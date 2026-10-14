@@ -1800,9 +1800,7 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 		UIDEntryDestructorRaw(entry);
 		goto free;
 	}
-	if (all == 0 || (attr & UID_ENTRY_ATTR_WEAK)) {
-		ret = GUIDCloseLink(guid);
-	} else {
+	if (all != 0 && !(attr & UID_ENTRY_ATTR_WEAK)) {
 		if (object != NULL) {
 			cls = object->sce_class;
 			memblockClass = ksceKernelGetUIDMemBlockClass();
@@ -1817,6 +1815,8 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 				     "[DeleteProcess] Force Close PUID 0x%08x [%s], Close  guid=0x%08x\n",
 				     puid, entry->name, guid);
 		ret = GUIDCloseLink(guid);
+	} else {
+		ret = GUIDCloseLink(entry->guid);
 	}
 closed:
 	UIDEntryDestructorRaw(entry);
