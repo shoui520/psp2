@@ -5,7 +5,9 @@
  */
 #include <stddef.h>
 #include "robin/mac.h"
+#include "robin/patch.h"
 #include "robin/rom.h"
+#include "robin/txring.h"
 
 /*
  * Starts a MAC operation and polls its progress field until it reads 3,
@@ -278,4 +280,97 @@ void wlanBaWindowCounterReset(int window)
 void wlanMacE80Select(void)
 {
 	MAC_E80_CONTROL = (MAC_E80_CONTROL & 0xfffff89c) | 1;
+}
+
+/* Hooks the MAC mode sequences consult. Rings reset: hardware pointers back in step; veto: nonzero keeps bits 31 and 17 clear. */
+int (*wlanTxRingsResetHook)(void) __attribute__((section(".itcm.rw")));
+int (*wlanModeVetoHook)(void) __attribute__((section(".itcm.rw")));
+
+static ROBIN_PATCH_SLOT(wlanMacModeApplyOverride);
+static ROBIN_PATCH_SLOT(wlanMacModeApplyDone);
+static ROBIN_PATCH_SLOT(wlanMacModeResetOverride);
+static ROBIN_PATCH_SLOT(wlanMacModeResetDone);
+
+/* Changes bits of the mode register for a station that is (on) or is not up. */
+int wlanMacMode300Apply(int on)
+{
+	int result = wlanMacModeApplyOverride(on, 0, 0, 0);
+
+	if (result != 0)
+		return result;
+	if (on) {
+		MAC_300_MODE |= 0x5e46;
+		MAC_300_MODE = MAC_300_MODE & ~0xa1b1u;
+	} else {
+		MAC_300_MODE |= 0x4640;
+		MAC_300_MODE &= ~0xb9b7u;
+		MAC_300_MODE = ((MAC_300_MODE >> 4) << 4) | 0xa;
+		MAC_300_MODE = MAC_300_MODE | 0x8000000;
+	}
+	MAC_300_MODE = MAC_300_MODE | 0x800000;
+	if (wlanModeVetoHook() == 0) {
+		MAC_300_MODE |= 0x80000000;
+		MAC_300_MODE |= 0x20000;
+	}
+	return wlanMacModeApplyDone(on, 0, 0, 0);
+}
+
+/* The mode register for no station. */
+int wlanMacMode300Reset(void)
+{
+	int result = wlanMacModeResetOverride(0, 0, 0, 0);
+
+	if (result != 0)
+		return result;
+	MAC_300_MODE = ((MAC_300_MODE >> 4) << 4) | 0xa;
+	MAC_300_MODE |= 0x200;
+	MAC_300_MODE &= ~0x100u;
+	MAC_300_MODE |= 0x8000000;
+	MAC_300_MODE |= 0x800000;
+	if (wlanModeVetoHook() == 0) {
+		MAC_300_MODE |= 0x80000000;
+		MAC_300_MODE |= 0x20000;
+	}
+	return wlanMacModeResetDone(0, 0, 0, 0);
+}
+
+/* Applies the mode and moves the event engine and the ROM entries to match. */
+void *wlanMacModeSwitch(int on)
+{
+	if (on) {
+		wlanMacMode300Apply(1);
+		MAC_824_CONTROL &= ~4u;
+		SOC_MAC_EVENT_CONTROL |= 0x20;
+		romMacConfigureEntry(0, 3);
+		romMacConfigureEntry(1, 4);
+		MAC_2D4_FLAGS |= 4;
+		return (void *)&MAC_REG(0x2c0);
+	}
+	wlanMacMode300Apply(0);
+	return (void *)(intptr_t)romMacConfigureEntry(1, 7);
+}
+
+/* Puts every ring's write index back to its read index and copies eight register pairs. */
+int wlanTxRingsReset(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < WLAN_TX_RING_COUNT; i++)
+		*wlanTxRingWriteIndex[i] = *wlanTxRingReadIndex[i];
+	for (i = 0; i < 8; i++)
+		MAC_REG(0x930 + 8 * i) = MAC_REG(0x934 + 8 * i);
+	return 0;
+}
+
+int wlanHookReturnZero(void)
+{
+	return 0;
+}
+
+/* Installs the ring reset and the mode veto hooks. */
+int wlanTxHooksInit(void)
+{
+	wlanTxRingsResetHook = wlanTxRingsReset;
+	wlanModeVetoHook = wlanHookReturnZero;
+	return 0;
 }

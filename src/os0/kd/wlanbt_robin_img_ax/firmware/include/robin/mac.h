@@ -83,6 +83,19 @@ int wlanMacWriteChecked(unsigned int from, unsigned int to, unsigned int page, u
 void wlanMacClear868Enable(void);
 unsigned int wlanFindSetBitDown(uint32_t mask, unsigned int start, unsigned int high, unsigned int low);
 
+#define MAC_2D4_FLAGS		MAC_REG(0x2d4)
+#define MAC_824_CONTROL		MAC_REG(0x824)
+
+extern int (*wlanTxRingsResetHook)(void);
+extern int (*wlanModeVetoHook)(void);
+int romMacConfigureEntry(unsigned int index, unsigned int value);	/* 0x03f3a865 */
+int wlanMacMode300Apply(int on);
+int wlanMacMode300Reset(void);
+void *wlanMacModeSwitch(int on);
+int wlanTxRingsReset(void);
+int wlanHookReturnZero(void);
+int wlanTxHooksInit(void);
+
 void wlanBaWindowEnable(int window);
 void wlanBaWindowDisable(int window);
 int wlanBaSlotApply(int slot, int window);
