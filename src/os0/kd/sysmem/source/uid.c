@@ -3087,10 +3087,18 @@ SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls)
 }
 
 /* PUIDGetObject */
+static inline SceObjectBase *UIDEntryGetObject(const UIDEntry *entry)
+{
+	SceObjectBase *object = entry->object;
+
+	if (object == NULL)
+		SCE_DBG_PRINTF(0xb, 1116, "Warning:pObject is SCE_NULL\n");
+	return object;
+}
+
 int kscePUIDGetObject(SceUID pid, SceUID puid, SceObjectBase **out)
 {
 	UIDEntryHeap *heap;
-	SceObjectBase *object;
 	UIDEntry *entry;
 	int state, ret;
 
@@ -3113,11 +3121,7 @@ int kscePUIDGetObject(SceUID pid, SceUID puid, SceObjectBase **out)
 		*out = NULL;
 		return ret;
 	}
-	/* UIDEntryGetObject */
-	object = entry->object;
-	if (object == NULL)
-		SCE_DBG_PRINTF(0xb, 1116, "Warning:pObject is SCE_NULL\n");
-	*out = object;
+	*out = UIDEntryGetObject(entry);
 	UID_READ_UNLOCK(heap, state);
 	return ret;
 }
@@ -3176,8 +3180,8 @@ int kscePUIDGetName(SceUID pid, SceUID puid, const char **name)
 int kscePUIDSetName(SceUID pid, SceUID puid, const char *name)
 {
 	UIDEntryHeap *heap;
-	NameEntry *nameEntry;
 	UIDEntry *entry;
+	NameEntry *nameEntry;
 	int state, ret;
 
 	if (pid == SCE_KERNEL_PROCESS_ID)
@@ -3292,14 +3296,18 @@ SceUID SceSysmemForKernel_1FF2749A(SceUID pid, SceUID guid, const UIDCreateOpt *
 
 SceUID kscePUIDOpenByName(SceUID pid, const char *name)
 {
-	if (pid == SCE_KERNEL_PROCESS_ID || name == NULL)
+	if (pid == SCE_KERNEL_PROCESS_ID)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return PUIDOpenByName(pid, name, NULL, 0, UID_ENTRY_ATTR_LEVEL_DEFAULT);
 }
 
 SceUID kscePUIDOpenByNameWithClass(SceUID pid, const char *name, SceClass *cls)
 {
-	if (pid == SCE_KERNEL_PROCESS_ID || name == NULL)
+	if (pid == SCE_KERNEL_PROCESS_ID)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return PUIDOpenByName(pid, name, cls, 2, UID_ENTRY_ATTR_LEVEL_DEFAULT);
 }
@@ -3311,7 +3319,9 @@ SceUID SceSysmemForKernel_201E970B(SceUID pid, const char *name, const UIDCreate
 	SceUInt32 attr;
 	int mode;
 
-	if (pid == SCE_KERNEL_PROCESS_ID || name == NULL)
+	if (pid == SCE_KERNEL_PROCESS_ID)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	UIDCreateOptCheckForPUID(opt, &cls, &mode, &attr);
 	return PUIDOpenByName(pid, name, cls, mode, attr);
