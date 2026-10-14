@@ -1691,7 +1691,7 @@ construct:
 		return ret;
 	}
 failed:
-	if (limited)
+	if (limited == 1)
 		ObjectHeapFreeLimit(objectHeap, type, newObject);
 	if (allocated)
 		UIDHeapCallFree(heap, newObject);
