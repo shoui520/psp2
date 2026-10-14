@@ -246,27 +246,31 @@ static int UIDEntryFindByBaseGUID(void *object, SceUInt32 index, void *arg)
 int UIDEntryCheckInvalid(UIDEntryHeap *heap, SceUID uid, SceUInt32 flags, UIDEntry **out)
 {
 	UIDEntry *entry = NULL;
+	SceUID expect;
 	int ret;
 
 	ret = FixedHeapGetObjectByIndexRaw(&heap->fixedHeap, UIDGetIndex(uid), (void **)&entry);
 	if (ret < 0)
 		return UID_ERROR_INVALID_UID;
-	if (entry != NULL && uid != entry->uid) {
+	if (entry != NULL && uid != (expect = entry->uid)) {
 		if (!(flags & 1) && uid != s_lastWarnedUID) {
 #if FW_DEBUG
 			const char *name = entry->name, *p;
 
 			if (name != NULL) {
-				for (p = name; *p != '\0' && p != name + 0x1f; p++) {
+				p = name;
+				do {
+					if (*p == '\0')
+						break;
 					if (!(look_ctype_table(*p) & 0x97)) {
 						name = "<NOT PRINTABLE>";
 						break;
 					}
-				}
+				} while (p++ != name + 0x1e);
 			}
 			SCE_DBG_PRINTF(6, 1428,
 				       "Warning:uid=0x%08x!=0x%08x[expect:pEntry->uid],pEnrtry=%p[%s]\n",
-				       uid, entry->uid, entry, name);
+				       uid, expect, entry, name);
 #endif
 			s_lastWarnedUID = uid;
 		}
@@ -369,8 +373,10 @@ int GUIDReferObjectClassCheckCommon(SceUID guid, int mode, SceClass *cls, SceUIn
 		ret = UIDEntryReferObjectCheckClassLevelWithGUID(entry, guid, mode, cls, level,
 								 flags, out);
 	UID_WRITE_UNLOCK(heap, state);
-	if (ret < 0 && out != NULL)
-		*out = NULL;
+	if (ret < 0) {
+		if (out != NULL)
+			*out = NULL;
+	}
 	return ret;
 }
 
@@ -501,7 +507,9 @@ walked:
 	*out = NULL;
 	return ret;
 check:
-	return (ret & UID_ENTRY_ATTR_NAME_PUBLIC) ? 0 : SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (ret & UID_ENTRY_ATTR_NAME_PUBLIC)
+		return 0;
+	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
 
 /* name unknown: walk callback of a vector */
