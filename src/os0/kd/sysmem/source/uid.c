@@ -997,22 +997,24 @@ int UIDEntryClose(UIDEntryHeap *heap, UIDEntry *entry, DeleteParam *param)
 	void *objectHeap;
 	int ret;
 
-	if (!(attr & UID_ENTRY_ATTR_GUID_ANY)) {
-		/* a link: its base is closed next */
-		object = NULL;
-		objectHeap = NULL;
-		if ((attr & UID_ENTRY_ATTR_CLOSED) && param->next == NULL) {
-			if (!(attr & UID_ENTRY_ATTR_PUID) && (attr & UID_ENTRY_ATTR_LINK_ANY))
-				param->next = entry->base;
-			else
-				param->next = NULL;
-		}
-	} else {
+	if (attr & UID_ENTRY_ATTR_GUID_ANY) {
 		object = entry->object;
 		objectHeap = (attr & UID_ENTRY_ATTR_PUID) ? NULL : entry->heap;
 		if (object == NULL) {
 			SCE_DBG_PRINTF(0xb, 1931, "Warning:There is no pObject\n");
 			SCE_DBG_ASSERT_FAIL(1932);
+		}
+	} else {
+		/* a link: its base is closed next */
+		object = NULL;
+		objectHeap = NULL;
+		if (attr & UID_ENTRY_ATTR_CLOSED) {
+			UIDEntry *base = NULL;
+
+			if (!(attr & UID_ENTRY_ATTR_PUID) && (attr & UID_ENTRY_ATTR_LINK_ANY))
+				base = entry->base;
+			if (param->next == NULL)
+				param->next = base;
 		}
 	}
 	UIDEntryDestructorRaw(entry);
@@ -1036,12 +1038,18 @@ int UIDEntryCloseLink(UIDEntryHeap *heap, UIDEntry *entry, DeleteParam *param)
 	SceUInt32 attr;
 	int ret;
 
+	if (entry->object == NULL)
+		goto warn;
 	for (;;) {
-		if (entry->object == NULL)
-			SCE_DBG_PRINTF(0xb, 2142, "Warning:pEntry[%p]->pObject is SCE_NULL\n", entry);
 		attr = entry->attr;
-		if (attr & UID_ENTRY_ATTR_GUID_ANY)
-			break;
+		if (attr & UID_ENTRY_ATTR_GUID_ANY) {
+			if (entry->linkCount == 0)
+				return UID_ERROR_INVALID_UID;
+			entry->linkCount--;
+			if (!UIDEntryIsUnused(entry))
+				return 0;
+			goto close;
+		}
 		if (!(attr & UID_ENTRY_ATTR_LINK_ANY) || entry->linkCount == 0)
 			return UID_ERROR_INVALID_UID;
 		entry->linkCount--;
@@ -1056,15 +1064,16 @@ int UIDEntryCloseLink(UIDEntryHeap *heap, UIDEntry *entry, DeleteParam *param)
 		if (base == NULL)
 			return 0;
 		entry = base;
+		if (entry->object == NULL) {
+warn:
+			SCE_DBG_PRINTF(0xb, 2142, "Warning:pEntry[%p]->pObject is SCE_NULL\n", entry);
+		}
 	}
-	if (entry->linkCount == 0)
-		return UID_ERROR_INVALID_UID;
-	entry->linkCount--;
-	if (!UIDEntryIsUnused(entry))
-		return 0;
 close:
 	ret = UIDEntryClose(heap, entry, param);
-	return ret < 0 ? ret : 0;
+	if (ret < 0)
+		return ret;
+	return 0;
 }
 
 /* the UID an entry has, from its index; puid: UID_PUID for a PUID */
