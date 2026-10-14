@@ -1403,6 +1403,26 @@ static inline void GUIDBaseInfoSetLinks(GUIDBaseInfo *info, const UIDEntry *base
 	}
 }
 
+static inline int UIDEntryIncLinkCountAndGetInfoForByName(UIDEntry *base, SceClass *cls, int mode,
+							  GUIDBaseInfo *info)
+{
+	int ret;
+
+	ret = UIDEntryCheckClassRaw(base, cls, mode);
+	if (ret < 0)
+		return ret;
+	if (UIDEntryIncLinkCountRaw(base) != 1)
+		return UID_ERROR_LINK_COUNT;
+	info->object = base->object;
+	info->guid = base->uid;
+	info->attr = base->attr;
+	info->name = base->name;
+	if (info->name == NULL)
+		SCE_DBG_PRINTF(0xb, 2640, "ERROR: There is no name.\n");
+	GUIDBaseInfoSetLinks(info, base);
+	return ret;
+}
+
 static inline int GUIDLinkBaseInfoByName(const char *name, SceClass *cls, int mode,
 					 GUIDBaseInfo *info)
 {
@@ -1422,23 +1442,10 @@ static inline int GUIDLinkBaseInfoByName(const char *name, SceClass *cls, int mo
 			       ret);
 		goto out;
 	}
-	ret = UIDEntryCheckClassRaw(base, cls, mode);
-	if (ret >= 0) {
-		/* UIDEntryIncLinkCountAndGetInfoForByName */
-		if (UIDEntryIncLinkCountRaw(base) == 1) {
-			info->object = base->object;
-			info->guid = base->uid;
-			info->attr = base->attr;
-			info->name = base->name;
-			if (info->name == NULL)
-				SCE_DBG_PRINTF(0xb, 2640, "ERROR: There is no name.\n");
-			GUIDBaseInfoSetLinks(info, base);
-			UID_WRITE_UNLOCK(heap, state);
-			return ret;
-		}
-		ret = UID_ERROR_LINK_COUNT;
-	}
-	SCE_DBG_PRINTF(0xb, 5614, "UIDEntryIncLinkCountAndGetInfoForByName failed 0x%08x\n", ret);
+	ret = UIDEntryIncLinkCountAndGetInfoForByName(base, cls, mode, info);
+	if (ret < 0)
+		SCE_DBG_PRINTF(0xb, 5614, "UIDEntryIncLinkCountAndGetInfoForByName failed 0x%08x\n",
+			       ret);
 out:
 	UID_WRITE_UNLOCK(heap, state);
 	return ret;
@@ -1496,7 +1503,7 @@ static inline int GUIDLinkBaseInfoByGUID(SceUID guid, SceClass *cls, int mode,
 					 GUIDBaseInfo *info)
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
-	UIDEntry *base;
+	UIDEntry *entry, *base;
 	int state, ret;
 
 	state = UID_WRITE_LOCK(heap, 5529);
@@ -1505,11 +1512,12 @@ static inline int GUIDLinkBaseInfoByGUID(SceUID guid, SceClass *cls, int mode,
 	info->name = NULL;
 	info->heap = NULL;
 	info->baseGuid = -1;
-	ret = UIDEntryCheckInvalid(heap, guid, 0, &base);
+	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
 	if (ret < 0) {
 		UID_WRITE_UNLOCK(heap, state);
 		return ret;
 	}
+	base = entry;
 	ret = UIDEntryCheckClassRaw(base, cls, mode);
 	if (ret >= 0) {
 		if (UIDEntryIncLinkCountRaw(base) == 1) {
