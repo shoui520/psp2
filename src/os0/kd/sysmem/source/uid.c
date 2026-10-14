@@ -2774,13 +2774,13 @@ int ksceGUIDReleaseObject(SceUID guid)
 	int ret;
 
 	if (!UIDIsGUID(guid)) {
-		SCE_DBG_PRINTF(0xb, 6627, "GUIDIsValid(0x%08x) failed 0x%08x\n", guid,
-			       UID_ERROR_INVALID_UID);
+		SCE_DBG_PRINTF_FUNC(0xb, 6627, "sceGUIDReleaseObject",
+				    "GUIDIsValid(0x%08x) failed 0x%08x\n", guid, UID_ERROR_INVALID_UID);
 		return UID_ERROR_INVALID_UID;
 	}
 	ret = GUIDReleaseObject(guid);
 	if (ret < 0)
-		SCE_DBG_ASSERT_FAIL(6632);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 6632, "sceGUIDReleaseObject");
 	return ret;
 }
 
@@ -2928,8 +2928,10 @@ int SceSysmemForKernel_3BF0DE65(SceUInt32 level, SceUInt32 state, SceKernelUIDEn
 	UIDEntryHeap *heap;
 	int ret;
 
-	if (infos == NULL && size != 0)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (infos == NULL) {
+		if (size != 0)
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
 	heap = GUID_ENTRY_HEAP();
 	if (heap == NULL)
 		return SCE_KERNEL_ERROR_ERROR;
