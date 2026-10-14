@@ -1270,6 +1270,8 @@ int GUIDUnregister(SceUID guid)
 			entry->linkCount--;
 #if FW_DEBUG
 		SceClass *cls, *memblockClass;
+		SceUInt8 linkCount;
+		SceUInt16 useCount;
 
 		if (UIDEntryIsUnused(entry) != 1 && UIDEntryGetClass(entry, &cls) >= 0) {
 			memblockClass = ksceKernelGetUIDMemBlockClass();
@@ -1277,10 +1279,11 @@ int GUIDUnregister(SceUID guid)
 				if (cls == memblockClass)
 					break;
 			}
-			if (cls == NULL || entry->linkCount != 1 || entry->useCount != 0)
+			linkCount = entry->linkCount;
+			useCount = entry->useCount;
+			if (cls == NULL || linkCount != 1 || useCount != 0)
 				SCE_DBG_PRINTF(0xb, 4830, "Warning: Unregister 0x%08x[%s]%d:%d\n", guid,
-					       entry->name, (SceInt8)entry->linkCount,
-					       (SceInt16)entry->useCount);
+					       entry->name, linkCount, useCount);
 		}
 #endif
 		entry->object = NULL;
