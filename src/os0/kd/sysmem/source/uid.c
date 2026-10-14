@@ -973,6 +973,23 @@ static inline void UIDEntryHeapCheckFreeUIDEntry(UIDEntryHeap *heap, UIDEntry *e
 #endif
 }
 
+/* name from Sony's messages: a free entry of the heap, checked */
+static inline int UIDEntryHeapAllocateObject(UIDEntryHeap *heap, UIDEntry **entry)
+{
+	int ret = FixedHeapAllocObjectRaw(&heap->fixedHeap, 0, (void **)entry);
+
+	if (ret >= 0)
+		UIDEntryHeapCheckFreeUIDEntry(heap, *entry);
+	return ret;
+}
+
+/* name from Sony's messages */
+static inline int UIDEntryHeapFreeObject(UIDEntryHeap *heap, UIDEntry *entry)
+{
+	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
+	return FixedHeapFreeObject(&heap->fixedHeap, entry);
+}
+
 /* the object of a closed entry, freed by DeleteParamClean after the lock */
 static inline int DeleteParamAdd(DeleteParam *param, SceObjectBase *object, void *heap,
 				 SceUInt32 type)
@@ -1455,12 +1472,11 @@ int PUIDOpenByName(SceUID pid, const char *name, SceClass *cls, int mode, SceUIn
 	ret = GetPUIDEntryHeap(pid, &heap);
 	if (ret < 0)
 		return ret;
-	ret = FixedHeapAllocObjectRaw(&heap->fixedHeap, 0, (void **)&entry);
+	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 7355, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
 	ret = GUIDLinkBaseInfoByName(name, cls, mode, &info);
 	if (ret < 0)
 		goto free;
@@ -1472,8 +1488,7 @@ int PUIDOpenByName(SceUID pid, const char *name, SceClass *cls, int mode, SceUIn
 	SCE_DBG_PRINTF(0xb, 7383, "puid=0x%08x\n", ret);
 	GUIDUnlinkBaseByName(name);
 free:
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
-	FixedHeapFreeObject(&heap->fixedHeap, entry);
+	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
 
@@ -1553,12 +1568,11 @@ int PUIDOpenByGUID(SceUID pid, SceUID guid, SceUInt32 flags, SceClass *cls, int 
 		SCE_DBG_PRINTF(0xb, 7277, "GetPUIDEntryHeap failed 0x%08x\n", ret);
 		return ret;
 	}
-	ret = FixedHeapAllocObjectRaw(&heap->fixedHeap, 0, (void **)&entry);
+	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 7283, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
 	ret = GUIDLinkBaseInfoByGUID(guid, cls, mode, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 7290, "GUIDLinkBaseInfoByGUID(0x%08x) failed 0x%08x\n", guid,
@@ -1578,8 +1592,7 @@ int PUIDOpenByGUID(SceUID pid, SceUID guid, SceUInt32 flags, SceClass *cls, int 
 	SCE_DBG_PRINTF(0xb, 7321, "error 0x%08x clean up %p\n", ret, entry);
 	GUIDUnlinkBaseByGUID(guid);
 free:
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
-	FixedHeapFreeObject(&heap->fixedHeap, entry);
+	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
 
@@ -1733,7 +1746,7 @@ int GUIDCloseLink(SceUID guid)
 	int state, ret;
 
 	state = UID_WRITE_LOCK(heap, 5081);
-	memset(&param, 0, sizeof(param));
+	param = (DeleteParam){0};
 	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
 	if (ret >= 0)
 		ret = UIDEntryCloseLink(heap, entry, &param);
@@ -2127,12 +2140,11 @@ static inline int GUIDOpenByGUID(SceUID guid)
 	UIDEntry *entry = NULL, *base;
 	int state, ret;
 
-	ret = FixedHeapAllocObjectRaw(&heap->fixedHeap, 0, (void **)&entry);
+	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 4940, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
 	state = UID_WRITE_LOCK(heap, 4944);
 	ret = UIDEntryCheckInvalid(heap, guid, 0, &base);
 	if (ret < 0) {
@@ -2167,8 +2179,7 @@ static inline int GUIDOpenByGUID(SceUID guid)
 	UID_WRITE_UNLOCK(heap, state);
 	SCE_DBG_PRINTF(0xb, 4985, "guidNew=0x%08x\n", ret);
 	if (entry != NULL) {
-		UIDEntryHeapCheckFreeUIDEntry(heap, entry);
-		FixedHeapFreeObject(&heap->fixedHeap, entry);
+		UIDEntryHeapFreeObject(heap, entry);
 	}
 	return ret;
 }
@@ -2193,12 +2204,11 @@ SceUID ksceGUIDOpenByName(const char *name)
 	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	heap = GUID_ENTRY_HEAP();
-	ret = FixedHeapAllocObjectRaw(&heap->fixedHeap, 0, (void **)&entry);
+	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 5010, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
 	state = FixedHeapWriteLock(&heap->fixedHeap, "GUIDOpenByName", 5014);
 	ret = GUIDEntryHeapFindByNameRaw(heap, name, 0, &base);
 	if (ret < 0) {
@@ -2230,8 +2240,7 @@ SceUID ksceGUIDOpenByName(const char *name)
 	}
 	UID_WRITE_UNLOCK(heap, state);
 	SCE_DBG_PRINTF(0xb, 5034, "guid=0x%08x\n", ret);
-	UIDEntryHeapCheckFreeUIDEntry(heap, entry);
-	FixedHeapFreeObject(&heap->fixedHeap, entry);
+	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
 
