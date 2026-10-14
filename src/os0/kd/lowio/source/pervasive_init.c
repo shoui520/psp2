@@ -90,10 +90,10 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		s_pervasiveUids[i] = ret;
 		ksceKernelGetMemBlockBase(ret, (void **)s_pervasiveDevices[i].base);
 	}
-	s_hardwareInfo[0] = *(volatile uint32_t *)s_misc;
-	s_hardwareInfo[1] = *(volatile uint32_t *)(s_misc + 4);
+	s_hardwareInfo[0] = s_misc->revision;
+	s_hardwareInfo[1] = s_misc->cacheStatus;
 	for (i = 0; i < 3; i++)
-		s_hardwareInfo[i + 2] = *(volatile uint32_t *)(s_misc + 0x300 + i * 4);
+		s_hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PervasiveClockInit();
 	ksceKernelRegisterSysEventHandler("ScePervasive", PervasiveSysEvent, NULL);
 	SceThreadmgrForDriver_B4A05763(LowioIdleEntry);

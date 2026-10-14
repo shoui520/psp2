@@ -108,3 +108,65 @@ _Static_assert(offsetof(ScePervasiveDeviceRegisters, bigmac) == 0x190, "bigmac")
 _Static_assert(sizeof(ScePervasiveDeviceRegisters) == 0x1000, "device register page");
 _Static_assert(sizeof(ScePervasiveTasChannel) == 0x1000, "TAS channel page");
 _Static_assert(sizeof(ScePervasiveTasRegisters) == 0x8000, "TAS register pages");
+
+/* ScePervasiveMisc (0xe3100000). Names after the henkaku wiki's Pervasive page
+ * where it has one, otherwise after the drivers that use the word
+ * (usbserv, sdif, motion SPI, bbmc's UART, audio, sdstor).
+ */
+#define SCE_PERVASIVE_UART5_PULL_DOWN_PINS	0x3	/* TX|CTS, or RX|RFR */
+
+typedef struct ScePervasiveMiscRegisters {
+	volatile uint32_t revision;			/* SoC revision */
+	volatile uint32_t cacheStatus;			/* bit 1: L2 cache defective */
+	volatile uint32_t reserved0[6];
+	volatile uint32_t suspendControl;		/* bit 31 set before the CPUs park */
+	volatile uint32_t reserved1[24];
+	volatile uint32_t usbMode[3];			/* per USB port, bit 0 */
+	volatile uint32_t reserved2[32];
+	volatile uint32_t sdifConfig[4];		/* bits 8-10 */
+	volatile uint32_t reserved3;
+	volatile uint32_t sdifVoltage;			/* 1 << port: 1.8 V */
+	volatile uint32_t reserved4[2];
+	volatile uint32_t secureBusErrorAttribute;	/* PERVASIVE_SYS_SBEATB */
+	volatile uint32_t secureBusErrorAddress;	/* PERVASIVE_SYS_SBEADR */
+	volatile uint32_t busErrorAttribute;		/* PERVASIVE_SYS_BEATB */
+	volatile uint32_t busErrorAddress;		/* PERVASIVE_SYS_BEADR */
+	volatile uint32_t dsi0Control;
+	volatile uint32_t csiControl;
+	volatile uint32_t dsi1Control;
+	volatile uint32_t reserved5;
+	volatile uint32_t usbBufferAddress[3];
+	volatile uint32_t usbBufferSize[3];
+	volatile uint32_t reserved6[5];
+	volatile uint32_t usbPortControl;		/* 2 bits per USB port */
+	volatile uint32_t reserved7[2];
+	volatile uint32_t motionSpiDisable;		/* bit 0 */
+	volatile uint32_t uart5PullDownTx;		/* bit 0 TX, bit 1 CTS */
+	volatile uint32_t audioMode;
+	volatile uint32_t gameCard;			/* bit 0 */
+	volatile uint32_t spareEnable;			/* bit 0; nothing calls its exports */
+	volatile uint32_t reserved8[4];
+	volatile uint32_t uart5PullDownRx;		/* bit 0 RX, bit 1 RFR */
+	volatile uint32_t reserved9[84];
+	volatile uint32_t hardwareInfo[3];
+	volatile uint32_t reserved10;
+	volatile uint32_t sdifMode;			/* 3 bits per port, port * 8 */
+	volatile uint32_t reserved11[827];
+} ScePervasiveMiscRegisters;
+
+_Static_assert(offsetof(ScePervasiveMiscRegisters, suspendControl) == 0x20, "misc suspend");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, usbMode) == 0x84, "misc usb mode");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, sdifConfig) == 0x110, "misc sdif");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, sdifVoltage) == 0x124, "misc sdif voltage");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, secureBusErrorAttribute) == 0x130, "misc bus error");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, dsi0Control) == 0x140, "misc dsi0");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, dsi1Control) == 0x148, "misc dsi1");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, usbBufferAddress) == 0x150, "misc usb buffer");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, usbBufferSize) == 0x15c, "misc usb buffer size");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, usbPortControl) == 0x17c, "misc usb port");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, motionSpiDisable) == 0x188, "misc motion spi");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, spareEnable) == 0x198, "misc spare");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, uart5PullDownRx) == 0x1ac, "misc uart5 rx");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, hardwareInfo) == 0x300, "misc hardware info");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, sdifMode) == 0x310, "misc sdif mode");
+_Static_assert(sizeof(ScePervasiveMiscRegisters) == 0x1000, "misc register page");

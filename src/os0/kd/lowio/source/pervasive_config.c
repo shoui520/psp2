@@ -46,7 +46,7 @@ uint32_t ScePervasiveForDriver_453BD2EC(unsigned port, unsigned enable)
 		return PERVASIVE_ERROR;
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	shift = port;
-	REG(s_misc, 0x124) = (REG(s_misc, 0x124) & ~(1U << shift)) |
+	s_misc->sdifVoltage = (s_misc->sdifVoltage & ~(1U << shift)) |
 		enable << shift;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
@@ -61,7 +61,7 @@ uint32_t ScePervasiveForDriver_043B33F5(unsigned port, unsigned mode)
 		return PERVASIVE_ERROR;
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	shift = port * 8;
-	REG(s_misc, 0x310) = (REG(s_misc, 0x310) & ~(7U << shift)) |
+	s_misc->sdifMode = (s_misc->sdifMode & ~(7U << shift)) |
 		mode << shift;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);

@@ -11,24 +11,32 @@ static uint32_t WriteClock(unsigned offset, uint32_t value)
 	return 0;
 }
 
-static uint32_t ReplaceRegister(unsigned offset, uint32_t value,
-	unsigned synchronize)
+/* Store a Misc word; returns whether it was set before. */
+static inline __attribute__((always_inline)) uint32_t MiscReplace(
+	volatile uint32_t *reg, uint32_t value)
 {
-	uint32_t state, previous;
+	uint32_t previous = *reg;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = REG(s_misc, offset);
-	REG(s_misc, offset) = value;
+	*reg = value;
+	previous = previous != 0;
 	LowioDmb();
-	if (synchronize)
-		LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
-	return previous != 0;
+	return previous;
+}
+
+static inline __attribute__((always_inline)) uint32_t MiscReplaceLocked(
+	volatile uint32_t *reg, uint32_t value)
+{
+	uint32_t intr, previous;
+
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	previous = MiscReplace(reg, value);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
+	return previous;
 }
 
 uint32_t ScePervasiveForDriver_A1D2E440(uint32_t value)
 {
-	REG(s_misc, 0x190) = value;
+	s_misc->audioMode = value;
 	return 0;
 }
 
@@ -62,9 +70,9 @@ uint32_t ScePervasiveForDriver_589D0291(unsigned value)
 
 uint32_t ScePervasiveForDriver_925D9D24(unsigned value)
 {
-	if (value >= 2)
+	if (value > 1)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x70, 0x10000 | value);
+	return WriteClock(0x70, value != 0 ? 0x10001 : 0x10000);
 }
 
 uint32_t ScePervasiveForDriver_26B51075(void)
@@ -107,84 +115,99 @@ uint32_t ScePervasiveForDriver_98D8914A(unsigned value)
 
 uint32_t ScePervasiveForDriver_A96642E3(unsigned value)
 {
-	if (value < 2)
-		return WriteClock(0x68, value | 2);
-	if (value == 0xff)
-		return WriteClock(0x68, 0);
-	return PERVASIVE_ERROR;
+	if (value <= 1)
+		value |= 2;
+	else if (value == 0xff)
+		value = 0;
+	else
+		return PERVASIVE_ERROR;
+	return WriteClock(0x68, value);
 }
 
 uint32_t ScePervasiveForDriver_F1908D3C(unsigned head)
 {
-	return ReplaceRegister(head == 0 ? 0x140 : 0x148, 1, 0);
+	volatile ScePervasiveMiscRegisters *misc = s_misc;
+
+	if (head != 0)
+		return MiscReplaceLocked(&misc->dsi1Control, 1);
+	return MiscReplaceLocked(&misc->dsi0Control, 1);
 }
 
 uint32_t ScePervasiveForDriver_350BF570(unsigned head)
 {
-	return ReplaceRegister(head == 0 ? 0x140 : 0x148, 0, 0);
+	volatile ScePervasiveMiscRegisters *misc = s_misc;
+
+	if (head != 0)
+		return MiscReplaceLocked(&misc->dsi1Control, 0);
+	return MiscReplaceLocked(&misc->dsi0Control, 0);
 }
 
 uint32_t ScePervasiveForDriver_0C1A7FFA(void)
 {
-	return ReplaceRegister(0x144, 1, 0);
+	volatile ScePervasiveMiscRegisters *misc = s_misc;
+
+	return MiscReplaceLocked(&misc->csiControl, 1);
 }
 
 uint32_t ScePervasiveForDriver_5B4EF352(void)
 {
-	return ReplaceRegister(0x144, 0, 0);
+	volatile ScePervasiveMiscRegisters *misc = s_misc;
+
+	return MiscReplaceLocked(&misc->csiControl, 0);
 }
 
-static uint32_t SetMiscBits(unsigned offset, uint32_t mask, unsigned enable)
+static uint32_t SetMiscBits(volatile uint32_t *reg, uint32_t mask,
+	unsigned enable)
 {
-	uint32_t previous = REG(s_misc, offset);
+	uint32_t previous = *reg;
 
-	REG(s_misc, offset) = enable ? previous | mask : previous & ~mask;
+	*reg = enable ? previous | mask : previous & ~mask;
 	LowioDmb();
 	return 0;
 }
 
 uint32_t ScePervasiveForDriver_5E20D7D5(void)
 {
-	return SetMiscBits(0x194, 1, 1);
+	return SetMiscBits(&s_misc->gameCard, 1, 1);
 }
 
 uint32_t ScePervasiveForDriver_E6728E30(void)
 {
-	return SetMiscBits(0x194, 1, 0);
+	return SetMiscBits(&s_misc->gameCard, 1, 0);
 }
 
 uint32_t ScePervasiveForDriver_03EA9418(void)
 {
-	return SetMiscBits(0x198, 1, 1);
+	return SetMiscBits(&s_misc->spareEnable, 1, 1);
 }
 
 uint32_t ScePervasiveForDriver_BD868E6E(void)
 {
-	return SetMiscBits(0x198, 1, 0);
+	return SetMiscBits(&s_misc->spareEnable, 1, 0);
 }
 
 uint32_t ScePervasiveForDriver_FDD445C3(void)
 {
-	return SetMiscBits(0x188, 1, 1);
+	return SetMiscBits(&s_misc->motionSpiDisable, 1, 1);
 }
 
 uint32_t ScePervasiveForDriver_132E514A(void)
 {
-	return SetMiscBits(0x188, 1, 0);
+	return SetMiscBits(&s_misc->motionSpiDisable, 1, 0);
 }
 
 uint32_t ScePervasiveForDriver_34537B12(void)
 {
-	REG(s_misc, 0x1ac) &= ~3U;
-	REG(s_misc, 0x18c) &= ~3U;
+	s_misc->uart5PullDownRx &= ~SCE_PERVASIVE_UART5_PULL_DOWN_PINS;
+	s_misc->uart5PullDownTx &= ~SCE_PERVASIVE_UART5_PULL_DOWN_PINS;
 	LowioDmb();
 	return 0;
 }
 
 uint32_t ScePervasiveForDriver_4B99558F(void)
 {
-	REG(s_misc, 0x1ac) |= 3;
-	REG(s_misc, 0x18c) |= 3;
+	s_misc->uart5PullDownRx |= SCE_PERVASIVE_UART5_PULL_DOWN_PINS;
+	s_misc->uart5PullDownTx |= SCE_PERVASIVE_UART5_PULL_DOWN_PINS;
 	LowioDmb();
 	return 0;
 }
@@ -199,44 +222,65 @@ uint32_t ScePervasiveForDriver_9F8E589C(unsigned port, uint32_t value)
 {
 	if (port >= 4 || (value & ~0x700U) != 0)
 		return PERVASIVE_ERROR;
-	REG(s_misc, 0x110 + port * 4) = value;
+	s_misc->sdifConfig[port] = value;
 	LowioDmb();
 	return 0;
 }
 
 uint32_t ScePervasiveForDriver_6B2BE37E(unsigned port, uint32_t value)
 {
-	uint32_t state, previous;
+	uint32_t intr, ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	if (port >= 3) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
-		return PERVASIVE_ERROR;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	switch (port) {
+	case 0:
+		ret = MiscReplace(&s_misc->usbMode[0], value & 1);
+		break;
+	case 1:
+		ret = MiscReplace(&s_misc->usbMode[1], value & 1);
+		break;
+	case 2:
+		ret = MiscReplace(&s_misc->usbMode[2], value & 1);
+		break;
+	default:
+		ret = PERVASIVE_ERROR;
+		break;
 	}
-	previous = REG(s_misc, 0x84 + port * 4);
-	REG(s_misc, 0x84 + port * 4) = value & 1;
-	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
-	return previous != 0;
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
+	return ret;
 }
 
-uint32_t ScePervasiveForDriver_29E65AE1(unsigned port, uint32_t first,
-	uint32_t second)
+uint32_t ScePervasiveForDriver_29E65AE1(unsigned port, uint32_t address,
+	uint32_t size)
 {
-	uint32_t state;
+	uint32_t intr;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	if (port < 3) {
-		REG(s_misc, 0x150 + port * 4) = first;
-		REG(s_misc, 0x15c + port * 4) = second;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	if (port == 0) {
+		s_misc->usbBufferAddress[0] = address;
+		s_misc->usbBufferSize[0] = size;
+	} else if (port == 1) {
+		s_misc->usbBufferAddress[1] = address;
+		s_misc->usbBufferSize[1] = size;
+	} else if (port == 2) {
+		s_misc->usbBufferAddress[2] = address;
+		s_misc->usbBufferSize[2] = size;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
 	return 1;
 }
 
 uint32_t ScePervasiveForDriver_E3A735B9(unsigned port)
 {
-	return port < 3 ? REG(s_misc, 0x150 + port * 4) : 0;
+	switch (port) {
+	case 0:
+		return s_misc->usbBufferAddress[0];
+	case 1:
+		return s_misc->usbBufferAddress[1];
+	case 2:
+		return s_misc->usbBufferAddress[2];
+	}
+	return 0;
 }
 
 uint32_t kscePervasiveRemovableMemoryGetCardInsertState(void)

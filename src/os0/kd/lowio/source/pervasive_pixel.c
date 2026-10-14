@@ -165,18 +165,18 @@ uint32_t ScePervasiveForDriver_4F64DEF6(unsigned head)
 	ScePervasiveForDriver_AD1E81EB(head, 0xb);
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	if (head < 3) {
-		(void)*(volatile uint32_t *)(s_misc + 0x84 + head * 4);
-		*(volatile uint32_t *)(s_misc + 0x84 + head * 4) = 1;
+		(void)s_misc->usbMode[head];
+		s_misc->usbMode[head] = 1;
 		LowioDmb();
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	ScePervasiveForDriver_13CC07C9(head, 8);
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	if (head < 3) {
-		volatile uint32_t *reg = (volatile uint32_t *)(s_misc + 0x17c);
 		unsigned shift = head * 2;
 
-		*reg = (*reg & ~(3U << shift)) | (2U << shift);
+		s_misc->usbPortControl = (s_misc->usbPortControl & ~(3U << shift)) |
+			(2U << shift);
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 1;

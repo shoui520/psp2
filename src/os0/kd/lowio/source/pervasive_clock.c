@@ -66,9 +66,7 @@ uint32_t ScePervasiveForDriver_BB67EF58(unsigned head)
 	ScePervasiveForDriver_4AF7A01E(head, 8);
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	if (head < 3) {
-		volatile uint32_t *reg = (volatile uint32_t *)(s_misc + 0x17c);
-
-		*reg &= ~(3U << (head * 2));
+		s_misc->usbPortControl &= ~(3U << (head * 2));
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 1;

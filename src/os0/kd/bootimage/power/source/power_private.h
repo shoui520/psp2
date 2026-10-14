@@ -53,14 +53,10 @@ _Static_assert(offsetof(struct PervasiveVidRegs, compatVoltage) == 0x40, "vid 0x
 _Static_assert(offsetof(struct PervasiveVidRegs, mediaVoltage) == 0x60, "vid 0x60");
 _Static_assert(offsetof(struct PervasiveVidRegs, busVoltage) == 0xa4, "vid 0xa4");
 
-/* ScePervasiveMisc (0xe3100000, ScePervasiveForDriver_81A155F1) */
-struct PervasiveMiscRegs {
-	uint32_t reserved[8];
-	uint32_t suspendControl;	/* bit 31 set before the CPUs are parked */
-};
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <sce/pervasive_regs.h>
 #include <psp2kern/ctrl.h>
 #include <psp2common/power.h>
 #include "sce/error.h"
@@ -265,7 +261,8 @@ extern uint32_t ksceKernelGetSystemTimeLow(void);
 extern uint32_t kscePervasiveGetSoCRevision(void);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 extern uint64_t sceKernelGetSystemTimeWide(void);
-extern volatile struct PervasiveMiscRegs *ScePervasiveForDriver_81A155F1(void);
+/* ScePervasiveMisc (0xe3100000) */
+extern ScePervasiveMiscRegisters *ScePervasiveForDriver_81A155F1(void);
 extern uintptr_t SceSysrootForDriver_0A52A59C(void);
 extern uintptr_t SceSysrootForDriver_10788257(void);
 extern void powerCpuResumeEntry(void);

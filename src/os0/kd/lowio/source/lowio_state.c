@@ -1,7 +1,8 @@
 /* Shared SceLowio state; mapped by module initialization. */
 #include "lowio_internal.h"
 
-uint8_t *s_misc, *s_video, *s_mailbox, *s_pervasive2;
+ScePervasiveMiscRegisters *s_misc;
+uint8_t *s_video, *s_mailbox, *s_pervasive2;
 ScePervasiveResetRegisters *s_reset;
 ScePervasiveGateRegisters *s_gate;
 uint8_t *s_uartClock, *s_baseClock;

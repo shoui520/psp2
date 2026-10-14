@@ -5,7 +5,8 @@
 #include <psp2kern/kernel/cpu.h>
 #include <sce/pervasive_regs.h>
 
-extern uint8_t *s_misc, *s_video, *s_mailbox, *s_pervasive2;
+extern ScePervasiveMiscRegisters *s_misc;
+extern uint8_t *s_video, *s_mailbox, *s_pervasive2;
 extern ScePervasiveResetRegisters *s_reset;
 extern ScePervasiveGateRegisters *s_gate;
 extern uint8_t *s_uartClock, *s_baseClock;
