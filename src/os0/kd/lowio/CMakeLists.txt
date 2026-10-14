@@ -1,10 +1,10 @@
 # SceLowio implementation; strict whole-module verification remains open.
 psp2_module(os0_kd_lowio KIND kernel SKELETON SOURCES
+	source/smc.S
 	source/lowio.c
 	source/lowio_state.c
 	source/pervasive_init.c
 	source/cdram.c
-	source/idle.S
 	source/gpio.c
 	source/pwm.c
 	source/i2c.c
@@ -20,5 +20,4 @@ psp2_module(os0_kd_lowio KIND kernel SKELETON SOURCES
 	source/pervasive_clock.c
 	source/pervasive_pixel.c
 	source/secure_controls.c
-	source/smc.S
 )
