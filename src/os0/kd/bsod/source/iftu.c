@@ -56,9 +56,9 @@ void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer)
 			buffer->address[0] = framebuffer->physical;
 			buffer->address[1] = 0;
 			buffer->address[2] = 0;
-			buffer->planeMode = 0;
-			buffer->srcX = 0;
-			buffer->srcY = 0;
+			buffer->sourceConfig[0] = 0;
+			buffer->sourceConfig[1] = 0;
+			buffer->sourceConfig[2] = 0;
 			buffer->vtopPadding = 0;
 			buffer->vbotPadding = 0;
 			buffer->hleftPadding = 0;
@@ -67,8 +67,8 @@ void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer)
 			buffer->scaleY = framebuffer->scaleY;
 			buffer->dstX = 0;
 			buffer->dstY = 0;
-			buffer->dstW = 0;
-			buffer->dstH = 0;
+			buffer->sampleX = 0;
+			buffer->sampleY = 0;
 		}
 	}
 }
