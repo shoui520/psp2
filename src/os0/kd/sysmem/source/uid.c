@@ -191,15 +191,16 @@ int UIDEntryIncLinkCountRaw(UIDEntry *entry)
 	SceUInt8 limit = entry->attr & UID_ENTRY_ATTR_LINK_LIMIT;
 	SceUInt8 linkCount = entry->linkCount;
 
-	if (limit != 0 && linkCount >= limit)
-		return 0;
-	if (linkCount >= UID_ENTRY_MAX_LCOUNT) {
-		SCE_DBG_PRINTF(0xb, 886, "Error:linkCount=0x%08x >= SCE_UID_ENTRY_MAX_LCOUNT\n",
-			       linkCount);
-		return 0;
+	if (limit != 0) {
+		if (linkCount >= limit)
+			return 0;
 	}
-	entry->linkCount = linkCount + 1;
-	return 1;
+	if (linkCount < UID_ENTRY_MAX_LCOUNT) {
+		entry->linkCount = linkCount + 1;
+		return 1;
+	}
+	SCE_DBG_PRINTF(0xb, 886, "Error:linkCount=0x%08x >= SCE_UID_ENTRY_MAX_LCOUNT\n", linkCount);
+	return 0;
 }
 
 #if !FW_DEBUG
@@ -636,7 +637,10 @@ int GUIDSet(SceUID guid, SceClass *cls, const char *name, SceObjectBase *object)
 	return ret;
 }
 
-/* a kernel address that is mapped */
+/* a kernel address that is mapped; 3.6x keeps only GCC's split tail (IsSafe.part) */
+#if !FW_SINCE(0x04000000)
+static
+#endif
 int IsSafe(const void *address)
 {
 	SceUIntPtr pa;
@@ -693,9 +697,9 @@ typedef struct UIDVectorByClass {
 	UIDEntryHeap *heap;
 	SceClass *cls;
 	SceUInt32 level;
-	SceUInt32 size;				/* of uids, in UIDs */
+	int size;				/* of uids, in UIDs */
 	SceUID *uids;
-	SceUInt32 count;
+	int count;
 	SceUInt32 total;
 } UIDVectorByClass;
 
@@ -733,7 +737,7 @@ static int UIDEntryCheckClass(void *object, SceUInt32 index, void *arg)
 	}
 	uids = vector->uids;
 	vector->total++;
-	if (uids == NULL || (SceInt32)vector->count >= (SceInt32)vector->size)
+	if (uids == NULL || vector->count >= vector->size)
 		return 0;
 	uids[vector->count] = uid;
 	vector->count++;
@@ -746,8 +750,8 @@ typedef struct UIDEntryInfoWalk {
 	SceUInt32 level;
 	SceUInt32 reserved;
 	SceKernelUIDEntryInfo *infos;
-	SceUInt32 size;				/* of infos, in infos */
-	SceUInt32 count;
+	int size;				/* of infos, in infos */
+	int count;
 	SceUInt32 total;
 } UIDEntryInfoWalk;
 
@@ -778,7 +782,7 @@ static int UIDEntryFuncForGetInfo(void *object, SceUInt32 index, void *arg)
 				return 0;
 		}
 	}
-	if ((SceInt32)walk->count < (SceInt32)walk->size && walk->infos != NULL) {
+	if (walk->count < walk->size && walk->infos != NULL) {
 		info = &walk->infos[walk->count];
 		info->size = sizeof(*info);
 		info->uid = entry->uid;

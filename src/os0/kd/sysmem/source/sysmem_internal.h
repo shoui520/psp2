@@ -774,7 +774,7 @@ typedef struct UIDFuncVector {
 	SceUInt32 level;			/* highest visibility level */
 	SceSize size;				/* 0x10: of buffer, in bytes */
 	void *buffer;
-	SceUInt32 count;			/* 0x18: written */
+	SceSize count;				/* 0x18: written */
 	SceUInt32 total;			/* matched */
 	SceUInt32 key;				/* 0x20 */
 } UIDFuncVector;

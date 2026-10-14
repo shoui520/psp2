@@ -431,7 +431,7 @@ void *sceKernelObjectHeapAlloc(ObjectHeap *heap, SceSize size)
 	ret = UIDHeapCallAlloc(fixedHeap, size, &object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 702, "UIDHeapCallAlloc failed 0x%08x\n", ret);
-		object = NULL;
+		return NULL;
 	}
 	return object;
 }
