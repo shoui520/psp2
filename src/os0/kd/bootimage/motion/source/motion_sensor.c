@@ -145,7 +145,7 @@ int motionInitializeSensor(void)
 	memset(&motionSensorTransfer, 0, sizeof(motionSensorTransfer));
 	motionSensorTransfer.sampleData = &motionSensorTransfer.response.data[1];
 	motionSensorTransfer.state.flags = 1;
-	ksceKernelDelayThread(100000);
+	sceKernelDelayThread(100000);
 	if (motionSpiInitialize(3, 200, 128, 1) < 0) {
 		motionSensorTransfer.state.flags |= 2;
 		goto failed;
@@ -160,7 +160,7 @@ int motionInitializeSensor(void)
 		motionSensorTransfer.request.size = 2;
 		motionSpiTransfer(&motionSensorTransfer.request,
 			&motionSensorTransfer.response);
-		ksceKernelDelayThread(5000);
+		sceKernelDelayThread(5000);
 		memset(&motionSensorTransfer.request, 0,
 			sizeof(motionSensorTransfer.request));
 		memset(&motionSensorTransfer.response, 0,
@@ -204,7 +204,7 @@ int motionInitializeSensor(void)
 			motionSensorTransfer.request.data[0] = 0x6b;
 			motionSpiTransfer(&motionSensorTransfer.request,
 				&motionSensorTransfer.response);
-			ksceKernelDelayThread(5000);
+			sceKernelDelayThread(5000);
 			result = motionVerifySensorRegisters();
 			if (result >= 0) {
 				motionSensorTransfer.state.flags = 0;
@@ -229,7 +229,7 @@ int motionInitializeSensor(void)
 		motionSensorTransfer.request.data[1] = 0x80;
 		motionSpiTransfer(&motionSensorTransfer.request,
 			&motionSensorTransfer.response);
-		ksceKernelDelayThread(100000);
+		sceKernelDelayThread(100000);
 	}
 failed:
 	motionSensorTransfer.state.flags &= 0xfe;
@@ -261,8 +261,8 @@ int motionResetSensorFifo(void)
 	motionSensorTransfer.request.size = 2;
 	motionSpiTransfer(&motionSensorTransfer.request,
 		&motionSensorTransfer.response);
-	ksceKernelDelayThread(5000);
-	ksceKernelDelayThread(95000);
+	sceKernelDelayThread(5000);
+	sceKernelDelayThread(95000);
 	memset(&motionSensorTransfer.request, 0,
 		sizeof(motionSensorTransfer.request));
 	memset(&motionSensorTransfer.response, 0,
@@ -321,7 +321,7 @@ int motionStopSensor(void)
 	motionSensorTransfer.request.size = 2;
 	motionSpiTransfer(&motionSensorTransfer.request,
 		&motionSensorTransfer.response);
-	ksceKernelDelayThread(5000);
+	sceKernelDelayThread(5000);
 	return 0;
 }
 
@@ -336,7 +336,7 @@ int motionSuspendSensor(void)
 	motionSensorTransfer.request.size = 2;
 	motionSpiTransfer(&motionSensorTransfer.request,
 		&motionSensorTransfer.response);
-	ksceKernelDelayThread(5000);
+	sceKernelDelayThread(5000);
 	motionSpiDeactivate();
 	return motionSpiSuspend();
 }
@@ -348,7 +348,7 @@ int motionResumeSensor(void)
 	if (result < 0)
 		return result;
 	motionSpiActivate();
-	ksceKernelDelayThread(100000);
+	sceKernelDelayThread(100000);
 	for (;;) {
 		const MotionSensorRegisterSetting *setting = motionSensorSettings;
 		uint8_t reg = 0x6a;
@@ -362,7 +362,7 @@ int motionResumeSensor(void)
 		motionSensorTransfer.request.data[1] = 1;
 		motionSpiTransfer(&motionSensorTransfer.request,
 			&motionSensorTransfer.response);
-		ksceKernelDelayThread(5000);
+		sceKernelDelayThread(5000);
 		for (;;) {
 			uint8_t value = setting->value;
 
@@ -390,7 +390,7 @@ int motionResumeSensor(void)
 		motionSensorTransfer.request.data[0] = 0x6b;
 		motionSpiTransfer(&motionSensorTransfer.request,
 			&motionSensorTransfer.response);
-		ksceKernelDelayThread(5000);
+		sceKernelDelayThread(5000);
 		result = motionVerifySensorRegisters();
 		if (result >= 0)
 			return result;
@@ -405,7 +405,7 @@ int motionResumeSensor(void)
 		motionSensorTransfer.request.data[1] = 0x80;
 		motionSpiTransfer(&motionSensorTransfer.request,
 			&motionSensorTransfer.response);
-		ksceKernelDelayThread(100000);
+		sceKernelDelayThread(100000);
 	}
 }
 
@@ -511,7 +511,7 @@ int motionReadSensorFifo(SceMotionDevData *data)
 		motionSensorTransfer.startTime = 0;
 		motionSensorTransfer.sequence += elapsed / 2000;
 	}
-	data->time = ksceKernelGetSystemTimeWide();
+	data->time = sceKernelGetSystemTimeWide();
 	samplesStart = (const MotionSensorFifoSample *)motionSensorTransfer.sampleData;
 	for (index = 0; index < count; index++) {
 		const MotionSensorFifoSample *sample = &samplesStart[consumedSamples];

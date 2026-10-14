@@ -7,8 +7,6 @@
 #include "../bbmc_netif.h"
 #include "../qmi_backend.h"
 
-void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
-void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
 int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *), void *arg);
 int bbmcTimerCancelHandler(int timerId);
@@ -54,8 +52,29 @@ static const BbmcBootVersionRequirement initialBootVersionRequirements[4] = {
 #if FW_DEBUG
 static const SceUInt8 initialOperationModes[5] = {0, 1, 3, 4, 2};
 
-SCE_DBGINFO_DEFINE(stmInitial_ComBoot, 927, "state_machine/initial.c");
-SCE_DBGINFO_DEFINE(stmInitial_ComBoot, 1259, "state_machine/initial.c");
+static const SceKernelDebugInfo dbg_stmInitial_ComBoot_L927
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "state_machine/initial.c",
+	.line = 927,
+	.func = "stmInitial_ComBoot",
+};
+
+static const SceKernelDebugInfoSource dbg_stmInitial_ComBoot_L927Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg_stmInitial_ComBoot_L927, "state_machine/initial.c", 927, "stmInitial_ComBoot",
+};
+
+static const SceKernelDebugInfo dbg_stmInitial_ComBoot_L1259
+	__attribute__((section(".sce_dbginfo"), used)) = {
+	.file = "state_machine/initial.c",
+	.line = 1259,
+	.func = "stmInitial_ComBoot",
+};
+
+static const SceKernelDebugInfoSource dbg_stmInitial_ComBoot_L1259Source
+	__attribute__((section(SCE_DBGSRC_SECTION), used)) = {
+	&dbg_stmInitial_ComBoot_L1259, "state_machine/initial.c", 1259, "stmInitial_ComBoot",
+};
 #endif
 
 static const SceKernelDebugInfo dbg__timeoutHandler_L675

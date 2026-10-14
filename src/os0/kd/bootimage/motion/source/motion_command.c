@@ -67,7 +67,7 @@ void motionCommandSamplesComplete(int result, void *arg)
 	if (data == NULL)
 		goto invalid_output;
 	memset(data, 0, sizeof(*data));
-	time = ksceKernelGetSystemTimeWide();
+	time = sceKernelGetSystemTimeWide();
 	count = motionParseResponse(&motionCommand.response, responses, 2);
 	if (count <= 0)
 		goto no_samples;
@@ -130,18 +130,18 @@ int motionCommandWorker(SceSize args, void *argp)
 			if (motionCommand.resetRequired != 0) {
 				if (ksceGpioPortRead(0, 28) != 0 &&
 					SceMotionDevForDriver_77BA3A04() == 0)
-					ksceKernelDelayThread(16000);
+					sceKernelDelayThread(16000);
 				if (SceMotionDevForDriver_77BA3A04() != 0) {
 					motionEncodeRequest(&scratch.request, NULL, 0);
 					motionSpiTransfer(&scratch.request, response);
-					ksceKernelDelayThread(2000);
+					sceKernelDelayThread(2000);
 				} else {
 					if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
-						ksceKernelDelayThread(2000);
+						sceKernelDelayThread(2000);
 						ksceSysconCtrlDeviceReset(2, 1);
 						motionCommand.resetRequired = 0;
 					}
-					ksceKernelDelayThread(80000);
+					sceKernelDelayThread(80000);
 				}
 				motionCommand.resetRequired = 0;
 				ksceGpioPortRead(0, 28);
@@ -156,7 +156,7 @@ int motionCommandWorker(SceSize args, void *argp)
 			motionWorker.arg = NULL;
 			if (completion != NULL)
 				completion(result, arg);
-			ksceKernelDelayThread(delay != 0 ? delay : 2000);
+			sceKernelDelayThread(delay != 0 ? delay : 2000);
 			continue;
 		}
 		case 2:
@@ -188,11 +188,11 @@ int motionCommandWorker(SceSize args, void *argp)
 			if (result >= 0) {
 				motionSpiActivate();
 				if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
-					ksceKernelDelayThread(2000);
+					sceKernelDelayThread(2000);
 					ksceSysconCtrlDeviceReset(2, 1);
 					motionCommand.resetRequired = 0;
 				}
-				ksceKernelDelayThread(80000);
+				sceKernelDelayThread(80000);
 				result = 0;
 			}
 			break;
@@ -694,11 +694,11 @@ int motionPowerOn(int activeLow)
 	if (result >= 0) {
 		motionSpiActivate();
 		if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
-			ksceKernelDelayThread(2000);
+			sceKernelDelayThread(2000);
 			ksceSysconCtrlDeviceReset(2, 1);
 			motionCommand.resetRequired = 0;
 		}
-		ksceKernelDelayThread(80000);
+		sceKernelDelayThread(80000);
 		return 0;
 	}
 	return result;
@@ -721,7 +721,7 @@ int motionCommandInitialize(void)
 	ksceGpioPortSet(0, 27);
 	motionSpiActivate();
 	if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
-		ksceKernelDelayThread(2000);
+		sceKernelDelayThread(2000);
 		ksceSysconCtrlDeviceReset(2, 1);
 		motionCommand.resetRequired = 0;
 	}
@@ -787,7 +787,7 @@ int motionReleaseReset(int pulse)
 		result = ksceSysconCtrlDeviceReset(2, 0);
 		if (result < 0)
 			return result;
-		ksceKernelDelayThread(2000);
+		sceKernelDelayThread(2000);
 	}
 	result = ksceSysconCtrlDeviceReset(2, 1);
 	motionCommand.resetRequired = 0;

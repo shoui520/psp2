@@ -82,8 +82,10 @@ macro(psp2_compile_settings name)
 	if(MODULE_DEPENDS)
 		set_source_files_properties(${M_SOURCES} PROPERTIES OBJECT_DEPENDS "${MODULE_DEPENDS}")
 	endif()
+	# GCC 14 and later make incompatible pointer types an error; Sony's GCC 4.8 warns
 	target_compile_options(${name} PRIVATE
-		-Wall -Wno-unused-parameter -O2 -fno-builtin -ffreestanding -fstack-protector-strong)
+		-Wall -Wno-unused-parameter -O2 -fno-builtin -ffreestanding -fstack-protector-strong
+		"$<$<COMPILE_LANGUAGE:C>:-Wno-error=incompatible-pointer-types>")
 	if(MODULE_COMPILE_OPTIONS)
 		# per module, after the defaults: flags of Sony's own build that change behaviour
 		target_compile_options(${name} PRIVATE ${MODULE_COMPILE_OPTIONS})
@@ -307,7 +309,8 @@ macro(psp2_sce_layout name)
 	# Sony's objects carry unwind tables (an .ARM.exidx entry per function)
 	target_compile_options(${name} PRIVATE
 		-Wall -Wno-unused-parameter -O2 -fno-builtin -ffreestanding -fstack-protector-strong
-		"$<$<COMPILE_LANGUAGE:C>:-funwind-tables>")
+		"$<$<COMPILE_LANGUAGE:C>:-funwind-tables>"
+		"$<$<COMPILE_LANGUAGE:C>:-Wno-error=incompatible-pointer-types>")
 	if(MODULE_COMPILE_OPTIONS)
 		target_compile_options(${name} PRIVATE ${MODULE_COMPILE_OPTIONS})
 	endif()

@@ -2058,7 +2058,7 @@ int SceMotionDevForDriver_FD1C528D(void)
 	if (state == 4) {
 		motionSetActivePolarity(1);
 		motionReleaseReset(1);
-		ksceKernelDelayThread(80000);
+		sceKernelDelayThread(80000);
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
 	return result;

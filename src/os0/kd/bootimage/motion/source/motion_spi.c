@@ -1,5 +1,6 @@
 /* The motion sensor's SPI1 mapping and transfer state. */
 #include "motion_command.h"
+#include <sce/threadmgr.h>
 #include <sce/sysmem.h>
 #include <sce/spi_regs.h>
 #include <sce/barrier.h>
@@ -120,9 +121,9 @@ int motionSpiTransfer(const MotionSensorPacket *request,
 				;
 		}
 		if (motionSpi.delay == 500)
-			ksceKernelDelayThread(1300);
+			sceKernelDelayThread(1300);
 		while (registers->transmitCount != 0)
-			ksceKernelDelayThread(motionSpi.delay);
+			sceKernelDelayThread(motionSpi.delay);
 		receiveRegisters = motionSpi.registers;
 		remaining = sent;
 		received = 0;
@@ -131,7 +132,7 @@ int motionSpiTransfer(const MotionSensorPacket *request,
 			uint8_t value;
 
 			while (receiveRegisters->receiveCount == 0) {
-				ksceKernelDelayThread(100);
+				sceKernelDelayThread(100);
 				if (remaining == 0)
 					goto received;
 			}

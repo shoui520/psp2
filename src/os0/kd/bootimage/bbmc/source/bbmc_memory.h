@@ -4,8 +4,11 @@
 #include <sce/syscon.h>
 
 typedef struct BbmcControl BbmcControl;
+struct ThreadmgrFastMutex;
 
 BbmcControl *bbmcGetControl(void);
+void bbmcEnterCS(struct ThreadmgrFastMutex *mutex);
+void bbmcLeaveCS(struct ThreadmgrFastMutex *mutex);
 int bbmcNotifyFeatureEvent(BbmcControl *control, SceUInt32 featureId,
 	SceUInt32 eventMask);
 int bbmcCollectIndexedResponseEvents(BbmcControl *control);

@@ -1,5 +1,6 @@
 /* Compass identification, factory adjustment and self-test. */
 #include <string.h>
+#include <sce/threadmgr.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/i2c.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -28,9 +29,9 @@ int motionMagnInitialize(void)
 	ksceGpioSetPortMode(0, MAGN_RESET_PORT, 0);
 	for (;;) {
 		ksceGpioPortClear(0, MAGN_RESET_PORT);
-		ksceKernelDelayThread(5);
+		sceKernelDelayThread(5);
 		ksceGpioPortSet(0, MAGN_RESET_PORT);
-		ksceKernelDelayThread(100);
+		sceKernelDelayThread(100);
 		identityRegister = 0;
 		result = ksceI2cTransferWriteRead(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			&identityRegister, 1, MAGN_I2C_ADDRESS,
@@ -53,7 +54,7 @@ int motionMagnInitialize(void)
 		command[1] = 0x1f;
 		result = ksceI2cTransferWrite(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			command, 2);
-		ksceKernelDelayThread(100);
+		sceKernelDelayThread(100);
 		if (result < 0)
 			goto configuration_error;
 		adjustmentRegister[0] = 0x60;
@@ -66,7 +67,7 @@ int motionMagnInitialize(void)
 		command[1] = 0;
 		result = ksceI2cTransferWrite(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 			command, 2);
-		ksceKernelDelayThread(100);
+		sceKernelDelayThread(100);
 		if (result >= 0)
 			break;
 	configuration_error:
@@ -79,12 +80,12 @@ int motionMagnInitialize(void)
 	command[0] = 0x31;
 	command[1] = 0;
 	ksceI2cTransferWrite(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
-	ksceKernelDelayThread(100);
+	sceKernelDelayThread(100);
 	command[0] = 0x31;
 	command[1] = 0x10;
 	ksceI2cTransferWrite(MAGN_I2C_BUS, MAGN_I2C_ADDRESS, command, 2);
-	ksceKernelDelayThread(100);
-	ksceKernelDelayThread(8000);
+	sceKernelDelayThread(100);
+	sceKernelDelayThread(8000);
 	attempts = 6;
 	do {
 		statusRegister[0] = 0x10;
@@ -156,9 +157,9 @@ int motionMagnReset(void)
 {
 	ksceGpioSetPortMode(0, MAGN_RESET_PORT, 0);
 	ksceGpioPortClear(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(5);
+	sceKernelDelayThread(5);
 	ksceGpioPortSet(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(100);
+	sceKernelDelayThread(100);
 	return 0;
 }
 
@@ -171,15 +172,15 @@ int motionMagnStartMeasurement(void)
 	command[1] = 1;
 	result = ksceI2cTransferWrite(MAGN_I2C_BUS, MAGN_I2C_ADDRESS,
 		command, 2);
-	ksceKernelDelayThread(100);
+	sceKernelDelayThread(100);
 	if (result >= 0) {
 		motionMagn.measuring = 1;
 		return result;
 	}
 	ksceGpioPortClear(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(5);
+	sceKernelDelayThread(5);
 	ksceGpioPortSet(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(100);
+	sceKernelDelayThread(100);
 	return result;
 }
 
@@ -244,9 +245,9 @@ status_error:
 	result = (int)0x80360107U;
 reset:
 	ksceGpioPortClear(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(5);
+	sceKernelDelayThread(5);
 	ksceGpioPortSet(0, MAGN_RESET_PORT);
-	ksceKernelDelayThread(100);
+	sceKernelDelayThread(100);
 	return result;
 }
 

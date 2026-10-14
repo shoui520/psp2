@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_motion KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_motion KIND kernel SOURCES
 	source/magnetometer.c
 	source/motion_command.c
 	source/motion_protocol.c
@@ -12,5 +12,4 @@ psp2_module(os0_kd_bootimage_motion KIND kernel PARTIAL SOURCES
 	source/motion_heap.c
 	../../../../common/motion/heap.c
 	../../../../common/motion/filter.c
-	source/motion.c
 )

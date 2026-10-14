@@ -35,9 +35,11 @@ typedef struct ThreadmgrLwCondInfo {
 	int numWaitThreads;
 } ThreadmgrLwCondInfo;
 
+#ifndef __cplusplus	/* C only; g++ 4.8 (C++98) has no static_assert */
 _Static_assert(sizeof(ThreadmgrLwMutexWork) == 0x20, "lw mutex work size");
 _Static_assert(sizeof(ThreadmgrLwMutexInfo) == 0x40, "lw mutex info size");
 _Static_assert(sizeof(ThreadmgrLwCondInfo) == 0x38, "lw condition info size");
+#endif
 
 int ksceKernelGetLwMutexInfo(SceUID lwMutexId, ThreadmgrLwMutexInfo *info);
 int sceKernelGetLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info);

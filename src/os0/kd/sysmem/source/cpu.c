@@ -6,7 +6,6 @@
 #include <sce/cpu_id.h>
 #include <sce/debug.h>
 #include <sce/threadcb.h>
-#include "../../../../common/sysclib/atomic.h"
 #include "cpu_irq.h"
 
 extern void *memset(void *destination, int value, size_t size);
@@ -36,62 +35,9 @@ void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)
 #endif
 }
 
-extern __typeof__(SceCpuForKernel_B331AB16) CpuRegisterLongIrqHandler
-	__attribute__((alias("SceCpuForKernel_B331AB16")));
-
 extern uint32_t SceSysrootForKernel_41636522(void);
 
 #if FW_DEBUG
-
-__attribute__((noinline))
-int CpuSpinlockLockIrqCore(volatile uint32_t *lock)
-{
-	return SpinlockLockIrq(lock, (uintptr_t)__builtin_return_address(0));
-}
-
-/* Alternate native entry supplies the caller before joining the same body. */
-__attribute__((noinline))
-int CpuSpinlockLockIrqWithCaller(volatile uint32_t *lock, uintptr_t caller)
-{
-	return SpinlockLockIrq(lock, caller);
-}
-
-__attribute__((noinline))
-int CpuSpinlockTrylockIrqCore(volatile uint32_t *lock)
-{
-	return SpinlockTrylockIrq(lock, (uintptr_t)__builtin_return_address(0));
-}
-
-/* Alternate native entry supplies the caller before joining the same body. */
-__attribute__((noinline))
-int CpuSpinlockTrylockIrqWithCaller(volatile uint32_t *lock, uintptr_t caller)
-{
-	return SpinlockTrylockIrq(lock, caller);
-}
-
-__attribute__((noinline))
-int CpuRWSpinlockReadLockIrq(volatile uint32_t *lock)
-{
-	return RWSpinlockReadLockIrq(lock);
-}
-
-__attribute__((noinline))
-int CpuRWSpinlockWriteLockIrq(volatile uint32_t *lock)
-{
-	return SpinlockLockIrq(lock, 0x80000000);
-}
-
-__attribute__((noinline))
-int CpuRWSpinlockTryWriteLockIrq(volatile uint32_t *lock)
-{
-	return SpinlockTrylockIrq(lock, 0x80000000);
-}
-
-__attribute__((noinline))
-int CpuRWSpinlockTryReadLockIrq(volatile uint32_t *lock)
-{
-	return RWSpinlockTryReadLockIrq(lock);
-}
 
 int ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(volatile uint32_t *lock)
 {
@@ -248,27 +194,11 @@ int ksceKernelCpuResumeIntr(int flags)
 	return CpuResumeIntrLow(flags);
 }
 #else
-int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return SpinlockLockIrq(lock, (uintptr_t)__builtin_return_address(0));
-}
-
-int ksceKernelSpinlockLowTrylockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return SpinlockTrylockIrq(lock, (uintptr_t)__builtin_return_address(0));
-}
-
 extern __typeof__(CpuSuspendIntrLow) ksceKernelCpuSuspendIntr
 	__attribute__((alias("CpuSuspendIntrLow")));
 extern __typeof__(CpuResumeIntrLow) ksceKernelCpuResumeIntr
 	__attribute__((alias("CpuResumeIntrLow")));
 #endif
-
-__attribute__((noinline))
-int sceKernelGetCpuId(void)
-{
-	return readMpidr() & 15;
-}
 
 #if FW_DEBUG
 int ksceKernelCpuId(void)
@@ -296,54 +226,11 @@ int ksceKernelCpuId(void)
 	}
 	return sceKernelGetCpuId();
 }
-#else
-extern __typeof__(sceKernelGetCpuId) ksceKernelCpuId
-	__attribute__((alias("sceKernelGetCpuId")));
 #endif
-
-void ksceKernelSpinlockLowLock(volatile uint32_t *lock)
-{
-	uint32_t caller = (uintptr_t)__builtin_return_address(0);
-
-	for (;;) {
-		if (AtomicLoadReserved32(lock)) {
-			wfe();
-			continue;
-		}
-		if (!AtomicStoreReserved32(lock, caller))
-			break;
-	}
-	AtomicFullBarrier();
-}
-
-int ksceKernelSpinlockLowTrylock(volatile uint32_t *lock)
-{
-	uint32_t caller = (uintptr_t)__builtin_return_address(0);
-
-	do {
-		if (AtomicLoadReserved32(lock))
-			return -1;
-	} while (AtomicStoreReserved32(lock, caller));
-	AtomicFullBarrier();
-	return 0;
-}
 
 #if FW_DEBUG
-__attribute__((noinline))
-#else
-static inline __attribute__((always_inline))
-#endif
-void CpuSpinlockUnlock(volatile uint32_t *lock)
-{
-	AtomicFullBarrier();
-	*lock = 0;
-	dsb();
-	sev();
-}
-
 void ksceKernelSpinlockLowUnlock(volatile uint32_t *lock)
 {
-#if FW_DEBUG
 	if (!*lock) {
 		void *caller = __builtin_return_address(0);
 
@@ -355,60 +242,9 @@ void ksceKernelSpinlockLowUnlock(volatile uint32_t *lock)
 			ksceKernelAssertLevel(1, 0,
 				SCE_DBGINFO_FUNC(233, "sceKernelSpinlockLowUnlock"), caller);
 	}
-#endif
 	CpuSpinlockUnlock(lock);
 }
-
-void ksceKernelRWSpinlockLowReadLock(volatile uint32_t *lock)
-{
-	for (;;) {
-		uint32_t next = AtomicLoadReserved32(lock) + 1;
-
-		if ((int32_t)next >= 0 && !AtomicStoreReserved32(lock, next))
-			break;
-		wfe();
-	}
-	AtomicFullBarrier();
-}
-
-int ksceKernelRWSpinlockLowTryWriteLock(volatile uint32_t *lock)
-{
-	do {
-		if (AtomicLoadReserved32(lock))
-			return -1;
-	} while (AtomicStoreReserved32(lock, 0x80000000U));
-	AtomicFullBarrier();
-	return 0;
-}
-
-void ksceKernelRWSpinlockLowWriteLock(volatile uint32_t *lock)
-{
-	for (;;) {
-		if (AtomicLoadReserved32(lock)) {
-			wfe();
-			continue;
-		}
-		/* Native code returns on failed STREX, and retries on success. */
-		if (AtomicStoreReserved32(lock, 0x80000000U))
-			break;
-	}
-	AtomicFullBarrier();
-}
-
-int ksceKernelRWSpinlockLowTryReadLock(volatile uint32_t *lock)
-{
-	uint32_t next;
-
-	do {
-		next = AtomicLoadReserved32(lock) + 1;
-		if ((int32_t)next < 0)
-			return -1;
-		/* Native retry tests the incremented word, not STREX status. */
-		(void)AtomicStoreReserved32(lock, next);
-	} while (next);
-	AtomicFullBarrier();
-	return 0;
-}
+#endif
 
 uint32_t SceCpuForKernel_9818A20B(uint32_t value)
 {
@@ -450,18 +286,6 @@ void ksceKernelCpuUpdateSCTLR(void)
 }
 
 #if FW_DEBUG
-extern __typeof__(CpuSpinlockUnlock) CpuRWSpinlockWriteUnlock
-	__attribute__((alias("CpuSpinlockUnlock")));
-
-__attribute__((noinline))
-void CpuSpinlockUnlockIrq(volatile uint32_t *lock, uint32_t flags)
-{
-	SpinlockUnlockIrq(lock, flags);
-}
-
-extern __typeof__(CpuSpinlockUnlockIrq) CpuRWSpinlockWriteUnlockIrq
-	__attribute__((alias("CpuSpinlockUnlockIrq")));
-
 void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
 {
 	void *caller = __builtin_return_address(0);
@@ -506,18 +330,6 @@ void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t 
 		return;
 	}
 	CpuSpinlockUnlockIrq(lock, flags);
-}
-
-__attribute__((noinline))
-void CpuRWSpinlockReadUnlockIrq(volatile uint32_t *lock, uint32_t flags)
-{
-	RWSpinlockReadUnlockIrq(lock, flags);
-}
-
-__attribute__((noinline))
-void CpuRWSpinlockReadUnlock(volatile uint32_t *lock)
-{
-	RWSpinlockReadUnlock(lock);
 }
 
 void ksceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
@@ -643,51 +455,4 @@ void ksceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock)
 	}
 	CpuRWSpinlockWriteUnlock(lock);
 }
-#else
-
-int ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return RWSpinlockReadLockIrq(lock);
-}
-
-int ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return RWSpinlockTryReadLockIrq(lock);
-}
-
-int ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return SpinlockLockIrq(lock, 0x80000000);
-}
-
-int ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr(volatile uint32_t *lock)
-{
-	return SpinlockTrylockIrq(lock, 0x80000000);
-}
-
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
-{
-	SpinlockUnlockIrq(lock, flags);
-}
-
-void ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
-{
-	SpinlockUnlockIrq(lock, flags);
-}
-
-void ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
-{
-	RWSpinlockReadUnlockIrq(lock, flags);
-}
-
-void ksceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
-{
-	RWSpinlockReadUnlock(lock);
-}
-
-void ksceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock)
-{
-	CpuSpinlockUnlock(lock);
-}
-
 #endif

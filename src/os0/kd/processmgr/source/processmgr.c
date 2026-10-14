@@ -7,6 +7,7 @@
 #include "processmgr_internal.h"
 #include "sce/modulemgr_patch.h"
 #include <sce/processmgr.h>
+#include <sce/process_info.h>
 #include <sce/sysroot_processmgr.h>
 
 /* the process private memory (PPM): per slot one 0x4000 byte area for the
@@ -4207,31 +4208,6 @@ int sceKernelIsProcessSuspending(SceUID pid)
 	ksceGUIDReleaseObject(process->pid);
 	return ret;
 }
-
-/* sceKernelGetProcessInfo's output */
-typedef struct SceKernelProcessInfo {
-	SceSize size;				/* 0xe8 */
-	SceUID pid;
-	SceUID addressSpace;
-	SceUInt32 attr;
-	SceUInt32 status;
-	SceUID parentPid;
-	SceUID budgetId;
-	SceUInt32 cpuAffinity;
-	SceUInt32 param;			/* SceProcessObject.infoParam */
-	SceUID mainModule;
-	void *entryPoint;
-	SceUInt32 type;
-	char name[0x20];
-	void *objectHeap[2];
-	SceUID entryHeap;
-	SceUID abortThread;
-	SceUInt32 abortCode;
-	SceUInt32 libraryDBFlags;
-	void *localStorage[PROCESS_LOCAL_STORAGE_MAX];
-} SceKernelProcessInfo;
-
-_Static_assert(sizeof(SceKernelProcessInfo) == 0xe8, "SceKernelProcessInfo size");
 
 int sceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info)
 {

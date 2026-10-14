@@ -75,6 +75,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	source/signed_division64.S
 	source/atomics32.c
 	source/atomics64.c
+	source/cpu_spinlock.S
 	source/atomics_small.c
 	source/atomic_counters.c
 	source/corelock.c

@@ -168,7 +168,7 @@ int sceAppMgrLoadExec(const char *path, char *const argv[], const void *optParam
 	return _sceAppMgrLoadExec(path, argv, optParam, &args);
 }
 
-int sceAppMgrGetAppInfo(const char *name, int info)
+int sceAppMgrGetAppInfo(const char *name, void *info)
 {
 	SceSyscallArgs2 args;
 

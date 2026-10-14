@@ -29,6 +29,7 @@ int motionGetGyroCalibData(SceMotionDevGyroCalibData *data);
 int motionGetAccCalibData(SceMotionDevAccCalibData *data);
 int motionGetGyroBias(SceMotionDevGyroBiasData *bias);
 int motionGetDeviceLocation(SceMotionDevDeviceLocation *location);
+uint32_t motionGetMeasMode(uint8_t *mode);
 int motionGetControllerType(int port, uint8_t *type);
 
 int sceMotionDevIsReady(void)
@@ -400,6 +401,27 @@ int sceMotionDevGetDeviceLocation(SceMotionDevDeviceLocation *location)
 	result = motionGetDeviceLocation(&buffer);
 	if (result >= 0)
 		result = ksceKernelCopyToUser(location, &buffer, sizeof(buffer));
+	sceSyscallLeave(state);
+	return result;
+}
+
+int sceMotionDevGetMeasMode(void *info)
+{
+	uint8_t buffer[8];
+	SceUInt32 state = sceSyscallEnter();
+	int result;
+
+	if (!ksceSblACMgrIsSystemProgram(0)) {
+		sceSyscallLeave(state);
+		return (int)0x80360002;
+	}
+	if (info == NULL) {
+		sceSyscallLeave(state);
+		return (int)0x80360001;
+	}
+	result = motionGetMeasMode(buffer);
+	if (result >= 0)
+		result = ksceKernelCopyToUser(info, buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
