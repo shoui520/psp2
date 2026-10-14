@@ -183,6 +183,24 @@ enum {
 #define BBP_EVENT_A		REG32(0x8000e840)
 #define BBP_EVENT_B		REG32(0x8000e844)
 #define BBP_SECONDARY_COMMAND	REG32(0x8000e804)
+/*
+ * Copy engines A and B (0x8000e800 and 0x8000e804 ...): length, source,
+ * destination and configuration words, and the control word they share with
+ * the baseband event latches above (bit 14: busy).
+ */
+#define DMA_A_LENGTH		REG32(0x8000e800)
+#define DMA_B_LENGTH		REG32(0x8000e804)
+#define DMA_A_SOURCE		REG32(0x8000e810)
+#define DMA_B_SOURCE		REG32(0x8000e814)
+#define DMA_A_DESTINATION	REG32(0x8000e820)
+#define DMA_B_DESTINATION	REG32(0x8000e824)
+#define DMA_A_CONFIG		REG32(0x8000e830)
+#define DMA_B_CONFIG		REG32(0x8000e834)
+#define DMA_A_CONTROL		BBP_EVENT_A
+#define DMA_B_CONTROL		BBP_EVENT_B
+#define DMA_CONTROL_BUSY	0x4000
+#define DMA_CONTROL_RESET	0x100000
+
 #define BBP_EVENT_A_STATUS	REG32(0x8000e8a0)
 #define BBP_EVENT_B_STATUS	REG32(0x8000e8a4)
 

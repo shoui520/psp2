@@ -26,6 +26,8 @@ extern WlanMoveFn wlanIeMoveForward;
 extern WlanMoveFn wlanIeMoveBackward;
 extern uint16_t wlanIeLimitProbe;
 extern uint16_t wlanIeLimitBeacon;
+int wlanIeInit(void);
+int wlanChannelHooksInit(void);
 
 uint8_t *wlanFindIe(WlanWirelessFrame *frame, int ieId, int frameKind,
 		    const void *match, unsigned int matchLength);

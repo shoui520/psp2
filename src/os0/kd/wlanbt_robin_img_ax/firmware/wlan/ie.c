@@ -2,6 +2,7 @@
  * 802.11 information element (TLV) helpers for management frame bodies.
  * The filename is inferred; no source filename survives.
  */
+#include "robin/dma.h"
 #include "robin/ie.h"
 #include "robin/patch.h"
 #include "robin/rom.h"
@@ -418,4 +419,34 @@ int wlanTimeDelta(unsigned int now, unsigned int last)
 	if (now < last)
 		--delta;
 	return delta;
+}
+
+/* Hooks the overlay code calls; the destinations are not converted yet. */
+int cbProcRecordBuffer(int first, int argument);		/* 0x1e12a */
+int wlanChannelValidate(void);					/* 0x117d2 */
+
+int (*wlanFrameRecordHook)(int argument) __attribute__((section(".itcm.rw")));
+int (*wlanChannelValidateHook)(void) __attribute__((section(".itcm.rw")));
+
+static int wlanFrameRecordDefault(int argument)
+{
+	return cbProcRecordBuffer(1, argument);
+}
+
+/* Installs the validation hook for a channel; returns the hook. */
+int wlanChannelHooksInit(void)
+{
+	wlanChannelValidateHook = wlanChannelValidate;
+	return (int)wlanChannelValidateHook;
+}
+
+/* IE init stage: the size limits of probe and beacon bodies, the DMA moves and the hooks. */
+int wlanIeInit(void)
+{
+	wlanIeLimitProbe = 1024;
+	wlanIeLimitBeacon = 1024;
+	wlanIeMoveForward = (WlanMoveFn)wlanDmaMoveForward;
+	wlanIeMoveBackward = (WlanMoveFn)wlanDmaMoveBackward;
+	wlanFrameRecordHook = wlanFrameRecordDefault;
+	return wlanChannelHooksInit();
 }
