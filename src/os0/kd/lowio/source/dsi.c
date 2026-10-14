@@ -800,17 +800,17 @@ int ksceDsiEnableHead(unsigned head)
 		regs->phyReset = 1;
 		regs->programReset = 0xffffffff;
 		if (ctx->output == 1)
-			count = DsiFixedProgram(program, ctx, mode);
+			count = DsiFixedProgram(program, &s_dsi[1], mode);
 		else if (mode->interlaced)
-			count = DsiInterlacedProgram(program, ctx, mode);
+			count = DsiInterlacedProgram(program, &s_dsi[1], mode);
 		else
-			count = DsiProgressiveProgram(program, ctx, mode);
+			count = DsiProgressiveProgram(program, &s_dsi[1], mode);
 	} else {
 		regs->laneEnable = 7;
 		regs->continuousClock = 0;
 		regs->phyReset = 1;
 		regs->programReset = 0xffffffff;
-		count = DsiPanelProgram(program, ctx, mode);
+		count = DsiPanelProgram(program, &s_dsi[0], mode);
 	}
 	for (i = 0; i < count; i++)
 		regs->videoProgram = program[i];
