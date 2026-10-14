@@ -65,6 +65,8 @@ PYEOF
 # relocation (lowio: movw r4, #0xb1ec for SceGpio's second context, s_gpio + 0x4c), stock
 # 4.8 splits only SYMBOL_REF into movw/movt and puts symbol + offset in a literal word
 # (measured 2026-10-14, 4.00 match.py on lowio/threadmgr/sysmem/iofilemgr: +5 exact, none lost).
+# The offset must fit the 16-bit addend a REL MOVW/MOVT relocation keeps in the instruction
+# (-0x8000..0x7fff, as later GCC's arm_valid_symbolic_address_p); larger ones stay as before.
 python3 - $D <<'PYEOF'
 import sys
 p = sys.argv[1]
@@ -76,7 +78,9 @@ new = '''   && TARGET_USE_MOVT
        || (GET_CODE (operands[1]) == CONST
 	   && GET_CODE (XEXP (operands[1], 0)) == PLUS
 	   && GET_CODE (XEXP (XEXP (operands[1], 0), 0)) == SYMBOL_REF
-	   && CONST_INT_P (XEXP (XEXP (operands[1], 0), 1))))
+	   && CONST_INT_P (XEXP (XEXP (operands[1], 0), 1))
+	   && IN_RANGE (INTVAL (XEXP (XEXP (operands[1], 0), 1)),
+			-0x8000, 0x7fff)))
    && !flag_pic && !target_word_relocations'''
 assert s.count(old) == 1
 s = s.replace(old, new)
