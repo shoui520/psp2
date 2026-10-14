@@ -305,7 +305,7 @@ PhyPage *PhyPageTableMgrGetPhyPage(PhyPageTableMgr *mgr, SceUInt32 pindex)
 }
 
 /* the descriptor of pindex in whichever segment holds it */
-static inline PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemPart *part, SceUInt32 pindex)
+static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemPart *part, SceUInt32 pindex)
 {
 	PhyMemSegment *segment;
 
@@ -1319,7 +1319,7 @@ int PhyMemPartInitWithSegmentRaw(PhyMemPart *part, PhyPageTableMgr *mgr, uintptr
 }
 
 /* whether a segment of the partition holds pindex */
-static inline int PhyMemPartHasIndex(PhyMemPart *part, SceUInt32 pindex)
+static inline __attribute__((always_inline)) int PhyMemPartHasIndex(PhyMemPart *part, SceUInt32 pindex)
 {
 	PhyMemSegment *segment;
 
@@ -1581,7 +1581,7 @@ static inline SceUInt32 PhyPageLinkTo(SceUInt32 info, SceUInt32 next)
 }
 
 /* the head of a buddy list, or the list empty */
-static inline void PhyMemPartBuddySetHead(PhyMemPart *part, SceUInt32 order, SceUInt32 pindex)
+static inline __attribute__((always_inline)) void PhyMemPartBuddySetHead(PhyMemPart *part, SceUInt32 order, SceUInt32 pindex)
 {
 	if (pindex == 0xffffffff) {
 		part->buddy[order].state = PHYMEM_BUDDY_EMPTY;
