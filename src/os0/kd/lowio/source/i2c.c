@@ -419,20 +419,22 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 
 	(void)args;
 	(void)opt;
-	if (resume == 1 && event == 0x10002) {
-		for (bus = 0; bus < 2; bus++) {
-			ScePervasiveForDriver_86BEA9A4(bus);
-			ScePervasiveForDriver_C37CFDFC(bus);
-			ksceI2cInit(bus);
-			I2cHardwareTiming(&s_i2c[bus]);
-			s_i2c[bus].base->interruptEnable = 0x01000000;
-			ksceKernelEnableIntr(s_i2c[bus].intrCode);
+	if (resume) {
+		if (resume == 1 && event == 0x10002) {
+			for (bus = 0; bus < 2; bus++) {
+				ScePervasiveForDriver_86BEA9A4(bus);
+				ScePervasiveForDriver_C37CFDFC(bus);
+				ksceI2cInit(bus);
+				I2cHardwareTiming(&s_i2c[bus]);
+				s_i2c[bus].base->interruptEnable = 0x01000000;
+				ksceKernelEnableIntr(s_i2c[bus].intrCode);
+			}
+			ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 		}
-		ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
-	} else if (resume == 0 && event == 0x402) {
+	} else if (event == 0x402) {
 		if (s_i2c[0].busy || s_i2c[1].busy)
 			return (int)0x803f0340;
-	} else if (resume == 0 && event == 0x4002) {
+	} else if (event == 0x4002) {
 		ScePervasiveForDriver_3F3E1AEA(0);
 		ScePervasiveForDriver_3F3E1AEA(1);
 	}
