@@ -12,7 +12,6 @@ psp2_module(os0_kd_lowio KIND kernel SKELETON SOURCES
 	source/gpio.c
 	source/pwm.c
 	source/i2c.c
-	source/i2c_wait.S
 	source/csi.c
 	source/dsi.c
 	source/iftu.c

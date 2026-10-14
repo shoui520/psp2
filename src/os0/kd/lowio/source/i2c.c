@@ -14,16 +14,15 @@
 #define I2C_ERROR_ADDRESS ((int)0x803f0303)
 #define I2C_STATUS_MASK 0xfb0fU
 
-/* The end-hook third word preserves Sony's observable r2 scratch state. */
 typedef struct I2cDebugHandlers {
 	uint32_t size;
 	void (*writeStart)(unsigned, unsigned, const uint8_t *, unsigned);
-	void (*writeEnd)(unsigned, int, uint32_t);
+	void (*writeEnd)(unsigned, int);
 	void (*readStart)(unsigned, unsigned, uint8_t *, unsigned);
-	void (*readEnd)(unsigned, int, uint32_t);
+	void (*readEnd)(unsigned, int);
 	void (*writeReadStart)(unsigned, unsigned, const uint8_t *, unsigned,
 		unsigned, uint8_t *, unsigned);
-	void (*writeReadEnd)(unsigned, int, uint32_t);
+	void (*writeReadEnd)(unsigned, int);
 } I2cDebugHandlers;
 
 typedef struct I2cContext {
@@ -65,21 +64,21 @@ int SceI2cForDriver_E449AC6E(unsigned bus, uint32_t noLock)
 
 int ksceI2cInit(unsigned bus)
 {
-	I2cContext *ctx;
+	SceI2cRegisters *base;
 
 	if (bus >= 2)
 		return I2C_ERROR_BUS;
-	ctx = &s_i2c[bus];
-	ctx->base->interruptEnable = 0x0100f70f;
-	ctx->base->writeFifoReset = 1;
-	ctx->base->readFifoReset = 1;
-	ctx->base->flags = 7;
+	base = s_i2c[bus].base;
+	base->interruptEnable = 0x0100f70f;
+	base->writeFifoReset = 1;
+	base->readFifoReset = 1;
+	base->flags = 7;
 	LowioDsb();
-	while (ctx->base->busy != 0)
+	while (base->busy != 0)
 		;
-	ctx->base->interruptStatus = ctx->base->interruptStatus;
-	ctx->base->interruptEnable = 0x01000000;
-	ksceKernelClearEventFlag(ctx->event, 0xffff04f0);
+	base->interruptStatus = base->interruptStatus;
+	base->interruptEnable = 0x01000000;
+	ksceKernelClearEventFlag(s_i2c[bus].event, 0xffff04f0);
 	return 0;
 }
 
@@ -130,74 +129,10 @@ static void I2cEnd(I2cContext *ctx)
 		ctx->busy = 0;
 }
 
-uint64_t I2cWaitWithScratch(SceUID event, uint32_t *status);
-
-static int I2cWait(I2cContext *ctx, uint32_t *status, uint32_t *scratch)
+static int I2cWait(I2cContext *ctx, uint32_t *status)
 {
-	uint64_t result = I2cWaitWithScratch(ctx->event, status);
-
-	*scratch = result >> 32;
-	return (int)result;
-}
-
-/* Reproduce the discarded register operations exposed by the end hooks.
- * Write/read share a classifier; write-read has distinct intermediate shifts.
- */
-static uint32_t I2cErrorScratch(uint32_t status, unsigned shift)
-{
-	unsigned bit;
-
-	for (bit = 0; bit < 8; bit++) {
-		if (status & (0x100U << bit))
-			return bit;
-	}
-	return status << shift;
-}
-
-static uint32_t I2cTransferScratch(uint32_t first, uint32_t stop)
-{
-	if ((first & I2C_STATUS_MASK) != 1) {
-		if (first & 2)
-			return 2;
-		return I2cErrorScratch(first, 17);
-	}
-	if ((stop & I2C_STATUS_MASK) == 4 || (stop & 2))
-		return 1;
-	return I2cErrorScratch(stop, 17);
-}
-
-static uint32_t I2cWriteReadScratch(uint32_t first, uint32_t restart,
-	uint32_t read, uint32_t stop)
-{
-	unsigned bit;
-
-	if ((first & I2C_STATUS_MASK) != 1) {
-		if (first & 2)
-			return 2;
-		return I2cErrorScratch(first, 18);
-	}
-	if ((restart & I2C_STATUS_MASK) != 8) {
-		if (restart & 2)
-			return 1;
-		return I2cErrorScratch(restart, 18);
-	}
-	if ((read & I2C_STATUS_MASK) != 1) {
-		if (read & 2)
-			return 1;
-		return I2cErrorScratch(read, 17);
-	}
-	if ((stop & I2C_STATUS_MASK) == 4)
-		return 4;
-	if (stop & 2)
-		return 2;
-	for (bit = 0; bit < 8; bit++) {
-		if (!(stop & (0x100U << bit)))
-			continue;
-		if (bit < 2)
-			return 0;
-		return stop << (bit < 6 ? 21 : 17);
-	}
-	return stop << 17;
+	return ksceKernelWaitEventFlag(ctx->event, I2C_STATUS_MASK,
+		SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, status, NULL);
 }
 
 static int I2cError(uint32_t status, int nack)
@@ -224,7 +159,8 @@ int ksceI2cTransferWrite(unsigned bus, unsigned address,
 	const uint8_t *buffer, unsigned size)
 {
 	I2cContext *ctx;
-	uint32_t first = 0, stop = 0, scratch = 0;
+	SceI2cRegisters *base;
+	uint32_t status[2];
 	unsigned i;
 	int ret;
 
@@ -235,9 +171,12 @@ int ksceI2cTransferWrite(unsigned bus, unsigned address,
 	if (size > 64)
 		return I2C_ERROR_SIZE;
 	ctx = &s_i2c[bus];
+	base = ctx->base;
 	ret = I2cBegin(bus, address);
 	if (ret < 0)
 		return ret;
+	status[0] = 0;
+	status[1] = 0;
 	ctx->txBuffer = buffer;
 	ctx->txCount = size;
 	ctx->rxBuffer = NULL;
@@ -245,24 +184,23 @@ int ksceI2cTransferWrite(unsigned bus, unsigned address,
 	ctx->rxRemaining = 0;
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->writeStart(bus, address, buffer, size);
-	ctx->base->writeFifoReset = 1;
-	ctx->base->readFifoReset = 1;
-	ctx->base->deviceAddress = address >> 1;
+	base->writeFifoReset = 1;
+	base->readFifoReset = 1;
+	base->deviceAddress = address >> 1;
 	for (i = 0; i < size; i++)
-		ctx->base->writeFifo = buffer[i];
-	ctx->base->flags = size << 8 | 2;
-	ret = I2cWait(ctx, &first, &scratch);
+		base->writeFifo = buffer[i];
+	base->flags = size << 8 | 2;
+	ret = I2cWait(ctx, &status[0]);
 	if (ret >= 0) {
-		ctx->base->flags = 4;
-		ret = I2cWait(ctx, &stop, &scratch);
+		base->flags = 4;
+		ret = I2cWait(ctx, &status[1]);
 		if (ret >= 0) {
-			ret = (first & I2C_STATUS_MASK) == 1 ?
-				I2cStopError(stop) : I2cError(first, 0x803f0341);
-			scratch = I2cTransferScratch(first, stop);
+			ret = (status[0] & I2C_STATUS_MASK) == 1 ?
+				I2cStopError(status[1]) : I2cError(status[0], 0x803f0341);
 		}
 	}
 	if (ctx->debugHandlers)
-		ctx->debugHandlers->writeEnd(bus, ret, scratch);
+		ctx->debugHandlers->writeEnd(bus, ret);
 	I2cEnd(ctx);
 	return ret;
 }
@@ -271,7 +209,8 @@ int ksceI2cTransferRead(unsigned bus, unsigned address,
 	uint8_t *buffer, unsigned size)
 {
 	I2cContext *ctx;
-	uint32_t first = 0, stop = 0, scratch = 0;
+	SceI2cRegisters *base;
+	uint32_t status[2];
 	unsigned i;
 	int ret;
 
@@ -282,9 +221,12 @@ int ksceI2cTransferRead(unsigned bus, unsigned address,
 	if (size - 1 >= 64)
 		return I2C_ERROR_SIZE;
 	ctx = &s_i2c[bus];
+	base = ctx->base;
 	ret = I2cBegin(bus, address);
 	if (ret < 0)
 		return ret;
+	status[0] = 0;
+	status[1] = 0;
 	ctx->txBuffer = NULL;
 	ctx->txCount = 0;
 	ctx->rxBuffer = buffer;
@@ -292,24 +234,23 @@ int ksceI2cTransferRead(unsigned bus, unsigned address,
 	ctx->rxRemaining = size;
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->readStart(bus, address, buffer, size);
-	ctx->base->writeFifoReset = 1;
-	ctx->base->readFifoReset = 1;
-	ctx->base->deviceAddress = address >> 1;
-	ctx->base->flags = size << 8 | 0x13;
-	ret = I2cWait(ctx, &first, &scratch);
+	base->writeFifoReset = 1;
+	base->readFifoReset = 1;
+	base->deviceAddress = address >> 1;
+	base->flags = size << 8 | 0x13;
+	ret = I2cWait(ctx, &status[0]);
 	if (ret >= 0) {
 		for (i = 0; i < size; i++)
-			buffer[i] = ctx->base->readFifo;
-		ctx->base->flags = 4;
-		ret = I2cWait(ctx, &stop, &scratch);
+			buffer[i] = base->readFifo;
+		base->flags = 4;
+		ret = I2cWait(ctx, &status[1]);
 		if (ret >= 0) {
-			ret = (first & I2C_STATUS_MASK) == 1 ?
-				I2cStopError(stop) : I2cError(first, 0x803f0342);
-			scratch = I2cTransferScratch(first, stop);
+			ret = (status[0] & I2C_STATUS_MASK) == 1 ?
+				I2cStopError(status[1]) : I2cError(status[0], 0x803f0342);
 		}
 	}
 	if (ctx->debugHandlers)
-		ctx->debugHandlers->readEnd(bus, ret, scratch);
+		ctx->debugHandlers->readEnd(bus, ret);
 	I2cEnd(ctx);
 	return ret;
 }
@@ -319,7 +260,8 @@ int ksceI2cTransferWriteRead(unsigned bus, unsigned writeAddress,
 	uint8_t *readBuffer, unsigned readSize)
 {
 	I2cContext *ctx;
-	uint32_t first = 0, restart = 0, read = 0, stop = 0, scratch = 0;
+	SceI2cRegisters *base;
+	uint32_t status[4];
 	unsigned i;
 	int ret;
 
@@ -334,9 +276,14 @@ int ksceI2cTransferWriteRead(unsigned bus, unsigned writeAddress,
 	if (readSize - 1 >= 64)
 		return I2C_ERROR_SIZE;
 	ctx = &s_i2c[bus];
+	base = ctx->base;
 	ret = I2cBegin(bus, writeAddress);
 	if (ret < 0)
 		return ret;
+	status[0] = 0;
+	status[1] = 0;
+	status[2] = 0;
+	status[3] = 0;
 	ctx->txBuffer = writeBuffer;
 	ctx->txCount = writeSize;
 	ctx->rxBuffer = readBuffer;
@@ -345,47 +292,46 @@ int ksceI2cTransferWriteRead(unsigned bus, unsigned writeAddress,
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->writeReadStart(bus, writeAddress, writeBuffer,
 			writeSize, readAddress, readBuffer, readSize);
-	ctx->base->writeFifoReset = 1;
-	ctx->base->readFifoReset = 1;
-	ctx->base->deviceAddress = writeAddress >> 1;
+	base->writeFifoReset = 1;
+	base->readFifoReset = 1;
+	base->deviceAddress = writeAddress >> 1;
 	for (i = 0; i < writeSize; i++)
-		ctx->base->writeFifo = writeBuffer[i];
-	ctx->base->flags = writeSize << 8 | 2;
-	ret = I2cWait(ctx, &first, &scratch);
+		base->writeFifo = writeBuffer[i];
+	base->flags = writeSize << 8 | 2;
+	ret = I2cWait(ctx, &status[0]);
 	if (ret < 0)
 		goto out;
-	if ((first & I2C_STATUS_MASK) == 1) {
-		ctx->base->flags = 5;
-		ret = I2cWait(ctx, &restart, &scratch);
+	if ((status[0] & I2C_STATUS_MASK) == 1) {
+		base->flags = 5;
+		ret = I2cWait(ctx, &status[1]);
 		if (ret < 0)
 			goto out;
-		if ((restart & I2C_STATUS_MASK) == 8) {
-			ctx->base->flags = readSize << 8 | 0x13;
-			ret = I2cWait(ctx, &read, &scratch);
+		if ((status[1] & I2C_STATUS_MASK) == 8) {
+			base->flags = readSize << 8 | 0x13;
+			ret = I2cWait(ctx, &status[2]);
 			if (ret < 0)
 				goto out;
-			if ((read & I2C_STATUS_MASK) == 1) {
+			if ((status[2] & I2C_STATUS_MASK) == 1) {
 				for (i = 0; i < readSize; i++)
-					readBuffer[i] = ctx->base->readFifo;
+					readBuffer[i] = base->readFifo;
 			}
 		}
 	}
-	ctx->base->flags = 4;
-	ret = I2cWait(ctx, &stop, &scratch);
+	base->flags = 4;
+	ret = I2cWait(ctx, &status[3]);
 	if (ret >= 0) {
-		if ((first & I2C_STATUS_MASK) != 1)
-			ret = I2cError(first, 0x803f0341);
-		else if ((restart & I2C_STATUS_MASK) != 8)
-			ret = I2cError(restart, 0x803f0343);
-		else if ((read & I2C_STATUS_MASK) != 1)
-			ret = I2cError(read, 0x803f0342);
+		if ((status[0] & I2C_STATUS_MASK) != 1)
+			ret = I2cError(status[0], 0x803f0341);
+		else if ((status[1] & I2C_STATUS_MASK) != 8)
+			ret = I2cError(status[1], 0x803f0343);
+		else if ((status[2] & I2C_STATUS_MASK) != 1)
+			ret = I2cError(status[2], 0x803f0342);
 		else
-			ret = I2cStopError(stop);
-		scratch = I2cWriteReadScratch(first, restart, read, stop);
+			ret = I2cStopError(status[3]);
 	}
 out:
 	if (ctx->debugHandlers)
-		ctx->debugHandlers->writeReadEnd(bus, ret, scratch);
+		ctx->debugHandlers->writeReadEnd(bus, ret);
 	I2cEnd(ctx);
 	return ret;
 }
@@ -409,8 +355,13 @@ static int I2cIntrHandler(int intrCode, void *arg)
 
 static void I2cHardwareTiming(I2cContext *ctx)
 {
-	ctx->base->speed =
-		(ksceSysrootGetHardwareInfo() & 0xff0000) < 0x800000 ? 5 : 4;
+	unsigned speed;
+
+	if ((ksceSysrootGetHardwareInfo() & 0xff0000) > 0x7fffff)
+		speed = 4;
+	else
+		speed = 5;
+	ctx->base->speed = speed;
 }
 
 static int I2cSysEvent(int resume, int event, void *args, void *opt)
@@ -444,8 +395,6 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 /* name unknown */
 static __attribute__((noinline)) int I2cInit(void)
 {
-	static const char *const names[2] = { "SceI2c0", "SceI2c1" };
-	static const char *const regNames[2] = { "SceI2c0Reg", "SceI2c1Reg" };
 	SceKernelAllocMemBlockKernelOpt opt;
 	I2cContext *ctx;
 	void *base;
@@ -457,24 +406,31 @@ static __attribute__((noinline)) int I2cInit(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = 0x58;
 		opt.attr = 2;
-		opt.paddr = 0xe0500000 + bus * 0x10000;
-		ret = ksceKernelAllocMemBlock(regNames[bus], 0x20100806,
-			0x1000, &opt);
+		if (bus) {
+			opt.paddr = 0xe0510000;
+			ret = ksceKernelAllocMemBlock("SceI2c1Reg", 0x20100806,
+				0x1000, &opt);
+		} else {
+			opt.paddr = 0xe0500000;
+			ret = ksceKernelAllocMemBlock("SceI2c0Reg", 0x20100806,
+				0x1000, &opt);
+		}
 		if (ret < 0)
 			return ret;
 		s_i2c[bus].uid = ret;
 		ksceKernelGetMemBlockBase(ret, &base);
 		s_i2c[bus].base = base;
 	}
-	for (bus = 0; bus < 2; bus++)
-		s_i2c[bus].mutex = ksceKernelCreateMutex(names[bus], 0, 0, NULL);
-	for (bus = 0; bus < 2; bus++)
-		s_i2c[bus].event = ksceKernelCreateEventFlag(names[bus], 0, 0, NULL);
-	for (bus = 0; bus < 2; bus++) {
-		s_i2c[bus].intrCode = 0x8e + bus;
-		ksceKernelRegisterIntrHandler(s_i2c[bus].intrCode, names[bus],
-			0, I2cIntrHandler, &s_i2c[bus], 0xa0, 0xf, NULL);
-	}
+	s_i2c[0].mutex = ksceKernelCreateMutex("SceI2c0", 0, 0, NULL);
+	s_i2c[1].mutex = ksceKernelCreateMutex("SceI2c1", 0, 0, NULL);
+	s_i2c[0].event = ksceKernelCreateEventFlag("SceI2c0", 0, 0, NULL);
+	s_i2c[1].event = ksceKernelCreateEventFlag("SceI2c1", 0, 0, NULL);
+	s_i2c[0].intrCode = 0x8e;
+	s_i2c[1].intrCode = 0x8f;
+	ksceKernelRegisterIntrHandler(0x8e, "SceI2c0", 0, I2cIntrHandler,
+		&s_i2c[0], 0xa0, 0xf, NULL);
+	ksceKernelRegisterIntrHandler(0x8f, "SceI2c1", 0, I2cIntrHandler,
+		&s_i2c[1], 0xa0, 0xf, NULL);
 	ksceKernelEnableIntr(0x8e);
 	ksceKernelEnableIntr(0x8f);
 	for (bus = 0; bus < 2; bus++) {
