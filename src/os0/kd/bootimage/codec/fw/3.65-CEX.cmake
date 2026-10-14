@@ -1,0 +1,54 @@
+# 3.65-CEX: os0:kd/bootimage/codec (generated)
+set(MODULE_NID 0x81D228FE)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x7697DFB4 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x7290B21C:1:0x0
+	0xFD00C69A:1:0x0
+	0xE692C727:1:0x0
+	0xE14BEF6E:1:0x0
+	0xFF160234:1:0x0
+	0x60A35F64:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xDB395782
+	0x7290B21C:F:0x04C05D10
+	0xFD00C69A:F:0x71608CA3
+	0xFD00C69A:F:0xC6E83F34
+	0xE692C727:F:0x925D9D24
+	0xE14BEF6E:F:0x0A40B7BF
+	0xE14BEF6E:F:0xCA94A759
+	0xFF160234:F:0x5130682D
+	0x60A35F64:F:0x965C68C3
+	0x60A35F64:F:0xCBD6D8BC
+)
+set(MODULE_IMPORT_FUNCS
+	memset
+	__stack_chk_fail
+	sceKernelDelayThread
+	ksceKernelLockFastMutex
+	ksceKernelInitializeFastMutex
+	ksceKernelUnlockFastMutex
+	ksceKernelRegisterSysEventHandler
+	ksceSblAimgrIsDolce
+	ksceSblAimgrIsGenuineDolce
+	ScePervasiveForDriver_925D9D24
+	ksceI2cTransferWriteRead
+	ksceI2cTransferWrite
+	SceClockgenForDriver_5130682D
+	ksceSysconGetHardwareInfo2
+	ksceSysconGetHardwareInfo
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

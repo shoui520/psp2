@@ -1,0 +1,34 @@
+SceTriggerUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceTriggerUtil:
+      syscall: false
+      version: 1
+      nid: 0x1B0302AD
+      functions:
+        - sceTriggerUtilRegisterOneTimeEvent: 0x04218D35
+        - sceTriggerUtilGetUserAppInfo: 0x0ACE6552
+        - SceTriggerUtil_1B615264: 0x1B615264
+        - SceTriggerUtil_257BA954: 0x257BA954
+        - SceTriggerUtil_28EF51DA: 0x28EF51DA
+        - sceTriggerUtilGetRegisteredSystemTitleIdList: 0x2A67EF8C
+        - SceTriggerUtil_2AD6A378: 0x2AD6A378
+        - SceTriggerUtil_2C43AC0C: 0x2C43AC0C
+        - sceTriggerUtilUnregisterDailyEvent: 0x58BF700F
+        - SceTriggerUtil_845BF533: 0x845BF533
+        - sceTriggerUtilGetOneTimeEventInfo: 0x912434E0
+        - SceTriggerUtil_921FF8E1: 0x921FF8E1
+        - sceTriggerUtilRegisterDailyEvent: 0xA69102DE
+        - sceTriggerUtilUnregisterOneTimeEvent: 0xAF73E0A8
+        - sceTriggerUtilGetSystemAppInfo: 0xD659CCB0
+        - SceTriggerUtil_DA93949A: 0xDA93949A
+        - sceTriggerUtilGetAutoStartStatus: 0xDD2CA8BB
+        - sceTriggerUtilGetDailyEventInfo: 0xDF3ED08E
+        - sceTriggerUtilGetRegisteredUserTitleIdList: 0xE2B2D2D0

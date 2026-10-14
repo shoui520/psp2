@@ -1,0 +1,130 @@
+SceLibHttp:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceHttp:
+      syscall: false
+      version: 1
+      nid: 0xE8F15CDE
+      functions:
+        - sceHttpsDisableOptionPrivate: 0x00659635
+        - SceHttp_031EBD2A: 0x031EBD2A
+        - sceHttpParseResponseHeader: 0x03A6C89E
+        - sceHttpDestroyEpoll: 0x07D9F8BB
+        - SceHttp_0B0D8E7A: 0x0B0D8E7A
+        - SceHttp_0CC59EF6: 0x0CC59EF6
+        - sceHttpCookieFlush: 0x0DACA8D4
+        - sceHttpSetEpoll: 0x0F1FD1B3
+        - sceHttpSetCookieSendCallback: 0x11C03867
+        - SceHttp_11C9BCE8: 0x11C9BCE8
+        - sceHttpSetAuthEnabled: 0x11EC42D0
+        - sceHttpGetAllResponseHeaders: 0x11F6C27F
+        - sceHttpUriUnescape: 0x1274D318
+        - SceHttp_175685B8: 0x175685B8
+        - sceHttpParseStatusLine: 0x179C56DB
+        - sceHttpCreateRequestWithURL2: 0x1B6B7983
+        - sceHttpGetCookieEnabled: 0x1B6EF66E
+        - sceHttpUriParse: 0x1D45F24E
+        - sceHttpUriEscape: 0x1DA2A673
+        - sceHttpsEnableOption2: 0x1E93E8EF
+        - sceHttpSetDefaultAcceptEncodingGZIPEnabled: 0x1EA3BB9C
+        - sceHttpInit: 0x214926D9
+        - sceHttpSetConnectTimeOut: 0x237CA86E
+        - sceHttpSetIcmOption: 0x23978CBC
+        - sceHttpGetStatusCode: 0x27071691
+        - sceHttpSetNonblock: 0x27A98BDA
+        - sceHttpsGetSslError: 0x2B79BDE0
+        - sceHttpSslIsCtxCreated: 0x2D3F1281
+        - sceHttpsDisableOption2: 0x2E77B201
+        - SceHttp_30F5D11F: 0x30F5D11F
+        - sceHttpAddRequestHeaderRaw: 0x31C00FBA
+        - sceHttpSetAutoRedirect: 0x34891C3F
+        - sceHttpSetRequestContentLength: 0x37C30C90
+        - sceHttpDeleteRequest: 0x3D3D29AD
+        - sceHttpAbortRequestForce: 0x3D44A6E5
+        - SceHttp_42108FBE: 0x42108FBE
+        - sceHttpCookieExport: 0x4259FB9E
+        - sceHttpAbortWaitRequest: 0x42E7DFF1
+        - SceHttp_43A7CC70: 0x43A7CC70
+        - sceHttpUriBuild: 0x47664424
+        - sceHttpWaitRequestCB: 0x48650A83
+        - sceHttpSetRedirectCallback: 0x4E08167D
+        - sceHttpUriSweepPath: 0x50737A3F
+        - sceHttpSetInflateGZIPEnabled: 0x5104B13D
+        - SceHttp_53B722F2: 0x53B722F2
+        - SceHttp_54847CFE: 0x54847CFE
+        - sceHttpsFreeCaList: 0x56C95D94
+        - SceHttp_5B6A0ACE: 0x5B6A0ACE
+        - sceHttpSetCookieTotalMaxSize: 0x5C4080BC
+        - sceHttpSetEpollId: 0x5CEB6554
+        - sceHttpSetCookieMaxNum: 0x5DAA4DEF
+        - sceHttpRemoveRequestHeader: 0x5EB5F548
+        - sceHttpGetIcmOption: 0x61A4ADDE
+        - sceHttpCreateTemplate: 0x62241DAB
+        - sceHttpSetCookieMaxNumPerDomain: 0x635F961F
+        - sceHttpGetEpoll: 0x65FE983F
+        - sceHttpGetAuthEnabled: 0x6727874C
+        - sceHttpGetAutoRedirect: 0x6EAD73EB
+        - sceHttpGetCookie: 0x70220BFA
+        - sceHttpSetAcceptEncodingGZIPEnabled: 0x7295C704
+        - sceHttpsEnableOptionPrivate: 0x72CB0741
+        - sceHttpUriMerge: 0x75027D1D
+        - sceHttpAddRequestHeader: 0x7B51B122
+        - sceHttpCreateEpoll: 0x7C99AF67
+        - sceHttpReadData: 0x7EDE3979
+        - SceHttp_802E3C30: 0x802E3C30
+        - SceHttp_80E6013D: 0x80E6013D
+        - sceHttpSetResolveTimeOut: 0x8455B5B3
+        - SceHttp_855D5254: 0x855D5254
+        - sceHttpsUnloadCert: 0x8577833F
+        - sceHttpCreateRequest2: 0x857D9242
+        - SceHttp_88116DB8: 0x88116DB8
+        - sceHttpSetSendTimeOut: 0x8AE3F008
+        - sceHttpRedirectCacheFlush: 0x8BAB3971
+        - sceHttpGetCookieStats: 0x8EF6AF55
+        - sceHttpSetRecvTimeOut: 0x94BF196E
+        - sceHttpWaitRequest: 0x94F7256A
+        - sceHttpGetLastErrno: 0x9A68C3DE
+        - sceHttpSetResolveRetry: 0x9AB56EA7
+        - sceHttpSendRequest: 0x9CA58B99
+        - sceHttpCookieImport: 0x9DF48282
+        - sceHttpGetEpollId: 0x9E031D7C
+        - sceHttpsEnableOption: 0x9FBE2869
+        - sceHttpsSetSslCallback: 0xA0926037
+        - SceHttp_A4CF892E: 0xA4CF892E
+        - SceHttp_A9A39BA1: 0xA9A39BA1
+        - sceHttpsLoadCert: 0xAE8D7C33
+        - sceHttpCreateConnection: 0xAEB3307E
+        - sceHttpSetCookieEnabled: 0xAEE573A3
+        - sceHttpAuthCacheFlush: 0xAF03924C
+        - sceHttpCreateRequest: 0xB0284270
+        - SceHttp_B0E41827: 0xB0E41827
+        - sceHttpRequestGetAllHeaders: 0xBAA34D18
+        - sceHttpGetAcceptEncodingGZIPEnabled: 0xBBFA3C2A
+        - sceHttpCreateRequestWithURL: 0xBD5DA1D0
+        - sceHttpAddCookie: 0xBEDB988D
+        - SceHttp_C498765A: 0xC498765A
+        - sceHttpCreateConnectionWithURL: 0xC616C200
+        - sceHttpsDisableOption: 0xC6D60403
+        - sceHttpTerm: 0xC9076666
+        - sceHttpUnsetEpoll: 0xCFB1DA4B
+        - sceHttpSetCookieRecvCallback: 0xD4F32A23
+        - sceHttpGetNonblock: 0xD65746BC
+        - SceHttp_E0825488: 0xE0825488
+        - sceHttpSetAuthInfoCallback: 0xE0A3A88D
+        - sceHttpSetCookieMaxSize: 0xE9C083A5
+        - sceHttpAbortRequest: 0xEA61662F
+        - sceHttpDeleteTemplate: 0xEC85ECFB
+        - sceHttpDeleteConnection: 0xF0F65C15
+        - SceHttp_F30073EC: 0xF30073EC
+        - sceHttpGetResponseContentLength: 0xF580D304
+        - sceHttpsGetCaList: 0xF71AA58D
+        - SceHttp_F8885CFD: 0xF8885CFD
+        - sceHttpGetMemoryPoolStats: 0xF98CDFA9
+        - sceHttpSetResponseHeaderMaxSize: 0xFD76E1FB
+        - SceHttp_FE60380A: 0xFE60380A

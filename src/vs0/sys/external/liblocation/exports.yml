@@ -1,0 +1,46 @@
+SceLibLocation:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    stop: module_stop
+  libraries:
+    SceLibLocation:
+      syscall: false
+      version: 1
+      nid: 0x924D86D7
+      functions:
+        - SceLibLocation_0341758B: 0x0341758B
+        - sceLocationStartHeadingCallback: 0x07D4DFE0
+        - sceLocationInit: 0x09C4F674
+        - SceLibLocation_0C0BB66A: 0x0C0BB66A
+        - sceLocationStartLocationCallback: 0x12D1F0EA
+        - sceLocationClose: 0x14FE76E8
+        - sceLocationGetLocation: 0x15BC27C8
+        - sceLocationGetLocationWithTimeout: 0x16F41ED0
+        - sceLocationGetMethod: 0x188CE004
+        - sceLocationTerm: 0x1E80199A
+        - SceLibLocation_2311B24A: 0x2311B24A
+        - SceLibLocation_41C1E68F: 0x41C1E68F
+        - sceLocationGetPermission: 0x482622C6
+        - SceLibLocation_4C8B6F21: 0x4C8B6F21
+        - sceLocationGetHeading: 0x4E9E5ED9
+        - SceLibLocation_5C7185D2: 0x5C7185D2
+        - sceLocationCancelGetLocation: 0x71503251
+        - sceLocationConfirmGetStatus: 0x730FF842
+        - SceLibLocation_7F74AA94: 0x7F74AA94
+        - SceLibLocation_822BBF06: 0x822BBF06
+        - sceLocationDenyApplication: 0x8AAF3FBD
+        - sceLocationStopHeadingCallback: 0x92E53F94
+        - SceLibLocation_991AF2D0: 0x991AF2D0
+        - sceLocationSetThreadParameter: 0xAA026B53
+        - sceLocationReopen: 0xB1F55065
+        - SceLibLocation_C1CFEC92: 0xC1CFEC92
+        - sceLocationConfirm: 0xC895E567
+        - sceLocationOpen: 0xDD271661
+        - sceLocationSetGpsEmulationFile: 0xDE0A9EA4
+        - sceLocationConfirmAbort: 0xE3CBF875
+        - sceLocationStopLocationCallback: 0xED378700
+        - SceLibLocation_EFC9BD25: 0xEFC9BD25
+        - sceLocationConfirmGetResult: 0xFF016C13

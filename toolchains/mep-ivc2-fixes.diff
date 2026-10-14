@@ -1,0 +1,33 @@
+diff -ru a/gcc/config/mep/mep.md b/gcc/config/mep/mep.md
+--- a/gcc/config/mep/mep.md	2026-10-13 21:45:17
++++ b/gcc/config/mep/mep.md	2026-10-13 21:45:17
+@@ -655,9 +655,9 @@
+ 
+ (define_insn "*movdi_cop_postinc"
+   [(parallel [(set (match_operand:DI 0 "register_operand" "=em")
+-		   (mem:DI (match_operand:SI 2 "register_operand" "r")))
+-	      (set (match_operand:SI 1 "register_operand" "=0")
+-		   (plus:SI (match_operand:SI 3 "register_operand" "0")
++		   (mem:DI (match_operand:SI 2 "register_operand" "1")))
++	      (set (match_operand:SI 1 "register_operand" "=r")
++		   (plus:SI (match_operand:SI 3 "register_operand" "1")
+ 			    (const_int 8)))
+ 	      ]
+ 	     )]
+diff -ru a/gcc/rtlanal.c b/gcc/rtlanal.c
+--- a/gcc/rtlanal.c	2026-10-13 21:45:17
++++ b/gcc/rtlanal.c	2026-10-13 21:45:17
+@@ -1967,7 +1967,12 @@
+   while ((eq_use = DF_REG_EQ_USE_CHAIN (regno)) != NULL)
+     {
+       rtx insn = DF_REF_INSN (eq_use);
+-      rtx note = find_reg_equal_equiv_note (insn);
++      /* Not find_reg_equal_equiv_note: it ignores the notes of insns with
++	 several sets, such as lmcpi's post-increment.  */
++      rtx note = find_reg_note (insn, REG_EQUAL, NULL_RTX);
++
++      if (!note)
++	note = find_reg_note (insn, REG_EQUIV, NULL_RTX);
+ 
+       /* This assert is generally triggered when someone deletes a REG_EQUAL
+ 	 or REG_EQUIV note by hacking the list manually rather than calling

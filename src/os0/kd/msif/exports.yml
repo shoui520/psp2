@@ -1,0 +1,25 @@
+SceMsif:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceMsifForDriver:
+      syscall: false
+      version: 1
+      nid: 0xB706084A
+      functions:
+        - sceMsifZerofillSector: 0x0F86BEEA
+        - ksceMsifWriteSector: 0x329035EF
+        - ksceMsifGetSlowModeState: 0x491E25B5
+        - ksceMsifEnableSlowMode: 0x4B751CE6
+        - sceMsifSwReset: 0x4EA579EF
+        - ksceMsifReadSector: 0x58654AA3
+        - sceMsifFormat: 0x6EDE7DBA
+        - sceMsifGetMediaId: 0x718BDFDE
+        - ksceMsifDisableSlowMode: 0x75848756
+        - SceMsifForDriver_855E1E38: 0x855E1E38
+        - ksceMsifGetMsInfo: 0xD0307849
+        - SceMsifForDriver_F997286B: 0xF997286B

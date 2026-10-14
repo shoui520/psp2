@@ -1,0 +1,125 @@
+SceLibNetCtl:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    stop: module_stop
+  libraries:
+    SceNetCtl:
+      syscall: false
+      version: 1
+      nid: 0xC6083AE1
+      functions:
+        - SceNetCtl_0815CAC5: 0x0815CAC5
+        - sceNetCtlAdhocGetState: 0x0961A561
+        - SceNetCtl_0CC36330: 0x0CC36330
+        - SceNetCtl_1172C5FC: 0x1172C5FC
+        - SceNetCtl_147B054C: 0x147B054C
+        - SceNetCtl_1581FABC: 0x1581FABC
+        - SceNetCtl_15BEEEF5: 0x15BEEEF5
+        - SceNetCtl_16268321: 0x16268321
+        - SceNetCtl_17FB44C4: 0x17FB44C4
+        - SceNetCtl_1A254169: 0x1A254169
+        - SceNetCtl_1AEEB480: 0x1AEEB480
+        - SceNetCtl_1EA25873: 0x1EA25873
+        - SceNetCtl_21AD7A46: 0x21AD7A46
+        - SceNetCtl_229EAA64: 0x229EAA64
+        - SceNetCtl_236DED99: 0x236DED99
+        - SceNetCtl_25EE061C: 0x25EE061C
+        - SceNetCtl_2792E1B6: 0x2792E1B6
+        - SceNetCtl_27932A1B: 0x27932A1B
+        - SceNetCtl_2B34DCCE: 0x2B34DCCE
+        - SceNetCtl_2B84A67F: 0x2B84A67F
+        - SceNetCtl_2CF683AD: 0x2CF683AD
+        - SceNetCtl_2F2A259D: 0x2F2A259D
+        - SceNetCtl_2FB386D9: 0x2FB386D9
+        - SceNetCtl_300E8877: 0x300E8877
+        - SceNetCtl_32237A58: 0x32237A58
+        - SceNetCtl_326FEE96: 0x326FEE96
+        - SceNetCtl_32A0BD7F: 0x32A0BD7F
+        - SceNetCtl_3AB4D791: 0x3AB4D791
+        - SceNetCtl_3C35D284: 0x3C35D284
+        - SceNetCtl_47980B9B: 0x47980B9B
+        - SceNetCtl_484EE0B2: 0x484EE0B2
+        - sceNetCtlInit: 0x495CA1DB
+        - sceNetCtlGetNatInfo: 0x4DDD6149
+        - sceNetCtlGetPhoneMaxDownloadableSize: 0x4FB4BEA1
+        - SceNetCtl_54848654: 0x54848654
+        - SceNetCtl_54EBA0FB: 0x54EBA0FB
+        - SceNetCtl_56C95F8F: 0x56C95F8F
+        - SceNetCtl_57CC3812: 0x57CC3812
+        - SceNetCtl_586C4DD7: 0x586C4DD7
+        - SceNetCtl_5AD6CBE8: 0x5AD6CBE8
+        - SceNetCtl_67926E00: 0x67926E00
+        - SceNetCtl_67DE0C31: 0x67DE0C31
+        - SceNetCtl_68C081D1: 0x68C081D1
+        - SceNetCtl_6A56FC3A: 0x6A56FC3A
+        - sceNetCtlInetGetResult: 0x6B20EC02
+        - sceNetCtlInetGetState: 0x6D26AC68
+        - SceNetCtl_6D63C34B: 0x6D63C34B
+        - SceNetCtl_6FFC4D4E: 0x6FFC4D4E
+        - sceNetCtlAdhocGetInAddr: 0x7118C99D
+        - SceNetCtl_713394C0: 0x713394C0
+        - SceNetCtl_719DD1DA: 0x719DD1DA
+        - SceNetCtl_743E9FCE: 0x743E9FCE
+        - SceNetCtl_766E2AE1: 0x766E2AE1
+        - sceNetCtlAdhocGetPeerList: 0x77586C59
+        - SceNetCtl_777FE4C2: 0x777FE4C2
+        - sceNetCtlAdhocGetResult: 0x7AE0ED19
+        - SceNetCtl_83184B6B: 0x83184B6B
+        - SceNetCtl_85C9CC02: 0x85C9CC02
+        - SceNetCtl_8B2FEFAA: 0x8B2FEFAA
+        - SceNetCtl_8E379B9C: 0x8E379B9C
+        - SceNetCtl_8F09A038: 0x8F09A038
+        - SceNetCtl_8F2C2053: 0x8F2C2053
+        - SceNetCtl_92EB6B1A: 0x92EB6B1A
+        - SceNetCtl_9629B72F: 0x9629B72F
+        - SceNetCtl_9AFCDAC4: 0x9AFCDAC4
+        - SceNetCtl_9B678FEE: 0x9B678FEE
+        - SceNetCtl_9CB6FEE1: 0x9CB6FEE1
+        - SceNetCtl_9D96400C: 0x9D96400C
+        - SceNetCtl_A0085E9F: 0xA0085E9F
+        - SceNetCtl_A25FE027: 0xA25FE027
+        - sceNetCtlAdhocUnregisterCallback: 0xA4471E10
+        - SceNetCtl_A59146E1: 0xA59146E1
+        - SceNetCtl_A7F4F4AB: 0xA7F4F4AB
+        - SceNetCtl_A840C74C: 0xA840C74C
+        - SceNetCtl_AA63CAEC: 0xAA63CAEC
+        - SceNetCtl_AB1462C5: 0xAB1462C5
+        - SceNetCtl_AC00BA34: 0xAC00BA34
+        - SceNetCtl_AC326DB7: 0xAC326DB7
+        - SceNetCtl_B0122008: 0xB0122008
+        - sceNetCtlInetGetInfo: 0xB26D07F3
+        - SceNetCtl_BB163832: 0xBB163832
+        - SceNetCtl_BBA99D34: 0xBBA99D34
+        - SceNetCtl_BBAD980D: 0xBBAD980D
+        - SceNetCtl_BC0563A0: 0xBC0563A0
+        - SceNetCtl_C03B9655: 0xC03B9655
+        - SceNetCtl_C15740E9: 0xC15740E9
+        - SceNetCtl_C1677C65: 0xC1677C65
+        - SceNetCtl_C2C30635: 0xC2C30635
+        - SceNetCtl_C33D7374: 0xC33D7374
+        - SceNetCtl_C61F3E96: 0xC61F3E96
+        - SceNetCtl_C81AD91B: 0xC81AD91B
+        - SceNetCtl_CCF30B92: 0xCCF30B92
+        - sceNetCtlTerm: 0xCD188648
+        - SceNetCtl_CDEBA500: 0xCDEBA500
+        - sceNetCtlInetUnregisterCallback: 0xD0C3BF3F
+        - SceNetCtl_D24E1CBB: 0xD24E1CBB
+        - SceNetCtl_D315EE4F: 0xD315EE4F
+        - sceNetCtlGetIfStat: 0xDA130450
+        - SceNetCtl_DD96DA85: 0xDD96DA85
+        - sceNetCtlCheckCallback: 0xDFFC3ED4
+        - SceNetCtl_E03981D6: 0xE03981D6
+        - SceNetCtl_E4B3142E: 0xE4B3142E
+        - SceNetCtl_E63C100B: 0xE63C100B
+        - SceNetCtl_E8E8DF18: 0xE8E8DF18
+        - SceNetCtl_E99EE305: 0xE99EE305
+        - SceNetCtl_EA423A96: 0xEA423A96
+        - sceNetCtlInetRegisterCallback: 0xEAEE6185
+        - sceNetCtlAdhocDisconnect: 0xED43B79A
+        - SceNetCtl_F081EFF9: 0xF081EFF9
+        - SceNetCtl_F30365D6: 0xF30365D6
+        - sceNetCtlAdhocRegisterCallback: 0xFFA9D594
+        - SceNetCtl_FFDC123A: 0xFFDC123A

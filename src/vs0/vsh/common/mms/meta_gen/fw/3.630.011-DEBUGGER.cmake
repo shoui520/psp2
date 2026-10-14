@@ -1,0 +1,83 @@
+# 3.630.011-DEBUGGER: vs0:vsh/common/mms/meta_gen.suprx (generated)
+set(MODULE_NID 0x68096840)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0x36F82E95:1:0x8
+	0x4772AF29:1:0x8
+	0xBF493DC9:1:0x8
+	0xDFA612D3:1:0x8
+	0x35B124F2:1:0x8
+	0xF0916D75:1:0x8
+	0x0EA9979D:1:0x8
+	0xA8FE3638:1:0x8
+	0x5F7A016E:1:0x8
+	0xEFDE7C7B:1:0x8
+	0xA7D28DAE:1:0x0
+	0x3D643CE8:1:0x0
+	0x54276D19:1:0x0
+	0xCAE9ACE6:5:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	SceDbutil_055C641E
+	SceDbutil_0E387A6B
+	SceDbutil_1B0116F3
+	SceDbutil_346FD9E2
+	SceDbutil_3B8AF9F8
+	SceDbutil_3B974D6B
+	SceDbutil_6735B7E3
+	SceDbutil_6C4E78DA
+	SceDbutil_AC0FC092
+	SceDbutil_BFA19C63
+	SceDbutil_C9BD83FD
+	SceDbutil_D1020D1D
+	SceDbutil_F6F59D3A
+	SceDbutil_F87A8B85
+	sce_paf_malloc
+	sce_paf_strchr
+	ScePafStdc_1B77082E
+	sce_paf_fopen
+	sce_paf_strncmp
+	sce_paf_memcpy
+	sce_paf_free
+	sce_paf_snprintf
+	sce_paf_strcmp
+	sce_paf_fclose
+	ScePafStdc_D608246A
+	sce_paf_tolower
+	sce_paf_memset
+	sce_paf_strlen
+	sce_paf_fseek
+	ScePafStdc_FC5CD359
+	ScePafMisc_14432321
+	ScePafMisc_2DBDFC13
+	ScePafMisc_2E8E9CBB
+	ScePafMisc_59979922
+	ScePafMisc_7C86911E
+	ScePafMisc_8523A173
+	ScePafMisc_93900EA9
+	ScePafMisc_95F2C107
+	ScePafMisc_A4F553B0
+	ScePafMisc_B3B5DF38
+	ScePafMisc_D2E471DC
+	ScePafMisc_FFE8F348
+	ScePafThread_4EA3A3D5
+	ScePafThread_9100D580
+	ScePafThread_A5D3F1B5
+	ScePafThread_AD04A33D
+	__stack_chk_fail
+)
+set(MODULE_IMPORT_VARS
+	ScePngPromoter_0C5150AE
+	SceBmpPromoter_42175267
+	SceJpegPromoter_3AFAE967
+	SceTiffPromoter_E79C12C6
+	SceGifPromoter_64BEB5DE
+	SceMsvPromoter_0AD08C4C
+	SceMp3Promoter_4D6FC690
+	SceAACPromoter_CB9AB056
+	SceRiffPromoter_974CC698
+	ScePafStdc_610F2F91
+	__stack_chk_guard
+)

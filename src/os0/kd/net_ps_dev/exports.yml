@@ -1,0 +1,72 @@
+SceNetPs:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceNetPsForDriver:
+      syscall: false
+      version: 1
+      nid: 0xB2A5C920
+      functions:
+        - ksceNetListen: 0x080C7992
+        - ksceNetConnect: 0x13491DA1
+        - SceNetPsForDriver_1ABF937D: 0x1ABF937D
+        - ksceNetClose: 0x21F4428D
+        - SceNetPsForDriver_3D4A1D74: 0x3D4A1D74
+        - ksceNetRecvfrom: 0x49B1669C
+        - ksceNetSetsockopt: 0x4BF5FAB4
+        - SceNetPsForDriver_83A12CCC: 0x83A12CCC
+        - ksceNetBind: 0x84AB650F
+        - ksceNetAccept: 0x880A5423
+        - SceNetPsForDriver_8C4346CA: 0x8C4346CA
+        - ksceNetGetsockname: 0x8F1BB0E7
+        - ksceNetGetsockopt: 0x92EE24A6
+        - ksceNetSendto: 0xAB746734
+        - ksceNetGetpeername: 0xB949AFD5
+        - SceNetPsForDriver_C000CA8F: 0xC000CA8F
+        - SceNetPsForDriver_E41C0794: 0xE41C0794
+        - ksceNetSocket: 0xEB95B024
+        - ksceNetShutdown: 0xEEB19FB6
+        - SceNetPsForDriver_F5788FF8: 0xF5788FF8
+    SceNetPsForSyscalls:
+      syscall: true
+      version: 1
+      nid: 0x2CBED2C6
+      functions:
+        - sceNetSyscallSetsockopt: 0x10DE34EA
+        - sceNetSyscallRecvfrom: 0x144C9758
+        - sceNetSyscallConnect: 0x14A4DE52
+        - sceNetSyscallClose: 0x1EBC2E28
+        - sceNetSyscallDumpClose: 0x263E52FD
+        - sceNetSyscallBind: 0x267F1EF9
+        - sceNetSyscallIoctl: 0x310F0725
+        - sceNetSyscallRecvmsg: 0x32C1AE45
+        - sceNetSyscallSendto: 0x39796C01
+        - sceNetSyscallDumpRead: 0x3CBE7071
+        - sceNetSyscallSysctl: 0x3D7495B0
+        - sceNetSyscallDumpCreate: 0x3FC34171
+        - sceNetSyscallAccept: 0x45EAAD89
+        - sceNetSyscallDumpAbort: 0x5CD20B54
+        - sceNetSyscallGetsockname: 0x6AA945D9
+        - sceNetSyscallEpollClose: 0x75E82300
+        - sceNetSyscallSocket: 0x81A120BE
+        - sceNetSyscallDescriptorClose: 0x854AFB6F
+        - sceNetSyscallGetIfList: 0x878274CE
+        - sceNetSyscallIcmConnect: 0x8C3FBC87
+        - sceNetSyscallEpollAbort: 0x94C3AE47
+        - sceNetSyscallShutdown: 0xA4014519
+        - sceNetSyscallDescriptorCtl: 0xA7064C2C
+        - sceNetSyscallEpollCreate: 0xA98AEF04
+        - sceNetSyscallSendmsg: 0xAEC6BE5D
+        - sceNetSyscallListen: 0xAEEB7CA0
+        - sceNetSyscallDescriptorCreate: 0xB518A2DE
+        - sceNetSyscallGetsockopt: 0xBC472DC5
+        - sceNetSyscallGetpeername: 0xBD7B0213
+        - sceNetSyscallEpollCtl: 0xDF30BE68
+        - sceNetSyscallControl: 0xEA0C1B71
+        - sceNetSyscallGetSockinfo: 0xF7748E56
+        - sceNetSyscallSocketAbort: 0xF9203B48
+        - sceNetSyscallEpollWait: 0xF933D6FC

@@ -1,0 +1,105 @@
+# 3.650.011-TOOL: vs0:sys/external/np_common.suprx (generated)
+set(MODULE_NID 0x81E67889)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xECB62224)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xEAED1616:2:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0x773242C7:1:0x0
+	0x0B351269:1:0x0
+	0x35C5ACD4:1:0x8
+	0x756B7E89:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x1D8D7945
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x4C5471BC
+	0xCAE9ACE6:F:0x50572FDA
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x774891D6
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0x9CC2BFDF
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xB0335388
+	0xCAE9ACE6:F:0xB54C0BE4
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xC88D44AD
+	0xCAE9ACE6:F:0xD8EBBB7E
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xED53334A
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:V:0x93B8AA67
+	0xEAED1616:F:0x5182E212
+	0x859A24B1:F:0x1A372EC8
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x6ED2E2DC
+	0x859A24B1:F:0x879E6EBD
+	0x859A24B1:F:0xCB78710D
+	0x859A24B1:F:0xF4EE4FA9
+	0x5E8D0E22:F:0x0C8A38E1
+	0x773242C7:F:0x7CBF442B
+	0x773242C7:F:0xB31E7F1C
+	0x773242C7:F:0xD943CE15
+	0x0B351269:F:0x347C1BDB
+	0x35C5ACD4:F:0x27216A82
+	0x35C5ACD4:F:0x4A004B05
+	0x756B7E89:F:0x72168C6E
+	0x756B7E89:F:0xA9EBCBAC
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelLockMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceClibTolower
+	sceKernelCreateCond
+	sceClibMemset
+	sceClibStrncmp
+	sceClibMspaceRealloc
+	sceClibMspaceMalloc
+	sceClibSnprintf
+	sceClibMspaceFree
+	sceClibMemcmp
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceClibToupper
+	sceClibStrncasecmp
+	sceClibStrncpy
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceClibLookCtypeTable
+	sceKernelWaitThreadEnd
+	sceKernelCreateMutex
+	sceKernelStartThread
+	sceKernelGetSystemSwVersion
+	sceKernelUnlockMutex
+	sceKernelDeleteThread
+	sceKernelSignalCond
+	sceKernelDeleteCond
+	sceKernelDeleteMutex
+	sceKernelGetSystemTimeWide
+	ksceKernelExitThread
+	SceShellSvc_7CBF442B
+	SceShellSvc_B31E7F1C
+	SceShellSvc_D943CE15
+	ksceRegMgrSystemParamGetInt
+	vshSblAimgrIsCEX
+	vshSblUtMgrHasStoreFlag
+	sceSblQafMgrIsAllowNpFullTest
+	sceSblQafMgrIsAllowNpTest
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,24 @@
+SceNpPartyGameUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpPartyGameUtil:
+      syscall: false
+      version: 1
+      nid: 0xB3B34742
+      functions:
+        - sceNpPartyGetMemberInfo: 0x0560D9A1
+        - SceNpPartyGameUtil_089134D1: 0x089134D1
+        - sceNpPartyGetId: 0x27AFCE24
+        - sceNpPartyRegisterHandler: 0x324C76F0
+        - sceNpPartyGetMembers: 0x420C30E9
+        - SceNpPartyGameUtil_6370CEB6: 0x6370CEB6
+        - sceNpPartyGetState: 0x9F99ADF7
+        - sceNpPartyInit: 0xB304962C
+        - sceNpPartyCheckCallback: 0xB6132502
+        - sceNpPartyGetGameSessionReadyState: 0xE9173FE6
+        - sceNpPartyGetMemberSessionInfo: 0xF01585A3
+        - sceNpPartyTerm: 0xF524AD2B
+        - sceNpPartyGetMemberVoiceInfo: 0xFB200A6D

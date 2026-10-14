@@ -1,0 +1,30 @@
+SceIdStorage:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceIdStorageForDriver:
+      syscall: false
+      version: 1
+      nid: 0xE1AC6D7C
+      functions:
+        - ksceIdStorageCreateLeaf: 0x08A471A6
+        - ksceIdStorageWriteLeaf: 0x1FA4D135
+        - ksceIdStorageDeleteLeaf: 0x2C97AB36
+        - ksceIdStorageIsReadOnly: 0x2D633688
+        - ksceIdStorageEnumId: 0x31E08AFB
+        - ksceIdStorageGetFreeLeaves: 0x37833CB8
+        - ksceIdStorageFlush: 0x3AD32523
+        - ksceIdStorageRestart: 0x60B647A5
+        - ksceIdStorageUpdate: 0x683AAC10
+        - ksceIdStorageLookup: 0x6FE062D1
+        - ksceIdStorageFormat: 0x958089DB
+        - ksceIdStorageCreateAtomicLeaves: 0x99ACCB71
+        - ksceIdStorageIsDirty: 0xB9069BAD
+        - ksceIdStorageReadLeaf: 0xEB00C509
+        - ksceIdStorageGetLeafSize: 0xEB830733
+        - ksceIdStorageUnformat: 0xF4BCB3EE
+        - ksceIdStorageIsFormatted: 0xFEFA40C2

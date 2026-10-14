@@ -1,0 +1,14 @@
+Candidate upstream, not an assertion of Sony's exact source revision.
+
+Project: Linux staging rt2860, Ralink WPA implementation
+Revision: 7bc30c23c8ace3821a6732bfbe7e8f1b0995a63e (2011-04-07)
+Source: https://android.googlesource.com/kernel/msm/+/7bc30c23c8ace3821a6732bfbe7e8f1b0995a63e/drivers/staging/rt2860/common/cmm_wpa.c
+License: GPL-2.0-or-later, original notice in cmm_wpa.c; COPYING from same revision.
+SHA256(cmm_wpa.c): ba63a2b265d1ebc9e383f501928ee505717a8902ea4e577a1cfb55e3e04847e9
+
+cmm_wpa.c is pristine. SCE.patch selects the PBKDF2 block without building
+the unrelated driver, specializes Sony's five-argument fixed-4096 interface,
+and adds the observed printable-password validation. The algorithm's original
+copy and XOR loops are unchanged. The module adapter maps its HMAC and bounded
+string reads to Sony's kernel services. The existing Sony password wrapper is
+separate. Configure applies the patch to a build-directory copy only.

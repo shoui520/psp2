@@ -1,0 +1,29 @@
+SceNpGriefReport:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpGriefReport:
+      syscall: false
+      version: 1
+      nid: 0xBF6A2122
+      functions:
+        - SceNpGriefReport_0A533A46: 0x0A533A46
+        - SceNpGriefReport_13C6B372: 0x13C6B372
+        - SceNpGriefReport_2C6703F6: 0x2C6703F6
+        - SceNpGriefReport_2D2D1B9B: 0x2D2D1B9B
+        - SceNpGriefReport_5138980A: 0x5138980A
+        - SceNpGriefReport_59A02CF0: 0x59A02CF0
+        - SceNpGriefReport_63B2BD27: 0x63B2BD27
+        - SceNpGriefReport_7290BA53: 0x7290BA53
+        - SceNpGriefReport_7BBB809B: 0x7BBB809B
+        - SceNpGriefReport_8252852A: 0x8252852A
+        - SceNpGriefReport_972642AC: 0x972642AC
+        - SceNpGriefReport_9F0E12B6: 0x9F0E12B6
+        - SceNpGriefReport_A020DDEE: 0xA020DDEE
+        - SceNpGriefReport_B4EC968E: 0xB4EC968E
+        - SceNpGriefReport_CC050129: 0xCC050129
+        - SceNpGriefReport_D870A755: 0xD870A755
+        - SceNpGriefReport_EC05EE9F: 0xEC05EE9F
+        - SceNpGriefReport_F06CA8C3: 0xF06CA8C3

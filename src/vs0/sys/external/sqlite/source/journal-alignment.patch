@@ -1,0 +1,22 @@
+--- sqlite3.c
++++ sqlite3.c
+@@ -41689,6 +41689,13 @@
+-        rc = write32bits(pPager->jfd, iOff, pPg->pgno);
+-        if( rc!=SQLITE_OK ) return rc;
+-        rc = sqlite3OsWrite(pPager->jfd, pData2, pPager->pageSize, iOff+4);
+-        if( rc!=SQLITE_OK ) return rc;
+-        rc = write32bits(pPager->jfd, iOff+pPager->pageSize+4, cksum);
+-        if( rc!=SQLITE_OK ) return rc;
++        /* SCE: write one journal record from a 64-byte-aligned buffer. */
++        {
++          void *allocation = sqlite3Malloc(pPager->pageSize + 72);
++          u8 *record;
++          if( allocation==0 ) return SQLITE_NOMEM;
++          record = (u8 *)(((uintptr_t)allocation + 63) & ~(uintptr_t)63);
++          put32bits(record, pPg->pgno);
++          memcpy(record + 4, pData2, pPager->pageSize);
++          put32bits(record + pPager->pageSize + 4, cksum);
++          rc = sqlite3OsWrite(pPager->jfd, record, pPager->pageSize + 8, iOff);
++          sqlite3_free(allocation);
++          if( rc!=SQLITE_OK ) return rc;
++        }

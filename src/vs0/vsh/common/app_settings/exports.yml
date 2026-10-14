@@ -1,0 +1,38 @@
+SceAppSettings:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceAppSettings:
+      syscall: false
+      version: 1
+      nid: 0x9522D063
+      functions:
+        - SceAppSettings_0002F53E: 0x0002F53E
+        - SceAppSettings_131CF769: 0x131CF769
+        - SceAppSettings_1C135375: 0x1C135375
+        - SceAppSettings_1E1BE36B: 0x1E1BE36B
+        - SceAppSettings_272D902F: 0x272D902F
+        - SceAppSettings_2CE1780F: 0x2CE1780F
+        - SceAppSettings_562213F4: 0x562213F4
+        - SceAppSettings_5FD4997E: 0x5FD4997E
+        - SceAppSettings_67E4365B: 0x67E4365B
+        - SceAppSettings_67FD397D: 0x67FD397D
+        - SceAppSettings_736A13B1: 0x736A13B1
+        - SceAppSettings_75E3F651: 0x75E3F651
+        - SceAppSettings_984AF519: 0x984AF519
+        - SceAppSettings_9D20A196: 0x9D20A196
+        - SceAppSettings_A621DCAE: 0xA621DCAE
+        - SceAppSettings_A749C13E: 0xA749C13E
+        - SceAppSettings_B3935DD3: 0xB3935DD3
+        - SceAppSettings_D1FDF0EB: 0xD1FDF0EB
+        - SceAppSettings_D58DE5C7: 0xD58DE5C7
+        - SceAppSettings_D906433B: 0xD906433B
+        - SceAppSettings_DDFAF536: 0xDDFAF536
+        - SceAppSettings_EC529AF7: 0xEC529AF7
+        - SceAppSettings_ED46CAFD: 0xED46CAFD
+        - SceAppSettings_EECA5057: 0xEECA5057

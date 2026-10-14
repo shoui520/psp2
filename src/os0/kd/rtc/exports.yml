@@ -1,0 +1,100 @@
+SceRtc:
+  attributes: 7
+  version:
+    major: 1
+    minor: 2
+  main:
+    start: module_start
+  libraries:
+    SceRtcForDriver:
+      syscall: false
+      version: 1
+      nid: 0x0351D827
+      functions:
+        - SceRtcForDriver_09AF419B: 0x09AF419B
+        - ksceRtcGetAccumulativeTime: 0x0A86FB04
+        - SceRtcForDriver_0CB72FAF: 0x0CB72FAF
+        - SceRtcForDriver_0E7091D6: 0x0E7091D6
+        - SceRtcForDriver_0EBB3F12: 0x0EBB3F12
+        - SceRtcForDriver_0F800878: 0x0F800878
+        - SceRtcForDriver_0F9E02EF: 0x0F9E02EF
+        - ksceRtcSetCurrentNetworkTick: 0x162E486E
+        - SceRtcForDriver_1DD4C5B6: 0x1DD4C5B6
+        - ksceRtcFormatRFC2822LocalTime: 0x1F7FC209
+        - SceRtcForDriver_24209FBF: 0x24209FBF
+        - SceRtcForDriver_32E50C36: 0x32E50C36
+        - ksceRtcFormatRFC3339LocalTime: 0x35925318
+        - ksceRtcGetLastReincarnatedTick: 0x3D614A9A
+        - ksceRtcGetCurrentAdNetworkTick: 0x3E3C09A0
+        - ksceRtcGetCurrentSecureTick: 0x401C0954
+        - ksceRtcGetCurrentRetainedNetworkTick: 0x40B4BCFF
+        - ksceRtcConvertTickToDateTime: 0x42A0DFCB
+        - ksceRtcConvertDateTimeToUnixTime: 0x497B5DC9
+        - ksceRtcRegisterCallback: 0x5220870D
+        - SceRtcForDriver_6965E5DF: 0x6965E5DF
+        - SceRtcForDriver_6F96FAA5: 0x6F96FAA5
+        - sceRtcSetCurrentTick: 0x70A78CD2
+        - ksceRtcSetCurrentSecureTick: 0x7D431C87
+        - ksceRtcGetCurrentClockLocalTime: 0x7DC0DF93
+        - ksceRtcSetSecureAlarmTick: 0x8333790D
+        - SceRtcForDriver_85F3026C: 0x85F3026C
+        - ksceRtcGetLastAdjustedTick: 0x8A987573
+        - SceRtcForDriver_9097EF0D: 0x9097EF0D
+        - ksceRtcUnregisterCallback: 0x9546C68B
+        - SceRtcForDriver_9C8AF264: 0x9C8AF264
+        - SceRtcForDriver_A0D7899A: 0xA0D7899A
+        - SceRtcForDriver_A1F41AE2: 0xA1F41AE2
+        - sceRtcSynchronize: 0xA2D280B4
+        - SceRtcForDriver_A7236656: 0xA7236656
+        - SceRtcForDriver_A82AC5B3: 0xA82AC5B3
+        - SceRtcForDriver_A8CDB6BD: 0xA8CDB6BD
+        - ksceRtcGetCurrentClock: 0xA930CD1A
+        - ksceRtcSetCurrentDebugNetworkTick: 0xAAB6053F
+        - SceRtcForDriver_ABA035B7: 0xABA035B7
+        - ksceRtcSetConf: 0xACFE5A9F
+        - ksceRtcConvertLocalTimeToUtc: 0xAD2F3544
+        - SceRtcForDriver_ADF63D7C: 0xADF63D7C
+        - SceRtcForDriver_BA14600F: 0xBA14600F
+        - ksceRtcFormatRFC2822: 0xBA3415F8
+        - ksceRtcGetSecureAlarmTick: 0xBD53731C
+        - ksceRtcGetCurrentDebugNetworkTick: 0xC141632A
+        - SceRtcForDriver_C2DC38D9: 0xC2DC38D9
+        - ksceRtcConvertUtcToLocal: 0xC6E03DD4
+        - ksceRtcGetAlarmTick: 0xC838275A
+        - ksceRtcIsAlarmed: 0xCD295F0C
+        - SceRtcForDriver_CE51C2A1: 0xCE51C2A1
+        - ksceRtcRegisterSecureAlarmCallback: 0xCF84DFC0
+        - ksceRtcFormatRFC3339: 0xD32AC698
+        - sceRtcSetAlarmTick: 0xD610C646
+        - SceRtcForDriver_DE9F4515: 0xDE9F4515
+        - ksceRtcGetCurrentTick: 0xDEC408D4
+        - ksceRtcIsSecureAlarmed: 0xE39F2ABE
+        - SceRtcForDriver_EB27F94E: 0xEB27F94E
+        - ksceRtcUnregisterSecureAlarmCallback: 0xEDDC2325
+        - SceRtcForDriver_F139E359: 0xF139E359
+        - ksceRtcGetCurrentNetworkTick: 0xF1517B38
+        - SceRtcForDriver_F4E23829: 0xF4E23829
+        - ksceRtcGetCurrentGpsTick: 0xF69B610F
+        - SceRtcForDriver_FFD7A04F: 0xFFD7A04F
+    SceRtc:
+      syscall: true
+      version: 1
+      nid: 0x3503487E
+      functions:
+        - _sceRtcGetCurrentNetworkTick: 0x06F734FE
+        - _sceRtcConvertLocalTimeToUtc: 0x0FC8AC41
+        - _sceRtcConvertUtcToLocalTime: 0x1E61DDA4
+        - _sceRtcGetCurrentTick: 0x247EE33B
+        - _sceRtcGetCurrentClock: 0x24947354
+        - sceRtcGetAccumulativeTime: 0x258BE8EC
+        - _sceRtcFormatRFC2822: 0x2CD6AC86
+        - _sceRtcGetCurrentGpsTick: 0x3BA820E5
+        - _sceRtcGetCurrentClockLocalTime: 0x41A6C861
+        - _sceRtcFormatRFC3339LocalTime: 0x4836474D
+        - _sceRtcFormatRFC2822LocalTime: 0x4C7ED349
+        - _sceRtcGetCurrentAdNetworkTick: 0x76EFA8FE
+        - _sceRtcFormatRFC3339: 0x7EE2CBEF
+        - _sceRtcGetCurrentDebugNetworkTick: 0xBF639B21
+        - _sceRtcGetCurrentRetainedNetworkTick: 0xC17EA809
+        - _sceRtcGetLastReincarnatedTick: 0xE13D0FE5
+        - _sceRtcGetLastAdjustedTick: 0xEA157EC5

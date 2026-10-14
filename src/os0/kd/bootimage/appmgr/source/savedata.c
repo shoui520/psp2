@@ -1,0 +1,2140 @@
+#include "appmgr_savedata_slot.h"
+#include "appmgr_event.h"
+
+#include <psp2/appmgr.h>
+#include <psp2kern/kernel/iofilemgr.h>
+#include <psp2kern/kernel/threadmgr.h>
+#include <psp2kern/kernel/sysclib.h>
+#include <sce/sysmem.h>
+#include <psp2kern/kernel/processmgr.h>
+#include <psp2kern/kernel/rtc.h>
+#include <sce/syscall.h>
+#include <sce/threadmgr.h>
+#include <sce/suspend.h>
+#include <sce/regmgr.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <stdio.h>
+#include <string.h>
+
+extern SceUID g_appmgrSaveDataHeap;
+extern SceUID g_appmgrSaveDataMutex;
+extern int g_appmgrSafeMemoryKey;
+extern int appmgrWriteSaveDataSlot(unsigned int slotId,
+				 const SceAppMgrSaveDataSlotParam *param,
+				 int status, const char *mountPoint);
+extern int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint);
+extern int appmgrOverwriteSaveDataSlot(unsigned int slotId,
+				     const SceAppMgrSaveDataSlotParam *param,
+				     int status, const char *mountPoint);
+extern int appmgrSetSaveDataSlotStatus(unsigned int slotId, int status,
+				     const char *mountPoint);
+extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
+			     SceSize size);
+extern int appmgrValidateSaveDataMountPoint(const char *mountPoint,
+					  int requirePrimary);
+extern int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
+				  int status);
+extern int appmgrGetFakeSdSlotBroken(void);
+extern int ScePfsMgrForKernel_27FB7618(const char *name,
+				    SceUInt32 *quota, SceUInt32 *usage);
+#if FW_VERSION >= 0x04000000
+extern void *__memcpy_chk(void *destination, const void *source,
+			  size_t length, size_t destinationSize);
+extern char *__strncat_chk2(char *destination, const char *source,
+			    size_t destinationSize);
+extern char *__strncat_chk(char *destination, const char *source,
+			   size_t length, size_t destinationSize);
+extern char *__strncpy_chk(char *destination, const char *source,
+			   size_t length, size_t destinationSize);
+#endif
+
+extern int SceSblACMgrForDriver_0924896F(SceUID pid);
+extern SceUInt64 ksceKernelGetProcessTimeWideCore(void);
+extern int appmgrExtractSaveDataDeviceName(const char *path, char *device,
+					 SceSize capacity);
+extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataFile *file,
+				     const char *path);
+extern int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB);
+extern void appmgrNotifySaveDataSpaceError(int error, SceUInt32 requiredKiB);
+extern void appmgrFreeSaveDataDirectories(char **directories);
+extern int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB);
+extern int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
+					  char **directories,
+					  SceUInt64 *requiredBytes,
+					  SceUInt64 allocationUnit,
+					  const char *mountPoint);
+extern int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
+				      SceUInt64 *allocationUnit,
+				      SceOff *totalBytes,
+				      SceUInt64 *availableQuota,
+				      SceOff *freeBytes);
+extern int appmgrGetSaveDataParentPath(const char *path, char *parentPath);
+extern int appmgrCreateSaveDataDirectories(const char *path, SceMode mode);
+extern int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operation,
+		const char *const *directories, const SceOff *originalSizes,
+		const int *createdFiles, SceUInt64 allocationUnit,
+		int slotCreated, SceUInt32 *requiredSizeKiB);
+
+int g_appmgrAppInfoCacheKey;
+AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
+
+int appmgrExtractSaveDataDeviceName(const char *path, char *device,
+				    SceSize capacity)
+{
+	const signed char *source = (const signed char *)path;
+	SceSize index;
+
+	memset(device, 0, capacity);
+	if (capacity) {
+		device[0] = source[0];
+		if (source[0] == ':')
+			return 0;
+		index = 0;
+		while (index != capacity - 1) {
+			index++;
+			device[index] = source[index];
+			if (source[index] == ':')
+				return 0;
+		}
+	}
+	device[capacity - 1] = 0;
+	return -1;
+}
+
+int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
+{
+	SceAppMgrAppInfoCache *info;
+	void *storage = NULL;
+	int result;
+
+	result = ksceKernelGetProcessLocalStorageAddrForPid(0,
+			g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result < 0)
+		return result;
+	if (!storage)
+		return (int)0x80800012;
+	info = storage;
+	info->neededSaveDataKiB = requiredKiB;
+	return 0;
+}
+
+int appmgrLoadSaveDataSlotCache(const char *mountPoint)
+{
+	char path[32] = {0};
+	char resolvedPath[292];
+	SceUID fd;
+	int result;
+	int bytes;
+
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint,
+		 "sce_sys", "sdslot.dat");
+	memset(resolvedPath, 0, sizeof(resolvedPath));
+	result = appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	if (result < 0)
+		return result;
+	fd = ksceIoOpen(resolvedPath, 1, 6);
+	if (fd < 0)
+		return fd == (int)0x80010013 ? fd : (int)0x80801087;
+	bytes = ksceIoRead(fd, g_appmgrSaveDataSlotCache.readWindow, 32768);
+	if (bytes != 32768) {
+		ksceIoClose(fd);
+		return (int)0x80801088;
+	}
+	g_appmgrSaveDataSlotCache.windowIndex = 0;
+	g_appmgrSaveDataSlotCache.windowLength = bytes;
+	g_appmgrSaveDataSlotCache.fd = fd;
+	result = 0;
+	memcpy(g_appmgrSaveDataSlotCache.header,
+	       g_appmgrSaveDataSlotCache.readWindow, 1024);
+	return result;
+}
+
+int appmgrInitializeSaveDataSlotCache(void)
+{
+	SceAllocOpt option;
+
+	g_appmgrSaveDataSlotCache = (AppmgrSaveDataSlotCache){0};
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	g_appmgrSaveDataSlotCache.fd = -1;
+	option.size = sizeof(option);
+	option.align = 32;
+	g_appmgrSaveDataSlotCache.header = ksceKernelAllocHeapMemoryWithOption(
+		g_appmgrSaveDataHeap, 1024, &option);
+	if (!g_appmgrSaveDataSlotCache.header)
+		return (int)0x80801006;
+	g_appmgrSaveDataSlotCache.readWindow = ksceKernelAllocHeapMemoryWithOption(
+		g_appmgrSaveDataHeap, 32768, &option);
+	if (!g_appmgrSaveDataSlotCache.readWindow) {
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap,
+					g_appmgrSaveDataSlotCache.header);
+		g_appmgrSaveDataSlotCache.header = NULL;
+		return (int)0x80801006;
+	}
+	memset(g_appmgrSaveDataSlotCache.header, 0, 1024);
+	memset(g_appmgrSaveDataSlotCache.readWindow, 0, 32768);
+	return 0;
+}
+
+int appmgrResetSaveDataSlotCache(SceUID pid)
+{
+	if (g_appmgrSaveDataSlotCache.processId != pid)
+		return 0;
+	if (g_appmgrSaveDataSlotCache.fd != -1) {
+		ksceIoClose(g_appmgrSaveDataSlotCache.fd);
+		g_appmgrSaveDataSlotCache.fd = -1;
+	}
+	g_appmgrSaveDataSlotCache.windowIndex = 0;
+	g_appmgrSaveDataSlotCache.windowLength = 0;
+	memset(g_appmgrSaveDataSlotCache.header, 0, 1024);
+	memset(g_appmgrSaveDataSlotCache.readWindow, 0, 32768);
+	g_appmgrSaveDataSlotCache.processId = 0;
+	return 0;
+}
+
+int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
+				SceUInt32 slotCount)
+{
+	void *buffer = NULL;
+	AppmgrSaveDataSlotFileHeader *header;
+	SceAllocOpt option;
+	SceIoStat stat;
+	char *filePath;
+	SceUID fd;
+	SceUInt32 total;
+	SceUInt32 remaining;
+	SceUInt32 chunk;
+	int bytes;
+	int result;
+
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	option.align = 32;
+	filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						     292, &option);
+	if (!filePath) {
+		result = (int)0x80801006;
+		goto unlockMutex;
+	}
+	memset(filePath, 0, 292);
+	snprintf(filePath, 292, "%s/%s/%s", path, "sce_sys", "sdslot.dat");
+	result = ksceIoGetstat(filePath, &stat);
+	if (result == 0)
+		goto freePath;
+	result = ksceKernelGetProcessLocalStorageAddrForPid(
+		pid, g_appmgrSafeMemoryKey, &buffer, 1);
+	if (result < 0)
+		goto freePath;
+	if (!buffer) {
+		result = (int)0x80801006;
+		goto freePath;
+	}
+	memset(buffer, 0, 65536);
+	header = buffer;
+	header->version = 0;
+	header->slotCount = slotCount;
+	*(SceUInt32 *)header->magic = *(const SceUInt32 *)"SDSL";
+	fd = ksceIoOpen(filePath, 1538, 390);
+	if (fd < 0) {
+		result = fd;
+		goto freePath;
+	}
+	total = (slotCount + 1) << 10;
+	chunk = total < 65536 ? total : 65536;
+	bytes = ksceIoWrite(fd, buffer, chunk);
+	if (bytes < 0) {
+		result = bytes;
+		goto closeFile;
+	}
+	if (bytes != chunk) {
+		result = (int)0x80801089;
+		goto closeFile;
+	}
+	remaining = total - chunk;
+	memset(buffer, 0, 65536);
+	while (remaining) {
+		chunk = remaining < 65536 ? remaining : 65536;
+		bytes = ksceIoWrite(fd, buffer, chunk);
+		if (bytes < 0) {
+			result = bytes;
+			goto closeFile;
+		}
+		if (bytes != chunk) {
+			result = (int)0x80801089;
+			goto closeFile;
+		}
+		remaining -= chunk;
+	}
+	result = 0;
+closeFile:
+	ksceIoClose(fd);
+freePath:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+unlockMutex:
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+	return result;
+}
+
+int ksceAppMgrSaveDataSlotInit(void *parameters)
+{
+	AppmgrSaveDataSlotInitParam *param = parameters;
+	AppmgrSaveDataSlotFileHeader *header;
+	SceAllocOpt option;
+	SceIoStat stat;
+	char directory[128];
+	char resolvedDirectory[292];
+	char path[292];
+	const char *mountPoint;
+	void *zeroSlots;
+	SceUInt32 syscallState;
+	SceUInt32 block;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!param || param->size != sizeof(*param)) {
+		result = (int)0x80800001;
+		goto leave;
+	}
+	mountPoint = param->mountPoint;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leave;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	memset(directory, 0, sizeof(directory));
+	snprintf(directory, sizeof(directory), "%s%s", mountPoint, "sce_sys");
+	appmgrResolvePath(directory, 0, resolvedDirectory,
+			  sizeof(resolvedDirectory));
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId() &&
+	    g_appmgrSaveDataSlotCache.fd != -1 &&
+	    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+		result = ksceIoClose(g_appmgrSaveDataSlotCache.fd);
+		if (result < 0)
+			goto restorePermission;
+		g_appmgrSaveDataSlotCache.fd = -1;
+	}
+	if (ksceIoGetstat(resolvedDirectory, &stat) < 0) {
+		result = ksceIoMkdir(resolvedDirectory, 6);
+		if (result < 0)
+			goto restorePermission;
+	}
+	snprintf(path, sizeof(path), "%s/%s", resolvedDirectory, "sdslot.dat");
+	if (ksceIoGetstat(path, &stat) >= 0) {
+		if (!(param->flags & 1)) {
+			fd = ksceIoOpen(path, 1, 390);
+			if (fd < 0) {
+				result = fd == (int)0x80010013 ? fd : (int)0x80801087;
+				goto restorePermission;
+			}
+			option.size = sizeof(option);
+			option.align = 32;
+			header = ksceKernelAllocHeapMemoryWithOption(
+				g_appmgrSaveDataHeap, sizeof(*header), &option);
+			if (!header) {
+				ksceIoClose(fd);
+				result = (int)0x80801006;
+				goto restorePermission;
+			}
+			memset(header, 0, sizeof(*header));
+			if (ksceIoRead(fd, header, sizeof(*header)) == sizeof(*header)) {
+				ksceIoClose(fd);
+				result = header->slotCount == param->slotCount ?
+					0 : (int)0x80801085;
+				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+			} else {
+				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+				ksceIoClose(fd);
+				result = (int)0x80801088;
+			}
+			goto restorePermission;
+		}
+		result = ksceIoRemove(path);
+		if (result < 0)
+			goto restorePermission;
+	}
+	option.size = sizeof(option);
+	option.align = 32;
+	header = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						   sizeof(*header), &option);
+	if (!header) {
+		result = (int)0x80801006;
+		goto restorePermission;
+	}
+	memset(header, 0, sizeof(*header));
+	header->version = 0;
+	header->magic[0] = 'S';
+	header->magic[1] = 'D';
+	header->magic[2] = 'S';
+	header->magic[3] = 'L';
+	header->slotCount = param->slotCount;
+	fd = ksceIoOpen(path, 1538, 390);
+	if (fd < 0) {
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		result = fd == (int)0x80010013 ? fd : (int)0x80801087;
+		goto restorePermission;
+	}
+	if (ksceIoWrite(fd, header, sizeof(*header)) != sizeof(*header)) {
+		ksceIoClose(fd);
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		result = (int)0x80801089;
+		goto restorePermission;
+	}
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+	option.size = sizeof(option);
+	option.align = 32;
+	zeroSlots = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						      4096, &option);
+	if (!zeroSlots) {
+		ksceIoClose(fd);
+		result = (int)0x80801006;
+		goto restorePermission;
+	}
+	memset(zeroSlots, 0, 4096);
+	if ((param->slotCount >> 2) != 0) {
+		block = 0;
+		do {
+			if (ksceIoWrite(fd, zeroSlots, 4096) != 4096) {
+				ksceIoClose(fd);
+				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
+				result = (int)0x80801089;
+				goto restorePermission;
+			}
+			++block;
+		} while (block < (param->slotCount >> 2));
+	}
+	ksceIoClose(fd);
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
+	result = 0;
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leave:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int ksceAppMgrSaveDataSlotCreate(void *parameters)
+{
+	const AppmgrSaveDataSlotKernelParam *slot = parameters;
+	SceAppMgrAppInfoCache *info;
+	SceIoStat stat;
+	char path[64];
+	void *storage;
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = slot->mountPoint;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = ksceIoClose(fd);
+			if (result < 0)
+				goto restorePermission;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 0);
+	if (result != 0)
+		goto restorePermission;
+	result = appmgrWriteSaveDataSlot(slot->slotId, &slot->param, -1,
+					mountPoint);
+	if (result != 0)
+		goto restorePermission;
+	storage = NULL;
+	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+						    &storage, 0) >= 0 && storage) {
+		info = storage;
+		info->saveDataFlags |= 2;
+		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
+			ksceIoChstat(path, &stat, 32);
+	}
+	result = 0;
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
+{
+	const SceAppMgrSaveDataSlotDelete *slot = parameters;
+	SceAppMgrAppInfoCache *info;
+	SceIoStat stat;
+	char path[64];
+	void *storage;
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)slot->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = ksceIoClose(fd);
+			if (result < 0)
+				goto restorePermission;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
+	if (result != 0)
+		goto restorePermission;
+	result = appmgrDeleteSaveDataSlot(slot->slotId, mountPoint);
+	if (result != 0)
+		goto restorePermission;
+	storage = NULL;
+	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+						    &storage, 0) >= 0 && storage) {
+		info = storage;
+		info->saveDataFlags |= 2;
+		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
+			ksceIoChstat(path, &stat, 32);
+	}
+	result = 0;
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int ksceAppMgrSaveDataSlotSetParam(void *parameters)
+{
+	const AppmgrSaveDataSlotKernelParam *slot = parameters;
+	SceAppMgrAppInfoCache *info;
+	SceIoStat stat;
+	char path[64];
+	void *storage;
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = slot->mountPoint;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = ksceIoClose(fd);
+			if (result < 0)
+				goto restorePermission;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
+	if (result != 0)
+		goto restorePermission;
+	result = appmgrOverwriteSaveDataSlot(slot->slotId, &slot->param, -1,
+					    mountPoint);
+	if (result != 0)
+		goto restorePermission;
+	storage = NULL;
+	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+						    &storage, 0) >= 0 && storage) {
+		info = storage;
+		info->saveDataFlags |= 2;
+		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
+			ksceIoChstat(path, &stat, 32);
+	}
+	result = 0;
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
+{
+	const AppmgrSaveDataSlotStatusParam *slot = parameters;
+	SceAppMgrAppInfoCache *info;
+	SceIoStat stat;
+	char path[64];
+	void *storage;
+	SceUInt32 syscallState;
+	const char *mountPoint;
+	SceUID fd;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	if (!slot || slot->size != sizeof(*slot)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = slot->mountPoint;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+		fd = g_appmgrSaveDataSlotCache.fd;
+		if (fd != -1 &&
+		    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+			result = ksceIoClose(fd);
+			if (result < 0)
+				goto restorePermission;
+			g_appmgrSaveDataSlotCache.fd = -1;
+		}
+	}
+	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
+	if (result != 0)
+		goto restorePermission;
+	result = appmgrSetSaveDataSlotStatus(slot->slotId, slot->status, mountPoint);
+	if (result != 0)
+		goto restorePermission;
+	storage = NULL;
+	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+						    &storage, 0) >= 0 && storage) {
+		info = storage;
+		info->saveDataFlags |= 2;
+		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
+			ksceIoChstat(path, &stat, 32);
+	}
+	result = 0;
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrOpenSaveDataSlotFile(const char *mountPoint,
+			      AppmgrSaveDataSlotFileInfo *info)
+{
+	SceUInt32 syscallState;
+	SceUInt32 version;
+	SceUInt32 slotCount;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	SceKernelSuspendForDriver_4DF40893(0);
+	if (!mountPoint) {
+		result = (int)0x80800001;
+		goto unlockPower;
+	}
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	result = (int)0x80801091;
+	permission = ksceKernelSetPermission(128);
+	if (g_appmgrSaveDataSlotCache.processId != 0)
+		goto restorePermission;
+	if (sceKernelGetProcessId() == 0 &&
+	    g_appmgrSaveDataSlotCache.fd != -1 &&
+	    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+		result = ksceIoClose(g_appmgrSaveDataSlotCache.fd);
+		if (result < 0)
+			goto restorePermission;
+		g_appmgrSaveDataSlotCache.fd = -1;
+	}
+	result = appmgrLoadSaveDataSlotCache(mountPoint);
+	if (result >= 0) {
+		g_appmgrSaveDataSlotCache.processId = sceKernelGetProcessId();
+		memset(g_appmgrSaveDataSlotCache.mountPoint, 0, 16);
+		strncpy(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 15);
+		if (info) {
+			memset(info, 0, sizeof(*info));
+			version = g_appmgrSaveDataSlotCache.header->version;
+			slotCount = g_appmgrSaveDataSlotCache.header->slotCount;
+			info->version = version;
+			info->slotCount = slotCount;
+			memcpy(info->occupied,
+			       g_appmgrSaveDataSlotCache.header->occupied,
+			       sizeof(info->occupied));
+		}
+	}
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)
+{
+	SceAppMgrSaveDataSlotParam *slot = param;
+	SceUInt32 syscallState;
+	SceUInt32 windowIndex;
+	SceSize windowLength;
+	SceSize end;
+	SceOff offset;
+	int permission;
+	int result;
+	SceUID fd;
+
+	syscallState = sceSyscallEnter();
+	if (slotId > 255 || !slot) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto leaveSyscall;
+	if (g_appmgrSaveDataSlotCache.processId != sceKernelGetProcessId()) {
+		result = (int)0x80801090;
+		goto unlockMutex;
+	}
+	if (!g_appmgrSaveDataSlotCache.header->occupied[slotId]) {
+		result = (int)0x8080108b;
+		goto unlockMutex;
+	}
+	windowIndex = (slotId + 1) >> 5;
+	if (g_appmgrSaveDataSlotCache.windowIndex == windowIndex) {
+		windowLength = g_appmgrSaveDataSlotCache.windowLength;
+	} else {
+		if (g_appmgrSaveDataSlotCache.fd == -1) {
+			permission = ksceKernelSetPermission(128);
+			if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+				fd = g_appmgrSaveDataSlotCache.fd;
+				if (fd != -1 &&
+				    strncmp(g_appmgrSaveDataSlotCache.mountPoint,
+					    g_appmgrSaveDataSlotCache.mountPoint, 16) == 0) {
+					result = ksceIoClose(fd);
+					if (result < 0) {
+						ksceKernelSetPermission(permission);
+						goto unlockMutex;
+					}
+					g_appmgrSaveDataSlotCache.fd = -1;
+				}
+			}
+			result = appmgrLoadSaveDataSlotCache(
+				g_appmgrSaveDataSlotCache.mountPoint);
+			ksceKernelSetPermission(permission);
+			if (result < 0)
+				goto unlockMutex;
+		}
+		permission = ksceKernelSetPermission(128);
+		offset = ksceIoLseek(g_appmgrSaveDataSlotCache.fd,
+				     (SceOff)(windowIndex << 15), 0);
+		ksceKernelSetPermission(permission);
+		if (offset < 0)
+			goto readError;
+		permission = ksceKernelSetPermission(128);
+		result = ksceIoRead(g_appmgrSaveDataSlotCache.fd,
+				    g_appmgrSaveDataSlotCache.readWindow, 32768);
+		ksceKernelSetPermission(permission);
+		if (result < 0)
+			goto readError;
+		windowLength = result;
+		g_appmgrSaveDataSlotCache.windowIndex = windowIndex;
+		g_appmgrSaveDataSlotCache.windowLength = result;
+	}
+	end = (((slotId + 1) & 31) + 1) << 10;
+	if (end > windowLength)
+		goto readError;
+	memcpy(slot, (const char *)g_appmgrSaveDataSlotCache.readWindow +
+	       end - sizeof(*slot), sizeof(*slot));
+	if (appmgrGetFakeSdSlotBroken() == slotId)
+		slot->status = 1;
+	result = 0;
+	goto unlockMutex;
+readError:
+	result = (int)0x80801088;
+unlockMutex:
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrCloseSaveDataSlotFile(const char *mountPoint)
+{
+	SceUInt32 syscallState;
+	int permission;
+	int result;
+
+	syscallState = sceSyscallEnter();
+	SceKernelSuspendForDriver_4DF40893(0);
+	if (!mountPoint) {
+		result = (int)0x80800001;
+		goto unlockPower;
+	}
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	if (g_appmgrSaveDataSlotCache.processId != sceKernelGetProcessId() ||
+	    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) != 0) {
+		result = (int)0x80801090;
+		goto unlockMutex;
+	}
+	if (g_appmgrSaveDataSlotCache.fd != -1) {
+		permission = ksceKernelSetPermission(128);
+		result = ksceIoClose(g_appmgrSaveDataSlotCache.fd);
+		ksceKernelSetPermission(permission);
+		if (result < 0)
+			goto unlockMutex;
+	}
+	g_appmgrSaveDataSlotCache.windowIndex = 0;
+	g_appmgrSaveDataSlotCache.windowLength = 0;
+	g_appmgrSaveDataSlotCache.processId = 0;
+	g_appmgrSaveDataSlotCache.fd = -1;
+	memset(g_appmgrSaveDataSlotCache.header, 0, 1024);
+	memset(g_appmgrSaveDataSlotCache.readWindow, 0, 32768);
+unlockMutex:
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalApplication)
+{
+	SceAppUtilSaveDataFile file;
+	SceAppMgrAppInfoCache *info;
+	SceAllocOpt option;
+	SceIoStat stat;
+	SceIoStat clockStat;
+	char path[210];
+	char resolvedPath[292];
+	char mountDevice[32];
+	char mountPath[64];
+	char *directories[20];
+	int createdFiles[5];
+	SceOff originalSizes[5];
+	const char *mountPoint;
+	char *filePath;
+	char *parentPath;
+	void *storage;
+	void *mappedPage;
+	unsigned char *buffer;
+	SceUInt64 allocationUnit;
+	SceOff totalBytes;
+	SceUInt64 quotaBytes;
+	SceOff freeBytes;
+	SceUInt64 requiredBytes;
+	SceUInt64 totalRequiredBytes;
+	SceOff quotaRemaining;
+	SceUInt64 writtenBytes;
+	SceUInt64 growth;
+	SceOff fileEnd;
+	SceSize mappedSize;
+	SceUInt32 mappedOffset;
+	SceUInt32 syscallState;
+	SceUID mapping;
+	SceUID fd;
+	unsigned int index;
+	unsigned int directoryIndex;
+	unsigned int missingFilesystemKiB;
+	int permission;
+	int allFilesEmpty;
+	int quotaExceeded;
+	int slotCreated;
+	int changed;
+	int value;
+	int result;
+	int bytes;
+
+	syscallState = sceSyscallEnter();
+	if (normalApplication) {
+		if (SceSblACMgrForDriver_0924896F(0)) {
+			result = (int)0x80800009;
+			goto leaveSyscall;
+		}
+	} else if (!SceSblACMgrForDriver_0924896F(0)) {
+		result = (int)0x80800009;
+		goto leaveSyscall;
+	}
+	if (!operation || operation->size != sizeof(*operation)) {
+		result = (int)0x80800001;
+		goto leaveSyscall;
+	}
+	mountPoint = (const char *)operation->mountPoint.data;
+	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
+	if (result < 0)
+		goto leaveSyscall;
+	SceKernelSuspendForDriver_4DF40893(0);
+	result = ksceKernelLockMutex(g_appmgrSaveDataMutex, 1, NULL);
+	if (result < 0)
+		goto unlockPower;
+	permission = ksceKernelSetPermission(128);
+	memset(path, 0, sizeof(path));
+	memset(resolvedPath, 0, sizeof(resolvedPath));
+	memset(mountDevice, 0, sizeof(mountDevice));
+	allocationUnit = 0;
+	totalBytes = 0;
+	quotaBytes = 0;
+	freeBytes = 0;
+	snprintf(path, sizeof(path), "%s%s", mountPoint, "sce_sys");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	appmgrExtractSaveDataDeviceName(resolvedPath, mountDevice, sizeof(mountDevice));
+	operation->requiredSizeKiB = 0;
+	if (strncmp(mountDevice, "host0:", 6) != 0) {
+		result = appmgrGetSaveDataDeviceSpace(mountDevice, &allocationUnit,
+						     &totalBytes, &quotaBytes, &freeBytes);
+		if (result != 0)
+			goto restorePermission;
+	} else {
+		allocationUnit = 32768;
+		totalBytes = 0;
+		quotaBytes = 0xFFFFFFFFULL;
+		freeBytes = 0xFFFFFFFFLL;
+	}
+	value = ksceSblAimgrIsCEX();
+	if (!value) {
+		if (ksceRegMgrSystemParamGetInt(0x154A2C, &value) == 0 && value == 1)
+			freeBytes = 0;
+		value = ksceSblAimgrIsCEX();
+	}
+	if (freeBytes < 0x200000) {
+		missingFilesystemKiB = (0x200000 - freeBytes) >> 10;
+		value = ksceSblAimgrIsCEX();
+	} else {
+		missingFilesystemKiB = 0;
+	}
+	if (!value &&
+	    ksceRegMgrSystemParamGetInt(0x25CE9A, &value) == 0 && value == 1)
+		quotaBytes = 0;
+	quotaRemaining = quotaBytes;
+	totalRequiredBytes = 0;
+	quotaExceeded = 0;
+	allFilesEmpty = 1;
+	memset(directories, 0, sizeof(directories));
+	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+		requiredBytes = 0;
+		result = appmgrCalculateSaveDataFileSpace(operation->files + index,
+			directories, &requiredBytes, 32768, mountPoint);
+		if (result != 0)
+			goto freeDirectories;
+		if (quotaRemaining < (SceOff)requiredBytes)
+			quotaExceeded = 1;
+		if ((SceOff)requiredBytes >= 1)
+			allFilesEmpty = 0;
+		if ((SceOff)requiredBytes < quotaRemaining)
+			quotaRemaining -= requiredBytes;
+		else
+			quotaRemaining = 0;
+		totalRequiredBytes += requiredBytes;
+	}
+	if (quotaExceeded) {
+		operation->requiredSizeKiB = (totalRequiredBytes - quotaBytes) >> 10;
+		storage = NULL;
+		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+			info = storage;
+			info->neededSaveDataKiB = operation->requiredSizeKiB;
+		}
+		appmgrNotifySaveDataSpaceError((int)0x8080108C,
+					      operation->requiredSizeKiB);
+		result = (int)0x8080108C;
+		goto freeDirectories;
+	}
+	if (missingFilesystemKiB && !allFilesEmpty) {
+		operation->requiredSizeKiB = missingFilesystemKiB;
+		storage = NULL;
+		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+			info = storage;
+			info->neededSaveDataKiB = missingFilesystemKiB;
+		}
+		appmgrNotifySaveDataSpaceError((int)0x8080108D,
+					      operation->requiredSizeKiB);
+		result = (int)0x8080108D;
+		goto freeDirectories;
+	}
+	slotCreated = 0;
+	changed = 0;
+	if (operation->slotId != (unsigned int)-1) {
+		if (g_appmgrSaveDataSlotCache.processId == sceKernelGetProcessId()) {
+			fd = g_appmgrSaveDataSlotCache.fd;
+			if (fd != -1 &&
+			    strncmp(g_appmgrSaveDataSlotCache.mountPoint, mountPoint, 16) == 0) {
+				result = ksceIoClose(fd);
+				if (result < 0)
+					goto freeDirectories;
+				g_appmgrSaveDataSlotCache.fd = -1;
+			}
+		}
+		result = appmgrCheckSaveDataSlot(operation->slotId, mountPoint, 1);
+		if (result != 0) {
+			if (result != (int)0x8080108B)
+				goto freeDirectories;
+			if (!operation->slotParam) {
+				result = (int)0x8080108E;
+				goto freeDirectories;
+			}
+			mappedPage = NULL;
+			mappedSize = 0;
+			mappedOffset = 0;
+			mapping = ksceKernelUserMap("SceAppMgrSaveDataSlotParam", 1,
+				operation->slotParam, 1024, &mappedPage, &mappedSize,
+				&mappedOffset);
+			if (mapping < 0) {
+				result = mapping;
+				goto freeDirectories;
+			}
+			result = appmgrWriteSaveDataSlot(operation->slotId,
+				(SceAppMgrSaveDataSlotParam *)((char *)mappedPage + mappedOffset),
+				1, mountPoint);
+			ksceKernelUserUnmap(mapping);
+			if (result != 0)
+				goto freeDirectories;
+			slotCreated = 1;
+		} else {
+			result = appmgrSetSaveDataSlotStatus(operation->slotId, 1, mountPoint);
+			if (result != 0)
+				goto freeDirectories;
+		}
+		storage = NULL;
+		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+			info = storage;
+			info->saveDataFlags |= 2;
+			if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+			    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
+				ksceIoChstat(mountPath, &clockStat, 32);
+		}
+		if (!(operation->flags & 1)) {
+			result = ksceIoSync(mountDevice, 0);
+			if (result != 0)
+				goto freeDirectories;
+		}
+		changed = 1;
+	}
+	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+		createdFiles[index] = 0;
+		memset(&file, 0, sizeof(file));
+		result = ksceKernelCopyFromUser(&file, operation->files + index, sizeof(file));
+		if (result != 0)
+			goto freeDirectories;
+		option.size = sizeof(option);
+		option.align = 32;
+		filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 200, &option);
+		if (!filePath) {
+			result = (int)0x80801006;
+			goto freeDirectories;
+		}
+		memset(filePath, 0, 200);
+		result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+		if (result < 0)
+			goto freeFirstFilePath;
+		result = appmgrValidateSaveDataFile(&file, filePath);
+		if (result < 0)
+			goto freeFirstFilePath;
+		memset(path, 0, sizeof(path));
+		memset(resolvedPath, 0, sizeof(resolvedPath));
+		option.size = sizeof(option);
+		option.align = 32;
+		parentPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 292, &option);
+		if (!parentPath) {
+			result = (int)0x80801006;
+			goto freeFirstFilePath;
+		}
+		memset(parentPath, 0, 292);
+		snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
+		appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+		if (file.mode == 2) {
+			strncpy(parentPath, resolvedPath, 292);
+			value = 1;
+		} else {
+			value = appmgrGetSaveDataParentPath(resolvedPath, parentPath);
+		}
+		if (value != 0) {
+			memset(&stat, 0, sizeof(stat));
+			result = ksceIoGetstat(parentPath, &stat);
+			originalSizes[index] = stat.st_size;
+			if (result < 0) {
+				result = appmgrCreateSaveDataDirectories(parentPath, 390);
+				if (result < 0)
+					goto firstWriteError;
+				if (!changed) {
+					storage = NULL;
+					if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+						g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+						info = storage;
+						info->saveDataFlags |= 2;
+						if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+						    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
+							ksceIoChstat(mountPath, &clockStat, 32);
+					}
+				}
+				changed = 1;
+			}
+		}
+		if (file.mode != 2) {
+			memset(&stat, 0, sizeof(stat));
+			result = ksceIoGetstat(resolvedPath, &stat);
+			originalSizes[index] = stat.st_size;
+			if (result < 0)
+				createdFiles[index] = 1;
+			fd = ksceIoOpen(resolvedPath, 514, 390);
+			if (fd < 0) {
+				result = fd;
+				goto firstWriteError;
+			}
+			if (file.bufSize) {
+				if (file.buf) {
+					mappedPage = NULL;
+					mappedSize = 0;
+					mappedOffset = 0;
+					mapping = ksceKernelUserMap("SceAppMgrSaveDataBuf", 1,
+						file.buf, file.bufSize, &mappedPage, &mappedSize, &mappedOffset);
+					if (mapping < 0) {
+						result = mapping;
+						ksceIoClose(fd);
+						goto freeFirstParentPath;
+					}
+					buffer = (unsigned char *)mappedPage + mappedOffset;
+					fileEnd = file.offset + file.bufSize;
+					bytes = file.bufSize;
+					if (createdFiles[index] == 1 ||
+					    originalSizes[index] <= file.offset) {
+						bytes = ksceIoPwrite(fd, buffer, file.bufSize, file.offset);
+						value = file.bufSize;
+					} else if (originalSizes[index] < fileEnd) {
+						value = file.offset + file.bufSize - originalSizes[index];
+						bytes = ksceIoPwrite(fd,
+							buffer + originalSizes[index] - file.offset,
+							value, originalSizes[index]);
+					} else {
+						value = bytes;
+					}
+					ksceKernelUserUnmap(mapping);
+					if (bytes != value) {
+						result = bytes;
+						ksceIoClose(fd);
+						if (result != (int)0x8001001C)
+							result = (int)0x8080108F;
+						goto firstWriteError;
+					}
+				}
+			} else if (createdFiles[index] == 1) {
+				memset(&stat, 0, sizeof(stat));
+				stat.st_size = file.offset;
+				result = ksceIoChstat(resolvedPath, &stat, 4);
+				if (result < 0) {
+					ksceIoClose(fd);
+					goto firstWriteError;
+				}
+			}
+			ksceIoClose(fd);
+			if (!changed) {
+				storage = NULL;
+				if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+					g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+					info = storage;
+					info->saveDataFlags |= 2;
+					if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+					    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
+						ksceIoChstat(mountPath, &clockStat, 32);
+				}
+			}
+			changed = 1;
+		}
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	}
+	writtenBytes = 0;
+	for (directoryIndex = 0; directoryIndex < 20; directoryIndex++) {
+		if (directories[directoryIndex]) {
+			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directories[directoryIndex]);
+			directories[directoryIndex] = NULL;
+			writtenBytes += allocationUnit;
+		}
+	}
+	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+		memset(&file, 0, sizeof(file));
+		result = ksceKernelCopyFromUser(&file, operation->files + index, sizeof(file));
+		if (result != 0)
+			goto restorePermission;
+		option.size = sizeof(option);
+		option.align = 32;
+		filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 200, &option);
+		if (!filePath) {
+			result = (int)0x80801006;
+			goto restorePermission;
+		}
+		memset(filePath, 0, 200);
+		result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+		if (result < 0)
+			goto freeSecondFilePath;
+		result = appmgrValidateSaveDataFile(&file, filePath);
+		if (result < 0)
+			goto freeSecondFilePath;
+		memset(path, 0, sizeof(path));
+		memset(resolvedPath, 0, sizeof(resolvedPath));
+		snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
+		appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+		if (file.mode != 2) {
+			fd = ksceIoOpen(resolvedPath, 2, 390);
+			if (fd < 0) {
+				result = fd;
+				goto freeSecondFilePath;
+			}
+			if (file.buf && file.bufSize) {
+				mappedPage = NULL;
+				mappedSize = 0;
+				mappedOffset = 0;
+				mapping = ksceKernelUserMap("SceAppMgrSaveDataBuf", 1,
+					file.buf, file.bufSize, &mappedPage, &mappedSize, &mappedOffset);
+				if (mapping < 0) {
+					result = mapping;
+					ksceIoClose(fd);
+					goto freeSecondFilePath;
+				}
+				if (!createdFiles[index]) {
+					buffer = (unsigned char *)mappedPage + mappedOffset;
+					fileEnd = file.offset + file.bufSize;
+					bytes = file.bufSize;
+					value = file.bufSize;
+					if (originalSizes[index] >= fileEnd) {
+						bytes = ksceIoPwrite(fd, buffer, file.bufSize, file.offset);
+					} else if (file.offset < originalSizes[index]) {
+						value = originalSizes[index] - file.offset;
+						bytes = ksceIoPwrite(fd, buffer, value, file.offset);
+					}
+					if (bytes != value) {
+						ksceKernelUserUnmap(mapping);
+						ksceIoClose(fd);
+						result = (int)0x8080108F;
+						goto freeSecondFilePath;
+					}
+					if (!changed) {
+						storage = NULL;
+						if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+							g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
+							info = storage;
+							info->saveDataFlags |= 2;
+							if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+							    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
+								ksceIoChstat(mountPath, &clockStat, 32);
+						}
+					}
+					changed = 1;
+				}
+				ksceKernelUserUnmap(mapping);
+			}
+			ksceIoClose(fd);
+			if (file.mode == 1) {
+				memset(&stat, 0, sizeof(stat));
+				stat.st_size = file.offset + file.bufSize;
+				result = ksceIoChstat(resolvedPath, &stat, 4);
+				if (result < 0)
+					goto freeSecondFilePath;
+			}
+			__builtin_prefetch(originalSizes + index + 1);
+			if (originalSizes[index] < file.offset && file.bufSize) {
+				growth = file.offset - originalSizes[index] + file.bufSize;
+				if (growth % allocationUnit)
+					growth = (SceUInt32)((growth / allocationUnit + 1) * allocationUnit);
+				else
+					growth = (SceUInt32)growth;
+			} else if (file.bufSize) {
+				growth = file.bufSize;
+				if (growth % allocationUnit)
+					growth = (SceUInt32)((growth / allocationUnit + 1) * allocationUnit);
+			} else {
+				growth = allocationUnit;
+			}
+			writtenBytes += growth;
+		}
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+		appmgrAccumulateSaveDataWriteSize(writtenBytes >> 10);
+	}
+	if (operation->slotId != (unsigned int)-1) {
+		if (!slotCreated && operation->slotParam) {
+			mappedPage = NULL;
+			mappedSize = 0;
+			mappedOffset = 0;
+			mapping = ksceKernelUserMap("SceAppMgrSaveDataSlotParam", 1,
+				operation->slotParam, 1024, &mappedPage, &mappedSize, &mappedOffset);
+			if (mapping < 0) {
+				result = mapping;
+				goto restorePermission;
+			}
+			result = appmgrOverwriteSaveDataSlot(operation->slotId,
+				(SceAppMgrSaveDataSlotParam *)((char *)mappedPage + mappedOffset),
+				0, mountPoint);
+			ksceKernelUserUnmap(mapping);
+			if (result != 0)
+				goto restorePermission;
+		} else {
+			result = appmgrSetSaveDataSlotStatus(operation->slotId, 0, mountPoint);
+			if (result != 0)
+				goto restorePermission;
+		}
+	}
+	result = 0;
+	if (!(operation->flags & 1))
+		result = ksceIoSync(mountDevice, 0);
+	goto restorePermission;
+firstWriteError:
+	if (result == (int)0x8001001C) {
+		appmgrRollbackSaveDataOperation(operation, (const char *const *)directories,
+			originalSizes, createdFiles, allocationUnit, slotCreated,
+			&operation->requiredSizeKiB);
+		appmgrSetRequiredSaveDataSize(operation->requiredSizeKiB);
+		appmgrNotifySaveDataSpaceError((int)0x8080108D, operation->requiredSizeKiB);
+		result = (int)0x8080108D;
+	}
+freeFirstParentPath:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
+freeFirstFilePath:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+freeDirectories:
+	appmgrFreeSaveDataDirectories(directories);
+	goto restorePermission;
+freeSecondFilePath:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+restorePermission:
+	ksceKernelSetPermission(permission);
+	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
+unlockPower:
+	SceKernelSuspendForDriver_2BB92967(0);
+leaveSyscall:
+	sceSyscallLeave(syscallState);
+	return result;
+}
+
+int appmgrValidateSaveDataMountPoint(const char *mountPoint, int requirePrimary)
+{
+	int result;
+
+	result = strncmp(mountPoint, "savedata0:", 16);
+	if (result != 0) {
+		if (requirePrimary == 1)
+			return (int)0x80800001;
+		if (strncmp(mountPoint, "savedata1:", 16) != 0)
+			return (int)0x80800001;
+		return 0;
+	}
+	return result;
+}
+
+int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
+			   int requiredStatus)
+{
+	AppmgrSaveDataSlotFileHeader *header;
+	SceAllocOpt option;
+	char path[128];
+	char resolvedPath[292];
+	SceUID fd;
+	int result;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint,
+		 "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	fd = ksceIoOpen(resolvedPath, 1, 390);
+	if (fd < 0)
+		return fd == (int)0x80010013 ? fd : (int)0x80801087;
+	option.mmapKind = 0;
+	option.align = 32;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	header = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						   sizeof(*header), &option);
+	if (!header)
+		return (int)0x80801006;
+	memset(header, 0, sizeof(*header));
+	if (ksceIoRead(fd, header, sizeof(*header)) != sizeof(*header)) {
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		ksceIoClose(fd);
+		return (int)0x80801088;
+	}
+	ksceIoClose(fd);
+	if (timingsafe_memcmp(header->magic, "SDSL", 4) != 0) {
+		result = (int)0x80801086;
+	} else if (header->slotCount <= slotId) {
+		result = (int)0x80801084;
+	} else if (requiredStatus == 0 && header->occupied[slotId] != 0) {
+		result = (int)0x8080108a;
+	} else if (requiredStatus == 1 && header->occupied[slotId] != 1) {
+		result = (int)0x8080108b;
+	} else {
+		result = 0;
+	}
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+	return result;
+}
+
+int appmgrValidateSaveDataSlotParam(const SceAppMgrSaveDataSlotParam *param)
+{
+	unsigned int index;
+	unsigned int character;
+
+	if (!param || strnlen(param->title, sizeof(param->title)) > 63 ||
+	    strnlen(param->subTitle, sizeof(param->subTitle)) > 127 ||
+	    strnlen(param->detail, sizeof(param->detail)) >= 512 ||
+	    strnlen(param->iconPath, sizeof(param->iconPath)) > 63)
+		return (int)0x80800001;
+	for (index = 0; index < sizeof(param->iconPath); index++) {
+		character = (unsigned char)param->iconPath[index];
+		if (!character)
+			break;
+		if (((character & ~32u) - 'A') > 25 &&
+		    character - '0' > 9 && character != '-' &&
+		    character != '_' && character != '.' &&
+		    character != '/' && character != ':')
+			return (int)0x80800001;
+		if (character == '.' && index != 63 &&
+		    param->iconPath[index + 1] == '.')
+			return (int)0x80800001;
+	}
+	for (index = 0; index < sizeof(param->reserved); index++) {
+		if (param->reserved[index])
+			return (int)0x80800001;
+	}
+	return 0;
+}
+
+int appmgrGetSaveDataParentPath(const char *path, char *parentPath)
+{
+	int slashCount = 0;
+	size_t lastSlash = 0;
+	size_t lastColon = 0;
+	size_t index;
+	signed char character;
+
+	for (index = 0; index != 200; index++) {
+		character = path[index];
+		if (!character)
+			break;
+		if (character == ':') {
+			lastColon = index;
+		} else if (character == '/') {
+			slashCount++;
+			lastSlash = index;
+		}
+	}
+	if (!lastColon)
+		return 0;
+	if (path[lastColon + 1] == '/')
+		slashCount--;
+	if (slashCount <= 0)
+		return 0;
+	strncpy(parentPath, path, lastSlash);
+	return 1;
+}
+
+int appmgrCreateSaveDataDirectories(const char *path, SceMode mode)
+{
+	char parentPath[292];
+	const char *separator;
+
+	if (path && *path) {
+		separator = path;
+		while ((separator = strchr(separator + 1, '/')) != NULL) {
+			memset(parentPath, 0, sizeof(parentPath));
+#if FW_VERSION >= 0x04000000
+			__strncpy_chk(parentPath, path, separator - path,
+				      sizeof(parentPath));
+#else
+			strncpy(parentPath, path, separator - path);
+#endif
+			ksceIoMkdir(parentPath, mode);
+		}
+	}
+	return ksceIoMkdir(path, mode);
+}
+
+int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
+			     unsigned int *entryCount)
+{
+	SceIoStat stat;
+	SceIoDirent entry;
+	char childPath[292];
+	SceUID directory;
+	int result;
+
+	result = ksceIoGetstat(path, &stat);
+	if (result < 0) {
+		if (result == (int)0x80010002 && missingPolicy <= 1)
+			result = 0;
+		return result;
+	}
+	if (!(stat.st_mode & SCE_S_IFDIR)) {
+		++*entryCount;
+		return ksceIoRemove(path);
+	}
+	directory = ksceIoDopen(path);
+	if (directory < 0)
+		return directory;
+	for (;;) {
+		memset(&entry, 0, sizeof(entry));
+		result = ksceIoDread(directory, &entry);
+		if (result < 0)
+			goto closeDirectory;
+		if (!result)
+			break;
+		memset(childPath, 0, sizeof(childPath));
+		strncpy(childPath, path, sizeof(childPath));
+#if FW_VERSION >= 0x04000000
+		__strncat_chk2(childPath, "/", sizeof(childPath));
+		__strncat_chk(childPath, entry.d_name, 256, sizeof(childPath));
+#else
+		*(unsigned short *)(childPath + strlen(childPath)) =
+			*(const unsigned short *)"/";
+		strncat(childPath, entry.d_name, 256);
+#endif
+		result = appmgrRemoveSaveDataPath(childPath, missingPolicy, entryCount);
+		if (result < 0)
+			goto closeDirectory;
+	}
+	ksceIoDclose(directory);
+	++*entryCount;
+	return ksceIoRmdir(path);
+closeDirectory:
+	ksceIoDclose(directory);
+	return result;
+}
+
+int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
+				  SceUInt64 *allocationUnit,
+				  SceOff *totalBytes,
+				  SceUInt64 *availableQuota,
+				  SceOff *freeBytes)
+{
+	char device[32] = {0};
+	SceUInt32 quota;
+	SceUInt32 usage;
+	SceIoDevInfo info;
+	SceOff maxSize;
+	SceOff freeSize;
+	size_t length;
+	int result;
+
+	length = strnlen(mountPoint, sizeof(device));
+#if FW_VERSION >= 0x04000000
+	__memcpy_chk(device, mountPoint, length - 2, sizeof(device));
+#else
+	memcpy(device, mountPoint, length - 2);
+#endif
+	quota = 0;
+	usage = 0;
+	result = ScePfsMgrForKernel_27FB7618(device, &quota, &usage);
+	if (result != (int)0x80010030 && result != 0)
+		return result;
+	if (!quota || result == (int)0x80010030)
+		quota = (SceUInt32)-1;
+	if (quota > usage)
+		*availableQuota = quota - usage;
+	else
+		*availableQuota = 0;
+	memset(&info, 0, sizeof(info));
+	result = ksceIoDevctl(mountPoint, 0x3001, NULL, 0, &info, sizeof(info));
+	if (result == 0) {
+		maxSize = info.max_size;
+		freeSize = info.free_size;
+		*allocationUnit = info.cluster_size;
+		*totalBytes = maxSize;
+		*freeBytes = freeSize;
+	}
+	return result;
+}
+
+int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
+				     char **directories,
+				     SceUInt64 *requiredBytes,
+				     SceUInt64 allocationUnit,
+				     const char *mountPoint)
+{
+	SceAppUtilSaveDataFile file;
+	SceIoStat stat;
+	SceAllocOpt option;
+	char path[210];
+	char resolvedPath[292];
+	char *filePath;
+	char *prefix;
+	char *directory;
+	SceOff totalSize;
+	SceUInt64 growth;
+	SceUInt64 directorySize;
+	size_t index;
+	size_t length;
+	unsigned int slot;
+	int result;
+
+	memset(&file, 0, sizeof(file));
+	memset(path, 0, sizeof(path));
+	memset(resolvedPath, 0, sizeof(resolvedPath));
+	result = ksceKernelCopyFromUser(&file, userFile, sizeof(file));
+	if (result != 0)
+		return result;
+	option.size = sizeof(option);
+	option.mmapKind = 0;
+	option.align = 32;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	filePath = ksceKernelAllocHeapMemoryWithOption(
+		g_appmgrSaveDataHeap, 200, &option);
+	if (!filePath)
+		return (int)0x80801006;
+	memset(filePath, 0, 200);
+	result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+	if (result < 0)
+		goto freeFilePath;
+	snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	if (ksceIoGetstat(resolvedPath, &stat) != 0) {
+		directorySize = allocationUnit * 3;
+		for (index = 0; index < 200 && resolvedPath[index]; index++) {
+			if (resolvedPath[index] != '/' ||
+			    resolvedPath[index - 1] == ':')
+				continue;
+			option.size = sizeof(option);
+			option.mmapKind = 0;
+			option.align = 32;
+			option.mmapBase = NULL;
+			option.mmapSize = 0;
+			prefix = ksceKernelAllocHeapMemoryWithOption(
+				g_appmgrSaveDataHeap, 292, &option);
+			if (!prefix) {
+				result = (int)0x80801006;
+				goto freeFilePath;
+			}
+			memset(prefix, 0, 292);
+#if FW_VERSION >= 0x04000000
+			__strncpy_chk(prefix, resolvedPath, index, 292);
+#else
+			strncpy(prefix, resolvedPath, index);
+#endif
+			if (ksceIoGetstat(prefix, &stat) != 0) {
+				for (slot = 0; slot < 20; slot++) {
+					if (directories[slot] &&
+					    strncmp(directories[slot], prefix, 291) == 0)
+						break;
+				}
+				if (slot == 20) {
+					length = strnlen(prefix, 291);
+					if (length > 7 &&
+					    strncmp(prefix + length - 8, "savedata", 8) != 0) {
+						option.size = sizeof(option);
+						option.mmapKind = 0;
+						option.align = 32;
+						option.mmapBase = NULL;
+						option.mmapSize = 0;
+						directory = ksceKernelAllocHeapMemoryWithOption(
+							g_appmgrSaveDataHeap, 292, &option);
+						if (!directory) {
+							ksceKernelFreeHeapMemory(
+								g_appmgrSaveDataHeap, prefix);
+							result = (int)0x80801006;
+							goto freeFilePath;
+						}
+						memset(directory, 0, 292);
+						strncpy(directory, prefix, 291);
+						for (slot = 0; slot < 20; slot++) {
+							if (!directories[slot]) {
+								directories[slot] = directory;
+								break;
+							}
+						}
+						*requiredBytes += directorySize;
+					}
+				}
+			}
+			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, prefix);
+		}
+		if (file.mode <= 1) {
+			totalSize = file.offset + file.bufSize;
+			growth = (SceUInt64)totalSize;
+			if (growth % allocationUnit)
+				growth = (growth / allocationUnit + 1) * allocationUnit;
+			*requiredBytes += growth + allocationUnit * 5;
+		} else {
+			option.size = sizeof(option);
+			option.mmapKind = 0;
+			option.align = 32;
+			option.mmapBase = NULL;
+			option.mmapSize = 0;
+			directory = ksceKernelAllocHeapMemoryWithOption(
+				g_appmgrSaveDataHeap, 292, &option);
+			if (!directory) {
+				result = (int)0x80801006;
+				goto freeFilePath;
+			}
+			memset(directory, 0, 292);
+			strncpy(directory, resolvedPath, 291);
+			for (slot = 0; slot < 20; slot++) {
+				if (!directories[slot]) {
+					directories[slot] = directory;
+					break;
+				}
+			}
+			*requiredBytes += directorySize;
+		}
+	} else if (file.mode <= 1) {
+		totalSize = file.offset + file.bufSize;
+		if (stat.st_size < totalSize) {
+			growth = (SceUInt64)(totalSize - stat.st_size);
+			if (growth % allocationUnit)
+				growth = (growth / allocationUnit + 1) * allocationUnit;
+			*requiredBytes = growth + allocationUnit;
+		} else {
+			*requiredBytes = 0;
+		}
+	} else {
+		*requiredBytes = 0;
+	}
+	result = 0;
+freeFilePath:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	return result;
+}
+
+int appmgrWriteSaveDataSlot(unsigned int slotId,
+			   const SceAppMgrSaveDataSlotParam *param,
+			   int status, const char *mountPoint)
+{
+	SceAppMgrSaveDataSlotParam *copy;
+	SceAllocOpt option;
+	char path[128];
+	char resolvedPath[292];
+	unsigned char occupied;
+	SceUID fd;
+	int result;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint,
+		 "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	fd = ksceIoOpen(resolvedPath, 2, 390);
+	if (fd < 0)
+		return fd == (int)0x80010013 ? fd : (int)0x80801087;
+	result = (int)ksceIoLseek(fd, (SceOff)((slotId + 1) << 10), 0);
+	if (result < 0)
+		goto closeFile;
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	option.align = 32;
+	copy = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						 sizeof(*copy), &option);
+	if (!copy) {
+		result = (int)0x80801006;
+		goto closeFile;
+	}
+	memcpy(copy, param, sizeof(*copy));
+	result = appmgrValidateSaveDataSlotParam(copy);
+	if (result < 0)
+		goto closeAndFree;
+	if (status >= 0)
+		copy->status = status;
+	if (ksceIoWrite(fd, copy, sizeof(*copy)) != sizeof(*copy)) {
+		result = (int)0x80801089;
+		goto closeAndFree;
+	}
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+	result = (int)ksceIoLseek(fd, (SceOff)(slotId + 512), 0);
+	if (result < 0)
+		goto closeFile;
+	occupied = 1;
+	if (ksceIoWrite(fd, &occupied, sizeof(occupied)) != sizeof(occupied))
+		result = (int)0x80801089;
+	else
+		result = 0;
+closeFile:
+	ksceIoClose(fd);
+	return result;
+closeAndFree:
+	ksceIoClose(fd);
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+	return result;
+}
+
+int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint)
+{
+	SceAppMgrSaveDataSlotParam *record;
+	SceAllocOpt option;
+	char path[128];
+	char resolvedPath[292];
+	unsigned char occupied;
+	SceUID fd;
+	int result;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint,
+		 "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	fd = ksceIoOpen(resolvedPath, 2, 390);
+	if (fd < 0)
+		return fd == (int)0x80010013 ? fd : (int)0x80801087;
+	result = (int)ksceIoLseek(fd, (SceOff)((slotId + 1) << 10), 0);
+	if (result < 0)
+		goto closeFile;
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.size = sizeof(option);
+	option.align = 32;
+	option.mmapSize = 0;
+	record = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						   sizeof(*record), &option);
+	if (!record) {
+		result = (int)0x80801006;
+		goto closeFile;
+	}
+	memset(record, 0, sizeof(*record));
+	if (ksceIoWrite(fd, record, sizeof(*record)) != sizeof(*record)) {
+		result = (int)0x80801089;
+		goto freeRecord;
+	}
+	result = (int)ksceIoLseek(fd, (SceOff)(slotId + 512), 0);
+	if (result < 0)
+		goto freeRecord;
+	occupied = 0;
+	if (ksceIoWrite(fd, &occupied, sizeof(occupied)) != sizeof(occupied))
+		result = (int)0x80801089;
+	else
+		result = 0;
+freeRecord:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, record);
+closeFile:
+	ksceIoClose(fd);
+	return result;
+}
+
+int appmgrOverwriteSaveDataSlot(unsigned int slotId,
+				const SceAppMgrSaveDataSlotParam *param,
+				int status, const char *mountPoint)
+{
+	SceAllocOpt option;
+	char *path;
+	char *resolvedPath;
+	SceAppMgrSaveDataSlotParam *copy;
+	SceUID fd;
+	int result;
+
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	option.align = 32;
+	path = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 128,
+						 &option);
+	if (!path)
+		return (int)0x80801006;
+	option.mmapKind = 0;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	option.align = 32;
+	resolvedPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+							 292, &option);
+	if (!resolvedPath) {
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
+		return (int)0x80801006;
+	}
+	memset(path, 0, 128);
+	memset(resolvedPath, 0, 292);
+	snprintf(path, 128, "%s%s/%s", mountPoint, "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, 292);
+	option.mmapKind = 0;
+	option.align = 32;
+	option.mmapBase = NULL;
+	option.mmapSize = 0;
+	option.size = sizeof(option);
+	copy = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+						 sizeof(*copy), &option);
+	if (!copy) {
+		result = (int)0x80801006;
+		goto freeBuffers;
+	}
+	memcpy(copy, param, sizeof(*copy));
+	result = appmgrValidateSaveDataSlotParam(copy);
+	if (result < 0)
+		goto freeBuffers;
+	fd = ksceIoOpen(resolvedPath, 2, 390);
+	if (fd < 0) {
+		result = fd == (int)0x80010013 ? fd : (int)0x80801087;
+		goto freeBuffers;
+	}
+	result = (int)ksceIoLseek(fd, (SceOff)((slotId + 1) << 10), 0);
+	if (result < 0)
+		goto closeFile;
+	if (status >= 0)
+		copy->status = status;
+	if (ksceIoWrite(fd, copy, sizeof(*copy)) == sizeof(*copy))
+		result = 0;
+	else
+		result = (int)0x80801089;
+closeFile:
+	ksceIoClose(fd);
+freeBuffers:
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
+	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, resolvedPath);
+	if (copy)
+		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+	return result;
+}
+
+int appmgrSetSaveDataSlotStatus(unsigned int slotId, int status,
+				const char *mountPoint)
+{
+	char path[128];
+	char resolvedPath[292];
+	int recordStatus = status;
+	SceUID fd;
+	int result;
+
+	memset(path, 0, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s/%s", mountPoint,
+		 "sce_sys", "sdslot.dat");
+	appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+	fd = ksceIoOpen(resolvedPath, 2, 390);
+	if (fd < 0)
+		return fd == (int)0x80010013 ? fd : (int)0x80801087;
+	result = (int)ksceIoLseek(fd, (SceOff)((slotId + 1) << 10), 0);
+	if (result < 0) {
+		ksceIoClose(fd);
+		return result;
+	}
+	if (ksceIoWrite(fd, &recordStatus, sizeof(recordStatus)) ==
+	    sizeof(recordStatus)) {
+		ksceIoClose(fd);
+		return 0;
+	}
+	ksceIoClose(fd);
+	return (int)0x80801089;
+}
+
+int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operation,
+				    const char *const *directories,
+				    const SceOff *originalSizes,
+				    const int *createdFiles,
+				    SceUInt64 allocationUnit, int slotCreated,
+				    SceUInt32 *requiredSizeKiB)
+{
+	SceIoStat stat;
+	SceAppUtilSaveDataFile file;
+	SceAllocOpt option;
+	SceOff totalSize;
+	char path[210];
+	char resolvedPath[292];
+	char *filePath;
+	unsigned int index;
+	unsigned int entryCount;
+	int result;
+
+	memset(&stat, 0, sizeof(stat));
+	index = 0;
+	if (operation->fileNum) {
+		do {
+			memset(&file, 0, sizeof(file));
+			result = ksceKernelCopyFromUser(&file,
+					operation->files + index, sizeof(file));
+			if (result != 0)
+				return result;
+			option.mmapKind = 0;
+			option.mmapBase = NULL;
+			option.size = sizeof(option);
+			option.mmapSize = 0;
+			option.align = 32;
+			filePath = ksceKernelAllocHeapMemoryWithOption(
+				g_appmgrSaveDataHeap, 200, &option);
+			if (!filePath)
+				return (int)0x80801006;
+			memset(filePath, 0, 200);
+			result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+			if (result < 0) {
+				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+				return result;
+			}
+			memset(path, 0, sizeof(path));
+			memset(resolvedPath, 0, sizeof(resolvedPath));
+			snprintf(path, sizeof(path), "%s%s",
+				 (const char *)operation->mountPoint.data, filePath);
+			appmgrResolvePath(path, 0, resolvedPath, sizeof(resolvedPath));
+			if (createdFiles[index] == 1) {
+				ksceIoRemove(resolvedPath);
+			} else if (file.mode != 2) {
+				stat.st_size = originalSizes[index];
+				__builtin_prefetch(originalSizes + index + 1);
+				ksceIoChstat(resolvedPath, &stat, 4);
+			}
+			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+			totalSize = file.offset + file.bufSize;
+			if ((SceUInt64)totalSize % allocationUnit != 0) {
+				*requiredSizeKiB +=
+					(((SceUInt64)totalSize / allocationUnit + 1) *
+					 allocationUnit) >> 10;
+			} else {
+				*requiredSizeKiB += totalSize / 1024;
+			}
+			index++;
+		} while (operation->fileNum > index);
+	}
+	for (index = 0; index < 20; index++) {
+		if (directories[index]) {
+			appmgrRemoveSaveDataPath(directories[index], 0, &entryCount);
+			*requiredSizeKiB += allocationUnit >> 10;
+		}
+	}
+	if (operation->slotId == (SceUInt32)-1)
+		return 0;
+	if (slotCreated)
+		return appmgrDeleteSaveDataSlot(operation->slotId,
+					      (const char *)operation->mountPoint.data);
+	return appmgrSetSaveDataSlotStatus(operation->slotId, 0,
+					  (const char *)operation->mountPoint.data);
+}
+
+int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
+{
+	AppmgrNotificationRequest notification;
+	SceAppMgrAppInfoCache *info;
+	void *storage = NULL;
+	SceUInt32 sinceNotice;
+	SceUInt32 seconds;
+	SceUInt32 threshold;
+	SceUInt32 rate;
+	float elapsed;
+	int result;
+
+	result = ksceKernelGetProcessLocalStorageAddrForPid(sceKernelGetProcessId(),
+		g_appmgrAppInfoCacheKey, &storage, 0);
+	if (result < 0)
+		return result;
+	if (!storage)
+		return (int)0x80800012;
+	info = storage;
+	sinceNotice = info->writtenSinceNoticeKiB + writtenKiB;
+	info->writtenSinceNoticeKiB += writtenKiB;
+	info->totalWrittenKiB += writtenKiB;
+	if (sinceNotice < 1024)
+		return 0;
+	seconds = ksceKernelGetProcessTimeWideCore() / 1000000;
+	if (seconds) {
+		elapsed = seconds;
+		threshold = 20480 * (seconds / 3600 + 1);
+	} else {
+		threshold = 20480;
+		elapsed = 1.0f;
+		seconds = 1;
+	}
+	if (info->totalWrittenKiB < threshold)
+		return 0;
+	rate = (SceUInt32)(((float)info->totalWrittenKiB / elapsed) * 60.0f * 60.0f);
+	memset(&notification, 0, sizeof(notification));
+	snprintf((char *)notification.payload, sizeof(notification.payload),
+		 "AppUtil:\nViolate TRC R3074\nWrite %d.%02d MiB/h\nPlay %02d:%02d",
+		 (int)(rate >> 10), (int)((rate & 0x3FF) / 10),
+		 (int)(seconds / 60), (int)(seconds % 60));
+	_appmgrQueuePush(&notification, 1);
+	info->writtenSinceNoticeKiB -= 1024;
+	return 0;
+}
+
+void appmgrNotifySaveDataSpaceError(int error, SceUInt32 requiredKiB)
+{
+	AppmgrNotificationRequest notification;
+
+	memset(&notification, 0, sizeof(notification));
+	if (error == (int)0x8080108C) {
+		snprintf((char *)notification.payload, sizeof(notification.payload),
+			 "AppUtil:\nFree Space Error - \nQuota : %u KiB", (unsigned int)requiredKiB);
+	} else if (error == (int)0x8080108D) {
+		snprintf((char *)notification.payload, sizeof(notification.payload),
+			 "AppUtil:\nFree Space Error - \nFS : %u KiB", requiredKiB);
+	} else {
+		return;
+	}
+	_appmgrQueuePush(&notification, 1);
+}
+
+void appmgrFreeSaveDataDirectories(char **directories)
+{
+	char **end = directories + 20;
+	char *directory;
+
+	do {
+		directory = *directories++;
+		if (directory) {
+			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directory);
+			directories[-1] = NULL;
+		}
+	} while (directories != end);
+}
+
+
+

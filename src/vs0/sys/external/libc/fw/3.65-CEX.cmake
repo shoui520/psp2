@@ -1,0 +1,81 @@
+# 3.65-CEX: vs0:sys/external/libc.suprx (generated)
+set(MODULE_NID 0x5CB79B3F)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x2DD91812:2:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0x3AD4D630:1:0x0
+	0x5AD9C136:1:0x8
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelGetThreadId
+	sceKernelCallModuleExit
+	sceKernelDeleteLwMutex
+	sceIoChstat
+	__stack_chk_fail
+	sceKernelSignalLwCond
+	sceKernelLockLwMutex
+	sceKernelCreateLwCond
+	sceKernelRegisterThreadEventHandler
+	sceKernelDeleteLwCond
+	sceKernelExitProcess
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceIoLseek
+	sceKernelTryLockLwMutex
+	sceKernelGetTLSAddr
+	sceIoGetstat
+	sceKernelCreateThread
+	sceKernelGetModuleInfoByAddr
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelWaitLwCond
+	sceKernelSignalLwCondAll
+	sceKernelStartThread
+	sceClibPrintf
+	sceIoWrite
+	sceIoRead
+	sceKernelLibcTime
+	sceKernelGetProcessParam
+	sceKernelLibcGettimeofday
+	sceKernelLibcMktime
+	sceKernelLibcLocaltime_r
+	sceKernelLibcClock
+	sceKernelLibcGmtime_r
+	sceKernelGetStdin
+	sceKernelGetStdout
+	sceKernelCallAbortHandler
+	sceKernelGetStderr
+	sceKernelFindMemBlockByAddr
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelDeleteThread
+	sceKernelUnregisterThreadEventHandler
+	sceKernelDelayThread
+	ksceKernelExitThread
+	sceFiosFHToFileno
+	sceFiosRenameSync
+	sceFiosFHCloseSync
+	sceFiosFileTruncateSync
+	sceFiosFHReadSync
+	sceFiosFHWriteSync
+	sceFiosFHSeek
+	sceFiosDeleteSync
+	sceFiosIsValidHandle
+	sceFiosDirectoryDeleteSync
+	sceFiosDirectoryCreateSync
+	sceFiosFilenoToFH
+	sceFiosFHOpenWithModeSync
+	sceFiosDeallocatePassthruFH
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+	SceLibcParam_DF084DFA
+)

@@ -1,0 +1,15 @@
+SceDeci4pSDeci2p:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: SDeci2pModuleStart
+  libraries:
+    SceDeci2pForDriver:
+      syscall: false
+      version: 1
+      nid: 0xD23B9DF6
+      functions:
+        - sceDeci2pTermForCompat: 0x38373E5C
+        - SceDeci2pForDriver_F6427E0F: 0xF6427E0F

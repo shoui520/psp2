@@ -1,0 +1,31 @@
+# generated skeleton (T2): stub bodies, original module/export/import tables
+psp2_module(os0_kd_bootimage_ngs KIND kernel PARTIAL SOURCES
+	source/ngs_platform.c
+	source/ngs_atomic.c
+	source/ngs_module.c
+	source/ngs_memory.c
+	source/ngs_buffer.c
+	source/ngs_params.c
+	source/ngs_builtin.c
+	source/ngs_sulpha.c
+	source/ngs_system.c
+	source/ngs_routing.c
+	source/ngs_access.c
+	source/ngs_module_memory.c
+	source/ngs_compressor.c
+	source/ngs_distortion.c
+	source/ngs_envelope.c
+	source/ngs_pauser.c
+	source/ngs_pcm_player.c
+	source/ngs_signal_generator.c
+	source/ngs_reverb.c
+	source/ngs_mixer.c
+	source/ngs_biquad_filter.c
+	source/ngs_input.c
+	source/ngs_output.c
+	source/ngs_at9_player.c
+	source/ngs_delay.c
+	source/ngs_pitch_shift.c
+	source/ngs_voice_definition.c
+	source/ngs.c
+)

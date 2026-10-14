@@ -1,0 +1,17 @@
+SceJpegArm:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceJpegArm:
+      syscall: false
+      version: 1
+      nid: 0x19F04693
+      functions:
+        - sceJpegArmGetOutputInfo: 0x23AE3BEA
+        - sceJpegArmSplitDecodeMJpeg: 0x5D83C606
+        - sceJpegArmCreateSplitDecoder: 0x9DA48DB6
+        - sceJpegArmDecodeMJpeg: 0xA4ABFCE3
+        - sceJpegArmDecodeMJpegYCbCr: 0xE9B1B86F
+        - sceJpegArmDeleteSplitDecoder: 0xE9CB3DFD

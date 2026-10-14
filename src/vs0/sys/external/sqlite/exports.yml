@@ -1,0 +1,156 @@
+SceSqliteVsh:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSqliteVsh:
+      syscall: false
+      version: 1
+      nid: 0x4943BF26
+      functions:
+        - sqlite3_bind_value: 0x00B3BFD9
+        - sqlite3_test_control: 0x02FE4A98
+        - sqlite3_blob_open: 0x07AD8710
+        - sqlite3_progress_handler: 0x0A016EB3
+        - sqlite3_vfs_find: 0x0A724F83
+        - sqlite3_result_text: 0x0EF04E45
+        - sqlite3_changes: 0x11AD1CD1
+        - sqlite3_enable_shared_cache: 0x12139F91
+        - sqlite3_exec: 0x14D27083
+        - sqlite3_reset_auto_extension: 0x1659918B
+        - sqlite3_result_null: 0x17321FC0
+        - sqlite3_snprintf: 0x18D86F12
+        - sqlite3_bind_double: 0x19788AEF
+        - sqlite3_backup_remaining: 0x19EB4846
+        - sqlite3_close: 0x1BEBC7B3
+        - sqlite3_backup_init: 0x1C8B9A95
+        - sqlite3_bind_text: 0x1FF06753
+        - sqlite3_value_bytes: 0x21215328
+        - sqlite3_file_control: 0x231F6199
+        - sqlite3_column_database_name: 0x26C40C45
+        - sqlite3_prepare: 0x26CA098C
+        - sqlite3_last_insert_rowid: 0x28B06314
+        - sqlite3_create_collation: 0x2AA39086
+        - sqlite3_release_memory: 0x2BEA295C
+        - sqlite3_total_changes: 0x2C34D734
+        - sqlite3_backup_finish: 0x31AAB3AD
+        - sqlite3_column_blob: 0x344D3122
+        - sqlite3_mutex_enter: 0x353EE230
+        - sqlite3_column_count: 0x3839D499
+        - sqlite3_context_db_handle: 0x3AE51257
+        - sqlite3_open_v2: 0x3E5BEB88
+        - sqlite3_busy_timeout: 0x3E7EF391
+        - sqlite3_vfs_register: 0x4145BF19
+        - sqlite3_randomness: 0x418EA87C
+        - sqlite3_bind_zeroblob: 0x41E99C5C
+        - sqlite3_result_error_nomem: 0x4574AB4A
+        - sqlite3_db_status: 0x45E8C34D
+        - sqlite3_column_bytes16: 0x46006466
+        - sqlite3_malloc: 0x490BA4E6
+        - sqlite3_column_name: 0x4997F344
+        - sqlite3_auto_extension: 0x4AB3373F
+        - sqlite3_column_int: 0x4C46682A
+        - sqlite3_next_stmt: 0x4FFC89DE
+        - sqlite3_mutex_alloc: 0x56CF92BB
+        - sqlite3_result_blob: 0x58F94B77
+        - sqlite3_result_value: 0x5A2D6AF5
+        - sqlite3_user_data: 0x5C4B62D9
+        - sqlite3_enable_load_extension: 0x619F7163
+        - sqlite3_get_autocommit: 0x61BFA3AB
+        - sqlite3_db_mutex: 0x644223EF
+        - sqlite3_libversion_number: 0x66236E89
+        - sqlite3_open: 0x67E5A83C
+        - sqlite3_column_bytes: 0x6AF794DB
+        - sqlite3_mutex_leave: 0x6D0B6A7D
+        - sqlite3_result_int: 0x7125360C
+        - sqlite3_sleep: 0x7236786C
+        - sqlite3_column_text: 0x7272D729
+        - sqlite3_shutdown: 0x7285EE28
+        - sqlite3_bind_null: 0x741238E3
+        - sqlite3_bind_int: 0x756ACC35
+        - sqlite3_mutex_free: 0x7838A7C6
+        - sqlite3_bind_parameter_count: 0x78ED0DC8
+        - sqlite3_db_handle: 0x7E309542
+        - sqlite3_initialize: 0x80691B14
+        - sqlite3_stmt_status: 0x84613A87
+        - sqlite3_bind_blob: 0x84C7C7DE
+        - sqlite3_value_int: 0x85DC034D
+        - sqlite3_table_column_metadata: 0x867A7B23
+        - sqlite3_set_auxdata: 0x87975A98
+        - sqlite3_extended_errcode: 0x88588393
+        - sqlite3_reset: 0x8B23AB10
+        - sqlite3_value_double: 0x8D23E9F3
+        - sqlite3_libversion: 0x9319D6F6
+        - sqlite3_blob_bytes: 0x93D050D4
+        - sqlite3_prepare_v2: 0x93F666E9
+        - sqlite3_commit_hook: 0x97971596
+        - sqlite3_column_value: 0x97B7F328
+        - sqlite3_value_numeric_type: 0x97FA0AB9
+        - sqlite3_update_hook: 0x9957716B
+        - sqlite3_config: 0x99998D1F
+        - sqlite3_memory_highwater: 0x9DA71F45
+        - sqlite3_errcode: 0x9E03B649
+        - sqlite3_backup_step: 0x9E06773B
+        - sqlite3_busy_handler: 0x9EA70062
+        - sqlite3_column_type: 0x9EF87FDA
+        - sqlite3_realloc: 0x9F48395D
+        - sqlite3_column_decltype: 0xA0027D75
+        - sqlite3_sourceid: 0xA5690EF1
+        - sqlite3_bind_parameter_index: 0xA6F41220
+        - sqlite3_strnicmp: 0xAAB36B4D
+        - sqlite3_mutex_try: 0xAFFE23F5
+        - sqlite3_mprintf: 0xB1D69618
+        - sqlite3_vmprintf: 0xB33ACD23
+        - sqlite3_threadsafe: 0xB54649EC
+        - sqlite3_column_double: 0xB5FB7288
+        - sqlite3_get_auxdata: 0xB6F18475
+        - sqlite3_result_int64: 0xBA2473EA
+        - sqlite3_value_text: 0xBA7F8AAA
+        - sqlite3_result_zeroblob: 0xBBE27F1E
+        - sqlite3_vfs_unregister: 0xBC445F9D
+        - sqlite3_overload_function: 0xBDA54F0D
+        - sqlite3_blob_write: 0xBE351934
+        - sqlite3_soft_heap_limit: 0xC2FA0A5E
+        - sqlite3_bind_parameter_name: 0xC82D4AE5
+        - sqlite3_value_blob: 0xCB0BE217
+        - sqlite3_collation_needed: 0xCB38A45D
+        - sqlite3_blob_read: 0xCB7A933A
+        - sqlite3_value_int64: 0xCD1805C0
+        - sqlite3_load_extension: 0xCDAB2769
+        - sqlite3_limit: 0xD113958B
+        - sqlite3_column_table_name: 0xD666D46D
+        - sqlite3_result_error: 0xD87A0866
+        - sqlite3_step: 0xD9992208
+        - sqlite3_db_config: 0xDA151341
+        - sqlite3_aggregate_context: 0xDB2B8899
+        - sqlite3_result_error_code: 0xDB6B866A
+        - sqlite3_bind_int64: 0xDB8FA6E8
+        - sqlite3_result_error_toobig: 0xDC36F2C5
+        - sqlite3_result_double: 0xDD07AC9D
+        - sqlite3_unlock_notify: 0xDE276CDA
+        - sqlite3_blob_close: 0xDE793774
+        - sqlite3_rollback_hook: 0xDED66A48
+        - sqlite3_column_origin_name: 0xDF4DFF2D
+        - sqlite3_interrupt: 0xE37D81B5
+        - sqlite3_status: 0xE7676A04
+        - sqlite3_errmsg: 0xE8098F5A
+        - sqlite3_create_function: 0xEA35A125
+        - sqlite3_memory_used: 0xEAEFCBF7
+        - sqlite3_column_int64: 0xEB65E393
+        - sqlite3_clear_bindings: 0xED10F261
+        - sqlite3_extended_result_codes: 0xEDD56591
+        - sqlite3_sql: 0xEE7AC3CC
+        - sqlite3_backup_pagecount: 0xEEED618D
+        - sqlite3_value_type: 0xF4528464
+        - sqlite3_free: 0xF67857AC
+        - sqlite3_data_count: 0xF6A5A258
+        - sqlite3_value_bytes16: 0xFA51004F
+        - sqlite3_create_collation_v2: 0xFD8E68CA
+        - sqlite3_finalize: 0xFE4D6E4D
+      variables:
+        - sqlite3_temp_directory: 0xBDCB4423
+        - sqlite3_version: 0xDFAA19B3

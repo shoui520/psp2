@@ -1,0 +1,35 @@
+SceLibMarlinPb:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceMarlinPb:
+      syscall: false
+      version: 1
+      nid: 0x2E4A334A
+      functions:
+        - SceMarlinPb_08CAD267: 0x08CAD267
+        - SceMarlinPb_102593F5: 0x102593F5
+        - SceMarlinPb_236015FA: 0x236015FA
+        - SceMarlinPb_23838449: 0x23838449
+        - SceMarlinPb_2F1E4047: 0x2F1E4047
+        - SceMarlinPb_2FD092BD: 0x2FD092BD
+        - SceMarlinPb_3AA04BBF: 0x3AA04BBF
+        - SceMarlinPb_49752AFE: 0x49752AFE
+        - SceMarlinPb_778408A7: 0x778408A7
+        - SceMarlinPb_83B44D33: 0x83B44D33
+        - SceMarlinPb_8FEB4F94: 0x8FEB4F94
+        - SceMarlinPb_92A6A48F: 0x92A6A48F
+        - SceMarlinPb_9609E2DF: 0x9609E2DF
+        - SceMarlinPb_9CD4CE1E: 0x9CD4CE1E
+        - SceMarlinPb_A11B25C7: 0xA11B25C7
+        - SceMarlinPb_A2E65A7E: 0xA2E65A7E
+        - SceMarlinPb_A43BC777: 0xA43BC777
+        - SceMarlinPb_BCED6CC4: 0xBCED6CC4
+        - SceMarlinPb_C76DA6C0: 0xC76DA6C0
+        - SceMarlinPb_CCA99803: 0xCCA99803
+        - SceMarlinPb_CCD2D17E: 0xCCD2D17E
+        - SceMarlinPb_EB4A1345: 0xEB4A1345
+        - SceMarlinPb_F450D554: 0xF450D554
+        - SceMarlinPb_FB95B259: 0xFB95B259

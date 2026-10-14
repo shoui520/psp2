@@ -1,0 +1,30 @@
+SceNotificationUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNotificationUtil:
+      syscall: false
+      version: 1
+      nid: 0xE19097C3
+      functions:
+        - sceNotificationUtilCleanHistory: 0xB0FFFB7B
+        - sceNotificationUtilSendNotification: 0xDE6F33F4
+    SceNotificationUtilBgApp:
+      syscall: false
+      version: 1
+      nid: 0xA8AEF7DB
+      functions:
+        - sceNotificationUtilBgAppInitialize: 0xCBE814C1
+    SceNotificationUtilProgress:
+      syscall: false
+      version: 1
+      nid: 0x75602769
+      functions:
+        - sceNotificationUtilProgressFinish: 0x8CD688A1
+        - sceNotificationUtilProgressUpdate: 0xD9890A65
+        - sceNotificationUtilProgressBegin: 0xFD0769B0

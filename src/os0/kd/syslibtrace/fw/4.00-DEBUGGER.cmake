@@ -1,0 +1,45 @@
+# 4.00-DEBUGGER: os0:kd/syslibtrace.skprx (generated)
+set(MODULE_NID 0x363628F3)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000 0x9D33EE8D 0x3F9BEA99)
+set(MODULE_IMPORT_LIBS
+	0x02451F0F:8:0x0
+	0x88758561:2:0x0
+	0x7EE45391:1:0x0
+	0x3691DA45:2:0x0
+	0x4E29D3B6:1:0x0
+	0x7F8593BA:1:0x0
+	0x92C9FFC2:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x02451F0F:F:0x4233C16D
+	0x02451F0F:F:0x85571907
+	0x88758561:F:0x35A35322
+	0x88758561:F:0xFD753E7A
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x3691DA45:F:0xB39CD708
+	0x4E29D3B6:F:0xCAD47130
+	0x7F8593BA:F:0x4F2B45DC
+	0x92C9FFC2:F:0x2E4A10A0
+	0x92C9FFC2:F:0x534519CD
+	0x92C9FFC2:F:0xB23286B8
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFree
+	ksceKernelAlloc
+	ksceKernelAssert
+	ksceKernelAssertLevel
+	__stack_chk_fail
+	SceSysrootForKernel_B39CD708
+	ksceSblQafMgrIsAllowSystemAppDebug
+	sceKernelSetSyslibtraceThreadCBEnable
+	ksceKernelRegisterSyscall
+	ksceKernelGetLibEntCBListForSyslibtrace
+	SceModulemgrForKernel_B23286B8
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,29 @@
+SceBEAVCorePlayer:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceBEAVCorePlayer:
+      syscall: false
+      version: 1
+      nid: 0x42D4F4F2
+      functions:
+        - SceBEAVCorePlayer_10A4E69E: 0x10A4E69E
+        - SceBEAVCorePlayer_14FF6F85: 0x14FF6F85
+        - SceBEAVCorePlayer_1CBC999E: 0x1CBC999E
+        - SceBEAVCorePlayer_1D8CF5C8: 0x1D8CF5C8
+        - SceBEAVCorePlayer_2201FF87: 0x2201FF87
+        - SceBEAVCorePlayer_55D39AE7: 0x55D39AE7
+        - SceBEAVCorePlayer_7B93DCA9: 0x7B93DCA9
+        - SceBEAVCorePlayer_9F1D83E5: 0x9F1D83E5
+        - SceBEAVCorePlayer_B7CB37ED: 0xB7CB37ED
+        - SceBEAVCorePlayer_CC146E6F: 0xCC146E6F
+        - SceBEAVCorePlayer_D59E69D5: 0xD59E69D5
+        - SceBEAVCorePlayer_EC2E1931: 0xEC2E1931
+        - SceBEAVCorePlayer_F4436962: 0xF4436962
+        - SceBEAVCorePlayer_F71D6812: 0xF71D6812
+        - SceBEAVCorePlayer_F7CE073B: 0xF7CE073B

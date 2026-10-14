@@ -1,0 +1,62 @@
+# 3.65-CEX: os0:kd/bootimage/motion_dummy (generated)
+set(MODULE_NID 0x89099760)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x1F766AC7 0xA501409A 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x746EC971:1:0x0
+	0x887F19D0:1:0x0
+	0x7290B21C:1:0x0
+	0x9AD8E213:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x49D4DD9B
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xBC996A7A
+	0x6F25E18A:F:0xD6437637
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xA46CB7DE
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xC58DF384
+	0xE2C40624:F:0xF4EE4FA9
+	0x746EC971:F:0x8CB01675
+	0x887F19D0:F:0x2A43912D
+	0x7290B21C:F:0x04C05D10
+	0x9AD8E213:F:0x8612B243
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeHeapMemory
+	ksceKernelAllocHeapMemoryWithOption
+	ksceKernelCopyToUser
+	ksceKernelCreateHeap
+	ksceKernelCopyFromUser
+	ksceKernelDeleteHeap
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	memset
+	memcpy
+	__aeabi_uidivmod
+	__stack_chk_fail
+	sceKernelGetProcessId
+	ksceKernelRegisterTimer
+	sceKernelGetSystemTimeWide
+	SceProcessmgrForDriver_8CB01675
+	ksceKernelRegisterProcEventHandler
+	ksceKernelRegisterSysEventHandler
+	ksceSblACMgrIsSystemProgram
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,41 @@
+SceBemp2sys:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceBemp2sys:
+      syscall: false
+      version: 1
+      nid: 0xA6A04A2C
+      functions:
+        - SceBemp2sys_0287CA06: 0x0287CA06
+        - SceBemp2sys_06F6B63B: 0x06F6B63B
+        - SceBemp2sys_25E3FEF3: 0x25E3FEF3
+        - SceBemp2sys_491AD648: 0x491AD648
+        - SceBemp2sys_4EE90DC7: 0x4EE90DC7
+        - SceBemp2sys_541D24AE: 0x541D24AE
+        - SceBemp2sys_65F75F5C: 0x65F75F5C
+        - SceBemp2sys_6901B91F: 0x6901B91F
+        - SceBemp2sys_69F282FF: 0x69F282FF
+        - SceBemp2sys_6D48B143: 0x6D48B143
+        - SceBemp2sys_7F2D4A1D: 0x7F2D4A1D
+        - SceBemp2sys_7F5BB72A: 0x7F5BB72A
+        - SceBemp2sys_81EB635C: 0x81EB635C
+        - SceBemp2sys_89D9D1CD: 0x89D9D1CD
+        - SceBemp2sys_958E24CE: 0x958E24CE
+        - SceBemp2sys_9EA526F4: 0x9EA526F4
+        - SceBemp2sys_9ED9AFC4: 0x9ED9AFC4
+        - SceBemp2sys_A480BF6B: 0xA480BF6B
+        - SceBemp2sys_BAC58BBE: 0xBAC58BBE
+        - SceBemp2sys_BBB64B8E: 0xBBB64B8E
+        - SceBemp2sys_C7D9EB73: 0xC7D9EB73
+        - SceBemp2sys_C877BD9E: 0xC877BD9E
+        - SceBemp2sys_CF2FD310: 0xCF2FD310
+        - SceBemp2sys_D55C2CBD: 0xD55C2CBD
+        - SceBemp2sys_D8F3128B: 0xD8F3128B
+        - SceBemp2sys_E6C1E8B4: 0xE6C1E8B4
+        - SceBemp2sys_F34C3596: 0xF34C3596

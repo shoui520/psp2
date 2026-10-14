@@ -1,0 +1,15 @@
+SceExcpmgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    bootstart: module_bootstart
+  libraries:
+    SceExcpmgrForTZS:
+      syscall: false
+      version: 1
+      nid: 0x8F526F35
+      functions:
+        - sceKernelRegisterMonitorEntry: 0xAC297406

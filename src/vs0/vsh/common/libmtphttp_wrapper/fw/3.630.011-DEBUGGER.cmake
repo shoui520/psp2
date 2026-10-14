@@ -1,0 +1,77 @@
+# 3.630.011-DEBUGGER: vs0:vsh/common/libmtphttp_wrapper.suprx (generated)
+set(MODULE_NID 0xCEAAB3F2)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x03FCF19D:1:0x0
+	0x8FC83F22:1:0x8
+	0xE8F15CDE:1:0x8
+	0xCAF5F2E9:1:0x8
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelStopUnloadModule
+	sceKernelLoadStartModule
+	__stack_chk_fail
+	sceClibPrintf
+	sceSysmoduleUnloadModule
+	sceSysmoduleLoadModule
+	SceLibMtpHttp_04A1183A
+	SceLibMtpHttp_0E6897BC
+	SceLibMtpHttp_1D6F97E9
+	SceLibMtpHttp_20FB4AF7
+	SceLibMtpHttp_314CE923
+	SceLibMtpHttp_3E17312F
+	SceLibMtpHttp_505331F6
+	SceLibMtpHttp_54F6A581
+	SceLibMtpHttp_5B31E373
+	SceLibMtpHttp_601596DC
+	SceLibMtpHttp_6A8BF9D5
+	SceLibMtpHttp_6DB1F55B
+	SceLibMtpHttp_72684CF8
+	SceLibMtpHttp_76947F49
+	SceLibMtpHttp_7BA117AA
+	SceLibMtpHttp_8D80C874
+	SceLibMtpHttp_8DF9F8BF
+	SceLibMtpHttp_94B3A908
+	SceLibMtpHttp_A6A60DCF
+	SceLibMtpHttp_CE45213C
+	SceLibMtpHttp_D063DA59
+	SceLibMtpHttp_D2904E5A
+	SceLibMtpHttp_D35D8424
+	SceLibMtpHttp_D82F7256
+	SceLibMtpHttp_D92810E0
+	SceLibMtpHttp_DF9A48DA
+	SceLibMtpHttp_E6895A35
+	SceLibMtpHttp_F42C62FF
+	sceHttpsDisableOptionPrivate
+	sceHttpInit
+	sceHttpSetConnectTimeOut
+	sceHttpGetStatusCode
+	sceHttpDeleteRequest
+	SceHttp_53B722F2
+	sceHttpRemoveRequestHeader
+	sceHttpCreateTemplate
+	sceHttpsEnableOptionPrivate
+	sceHttpAddRequestHeader
+	sceHttpReadData
+	sceHttpSetSendTimeOut
+	sceHttpSetRecvTimeOut
+	sceHttpSendRequest
+	sceHttpCreateRequestWithURL
+	sceHttpCreateConnectionWithURL
+	sceHttpTerm
+	sceHttpSetAuthInfoCallback
+	sceHttpAbortRequest
+	sceHttpDeleteTemplate
+	sceHttpDeleteConnection
+	sceHttpGetResponseContentLength
+	sceHttpGetMemoryPoolStats
+	sceSslTerm
+	sceSslInit
+	sceSslGetMemoryPoolStats
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

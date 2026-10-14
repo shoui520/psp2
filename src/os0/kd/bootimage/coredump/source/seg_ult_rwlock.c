@@ -1,0 +1,100 @@
+/* ULT_RWLOCK_INFO note. */
+
+#include <sce/debug.h>
+#include <sce/error.h>
+#include "writer_internal.h"
+#include "seg_internal.h"
+
+extern Writer *currentWriter;
+extern int oalGetNumOfUltObjects(SceUID pid, int type);
+extern void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
+	SceUInt32 skip, int type);
+extern void oalGetUltRwlockInfo(SceUID pid, SceUIntPtr address,
+	CoredumpUltRwlockInfo *info, SceUInt32 *writerThreadId,
+	SceUInt32 maxIds, SceUInt32 *ids, SceUInt32 *numReaders,
+	SceUInt32 *numWriters);
+extern void *memMgrLocalAlloc(SceSize size);
+extern int memMgrLocalFree(void *allocation);
+extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
+extern int ultRwlockCalcSize(SegIf *segment);
+
+static int _writeSegs(SegIf *segment);
+
+const SegIfMethod ultRwlockMethods = {
+	segInitBase,
+	ultRwlockCalcSize,
+	segWritePtNoteHdr,
+	_writeSegs,
+};
+
+static int _writeSegs(SegIf *segment)
+{
+	SceUInt32 count, numReaders, numWriters, writerThreadId;
+	CoredumpNoteHeader header;
+	CoredumpUltRwlockInfo info;
+	SceUInt32 *ids, *waitingIds;
+	SceUInt32 remaining, skip, batch, i;
+	SceSize recordSize, waitingSize;
+	int result;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 123, "_writeSegs");
+	result = segment->numPhdr;
+	if (result == 0)
+		return result;
+	count = oalGetNumOfUltObjects(coredumpRun.pid, 3);
+	ids = memMgrLocalAlloc(1024 * sizeof(*ids));
+	if (ids == NULL)
+		return SCE_ERROR_ERRNO_ENOMEM;
+	waitingIds = memMgrLocalAlloc(1024 * sizeof(*waitingIds));
+	if (waitingIds == NULL) {
+		result = SCE_ERROR_ERRNO_ENOMEM;
+		goto out_ids;
+	}
+	utilsMakeNoteHeader(&header, "ULT_RWLOCK_INFO", 0x1028, 17,
+		segment->dataSize);
+	result = writerWrite(currentWriter, &header, sizeof(header));
+	if (result != 0)
+		goto out;
+	segment->writtenSize += sizeof(header);
+	result = writerWrite(currentWriter, &count, sizeof(count));
+	if (result != 0)
+		goto out;
+	segment->writtenSize += sizeof(count);
+	remaining = count;
+	for (skip = 0; skip < count; skip += 1024) {
+		batch = remaining;
+		if (batch >= 1024)
+			batch = 1024;
+		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 3);
+		for (i = 0; i != batch; ++i) {
+			oalGetUltRwlockInfo(coredumpRun.pid, ids[i], &info,
+				&writerThreadId, 1024, waitingIds, &numReaders,
+				&numWriters);
+			recordSize = (numWriters + numReaders + 17) * 4;
+			info.recordSize = recordSize;
+			result = writerWrite(currentWriter, &info, sizeof(info));
+			if (result != 0)
+				goto out;
+			segment->writtenSize += sizeof(info);
+			waitingSize = recordSize - sizeof(info) - sizeof(writerThreadId);
+			result = writerWrite(currentWriter, waitingIds,
+				waitingSize);
+			if (result != 0)
+				goto out;
+			segment->writtenSize += waitingSize;
+			result = writerWrite(currentWriter, &writerThreadId,
+				sizeof(writerThreadId));
+			if (result != 0)
+				goto out;
+			segment->writtenSize += sizeof(writerThreadId);
+		}
+		remaining -= batch;
+	}
+	result = segWritePaddingData(segment, segment->writtenSize);
+	segment->writtenSize = segment->dataSize;
+out:
+	memMgrLocalFree(waitingIds);
+out_ids:
+	memMgrLocalFree(ids);
+	return result;
+}

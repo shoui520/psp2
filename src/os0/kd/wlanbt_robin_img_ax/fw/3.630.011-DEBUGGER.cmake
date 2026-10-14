@@ -1,0 +1,8 @@
+# 3.630.011-DEBUGGER: os0:kd/wlanbt_robin_img_ax.skprx (generated)
+set(MODULE_NID 0x830C403D)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000)
+set(MODULE_IMPORT_LIBS
+)

@@ -1,0 +1,25 @@
+SceUsbMtp:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: _sceUsbMtpModuleStart
+  libraries:
+    SceUsbMtpForDriver:
+      syscall: false
+      version: 1
+      nid: 0xF0122DB1
+      functions:
+        - SceUsbMtpForDriver_08CD359F: 0x08CD359F
+        - SceUsbMtpForDriver_151947D2: 0x151947D2
+        - sceUsbMtpSendData: 0x25D92570
+        - SceUsbMtpForDriver_4463009B: 0x4463009B
+        - SceUsbMtpForDriver_576A266F: 0x576A266F
+        - SceUsbMtpForDriver_5FA86BA4: 0x5FA86BA4
+        - SceUsbMtpForDriver_6F7DF4B8: 0x6F7DF4B8
+        - sceUsbMtpStart: 0x6FC97594
+        - SceUsbMtpForDriver_76D707B1: 0x76D707B1
+        - sceUsbMtpRecvData: 0xB01C1369
+        - SceUsbMtpForDriver_B958E5DE: 0xB958E5DE
+        - SceUsbMtpForDriver_E64513A9: 0xE64513A9

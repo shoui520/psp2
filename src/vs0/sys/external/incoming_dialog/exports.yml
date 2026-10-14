@@ -1,0 +1,21 @@
+SceIncomingDialog:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceIncomingDialog:
+      syscall: false
+      version: 1
+      nid: 0x5058F4AB
+      functions:
+        - sceIncomingDialogSwitchToDialog: 0x0123B83A
+        - sceIncomingDialogClose: 0x126BD15E
+        - sceIncomingDialogInitialize: 0x18AF99EB
+        - sceIncomingDialogOpen: 0x2BEDC1A0
+        - sceIncomingDialogGetStatus: 0x839DE14C
+        - sceIncomingDialogFinish: 0x860B1885

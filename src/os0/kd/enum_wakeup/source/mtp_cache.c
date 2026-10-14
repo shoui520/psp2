@@ -1,0 +1,45 @@
+/* SceEnumWakeUp: Files kept in memory for MTP (the device icon). */
+#include "ew_internal.h"
+
+static inline __attribute__((always_inline)) MtpCacheEntry *mtpCacheFind(const char *path)
+{
+	int i;
+
+	for (i = 0; i < MTP_CACHE_ENTRIES - 1; i++)
+		if (strncmp(path, ewg.mtp.cache[i].path, sizeof(ewg.mtp.cache[i].path)) == 0)
+			break;
+	return &ewg.mtp.cache[i];
+}
+
+int mtpCacheLoad(const char *path, SceSize size)
+{
+	MtpCacheEntry *e = mtpCacheFind(path);
+	SceUID fd;
+	int ret;
+
+	if (e->base == NULL) {
+		e->block = ksceKernelAllocMemBlock("MTPDataCacheBuffer", EW_MEMTYPE_FB,
+						   (size + 0xfff) & ~0xfff, NULL);
+		if (e->block < 0)
+			return e->block;
+		ksceKernelGetMemBlockBase(e->block, &e->base);
+		strncpy(e->path, path, strnlen(path, 0xff));
+	}
+	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	if (fd < 0)
+		return fd;
+	ret = ksceIoRead(fd, e->base, size);
+	ksceIoClose(fd);
+	e->size = ret;
+	return ret;
+}
+
+int mtpCacheRead(const char *path, void *dst, SceSize max)
+{
+	MtpCacheEntry *e = mtpCacheFind(path);
+
+	if (e->base == NULL)
+		return MTP_ERROR_NOT_CACHED;
+	memcpy(dst, e->base, e->size > max ? max : e->size);
+	return e->size > max ? max : e->size;
+}

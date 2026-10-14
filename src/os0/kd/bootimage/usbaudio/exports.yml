@@ -1,0 +1,32 @@
+SceUsbAudio:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceUsbAudioForDriver:
+      syscall: false
+      version: 1
+      nid: 0x066BBE8B
+      functions:
+        - ksceUsbAudioUnregisterCallback: 0x23A07D29
+        - ksceUsbAudioInput: 0x863B0617
+        - ksceUsbAudioGetDeviceIdList: 0x96EC3E18
+        - ksceUsbAudioRegisterCallback: 0x974DBE03
+        - ksceUsbAudioInput2: 0xEFB4E3E4
+    SceUsbAudioIn:
+      syscall: true
+      version: 1
+      nid: 0x53AD0094
+      functions:
+        - sceUsbAudioInOpenDevice: 0x00563102
+        - sceUsbAudioInGetDeviceInformation: 0x00CCAA66
+        - sceUsbAudioInGetMaxValueOfVolume: 0x0E334392
+        - SceUsbAudioIn_198A7C33: 0x198A7C33
+        - sceUsbAudioInGetMinValueOfVolume: 0x40A15361
+        - sceUsbAudioInCloseDevice: 0x8D592FBC
+        - sceUsbAudioInGetDeviceIdList: 0x8E5FA43F
+        - sceUsbAudioInSetCurrentValueOfVolume: 0xFA026651
+        - sceUsbAudioInInput: 0xFAB27059

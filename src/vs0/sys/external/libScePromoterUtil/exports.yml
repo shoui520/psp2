@@ -1,0 +1,37 @@
+ScePromoterUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    ScePromoterUtil:
+      syscall: false
+      version: 1
+      nid: 0x31F237B6
+      functions:
+        - ScePromoterUtil_0D76CD38: 0x0D76CD38
+        - scePromoterUtilityUpdateLiveArea: 0x17D73ECA
+        - scePromoterUtilityGetSize: 0x1F5EA997
+        - ScePromoterUtil_30A36AAF: 0x30A36AAF
+        - ScePromoterUtil_395739DF: 0x395739DF
+        - scePromoterUtilityGetResult: 0x49B473F0
+        - scePromoterUtilityPromoteImport: 0x4B37808F
+        - ScePromoterUtil_59A6CDAE: 0x59A6CDAE
+        - ScePromoterUtil_59DA665E: 0x59DA665E
+        - ScePromoterUtil_5FF5CACF: 0x5FF5CACF
+        - ScePromoterUtil_6A547384: 0x6A547384
+        - scePromoterUtilityPromotePkg: 0x716C81F4
+        - ScePromoterUtil_739BC292: 0x739BC292
+        - scePromoterUtilityDeletePkg: 0x7D46752F
+        - scePromoterUtilityUpdateUpgradableStatus: 0x82E69783
+        - ScePromoterUtil_8494C742: 0x8494C742
+        - scePromoterUtilityPromotePkgWithRif: 0x86641BC6
+        - scePromoterUtilityInit: 0x93451536
+        - ScePromoterUtil_999AD6CE: 0x999AD6CE
+        - scePromoterUtilityGetState: 0xABEC74D2
+        - ScePromoterUtil_B27DA268: 0xB27DA268
+        - scePromoterUtilityCheckExist: 0xBA9871E5
+        - scePromoterUtilityExit: 0xC95D24A6
+        - scePromoterUtilityRemoveSavedata: 0xCB0A59B0
+        - ScePromoterUtil_D4E87DCB: 0xD4E87DCB
+        - ScePromoterUtil_FDCCBE33: 0xFDCCBE33

@@ -1,0 +1,21 @@
+ScePhotoExport:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    ScePhotoExport:
+      syscall: false
+      version: 1
+      nid: 0x79166BD9
+      functions:
+        - ScePhotoExport_05D5A482: 0x05D5A482
+        - ScePhotoExport_16B1028E: 0x16B1028E
+        - ScePhotoExport_2EFB7250: 0x2EFB7250
+        - scePhotoExportIsAvailableFromFile: 0x5655F971
+        - scePhotoExportFromData: 0x70512321
+        - ScePhotoExport_719ACE85: 0x719ACE85
+        - ScePhotoExport_76640642: 0x76640642
+        - scePhotoExportFromFile: 0x84FD9FC5
+        - scePhotoExportIsAvailableFromData: 0xE6E6AFD5
+        - ScePhotoExport_F4E0F7FF: 0xF4E0F7FF

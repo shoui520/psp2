@@ -1,0 +1,52 @@
+/*
+ * SceNpBasic skeleton: export stubs.
+ *
+ * Generated (T2). Every body is a placeholder.
+ */
+
+#include "skeleton.h"
+
+STUB_MAIN(module_start)
+STUB_MAIN(module_stop)
+
+STUB(sceNpBasicUnregisterHandler)
+STUB(SceNpBasic_0C9BAF57)
+STUB(sceNpBasicGetBlockListEntries)
+STUB(SceNpBasic_1CAAF066)
+STUB(sceNpBasicCheckCallback)
+STUB(sceNpBasicRegisterHandler)
+STUB(sceNpBasicUnregisterJoinGameAckHandler)
+STUB(sceNpBasicUnregisterInGameDataMessageHandler)
+STUB(sceNpBasicGetPlaySessionLog)
+STUB(sceNpBasicGetRequestedFriendRequestEntries)
+STUB(SceNpBasic_375EABF2)
+STUB(sceNpBasicTerm)
+STUB(sceNpBasicRegisterInGameDataMessageHandler)
+STUB(sceNpBasicRecordPlaySessionLog)
+STUB(sceNpBasicGetBlockListEntryCount)
+STUB(sceNpBasicGetFriendOnlineStatus)
+STUB(sceNpBasicSetInGamePresence)
+STUB(SceNpBasic_6F1B58F9)
+STUB(SceNpBasic_748925A4)
+STUB(sceNpBasicSendInGameDataMessage)
+STUB(SceNpBasic_7F13243D)
+STUB(sceNpBasicGetGameJoiningPresence)
+STUB(sceNpBasicJoinGameAckResponseSend)
+STUB(sceNpBasicGetFriendRequestEntries)
+STUB(SceNpBasic_999CC1E9)
+STUB(sceNpBasicGetFriendContextState)
+STUB(SceNpBasic_A1C1A8E2)
+STUB(SceNpBasic_A6BFBBFF)
+STUB(SceNpBasic_B414E768)
+STUB(sceNpBasicGetRequestedFriendRequestEntryCount)
+STUB(SceNpBasic_B93ADCDA)
+STUB(sceNpBasicUnsetInGamePresence)
+STUB(sceNpBasicGetFriendListEntryCount)
+STUB(sceNpBasicRegisterJoinGameAckHandler)
+STUB(sceNpBasicGetGamePresenceOfFriend)
+STUB(sceNpBasicInit)
+STUB(sceNpBasicCheckIfPlayerIsBlocked)
+STUB(sceNpBasicGetPlaySessionLogSize)
+STUB(SceNpBasic_FB1B7762)
+STUB(sceNpBasicGetFriendRequestEntryCount)
+STUB(sceNpBasicGetFriendListEntries)

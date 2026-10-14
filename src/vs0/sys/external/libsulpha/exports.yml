@@ -1,0 +1,34 @@
+SceSulpha:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceSulpha:
+      syscall: false
+      version: 1
+      nid: 0x533DEBDE
+      functions:
+        - sceSulphaNetworkShutdown: 0x0FC71B72
+        - sceSulphaShutdown: 0x10770BA7
+        - sceSulphaGetTimestamp: 0x29F0DA12
+        - sceSulphaAgentsUnregister: 0x2A8B74D7
+        - sceSulphaInit: 0x324F158F
+        - sceSulphaLogHandler: 0x5C6815C6
+        - sceSulphaSetBookmark: 0x5E15E164
+        - sceSulphaFileConnect: 0x7968A138
+        - sceSulphaAgentsRegister: 0x7ADB454D
+        - sceSulphaUpdate: 0x920EC7BF
+        - sceSulphaLogSetLevel: 0x951D159D
+        - sceSulphaNodeNew: 0xA41B7402
+        - sceSulphaGetDefaultConfig: 0xA6A05C50
+        - sceSulphaEventAdd: 0xB0C2B9CE
+        - sceSulphaFileDisconnect: 0xB16E7B88
+        - sceSulphaNetworkInit: 0xB4668AEA
+        - sceSulphaEventReport: 0xBC6A2833
+        - sceSulphaEventNew: 0xBF61F3B8
+        - sceSulphaAgentsGetNeededMemory: 0xC5752B6B
+        - sceSulphaNodeDelete: 0xD44C9F86
+        - sceSulphaGetNeededMemory: 0xD52E5A5A
+        - sceSulphaEventDelete: 0xD5D995A9
+        - sceSulphaGetAgent: 0xDE7E2911

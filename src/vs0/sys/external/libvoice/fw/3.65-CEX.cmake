@@ -1,0 +1,108 @@
+# 3.65-CEX: vs0:sys/external/libvoice.suprx (generated)
+set(MODULE_NID 0x3290E272)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xCE56E214 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x438BB957:1:0x0
+	0xF8DC61A3:1:0x0
+	0x2AA62046:1:0x0
+	0xA938B1A6:1:0x0
+	0xCAE9ACE6:5:0x0
+	0x2DD91812:2:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x438BB957:F:0x02DB3F5F
+	0x438BB957:F:0x5BC341E4
+	0x438BB957:F:0x69E2E6B5
+	0xF8DC61A3:F:0x39B50DC1
+	0xF8DC61A3:F:0x3A61B8C4
+	0xF8DC61A3:F:0x566AC433
+	0xF8DC61A3:F:0x638ADD2D
+	0x2AA62046:F:0x445C2CEF
+	0x2AA62046:F:0x45719B9D
+	0x2AA62046:F:0x4DFD3AAA
+	0x2AA62046:F:0xCCDABA04
+	0x2AA62046:F:0xE7A24E16
+	0xA938B1A6:F:0x64C04AE8
+	0xA938B1A6:F:0x76EE4DC6
+	0xA938B1A6:F:0xAB32D022
+	0xA938B1A6:F:0xC6BA5EE6
+	0xA938B1A6:F:0xD85DB29C
+	0xCAE9ACE6:F:0x0A10C1C8
+	0xCAE9ACE6:F:0x0CA71EA2
+	0xCAE9ACE6:F:0x120F03AF
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x4E81DD5C
+	0xCAE9ACE6:F:0x83C0E2AF
+	0xCAE9ACE6:F:0x8516D040
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE6DB2494
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:V:0x93B8AA67
+	0x2DD91812:F:0xCE0F02F0
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x208CFE28
+	0x859A24B1:F:0x324218CD
+	0x859A24B1:F:0x4B675D05
+	0x859A24B1:F:0x5840162C
+	0x859A24B1:F:0xE78BCCF7
+	0x859A24B1:F:0xEC94DFF7
+)
+set(MODULE_IMPORT_FUNCS
+	sceAudioOutOutput
+	sceAudioOutOpenPort
+	sceAudioOutReleasePort
+	sceAudioInOpenPort
+	sceAudioInReleasePort
+	sceAudioInGetAdopt
+	sceAudioInInput
+	sceAudiodecInitLibrary
+	sceAudiodecTermLibrary
+	sceAudiodecCreateDecoder
+	sceAudiodecDecode
+	sceAudiodecDeleteDecoder
+	sceAudioencCreateEncoder
+	sceAudioencInitLibrary
+	sceAudioencTermLibrary
+	sceAudioencDeleteEncoder
+	sceAudioencEncode
+	sceKernelCreateMsgPipe
+	sceKernelSendMsgPipe
+	sceKernelWaitEvent
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceKernelReceiveMsgPipe
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceKernelUnlockLwMutex
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelCreateSimpleEvent
+	sceKernelStartThread
+	sceKernelIsGameBudget
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelDeleteThread
+	sceKernelDeleteSimpleEvent
+	sceKernelSetEvent
+	sceKernelDelayThread
+	sceKernelDeleteEventFlag
+	sceKernelDeleteMsgPipe
+	sceKernelSetEventFlag
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

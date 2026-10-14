@@ -1,0 +1,46 @@
+SceShell:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceShell:
+      syscall: false
+      version: 1
+      nid: 0x2404AE25
+      functions:
+        - SceShell_0025417F: 0x0025417F
+        - SceShell_05D6FCB0: 0x05D6FCB0
+        - SceShell_29A14252: 0x29A14252
+        - SceShell_2E0B6FA6: 0x2E0B6FA6
+        - SceShell_3059EEBC: 0x3059EEBC
+        - SceShell_36788D70: 0x36788D70
+        - SceShell_3E737FBE: 0x3E737FBE
+        - SceShell_3F41E440: 0x3F41E440
+        - SceShell_42053414: 0x42053414
+        - SceShell_449348B6: 0x449348B6
+        - SceShell_548A3111: 0x548A3111
+        - SceShell_5928D835: 0x5928D835
+        - SceShell_5DC4A753: 0x5DC4A753
+        - SceShell_60129092: 0x60129092
+        - SceShell_6A6123E3: 0x6A6123E3
+        - SceShell_6B8772A2: 0x6B8772A2
+        - SceShell_77642C92: 0x77642C92
+        - SceShell_794BF5BE: 0x794BF5BE
+        - SceShell_7AD86CE1: 0x7AD86CE1
+        - SceShell_7FE4E732: 0x7FE4E732
+        - SceShell_83D16CA8: 0x83D16CA8
+        - SceShell_871A8E92: 0x871A8E92
+        - SceShell_8858B876: 0x8858B876
+        - SceShell_8C1D932A: 0x8C1D932A
+        - SceShell_99893E59: 0x99893E59
+        - SceShell_A25CD3F2: 0xA25CD3F2
+        - SceShell_B4D888D5: 0xB4D888D5
+        - SceShell_C1886828: 0xC1886828
+        - SceShell_D4C7D2B7: 0xD4C7D2B7
+        - SceShell_E3D3A162: 0xE3D3A162
+        - SceShell_EC75C2F3: 0xEC75C2F3
+        - SceShell_F197032C: 0xF197032C
+        - SceShell_FDAA5D2E: 0xFDAA5D2E

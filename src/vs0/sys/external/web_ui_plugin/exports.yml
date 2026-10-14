@@ -1,0 +1,44 @@
+SceWebUIPlugin:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceWebUIPlugin:
+      syscall: false
+      version: 1
+      nid: 0x04FA0166
+      functions:
+        - SceWebUIPlugin_020BBDEC: 0x020BBDEC
+        - SceWebUIPlugin_07F112B1: 0x07F112B1
+        - SceWebUIPlugin_0CC680F9: 0x0CC680F9
+        - SceWebUIPlugin_0D16E32E: 0x0D16E32E
+        - SceWebUIPlugin_12EDFFFD: 0x12EDFFFD
+        - SceWebUIPlugin_1839F91E: 0x1839F91E
+        - SceWebUIPlugin_185749DD: 0x185749DD
+        - SceWebUIPlugin_1D972BD5: 0x1D972BD5
+        - SceWebUIPlugin_20FC6A4B: 0x20FC6A4B
+        - SceWebUIPlugin_38C35ABF: 0x38C35ABF
+        - SceWebUIPlugin_4B574C0E: 0x4B574C0E
+        - SceWebUIPlugin_4BE50934: 0x4BE50934
+        - SceWebUIPlugin_6123BAC6: 0x6123BAC6
+        - SceWebUIPlugin_732FD74D: 0x732FD74D
+        - SceWebUIPlugin_7F3207BF: 0x7F3207BF
+        - SceWebUIPlugin_93C92A4A: 0x93C92A4A
+        - SceWebUIPlugin_9CD848A2: 0x9CD848A2
+        - SceWebUIPlugin_9DE97660: 0x9DE97660
+        - SceWebUIPlugin_A5D37F3B: 0xA5D37F3B
+        - SceWebUIPlugin_B7E01B26: 0xB7E01B26
+        - SceWebUIPlugin_B888A5A6: 0xB888A5A6
+        - SceWebUIPlugin_C329EB86: 0xC329EB86
+        - SceWebUIPlugin_C4DEF65E: 0xC4DEF65E
+        - SceWebUIPlugin_C59CB476: 0xC59CB476
+        - SceWebUIPlugin_CC288B0C: 0xCC288B0C
+        - SceWebUIPlugin_CDD05310: 0xCDD05310
+        - SceWebUIPlugin_D480614B: 0xD480614B
+        - SceWebUIPlugin_D4A3FD30: 0xD4A3FD30
+        - SceWebUIPlugin_E5A82BE5: 0xE5A82BE5
+        - SceWebUIPlugin_E6A8A5BC: 0xE6A8A5BC

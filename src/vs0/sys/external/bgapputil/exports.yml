@@ -1,0 +1,16 @@
+SceBgAppUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceBgAppUtil:
+      syscall: false
+      version: 1
+      nid: 0xF9516A07
+      functions:
+        - sceBgAppUtilStartBgApp: 0x7C3525B5

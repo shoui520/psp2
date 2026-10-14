@@ -1,0 +1,23 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libscejpegencarm.suprx (generated)
+set(MODULE_NID 0xC25C7A28)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0xCF9C23A2 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:V:0x93B8AA67
+)
+set(MODULE_IMPORT_FUNCS
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMemset
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

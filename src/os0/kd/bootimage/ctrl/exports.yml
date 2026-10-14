@@ -1,0 +1,95 @@
+SceCtrl:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceCtrlForDriver:
+      syscall: false
+      version: 1
+      nid: 0x7823A5D1
+      functions:
+        - _sceCtrlBdRemoconSendMergedNotify2: 0x02081494
+        - ksceCtrlUpdateMaskForNonShell: 0x03777131
+        - ksceCtrlSetAnalogEmulation: 0x06577FE8
+        - ksceCtrlSetButtonIntercept: 0x06AA5E1A
+        - ksceCtrlSetIdleCancelKey: 0x0A679512
+        - ksceCtrlUpdateMaskForAll: 0x12C13A72
+        - ksceCtrlGetSamplingMode: 0x145B13BC
+        - ksceCtrlRegisterVirtualControllerDriver: 0x18823EEA
+        - ksceCtrlPeekBufferNegative: 0x19895843
+        - ksceCtrlSetButtonEmulation: 0x1E750326
+        - ksceCtrlGetIdleCancelKey: 0x30801AE9
+        - ksceCtrlSetIdleCancelThreshold: 0x345E74FD
+        - ksceCtrlGetMaskForAll: 0x46ABDDE8
+        - SceCtrlForDriver_4CCB2153: 0x4CCB2153
+        - ksceCtrlSetVibrationSetting: 0x4D8FE670
+        - ksceCtrlChangePortAssign: 0x53381364
+        - SceCtrlForDriver_5B708A15: 0x5B708A15
+        - ksceCtrlIsBdRemoconConnected: 0x5B849B22
+        - SceCtrlForDriver_69E45836: 0x69E45836
+        - ksceCtrlGetButtonIntercept: 0x6BEB1CD7
+        - ksceCtrlNotifyCallBacks: 0x6E183B9B
+        - ksceCtrlSetCtrlpCallback: 0x7AD9467E
+        - ksceCtrlSetSamplingMode: 0x80F5E418
+        - ksceCtrlReadBufferNegative: 0x8D4E0DD1
+        - ksceCtrlReadBufferPositive: 0x9B96A1AA
+        - ksceCtrlUnregisterNotifyCallBack: 0x9DAB51C4
+        - ksceCtrlSetRapidFire: 0xA248CDAE
+        - ksceCtrlSetBdRemoconConnected: 0xAA36F578
+        - ksceCtrlGetMaskForNonShell: 0xB25BD8FD
+        - SceCtrlForDriver_B26C2231: 0xB26C2231
+        - ksceCtrlGetIdleCancelThreshold: 0xB9402CEF
+        - SceCtrlForDriver_C8CE3E43: 0xC8CE3E43
+        - SceCtrlForDriver_DA07E970: 0xDA07E970
+        - ksceCtrlRegisterNotifyCallBack: 0xE170883E
+        - ksceCtrlPeekBufferPositive: 0xEA1D3A34
+        - ksceCtrlClearRapidFire: 0xED138A26
+        - ksceCtrlSetTurnOffInterval: 0xED8F0129
+        - ksceCtrlGetControllerPortInfo: 0xF11D0D30
+        - ksceCtrlGetActiveControllerPort: 0xFA88D837
+        - SceCtrlForDriver_FF9D4DD4: 0xFF9D4DD4
+    SceCtrl:
+      syscall: true
+      version: 1
+      nid: 0xD197E3C7
+      functions:
+        - sceCtrlSingleControllerMode: 0x031BE396
+        - sceCtrlRegisterBdRMCCallback: 0x0A06B7E4
+        - sceCtrlUnregisterBdRMCCallback: 0x103EB2B0
+        - sceCtrlPeekBufferNegative: 0x104ED1A7
+        - sceCtrlPeekBufferPositive2: 0x15F81E8C
+        - sceCtrlReadBufferNegative: 0x15F96FB0
+        - sceCtrlDisconnect: 0x16D26DC7
+        - sceCtrlIsMultiControllerSupported: 0x1FFFD965
+        - sceCtrlReadBufferNegative2: 0x27A0C5FB
+        - sceCtrlGetControllerPortInfo: 0x324F1B66
+        - sceCtrlGetAnalogStickCheckMode: 0x35BCD3BB
+        - sceCtrlSetButtonIntercept: 0x433D71F4
+        - sceCtrlReadBufferPositive: 0x67E7AB83
+        - sceCtrlGetButtonIntercept: 0x6FAFAD05
+        - sceCtrlResetLightBar: 0x7E110E90
+        - sceCtrlPeekBufferNegative2: 0x81A89660
+        - sceCtrlPeekBufferPositiveExt2: 0x860BF292
+        - sceCtrlSetButtonRemappingInfo: 0x8A187F98
+        - sceCtrlGetBatteryInfo: 0x8F9B1CE5
+        - sceCtrlGetProcessStatus: 0xA2A56685
+        - sceCtrlSetSamplingMode: 0xA497B150
+        - sceCtrlPeekBufferPositiveExt: 0xA59454D3
+        - sceCtrlReadBufferPositiveExt2: 0xA7178860
+        - sceCtrlPeekBufferPositive: 0xA9C3CED6
+        - sceCtrlSetSamplingModeExt: 0xB1DC4378
+        - sceCtrlSetAnalogStickCheckMode: 0xB2C98244
+        - sceCtrlGetWirelessControllerInfo: 0xB8844141
+        - sceCtrlGetSamplingModeExt: 0xBD27F830
+        - sceCtrlReadBufferPositive2: 0xC4226A3E
+        - sceCtrlGetAnalogStickCheckTarget: 0xD01DE63A
+        - sceCtrlClearRapidFire: 0xD8294C9C
+        - sceCtrlSetLightBar: 0xDA11D433
+        - sceCtrlSetActuator: 0xDBCAA0C9
+        - sceCtrlReadBufferPositiveExt: 0xE2D99296
+        - sceCtrlSetRapidFire: 0xE9CB69C8
+        - sceCtrlGetSamplingMode: 0xEC752AAF
+        - sceCtrlSetAnalogStickCheckTarget: 0xFB12A0A7

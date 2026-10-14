@@ -1,0 +1,17 @@
+SceSecondScreen:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSecondScreen:
+      syscall: false
+      version: 1
+      nid: 0x9B603547
+      functions:
+        - SceSecondScreen_30C7851C: 0x30C7851C
+        - SceSecondScreen_5D16085E: 0x5D16085E
+        - SceSecondScreen_E7F89B9F: 0xE7F89B9F

@@ -1,0 +1,31 @@
+SceSystemGesture:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSystemGesture:
+      syscall: false
+      version: 1
+      nid: 0xAF3FE2D3
+      functions:
+        - sceSystemGestureResetTouchRecognizer: 0x0D941B90
+        - sceSystemGestureGetTouchEventsCount: 0x13AD2218
+        - sceSystemGestureGetPrimitiveTouchEventByPrimitiveID: 0x480564C9
+        - sceSystemGestureGetTouchEventByEventID: 0x5570B83E
+        - sceSystemGestureInitializePrimitiveTouchRecognizer: 0x6078A08B
+        - sceSystemGestureGetTouchEventByIndex: 0x74724147
+        - sceSystemGestureGetTouchEvents: 0x789D867C
+        - sceSystemGestureUpdateTouchRecognizer: 0x851FB144
+        - sceSystemGestureUpdateTouchRecognizerRectangle: 0xA9DB29F6
+        - sceSystemGestureFinalizePrimitiveTouchRecognizer: 0xB3875104
+        - sceSystemGestureGetPrimitiveTouchEventsCount: 0xBAB8ECCB
+        - sceSystemGestureCreateTouchRecognizer: 0xC3367370
+        - sceSystemGestureGetPrimitiveTouchEvents: 0xC750D3DA
+        - sceSystemGestureUpdatePrimitiveTouchRecognizer: 0xDF4C665A
+        - sceSystemGestureGetPrimitiveTouchEventByIndex: 0xE0577765
+        - sceSystemGestureGetTouchRecognizerInformation: 0xF0DB1AE5
+        - sceSystemGestureResetPrimitiveTouchRecognizer: 0xFD5A6504

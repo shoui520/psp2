@@ -1,0 +1,60 @@
+# 3.650.011-TOOL: vs0:sys/external/libssl.suprx (generated)
+set(MODULE_NID 0x29273020)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0x6BF8B2A2:1:0x0
+	0x6704D3C6:1:0x0
+	0xA6605D6F:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelGetThreadId
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceClibStrncmp
+	sceIoOpen
+	sceClibMemmove
+	sceClibMspaceRealloc
+	sceClibMspaceMalloc
+	sceClibMspaceMallocStats
+	sceKernelUnlockLwMutex
+	sceIoLseek
+	sceClibMspaceFree
+	sceClibMemcmp
+	SceLibKernel_9F793F84
+	sceClibStrncat
+	sceClibMspaceDestroy
+	sceClibToupper
+	sceClibStrncpy
+	sceClibMspaceIsHeapEmpty
+	sceKernelCreateLwMutex
+	sceClibVsnprintf
+	sceIoClose
+	sceIoRead
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelGetSystemTimeWide
+	sceNetRecv
+	sceNetSocketClose
+	sceNetShutdown
+	sceNetErrnoLoc
+	sceNetSend
+	sceRtcGetCurrentClock
+	sceRtcSetTime64_t
+	sceRtcGetTime64_t
+	sceRtcGetTick
+	sceAppMgrConvertVs0UserDrivePath
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

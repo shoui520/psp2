@@ -1,0 +1,103 @@
+# 3.65-CEX: os0:kd/bootimage/usbstorvstor (generated)
+set(MODULE_NID 0xCE6682C3)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x17F294B9)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x9AD8E213:1:0x0
+	0x40FD29C7:1:0x0
+	0x5D01DDE4:1:0x0
+	0xBC05A8FB:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x6F25E18A:F:0xDB3EC244
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x12CEE649
+	0x7EE45391:F:0x6D286146
+	0x7EE45391:F:0x7554AB04
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:F:0xF939E83D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x02EEDF17
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x0C8A38E1
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x3E20216F
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAC834F3F
+	0xE2C40624:F:0xC6674E7D
+	0xE2C40624:F:0xD4780C3E
+	0x9AD8E213:F:0x8612B243
+	0x9AD8E213:F:0xD0E11C89
+	0x40FD29C7:F:0x21EE91F0
+	0x40FD29C7:F:0x62090481
+	0x40FD29C7:F:0x75192972
+	0x40FD29C7:F:0xE17EFC03
+	0x40FD29C7:F:0xF99DD8A3
+	0x5D01DDE4:F:0x73F2FF9D
+	0x5D01DDE4:F:0xADB2AAF2
+	0x5D01DDE4:F:0xB6689597
+	0x5D01DDE4:F:0xC0944A04
+	0x5D01DDE4:F:0xD3C7EE70
+	0x5D01DDE4:F:0xEAC08C24
+	0x5D01DDE4:F:0xF1A690DC
+	0xBC05A8FB:F:0x1494293B
+	0xBC05A8FB:F:0x409DD196
+	0xBC05A8FB:F:0x4FDEA423
+	0xBC05A8FB:F:0x8AE87657
+	0xBC05A8FB:F:0x9FD733EA
+	0xBC05A8FB:F:0xC0CA5DDB
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelStrncpyFromUser
+	memset
+	strncmp
+	strncpy
+	__aeabi_ldivmod
+	__stack_chk_fail
+	memcmp
+	ksceKernelSetPermission
+	ksceKernelWaitEventFlag
+	sceKernelExitThread
+	ksceKernelStartThread
+	ksceKernelWaitThreadEnd
+	ksceKernelCreateEventFlag
+	ksceKernelDeleteEventFlag
+	ksceKernelDeleteThread
+	ksceKernelCreateThread
+	ksceKernelSetEventFlag
+	ksceSblACMgrIsSystemProgram
+	ksceSblACMgrIsMiniSettingsForQA
+	ksceIoWrite
+	ksceIoLseek
+	ksceIoOpen
+	ksceIoRead
+	ksceIoClose
+	SceUsbstorForDriver_73F2FF9D
+	SceUsbstorForDriver_ADB2AAF2
+	SceUsbstorForDriver_B6689597
+	SceUsbstorForDriver_C0944A04
+	SceUsbstorForDriver_D3C7EE70
+	SceUsbstorForDriver_EAC08C24
+	SceUsbstorForDriver_F1A690DC
+	ksceUdcdStop
+	ksceUdcdGetDeviceStateInternal
+	ksceUdcdActivate
+	ksceUdcdDeactivate
+	ksceUdcdStart
+	ksceUdcdGetDrvState
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

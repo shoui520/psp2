@@ -1,0 +1,43 @@
+/*
+ * SceShell skeleton: export stubs.
+ *
+ * Generated (T2). Every body is a placeholder.
+ */
+
+#include "skeleton.h"
+
+STUB_MAIN(module_start)
+
+STUB(SceShell_0025417F)
+STUB(SceShell_05D6FCB0)
+STUB(SceShell_29A14252)
+STUB(SceShell_2E0B6FA6)
+STUB(SceShell_3059EEBC)
+STUB(SceShell_36788D70)
+STUB(SceShell_3E737FBE)
+STUB(SceShell_3F41E440)
+STUB(SceShell_42053414)
+STUB(SceShell_449348B6)
+STUB(SceShell_548A3111)
+STUB(SceShell_5928D835)
+STUB(SceShell_5DC4A753)
+STUB(SceShell_60129092)
+STUB(SceShell_6A6123E3)
+STUB(SceShell_6B8772A2)
+STUB(SceShell_77642C92)
+STUB(SceShell_794BF5BE)
+STUB(SceShell_7AD86CE1)
+STUB(SceShell_7FE4E732)
+STUB(SceShell_83D16CA8)
+STUB(SceShell_871A8E92)
+STUB(SceShell_8858B876)
+STUB(SceShell_8C1D932A)
+STUB(SceShell_99893E59)
+STUB(SceShell_A25CD3F2)
+STUB(SceShell_B4D888D5)
+STUB(SceShell_C1886828)
+STUB(SceShell_D4C7D2B7)
+STUB(SceShell_E3D3A162)
+STUB(SceShell_EC75C2F3)
+STUB(SceShell_F197032C)
+STUB(SceShell_FDAA5D2E)

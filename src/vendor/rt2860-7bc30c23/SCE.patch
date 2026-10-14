@@ -1,0 +1,64 @@
+--- cmm_wpa.c
++++ cmm_wpa.c
+@@ -35,6 +35,7 @@
+ 	Jan	Lee		03-07-22		Initial
+ 	Paul Lin	03-11-28		Modify for supplicant
+ */
++#if !defined(SCE_WLANBT_PBKDF2)
+ #include "../rt_config.h"
+ /* WPA OUI */
+ u8 OUI_WPA_NONE_AKM[4] = { 0x00, 0x50, 0xF2, 0x00 };
+@@ -1330,11 +1331,36 @@
+ * Uc = PRF(P, Uc-1)
+ */
+ 
++#endif /* !SCE_WLANBT_PBKDF2 */
++
++#if defined(SCE_WLANBT_PBKDF2)
++/* SCE: fixed iteration count, kernel HMAC service, bounded password reads. */
++#define iterations 4096
++void wlanPbkdf2Sha1Block(const char *password, const void *ssid,
++			int ssidlength, int count, unsigned char *output)
++#else
+ static void F(char *password, unsigned char *ssid, int ssidlength,
+ 	      int iterations, int count, unsigned char *output)
++#endif
+ {
+ 	unsigned char digest[36], digest1[SHA1_DIGEST_SIZE];
+ 	int i, j;
++
++#if defined(SCE_WLANBT_PBKDF2)
++	/* SCE: reject non-printable password bytes before deriving either block. */
++	const unsigned char *character = (const unsigned char *)password;
++	const unsigned char *end = character + strnlen(password, 64);
++
++	while (character != end) {
++		unsigned int value = *character++;
++
++		if (value - 32 > 94) {
++			ksceKernelPrintf("[SceWlanBt]: invalid password character : %x\n",
++					 (signed char)value);
++			return;
++		}
++	}
++#endif
+ 
+ 	/* U1 = PRF(P, S || int(i)) */
+ 	memcpy(digest, ssid, ssidlength);
+@@ -1358,6 +1384,10 @@
+ 		}
+ 	}
+ }
++
++#if defined(SCE_WLANBT_PBKDF2)
++#undef iterations
++#else
+ 
+ /*
+ * password - ascii string up to 63 characters in length
+@@ -3008,3 +3038,5 @@
+ 
+ 	return;
+ }
++
++#endif /* !SCE_WLANBT_PBKDF2 */

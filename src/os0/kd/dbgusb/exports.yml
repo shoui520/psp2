@@ -1,0 +1,17 @@
+SceDbgUsb:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: sceDbgUsbModuleStart
+  libraries:
+    SceDbgUsbForDriver:
+      syscall: false
+      version: 1
+      nid: 0x7001B5EF
+      functions:
+        - SceDbgUsbForDriver_08CF16D1: 0x08CF16D1
+        - SceDbgUsbForDriver_40C65DB2: 0x40C65DB2
+        - _sceDbgUsbPullData: 0x83B67515
+        - SceDbgUsbForDriver_A6BFCC0A: 0xA6BFCC0A

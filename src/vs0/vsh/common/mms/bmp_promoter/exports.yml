@@ -1,0 +1,19 @@
+SceBmpPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceBmpPromoter:
+      syscall: false
+      version: 1
+      nid: 0xBF493DC9
+      functions:
+        - SceBmpPromoter_106DCBFA: 0x106DCBFA
+        - SceBmpPromoter_6E2F219E: 0x6E2F219E
+        - SceBmpPromoter_78804CEF: 0x78804CEF
+      variables:
+        - SceBmpPromoter_42175267: 0x42175267

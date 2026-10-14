@@ -1,0 +1,72 @@
+SceLibical:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    libical:
+      syscall: false
+      version: 1
+      nid: 0xA49FEF37
+      functions:
+        - libical_071135A1: 0x071135A1
+        - libical_0A2BB067: 0x0A2BB067
+        - libical_0E2749A7: 0x0E2749A7
+        - libical_0F21C448: 0x0F21C448
+        - libical_1739D883: 0x1739D883
+        - libical_17FB5E28: 0x17FB5E28
+        - libical_19BC6E00: 0x19BC6E00
+        - libical_2076B600: 0x2076B600
+        - libical_24065D72: 0x24065D72
+        - libical_24F09B3A: 0x24F09B3A
+        - libical_2AB87FAA: 0x2AB87FAA
+        - libical_2CF90B6E: 0x2CF90B6E
+        - libical_35FAA8FF: 0x35FAA8FF
+        - libical_379C2B30: 0x379C2B30
+        - libical_3901B661: 0x3901B661
+        - libical_396A6857: 0x396A6857
+        - libical_3BE0DFD6: 0x3BE0DFD6
+        - libical_442C83E1: 0x442C83E1
+        - libical_444D8D34: 0x444D8D34
+        - libical_509393AA: 0x509393AA
+        - libical_5D37A98C: 0x5D37A98C
+        - libical_5E3D5C6F: 0x5E3D5C6F
+        - libical_5E4376F9: 0x5E4376F9
+        - libical_6C52619C: 0x6C52619C
+        - libical_6D7170CC: 0x6D7170CC
+        - libical_7742A739: 0x7742A739
+        - libical_7C8968DC: 0x7C8968DC
+        - libical_7F6D5C6B: 0x7F6D5C6B
+        - libical_7F817046: 0x7F817046
+        - libical_8ACE8926: 0x8ACE8926
+        - libical_906FA195: 0x906FA195
+        - libical_92BDD408: 0x92BDD408
+        - libical_94ED33F7: 0x94ED33F7
+        - libical_97CC05DD: 0x97CC05DD
+        - libical_9B3E8CDD: 0x9B3E8CDD
+        - libical_9B9DBD12: 0x9B9DBD12
+        - libical_9C45D3FF: 0x9C45D3FF
+        - libical_A08BE446: 0xA08BE446
+        - libical_A1B20721: 0xA1B20721
+        - libical_A5A47C33: 0xA5A47C33
+        - libical_AF3B78E5: 0xAF3B78E5
+        - libical_B032176D: 0xB032176D
+        - libical_C2056C01: 0xC2056C01
+        - libical_C3525E86: 0xC3525E86
+        - libical_C53EE59D: 0xC53EE59D
+        - libical_C83A8B1C: 0xC83A8B1C
+        - libical_CD4CB143: 0xCD4CB143
+        - libical_D419444E: 0xD419444E
+        - libical_DB84532B: 0xDB84532B
+        - libical_E2EC281C: 0xE2EC281C
+        - libical_E54D8A21: 0xE54D8A21
+        - libical_E6257835: 0xE6257835
+        - libical_EF90A77B: 0xEF90A77B
+        - libical_F65A3501: 0xF65A3501
+        - libical_F698A4EF: 0xF698A4EF
+        - libical_F7BA99CA: 0xF7BA99CA
+        - libical_FAF2C5E7: 0xFAF2C5E7
+        - libical_FD07CAD0: 0xFD07CAD0

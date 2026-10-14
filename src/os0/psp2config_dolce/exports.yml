@@ -1,0 +1,13 @@
+SceKernelPsp2Config:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceKernelPsp2Config:
+      syscall: false
+      version: 1
+      nid: 0x3198F2C4
+      variables:
+        - SceKernelPsp2Config_A6483A7C: 0xA6483A7C
+        - SceKernelPsp2Config_C1BA20DA: 0xC1BA20DA

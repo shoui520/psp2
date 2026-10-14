@@ -1,0 +1,64 @@
+# 3.65-CEX: vs0:sys/external/adhoc_matching.suprx (generated)
+set(MODULE_NID 0xC45089B0)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0x6BF8B2A2:1:0x8
+	0x9E8A69FD:1:0x8
+	0xC6083AE1:1:0x8
+	0x5E8D0E22:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelCreateMsgPipe
+	sceKernelSendMsgPipe
+	sceKernelLockMutex
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	__sce_aeabi_idiv0
+	sceKernelLockLwMutex
+	sceKernelReceiveMsgPipe
+	sceKernelCreateCond
+	sceClibMemset
+	sceClibMspaceMalloc
+	sceKernelUnlockLwMutex
+	sceClibMspaceFree
+	SceLibKernel_9F793F84
+	sceClibMspaceDestroy
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelCreateMutex
+	sceKernelStartThread
+	__sce_aeabi_ldiv0
+	sceKernelUnlockMutex
+	sceKernelDeleteThread
+	sceKernelSignalCond
+	sceKernelDeleteCond
+	sceKernelDeleteMutex
+	sceKernelDeleteMsgPipe
+	sceKernelGetSystemTimeWide
+	sceNetSetsockopt
+	sceNetNtohs
+	sceNetBind
+	sceNetSocketClose
+	sceNetHtonl
+	sceNetSendto
+	sceNetShutdown
+	sceNetSocketAbort
+	sceNetHtons
+	sceNetRecvfrom
+	sceNetNtohl
+	sceNetSocket
+	SceNetInternal_689B9D7D
+	sceNetCtlAdhocGetInAddr
+	ksceKernelExitThread
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

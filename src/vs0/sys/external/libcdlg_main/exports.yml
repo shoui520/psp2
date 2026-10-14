@@ -1,0 +1,29 @@
+SceCommonDialogMain:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceCommonDialogMain:
+      syscall: false
+      version: 1
+      nid: 0xDCF776D9
+      functions:
+        - SceCommonDialogMain_05EFC635: 0x05EFC635
+        - SceCommonDialogMain_1DE9E1A7: 0x1DE9E1A7
+        - SceCommonDialogMain_2E153774: 0x2E153774
+        - SceCommonDialogMain_36DF1E1B: 0x36DF1E1B
+        - SceCommonDialogMain_5739BC42: 0x5739BC42
+        - SceCommonDialogMain_60E5D4E7: 0x60E5D4E7
+        - SceCommonDialogMain_68330971: 0x68330971
+        - SceCommonDialogMain_75F10F83: 0x75F10F83
+        - SceCommonDialogMain_877BB562: 0x877BB562
+        - SceCommonDialogMain_B9D0E5A8: 0xB9D0E5A8
+        - SceCommonDialogMain_C224F846: 0xC224F846
+        - SceCommonDialogMain_C62B845D: 0xC62B845D
+        - SceCommonDialogMain_DD2CAC30: 0xDD2CAC30
+        - SceCommonDialogMain_E33EFFA5: 0xE33EFFA5
+        - SceCommonDialogMain_FDED47DB: 0xFDED47DB

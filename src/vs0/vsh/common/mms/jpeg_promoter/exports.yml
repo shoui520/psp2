@@ -1,0 +1,19 @@
+SceJpegPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceJpegPromoter:
+      syscall: false
+      version: 1
+      nid: 0xDFA612D3
+      functions:
+        - SceJpegPromoter_6198C88D: 0x6198C88D
+        - SceJpegPromoter_AB197358: 0xAB197358
+        - SceJpegPromoter_D7BD46C4: 0xD7BD46C4
+      variables:
+        - SceJpegPromoter_3AFAE967: 0x3AFAE967

@@ -1,0 +1,42 @@
+# 3.650.011-TOOL: vs0:sys/external/libfiber.suprx (generated)
+set(MODULE_NID 0x5E8E0E89)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xF88DAA70 0x00000000 0x49F67FCF)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xDB18BB68:1:0x0
+	0x447F047D:1:0x8
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x2F2C6046
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0xB295EB61
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0xDB18BB68:F:0x08769991
+	0xDB18BB68:F:0xEF09284B
+	0x447F047D:F:0x409D966A
+	0x447F047D:F:0x453AED06
+	0x447F047D:F:0x8F7B522C
+	0x447F047D:V:0x936A5F31
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelGetThreadId
+	sceClibAbort
+	__stack_chk_fail
+	sceKernelGetTLSAddr
+	sceClibPrintf
+	_sceUlobjMgrStartSupportingUserlevelObject
+	_sceUlobjMgrStopSupportingUserlevelObject
+	_sceRazorCpuWriteFiberUltPkt
+	_sceCpuRazorPopFiberUserMarker
+	_sceCpuRazorPushFiberUserMarker
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+	_pLibPerfCaptureFlagPtr
+)

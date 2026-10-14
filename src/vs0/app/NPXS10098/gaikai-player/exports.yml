@@ -1,0 +1,110 @@
+gaikai_player:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    stop: module_stop
+    exit: module_exit
+    start: module_start
+  libraries:
+    gaikai_player:
+      syscall: false
+      version: 1
+      nid: 0xECA5FB07
+      functions:
+        - gaikai_player_051973D3: 0x051973D3
+        - gaikai_player_078F7CD2: 0x078F7CD2
+        - gaikai_player_0DF5624D: 0x0DF5624D
+        - gaikai_player_0E746D31: 0x0E746D31
+        - gaikai_player_10CBED03: 0x10CBED03
+        - gaikai_player_1112B9C8: 0x1112B9C8
+        - gaikai_player_1570D3E6: 0x1570D3E6
+        - gaikai_player_16E64D6F: 0x16E64D6F
+        - gaikai_player_1E069760: 0x1E069760
+        - gaikai_player_1FB3D729: 0x1FB3D729
+        - gaikai_player_213D0AD4: 0x213D0AD4
+        - gaikai_player_260B82F5: 0x260B82F5
+        - gaikai_player_2676435F: 0x2676435F
+        - gaikai_player_2802D60F: 0x2802D60F
+        - gaikai_player_2AA01A02: 0x2AA01A02
+        - gaikai_player_2B4F7970: 0x2B4F7970
+        - gaikai_player_2C9B69BF: 0x2C9B69BF
+        - gaikai_player_300630E0: 0x300630E0
+        - gaikai_player_3180646F: 0x3180646F
+        - gaikai_player_3916D2D4: 0x3916D2D4
+        - gaikai_player_3988EBFE: 0x3988EBFE
+        - gaikai_player_3AA2CB50: 0x3AA2CB50
+        - gaikai_player_3CDDE5F0: 0x3CDDE5F0
+        - gaikai_player_3D8BA574: 0x3D8BA574
+        - gaikai_player_485842EA: 0x485842EA
+        - gaikai_player_4AC89031: 0x4AC89031
+        - gaikai_player_4B8254A5: 0x4B8254A5
+        - gaikai_player_528E2ED8: 0x528E2ED8
+        - gaikai_player_539B3C46: 0x539B3C46
+        - gaikai_player_54EF48A1: 0x54EF48A1
+        - gaikai_player_557130B5: 0x557130B5
+        - gaikai_player_56D01833: 0x56D01833
+        - gaikai_player_5B953896: 0x5B953896
+        - gaikai_player_5FA57B46: 0x5FA57B46
+        - gaikai_player_634A12E8: 0x634A12E8
+        - gaikai_player_64205845: 0x64205845
+        - gaikai_player_6481734C: 0x6481734C
+        - gaikai_player_64955516: 0x64955516
+        - gaikai_player_64B37B93: 0x64B37B93
+        - gaikai_player_64CADF4A: 0x64CADF4A
+        - gaikai_player_65C035D3: 0x65C035D3
+        - gaikai_player_65D2327C: 0x65D2327C
+        - gaikai_player_664343A1: 0x664343A1
+        - gaikai_player_712165AE: 0x712165AE
+        - gaikai_player_723D76DE: 0x723D76DE
+        - gaikai_player_7457FA29: 0x7457FA29
+        - gaikai_player_77C904FD: 0x77C904FD
+        - gaikai_player_78B13765: 0x78B13765
+        - gaikai_player_79E3A1B1: 0x79E3A1B1
+        - gaikai_player_80B81FE8: 0x80B81FE8
+        - gaikai_player_82A541CC: 0x82A541CC
+        - gaikai_player_83167053: 0x83167053
+        - gaikai_player_87436097: 0x87436097
+        - gaikai_player_87B6ACBA: 0x87B6ACBA
+        - gaikai_player_8E179DF5: 0x8E179DF5
+        - gaikai_player_8EC50650: 0x8EC50650
+        - gaikai_player_8F45EE23: 0x8F45EE23
+        - gaikai_player_906DD9CF: 0x906DD9CF
+        - gaikai_player_91E5230C: 0x91E5230C
+        - gaikai_player_971FB64B: 0x971FB64B
+        - gaikai_player_9CE9CD1E: 0x9CE9CD1E
+        - gaikai_player_9F3DD0E3: 0x9F3DD0E3
+        - gaikai_player_A6CA8F42: 0xA6CA8F42
+        - gaikai_player_A6CCC7DC: 0xA6CCC7DC
+        - gaikai_player_AAA8C0C6: 0xAAA8C0C6
+        - gaikai_player_AF6B92DE: 0xAF6B92DE
+        - gaikai_player_B11BB600: 0xB11BB600
+        - gaikai_player_B6609C09: 0xB6609C09
+        - gaikai_player_B77814F1: 0xB77814F1
+        - gaikai_player_BB564106: 0xBB564106
+        - gaikai_player_BDB44E43: 0xBDB44E43
+        - gaikai_player_BFBB9532: 0xBFBB9532
+        - gaikai_player_C1BC37B5: 0xC1BC37B5
+        - gaikai_player_CEB04111: 0xCEB04111
+        - gaikai_player_D38A6B13: 0xD38A6B13
+        - gaikai_player_D72AB525: 0xD72AB525
+        - gaikai_player_D94682EF: 0xD94682EF
+        - gaikai_player_DACC8D1F: 0xDACC8D1F
+        - gaikai_player_DC859184: 0xDC859184
+        - gaikai_player_E5371B7D: 0xE5371B7D
+        - gaikai_player_E78A95CC: 0xE78A95CC
+        - gaikai_player_EAB021CC: 0xEAB021CC
+        - gaikai_player_F00C13A2: 0xF00C13A2
+        - gaikai_player_FA974EFA: 0xFA974EFA
+        - gaikai_player_FCDE7B02: 0xFCDE7B02
+        - gaikai_player_FF4FAC73: 0xFF4FAC73
+      variables:
+        - gaikai_player_063C751F: 0x063C751F
+        - gaikai_player_2520A7EF: 0x2520A7EF
+        - gaikai_player_4BF692A3: 0x4BF692A3
+        - gaikai_player_6FF5F99C: 0x6FF5F99C
+        - gaikai_player_733A06B7: 0x733A06B7
+        - gaikai_player_C1EBE1C8: 0xC1EBE1C8
+        - gaikai_player_DBE0A4B4: 0xDBE0A4B4
+        - gaikai_player_E52FA813: 0xE52FA813

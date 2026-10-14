@@ -1,0 +1,68 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libmln.suprx (generated)
+set(MODULE_NID 0x9F89BC3E)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03100010)
+set(MODULE_IMPORT_LIBS
+	0x6704D3C6:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x91AFEB43:1:0x0
+	0x0B351269:1:0x0
+	0xA6605D6F:1:0x0
+	0x982E0032:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceRtcGetCurrentTick
+	sceRtcTickAddMinutes
+	sceRtcTickAddSeconds
+	sceRtcSetTick
+	sceRtcGetTick
+	sceKernelGetOpenPsId
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMemset
+	sceIoOpen
+	sceIoMkdir
+	sceIoLseek
+	sceIoDread
+	sceIoDopen
+	sceIoGetstat
+	sceIoRemove
+	sceIoRmdir
+	sceIoWrite
+	sceIoDclose
+	sceIoClose
+	sceIoRead
+	sceDrmBridgeIsAllowRemotePlayDebug
+	sceDrmBridgeMlnpsnlAuth2
+	SceDrmBridgeUser_6F5DC6CD
+	sceDrmBridgeGetCurrentSecureTick
+	sceDrmBridgeMlnpsnlAuth1
+	ksceRegMgrSystemParamGetStr
+	sceAppMgrAppDataMount
+	sceAppMgrUmount
+	SceMarlinHci_00F544DF
+	SceMarlinHci_24D94277
+	SceMarlinHci_4406594F
+	SceMarlinHci_44390C58
+	SceMarlinHci_457F6683
+	SceMarlinHci_4DADE2FD
+	SceMarlinHci_527EB697
+	SceMarlinHci_68315912
+	SceMarlinHci_9EA124CA
+	SceMarlinHci_A626EBBC
+	SceMarlinHci_AE0FBC3F
+	SceMarlinHci_B7FB96EC
+	SceMarlinHci_BFBA3A79
+	SceMarlinHci_C3E201D5
+	SceMarlinHci_C889F85B
+	SceMarlinHci_CB99E399
+	SceMarlinHci_CC2BA3B5
+	SceMarlinHci_E8A352C2
+	SceMarlinHci_EAD075E3
+	SceMarlinHci_F7303D28
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

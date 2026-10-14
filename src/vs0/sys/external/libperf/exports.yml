@@ -1,0 +1,53 @@
+ScePerf:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    ScePerf:
+      syscall: false
+      version: 1
+      nid: 0x447F047D
+      functions:
+        - sceRazorCpuGetUserMarkerTraceBuffer: 0x0DE231D4
+        - scePerfArmPmonSetCounterValue: 0x12F6C708
+        - scePerfArmPmonReset: 0x35151735
+        - sceRazorCpuStartActivityMonitor: 0x3F29E937
+        - _sceRazorCpuWriteFiberUltPkt: 0x409D966A
+        - scePerfArmPmonSoftwareIncrement: 0x4264B4E7
+        - _sceCpuRazorPopFiberUserMarker: 0x453AED06
+        - sceRazorCpuStopUserMarkerTrace: 0x4B47E144
+        - sceRazorCpuSync: 0x4F1385E3
+        - sceRazorCpuPushMarkerWithHud: 0x5CDC09EA
+        - scePerfArmPmonGetCounterValue: 0x6132A497
+        - scePerfArmPmonSelectEvent: 0x63CBEA8B
+        - scePerfGetTimebaseFrequency: 0x78EA4FFB
+        - _sceRazorCpuInit: 0x7AD6AC30
+        - sceRazorCpuIsCapturing: 0x8DA87B35
+        - _sceCpuRazorPushFiberUserMarker: 0x8F7B522C
+        - sceRazorCpuStopCapture: 0x9C2C05C2
+        - sceRazorCpuStopActivityMonitor: 0x9D5B9621
+        - sceRazorCpuStartUserMarkerTrace: 0xAED36A40
+        - scePerfGetTimebaseValue: 0xBD9615E5
+        - sceRazorCpuPushMarker: 0xC3DE4C0A
+        - scePerfArmPmonStart: 0xC9D969D5
+        - scePerfArmPmonStop: 0xD1A40F54
+        - sceRazorCpuStartCapture: 0xDAB63FC3
+        - sceRazorCpuPopMarker: 0xDC3224C3
+        - sceRazorCpuGetActivityMonitorTraceBuffer: 0xF7F8ADCE
+      variables:
+        - _pLibPerfCaptureFlagPtr: 0x936A5F31
+    ScePerfInternal:
+      syscall: false
+      version: 1
+      nid: 0xDAB47909
+      functions:
+        - ScePerfInternal_26A6DF2C: 0x26A6DF2C
+        - ScePerfInternal_275F2475: 0x275F2475
+        - ScePerfInternal_35405E9B: 0x35405E9B
+        - ScePerfInternal_37D9191E: 0x37D9191E
+        - ScePerfInternal_8AE83E02: 0x8AE83E02
+        - ScePerfInternal_9D1E1CEE: 0x9D1E1CEE

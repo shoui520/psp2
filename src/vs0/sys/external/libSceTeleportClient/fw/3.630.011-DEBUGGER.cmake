@@ -1,0 +1,74 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libSceTeleportClient.suprx (generated)
+set(MODULE_NID 0xA129A567)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0x0B351269:1:0x0
+	0x6BF8B2A2:1:0x8
+)
+set(MODULE_IMPORT_FUNCS
+	sceClibMemcpyChk
+	sceKernelDeleteLwMutex
+	sceKernelCancelEventFlag
+	sceClibStrlcpy
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceClibTolower
+	sceClibMemset
+	sceClibStrncmp
+	sceClibMemmove
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceClibMspaceMalloc
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceClibMspaceFree
+	sceClibMemcmp
+	sceClibStrcmp
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceClibToupper
+	sceClibStrncasecmp
+	sceClibStrncpy
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceClibStrstr
+	sceKernelStartThread
+	sceClibVsnprintf
+	sceKernelCheckModelCapability
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelDeleteThread
+	sceKernelDelayThread
+	sceKernelDeleteEventFlag
+	sceKernelGetSystemTimeWide
+	ksceRegMgrSystemParamGetInt
+	ksceRegMgrSystemParamGetBin
+	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamSetInt
+	sceRegMgrSystemParamSetStr
+	sceRegMgrSystemParamSetBin
+	sceNetRecv
+	sceNetSetsockopt
+	sceNetConnect
+	sceNetSocketClose
+	sceNetSendto
+	sceNetSocketAbort
+	sceNetHtons
+	sceNetGetSockInfo
+	sceNetRecvfrom
+	sceNetInetPton
+	sceNetSend
+	sceNetSocket
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

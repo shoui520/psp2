@@ -1,0 +1,19 @@
+ScePartyMemberListPlugin:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    ScePartyMemberListPlugin:
+      syscall: false
+      version: 1
+      nid: 0x340DC02E
+      functions:
+        - ScePartyMemberListPlugin_852B695D: 0x852B695D
+        - ScePartyMemberListPlugin_8DA476F3: 0x8DA476F3
+        - ScePartyMemberListPlugin_948AF6E3: 0x948AF6E3
+        - ScePartyMemberListPlugin_CA3A2524: 0xCA3A2524
+        - ScePartyMemberListPlugin_DCA98292: 0xDCA98292

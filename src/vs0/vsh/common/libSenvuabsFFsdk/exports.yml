@@ -1,0 +1,75 @@
+SceLibFflVuMp4:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibFflVuMp4:
+      syscall: false
+      version: 1
+      nid: 0xFF95AABF
+      functions:
+        - SceLibFflVuMp4_02624B55: 0x02624B55
+        - SceLibFflVuMp4_036E794E: 0x036E794E
+        - SceLibFflVuMp4_03ED506A: 0x03ED506A
+        - SceLibFflVuMp4_0640386D: 0x0640386D
+        - SceLibFflVuMp4_09CDCB0A: 0x09CDCB0A
+        - SceLibFflVuMp4_18AF7E91: 0x18AF7E91
+        - SceLibFflVuMp4_1C9A416C: 0x1C9A416C
+        - SceLibFflVuMp4_275245E1: 0x275245E1
+        - SceLibFflVuMp4_298165CD: 0x298165CD
+        - SceLibFflVuMp4_29BD5D63: 0x29BD5D63
+        - SceLibFflVuMp4_2D1E938F: 0x2D1E938F
+        - SceLibFflVuMp4_2DD28439: 0x2DD28439
+        - SceLibFflVuMp4_3277DA0D: 0x3277DA0D
+        - SceLibFflVuMp4_34920790: 0x34920790
+        - SceLibFflVuMp4_36F6C278: 0x36F6C278
+        - SceLibFflVuMp4_3F40ABF3: 0x3F40ABF3
+        - SceLibFflVuMp4_436386BA: 0x436386BA
+        - SceLibFflVuMp4_482CF4B6: 0x482CF4B6
+        - SceLibFflVuMp4_4EC38681: 0x4EC38681
+        - SceLibFflVuMp4_51847BAC: 0x51847BAC
+        - SceLibFflVuMp4_53B969F1: 0x53B969F1
+        - SceLibFflVuMp4_5480C4A6: 0x5480C4A6
+        - SceLibFflVuMp4_5528C765: 0x5528C765
+        - SceLibFflVuMp4_55949A9C: 0x55949A9C
+        - SceLibFflVuMp4_600B4D3C: 0x600B4D3C
+        - SceLibFflVuMp4_621E3874: 0x621E3874
+        - SceLibFflVuMp4_6E3B3CB7: 0x6E3B3CB7
+        - SceLibFflVuMp4_72C4BA21: 0x72C4BA21
+        - SceLibFflVuMp4_76DBE453: 0x76DBE453
+        - SceLibFflVuMp4_81BE7CA2: 0x81BE7CA2
+        - SceLibFflVuMp4_845E0AAD: 0x845E0AAD
+        - SceLibFflVuMp4_84E1EA8F: 0x84E1EA8F
+        - SceLibFflVuMp4_85737DF2: 0x85737DF2
+        - SceLibFflVuMp4_8A7EE21B: 0x8A7EE21B
+        - SceLibFflVuMp4_8E4BE7AD: 0x8E4BE7AD
+        - SceLibFflVuMp4_9098F5CF: 0x9098F5CF
+        - SceLibFflVuMp4_919C4934: 0x919C4934
+        - SceLibFflVuMp4_988706C8: 0x988706C8
+        - SceLibFflVuMp4_99EFE6F9: 0x99EFE6F9
+        - SceLibFflVuMp4_A10EBDA3: 0xA10EBDA3
+        - SceLibFflVuMp4_BB5BDFF8: 0xBB5BDFF8
+        - SceLibFflVuMp4_BDE7E438: 0xBDE7E438
+        - SceLibFflVuMp4_C1C622EC: 0xC1C622EC
+        - SceLibFflVuMp4_C1EEFC84: 0xC1EEFC84
+        - SceLibFflVuMp4_C2067EA9: 0xC2067EA9
+        - SceLibFflVuMp4_C313011C: 0xC313011C
+        - SceLibFflVuMp4_C43076CA: 0xC43076CA
+        - SceLibFflVuMp4_C4DEA34A: 0xC4DEA34A
+        - SceLibFflVuMp4_C8DE25E9: 0xC8DE25E9
+        - SceLibFflVuMp4_C9CC3A57: 0xC9CC3A57
+        - SceLibFflVuMp4_CB181128: 0xCB181128
+        - SceLibFflVuMp4_CC958054: 0xCC958054
+        - SceLibFflVuMp4_D6B39144: 0xD6B39144
+        - SceLibFflVuMp4_E239B748: 0xE239B748
+        - SceLibFflVuMp4_E3710497: 0xE3710497
+        - SceLibFflVuMp4_E427F430: 0xE427F430
+        - SceLibFflVuMp4_E722201B: 0xE722201B
+        - SceLibFflVuMp4_E79C8D7B: 0xE79C8D7B
+        - SceLibFflVuMp4_EE404088: 0xEE404088
+        - SceLibFflVuMp4_EF58C610: 0xEF58C610
+        - SceLibFflVuMp4_FAC2B158: 0xFAC2B158

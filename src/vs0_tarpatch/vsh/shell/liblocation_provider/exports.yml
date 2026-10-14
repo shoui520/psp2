@@ -1,0 +1,19 @@
+SceLibLocationProvider:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceLibLocationProvider:
+      syscall: false
+      version: 1
+      nid: 0x0D9556D4
+      functions:
+        - SceLibLocationProvider_0CBB4331: 0x0CBB4331
+        - SceLibLocationProvider_2A97FD02: 0x2A97FD02
+        - SceLibLocationProvider_836F5953: 0x836F5953
+        - SceLibLocationProvider_8A796686: 0x8A796686

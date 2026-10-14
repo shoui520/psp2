@@ -1,0 +1,6 @@
+/* FreeBSD identification records have no runtime role on PSP2. */
+#ifndef __FBSDID
+#define __FBSDID(record)
+#endif
+
+#include "../../vendor/bsd-string-1998/strlcpy.c"

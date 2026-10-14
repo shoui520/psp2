@@ -1,0 +1,73 @@
+SceFios2Kernel:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceFios2KernelForDriver:
+      syscall: false
+      version: 1
+      nid: 0x54D6B9EB
+      functions:
+        - ksceFiosKernelOverlayThreadSetDisabled: 0x03727E5E
+        - ksceFiosKernelOverlayResolveSync: 0x0F456345
+        - ksceFiosKernelOverlayAddForProcess: 0x17E65A1C
+        - ksceFiosKernelOverlayRemoveForProcess: 0x23247EFB
+        - ksceFiosKernelOverlayRemove: 0x2368FEB5
+        - ksceFiosKernelOverlayGetRecommendedScheduler: 0x241BF0D6
+        - ksceFiosKernelOverlayAdd: 0x2607EE4C
+        - SceFios2KernelForDriver_2649408B: 0x2649408B
+        - SceFios2KernelForDriver_28E28A58: 0x28E28A58
+        - SceFios2KernelForDriver_35E7E75C: 0x35E7E75C
+        - SceFios2KernelForDriver_3B329E86: 0x3B329E86
+        - ksceFiosKernelOverlayGetInfo: 0x725E6817
+        - ksceFiosKernelOverlayModify: 0x7F8B960C
+        - ksceFiosKernelOverlayModifyForProcess: 0x853EA82A
+        - SceFios2KernelForDriver_990F46A5: 0x990F46A5
+        - ksceFiosKernelOverlayResolveWithRangeSync: 0xD3D968FC
+        - SceFios2KernelForDriver_DD7627EC: 0xDD7627EC
+        - ksceFiosKernelOverlayThreadIsDisabled: 0xE71192C5
+        - ksceFiosKernelOverlayGetInfoForProcess: 0xF1762BC2
+        - ksceFiosKernelOverlayGetList: 0xFF42AAF0
+    SceFios2Kernel:
+      syscall: true
+      version: 1
+      nid: 0x8757B742
+      functions:
+        - _sceFiosKernelOverlayDHCloseSync: 0x021B4AF7
+        - _sceFiosKernelOverlayAddForProcess: 0x2A381357
+        - _sceFiosKernelOverlayDHSyncSync: 0x2A9724C9
+        - _sceFiosKernelOverlayDHReadSync: 0x2F06ADC6
+        - _sceFiosKernelOverlayThreadSetDisabled: 0x3E9172EA
+        - _sceFiosKernelOverlayDHOpenSync: 0x5D6A1CCE
+        - _sceFiosKernelOverlayThreadIsDisabled: 0x629F4FE4
+        - _sceFiosKernelOverlayModify: 0x6D6CDE05
+        - _sceFiosKernelOverlayAdd: 0x6DBCF0B2
+        - _sceFiosKernelOverlayModifyForProcess: 0x6DF2FC05
+        - _sceFiosKernelOverlayDHStatSync: 0x759EBEE6
+        - _sceFiosKernelOverlayResolveWithRangeSync: 0x8CCA471A
+        - _sceFiosKernelOverlayGetList: 0x9379E2D5
+        - _sceFiosKernelOverlayGetRecommendedScheduler: 0xB02E0B26
+        - _sceFiosKernelOverlayRemove: 0xB4927173
+        - _sceFiosKernelOverlayGetInfoForProcess: 0xBC6B3CC5
+        - _sceFiosKernelOverlayResolveSync: 0xE9AE60FB
+        - _sceFiosKernelOverlayGetInfo: 0xF44F3505
+        - _sceFiosKernelOverlayDHChstatSync: 0xF6A3E335
+        - _sceFiosKernelOverlayRemoveForProcess: 0xF8277E07
+    SceFios2Kernel02:
+      syscall: true
+      version: 1
+      nid: 0xE83E40A6
+      functions:
+        - sceFiosKernelOverlayGetInfoForProcess02: 0x111DCCFA
+        - sceFiosKernelOverlayGetRecommendedScheduler02: 0x26B9D08A
+        - sceFiosKernelOverlayRemoveForProcess02: 0x50A7167C
+        - sceFiosKernelOverlayModifyForProcess02: 0x6A976528
+        - sceFiosKernelOverlayThreadSetDisabled02: 0x7F26D4DD
+        - sceFiosKernelOverlayResolveWithRangeSync02: 0x8DAD1FED
+        - sceFiosKernelOverlayAddForProcess02: 0xB77C366D
+        - sceFiosKernelOverlayThreadIsDisabled02: 0xD6A4FDD6
+        - sceFiosKernelOverlayResolveSync02: 0xD76F046A
+        - sceFiosKernelOverlayGetList02: 0xD90FC293

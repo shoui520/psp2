@@ -1,0 +1,50 @@
+# 3.650.011-TOOL: vs0:sys/external/liblocation_factory.suprx (generated)
+set(MODULE_NID 0x03E1FFCE)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x6F397272)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x37FE725A:2:0x0
+	0xF4E34EDB:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:V:0x93B8AA67
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0xF4E34EDB:F:0x4E255C31
+	0xF4E34EDB:F:0xB282B430
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceClibMspaceMalloc
+	sceKernelUnlockLwMutex
+	sceClibMspaceFree
+	sceClibMspaceDestroy
+	sceClibStrncpy
+	sceKernelCreateLwMutex
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

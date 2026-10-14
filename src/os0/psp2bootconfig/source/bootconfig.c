@@ -1,0 +1,163 @@
+/*
+ * ScePsp2BootConfig: the first kernel module the NSKBL starts.
+ *
+ * module_start loads the core kernel modules through the boot loader;
+ * module_bootstart then starts them, in two groups around the boot loader's
+ * own process/thread manager hand-over. Development kits also bring up the
+ * debug channel (SDBG over SDIO, deci4p) right after the core group.
+ */
+
+#include "fw.h"
+#include "sce/kbl.h"
+
+#define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
+
+#define BOOTPARAM_FUNC0		0x2fc
+#define BOOTPARAM_FUNC1		0x300
+#define BOOTPARAM_VALUE0	0x304
+#define BOOTPARAM_VALUE1	0x308
+
+#define PANEL_LCD		0x9
+
+static const char *const s_coreModules[] = {
+	"sysmem.skprx",
+	"excpmgr.skprx",
+	"intrmgr.skprx",
+	"buserror.skprx",
+	"systimer.skprx",
+	"acmgr.skprx",
+	"threadmgr.skprx",
+	"dmacmgr.skprx",
+	"smsc_proxy.skprx",
+	"authmgr.skprx",
+	"processmgr.skprx",
+	"iofilemgr.skprx",
+	"modulemgr.skprx",
+};
+
+#if FW_DEVKIT
+static const char *const s_debugModules[] = {
+	"sdbgsdio.skprx",
+	"deci4p_sdfmgr.skprx",
+	"deci4p_sttyp.skprx",
+};
+static const char *const s_sdbgpModule[] = { "deci4p_sdbgp.skprx" };
+static const char *const s_sdrfpModule[] = { "deci4p_sdrfp.skprx" };
+#endif
+
+/* slots 2 and 3 are filled in at boot */
+static const char *const s_deviceModules[] = {
+	"lowio.skprx",
+	"syscon.skprx",
+	NULL,			/* lcd.skprx or oled.skprx */
+	NULL,			/* hdmi.skprx */
+	"display.skprx",
+	"sm_comm.skprx",
+	"ss_mgr.skprx",
+	"sdif.skprx",
+	"msif.skprx",
+	"gcauthmgr.skprx",
+	"sdstor.skprx",
+	"rtc.skprx",
+	"exfatfs.skprx",
+#if FW_DEVKIT
+	"bsod.skprx",
+#endif
+	"sysstatemgr.skprx",
+};
+
+static SceUID s_deviceUid[ARRAY_SIZE(s_deviceModules)];
+#if FW_DEVKIT
+static SceUID s_sdbgpUid[1];
+static SceUID s_sdrfpUid[1];
+#endif
+static SceUInt32 s_panel;
+#if FW_DEVKIT
+static SceUID s_debugUid[ARRAY_SIZE(s_debugModules)];
+#endif
+static const char *s_device[ARRAY_SIZE(s_deviceModules)];
+static SceUID s_coreUid[ARRAY_SIZE(s_coreModules)];
+
+#if FW_DEVKIT
+/* the debug channel needs dipsw 0xc1 and none of the three boot modes */
+static int DebugChannelEnabled(void)
+{
+	return SceKblForKernel_C8F4DE71(0xc1) &&
+	       !SceKblForKernel_8A416887() &&
+	       !SceKblForKernel_5945F065() &&
+	       !SceKblForKernel_C3DDDE15();
+}
+#endif
+
+int module_start(SceSize args, void *argp)
+{
+	unsigned int i;
+
+	SceKblForKernel_6D7A1F18(s_coreModules, s_coreUid, ARRAY_SIZE(s_coreModules), 0);
+
+#if FW_DEVKIT
+	if (DebugChannelEnabled()) {
+		int flags = SceKblForKernel_C8F4DE71(0xd2) != 0;
+
+		SceKblForKernel_6D7A1F18(s_debugModules, s_debugUid,
+					 ARRAY_SIZE(s_debugModules), flags);
+		if (SceKblForKernel_CE94F329()) {
+			SceKblForKernel_6D7A1F18(s_sdbgpModule, s_sdbgpUid, 1, flags);
+			SceKblForKernel_6D7A1F18(s_sdrfpModule, s_sdrfpUid, 1, flags);
+		}
+	}
+#endif
+
+	for (i = 0; i < ARRAY_SIZE(s_deviceModules); i++)
+		s_device[i] = s_deviceModules[i];
+
+	if (SceKblForKernel_B6D00D6D() == 0) {
+		SceKblForKernel_D3A516D5(&s_panel);
+		s_device[2] = (s_panel & PANEL_LCD) ? "lcd.skprx" : "oled.skprx";
+	} else {
+		s_device[2] = NULL;
+	}
+
+	if (SceKblForKernel_838466E9() == 0 ||
+	    (SceKblForKernel_8A416887() == 0 && SceKblForKernel_5945F065() == 0))
+		s_device[3] = "hdmi.skprx";
+
+	SceKblForKernel_6D7A1F18(s_device, s_deviceUid, ARRAY_SIZE(s_device), 0);
+	SceKblForKernel_261F2747();
+	SceKblForKernel_79241ACF();
+	return 0;
+}
+
+int module_bootstart(SceSize args, void *argp)
+{
+	char *param = argp;
+
+	SceKblForKernel_DDB3A1A8(args);
+	*(void **)(param + BOOTPARAM_FUNC0) = SceKblForKernel_08E9FAEB;
+	*(void **)(param + BOOTPARAM_FUNC1) = SceKblForKernel_13A5ABEF;
+	*(SceUInt32 *)(param + BOOTPARAM_VALUE0) = SceKblForKernel_9B868276();
+	*(SceUInt32 *)(param + BOOTPARAM_VALUE1) = SceKblForKernel_C011935A();
+
+	SceKblForKernel_9A92436E(s_coreUid, ARRAY_SIZE(s_coreUid), 4, argp);
+
+#if FW_DEVKIT
+	if (DebugChannelEnabled()) {
+		SceKblForKernel_9A92436E(s_debugUid, ARRAY_SIZE(s_debugUid), 0, NULL);
+		if (SceKblForKernel_CE94F329())
+			SceKblForKernel_9A92436E(s_sdbgpUid, 1, 0, NULL);
+	}
+#endif
+
+	SceKblForKernel_1DB28F02();
+	SceKblForKernel_9F4F3F98();
+	SceKblForKernel_161D6FCC();
+	SceKblForKernel_C7B77991();
+
+#if FW_DEVKIT
+	if (SceKblForKernel_CE94F329() && DebugChannelEnabled())
+		SceKblForKernel_9A92436E(s_sdrfpUid, 1, 0, NULL);
+#endif
+
+	SceKblForKernel_9A92436E(s_deviceUid, ARRAY_SIZE(s_deviceUid), 4, argp);
+	return 0;
+}

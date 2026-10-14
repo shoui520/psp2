@@ -1,0 +1,77 @@
+# 3.630.011-DEBUGGER: vs0:app/NPXS10103/ds4_pairing.self (generated)
+set(MODULE_NID 0xCB721461)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_NID0_VARS 0x70FBA1E7:sceProcessParam)
+set(MODULE_IMPORT_LIBS
+	0xA7D28DAE:1:0x0
+	0x2836DC9B:1:0x0
+	0x4D9A9DD0:1:0x0
+	0x073F8C68:1:0x0
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0xD197E3C7:1:0x0
+	0x9785DB68:1:0x0
+	0x03FCF19D:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	ScePafStdc_19BB4B73
+	ScePafStdc_1B77082E
+	ScePafStdc_2730262C
+	sce_paf_memcpy
+	sce_paf_strcmp
+	ScePafStdc_75ECC54E
+	sce_paf_private_exit
+	sce_paf_private_atexit
+	sce_paf_wcslen
+	ScePafStdc_C95732BB
+	ScePafStdc_D608246A
+	sce_paf_strncpy
+	sce_paf_strlen
+	sce_paf_swprintf
+	ScePafStdc_FC5CD359
+	ScePafResource_55EB9585
+	ScePafResource_5F05DE68
+	ScePafToplevel_12E33958
+	ScePafToplevel_30B442D9
+	ScePafToplevel_32CE0577
+	ScePafToplevel_34FE1331
+	ScePafToplevel_3F0DB1BF
+	ScePafToplevel_400F84CE
+	ScePafToplevel_9A4B0DC4
+	ScePafToplevel_A5560E60
+	ScePafToplevel_E2860A99
+	ScePafToplevel_F702E40A
+	ScePafWidget_04310E14
+	ScePafWidget_627CDA4E
+	ScePafWidget_6E3EEF4E
+	ScePafWidget_73D27A1B
+	ScePafWidget_8F09D12E
+	ScePafWidget_9D304F4A
+	sceKernelLoadStartModule
+	__stack_chk_fail
+	sceClibPrintf
+	sceKernelCreateCallback
+	sceKernelCheckCallback
+	sceCtrlGetControllerPortInfo
+	sceBtStartDisconnect
+	sceBtReadEvent
+	sceBtUnregisterCallback
+	sceBtGetDeviceName
+	sceBtRegisterCallback
+	sceBtReplyPinCode
+	sceBtStartInquiry
+	sceBtDeleteRegisteredInfo
+	sceBtGetRegisteredInfo
+	sceBtReplyUserConfirmation
+	sceBtStopInquiry
+	sceBtStartConnect
+	sceSysmoduleUnloadModuleInternalWithArg
+	sceSysmoduleLoadModuleInternalWithArg
+)
+set(MODULE_IMPORT_VARS
+	ScePafStdc_610F2F91
+	ScePafStdc_B4A712A7
+	__stack_chk_guard
+)

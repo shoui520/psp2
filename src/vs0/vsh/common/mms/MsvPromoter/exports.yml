@@ -1,0 +1,19 @@
+SceMsvPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMsvPromoter:
+      syscall: false
+      version: 1
+      nid: 0x0EA9979D
+      functions:
+        - SceMsvPromoter_1A72675C: 0x1A72675C
+        - SceMsvPromoter_99B3CEC0: 0x99B3CEC0
+        - SceMsvPromoter_C7C08186: 0xC7C08186
+      variables:
+        - SceMsvPromoter_0AD08C4C: 0x0AD08C4C

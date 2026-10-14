@@ -1,0 +1,21 @@
+/* Payloads are rebuilt child VELFs, never copied original executable bytes. */
+.syntax unified
+.section .rodata.bootimage, "a", %progbits
+.balign 4
+.global sceKernelBootimageEntries
+.type sceKernelBootimageEntries, %object
+sceKernelBootimageEntries:
+	.word @BOOTIMAGE_COUNT@
+	.word BootimageModuleTable
+.size sceKernelBootimageEntries, .-sceKernelBootimageEntries
+BootimageModuleTable:
+@BOOTIMAGE_ENTRIES@
+@BOOTIMAGE_PAYLOADS@
+/* These two original variable exports have literal null entry addresses. */
+.global SceKernelBootimage_C08FC9B5
+.type SceKernelBootimage_C08FC9B5, %object
+.set SceKernelBootimage_C08FC9B5, 0
+.global SceKernelBootimage_DF5E79B8
+.type SceKernelBootimage_DF5E79B8, %object
+.set SceKernelBootimage_DF5E79B8, 0
+.section .note.GNU-stack, "", %progbits

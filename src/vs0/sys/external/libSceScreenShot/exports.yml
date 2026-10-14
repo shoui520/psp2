@@ -1,0 +1,20 @@
+SceScreenShot:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceScreenShot:
+      syscall: false
+      version: 1
+      nid: 0xF26FC97D
+      functions:
+        - sceScreenShotSetParam: 0x05DB59C7
+        - SceScreenShot_0757A17F: 0x0757A17F
+        - sceScreenShotDisable: 0x50AE9FF9
+        - sceScreenShotSetOverlayImage: 0x7061665B
+        - sceScreenShotEnable: 0x76E674D1
+        - sceScreenShotEnableNotification: 0x816633FE
+        - sceScreenShotGetParam: 0xBAE9E534
+        - sceScreenShotCapture: 0xD509FB08
+        - sceScreenShotDisableNotification: 0xDA80A228

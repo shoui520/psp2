@@ -1,0 +1,19 @@
+ScePngPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    ScePngPromoter:
+      syscall: false
+      version: 1
+      nid: 0x4772AF29
+      functions:
+        - ScePngPromoter_90602E81: 0x90602E81
+        - ScePngPromoter_9901869A: 0x9901869A
+        - ScePngPromoter_D09FBCAC: 0xD09FBCAC
+      variables:
+        - ScePngPromoter_0C5150AE: 0x0C5150AE

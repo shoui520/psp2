@@ -1,0 +1,15 @@
+SceNpActivity:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpActivity:
+      syscall: false
+      version: 1
+      nid: 0xFEF492ED
+      functions:
+        - sceNpActivityPostAppStartupStatus: 0x6BE90416
+        - sceNpActivityTerm: 0x9EA4901F
+        - sceNpActivityPostStatus: 0xBC7FDC77
+        - sceNpActivityInit: 0xE0FFEE97

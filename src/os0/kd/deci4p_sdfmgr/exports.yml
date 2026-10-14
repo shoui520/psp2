@@ -1,0 +1,48 @@
+SceDeci4pSDfMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 2
+  main:
+    start: module_start
+    bootstart: module_bootstart
+  libraries:
+    SceDeci4pSDfMgrForKernel:
+      syscall: false
+      version: 1
+      nid: 0xA1386CB2
+      functions:
+        - SceDeci4pSDfMgrForKernel_0A6437B6: 0x0A6437B6
+        - SceDeci4pSDfMgrForKernel_11340BD4: 0x11340BD4
+        - sceSDfMgrPoll: 0x152D98DF
+        - SceDeci4pSDfMgrForKernel_35238B8A: 0x35238B8A
+        - SceDeci4pSDfMgrForKernel_3A25594F: 0x3A25594F
+        - sceSDfMgrSendSpace: 0x4D974C08
+        - SceDeci4pSDfMgrForKernel_4EA65698: 0x4EA65698
+        - SceDeci4pSDfMgrForKernel_501CE61D: 0x501CE61D
+        - SceDeci4pSDfMgrForKernel_58D7597A: 0x58D7597A
+        - SceDeci4pSDfMgrForKernel_5996E2DB: 0x5996E2DB
+        - SceDeci4pSDfMgrForKernel_59C077B3: 0x59C077B3
+        - SceDeci4pSDfMgrForKernel_682D0EFB: 0x682D0EFB
+        - SceDeci4pSDfMgrForKernel_68903C1D: 0x68903C1D
+        - SceDeci4pSDfMgrForKernel_6BF5553C: 0x6BF5553C
+        - SceDeci4pSDfMgrForKernel_81E7C5BD: 0x81E7C5BD
+        - SceDeci4pSDfMgrForKernel_86CFC8C6: 0x86CFC8C6
+        - SceDeci4pSDfMgrForKernel_8A3B06F2: 0x8A3B06F2
+        - sceSDfMgrExClose: 0x90E8D453
+        - SceDeci4pSDfMgrForKernel_98AEC60E: 0x98AEC60E
+        - sceSDfMgrContinueSystem: 0x9A653F19
+        - SceDeci4pSDfMgrForKernel_A55F5F0D: 0xA55F5F0D
+        - _threadSignal: 0xA963E333
+        - SceDeci4pSDfMgrForKernel_B050A0D5: 0xB050A0D5
+        - SceDeci4pSDfMgrForKernel_B22B42FB: 0xB22B42FB
+        - sceSDfMgrExReqSend: 0xB44083E1
+        - SceDeci4pSDfMgrForKernel_BFB482D8: 0xBFB482D8
+        - SceDeci4pSDfMgrForKernel_C38EA67A: 0xC38EA67A
+        - sceSDfMgrExOpen: 0xCF4A3E03
+        - sceSDfMgrExSend: 0xDAFE03AD
+        - SceDeci4pSDfMgrForKernel_E53400AE: 0xE53400AE
+        - sceSDfMgrBreakSystem: 0xEDFBA012
+        - sceSDfMgrExRecv: 0xF43F5941
+        - SceDeci4pSDfMgrForKernel_FCF211FB: 0xFCF211FB
+        - SceDeci4pSDfMgrForKernel_FFC95B63: 0xFFC95B63

@@ -1,0 +1,108 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libSceCompanionUtil.suprx (generated)
+set(MODULE_NID 0x288DBE5A)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x3EE99C82)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xEAED1616:2:0x0
+	0x859A24B1:2:0x0
+	0x6BF8B2A2:1:0x8
+	0xF9AC7CF8:1:0x0
+	0xA6605D6F:1:0x8
+	0x35C5ACD4:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xB110C123
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE265498B
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:V:0x93B8AA67
+	0xEAED1616:F:0x5182E212
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x4B675D05
+	0x859A24B1:F:0x9DCB4B7A
+	0x6BF8B2A2:F:0x023643B7
+	0x6BF8B2A2:F:0x065505CA
+	0x6BF8B2A2:F:0x11E5B6F6
+	0x6BF8B2A2:F:0x1296A94B
+	0x6BF8B2A2:F:0x29822B4D
+	0x6BF8B2A2:F:0x52DB31D5
+	0x6BF8B2A2:F:0x69E50BB5
+	0x6BF8B2A2:F:0x891C1B9B
+	0x6BF8B2A2:F:0x9FA3207B
+	0x6BF8B2A2:F:0xB226138B
+	0x6BF8B2A2:F:0xE37F34AA
+	0x6BF8B2A2:F:0xE3DD8CD9
+	0x6BF8B2A2:F:0xF084FCE3
+	0xF9AC7CF8:F:0xB2700165
+	0xA6605D6F:F:0x0C733AE2
+	0x35C5ACD4:F:0x1AF2CFC9
+	0x35C5ACD4:F:0x2C28B1B0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelGetThreadId
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceClibStrncmp
+	sceClibMspaceMalloc
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceClibMspaceFree
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceKernelGetProcessTimeWide
+	sceClibStrncpy
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceClibStrstr
+	sceKernelStartThread
+	sceKernelGetSystemSwVersion
+	sceKernelDeleteThread
+	sceKernelDelayThread
+	sceKernelGetProcessId
+	sceNetRecv
+	sceNetSetsockopt
+	sceNetConnect
+	sceNetBind
+	sceNetSocketClose
+	sceNetSendto
+	sceNetShutdown
+	sceNetSocketAbort
+	sceNetHtons
+	sceNetRecvfrom
+	sceNetErrnoLoc
+	sceNetSend
+	sceNetSocket
+	sceKernelGetRandomNumber
+	sceAppMgrAppParamGetString
+	_vshSblAimgrGetPscode
+	vshSblAimgrIsDolce
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

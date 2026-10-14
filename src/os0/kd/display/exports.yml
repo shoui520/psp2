@@ -1,0 +1,92 @@
+SceDisplay:
+  attributes: 7
+  version:
+    major: 1
+    minor: 2
+  main:
+    start: module_start
+  libraries:
+    SceDisplayForDriver:
+      syscall: false
+      version: 1
+      nid: 0x9FED47AC
+      functions:
+        - SceDisplayForDriver_086DEFB6: 0x086DEFB6
+        - ksceDisplayWaitSetFrameBufInternal: 0x12A77662
+        - ksceDisplaySetFrameBufInternal: 0x16466675
+        - ksceDisplaySetInvertColors: 0x19140ACD
+        - ksceDisplayGetFrameBufInternal: 0x19F94C63
+        - ksceDisplayWaitSetFrameBuf: 0x1C0C9C4A
+        - ksceDisplaySetFrameBuf: 0x289D82FE
+        - ksceDisplayWaitVblankStartMultiInternal: 0x32287576
+        - SceDisplayForDriver_332C5410: 0x332C5410
+        - ksceDisplayWaitSetFrameBufCBInternal: 0x35466D63
+        - ksceDisplayGetProcFrameBufInternal: 0x3BC165EF
+        - SceDisplayForDriver_3D95D478: 0x3D95D478
+        - ksceDisplayGetActualViewportConf: 0x40ACFE51
+        - ksceDisplayWaitVblankStartMulti: 0x40F1469C
+        - ksceDisplayDisableHead: 0x43347565
+        - ksceDisplayWaitVblankStartCB: 0x46F186C3
+        - ksceDisplayEnableHead: 0x496032D6
+        - ksceDisplayRegisterVblankStartCallbackInternal: 0x4AE2A2B1
+        - ksceDisplayUnregisterVblankStartCallback: 0x4B27191F
+        - ksceDisplayGetMaximumFrameBufResolution: 0x5AFE6CD3
+        - ksceDisplayWaitVblankStartMultiCBInternal: 0x61421AAF
+        - ksceDisplaySetMergeConf: 0x6B198052
+        - ksceDisplayWaitSetFrameBufMultiCBInternal: 0x6DC8F0F5
+        - ksceDisplayRegisterFrameBufCallback: 0x6E22990E
+        - ksceDisplayCaptureFrameBufDMACInternal: 0x707EEE2E
+        - ksceDisplayWaitVblankStartMultiCB: 0x77ED8B3A
+        - ksceDisplayGetRefreshRateInternal: 0x7911958E
+        - ksceDisplayRegisterVblankStartCallback: 0x7FB0BD28
+        - ksceDisplayWaitSetFrameBufMultiCB: 0x863EACBE
+        - ksceDisplayGetVcountInternal: 0x8B5DA27B
+        - ksceDisplaySetColorSpaceMode: 0x8D79D187
+        - ksceDisplayGetDeviceType: 0x8D9A1CCE
+        - ksceDisplayWaitVblankStartCBInternal: 0x8F3C0E19
+        - ksceDisplayWaitVblankStart: 0x984C27E7
+        - ksceDisplayWaitSetFrameBufCB: 0x9D7F203C
+        - ksceDisplaySetBrightness: 0x9E3C6DC6
+        - ksceDisplaySetOutputMode: 0xAF5EE5BE
+        - ksceDisplayUnregisterVblankStartCallbackInternal: 0xB027433E
+        - ksceDisplayCaptureFrameBufIFTU: 0xB0CED8BC
+        - ksceDisplayGetResolutionInfoInternal: 0xB3C6D647
+        - ksceDisplaySetOwner: 0xB54962A1
+        - ksceDisplayWaitVblankStartInternal: 0xB80CA224
+        - SceDisplayForDriver_BC76296A: 0xBC76296A
+        - ksceDisplayGetPrimaryHead: 0xC8E554C5
+        - ksceDisplayGetOutputMode: 0xD2CED235
+        - ksceDisplayCaptureFrameBufIFTUInternal: 0xD4C812E5
+        - ksceDisplayWaitSetFrameBufMulti: 0xE6D27E0A
+        - ksceDisplaySetScaleConf: 0xEB390A76
+        - ksceDisplaySetViewportConf: 0xEE5EB52D
+        - ksceDisplayGetFrameBuf: 0xEEDA2E54
+        - ksceDisplayCaptureFrameBufDMAC: 0xF116D0B4
+        - ksceDisplayWaitSetFrameBufMultiInternal: 0xF83C95B1
+        - ksceDisplayRegisterFrameBufCallbackInternal: 0xFA7CE579
+    SceDisplay:
+      syscall: true
+      version: 1
+      nid: 0x5ED8F994
+      functions:
+        - sceDisplayWaitVblankStartMultiCB: 0x05F27764
+        - _sceDisplayGetMaximumFrameBufResolution: 0x2EBFC7CB
+        - sceDisplayWaitSetFrameBufMultiCB: 0x3E796EF5
+        - _sceDisplaySetFrameBufForCompat: 0x45BCB941
+        - sceDisplayWaitVblankStart: 0x5795E898
+        - sceDisplayRegisterVblankStartCallback: 0x6BDF4C4D
+        - ksceDisplayGetPrimaryHead: 0x7178FADA
+        - sceDisplayWaitVblankStartCB: 0x78B41B92
+        - _sceDisplaySetFrameBufInternal: 0x7A8CB78E
+        - sceDisplayWaitSetFrameBufMulti: 0x7D9864A8
+        - sceDisplayWaitSetFrameBufCB: 0x814C90AF
+        - _sceDisplayGetFrameBufInternal: 0x86A8E436
+        - sceDisplayWaitSetFrameBuf: 0x9423560C
+        - sceDisplayGetVcountInternal: 0x9686859E
+        - sceDisplayUnregisterVblankStartCallback: 0x98436A80
+        - sceDisplayGetRefreshRate: 0xA08CA60D
+        - _sceDisplayGetFrameBuf: 0xA753B0CA
+        - sceDisplayGetVcount: 0xB6FDE0BA
+        - sceDisplayWaitVblankStartMulti: 0xDD0A13B8
+        - _sceDisplaySetFrameBuf: 0xF51523CB
+        - _sceDisplayGetResolutionInfoInternal: 0xFEFEB240

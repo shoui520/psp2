@@ -1,0 +1,69 @@
+#include <psp2kern/io/fcntl.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include "update_internal.h"
+
+int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,
+		char *path, SceSize size);
+
+int StorageUtilReadMbr(SceMbr *mbr)
+{
+	SceUID fd;
+	int permission, result;
+
+	permission = ksceKernelSetPermission(128);
+	if (permission < 0)
+		return permission;
+	if (!mbr) {
+		ksceKernelSetPermission(permission);
+		return (int)0x800f0216;
+	}
+	fd = StorageUtileGetPartitionFd(255, 1);
+	if (fd < 0) {
+		ksceKernelSetPermission(permission);
+		updateLastResult = 0x80100ff;
+		return fd;
+	}
+	if (ksceIoRead(fd, mbr, sizeof(*mbr)) == sizeof(*mbr)) {
+		result = 0;
+	} else {
+		result = (int)0x800f0205;
+		updateLastResult = 0x80100ff;
+	}
+	ksceIoClose(fd);
+	ksceKernelSetPermission(permission);
+	return result;
+}
+
+int StorageUtilWriteMbr(const SceMbr *mbr)
+{
+	char path[64];
+	SceUID fd;
+	int permission, result;
+
+	permission = ksceKernelSetPermission(128);
+	if (permission < 0)
+		return permission;
+	if (!mbr) {
+		ksceKernelSetPermission(permission);
+		return (int)0x800f0216;
+	}
+	fd = StorageUtileGetPartitionFd(255, 1);
+	if (fd < 0) {
+		ksceKernelSetPermission(permission);
+		updateLastResult = 0x80100ff;
+		return fd;
+	}
+	if (ksceIoWrite(fd, mbr, sizeof(*mbr)) != sizeof(*mbr)) {
+		updateLastResult = 0x80100ff;
+		return (int)0x800f0205;
+	}
+	result = StorageUtilGetPartitionPath(255, 1, path, sizeof(path));
+	if (result) {
+		updateLastResult = 0x80100ff;
+		return result;
+	}
+	ksceIoSync(path, 0);
+	ksceIoClose(fd);
+	ksceKernelSetPermission(permission);
+	return 0;
+}

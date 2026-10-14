@@ -1,0 +1,76 @@
+# 4.00-DEBUGGER: os0:kd/deci4p_ctrlp.skprx (generated)
+set(MODULE_NID 0xCED58C79)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0x88758561:2:0x0
+	0xE2C40624:1:0x0
+	0xFD00C69A:1:0x0
+	0xC9E26388:1:0x0
+	0x849E3DF5:1:0x8
+	0x7823A5D1:1:0x0
+	0xA4A7DAFC:1:0x0
+	0xD48CA62D:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0x6D286146
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x88758561:F:0x391B74B7
+	0xE2C40624:F:0xF4EE4FA9
+	0xFD00C69A:F:0x71608CA3
+	0xC9E26388:F:0xA98FC2FD
+	0x849E3DF5:F:0x529979FB
+	0x849E3DF5:F:0x5F2C7E11
+	0x849E3DF5:F:0x6D26CC56
+	0x849E3DF5:F:0xBADEF855
+	0x849E3DF5:F:0xC3390112
+	0x7823A5D1:F:0x06577FE8
+	0x7823A5D1:F:0x1E750326
+	0x7823A5D1:F:0x7AD9467E
+	0x7823A5D1:F:0xA248CDAE
+	0x7823A5D1:F:0xED138A26
+	0x7823A5D1:F:0xF11D0D30
+	0xA4A7DAFC:F:0x628D9324
+	0xA4A7DAFC:F:0x937DB4C0
+	0xD48CA62D:F:0x10D68FAE
+	0xD48CA62D:F:0xE6F659E0
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	memset
+	memcpy
+	strncpy
+	__stack_chk_fail
+	ksceKernelPrintf
+	sceKernelGetSystemTimeWide
+	ksceSblAimgrIsDolce
+	ksceKernelCheckDipsw
+	sceDfMgrOpen
+	sceDfMgrRecv
+	SceDeci4pDfMgrForDebugger_6D26CC56
+	sceDfMgrReqSend
+	sceDfMgrSend
+	ksceCtrlSetAnalogEmulation
+	ksceCtrlSetButtonEmulation
+	ksceCtrlSetCtrlpCallback
+	ksceCtrlSetRapidFire
+	ksceCtrlClearRapidFire
+	ksceCtrlGetControllerPortInfo
+	ksceTouchSetCtrlpCallback
+	ksceTouchGetPanelInfo
+	SceBtForDriver_10D68FAE
+	ksceBtDeleteRegisteredInfo
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

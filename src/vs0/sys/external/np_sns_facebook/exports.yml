@@ -1,0 +1,72 @@
+SceNpSnsFacebook:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpSnsFacebook:
+      syscall: false
+      version: 1
+      nid: 0x1EF501B8
+      functions:
+        - SceNpSnsFacebook_06A167FC: 0x06A167FC
+        - SceNpSnsFacebook_0CDD6B52: 0x0CDD6B52
+        - SceNpSnsFacebook_0FEBCA93: 0x0FEBCA93
+        - SceNpSnsFacebook_1375638F: 0x1375638F
+        - SceNpSnsFacebook_18041141: 0x18041141
+        - SceNpSnsFacebook_20B68EBC: 0x20B68EBC
+        - SceNpSnsFacebook_249B3C57: 0x249B3C57
+        - SceNpSnsFacebook_2814F3DB: 0x2814F3DB
+        - sceNpSnsFacebookAbortRequest: 0x32FB2721
+        - SceNpSnsFacebook_34A88B2D: 0x34A88B2D
+        - SceNpSnsFacebook_3574800C: 0x3574800C
+        - SceNpSnsFacebook_42CD6A87: 0x42CD6A87
+        - SceNpSnsFacebook_46C23078: 0x46C23078
+        - SceNpSnsFacebook_4A453D97: 0x4A453D97
+        - SceNpSnsFacebook_501CCC39: 0x501CCC39
+        - SceNpSnsFacebook_5069C04E: 0x5069C04E
+        - SceNpSnsFacebook_58CAC784: 0x58CAC784
+        - SceNpSnsFacebook_5EAB459F: 0x5EAB459F
+        - SceNpSnsFacebook_61DDCBB7: 0x61DDCBB7
+        - SceNpSnsFacebook_64E5B424: 0x64E5B424
+        - SceNpSnsFacebook_6A170F5D: 0x6A170F5D
+        - SceNpSnsFacebook_6CAB3583: 0x6CAB3583
+        - SceNpSnsFacebook_72A0685C: 0x72A0685C
+        - SceNpSnsFacebook_76B234BD: 0x76B234BD
+        - SceNpSnsFacebook_78636540: 0x78636540
+        - SceNpSnsFacebook_7C1286C0: 0x7C1286C0
+        - SceNpSnsFacebook_7CE37858: 0x7CE37858
+        - sceNpSnsFacebookInit: 0x80557AA0
+        - SceNpSnsFacebook_836AA54A: 0x836AA54A
+        - SceNpSnsFacebook_8770E114: 0x8770E114
+        - SceNpSnsFacebook_8CB58B88: 0x8CB58B88
+        - SceNpSnsFacebook_9663A2EC: 0x9663A2EC
+        - SceNpSnsFacebook_9A0A4832: 0x9A0A4832
+        - sceNpSnsFacebookGetAccessToken: 0x9A87EEE9
+        - SceNpSnsFacebook_9C6AAB52: 0x9C6AAB52
+        - sceNpSnsFacebookCreateRequest: 0x9CF1BC76
+        - SceNpSnsFacebook_9DE0B1BC: 0x9DE0B1BC
+        - SceNpSnsFacebook_A3785735: 0xA3785735
+        - sceNpSnsFacebookGetLongAccessToken: 0xA3C9041D
+        - sceNpSnsFacebookDeleteRequest: 0xA537FF90
+        - sceNpSnsFacebookTerm: 0xA71E6847
+        - SceNpSnsFacebook_A9C661E9: 0xA9C661E9
+        - SceNpSnsFacebook_ABF56333: 0xABF56333
+        - SceNpSnsFacebook_B22D89FD: 0xB22D89FD
+        - SceNpSnsFacebook_B45419A5: 0xB45419A5
+        - SceNpSnsFacebook_C10D390C: 0xC10D390C
+        - SceNpSnsFacebook_C15158EE: 0xC15158EE
+        - SceNpSnsFacebook_C87C016D: 0xC87C016D
+        - SceNpSnsFacebook_C9798074: 0xC9798074
+        - SceNpSnsFacebook_C9ACC1C1: 0xC9ACC1C1
+        - SceNpSnsFacebook_CB2ED352: 0xCB2ED352
+        - SceNpSnsFacebook_CB51675B: 0xCB51675B
+        - SceNpSnsFacebook_D08701B6: 0xD08701B6
+        - SceNpSnsFacebook_DC06BD48: 0xDC06BD48
+        - SceNpSnsFacebook_DCCE1BB3: 0xDCCE1BB3
+        - SceNpSnsFacebook_DEDD3ECA: 0xDEDD3ECA
+        - SceNpSnsFacebook_EF957AD0: 0xEF957AD0
+        - SceNpSnsFacebook_F3956995: 0xF3956995
+        - SceNpSnsFacebook_FA6FBAAE: 0xFA6FBAAE
+        - SceNpSnsFacebook_FB99FF8E: 0xFB99FF8E
+        - SceNpSnsFacebook_FD842B21: 0xFD842B21

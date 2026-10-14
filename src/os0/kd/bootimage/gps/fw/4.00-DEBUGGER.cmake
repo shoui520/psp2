@@ -1,0 +1,103 @@
+# 4.00-DEBUGGER: os0:kd/bootimage/gps (generated)
+set(MODULE_NID 0x02AC014E)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x4E75DFF2 0x0B6F33FE 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x7290B21C:1:0x0
+	0x4E29D3B6:1:0x0
+	0x9AD8E213:1:0x0
+	0xF13F32F9:1:0x0
+	0x2254E1B2:1:0x0
+	0x0351D827:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x45D22597
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0x7B4CB60A
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xBC996A7A
+	0x6F25E18A:F:0xD6437637
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x12CEE649
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0x8A0B0815
+	0x7EE45391:F:0xAB77C5AA
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0A20775A
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x11FE84A1
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x3E20216F
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAC834F3F
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xC3E00919
+	0xE2C40624:F:0xC6674E7D
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xDB395782
+	0xE2C40624:F:0xFBAA026E
+	0x7290B21C:F:0x04C05D10
+	0x7290B21C:F:0xDD61D621
+	0x4E29D3B6:F:0xBFD5E463
+	0x9AD8E213:F:0x8612B243
+	0xF13F32F9:F:0x2AC815A2
+	0x2254E1B2:F:0x128FB35A
+	0x0351D827:F:0xA7236656
+	0x0351D827:F:0xF139E359
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeHeapMemory
+	kscePUIDtoGUID
+	ksceKernelCopyToUser
+	ksceKernelAllocHeapMemory
+	ksceKernelCreateHeap
+	ksceKernelCopyFromUser
+	ksceKernelDeleteHeap
+	memset
+	strncmp
+	memcpy
+	__memcpy_chk
+	strtol
+	__stack_chk_fail
+	ksceKernelGetThreadmgrUIDClass
+	ksceKernelDeleteMutex
+	ksceKernelWaitEventFlag
+	ksceKernelFinalizeFastMutex
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	ksceKernelStartThread
+	ksceKernelWaitThreadEnd
+	ksceKernelCreateEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	ksceKernelDeleteThread
+	ksceKernelInitializeFastMutex
+	ksceKernelNotifyCallback
+	ksceKernelCreateThread
+	ksceKernelSetEventFlag
+	ksceKernelUnlockFastMutex
+	ksceKernelCreateMutex
+	ksceKernelRegisterSysEventHandler
+	ksceKernelUnregisterSysEventHandler
+	ksceSblQafMgrIsAllowRemotePlayDebug
+	ksceSblACMgrIsSystemProgram
+	kscePmMgrGetProductMode
+	SceSblPostSsMgrForDriver_128FB35A
+	SceRtcForDriver_A7236656
+	SceRtcForDriver_F139E359
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

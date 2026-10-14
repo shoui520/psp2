@@ -1,0 +1,192 @@
+SceShellSvc:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceShellSvc:
+      syscall: false
+      version: 1
+      nid: 0x773242C7
+      functions:
+        - SceShellSvc_1FAB9A1E: 0x1FAB9A1E
+        - SceShellSvc_7CBF442B: 0x7CBF442B
+        - SceShellSvc_8D4F9F2E: 0x8D4F9F2E
+        - SceShellSvc_A0B067AC: 0xA0B067AC
+        - SceShellSvc_B31E7F1C: 0xB31E7F1C
+        - SceShellSvc_B452A177: 0xB452A177
+        - SceShellSvc_BD4161B0: 0xBD4161B0
+        - SceShellSvc_D943CE15: 0xD943CE15
+        - SceShellSvc_E91AEAD4: 0xE91AEAD4
+        - SceShellSvc_FB03FBC9: 0xFB03FBC9
+    SceShellUtil:
+      syscall: false
+      version: 1
+      nid: 0xD2B1C8AE
+      functions:
+        - SceShellUtil_01141995: 0x01141995
+        - SceShellUtil_03201F4B: 0x03201F4B
+        - SceShellUtil_040997D6: 0x040997D6
+        - SceShellUtil_0B066FAD: 0x0B066FAD
+        - SceShellUtil_0E7EAD89: 0x0E7EAD89
+        - SceShellUtil_1B186905: 0x1B186905
+        - sceShellUtilUnlock: 0x21A6CF54
+        - SceShellUtil_29DB95D1: 0x29DB95D1
+        - SceShellUtil_3219A1C0: 0x3219A1C0
+        - SceShellUtil_40DFAC6B: 0x40DFAC6B
+        - SceShellUtil_48C7E8F8: 0x48C7E8F8
+        - SceShellUtil_4A234ABB: 0x4A234ABB
+        - SceShellUtilUketorne_FB551721: 0x5C5373B9
+        - SceShellUtil_636544FB: 0x636544FB
+        - SceShellUtil_6430C45E: 0x6430C45E
+        - SceShellUtil_6F730976: 0x6F730976
+        - SceShellUtil_71C21A8C: 0x71C21A8C
+        - SceShellUtilUketorne_156FEACF: 0x7A2CC043
+        - sceShellUtilRegisterEventHandler: 0x7B5EDFE7
+        - SceShellUtil_8B69AD27: 0x8B69AD27
+        - SceShellUtil_8CAAB23B: 0x8CAAB23B
+        - SceShellUtil_8F2F143D: 0x8F2F143D
+        - SceShellUtil_96BBF91B: 0x96BBF91B
+        - SceShellUtil_9A83AC60: 0x9A83AC60
+        - SceShellUtil_9B0EE918: 0x9B0EE918
+        - sceShellUtilLock: 0xA9537233
+        - SceShellUtil_B65B60CA: 0xB65B60CA
+        - SceShellUtil_B67A0C68: 0xB67A0C68
+        - SceShellUtil_BB54D049: 0xBB54D049
+        - SceShellUtil_C4810C56: 0xC4810C56
+        - SceShellUtil_CE35B2B8: 0xCE35B2B8
+        - SceShellUtil_D0DDEDBC: 0xD0DDEDBC
+        - SceShellUtilUketorne_FDC48BBE: 0xD71D8245
+        - SceShellUtil_E701BA71: 0xE701BA71
+        - sceShellUtilInitEvents: 0xE8AD11EC
+        - SceShellUtil_EC5881A5: 0xEC5881A5
+        - SceShellUtil_F75C684D: 0xF75C684D
+        - SceShellUtil_F979148A: 0xF979148A
+        - SceShellUtil_FB612CA8: 0xFB612CA8
+        - sceShellUtilLaunchAppRequestLaunchApp: 0xFD521712
+    SceShellUtilUketorne:
+      syscall: false
+      version: 1
+      nid: 0xA2316143
+      functions:
+        - sceShellUtilRegisterEventHandler: 0x0C73C5E0
+        - sceShellUtilUnlock: 0x154D9067
+        - SceShellUtilUketorne_156FEACF: 0x156FEACF
+        - sceShellUtilInitEvents: 0xA4C2ACFC
+        - sceShellUtilLock: 0xB98FC611
+        - SceShellUtilUketorne_FB551721: 0xFB551721
+        - SceShellUtilUketorne_FDC48BBE: 0xFDC48BBE
+    SceShellUtilLaunchApp:
+      syscall: false
+      version: 1
+      nid: 0xA0FD0261
+      functions:
+        - sceShellUtilLaunchAppRequestLaunchApp: 0x5372EEDB
+    SceSvcCtrl:
+      syscall: false
+      version: 1
+      nid: 0x33E9B101
+      functions:
+        - SceSvcCtrl_077F8AF1: 0x077F8AF1
+        - SceSvcCtrl_683998F2: 0x683998F2
+        - SceSvcCtrl_8BEB8B7C: 0x8BEB8B7C
+        - SceSvcCtrl_B21BE499: 0xB21BE499
+    SceIpmi:
+      syscall: false
+      version: 1
+      nid: 0xF4E34EDB
+      functions:
+        - SceIpmi_006EFA9D: 0x006EFA9D
+        - SceIpmi_0400DE60: 0x0400DE60
+        - SceIpmi_08E0BAE1: 0x08E0BAE1
+        - SceIpmi_095C92A6: 0x095C92A6
+        - SceIpmi_0B829281: 0x0B829281
+        - SceIpmi_0BBBE77C: 0x0BBBE77C
+        - SceIpmi_0E0728BE: 0x0E0728BE
+        - SceIpmi_1372C7B7: 0x1372C7B7
+        - SceIpmi_146B3C78: 0x146B3C78
+        - SceIpmi_1746BC8B: 0x1746BC8B
+        - SceIpmi_1D7F6CE9: 0x1D7F6CE9
+        - SceIpmi_1F3D805E: 0x1F3D805E
+        - SceIpmi_1FF8764B: 0x1FF8764B
+        - SceIpmi_22625598: 0x22625598
+        - SceIpmi_296D44D4: 0x296D44D4
+        - SceIpmi_2B081B77: 0x2B081B77
+        - SceIpmi_2B646CEA: 0x2B646CEA
+        - SceIpmi_2C6DB642: 0x2C6DB642
+        - SceIpmi_2DE2B1F0: 0x2DE2B1F0
+        - SceIpmi_2E318972: 0x2E318972
+        - SceIpmi_2FF6EF6D: 0x2FF6EF6D
+        - SceIpmi_3554D4B0: 0x3554D4B0
+        - SceIpmi_367CEF82: 0x367CEF82
+        - SceIpmi_391B02AA: 0x391B02AA
+        - SceIpmi_3A564438: 0x3A564438
+        - SceIpmi_3B6BF028: 0x3B6BF028
+        - SceIpmi_40F31ABF: 0x40F31ABF
+        - SceIpmi_44AF00BA: 0x44AF00BA
+        - SceIpmi_48E072C8: 0x48E072C8
+        - SceIpmi_4A389FF9: 0x4A389FF9
+        - SceIpmi_4AA4166D: 0x4AA4166D
+        - SceIpmi_4DEDA4F2: 0x4DEDA4F2
+        - SceIpmi_4E255C31: 0x4E255C31
+        - SceIpmi_4E5E2881: 0x4E5E2881
+        - SceIpmi_5000D63E: 0x5000D63E
+        - SceIpmi_5ECD40E9: 0x5ECD40E9
+        - SceIpmi_64554130: 0x64554130
+        - SceIpmi_691931E8: 0x691931E8
+        - SceIpmi_6964FD2A: 0x6964FD2A
+        - SceIpmi_6A9D2D70: 0x6A9D2D70
+        - SceIpmi_6CAE7340: 0x6CAE7340
+        - SceIpmi_70DFD08F: 0x70DFD08F
+        - SceIpmi_7714F7BB: 0x7714F7BB
+        - SceIpmi_79C2EB5D: 0x79C2EB5D
+        - SceIpmi_7C002FEC: 0x7C002FEC
+        - SceIpmi_7D217169: 0x7D217169
+        - SceIpmi_7E079E19: 0x7E079E19
+        - SceIpmi_87BFA24B: 0x87BFA24B
+        - SceIpmi_8941B364: 0x8941B364
+        - SceIpmi_8A0BAC4E: 0x8A0BAC4E
+        - SceIpmi_8DE3BDC8: 0x8DE3BDC8
+        - SceIpmi_8DF92251: 0x8DF92251
+        - SceIpmi_8F252BAF: 0x8F252BAF
+        - SceIpmi_9097E0AD: 0x9097E0AD
+        - SceIpmi_969B1899: 0x969B1899
+        - SceIpmi_9E5154FC: 0x9E5154FC
+        - SceIpmi_9EE9496B: 0x9EE9496B
+        - SceIpmi_A20BB95B: 0xA20BB95B
+        - SceIpmi_A35498CB: 0xA35498CB
+        - SceIpmi_A360D58A: 0xA360D58A
+        - SceIpmi_A5AA193C: 0xA5AA193C
+        - SceIpmi_A68863F9: 0xA68863F9
+        - SceIpmi_AC75DB57: 0xAC75DB57
+        - SceIpmi_B0304313: 0xB0304313
+        - SceIpmi_B282B430: 0xB282B430
+        - SceIpmi_B50625FA: 0xB50625FA
+        - SceIpmi_B509D16D: 0xB509D16D
+        - SceIpmi_B56BAC7F: 0xB56BAC7F
+        - SceIpmi_B943F5D9: 0xB943F5D9
+        - SceIpmi_BC3A3031: 0xBC3A3031
+        - SceIpmi_C6EA9161: 0xC6EA9161
+        - SceIpmi_CBD4547A: 0xCBD4547A
+        - SceIpmi_CE42D450: 0xCE42D450
+        - SceIpmi_D15C6742: 0xD15C6742
+        - SceIpmi_D73C03D2: 0xD73C03D2
+        - SceIpmi_DA312C81: 0xDA312C81
+        - SceIpmi_DC6AE587: 0xDC6AE587
+        - SceIpmi_F089979A: 0xF089979A
+        - SceIpmi_F38BFC2D: 0xF38BFC2D
+        - SceIpmi_F3BB29DC: 0xF3BB29DC
+        - SceIpmi_F5CFFDF6: 0xF5CFFDF6
+        - SceIpmi_F5D3ACC2: 0xF5D3ACC2
+        - SceIpmi_F5E5D1B7: 0xF5E5D1B7
+      variables:
+        - SceIpmi_1B0607E7: 0x1B0607E7
+        - SceIpmi_28CF9138: 0x28CF9138
+        - SceIpmi_41D521B4: 0x41D521B4
+        - SceIpmi_7DEDA068: 0x7DEDA068
+        - SceIpmi_89E30D08: 0x89E30D08
+        - SceIpmi_9DA8C301: 0x9DA8C301
+        - SceIpmi_C4379635: 0xC4379635

@@ -1,0 +1,116 @@
+ScePamgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    ScePamgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0xA41B0AAF
+      functions:
+        - ScePamgrForDriver_019BD60F: 0x019BD60F
+        - ScePamgrForDriver_02ACD81C: 0x02ACD81C
+        - ScePamgrForDriver_060C4668: 0x060C4668
+        - ScePamgrForDriver_0A942B36: 0x0A942B36
+        - ScePamgrForDriver_0B7F6F53: 0x0B7F6F53
+        - ScePamgrForDriver_0BCD4966: 0x0BCD4966
+        - ScePamgrForDriver_0D04B52A: 0x0D04B52A
+        - sceKernelPaRegisterShared: 0x0E486392
+        - ScePamgrForDriver_16A24732: 0x16A24732
+        - ScePamgrForDriver_17C81A92: 0x17C81A92
+        - ScePamgrForDriver_1A7733E0: 0x1A7733E0
+        - ScePamgrForDriver_328C006F: 0x328C006F
+        - ScePamgrForDriver_3ACF4316: 0x3ACF4316
+        - ScePamgrForDriver_3C12A0CD: 0x3C12A0CD
+        - sceKernelPaRegister: 0x3CCB921F
+        - ScePamgrForDriver_3D299796: 0x3D299796
+        - ScePamgrForDriver_3E3E66DF: 0x3E3E66DF
+        - ScePamgrForDriver_3E7AABEA: 0x3E7AABEA
+        - ScePamgrForDriver_48EC7C89: 0x48EC7C89
+        - ScePamgrForDriver_49A43754: 0x49A43754
+        - ScePamgrForDriver_4AF0C972: 0x4AF0C972
+        - ScePamgrForDriver_4C4A48AF: 0x4C4A48AF
+        - ScePamgrForDriver_50FD85C8: 0x50FD85C8
+        - sceKernelPerfArmPmonSelectEvent: 0x58F09135
+        - sceKernelPaUnregister: 0x5A04D868
+        - ScePamgrForDriver_5D3D46E4: 0x5D3D46E4
+        - ScePamgrForDriver_5EFEB00D: 0x5EFEB00D
+        - ScePamgrForDriver_6005FDAA: 0x6005FDAA
+        - ScePamgrForDriver_606C98CD: 0x606C98CD
+        - sceKernelPerfArmPmonReset: 0x7A0A8469
+        - ScePamgrForDriver_7F0EE7B3: 0x7F0EE7B3
+        - ScePamgrForDriver_7F3814A4: 0x7F3814A4
+        - sceKernelPerfArmPmonSetCounterValue: 0x7FEC4022
+        - ScePamgrForDriver_80CA3B39: 0x80CA3B39
+        - ScePamgrForDriver_81764B21: 0x81764B21
+        - ScePamgrForDriver_88462719: 0x88462719
+        - ScePamgrForDriver_95E2A1C5: 0x95E2A1C5
+        - ScePamgrForDriver_95F4079E: 0x95F4079E
+        - ScePamgrForDriver_9935D8EF: 0x9935D8EF
+        - ScePamgrForDriver_A1E448E7: 0xA1E448E7
+        - ScePamgrForDriver_A708D62A: 0xA708D62A
+        - ScePamgrForDriver_A8C0A636: 0xA8C0A636
+        - ScePamgrForDriver_A9DD2CB8: 0xA9DD2CB8
+        - ScePamgrForDriver_ADDE4C07: 0xADDE4C07
+        - ScePamgrForDriver_B619D492: 0xB619D492
+        - ScePamgrForDriver_B699F4B0: 0xB699F4B0
+        - ScePamgrForDriver_B9EE1620: 0xB9EE1620
+        - ScePamgrForDriver_C0EF725E: 0xC0EF725E
+        - ScePamgrForDriver_C5125E61: 0xC5125E61
+        - sceKernelPerfArmPmonClose: 0xC7144212
+        - ScePamgrForDriver_D4E85C87: 0xD4E85C87
+        - ScePamgrForDriver_D4FBC37D: 0xD4FBC37D
+        - ScePamgrForDriver_D9EFF812: 0xD9EFF812
+        - ScePamgrForDriver_DB62FEFE: 0xDB62FEFE
+        - ScePamgrForDriver_DEC5313E: 0xDEC5313E
+        - ScePamgrForDriver_E0D151F4: 0xE0D151F4
+        - ScePamgrForDriver_E4AF5A5D: 0xE4AF5A5D
+        - ScePamgrForDriver_E8FF4812: 0xE8FF4812
+        - ScePamgrForDriver_E9E45545: 0xE9E45545
+        - ScePamgrForDriver_EB70556B: 0xEB70556B
+        - sceKernelPerfArmPmonStop: 0xED86717F
+        - sceKernelPerfArmPmonStart: 0xF0A5833A
+        - ScePamgrForDriver_F2D5105A: 0xF2D5105A
+        - sceKernelPerfArmPmonOpen: 0xF9883A43
+        - ScePamgrForDriver_FB04BBEF: 0xFB04BBEF
+        - ScePamgrForDriver_FB46C3CD: 0xFB46C3CD
+        - ScePamgrForDriver_FE9BFD27: 0xFE9BFD27
+    ScePamgr:
+      syscall: true
+      version: 1
+      nid: 0xAB606F3F
+      functions:
+        - sceKernelPaGetTraceBufferSize: 0x0DD84F31
+        - _sceKernelPaAddBusTraceByKey: 0x0F05045B
+        - _sceKernelPaAddGpuTraceByKey: 0x174F2500
+        - sceKernelPaRemoveCounterTraceByKey: 0x1FDDEBF0
+        - sceKernelPaStartByKey: 0x28D43BE5
+        - _sceKernelPaAddArmTraceByKey: 0x2CB10FD0
+        - sceKernelPaUnregisterForUser: 0x2DE1E55C
+        - sceKernelPaRemoveGpuTraceByKey: 0x300258EE
+        - sceKernelPaGetSharedKey: 0x30043A1F
+        - _sceKernelPaGetGpuSampledData: 0x39096D8F
+        - sceKernelPaGetTimebaseValue: 0x3FD2C5F5
+        - sceKernelPaInsertBookmark: 0x53B16517
+        - sceKernelPaRegisterSharedForUser: 0x556105AA
+        - _sceKernelPaAddCounterTraceByKey: 0x5F050AAF
+        - sceKernelPaGetTraceBufferStatus: 0x78B19CDE
+        - sceKernelPerfArmPmonResetForUser: 0x7B9CF258
+        - _sceKernelPaSetupTraceBufferByKey: 0x7BD1B4A3
+        - sceKernelPerfArmPmonOpenForUser: 0x7F5A960E
+        - sceKernelPaRegisterForUser: 0x822E0719
+        - sceKernelPaStopByKey: 0x8252E671
+        - sceKernelPerfArmPmonSelectEventForUser: 0x9E55649C
+        - sceKernelPerfArmPmonStopForUser: 0xA42BDD17
+        - sceKernelPaGetIoBaseAddress: 0xA4EE9025
+        - sceKernelPerfArmPmonStartForUser: 0xAAE516BC
+        - sceKernelPaRemoveBusTraceByKey: 0xBFE73BEB
+        - sceKernelPerfArmPmonCloseForUser: 0xC9F72613
+        - sceKernelPaGetWritePointer: 0xCA0D64C8
+        - sceKernelPaGetTimebaseFrequency: 0xCAEE6AF2
+        - sceKernelPaRemoveArmTraceByKey: 0xDD4D0A27
+        - sceKernelPaSetBookmarkChannelEnableByKey: 0xF8D02FF4
+        - sceKernelPerfArmPmonSetCounterValueForUser: 0xFC954C07

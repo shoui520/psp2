@@ -1,0 +1,71 @@
+# 3.650.011-TOOL: vs0:sys/external/libmlndownloader.suprx (generated)
+set(MODULE_NID 0xD08477B3)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0x608C27AF:1:0x0
+	0xE8F15CDE:1:0x8
+	0xECB62224:1:0x8
+	0xD8835093:1:0x8
+	0x40120DC3:1:0x0
+	0x6704D3C6:1:0x0
+	0x91AFEB43:1:0x0
+	0xCAE9ACE6:5:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	SceMarlin_08CAD267
+	SceMarlin_14097094
+	SceMarlin_236015FA
+	SceMarlin_3AA04BBF
+	SceMarlin_45B29121
+	SceMarlin_7E65734B
+	SceMarlin_83B44D33
+	SceMarlin_88AC64AD
+	SceMarlin_8FEB4F94
+	SceMarlin_9609E2DF
+	SceMarlin_9CD4CE1E
+	SceMarlin_BCED6CC4
+	SceMarlin_C4FF32EF
+	SceMarlin_C76DA6C0
+	SceMarlin_CCA99803
+	SceMarlin_E8276179
+	sceHttpParseResponseHeader
+	sceHttpGetAllResponseHeaders
+	sceHttpGetStatusCode
+	sceHttpDeleteRequest
+	sceHttpCreateTemplate
+	sceHttpAddRequestHeader
+	sceHttpReadData
+	sceHttpSendRequest
+	sceHttpCreateRequestWithURL
+	sceHttpCreateConnectionWithURL
+	sceHttpAbortRequest
+	sceHttpDeleteTemplate
+	sceHttpDeleteConnection
+	sceNpCommonGetNpEnviroment
+	SceNpManager_DDF30B0E
+	SceNpCommerce2_07C16199
+	SceNpCommerce2_1BFF9C73
+	SceNpCommerce2_1EC16D19
+	SceNpCommerce2_2C6028A0
+	SceNpCommerce2_2DC2A0F9
+	SceNpCommerce2_5953F48D
+	SceNpCommerce2_7E3C9196
+	SceNpCommerce2_8ECAE666
+	sceNpCommerce2DestroyReq
+	SceNpCommerce2_AA090F5E
+	sceNpCommerce2CreateSessionGetResult
+	SceNpCommerce2_B7387C96
+	sceNpCommerce2CreateSessionStart
+	SceNpCommerce2_C737A929
+	SceNpCommerce2_D35F548B
+	sceNpCommerce2CreateSessionCreateReq
+	sceRtcSetTick
+	sceRtcGetTick
+	sceDrmBridgeGetCurrentSecureTick
+	__stack_chk_fail
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

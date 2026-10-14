@@ -1,0 +1,40 @@
+SceAudioin:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceAudioInForDriver:
+      syscall: false
+      version: 1
+      nid: 0x60928C22
+      functions:
+        - SceAudioInForDriver_005A2A31: 0x005A2A31
+        - sceAudioInInput: 0x0AB2743C
+        - SceAudioInForDriver_197CAA1B: 0x197CAA1B
+        - sceAudioInReleasePort: 0x313C969A
+        - SceAudioInForDriver_3D164387: 0x3D164387
+        - SceAudioInForDriver_3EC79053: 0x3EC79053
+        - sceAudioInSelectInput: 0x44A497F8
+        - sceAudioInOpenPort: 0x9C7404BF
+        - SceAudioInForDriver_E4042F6F: 0xE4042F6F
+        - SceAudioInForDriver_FB46FA10: 0xFB46FA10
+    SceAudioIn:
+      syscall: true
+      version: 1
+      nid: 0xF8DC61A3
+      functions:
+        - sceAudioInGetInput: 0x08105392
+        - sceAudioInSetMicGain: 0x0F34DD73
+        - sceAudioInSetMute: 0x1DFE7698
+        - sceAudioInGetStatus: 0x2F940377
+        - sceAudioInInputWithInputDeviceState: 0x343E8251
+        - sceAudioInOpenPort: 0x39B50DC1
+        - sceAudioInReleasePort: 0x3A61B8C4
+        - sceAudioInGetAdopt: 0x566AC433
+        - sceAudioInInput: 0x638ADD2D
+        - sceAudioInGetMicGain: 0x86118097
+        - sceAudioInSelectInput: 0xA0EB852F
+        - sceAudioInOpenPortForDiag: 0xC6962E84

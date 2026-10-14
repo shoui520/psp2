@@ -1,0 +1,158 @@
+SceNpUtility:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpUtility:
+      syscall: false
+      version: 1
+      nid: 0x7B47D9CF
+      functions:
+        - sceNpWordFilterInit: 0x01284C6E
+        - sceNpLookupTerm: 0x0158B61B
+        - SceNpUtility_01C44B07: 0x01C44B07
+        - sceNpLookupAbortRequest: 0x027587C4
+        - SceNpUtility_04AA56CB: 0x04AA56CB
+        - sceNpBandwidthTestInitStart: 0x081FA13C
+        - SceNpUtility_08893FA1: 0x08893FA1
+        - sceNpWordFilterCreateTitleCtx: 0x1075589C
+        - SceNpUtility_1392F18F: 0x1392F18F
+        - SceNpUtility_14437509: 0x14437509
+        - SceNpUtility_15227842: 0x15227842
+        - SceNpUtility_15D37FB1: 0x15D37FB1
+        - SceNpUtility_16954FFF: 0x16954FFF
+        - SceNpUtility_17385829: 0x17385829
+        - SceNpUtility_191D314C: 0x191D314C
+        - SceNpUtility_200BBAC5: 0x200BBAC5
+        - SceNpUtility_23414285: 0x23414285
+        - SceNpUtility_23B387A5: 0x23B387A5
+        - SceNpUtility_2580CDAF: 0x2580CDAF
+        - SceNpUtility_25D26B6F: 0x25D26B6F
+        - SceNpUtility_26B4AC00: 0x26B4AC00
+        - sceNpLookupAvatarImageAsync: 0x282BD43C
+        - SceNpUtility_2835BC9B: 0x2835BC9B
+        - SceNpUtility_2E4D8BCF: 0x2E4D8BCF
+        - sceNpWordFilterSanitizeComment: 0x30606C85
+        - SceNpUtility_31423835: 0x31423835
+        - sceNpWordFilterWaitAsync: 0x31B308AA
+        - SceNpUtility_31D3542E: 0x31D3542E
+        - sceNpBandwidthTestAbort: 0x32B068C4
+        - sceNpLookupDeleteTitleCtx: 0x33B64699
+        - SceNpUtility_34B42669: 0x34B42669
+        - sceNpWordFilterAbortRequest: 0x36DA662E
+        - SceNpUtility_37AD71B9: 0x37AD71B9
+        - SceNpUtility_3A1BA624: 0x3A1BA624
+        - SceNpUtility_4013244C: 0x4013244C
+        - sceNpWordFilterSanitizeCommentAsync: 0x40EC7271
+        - SceNpUtility_418E1324: 0x418E1324
+        - SceNpUtility_44A2F444: 0x44A2F444
+        - SceNpUtility_44FE1097: 0x44FE1097
+        - SceNpUtility_450C80FB: 0x450C80FB
+        - SceNpUtility_46543307: 0x46543307
+        - SceNpUtility_475B35A8: 0x475B35A8
+        - SceNpUtility_485F368A: 0x485F368A
+        - SceNpUtility_4A3FDD3B: 0x4A3FDD3B
+        - SceNpUtility_4A479D1D: 0x4A479D1D
+        - SceNpUtility_4B30CAEF: 0x4B30CAEF
+        - SceNpUtility_4D52A224: 0x4D52A224
+        - SceNpUtility_4FAC4566: 0x4FAC4566
+        - sceNpLookupCreateTitleCtx: 0x5110E17E
+        - sceNpLookupNpIdAsync: 0x5387BABB
+        - SceNpUtility_548625FC: 0x548625FC
+        - SceNpUtility_54C48F92: 0x54C48F92
+        - SceNpUtility_5631E596: 0x5631E596
+        - SceNpUtility_575BBBC4: 0x575BBBC4
+        - sceNpBandwidthTestShutdown: 0x58D92EFD
+        - SceNpUtility_5D6FC99E: 0x5D6FC99E
+        - SceNpUtility_5D75C414: 0x5D75C414
+        - SceNpUtility_5FC4B7D5: 0x5FC4B7D5
+        - SceNpUtility_60CC5AFB: 0x60CC5AFB
+        - SceNpUtility_60D70B4A: 0x60D70B4A
+        - sceNpWordFilterDeleteRequest: 0x6690D8E2
+        - SceNpUtility_67147C73: 0x67147C73
+        - sceNpLookupUserProfile: 0x6A1BF429
+        - SceNpUtility_6C1161AD: 0x6C1161AD
+        - SceNpUtility_6DF884DA: 0x6DF884DA
+        - SceNpUtility_6EB4C8FE: 0x6EB4C8FE
+        - sceNpWordFilterCreateRequest: 0x7183047C
+        - SceNpUtility_72FC55A7: 0x72FC55A7
+        - SceNpUtility_74B0D0AC: 0x74B0D0AC
+        - SceNpUtility_75FD803B: 0x75FD803B
+        - SceNpUtility_7A86C37E: 0x7A86C37E
+        - SceNpUtility_7BC7E7F7: 0x7BC7E7F7
+        - sceNpWordFilterTerm: 0x7D140F70
+        - SceNpUtility_83445FED: 0x83445FED
+        - SceNpUtility_839F805E: 0x839F805E
+        - SceNpUtility_866D737A: 0x866D737A
+        - SceNpUtility_8857763D: 0x8857763D
+        - SceNpUtility_8904FE15: 0x8904FE15
+        - SceNpUtility_89484A9C: 0x89484A9C
+        - SceNpUtility_8951DA6B: 0x8951DA6B
+        - SceNpUtility_89C8F74E: 0x89C8F74E
+        - sceNpLookupDeleteRequest: 0x8B608BF6
+        - SceNpUtility_8CA24D19: 0x8CA24D19
+        - sceNpLookupInit: 0x9246A673
+        - SceNpUtility_944FE83C: 0x944FE83C
+        - SceNpUtility_9D8E0730: 0x9D8E0730
+        - sceNpLookupCreateRequest: 0x9E42E922
+        - SceNpUtility_9EEDD7F8: 0x9EEDD7F8
+        - SceNpUtility_9F142A92: 0x9F142A92
+        - sceNpWordFilterSetTimeout: 0x9F44CE45
+        - SceNpUtility_A08E60BA: 0xA08E60BA
+        - SceNpUtility_A0991531: 0xA0991531
+        - SceNpUtility_A15150C9: 0xA15150C9
+        - sceNpWordFilterCensorComment: 0xA30E4E17
+        - SceNpUtility_A3767D45: 0xA3767D45
+        - SceNpUtility_A3E828ED: 0xA3E828ED
+        - SceNpUtility_A48B44C9: 0xA48B44C9
+        - SceNpUtility_A9D5542A: 0xA9D5542A
+        - SceNpUtility_AB499EA4: 0xAB499EA4
+        - sceNpLookupSetTimeout: 0xB0C9DC45
+        - sceNpLookupNpId: 0xB1A14879
+        - SceNpUtility_B2FD5E9D: 0xB2FD5E9D
+        - SceNpUtility_B418204E: 0xB418204E
+        - SceNpUtility_B4423DAF: 0xB4423DAF
+        - sceNpWordFilterDeleteTitleCtx: 0xB4E5A189
+        - SceNpUtility_B5711AF9: 0xB5711AF9
+        - SceNpUtility_B7A52202: 0xB7A52202
+        - SceNpUtility_B8DFA4D1: 0xB8DFA4D1
+        - SceNpUtility_B9FFB253: 0xB9FFB253
+        - sceNpWordFilterPollAsync: 0xBAE4CD1F
+        - SceNpUtility_BDFC2D58: 0xBDFC2D58
+        - SceNpUtility_C01F7C6A: 0xC01F7C6A
+        - SceNpUtility_C02139E5: 0xC02139E5
+        - SceNpUtility_C2598A46: 0xC2598A46
+        - SceNpUtility_C4FE3A57: 0xC4FE3A57
+        - SceNpUtility_C63A0F6B: 0xC63A0F6B
+        - SceNpUtility_C9283605: 0xC9283605
+        - SceNpUtility_CD3A3712: 0xCD3A3712
+        - sceNpLookupWaitAsync: 0xCF956F23
+        - SceNpUtility_D03605CD: 0xD03605CD
+        - SceNpUtility_D46E45DE: 0xD46E45DE
+        - SceNpUtility_D5BB8464: 0xD5BB8464
+        - SceNpUtility_DFFF438A: 0xDFFF438A
+        - sceNpBandwidthTestGetStatus: 0xE0EBFBF6
+        - SceNpUtility_E2135903: 0xE2135903
+        - SceNpUtility_E38548AB: 0xE38548AB
+        - sceNpLookupUserProfileAsync: 0xE5285E0F
+        - SceNpUtility_E64B4101: 0xE64B4101
+        - SceNpUtility_E916C86A: 0xE916C86A
+        - SceNpUtility_E9544993: 0xE9544993
+        - sceNpWordFilterCensorCommentAsync: 0xE956080F
+        - SceNpUtility_ED2B86ED: 0xED2B86ED
+        - SceNpUtility_F32ED20E: 0xF32ED20E
+        - SceNpUtility_F32ED701: 0xF32ED701
+        - SceNpUtility_F4B21646: 0xF4B21646
+        - SceNpUtility_F5086697: 0xF5086697
+        - SceNpUtility_F73C4411: 0xF73C4411
+        - sceNpLookupPollAsync: 0xFCDBA234
+        - sceNpLookupAvatarImage: 0xFDB0AE47
+        - SceNpUtility_FF9F1571: 0xFF9F1571
+    SceNpUtilityAvatarN:
+      syscall: false
+      version: 1
+      nid: 0x379FF482
+      functions:
+        - SceNpUtilityAvatarN_4A989C1C: 0x4A989C1C
+        - SceNpUtilityAvatarN_DC2B7B72: 0xDC2B7B72

@@ -1,0 +1,76 @@
+# 3.65-CEX: vs0:sys/external/libgameupdate.suprx (generated)
+set(MODULE_NID 0x9D0B3E42)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xEAED1616:2:0x0
+	0x859A24B1:2:0x0
+	0x6704D3C6:1:0x0
+	0x0B351269:1:0x0
+	0xE8F15CDE:1:0x8
+	0xA6605D6F:1:0x0
+	0x9E8A69FD:1:0x8
+	0xF4E34EDB:1:0x0
+	0x773242C7:1:0x0
+	0xF7629240:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	sceClibStrlcpy
+	sceClibMemcpy_safe
+	sceClibStrtoll
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceClibStrncmp
+	sceClibStrlcat
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceClibStrnlen
+	sceClibStrncasecmp
+	sceClibLookCtypeTable
+	sceKernelCreateLwMutex
+	sceKernelGetSystemSwVersion
+	sceKernelDelayThread
+	sceRtcGetCurrentNetworkTick
+	ksceRegMgrSystemParamGetInt
+	ksceRegMgrSystemParamGetStr
+	sceHttpsDisableOptionPrivate
+	sceHttpSetConnectTimeOut
+	sceHttpGetStatusCode
+	sceHttpDeleteRequest
+	SceHttp_53B722F2
+	sceHttpRemoveRequestHeader
+	sceHttpCreateTemplate
+	sceHttpsEnableOptionPrivate
+	sceHttpReadData
+	sceHttpSetSendTimeOut
+	sceHttpSetRecvTimeOut
+	sceHttpSendRequest
+	sceHttpCreateRequestWithURL
+	sceHttpCreateConnectionWithURL
+	sceHttpSetAuthInfoCallback
+	sceHttpAbortRequest
+	sceHttpDeleteTemplate
+	sceHttpDeleteConnection
+	sceHttpGetResponseContentLength
+	sceAppMgrAppParamGetString
+	sceAppMgrGetStatusByName
+	sceAppMgrAppParamGetInt
+	SceNetInternal_A2C2BC5F
+	SceNetInternal_E62A2FAA
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+	SceShellSvc_8D4F9F2E
+	SceShellSvc_A0B067AC
+	SceShellSvc_B31E7F1C
+	_ZdlPv
+	_ZdaPv
+	_Znaj
+	_Znwj
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

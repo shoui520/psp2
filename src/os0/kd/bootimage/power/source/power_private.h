@@ -1,0 +1,770 @@
+/*
+ * ScePower: the state and helpers its units share.
+ */
+
+#pragma once
+
+#include "sce/power_imports.h"
+#include <sce/power.h>
+#include <sce/led.h>
+#include <sce/idstorage.h>
+#include "sce/suspend.h"
+#include "sce/sysevent.h"
+#include "sce/barrier.h"
+#include "sce/sysroot.h"
+#include "sce/syscall.h"
+
+/*
+ * Power callback argument bits. Sony's SDK (power.h) names the ones user code
+ * sees; the kernel-only bits it lists as reserved are named by what this
+ * module does with them.
+ */
+#define SCE_POWER_CALLBACKARG_BATTERYEXIST		0x00000080
+#define SCE_POWER_CALLBACKARG_LOWBATTERY		0x00000100
+#define SCE_POWER_CALLBACKARG_POWERONLINE		0x00001000
+#define SCE_POWER_CALLBACKARG_PROCESS_RESUMING		0x00100000
+#define SCE_POWER_CALLBACKARG_PROCESS_RESUME_COMP	0x00200000
+#define POWER_CALLBACKARG_THERMAL_SUSPEND		0x00000200
+#define POWER_CALLBACKARG_LOW_BATTERY_SUSPEND		0x00000400
+#define POWER_CALLBACKARG_USB_POWER			0x00000800
+#define POWER_CALLBACKARG_DISPLAY_OFF			0x00400000	/* state */
+#define POWER_CALLBACKARG_DISPLAY_ON			0x00800000	/* event */
+/* the state bits the syscon reports */
+#define POWER_CALLBACKARG_SYSCON_STATE	(SCE_POWER_CALLBACKARG_BATTERYEXIST | \
+					 SCE_POWER_CALLBACKARG_LOWBATTERY | \
+					 POWER_CALLBACKARG_THERMAL_SUSPEND | \
+					 POWER_CALLBACKARG_LOW_BATTERY_SUSPEND | \
+					 POWER_CALLBACKARG_USB_POWER | \
+					 SCE_POWER_CALLBACKARG_POWERONLINE)
+
+/* ScePervasiveVid (0xe3104000, ScePervasiveForDriver_47708C03): the rail voltages */
+struct PervasiveVidRegs {
+	uint32_t reserved0;
+	uint32_t armVoltage[5];		/* 0x04 */
+	uint32_t reserved1[10];
+	uint32_t compatVoltage[2];	/* 0x40 */
+	uint32_t gpuVoltage[2];		/* 0x48 */
+	uint32_t reserved2[4];
+	uint32_t mediaVoltage[4];	/* 0x60 */
+	uint32_t reserved3[13];
+	uint32_t busVoltage[3];		/* 0xa4 */
+};
+_Static_assert(offsetof(struct PervasiveVidRegs, compatVoltage) == 0x40, "vid 0x40");
+_Static_assert(offsetof(struct PervasiveVidRegs, mediaVoltage) == 0x60, "vid 0x60");
+_Static_assert(offsetof(struct PervasiveVidRegs, busVoltage) == 0xa4, "vid 0xa4");
+
+/* ScePervasiveMisc (0xe3100000, ScePervasiveForDriver_81A155F1) */
+struct PervasiveMiscRegs {
+	uint32_t reserved[8];
+	uint32_t suspendControl;	/* bit 31 set before the CPUs are parked */
+};
+
+#include <stdint.h>
+#include <stdbool.h>
+#include <psp2kern/ctrl.h>
+#include <psp2common/power.h>
+#include "sce/error.h"
+#include <psp2kern/kernel/sysmem.h>
+#include <psp2kern/kernel/sysmem/address_space.h>
+#include <stddef.h>
+#include <string.h>
+#include "sce/intrmgr.h"
+#include "sce/debug.h"
+#include <psp2kern/kernel/cpu.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/acmgr.h>
+#include <psp2kern/kernel/sysroot.h>
+#include <psp2kern/kernel/syscon.h>
+#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/threadmgr/callback.h>
+#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include <psp2kern/kernel/processmgr.h>
+#include <psp2kern/kernel/threadmgr/thread.h>
+
+
+
+
+
+
+
+/* Native idle table has an eight-byte header followed by eight 32-byte rows. */
+struct PowerIdleTimer {
+	uint64_t lastTick;
+	uint64_t interval;
+	uint32_t propagationMask;
+	PowerIdleCallback callback;
+	void *callbackArgument;
+	uint16_t tickFlags;
+	uint8_t tickRecorded;
+	uint8_t idleState;
+};
+
+/* name unknown: told when a process goes idle (elapsed ticks) or wakes (0) */
+typedef int (*PowerProcessIdleCallback)(SceUID pid, uint32_t elapsed, void *argument);
+
+struct PowerProcessIdleState {
+	PowerProcessIdleCallback callback;
+	void *argument;
+};
+
+struct PowerIdleState {
+	uint64_t tickSnapshot;
+	struct PowerIdleTimer timers[8];
+	struct PowerProcessIdleState processCallback;
+};
+
+extern struct PowerIdleState s_powerIdleTimers;
+
+
+
+
+/* imports */
+
+
+
+extern int sceKernelFreeRemoteProcessHeap(SceUID pid, void *address);
+
+
+
+
+
+
+
+
+/* The saved continuation returns through the original caller's LR and SP. */
+extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
+
+
+/* Voltage codes decrease as the required voltage increases. */
+extern int SceSysconForDriver_7F198FA2(unsigned int rail, unsigned int code);
+
+
+
+
+extern int ScePervasiveForDriver_E9D95643(unsigned int selector, unsigned int mode);
+
+
+extern int ksceKernelCheckDipsw(unsigned int index);
+
+
+extern int ksceKernelEnqueueWorkQueue(SceUID queue, const char *name,
+				     int (*callback)(void), void *argument);
+
+
+extern int sceKernelDelayThread(unsigned int delay);
+
+/* Actual callbacks required by Power's startup registration sequence. */
+extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
+
+/* LED callback and script engine; appended after the existing LED state. */
+extern int ksceGpioSetPortMode(uint32_t, uint32_t, uint32_t);
+
+/* Native Syscon bodies take no arguments and return a sign-extended byte. */
+extern int ksceSysconIsLowBatteryInhibitUpdateReboot(void);
+
+extern SceUID ksceKernelRegisterTimer(const char *name, unsigned int period,
+				    int (*handler)(void *argp), void *argp);
+
+extern SceUID sceKernelGetProcessId(void);
+
+extern int SceSysconForDriver_4A184B7C(void);
+
+extern int SceSysconForDriver_4E0EB57B(uint32_t, const void *, uint32_t);
+
+extern int SceSysconForDriver_ACEE1C70(void);
+
+extern int SceSysconForDriver_CF5B2F2F(volatile uint32_t *);
+
+extern int SceSysconForDriver_D7BEFF8B(void *);
+
+extern int SceSysconForDriver_D7F5A797(void);
+
+extern int __aeabi_idiv(int numerator, int denominator);
+
+extern int ksceCtrlGetActiveControllerPort(void);
+
+extern int ksceDisplayGetPrimaryHead(void);
+
+extern int ksceSblACMgrIsGameProgram(SceUID pid);
+
+extern int sceKernelCancelAlarm(SceUID alarm);
+
+
+extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
+
+/* name unknown: told the new power flags of a process */
+extern SceUID SceCtrlForDriver_FF9D4DD4(uint32_t, void (*)(uint32_t, uint32_t),
+					void *, int);
+extern const char *ksceGUIDName(SceUID);
+extern int SceCtrlForDriver_69E45836(void);
+extern int SceCtrlForDriver_C8CE3E43(unsigned int);
+extern int ScePervasiveForDriver_12D17D47(unsigned int selector);
+extern int ScePervasiveForDriver_15237AF8(unsigned int clock);
+extern int ScePervasiveForDriver_589D0291(unsigned int selector);
+extern int ScePervasiveForDriver_6AF0196F(unsigned int first, unsigned int second);
+extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
+extern int ScePervasiveForDriver_98D8914A(unsigned int selector);
+extern int ScePervasiveForDriver_A6832B33(unsigned int selector);
+extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
+extern int SceProcessmgrForDriver_879153D9(SceUID pid, uint32_t mask);
+extern int SceProcessmgrForDriver_FC2A424E(void *memory);
+extern int SceSysconForDriver_03C50DC3(void);
+extern int SceSysconForDriver_03F11220(uint32_t *voltage);
+extern int SceSysconForDriver_0826BA07(uint32_t *current);
+extern int SceSysconForDriver_0D0B6D25(void);
+extern int SceSysconForDriver_129EA022(SceSysconCallback callback, void *argp);
+extern int SceSysconForDriver_14B99945(void);
+extern int SceSysconForDriver_26F9D729(uint32_t *maximum, uint32_t *level);
+extern int SceSysconForDriver_27758A64(void);
+extern int SceSysconForDriver_2A4B0437(uint32_t control, uint32_t enabled);
+extern int SceSysconForDriver_2D471528(SceSysconCallback callback, void *argp);
+extern int SceSysconForDriver_373ECF8A(unsigned int);
+extern int SceSysconForDriver_4278E614(unsigned int);
+extern int SceSysconForDriver_50CAE242(void);
+extern int SceSysconForDriver_596B17B7(uint32_t enabled);
+extern int SceSysconForDriver_59DC5938(uint32_t status);
+extern int SceSysconForDriver_6F586D1A(uint32_t, uint32_t);
+extern int SceSysconForDriver_80D6E061(SceSysconCallback callback, void *argp);
+extern int SceSysconForDriver_901D6CD4(unsigned int);
+extern int SceSysconForDriver_9070F139(uint32_t *temperature);
+extern int SceSysconForDriver_91D3B7A3(uint32_t *health, uint32_t *unk);
+extern int SceSysconForDriver_9DA2A5AB(void);
+extern int SceSysconForDriver_9F8340FF(void (*)(uint32_t), void *);
+extern int SceSysconForDriver_A2FE9BF9(uint32_t *status);
+extern int SceSysconForDriver_AD0A8275(uint32_t *percent);
+extern int SceSysconForDriver_B841C141(uint32_t *time);
+extern int SceSysconForDriver_C562AF3A(uint32_t *capacity);
+extern int SceSysconForDriver_CD73079D(uint32_t *count);
+extern int SceSysconForDriver_D7F5A797(void);
+extern int SceSysconForDriver_F93CF833(uint32_t *capacity);
+extern int SceSysrootForDriver_89532E2F(void);
+extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
+extern int ksceDisplayGetDeviceType(int head, int unused);
+extern int ksceDisplayWaitVblankStart(void);
+extern int ksceGpioPortClear(uint32_t, uint32_t);
+extern int ksceGpioPortSet(uint32_t, uint32_t);
+extern int ksceKernelPrintfAssertLevel(uint32_t level, int condition,
+				     const SceKernelDebugInfo *info,
+				     const void *caller, const char *format, ...);
+extern int ksceKernelRegisterProcEventHandler(const char *, const void *, void *);
+extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
+extern int kscePervasiveUartResetEnable(unsigned int);
+extern int ksceSblACMgrIsSystemProgram(SceUID pid);
+extern int ksceSblAimgrIsDolce(void);
+extern int ksceSblAimgrIsGenuineDolce(void);
+extern int ksceSysconCtrlDolceLED(uint32_t mode);
+extern int ksceSysconGetHardwareInfo(void);
+extern int ksceSysconIsLowBatteryInhibitUpdateDownload(void);
+extern int ksceSysconWaitInitialized(void);
+extern int ksceSysrootIsExternalBootMode(void);
+extern int ksceSysrootIsUsbEnumWakeup(void);
+extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
+extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
+extern uint32_t ksceKernelGetSystemTimeLow(void);
+extern uint32_t kscePervasiveGetSoCRevision(void);
+extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
+extern uint64_t sceKernelGetSystemTimeWide(void);
+extern volatile struct PervasiveMiscRegs *ScePervasiveForDriver_81A155F1(void);
+extern uintptr_t SceSysrootForDriver_0A52A59C(void);
+extern uintptr_t SceSysrootForDriver_10788257(void);
+extern void powerCpuResumeEntry(void);
+extern void powerRestoreCpuContext(void *context, int value)
+	__attribute__((noreturn));
+extern void powerSmcResumePrimary(void);
+extern void powerSmcResumeSecondary(int value);
+extern void powerSmcSuspendSecondary(void);
+
+
+
+
+
+/* Native switch modes and controller timing state. */
+/* s_powerSwitchState.eventFlag */
+#define POWER_SWITCH_EVENT_BUTTONS	0x00000001	/* the controller buttons changed */
+#define POWER_SWITCH_EVENT_DISPLAY_ON	0x00000004
+#define POWER_SWITCH_EVENT_DISPLAY_OFF	0x00000008
+#define POWER_SWITCH_EVENT_STANDBY	0x00000010
+#define POWER_SWITCH_EVENT_SUSPEND	0x00000020
+#define POWER_SWITCH_EVENT_SOFT_RESET	0x00000040
+#define POWER_SWITCH_EVENT_COLD_RESET	0x00000080
+#define POWER_SWITCH_EVENT_SHUTDOWN	0x00000200
+#define POWER_SWITCH_EVENT_HIBERNATE	0x00000400
+#define POWER_SWITCH_EVENT_HDMI_CEC	0x00000800	/* the TV's power key */
+#define POWER_SWITCH_EVENT_UNLOCKED	0x00010000	/* no switch lock is held */
+#define POWER_SWITCH_EVENT_BUSY		0x00020000	/* a transition is running */
+#define POWER_SWITCH_EVENT_IDLE		0x00040000	/* the last transition finished */
+#define POWER_SWITCH_EVENT_EXIT		0x80000000
+#define POWER_SWITCH_EVENT_REQUESTS	(POWER_SWITCH_EVENT_DISPLAY_ON | POWER_SWITCH_EVENT_DISPLAY_OFF | \
+					 POWER_SWITCH_EVENT_STANDBY | POWER_SWITCH_EVENT_SUSPEND | \
+					 POWER_SWITCH_EVENT_SOFT_RESET | POWER_SWITCH_EVENT_COLD_RESET | \
+					 POWER_SWITCH_EVENT_SHUTDOWN | POWER_SWITCH_EVENT_HIBERNATE)
+
+/* the request a transition carries out (the transition takes request * 0x101) */
+#define POWER_REQUEST_NONE		0
+#define POWER_REQUEST_STANDBY		1
+#define POWER_REQUEST_SUSPEND		2
+#define POWER_REQUEST_SOFT_RESET	3
+#define POWER_REQUEST_COLD_RESET	4
+#define POWER_REQUEST_SHUTDOWN		5
+#define POWER_REQUEST_HIBERNATE		6
+
+/* kscePowerSetPowerSwMode: what the power button does */
+#define POWER_SW_MODE_HOLD_STANDBY	0x1	/* held for the push time: standby */
+#define POWER_SW_MODE_PRESS_SUSPEND	0x2
+#define POWER_SW_MODE_PRESS_DISPLAY_OFF	0x4
+#define POWER_SW_MODE_PRESS_STANDBY	0x8
+
+struct PowerSwitchState {
+	SceUID eventFlag;
+	SceUID mainThread;
+	uint32_t primaryMode;
+	uint32_t secondaryMode;
+	uint32_t powerOffDelay;
+	uint32_t ledPolicy;
+	uint32_t standbyButtonPushTime;
+	uint32_t psButtonPushTime;
+	uint32_t suspendInProgress;
+	uint32_t processLockCount;
+	uint32_t systemLockCount;
+	uint32_t initHold;
+	volatile uint32_t buttonRequest;/* POWER_REQUEST_*, from the power button */
+	volatile uint32_t pendingRequest;/* POWER_REQUEST_*, from the API */
+	uint32_t shutdownArgument;
+	uint32_t resumeRequested;
+	uint32_t powerModeArgument;
+	uint32_t requestState;
+	uint32_t wakeupFactor;
+	uint32_t resumeCount;
+	uint32_t interruptState;
+	uint32_t interruptCpuMask;
+	uint32_t controllerButtons;
+	uint32_t controllerMask;
+	SceUID controllerCallback;
+};
+
+_Static_assert(offsetof(struct PowerSwitchState, standbyButtonPushTime) == 0x18,
+	       "Power standby push time offset");
+
+_Static_assert(offsetof(struct PowerSwitchState, buttonRequest) == 0x30,
+	       "Power request state offset");
+_Static_assert(offsetof(struct PowerSwitchState, resumeRequested) == 0x3c,
+	       "Power resume request offset");
+
+struct PowerCallbackRecord {
+	struct PowerCallbackRecord *next;
+	SceUID pid;
+	SceUID callback;
+	uint32_t pendingEvents;
+	uint32_t lastNotification;
+	uint32_t permittedMask;
+	uint32_t notified;
+};
+
+struct PowerCallbackControl {
+	struct PowerCallbackRecord *head;
+	uint32_t stateFlags;
+	uint32_t notificationMask;
+	uint8_t sysconStatus[4];
+	uint8_t thermalAlert;
+	uint8_t wlanActive;
+	uint8_t padding[2];
+	PowerWirelessCallback wirelessCallback;
+	void *wirelessArgument;
+	PowerProcessFlagsCallback flagCallbacks[4];
+	void *flagArguments[4];
+};
+
+_Static_assert(sizeof(struct PowerCallbackRecord) == 0x1c,
+	       "Power callback record size");
+_Static_assert(offsetof(struct PowerCallbackControl, wirelessCallback) == 0x14,
+	       "Power wireless callback offset");
+
+/* Native state initialization remains unresolved. Unknown gaps stay explicit. */
+struct PowerClockState {
+	uint32_t busClockFrequency;
+	uint32_t dmac5ClockFrequency;
+	uint32_t cameraBusClockFrequency;
+	uint32_t sysClockFrequency;
+	uint32_t busSelector;
+	uint32_t dmac5Selector;
+	uint32_t cameraBusSelector;
+	uint32_t sysSelector;
+	uint32_t armClockFrequency;
+	uint32_t armSelector;
+	uint32_t veneziaClockFrequency;
+	uint32_t veneziaSelector;
+	uint32_t vipClockFrequency;
+	uint32_t vipSelector;
+	uint32_t compatClockFrequency;
+	uint32_t compatSelector;
+	uint32_t gpuXbarClockFrequency;
+	uint32_t gpuXbarSelector;
+	uint32_t gpuClockFrequency[2];
+};
+
+_Static_assert(offsetof(struct PowerClockState, armClockFrequency) == 0x20,
+	       "Power ARM clock state offset");
+_Static_assert(offsetof(struct PowerClockState, gpuClockFrequency) == 0x48,
+	       "Power GPU clock state offset");
+
+struct PowerClockControl {
+	SceUID mutex;
+	uint32_t hardwareInfo;
+	uint32_t busVoltageTable[3];
+	uint32_t armVoltageTable[6];
+	uint32_t mediaVoltageTable[4];
+	uint32_t compatVoltageTable[2];
+	uint32_t gpuVoltageTable[2];
+	uint32_t voltageDemand[10];
+	uint32_t railVoltage[4];
+	struct PowerClockState frequencies;
+	uint32_t gpuSelector[2];
+	void (*beforeGpuClockChange)(uint32_t, uint32_t, int, void *);
+	void *beforeGpuClockArgument;
+	void (*afterGpuClockChange)(uint32_t, uint32_t, int, void *);
+	void *afterGpuClockArgument;
+	uint32_t lockBypass;
+	uint32_t kernelClockReduced;
+	uint32_t gpuLimitOverride;
+};
+
+_Static_assert(offsetof(struct PowerClockControl, frequencies) == 0x84,
+	       "Power clock frequencies offset");
+_Static_assert(offsetof(struct PowerClockControl, lockBypass) == 0xec,
+	       "Power clock lock bypass offset");
+
+
+struct PowerBatteryState {
+	uint32_t status;
+	uint32_t remainCapacity;
+	uint32_t lifePercent;
+	uint32_t calculatedLifePercent;
+	uint32_t fullCapacity;
+	uint32_t remainLevel;
+	uint32_t remainMaxLevel;
+	uint32_t stateOfHealth;
+	uint32_t healthStatus;
+	uint32_t cycleCount;
+	int32_t lifeTime;
+	uint32_t temperature;
+	uint32_t electricCurrent;
+	uint32_t voltage;
+	uint32_t usbStopPending;
+	SceSysconPacket usbStopPacket;
+	uint32_t usbStatus;
+	uint32_t usbStatusPending;
+	SceSysconPacket usbStatusPacket;
+	uint32_t sysconLedOff;
+	void (*temperatureCallback)(uint32_t, void *);
+	void *temperatureArgument;
+	uint32_t temperatureThreshold;
+	uint32_t previousTemperature;
+	uint64_t fakeStartTime;
+	uint32_t fakeEnabled;
+	uint32_t reserved;
+	uint32_t fakeStatusSize;
+	uint32_t fakeRemainCapacity;
+	uint32_t fakeFullCapacity;
+	uint32_t fakeDuration;
+};
+
+_Static_assert(offsetof(struct PowerBatteryState, temperature) == 0x2c,
+	       "Power battery temperature offset");
+
+_Static_assert(offsetof(struct PowerBatteryState, fakeEnabled) == 0x160,
+	       "Power fake battery flag offset");
+_Static_assert(offsetof(struct PowerBatteryState, fakeFullCapacity) == 0x170,
+	       "Power fake full capacity offset");
+
+/* Worker, charging and cached battery state share the native control block. */
+struct PowerBatteryBase {
+	SceUID eventFlag;
+	SceUID worker;
+	SceKernelSpinlock chargingLock;
+	uint32_t reserved;
+	uint32_t workerPaused;
+	uint32_t chargingInhibitCount;
+	uint32_t usbChargingEnabled;
+	SceUID chargingAlarm;
+	uint32_t initialScan;
+	uint32_t scanStep;
+	int32_t powerSource;
+	uint32_t hardwareStatus;
+	struct PowerBatteryState state;
+};
+
+_Static_assert(offsetof(struct PowerBatteryBase, state) == 0x30,
+	       "Power cached battery state offset");
+_Static_assert(offsetof(struct PowerBatteryBase, state.fakeEnabled) == 0x190,
+	       "Power fake battery flag base offset");
+
+_Static_assert(offsetof(struct PowerBatteryBase, state.fakeStartTime) == 0x188,
+	       "Power fake start time base offset");
+_Static_assert(offsetof(struct PowerBatteryBase, state.fakeRemainCapacity) == 0x19c,
+	       "Power fake remaining capacity base offset");
+_Static_assert(offsetof(struct PowerBatteryBase, state.fakeDuration) == 0x1a4,
+	       "Power fake duration base offset");
+struct PowerDisplayState {
+	uint32_t requestedBrightness;
+	uint32_t maxBrightness[2];
+	uint32_t brightness[3];
+	uint32_t displayEnabled;
+	uint32_t controllerIdleGate;
+	uint32_t ledWorkEnabled;
+	uint32_t ledReason;
+};
+
+_Static_assert(offsetof(struct PowerBatteryBase, state.usbStopPending) == 0x68,
+	       "Power USB stop pending offset");
+_Static_assert(offsetof(struct PowerBatteryBase, state.usbStatus) == 0xec,
+	       "Power USB status offset");
+_Static_assert(offsetof(struct PowerBatteryBase, state.usbStatusPacket) == 0xf4,
+	       "Power USB status packet offset");
+
+struct PowerBatteryFakeStatus {
+	uint32_t size;
+	uint32_t remainingCapacity;
+	uint32_t fullCapacity;
+	uint32_t duration;
+};
+
+
+/* LED error codes (lowio's 0x803f01xx facility; names unknown) */
+#define SCE_LED_ERROR_INVALID_LED	0x803f0140
+#define SCE_LED_ERROR_INVALID_MODE	0x803f0141
+
+/* ksceLedSetMode's modes */
+#define SCE_LED_MODE_OFF	0
+#define SCE_LED_MODE_ON		1	/* Syscon pattern index */
+#define SCE_LED_MODE_BLINK	2
+#define SCE_LED_MODE_SCRIPT	3	/* option is a byte script */
+#define SCE_LED_MODE_LEVEL	4	/* Syscon level, LED 2 only */
+
+/* an open loop of an LED script (ops 3 and 4) */
+struct PowerLedScriptLoop {
+	const uint8_t *cursor;
+	int count;
+};
+
+/* one LED: its GPIO line and what it is doing, updated each vblank */
+struct PowerLedState {
+	uint8_t gpio;			/* port << 5 | pin; 0: no LED */
+	uint8_t polarity;		/* the output level that turns the LED off */
+	uint16_t padding;
+	uint32_t mode;
+	int phase;			/* ticks into the on/off period */
+	int onTicks;
+	int offTicks;
+	int repeatCount;
+	int endState;
+	uint32_t sysconLevel;
+	uint32_t sysconIndex;
+	uint32_t scriptMode;
+	int scriptDelayTicks;
+	const uint8_t *scriptCursor;
+	const uint8_t *scriptLoop;
+	int scriptDepth;
+	struct PowerLedScriptLoop scriptStack[4];
+};
+
+_Static_assert(sizeof(struct PowerLedState) == 0x58, "Power LED row size");
+
+_Static_assert(offsetof(struct PowerIdleState, processCallback) == 0x108,
+	       "Power process idle callback offset");
+_Static_assert(sizeof(struct PowerIdleState) == 0x110,
+	       "Power idle control size");
+
+_Static_assert(sizeof(struct PowerBatteryBase) == 0x1a8,
+	       "Power battery control size");
+
+/* Native low-power state passed to Syscon and system event consumers. */
+/*
+ * What Syscon reports on resume: the same words as the boot's SceKblParam at
+ * 0xc0 (vitasdk psp2kern/kernel/kbl/kbl.h).
+ */
+struct PowerResumeInformation {
+	uint32_t powerOffFactor;
+	uint32_t wakeupFactor;
+	uint32_t requestState;
+	uint32_t holdControl;
+	uint32_t resumeContextAddress;
+	uint32_t hardwareInfo;
+	uint32_t powerInfo;		/* vitasdk: 0x8 AC connected */
+	uint32_t reserved;
+};
+
+struct PowerMonitorState {
+	uint32_t size;
+	uint32_t powerModeArgument;
+	struct PowerResumeInformation *resumeInformation;
+	void (*resumeEntry)(void);
+	uint32_t cp15[14];
+	uint32_t reserved[8];
+};
+
+_Static_assert(sizeof(struct PowerMonitorState) == 0x68,
+	       "Power monitor state size");
+
+/* Per-process requested clock frequencies, idle timers and switch locks. */
+
+/* the clocks a process requests a frequency of */
+enum PowerProcessClock {
+	POWER_PROCESS_CLOCK_BUS,
+	POWER_PROCESS_CLOCK_ARM,
+	POWER_PROCESS_CLOCK_GPU_XBAR,
+	POWER_PROCESS_CLOCK_GPU,
+	POWER_PROCESS_CLOCKS
+};
+
+struct PowerProcessState {
+	struct PowerProcessState *next;
+	SceUID pid;
+	uint32_t clockExcluded;
+	uint32_t powerLockCount;
+	uint64_t idleInterval;
+	uint64_t lastIdleTick;
+	uint32_t tickRecorded;
+	uint32_t idleState;
+	int clockFrequency[POWER_PROCESS_CLOCKS];	/* requested, by enum PowerProcessClock */
+	uint32_t wirelessFlags;
+};
+
+_Static_assert(offsetof(struct PowerProcessState, clockFrequency) == 0x28,
+	       "Power process bus clock offset");
+
+/* Only bits zero and one have proved wireless meanings; other bits are raw. */
+_Static_assert(offsetof(struct PowerProcessState, wirelessFlags) == 0x38,
+	       "Power process wireless flags offset");
+
+_Static_assert(offsetof(struct PowerProcessState, idleInterval) == 0x10,
+	       "Power process idle interval offset");
+_Static_assert(offsetof(struct PowerProcessState, lastIdleTick) == 0x18,
+	       "Power process idle tick offset");
+
+struct PowerProcessEventHandlers {
+	uint32_t size;
+	int (*create)(SceUID pid);
+	int (*kill)(SceUID pid);
+	int (*exit)(SceUID pid);
+	int (*suspend)(SceUID pid, uint32_t event);
+	int (*resume)(SceUID pid, uint32_t event);
+	void *reserved;
+};
+
+_Static_assert(sizeof(struct PowerProcessEventHandlers) == 0x1c,
+	       "Power process event handler size");
+
+/* shared state */
+extern struct PowerCallbackControl s_powerCallbackControl;
+extern struct PowerClockControl s_powerClockControl;
+extern struct PowerBatteryBase s_powerBatteryBase;
+extern struct PowerDisplayState s_powerDisplayState;
+extern int s_processStorageKey;
+extern SceKernelSpinlock s_powerIdleLock;
+extern struct PowerProcessState *volatile s_powerProcessList;
+
+/* across units */
+
+uint32_t kscePowerGetPowerSwMode(void);
+
+int scePowerRequestSuspend(void);
+int ScePowerForDriver_660D5AB4(uint32_t timerId);
+
+int ScePowerForDriver_991BDEAF(uint32_t timerId, uint32_t mask);
+
+int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
+			     uint64_t interval, PowerIdleCallback callback,
+			     void *argument);
+uint32_t powerIsIdleTimer(uint32_t timerId);
+
+uint32_t ScePowerForDriver_394DE492(void);
+int powerTickInternalPredicate(void);
+
+int kscePowerTick(uint32_t mask);
+
+int kscePowerSetDisplayMaxBrightness(uint32_t limit);
+int ScePowerForDriver_38415146(uint32_t value);
+
+int powerPermitChargeTimer(void *argp);
+
+int powerChargingCommandComplete(SceSysconPacket *packet, void *argp);
+
+int powerLockClockControl(void);
+int powerSetBusRailClockRaw(unsigned int lane, int frequency,
+			    unsigned int selector, uint32_t demand);
+
+void powerUnlockClockControl(void);
+
+int kscePowerSetBusClockFrequency(int frequency);
+
+int kscePowerSetGpuXbarClockFrequency(int frequency);
+
+int kscePowerSetArmClockFrequency(int frequency);
+
+int kscePowerSetGpuClockFrequencyInternal(int first, int second);
+
+void powerNotifyWirelessLimit(int enabled);
+
+void powerNotifyProcessFlags(SceUID pid, uint32_t flags);
+
+int scePowerBatteryUpdateInfo(void);
+
+int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option);
+
+void powerNotifyCallback(uint32_t clearMask,
+							    uint32_t setMask,
+							    uint32_t events);
+
+
+
+int powerInitializeClockControl(void);
+
+int powerInitializeIdleControl(void);
+
+void powerDefaultIdleCallback(uint32_t timerId, uint32_t elapsed,
+			      void *argument, uint32_t elapsedHigh);
+
+void powerRefreshDisplayBrightness(void);
+
+uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason);
+
+int powerInitializeDisplayControl(void);
+
+int powerInitializeBatteryControl(void);
+
+int powerInitializeLedControl(void);
+int powerStartLedControl(void);
+
+int powerInitializeClockRuntime(void);
+
+void powerRestoreClockRuntime(void);
+
+int powerSuspendBatteryControl(void);
+
+int powerResumeBatteryControl(const struct PowerResumeInformation *information);
+
+int powerInitializeSwitchHardware(void);
+
+int powerInitializeSwitchControl(void);
+
+int powerInitializeKernelProcessState(void);
+
+void powerCreateProcessState(SceUID pid);
+
+void powerUnlinkExitedProcess(SceUID pid);
+
+void powerUnlinkKilledProcess(SceUID pid);
+
+void powerProcessSuspendEvent(SceUID pid, uint32_t event);
+
+void powerProcessResumeEvent(SceUID pid, uint32_t event);
+
+int powerReleaseProcessSwitchLocks(SceUID pid);
+
+int powerTickProcessForPid(SceUID pid, uint32_t mask);
+int powerBatteryPausePending(void);
+void powerInitializeProcessIdleState(struct PowerProcessState *state);
+void powerRecordProcessIdleTick(struct PowerProcessState *state);
+int powerHasBusyCallback(uint32_t mask, SceUID *callback);
+int powerClockSysEventHook(void);

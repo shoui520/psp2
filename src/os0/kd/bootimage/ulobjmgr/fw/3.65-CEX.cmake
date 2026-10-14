@@ -1,0 +1,52 @@
+# 3.65-CEX: os0:kd/bootimage/ulobjmgr (generated)
+set(MODULE_NID 0x216615A5)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xDB18BB68 0xD6A45C93 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x7EE45391:1:0x0
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0xE2C40624:1:0x0
+	0x887F19D0:1:0x0
+	0x2ED7F97A:2:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0x605275F8
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xD6ED0C46
+	0xE2C40624:F:0x9DCB4B7A
+	0x887F19D0:F:0x2A43912D
+	0x2ED7F97A:F:0x1160FCA1
+	0x2ED7F97A:F:0x6219CC14
+)
+set(MODULE_IMPORT_FUNCS
+	memset
+	__stack_chk_fail
+	ksceKernelFreeMemBlock
+	ksceKernelCopyFromUserProc
+	ksceKernelCopyToUser
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLock
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	sceKernelGetProcessId
+	ksceKernelRegisterProcEventHandler
+	SceSysrootForDriver_1160FCA1
+	SceSysrootForDriver_6219CC14
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

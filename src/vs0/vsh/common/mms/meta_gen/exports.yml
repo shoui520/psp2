@@ -1,0 +1,27 @@
+SceMetaGen:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceMetaGen:
+      syscall: false
+      version: 1
+      nid: 0xCC2DBE5E
+      functions:
+        - SceMetaGen_4073187B: 0x4073187B
+        - SceMetaGen_41ABAEA8: 0x41ABAEA8
+        - SceMetaGen_41B8717E: 0x41B8717E
+        - SceMetaGen_46BA9D91: 0x46BA9D91
+        - SceMetaGen_4F9650DF: 0x4F9650DF
+        - SceMetaGen_56767166: 0x56767166
+        - SceMetaGen_6AE7DE4F: 0x6AE7DE4F
+        - SceMetaGen_6B45E30A: 0x6B45E30A
+        - SceMetaGen_70010A01: 0x70010A01
+        - SceMetaGen_755349FC: 0x755349FC
+        - SceMetaGen_7D7CACEC: 0x7D7CACEC
+        - SceMetaGen_8A90EFAF: 0x8A90EFAF
+        - SceMetaGen_98394E0B: 0x98394E0B
+        - SceMetaGen_C1ED4B52: 0xC1ED4B52
+        - SceMetaGen_D5505BA6: 0xD5505BA6
+        - SceMetaGen_EA1DFDCC: 0xEA1DFDCC

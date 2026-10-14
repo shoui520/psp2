@@ -1,0 +1,94 @@
+# 3.650.011-TOOL: vs0:vsh/shell/location_dialog_plugin.suprx (generated)
+set(MODULE_NID 0x5139B156)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_NID0_VARS 0x1A9822A4:module_nid0_1A9822A4 0xD20886EB:module_nid0_D20886EB)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0xA7D28DAE:1:0x0
+	0x3D643CE8:1:0x0
+	0x3C1965CD:1:0x0
+	0x54276D19:1:0x0
+	0x2836DC9B:1:0x0
+	0x4D9A9DD0:1:0x0
+	0x073F8C68:1:0x0
+	0xA6605D6F:1:0x8
+	0x8AF17416:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceKernelUnlockLwMutex
+	sceKernelCreateLwMutex
+	sceClibPrintf
+	sceKernelCreateCallback
+	sceKernelDeleteCallback
+	ScePafStdc_1B77082E
+	sce_paf_wcsncpy
+	ScePafStdc_2730262C
+	sce_paf_memcpy
+	sce_paf_wcsncat
+	sce_paf_snprintf
+	sce_paf_wcslen
+	ScePafStdc_C95732BB
+	ScePafStdc_D608246A
+	sce_paf_wcsnlen
+	sce_paf_memset
+	ScePafStdc_F36BABE3
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	ScePafMisc_17260154
+	ScePafMisc_2FBC2819
+	ScePafMisc_488437AD
+	ScePafMisc_4B90AA0D
+	ScePafMisc_5D36CFBA
+	ScePafMisc_AF4FC3F4
+	ScePafMisc_FDFC29F2
+	ScePafCommon_4A8115D5
+	ScePafCommon_6735B503
+	ScePafThread_23B8F66F
+	ScePafResource_5F05DE68
+	ScePafToplevel_15B7D17E
+	ScePafToplevel_19CEFDA7
+	ScePafToplevel_20D1E49B
+	ScePafToplevel_30B442D9
+	ScePafToplevel_34FE1331
+	ScePafToplevel_99300D8B
+	ScePafToplevel_AB0DB9B0
+	ScePafToplevel_BAFA5D83
+	ScePafToplevel_F5354FEF
+	ScePafToplevel_F9639E7F
+	ScePafWidget_046AA07D
+	ScePafWidget_0DCB8EA5
+	ScePafWidget_135697FF
+	ScePafWidget_1A678CB4
+	ScePafWidget_22E867F5
+	ScePafWidget_2F924BAD
+	ScePafWidget_3546C104
+	ScePafWidget_4FAE8054
+	ScePafWidget_627CDA4E
+	ScePafWidget_66B35C73
+	ScePafWidget_723F6A4C
+	ScePafWidget_7284DAB8
+	ScePafWidget_8EA8F13B
+	ScePafWidget_9D304F4A
+	ScePafWidget_A1193AAB
+	ScePafWidget_A58F978C
+	ScePafWidget_B773464D
+	ScePafWidget_B8CA08DA
+	ScePafWidget_EB85176E
+	ScePafWidget_FB7FE189
+	sceAppMgrLaunchAppByName2
+	sceAppMgrDestroyAppByName
+	sceAppMgrGetAppIdByAppId
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+	ScePafStdc_610F2F91
+	ScePafStdc_B4A712A7
+	ScePafThread_83CE85DD
+	ScePafWidget_E1FB1CFF
+)

@@ -1,0 +1,18 @@
+SceNpKdc:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpKdc:
+      syscall: false
+      version: 1
+      nid: 0x52115CC3
+      functions:
+        - SceNpKdc_06CB1007: 0x06CB1007
+        - SceNpKdc_23521D81: 0x23521D81
+        - SceNpKdc_26F8A1B9: 0x26F8A1B9
+        - SceNpKdc_78E56B9B: 0x78E56B9B
+        - SceNpKdc_A1441E8C: 0xA1441E8C
+        - SceNpKdc_C3B78C87: 0xC3B78C87
+        - SceNpKdc_D8903721: 0xD8903721

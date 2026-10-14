@@ -1,0 +1,19 @@
+SceUsbMass:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceUsbMassForDriver:
+      syscall: false
+      version: 1
+      nid: 0x15243EC5
+      functions:
+        - _sceUsbMassWriteSector: 0x081CA197
+        - SceUsbMassForDriver_3C821E99: 0x3C821E99
+        - SceUsbMassForDriver_7833D935: 0x7833D935
+        - _sceUsbMassReadSector: 0xB80D1DF8
+        - _sceUsbMassGetDevInfo: 0xD989A9F6
+        - SceUsbMassForDriver_F2BAB182: 0xF2BAB182

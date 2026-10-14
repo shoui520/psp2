@@ -1,0 +1,82 @@
+# 3.650.011-TOOL: os0:kd/intrmgr.skprx (generated)
+set(MODULE_NID 0xE390EECF)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xDF44892E 0x9DF04041)
+set(MODULE_IMPORT_LIBS
+	0x7290B21C:1:0x0
+	0x1496A5B5:1:0x0
+	0x6F25E18A:5:0x0
+	0x02451F0F:8:0x0
+	0x3691DA45:2:0x0
+	0x40ECDB0E:2:0x0
+	0x88758561:2:0x0
+	0x7EE45391:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x7290B21C:F:0x105C5752
+	0x7290B21C:F:0xCE7A2207
+	0x1496A5B5:F:0x00063675
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x7B4CB60A
+	0x6F25E18A:F:0x8D160E65
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x02451F0F:F:0x634D0D0C
+	0x02451F0F:F:0x6DB46017
+	0x02451F0F:F:0xB628B46B
+	0x3691DA45:F:0x118657C6
+	0x3691DA45:F:0x7A7E7C0C
+	0x3691DA45:F:0x8E4B61F1
+	0x3691DA45:F:0x9139E22B
+	0x3691DA45:F:0xAE55B7CC
+	0x3691DA45:F:0xC8C8C321
+	0x3691DA45:F:0xCC85905B
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0x9CB9F0CE
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xD6ED0C46
+	0x88758561:F:0x391B5B74
+	0x88758561:F:0x391B74B7
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+)
+set(MODULE_IMPORT_FUNCS
+	SceKernelSuspendForDriver_105C5752
+	SceKernelSuspendForDriver_CE7A2207
+	ksceExcpmgrRegisterHandler
+	ksceKernelFreeHeapMemory
+	ksceKernelAllocHeapMemory
+	ksceKernelVAtoPA
+	ksceKernelCreateHeap
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	SceSysmemForKernel_634D0D0C
+	ksceKernelAllocPartitionMemBlock
+	SceSysmemForKernel_B628B46B
+	SceSysrootForKernel_118657C6
+	sceKernelSysrootSetModulePrivate
+	sceKernelSysrootCorelockLock
+	sceKernelSysrootTrapThreadAfterSyscall
+	sceKernelSysrootCorelockUnlock
+	ksceKernelSysrootGetSharedMemory
+	ksceKernelSysrootGetVbaseResetVector
+	ksceKernelCpuId
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelDcacheCleanRangeForL1WBWA
+	ksceKernelSpinlockLowLock
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	ksceKernelPanic
+	ksceKernelPrintf
+	memset
+	__stack_chk_fail
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

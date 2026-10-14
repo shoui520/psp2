@@ -1,0 +1,52 @@
+SceMgVideo:
+  attributes: 6
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMgVideo:
+      syscall: true
+      version: 1
+      nid: 0x7937AA3F
+      functions:
+        - SceMgVideo_03F7BC67: 0x03F7BC67
+        - SceMgVideo_0F3F58E3: 0x0F3F58E3
+        - SceMgVideo_0F6359B1: 0x0F6359B1
+        - SceMgVideo_11FF1A1B: 0x11FF1A1B
+        - SceMgVideo_18D553EB: 0x18D553EB
+        - SceMgVideo_1F9409D1: 0x1F9409D1
+        - SceMgVideo_22D74C37: 0x22D74C37
+        - SceMgVideo_3F3E3A8E: 0x3F3E3A8E
+        - SceMgVideo_4C014C4D: 0x4C014C4D
+        - SceMgVideo_553C65CB: 0x553C65CB
+        - SceMgVideo_5A62101E: 0x5A62101E
+        - SceMgVideo_5ADD5F9B: 0x5ADD5F9B
+        - SceMgVideo_5B57B197: 0x5B57B197
+        - SceMgVideo_653809E0: 0x653809E0
+        - SceMgVideo_74907E1E: 0x74907E1E
+        - SceMgVideo_8A803FB4: 0x8A803FB4
+        - SceMgVideo_8CDC8D33: 0x8CDC8D33
+        - SceMgVideo_A271BBED: 0xA271BBED
+        - SceMgVideo_A4B68884: 0xA4B68884
+        - SceMgVideo_ACD50568: 0xACD50568
+        - SceMgVideo_BCC6E991: 0xBCC6E991
+        - SceMgVideo_C62CA5A7: 0xC62CA5A7
+        - SceMgVideo_CD12E1AC: 0xCD12E1AC
+        - SceMgVideo_D6EE7B53: 0xD6EE7B53
+        - SceMgVideo_E8617A7F: 0xE8617A7F
+        - SceMgVideo_E9367823: 0xE9367823
+        - SceMgVideo_ECB4B61C: 0xECB4B61C
+        - SceMgVideo_F46B72E6: 0xF46B72E6
+        - SceMgVideo_FBF16BC5: 0xFBF16BC5
+    SceMgVideoForMiniApp:
+      syscall: true
+      version: 1
+      nid: 0x11E50D9C
+      functions:
+        - SceMgVideoForMiniApp_02E5F373: 0x02E5F373
+        - SceMgVideoForMiniApp_3EBD4502: 0x3EBD4502
+        - SceMgVideoForMiniApp_CF0D2A06: 0xCF0D2A06
+        - SceMgVideoForMiniApp_EA3A897A: 0xEA3A897A

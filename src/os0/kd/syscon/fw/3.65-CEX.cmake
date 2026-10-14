@@ -1,0 +1,112 @@
+# 3.65-CEX: os0:kd/syscon.skprx (generated)
+set(MODULE_NID 0x28256CDE)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x60A35F64 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0x2ED7F97A:2:0x0
+	0x9DF04041:1:0x0
+	0xE2C40624:1:0x0
+	0x7290B21C:1:0x0
+	0xFD00C69A:1:0x0
+	0xE692C727:1:0x0
+	0xF0EF5743:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xD6ED0C46
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0x6CC9C1A1
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x2ED7F97A:F:0x3AE319DA
+	0x2ED7F97A:F:0x46E72428
+	0x2ED7F97A:F:0x930B1342
+	0x9DF04041:F:0x182EE3E3
+	0x9DF04041:F:0x259C6D9E
+	0x9DF04041:F:0x7B9657B3
+	0x9DF04041:F:0x901E41D8
+	0x9DF04041:F:0x96576C18
+	0x9DF04041:F:0x973BACCC
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x16A35E58
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x30E93C31
+	0xE2C40624:F:0x3C8B55A9
+	0xE2C40624:F:0x47F6DE49
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0xD270498B
+	0xE2C40624:F:0xD9BD74EB
+	0xE2C40624:F:0xE50E1185
+	0xE2C40624:F:0xFBAA026E
+	0x7290B21C:F:0x04C05D10
+	0xFD00C69A:F:0x71608CA3
+	0xFD00C69A:F:0xC6E83F34
+	0xE692C727:F:0xDFD96BFC
+	0xE692C727:F:0xE4B145AE
+	0xF0EF5743:F:0x010DC295
+	0xF0EF5743:F:0x35AAD77A
+	0xF0EF5743:F:0x372022A4
+	0xF0EF5743:F:0xBBEA1DDC
+	0xF0EF5743:F:0xD454A584
+	0xF0EF5743:F:0xF6310435
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLock
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	memset
+	memcpy
+	memmove
+	__stack_chk_fail
+	SceSysrootForDriver_3AE319DA
+	ksceSysrootGetHardwareFlags
+	ksceSysrootGetHardwareInfo
+	ksceKernelIsIntrAllowedInCurrentContext
+	ksceKernelDisableSubIntr
+	ksceKernelReleaseSubIntrHandler
+	ksceKernelEnableSubIntr
+	ksceKernelRegisterSubIntrHandler
+	ksceKernelSetIntrTarget
+	ksceKernelDeleteMutex
+	ksceKernelDeleteSema
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	ksceKernelCreateSema
+	ksceKernelWaitSema
+	ksceKernelGetSystemTimeLow
+	sceKernelDelayThread
+	ksceKernelSignalSema
+	sceKernelCheckWaitableStatus
+	ksceKernelEnqueueWorkQueue
+	ksceKernelCreateMutex
+	ksceKernelRegisterSysEventHandler
+	ksceSblAimgrIsDolce
+	ksceSblAimgrIsGenuineDolce
+	kscePervasiveSpiClockEnable
+	kscePervasiveSpiResetDisable
+	ksceGpioQueryIntr
+	ksceGpioAcquireIntr
+	ksceGpioSetPortMode
+	ksceGpioSetIntrMode
+	ksceGpioPortSet
+	ksceGpioPortClear
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

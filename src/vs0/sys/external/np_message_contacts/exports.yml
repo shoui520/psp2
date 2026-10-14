@@ -1,0 +1,30 @@
+SceNpMessageContactsPlugin:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNpMessageContacts:
+      syscall: false
+      version: 1
+      nid: 0x0DFB9161
+      functions:
+        - SceNpMessageContacts_017D299D: 0x017D299D
+        - SceNpMessageContacts_0212231C: 0x0212231C
+        - SceNpMessageContacts_0E98ECFC: 0x0E98ECFC
+        - SceNpMessageContacts_2117B92A: 0x2117B92A
+        - SceNpMessageContacts_21B462D1: 0x21B462D1
+        - SceNpMessageContacts_3E7B69AE: 0x3E7B69AE
+        - SceNpMessageContacts_44B59B98: 0x44B59B98
+        - SceNpMessageContacts_5BDDA402: 0x5BDDA402
+        - SceNpMessageContacts_812F9D28: 0x812F9D28
+        - SceNpMessageContacts_88E9872C: 0x88E9872C
+        - SceNpMessageContacts_925DC293: 0x925DC293
+        - SceNpMessageContacts_92636117: 0x92636117
+        - SceNpMessageContacts_B88EDD4E: 0xB88EDD4E
+        - SceNpMessageContacts_C157920F: 0xC157920F
+        - SceNpMessageContacts_E5E42852: 0xE5E42852
+        - SceNpMessageContacts_FA2CA5A5: 0xFA2CA5A5

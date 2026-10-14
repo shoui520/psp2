@@ -1,0 +1,25 @@
+SceCompanionUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceCompanionUtil:
+      syscall: false
+      version: 1
+      nid: 0x3EE99C82
+      functions:
+        - SceCompanionUtil_04BC85DC: 0x04BC85DC
+        - SceCompanionUtil_0634FFD8: 0x0634FFD8
+        - SceCompanionUtil_18D13C74: 0x18D13C74
+        - SceCompanionUtil_2B0EF5F8: 0x2B0EF5F8
+        - SceCompanionUtil_43D0A655: 0x43D0A655
+        - SceCompanionUtil_52AA755B: 0x52AA755B
+        - SceCompanionUtil_53445DBF: 0x53445DBF
+        - SceCompanionUtil_6097D2A8: 0x6097D2A8
+        - SceCompanionUtil_7A5632D5: 0x7A5632D5
+        - SceCompanionUtil_7A578A71: 0x7A578A71
+        - SceCompanionUtil_7AB433EC: 0x7AB433EC
+        - SceCompanionUtil_8617FF79: 0x8617FF79
+        - SceCompanionUtil_C93BB8F0: 0xC93BB8F0
+        - SceCompanionUtil_CC52810C: 0xCC52810C

@@ -1,0 +1,36 @@
+#include <stdarg.h>
+#include <stddef.h>
+#include <sce/debug.h>
+#include "sce/compiler.h"
+
+extern int vsnprintf(char *destination, size_t size, const char *format,
+		     va_list arguments);
+
+__attribute__((noinline))
+int __vsnprintf_chk(char *destination, size_t size, int flags, size_t capacity,
+		    const char *format, va_list arguments)
+{
+	(void)flags;
+	if (capacity < size)
+		SCE_PANIC(72);
+	return vsnprintf(destination, size, format, arguments);
+}
+
+int __snprintf_chk(char *destination, size_t size, int flags, size_t capacity,
+		   const char *format, ...)
+{
+	va_list arguments;
+	int result;
+
+	va_start(arguments, format);
+	result = __vsnprintf_chk(destination, size, flags, capacity, format, arguments);
+	va_end(arguments);
+	return result;
+}
+
+/* a smashed stack canary: stop at a breakpoint */
+void __attribute__((noreturn)) __stack_chk_fail(void)
+{
+	__breakpoint(BKPT_CHECK_FAILED);
+	__builtin_unreachable();
+}

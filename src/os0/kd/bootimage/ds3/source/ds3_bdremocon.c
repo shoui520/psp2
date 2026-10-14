@@ -1,0 +1,231 @@
+/* SceDs3 BD remote; the original filename is not recorded. */
+#include "ds3_private.h"
+#include <sce/ctrl.h>
+#include <sce/regmgr.h>
+#include <sce/bt_registered.h>
+#include <sce/bt_event.h>
+#include <sce/bt_test.h>
+#include <sce/debug.h>
+#include <sce/udcd_imports.h>
+#include <sce/threadmgr.h>
+#include <sce/motion_dev.h>
+#include <sce/touch_dummy.h>
+#include <sce/touch.h>
+#include <sce/sysmem.h>
+#include <sce/syscon.h>
+#include <psp2kern/kernel/cpu/spinlock.h>
+#include <psp2kern/kernel/suspend.h>
+#include <psp2kern/kernel/proc_event.h>
+#include <psp2kern/kernel/sysroot.h>
+#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/threadmgr/thread.h>
+#include <psp2kern/kernel/threadmgr/callback.h>
+#include <psp2kern/usbserv.h>
+#include <psp2kern/registrymgr.h>
+#include <psp2kern/display.h>
+#include <string.h>
+
+
+static Ds3BdRemocon ds3BdRemocon;
+
+uint32_t ds3BdRemoconReleaseTimer(void *argp)
+{
+	ds3BdRemocon.releaseTimer = 0;
+	_sceCtrlBdRemoconSendMergedNotify2(0, 255, 0);
+	return 0;
+}
+
+int ds3BdRemoconThread(SceSize args, void *argp)
+{
+	SceUID callback, event;
+	SceUInt32 outBits;
+	int result;
+
+	callback = ksceKernelCreateCallback("SceBdRemocon", 0,
+					    ds3BdRemoconCallback, NULL);
+	ds3BdRemocon.callback = callback;
+	if (callback < 0)
+		return callback;
+	result = ksceBtRegisterCallback(callback, 0x460);
+	if (result < 0)
+		return result;
+	ksceKernelRegisterSysEventHandler("SceBdRemocon", ds3BdRemoconSysEvent, NULL);
+	event = ksceKernelCreateEventFlag("SceBdRemocon", 0x1000, 0, NULL);
+	if (event < 0)
+		return event;
+	for (;;)
+		ksceKernelWaitEventFlagCB(event, 1, 5, &outBits, NULL);
+}
+
+int ds3BdRemoconSysEvent(int resume, int eventId, void *args, void *opt)
+{
+	if (resume == 0 && eventId == 0x20f && ds3BdRemocon.deviceAddress != 0) {
+		_sceCtrlBdRemoconSendMergedNotify2(0, 255, 0);
+		ds3BdRemocon.inputReady = 0;
+		ds3BdRemocon.deviceAddress = 0;
+		ksceCtrlSetBdRemoconConnected(0);
+	}
+	return 0;
+}
+
+int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *userData)
+{
+	SceBtEvent events[2], *event;
+	SceBtRegisteredInfo info;
+	SceBtHidRequest *request;
+	const uint8_t *report;
+	uint64_t address;
+	uint32_t buttons, state, connected;
+	int count, index, result, timer;
+
+	do {
+		do {
+			count = ksceBtReadEvent(events, 2);
+		} while (count == (int)0x802f0c04);
+		if (count <= 0)
+			break;
+		for (event = events; event < events + count; event++) {
+			address = ((uint64_t)event->mac1 << 32) | event->mac0;
+			__builtin_prefetch(event + 1);
+			if (event->id == 6) {
+				if (ds3BdRemocon.deviceAddress != address ||
+				    ds3BdRemocon.deviceAddress == 0)
+					continue;
+				_sceCtrlBdRemoconSendMergedNotify2(0, 255, 0);
+				ds3BdRemocon.inputReady = 0;
+				ds3BdRemocon.deviceAddress = 0;
+				ksceCtrlSetBdRemoconConnected(0);
+			} else if (event->id == 5) {
+				memset(&info, 0, sizeof(info));
+				result = ksceBtGetRegisteredInfo(address, &info, 1);
+				if (result >= 0) {
+					if (info.vid != 0x054c || info.pid != 0x0306)
+						continue;
+					ds3BdRemocon.deviceAddress = address;
+					ksceCtrlSetBdRemoconConnected(1);
+				}
+				ksceKernelPowerTick(0);
+				ds3BdRemocon.state = 0;
+				ds3BdRemocon.connected = 0;
+				ds3BdRemocon.buttons = 0;
+				index = ds3BdRemocon.inputIndex;
+				request = &ds3BdRemocon.inputRequests[index];
+				memset(request, 0, sizeof(*request));
+				request->buffer = ds3BdRemocon.inputReports[index];
+				request->type = 0;
+				request->reportId = 0;
+				request->length = 64;
+				request->argument = 0;
+				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				index = ds3BdRemocon.inputIndex ^ 1;
+				ds3BdRemocon.inputIndex = index;
+				request = &ds3BdRemocon.inputRequests[index];
+				memset(request, 0, sizeof(*request));
+				request->buffer = ds3BdRemocon.inputReports[index];
+				request->type = 0;
+				request->reportId = 0;
+				request->length = 64;
+				request->argument = 0;
+				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				ds3BdRemocon.inputIndex ^= 1;
+			} else if (event->id == 10) {
+				if (ds3BdRemocon.deviceAddress != address)
+					continue;
+				report = ds3BdRemocon.inputReports[ds3BdRemocon.inputIndex];
+				buttons = report[1] | (report[2] << 8) |
+					((report[3] & 1) << 16);
+				if (ds3BdRemocon.buttonAssign == 0)
+					buttons |= (report[3] & 8) << 10;
+				else if (ds3BdRemocon.buttonAssign == 1)
+					buttons |= (report[3] & 8) << 11;
+				state = report[4];
+				connected = report[10];
+				if (ds3BdRemocon.inputReady != 0) {
+					if (ds3BdRemocon.releaseTimer != 0) {
+						sceKernelCancelAlarm(ds3BdRemocon.releaseTimer);
+						ds3BdRemocon.releaseTimer = 0;
+					}
+					if (state == 255 && connected == 1) {
+						state = 255;
+						connected = 0;
+					}
+				} else {
+					ds3BdRemocon.inputReady = 1;
+					if (ScePowerForDriver_394DE492() == 0) {
+						timer = ksceKernelRegisterTimer("SceBDRmcPS", 40000,
+									       ds3BdRemoconReleaseTimer, NULL);
+						if (timer >= 0)
+							ds3BdRemocon.releaseTimer = timer;
+						buttons = 0x10000;
+						state = 255;
+						connected = 0;
+					} else if (state == 255 && connected == 1) {
+						state = 255;
+						connected = 0;
+					}
+				}
+				if (ds3BdRemocon.buttons != buttons ||
+				    ds3BdRemocon.state != state ||
+				    ds3BdRemocon.connected != connected) {
+					if (ksceDisplayGetVcountInternal(1) == ds3BdRemocon.lastVcount) {
+						ksceDisplayWaitVblankStart();
+						ksceDisplayWaitVblankStart();
+					}
+					_sceCtrlBdRemoconSendMergedNotify2(buttons, state, connected);
+					ds3BdRemocon.lastVcount = ksceDisplayGetVcountInternal(1);
+				}
+				ds3BdRemocon.state = state;
+				ds3BdRemocon.connected = connected;
+				ds3BdRemocon.buttons = buttons;
+				index = ds3BdRemocon.inputIndex;
+				request = &ds3BdRemocon.inputRequests[index];
+				memset(request, 0, sizeof(*request));
+				request->type = 0;
+				request->reportId = 0;
+				request->length = 64;
+				request->argument = 0;
+				request->buffer = ds3BdRemocon.inputReports[index];
+				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				ds3BdRemocon.inputIndex ^= 1;
+			}
+		}
+	} while (count == 2);
+	return 0;
+}
+
+int ds3InitializeBdRemocon(void)
+{
+	SceKernelThreadOptParamV1 option;
+	int buttonAssign = 0;
+	int result;
+
+	memset(&ds3BdRemocon, 0, sizeof(ds3BdRemocon));
+	option.size = sizeof(option);
+	option.attr = 0;
+	if (ksceRegMgrSystemParamGetInt(0x00229142, &buttonAssign) >= 0) {
+		if (buttonAssign == 0)
+			ds3BdRemocon.buttonAssign = 0;
+		else if (buttonAssign == 1)
+			ds3BdRemocon.buttonAssign = 1;
+	}
+	result = ksceKernelCreateThread("SceBdRemocon", ds3BdRemoconThread,
+		60, 0x1000, 0x10000000, 0x80000,
+		(const SceKernelThreadOptParam *)&option);
+	ds3BdRemocon.workerThread = result;
+	if (result < 0)
+		return result;
+	result = ksceKernelStartThread(result, 0, NULL);
+	if (result < 0)
+		return result;
+	return 0;
+}
+
+int ds3DisconnectTrackedDevice(void)
+{
+	uint64_t address = ds3BdRemocon.deviceAddress;
+
+	if (address != 0)
+		ksceBtStartDisconnect((uint32_t)address, address >> 32);
+	return 0;
+}

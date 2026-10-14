@@ -1,0 +1,50 @@
+SceMtpIfDriver:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: _sceMtpIfModuleStart
+  libraries:
+    SceMtpIfForDriver:
+      syscall: false
+      version: 1
+      nid: 0x73309DFE
+      functions:
+        - SceMtpIfForDriver_05408B5B: 0x05408B5B
+        - SceMtpIfForDriver_117F7519: 0x117F7519
+        - SceMtpIfForDriver_16D7DBCC: 0x16D7DBCC
+        - SceMtpIfForDriver_27D40294: 0x27D40294
+        - SceMtpIfForDriver_2D9318E1: 0x2D9318E1
+        - SceMtpIfForDriver_33F1826F: 0x33F1826F
+        - SceMtpIfForDriver_5245D237: 0x5245D237
+        - SceMtpIfForDriver_5766D257: 0x5766D257
+        - SceMtpIfForDriver_8D16B997: 0x8D16B997
+        - SceMtpIfForDriver_92CD107E: 0x92CD107E
+        - SceMtpIfForDriver_B5E78858: 0xB5E78858
+        - SceMtpIfForDriver_CB685AC0: 0xCB685AC0
+        - SceMtpIfForDriver_E6453F21: 0xE6453F21
+        - SceMtpIfForDriver_EDC3AB26: 0xEDC3AB26
+        - SceMtpIfForDriver_F0FA2D86: 0xF0FA2D86
+        - SceMtpIfForDriver_F1EC5992: 0xF1EC5992
+        - SceMtpIfForDriver_FDF8C3C0: 0xFDF8C3C0
+    SceMtpIf:
+      syscall: true
+      version: 1
+      nid: 0x5EFA4138
+      functions:
+        - sceMtpIfStartPort: 0x1624280E
+        - sceMtpIfWaitConnect: 0x1E0156BE
+        - sceMtpIfReset: 0x315FDE8E
+        - sceMtpIfGetPort: 0x352F61B9
+        - sceMtpIfRecvCommand: 0x468B6E3E
+        - sceMtpIfChangePhase: 0x695B0DE4
+        - sceMtpIfRecvDataWithParam: 0x6EDB6FB4
+        - sceMtpIfCancelTransfer: 0x80D1CA60
+        - sceMtpIfSendDataWithParam: 0x87CC6686
+        - sceMtpIfIsConnected: 0xA9C97661
+        - sceMtpIfStopDriver: 0xC0CFA3BC
+        - sceMtpIfStartDriver: 0xC5327CAC
+        - sceMtpIfStopPort: 0xD3C974D9
+        - sceMtpIfSendResponse: 0xDD08CA01
+        - sceMtpIfSendEvent: 0xE3C33379

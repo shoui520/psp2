@@ -1,0 +1,83 @@
+# 3.650.011-TOOL: vs0:sys/external/libipmi_nongame.suprx (generated)
+set(MODULE_NID 0x46F05693)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x2DD91812:2:0x0
+	0x859A24B1:2:0x0
+	0xA6605D6F:1:0x0
+	0x8AF17416:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelCreateMsgPipe
+	sceKernelWaitSema
+	sceKernelSendMsgPipe
+	sceKernelWaitSemaCB
+	sceKernelCreateSema
+	sceKernelLockMutex
+	sceKernelPollEventFlag
+	sceKernelCancelMutex
+	sceKernelPollEvent
+	sceKernelDeleteLwMutex
+	sceKernelCancelEventFlag
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceKernelReceiveMsgPipe
+	sceKernelTryReceiveMsgPipe
+	sceKernelTrySendMsgPipeVector
+	sceClibMemset
+	sceClibStrncmp
+	sceKernelCancelSema
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceClibMspaceMalloc
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceKernelSendMsgPipeVector
+	sceClibMspaceFree
+	SceLibKernel_9F793F84
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceClibStrncpy
+	sceKernelCreateLwMutex
+	sceKernelTrySendMsgPipe
+	sceKernelCreateMutex
+	sceKernelCancelMsgPipe
+	sceClibPrintf
+	sceKernelIsCDialogAvailable
+	sceKernelPowerUnlock
+	sceKernelRegisterProcessTerminationCallback
+	sceKernelPowerLock
+	sceKernelUnregisterProcessTerminationCallback
+	sceKernelIsGameBudget
+	sceKernelOpenMsgPipe
+	sceKernelCloseMsgPipe
+	sceKernelUnlockMutex
+	sceKernelDelayThread
+	sceKernelDeleteEventFlag
+	sceKernelGetMsgPipeCreatorId
+	sceKernelTryLockMutex
+	sceKernelPollSema
+	sceKernelCloseEventFlag
+	sceKernelGetProcessId
+	sceKernelCloseSema
+	sceKernelCreateCallback
+	sceKernelOpenEventFlag
+	sceKernelDeleteMutex
+	sceKernelOpenSema
+	sceKernelDeleteCallback
+	sceKernelDeleteSema
+	sceKernelCheckCallback
+	sceKernelSignalSema
+	sceKernelDeleteMsgPipe
+	sceKernelSetEventFlag
+	sceAppMgrGetStatusByName
+	sceAppMgrIsPidShellAndCrashed
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

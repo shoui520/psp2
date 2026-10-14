@@ -1,0 +1,40 @@
+SceAppUtilExt:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceAppUtilExt:
+      syscall: false
+      version: 1
+      nid: 0x76D1A509
+      functions:
+        - sceAppUtilExtVideoUmount: 0x02E1E2C4
+        - sceAppUtilExtVideoMount: 0xA0380CF7
+    SceAppUtilExtPlayReady:
+      syscall: false
+      version: 1
+      nid: 0x778AAA51
+      functions:
+        - SceAppUtilExtPlayReady_4C91CDB1: 0x4C91CDB1
+        - SceAppUtilExtPlayReady_9B52C63D: 0x9B52C63D
+        - SceAppUtilExtPlayReady_A9C2098C: 0xA9C2098C
+        - SceAppUtilExtPlayReady_E915A695: 0xE915A695
+    SceAppUtilExtMarlinIptv:
+      syscall: false
+      version: 1
+      nid: 0x6A9FD83C
+      functions:
+        - SceAppUtilExtMarlinIptv_B86104DB: 0xB86104DB
+        - SceAppUtilExtMarlinIptv_DFFF8D1F: 0xDFFF8D1F
+    SceAppUtilExtPsNow:
+      syscall: false
+      version: 1
+      nid: 0x061C5401
+      functions:
+        - SceAppUtilExtPsNow_2BF9A33D: 0x2BF9A33D
+        - SceAppUtilExtPsNow_2CF451BE: 0x2CF451BE

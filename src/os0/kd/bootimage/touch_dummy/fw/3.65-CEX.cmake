@@ -1,0 +1,94 @@
+# 3.65-CEX: os0:kd/bootimage/touch_dummy (generated)
+set(MODULE_NID 0xADBADA30)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x3E4F4A81 0xA4A7DAFC 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0x88758561:2:0x0
+	0x9DF04041:1:0x0
+	0xE2C40624:1:0x0
+	0x746EC971:1:0x0
+	0x9AD8E213:1:0x0
+	0x7290B21C:1:0x0
+	0x887F19D0:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0xBC996A7A
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x88758561:F:0x391B74B7
+	0x9DF04041:F:0x259C6D9E
+	0x9DF04041:F:0x901E41D8
+	0x9DF04041:F:0x96576C18
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x44CCF310
+	0xE2C40624:F:0x47F6DE49
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xC58DF384
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xE50E1185
+	0xE2C40624:F:0xF4EE4FA9
+	0xE2C40624:F:0xFBAA026E
+	0x746EC971:F:0x3801D7D6
+	0x746EC971:F:0x8CB01675
+	0x746EC971:F:0xAF80F39C
+	0x746EC971:F:0xD141C076
+	0x9AD8E213:F:0x8612B243
+	0x7290B21C:F:0x04C05D10
+	0x7290B21C:F:0xE0489831
+	0x887F19D0:F:0x2A43912D
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelCopyToUser
+	ksceKernelCopyFromUser
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelPrintf
+	ksceKernelDisableSubIntr
+	ksceKernelEnableSubIntr
+	ksceKernelRegisterSubIntrHandler
+	ksceKernelDeleteMutex
+	ksceKernelWaitEventFlag
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	ksceKernelCreateEventFlag
+	sceKernelCancelAlarm
+	ksceKernelGetSystemTimeLow
+	ksceKernelClearEventFlag
+	ksceKernelDeleteEventFlag
+	sceKernelGetProcessId
+	ksceKernelRegisterTimer
+	ksceKernelSetEventFlag
+	ksceKernelEnqueueWorkQueue
+	sceKernelGetSystemTimeWide
+	ksceKernelCreateMutex
+	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_8CB01675
+	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_D141C076
+	ksceSblACMgrIsSystemProgram
+	ksceKernelRegisterSysEventHandler
+	ksceKernelPowerTick
+	ksceKernelRegisterProcEventHandler
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

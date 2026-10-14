@@ -1,0 +1,26 @@
+SceUsbPspcm:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceUsbPspcm:
+      syscall: true
+      version: 1
+      nid: 0xC06A361B
+      functions:
+        - sceUsbPspcmIoctlReset: 0x075B0D23
+        - sceUsbPspcmOpen: 0x29E0D985
+        - sceUsbPspcmIoctlCancelWaitData: 0x2A3A4A4A
+        - sceUsbPspcmStopDevice: 0x495D3A91
+        - sceUsbPspcmIoctlWaitData: 0x7C1410FB
+        - sceUsbPspcmSetTitle: 0x9F40F727
+        - sceUsbPspcmWrite: 0xC09CD942
+        - sceUsbPspcmRead: 0xD70556DA
+        - sceUsbPspcmClose: 0xEA4B99DC
+        - sceUsbPspcmDevctl: 0xF7079111
+        - sceUsbPspcmIoctlPollData: 0xF9C17E1F
+        - sceUsbPspcmStartDevice: 0xFD87B944

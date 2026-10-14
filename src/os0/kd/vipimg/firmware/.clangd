@@ -1,0 +1,3 @@
+# MeP firmware (GCC 4.5 for mep-elf): the host clangd cannot parse it.
+Diagnostics:
+  Suppress: "*"

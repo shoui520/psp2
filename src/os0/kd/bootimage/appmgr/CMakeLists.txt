@@ -1,0 +1,46 @@
+# generated skeleton (T2): stub bodies, original module/export/import tables
+psp2_module(os0_kd_bootimage_appmgr KIND kernel PARTIAL SOURCES
+	source/appmgr.c
+	source/appmgr_process.c
+	source/appmgr_applist.c
+	source/appmgr_aborthandler.c
+	source/appmgr_device.c
+	source/appmgr_shell.c
+	source/appmgr_lock.c
+	source/appmgr_internal_util.c
+	source/app_arbitration.c
+	source/appmgr_event.c
+	source/appmgr_service.c
+	source/appmgr_app_event.c
+	source/appmgr_shell_event.c
+	source/appmgr_control.c
+	source/appmgr_control_syscalls.c
+	source/mount.c
+	source/mount_process.c
+	source/savedata.c
+	source/system_param.c
+	source/bgdl.c
+	source/debug_setting.c
+	source/appmgr_for_debugger.c
+	source/mapfile.c
+	source/param_sfo.c
+	source/appmgr_system_data.c
+	source/appmgr_query_syscalls.c
+	source/appmgr_user_syscalls.c
+	source/appmgr_savedata_syscalls.c
+	source/appmgr_user_savedata_syscalls.c
+	source/appmgr_path_syscalls.c
+	source/appmgr_user_path_syscalls.c
+	source/appmgr_event_syscalls.c
+	source/appmgr_user_event_syscalls.c
+	source/appmgr_syscalls.c
+	source/entry.c
+	source/sharedfb.c
+	source/psf.c
+	source/psf_lifecycle.c
+	source/psf_io.c
+	source/psf_util.c
+	source/fat_format.c
+	source/fat_format_storage.c
+	source/partition.c
+)

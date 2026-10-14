@@ -1,0 +1,24 @@
+SceLibMp4Recorder:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibMp4Recorder:
+      syscall: false
+      version: 1
+      nid: 0x5EE05E0F
+      functions:
+        - sceMp4RecCreateRecorder: 0x21053FDE
+        - sceMp4RecAddAudioSample: 0x2C39D932
+        - sceMp4RecRecorderInit: 0x4045786D
+        - sceMp4RecDeleteRecorder: 0x5EBA2AE2
+        - sceMp4RecCsc: 0x7B3184E4
+        - sceMp4RecQueryPhysicalMemSize: 0x9A48028F
+        - sceMp4RecTerm: 0xB13DAFF3
+        - sceMp4RecAddVideoSample: 0xB263D8FB
+        - sceMp4RecRecorderEnd: 0xB51FEBAF
+        - sceMp4RecInit: 0xE9193B80

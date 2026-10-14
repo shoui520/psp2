@@ -1,0 +1,27 @@
+SceTeleportClient:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceTeleportClient:
+      syscall: false
+      version: 1
+      nid: 0xE68FB26D
+      functions:
+        - sceTeleportClientStartSearchDevice: 0x1775E8ED
+        - sceTeleportClientFinalize: 0x26779A35
+        - sceTeleportClientEndSearchDevice: 0x2EBCF588
+        - sceTeleportClientInitialize: 0x48DEB4C8
+        - sceTeleportClientGetCacheInfo: 0x8534FF0F
+        - sceTeleportClientGetRemoteAppInfoNum: 0x931E4029
+        - sceTeleportClientWakeupLatestDevice: 0x9336895E
+        - sceTeleportClientDeleteRemoteApp: 0xB0F81AF3
+        - sceTeleportClientRegisterGetDeviceInfoCallback: 0xBA0D42D9
+        - sceTeleportClientGetDeviceDescription: 0xBB89052D
+        - sceTeleportClientLaunchRemoteApp: 0xE076A357
+        - sceTeleportClientClearCacheInfo: 0xE1491C21
+        - sceTeleportClientGetRemoteAppInfo: 0xEE9AEE60

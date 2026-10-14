@@ -1,0 +1,103 @@
+# 4.00-DEBUGGER: os0:kd/authmgr.skprx (generated)
+set(MODULE_NID 0x6F9AFC88)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000 0x7ABF5135 0x4EB2B1BB)
+set(MODULE_IMPORT_LIBS
+	0x7EE45391:1:0x0
+	0x40ECDB0E:2:0x0
+	0x88758561:2:0x0
+	0x6F25E18A:5:0x0
+	0x3691DA45:2:0x0
+	0x2ED7F97A:2:0x0
+	0xE2C40624:1:0x0
+	0x15F25C84:1:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x40ECDB0E:F:0x02796361
+	0x40ECDB0E:F:0x103872A5
+	0x88758561:F:0x35A35322
+	0x88758561:F:0x391B5B74
+	0x88758561:F:0xD9703808
+	0x6F25E18A:F:0x0B4ED16A
+	0x6F25E18A:F:0x8D160E65
+	0x6F25E18A:F:0xAE36C775
+	0x6F25E18A:F:0xE68BEEBD
+	0x3691DA45:F:0x377895EB
+	0x3691DA45:F:0x9DB56D1F
+	0x2ED7F97A:F:0xD75D4F37
+	0x2ED7F97A:F:0xEE934615
+	0x2ED7F97A:F:0xEEF091A7
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x11FE84A1
+	0xE2C40624:F:0x16A35E58
+	0xE2C40624:F:0x30E93C31
+	0xE2C40624:F:0x3C8B55A9
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xD270498B
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xDB395782
+	0x15F25C84:F:0x15B0E4DF
+	0x15F25C84:F:0x1916509B
+	0x15F25C84:F:0x27EB92F1
+	0x15F25C84:F:0x723B382F
+	0x15F25C84:F:0x85EDA5FC
+	0x15F25C84:F:0x8B84AC2A
+	0x15F25C84:F:0x973A4A7D
+	0x15F25C84:F:0xF35EFC1A
+	0x7290B21C:F:0x2BB92967
+	0x7290B21C:F:0x4DF40893
+)
+set(MODULE_IMPORT_FUNCS
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelDcacheInvalidateRange
+	ksceKernelDcacheCleanRange
+	ksceKernelAssert
+	ksceKernelPanic
+	ksceKernelPrintfLevelWithInfo
+	ksceKernelAllocUncacheHeapMemoryWithOption
+	ksceKernelVAtoPA
+	ksceKernelVARangeToPARange
+	ksceKernelVARangeToPAVector
+	SceSysrootForKernel_377895EB
+	ksceKernelSysrootGetKblParam
+	SceSysrootForDriver_D75D4F37
+	sceKernelSysrootDisableAutoClockDown
+	sceKernelSysrootEnableAutoClockDown
+	ksceKernelWaitEventFlag
+	ksceKernelFinalizeFastMutex
+	ksceKernelDeleteSema
+	ksceKernelCreateSema
+	ksceKernelWaitSema
+	ksceKernelCreateEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	ksceKernelInitializeFastMutex
+	ksceKernelSignalSema
+	ksceKernelSetEventFlag
+	ksceKernelUnlockFastMutex
+	ksceSblSmSchedProxyWriteCry2Arm
+	ksceSblSmSchedProxyInvoke
+	ksceSblSmSchedProxyGetStatus
+	ksceSblSmSchedCallFunc
+	ksceSblSmSchedProxyDisableCry2ArmInterrupt
+	ksceSblSmSchedProxyEnableCry2ArmInterrupt
+	ksceSblSmSchedProxyReadCry2Arm
+	ksceSblSmSchedProxyWait
+	SceKernelSuspendForDriver_2BB92967
+	SceKernelSuspendForDriver_4DF40893
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

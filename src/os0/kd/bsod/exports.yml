@@ -1,0 +1,14 @@
+SceKernelBlueScreenOfDeath:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceDeci4pUserp:
+      syscall: true
+      version: 1
+      nid: 0x797E39C0
+      functions:
+        - SceDeci4pUserp_C53CFD12: 0xC53CFD12

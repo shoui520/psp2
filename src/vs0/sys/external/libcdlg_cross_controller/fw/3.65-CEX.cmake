@@ -1,0 +1,73 @@
+# 3.65-CEX: vs0:sys/external/libcdlg_cross_controller.suprx (generated)
+set(MODULE_NID 0x059AC0BD)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0x4B4AAE97:1:0x0
+	0xDCF776D9:1:0x0
+	0xA7D28DAE:1:0x0
+	0x3D643CE8:1:0x0
+	0x3C1965CD:1:0x0
+	0xA070D6A7:1:0x0
+	0x4D9A9DD0:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xA6605D6F:1:0x0
+	0x6BF8B2A2:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	SceCommonGuiDialog_01702008
+	SceCommonGuiDialog_20B141F1
+	SceCommonGuiDialog_696DB9C9
+	SceCommonGuiDialog_6CE14F66
+	SceCommonGuiDialog_BC311DC0
+	SceCommonGuiDialog_CCFCD9A6
+	SceCommonGuiDialog_F1A40838
+	SceCommonDialogMain_05EFC635
+	SceCommonDialogMain_75F10F83
+	SceCommonDialogMain_DD2CAC30
+	ScePafStdc_1B77082E
+	ScePafStdc_2730262C
+	sce_paf_memcpy
+	sce_paf_wcslen
+	ScePafStdc_D608246A
+	ScePafStdc_F36BABE3
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	ScePafMisc_4B90AA0D
+	ScePafCommon_23A39B05
+	ScePafCommon_4A8115D5
+	ScePafCommon_6735B503
+	ScePafGraphics_9FAF51CF
+	ScePafToplevel_19CEFDA7
+	ScePafToplevel_30B442D9
+	ScePafToplevel_34FE1331
+	ScePafToplevel_F9639E7F
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMemset
+	sceClibSnprintf
+	sceClibMemcmp
+	sceClibStrnlen
+	sceClibStrncpy
+	sceClibLookCtypeTable
+	sceAppMgrLaunchAppByUri
+	sceAppMgrAppParamGetString
+	sceAppMgrAppParamGetInt
+	sceNetSetsockopt
+	sceNetSocketClose
+	sceNetSendto
+	sceNetHtons
+	sceNetRecvfrom
+	sceNetSocket
+)
+set(MODULE_IMPORT_VARS
+	SceCommonGuiDialog_22B17F2B
+	SceCommonGuiDialog_2A68B4A4
+	SceCommonGuiDialog_AF75CA6D
+	SceCommonGuiDialog_EF2C5382
+	SceCommonGuiDialog_F8B2D7E1
+	ScePafStdc_610F2F91
+	ScePafStdc_B4A712A7
+	__stack_chk_guard
+)

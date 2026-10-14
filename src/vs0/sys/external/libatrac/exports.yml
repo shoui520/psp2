@@ -1,0 +1,38 @@
+SceAtrac:
+  attributes: 6
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceAtrac:
+      syscall: false
+      version: 1
+      nid: 0x9AAEDAA0
+      functions:
+        - sceAtracReleaseHandle: 0x008EF251
+        - sceAtracCreateDecoderGroup: 0x01BFB98C
+        - sceAtracSetOutputSamples: 0x075B0C63
+        - sceAtracQueryDecoderGroupMemSize: 0x1A34B331
+        - sceAtracSetSubBuffer: 0x272B4CBA
+        - sceAtracDecode: 0x29C74EE3
+        - sceAtracGetOutputSamples: 0x37B3F335
+        - sceAtracAddStreamData: 0x53656F1C
+        - sceAtracGetOutputableSamples: 0x5B36CDB5
+        - sceAtracSetLoopNum: 0x5C22E927
+        - sceAtracGetInternalError: 0x67981334
+        - sceAtracGetContentInfo: 0x68DFC199
+        - sceAtracDeleteDecoderGroup: 0x6CA2F08A
+        - sceAtracIsSubBufferNeeded: 0x722F5004
+        - sceAtracGetDecoderStatus: 0x90B512AC
+        - sceAtracGetVacantSize: 0x9BDB14F7
+        - sceAtracGetNextOutputPosition: 0xACA5F9CC
+        - sceAtracGetDecoderGroupInfo: 0xBF34605D
+        - sceAtracSetDataAndAcquireHandle: 0xD1997678
+        - sceAtracResetNextOutputPosition: 0xD81D7280
+        - sceAtracGetStreamInfo: 0xD9409E57
+        - sceAtracGetRemainSamples: 0xDC27E7C2
+        - sceAtracGetLoopInfo: 0xDC768033
+        - sceAtracGetSubBufferInfo: 0xE7D9DC4F

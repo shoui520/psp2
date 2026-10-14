@@ -1,0 +1,45 @@
+# Complete native graph; behavioral verification remains open.
+psp2_module(os0_kd_bootimage_pfsmgr KIND kernel SKELETON SOURCES
+	source/pfsmgr.c
+	source/pmi.c
+	source/gdsd_vfs.c
+	source/gdsd.c
+	source/core.c
+	source/vd.c
+	source/ac_vfs.c
+	source/access.c
+	source/lower.c
+	source/lru.c
+	source/buffer.c
+	source/unicv.c
+	source/unicv_tree.c
+	source/icv.c
+	source/block.c
+	source/block_request.c
+	source/crypt_engine.c
+	source/mapping.c
+	source/facade.c
+	source/global.c
+	source/sector_crypt.c
+	source/crypto.c
+	source/error.c
+	source/redirect_vfs.c
+	source/redirect.c
+	source/files_db.c
+	source/acid.c
+	source/page_alloc.c
+	source/page_acc.c
+	source/crypt_buffer.c
+	source/hash_tree.c
+	source/unicv_entry.c
+	source/db_table.c
+	source/hash_nodes.c
+	source/hash_list.c
+	source/hash_page.c
+	source/db_tree.c
+	source/db_node_page.c
+	source/hash_array.c
+	source/hash_node_view.c
+	source/hash_node_page.c
+	source/hash_array_tree.c
+)

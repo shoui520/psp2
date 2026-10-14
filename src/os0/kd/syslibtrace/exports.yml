@@ -1,0 +1,29 @@
+SceSysLibTrace:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: SyslibtraceStart
+  libraries:
+    SceSyslibtraceForKernel:
+      syscall: false
+      version: 1
+      nid: 0x9D33EE8D
+      functions:
+        - sceSyslibtraceCallbackRegisterLibs: 0x1EDA3691
+        - sceSyslibtraceStartSyscallTrace: 0x5DEF9EDF
+        - SceSyslibtraceForKernel_7CC73CDA: 0x7CC73CDA
+        - sceSyslibtraceClearTargetSyscallLib: 0x7E843A85
+        - sceSyslibtraceSetTargetSyscallLib: 0xAB6A0C53
+        - SceSyslibtraceForKernel_BD326721: 0xBD326721
+        - sceSyslibtraceStopSyscallTrace: 0xDD47649F
+        - sceSyslibtraceCallbackDeregisterLibs: 0xEA56BE7C
+        - SceSyslibtraceForKernel_F9CB8BA9: 0xF9CB8BA9
+    SceNidsymtblForDriver:
+      syscall: false
+      version: 1
+      nid: 0x3F9BEA99
+      functions:
+        - SceNidsymtblForDriver_138A9106: 0x138A9106
+        - SceNidsymtblForDriver_985E2935: 0x985E2935

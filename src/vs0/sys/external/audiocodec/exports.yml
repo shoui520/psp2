@@ -1,0 +1,17 @@
+SceAudiocodec:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceAudiocodec:
+      syscall: false
+      version: 1
+      nid: 0x0984774F
+      functions:
+        - SceAudiocodec_1F9A3722: 0x1F9A3722
+        - SceAudiocodec_2DDF5699: 0x2DDF5699
+        - SceAudiocodec_3B7D6200: 0x3B7D6200
+        - SceAudiocodec_4ECFEF31: 0x4ECFEF31
+        - SceAudiocodec_E2AF3A54: 0xE2AF3A54
+        - SceAudiocodec_E827E04F: 0xE827E04F

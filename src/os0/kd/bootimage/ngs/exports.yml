@@ -1,0 +1,76 @@
+SceNgs:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNgsInternal:
+      syscall: true
+      version: 1
+      nid: 0xE1825F41
+      functions:
+        - sceNgsSystemGetCallbackListInternal: 0x00993680
+        - sceNgsSystemLockInternal: 0x0115E271
+        - sceNgsSystemSetParamErrorCallbackInternal: 0x02E45DA3
+        - sceNgsVoicePauseInternal: 0x05D2487D
+        - sceNgsRackInitInternal: 0x0B1A2AF8
+        - sceNgsSulphaGetInfoInternal: 0x0DE53F9A
+        - sceNgsVoiceDefGetScreamVoiceAT9Internal: 0x10457017
+        - sceNgsVoiceInitInternal: 0x11E14BB3
+        - sceNgsVoiceDefGetTemplate1Internal: 0x1224105B
+        - sceNgsVoiceResumeInternal: 0x144F0D33
+        - sceNgsVoiceDefGetPitchshiftBussInternal: 0x1876116F
+        - sceNgsSystemGetRequiredMemorySizeInternal: 0x19FF8A35
+        - sceNgsVoiceDefGetEqBussInternal: 0x251F58F5
+        - sceNgsVoiceDefGetSasEmuVoiceInternal: 0x3051D319
+        - sceNgsVoiceSetAllBypassesInternal: 0x39E58E87
+        - sceNgsModuleCheckParamsInRangeInternal: 0x3AFBAD5C
+        - sceNgsVoiceDefGetSimpleVoiceInternal: 0x41C1D637
+        - sceNgsVoiceKeyOffInternal: 0x467EFA9D
+        - sceNgsRackGetRequiredMemorySizeInternal: 0x47F13846
+        - sceNgsModuleGetPresetInternal: 0x548AC8DF
+        - sceNgsPatchCreateRoutingInternal: 0x550E9413
+        - sceNgsSulphaGetModuleListInternal: 0x5B889852
+        - sceNgsVoiceDefGetScreamVoiceInternal: 0x5E4ADC7F
+        - sceNgsVoiceDefGetCompressorBussInternal: 0x61DD58F9
+        - sceNgsSystemPushDataInternal: 0x66B43B6F
+        - sceNgsSystemInitInternal: 0x68031121
+        - sceNgsVoiceDefGetReverbBussInternal: 0x6A637E1C
+        - sceNgsVoiceDefGetSimpleAtrac9VoiceInternal: 0x6A768149
+        - sceNgsSystemGetSysHandleFromRack: 0x6F31AD08
+        - sceNgsVoiceSetPresetInternal: 0x6FA9CAA5
+        - sceNgsPatchRemoveRoutingInternal: 0x749E9779
+        - sceNgsSystemReleaseInternal: 0x74CB5DAB
+        - sceNgsVoiceKillInternal: 0x756B12A6
+        - sceNgsVoiceSetFinishedCallbackInternal: 0x79BAC4B6
+        - sceNgsVoiceGetModuleBypassInternal: 0x7B41F321
+        - sceNgsRackReleaseInternal: 0x7C434055
+        - sceNgsVoiceGetOutputPatchInternal: 0x8B8D43CF
+        - sceNgsVoiceDefGetDistortionBussInternal: 0x8D014678
+        - sceNgsRackGetVoiceHandleInternal: 0x8DA78916
+        - sceNgsVoiceClearDirtyFlagInternal: 0x9485F0C8
+        - sceNgsVoiceDefGetPauserBussInternal: 0x96FE3B3C
+        - sceNgsSulphaSetSynthUpdateCallbackInternal: 0x9B4B54AF
+        - sceNgsVoiceDefinitionGetPresetInternal: 0x9EC976F9
+        - sceNgsModuleGetNumPresetsInternal: 0x9EEDE7B9
+        - sceNgsRackSetParamErrorCallbackInternal: 0xA7454973
+        - sceNgsVoiceDefGetAtrac9VoiceInternal: 0xA907D598
+        - sceNgsSystemUpdateInternal: 0xA98F9D60
+        - sceNgsVoiceBypassModuleInternal: 0xAAFB8669
+        - sceNgsVoicePlayInternal: 0xAEC9D124
+        - sceNgsVoiceDefGetDelayBussInternal: 0xAF8277C3
+        - sceNgsSystemUnlockInternal: 0xB3235BA7
+        - sceNgsVoiceDefGetMixerBussInternal: 0xB8636646
+        - sceNgsSulphaGetSynthUpdateCallbackInternal: 0xB9027A52
+        - sceNgsSystemIsFixForBugzilla89940: 0xC7F24F21
+        - sceNgsVoiceSetModuleCallbackInternal: 0xD4E8F83C
+        - sceNgsVoiceGetParamsOutOfRangeBufferedInternal: 0xD68C312F
+        - sceNgsVoiceDefGetEnvelopeBussInternal: 0xE063536C
+        - sceNgsVoiceDefGetMasterBussInternal: 0xE204946B
+        - sceNgsSystemSetFlagsInternal: 0xE32A0DD3
+        - sceNgsVoiceDefGetCompressorSideChainBussInternal: 0xE962F447
+        - sceNgsSulphaQueryModuleInternal: 0xEBC5957D
+        - sceNgsSystemPullDataInternal: 0xF021CF1E

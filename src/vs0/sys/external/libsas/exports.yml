@@ -1,0 +1,76 @@
+SceSasUser:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceSas:
+      syscall: false
+      version: 1
+      nid: 0xEE47EC43
+      functions:
+        - sceSasGetEndState: 0x007E63E6
+        - sceSasSetDistortion: 0x011788BE
+        - SceSas_0AEA9963: 0x0AEA9963
+        - SceSas_0B96AF29: 0x0B96AF29
+        - sceSasSetVolume: 0x0BE8204D
+        - SceSas_0C294FAF: 0x0C294FAF
+        - SceSas_0DE54FF9: 0x0DE54FF9
+        - SceSas_0F771045: 0x0F771045
+        - SceSas_107D1850: 0x107D1850
+        - sceSasGetPreMasterPeak: 0x1568017A
+        - SceSas_1744ACD7: 0x1744ACD7
+        - sceSasGetNeededMemorySize: 0x180C6824
+        - sceSasSetADSR: 0x18A5EFA2
+        - SceSas_26B2B2A9: 0x26B2B2A9
+        - sceSasGetEnvelope: 0x296A9910
+        - sceSasSetGrain: 0x2B4A207C
+        - sceSasSetVoice: 0x2B75F9BC
+        - sceSasGetGrain: 0x2BEA45BC
+        - sceSasGetOutputmode: 0x2C36E150
+        - sceSasSetPitch: 0x2C48A08C
+        - SceSas_3D4F37FF: 0x3D4F37FF
+        - SceSas_40ED8367: 0x40ED8367
+        - sceSasGetWetPeak: 0x4314F0E9
+        - SceSas_44514A50: 0x44514A50
+        - sceSasInit: 0x449B5974
+        - sceSasSetOutputmode: 0x44DDB3C4
+        - SceSas_4636ACC2: 0x4636ACC2
+        - SceSas_50D722D7: 0x50D722D7
+        - sceSasSetADSRmode: 0x5207F9D2
+        - sceSasSetEffectVolume: 0x55EDDBFA
+        - sceSasSetPause: 0x59C7A9DF
+        - SceSas_5C5250C1: 0x5C5250C1
+        - sceSasSetKeyOff: 0x5E42ADAB
+        - SceSas_5F82207D: 0x5F82207D
+        - SceSas_62CCF050: 0x62CCF050
+        - SceSas_79665BCA: 0x79665BCA
+        - SceSas_799DD9C0: 0x799DD9C0
+        - sceSasCore: 0x7A4672B2
+        - SceSas_81AF90AC: 0x81AF90AC
+        - sceSasInitWithGrain: 0x820D5F82
+        - SceSas_868E1C88: 0x868E1C88
+        - sceSasSetEffect: 0xB0444E69
+        - sceSasSetVoicePCM: 0xB1756EFC
+        - SceSas_B26DF4BF: 0xB26DF4BF
+        - SceSas_B47D5122: 0xB47D5122
+        - sceSasGetDryPeak: 0xB6642276
+        - sceSasSetEffectParam: 0xBAD546A0
+        - sceSasExit: 0xBB7D6790
+        - SceSas_BD2907EA: 0xBD2907EA
+        - sceSasCoreWithMix: 0xBD496983
+        - SceSas_BEEBC820: 0xBEEBC820
+        - SceSas_BF95B455: 0xBF95B455
+        - sceSasSetKeyOn: 0xC838DB6F
+        - SceSas_CB23EA6D: 0xCB23EA6D
+        - sceSasSetEffectType: 0xCDF2DDD5
+        - SceSas_DAF4773A: 0xDAF4773A
+        - sceSasSetSL: 0xDE6227B8
+        - SceSas_E04ACC5A: 0xE04ACC5A
+        - SceSas_E3A5D1D4: 0xE3A5D1D4
+        - SceSas_E9F3944D: 0xE9F3944D
+        - SceSas_EB6708B0: 0xEB6708B0
+        - sceSasSetSimpleADSR: 0xECCE0DB8
+        - sceSasSetNoise: 0xF1C63CB9
+        - sceSasGetPauseState: 0xFD1A0CBF
+        - SceSas_FE263F55: 0xFE263F55

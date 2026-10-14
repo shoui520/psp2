@@ -1,0 +1,21 @@
+SceKernelIntrMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    bootstart: module_bootstart
+  libraries:
+    SceIntrmgrForTZS:
+      syscall: false
+      version: 1
+      nid: 0xEC3056FE
+      functions:
+        - sceKernelGenerateSoftIntr: 0x28BBA975
+        - sceKernelDisableIntr: 0x4F39B381
+        - sceKernelRegisterIntrHandler: 0x6B84DA8F
+        - sceKernelReleaseIntrHandler: 0x75A0F189
+        - sceKernelEnableIntr: 0x98E38390
+        - sceKernelUsleep: 0xC0908EA9
+        - sceKernelRegisterMonitorCallHandler: 0xC188114F

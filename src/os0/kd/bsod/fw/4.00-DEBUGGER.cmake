@@ -1,0 +1,115 @@
+# 4.00-DEBUGGER: os0:kd/bsod.skprx (generated)
+set(MODULE_NID 0xA9F6CE77)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ATTRS 0x797E39C0:0x4005)
+set(MODULE_EXPORT_ORDER 0x00000000 0x797E39C0)
+set(MODULE_IMPORT_LIBS
+	0xC9E26388:1:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0x2ED7F97A:2:0x0
+	0x3691DA45:2:0x0
+	0x6F25E18A:5:0x0
+	0x1496A5B5:1:0x0
+	0x9DF04041:1:0x0
+	0xE2C40624:1:0x0
+	0x40FD29C7:1:0x0
+	0x92C9FFC2:1:0x0
+	0x88758561:2:0x0
+	0x13D793B7:3:0x0
+	0xFD00C69A:1:0x0
+	0x9AD8E213:1:0x0
+	0x4E29D3B6:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xC9E26388:F:0xA98FC2FD
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x821FC0EE
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xF5BAD43B
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0xA9FF1205
+	0x7EE45391:F:0xAE7A8981
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x2ED7F97A:F:0xCAE820B2
+	0x3691DA45:F:0x3E455842
+	0x3691DA45:F:0x84783B71
+	0x3691DA45:F:0xC8C8C321
+	0x3691DA45:F:0xCC893F37
+	0x3691DA45:F:0xE20F6FC8
+	0x6F25E18A:F:0xA78755EB
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x1496A5B5:F:0x00063675
+	0x9DF04041:F:0x180435EC
+	0xE2C40624:F:0xFA54D49A
+	0x40FD29C7:F:0x673D2FCD
+	0x40FD29C7:F:0x9C7E7B76
+	0x40FD29C7:F:0x9CBFA725
+	0x40FD29C7:F:0xB62DE9A6
+	0x92C9FFC2:F:0x5564A860
+	0x88758561:F:0x02B04343
+	0x88758561:F:0x374B7868
+	0x88758561:F:0x391B5B74
+	0x88758561:F:0x62466B0A
+	0x88758561:F:0xD9703808
+	0x88758561:F:0xFD753E7A
+	0x13D793B7:F:0x22546577
+	0x13D793B7:F:0x5D6F0CFC
+	0x13D793B7:F:0x67E9D1EC
+	0x13D793B7:F:0x8D474850
+	0x13D793B7:F:0xA465A31A
+	0xFD00C69A:F:0x71608CA3
+	0xFD00C69A:F:0xD78B04A2
+	0x9AD8E213:F:0x8612B243
+	0x4E29D3B6:F:0x382C71E8
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelCheckDipsw
+	ksceKernelCpuId
+	ksceKernelCpuSuspendIntr
+	ksceKernelSpinlockLowLock
+	ksceKernelCpuResumeIntr
+	memset
+	__aeabi_uidiv
+	snprintf
+	__stack_chk_fail
+	SceSysrootForDriver_CAE820B2
+	ksceSysrootGetSysroot
+	ksceSysrootGetSessionId
+	ksceKernelSysrootGetSharedMemory
+	sceKernelSysrootBacktrace
+	SceSysrootForKernel_E20F6FC8
+	ksceGUIDGetName
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceExcpmgrRegisterHandler
+	ksceKernelDisableIntr
+	ksceKernelGetProcessIdFromTLS
+	ksceVfsAddVfs
+	vfsUmount
+	ksceVfsDeleteVfs
+	vfsMount
+	ksceKernelGetModuleInfoMinByAddr
+	ksceKernelPrintfWithInfo
+	ksceKernelGetAssertLevel
+	ksceKernelPanic
+	ksceKernelGetTtyInfo
+	ksceKernelPrintfLevelWithInfo
+	ksceKernelAssertLevel
+	ksceKernelRegisterDebugPutcharHandler
+	SceDebugForKernel_5D6F0CFC
+	SceDebugForKernel_67E9D1EC
+	ksceKernelGetDebugPutcharHandler
+	ksceKernelEnableCrashDump
+	ksceSblAimgrIsDolce
+	ksceSblAimgrIsCEX
+	ksceSblACMgrIsSystemProgram
+	SceQafMgrForDriver_382C71E8
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

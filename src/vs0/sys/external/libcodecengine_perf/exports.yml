@@ -1,0 +1,21 @@
+SceCodecEnginePerf:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceCodecEnginePerf:
+      syscall: false
+      version: 1
+      nid: 0x9BF4FFAD
+      functions:
+        - sceCodecEnginePmonStart: 0x0635EB77
+        - sceCodecEngineChangeNumWorkerCores: 0x143B3FDB
+        - sceCodecEnginePmonGetProcessorLoad: 0x2C9DA711
+        - sceCodecEngineGetMemoryState: 0x33FA7D03
+        - sceCodecEnginePmonReset: 0x5D75DF62
+        - sceCodecEngineGetNumRpcCalled: 0x6165B7C3
+        - sceCodecEngineGetProcessorLoad: 0x6621A0CC
+        - sceCodecEngineSetClockFrequency: 0x783341F4
+        - sceCodecEngineResetNumRpcCalled: 0x97BB9AB5
+        - sceCodecEnginePmonStop: 0xD2EFAEA1

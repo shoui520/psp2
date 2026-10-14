@@ -1,0 +1,40 @@
+SceAacenc:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceAacencInternal:
+      syscall: false
+      version: 1
+      nid: 0x3D9502EF
+      functions:
+        - SceAacencInternal_118F588C: 0x118F588C
+        - SceAacencInternal_30D75275: 0x30D75275
+        - SceAacencInternal_50891A4F: 0x50891A4F
+        - SceAacencInternal_71BDD121: 0x71BDD121
+        - SceAacencInternal_7EC218B7: 0x7EC218B7
+        - SceAacencInternal_88BF7DA5: 0x88BF7DA5
+        - SceAacencInternal_9EB15569: 0x9EB15569
+        - SceAacencInternal_B3004C1B: 0xB3004C1B
+        - SceAacencInternal_B8BEEDE6: 0xB8BEEDE6
+        - SceAacencInternal_C1876820: 0xC1876820
+        - SceAacencInternal_C58CA5A8: 0xC58CA5A8
+        - SceAacencInternal_C867CE87: 0xC867CE87
+    SceAacenc:
+      syscall: false
+      version: 1
+      nid: 0xBFE3220E
+      functions:
+        - SceAacenc_03C4FED0: 0x03C4FED0
+        - SceAacenc_0EDE0FBD: 0x0EDE0FBD
+        - SceAacenc_49ADDF5C: 0x49ADDF5C
+        - SceAacenc_5CB16FD6: 0x5CB16FD6
+        - SceAacenc_61BA27BC: 0x61BA27BC
+        - SceAacenc_93EFB09C: 0x93EFB09C
+        - SceAacenc_98A9AF7C: 0x98A9AF7C
+        - SceAacenc_E539FF41: 0xE539FF41
+        - SceAacenc_EF8BD582: 0xEF8BD582
+        - SceAacenc_F5F58A6B: 0xF5F58A6B
+        - SceAacenc_FCB3AEF4: 0xFCB3AEF4
+        - SceAacenc_FCF8B786: 0xFCF8B786

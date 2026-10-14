@@ -1,0 +1,140 @@
+SceRegistryMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceRegMgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0xB2223AEB
+      functions:
+        - sceRegMgrGetKeyBin: 0x0B98D646
+        - sceRegMgrGetKeyInt: 0x16DDF3DC
+        - sceRegMgrIsBlueScreen: 0x282027B7
+        - sceRegMgrResetRegistryLv: 0x2B5F3E20
+        - ksceRegMgrSystemParamGetInt: 0x347C1BDB
+        - sceRegMgrSetKeys: 0x34E550DA
+        - sceRegMgrGetInitVals: 0x3A9DE7C5
+        - sceRegMgrSetKeyStr: 0x41D320C5
+        - sceRegMgrSetKeyBin: 0x566A1793
+        - sceRegMgrGetKeysInfo: 0x58421DD1
+        - sceRegMgrGetKeys: 0x5B161504
+        - sceRegMgrStopCallback: 0x6A8E2FB4
+        - sceRegMgrGetRegVersion: 0x74A0FB10
+        - ksceRegMgrSystemParamGetBin: 0x7FFE2CDF
+        - sceRegMgrRegisterCallback: 0x82A4464D
+        - ksceRegMgrSystemParamGetStr: 0x877ADB3F
+        - sceRegMgrAddRegistryCallback: 0xA86F0A71
+        - sceRegMgrDbRestore: 0xA87D2562
+        - sceRegMgrDbBackup: 0xB68B5422
+        - sceRegMgrStartCallback: 0xCE84FE2F
+        - sceRegMgrSetKeyInt: 0xD72EA399
+        - sceRegMgrUnregisterCallback: 0xD7BD3607
+        - sceRegMgrUnregisterDrvErrCallback: 0xD9E6B7BD
+        - sceRegMgrRegisterDrvErrCallback: 0xDDB02D7F
+        - sceRegMgrGetKeyStr: 0xE188382F
+    SceRegMgrServiceForDriver:
+      syscall: false
+      version: 1
+      nid: 0x12431F66
+      functions:
+        - sceRegMgrSrvCnvRegionStr: 0x15B4A5C5
+        - sceRegMgrSrvCnvRegionInt: 0x7683FC84
+        - sceRegMgrSrvCnvRegionPsCode: 0x94D008D2
+        - sceRegMgrSrvGetRegionStr: 0xBC3FE639
+        - sceRegMgrSrvGetRegion: 0xBEC3F77A
+    SceRegMgr:
+      syscall: true
+      version: 1
+      nid: 0xC436F916
+      functions:
+        - sceRegMgrGetKeyBinInternal2: 0x0B98D646
+        - sceRegMgrGetKeyIntInternal2: 0x16DDF3DC
+        - sceRegMgrIsBlueScreenInternal2: 0x282027B7
+        - sceRegMgrResetRegistryLvInternal2: 0x2B5F3E20
+        - sceRegMgrSetKeysInternal2: 0x34E550DA
+        - sceRegMgrGetInitValsInternal2: 0x3A9DE7C5
+        - sceRegMgrSetKeyStrInternal2: 0x41D320C5
+        - sceRegMgrSetKeyBinInternal2: 0x566A1793
+        - sceRegMgrGetKeysInfoInternal2: 0x58421DD1
+        - sceRegMgrGetKeysInternal2: 0x5B161504
+        - sceRegMgrStopCallbackInternal2: 0x6A8E2FB4
+        - sceRegMgrGetRegVersionInternal2: 0x74A0FB10
+        - sceRegMgrRegisterCallbackInternal2: 0x82A4464D
+        - sceRegMgrAddRegistryCallbackInternal2: 0xA86F0A71
+        - sceRegMgrDbRestoreInternal2: 0xA87D2562
+        - sceRegMgrDbBackupInternal2: 0xB68B5422
+        - sceRegMgrStartCallbackInternal2: 0xCE84FE2F
+        - sceRegMgrSetKeyIntInternal2: 0xD72EA399
+        - sceRegMgrUnregisterCallbackInternal2: 0xD7BD3607
+        - sceRegMgrUnregisterDrvErrCallbackInternal2: 0xD9E6B7BD
+        - sceRegMgrRegisterDrvErrCallbackInternal2: 0xDDB02D7F
+        - sceRegMgrGetKeyStrInternal2: 0xE188382F
+    SceRegMgrService:
+      syscall: true
+      version: 1
+      nid: 0x23A10D9B
+      functions:
+        - sceRegMgrSrvCnvRegionStrInternal2: 0x15B4A5C5
+        - sceRegMgrSrvCnvRegionIntInternal2: 0x7683FC84
+        - sceRegMgrSrvCnvRegionPsCodeInternal2: 0x94D008D2
+        - sceRegMgrSrvGetRegionStrInternal2: 0xBC3FE639
+        - sceRegMgrSrvGetRegionInternal2: 0xBEC3F77A
+    SceRegMgrForGame:
+      syscall: true
+      version: 1
+      nid: 0x0B351269
+      functions:
+        - sceRegMgrSystemIsBlueScreen: 0x169A0D1D
+        - sceRegMgrSystemParamGetInt: 0x347C1BDB
+        - sceRegMgrSystemParamGetBin: 0x7FFE2CDF
+        - sceRegMgrSystemParamGetStr: 0x877ADB3F
+        - sceRegMgrSystemParamSetInt: 0xC8F73311
+        - sceRegMgrSystemParamSetStr: 0xCB3246E3
+        - sceRegMgrSystemParamSetBin: 0xD5A73557
+    SceRegMgrForSDK:
+      syscall: true
+      version: 1
+      nid: 0x67E45817
+      functions:
+        - sceRegMgrUtilityGetStr: 0x1FE8949E
+        - sceRegMgrUtilitySetStr: 0x4898C1E2
+        - sceRegMgrUtilitySetBin: 0x7304DC12
+        - sceRegMgrUtilityGetInt: 0x8154D696
+        - sceRegMgrUtilitySetInt: 0xB370A2CF
+        - sceRegMgrUtilityGetBin: 0xEFCFA182
+    SceRegMgrForDebugger:
+      syscall: false
+      version: 1
+      nid: 0xCC88EAB1
+      functions:
+        - SceRegMgrForDebugger_46AC0CCB: 0x46AC0CCB
+        - SceRegMgrForDebugger_53970232: 0x53970232
+        - SceRegMgrForDebugger_810D2F09: 0x810D2F09
+        - SceRegMgrForDebugger_8AE5757E: 0x8AE5757E
+        - SceRegMgrForDebugger_8E798E47: 0x8E798E47
+        - SceRegMgrForDebugger_B9A0BB77: 0xB9A0BB77
+        - SceRegMgrForDebugger_C588D3E7: 0xC588D3E7
+        - SceRegMgrForDebugger_C64C67A8: 0xC64C67A8
+        - SceRegMgrForDebugger_D668ABD2: 0xD668ABD2
+    SceRegMgrForTool:
+      syscall: false
+      version: 1
+      nid: 0x1F121C9E
+      functions:
+        - SceRegMgrForTool_0B623D0B: 0x0B623D0B
+        - SceRegMgrForTool_0CFA929B: 0x0CFA929B
+        - SceRegMgrForTool_2A76051A: 0x2A76051A
+        - SceRegMgrForTool_2D415472: 0x2D415472
+        - SceRegMgrForTool_3AAB71EF: 0x3AAB71EF
+        - SceRegMgrForTool_4EDF87F9: 0x4EDF87F9
+        - SceRegMgrForTool_6276E7D8: 0x6276E7D8
+        - SceRegMgrForTool_6808B7AD: 0x6808B7AD
+        - SceRegMgrForTool_7B30AC2C: 0x7B30AC2C
+        - SceRegMgrForTool_B441660B: 0xB441660B
+        - SceRegMgrForTool_C689E36C: 0xC689E36C
+        - SceRegMgrForTool_E6E81558: 0xE6E81558
+        - SceRegMgrForTool_F55E6E4F: 0xF55E6E4F

@@ -1,0 +1,28 @@
+SceSblMgKeyMgr:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSblMgKeyMgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0xE1856C6D
+      functions:
+        - SceSblMgKeyMgrForDriver_1263FB04: 0x1263FB04
+        - SceSblMgKeyMgrForDriver_1C5388D0: 0x1C5388D0
+        - SceSblMgKeyMgrForDriver_20B66ADA: 0x20B66ADA
+        - SceSblMgKeyMgrForDriver_4C82A466: 0x4C82A466
+        - SceSblMgKeyMgrForDriver_5FECCE03: 0x5FECCE03
+        - SceSblMgKeyMgrForDriver_71FA16B0: 0x71FA16B0
+        - SceSblMgKeyMgrForDriver_8CFCAA52: 0x8CFCAA52
+        - SceSblMgKeyMgrForDriver_8ECFFD7A: 0x8ECFFD7A
+        - SceSblMgKeyMgrForDriver_B6AC3AE1: 0xB6AC3AE1
+        - SceSblMgKeyMgrForDriver_BC7D86EE: 0xBC7D86EE
+        - SceSblMgKeyMgrForDriver_D37C3DAE: 0xD37C3DAE
+        - SceSblMgKeyMgrForDriver_DF3B808D: 0xDF3B808D
+        - SceSblMgKeyMgrForDriver_EA534495: 0xEA534495
+        - SceSblMgKeyMgrForDriver_F8F856FC: 0xF8F856FC

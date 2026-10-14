@@ -1,0 +1,21 @@
+SQLite 3.7.6.3 source, trimmed to what the build needs
+
+sqlite-src-3070603/ is the official source archive, unchanged:
+https://www.sqlite.org/sqlite-src-3070603.zip
+(sha256 f40dbcfed53853727cec0135b527d209170f8703c1013b24d066a0df9b82cdc9)
+
+The build runs configure and generates the parser, keyword hash and amalgamation
+from it with Sony's options, so the configure files, src/, tool/ and ext/ (the
+amalgamation lists the extension sources) are kept. Left out: test/, art/, doc/,
+contrib/, the other platforms' makefiles (Makefile.arm-wince-mingw32ce-gcc,
+Makefile.linux-gcc, Makefile.vxworks), the publish and DLL scripts (publish.sh,
+publish_osx.sh, mkdll.sh, mkextu.sh, mkextw.sh, mkso.sh) and spec.template. Every kept
+file is identical to the archive.
+
+The upstream VERSION file identifies release 3.7.6.3. The upstream README and
+public-domain notices in the source files are retained. The enclosing vendor
+directory keeps LICENSE and the official sqlite3.h; the official amalgamation
+(sqlite3.c) is left out, since the build generates its own.
+
+Generate configured parsers and amalgamations in build directories. Sony changes
+belong to the consuming module's separate patches or explicitly marked SCE code.

@@ -1,0 +1,17 @@
+SceDbgSdio:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: _sceDbgSdioModuleStart
+  libraries:
+    SceDbgSdioForDriver:
+      syscall: false
+      version: 1
+      nid: 0x6947917B
+      functions:
+        - SceDbgSdioForDriver_361E1BB6: 0x361E1BB6
+        - receiveData: 0x3BA07B2D
+        - SceDbgSdioForDriver_3D3FAF3A: 0x3D3FAF3A
+        - sceDbgSdioWrite: 0xEBD24322

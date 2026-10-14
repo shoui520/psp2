@@ -1,0 +1,124 @@
+SceNpManager:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpManager:
+      syscall: false
+      version: 1
+      nid: 0xD8835093
+      functions:
+        - sceNpInit: 0x04D9F484
+        - SceNpManager_06EBD8B1: 0x06EBD8B1
+        - SceNpManager_0E26EA86: 0x0E26EA86
+        - SceNpManager_0F6AC47E: 0x0F6AC47E
+        - SceNpManager_1796CD2E: 0x1796CD2E
+        - sceNpTerm: 0x19E40AE1
+        - SceNpManager_1F0C6314: 0x1F0C6314
+        - SceNpManager_21F1D18E: 0x21F1D18E
+        - SceNpManager_27112D01: 0x27112D01
+        - SceNpManager_2841C20F: 0x2841C20F
+        - SceNpManager_28DED5D1: 0x28DED5D1
+        - SceNpManagerTicket_A30BF29A: 0x29C9B8A5
+        - SceNpManager_2BB7D844: 0x2BB7D844
+        - SceNpManager_2EA038D8: 0x2EA038D8
+        - SceNpManager_2FE3625C: 0x2FE3625C
+        - SceNpManager_351A74C2: 0x351A74C2
+        - SceNpManager_375A8BC0: 0x375A8BC0
+        - SceNpManager_38626F73: 0x38626F73
+        - SceNpManager_3907F96A: 0x3907F96A
+        - sceNpCheckCallback: 0x3B0AE9A9
+        - sceNpManagerGetNpId: 0x3C94B4B4
+        - SceNpManager_4110B787: 0x4110B787
+        - SceNpManager_4341692A: 0x4341692A
+        - sceNpManagerGetCachedParam: 0x43DC48A1
+        - sceNpRegisterServiceStateCallback: 0x44239C35
+        - SceNpManager_44DF26F5: 0x44DF26F5
+        - SceNpManager_455E05C1: 0x455E05C1
+        - SceNpManager_4C5D2A19: 0x4C5D2A19
+        - SceNpManager_4E94274C: 0x4E94274C
+        - sceNpGetServiceState: 0x54060DF6
+        - sceNpAuthCreateOAuthRequest: 0x555EB58C
+        - SceNpManager_557D5CC1: 0x557D5CC1
+        - SceNpManager_5EB63590: 0x5EB63590
+        - sceNpManagerGetChatRestrictionFlag: 0x60C575B1
+        - SceNpManager_63EF4853: 0x63EF4853
+        - sceNpAuthGetAuthorizationCode: 0x65DFB208
+        - SceNpManager_6CDB2AEC: 0x6CDB2AEC
+        - SceNpManager_6D13F55F: 0x6D13F55F
+        - SceNpManager_6EA27D2A: 0x6EA27D2A
+        - SceNpManager_72936716: 0x72936716
+        - SceNpManager_737B2820: 0x737B2820
+        - SceNpManager_77DE17D4: 0x77DE17D4
+        - SceNpManagerTicket_80895A1E: 0x7CE94530
+        - SceNpManagerTicket_2B813EC7: 0x80036A44
+        - SceNpManagerTicket_877251F3: 0x82DA7CFD
+        - SceNpManager_89E693FB: 0x89E693FB
+        - SceNpManager_8C6EACC4: 0x8C6EACC4
+        - sceNpAuthDeleteOAuthRequest: 0x8C94C7A5
+        - SceNpManagerTicket_37F7F258: 0x8D7981D4
+        - SceNpManager_9554802B: 0x9554802B
+        - SceNpManager_96534006: 0x96534006
+        - SceNpManager_96DF1B76: 0x96DF1B76
+        - SceNpManager_97291707: 0x97291707
+        - SceNpManager_997CD5A7: 0x997CD5A7
+        - SceNpManager_A3E472B8: 0xA3E472B8
+        - SceNpManager_A5F0BD9C: 0xA5F0BD9C
+        - SceNpManager_A6964218: 0xA6964218
+        - SceNpManager_A775A452: 0xA775A452
+        - sceNpManagerGetContentRatingFlag: 0xAF0073B2
+        - SceNpManager_B24FC028: 0xB24FC028
+        - SceNpManager_BA49FD24: 0xBA49FD24
+        - SceNpManager_BB384A4D: 0xBB384A4D
+        - SceNpManager_BBCD1B6D: 0xBBCD1B6D
+        - SceNpManager_BD57A0B8: 0xBD57A0B8
+        - SceNpManagerSP_7C78A608: 0xBF8921C8
+        - SceNpManager_C253AE5B: 0xC253AE5B
+        - SceNpManager_C7F6ADC4: 0xC7F6ADC4
+        - SceNpManager_C80D8C3E: 0xC80D8C3E
+        - SceNpManager_C89E0B94: 0xC89E0B94
+        - SceNpManager_CFAEB050: 0xCFAEB050
+        - SceNpManager_D157DC12: 0xD157DC12
+        - SceNpManager_D1D191FB: 0xD1D191FB
+        - SceNpManager_D4180D28: 0xD4180D28
+        - SceNpManager_D6C54CC2: 0xD6C54CC2
+        - SceNpManager_D83C8CCB: 0xD83C8CCB
+        - SceNpManager_D891AB9A: 0xD891AB9A
+        - sceNpUnregisterServiceStateCallback: 0xD9E6E56C
+        - SceNpManager_DDF30B0E: 0xDDF30B0E
+        - SceNpManager_E2FAC2CA: 0xE2FAC2CA
+        - SceNpManager_E41932D4: 0xE41932D4
+        - SceNpManager_E45E4003: 0xE45E4003
+        - SceNpManager_EB16514C: 0xEB16514C
+        - sceNpAuthAbortOAuthRequest: 0xECBC7614
+        - SceNpManager_ED12AF16: 0xED12AF16
+        - SceNpManager_F35CC917: 0xF35CC917
+        - SceNpManager_F66A7AAE: 0xF66A7AAE
+        - SceNpManager_FAEA7A73: 0xFAEA7A73
+        - SceNpManager_FDE78C74: 0xFDE78C74
+        - sceNpManagerGetAccountRegion: 0xFE835967
+        - SceNpManager_FF0D6501: 0xFF0D6501
+        - SceNpManager_FFBFC540: 0xFFBFC540
+    SceNpManagerSP:
+      syscall: false
+      version: 1
+      nid: 0x7AD3F44D
+      functions:
+        - SceNpManagerSP_7C78A608: 0x7C78A608
+    SceNpManagerOAuth:
+      syscall: false
+      version: 1
+      nid: 0xBAFA7232
+      functions:
+        - SceNpManagerOAuth_C62F86A6: 0xC62F86A6
+    SceNpManagerTicket:
+      syscall: false
+      version: 1
+      nid: 0xB554A126
+      functions:
+        - SceNpManagerTicket_2B813EC7: 0x2B813EC7
+        - SceNpManagerTicket_37F7F258: 0x37F7F258
+        - SceNpManagerTicket_80895A1E: 0x80895A1E
+        - SceNpManagerTicket_877251F3: 0x877251F3
+        - SceNpManagerTicket_A30BF29A: 0xA30BF29A

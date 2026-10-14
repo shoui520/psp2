@@ -1,0 +1,84 @@
+# 3.65-CEX: vs0:sys/external/avcdec_for_player.suprx (generated)
+set(MODULE_NID 0x0834F978)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xB6AE860A 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0x163C3727:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x83C0E2AF
+	0xCAE9ACE6:F:0x8516D040
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE737B1DF
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA6BE467
+	0xCAE9ACE6:V:0x93B8AA67
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x4CB87CA7
+	0x859A24B1:F:0x5840162C
+	0x859A24B1:F:0x9DCB4B7A
+	0x859A24B1:F:0xB19CF7E9
+	0x859A24B1:F:0xD469676B
+	0x859A24B1:F:0xEC94DFF7
+	0x5E8D0E22:F:0x0C8A38E1
+	0x163C3727:F:0x2385A82B
+	0x163C3727:F:0x24E905BF
+	0x163C3727:F:0x25F31020
+	0x163C3727:F:0x3102196C
+	0x163C3727:F:0x63237A8F
+	0x163C3727:F:0x68628BC4
+	0x163C3727:F:0x8A0E359E
+	0x163C3727:F:0x8FA94451
+	0x163C3727:F:0x9648D853
+	0x163C3727:F:0x97E95EDB
+	0x163C3727:F:0xE82BB69B
+	0x163C3727:F:0xFA072F66
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceKernelUnlockLwMutex
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelWaitEventFlagCB
+	sceKernelStartThread
+	sceClibVsnprintf
+	sceKernelDeleteThread
+	sceKernelClearEventFlag
+	sceKernelDeleteEventFlag
+	sceKernelGetProcessId
+	sceKernelCreateCallback
+	sceKernelDeleteCallback
+	sceKernelSetEventFlag
+	ksceKernelExitThread
+	sceAvcdecDecodeAuInternal
+	sceAvcdecUnregisterCallbackInternal
+	sceAvcdecDecodeFlush
+	sceAvcdecCreateDecoderNongameapp
+	sceAvcdecDecodeGetPictureInternal
+	sceAvcdecDecodeAuNalAuInternal
+	sceAvcdecDeleteDecoder
+	sceAvcdecRegisterCallbackInternal
+	sceAvcdecDecodeStop
+	sceAvcdecQueryDecoderMemSize
+	sceAvcdecCreateDecoder
+	sceAvcdecQueryDecoderMemSizeNongameapp
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

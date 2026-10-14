@@ -1,0 +1,40 @@
+SceDeci4pSDbgp:
+  attributes: 7
+  version:
+    major: 1
+    minor: 2
+  main:
+    start: module_start
+    bootstart: module_bootstart
+  libraries:
+    SceDeci4pSdbgpForKernel:
+      syscall: false
+      version: 1
+      nid: 0x085209B0
+      functions:
+        - sceKernelAddressSpaceGetMMUL1Info: 0x133B2AF7
+        - SceDeci4pSdbgpForKernel_17E9BFED: 0x17E9BFED
+        - SceDeci4pSdbgpForKernel_762BFAE0: 0x762BFAE0
+        - SceDeci4pSdbgpForKernel_7B25F7A5: 0x7B25F7A5
+        - sceSdbgpGetSystemResourceSnapshot: 0x84B349FD
+    SceDeci4pSdbgpTest:
+      syscall: true
+      version: 1
+      nid: 0x900E5367
+      functions:
+        - sceTestUnloadModuleForUser: 0x033B5E61
+        - sceTestCreateBudgetForUser: 0x0D9419DD
+        - sceTestLoadModuleForUser: 0x18554675
+        - sceTestCreateProcessForUser: 0x1F8A6139
+        - SceDeci4pSdbgpTest_462B520A: 0x462B520A
+        - SceDeci4pSdbgpTest_462DC57D: 0x462DC57D
+        - SceDeci4pSdbgpTest_50DA251E: 0x50DA251E
+        - SceDeci4pSdbgpTest_6A5AC725: 0x6A5AC725
+        - sceTestDeleteBudgetForUser: 0x8AB4CFE6
+        - sceTestStartProcessForUser: 0x971D5737
+        - sceTestWaitProcessEndForUser: 0xA9CFB1ED
+        - sceTestStopModuleForUser: 0xABFFCAF3
+        - SceDeci4pSdbgpTest_B55D9F76: 0xB55D9F76
+        - SceDeci4pSdbgpTest_B671059C: 0xB671059C
+        - sceTestGetModuleNumForUser: 0xEFB96108
+        - sceTestStartModuleForUser: 0xF2628F2F

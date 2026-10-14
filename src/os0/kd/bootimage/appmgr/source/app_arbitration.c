@@ -1,0 +1,534 @@
+/* Application launch and arbitration helpers. */
+
+#include <sce/debug.h>
+#include <sce/barrier.h>
+#include <sce/threadmgr.h>
+#include <sce/threadmgr_event.h>
+#include <sce/iofilemgr.h>
+#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <psp2kern/kernel/threadmgr.h>
+#include <psp2kern/kernel/sysclib.h>
+#include <psp2kern/kernel/pm_mgr.h>
+#include <psp2/appmgr.h>
+#include "app_state_internal.h"
+
+extern int sceAppMgrDump(void);
+extern int dumpBgmState(void);
+extern SceUID g_appmgrMainMutexOwner;
+extern int appmgrGetAppRunState(const struct AppState *app);
+extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
+		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
+
+struct AppState;
+extern int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **app);
+extern int _appListPushEvent(struct AppState *app, const SceAppMgrSystemEvent *event);
+extern int _appListUnlockApp(struct AppState *app);
+extern int _processUpdateThreadEntry(SceSize args, void *argp);
+extern int _gcListenerThreadEntry(SceSize args, void *argp);
+extern SceUID g_appmgrMainMutex;
+extern SceUID g_appmgrCore2Mutex;
+extern SceUID g_appmgrCore2MutexOwner;
+extern int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
+extern int SceProcessmgrForKernel_D5DF895D(void);
+extern int ksceKernelClearEvent(SceUID eventId, SceUInt32 keep);
+extern void _sceAppMgrNotifyAppMgrHandler(void);
+
+SceUID g_appmgrUpdateNotifySemaphore = -1;
+SceUID g_appmgrProcessStateUpdaterThread = -1;
+SceUID g_appmgrGcListenerThread = -1;
+
+#if FW_DEBUG
+SceUID g_appmgrGrw0MountEvent;
+SceUID g_appmgrGro0MountEvent;
+SceUID g_appmgrUx0MountEvent;
+#else
+SceUID g_appmgrUx0MountEvent;
+SceUID g_appmgrGrw0MountEvent;
+SceUID g_appmgrGro0MountEvent;
+#endif
+
+ThreadmgrWaitEvent g_appmgrGcWaitEvents[3];
+
+#if !FW_DEBUG
+static const SceKernelDebugInfo gcListenerStartPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x85948057,
+	.funcHash = 0xa0a0ebb7,
+};
+
+static const SceKernelDebugInfo processStateUpdaterStartPanicInfo = {
+	.fileHash = 0xb8f4da66,
+	.lineHash = 0x0a3acb7c,
+	.funcHash = 0xa0a0ebb7,
+};
+
+static const SceKernelDebugInfo arbitrationPanicInfo = {
+	.fileHash = 0xc9656e8e,
+	.lineHash = 0xc879dadc,
+	.funcHash = 0x11a05ee1,
+};
+
+static const SceKernelDebugInfo gcListenerMutexPanicInfo = {
+	.fileHash = 0xc9656e8e,
+	.lineHash = 0x79d3a1f0,
+	.funcHash = 0x9d536bce,
+};
+
+static const SceKernelDebugInfo gcWaitProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x658a5287, .funcHash = 0x1bbf336b,
+};
+static const SceKernelDebugInfo gcCheckProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0xffb33277, .funcHash = 0x1bbf336b,
+};
+static const SceKernelDebugInfo gcGameWaitProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x7031627a, .funcHash = 0x1bbf336b,
+};
+static const SceKernelDebugInfo gcGameCheckProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x8299cbeb, .funcHash = 0x1bbf336b,
+};
+static const SceKernelDebugInfo removableWaitProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x0331b8ce, .funcHash = 0x64fee94b,
+};
+static const SceKernelDebugInfo removableCheckProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x3b7d0a8c, .funcHash = 0x64fee94b,
+};
+static const SceKernelDebugInfo removableGameWaitProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x026fd4e8, .funcHash = 0x64fee94b,
+};
+static const SceKernelDebugInfo removableGameCheckProcessEventsPanicInfo = {
+	.fileHash = 0xb8f4da66, .lineHash = 0x1b174385, .funcHash = 0x64fee94b,
+};
+
+void appmgrArbitrationPanic(void)
+{
+	ksceKernelPanic(&arbitrationPanicInfo, __builtin_return_address(0));
+}
+
+_Noreturn void appmgrGcListenerMutexPanic(void)
+{
+	ksceKernelPanic(&gcListenerMutexPanicInfo, __builtin_return_address(0));
+}
+#endif
+
+int _onlaunchCallback(int notifyId, int notifyCount, int notifyArg, void *userData)
+{
+	SceUID *semaphore = userData;
+	int result;
+
+	(void)notifyId;
+	(void)notifyCount;
+	(void)notifyArg;
+	result = ksceKernelSignalSema(*semaphore, 1);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 2119, "_onlaunchCallback",
+			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
+			result, result, 0, 0);
+#else
+		appmgrArbitrationPanic();
+#endif
+	}
+	return 0;
+}
+
+#if FW_DEBUG
+int copyArgv(char *destination, const char *const *userArgv)
+{
+	int total = 0;
+	char *cursor = destination;
+	const char *argument;
+	int result;
+	int length;
+
+	*cursor = '\0';
+	if (userArgv == NULL)
+		return 0;
+	for (;;) {
+		result = ksceKernelCopyFromUser(&argument, userArgv, sizeof(argument));
+		if (result != 0)
+			return result;
+		if (argument == NULL) {
+			if (total > 1024) {
+				sceAppMgrDump();
+				dumpBgmState();
+				SCE_DBG_ASSERT_CHECK_FUNC(0, 925, "copyArgv");
+			}
+			return total;
+		}
+		result = ksceKernelStrncpyFromUser(cursor, argument, 1024 - total);
+		if (result == 1024 - total)
+			return (int)0x8001005bU;
+		if (result < 0)
+			return result;
+		length = result + 1;
+		if ((SceUInt32)(1024 - total) < (SceUInt32)length) {
+			sceAppMgrDump();
+			dumpBgmState();
+			SCE_DBG_ASSERT_CHECK_FUNC(0, 942, "copyArgv");
+		}
+		total += length;
+		cursor += length;
+		++userArgv;
+	}
+}
+
+void sendResumeToPid(SceUID pid)
+{
+	struct AppState *app = NULL;
+	struct AppState *lockedApp;
+	SceAppMgrSystemEvent event;
+
+	if (_appListFindAndLockAppByProcessId(pid, &app) != 0)
+		return;
+	lockedApp = app;
+	if (lockedApp == NULL) {
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 134, "sendResumeToPid");
+		lockedApp = app;
+	}
+	memset(&event, 0, sizeof(event));
+	event.systemEvent = SCE_APPMGR_SYSTEMEVENT_ON_RESUME;
+	if (_appListPushEvent(lockedApp, &event) != 0) {
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 139, "sendResumeToPid");
+	}
+	if (_appListUnlockApp(app) != 0) {
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 142, "sendResumeToPid");
+	}
+}
+#endif
+
+int getMiniAppValue(struct AppState *app)
+{
+	SceUID owner = g_appmgrMainMutexOwner;
+	SceUID pid;
+	int value, runningValue;
+
+#if FW_DEBUG
+	if (owner != ksceKernelGetThreadId()) {
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 148, "getMiniAppValue");
+	}
+	if (app == NULL) {
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 149, "getMiniAppValue");
+	}
+#else
+	if (owner != ksceKernelGetThreadId() || app == NULL)
+		appmgrArbitrationPanic();
+#endif
+	value = 100000;
+	runningValue = 110000;
+	if (app->protectionMode == 0) {
+		value = 0;
+		runningValue = 10000;
+	}
+	if (appmgrGetAppRunState(app) == 2)
+		value = runningValue;
+	if (app->processAttr & 1)
+		value += 1000;
+	pid = app->process.processId;
+	if (pid == sceKernelGetProcessId())
+		value += 100;
+	return app->baseMiniEvictionValue + value;
+}
+
+#if FW_DEBUG
+#define GC_FAILURE(_value, _line, _func) do { \
+	sceAppMgrDump(); \
+	dumpBgmState(); \
+	SCE_DBG_ASSERT_PRINTF_FUNC(0, _line, _func, \
+		"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
+		_value, _value, 0, 0); \
+} while (0)
+
+#define GC_CHECK_APP_OWNERS(_line, _func) do { \
+	int ownerIndex; \
+	for (ownerIndex = 0; ownerIndex != 20; ++ownerIndex) { \
+		__builtin_prefetch(&g_appmgrAppStates[ownerIndex + 5].mutexOwner); \
+		SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrAppStates[ownerIndex].mutexOwner != \
+			ksceKernelGetThreadId(), _line, _func); \
+	} \
+} while (0)
+
+#define GC_LOCK(_mutex, _owner, _line, _func) do { \
+	int lockResult = ksceKernelLockMutex(_mutex, 1, NULL); \
+	if (lockResult != 0) { \
+		if ((unsigned int)(lockResult + 0x7ffd7fd4) > 1) \
+			GC_FAILURE(lockResult, _line, _func); \
+		GC_FAILURE(lockResult, (_line) + 1, _func); \
+	} else { \
+		_owner = ksceKernelGetThreadId(); \
+	} \
+} while (0)
+
+#define GC_MAIN_LOCK(_line, _func) do { \
+	int lockResult = ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL); \
+	if (lockResult != 0) { \
+		SCE_DBG_PRINTF_FUNC(0, _line, _func, \
+			"Failed to lock ret=0x%08x\n", lockResult); \
+		sceAppMgrDump(); \
+		dumpBgmState(); \
+		SCE_DBG_ASSERT_CHECK_FUNC(0, _line, _func); \
+	} else { \
+		g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+	} \
+} while (0)
+
+#define GC_UNLOCK_CHECK(_result, _line, _func) do { \
+	if (_result != 0) \
+		GC_FAILURE(_result, _line, _func); \
+} while (0)
+#define GC_PROCESS_CHECK(_result, _line, _func, _info) \
+	GC_UNLOCK_CHECK(_result, _line, _func)
+#define GC_SUSPEND_CHECK(_result, _line, _func) \
+	GC_UNLOCK_CHECK(_result, _line, _func)
+#define GC_APP_LOCK_CHECK(_line, _func) do { \
+	SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrMainMutexOwner != \
+		ksceKernelGetThreadId(), _line, _func); \
+	if (g_appmgrCore2MutexOwner != ksceKernelGetThreadId()) \
+		GC_CHECK_APP_OWNERS(_line, _func); \
+} while (0)
+#define GC_APP_UNLOCK_CHECK(_line, _func) \
+	SCE_DBG_ASSERT_CHECK_FUNC(g_appmgrMainMutexOwner != \
+		ksceKernelGetThreadId(), _line, _func)
+#define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[1].mutex)
+#else
+#define GC_CHECK_APP_OWNERS(_line, _func) do { } while (0)
+#define GC_LOCK(_mutex, _owner, _line, _func) do { \
+	int lockResult = ksceKernelLockMutex(_mutex, 1, NULL); \
+	if (lockResult != 0) { \
+		if ((unsigned int)(lockResult + 0x7ffd7fd4) > 1) \
+			appmgrGcListenerMutexPanic(); \
+		appmgrArbitrationPanic(); \
+	} \
+	_owner = ksceKernelGetThreadId(); \
+} while (0)
+#define GC_MAIN_LOCK(_line, _func) do { \
+	if (ksceKernelLockMutex(g_appmgrMainMutex, 1, NULL) != 0) \
+		appmgrGcListenerMutexPanic(); \
+	g_appmgrMainMutexOwner = ksceKernelGetThreadId(); \
+} while (0)
+#define GC_UNLOCK_CHECK(_result, _line, _func) do { \
+	if (_result != 0) \
+		appmgrGcListenerMutexPanic(); \
+} while (0)
+#define GC_PROCESS_CHECK(_result, _line, _func, _info) do { \
+	if (_result != 0) \
+		ksceKernelPrintfPanic(&_info, __builtin_return_address(0), \
+			"0x%08x,0x%08x\n", _result, 0); \
+} while (0)
+#define GC_SUSPEND_CHECK(_result, _line, _func) do { \
+	if (_result != 0) \
+		appmgrArbitrationPanic(); \
+} while (0)
+#define GC_APP_LOCK_CHECK(_line, _func) \
+	((void)ksceKernelGetThreadId())
+#define GC_APP_UNLOCK_CHECK(_line, _func) do { } while (0)
+#define GC_PREFETCH_APP(_app) __builtin_prefetch(&(_app)[2].mutex)
+#endif
+
+/* The two Sony media helpers are inlined twice into the listener. */
+#define GC_SUSPEND_MEDIA(_func, _lockLine, _mainLine, _unlockLine, \
+		_suspendLine, _appUnlockLine, _waitLine, _checkLine, \
+		_includeUx, _game, _markRemoval, _waitInfo, _checkInfo) do { \
+	int index = appmgrGetShellApp() != NULL; \
+	struct AppState *app = &g_appmgrAppStates[index]; \
+	int result; \
+	do { \
+		SceUID pid; \
+		SceUInt32 attributes; \
+		int fromMedia; \
+		GC_APP_LOCK_CHECK(_lockLine, _func); \
+		GC_PREFETCH_APP(app); \
+		GC_LOCK(app->mutex, app->mutexOwner, _lockLine, _func); \
+		GC_MAIN_LOCK(_mainLine, _func); \
+		__builtin_prefetch(&app[1].process.processId); \
+		pid = app->process.processId; \
+		attributes = app->processAttr; \
+		fromMedia = strncmp(app->process.content.devicePrefix, "gro0:", 5) == 0 || \
+			strncmp(app->process.content.devicePrefix, "grw0:", 5) == 0 || \
+			((_includeUx) && strncmp(app->process.content.devicePrefix, "ux0:", 4) == 0); \
+		g_appmgrMainMutexOwner = -1; \
+		result = ksceKernelUnlockMutex(g_appmgrMainMutex, 1); \
+		GC_UNLOCK_CHECK(result, _unlockLine, _func); \
+		if (fromMedia && pid >= 0 && (pid & 1) != 0 && \
+			(attributes & 1) == (_game)) { \
+			if (_markRemoval) { \
+				__builtin_prefetch(&app[1].gameCardRemovalQuitPending); \
+				app->gameCardRemovalQuitPending = 1; \
+			} \
+			result = _appmgrProcessSuspendProcess(app, 0, NULL); \
+			GC_SUSPEND_CHECK(result, _suspendLine, _func); \
+		} \
+		GC_APP_UNLOCK_CHECK(_appUnlockLine, _func); \
+		app->mutexOwner = -1; \
+		result = ksceKernelUnlockMutex(app->mutex, 1); \
+		GC_UNLOCK_CHECK(result, _appUnlockLine, _func); \
+		++index; \
+		++app; \
+	} while (index <= 19); \
+	result = SceProcessmgrForKernel_8321B827(NULL); \
+	GC_PROCESS_CHECK(result, _waitLine, _func, _waitInfo); \
+	result = SceProcessmgrForKernel_D5DF895D(); \
+	GC_PROCESS_CHECK(result, _checkLine, _func, _checkInfo); \
+} while (0)
+
+int _gcListenerThreadEntry(SceSize args, void *argp)
+{
+	ThreadmgrWaitEventResult results[3];
+	SceProductMode productMode;
+	int count;
+	int gameCardChanged;
+	int removableChanged;
+	int result;
+
+	(void)args;
+	(void)argp;
+	for (;;) {
+		ksceKernelClearEvent(g_appmgrGro0MountEvent, 0);
+		ksceKernelClearEvent(g_appmgrGrw0MountEvent, 0);
+		g_appmgrGcWaitEvents[0].eventId = g_appmgrGro0MountEvent;
+		g_appmgrGcWaitEvents[1].eventId = g_appmgrGrw0MountEvent;
+		g_appmgrGcWaitEvents[2].eventId = g_appmgrUx0MountEvent;
+		g_appmgrGcWaitEvents[0].pattern = -1;
+		g_appmgrGcWaitEvents[1].pattern = -1;
+		g_appmgrGcWaitEvents[2].pattern = -1;
+		memset(results, 0, sizeof(results));
+		count = SceThreadmgrForDriver_36F8E58A(g_appmgrGcWaitEvents, 3,
+			1, results, NULL);
+		GC_CHECK_APP_OWNERS(2769, "_gcListenerThreadEntry");
+		GC_LOCK(g_appmgrCore2Mutex, g_appmgrCore2MutexOwner, 2769,
+			"_gcListenerThreadEntry");
+		if (count > 0) {
+			gameCardChanged = results[0].eventId == g_appmgrGro0MountEvent ||
+				results[0].eventId == g_appmgrGrw0MountEvent;
+			removableChanged = results[0].eventId == g_appmgrUx0MountEvent;
+			if (count != 1) {
+				if (results[1].eventId == g_appmgrGro0MountEvent ||
+					results[1].eventId == g_appmgrGrw0MountEvent)
+					gameCardChanged = 1;
+				if (results[1].eventId == g_appmgrUx0MountEvent)
+					removableChanged = 1;
+				if (count != 2) {
+					if (results[2].eventId == g_appmgrGro0MountEvent ||
+						results[2].eventId == g_appmgrGrw0MountEvent)
+						gameCardChanged = 1;
+					if (results[2].eventId == g_appmgrUx0MountEvent)
+						removableChanged = 1;
+				}
+			}
+			if (gameCardChanged) {
+				GC_SUSPEND_MEDIA("suspendAppBootedfromGC", 2530, 2533,
+					2537, 2543, 2545, 2552, 2554, 0, 0, 1,
+					gcWaitProcessEventsPanicInfo, gcCheckProcessEventsPanicInfo);
+				GC_SUSPEND_MEDIA("suspendAppBootedfromGC", 2559, 2562,
+					2566, 2569, 2571, 2576, 2578, 0, 1, 0,
+					gcGameWaitProcessEventsPanicInfo, gcGameCheckProcessEventsPanicInfo);
+			}
+			if (removableChanged) {
+				kscePmMgrGetProductMode(&productMode);
+				if (productMode != 1) {
+					GC_SUSPEND_MEDIA("suspendAppBootedfromGCorRM", 2589, 2592,
+						2596, 2599, 2601, 2607, 2609, 1, 0, 0,
+						removableWaitProcessEventsPanicInfo, removableCheckProcessEventsPanicInfo);
+					GC_SUSPEND_MEDIA("suspendAppBootedfromGCorRM", 2613, 2616,
+						2620, 2623, 2625, 2630, 2632, 1, 1, 0,
+						removableGameWaitProcessEventsPanicInfo, removableGameCheckProcessEventsPanicInfo);
+				}
+			}
+		}
+		g_appmgrCore2MutexOwner = -1;
+		result = ksceKernelUnlockMutex(g_appmgrCore2Mutex, 1);
+		GC_UNLOCK_CHECK(result, 2791, "_gcListenerThreadEntry");
+#if FW_DEBUG
+		if (result != 0)
+			GC_FAILURE(result, 2792, "_gcListenerThreadEntry");
+#endif
+	}
+}
+
+void initProcessStateUpdaterThread(void)
+{
+	int result;
+
+	g_appmgrUpdateNotifySemaphore = ksceKernelCreateSema("SceAppMgrUpdtNtfy",
+		0, 0, 2000, NULL);
+	if (g_appmgrUpdateNotifySemaphore <= 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2811, "initProcessStateUpdaterThread");
+#else
+		appmgrArbitrationPanic();
+#endif
+	}
+	dmb();
+	g_appmgrProcessStateUpdaterThread = ksceKernelCreateThread(
+		"SceAppMgrProcessStateUpdater", _processUpdateThreadEntry,
+		96, 8192, 0, 0x80000, NULL);
+	if (g_appmgrProcessStateUpdaterThread <= 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2822, "initProcessStateUpdaterThread");
+#else
+		appmgrArbitrationPanic();
+#endif
+	}
+	result = ksceKernelStartThread(g_appmgrProcessStateUpdaterThread, 0, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2825, "initProcessStateUpdaterThread");
+#else
+		ksceKernelPanic(&processStateUpdaterStartPanicInfo, __builtin_return_address(0));
+#endif
+	}
+	g_appmgrGro0MountEvent = ksceIoCreateMountEvent(0x900, 0x202);
+	g_appmgrGrw0MountEvent = ksceIoCreateMountEvent(0xa00, 0x202);
+	g_appmgrUx0MountEvent = ksceIoCreateMountEvent(0x800, 2);
+	g_appmgrGcListenerThread = ksceKernelCreateThread("SceAppMgrGcListener",
+		_gcListenerThreadEntry, 96, 4096, 0, 0x80000, NULL);
+	if (g_appmgrGcListenerThread <= 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2843, "initProcessStateUpdaterThread");
+#else
+		appmgrArbitrationPanic();
+#endif
+	}
+	result = ksceKernelStartThread(g_appmgrGcListenerThread, 0, NULL);
+	if (result != 0) {
+#if FW_DEBUG
+		sceAppMgrDump();
+		dumpBgmState();
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2846, "initProcessStateUpdaterThread");
+#else
+		ksceKernelPanic(&gcListenerStartPanicInfo, __builtin_return_address(0));
+#endif
+	}
+}
+
+void appmgrProcessIdleCallback(SceUID pid, unsigned int elapsed, void *argument)
+{
+	struct AppState *app;
+
+	(void)argument;
+	app = appmgrFindSpecialApp(g_appmgrAppStates, pid);
+	if (app == NULL || app->process.processId != pid)
+		return;
+	app->process.runWhenUiOverlay = elapsed == 0;
+	dmb();
+	_sceAppMgrNotifyAppMgrHandler();
+}

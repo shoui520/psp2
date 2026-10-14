@@ -1,0 +1,53 @@
+SceLibMarlin:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceMarlin:
+      syscall: false
+      version: 1
+      nid: 0x608C27AF
+      functions:
+        - SceMarlin_0166ACC1: 0x0166ACC1
+        - SceMarlin_05CB30D5: 0x05CB30D5
+        - SceMarlin_08CAD267: 0x08CAD267
+        - SceMarlin_102593F5: 0x102593F5
+        - SceMarlin_10C0787D: 0x10C0787D
+        - SceMarlin_14097094: 0x14097094
+        - SceMarlin_236015FA: 0x236015FA
+        - SceMarlin_23838449: 0x23838449
+        - SceMarlin_2F1E4047: 0x2F1E4047
+        - SceMarlin_2FD092BD: 0x2FD092BD
+        - SceMarlin_39FF1549: 0x39FF1549
+        - SceMarlin_3AA04BBF: 0x3AA04BBF
+        - SceMarlin_45B29121: 0x45B29121
+        - SceMarlin_49752AFE: 0x49752AFE
+        - SceMarlin_73C12840: 0x73C12840
+        - SceMarlin_778408A7: 0x778408A7
+        - SceMarlin_7A7CCFD0: 0x7A7CCFD0
+        - SceMarlin_7E65734B: 0x7E65734B
+        - SceMarlin_83B44D33: 0x83B44D33
+        - SceMarlin_87DF7B98: 0x87DF7B98
+        - SceMarlin_88AC64AD: 0x88AC64AD
+        - SceMarlin_8FEB4F94: 0x8FEB4F94
+        - SceMarlin_92A6A48F: 0x92A6A48F
+        - SceMarlin_9609E2DF: 0x9609E2DF
+        - SceMarlin_9CD4CE1E: 0x9CD4CE1E
+        - SceMarlin_A11B25C7: 0xA11B25C7
+        - SceMarlin_A2E65A7E: 0xA2E65A7E
+        - SceMarlin_A43BC777: 0xA43BC777
+        - SceMarlin_B477D615: 0xB477D615
+        - SceMarlin_BCED6CC4: 0xBCED6CC4
+        - SceMarlin_C4FF32EF: 0xC4FF32EF
+        - SceMarlin_C76DA6C0: 0xC76DA6C0
+        - SceMarlin_CCA99803: 0xCCA99803
+        - SceMarlin_CCD2D17E: 0xCCD2D17E
+        - SceMarlin_CD5AEEF2: 0xCD5AEEF2
+        - SceMarlin_D09A4419: 0xD09A4419
+        - SceMarlin_D7A21F7F: 0xD7A21F7F
+        - SceMarlin_E8276179: 0xE8276179
+        - SceMarlin_EB4A1345: 0xEB4A1345
+        - SceMarlin_F450D554: 0xF450D554
+        - SceMarlin_F6B7B9F4: 0xF6B7B9F4
+        - SceMarlin_FB95B259: 0xFB95B259

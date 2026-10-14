@@ -1,0 +1,48 @@
+SceStitchAdapter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceStitchAdapter:
+      syscall: false
+      version: 1
+      nid: 0x355B0D93
+      functions:
+        - SceStitchAdapter_00DED868: 0x00DED868
+        - SceStitchAdapter_17FE8653: 0x17FE8653
+        - SceStitchAdapter_1ED1764A: 0x1ED1764A
+        - SceStitchAdapter_500D9D98: 0x500D9D98
+        - SceStitchAdapter_767869AD: 0x767869AD
+        - SceStitchAdapter_814E7792: 0x814E7792
+        - SceStitchAdapter_8552C241: 0x8552C241
+        - SceStitchAdapter_98FB5940: 0x98FB5940
+        - SceStitchAdapter_9E96CA23: 0x9E96CA23
+        - SceStitchAdapter_B5BC5021: 0xB5BC5021
+        - SceStitchAdapter_D75D9673: 0xD75D9673
+        - SceStitchAdapter_E5387BD3: 0xE5387BD3
+        - SceStitchAdapter_E74CFAC8: 0xE74CFAC8
+        - SceStitchAdapter_EBE7744F: 0xEBE7744F
+    stitch_prx:
+      syscall: false
+      version: 1
+      nid: 0xC0A0E9A9
+      functions:
+        - SceStitchAdapter_814E7792: 0x0F42D1F9
+        - SceStitchAdapter_E5387BD3: 0x14E40564
+        - SceStitchAdapter_500D9D98: 0x176A9ED5
+        - SceStitchAdapter_17FE8653: 0x20AD5448
+        - SceStitchAdapter_EBE7744F: 0x389BF935
+        - SceStitchAdapter_98FB5940: 0x641AFA50
+        - SceStitchAdapter_D75D9673: 0x7E6CCA28
+        - SceStitchAdapter_1ED1764A: 0x7FF51713
+        - SceStitchAdapter_9E96CA23: 0x894EFD73
+        - SceStitchAdapter_00DED868: 0x9B429E59
+        - SceStitchAdapter_767869AD: 0xB2F51DBA
+        - SceStitchAdapter_8552C241: 0xC4AA4F16
+        - SceStitchAdapter_E74CFAC8: 0xE1F72BA5
+        - SceStitchAdapter_B5BC5021: 0xEF6F4C85

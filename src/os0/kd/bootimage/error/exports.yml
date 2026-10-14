@@ -1,0 +1,19 @@
+SceError:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceError:
+      syscall: true
+      version: 1
+      nid: 0x5CD2CAD1
+      functions:
+        - _sceErrorHistoryUpdateSequenceInfo: 0x6FBE4BDC
+        - _sceErrorHistoryPostError: 0x70F9D872
+        - _sceErrorGetExternalString: 0x85747003
+        - _sceErrorHistorySetDefaultFormat: 0xB94DAA2F
+        - _sceErrorHistoryClearError: 0xC88F479E
+        - _sceErrorHistoryGetError: 0xF16DF981

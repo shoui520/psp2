@@ -1,0 +1,7 @@
+SceDeci4pTsmp:
+  attributes: 7
+  version:
+    major: 2
+    minor: 0
+  main:
+    start: module_start

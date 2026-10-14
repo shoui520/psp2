@@ -1,0 +1,45 @@
+SceLibRudp:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibRudp:
+      syscall: false
+      version: 1
+      nid: 0x32910D11
+      functions:
+        - sceRudpGetRemoteInfo: 0x104E4D3B
+        - sceRudpPollControl: 0x18668BD8
+        - sceRudpInit: 0x22C9AA29
+        - sceRudpProcessEvents: 0x24E36E39
+        - sceRudpNetReceived: 0x2C1E736E
+        - sceRudpRead: 0x30A9438E
+        - sceRudpSetEventHandler: 0x396A24D6
+        - sceRudpEnableInternalIOThread: 0x3A495E69
+        - sceRudpEnd: 0x3EA0961E
+        - sceRudpInitiate: 0x46B635BD
+        - sceRudpGetLocalInfo: 0x4DC43692
+        - sceRudpTerminate: 0x552B2D3E
+        - sceRudpPollWait: 0x55918C7C
+        - sceRudpGetNumberOfPacketsToRead: 0x5D0460CD
+        - sceRudpGetMaxSegmentSize: 0x68A52861
+        - sceRudpWrite: 0x69C9DE15
+        - sceRudpGetSizeReadable: 0x6B74CA22
+        - sceRudpCreateContext: 0x772C07E8
+        - sceRudpEnableInternalIOThread2: 0x87EC465E
+        - sceRudpBind: 0x8B766108
+        - sceRudpFlush: 0x8D45BA52
+        - sceRudpPollCreate: 0x943D96EC
+        - sceRudpPollCancel: 0xA9B92EFE
+        - sceRudpGetSizeWritable: 0xADE196DC
+        - sceRudpSetOption: 0xBD87A5CA
+        - sceRudpPollDestroy: 0xC9ACBDF0
+        - sceRudpGetContextStatus: 0xD620B557
+        - sceRudpGetStatus: 0xD77928C5
+        - sceRudpSetMaxSegmentSize: 0xE1DD9645
+        - sceRudpGetOption: 0xE68005E3
+        - sceRudpActivate: 0xF1151D91

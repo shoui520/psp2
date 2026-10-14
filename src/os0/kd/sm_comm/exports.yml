@@ -1,0 +1,17 @@
+SceSblSsSmComm:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSblSmCommForKernel:
+      syscall: false
+      version: 1
+      nid: 0xCD3C89B6
+      functions:
+        - ksceSblSmCommStartSmFromData: 0x039C73B1
+        - ksceSblSmCommStopSm: 0x0631F8ED
+        - ksceSblSmCommStartSmFromFile: 0x7863A0CC
+        - ksceSblSmCommCallFunc: 0xDB9FC204

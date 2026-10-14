@@ -1,0 +1,77 @@
+SceNpWebApi:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNpWebApi:
+      syscall: false
+      version: 1
+      nid: 0xE1AF627C
+      functions:
+        - sceNpWebApiTerminate: 0x001254C2
+        - sceNpWebApiGetErrorCode: 0x00234C88
+        - sceNpWebApiUnregisterServicePushEventCallback: 0x06D28ADA
+        - SceNpWebApi_07913970: 0x07913970
+        - SceNpWebApi_0D910413: 0x0D910413
+        - SceNpWebApi_1140FA82: 0x1140FA82
+        - SceNpWebApi_159396F0: 0x159396F0
+        - sceNpWebApiCreatePushEventFilter: 0x18CB54B5
+        - SceNpWebApi_19062C5A: 0x19062C5A
+        - SceNpWebApi_1BDB76C0: 0x1BDB76C0
+        - SceNpWebApi_1D427258: 0x1D427258
+        - sceNpWebApiSendRequest2: 0x1E37862A
+        - sceNpWebApiCreateServicePushEventFilter: 0x2B61B0C7
+        - sceNpWebApiUnregisterExtdPushEventCallback: 0x2D272ACA
+        - sceNpWebApiCreateHandle: 0x40341759
+        - SceNpWebApi_4699EF17: 0x4699EF17
+        - sceNpWebApiDeleteExtdPushEventFilter: 0x4980D88D
+        - SceNpWebApi_4D7CC67C: 0x4D7CC67C
+        - sceNpWebApiSendRequest: 0x51EA899B
+        - sceNpWebApiCreateMultipartRequest: 0x55435037
+        - sceNpWebApiDeleteRequest: 0x57B2826E
+        - sceNpWebApiDeletePushEventFilter: 0x6099B918
+        - SceNpWebApi_66CEC1A6: 0x66CEC1A6
+        - sceNpWebApiGetHttpStatusCode: 0x67A3BC79
+        - sceNpWebApiCreateExtdPushEventFilter: 0x6AB53577
+        - SceNpWebApi_6CDD45B6: 0x6CDD45B6
+        - SceNpWebApi_6E6AFA39: 0x6E6AFA39
+        - sceNpWebApiCreateRequest: 0x6FC7357E
+        - sceNpWebApiDeleteServicePushEventFilter: 0x828F657B
+        - SceNpWebApi_83E94928: 0x83E94928
+        - sceNpWebApiInitialize: 0x8519EB34
+        - SceNpWebApi_8D83A2D0: 0x8D83A2D0
+        - sceNpWebApiAddHttpRequestHeader: 0x8DCD6D19
+        - sceNpWebApiSetMultipartContentType: 0x8E870BE4
+        - SceNpWebApi_93BBA612: 0x93BBA612
+        - sceNpWebApiUtilityParseNpId: 0x98CBE11F
+        - sceNpWebApiSetNpTitleId: 0x9AE6BC46
+        - sceNpWebApiGetMemoryPoolStats: 0x9DF7EE1E
+        - SceNpWebApi_A11FBA1A: 0xA11FBA1A
+        - sceNpWebApiGetHttpResponseHeaderValue: 0xB0500FF4
+        - SceNpWebApi_B280EA3D: 0xB280EA3D
+        - sceNpWebApiDeleteHandle: 0xB575A09C
+        - sceNpWebApiGetNpTitleId: 0xB65DF857
+        - sceNpWebApiReadData: 0xBA75BF6E
+        - sceNpWebApiSendMultipartRequest: 0xBDEC2650
+        - SceNpWebApi_BED99F66: 0xBED99F66
+        - SceNpWebApi_C18E6DAA: 0xC18E6DAA
+        - SceNpWebApi_C359A88A: 0xC359A88A
+        - SceNpWebApi_C42F1E67: 0xC42F1E67
+        - sceNpWebApiAddMultipartPart: 0xC4B24435
+        - sceNpWebApiSendMultipartRequest2: 0xC8E042B8
+        - sceNpWebApiUnregisterPushEventCallback: 0xC9056736
+        - SceNpWebApi_CB51F139: 0xCB51F139
+        - sceNpWebApiAbortHandle: 0xD462D519
+        - sceNpWebApiGetHttpResponseHeaderValueLength: 0xD585FDEA
+        - sceNpWebApiRegisterPushEventCallback: 0xDB04ECD6
+        - sceNpWebApiRegisterExtdPushEventCallback: 0xE75796DD
+        - SceNpWebApi_E83CE7F1: 0xE83CE7F1
+        - SceNpWebApi_E8FBA9B8: 0xE8FBA9B8
+        - sceNpWebApiAbortRequest: 0xEB3D14CE
+        - sceNpWebApiCheckCallback: 0xEDA9C359
+        - sceNpWebApiRegisterServicePushEventCallback: 0xF6B6C994
+        - SceNpWebApi_FDCBD57D: 0xFDCBD57D

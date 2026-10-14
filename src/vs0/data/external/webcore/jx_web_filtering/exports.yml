@@ -1,0 +1,30 @@
+SceWebFiltering:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceWebFiltering:
+      syscall: false
+      version: 1
+      nid: 0xE6509886
+      functions:
+        - SceWebFiltering_1CF343FB: 0x1CF343FB
+        - SceWebFiltering_45C62364: 0x45C62364
+        - SceWebFiltering_4A917646: 0x4A917646
+        - SceWebFiltering_4E75F547: 0x4E75F547
+        - SceWebFiltering_6D231FBC: 0x6D231FBC
+        - SceWebFiltering_8843F0EA: 0x8843F0EA
+        - SceWebFiltering_BFFD2DB1: 0xBFFD2DB1
+        - SceWebFiltering_DB3F1F97: 0xDB3F1F97
+    WebPlugin:
+      syscall: false
+      version: 1
+      nid: 0x3CC337B1
+      functions:
+        - WebPlugin_8F78AB7C: 0x8F78AB7C
+        - WebPlugin_9F9213AF: 0x9F9213AF

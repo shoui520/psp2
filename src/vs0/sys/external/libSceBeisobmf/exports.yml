@@ -1,0 +1,32 @@
+SceBeisobmf:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceBeisobmf:
+      syscall: false
+      version: 1
+      nid: 0xC3525DE0
+      functions:
+        - SceBeisobmf_0A70CE8D: 0x0A70CE8D
+        - SceBeisobmf_1047C50A: 0x1047C50A
+        - SceBeisobmf_18B99048: 0x18B99048
+        - SceBeisobmf_35EFA733: 0x35EFA733
+        - SceBeisobmf_71AB7DEA: 0x71AB7DEA
+        - SceBeisobmf_72F99D98: 0x72F99D98
+        - SceBeisobmf_82FDC702: 0x82FDC702
+        - SceBeisobmf_958E4F24: 0x958E4F24
+        - SceBeisobmf_9722FE78: 0x9722FE78
+        - SceBeisobmf_A70C1132: 0xA70C1132
+        - SceBeisobmf_B0208E0C: 0xB0208E0C
+        - SceBeisobmf_B66791B3: 0xB66791B3
+        - SceBeisobmf_D086C0EC: 0xD086C0EC
+        - SceBeisobmf_D158B5D2: 0xD158B5D2
+        - SceBeisobmf_D310B27E: 0xD310B27E
+        - SceBeisobmf_D592745E: 0xD592745E
+        - SceBeisobmf_D643E393: 0xD643E393
+        - SceBeisobmf_F9EA95DA: 0xF9EA95DA

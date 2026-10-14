@@ -1,0 +1,34 @@
+SceLiveAreaUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLiveAreaUtil:
+      syscall: false
+      version: 1
+      nid: 0x5303CB07
+      functions:
+        - SceLiveAreaUtil_009CD8E2: 0x009CD8E2
+        - sceLiveAreaReplaceAllAsync: 0x18066BA9
+        - sceLiveAreaReplaceAllSync: 0x29C65C0B
+        - SceLiveAreaUtil_31A5E6AB: 0x31A5E6AB
+        - sceLiveAreaGetStatus: 0x7FE5B83F
+        - sceLiveAreaGetRevision: 0x833F5D0A
+        - SceLiveAreaUtil_876A649B: 0x876A649B
+        - SceLiveAreaUtil_B0571F88: 0xB0571F88
+        - SceLiveAreaUtil_C1F7A931: 0xC1F7A931
+        - sceLiveAreaUpdateFrameSync: 0xCFCEDE95
+        - sceLiveAreaUpdateFrameAsync: 0xD330285D
+        - sceLiveAreaGetFrameRevision: 0xD6EE2214
+        - sceLiveAreaGetFrameUserData: 0xD6FD367F
+        - SceLiveAreaUtil_EF2A3C3D: 0xEF2A3C3D
+    SceLiveAreaUtilBgApp:
+      syscall: false
+      version: 1
+      nid: 0x6EC49E8F
+      functions:
+        - SceLiveAreaUtilBgApp_381D11E6: 0x381D11E6

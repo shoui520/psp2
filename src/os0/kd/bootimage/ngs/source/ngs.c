@@ -1,0 +1,49 @@
+/*
+ * SceNgs skeleton: export stubs.
+ *
+ * Remaining exports are placeholders pending C implementation.
+ */
+
+#include "skeleton.h"
+
+
+STUB(sceNgsSystemGetCallbackListInternal)
+STUB(sceNgsSystemLockInternal)
+STUB(sceNgsSystemSetParamErrorCallbackInternal)
+STUB(sceNgsVoicePauseInternal)
+STUB(sceNgsRackInitInternal)
+STUB(sceNgsSulphaGetInfoInternal)
+STUB(sceNgsVoiceInitInternal)
+STUB(sceNgsVoiceResumeInternal)
+STUB(sceNgsVoiceSetAllBypassesInternal)
+STUB(sceNgsModuleCheckParamsInRangeInternal)
+STUB(sceNgsVoiceKeyOffInternal)
+STUB(sceNgsRackGetRequiredMemorySizeInternal)
+STUB(sceNgsModuleGetPresetInternal)
+STUB(sceNgsPatchCreateRoutingInternal)
+STUB(sceNgsSystemPushDataInternal)
+STUB(sceNgsSystemInitInternal)
+STUB(sceNgsSystemGetSysHandleFromRack)
+STUB(sceNgsVoiceSetPresetInternal)
+STUB(sceNgsPatchRemoveRoutingInternal)
+STUB(sceNgsSystemReleaseInternal)
+STUB(sceNgsVoiceKillInternal)
+STUB(sceNgsVoiceSetFinishedCallbackInternal)
+STUB(sceNgsVoiceGetModuleBypassInternal)
+STUB(sceNgsRackReleaseInternal)
+STUB(sceNgsVoiceGetOutputPatchInternal)
+STUB(sceNgsRackGetVoiceHandleInternal)
+STUB(sceNgsVoiceClearDirtyFlagInternal)
+STUB(sceNgsSulphaSetSynthUpdateCallbackInternal)
+STUB(sceNgsModuleGetNumPresetsInternal)
+STUB(sceNgsRackSetParamErrorCallbackInternal)
+STUB(sceNgsSystemUpdateInternal)
+STUB(sceNgsVoiceBypassModuleInternal)
+STUB(sceNgsVoicePlayInternal)
+STUB(sceNgsSystemUnlockInternal)
+STUB(sceNgsSulphaGetSynthUpdateCallbackInternal)
+STUB(sceNgsSystemIsFixForBugzilla89940)
+STUB(sceNgsVoiceSetModuleCallbackInternal)
+STUB(sceNgsVoiceGetParamsOutOfRangeBufferedInternal)
+STUB(sceNgsSystemSetFlagsInternal)
+STUB(sceNgsSystemPullDataInternal)

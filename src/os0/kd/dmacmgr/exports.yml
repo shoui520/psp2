@@ -1,0 +1,35 @@
+SceKernelDmacMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceDmacmgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0xEB4E3738
+      functions:
+        - ksceDmacMemcpy: 0x00896B11
+        - ksceKernelDmaOpSetupDirect: 0x01A599E0
+        - ksceKernelDmaOpQuit: 0x03052D0D
+        - ksceKernelDmaOpSetupChain: 0x167079FC
+        - ksceKernelDmaOpSync: 0x397A917C
+        - ksceDmacMemset: 0x4BAC049B
+        - ksceKernelDmaOpEnQueue: 0x543F54CF
+        - ksceKernelDmaOpDeQueue: 0x7433F70F
+        - ksceKernelDmaOpAlloc: 0x7CD5088A
+        - SceDmacmgrForDriver_893FCB80: 0x893FCB80
+        - ksceKernelDmaOpConcatenate: 0xA4454DEA
+        - ksceKernelDmaOpFree: 0xADFF1186
+        - SceDmacmgrForDriver_BCBB5E85: 0xBCBB5E85
+        - ksceKernelDmaOpSetCallback: 0xCF627CFD
+        - ksceKernelDmaOpAssign: 0xFCE4171A
+    SceDmacmgr:
+      syscall: true
+      version: 1
+      nid: 0xA9E5B2F0
+      functions:
+        - sceDmacMemcpy: 0x9B2FF739
+        - sceDmacMemset: 0xA4C33F11

@@ -1,0 +1,34 @@
+SceOled:
+  attributes: 7
+  version:
+    major: 1
+    minor: 2
+  main:
+    start: module_start
+  libraries:
+    SceOledForDriver:
+      syscall: false
+      version: 1
+      nid: 0x60C7478A
+      functions:
+        - ksceOledWaitReady: 0x0CC6BCB4
+        - SceOledForDriver_26F9EEA8: 0x26F9EEA8
+        - SceOledForDriver_2F0C4B67: 0x2F0C4B67
+        - SceOledForDriver_3C990F53: 0x3C990F53
+        - SceOledForDriver_3E6AE8A2: 0x3E6AE8A2
+        - ksceOledGetBrightness: 0x43EF811A
+        - SceOledForDriver_4891257F: 0x4891257F
+        - ksceOledDisplayOn: 0x4C7836C7
+        - ksceOledGetDisplayColorSpaceMode: 0x4F8A1D4A
+        - SceOledForDriver_5AF31932: 0x5AF31932
+        - SceOledForDriver_6B1E0B52: 0x6B1E0B52
+        - SceOledForDriver_9F4ABDDC: 0x9F4ABDDC
+        - SceOledForDriver_AD6C7FB8: 0xAD6C7FB8
+        - ksceOledDisplayOff: 0xBC84602E
+        - SceOledForDriver_BF5C5624: 0xBF5C5624
+        - ksceOledGetDDB: 0xC9D5987C
+        - ksceOledSetDisplayColorSpaceMode: 0xDABBD9D3
+        - SceOledForDriver_DDB1412B: 0xDDB1412B
+        - SceOledForDriver_E30604CC: 0xE30604CC
+        - SceOledForDriver_ED2D6F19: 0xED2D6F19
+        - ksceOledSetBrightness: 0xF9624C47

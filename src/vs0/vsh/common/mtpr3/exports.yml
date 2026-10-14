@@ -1,0 +1,21 @@
+SceMtpr3:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMtpr3:
+      syscall: false
+      version: 1
+      nid: 0x7DDE008C
+      functions:
+        - SceMtpr3_3F679F17: 0x3F679F17
+        - SceMtpr3_4CF037DD: 0x4CF037DD
+        - SceMtpr3_6C3E64F9: 0x6C3E64F9
+        - SceMtpr3_811BF760: 0x811BF760
+        - SceMtpr3_B6934EC0: 0xB6934EC0
+        - SceMtpr3_D4B9A16E: 0xD4B9A16E
+        - SceMtpr3_E3C57CF1: 0xE3C57CF1

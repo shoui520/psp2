@@ -1,0 +1,33 @@
+SceAvPlayer:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceAvPlayer:
+      syscall: false
+      version: 1
+      nid: 0xFA10CE65
+      functions:
+        - sceAvPlayerResume: 0x11FF162D
+        - sceAvPlayerDisableStream: 0x15365ECE
+        - sceAvPlayerGetVideoDataEx: 0x22986CD1
+        - sceAvPlayerStart: 0x2ACB4217
+        - sceAvPlayerStreamCount: 0x2CD86FD6
+        - sceAvPlayerIsActive: 0x2E4FF35F
+        - sceAvPlayerGetStreamInfo: 0x34E2D370
+        - sceAvPlayerPause: 0x34FD744B
+        - sceAvPlayerPostInit: 0x3F51D38A
+        - sceAvPlayerInit: 0x4C847ADF
+        - sceAvPlayerJumpToTime: 0x5B7DB4BC
+        - sceAvPlayerEnableStream: 0x70127AB8
+        - sceAvPlayerClose: 0x7AA29B2D
+        - sceAvPlayerCurrentTime: 0x804DCECD
+        - sceAvPlayerSetTrickSpeed: 0x86E0CF55
+        - sceAvPlayerGetVideoData: 0x8BC3221B
+        - sceAvPlayerGetAudioData: 0xA10FC252
+        - sceAvPlayerAddSource: 0xBC83C8FD
+        - sceAvPlayerStop: 0xBD35E360
+        - sceAvPlayerSetLooping: 0xEC103ADF

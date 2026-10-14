@@ -1,0 +1,26 @@
+SceDeci4pDbgp:
+  attributes: 7
+  version:
+    major: 1
+    minor: 8
+  main:
+    start: module_start
+  libraries:
+    SceDeci4pDbgpForDriver:
+      syscall: false
+      version: 1
+      nid: 0xFBD04C34
+      functions:
+        - ksceDbgpGetDTraceBreakpointHandler: 0x01D7C7BF
+        - ksceDbgpSetDTraceBreakpointHandler: 0x0509AC51
+        - ksceDbgpSetDTraceUsdtHandler: 0x7251789E
+        - ksceDbgpGetDTraceUsdtHandler: 0x9CD5EE8C
+    SceDeci4pDbgp:
+      syscall: true
+      version: 1
+      nid: 0x40286FC4
+      functions:
+        - SceDeci4pDbgp_073A6B4B: 0x073A6B4B
+        - sceDeci4pDbgpResumeAppForTestForUser: 0x0C30DE67
+        - SceDeci4pDbgp_6180DC1A: 0x6180DC1A
+        - sceDeci4pDbgpSuspendAppForTestForUser: 0xE0EED45E

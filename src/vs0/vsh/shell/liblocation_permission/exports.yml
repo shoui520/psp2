@@ -1,0 +1,24 @@
+SceLibLocationPermission:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibLocationPermission:
+      syscall: false
+      version: 1
+      nid: 0x9743F696
+      functions:
+        - SceLibLocationPermission_04B96CDD: 0x04B96CDD
+        - SceLibLocationPermission_35A05111: 0x35A05111
+        - SceLibLocationPermission_3B8D755E: 0x3B8D755E
+        - SceLibLocationPermission_6ACFB882: 0x6ACFB882
+        - SceLibLocationPermission_7899CA29: 0x7899CA29
+        - SceLibLocationPermission_810F3D2A: 0x810F3D2A
+        - SceLibLocationPermission_861AB52D: 0x861AB52D
+        - SceLibLocationPermission_94C110F2: 0x94C110F2
+        - SceLibLocationPermission_AB8EBF86: 0xAB8EBF86
+        - SceLibLocationPermission_EAC9023C: 0xEAC9023C

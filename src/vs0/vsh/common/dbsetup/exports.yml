@@ -1,0 +1,15 @@
+SceDbSetup:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceDbSetup:
+      syscall: false
+      version: 1
+      nid: 0xB84CEB48
+      functions:
+        - SceDbSetup_C148251E: 0xC148251E

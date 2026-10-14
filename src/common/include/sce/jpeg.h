@@ -1,0 +1,44 @@
+/* JPEG decoder control records shared by the driver and its callers. */
+#pragma once
+
+#include <vitasdk/build_utils.h>
+#include <psp2/types.h>
+
+typedef struct SceJpegMJpegInitParam {
+	SceSize size;
+	int maxSplitDecoder;
+	int option;
+} SceJpegMJpegInitParam;
+
+typedef struct SceJpegPitch {
+	unsigned int x;
+	unsigned int y;
+} SceJpegPitch;
+
+typedef struct SceJpegOutputInfo {
+	int colorSpace;
+	unsigned short imageWidth;
+	unsigned short imageHeight;
+	SceSize outputBufferSize;
+	SceSize tempBufferSize;
+	SceSize coefBufferSize;
+	SceJpegPitch pitch[4];
+} SceJpegOutputInfo;
+
+typedef struct SceJpegSplitDecodeCtrl {
+	unsigned char *pStreamBuffer;
+	SceSize streamBufferSize;
+	unsigned char *pWriteBuffer;
+	SceSize writeBufferSize;
+	int isEndOfStream;
+	int decodeMode;
+	SceJpegOutputInfo outputInfo;
+	void *pOutputBuffer;
+	void *pCoefBuffer;
+	unsigned int internalData[3];
+} SceJpegSplitDecodeCtrl;
+
+VITASDK_BUILD_ASSERT_EQ(12, SceJpegMJpegInitParam);
+VITASDK_BUILD_ASSERT_EQ(8, SceJpegPitch);
+VITASDK_BUILD_ASSERT_EQ(52, SceJpegOutputInfo);
+VITASDK_BUILD_ASSERT_EQ(96, SceJpegSplitDecodeCtrl);

@@ -1,0 +1,20 @@
+SceDeci4pDtracep:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceDTrace:
+      syscall: true
+      version: 1
+      nid: 0x69699F30
+      functions:
+        - sceDTraceHelperIoctl: 0x413C420E
+        - sceDTraceClientIoctl: 0x63F0C4F5
+        - sceDTraceClientOpen: 0x761062E9
+        - sceDTraceAddHelperDof: 0xA47807D7
+        - sceDTraceClientClose: 0xB8232491
+        - sceDTraceRemoveHelperDof: 0xF2C9207A

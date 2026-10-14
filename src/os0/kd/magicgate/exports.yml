@@ -1,0 +1,62 @@
+SceMagicGate:
+  attributes: 6
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMagicGateForDriver:
+      syscall: false
+      version: 1
+      nid: 0x4EA9847A
+      functions:
+        - SceMagicGateForDriver_01FD0260: 0x01FD0260
+        - SceMagicGateForDriver_0201E54B: 0x0201E54B
+        - SceMagicGateForDriver_05912BF5: 0x05912BF5
+        - SceMagicGateForDriver_0770CBEF: 0x0770CBEF
+        - SceMagicGateForDriver_07BDCE2F: 0x07BDCE2F
+        - SceMagicGateForDriver_0B01FE3F: 0x0B01FE3F
+        - SceMagicGateForDriver_0EBA5958: 0x0EBA5958
+        - SceMagicGateForDriver_12CE769D: 0x12CE769D
+        - SceMagicGateForDriver_144BFA76: 0x144BFA76
+        - SceMagicGateForDriver_1BCE34AD: 0x1BCE34AD
+        - SceMagicGateForDriver_2B026FFF: 0x2B026FFF
+        - SceMagicGateForDriver_2D5069DE: 0x2D5069DE
+        - SceMagicGateForDriver_30DF2E82: 0x30DF2E82
+        - SceMagicGateForDriver_3270BEE6: 0x3270BEE6
+        - SceMagicGateForDriver_38AE3ACA: 0x38AE3ACA
+        - SceMagicGateForDriver_3EDD73EB: 0x3EDD73EB
+        - SceMagicGateForDriver_42A9D74E: 0x42A9D74E
+        - SceMagicGateForDriver_43518F19: 0x43518F19
+        - SceMagicGateForDriver_465A7B76: 0x465A7B76
+        - SceMagicGateForDriver_46A28FAA: 0x46A28FAA
+        - SceMagicGateForDriver_492EE950: 0x492EE950
+        - SceMagicGateForDriver_4E8B4EB5: 0x4E8B4EB5
+        - SceMagicGateForDriver_4F4B2DC9: 0x4F4B2DC9
+        - SceMagicGateForDriver_593016E1: 0x593016E1
+        - SceMagicGateForDriver_6A240950: 0x6A240950
+        - SceMagicGateForDriver_6A4D4F91: 0x6A4D4F91
+        - SceMagicGateForDriver_6D3B42E6: 0x6D3B42E6
+        - SceMagicGateForDriver_758D7158: 0x758D7158
+        - SceMagicGateForDriver_75B445DA: 0x75B445DA
+        - SceMagicGateForDriver_7A233CBC: 0x7A233CBC
+        - SceMagicGateForDriver_7B052A10: 0x7B052A10
+        - SceMagicGateForDriver_8E2E577E: 0x8E2E577E
+        - SceMagicGateForDriver_8E87BA88: 0x8E87BA88
+        - SceMagicGateForDriver_9CEF4965: 0x9CEF4965
+        - SceMagicGateForDriver_A495FA95: 0xA495FA95
+        - SceMagicGateForDriver_A49B9D70: 0xA49B9D70
+        - SceMagicGateForDriver_A855C045: 0xA855C045
+        - SceMagicGateForDriver_ACA0F529: 0xACA0F529
+        - SceMagicGateForDriver_B0827B4F: 0xB0827B4F
+        - SceMagicGateForDriver_B20497C7: 0xB20497C7
+        - SceMagicGateForDriver_C9658A76: 0xC9658A76
+        - SceMagicGateForDriver_CA74A13D: 0xCA74A13D
+        - SceMagicGateForDriver_CFD943E0: 0xCFD943E0
+        - SceMagicGateForDriver_D819D5C6: 0xD819D5C6
+        - SceMagicGateForDriver_E0888D78: 0xE0888D78
+        - SceMagicGateForDriver_E62B8A67: 0xE62B8A67
+        - SceMagicGateForDriver_F2502A3B: 0xF2502A3B
+        - SceMagicGateForDriver_FEF11D84: 0xFEF11D84

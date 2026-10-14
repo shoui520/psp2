@@ -1,0 +1,33 @@
+/*
+ * SceDtcpIp skeleton: export stubs.
+ *
+ * Generated (T2). Every body is a placeholder.
+ */
+
+#include "skeleton.h"
+
+STUB(SceDtcpIp_0584D86E)
+STUB(SceDtcpIp_0AA185AC)
+STUB(SceDtcpIp_30D1F84E)
+STUB(SceDtcpIp_3D67BF8E)
+STUB(SceDtcpIp_42679E06)
+STUB(SceDtcpIp_55E2C3C4)
+STUB(SceDtcpIp_5E57BB11)
+STUB(SceDtcpIp_67F85C9C)
+STUB(SceDtcpIp_6AE48FE3)
+STUB(SceDtcpIp_6C6AC8E8)
+STUB(SceDtcpIp_6D9B3939)
+STUB(SceDtcpIp_7DAFA54B)
+STUB(SceDtcpIp_82672A89)
+STUB(SceDtcpIp_82BE2239)
+STUB(SceDtcpIp_8557758E)
+STUB(SceDtcpIp_9108E525)
+STUB(SceDtcpIp_9697C0ED)
+STUB(SceDtcpIp_ADF09EF3)
+STUB(SceDtcpIp_C65C1309)
+STUB(SceDtcpIp_CDDCA8E4)
+STUB(SceDtcpIp_D8304EAE)
+STUB(SceDtcpIp_DBF71527)
+STUB(SceDtcpIp_DE90746D)
+STUB(SceDtcpIp_F45F5693)
+STUB(SceDtcpIp_F5CF6EBE)

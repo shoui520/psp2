@@ -1,0 +1,25 @@
+MarlinAppLib:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    mlnapplib:
+      syscall: false
+      version: 1
+      nid: 0xBD69C078
+      functions:
+        - mlnapplib_08F83AB1: 0x08F83AB1
+        - mlnapplib_09482691: 0x09482691
+        - mlnapplib_2FE40F79: 0x2FE40F79
+        - mlnapplib_5D6656EC: 0x5D6656EC
+        - mlnapplib_627F6BE5: 0x627F6BE5
+        - mlnapplib_6FECE360: 0x6FECE360
+        - mlnapplib_873FA8C6: 0x873FA8C6
+        - mlnapplib_993137AF: 0x993137AF
+        - mlnapplib_B074B00E: 0xB074B00E
+        - mlnapplib_E271FA8B: 0xE271FA8B
+        - mlnapplib_E775B916: 0xE775B916

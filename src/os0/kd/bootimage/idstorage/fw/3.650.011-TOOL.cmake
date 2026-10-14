@@ -1,0 +1,86 @@
+# 3.650.011-TOOL: os0:kd/bootimage/idstorage (generated)
+set(MODULE_NID 0xD4C8B922)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xE1AC6D7C 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x40FD29C7:1:0x0
+	0x9AD8E213:1:0x0
+	0xF13F32F9:1:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x49D4DD9B
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x6F25E18A:F:0xD6437637
+	0x40ECDB0E:F:0x821FC0EE
+	0x40ECDB0E:F:0xF5BAD43B
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:F:0xF939E83D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x56C18B11
+	0xE2C40624:F:0x84EB1EA4
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xFBAA026E
+	0x40FD29C7:F:0x21EE91F0
+	0x40FD29C7:F:0x62090481
+	0x40FD29C7:F:0x75192972
+	0x40FD29C7:F:0xDDF78594
+	0x40FD29C7:F:0xE17EFC03
+	0x40FD29C7:F:0xF99DD8A3
+	0x9AD8E213:F:0xBE5667C5
+	0xF13F32F9:F:0x2AC815A2
+	0x7290B21C:F:0x04C05D10
+	0x7290B21C:F:0x2BB92967
+	0x7290B21C:F:0x4DF40893
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelFreeHeapMemory
+	ksceKernelAllocHeapMemoryWithOption
+	ksceKernelCreateHeap
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelDeleteHeap
+	ksceKernelCpuSuspendIntr
+	ksceKernelCpuResumeIntr
+	memset
+	memcpy
+	__stack_chk_fail
+	memcmp
+	ksceKernelDeleteMutex
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	SceThreadmgrForDriver_56C18B11
+	SceThreadmgrForDriver_84EB1EA4
+	sceKernelGetProcessId
+	ksceKernelCreateMutex
+	ksceIoWrite
+	ksceIoLseek
+	ksceIoOpen
+	ksceIoSync
+	ksceIoRead
+	ksceIoClose
+	SceSblACMgrForDriver_BE5667C5
+	kscePmMgrGetProductMode
+	ksceKernelRegisterSysEventHandler
+	SceKernelSuspendForDriver_2BB92967
+	SceKernelSuspendForDriver_4DF40893
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

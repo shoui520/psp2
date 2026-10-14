@@ -1,0 +1,14 @@
+SceKernelBusError:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: RegisterErrorHandler
+  libraries:
+    SceBusErrorForKernel:
+      syscall: false
+      version: 1
+      nid: 0x193156B1
+      functions:
+        - SceBusErrorForKernel_EBB1F135: 0xEBB1F135

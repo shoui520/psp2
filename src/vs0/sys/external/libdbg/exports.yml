@@ -1,0 +1,16 @@
+SceLibDbg:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceDbg:
+      syscall: false
+      version: 1
+      nid: 0x623DF986
+      functions:
+        - sceDbgAssertionHandler: 0x1AF3678B
+        - sceDbgSetBreakOnWarningState: 0x3DEAECD3
+        - sceDbgLoggingHandler: 0x6605AB19
+        - sceDbgSetMinimumLogLevel: 0x941622FA
+        - sceDbgSetBreakOnErrorState: 0xED4A00BA

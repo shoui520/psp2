@@ -1,0 +1,84 @@
+# 3.630.011-DEBUGGER: os0:kd/bootimage/usbaudio (generated)
+set(MODULE_NID 0x4728BA6A)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x066BBE8B 0x53AD0094 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x88758561:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x6F25E18A:5:0x0
+	0x887F19D0:1:0x0
+	0xA0EBCA41:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x88758561:F:0x391B74B7
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x270993A6
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xC3E00919
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xDB395782
+	0xE2C40624:F:0xFBAA026E
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0x7B4CB60A
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x887F19D0:F:0x2A43912D
+	0xA0EBCA41:F:0x1CDBFF9F
+	0xA0EBCA41:F:0x2249BF99
+	0xA0EBCA41:F:0x2E05660F
+	0xA0EBCA41:F:0x6E53D7F4
+	0xA0EBCA41:F:0x7938DAC7
+	0xA0EBCA41:F:0xBC3EF82B
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelPrintf
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelWaitEventFlag
+	ksceKernelUnlockMutex
+	ksceKernelTryLockMutex
+	ksceKernelCreateEventFlag
+	ksceKernelClearEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	sceKernelGetProcessId
+	ksceKernelInitializeFastMutex
+	ksceKernelNotifyCallback
+	ksceKernelSetEventFlag
+	ksceKernelUnlockFastMutex
+	ksceKernelCreateMutex
+	ksceKernelFreeMemBlock
+	ksceKernelFreeHeapMemory
+	ksceKernelCopyToUser
+	ksceKernelAllocHeapMemory
+	ksceKernelCreateHeap
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelRegisterProcEventHandler
+	ksceUsbdOpenPipe
+	ksceUsbdIsochronousTransfer
+	ksceUsbdControlTransfer
+	ksceUsbdRegisterCompositeLdd
+	ksceUsbd_7938DAC7
+	ksceUsbdScanStaticDescriptor
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,78 @@
+# 3.65-CEX: vs0:sys/external/sqlite.suprx (generated)
+set(MODULE_NID 0x7F31B043)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x2DD91812:2:0x0
+	0x859A24B1:2:0x0
+	0xA6605D6F:1:0x8
+	0xA7D28DAE:1:0x0
+	0x6704D3C6:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelLockMutex
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	__sce_aeabi_idiv0
+	sceKernelLockLwMutex
+	sceIoPread
+	sceIoIoctl
+	sceClibStrchr
+	sceIoOpen
+	sceClibStrrchr
+	sceIoChstatByFd
+	sceKernelCreateEventFlag
+	sceKernelGetEventFlagInfo
+	sceIoPwrite
+	sceKernelUnlockLwMutex
+	sceIoSync
+	sceIoLseek
+	sceKernelTryLockLwMutex
+	sceIoGetstat
+	sceKernelCreateLwMutex
+	sceIoRemove
+	sceKernelCreateMutex
+	__sce_aeabi_ldiv0
+	sceIoSyncByFd
+	sceIoFlockForSystem
+	sceIoClose
+	sceKernelPowerUnlock
+	sceKernelPowerLock
+	sceKernelCloseMutex
+	sceKernelUnlockMutex
+	sceKernelDelayThread
+	sceKernelClearEventFlag
+	sceKernelOpenMutex
+	sceKernelDeleteEventFlag
+	sceKernelCloseEventFlag
+	sceKernelGetProcessId
+	sceKernelOpenEventFlag
+	sceKernelDeleteMutex
+	sceKernelSetEventFlag
+	sceAppMgrGetRawPath
+	sceAppMgrUmount
+	sceAppMgrWorkDirMount
+	sce_paf_malloc
+	ScePafStdc_0ADEA3AD
+	sce_paf_strncmp
+	sce_paf_memcpy
+	sce_paf_free
+	sce_paf_strcmp
+	ScePafStdc_75ECC54E
+	sce_paf_memcmp
+	sce_paf_memset
+	sce_paf_strlen
+	sceRtcConvertUtcToLocalTime
+	sceRtcGetCurrentTick
+	sceRtcSetTime_t
+	sceRtcGetCurrentClock
+	sceRtcGetTime_t
+	sceRtcSetTick
+	sceRtcGetTick
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

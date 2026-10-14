@@ -1,0 +1,19 @@
+SceLibG729:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceG729:
+      syscall: false
+      version: 1
+      nid: 0x9372381A
+      functions:
+        - sceG729DecodeGetContextSize: 0x57DB3ADD
+        - sceG729DecodeReset: 0x60C5F97E
+        - sceG729DecodeInit: 0x7A74B98F
+        - sceG729DecodeCore: 0x918BE529
+        - sceG729EncodeReset: 0xA5B87504
+        - sceG729EncodeInit: 0xAB9DA641
+        - sceG729EncodeGetContextSize: 0xFB053ABE
+        - sceG729EncodeCore: 0xFF57E664

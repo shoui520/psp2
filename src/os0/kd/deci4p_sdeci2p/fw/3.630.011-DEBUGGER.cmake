@@ -1,0 +1,109 @@
+# 3.630.011-DEBUGGER: os0:kd/deci4p_sdeci2p.skprx (generated)
+set(MODULE_NID 0x7A4E76F7)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xD23B9DF6)
+set(MODULE_IMPORT_LIBS
+	0x3691DA45:2:0x0
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x9DF04041:1:0x0
+	0xDF44892E:1:0x0
+	0x7EE45391:1:0x0
+	0xC9E26388:1:0x0
+	0x4E29D3B6:1:0x0
+	0xE2C40624:1:0x0
+	0xA1386CB2:1:0x8
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x3691DA45:F:0x8E4B61F1
+	0x3691DA45:F:0xAE55B7CC
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x821FC0EE
+	0x40ECDB0E:F:0x8B4C26DF
+	0x40ECDB0E:F:0x9CB9F0CE
+	0x40ECDB0E:F:0xF5BAD43B
+	0x9DF04041:F:0x180435EC
+	0x9DF04041:F:0x5C1FEB29
+	0x9DF04041:F:0x7117E827
+	0x9DF04041:F:0xD6009B98
+	0xDF44892E:F:0x2CC44FF3
+	0xDF44892E:F:0xC63C96BC
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xC9E26388:F:0xA98FC2FD
+	0x4E29D3B6:F:0x382C71E8
+	0xE2C40624:F:0x0C8A38E1
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x3E20216F
+	0xE2C40624:F:0xAC834F3F
+	0xE2C40624:F:0xC6674E7D
+	0xA1386CB2:F:0x35238B8A
+	0xA1386CB2:F:0x3A25594F
+	0xA1386CB2:F:0x59C077B3
+	0xA1386CB2:F:0x68903C1D
+	0xA1386CB2:F:0x86CFC8C6
+	0xA1386CB2:F:0x8A3B06F2
+	0xA1386CB2:F:0x98AEC60E
+	0xA1386CB2:F:0x9A653F19
+	0xA1386CB2:F:0xA55F5F0D
+	0xA1386CB2:F:0xB22B42FB
+	0xA1386CB2:F:0xB44083E1
+	0xA1386CB2:F:0xDAFE03AD
+	0xA1386CB2:F:0xE53400AE
+	0xA1386CB2:F:0xEDFBA012
+	0xA1386CB2:F:0xF43F5941
+	0xA1386CB2:F:0xFFC95B63
+	0x7290B21C:F:0xCE7A2207
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelSysrootCorelockLock
+	sceKernelSysrootCorelockUnlock
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelCpuId
+	ksceKernelCpuSuspendIntr
+	ksceKernelDcacheInvalidateRangeForL1WBWA
+	ksceKernelDcacheCleanRangeForL1WBWA
+	ksceKernelCpuResumeIntr
+	ksceKernelDisableIntr
+	ksceKernelRegisterIntrHandler
+	ksceKernelEnableIntr
+	ksceKernelReleaseIntrHandler
+	sceKernelGetIntrPendingStatusForDebugger
+	sceKernelClearIntrPendingStatusForDebugger
+	__stack_chk_fail
+	ksceKernelCheckDipsw
+	SceQafMgrForDriver_382C71E8
+	sceKernelExitThread
+	ksceKernelStartThread
+	ksceKernelWaitThreadEnd
+	ksceKernelDeleteThread
+	ksceKernelCreateThread
+	SceDeci4pSDfMgrForKernel_35238B8A
+	SceDeci4pSDfMgrForKernel_3A25594F
+	SceDeci4pSDfMgrForKernel_59C077B3
+	SceDeci4pSDfMgrForKernel_68903C1D
+	SceDeci4pSDfMgrForKernel_86CFC8C6
+	SceDeci4pSDfMgrForKernel_8A3B06F2
+	SceDeci4pSDfMgrForKernel_98AEC60E
+	sceSDfMgrContinueSystem
+	SceDeci4pSDfMgrForKernel_A55F5F0D
+	SceDeci4pSDfMgrForKernel_B22B42FB
+	sceSDfMgrExReqSend
+	sceSDfMgrExSend
+	SceDeci4pSDfMgrForKernel_E53400AE
+	sceSDfMgrBreakSystem
+	sceSDfMgrExRecv
+	SceDeci4pSDfMgrForKernel_FFC95B63
+	SceKernelSuspendForDriver_CE7A2207
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

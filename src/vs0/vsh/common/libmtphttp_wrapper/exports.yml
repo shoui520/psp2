@@ -1,0 +1,42 @@
+SceLibMtpHttpWrapper:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibMtpHttpWrapper:
+      syscall: false
+      version: 1
+      nid: 0x3D085D26
+      functions:
+        - SceLibMtpHttpWrapper_08087DF4: 0x08087DF4
+        - SceLibMtpHttpWrapper_0B4CFA83: 0x0B4CFA83
+        - SceLibMtpHttpWrapper_2054E940: 0x2054E940
+        - SceLibMtpHttpWrapper_22694C99: 0x22694C99
+        - SceLibMtpHttpWrapper_2B7DDF1D: 0x2B7DDF1D
+        - SceLibMtpHttpWrapper_37687260: 0x37687260
+        - SceLibMtpHttpWrapper_3E7BB77D: 0x3E7BB77D
+        - SceLibMtpHttpWrapper_4039717B: 0x4039717B
+        - SceLibMtpHttpWrapper_40C02EE4: 0x40C02EE4
+        - SceLibMtpHttpWrapper_456A878F: 0x456A878F
+        - SceLibMtpHttpWrapper_498DBA74: 0x498DBA74
+        - SceLibMtpHttpWrapper_511EC73A: 0x511EC73A
+        - SceLibMtpHttpWrapper_591AE2E0: 0x591AE2E0
+        - SceLibMtpHttpWrapper_6690720E: 0x6690720E
+        - SceLibMtpHttpWrapper_7A309C95: 0x7A309C95
+        - SceLibMtpHttpWrapper_7B4C41AA: 0x7B4C41AA
+        - SceLibMtpHttpWrapper_8F78F81F: 0x8F78F81F
+        - SceLibMtpHttpWrapper_982867D8: 0x982867D8
+        - SceLibMtpHttpWrapper_A90518BF: 0xA90518BF
+        - SceLibMtpHttpWrapper_AEAFFD82: 0xAEAFFD82
+        - SceLibMtpHttpWrapper_AEE728EA: 0xAEE728EA
+        - SceLibMtpHttpWrapper_AF3AA459: 0xAF3AA459
+        - SceLibMtpHttpWrapper_B0C88BB8: 0xB0C88BB8
+        - SceLibMtpHttpWrapper_CD375BDC: 0xCD375BDC
+        - SceLibMtpHttpWrapper_D1748150: 0xD1748150
+        - SceLibMtpHttpWrapper_D5B490C5: 0xD5B490C5
+        - SceLibMtpHttpWrapper_ED615FAE: 0xED615FAE
+        - SceLibMtpHttpWrapper_EEB4F73D: 0xEEB4F73D

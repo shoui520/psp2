@@ -1,0 +1,12 @@
+SceTeleportServer:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceTeleportServer:
+      syscall: false
+      version: 1
+      nid: 0x5DF15228
+      functions:
+        - sceTeleportServerSendInitialInfo: 0x2420A460

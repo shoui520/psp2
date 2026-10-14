@@ -1,0 +1,44 @@
+# 3.65-CEX: vs0:sys/external/libsystemgesture.suprx (generated)
+set(MODULE_NID 0x4F104B76)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xAF3FE2D3)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x3E4F4A81:1:0x0
+	0xCDAE3C7D:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:V:0x93B8AA67
+	0x3E4F4A81:F:0x10A2CA25
+	0x3E4F4A81:F:0xE0C1DB92
+	0xCDAE3C7D:F:0x27EAB8C1
+	0xCDAE3C7D:F:0xBA3F6937
+	0xCDAE3C7D:F:0xDA227FCC
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceKernelUnlockLwMutex
+	sceKernelCreateLwMutex
+	sceTouchGetPanelInfo
+	sceTouchGetPixelDensity2
+	acosf
+	sqrtf
+	sqrt
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,63 @@
+SceKernelIntrMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: sceKernelIntrMgrModuleStart
+    bootstart: module_bootstart
+  libraries:
+    SceIntrmgrForKernel:
+      syscall: false
+      version: 1
+      nid: 0xDF44892E
+      functions:
+        - SceIntrmgrForKernel_01911612: 0x01911612
+        - SceIntrmgrForKernel_04DBA732: 0x04DBA732
+        - SceIntrmgrForKernel_04E635AA: 0x04E635AA
+        - SceIntrmgrForKernel_08FDB0CE: 0x08FDB0CE
+        - SceIntrmgrForKernel_217AC350: 0x217AC350
+        - sceKernelGetIntrPendingStatusForDebugger: 0x2CC44FF3
+        - SceIntrmgrForKernel_46F04D82: 0x46F04D82
+        - SceIntrmgrForKernel_6F5B8AF2: 0x6F5B8AF2
+        - SceIntrmgrForKernel_71C5F42F: 0x71C5F42F
+        - SceIntrmgrForKernel_71E08D71: 0x71E08D71
+        - SceIntrmgrForKernel_764F140A: 0x764F140A
+        - SceIntrmgrForKernel_7E3D4560: 0x7E3D4560
+        - SceIntrmgrForKernel_807B2004: 0x807B2004
+        - SceIntrmgrForKernel_8D6E1289: 0x8D6E1289
+        - SceIntrmgrForKernel_9CB39268: 0x9CB39268
+        - SceIntrmgrForKernel_ABEB5A69: 0xABEB5A69
+        - sceKernelAllocSystemCallTable: 0xB5A665C7
+        - SceIntrmgrForKernel_BCD3BB05: 0xBCD3BB05
+        - sceKernelClearIntrPendingStatusForDebugger: 0xC63C96BC
+        - SceIntrmgrForKernel_E3B670BF: 0xE3B670BF
+        - sceKernelQueryIntrHandlerInfo: 0xF769CEFA
+    SceIntrmgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0x9DF04041
+      functions:
+        - sceKernelDisableIntr: 0x180435EC
+        - ksceKernelIsIntrAllowedInCurrentContext: 0x182EE3E3
+        - sceKernelDisableSubIntr: 0x259C6D9E
+        - sceKernelGenerateSoftIntr: 0x29F62500
+        - sceKernelGetIntrTargetCpu: 0x353CFAAE
+        - sceKernelSuspendSubIntr: 0x3A9EA7D1
+        - sceKernelRegisterIntrHandler: 0x5C1FEB29
+        - sceKernelSuspendIntr: 0x6EC07C56
+        - sceKernelSetIntrPriority: 0x71020E29
+        - sceKernelEnableIntr: 0x7117E827
+        - sceKernelReleaseSubIntrHandler: 0x7B9657B3
+        - sceKernelEnableSubIntr: 0x901E41D8
+        - sceKernelIsSubInterruptOccurred: 0x950B864B
+        - sceKernelResumeSubIntr: 0x957023D0
+        - sceKernelRegisterSubIntrHandler: 0x96576C18
+        - sceKernelSetIntrTargetCpu: 0x973BACCC
+        - sceKernelRegisterIntrHookHandler: 0x99048AEC
+        - sceKernelReleaseIntrHookHandler: 0xA0B7F44E
+        - sceKernelResumeIntr: 0xA4C772AF
+        - SceIntrmgrForDriver_C568F145: 0xC568F145
+        - sceKernelCallSubIntrHandler: 0xCC94B294
+        - sceKernelReleaseIntrHandler: 0xD6009B98
+        - sceKernelGetIntrPriority: 0xE427D050

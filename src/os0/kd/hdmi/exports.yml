@@ -1,0 +1,38 @@
+SceHdmi:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceHdmiForDriver:
+      syscall: false
+      version: 1
+      nid: 0x58A1A1C5
+      functions:
+        - SceHdmiForDriver_05174BC2: 0x05174BC2
+        - SceHdmiForDriver_0686FBD6: 0x0686FBD6
+        - SceHdmiForDriver_08AFFB03: 0x08AFFB03
+        - SceHdmiForDriver_0F12364A: 0x0F12364A
+        - SceHdmiForDriver_291F000B: 0x291F000B
+        - sceHdmiCecRegisterEventCallback: 0x3126A070
+        - SceHdmiForDriver_47894820: 0x47894820
+        - SceHdmiForDriver_47B753EB: 0x47B753EB
+        - sceHdmiCecCmdOneTouchPlay: 0x4C31F5E8
+        - SceHdmiForDriver_5A212BB3: 0x5A212BB3
+        - SceHdmiForDriver_6D2D10D8: 0x6D2D10D8
+        - SceHdmiForDriver_7AD0F6C9: 0x7AD0F6C9
+        - SceHdmiForDriver_854EEB78: 0x854EEB78
+        - SceHdmiForDriver_8EB0FD9C: 0x8EB0FD9C
+        - SceHdmiForDriver_93AA48AC: 0x93AA48AC
+        - SceHdmiForDriver_99A3CABE: 0x99A3CABE
+        - SceHdmiForDriver_B04F5B6A: 0xB04F5B6A
+        - SceHdmiForDriver_D929E4E5: 0xD929E4E5
+        - SceHdmiForDriver_E331EC90: 0xE331EC90
+        - SceHdmiForDriver_E66D5A4D: 0xE66D5A4D
+        - SceHdmiForDriver_EA486A37: 0xEA486A37
+        - SceHdmiForDriver_F20529CC: 0xF20529CC
+        - sceHdmiCecEnableCec: 0xFA30ACFC
+        - SceHdmiForDriver_FAB3A2E9: 0xFAB3A2E9
+        - SceHdmiForDriver_FF5546D8: 0xFF5546D8

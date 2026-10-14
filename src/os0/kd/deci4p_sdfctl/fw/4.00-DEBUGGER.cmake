@@ -1,0 +1,104 @@
+# 4.00-DEBUGGER: os0:kd/deci4p_sdfctl.skprx (generated)
+set(MODULE_NID 0x06E800C0)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x2ED7F97A:2:0x0
+	0xE2C40624:1:0x0
+	0x9DF04041:1:0x0
+	0x3691DA45:2:0x0
+	0x40ECDB0E:2:0x0
+	0x1CCD9BA3:1:0x0
+	0x88758561:2:0x0
+	0xC9E26388:1:0x0
+	0x7EE45391:1:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x2ED7F97A:F:0x2816A813
+	0x2ED7F97A:F:0x9421B223
+	0x2ED7F97A:F:0xD56A2F3E
+	0x2ED7F97A:F:0xE541959B
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAC834F3F
+	0xE2C40624:F:0xC6674E7D
+	0xE2C40624:F:0xD4780C3E
+	0x9DF04041:F:0x180435EC
+	0x9DF04041:F:0x29F62500
+	0x9DF04041:F:0x5C1FEB29
+	0x9DF04041:F:0x7117E827
+	0x9DF04041:F:0xD6009B98
+	0x3691DA45:F:0x8E4B61F1
+	0x3691DA45:F:0xAE55B7CC
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x1CCD9BA3:F:0x430C48F1
+	0x1CCD9BA3:F:0x4C02AA05
+	0x1CCD9BA3:F:0x4E97D3AD
+	0x88758561:F:0x02B04343
+	0x88758561:F:0x374B7868
+	0x88758561:F:0x391B74B7
+	0x88758561:F:0xD9703808
+	0x88758561:F:0xFD753E7A
+	0xC9E26388:F:0xA98FC2FD
+	0x7EE45391:F:0x6D286146
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:F:0xCD4BD884
+	0x7EE45391:V:0x99EEBD1F
+	0x7290B21C:F:0x0106C0F0
+	0x7290B21C:F:0x04C05D10
+	0x7290B21C:F:0x0A6CA124
+	0x7290B21C:F:0x105C5752
+	0x7290B21C:F:0xAEA9440D
+	0x7290B21C:F:0xCE7A2207
+)
+set(MODULE_IMPORT_FUNCS
+	SceSysrootForDriver_2816A813
+	SceSysrootForDriver_9421B223
+	SceSysrootForDriver_D56A2F3E
+	SceSysrootForDriver_E541959B
+	ksceKernelWaitEventFlag
+	ksceKernelStartThread
+	ksceKernelCreateEventFlag
+	ksceKernelDeleteEventFlag
+	ksceKernelDeleteThread
+	ksceKernelCreateThread
+	ksceKernelSetEventFlag
+	ksceKernelDisableIntr
+	ksceKernelTriggerSGI
+	ksceKernelRegisterIntrHandler
+	ksceKernelEnableIntr
+	ksceKernelReleaseIntrHandler
+	sceKernelSysrootCorelockLock
+	sceKernelSysrootCorelockUnlock
+	ksceKernelCpuId
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceUartWrite
+	ksceUartInit
+	ksceUartRead
+	ksceKernelPrintfWithInfo
+	ksceKernelGetAssertLevel
+	ksceKernelPrintf
+	ksceKernelPrintfLevelWithInfo
+	ksceKernelAssertLevel
+	ksceKernelCheckDipsw
+	strncpy
+	__stack_chk_fail
+	strnlen
+	SceKernelSuspendForDriver_0106C0F0
+	ksceKernelRegisterSysEventHandler
+	SceKernelSuspendForDriver_0A6CA124
+	SceKernelSuspendForDriver_105C5752
+	SceKernelSuspendForDriver_AEA9440D
+	SceKernelSuspendForDriver_CE7A2207
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

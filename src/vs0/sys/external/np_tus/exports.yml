@@ -1,0 +1,78 @@
+SceNpTus:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpTus:
+      syscall: false
+      version: 1
+      nid: 0xAE84BDEA
+      functions:
+        - sceNpTusGetMultiUserVariableVUser: 0x0374C127
+        - sceNpTusAddAndGetVariableAsync: 0x0A5D05F1
+        - sceNpTusDeleteMultiSlotDataAsync: 0x0CFAC523
+        - sceNpTusSetDataVUserAsync: 0x1989CC51
+        - sceNpTssGetDataAsync: 0x1C8D73A8
+        - sceNpTusDeleteMultiSlotVariable: 0x246DB508
+        - sceNpTusGetFriendsDataStatus: 0x27FB4EFD
+        - sceNpTusAbortRequest: 0x2C5F1162
+        - sceNpTusSetMultiSlotVariableVUserAsync: 0x2E9A7FD0
+        - sceNpTusGetFriendsDataStatusAsync: 0x32064D64
+        - sceNpTusSetData: 0x33E29819
+        - sceNpTusWaitAsync: 0x3907A8BC
+        - sceNpTusDeleteMultiSlotVariableVUserAsync: 0x3B44D0E4
+        - sceNpTusAddAndGetVariable: 0x4099FC56
+        - sceNpTusDeleteMultiSlotDataVUser: 0x41FBED79
+        - sceNpTusDeleteMultiSlotVariableVUser: 0x420350F9
+        - sceNpTusTryAndSetVariableAsync: 0x44947D07
+        - sceNpTusGetFriendsVariable: 0x47E1716A
+        - sceNpTusGetMultiSlotDataStatusVUser: 0x50FC680F
+        - sceNpTusTryAndSetVariableVUserAsync: 0x518A64B9
+        - sceNpTusGetMultiSlotDataStatusAsync: 0x520975C3
+        - sceNpTusGetMultiSlotVariable: 0x5EB05C7A
+        - sceNpTusSetDataVUser: 0x6A175F75
+        - sceNpTusTryAndSetVariableVUser: 0x6B2A54EB
+        - sceNpTusGetMultiUserDataStatusVUserAsync: 0x7593D595
+        - sceNpTssGetDataNoLimitAsync: 0x7A101394
+        - sceNpTusTerm: 0x7EDC33B3
+        - sceNpTusGetDataAsync: 0x883AC44A
+        - sceNpTusChangeModeForOtherSaveDataOwners: 0x88A2D551
+        - sceNpTssGetStorageAsync: 0x8972DF8F
+        - sceNpTssGetSmallStorage: 0x8CA469F4
+        - sceNpTusGetData: 0x9677BDD6
+        - sceNpTssGetDataNoLimit: 0x987D1018
+        - sceNpTusCreateRequest: 0x99DC7420
+        - sceNpTusSetMultiSlotVariableVUser: 0x9A1E4472
+        - sceNpTusDeleteMultiSlotDataVUserAsync: 0x9BA9148C
+        - sceNpTusGetDataVUserAsync: 0x9E8E1CF8
+        - sceNpTusSetDataAsync: 0x9FABA1E5
+        - sceNpTusSetMultiSlotVariable: 0xA3F00EE6
+        - sceNpTusSetMultiSlotVariableAsync: 0xA61AEDB0
+        - sceNpTusGetMultiUserDataStatusVUser: 0xAF7148A6
+        - sceNpTusTryAndSetVariable: 0xB0A6F839
+        - sceNpTusInit: 0xB2141F8D
+        - sceNpTusDeleteRequest: 0xB46B5D7F
+        - sceNpTusAddAndGetVariableVUserAsync: 0xBB5E5E29
+        - sceNpTusGetMultiUserVariableAsync: 0xBBEFCD26
+        - sceNpTusPollAsync: 0xC003C588
+        - sceNpTusGetMultiUserDataStatusAsync: 0xC08A1E5E
+        - sceNpTusSetTimeout: 0xC4BB64A7
+        - sceNpTusGetMultiUserVariable: 0xC5656132
+        - sceNpTusGetDataVUser: 0xCCB9E791
+        - sceNpTusGetMultiSlotVariableAsync: 0xD26B9F4C
+        - sceNpTusGetMultiUserVariableVUserAsync: 0xD51B39ED
+        - sceNpTusDeleteTitleCtx: 0xD53D3692
+        - sceNpTusGetMultiSlotDataStatusVUserAsync: 0xD62D2A0B
+        - sceNpTssGetData: 0xD8D5CABA
+        - sceNpTusGetMultiSlotDataStatus: 0xD97E51EC
+        - sceNpTusGetFriendsVariableAsync: 0xDFC8F03D
+        - sceNpTusAddAndGetVariableVUser: 0xE1D6D4CF
+        - sceNpTssGetSmallStorageAsync: 0xEA588F23
+        - sceNpTusCreateTitleCtx: 0xF1D9529E
+        - sceNpTusGetMultiUserDataStatus: 0xF4D40B19
+        - sceNpTusDeleteMultiSlotData: 0xF6D24DF7
+        - sceNpTusGetMultiSlotVariableVUserAsync: 0xF91887EC
+        - sceNpTusDeleteMultiSlotVariableAsync: 0xFC0C5159
+        - sceNpTssGetStorage: 0xFC300E7E
+        - sceNpTusGetMultiSlotVariableVUser: 0xFE92D6CB

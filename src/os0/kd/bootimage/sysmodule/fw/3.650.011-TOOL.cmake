@@ -1,0 +1,92 @@
+# 3.650.011-TOOL: os0:kd/bootimage/sysmodule (generated)
+set(MODULE_NID 0x86F009BC)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x03FCF19D 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x88758561:2:0x0
+	0x6F25E18A:5:0x0
+	0x7EE45391:1:0x0
+	0xC9E26388:1:0x0
+	0xD4A60A52:1:0x0
+	0xE2C40624:1:0x0
+	0x746EC971:1:0x0
+	0x9AD8E213:1:0x0
+	0x4E29D3B6:1:0x0
+	0x887F19D0:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x88758561:F:0x391B74B7
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0xBC996A7A
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xC9E26388:F:0xA98FC2FD
+	0xD4A60A52:F:0x02D3D0C1
+	0xD4A60A52:F:0x49A3EDC7
+	0xD4A60A52:F:0x9D953C22
+	0xD4A60A52:F:0xE2ADEF8D
+	0xE2C40624:F:0x02EEDF17
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1AAFA818
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x20C228E4
+	0xE2C40624:F:0x5053B005
+	0xE2C40624:F:0x59D06540
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xFBAA026E
+	0x746EC971:F:0x3801D7D6
+	0x746EC971:F:0x61B9B6FA
+	0x746EC971:F:0x6599E5D9
+	0x746EC971:F:0xAF80F39C
+	0x746EC971:F:0xB1C3EFCA
+	0x746EC971:F:0xD141C076
+	0x9AD8E213:F:0x6C5AB07F
+	0x9AD8E213:F:0x8612B243
+	0x9AD8E213:F:0xC98D82EE
+	0x9AD8E213:F:0xE87D1777
+	0x4E29D3B6:F:0xB9770A13
+	0x887F19D0:F:0x2A43912D
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelPrintf
+	ksceKernelCopyToUser
+	ksceKernelCopyFromUser
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelCheckDipsw
+	ksceKernelStopUnloadSharedModuleForPid
+	ksceKernelStopUnloadModuleForPid
+	ksceKernelLoadStartModuleForPid
+	ksceKernelLoadStartSharedModuleForPid
+	ksceKernelSetPermission
+	ksceKernelDeleteMutex
+	ksceKernelLockMutex
+	sceKernelPMonSetControlRegister
+	ksceKernelUnlockMutex
+	SceThreadmgrForDriver_20C228E4
+	sceKernelPMonSetUserEnableRegister
+	ksceKernelGetThreadId
+	sceKernelGetProcessId
+	ksceKernelCreateMutex
+	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_61B9B6FA
+	sceKernelSetPMUSERENR
+	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_B1C3EFCA
+	SceProcessmgrForDriver_D141C076
+	ksceSblACMgrIsNonGameProgram
+	ksceSblACMgrIsSystemProgram
+	ksceSblACMgrIsPSMDevAssistant
+	ksceSblACMgrIsDevelopmentMode
+	SceQafMgrForDriver_B9770A13
+	ksceKernelRegisterProcEventHandler
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

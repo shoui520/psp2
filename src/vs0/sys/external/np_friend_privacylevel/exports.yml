@@ -1,0 +1,27 @@
+SceNpFriendPrivacyLevel:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpFriendPrivacyLevel:
+      syscall: false
+      version: 1
+      nid: 0xB30BCE77
+      functions:
+        - SceNpFriendPrivacyLevel_0DBE63D7: 0x0DBE63D7
+        - SceNpFriendPrivacyLevel_0FCF5624: 0x0FCF5624
+        - SceNpFriendPrivacyLevel_2084754C: 0x2084754C
+        - SceNpFriendPrivacyLevel_4FCC8C4F: 0x4FCC8C4F
+        - SceNpFriendPrivacyLevel_553802EA: 0x553802EA
+        - SceNpFriendPrivacyLevel_5F889D6B: 0x5F889D6B
+        - SceNpFriendPrivacyLevel_7329E546: 0x7329E546
+        - SceNpFriendPrivacyLevel_75AD3F62: 0x75AD3F62
+        - SceNpFriendPrivacyLevel_930AE1C5: 0x930AE1C5
+        - SceNpFriendPrivacyLevel_9AB5E611: 0x9AB5E611
+        - SceNpFriendPrivacyLevel_A6A29020: 0xA6A29020
+        - SceNpFriendPrivacyLevel_CA5CCFC3: 0xCA5CCFC3
+        - SceNpFriendPrivacyLevel_CAE56596: 0xCAE56596
+        - SceNpFriendPrivacyLevel_E1CBA890: 0xE1CBA890
+        - SceNpFriendPrivacyLevel_FBD597C5: 0xFBD597C5
+        - SceNpFriendPrivacyLevel_FC331519: 0xFC331519

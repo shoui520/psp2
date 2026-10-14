@@ -1,0 +1,70 @@
+# 3.650.011-TOOL: vs0:app/NPXS10029/eboot.bin (generated)
+set(MODULE_NID 0x06121F8D)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_NID0_VARS 0x70FBA1E7:sceProcessParam)
+set(MODULE_IMPORT_LIBS
+	0xA6605D6F:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x859A24B1:2:0x0
+	0x37FE725A:2:0x0
+	0x608C27AF:1:0x0
+	0xF4E34EDB:1:0x8
+	0xBE43BB07:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceAppMgrDestroyAppByName
+	sceAppMgrReceiveEventNum
+	sceAppMgrReceiveEvent
+	sceKernelCallModuleExit
+	sceKernelStopUnloadModule
+	sceKernelDeleteLwMutex
+	sceKernelLoadStartModule
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	__sce_aeabi_idiv0
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceIoOpen
+	sceClibMemmove
+	sceKernelExitProcess
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceKernelUnlockLwMutex
+	sceIoLseek
+	sceKernelTryLockLwMutex
+	sceClibStrnlen
+	sceKernelCreateLwMutex
+	sceKernelGetProcessTimeLow
+	sceClibPrintf
+	__sce_aeabi_ldiv0
+	sceIoWrite
+	sceIoClose
+	sceIoRead
+	sceKernelDelayThread
+	sceKernelClearEventFlag
+	sceKernelOpenEventFlag
+	sceKernelSetEventFlag
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	SceMarlin_0166ACC1
+	SceMarlin_45B29121
+	SceMarlin_83B44D33
+	SceMarlin_8FEB4F94
+	SceMarlin_9609E2DF
+	SceMarlin_9CD4CE1E
+	SceMarlin_C76DA6C0
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+	_sceLdTlsRegisterModuleInfo
+	free
+	malloc
+	strncpy
+	__at_quick_exit
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

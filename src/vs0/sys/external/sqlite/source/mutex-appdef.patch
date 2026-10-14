@@ -1,0 +1,5 @@
+--- sqlite3.c
++++ sqlite3.c
+@@ -8956,1 +8956,1 @@
+-#if SQLITE_THREADSAFE && !defined(SQLITE_MUTEX_NOOP)
++#if SQLITE_THREADSAFE && !defined(SQLITE_MUTEX_NOOP) && !defined(SQLITE_MUTEX_APPDEF)

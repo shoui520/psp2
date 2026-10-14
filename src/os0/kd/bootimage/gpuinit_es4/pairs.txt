@@ -1,0 +1,8 @@
+module_start 81000000
+nextScriptCommand 81000148
+scriptWriteSGXReg 8100016a
+patchUSEImmediate 8100017e
+allocKernelDataZeroed 810001a8
+allocKernelBufferZeroed 810001e0
+setUSEExecutionAddress 81000218
+SGXInitialisePart2KM 81000238

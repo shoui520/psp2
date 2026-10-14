@@ -1,0 +1,193 @@
+SceCommonDialog:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceCommonDialog:
+      syscall: false
+      version: 1
+      nid: 0xE537816C
+      functions:
+        - sceSaveDataDialogAbort: 0x013E7F74
+        - sceMsgDialogProgressBarSetMsg: 0x0150A451
+        - scePhotoImportDialogGetStatus: 0x032206D8
+        - sceCommonDialogIsRunning: 0x043A353E
+        - sceNpProfileDialogTerm: 0x04B63D6F
+        - sceNpFriendList2DialogTerm: 0x05B18EA3
+        - SceCommonDialog_075E4490: 0x075E4490
+        - sceStoreCheckoutDialogGetResult: 0x07ED1E26
+        - SceCommonDialog_089FB01E: 0x089FB01E
+        - sceMsgDialogAbort: 0x0CC66115
+        - sceCompanionUtilDialogInit: 0x0F68448E
+        - sceNpSnsFacebookDialogGetStatus: 0x147650E8
+        - sceSaveDataDialogContinue: 0x19192C8B
+        - sceImeDialogInit: 0x1E7043BF
+        - sceNpFriendListDialogGetStatus: 0x1FD5D373
+        - sceSaveDataDialogTerm: 0x2192A10A
+        - sceRemoteOSKDialogAbort: 0x2314D273
+        - sceCrossControllerDialogInit: 0x2339FBD5
+        - SceCommonDialog_243D6A36: 0x243D6A36
+        - sceRemoteOSKDialogInit: 0x24EB7636
+        - sceTwDialogTerm: 0x2702905B
+        - sceNpMessageDialogGetStatus: 0x2A0D060F
+        - sceNpProfileDialogAbort: 0x2B02BE3F
+        - SceCommonDialog_2CD0649B: 0x2CD0649B
+        - sceNetCheckDialogAbort: 0x2D8EDF09
+        - sceImeDialogGetResult: 0x2EB3D046
+        - SceCommonDialog_33626E2C: 0x33626E2C
+        - SceCommonDialog_35387E0C: 0x35387E0C
+        - sceRemoteOSKDialogGetStatus: 0x356F222A
+        - sceNpSnsFacebookDialogGetResult: 0x36C5E9A5
+        - sceNetCheckDialogGetPS3ConnectInfo: 0x39467634
+        - SceCommonDialog_396D7B68: 0x396D7B68
+        - SceCommonDialog_3D3F9AD6: 0x3D3F9AD6
+        - SceCommonDialog_40CD30CD: 0x40CD30CD
+        - sceMsgDialogGetStatus: 0x4107019E
+        - sceSaveDataDialogSubClose: 0x415D6068
+        - scePspSaveDataDialogInit: 0x4458B053
+        - sceCrossControllerDialogGetStatus: 0x44B9E931
+        - SceCommonDialog_452DA757: 0x452DA757
+        - sceNpMessageDialogInit: 0x4535A358
+        - SceCommonDialog_460FDFF7: 0x460FDFF7
+        - SceCommonDialog_463DB9ED: 0x463DB9ED
+        - sceNpMessageDialogAbort: 0x47AB6D04
+        - SceCommonDialog_47E7AD8E: 0x47E7AD8E
+        - sceCompanionUtilDialogGetResult: 0x4A101FA7
+        - scePspSaveDataDialogContinue: 0x4A40C37F
+        - sceNpFriendListDialogTerm: 0x4A880C6A
+        - scePhotoImportDialogAbort: 0x4B125581
+        - SceCommonDialog_500229F0: 0x500229F0
+        - sceVideoImportDialogTerm: 0x52E1CF8F
+        - sceStoreCheckoutDialogInit: 0x52ECD8A5
+        - sceNpFriendListDialogAbort: 0x58FA2062
+        - sceImeDialogAbort: 0x594A220E
+        - sceSaveDataDialogProgressBarSetValue: 0x5C322D1E
+        - sceNpProfileDialogInit: 0x5E0AFDF8
+        - sceTwLoginDialogGetResult: 0x5F7F4149
+        - scePspSaveDataDialogGetResult: 0x61C45E12
+        - SceCommonDialog_62B60B87: 0x62B60B87
+        - SceCommonDialog_631DC45C: 0x631DC45C
+        - SceCommonDialog_63B08CA3: 0x63B08CA3
+        - SceCommonDialog_64D21971: 0x64D21971
+        - SceCommonDialog_64F65B8D: 0x64F65B8D
+        - SceCommonDialog_675248CA: 0x675248CA
+        - sceNpSnsFacebookDialogInit: 0x6821F09B
+        - sceCompanionUtilDialogAbort: 0x686C27EB
+        - sceSaveDataDialogFinish: 0x6C49924B
+        - sceSaveDataDialogGetStatus: 0x6E258046
+        - sceCrossControllerDialogTerm: 0x6E572EBF
+        - sceStoreCheckoutDialogGetStatus: 0x7004BB2E
+        - SceCommonDialog_7030E4A6: 0x7030E4A6
+        - scePhotoImportDialogInit: 0x73EE7C9C
+        - sceNpProfileDialogGetResult: 0x749CAFFC
+        - scePhotoReviewDialogAbort: 0x74FF2A8B
+        - sceMsgDialogInit: 0x755FF270
+        - SceCommonDialog_76A52CDE: 0x76A52CDE
+        - sceVideoImportDialogGetResult: 0x7759D5AD
+        - sceNpMessageDialogTerm: 0x7AB50F63
+        - sceCameraImportDialogGetResult: 0x7B339AA2
+        - sceMsgDialogProgressBarInc: 0x7BE0E08B
+        - sceNpSnsFacebookDialogAbort: 0x7E22AD33
+        - sceNpMessageDialogGetResult: 0x7EC95C61
+        - scePhotoImportDialogTerm: 0x7FE5BD77
+        - sceNetCheckDialogGetStatus: 0x8027292A
+        - sceMsgDialogTerm: 0x81ACF695
+        - sceImeDialogTerm: 0x838A3AF4
+        - sceCameraImportDialogGetStatus: 0x86AE7314
+        - sceTwDialogGetResult: 0x87F3F43E
+        - sceCameraImportDialogAbort: 0x8852B9A4
+        - sceTwLoginDialogGetStatus: 0x8ACC1F0B
+        - sceNetCheckDialogTerm: 0x8BE51C15
+        - sceCrossControllerDialogGetResult: 0x8E35EA7B
+        - sceCameraImportDialogTerm: 0x8ED0C83C
+        - sceCommonDialogUpdate: 0x90530F2F
+        - sceTwDialogInit: 0x93E51B04
+        - sceNpFriendListDialogInit: 0x93FCFEC6
+        - SceCommonDialog_9800F871: 0x9800F871
+        - sceTwDialogAbort: 0x9BEBB77B
+        - sceMsgDialogProgressBarSetValue: 0x9CDA5E0D
+        - sceNpTrophySetupDialogInit: 0x9E2C02C9
+        - SceCommonDialog_9FA21E09: 0x9FA21E09
+        - sceRemoteOSKDialogTerm: 0xA15121F7
+        - sceNetCheckDialogInit: 0xA38A4A0D
+        - SceCommonDialog_A68A44EA: 0xA68A44EA
+        - SceCommonDialog_A785D111: 0xA785D111
+        - sceNpTrophySetupDialogTerm: 0xA81082DD
+        - sceNpSnsFacebookDialogGetResultLongToken: 0xA8682304
+        - SceCommonDialog_AA624C1F: 0xAA624C1F
+        - SceCommonDialog_AC20DAF9: 0xAC20DAF9
+        - sceNpFriendList2DialogGetStatus: 0xAC735AF9
+        - sceNetCheckDialogGetResult: 0xB05FCE9E
+        - sceSaveDataDialogGetResult: 0xB2FF576E
+        - SceCommonDialog_B55CF0E3: 0xB55CF0E3
+        - sceTwLoginDialogAbort: 0xB5ED4A32
+        - sceStoreCheckoutDialogTerm: 0xB787F4B0
+        - SceCommonDialog_B7D4C911: 0xB7D4C911
+        - scePspSaveDataDialogTerm: 0xB8E37F7C
+        - sceCompanionUtilDialogGetStatus: 0xB981474F
+        - sceSaveDataDialogGetSubStatus: 0xBA0542CA
+        - sceMsgDialogGetResult: 0xBB3BFC89
+        - sceNpFriendList2DialogInit: 0xBBCDF66D
+        - sceSaveDataDialogProgressBarInc: 0xBDE00A83
+        - sceVideoImportDialogGetStatus: 0xBE7C198A
+        - SceCommonDialog_BEBAEF25: 0xBEBAEF25
+        - sceCommonDialogSetConfigParam: 0xBECD35C8
+        - sceSaveDataDialogInit: 0xBF5248FA
+        - sceNpFriendList2DialogGetResult: 0xC0CF1ED4
+        - sceMsgDialogClose: 0xC296D396
+        - SceCommonDialog_C2D6F7F2: 0xC2D6F7F2
+        - SceCommonDialog_C36C7DD1: 0xC36C7DD1
+        - sceNpTrophySetupDialogGetStatus: 0xC3A59547
+        - sceCompanionUtilDialogTerm: 0xC3E6B1EC
+        - SceCommonDialog_C6DB0740: 0xC6DB0740
+        - scePhotoReviewDialogTerm: 0xC700B2DF
+        - scePhotoReviewDialogInit: 0xCD990375
+        - sceImeDialogGetStatus: 0xCF0431FD
+        - SceCommonDialog_D1858A78: 0xD1858A78
+        - sceNpFriendListDialogGetResult: 0xD29FE607
+        - SceCommonDialog_D474A749: 0xD474A749
+        - sceCommonDialogGetWorkerThreadId: 0xD4C37375
+        - sceTwDialogGetStatus: 0xD5A6B473
+        - sceTwLoginDialogTerm: 0xD6387E24
+        - sceStoreCheckoutDialogAbort: 0xD699D9B4
+        - scePhotoImportDialogGetResult: 0xD855414C
+        - sceNpTrophySetupDialogAbort: 0xDC346979
+        - sceCrossControllerDialogAbort: 0xDDC52A46
+        - sceNpSnsFacebookDialogTerm: 0xDE1F3928
+        - sceNpTrophySetupDialogGetResult: 0xE37069D5
+        - sceCameraImportDialogInit: 0xE525BDB0
+        - SceCommonDialog_E7F645AE: 0xE7F645AE
+        - sceVideoImportDialogAbort: 0xECA699FD
+        - SceCommonDialog_ED2F1495: 0xED2F1495
+        - SceCommonDialog_EFABDD6F: 0xEFABDD6F
+        - sceVideoImportDialogInit: 0xF0CC86F9
+        - sceRemoteOSKDialogGetResult: 0xF22D7884
+        - SceCommonDialog_F2F0049E: 0xF2F0049E
+        - scePhotoReviewDialogGetStatus: 0xF4F600CA
+        - SceCommonDialog_FA26EB30: 0xFA26EB30
+        - SceCommonDialog_FBE52F6D: 0xFBE52F6D
+        - sceNpFriendList2DialogAbort: 0xFC67B971
+        - SceCommonDialog_FCDA2F0D: 0xFCDA2F0D
+        - sceNpProfileDialogGetStatus: 0xFDFE6042
+        - SceCommonDialog_FEBF87EB: 0xFEBF87EB
+        - scePhotoReviewDialogGetResult: 0xFFA35858
+    SceNpWebApiCommonDialog:
+      syscall: false
+      version: 1
+      nid: 0x883CFD5C
+      functions:
+        - sceGameCustomDataDialogGetStatus: 0x114F831A
+        - sceGameCustomDataDialogInit: 0x23C9840E
+        - sceInvitationDialogTerm: 0x4136382C
+        - sceInvitationDialogGetStatus: 0x5B735F60
+        - sceInvitationDialogAbort: 0x853E5D3B
+        - sceInvitationDialogInit: 0x8723A5F2
+        - sceGameCustomDataDialogGetResult: 0xC2B39806
+        - sceGameCustomDataDialogTerm: 0xE183B9F3
+        - sceInvitationDialogGetResult: 0xEA14FB1E
+        - sceGameCustomDataDialogAbort: 0xF5A1FA42

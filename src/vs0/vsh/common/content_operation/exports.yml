@@ -1,0 +1,24 @@
+SceContentOperation:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceContentOperation:
+      syscall: false
+      version: 1
+      nid: 0x0D64B6ED
+      functions:
+        - SceContentOperation_0D35D892: 0x0D35D892
+        - SceContentOperation_16112947: 0x16112947
+        - SceContentOperation_1A67467D: 0x1A67467D
+        - SceContentOperation_52DCED70: 0x52DCED70
+        - SceContentOperation_668CB1E5: 0x668CB1E5
+        - SceContentOperation_70B406BD: 0x70B406BD
+        - SceContentOperation_7EB57B7D: 0x7EB57B7D
+        - SceContentOperation_AF89DF37: 0xAF89DF37
+        - SceContentOperation_CDCC7DBD: 0xCDCC7DBD
+        - SceContentOperation_F0AC6849: 0xF0AC6849

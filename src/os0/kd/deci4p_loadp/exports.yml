@@ -1,0 +1,15 @@
+SceDeci4pLoadp:
+  attributes: 7
+  version:
+    major: 1
+    minor: 4
+  main:
+    start: module_start
+  libraries:
+    SceDeci4pLoadp:
+      syscall: true
+      version: 1
+      nid: 0x7C088954
+      functions:
+        - SceDeci4pLoadp_9A46C1BA: 0x9A46C1BA
+        - SceDeci4pLoadp_AA103B3F: 0xAA103B3F

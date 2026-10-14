@@ -1,0 +1,87 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/psmkdc.suprx (generated)
+set(MODULE_NID 0x430DBE4B)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xE8F15CDE:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x859A24B1:2:0x0
+	0xA6605D6F:1:0x0
+	0x91AFEB43:1:0x0
+	0x3F2B0888:1:0x0
+	0x35C5ACD4:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceHttpsDisableOptionPrivate
+	sceHttpParseResponseHeader
+	sceHttpGetAllResponseHeaders
+	sceHttpUriEscape
+	sceHttpInit
+	sceHttpSetConnectTimeOut
+	sceHttpGetStatusCode
+	sceHttpsGetSslError
+	sceHttpDeleteRequest
+	sceHttpCreateTemplate
+	sceHttpsEnableOptionPrivate
+	sceHttpAddRequestHeader
+	sceHttpReadData
+	sceHttpSetSendTimeOut
+	sceHttpSetRecvTimeOut
+	sceHttpSendRequest
+	sceHttpCreateRequestWithURL
+	sceHttpCreateConnectionWithURL
+	sceHttpAbortRequest
+	sceHttpDeleteTemplate
+	sceHttpDeleteConnection
+	sceHttpGetResponseContentLength
+	sceKernelLockMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	__sce_aeabi_idiv0
+	sceClibTolower
+	sceClibStrchr
+	SceLibKernel_622A81E6
+	sceClibMemset
+	sceClibStrncmp
+	sceIoOpen
+	sceClibSnprintf
+	sceIoMkdir
+	sceIoDread
+	sceClibMemcmp
+	sceIoDopen
+	sceClibStrnlen
+	sceClibToupper
+	sceIoGetstat
+	sceClibStrncpy
+	sceClibLookCtypeTable
+	sceIoRemove
+	sceClibStrstr
+	SceLibKernel_EB6DA895
+	sceKernelCreateMutex
+	sceIoRename
+	__sce_aeabi_ldiv0
+	sceIoWrite
+	sceIoDclose
+	sceIoLseek32
+	sceIoClose
+	sceIoRead
+	sceKernelUnlockMutex
+	sceKernelOpenMutex
+	sceKernelDeleteMutex
+	sceAppMgrSystemParamGetString
+	sceAppMgrUmount
+	sceAppMgrAppDataMountById
+	sceDrmBridgeGetCurrentSecureTick
+	scePsmDrmGetRifNameForInstall
+	scePsmDrmRemoveActData
+	scePsmDrmGetRifKey
+	scePsmDrmGetRifName
+	scePsmDrmGetActInfo
+	scePsmDrmGetRifInfo
+	_vshRtcGetCurrentSecureTick
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

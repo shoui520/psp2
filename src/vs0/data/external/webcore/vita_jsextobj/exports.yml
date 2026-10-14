@@ -1,0 +1,25 @@
+SceLibVitaJSExtObj:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceLibVitaJSExtObj:
+      syscall: false
+      version: 1
+      nid: 0x2E01B9FF
+      functions:
+        - SceLibVitaJSExtObj_33DC4DF2: 0x33DC4DF2
+        - SceLibVitaJSExtObj_4E92DEF9: 0x4E92DEF9
+        - SceLibVitaJSExtObj_54C05E8D: 0x54C05E8D
+        - SceLibVitaJSExtObj_655F46B4: 0x655F46B4
+        - SceLibVitaJSExtObj_6A962A95: 0x6A962A95
+        - SceLibVitaJSExtObj_6D470EC3: 0x6D470EC3
+        - SceLibVitaJSExtObj_74372B12: 0x74372B12
+        - SceLibVitaJSExtObj_825440CD: 0x825440CD
+        - SceLibVitaJSExtObj_9B77AD63: 0x9B77AD63
+        - SceLibVitaJSExtObj_EB83E6F3: 0xEB83E6F3

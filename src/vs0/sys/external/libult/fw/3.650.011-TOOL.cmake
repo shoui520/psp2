@@ -1,0 +1,78 @@
+# 3.650.011-TOOL: vs0:sys/external/libult.suprx (generated)
+set(MODULE_NID 0xBD26C773)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x220668A5)
+set(MODULE_IMPORT_LIBS
+	0xF88DAA70:1:0x0
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0xDB18BB68:1:0x0
+	0x49F67FCF:1:0x8
+	0x447F047D:1:0x8
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xF88DAA70:F:0x189599B4
+	0xF88DAA70:F:0x3B42921F
+	0xF88DAA70:F:0x7DF23243
+	0xF88DAA70:F:0xC6A3F9BB
+	0xF88DAA70:F:0xE00B9AFE
+	0xF88DAA70:F:0xE160F844
+	0xF88DAA70:F:0xE4283144
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x8D9C5461
+	0xCAE9ACE6:F:0xADCA94E5
+	0xCAE9ACE6:F:0xB295EB61
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0xD4C367B2
+	0x5E8D0E22:F:0x0C8A38E1
+	0xDB18BB68:F:0x50F2F2AA
+	0x49F67FCF:F:0xD7F0F610
+	0x49F67FCF:F:0xF9C0F5DA
+	0x447F047D:F:0x409D966A
+	0x447F047D:V:0x936A5F31
+)
+set(MODULE_IMPORT_FUNCS
+	sceFiberGetInfo
+	sceFiberReturnToThread
+	sceFiberRun
+	_sceFiberInitializeWithInternalOptionImpl
+	_sceFiberAttachContextAndSwitch
+	sceFiberFinalize
+	sceFiberSwitch
+	sceKernelGetThreadId
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMemset
+	sceKernelGetThreadInfo
+	sceKernelWaitSignal
+	sceKernelGetTLSAddr
+	sceClibStrncpy
+	sceKernelCreateThread
+	sceKernelWaitThreadEnd
+	sceKernelStartThread
+	sceClibPrintf
+	sceKernelDeleteThread
+	sceKernelSendSignal
+	ksceKernelExitThread
+	_sceUlobjMgrRegisterLibultProtocolRevision
+	SceUlobjDbg_D7F0F610
+	SceUlobjDbg_F9C0F5DA
+	_sceRazorCpuWriteFiberUltPkt
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+	_pLibPerfCaptureFlagPtr
+)

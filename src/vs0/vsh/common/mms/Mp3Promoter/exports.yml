@@ -1,0 +1,48 @@
+SceMp3Promoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMp3Promoter:
+      syscall: false
+      version: 1
+      nid: 0xA8FE3638
+      functions:
+        - SceMp3Promoter_0644D4E1: 0x0644D4E1
+        - SceMp3Promoter_0BB42DE8: 0x0BB42DE8
+        - SceMp3Promoter_0D5C84D9: 0x0D5C84D9
+        - SceMp3Promoter_1506F7E5: 0x1506F7E5
+        - SceMp3Promoter_1530477D: 0x1530477D
+        - SceMp3Promoter_1F15FA1A: 0x1F15FA1A
+        - SceMp3Promoter_1F916927: 0x1F916927
+        - SceMp3Promoter_23C2FC85: 0x23C2FC85
+        - SceMp3Promoter_2E92B9DC: 0x2E92B9DC
+        - SceMp3Promoter_386935BF: 0x386935BF
+        - SceMp3Promoter_3C9BF72A: 0x3C9BF72A
+        - SceMp3Promoter_47DF8765: 0x47DF8765
+        - SceMp3Promoter_539416BF: 0x539416BF
+        - SceMp3Promoter_54217442: 0x54217442
+        - SceMp3Promoter_67B28E6A: 0x67B28E6A
+        - SceMp3Promoter_74D72562: 0x74D72562
+        - SceMp3Promoter_79BF2D84: 0x79BF2D84
+        - SceMp3Promoter_7F47D37A: 0x7F47D37A
+        - SceMp3Promoter_7FA75732: 0x7FA75732
+        - SceMp3Promoter_843F5044: 0x843F5044
+        - SceMp3Promoter_8454909B: 0x8454909B
+        - SceMp3Promoter_8757DD4D: 0x8757DD4D
+        - SceMp3Promoter_8B136E4F: 0x8B136E4F
+        - SceMp3Promoter_956AE8CB: 0x956AE8CB
+        - SceMp3Promoter_9E1FC9A9: 0x9E1FC9A9
+        - SceMp3Promoter_A7628E4A: 0xA7628E4A
+        - SceMp3Promoter_C44B8385: 0xC44B8385
+        - SceMp3Promoter_C835A169: 0xC835A169
+        - SceMp3Promoter_CF3B8D09: 0xCF3B8D09
+        - SceMp3Promoter_DA2A7075: 0xDA2A7075
+        - SceMp3Promoter_DDBF30E9: 0xDDBF30E9
+        - SceMp3Promoter_FE9F3AAC: 0xFE9F3AAC
+      variables:
+        - SceMp3Promoter_4D6FC690: 0x4D6FC690

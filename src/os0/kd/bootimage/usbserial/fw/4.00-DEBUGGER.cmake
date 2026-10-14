@@ -1,0 +1,93 @@
+# 4.00-DEBUGGER: os0:kd/bootimage/usbserial (generated)
+set(MODULE_NID 0x1FFF0153)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000 0x2820117D)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x9AD8E213:1:0x0
+	0xBC05A8FB:1:0x0
+	0xE1AC6D7C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xBC996A7A
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x02796361
+	0x40ECDB0E:F:0x103872A5
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x20C228E4
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x8A35F714
+	0xE2C40624:F:0xC3E00919
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xE50E1185
+	0x9AD8E213:F:0x062CAEB2
+	0xBC05A8FB:F:0x0DECE532
+	0xBC05A8FB:F:0x1494293B
+	0xBC05A8FB:F:0x1ED0E89E
+	0xBC05A8FB:F:0x38787672
+	0xBC05A8FB:F:0x4E55244D
+	0xBC05A8FB:F:0x4FDEA423
+	0xBC05A8FB:F:0x78BF2A28
+	0xBC05A8FB:F:0x8AE87657
+	0xBC05A8FB:F:0x9F53D64D
+	0xBC05A8FB:F:0x9FD733EA
+	0xBC05A8FB:F:0xC60A74B2
+	0xBC05A8FB:F:0xFBEA3703
+	0xE1AC6D7C:F:0x6FE062D1
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelCopyToUser
+	ksceKernelGetMemBlockBase
+	ksceKernelCopyFromUser
+	ksceKernelAllocMemBlock
+	ksceKernelDcacheInvalidateRange
+	ksceKernelDcacheCleanRange
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelWaitEventFlag
+	SceThreadmgrForDriver_20C228E4
+	ksceKernelCreateEventFlag
+	ksceKernelClearEventFlag
+	ksceKernelDeleteEventFlag
+	ksceKernelWaitEventFlagCB
+	ksceKernelNotifyCallback
+	ksceKernelSetEventFlag
+	ksceKernelEnqueueWorkQueue
+	ksceSblACMgrIsAllowedUsbSerial
+	ksceUdcdUnregister
+	ksceUdcdStop
+	ksceUdcdReqSend
+	ksceUdcdReqCancelAll
+	ksceUdcdRegister
+	ksceUdcdActivate
+	SceUdcdForDriver_78BF2A28
+	ksceUdcdDeactivate
+	ksceUdcdClearFIFO
+	ksceUdcdStart
+	ksceUdcdReqRecv
+	ksceUdcdGetDeviceInfo
+	ksceIdStorageLookup
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

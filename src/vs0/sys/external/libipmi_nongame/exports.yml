@@ -1,0 +1,46 @@
+SceIpmiNonGameApp:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceIpmiNonGameApp:
+      syscall: false
+      version: 1
+      nid: 0xBFCFC252
+      functions:
+        - SceIpmiNonGameApp_08A67A24: 0x08A67A24
+        - SceIpmiNonGameApp_08DA19F1: 0x08DA19F1
+        - SceIpmiNonGameApp_16597C73: 0x16597C73
+        - SceIpmiNonGameApp_28F05588: 0x28F05588
+        - SceIpmiNonGameApp_32B9319E: 0x32B9319E
+        - SceIpmiNonGameApp_378A6E79: 0x378A6E79
+        - SceIpmiNonGameApp_42A0FBE4: 0x42A0FBE4
+        - SceIpmiNonGameApp_4AEF24BA: 0x4AEF24BA
+        - SceIpmiNonGameApp_4E678B05: 0x4E678B05
+        - SceIpmiNonGameApp_63D7FF6E: 0x63D7FF6E
+        - SceIpmiNonGameApp_6471B91B: 0x6471B91B
+        - SceIpmiNonGameApp_6A2ADB1A: 0x6A2ADB1A
+        - SceIpmiNonGameApp_7F07B53D: 0x7F07B53D
+        - SceIpmiNonGameApp_93A44C41: 0x93A44C41
+        - SceIpmiNonGameApp_A3B4DFA8: 0xA3B4DFA8
+        - SceIpmiNonGameApp_AE857B44: 0xAE857B44
+        - SceIpmiNonGameApp_B34F8554: 0xB34F8554
+        - SceIpmiNonGameApp_B7AC0EC0: 0xB7AC0EC0
+        - SceIpmiNonGameApp_C16CCC31: 0xC16CCC31
+        - SceIpmiNonGameApp_CAE2A649: 0xCAE2A649
+        - SceIpmiNonGameApp_DC7D9960: 0xDC7D9960
+        - SceIpmiNonGameApp_E289FE5C: 0xE289FE5C
+        - SceIpmiNonGameApp_E7466639: 0xE7466639
+        - SceIpmiNonGameApp_E8538149: 0xE8538149
+        - SceIpmiNonGameApp_EE1C493F: 0xEE1C493F
+        - SceIpmiNonGameApp_F48DE317: 0xF48DE317
+      variables:
+        - SceIpmiNonGameApp_3BAA521C: 0x3BAA521C
+        - SceIpmiNonGameApp_5422D026: 0x5422D026
+        - SceIpmiNonGameApp_D7DC6D65: 0xD7DC6D65
+        - SceIpmiNonGameApp_D8B853C9: 0xD8B853C9
+        - SceIpmiNonGameApp_EFBA5ED2: 0xEFBA5ED2

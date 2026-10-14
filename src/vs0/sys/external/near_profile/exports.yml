@@ -1,0 +1,22 @@
+SceNearProfile:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNearProfile:
+      syscall: false
+      version: 1
+      nid: 0x16A586F4
+      functions:
+        - SceNearProfile_198A0293: 0x198A0293
+        - SceNearProfile_4172E56B: 0x4172E56B
+        - SceNearProfile_5528D78C: 0x5528D78C
+        - SceNearProfile_58780C39: 0x58780C39
+        - SceNearProfile_6CAE5051: 0x6CAE5051
+        - SceNearProfile_773510AF: 0x773510AF
+        - SceNearProfile_BE9CBDC3: 0xBE9CBDC3
+        - SceNearProfile_D595DAE0: 0xD595DAE0

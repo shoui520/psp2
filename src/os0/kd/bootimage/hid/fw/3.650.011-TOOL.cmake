@@ -1,0 +1,101 @@
+# 3.650.011-TOOL: os0:kd/bootimage/hid (generated)
+set(MODULE_NID 0x71C962A3)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xB6000991 0xE23FAD62 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x40ECDB0E:2:0x0
+	0x88758561:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x6F25E18A:5:0x0
+	0x887F19D0:1:0x0
+	0x7290B21C:1:0x0
+	0x2ED7F97A:2:0x0
+	0x9AD8E213:1:0x0
+	0xD48CA62D:1:0x0
+	0x1590166F:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x88758561:F:0x391B74B7
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x1C41614C
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x8A35F714
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xC3E00919
+	0xE2C40624:F:0xC6674E7D
+	0xE2C40624:F:0xDB395782
+	0xE2C40624:F:0xF4EE4FA9
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x45D22597
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0x7B4CB60A
+	0x6F25E18A:F:0x9328E0E8
+	0x887F19D0:F:0x2A43912D
+	0x7290B21C:F:0x04C05D10
+	0x7290B21C:F:0xE0489831
+	0x2ED7F97A:F:0x34281746
+	0x9AD8E213:F:0x0948F41C
+	0x9AD8E213:F:0x2E992B02
+	0x9AD8E213:F:0x8612B243
+	0x9AD8E213:F:0x991FDC15
+	0xD48CA62D:F:0x06CB4ABA
+	0xD48CA62D:F:0x120AC1F7
+	0xD48CA62D:F:0x5ABB9A9D
+	0xD48CA62D:F:0xF86D25E2
+	0xD48CA62D:F:0xF9DCEC77
+	0x1590166F:F:0x04B7766E
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelPrintf
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelCreateCallback
+	ksceKernelStartThread
+	ksceKernelCreateEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	ksceKernelWaitEventFlagCB
+	sceKernelGetProcessId
+	ksceKernelInitializeFastMutex
+	ksceKernelNotifyCallback
+	ksceKernelCreateThread
+	ksceKernelUnlockFastMutex
+	sceKernelGetSystemTimeWide
+	ksceKernelFreeHeapMemory
+	kscePUIDtoGUID
+	ksceKernelCopyToUser
+	ksceKernelAllocHeapMemory
+	ksceKernelCreateHeap
+	ksceKernelRegisterProcEventHandler
+	ksceKernelRegisterSysEventHandler
+	ksceKernelPowerTick
+	SceSysrootForDriver_34281746
+	ksceSblACMgrIsRootProgram
+	SceSblACMgrForDriver_2E992B02
+	ksceSblACMgrIsSystemProgram
+	ksceSblACMgrIsSceShell
+	ksceBtHidGetReportDescriptor
+	ksceBtRegisterCallback
+	ksceBtReadEvent
+	ksceBtGetRegisteredInfo
+	ksceBtHidTransfer
+	scePowerRegisterCallback
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

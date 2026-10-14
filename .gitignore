@@ -1,0 +1,105 @@
+# Firmware and module images
+*.elf
+*.velf
+*.self
+*.fself
+*.skprx
+*.suprx
+*.sprx
+*.prx
+*.bin
+*.img
+*.dat
+*.pup
+*.PUP
+*.pkg
+*.PKG
+*.vpk
+*.raw
+*.enc
+*.slb2
+*.e2x
+*.fw
+
+# Compiler and linker output
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.lib
+*.dll
+*.exe
+*.out
+*.d
+build/
+
+# IDA databases
+*.i64
+*.idb
+*.id0
+*.id1
+*.id2
+*.nam
+*.til
+*.$$$
+
+# Ghidra projects and exports
+*.gpr
+*.rep/
+*.gzf
+*.gbf
+*.lock
+*.lock~
+
+# Archives
+*.zip
+*.tar
+*.tar.*
+*.tgz
+*.gz
+*.xz
+*.bz2
+*.7z
+*.rar
+*.zst
+
+# Images, audio, video, documents
+*.ppm
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+*.ico
+*.gxt
+*.dds
+*.at9
+*.wav
+*.mp3
+*.mp4
+*.pdf
+
+# Python caches and pickles
+__pycache__/
+*.pyc
+*.pyo
+*.pkl
+*.pickle
+*.npy
+*.npz
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# macOS
+.DS_Store
+
+# Licence texts are kept whatever their extension (COPYING.LIB, COPYING3.LIB)
+!COPYING*
+
+# Toolchains built by toolchains/ when PSP2_TOOLCHAINS is not set
+/toolchains/install/
+/build-mep/

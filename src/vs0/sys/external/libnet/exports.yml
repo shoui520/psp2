@@ -1,0 +1,139 @@
+SceNet:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNet:
+      syscall: false
+      version: 1
+      nid: 0x6BF8B2A2
+      functions:
+        - sceNetRecv: 0x023643B7
+        - sceNetDumpRead: 0x04042925
+        - sceNetResolverStartAton: 0x0424AE26
+        - sceNetSetsockopt: 0x065505CA
+        - sceNetGetMacAddress: 0x06C05518
+        - sceNetNtohs: 0x07845128
+        - sceNetConnect: 0x11E5B6F6
+        - sceNetBind: 0x1296A94B
+        - sceNetHtonll: 0x12C19209
+        - sceNetGetSockIdInfo: 0x138CF1D6
+        - sceNetAccept: 0x1ADF9BB1
+        - sceNetGetsockname: 0x1C66A6DB
+        - sceNetResolverStartNtoa: 0x1EB11857
+        - SceNetInternal_46E28336: 0x1F0080B3
+        - sceNetGetpeername: 0x2348D353
+        - sceNetSocketClose: 0x29822B4D
+        - sceNetShowNetstat: 0x338EDC2E
+        - sceNetResolverDestroy: 0x3559F098
+        - sceNetResolverAbort: 0x38EBBD57
+        - sceNetDumpAbort: 0x3B24E75F
+        - sceNetEpollWait: 0x45CE337D
+        - sceNetHtonl: 0x4C30B03C
+        - sceNetEpollControl: 0x4C8764AC
+        - SceNetInternal_9DBD2F60: 0x522D2118
+        - sceNetSendto: 0x52DB31D5
+        - sceNetEmulationSet: 0x561DFD03
+        - sceNetShowIfconfig: 0x658B903B
+        - sceNetShutdown: 0x69E50BB5
+        - sceNetShowRoute: 0x6AB3B74B
+        - sceNetResolverCreate: 0x6DA29319
+        - sceNetEpollDestroy: 0x7915CAF3
+        - sceNetListen: 0x7A8DA094
+        - sceNetDumpDestroy: 0x82DDCF63
+        - SceNetInternal_93F2FF08: 0x84257F65
+        - sceNetEtherNtostr: 0x84334EB2
+        - sceNetResolverGetError: 0x874EF500
+        - sceNetSocketAbort: 0x891C1B9B
+        - sceNetEpollWaitCB: 0x92D3E767
+        - sceNetEpollAbort: 0x93FCC4E8
+        - sceNetInetNtop: 0x98839B74
+        - sceNetSendmsg: 0x99C579AE
+        - sceNetHtons: 0x9FA3207B
+        - sceNetGetStatisticsInfo: 0xA86F8FE5
+        - sceNetEmulationGet: 0xAE3F4AC6
+        - sceNetDumpCreate: 0xAFF9FA4D
+        - sceNetGetSockInfo: 0xB1AF6840
+        - sceNetRecvfrom: 0xB226138B
+        - sceNetGetsockopt: 0xBA652062
+        - sceNetNtohl: 0xD2EAA645
+        - sceNetInetPton: 0xD5EEB048
+        - sceNetSetDnsInfo: 0xD62EF218
+        - SceNet_D886F498: 0xD886F498
+        - sceNetRecvmsg: 0xDE94C6FE
+        - sceNetErrnoLoc: 0xE37F34AA
+        - sceNetSend: 0xE3DD8CD9
+        - sceNetTerm: 0xEA3CC286
+        - sceNetInit: 0xEB03E265
+        - sceNetEtherStrton: 0xEEC6D75F
+        - sceNetSocket: 0xF084FCE3
+        - sceNetEpollCreate: 0xF9D102AE
+        - sceNetNtohll: 0xFB3336A6
+        - sceNetClearDnsCache: 0xFEC1166D
+    SceNetInternal:
+      syscall: false
+      version: 1
+      nid: 0x9E8A69FD
+      functions:
+        - SceNetInternal_01B090F1: 0x01B090F1
+        - SceNetInternal_04E6136D: 0x04E6136D
+        - SceNetInternal_0DFC23D6: 0x0DFC23D6
+        - SceNetInternal_0F83B7A9: 0x0F83B7A9
+        - SceNetInternal_104E4820: 0x104E4820
+        - SceNetInternal_16222ED6: 0x16222ED6
+        - SceNetInternal_225C4801: 0x225C4801
+        - SceNetInternal_235DE96C: 0x235DE96C
+        - SceNetInternal_26EFF46D: 0x26EFF46D
+        - SceNetInternal_2FEC8B74: 0x2FEC8B74
+        - SceNetInternal_333F9CB3: 0x333F9CB3
+        - SceNetInternal_3B5F94B7: 0x3B5F94B7
+        - SceNetInternal_4054D2D8: 0x4054D2D8
+        - SceNetInternal_46E28336: 0x46E28336
+        - SceNetInternal_4EF96CD8: 0x4EF96CD8
+        - SceNetInternal_4F5E0E8A: 0x4F5E0E8A
+        - SceNetInternal_5B0E370C: 0x5B0E370C
+        - sceNetEmulationGet: 0x6273AF23
+        - SceNetInternal_65AFF9BE: 0x65AFF9BE
+        - SceNetInternal_689B9D7D: 0x689B9D7D
+        - SceNetInternal_694F8996: 0x694F8996
+        - SceNetInternal_7493FB0C: 0x7493FB0C
+        - SceNetInternal_7F63379E: 0x7F63379E
+        - SceNetInternal_7FD92AE7: 0x7FD92AE7
+        - SceNetInternal_8157DE3E: 0x8157DE3E
+        - SceNetInternal_853EEABE: 0x853EEABE
+        - SceNetInternal_873DE778: 0x873DE778
+        - SceNetInternal_916EA798: 0x916EA798
+        - SceNetInternal_93F2FF08: 0x93F2FF08
+        - SceNetInternal_97527BDB: 0x97527BDB
+        - SceNetInternal_9D12D8A4: 0x9D12D8A4
+        - SceNetInternal_9DBD2F60: 0x9DBD2F60
+        - SceNetInternal_A2C2BC5F: 0xA2C2BC5F
+        - SceNetInternal_A64CFBF5: 0xA64CFBF5
+        - SceNetInternal_A6B9F5D2: 0xA6B9F5D2
+        - SceNetInternal_A9F2277C: 0xA9F2277C
+        - SceNetInternal_AA414742: 0xAA414742
+        - SceNetInternal_AAA34850: 0xAAA34850
+        - SceNetInternal_B01ABD0A: 0xB01ABD0A
+        - SceNetInternal_BDA92B76: 0xBDA92B76
+        - SceNetInternal_C2FF615E: 0xC2FF615E
+        - SceNetInternal_CF49E9C4: 0xCF49E9C4
+        - SceNetInternal_DE8DD55E: 0xDE8DD55E
+        - SceNetInternal_DEF2357F: 0xDEF2357F
+        - sceNetEmulationSet: 0xDF815D48
+        - SceNetInternal_E03F6A77: 0xE03F6A77
+        - SceNetInternal_E2F6CAEA: 0xE2F6CAEA
+        - SceNetInternal_E62A2FAA: 0xE62A2FAA
+        - SceNetInternal_EAC33599: 0xEAC33599
+        - SceNetInternal_EDAA3453: 0xEDAA3453
+        - SceNetInternal_EE1985D9: 0xEE1985D9
+        - SceNetInternal_EE94BA15: 0xEE94BA15
+        - SceNetInternal_EE94BF52: 0xEE94BF52
+        - SceNetInternal_EF421A65: 0xEF421A65
+        - SceNetInternal_F3917021: 0xF3917021
+        - SceNetInternal_F6291476: 0xF6291476
+        - SceNetInternal_F9E3A8B7: 0xF9E3A8B7
+        - SceNetInternal_FE8C89AE: 0xFE8C89AE

@@ -1,0 +1,25 @@
+SceHandwriting:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceHandwriting:
+      syscall: false
+      version: 1
+      nid: 0x2AA55635
+      functions:
+        - sceHandwritingSetMode: 0x09AF9BF8
+        - sceHandwritingRecognize: 0x12E4F99A
+        - sceHandwritingTerm: 0x356B2931
+        - sceHandwritingInit: 0x446F171E
+        - sceHandwritingGetBufferSize: 0x4C3A8D49
+        - sceHandwritingRegisterInfo: 0x69324689
+        - sceHandwritingRegisterTerm: 0x6ABBD675
+        - sceHandwritingRegisterDelete: 0x6BA4A521
+        - sceHandwritingRegisterInit: 0x76395D93
+        - sceHandwritingRegisterSet: 0x79CA5D3F
+        - sceHandwritingRegisterGetResult: 0xB886450E

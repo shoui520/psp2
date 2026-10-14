@@ -1,0 +1,38 @@
+ScePfsMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    ScePfsMgrForKernel:
+      syscall: false
+      version: 1
+      nid: 0xA067B56F
+      functions:
+        - kscePfsAcidDirUnmount: 0x00C8AF80
+        - ScePfsMgrForKernel_27FB7618: 0x27FB7618
+        - kscePfsMount2: 0x2D48AEA2
+        - kscePfsDisapprove: 0x2D67D8CA
+        - kscePfsAcidDirMount: 0x4A4A8243
+        - ScePfsMgrForKernel_4C148288: 0x4C148288
+        - kscePfsUnmount: 0x680BC384
+        - ScePfsMgrForKernel_7E4B76E6: 0x7E4B76E6
+        - ScePfsMgrForKernel_806D2EA1: 0x806D2EA1
+        - kscePfsAcidDirApprove: 0x8CDA249A
+        - kscePfsMount: 0xA772209C
+        - kscePfsAcidDirSet: 0xB0CC0A1A
+        - kscePfsApprove: 0xD8D0FEE5
+        - ScePfsMgrForKernel_E9D672AB: 0xE9D672AB
+    ScePfsFacadeForKernel:
+      syscall: false
+      version: 1
+      nid: 0xC26DC7BD
+      functions:
+        - ScePfsFacadeForKernel_04352D52: 0x04352D52
+        - ScePfsFacadeForKernel_4238D2D2: 0x4238D2D2
+        - ScePfsFacadeForKernel_58E643C5: 0x58E643C5
+        - ScePfsFacadeForKernel_7F9F4E49: 0x7F9F4E49
+        - ScePfsFacadeForKernel_BD5B21F6: 0xBD5B21F6
+        - ScePfsFacadeForKernel_CB622FFE: 0xCB622FFE

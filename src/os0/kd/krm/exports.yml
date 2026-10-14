@@ -1,0 +1,32 @@
+SceKrm:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceKrm:
+      syscall: true
+      version: 1
+      nid: 0x17EDC66B
+      functions:
+        - SceKrm_10202EB4: 0x10202EB4
+        - SceKrm_18DE25C6: 0x18DE25C6
+        - SceKrm_2528D613: 0x2528D613
+        - SceKrm_3257BD35: 0x3257BD35
+        - SceKrm_350C8251: 0x350C8251
+        - SceKrm_41547BE1: 0x41547BE1
+        - SceKrm_5296A954: 0x5296A954
+        - SceKrm_7251237D: 0x7251237D
+        - SceKrm_7401B932: 0x7401B932
+        - SceKrm_820B45C6: 0x820B45C6
+        - SceKrm_949506DC: 0x949506DC
+        - SceKrm_98EEB7F3: 0x98EEB7F3
+        - EncryptAndSignState: 0xA100E9C3
+        - SceKrm_A9201DA3: 0xA9201DA3
+        - SceKrm_D7B35BE6: 0xD7B35BE6
+        - SceKrm_E0AEAE3B: 0xE0AEAE3B
+        - SceKrm_ECE6B5F4: 0xECE6B5F4
+        - SceKrm_ECF53237: 0xECF53237
+        - SceKrm_F0B626E7: 0xF0B626E7

@@ -1,0 +1,22 @@
+SceUsbDevSerial:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: _sceUsbDevSerialModuleStart
+    stop: _sceUsbDevSerialModuleStop
+  libraries:
+    SceUsbDevSerial:
+      syscall: true
+      version: 1
+      nid: 0x125C67C7
+      functions:
+        - SceUsbDevSerial_4437FF2D: 0x4437FF2D
+        - SceUsbDevSerial_57FBB08C: 0x57FBB08C
+        - SceUsbDevSerial_6F2B3960: 0x6F2B3960
+        - SceUsbDevSerial_918D359E: 0x918D359E
+        - SceUsbDevSerial_9F497D4E: 0x9F497D4E
+        - SceUsbDevSerial_C0FDECAF: 0xC0FDECAF
+        - SceUsbDevSerial_DAE5C362: 0xDAE5C362
+        - SceUsbDevSerial_F0C3F3D4: 0xF0C3F3D4

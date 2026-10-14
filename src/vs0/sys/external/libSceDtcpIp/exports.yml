@@ -1,0 +1,36 @@
+SceDtcpIp:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceDtcpIp:
+      syscall: false
+      version: 1
+      nid: 0xF9A3ED9D
+      functions:
+        - SceDtcpIp_0584D86E: 0x0584D86E
+        - SceDtcpIp_0AA185AC: 0x0AA185AC
+        - SceDtcpIp_30D1F84E: 0x30D1F84E
+        - SceDtcpIp_3D67BF8E: 0x3D67BF8E
+        - SceDtcpIp_42679E06: 0x42679E06
+        - SceDtcpIp_55E2C3C4: 0x55E2C3C4
+        - SceDtcpIp_5E57BB11: 0x5E57BB11
+        - SceDtcpIp_67F85C9C: 0x67F85C9C
+        - SceDtcpIp_6AE48FE3: 0x6AE48FE3
+        - SceDtcpIp_6C6AC8E8: 0x6C6AC8E8
+        - SceDtcpIp_6D9B3939: 0x6D9B3939
+        - SceDtcpIp_7DAFA54B: 0x7DAFA54B
+        - SceDtcpIp_82672A89: 0x82672A89
+        - SceDtcpIp_82BE2239: 0x82BE2239
+        - SceDtcpIp_8557758E: 0x8557758E
+        - SceDtcpIp_9108E525: 0x9108E525
+        - SceDtcpIp_9697C0ED: 0x9697C0ED
+        - SceDtcpIp_ADF09EF3: 0xADF09EF3
+        - SceDtcpIp_C65C1309: 0xC65C1309
+        - SceDtcpIp_CDDCA8E4: 0xCDDCA8E4
+        - SceDtcpIp_D8304EAE: 0xD8304EAE
+        - SceDtcpIp_DBF71527: 0xDBF71527
+        - SceDtcpIp_DE90746D: 0xDE90746D
+        - SceDtcpIp_F45F5693: 0xF45F5693
+        - SceDtcpIp_F5CF6EBE: 0xF5CF6EBE

@@ -1,0 +1,34 @@
+SceLibPgf:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    ScePgf:
+      syscall: false
+      version: 1
+      nid: 0x9F3504F2
+      functions:
+        - sceFontPointToPixelV: 0x03F10EC8
+        - sceFontDoneLib: 0x07EE1733
+        - sceFontNewLib: 0x1055ABA3
+        - sceFontPointToPixelH: 0x39B9AEFF
+        - sceFontClose: 0x4A7293E9
+        - sceFontFindFont: 0x51061D87
+        - sceFontGetCharInfo: 0x6FD1BA65
+        - sceFontGetCharImageRect: 0x70C86B3E
+        - sceFontPixelToPointV: 0x7B45E2D1
+        - sceFontFlush: 0x7D8CB13B
+        - sceFontSetAltCharacterCode: 0x8D5B44DF
+        - sceFontFindOptimumFont: 0x8DFBAE1B
+        - sceFontPixelToPointH: 0x9E38F4D6
+        - sceFontGetNumFontList: 0x9F842307
+        - sceFontGetFontInfoByIndexNumber: 0xAB034738
+        - sceFontGetCharGlyphImage: 0xAB45AAD3
+        - sceFontOpenUserMemory: 0xB23ED47C
+        - sceFontOpen: 0xBD2DFCFF
+        - sceFontGetFontList: 0xD56DCCEA
+        - sceFontSetResolution: 0xDE47674C
+        - sceFontOpenUserFile: 0xE260E740
+        - sceFontGetCharGlyphImage_Clip: 0xEB589530
+        - sceFontGetFontInfo: 0xF9414FA2

@@ -1,0 +1,123 @@
+SceLibSsl:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceSsl:
+      syscall: false
+      version: 1
+      nid: 0xCAF5F2E9
+      functions:
+        - sceSslTerm: 0x03CE6E3A
+        - sceSslGetNameEntryInfo: 0x2A857867
+        - sceSslInit: 0x3C733316
+        - sceSslGetIssuerName: 0x412711E5
+        - sceSslGetNotBefore: 0x70DEA174
+        - sceSslGetSerialNumber: 0x901C5C15
+        - sceSslGetNameEntryCount: 0x95E14CA6
+        - sceSslGetSubjectName: 0x9B2F1BC1
+        - sceSslGetMemoryPoolStats: 0xBD203262
+        - sceSslFreeSslCertName: 0xC73687E4
+        - sceSslGetNotAfter: 0xF5ED7B68
+    SceSslInternal:
+      syscall: false
+      version: 1
+      nid: 0x68D6C3FF
+      functions:
+        - SceSslInternal_00ABEBC3: 0x00ABEBC3
+        - SceSslInternal_04BAED82: 0x04BAED82
+        - SceSslInternal_05F6A292: 0x05F6A292
+        - sceSslInternalGetCertificateAuthority: 0x064DFC99
+        - SceSslInternal_08179EBD: 0x08179EBD
+        - SceSslInternal_08ED1B25: 0x08ED1B25
+        - SceSslInternal_09657E15: 0x09657E15
+        - SceSslInternal_0C693D36: 0x0C693D36
+        - SceSslInternal_0DB6C206: 0x0DB6C206
+        - SceSslInternal_133ED36D: 0x133ED36D
+        - SceSslInternal_144FA354: 0x144FA354
+        - SceSslInternal_170D595D: 0x170D595D
+        - SceSslInternal_17BF2367: 0x17BF2367
+        - SceSslInternal_19B2BB58: 0x19B2BB58
+        - SceSslInternal_2074A6EB: 0x2074A6EB
+        - SceSslInternal_2185BB05: 0x2185BB05
+        - SceSslInternal_243DE290: 0x243DE290
+        - SceSslInternal_2464F9D0: 0x2464F9D0
+        - SceSslInternal_24C6257F: 0x24C6257F
+        - SceSslInternal_260F5A85: 0x260F5A85
+        - SceSslInternal_26CBEEB6: 0x26CBEEB6
+        - SceSslInternal_29AAC768: 0x29AAC768
+        - SceSslInternal_2B90012E: 0x2B90012E
+        - SceSslInternal_2F0FC3CD: 0x2F0FC3CD
+        - SceSslInternal_306E2A22: 0x306E2A22
+        - SceSslInternal_33737FDC: 0x33737FDC
+        - SceSslInternal_33AC7A16: 0x33AC7A16
+        - SceSslInternal_349B0E73: 0x349B0E73
+        - SceSslInternal_3DE4F3DB: 0x3DE4F3DB
+        - SceSslInternal_3EF42454: 0x3EF42454
+        - SceSslInternal_422DFE70: 0x422DFE70
+        - SceSslInternal_461C5990: 0x461C5990
+        - SceSslInternal_46358909: 0x46358909
+        - SceSslInternal_4725F9E7: 0x4725F9E7
+        - SceSslInternal_4A1557A7: 0x4A1557A7
+        - SceSslInternal_4AAF0D45: 0x4AAF0D45
+        - sceSslInternalIsInitalized: 0x4B4A2307
+        - SceSslInternal_4D80D3F7: 0x4D80D3F7
+        - SceSslInternal_4F781BB6: 0x4F781BB6
+        - SceSslInternal_568F0E80: 0x568F0E80
+        - SceSslInternal_56FE376A: 0x56FE376A
+        - SceSslInternal_5E50CB55: 0x5E50CB55
+        - SceSslInternal_6046C1F3: 0x6046C1F3
+        - SceSslInternal_64BDF1BB: 0x64BDF1BB
+        - SceSslInternal_67FB1CD3: 0x67FB1CD3
+        - SceSslInternal_6CDB4EE8: 0x6CDB4EE8
+        - SceSslInternal_6D0D3B11: 0x6D0D3B11
+        - SceSslInternal_6D2A86F0: 0x6D2A86F0
+        - SceSslInternal_6F3B9809: 0x6F3B9809
+        - SceSslInternal_7D30F0A6: 0x7D30F0A6
+        - SceSslInternal_81FA5DBE: 0x81FA5DBE
+        - SceSslInternal_88391E03: 0x88391E03
+        - SceSslInternal_91C2531C: 0x91C2531C
+        - SceSslInternal_92560B8D: 0x92560B8D
+        - SceSslInternal_93EAE08A: 0x93EAE08A
+        - SceSslInternal_9E38815D: 0x9E38815D
+        - SceSslInternal_A374CD7B: 0xA374CD7B
+        - SceSslInternal_A4EA9DE0: 0xA4EA9DE0
+        - SceSslInternal_AC1DBE40: 0xAC1DBE40
+        - SceSslInternal_AF50B945: 0xAF50B945
+        - SceSslInternal_B0E4CB2F: 0xB0E4CB2F
+        - SceSslInternal_B1745DAD: 0xB1745DAD
+        - SceSslInternal_B5A099D2: 0xB5A099D2
+        - SceSslInternal_B8E6E249: 0xB8E6E249
+        - SceSslInternal_BF99D664: 0xBF99D664
+        - SceSslInternal_C0B135F0: 0xC0B135F0
+        - SceSslInternal_C1299FB6: 0xC1299FB6
+        - SceSslInternal_C4D984C2: 0xC4D984C2
+        - SceSslInternal_CB83EA07: 0xCB83EA07
+        - SceSslInternal_CBEC7D13: 0xCBEC7D13
+        - SceSslInternal_CC7F4211: 0xCC7F4211
+        - SceSslInternal_CE37B69E: 0xCE37B69E
+        - SceSslInternal_CEE46B33: 0xCEE46B33
+        - SceSslInternal_D1A82B1A: 0xD1A82B1A
+        - SceSslInternal_D28834E6: 0xD28834E6
+        - SceSslInternal_D3C049B9: 0xD3C049B9
+        - SceSslInternal_D419451B: 0xD419451B
+        - SceSslInternal_D4ADF069: 0xD4ADF069
+        - SceSslInternal_D68D8421: 0xD68D8421
+        - SceSslInternal_D6D32A2F: 0xD6D32A2F
+        - SceSslInternal_D776E2F8: 0xD776E2F8
+        - SceSslInternal_DABB61EE: 0xDABB61EE
+        - SceSslInternal_DEC6DD27: 0xDEC6DD27
+        - SceSslInternal_E5EDD91B: 0xE5EDD91B
+        - SceSslInternal_E746465E: 0xE746465E
+        - SceSslInternal_EC9FAF42: 0xEC9FAF42
+        - SceSslInternal_EF9EBAC7: 0xEF9EBAC7
+        - SceSslInternal_F030A0DE: 0xF030A0DE
+        - SceSslInternal_F2C9B744: 0xF2C9B744
+        - sceSslInternalWrite: 0xF39A49C6
+        - SceSslInternal_F4007DBE: 0xF4007DBE
+        - SceSslInternal_F71DB06F: 0xF71DB06F
+        - SceSslInternal_FB51AE89: 0xFB51AE89
+        - SceSslInternal_FBEB1FD7: 0xFBEB1FD7
+        - SceSslInternal_FEFE761C: 0xFEFE761C
+        - SceSslInternal_FFE2ED51: 0xFFE2ED51

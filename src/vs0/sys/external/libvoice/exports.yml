@@ -1,0 +1,39 @@
+SceVoice:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceVoice:
+      syscall: false
+      version: 1
+      nid: 0xCE56E214
+      functions:
+        - sceVoiceSetBitRate: 0x02F58D6F
+        - sceVoiceReadFromOPort: 0x09E4D18C
+        - sceVoiceWriteToIPort: 0x0A22EC0E
+        - sceVoiceSetMuteFlag: 0x0B9E4AE2
+        - sceVoiceResumePortAll: 0x1F93FC0C
+        - sceVoicePausePort: 0x23C6B16B
+        - sceVoiceResumePort: 0x2DE35411
+        - sceVoicePausePortAll: 0x39AA3884
+        - sceVoiceGetPortInfo: 0x5933CCFB
+        - sceVoiceResetPort: 0x5E1CE910
+        - sceVoiceDisconnectIPortFromOPort: 0x5F0260F4
+        - sceVoiceConnectIPortToOPort: 0x698BDAAE
+        - sceVoiceGetResourceInfo: 0x6E46950E
+        - sceVoiceGetPortAttr: 0x73F72940
+        - sceVoiceInit: 0x805CC20F
+        - sceVoiceCheckTopology: 0x874054CE
+        - sceVoiceGetVolume: 0x875CC80D
+        - sceVoiceSetPortAttr: 0x9B0D3490
+        - sceVoiceEnd: 0xAC98853E
+        - sceVoiceDeletePort: 0xAE46564D
+        - sceVoiceStart: 0xB2ED725B
+        - sceVoiceStop: 0xC3868DF6
+        - sceVoiceGetMuteFlag: 0xC913F7E9
+        - sceVoiceUpdatePort: 0xCE855C50
+        - sceVoiceGetBitRate: 0xD02C00B4
+        - sceVoiceSetVolume: 0xD93769E6
+        - sceVoiceSetMuteFlagAll: 0xDB90EAC4
+        - sceVoiceCreatePort: 0xFA4E57B1

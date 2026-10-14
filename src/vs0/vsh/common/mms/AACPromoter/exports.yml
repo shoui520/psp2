@@ -1,0 +1,20 @@
+SceAACPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceAACPromoter:
+      syscall: false
+      version: 1
+      nid: 0x5F7A016E
+      functions:
+        - SceAACPromoter_5DDAC61C: 0x5DDAC61C
+        - SceAACPromoter_84F12896: 0x84F12896
+        - SceAACPromoter_8A69E88E: 0x8A69E88E
+        - SceAACPromoter_C9A5E0B8: 0xC9A5E0B8
+      variables:
+        - SceAACPromoter_CB9AB056: 0xCB9AB056

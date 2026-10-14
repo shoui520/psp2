@@ -1,0 +1,78 @@
+# 3.650.011-TOOL: os0:kd/krm.skprx (generated)
+set(MODULE_NID 0xD0F74F73)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x17EDC66B 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x7EE45391:1:0x0
+	0x887F19D0:1:0x0
+	0x9AD8E213:1:0x0
+	0x496AD8B4:1:0x0
+	0xE2C40624:1:0x0
+	0x61E9428D:1:0x0
+	0x0351D827:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0x9C78064C
+	0x6F25E18A:F:0xBC996A7A
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xA46CB7DE
+	0x7EE45391:F:0xA9FF1205
+	0x7EE45391:F:0xB5A4D745
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x887F19D0:F:0x2A43912D
+	0x9AD8E213:F:0xAE1AF154
+	0x496AD8B4:F:0x1DF3792A
+	0x496AD8B4:F:0x236A9097
+	0x496AD8B4:F:0x302947B6
+	0x496AD8B4:F:0x4899CD4B
+	0x496AD8B4:F:0x72408E29
+	0x496AD8B4:F:0xD909FA2C
+	0x496AD8B4:F:0xE39CD272
+	0x496AD8B4:F:0xEDA97D6D
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xDB395782
+	0x61E9428D:F:0x934DB6B5
+	0x61E9428D:F:0xA5B5D269
+	0x61E9428D:F:0xAC57F4F0
+	0x0351D827:F:0xF1517B38
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelCopyToUser
+	ksceKernelIsAccessibleRange
+	ksceKernelCopyFromUser
+	memset
+	memcpy
+	__aeabi_uidivmod
+	__aeabi_uidiv
+	timingsafe_memcmp
+	__stack_chk_fail
+	ksceKernelRegisterProcEventHandler
+	SceSblACMgrForDriver_AE1AF154
+	SceKernelUtilsForDriver_1DF3792A
+	ksceSha256BlockUpdate
+	ksceAesEncrypt2
+	ksceSha256BlockResult
+	ksceAesInit3
+	ksceSha256BlockInit
+	ksceAesDecrypt2
+	ksceAesInit2
+	ksceKernelLockFastMutex
+	sceKernelGetProcessId
+	ksceKernelInitializeFastMutex
+	ksceKernelUnlockFastMutex
+	ksceSblSsDecryptWithPortability
+	ksceSblAimgrGetOpenPsId
+	ksceSblRngGenuineRandomNumber
+	ksceRtcGetCurrentNetworkTick
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,50 @@
+/*
+ * post_ss_mgr_startstop.c: module start.
+ */
+
+#include "post_ss_mgr_internal.h"
+
+#define POST_SS_MGR_HEAP_SIZE	0x1000
+
+SceUID g_postSsMgrHeap;
+SceKernelFastMutex g_postSsMgrKeysMutex;
+SceKernelFastMutex g_postSsMgrSdMutex;
+SceKernelFastMutex g_postSsMgrCloudMutex;
+
+/* the work queued at start: what needs the file system */
+static int postSsMgrInitWork(void *arg)	/* name unknown */
+{
+	sceSblLicMgrInit();
+	sceSblUtMgrInit();
+	return 1;
+}
+
+static int postSsMgrRandom(void *buf, SceSize size)	/* name unknown */
+{
+	return ksceSblRngPseudoRandomNumber(buf, size);
+}
+
+/* Sony's _sceSblPostSsMgrInitPhase1 (post_ss_mgr_startstop.c) */
+int module_start(SceSize args, void *argp)
+{
+	SceKernelHeapCreateOpt opt;
+	int failed;
+
+	opt.size = sizeof(opt);
+	opt.attr = 1;
+	g_postSsMgrHeap = ksceKernelCreateHeap("SceSblPostSsMgr", POST_SS_MGR_HEAP_SIZE, &opt);
+	failed = g_postSsMgrHeap < 0;
+	if (failed) {
+		SCE_DBG_PRINTF(0, 81, "sceKernelCreateHeap() failure\n");
+	} else {
+		ksceKernelInitializeFastMutex(&g_postSsMgrKeysMutex, "SceSblSsMgr", 0, 0);
+		ksceKernelInitializeFastMutex(&g_postSsMgrSdMutex, "SceSblSsMgr", 0, 0);
+		ksceKernelInitializeFastMutex(&g_postSsMgrCloudMutex, "SceSblSsMgr", 0, 0);
+		sceSblPmMgrInit();
+		sceSblRtcMgrInit();
+		sceSblFwLoaderInit();
+		sceSblRsaSetRandom(postSsMgrRandom);
+		ksceKernelEnqueueWorkQueue(0x10023, "SceSblPostSsMgrInit", postSsMgrInitWork, NULL);
+	}
+	return failed;
+}

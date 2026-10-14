@@ -1,0 +1,44 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libsas.suprx (generated)
+set(MODULE_NID 0xF067BC4C)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0xEE47EC43 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2CDFCD1C
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x70CBC2D5
+	0xCAE9ACE6:F:0x736753C8
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xA2FB4D9D
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xFA6BE467
+	0xCAE9ACE6:V:0x93B8AA67
+	0x859A24B1:F:0x4B675D05
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	sceClibStrlcpy
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceClibStrlcat
+	sceClibMemmove
+	sceKernelUnlockLwMutex
+	sceClibStrcmp
+	sceKernelCreateLwMutex
+	sceClibVsnprintf
+	sceKernelDelayThread
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

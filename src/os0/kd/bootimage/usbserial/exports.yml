@@ -1,0 +1,27 @@
+SceUsbSerial:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceUsbSerial:
+      syscall: true
+      version: 1
+      nid: 0x2820117D
+      functions:
+        - SceUsbSerial_0ACC8A92: 0x0ACC8A92
+        - sceUsbSerialSetup: 0x290E08B4
+        - SceUsbSerial_2C08272C: 0x2C08272C
+        - SceUsbSerial_405DB744: 0x405DB744
+        - SceUsbSerial_60D93778: 0x60D93778
+        - SceUsbSerial_642F8F19: 0x642F8F19
+        - sceUsbSerialSend: 0x89E71202
+        - SceUsbSerial_923535FA: 0x923535FA
+        - SceUsbSerial_A281DF87: 0xA281DF87
+        - sceUsbSerialStatus: 0xA6A2F5DE
+        - sceUsbSerialStart: 0xE3BEC18C
+        - sceUsbSerialGetRecvBufferSize: 0xE8567A87
+        - sceUsbSerialClose: 0xF2415853
+        - sceUsbSerialRecv: 0xF26DC8D8

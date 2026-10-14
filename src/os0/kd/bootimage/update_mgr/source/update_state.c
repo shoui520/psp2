@@ -1,0 +1,67 @@
+#include "update_internal.h"
+#include "update_objects.h"
+#include "motion_update.h"
+#include "bbmc_update.h"
+
+uint16_t updateSysconTouchDeviceInfo[4];
+struct touchDeviceInfo updateTouchDeviceInfo[2];
+MotionUtilEventContext updateMotionEvent;
+MotionSensorResponse updateMotionRequest;
+MotionSensorResponse updateMotionResponse;
+int updateCpupContext;
+int updateUseBatteryService;
+int updateUseCpupService;
+uint16_t updateMotionHardwareType;
+int updateThreadArgument;
+SceMotionDevDeviceInfo updateMotionDeviceInfo;
+int updateUseMotionService;
+int updateUseCpupExtendedService;
+int updateUseSysconConfigStorage;
+int updateUseSysconNvsService;
+uint16_t updateMotionFirmwareVersion;
+unsigned int updateCpupBoardVersion;
+int updateUseSysconPowerControl;
+int updateUseSysconUpdateService;
+unsigned int updateCpupProtocolVersion;
+unsigned int updateSysconFirmwareVersion;
+int updateMotionConnected;
+unsigned int updateBatteryDataFlashVersion;
+int updateInitialized;
+int updateSysconDownloader;
+int updateCpupConnected;
+unsigned int updateSysconHardwareInfo;
+unsigned int updateBatteryFirmwareVersion;
+unsigned int updateBatteryHardwareInfo;
+int updateUseSysconSnvs;
+int updateUseCpupPowerService;
+int updateUseTouchService;
+unsigned int updateSysconDownloaderVersion;
+unsigned int pupFileBufferSize;
+PupHeader *pupFileBuffer;
+PupHeader pupFileHeader;
+struct ThreadmgrFastMutex updateMutex;
+struct ThreadmgrFastMutex updateMbrMutex;
+struct ThreadmgrFastMutex updateTableMutex;
+SceSblUpdateMgrNode updateNodes[4];
+struct ThreadmgrFastMutex updateComMutex;
+UpdateUtilBufferEntry updateBufferTable[4];
+uint32_t updateLastResult;
+int spkgMbrLoaded;
+unsigned int spkgBlSwitchCount;
+uint64_t spkgSysdataChunkMask;
+uint32_t spkgModifiedBanks;
+uint64_t spkgOsChunkMask;
+uint64_t spkgVshChunkMask;
+SceMbr spkgMbr;
+unsigned int spkgOsSwitchCount;
+uint64_t spkgPidataChunkMask;
+int updateSysconShutdownWorkaround;
+int updateSysconFirmwareUpdateStarted;
+int updateSysconLargeChunks;
+uint8_t updateSnvsFailureStage;
+unsigned int spkgSystemSwVersion;
+int updateTouchRecoveryMode;
+int updateCpupUpdateStarted;
+int updateCpupUpdateTriggered;
+BbmcUtilContext updateBbmcContext;
+int updateBbmcInitialized;

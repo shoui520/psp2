@@ -1,0 +1,47 @@
+SceNearDialogUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNearDialogUtil:
+      syscall: false
+      version: 1
+      nid: 0x65408075
+      functions:
+        - sceNearUtilityGetMyStatus: 0x1265745D
+        - sceNearDialogGetStatus: 0x1341672D
+        - sceNearUtilityReadDiscoveredGiftImage: 0x200D6143
+        - sceNearUtilityCloseReceivedGiftData: 0x28394CD7
+        - sceNearUtilitySetGift: 0x294693CB
+        - sceNearUtilityReadReceivedGiftData: 0x30C8B7A3
+        - sceNearUtilityCloseDiscoveredGiftImage: 0x3289BF4A
+        - sceNearUtilityGetNewNeighbors: 0x44A0F2B7
+        - sceNearUtilityDeleteDiscoveredGift: 0x44EA7FA3
+        - sceNearUtilityOpenReceivedGiftData: 0x486BEBDB
+        - sceNearUtilityFinalize: 0x52BBF4C5
+        - sceNearUtilityGetNeighbors: 0x61A68242
+        - sceNearUtilityLaunchNearAppForDownload: 0x6DBC14B8
+        - sceNearUtilityDeleteGift: 0x722E8B53
+        - sceNearUtilityRefresh: 0x74E55A3B
+        - sceNearDialogAbort: 0x7790BDB4
+        - sceNearUtilityGetGift: 0x8CBD3BF9
+        - sceNearUtilityLaunchNearAppForUpdate: 0x8D32729E
+        - sceNearUtilityGetLastNeighborFoundDateTime: 0x9D6A7AD4
+        - sceNearDialogTerm: 0xA3D52935
+        - sceNearUtilityGetDiscoveredGiftInfo: 0xAF4740D1
+        - sceNearUtilityIgnoreDiscoveredGift: 0xB04B9676
+        - sceNearUtilityOpenDiscoveredGiftImage: 0xBF1B4BB9
+        - sceNearUtilityGetGiftStatus: 0xCCB5FF48
+        - sceNearDialogGetResult: 0xD46E5257
+        - sceNearUtilityGetDiscoveredGiftStatus: 0xD6FFC962
+        - sceNearUtilityGetRecentNeighbors: 0xDA56F2F1
+        - sceNearUtilitySetGift2: 0xDBEFB12E
+        - sceNearUtilityGetDiscoveredGiftSender: 0xE2A90639
+        - sceNearDialogInit: 0xE493D3B8
+        - sceNearUtilityInitialize: 0xECA38E35
+        - sceNearUtilityConvertDiscoveredGiftParam: 0xF3FBFFE9
+        - sceNearUtilityGetDiscoveredGifts: 0xF684C554

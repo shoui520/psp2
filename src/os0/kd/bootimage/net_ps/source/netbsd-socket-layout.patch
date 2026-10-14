@@ -1,0 +1,104 @@
+# SCE adaptation; full licensed definitions moved once to sce/netps_socket.h.
+# Canonical differences: no selinfo; 32-bit options/linger/buffer flags/timeouts;
+# policy at12; preserved MBUFTRACE owner slots; original-backed SCE tail192..255.
+--- src/vendor/netbsd-2.1/sys/sys/socketvar.h	2026-10-12 19:26:41
++++ src/os0/kd/bootimage/net_ps/include/sys/socketvar.h	2026-10-12 22:25:13
+@@ -34,35 +34,19 @@
+ #ifndef _SYS_SOCKETVAR_H_
+ #define	_SYS_SOCKETVAR_H_
+ 
+-#include <sys/select.h>			/* for struct selinfo */
++#include <sce/netps_socket.h> /* SCE: canonical complete socket owners. */
+ #include <sys/queue.h>
+ 
+ #if !defined(_KERNEL) || defined(LKM)
+ struct uio;
+ #endif
+ 
+-TAILQ_HEAD(soqhead, socket);
+ 
+ /*
+  * Variables for socket buffering.
+  */
+-struct sockbuf {
+-	struct selinfo sb_sel;		/* process selecting read/write */
+-	struct mowner *sb_mowner;	/* who owns data for this sockbuf */
+-	/* When re-zeroing this struct, we zero from sb_startzero to the end */
+-#define	sb_startzero	sb_cc
+-	u_long	sb_cc;			/* actual chars in buffer */
+-	u_long	sb_hiwat;		/* max actual char count */
+-	u_long	sb_mbcnt;		/* chars of mbufs used */
+-	u_long	sb_mbmax;		/* max chars of mbufs to use */
+-	long	sb_lowat;		/* low water mark */
+-	struct mbuf *sb_mb;		/* the mbuf chain */
+-	struct mbuf *sb_mbtail;		/* the last mbuf in the chain */
+-	struct mbuf *sb_lastrecord;	/* first mbuf of last record in
+-					   socket buffer */
+-	short	sb_flags;		/* flags, see below */
+-	short	sb_timeo;		/* timeout for read/write */
+-};
++/* SCE: struct sockbuf is canonical in sce/netps_socket.h. */
++#define sb_startzero sb_cc
+ 
+ #ifndef SB_MAX
+ #define	SB_MAX		(256*1024)	/* default for max chars in sockbuf */
+@@ -84,52 +68,7 @@
+  * handle on protocol and pointer to protocol
+  * private data and error information.
+  */
+-struct socket {
+-	short		so_type;	/* generic type, see socket.h */
+-	short		so_options;	/* from socket call, see socket.h */
+-	short		so_linger;	/* time to linger while closing */
+-	short		so_state;	/* internal state flags SS_*, below */
+-	void		*so_pcb;	/* protocol control block */
+-	struct protosw	*so_proto;	/* protocol handle */
+-/*
+- * Variables for connection queueing.
+- * Socket where accepts occur is so_head in all subsidiary sockets.
+- * If so_head is 0, socket is not related to an accept.
+- * For head socket so_q0 queues partially completed connections,
+- * while so_q is a queue of connections ready to be accepted.
+- * If a connection is aborted and it has so_head set, then
+- * it has to be pulled out of either so_q0 or so_q.
+- * We allow connections to queue up based on current queue lengths
+- * and limit on number of queued connections for this socket.
+- */
+-	struct socket	*so_head;	/* back pointer to accept socket */
+-	struct soqhead	*so_onq;	/* queue (q or q0) that we're on */
+-	struct soqhead	so_q0;		/* queue of partial connections */
+-	struct soqhead	so_q;		/* queue of incoming connections */
+-	TAILQ_ENTRY(socket) so_qe;	/* our queue entry (q or q0) */
+-	short		so_q0len;	/* partials on so_q0 */
+-	short		so_qlen;	/* number of connections on so_q */
+-	short		so_qlimit;	/* max number queued connections */
+-	short		so_timeo;	/* connection timeout */
+-	u_short		so_error;	/* error affecting connection */
+-	pid_t		so_pgid;	/* pgid for signals */
+-	u_long		so_oobmark;	/* chars to oob mark */
+-	struct sockbuf	so_snd;		/* send buffer */
+-	struct sockbuf	so_rcv;		/* receive buffer */
+-
+-	void		*so_internal;	/* Space for svr4 stream data */
+-	void		(*so_upcall) __P((struct socket *, caddr_t, int));
+-	caddr_t		so_upcallarg;	/* Arg for above */
+-	int		(*so_send) __P((struct socket *, struct mbuf *,
+-					struct uio *, struct mbuf *,
+-					struct mbuf *, int));
+-	int		(*so_receive) __P((struct socket *,
+-					struct mbuf **,
+-					struct uio *, struct mbuf **,
+-					struct mbuf **, int *));
+-	struct mowner	*so_mowner;	/* who owns mbufs for this socket */
+-	uid_t		so_uid;		/* who opened the socket */
+-};
++/* SCE: struct socket is canonical in sce/netps_socket.h. */
+ 
+ #define	SB_EMPTY_FIXUP(sb)						\
+ do {									\
+@@ -383,3 +322,4 @@
+ #endif /* _KERNEL */
+ 
+ #endif /* !_SYS_SOCKETVAR_H_ */
++
+

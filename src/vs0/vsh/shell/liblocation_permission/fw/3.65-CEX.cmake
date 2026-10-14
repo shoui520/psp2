@@ -1,0 +1,74 @@
+# 3.65-CEX: vs0:vsh/shell/liblocation_permission.suprx (generated)
+set(MODULE_NID 0x4B5FB870)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_NID0_VARS 0x1A9822A4:module_nid0_1A9822A4 0xD20886EB:module_nid0_D20886EB)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0xA7D28DAE:1:0x0
+	0x3D643CE8:1:0x0
+	0x3C1965CD:1:0x0
+	0x54276D19:1:0x0
+	0x4D9A9DD0:1:0x0
+	0x36F82E95:1:0x8
+	0xF4E34EDB:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	__stack_chk_fail
+	sce_paf_malloc
+	sce_paf_strchr
+	ScePafStdc_1B77082E
+	sce_paf_strncmp
+	sce_paf_memcpy
+	sce_paf_free
+	sce_paf_snprintf
+	sce_paf_strcmp
+	ScePafStdc_75ECC54E
+	sce_paf_memcmp
+	ScePafStdc_C95732BB
+	ScePafStdc_D41FD265
+	ScePafStdc_D608246A
+	sce_paf_memset
+	sce_paf_strncpy
+	ScePafStdc_F36BABE3
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	ScePafMisc_0853896D
+	ScePafMisc_1702CD72
+	ScePafMisc_581735E6
+	ScePafMisc_656E8C26
+	ScePafMisc_C8CA2008
+	ScePafCommon_9272D6E6
+	ScePafThread_4EA3A3D5
+	ScePafThread_9100D580
+	ScePafThread_A5D3F1B5
+	ScePafThread_AD04A33D
+	ScePafToplevel_004D98CC
+	ScePafToplevel_1DF2C6FD
+	ScePafToplevel_F72FC59E
+	SceDbutil_0E387A6B
+	SceDbutil_1B0116F3
+	SceDbutil_56D53123
+	SceDbutil_593BEAB7
+	SceDbutil_6735B7E3
+	SceDbutil_6C4E78DA
+	SceDbutil_75BEA7DD
+	SceDbutil_AC0FC092
+	SceDbutil_BC17F930
+	SceDbutil_BFA19C63
+	SceDbutil_D1020D1D
+	SceDbutil_D1D0D3CA
+	SceDbutil_D48BBE90
+	SceDbutil_E678A223
+	SceDbutil_F6F59D3A
+	SceDbutil_F87A8B85
+	SceDbutil_FD7DD749
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+	ScePafStdc_610F2F91
+	ScePafStdc_B4A712A7
+)

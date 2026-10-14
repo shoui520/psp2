@@ -1,0 +1,54 @@
+SceAudio:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: audioModuleStart
+  libraries:
+    SceAudioForDriver:
+      syscall: false
+      version: 1
+      nid: 0x15D711C1
+      functions:
+        - SceAudioForDriver_134C96C1: 0x134C96C1
+        - SceAudioForDriver_15FB30DF: 0x15FB30DF
+        - sceAudioOutSetAlcMode: 0x216D8A91
+        - SceAudioForDriver_28B3AF10: 0x28B3AF10
+        - SceAudioForDriver_3440C1CA: 0x3440C1CA
+        - SceAudioForDriver_37517CC9: 0x37517CC9
+        - SceAudioForDriver_629261CD: 0x629261CD
+        - SceAudioForDriver_6F613D36: 0x6F613D36
+        - SceAudioForDriver_75915003: 0x75915003
+        - SceAudioForDriver_7E0E1331: 0x7E0E1331
+        - SceAudioForDriver_81EB0AE5: 0x81EB0AE5
+        - SceAudioForDriver_85987B88: 0x85987B88
+        - sceAudioOutSetEffectType: 0x8D0AE24F
+        - SceAudioForDriver_A8C38998: 0xA8C38998
+        - SceAudioForDriver_AC9383D0: 0xAC9383D0
+        - SceAudioForDriver_B05D5B28: 0xB05D5B28
+        - sceAudioOutSetAdoptMode: 0xDB1C4A83
+        - SceAudioForDriver_E87902DF: 0xE87902DF
+        - SceAudioForDriver_F07D34C2: 0xF07D34C2
+        - SceAudioForDriver_FC375BAC: 0xFC375BAC
+    SceAudio:
+      syscall: true
+      version: 1
+      nid: 0x438BB957
+      functions:
+        - _audioSetptrMain: 0x02DB3F5F
+        - sceAudioOutGetAdopt: 0x12FB1767
+        - sceAudioOutSetAdopt_forUser: 0x26C82AF2
+        - sceAudioOutSetCompress: 0x3601D375
+        - sceAudioOutOpenPort: 0x5BC341E4
+        - sceAudioOutOpenExtPort: 0x6184B939
+        - sceAudioOutSetVolume: 0x64167F11
+        - sceAudioOutSetPortVolume_forUser: 0x65840F3D
+        - sceAudioOutReleasePort: 0x69E2E6B5
+        - sceAudioOutSetAlcMode: 0x940CE469
+        - sceAudioOutGetRestSample: 0x9A5370C4
+        - sceAudioOutGetConfig: 0x9C8EDAEA
+        - sceAudioOutSetEffectType: 0xB41FACCE
+        - sceAudioOutSetConfig: 0xB8BA0D07
+        - sceAudioOutSetAdoptMode: 0xDCC90EDB
+        - sceAudioOutGetPortVolume_forUser: 0xFF635DA5

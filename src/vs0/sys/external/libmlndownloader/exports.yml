@@ -1,0 +1,31 @@
+SceMarlinDownloader:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    mlndl:
+      syscall: false
+      version: 1
+      nid: 0x25E4BAE2
+      functions:
+        - mlndl_05D8AAAD: 0x05D8AAAD
+        - mlndl_14538FCC: 0x14538FCC
+        - mlndl_15B43EC9: 0x15B43EC9
+        - mlndl_27A84309: 0x27A84309
+        - mlndl_27E075AF: 0x27E075AF
+        - mlndl_41AC7B0D: 0x41AC7B0D
+        - mlndl_5483B464: 0x5483B464
+        - mlndl_6731EACF: 0x6731EACF
+        - mlndl_764AC6DC: 0x764AC6DC
+        - mlndl_7C51CBF6: 0x7C51CBF6
+        - mlndl_84E05172: 0x84E05172
+        - mlndl_8F409146: 0x8F409146
+        - mlndl_BC6A8671: 0xBC6A8671
+        - mlndl_C0F382A6: 0xC0F382A6
+        - mlndl_C2783A9F: 0xC2783A9F
+        - mlndl_C4B91CB9: 0xC4B91CB9
+        - mlndl_E16D6FD9: 0xE16D6FD9

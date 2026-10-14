@@ -1,0 +1,108 @@
+/* Sony's rmauth.c: removable-media secure-module requests. */
+#include "skeleton.h"
+#include "rmauth.h"
+#include <psp2kern/kernel/sysroot.h>
+#include <string.h>
+
+int SceKernelSuspendForDriver_4DF40893(uint32_t flags);
+int SceKernelSuspendForDriver_2BB92967(uint32_t flags);
+
+struct MsifRmAuthRequest {
+	uint8_t mediaId[16];
+	uint32_t generation;
+	uint8_t serviceData[12];
+};
+
+_Static_assert(sizeof(struct MsifRmAuthRequest) == 32,
+	"removable-media secure request size");
+
+const SceSelfAuthInfo gMsifSmAuthInfo = {
+	.program_authority_id = 0x2808000000000001ULL,
+	.capability = {
+		[0] = 0x80, [4] = 0xc0, [6] = 0xf0,
+		[12] = 0xff, [13] = 0xff, [14] = 0xff, [15] = 0xff,
+	},
+	.attribute = {
+		[0] = 0x80, [1] = 0x09, [2] = 0x80, [3] = 0x03,
+		[6] = 0xc3, [10] = 0x80, [11] = 0x09, [12] = 0x80,
+		[28] = 0xff, [29] = 0xff, [30] = 0xff, [31] = 0xff,
+	},
+};
+
+SceSblSmCommId gMsifSmId;
+
+int invoke_rm_auth_secure_module(void)
+{
+	SceAuthInfo auth;
+	SceKernelSysrootSelfInfo selfInfo;
+
+	memset(&auth, 0, sizeof(auth));
+	memcpy(&auth.request, &gMsifSmAuthInfo, sizeof(auth.request));
+	selfInfo.self_data = NULL;
+	auth.media_type = 2;
+	selfInfo.self_size = 0;
+	selfInfo.size = sizeof(selfInfo);
+	if (ksceSysrootGetSelfInfo(SCE_KERNEL_SYSROOT_SELF_INDEX_RMAUTH_SM,
+		&selfInfo) < 0)
+		return 0x800f0016;
+	auth.self_type = (auth.self_type & ~0xf) | 2;
+	return ksceSblSmCommStartSmFromData(0, selfInfo.self_data,
+		selfInfo.self_size, 0, &auth, &gMsifSmId);
+}
+
+int call_get_key_master_gen_no(uint32_t *generation)
+{
+	struct MsifRmAuthRequest request;
+	SceSblSmCommPair stopResult;
+	uint32_t serviceResult;
+	int callResult;
+	int result;
+
+	if (!generation)
+		return 0x800f1916;
+	SceKernelSuspendForDriver_4DF40893(0);
+	serviceResult = 0;
+	callResult = invoke_rm_auth_secure_module();
+	if (callResult) {
+		result = callResult;
+	} else {
+		if (ksceSblSmCommCallFunc(gMsifSmId, 1, &serviceResult, &request,
+			sizeof(request)))
+			serviceResult = 0x800f1928;
+		callResult = ksceSblSmCommStopSm(gMsifSmId, &stopResult);
+		if (callResult) {
+			result = callResult;
+		} else {
+			result = serviceResult;
+			*generation = request.generation;
+		}
+	}
+	SceKernelSuspendForDriver_2BB92967(0);
+	return result;
+}
+
+int call_set_ind_key(const uint8_t *mediaId)
+{
+	struct MsifRmAuthRequest request;
+	SceSblSmCommPair stopResult;
+	uint32_t serviceResult;
+	int result;
+
+	if (!mediaId)
+		return 0x800f1916;
+	SceKernelSuspendForDriver_4DF40893(0);
+	__builtin_memcpy(request.mediaId, mediaId, sizeof(request.mediaId));
+	serviceResult = 0;
+	result = invoke_rm_auth_secure_module();
+	if (result)
+		goto unlock;
+	if (ksceSblSmCommCallFunc(gMsifSmId, 2, &serviceResult, &request,
+		sizeof(request)))
+		serviceResult = 0x800f1928;
+	result = ksceSblSmCommStopSm(gMsifSmId, &stopResult);
+	if (!result)
+		result = serviceResult;
+unlock:
+	SceKernelSuspendForDriver_2BB92967(0);
+	return result;
+}

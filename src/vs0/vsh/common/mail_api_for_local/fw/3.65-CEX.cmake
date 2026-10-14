@@ -1,0 +1,62 @@
+# 3.65-CEX: vs0:vsh/common/mail_api_for_local.suprx (generated)
+set(MODULE_NID 0x5591BD8E)
+set(MODULE_ATTR 2)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0x6704D3C6:1:0x0
+	0xA6605D6F:1:0x0
+	0x03FCF19D:1:0x0
+	0xA7D28DAE:1:0x0
+	0x3C1965CD:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x859A24B1:2:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceRtcGetCurrentTick
+	sceAppMgrUmount
+	sceAppMgrWorkDirMount
+	sceSysmoduleUnloadModuleInternalWithArg
+	sceSysmoduleLoadModuleInternalWithArg
+	sce_paf_malloc
+	ScePafStdc_19BB4B73
+	ScePafStdc_1B77082E
+	ScePafStdc_2730262C
+	sce_paf_memcpy
+	sce_paf_free
+	sce_paf_snprintf
+	ScePafStdc_5883A6E3
+	sce_paf_strcmp
+	ScePafStdc_75ECC54E
+	sce_paf_private_exit
+	sce_paf_private_atexit
+	ScePafStdc_C95732BB
+	ScePafStdc_D608246A
+	sce_paf_memset
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	ScePafCommon_23A39B05
+	sceKernelSendMsgPipe
+	sceKernelLoadStartModule
+	__stack_chk_fail
+	sceIoOpen
+	sceIoMkdir
+	sceIoDread
+	sceIoDopen
+	sceIoGetstat
+	sceIoRemove
+	sceIoRename
+	sceClibPrintf
+	sceIoWrite
+	sceIoDclose
+	sceIoClose
+	sceIoRead
+	sceKernelOpenMsgPipe
+	sceKernelCloseMsgPipe
+)
+set(MODULE_IMPORT_VARS
+	ScePafStdc_610F2F91
+	ScePafStdc_B4A712A7
+	__stack_chk_guard
+)

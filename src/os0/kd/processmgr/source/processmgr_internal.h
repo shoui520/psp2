@@ -1,0 +1,154 @@
+/*
+ * SceProcessmgr internals shared by the module's sources.
+ *
+ * Source files follow Sony's (from the 4.00 debug records): processmgr.c and
+ * budget.c; the kernel libc time wrappers at the end of the module have no
+ * debug records (libctime.c, name unknown).
+ */
+
+#ifndef PROCESSMGR_INTERNAL_H
+#define PROCESSMGR_INTERNAL_H
+
+#include <psp2kern/types.h>
+#include "sce/sysmem.h"
+#include "sce/debug.h"
+#include "sce/threadcb.h"
+#include "sce/processmgr_imports.h"
+#include "sce/process.h"
+
+#define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
+
+#define KERNEL_PID			0x10005
+#define KERNEL_ADDRESS_SPACE		0x10007
+#define KERNEL_HEAP			0x1000b
+#define TOOL_HEAP			0x1002b	/* the tool heap (dipsw 0xd2) */
+#define SHELL_DUMMY_PID			0x10013	/* dummy processes (dipsw 0xc2) */
+#define NPDRM_DUMMY_PID			0x10015
+
+/* SceProcessObject.attr */
+#define PROCESS_ATTR_LOAD_DEBUG		0x00010000	/* name unknown: LoadProcessImage flag */
+#define PROCESS_ATTR_NOT_ACTIVE		0x00400000	/* not counted in the budget's active processes */
+#define PROCESS_ATTR_PRIORITY		0x10000000	/* the given main thread priority */
+#define PROCESS_ATTR_STACK_SIZE		0x20000000	/* the given main thread stack size */
+#define PROCESS_ATTR_LOAD_FLAG		0x40000000
+#define PROCESS_ATTR_SUSPENDED		0x80000000	/* created suspended (preload) */
+
+/* the process event flag (SceProcessObject.eventFlag) */
+#define PROCESS_EVF_CREATED		0x00000001
+#define PROCESS_EVF_STARTED		0x00000002
+#define PROCESS_EVF_SUSPENDED		0x00000010
+#define PROCESS_EVF_RESUMED		0x00000020
+#define PROCESS_EVF_DELETED		0x00000100
+#define PROCESS_EVF_NOT_DEBUG_SUSPENDED	0x00010000
+#define PROCESS_EVF_DEBUG_RESUME	0x10000000
+
+/* requests queued to the process event thread */
+#define PROCESS_REQUEST_EXIT		0x01
+#define PROCESS_REQUEST_KILL		0x02
+#define PROCESS_REQUEST_SUSPEND		0x04
+#define PROCESS_REQUEST_RESUME		0x08
+#define PROCESS_REQUEST_DEBUG_SUSPEND	0x10
+#define PROCESS_REQUEST_FORCE_KILL	0x20
+#define PROCESS_REQUEST_EXIT_SPAWN	0x40
+#define PROCESS_REQUEST_FORCE_SUSPEND	0x80
+
+/* process event handler events (ksceKernelInvokeProcEventHandler) */
+#define PROC_EVENT_CREATE		1
+#define PROC_EVENT_EXIT			2	/* also a failed create */
+#define PROC_EVENT_KILL			3
+#define PROC_EVENT_SUSPEND		4
+#define PROC_EVENT_RESUME		5
+#define PROC_EVENT_PRELOAD		0x10
+#define PROC_EVENT_SUSPEND_DONE		0x11
+
+#define PROCESS_THREAD_VECTOR_MAX	192
+
+/* error codes (official names where the SDK has one) */
+#define SCE_KERNEL_ERROR_ERROR				0x80020001
+#define SCE_KERNEL_ERROR_NOT_IMPLEMENTED		0x80020002
+#define SCE_KERNEL_ERROR_INVALID_ARGUMENT		0x80020005
+#define SCE_KERNEL_ERROR_ILLEGAL_ADDR			0x80020006
+#define SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE		0x80020009
+#define SCE_KERNEL_ERROR_ILLEGAL_SIZE			0x8002000b
+#define SCE_KERNEL_ERROR_NO_MEMORY			0x8001000c
+#define SCE_KERNEL_ERROR_INVALID_UID			0x80024501
+#define SCE_KERNEL_ERROR_UID_RL_OVERFLOW			0x8002450d
+#define SCE_KERNEL_ERROR_ILLEGAL_CONTEXT		0x80027101
+#define SCE_KERNEL_ERROR_NO_FREE_HEAP			0x8002710b	/* name unknown */
+#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID		0x80028021
+#define SCE_KERNEL_ERROR_DORMANT				0x80028027
+#define SCE_KERNEL_ERROR_DELETED				0x8002802a
+#define SCE_KERNEL_ERROR_ALREADY_DEBUG_SUSPENDED	0x8002802f
+#define SCE_KERNEL_ERROR_NOT_DEBUG_SUSPENDED		0x80028030
+#define SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID		0x80029001	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE	0x80029002	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_NO_LOCAL_STORAGE	0x80029003	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_INVALID_STATUS	0x80029004	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_NO_CALLBACK		0x80029005	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_BUSY		0x80029006	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_NOT_TOOL		0x80029008	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_TOO_MANY_PROCESSES	0x80029009	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_IN_USE	0x8002900a	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_NO_SLOT		0x8002900b	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_NO_REQUEST		0x8002900c	/* name unknown */
+#define SCE_KERNEL_ERROR_PROCESSMGR_INHERIT_PID		0x80029001	/* ExitSpawn: other pid */
+
+
+_Static_assert(sizeof(ProcessBudget) == 0x74, "ProcessBudget size");
+
+typedef SceUInt32 SceKernelTime;
+
+/* the kernel libc time implementation (SceProcessmgrForDriver_4140D633); rtc's RtcLibcTimeFunctions */
+typedef struct ProcessmgrLibcOps {
+	SceSize size;
+	SceUInt32 (*clock)(void);
+	SceKernelTime (*time)(SceKernelTime *t);
+	int (*gettimeofday)(void *tv, void *tz);
+	int (*gmtime_r)(const SceKernelTime *t, void *tm);
+	int (*localtime_r)(const SceKernelTime *t, void *tm);
+	int (*mktime)(void *tm, SceKernelTime *t, SceUInt64 *wide);
+	int (*getCurrentTick)(void *a, void *b, void *c);
+	int (*getCurrentSecureTick)(void *a, void *b, void *c);
+} ProcessmgrLibcOps;
+
+#define THREAD_ATTR_COREDUMP_HANDLER	0x800000	/* name unknown */
+
+/* the system call state in TPIDRURO (see the module manager) */
+static inline SceUInt32 ProcessSyscallEnter(void)
+{
+	SceUInt32 t;
+
+	__asm__ volatile("mrc p15, 0, %0, c13, c0, 3" : "=r"(t));
+	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" :: "r"(t << 16) : "memory");
+	return t;
+}
+
+static inline void ProcessSyscallLeave(SceUInt32 t)
+{
+	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" :: "r"(t) : "memory");
+}
+
+/* processmgr.c */
+extern SceClass g_processClass;
+SceProcessObject *GetCurrentProcess(void);
+SceUInt64 ksceKernelGetProcessTimeWideCore(void);
+
+/* libctime.c */
+SceUInt32 ProcessmgrLibcClock(void);
+SceKernelTime ksceKernelLibcTime(SceKernelTime *t);
+int ksceKernelLibcGettimeofday(void *tv, void *tz);
+int ProcessmgrLibcGmtime_r(const SceKernelTime *t, void *tm);
+int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, void *tm);
+int ProcessmgrLibcMktime(void *tm, SceKernelTime *t, SceUInt64 *wide);
+
+/* budget.c */
+extern ProcessBudget *g_gameBudget;
+extern ProcessBudget *g_kernelBudget;
+int BudgetLock(ProcessBudget *budget);
+int BudgetUnlock(ProcessBudget *budget);
+SceUID BudgetGetKernelBudgetId(void);
+int BudgetIDtoBudgetObj(SceUID budgetId, ProcessBudget **budget);
+int SetBudget(SceUInt32 type, SceUID addressSpace, ProcessBudget *budget);
+int CreateDefaultBudget(void);
+
+#endif

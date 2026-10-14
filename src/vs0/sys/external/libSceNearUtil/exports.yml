@@ -1,0 +1,60 @@
+SceNearUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNearUtil:
+      syscall: false
+      version: 1
+      nid: 0x560D1608
+      functions:
+        - sceNearOpenReceivedGiftData: 0x06807CA3
+        - sceNearSetGift: 0x146BE236
+        - SceNearUtil_1AA394BA: 0x1AA394BA
+        - SceNearUtil_1AE3EC1C: 0x1AE3EC1C
+        - sceNearReadDiscoveredGiftImage: 0x2364D6BD
+        - sceNearRefresh: 0x2ED36EE2
+        - sceNearCloseReceivedGiftData: 0x2F35C196
+        - sceNearIgnoreDiscoveredGift: 0x360D4A19
+        - sceNearFinalizeAndLaunchNearApp: 0x3F3F6D92
+        - SceNearUtil_46604AA3: 0x46604AA3
+        - SceNearUtil_49A97D5F: 0x49A97D5F
+        - sceNearSetGift2: 0x4CCE6A14
+        - sceNearDeleteGift: 0x52021026
+        - SceNearUtil_69EE6FB3: 0x69EE6FB3
+        - sceNearGetNewNeighbors: 0x6C2E610F
+        - SceNearUtil_76C4807C: 0x76C4807C
+        - sceNearGetDiscoveredGiftInfo: 0x773ABEA9
+        - SceNearUtil_79A4283C: 0x79A4283C
+        - SceNearUtil_8095FDEF: 0x8095FDEF
+        - sceNearConvertDiscoveredGiftParam: 0x80D6C552
+        - SceNearUtil_88540CEC: 0x88540CEC
+        - sceNearCloseDiscoveredGiftImage: 0x88A68D20
+        - sceNearDeleteDiscoveredGift: 0x8CBEB2DA
+        - SceNearUtil_8E47CFDC: 0x8E47CFDC
+        - sceNearGetGiftStatus: 0x8F3CC01C
+        - SceNearUtil_9044B509: 0x9044B509
+        - SceNearUtil_9B3F2DCE: 0x9B3F2DCE
+        - SceNearUtil_9FB9277B: 0x9FB9277B
+        - SceNearUtil_A412E9CA: 0xA412E9CA
+        - sceNearGetDiscoveredGiftStatus: 0xA64D9D38
+        - sceNearGetNeighbors: 0xAD264F5F
+        - sceNearGetMyStatus: 0xAEF3022A
+        - sceNearReadReceivedGiftData: 0xB14145DD
+        - sceNearLaunchNearAppForDownload: 0xB22CB01D
+        - sceNearInitialize: 0xBBCA5813
+        - SceNearUtil_BF2BBE1F: 0xBF2BBE1F
+        - SceNearUtil_CA742B97: 0xCA742B97
+        - SceNearUtil_CCC99AF1: 0xCCC99AF1
+        - SceNearUtil_D22CB2DE: 0xD22CB2DE
+        - sceNearGetLastNeighborFoundDateTime: 0xD393578E
+        - sceNearGetGift: 0xDB8BAC35
+        - SceNearUtil_DDEB6C8C: 0xDDEB6C8C
+        - sceNearGetDiscoveredGifts: 0xDE6F0859
+        - SceNearUtil_E608000B: 0xE608000B
+        - sceNearGetRecentNeighbors: 0xE75A5A9B
+        - sceNearGetDiscoveredGiftSender: 0xEFE6F060
+        - sceNearLaunchNearAppForUpdate: 0xF3398774
+        - sceNearOpenDiscoveredGiftImage: 0xF8C15008
+        - sceNearFinalize: 0xFF3BC581

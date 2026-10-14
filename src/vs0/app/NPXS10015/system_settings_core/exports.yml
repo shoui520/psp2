@@ -1,0 +1,110 @@
+SceSystemSettingsCore:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSystemSettingsCore:
+      syscall: false
+      version: 1
+      nid: 0x4562B26E
+      functions:
+        - SceSystemSettingsCore_0277BC7A: 0x0277BC7A
+        - SceSystemSettingsCore_043C27CD: 0x043C27CD
+        - SceSystemSettingsCore_06AB76AC: 0x06AB76AC
+        - SceSystemSettingsCore_07036707: 0x07036707
+        - SceSystemSettingsCore_07B7A561: 0x07B7A561
+        - SceSystemSettingsCore_0C68E8C8: 0x0C68E8C8
+        - SceSystemSettingsCore_11C08DD5: 0x11C08DD5
+        - SceSystemSettingsCore_15E54A2D: 0x15E54A2D
+        - SceSystemSettingsCore_15EB9E80: 0x15EB9E80
+        - SceSystemSettingsCore_16AF27B0: 0x16AF27B0
+        - SceSystemSettingsCore_217D71DD: 0x217D71DD
+        - SceSystemSettingsCore_273781B0: 0x273781B0
+        - SceSystemSettingsCore_2B0181BB: 0x2B0181BB
+        - SceSystemSettingsCore_2BF0AF80: 0x2BF0AF80
+        - SceSystemSettingsCore_2D77CA71: 0x2D77CA71
+        - SceSystemSettingsCore_2EEC9F5E: 0x2EEC9F5E
+        - SceSystemSettingsCore_2F3D38BD: 0x2F3D38BD
+        - SceSystemSettingsCore_321CFB2E: 0x321CFB2E
+        - SceSystemSettingsCore_3618113A: 0x3618113A
+        - SceSystemSettingsCore_39529A4E: 0x39529A4E
+        - SceSystemSettingsCore_3CF0975C: 0x3CF0975C
+        - SceSystemSettingsCore_402D49F3: 0x402D49F3
+        - SceSystemSettingsCore_42C18E86: 0x42C18E86
+        - SceSystemSettingsCore_450A7F47: 0x450A7F47
+        - SceSystemSettingsCore_4D5ECE29: 0x4D5ECE29
+        - SceSystemSettingsCore_4D6D9DC9: 0x4D6D9DC9
+        - SceSystemSettingsCore_4DAAED2C: 0x4DAAED2C
+        - SceSystemSettingsCore_4EE8AA87: 0x4EE8AA87
+        - SceSystemSettingsCore_4F87FB52: 0x4F87FB52
+        - SceSystemSettingsCore_51A8F9FA: 0x51A8F9FA
+        - SceSystemSettingsCore_51A92F4A: 0x51A92F4A
+        - SceSystemSettingsCore_5666E5C5: 0x5666E5C5
+        - SceSystemSettingsCore_5AFC366F: 0x5AFC366F
+        - SceSystemSettingsCore_5D2FEFE0: 0x5D2FEFE0
+        - SceSystemSettingsCore_5EBE3059: 0x5EBE3059
+        - SceSystemSettingsCore_613EA524: 0x613EA524
+        - SceSystemSettingsCore_670F0D27: 0x670F0D27
+        - SceSystemSettingsCore_678F3847: 0x678F3847
+        - SceSystemSettingsCore_68551987: 0x68551987
+        - SceSystemSettingsCore_68C15EF7: 0x68C15EF7
+        - SceSystemSettingsCore_6B46E145: 0x6B46E145
+        - SceSystemSettingsCore_72F3FF36: 0x72F3FF36
+        - SceSystemSettingsCore_730250F7: 0x730250F7
+        - SceSystemSettingsCore_7312E9BB: 0x7312E9BB
+        - SceSystemSettingsCore_77973F41: 0x77973F41
+        - SceSystemSettingsCore_79397C72: 0x79397C72
+        - SceSystemSettingsCore_7971E9AA: 0x7971E9AA
+        - SceSystemSettingsCore_7BDB898B: 0x7BDB898B
+        - SceSystemSettingsCore_7CB0FBA8: 0x7CB0FBA8
+        - SceSystemSettingsCore_810AF733: 0x810AF733
+        - SceSystemSettingsCore_826DE98D: 0x826DE98D
+        - SceSystemSettingsCore_84029629: 0x84029629
+        - SceSystemSettingsCore_87EF45A8: 0x87EF45A8
+        - SceSystemSettingsCore_882CCE7B: 0x882CCE7B
+        - SceSystemSettingsCore_90B5192F: 0x90B5192F
+        - SceSystemSettingsCore_971FE8D0: 0x971FE8D0
+        - SceSystemSettingsCore_9D058B17: 0x9D058B17
+        - SceSystemSettingsCore_A0E1A0DE: 0xA0E1A0DE
+        - SceSystemSettingsCore_A1A81B84: 0xA1A81B84
+        - SceSystemSettingsCore_A4AB36D1: 0xA4AB36D1
+        - SceSystemSettingsCore_A622B21C: 0xA622B21C
+        - SceSystemSettingsCore_A6927617: 0xA6927617
+        - SceSystemSettingsCore_A8A59A68: 0xA8A59A68
+        - SceSystemSettingsCore_AD9B37CF: 0xAD9B37CF
+        - SceSystemSettingsCore_B46ECA74: 0xB46ECA74
+        - SceSystemSettingsCore_BA015B58: 0xBA015B58
+        - SceSystemSettingsCore_BDB28424: 0xBDB28424
+        - SceSystemSettingsCore_BE7948B5: 0xBE7948B5
+        - SceSystemSettingsCore_C7CAD7C8: 0xC7CAD7C8
+        - SceSystemSettingsCore_CB75FBDE: 0xCB75FBDE
+        - SceSystemSettingsCore_CB8726BE: 0xCB8726BE
+        - SceSystemSettingsCore_CB94B9C4: 0xCB94B9C4
+        - SceSystemSettingsCore_D289975C: 0xD289975C
+        - SceSystemSettingsCore_D8386A14: 0xD8386A14
+        - SceSystemSettingsCore_D889BCED: 0xD889BCED
+        - SceSystemSettingsCore_D8924729: 0xD8924729
+        - SceSystemSettingsCore_DA2AFC21: 0xDA2AFC21
+        - SceSystemSettingsCore_E28BBEC0: 0xE28BBEC0
+        - SceSystemSettingsCore_E79E0FF8: 0xE79E0FF8
+        - SceSystemSettingsCore_E9558062: 0xE9558062
+        - SceSystemSettingsCore_EAA132D4: 0xEAA132D4
+        - SceSystemSettingsCore_EB051FFB: 0xEB051FFB
+        - SceSystemSettingsCore_ED11ABB3: 0xED11ABB3
+        - SceSystemSettingsCore_F101BDF9: 0xF101BDF9
+        - SceSystemSettingsCore_F14DC96D: 0xF14DC96D
+        - SceSystemSettingsCore_F27ADB10: 0xF27ADB10
+        - SceSystemSettingsCore_F312A091: 0xF312A091
+        - SceSystemSettingsCore_F554C5ED: 0xF554C5ED
+        - SceSystemSettingsCore_F56BD874: 0xF56BD874
+        - SceSystemSettingsCore_F5BB3AAB: 0xF5BB3AAB
+        - SceSystemSettingsCore_F832D8FB: 0xF832D8FB
+        - SceSystemSettingsCore_FE4F5860: 0xFE4F5860
+        - SceSystemSettingsCore_FFE80316: 0xFFE80316
+      variables:
+        - SceSystemSettingsCore_99BF8758: 0x99BF8758
+        - SceSystemSettingsCore_A598C559: 0xA598C559

@@ -1,0 +1,16 @@
+SceLibLocationExtension:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceLibLocationExtension:
+      syscall: false
+      version: 1
+      nid: 0x2ECC3C56
+      functions:
+        - sceLocationQueryLocationWifiHistory: 0x277DA915
+        - sceLocationCancelQueryLocationWifiHistory: 0x46D2F044
+        - sceLocationGetLocationWifiHistory: 0x82DE9BF8

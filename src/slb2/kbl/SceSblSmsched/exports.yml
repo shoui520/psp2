@@ -1,0 +1,15 @@
+SceSblSmsched:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSblSmSchedForTZS:
+      syscall: false
+      version: 1
+      nid: 0x5A2E5C09
+      functions:
+        - SceSblSmSchedForTZS_AB169029: 0xAB169029
+        - SceSblSmSchedForTZS_E72F2886: 0xE72F2886

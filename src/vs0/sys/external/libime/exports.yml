@@ -1,0 +1,42 @@
+SceIme:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceImeVsh:
+      syscall: false
+      version: 1
+      nid: 0x343A4D7F
+      functions:
+        - SceImeVsh_03D0D46F: 0x03D0D46F
+        - SceImeVsh_269FFDCF: 0x269FFDCF
+        - SceImeVsh_2765866F: 0x2765866F
+        - SceImeVsh_3DA671DD: 0x3DA671DD
+        - SceImeVsh_443E963A: 0x443E963A
+        - SceImeVsh_4D7F8416: 0x4D7F8416
+        - SceImeVsh_684C4574: 0x684C4574
+        - SceImeVsh_7EC113FA: 0x7EC113FA
+        - SceImeVsh_8BE1872C: 0x8BE1872C
+        - SceImeVsh_9AEEC1BD: 0x9AEEC1BD
+        - SceImeVsh_A41DB14B: 0xA41DB14B
+        - SceImeVsh_BE92A5B3: 0xBE92A5B3
+        - SceImeVsh_D3FE7CD8: 0xD3FE7CD8
+        - SceImeVsh_DDBE0490: 0xDDBE0490
+        - SceImeVsh_F27C99D3: 0xF27C99D3
+        - SceImeVsh_F4A4865B: 0xF4A4865B
+        - SceImeVsh_FD1A16DF: 0xFD1A16DF
+    SceIme:
+      syscall: false
+      version: 1
+      nid: 0xD2553017
+      functions:
+        - sceImeOpen: 0x0E050613
+        - sceImeUpdate: 0x71D6898A
+        - sceImeSetPreeditGeometry: 0x7B1EFAA5
+        - sceImeClose: 0x889A8421
+        - sceImeSetCaret: 0xD8342D2A
+        - sceImeSetText: 0xF3BD9A76

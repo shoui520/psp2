@@ -1,0 +1,28 @@
+/*
+ * SceSystemGesture skeleton: export stubs.
+ *
+ * Generated (T2). Every body is a placeholder.
+ */
+
+#include "skeleton.h"
+
+STUB_MAIN(module_start)
+STUB_MAIN(module_stop)
+
+STUB(sceSystemGestureResetTouchRecognizer)
+STUB(sceSystemGestureGetTouchEventsCount)
+STUB(sceSystemGestureGetPrimitiveTouchEventByPrimitiveID)
+STUB(sceSystemGestureGetTouchEventByEventID)
+STUB(sceSystemGestureInitializePrimitiveTouchRecognizer)
+STUB(sceSystemGestureGetTouchEventByIndex)
+STUB(sceSystemGestureGetTouchEvents)
+STUB(sceSystemGestureUpdateTouchRecognizer)
+STUB(sceSystemGestureUpdateTouchRecognizerRectangle)
+STUB(sceSystemGestureFinalizePrimitiveTouchRecognizer)
+STUB(sceSystemGestureGetPrimitiveTouchEventsCount)
+STUB(sceSystemGestureCreateTouchRecognizer)
+STUB(sceSystemGestureGetPrimitiveTouchEvents)
+STUB(sceSystemGestureUpdatePrimitiveTouchRecognizer)
+STUB(sceSystemGestureGetPrimitiveTouchEventByIndex)
+STUB(sceSystemGestureGetTouchRecognizerInformation)
+STUB(sceSystemGestureResetPrimitiveTouchRecognizer)

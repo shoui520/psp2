@@ -1,0 +1,96 @@
+# 3.630.011-DEBUGGER: os0:kd/bootimage/umass (generated)
+set(MODULE_NID 0x7B986144)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x15243EC5 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0xFD00C69A:1:0x0
+	0x88758561:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x6F25E18A:5:0x0
+	0x2ED7F97A:2:0x0
+	0x9DF04041:1:0x0
+	0x40ECDB0E:2:0x0
+	0xA0EBCA41:1:0x0
+	0xA75BBDF2:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xFD00C69A:F:0x71608CA3
+	0x88758561:F:0x391B74B7
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x47F6DE49
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x7204B846
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xFBAA026E
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x2ED7F97A:F:0x834439A7
+	0x9DF04041:F:0x29F62500
+	0x9DF04041:F:0xCC94B294
+	0x40ECDB0E:F:0x2A40BB93
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xE36F3A46
+	0xA0EBCA41:F:0x1CDBFF9F
+	0xA0EBCA41:F:0x1EC94F18
+	0xA0EBCA41:F:0x235C094A
+	0xA0EBCA41:F:0x2E05660F
+	0xA0EBCA41:F:0xBC3EF82B
+	0xA0EBCA41:F:0xF304DC5C
+	0xA75BBDF2:F:0x853CB8E4
+	0xA75BBDF2:F:0xAA6D4409
+)
+set(MODULE_IMPORT_FUNCS
+	ksceSblAimgrIsDolce
+	ksceKernelPrintf
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceKernelDeleteMutex
+	ksceKernelWaitEventFlag
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	ksceKernelCreateEventFlag
+	ksceKernelGetSystemTimeLow
+	sceKernelDelayThread
+	ksceKernelClearEventFlag
+	ksceKernelDeleteEventFlag
+	ksceKernelCancelMutex
+	ksceKernelSetEventFlag
+	ksceKernelCreateMutex
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceSysrootIsSafeMode
+	ksceKernelTriggerSGI
+	ksceKernelTriggerSubIntr
+	ksceKernelAtomicGetAndOr32
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelAtomicGetAndClear32
+	ksceUsbdOpenPipe
+	ksceUsbdRegisterDriver
+	ksceUsbdBulkTransfer
+	ksceUsbdControlTransfer
+	ksceUsbdScanStaticDescriptor
+	ksceUsbdClosePipe
+	ksceUsbServAccessoryDeactivate
+	ksceUsbServAccessoryActivate
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

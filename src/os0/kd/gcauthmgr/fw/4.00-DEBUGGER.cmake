@@ -1,0 +1,115 @@
+# 4.00-DEBUGGER: os0:kd/gcauthmgr.skprx (generated)
+set(MODULE_NID 0x558BDBE8)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630000)
+set(MODULE_EXPORT_ORDER 0x00000000 0x1926B182 0xC6627F5E 0x29ED0109 0x082FBA7D 0x1C53F37D 0xF24F760D 0x5032E8D4 0x7B13BCF7)
+set(MODULE_IMPORT_LIBS
+	0x496AD8B4:1:0x0
+	0x6F25E18A:5:0x0
+	0x887F19D0:1:0x0
+	0x7EE45391:1:0x0
+	0x3691DA45:2:0x0
+	0xE2C40624:1:0x0
+	0xCD3C89B6:1:0x0
+	0x61E9428D:1:0x0
+	0xD84DC44A:1:0x8
+	0x9F4924F2:1:0x8
+	0x0351D827:1:0x8
+	0xE1AC6D7C:1:0x8
+	0x96D306FA:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x496AD8B4:F:0x83EFA1CC
+	0x496AD8B4:F:0x87DC7F2F
+	0x496AD8B4:F:0x9EA9D4DC
+	0x496AD8B4:F:0xA773A6A8
+	0x496AD8B4:F:0xC2A61770
+	0x496AD8B4:F:0xD8678061
+	0x496AD8B4:F:0xF12B6451
+	0x6F25E18A:F:0x6D88EF8A
+	0x6F25E18A:F:0xBC996A7A
+	0x887F19D0:F:0x2A43912D
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0x6CC9C1A1
+	0x7EE45391:F:0x9D148CDE
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x3691DA45:F:0xF10AB792
+	0xE2C40624:F:0x02EEDF17
+	0xE2C40624:F:0x16A35E58
+	0xE2C40624:F:0x30E93C31
+	0xE2C40624:F:0x3C8B55A9
+	0xE2C40624:F:0xD270498B
+	0xE2C40624:F:0xE54FD746
+	0xE2C40624:F:0xF4EE4FA9
+	0xCD3C89B6:F:0x039C73B1
+	0xCD3C89B6:F:0x0631F8ED
+	0xCD3C89B6:F:0xDB9FC204
+	0x61E9428D:F:0xAC57F4F0
+	0x61E9428D:F:0xFC6CDD68
+	0xD84DC44A:F:0x742EBAF4
+	0xD84DC44A:F:0x8B85A509
+	0xD84DC44A:F:0xD91C3BCE
+	0x9F4924F2:F:0x4CD5375C
+	0x9F4924F2:F:0xB09003A7
+	0x9F4924F2:F:0xCB73E9D3
+	0x0351D827:F:0x401C0954
+	0x0351D827:F:0x42A0DFCB
+	0x0351D827:F:0x7D431C87
+	0x0351D827:F:0x9C8AF264
+	0xE1AC6D7C:F:0x6FE062D1
+	0x96D306FA:F:0x134E06C4
+	0x96D306FA:F:0x22C82E79
+	0x96D306FA:F:0x6A71987F
+	0x96D306FA:F:0xB0996641
+)
+set(MODULE_IMPORT_FUNCS
+	ksceHmacSha256Digest
+	ksceSha1Digest
+	ksceSha224Digest
+	ksceSha256Digest
+	ksceAesEncrypt1
+	ksceAesDecrypt1
+	ksceAesInit1
+	ksceKernelCopyToUser
+	ksceKernelCopyFromUser
+	ksceKernelRegisterProcEventHandler
+	memset
+	memcpy
+	memmove
+	__aeabi_uldivmod
+	__stack_chk_fail
+	ksceSysrootGetSelfInfo
+	ksceKernelSetPermission
+	ksceKernelDeleteSema
+	ksceKernelCreateSema
+	ksceKernelWaitSema
+	ksceKernelSignalSema
+	ksceKernelRunWithStack
+	sceKernelGetSystemTimeWide
+	ksceSblSmCommStartSmFromData
+	ksceSblSmCommStopSm
+	ksceSblSmCommCallFunc
+	ksceSblRngGenuineRandomNumber
+	ksceSblAimgrGetConsoleId
+	ksceNpDrmWriteActData
+	ksceNpDrmRemoveActData
+	ksceNpDrmReadActData
+	kscePsmDrmRemoveActData
+	kscePsmDrmGetActInfo
+	kscePsmDrmWriteActData
+	ksceRtcGetCurrentSecureTick
+	ksceRtcConvertTickToDateTime
+	ksceRtcSetCurrentSecureTick
+	SceRtcForDriver_9C8AF264
+	ksceIdStorageLookup
+	ksceSdifReadCmd56
+	ksceSdifInitializeMmcDevice
+	ksceSdifGetSdContextPartValidateMmc
+	ksceSdifWriteCmd56
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

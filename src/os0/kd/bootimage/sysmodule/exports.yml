@@ -1,0 +1,21 @@
+SceSysmodule:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSysmodule:
+      syscall: true
+      version: 1
+      nid: 0x03FCF19D
+      functions:
+        - sceSysmoduleIsLoadedInternal: 0x09A4AF1D
+        - sceSysmoduleLoadModuleInternal: 0x2399BF45
+        - sceSysmoduleUnloadModule: 0x31D87805
+        - sceSysmoduleIsLoaded: 0x53099B7A
+        - sceSysmoduleLoadModule: 0x79A0160A
+        - sceSysmoduleUnloadModuleInternalWithArg: 0xA2F40C4C
+        - sceSysmoduleLoadModuleInternalWithArg: 0xC3C26339
+        - sceSysmoduleUnloadModuleInternal: 0xFF206B19

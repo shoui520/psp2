@@ -1,0 +1,103 @@
+/* Boot DIP-switch state and kernel accessors. */
+#include <stdint.h>
+#include <psp2kern/kernel/dipsw.h>
+#include "sysmem_boot.h"
+
+union DipswState {
+	SceDipsw info;
+	uint32_t words[8];
+};
+
+static union DipswState s_bootDipsw;
+static union DipswState *s_dipsw;
+
+#define SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER ((int)UINT32_C(0x80021001))
+extern int CheckProcessDebugCapability(int processId);
+
+/* Name unknown; called before the first startup DIP-switch query. */
+int InitializeDipsw(const struct SysmemBootContext *context)
+{
+	const union DipswState *initial =
+		(const union DipswState *)&context->kblParam->dipsw;
+	unsigned int word;
+
+	for (word = 0; word < 8; word++)
+		s_bootDipsw.words[word] = initial->words[word];
+	s_dipsw = &s_bootDipsw;
+	return 0;
+}
+
+uint32_t ksceKernelGetDipswInfo(unsigned int index)
+{
+	return s_dipsw->words[index];
+}
+
+__attribute__((noinline))
+int ksceKernelCheckDipsw(unsigned int bit)
+{
+	return (s_dipsw->words[bit >> 5] >> (bit & 31)) & 1;
+}
+
+__attribute__((noinline))
+void ksceKernelSetDipsw(unsigned int bit)
+{
+	s_dipsw->words[bit >> 5] |= UINT32_C(1) << (bit & 31);
+}
+
+__attribute__((noinline))
+void ksceKernelClearDipsw(unsigned int bit)
+{
+	s_dipsw->words[bit >> 5] &= ~(UINT32_C(1) << (bit & 31));
+}
+
+/* Name unknown; high DIP-switch numbers require process capability bit1. */
+__attribute__((noinline))
+int CheckDipswAccess(void)
+{
+	return CheckProcessDebugCapability(0) == 1 ? 0 :
+		SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER;
+}
+
+int sceKernelCheckDipsw(unsigned int bit)
+{
+	int result;
+
+	if (bit > 255)
+		return SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER;
+	if (bit > 63) {
+		result = CheckDipswAccess();
+		if (result < 0)
+			return result;
+	}
+	return ksceKernelCheckDipsw(bit);
+}
+
+int sceKernelSetDipsw(unsigned int bit)
+{
+	int result;
+
+	if (bit > 255)
+		return SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER;
+	if (bit > 63) {
+		result = CheckDipswAccess();
+		if (result < 0)
+			return result;
+	}
+	ksceKernelSetDipsw(bit);
+	return 0;
+}
+
+int sceKernelClearDipsw(unsigned int bit)
+{
+	int result;
+
+	if (bit > 255)
+		return SCE_KERNEL_ERROR_ILLEGAL_DIPSW_NUMBER;
+	if (bit > 63) {
+		result = CheckDipswAccess();
+		if (result < 0)
+			return result;
+	}
+	ksceKernelClearDipsw(bit);
+	return 0;
+}

@@ -1,0 +1,433 @@
+/* Signal counters, lockup notifications and salvage registration. */
+#include <stdint.h>
+#include <psp2kern/kernel/threadmgr.h>
+#include "sce/threadmgr.h"
+#include "sce/sysmem.h"
+#include "gpu-dump.h"
+#include "lockup-history.h"
+#include <sce/debug.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/acmgr.h>
+
+int signalMutex = -1;
+int signalCond = -1;
+unsigned signalCounter;
+int lockupMutex = -1;
+int lockupCond = -1;
+int registerDumpMutex = -1;
+int salvageUid = -1;
+unsigned registerDumpSize;
+int lockupEventUid = -1;
+int lockupThreadUid = -1;
+unsigned lockupThreadRunning;
+unsigned gpuHalted;
+unsigned lockupRecoveryCount;
+typedef unsigned (*GpuLockupBeginCallback)(void);
+typedef void (*GpuLockupEndCallback)(unsigned token);
+GpuLockupBeginCallback lockupBeginCallback;
+GpuLockupEndCallback lockupEndCallback;
+
+static inline unsigned ReadThreadContext(void)
+{
+	unsigned value;
+	__asm__ volatile("mrc p15, 0, %0, c13, c0, 3" : "=r"(value));
+	return value;
+}
+
+static inline void WriteThreadContext(unsigned value)
+{
+	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(value));
+}
+
+/* Internal names are unknown; these names describe the recovered operations. */
+int CreateSignalWaitObjects(void)
+{
+	int ret;
+
+	ret = ksceKernelCreateMutex("SceGpuSignalMutex", 0, 0, 0);
+	signalMutex = ret;
+	if (ret < 0) {
+		signalMutex = -1;
+		return ret;
+	}
+	ret = ksceKernelCreateCond("SceGpuSignalCond", 0, signalMutex, 0);
+	signalCond = ret;
+	if (ret < 0) {
+		ksceKernelDeleteMutex(signalMutex);
+		ret = signalCond;
+		signalMutex = -1;
+		signalCond = -1;
+		return ret;
+	}
+	return 0;
+}
+
+int SignalWaitCounter(void)
+{
+	int ret;
+
+	if (signalMutex < 0 || signalCond < 0)
+		return (int)0x804c0007;
+	ret = ksceKernelLockMutex(signalMutex, 1, 0);
+	if (ret < 0)
+		return ret;
+	signalCounter++;
+	ksceKernelUnlockMutex(signalMutex, 1);
+	return ksceKernelSignalCondAll(signalCond);
+}
+
+int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
+{
+	unsigned context, observed, *waitTimeout;
+	int ret;
+
+	if (signalMutex < 0 || signalCond < 0)
+		return (int)0x804c0007;
+	if (!counter)
+		return (int)0x804c0000;
+	context = ReadThreadContext();
+	WriteThreadContext(context << 16);
+	ret = ksceKernelLockMutex(signalMutex, 1, 0);
+	if (ret >= 0) {
+		if (user) {
+			ret = ksceKernelCopyFromUser(&observed, counter, 4);
+			if (ret < 0)
+				goto unlock;
+		} else {
+			observed = *counter;
+		}
+		if (observed == signalCounter) {
+			waitTimeout = timeout ? &timeout : 0;
+			ret = ksceKernelWaitCond(signalCond, waitTimeout);
+		}
+		if (ret == 0) {
+			if (user)
+				ret = ksceKernelCopyToUser(counter, &signalCounter, 4);
+			else
+				*counter = signalCounter;
+		}
+	unlock:
+		ksceKernelUnlockMutex(signalMutex, 1);
+	}
+	WriteThreadContext(context);
+	return ret;
+}
+
+int sceGpuSignalWait(unsigned *counter, unsigned timeout)
+{
+	return WaitSignalCounter(counter, timeout, 1);
+}
+
+int WaitSignalCounterKernel(unsigned *counter, unsigned timeout)
+{
+	return WaitSignalCounter(counter, timeout, 0);
+}
+
+int ksceGpuSignalWaitLockup(void)
+{
+	unsigned context, timeout = 100000;
+	int ret;
+
+	if (lockupMutex < 0 || lockupCond < 0)
+		return (int)0x804c0007;
+	context = ReadThreadContext();
+	WriteThreadContext(context << 16);
+	ret = ksceKernelLockMutex(lockupMutex, 1, 0);
+	if (ret >= 0) {
+		ret = ksceKernelWaitCond(lockupCond, &timeout);
+		ksceKernelUnlockMutex(lockupMutex, 1);
+	}
+	WriteThreadContext(context);
+	return ret;
+}
+
+static int LockRegisterDump(void)
+{
+	unsigned timeout;
+
+	if (registerDumpMutex < 0)
+		return (int)0x804c0007;
+	timeout = 100000;
+	return ksceKernelLockMutex(registerDumpMutex, 1, &timeout);
+}
+
+static int UnlockRegisterDump(void)
+{
+	if (registerDumpMutex < 0)
+		return (int)0x804c0007;
+	return ksceKernelUnlockMutex(registerDumpMutex, 1);
+}
+
+unsigned GetRegisterDumpAllocationSize(void);
+unsigned StoreRegisterDump(const void *data);
+int LockupThread(SceSize args, void *argp);
+
+int CreateLockupWaitObjects(void)
+{
+	unsigned dumpSize;
+	int ret;
+
+	dumpSize = GetRegisterDumpAllocationSize();
+	registerDumpSize = dumpSize;
+	salvageUid = -1;
+	ret = StoreRegisterDump(NULL);
+	if (ret < 0)
+		return ret;
+	ret = ksceKernelCreateMutex("SceGpuLockupMutex", 0, 0, NULL);
+	lockupMutex = ret;
+	if (ret < 0) {
+		lockupMutex = -1;
+		return ret;
+	}
+	ret = ksceKernelCreateCond("SceGpuLockupCond", 0, lockupMutex, NULL);
+	lockupCond = ret;
+	if (ret < 0)
+		goto deleteCond;
+	ret = ksceKernelCreateEventFlag("SceGpuLockupEventFlag", 0, 0, NULL);
+	lockupEventUid = ret;
+	if (ret < 0)
+		goto deleteLockupMutex;
+	ret = ksceKernelCreateMutex("SceGpuLockupMutex2", 0, 0, NULL);
+	registerDumpMutex = ret;
+	if (ret < 0)
+		goto deleteRegisterMutex;
+	ret = ksceKernelCreateThread("SceGpuLockupThread", LockupThread, 20,
+			((dumpSize + 0x1fff) & ~0x1fffU) + 0x2000, 0, 0x80000, NULL);
+	lockupThreadUid = ret;
+	if (ret < 0)
+		goto deleteEvent;
+	lockupThreadRunning = 1;
+	ret = ksceKernelStartThread(lockupThreadUid, 0, NULL);
+	if (ret >= 0)
+		return 0;
+	ksceKernelDeleteThread(lockupThreadUid);
+	lockupThreadUid = -1;
+deleteEvent:
+	ksceKernelDeleteEventFlag(lockupEventUid);
+	lockupEventUid = -1;
+deleteRegisterMutex:
+	ksceKernelDeleteMutex(registerDumpMutex);
+	registerDumpMutex = -1;
+deleteLockupMutex:
+	ksceKernelDeleteMutex(lockupMutex);
+	lockupMutex = -1;
+deleteCond:
+	ksceKernelDeleteCond(lockupCond);
+	lockupCond = -1;
+	lockupThreadRunning = 0;
+	return ret;
+}
+
+SceUID GetLockupEventUid(void)
+{
+	return lockupEventUid;
+}
+
+int sceGpuRegisterSalvage(int eventUid)
+{
+	unsigned context;
+	int ret;
+
+	if (!lockupThreadRunning)
+		return (int)0x804c000c;
+	if (eventUid == -1)
+		return (int)0x804c0000;
+	context = ReadThreadContext();
+	WriteThreadContext(context << 16);
+	ret = LockRegisterDump();
+	if (ret == 0) {
+		if (salvageUid == -1)
+			salvageUid = eventUid;
+		else
+			ret = (int)0x804c000e;
+	}
+	UnlockRegisterDump();
+	WriteThreadContext(context);
+	return ret;
+}
+
+int sceGpuUnregisterSalvage(int eventUid)
+{
+	unsigned context;
+	int ret;
+
+	if (!lockupThreadRunning)
+		return (int)0x804c000c;
+	if (eventUid == -1)
+		return (int)0x804c0000;
+	context = ReadThreadContext();
+	WriteThreadContext(context << 16);
+	ret = LockRegisterDump();
+	if (ret == 0) {
+		if (salvageUid == eventUid)
+			salvageUid = -1;
+		else
+			ret = (int)0x804c0000;
+	}
+	UnlockRegisterDump();
+	WriteThreadContext(context);
+	return ret;
+}
+
+extern void *memset(void *destination, int value, unsigned size);
+extern void *memcpy(void *destination, const void *source, unsigned size);
+
+int ksceGpuGetRegisterDump(void *destination, unsigned size)
+{
+	const SceGpuRegisterDump *dump;
+	int ret;
+
+	if (!destination)
+		return (int)0x804c0000;
+	memset(destination, 0, size);
+	ret = LockRegisterDump();
+	if (ret == 0) {
+		dump = GetRegisterDumpBuffer();
+		if (!dump || size != registerDumpSize)
+			ret = (int)0x804c0000;
+		else
+			memcpy(destination, dump, size);
+	}
+	UnlockRegisterDump();
+	return ret;
+}
+
+/* Native LockupThread calls begin() before collecting the dump and end(token)
+ * after analysis when recovery is not required. These are not IRQ callbacks.
+ */
+void SceGpuEs4ForDriver_26B03DCE(GpuLockupBeginCallback begin,
+			       GpuLockupEndCallback end)
+{
+	lockupBeginCallback = begin;
+	lockupEndCallback = end;
+}
+
+unsigned SceGpuEs4ForDriver_F001AE90(void)
+{
+	return registerDumpSize;
+}
+
+unsigned SceGpuEs4ForDriver_18C90B42(void)
+{
+	return lockupRecoveryCount;
+}
+
+PVRSRV_DEVICE_NODE *GetGpuDeviceNode(void);
+PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer);
+PVRSRV_ERROR OSEnableTimer(IMG_HANDLE hTimer);
+int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
+		unsigned flags);
+int sceGpuCollectFrameNumSceneIndexInfo(SceGpuRegisterDump *dump);
+int CollectRegisterDumpContexts(SceGpuRegisterDump *dump);
+int sceGpuRegisterDumpAnalysis(const SceGpuRegisterDump *dump,
+		unsigned *analysis, int *pid, unsigned *detail);
+IMG_VOID HWRecoveryResetSGX(PVRSRV_DEVICE_NODE *psDeviceNode,
+		unsigned callerId, int lockupId);
+void RecordGpuLockup(SceGpuRegisterDump *dump, unsigned reason,
+		SceUID processUid, unsigned analysisDetail);
+/* NID37F51E91 is unnamed in the pinned SDK; retain its original identity. */
+int SceThreadmgrForDriver_37F51E91(SceUID processUid, int flags);
+
+int LockupThread(SceSize args, void *argp)
+{
+	SceGpuRegisterDump *dump = __builtin_alloca(registerDumpSize);
+	struct GpuLockupHistory *history = __builtin_alloca(sizeof(*history));
+	struct GpuLockupHistory *ordered = __builtin_alloca(sizeof(*ordered));
+	PVRSRV_DEVICE_NODE *node;
+	PVRSRV_SGXDEV_INFO *device;
+	unsigned eventPattern, token, analysis, detail;
+	int processUid, recovered, salvage, result;
+
+	lockupHistory = history;
+	orderedLockupHistory = ordered;
+	memset(history, 0, sizeof(*history));
+	memset(ordered, 0, sizeof(*ordered));
+	history->processCount = 0;
+	history->size = sizeof(*history);
+	history->identifier = 101;
+	ordered->identifier = 101;
+	ordered->size = sizeof(*ordered);
+	while (lockupThreadRunning) {
+		eventPattern = 0;
+		result = ksceKernelWaitEventFlag(lockupEventUid, 3,
+				SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+				&eventPattern, NULL);
+		if (!lockupThreadRunning)
+			break;
+		if (result)
+			continue;
+		node = GetGpuDeviceNode();
+		device = node ? node->pvDevice : NULL;
+		OSDisableTimer(device->hTimer);
+		token = 0;
+		if (lockupBeginCallback)
+			token = lockupBeginCallback();
+		result = sceGpuRegisterDumpCollect(dump, registerDumpSize, 7);
+		if (result)
+			SCE_DBG_PRINTF(0, 151,
+					"sceGpuRegisterDumpCollect returned 0x%08x\n", result);
+		result = sceGpuCollectFrameNumSceneIndexInfo(dump);
+		if (result)
+			SCE_DBG_PRINTF(0, 159,
+					"sceGpuCollectFrameNumSceneIndexInfo returned 0x%08x\n", result);
+		if (!LockRegisterDump()) {
+			result = StoreRegisterDump(dump);
+			if (result)
+				SCE_DBG_PRINTF(0, 175,
+						"sceGpuRegisterDumpSave returned 0x%08x\n", result);
+			UnlockRegisterDump();
+		}
+		CollectRegisterDumpContexts(dump);
+		if (!LockRegisterDump()) {
+			result = StoreRegisterDump(dump);
+			if (result)
+				SCE_DBG_PRINTF(0, 190,
+						"sceGpuRegisterDumpSave returned 0x%08x\n", result);
+			UnlockRegisterDump();
+		}
+		result = sceGpuRegisterDumpAnalysis(dump, &analysis, &processUid, &detail);
+		if (result < 0) {
+			SCE_DBG_PRINTF(0, 204,
+					"sceGpuRegisterDumpAnalysis returned 0x%08x\n", result);
+			analysis = 0;
+		}
+		recovered = 0;
+		if (analysis > 2 && analysis <= 4) {
+			if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
+				if (lockupEndCallback)
+					lockupEndCallback(token);
+				ksceKernelPrintf("GPU coredump analysis: GPU may have been halted by a known clipper hardware bug.\n");
+				ksceKernelPrintf("GPU coredump analysis: Please refer to https://psvita.scedev.net/technotes/view/274\n");
+			} else {
+				HWRecoveryResetSGX(node, 0, -1);
+				RecordGpuLockup(dump, analysis, processUid, detail);
+				lockupRecoveryCount++;
+				recovered = 1;
+			}
+		} else if (lockupEndCallback) {
+			lockupEndCallback(token);
+		}
+		if (!LockRegisterDump()) {
+			salvage = salvageUid;
+			UnlockRegisterDump();
+			if (salvage != -1) {
+				ksceKernelSignalCondAll(lockupCond);
+				break;
+			}
+		}
+		if (recovered) {
+			OSEnableTimer(device->hTimer);
+		} else {
+			gpuHalted = 1;
+			ksceKernelSignalCondAll(lockupCond);
+			SceThreadmgrForDriver_37F51E91(0x10005, 0);
+		}
+	}
+	ksceKernelExitDeleteThread(0);
+	return 0;
+}
+
+int sceGpuIsHalted(void)
+{
+	return gpuHalted;
+}

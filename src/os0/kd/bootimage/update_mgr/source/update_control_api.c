@@ -1,0 +1,74 @@
+#include <psp2kern/kernel/cpu.h>
+#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include "update_internal.h"
+
+int ksceSblACIsSystemProgram(SceUID pid);
+
+int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
+{
+	SceUpdateMode mode = 0;
+	unsigned int state;
+	int result;
+
+	if (!ksceSblACIsSystemProgram(0))
+		return (int)0x800f022c;
+	ENTER_SYSCALL(state);
+	result = SpkgUtilGetUpdateMode(&mode);
+	if (result == 0)
+		result = ksceKernelCopyToUser(output, &mode, sizeof(mode));
+	EXIT_SYSCALL(state);
+	return result;
+}
+
+int sceSblUsSetUpdateModeForUser(SceUpdateMode mode)
+{
+	unsigned int state;
+	int result;
+
+	if (!ksceSblACIsSystemProgram(0))
+		return (int)0x800f022c;
+	ENTER_SYSCALL(state);
+	result = SpkgUtilSetUpdateMode(mode);
+	EXIT_SYSCALL(state);
+	return result;
+}
+
+int sceSblUsCheckSystemIntegrityForUser(void)
+{
+	unsigned int state;
+
+	if (!ksceSblACIsSystemProgram(0))
+		return (int)0x800f022c;
+	ENTER_SYSCALL(state);
+	EXIT_SYSCALL(state);
+	return 0;
+}
+
+int sceSblUsPowerControlForUser(int operation, int flags)
+{
+	unsigned int state;
+	int result;
+
+	if (!ksceSblACIsSystemProgram(0))
+		return (int)0x800f022c;
+	ENTER_SYSCALL(state);
+	result = SpkgUtilPowerControl(operation, flags);
+	EXIT_SYSCALL(state);
+	return result;
+}
+
+int sceSblUsGetApplicableVersionForUser(int type, UpdateApplicableVersion *output)
+{
+	UpdateApplicableVersion info;
+	unsigned int state;
+	int result;
+
+	if (!ksceSblACIsSystemProgram(0))
+		return (int)0x800f022c;
+	ENTER_SYSCALL(state);
+	result = SpkgInfoUtilGetApplicableVersion(type, &info);
+	if (result == 0)
+		result = ksceKernelCopyToUser(output, &info, sizeof(info));
+	EXIT_SYSCALL(state);
+	return result;
+}

@@ -1,0 +1,35 @@
+SceSensMe:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceSensMe:
+      syscall: false
+      version: 1
+      nid: 0xFC1F0822
+      functions:
+        - SceSensMe_10D0C2A7: 0x10D0C2A7
+        - SceSensMe_16E0EFB7: 0x16E0EFB7
+        - SceSensMe_25873B66: 0x25873B66
+        - SceSensMe_370D4089: 0x370D4089
+        - SceSensMe_445BDF6F: 0x445BDF6F
+        - SceSensMe_45B246B7: 0x45B246B7
+        - SceSensMe_502FEAD2: 0x502FEAD2
+        - SceSensMe_5746D1DB: 0x5746D1DB
+        - SceSensMe_90E815D2: 0x90E815D2
+        - SceSensMe_919228D4: 0x919228D4
+        - SceSensMe_9362AB22: 0x9362AB22
+        - SceSensMe_936ECE67: 0x936ECE67
+        - SceSensMe_95CCEDA0: 0x95CCEDA0
+        - SceSensMe_9A5DFC17: 0x9A5DFC17
+        - SceSensMe_A08C3E30: 0xA08C3E30
+        - SceSensMe_AFE9C3E8: 0xAFE9C3E8
+        - SceSensMe_B84E78B0: 0xB84E78B0
+        - SceSensMe_C00E142D: 0xC00E142D
+        - SceSensMe_CBC97D53: 0xCBC97D53
+        - SceSensMe_CE5504BE: 0xCE5504BE
+        - SceSensMe_D35B015B: 0xD35B015B

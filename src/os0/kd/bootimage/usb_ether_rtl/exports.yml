@@ -1,0 +1,16 @@
+SceUsbEtherRtl:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceUsbEtherRtlForDriver:
+      syscall: false
+      version: 1
+      nid: 0x6AC379A7
+      functions:
+        - SceUsbEtherRtlForDriver_1E0E3E59: 0x1E0E3E59
+        - SceUsbEtherRtlForDriver_7473CB10: 0x7473CB10
+        - SceUsbEtherRtlForDriver_BAF95A47: 0xBAF95A47

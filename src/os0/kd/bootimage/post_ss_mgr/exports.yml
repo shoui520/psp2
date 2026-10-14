@@ -1,0 +1,180 @@
+SceSblPostSsMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSblPostSsMgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0x2254E1B2
+      functions:
+        - ksceSblPostSsMgrActivate: 0x0298382B
+        - ksceSblRSA2048CreateSignature: 0x07BAD056
+        - sceSblSsGenerateSealedKey: 0x08525D8D
+        - SceSblPostSsMgrForDriver_128FB35A: 0x128FB35A
+        - ksceSblLicMgrGetLicenseStatus: 0x15F37282
+        - SceSblPostSsMgrForDriver_1923D80D: 0x1923D80D
+        - sceSblPmMgrAuthEtoI: 0x19B63D65
+        - ksceSblUtMgrResetUtokenFile: 0x1FF699DD
+        - SceSblPostSsMgrForDriver_22599675: 0x22599675
+        - SceSblPostSsMgrForDriver_2646DE64: 0x2646DE64
+        - SceSblPostSsMgrForDriver_2BF04B8E: 0x2BF04B8E
+        - SceSblPostSsMgrForDriver_2C463AF1: 0x2C463AF1
+        - sceSblSsDecryptSealedKey: 0x33275F95
+        - ksceSblRSA2048VerifySignature: 0x3DB69911
+        - ksceSblPostSsMgrSetCpRtc: 0x3F9BDEDF
+        - SceSblPostSsMgrForDriver_4100B9E9: 0x4100B9E9
+        - ksceSblPostSsMgrDebugEncryptKeystone: 0x42474C8B
+        - ksceSblPostSsMgrExecutePmSmF00dCommand8: 0x4663C195
+        - ksceSblPostSsMgrGetExpireDate: 0x4FF2682F
+        - ksceSblPostSsMgrVerifySpfsoCtx: 0x686B9461
+        - SceSblPostSsMgrForDriver_739C981E: 0x739C981E
+        - ksceSblUtMgrHasComTestFlag: 0x7ACCAA50
+        - ksceSblRtcMgrGetCpRtcPhysical: 0x942010A0
+        - SceSblPostSsMgrForDriver_9B49C249: 0x9B49C249
+        - SceSblPostSsMgrForDriver_9D1D8EE5: 0x9D1D8EE5
+        - ksceSblUtMgrHasStoreFlag: 0x9D2E2D39
+        - ksceSblUtMgrHasNpTestFlag: 0x9FD835B0
+        - ksceSblUtMgrGetTrilithiumBuffer: 0xABDD68CD
+        - ksceSblPostSsMgrReleaseSpfsoCtx: 0xAD3B0078
+        - ksceSblPostSsMgrExecutePmSmF00dCommand: 0xADF92824
+        - ksceSblPostSsMgrInitializeSpfsoCtx: 0xBDF18922
+        - ksceSblUtMgrExecuteUtokenSmCommand1: 0xC2E58CE3
+        - SceSblPostSsMgrForDriver_C6684F7E: 0xC6684F7E
+        - SceSblPostSsMgrForDriver_C93C0A0D: 0xC93C0A0D
+        - SceSblPostSsMgrForDriver_C977601E: 0xC977601E
+        - SceSblPostSsMgrForDriver_CB5436BD: 0xCB5436BD
+        - ksceSblPostSsMgrDebugDecryptKeystone: 0xCC5AA5A5
+        - SceSblPostSsMgrForDriver_D8A2D465: 0xD8A2D465
+        - SceSblPostSsMgrForDriver_DC68EE5C: 0xDC68EE5C
+        - ksceSblPostSsMgrVerifyKeystone: 0xDDA6FA6D
+        - ksceSblRtcMgrGetCpRtcLogical: 0xDE5150FE
+        - ksceSblLicMgrGetActivationKey: 0xF7F1015B
+        - ksceSblPostSsMgrVerifyKeystoneWithPasscode: 0xF86F1452
+        - _ksceSblPostSsMgrExecutePmSmF00dCommand: 0xFE92A318
+    SceZlibForDriver:
+      syscall: false
+      version: 1
+      nid: 0xE241534E
+      functions:
+        - inflateSetDictionary: 0x00561385
+        - deflateBound: 0x05F712FE
+        - inflateInit2_: 0x0BDDF66A
+        - deflatePrime: 0x0FA805A3
+        - inflateEnd: 0x134E91EA
+        - deflatePrime: 0x1C344E27
+        - deflateCopy: 0x1E135CC1
+        - deflateInit2Padded_: 0x20A122F8
+        - deflateReset: 0x211D25F5
+        - inflateInit2_: 0x21A03034
+        - deflateInit_: 0x25F28DA7
+        - deflateCopy: 0x3252D28C
+        - crc32: 0x3370B9AD
+        - inflateSync: 0x35E0108C
+        - zError: 0x3B4466F4
+        - zError: 0x3F33F55F
+        - inflateReset: 0x408311E8
+        - inflateInitNocheck_: 0x44DA19D2
+        - inflateCopy: 0x4C27A382
+        - inflateSyncPoint: 0x4CB63BCD
+        - deflateSetDictionary: 0x4EE6C080
+        - zlibVersion: 0x517BC5F7
+        - deflateInit_: 0x520CAA7F
+        - inflateBack: 0x5377643A
+        - deflateEnd: 0x5492B3F2
+        - deflateInitPadded_: 0x5A0078D6
+        - deflate: 0x5B718E55
+        - deflateBound: 0x67A085C4
+        - deflateReset: 0x68CFEA45
+        - compress: 0x6ED5B677
+        - compressBound: 0x7048F14C
+        - inflateInit_: 0x723495A5
+        - compress: 0x7993ADAB
+        - inflateSetDictionary: 0x7B16DBD6
+        - inflateBack: 0x7C40CC39
+        - adler32: 0x7E823337
+        - inflateInit_: 0x81D0667B
+        - compress2: 0x82167CD9
+        - inflateSyncPoint: 0x834CC4A2
+        - inflateBackEnd: 0x86FF6C8B
+        - uncompress: 0x89A13883
+        - inflateCopy: 0x89B30588
+        - inflateEnd: 0x9030BAE4
+        - inflateBackEnd: 0x904AA7AE
+        - deflateSetDictionary: 0x93168F72
+        - deflateParams: 0x938F34FA
+        - adler32: 0x98619620
+        - inflateInit2Nocheck_: 0xA1E7E8B3
+        - deflateEnd: 0xA5D70E95
+        - inflateInit2Nocheck_: 0xAC2F8437
+        - deflateInitPadded_: 0xAD23EEBB
+        - inflateInitNocheck_: 0xB03E109B
+        - deflateParams: 0xBC022D38
+        - deflateInit2Padded_: 0xBE5CE88A
+        - inflate: 0xD4A85178
+        - uncompress: 0xD9BDC778
+        - crc32: 0xE0CE06C0
+        - inflateSync: 0xE2DF5A8B
+        - compressBound: 0xE323828B
+        - inflate: 0xE4F34A68
+        - deflateInit2_: 0xE6EB524C
+        - deflate: 0xE859D60F
+        - compress2: 0xE94663DD
+        - inflateReset: 0xEEC6D267
+        - deflateInit2_: 0xF2D8FC1A
+    SceSblPmMgr:
+      syscall: true
+      version: 1
+      nid: 0xA9CE5795
+      functions:
+        - sceSblPmMgrSetProductModeOffForUser: 0x41FE8A37
+        - sceSblPmMgrGetProductModeForUser: 0x46EA9FDB
+        - sceSblPmMgrGetProductModeFromNVS: 0x49CE0DDF
+        - sceSblPmMgrAuthEtoIForUser: 0xBD38B141
+        - sceSblPmMgrGetCurrentMode: 0xDA4EDEBF
+    SceSblRtcMgr:
+      syscall: true
+      version: 1
+      nid: 0x44C5F209
+      functions:
+        - sceSblRtcMgrGetCpRtcPhysicalForUser: 0x1614302B
+        - sceSblRtcMgrSetCpActivationKeyForUser: 0x298AE544
+        - sceSblRtcMgrSetCpRtcPhysicalAndKeyForUser: 0x3C0EEC69
+        - sceSblRtcMgrSetCpRtcLogicalForUser: 0x9DFB118B
+        - sceSblRtcMgrSetCpRtcPhysicalForUser: 0xA990BC44
+        - sceSblRtcMgrGetCpRtcLogicalForUser: 0xDD44D726
+        - sceSblRtcMgrGetCpSerialIdForUser: 0xE162A827
+    SceSblLicMgr:
+      syscall: true
+      version: 1
+      nid: 0x62083C72
+      functions:
+        - sceSblLicMgrGetIssueNoForUser: 0x0E0691A1
+        - sceSblLicMgrGetLicenseStatus: 0x0EA6A30C
+        - sceSblLicMgrGetActivationKeyForUser: 0x2A437187
+        - sceSblLicMgrActivateFromFs: 0x6E56EA0A
+        - sceSblLicMgrGetUsageTimeLimit: 0x774EBBA2
+        - sceSblLicMgrClearActivationData: 0x9B749D1D
+        - sceSblLicMgrGetExpireDateForUser: 0xE9FA0FE5
+        - sceSblLicMgrActivateDevkitForUser: 0xEB21DD39
+    SceSblUtMgr:
+      syscall: true
+      version: 1
+      nid: 0x000DF81A
+      functions:
+        - sceSblUtMgrIsTrilithiumFlagEnabled: 0x04CA1311
+        - sceSblUtMgrResetUtokenFile: 0x1CD57182
+        - sceSblUtMgrUpdateUtoken: 0xBDE74645
+        - sceSblUtMgrGetCurrentSecureTick: 0xCFCB1355
+        - sceSblUtMgrReadUtoken: 0xD2836E0D
+    SceSblFwLoaderForDriver:
+      syscall: false
+      version: 1
+      nid: 0x6FE424E4
+      functions:
+        - sceSblFwLoaderLoad: 0x91C73A54
+        - sceSblFwLoaderSetPath: 0xA6278D27
+        - ksceSblFwLoaderUnlock: 0xBB59FC7A

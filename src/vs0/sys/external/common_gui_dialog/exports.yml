@@ -1,0 +1,103 @@
+SceCommonGuiDialog:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceCommonGuiDialog:
+      syscall: false
+      version: 1
+      nid: 0x4B4AAE97
+      functions:
+        - SceCommonGuiDialog_01702008: 0x01702008
+        - SceCommonGuiDialog_052D0230: 0x052D0230
+        - SceCommonGuiDialog_061DD12B: 0x061DD12B
+        - SceCommonGuiDialog_0BA67FE0: 0x0BA67FE0
+        - SceCommonGuiDialog_0C2B57DC: 0x0C2B57DC
+        - SceCommonGuiDialog_11D35CB5: 0x11D35CB5
+        - SceCommonGuiDialog_149B7ABB: 0x149B7ABB
+        - SceCommonGuiDialog_17091699: 0x17091699
+        - SceCommonGuiDialog_1D4E3C83: 0x1D4E3C83
+        - SceCommonGuiDialog_206623FF: 0x206623FF
+        - SceCommonGuiDialog_20B141F1: 0x20B141F1
+        - SceCommonGuiDialog_22475C30: 0x22475C30
+        - SceCommonGuiDialog_273A476A: 0x273A476A
+        - SceCommonGuiDialog_2BBC4734: 0x2BBC4734
+        - SceCommonGuiDialog_2CA16BBF: 0x2CA16BBF
+        - SceCommonGuiDialog_2FA91F45: 0x2FA91F45
+        - SceCommonGuiDialog_3EA370C9: 0x3EA370C9
+        - SceCommonGuiDialog_47BEE7F8: 0x47BEE7F8
+        - SceCommonGuiDialog_5057376C: 0x5057376C
+        - SceCommonGuiDialog_518ABE78: 0x518ABE78
+        - SceCommonGuiDialog_52AB228A: 0x52AB228A
+        - SceCommonGuiDialog_5B9511E9: 0x5B9511E9
+        - SceCommonGuiDialog_5F13DF1F: 0x5F13DF1F
+        - SceCommonGuiDialog_694696F3: 0x694696F3
+        - SceCommonGuiDialog_696DB9C9: 0x696DB9C9
+        - SceCommonGuiDialog_6A0E7F14: 0x6A0E7F14
+        - SceCommonGuiDialog_6A6F5DEE: 0x6A6F5DEE
+        - SceCommonGuiDialog_6CE14F66: 0x6CE14F66
+        - SceCommonGuiDialog_6FF8219B: 0x6FF8219B
+        - SceCommonGuiDialog_705BEC49: 0x705BEC49
+        - SceCommonGuiDialog_7775C6B6: 0x7775C6B6
+        - SceCommonGuiDialog_7C019CF0: 0x7C019CF0
+        - SceCommonGuiDialog_8947FC23: 0x8947FC23
+        - SceCommonGuiDialog_96B9C9F6: 0x96B9C9F6
+        - SceCommonGuiDialog_A6422883: 0xA6422883
+        - SceCommonGuiDialog_B1BA8D9E: 0xB1BA8D9E
+        - SceCommonGuiDialog_B59AE4AD: 0xB59AE4AD
+        - SceCommonGuiDialog_BAC27433: 0xBAC27433
+        - SceCommonGuiDialog_BACBA7F2: 0xBACBA7F2
+        - SceCommonGuiDialog_BC311DC0: 0xBC311DC0
+        - SceCommonGuiDialog_C4601FBE: 0xC4601FBE
+        - SceCommonGuiDialog_CCFCD9A6: 0xCCFCD9A6
+        - SceCommonGuiDialog_D0B729B2: 0xD0B729B2
+        - SceCommonGuiDialog_D222DCE5: 0xD222DCE5
+        - SceCommonGuiDialog_D2381B88: 0xD2381B88
+        - SceCommonGuiDialog_D3F78BA5: 0xD3F78BA5
+        - SceCommonGuiDialog_D44D1EFB: 0xD44D1EFB
+        - SceCommonGuiDialog_D6B6809B: 0xD6B6809B
+        - SceCommonGuiDialog_EB559AFE: 0xEB559AFE
+        - SceCommonGuiDialog_ED620EF1: 0xED620EF1
+        - SceCommonGuiDialog_F1A40838: 0xF1A40838
+        - SceCommonGuiDialog_F3D37CAE: 0xF3D37CAE
+        - SceCommonGuiDialog_F9903161: 0xF9903161
+        - SceCommonGuiDialog_FA31832E: 0xFA31832E
+      variables:
+        - SceCommonGuiDialog_04D71470: 0x04D71470
+        - SceCommonGuiDialog_1424609E: 0x1424609E
+        - SceCommonGuiDialog_22B17F2B: 0x22B17F2B
+        - SceCommonGuiDialog_25BD4084: 0x25BD4084
+        - SceCommonGuiDialog_2A68B4A4: 0x2A68B4A4
+        - SceCommonGuiDialog_3297B4B7: 0x3297B4B7
+        - SceCommonGuiDialog_3785AD25: 0x3785AD25
+        - SceCommonGuiDialog_3AC06BC6: 0x3AC06BC6
+        - SceCommonGuiDialog_446F8B49: 0x446F8B49
+        - SceCommonGuiDialog_52A53037: 0x52A53037
+        - SceCommonGuiDialog_5C8A2999: 0x5C8A2999
+        - SceCommonGuiDialog_63163B76: 0x63163B76
+        - SceCommonGuiDialog_6CD802FC: 0x6CD802FC
+        - SceCommonGuiDialog_78399261: 0x78399261
+        - SceCommonGuiDialog_7AEA192C: 0x7AEA192C
+        - SceCommonGuiDialog_7D8FE85E: 0x7D8FE85E
+        - SceCommonGuiDialog_7DEE4B63: 0x7DEE4B63
+        - SceCommonGuiDialog_82BB2D55: 0x82BB2D55
+        - SceCommonGuiDialog_92752DE2: 0x92752DE2
+        - SceCommonGuiDialog_95087497: 0x95087497
+        - SceCommonGuiDialog_9FA4D765: 0x9FA4D765
+        - SceCommonGuiDialog_A0E0A437: 0xA0E0A437
+        - SceCommonGuiDialog_AF75CA6D: 0xAF75CA6D
+        - SceCommonGuiDialog_B04C8C1A: 0xB04C8C1A
+        - SceCommonGuiDialog_C4A714DE: 0xC4A714DE
+        - SceCommonGuiDialog_D7F1D334: 0xD7F1D334
+        - SceCommonGuiDialog_DDC59760: 0xDDC59760
+        - SceCommonGuiDialog_DEDA75E4: 0xDEDA75E4
+        - SceCommonGuiDialog_E872FB5D: 0xE872FB5D
+        - SceCommonGuiDialog_EA557911: 0xEA557911
+        - SceCommonGuiDialog_ECF6DC9B: 0xECF6DC9B
+        - SceCommonGuiDialog_EF2C5382: 0xEF2C5382
+        - SceCommonGuiDialog_EF7F04DD: 0xEF7F04DD
+        - SceCommonGuiDialog_F8B2D7E1: 0xF8B2D7E1

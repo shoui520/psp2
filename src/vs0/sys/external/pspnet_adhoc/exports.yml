@@ -1,0 +1,46 @@
+SceLibPspnetAdhoc:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    ScePspnetAdhoc:
+      syscall: false
+      version: 1
+      nid: 0x19C6AFDC
+      functions:
+        - sceNetAdhocGetPdpStat: 0x02098B69
+        - sceNetAdhocPtpRecv: 0x0291EF5B
+        - sceNetAdhocctlGetParameter: 0x051D8368
+        - sceNetAdhocPtpAccept: 0x0A0423DD
+        - sceNetAdhocPtpSend: 0x0A4E32EF
+        - sceNetAdhocPdpRecv: 0x1172398C
+        - sceNetAdhocctlGetPeerInfo: 0x14552BB1
+        - sceNetAdhocSetSocketAlert: 0x31F45B51
+        - sceNetAdhocctlGetPeerList: 0x356AA25E
+        - sceNetAdhocctlGetAdhocId: 0x49AF74AE
+        - sceNetAdhocPollSocket: 0x54ED636D
+        - ScePspnetAdhoc_5C83C5C8: 0x5C83C5C8
+        - sceNetAdhocPtpConnect: 0x632EDB11
+        - sceNetAdhocTerm: 0x6C0B4971
+        - sceNetAdhocPtpOpen: 0x81498625
+        - sceNetAdhocInit: 0x87805E13
+        - ScePspnetAdhoc_8938A4D0: 0x8938A4D0
+        - sceNetAdhocPtpListen: 0x8F683810
+        - sceNetAdhocctlTerm: 0x97A80065
+        - sceNetAdhocPtpClose: 0xA083BF7C
+        - ScePspnetAdhoc_A3EC45B9: 0xA3EC45B9
+        - sceNetAdhocctlGetEtherAddr: 0xA40F17E0
+        - sceNetAdhocPtpFlush: 0xAD5F570D
+        - sceNetAdhocPdpSend: 0xB56238BA
+        - sceNetAdhocPdpDelete: 0xB7B6A662
+        - sceNetAdhocGetSocketAlert: 0xCA249F53
+        - sceNetAdhocctlGetAddrByName: 0xD3230114
+        - sceNetAdhocctlInit: 0xE2FE9DD6
+        - sceNetAdhocGetPtpStat: 0xE45F0801
+        - sceNetAdhocPdpCreate: 0xF2EC12CD
+        - ScePspnetAdhoc_F87F9518: 0xF87F9518
+        - sceNetAdhocctlGetNameByAddr: 0xFCA965F6

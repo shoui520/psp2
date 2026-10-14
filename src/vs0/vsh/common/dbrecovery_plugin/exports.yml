@@ -1,0 +1,15 @@
+SceDbRecovery:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceDbRecovery:
+      syscall: false
+      version: 1
+      nid: 0x8A564258
+      functions:
+        - SceDbRecovery_1B626C54: 0x1B626C54

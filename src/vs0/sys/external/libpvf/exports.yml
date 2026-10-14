@@ -1,0 +1,54 @@
+SceLibPvf:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    ScePvf:
+      syscall: false
+      version: 1
+      nid: 0x68D59260
+      functions:
+        - scePvfOpenUserFileWithSubfontIndex: 0x10452B86
+        - scePvfGetCharGlyphOutline: 0x17A7873B
+        - scePvfFindOptimumFont: 0x2761FEAC
+        - scePvfPointToPixelV: 0x35465BD7
+        - scePvfGetCharGlyphImage: 0x37DA496A
+        - scePvfSetSkewValue: 0x3DD09BC9
+        - __scePvfSetFt2DoneLibCHook: 0x58142D71
+        - scePvfGetVertCharImageRect: 0x64E0EA8B
+        - scePvfGetFontList: 0x66F2D767
+        - scePvfFlush: 0x687FF765
+        - scePvfGetCharImageRect: 0x6C1B9CAF
+        - scePvfSetEmboldenRate: 0x6E787722
+        - scePvfNewLib: 0x72E58672
+        - scePvfSetAltCharacterCode: 0x830625C2
+        - scePvfGetVertCharGlyphImage: 0x8AE8433A
+        - scePvfPointToPixelH: 0x91F02F9A
+        - scePvfFindFont: 0x984E5BFE
+        - __scePvfSetFt2LibCHook: 0x997161C3
+        - scePvfOpenDefaultLatinFontOnSharedMemory: 0x9CBC1A46
+        - scePvfOpenUserMemory: 0x9E65E4ED
+        - scePvfIsElement: 0x9F018F25
+        - scePvfGetCharGlyphImage_Clip: 0xA55F973F
+        - scePvfOpenUserMemoryWithSubfontIndex: 0xA81570EB
+        - scePvfGetCharInfo: 0xA88EEDB0
+        - scePvfGetFontInfo: 0xAB0C7CF2
+        - scePvfReleaseCharGlyphOutline: 0xB6CE89E1
+        - scePvfGetVertCharInfo: 0xB8D01915
+        - scePvfGetKerningInfo: 0xBC90F661
+        - scePvfSetResolution: 0xC4444FB3
+        - scePvfPixelToPointV: 0xCDA282D2
+        - scePvfClose: 0xD282C23C
+        - scePvfOpenUserFile: 0xD535520F
+        - scePvfSetEM: 0xDFB677C5
+        - scePvfDoneLib: 0xE17717EC
+        - scePvfOpen: 0xE35434BB
+        - scePvfIsVertElement: 0xE676A888
+        - scePvfGetVertCharGlyphOutline: 0xECCB0CEE
+        - scePvfGetVertCharGlyphImage_Clip: 0xEEDAB884
+        - scePvfSetCharSize: 0xF17ADE4D
+        - scePvfGetFontInfoByIndexNumber: 0xF3E1E8BD
+        - scePvfPixelToPointH: 0xF56B5B9B
+        - scePvfGetNumFontList: 0xF6C4A855
+        - scePvfOpenDefaultJapaneseFontOnSharedMemory: 0xFEEE373A

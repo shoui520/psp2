@@ -1,0 +1,92 @@
+SceActivityDb:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceActivityDb:
+      syscall: false
+      version: 1
+      nid: 0xE9B9C06B
+      functions:
+        - SceActivityDb_0045B8C6: 0x0045B8C6
+        - SceActivityDb_06420B18: 0x06420B18
+        - SceActivityDb_0B710C7E: 0x0B710C7E
+        - SceActivityDb_1163677C: 0x1163677C
+        - SceActivityDb_11D77056: 0x11D77056
+        - SceActivityDb_1281238F: 0x1281238F
+        - SceActivityDb_14DE3B37: 0x14DE3B37
+        - SceActivityDb_17420D1D: 0x17420D1D
+        - SceActivityDb_2929CAD1: 0x2929CAD1
+        - SceActivityDb_2A7ABB45: 0x2A7ABB45
+        - SceActivityDb_31060D93: 0x31060D93
+        - SceActivityDb_363A3B40: 0x363A3B40
+        - SceActivityDb_36B8046C: 0x36B8046C
+        - SceActivityDb_3D0208DB: 0x3D0208DB
+        - SceActivityDb_3D89266C: 0x3D89266C
+        - SceActivityDb_3E221469: 0x3E221469
+        - SceActivityDb_3F501885: 0x3F501885
+        - SceActivityDb_402A5F72: 0x402A5F72
+        - SceActivityDb_41E31BEF: 0x41E31BEF
+        - SceActivityDb_4FF801F4: 0x4FF801F4
+        - SceActivityDb_572A6463: 0x572A6463
+        - SceActivityDb_575DA6A6: 0x575DA6A6
+        - SceActivityDb_5B44F019: 0x5B44F019
+        - SceActivityDb_5FC8EE9A: 0x5FC8EE9A
+        - SceActivityDb_6107381D: 0x6107381D
+        - SceActivityDb_6268A990: 0x6268A990
+        - SceActivityDb_66CD98C8: 0x66CD98C8
+        - SceActivityDb_69B8F963: 0x69B8F963
+        - SceActivityDb_6C29F640: 0x6C29F640
+        - SceActivityDb_6C98B745: 0x6C98B745
+        - SceActivityDb_6D8000C1: 0x6D8000C1
+        - SceActivityDb_6E198FFA: 0x6E198FFA
+        - SceActivityDb_738D4B49: 0x738D4B49
+        - SceActivityDb_74F96707: 0x74F96707
+        - SceActivityDb_76F10DA7: 0x76F10DA7
+        - SceActivityDb_7A345D77: 0x7A345D77
+        - SceActivityDb_7B0C84A3: 0x7B0C84A3
+        - SceActivityDb_7B68F69D: 0x7B68F69D
+        - SceActivityDb_7ED9033C: 0x7ED9033C
+        - SceActivityDb_82B2DA51: 0x82B2DA51
+        - SceActivityDb_82B45E74: 0x82B45E74
+        - SceActivityDb_850C8ADB: 0x850C8ADB
+        - SceActivityDb_8D4B7F73: 0x8D4B7F73
+        - SceActivityDb_8E76E134: 0x8E76E134
+        - SceActivityDb_8EE00DC5: 0x8EE00DC5
+        - SceActivityDb_8EF234A1: 0x8EF234A1
+        - SceActivityDb_8F2E07A1: 0x8F2E07A1
+        - SceActivityDb_937D49BA: 0x937D49BA
+        - SceActivityDb_94516607: 0x94516607
+        - SceActivityDb_9A8944FC: 0x9A8944FC
+        - SceActivityDb_A16326B1: 0xA16326B1
+        - SceActivityDb_AD7BFF8F: 0xAD7BFF8F
+        - SceActivityDb_ADFC2C4C: 0xADFC2C4C
+        - SceActivityDb_AEFA327F: 0xAEFA327F
+        - SceActivityDb_AFB99B8D: 0xAFB99B8D
+        - SceActivityDb_B2EF1EE0: 0xB2EF1EE0
+        - SceActivityDb_B5012F40: 0xB5012F40
+        - SceActivityDb_B83F0A77: 0xB83F0A77
+        - SceActivityDb_B9A3FDCC: 0xB9A3FDCC
+        - SceActivityDb_BF4343E0: 0xBF4343E0
+        - SceActivityDb_C37F81FE: 0xC37F81FE
+        - SceActivityDb_C3CAF7DA: 0xC3CAF7DA
+        - SceActivityDb_C715B8BC: 0xC715B8BC
+        - SceActivityDb_C8123001: 0xC8123001
+        - SceActivityDb_D3277649: 0xD3277649
+        - SceActivityDb_D512F568: 0xD512F568
+        - SceActivityDb_D67DF90F: 0xD67DF90F
+        - SceActivityDb_DAB113F9: 0xDAB113F9
+        - SceActivityDb_DF874DD2: 0xDF874DD2
+        - SceActivityDb_E1A93D0D: 0xE1A93D0D
+        - SceActivityDb_E1FB81FE: 0xE1FB81FE
+        - SceActivityDb_E6601703: 0xE6601703
+        - SceActivityDb_E6C23731: 0xE6C23731
+        - SceActivityDb_EA953F36: 0xEA953F36
+        - SceActivityDb_F138D4E5: 0xF138D4E5
+        - SceActivityDb_F65C0C21: 0xF65C0C21
+        - SceActivityDb_FBB82B37: 0xFBB82B37
+        - SceActivityDb_FEB3A02F: 0xFEB3A02F

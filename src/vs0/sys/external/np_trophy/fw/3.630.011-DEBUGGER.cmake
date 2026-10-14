@@ -1,0 +1,61 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/np_trophy.suprx (generated)
+set(MODULE_NID 0x530172F4)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0xECB62224:1:0x8
+	0xD8835093:1:0x8
+	0xF4E34EDB:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelDeleteLwMutex
+	sceClibStrlcpy
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceClibMspaceRealloc
+	sceClibMspaceMalloc
+	sceClibMspaceMallocStats
+	sceKernelUnlockLwMutex
+	sceClibMspaceFree
+	sceClibMemcmp
+	SceLibKernel_9F793F84
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceClibStrncpy
+	sceKernelCreateLwMutex
+	sceKernelGetLwMutexInfo
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelDelayThread
+	SceNpCommon_40CC4D15
+	SceNpCommon_5BC54899
+	SceNpCommon_85699AE2
+	SceNpCommon_9B7CAA67
+	SceNpCommon_D2B9BCA8
+	SceNpCommon_E426FEE8
+	SceNpManager_9554802B
+	SceNpManager_96DF1B76
+	SceIpmi_1372C7B7
+	SceIpmi_296D44D4
+	SceIpmi_2C6DB642
+	SceIpmi_3554D4B0
+	SceIpmi_367CEF82
+	SceIpmi_48E072C8
+	SceIpmi_5ECD40E9
+	SceIpmi_7C002FEC
+	SceIpmi_7E079E19
+	SceIpmi_8A0BAC4E
+	SceIpmi_A20BB95B
+	SceIpmi_BC3A3031
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

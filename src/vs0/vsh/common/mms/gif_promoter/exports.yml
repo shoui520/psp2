@@ -1,0 +1,19 @@
+SceGifPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceGifPromoter:
+      syscall: false
+      version: 1
+      nid: 0xF0916D75
+      functions:
+        - SceGifPromoter_33223722: 0x33223722
+        - SceGifPromoter_B235147F: 0xB235147F
+        - SceGifPromoter_E4D74D8C: 0xE4D74D8C
+      variables:
+        - SceGifPromoter_64BEB5DE: 0x64BEB5DE

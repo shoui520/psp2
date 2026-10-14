@@ -1,0 +1,89 @@
+SceCameraDummy:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceCameraForDriver:
+      syscall: false
+      version: 1
+      nid: 0xBCBC1F4A
+      functions:
+        - SceCameraForDriver_0E9B4B9E: 0x0E9B4B9E
+        - SceCameraForDriver_22D51107: 0x22D51107
+        - SceCameraForDriver_22E70D83: 0x22E70D83
+        - SceCameraForDriver_2D12FDF3: 0x2D12FDF3
+        - SceCameraForDriver_3590BB9B: 0x3590BB9B
+        - SceCameraForDriver_36C164BE: 0x36C164BE
+        - SceCameraForDriver_45EB69C9: 0x45EB69C9
+        - SceCameraForDriver_5338BE86: 0x5338BE86
+        - SceCameraForDriver_6443EEDB: 0x6443EEDB
+        - SceCameraForDriver_8C3354E5: 0x8C3354E5
+        - SceCameraForDriver_93477709: 0x93477709
+        - SceCameraForDriver_96C63737: 0x96C63737
+        - SceCameraForDriver_B241F11F: 0xB241F11F
+        - SceCameraForDriver_B312CE90: 0xB312CE90
+        - SceCameraForDriver_C2E71BE8: 0xC2E71BE8
+        - SceCameraForDriver_D0810455: 0xD0810455
+        - SceCameraForDriver_D259707C: 0xD259707C
+        - SceCameraForDriver_D56A12BD: 0xD56A12BD
+        - SceCameraForDriver_DFBBA264: 0xDFBBA264
+        - SceCameraForDriver_E487870A: 0xE487870A
+        - SceCameraForDriver_E81EADE1: 0xE81EADE1
+        - ksceCameraIsActive: 0xEB1CC2CA
+        - SceCameraForDriver_EE3D4B1C: 0xEE3D4B1C
+        - SceCameraForDriver_F7A0C99F: 0xF7A0C99F
+        - SceCameraForDriver_FE3C170C: 0xFE3C170C
+    SceCamera:
+      syscall: true
+      version: 1
+      nid: 0xDA91B3ED
+      functions:
+        - sceCameraSetExposureCeiling: 0x04F34BEE
+        - sceCameraGetAutoControlHold: 0x06A21BBB
+        - sceCameraGetZoom: 0x06D3816C
+        - sceCameraSetContrast: 0x06FB2900
+        - sceCameraIsActive: 0x103A75B8
+        - sceCameraSetReverse: 0x1175F477
+        - sceCameraGetNightmode: 0x12B6FF26
+        - sceCameraStop: 0x1DD9C9CE
+        - sceCameraGetDeviceLocation: 0x274EF751
+        - sceCameraGetGain: 0x2C36D6F3
+        - sceCameraGetSharpnessOff: 0x34CCAF85
+        - sceCameraSetAutoControlHold: 0x3A0DABBD
+        - sceCameraSetISO: 0x3CF630A1
+        - sceCameraSetNightmode: 0x3F26233E
+        - sceCameraGetReverse: 0x44F6043F
+        - sceCameraSetSharpnessOff: 0x4B5405C8
+        - sceCameraSetWhiteBalance: 0x4D4514AC
+        - sceCameraGetISO: 0x4EBD5C68
+        - sceCameraGetExposureCeiling: 0x5FA5B1BB
+        - sceCameraGetSaturation: 0x624F7653
+        - sceCameraSetEV: 0x62AFF0B8
+        - sceCameraSetImageQuality: 0x75C4300B
+        - sceCameraRead: 0x79B5C2DE
+        - sceCameraGetEffect: 0x7E8EF3B2
+        - sceCameraGetBrightness: 0x85D5951D
+        - sceCameraGetEV: 0x8B5E6147
+        - sceCameraGetBacklight: 0x8DD1292B
+        - sceCameraGetContrast: 0x8FBE84BE
+        - sceCameraSetBrightness: 0x98D71588
+        - SceCamera_99B5FB62: 0x99B5FB62
+        - sceCameraGetAntiFlicker: 0x9FDACB99
+        - sceCameraOpen: 0xA462F801
+        - sceCameraStart: 0xA8FEAE35
+        - sceCameraGetSharpness: 0xAA72C3DC
+        - sceCameraSetBacklight: 0xAE071044
+        - sceCameraClose: 0xCD6E1CFC
+        - sceCameraSetSharpness: 0xD1A5BB0B
+        - sceCameraGetWhiteBalance: 0xDBFFA1DA
+        - sceCameraGetImageQuality: 0xE2AC7BCE
+        - sceCameraSetAntiFlicker: 0xE312958A
+        - sceCameraSetGain: 0xE65CFE86
+        - sceCameraSetEffect: 0xE9D2CFB1
+        - sceCameraSetZoom: 0xF7464216
+        - sceCameraSetNoiseReduction: 0xF9B79556
+        - sceCameraSetSaturation: 0xF9F7CA3D
+        - sceCameraGetNoiseReduction: 0xFEB99ACC

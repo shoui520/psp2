@@ -1,0 +1,19 @@
+SceLibicalss:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    libicalss:
+      syscall: false
+      version: 1
+      nid: 0x4E2E4D8D
+      functions:
+        - libicalss_0F52D1FF: 0x0F52D1FF
+        - libicalss_447AC528: 0x447AC528
+        - libicalss_6A41C39E: 0x6A41C39E
+        - libicalss_D2386CAD: 0xD2386CAD
+        - libicalss_F7FC10E7: 0xF7FC10E7

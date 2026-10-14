@@ -1,0 +1,24 @@
+SceRazorCapture:
+  attributes: 6
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceRazorCapture:
+      syscall: false
+      version: 1
+      nid: 0x7B2A3F18
+      functions:
+        - sceRazorCaptureSetTriggerNextFrame: 0x3D4B7E68
+        - sceRazorGpuCaptureStartSalvageMode: 0x3F0913CF
+        - sceRazorGpuCaptureSetTrigger: 0x472492DA
+        - sceRazorGpuCaptureSetCaptureAllMemory: 0x6A09822D
+        - sceRazorGpuCaptureSetCaptureBeforeKick: 0x8EE74EB7
+        - sceRazorCaptureIsInProgress: 0x911E0AA0
+        - sceRazorGpuCaptureSetTriggerNextFrame: 0x9DAA7E9C
+        - sceRazorGpuCaptureIsInProgress: 0xD2358BFB
+        - sceRazorGpuCaptureEnableSalvage: 0xDFBDCC4C
+        - sceRazorCaptureSetTrigger: 0xE916B538

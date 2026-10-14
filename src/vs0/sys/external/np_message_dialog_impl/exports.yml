@@ -1,0 +1,19 @@
+SceNpMessageDlgImplPlugin:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNpMessageDialogPlugin:
+      syscall: false
+      version: 1
+      nid: 0x7E103235
+      functions:
+        - SceNpMessageDialogPlugin_30A03EE4: 0x30A03EE4
+        - SceNpMessageDialogPlugin_47DA49AB: 0x47DA49AB
+        - SceNpMessageDialogPlugin_618894C6: 0x618894C6
+        - SceNpMessageDialogPlugin_62ED2200: 0x62ED2200
+        - SceNpMessageDialogPlugin_C80065AA: 0xC80065AA

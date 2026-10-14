@@ -1,0 +1,81 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libSceVideoSearchEmpr.suprx (generated)
+set(MODULE_NID 0x32D9F697)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0xF2FF276E:1:0x0
+	0x2DD91812:2:0x0
+	0xA6605D6F:1:0x8
+	0x6704D3C6:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceKernelLockMutex
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceClibMspaceCreate
+	__sce_aeabi_idiv0
+	sceKernelLockLwMutex
+	sceIoPread
+	sceIoIoctl
+	sceClibVprintf
+	sceClibStrchr
+	sceClibMemset
+	sceIoOpen
+	sceClibStrrchr
+	sceIoChstatByFd
+	sceClibMspaceRealloc
+	sceKernelWaitEventFlag
+	sceKernelCreateEventFlag
+	sceClibMspaceMalloc
+	sceKernelGetEventFlagInfo
+	sceClibSnprintf
+	sceIoPwrite
+	sceKernelUnlockLwMutex
+	sceIoSync
+	sceIoLseek
+	sceClibMspaceFree
+	sceKernelTryLockLwMutex
+	sceClibStrnlen
+	sceIoGetstat
+	sceClibStrncpy
+	sceKernelCreateLwMutex
+	sceIoRemove
+	sceKernelCreateMutex
+	__sce_aeabi_ldiv0
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelCloseMutex
+	sceKernelUnlockMutex
+	sceKernelDelayThread
+	sceKernelClearEventFlag
+	sceKernelOpenMutex
+	sceKernelDeleteEventFlag
+	sceKernelCloseEventFlag
+	sceKernelGetProcessId
+	sceKernelOpenEventFlag
+	sceKernelDeleteMutex
+	sceKernelSetEventFlag
+	sceIoSyncByFd
+	sceIoFlockForSystem
+	sceIoClose
+	sceKernelPowerUnlock
+	sceKernelPowerLock
+	sceAppMgrGetRawPath
+	sceAppMgrUmount
+	sceAppMgrWorkDirMount
+	sceAppMgrMmsMount
+	sceRtcConvertUtcToLocalTime
+	sceRtcGetCurrentTick
+	sceRtcSetTime_t
+	sceRtcGetCurrentClock
+	sceRtcGetTime_t
+	sceRtcSetTick
+	sceRtcGetTick
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

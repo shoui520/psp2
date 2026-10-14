@@ -1,0 +1,38 @@
+SceBackupRestore:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceBackupRestore:
+      syscall: false
+      version: 1
+      nid: 0xB5952424
+      functions:
+        - SceBackupRestore_1050BE90: 0x1050BE90
+        - SceBackupRestore_156A9E66: 0x156A9E66
+        - SceBackupRestore_1E7AC3F7: 0x1E7AC3F7
+        - SceBackupRestore_1FE3E3FF: 0x1FE3E3FF
+        - SceBackupRestore_264B7CA1: 0x264B7CA1
+        - SceBackupRestore_28A22272: 0x28A22272
+        - SceBackupRestore_44EF1A4D: 0x44EF1A4D
+        - SceBackupRestore_480CCE41: 0x480CCE41
+        - SceBackupRestore_4CFA46BB: 0x4CFA46BB
+        - SceBackupRestore_5FFEA932: 0x5FFEA932
+        - SceBackupRestore_76F062D2: 0x76F062D2
+        - SceBackupRestore_8952E4A4: 0x8952E4A4
+        - SceBackupRestore_89E6220D: 0x89E6220D
+        - SceBackupRestore_977D47A2: 0x977D47A2
+        - SceBackupRestore_9FDDEAFD: 0x9FDDEAFD
+        - SceBackupRestore_A5FFD987: 0xA5FFD987
+        - SceBackupRestore_ABEA73FF: 0xABEA73FF
+        - SceBackupRestore_AFCD0DF5: 0xAFCD0DF5
+        - SceBackupRestore_B5A23A25: 0xB5A23A25
+        - SceBackupRestore_C6B3E0A0: 0xC6B3E0A0
+        - SceBackupRestore_E4AB4572: 0xE4AB4572
+        - SceBackupRestore_EEA2571C: 0xEEA2571C
+        - SceBackupRestore_FA62A9BB: 0xFA62A9BB
+        - SceBackupRestore_FAE75E6C: 0xFAE75E6C

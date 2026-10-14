@@ -1,0 +1,30 @@
+SceSblAuthMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSblAuthMgrForKernel:
+      syscall: false
+      version: 1
+      nid: 0x7ABF5135
+      functions:
+        - ksceSblAuthMgrClose: 0x026ACBAD
+        - ksceSblAuthMgrSetDmac5Key: 0x122ACDEA
+        - SceSblAuthMgrForKernel_2A83A012: 0x2A83A012
+        - ksceSblAuthMgrSetupAuthSegment: 0x89CCDA2C
+        - ksceSblAuthMgrOpen: 0xA9CD2A09
+        - ksceSblAuthMgrCompareSwVersion: 0xABAB8466
+        - ksceSblAuthMgrLoadBlock: 0xBC422443
+        - ksceSblAuthMgrClearDmac5Key: 0xF2BB723E
+        - ksceSblAuthMgrAuthHeader: 0xF3411881
+    SceSblAuthMgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0x4EB2B1BB
+      functions:
+        - ksceSblAuthMgrVerifySpfsoCtx: 0x24C4CE64
+        - ksceSblAuthMgrDecBindData: 0x41DAEA12
+        - ksceSblAuthMgrGetEKc: 0x868B9E9A

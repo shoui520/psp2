@@ -1,0 +1,24 @@
+SceHpremote:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceHpremoteForDriver:
+      syscall: false
+      version: 1
+      nid: 0xFD0B0E27
+      functions:
+        - SceHpremoteForDriver_208DB1BD: 0x208DB1BD
+        - SceHpremoteForDriver_219C58F1: 0x219C58F1
+        - SceHpremoteForDriver_2229EF51: 0x2229EF51
+        - SceHpremoteForDriver_4D1E622C: 0x4D1E622C
+        - SceHpremoteForDriver_68D64A0F: 0x68D64A0F
+        - SceHpremoteForDriver_71B5FB67: 0x71B5FB67
+        - SceHpremoteForDriver_7735C403: 0x7735C403
+        - SceHpremoteForDriver_7B038374: 0x7B038374
+        - SceHpremoteForDriver_7E69EDA4: 0x7E69EDA4
+        - SceHpremoteForDriver_C7154136: 0xC7154136
+        - SceHpremoteForDriver_D22913DB: 0xD22913DB

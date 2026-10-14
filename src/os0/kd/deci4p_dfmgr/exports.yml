@@ -1,0 +1,22 @@
+SceDeci4pDfMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 6
+  main:
+    start: sceDfMgrModuleStart
+  libraries:
+    SceDeci4pDfMgrForDebugger:
+      syscall: false
+      version: 1
+      nid: 0x849E3DF5
+      functions:
+        - sceDfMgrClose: 0x1CC6ED4B
+        - sceDfMgrOpen: 0x529979FB
+        - sceDfMgrRecv: 0x5F2C7E11
+        - SceDeci4pDfMgrForDebugger_6D26CC56: 0x6D26CC56
+        - sceDfMgrSendSpace: 0x7EAE4FA2
+        - sceDfMgrReqSend: 0xBADEF855
+        - sceDfMgrSend: 0xC3390112
+        - SceDeci4pDfMgrForDebugger_CACAB5F9: 0xCACAB5F9
+        - sceDfMgrDcmpReqSendForLoadp: 0xD0CCF840

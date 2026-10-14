@@ -1,0 +1,20 @@
+SceGriefReportDialog:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceGriefReportDialog:
+      syscall: false
+      version: 1
+      nid: 0xF2D55EBD
+      functions:
+        - SceGriefReportDialog_01AF3028: 0x01AF3028
+        - SceGriefReportDialog_1FC01F49: 0x1FC01F49
+        - SceGriefReportDialog_439CCBC9: 0x439CCBC9
+        - SceGriefReportDialog_4747BB9E: 0x4747BB9E
+        - SceGriefReportDialog_67FFAAFD: 0x67FFAAFD
+        - SceGriefReportDialog_69FC8188: 0x69FC8188
+        - SceGriefReportDialog_CBF4F0CB: 0xCBF4F0CB
+        - SceGriefReportDialog_CFDBDC8B: 0xCFDBDC8B
+        - SceGriefReportDialog_DF1C6A13: 0xDF1C6A13

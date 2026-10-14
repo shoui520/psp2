@@ -1,0 +1,77 @@
+# Bluetooth implementation with original module/export/import tables.
+psp2_module(os0_kd_bootimage_bt KIND kernel SOURCES
+	source/bt_sbc.c
+	source/bt_tables.c
+	source/bt_hci_callbacks.c
+	source/bt_connection.c
+	source/bt_connection_cleanup.c
+	source/bt_hci_dispatch.c
+	source/bt_connection_data.c
+	source/bt_registry.c
+	source/bt_power.c
+	source/bt_api.c
+	source/bt_events.c
+	source/bt_l2cap.c
+	source/bt_l2cap_decode.c
+	source/bt_audio_buffers.c
+	source/bt_audio_receive.c
+	source/bt_audio_capabilities.c
+	source/bt_audio.c
+	source/bt_audio_accept.c
+	source/bt_avrcp.c
+	source/bt_avrcp_receive.c
+	source/bt_avdtp.c
+	source/bt_avdtp_receive.c
+	source/bt_image_jpeg.c
+	source/bt_image.c
+	source/bt_image_send.c
+	source/bt_network_checksum.c
+	source/bt_dhcp_send.c
+	source/bt_dhcp_receive.c
+	source/bt_network.c
+	source/bt_hci_send.c
+	source/bt_acl_queue.c
+	source/bt_l2cap_send.c
+	source/bt_packet.c
+	source/bt_lookup.c
+	source/bt_queue_init.c
+	source/bt_profile_adapters.c
+	source/bt_hsp.c
+	source/bt_hsp_send.c
+	source/bt_hid.c
+	source/bt_hid_transfer.c
+	source/bt_packet_backend.c
+	source/bt_bnep.c
+	source/bt_bnep_receive.c
+	source/bt_bnep_send.c
+	source/bt_device_registry.c
+	source/bt_rfcomm.c
+	source/bt_rfcomm_receive.c
+	source/bt_device.c
+	source/bt_sdp.c
+	source/bt_sdp_close.c
+	source/bt_sdp_channel.c
+	source/bt_sdp_receive.c
+	source/bt_sbc_codec.c
+	source/bt_sco_transfer.c
+	source/bt_access.c
+	source/bt_transport_init.c
+	source/bt_sync.c
+	source/bt_platform.c
+	source/bt_transport.c
+	source/bt_transport_poll.c
+	source/bt_transport_thread.c
+	source/bt_timers.c
+	source/bt_wire.c
+	source/bt_buffer.c
+	source/bt_transport_sleep.c
+	source/bt_hci_policy.c
+	source/bt_util.c
+	source/bt_crypto.c
+	source/bt_checksum.c
+	source/bt_sha1.c
+	source/bt.c
+)
+
+# The original codec source group is ARM in every firmware; the API is Thumb.
+set_source_files_properties(source/bt_sbc.c PROPERTIES COMPILE_OPTIONS "-marm")

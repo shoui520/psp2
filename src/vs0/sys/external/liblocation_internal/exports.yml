@@ -1,0 +1,19 @@
+SceLibLocationInternal:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceLibLocationInternal:
+      syscall: false
+      version: 1
+      nid: 0x098B0C75
+      functions:
+        - SceLibLocationInternal_209228A3: 0x209228A3
+        - SceLibLocationInternal_29267421: 0x29267421
+        - SceLibLocationInternal_3500A98C: 0x3500A98C
+        - SceLibLocationInternal_A8531ABF: 0xA8531ABF
+        - SceLibLocationInternal_EEF11F68: 0xEEF11F68

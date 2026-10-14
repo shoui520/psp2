@@ -1,0 +1,106 @@
+# 4.00-DEBUGGER: os0:kd/lowio.skprx (generated)
+set(MODULE_NID 0xEEB509E8)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000 0xE692C727 0xF0EF5743 0xECEAE2D0 0xE14BEF6E 0x81C54BED 0xC8CD941E 0xEC897883 0xCAFCFE50 0xD85C8E44)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0xC9E26388:1:0x0
+	0x2ED7F97A:2:0x0
+	0x7EE45391:1:0x0
+	0x9DF04041:1:0x0
+	0xE2C40624:1:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0x821FC0EE
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xF5BAD43B
+	0xC9E26388:F:0xA98FC2FD
+	0x2ED7F97A:F:0x930B1342
+	0x2ED7F97A:V:0x4B8C305A
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xA9FF1205
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x9DF04041:F:0x180435EC
+	0x9DF04041:F:0x5C1FEB29
+	0x9DF04041:F:0x7117E827
+	0x9DF04041:F:0xCC94B294
+	0x9DF04041:F:0xD6009B98
+	0xE2C40624:F:0x0A912340
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x11FE84A1
+	0xE2C40624:F:0x16AC80C5
+	0xE2C40624:F:0x1E82E5D0
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x47F6DE49
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x63DAB420
+	0xE2C40624:F:0x6D0733A8
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xB4A05763
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xD9BD74EB
+	0xE2C40624:F:0xDB395782
+	0xE2C40624:F:0xE50E1185
+	0xE2C40624:F:0xF4EE4FA9
+	0xE2C40624:F:0xFBAA026E
+	0x7290B21C:F:0x04C05D10
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelCpuSuspendIntr
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelCpuResumeIntr
+	ksceKernelCheckDipsw
+	ksceSysrootGetHardwareInfo
+	memset
+	memcpy
+	__aeabi_uidiv
+	__stack_chk_fail
+	ksceKernelDisableIntr
+	ksceKernelRegisterIntrHandler
+	ksceKernelEnableIntr
+	ksceKernelTriggerSubIntr
+	ksceKernelReleaseIntrHandler
+	ksceKernelDeleteMutex
+	ksceKernelWaitEventFlag
+	ksceKernelFinalizeFastMutex
+	ksceKernelLockMutex
+	ksceKernelUnlockMutex
+	ksceKernelCreateEventFlag
+	ksceKernelGetSystemTimeLow
+	sceKernelDelayThread
+	ksceKernelClearEventFlag
+	ksceKernelChangeThreadPriority
+	ksceKernelChangeThreadCpuAffinityMask
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	ksceKernelInitializeFastMutex
+	SceThreadmgrForDriver_B4A05763
+	ksceKernelSetEventFlag
+	sceKernelCheckWaitableStatus
+	ksceKernelUnlockFastMutex
+	ksceKernelEnqueueWorkQueue
+	sceKernelGetSystemTimeWide
+	ksceKernelCreateMutex
+	ksceKernelRegisterSysEventHandler
+)
+set(MODULE_IMPORT_VARS
+	SceSysrootForDriver_4B8C305A
+	__stack_chk_guard
+)

@@ -1,0 +1,74 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libvoiceqos.suprx (generated)
+set(MODULE_NID 0xCE4BF322)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x650551BC 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0xCE56E214:1:0x0
+	0xCAE9ACE6:5:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0xCE56E214:F:0x02F58D6F
+	0xCE56E214:F:0x09E4D18C
+	0xCE56E214:F:0x0A22EC0E
+	0xCE56E214:F:0x0B9E4AE2
+	0xCE56E214:F:0x5933CCFB
+	0xCE56E214:F:0x5F0260F4
+	0xCE56E214:F:0x698BDAAE
+	0xCE56E214:F:0x73F72940
+	0xCE56E214:F:0x805CC20F
+	0xCE56E214:F:0x875CC80D
+	0xCE56E214:F:0xAC98853E
+	0xCE56E214:F:0xAE46564D
+	0xCE56E214:F:0xB2ED725B
+	0xCE56E214:F:0xC3868DF6
+	0xCE56E214:F:0xC913F7E9
+	0xCE56E214:F:0xD93769E6
+	0xCE56E214:F:0xFA4E57B1
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:V:0x93B8AA67
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0xF4EE4FA9
+)
+set(MODULE_IMPORT_FUNCS
+	sceVoiceSetBitRate
+	sceVoiceReadFromOPort
+	sceVoiceWriteToIPort
+	sceVoiceSetMuteFlag
+	sceVoiceGetPortInfo
+	sceVoiceDisconnectIPortFromOPort
+	sceVoiceConnectIPortToOPort
+	sceVoiceGetPortAttr
+	sceVoiceInit
+	sceVoiceGetVolume
+	sceVoiceEnd
+	sceVoiceDeletePort
+	sceVoiceStart
+	sceVoiceStop
+	sceVoiceGetMuteFlag
+	sceVoiceSetVolume
+	sceVoiceCreatePort
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceClibMemset
+	sceKernelUnlockLwMutex
+	sceKernelCreateLwMutex
+	sceKernelFreeMemBlock
+	sceKernelAllocMemBlock
+	sceKernelGetSystemTimeWide
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

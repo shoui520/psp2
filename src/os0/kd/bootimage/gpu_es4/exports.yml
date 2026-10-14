@@ -1,0 +1,56 @@
+SceGpuEs4:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceGpuEs4ForDriver:
+      syscall: false
+      version: 1
+      nid: 0x54802381
+      functions:
+        - OSFreeMem: 0x0BB49287
+        - ksceGpuGetRegisterDump: 0x14ECCFCD
+        - SceGpuEs4ForDriver_18C90B42: 0x18C90B42
+        - PVRSRVPerProcessDataConnect: 0x1A53327D
+        - SceGpuEs4ForDriver_26B03DCE: 0x26B03DCE
+        - OSProcHasPrivSrvInit: 0x302C7C5F
+        - SceGpuEs4ForDriver_395F7689: 0x395F7689
+        - PVRSRVFinaliseSystem: 0x399BC738
+        - PVRSRVGetInitServerState: 0x3AF6FE80
+        - PVRSRVPerProcessData: 0x3DAB1F7F
+        - ksceGpuSignalWaitLockup: 0x40E292D7
+        - DevInitSGXPart2KM: 0x49AD869F
+        - OSMemSet: 0x50494916
+        - PVRSRVAllocDeviceMemKM: 0x623E50D0
+        - SGXGetInfoForSrvinitKM: 0x668B1A60
+        - OSAllocMem: 0x68815236
+        - OSGetCurrentProcessIDKM: 0x6C6F2BEA
+        - OSMemCopy: 0x771EC61E
+        - SceGpuEs4ForDriver_7AA79658: 0x7AA79658
+        - SceGpuEs4ForDriver_8A3929D2: 0x8A3929D2
+        - PVRSRVGetMiscInfoKM: 0x8FB57186
+        - SceGpuEs4ForDriver_990338F6: 0x990338F6
+        - ksceGpuMmuUnmapMemory: 0x9AAAD91C
+        - PVRSRVPerProcessDataDisconnect: 0xB4A2B60F
+        - SceGpuEs4ForDriver_C0C73C1B: 0xC0C73C1B
+        - PVRSRVFreeDeviceMemKM: 0xD9CE787A
+        - PVRSRVSetInitServerState: 0xDCD78852
+        - PVRSRVAcquireDeviceDataKM: 0xE6B866FD
+        - PVRSRVEnumerateDevicesKM: 0xEC5163B0
+        - ksceGpuMmuMapMemory: 0xEF4B16D3
+        - SceGpuEs4ForDriver_F001AE90: 0xF001AE90
+    SceGpuEs4ForUser:
+      syscall: true
+      version: 1
+      nid: 0x6EC1443D
+      functions:
+        - sceGpuSignalWait: 0x05BCE11C
+        - PVRSRVOpen: 0x5E943288
+        - sceGpuUnregisterSalvage: 0x807202B7
+        - PVRSRVRelease: 0x85C328DF
+        - sceGpuRegisterSalvage: 0x8E0D9D40
+        - PVRSRV_BridgeDispatchKM: 0xCA19ABCD
+        - ksceGpuSignalWaitLockup: 0xE0DECA6E

@@ -1,0 +1,4 @@
+psp2_module(os0_kd_bootimage_hpremote KIND kernel SOURCES source/hpremote.c
+	IMPORTS ksceKernelReleaseSubIntrHandler ksceKernelWaitThreadEnd
+	ksceKernelDeleteEventFlag ksceKernelDeleteThread
+)

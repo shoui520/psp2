@@ -1,0 +1,87 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libfios2.suprx (generated)
+set(MODULE_NID 0x044CA0AC)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xC2ED82D7:1:0x0
+	0x623DF986:1:0x8
+	0x6704D3C6:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0x8AF17416:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sceFiosOverlayGetList02
+	sceFiosOverlayResolveWithRangeSync02
+	sceFiosOverlayAddForProcess02
+	sceFiosOverlayThreadSetDisabled02
+	sceFiosOverlayGetInfoForProcess02
+	sceFiosOverlayModifyForProcess02
+	sceFiosOverlayRemoveForProcess02
+	sceFiosOverlayGetRecommendedScheduler02
+	sceDbgAssertionHandler
+	sceRtcGetCurrentTick
+	sceRtcGetCurrentClock
+	sceRtcGetTickResolution
+	sceRtcSetTime64_t
+	sceRtcGetTime64_t
+	sceIoDevctl
+	sceKernelGetThreadId
+	sceKernelDeleteLwMutex
+	sceIoChstat
+	__stack_chk_fail
+	sceKernelSignalLwCond
+	__sce_aeabi_idiv0
+	sceKernelLockLwMutex
+	sceKernelCreateLwCond
+	sceIoPread
+	sceIoIoctl
+	sceIoGetstatByFd
+	sceIoOpen
+	sceKernelDeleteLwCond
+	sceKernelGetThreadCpuAffinityMask
+	sceKernelGetThreadInfo
+	sceIoPwrite
+	sceKernelUnlockLwMutex
+	sceIoMkdir
+	sceIoSync
+	sceIoLseek
+	sceIoDread
+	sceKernelTryLockLwMutex
+	sceIoDopen
+	sceKernelGetProcessTimeWide
+	sceKernelGetTLSAddr
+	sceIoGetstat
+	sceKernelGetThreadCurrentPriority
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelWaitLwCond
+	sceIoRemove
+	sceKernelSignalLwCondAll
+	sceIoRmdir
+	sceKernelStartThread
+	sceIoRename
+	sceClibPrintf
+	__sce_aeabi_ldiv0
+	sceIoSyncByFd
+	sceIoWrite
+	sceIoDclose
+	sceIoClose
+	sceIoRead
+	sceKernelChangeThreadCpuAffinityMask
+	sceKernelDeleteThread
+	sceKernelDelayThread
+	sceKernelGetProcessId
+	sceKernelChangeThreadPriority2
+	sceKernelChangeThreadVfpException
+	sceKernelGetSystemTimeWide
+	ksceKernelExitThread
+	sceAppMgrIsGameProgram
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

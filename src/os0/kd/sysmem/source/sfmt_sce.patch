@@ -1,0 +1,274 @@
+--- SFMT.c
++++ SFMT.c
+@@ -10,8 +10,14 @@
+  *
+  * The new BSD License is applied to this software, see LICENSE.txt
+  */
+-#include <string.h>
+-#include <assert.h>
++/*
++ * SCE: SceKernelUtils' SFMT19937 (ksceSfmt19937*). The state is the caller's
++ * SceSfmt19937Context instead of file globals; failed preconditions return
++ * -1 instead of asserting.
++ */
++#define MEXP 19937
++#include <psp2kern/types.h>
++#include <psp2kern/kernel/sysclib.h>
+ #include "SFMT.h"
+ #include "SFMT-params.h"
+ 
+@@ -68,19 +74,17 @@
+   FILE GLOBAL VARIABLES
+   internal state, index counter and flag 
+   --------------------------------------*/
+-/** the 128-bit internal state array */
+-static w128_t sfmt[N];
+-/** the 32bit integer pointer to the 128-bit internal state array */
+-static uint32_t *psfmt32 = &sfmt[0].u[0];
+-#if !defined(BIG_ENDIAN64) || defined(ONLY64)
+-/** the 64bit integer pointer to the 128-bit internal state array */
+-static uint64_t *psfmt64 = (uint64_t *)&sfmt[0].u[0];
+-#endif
+-/** index counter to the 32-bit internal state array */
+-static int idx;
+-/** a flag: it is 0 if and only if the internal state is not yet
+- * initialized. */
+-static int initialized = 0;
++/* SCE: the context; idx counts 32-bit words like upstream's idx */
++typedef struct SceSfmt19937Context {
++    SceUInt32 index;
++    SceUInt32 state[N][4];
++} SceSfmt19937Context;
++
++#define sfmt    ((w128_t *)ctx->state)
++#define psfmt32 (&ctx->state[0][0])
++#define psfmt64 ((uint64_t *)&ctx->state[0][0])
++#define idx     (ctx->index)
++
+ /** a parity check vector which certificate the period of 2^{MEXP} */
+ static uint32_t parity[4] = {PARITY1, PARITY2, PARITY3, PARITY4};
+ 
+@@ -90,11 +94,11 @@
+ inline static int idxof(int i);
+ inline static void rshift128(w128_t *out,  w128_t const *in, int shift);
+ inline static void lshift128(w128_t *out,  w128_t const *in, int shift);
+-inline static void gen_rand_all(void);
+-inline static void gen_rand_array(w128_t *array, int size);
++inline static void gen_rand_all(SceSfmt19937Context *ctx);
++inline static void gen_rand_array(SceSfmt19937Context *ctx, w128_t *array, int size);
+ inline static uint32_t func1(uint32_t x);
+ inline static uint32_t func2(uint32_t x);
+-static void period_certification(void);
++static void period_certification(SceSfmt19937Context *ctx);
+ #if defined(BIG_ENDIAN64) && !defined(ONLY64)
+ inline static void swap(w128_t *array, int size);
+ #endif
+@@ -248,7 +252,7 @@
+  * This function fills the internal state array with pseudorandom
+  * integers.
+  */
+-inline static void gen_rand_all(void) {
++inline static void gen_rand_all(SceSfmt19937Context *ctx) {
+     int i;
+     w128_t *r1, *r2;
+ 
+@@ -273,7 +277,7 @@
+  * @param array an 128-bit array to be filled by pseudorandom numbers.  
+  * @param size number of 128-bit pseudorandom numbers to be generated.
+  */
+-inline static void gen_rand_array(w128_t *array, int size) {
++inline static void gen_rand_array(SceSfmt19937Context *ctx, w128_t *array, int size) {
+     int i, j;
+     w128_t *r1, *r2;
+ 
+@@ -344,7 +348,7 @@
+ /**
+  * This function certificate the period of 2^{MEXP}
+  */
+-static void period_certification(void) {
++static void period_certification(SceSfmt19937Context *ctx) {
+     int inner = 0;
+     int i, j;
+     uint32_t work;
+@@ -378,41 +382,18 @@
+  * This function returns the identification string.
+  * The string shows the word size, the Mersenne exponent,
+  * and all parameters of this generator.
+- */
+-const char *get_idstring(void) {
+-    return IDSTR;
+-}
+-
+-/**
+- * This function returns the minimum size of array used for \b
+- * fill_array32() function.
+- * @return minimum size of array used for fill_array32() function.
+  */
+-int get_min_array_size32(void) {
+-    return N32;
+-}
+-
+-/**
+- * This function returns the minimum size of array used for \b
+- * fill_array64() function.
+- * @return minimum size of array used for fill_array64() function.
+- */
+-int get_min_array_size64(void) {
+-    return N64;
+-}
+-
+ #ifndef ONLY64
+ /**
+  * This function generates and returns 32-bit pseudorandom number.
+  * init_gen_rand or init_by_array must be called before this function.
+  * @return 32-bit pseudorandom number
+  */
+-uint32_t gen_rand32(void) {
++SceUInt32 ksceSfmt19937GenRand32(SceSfmt19937Context *ctx) {
+     uint32_t r;
+ 
+-    assert(initialized);
+     if (idx >= N32) {
+-	gen_rand_all();
++	gen_rand_all(ctx);
+ 	idx = 0;
+     }
+     r = psfmt32[idx++];
+@@ -426,30 +407,22 @@
+  * unless an initialization is again executed. 
+  * @return 64-bit pseudorandom number
+  */
+-uint64_t gen_rand64(void) {
+-#if defined(BIG_ENDIAN64) && !defined(ONLY64)
+-    uint32_t r1, r2;
+-#else
++SceUInt64 ksceSfmt19937GenRand64(SceSfmt19937Context *ctx) {
+     uint64_t r;
+-#endif
+ 
+-    assert(initialized);
+-    assert(idx % 2 == 0);
+-
+     if (idx >= N32) {
+-	gen_rand_all();
++	gen_rand_all(ctx);
+ 	idx = 0;
+     }
+-#if defined(BIG_ENDIAN64) && !defined(ONLY64)
+-    r1 = psfmt32[idx];
+-    r2 = psfmt32[idx + 1];
+-    idx += 2;
+-    return ((uint64_t)r2 << 32) | r1;
+-#else
++    /* SCE: an odd index (after GenRand32) gives one word and rounds up */
++    if (idx % 2 != 0) {
++	r = psfmt32[idx];
++	idx += 1;
++	return r;
++    }
+     r = psfmt64[idx / 2];
+     idx += 2;
+     return r;
+-#endif
+ }
+ 
+ #ifndef ONLY64
+@@ -478,14 +451,13 @@
+  * memory. Mac OSX doesn't have these functions, but \b malloc of OSX
+  * returns the pointer to the aligned memory block.
+  */
+-void fill_array32(uint32_t *array, int size) {
+-    assert(initialized);
+-    assert(idx == N32);
+-    assert(size % 4 == 0);
+-    assert(size >= N32);
++int ksceSfmt19937FillArray32(SceSfmt19937Context *ctx, uint32_t *array, int size) {
++    if (size % 4 != 0 || idx != N32 || size < N32)
++	return -1;
+ 
+-    gen_rand_array((w128_t *)array, size / 4);
++    gen_rand_array(ctx, (w128_t *)array, size / 4);
+     idx = N32;
++    return 0;
+ }
+ #endif
+ 
+@@ -514,18 +486,17 @@
+  * memory. Mac OSX doesn't have these functions, but \b malloc of OSX
+  * returns the pointer to the aligned memory block.
+  */
+-void fill_array64(uint64_t *array, int size) {
+-    assert(initialized);
+-    assert(idx == N32);
+-    assert(size % 2 == 0);
+-    assert(size >= N64);
++int ksceSfmt19937FillArray64(SceSfmt19937Context *ctx, uint64_t *array, int size) {
++    if (size % 2 != 0 || idx != N32 || size < N64)
++	return -1;
+ 
+-    gen_rand_array((w128_t *)array, size / 2);
++    gen_rand_array(ctx, (w128_t *)array, size / 2);
+     idx = N32;
+ 
+ #if defined(BIG_ENDIAN64) && !defined(ONLY64)
+     swap((w128_t *)array, size /2);
+ #endif
++    return 0;
+ }
+ 
+ /**
+@@ -534,7 +505,7 @@
+  *
+  * @param seed a 32-bit integer used as the seed.
+  */
+-void init_gen_rand(uint32_t seed) {
++int ksceSfmt19937InitGenRand(SceSfmt19937Context *ctx, uint32_t seed) {
+     int i;
+ 
+     psfmt32[idxof(0)] = seed;
+@@ -544,8 +515,8 @@
+ 	    + i;
+     }
+     idx = N32;
+-    period_certification();
+-    initialized = 1;
++    period_certification(ctx);
++    return 0;
+ }
+ 
+ /**
+@@ -554,7 +525,7 @@
+  * @param init_key the array of 32-bit integers, used as a seed.
+  * @param key_length the length of init_key.
+  */
+-void init_by_array(uint32_t *init_key, int key_length) {
++int ksceSfmt19937InitByArray(SceSfmt19937Context *ctx, const uint32_t *init_key, int key_length) {
+     int i, j, count;
+     uint32_t r;
+     int lag;
+@@ -581,12 +552,14 @@
+     r = func1(psfmt32[idxof(0)] ^ psfmt32[idxof(mid)] 
+ 	      ^ psfmt32[idxof(N32 - 1)]);
+     psfmt32[idxof(mid)] += r;
+-    r += key_length;
++    /* SCE: a NULL key counts as an empty one */
++    if (init_key != NULL)
++	r += key_length;
+     psfmt32[idxof(mid + lag)] += r;
+     psfmt32[idxof(0)] = r;
+ 
+     count--;
+-    for (i = 1, j = 0; (j < count) && (j < key_length); j++) {
++    for (i = 1, j = 0; (j < count) && init_key != NULL && (j < key_length); j++) {
+ 	r = func1(psfmt32[idxof(i)] ^ psfmt32[idxof((i + mid) % N32)] 
+ 		  ^ psfmt32[idxof((i + N32 - 1) % N32)]);
+ 	psfmt32[idxof((i + mid) % N32)] += r;
+@@ -615,6 +588,6 @@
+     }
+ 
+     idx = N32;
+-    period_certification();
+-    initialized = 1;
++    period_certification(ctx);
++    return 0;
+ }

@@ -1,0 +1,116 @@
+# 4.00-DEBUGGER: os0:kd/dmacmgr.skprx (generated)
+set(MODULE_NID 0x76987AE0)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x04000000)
+set(MODULE_EXPORT_ORDER 0x00000000 0xEB4E3738 0xA9E5B2F0)
+set(MODULE_IMPORT_LIBS
+	0x7EE45391:1:0x0
+	0x6F25E18A:5:0x0
+	0x02451F0F:8:0x0
+	0xC9E26388:1:0x0
+	0x2ED7F97A:2:0x0
+	0x9DF04041:1:0x0
+	0xE2C40624:1:0x0
+	0x88758561:2:0x0
+	0x40ECDB0E:2:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x6F25E18A:F:0x22CBE925
+	0x6F25E18A:F:0x3EBCE343
+	0x6F25E18A:F:0x7B4CB60A
+	0x6F25E18A:F:0x8D160E65
+	0x6F25E18A:F:0x9328E0E8
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xBC0A1D60
+	0x6F25E18A:F:0xC94850C9
+	0x6F25E18A:F:0xD6437637
+	0x6F25E18A:F:0xE655852F
+	0x6F25E18A:F:0xE68BEEBD
+	0x02451F0F:F:0x3717C322
+	0x02451F0F:F:0x93344755
+	0x02451F0F:F:0xABA5313C
+	0x02451F0F:F:0xB628B46B
+	0xC9E26388:F:0xA98FC2FD
+	0x2ED7F97A:F:0xEE934615
+	0x2ED7F97A:F:0xEEF091A7
+	0x9DF04041:F:0x180435EC
+	0x9DF04041:F:0x182EE3E3
+	0x9DF04041:F:0x5C1FEB29
+	0x9DF04041:F:0x7117E827
+	0x9DF04041:F:0xD6009B98
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x76C6555B
+	0xE2C40624:F:0xD4780C3E
+	0x88758561:F:0x35A35322
+	0x88758561:F:0x374B7868
+	0x88758561:F:0x391B5B74
+	0x88758561:F:0xD9703808
+	0x88758561:F:0xFD753E7A
+	0x40ECDB0E:F:0x337CBDF3
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xCDA96E81
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xD6ED0C46
+	0x7290B21C:F:0x105C5752
+	0x7290B21C:F:0xCE7A2207
+)
+set(MODULE_IMPORT_FUNCS
+	memset
+	__stack_chk_fail
+	ksceKernelUnlockRangeWithMode
+	ksceKernelFreeHeapMemory
+	ksceKernelAllocHeapMemory
+	ksceKernelVAtoPA
+	ksceKernelCreateHeap
+	ksceKernelGetMemBlockBase
+	ksceKernelLockRangeWithMode
+	ksceKernelAllocMemBlock
+	ksceKernelDeleteHeap
+	ksceGUIDName
+	ksceKernelVARangeToPAVector
+	SceSysmemForKernel_3717C322
+	SceSysmemForKernel_93344755
+	SceSysmemForKernel_ABA5313C
+	SceSysmemForKernel_B628B46B
+	ksceKernelCheckDipsw
+	sceKernelSysrootDisableAutoClockDown
+	sceKernelSysrootEnableAutoClockDown
+	ksceKernelDisableIntr
+	ksceKernelIsIntrAllowedInCurrentContext
+	ksceKernelRegisterIntrHandler
+	ksceKernelEnableIntr
+	ksceKernelReleaseIntrHandler
+	ksceKernelWaitEventFlag
+	ksceKernelCreateEventFlag
+	sceKernelDelayThread
+	ksceKernelDeleteEventFlag
+	ksceKernelPollEventFlag
+	ksceKernelSetEventFlag
+	ksceKernelAssert
+	ksceKernelGetAssertLevel
+	ksceKernelPanic
+	ksceKernelPrintfLevelWithInfo
+	ksceKernelAssertLevel
+	ksceKernelIsUncacheAddressInTmpFsGame
+	ksceKernelCpuId
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelSpinlockLowLock
+	ksceKernelAtomicCompareAndSet32
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	SceKernelSuspendForDriver_105C5752
+	SceKernelSuspendForDriver_CE7A2207
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

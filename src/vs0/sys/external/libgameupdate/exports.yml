@@ -1,0 +1,18 @@
+SceLibGameUpdate:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceGameUpdate:
+      syscall: false
+      version: 1
+      nid: 0x2DD9A62D
+      functions:
+        - sceGameUpdateAbort: 0x14116007
+        - sceGameUpdateInit: 0x2F401247
+        - sceGameUpdateRun: 0x3C616238
+        - sceGameUpdateTerm: 0x48D879BA

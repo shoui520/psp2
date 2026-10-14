@@ -1,0 +1,91 @@
+#include <sce/sysroot.h>
+#include <psp2kern/io/stat.h>
+#include <psp2kern/kernel/threadmgr/thread.h>
+#include <psp2kern/kernel/sysroot.h>
+#include <sce/syscon.h>
+#include <sce/sysstatemgr.h>
+#include "update_internal.h"
+
+int SceSysconForDriver_D2F456DC(unsigned char *information);
+int SceSysconForDriver_EBE3262C(void);
+int SceQafMgrForDriver_3CB55F98(void);
+
+int module_start(SceSize arglen, const void *argp)
+{
+	SceIoStat stat;
+	int hostUpdate = 0;
+	int mode;
+	int result;
+	SceUID thread;
+
+	if (UpdateUtilInit() != 0 || StorageUtilInit() != 0)
+		goto finish;
+	updateSysconHardwareInfo = ksceSysconGetHardwareInfo();
+	updateSysconFirmwareVersion = ksceSysconGetBaryonVersion();
+	SceSysconForDriver_D2F456DC((unsigned char *)&updateSysconDownloaderVersion);
+	if (updateSysconFirmwareVersion > 0x400ff) {
+		updateUseSysconNvsService = 1;
+		updateUseMotionService = 1;
+		if (updateSysconFirmwareVersion > 0x90902) {
+			updateUseSysconUpdateService = 1;
+			updateUseSysconConfigStorage = 1;
+		} else if (updateSysconFirmwareVersion <= 0x704ff) {
+			goto checkDownloader;
+		}
+		if (updateSysconHardwareInfo != 0x101003)
+			updateUseSysconPowerControl = 1;
+	}
+checkDownloader:
+	mode = SceSysconForDriver_EBE3262C();
+	if (mode < 0 || (mode & 0x40)) {
+		updateSysconDownloader = 1;
+		if ((updateSysconDownloaderVersion & 0xffffff) >= 0x3600)
+			updateUseSysconSnvs = 1;
+	} else {
+		updateSysconDownloader = 0;
+		if (updateSysconFirmwareVersion > 0x90902)
+			updateUseSysconSnvs = 1;
+	}
+	if (SceQafMgrForDriver_3CB55F98() &&
+	    ksceIoGetstat("host0:PSP2UPDAT.PUP", &stat) == 0) {
+		hostUpdate = 1;
+		updateInitializeAsync = 0;
+	}
+	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() || ksceSysrootIsUpdateMode())
+		updateInitializeAsync = 0;
+	if (updateInitializeAsync) {
+		thread = ksceKernelCreateThread("SceSblUsInitialize",
+			sceSblUpdateMgrInitPeripheralsPhase2, 253, 8192, 0x50000, 2, 0);
+		if (thread < 0)
+			goto finish;
+		if (ksceKernelStartThread(thread, 4, &updateThreadArgument) != 0) {
+			ksceKernelDeleteThread(thread);
+			goto finish;
+		}
+	} else if (sceSblUpdateMgrInitPeripheralsPhase2(4, &updateThreadArgument) != 0) {
+		goto finish;
+	}
+	if (SceQafMgrForDriver_3CB55F98() && hostUpdate && updateInitialized) {
+		result = UpdateMgrdoUpdate(UpdateUtilGetHeapId(), "host0:PSP2UPDAT.PUP");
+		if (result != (int)0x800f0202) {
+			if (result == 0) {
+				ksceKernelInvokeInitCallback(8);
+				sceSblUsPowerControlForKernel(1, 1);
+				for (;;)
+					;
+			}
+			goto finish;
+		}
+	}
+	if (updateInitializeAsync) {
+		thread = ksceKernelCreateThread("SceSblUsInvalidateVersion",
+			invalidate_prev_system_info, 253, 8192, 0x50000, 2, 0);
+		if (thread >= 0 && ksceKernelStartThread(thread, 4, &updateThreadArgument) != 0)
+			ksceKernelDeleteThread(thread);
+	} else {
+		invalidate_prev_system_info(4, &updateThreadArgument);
+	}
+finish:
+	UpdateMgrRegisterEventHandlers();
+	return 0;
+}

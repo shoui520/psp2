@@ -1,0 +1,43 @@
+SceNpScore:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpScore:
+      syscall: false
+      version: 1
+      nid: 0x75F052DB
+      functions:
+        - sceNpScoreGetBoardInfo: 0x00F90E7B
+        - sceNpScoreInit: 0x0433069F
+        - sceNpScoreSanitizeCommentAsync: 0x15981858
+        - sceNpScoreTerm: 0x2050F98F
+        - sceNpScoreRecordScoreAsync: 0x24B09634
+        - sceNpScoreWaitAsync: 0x31733BF3
+        - sceNpScoreRecordScore: 0x320C0277
+        - sceNpScoreGetBoardInfoAsync: 0x3CD9974E
+        - sceNpScoreRecordGameDataAsync: 0x40573917
+        - sceNpScoreGetRankingByRange: 0x427D3412
+        - sceNpScoreGetRankingByNpIdAsync: 0x45CD1D00
+        - sceNpScoreGetFriendsRanking: 0x4F795659
+        - sceNpScoreSetPlayerCharacterId: 0x53D77883
+        - sceNpScoreCreateTitleCtx: 0x5685F225
+        - sceNpScoreSetTimeout: 0x5EF44841
+        - sceNpScoreSanitizeComment: 0x6FD2041A
+        - sceNpScoreGetFriendsRankingAsync: 0x7090ED11
+        - sceNpScoreChangeModeForOtherSaveDataOwners: 0x7C68D91B
+        - sceNpScoreGetRankingByNpIdPcId: 0x871F28AA
+        - sceNpScorePollAsync: 0x9F2A7AC9
+        - sceNpScoreCensorComment: 0xA0C94D46
+        - sceNpScoreAbortRequest: 0xA7E93CE1
+        - sceNpScoreCensorCommentAsync: 0xAA0BBF8E
+        - sceNpScoreGetRankingByNpId: 0xBAE55B34
+        - sceNpScoreRecordGameData: 0xC2862B67
+        - sceNpScoreGetRankingByRangeAsync: 0xC45E3FCD
+        - sceNpScoreGetRankingByNpIdPcIdAsync: 0xCE3A9544
+        - sceNpScoreGetGameDataAsync: 0xCE416993
+        - sceNpScoreCreateRequest: 0xD30D1993
+        - sceNpScoreGetGameData: 0xDFAD64D3
+        - sceNpScoreDeleteTitleCtx: 0xF52EA88A
+        - sceNpScoreDeleteRequest: 0xFFF24BB1

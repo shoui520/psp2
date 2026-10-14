@@ -1,0 +1,89 @@
+# 3.630.011-DEBUGGER: os0:kd/sm_comm.skprx (generated)
+set(MODULE_NID 0xAD32D959)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xCD3C89B6)
+set(MODULE_IMPORT_LIBS
+	0x40FD29C7:1:0x0
+	0x6F25E18A:5:0x0
+	0x2ED7F97A:2:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x15F25C84:1:0x0
+	0x7290B21C:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x40FD29C7:F:0x62090481
+	0x40FD29C7:F:0x75192972
+	0x40FD29C7:F:0xE17EFC03
+	0x40FD29C7:F:0xF99DD8A3
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0x8D160E65
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x6F25E18A:F:0xE68BEEBD
+	0x2ED7F97A:F:0xEE934615
+	0x2ED7F97A:F:0xEEF091A7
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x11FE84A1
+	0xE2C40624:F:0x16A35E58
+	0xE2C40624:F:0x30E93C31
+	0xE2C40624:F:0x3C8B55A9
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xD270498B
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xDB395782
+	0x15F25C84:F:0x15B0E4DF
+	0x15F25C84:F:0x1916509B
+	0x15F25C84:F:0x723B382F
+	0x15F25C84:F:0x8B84AC2A
+	0x15F25C84:F:0x973A4A7D
+	0x15F25C84:F:0xF35EFC1A
+	0x7290B21C:F:0x2BB92967
+	0x7290B21C:F:0x4DF40893
+)
+set(MODULE_IMPORT_FUNCS
+	ksceIoLseek
+	ksceIoOpen
+	ksceIoRead
+	ksceIoClose
+	ksceKernelFreeMemBlock
+	ksceKernelVAtoPA
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelVARangeToPAVector
+	sceKernelSysrootDisableAutoClockDown
+	sceKernelSysrootEnableAutoClockDown
+	memcpy
+	__stack_chk_fail
+	ksceKernelWaitEventFlag
+	ksceKernelFinalizeFastMutex
+	ksceKernelDeleteSema
+	ksceKernelCreateSema
+	ksceKernelWaitSema
+	ksceKernelCreateEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	ksceKernelInitializeFastMutex
+	ksceKernelSignalSema
+	ksceKernelSetEventFlag
+	ksceKernelUnlockFastMutex
+	ksceSblSmSchedProxyWriteCry2Arm
+	ksceSblSmSchedProxyInvoke
+	ksceSblSmSchedCallFunc
+	ksceSblSmSchedProxyEnableCry2ArmInterrupt
+	ksceSblSmSchedProxyReadCry2Arm
+	ksceSblSmSchedProxyWait
+	SceKernelSuspendForDriver_2BB92967
+	SceKernelSuspendForDriver_4DF40893
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,54 @@
+# 3.650.011-TOOL: os0:kd/mgkeymgr.skprx (generated)
+set(MODULE_NID 0x1E10AB9D)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_EXPORT_ORDER 0x00000000 0xE1856C6D)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0xCD3C89B6:1:0x0
+	0x7EE45391:1:0x0
+	0x7290B21C:1:0x0
+	0x61E9428D:1:0x0
+	0x9AD8E213:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0xCD3C89B6:F:0x0631F8ED
+	0xCD3C89B6:F:0x7863A0CC
+	0xCD3C89B6:F:0xDB9FC204
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0x8A0B0815
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x7290B21C:F:0x2BB92967
+	0x7290B21C:F:0x4DF40893
+	0x61E9428D:F:0x01BE0374
+	0x61E9428D:F:0x37DD5CBF
+	0x61E9428D:F:0x8B4700CB
+	0x61E9428D:F:0x8EAFB18A
+	0x9AD8E213:F:0x4322F188
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceSblSmCommStopSm
+	ksceSblSmCommStartSmFromFile
+	ksceSblSmCommCallFunc
+	memset
+	memcpy
+	__memcpy_chk
+	__stack_chk_fail
+	SceKernelSuspendForDriver_2BB92967
+	SceKernelSuspendForDriver_4DF40893
+	ksceSblDmac5AesEcbEncWithKeyslot
+	ksceSblDmac5DesEcbEncWithKeyslot
+	ksceSblDmac5AesEcbDecWithKeyslot
+	ksceSblDmac5DesEcbDecWithKeyslot
+	ksceSblACMgrGetMediaType
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

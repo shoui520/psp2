@@ -1,0 +1,22 @@
+SceRiffPromoter:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceRiffPromoter:
+      syscall: false
+      version: 1
+      nid: 0xEFDE7C7B
+      functions:
+        - SceRiffPromoter_3AF78E9C: 0x3AF78E9C
+        - SceRiffPromoter_551AFEE6: 0x551AFEE6
+        - SceRiffPromoter_71A667CE: 0x71A667CE
+        - SceRiffPromoter_A9ABA518: 0xA9ABA518
+        - SceRiffPromoter_AB8D33C2: 0xAB8D33C2
+        - SceRiffPromoter_F9F2816D: 0xF9F2816D
+      variables:
+        - SceRiffPromoter_974CC698: 0x974CC698

@@ -1,0 +1,345 @@
+SceGxmDbg:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceGxm:
+      syscall: false
+      version: 1
+      nid: 0xF76B66BD
+      functions:
+        - sceGxmMapFragmentUsseMemory: 0x008402C6
+        - sceGxmProgramIsDiscardUsed: 0x029B4F1C
+        - sceGxmPrecomputedVertexStateSetAllUniformBuffers: 0x0389861D
+        - sceGxmRemoveRazorGpuCaptureBuffer: 0x0468E3F2
+        - sceGxmProgramGetType: 0x04BB3C59
+        - sceGxmShaderPatcherCreate: 0x05032658
+        - sceGxmSetFrontPointLineWidth: 0x06752183
+        - sceGxmProgramGetParameter: 0x06FF9151
+        - sceGxmFinish: 0x0733D8AE
+        - sceGxmColorSurfaceGetClip: 0x07DFEE4B
+        - sceGxmDepthStencilSurfaceIsEnabled: 0x082200E1
+        - sceGxmUnmapVertexUsseMemory: 0x099134F5
+        - sceGxmDestroyRenderTarget: 0x0B94C50A
+        - sceGxmSetDeferredContextVdmBuffer: 0x0B9D13CE
+        - sceGxmDepthStencilSurfaceSetForceLoadMode: 0x0C44ACD7
+        - sceGxmTextureGetPalette: 0x0D189C30
+        - sceGxmSetTwoSidedEnable: 0x0DE9AEB7
+        - sceGxmColorSurfaceIsEnabled: 0x0E0EBB57
+        - sceGxmShaderPatcherAddRefVertexProgram: 0x0FD1E589
+        - sceGxmProgramIsFragColorUsed: 0x104F23F4
+        - sceGxmDepthStencilSurfaceGetStrideInSamples: 0x11628789
+        - sceGxmTextureInitCube: 0x11DC8DC9
+        - sceGxmSetFrontVisibilityTestIndex: 0x12625C34
+        - sceGxmTextureGetWidth: 0x126A3EB3
+        - sceGxmTextureSetVAddrMode: 0x126CDAA3
+        - sceGxmDepthStencilSurfaceSetForceStoreMode: 0x12AAA7AF
+        - sceGxmSetWarningEnabled: 0x12D18B3D
+        - sceGxmSetFrontDepthFunc: 0x14BD831F
+        - sceGxmDrawInstanced: 0x14C4E7D3
+        - SceGxm_1625D348: 0x1625D348
+        - _sceGxmSetVertexTexture: 0x16C9D339
+        - sceGxmSetBackDepthBias: 0x17B3BF86
+        - sceGxmSetBackVisibilityTestEnable: 0x17CF46B9
+        - sceGxmProgramParameterGetCategory: 0x1997DC17
+        - sceGxmSetBackStencilFunc: 0x1A68C8D2
+        - _sceGxmTextureSetHeight: 0x1B20D5DF
+        - sceGxmSetWClampEnable: 0x1BF8B853
+        - sceGxmTextureSetMipFilter: 0x1CA9FE0B
+        - sceGxmColorSurfaceGetDitherMode: 0x200A96E1
+        - sceGxmCreateRenderTarget: 0x207AF96B
+        - sceGxmCreateDeferredContext: 0x249D5B00
+        - sceGxmDepthStencilSurfaceGetBackgroundDepth: 0x269B56BE
+        - sceGxmProgramFindParameterByName: 0x277794C4
+        - sceGxmSetDeferredContextVertexBuffer: 0x27CAD127
+        - sceGxmPrecomputedFragmentStateSetTexture: 0x29118BF1
+        - sceGxmSetFragmentTexture: 0x29C34DF5
+        - sceGxmGetContextType: 0x2A1BCDDB
+        - sceGxmTextureGetUAddrMode: 0x2AE22788
+        - sceGxmShaderPatcherRegisterProgram: 0x2B528462
+        - sceGxmMidSceneFlush: 0x2B5C0444
+        - sceGxmShaderPatcherGetFragmentProgramRefCount: 0x2C5550F0
+        - sceGxmColorSurfaceGetData: 0x2DB6026C
+        - sceGxmTextureGetLodBias: 0x2DE55DA5
+        - sceGxmTextureSetWidth: 0x2EA178BE
+        - sceGxmDepthStencilSurfaceGetForceLoadMode: 0x2F5CC20C
+        - sceGxmSetFrontVisibilityTestEnable: 0x30459117
+        - sceGxmSetVertexProgram: 0x31FF8ABD
+        - sceGxmPushUserMarker: 0x3276C475
+        - sceGxmDepthStencilSurfaceSetBackgroundDepth: 0x32F280F0
+        - sceGxmPrecomputedVertexStateSetDefaultUniformBuffer: 0x34BF64E3
+        - sceGxmEndCommandList: 0x36D85916
+        - sceGxmPrecomputedDrawSetParamsInstanced: 0x3A7B1633
+        - sceGxmShaderPatcherGetFragmentUsseMemAllocated: 0x3C9DDB4A
+        - sceGxmPadHeartbeat: 0x3D25FCE9
+        - sceGxmSetViewport: 0x3EB3380B
+        - sceGxmTextureSetMinFilter: 0x416764E3
+        - sceGxmGetPrecomputedDrawSize: 0x41BBD792
+        - sceGxmTextureSetUAddrMode: 0x4281763E
+        - sceGxmColorSurfaceSetDitherMode: 0x45027BAB
+        - sceGxmTransferFinish: 0x45229C39
+        - sceGxmTextureGetVAddrMode: 0x46136CA9
+        - sceGxmBeginSceneEx: 0x4709CF5A
+        - sceGxmTextureInitLinear: 0x4811AECB
+        - sceGxmRenderTargetGetDriverMemBlock: 0x49553737
+        - sceGxmTextureGetMipmapCountUnsafe: 0x4CC42929
+        - sceGxmShaderPatcherAddRefFragmentProgram: 0x4CD2D19F
+        - sceGxmShaderPatcherCreateFragmentProgram: 0x4ED2E49D
+        - sceGxmPopUserMarker: 0x4FA073A6
+        - sceGxmTextureGetNormalizeMode: 0x512BB86C
+        - _sceGxmMidSceneFlush: 0x51FE0899
+        - sceGxmColorSurfaceGetType: 0x52FDE962
+        - sceGxmTextureValidate: 0x5331BED3
+        - sceGxmTextureGetData: 0x5341BD46
+        - sceGxmColorSurfaceSetData: 0x537CA400
+        - sceGxmTextureGetHeight: 0x5420A086
+        - sceGxmDepthStencilSurfaceGetForceStoreMode: 0x544AA05A
+        - sceGxmFragmentProgramIsEnabled: 0x5748367E
+        - sceGxmSetFrontFragmentProgramEnable: 0x575958A8
+        - sceGxmSetFrontLineFillLastPixelEnable: 0x5765DE9F
+        - sceGxmTextureSetStride: 0x58D0EB0A
+        - _sceGxmTextureSetWidth: 0x5A690B60
+        - sceGxmPrecomputedFragmentStateSetAllUniformBuffers: 0x5A783DC3
+        - sceGxmProgramParameterGetResourceIndex: 0x5C79D59A
+        - sceGxmTextureInitSwizzledArbitrary: 0x5DBFBA2C
+        - sceGxmColorSurfaceSetFormat: 0x5F9A3A16
+        - sceGxmSetDefaultRegionClipAndViewport: 0x60CF708E
+        - sceGxmColorSurfaceInitDisabled: 0x613639FA
+        - sceGxmTransferCopy: 0x62312BF8
+        - sceGxmShaderPatcherForceUnregisterProgram: 0x630D4B2E
+        - sceGxmProgramFindParameterBySemantic: 0x633CAA54
+        - sceGxmSetUniformDataF: 0x65DD0C84
+        - sceGxmTextureInitLinearStrided: 0x6679BEF0
+        - sceGxmTransferFill: 0x69DDFF5E
+        - sceGxmPrecomputedVertexStateSetTexture: 0x6A29EB06
+        - sceGxmSyncObjectCreate: 0x6A6013E1
+        - sceGxmGetParameterBufferThreshold: 0x6ABF3F76
+        - sceGxmProgramParameterGetName: 0x6AF88A5D
+        - sceGxmColorSurfaceSetScaleMode: 0x6B96EDF7
+        - sceGxmPrecomputedDrawSetVertexStream: 0x6C936214
+        - sceGxmColorSurfaceGetScaleMode: 0x6E3FA74D
+        - sceGxmProgramParameterGetIndex: 0x6E61DDF5
+        - sceGxmSetRegionClip: 0x70C86868
+        - sceGxmSetVisibilityBuffer: 0x7767EC49
+        - sceGxmReserveFragmentDefaultUniformBuffer: 0x7B1FABB6
+        - sceGxmProgramParameterGetType: 0x7B9023C3
+        - sceGxmShaderPatcherGetVertexUsseMemAllocated: 0x7D2F83C1
+        - _sceGxmProgramFindParameterBySemantic: 0x7FFFDD7A
+        - sceGxmUnmapFragmentUsseMemory: 0x80CCEDBB
+        - sceGxmSetViewportEnable: 0x814F61EB
+        - sceGxmUnmapMemory: 0x828C68E8
+        - sceGxmDepthStencilSurfaceGetFormat: 0x8504038D
+        - sceGxmTextureSetData: 0x855814C4
+        - sceGxmDepthStencilSurfaceGetBackgroundMask: 0x85D4DEFE
+        - sceGxmGetPrecomputedFragmentStateSize: 0x85DE8506
+        - sceGxmColorSurfaceSetClip: 0x86456F7B
+        - sceGxmSetBackStencilRef: 0x866A0517
+        - sceGxmTextureSetUAddrModeSafe: 0x8699ECF4
+        - sceGxmProgramParameterIsRegFormat: 0x871E5009
+        - sceGxmBeginScene: 0x8734FF4E
+        - sceGxmIsDebugVersion: 0x873B07C0
+        - sceGxmGetDeferredContextVertexBuffer: 0x87632B9C
+        - sceGxmPrecomputedDrawSetParams: 0x884D0D08
+        - sceGxmSyncObjectDestroy: 0x889AE88C
+        - sceGxmSetVertexStream: 0x895DF2E9
+        - sceGxmProgramIsDepthReplaceUsed: 0x89613EF2
+        - sceGxmWaitEvent: 0x8BD94593
+        - sceGxmGetNotificationRegion: 0x8BDE825A
+        - sceGxmSetBackPointLineWidth: 0x8DCB0EDB
+        - sceGxmProgramGetDefaultUniformBufferSize: 0x8FA3F9C3
+        - sceGxmSetFrontStencilRef: 0x8FA6FE44
+        - SceGxm_8FF68274: 0x8FF68274
+        - sceGxmPrecomputedFragmentStateSetDefaultUniformBuffer: 0x91236858
+        - sceGxmTextureGetMinFilter: 0x920666C6
+        - sceGxmBeginCommandList: 0x944D3F83
+        - sceGxmShaderPatcherGetUserData: 0x96A7E6DD
+        - sceGxmReserveVertexDefaultUniformBuffer: 0x97118913
+        - sceGxmGetPrecomputedVertexStateSize: 0x9D83CA3B
+        - sceGxmShaderPatcherGetHostMemAllocated: 0x9DBBC71C
+        - sceGxmSetVertexTexture: 0x9EB4380F
+        - sceGxmNotificationWait: 0x9F448E79
+        - sceGxmPrecomputedDrawInit: 0xA197F096
+        - sceGxmShaderPatcherGetVertexProgramRefCount: 0xA1A16FF6
+        - sceGxmDepthStencilSurfaceInitDisabled: 0xA41DB0D6
+        - sceGxmProgramIsNativeColorUsed: 0xA4297E57
+        - sceGxmShaderPatcherCreateMaskUpdateFragmentProgram: 0xA4433427
+        - sceGxmTextureSetGammaMode: 0xA6D9F4DA
+        - sceGxmSetFragmentDefaultUniformBuffer: 0xA824EB24
+        - sceGxmShaderPatcherGetProgramFromId: 0xA949A803
+        - sceGxmSetFrontDepthBias: 0xAAA97F81
+        - sceGxmDepthStencilSurfaceGetBackgroundStencil: 0xAAFC062B
+        - _sceGxmProgramParameterGetSemantic: 0xAAFD61D5
+        - sceGxmShaderPatcherReleaseVertexProgram: 0xAC1FF2DA
+        - sceGxmSetFragmentProgram: 0xAD2F48D9
+        - sceGxmGetDeferredContextVdmBuffer: 0xAD8C2EBA
+        - sceGxmSetBackVisibilityTestIndex: 0xAE7886FE
+        - sceGxmTextureGetMagFilter: 0xAE7FBB51
+        - sceGxmTextureSetHeight: 0xAEE7FDD1
+        - sceGxmSetBackDepthFunc: 0xB042A4D2
+        - sceGxmTextureGetStride: 0xB0BD52F3
+        - sceGxmInitialize: 0xB0F1E4EC
+        - sceGxmGetRenderTargetMemSize: 0xB291C959
+        - sceGxmSetYuvProfile: 0xB32917F0
+        - sceGxmPrecomputedFragmentStateSetUniformBuffer: 0xB452F1FB
+        - sceGxmTerminate: 0xB627DE66
+        - sceGxmTextureSetLodBias: 0xB65EE6F7
+        - sceGxmPrecomputedDrawSetAllVertexStreams: 0xB6C6F571
+        - sceGxmSetPrecomputedVertexState: 0xB7626A93
+        - sceGxmTextureSetLodMin: 0xB79E43DD
+        - sceGxmShaderPatcherCreateVertexProgram: 0xB7BBA6D5
+        - sceGxmProgramParameterGetSemanticIndex: 0xB85CC13E
+        - sceGxmSetFrontStencilFunc: 0xB8645A9A
+        - sceGxmDisplayQueueFinish: 0xB98C5B0D
+        - sceGxmProgramParameterGetContainerIndex: 0xBB58267D
+        - sceGxmDraw: 0xBC059AFC
+        - sceGxmVertexProgramGetProgram: 0xBC52320E
+        - sceGxmProgramParameterGetComponentCount: 0xBD2998D1
+        - sceGxmShaderPatcherReleaseFragmentProgram: 0xBE2743D1
+        - sceGxmTextureGetLodMin: 0xBE524A2C
+        - sceGxmPrecomputedVertexStateGetDefaultUniformBuffer: 0xBE5A68EF
+        - sceGxmPrecomputedVertexStateInit: 0xBE937F8D
+        - sceGxmProgramGetSize: 0xBF5E2090
+        - sceGxmTextureGetUAddrModeSafe: 0xC037DA83
+        - sceGxmSetBackDepthWriteEnable: 0xC18B706B
+        - sceGxmPrecomputedFragmentStateSetAllTextures: 0xC383DE39
+        - sceGxmPrecomputedVertexStateSetAllTextures: 0xC40C9127
+        - sceGxmMapMemory: 0xC61E34FC
+        - sceGxmSetVertexUniformBuffer: 0xC68015E4
+        - sceGxmProgramGetFragmentProgramInputs: 0xC6924709
+        - sceGxmShaderPatcherGetBufferMemAllocated: 0xC694D039
+        - sceGxmSetVertexDefaultUniformBuffer: 0xC697CAE5
+        - sceGxmSetDeferredContextFragmentBuffer: 0xC6B3FCD0
+        - sceGxmSetUserMarker: 0xC7A8CB77
+        - sceGxmSetBackVisibilityTestOp: 0xC83F0AB3
+        - sceGxmSetBackLineFillLastPixelEnable: 0xC88EB702
+        - sceGxmDepthStencilSurfaceInit: 0xCA9D41D1
+        - sceGxmFragmentProgramGetPassType: 0xCE0B0A76
+        - sceGxmTextureSetNormalizeMode: 0xCE8DDAD0
+        - sceGxmTextureGetMipFilter: 0xCE94CA15
+        - sceGxmPrecomputedFragmentStateGetDefaultUniformBuffer: 0xCECB584A
+        - sceGxmSetWClampValue: 0xD096336E
+        - sceGxmSetFrontVisibilityTestOp: 0xD0E3CD9A
+        - sceGxmTransferDownscale: 0xD10F7EAD
+        - sceGxmTextureSetMipmapCount: 0xD2DC4643
+        - sceGxmTextureGetVAddrModeSafe: 0xD2F0D9C1
+        - sceGxmTextureInitSwizzled: 0xD572D547
+        - sceGxmProgramGetParameterCount: 0xD5D5FCCD
+        - sceGxmDestroyDeferredContext: 0xD6A2FF2F
+        - _sceGxmBeginScene: 0xDBA33160
+        - sceGxmProgramParameterGetArraySize: 0xDBA8D061
+        - sceGxmPrecomputedVertexStateSetUniformBuffer: 0xDBF97ED6
+        - sceGxmTextureSetPalette: 0xDD6AABFA
+        - sceGxmVertexFence: 0xE05277D6
+        - sceGxmFragmentProgramGetProgram: 0xE0E3B3F8
+        - sceGxmProgramGetOutputRegisterFormat: 0xE11603B1
+        - sceGxmSetCullMode: 0xE1CA72AE
+        - sceGxmProgramIsEquivalent: 0xE23C838C
+        - sceGxmSetBackFragmentProgramEnable: 0xE26B4834
+        - sceGxmPrecomputedFragmentStateInit: 0xE297D7AF
+        - sceGxmTextureInitCubeArbitrary: 0xE3DF5E3B
+        - sceGxmProgramIsSpriteCoordUsed: 0xE63C53D8
+        - sceGxmProgramParameterGetSemantic: 0xE6D9C4CE
+        - sceGxmTextureInitTiled: 0xE6F0DB27
+        - sceGxmCreateContext: 0xE84CE5B4
+        - sceGxmTextureGetFormat: 0xE868D2B3
+        - sceGxmExecuteCommandList: 0xE8E139DD
+        - sceGxmAddRazorGpuCaptureBuffer: 0xE9E81073
+        - sceGxmSetFragmentUniformBuffer: 0xEA0FC310
+        - sceGxmShaderPatcherDestroy: 0xEAA5B100
+        - sceGxmDisplayQueueAddEntry: 0xEC5C26B5
+        - sceGxmColorSurfaceInit: 0xED0F6E25
+        - sceGxmDrawPrecomputed: 0xED3F78B8
+        - sceGxmProgramCheck: 0xED8B6C69
+        - sceGxmDestroyContext: 0xEDDC5FB2
+        - sceGxmColorSurfaceGetGammaMode: 0xEE0B4DF0
+        - sceGxmSetWBufferEnable: 0xEED86975
+        - sceGxmShaderPatcherUnregisterProgram: 0xF103AF8A
+        - sceGxmTextureGetGammaMode: 0xF23FCE81
+        - sceGxmDepthStencilSurfaceSetBackgroundMask: 0xF28A688A
+        - sceGxmSetFrontDepthWriteEnable: 0xF32CBF34
+        - sceGxmColorSurfaceGetStrideInPixels: 0xF33D9980
+        - sceGxmColorSurfaceGetFormat: 0xF3C1C6C6
+        - sceGxmColorSurfaceSetGammaMode: 0xF5C89643
+        - sceGxmDepthStencilSurfaceSetBackgroundStencil: 0xF5D3F3E8
+        - sceGxmTextureGetType: 0xF65D4917
+        - sceGxmSetBackPolygonMode: 0xF66EC6FE
+        - sceGxmProgramParameterIsSamplerCube: 0xF7AA978B
+        - sceGxmTextureGetMipmapCount: 0xF7B7B1E4
+        - sceGxmSetPrecomputedFragmentState: 0xF8952750
+        - sceGxmShaderPatcherSetUserData: 0xF9B8FCFD
+        - sceGxmGetDeferredContextFragmentBuffer: 0xFA081D05
+        - sceGxmTextureSetVAddrModeSafe: 0xFA22F6CC
+        - sceGxmMapVertexUsseMemory: 0xFA437510
+        - sceGxmTextureSetMagFilter: 0xFA695FD7
+        - sceGxmProgramGetVertexProgramOutputs: 0xFB01C7E5
+        - sceGxmTextureSetFormat: 0xFC943596
+        - sceGxmSetFrontPolygonMode: 0xFD93209D
+        - sceGxmEndScene: 0xFE300E2F
+    SceGxmInternal:
+      syscall: false
+      version: 1
+      nid: 0x3FE654E6
+      functions:
+        - SceGxmInternal_338E3186: 0x338E3186
+        - sceGxmSetInitializeParamInternal: 0x3FC5E110
+        - sceGxmGetRenderTargetMemSizeInternal: 0x4DD98588
+        - sceGxmMapVertexUsseMemoryInternal: 0x5694B569
+        - sceGxmSetCallbackInternal: 0x56CDD9AD
+        - sceGxmCheckMemoryInternal: 0x88B424FB
+        - sceGxmGetTopContextInternal: 0x90EE6A28
+        - SceGxmInternal_9F7503E8: 0x9F7503E8
+        - sceGxmGetDisplayQueueThreadIdInternal: 0xAB1D9466
+        - sceGxmRenderingContextIsWithinSceneInternal: 0xB56413BB
+        - sceGxmMapFragmentUsseMemoryInternal: 0xB9391D22
+        - sceGxmUnmapFragmentUsseMemoryInternal: 0xC29B9B82
+        - sceGxmCreateRenderTargetInternal: 0xC8A0F04E
+        - sceGxmInitializedInternal: 0xC8E9F108
+        - sceGxmUnmapVertexUsseMemoryInternal: 0xD7506735
+        - sceGxmIsInitializationInternal: 0xEC82DB20
+    SceGxmInternalForGles:
+      syscall: false
+      version: 1
+      nid: 0xB5973AAA
+      functions:
+        - sceGxmShaderPatcherCreateFragmentProgramForGles: 0x83149CAD
+    SceGxmInternalForReplay:
+      syscall: false
+      version: 1
+      nid: 0xA64BEF47
+      functions:
+        - sceGxmGetReplayRenderTargetMemSize: 0xEFA222AF
+    SceGxmInternalForTest:
+      syscall: false
+      version: 1
+      nid: 0x171129AF
+      functions:
+        - SceGxmInternalForTest_1D68FB73: 0x1D68FB73
+        - SceGxmInternalForTest_2B0A5A39: 0x2B0A5A39
+        - SceGxmInternalForTest_3D8863E2: 0x3D8863E2
+        - SceGxmInternalForTest_46D6C306: 0x46D6C306
+        - SceGxmInternalForTest_588FD7FD: 0x588FD7FD
+        - SceGxmInternalForTest_631E95AA: 0x631E95AA
+        - SceGxmInternalForTest_65FF05BC: 0x65FF05BC
+        - SceGxmInternalForTest_6E9565D5: 0x6E9565D5
+        - SceGxmInternalForTest_7C427319: 0x7C427319
+        - SceGxmInternalForTest_9C7DC365: 0x9C7DC365
+        - SceGxmInternalForTest_9CAFAE4B: 0x9CAFAE4B
+        - SceGxmInternalForTest_9F4A526F: 0x9F4A526F
+        - SceGxmInternalForTest_C65CED80: 0xC65CED80
+        - SceGxmInternalForTest_D352F90A: 0xD352F90A
+        - SceGxmInternalForTest_D412F27B: 0xD412F27B
+    SceGxmInternalForVsh:
+      syscall: false
+      version: 1
+      nid: 0xC98AEB79
+      functions:
+        - sceGxmVshSyncObjectCreate: 0x2A956594
+        - sceGxmVshSyncObjectDestroy: 0x9B8FC52F
+        - sceGxmVshInitialize: 0xA04F5FAC
+        - sceGxmVshSyncObjectOpen: 0xAD3FE572
+        - sceGxmVshSyncObjectClose: 0xBEB4F93D

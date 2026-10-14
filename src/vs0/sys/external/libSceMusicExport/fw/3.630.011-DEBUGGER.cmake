@@ -1,0 +1,86 @@
+# 3.630.011-DEBUGGER: vs0:sys/external/libSceMusicExport.suprx (generated)
+set(MODULE_NID 0x2C1FDCE7)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0x00000000 0xF2E30EED)
+set(MODULE_IMPORT_LIBS
+	0xA6605D6F:1:0x0
+	0xCAE9ACE6:5:0x0
+	0xF2FF276E:1:0x0
+	0x37FE725A:2:0x0
+	0x859A24B1:2:0x0
+	0xF4E34EDB:1:0x0
+	0x0B351269:1:0x0
+)
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xA6605D6F:F:0x0ED6AF54
+	0xA6605D6F:F:0x6E4997D7
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x4373B548
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x6C60AC61
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x99BA173E
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0x9F793F84
+	0xCAE9ACE6:F:0xAC595E68
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xB54C0BE4
+	0xCAE9ACE6:F:0xBCA5B623
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xFB235848
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0xC70B8886
+	0xF2FF276E:F:0xFDB32293
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0x4B675D05
+	0x859A24B1:F:0xB19CF7E9
+	0x859A24B1:F:0xD469676B
+	0x859A24B1:F:0xE53E41F6
+	0xF4E34EDB:F:0x4E255C31
+	0xF4E34EDB:F:0xB282B430
+	0x0B351269:F:0x347C1BDB
+)
+set(MODULE_IMPORT_FUNCS
+	sceAppMgrLaunchAppByUri2
+	sceAppMgrSendNotificationRequest
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	sceClibMspaceCreate
+	__sce_aeabi_idiv0
+	sceClibMemset
+	sceClibStrncmp
+	sceIoOpen
+	sceClibMspaceMalloc
+	sceIoLseek
+	sceClibMspaceFree
+	SceLibKernel_9F793F84
+	sceClibStrnlen
+	sceClibMspaceDestroy
+	sceClibStrncasecmp
+	sceIoGetstat
+	sceClibStrncpy
+	__sce_aeabi_ldiv0
+	sceIoClose
+	sceIoRead
+	sceKernelFreeMemBlock
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlock
+	sceKernelDelayThread
+	sceKernelCreateCallback
+	sceKernelDeleteCallback
+	sceKernelCheckCallback
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+	ksceRegMgrSystemParamGetInt
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

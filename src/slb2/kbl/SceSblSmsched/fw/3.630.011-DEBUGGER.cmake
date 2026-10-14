@@ -1,0 +1,47 @@
+# 3.630.011-DEBUGGER: slb2:kbl/SceSblSmsched (generated)
+set(MODULE_NID 0x0885424B)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xC839BB78:1:0x0
+	0xC516B23E:1:0x0
+	0xFEFF641D:1:0x0
+	0x028FFADB:1:0x0
+	0x08680060:4:0x0
+	0xEC3056FE:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	SceSysclibForTZS_E5457B97
+	SceCpuForTZS_190D96D5
+	SceCpuForTZS_44C423D3
+	SceCpuForTZS_71FD9AB5
+	SceCpuForTZS_ACF209F3
+	SceCpuForTZS_B8F00FBE
+	SceCpuForTZS_CD98416C
+	SceCpuForTZS_CDD46655
+	SceCpuForTZS_D67A4356
+	SceCpuForTZS_EFD6F289
+	SceSysrootForTZS_1C96096F
+	SceSysrootForTZS_29C1049E
+	SceSysrootForTZS_EA572BD9
+	SceDebugForTZS_0D799DAE
+	SceDebugForTZS_563B623D
+	SceSysmemForTZS_1DEADF6C
+	SceSysmemForTZS_2F18E288
+	SceSysmemForTZS_42FB5B12
+	SceSysmemForTZS_473871D8
+	SceSysmemForTZS_56A16D84
+	SceSysmemForTZS_624454BC
+	SceSysmemForTZS_6A3FBAF0
+	SceSysmemForTZS_9D43E416
+	sceKernelGenerateSoftIntr
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelReleaseIntrHandler
+	sceKernelEnableIntr
+	sceKernelRegisterMonitorCallHandler
+)
+set(MODULE_IMPORT_VARS
+	SceSysclibForTZS_BA505B15
+)

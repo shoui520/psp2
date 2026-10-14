@@ -1,0 +1,275 @@
+/*
+ * SceDeci4pRDrfp write buffers (Sony's rdrfp_writebuf_list.c). Consecutive
+ * writes to one file are collected in a write buffer and written as one
+ * request; buffers left waiting are flushed by a 3 s timer, the second time
+ * it finds them.
+ */
+#include <psp2kern/kernel/threadmgr.h>
+#include <string.h>
+#include "sce/threadmgr.h"
+#include "rdrfp.h"
+
+#define RDRFP_FLUSH_INTERVAL	3000000		/* us */
+
+typedef struct RdrfpWritebufList {
+	RdrfpLink head;
+	SceUID mutex;
+} RdrfpWritebufList;
+
+static RdrfpWritebufList rdrfpWritebufList;
+static SceUID rdrfpWritebufCallback;
+static SceUID rdrfpWritebufTimer;
+static RdrfpFileCacheEntry rdrfpFileCache[RDRFP_FILE_CACHE];
+
+#define WRITEBUF_HEAD	(&rdrfpWritebufList.head)
+
+static inline void writebufUnlink(RdrfpWritebuf *wb)
+{
+	wb->link.next->prev = wb->link.prev;
+	wb->link.prev->next = wb->link.next;
+	wb->link.next = &wb->link;
+	wb->link.prev = &wb->link;
+}
+
+static int requestWritebufCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32 notifyArg,
+				   void *common)
+{
+	RdrfpLink *link, *next;
+	RdrfpWritebuf *wb;
+	int flushed = 0;
+
+	(void)notifyId;
+	(void)notifyCount;
+	(void)notifyArg;
+	(void)common;
+
+	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	if (rdrfpWritebufList.head.next != WRITEBUF_HEAD) {
+		for (link = rdrfpWritebufList.head.next; link != WRITEBUF_HEAD; link = next) {
+			next = link->next;
+			wb = (RdrfpWritebuf *)link;
+			if (wb->flushed) {
+				writebufUnlink(wb);
+				SCE_DBG_PRINTF_WITH_INFO(0xf, 62, "TimerCallbackFlush\n");
+				rdrfpRequestWritebuf(wb, 2);
+				flushed = 1;
+			}
+			wb->flushed = 1;
+		}
+		if (flushed && rdrfpWritebufList.head.next == WRITEBUF_HEAD)
+			ksceKernelStopTimer(rdrfpWritebufTimer);
+	}
+	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	return 0;
+}
+
+int rdrfpInitWritebufList(void)
+{
+	int ret;
+
+	rdrfpWritebufList.head.next = WRITEBUF_HEAD;
+	rdrfpWritebufList.head.prev = WRITEBUF_HEAD;
+	ret = ksceKernelCreateMutex("SceDeci4pRDrfp", 0x2000, 0, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 85, "CreateMutex failed (0x%08X)\n", ret);
+		return ret;
+	}
+	rdrfpWritebufList.mutex = ret;
+	return 0;
+}
+
+RdrfpWritebuf *rdrfpCreateWritebuf(SceUInt32 fd, SceOff offset, int bufType, int bufIndex)
+{
+	RdrfpWritebuf *wb = rdrfpAlloc(sizeof(*wb));
+
+	if (wb == NULL) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 110, "AllocateHeapMemory failed\n");
+		return NULL;
+	}
+	wb->link.next = &wb->link;
+	wb->link.prev = &wb->link;
+	wb->fd = fd;
+	wb->bufType = bufType;
+	wb->bufIndex = bufIndex;
+	wb->count = 0;
+	wb->size = 0;
+	wb->buf = rdrfpBufferAddr(bufType, bufIndex);
+	wb->offset = offset;
+	wb->flushed = 0;
+	return wb;
+}
+
+void rdrfpDeleteWritebuf(RdrfpWritebuf *wb)
+{
+	rdrfpFree(wb);
+}
+
+void rdrfpPutWritebufToList(RdrfpWritebuf *wb)
+{
+	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	SCE_DBG_ASSERT_LEVEL(0, &wb->link == wb->link.next, 134);
+	if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
+		ksceKernelStartTimer(rdrfpWritebufTimer);
+	wb->link.next = WRITEBUF_HEAD;
+	wb->link.prev = rdrfpWritebufList.head.prev;
+	rdrfpWritebufList.head.prev = &wb->link;
+	wb->flushed = 0;
+	wb->link.prev->next = &wb->link;
+	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+}
+
+/* the oldest waiting write buffer, taken off the list */
+RdrfpWritebuf *rdrfpGetWritebufFromList(void)
+{
+	RdrfpWritebuf *wb;
+
+	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	wb = (RdrfpWritebuf *)rdrfpWritebufList.head.next;
+	if (&wb->link == WRITEBUF_HEAD) {
+		wb = NULL;
+	} else {
+		writebufUnlink(wb);
+		if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
+			ksceKernelStopTimer(rdrfpWritebufTimer);
+	}
+	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	return wb;
+}
+
+/* the waiting write buffer a write at offset continues, if it has room */
+RdrfpWritebuf *rdrfpFindWritebuf(SceUInt32 fd, SceOff offset, SceSize size)
+{
+	RdrfpLink *link;
+	RdrfpWritebuf *wb;
+
+	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
+	for (link = rdrfpWritebufList.head.next; link != WRITEBUF_HEAD; link = link->next) {
+		wb = (RdrfpWritebuf *)link;
+		if (wb->fd == fd && wb->offset + wb->size == offset &&
+		    wb->size + size <= RDRFP_WRITE_MAX) {
+			writebufUnlink(wb);
+			if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
+				ksceKernelStopTimer(rdrfpWritebufTimer);
+			goto out;
+		}
+	}
+	wb = NULL;
+out:
+	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
+	return wb;
+}
+
+void rdrfpWritebufAddSize(RdrfpWritebuf *wb, SceSize size)
+{
+	wb->size += size;
+}
+
+void rdrfpWritebufAddId(RdrfpWritebuf *wb, SceUInt32 id)
+{
+	wb->ids[wb->count++] = id;
+}
+
+int rdrfpRegisterWritebufTimer(void)
+{
+	SceKernelSysClock interval;
+	int ret;
+
+	ret = ksceKernelCreateCallback("SceDeci4pRDrfp", 0, requestWritebufCallback, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 206, "CreateCallback failed (0x%08X)\n", ret);
+		return ret;
+	}
+	rdrfpWritebufCallback = ret;
+	ret = sceKernelCreateTimer("SceDeci4pRDrfp", 0x100, NULL);
+	if (ret < 0) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 214, "CreateTimer failed (0x%08X)\n", ret);
+		goto delete_callback;
+	}
+	rdrfpWritebufTimer = ret;
+	interval = RDRFP_FLUSH_INTERVAL;
+	ret = sceKernelSetTimerEvent(rdrfpWritebufTimer, 0, &interval, 1);
+	if (ret < 0) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 223, "SetTimerEvent failed (0x%08X)\n", ret);
+		SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
+		goto delete_callback;
+	}
+	ret = ksceKernelRegisterCallbackToEvent(rdrfpWritebufTimer,
+					      rdrfpWritebufCallback, rdrfpWritebufCallback);
+	if (ret < 0) {
+		SCE_DBG_PRINTF_WITH_INFO(0xf, 232, "RegisterCallbackToEvent failed (0x%08x)\n", ret);
+		return ret;
+	}
+	return 0;
+
+delete_callback:
+	ksceKernelDeleteCallback(rdrfpWritebufCallback);
+	return ret;
+}
+
+void rdrfpUnregisterWritebufTimer(void)
+{
+	ksceKernelStopTimer(rdrfpWritebufTimer);
+	SceThreadmgrForDriver_91A8F38B(rdrfpWritebufTimer);
+	/* Sony deletes the timer's UID as the callback */
+	ksceKernelDeleteCallback(rdrfpWritebufTimer);
+}
+
+/* ===== file cache ===== */
+
+int rdrfpInitFileCache(void)
+{
+	memset(rdrfpFileCache, 0, sizeof(rdrfpFileCache));
+	return 0;
+}
+
+/* remember a file, in a free entry or in place of the oldest */
+RdrfpFileCacheEntry *rdrfpAddFileCache(SceUInt32 fd, SceOff offset, SceUInt32 result)
+{
+	RdrfpFileCacheEntry *entry, *oldest = NULL;
+	int i, age = -1;
+
+	for (i = 0; i < RDRFP_FILE_CACHE; i++) {
+		if (!rdrfpFileCache[i].used)
+			break;
+		if (age < rdrfpFileCache[i].age) {
+			oldest = &rdrfpFileCache[i];
+			age = rdrfpFileCache[i].age;
+		}
+	}
+	entry = i < RDRFP_FILE_CACHE ? &rdrfpFileCache[i] : NULL;
+	for (i = 0; i < RDRFP_FILE_CACHE; i++)
+		rdrfpFileCache[i].age++;
+	if (entry == NULL)
+		entry = oldest;
+	if (entry) {
+		entry->offset = offset;
+		entry->used = 1;
+		entry->fd = fd;
+		entry->age = 0;
+		entry->result = result;
+	}
+	return entry;
+}
+
+void rdrfpDeleteFileCache(RdrfpFileCacheEntry *entry)
+{
+	entry->used = 0;
+	entry->age = 0;
+}
+
+RdrfpFileCacheEntry *rdrfpFindFileCache(SceUInt32 fd, SceOff offset)
+{
+	int i;
+
+	for (i = 0; i < RDRFP_FILE_CACHE; i++) {
+		if (rdrfpFileCache[i].used && rdrfpFileCache[i].fd == fd &&
+		    rdrfpFileCache[i].offset == offset)
+			return &rdrfpFileCache[i];
+	}
+	return NULL;
+}
+
+void rdrfpFileCacheAddOffset(RdrfpFileCacheEntry *entry, SceSize size)
+{
+	entry->offset += size;
+}

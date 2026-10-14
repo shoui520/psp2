@@ -1,0 +1,22 @@
+SceVideoSearchEmpr:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceVideoSearchEmpr:
+      syscall: false
+      version: 1
+      nid: 0x9D5CBD70
+      functions:
+        - SceVideoSearchEmpr_76F93BD3: 0x76F93BD3
+        - SceVideoSearchEmpr_7B403AC0: 0x7B403AC0
+        - SceVideoSearchEmpr_87F6312C: 0x87F6312C
+        - SceVideoSearchEmpr_95441C59: 0x95441C59
+        - SceVideoSearchEmpr_A6712C5F: 0xA6712C5F
+        - SceVideoSearchEmpr_AA171468: 0xAA171468
+        - SceVideoSearchEmpr_AAE5CD38: 0xAAE5CD38
+        - SceVideoSearchEmpr_BBEDB86A: 0xBBEDB86A

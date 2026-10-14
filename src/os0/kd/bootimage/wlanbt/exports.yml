@@ -1,0 +1,27 @@
+SceWlanBt:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceWlanBtForDriver:
+      syscall: false
+      version: 1
+      nid: 0xFD94FCE9
+      functions:
+        - ksceWlanBtGetConfiguration: 0x0FC89113
+        - ksceWlanBtSetConfiguration: 0x4C96C3B7
+        - ksceWlanBtDetachMonitor: 0xA7FDE9DC
+        - ksceWlanBtAttachMonitor: 0xC5AA6F43
+    SceWlan:
+      syscall: true
+      version: 1
+      nid: 0x22821EA3
+      functions:
+        - sceWlanGetWakeOnTargetProcess: 0x18E6AFB2
+        - sceWlanGetConfiguration: 0x70AF9BD6
+        - sceWlanUnregisterCallback: 0x826DC04F
+        - sceWlanRegisterCallback: 0xAA2E46F6
+        - sceWlanSetConfiguration: 0xDBE8AEF2

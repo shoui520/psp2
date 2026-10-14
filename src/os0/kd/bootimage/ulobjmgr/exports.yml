@@ -1,0 +1,40 @@
+SceUlobjMgr:
+  attributes: 7
+  version:
+    major: 1
+    minor: 6
+  main:
+    start: module_start
+  libraries:
+    SceUlobjMgr:
+      syscall: true
+      version: 1
+      nid: 0xDB18BB68
+      functions:
+        - _sceUlobjMgrStartSupportingUserlevelObject: 0x08769991
+        - _sceUlobjMgrRegisterLibultProtocolRevision: 0x50F2F2AA
+        - _sceUlobjMgrStopSupportingUserlevelObject: 0xEF09284B
+    SceUlobjMgrForDriver:
+      syscall: false
+      version: 1
+      nid: 0xD6A45C93
+      functions:
+        - SceUlobjMgrForDriver_0C29AFEC: 0x0C29AFEC
+        - SceUlobjMgrForDriver_332F2E58: 0x332F2E58
+        - SceUlobjMgrForDriver_362C9488: 0x362C9488
+        - SceUlobjMgrForDriver_3685D4FB: 0x3685D4FB
+        - SceUlobjMgrForDriver_3D6E2EF3: 0x3D6E2EF3
+        - SceUlobjMgrForDriver_525A9BDB: 0x525A9BDB
+        - SceUlobjMgrForDriver_5D7A7925: 0x5D7A7925
+        - SceUlobjMgrForDriver_6BCB4568: 0x6BCB4568
+        - SceUlobjMgrForDriver_6D2C8928: 0x6D2C8928
+        - SceUlobjMgrForDriver_6F868221: 0x6F868221
+        - SceUlobjMgrForDriver_74B9199C: 0x74B9199C
+        - SceUlobjMgrForDriver_8E200387: 0x8E200387
+        - sceUlobjMgrReleaseInfoArray: 0xA48A5B3C
+        - sceUlobjMgrRetainInfoArray: 0xA90A564C
+        - SceUlobjMgrForDriver_ADAAA961: 0xADAAA961
+        - SceUlobjMgrForDriver_B978DB70: 0xB978DB70
+        - sceUlobjMgrGetIdForFiber: 0xBB11EB2F
+        - SceUlobjMgrForDriver_CDAD91AD: 0xCDAD91AD
+        - SceUlobjMgrForDriver_FFC8C811: 0xFFC8C811

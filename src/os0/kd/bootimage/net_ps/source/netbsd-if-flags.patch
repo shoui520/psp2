@@ -1,0 +1,13 @@
+--- netbsd-2.1/sys/net/if.h
++++ net_ps/include/net/if.h
+@@ -246,8 +246,8 @@
+ 	caddr_t	if_bpf;			/* packet filter structure */
+ 	u_short	if_index;		/* numeric abbreviation for this if */
+ 	short	if_timer;		/* time 'til if_watchdog called */
+-	short	if_flags;		/* up/down, broadcast, etc. */
+-	short	if__pad1;		/* be nice to m68k ports */
++	/* SCE: both TOOL ioctl bodies use flags 0x20000/0x40000 here. */
++	u_int	if_flags;		/* up/down, broadcast, etc. */
+ 	struct	if_data if_data;	/* statistics and other data about if */
+ 	/*
+ 	 * Procedure handles.  If you add more of these, don't forget the

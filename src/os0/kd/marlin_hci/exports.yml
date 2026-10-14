@@ -1,0 +1,58 @@
+SceMarlinHci:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceMarlinHci:
+      syscall: true
+      version: 1
+      nid: 0x982E0032
+      functions:
+        - MarlinHciImportDerivedKeyChecked: 0x00F544DF
+        - MarlinHciLockAlias: 0x06F699FF
+        - MarlinHciExportStoredInfo: 0x0E46FA73
+        - MarlinHciTerminateAlias: 0x1ACDD25B
+        - MarlinHciImportWrappedKeyChecked: 0x24D94277
+        - MarlinHciTerminate: 0x258C55B6
+        - MarlinHciDecrypt: 0x2B5434C9
+        - MarlinHciVerifyDigest: 0x30135081
+        - MarlinHciSign: 0x3B79F57F
+        - MarlinHciLock: 0x4406594F
+        - MarlinHciVerifyDigestChecked: 0x44390C58
+        - MarlinHciUnlock: 0x457F6683
+        - MarlinHciExportStoredInfoChecked: 0x4DADE2FD
+        - MarlinHciGetHandleSizeChecked: 0x527EB697
+        - MarlinHciImportWrappedKey: 0x52985887
+        - MarlinHciInitializeAlias: 0x55682EDD
+        - MarlinHciDisableKey: 0x5C9C7045
+        - MarlinHciExportEncryptedKeyChecked: 0x68315912
+        - MarlinHciInitialize: 0x68A5C796
+        - MarlinHciUnlockAlias: 0x6D915D7B
+        - MarlinHciGetKeyOperationsEnabled: 0x6FD54616
+        - MarlinHciImportStoredKey: 0x75D04A51
+        - MarlinHciImportDerivedKey: 0x77693C89
+        - MarlinHciExportStoredList: 0x910566BD
+        - MarlinHciReleaseKeyChecked: 0x9EA124CA
+        - MarlinHciGetKeyOperationsEnabledChecked: 0xA626EBBC
+        - MarlinHciDecryptChecked: 0xAE0FBC3F
+        - MarlinHciSignChecked: 0xB7FB96EC
+        - MarlinHciStoreDataChecked: 0xBFBA3A79
+        - MarlinHciImportStoredKeyChecked: 0xC3E201D5
+        - MarlinHciTakeHandleObject: 0xC6901BC8
+        - MarlinHciTakeHandleObjectChecked: 0xC889F85B
+        - MarlinHciVerifyMacChecked: 0xCB99E399
+        - MarlinHciExportStoredListChecked: 0xCC2BA3B5
+        - MarlinHciCheckStored: 0xCFB18A73
+        - MarlinHciStoreData: 0xDBF7A9E2
+        - MarlinHciExportEncryptedKey: 0xE20887CB
+        - MarlinHciCheckStoredChecked: 0xE8A352C2
+        - MarlinHciGetHandleSize: 0xE9460764
+        - MarlinHciDisableKeyChecked: 0xEAD075E3
+        - MarlinHciVerifyMac: 0xEEE9D87E
+        - MarlinHciWrapRsa: 0xF4FD13ED
+        - MarlinHciWrapRsaChecked: 0xF7303D28
+        - MarlinHciReleaseKey: 0xF955CEA4

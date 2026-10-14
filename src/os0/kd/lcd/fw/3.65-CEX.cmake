@@ -1,0 +1,78 @@
+# 3.65-CEX: os0:kd/lcd.skprx (generated)
+set(MODULE_NID 0x7142AB78)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xFA916D71 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x40ECDB0E:2:0x0
+	0x7EE45391:1:0x0
+	0x2ED7F97A:2:0x0
+	0xE2C40624:1:0x0
+	0xD4A60A52:1:0x0
+	0x7290B21C:1:0x0
+	0xE692C727:1:0x0
+	0xF0EF5743:1:0x0
+	0xE14BEF6E:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x009E1C61
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x40ECDB0E:F:0x5AC9D394
+	0x40ECDB0E:F:0x821FC0EE
+	0x40ECDB0E:F:0xD6ED0C46
+	0x40ECDB0E:F:0xF5BAD43B
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x2ED7F97A:F:0x46E72428
+	0x2ED7F97A:F:0x930B1342
+	0xE2C40624:F:0x47F6DE49
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0xE50E1185
+	0xD4A60A52:F:0xBBE1771C
+	0x7290B21C:F:0x04C05D10
+	0xE692C727:F:0x7B16F900
+	0xE692C727:F:0xA85BF98A
+	0xE692C727:F:0xDFD96BFC
+	0xE692C727:F:0xE4B145AE
+	0xF0EF5743:F:0x129DF5AC
+	0xF0EF5743:F:0x372022A4
+	0xF0EF5743:F:0xD454A584
+	0xF0EF5743:F:0xF6310435
+	0xE14BEF6E:F:0xCA94A759
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelFreeMemBlock
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelSpinlockLowTrylock
+	ksceKernelCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	ksceKernelCpuResumeIntr
+	memset
+	memcpy
+	__stack_chk_fail
+	ksceSysrootGetHardwareFlags
+	ksceSysrootGetHardwareInfo
+	ksceKernelGetSystemTimeLow
+	sceKernelDelayThread
+	ksceKernelEnqueueWorkQueue
+	ksceKernelSearchModuleByName
+	ksceKernelRegisterSysEventHandler
+	kscePervasiveSpiResetEnable
+	kscePervasiveSpiClockDisable
+	kscePervasiveSpiClockEnable
+	kscePervasiveSpiResetDisable
+	ksceGpioPortRead
+	ksceGpioSetPortMode
+	ksceGpioPortSet
+	ksceGpioPortClear
+	ksceI2cTransferWrite
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

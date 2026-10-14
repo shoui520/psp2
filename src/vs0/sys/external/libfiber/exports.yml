@@ -1,0 +1,40 @@
+SceFiber:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceFiber:
+      syscall: false
+      version: 1
+      nid: 0xF88DAA70
+      functions:
+        - sceFiberGetInfo: 0x189599B4
+        - sceFiberReturnToThread: 0x3B42921F
+        - sceFiberGetSelf: 0x414D8CA5
+        - sceFiberPopUserMarkerWithHud: 0x4EC01F9C
+        - sceFiberStopContextSizeCheck: 0x67F70867
+        - _sceFiberAttachContextAndRun: 0x7D0C7DDB
+        - sceFiberRun: 0x7DF23243
+        - sceFiberOptParamInitialize: 0x801AB334
+        - sceFiberPushUserMarkerWithHud: 0x9C414B09
+        - _sceFiberInitializeWithInternalOptionImpl: 0xC6A3F9BB
+        - sceFiberStartContextSizeCheck: 0xCD543A71
+        - sceFiberRenameSelf: 0xDD50DF3D
+        - _sceFiberAttachContextAndSwitch: 0xE00B9AFE
+        - sceFiberFinalize: 0xE160F844
+        - sceFiberSwitch: 0xE4283144
+        - _sceFiberInitializeImpl: 0xF24A298C
+    SceUlobjDbg:
+      syscall: false
+      version: 1
+      nid: 0x49F67FCF
+      functions:
+        - SceUlobjDbg_D7F0F610: 0xD7F0F610
+        - SceUlobjDbg_F9C0F5DA: 0xF9C0F5DA
+      variables:
+        - SceUlobjDbg_DE6CFF47: 0xDE6CFF47

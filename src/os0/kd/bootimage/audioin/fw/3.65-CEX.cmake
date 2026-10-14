@@ -1,0 +1,114 @@
+# 3.65-CEX: os0:kd/bootimage/audioin (generated)
+set(MODULE_NID 0x20535135)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x60928C22 0xF8DC61A3 0x00000000)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x7EE45391:1:0x0
+	0xE2C40624:1:0x0
+	0x746EC971:1:0x0
+	0x7290B21C:1:0x0
+	0x887F19D0:1:0x0
+	0x40ECDB0E:2:0x0
+	0xFD00C69A:1:0x0
+	0x15D711C1:1:0x0
+	0x7697DFB4:1:0x0
+	0x60A35F64:1:0x0
+	0x51593F20:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x6B825479
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xA46CB7DE
+	0x7EE45391:F:0xAE7A8981
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0xE2C40624:F:0x0C1D3F20
+	0xE2C40624:F:0x11FE84A1
+	0xE2C40624:F:0x21F5419B
+	0xE2C40624:F:0x4336BAA4
+	0xE2C40624:F:0x4B675D05
+	0xE2C40624:F:0x4F1DA3BE
+	0xE2C40624:F:0x70627F3A
+	0xE2C40624:F:0x71ECB352
+	0xE2C40624:F:0x9DCB4B7A
+	0xE2C40624:F:0xAF8E1266
+	0xE2C40624:F:0xC6674E7D
+	0xE2C40624:F:0xD4780C3E
+	0xE2C40624:F:0xDB395782
+	0x746EC971:F:0x02179E12
+	0x746EC971:F:0xD141C076
+	0x7290B21C:F:0x04C05D10
+	0x887F19D0:F:0x2A43912D
+	0x40ECDB0E:F:0x2A40BB93
+	0x40ECDB0E:F:0xBC248C30
+	0x40ECDB0E:F:0xDF899E4B
+	0xFD00C69A:F:0x71608CA3
+	0xFD00C69A:F:0xC6E83F34
+	0x15D711C1:F:0x75915003
+	0x7697DFB4:F:0x41CFFE48
+	0x7697DFB4:F:0xC1DB7BAF
+	0x60A35F64:F:0x965C68C3
+	0x51593F20:F:0x03EA6C2A
+	0x51593F20:F:0x07C53B4E
+	0x51593F20:F:0x091B0231
+	0x51593F20:F:0x1C2BC9F7
+	0x51593F20:F:0x391BD4FD
+	0x51593F20:F:0x3A79A935
+	0x51593F20:F:0x47AED6FF
+	0x51593F20:F:0x6A1184EA
+	0x51593F20:F:0x91535820
+	0x51593F20:F:0xCB8703D8
+	0x51593F20:F:0xD1F94D9D
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelCopyToUserProc
+	memset
+	memcpy
+	__aeabi_uidivmod
+	snprintf
+	__stack_chk_fail
+	ksceKernelWaitEventFlag
+	ksceKernelFinalizeFastMutex
+	ksceKernelStartThread
+	ksceKernelCreateEventFlag
+	sceKernelDelayThread
+	ksceKernelClearEventFlag
+	ksceKernelLockFastMutex
+	ksceKernelDeleteEventFlag
+	sceKernelGetProcessId
+	ksceKernelInitializeFastMutex
+	ksceKernelCreateThread
+	ksceKernelSetEventFlag
+	ksceKernelUnlockFastMutex
+	ksceKernelGetProcessTimeLowCore
+	SceProcessmgrForDriver_D141C076
+	ksceKernelRegisterSysEventHandler
+	ksceKernelRegisterProcEventHandler
+	ksceKernelAtomicGetAndOr32
+	ksceKernelAtomicOrAndGet32
+	ksceKernelAtomicAndAndGet32
+	ksceSblAimgrIsDolce
+	ksceSblAimgrIsGenuineDolce
+	SceAudioForDriver_75915003
+	SceCodecForDriver_41CFFE48
+	SceCodecForDriver_C1DB7BAF
+	ksceSysconGetHardwareInfo2
+	sceCodecEngineDsp0AllocCommunicationMemories
+	sceCodecEngineDsp0ConvertPhysicalToVirtual
+	_unlockProcessSuspendCore
+	sceCodecEngineDsp0FreeCommunicationMemories
+	SceCodecEngineWrapperForDriver_391BD4FD
+	SceCodecEngineWrapperForDriver_3A79A935
+	sceCodecEngineDsp0ConvertVirtualToPhysical
+	sceCodecEngineDsp0GetThreadExecGroup
+	SceCodecEngineWrapperForDriver_91535820
+	SceCodecEngineWrapperForDriver_CB8703D8
+	sceCodecEngineDsp0MemcpyChain
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

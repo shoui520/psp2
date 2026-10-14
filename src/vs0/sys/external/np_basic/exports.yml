@@ -1,0 +1,55 @@
+SceNpBasic:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+  libraries:
+    SceNpBasic:
+      syscall: false
+      version: 1
+      nid: 0x605BA760
+      functions:
+        - sceNpBasicUnregisterHandler: 0x050AE072
+        - SceNpBasic_0C9BAF57: 0x0C9BAF57
+        - sceNpBasicGetBlockListEntries: 0x1211AE8E
+        - SceNpBasic_1CAAF066: 0x1CAAF066
+        - sceNpBasicCheckCallback: 0x20146AEC
+        - sceNpBasicRegisterHandler: 0x26E6E048
+        - sceNpBasicUnregisterJoinGameAckHandler: 0x2A764628
+        - sceNpBasicUnregisterInGameDataMessageHandler: 0x363FF161
+        - sceNpBasicGetPlaySessionLog: 0x364531A8
+        - sceNpBasicGetRequestedFriendRequestEntries: 0x3700E00C
+        - SceNpBasic_375EABF2: 0x375EABF2
+        - sceNpBasicTerm: 0x389BCB3B
+        - sceNpBasicRegisterInGameDataMessageHandler: 0x3ADE3628
+        - sceNpBasicRecordPlaySessionLog: 0x3B0A7F47
+        - sceNpBasicGetBlockListEntryCount: 0x407E1E6F
+        - sceNpBasicGetFriendOnlineStatus: 0x5183A4B5
+        - sceNpBasicSetInGamePresence: 0x51D75562
+        - SceNpBasic_6F1B58F9: 0x6F1B58F9
+        - SceNpBasic_748925A4: 0x748925A4
+        - sceNpBasicSendInGameDataMessage: 0x7A5020A5
+        - SceNpBasic_7F13243D: 0x7F13243D
+        - sceNpBasicGetGameJoiningPresence: 0x863249CB
+        - sceNpBasicJoinGameAckResponseSend: 0x8C90CC09
+        - sceNpBasicGetFriendRequestEntries: 0x91BF63CB
+        - SceNpBasic_999CC1E9: 0x999CC1E9
+        - sceNpBasicGetFriendContextState: 0x9A9E2021
+        - SceNpBasic_A1C1A8E2: 0xA1C1A8E2
+        - SceNpBasic_A6BFBBFF: 0xA6BFBBFF
+        - SceNpBasic_B414E768: 0xB414E768
+        - sceNpBasicGetRequestedFriendRequestEntryCount: 0xB9041420
+        - SceNpBasic_B93ADCDA: 0xB93ADCDA
+        - sceNpBasicUnsetInGamePresence: 0xD20C2370
+        - sceNpBasicGetFriendListEntryCount: 0xDF41F308
+        - sceNpBasicRegisterJoinGameAckHandler: 0xE02A445C
+        - sceNpBasicGetGamePresenceOfFriend: 0xEF8A91BC
+        - sceNpBasicInit: 0xEFB91A99
+        - sceNpBasicCheckIfPlayerIsBlocked: 0xF51545D8
+        - sceNpBasicGetPlaySessionLogSize: 0xFB0F7FDF
+        - SceNpBasic_FB1B7762: 0xFB1B7762
+        - sceNpBasicGetFriendRequestEntryCount: 0xFE98E45A
+        - sceNpBasicGetFriendListEntries: 0xFF07E787

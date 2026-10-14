@@ -1,0 +1,7 @@
+SceDeci4pPamp:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: PampModuleStart

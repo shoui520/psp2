@@ -1,0 +1,66 @@
+SceNpMatching2:
+  attributes: 2
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpMatching2:
+      syscall: false
+      version: 1
+      nid: 0x7106F303
+      functions:
+        - sceNpMatching2Term: 0x0124641C
+        - sceNpMatching2GetRoomMemberDataExternalList: 0x11BEFFA8
+        - sceNpMatching2RegisterSignalingCallback: 0x1C60BC5B
+        - sceNpMatching2LeaveLobby: 0x1E70D5B5
+        - sceNpMatching2SignalingGetConnectionInfo: 0x20598618
+        - sceNpMatching2GetRoomMemberDataInternal: 0x28C643B7
+        - SceNpMatching2_28CF3F83: 0x28CF3F83
+        - sceNpMatching2JoinRoom: 0x33F7D5AE
+        - sceNpMatching2DestroyContext: 0x368AA759
+        - sceNpMatching2RegisterLobbyEventCallback: 0x3C507D4A
+        - SceNpMatching2_40585786: 0x40585786
+        - sceNpMatching2GetSignalingOptParamLocal: 0x495D2B46
+        - sceNpMatching2RegisterLobbyMessageCallback: 0x4E3193D2
+        - sceNpMatching2SignalingGetConnectionStatus: 0x4E4C55BD
+        - sceNpMatching2ContextStop: 0x506454DE
+        - SceNpMatching2_54692CAA: 0x54692CAA
+        - sceNpMatching2GetRoomDataExternalList: 0x5BE8B86F
+        - sceNpMatching2GetServerLocal: 0x65C0FEED
+        - sceNpMatching2SetSignalingOptParam: 0x6E48307F
+        - sceNpMatching2AbortRequest: 0x74EB6CE9
+        - sceNpMatching2GetUserInfoList: 0x78521326
+        - sceNpMatching2SignalingGetLocalNetInfo: 0x79310806
+        - sceNpMatching2SendRoomMessage: 0x7B908D99
+        - sceNpMatching2GetMemoryInfo: 0x7BD39E50
+        - sceNpMatching2CreateJoinRoom: 0x818A9499
+        - sceNpMatching2GrantRoomOwner: 0x86458025
+        - sceNpMatching2JoinLobby: 0x86CED8AF
+        - sceNpMatching2GetLobbyInfoList: 0x86E7C97D
+        - sceNpMatching2SignalingGetPingInfo: 0x881F7428
+        - sceNpMatching2SetRoomDataExternal: 0x8F88AC7E
+        - sceNpMatching2SendLobbyChatMessage: 0x9388A007
+        - sceNpMatching2SetRoomDataInternal: 0x94784A8C
+        - sceNpMatching2KickoutRoomMember: 0xA8021394
+        - sceNpMatching2SignalingCancelPeerNetInfo: 0xADCD102C
+        - sceNpMatching2CreateContext: 0xADF578E1
+        - SceNpMatching2_B096B7A9: 0xB096B7A9
+        - sceNpMatching2GetRoomMemberIdListLocal: 0xB6E8C059
+        - sceNpMatching2ContextStart: 0xBB2E7559
+        - sceNpMatching2GetWorldInfoList: 0xC086B560
+        - sceNpMatching2GetRoomDataInternal: 0xC61C79EE
+        - sceNpMatching2LeaveRoom: 0xC8B0C9EE
+        - sceNpMatching2GetRoomPasswordLocal: 0xD22C4989
+        - sceNpMatching2SetRoomMemberDataInternal: 0xD3096C55
+        - sceNpMatching2SearchRoom: 0xD48BAF13
+        - SceNpMatching2_DF322C5B: 0xDF322C5B
+        - sceNpMatching2SendRoomChatMessage: 0xE0BE0510
+        - sceNpMatching2Init: 0xEBB1FE74
+        - sceNpMatching2SetUserInfo: 0xF049BEC1
+        - sceNpMatching2SignalingGetPeerNetInfo: 0xF0CB1DD3
+        - sceNpMatching2AbortContextStart: 0xF2847E3B
+        - sceNpMatching2SetDefaultRequestOptParam: 0xF3A43C50
+        - sceNpMatching2RegisterRoomEventCallback: 0xF486991B
+        - sceNpMatching2RegisterContextCallback: 0xF9E35566
+        - sceNpMatching2RegisterRoomMessageCallback: 0xFA51949B
+        - sceNpMatching2SignalingGetPeerNetInfoResult: 0xFDC7B2C9

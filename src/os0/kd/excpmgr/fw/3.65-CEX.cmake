@@ -1,0 +1,90 @@
+# 3.65-CEX: os0:kd/excpmgr.skprx (generated)
+set(MODULE_NID 0xB5616C8A)
+set(MODULE_ATTR 7)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x00000000 0x1496A5B5)
+set(MODULE_IMPORT_LIBS
+	0x6F25E18A:5:0x0
+	0x02451F0F:8:0x0
+	0x3691DA45:2:0x0
+	0x40ECDB0E:2:0x0
+	0xA5195D20:2:0x0
+	0x88758561:2:0x0
+	0x13D793B7:3:0x0
+	0x7EE45391:1:0x0
+	0x7290B21C:1:0x0
+	0x4E29D3B6:1:0x0
+)
+set(MODULE_IMPORT_NIDS
+	0x6F25E18A:F:0x605275F8
+	0x6F25E18A:F:0xA78755EB
+	0x6F25E18A:F:0xA841EDDA
+	0x6F25E18A:F:0xC94850C9
+	0x02451F0F:F:0x2995558D
+	0x3691DA45:F:0x06182D59
+	0x3691DA45:F:0x0A12227B
+	0x3691DA45:F:0x118657C6
+	0x3691DA45:F:0x1D84C4D4
+	0x3691DA45:F:0x491CE8DF
+	0x3691DA45:F:0x7A7E7C0C
+	0x3691DA45:F:0xCC85905B
+	0x3691DA45:F:0xCC893F37
+	0x3691DA45:F:0xD7198963
+	0x3691DA45:F:0xDADFF828
+	0x40ECDB0E:F:0x5E4D5DE1
+	0x40ECDB0E:F:0x7BB9D5DF
+	0x40ECDB0E:F:0x9CB9F0CE
+	0x40ECDB0E:F:0xBF82DEB2
+	0x40ECDB0E:F:0xD32ACE9E
+	0x40ECDB0E:F:0xD6ED0C46
+	0xA5195D20:F:0x803C84BF
+	0xA5195D20:F:0xC32687D0
+	0x88758561:F:0x02B04343
+	0x13D793B7:F:0xCCABDD98
+	0x7EE45391:F:0x0AB9BF5C
+	0x7EE45391:F:0x40C88316
+	0x7EE45391:F:0xAE7A8981
+	0x7EE45391:F:0xB997493D
+	0x7EE45391:V:0x99EEBD1F
+	0x7290B21C:F:0x105C5752
+	0x7290B21C:F:0xCE7A2207
+	0x4E29D3B6:F:0x382C71E8
+)
+set(MODULE_IMPORT_FUNCS
+	ksceKernelCopyFromUserProc
+	ksceGUIDGetName
+	ksceKernelGetMemBlockBase
+	ksceKernelAllocMemBlock
+	ksceKernelCopyToUserProcTextDomain
+	SceSysrootForKernel_06182D59
+	SceSysrootForKernel_0A12227B
+	SceSysrootForKernel_118657C6
+	SceSysrootForKernel_1D84C4D4
+	sceKernelSysrootPrintBacktrace
+	sceKernelSysrootSetModulePrivate
+	ksceKernelSysrootGetVbaseResetVector
+	sceKernelSysrootBacktrace
+	ksceKernelIsColdBoot
+	sceKernelSysrootReturnFromExcpToThread
+	ksceKernelCpuId
+	ksceKernelSpinlockLowUnlockCpuResumeIntr
+	ksceKernelDcacheCleanRangeForL1WBWA
+	ksceKernelSpinlockLowLock
+	ksceKernelSpinlockLowLockCpuSuspendIntr
+	ksceKernelSpinlockLowUnlock
+	ksceKernelL1IcacheInvalidateEntireAllCore
+	ksceKernelGetVmaccessRange
+	ksceKernelPrintfWithInfo
+	SceDebugForKernel_CCABDD98
+	memset
+	memcpy
+	snprintf
+	__stack_chk_fail
+	SceKernelSuspendForDriver_105C5752
+	SceKernelSuspendForDriver_CE7A2207
+	SceQafMgrForDriver_382C71E8
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)

@@ -1,0 +1,107 @@
+/* IMG DDK 1.7@862890 sgxapi_km.h ABI, with SCE additions marked below.
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+#ifndef MISC_SCE_H
+#define MISC_SCE_H
+
+#include "sce_ddk_port.h"
+
+typedef enum SGX_MISC_INFO_REQUEST {
+	SGX_MISC_INFO_REQUEST_CLOCKSPEED,
+	SGX_MISC_INFO_REQUEST_SGXREV,
+	SGX_MISC_INFO_REQUEST_DRIVER_SGXREV,
+	SGX_MISC_INFO_REQUEST_SET_HWPERF_STATUS,
+	SGX_MISC_INFO_REQUEST_SET_BREAKPOINT,
+	SGX_MISC_INFO_REQUEST_POLL_BREAKPOINT,
+	SGX_MISC_INFO_REQUEST_RESUME_BREAKPOINT,
+	SGX_MISC_INFO_DUMP_DEBUG_INFO,
+	SGX_MISC_INFO_PANIC,
+	SGX_MISC_INFO_REQUEST_SPM,
+	SGX_MISC_INFO_REQUEST_ACTIVEPOWER,
+	SGX_MISC_INFO_REQUEST_LOCKUPS,
+	/* SCE: CPU and GPU timer query. */
+	SGX_MISC_INFO_REQUEST_TIMERS,
+	/* SCE: development-mode display control. Reviewed descriptive name. */
+	SGX_MISC_INFO_REQUEST_DISPLAY_CONTROL,
+	SGX_MISC_INFO_REQUEST_FORCE_I16 = 0x7fff
+} SGX_MISC_INFO_REQUEST;
+
+typedef struct PVRSRV_SGX_MISCINFO_FEATURES {
+	IMG_UINT32 ui32CoreRev;
+	IMG_UINT32 ui32CoreID;
+	IMG_UINT32 ui32DDKVersion;
+	IMG_UINT32 ui32DDKBuild;
+	IMG_UINT32 ui32CoreIdSW;
+	IMG_UINT32 ui32CoreRevSW;
+	IMG_UINT32 ui32BuildOptions;
+	/* SCE: pervasive SoC revision, copied with the seven IMG feature words. */
+	IMG_UINT32 socRevision;
+} PVRSRV_SGX_MISCINFO_FEATURES;
+
+typedef struct PVRSRV_SGX_MISCINFO_LOCKUPS {
+	IMG_UINT32 ui32HostDetectedLockups;
+	IMG_UINT32 ui32uKernelDetectedLockups;
+} PVRSRV_SGX_MISCINFO_LOCKUPS;
+
+typedef struct PVRSRV_SGX_MISCINFO_ACTIVEPOWER {
+	IMG_UINT32 ui32NumActivePowerEvents;
+} PVRSRV_SGX_MISCINFO_ACTIVEPOWER;
+
+typedef struct PVRSRV_SGX_MISCINFO_SPM {
+	IMG_HANDLE hRTDataSet;
+	IMG_UINT32 ui32NumOutOfMemSignals;
+	IMG_UINT32 ui32NumSPMRenders;
+} PVRSRV_SGX_MISCINFO_SPM;
+
+typedef struct SGX_BREAKPOINT_INFO {
+	IMG_BOOL bBPEnable;
+	IMG_UINT32 ui32BPIndex;
+	IMG_UINT32 ui32DataMasterMask;
+	IMG_DEV_VIRTADDR sBPDevVAddr;
+	IMG_DEV_VIRTADDR sBPDevVAddrEnd;
+	IMG_BOOL bTrapped;
+	IMG_BOOL bRead;
+	IMG_BOOL bWrite;
+	IMG_BOOL bTrappedBP;
+	IMG_UINT32 ui32CoreNum;
+	IMG_DEV_VIRTADDR sTrappedBPDevVAddr;
+	IMG_UINT32 ui32TrappedBPBurstLength;
+	IMG_BOOL bTrappedBPRead;
+	IMG_UINT32 ui32TrappedBPDataMaster;
+	IMG_UINT32 ui32TrappedBPTag;
+} SGX_BREAKPOINT_INFO;
+
+typedef struct PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS {
+	IMG_UINT32 ui32NewHWPerfStatus;
+	IMG_UINT32 aui32PerfGroup[8];
+	IMG_UINT32 aui32PerfBit[8];
+} PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS;
+
+/* SCE: the wire ABI is word-aligned, with a 76-byte enclosing request.
+ * Both TOOL bridges copy 76 bytes; the owner writes timers at bytes 8 and 16.
+ */
+typedef struct PVRSRV_SGX_MISCINFO_TIMERS {
+	IMG_UINT64 ui64CPUTimer __attribute__((packed, aligned(4)));
+	IMG_UINT32 ui32GPUTimer;
+} PVRSRV_SGX_MISCINFO_TIMERS;
+
+typedef struct SGX_MISC_INFO {
+	SGX_MISC_INFO_REQUEST eRequest;
+	IMG_UINT32 ui32Padding;
+	union {
+		IMG_UINT32 reserved;
+		PVRSRV_SGX_MISCINFO_FEATURES sSGXFeatures;
+		IMG_UINT32 ui32SGXClockSpeed;
+		PVRSRV_SGX_MISCINFO_ACTIVEPOWER sActivePower;
+		PVRSRV_SGX_MISCINFO_LOCKUPS sLockups;
+		PVRSRV_SGX_MISCINFO_SPM sSPM;
+		SGX_BREAKPOINT_INFO sSGXBreakpointInfo;
+		PVRSRV_SGX_MISCINFO_SET_HWPERF_STATUS sSetHWPerfStatus;
+		PVRSRV_SGX_MISCINFO_TIMERS sTimers;
+		IMG_UINT32 ui32DisplayControlFlags;
+	} uData;
+} SGX_MISC_INFO;
+
+_Static_assert(sizeof(SGX_MISC_INFO) == 76, "SCE miscellaneous GPU request");
+
+#endif

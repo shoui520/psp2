@@ -1,0 +1,24 @@
+SceAvcdecForPlayer:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceAvcdecForPlayer:
+      syscall: false
+      version: 1
+      nid: 0xB6AE860A
+      functions:
+        - SceAvcdecForPlayer_291780A0: 0x291780A0
+        - SceAvcdecForPlayer_32A8BBA9: 0x32A8BBA9
+        - SceAvcdecForPlayer_3C1FFE1F: 0x3C1FFE1F
+        - SceAvcdecForPlayer_44C56742: 0x44C56742
+        - SceAvcdecForPlayer_4904E8C9: 0x4904E8C9
+        - SceAvcdecForPlayer_58335367: 0x58335367
+        - SceAvcdecForPlayer_7A3AB6D6: 0x7A3AB6D6
+        - SceAvcdecForPlayer_8D489544: 0x8D489544
+        - SceAvcdecForPlayer_B2EBD4EE: 0xB2EBD4EE
+        - SceAvcdecForPlayer_B6BAAF04: 0xB6BAAF04
+        - SceAvcdecForPlayer_C2569BD6: 0xC2569BD6
+        - SceAvcdecForPlayer_DD3E7360: 0xDD3E7360
+        - SceAvcdecForPlayer_EB436C3B: 0xEB436C3B

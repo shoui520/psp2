@@ -1,0 +1,90 @@
+SceCodecEngineWrapper:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceCodecEngineWrapperForDriver:
+      syscall: false
+      version: 1
+      nid: 0x51593F20
+      functions:
+        - sceCodecEngineDsp0AllocCommunicationMemories: 0x03EA6C2A
+        - sceCodecEngineDsp0ConvertPhysicalToVirtual: 0x07C53B4E
+        - _unlockProcessSuspendCore: 0x091B0231
+        - SceCodecEngineWrapperForDriver_0D140628: 0x0D140628
+        - SceCodecEngineWrapperForDriver_0D3BB164: 0x0D3BB164
+        - sceCodecEngineRegisterProcKillHandler: 0x0E38B133
+        - SceCodecEngineWrapperForDriver_0F235F44: 0x0F235F44
+        - SceCodecEngineWrapperForDriver_16506603: 0x16506603
+        - SceCodecEngineWrapperForDriver_18197103: 0x18197103
+        - sceCodecEngineDsp0FreeCommunicationMemories: 0x1C2BC9F7
+        - SceCodecEngineWrapperForDriver_26FAF6EC: 0x26FAF6EC
+        - SceCodecEngineWrapperForDriver_2B74706E: 0x2B74706E
+        - SceCodecEngineWrapperForDriver_2B7CC150: 0x2B7CC150
+        - SceCodecEngineWrapperForDriver_2DD83BB0: 0x2DD83BB0
+        - SceCodecEngineWrapperForDriver_30F6AFD4: 0x30F6AFD4
+        - SceCodecEngineWrapperForDriver_391BD4FD: 0x391BD4FD
+        - SceCodecEngineWrapperForDriver_3A79A935: 0x3A79A935
+        - SceCodecEngineWrapperForDriver_3C5E9CC3: 0x3C5E9CC3
+        - sceCodecEngineDsp0ConvertVirtualToPhysical: 0x47AED6FF
+        - SceCodecEngineWrapperForDriver_54F39D1D: 0x54F39D1D
+        - SceCodecEngineWrapperForDriver_62996F94: 0x62996F94
+        - sceCodecEngineDsp0GetThreadExecGroup: 0x6A1184EA
+        - SceCodecEngineWrapperForDriver_6A3638A8: 0x6A3638A8
+        - sceCodecEngineUnmapUserVAtoPA: 0x6D41287F
+        - sceCodecEngineUnmapKernelVAtoUserVA: 0x744D4C3F
+        - sceCodecEngineDsp0IsProcessSuspended: 0x7492DE05
+        - sceCodecEngineUnmapUserVAtoKernelVA: 0x82E378BD
+        - SceCodecEngineWrapperForDriver_86861877: 0x86861877
+        - SceCodecEngineWrapperForDriver_8CD35820: 0x8CD35820
+        - SceCodecEngineWrapperForDriver_8DEF9631: 0x8DEF9631
+        - SceCodecEngineWrapperForDriver_8FE370E6: 0x8FE370E6
+        - SceCodecEngineWrapperForDriver_91535820: 0x91535820
+        - SceCodecEngineWrapperForDriver_972F0D0F: 0x972F0D0F
+        - SceCodecEngineWrapperForDriver_9D3B1425: 0x9D3B1425
+        - SceCodecEngineWrapperForDriver_9EB3D63E: 0x9EB3D63E
+        - SceCodecEngineWrapperForDriver_B280BA55: 0xB280BA55
+        - SceCodecEngineWrapperForDriver_B420ABAC: 0xB420ABAC
+        - SceCodecEngineWrapperForDriver_B48B02A3: 0xB48B02A3
+        - SceCodecEngineWrapperForDriver_BB02EB22: 0xBB02EB22
+        - SceCodecEngineWrapperForDriver_BB388700: 0xBB388700
+        - sceCodecEngineUnmapPAtoUserVA: 0xBCDCEA13
+        - sceCodecEngineUnregisterUnmapMemory: 0xC5478DD5
+        - SceCodecEngineWrapperForDriver_C7C150AE: 0xC7C150AE
+        - SceCodecEngineWrapperForDriver_CB8703D8: 0xCB8703D8
+        - sceCodecEngineDsp0MemcpyChain: 0xD1F94D9D
+        - sceCodecEngineRegisterProcExitHandler: 0xEA88ABE5
+        - sceCodecEngineIsUnmapMemory: 0xF3F71CEF
+        - SceCodecEngineWrapperForDriver_F9495589: 0xF9495589
+        - SceCodecEngineWrapperForDriver_FAF590A6: 0xFAF590A6
+        - sceCodecEngineRegisterUnmapMemory: 0xFBD4853E
+    SceCodecEngineWrapperForDebugger:
+      syscall: false
+      version: 1
+      nid: 0x615771E2
+      functions:
+        - SceCodecEngineWrapperForDebugger_771190E7: 0x771190E7
+    SceCodecEngineWrapper:
+      syscall: true
+      version: 1
+      nid: 0x5C9EE5B9
+      functions:
+        - _sceCodecEngineAllocMemoryFromUnmapMemBlock: 0x03DCBDCA
+        - _sceCodecEngineChangeNumWorkerCoresMax: 0x04BA9415
+        - _sceCodecEnginePmonStop: 0x04D5F36B
+        - _sceCodecEngineGetMemoryState: 0x1E9E5A79
+        - _sceCodecEngineGetProcessorLoad: 0x241B194B
+        - _sceCodecEngineChangeNumWorkerCoresDefault: 0x362E9415
+        - _sceCodecEnginePmonGetProcessorLoad: 0x3EBA4982
+        - _sceCodecEngineFreeMemoryFromUnmapMemBlock: 0x489FF965
+        - _sceCodecEnginePmonStart: 0x6AF71F08
+        - _sceCodecEngineChangeNumWorkerCores: 0x7E5E1F38
+        - _sceCodecEngineResetNumRpcCalled: 0x8EFF2DAA
+        - _sceCodecEngineGetNumRpcCalled: 0x9B157692
+        - _sceCodecEngineCloseUnmapMemBlock: 0xAD30912D
+        - _sceCodecEngineOpenUnmapMemBlock: 0xB0E654EE
+        - _sceCodecEnginePmonReset: 0xCA79BFC4
+        - _sceCodecEngineSetClockFrequency: 0xDE5EF6CC

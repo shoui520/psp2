@@ -1,0 +1,73 @@
+SceMotionDevDummy:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceMotionDev:
+      syscall: true
+      version: 1
+      nid: 0x1F766AC7
+      functions:
+        - sceMotionDevGetCurrentMagnStabilityLevel: 0x067F06D9
+        - sceMotionDevGetGyroBias2: 0x12B9F05E
+        - sceMotionDevGetGyroCalibData2: 0x160E8DE9
+        - sceMotionDevMagnSamplingStart: 0x16DD5913
+        - sceMotionDevGetDeviceInfo: 0x1F1EFEFB
+        - sceMotionDevGetDs3CalibData: 0x1FD76B5E
+        - sceMotionDevRead3: 0x27954BC7
+        - sceMotionDevSetSamplingMode: 0x3EAA8A4F
+        - sceMotionDevSamplingStart: 0x47948D9C
+        - sceMotionDevSamplingStop: 0x56C1551E
+        - sceMotionDevGetDeviceLocation: 0x5EDEA879
+        - sceMotionDevGetGyroBias: 0x6D033072
+        - sceMotionDevGetCalibrationData: 0x716C685B
+        - sceMotionDevGetGyroCalibData: 0x74555D91
+        - sceMotionDevGetFactoryMagnCalibData: 0x777D57D2
+        - sceMotionDevUpdateMagnCalibData: 0x787384FA
+        - sceMotionDevSamplingStop2: 0x9E868205
+        - sceMotionDevGetControllerType: 0xA2CD11F6
+        - sceMotionDevGetCurrentMagnCalibData: 0xAAB4B41F
+        - sceMotionDevGetAccCalibData: 0xAF014866
+        - sceMotionDevSamplingStart2: 0xB51E02E8
+        - sceMotionDevGetCalibrationHeader: 0xBDEC1E32
+        - sceMotionDevRead: 0xC0095F0F
+        - sceMotionDevReadForMagnCalib: 0xCC4FDA6A
+        - sceMotionDevSetGyroFeedBack: 0xCCAEBF59
+        - sceMotionDevGetAccCalibData2: 0xD582B628
+        - sceMotionDevGetEvaInfo: 0xE6955280
+        - sceMotionDevMagnSamplingStop: 0xE72A35B8
+        - sceMotionDevIsReady: 0xE8A3E48E
+        - sceMotionDevGetMeasMode: 0xEA95D3C9
+        - sceMotionDevUpdateMagnStabilityLevel: 0xEC94F683
+        - sceMotionDevRead2: 0xFB87948E
+    SceMotionDevForDriver:
+      syscall: false
+      version: 1
+      nid: 0xA501409A
+      functions:
+        - SceMotionDevForDriver_031AF7A1: 0x031AF7A1
+        - SceMotionDevForDriver_0808D77D: 0x0808D77D
+        - SceMotionDevForDriver_09918DAE: 0x09918DAE
+        - ksceMotionDevIsReady: 0x10AAC8EA
+        - ksceMotionDevNoiseFilterIsAvailable: 0x11A17A96
+        - SceMotionDevForDriver_22CD6DCA: 0x22CD6DCA
+        - ksceMotionDevRead: 0x3A3407B5
+        - ksceMotionDevGetCalibrationHeader: 0x3B23DF55
+        - SceMotionDevForDriver_3CD0CE14: 0x3CD0CE14
+        - ksceMotionDevGetDeviceInfo: 0x3E4BCBC0
+        - ksceMotionDevGetEvaInfo: 0x5B53AC26
+        - SceMotionDevForDriver_77BA3A04: 0x77BA3A04
+        - ksceMotionDevRegisterVirtualMotionDriver: 0x7FD06731
+        - SceMotionDevForDriver_85E3C678: 0x85E3C678
+        - SceMotionDevForDriver_A75976EE: 0xA75976EE
+        - ksceMotionDevSamplingStart: 0xC02C85AB
+        - SceMotionDevForDriver_D7DA3DA7: 0xD7DA3DA7
+        - SceMotionDevForDriver_DB89D1BF: 0xDB89D1BF
+        - ksceMotionDevSetSamplingMode: 0xDBAF611A
+        - ksceMotionDevGetCalibrationData: 0xF0251700
+        - ksceMotionDevSamplingStop: 0xFD0B0785
+        - SceMotionDevForDriver_FD1C528D: 0xFD1C528D
+        - SceMotionDevForDriver_FE6ECA41: 0xFE6ECA41

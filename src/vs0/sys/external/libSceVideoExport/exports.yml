@@ -1,0 +1,26 @@
+SceVideoExport:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceVideoExport:
+      syscall: false
+      version: 1
+      nid: 0xF0812A7C
+      functions:
+        - sceVideoExportFromFile: 0x4F60A3C8
+    SceVideoExportEmpr:
+      syscall: false
+      version: 1
+      nid: 0x3BA9B5E8
+      functions:
+        - SceVideoExportEmpr_8493BF31: 0x8493BF31
+    SceVideoExportData:
+      syscall: false
+      version: 1
+      nid: 0xFE94CA1D
+      functions:
+        - SceVideoExportData_3488EA69: 0x3488EA69
+        - SceVideoExportData_34953CC0: 0x34953CC0
+        - SceVideoExportData_8DDE620F: 0x8DDE620F

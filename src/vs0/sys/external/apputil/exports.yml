@@ -1,0 +1,139 @@
+SceAppUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceAppUtil:
+      syscall: false
+      version: 1
+      nid: 0x48E01D74
+      functions:
+        - sceAppUtilAppEventParseGameCustomData: 0x0B04C067
+        - sceAppUtilAppEventParseLiveArea: 0x0F4EE55F
+        - sceAppUtilAddcontUmount: 0x1B36AF8C
+        - SceAppUtil_1CFFE892: 0x1CFFE892
+        - SceAppUtil_1E2A6158: 0x1E2A6158
+        - sceAppUtilAppEventParseIncomingDialog: 0x22297D59
+        - sceAppUtilSaveDataSlotDelete: 0x266A7646
+        - sceAppUtilAppEventParseNpBasicJoinablePresence: 0x28C7D4F6
+        - sceAppUtilAppEventParseScreenShotNotification: 0x2AF42D6A
+        - sceAppUtilDrmOpen: 0x2DB7BE3B
+        - sceAppUtilLoadSafeMemory: 0x3424D772
+        - sceAppUtilResetCookieWebBrowser: 0x4FAAD133
+        - sceAppUtilAddcontMount: 0x53B2C020
+        - sceAppUtilSystemParamGetInt: 0x5DFB9CA0
+        - sceAppUtilSaveDataDataSave: 0x607647BA
+        - sceAppUtilAppEventParseTeleport: 0x665A8B7E
+        - sceAppUtilDrmClose: 0x6A140498
+        - sceAppUtilAppEventParseNpAppDataMessage: 0x6BED9B58
+        - sceAppUtilSystemParamGetString: 0x6E6AA267
+        - sceAppUtilPspSaveDataLoad: 0x7402C6EA
+        - sceAppUtilAppEventParseNearGift: 0x77380601
+        - SceAppUtil_7DA34311: 0x7DA34311
+        - sceAppUtilSaveDataSlotCreate: 0x7E8FE96A
+        - sceAppUtilStoreBrowse: 0x85FA94EE
+        - sceAppUtilAppEventParseTriggerUtil: 0x8DEE696B
+        - sceAppUtilAppEventParseWebBrowser: 0x8ED716F5
+        - sceAppUtilSaveDataSlotGetParam: 0x93F0D89F
+        - sceAppUtilPhotoUmount: 0x9651B941
+        - sceAppUtilBgdlGetStatus: 0x96F478D6
+        - sceAppUtilSaveDataSlotSetParam: 0x98630136
+        - sceAppUtilPspSaveDataGetDirNameList: 0x9942071D
+        - sceAppUtilSaveSafeMemory: 0x9D8AC677
+        - sceAppUtilAppEventParseNpInviteMessage: 0xA2496814
+        - SceAppUtil_A3E0694F: 0xA3E0694F
+        - sceAppUtilAppEventParseSessionInvitation: 0xA58E6FCE
+        - sceAppUtilMusicUmount: 0xA7FE1BF7
+        - sceAppUtilShutdown: 0xB220B00B
+        - SceAppUtil_B2FE3BB1: 0xB2FE3BB1
+        - sceAppUtilMusicMount: 0xB5EDCBFF
+        - SceAppUtil_C0418B1C: 0xC0418B1C
+        - SceAppUtil_C3CB128B: 0xC3CB128B
+        - sceAppUtilSaveDataGetQuota: 0xC560E716
+        - sceAppUtilAddCookieWebBrowser: 0xC97D5D9E
+        - SceAppUtil_CD0E5C59: 0xCD0E5C59
+        - sceAppUtilAppParamGetInt: 0xCD7FD67A
+        - sceAppUtilSaveDataDataRemove: 0xD1C6AB8E
+        - sceAppUtilInit: 0xDAFFE671
+        - sceAppUtilSaveDataSlotSearch: 0xE6057A85
+        - sceAppUtilSaveDataMount: 0xE61453B0
+        - SceAppUtil_E8CADCA9: 0xE8CADCA9
+        - sceAppUtilSaveDataUmount: 0xEB720402
+        - sceAppUtilReceiveAppEvent: 0xEE0DBED9
+        - sceAppUtilPhotoMount: 0xEE85804D
+        - sceAppUtilLaunchWebBrowser: 0xF19D0423
+        - sceAppUtilAppEventParseNpActivity: 0xF6B75651
+        - SceAppUtil_F93C691C: 0xF93C691C
+    SceAppUtilDevice:
+      syscall: false
+      version: 1
+      nid: 0x4CDA2318
+      functions:
+        - SceAppUtilDevice_0AA41EAD: 0x0AA41EAD
+    SceAppUtilCache:
+      syscall: false
+      version: 1
+      nid: 0xE96B941B
+      functions:
+        - sceAppUtilCacheMount: 0x0AA56143
+        - sceAppUtilCacheGetDevInfo: 0x1171B736
+        - sceAppUtilCacheUmount: 0x72D26BF4
+    SceAppUtilUmass:
+      syscall: false
+      version: 1
+      nid: 0x92F4DAFD
+      functions:
+        - SceAppUtilUmass_0BC38A89: 0x0BC38A89
+        - SceAppUtilUmass_6D8CF67E: 0x6D8CF67E
+        - SceAppUtilUmass_96C76886: 0x96C76886
+        - SceAppUtilUmass_AE1230D3: 0xAE1230D3
+        - SceAppUtilUmass_CC85F96F: 0xCC85F96F
+    SceAppUtilWebBrowserCBLimited:
+      syscall: false
+      version: 1
+      nid: 0xED5B824D
+      functions:
+        - SceAppUtilWebBrowserCBLimited_3ED8F841: 0x3ED8F841
+    SceAppUtilNpSignin:
+      syscall: false
+      version: 1
+      nid: 0xDB50B699
+      functions:
+        - SceAppUtilNpSignin_56C91A8E: 0x56C91A8E
+    SceAppUtilBook:
+      syscall: false
+      version: 1
+      nid: 0xDA27A9D3
+      functions:
+        - sceAppUtilBookUmount: 0x9C1794C2
+        - sceAppUtilBookMount: 0xFDAAF091
+    SceAppUtilLaunchApp:
+      syscall: false
+      version: 1
+      nid: 0x445E2879
+      functions:
+        - SceAppUtilLaunchApp_D2338D13: 0xD2338D13
+        - SceAppUtilLaunchApp_E70C7435: 0xE70C7435
+    SceAppUtilAddcontForce:
+      syscall: false
+      version: 1
+      nid: 0x9D061921
+      functions:
+        - sceAppUtilAddcontForceAddcontMount: 0x6087E5F7
+    SceAppUtilPsm:
+      syscall: false
+      version: 1
+      nid: 0xC6A1483E
+      functions:
+        - SceAppUtilPsm_DEB51A38: 0xDEB51A38
+    SceAppUtilAppEventUserDefined:
+      syscall: false
+      version: 1
+      nid: 0xDD232133
+      functions:
+        - SceAppUtilAppEventUserDefined_54580104: 0x54580104

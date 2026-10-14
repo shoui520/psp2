@@ -1,0 +1,26 @@
+SceNpPartyAppUtil:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpPartyAppUtil:
+      syscall: false
+      version: 1
+      nid: 0xEB1F7DF8
+      functions:
+        - SceNpPartyAppUtil_034A38FF: 0x034A38FF
+        - SceNpPartyAppUtil_4053DA31: 0x4053DA31
+        - SceNpPartyAppUtil_6DD6AB78: 0x6DD6AB78
+        - SceNpPartyAppUtil_74484461: 0x74484461
+        - SceNpPartyAppUtil_74FA54BF: 0x74FA54BF
+        - SceNpPartyAppUtil_7ED927F3: 0x7ED927F3
+        - SceNpPartyAppUtil_8C4EF8DD: 0x8C4EF8DD
+        - SceNpPartyAppUtil_95CC3311: 0x95CC3311
+        - SceNpPartyAppUtil_9764D34A: 0x9764D34A
+        - SceNpPartyAppUtil_A540F067: 0xA540F067
+        - SceNpPartyAppUtil_A6EF1BCF: 0xA6EF1BCF
+        - SceNpPartyAppUtil_A9F3E9E4: 0xA9F3E9E4
+        - SceNpPartyAppUtil_E3EB7422: 0xE3EB7422
+        - SceNpPartyAppUtil_E64BB92C: 0xE64BB92C
+        - SceNpPartyAppUtil_FC2D13E4: 0xFC2D13E4

@@ -1,0 +1,70 @@
+SceNpTrophy:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpTrophy:
+      syscall: false
+      version: 1
+      nid: 0x4332C10D
+      functions:
+        - SceNpTrophy_03D7BB80: 0x03D7BB80
+        - SceNpTrophy_061DE3F5: 0x061DE3F5
+        - sceNpTrophyGetGroupInfo: 0x087B0535
+        - SceNpTrophy_0AC3CEA8: 0x0AC3CEA8
+        - SceNpTrophy_0B4BCB51: 0x0B4BCB51
+        - SceNpTrophy_10182F1B: 0x10182F1B
+        - SceNpTrophy_10371F25: 0x10371F25
+        - SceNpTrophy_11A4F171: 0x11A4F171
+        - SceNpTrophy_17FB1D9E: 0x17FB1D9E
+        - sceNpTrophyGetGroupIcon: 0x1B8C3192
+        - SceNpTrophy_21676448: 0x21676448
+        - SceNpTrophy_2B0CC831: 0x2B0CC831
+        - SceNpTrophy_2EE76D88: 0x2EE76D88
+        - SceNpTrophy_32473A4B: 0x32473A4B
+        - sceNpTrophyInit: 0x34516838
+        - SceNpTrophy_3AC04020: 0x3AC04020
+        - SceNpTrophy_4173F2C7: 0x4173F2C7
+        - SceNpTrophy_44E0F73E: 0x44E0F73E
+        - SceNpTrophy_47456D7E: 0x47456D7E
+        - SceNpTrophy_4D16AF03: 0x4D16AF03
+        - SceNpTrophy_4DA9A081: 0x4DA9A081
+        - sceNpTrophyCreateHandle: 0x4EBC6977
+        - SceNpTrophy_5672DAE5: 0x5672DAE5
+        - sceNpTrophyDestroyContext: 0x56F5CBA5
+        - SceNpTrophy_62E37599: 0x62E37599
+        - SceNpTrophy_69532B6A: 0x69532B6A
+        - SceNpTrophy_6B41EC32: 0x6B41EC32
+        - SceNpTrophy_6F17BD4E: 0x6F17BD4E
+        - SceNpTrophy_722D9BAD: 0x722D9BAD
+        - SceNpTrophy_72446B6B: 0x72446B6B
+        - SceNpTrophy_7BD69297: 0x7BD69297
+        - SceNpTrophy_86C16F67: 0x86C16F67
+        - SceNpTrophy_87E4C1B5: 0x87E4C1B5
+        - sceNpTrophyGetTrophyIcon: 0x94BAB8D0
+        - SceNpTrophy_97D19AB6: 0x97D19AB6
+        - SceNpTrophy_9E483C50: 0x9E483C50
+        - sceNpTrophyGetTrophyInfo: 0xA4ADDD91
+        - SceNpTrophy_AAF30D25: 0xAAF30D25
+        - SceNpTrophy_ADEAD655: 0xADEAD655
+        - sceNpTrophyUnlockTrophy: 0xB397AA24
+        - sceNpTrophyGetGameInfo: 0xBA2B7F2A
+        - SceNpTrophy_BF78B2BC: 0xBF78B2BC
+        - sceNpTrophyTerm: 0xBFE0F28F
+        - SceNpTrophy_C1406504: 0xC1406504
+        - SceNpTrophy_C338E582: 0xC338E582
+        - sceNpTrophyCreateContext: 0xC49FD33F
+        - SceNpTrophy_C80794CF: 0xC80794CF
+        - sceNpTrophyGetTrophyUnlockState: 0xC8D2A4DE
+        - SceNpTrophy_CCDEB18B: 0xCCDEB18B
+        - sceNpTrophyAbortHandle: 0xD55C6F4C
+        - SceNpTrophy_D70DAFA7: 0xD70DAFA7
+        - SceNpTrophy_DCFBE482: 0xDCFBE482
+        - SceNpTrophy_E363C13A: 0xE363C13A
+        - SceNpTrophy_ED1908F7: 0xED1908F7
+        - SceNpTrophy_EF32F9F6: 0xEF32F9F6
+        - SceNpTrophy_F44BFD5F: 0xF44BFD5F
+        - SceNpTrophy_FD34F7CF: 0xFD34F7CF
+        - sceNpTrophyGetGameIcon: 0xFE382529
+        - sceNpTrophyDestroyHandle: 0xFF142071

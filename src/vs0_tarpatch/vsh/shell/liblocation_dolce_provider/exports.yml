@@ -1,0 +1,17 @@
+SceLibLocationDolceProvide:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+    stop: module_stop
+    exit: module_exit
+  libraries:
+    SceLibLocationDolceProvide:
+      syscall: false
+      version: 1
+      nid: 0x05DD40B5
+      functions:
+        - SceLibLocationDolceProvide_67156291: 0x67156291
+        - SceLibLocationDolceProvide_AF76021F: 0xAF76021F

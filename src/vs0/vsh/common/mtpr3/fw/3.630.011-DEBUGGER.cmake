@@ -1,0 +1,65 @@
+# 3.630.011-DEBUGGER: vs0:vsh/common/mtpr3.suprx (generated)
+set(MODULE_NID 0xC1CC7EBB)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xBCAB200B:1:0x8
+	0xA7D28DAE:1:0x0
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0xF4E34EDB:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	ScebXCe_123F0027
+	ScebXCe_181EA0A6
+	ScebXCe_2B74B19B
+	ScebXCe_57CD3B4F
+	ScebXCe_5E4DEC29
+	ScebXCe_7A9B3EBE
+	ScebXCe_99CCD21E
+	ScebXCe_B0B4B2AE
+	ScebXCe_B537FF02
+	ScebXCe_CACFBB2D
+	ScebXCe_DE200527
+	sce_paf_malloc
+	ScePafStdc_1B77082E
+	sce_paf_memcpy
+	sce_paf_strtoll
+	sce_paf_free
+	sce_paf_snprintf
+	sce_paf_atoi
+	sce_paf_strcmp
+	ScePafStdc_75ECC54E
+	ScePafStdc_C95732BB
+	sce_paf_strncat
+	ScePafStdc_D41FD265
+	ScePafStdc_D608246A
+	sce_paf_memset
+	sce_paf_strncpy
+	ScePafStdc_F36BABE3
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	sceKernelDeleteLwMutex
+	__stack_chk_fail
+	sceKernelLockLwMutex
+	sceKernelWaitEventFlag
+	sceKernelUnlockLwMutex
+	sceKernelCreateThread
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	sceKernelStartThread
+	sceClibPrintf
+	sceKernelDeleteThread
+	sceKernelDelayThread
+	sceKernelClearEventFlag
+	sceKernelCloseEventFlag
+	sceKernelOpenEventFlag
+	sceKernelGetSystemTimeWide
+	SceIpmi_4E255C31
+	SceIpmi_B282B430
+)
+set(MODULE_IMPORT_VARS
+	ScePafStdc_610F2F91
+	__stack_chk_guard
+)

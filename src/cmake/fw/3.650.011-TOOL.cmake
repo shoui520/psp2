@@ -1,0 +1,4 @@
+set(FW_VERSION     0x03650011)
+set(FW_TYPE        TOOL)
+set(FW_SDK_VERSION 0x03650011)
+set(FW_DEBUG       0)

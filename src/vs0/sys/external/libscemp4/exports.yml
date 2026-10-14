@@ -1,0 +1,32 @@
+SceMp4:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceMp4:
+      syscall: false
+      version: 1
+      nid: 0x8FEACABD
+      functions:
+        - SceMp4_05474AF0: 0x05474AF0
+        - SceMp4_20A01112: 0x20A01112
+        - SceMp4_30E49E4D: 0x30E49E4D
+        - SceMp4_32A15788: 0x32A15788
+        - SceMp4_40351E1A: 0x40351E1A
+        - SceMp4_40C64DC0: 0x40C64DC0
+        - SceMp4_609E57AD: 0x609E57AD
+        - SceMp4_6B69F900: 0x6B69F900
+        - SceMp4_7B4832FE: 0x7B4832FE
+        - SceMp4_8BE0E3D3: 0x8BE0E3D3
+        - SceMp4_920623C8: 0x920623C8
+        - SceMp4_94E1305D: 0x94E1305D
+        - SceMp4_96676BA0: 0x96676BA0
+        - SceMp4_A7C09746: 0xA7C09746
+        - SceMp4_A870587F: 0xA870587F
+        - SceMp4_C05DFF01: 0xC05DFF01
+        - SceMp4_CB91CEBC: 0xCB91CEBC
+        - SceMp4_D092A066: 0xD092A066
+        - SceMp4_D2871F1C: 0xD2871F1C
+        - SceMp4_D5B26179: 0xD5B26179
+        - SceMp4_EFE299C9: 0xEFE299C9

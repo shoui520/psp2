@@ -1,0 +1,74 @@
+SceGpuEs4User:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  nid: 0x6F00588D
+  main:
+    start: _sceGpuUserStart
+    exit: module_exit
+  libraries:
+    SceGpuEs4User:
+      syscall: false
+      version: 1
+      nid: 0xFAFCA413
+      functions:
+        - SceGpuEs4User_228252A2: 0x228252A2
+        - SceGpuEs4User_A5B14369: 0xA5B14369
+        - SceGpuEs4User_4447D217: 0x4447D217
+        - SceGpuEs4User_70800B46: 0x70800B46
+        - SceGpuEs4User_73E945A1: 0x73E945A1
+        - SceGpuEs4User_F4735A47: 0xF4735A47
+        - SceGpuEs4User_1E0A9C4A: 0x1E0A9C4A
+        - SceGpuEs4User_B9178277: 0xB9178277
+        - SceGpuEs4User_071E62F0: 0x071E62F0
+        - SceGpuEs4User_B6CFD213: 0xB6CFD213
+        - SceGpuEs4User_56893E98: 0x56893E98
+        - SceGpuEs4User_AD20D1A0: 0xAD20D1A0
+        - SceGpuEs4User_0EA7458D: 0x0EA7458D
+        - SceGpuEs4User_156A6B70: 0x156A6B70
+        - SceGpuEs4User_9A4A5DAE: 0x9A4A5DAE
+        - SceGpuEs4User_94286660: 0x94286660
+        - SceGpuEs4User_B26DF3D2: 0xB26DF3D2
+        - SceGpuEs4User_416C8813: 0x416C8813
+        - SceGpuEs4User_7DCCBCAF: 0x7DCCBCAF
+        - SceGpuEs4User_0D27286F: 0x0D27286F
+        - SceGpuEs4User_116449D2: 0x116449D2
+        - SceGpuEs4User_AAD85460: 0xAAD85460
+        - SceGpuEs4User_5C3A6DFE: 0x5C3A6DFE
+        - SceGpuEs4User_B000CA65: 0xB000CA65
+        - SceGpuEs4User_5273D097: 0x5273D097
+        - SceGpuEs4User_09BB98B2: 0x09BB98B2
+        - SceGpuEs4User_8A997DBB: 0x8A997DBB
+        - SceGpuEs4User_0BFE1685: 0x0BFE1685
+        - SceGpuEs4User_0162A405: 0x0162A405
+        - SceGpuEs4User_D90B0707: 0xD90B0707
+        - SceGpuEs4User_CCEE0336: 0xCCEE0336
+        - SceGpuEs4User_804BA13D: 0x804BA13D
+        - SceGpuEs4User_9E8E2957: 0x9E8E2957
+        - SceGpuEs4User_83D972DF: 0x83D972DF
+        - SceGpuEs4User_F0CCE9DB: 0xF0CCE9DB
+        - SceGpuEs4User_BDE2B9E1: 0xBDE2B9E1
+        - SceGpuEs4User_8ED7D698: 0x8ED7D698
+        - SceGpuEs4User_5564C1BE: 0x5564C1BE
+        - SceGpuEs4User_7E965369: 0x7E965369
+        - SceGpuEs4User_768482F6: 0x768482F6
+        - SceGpuEs4User_C0D16CE5: 0xC0D16CE5
+        - SceGpuEs4User_9D5C4326: 0x9D5C4326
+        - SceGpuEs4User_7AF40138: 0x7AF40138
+        - SceGpuEs4User_1BE5985A: 0x1BE5985A
+        - SceGpuEs4User_E98914E4: 0xE98914E4
+        - SceGpuEs4User_A5E331FA: 0xA5E331FA
+        - SceGpuEs4User_1A575DFD: 0x1A575DFD
+        - SceGpuEs4User_86FC3202: 0x86FC3202
+        - SceGpuEs4User_53CACDAB: 0x53CACDAB
+    SceGpuEs4UserForVsh:
+      syscall: false
+      version: 1
+      nid: 0x9E3C99D4
+      functions:
+        - SceGpuEs4UserForVsh_3C09BFCA: 0x3C09BFCA
+        - SceGpuEs4UserForVsh_8A27AB0A: 0x8A27AB0A
+        - SceGpuEs4UserForVsh_0A9556D9: 0x0A9556D9
+        - SceGpuEs4UserForVsh_010DA2CB: 0x010DA2CB
+        - SceGpuEs4UserForVsh_3DC96093: 0x3DC96093

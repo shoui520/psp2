@@ -1,0 +1,82 @@
+SceNpCommon:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpCommon:
+      syscall: false
+      version: 1
+      nid: 0xECB62224
+      functions:
+        - SceNpCommon_0624AE44: 0x0624AE44
+        - SceNpCommon_13293ADC: 0x13293ADC
+        - SceNpCommon_14BC2B99: 0x14BC2B99
+        - sceNpAuthDestroyRequest: 0x14FC18AF
+        - SceNpCommon_187C0A8D: 0x187C0A8D
+        - sceNpCommonFreeNpServerName: 0x1D81E445
+        - SceNpCommon_256670D6: 0x256670D6
+        - sceNpAuthGetEntitlementIdList: 0x3377CD37
+        - SceNpCommon_37954C1F: 0x37954C1F
+        - SceNpCommon_389F8C14: 0x389F8C14
+        - SceNpCommon_38B54F30: 0x38B54F30
+        - SceNpCommon_38B88BA3: 0x38B88BA3
+        - SceNpCommon_40724BEA: 0x40724BEA
+        - SceNpCommon_40CC4D15: 0x40CC4D15
+        - SceNpCommon_43F5DE5F: 0x43F5DE5F
+        - sceNpAuthInit: 0x441D8B4E
+        - SceNpCommon_48314C6E: 0x48314C6E
+        - SceNpCommon_4C4AA451: 0x4C4AA451
+        - SceNpCommon_50D71BB5: 0x50D71BB5
+        - SceNpCommon_540B307E: 0x540B307E
+        - SceNpCommon_55F7FCF7: 0x55F7FCF7
+        - sceNpCommonBase64Encode: 0x5601E9A2
+        - sceNpAuthGetTicket: 0x59608D1C
+        - SceNpCommon_5B770B80: 0x5B770B80
+        - SceNpCommon_5BC54899: 0x5BC54899
+        - sceNpAuthTerm: 0x6093B689
+        - SceNpCommon_619FB198: 0x619FB198
+        - SceNpCommon_622F004B: 0x622F004B
+        - SceNpCommon_650D111B: 0x650D111B
+        - SceNpCommon_652FC5E0: 0x652FC5E0
+        - SceNpCommon_659ED07E: 0x659ED07E
+        - sceNpCmpNpIdInOrder: 0x6BC8150A
+        - SceNpCommon_73BDFF32: 0x73BDFF32
+        - sceNpCommonGetSystemSwVersion: 0x775D0177
+        - sceNpCmpOnlineId: 0x8327C26F
+        - SceNpCommon_85503FA6: 0x85503FA6
+        - SceNpCommon_85699AE2: 0x85699AE2
+        - SceNpCommon_88B18A5B: 0x88B18A5B
+        - SceNpCommon_8C21F489: 0x8C21F489
+        - SceNpCommon_92DF18F6: 0x92DF18F6
+        - sceNpCommonMallocNpServerName: 0x95EFA15C
+        - SceNpCommon_9AEF645B: 0x9AEF645B
+        - SceNpCommon_9B7CAA67: 0x9B7CAA67
+        - SceNpCommon_A04C77A1: 0xA04C77A1
+        - SceNpCommon_A0C5C10E: 0xA0C5C10E
+        - SceNpCommon_A1CF53F3: 0xA1CF53F3
+        - SceNpCommon_A385C8CD: 0xA385C8CD
+        - SceNpCommon_A7EC5CDB: 0xA7EC5CDB
+        - sceNpCommonGetNpEnviroment: 0xAD6403E0
+        - SceNpCommon_B88B3F92: 0xB88B3F92
+        - SceNpCommon_BA6310A1: 0xBA6310A1
+        - SceNpCommon_BBC13621: 0xBBC13621
+        - SceNpCommon_BDCD318E: 0xBDCD318E
+        - sceNpAuthGetTicketParam: 0xC1E23E01
+        - SceNpCommon_C2BF5C1F: 0xC2BF5C1F
+        - sceNpAuthGetEntitlementByIdPrefix: 0xC8E51CCA
+        - SceNpCommon_CC8E6AC6: 0xCC8E6AC6
+        - SceNpCommon_CF843378: 0xCF843378
+        - SceNpCommon_D2B9BCA8: 0xD2B9BCA8
+        - SceNpCommon_DA04BA55: 0xDA04BA55
+        - SceNpCommon_E1FF4E70: 0xE1FF4E70
+        - sceNpAuthAbortRequest: 0xE2582575
+        - SceNpCommon_E2743C07: 0xE2743C07
+        - SceNpCommon_E426FEE8: 0xE426FEE8
+        - sceNpSetPlatformType: 0xE807D0BC
+        - sceNpGetPlatformType: 0xE9A003DE
+        - sceNpAuthCreateStartRequest: 0xED42079F
+        - SceNpCommon_F585C86C: 0xF585C86C
+        - sceNpAuthGetEntitlementById: 0xF93842F0
+        - SceNpCommon_FB1F70F3: 0xFB1F70F3
+        - sceNpCmpNpId: 0xFB8D82E5

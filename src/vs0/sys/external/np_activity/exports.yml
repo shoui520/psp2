@@ -1,0 +1,41 @@
+SceNpActivityNet:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  libraries:
+    SceNpActivityNet:
+      syscall: false
+      version: 1
+      nid: 0x068CD5DB
+      functions:
+        - SceNpActivityNet_2000C248: 0x2000C248
+        - SceNpActivityNet_2351D75A: 0x2351D75A
+        - SceNpActivityNet_26B9D4A3: 0x26B9D4A3
+        - SceNpActivityNet_319CB4F4: 0x319CB4F4
+        - SceNpActivityNet_348268A0: 0x348268A0
+        - SceNpActivityNet_35B49CA4: 0x35B49CA4
+        - SceNpActivityNet_363CB63A: 0x363CB63A
+        - SceNpActivityNet_40475264: 0x40475264
+        - SceNpActivityNet_42CFC0DE: 0x42CFC0DE
+        - SceNpActivityNet_447AC73E: 0x447AC73E
+        - SceNpActivityNet_48B5F8B3: 0x48B5F8B3
+        - SceNpActivityNet_5A0524AD: 0x5A0524AD
+        - SceNpActivityNet_5C07C7E5: 0x5C07C7E5
+        - SceNpActivityNet_690808DA: 0x690808DA
+        - SceNpActivityNet_72346DA7: 0x72346DA7
+        - SceNpActivityNet_747FBB53: 0x747FBB53
+        - SceNpActivityNet_75F6CD31: 0x75F6CD31
+        - SceNpActivityNet_7E3116FB: 0x7E3116FB
+        - SceNpActivityNet_7E58E9B9: 0x7E58E9B9
+        - SceNpActivityNet_92CF4044: 0x92CF4044
+        - SceNpActivityNet_99C86ADA: 0x99C86ADA
+        - SceNpActivityNet_AD0B8FDD: 0xAD0B8FDD
+        - SceNpActivityNet_BE4CC2D1: 0xBE4CC2D1
+        - SceNpActivityNet_C27E99D3: 0xC27E99D3
+        - SceNpActivityNet_C35984F3: 0xC35984F3
+        - SceNpActivityNet_C55B9299: 0xC55B9299
+        - SceNpActivityNet_DA59D2CF: 0xDA59D2CF
+        - SceNpActivityNet_F3586055: 0xF3586055
+        - SceNpActivityNet_F8049E41: 0xF8049E41
+        - SceNpActivityNet_FE7F0822: 0xFE7F0822

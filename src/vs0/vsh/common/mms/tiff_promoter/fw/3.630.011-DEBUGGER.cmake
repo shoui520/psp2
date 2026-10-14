@@ -1,0 +1,59 @@
+# 3.630.011-DEBUGGER: vs0:vsh/common/mms/tiff_promoter.suprx (generated)
+set(MODULE_NID 0x392C92A2)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_IMPORT_LIBS
+	0xA7D28DAE:1:0x0
+	0x3D643CE8:1:0x0
+	0x54276D19:1:0x0
+	0xCAE9ACE6:5:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	sce_paf_malloc
+	ScePafStdc_1B77082E
+	sce_paf_strncmp
+	ScePafStdc_2730262C
+	sce_paf_memcpy
+	sce_paf_free
+	sce_paf_snprintf
+	ScePafStdc_5883A6E3
+	ScePafStdc_5C468294
+	sce_paf_strcmp
+	sce_paf_memcmp
+	ScePafStdc_D608246A
+	ScePafStdc_D8CC1AFE
+	sce_paf_memset
+	sce_paf_strncpy
+	ScePafStdc_F36BABE3
+	sce_paf_strlen
+	ScePafStdc_FC5CD359
+	ScePafMisc_0853896D
+	ScePafMisc_147115CE
+	ScePafMisc_1E66D069
+	ScePafMisc_29E8BCA7
+	ScePafMisc_2DBDFC13
+	ScePafMisc_2EAB756A
+	ScePafMisc_4B90AA0D
+	ScePafMisc_502BC2CF
+	ScePafMisc_581735E6
+	ScePafMisc_7C34D065
+	ScePafMisc_8372AEFD
+	ScePafMisc_8523A173
+	ScePafMisc_909913D9
+	ScePafMisc_93900EA9
+	ScePafMisc_B92E588A
+	ScePafMisc_B9FB9BD6
+	ScePafMisc_C8CA2008
+	ScePafMisc_E9A4171E
+	ScePafMisc_F262A130
+	ScePafMisc_FAA808C2
+	ScePafMisc_FBFB4ED7
+	ScePafThread_A5D3F1B5
+	ScePafThread_AD04A33D
+	__stack_chk_fail
+)
+set(MODULE_IMPORT_VARS
+	ScePafStdc_610F2F91
+	__stack_chk_guard
+)

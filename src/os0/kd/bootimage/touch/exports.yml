@@ -1,0 +1,74 @@
+SceTouch:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceTouch:
+      syscall: true
+      version: 1
+      nid: 0x3E4F4A81
+      functions:
+        - sceTouchEnableIdleTimerCancelSetting: 0x012EAE3A
+        - sceTouchPeekRegion: 0x04440622
+        - sceTouchSetRegionAttr: 0x08DD4C7C
+        - sceTouchGetPanelInfo: 0x10A2CA25
+        - sceTouchSetSamplingStateExt: 0x13CDFC43
+        - sceTouchRead: 0x169A1D58
+        - sceTouchSetSamplingState: 0x1B9C5D14
+        - sceTouchGetSamplingState: 0x26531526
+        - sceTouchPeekRegionExt: 0x2CF6D7E2
+        - sceTouchClearRegion: 0x2D94EAEA
+        - sceTouchRead2: 0x39401BEA
+        - sceTouchPeek2: 0x3AD3D0A1
+        - sceTouchDisableTouchForce: 0x41194411
+        - sceTouchSetProcessPrivilege: 0x609EA489
+        - sceTouchSetRegion: 0x6134DFBE
+        - sceTouchReadRegion: 0x93B5635B
+        - sceTouchReadRegionExt: 0x9F0ACAF9
+        - sceTouchEnableTouchForceExt: 0xA3FE877B
+        - sceTouchGetProcessInfo: 0xAB364C23
+        - sceTouchEnableTouchForce: 0xB18370C2
+        - sceTouchActivateRegion: 0xBD59D652
+        - sceTouchGetDeviceInfo: 0xD7889B91
+        - sceTouchGetSamplingStateExt: 0xDC8671EA
+        - sceTouchGetPixelDensity2: 0xE0C1DB92
+        - sceTouchDisableTouchForceExt: 0xED25DFDC
+        - sceTouchGetPixelDensity: 0xF0704CF3
+        - sceTouchPeek: 0xFF082DF0
+    SceTouchForDriver:
+      syscall: false
+      version: 1
+      nid: 0xA4A7DAFC
+      functions:
+        - ksceTouchRegisterVirtualTouchDriver: 0x03C3AC7C
+        - SceTouchForDriver_062A11A2: 0x062A11A2
+        - ksceTouchSetRegionAttr: 0x10A998DE
+        - ksceTouchSetSamplingState: 0x1247257A
+        - ksceTouchGetSamplingState: 0x174D0333
+        - ksceTouchSetEnableFlag: 0x328E38B0
+        - SceTouchForDriver_384F6C68: 0x384F6C68
+        - SceTouchForDriver_3F3FBF69: 0x3F3FBF69
+        - SceTouchForDriver_423F26D3: 0x423F26D3
+        - ksceTouchGetProcessInfo: 0x4DF3A37C
+        - SceTouchForDriver_4E6C4558: 0x4E6C4558
+        - ksceTouchSetCtrlpCallback: 0x628D9324
+        - SceTouchForDriver_63DCF2FE: 0x63DCF2FE
+        - ksceTouchRead: 0x70C8AACE
+        - ksceTouchSetRegion: 0x7985B164
+        - SceTouchForDriver_845E2115: 0x845E2115
+        - ksceTouchGetPanelInfo: 0x937DB4C0
+        - ksceTouchReadRegion: 0x9A91F624
+        - ksceTouchPeekRegion: 0x9B3F7207
+        - SceTouchForDriver_9C8CCB66: 0x9C8CCB66
+        - ksceTouchSetTouchEmulationData: 0xA32529B8
+        - ksceTouchPeek: 0xBAD1960B
+        - ksceTouchActivateRegion: 0xC7F0DAA0
+        - ksceTouchDisableTouchForce: 0xCDE79889
+        - SceTouchForDriver_DDCF5145: 0xDDCF5145
+        - SceTouchForDriver_E1C5D95F: 0xE1C5D95F
+        - ksceTouchEnableTouchForce: 0xE41B4BF8
+        - ksceTouchEnableIdleTimerCancelSetting: 0xEBF4C86A
+        - ksceTouchGetDeviceInfo: 0xFD2E0278

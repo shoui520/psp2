@@ -1,0 +1,86 @@
+# 3.650.011-TOOL: vs0:sys/external/pspnet_adhoc.suprx (generated)
+set(MODULE_NID 0x2A1B72F4)
+set(MODULE_ATTR 0)
+set(MODULE_EXPORTS exports.yml)
+set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_IMPORT_LIBS
+	0xCAE9ACE6:5:0x0
+	0x859A24B1:2:0x0
+	0x5E8D0E22:1:0x0
+	0x6BF8B2A2:1:0x8
+	0xC6083AE1:1:0x8
+	0x9E8A69FD:1:0x8
+	0xA6605D6F:1:0x0
+	0x0B351269:1:0x0
+)
+set(MODULE_IMPORT_FUNCS
+	SceLibKernel_01E00CBF
+	sceKernelCreateMsgPipe
+	sceKernelWaitSema
+	sceKernelSendMsgPipe
+	sceKernelGetThreadId
+	sceKernelCreateSema
+	sceKernelLockMutex
+	SceLibKernel_1F4DF829
+	sceKernelDeleteLwMutex
+	sceClibMemcpy_safe
+	__stack_chk_fail
+	SceLibKernel_3B595E1D
+	sceKernelLockLwMutex
+	sceKernelReceiveMsgPipe
+	sceKernelCreateCond
+	sceKernelTryReceiveMsgPipe
+	SceLibKernel_6314CAA3
+	sceClibMemset
+	sceKernelRegisterThreadEventHandler
+	SceLibKernel_88E72157
+	sceClibSnprintf
+	sceKernelUnlockLwMutex
+	sceClibMemcmp
+	SceLibKernel_9F793F84
+	SceLibKernel_A9002567
+	sceKernelGetProcessTimeWide
+	SceLibKernel_C362ECD6
+	sceKernelCreateThread
+	sceKernelWaitCond
+	sceKernelCreateLwMutex
+	sceKernelWaitThreadEnd
+	SceLibKernel_E2984A54
+	sceKernelGetProcessTimeLow
+	sceKernelCreateMutex
+	sceKernelCancelMsgPipe
+	SceLibKernel_EFD76235
+	sceKernelStartThread
+	sceKernelUnlockMutex
+	sceKernelDeleteThread
+	sceKernelUnregisterThreadEventHandler
+	sceKernelSignalCond
+	sceKernelDeleteCond
+	sceKernelGetProcessId
+	sceKernelDeleteMutex
+	sceKernelDeleteSema
+	sceKernelSignalSema
+	sceKernelDeleteMsgPipe
+	ksceKernelExitThread
+	sceNetSetsockopt
+	sceNetNtohs
+	sceNetSocketClose
+	sceNetHtonl
+	sceNetSocketAbort
+	sceNetHtons
+	sceNetRecvfrom
+	sceNetNtohl
+	sceNetSend
+	sceNetSocket
+	SceNetCtl_326FEE96
+	SceNetCtl_6D63C34B
+	SceNetCtl_CDEBA500
+	SceNetInternal_0DFC23D6
+	SceNetInternal_A2C2BC5F
+	SceNetInternal_E62A2FAA
+	sceAppMgrSendNotificationRequest
+	ksceRegMgrSystemParamGetStr
+)
+set(MODULE_IMPORT_VARS
+	__stack_chk_guard
+)
