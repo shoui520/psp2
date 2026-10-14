@@ -1,0 +1,49 @@
+#!/bin/busybox sh
+
+export HOME=/
+export PATH=/confidential/scei/bin:/confidential/sony/bin:/sbin:/bin:/usr/sbin:/usr/bin:$PATH
+#export CPUPDATE_LOG=/tmp/cpupdate.log
+
+mount -o rw -t proc proc /proc
+mount -t sysfs none /sys
+mount -o rw,noatime,remount -t rootfs rootfs /
+mount -t axfs -o physaddr=$fsimage1 none /confidential/
+mount -t tmpfs -o "size=32m" none /tmp
+mount -t vfat -o "batch_sync,noatime,shortname=winnt" /dev/mmcblk0p8 /work
+mount -t devpts none /dev/pts
+
+ifconfig lo 127.0.0.1 up
+
+if [ -n "$fsimage2" ]; then
+  mount -t axfs -o physaddr=$fsimage2 none /devel
+  export PATH=/devel/sbin:/devel/bin:/devel/usr/bin:/devel/usr/sbin:$PATH
+  if [ -f /devel/etc/rc.local ] ; then
+    . /devel/etc/rc.local
+  fi
+fi
+
+insmod /confidential/sony/lib/sdmdrv.ko
+
+insmod /confidential/scei/lib/sce_gpio.ko
+
+if [ `/confidential/sony/bin/nblconfig -show | /bin/grep -c Normal` = "0" ]; then
+  echo "Recovery bank. Rewrite USB hub config eeprom."
+  echo 1 > /proc/sce_gpio/F0045
+  /etc/eeprom/eeprom -p 1 -w -y -v -f /etc/eeprom/usb-hub-config.img
+  echo 0 > /proc/sce_gpio/F0045
+fi
+
+echo 1 > /proc/sce_gpio/F0046
+
+insmod /confidential/scei/lib/sce_usb.ko deci_major_no=251 devicename="PSP2 Devkit"
+
+/confidential/sony/bin/nblconfig -bootdone
+
+insmod /confidential/scei/lib/sce_sdio.ko
+
+while true
+do
+  (cd /tmp; /confidential/scei/bin/dfcpm --shell -h usb -t sdio -k /dev/ttyS1)
+  echo dfcpm exit code = $?
+done
+

@@ -1,0 +1,19 @@
+#
+# spec file template
+#
+
+CP_VERSION=1.3.0.1
+
+NBL_VERSION=0.9.7.5
+NBL_IMAGE=nbl.nui
+
+KERNEL_VERSION=1.1.6.0
+KERNEL_IMAGE=vmlinux.trf
+BOOTPROF_NORMAL0=normal0.txt
+BOOTPROF_NORMAL1=normal1.txt
+
+USERLAND_VERSION=1.3.0.1
+USERLAND_IMAGES="fsimage0.trf fsimage1.trf"
+
+PRE_SCRIPT=pre.sh
+POST_SCRIPT=post.sh

@@ -221,6 +221,49 @@ ${weak}" @ONLY)
 	add_custom_target(${name}_velf ALL DEPENDS ${name}.velf)
 endfunction()
 
+# A raw boot image (no SCE module around it, e.g. NSKBL): linked at ADDRESS with the
+# reset vector first, written as <name>.elf and the flat <name>.bin.
+#   psp2_image(<target> ADDRESS <addr> [LINKER_SCRIPT <file>] [SKELETON] [PARTIAL]
+#              SOURCES <files...>)
+# fw/<FW>.cmake says the image is in that firmware (and may set MODULE_DEFINES).
+# LINKER_SCRIPT (relative to the module) replaces cmake/image.ld for an image of several
+# segments; IMAGE_ADDRESS is still defined for it.
+function(psp2_image name)
+	cmake_parse_arguments(M "SKELETON;PARTIAL" "ADDRESS;LINKER_SCRIPT" "SOURCES" ${ARGN})
+	set(script "${PSP2_SRC}/cmake/image.ld")
+	if(M_LINKER_SCRIPT)
+		set(script "${CMAKE_CURRENT_SOURCE_DIR}/${M_LINKER_SCRIPT}")
+	endif()
+	set(fwfile "${CMAKE_CURRENT_SOURCE_DIR}/fw/${FW}.cmake")
+	if(NOT EXISTS "${fwfile}")
+		message(STATUS "psp2: ${name} not in ${FW}, skipped")
+		return()
+	endif()
+	set(MODULE_DEFINES "")
+	set(MODULE_DEPENDS "")
+	include("${fwfile}")
+	set(M_KIND kernel)
+
+	if(M_PARTIAL)
+		add_library(${name} OBJECT ${M_SOURCES})
+		psp2_compile_settings(${name})
+		return()
+	endif()
+
+	add_executable(${name} ${M_SOURCES})
+	psp2_compile_settings(${name})
+	set_target_properties(${name} PROPERTIES SUFFIX ".elf" LINK_DEPENDS "${script}")
+	# RWX regions, like the originals (NSKBL runs from an RWX identity mapping)
+	target_link_options(${name} PRIVATE -nostdlib -Wl,--defsym=IMAGE_ADDRESS=${M_ADDRESS}
+		-Wl,-T,${script} -Wl,--no-warn-rwx-segments)
+	target_link_libraries(${name} PRIVATE gcc)
+	add_custom_command(OUTPUT ${name}.bin
+		COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${name}> ${name}.bin
+		DEPENDS ${name}
+		VERBATIM)
+	add_custom_target(${name}_bin ALL DEPENDS ${name}.bin)
+endfunction()
+
 # Sony's layout (psp2_module SCE_LAYOUT): called with psp2_module's variables in scope.
 macro(psp2_sce_layout name)
 	set(tables "${CMAKE_CURRENT_BINARY_DIR}/scetables.S")

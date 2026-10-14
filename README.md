@@ -8,9 +8,7 @@ Names like the "TOOL" or "DEBUGGER" suffixes are mine/whatever:
 * 3.630.011-DEBUGGER (PDEL internal system debugger, `os0`, `slb2`, `pup`, `vs0`,`vs0_tarpatch`)
 * 3.65-CEX (retail, `os0`, `slb2`, `pup`, `vs0`,`vs0_tarpatch`)
 
-Extra type names and strings have been taken from the `0.990.030-I` internal system debugger firmware.
-
-first_loader and Ernie are also planned. These are not part of PSP2UPDAT.PUP but are on the roadmap anyway.  
+Extra type names and strings have been taken from the `0.990.030-I` internal system debugger firmware. 
 
 ## Layout
 For the sake of simplicity, the project layout mirrors the PUP layout.  
@@ -18,15 +16,17 @@ For example, the following path contains the reimplementation of `os0:kd/acmgr.s
 ```
 src/os0/kd/acmgr/source/
 ```
-This can be built back into a .skprx so it can (*hopefully*) be used in place of `os0:kd/acmgr.skprx` on a PSP2.
+This can be built back into a .skprx so it can (*hopefully*) be used in place of `os0:kd/acmgr.skprx` on PSP2.
 ## Current status
 To summarize:
 * `os0`: substantial C reimplementation exists for nearly all modules. Not complete and not exact yet. No progress so far on MeP modules.
 * `slb2`: WIP.
-* `pup`: WIP. For `psp2swu`. `pup/cui_setupper` is identical to `os0:ue/cui_settuper`.
-* `vs0`: WIP. A little progress made, but deferred until os0+slb2 are mostly "done", but `os0:ue/safemode.elf` will be deferred until `vs0` becomes the priority.
-* "bootrom"/`first_loader`: not started
-* syscon/Ernie: not started
+* `pup`: Not started. this is for `psp2swu`. `pup/cui_setupper` is identical to `os0:ue/cui_setupper`.
+* `vs0`: WIP. A little progress made. `os0:ue/safemode.elf` will be deferred until `vs0` becomes the priority.
+* `pd0:app/NPXS10007`: Not started
+* `first_loader`: Not started
+* `ernie`: Not started
+* `pup/devkit_cp`: Not started
 
 Contributions welcome!
 ## AI disclosure

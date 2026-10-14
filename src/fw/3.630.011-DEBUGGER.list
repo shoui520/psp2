@@ -146,6 +146,9 @@ slb2/kbl/SceExcpmgr
 slb2/kbl/SceKernelBusError
 slb2/kbl/SceKernelIntrMgr
 slb2/kbl/SceSblSmsched
+slb2/kbl/SceSysmem
+slb2/nskbl
+slb2/skbl
 vs0/app/NPXS10000/eboot
 vs0/app/NPXS10001/eboot
 vs0/app/NPXS10001/np_party_app

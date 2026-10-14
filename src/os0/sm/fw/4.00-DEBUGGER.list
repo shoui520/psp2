@@ -1,0 +1,12 @@
+act_sm
+aimgr_sm
+compat_sm
+encdec_w_portability_sm
+gcauthmgr_sm
+mgkm_sm
+pm_sm
+qaf_sm
+rmauth_sm
+spkg_verifier_sm_w_key_2
+update_service_sm
+utoken_sm

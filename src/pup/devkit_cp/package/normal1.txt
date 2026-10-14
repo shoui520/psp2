@@ -1,0 +1,14 @@
+[global]
+  normal    : 
+  recovery  : 
+
+[Linux-normal1]
+  kernel    : emmca6:uvfat:/vmlinux.trf
+  cmdline   : console=ttyS0,115200n8n
+  initrd    : 
+  preboot   : 
+  timeout   : 20
+  retry     : 3
+  fsimage   : emmca6:uvfat:/fsimage0.trf,rootfs emmca6:uvfat:/fsimage1.trf
+  sign      : a6529a00e002819944ce2eabdb362a3204dc06b1ff76b45b52fb2e24ff071fe49b31e87588560e75fc6cd76838d4409a315cf14d388e35c24782f2d3af4032d3f82c53042e0d3cfd331051a8c2b258f220663a0206f89277633ea720c46f6832a7edff623ba8ed136b642ceb7329b6b3dbc00a80ba6b2e4788ee287ffb92fc78e7cac4c71f71be3506ccd33ec6dae3438c029aa858683fa05c62b9e5dc53f54c86e56f0238ba39004ae280937ca0693e2a46812cddaab37d6c7d770825a2d66cc7908b1398d0ad076a00aab3183d16919eb6ff8dd2e2dc54fb4c01d33be076496c695789fd301b691df95e512ed3c7db0dfc77f1e439e93769960b3874da8561
+

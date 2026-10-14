@@ -1,0 +1,1122 @@
+#!/bin/busybox sh
+# -*- shell-script -*-
+#
+# Sony CONFIDENTIAL
+#
+# Copyright 2009 Sony Corporation.
+#
+# DO NOT COPY AND/OR REDISTRIBUTE WITHOUT PERMISSION.
+#
+# THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+
+# version of this script
+CPUPDATE_VERSION=1.1.0.0
+
+# commands
+cmd_cuiutil=cuiutil
+cmd_nblenv=nblenv
+cmd_nblupdate=nblupdate
+cmd_nblconfig=nblconfig
+cmd_bootprof=bootprof
+
+# settings to mount a bank
+MNT_TYPE="vfat"
+MNT_OPTS="batch_sync,shortname=winnt"
+MNT_DEV_NORMAL0="/dev/mmcblk0p5"
+MNT_DEV_NORMAL1="/dev/mmcblk0p6"
+
+#
+# functions (debug)
+#
+INFO()
+{
+    local MSG=$1
+
+    echo "[INF] $MSG" 1>&2
+}
+
+ERROR()
+{
+    local MSG=$1
+
+    echo "[ERR] $MSG" 1>&2
+}
+
+#
+# functions (file)
+#
+install_file()
+{
+    local SRC=$1
+    local DST=$2
+
+    if [ ! -f "$SRC" ]; then
+        return 1
+    fi
+
+    mkdir -p $(dirname "$DST")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    cp -f "$SRC" "$DST"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+#
+# functions (registry)
+#
+setreg()
+{
+    local NAME=$1
+    local VAR=$2
+
+    if [ -z "$NAME" ]; then
+        return 1
+    fi
+
+    if [ -z "$VAR" ]; then
+        return 1
+    fi
+
+    "$cmd_nblenv" set "$NAME" "$VAR"
+}
+
+getreg()
+{
+    local VAR
+    local NAME=$1
+
+    if [ -z "$NAME" ]; then
+        return 1
+    fi
+
+    VAR=$("$cmd_nblenv" get "$NAME" | sed -n "s/^$NAME=\(.*\)\$/\1/p")
+    if [ -z "$VAR" ]; then
+        return 1
+    fi
+
+    echo "$VAR"
+}
+
+#
+# functions (version)
+#
+cut_version()
+{
+    local R
+    local NUM
+    local VERSION=$1
+    local FIELD=$2
+
+    R="\([[:digit:]]\{1,3\}\)"
+
+    NUM=$(echo "$VERSION" | sed -n "s/^$R\.$R\.$R\.$R\$/\\$FIELD/p")
+    if [ -z "$NUM" ]; then
+        return 1
+    fi
+
+    echo "$NUM" | grep -q "^0[[:digit:]]\{1,2\}\$"
+    if [ $? -eq 0 ]; then
+        return 1
+    fi
+
+    if [ "$NUM" -gt 255 ]; then
+        return 1
+    fi
+
+    echo "$NUM"
+}
+
+version_str2int()
+{
+    local i
+    local NUM
+    local INTVER=0
+    local VERSION=$1
+
+    # Note that CE Linux's busybox is compiled with
+    # CONFIG_ASH_MATH_SUPPORT_64=y, so we can handle 32bit length
+    # integer form version appropriately.
+
+    for i in 1 2 3 4; do
+        NUM=$(cut_version "$VERSION" $i)
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        INTVER=$((($INTVER * 256) | $NUM))
+    done
+
+    echo "$INTVER"
+}
+
+is_valid_version()
+{
+    local i
+    local NUM
+    local VERSION=$1
+
+    for i in 1 2 3 4; do
+        NUM=$(cut_version "$VERSION" $i)
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    done
+}
+
+cmp_version_gt()
+{
+    local INTVER1
+    local INTVER2
+    local VERSION1=$1
+    local VERSION2=$2
+
+    INTVER1=$(version_str2int "$VERSION1")
+    INTVER2=$(version_str2int "$VERSION2")
+
+    [ $(( $INTVER1 > $INTVER2 )) -eq 1 ]
+    return $?
+}
+
+get_version_name()
+{
+    local SUFFIX
+    local BANK_NAME=$1
+    local COMPONENT=$2
+
+    case "$BANK_NAME" in
+        normal0  ) SUFFIX=NORMAL0;;
+        normal1  ) SUFFIX=NORMAL1;;
+        recovery ) SUFFIX=RECOVERY;;
+        *        ) return 1;;
+    esac
+
+    echo "${COMPONENT}_VERSION_${SUFFIX}"
+}
+
+get_version_from_reg()
+{
+    local NAME
+    local VERSION
+    local BANK_NAME=$1
+    local COMPONENT=$2
+
+    NAME=$(get_version_name "$BANK_NAME" "$COMPONENT")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    VERSION=$(getreg "$NAME")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    echo "$VERSION"
+}
+
+set_version_to_reg()
+{
+    local NAME
+    local BANK_NAME=$1
+    local COMPONENT=$2
+    local VERSION=$3
+
+    NAME=$(get_version_name "$BANK_NAME" "$COMPONENT")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    setreg "$NAME" "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+get_nbl_version_name()
+{
+    local SUFFIX
+    local BANK_NAME=$1
+
+    case "$BANK_NAME" in
+        normal0  ) SUFFIX=NORMAL;;
+        normal1  ) SUFFIX=NORMAL;;
+        recovery ) SUFFIX=RECOVERY;;
+        *        ) return 1;;
+    esac
+
+    echo "NBL_VERSION_${SUFFIX}"
+}
+
+get_nbl_version_from_reg()
+{
+    local NAME
+    local VERSION
+    local BANK_NAME=$1
+
+    NAME=$(get_nbl_version_name "$BANK_NAME")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    VERSION=$(getreg "$NAME")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    echo "$VERSION"
+}
+
+set_nbl_version_to_reg()
+{
+    local NAME
+    local BANK_NAME=$1
+    local VERSION=$2
+
+    NAME=$(get_nbl_version_name "$BANK_NAME")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    setreg "$NAME" "$VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+#
+# functions (bank)
+#
+is_valid_bank_name()
+{
+    local BANK_NAME=$1
+
+    case "$BANK_NAME" in
+        normal0  ) return 0;;
+        normal1  ) return 0;;
+        recovery ) return 0;;
+        *        ) return 1;;
+    esac
+}
+
+is_valid_normal_bank_name()
+{
+    local BANK_NAME=$1
+
+    case "$BANK_NAME" in
+        normal0 ) return 0;;
+        normal1 ) return 0;;
+        *       ) return 1;;
+    esac
+}
+
+get_active_bank()
+{
+    local BOOTNAME
+
+    BOOTNAME=$("$cmd_bootprof" bootname | \
+               sed -n 's/^Normal Profile: \(.*\)$/\1/p')
+
+    case "$BOOTNAME" in
+        Linux-normal0 ) echo normal0;;
+        Linux-normal1 ) echo normal1;;
+        *             ) return 1;;
+    esac
+}
+
+get_inactive_bank()
+{
+    case "$(get_active_bank)" in
+        normal0 ) echo normal1;;
+        normal1 ) echo normal0;;
+        *       ) return 1;;
+    esac
+}
+
+set_active_bank()
+{
+    local BOOTNAME
+    local BANK_NAME=$1
+
+    case "$BANK_NAME" in
+        normal0 ) BOOTNAME=Linux-normal0;;
+        normal1 ) BOOTNAME=Linux-normal1;;
+        *       ) return 1;;
+    esac
+
+    "$cmd_bootprof" bootname "$BOOTNAME"
+}
+
+get_boot_bank()
+{
+    local KSEL
+
+    KSEL=$("$cmd_nblconfig" -show | \
+           sed -n 's/^[[:space:]]*kernel select: \(.*\)$/\1/p')
+
+    case "$KSEL" in
+        Normal   ) get_active_bank;;
+        Recovery ) echo recovery;;
+        *        ) return 1;;
+    esac
+}
+
+mount_bank()
+{
+    local MNT_DEV
+    local BANK_NAME=$1
+    local MNT_DIRNAME=$2
+
+    case "$BANK_NAME" in
+        normal0  ) MNT_DEV=$MNT_DEV_NORMAL0;;
+        normal1  ) MNT_DEV=$MNT_DEV_NORMAL1;;
+        *        ) return 1;;
+    esac
+
+    mount -t "$MNT_TYPE" -o "$MNT_OPTS" "$MNT_DEV" "$MNT_DIRNAME"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    MOUNTED_BANK_DEVICE=$MNT_DEV
+}
+
+umount_bank()
+{
+    if [ -z "$MOUNTED_BANK_DEVICE" ]; then
+        return 0
+    fi
+
+    umount "$MOUNTED_BANK_DEVICE"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    MOUNTED_BANK_DEVICE=""
+}
+
+#
+# functions (status)
+#
+get_update_status()
+{
+    getreg CPUPDATE_STATUS
+}
+
+set_update_status_updating()
+{
+    local PHASE=$1
+
+    setreg CPUPDATE_STATUS "updating:$PHASE"
+}
+
+set_update_status_failed()
+{
+    local STATUS
+    local PHASE
+
+    STATUS=$(get_update_status)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    PHASE=$(echo "$STATUS" | sed -n 's/^updating:\(.*\)$/\1/p')
+    if [ -z "$PHASE" ]; then
+        return 1
+    fi
+
+    ERROR "Failed to update at '$PHASE' phase."
+
+    setreg CPUPDATE_STATUS "failed:$PHASE"
+}
+
+set_update_status_success()
+{
+    INFO "CP firmware is updated successfully."
+
+    setreg CPUPDATE_STATUS "success:OK"
+}
+
+#
+# functions (update)
+#
+do_update()
+{
+    local filename
+    local MKTEMP_TEMPLATE
+    local EXTRACT_DIRNAME
+    local MNT_DIRNAME
+    local CUIUTIL_RET
+    local TAR_RET
+    local PROFILE_FILENAME
+    local BANK_NAME=$1
+    local KEY_FILENAME=$2
+    local WORK_DIRNAME=$3
+    local CUI_FILENAME=$4
+    local IGNORE_VERSION=$5
+
+    ################################################################
+    # 1. prepare to update
+    ################################################################
+
+    set_update_status_updating "preparation"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # export some variables for PRE_SCRIPT and POST_SCRIPT.
+    export BANK_NAME
+    export WORK_DIRNAME
+    export EXTRACT_DIRNAME
+    export IGNORE_VERSION
+
+    # Note that the filename created by mktemp in "srel" environment
+    # consists of lower alphabets (a-z) and numbers (0-9). So the
+    # filenames created below are treated as a short filename on VFAT
+    # filesystem mounted with "shortname=winnt".
+
+    # create temporary files and directories
+    MKTEMP_TEMPLATE="$WORK_DIRNAME/XXXXXXXX"
+
+    EXTRACT_DIRNAME=$(mktemp -d "$MKTEMP_TEMPLATE")
+    if [ ! -d "$EXTRACT_DIRNAME" ]; then
+        return 1
+    fi
+
+    MNT_DIRNAME=$(mktemp -d "$MKTEMP_TEMPLATE")
+    if [ ! -d "$MNT_DIRNAME" ]; then
+        return 1
+    fi
+
+    CUIUTIL_RET=$(mktemp "$MKTEMP_TEMPLATE")
+    if [ ! -f "$CUIUTIL_RET" ]; then
+        return 1
+    fi
+
+    TAR_RET=$(mktemp "$MKTEMP_TEMPLATE")
+    if [ ! -f "$TAR_RET" ]; then
+        return 1
+    fi
+
+    ################################################################
+    # 2. extract files from CUI
+    ################################################################
+
+    set_update_status_updating "extract"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    (
+        "$cmd_cuiutil" decrypt -k "$KEY_FILENAME" -i "$CUI_FILENAME"
+        echo $? > "$CUIUTIL_RET"
+    ) | (
+        tar -xz -C "$EXTRACT_DIRNAME"
+        echo $? > "$TAR_RET"
+    )
+
+    if [ "$(cat $CUIUTIL_RET)" != "0" ]; then
+        return 1
+    fi
+
+    if [ "$(cat $TAR_RET)" != "0" ]; then
+        return 1
+    fi
+
+     # include spec file
+    if [ ! -f "$EXTRACT_DIRNAME/spec" ]; then
+        return 1
+    fi
+
+    . "$EXTRACT_DIRNAME/spec"
+
+    ################################################################
+    # 3. execute PRE_SCRIPT
+    ################################################################
+
+    set_update_status_updating "pre_script"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    if [ -n "$PRE_SCRIPT" ]; then
+
+        INFO "executing pre_script '$PRE_SCRIPT' ..."
+
+        if [ ! -f "$EXTRACT_DIRNAME/$PRE_SCRIPT" ]; then
+            return 1
+        fi
+
+        if [ ! -x "$EXTRACT_DIRNAME/$PRE_SCRIPT" ]; then
+            return 1
+        fi
+
+        "$EXTRACT_DIRNAME/$PRE_SCRIPT"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    ################################################################
+    # 4. version check
+    ################################################################
+
+    set_update_status_updating "version_check"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # check versions written in spec file
+    is_valid_version "$CP_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$NBL_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$KERNEL_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    is_valid_version "$USERLAND_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # get and check versions stored in registry
+    CP_VERSION_IN_REG=$(get_version_from_reg "$BANK_NAME" CP)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    NBL_VERSION_IN_REG=$(get_nbl_version_from_reg "$BANK_NAME")
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    KERNEL_VERSION_IN_REG=$(get_version_from_reg "$BANK_NAME" KERNEL)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    USERLAND_VERSION_IN_REG=$(get_version_from_reg "$BANK_NAME" USERLAND)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # check CP version
+    CP_VERSION_NORMAL0=$(get_version_from_reg "normal0" CP)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    CP_VERSION_NORMAL1=$(get_version_from_reg "normal1" CP)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    if [ "$IGNORE_VERSION" -eq 0 ]; then
+        if cmp_version_gt "$CP_VERSION_NORMAL0" "$CP_VERSION" ||
+           cmp_version_gt "$CP_VERSION_NORMAL1" "$CP_VERSION" ; then
+
+            INFO "The newer CP firmware is already installed."
+            INFO " to install : $CP_VERSION"
+            INFO "  installed : $CP_VERSION_NORMAL0/$CP_VERSION_NORMAL1"
+
+            return 1
+        fi
+    fi
+
+    INFO "updating CP firmware ..."
+    INFO "  bank    : $BANK_NAME"
+    INFO "  version : $CP_VERSION_IN_REG -> $CP_VERSION"
+
+    ################################################################
+    # 5. update NBL
+    ################################################################
+
+    set_update_status_updating "NBL"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    if [ "$IGNORE_VERSION" -ne 0 ] || \
+        cmp_version_gt "$NBL_VERSION" "$NBL_VERSION_IN_REG"; then
+
+        INFO "updating NBL ..."
+        INFO "  version : $NBL_VERSION_IN_REG -> $NBL_VERSION"
+
+        if [ ! -f "$EXTRACT_DIRNAME/$NBL_IMAGE" ]; then
+            return 1
+        fi
+
+        "$cmd_nblupdate" -n "$EXTRACT_DIRNAME/$NBL_IMAGE"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        set_nbl_version_to_reg "$BANK_NAME" "$NBL_VERSION"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    ################################################################
+    # 6. update kernel
+    ################################################################
+
+    set_update_status_updating "kernel"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # Always update kernel
+    if true; then
+
+        INFO "updating kernel ..."
+        INFO "  version : $KERNEL_VERSION_IN_REG -> $KERNEL_VERSION"
+
+        # update kernel image
+        mount_bank "$BANK_NAME" "$MNT_DIRNAME"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        install_file \
+            "$EXTRACT_DIRNAME/$KERNEL_IMAGE" "$MNT_DIRNAME/$KERNEL_IMAGE"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        umount_bank
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        # update bootprof
+        case "$BANK_NAME" in
+            normal0 ) PROFILE_FILENAME=$BOOTPROF_NORMAL0;;
+            normal1 ) PROFILE_FILENAME=$BOOTPROF_NORMAL1;;
+            *       ) return 1;;
+        esac
+
+        if [ ! -f "$EXTRACT_DIRNAME/$PROFILE_FILENAME" ]; then
+            return 1
+        fi
+
+        "$cmd_bootprof" load -u "$EXTRACT_DIRNAME/$PROFILE_FILENAME"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        # set version
+        set_version_to_reg "$BANK_NAME" KERNEL "$KERNEL_VERSION"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    ################################################################
+    # 7. update userland
+    ################################################################
+
+    set_update_status_updating "userland"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # Always update userland
+    if true; then
+
+        INFO "updating userland ..."
+        INFO "  version : $USERLAND_VERSION_IN_REG -> $USERLAND_VERSION"
+
+        # update userland images
+        mount_bank "$BANK_NAME" "$MNT_DIRNAME"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        for filename in $USERLAND_IMAGES; do
+            install_file "$EXTRACT_DIRNAME/$filename" "$MNT_DIRNAME/$filename"
+            if [ $? -ne 0 ]; then
+                return 1
+            fi
+        done
+
+        umount_bank
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+
+        # set version
+        set_version_to_reg "$BANK_NAME" USERLAND "$USERLAND_VERSION"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    ################################################################
+    # 8. execute POST_SCRIPT
+    ################################################################
+
+    set_update_status_updating "post_script"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    if [ -n "$POST_SCRIPT" ]; then
+
+        INFO "executing post_script '$POST_SCRIPT' ..."
+
+        if [ ! -f "$EXTRACT_DIRNAME/$POST_SCRIPT" ]; then
+            return 1
+        fi
+
+        if [ ! -x "$EXTRACT_DIRNAME/$POST_SCRIPT" ]; then
+            return 1
+        fi
+
+        "$EXTRACT_DIRNAME/$POST_SCRIPT"
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    ################################################################
+    # 9. complete the update
+    ################################################################
+
+    set_update_status_updating "completion"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    set_version_to_reg "$BANK_NAME" CP "$CP_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+}
+
+update()
+{
+    local UPDATE_RET
+    local BANK_NAME=$1
+    local KEY_FILENAME=$2
+    local WORK_DIRNAME=$3
+    local CUI_FILENAME=$4
+    local IGNORE_VERSION=$5
+
+    # do update
+    do_update "$BANK_NAME" "$KEY_FILENAME" \
+        "$WORK_DIRNAME" "$CUI_FILENAME" "$IGNORE_VERSION"
+    UPDATE_RET=$?
+
+    if [ $UPDATE_RET -eq 0 ]; then
+        set_update_status_success
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    else
+        set_update_status_failed
+        if [ $? -ne 0 ]; then
+            return 1
+        fi
+    fi
+
+    # unmount the bank if it's been mounted yet.
+    umount_bank
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    # cleanup the working directory
+    (cd "$WORK_DIRNAME" && ls -A | xargs rm -rf)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    return $UPDATE_RET
+}
+
+#
+# functions (commands)
+#
+cmd_get_version()
+{
+    is_valid_version "$CPUPDATE_VERSION"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    echo "$CPUPDATE_VERSION"
+}
+
+cmd_get_board_id()
+{
+    local REVISION
+    local BOARD_ID
+
+    REVISION=$(grep '^Revision[[:space:]]*:' /proc/cpuinfo)
+    if [ -z "$REVISION" ]; then
+        return 1
+    fi
+
+    BOARD_ID=$(echo "$REVISION" | sed -n 's/^.*\([[:xdigit:]]\)$/\1/p')
+    if [ -z "$BOARD_ID" ]; then
+        return 1
+    fi
+
+    echo "0x${BOARD_ID}"
+}
+
+cmd_get_cp_firmware_version()
+{
+    local BANK_NAME
+
+    BANK_NAME=$(get_active_bank)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -b )
+                [ $# -le 1 ] && return 1
+                BANK_NAME=$2; shift
+                ;;
+            * )
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    is_valid_bank_name "$BANK_NAME"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    get_version_from_reg "$BANK_NAME" CP
+}
+
+cmd_get_boot_bank()
+{
+    get_boot_bank
+}
+
+cmd_get_active_bank()
+{
+    get_active_bank
+}
+
+cmd_get_inactive_bank()
+{
+    get_inactive_bank
+}
+
+cmd_switch_active_bank()
+{
+    local BANK_NAME
+
+    BANK_NAME=$(get_inactive_bank)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -b )
+                [ $# -le 1 ] && return 1
+                BANK_NAME=$2; shift
+                ;;
+            * )
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    is_valid_normal_bank_name "$BANK_NAME"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    set_active_bank "$BANK_NAME"
+}
+
+cmd_update()
+{
+    local BANK_NAME
+    local KEY_FILENAME
+    local WORK_DIRNAME
+    local CUI_FILENAME
+    local IGNORE_VERSION
+    local BACKGROUND
+
+    BANK_NAME=$(get_inactive_bank)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    IGNORE_VERSION=0
+    BACKGROUND=0
+
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -b )
+                [ $# -le 1 ] && return 1
+                BANK_NAME=$2; shift
+                ;;
+            -k )
+                [ $# -le 1 ] && return 1
+                KEY_FILENAME=$2; shift
+                ;;
+            -w )
+                [ $# -le 1 ] && return 1
+                WORK_DIRNAME=$2; shift
+                ;;
+            -i )
+                [ $# -le 1 ] && return 1
+                CUI_FILENAME=$2; shift
+                ;;
+            --ignore-version )
+                IGNORE_VERSION=1
+                ;;
+            --background )
+                BACKGROUND=1
+                ;;
+            * )
+                return 1
+                ;;
+        esac
+        shift
+    done
+
+    is_valid_normal_bank_name "$BANK_NAME"
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+
+    if [ ! -f "$KEY_FILENAME" ]; then
+        return 1
+    fi
+
+    if [ ! -d "$WORK_DIRNAME" ]; then
+        return 1
+    fi
+
+    if [ ! -f "$CUI_FILENAME" ]; then
+        return 1
+    fi
+
+    if [ "$BACKGROUND" -eq 0 ];then
+        update "$BANK_NAME" "$KEY_FILENAME" \
+            "$WORK_DIRNAME" "$CUI_FILENAME" "$IGNORE_VERSION"
+        if [ $? -ne 0 ]; then
+            return 2
+        fi
+    else
+        set_update_status_updating "preparation"
+        update "$BANK_NAME" "$KEY_FILENAME" \
+            "$WORK_DIRNAME" "$CUI_FILENAME" "$IGNORE_VERSION" &
+    fi
+}
+
+cmd_get_last_update_status()
+{
+    get_update_status
+}
+
+#
+# main
+#
+if [ $# -eq 0 ]; then
+    echo "usage: cpupdate <command> [arg...]"
+    exit 1
+fi
+
+# redirect stderr if CPUPDATE_LOG is set
+if [ -n "$CPUPDATE_LOG" ]; then
+    exec 2>> "$CPUPDATE_LOG"
+fi
+
+# parse arguments
+COMMAND=$1
+shift
+
+case "$COMMAND" in
+    "get-version" )
+        cmd_get_version "$@"
+        RET=$?;;
+    "get-board-id" )
+        cmd_get_board_id "$@";
+        RET=$?;;
+    "get-cp-firmware-version" )
+        cmd_get_cp_firmware_version "$@"
+        RET=$?;;
+    "get-boot-bank" )
+        cmd_get_boot_bank "$@"
+        RET=$?;;
+    "get-active-bank" )
+        cmd_get_active_bank "$@"
+        RET=$?;;
+    "get-inactive-bank" )
+        cmd_get_inactive_bank "$@"
+        RET=$?;;
+    "switch-active-bank" )
+        cmd_switch_active_bank "$@"
+        RET=$?;;
+    "update" )
+        cmd_update "$@"
+        RET=$?;;
+    "get-last-update-status" )
+        cmd_get_last_update_status "$@"
+        RET=$?;;
+    * )
+        ERROR "unknown command : $COMMAND"
+        RET=1;;
+esac
+
+if [ $RET -ne 0 ]; then
+    ERROR "exit with $RET"
+fi
+
+exit $RET

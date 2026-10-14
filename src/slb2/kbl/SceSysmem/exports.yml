@@ -1,0 +1,137 @@
+SceSysmem:
+  attributes: 7
+  version:
+    major: 1
+    minor: 1
+  main:
+    start: module_start
+  libraries:
+    SceSysmemForTZS:
+      syscall: false
+      version: 4
+      nid: 0x08680060
+      functions:
+        - SceSysmemForTZS_0028E26C: 0x0028E26C
+        - SceSysmemForTZS_038EAEEE: 0x038EAEEE
+        - SceSysmemForTZS_1DEADF6C: 0x1DEADF6C
+        - SceSysmemForTZS_29DE887D: 0x29DE887D
+        - SceSysmemForTZS_2F18E288: 0x2F18E288
+        - SceSysmemForTZS_31273DC7: 0x31273DC7
+        - SceSysmemForTZS_402EB970: 0x402EB970
+        - SceSysmemForTZS_42AD34AB: 0x42AD34AB
+        - SceSysmemForTZS_42FB5B12: 0x42FB5B12
+        - SceSysmemForTZS_473871D8: 0x473871D8
+        - SceSysmemForTZS_56A16D84: 0x56A16D84
+        - SceSysmemForTZS_624454BC: 0x624454BC
+        - SceSysmemForTZS_658EACE3: 0x658EACE3
+        - SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
+        - SceSysmemForTZS_9D43E416: 0x9D43E416
+        - SceSysmemForTZS_E1DEDFF4: 0xE1DEDFF4
+        - SceSysmemForTZS_EA712806: 0xEA712806
+        - SceSysmemForTZS_F459D09D: 0xF459D09D
+    SceDipswForTZS:
+      syscall: false
+      version: 1
+      nid: 0x9DBF584C
+      functions:
+        - SceDipswForTZS_ksceKernelCheckDipsw: 0xA98FC2FD
+    SceUartForTZS:
+      syscall: false
+      version: 1
+      nid: 0xA1D740D7
+      functions:
+        - SceUartForTZS_3AFD5E71: 0x3AFD5E71
+    SceDebugForTZS:
+      syscall: false
+      version: 1
+      nid: 0x028FFADB
+      functions:
+        - SceDebugForTZS_0D799DAE: 0x0D799DAE
+        - SceDebugForTZS_1655E0E3: 0x1655E0E3
+        - SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
+        - SceDebugForTZS_563B623D: 0x563B623D
+        - SceDebugForTZS_618F89E6: 0x618F89E6
+        - SceDebugForTZS_C70CBB58: 0xC70CBB58
+        - SceDebugForTZS_D26EB4BB: 0xD26EB4BB
+        - SceDebugForTZS_F851BA4F: 0xF851BA4F
+    SceSysclibForTZS:
+      syscall: false
+      version: 1
+      nid: 0xC839BB78
+      functions:
+        - SceSysclibForTZS_361850BB: 0x361850BB
+        - SceSysclibForTZS_956DB750: 0x956DB750
+        - SceSysclibForTZS_BE3AF2EE: 0xBE3AF2EE
+        - SceSysclibForTZS_E5457B97: 0xE5457B97
+      variables:
+        - SceSysclibForTZS_BA505B15: 0xBA505B15
+    SceQafMgrForTZS:
+      syscall: false
+      version: 1
+      nid: 0x637069DD
+      functions:
+        - SceQafMgrForTZS_54D22D74: 0x54D22D74
+    ScePmMgrForTZS:
+      syscall: false
+      version: 1
+      nid: 0x27F1AFD8
+      functions:
+        - ScePmMgrForTZS_CF554E69: 0xCF554E69
+    SceSblAIMgrForTZS:
+      syscall: false
+      version: 1
+      nid: 0x60D19047
+      functions:
+        - SceSblAIMgrForTZS_536B38F4: 0x536B38F4
+    SceSysrootForTZS:
+      syscall: false
+      version: 1
+      nid: 0xFEFF641D
+      functions:
+        - SceSysrootForTZS_0567B4B9: 0x0567B4B9
+        - SceSysrootForTZS_1C96096F: 0x1C96096F
+        - SceSysrootForTZS_2460ADFA: 0x2460ADFA
+        - SceSysrootForTZS_29C1049E: 0x29C1049E
+        - SceSysrootForTZS_2F5FD9A8: 0x2F5FD9A8
+        - SceSysrootForTZS_317E7556: 0x317E7556
+        - SceSysrootForTZS_32546BDB: 0x32546BDB
+        - SceSysrootForTZS_45EEB2E0: 0x45EEB2E0
+        - SceSysrootForTZS_7DA87A7F: 0x7DA87A7F
+        - SceSysrootForTZS_8E871C6D: 0x8E871C6D
+        - SceSysrootForTZS_A8B7DAF9: 0xA8B7DAF9
+        - SceSysrootForTZS_C9DD8EB3: 0xC9DD8EB3
+        - SceSysrootForTZS_CC36643A: 0xCC36643A
+        - SceSysrootForTZS_D4E6D8E8: 0xD4E6D8E8
+        - SceSysrootForTZS_D653194A: 0xD653194A
+        - SceSysrootForTZS_D6FBF445: 0xD6FBF445
+        - SceSysrootForTZS_DB3DAB76: 0xDB3DAB76
+        - SceSysrootForTZS_EA572BD9: 0xEA572BD9
+    SceCpuForTZS:
+      syscall: false
+      version: 1
+      nid: 0xC516B23E
+      functions:
+        - SceCpuForTZS_0A15B41C: 0x0A15B41C
+        - SceCpuForTZS_17A88E69: 0x17A88E69
+        - SceCpuForTZS_190D96D5: 0x190D96D5
+        - SceCpuForTZS_2B6403F8: 0x2B6403F8
+        - SceCpuForTZS_31E78A4B: 0x31E78A4B
+        - SceCpuForTZS_44C423D3: 0x44C423D3
+        - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
+        - SceCpuForTZS_596784E9: 0x596784E9
+        - SceCpuForTZS_71FD9AB5: 0x71FD9AB5
+        - SceCpuForTZS_7548CBCF: 0x7548CBCF
+        - SceCpuForTZS_75D87321: 0x75D87321
+        - SceCpuForTZS_7A5373EB: 0x7A5373EB
+        - SceCpuForTZS_7CCE9480: 0x7CCE9480
+        - SceCpuForTZS_9E4C0D0D: 0x9E4C0D0D
+        - SceCpuForTZS_A5965CBF: 0xA5965CBF
+        - SceCpuForTZS_ACF209F3: 0xACF209F3
+        - SceCpuForTZS_B421FAFD: 0xB421FAFD
+        - SceCpuForTZS_B8F00FBE: 0xB8F00FBE
+        - SceCpuForTZS_C4137AED: 0xC4137AED
+        - SceCpuForTZS_CD98416C: 0xCD98416C
+        - SceCpuForTZS_CDD46655: 0xCDD46655
+        - SceCpuForTZS_D4E7413D: 0xD4E7413D
+        - SceCpuForTZS_D67A4356: 0xD67A4356
+        - SceCpuForTZS_EFD6F289: 0xEFD6F289

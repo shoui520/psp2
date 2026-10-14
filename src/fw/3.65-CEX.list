@@ -109,6 +109,7 @@ os0/us/driver_us
 os0/us/libgpu_es4
 os0/us/libgxm_es4
 os0/us/libkernel
+pd0/app/NPXS10007/eboot
 pup/cui_setupper
 pup/psp2swu
 slb2/kbl/SceDriverTzs
@@ -116,6 +117,9 @@ slb2/kbl/SceExcpmgr
 slb2/kbl/SceKernelBusError
 slb2/kbl/SceKernelIntrMgr
 slb2/kbl/SceSblSmsched
+slb2/kbl/SceSysmem
+slb2/nskbl
+slb2/skbl
 vs0/app/NPXS10000/eboot
 vs0/app/NPXS10001/eboot
 vs0/app/NPXS10001/np_party_app

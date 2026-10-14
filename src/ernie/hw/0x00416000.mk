@@ -1,0 +1,3 @@
+# Board 0x00416000: PDEL-10XX, DEM-3000JEC third revision (IRT-002), supports FW 1.000-3.730, Product Sub Code 0xF, 0x10
+# Firmware versions with an update patch: 0x01000104 0x01000107 0x01000109 0x0100010A 0x0100010B 0x01000306 0x0100060B 0x0100060D
+HW_ID := 0x00416000
