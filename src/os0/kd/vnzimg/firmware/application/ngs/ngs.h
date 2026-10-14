@@ -465,7 +465,7 @@ int32_t ngsPlayerInit(NgsBufferList *inputs, NgsBufferList *outputs, NgsModulePa
 int32_t ngsPlayerProcess(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
 int32_t ngsReverbInit(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
 int32_t ngsReverbProcess(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
-int32_t ngsReverbAuxiliary(void *state, void *buffers, void *scratch);
+int32_t ngsReverbAuxiliary(void *state, void *buffers, uint8_t *scratch);
 int32_t ngsGeneratorInit(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
 int32_t ngsGeneratorProcess(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
 int32_t ngsAt9Init(NgsBufferList *inputs, NgsBufferList *outputs, NgsModuleParams *params);
@@ -494,40 +494,8 @@ extern const int32_t ngsWindow[NGS_WINDOW_SIZE];
 /* where fades start in ngsWindow */
 extern const int32_t ngsFadeStart;
 
-/* SceNgsReverbParams in 8.24 (levels in mB / 2000, percentages / 100), for the engine */
-typedef struct NgsReverbConfig {
-	SceNgsParamsDescriptor desc;
-	int32_t room;
-	int32_t roomHF;
-	int32_t decayTime;
-	int32_t decayHFRatio;
-	int32_t reflections;
-	int32_t reflectionsDelay;	/* less one block, 0 to 0.15 s */
-	int32_t reverb;
-	int32_t reverbDelay;
-	int32_t diffusion;
-	int32_t density;
-	int32_t hfReference;		/* Hz */
-	int32_t earlyReflectionPattern[SCE_NGS_MAX_SYSTEM_CHANNELS];
-	int32_t earlyReflectionScalar;
-	int32_t lfReference;		/* Hz */
-	int32_t roomLF;
-	int32_t dry;
-} NgsReverbConfig;
-
 /* reverb.c */
 void ngsFadeOut(NgsBufferList *inputs);
-
-/* the reverb engine (0x84be00-0x84d430) */
-void ngsReverbRun(uint8_t **inputs, uint8_t **outputs, int32_t channels, uint32_t samples,
-	void *state, void *scratch);					/* 0x84be00 */
-void ngsReverbBypass(uint8_t **inputs, uint8_t **outputs, int32_t channels, uint32_t samples,
-	void *state, int32_t reset);					/* 0x84be14 */
-int32_t ngsReverbEngine(void *state, void *buffers, void *scratch);	/* 0x84be2c */
-void ngsReverbReset(void *state, const NgsReverbConfig *config, int32_t channels,
-	int32_t unused, int32_t full);					/* 0x84ce30 */
-int32_t ngsReverbConfigure(void *state, const NgsReverbConfig *config, int32_t channels,
-	int32_t unused);						/* 0x84d150 */
 
 /* VLIW code (0x8787c0, 0x8788f8): base^exponent and log10, in 8.24 */
 int32_t ngsPower(int32_t base, int32_t exponent);
@@ -570,25 +538,28 @@ uint32_t ngsGeneratorTriangle(int32_t *output, void *settings, uint32_t samples,
 	NgsModuleParams *params);					/* 0x87ebd0 */
 uint32_t ngsGeneratorSaw(int32_t *output, void *settings, uint32_t samples,
 	NgsModuleParams *params);					/* 0x87eef8 */
-int32_t ngsAt9DecoderInit(void *decoder, int32_t channels, uint8_t **work,
-	const uint32_t *config, int32_t flags);				/* 0x8809d8 */
-void ngsAt9DecoderReset(void *decoder);				/* 0x881338 */
+/* the ATRAC9 decoder (at9/at9decoder.c); a call decodes the next frame of the superframe */
+struct At9DecoderState;
+
+int32_t ngsAt9DecoderInit(struct At9DecoderState *decoder, int32_t channels, uint8_t **work,
+	const uint32_t *config, int32_t physical);				/* 0x8809d8 */
+void ngsAt9DecoderReset(struct At9DecoderState *decoder);			/* 0x881338 */
 int32_t ngsAt9ConfigInfo(const uint32_t *config, int32_t *rateIndex, int32_t *channelConfig,
 	uint32_t *superframeBytes, uint32_t *framesPerSuperframe);	/* 0x881558 */
-int32_t ngsAt9SkipSuperframe(void *decoder, const uint8_t *data, uint32_t *used); /* 0x880f00 */
-int32_t ngsAt9DecodeSuperframe(void *decoder, const uint8_t *data, uint32_t *used,
-	int16_t *pcm);							/* 0x881088 */
-int32_t ngsAt9DecodeRange(void *decoder, const uint8_t *data, uint32_t *used, int16_t *pcm,
-	uint32_t skip, uint32_t count);					/* 0x881170 */
-/* two of the decoder's counters, differences of its fields (named when it is written) */
-int32_t ngsAt9DecoderInputLeft(void *decoder);			/* 0x8814e8 */
-int32_t ngsAt9DecoderOutputLeft(void *decoder);			/* 0x881510 */
-int32_t ngsAt9DecoderChannels(void *decoder);			/* 0x881538 */
-int32_t ngsAt9DecoderSamples(void *decoder);			/* 0x881548 */
-int32_t ngsAt9ChannelCount(int32_t channelConfig);		/* 0x8817b0 */
-int32_t ngsAt9Skip(void *decoder, const uint8_t *data, int32_t *used);	/* 0x880b28 */
-int32_t ngsAt9Decode(void *decoder, const uint8_t *data, int32_t *used,
+int32_t ngsAt9Skip(struct At9DecoderState *decoder, const uint8_t *data, int32_t *used); /* 0x880b28 */
+int32_t ngsAt9Decode(struct At9DecoderState *decoder, const uint8_t *data, int32_t *used,
 	int16_t *pcm);							/* 0x880c80 */
+int32_t ngsAt9SkipSuperframe(struct At9DecoderState *decoder, const uint8_t *data, uint32_t *used); /* 0x880f00 */
+int32_t ngsAt9DecodeSuperframe(struct At9DecoderState *decoder, const uint8_t *data, uint32_t *used,
+	int16_t *pcm);							/* 0x881088 */
+int32_t ngsAt9DecodeRange(struct At9DecoderState *decoder, const uint8_t *data, uint32_t *used,
+	int16_t *pcm, uint32_t skip, uint32_t count);			/* 0x881170 */
+/* the bytes and the frames of the superframe still to come */
+int32_t ngsAt9DecoderInputLeft(struct At9DecoderState *decoder);		/* 0x8814e8 */
+int32_t ngsAt9DecoderOutputLeft(struct At9DecoderState *decoder);		/* 0x881510 */
+int32_t ngsAt9DecoderChannels(struct At9DecoderState *decoder);		/* 0x881538 */
+int32_t ngsAt9DecoderSamples(struct At9DecoderState *decoder);			/* 0x881548 */
+int32_t ngsAt9ChannelCount(int32_t channelConfig);			/* 0x8817b0 */
 void ngsDelayRun(void *settings, const int32_t *input, int32_t *output, uint32_t samples,
 	int32_t active);						/* 0x87f1d0 */
 void ngsDelayBypass(void *settings, const int32_t *input, int32_t *output,

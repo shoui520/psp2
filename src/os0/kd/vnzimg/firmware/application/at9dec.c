@@ -113,8 +113,8 @@ static int32_t configBitRate(const uint8_t *config)
 
 static void decoderCounters(At9Ctrl *ctrl, At9Decoder *decoder)
 {
-	ctrl->inputLeft = ngsAt9DecoderInputLeft(decoder);
-	ctrl->outputLeft = ngsAt9DecoderOutputLeft(decoder);
+	ctrl->inputLeft = ngsAt9DecoderInputLeft((struct At9DecoderState *)decoder);
+	ctrl->outputLeft = ngsAt9DecoderOutputLeft((struct At9DecoderState *)decoder);
 }
 
 static void at9InitJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
@@ -145,7 +145,7 @@ static void at9InitJob(uint32_t argument, uint32_t argument2, uint32_t argument3
 		result = ERROR_SAMPLING_RATE;
 		goto out;
 	}
-	result = ngsAt9DecoderInit(decoder, ctrl->info.ch, ctrl->work, &ctrl->info.configData, 1);
+	result = ngsAt9DecoderInit((struct At9DecoderState *)decoder, ctrl->info.ch, ctrl->work, &ctrl->info.configData, 1);
 	if (result < 0)
 		goto out;
 	decoderCounters(ctrl, decoder);
@@ -162,15 +162,15 @@ static void at9DecodeJob(uint32_t argument, uint32_t argument2, uint32_t argumen
 	int32_t result, samples;
 
 	ctrl->pcmSize = 0;
-	result = ngsAt9DecodeSuperframe(decoder, (const uint8_t *)ctrl->pEs, &ctrl->esSize,
+	result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder, (const uint8_t *)ctrl->pEs, &ctrl->esSize,
 		(int16_t *)ctrl->pPcm);
 	if (result < 0)
 		goto out;
-	result = ngsAt9DecoderSamples(decoder);
+	result = ngsAt9DecoderSamples((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	samples = result;
-	result = ngsAt9DecoderChannels(decoder);
+	result = ngsAt9DecoderChannels((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	ctrl->pcmSize = samples * result * 2;
@@ -192,16 +192,16 @@ static void at9DecodeManyJob(uint32_t argument, uint32_t count, uint32_t argumen
 
 	ctrl->esSize = 0;
 	ctrl->pcmSize = 0;
-	result = ngsAt9DecoderSamples(decoder);
+	result = ngsAt9DecoderSamples((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	samples = result;
-	result = ngsAt9DecoderChannels(decoder);
+	result = ngsAt9DecoderChannels((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	channels = result;
 	for (i = 0; i < (int32_t)count; i++) {
-		result = ngsAt9DecodeSuperframe(decoder, es, &used, (int16_t *)pcm);
+		result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder, es, &used, (int16_t *)pcm);
 		if (result < 0)
 			goto out;
 		bytes = samples * channels * 2;
@@ -228,11 +228,11 @@ static void at9DecodeRangeJob(uint32_t argument, uint32_t skip, uint32_t count,
 
 	ctrl->esSize = 0;
 	ctrl->pcmSize = 0;
-	result = ngsAt9DecoderSamples(decoder);
+	result = ngsAt9DecoderSamples((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	samples = result;
-	result = ngsAt9DecoderChannels(decoder);
+	result = ngsAt9DecoderChannels((struct At9DecoderState *)decoder);
 	if (result < 0)
 		goto out;
 	channels = result;
@@ -240,7 +240,7 @@ static void at9DecodeRangeJob(uint32_t argument, uint32_t skip, uint32_t count,
 	while (skip + count != 0) {
 		if (skip >= samples * 2) {
 			/* the original does not check this result */
-			result = ngsAt9SkipSuperframe(decoder, es, &used);
+			result = ngsAt9SkipSuperframe((struct At9DecoderState *)decoder, es, &used);
 			taken = 0;
 			skip -= samples;
 		} else {
@@ -248,7 +248,7 @@ static void at9DecodeRangeJob(uint32_t argument, uint32_t skip, uint32_t count,
 			taken = samples - skipped;
 			if (count < taken)
 				taken = count;
-			result = ngsAt9DecodeRange(decoder, es, &used, (int16_t *)pcm, skipped, taken);
+			result = ngsAt9DecodeRange((struct At9DecoderState *)decoder, es, &used, (int16_t *)pcm, skipped, taken);
 			if (result < 0)
 				goto out;
 			count -= taken;
@@ -270,7 +270,7 @@ static void at9ResetJob(uint32_t argument, uint32_t argument2, uint32_t argument
 {
 	At9Ctrl *ctrl = (At9Ctrl *)argument;
 
-	ngsAt9DecoderReset(ctrl->decoder);
+	ngsAt9DecoderReset((struct At9DecoderState *)ctrl->decoder);
 	decoderCounters(ctrl, ctrl->decoder);
 	ctrl->result = 0;
 }

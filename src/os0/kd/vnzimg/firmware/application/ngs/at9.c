@@ -187,10 +187,10 @@ static int32_t at9Open(NgsAt9Settings *settings)
 	int32_t rateIndex = 7, channelConfig = 0;
 	uint32_t superframeBytes = 0, frames = 0;
 
-	if (ngsAt9DecoderInit(settings->decoder, settings->user.nChannels, work,
+	if (ngsAt9DecoderInit((struct At9DecoderState *)settings->decoder, settings->user.nChannels, work,
 		&settings->user.configData, 0) < 0)
 		return -1;
-	ngsAt9DecoderReset(settings->decoder);
+	ngsAt9DecoderReset((struct At9DecoderState *)settings->decoder);
 	ngsAt9ConfigInfo(&settings->user.configData, &rateIndex, &channelConfig, &superframeBytes,
 		&frames);
 	if (rateIndex == 7)
@@ -490,13 +490,13 @@ static int32_t at9DecodeFrame(int16_t *destination, NgsAt9Settings *settings,
 
 	if (isRiff((const char *)superframe)) {
 		at9SkipHeader(settings, params);
-		ngsAt9DecoderReset(settings->decoder);
+		ngsAt9DecoderReset((struct At9DecoderState *)settings->decoder);
 		return 0;
 	}
 	if (skip) {
-		result = ngsAt9Skip(settings->decoder, superframe, &used);
+		result = ngsAt9Skip((struct At9DecoderState *)settings->decoder, superframe, &used);
 	} else {
-		result = ngsAt9Decode(settings->decoder, superframe, &used, decoded);
+		result = ngsAt9Decode((struct At9DecoderState *)settings->decoder, superframe, &used, decoded);
 		memcpy(destination, decoded + channels * start,
 			(settings->frameSamples - start - end) * channels * 2);
 	}

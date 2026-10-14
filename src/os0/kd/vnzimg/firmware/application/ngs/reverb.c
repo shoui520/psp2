@@ -1,9 +1,9 @@
 /*
- * The reverb (SCE_NGS_REVERB_ID): an I3DL2 reverb run by the engine in
+ * The reverb (SCE_NGS_REVERB_ID): an I3DL2-style reverb run by the engine in
  * reverbengine.c. After the voice is keyed off, or its input ends, the
  * module keeps running on silence until the tail has died away.
  */
-#include "ngs.h"
+#include "reverb.h"
 
 #define SCE_NGS_REVERB_PARAMS_STRUCT_ID		SCE_NGS_MAKE_PARAMS_ID(SCE_NGS_REVERB_ID, 1, 1)
 #define SCE_NGS_REVERB_PARAMS_STRUCT_ID_V2	SCE_NGS_MAKE_PARAMS_ID(SCE_NGS_REVERB_ID, 1, 2)
@@ -36,14 +36,6 @@ typedef struct NgsReverbUserParams {
 	float fRoomLF;
 	float fDryMB;
 } NgsReverbUserParams;
-
-typedef struct NgsReverbSettings {
-	uint32_t granularity;
-	int32_t tail;			/* blocks run since the voice was keyed off */
-	int32_t maxTail;		/* blocks for the reverb to die away */
-	int32_t bypassed;
-	uint32_t engine[];		/* the engine's state */
-} NgsReverbSettings;
 
 /* the last 64 samples of each channel faded out (the delay's too) */
 void ngsFadeOut(NgsBufferList *inputs)
@@ -97,11 +89,11 @@ int32_t ngsReverbProcess(NgsBufferList *inputs, NgsBufferList *outputs, NgsModul
 	input = inputs->buffers[0];
 	output = outputs->buffers[0];
 	if (mode & REVERB_BYPASS)
-		ngsReverbBypass(input->channelData, output->channelData, input->channels,
-			input->samples, settings->engine, reset);
+		ngsReverbBypass((int32_t **)input->channelData, (int32_t **)output->channelData,
+			input->channels, input->samples, &settings->engine, reset);
 	else
-		ngsReverbRun(input->channelData, output->channelData, input->channels,
-			input->samples, settings->engine, params->scratch);
+		ngsReverbRun((int32_t **)input->channelData, (int32_t **)output->channelData,
+			input->channels, input->samples, &settings->engine);
 
 	outputs->buffers[0]->flags = NGS_BUFFER_VALID;
 	for (channel = 0; channel < outputs->buffers[0]->channels; channel++)
@@ -119,9 +111,9 @@ int32_t ngsReverbProcess(NgsBufferList *inputs, NgsBufferList *outputs, NgsModul
 }
 
 /* RPC 327 gives the ARM this entry */
-int32_t ngsReverbAuxiliary(void *state, void *buffers, void *scratch)
+int32_t ngsReverbAuxiliary(void *state, void *buffers, uint8_t *scratch)
 {
-	ngsReverbEngine(state, buffers, scratch);
+	ngsReverbEngine((NgsReverbSettings *)state, buffers, scratch);
 	return 0;
 }
 
@@ -175,8 +167,8 @@ int32_t ngsReverbInit(NgsBufferList *inputs, NgsBufferList *outputs, NgsModulePa
 	if (params->voiceState & SCE_NGS_VOICE_STATE_ACTIVE) {
 		settings->bypassed = 0;
 		settings->tail = 0;
-		ngsReverbReset(settings->engine, &config,
+		ngsReverbReset(&settings->engine, &config,
 			inputs->buffers[0]->channels == 1 ? 1 : 2, 0, 1);
 	}
-	return ngsReverbConfigure(settings->engine, &config, channels, 0);
+	return ngsReverbConfigure(&settings->engine, &config, channels, NULL);
 }

@@ -14,13 +14,13 @@ void *memset(void *destination, int value, size_t size)
 	return destination;
 }
 
-/* 0x924f3a */
+/* 0x924f3c */
 int abs(int value)
 {
 	return value < 0 ? -value : value;
 }
 
-/* 0x924f46 */
+/* 0x924f48 */
 void *memcpy(void *destination, const void *source, size_t size)
 {
 	uint8_t *to = destination;
