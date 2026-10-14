@@ -2451,17 +2451,11 @@ SceInt32 ksceKernelUIDEntryHeapGetInfo(SceUID entryHeapId, void *pInfo)
 	heapInfo.size = sizeof(heapInfo);
 	ret = FixedHeapGetInfo(&heap->fixedHeap, &heapInfo);
 	if (ret >= 0) {
-		SceUInt32 peakCount = heapInfo.peakCount;
-		SceUInt32 freeCount = heapInfo.freeCount;
-		SceUInt32 perPage = heapInfo.perPage;
-		SceUInt32 totalSize;
-
 		info->itemSize = heapInfo.itemSize;
-		totalSize = heapInfo.totalSize;
-		info->freeCount = freeCount;
-		info->peakCount = peakCount;
-		info->totalSize = totalSize;
-		info->perPage = perPage;
+		info->totalSize = heapInfo.totalSize;
+		info->perPage = heapInfo.perPage;
+		info->freeCount = heapInfo.freeCount;
+		info->peakCount = heapInfo.peakCount;
 	}
 	UID_READ_UNLOCK(heap, state);
 	return ret;
