@@ -1213,7 +1213,7 @@ static SceKernelIntrOptParam s_dsiIntrOpt = {
 };
 
 /* name unknown: initializer at original offset 0x39f8. */
-int LowioDsiInit(void)
+static __attribute__((noinline)) int DsiInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	const uint32_t *mode, *timing;
@@ -1267,5 +1267,14 @@ int LowioDsiInit(void)
 		s_dsiState[1][3] = 0x8300;
 		s_dsiState[1][4] = (uint32_t)mode;
 	}
+	return 0;
+}
+
+int LowioDsiInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	if (DsiInit() < 0)
+		return 2;
 	return 0;
 }

@@ -8,6 +8,13 @@ uint32_t Smc11E(uint32_t, uint32_t, uint32_t, uint32_t);
 uint32_t Smc11F(uint32_t, uint32_t, uint32_t, uint32_t);
 uint32_t Smc121(uint32_t, uint32_t, uint32_t, uint32_t);
 
+int LowioGrabInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	return 0;
+}
+
 uint32_t SceGrabForDriver_B22EE8BC(uint32_t a0, uint32_t a1,
 	uint32_t a2, uint32_t a3)
 {

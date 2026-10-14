@@ -9,8 +9,10 @@ volatile uint32_t s_cdramReady;
 
 int CdramInitWorker(void *arg);
 
-int LowioCdramInit(void)
+int LowioCdramInit(SceSize arglen, const void *argp)
 {
+	(void)arglen;
+	(void)argp;
 	ksceKernelEnqueueWorkQueue(0x10023, "SceCdramInit", CdramInitWorker, NULL);
 	return 0;
 }

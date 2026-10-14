@@ -1,27 +1,16 @@
-/* SceLowio module initialization; stage return values are ignored by Sony. */
-#include <stddef.h>
-#include <psp2kern/types.h>
+/* SceLowio module start: each stage's result is ignored. */
+#include "lowio_internal.h"
 
-int LowioPervasiveInit(void);
-int LowioGpioInit(void);
-int LowioPwmInit(void);
-int LowioI2cInit(void);
-int LowioCdramInit(void);
-int LowioDsiInit(void);
-int LowioIftuInit(void);
-int LowioCsiInit(SceSize arglen, const void *argp);
-
-int module_start(unsigned arglen, void *argp)
+int module_start(SceSize arglen, const void *argp)
 {
-	(void)arglen;
-	(void)argp;
-	LowioPervasiveInit();
-	LowioGpioInit();
-	LowioPwmInit();
-	LowioI2cInit();
-	LowioCdramInit();
-	LowioDsiInit();
-	LowioIftuInit();
+	LowioPervasiveInit(arglen, argp);
+	LowioGpioInit(arglen, argp);
+	LowioPwmInit(arglen, argp);
+	LowioI2cInit(arglen, argp);
+	LowioGrabInit(arglen, argp);
+	LowioCdramInit(arglen, argp);
+	LowioDsiInit(arglen, argp);
+	LowioIftuInit(arglen, argp);
 	LowioCsiInit(arglen, argp);
 	return 0;
 }

@@ -56,11 +56,13 @@ static int PwmSysEvent(int resume, int eventId, void *args, void *opt)
 	return 0;
 }
 
-int LowioPwmInit(void)
+int LowioPwmInit(SceSize arglen, const void *argp)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	int ret;
 
+	(void)arglen;
+	(void)argp;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = 0x58;
 	opt.attr = 2;

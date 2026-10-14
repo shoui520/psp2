@@ -699,7 +699,7 @@ static const struct {
 	{ 0xff, "SceIftu2", "SceIftu2Reg", 0xe5040000, NULL, 0 },
 };
 
-int LowioIftuInit(void)
+static __attribute__((noinline)) int IftuInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	IftuPlane *plane;
@@ -772,5 +772,13 @@ int LowioIftuInit(void)
 	ScePervasiveForDriver_5AFE0AF0();
 	ksceKernelInitializeFastMutex(&s_iftuFastMutex, "SceIftu2", 2, NULL);
 	ksceKernelRegisterSysEventHandler("SceIftu", IftuSysEvent, NULL);
+	return 0;
+}
+
+int LowioIftuInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	IftuInit();
 	return 0;
 }

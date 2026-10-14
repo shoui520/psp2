@@ -381,7 +381,7 @@ static const struct {
 	},
 };
 
-int LowioGpioInit(void)
+static __attribute__((noinline)) int GpioInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	GpioContext *ctx;
@@ -428,5 +428,14 @@ int LowioGpioInit(void)
 			ksceKernelEnableIntr(ctx->intrCodes[gate]);
 	}
 	ksceKernelRegisterSysEventHandler("SceGpio", GpioSysEvent, NULL);
+	return 0;
+}
+
+int LowioGpioInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	if (GpioInit() < 0)
+		return 2;
 	return 0;
 }

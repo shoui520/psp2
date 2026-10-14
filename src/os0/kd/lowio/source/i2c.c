@@ -439,8 +439,8 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 	return 0;
 }
 
-/* Initialization wrapper in module_start converts negative results to 2. */
-int LowioI2cInit(void)
+/* name unknown */
+static __attribute__((noinline)) int I2cInit(void)
 {
 	static const char *const names[2] = { "SceI2c0", "SceI2c1" };
 	static const char *const regNames[2] = { "SceI2c0Reg", "SceI2c1Reg" };
@@ -490,5 +490,14 @@ int LowioI2cInit(void)
 	}
 	ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 	ksceKernelRegisterSysEventHandler("SceI2c", I2cSysEvent, NULL);
+	return 0;
+}
+
+int LowioI2cInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	if (I2cInit() < 0)
+		return 2;
 	return 0;
 }

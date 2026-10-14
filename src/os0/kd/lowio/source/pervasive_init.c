@@ -57,7 +57,7 @@ static int PervasiveSysEvent(int resume, int event, void *args, void *opt)
 	return 0;
 }
 
-int LowioPervasiveInit(void)
+static __attribute__((noinline)) int PervasiveInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	unsigned i;
@@ -93,5 +93,14 @@ int LowioPervasiveInit(void)
 	PervasiveClockInit();
 	ksceKernelRegisterSysEventHandler("ScePervasive", PervasiveSysEvent, NULL);
 	SceThreadmgrForDriver_B4A05763(LowioIdleEntry);
+	return 0;
+}
+
+int LowioPervasiveInit(SceSize arglen, const void *argp)
+{
+	(void)arglen;
+	(void)argp;
+	if (PervasiveInit() < 0)
+		return 2;
 	return 0;
 }
