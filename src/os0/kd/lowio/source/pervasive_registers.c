@@ -4,9 +4,9 @@
 #define PERVASIVE_ERROR ((uint32_t)0x803f0000)
 #define REG(base, offset) (*(volatile uint32_t *)((base) + (offset)))
 
-static uint32_t WriteClock(unsigned offset, uint32_t value)
+static uint32_t WriteClock(volatile uint32_t *reg, uint32_t value)
 {
-	REG(s_baseClock, offset) = value;
+	*reg = value;
 	LowioDmb();
 	return 0;
 }
@@ -44,73 +44,73 @@ uint32_t ScePervasiveForDriver_6AF0196F(unsigned first, unsigned second)
 {
 	if (first >= 8 || second >= 8)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x10, second | first << 16);
+	return WriteClock(&s_baseClock->gpuClock, second | first << 16);
 }
 
 uint32_t ScePervasiveForDriver_725B4F59(unsigned value)
 {
 	if (value - 1 >= 7)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x20, value);
+	return WriteClock(&s_baseClock->veneziaClock, value);
 }
 
 uint32_t ScePervasiveForDriver_12D17D47(unsigned value)
 {
 	if (value - 1 >= 6)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x30, value);
+	return WriteClock(&s_baseClock->vipClock, value);
 }
 
 uint32_t ScePervasiveForDriver_589D0291(unsigned value)
 {
 	if (value - 1 >= 5)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x44, value);
+	return WriteClock(&s_baseClock->cameraBusClock, value);
 }
 
 uint32_t ScePervasiveForDriver_925D9D24(unsigned value)
 {
 	if (value > 1)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x70, value != 0 ? 0x10001 : 0x10000);
+	return WriteClock(&s_baseClock->audioClock, value != 0 ? 0x10001 : 0x10000);
 }
 
 uint32_t ScePervasiveForDriver_26B51075(void)
 {
-	return WriteClock(0x1d0, 1);
+	return WriteClock(&s_baseClock->cecClockOut, 1);
 }
 
 uint32_t ScePervasiveForDriver_D185D235(void)
 {
-	return WriteClock(0x1d0, 0);
+	return WriteClock(&s_baseClock->cecClockOut, 0);
 }
 
 uint32_t kscePervasiveMsifSetClock(unsigned value)
 {
 	if ((value & ~4U) >= 3)
 		return PERVASIVE_ERROR;
-	return WriteClock(0xb0, (value & 3) | (value & 4 ? 0x10000 : 0));
+	return WriteClock(&s_baseClock->msifClock, (value & 3) | (value & 4 ? 0x10000 : 0));
 }
 
 uint32_t ScePervasiveForDriver_A6832B33(unsigned value)
 {
 	if (value - 1 >= 4)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x1f0, value);
+	return WriteClock(&s_baseClock->dmac5Clock, value);
 }
 
 uint32_t ScePervasiveForDriver_2FB5F88F(unsigned value)
 {
 	if (value >= 3)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x210, value);
+	return WriteClock(&s_baseClock->srcClock, value);
 }
 
 uint32_t ScePervasiveForDriver_98D8914A(unsigned value)
 {
 	if (value >= 2)
 		return PERVASIVE_ERROR;
-	return WriteClock(0x214, value);
+	return WriteClock(&s_baseClock->sysClock, value);
 }
 
 uint32_t ScePervasiveForDriver_A96642E3(unsigned value)
@@ -121,7 +121,7 @@ uint32_t ScePervasiveForDriver_A96642E3(unsigned value)
 		value = 0;
 	else
 		return PERVASIVE_ERROR;
-	return WriteClock(0x68, value);
+	return WriteClock(&s_baseClock->gatedClockSelect, value);
 }
 
 uint32_t ScePervasiveForDriver_F1908D3C(unsigned head)

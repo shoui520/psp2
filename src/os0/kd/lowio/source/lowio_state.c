@@ -5,6 +5,7 @@ ScePervasiveMiscRegisters *s_misc;
 uint8_t *s_video, *s_mailbox, *s_pervasive2;
 ScePervasiveResetRegisters *s_reset;
 ScePervasiveGateRegisters *s_gate;
-uint8_t *s_uartClock, *s_baseClock;
+volatile uint32_t *s_uartClock;
+ScePervasiveBaseClkRegisters *s_baseClock;
 uint8_t *s_tas[8];
 SceKernelSpinlock s_pervasiveLock;

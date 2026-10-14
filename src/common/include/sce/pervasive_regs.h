@@ -170,3 +170,90 @@ _Static_assert(offsetof(ScePervasiveMiscRegisters, uart5PullDownRx) == 0x1ac, "m
 _Static_assert(offsetof(ScePervasiveMiscRegisters, hardwareInfo) == 0x300, "misc hardware info");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, sdifMode) == 0x310, "misc sdif mode");
 _Static_assert(sizeof(ScePervasiveMiscRegisters) == 0x1000, "misc register page");
+
+/* One DSI pixel clock: a PLL and dividers behind three reset words. Setting a
+ * clock holds output, dividers and PLL in reset (8, 4, 0), programs the PLL
+ * (pllConfig bit 4 selects it, then its coefficients), releases the PLL, then
+ * programs the dividers and source and releases dividers and output in turn.
+ */
+typedef struct ScePervasivePixelClockRegisters {
+	volatile uint32_t pllReset;
+	volatile uint32_t dividerReset;
+	volatile uint32_t outputReset;
+	volatile uint32_t reserved0[5];
+	volatile uint32_t source;
+	volatile uint32_t pllConfig;			/* bit 4: the PLL is used */
+	volatile uint32_t reserved1[2];
+	volatile uint32_t pllCoefficient[3];
+	volatile uint32_t reserved2;
+	volatile uint32_t divider[3];
+	volatile uint32_t reserved3;
+} ScePervasivePixelClockRegisters;
+
+_Static_assert(offsetof(ScePervasivePixelClockRegisters, source) == 0x20, "pixel clock source");
+_Static_assert(offsetof(ScePervasivePixelClockRegisters, pllCoefficient) == 0x30, "pixel clock pll");
+_Static_assert(offsetof(ScePervasivePixelClockRegisters, divider) == 0x40, "pixel clock divider");
+_Static_assert(sizeof(ScePervasivePixelClockRegisters) == 0x50, "pixel clock block");
+
+/* ScePervasiveBaseClk (physical 0xe3103000): the clocks fed to the SoC's
+ * devices, one select word each. Roles follow the henkaku wiki's Pervasive
+ * page and the ScePervasiveForDriver exports that write them; the words the
+ * wiki marks secure (CMeP, bus, DRAM, compat) are only written by the
+ * bootloaders and the secure monitor.
+ */
+typedef struct ScePervasiveBaseClkRegisters {
+	volatile uint32_t armMultiplier;		/* low nibble: the ARM clock step */
+	volatile uint32_t armDivisor;			/* 16 - speed */
+	volatile uint32_t reserved0[2];
+	volatile uint32_t gpuClock;			/* core << 16 | mp */
+	volatile uint32_t reserved1[3];
+	volatile uint32_t veneziaClock;
+	volatile uint32_t reserved2[3];
+	volatile uint32_t vipClock;
+	volatile uint32_t reserved3[3];
+	volatile uint32_t cmepClock;
+	volatile uint32_t cameraBusClock;
+	volatile uint32_t reserved4[2];
+	volatile uint32_t busClock;
+	volatile uint32_t reserved5[3];
+	volatile uint32_t auxClockDivider;		/* divider - 1 from source 0 */
+	volatile uint32_t auxClockSource;
+	volatile uint32_t gatedClockSelect;		/* bit 1 enable, bit 0 source */
+	volatile uint32_t reserved6;
+	volatile uint32_t audioClock;			/* 0x10000 | enable */
+	volatile uint32_t reserved7[7];
+	volatile uint32_t dramMainClock;
+	volatile uint32_t dramSubClock;
+	volatile uint32_t reserved8[3];
+	volatile uint32_t auxClockEnable;		/* cleared while the aux clock changes */
+	volatile uint32_t reserved9[2];
+	volatile uint32_t msifClock;			/* bits 0-1, bit 16 */
+	volatile uint32_t reserved10[4];
+	volatile uint32_t compatClock;
+	volatile uint32_t reserved11[14];
+	ScePervasivePixelClockRegisters dsi1PixelClock;
+	volatile uint32_t reserved12[12];
+	ScePervasivePixelClockRegisters dsi0PixelClock;
+	volatile uint32_t cecClockOut;			/* HDMI CEC clock output enable */
+	volatile uint32_t reserved13[7];
+	volatile uint32_t dmac5Clock;
+	volatile uint32_t reserved14[7];
+	volatile uint32_t srcClock;			/* audio sample-rate converter */
+	volatile uint32_t sysClock;
+	volatile uint32_t reserved15[890];
+} ScePervasiveBaseClkRegisters;
+
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, gpuClock) == 0x10, "base clock gpu");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, cameraBusClock) == 0x44, "base clock camera bus");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, auxClockDivider) == 0x60, "base clock aux");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, audioClock) == 0x70, "base clock audio");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, dramMainClock) == 0x90, "base clock dram");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, auxClockEnable) == 0xa4, "base clock aux enable");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, msifClock) == 0xb0, "base clock msif");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, compatClock) == 0xc4, "base clock compat");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, dsi1PixelClock) == 0x100, "base clock dsi1");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, dsi0PixelClock) == 0x180, "base clock dsi0");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, cecClockOut) == 0x1d0, "base clock cec");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, dmac5Clock) == 0x1f0, "base clock dmac5");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, srcClock) == 0x210, "base clock src");
+_Static_assert(sizeof(ScePervasiveBaseClkRegisters) == 0x1000, "base clock page");

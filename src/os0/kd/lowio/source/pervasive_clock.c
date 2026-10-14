@@ -4,7 +4,6 @@
 #include CLOCK_PREFIX_HEADER
 
 #define PERVASIVE_ERROR ((uint32_t)0x803f0000)
-#define REG(offset) (*(volatile uint32_t *)(s_baseClock + (offset)))
 
 static int ClockIndex(unsigned mode)
 {
@@ -28,12 +27,12 @@ uint32_t ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 		return PERVASIVE_ERROR;
 #endif
 	if (mode == 0) {
-		REG(4) = 16 - speed;
+		s_baseClock->armDivisor = 16 - speed;
 		LowioDmb();
 		return 0;
 	}
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	raw = REG(0);
+	raw = s_baseClock->armMultiplier;
 	current = raw & 15;
 	if (current != mode) {
 		if (current == 0)
@@ -46,13 +45,13 @@ uint32_t ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 			for (shift = 0; shift < 16 && (path >> shift); shift += 4) {
 				if (shift)
 					LowioDmb();
-				REG(0) = high | ((path >> shift) & 15);
+				s_baseClock->armMultiplier = high | ((path >> shift) & 15);
 				LowioDmb();
 			}
 		}
 	}
 	LowioDmb();
-	REG(4) = 16 - speed;
+	s_baseClock->armDivisor = 16 - speed;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;

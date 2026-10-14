@@ -9,7 +9,8 @@ extern ScePervasiveMiscRegisters *s_misc;
 extern uint8_t *s_video, *s_mailbox, *s_pervasive2;
 extern ScePervasiveResetRegisters *s_reset;
 extern ScePervasiveGateRegisters *s_gate;
-extern uint8_t *s_uartClock, *s_baseClock;
+extern volatile uint32_t *s_uartClock;		/* SceUartclkReg: one baud-rate word per port */
+extern ScePervasiveBaseClkRegisters *s_baseClock;
 extern uint8_t *s_tas[8];
 extern SceKernelSpinlock s_pervasiveLock;
 

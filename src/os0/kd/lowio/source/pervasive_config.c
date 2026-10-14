@@ -3,7 +3,6 @@
 #include "uart_clock_table.h"
 
 #define PERVASIVE_ERROR ((uint32_t)0x803f0000)
-#define REG(base, offset) (*(volatile uint32_t *)((base) + (offset)))
 
 /* Hardware-info registers cached by initialization; the final four names unknown. */
 uint32_t s_hardwareInfo[5];
@@ -82,15 +81,15 @@ uint32_t ScePervasiveForDriver_59B7CA34(unsigned source, unsigned divider)
 		value = 0;
 	}
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = REG(s_baseClock, 0xa4);
+	previous = s_baseClock->auxClockEnable;
 	if (previous) {
-		REG(s_baseClock, 0xa4) = 0;
+		s_baseClock->auxClockEnable = 0;
 		LowioDmb();
 	}
-	REG(s_baseClock, 0x60) = value;
-	REG(s_baseClock, 0x64) = source;
+	s_baseClock->auxClockDivider = value;
+	s_baseClock->auxClockSource = source;
 	if (previous)
-		REG(s_baseClock, 0xa4) = previous;
+		s_baseClock->auxClockEnable = previous;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;
@@ -101,10 +100,10 @@ uint32_t ScePervasiveForDriver_8847825F(void)
 	uint32_t state, previous;
 
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = REG(s_baseClock, 0xa4);
-	REG(s_baseClock, 0xa4) = 1;
+	previous = s_baseClock->auxClockEnable;
+	s_baseClock->auxClockEnable = 1;
 	LowioDmb();
-	(void)REG(s_baseClock, 0xa4);
+	(void)s_baseClock->auxClockEnable;
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
@@ -115,8 +114,8 @@ uint32_t ScePervasiveForDriver_9E81E057(void)
 	uint32_t state, previous;
 
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = REG(s_baseClock, 0xa4);
-	REG(s_baseClock, 0xa4) = 0;
+	previous = s_baseClock->auxClockEnable;
+	s_baseClock->auxClockEnable = 0;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
@@ -131,7 +130,7 @@ uint32_t kscePervasiveUartSetBaudrate(unsigned port, unsigned baud)
 	for (i = 0; i < sizeof(s_uartClockTable) / sizeof(s_uartClockTable[0]); i++) {
 		if (s_uartClockTable[i].baud != baud)
 			continue;
-		REG(s_uartClock, port * 4) = s_uartClockTable[i].value;
+		s_uartClock[port] = s_uartClockTable[i].value;
 		LowioDmb();
 		return 0;
 	}

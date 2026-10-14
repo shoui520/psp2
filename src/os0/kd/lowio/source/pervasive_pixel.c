@@ -1,4 +1,4 @@
-/* Pervasive DSI pixel clocks. Numeric timing field meanings remain unknown. */
+/* Pervasive DSI pixel clocks (ScePervasiveBaseClk dsi0PixelClock, dsi1PixelClock). */
 #include "lowio_internal.h"
 #include <psp2kern/kernel/threadmgr.h>
 #include <sce/threadmgr.h>
@@ -6,19 +6,19 @@
 
 typedef struct PixelClockSetting {
 	uint32_t clock;
-	uint32_t unk00;
-	uint32_t unk04;
-	const uint32_t *aux;
-	uint32_t unk0c[3];
+	uint32_t pllConfig;
+	uint32_t source;
+	const uint32_t *pllCoefficient;
+	uint32_t divider[3];
 	uint32_t timing[4];
 } PixelClockSetting;
 
 #include "pixel_clock_table.h"
 
 typedef struct PixelClockContext {
-	uint8_t *base;
+	volatile ScePervasivePixelClockRegisters *registers;
 	const PixelClockSetting *setting;
-	uint32_t unk08;
+	uint32_t pllConfig;
 	uint32_t clock;
 	uint32_t timing[4];
 } PixelClockContext;
@@ -26,17 +26,14 @@ typedef struct PixelClockContext {
 _Static_assert(sizeof(PixelClockContext) == 0x20, "pixel clock context");
 PixelClockContext s_pixelClock[2];
 
-#define PIXEL_REG(ctx, offset) \
-	(*(volatile uint32_t *)((ctx)->base + (offset)))
-
 int LowioPixelClockInit(void)
 {
 	s_pixelClock[0].setting = NULL;
 	s_pixelClock[1].setting = NULL;
-	s_pixelClock[0].base = s_baseClock + 0x180;
-	s_pixelClock[0].unk08 = PIXEL_REG(&s_pixelClock[0], 0x24);
-	s_pixelClock[1].base = s_baseClock + 0x100;
-	s_pixelClock[1].unk08 = PIXEL_REG(&s_pixelClock[1], 0x24);
+	s_pixelClock[0].registers = &s_baseClock->dsi0PixelClock;
+	s_pixelClock[0].pllConfig = s_pixelClock[0].registers->pllConfig;
+	s_pixelClock[1].registers = &s_baseClock->dsi1PixelClock;
+	s_pixelClock[1].pllConfig = s_pixelClock[1].registers->pllConfig;
 	return 0;
 }
 
@@ -93,10 +90,10 @@ uint32_t kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 	ctx = &s_pixelClock[head];
 	if (clock == 0) {
 		if (ctx->setting) {
-			PIXEL_REG(ctx, 8) = 1;
-			PIXEL_REG(ctx, 4) = 1;
-			PIXEL_REG(ctx, 0) = 1;
-			(void)PIXEL_REG(ctx, 0);
+			ctx->registers->outputReset = 1;
+			ctx->registers->dividerReset = 1;
+			ctx->registers->pllReset = 1;
+			(void)ctx->registers->pllReset;
 			ctx->setting = NULL;
 			ctx->clock = 0;
 			for (i = 0; i < 4; i++)
@@ -110,34 +107,34 @@ uint32_t kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 		return 0x803f0000;
 	if (setting == ctx->setting)
 		return 0;
-	PIXEL_REG(ctx, 8) = 1;
-	PIXEL_REG(ctx, 4) = 1;
-	(void)PIXEL_REG(ctx, 4);
+	ctx->registers->outputReset = 1;
+	ctx->registers->dividerReset = 1;
+	(void)ctx->registers->dividerReset;
 	LowioDsb();
-	if (ctx->unk08 != setting->unk00 || !ctx->setting ||
-		ctx->setting->aux != setting->aux) {
-		PIXEL_REG(ctx, 0x24) = setting->unk00;
-		PIXEL_REG(ctx, 0) = 1;
-		(void)PIXEL_REG(ctx, 0);
+	if (ctx->pllConfig != setting->pllConfig || !ctx->setting ||
+		ctx->setting->pllCoefficient != setting->pllCoefficient) {
+		ctx->registers->pllConfig = setting->pllConfig;
+		ctx->registers->pllReset = 1;
+		(void)ctx->registers->pllReset;
 		LowioDsb();
-		if (setting->unk00 & 0x10) {
+		if (setting->pllConfig & 0x10) {
 			for (i = 0; i < 3; i++)
-				PIXEL_REG(ctx, 0x30 + i * 4) = setting->aux[i];
-			PIXEL_REG(ctx, 0) = 0;
-			(void)PIXEL_REG(ctx, 0);
+				ctx->registers->pllCoefficient[i] = setting->pllCoefficient[i];
+			ctx->registers->pllReset = 0;
+			(void)ctx->registers->pllReset;
 			LowioDsb();
 			PixelClockDelay();
 		}
 	}
 	for (i = 0; i < 3; i++)
-		PIXEL_REG(ctx, 0x40 + i * 4) = setting->unk0c[i];
-	PIXEL_REG(ctx, 0x20) = setting->unk04;
-	PIXEL_REG(ctx, 4) = 0;
-	(void)PIXEL_REG(ctx, 4);
+		ctx->registers->divider[i] = setting->divider[i];
+	ctx->registers->source = setting->source;
+	ctx->registers->dividerReset = 0;
+	(void)ctx->registers->dividerReset;
 	LowioDsb();
 	PixelClockDelay();
-	PIXEL_REG(ctx, 8) = 0;
-	(void)PIXEL_REG(ctx, 8);
+	ctx->registers->outputReset = 0;
+	(void)ctx->registers->outputReset;
 	ctx->setting = setting;
 	ctx->clock = clock;
 	for (i = 0; i < 4; i++)
