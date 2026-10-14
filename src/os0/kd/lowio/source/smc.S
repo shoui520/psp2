@@ -1,11 +1,15 @@
-/* Secure monitor services and the idle loop, in the original's order. */
+/*
+ * Secure monitor services and the idle loop, in the original's order. A function
+ * followed by alignment padding owns it (the original's unwind table ends each
+ * function where the next begins), so the padding is inside its size.
+ */
 .syntax unified
 .thumb
 .arch armv7-a
 .arch_extension sec
 .text
 
-.macro SERVICE name, number
+.macro SERVICE name, number, align=0
 	.global \name
 	.type \name, %function
 	.thumb_func
@@ -13,6 +17,9 @@
 	movw ip, #\number
 	smc #0
 	bx lr
+	.if \align
+	.balign \align, 0
+	.endif
 	.size \name, .-\name
 .endm
 
@@ -32,10 +39,9 @@
 SERVICE Smc110, 0x110
 SERVICE Smc111, 0x111
 SERVICE Smc113, 0x113
-SERVICE Smc114, 0x114
+SERVICE Smc114, 0x114, 64
 
 /* The idle loop: privileged Thumb code (cpsid, ldrex/strex, CP15). */
-.balign 64, 0
 .global LowioIdleEntry
 .type LowioIdleEntry, %function
 .thumb_func
@@ -103,9 +109,9 @@ LowioIdleEntry:
 	b .Lidle
 .Lagain:
 	b .Lexit
+.balign 4
 .size LowioIdleEntry, .-LowioIdleEntry
 
-.balign 4
 SERVICE Smc11B, 0x11b
 SERVICE Smc11C, 0x11c
 SERVICE Smc120, 0x120
@@ -129,5 +135,5 @@ SERVICE Smc11F, 0x11f
 SERVICE Smc121, 0x121
 SERVICE Smc117, 0x117
 SERVICE SceCdramForDriver_2D728EBF, 0x118
-SERVICE SceCdramForDriver_0657FC1B, 0x119
+SERVICE SceCdramForDriver_0657FC1B, 0x119, 4
 .section .note.GNU-stack,"",%progbits
