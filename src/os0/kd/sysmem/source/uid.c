@@ -2959,8 +2959,10 @@ int sceGUIDGetEntryInfoClass(SceClass *cls, SceUInt32 level, SceUInt32 reserved,
 	SCE_DBG_PRINTF(0xb, 6796, "()\n");
 	if (size < 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (size != 0 && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (size != 0) {
+		if (infos == NULL)
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
 	heap = GUID_ENTRY_HEAP();
 	state = FixedHeapReadLock(&heap->fixedHeap, "GUIDGetEntryInfoClass", 5912);
 	walk.size = size;
@@ -3005,8 +3007,10 @@ int PUIDGetEntryInfoAll(SceUID pid, SceUInt32 level, SceUInt32 reserved, SceKern
 
 	if (size < 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (size != 0 && infos == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (size != 0) {
+		if (infos == NULL)
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
 	ret = GetPUIDEntryHeap(pid, &heap);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 6906, "GetPUIDEntryHeap failed 0x%08x\n", ret);
