@@ -1,5 +1,6 @@
 /* SceI2c transfers. Private helper and context field names are inferred. */
 #include "lowio_internal.h"
+#include <sce/i2c_regs.h>
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
@@ -12,8 +13,6 @@
 #define I2C_ERROR_SIZE ((int)0x803f0302)
 #define I2C_ERROR_ADDRESS ((int)0x803f0303)
 #define I2C_STATUS_MASK 0xfb0fU
-#define I2C_REG(ctx, offset) \
-	(*(volatile uint32_t *)((ctx)->base + (offset)))
 
 /* The end-hook third word preserves Sony's observable r2 scratch state. */
 typedef struct I2cDebugHandlers {
@@ -28,7 +27,7 @@ typedef struct I2cDebugHandlers {
 } I2cDebugHandlers;
 
 typedef struct I2cContext {
-	uint8_t *base;
+	SceI2cRegisters *base;
 	const uint8_t *txBuffer;
 	uint32_t txCount;
 	uint8_t *rxBuffer;
@@ -71,15 +70,15 @@ int ksceI2cInit(unsigned bus)
 	if (bus >= 2)
 		return I2C_ERROR_BUS;
 	ctx = &s_i2c[bus];
-	I2C_REG(ctx, 0x2c) = 0x0100f70f;
-	I2C_REG(ctx, 8) = 1;
-	I2C_REG(ctx, 0xc) = 1;
-	I2C_REG(ctx, 0x14) = 7;
+	ctx->base->interruptEnable = 0x0100f70f;
+	ctx->base->writeFifoReset = 1;
+	ctx->base->readFifoReset = 1;
+	ctx->base->flags = 7;
 	LowioDsb();
-	while (I2C_REG(ctx, 0x1c) != 0)
+	while (ctx->base->busy != 0)
 		;
-	I2C_REG(ctx, 0x28) = I2C_REG(ctx, 0x28);
-	I2C_REG(ctx, 0x2c) = 0x01000000;
+	ctx->base->interruptStatus = ctx->base->interruptStatus;
+	ctx->base->interruptEnable = 0x01000000;
 	ksceKernelClearEventFlag(ctx->event, 0xffff04f0);
 	return 0;
 }
@@ -93,7 +92,7 @@ int SceI2cForDriver_30CF9469(unsigned bus, uint32_t first, uint32_t second)
 	ctx = &s_i2c[bus];
 	ctx->timing[0] = first;
 	ctx->timing[1] = second;
-	I2C_REG(ctx, 0x18) =
+	ctx->base->speed =
 		(ksceSysrootGetHardwareInfo() & 0xff0000) < 0x800000 ? 5 : 4;
 	return 0;
 }
@@ -246,15 +245,15 @@ int ksceI2cTransferWrite(unsigned bus, unsigned address,
 	ctx->rxRemaining = 0;
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->writeStart(bus, address, buffer, size);
-	I2C_REG(ctx, 8) = 1;
-	I2C_REG(ctx, 0xc) = 1;
-	I2C_REG(ctx, 0x10) = address >> 1;
+	ctx->base->writeFifoReset = 1;
+	ctx->base->readFifoReset = 1;
+	ctx->base->deviceAddress = address >> 1;
 	for (i = 0; i < size; i++)
-		I2C_REG(ctx, 0) = buffer[i];
-	I2C_REG(ctx, 0x14) = size << 8 | 2;
+		ctx->base->writeFifo = buffer[i];
+	ctx->base->flags = size << 8 | 2;
 	ret = I2cWait(ctx, &first, &scratch);
 	if (ret >= 0) {
-		I2C_REG(ctx, 0x14) = 4;
+		ctx->base->flags = 4;
 		ret = I2cWait(ctx, &stop, &scratch);
 		if (ret >= 0) {
 			ret = (first & I2C_STATUS_MASK) == 1 ?
@@ -293,15 +292,15 @@ int ksceI2cTransferRead(unsigned bus, unsigned address,
 	ctx->rxRemaining = size;
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->readStart(bus, address, buffer, size);
-	I2C_REG(ctx, 8) = 1;
-	I2C_REG(ctx, 0xc) = 1;
-	I2C_REG(ctx, 0x10) = address >> 1;
-	I2C_REG(ctx, 0x14) = size << 8 | 0x13;
+	ctx->base->writeFifoReset = 1;
+	ctx->base->readFifoReset = 1;
+	ctx->base->deviceAddress = address >> 1;
+	ctx->base->flags = size << 8 | 0x13;
 	ret = I2cWait(ctx, &first, &scratch);
 	if (ret >= 0) {
 		for (i = 0; i < size; i++)
-			buffer[i] = I2C_REG(ctx, 4);
-		I2C_REG(ctx, 0x14) = 4;
+			buffer[i] = ctx->base->readFifo;
+		ctx->base->flags = 4;
 		ret = I2cWait(ctx, &stop, &scratch);
 		if (ret >= 0) {
 			ret = (first & I2C_STATUS_MASK) == 1 ?
@@ -346,32 +345,32 @@ int ksceI2cTransferWriteRead(unsigned bus, unsigned writeAddress,
 	if (ctx->debugHandlers)
 		ctx->debugHandlers->writeReadStart(bus, writeAddress, writeBuffer,
 			writeSize, readAddress, readBuffer, readSize);
-	I2C_REG(ctx, 8) = 1;
-	I2C_REG(ctx, 0xc) = 1;
-	I2C_REG(ctx, 0x10) = writeAddress >> 1;
+	ctx->base->writeFifoReset = 1;
+	ctx->base->readFifoReset = 1;
+	ctx->base->deviceAddress = writeAddress >> 1;
 	for (i = 0; i < writeSize; i++)
-		I2C_REG(ctx, 0) = writeBuffer[i];
-	I2C_REG(ctx, 0x14) = writeSize << 8 | 2;
+		ctx->base->writeFifo = writeBuffer[i];
+	ctx->base->flags = writeSize << 8 | 2;
 	ret = I2cWait(ctx, &first, &scratch);
 	if (ret < 0)
 		goto out;
 	if ((first & I2C_STATUS_MASK) == 1) {
-		I2C_REG(ctx, 0x14) = 5;
+		ctx->base->flags = 5;
 		ret = I2cWait(ctx, &restart, &scratch);
 		if (ret < 0)
 			goto out;
 		if ((restart & I2C_STATUS_MASK) == 8) {
-			I2C_REG(ctx, 0x14) = readSize << 8 | 0x13;
+			ctx->base->flags = readSize << 8 | 0x13;
 			ret = I2cWait(ctx, &read, &scratch);
 			if (ret < 0)
 				goto out;
 			if ((read & I2C_STATUS_MASK) == 1) {
 				for (i = 0; i < readSize; i++)
-					readBuffer[i] = I2C_REG(ctx, 4);
+					readBuffer[i] = ctx->base->readFifo;
 			}
 		}
 	}
-	I2C_REG(ctx, 0x14) = 4;
+	ctx->base->flags = 4;
 	ret = I2cWait(ctx, &stop, &scratch);
 	if (ret >= 0) {
 		if ((first & I2C_STATUS_MASK) != 1)
@@ -392,16 +391,16 @@ out:
 }
 
 uint32_t ScePervasiveForDriver_86BEA9A4(unsigned bus);
-uint32_t ScePervasiveForDriver_C37CFDFC(unsigned bus);
-uint32_t ScePervasiveForDriver_3F3E1AEA(unsigned bus);
+int ScePervasiveForDriver_C37CFDFC(int port);
+int ScePervasiveForDriver_3F3E1AEA(int port);
 
 static int I2cIntrHandler(int intrCode, void *arg)
 {
 	I2cContext *ctx = arg;
-	uint32_t status = I2C_REG(ctx, 0x28);
+	uint32_t status = ctx->base->interruptStatus;
 
 	(void)intrCode;
-	I2C_REG(ctx, 0x28) = status;
+	ctx->base->interruptStatus = status;
 	LowioDmb();
 	ctx->intrPending |= 1;
 	ksceKernelSetEventFlag(ctx->event, status);
@@ -410,7 +409,7 @@ static int I2cIntrHandler(int intrCode, void *arg)
 
 static void I2cHardwareTiming(I2cContext *ctx)
 {
-	I2C_REG(ctx, 0x18) =
+	ctx->base->speed =
 		(ksceSysrootGetHardwareInfo() & 0xff0000) < 0x800000 ? 5 : 4;
 }
 
@@ -426,7 +425,7 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 			ScePervasiveForDriver_C37CFDFC(bus);
 			ksceI2cInit(bus);
 			I2cHardwareTiming(&s_i2c[bus]);
-			I2C_REG(&s_i2c[bus], 0x2c) = 0x01000000;
+			s_i2c[bus].base->interruptEnable = 0x01000000;
 			ksceKernelEnableIntr(s_i2c[bus].intrCode);
 		}
 		ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
@@ -487,7 +486,7 @@ int LowioI2cInit(void)
 		ctx->timing[0] = 0xe8;
 		ctx->timing[1] = 0x77;
 		I2cHardwareTiming(ctx);
-		I2C_REG(ctx, 0x2c) = 0x01000000;
+		ctx->base->interruptEnable = 0x01000000;
 	}
 	ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 	ksceKernelRegisterSysEventHandler("SceI2c", I2cSysEvent, NULL);
