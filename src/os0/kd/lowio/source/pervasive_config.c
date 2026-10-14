@@ -39,13 +39,16 @@ uint32_t ScePervasiveForDriver_270BE98A(unsigned index)
 
 uint32_t ScePervasiveForDriver_453BD2EC(unsigned port, unsigned enable)
 {
+	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, shift;
 
-	if (port >= 4 || enable >= 2)
+	if (port >= 4)
+		return PERVASIVE_ERROR;
+	if (enable >= 2)
 		return PERVASIVE_ERROR;
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	shift = port;
-	s_misc->sdifVoltage = (s_misc->sdifVoltage & ~(1U << shift)) |
+	misc->sdifVoltage = (misc->sdifVoltage & ~(1U << shift)) |
 		enable << shift;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
@@ -54,13 +57,16 @@ uint32_t ScePervasiveForDriver_453BD2EC(unsigned port, unsigned enable)
 
 uint32_t ScePervasiveForDriver_043B33F5(unsigned port, unsigned mode)
 {
+	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, shift;
 
-	if (port >= 4 || mode >= 7)
+	if (port >= 4)
+		return PERVASIVE_ERROR;
+	if (mode >= 7)
 		return PERVASIVE_ERROR;
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	shift = port * 8;
-	s_misc->sdifMode = (s_misc->sdifMode & ~(7U << shift)) |
+	misc->sdifMode = (misc->sdifMode & ~(7U << shift)) |
 		mode << shift;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
@@ -75,10 +81,12 @@ uint32_t ScePervasiveForDriver_59B7CA34(unsigned source, unsigned divider)
 		value = divider - 1;
 		if (value >= 16)
 			return PERVASIVE_ERROR;
-	} else {
-		if (source != 1 || divider != 1)
+	} else if (source == 1) {
+		if (divider != 1)
 			return PERVASIVE_ERROR;
 		value = 0;
+	} else {
+		return PERVASIVE_ERROR;
 	}
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
 	previous = s_baseClock->auxClockEnable;
@@ -97,13 +105,14 @@ uint32_t ScePervasiveForDriver_59B7CA34(unsigned source, unsigned divider)
 
 uint32_t ScePervasiveForDriver_8847825F(void)
 {
+	ScePervasiveBaseClkRegisters *base = s_baseClock;
 	uint32_t state, previous;
 
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = s_baseClock->auxClockEnable;
-	s_baseClock->auxClockEnable = 1;
+	previous = base->auxClockEnable;
+	base->auxClockEnable = 1;
 	LowioDmb();
-	(void)s_baseClock->auxClockEnable;
+	(void)base->auxClockEnable;
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
@@ -111,11 +120,12 @@ uint32_t ScePervasiveForDriver_8847825F(void)
 
 uint32_t ScePervasiveForDriver_9E81E057(void)
 {
+	ScePervasiveBaseClkRegisters *base = s_baseClock;
 	uint32_t state, previous;
 
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	previous = s_baseClock->auxClockEnable;
-	s_baseClock->auxClockEnable = 0;
+	previous = base->auxClockEnable;
+	base->auxClockEnable = 0;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
