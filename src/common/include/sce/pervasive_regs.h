@@ -257,3 +257,26 @@ _Static_assert(offsetof(ScePervasiveBaseClkRegisters, cecClockOut) == 0x1d0, "ba
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, dmac5Clock) == 0x1f0, "base clock dmac5");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, srcClock) == 0x210, "base clock src");
 _Static_assert(sizeof(ScePervasiveBaseClkRegisters) == 0x1000, "base clock page");
+
+/* ScePervasive2 (physical 0xe3110000): bus protection and bus error words
+ * (named in sce/buserror_es3.h by address) and the insert and interrupt states
+ * of the memory card and the USB ports, per the henkaku wiki's Pervasive page.
+ * Interrupt state words are acknowledged by writing back what was read.
+ */
+typedef struct ScePervasive2Registers {
+	volatile uint32_t reserved0[972];
+	volatile uint32_t usbPhyReady;			/* bit per port */
+	volatile uint32_t usbPhyInterrupt;
+	volatile uint32_t reserved1[2];
+	volatile uint32_t memoryCardInsert;		/* bit 0 */
+	volatile uint32_t memoryCardInterrupt;		/* bit 0 removed, bit 1 inserted */
+	volatile uint32_t reserved2[2];
+	volatile uint32_t usbVbus;			/* bit per port */
+	volatile uint32_t usbVbusInterrupt;
+	volatile uint32_t reserved3[42];
+} ScePervasive2Registers;
+
+_Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "pervasive2 usb phy");
+_Static_assert(offsetof(ScePervasive2Registers, memoryCardInsert) == 0xf40, "pervasive2 card");
+_Static_assert(offsetof(ScePervasive2Registers, usbVbus) == 0xf50, "pervasive2 vbus");
+_Static_assert(sizeof(ScePervasive2Registers) == 0x1000, "pervasive2 page");

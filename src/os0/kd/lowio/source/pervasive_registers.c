@@ -2,7 +2,6 @@
 #include "lowio_internal.h"
 
 #define PERVASIVE_ERROR ((uint32_t)0x803f0000)
-#define REG(base, offset) (*(volatile uint32_t *)((base) + (offset)))
 
 static uint32_t WriteClock(volatile uint32_t *reg, uint32_t value)
 {
@@ -285,15 +284,15 @@ uint32_t ScePervasiveForDriver_E3A735B9(unsigned port)
 
 uint32_t kscePervasiveRemovableMemoryGetCardInsertState(void)
 {
-	return REG(s_pervasive2, 0xf40) & 1;
+	return s_pervasive2->memoryCardInsert & 1;
 }
 
 uint32_t ScePervasiveForDriver_F9E7B023(void)
 {
-	uint32_t previous = REG(s_pervasive2, 0xf44);
+	uint32_t previous = s_pervasive2->memoryCardInterrupt;
 
-	REG(s_pervasive2, 0xf44) = previous;
-	(void)REG(s_pervasive2, 0xf44);
+	s_pervasive2->memoryCardInterrupt = previous;
+	(void)s_pervasive2->memoryCardInterrupt;
 	LowioDsb();
 	return previous;
 }

@@ -6,7 +6,8 @@
 #include <sce/pervasive_regs.h>
 
 extern ScePervasiveMiscRegisters *s_misc;
-extern uint8_t *s_video, *s_mailbox, *s_pervasive2;
+extern uint8_t *s_video, *s_mailbox;
+extern ScePervasive2Registers *s_pervasive2;
 extern ScePervasiveResetRegisters *s_reset;
 extern ScePervasiveGateRegisters *s_gate;
 extern volatile uint32_t *s_uartClock;		/* SceUartclkReg: one baud-rate word per port */
