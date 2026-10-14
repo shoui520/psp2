@@ -29,7 +29,7 @@ PixelClockContext s_pixelClock[2];
 #define PIXEL_REG(ctx, offset) \
 	(*(volatile uint32_t *)((ctx)->base + (offset)))
 
-void LowioPixelClockInit(void)
+int LowioPixelClockInit(void)
 {
 	s_pixelClock[0].setting = NULL;
 	s_pixelClock[1].setting = NULL;
@@ -37,6 +37,7 @@ void LowioPixelClockInit(void)
 	s_pixelClock[0].unk08 = PIXEL_REG(&s_pixelClock[0], 0x24);
 	s_pixelClock[1].base = s_baseClock + 0x100;
 	s_pixelClock[1].unk08 = PIXEL_REG(&s_pixelClock[1], 0x24);
+	return 0;
 }
 
 static const PixelClockSetting *PixelClockFind(uint32_t clock)

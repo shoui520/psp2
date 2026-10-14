@@ -9,7 +9,8 @@
 #include <sce/sysevent.h>
 
 extern uint32_t s_hardwareInfo[5];
-void LowioPixelClockInit(void);
+int LowioPixelClockInit(void);
+int PervasiveMiscInit(void);
 void LowioIdleEntry(void);
 uint32_t ScePervasiveForDriver_6AF0196F(unsigned first, unsigned second);
 
@@ -19,31 +20,33 @@ static SceUID s_pervasiveUids[16];
 static const struct {
 	const char *name;
 	uint32_t paddr;
+	uint32_t size;
 	void *base;
 } s_pervasiveDevices[16] = {
-	{ "ScePervasiveMisc", 0xe3100000, &s_misc },
-	{ "ScePervasiveReset", 0xe3101000, &s_reset },
-	{ "ScePervasiveGate", 0xe3102000, &s_gate },
-	{ "ScePervasiveBaseClk", 0xe3103000, &s_baseClock },
-	{ "ScePervasiveVid", 0xe3104000, &s_video },
-	{ "ScePervasiveMailbox", 0xe3106000, &s_mailbox },
-	{ "ScePervasiveTas0", 0xe3108000, &s_tas[0] },
-	{ "ScePervasiveTas1", 0xe3109000, &s_tas[1] },
-	{ "ScePervasiveTas2", 0xe310a000, &s_tas[2] },
-	{ "ScePervasiveTas3", 0xe310b000, &s_tas[3] },
-	{ "ScePervasiveTas4", 0xe310c000, &s_tas[4] },
-	{ "ScePervasiveTas5", 0xe310d000, &s_tas[5] },
-	{ "ScePervasiveTas6", 0xe310e000, &s_tas[6] },
-	{ "ScePervasiveTas7", 0xe310f000, &s_tas[7] },
-	{ "ScePervasive2", 0xe3110000, &s_pervasive2 },
-	{ "SceUartclkReg", 0xe3105000, &s_uartClock },
+	{ "ScePervasiveMisc", 0xe3100000, 0x1000, &s_misc },
+	{ "ScePervasiveReset", 0xe3101000, 0x1000, &s_reset },
+	{ "ScePervasiveGate", 0xe3102000, 0x1000, &s_gate },
+	{ "ScePervasiveBaseClk", 0xe3103000, 0x1000, &s_baseClock },
+	{ "ScePervasiveVid", 0xe3104000, 0x1000, &s_video },
+	{ "ScePervasiveMailbox", 0xe3106000, 0x1000, &s_mailbox },
+	{ "ScePervasiveTas0", 0xe3108000, 0x1000, &s_tas[0] },
+	{ "ScePervasiveTas1", 0xe3109000, 0x1000, &s_tas[1] },
+	{ "ScePervasiveTas2", 0xe310a000, 0x1000, &s_tas[2] },
+	{ "ScePervasiveTas3", 0xe310b000, 0x1000, &s_tas[3] },
+	{ "ScePervasiveTas4", 0xe310c000, 0x1000, &s_tas[4] },
+	{ "ScePervasiveTas5", 0xe310d000, 0x1000, &s_tas[5] },
+	{ "ScePervasiveTas6", 0xe310e000, 0x1000, &s_tas[6] },
+	{ "ScePervasiveTas7", 0xe310f000, 0x1000, &s_tas[7] },
+	{ "ScePervasive2", 0xe3110000, 0x1000, &s_pervasive2 },
+	{ "SceUartclkReg", 0xe3105000, 0x1000, &s_uartClock },
 };
 
-static void PervasiveClockInit(void)
+static inline __attribute__((always_inline)) void PervasiveClockInit(void)
 {
 	unsigned mode;
 
 	LowioPixelClockInit();
+	PervasiveMiscInit();
 	mode = ksceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
 	ScePervasiveForDriver_6AF0196F(mode, mode);
 }
@@ -73,7 +76,8 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		opt.attr = 2;
 		opt.paddr = s_pervasiveDevices[i].paddr;
 		ret = ksceKernelAllocMemBlock(s_pervasiveDevices[i].name,
-			i == 5 ? 0x20100206 : 0x20100806, 0x1000, &opt);
+			i == 5 ? 0x20100206 : 0x20100806,
+			s_pervasiveDevices[i].size, &opt);
 		if (ret < 0) {
 			unsigned j;
 

@@ -189,6 +189,12 @@ uint32_t ScePervasiveForDriver_4B99558F(void)
 	return 0;
 }
 
+/* name unknown: part of the clock setup at start and on resume; does nothing */
+int PervasiveMiscInit(void)
+{
+	return 0;
+}
+
 uint32_t ScePervasiveForDriver_9F8E589C(unsigned port, uint32_t value)
 {
 	if (port >= 4 || (value & ~0x700U) != 0)
