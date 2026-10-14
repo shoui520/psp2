@@ -52,6 +52,12 @@ int wlanConnectionHasPrimary(void)
 	return wlanConnectionPrimary != NULL;
 }
 
+int wlanConnectionSetPrimary(struct WlanConnection *connection)
+{
+	wlanConnectionPrimary = connection;
+	return 0;
+}
+
 struct WlanConnection *wlanConnectionGetPrimary(void)
 {
 	return wlanConnectionPrimary;

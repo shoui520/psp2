@@ -73,7 +73,9 @@ struct WlanConnection {
 	uint8_t flags2;
 	uint8_t reserved0[2];
 	void *device;
-	uint8_t reserved1[48];
+	uint8_t reserved1a[38];
+	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
+	uint8_t reserved1d[9];
 	uint8_t supportedRates[12];
 	uint8_t reserved1b[2];
 	uint8_t supportedRatesLength;
@@ -123,6 +125,7 @@ struct WlanConnection {
 };
 
 _Static_assert(offsetof(struct WlanConnection, device) == 12, "device");
+_Static_assert(offsetof(struct WlanConnection, hostFlags) == 54, "host flags");
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");
@@ -164,6 +167,24 @@ struct WlanConnectionInfo **wlanConnectionInfoSlot(struct WlanConnection *connec
 struct WlanConnectionInfo *wlanConnectionInfo(struct WlanConnection *connection);
 int wlanConnectionIsReady(struct WlanConnection *connection);
 void wlanConnectionSetActiveFlag(struct WlanConnection *connection, int active);
+#define WLAN_CONN_HOST_ETHERNET		0x10
+#define WLAN_CONN_HOST_FLAG_8		0x08
+
+int wlanConnectionsIdle(void);
+int wlanNoConnectionActive(void);
+struct WlanConnection *wlanConnectionNextByBss(struct WlanConnection *after, unsigned int bssType,
+					       unsigned int bssNumber);
+int wlanAnyConnectionHostFlag8(void);
+int wlanAnyConnectionFlag4(void);
+int wlanAnyConnectionFlag10(void);
+int wlanAnyActiveConnectionFlags2Bit0(void);
+int wlanAnyConnectionFlags2Bit4(void);
+struct WlanConnection *wlanConnectionFindByTypeNumber(unsigned int interfaceType,
+						      unsigned int bssNumber);
+int wlanConnectionHasLocalAddress(const struct WlanConnection *connection, const void *address);
+int wlanContextUsesEthernetFrames(const void *context);
+struct WlanConnection *wlanConnectionNextFlagged(struct WlanConnection *after,
+						 unsigned int interfaceType);
 int wlanBufferUsesAmp(OsaBuffer *buffer);
 void *wlanGetBufferDevice(OsaBuffer *buffer);
 
@@ -179,6 +200,9 @@ int wlanHasApRole(void);
 struct WlanConnection *wlanConnectionByRole(int role);
 int wlanConnectionHasPrimary(void);
 struct WlanConnection *wlanConnectionGetPrimary(void);
+int wlanConnectionSetPrimary(struct WlanConnection *connection);
+int wlanConnectionTypeCount(void);
+struct WlanConnection *wlanConnectionFindFlaggedByLocal(const void *address);
 int wlanConnectionActivate(struct WlanConnection *connection);
 int wlanPostConnectionEvent(struct WlanConnection *connection, uint32_t event);
 int wlanConnectEventTryWait(void);

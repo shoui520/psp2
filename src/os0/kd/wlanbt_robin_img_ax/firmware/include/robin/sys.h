@@ -18,6 +18,7 @@ typedef void (*OsaTimerCallback)(uint32_t timer, uint32_t argument);
 /* sys/sys.c */
 int sysInit(void);
 void sysIrqRegister(uint32_t line, SysIrqHandler handler);
+int sysOsTimerIrq(int line, uint32_t pending);
 int sysIrqUnregister(uint32_t line);
 int sysIrqDispatch(void);
 int sysIrqEnableAll(void);

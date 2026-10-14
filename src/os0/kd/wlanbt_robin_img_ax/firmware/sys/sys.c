@@ -28,7 +28,7 @@ struct SysTimerSlot {
 	uint32_t arg;
 };
 
-static int sysOsTimerIrq(int line, uint32_t pending);
+int sysOsTimerIrq(int line, uint32_t pending);
 static int sysSdioIrq(int line, uint32_t pending);
 static int sysBbpEventAIrq(int line, uint32_t pending);
 static int sysBbpEventBIrq(int line, uint32_t pending);
@@ -242,7 +242,7 @@ ULONG sysGetTime(ULONG *now)
  * Lines 4, 6 and 7: the general-purpose timer block (0x00000554).
  * Timer 0 is the ThreadX tick.
  */
-static int sysOsTimerIrq(int line, uint32_t pending)
+int sysOsTimerIrq(int line, uint32_t pending)
 {
 	uint32_t status = SOC_TIMER_INT_STATUS;
 

@@ -219,3 +219,221 @@ void *wlanGetBufferDevice(OsaBuffer *buffer)
 
 	return connection->device;
 }
+
+/*
+ * Next connection after one in the list that has bit 2 of the second flag
+ * byte set and the given interface type; interrupts are masked while the
+ * list is walked.
+ */
+struct WlanConnection *wlanConnectionNextFlagged(struct WlanConnection *after,
+						 unsigned int interfaceType)
+{
+	struct WlanConnection *found = NULL;
+	struct WlanConnection *connection;
+	struct WlanConnection *candidate;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection != after)
+			continue;
+		for (candidate = connection->next; candidate != NULL && found == NULL;
+		     candidate = candidate->next) {
+			if ((candidate->flags2 & 4) && candidate->interfaceType == interfaceType)
+				found = candidate;
+		}
+		break;
+	}
+	sysIrqRestore(posture);
+	return found;
+}
+
+int wlanConnectionsIdle(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->state != 0) {
+			sysIrqRestore(posture);
+			return 0;
+		}
+	}
+	sysIrqRestore(posture);
+	return 1;
+}
+
+int wlanNoConnectionActive(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->state != 0) {
+			sysIrqRestore(posture);
+			return 0;
+		}
+	}
+	sysIrqRestore(posture);
+	return 1;
+}
+
+/* Next connection after one in the list that belongs to the given BSS. */
+struct WlanConnection *wlanConnectionNextByBss(struct WlanConnection *after, unsigned int bssType,
+					       unsigned int bssNumber)
+{
+	struct WlanConnection *connection;
+	struct WlanConnection *candidate;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection != after)
+			continue;
+		for (candidate = connection->next; candidate != NULL; candidate = candidate->next) {
+			if (candidate->bssType == bssType && candidate->bssNumber == bssNumber) {
+				sysIrqRestore(posture);
+				return candidate;
+			}
+		}
+		break;
+	}
+	sysIrqRestore(posture);
+	return NULL;
+}
+
+int wlanAnyConnectionHostFlag8(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->hostFlags & WLAN_CONN_HOST_FLAG_8) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+int wlanAnyConnectionFlag4(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->flags & 4) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+int wlanAnyConnectionFlag10(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->flags & 0x10) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/* A connection that is up and has bit 0 of the second flag byte. */
+int wlanAnyActiveConnectionFlags2Bit0(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->state != 0 && (connection->flags2 & 1)) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+int wlanAnyConnectionFlags2Bit4(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->flags2 & 0x10) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+struct WlanConnection *wlanConnectionFindByTypeNumber(unsigned int interfaceType,
+						      unsigned int bssNumber)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->interfaceType == interfaceType && connection->bssNumber == bssNumber) {
+			sysIrqRestore(posture);
+			return connection;
+		}
+	}
+	sysIrqRestore(posture);
+	return NULL;
+}
+
+int wlanConnectionHasLocalAddress(const struct WlanConnection *connection, const void *address)
+{
+	return memcmp(connection->localAddress, address, 6) == 0;
+}
+
+int wlanContextUsesEthernetFrames(const void *context)
+{
+	return (((const struct WlanConnection *)context)->hostFlags >> 4) & 1;
+}
+
+/* Number of different interface types (below 6) among the connections. */
+int wlanConnectionTypeCount(void)
+{
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+	unsigned int seen = 0;
+	int count = 0;
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		unsigned int type = connection->interfaceType;
+
+		if (type < 6 && ((1 << type) & seen) == 0) {
+			++count;
+			seen |= 1 << type;
+		}
+	}
+	sysIrqRestore(posture);
+	return count;
+}
+
+/* First connection with bit 2 of the second flag byte and the given local address. */
+struct WlanConnection *wlanConnectionFindFlaggedByLocal(const void *address)
+{
+	struct WlanConnection *found = NULL;
+	struct WlanConnection *connection;
+	unsigned int posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL && found == NULL;
+	     connection = connection->next) {
+		if ((connection->flags2 & 4) && memcmp(connection->localAddress, address, 6) == 0)
+			found = connection;
+	}
+	sysIrqRestore(posture);
+	return found;
+}

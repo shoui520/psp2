@@ -55,6 +55,9 @@ extern void *wlanSdioDev;
 
 int wlanInitializationHook(void);
 int wlanDriverInit(void);
+void wlanIrqRegisterAll(void);
+void wlanIrqUnregisterAll(void);
+void wlanIrqEnableHostLines(void);
 int wlanForwardSdioEvent(void *device, OsaBuffer *buffer,
 			 uintptr_t argument, unsigned int event);
 int wlanReceiveDeviceEvent(void *device, OsaBuffer *buffer,
