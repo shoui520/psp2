@@ -2520,19 +2520,19 @@ create:
 /* an object of cls from the heap of heapGuid (the kernel heap if none) */
 SceUID ksceGUIDCreate(SceClass *cls, const char *name, SceUID heapGuid, SceObjectBase **obj)
 {
-	SceUInt32 type;
+	SceUInt32 attr;
 	SceUID pid;
 	void *heap;
 
-	if (name == NULL || obj == NULL)
+	if (name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	type = cls->defaultObjectType << UID_ENTRY_ATTR_TYPE_SHIFT;
+	if (obj == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	attr = ((cls->defaultObjectType << UID_ENTRY_ATTR_TYPE_SHIFT) & UID_ENTRY_ATTR_TYPE_MASK) |
+	       UID_ENTRY_ATTR_LEVEL_DEFAULT;
 	pid = SceSysrootForKernel_7385CADE();
-	if (ksceGUIDGetObject(heapGuid, &heap) < 0)
-		heap = NULL;
-	return GUIDCreate(cls, name, pid, heap, NULL,
-			  (type & UID_ENTRY_ATTR_TYPE_MASK) |
-			  UID_ENTRY_ATTR_LEVEL_DEFAULT, obj);
+	return GUIDCreate(cls, name, pid, ksceGUIDGetObject(heapGuid, &heap) < 0 ? NULL : heap, NULL,
+			  attr, obj);
 }
 
 static inline int UIDEntryGetClassWithGUID(const UIDEntry *entry, SceUID guid, SceClass **cls)
