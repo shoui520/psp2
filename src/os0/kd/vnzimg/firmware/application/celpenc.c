@@ -73,7 +73,7 @@ typedef struct CelpEncoderRate {
 /* the engine (0x854b9e-) */
 int32_t celpEncoderInit(void *engine, uint32_t size);
 int32_t celpEncoderReset(void *engine);
-int32_t celpEncoderSetRate(void *engine, const CelpEncoderRate *rate);
+int32_t celpEncoderSetRate(void *engine, CelpEncoderRate *rate);
 int32_t celpEncoderHeader(void *engine, uint8_t *header, uint32_t size, int32_t *bits);
 int32_t celpEncode(void *engine, const int16_t *pcm, uint32_t *pcmSize, uint8_t *es,
 	uint32_t *esSize);

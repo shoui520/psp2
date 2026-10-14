@@ -28,6 +28,7 @@
 #define CELP_ERROR_STATE		((int32_t)0x80000001)
 #define CELP_ERROR_SIZE			((int32_t)0x80000003)
 #define CELP_ERROR_POINTER		((int32_t)0x80000004)
+#define CELP_ERROR_ENCODE		((int32_t)0x80000007)
 
 /* the decoder's state, 8 bytes into the memory the ARM gives */
 typedef struct CelpDecoderState {
@@ -122,6 +123,9 @@ uint32_t celpInvSqrt(int32_t x);
 int32_t celpSqrt(int32_t x);
 int32_t celpSin(int32_t t);
 int32_t celpCos(int32_t t);
+int32_t celpTan(int32_t t);
+int32_t celpAtan(int32_t x);
+int32_t celpAcos(int32_t x);
 
 /* the bit reader (celpbits.c) */
 void celpBitsReset(CelpDecoderState *state);
@@ -137,3 +141,52 @@ void celpSynthesize(CelpDecoderState *state);
 void celpBuildPulses(CelpDecoderState *state, int32_t subframeLength, int32_t pulses, int32_t *widths,
 	int32_t (*positions)[CELP_MAX_SUBFRAME]);
 int32_t celpFrameBits(const CelpDecoderState *state);
+
+/* ------------------------------------------------------------ the encoder */
+
+#define CELP_ENC_STATE_SIZE		0x16cb8
+
+#include "celpencstate.h"
+
+/* the engine's state, 8 bytes into the memory the ARM gives */
+static inline CelpEncoderState *celpEncoderState(void *engine)
+{
+	return (CelpEncoderState *)(((uint32_t)engine & ~7u) + 8);
+}
+
+extern const int32_t celpEncModeBitRates[32];
+extern const int32_t celpEncFrameLengths[32];
+extern const int32_t celpEncSubframeCounts[32];
+extern const int32_t celpEncSubframeLengths[32];
+extern const int32_t celpEncPitchBlocks[32];
+extern const int8_t celpEncPositionBits[64];
+extern const int8_t celpEncSignBits[64];
+extern const int16_t celpEncWindowHead[120];
+extern const int16_t celpEncWindowTail[160];
+extern const int16_t celpEncInitialLsp[10];
+extern const int32_t celpEncLagWindow[11];
+extern const int32_t celpEncGamma[10];
+extern const int16_t celpEncLagIndex[768];
+extern const int32_t celpEncPi[1];
+extern const int16_t celpEncLspWeights[6];
+extern const int16_t celpEncLspFirst[16][5];
+extern const int16_t celpEncLspSecond[16][5];
+extern const int16_t celpEncLspThird[64][5];
+extern const int16_t celpEncLspFourth[32][5];
+extern const int16_t celpEncLspThirdPredicted[64][5];
+extern const int16_t celpEncLspFourthPredicted[32][5];
+
+/* the rate of celpEncoderSetRate: the mode index (-1: the bit rate's) and the bit rate */
+typedef struct CelpEncoderRate {
+	int32_t mode;
+	uint32_t bitRate;
+} CelpEncoderRate;
+
+/* the encoder's analysis, search and quantisation of a frame */
+void celpEncAnalyseLpc(CelpEncoderState *state);
+void celpEncLpcToLsp(CelpEncoderState *state, int32_t *angle);
+void celpEncQuantizeLsp(CelpEncoderState *state, int32_t *angle, int32_t *lsp, int32_t *indices);
+void celpEncInterpolateLsp(CelpEncoderState *state);
+void celpEncSearchPitch(CelpEncoderState *state);
+void celpEncSearchExcitation(CelpEncoderState *state);
+int32_t celpEncDivide(int64_t remainder, int32_t divisor);

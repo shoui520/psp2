@@ -286,3 +286,74 @@ int32_t celpCos(int32_t t)
 		result = sinSeries(HALF_PI - angle);
 	return negative ? -result : result;
 }
+
+/* 0x86e056: tan(t) */
+int32_t celpTan(int32_t t)
+{
+	int32_t sine = celpSin(t);
+	int32_t cosine = celpCos(t);
+	int32_t sign = sine;
+	uint32_t result;
+
+	if (cosine < 0) {
+		cosine = -cosine;
+		sign = -sine;
+	}
+	result = ((uint32_t)absolute(sine) << 16) / (uint32_t)cosine;
+	return sign < 0 ? -(int32_t)result : (int32_t)result;
+}
+
+/* 0x86de44: atan(t) for small t, from its series */
+static int32_t atanSeries(int32_t t)
+{
+	uint32_t square = (uint32_t)t * (uint32_t)t;
+	uint32_t a = highProduct(square, -9174);
+	uint32_t b = highProduct(square, (int32_t)(a + 13107));
+	uint32_t c = highProduct(square, (int32_t)(b - 21844));
+
+	return (int32_t)((c + ONE) * (uint32_t)t) >> 16;
+}
+
+/* 0x86e15e: atan(x) for x >= 0, reduced by pi/8 and pi/4 */
+static int32_t atanReduced(int32_t x)
+{
+	if (x < 13035)
+		return atanSeries(x);
+	if (x < 43785)
+		return atanSeries((int32_t)((uint32_t)(x - 27146) << 16) / (int32_t)(((x * 27146) >> 16) + ONE)) + 25735;
+	if (x < 0x7fff0001)
+		return atanSeries((int32_t)((uint32_t)(x - ONE) << 16) / (x + ONE)) + 51471;
+	return 51471;
+}
+
+/* 0x86e096: atan(x) */
+int32_t celpAtan(int32_t x)
+{
+	int32_t magnitude = absolute(x);
+	int32_t result;
+
+	if (magnitude < ONE) {
+		result = atanReduced(magnitude);
+	} else {
+		uint64_t reciprocal = ((uint64_t)1 << 32) / (uint32_t)magnitude;
+
+		result = HALF_PI - atanReduced((int32_t)reciprocal);
+	}
+	return x < 0 ? -result : result;
+}
+
+/* 0x86e0f0: acos(x) */
+int32_t celpAcos(int32_t x)
+{
+	int32_t magnitude, complement;
+
+	if (x == 0)
+		return HALF_PI;
+	magnitude = absolute(x);
+	complement = ONE - (int32_t)(((uint32_t)magnitude * (uint32_t)magnitude) >> 16);
+	if (magnitude < 46342)
+		return HALF_PI - celpAtan((int32_t)(((uint32_t)magnitude << 16) / (uint32_t)celpSqrt(complement)) << 8);
+	if (!(magnitude < 0x10001))
+		return CELP_MATH_ERROR;
+	return celpAtan((int32_t)(((uint32_t)celpSqrt(complement) << 8) / (uint32_t)magnitude));
+}
