@@ -3,7 +3,6 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <sce/threadmgr.h>
 
-int sceKernelDelayThread(unsigned usec);
 
 typedef struct PixelClockSetting {
 	uint32_t clock;

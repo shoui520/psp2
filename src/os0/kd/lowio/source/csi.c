@@ -2,10 +2,10 @@
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/motion_dummy.h>
 #include <sce/sysevent.h>
 #include <sce/csi.h>
 #include <sce/csi_regs.h>
+#include <sce/threadmgr.h>
 
 #define CSI_ERROR_HEAD ((uint32_t)0x803f0900)
 #define CSI_ERROR_MODE ((uint32_t)0x803f0901)
@@ -14,7 +14,6 @@ uint32_t ScePervasiveForDriver_5B4EF352(void);
 int ScePervasiveForDriver_4B223AF5(int port);
 int ScePervasiveForDriver_D3B59C33(int port);
 int ScePervasiveForDriver_1068C067(int port);
-int sceKernelDelayThread(unsigned int usec);
 
 typedef struct CsiContext {
 	volatile SceCsiRegisters *registers;
