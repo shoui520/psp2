@@ -1,152 +1,57 @@
-/* ScePwm configuration and deferred stop state. Private names are inferred. */
+/* ScePwm: two PWM channels and their deferred stop. Private names are inferred. */
 #include "lowio_internal.h"
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
+#include <sce/pwm_regs.h>
 #include <sce/sysevent.h>
 
-#define PWM_ERROR_CHANNEL ((uint32_t)0x803f0200)
-#define PWM_ERROR_ARGUMENT ((uint32_t)0x803f0201)
-#define PWM_ERROR_BUSY ((uint32_t)0x803f0280)
-#define PWM_REG(channel, offset) \
-	(*(volatile uint32_t *)(s_pwmBase + (channel) * 0x20 + (offset)))
+#define PWM_ERROR_CHANNEL ((int)0x803f0200)
+#define PWM_ERROR_ARGUMENT ((int)0x803f0201)
+#define PWM_ERROR_BUSY ((int)0x803f0280)
 
-uint8_t *s_pwmBase;
-uint8_t s_pwmState[2];
+typedef enum PwmState {
+	PWM_STATE_STOPPED = 0,
+	PWM_STATE_RUNNING = 1,
+	PWM_STATE_STOPPING = 2,	/* stop requested, update still pending */
+} PwmState;
 
-uint32_t ScePwmForDriver_13161CCC(unsigned channel, uint32_t flags,
-	uint32_t period, uint32_t duty)
+typedef struct PwmContext {
+	volatile ScePwmRegisters *registers;
+	uint8_t state[2];
+	SceUID uid;
+} PwmContext;
+
+_Static_assert(offsetof(PwmContext, uid) == 0x8, "PWM context uid");
+
+static PwmContext s_pwm;
+
+static inline __attribute__((always_inline)) void PwmRestoreState(void)
 {
-	uint32_t control, previous;
+	volatile ScePwmRegisters *regs = s_pwm.registers;
+	uint32_t control, period;
 
-	if (channel >= 2)
-		return PWM_ERROR_CHANNEL;
-	if ((flags & ~0x300U) != 0 || duty > period)
-		return PWM_ERROR_ARGUMENT;
-	previous = s_pwmState[channel];
-	control = PWM_REG(channel, 0);
-	if (previous == 2) {
-		if (control & 2)
-			return PWM_ERROR_BUSY;
-		previous = 0;
-	}
-	s_pwmState[channel] = 1;
-	control = (flags & 0x300) | (control & 1 ? 3 : 1);
-	PWM_REG(channel, 4) = period;
-	PWM_REG(channel, 8) = duty;
-	PWM_REG(channel, 0) = control;
-	return previous;
+	control = regs->channel[0].control;
+	period = regs->channel[0].period;
+	s_pwm.state[0] = (control & SCE_PWM_CONTROL_ENABLE) && period != 0;
+	control = regs->channel[1].control;
+	period = regs->channel[1].period;
+	s_pwm.state[1] = (control & SCE_PWM_CONTROL_ENABLE) && period != 0;
 }
 
-uint32_t ScePwmForDriver_22C17D24(unsigned channel)
-{
-	uint32_t control, previous;
-
-	if (channel >= 2)
-		return PWM_ERROR_CHANNEL;
-	previous = s_pwmState[channel];
-	control = PWM_REG(channel, 0);
-	if (previous == 2) {
-		if ((control & 2) == 0) {
-			s_pwmState[channel] = 0;
-			return 0;
-		}
-	} else if (previous == 0) {
-		return 0;
-	}
-	PWM_REG(channel, 4) = 0;
-	PWM_REG(channel, 0) = control | 2;
-	s_pwmState[channel] = 2;
-	if ((PWM_REG(channel, 0) & 2) == 0) {
-		PWM_REG(channel, 0) &= 1;
-		s_pwmState[channel] = 0;
-	}
-	return previous;
-}
-
-uint32_t ScePwmForDriver_514773B1(unsigned channel, uint32_t period,
-	uint32_t duty)
-{
-	uint8_t state;
-	uint32_t control;
-
-	if (channel >= 2)
-		return PWM_ERROR_CHANNEL;
-	state = s_pwmState[channel];
-	if (state == 0)
-		return 0;
-	control = PWM_REG(channel, 0);
-	if (state == 2) {
-		if ((control & 2) == 0)
-			s_pwmState[channel] = 0;
-		return 0;
-	}
-	if (state == 1 && (control & 2))
-		return PWM_ERROR_BUSY;
-	PWM_REG(channel, 4) = period;
-	PWM_REG(channel, 8) = duty;
-	PWM_REG(channel, 0) |= 2;
-	return 0;
-}
-
-uint32_t ScePwmForDriver_0374213C(unsigned channel, uint16_t *periodOut,
-	uint16_t *dutyOut, uint32_t *levelOut)
-{
-	uint32_t state, control, period, duty, level = 2;
-
-	if (channel >= 2)
-		return PWM_ERROR_CHANNEL;
-	state = s_pwmState[channel];
-	control = PWM_REG(channel, 0);
-	period = PWM_REG(channel, 4);
-	duty = PWM_REG(channel, 8);
-	if (state == 2) {
-		if ((control & 2) == 0)
-			s_pwmState[channel] = 0;
-		state = 0;
-	}
-	if (periodOut)
-		*periodOut = period;
-	if (dutyOut)
-		*dutyOut = duty;
-	if (levelOut) {
-		if ((control & 3) == 1) {
-			if (period == 0)
-				level = control >> 9 & 1;
-			else if (period == duty)
-				level = (control >> 8 & 1) ^ 1;
-			else if (duty == 0)
-				level = control >> 8 & 1;
-		}
-		*levelOut = level;
-	}
-	return state;
-}
-
-static int s_pwmUid;
-
-static void PwmRestoreState(void)
-{
-	unsigned channel;
-
-	for (channel = 0; channel < 2; channel++) {
-		uint32_t control = PWM_REG(channel, 0);
-		uint32_t period = PWM_REG(channel, 4);
-
-		s_pwmState[channel] = (control & 1) && period != 0;
-	}
-}
-
-static int PwmSysEvent(int resume, int event, void *args, void *opt)
+static int PwmSysEvent(int resume, int eventId, void *args, void *opt)
 {
 	(void)args;
 	(void)opt;
-	if (resume == 0 && event == 0x4002) {
-		s_pwmState[0] = 0;
-		s_pwmState[1] = 0;
-	} else if (resume == 1 && event == 0x10002) {
-		PwmRestoreState();
+	if (resume == 0) {
+		if (eventId == 0x4002) {
+			s_pwm.state[0] = PWM_STATE_STOPPED;
+			s_pwm.state[1] = PWM_STATE_STOPPED;
+		}
+	} else if (resume == 1) {
+		if (eventId == 0x10002)
+			PwmRestoreState();
 	}
 	return 0;
 }
@@ -163,9 +68,148 @@ int LowioPwmInit(void)
 	ret = ksceKernelAllocMemBlock("ScePwmReg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		return 2;
-	s_pwmUid = ret;
-	ksceKernelGetMemBlockBase(ret, (void **)&s_pwmBase);
+	s_pwm.uid = ret;
+	ksceKernelGetMemBlockBase(ret, (void **)&s_pwm.registers);
 	PwmRestoreState();
 	ksceKernelRegisterSysEventHandler("ScePwm", PwmSysEvent, NULL);
 	return 0;
+}
+
+int ScePwmForDriver_13161CCC(unsigned int channel, uint32_t flags,
+	uint32_t period, uint32_t duty)
+{
+	volatile ScePwmRegisters *regs = s_pwm.registers;
+	volatile ScePwmChannelRegisters *pwm;
+	uint32_t control;
+	int previous;
+
+	if (channel > 1)
+		return PWM_ERROR_CHANNEL;
+	if ((flags & ~SCE_PWM_CONTROL_LEVELS) != 0 || duty > period)
+		return PWM_ERROR_ARGUMENT;
+	previous = s_pwm.state[channel];
+	pwm = &regs->channel[channel];
+	control = pwm->control;
+	if (previous == PWM_STATE_STOPPING) {
+		if (control & SCE_PWM_CONTROL_UPDATE)
+			return PWM_ERROR_BUSY;
+		previous = PWM_STATE_STOPPED;
+	}
+	s_pwm.state[channel] = PWM_STATE_RUNNING;
+	if (control & SCE_PWM_CONTROL_ENABLE)
+		control = (flags & SCE_PWM_CONTROL_LEVELS) |
+			SCE_PWM_CONTROL_UPDATE | SCE_PWM_CONTROL_ENABLE;
+	else
+		control = (flags & SCE_PWM_CONTROL_LEVELS) | SCE_PWM_CONTROL_ENABLE;
+	pwm->period = period;
+	pwm->duty = duty;
+	pwm->control = control;
+	return previous;
+}
+
+int ScePwmForDriver_22C17D24(unsigned int channel)
+{
+	volatile ScePwmRegisters *regs = s_pwm.registers;
+	volatile ScePwmChannelRegisters *pwm;
+	uint32_t control;
+	int previous;
+
+	if (channel > 1)
+		return PWM_ERROR_CHANNEL;
+	previous = s_pwm.state[channel];
+	pwm = &regs->channel[channel];
+	control = pwm->control;
+	if (previous == PWM_STATE_STOPPING) {
+		if ((control & SCE_PWM_CONTROL_UPDATE) == 0) {
+			s_pwm.state[channel] = PWM_STATE_STOPPED;
+			return 0;
+		}
+	} else if (previous == PWM_STATE_STOPPED) {
+		return previous;
+	}
+	pwm->period = 0;
+	pwm->control = control | SCE_PWM_CONTROL_UPDATE;
+	s_pwm.state[channel] = PWM_STATE_STOPPING;
+	if ((pwm->control & SCE_PWM_CONTROL_UPDATE) == 0) {
+		pwm->control &= SCE_PWM_CONTROL_ENABLE;
+		s_pwm.state[channel] = PWM_STATE_STOPPED;
+	}
+	return previous;
+}
+
+int ScePwmForDriver_514773B1(unsigned int channel, uint32_t period,
+	uint32_t duty)
+{
+	volatile ScePwmRegisters *regs = s_pwm.registers;
+	volatile ScePwmChannelRegisters *pwm;
+	uint32_t control;
+	int state;
+
+	if (channel > 1)
+		return PWM_ERROR_CHANNEL;
+	state = s_pwm.state[channel];
+	if (state == PWM_STATE_STOPPED)
+		return state;
+	pwm = &regs->channel[channel];
+	control = pwm->control;
+	if (state == PWM_STATE_STOPPING) {
+		if ((control & SCE_PWM_CONTROL_UPDATE) == 0)
+			s_pwm.state[channel] = PWM_STATE_STOPPED;
+		return 0;
+	}
+	if (state == PWM_STATE_RUNNING && (control & SCE_PWM_CONTROL_UPDATE) != 0)
+		return PWM_ERROR_BUSY;
+	pwm->period = period;
+	pwm->duty = duty;
+	pwm->control |= SCE_PWM_CONTROL_UPDATE;
+	return 0;
+}
+
+int ScePwmForDriver_0374213C(unsigned int channel, uint16_t *periodOut,
+	uint16_t *dutyOut, uint32_t *levelOut)
+{
+	volatile ScePwmChannelRegisters *pwm;
+	uint32_t control, period, duty, level;
+	int state;
+
+	if (channel > 1)
+		return PWM_ERROR_CHANNEL;
+	state = s_pwm.state[channel];
+	pwm = &s_pwm.registers->channel[channel];
+	control = pwm->control;
+	period = pwm->period;
+	duty = pwm->duty;
+	if (state == PWM_STATE_STOPPING) {
+		if ((control & SCE_PWM_CONTROL_UPDATE) == 0)
+			s_pwm.state[channel] = PWM_STATE_STOPPED;
+		state = PWM_STATE_STOPPED;
+	}
+	if (periodOut != NULL)
+		*periodOut = period;
+	if (dutyOut != NULL)
+		*dutyOut = duty;
+	if (levelOut != NULL) {
+		/* A steady output has a level; a running wave has none (2). */
+		level = 2;
+		if ((control & (SCE_PWM_CONTROL_UPDATE | SCE_PWM_CONTROL_ENABLE)) ==
+		    SCE_PWM_CONTROL_ENABLE) {
+			if (period == 0)
+				level = (control & SCE_PWM_CONTROL_IDLE_LEVEL) != 0;
+			else if (period == duty)
+				level = (control & SCE_PWM_CONTROL_INVERT) == 0;
+			else if (duty == 0)
+				level = (control & SCE_PWM_CONTROL_INVERT) != 0;
+		}
+		*levelOut = level;
+	}
+	return state;
+}
+
+int ScePwmForDriver_99911920(unsigned int channel)
+{
+	volatile ScePwmRegisters *regs = s_pwm.registers;
+
+	if (channel > 1)
+		return PWM_ERROR_CHANNEL;
+	return (regs->channel[channel].control & SCE_PWM_CONTROL_UPDATE) != 0;
 }
