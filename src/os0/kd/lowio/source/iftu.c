@@ -503,67 +503,69 @@ int ksceIftuEnable(unsigned int index)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
-	if (plane->state == IFTU_STATE_DISABLED) {
-		regs = plane->registers;
-		regs->pathConfig = 0x108;
-		regs->filter = plane->bilinear;
-		IftuLoadCsc2(regs, &plane->cscParams2);
-		IftuLoadCsc1(regs, &plane->cscParams1);
-		regs->backgroundColor[0] = 0;
-		regs->backgroundColor[1] = 0;
-		regs->backgroundColor[2] = 0;
-		if (plane->alpha == IFTU_NO_BLEND) {
-			regs->alpha = 0;
-			regs->alphaControl = 1;
-		} else {
-			regs->alpha = plane->alpha;
-			regs->alphaControl = 0;
-		}
-		for (i = 0; i < 2; i++) {
-			volatile SceIftuBufferRegisters *buffer = &regs->buffer[i];
-
-			buffer->dstFormat = plane->output.pixelFormat;
-			buffer->dstWidth = plane->output.width;
-			buffer->dstHeight = plane->output.height;
-			if (plane->planeState.fb.pixelformat != 0)
-				IftuLoadSource(buffer, &plane->planeState);
-			else
-				IftuLoadBlank(buffer, plane);
-		}
-		control = plane->control;
-		planeControl = control->planeControl;
-		if ((index & ~2) == 1) {
-			uint32_t setting = plane->mergeSetting;
-
-			if (setting == IFTU_NO_MERGE) {
-				planeControl &= ~1;
-				setting = 0;
-			} else {
-				planeControl |= 1;
-			}
-			control->blendControl = setting;
-		}
-		if (index & 1) {
-			if (plane->output.planeEnable == 1) {
-				planeControl |= 0x10;
-				control->plane[1].companion = 0;
-			} else {
-				planeControl &= ~0x10;
-			}
-		} else if (plane->output.planeEnable == 1) {
-			planeControl |= 4;
-			control->plane[0].companion = 0;
-		} else {
-			planeControl &= ~4;
-		}
-		plane->bank = 0;
-		plane->planeControl->bankSelect = 0;
-		control->planeControl = planeControl;
-		control->engineControl = 1;
-		LowioDmb();
-		plane->state = IFTU_STATE_STARTING;
-		ksceKernelEnableIntr(plane->intrCode);
+	if (plane->state != IFTU_STATE_DISABLED) {
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+		return 0;
 	}
+	regs = plane->registers;
+	regs->pathConfig = 0x108;
+	regs->filter = plane->bilinear;
+	IftuLoadCsc2(regs, &plane->cscParams2);
+	IftuLoadCsc1(regs, &plane->cscParams1);
+	regs->backgroundColor[0] = 0;
+	regs->backgroundColor[1] = 0;
+	regs->backgroundColor[2] = 0;
+	if (plane->alpha == IFTU_NO_BLEND) {
+		regs->alpha = 0;
+		regs->alphaControl = 1;
+	} else {
+		regs->alpha = plane->alpha;
+		regs->alphaControl = 0;
+	}
+	for (i = 0; i < 2; i++) {
+		volatile SceIftuBufferRegisters *buffer = &regs->buffer[i];
+
+		buffer->dstFormat = plane->output.pixelFormat;
+		buffer->dstWidth = plane->output.width;
+		buffer->dstHeight = plane->output.height;
+		if (plane->planeState.fb.pixelformat != 0)
+			IftuLoadSource(buffer, &plane->planeState);
+		else
+			IftuLoadBlank(buffer, plane);
+	}
+	control = plane->control;
+	planeControl = control->planeControl;
+	if ((index & ~2) == 1) {
+		uint32_t setting = plane->mergeSetting;
+
+		if (setting == IFTU_NO_MERGE) {
+			planeControl &= ~1;
+			setting = 0;
+		} else {
+			planeControl |= 1;
+		}
+		control->blendControl = setting;
+	}
+	if (index & 1) {
+		if (plane->output.planeEnable == 1) {
+			planeControl |= 0x10;
+			control->plane[1].companion = 0;
+		} else {
+			planeControl &= ~0x10;
+		}
+	} else if (plane->output.planeEnable == 1) {
+		planeControl |= 4;
+		control->plane[0].companion = 0;
+	} else {
+		planeControl &= ~4;
+	}
+	plane->bank = 0;
+	plane->planeControl->bankSelect = 0;
+	control->planeControl = planeControl;
+	control->engineControl = 1;
+	LowioDmb();
+	plane->state = IFTU_STATE_STARTING;
+	ksceKernelEnableIntr(plane->intrCode);
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
