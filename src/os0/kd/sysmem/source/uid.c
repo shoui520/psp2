@@ -2008,55 +2008,58 @@ int GUIDFindByName(const char *name)
 }
 
 /* one user less of a GUID */
-int GUIDReleaseObject(SceUID guid)
+/* one use less: the last use of an entry closed meanwhile closes it */
+static inline int UIDEntryReleaseObjectWithGUID(UIDEntryHeap *heap, UIDEntry **pEntry,
+						SceUID guid, DeleteParam *param)
 {
-	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
-	DeleteParam param = { 0 };
-	UIDEntry *entry, *base;
-	int state, ret;
+	UIDEntry *entry = *pEntry;
+	UIDEntry *base;
+	int ret;
 
-	state = UID_WRITE_LOCK(heap, 5771);
-	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
-	if (ret < 0)
-		goto out;
-	/* UIDEntryReleaseObjectWithGUID */
 	if (entry->attr & UID_ENTRY_ATTR_GUID_ANY) {
 		if (entry->useCount == 0) {
 			SCE_DBG_ASSERT_FAIL(2813);
-			goto invalid;
+			return UID_ERROR_INVALID_UID;
 		}
 		entry->useCount--;
 		if (!UIDEntryIsUnused(entry))
-			goto unused;
+			return 0;
 		base = NULL;
 	} else if (entry->attr & UID_ENTRY_ATTR_LINK_ANY) {
 		if (entry->useCount == 0) {
 			SCE_DBG_ASSERT_FAIL(2828);
-			goto invalid;
+			return UID_ERROR_INVALID_UID;
 		}
 		entry->useCount--;
 		if (!UIDEntryIsUnused(entry))
-			goto unused;
+			return 0;
 		base = (entry->attr & UID_ENTRY_ATTR_PUID) ? NULL : entry->base;
 	} else {
-		goto invalid;
+		return UID_ERROR_INVALID_UID;
 	}
 	SCE_DBG_ASSERT_PRINTF(guid - 0x10001U > 0x5e, 2849,
 			      "error: GUIDReleaseObject(guid=0x%08X), pEntry->ucount=0x%08X\n", guid,
 			      entry->useCount);
-	ret = UIDEntryClose(heap, entry, &param);
-	if (ret >= 0 && base != NULL)
-		ret = UIDEntryCloseLink(heap, base, &param);
-	goto out;
-unused:
-	ret = 0;
-out:
+	ret = UIDEntryClose(heap, *pEntry, param);
+	if (ret < 0)
+		return ret;
+	if (base != NULL)
+		ret = UIDEntryCloseLink(heap, base, param);
+	return ret;
+}
+
+int GUIDReleaseObject(SceUID guid)
+{
+	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
+	DeleteParam param = { 0 };
+	UIDEntry *entry;
+	int state, ret;
+
+	state = UID_WRITE_LOCK(heap, 5771);
+	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
+	if (ret >= 0)
+		ret = UIDEntryReleaseObjectWithGUID(heap, &entry, guid, &param);
 	UID_WRITE_UNLOCK(heap, state);
-	goto clean;
-invalid:
-	UID_WRITE_UNLOCK(heap, state);
-	ret = UID_ERROR_INVALID_UID;
-clean:
 	if (param.nObject > DELETE_PARAM_OBJECTS) {
 		SCE_DBG_PRINTF(0xb, 5810, "nObject=%d[0x%08x]/%d, guid=0x%08x\n", param.nObject,
 			       param.nObject, DELETE_PARAM_OBJECTS, guid);
