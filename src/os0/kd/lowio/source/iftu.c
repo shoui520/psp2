@@ -330,7 +330,10 @@ int ksceIftuSetOutputFormat(int index, unsigned int width,
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return SCE_IFTU_ERROR_PLANE_BUSY;
 	}
-	plane->output = (IftuOutput){ width, height, pixelFormat, planeEnable };
+	plane->output.width = width;
+	plane->output.height = height;
+	plane->output.pixelFormat = pixelFormat;
+	plane->output.planeEnable = planeEnable;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return state;
 }
@@ -658,8 +661,24 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 		regs->backgroundColor[2] = 0;
 		regs->alpha = 0xff;
 	}
+	/* The converter's bank: source, destination, then the scaling. */
 	buffer = &regs->buffer[0];
-	IftuLoadSource(buffer, src);
+	buffer->disabled = 0;
+	buffer->format = src->fb.pixelformat;
+	buffer->width = src->fb.width;
+	buffer->height = src->fb.height;
+	buffer->linePadding = src->fb.leftover_stride;
+	buffer->leftoverAlign = src->fb.leftover_align;
+	buffer->address[0] = src->fb.paddr0;
+	buffer->address[1] = src->fb.paddr1;
+	buffer->address[2] = src->fb.paddr2;
+	buffer->sourceConfig[0] = src->sourceConfig[0];
+	buffer->sourceConfig[1] = src->sourceConfig[1];
+	buffer->sourceConfig[2] = src->sourceConfig[2];
+	buffer->vtopPadding = src->vtop_padding;
+	buffer->vbotPadding = src->vbot_padding;
+	buffer->hleftPadding = src->hleft_padding;
+	buffer->hrightPadding = src->hright_padding;
 	buffer->dstFormat = dst->pixelformat;
 	buffer->dstWidth = dst->width;
 	buffer->dstHeight = dst->height;
@@ -668,6 +687,12 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	buffer->dstAddress[0] = dst->paddr0;
 	buffer->dstAddress[1] = dst->paddr1;
 	buffer->dstAddress[2] = dst->paddr2;
+	buffer->scaleX = src->scaleX;
+	buffer->scaleY = src->scaleY;
+	buffer->dstX = src->dst_x;
+	buffer->dstY = src->dst_y;
+	buffer->sampleX = src->sampleX;
+	buffer->sampleY = src->sampleY;
 	regs->interruptEnable = 3;
 	regs->pathConfig = 0x108;
 	if (field == 2) {
@@ -683,8 +708,6 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
 	ksceKernelWaitEventFlag(converter->eventFlag, 1, 5, NULL, NULL);
-	(void)regs->pathConfig;
-	LowioDsb();
 	ScePervasiveForDriver_5AFE0AF0();
 	ret = ksceKernelUnlockFastMutex(&s_iftuFastMutex);
 	return ret < 0 ? ret : 0;
