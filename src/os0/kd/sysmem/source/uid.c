@@ -1194,7 +1194,10 @@ int UIDEntryHeapSetPUIDEntryChainRaw(UIDEntryHeap *heap, UIDEntry *entry, SceUID
 	entry->object = object;
 	entry->pid = pid;
 	entry->attr = entryAttr;
-	entry->classAttr = cls != NULL ? cls->attributes : 0;
+	if (cls != NULL)
+		entry->classAttr = cls->attributes;
+	else
+		entry->classAttr = 0;
 	entry->useCount = 0;
 	entry->linkCount = 1;
 	entry->guid = guid;
@@ -1226,7 +1229,10 @@ int UIDEntryConstructByBase(UIDEntryHeap *heap, UIDEntry *entry, SceUID pid, UID
 	entry->object = object;
 	entry->pid = pid;
 	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_LINK;
-	entry->classAttr = cls != NULL ? cls->attributes : 0;
+	if (cls != NULL)
+		entry->classAttr = cls->attributes;
+	else
+		entry->classAttr = 0;
 	entry->useCount = 0;
 	entry->linkCount = 1;
 	entry->base = base;
@@ -1326,7 +1332,10 @@ int UIDEntryHeapAllocateGUIDEntryObject(UIDEntryHeap *heap, SceClass *cls, const
 	entry->pid = pid;
 	entry->reserved = 0;
 	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_GUID;
-	entry->classAttr = cls != NULL ? cls->attributes : 0;
+	if (cls != NULL)
+		entry->classAttr = cls->attributes;
+	else
+		entry->classAttr = 0;
 	entry->useCount = 0;
 	entry->linkCount = 1;
 	if (entry->uid & UID_PUID)
