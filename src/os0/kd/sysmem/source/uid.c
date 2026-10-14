@@ -1320,14 +1320,66 @@ int GUIDUnregister(SceUID guid)
 	return ret;
 }
 
+/* the entry's name, inserted into the name heap its attr selects */
+static inline int UIDEntryConstructNameInsertRaw(UIDEntry *entry, const char *name, SceUInt32 attr)
+{
+	NameEntry *nameEntry;
+	SceUInt32 flags;
+	int ret;
+
+	if (name == NULL) {
+		entry->name = NULL;
+		return 0;
+	}
+	flags = NAME_HEAP_FLAG_BY_LINK | ((attr & UID_ENTRY_ATTR_NAME_KIND) ?
+					  NAME_HEAP_FLAG_SECOND : 1);
+	ret = NameHeapInsert(name, flags, &nameEntry);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 746, "NameHeapInsert([%s], 0x%08x) failed 0x%08x\n", name, flags,
+			       ret);
+		return ret;
+	}
+	if ((flags & 0xf) == NAME_HEAP_FLAG_SECOND)
+		NameEntrySetUIDEntry(nameEntry, entry);
+	entry->name = nameEntry->name;
+	return ret;
+}
+
+/* a free entry made the GUID entry of object */
+static inline int UIDEntryConstructObjectRaw(UIDEntry *entry, SceClass *cls, const char *name,
+					     SceObjectBase *object, SceUID pid, void *objectHeap,
+					     SceUInt32 attr)
+{
+	int ret;
+
+	object->sce_class = cls;
+	entry->object = object;
+	entry->pid = pid;
+	entry->reserved = 0;
+	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_GUID;
+	if (cls != NULL)
+		entry->classAttr = cls->attributes;
+	else
+		entry->classAttr = 0;
+	entry->useCount = 0;
+	entry->linkCount = 1;
+	if (entry->uid & UID_PUID)
+		entry->uid &= ~UID_PUID;
+	entry->heap = objectHeap;
+	ret = UIDEntryConstructNameInsertRaw(entry, name, attr);
+	if (ret < 0) {
+		entry->name = NULL;
+		entry->attr &= ~UID_ENTRY_ATTR_ALL;
+	}
+	return ret;
+}
+
 /* a GUID entry for an object; returns the GUID */
 int UIDEntryHeapAllocateGUIDEntryObject(UIDEntryHeap *heap, SceClass *cls, const char *name,
 					       SceObjectBase *object, SceUID pid, void *objectHeap,
 					       SceUInt32 attr)
 {
 	UIDEntry *entry;
-	NameEntry *nameEntry;
-	SceUInt32 flags;
 	int state, ret;
 
 	state = UID_WRITE_LOCK(heap, 4494);
@@ -1343,41 +1395,12 @@ int UIDEntryHeapAllocateGUIDEntryObject(UIDEntryHeap *heap, SceClass *cls, const
 		FixedHeapFreeObjectRaw(&heap->fixedHeap, entry);
 		goto out;
 	}
-	/* UIDEntryConstructObjectRaw */
-	object->sce_class = cls;
-	entry->object = object;
-	entry->pid = pid;
-	entry->reserved = 0;
-	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_GUID;
-	if (cls != NULL)
-		entry->classAttr = cls->attributes;
-	else
-		entry->classAttr = 0;
-	entry->useCount = 0;
-	entry->linkCount = 1;
-	if (entry->uid & UID_PUID)
-		entry->uid &= ~UID_PUID;
-	entry->heap = objectHeap;
-	if (name == NULL) {
-		entry->name = NULL;
-	} else {
-		/* UIDEntryConstructNameInsertRaw */
-		flags = NAME_HEAP_FLAG_BY_LINK | ((attr & UID_ENTRY_ATTR_NAME_KIND) ?
-						  NAME_HEAP_FLAG_SECOND : 1);
-		ret = NameHeapInsert(name, flags, &nameEntry);
-		if (ret < 0) {
-			SCE_DBG_PRINTF(0xb, 746, "NameHeapInsert([%s], 0x%08x) failed 0x%08x\n", name,
-				       flags, ret);
-			entry->name = NULL;
-			entry->attr &= ~UID_ENTRY_ATTR_ALL;
-			SCE_DBG_PRINTF(0xb, 4526, "UIDEntryConstructObjectRaw failed 0x%08x\n", ret);
-			UIDEntryHeapCheckFreeUIDEntry(heap, entry);
-			FixedHeapFreeObjectRaw(&heap->fixedHeap, entry);
-			goto out;
-		}
-		if ((flags & 0xf) == NAME_HEAP_FLAG_SECOND)
-			NameEntrySetUIDEntry(nameEntry, entry);
-		entry->name = nameEntry->name;
+	ret = UIDEntryConstructObjectRaw(entry, cls, name, object, pid, objectHeap, attr);
+	if (ret < 0) {
+		SCE_DBG_PRINTF(0xb, 4526, "UIDEntryConstructObjectRaw failed 0x%08x\n", ret);
+		UIDEntryHeapCheckFreeUIDEntry(heap, entry);
+		FixedHeapFreeObjectRaw(&heap->fixedHeap, entry);
+		goto out;
 	}
 	UIDEntryHeapCheckIndex(heap, entry, 0);
 	ret = entry->uid;
