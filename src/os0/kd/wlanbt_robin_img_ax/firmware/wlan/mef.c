@@ -6,8 +6,10 @@
 #include "robin/conn.h"
 #include "robin/mef.h"
 #include "robin/wlan.h"
+#include "robin/btrom.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sys.h"
 
 /* Bytes the stack may hold, the nesting depth allowed, and the depth reached so far. */
 uint16_t wlanMefStackLimit __attribute__((section(".itcm.bss")));
@@ -361,7 +363,7 @@ struct WlanSnapArp *wlanBuildArpReply(OsaBuffer *buffer, struct WlanSnapArp *rep
 }
 
 /* Builds the ICMP echo reply to an unfragmented echo request that fits maxLength. */
-void wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength, unsigned int maxLength)
+int wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength, unsigned int maxLength)
 {
 	const uint8_t *request;
 	uint8_t *ip;
@@ -369,12 +371,12 @@ void wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength
 	unsigned int total;
 
 	if (reply == NULL || buffer == NULL)
-		return;
+		return 0;
 	request = (const uint8_t *)buffer + buffer->dataOffset + wlanOffloadHeadroom + 32;
 	ipLength = (uint16_t)((request[10] << 8) | request[11]);
 	total = (uint16_t)(ipLength + 8);
 	if ((request[14] & 0x20) != 0 || total > maxLength)
-		return;
+		return 0;
 	__aeabi_memcpy(reply, request, total);
 	ip = reply + 8;
 	__aeabi_uwrite4(__aeabi_uread4(request + 8 + 16), ip + 12);
@@ -388,6 +390,7 @@ void wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength
 	ip[3] = 0;
 	*(uint16_t *)(ip + 2) = wlanInternetChecksum((const uint16_t *)ip, (uint16_t)(ipLength - 20));
 	*replyLength = total;
+	return 1;
 }
 
 /* Parameter slots: a value (or values) followed by a mask of the valid indexes. */
@@ -579,4 +582,210 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 			return 1;
 	}
 	return 0;
+}
+
+/* The connection the offload uses when no buffer names one, and the number of entries in use. */
+struct WlanConnection *wlanMefConnection __attribute__((section(".itcm.bss")));
+uint32_t wlanMefEntryCount __attribute__((section(".itcm.bss")));
+
+int macTxNotifyFormatTable(OsaBuffer *buffer);		/* 0x31c0a, not converted yet */
+
+/* Allocates a frame buffer for the connection; 0 if the pool is empty. */
+OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection)
+{
+	OsaBuffer *buffer = osa_BufferAlloc(&wlanReplyFramePool, 0x700, 0);
+
+	if (buffer != NULL) {
+		buffer->context = connection;
+		buffer->dataOffset = 28;
+	}
+	return buffer;
+}
+
+/* Where the body of the frame goes. */
+uint8_t *wlanReplyFramePayload(OsaBuffer *buffer)
+{
+	return (uint8_t *)buffer + buffer->dataOffset + WLAN_REPLY_FRAME_BODY;
+}
+
+OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer)
+{
+	if (buffer != NULL)
+		osa_BufferFree(buffer);
+	return buffer;
+}
+
+/*
+ * Fills in the 802.11 data frame header and the transmit request and queues
+ * the frame: to the destination within the BSS when the destination is the
+ * interface's own address, otherwise through the access point (ToDS).
+ */
+int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, int length)
+{
+	struct WlanConnection *connection = buffer->context;
+	struct WlanReplyFrame *frame = (struct WlanReplyFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	const uint8_t *source;
+
+	frame->frame = frame->frameLength;
+	frame->frameLength[0] = length;
+	frame->frameLength[1] = length >> 8;
+	frame->kind = 0x30;
+	__aeabi_memclr(frame->header, sizeof(frame->header));
+	frame->header[0] = (((frame->header[0] & 0xf3) + 8) & 0xf) | (subtype << 4);
+	if (memcmp(destination, connection->interfaceAddress, 6) != 0) {
+		frame->header[1] |= 1;
+		__aeabi_memcpy(frame->header + 4, connection->localAddress, 6);
+		source = destination;
+	} else {
+		__aeabi_memcpy(frame->header + 4, destination, 6);
+		source = connection->localAddress;
+	}
+	__aeabi_memcpy(frame->header + 16, source, 6);
+	__aeabi_memcpy(frame->header + 10, connection->interfaceAddress, 6);
+	frame->queue = 0;
+	frame->descriptor.header.wire.packetLength[0] = 3;
+	frame->descriptor.control = 0;
+	frame->descriptor.flags = (frame->descriptor.flags & ~0x1f) | 0x11;
+	return macTxNotifyFormatTable(buffer);
+}
+
+/*
+ * Runs the configured filters against a received frame (or, with a NULL
+ * buffer, for the default connection). A matching filter answers an ARP
+ * request or a ping, or replies with a stored pattern; *wake tells whether
+ * the host should see the frame. Returns 1 if a filter handled it.
+ */
+int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
+{
+	struct WlanConnection *connection = wlanMefConnection;
+	struct WlanMefStack *working = &wlanMefEntries[WLAN_MEF_WORKING].stack;
+	unsigned int i;
+	unsigned int posture;
+	int failed;
+
+	if (buffer != NULL)
+		connection = buffer->context;
+	for (i = 0; i < (uint16_t)wlanMefEntryCount; ++i) {
+		struct WlanMefEntry *entry = &wlanMefEntries[i];
+		uint8_t flags;
+
+		posture = sysIrqDisable();
+		if (mode & ~entry->modes) {
+			sysIrqRestore(posture);
+			continue;
+		}
+		wlanMefEntries[WLAN_MEF_WORKING].modes = entry->modes;
+		wlanMefEntries[WLAN_MEF_WORKING].flags = entry->flags;
+		wlanMefLoad(working, (const uint8_t *)&entry->stack);
+		sysIrqRestore(posture);
+		if (mode & WLAN_MEF_MODE_PATTERN) {
+			wlanMefReplyPattern(connection);
+			continue;
+		}
+		if (!wlanMefMatchFrame(buffer))
+			continue;
+		flags = wlanMefEntries[WLAN_MEF_WORKING].flags;
+		failed = 0;
+		if ((flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ARP_REPLY) {
+			struct WlanConnection *owner = buffer->context;
+			OsaBuffer *reply = wlanReplyFrameAlloc(owner);
+
+			if (reply != NULL) {
+				struct WlanSnapArp *arp = wlanBuildArpReply(buffer, (struct WlanSnapArp *)
+							wlanReplyFramePayload(reply), owner->interfaceAddress);
+
+				if (arp != NULL)
+					wlanReplyFrameSend(reply, (uint8_t *)arp + 18, 0, 36);
+				else
+					wlanReplyFrameFree(reply);
+			}
+		} else if ((flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ECHO_REPLY) {
+			const uint8_t *request = (const uint8_t *)buffer + buffer->dataOffset;
+			OsaBuffer *reply = wlanReplyFrameAlloc(buffer->context);
+			uint16_t length;
+
+			if (reply != NULL &&
+			    wlanBuildEchoReply(buffer, wlanReplyFramePayload(reply), &length, 0x64c)) {
+				wlanReplyFrameSend(reply, request + 18, 0, length);
+			} else {
+				if (reply != NULL)
+					wlanReplyFrameFree(reply);
+				failed = 1;
+			}
+		}
+		if (failed) {
+			*wake = 1;
+			return 1;
+		}
+		*wake = (flags & WLAN_MEF_FLAG_WAKE) != 0;
+		if (!(flags & WLAN_MEF_FLAG_KEEP))
+			buffer->length = 0;
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * Sends a frame made of a pattern repeated: pops the offset, the pattern,
+ * the repeat count and the destination address off the working filter.
+ */
+int wlanMefReplyPattern(struct WlanConnection *connection)
+{
+	struct WlanMefStack *working = &wlanMefEntries[WLAN_MEF_WORKING].stack;
+	struct WlanMefToken offset;
+	struct WlanMefToken pattern;
+	struct WlanMefToken repeat;
+	struct WlanMefToken destination;
+	OsaBuffer *frame;
+	uint8_t *body;
+	unsigned int i;
+
+	wlanMefTokenPop(working, &offset);
+	wlanMefTokenPop(working, &pattern);
+	wlanMefTokenPop(working, &repeat);
+	wlanMefTokenPop(working, &destination);
+	frame = wlanReplyFrameAlloc(connection);
+	if (frame == NULL)
+		return 0;
+	body = wlanReplyFramePayload(frame) + (offset.number - 14);
+	for (i = 0; i < (uint16_t)repeat.number; ++i) {
+		__aeabi_memcpy(body, pattern.sequence.bytes, pattern.sequence.length);
+		body += pattern.sequence.length;
+	}
+	return wlanReplyFrameSend(frame, destination.sequence.bytes, wlanMefEntries[WLAN_MEF_WORKING].flags,
+				  (uint16_t)(repeat.number * pattern.sequence.length + offset.number - 14));
+}
+
+int wlanMefDisable(void)
+{
+	wlanMefEntryCount = 0;
+	wlanMefConnection = NULL;
+	return 0;
+}
+
+/* The access category of a TID: 1 for background, 2 for video, 3 for voice, 0 otherwise. */
+unsigned int wlanTidToAccessCategory(int tid)
+{
+	switch ((int8_t)tid) {
+	case 1:
+	case 2:
+		return 1;
+	case 4:
+	case 5:
+		return 2;
+	case 6:
+	case 7:
+		return 3;
+	}
+	return 0;
+}
+
+/* Swaps categories 0 and 1: the order of the hardware queues. */
+unsigned int wlanAccessCategoryToQueue(unsigned int category)
+{
+	if (category == 0)
+		return 1;
+	if (category == 1)
+		return 0;
+	return category;
 }

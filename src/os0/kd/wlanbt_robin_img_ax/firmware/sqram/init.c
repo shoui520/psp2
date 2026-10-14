@@ -4,7 +4,7 @@
  * return values are ignored.
  *
  * Entries marked "not converted" keep provisional names until their
- * subsystems are converted (see agent/namecheck/os0/kd/wlanbt_robin_img_ax.tsv).
+ * subsystems are converted.
  */
 #include <stddef.h>
 #include "robin/sys.h"

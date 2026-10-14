@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/conn.h"
+#include <sce/wlanbt_protocol.h>
 
 /* The stack: bytes are pushed after the length. */
 struct WlanMefStack {
@@ -99,6 +101,43 @@ int wlanMefMatchFrame(OsaBuffer *buffer);
 void wlanMefConfigClear(void);
 void wlanMefConfigParse(const uint8_t *tlvs, int length);
 int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop);
+#define WLAN_MEF_FLAG_WAKE	0x01	/* the host sees the frame too */
+#define WLAN_MEF_FLAG_KEEP	0x02	/* the frame is not discarded */
+#define WLAN_MEF_ACTION_SHIFT	4
+enum {
+	WLAN_MEF_ACTION_ARP_REPLY = 1,
+	WLAN_MEF_ACTION_ECHO_REPLY = 2,
+};
+#define WLAN_MEF_MODE_PATTERN	4
+
+/* A frame the offload sends on its own (one buffer, header at dataOffset). */
+struct WlanReplyFrame {
+	WlanTxDescriptor descriptor;
+	uint8_t reserved16[80];
+	uint8_t *frame;			/* points at frameLength */
+	uint8_t reserved100[8];
+	uint8_t queue;
+	uint8_t kind;
+	uint8_t reserved110[6];
+	uint8_t frameLength[2];
+	uint8_t header[30];		/* frame control, duration, three addresses */
+	uint8_t body[];
+};
+
+#define WLAN_REPLY_FRAME_BODY	148	/* offset of body from the start of the data */
+
+extern struct OsaBufferPool wlanReplyFramePool;
+extern struct WlanConnection *wlanMefConnection;
+extern uint32_t wlanMefEntryCount;
+OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection);
+uint8_t *wlanReplyFramePayload(OsaBuffer *buffer);
+int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, int length);
+OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer);
+int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode);
+int wlanMefReplyPattern(struct WlanConnection *connection);
+int wlanMefDisable(void);
+unsigned int wlanTidToAccessCategory(int tid);
+unsigned int wlanAccessCategoryToQueue(unsigned int category);
 extern uint16_t wlanMefStackLimit;
 extern uint16_t wlanMefDepthLimit;
 extern uint8_t wlanMefDepth;
@@ -129,7 +168,7 @@ extern uint32_t wlanMefClassMask;
 unsigned int wlanAddressClass(const uint16_t *address);
 struct WlanSnapArp *wlanBuildArpReply(OsaBuffer *buffer, struct WlanSnapArp *reply,
 				      const uint8_t *localAddress);
-void wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength, unsigned int maxLength);
+int wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength, unsigned int maxLength);
 
 /* Typed parameter slots with a validity bit per index. */
 int wlanParam8Set(uint8_t *slot, unsigned int index, const uint8_t *value);

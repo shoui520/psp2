@@ -2,8 +2,7 @@
  * Marvell 88W8787 ("Robin") SoC registers used by the firmware.
  *
  * No Marvell documentation or source names these registers. The names below
- * describe what the firmware does with each one (see
- * agent/namecheck/os0/kd/wlanbt_robin_img_ax.tsv).
+ * describe what the firmware does with each one.
  */
 #ifndef ROBIN_SOC_H
 #define ROBIN_SOC_H
