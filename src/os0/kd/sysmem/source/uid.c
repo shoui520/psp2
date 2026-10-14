@@ -2260,8 +2260,9 @@ SceUID ksceGUIDOpenByName(const char *name)
 }
 
 /* one link less: the last one closes the GUID */
-static inline int UIDEntryCloseAPI(UIDEntryHeap *heap, UIDEntry *entry, DeleteParam *param)
+static inline int UIDEntryCloseAPI(UIDEntryHeap *heap, UIDEntry **pEntry, DeleteParam *param)
 {
+	UIDEntry *entry = *pEntry;
 	SceUInt32 attr;
 	UIDEntry *base;
 	int ret;
@@ -2277,7 +2278,7 @@ static inline int UIDEntryCloseAPI(UIDEntryHeap *heap, UIDEntry *entry, DeletePa
 			entry->attr = (attr & ~UID_ENTRY_ATTR_ALL) | UID_ENTRY_ATTR_GUID_CLOSED;
 			return 0;
 		}
-		return UIDEntryClose(heap, entry, param);
+		return UIDEntryClose(heap, *pEntry, param);
 	}
 	if (!(attr & UID_ENTRY_ATTR_LINK) || entry->linkCount == 0)
 		return UID_ERROR_INVALID_UID;
@@ -2287,27 +2288,23 @@ static inline int UIDEntryCloseAPI(UIDEntryHeap *heap, UIDEntry *entry, DeletePa
 		return 0;
 	}
 	if ((attr & UID_ENTRY_ATTR_PUID) || !(attr & UID_ENTRY_ATTR_LINK_ANY))
-		return UIDEntryClose(heap, entry, param);
+		return UIDEntryClose(heap, *pEntry, param);
 	base = entry->base;
-	ret = UIDEntryClose(heap, entry, param);
-	if (ret >= 0 && base != NULL)
+	ret = UIDEntryClose(heap, *pEntry, param);
+	if (ret < 0)
+		return ret;
+	if (base != NULL)
 		ret = UIDEntryCloseLink(heap, base, param);
 	return ret;
 }
 
-int ksceGUIDClose(SceUID guid)
+static inline int GUIDClose(SceUID guid)
 {
 	UIDEntryHeap *heap;
 	DeleteParam param;
 	UIDEntry *entry;
 	int state, ret;
 
-	if (!UIDIsGUID(guid)) {
-		SCE_DBG_PRINTF(0xb, 6301, "GUIDIsValid(0x%08x) failed 0x%08x\n", guid,
-			       UID_ERROR_INVALID_UID);
-		return UID_ERROR_INVALID_UID;
-	}
-	/* GUIDClose */
 	SCE_DBG_ASSERT_PRINTF(guid - 0x10001U > 0x5e, 5118, "error: GUIDClose(guid=0x%08X)\n",
 			      guid);
 	param = (DeleteParam){0};
@@ -2315,10 +2312,20 @@ int ksceGUIDClose(SceUID guid)
 	state = FixedHeapWriteLock(&heap->fixedHeap, "GUIDClose", 5130);
 	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
 	if (ret >= 0)
-		ret = UIDEntryCloseAPI(heap, entry, &param);
+		ret = UIDEntryCloseAPI(heap, &entry, &param);
 	UID_WRITE_UNLOCK(heap, state);
 	DeleteParamClean(&param);
 	return ret;
+}
+
+int ksceGUIDClose(SceUID guid)
+{
+	if (!UIDIsGUID(guid)) {
+		SCE_DBG_PRINTF_FUNC(0xb, 6301, "sceGUIDClose", "GUIDIsValid(0x%08x) failed 0x%08x\n",
+				    guid, UID_ERROR_INVALID_UID);
+		return UID_ERROR_INVALID_UID;
+	}
+	return GUIDClose(guid);
 }
 
 int ksceGUIDGetObjectWithClass(SceUID uid, SceClass *pClass, SceObjectBase **obj)
