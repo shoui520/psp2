@@ -1804,11 +1804,9 @@ int UIDEntryCloseEntryForPUID(UIDEntryHeap *heap, UIDEntry *entry, int all, SceU
 		if (object != NULL) {
 			cls = object->sce_class;
 			memblockClass = ksceKernelGetUIDMemBlockClass();
-			for (; cls != NULL; cls = cls->uidclass) {
-				if (cls == memblockClass) {
-					ret = FreeMemBlockByGUID(guid);
-					goto closed;
-				}
+			if (cls != NULL && SceSysmemForKernel_7F7D5C4A(cls, memblockClass)) {
+				ret = FreeMemBlockByGUID(guid);
+				goto closed;
 			}
 		}
 		SCE_DBG_PRINTF_LEVEL(2, 0, 3056,
@@ -1895,11 +1893,12 @@ const char *SceSysmemForKernel_5FD15C6E(UIDEntry *entry)
 /* cls is base or a subclass of it */
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base)
 {
-	do {
-		if (cls == base)
+	if (cls == base)
+		return 1;
+	while ((cls = cls->uidclass) != NULL) {
+		if (base == cls)
 			return 1;
-		cls = cls->uidclass;
-	} while (cls != NULL);
+	}
 	return 0;
 }
 
@@ -1923,7 +1922,7 @@ int GUIDRegister(SceClass *cls, const char *name, SceObjectBase *object, SceUInt
 static inline int UIDEntrySetCNOA(UIDEntry *entry, SceClass *cls, const char *name,
 				  SceObjectBase *object, SceUInt32 attr)
 {
-	SceClass *memblockClass, *c;
+	SceClass *memblockClass;
 	int ret;
 
 	if (name == NULL) {
@@ -1948,29 +1947,26 @@ static inline int UIDEntrySetCNOA(UIDEntry *entry, SceClass *cls, const char *na
 		if (cls != NULL) {
 			object->sce_class = cls;
 			memblockClass = ksceKernelGetUIDMemBlockClass();
-			for (c = cls; c != NULL; c = c->uidclass) {
-				if (c == memblockClass) {
-					MemBlockObject *block = (MemBlockObject *)object;
-					const char *blockName;
+			if (SceSysmemForKernel_7F7D5C4A(cls, memblockClass)) {
+				MemBlockObject *block = (MemBlockObject *)object;
+				const char *blockName;
 #if FW_DEBUG
-					int assertLevel = ksceKernelGetAssertLevel();
+				int assertLevel = ksceKernelGetAssertLevel();
 
-					blockName = entry->name;
+				blockName = entry->name;
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
-					if (assertLevel > 0)
-						ksceKernelAssertLevel(1, blockName != NULL,
-							SCE_DBGINFO_FUNC(653, "MemBlockSetNameRaw"),
-							__builtin_return_address(0));
+				if (assertLevel > 0)
+					ksceKernelAssertLevel(1, blockName != NULL,
+						SCE_DBGINFO_FUNC(653, "MemBlockSetNameRaw"),
+						__builtin_return_address(0));
 #pragma pop_macro("__FILE_NAME__")
 #else
-					blockName = entry->name;
+				blockName = entry->name;
 #endif
-					block->name = blockName;
-					block->flags |= MEMBLOCK_FLAG_NAMED;
-					break;
-				}
+				block->name = blockName;
+				block->flags |= MEMBLOCK_FLAG_NAMED;
 			}
 		}
 	}
