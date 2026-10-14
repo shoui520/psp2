@@ -151,3 +151,5 @@ PROVIDE(romMacStatCheck    = 0x03f3accf);
 PROVIDE(romMacWakeRequest  = 0x03f3a917);
 PROVIDE(romMacSleepNotify  = 0x03f3a907);
 PROVIDE(__aeabi_uldivmod   = 0x03f3ec30);
+PROVIDE(romMacEntryCheck   = 0x03f3ac3d);
+PROVIDE(romMacEntryWrite   = 0x03f3ac8b);
