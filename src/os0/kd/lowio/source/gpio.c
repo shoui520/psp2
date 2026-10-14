@@ -405,7 +405,9 @@ static int GpioSysEvent(int resume, int event, void *args, void *opt)
 
 	(void)args;
 	(void)opt;
-	if (resume == 1 && event == 0x10002) {
+	if (resume != 1)
+		return 0;
+	if (event == 0x10002) {
 		kscePervasiveGpioClockEnable();
 		for (bank = 0; bank < 2; bank++) {
 			ctx = &s_gpio[bank];
