@@ -425,12 +425,14 @@ SceCpuForKernel_9B071FD3:
 .Ldacr_restore_set:
 	mcr	p15, 0, lr, c3, c0, 0
 	pop	{r4, r5, r6, pc}
-	.size SceCpuForKernel_9B071FD3, . - SceCpuForKernel_9B071FD3
 
 	.global VmaccessEnd
 VmaccessEnd:
 
-/* recovery: undo the pushes, return the fault error */
+/*
+ * recovery: undo the pushes, return the fault error. It has no unwind entry of
+ * its own; SceCpuForKernel_9B071FD3's covers it.
+ */
 .Lfault1:
 	pop.w	{r4, lr}
 	b	.Lfault
@@ -454,3 +456,4 @@ VmaccessEnd:
 	movw	r0, #:lower16:VMACCESS_ERROR_FAULT
 	movt	r0, #:upper16:VMACCESS_ERROR_FAULT
 	b	.Ldacr_restore_set
+	.size SceCpuForKernel_9B071FD3, . - SceCpuForKernel_9B071FD3

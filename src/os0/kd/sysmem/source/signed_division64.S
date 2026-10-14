@@ -25,7 +25,7 @@ __aeabi_ldivmod:
 	str r0, [sp, #8]
 	pop {r0, r1, pc}
 .Lsigned64_zero_target:
-	.word HandleSigned64DivisionByZero - .Lsigned64_zero_target
+	.word HandleDivisionByZero - .Lsigned64_zero_target
 .Lsigned64_nonzero:
 	sub sp, #8
 	mov ip, sp
@@ -685,9 +685,4 @@ SignedDivision64Quotient:
 	nop 
 .size SignedDivision64Quotient, . - SignedDivision64Quotient
 
-.type HandleSigned64DivisionByZero, %function
-.thumb_func
-HandleSigned64DivisionByZero:
-	bx lr
-.size HandleSigned64DivisionByZero, . - HandleSigned64DivisionByZero
 .section .note.GNU-stack,"",%progbits

@@ -11,6 +11,7 @@
 .endm
 
 .macro end name
+	.balign 4
 	.size \name, . - \name
 .endm
 

@@ -63,7 +63,7 @@ __aeabi_uidiv:
 	str r0, [sp, #8]
 	pop {r0, r1, pc}
 .Lunsigned_divide_zero_target:
-	.word HandleUnsignedDivisionByZero - .Lunsigned_divide_zero_target
+	.word HandleDivisionByZero - .Lunsigned_divide_zero_target
 .size __aeabi_uidiv, . - __aeabi_uidiv
 
 /* Inputs r0/r1; quotient r0, remainder r1. */
@@ -79,14 +79,9 @@ __aeabi_uidivmod:
 	mul.w r3, r2, r0
 	sub.w r1, r1, r3
 	bx lr
+	nop
+	nop.w
 .size __aeabi_uidivmod, . - __aeabi_uidivmod
-
-/* The original module's local default handler simply returns to its caller. */
-.type HandleUnsignedDivisionByZero, %function
-.thumb_func
-HandleUnsignedDivisionByZero:
-	bx lr
-.size HandleUnsignedDivisionByZero, . - HandleUnsignedDivisionByZero
 
 .section .note.GNU-stack,"",%progbits
 
@@ -114,7 +109,7 @@ __aeabi_uldivmod:
 	pop {r0, r1, pc}
 	nop
 .Lunsigned64_zero_target:
-	.word HandleUnsignedDivisionByZero - .Lunsigned64_zero_target
+	.word HandleDivisionByZero - .Lunsigned64_zero_target
 .Lunsigned64_nonzero:
 	sub sp, #8
 	mov ip, sp

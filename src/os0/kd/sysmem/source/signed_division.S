@@ -82,7 +82,7 @@ __aeabi_idiv:
 	str r0, [sp, #8]
 	pop {r0, r1, pc}
 .Lsigned_divide_zero_target:
-	.word HandleSignedDivisionByZero - .Lsigned_divide_zero_target
+	.word HandleDivisionByZero - .Lsigned_divide_zero_target
 .size __aeabi_idiv, . - __aeabi_idiv
 
 .global __aeabi_idivmod
@@ -97,12 +97,18 @@ __aeabi_idivmod:
 	mul r3, r2, r0
 	sub.w r1, r1, r3
 	bx lr
-.size __aeabi_idivmod, . - __aeabi_idivmod
 	nop
 	nop.w
-.type HandleSignedDivisionByZero, %function
+
+/*
+ * Every division helper's default division-by-zero handler: it returns to the
+ * caller. It has no unwind entry of its own; __aeabi_idivmod's covers it.
+ */
+.global HandleDivisionByZero
 .thumb_func
-HandleSignedDivisionByZero:
+HandleDivisionByZero:
 	bx lr
-.size HandleSignedDivisionByZero, . - HandleSignedDivisionByZero
+	.balign 4
+.size __aeabi_idivmod, . - __aeabi_idivmod
+
 .section .note.GNU-stack,"",%progbits
