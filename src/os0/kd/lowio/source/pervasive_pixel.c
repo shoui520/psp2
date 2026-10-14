@@ -84,8 +84,9 @@ static void PixelClockDelay(void)
 int kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 {
 	volatile ScePervasivePixelClockRegisters *regs;
-	const PixelClockSetting *setting;
+	const PixelClockSetting *setting, *current;
 	PixelClockContext *ctx;
+	uint32_t pllConfig;
 	unsigned i;
 
 	if (head >= 2)
@@ -111,19 +112,21 @@ int kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 		return (int)0x803f0000;
 	ctx = &s_pixelClock[head];
 	regs = ctx->registers;
-	if (setting == ctx->setting)
+	current = ctx->setting;
+	if (setting == current)
 		return 0;
 	regs->outputReset = 1;
 	regs->dividerReset = 1;
 	(void)regs->dividerReset;
 	LowioDsb();
-	if (ctx->pllConfig != setting->pllConfig || !ctx->setting ||
-		ctx->setting->pllCoefficient != setting->pllCoefficient) {
-		regs->pllConfig = setting->pllConfig;
+	pllConfig = setting->pllConfig;
+	if (ctx->pllConfig != pllConfig || !current ||
+		current->pllCoefficient != setting->pllCoefficient) {
+		regs->pllConfig = pllConfig;
 		regs->pllReset = 1;
 		(void)regs->pllReset;
 		LowioDsb();
-		if (setting->pllConfig & 0x10) {
+		if (pllConfig & 0x10) {
 			const uint32_t *coefficient = setting->pllCoefficient;
 			uint32_t c0 = coefficient[0], c1 = coefficient[1], c2 = coefficient[2];
 

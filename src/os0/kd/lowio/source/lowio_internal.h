@@ -15,6 +15,10 @@ extern ScePervasiveBaseClkRegisters *s_baseClock;
 extern uint8_t *s_tas[8];
 extern SceKernelSpinlock s_pervasiveLock;
 
+/*
+ * Sony's DMB orders only the device accesses around it; its DSB is also a
+ * compiler barrier (values held in registers are reloaded after it).
+ */
 static inline void LowioDmb(void)
 {
 	__asm__ volatile("dmb sy");
@@ -22,7 +26,7 @@ static inline void LowioDmb(void)
 
 static inline void LowioDsb(void)
 {
-	__asm__ volatile("dsb sy");
+	__asm__ volatile("dsb sy" : : : "memory");
 }
 
 uint32_t Smc110(uint32_t, uint32_t, uint32_t, uint32_t);

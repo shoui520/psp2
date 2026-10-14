@@ -218,16 +218,20 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 
 	(void)args;
 	(void)opt;
-	if (resume == 0) {
+	switch (resume) {
+	case 0:
 		if (eventId != 0x4005)
-			return 0;
+			break;
 		for (plane = s_iftuPlanes; plane != converter; plane++) {
 			intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
 			if (plane->state != IFTU_STATE_DISABLED)
 				IftuStop(plane);
 			ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		}
-	} else if (resume == 1 && eventId == 0x10005) {
+		break;
+	case 1:
+		if (eventId != 0x10005)
+			break;
 		ScePervasiveForDriver_07F2A738();
 		ScePervasiveForDriver_E92E28FF();
 		(void)converter->registers->pathConfig;
@@ -249,6 +253,7 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		(void)converter->registers->pathConfig;
 		LowioDsb();
 		ScePervasiveForDriver_5AFE0AF0();
+		break;
 	}
 	return 0;
 }
