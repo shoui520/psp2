@@ -3026,7 +3026,7 @@ int checkVeneziaDebugReset(void)
 	uint32_t saved, reset;
 
 	saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
-	reset = g_veneziaVipState.resetRegisters->controls.veneziaReset;
+	reset = g_veneziaVipState.resetRegisters->vip;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return reset & 1;
 }

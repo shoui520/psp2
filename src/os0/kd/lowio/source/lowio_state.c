@@ -2,6 +2,8 @@
 #include "lowio_internal.h"
 
 uint8_t *s_misc, *s_video, *s_mailbox, *s_pervasive2;
-uint8_t *s_reset, *s_gate, *s_uartClock, *s_baseClock;
+ScePervasiveResetRegisters *s_reset;
+ScePervasiveGateRegisters *s_gate;
+uint8_t *s_uartClock, *s_baseClock;
 uint8_t *s_tas[8];
 SceKernelSpinlock s_pervasiveLock;

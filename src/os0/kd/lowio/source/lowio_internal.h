@@ -3,9 +3,12 @@
 
 #include <stdint.h>
 #include <psp2kern/kernel/cpu.h>
+#include <sce/pervasive_regs.h>
 
 extern uint8_t *s_misc, *s_video, *s_mailbox, *s_pervasive2;
-extern uint8_t *s_reset, *s_gate, *s_uartClock, *s_baseClock;
+extern ScePervasiveResetRegisters *s_reset;
+extern ScePervasiveGateRegisters *s_gate;
+extern uint8_t *s_uartClock, *s_baseClock;
 extern uint8_t *s_tas[8];
 extern SceKernelSpinlock s_pervasiveLock;
 
@@ -20,8 +23,8 @@ static inline void LowioDsb(void)
 }
 
 uint32_t Smc110(uint32_t, uint32_t, uint32_t, uint32_t);
-uint32_t Smc111(uint32_t, uint32_t, uint32_t, uint32_t);
-uint32_t Smc113(uint32_t, uint32_t, uint32_t, uint32_t);
+int Smc111(volatile uint32_t *reg, int value);
+int Smc113(volatile uint32_t *reg, int value);
 uint32_t Smc114(uint32_t, uint32_t, uint32_t, uint32_t);
 
-uint32_t ScePervasiveForDriver_4AF7A01E(unsigned head, unsigned mask);
+int ScePervasiveForDriver_4AF7A01E(int port, unsigned int mask);

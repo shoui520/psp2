@@ -14,6 +14,8 @@ psp2_module(os0_kd_lowio KIND kernel SKELETON SOURCES
 	source/dsi.c
 	source/iftu.c
 	source/pervasive_controls.c
+	source/pervasive_reset.c
+	source/pervasive_gate.c
 	source/pervasive_registers.c
 	source/pervasive_config.c
 	source/pervasive_clock.c

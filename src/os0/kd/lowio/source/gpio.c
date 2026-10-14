@@ -201,7 +201,7 @@ uint32_t ksceGpioAcquireIntr(unsigned bank, unsigned port)
 	return (pending & bit) != 0;
 }
 
-uint32_t kscePervasiveGpioClockEnable(void);
+int kscePervasiveGpioClockEnable(void);
 
 static GpioContext *GpioIntrContext(int intrCode, unsigned *gate)
 {

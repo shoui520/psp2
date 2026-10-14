@@ -19,7 +19,7 @@ static SceUID s_pervasiveUids[16];
 static const struct {
 	const char *name;
 	uint32_t paddr;
-	uint8_t **base;
+	void *base;
 } s_pervasiveDevices[16] = {
 	{ "ScePervasiveMisc", 0xe3100000, &s_misc },
 	{ "ScePervasiveReset", 0xe3101000, &s_reset },
