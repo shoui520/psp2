@@ -5,51 +5,35 @@
 #include <sce/motion_dummy.h>
 #include <sce/sysevent.h>
 #include <sce/csi.h>
+#include <sce/csi_regs.h>
 
 #define CSI_ERROR_HEAD ((uint32_t)0x803f0900)
 #define CSI_ERROR_MODE ((uint32_t)0x803f0901)
-#define CSI_REG(base, offset) (*(volatile uint32_t *)((base) + (offset)))
 
 uint32_t ScePervasiveForDriver_5B4EF352(void);
-uint32_t ScePervasiveForDriver_4B223AF5(unsigned head);
-uint32_t ScePervasiveForDriver_D3B59C33(unsigned head);
-uint32_t ScePervasiveForDriver_1068C067(unsigned head);
-int sceKernelDelayThread(unsigned usec);
+int ScePervasiveForDriver_4B223AF5(int port);
+int ScePervasiveForDriver_D3B59C33(int port);
+int ScePervasiveForDriver_1068C067(int port);
+int sceKernelDelayThread(unsigned int usec);
 
 typedef struct CsiContext {
-	uint8_t *base;
-	uint8_t *cifBase;
+	volatile SceCsiRegisters *registers;
+	volatile SceCifRegisters *cifRegisters;
 	uint32_t width;
 	uint32_t height;
 	CsiTransferConfig transfer;
 	SceKernelSpinlock lock;
 	int intrCode;
 	int cifIntrCode;
-	int uid;
-	int cifUid;
+	SceUID uid;
+	SceUID cifUid;
 	uint32_t subIntrMask;
 } CsiContext;
 
 _Static_assert(sizeof(CsiContext) == 0x54, "CSI context layout");
 static CsiContext s_csi[2];
 
-/* ARM register shifts use the low byte and clear the result above bit 31. */
-static uint32_t CsiSubIntrBit(unsigned subIntr)
-{
-	subIntr &= 0xff;
-	return subIntr < 32 ? 1U << subIntr : 0;
-}
-
-/* name unknown: interrupt option callback at original offset 0x69b8. */
-static int CsiIntrPending(int intrCode, int subIntr)
-{
-	CsiContext *ctx = &s_csi[intrCode == 0xa6 ? 0 : 1];
-
-	(void)subIntr;
-	return CSI_REG(ctx->cifBase, 0xbc) >> 24 & 1;
-}
-
-/* name unknown: first camera interface interrupt is acknowledged elsewhere. */
+/* name unknown */
 static int CsiIntrHandler(int intrCode, void *arg)
 {
 	(void)intrCode;
@@ -57,72 +41,117 @@ static int CsiIntrHandler(int intrCode, void *arg)
 	return -1;
 }
 
+/* name unknown: interrupt option callback */
+static int CsiIntrPending(int intrCode, int subIntr)
+{
+	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
+
+	(void)subIntr;
+	return (ctx->cifRegisters->interruptStatus & SCE_CIF_INTR_FRAME) != 0;
+}
+
 /* name unknown */
 static int CifIntrHandler(int intrCode, void *arg)
 {
 	CsiContext *ctx = arg;
-	uint32_t status = CSI_REG(ctx->cifBase, 0xbc);
-	uint32_t value = CSI_REG(ctx->cifBase, 0xb4);
-	uint32_t mask;
-	unsigned i;
+	volatile SceCifRegisters *cif = ctx->cifRegisters;
+	uint32_t status, frameInfo, mask;
 
-	CSI_REG(ctx->cifBase, 0xbc) = status;
-	if (status & 0x1000000) {
+	status = cif->interruptStatus;
+	frameInfo = cif->frameInfo;
+	cif->interruptStatus = status;
+	if (status & SCE_CIF_INTR_FRAME) {
 		mask = ctx->subIntrMask;
-		for (i = 0; i < 4; i++) {
-			if (mask & (1U << i))
-				ksceKernelTriggerSubIntr(intrCode, i, (void *)value);
-		}
+		if (mask & 1)
+			ksceKernelTriggerSubIntr(intrCode, 0, (void *)frameInfo);
+		if (mask & 2)
+			ksceKernelTriggerSubIntr(intrCode, 1, (void *)frameInfo);
+		if (mask & 4)
+			ksceKernelTriggerSubIntr(intrCode, 2, (void *)frameInfo);
+		if (mask & 8)
+			ksceKernelTriggerSubIntr(intrCode, 3, (void *)frameInfo);
 	}
-	(void)CSI_REG(ctx->cifBase, 0xbc);
+	(void)cif->interruptStatus;
 	LowioDsb();
 	return -1;
 }
 
-/* name unknown: option table callback at original offset 0x6a50. */
-static int CsiSetSubIntrHandler(int intrCode, unsigned subIntr, void *handler)
+/* name unknown: interrupt option callback */
+static int CsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 {
-	CsiContext *ctx = &s_csi[intrCode == 0xa6 ? 0 : 1];
-	uint32_t state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
-	uint32_t bit = CsiSubIntrBit(subIntr);
+	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
+	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
-	ctx->subIntrMask = (ctx->subIntrMask & ~bit) | (handler ? bit : 0);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	ctx->subIntrMask = (ctx->subIntrMask & ~(1U << subIntr)) |
+		((handler != NULL) << subIntr);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
-/* name unknown: option table callback at original offset 0x6a98. */
-static int CsiSuspendSubIntr(int intrCode, unsigned subIntr, uint32_t *enabled)
+/* name unknown: interrupt option callback */
+static int CsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 {
-	CsiContext *ctx = &s_csi[intrCode == 0xa6 ? 0 : 1];
-	uint32_t state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
+	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t mask = ctx->subIntrMask;
 
-	if (enabled)
-		*enabled = !!(ctx->subIntrMask & CsiSubIntrBit(subIntr));
-	ctx->subIntrMask &= ~CsiSubIntrBit(subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	if (enabled != NULL)
+		*enabled = (mask >> subIntr) & 1;
+	ctx->subIntrMask = mask & ~(1U << subIntr);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	return 0;
+}
+
+static inline __attribute__((always_inline)) void CsiReset(void)
+{
+	ScePervasiveForDriver_5B4EF352();
+	ScePervasiveForDriver_4B223AF5(0);
+	ScePervasiveForDriver_4B223AF5(1);
+	ScePervasiveForDriver_D3B59C33(0);
+	ScePervasiveForDriver_D3B59C33(1);
+}
+
+/* name unknown */
+static int CsiSysEvent(int resume, int eventId, void *args, void *opt)
+{
+	(void)args;
+	(void)opt;
+	if (resume == 0) {
+		if (eventId == 0x4004) {
+			ksceKernelDisableIntr(s_csi[0].intrCode);
+			ksceKernelDisableIntr(s_csi[0].cifIntrCode);
+			ksceKernelDisableIntr(s_csi[1].intrCode);
+			ksceKernelDisableIntr(s_csi[1].cifIntrCode);
+		}
+	} else if (resume == 1 && eventId == 0x10004) {
+		CsiReset();
+		ksceKernelEnableIntr(s_csi[0].intrCode);
+		ksceKernelEnableIntr(s_csi[0].cifIntrCode);
+		ksceKernelEnableIntr(s_csi[1].intrCode);
+		ksceKernelEnableIntr(s_csi[1].cifIntrCode);
+	}
 	return 0;
 }
 
 /* name unknown */
 static int CsiDisableSubIntr(int intrCode, int subIntr)
 {
-	CsiContext *ctx = &s_csi[intrCode == 0xa6 ? 0 : 1];
-	uint32_t state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
+	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
-	ctx->subIntrMask &= ~CsiSubIntrBit(subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	ctx->subIntrMask &= ~(1U << subIntr);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
 /* name unknown */
 static int CsiEnableSubIntr(int intrCode, int subIntr)
 {
-	CsiContext *ctx = &s_csi[intrCode == 0xa6 ? 0 : 1];
-	uint32_t state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
+	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 
-	ctx->subIntrMask |= CsiSubIntrBit(subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	ctx->subIntrMask |= 1U << subIntr;
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -153,38 +182,6 @@ static SceKernelIntrOptParam s_csiIntrOpt = {
     0,
 };
 
-/* name unknown */
-static void CsiReset(void)
-{
-	ScePervasiveForDriver_5B4EF352();
-	ScePervasiveForDriver_4B223AF5(0);
-	ScePervasiveForDriver_4B223AF5(1);
-	ScePervasiveForDriver_D3B59C33(0);
-	ScePervasiveForDriver_D3B59C33(1);
-}
-
-/* name unknown */
-static int CsiSysEvent(int resume, int eventid, void *args, void *opt)
-{
-	unsigned i;
-
-	(void)args;
-	(void)opt;
-	if (!resume && eventid == 0x4004) {
-		for (i = 0; i < 2; i++) {
-			ksceKernelDisableIntr(s_csi[i].intrCode);
-			ksceKernelDisableIntr(s_csi[i].cifIntrCode);
-		}
-	} else if (resume == 1 && eventid == 0x10004) {
-		CsiReset();
-		for (i = 0; i < 2; i++) {
-			ksceKernelEnableIntr(s_csi[i].intrCode);
-			ksceKernelEnableIntr(s_csi[i].cifIntrCode);
-		}
-	}
-	return 0;
-}
-
 /* name unknown: device descriptors at original offset 0x9164. */
 static const struct {
 	int intrCode;
@@ -204,13 +201,13 @@ static const struct {
 	0x1000},
 };
 
-/* name unknown: initializer at original offset 0x6bdc. */
-int LowioCsiInit(void)
+/* name unknown */
+static __attribute__((noinline)) int CsiInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	CsiContext *ctx;
 	void *base;
-	unsigned i;
+	unsigned int i;
 	int ret;
 
 	memset(s_csi, 0, sizeof(s_csi));
@@ -220,34 +217,34 @@ int LowioCsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(
-		    s_csiDevices[i].name, 0x20100806, s_csiDevices[i].size, &opt);
+		ret = ksceKernelAllocMemBlock(s_csiDevices[i].name, 0x20100806,
+			s_csiDevices[i].size, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->uid = ret;
 		ret = ksceKernelGetMemBlockBase(ret, &base);
 		if (ret < 0)
 			return ret;
-		ctx->base = base;
+		ctx->registers = base;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].cifPaddr;
-		ret = ksceKernelAllocMemBlock(
-		    s_csiDevices[i].cifName, 0x20100806, s_csiDevices[i].cifSize, &opt);
+		ret = ksceKernelAllocMemBlock(s_csiDevices[i].cifName, 0x20100806,
+			s_csiDevices[i].cifSize, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->cifUid = ret;
 		ret = ksceKernelGetMemBlockBase(ret, &base);
 		if (ret < 0)
 			return ret;
-		ctx->cifBase = base;
+		ctx->cifRegisters = base;
 		ctx->intrCode = s_csiDevices[i].intrCode;
 		ctx->cifIntrCode = s_csiDevices[i].cifIntrCode;
 		ksceKernelRegisterIntrHandler(ctx->intrCode, s_csiDevices[i].intrName, 0,
-		    CsiIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
+			CsiIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
 		ksceKernelRegisterIntrHandler(ctx->cifIntrCode, s_csiDevices[i].cifIntrName, 0,
-		    CifIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
+			CifIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
 		ksceKernelEnableIntr(ctx->intrCode);
 		ksceKernelEnableIntr(ctx->cifIntrCode);
 	}
@@ -256,62 +253,88 @@ int LowioCsiInit(void)
 	return 0;
 }
 
-uint32_t SceCsiForDriver_B508822B(unsigned head, uint32_t a1, uint32_t a2)
+int LowioCsiInit(SceSize arglen, const void *argp)
 {
-	if (head >= 2)
-		return CSI_ERROR_HEAD;
-	s_csi[head].width = a1;
-	s_csi[head].height = a2;
+	(void)arglen;
+	(void)argp;
+	if (CsiInit() < 0)
+		return 2;
 	return 0;
+}
+
+uint32_t SceCsiForDriver_B508822B(unsigned head, uint32_t width, uint32_t height)
+{
+	uint32_t ret;
+
+	if (head <= 1) {
+		s_csi[head].width = width;
+		s_csi[head].height = height;
+		ret = 0;
+	} else {
+		ret = CSI_ERROR_HEAD;
+	}
+	return ret;
 }
 
 uint32_t SceCsiForDriver_10545393(unsigned head, const CsiTransferConfig *data)
 {
-	if (head >= 2)
+	if (head > 1)
 		return CSI_ERROR_HEAD;
-	s_csi[head].transfer = *data;
+	__builtin_memcpy(&s_csi[head].transfer, data, sizeof(*data));
 	return 0;
 }
 
 uint32_t SceCsiForDriver_2AFEA1B0(unsigned head, uint32_t mode)
 {
 	CsiContext *ctx;
-	uint8_t *base;
-	unsigned format = mode & 0xff;
-	unsigned i;
+	volatile SceCifRegisters *cif;
 
-	if (head >= 2)
+	if (head > 1)
 		return CSI_ERROR_HEAD;
-	if (format != 0 && format != 8 && format != 0x10 && format != 0x11 && format != 0x12 &&
-	    format != 0x30 && format != 0x40)
+	switch (mode & 0xff) {
+	case 0x00:
+	case 0x08:
+	case 0x10:
+	case 0x11:
+	case 0x12:
+	case 0x30:
+	case 0x40:
+		break;
+	default:
 		return CSI_ERROR_MODE;
+	}
 	ScePervasiveForDriver_1068C067(head);
 	ctx = &s_csi[head];
-	base = ctx->cifBase;
-	CSI_REG(base, 0xc) = (mode >> 4 & 0xf) | 0x301100;
-	CSI_REG(base, 0x24) = (mode & 0xf) | 0xff0000;
-	CSI_REG(base, 0x14) = mode & 0x1000 ? 0x100 : mode & 0x2000 ? 0x200 : 0;
-	CSI_REG(base, 0x28) = 2;
-	CSI_REG(base, 0x4c) = ctx->transfer.iAddress[0];
-	CSI_REG(base, 0x78) = ctx->transfer.iAddress[1];
-	CSI_REG(base, 0x84) = ctx->transfer.iAddress[2];
-	CSI_REG(base, 0x50) = ctx->transfer.iPitch;
-	for (i = 0; i < 3; i++) {
-		static const uint8_t chromaOffsets[3] = { 0x54, 0x7c, 0x88 };
-
-		CSI_REG(base, chromaOffsets[i]) = ctx->transfer.chromaAddress[i][0];
-		CSI_REG(base, chromaOffsets[i] + 4) = ctx->transfer.chromaAddress[i][1];
-	}
-	CSI_REG(base, 0x5c) = ctx->transfer.chromaPitch;
-	CSI_REG(base, 0x34) = ctx->width;
-	CSI_REG(base, 0x38) = 0;
-	CSI_REG(base, 0x3c) = ctx->height;
-	CSI_REG(base, 0x40) = 0;
-	CSI_REG(base, 0x30) = 0;
-	CSI_REG(base, 0x90) = 0;
-	CSI_REG(base, 0xc0) = 0x100000;
-	CSI_REG(base, 0x18) = 1;
-	CSI_REG(base, 4) = 1;
+	cif = ctx->cifRegisters;
+	cif->inputFormat = (mode >> 4 & 0xf) | 0x301100;
+	cif->outputFormat = (mode & 0xf) | 0xff0000;
+	if (mode & 0x1000)
+		cif->dataOrder = 0x100;
+	else if (mode & 0x2000)
+		cif->dataOrder = 0x200;
+	else
+		cif->dataOrder = 0;
+	cif->lastFrame = 2;
+	cif->iAddress = ctx->transfer.iAddress[0];
+	cif->frame[0].iAddress = ctx->transfer.iAddress[1];
+	cif->frame[1].iAddress = ctx->transfer.iAddress[2];
+	cif->iPitch = ctx->transfer.iPitch;
+	cif->chromaAddress[0] = ctx->transfer.chromaAddress[0][0];
+	cif->chromaAddress[1] = ctx->transfer.chromaAddress[0][1];
+	cif->frame[0].chromaAddress[0] = ctx->transfer.chromaAddress[1][0];
+	cif->frame[0].chromaAddress[1] = ctx->transfer.chromaAddress[1][1];
+	cif->frame[1].chromaAddress[0] = ctx->transfer.chromaAddress[2][0];
+	cif->frame[1].chromaAddress[1] = ctx->transfer.chromaAddress[2][1];
+	cif->chromaPitch = ctx->transfer.chromaPitch;
+	cif->width = ctx->width;
+	cif->left = 0;
+	cif->height = ctx->height;
+	cif->top = 0;
+	cif->windowControl = 0;
+	cif->currentFrame = 0;
+	cif->interruptEnable = 0x100000;
+	cif->outputEnable = 1;
+	cif->start = 1;
 	LowioDmb();
 	ksceKernelEnableIntr(ctx->cifIntrCode);
 	return 0;
@@ -320,75 +343,78 @@ uint32_t SceCsiForDriver_2AFEA1B0(unsigned head, uint32_t mode)
 uint32_t SceCsiForDriver_A1D1805D(unsigned head)
 {
 	CsiContext *ctx;
-	uint8_t *base;
-	uint64_t start;
-	uint32_t status;
-	uint32_t control;
+	volatile SceCifRegisters *cif;
+	SceUInt64 start;
+	uint32_t status, busy;
 
-	if (head >= 2)
+	if (head > 1)
 		return CSI_ERROR_HEAD;
 	ctx = &s_csi[head];
-	base = ctx->cifBase;
+	cif = ctx->cifRegisters;
 	ksceKernelDisableIntr(ctx->cifIntrCode);
+	/* Let the frame in progress finish, for up to 300 ms. */
 	start = sceKernelGetSystemTimeWide();
-	while (sceKernelGetSystemTimeWide() - start < 300000 && (CSI_REG(base, 8) & 1)) {
-		status = CSI_REG(base, 0xbc);
-		if (status) {
-			CSI_REG(base, 0xbc) = status;
-			(void)CSI_REG(base, 0xbc);
+	while (sceKernelGetSystemTimeWide() - start < 300000) {
+		if ((cif->status & SCE_CIF_STATUS_BUSY) == 0)
+			break;
+		status = cif->interruptStatus;
+		if (status != 0) {
+			cif->interruptStatus = status;
+			(void)cif->interruptStatus;
 			LowioDsb();
-			if (status & 0x1000000)
+			if (status & SCE_CIF_INTR_FRAME)
 				break;
 		}
 		sceKernelDelayThread(1000);
 	}
-	CSI_REG(base, 0) = 1;
-	(void)CSI_REG(base, 0xbc);
+	cif->stop = 1;
+	(void)cif->interruptStatus;
 	LowioDmb();
+	/* Then wait for the interface to stop, for up to 300 ms. */
 	start = sceKernelGetSystemTimeWide();
 	while (sceKernelGetSystemTimeWide() - start < 300000) {
-		control = CSI_REG(base, 8);
-		status = CSI_REG(base, 0xbc);
-		if (status) {
-			CSI_REG(base, 0xbc) = status;
-			(void)CSI_REG(base, 0xbc);
+		busy = cif->status;
+		status = cif->interruptStatus;
+		if (status != 0) {
+			cif->interruptStatus = status;
+			(void)cif->interruptStatus;
 			LowioDsb();
-			if (status & 0x1000000)
-				return 0;
+			if (status & SCE_CIF_INTR_FRAME)
+				break;
 		}
-		if (!(control & 1))
+		if ((busy & SCE_CIF_STATUS_BUSY) == 0)
 			break;
 		sceKernelDelayThread(1000);
 	}
 	return 0;
 }
 
-uint32_t SceCsiForDriver_FC165297(unsigned head, uint32_t a1)
+uint32_t SceCsiForDriver_FC165297(unsigned head, uint32_t format)
 {
-	uint8_t *base;
+	volatile SceCsiRegisters *csi;
 
-	if (head >= 2)
+	if (head > 1)
 		return CSI_ERROR_HEAD;
-	base = s_csi[head].base;
-	CSI_REG(base, 0x8c) = 0;
-	CSI_REG(base, 0x28) = 0x1000;
-	CSI_REG(base, 0x100) = a1;
-	CSI_REG(base, 0) = 1;
-	CSI_REG(base, 8) = 1;
-	(void)CSI_REG(base, 0x14);
+	csi = s_csi[head].registers;
+	csi->interruptEnable = 0;
+	csi->mode = 0x1000;
+	csi->format = format;
+	csi->enable = 1;
+	csi->receive = 1;
+	(void)csi->status;
 	LowioDmb();
 	return 0;
 }
 
 uint32_t SceCsiForDriver_4AE39F26(unsigned head)
 {
-	uint8_t *base;
+	volatile SceCsiRegisters *csi;
 
-	if (head >= 2)
+	if (head > 1)
 		return CSI_ERROR_HEAD;
-	base = s_csi[head].base;
-	CSI_REG(base, 8) = 0;
-	CSI_REG(base, 0) = 0;
+	csi = s_csi[head].registers;
+	csi->receive = 0;
+	csi->enable = 0;
 	LowioDmb();
 	ScePervasiveForDriver_4B223AF5(head);
 	return 0;
