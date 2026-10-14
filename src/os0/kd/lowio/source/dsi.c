@@ -169,17 +169,17 @@ static int DsiShortWrite(unsigned head, uint32_t packet)
 }
 
 /* name unknown: sends a read request and collects up to 32 response bytes */
-static int DsiRead(unsigned head, uint32_t packet, uint8_t *data, unsigned size)
+static int DsiRead(unsigned head, uint32_t packet, uint8_t *data, int size)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
 	uint32_t program[63];
 	uint32_t intr, word;
-	unsigned i;
+	int i;
 
 	if (head > 1)
 		return DSI_ERROR_HEAD;
-	if (size > 32)
+	if ((unsigned)size > 32)
 		return DSI_ERROR_PARAM;
 	ctx = &s_dsi[head];
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
@@ -210,6 +210,7 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	DsiContext *ctx = arg;
 	volatile SceDsiRegisters *regs = ctx->registers;
 	const DsiVicMode *mode;
+	uint64_t target, output;
 	uint32_t intr, status, mask;
 
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
@@ -220,14 +221,17 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	status = regs->interruptStatus;
 	regs->interruptStatus = status;
 	LowioDmb();
+	(void)regs->interruptStatus;
 	LowioDsb();
 	if (status & 2) {
 		mode = ctx->mode;
-		ctx->targetPixels += ctx->targetFramePixels;
-		ctx->outputPixels += ctx->framePixels;
+		target = ctx->targetPixels + ctx->targetFramePixels;
+		ctx->targetPixels = target;
+		output = ctx->outputPixels + ctx->framePixels;
+		ctx->outputPixels = output;
 		if (!mode->interlaced) {
-			if (ctx->targetPixels - ctx->outputPixels >= mode->hTotal) {
-				ctx->outputPixels += mode->hTotal;
+			if (target - output >= mode->hTotal) {
+				ctx->outputPixels = output + mode->hTotal;
 				regs->vTotal = mode->vTotal + 1;
 			} else {
 				regs->vTotal = mode->vTotal;
@@ -422,11 +426,11 @@ int ksceDsiSetLanesAndPixelSize(unsigned head, unsigned lanes, unsigned pixelSiz
 {
 	if (head > 1)
 		return DSI_ERROR_HEAD;
-	if (head) {
-		if ((pixelSize != 30 && pixelSize != 24) || lanes - 2 > 1)
+	if (head == 0) {
+		if (lanes != 2 || pixelSize != 24)
 			return DSI_ERROR_PARAM;
 	} else {
-		if (lanes != 2 || pixelSize != 24)
+		if ((pixelSize != 24 && pixelSize != 30) || lanes - 2 > 1)
 			return DSI_ERROR_PARAM;
 	}
 	s_dsi[head].pixelSize = pixelSize;
@@ -844,6 +848,7 @@ int ksceDsiDisableHead(unsigned head)
 		regs->lanePower[3] = 1;
 	regs->laneEnable = 0;
 	regs->phyReset = 1;
+	(void)regs->status;
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	ScePervasiveForDriver_F1908D3C(head);
@@ -990,6 +995,7 @@ int ksceDsiSendBlankingPacket(unsigned head)
 	}
 	regs = s_dsi[head].registers;
 	regs->programControl = 12;
+	(void)regs->programControl;
 	LowioDmb();
 	regs->commandStatusClear = regs->commandStatus;
 	while (regs->commandStatus & SCE_DSI_COMMAND_BLANKED)
@@ -998,7 +1004,7 @@ int ksceDsiSendBlankingPacket(unsigned head)
 	regs->videoProgram = SCE_DSI_PROGRAM_LONG(DSI_BLANKING, 0);
 	/* meaning unknown */
 	regs->videoProgram = ctx->lanes == 3 ? 0x30000079 : 0x30000039;
-	regs->videoProgram = 0xa6000000;
+	regs->videoProgram = 0xa6002000;
 	regs->videoProgram = 0x18000001;
 	regs->videoProgramStart = 0xffffffff;
 	LowioDmb();
@@ -1007,8 +1013,10 @@ int ksceDsiSendBlankingPacket(unsigned head)
 	regs->programReset = 0xffffffff;
 	regs->commandStatusClear = SCE_DSI_COMMAND_BLANKED;
 	regs->programControl = 12;
+	(void)regs->programControl;
 	LowioDmb();
 	regs->control = 0;
+	(void)regs->control;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
@@ -1019,12 +1027,12 @@ static int DsiSysEvent(int resume, int eventId, void *args, void *opt)
 {
 	(void)args;
 	(void)opt;
-	if (resume != 0 || eventId != 0x4004)
-		return 0;
-	ksceDsiSendBlankingPacket(0);
-	ksceDsiSendBlankingPacket(1);
-	ksceDsiDisableHead(0);
-	ksceDsiDisableHead(1);
+	if (resume == 0 && eventId == 0x4004) {
+		ksceDsiSendBlankingPacket(0);
+		ksceDsiSendBlankingPacket(1);
+		ksceDsiDisableHead(0);
+		ksceDsiDisableHead(1);
+	}
 	return 0;
 }
 
