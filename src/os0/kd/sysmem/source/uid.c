@@ -2017,10 +2017,8 @@ int GUIDReleaseObject(SceUID guid)
 
 	state = UID_WRITE_LOCK(heap, 5771);
 	ret = UIDEntryCheckInvalid(heap, guid, 0, &entry);
-	if (ret < 0) {
-		UID_WRITE_UNLOCK(heap, state);
-		goto clean;
-	}
+	if (ret < 0)
+		goto out;
 	/* UIDEntryReleaseObjectWithGUID */
 	if (entry->attr & UID_ENTRY_ATTR_GUID_ANY) {
 		if (entry->useCount == 0) {
@@ -2049,10 +2047,10 @@ int GUIDReleaseObject(SceUID guid)
 	ret = UIDEntryClose(heap, entry, &param);
 	if (ret >= 0 && base != NULL)
 		ret = UIDEntryCloseLink(heap, base, &param);
-	UID_WRITE_UNLOCK(heap, state);
-	goto clean;
+	goto out;
 unused:
 	ret = 0;
+out:
 	UID_WRITE_UNLOCK(heap, state);
 	goto clean;
 invalid:
@@ -2073,8 +2071,10 @@ clean:
 /* attr: a visibility level, else 3; UID_ENTRY_ATTR_NAME_PUBLIC names go to table 0 */
 static inline SceUInt32 UIDCreateAttr(SceUInt32 attr)
 {
-	if ((attr & UID_ENTRY_ATTR_NAME_PUBLIC) && !(attr & UID_ENTRY_ATTR_NAME_KIND))
-		attr |= UID_ENTRY_ATTR_NAME_KIND;
+	if (attr & UID_ENTRY_ATTR_NAME_PUBLIC) {
+		if (!(attr & UID_ENTRY_ATTR_NAME_KIND))
+			attr |= UID_ENTRY_ATTR_NAME_KIND;
+	}
 	return attr;
 }
 
@@ -2095,7 +2095,7 @@ int ksceGUIDKernelCreateWithAttr(SceClass *pClass, const char *name, SceUInt32 a
 	type = pClass->defaultObjectType;
 	return GUIDCreate(pClass, name, SceSysrootForKernel_7385CADE(), heap, NULL,
 			  (attr & ~UID_ENTRY_ATTR_TYPE_MASK) |
-			  (type & 0xf) << UID_ENTRY_ATTR_TYPE_SHIFT, ppEntry);
+			  ((type << UID_ENTRY_ATTR_TYPE_SHIFT) & UID_ENTRY_ATTR_TYPE_MASK), ppEntry);
 }
 
 SceUID ksceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **obj)
