@@ -14,7 +14,7 @@ typedef int (*SysInitFunc)(void);
 int romRamInit(void);		/* sqram/rom_ram.c */
 int btRomHooksInit(void);	/* 0x00042e00, not converted */
 int wlanInit(void);		/* 0x0001bdc4, not converted */
-int bufferListInit(void);	/* 0x00027eec, not converted */
+int sysTimerSlotInit(void);	/* sys/timer_slot.c */
 int rfInit(void);		/* 0xc0007506, not converted */
 int clockInit(void);		/* 0xc0007540, not converted */
 int bufferPoolsInit(void);	/* 0x0001bcce, not converted */
@@ -30,7 +30,7 @@ static SysInitFunc sysInitTable[] __attribute__((section(".sqram1.rw"))) = {
 	sysInit,
 	btRomHooksInit,
 	wlanInit,
-	bufferListInit,
+	sysTimerSlotInit,
 	rfInit,
 	clockInit,
 	sysIrqEnableAll,

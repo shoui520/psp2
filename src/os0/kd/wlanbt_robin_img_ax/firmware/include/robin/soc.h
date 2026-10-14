@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 #define REG32(addr)	(*(volatile uint32_t *)(addr))
+#define REG16(addr)	(*(volatile uint16_t *)(addr))
 #define REG8(addr)	(*(volatile uint8_t *)(addr))
 
 /* Event sources cascaded through interrupt line 22. */
@@ -114,6 +115,8 @@ enum {
 #define SOC_PENDING_EVENT_STATUS REG32(0x8000a7ac)
 #define SOC_MAC_EVENT_CONTROL	REG32(0x8000a700)
 #define SOC_MAC_REGISTER_BASE	0x8000a000u
+/* MAC register file; the offsets are the hardware's, no names are known. */
+#define MAC_REG(offset)		REG32(SOC_MAC_REGISTER_BASE + (offset))
 #define SOC_MAC_EVENT_PATH_CONTROL REG32(0x8000a7e0)
 #define SOC_MAC_EVENT_PRIMARY_PATTERN REG32(0x8000a78c)
 #define SOC_MAC_EVENT_CONTROL_PATTERN REG32(0x8000a7e4)
@@ -137,6 +140,24 @@ enum {
 #define SOC_IRQ_RAW_STATUS	REG32(0x80002900)	/* raw sources; bit 23 = fatal line */
 
 #define SOC_IRQ_LINE_COUNT	32
+
+#define SOC_CHIP_REVISION	REG32(0x80002018)	/* low byte: silicon revision */
+/* Baseband version words, one per byte of the version string. */
+#define BBP_VERSION_REGISTERS	((volatile uint32_t *)0x90002000)
+/* Baseband register file: one byte-wide register per word. */
+#define BBP_REGISTER(n)		REG32(0x90002000u + 4u * (n))
+
+/*
+ * Serial register bus to the radio (0x90000800). An access writes the
+ * register number to the address register and then moves one byte through
+ * the data register; the status register tells when the bus is busy.
+ */
+#define RFBUS_CONTROL		REG16(0x90000800)
+#define RFBUS_CONFIGURATION	REG16(0x90000804)
+#define RFBUS_STATUS		REG16(0x9000081c)
+#define RFBUS_DATA		REG8(0x90000824)
+#define RFBUS_ADDRESS		REG16(0x90000828)
+#define RFBUS_STATUS_BUSY	0x1c7
 #define SOC_IRQ_LINE_FATAL	23
 
 /*
@@ -153,6 +174,7 @@ enum {
 #define SOC_TIMER3_RELOAD	REG32(0x8000300c)
 #define SOC_TIMER_CONTROL	REG32(0x80003010)
 #define SOC_TIMER1_COUNTER	REG32(0x80003018)
+#define SOC_TIMER2_COUNTER	REG32(0x8000301c)
 #define SOC_TIMER3_COUNTER	REG32(0x80003020)
 #define SOC_TIMER_INT_STATUS	REG32(0x80003024)	/* bit n = timer n expired; written ~bit to clear */
 #define SOC_TIMER_INT_ENABLE	REG32(0x80003028)	/* bit n = timer n interrupt enabled */

@@ -5,7 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-struct OsaBufferPool;
+/* Pool control block created by osa_BlockPoolCreate(); layout is the ROM's. */
+struct OsaBufferPool {
+	uint32_t words[3];
+};
 typedef struct OsaBuffer OsaBuffer;
 
 struct OsaBuffer {

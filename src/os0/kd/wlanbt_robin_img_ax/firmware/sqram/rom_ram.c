@@ -20,7 +20,7 @@
 #define ROM_RW_B_INIT		((const uint32_t *)0x03f47600)
 #define ROM_RW_B_SIZE		0xa00
 
-void osaTimerListInit(void);	/* 0x00027e6a, not converted */
+void osaTimerListInit(void);	/* osa/timer.c */
 void rfHookInit(void);		/* 0x00026fc6, not converted */
 
 /* Word copy (0xc00075e8). */

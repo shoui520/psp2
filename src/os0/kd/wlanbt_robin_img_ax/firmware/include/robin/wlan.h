@@ -45,7 +45,16 @@ _Static_assert(offsetof(WlanWirelessFrame, address3) == 18, "wireless address3")
 _Static_assert(offsetof(WlanWirelessFrame, address4) == 26, "wireless address4");
 _Static_assert(offsetof(WlanWirelessFrame, body) == 32, "wireless frame body");
 
+typedef int (*WlanHostCallback)(void *device, OsaBuffer *buffer, uintptr_t argument,
+				unsigned int event);
+
+/* Callback the host side registers with ioctl 0x20 on the "wlan" device. */
+extern WlanHostCallback wlanHostCallback;
+extern void *wlanDevice;
+extern void *wlanSdioDev;
+
 int wlanInitializationHook(void);
+int wlanDriverInit(void);
 int wlanForwardSdioEvent(void *device, OsaBuffer *buffer,
 			 uintptr_t argument, unsigned int event);
 int wlanReceiveDeviceEvent(void *device, OsaBuffer *buffer,

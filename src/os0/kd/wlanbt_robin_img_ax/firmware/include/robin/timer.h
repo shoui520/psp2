@@ -44,9 +44,17 @@ extern OsaCancelTimerOverride osaCancelTimerOverride;
 extern int (*osaTimerInterruptOverride)(void);
 extern int (*osaPauseTimersOverride)(void);
 extern int (*osaResumeTimersOverride)(void);
+typedef int (*OsaTimerDeadlineOverride)(uint64_t *deadline, uint32_t flagMask,
+					int keepPaused, uint32_t *remaining);
+typedef int (*OsaTimerExpireOverride)(uint32_t threshold, int *result);
+extern OsaTimerDeadlineOverride osaTimerDeadlineOverride;
+extern OsaTimerExpireOverride osaTimerExpireOverride;
 int robinNoOverride(void);
 int osaPauseTimers(void);
 int osaResumeTimers(void);
+uint32_t osaGetNextTimerDeadline(uint64_t *deadline, uint32_t flagMask,
+				 int keepPaused);
+int osaExpireTimerWithin(uint32_t threshold);
 
 struct OsaTimerState *osaRecycleTimer(struct OsaTimerEntry **link);
 int osaAdvanceTimers(struct OsaTimerEntry *entry, uint32_t elapsed);

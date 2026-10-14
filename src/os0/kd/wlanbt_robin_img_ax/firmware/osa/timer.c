@@ -3,6 +3,7 @@
 #include "robin/soc.h"
 #include "robin/timer.h"
 #include "robin/rom.h"
+#include "robin/osa.h"
 
 static volatile uint32_t osaTimerOverflowCount __attribute__((section(".itcm.rw"))) = 0;
 static volatile uint32_t osaTimerLastCounter __attribute__((section(".itcm.rw"))) = 0;
@@ -23,6 +24,12 @@ int (*osaPauseTimersOverride)(void)
 	__attribute__((section(".itcm.rw"))) = robinNoOverride;
 int (*osaResumeTimersOverride)(void)
 	__attribute__((section(".itcm.rw"))) = robinNoOverride;
+OsaTimerDeadlineOverride osaTimerDeadlineOverride
+	__attribute__((section(".itcm.rw"))) =
+	(OsaTimerDeadlineOverride)robinNoOverride;
+OsaTimerExpireOverride osaTimerExpireOverride
+	__attribute__((section(".itcm.rw"))) =
+	(OsaTimerExpireOverride)robinNoOverride;
 
 struct OsaTimerEntry osaTimerEntries[OSA_TIMER_CAPACITY]
 	__attribute__((section(".itcm.bss")));
@@ -306,3 +313,113 @@ int osaResumeTimers(void)
 	return tx_interrupt_control(posture);
 }
 
+/*
+ * Stores in *deadline the absolute hardware time at which the first armed
+ * timer (one whose flags overlap flagMask, or any when flagMask is 0) will
+ * expire, and returns the ticks left until then (0 if none is armed).
+ * The timers stay paused afterwards when keepPaused is set.
+ */
+uint32_t osaGetNextTimerDeadline(uint64_t *deadline, uint32_t flagMask,
+				 int keepPaused)
+{
+	struct OsaTimerEntry *entry;
+	uint32_t remaining = 0;
+	uint32_t elapsed;
+	UINT posture;
+
+	if (osaTimerDeadlineOverride(deadline, flagMask, keepPaused, &remaining))
+		return remaining;
+	osaPauseTimers();
+	posture = tx_interrupt_control(TX_INT_DISABLE);
+	for (entry = osaTimers->active; entry; entry = entry->next) {
+		if (remaining)
+			break;
+		if (flagMask && !(entry->flags & flagMask))
+			continue;
+		remaining = entry->remainingTicks;
+		*deadline = romGetTimerTimestamp() + remaining;
+	}
+	tx_interrupt_control(posture);
+	if (!keepPaused)
+		osaResumeTimers();
+	if (!remaining)
+		return remaining;
+	elapsed = osaGetTimerElapsedTicks();
+	if (remaining < elapsed)
+		return 1;
+	return remaining - elapsed;
+}
+
+/*
+ * Makes the first timer flagged 4 that is due within threshold ticks expire
+ * at once by moving it to the head of the list. Returns 1 when one was found.
+ */
+int osaExpireTimerWithin(uint32_t threshold)
+{
+	struct OsaTimerEntry **link = NULL;
+	struct OsaTimerEntry *entry;
+	int found = 0;
+	UINT posture;
+
+	if (osaTimerExpireOverride(threshold, &found))
+		return found;
+	posture = tx_interrupt_control(TX_INT_DISABLE);
+	entry = osaTimers->active;
+	while (entry && !found) {
+		if ((entry->flags & 4) && entry->remainingTicks <= threshold) {
+			entry->remainingTicks = 0;
+			if (link) {
+				*link = entry->next;
+				entry->next = osaTimers->active;
+				osaTimers->active = entry;
+			}
+			osaResumeTimers();
+			found = 1;
+		} else {
+			link = &entry->next;
+			entry = entry->next;
+		}
+	}
+	tx_interrupt_control(posture);
+	return found;
+}
+
+/* Installed as osaTimerArmedHook: waits for timer 2 to start counting, then unmasks it. */
+void osaEnableArmedTimerInterrupt(void)
+{
+	while (SOC_TIMER2_COUNTER == 0)
+		;
+	SOC_TIMER_INT_ENABLE |= 4;
+}
+
+/*
+ * Words the Mask ROM timer code reads: the entry table, its capacity and a
+ * tick limit. They are written once here and not used by the RAM code.
+ */
+void *osaRomTimerEntries __attribute__((section(".itcm.rw")));
+uint32_t osaRomTimerCount __attribute__((section(".itcm.rw")));
+uint32_t osaRomTimerLimit __attribute__((section(".itcm.rw")));
+
+void osaTimerListInit(void)
+{
+	osaRomTimerEntries = osaTimerEntries;
+	osaTimers = &osaTimerState;
+	osaRomTimerCount = OSA_TIMER_CAPACITY;
+	osaTimerClockReload = UINT32_MAX;
+	osaRomTimerLimit = 10000;
+	osaTimerArmedHook = osaEnableArmedTimerInterrupt;
+}
+
+/* Chains the timer entries onto the free list. */
+unsigned int osaTimerPoolInit(void)
+{
+	unsigned int i;
+
+	__aeabi_memclr4(&osaTimerState, sizeof(osaTimerState));
+	__aeabi_memclr4(osaTimerEntries, sizeof(osaTimerEntries));
+	for (i = 0; i < OSA_TIMER_CAPACITY; i++) {
+		osaTimerEntries[i].next = osaTimerState.free;
+		osaTimerState.free = &osaTimerEntries[i];
+	}
+	return i;
+}
