@@ -2137,6 +2137,29 @@ int SceSysmemForKernel_5EDDEEB5(SceUID guid, SceClass *cls, const char *name,
 	return GUIDSetCNOA(guid, cls, name, object, attr);
 }
 
+/* links newEntry to the GUID entry it opens */
+static inline int UIDEntryIncLinkCountForOpen(UIDEntryHeap *heap, UIDEntry *entry, UIDEntry *newEntry,
+					      SceUID guid)
+{
+	int ret;
+
+	if (entry->object == NULL)
+		SCE_DBG_PRINTF(0xb, 2048, "Warning:pEntry[%p]->pObject is SCE_NULL\n", entry);
+	if (!(entry->attr & UID_ENTRY_ATTR_ACTIVE) || guid != entry->uid) {
+		ret = UID_ERROR_INVALID_UID;
+		SCE_DBG_PRINTF(0xb, 2053, "guid 0x%08x is not active\n", guid);
+		return ret;
+	}
+	if (UIDEntryIncLinkCountRaw(entry) != 1) {
+		SCE_DBG_PRINTF(0xb, 2060, "UIDEntryIncLinkCountRaw failed\n");
+		return UID_ERROR_LINK_COUNT;
+	}
+	ret = UIDEntryConstructByBase(heap, newEntry, SceSysrootForKernel_7385CADE(), entry);
+	if (ret < 0)
+		SCE_DBG_PRINTF(0xb, 2071, "UIDEntryHeapSetGUIDEntryChainRaw failed 0x%08x\n", ret);
+	return ret;
+}
+
 /* a new link to a GUID: another GUID for the same object */
 static inline int GUIDOpenByGUID(SceUID guid)
 {
@@ -2156,27 +2179,10 @@ static inline int GUIDOpenByGUID(SceUID guid)
 			       ret);
 		ret = UID_ERROR_INVALID_UID;
 	} else {
-		UIDEntry *baseEntry = base;
-		UIDEntry *newEntry = entry;
-
-		/* UIDEntryIncLinkCountForOpen */
-		if (baseEntry->object == NULL)
-			SCE_DBG_PRINTF(0xb, 2048, "Warning:pEntry[%p]->pObject is SCE_NULL\n", baseEntry);
-		if (!(baseEntry->attr & UID_ENTRY_ATTR_ACTIVE) || guid != baseEntry->uid) {
-			ret = UID_ERROR_INVALID_UID;
-			SCE_DBG_PRINTF(0xb, 2053, "guid 0x%08x is not active\n", guid);
-		} else if (UIDEntryIncLinkCountRaw(baseEntry) == 1) {
-			ret = UIDEntryConstructByBase(heap, newEntry, SceSysrootForKernel_7385CADE(),
-						    baseEntry);
-			if (ret >= 0) {
-				UID_WRITE_UNLOCK(heap, state);
-				return ret;
-			}
-			SCE_DBG_PRINTF(0xb, 2071, "UIDEntryHeapSetGUIDEntryChainRaw failed 0x%08x\n",
-				       ret);
-		} else {
-			SCE_DBG_PRINTF(0xb, 2060, "UIDEntryIncLinkCountRaw failed\n");
-			ret = UID_ERROR_LINK_COUNT;
+		ret = UIDEntryIncLinkCountForOpen(heap, base, entry, guid);
+		if (ret >= 0) {
+			UID_WRITE_UNLOCK(heap, state);
+			return ret;
 		}
 		SCE_DBG_PRINTF(0xb, 4956, "UIDEntryIncLinkCountForOpen failed\n");
 	}
@@ -2199,10 +2205,31 @@ SceUID ksceGUIDOpenByGUID(SceUID guid)
 }
 
 /* a new link to the GUID named name */
+/* links newEntry to the named GUID entry it opens */
+static inline int UIDEntryIncLinkCountForOpenByName(UIDEntryHeap *heap, UIDEntry *entry,
+						    UIDEntry *newEntry)
+{
+	int ret;
+
+	if (entry->object == NULL)
+		SCE_DBG_PRINTF(0xb, 2094, "Warning:pEntry[%p]->pObject is SCE_NULL\n", entry);
+	if (!(entry->attr & UID_ENTRY_ATTR_ALL))
+		return UID_ERROR_INVALID_UID;
+	if (UIDEntryIncLinkCountRaw(entry) != 1) {
+		ret = UID_ERROR_LINK_COUNT;
+		SCE_DBG_PRINTF(0xb, 2106, "UIDEntryIncLinkCountRaw failed\n");
+		return ret;
+	}
+	ret = UIDEntryConstructByBase(heap, newEntry, SceSysrootForKernel_7385CADE(), entry);
+	if (ret < 0)
+		SCE_DBG_PRINTF(0xb, 2116, "UIDEntryHeapSetGUIDEntryChainRaw failed 0x%08x\n", ret);
+	return ret;
+}
+
 SceUID ksceGUIDOpenByName(const char *name)
 {
 	UIDEntryHeap *heap;
-	UIDEntry *entry, *base;
+	UIDEntry *base, *entry;
 	int state, ret;
 
 	if (name == NULL)
@@ -2210,40 +2237,24 @@ SceUID ksceGUIDOpenByName(const char *name)
 	heap = GUID_ENTRY_HEAP();
 	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 5010, "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 5010, "GUIDOpenByName", "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
 	state = FixedHeapWriteLock(&heap->fixedHeap, "GUIDOpenByName", 5014);
 	ret = GUIDEntryHeapFindByNameRaw(heap, name, 0, &base);
 	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 5018, "GUIDEntryHeapFindByNameRaw([%s]) failed 0x%08x\n", name,
+		SCE_DBG_PRINTF_FUNC(0xb, 5018, "GUIDOpenByName", "GUIDEntryHeapFindByNameRaw([%s]) failed 0x%08x\n", name,
 			       ret);
 	} else {
-		UIDEntry *baseEntry = base;
-		UIDEntry *newEntry = entry;
-
-		/* UIDEntryIncLinkCountForOpenByName */
-		if (baseEntry->object == NULL)
-			SCE_DBG_PRINTF(0xb, 2094, "Warning:pEntry[%p]->pObject is SCE_NULL\n", baseEntry);
-		if (!(baseEntry->attr & UID_ENTRY_ATTR_ALL)) {
-			ret = UID_ERROR_INVALID_UID;
-		} else if (UIDEntryIncLinkCountRaw(baseEntry) == 1) {
-			ret = UIDEntryConstructByBase(heap, newEntry, SceSysrootForKernel_7385CADE(),
-						    baseEntry);
-			if (ret >= 0) {
-				UID_WRITE_UNLOCK(heap, state);
-				return ret;
-			}
-			SCE_DBG_PRINTF(0xb, 2116, "UIDEntryHeapSetGUIDEntryChainRaw failed 0x%08x\n",
-				       ret);
-		} else {
-			ret = UID_ERROR_LINK_COUNT;
-			SCE_DBG_PRINTF(0xb, 2106, "UIDEntryIncLinkCountRaw failed\n");
+		ret = UIDEntryIncLinkCountForOpenByName(heap, base, entry);
+		if (ret >= 0) {
+			UID_WRITE_UNLOCK(heap, state);
+			return ret;
 		}
-		SCE_DBG_PRINTF(0xb, 5027, "UIDEntryIncLinkCountForOpenByName failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 5027, "GUIDOpenByName", "UIDEntryIncLinkCountForOpenByName failed 0x%08x\n", ret);
 	}
 	UID_WRITE_UNLOCK(heap, state);
-	SCE_DBG_PRINTF(0xb, 5034, "guid=0x%08x\n", ret);
+	SCE_DBG_PRINTF_FUNC(0xb, 5034, "GUIDOpenByName", "guid=0x%08x\n", ret);
 	UIDEntryHeapFreeObject(heap, entry);
 	return ret;
 }
