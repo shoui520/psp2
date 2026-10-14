@@ -1,1 +1,0 @@
-set(MODULE_DEFINES CLOCK_PREFIX_HEADER="clock_prefix_release.h")

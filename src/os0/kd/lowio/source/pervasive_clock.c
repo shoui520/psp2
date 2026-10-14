@@ -1,9 +1,8 @@
 /* Pervasive clock transitions. Private names and transition nibble meaning unknown. */
 #include "lowio_internal.h"
 #include "clock_transition_table.h"
-#include CLOCK_PREFIX_HEADER
 
-#define PERVASIVE_ERROR ((uint32_t)0x803f0000)
+#define PERVASIVE_ERROR ((int)0x803f0000)
 
 static int ClockIndex(unsigned mode)
 {
@@ -14,18 +13,19 @@ static int ClockIndex(unsigned mode)
 	return (int)mode - 3;
 }
 
-uint32_t ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
+int ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 {
-	uint32_t state, current, raw, high, path;
-	unsigned shift;
+	uint32_t raw, high;
+	unsigned current;
+	uint16_t path;
+	int state;
 
-	if (mode >= 16 || mode == 2 || mode == 11 || mode == 15 ||
-	    speed - 8 >= 9)
-		return PERVASIVE_ERROR;
+	if (mode > 15 || mode == 2 ||
 #if FW_DEBUG
-	if (mode == 9)
-		return PERVASIVE_ERROR;
+	    mode == 9 ||
 #endif
+	    mode == 11 || mode == 15 || speed - 8 > 8)
+		return PERVASIVE_ERROR;
 	if (mode == 0) {
 		s_baseClock->armDivisor = 16 - speed;
 		LowioDmb();
@@ -35,19 +35,18 @@ uint32_t ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 	raw = s_baseClock->armMultiplier;
 	current = raw & 15;
 	if (current != mode) {
-		if (current == 0)
-			path = s_clockTransitionPrefix[ClockIndex(mode)];
-		else
-			path = s_clockTransition[ClockIndex(current)][ClockIndex(mode)];
-		if (path) {
+		/*
+		 * Sony's code indexes the row before the table when the current
+		 * mode is 0 (ClockIndex(0) is -1) and steps through whatever
+		 * precedes it in rodata.
+		 */
+		path = s_clockTransition[ClockIndex(current)][ClockIndex(mode)];
+		high = raw & ~15U;
+		while (path) {
 			LowioDmb();
-			high = raw & ~15U;
-			for (shift = 0; shift < 16 && (path >> shift); shift += 4) {
-				if (shift)
-					LowioDmb();
-				s_baseClock->armMultiplier = high | ((path >> shift) & 15);
-				LowioDmb();
-			}
+			s_baseClock->armMultiplier = high | (path & 15);
+			LowioDmb();
+			path >>= 4;
 		}
 	}
 	LowioDmb();
@@ -57,16 +56,19 @@ uint32_t ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 	return 0;
 }
 
-uint32_t ScePervasiveForDriver_BB67EF58(unsigned head)
+int ScePervasiveForDriver_BB67EF58(unsigned head)
 {
-	uint32_t state;
+	int state;
 
 	/* Reset-mask helper accepts the second argument unchanged. */
 	ScePervasiveForDriver_4AF7A01E(head, 8);
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
-	if (head < 3) {
-		s_misc->usbPortControl &= ~(3U << (head * 2));
-	}
+	if (head == 0)
+		s_misc->usbPortControl &= ~3U;
+	else if (head == 1)
+		s_misc->usbPortControl &= ~0xcU;
+	else if (head == 2)
+		s_misc->usbPortControl &= ~0x30U;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 1;
 }

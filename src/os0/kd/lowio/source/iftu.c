@@ -714,8 +714,11 @@ static __attribute__((noinline)) int IftuInit(void)
 		plane->alpha = 0xff;
 		plane->mergeSetting = IFTU_NO_MERGE;
 		plane->bilinear = 1;
-		plane->eventFlag = i == IFTU_CONVERTER ?
-			ksceKernelCreateEventFlag("SceIftu2", 0x1000, 0, NULL) : -1;
+		if (i == IFTU_CONVERTER)
+			plane->eventFlag = ksceKernelCreateEventFlag("SceIftu2",
+				0x1000, 0, NULL);
+		else
+			plane->eventFlag = -1;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = 0x58;
 		opt.attr = 2;
@@ -727,25 +730,28 @@ static __attribute__((noinline)) int IftuInit(void)
 		plane->controlUid = ret;
 		ksceKernelGetMemBlockBase(ret, &base);
 		plane->registers = base;
-		if (s_iftuDevices[i].controlPaddr == 0) {
+		if (s_iftuDevices[i].controlPaddr != 0) {
+			if (i & 1) {
+				plane->controlUid = -1;
+				plane->control = plane[-1].control;
+				plane->planeControl = &plane->control->plane[1];
+			} else {
+				opt.size = 0x58;
+				opt.attr = 2;
+				opt.paddr = s_iftuDevices[i].controlPaddr;
+				ret = ksceKernelAllocMemBlock(
+					s_iftuDevices[i].controlName, 0x20100806,
+					0x1000, &opt);
+				/* Sony does not check this allocation or mapping. */
+				ksceKernelGetMemBlockBase(ret, &base);
+				plane->controlUid = ret;
+				plane->control = base;
+				plane->planeControl = &plane->control->plane[0];
+			}
+		} else {
 			plane->control = NULL;
 			plane->planeControl = NULL;
 			plane->controlUid = -1;
-		} else if (i & 1) {
-			plane->controlUid = -1;
-			plane->control = plane[-1].control;
-			plane->planeControl = &plane->control->plane[1];
-		} else {
-			opt.size = 0x58;
-			opt.attr = 2;
-			opt.paddr = s_iftuDevices[i].controlPaddr;
-			ret = ksceKernelAllocMemBlock(s_iftuDevices[i].controlName,
-				0x20100806, 0x1000, &opt);
-			/* Sony does not check this allocation or mapping. */
-			ksceKernelGetMemBlockBase(ret, &base);
-			plane->controlUid = ret;
-			plane->control = base;
-			plane->planeControl = &plane->control->plane[0];
 		}
 		plane->intrCode = s_iftuDevices[i].intrCode;
 		if (plane->intrCode >= 0) {

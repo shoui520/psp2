@@ -17,12 +17,12 @@ extern SceKernelSpinlock s_pervasiveLock;
 
 static inline void LowioDmb(void)
 {
-	__asm__ volatile("dmb sy" : : : "memory");
+	__asm__ volatile("dmb sy");
 }
 
 static inline void LowioDsb(void)
 {
-	__asm__ volatile("dsb sy" : : : "memory");
+	__asm__ volatile("dsb sy");
 }
 
 uint32_t Smc110(uint32_t, uint32_t, uint32_t, uint32_t);

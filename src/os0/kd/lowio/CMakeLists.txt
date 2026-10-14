@@ -3,7 +3,7 @@
 # NEON vector, the DSI VIC search and FIFO copies are fully unrolled, and the
 # I2C and pixel clock helpers are inlined into every caller.
 set(MODULE_COMPILE_OPTIONS -O3)
-psp2_module(os0_kd_lowio KIND kernel SKELETON SOURCES
+psp2_module(os0_kd_lowio KIND kernel SOURCES
 	source/smc.S
 	source/lowio.c
 	source/lowio_state.c
