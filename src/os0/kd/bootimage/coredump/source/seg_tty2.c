@@ -6,18 +6,41 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int tty2Init(SegIf *segment);
-extern int tty2CalcSize(SegIf *segment);
 extern int oalGetDebugTailLog(char *buffer, SceSize size);
+extern int oalIsToolDipswEnabled(void);
 
+static int _init(SegIf *segment);
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod tty2Methods = {
-	tty2Init,
-	tty2CalcSize,
+	_init,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf tty2Segment;
+
+static int _init(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 41, "_init");
+	return segInitBase(segment);
+}
+
+static int _calcSize(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 54, "_calcSize");
+	segment->writtenSize = 0;
+	if (oalIsToolDipswEnabled() == 0) {
+		segment->numPhdr = 1;
+		segment->dataSize = sizeof(CoredumpTtyNote) + 4096;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

@@ -23,6 +23,8 @@ const SegIfMethod memBlockMethods = {
 	_writeSegs,
 };
 
+SegIf memBlockSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	unsigned int count;

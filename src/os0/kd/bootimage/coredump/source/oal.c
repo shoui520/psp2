@@ -18,6 +18,8 @@
 #include <sce/rtc.h>
 #include <sce/iofilemgr.h>
 #include <sce/processmgr.h>
+#include <sce/process_info.h>
+#include <psp2common/kernel/modulemgr.h>
 #include <sce/process_budget.h>
 #include <sce/threadmgr_debugger.h>
 #include <sce/threadmgr_vfp.h>
@@ -139,6 +141,12 @@ extern int SceThreadmgrForDriver_D1FBDFA6(SceUID condId,
 extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level,
 	SceUID *vector, SceSize size, SceSize *retNum);
 extern int ksceKernelGetProcessStatus(SceUID pid, int *status);
+extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
+extern int SceProcessmgrForDriver_BA0A06A4(SceUInt32 visibilityLevel,
+	SceKernelProcessInfo *processes, SceSize size, SceUInt32 *count);
+extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
+extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
+extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
 extern int SceSblACMgrForDriver_4CBD6156(SceUID pid);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblACMgrIsRootProgram(SceUID pid);
@@ -700,12 +708,12 @@ finish:
 	return result;
 }
 
-int oalIsPlaintextDumpAllowed(SceUID pid)
+static inline int _isPlaintextDumpAllowed(SceUID pid)
 {
 	return alwaysEncryptDump == 0 && SceSblACMgrForDriver_4CBD6156(pid) != 0;
 }
 
-int oalIsSystemProgram(SceUID pid)
+static inline int _isSystemProgram(SceUID pid)
 {
 	SceSize titleSize = coredumpRun.titleid_len;
 	const char *titleid = coredumpRun.titleid;
@@ -720,6 +728,16 @@ int oalIsSystemProgram(SceUID pid)
 		(strncmp(titleid, "NPXS10083", titleSize) == 0 ||
 		 strncmp(titleid, "NPXS10084", titleSize) == 0)) ||
 		ksceSblACMgrIsSystemProgram(pid) != 0;
+}
+
+int oalIsPlaintextDumpAllowed(SceUID pid)
+{
+	return _isPlaintextDumpAllowed(pid);
+}
+
+int oalIsSystemProgram(SceUID pid)
+{
+	return _isSystemProgram(pid);
 }
 
 int oalIsRootProgram(SceUID pid)
@@ -898,7 +916,22 @@ int oalWaitThreadEnd(SceUID threadId, SceUInt timeout)
 	return ksceKernelWaitThreadEnd(threadId, &exitStatus, &remaining);
 }
 
-/* Process label helper awaits the canonical processmgr process-info owner. */
+/* the core file's name part: the process name, else its program class */
+void oalGetProcessDumpName(SceUID pid, char *name)
+{
+	SceKernelProcessInfo process;
+
+	memset(name, 0, 32);
+	if (_isSystemProgram(pid) != 0 || ksceSblACMgrIsRootProgram(pid) != 0)
+		strncpy(name, "system", 32);
+	else
+		strncpy(name, "nonsystem", 32);
+	memset(&process, 0, sizeof(process));
+	process.size = sizeof(process);
+	if (ksceKernelGetProcessInfo(pid, &process) == 0 &&
+	    strnlen(process.name, sizeof(process.name)) != 0)
+		__builtin_memcpy(name, process.name, sizeof(process.name));
+}
 
 int oalCondInit(SceUID *condId, SceUID mutexId)
 {
@@ -1388,6 +1421,118 @@ void oalGetHwInfo(SceUID pid, CoredumpHwInfo *info)
 	__builtin_memcpy(info->qafName, qafName, sizeof(qafName));
 }
 
+static inline void _getExternalProcessStopReason(
+	const SceKernelProcessInfo *process, CoredumpStopReason *stopReason)
+{
+	SCE_DBG_ASSERT_FUNC(stopReason != NULL, 2009, "_getExternalProcessStopReason");
+	memset(stopReason, 0, sizeof(*stopReason));
+	stopReason->reason.codeLow = 0;
+	stopReason->reason.codeHigh = 0;
+	stopReason->reason.groupLow = 0;
+	stopReason->reason.groupHigh = 0;
+	stopReason->detail.codeLow = 0;
+	stopReason->detail.codeHigh = 0;
+	stopReason->detail.groupLow = 0;
+	stopReason->detail.groupHigh = 0;
+	switch ((uint8_t)process->status) {
+	case 1:
+	case 2:
+	case 3:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 3;
+		stopReason->reason.groupLow = 1;
+		break;
+	case 17:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 1;
+		stopReason->reason.groupLow = 1;
+		break;
+	case 18:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 4;
+		stopReason->reason.groupLow = 2;
+		break;
+	case 19:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 3;
+		stopReason->reason.groupLow = 3;
+		break;
+	case 20:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 4;
+		stopReason->reason.groupLow = 3;
+		break;
+	case 21:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 2;
+		stopReason->reason.groupLow = 3;
+		break;
+	case 22:
+		stopReason->reason.codeHigh = 0;
+		stopReason->reason.groupHigh = 0;
+		stopReason->reason.codeLow = 1;
+		stopReason->reason.groupLow = 2;
+		break;
+	}
+}
+
+void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info)
+{
+	SceKernelProcessInfo process;
+	uint32_t flags;
+	int status;
+
+	SCE_DBG_ASSERT(info != NULL, 1722);
+	memset(info, 0, sizeof(*info));
+	memset(&process, 0, sizeof(process));
+	process.size = sizeof(process);
+	if (ksceKernelGetProcessInfo(pid, &process) != 0)
+		return;
+	status = 0;
+	info->pid = process.pid;
+	if (ksceKernelGetProcessStatus(pid, &status) < 0) {
+		flags = 0;
+	} else {
+		status = (uint8_t)status;
+		flags = _isPlaintextDumpAllowed(pid) ? 0x10000 : 0;
+		if (status == 3)
+			flags |= 8;
+		if (_isSystemProgram(pid) != 0)
+			flags |= 4;
+		if (status == 2)
+			flags |= 2;
+		flags |= 1;
+	}
+	info->flags = flags;
+	__builtin_memcpy(info->name, process.name, sizeof(info->name));
+	info->cpuAffinityMask = process.cpuAffinity;
+	info->entryPoint = (uintptr_t)process.entryPoint;
+	ksceKernelGetModuleFingerprint(process.mainModule, &info->fingerprint);
+	if (process.parentPid == 0x10005) {
+		info->parentPidBytes[0] = -1;
+		info->parentPidBytes[1] = -1;
+		info->parentPidBytes[2] = -1;
+		info->parentPidBytes[3] = -1;
+	} else {
+		info->parentPid = process.parentPid;
+	}
+	if (pid == coredumpRun.pid) {
+#if FW_DEBUG
+		_getAbortedProcessStopReason(pid, &info->stopReason);
+#else
+		_getAbortedProcessStopReason(&info->stopReason);
+#endif
+		return;
+	}
+	_getExternalProcessStopReason(&process, &info->stopReason);
+}
+
 SceUInt64 oalGetProcessTime(SceUID pid)
 {
 	SceUInt64 time = 0;
@@ -1396,6 +1541,43 @@ SceUInt64 oalGetProcessTime(SceUID pid)
 	if (SceProcessmgrForDriver_8CB01675(pid, &time, timestamp) < 0)
 		return (SceUInt64)-1;
 	return time;
+}
+
+int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize)
+{
+	SceKernelProcessInfo process;
+	int result;
+
+	SCE_DBG_ASSERT(path != NULL && pathSize != NULL, 2074);
+	memset(path, 0, 256);
+	*pathSize = 0;
+	memset(&process, 0, sizeof(process));
+	process.size = sizeof(process);
+	result = ksceKernelGetProcessInfo(pid, &process);
+	if (result != 0)
+		return result;
+	result = ksceKernelGetModulePath(process.mainModule, path, 255);
+	if (result < 0)
+		return result;
+	*pathSize = strnlen(path, 255) + 1;
+	return *pathSize;
+}
+
+void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info)
+{
+	SceKernelProcessInfo process;
+	SceKernelModuleInfo module;
+
+	SCE_DBG_ASSERT(info != NULL, 2111);
+	memset(info, 0, sizeof(*info));
+	memset(&process, 0, sizeof(process));
+	process.size = sizeof(process);
+	if (ksceKernelGetProcessInfo(pid, &process) != 0)
+		return;
+	if (ksceKernelGetModuleInfo(pid, process.mainModule, &module) < 0)
+		return;
+	/* exidx_top, exidx_btm, extab_top, extab_btm */
+	__builtin_memcpy(info, &module.exidx_top, sizeof(*info));
 }
 
 unsigned int oalGetNumOfThreads(SceUID pid)
@@ -1878,6 +2060,77 @@ void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info)
 	}
 }
 
+extern int SceSysmemForKernel_AD19285A(void *partition, uintptr_t lo, uintptr_t hi,
+	SceUInt32 level, MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count);
+
+/* the partitions oalEachOfAllMemBlockInfo has walked: shared ones are walked once */
+static SceUInt32 numVisitedPartitions;
+static void *visitedPartitions[64];
+
+/*
+ * Calls callback for every memory block of the process's user partitions (every
+ * partition for the kernel), blocks being the work buffer for the block lists.
+ */
+int oalEachOfAllMemBlockInfo(SceUID pid,
+	int (*callback)(CoredumpMemBlockInfo *info, void *context), void *context,
+	MemBlockInfoEx *blocks, SceSize size)
+{
+	SceKernelProcessInfo process;
+	AddressSpaceInfo space;
+	CoredumpMemBlockInfo info;
+	SceUInt32 count, i, k;
+	uintptr_t address;
+	void *partition;
+	int j, result;
+
+	SCE_DBG_ASSERT(callback != NULL && blocks != NULL, 2959);
+	process.size = sizeof(process);
+	if (ksceKernelGetProcessInfo(pid, &process) < 0)
+		return 0;
+	space.size = sizeof(space);
+	result = SceSysmemForKernel_C3EF4055(process.addressSpace, &space);
+	if (result < 0)
+		return result;
+	numVisitedPartitions = 0;
+	for (i = 0; i < space.partitionCount; i++) {
+		if (pid != 0x10005 && space.partition[i].data[1] < 0x40000000)
+			continue;
+		partition = (void *)space.partition[i].data[0];
+		for (k = 0; k < numVisitedPartitions; k++) {
+			if (visitedPartitions[k] == partition)
+				break;
+		}
+		if (k < numVisitedPartitions || numVisitedPartitions == 64)
+			continue;
+		visitedPartitions[numVisitedPartitions++] = partition;
+		address = 0;
+		for (;;) {
+			result = SceSysmemForKernel_AD19285A(partition, address,
+				0xffffffff, 5, blocks, size, &count);
+			if (result < 0)
+				return result;
+			if (count == 0)
+				break;
+			for (j = 0; j < (int)count; j++) {
+				memset(&info, 0, sizeof(info));
+				strncpy(info.name, blocks[j].details.name, sizeof(info.name));
+				info.type = blocks[j].details.type;
+				info.vbase = blocks[j].details.vbase;
+				info.size = blocks[j].details.size;
+				info.mapSize = blocks[j].details.mapSize;
+				info.headFree = blocks[j].details.headFree;
+				info.tailFree = blocks[j].details.tailFree;
+				result = callback(&info, context);
+				if (result != 0)
+					return result;
+			}
+			address = blocks[count - 1].details.vbase +
+				blocks[count - 1].details.size;
+		}
+	}
+	return 0;
+}
+
 int oalEachFileInfo(SceUID pid,
 	int (*callback)(CoredumpFileInfo *info, SceSize resolvedPathSize,
 		const char *resolvedPath, SceSize resolvedPathPadding,
@@ -1897,7 +2150,6 @@ int oalEachFileInfo(SceUID pid,
 		return 0;
 	index = 0;
 	do {
-		__builtin_prefetch(&fds[2].pid);
 		if (fds->pid == pid) {
 			memset(&file, 0, sizeof(file));
 			if (ksceIoGetFileInfo(fds->fd, pid, &file) >= 0) {
@@ -3086,6 +3338,118 @@ void oalGetUltQueueDataResourcePoolInfo(SceUID pid, SceUIntPtr address,
 	}
 }
 
+/* processes other than the caller's own; all of them for a system program */
+int oalGetNumOfExtnlProcs(SceUID pid)
+{
+	SceKernelProcessInfo *processes;
+	SceUInt32 count;
+	SceSize size;
+	SceUID currentPid;
+	int i, num;
+
+	processes = memMgrLocalAllAlloc(&size);
+	if (processes == NULL)
+		return 0;
+	if (SceProcessmgrForDriver_BA0A06A4(5, processes, size, &count) < 0) {
+		memMgrLocalFree(processes);
+		return 0;
+	}
+	if (_isSystemProgram(pid) != 0) {
+		memMgrLocalFree(processes);
+		return count;
+	}
+	currentPid = ksceKernelGetProcessId();
+	num = 0;
+	for (i = 0; i < (int)count; i++) {
+		if (processes[i].pid != currentPid)
+			num++;
+	}
+	memMgrLocalFree(processes);
+	return num;
+}
+
+void oalGetExtnlProcIdList(SceUID pid, SceUID *ids, int capacity)
+{
+	SceKernelProcessInfo *processes;
+	SceUInt32 count;
+	SceSize size;
+	SceUID currentPid;
+	int systemProgram, i, num;
+
+	SCE_DBG_ASSERT(ids != NULL, 5329);
+	memset(ids, 0, capacity * sizeof(*ids));
+	processes = memMgrLocalAllAlloc(&size);
+	if (processes == NULL)
+		return;
+	if (SceProcessmgrForDriver_BA0A06A4(5, processes, size, &count) >= 0) {
+		systemProgram = _isSystemProgram(pid);
+		currentPid = ksceKernelGetProcessId();
+		if (systemProgram != 0) {
+			for (i = 0; i < (int)count && i < capacity; i++)
+				ids[i] = processes[i].pid;
+		} else {
+			for (i = 0, num = 0; i < (int)count && num < capacity; i++) {
+				if (processes[i].pid != currentPid)
+					ids[num++] = processes[i].pid;
+			}
+		}
+	}
+	memMgrLocalFree(processes);
+}
+
+void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *info)
+{
+	SceKernelProcessInfo process;
+	uint32_t flags;
+	int status;
+
+	SCE_DBG_ASSERT(info != NULL, 5366);
+	memset(info, 0, sizeof(*info));
+	memset(&process, 0, sizeof(process));
+	process.size = sizeof(process);
+	if (ksceKernelGetProcessInfo(extnlPid, &process) != 0)
+		return;
+	info->pid = process.pid;
+	if (_isSystemProgram(pid) != 0)
+		info->budgetId = process.budgetId;
+	status = 0;
+	if (ksceKernelGetProcessStatus(extnlPid, &status) < 0) {
+		flags = 0;
+	} else {
+		status = (uint8_t)status;
+		flags = _isPlaintextDumpAllowed(extnlPid) ? 0x10000 : 0;
+		if (status == 3)
+			flags |= 8;
+		if (_isSystemProgram(extnlPid) != 0)
+			flags |= 4;
+		if (status == 2)
+			flags |= 2;
+		flags |= 1;
+	}
+	info->flags = flags;
+	__builtin_memcpy(info->name, process.name, sizeof(info->name));
+	info->cpuAffinityMask = process.cpuAffinity;
+	info->entryPoint = (uintptr_t)process.entryPoint;
+	ksceKernelGetModuleFingerprint(process.mainModule, &info->fingerprint);
+	if (process.parentPid == 0x10005) {
+		info->parentPidBytes[0] = -1;
+		info->parentPidBytes[1] = -1;
+		info->parentPidBytes[2] = -1;
+		info->parentPidBytes[3] = -1;
+	} else {
+		info->parentPid = process.parentPid;
+	}
+	if (extnlPid == coredumpRun.pid) {
+#if FW_DEBUG
+		_getAbortedProcessStopReason(extnlPid, &info->stopReason);
+#else
+		_getAbortedProcessStopReason(&info->stopReason);
+#endif
+		return;
+	}
+	_getExternalProcessStopReason(&process, &info->stopReason);
+}
+
 int oalGetNumOfBudgets(void)
 {
 	SceSize size, count;
@@ -3119,6 +3483,47 @@ void oalGetBudgetIdList(SceUID *ids, int capacity)
 			ids[i] = budgets[i].budgetId;
 	}
 	memMgrLocalFree(budgets);
+}
+
+void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info,
+	CoredumpPhyMemPartInfo *parts, SceUInt32 *numParts)
+{
+	SceKernelBudgetInfoForDebugger budget;
+	const SceKernelPhyMemPartInfoForDebugger *part;
+	SceUInt32 count, capacity, i, j;
+
+	SCE_DBG_ASSERT(info != NULL, 5472);
+	SCE_DBG_ASSERT(parts != NULL, 5473);
+	SCE_DBG_ASSERT(numParts != NULL, 5474);
+	memset(info, 0, sizeof(*info));
+	budget.size = sizeof(budget);
+	if (sceKernelGetBudgetInfoForDebugger(budgetId, 5, &budget) != 0)
+		return;
+	count = budget.count;
+	info->budgetId = budget.budgetId;
+	info->numPhyMemParts = count;
+	strncpy(info->name, budget.name, sizeof(info->name));
+	if (*numParts == 0)
+		return;
+	memset(parts, 0, *numParts * sizeof(*parts));
+	capacity = *numParts;
+	for (i = 0; i < count && i < capacity; i++) {
+		part = &budget.part[i].info;
+		parts[i].uid = part->uid;
+		if (part->name != NULL)
+			strncpy(parts[i].name, part->name, sizeof(parts[i].name));
+		parts[i].type = part->type;
+		parts[i].numSegments = part->segmentCount >= 8 ? 8 : part->segmentCount;
+		/* Sony walks every segment, past the eight it has room for */
+		for (j = 0; j < part->segmentCount; j++) {
+			parts[i].segments[j].pbase = part->segments[j].pbase;
+			parts[i].segments[j].psize = part->segments[j].psize;
+			parts[i].segments[j].freeSize = part->freeSize;
+			parts[i].segments[j].freeSizeMin = part->freeSizeMin;
+			parts[i].segments[j].freeUnitCount = part->freeUnitCount;
+		}
+	}
+	*numParts = i;
 }
 
 int oalGetNumOfApp(void)
@@ -3802,11 +4207,12 @@ int oalGetEventlog(void *buf, SceSize size, SceSize *readBlocks)
 	return ksceEventLogGetInfo(buf, size, readBlocks);
 }
 
-extern int ksceKernelResumeProcess(SceUID pid);
+/* 0x6894499C in 4.00 takes a second argument, always 0 here */
+extern int ksceKernelResumeProcess(SceUID pid, SceUInt32 reserved);
 
 int oalResumeProcess(SceUID pid)
 {
-	return ksceKernelResumeProcess(pid);
+	return ksceKernelResumeProcess(pid, 0);
 }
 
 int oalSuspendProcess(SceUID pid, SceUInt32 *timeout)

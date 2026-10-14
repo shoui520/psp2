@@ -16,17 +16,46 @@ extern void oalGetWaitingThreadList(SceUID pid, SceUID waitId,
 	CoredumpWaitingThread *threads, SceSize capacity);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
+extern int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId);
 extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
-extern int simpleEventCalcSize(SegIf *segment);
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod simpleEventMethods = {
 	segInitBase,
-	simpleEventCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf simpleEventSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	SceUID *ids;
+	unsigned int count, i, numWaiting = 0;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 38, "_calcSize");
+	segment->writtenSize = 0;
+	count = oalGetNumOfSyncObj(11, coredumpRun.pid);
+	if (count == 0) {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+		return 0;
+	}
+	ids = memMgrLocalAlloc(count * sizeof(*ids));
+	if (ids == NULL)
+		return SCE_ERROR_ERRNO_ENOMEM;
+	oalGetSyncObjIdList(11, coredumpRun.pid, ids, count);
+	for (i = 0; i < count; i++)
+		numWaiting += oalGetNumOfWaitingThreads(coredumpRun.pid, ids[i]);
+	memMgrLocalFree(ids);
+	segment->numPhdr = 1;
+	segment->dataSize = count * sizeof(CoredumpSimpleEventInfo) + 76 +
+		numWaiting * sizeof(CoredumpWaitingThread);
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

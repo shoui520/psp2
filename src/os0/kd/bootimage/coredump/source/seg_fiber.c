@@ -25,6 +25,8 @@ const SegIfMethod fiberMethods = {
 	_writeSegs,
 };
 
+SegIf fiberSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	int count, numPhdr;

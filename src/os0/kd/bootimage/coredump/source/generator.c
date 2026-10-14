@@ -60,11 +60,10 @@ extern int oalFileOpen(const char *path, SceUID *fd);
 extern void oalGetDestHostPathFromSettings(char *path);
 extern unsigned int oalGetUnixTime(void);
 extern int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize);
-extern int oalGetProcessDumpName(SceUID pid, char *name);
+extern void oalGetProcessDumpName(SceUID pid, char *name);
 extern int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize);
 extern int oalIsRootProgram(SceUID pid);
 extern int triggerGetNextRequestId(void);
-extern const SegIfMethodPair kernelSegments[5];
 extern int oalMutexLock(SceUID mutexId);
 extern int oalMutexUnlock(SceUID mutexId);
 extern int writeFrameBuffers(SceUID pid);
@@ -73,7 +72,6 @@ extern int oalSuspendProcess(SceUID pid, SceUInt32 *timeout);
 extern int oalChangeThreadPriority(SceUID threadId, int priority);
 extern int writerFlush(Writer *writer);
 extern SceSize encryptedScreenshotSize;
-extern const SegIfMethodPair registeredSegments[50];
 extern int oalIsPlaintextDumpAllowed(SceUID pid);
 extern int oalIsSystemProgram(SceUID pid);
 extern int oalMutexFinal(SceUID mutexId);
@@ -117,6 +115,171 @@ extern int cafWriterGetNumSegments(CafWriter *writer);
 extern int oalFileRemove(const char *path);
 extern void oalGetCdnAccessParam(SceUInt32 appVersion, SceUInt32 stopReason,
 	CoredumpCdnAccessParam *param, const CoredumpCdnPcAndLrInfo *location);
+
+/* the segments of a kernel dump and of a process dump, in writing order */
+extern SegIf corefileSegment;
+extern SegIf systemSegment;
+extern SegIf hardwareSegment;
+extern SegIf buildVersionSegment;
+extern SegIf crashdumpSegment;
+extern SegIf threadSegment;
+extern SegIf semaphoreSegment;
+extern SegIf eventFlagSegment;
+extern SegIf mutexSegment;
+extern SegIf lwMutexSegment;
+extern SegIf msgPipeSegment;
+extern SegIf callbackSegment;
+extern SegIf timerSegment;
+extern SegIf rwLockSegment;
+extern SegIf condSegment;
+extern SegIf lwCondSegment;
+extern SegIf simpleEventSegment;
+extern SegIf threadRegSegment;
+extern ProcessSegment processSegment;
+extern SegIf appSegment;
+extern SegIf stackSegment;
+extern SegIf moduleSegment;
+extern SegIf libSegment;
+extern SegIf metaDataSegment;
+extern SegIf procMemMiniSegment;
+extern SegIf procMemFullSegment;
+extern SegIf memBlockSegment;
+extern FileSegIf fileSegment;
+extern SegIf fiberSegment;
+extern SegIf ultSegment;
+extern SegIf extnlProcSegment;
+extern SegIf budgetSegment;
+extern SegIf appListSegment;
+extern SegIf deviceSegment;
+extern SegIf systemDeviceSegment;
+extern SegIf userDataSegment;
+extern SegIf ultSemaSegment;
+extern SegIf ultMutexSegment;
+extern SegIf ultCondSegment;
+extern SegIf ultRwlockSegment;
+extern SegIf ultQueueSegment;
+extern SegIf ultQueueDataPoolSegment;
+extern SegIf ultWaitingQueuePoolSegment;
+extern SegIf ttySegment;
+extern SegIf screenshotSegment;
+extern SegIf eventLogSegment;
+extern SegIf encryptedScreenshotSegment;
+extern GpuSegIf gpuSegment;
+extern SegIf gpuActivitySegment;
+extern SegIf tty2Segment;
+extern SummarySegIf summarySegment;
+extern const SegIfMethod corefileMethods;
+extern const SegIfMethod systemMethods;
+extern const SegIfMethod hardwareMethods;
+extern const SegIfMethod buildVersionMethods;
+extern const SegIfMethod crashdumpMethods;
+extern const SegIfMethod threadMethods;
+extern const SegIfMethod semaphoreMethods;
+extern const SegIfMethod eventFlagMethods;
+extern const SegIfMethod mutexMethods;
+extern const SegIfMethod lwMutexMethods;
+extern const SegIfMethod msgPipeMethods;
+extern const SegIfMethod callbackMethods;
+extern const SegIfMethod timerMethods;
+extern const SegIfMethod rwLockMethods;
+extern const SegIfMethod condMethods;
+extern const SegIfMethod lwCondMethods;
+extern const SegIfMethod simpleEventMethods;
+extern const SegIfMethod threadRegMethods;
+extern const SegIfMethod processMethods;
+extern const SegIfMethod appMethods;
+extern const SegIfMethod stackMethods;
+extern const SegIfMethod moduleMethods;
+extern const SegIfMethod libMethods;
+extern const SegIfMethod metaDataMethods;
+extern const SegIfMethod procMemMiniMethods;
+extern const SegIfMethod procMemFullMethods;
+extern const SegIfMethod memBlockMethods;
+extern const SegIfMethod fileMethods;
+extern const SegIfMethod fiberMethods;
+extern const SegIfMethod ultMethods;
+extern const SegIfMethod extnlProcMethods;
+extern const SegIfMethod budgetMethods;
+extern const SegIfMethod appListMethods;
+extern const SegIfMethod deviceMethods;
+extern const SegIfMethod systemDeviceMethods;
+extern const SegIfMethod userDataMethods;
+extern const SegIfMethod ultSemaMethods;
+extern const SegIfMethod ultMutexMethods;
+extern const SegIfMethod ultCondMethods;
+extern const SegIfMethod ultRwlockMethods;
+extern const SegIfMethod ultQueueMethods;
+extern const SegIfMethod ultQueueDataPoolMethods;
+extern const SegIfMethod ultWaitingQueuePoolMethods;
+extern const SegIfMethod ttyMethods;
+extern const SegIfMethod screenshotMethods;
+extern const SegIfMethod eventLogMethods;
+extern const SegIfMethod encryptedScreenshotMethods;
+extern const SegIfMethod gpuMethods;
+extern const SegIfMethod gpuActivityMethods;
+extern const SegIfMethod tty2Methods;
+extern const SegIfMethod summaryMethods;
+
+const SegIfMethodPair kernelSegments[5] = {
+	{ &corefileSegment, &corefileMethods, 0x1000 },
+	{ &systemSegment, &systemMethods, 0x1001 },
+	{ &hardwareSegment, &hardwareMethods, 0x101a },
+	{ &buildVersionSegment, &buildVersionMethods, 0x101d },
+	{ &crashdumpSegment, &crashdumpMethods, 0x3000 },
+};
+
+const SegIfMethodPair registeredSegments[50] = {
+	{ &corefileSegment, &corefileMethods, 0x1000 },
+	{ &threadSegment, &threadMethods, 0x1003 },
+	{ &semaphoreSegment, &semaphoreMethods, 0x100a },
+	{ &eventFlagSegment, &eventFlagMethods, 0x100b },
+	{ &mutexSegment, &mutexMethods, 0x100c },
+	{ &lwMutexSegment, &lwMutexMethods, 0x100d },
+	{ &msgPipeSegment, &msgPipeMethods, 0x1010 },
+	{ &callbackSegment, &callbackMethods, 0x1011 },
+	{ &timerSegment, &timerMethods, 0x1013 },
+	{ &rwLockSegment, &rwLockMethods, 0x1014 },
+	{ &condSegment, &condMethods, 0x1015 },
+	{ &lwCondSegment, &lwCondMethods, 0x1016 },
+	{ &simpleEventSegment, &simpleEventMethods, 0x1030 },
+	{ &threadRegSegment, &threadRegMethods, 0x1004 },
+	{ &processSegment.segment, &processMethods, 0x1002 },
+	{ &systemSegment, &systemMethods, 0x1001 },
+	{ &appSegment, &appMethods, 0x101c },
+	{ &hardwareSegment, &hardwareMethods, 0x101a },
+	{ &buildVersionSegment, &buildVersionMethods, 0x101d },
+	{ &stackSegment, &stackMethods, 0x101b },
+	{ &moduleSegment, &moduleMethods, 0x1005 },
+	{ &libSegment, &libMethods, 0x1006 },
+	{ &metaDataSegment, &metaDataMethods, 0x1019 },
+	{ &procMemMiniSegment, &procMemMiniMethods, 0x4002 },
+	{ &procMemFullSegment, &procMemFullMethods, 0x4003 },
+	{ &memBlockSegment, &memBlockMethods, 0x1007 },
+	{ &fileSegment.base, &fileMethods, 0x1009 },
+	{ &fiberSegment, &fiberMethods, 0x1017 },
+	{ &ultSegment, &ultMethods, 0x1018 },
+	{ &extnlProcSegment, &extnlProcMethods, 0x101e },
+	{ &budgetSegment, &budgetMethods, 0x101f },
+	{ &appListSegment, &appListMethods, 0x1020 },
+	{ &deviceSegment, &deviceMethods, 0x1021 },
+	{ &systemDeviceSegment, &systemDeviceMethods, 0x102f },
+	{ &userDataSegment, &userDataMethods, 0x1022 },
+	{ &ultSemaSegment, &ultSemaMethods, 0x1023 },
+	{ &ultMutexSegment, &ultMutexMethods, 0x1024 },
+	{ &ultCondSegment, &ultCondMethods, 0x1029 },
+	{ &ultRwlockSegment, &ultRwlockMethods, 0x1028 },
+	{ &ultQueueSegment, &ultQueueMethods, 0x1027 },
+	{ &ultQueueDataPoolSegment, &ultQueueDataPoolMethods, 0x1025 },
+	{ &ultWaitingQueuePoolSegment, &ultWaitingQueuePoolMethods, 0x1026 },
+	{ &ttySegment, &ttyMethods, 0x102a },
+	{ &screenshotSegment, &screenshotMethods, 0x102b },
+	{ &eventLogSegment, &eventLogMethods, 0x102c },
+	{ &encryptedScreenshotSegment, &encryptedScreenshotMethods, 0x102d },
+	{ &gpuSegment.base, &gpuMethods, 0x2000 },
+	{ &gpuActivitySegment, &gpuActivityMethods, 0x2001 },
+	{ &tty2Segment, &tty2Methods, 0x1031 },
+	{ &summarySegment.base, &summaryMethods, 0x102e },
+};
 
 int initWriters(FileWriterOpenCallback openFile, int useGzip, int useCaf,
 	SceUInt32 maxSegments)

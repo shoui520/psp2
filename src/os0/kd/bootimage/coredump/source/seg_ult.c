@@ -19,9 +19,14 @@ extern int oalEachUltRuntimeInfo(SceUID pid,
 	int (*callback)(SceUInt32 runtimeId, CoredumpUltRuntimeInfo *info,
 		void *context),
 	SceUInt32 *ids, SceSize capacity, void *context);
-extern int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,
+extern int oalEachUltInfo(SceUID pid, SceUIntPtr runtimeId,
+	int (*callback)(CoredumpUltInfo *info, void *context),
+	SceUInt32 *ids, SceSize capacity, void *context);
+extern void *memMgrLocalAllAlloc(SceSize *size);
+
+static int _getSizeCallback(SceUInt32 runtimeId,
 	CoredumpUltRuntimeInfo *info, void *context);
-extern int _getSizeCallback(SceUInt32 runtimeId,
+static int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,
 	CoredumpUltRuntimeInfo *info, void *context);
 
 static int _calcSize(SegIf *segment);
@@ -33,6 +38,8 @@ const SegIfMethod ultMethods = {
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf ultSegment;
 
 static int _calcSize(SegIf *segment)
 {
@@ -105,5 +112,53 @@ static int _writeSegs(SegIf *segment)
 out:
 	memMgrLocalFree(ids);
 done:
+	return result;
+}
+
+static int _getSizeCallback(SceUInt32 runtimeId,
+	CoredumpUltRuntimeInfo *info, void *context)
+{
+	CoredumpUltWriteCounts *counts = context;
+
+	SCE_DBG_ASSERT_FUNC(info != NULL, 200, "_getSizeCallback");
+	SCE_DBG_ASSERT_FUNC(counts != NULL, 201, "_getSizeCallback");
+	counts->numRuntimes++;
+	counts->numUlts += info->numUsedUlts;
+	return 0;
+}
+
+static int _writeUltInfoCallback(CoredumpUltInfo *info, void *context)
+{
+	CoredumpUltWriteCounts *counts = context;
+	int result;
+
+	SCE_DBG_ASSERT_FUNC(info != NULL, 264, "_writeUltInfoCallback");
+	SCE_DBG_ASSERT_FUNC(counts != NULL, 265, "_writeUltInfoCallback");
+	result = writerWrite(currentWriter, info, sizeof(*info));
+	if (result == 0)
+		counts->numUlts++;
+	return result;
+}
+
+static int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,
+	CoredumpUltRuntimeInfo *info, void *context)
+{
+	CoredumpUltWriteCounts *counts = context;
+	SceSize size;
+	void *ids;
+	int result;
+
+	SCE_DBG_ASSERT_FUNC(info != NULL, 216, "_writeUltRuntimeInfoCallback");
+	SCE_DBG_ASSERT_FUNC(counts != NULL, 217, "_writeUltRuntimeInfoCallback");
+	result = writerWrite(currentWriter, info, sizeof(*info));
+	if (result != 0)
+		return result;
+	counts->numRuntimes++;
+	ids = memMgrLocalAllAlloc(&size);
+	if (ids == NULL)
+		return SCE_ERROR_ERRNO_ENOMEM;
+	result = oalEachUltInfo(coredumpRun.pid, runtimeId, _writeUltInfoCallback,
+		ids, size, counts);
+	memMgrLocalFree(ids);
 	return result;
 }

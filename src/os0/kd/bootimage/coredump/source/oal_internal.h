@@ -99,6 +99,78 @@ typedef struct CoredumpStopReason {
 	uint8_t reservedTail[8];
 } CoredumpStopReason;
 
+/* PROCESS_INFO note body; pathSize is filled by the segment writer */
+typedef struct CoredumpProcessInfo {
+	uint32_t reservedHeader;
+	SceUID pid;
+	uint32_t flags;			/* 1 valid, 2 status 2, 4 system program, 8 status 3, 0x10000 plaintext dump */
+	char name[32];
+	uint32_t reserved;
+	uint32_t cpuAffinityMask;
+	uintptr_t entryPoint;
+	uint32_t fingerprint;
+	union {
+		SceUID parentPid;
+		int8_t parentPidBytes[4];	/* all ones for pid 0x10005 */
+	};
+	CoredumpStopReason stopReason;
+	SceSize pathSize;
+} CoredumpProcessInfo;
+
+/* EXTNL_PROC_INFO entry: another process, with its path size */
+typedef struct CoredumpExtnlProcInfo {
+	uint32_t reservedHeader;
+	SceUID pid;
+	SceUID budgetId;		/* only when the dumped process is a system program */
+	uint32_t flags;			/* as CoredumpProcessInfo */
+	char name[32];
+	uint32_t reserved;
+	uint32_t cpuAffinityMask;
+	uintptr_t entryPoint;
+	uint32_t fingerprint;
+	union {
+		SceUID parentPid;
+		int8_t parentPidBytes[4];	/* all ones for pid 0x10005 */
+	};
+	CoredumpStopReason stopReason;
+	SceSize pathSize;
+} CoredumpExtnlProcInfo;
+
+/* BUDGET_INFO: a budget and its physical memory partitions */
+typedef struct CoredumpBudgetInfo {
+	uint32_t reservedHeader;
+	SceUID budgetId;
+	char name[32];
+	SceUInt32 numPhyMemParts;
+} CoredumpBudgetInfo;
+
+typedef struct CoredumpPhyMemPartSegment {
+	uint32_t reserved;
+	uintptr_t pbase;
+	SceSize psize;
+	SceSize freeSize;		/* the partition's, in every segment */
+	SceSize freeSizeMin;
+	SceUInt32 freeUnitCount;
+	uint32_t reservedTail[9];
+} CoredumpPhyMemPartSegment;
+
+typedef struct CoredumpPhyMemPartInfo {
+	uint32_t reservedHeader;
+	SceUID uid;
+	char name[32];
+	SceUInt32 type;
+	SceUInt32 numSegments;		/* at most 8 */
+	CoredumpPhyMemPartSegment segments[8];
+} CoredumpPhyMemPartInfo;
+
+/* the main module's unwind tables */
+typedef struct CoredumpArmExInfo {
+	uintptr_t exidxTop;
+	uintptr_t exidxBtm;
+	uintptr_t extabTop;
+	uintptr_t extabBtm;
+} CoredumpArmExInfo;
+
 typedef struct CoredumpThreadStopEvent {
 	SceUID threadId;
 	int reason;
@@ -675,6 +747,11 @@ typedef struct CoredumpLibraryInfo {
 } CoredumpLibraryInfo;
 
 _Static_assert(sizeof(CoredumpStopReason) == 20, "coredump stop reason size");
+_Static_assert(sizeof(CoredumpProcessInfo) == 88, "coredump process info size");
+_Static_assert(sizeof(CoredumpExtnlProcInfo) == 92, "coredump external process info size");
+_Static_assert(sizeof(CoredumpBudgetInfo) == 44, "coredump budget info size");
+_Static_assert(sizeof(CoredumpPhyMemPartInfo) == 528, "coredump partition info size");
+_Static_assert(sizeof(CoredumpArmExInfo) == 16, "coredump ARM exception info size");
 _Static_assert(sizeof(CoredumpThreadStopEvent) == 8, "coredump stop event size");
 _Static_assert(sizeof(CoredumpBuildVerInfo) == 512, "coredump build version size");
 _Static_assert(sizeof(CoredumpRunContext) == 64, "coredump run context size");

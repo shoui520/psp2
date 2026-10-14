@@ -14,16 +14,35 @@ extern void oalGetUltWaitingQueueResourcePoolInfo(SceUID pid, SceUIntPtr address
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
 extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
-extern int ultWaitingQueuePoolCalcSize(SegIf *segment);
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod ultWaitingQueuePoolMethods = {
 	segInitBase,
-	ultWaitingQueuePoolCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf ultWaitingQueuePoolSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	unsigned int count;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 55, "_calcSize");
+	segment->writtenSize = 0;
+	count = oalGetNumOfUltObjects(coredumpRun.pid, 5);
+	if (count != 0) {
+		segment->numPhdr = 1;
+		segment->dataSize = (count + 1) * 56;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

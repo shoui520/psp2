@@ -36,7 +36,9 @@ psp2_module(os0_kd_bootimage_coredump KIND kernel PARTIAL SOURCES
 	source/seg_meta_data.c
 	source/seg_fiber.c
 	source/seg_ult.c
+	source/seg_proc_mem.c
 	source/seg_extnl_proc.c
+	source/seg_budget.c
 	source/seg_app_list.c
 	source/seg_device.c
 	source/seg_system_device.c
@@ -58,5 +60,13 @@ psp2_module(os0_kd_bootimage_coredump KIND kernel PARTIAL SOURCES
 	source/seg_event_log.c
 	source/seg_encrypted_screenshot.c
 	source/seg_simple_event.c
+	source/kernel_dump.c
+	source/utils.c
 	source/coredump.c
+	source/user_data.c
+	source/object_cache.c
 )
+
+# Sony built coredump with -O3: its loops are unrolled with PLD prefetches
+# (GCC 4.8 prefetches loop arrays on Cortex-A9 only at -O3).
+target_compile_options(os0_kd_bootimage_coredump PRIVATE -O3)

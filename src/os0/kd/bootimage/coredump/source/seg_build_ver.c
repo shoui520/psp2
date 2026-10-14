@@ -26,6 +26,8 @@ const SegIfMethod buildVersionMethods = {
 	_writeSegs,
 };
 
+SegIf buildVersionSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 53, "_calcSize");

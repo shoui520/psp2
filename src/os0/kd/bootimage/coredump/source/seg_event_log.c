@@ -6,7 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int eventLogCalcSize(SegIf *segment);
 extern int oalGetEventlog(void *buffer, SceSize size, SceSize *readBlocks);
 extern int writerWritePaddingData(Writer *writer, SceSize size);
 
@@ -19,14 +18,26 @@ typedef struct CoredumpEventLogNote {
 
 _Static_assert(sizeof(CoredumpEventLogNote) == 40, "event-log note size");
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod eventLogMethods = {
 	segInitBase,
-	eventLogCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf eventLogSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 48, "_calcSize");
+	segment->numPhdr = 1;
+	segment->dataSize = sizeof(CoredumpEventLogNote) + 2048;
+	segment->writtenSize = 0;
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

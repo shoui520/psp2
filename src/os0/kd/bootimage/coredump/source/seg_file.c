@@ -41,6 +41,8 @@ const SegIfMethod fileMethods = {
 	_writeSegs,
 };
 
+FileSegIf fileSegment;
+
 static int _calcSize(SegIf *base)
 {
 	FileSegIf *segment = (FileSegIf *)base;

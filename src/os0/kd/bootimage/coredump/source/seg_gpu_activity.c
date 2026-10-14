@@ -8,7 +8,6 @@ extern Writer *currentWriter;
 extern SceUInt32 oalGetGpuRecoveryCount(void);
 extern SceSize oalGetGpuActivitySize(void);
 extern void oalGetGpuActivity(void *buffer, SceSize size);
-extern int gpuActivityCalcSize(SegIf *segment);
 extern int writerWritePaddingData(Writer *writer, SceSize size);
 
 typedef struct CoredumpGpuActivityNote {
@@ -20,14 +19,31 @@ typedef struct CoredumpGpuActivityNote {
 _Static_assert(sizeof(CoredumpGpuActivityNote) == 40,
 	"GPU activity note size");
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod gpuActivityMethods = {
 	segInitBase,
-	gpuActivityCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf gpuActivitySegment;
+
+static int _calcSize(SegIf *segment)
+{
+	SceSize size;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 51, "_calcSize");
+	segment->writtenSize = 0;
+	size = oalGetGpuActivitySize();
+	if (size >= 4096)
+		size = 4096;
+	segment->numPhdr = 1;
+	segment->dataSize = (size + sizeof(CoredumpGpuActivityNote) + 3) & ~3u;
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

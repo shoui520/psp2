@@ -6,20 +6,51 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
+extern SceSize oalGetGpuInfoSize(void);
 extern void oalGetGpuInfo(void *buffer, SceSize size);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
-extern int gpuInit(SegIf *segment);
-extern int gpuCalcSize(SegIf *segment);
 
+static int _init(SegIf *segment);
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod gpuMethods = {
-	gpuInit,
-	gpuCalcSize,
+	_init,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+GpuSegIf gpuSegment;
+
+static int _init(SegIf *segment)
+{
+	int result;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 49, "_init");
+	result = segInitBase(segment);
+	if (result == 0)
+		((GpuSegIf *)segment)->gpuInfoSize = 0;
+	return result;
+}
+
+static int _calcSize(SegIf *segment)
+{
+	SceSize size;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 65, "_calcSize");
+	segment->writtenSize = 0;
+	if (coredumpRun.triggerReason != 1)
+		return 0;
+	size = oalGetGpuInfoSize();
+	if (size == 0)
+		return 0;
+	((GpuSegIf *)segment)->gpuInfoSize = size;
+	segment->numPhdr = 1;
+	segment->dataSize = size + sizeof(CoredumpNoteHeader);
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

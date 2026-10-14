@@ -39,6 +39,8 @@ const SegIfMethod appMethods = {
 	_writeSegs,
 };
 
+SegIf appSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 54, "_calcSize");

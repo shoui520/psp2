@@ -32,6 +32,8 @@ const SegIfMethod moduleMethods = {
 	_writeSegs,
 };
 
+SegIf moduleSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SceSize capacity;

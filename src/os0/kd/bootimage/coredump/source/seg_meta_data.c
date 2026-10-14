@@ -30,6 +30,8 @@ const SegIfMethod metaDataMethods = {
 	_writeSegs,
 };
 
+SegIf metaDataSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SceKernelModuleInfoForDebugger *modules;

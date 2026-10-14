@@ -29,6 +29,8 @@ const SegIfMethod mutexMethods = {
 	_writeSegs,
 };
 
+SegIf mutexSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SceUID *ids;
@@ -46,39 +48,8 @@ static int _calcSize(SegIf *segment)
 	if (ids == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	oalGetSyncObjIdList(3, coredumpRun.pid, ids, count);
-	i = 0;
-	if (count > 8) {
-		do {
-			unsigned int firstWaiting, secondWaiting, thirdWaiting;
-			unsigned int fourthWaiting, fifthWaiting, sixthWaiting;
-			unsigned int seventhWaiting, eighthWaiting;
-
-			__builtin_prefetch(&ids[i + 10]);
-			firstWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i]);
-			secondWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 1]);
-			thirdWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 2]);
-			fourthWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 3]);
-			fifthWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 4]);
-			sixthWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 5]);
-			seventhWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 6]);
-			eighthWaiting = oalGetNumOfWaitingThreads(coredumpRun.pid,
-				ids[i + 7]);
-			numWaiting += firstWaiting + secondWaiting + thirdWaiting +
-				fourthWaiting + fifthWaiting + sixthWaiting +
-				seventhWaiting + eighthWaiting;
-			i += 8;
-		} while (count - 7 > i + 1);
-	}
-	do {
-		numWaiting += oalGetNumOfWaitingThreads(coredumpRun.pid, ids[i++]);
-	} while (count > i);
+	for (i = 0; i < count; i++)
+		numWaiting += oalGetNumOfWaitingThreads(coredumpRun.pid, ids[i]);
 	memMgrLocalFree(ids);
 	segment->numPhdr = 1;
 	segment->dataSize = (numWaiting + count *

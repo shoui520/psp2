@@ -5,19 +5,44 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
+extern int oalIsSystemProgram(SceUID pid);
 extern void oalGetDeviceInfo(CoredumpDeviceInfo *info, SceUID *renderingPids,
 	SceSize *renderingCount, SceUID *touchPids, SceSize *touchCount);
 extern int writerWritePaddingData(Writer *writer, SceSize size);
-extern int deviceCalcSize(SegIf *segment);
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod deviceMethods = {
 	segInitBase,
-	deviceCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf deviceSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	CoredumpDeviceInfo info;
+	SceUID renderingPids[16], touchPids[16];
+	SceSize renderingCount, touchCount;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 68, "_calcSize");
+	segment->writtenSize = 0;
+	if (oalIsSystemProgram(coredumpRun.pid) != 0) {
+		renderingCount = 16;
+		touchCount = 16;
+		oalGetDeviceInfo(&info, renderingPids, &renderingCount, touchPids,
+				 &touchCount);
+		segment->numPhdr = 1;
+		segment->dataSize = (renderingCount + touchCount + 55) * 4;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

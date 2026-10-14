@@ -14,16 +14,64 @@ extern void oalGetUltCondInfo(SceUID pid, SceUIntPtr address,
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
 extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
-extern int ultCondCalcSize(SegIf *segment);
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod ultCondMethods = {
 	segInitBase,
-	ultCondCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf ultCondSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	CoredumpUltCondInfo info;
+	SceUInt32 count, numWaiting, totalWaiting = 0;
+	SceUInt32 *ids, *waitingIds;
+	SceUInt32 remaining, skip, batch, i;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 57, "_calcSize");
+	segment->writtenSize = 0;
+	count = oalGetNumOfUltObjects(coredumpRun.pid, 1);
+	if (count == 0) {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+		return 0;
+	}
+	ids = memMgrLocalAlloc(1024 * sizeof(*ids));
+	if (ids == NULL)
+		return SCE_ERROR_ERRNO_ENOMEM;
+	waitingIds = memMgrLocalAlloc(1024 * sizeof(*waitingIds));
+	if (waitingIds == NULL) {
+		memMgrLocalFree(ids);
+		return SCE_ERROR_ERRNO_ENOMEM;
+	}
+	remaining = count;
+	skip = 0;
+	do {
+		batch = remaining;
+		if (batch >= 1024)
+			batch = 1024;
+		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 1);
+		for (i = 0; i < batch; i++) {
+			numWaiting = 1024;
+			oalGetUltCondInfo(coredumpRun.pid, ids[i], &info, waitingIds,
+				&numWaiting);
+			totalWaiting += numWaiting;
+		}
+		skip += 1024;
+		remaining -= batch;
+	} while (count > skip);
+	memMgrLocalFree(waitingIds);
+	memMgrLocalFree(ids);
+	segment->numPhdr = 1;
+	segment->dataSize = (totalWaiting + count * 13 + 14) * 4;
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

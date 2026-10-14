@@ -24,6 +24,8 @@ const SegIfMethod callbackMethods = {
 	_writeSegs,
 };
 
+SegIf callbackSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	unsigned int count, numPhdr;

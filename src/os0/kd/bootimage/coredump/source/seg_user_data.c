@@ -15,6 +15,7 @@ typedef struct CoredumpUserDataNote {
 _Static_assert(sizeof(CoredumpUserDataNote) == 40, "user data note size");
 
 extern Writer *currentWriter;
+extern int oalHasCoredumpHandler(SceUID pid);
 extern CoredumpRunContext coredumpRun;
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
@@ -27,16 +28,37 @@ extern int oalPrintf(const char *fmt, ...);
 extern int userDataSetBuffer(void *buffer, SceSize capacity);
 extern int userDataGetUsedSize(void);
 extern int userDataClearBuffer(void);
-extern int userDataCalcSize(SegIf *segment);
 
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod userDataMethods = {
 	segInitBase,
-	userDataCalcSize,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf userDataSegment;
+
+static int _calcSize(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 49, "_calcSize");
+	segment->writtenSize = 0;
+	if (coredumpRun.triggerReason == -2 || coredumpRun.triggerReason == -1) {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+		return 0;
+	}
+	if (oalHasCoredumpHandler(coredumpRun.pid) != 0) {
+		segment->numPhdr = 1;
+		segment->dataSize = sizeof(CoredumpUserDataNote) + 0x4000;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

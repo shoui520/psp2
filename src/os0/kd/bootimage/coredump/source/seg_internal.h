@@ -51,7 +51,7 @@ typedef struct SummarySegIf {
 _Static_assert(sizeof(SummarySegIf) == 28, "summary segment interface size");
 
 typedef struct CoredumpNoteHeader {
-	SceUInt32 nameSize;
+	SceUInt8 nameSize[4];	/* little-endian, written byte by byte */
 	SceUInt32 descSize;
 	SceUInt32 type;
 	char name[16];

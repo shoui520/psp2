@@ -6,8 +6,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int screenshotInit(SegIf *segment);
-extern int screenshotCalcSize(SegIf *segment);
 extern int oalGetFrameBufferInfo(SceUID pid, unsigned int index,
 	unsigned int *vblankcount, unsigned int *width, unsigned int *height,
 	unsigned int *pixelformat);
@@ -25,14 +23,47 @@ typedef struct CoredumpScreenshotNote {
 
 _Static_assert(sizeof(CoredumpScreenshotNote) == 52, "screenshot note size");
 
+static int _init(SegIf *segment);
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod screenshotMethods = {
-	screenshotInit,
-	screenshotCalcSize,
+	_init,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SegIf screenshotSegment;
+
+static int _init(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 39, "_init");
+	return segInitBase(segment);
+}
+
+static int _calcSize(SegIf *segment)
+{
+	unsigned int vblankcount, width, height, pixelformat;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 52, "_calcSize");
+	segment->writtenSize = 0;
+	if (coredumpRun.dumpLevel == 15) {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+		return 0;
+	}
+	if (oalGetFrameBufferInfo(coredumpRun.pid, 0, &vblankcount, &width,
+				  &height, &pixelformat) >= 0 &&
+	    width <= 960 && height <= 544) {
+		segment->numPhdr = 1;
+		segment->dataSize = (width * height + 13) * 4;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

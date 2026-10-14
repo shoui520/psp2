@@ -23,6 +23,8 @@ const SegIfMethod threadMethods = {
 	_writeSegs,
 };
 
+SegIf threadSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	unsigned int count;

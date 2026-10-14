@@ -5,8 +5,6 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-extern int summaryInit(SegIf *segment);
-extern int summaryCalcSize(SegIf *segment);
 
 typedef struct CoredumpSummaryNote {
 	CoredumpNoteHeader header;
@@ -16,14 +14,40 @@ typedef struct CoredumpSummaryNote {
 
 _Static_assert(sizeof(CoredumpSummaryNote) == 40, "summary note size");
 
+static int _init(SegIf *segment);
+static int _calcSize(SegIf *segment);
 static int _writeSegs(SegIf *segment);
 
 const SegIfMethod summaryMethods = {
-	summaryInit,
-	summaryCalcSize,
+	_init,
+	_calcSize,
 	segWritePtNoteHdr,
 	_writeSegs,
 };
+
+SummarySegIf summarySegment;
+
+static int _init(SegIf *segment)
+{
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 39, "_init");
+	return segInitBase(segment);
+}
+
+static int _calcSize(SegIf *segment)
+{
+	SummarySegIf *summary = (SummarySegIf *)segment;
+
+	SCE_DBG_ASSERT_FUNC(segment != NULL, 52, "_calcSize");
+	segment->writtenSize = 0;
+	if (summary->pairs != NULL && summary->numSegments != 0) {
+		segment->numPhdr = 1;
+		segment->dataSize = summary->numSegments * 12 + 40;
+	} else {
+		segment->numPhdr = 0;
+		segment->dataSize = 0;
+	}
+	return 0;
+}
 
 static int _writeSegs(SegIf *segment)
 {

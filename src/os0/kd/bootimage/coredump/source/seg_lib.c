@@ -35,6 +35,8 @@ const SegIfMethod libMethods = {
 	_writeSegs,
 };
 
+SegIf libSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	SceSize nameSize;

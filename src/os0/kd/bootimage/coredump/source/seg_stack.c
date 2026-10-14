@@ -22,6 +22,8 @@ const SegIfMethod stackMethods = {
 	_writeSegs,
 };
 
+SegIf stackSegment;
+
 static int _calcSize(SegIf *segment)
 {
 	unsigned int count;
