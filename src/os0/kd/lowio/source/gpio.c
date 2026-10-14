@@ -1,5 +1,6 @@
 /* SceGpio port and interrupt controls. Private context names are inferred. */
 #include "lowio_internal.h"
+#include <sce/gpio_regs.h>
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
@@ -9,14 +10,13 @@
 #define GPIO_ERROR_BANK ((uint32_t)0x803f0100)
 #define GPIO_ERROR_PORT ((uint32_t)0x803f0101)
 #define GPIO_ERROR_MODE ((uint32_t)0x803f0102)
-#define GPIO_REG(ctx, offset) (*(volatile uint32_t *)((ctx)->base + (offset)))
 
 typedef struct GpioContext {
-	uint8_t *base;
+	volatile SceGpioRegisters *base;
 	uint32_t portMode;
 	uint32_t intrMode[2];
 	uint32_t intrEnable[5];
-	uint32_t unk24;
+	uint32_t excludedPorts;
 	uint32_t edgeMask;
 	uint32_t nextPort;
 	SceKernelSpinlock lock;
@@ -42,9 +42,11 @@ uint32_t ksceGpioPortRead(unsigned bank, unsigned port)
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
 	ctx = &s_gpio[bank];
-	value = GPIO_REG(ctx, ctx->portMode & PortBit(port) ? 0x34 : 4);
-	port &= 0xff;
-	return port < 32 ? value >> port & 1 : 0;
+	if (ctx->portMode & (1U << port))
+		value = ctx->base->output;
+	else
+		value = ctx->base->input;
+	return value >> port & 1;
 }
 
 uint32_t ksceGpioPortSet(unsigned bank, unsigned port)
@@ -53,8 +55,8 @@ uint32_t ksceGpioPortSet(unsigned bank, unsigned port)
 		return GPIO_ERROR_BANK;
 	if (port >= 32)
 		return GPIO_ERROR_PORT;
-	GPIO_REG(&s_gpio[bank], 8) = 1U << port;
-	(void)GPIO_REG(&s_gpio[bank], 0x34);
+	s_gpio[bank].base->outputSet = 1U << port;
+	(void)s_gpio[bank].base->output;
 	LowioDsb();
 	return 0;
 }
@@ -65,8 +67,8 @@ uint32_t ksceGpioPortClear(unsigned bank, unsigned port)
 		return GPIO_ERROR_BANK;
 	if (port >= 32)
 		return GPIO_ERROR_PORT;
-	GPIO_REG(&s_gpio[bank], 0xc) = 1U << port;
-	(void)GPIO_REG(&s_gpio[bank], 0x34);
+	s_gpio[bank].base->outputClear = 1U << port;
+	(void)s_gpio[bank].base->output;
 	LowioDsb();
 	return 0;
 }
@@ -82,11 +84,11 @@ uint32_t ksceGpioPortReset(unsigned bank, unsigned port)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
-	previous = GPIO_REG(ctx, 4);
+	previous = ctx->base->input;
 	bit = 1U << port;
-	GPIO_REG(ctx, 0xc) = previous & bit;
-	GPIO_REG(ctx, 8) = ~previous & bit;
-	(void)GPIO_REG(ctx, 0x34);
+	ctx->base->outputClear = previous & bit;
+	ctx->base->outputSet = ~previous & bit;
+	(void)ctx->base->output;
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return previous >> port & 1;
@@ -108,7 +110,7 @@ uint32_t ksceGpioSetPortMode(unsigned bank, unsigned port, unsigned mode)
 	previous = ctx->portMode;
 	bit = 1U << port;
 	ctx->portMode = (previous & ~bit) | (mode ^ 1U) << port;
-	GPIO_REG(ctx, 0) = ctx->portMode;
+	ctx->base->portMode = ctx->portMode;
 	LowioDmb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return (previous & bit) == 0;
@@ -138,9 +140,9 @@ uint32_t ksceGpioSetIntrMode(unsigned bank, unsigned port, unsigned mode)
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	word = port >> 4;
 	shift = (port & 15) * 2;
-	value = GPIO_REG(ctx, 0x14 + word * 4);
+	value = ctx->base->interruptMode[word];
 	value = (value & ~(3U << shift)) | mode << shift;
-	GPIO_REG(ctx, 0x14 + word * 4) = value;
+	ctx->base->interruptMode[word] = value;
 	ctx->intrMode[word] = value;
 	LowioDmb();
 	bit = 1U << port;
@@ -168,11 +170,11 @@ uint32_t ksceGpioQueryIntr(unsigned bank, unsigned port)
 	if (port >= 32)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
-	pending = GPIO_REG(ctx, 0x38) & ctx->intrEnable[0];
-	pending |= GPIO_REG(ctx, 0x3c) & ctx->intrEnable[1];
-	pending |= GPIO_REG(ctx, 0x40) & ctx->intrEnable[2];
-	pending |= GPIO_REG(ctx, 0x44) & ctx->intrEnable[3];
-	pending |= GPIO_REG(ctx, 0x48) & ctx->intrEnable[4];
+	pending = ctx->base->interruptStatus[0] & ctx->intrEnable[0];
+	pending |= ctx->base->interruptStatus[1] & ctx->intrEnable[1];
+	pending |= ctx->base->interruptStatus[2] & ctx->intrEnable[2];
+	pending |= ctx->base->interruptStatus[3] & ctx->intrEnable[3];
+	pending |= ctx->base->interruptStatus[4] & ctx->intrEnable[4];
 	return (pending & (1U << port)) != 0;
 }
 
@@ -189,13 +191,13 @@ uint32_t ksceGpioAcquireIntr(unsigned bank, unsigned port)
 	ctx = &s_gpio[bank];
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
 	for (gate = 0; gate < 5; gate++)
-		status[gate] = GPIO_REG(ctx, 0x38 + gate * 4);
+		status[gate] = ctx->base->interruptStatus[gate];
 	bit = 1U << port;
 	for (gate = 0; gate < 5; gate++) {
 		pending |= status[gate] & ctx->intrEnable[gate];
-		GPIO_REG(ctx, 0x38 + gate * 4) = bit;
+		ctx->base->interruptStatus[gate] = bit;
 	}
-	(void)GPIO_REG(ctx, 0x48);
+	(void)ctx->base->interruptStatus[4];
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return (pending & bit) != 0;
@@ -232,7 +234,7 @@ static int GpioIntrPending(int intrCode)
 		ctx = &s_gpio[1];
 		gate = intrCode >= 0xfd ? intrCode - 0xfd : intrCode - 0x2f;
 	}
-	return GPIO_REG(ctx, 0x38 + gate * 4) != 0;
+	return ctx->base->interruptStatus[gate] != 0;
 }
 
 static int GpioSetSubIntr(int intrCode, unsigned port, int enable)
@@ -248,10 +250,10 @@ static int GpioSetSubIntr(int intrCode, unsigned port, int enable)
 	if (enable)
 		mask |= PortBit(port);
 	ctx->intrEnable[gate] = mask;
-	previous = GPIO_REG(ctx, 0x1c + gate * 4);
-	GPIO_REG(ctx, 0x1c + gate * 4) =
-		(ctx->unk24 & previous) | ~(mask | ctx->unk24);
-	(void)GPIO_REG(ctx, 0x1c + gate * 4);
+	previous = ctx->base->interruptMask[gate];
+	ctx->base->interruptMask[gate] =
+		(ctx->excludedPorts & previous) | ~(mask | ctx->excludedPorts);
+	(void)ctx->base->interruptMask[gate];
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
@@ -282,10 +284,10 @@ static int GpioSuspendSubIntr(int intrCode, unsigned port, uint32_t *previous)
 		*previous = shift < 32 ? ctx->intrEnable[gate] >> shift & 1 : 0;
 	}
 	ctx->intrEnable[gate] &= ~PortBit(port);
-	GPIO_REG(ctx, 0x1c + gate * 4) =
-		(ctx->unk24 & GPIO_REG(ctx, 0x1c + gate * 4)) |
-		~(ctx->intrEnable[gate] | ctx->unk24);
-	(void)GPIO_REG(ctx, 0x1c + gate * 4);
+	ctx->base->interruptMask[gate] =
+		(ctx->excludedPorts & ctx->base->interruptMask[gate]) |
+		~(ctx->intrEnable[gate] | ctx->excludedPorts);
+	(void)ctx->base->interruptMask[gate];
 	LowioDsb();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
@@ -300,8 +302,8 @@ static int GpioIntrHandler(int intrCode, void *arg)
 	state = ksceKernelCpuSuspendIntr();
 	if (!GpioIntrContext(intrCode, &gate))
 		goto empty;
-	pending = GPIO_REG(ctx, 0x38 + gate * 4) &
-		ctx->intrEnable[gate] & ~ctx->unk24;
+	pending = ctx->base->interruptStatus[gate] &
+		ctx->intrEnable[gate] & ~ctx->excludedPorts;
 	if (!pending)
 		goto empty;
 	start = ctx->nextPort;
@@ -310,8 +312,8 @@ static int GpioIntrHandler(int intrCode, void *arg)
 	rotated = start ? (pending >> start) | (pending << (32 - start)) :
 		pending;
 	port = (start + 31 - __builtin_clz(rotated)) & 31;
-	GPIO_REG(ctx, 0x38 + gate * 4) = 1U << port;
-	(void)GPIO_REG(ctx, 0x38 + gate * 4);
+	ctx->base->interruptStatus[gate] = 1U << port;
+	(void)ctx->base->interruptStatus[gate];
 	LowioDsb();
 	ksceKernelCpuResumeIntr(state);
 	if (ksceKernelTriggerSubIntr(intrCode, port, (void *)(uintptr_t)port) == -2)
@@ -333,7 +335,7 @@ static int GpioSysEvent(int resume, int event, void *args, void *opt)
 		kscePervasiveGpioClockEnable();
 		for (bank = 0; bank < 2; bank++) {
 			ctx = &s_gpio[bank];
-			ctx->portMode = GPIO_REG(ctx, 0);
+			ctx->portMode = ctx->base->portMode;
 			for (gate = 0; gate < 5; gate++)
 				ctx->intrEnable[gate] = 0;
 			for (gate = 0; gate < 5; gate++)
@@ -412,16 +414,16 @@ int LowioGpioInit(void)
 	kscePervasiveGpioClockEnable();
 	for (bank = 0; bank < 2; bank++) {
 		ctx = &s_gpio[bank];
-		ctx->unk24 = 0;
+		ctx->excludedPorts = 0;
 		ctx->nextPort = 0;
-		ctx->portMode = GPIO_REG(ctx, 0);
+		ctx->portMode = ctx->base->portMode;
 		for (gate = 0; gate < 5; gate++)
-			GPIO_REG(ctx, 0x38 + gate * 4) =
-				GPIO_REG(ctx, 0x38 + gate * 4);
-		ctx->intrMode[0] = GPIO_REG(ctx, 0x14);
-		ctx->intrMode[1] = GPIO_REG(ctx, 0x18);
+			ctx->base->interruptStatus[gate] =
+				ctx->base->interruptStatus[gate];
+		ctx->intrMode[0] = ctx->base->interruptMode[0];
+		ctx->intrMode[1] = ctx->base->interruptMode[1];
 		for (gate = 0; gate < 5; gate++)
-			ctx->intrEnable[gate] = ~GPIO_REG(ctx, 0x1c + gate * 4);
+			ctx->intrEnable[gate] = ~ctx->base->interruptMask[gate];
 		for (gate = 0; gate < 5; gate++)
 			ksceKernelEnableIntr(ctx->intrCodes[gate]);
 	}
