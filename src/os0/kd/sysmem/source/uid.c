@@ -2141,7 +2141,7 @@ int SceSysmemForKernel_5EDDEEB5(SceUID guid, SceClass *cls, const char *name,
 static inline int GUIDOpenByGUID(SceUID guid)
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
-	UIDEntry *entry = NULL, *base;
+	UIDEntry *base, *entry = NULL;
 	int state, ret;
 
 	ret = UIDEntryHeapAllocateObject(heap, &entry);
@@ -2191,8 +2191,8 @@ static inline int GUIDOpenByGUID(SceUID guid)
 SceUID ksceGUIDOpenByGUID(SceUID guid)
 {
 	if (!UIDIsGUID(guid)) {
-		SCE_DBG_PRINTF(0xb, 6278, "GUIDIsValid(0x%08x) failed 0x%08x\n", guid,
-			       UID_ERROR_INVALID_UID);
+		SCE_DBG_PRINTF_FUNC(0xb, 6278, "sceGUIDOpenByGUID",
+				    "GUIDIsValid(0x%08x) failed 0x%08x\n", guid, UID_ERROR_INVALID_UID);
 		return UID_ERROR_INVALID_UID;
 	}
 	return GUIDOpenByGUID(guid);
