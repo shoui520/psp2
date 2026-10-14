@@ -98,9 +98,6 @@ void SceCpuForDriver_E813EBB2(void)
 	CpuL2CacheSyncCore();
 }
 
-extern __typeof__(SceCpuForDriver_E813EBB2) CpuL2CacheSync
-	__attribute__((alias("SceCpuForDriver_E813EBB2")));
-
 /* the controller's registers into kernel virtual memory */
 void sceKernelL2CacheRemap(void)
 {
