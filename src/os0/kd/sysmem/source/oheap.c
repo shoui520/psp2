@@ -317,10 +317,7 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	heap->heap = processHeap;
 	for (def = s_sizeClassDefs; def->size <= 0x200; def++) {
-		if (def->ownHeap) {
-			fixedHeap = ObjectHeapGetHeap(heap, def->size);
-			fixedHeap->heap = processHeap;
-		} else {
+		if (!def->ownHeap) {
 			fixedHeap = HeapAllocLocked(processHeap, sizeof(*fixedHeap));
 			if (fixedHeap == NULL)
 				return SCE_KERNEL_ERROR_ERROR;
@@ -331,6 +328,9 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 			uid = SceSysmemForKernel_6DB44A42(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name,
 							  fixedHeap);
 			ObjectHeapSetSizeClass(heap, def->size, fixedHeap, uid);
+		} else {
+			fixedHeap = ObjectHeapGetHeap(heap, def->size);
+			fixedHeap->heap = processHeap;
 		}
 		if (def == &s_sizeClassDefs[OBJECT_HEAP_SIZE_CLASSES - 1])
 			break;
