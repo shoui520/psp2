@@ -103,15 +103,21 @@ int ksceI2cReset(int enable)
 	return ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 }
 
+static int I2cWaitReady(I2cContext *ctx)
+{
+	int ret = ksceKernelWaitEventFlag(ctx->event, 0x80000000, 0, NULL, NULL);
+
+	return ret < 0 ? ret : 0;
+}
+
 static int I2cBegin(unsigned bus, unsigned address)
 {
 	I2cContext *ctx = &s_i2c[bus];
 	int ret;
 
 	if (bus == 1 && address == 1) {
-		ret = ksceKernelWaitEventFlag(ctx->event, 0x80000000, 0,
-			NULL, NULL);
-		if (ret < 0)
+		ret = I2cWaitReady(ctx);
+		if (ret != 0)
 			return ret;
 	}
 	if (ctx->noLock == 0) {
