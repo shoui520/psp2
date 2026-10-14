@@ -1925,17 +1925,17 @@ static inline int UIDEntrySetCNOA(UIDEntry *entry, SceClass *cls, const char *na
 	SceClass *memblockClass;
 	int ret;
 
-	if (name == NULL) {
-		SCE_DBG_PRINTF(0xb, 2442, "name is NULL\n");
-		entry->name = NULL;
-		ret = 0;
-	} else {
+	if (name != NULL) {
 		ret = UIDEntrySetNameWithNameHeapRaw(entry, name);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 2438, "UIDEntrySetNameWithNameHeapRaw([%s]) failed 0x%08x\n",
 				       name, ret);
 			entry->name = NULL;
 		}
+	} else {
+		SCE_DBG_PRINTF(0xb, 2442, "name is NULL\n");
+		entry->name = NULL;
+		ret = 0;
 	}
 	if (object == NULL) {
 		if (entry->object == NULL) {
