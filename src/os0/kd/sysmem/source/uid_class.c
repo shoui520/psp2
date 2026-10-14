@@ -155,7 +155,7 @@ int RegisterClass(SceClass *cls)
 		const char *name;
 
 		if ((SceUInt8)c->attributes == 0)
-			SCE_DBG_PRINTF(0xb, 94, "cinex=0x%08x, %p,0x%08x[%s]\n", index, c, 0, c->name);
+			SCE_DBG_PRINTF(0xb, 94, "cinex=0x%08x, %p,0x%08x[%s]\n", index, c, (SceUInt8)c->attributes, c->name);
 		if (c == cls) {
 			SCE_DBG_PRINTF(0xb, 105, "Duplicated %p and %p[new]\n", c, c);
 			return 0;
@@ -167,7 +167,7 @@ int RegisterClass(SceClass *cls)
 		}
 		cindex = (SceUInt8)c->attributes;
 		c = c->next;
-		if (index <= cindex)
+		if (cindex >= index)
 			index = cindex;
 	} while (head != c);
 	/* before the head: last on the ring */
@@ -177,10 +177,10 @@ int RegisterClass(SceClass *cls)
 		c->prev->next = cls;
 	c->prev = cls;
 	if (index != 0xff)
-		index = (index + 1) & 0xff;
+		index = (SceUInt8)(index + 1);
 	attributes = (cls->attributes & ~0xff) | index;
 	cls->attributes = attributes;
-	SCE_DBG_ASSERT_CHECK((SceUInt8)attributes == index, 125);
+	SCE_DBG_ASSERT_CHECK(index == (SceUInt8)attributes, 125);
 	return 0;
 }
 
@@ -215,16 +215,19 @@ int SceSysmemForKernel_1DE4953F(SceUInt32 index, SceClass **cls)
 	if (cls == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	head = g_uidManager->classes;
-	if (head != NULL) {
-		c = head;
-		if (index == (SceUInt8)head->attributes)
-			goto found;
-		for (c = head->next; head != c && c != NULL; c = c->next) {
+	if (head == NULL)
+		return SCE_KERNEL_ERROR_UID_CLASS_NOT_FOUND;
+	if (index == (SceUInt8)head->attributes) {
+		c = g_uidManager->classes;
+	} else {
+		for (c = head->next; head != c; c = c->next) {
+			if (c == NULL)
+				break;
 			if (index == (SceUInt8)c->attributes)
 				goto found;
 		}
+		return SCE_KERNEL_ERROR_UID_CLASS_NOT_FOUND;
 	}
-	return SCE_KERNEL_ERROR_UID_CLASS_NOT_FOUND;
 found:
 	*cls = c;
 	return 0;
@@ -233,7 +236,7 @@ found:
 int ksceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 			  SceClassCallback create, SceClassCallback destroy)
 {
-	SceUInt16 aligned;
+	SceSize aligned;
 
 	if (itemsize <= 4)
 		aligned = 4;
