@@ -26,8 +26,8 @@ static __attribute__((noinline, noclone)) ObjectHeap *ObjectHeapInit(ObjectHeap 
 			   ObjectHeapSizeClass *sizeClasses, SceKernelHeapHook *hook)
 {
 	unsigned int i;
+	int type;
 	ObjectHeapSizeClass *entry = sizeClasses;
-	ObjectHeapLimit *limit = heap->limits;
 
 	heap->partition = partition;
 	heap->sizeClassCount = count;
@@ -43,18 +43,15 @@ static __attribute__((noinline, noclone)) ObjectHeap *ObjectHeapInit(ObjectHeap 
 	}
 	heap->hook = hook;
 	heap->heap = NULL;
-	i = OBJECT_HEAP_TYPES;
-	do {
-		i--;
-		limit->max = 0xffffffff;
-		limit->reserve = 0;
-		limit->count = 0;
-		limit->peak = 0;
-		limit->freeCount = 0;
-		limit->freeHead = NULL;
-		limit->freeTail = NULL;
-		limit++;
-	} while (i != 0);
+	for (type = 0; type < OBJECT_HEAP_TYPES; type++) {
+		heap->limits[type].max = 0xffffffff;
+		heap->limits[type].reserve = 0;
+		heap->limits[type].count = 0;
+		heap->limits[type].peak = 0;
+		heap->limits[type].freeCount = 0;
+		heap->limits[type].freeHead = NULL;
+		heap->limits[type].freeTail = NULL;
+	}
 	return heap;
 }
 
