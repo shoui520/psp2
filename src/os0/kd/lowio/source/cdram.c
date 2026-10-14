@@ -5,7 +5,7 @@
 #include <sce/touch_dummy.h>
 
 uint32_t Smc117(uint32_t command);
-volatile uint32_t s_cdramReady;
+static volatile uint32_t s_cdramReady;
 
 /* name unknown: runs SMC 0x117 once, from the work queue, on cores 1-2 */
 static int CdramInitWorker(void *arg)

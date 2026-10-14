@@ -24,7 +24,7 @@ typedef struct PixelClockContext {
 } PixelClockContext;
 
 _Static_assert(sizeof(PixelClockContext) == 0x20, "pixel clock context");
-PixelClockContext s_pixelClock[2];
+static PixelClockContext s_pixelClock[2];
 
 int LowioPixelClockInit(void)
 {
@@ -48,13 +48,13 @@ static const PixelClockSetting *PixelClockFind(uint32_t clock)
 	return NULL;
 }
 
-uint32_t ScePervasiveForDriver_243D0E78(uint32_t clock,
+int ScePervasiveForDriver_243D0E78(uint32_t clock,
 	uint32_t *first, uint32_t *second)
 {
 	const PixelClockSetting *setting = PixelClockFind(clock);
 
 	if (!setting)
-		return 0x803f0000;
+		return (int)0x803f0000;
 	if (first) {
 		first[0] = setting->timing[0];
 		first[1] = setting->timing[1];
@@ -79,14 +79,14 @@ static void PixelClockDelay(void)
 	}
 }
 
-uint32_t kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
+int kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 {
 	const PixelClockSetting *setting;
 	PixelClockContext *ctx;
 	unsigned i;
 
 	if (head >= 2)
-		return 0x803f0000;
+		return (int)0x803f0000;
 	ctx = &s_pixelClock[head];
 	if (clock == 0) {
 		if (ctx->setting) {
@@ -104,7 +104,7 @@ uint32_t kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 	}
 	setting = PixelClockFind(clock);
 	if (!setting)
-		return 0x803f0000;
+		return (int)0x803f0000;
 	if (setting == ctx->setting)
 		return 0;
 	ctx->registers->outputReset = 1;
@@ -143,10 +143,10 @@ uint32_t kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
 	return 0;
 }
 
-uint32_t ScePervasiveForDriver_7E813FC5(unsigned head, uint32_t *clock)
+int ScePervasiveForDriver_7E813FC5(unsigned head, uint32_t *clock)
 {
 	if (head >= 2)
-		return 0x803f0000;
+		return (int)0x803f0000;
 	*clock = s_pixelClock[head].clock;
 	return 0;
 }
@@ -154,7 +154,7 @@ uint32_t ScePervasiveForDriver_7E813FC5(unsigned head, uint32_t *clock)
 uint32_t ScePervasiveForDriver_AD1E81EB(unsigned head, unsigned mask);
 uint32_t ScePervasiveForDriver_13CC07C9(unsigned head, unsigned mask);
 
-uint32_t ScePervasiveForDriver_4F64DEF6(unsigned head)
+int ScePervasiveForDriver_4F64DEF6(unsigned head)
 {
 	uint32_t state;
 

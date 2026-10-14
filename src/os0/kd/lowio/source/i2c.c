@@ -45,7 +45,7 @@ typedef struct I2cContext {
 } I2cContext;
 
 _Static_assert(sizeof(I2cContext) == 0x40, "I2cContext layout");
-I2cContext s_i2c[2];
+static I2cContext s_i2c[2];
 
 int ksceI2cSetDebugHandlers(unsigned bus, I2cDebugHandlers *handlers)
 {

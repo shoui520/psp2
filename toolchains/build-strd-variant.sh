@@ -60,6 +60,28 @@ for t in ('ite\\\\t%D1\\;mov%D1\\\\t%0, #0\\;mov%d1\\\\t%0, #1',
 	s = s.replace(old, '"%s"\n  "0"\n' % t)
 open(p, 'w').write(s)
 PYEOF
+# A symbol plus a constant offset (&s[1], s + 0x4c) is loaded with a movw/movt pair, like a
+# bare symbol, not from the literal pool: Sony's code has movw/movt with the offset in the
+# relocation (lowio: movw r4, #0xb1ec for SceGpio's second context, s_gpio + 0x4c), stock
+# 4.8 splits only SYMBOL_REF into movw/movt and puts symbol + offset in a literal word
+# (measured 2026-10-14, 4.00 match.py on lowio/threadmgr/sysmem/iofilemgr: +5 exact, none lost).
+python3 - $D <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = '''   && TARGET_USE_MOVT && GET_CODE (operands[1]) == SYMBOL_REF
+   && !flag_pic && !target_word_relocations'''
+new = '''   && TARGET_USE_MOVT
+   && (GET_CODE (operands[1]) == SYMBOL_REF
+       || (GET_CODE (operands[1]) == CONST
+	   && GET_CODE (XEXP (operands[1], 0)) == PLUS
+	   && GET_CODE (XEXP (XEXP (operands[1], 0), 0)) == SYMBOL_REF
+	   && CONST_INT_P (XEXP (XEXP (operands[1], 0), 1))))
+   && !flag_pic && !target_word_relocations'''
+assert s.count(old) == 1
+s = s.replace(old, new)
+open(p, 'w').write(s)
+PYEOF
 B=$W/build-$(basename $P)
 rm -rf $B && mkdir -p $B && cd $B
 CC="gcc -std=gnu89 -fcommon -w" CXX="g++ -std=gnu++98 -fpermissive -w" $W/$T/configure \
