@@ -1086,9 +1086,13 @@ int TinyPartitionCutFreeMemBlockRaw(TinyPartition *tiny, const SceSize *size, Sc
 {
 	int ret;
 
-	if (attr & 0x8000000)
-		offset = *size * (((block->size - offset) >> (31 - __builtin_clz(*size))) - 1) + offset;
-	if (offset != 0) {
+	if (attr & 0x8000000) {
+		/* from the top: the last whole unit of the free block */
+		offset += *size * (((block->size - offset) >> (31 - __builtin_clz(*size))) - 1);
+		if (offset != 0)
+			goto split;
+	} else if (offset != 0) {
+split:
 		ret = TinyPartitionSplitFreeMemBlockRaw(tiny, block, offset, &block);
 		if (ret < 0)
 			return ret;
