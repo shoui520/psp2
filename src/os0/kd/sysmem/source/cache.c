@@ -201,7 +201,7 @@ void _sceKernelDcacheInvalidateRangeCore(const void *start, SceSize size, int fl
 			       func, start, size, lr);
 		/* a partial line would lose its neighbours' data */
 		if (((uintptr_t)start | size) & 0x1f)
-			SCE_DBG_ASSERT_CHECK_LR(0, 195, lr);
+			SCE_DBG_ASSERT_CHECK(0, 195);
 	}
 	if (size == 0)
 		return;
