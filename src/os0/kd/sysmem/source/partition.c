@@ -681,11 +681,12 @@ int AllocMemBlockCommandSetOpt(SceKernelAllocMemBlockCommand *command)
 __attribute__((noinline))
 VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
 {
-	VirPage *vp = MemBlockGetVirPageRaw(block);
+	VirPage *vp = MemBlockGetVirPageRaw(block), *next;
 
-	if (vp != NULL)
-		while (vp->next != NULL)
-			vp = vp->next;
+	if (vp == NULL)
+		return vp;
+	for (next = vp->next; next != NULL; next = vp->next)
+		vp = next;
 	return vp;
 }
 
