@@ -1,7 +1,7 @@
 /*
  * The Cortex-A9 MPCore private region (PERIPHBASE): the snoop control unit,
- * the GIC CPU interface and distributor, and the PL310 after them (see
- * pl310_regs.h). SceKernelIntrMgr maps it as SceInterruptControllerReg; the
+ * the GIC CPU interface, the global timer and the distributor, and the PL310
+ * after them (see pl310_regs.h). SceKernelIntrMgr maps it as SceInterruptControllerReg; the
  * TZS IntrMgr in slb2 maps it too. Names after ARM's GIC documentation and
  * the henkaku wiki's Physical Memory and Interrupts pages.
  */
@@ -12,8 +12,9 @@
 #define PERIPH_REG_BASE			0x1a000000
 #define PERIPH_REG_SIZE			0x2000
 
-/* the GIC in the private region */
+/* the GIC and the global timer in the private region */
 #define GIC_CPU_INTERFACE_OFFSET 0x100
+#define GLOBAL_TIMER_OFFSET	0x200
 #define GIC_DISTRIBUTOR_OFFSET 0x1000
 
 /* ARM GIC distributor (PERIPHBASE + 0x1000) */
@@ -43,3 +44,17 @@ typedef struct GicCpuInterface {
 	SceUInt32 acknowledge;		/* 0x0c */
 	SceUInt32 endOfIntr;		/* 0x10 */
 } GicCpuInterface;
+
+/* GlobalTimer.control (Cortex-A9 MPCore TRM, Global timer) */
+#define GLOBAL_TIMER_CONTROL_ENABLE	0x1
+
+/* ARM Cortex-A9 global timer (PERIPHBASE + 0x200), shared by every core */
+typedef struct GlobalTimer {
+	volatile SceUInt32 counterLow;		/* 0x00 */
+	volatile SceUInt32 counterHigh;		/* 0x04 */
+	volatile SceUInt32 control;		/* 0x08 GLOBAL_TIMER_CONTROL_* */
+	volatile SceUInt32 intrStatus;		/* 0x0c */
+	volatile SceUInt32 comparatorLow;	/* 0x10 */
+	volatile SceUInt32 comparatorHigh;	/* 0x14 */
+	volatile SceUInt32 autoIncrement;	/* 0x18 */
+} GlobalTimer;
