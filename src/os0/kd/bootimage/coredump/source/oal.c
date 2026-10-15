@@ -726,8 +726,7 @@ static inline int _isSystemProgram(SceUID pid)
 	const char *titleid = coredumpRun.trigger.titleid;
 	int isCurrentProcess;
 
-	if (titleSize >= 9)
-		titleSize = 9;
+	titleSize = titleSize < 9 ? titleSize : 9;
 	isCurrentProcess = coredumpRun.pid == pid;
 	if (titleSize == 0)
 		isCurrentProcess = 0;
@@ -1275,8 +1274,7 @@ void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info)
 	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;
 	titleid = coredumpRun.trigger.titleid;
-	if (titleSize >= 9)
-		titleSize = 9;
+	titleSize = titleSize < 9 ? titleSize : 9;
 	info->formatVersion[0] = 19;
 	info->formatVersion[1] = 0;
 	info->formatVersion[2] = 0;
@@ -1349,8 +1347,7 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;
 	titleid = coredumpRun.trigger.titleid;
-	if (titleSize >= 9)
-		titleSize = 9;
+	titleSize = titleSize < 9 ? titleSize : 9;
 	isCurrentProcess = pid == currentPid;
 	if (titleSize == 0)
 		isCurrentProcess = 0;
