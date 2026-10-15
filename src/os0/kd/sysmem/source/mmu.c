@@ -206,7 +206,8 @@ uint32_t MemBlockTypeToL1PTE(uint32_t type, uint32_t domain)
 		attr |= MMU_L1_B;
 		break;
 	case MEMBLOCK_CODE_NORMAL_NC:
-		attr = (attr & ~MMU_L1_S) | MMU_L1_TEX(1);
+		attr &= ~MMU_L1_S;
+		attr |= MMU_L1_TEX(1);
 		break;
 	case MEMBLOCK_CODE_NORMAL:
 		attr |= MMU_L1_TEX(1) | MMU_L1_C | MMU_L1_B;
