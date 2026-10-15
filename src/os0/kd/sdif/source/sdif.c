@@ -18,8 +18,8 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt);
 int sdifDisableSubIntr(int interrupt, int subInterrupt);
 
 #if FW_VERSION >= 0x04000000
-static const uint32_t sdifRegisterAddresses[4] = {
-	0xe0b00000, 0xe0c00000, 0xe0c10000, 0xe0c20000
+static const uint32_t sdifRegisterAddresses[SDIF_PORTS] = {
+	SDIF_REG_BASE(0), SDIF_REG_BASE(1), SDIF_REG_BASE(2), SDIF_REG_BASE(3)
 };
 static const SceKernelIntrCallbacks sdifIntrCallbacks = {
 	.size = sizeof(SceKernelIntrCallbacks),
@@ -56,8 +56,8 @@ static const char sdifPortNames[4][12] = {
 static const char *const sdifMemblockNames[4] = {
 	sdifPortNames[0], sdifPortNames[1], sdifPortNames[2], sdifPortNames[3]
 };
-static const uint32_t sdifRegisterAddresses[4] = {
-	0xe0b00000, 0xe0c00000, 0xe0c10000, 0xe0c20000
+static const uint32_t sdifRegisterAddresses[SDIF_PORTS] = {
+	SDIF_REG_BASE(0), SDIF_REG_BASE(1), SDIF_REG_BASE(2), SDIF_REG_BASE(3)
 };
 #endif
 
@@ -616,10 +616,10 @@ int sceSdifInit(void)
 		port->index = index;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
-		opt.paddr = index <= 3 ? sdifRegisterAddresses[index] : 0;
+		opt.paddr = index < SDIF_PORTS ? sdifRegisterAddresses[index] : 0;
 		opt.attr = 2;
 		result = ksceKernelAllocMemBlock(name, 0x20100806,
-					       index <= 3 ? 4096 : 0, &opt);
+					       index < SDIF_PORTS ? SDIF_REG_SIZE : 0, &opt);
 		if (result < 0)
 			goto cleanupPorts;
 		port->registerMemblock = result;

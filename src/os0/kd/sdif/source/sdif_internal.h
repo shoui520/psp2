@@ -6,53 +6,8 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <sce/sdif.h>
+#include <sce/sdif_regs.h>
 #include <sce/fast_mutex.h>
-
-typedef struct SdifHostRegisters {
-	uint32_t dmaAddress;
-	uint16_t blockSize;
-	uint16_t blockCount;
-	uint32_t argument;
-	uint16_t transferMode;
-	uint16_t command;
-	uint32_t response[4];
-	union {
-		uint8_t byte;
-		uint16_t halfword;
-		uint32_t word;
-	} buffer;
-	uint32_t presentState;
-	uint8_t hostControl;
-	uint8_t powerControl;
-	uint8_t blockGapControl;
-	uint8_t wakeupControl;
-	uint16_t clockControl;
-	uint8_t timeoutControl;
-	uint8_t softwareReset;
-	uint16_t normalInterruptStatus;
-	uint16_t errorInterruptStatus;
-	uint16_t normalInterruptEnable;
-	uint16_t errorInterruptEnable;
-	uint16_t normalSignalEnable;
-	uint16_t errorSignalEnable;
-	uint16_t autoCmd12Error;
-	uint16_t hostControl2;
-	uint32_t capabilities;
-	uint32_t capabilitiesHigh;
-	uint32_t maximumCurrent;
-	uint32_t maximumCurrentHigh;
-	uint16_t forceAutoCmd12Error;
-	uint16_t forceErrorInterrupt;
-	uint8_t AdmaErrStatus;
-	uint8_t reservedAdma[3];
-	uint32_t admaSystemAddress;
-	uint32_t admaSystemAddressHigh;
-	uint8_t reservedStandard[32];
-	uint16_t ceataControl;
-	uint8_t reservedVendor[122];
-	uint16_t slotInterruptStatus;
-	uint16_t hostVersion;
-} SdifHostRegisters;
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;
