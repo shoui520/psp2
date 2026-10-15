@@ -916,12 +916,11 @@ found:
 	if (guid >= 0 && ksceKernelGetAssertLevel() > 0) {
 		const char *name;
 
-		if (GUIDGetName(guid, &name) < 0)
-			name = NULL;
 		ksceKernelPrintfAssertLevel(1, guid > 0x1005f, SCE_DBGINFO(6987),
 					    __builtin_return_address(0),
 					    "error: PUID2GUID(pid=0x%08X, puid=0x%08X), guid=0x%08X, name=[\"%s\"]\n",
-					    pid, puid, guid, name);
+					    pid, puid, guid,
+					    GUIDGetName(guid, &name) < 0 ? NULL : name);
 	}
 #endif
 	return guid;
