@@ -1,4 +1,5 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(slb2_kbl_SceSblSmsched KIND kernel SKELETON SOURCES
+# slb2:kbl/SceSblSmsched - the secure world's secure module scheduler
+psp2_module(slb2_kbl_SceSblSmsched KIND kernel PARTIAL SOURCES
 	source/SceSblSmsched.c
+	source/sms_sk_proxy.c
 )
