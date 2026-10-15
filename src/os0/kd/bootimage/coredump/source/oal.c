@@ -2887,8 +2887,7 @@ void oalGetSimpleEventInfo(SceUID pid, SceUID eventId,
 	info->pid = pid;
 	info->attr = attr;
 	info->pattern = event.pattern;
-	info->userData[0] = event.userData;
-	info->userData[1] = event.userData >> 32;
+	__builtin_memcpy(info->userData, &event.userData, sizeof(info->userData));
 }
 
 int oalGetNumAndTotalSizeOfMetaData(SceUID pid, int *numMetaData,
