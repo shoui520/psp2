@@ -5,7 +5,7 @@
  * run has its mailboxes saved in its request (SmschedMailbox), which the
  * secure kernel restores when it resumes the module.
  *
- * PARTIAL: written in address order up to sceSblSmSchedInvokeInternal.
+ * PARTIAL: written in address order up to the smc 0x132 handler.
  */
 #include "smsched.h"
 #include "sce/barrier.h"
@@ -135,7 +135,7 @@ int cry2Arm123IntHandler(int intrCode, void *userCtx)
 {
 	SmschedIntrMessage message;
 	SmschedIntrHandler handler;
-	SmschedRequest *running;
+	volatile SmschedRequest *running;
 	int intr, mailbox, ret;
 	void *arg;
 
@@ -175,7 +175,7 @@ int cry2Arm123IntHandler(int intrCode, void *userCtx)
 			SCE_PANIC(2535);
 		ret = -2;
 	} else {
-		ret = running->proxyId;
+		ret = -1;
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 	dsb();
@@ -1383,4 +1383,68 @@ int sceSblSmSchedInvokeMonitorCall(SceUInt32 priority, uintptr_t selfPA, SceUInt
 	if (err < 0)
 		return err;
 	return ret;
+}
+
+/* name unknown (smc 0x13b, the henkaku wiki's "Uninitialize"): every
+ * request of the Non-secure kernel dropped */
+int sceSblSmSchedStopMonitorCall(void)
+{
+	int ret;
+
+	ret = deleteAllRequest(1);
+	reschedule();
+	return ret;
+}
+
+/* name unknown (smc 0x13a): the Non-secure kernel has taken a message of
+ * sendIntrMessage; the interrupts it disabled come back */
+int sceSblSmSchedIntrDoneMonitorCall(SceUInt32 id, int mailbox, unsigned int index)
+{
+	volatile SmschedRequest *request;
+	int intr, ret;
+
+	(void)mailbox;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	ret = sceSblTzsBridgeFreeIntrArea(index);
+	if (ret < 0)
+		goto out;
+	ret = sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0);
+	if (ret < 0)
+		goto out;
+	if (id == (SceUInt32)-1)
+		goto out;
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ret = SCE_SBL_ERROR_NO_REQUEST;
+		goto out;
+	}
+	if (SmschedStateOnCmep(request->status.state)) {
+		for (mailbox = 1; mailbox < CMEP_MAILBOXES; mailbox++) {
+			if (request->intr[mailbox].enabled) {
+				ret = sceSblSmSchedEnableIntr(mailbox);
+				if (ret < 0)
+					goto out;
+			}
+		}
+	}
+out:
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+/* smc 0x131, reserved: checks its PA and does nothing */
+int sceSblSmSchedReserved131MonitorCall(SceUInt32 arg0, uintptr_t pa)
+{
+	(void)arg0;
+	if (!SmschedIsNonSecurePA(pa))
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_NOT_SUPPORTED;
+}
+
+/* smc 0x132, reserved: the same */
+int sceSblSmSchedReserved132MonitorCall(uintptr_t pa)
+{
+	if (!SmschedIsNonSecurePA(pa))
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	return SCE_SBL_ERROR_NOT_SUPPORTED;
 }
