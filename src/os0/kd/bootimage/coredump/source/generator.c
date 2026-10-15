@@ -360,11 +360,11 @@ int writeSegments(void)
 	if (progressCallback != NULL)
 		progressCallback(activeRequestId, coredumpRun.pid, 0);
 	timeout = 10000000;
-	if (coredumpRun.triggerReason == -2) {
+	if (coredumpRun.trigger.triggerReason == -2) {
 		result = oalResumeProcess(coredumpRun.pid);
 		if (result != 0)
 			return result;
-	} else if (coredumpRun.triggerReason != -1) {
+	} else if (coredumpRun.trigger.triggerReason != -1) {
 		result = oalSuspendProcess(coredumpRun.pid, &timeout);
 		if (result != 0)
 			return result;
@@ -507,11 +507,11 @@ int writeCrashReport(void)
 	pathSize = strnlen(corefilePath, 1329) + 1;
 	payloadResult = writerWrite(&cafWriter.writer, corefilePath, pathSize);
 	if (payloadResult == 0) {
-		payloadResult = writerWrite(currentWriter, coredumpRun.titleid,
-			coredumpRun.titleid_len);
+		payloadResult = writerWrite(currentWriter, coredumpRun.trigger.titleid,
+			coredumpRun.trigger.titleid_len);
 		if (payloadResult == 0)
 			payloadResult = writerWritePaddingData(currentWriter,
-				16 - ((coredumpRun.titleid_len + pathSize) & 15));
+				16 - ((coredumpRun.trigger.titleid_len + pathSize) & 15));
 	}
 	if (gzipWriterInitialized != 0) {
 		result = gzipWriterFinal(&gzipWriter);
@@ -525,7 +525,7 @@ int writeCrashReport(void)
 			finalResult = cafWriterBeginSegment(&cafWriter,
 				useAlternateCafSegment ? 4 : 3);
 			if (finalResult == 0) {
-				oalGetCdnAccessParam(coredumpRun.appVersion,
+				oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
 					coredumpRun.stopReason, &access, &cdnLocation);
 				finalResult = writerWrite(&cafWriter.writer, &access,
 					sizeof(access));
@@ -617,7 +617,7 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 			goto restorePriority;
 		}
 		coredumpRun.pid = event.pid;
-		memcpy(&coredumpRun.triggerParamSize, &event.trigger, sizeof(event.trigger));
+		memcpy(&coredumpRun.trigger.size, &event.trigger, sizeof(event.trigger));
 		progressCallback = event.progressCallback;
 		plaintextDumpAllowed = oalIsPlaintextDumpAllowed(event.pid);
 		useAlternateCafSegment = oalIsSystemProgram(coredumpRun.pid);
@@ -642,8 +642,8 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 		if (result != 0)
 			goto restorePriority;
 		memoryInitialized = 1;
-		stopEvent.threadId = coredumpRun.crash_thid;
-		stopEvent.reason = coredumpRun.triggerReason;
+		stopEvent.threadId = coredumpRun.trigger.crash_thid;
+		stopEvent.reason = coredumpRun.trigger.triggerReason;
 		oalGetCdnPcAndLrInfo(coredumpRun.pid, &stopEvent, &cdnLocation);
 		if (plaintextDumpAllowed == 0) {
 			result = oalCafInit();
@@ -707,7 +707,7 @@ finalWriters:
 				finalResult = cafWriterBeginSegment(&cafWriter,
 					useAlternateCafSegment ? 4 : 3);
 				if (finalResult == 0) {
-					oalGetCdnAccessParam(coredumpRun.appVersion,
+					oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
 						coredumpRun.stopReason, &buffer.cdnParam, &cdnLocation);
 					finalResult = writerWrite(&cafWriter.writer, &buffer.cdnParam,
 						sizeof(buffer.cdnParam));
@@ -916,7 +916,7 @@ int openDumpFileAtDestination(SceUID *fd, const char *filename, char *path)
 	SceSize triggerDataSize;
 	SceUInt32 triggerDataType;
 
-	triggerDataType = coredumpRun.triggerDataType;
+	triggerDataType = coredumpRun.trigger.triggerDataType;
 	if (triggerDataType == 0) {
 		hostPath = memMgrLocalAlloc(1024);
 		if (hostPath != NULL) {
@@ -939,8 +939,8 @@ int openDumpFileAtDestination(SceUID *fd, const char *filename, char *path)
 	} else if (triggerDataType != 2) {
 		if (triggerDataType != 10)
 			return (int)0x80010016;
-		triggerDataSize = coredumpRun.triggerDataSize;
-		triggerData = coredumpRun.triggerData;
+		triggerDataSize = coredumpRun.trigger.triggerDataSize;
+		triggerData = coredumpRun.trigger.triggerData;
 		destination = path + 6;
 		__builtin_memcpy(path, "host0:", 6);
 		if (triggerDataSize != 0) {
@@ -970,7 +970,7 @@ int _createCorefile(SceUID *fd)
 	memset(filename, 0, sizeof(filename));
 	if (plaintextDumpAllowed != 0) {
 		timestamp = oalGetUnixTime();
-		if (coredumpRun.triggerFlags != 0 && coredumpRun.triggerReason == 1) {
+		if (coredumpRun.trigger.triggerFlags != 0 && coredumpRun.trigger.triggerReason == 1) {
 			snprintf(filename, sizeof(filename),
 				"psp2core-%010u-GPUCRASH.psp2dmp.tmp", timestamp);
 		} else {
@@ -988,7 +988,7 @@ int _createCorefile(SceUID *fd)
 				"psp2core-%010u-0x%010x-%s.psp2dmp.tmp", timestamp,
 				coredumpRun.pid, basename);
 		}
-	} else if (coredumpRun.triggerFlags != 0 && coredumpRun.triggerReason == 1) {
+	} else if (coredumpRun.trigger.triggerFlags != 0 && coredumpRun.trigger.triggerReason == 1) {
 		strncpy(filename, "psp2core-GPUCRASH.spsp2dmp.tmp", sizeof(filename));
 	} else {
 		oalGetProcessDumpName(coredumpRun.pid, processPath);
@@ -1034,7 +1034,7 @@ int generatorBeginKernelDump(SceCoredumpTriggerParam param, SceSize payloadSize)
 	requestId = triggerGetNextRequestId();
 	memset(&coredumpRun, 0, sizeof(coredumpRun));
 	coredumpRun.pid = 65541;
-	memcpy(&coredumpRun.triggerParamSize, &param, sizeof(param));
+	coredumpRun.trigger = param;
 	plaintextDumpAllowed = oalIsPlaintextDumpAllowed(coredumpRun.pid);
 	useAlternateCafSegment = oalIsSystemProgram(coredumpRun.pid) != 0 ||
 		oalIsRootProgram(coredumpRun.pid) != 0;
@@ -1042,8 +1042,8 @@ int generatorBeginKernelDump(SceCoredumpTriggerParam param, SceSize payloadSize)
 	result = oalMutexLock(generatorMutexId);
 	if (result != 0)
 		return result;
-	cancelRequested = 0;
 	activeRequestId = requestId;
+	cancelRequested = 0;
 	result = oalMutexUnlock(generatorMutexId);
 	if (result != 0)
 		return result;
@@ -1138,7 +1138,7 @@ int generatorEndKernelDump(void)
 				result = cafWriterBeginSegment(&cafWriter,
 					useAlternateCafSegment != 0 ? 4 : 3);
 				if (result == 0) {
-					oalGetCdnAccessParam(coredumpRun.appVersion,
+					oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
 						coredumpRun.stopReason, &access, &cdnLocation);
 					result = writerWrite(&cafWriter.writer, &access,
 						sizeof(access));

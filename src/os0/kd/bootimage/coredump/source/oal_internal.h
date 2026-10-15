@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/coredump.h>
+#include <sce/coredump.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sce/threadmgr_debugger.h>
@@ -217,19 +218,7 @@ typedef struct CoredumpBuildVerInfo {
 
 typedef struct CoredumpRunContext {
 	SceUID pid;
-	uint32_t triggerParamSize;
-	uint32_t dumpLevel;
-	uint32_t triggerDataType;
-	SceSize triggerDataSize;
-	const void *triggerData;
-	SceSize titleid_len;
-	const char *titleid;
-	SceSize app_name_len;
-	const char *app_name;
-	int appVersion;
-	int triggerReason;
-	SceUID crash_thid;
-	uint32_t triggerFlags;
+	SceCoredumpTriggerParam trigger;
 	uint32_t stopReason;
 	uint32_t systemInfoFlagsEnabled;
 } CoredumpRunContext;

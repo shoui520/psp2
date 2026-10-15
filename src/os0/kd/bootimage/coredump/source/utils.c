@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 /* the ELF header of an ARM core file with numPhdr program headers */
-void utilsElf32MakeEhdr(Elf32_Ehdr *header, SceUInt16 numPhdr)
+void utilsElf32MakeEhdr(Elf32_Ehdr *header, SceUInt32 numPhdr)
 {
 	SCE_DBG_ASSERT(header != NULL, 29);
 	memset(header, 0, sizeof(*header));

@@ -63,29 +63,29 @@ static int _writeSegs(SegIf *segment)
 			segment->dataSize);
 		pid = coredumpRun.pid;
 		memset(&note.info, 0, sizeof(note.info));
-		if (coredumpRun.titleid != NULL && coredumpRun.titleid_len != 0) {
+		if (coredumpRun.trigger.titleid != NULL && coredumpRun.trigger.titleid_len != 0) {
 #if FW_DEBUG
 			__builtin___memcpy_chk(note.info.titleid,
-				coredumpRun.titleid, coredumpRun.titleid_len,
+				coredumpRun.trigger.titleid, coredumpRun.trigger.titleid_len,
 				sizeof(note.info) - offsetof(AppNoteInfo, titleid));
 #else
-			memcpy(note.info.titleid, coredumpRun.titleid,
-				coredumpRun.titleid_len);
+			memcpy(note.info.titleid, coredumpRun.trigger.titleid,
+				coredumpRun.trigger.titleid_len);
 #endif
 		}
-		if (coredumpRun.app_name != NULL && coredumpRun.app_name_len != 0) {
+		if (coredumpRun.trigger.app_name != NULL && coredumpRun.trigger.app_name_len != 0) {
 #if FW_DEBUG
 			__builtin___memcpy_chk(note.info.appName,
-				coredumpRun.app_name, coredumpRun.app_name_len,
+				coredumpRun.trigger.app_name, coredumpRun.trigger.app_name_len,
 				sizeof(note.info) - offsetof(AppNoteInfo, appName));
 #else
-			memcpy(note.info.appName, coredumpRun.app_name,
-				coredumpRun.app_name_len);
+			memcpy(note.info.appName, coredumpRun.trigger.app_name,
+				coredumpRun.trigger.app_name_len);
 #endif
 		}
 		snprintf(note.info.appVersion, sizeof(note.info.appVersion),
-			"%02d.%02d", coredumpRun.appVersion / 100,
-			coredumpRun.appVersion % 100);
+			"%02d.%02d", coredumpRun.trigger.appVersion / 100,
+			coredumpRun.trigger.appVersion % 100);
 		oalGetAppBuildSDKVersion(pid, &note.info.sdkVersion);
 		result = writerWrite(currentWriter, &note, segment->dataSize);
 		if (result == 0) {

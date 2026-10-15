@@ -78,7 +78,7 @@ static int _calcSize(SegIf *segment)
 	if (oalGetFrameBufferInfo(apps.device.shellPid, 1, &vblankcount, &width,
 				  &height, &pixelformat) >= 0)
 		size += width * height * 4;
-	if (coredumpRun.dumpLevel == 15 && size > 80) {
+	if (coredumpRun.trigger.dumpLevel == 15 && size > 80) {
 		segment->numPhdr = 1;
 		segment->dataSize = size + 544;
 	} else {

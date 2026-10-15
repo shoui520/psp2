@@ -76,8 +76,8 @@ static int _writeSegs(SegIf *segment)
 		goto out;
 	segment->writtenSize += sizeof(count);
 	oalGetThreadIdList(coredumpRun.pid, threadIds, count);
-	stopEvent.threadId = coredumpRun.crash_thid;
-	stopEvent.reason = coredumpRun.triggerReason;
+	stopEvent.threadId = coredumpRun.trigger.crash_thid;
+	stopEvent.reason = coredumpRun.trigger.triggerReason;
 	for (i = 0; i < count; ++i) {
 		oalGetThreadInfo(coredumpRun.pid, threadIds[i], &stopEvent, &info);
 		__builtin_memcpy(&stopReason, &info.stopReason.reason,

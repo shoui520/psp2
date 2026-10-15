@@ -158,7 +158,7 @@ static int _writeSegs(SegIf *base)
 	currentSegment = segment;
 	if (segment->dumpLevel == PROC_MEM_LEVEL_FULL)
 		segment->phdrType = PT_LOAD;
-	else if (coredumpRun.dumpLevel == PROC_MEM_LEVEL_FULL)
+	else if (coredumpRun.trigger.dumpLevel == PROC_MEM_LEVEL_FULL)
 		segment->phdrType = PT_NULL;
 	else
 		segment->phdrType = PT_LOAD;
@@ -228,13 +228,13 @@ static int _calcSize(SegIf *base)
 	base->writtenSize = 0;
 	if (level == PROC_MEM_LEVEL_FULL) {
 		segment->phdrType = 1;
-		if (coredumpRun.dumpLevel != PROC_MEM_LEVEL_FULL) {
+		if (coredumpRun.trigger.dumpLevel != PROC_MEM_LEVEL_FULL) {
 			base->numPhdr = 0;
 			base->dataSize = 0;
 			return 0;
 		}
 	} else {
-		segment->phdrType = coredumpRun.dumpLevel != PROC_MEM_LEVEL_FULL;
+		segment->phdrType = coredumpRun.trigger.dumpLevel != PROC_MEM_LEVEL_FULL;
 		if (level & PROC_MEM_LEVEL_ARM_EX) {
 			/* _getArmExInfo inlined */
 			SCE_DBG_ASSERT_FUNC(base != NULL, 530, "_getArmExInfo");
@@ -316,7 +316,7 @@ static int _writePhdr(SegIf *base, SceOff fileOffset)
 	currentSegment = segment;
 	if (segment->dumpLevel == PROC_MEM_LEVEL_FULL)
 		segment->phdrType = PT_LOAD;
-	else if (coredumpRun.dumpLevel == PROC_MEM_LEVEL_FULL)
+	else if (coredumpRun.trigger.dumpLevel == PROC_MEM_LEVEL_FULL)
 		segment->phdrType = PT_NULL;
 	else
 		segment->phdrType = PT_LOAD;
@@ -497,8 +497,8 @@ static void _sInitMemDumpContext(MemDumpContext *context)
 	int i;
 
 	SCE_DBG_ASSERT_FUNC(context != NULL, 822, "_sInitMemDumpContext");
-	stopEvent.threadId = coredumpRun.crash_thid;
-	stopEvent.reason = coredumpRun.triggerReason;
+	stopEvent.threadId = coredumpRun.trigger.crash_thid;
+	stopEvent.reason = coredumpRun.trigger.triggerReason;
 	threadId = oalGetAbortedThreadID(coredumpRun.pid, &stopEvent);
 	if (threadId < 0) {
 		context->hasAbortedThread = 0;

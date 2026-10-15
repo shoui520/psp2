@@ -41,7 +41,7 @@ static int _calcSize(SegIf *segment)
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 65, "_calcSize");
 	segment->writtenSize = 0;
-	if (coredumpRun.triggerReason != 1)
+	if (coredumpRun.trigger.triggerReason != 1)
 		return 0;
 	size = oalGetGpuInfoSize();
 	if (size == 0)

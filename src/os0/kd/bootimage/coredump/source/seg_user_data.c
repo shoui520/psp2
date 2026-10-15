@@ -45,7 +45,7 @@ static int _calcSize(SegIf *segment)
 {
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 49, "_calcSize");
 	segment->writtenSize = 0;
-	if (coredumpRun.triggerReason == -2 || coredumpRun.triggerReason == -1) {
+	if (coredumpRun.trigger.triggerReason == -2 || coredumpRun.trigger.triggerReason == -1) {
 		segment->numPhdr = 0;
 		segment->dataSize = 0;
 		return 0;

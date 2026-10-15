@@ -48,7 +48,7 @@ static int _calcSize(SegIf *segment)
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 52, "_calcSize");
 	segment->writtenSize = 0;
-	if (coredumpRun.dumpLevel == 15) {
+	if (coredumpRun.trigger.dumpLevel == 15) {
 		segment->numPhdr = 0;
 		segment->dataSize = 0;
 		return 0;

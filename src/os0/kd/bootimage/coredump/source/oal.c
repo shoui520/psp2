@@ -483,22 +483,22 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	stopReason->detail.codeHigh = 0;
 	stopReason->detail.groupLow = 0;
 	stopReason->detail.groupHigh = 0;
-	if (coredumpRun.triggerReason == 1) {
+	if (coredumpRun.trigger.triggerReason == 1) {
 		reason = 0x50001;
 		coredumpRun.stopReason = reason;
 		goto foundReason;
 	}
-	if (coredumpRun.triggerReason == 3) {
+	if (coredumpRun.trigger.triggerReason == 3) {
 		reason = 0x10004;
 		coredumpRun.stopReason = reason;
 		goto foundReason;
 	}
-	if (coredumpRun.triggerReason == -2) {
+	if (coredumpRun.trigger.triggerReason == -2) {
 		reason = 0x10003;
 		goto foundReason;
 	}
-	stopEvent.threadId = coredumpRun.crash_thid;
-	stopEvent.reason = coredumpRun.triggerReason;
+	stopEvent.threadId = coredumpRun.trigger.crash_thid;
+	stopEvent.reason = coredumpRun.trigger.triggerReason;
 	result = _getThreadStopReason(stopEvent.threadId, &stopEvent,
 		&threadStopReason);
 	__builtin_memcpy(&reason, &threadStopReason.reason, sizeof(reason));
@@ -718,8 +718,8 @@ static inline int _isPlaintextDumpAllowed(SceUID pid)
 
 static inline int _isSystemProgram(SceUID pid)
 {
-	SceSize titleSize = coredumpRun.titleid_len;
-	const char *titleid = coredumpRun.titleid;
+	SceSize titleSize = coredumpRun.trigger.titleid_len;
+	const char *titleid = coredumpRun.trigger.titleid;
 	int isCurrentProcess;
 
 	if (titleSize >= 9)
@@ -1268,9 +1268,9 @@ void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info)
 
 	SCE_DBG_ASSERT(info != NULL, 1280);
 	memset(info, 0, sizeof(*info));
-	titleSize = coredumpRun.titleid_len;
+	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;
-	titleid = coredumpRun.titleid;
+	titleid = coredumpRun.trigger.titleid;
 	if (titleSize >= 9)
 		titleSize = 9;
 	info->formatVersion[0] = 19;
@@ -1341,9 +1341,9 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	info->isDolce = ksceSblAimgrIsDolce() != 0;
 	if (ksceSblAimgrGetOpenPsId(&openPsId) != 0)
 		return;
-	titleSize = coredumpRun.titleid_len;
+	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;
-	titleid = coredumpRun.titleid;
+	titleid = coredumpRun.trigger.titleid;
 	if (titleSize >= 9)
 		titleSize = 9;
 	isCurrentProcess = pid == currentPid;
