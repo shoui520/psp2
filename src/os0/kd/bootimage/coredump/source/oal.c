@@ -4291,9 +4291,12 @@ int oalGetMemoryCardInfo(CoredumpMemoryCardInfo *out)
 		out->present[3] = 0;
 		out->mediaType = info.mediaType;
 		out->writeProtected = info.writeProtected;
-		out->nbytes = info.nbytes;
-		out->nbytes2 = info.nbytes2;
-		out->sector_size = info.sector_size;
+		out->nbytes[0] = info.nbytes;
+		out->nbytes[1] = info.nbytes >> 32;
+		out->nbytes2[0] = info.nbytes2;
+		out->nbytes2[1] = info.nbytes2 >> 32;
+		out->sector_size[0] = info.sector_size;
+		out->sector_size[1] = info.sector_size >> 32;
 		out->blockSize = info.blockSize;
 		out->serialNumber = info.serialNumber;
 		out->assemblyModel = info.assemblyModel;

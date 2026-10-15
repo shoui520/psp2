@@ -40,9 +40,9 @@ typedef struct CoredumpMemoryCardInfo {
 	uint8_t present[4];
 	int mediaType;
 	int writeProtected;
-	uint64_t nbytes;
-	uint64_t nbytes2;
-	uint64_t sector_size;
+	uint32_t nbytes[2];
+	uint32_t nbytes2[2];
+	uint32_t sector_size[2];
 	uint32_t blockSize;
 	uint32_t serialNumber;
 	uint32_t assemblyModel;
