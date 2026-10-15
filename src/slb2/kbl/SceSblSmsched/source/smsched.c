@@ -4,8 +4,6 @@
  * module: its requests reach the registers, while a module that does not
  * run has its mailboxes saved in its request (SmschedMailbox), which the
  * secure kernel restores when it resumes the module.
- *
- * PARTIAL: written in address order up to sceSblSmSchedStopForTZS.
  */
 #include "smsched.h"
 #include "sce/barrier.h"
@@ -1653,4 +1651,219 @@ int sceSblSmSchedStopForTZS(void)
 		sceSblSmSchedFini(0);
 	}
 	return 0;
+}
+
+/* a request's exit waited for, once: its status taken and the request freed */
+int sceSblSmSchedWait(SceUInt32 id, SmschedIntrStatus *status)
+{
+	SmschedRequest *request;
+	SceUInt32 state;
+	int intr;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (status == NULL)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	request = SmschedGetRequest(id);
+	if (request == NULL)
+		return SCE_SBL_ERROR_NO_REQUEST;
+	if (atomicCompareAndSet8(&request->waitFlag, 0, 1) != 0)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	state = request->status.state;
+	switch (state) {
+	case SMSCHED_STATE_READY:
+	case SMSCHED_STATE_RUNNING:
+	case SMSCHED_STATE_STARTING:
+	case SMSCHED_STATE_SUSPENDING:
+	case SMSCHED_STATE_STOPPING:
+	case SMSCHED_STATE_KILLING:
+	case SMSCHED_STATE_EXITING:
+		do {
+			waitStateChange(state, &intr, request, &state);
+		} while (state == SMSCHED_STATE_SUSPENDING || state == SMSCHED_STATE_READY ||
+			 state == SMSCHED_STATE_STARTING || state == SMSCHED_STATE_RUNNING ||
+			 state == SMSCHED_STATE_KILLING || state == SMSCHED_STATE_STOPPING ||
+			 state == SMSCHED_STATE_EXITING);
+		if (state != SMSCHED_STATE_EXITED && state != SMSCHED_STATE_KILLED &&
+		    state != SMSCHED_STATE_STOPPED) {
+			SCE_PANIC(289);
+			return SCE_SBL_ERROR_NOT_READY;
+		}
+		/* fall through */
+	case SMSCHED_STATE_EXITED:
+	case SMSCHED_STATE_KILLED:
+	case SMSCHED_STATE_STOPPED:
+		SmschedLinkRemove(&request->link);
+		*status = request->status;
+		deleteRequest(id);
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		return 0;
+	default:
+		SCE_PANIC(305);
+	}
+}
+
+int sceSblSmSchedWaitMonitorCall(SceUInt32 id, unsigned int index)
+{
+	SceSize areaSize;
+	SmschedIntrStatus status;
+	SmschedIntrStatus *area;
+	int ret, err;
+
+	ret = sceSblTzsBridgePopArgArea(index, (void **)&area, &areaSize);
+	if (ret < 0)
+		return ret;
+	if (areaSize < sizeof(*area)) {
+#if FW_SINCE(0x04000000)
+		SCE_DBG_ASSERT_FAIL(923);
+#endif
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmSchedWait(id, &status);
+	*area = status;
+	err = sceSblTzsBridgePushArgArea(index);
+	if (err < 0)
+		return err;
+	return ret;
+}
+
+/* a request's result and state */
+int sceSblSmSchedGetStatus(SceUInt32 id, SmschedIntrStatus *status)
+{
+	SmschedRequest *request;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (status == NULL)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ret = SCE_SBL_ERROR_NO_REQUEST;
+	} else {
+		*status = request->status;
+		ret = 0;
+	}
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+int sceSblSmSchedGetStatusMonitorCall(SceUInt32 id, unsigned int index)
+{
+	SceSize areaSize;
+	SmschedIntrStatus status;
+	SmschedIntrStatus *area;
+	int ret, err;
+
+	ret = sceSblTzsBridgePopArgArea(index, (void **)&area, &areaSize);
+	if (ret < 0)
+		return ret;
+	if (areaSize < sizeof(*area)) {
+#if FW_SINCE(0x04000000)
+		SCE_DBG_ASSERT_FAIL(963);
+#endif
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	ret = sceSblSmSchedGetStatus(id, &status);
+	*area = status;
+	err = sceSblTzsBridgePushArgArea(index);
+	if (err < 0)
+		return err;
+	return ret;
+}
+
+/*
+ * A request killed: soft-killed on the Cmep while it runs, moved to the
+ * done list while it waits. A module being started or suspended is waited
+ * for. The Non-secure kernel's request is told it is done.
+ */
+int sceSblSmSchedKill(SceUInt32 id)
+{
+	volatile SmschedIntrMessage message;
+	SmschedIntrHandler handler;
+	SmschedRequest *request;
+	SceUInt32 state;
+	void *arg;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	message.channel = 0;
+	message.id = -1;
+	message.flags = 0;
+	message.eventBits = 0;
+	message.ack = 0;
+	message.status.result = 0;
+	message.status.state = 0;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		return SCE_SBL_ERROR_NO_REQUEST;
+	}
+	ksceKernelSpinlockLowLock(&request->lock);
+	state = request->status.state;
+	switch (state) {
+	case SMSCHED_STATE_STARTING:
+		waitStateChange(SMSCHED_STATE_STARTING, &intr, request, &state);
+		if (state != SMSCHED_STATE_RUNNING)
+			goto illegal;
+		/* fall through */
+	case SMSCHED_STATE_RUNNING:
+		request->status.state = SMSCHED_STATE_SOFT_KILLING;
+		ret = smsSecureKernelProxySoftKillSecureModule();
+		if (ret < 0)
+			goto unlock;
+		handler = NULL;
+		arg = NULL;
+		break;
+	case SMSCHED_STATE_SUSPENDING:
+		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
+		if (state != SMSCHED_STATE_READY)
+			goto illegal;
+		/* fall through */
+	case SMSCHED_STATE_READY:
+		ret = 0;
+		request->status.state = SMSCHED_STATE_KILLED;
+		handler = request->intr[0].handler;
+		arg = request->intr[0].arg;
+		SmschedLinkRemove(&request->link);
+		SmschedLinkAddTail(&s_doneList, &request->link);
+		message.id = request->proxyId;
+		message.flags |= MSG_CALL_HANDLER;
+		/* as Sony's: 0x104 and 3, not the request's own status */
+		message.status.result = 0x104;
+		message.status.state = 3;
+		break;
+	default:
+		handler = NULL;
+		arg = NULL;
+		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		break;
+	}
+	if (message.id != -1) {
+		ret = sendIntrMessage((const SmschedIntrMessage *)&message);
+		if (ret < 0)
+			SCE_PANIC(496);
+	}
+	ksceKernelSpinlockLowUnlock(&request->lock);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	if (handler != NULL)
+		handler(message.id, message.flags, arg, message.status.state,
+			message.status.result);
+	return ret;
+
+illegal:
+	ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+unlock:
+	ksceKernelSpinlockLowUnlock(&request->lock);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+int sceSblSmSchedKillMonitorCall(SceUInt32 id)
+{
+	return sceSblSmSchedKill(id);
 }

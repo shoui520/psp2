@@ -15,7 +15,7 @@
 #include "sce/debug.h"
 #include "sce/smsc_proxy.h"
 #include "sce/sysroot.h"
-#include "tzs_bridge.h"
+#include "sce/tzs_bridge.h"
 #include "sce/syscall.h"
 #include "sce/sysevent_ids.h"
 
@@ -317,7 +317,7 @@ static int SysEventHandler(int resume, int eventId, void *args, void *opt)
 
 	if (eventId != SYSEVENT_RESUME_DEVICE(4))
 		return 0;
-	ret = sceSblTzsBridgeInit();
+	ret = sceSblTzsBridgeStart();
 	return ret < 0 ? ret : 0;
 }
 
@@ -338,7 +338,7 @@ int module_start(SceSize args, void *argp)
 	for (i = 0; i < SESSION_COUNT; i++)
 		s_session[i].used = 0;
 
-	ret = sceSblTzsBridgeInit();
+	ret = sceSblTzsBridgeStart();
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelRegisterIntrHandler(4, "SceSblSmSchedProxySGI", 0x10, softIntrHandler,

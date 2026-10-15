@@ -68,7 +68,7 @@ typedef struct SkRevokeListArg {
 
 _Static_assert(sizeof(SkRunArg) == 0x50, "SkRunArg");
 
-static SmschedInstance *s_instance;
+static SmschedInstance *s_proxyInstance;
 
 static inline void SkDmb(void)
 {
@@ -127,7 +127,7 @@ static inline void SkWaitMessage(SceUInt32 message)
 
 int smsSecureKernelProxySetInstance(SmschedInstance *instance)
 {
-	s_instance = instance;
+	s_proxyInstance = instance;
 	return 0;
 }
 
@@ -166,7 +166,7 @@ int smsSecureKernelProxyStartSecureKernel(uintptr_t enpPA, SceSize enpSize)
 	}
 
 	SkWaitMessage(CMEP_MESSAGE_MAIN_INIT);
-	ret = sceKernelVAtoPAForTZS(s_instance->skCmdArea, &cmdAreaPA);
+	ret = sceKernelVAtoPAForTZS(s_proxyInstance->skCmdArea, &cmdAreaPA);
 	if (ret < 0)
 		return ret;
 	CMEP_MAILBOX_REG(arm2Cry[0]) = cmdAreaPA & ~3;
@@ -206,7 +206,7 @@ int smsSecureKernelProxyInstallRevokeList(uintptr_t listPA, SceSize listSize)
 		sceKernelFreeUncacheHeapMemoryForTZS(list);
 		return ret;
 	}
-	cmd = s_instance->skCmdArea;
+	cmd = s_proxyInstance->skCmdArea;
 	cmd->count = 1;
 	cmd->listPA = pa;
 	SkFlushArea(cmd, sizeof(*cmd));
@@ -220,7 +220,7 @@ int smsSecureKernelProxyRunSecureModule(uintptr_t selfPA, SceUInt32 arg1, SceUIn
 					SceUInt32 arg3, SceUInt32 arg4,
 					const SmschedInvokeArg *invokeArg, uintptr_t areaPA)
 {
-	SkRunArg *cmd = s_instance->skCmdArea;
+	SkRunArg *cmd = s_proxyInstance->skCmdArea;
 
 	cmd->arg2 = arg2;
 	cmd->arg1 = arg1;
@@ -237,7 +237,7 @@ int smsSecureKernelProxyRunSecureModule(uintptr_t selfPA, SceUInt32 arg1, SceUIn
 int smsSecureKernelProxySuspendSecureModule(uintptr_t vectorPA, SceUInt32 vectorCount,
 					    uintptr_t areaPA, uintptr_t mailboxPA)
 {
-	SkContextArg *cmd = s_instance->skCmdArea;
+	SkContextArg *cmd = s_proxyInstance->skCmdArea;
 
 	cmd->vectorCount = vectorCount;
 	cmd->vectorPA = vectorPA;
@@ -251,7 +251,7 @@ int smsSecureKernelProxySuspendSecureModule(uintptr_t vectorPA, SceUInt32 vector
 int smsSecureKernelProxyResumeSecureModule(uintptr_t vectorPA, SceUInt32 vectorCount,
 					   uintptr_t areaPA, uintptr_t mailboxPA)
 {
-	SkContextArg *cmd = s_instance->skCmdArea;
+	SkContextArg *cmd = s_proxyInstance->skCmdArea;
 
 	cmd->vectorCount = vectorCount;
 	cmd->vectorPA = vectorPA;
@@ -301,7 +301,7 @@ int smsSecureKernelProxySetDebug(const void *area, SceSize size)
 	ret = sceKernelVAtoPAForTZS(area, &pa);
 	if (ret < 0)
 		return ret;
-	cmd = s_instance->skCmdArea;
+	cmd = s_proxyInstance->skCmdArea;
 	cmd->pa = pa;
 	cmd->size = size;
 	SkFlushArea(cmd, sizeof(*cmd));

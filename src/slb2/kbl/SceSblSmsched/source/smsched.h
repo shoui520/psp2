@@ -54,6 +54,7 @@ __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
 
 int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
+int sceKernelVARangeToPAVectorForTZS(const SceKernelVARange *range, SceKernelPAVector *vector);
 void *sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SceSize size, SceAllocOpt *opt);
 int sceKernelFreeUncacheHeapMemoryForTZS(void *ptr);
 void *sceKernelAllocHeapMemoryForTZS(SceUID heap, SceSize size);
@@ -260,13 +261,5 @@ int smsSecureKernelProxyGenerateIntr3(void);
 int smsSecureKernelProxyGenerateIntr4(void);
 int smsSecureKernelProxyReady(void);
 
-/* tzs_bridge.c: the argument and interrupt areas shared with the Non-secure kernel */
-int sceSblTzsBridgeInit(void);
-int sceSblTzsBridgeAllocIntrArea(SceSize size, void **area, SceSize *areaSize);
-int sceSblTzsBridgePush(void *areas, unsigned int index);
-int sceSblTzsBridgePushArgArea(unsigned int index);
-int sceSblTzsBridgePushIntrArea(unsigned int index);
-int sceSblTzsBridgePop(void *areas, unsigned int index, void **area, SceSize *areaSize);
-int sceSblTzsBridgePopArgArea(unsigned int index, void **area, SceSize *areaSize);
-int sceSblTzsBridgeFree(void *areas, unsigned int index);
-int sceSblTzsBridgeFreeIntrArea(unsigned int index);
+/* tzs_bridge.c */
+#include "sce/tzs_bridge.h"
