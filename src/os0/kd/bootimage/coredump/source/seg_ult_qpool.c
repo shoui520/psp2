@@ -76,8 +76,7 @@ static int _writeSegs(SegIf *segment)
 	remaining = count;
 	for (skip = 0; skip < count; skip += 1024) {
 		batch = remaining;
-		if (batch >= 1024)
-			batch = 1024;
+		batch = batch < 1024 ? batch : 1024;
 		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 6);
 		for (i = 0; i != batch; ++i) {
 			oalGetUltQueueDataResourcePoolInfo(coredumpRun.pid,

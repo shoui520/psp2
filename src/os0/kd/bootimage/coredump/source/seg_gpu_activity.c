@@ -38,8 +38,7 @@ static int _calcSize(SegIf *segment)
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 51, "_calcSize");
 	segment->writtenSize = 0;
 	size = oalGetGpuActivitySize();
-	if (size >= 4096)
-		size = 4096;
+	size = size < 4096 ? size : 4096;
 	segment->numPhdr = 1;
 	segment->dataSize = (size + sizeof(CoredumpGpuActivityNote) + 3) & ~3u;
 	return 0;

@@ -54,8 +54,7 @@ static int _calcSize(SegIf *segment)
 	skip = 0;
 	do {
 		batch = remaining;
-		if (batch >= 1024)
-			batch = 1024;
+		batch = batch < 1024 ? batch : 1024;
 		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 0);
 		for (i = 0; i < batch; i++) {
 			numWaiting = 1024;
@@ -108,8 +107,7 @@ static int _writeSegs(SegIf *segment)
 	remaining = count;
 	for (skip = 0; skip < count; skip += 1024) {
 		batch = remaining;
-		if (batch >= 1024)
-			batch = 1024;
+		batch = batch < 1024 ? batch : 1024;
 		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 0);
 		for (i = 0; i != batch; ++i) {
 			numWaiting = 1024;

@@ -101,12 +101,13 @@ static int _writeSegs(SegIf *segment)
 	totalWaiting = 0;
 	for (i = 0; i < count; ++i) {
 		oalGetMsgPipeInfo(coredumpRun.pid, ids[i], &info);
-		numWaiting = (unsigned int)info.numSendWaitThreads +
-			(unsigned int)info.numReceiveWaitThreads;
-		info.recordSize = 8 * (numWaiting + 10);
+		info.recordSize = 8 * ((unsigned int)info.numSendWaitThreads +
+			(unsigned int)info.numReceiveWaitThreads + 10);
 		result = writerWrite(currentWriter, &info, sizeof(info));
 		if (result != 0)
 			goto out;
+		numWaiting = (unsigned int)info.numSendWaitThreads +
+			(unsigned int)info.numReceiveWaitThreads;
 		numWaiting = numWaiting < 320 ? numWaiting : 320;
 		segment->writtenSize += sizeof(info);
 		oalGetWaitingThreadList(coredumpRun.pid, ids[i], threads,
