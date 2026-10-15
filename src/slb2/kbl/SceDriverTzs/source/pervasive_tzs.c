@@ -68,7 +68,7 @@ int module_start(SceSize arglen, const void *argp)
 	PervasiveModuleStart(arglen, argp);
 	GrabModuleStart(arglen, argp);
 	EmcModuleStart(arglen, argp);
-	CrashDumpRegisterModuleStart(arglen, argp);
+	PowerModeModuleStart(arglen, argp);
 	CrashDumpModuleStart(arglen, argp);
 	return 0;
 }

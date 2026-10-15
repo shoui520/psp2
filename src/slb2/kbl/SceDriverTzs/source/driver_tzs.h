@@ -72,6 +72,7 @@ void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before 
 #define CDRAM_MONCALL_ENABLE		0x117
 #define CDRAM_MONCALL_ENTER_SELF_REFRESH	0x118
 #define CDRAM_MONCALL_EXIT_SELF_REFRESH	0x119
+#define SYSCON_MONCALL_SET_POWER_MODE	0x11a
 #define GRAB_MONCALL_STOP		0x11b
 #define GRAB_MONCALL_PORT_CONFIG	0x11c
 #define GRAB_MONCALL_SET_CMP_MAP	0x11d
@@ -110,8 +111,8 @@ int DmacGateEnable(int n);
 int GpuClockSet(unsigned int core, unsigned int mp);
 int PervasiveModuleStart(SceSize arglen, const void *argp);
 
-/* grab.c, emc_tzs.c, crashdump_tzs.c: module_start's later stages */
+/* grab.c, emc_tzs.c, power_tzs.c, crashdump_tzs.c: module_start's later stages */
 int GrabModuleStart(SceSize arglen, const void *argp);
 int EmcModuleStart(SceSize arglen, const void *argp);
 int CrashDumpModuleStart(SceSize arglen, const void *argp);
-int CrashDumpRegisterModuleStart(SceSize arglen, const void *argp);
+int PowerModeModuleStart(SceSize arglen, const void *argp);

@@ -90,6 +90,7 @@
 /* TLB maintenance */
 #define writeTlbimvais(v)	CP_WRITE(p15, 0, c8, c3, 1, v)
 #define writeTlbimvaais(v)	CP_WRITE(p15, 0, c8, c3, 3, v)
+#define writeTlbiall(v)		CP_WRITE(p15, 0, c8, c7, 0, v)
 
 #define readPmcr()		CP_READ(p15, 0, c9, c12, 0)
 #define writePmcr(v)		CP_WRITE(p15, 0, c9, c12, 0, v)
