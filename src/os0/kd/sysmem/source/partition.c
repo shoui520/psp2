@@ -1065,8 +1065,8 @@ int PartitionFreeMemBlockWithBaseRaw(Partition *partition, MemBlockObject *block
 		if (base != NULL)
 			*baseBlock = base;
 	}
-	shared = s_tinyPartitionUserShared;
 	if ((block->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_VIR_BASE_BLOCK) {
+		shared = s_tinyPartitionUserShared;
 		base = MemBlockOptGetVirBaseBlockRaw(block);
 		if (base->code != 0)
 			TinyPartitionFreeMemBlock(shared, base, 2, NULL);
