@@ -80,7 +80,7 @@ static int SerialSuspend(void *args)
 }
 
 /* name unknown: a character to a port, CR before LF */
-__attribute__((noinline)) void SerialPutcharCRLF(unsigned int port, int c)
+__attribute__((noinline)) void SerialPutcharCRLF(unsigned int port, char c)
 {
 	volatile UartRegs *regs = s_uartRegs[port];
 
@@ -101,7 +101,7 @@ int SerialDebugPutchar(void *args, int c)
 	if (c != 0x200 && c != 0x201) {
 		for (i = 0; i < UART_DEBUG_PORTS; i++) {
 			if (s_debugPorts[i].enabled) {
-				SerialPutcharCRLF(s_debugPorts[i].port, (char)c);
+				SerialPutcharCRLF(s_debugPorts[i].port, c);
 				SerialFlush(s_debugPorts[i].port);
 			}
 		}
@@ -109,7 +109,7 @@ int SerialDebugPutchar(void *args, int c)
 	return 0;
 }
 
-__attribute__((noinline)) void SerialPutchar(unsigned int port, int c)
+__attribute__((noinline)) void SerialPutchar(unsigned int port, char c)
 {
 	SerialWaitTxReady(s_uartRegs[port]);
 	s_uartRegs[port]->tx = c;
@@ -130,7 +130,7 @@ __attribute__((noinline)) unsigned int SerialReadAvailable(unsigned int port)
 	return s_uartRegs[port]->fifoStatus & UART_FIFO_COUNT_MASK;
 }
 
-int ksceUartWrite(int port, char c)
+int ksceUartWrite(int port, int c)
 {
 	SerialPutchar(port, c);
 	SerialFlush(port);
