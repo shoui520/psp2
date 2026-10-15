@@ -122,6 +122,7 @@ static inline int _dcmpEcho(DcmpCB *dcmp)
 	reply.dcmp.hdr.dst = req->dcmp.hdr.src;
 	reply.dcmp.type = DCMP_TYPE_ECHO;
 	reply.dcmp.code = 1;
+	reply.dcmp.reserved = 0;
 	reply.id = req->id;
 	reply.seq = req->seq + 1;
 	dcmpMemcpyChk(reply.data, req->data, n);
@@ -230,14 +231,14 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 	SceKernelIntrStatus s;
 	DcmpHeader *msg;
 	SceSize size;
-	int errPending, ret;
+	int count, read, next, errPending, ret;
 
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
-	errPending = dcmp->errPending;
 	if (dcmp->count <= 0) {
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 		return DFMGR_ERROR_NOTHING_TO_SEND;
 	}
+	errPending = dcmp->errPending;
 	msg = dcmp->buf[dcmp->read];
 	size = dcmp->size[dcmp->read];
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
@@ -257,10 +258,15 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 	}
 
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
+	count = dcmp->count;
+	read = dcmp->read;
+	next = read + 1;
+	if (next >= DCMP_SEND_QUEUE)
+		next = 0;
 	dcmp->errPending = 0;
-	dcmp->size[dcmp->read] = 0;
-	dcmp->read = dcmp->read + 1 >= DCMP_SEND_QUEUE ? 0 : dcmp->read + 1;
-	dcmp->count--;
+	dcmp->read = next;
+	dcmp->size[read] = 0;
+	dcmp->count = count - 1;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 	return 0;
 }
@@ -303,7 +309,8 @@ int dcmpInit(DfMgrProtocolCB *pd, SceUInt32 linkIndex, DfMgrLinkCB *link)
 {
 	DcmpCB *dcmp;
 	SceUInt8 *base;
-	int i, ret;
+	SceUInt32 i;
+	int ret;
 
 	dcmp = _getDcmpCB(linkIndex);
 	memset(dcmp, 0, sizeof(*dcmp));
@@ -338,9 +345,11 @@ int dcmpInit(DfMgrProtocolCB *pd, SceUInt32 linkIndex, DfMgrLinkCB *link)
 		return ret;
 	}
 	dcmp->recvBuf = (DcmpHeader *)base;
+	base += 0x2000;
 	for (i = 0; i < DCMP_SEND_QUEUE; i++)
-		dcmp->buf[i] = base + 0x2000 + i * DCMP_SEND_BUF_SIZE;
-	dcmp->errBuf = base + 0x4000;
+		dcmp->buf[i] = base + i * DCMP_SEND_BUF_SIZE;
+	base += 0x2000;
+	dcmp->errBuf = base;
 
 	ret = dfmgrSetProtocolStatus(pd, DFMGR_PD_OPEN, 1);
 	if (ret < 0) {
@@ -381,6 +390,7 @@ void dcmpSendError(DfMgrProtocolCB *pd, SceUInt32 linkIndex, SceUInt8 code,
 	msg.hdr.dst = hdr->src;
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.hdr, size + sizeof(msg));
 	msg.type = DCMP_TYPE_ERROR;
+	msg.reserved = 0;
 	msg.code = code;
 	if (dcmpQueueLock(dcmp, &s) < 0) {
 		SCE_PRINTF_WITH_INFO(15, 401, "0x%08X\n", DFMGR_ERROR_QUEUE_FULL);
@@ -397,6 +407,8 @@ void dcmpSendStatusProtocol(SceUInt32 linkIndex, SceUInt32 status,
 	DcmpStatusProtocol msg;
 	SceKernelIntrStatus s;
 	DcmpCB *dcmp;
+	SceUInt16 flags;
+	SceUInt32 protocolId, version, subVersion;
 
 	if (status & ~7) {
 		SCE_PRINTF_WITH_INFO(15, 854, "0x%08X\n", status);
@@ -405,14 +417,19 @@ void dcmpSendStatusProtocol(SceUInt32 linkIndex, SceUInt32 status,
 	dcmp = _getDcmpCB(linkIndex);
 	memset(&msg, 0, sizeof(msg));
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, sizeof(msg));
+	flags = protocol->flags;
+	version = protocol->version;
+	protocolId = protocol->protocol;
+	subVersion = protocol->subVersion;
+	msg.dcmp.reserved = 0;
+	msg.protocol = protocolId;
+	msg.version = version;
+	msg.subVersion = subVersion;
+	msg.status = status;
+	msg.port = (flags & DFMGR_PROTOCOL_USB) ? DCMP_PORT_USB : DCMP_PORT_SDIO;
 	msg.dcmp.hdr.dst = DCMP_PORT_HOST;
 	msg.dcmp.type = DCMP_TYPE_STATUS;
 	msg.dcmp.code = DCMP_STATUS_PROTOCOL;
-	msg.protocol = protocol->protocol;
-	msg.version = protocol->version;
-	msg.subVersion = protocol->subVersion;
-	msg.port = (protocol->flags & DFMGR_PROTOCOL_USB) ? DCMP_PORT_USB : DCMP_PORT_SDIO;
-	msg.status = status;
 	if (dcmpQueueLock(dcmp, &s) < 0) {
 		SCE_PRINTF_WITH_INFO(15, 896, "0x%08X\n", DFMGR_ERROR_QUEUE_FULL);
 		return;
@@ -430,11 +447,12 @@ void dcmpSendStatusProtocolAlias(SceUInt32 linkIndex, const SceDfMgrProtocol *pr
 	dcmp = _getDcmpCB(linkIndex);
 	memset(&msg, 0, sizeof(msg));
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, sizeof(msg));
-	msg.dcmp.hdr.dst = DCMP_PORT_HOST;
 	msg.dcmp.type = DCMP_TYPE_STATUS;
 	msg.dcmp.code = DCMP_STATUS_ALIAS;
+	msg.dcmp.reserved = 0;
 	msg.protocol = protocol->protocol;
 	msg.alias = protocol->alias;
+	msg.dcmp.hdr.dst = DCMP_PORT_HOST;
 	if (dcmpQueueLock(dcmp, &s) < 0) {
 		SCE_PRINTF_WITH_INFO(15, 938, "0x%08X\n", DFMGR_ERROR_QUEUE_FULL);
 		return;
@@ -443,21 +461,24 @@ void dcmpSendStatusProtocolAlias(SceUInt32 linkIndex, const SceDfMgrProtocol *pr
 	dcmpQueueCommit(dcmp, sizeof(msg), 0, s);
 }
 
-void dcmpSendStatusPower(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 state, SceUInt8 arg)
+void dcmpSendStatusPower(SceUInt32 linkIndex, SceUInt32 kind, SceUInt32 state, SceUInt32 arg)
 {
 	DcmpStatusPower msg;
 	SceKernelIntrStatus s;
 	DcmpCB *dcmp;
+	SceUInt8 arg2;
 
 	dcmp = _getDcmpCB(linkIndex);
 	memset(&msg, 0, sizeof(msg));
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, sizeof(msg));
+	arg2 = (kind == 0 && state == 2) ? arg : 0;
+	msg.kind = kind;
+	msg.dcmp.code = DCMP_STATUS_POWER;
+	msg.dcmp.reserved = 0;
+	msg.state = state;
 	msg.dcmp.hdr.dst = DCMP_PORT_POWER;
 	msg.dcmp.type = DCMP_TYPE_STATUS;
-	msg.dcmp.code = DCMP_STATUS_POWER;
-	msg.kind = kind;
-	msg.state = state;
-	msg.arg2 = (kind == 0 && state == 2) ? arg : 0;
+	msg.arg2 = arg2;
 	if ((kind == 0x80 || kind == 0x81) && state == 3)
 		msg.arg = arg;
 	if (dcmpQueueLock(dcmp, &s) < 0) {
@@ -477,9 +498,11 @@ void dcmpSendStatusSpace(SceUInt32 linkIndex, SceUInt32 protocol)
 	dcmp = _getDcmpCB(linkIndex);
 	memset(&msg, 0, sizeof(msg));
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, sizeof(msg));
-	msg.dcmp.type = DCMP_TYPE_STATUS;
 	msg.dcmp.code = DCMP_STATUS_SPACE;
+	msg.dcmp.hdr.dst = 0;
+	msg.dcmp.reserved = 0;
 	msg.protocol = protocol;
+	msg.dcmp.type = DCMP_TYPE_STATUS;
 	if (dcmpQueueLock(dcmp, &s) < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1034, "0x%08X\n", DFMGR_ERROR_QUEUE_FULL);
 		return;
@@ -504,12 +527,15 @@ int dcmpSendProgressStarted(DcmpCB *dcmp, SceUInt8 code, SceUInt8 kind, SceUInt3
 
 	dcmpMemsetChk(&msg, 0, size);
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, size);
-	msg.msgLen = len + 1;
+	msg.value = total;
+	msg.kind = kind;
 	msg.flag = flag;
 	msg.dcmp.type = DCMP_TYPE_STATUS;
 	msg.dcmp.code = code;
-	msg.kind = kind;
-	msg.value = total;
+	msg.msgLen = len + 1;
+	msg.dcmp.hdr.dst = 0;
+	msg.dcmp.reserved = 0;
+	msg.percent = 0;
 	dcmpStrncpyChk(msg.msg, str, len);
 	if (size > sizeof(msg))
 		return DFMGR_ERROR_INVALID_ARGUMENT;
@@ -523,20 +549,26 @@ int dcmpSendProgressStarted(DcmpCB *dcmp, SceUInt8 code, SceUInt8 kind, SceUInt3
 static inline __attribute__((always_inline))
 int dcmpSendProgressOngoing(DcmpCB *dcmp, SceUInt8 code, SceUInt8 kind, SceUInt8 percent)
 {
-	DcmpProgressOngoing msg;
+	DcmpProgress msg;
+	SceSize size = dcmpProgressSize(0);
 	SceKernelIntrStatus s;
 
-	memset(&msg, 0, sizeof(msg));
-	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, sizeof(msg));
+	memset(&msg, 0, size);
+	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, size);
 	msg.msgLen = 1;
-	msg.dcmp.type = DCMP_TYPE_STATUS;
-	msg.dcmp.code = code;
+	msg.dcmp.hdr.dst = 0;
+	msg.dcmp.reserved = 0;
 	msg.kind = kind;
 	msg.percent = percent;
+	msg.flag = 0;
+	msg.value = 0;
+	msg.msg[0] = '\0';
+	msg.dcmp.type = DCMP_TYPE_STATUS;
+	msg.dcmp.code = code;
 	if (dcmpQueueLock(dcmp, &s) < 0)
 		return DFMGR_ERROR_QUEUE_FULL;
-	memcpy(dcmp->buf[dcmp->write], &msg, sizeof(msg));
-	dcmpQueueCommit(dcmp, sizeof(msg), 0, s);
+	memcpy(dcmp->buf[dcmp->write], &msg, size);
+	dcmpQueueCommit(dcmp, size, 0, s);
 	return 0;
 }
 
@@ -553,8 +585,8 @@ void dcmpSetFinished(DcmpCB *dcmp, SceUInt8 code, SceUInt32 result, const char *
 	strncpy(dcmp->pending.msg, str, len);
 }
 
-void dcmpSendStatusUpdateProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					 const char *msg, SceSize len, SceUInt16 flag)
+void dcmpSendStatusUpdateProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					 const char *msg, SceSize len, SceUInt32 flag)
 {
 	int ret;
 
@@ -564,7 +596,7 @@ void dcmpSendStatusUpdateProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, Sce
 		SCE_PRINTF_WITH_INFO(15, 1095, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusUpdateProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 percent)
+void dcmpSendStatusUpdateProgressOngoing(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 percent)
 {
 	int ret;
 
@@ -607,11 +639,13 @@ void dcmpSendStatusUpdateFinished(SceUInt32 linkIndex, SceUInt32 result, const c
 	dcmp = _getDcmpCB(linkIndex);
 	dcmpMemsetChk(&msg, 0, size);
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, size);
-	msg.msgLen = len + 1;
-	msg.dcmp.type = DCMP_TYPE_STATUS;
-	msg.dcmp.code = DCMP_STATUS_UPDATE_FINISHED;
 	msg.status = status;
 	msg.value = result;
+	msg.dcmp.type = DCMP_TYPE_STATUS;
+	msg.dcmp.code = DCMP_STATUS_UPDATE_FINISHED;
+	msg.msgLen = len + 1;
+	msg.dcmp.hdr.dst = 0;
+	msg.dcmp.reserved = 0;
 	dcmpStrncpyChk(msg.msg, str, len);
 	if (size > sizeof(msg)) {
 		ret = DFMGR_ERROR_INVALID_ARGUMENT;
@@ -634,10 +668,12 @@ void sceDfMgrDcmpReqSendForLoadp(SceUInt32 result)
 	SceUInt32 status;
 	DcmpProgress msg;
 	SceSize size;
+	SceUInt16 pendingHeader;
 	int ret;
 
 	size = offsetof(DcmpProgress, msg) + 4;
-	if (dcmp->pending.type != 0 || dcmp->pending.code != 0)
+	memcpy(&pendingHeader, &dcmp->pending.type, sizeof(pendingHeader));
+	if (pendingHeader != 0)
 		size = ((dcmp->pending.len + 3) & ~3) + offsetof(DcmpProgress, msg);
 
 	switch (dcmp->pending.result) {
@@ -681,18 +717,22 @@ void sceDfMgrDcmpReqSendForLoadp(SceUInt32 result)
 
 	dcmpMemsetChk(&msg, 0, size);
 	SceDeci4pDfMgrForDebugger_6D26CC56(&msg.dcmp.hdr, size);
-	if (dcmp->pending.type == 0 && dcmp->pending.code == 0) {
-		msg.dcmp.type = DCMP_TYPE_STATUS;
-		msg.dcmp.code = DCMP_STATUS_LOADP;
+	msg.dcmp.hdr.dst = 0;
+	memcpy(&pendingHeader, &dcmp->pending.type, sizeof(pendingHeader));
+	if (pendingHeader == 0) {
 		msg.status = result;
 		msg.value = result == 4 ? 0x82 : result;
-		msg.msgLen = 1;
+		msg.dcmp.reserved = 0;
 		msg.msg[0] = '\0';
+		msg.dcmp.type = DCMP_TYPE_STATUS;
+		msg.dcmp.code = DCMP_STATUS_LOADP;
+		msg.msgLen = 1;
 	} else {
-		msg.dcmp.type = dcmp->pending.type;
-		msg.dcmp.code = dcmp->pending.code;
+		msg.dcmp.reserved = 0;
 		msg.status = status;
 		msg.value = dcmp->pending.result == 4 ? 0x82 : dcmp->pending.result;
+		msg.dcmp.type = dcmp->pending.type;
+		msg.dcmp.code = dcmp->pending.code;
 		msg.msgLen = dcmp->pending.len;
 		dcmpStrncpyChk(msg.msg, dcmp->pending.msg, dcmp->pending.len);
 	}
@@ -710,8 +750,8 @@ void sceDfMgrDcmpReqSendForLoadp(SceUInt32 result)
 	SCE_PRINTF_WITH_INFO(15, 1365, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					  const char *msg, SceSize len, SceUInt16 flag)
+void dcmpSendStatusInstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					  const char *msg, SceSize len, SceUInt32 flag)
 {
 	int ret;
 
@@ -721,7 +761,7 @@ void dcmpSendStatusInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, Sc
 		SCE_PRINTF_WITH_INFO(15, 1429, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusInstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 percent)
+void dcmpSendStatusInstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 percent)
 {
 	int ret;
 
@@ -737,8 +777,8 @@ void dcmpSetStatusInstallFinished(SceUInt32 linkIndex, SceUInt32 result, const c
 	dcmpSetFinished(_getDcmpCB(linkIndex), DCMP_STATUS_INSTALL_FINISHED, result, msg, len);
 }
 
-void dcmpSendStatusUninstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					    const char *msg, SceSize len, SceUInt16 flag)
+void dcmpSendStatusUninstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					    const char *msg, SceSize len, SceUInt32 flag)
 {
 	int ret;
 
@@ -748,8 +788,8 @@ void dcmpSendStatusUninstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, 
 		SCE_PRINTF_WITH_INFO(15, 1568, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusUninstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-					    SceUInt8 percent)
+void dcmpSendStatusUninstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+					    SceUInt32 percent)
 {
 	int ret;
 
@@ -765,9 +805,9 @@ void dcmpSetStatusUninstallFinished(SceUInt32 linkIndex, SceUInt32 result, const
 	dcmpSetFinished(_getDcmpCB(linkIndex), DCMP_STATUS_UNINSTALL_FINISHED, result, msg, len);
 }
 
-void dcmpSendStatusSaveDataInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind,
+void dcmpSendStatusSaveDataInstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind,
 						  SceUInt32 total, const char *msg, SceSize len,
-						  SceUInt16 flag)
+						  SceUInt32 flag)
 {
 	int ret;
 
@@ -777,8 +817,8 @@ void dcmpSendStatusSaveDataInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 
 		SCE_PRINTF_WITH_INFO(15, 1707, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusSaveDataInstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-						  SceUInt8 percent)
+void dcmpSendStatusSaveDataInstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+						  SceUInt32 percent)
 {
 	int ret;
 
@@ -795,9 +835,9 @@ void dcmpSetStatusSaveDataInstallFinished(SceUInt32 linkIndex, SceUInt32 result,
 			len);
 }
 
-void dcmpSendStatusSaveDataFormatProgressStarted(SceUInt32 linkIndex, SceUInt8 kind,
+void dcmpSendStatusSaveDataFormatProgressStarted(SceUInt32 linkIndex, SceInt32 kind,
 						 SceUInt32 total, const char *msg, SceSize len,
-						 SceUInt16 flag)
+						 SceUInt32 flag)
 {
 	int ret;
 
@@ -807,8 +847,8 @@ void dcmpSendStatusSaveDataFormatProgressStarted(SceUInt32 linkIndex, SceUInt8 k
 		SCE_PRINTF_WITH_INFO(15, 1846, "0x%08X\n", ret);
 }
 
-void dcmpSendStatusSaveDataFormatProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-						 SceUInt8 percent)
+void dcmpSendStatusSaveDataFormatProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+						 SceUInt32 percent)
 {
 	int ret;
 
@@ -825,9 +865,9 @@ void dcmpSetStatusSaveDataFormatFinished(SceUInt32 linkIndex, SceUInt32 result,
 }
 
 /* the SCE_DFMGR_EVENT_STATUS packets dfmgr hands to the protocols */
-int dcmpMakeStatusConnection(SceUInt32 connected, DcmpStatus *status)
+int dcmpMakeStatusConnection(SceUInt32 connected, DcmpStatusConnection *status)
 {
-	DcmpStatusConnection *msg = &status->connection;
+	DcmpStatusConnection *msg = status;
 
 	if (status == NULL) {
 		SCE_PRINTF_WITH_INFO(15, 2075, "\n");

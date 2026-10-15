@@ -80,7 +80,7 @@ typedef struct DfMgrLinkCB {
 	DfMgrLinkIo send;
 	DfMgrLinkIo recv;
 	const DfMgrLinkInfo *info;
-	SceUInt32 flags;			/* DFMGR_LINK_* */
+	volatile SceUInt32 flags;		/* DFMGR_LINK_* */
 	SceKernelSpinlock lock;
 	SceUID sendMutex;
 	SceUID recvMutex;
@@ -102,7 +102,7 @@ typedef struct DfMgrProtocolCB {
 	SceDfMgrProtocol info;
 	void *arg;
 	SceUID handle;
-	SceUInt32 flags;		/* DFMGR_PD_* */
+	volatile SceUInt32 flags;	/* DFMGR_PD_* */
 	SceKernelSpinlock lock;
 	SceUInt32 linkIndex;
 	DfMgrLinkCB *link;
@@ -235,7 +235,7 @@ typedef struct DcmpProgressOngoing {
 
 /* a finished report waiting for sceDfMgrDcmpReqSendForLoadp */
 typedef struct DcmpPending {
-	SceUInt32 result;
+	SceInt32 result;
 	char msg[64];
 	SceSize len;			/* with the terminating NUL */
 	SceUInt8 type;
@@ -291,41 +291,41 @@ void dcmpSendError(DfMgrProtocolCB *pd, SceUInt32 linkIndex, SceUInt8 code,
 void dcmpSendStatusProtocol(SceUInt32 linkIndex, SceUInt32 status,
 			    const SceDfMgrProtocol *protocol);
 void dcmpSendStatusProtocolAlias(SceUInt32 linkIndex, const SceDfMgrProtocol *protocol);
-void dcmpSendStatusPower(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 state, SceUInt8 arg);
+void dcmpSendStatusPower(SceUInt32 linkIndex, SceUInt32 kind, SceUInt32 state, SceUInt32 arg);
 void dcmpSendStatusSpace(SceUInt32 linkIndex, SceUInt32 protocol);
 int dcmpIsSendQueueEmpty(SceUInt32 linkIndex);
-int dcmpMakeStatusConnection(SceUInt32 connected, DcmpStatus *status);
+int dcmpMakeStatusConnection(SceUInt32 connected, DcmpStatusConnection *status);
 int dcmpMakeStatusProtocol(SceUInt32 enabled, const SceDfMgrProtocol *protocol,
 			   DcmpStatus *status);
 
-void dcmpSendStatusUpdateProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					 const char *msg, SceSize len, SceUInt16 flag);
-void dcmpSendStatusUpdateProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 percent);
+void dcmpSendStatusUpdateProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					 const char *msg, SceSize len, SceUInt32 flag);
+void dcmpSendStatusUpdateProgressOngoing(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 percent);
 void dcmpSendStatusUpdateFinished(SceUInt32 linkIndex, SceUInt32 result, const char *msg,
 				  SceSize len);
-void dcmpSendStatusInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					  const char *msg, SceSize len, SceUInt16 flag);
-void dcmpSendStatusInstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind, SceUInt8 percent);
+void dcmpSendStatusInstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					  const char *msg, SceSize len, SceUInt32 flag);
+void dcmpSendStatusInstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 percent);
 void dcmpSetStatusInstallFinished(SceUInt32 linkIndex, SceUInt32 result, const char *msg,
 				  SceSize len);
-void dcmpSendStatusUninstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind, SceUInt32 total,
-					    const char *msg, SceSize len, SceUInt16 flag);
-void dcmpSendStatusUninstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-					    SceUInt8 percent);
+void dcmpSendStatusUninstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind, SceUInt32 total,
+					    const char *msg, SceSize len, SceUInt32 flag);
+void dcmpSendStatusUninstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+					    SceUInt32 percent);
 void dcmpSetStatusUninstallFinished(SceUInt32 linkIndex, SceUInt32 result, const char *msg,
 				    SceSize len);
-void dcmpSendStatusSaveDataInstallProgressStarted(SceUInt32 linkIndex, SceUInt8 kind,
+void dcmpSendStatusSaveDataInstallProgressStarted(SceUInt32 linkIndex, SceInt32 kind,
 						  SceUInt32 total, const char *msg, SceSize len,
-						  SceUInt16 flag);
-void dcmpSendStatusSaveDataInstallProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-						  SceUInt8 percent);
+						  SceUInt32 flag);
+void dcmpSendStatusSaveDataInstallProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+						  SceUInt32 percent);
 void dcmpSetStatusSaveDataInstallFinished(SceUInt32 linkIndex, SceUInt32 result,
 					  const char *msg, SceSize len);
-void dcmpSendStatusSaveDataFormatProgressStarted(SceUInt32 linkIndex, SceUInt8 kind,
+void dcmpSendStatusSaveDataFormatProgressStarted(SceUInt32 linkIndex, SceInt32 kind,
 						 SceUInt32 total, const char *msg, SceSize len,
-						 SceUInt16 flag);
-void dcmpSendStatusSaveDataFormatProgressOngoing(SceUInt32 linkIndex, SceUInt8 kind,
-						 SceUInt8 percent);
+						 SceUInt32 flag);
+void dcmpSendStatusSaveDataFormatProgressOngoing(SceUInt32 linkIndex, SceInt32 kind,
+						 SceUInt32 percent);
 void dcmpSetStatusSaveDataFormatFinished(SceUInt32 linkIndex, SceUInt32 result,
 					 const char *msg, SceSize len);
 

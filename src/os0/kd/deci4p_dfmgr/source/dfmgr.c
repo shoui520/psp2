@@ -4,6 +4,7 @@
  */
 
 #include <sce/sysroot.h>
+#include <sce/sysroot_dfmgr.h>
 #include <string.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
@@ -17,29 +18,6 @@
 
 static void sendCallback(DfMgrLinkCB *link);
 static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt);
-
-/* SceSysrootForDriver_579CC758: progress reports of the system software tools */
-typedef struct DfMgrSysrootCallbacks {
-	SceSize size;
-	int (*updateProgressStarted)(SceInt32 phase, SceUInt32 total, const char *description, int size);
-	int (*updateProgressOngoing)(SceInt32 phase, SceUInt32 progress);
-	int (*updateFinished)(SceUInt32 result, const char *description, int size);
-	int (*installProgressStarted)(SceInt32 phase, SceUInt32 total, const char *description, int size);
-	int (*installProgressOngoing)(SceInt32 phase, SceUInt32 progress);
-	int (*installFinished)(SceUInt32 result, const char *description, int size);
-	int (*uninstallProgressStarted)(SceInt32 phase, SceUInt32 total, const char *description,
-					int size);
-	int (*uninstallProgressOngoing)(SceInt32 phase, SceUInt32 progress);
-	int (*uninstallFinished)(SceUInt32 result, const char *description, int size);
-	int (*saveDataInstallProgressStarted)(SceInt32 phase, SceUInt32 total, const char *description,
-					      int size);
-	int (*saveDataInstallProgressOngoing)(SceInt32 phase, SceUInt32 progress);
-	int (*saveDataInstallFinished)(SceUInt32 result, const char *description, int size);
-	int (*saveDataFormatProgressStarted)(SceInt32 phase, SceUInt32 total, const char *description,
-					     int size);
-	int (*saveDataFormatProgressOngoing)(SceInt32 phase, SceUInt32 progress);
-	int (*saveDataFormatFinished)(SceUInt32 result, const char *description, int size);
-} DfMgrSysrootCallbacks;
 
 #define DFMGR_PROGRESS_MSG_MAX	63
 
@@ -72,19 +50,22 @@ static int _saveDataFormatEventFinished(SceUInt32 result, const char *descriptio
 
 static int _saveDataFormatEventOngoing(SceInt32 phase, SceUInt32 progress)
 {
-	if (phase <= 0xff && progress - 1 <= 99) {
-		dcmpSendStatusSaveDataFormatProgressOngoing(0, phase, progress);
-		return 0;
-	}
-	return DFMGR_ERROR_INVALID_ARGUMENT;
+	if (phase > 0xff || progress - 1 > 99)
+		return DFMGR_ERROR_INVALID_ARGUMENT;
+	dcmpSendStatusSaveDataFormatProgressOngoing(0, phase, progress);
+	return 0;
 }
 
 static int _saveDataFormatEventStarted(SceInt32 phase, SceUInt32 total, const char *description, int size)
 {
-	SceUInt16 flag = phase < 0;
+	SceUInt32 flag;
 
-	if (flag)
+	if (phase < 0) {
 		phase &= 0x7fffffff;
+		flag = 1;
+	} else {
+		flag = 0;
+	}
 	if ((SceUInt32)phase > 0xff)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	if (size > DFMGR_PROGRESS_MSG_MAX)
@@ -107,19 +88,22 @@ static int _saveDataInstallEventFinished(SceUInt32 result, const char *descripti
 
 static int _saveDataInstallEventOngoing(SceInt32 phase, SceUInt32 progress)
 {
-	if (phase <= 0xff && progress - 1 <= 99) {
-		dcmpSendStatusSaveDataInstallProgressOngoing(0, phase, progress);
-		return 0;
-	}
-	return DFMGR_ERROR_INVALID_ARGUMENT;
+	if (phase > 0xff || progress - 1 > 99)
+		return DFMGR_ERROR_INVALID_ARGUMENT;
+	dcmpSendStatusSaveDataInstallProgressOngoing(0, phase, progress);
+	return 0;
 }
 
 static int _saveDataInstallEventStarted(SceInt32 phase, SceUInt32 total, const char *description, int size)
 {
-	SceUInt16 flag = phase < 0;
+	SceUInt32 flag;
 
-	if (flag)
+	if (phase < 0) {
 		phase &= 0x7fffffff;
+		flag = 1;
+	} else {
+		flag = 0;
+	}
 	if ((SceUInt32)phase > 0xff)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	if (size > DFMGR_PROGRESS_MSG_MAX)
@@ -142,19 +126,22 @@ static int _uninstallEventFinished(SceUInt32 result, const char *description, in
 
 static int _uninstallEventOngoing(SceInt32 phase, SceUInt32 progress)
 {
-	if (phase <= 0xff && progress - 1 <= 99) {
-		dcmpSendStatusUninstallProgressOngoing(0, phase, progress);
-		return 0;
-	}
-	return DFMGR_ERROR_INVALID_ARGUMENT;
+	if (phase > 0xff || progress - 1 > 99)
+		return DFMGR_ERROR_INVALID_ARGUMENT;
+	dcmpSendStatusUninstallProgressOngoing(0, phase, progress);
+	return 0;
 }
 
 static int _uninstallEventStarted(SceInt32 phase, SceUInt32 total, const char *description, int size)
 {
-	SceUInt16 flag = phase < 0;
+	SceUInt32 flag;
 
-	if (flag)
+	if (phase < 0) {
 		phase &= 0x7fffffff;
+		flag = 1;
+	} else {
+		flag = 0;
+	}
 	if ((SceUInt32)phase > 0xff)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	if (size > DFMGR_PROGRESS_MSG_MAX)
@@ -177,19 +164,22 @@ static int _installEventFinished(SceUInt32 result, const char *description, int 
 
 static int _installEventOngoing(SceInt32 phase, SceUInt32 progress)
 {
-	if (phase <= 0xff && progress - 1 <= 99) {
-		dcmpSendStatusInstallProgressOngoing(0, phase, progress);
-		return 0;
-	}
-	return DFMGR_ERROR_INVALID_ARGUMENT;
+	if (phase > 0xff || progress - 1 > 99)
+		return DFMGR_ERROR_INVALID_ARGUMENT;
+	dcmpSendStatusInstallProgressOngoing(0, phase, progress);
+	return 0;
 }
 
 static int _installEventStarted(SceInt32 phase, SceUInt32 total, const char *description, int size)
 {
-	SceUInt16 flag = phase < 0;
+	SceUInt32 flag;
 
-	if (flag)
+	if (phase < 0) {
 		phase &= 0x7fffffff;
+		flag = 1;
+	} else {
+		flag = 0;
+	}
 	if ((SceUInt32)phase > 0xff)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	if (size > DFMGR_PROGRESS_MSG_MAX)
@@ -213,19 +203,22 @@ static int _updateEventFinished(SceUInt32 result, const char *description, int s
 
 static int _updateEventOngoing(SceInt32 phase, SceUInt32 progress)
 {
-	if (phase <= 0xff && progress - 1 <= 99) {
-		dcmpSendStatusUpdateProgressOngoing(0, phase, progress);
-		return 0;
-	}
-	return DFMGR_ERROR_INVALID_ARGUMENT;
+	if (phase > 0xff || progress - 1 > 99)
+		return DFMGR_ERROR_INVALID_ARGUMENT;
+	dcmpSendStatusUpdateProgressOngoing(0, phase, progress);
+	return 0;
 }
 
 static int _updateEventStarted(SceInt32 phase, SceUInt32 total, const char *description, int size)
 {
-	SceUInt16 flag = phase < 0;
+	SceUInt32 flag;
 
-	if (flag)
+	if (phase < 0) {
 		phase &= 0x7fffffff;
+		flag = 1;
+	} else {
+		flag = 0;
+	}
 	if ((SceUInt32)phase > 0xff)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	if (size > DFMGR_PROGRESS_MSG_MAX)
@@ -236,8 +229,8 @@ static int _updateEventStarted(SceInt32 phase, SceUInt32 total, const char *desc
 	return 0;
 }
 
-static const DfMgrSysrootCallbacks s_dfmgrSysrootCallbacks = {
-	.size = sizeof(DfMgrSysrootCallbacks),
+static const SysrootDfmgrOps s_dfmgrSysrootCallbacks = {
+	.size = sizeof(SysrootDfmgrOps),
 	.updateProgressStarted = _updateEventStarted,
 	.updateProgressOngoing = _updateEventOngoing,
 	.updateFinished = _updateEventFinished,
@@ -276,7 +269,7 @@ static inline void dfmgrClearFlags(SceUInt32 mask)
 /* SceSysrootForDriver_C5EAF5F7: 0 power off, 1 power button, 2 low battery */
 static void _sysstatemgrEvent(int event)
 {
-	int percent;
+	int percent = s_dfmgrPowerEvents + 50;
 
 	switch (event) {
 	case 0:
@@ -284,7 +277,6 @@ static void _sysstatemgrEvent(int event)
 		dfmgrSetFlags(DFMGR_POWER_OFF);
 		break;
 	case 1:
-		percent = s_dfmgrPowerEvents + 50;
 		if (percent < 100) {
 			dcmpSendStatusPower(0, 0, 2, percent);
 			s_dfmgrPowerEvents++;
@@ -308,7 +300,8 @@ static inline DfMgrProtocolCB *_getPdCB(SceUInt32 id)
 	return NULL;
 }
 
-static inline int _callProtocolHandler(DfMgrProtocolCB *pd, int event, void *arg)
+static __attribute__((always_inline)) inline int
+_callProtocolHandler(DfMgrProtocolCB *pd, int event, void *arg)
 {
 	int ret;
 
@@ -345,11 +338,16 @@ static void recvCallback(DfMgrLinkCB *link)
 	SceDeci4pHeader hdr;
 	SceUInt8 discard[16];
 	DfMgrProtocolCB *pd;
+	SceUInt16 sizeLow;
+	SceUInt32 packetSize, protocol;
 	SceSize n;
 	int ret;
 
 	if (link->recv(&hdr, sizeof(hdr)) < 0)
 		return;
+	memcpy(&sizeLow, hdr.size, sizeof(sizeLow));
+	packetSize = sizeLow | hdr.size[2] << 16;
+	protocol = hdr.protocol;
 	if (hdr.version != SCE_DECI4P_VERSION) {
 		SCE_PRINTF_WITH_INFO(0, 1478, "[DECI] unknown packet version: 0x%02x\n",
 				     hdr.version);
@@ -363,15 +361,15 @@ static void recvCallback(DfMgrLinkCB *link)
 		return;
 	}
 	link->header = hdr;
-	link->recvRemaining = hdr.size[0] | hdr.size[1] << 8 | hdr.size[2] << 16;
+	link->recvRemaining = packetSize;
 
-	if (hdr.protocol == DFMGR_PROTOCOL_DCMP) {
+	if (protocol == DFMGR_PROTOCOL_DCMP) {
 		pd = _getPdCB(s_dfmgrLinkTable[link->info->id].pd);
 		if (pd == NULL)
 			goto unknown;
 	} else {
 		for (pd = s_dfmgrPd; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++)
-			if ((pd->flags & DFMGR_PD_OPEN) && pd->info.protocol == hdr.protocol)
+			if ((pd->flags & DFMGR_PD_OPEN) && pd->info.protocol == protocol)
 				break;
 		if (pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT])
 			goto unknown;
@@ -436,8 +434,7 @@ int sceDfMgrInit(void)
 	memset(s_dfmgrPd, 0, sizeof(s_dfmgrPd));
 	s_dfmgrNextHandle = 0x1000;
 
-	for (i = 0; i < DFMGR_LINK_COUNT; i++) {
-		link = &s_dfmgrLink[i];
+	for (i = 0, link = s_dfmgrLink; i < DFMGR_LINK_COUNT; i++, link++) {
 		pd = _getPdCB(s_dfmgrLinkTable[i].pd);
 		ret = ksceKernelCreateMutex("SceDeci4pDfMgrSend", SCE_KERNEL_ATTR_THREAD_PRIO, 0,
 					    NULL);
@@ -498,16 +495,6 @@ int sceDfMgrModuleStart(SceSize args, void *argp)
 	if (sceDfMgrInit() < 0)
 		return SCE_KERNEL_START_FAILED;
 	return SCE_KERNEL_START_SUCCESS;
-}
-
-static inline DfMgrProtocolCB *dfmgrFindHandle(SceUID handle)
-{
-	DfMgrProtocolCB *pd;
-
-	for (pd = s_dfmgrPd; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++)
-		if ((pd->flags & DFMGR_PD_OPEN) && pd->handle == handle)
-			return pd;
-	return NULL;
 }
 
 int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void *arg)
@@ -585,13 +572,13 @@ int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void
 	if (pd->link->flags & DFMGR_LINK_CONNECTED) {
 		if (protocol->flags & DFMGR_PROTOCOL_ENABLE)
 			return handle;
-		dcmpMakeStatusConnection(1, &status);
+		dcmpMakeStatusConnection(1, &status.connection);
 		ret = _callProtocolHandler(pd, SCE_DFMGR_EVENT_STATUS, &status);
 		if (ret < 0)
 			SCE_PRINTF_WITH_INFO(15, 894, "%08X\n", ret);
 		return handle;
 	}
-	dcmpMakeStatusConnection(0, &status);
+	dcmpMakeStatusConnection(0, &status.connection);
 	ret = _callProtocolHandler(pd, SCE_DFMGR_EVENT_STATUS, &status);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(15, 870, "%08X\n", ret);
@@ -613,10 +600,12 @@ int sceDfMgrClose(SceUID handle)
 	SceUInt32 linkIndex;
 	int ret;
 
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 921, "%08X\n", handle);
-		return DFMGR_ERROR_INVALID_ARGUMENT;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 921, "%08X\n", handle);
+			return DFMGR_ERROR_INVALID_ARGUMENT;
+		}
 	}
 	ret = ksceKernelWaitSema(pd->link->eventSema, 2, NULL);
 	if (ret < 0)
@@ -646,10 +635,12 @@ int sceDfMgrReqSend(SceUID handle)
 	SceKernelIntrStatus s, rs;
 	int ret;
 
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 966, "%08X\n", handle);
-		return DFMGR_ERROR_INVALID_ARGUMENT;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 966, "%08X\n", handle);
+			return DFMGR_ERROR_INVALID_ARGUMENT;
+		}
 	}
 	link = pd->link;
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->lock);
@@ -664,18 +655,22 @@ int sceDfMgrReqSend(SceUID handle)
 		dfmgrSetProtocolStatus(pd, DFMGR_PD_SEND_REQUESTED, 1);
 		handle = pd->handle;
 		rs = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->reqLock);
-		if (link->reqCount < DFMGR_REQ_QUEUE) {
+		if (link->reqCount > DFMGR_REQ_QUEUE - 1) {
+			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
+			ret = DFMGR_ERROR_QUEUE_FULL;
+		} else {
+			int write = link->reqWrite;
+			int next = write + 1;
+
 			link->reqCount++;
-			link->req[link->reqWrite] = handle;
-			link->reqWrite = link->reqWrite + 1 >= DFMGR_REQ_QUEUE ? 0 :
-					 link->reqWrite + 1;
+			if (next > DFMGR_REQ_QUEUE - 1)
+				next = 0;
+			link->req[write] = handle;
+			link->reqWrite = next;
 			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
 			ret = ksceKernelSetEventFlag(link->sendEvf, 1);
 			if (ret < 0)
 				SCE_DBG_ASSERT(0, 1032);
-		} else {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
-			ret = DFMGR_ERROR_QUEUE_FULL;
 		}
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
@@ -695,10 +690,12 @@ int sceDfMgrSend(SceUID handle, const void *data, SceSize size)
 		SCE_PRINTF_WITH_INFO(15, 1053, "\n");
 		return DFMGR_ERROR_NULL_BUFFER;
 	}
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 1060, "%08X\n", handle);
-		return DFMGR_ERROR_INVALID_ARGUMENT;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 1060, "%08X\n", handle);
+			return DFMGR_ERROR_INVALID_ARGUMENT;
+		}
 	}
 	link = pd->link;
 	if (!(pd->flags & DFMGR_PD_SEND_REQUESTED) && !(pd->flags & DFMGR_PD_SENDING))
@@ -712,12 +709,21 @@ int sceDfMgrSend(SceUID handle, const void *data, SceSize size)
 		return ret;
 
 	if (!(pd->flags & DFMGR_PD_HEADER_SENT)) {
-		link->sendRemaining = buf->size[0] | buf->size[1] << 8 | buf->size[2] << 16;
+		SceUInt16 sizeLow;
+		SceUInt32 protocol, packetProtocol, id;
+
+		memcpy(&sizeLow, buf->size, sizeof(sizeLow));
+		link->sendRemaining = sizeLow | buf->size[2] << 16;
 		buf->version = SCE_DECI4P_VERSION;
-		buf->reserved = 0;
-		buf->src = link->info->id == 1 ? 0xa100 : 0xa000;
-		buf->protocol = pd->info.protocol;
-		if (pd->info.protocol != DFMGR_PROTOCOL_DCMP)
+		protocol = pd->info.protocol;
+		id = link->info->id;
+		buf->reserved0 = 0;
+		buf->reserved1 = 0;
+		packetProtocol = pd->info.protocol;
+		buf->reserved2 = 0;
+		buf->src = id == 1 ? 0xa100 : 0xa000;
+		buf->protocol = protocol;
+		if (packetProtocol != DFMGR_PROTOCOL_DCMP)
 			buf->dst = pd->info.destination;
 		if (size <= link->sendRemaining) {
 			dfmgrSetProtocolStatus(pd, DFMGR_PD_HEADER_SENT, 1);
@@ -755,7 +761,7 @@ static void sendCallback(DfMgrLinkCB *link)
 	SceUInt32 pad;
 	SceSize n;
 	SceUID handle;
-	int ret;
+	int ret, read, next;
 
 	link->sendRemaining = 0;
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->reqLock);
@@ -763,16 +769,22 @@ static void sendCallback(DfMgrLinkCB *link)
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
 		return;
 	}
+	read = link->reqRead;
 	link->reqCount--;
-	handle = link->req[link->reqRead];
-	link->reqRead = link->reqRead + 1 >= DFMGR_REQ_QUEUE ? 0 : link->reqRead + 1;
+	next = read + 1;
+	if (next > DFMGR_REQ_QUEUE - 1)
+		next = 0;
+	handle = link->req[read];
+	link->reqRead = next;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
 	if (handle < 0)
 		return;
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 1356, "%08X\n", handle);
-		return;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 1356, "%08X\n", handle);
+			return;
+		}
 	}
 	dfmgrSetProtocolStatus(pd, DFMGR_PD_SENDING, 1);
 	dfmgrSetProtocolStatus(pd, DFMGR_PD_SEND_REQUESTED, 0);
@@ -816,10 +828,12 @@ int sceDfMgrRecv(SceUID handle, void *buf, SceSize size)
 		SCE_PRINTF_WITH_INFO(15, 1201, "\n");
 		return DFMGR_ERROR_NULL_BUFFER;
 	}
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 1208, "%08X\n", handle);
-		return DFMGR_ERROR_INVALID_ARGUMENT;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 1208, "%08X\n", handle);
+			return DFMGR_ERROR_INVALID_ARGUMENT;
+		}
 	}
 	link = pd->link;
 	ret = ksceKernelLockMutex(link->recvMutex, 1, NULL);
@@ -864,10 +878,12 @@ int sceDfMgrSendSpace(SceUID handle)
 	DfMgrProtocolCB *pd;
 	int i;
 
-	pd = dfmgrFindHandle(handle);
-	if (pd == NULL) {
-		SCE_PRINTF_WITH_INFO(15, 1303, "%08X\n", handle);
-		return DFMGR_ERROR_NOT_FOUND;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->handle != handle) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
+			SCE_PRINTF_WITH_INFO(15, 1303, "%08X\n", handle);
+			return DFMGR_ERROR_NOT_FOUND;
+		}
 	}
 	for (i = 100; i != 0; i--) {
 		if (pd->flags & DFMGR_PD_SPACE_DONE)
@@ -905,7 +921,7 @@ int dfmgrSetLinkStatus(DfMgrLinkCB *link, SceUInt32 mask, int on)
 /* tell the protocols on the link that it is up / down */
 static inline void dfmgrNotifyConnection(DfMgrLinkCB *link, SceUInt32 connected)
 {
-	DcmpStatus status;
+	DcmpStatusConnection status;
 	DfMgrProtocolCB *pd;
 
 	dcmpMakeStatusConnection(connected, &status);
@@ -934,11 +950,11 @@ int dfmgrStartProtocol(SceUInt32 protocol)
 	DfMgrProtocolCB *pd;
 	int ret;
 
-	for (pd = s_dfmgrPd; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++)
-		if ((pd->flags & DFMGR_PD_OPEN) && pd->info.protocol == protocol)
-			break;
-	if (pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT])
-		return DFMGR_ERROR_UNKNOWN_PROTOCOL;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->info.protocol != protocol) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT])
+			return DFMGR_ERROR_UNKNOWN_PROTOCOL;
+	}
 	dfmgrSetProtocolStatus(pd, DFMGR_PD_STARTED, 1);
 	ret = dcmpMakeStatusProtocol(1, &pd->info, &status);
 	if (ret < 0) {
@@ -955,11 +971,11 @@ int dfmgrStopProtocol(SceUInt32 protocol)
 	DfMgrProtocolCB *pd;
 	int ret;
 
-	for (pd = s_dfmgrPd; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++)
-		if ((pd->flags & DFMGR_PD_OPEN) && pd->info.protocol == protocol)
-			break;
-	if (pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT])
-		return DFMGR_ERROR_INVALID_ARGUMENT;
+	pd = s_dfmgrPd;
+	while (!(pd->flags & DFMGR_PD_OPEN) || pd->info.protocol != protocol) {
+		if (++pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT])
+			return DFMGR_ERROR_INVALID_ARGUMENT;
+	}
 	dfmgrSetProtocolStatus(pd, DFMGR_PD_STARTED, 0);
 	ret = dcmpMakeStatusProtocol(0, &pd->info, &status);
 	if (ret < 0) {
@@ -971,6 +987,9 @@ int dfmgrStopProtocol(SceUInt32 protocol)
 }
 
 /* name unknown: report the protocols of a link that came up */
+#if FW_SINCE(0x04000000)
+static void dfmgrSendStatusProtocols(SceUInt32 linkIndex) __attribute__((noinline));
+#endif
 static void dfmgrSendStatusProtocols(SceUInt32 linkIndex)
 {
 	DfMgrProtocolCB *pd;
@@ -1047,15 +1066,20 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 {
 	const struct PowerSuspendEvent *suspend = args;
 	SceUInt8 code;
-	int i, sleepMode;
+	int sleepMode;
 
 	if (resume == 0) {
 		switch (eventid) {
 		case SYSEVENT_SUSPEND_PREPARE(0):
 			sleepMode = suspend->sleepMode;
-			for (i = 0; i < DFMGR_LINK_COUNT; i++)
-				dfmgrSetLinkStatus(&s_dfmgrLink[i], DFMGR_LINK_SUSPENDED,
-						   s_dfmgrLink[i].flags & DFMGR_LINK_CONNECTED);
+			if (s_dfmgrLink[0].flags & DFMGR_LINK_CONNECTED)
+				dfmgrSetLinkStatus(&s_dfmgrLink[0], DFMGR_LINK_SUSPENDED, 1);
+			else
+				dfmgrSetLinkStatus(&s_dfmgrLink[0], DFMGR_LINK_SUSPENDED, 0);
+			if (s_dfmgrLink[1].flags & DFMGR_LINK_CONNECTED)
+				dfmgrSetLinkStatus(&s_dfmgrLink[1], DFMGR_LINK_SUSPENDED, 1);
+			else
+				dfmgrSetLinkStatus(&s_dfmgrLink[1], DFMGR_LINK_SUSPENDED, 0);
 			dcmpSendStatusPower(0, sleepMode == POWER_SLEEP_SUSPEND ? 0x81 : 0x80, 0, 0);
 			return 0;
 		case SYSEVENT_SUSPEND_QUERY:
@@ -1069,9 +1093,10 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 			dcmpSendStatusPower(0, sleepMode == POWER_SLEEP_SUSPEND ? 0x81 : 0x80, 3, 1);
 			return SCE_ERROR_ERRNO_EBUSY;
 		case SYSEVENT_SUSPEND_IDLE:
+			sleepMode = suspend->sleepMode;
 			if (s_dfmgrFlags & DFMGR_SUSPENDING)
 				return 0;
-			code = suspend->sleepMode == POWER_SLEEP_SUSPEND ? 0x8e : 0x8f;
+			code = sleepMode == POWER_SLEEP_SUSPEND ? 0x8e : 0x8f;
 			dfmgrSetFlags(DFMGR_SUSPENDING);
 			if (ksceKernelCheckDipsw(0xc3) == 0)
 				dcmpSendStatusPower(1, code, 0, 0);
