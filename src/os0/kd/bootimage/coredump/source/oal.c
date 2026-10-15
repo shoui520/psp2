@@ -225,7 +225,8 @@ static inline void setReason(CoredumpReasonCode *reason,
 	reason->groupLow = group;
 }
 
-int _getThreadStopReason(SceUID threadId,
+/* Sony calls it out of line from all five callers */
+__attribute__((noinline)) int _getThreadStopReason(SceUID threadId,
 	const CoredumpThreadStopEvent *stopEvent, CoredumpStopReason *stopReason)
 {
 	int result;
@@ -3975,10 +3976,7 @@ SceUID oalGetAbortedThreadID(SceUID pid,
 		if (ksceKernelGetThreadInfoForDebugger(threadId, 0,
 			&threadInfo.info) == 0) {
 			_getThreadStopReason(threadId, stopEvent, &stopReason);
-			reason = stopReason.reason.codeLow |
-				(uint32_t)stopReason.reason.codeHigh << 8 |
-				(uint32_t)stopReason.reason.groupLow << 16 |
-				(uint32_t)stopReason.reason.groupHigh << 24;
+			__builtin_memcpy(&reason, &stopReason.reason, sizeof(reason));
 			if (reason != 0)
 				goto found;
 		}
