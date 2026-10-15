@@ -71,6 +71,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	source/debug_state.c
 	source/dipsw.c
 	source/sysroot_time.c
+	source/sysroot_time_low.c
 	source/sysroot_capability.c
 	source/aeabi.S
 	source/unsigned_division.S

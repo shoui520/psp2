@@ -409,14 +409,6 @@ int SceSysrootForDriver_F804F761(void)
 	return 0;
 }
 
-uint32_t SceSysrootForKernel_41636522(void);
-
-/* name unknown: the low word of the system time, for procevent.c's timing */
-uint32_t SysrootGetTimeLow(void)
-{
-	return SceSysrootForKernel_41636522();
-}
-
 __attribute__((noinline))
 void InvokeInitCallback(uint32_t phase, uint32_t kind)
 {
