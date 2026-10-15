@@ -6,10 +6,12 @@
 #include "seg_internal.h"
 
 extern Writer *currentWriter;
-typedef struct CoredumpUltWriteCounts {
-	SceUInt32 numRuntimes;
-	SceUInt32 numUlts;
-} CoredumpUltWriteCounts;
+/* The callbacks' context: a count pair indexed by these. */
+enum {
+	COUNT_RUNTIMES,
+	COUNT_ULTS,
+	NUM_COUNTS,
+};
 
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
@@ -43,23 +45,24 @@ SegIf ultSegment;
 
 static int _calcSize(SegIf *segment)
 {
-	CoredumpUltWriteCounts counts;
+	SceUInt32 counts[NUM_COUNTS];
 	SceUInt32 *ids;
 	int result;
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 72, "_calcSize");
 	segment->writtenSize = 0;
-	counts = (CoredumpUltWriteCounts){ 0 };
+	counts[COUNT_RUNTIMES] = 0;
+	counts[COUNT_ULTS] = 0;
 	ids = memMgrLocalAlloc(1024);
 	if (ids == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	result = oalEachUltRuntimeInfo(coredumpRun.pid, _getSizeCallback,
-		ids, 1024, &counts);
+		ids, 1024, counts);
 	if (result == 0) {
-		if (counts.numRuntimes != 0) {
+		if (counts[COUNT_RUNTIMES] != 0) {
 			segment->numPhdr = 1;
-			segment->dataSize = counts.numUlts * sizeof(CoredumpUltInfo) +
-				counts.numRuntimes * sizeof(CoredumpUltRuntimeInfo) + 36;
+			segment->dataSize = counts[COUNT_ULTS] * sizeof(CoredumpUltInfo) +
+				counts[COUNT_RUNTIMES] * sizeof(CoredumpUltRuntimeInfo) + 36;
 		} else {
 			segment->numPhdr = 0;
 			segment->dataSize = 0;
@@ -72,7 +75,7 @@ static int _calcSize(SegIf *segment)
 static int _writeSegs(SegIf *segment)
 {
 	int numRuntimes;
-	CoredumpUltWriteCounts counts;
+	SceUInt32 counts[NUM_COUNTS];
 	SceSize writtenSize;
 	CoredumpNoteHeader header;
 	SceUInt32 *ids;
@@ -82,7 +85,8 @@ static int _writeSegs(SegIf *segment)
 	result = segment->numPhdr;
 	if (result == 0)
 		return result;
-	counts = (CoredumpUltWriteCounts){ 0 };
+	counts[COUNT_RUNTIMES] = 0;
+	counts[COUNT_ULTS] = 0;
 	ids = memMgrLocalAlloc(1024);
 	if (ids == NULL) {
 		result = SCE_ERROR_ERRNO_ENOMEM;
@@ -100,11 +104,11 @@ static int _writeSegs(SegIf *segment)
 		goto out;
 	segment->writtenSize += sizeof(numRuntimes);
 	result = oalEachUltRuntimeInfo(coredumpRun.pid,
-		_writeUltRuntimeInfoCallback, ids, 1024, &counts);
+		_writeUltRuntimeInfoCallback, ids, 1024, counts);
 	if (result != 0)
 		goto out;
-	writtenSize = counts.numRuntimes * sizeof(CoredumpUltRuntimeInfo) +
-		counts.numUlts * sizeof(CoredumpUltInfo);
+	writtenSize = counts[COUNT_RUNTIMES] * sizeof(CoredumpUltRuntimeInfo) +
+		counts[COUNT_ULTS] * sizeof(CoredumpUltInfo);
 	segment->writtenSize += writtenSize;
 	writtenSize += 36;
 	result = segWritePaddingData(segment, writtenSize);
@@ -118,32 +122,32 @@ done:
 static int _getSizeCallback(SceUInt32 runtimeId,
 	CoredumpUltRuntimeInfo *info, void *context)
 {
-	CoredumpUltWriteCounts *counts = context;
+	SceUInt32 *counts = context;
 
 	SCE_DBG_ASSERT_FUNC(info != NULL, 200, "_getSizeCallback");
 	SCE_DBG_ASSERT_FUNC(counts != NULL, 201, "_getSizeCallback");
-	counts->numRuntimes++;
-	counts->numUlts += info->numUsedUlts;
+	counts[COUNT_RUNTIMES]++;
+	counts[COUNT_ULTS] += info->numUsedUlts;
 	return 0;
 }
 
 static int _writeUltInfoCallback(CoredumpUltInfo *info, void *context)
 {
-	CoredumpUltWriteCounts *counts = context;
+	SceUInt32 *counts = context;
 	int result;
 
 	SCE_DBG_ASSERT_FUNC(info != NULL, 264, "_writeUltInfoCallback");
 	SCE_DBG_ASSERT_FUNC(counts != NULL, 265, "_writeUltInfoCallback");
 	result = writerWrite(currentWriter, info, sizeof(*info));
 	if (result == 0)
-		counts->numUlts++;
+		counts[COUNT_ULTS]++;
 	return result;
 }
 
 static int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,
 	CoredumpUltRuntimeInfo *info, void *context)
 {
-	CoredumpUltWriteCounts *counts = context;
+	SceUInt32 *counts = context;
 	SceSize size;
 	void *ids;
 	int result;
@@ -153,7 +157,7 @@ static int _writeUltRuntimeInfoCallback(SceUInt32 runtimeId,
 	result = writerWrite(currentWriter, info, sizeof(*info));
 	if (result != 0)
 		return result;
-	counts->numRuntimes++;
+	counts[COUNT_RUNTIMES]++;
 	ids = memMgrLocalAllAlloc(&size);
 	if (ids == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
