@@ -15,6 +15,10 @@ static SceSize s_objectTypeSize[OBJECT_HEAP_TYPES];
 /* SceKernelHeapForShared */
 static void *s_sharedHeap;
 
+/*
+ * The walks below stop at the first size over 0x200, as Sony's do: past the last
+ * class that is the first word of the object after the table.
+ */
 static const ObjectHeapSizeClassDef s_sizeClassDefs[] = {
 	{ 0x10, 0 }, { 0x20, 1 }, { 0x40, 1 }, { 0x80, 0 }, { 0x100, 0 }, { 0x200, 0 },
 };
@@ -293,8 +297,6 @@ int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, O
 							  fixedHeap);
 		}
 		ObjectHeapSetSizeClass(heap, def->size, fixedHeap, uid);
-		if (def == &s_sizeClassDefs[OBJECT_HEAP_SIZE_CLASSES - 1])
-			break;
 	}
 	heap->defaultHeap = ObjectHeapGetHeap(heap, 0x40);
 	*out = heap;
@@ -332,8 +334,6 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 			fixedHeap = ObjectHeapGetHeap(heap, def->size);
 			fixedHeap->heap = processHeap;
 		}
-		if (def == &s_sizeClassDefs[OBJECT_HEAP_SIZE_CLASSES - 1])
-			break;
 	}
 	ObjectHeapSetSizeClass(heap, (SceSize)-1, processHeap, -1);
 	return 0;
@@ -350,15 +350,10 @@ int SceSysmemForKernel_2F526AB8(ObjectHeap *heap)
 		if (entry->heap == NULL || entry->size == (SceSize)-1)
 			continue;
 		FixedHeapRelease(entry->heap);
-		for (def = s_sizeClassDefs; def->size <= 0x200; def++) {
+		for (def = s_sizeClassDefs; def->size <= 0x200; def++)
 			if (def->size == entry->size)
 				break;
-			if (def == &s_sizeClassDefs[OBJECT_HEAP_SIZE_CLASSES - 1]) {
-				def = NULL;
-				break;
-			}
-		}
-		if (def != NULL && def->ownHeap)
+		if (def->size <= 0x200 && def->ownHeap)
 			heap->hook->free(heap->hook->arg, entry->heap);
 		else
 			HeapFreeLocked(heap->heap, entry->heap);
