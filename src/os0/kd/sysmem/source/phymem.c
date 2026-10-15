@@ -238,9 +238,13 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	switch (type) {
 	case SCE_KERNEL_PAGE_VENEZIA_INDEX:
 		pages = s_phyPageVenezia;
+		if (pages == NULL)
+			return SCE_KERNEL_ERROR_PHYMEM_ERROR;
 		break;
 	case SCE_KERNEL_PAGE_VIP_INDEX:
 		pages = s_phyPageVip;
+		if (pages == NULL)
+			return SCE_KERNEL_ERROR_PHYMEM_ERROR;
 		break;
 	case SCE_KERNEL_PHYMEMPART_KERNEL_INDEX:
 		if (s_phyPartKernel == NULL)
@@ -252,8 +256,6 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	default:
 		return SCE_KERNEL_ERROR_PHYMEM_ERROR;
 	}
-	if (pages == NULL)
-		return SCE_KERNEL_ERROR_PHYMEM_ERROR;
 	info->base = pages->page << 12;
 	info->rangeSize = pages->size;
 	return 0;
