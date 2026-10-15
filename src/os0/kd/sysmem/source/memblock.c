@@ -2297,8 +2297,8 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 	SceKernelAllocMemBlockKernelOpt opt;
 	SysmemProcessStorage *storage;
 	SysmemVMBlock *entry, *end;
-	MemBlockObject *block = NULL;
 	SceUInt32 attr, restype;
+	MemBlockObject *block = NULL;
 	SceUID guid, puid;
 	char name[0x20];
 	int intr, rintr, ret;
@@ -2307,8 +2307,9 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	ret = SceSysmemForKernel_4E6D8BC3();
 	if (ret >= 1) {
-		SCE_DBG_PRINTF(0xb, 3893, "sceKernelCheckOpenVMDomain returns 0x%08x\n", ret);
-		SCE_DBG_ASSERT_FAIL(3894);
+		SCE_DBG_PRINTF_FUNC(0xb, 3893, "sceKernelAllocMemBlockForVMForUser",
+				    "sceKernelCheckOpenVMDomain returns 0x%08x\n", ret);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 3894, "sceKernelAllocMemBlockForVMForUser");
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (userName == NULL)
@@ -2322,7 +2323,8 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 	sceKernelSysrootGetCurrentThreadAttr(&attr);
 	restype = (attr >> 14) & 1;
 	if (SysrootIncProcessResource(restype) < 0) {
-		SCE_PRINTF_WITH_INFO(0xb, 3923, "MemBlock overflow, restype=0x%08x\n", restype);
+		SCE_PRINTF_WITH_INFO_FUNC(0xb, 3923, "sceKernelAllocMemBlockForVMForUser",
+					  "MemBlock overflow, restype=0x%08x\n", restype);
 		return SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 	}
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
@@ -2352,7 +2354,8 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 			storage->vmBlocks = SceSysrootForKernel_2F75C1DC(
 				SYSMEM_VM_BLOCKS * sizeof(SysmemVMBlock), NULL);
 			if (storage->vmBlocks == NULL)
-				ksceKernelPanic(SCE_DBGINFO(3976), __builtin_return_address(0));
+				ksceKernelPanic(SCE_DBGINFO_FUNC(3976, "sceKernelAllocMemBlockForVMForUser"),
+						__builtin_return_address(0));
 			for (entry = storage->vmBlocks; entry != storage->vmBlocks + SYSMEM_VM_BLOCKS;
 			     entry++)
 				entry->puid = -1;
@@ -2361,21 +2364,23 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 						   (SceObjectBase **)&block);
 		if (ret >= 0) {
 			rintr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
-			end = storage->vmBlocks + SYSMEM_VM_BLOCKS;
-			for (entry = storage->vmBlocks; entry != end; entry++) {
+			entry = storage->vmBlocks;
+			end = entry + SYSMEM_VM_BLOCKS;
+			do {
 				MemBlockObject *current;
 				uintptr_t base;
 
-				if (entry->puid != -1)
-					continue;
-				current = block;
-				entry->puid = puid;
-				base = current->vbase;
-				base += MemBlockGetHeadFreeSize(current);
-				entry->base = base;
-				entry->size = MemBlockGetAllocMapSizeRaw(block);
-				break;
-			}
+				if (entry->puid == -1) {
+					current = block;
+					entry->puid = puid;
+					base = current->vbase;
+					base += MemBlockGetHeadFreeSize(current);
+					entry->base = base;
+					entry->size = MemBlockGetAllocMapSizeRaw(block);
+					break;
+				}
+				entry++;
+			} while (entry != end);
 			ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, rintr);
 			ksceGUIDReleaseObject(guid);
 			ksceKernelSpinlockLowUnlockCpuResumeIntr(&storage->lock, intr);
@@ -2469,7 +2474,8 @@ int sceKernelSyncVMDomain(SceUID puid, uintptr_t va, SceSize size)
 		goto sync;
 	}
 overflow:
-	SCE_DBG_PRINTF(0xb, 4201, "Warning: VM Block overflow\n");
+	SCE_DBG_PRINTF_FUNC(0xb, 4201, "sceKernelSyncVMDomainForUser",
+			    "Warning: VM Block overflow\n");
 	ret = SceSysmemForKernel_9C23DFF7(0, puid, ksceKernelGetUIDMemBlockClass(),
 					  (SceObjectBase **)&block);
 	if (ret < 0)
