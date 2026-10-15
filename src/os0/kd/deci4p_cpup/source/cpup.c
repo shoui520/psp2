@@ -64,16 +64,19 @@ typedef struct CpupLink {
 	CpupRequest *req;
 } CpupLink;
 
-static struct {
-	SceUInt16 seq;
-	SceUID memblock;
-	CpupRequest req;
-	CpupPacket *buf;
-	CpupLink link;
-	SceUID bufSema;
-	SceUID reqSema;
-	SceUID mutex;
-} s_cpup;
+#if FW_VERSION >= 0x04000000
+static SceUInt16 s_cpupSequence;
+#endif
+static SceUID s_cpupMemBlock;
+static CpupRequest s_cpupRequest;
+static CpupPacket *s_cpupBuffer;
+static CpupLink s_cpupLink;
+static SceUID s_cpupBufferSemaphore;
+static SceUID s_cpupRequestSemaphore;
+static SceUID s_cpupMutex;
+#if FW_VERSION < 0x04000000
+static SceUInt16 s_cpupSequence;
+#endif
 
 static const SceDfMgrProtocol s_protocol = {
 	.size = sizeof(SceDfMgrProtocol),
@@ -89,31 +92,44 @@ static int CpupHandler(int event, void *arg, void *ctx)
 {
 	CpupLink *link = ctx;
 	CpupReplyHead head;
+	CpupReplyHead *reply;
+	SceUInt32 requestWord, reservedWord, sequence;
 	SceDfMgrStatus *st;
 
 	switch (event) {
 	case SCE_DFMGR_EVENT_RECV:
 		sceDfMgrRecv(link->handle, &head.hdr, sizeof(head.hdr));
 		sceDfMgrRecv(link->handle, head.word, sizeof(head.word));
-		*(CpupReplyHead *)s_cpup.req.pkt = head;
-		sceDfMgrRecv(link->handle, (SceUInt8 *)s_cpup.req.pkt + sizeof(head),
+		reply = (CpupReplyHead *)s_cpupRequest.pkt;
+		reply->hdr = head.hdr;
+		requestWord = head.word[0];
+		reservedWord = head.word[1];
+		sequence = head.word[2];
+		reply->word[2] = sequence;
+		reply->word[0] = requestWord;
+		reply->word[1] = reservedWord;
+		sceDfMgrRecv(link->handle, (SceUInt8 *)s_cpupRequest.pkt + sizeof(head),
 			     (SceSize)arg - sizeof(head));
 		break;
 	case SCE_DFMGR_EVENT_REQ_DONE:
 		ksceKernelSetEventFlag(link->req->evf, 1);
-		ksceKernelSignalSema(s_cpup.reqSema, 1);
+		ksceKernelSignalSema(s_cpupRequestSemaphore, 1);
 		break;
 	case SCE_DFMGR_EVENT_SEND:
-		sceDfMgrSend(link->handle, s_cpup.req.pkt, s_cpup.req.size);
+		sceDfMgrSend(link->handle, s_cpupRequest.pkt, s_cpupRequest.size);
 		break;
 	case SCE_DFMGR_EVENT_STATUS:
 		st = arg;
 		if (st->kind == 0) {
-			if (st->connected == 0 || st->connected == 1)
-				link->connected = st->connected;
+			if (st->connected == 0)
+				link->connected = 0;
+			else if (st->connected == 1)
+				link->connected = 1;
 		} else if (st->kind == 1) {
-			if (st->enabled == 0 || st->enabled == 1)
-				link->enabled = st->enabled;
+			if (st->enabled == 0)
+				link->enabled = 0;
+			else if (st->enabled == 1)
+				link->enabled = 1;
 		}
 		break;
 	}
@@ -121,43 +137,43 @@ static int CpupHandler(int event, void *arg, void *ctx)
 }
 
 /* name unknown */
-static int CpupInit(void)
+static __attribute__((noinline)) int CpupInit(void)
 {
-	s_cpup.mutex = ksceKernelCreateMutex("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
-	if (s_cpup.mutex < 0)
-		return s_cpup.mutex;
+	s_cpupMutex = ksceKernelCreateMutex("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	if (s_cpupMutex < 0)
+		return s_cpupMutex;
 
-	s_cpup.memblock = ksceKernelAllocMemBlock("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+	s_cpupMemBlock = ksceKernelAllocMemBlock("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 						  CPUP_BUF_SIZE, NULL);
-	ksceKernelGetMemBlockBase(s_cpup.memblock, (void **)&s_cpup.buf);
+	ksceKernelGetMemBlockBase(s_cpupMemBlock, (void **)&s_cpupBuffer);
 
-	s_cpup.reqSema = ksceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
-	if (s_cpup.reqSema < 0) {
-		ksceKernelDeleteMutex(s_cpup.mutex);
-		return s_cpup.reqSema;
+	s_cpupRequestSemaphore = ksceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
+	if (s_cpupRequestSemaphore < 0) {
+		ksceKernelDeleteMutex(s_cpupMutex);
+		return s_cpupRequestSemaphore;
 	}
-	s_cpup.bufSema = ksceKernelCreateSema("SceDeci4pCpupBuf", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
-	if (s_cpup.bufSema < 0) {
-		ksceKernelDeleteMutex(s_cpup.mutex);
-		ksceKernelDeleteSema(s_cpup.reqSema);
-		return s_cpup.bufSema;
+	s_cpupBufferSemaphore = ksceKernelCreateSema("SceDeci4pCpupBuf", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
+	if (s_cpupBufferSemaphore < 0) {
+		ksceKernelDeleteMutex(s_cpupMutex);
+		ksceKernelDeleteSema(s_cpupRequestSemaphore);
+		return s_cpupBufferSemaphore;
 	}
-	s_cpup.req.evf = ksceKernelCreateEventFlag("SceDeci4pCpup", 0, 0, NULL);
-	if (s_cpup.req.evf < 0) {
-		ksceKernelDeleteMutex(s_cpup.mutex);
-		ksceKernelDeleteSema(s_cpup.reqSema);
-		ksceKernelDeleteSema(s_cpup.bufSema);
-		return s_cpup.req.evf;
+	s_cpupRequest.evf = ksceKernelCreateEventFlag("SceDeci4pCpup", 0, 0, NULL);
+	if (s_cpupRequest.evf < 0) {
+		ksceKernelDeleteMutex(s_cpupMutex);
+		ksceKernelDeleteSema(s_cpupRequestSemaphore);
+		ksceKernelDeleteSema(s_cpupBufferSemaphore);
+		return s_cpupRequest.evf;
 	}
 
-	s_cpup.link.handle = 0;
-	s_cpup.link.connected = 0;
-	s_cpup.link.enabled = 0;
-	s_cpup.link.req = NULL;
-	s_cpup.link.handle = sceDfMgrOpen(CpupHandler, &s_protocol, &s_cpup.link);
-	s_cpup.link.connected = 0;
-	s_cpup.link.enabled = 0;
-	s_cpup.link.req = &s_cpup.req;
+	s_cpupLink.handle = 0;
+	s_cpupLink.connected = 0;
+	s_cpupLink.enabled = 0;
+	s_cpupLink.req = NULL;
+	s_cpupLink.handle = sceDfMgrOpen(CpupHandler, &s_protocol, &s_cpupLink);
+	s_cpupLink.connected = 0;
+	s_cpupLink.enabled = 0;
+	s_cpupLink.req = &s_cpupRequest;
 	return 0;
 }
 
@@ -171,27 +187,29 @@ int CpupModuleStart(SceSize args, void *argp)
 }
 
 /* name unknown: take the packet buffer */
-static CpupPacket *CpupGetBuffer(void)
+static __attribute__((noinline)) CpupPacket *CpupGetBuffer(void)
 {
-	if (ksceKernelWaitSema(s_cpup.bufSema, 1, NULL) == 0)
-		return s_cpup.buf;
+	if (ksceKernelWaitSema(s_cpupBufferSemaphore, 1, NULL) == 0)
+		return s_cpupBuffer;
 	return NULL;
 }
 
 /* name unknown */
-static void CpupReleaseBuffer(void)
+static __attribute__((noinline)) void CpupReleaseBuffer(void)
 {
-	ksceKernelSignalSema(s_cpup.bufSema, 1);
+	ksceKernelSignalSema(s_cpupBufferSemaphore, 1);
 }
 
 /* name unknown: send pkt and wait for the reply */
 static int CpupSendRequest(CpupPacket *pkt, SceSize size)
 {
 	CpupRequest *req;
+	SceUInt32 sequence;
+	int handle;
 
-	if (ksceKernelWaitSema(s_cpup.reqSema, 1, NULL) == 0) {
-		req = &s_cpup.req;
-		req->seq = s_cpup.seq++;
+	if (ksceKernelWaitSema(s_cpupRequestSemaphore, 1, NULL) == 0) {
+		req = &s_cpupRequest;
+		req->seq = s_cpupSequence++;
 	} else {
 		/* Sony's code carries on with no request */
 		req = NULL;
@@ -201,17 +219,20 @@ static int CpupSendRequest(CpupPacket *pkt, SceSize size)
 
 	pkt->hdr.version = SCE_DECI4P_VERSION;
 	SceDeci4pDfMgrForDebugger_6D26CC56(&pkt->hdr, size);
+	sequence = req->seq;
 	pkt->hdr.protocol = CPUP_PROTOCOL;
-	pkt->seq = req->seq;
+	pkt->seq = sequence;
+	handle = s_cpupLink.handle;
 	pkt->hdr.src = SCE_DECI4P_PORT_TARGET;
 	pkt->hdr.dst = 0;
-	sceDfMgrReqSend(s_cpup.link.handle);
+	sceDfMgrReqSend(handle);
 
 	return ksceKernelWaitEventFlag(req->evf, 1,
 				       SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
 }
 
-static CpupPacket *CpupNewPacket(SceSize size, SceUInt8 code)
+static inline __attribute__((always_inline)) CpupPacket *CpupNewPacket(SceSize size,
+								     SceUInt8 code)
 {
 	CpupPacket *pkt = CpupGetBuffer();
 
@@ -225,7 +246,7 @@ static CpupPacket *CpupNewPacket(SceSize size, SceUInt8 code)
 }
 
 /* the host's error code, else the request's own result */
-static int CpupFinish(CpupPacket *pkt, int ret)
+static inline __attribute__((always_inline)) int CpupFinish(CpupPacket *pkt, int ret)
 {
 	if (pkt->arg[0] != 0)
 		ret = pkt->arg[0];
@@ -234,7 +255,7 @@ static int CpupFinish(CpupPacket *pkt, int ret)
 }
 
 /* sceDeci4pCpupInquireVersionForDriver */
-int SceDeci4pCpupForDriver_C0AB956B(SceUInt32 *protocolVersion, SceUInt32 *packageVersion,
+int sceDeci4pCpupInquireVersionForDriver(SceUInt32 *protocolVersion, SceUInt32 *packageVersion,
 				      SceUInt32 *boardVersion)
 {
 	CpupPacket *pkt;
@@ -282,7 +303,7 @@ int SceDeci4pCpupForDriver_765F7234(SceUInt32 arg0, SceUInt32 arg1, SceUInt32 ar
 }
 
 /* sceDeci4pCpupStartUpdateForDriver: enter CP update */
-int SceDeci4pCpupForDriver_DE07478F(SceUInt32 arg0, SceUInt32 arg1, SceUInt32 *ctx)
+int sceDeci4pCpupStartUpdateForDriver(SceUInt32 arg0, SceUInt32 arg1, SceUInt32 *ctx)
 {
 	CpupPacket *pkt;
 	int ret, err;
@@ -306,7 +327,8 @@ int SceDeci4pCpupForDriver_DE07478F(SceUInt32 arg0, SceUInt32 arg1, SceUInt32 *c
 }
 
 /* sceDeci4pCpupTransferUpdatePackageForDriver */
-int SceDeci4pCpupForDriver_90339379(SceUInt32 ctx, SceUInt32 offset, SceSize size, const void *data)
+int sceDeci4pCpupTransferUpdatePackageForDriver(SceUInt32 ctx, SceUInt32 offset,
+					     SceSize size, const void *data)
 {
 	SceSize total = size + 0x28;
 	CpupPacket *pkt;
@@ -325,7 +347,8 @@ int SceDeci4pCpupForDriver_90339379(SceUInt32 ctx, SceUInt32 offset, SceSize siz
 	return CpupFinish(pkt, ret);
 }
 
-static int CpupSimpleRequest(SceUInt8 code, SceUInt32 value)
+static inline __attribute__((always_inline)) int CpupSimpleRequest(SceUInt8 code,
+								  SceUInt32 value)
 {
 	CpupPacket *pkt;
 	int ret;
@@ -345,13 +368,13 @@ int SceDeci4pCpupForDriver_02CDA82C(SceUInt32 ctx)
 }
 
 /* sceDeci4pCpupTriggerUpdateForDriver */
-int SceDeci4pCpupForDriver_D78403C8(SceUInt32 ctx)
+int sceDeci4pCpupTriggerUpdateForDriver(SceUInt32 ctx)
 {
 	return CpupSimpleRequest(CPUP_REQ_TRIGGER_UPDATE, ctx);
 }
 
 /* sceDeci4pCpupGetProgressForDriver */
-int SceDeci4pCpupForDriver_7998FFD8(SceUInt32 ctx, SceUInt32 *out0, SceUInt32 *out1,
+int sceDeci4pCpupGetProgressForDriver(SceUInt32 ctx, SceUInt32 *out0, SceUInt32 *out1,
 				     SceUInt32 *out2)
 {
 	CpupPacket *pkt;
@@ -382,13 +405,13 @@ int SceDeci4pCpupForDriver_2BAD7B39(SceUInt32 ctx)
 }
 
 /* sceDeci4pCpupExecCommand */
-int SceDeci4pCpupForDriver_BBB991CD(SceUInt32 command)
+int sceDeci4pCpupExecCommand(SceUInt32 command)
 {
 	return CpupSimpleRequest(CPUP_REQ_EXEC_COMMAND, command);
 }
 
 /* sceDeci4pCpupGetRtcForDriver */
-int SceDeci4pCpupForDriver_2015C7CB(SceUInt32 *rtc, int physical)
+int sceDeci4pCpupGetRtcForDriver(SceUInt32 *rtc, int physical)
 {
 	CpupPacket *pkt;
 	int ret, err;
@@ -410,7 +433,7 @@ int SceDeci4pCpupForDriver_2015C7CB(SceUInt32 *rtc, int physical)
 }
 
 /* sceDeci4pCpupSetRtcForDriver */
-int SceDeci4pCpupForDriver_DAC4F630(SceUInt32 rtc, int physical)
+int sceDeci4pCpupSetRtcForDriver(SceUInt32 rtc, int physical)
 {
 	CpupPacket *pkt;
 	int ret;
@@ -426,22 +449,29 @@ int SceDeci4pCpupForDriver_DAC4F630(SceUInt32 rtc, int physical)
 }
 
 /* sceDeci4pCpupSetRtcWithActivationKeyForDriver */
-int SceDeci4pCpupForDriver_4939DA45(SceUInt32 rtc, int physical, const SceUInt32 *key)
+int sceDeci4pCpupSetRtcWithActivationKeyForDriver(SceUInt32 rtc, int physical,
+					      const SceUInt32 *key)
 {
 	CpupPacket *pkt;
+	SceUInt32 secondWord, thirdWord, fourthWord;
 	int ret;
 
 	if ((pkt = CpupNewPacket(0x3c, CPUP_REQ_SET_RTC)) == NULL)
 		return -1;
-	pkt->arg[0] = physical != 0;
+	if (physical != 0)
+		physical = 1;
+	pkt->arg[0] = physical;
 	pkt->arg[1] = rtc;
 	pkt->arg[2] = 0;
 	if (key != NULL) {
-		pkt->arg[0] = (physical != 0) | 2;
+		pkt->arg[0] = physical | 2;
+		secondWord = key[1];
+		thirdWord = key[2];
+		fourthWord = key[3];
 		pkt->arg[3] = key[0];
-		pkt->arg[4] = key[1];
-		pkt->arg[5] = key[2];
-		pkt->arg[6] = key[3];
+		pkt->arg[4] = secondWord;
+		pkt->arg[5] = thirdWord;
+		pkt->arg[6] = fourthWord;
 		pkt->arg[7] = key[4];
 	}
 
@@ -450,7 +480,7 @@ int SceDeci4pCpupForDriver_4939DA45(SceUInt32 rtc, int physical, const SceUInt32
 }
 
 /* sceDeci4pCpupGetCpSerialIdForDriver */
-int SceDeci4pCpupForDriver_8139AD4E(void *serialId, SceSize *size)
+int sceDeci4pCpupGetCpSerialIdForDriver(void *serialId, SceSize *size)
 {
 	CpupPacket *pkt;
 	SceSize n;

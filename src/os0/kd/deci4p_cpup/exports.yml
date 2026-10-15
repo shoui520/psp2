@@ -12,15 +12,15 @@ SceDeci4pCpup:
       nid: 0x5E323A42
       functions:
         - SceDeci4pCpupForDriver_02CDA82C: 0x02CDA82C
-        - SceDeci4pCpupForDriver_2015C7CB: 0x2015C7CB
+        - sceDeci4pCpupGetRtcForDriver: 0x2015C7CB
         - SceDeci4pCpupForDriver_2BAD7B39: 0x2BAD7B39
-        - SceDeci4pCpupForDriver_4939DA45: 0x4939DA45
+        - sceDeci4pCpupSetRtcWithActivationKeyForDriver: 0x4939DA45
         - SceDeci4pCpupForDriver_765F7234: 0x765F7234
-        - SceDeci4pCpupForDriver_7998FFD8: 0x7998FFD8
-        - SceDeci4pCpupForDriver_8139AD4E: 0x8139AD4E
-        - SceDeci4pCpupForDriver_90339379: 0x90339379
-        - SceDeci4pCpupForDriver_BBB991CD: 0xBBB991CD
-        - SceDeci4pCpupForDriver_C0AB956B: 0xC0AB956B
-        - SceDeci4pCpupForDriver_D78403C8: 0xD78403C8
-        - SceDeci4pCpupForDriver_DAC4F630: 0xDAC4F630
-        - SceDeci4pCpupForDriver_DE07478F: 0xDE07478F
+        - sceDeci4pCpupGetProgressForDriver: 0x7998FFD8
+        - sceDeci4pCpupGetCpSerialIdForDriver: 0x8139AD4E
+        - sceDeci4pCpupTransferUpdatePackageForDriver: 0x90339379
+        - sceDeci4pCpupExecCommand: 0xBBB991CD
+        - sceDeci4pCpupInquireVersionForDriver: 0xC0AB956B
+        - sceDeci4pCpupTriggerUpdateForDriver: 0xD78403C8
+        - sceDeci4pCpupSetRtcForDriver: 0xDAC4F630
+        - sceDeci4pCpupStartUpdateForDriver: 0xDE07478F
