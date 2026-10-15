@@ -245,12 +245,40 @@ static inline void FixedHeapCallFreeHook(FixedHeap *heap, void *object, const vo
 		heap->objectHook->onFree(heap->objectHook->arg, heap, object, caller);
 }
 
+/* the page and its simple memblock into the page tables, twice as large when full */
+static inline void FixedHeapAddPage(FixedHeap *heap, void *page, struct MemBlockObject *block)
+{
+	void **pages, **blocks;
+	void *kernelHeap;
+
+	if (heap->pageCount >= heap->maxPages) {
+		kernelHeap = heap->heap;
+		if (kernelHeap == NULL)
+			heap->heap = kernelHeap = UIDManagerGetKernelHeap();
+		pages = HeapAllocLocked(kernelHeap, heap->maxPages * 2 * sizeof(void *));
+		blocks = HeapAllocLocked(kernelHeap, heap->maxPages * 2 * sizeof(void *));
+		if (pages == NULL || blocks == NULL) {
+			if (kernelHeap != NULL) {
+				if (pages != NULL)
+					HeapFreeLocked(kernelHeap, pages);
+				if (blocks != NULL)
+					HeapFreeLocked(kernelHeap, blocks);
+			}
+			return;
+		}
+		FixedHeapReplaceTables(heap, FIXED_HEAP_ATTR_TABLES_HEAP, (uintptr_t *)pages, blocks,
+				       heap->maxPages * 2);
+	}
+	heap->pages[heap->pageCount] = page;
+	heap->blocks[heap->pageCount] = block;
+	heap->pageCount++;
+}
+
 __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUInt32 opt, int raw,
 						    void **object)
 {
 	struct MemBlockObject *smb;
-	void *entry, *base, *kernelHeap;
-	void **pages, **blocks;
+	void *entry, *base;
 	const char *name;
 	SceUInt32 attr;
 	int state, ret;
@@ -332,30 +360,7 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 				ksceKernelFreeSimpleMemBlock(smb);
 			goto failed;
 		}
-		if (heap->pageCount >= heap->maxPages) {
-			/* twice the page tables */
-			kernelHeap = heap->heap;
-			if (kernelHeap == NULL)
-				heap->heap = kernelHeap = UIDManagerGetKernelHeap();
-			pages = HeapAllocLocked(kernelHeap, heap->maxPages * 2 * sizeof(void *));
-			blocks = HeapAllocLocked(kernelHeap, heap->maxPages * 2 * sizeof(void *));
-			if (pages != NULL && blocks != NULL) {
-				FixedHeapReplaceTables(heap, FIXED_HEAP_ATTR_TABLES_HEAP, pages, blocks,
-						       heap->maxPages * 2);
-			} else {
-				if (kernelHeap != NULL) {
-					if (pages != NULL)
-						HeapFreeLocked(kernelHeap, pages);
-					if (blocks != NULL)
-						HeapFreeLocked(kernelHeap, blocks);
-				}
-				goto set_page;
-			}
-		}
-		heap->pages[heap->pageCount] = base;
-		heap->blocks[heap->pageCount] = smb;
-		heap->pageCount++;
-set_page:
+		FixedHeapAddPage(heap, base, smb);
 		heap->uidHeap.cls->setPage(heap, base);
 		entry = FixedHeapCarveObject(heap);
 		if (entry == NULL)
