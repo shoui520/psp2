@@ -15,7 +15,6 @@
 #define plePark()		CP_WRITE(p15, 0, c11, c2, 1, 0)
 
 #define PERVASIVE_INTR_PARK	0xb	/* software interrupt: park this core */
-#define ALL_CPUS		0xf
 
 
 ScePervasiveMailboxRegisters *s_mailbox;

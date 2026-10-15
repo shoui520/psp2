@@ -4,6 +4,7 @@ psp2_module(slb2_kbl_SceDriverTzs KIND kernel PARTIAL SOURCES
 	source/pervasive_control_tzs.c
 	source/pervasive_clock_tzs.c
 	source/grab.c
+	source/emc_tzs.c
 )
 # Sony built pervasive_tzs.c at -O3, as SceLowio: PervasiveInit's mapping
 # loop prefetches its table (pld, only with -fprefetch-loop-arrays) and the

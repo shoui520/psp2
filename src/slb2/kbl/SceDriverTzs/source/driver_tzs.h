@@ -4,7 +4,7 @@
  * It holds the Pervasive devices the Non-secure kernel may not touch: the
  * secure reset, gate and clock words (monitor calls 0x110-0x114, which
  * SceLowio's ScePervasiveForDriver exports call), the grab and SonyRegbus
- * windows (0x11b-0x121), the EMC's self refresh (0x117-0x119) and the crash
+ * windows (0x11b-0x121), the CDRAM's controller (0x117-0x119) and the crash
  * dump (0x122). Its ForTZS imports are mapped to the os0 names here, before
  * any declaration.
  */
@@ -27,6 +27,7 @@
 #define sceKernelDcacheCleanInvalidateRange	SceCpuForTZS_7A5373EB
 #define sceKernelDcacheCleanInvalidateAll	SceCpuForTZS_7CCE9480
 #define sceKernelSysrootGetModelInfoForTZS	SceSysrootForTZS_D6FBF445	/* the wiki's guess */
+#define sceKernelSysrootGetErnieWakeupFactorForTZS SceSysrootForTZS_8E871C6D
 
 #include <fw.h>
 #include <stdint.h>
@@ -39,6 +40,7 @@
 #include "sce/mailbox_regs.h"
 #include "sce/uart_regs.h"
 #include "sce/grab_regs.h"
+#include "sce/emc_regs.h"
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -56,18 +58,20 @@ int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);
 void sceKernelDcacheCleanInvalidateRange(const void *addr, unsigned int size);
 void sceKernelDcacheCleanInvalidateAll(void);
 unsigned int sceKernelSysrootGetModelInfoForTZS(void);
+unsigned int sceKernelSysrootGetErnieWakeupFactorForTZS(void);
 void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before a core parks */
 
 #define PERVASIVE_ERROR			((int)0x803f0000)
+#define ALL_CPUS			0xf	/* an interrupt's target CPUs */
 
 /* the monitor calls this module serves */
 #define PERVASIVE_MONCALL_POWER		0x110
 #define PERVASIVE_MONCALL_RESET		0x111
 #define PERVASIVE_MONCALL_GATE		0x113
 #define PERVASIVE_MONCALL_CLOCK		0x114
-#define EMC_MONCALL_SET_TIMING		0x117
-#define EMC_MONCALL_SELF_REFRESH_ENTER	0x118
-#define EMC_MONCALL_SELF_REFRESH_EXIT	0x119
+#define CDRAM_MONCALL_ENABLE		0x117
+#define CDRAM_MONCALL_ENTER_SELF_REFRESH	0x118
+#define CDRAM_MONCALL_EXIT_SELF_REFRESH	0x119
 #define GRAB_MONCALL_STOP		0x11b
 #define GRAB_MONCALL_PORT_CONFIG	0x11c
 #define GRAB_MONCALL_SET_CMP_MAP	0x11d
