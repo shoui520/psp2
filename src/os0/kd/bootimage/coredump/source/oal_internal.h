@@ -248,15 +248,17 @@ typedef struct CoredumpShutdownContext {
 	int *result;
 } CoredumpShutdownContext;
 
+typedef int (*CoredumpCompletionCallback)(int requestId, SceUID pid,
+	int result, const char *path, SceSize pathLength, int encrypted,
+	CoredumpCompletionContext *context);
+
 typedef struct CoredumpEvent {
 	uint32_t kind;
 	SceUID pid;
 	int requestId;
 	SceCoredumpTriggerParam trigger;
 	SceKernelCoredumpStateUpdateCallback progressCallback;
-	int (*completionCallback)(int requestId, SceUID pid, int result,
-		const char *path, SceSize pathLength, int encrypted,
-		CoredumpCompletionContext *context);
+	CoredumpCompletionCallback completionCallback;
 	CoredumpCompletionContext completionContext;
 	int (*shutdownCallback)(int result, CoredumpShutdownContext *context);
 	CoredumpShutdownContext shutdownContext;

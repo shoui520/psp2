@@ -575,6 +575,9 @@ remove:
 int _coredumpHandlerEntry(SceSize argSize, void *argp)
 {
 	CoredumpEvent event;
+	CoredumpCompletionCallback completionCallback;
+	uint32_t kind;
+	int requestId;
 	union {
 		CoredumpEvent event;
 		Elf32_Ehdr elfHeader;
@@ -599,16 +602,17 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 			SCE_DBG_ASSERT_FUNC(1, 633, "_receiveEvent");
 		} while (oalEventQueueReceive(&generatorEventQueue, &buffer.event) != 0);
 		memcpy(&event, &buffer.event, sizeof(event));
+		kind = event.kind;
 		if (event.trigger.titleid != NULL && event.trigger.titleid_len != 0)
 			SCE_PRINTF_WITH_INFO(15, 773, "[coredump] start ID=%s\n",
 				event.trigger.titleid);
 		else
 			SCE_PRINTF_WITH_INFO(15, 775, "[coredump] start ID=Unknown\n");
-		if (event.kind == 2)
+		if (kind == 2)
 			break;
 		memoryInitialized = 0;
 		cafInitialized = 0;
-		if (event.kind > 1) {
+		if (kind > 1) {
 			result = (int)0x80010016;
 			goto restorePriority;
 		}
@@ -783,9 +787,10 @@ finishEvent:
 			if (finalResult == 0)
 				finalResult = result;
 		}
-		memset(&cdnLocation, 0, sizeof(cdnLocation));
+		__builtin_memset(&cdnLocation, 0, sizeof(cdnLocation));
 		removeEncryptedScreenshot();
 		coredumpMemoryInit();
+		completionCallback = event.completionCallback;
 		if (finalResult == (int)0x8001008c)
 			SCE_PRINTF_WITH_INFO(15, 1017, "[coredump] canceled\n");
 		else if (finalResult == 0)
@@ -793,8 +798,10 @@ finishEvent:
 		else
 			SCE_PRINTF_WITH_INFO(15, 1015, "[coredump] error:0x%08x\n",
 				finalResult);
-		event.completionCallback(activeRequestId, coredumpRun.pid, finalResult,
-			corefilePath, strnlen(corefilePath, 1329) + 1,
+		requestId = activeRequestId;
+		pathSize = strnlen(corefilePath, 1329) + 1;
+		completionCallback(requestId, coredumpRun.pid, finalResult,
+			corefilePath, pathSize,
 			plaintextDumpAllowed == 0, &event.completionContext);
 		if (oalMutexLock(generatorMutexId) == 0) {
 			cancelRequested = 0;
