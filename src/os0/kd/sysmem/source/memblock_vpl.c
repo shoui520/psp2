@@ -298,10 +298,17 @@ SceSize MemBlockVirPageListGetPhySize(MemBlockObject *block)
 	vp = MemBlockGetVirPageRaw(block);
 	if (vp == NULL)
 		return 0;
-	for (; vp != NULL; vp = vp->next)
-		if ((VIRPAGE_TYPE(vp) == VIRPAGE_TYPE_DIVIDED && vp->page != NULL) ||
-		    VIRPAGE_TYPE(vp) == VIRPAGE_TYPE_16)
+	for (; vp != NULL; vp = vp->next) {
+		switch (VIRPAGE_TYPE(vp)) {
+		case VIRPAGE_TYPE_DIVIDED:
+			if (vp->page == NULL)
+				break;
+			/* fall through */
+		case VIRPAGE_TYPE_16:
 			size += vp->size;
+			break;
+		}
+	}
 	return size;
 }
 
