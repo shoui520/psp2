@@ -411,7 +411,7 @@ static inline SceUInt32 controllerType(SceUInt32 port)
 
 static inline void getPortInfo(void)
 {
-	memset(&state.portInfo, 0, sizeof(state.portInfo));
+	__builtin_memset(&state.portInfo, 0, sizeof(state.portInfo));
 	ksceCtrlGetControllerPortInfo(&state.portInfo);
 }
 
@@ -432,9 +432,9 @@ static inline SceUInt32 normalizeButtons(SceUInt32 buttons, SceUInt32 version)
 {
 	if (!state.dolce && !version) {
 		if (buttons & (SCE_CTRL_L2 | SCE_CTRL_L1))
-			buttons = (buttons & ~SCE_CTRL_L2) | SCE_CTRL_L1;
+			buttons = (buttons & ~(SCE_CTRL_L2 | SCE_CTRL_L1)) | SCE_CTRL_L1;
 		if (buttons & (SCE_CTRL_R2 | SCE_CTRL_R1))
-			buttons = (buttons & ~SCE_CTRL_R2) | SCE_CTRL_R1;
+			buttons = (buttons & ~(SCE_CTRL_R2 | SCE_CTRL_R1)) | SCE_CTRL_R1;
 	}
 	return buttons;
 }
@@ -529,26 +529,35 @@ static void applyTouch(SceTouchData *sample, const CtrlpTouchData *data, SceUInt
 		CTRLP_TOUCH_REPORT_NUM : data->reportNum;
 	for (SceUInt32 i = 0; i < sample->reportNum; i++, in++) {
 		SceTouchReport *report = &sample->report[i];
+		SceUInt8 force, forceLimit;
+		SceInt16 limit;
+		int coordinate;
 
 		report->id = (SceInt8)in->id < 0 ? 0x7f : in->id;
-		if (in->force > info->maxForce)
-			report->force = info->maxForce;
-		else if (in->force < info->minForce)
-			report->force = info->minForce;
-		else
-			report->force = in->force;
-		if (in->x > info->maxAaX)
-			report->x = info->maxAaX;
-		else if (in->x < info->minAaX)
-			report->x = info->minAaX;
-		else
-			report->x = in->x;
-		if (in->y > info->maxAaY)
-			report->y = info->maxAaY;
-		else if (in->y < info->minAaY)
-			report->y = info->minAaY;
-		else
-			report->y = in->y;
+		force = in->force;
+		forceLimit = info->maxForce;
+		if (force <= forceLimit) {
+			forceLimit = info->minForce;
+			if (force >= forceLimit)
+				forceLimit = force;
+		}
+		report->force = forceLimit;
+		limit = info->maxAaX;
+		coordinate = in->x;
+		if (coordinate <= limit) {
+			limit = info->minAaX;
+			if (coordinate >= limit)
+				limit = coordinate;
+		}
+		report->x = limit;
+		limit = info->maxAaY;
+		coordinate = in->y;
+		if (coordinate <= limit) {
+			limit = info->minAaY;
+			if (coordinate >= limit)
+				limit = coordinate;
+		}
+		report->y = limit;
 		for (int j = 0; j < 8; j++)
 			report->reserved[j] = 0;
 	}
@@ -610,10 +619,26 @@ static inline int stopMode(SceUInt32 mode)
 static int stopPlayback(void)
 {
 	for (int port = 0; port < CTRLP_PORT_NUM; port++) {
-		for (int index = 0; index < 16; index++) {
-			if (state.rapidFire[port] & (1 << index))
-				ksceCtrlClearRapidFire(port, index);
-		}
+#define CLEAR_RAPID_FIRE(index) \
+		if (state.rapidFire[port] & (1u << (index))) \
+			ksceCtrlClearRapidFire(port, (index))
+		CLEAR_RAPID_FIRE(0);
+		CLEAR_RAPID_FIRE(1);
+		CLEAR_RAPID_FIRE(2);
+		CLEAR_RAPID_FIRE(3);
+		CLEAR_RAPID_FIRE(4);
+		CLEAR_RAPID_FIRE(5);
+		CLEAR_RAPID_FIRE(6);
+		CLEAR_RAPID_FIRE(7);
+		CLEAR_RAPID_FIRE(8);
+		CLEAR_RAPID_FIRE(9);
+		CLEAR_RAPID_FIRE(10);
+		CLEAR_RAPID_FIRE(11);
+		CLEAR_RAPID_FIRE(12);
+		CLEAR_RAPID_FIRE(13);
+		CLEAR_RAPID_FIRE(14);
+		CLEAR_RAPID_FIRE(15);
+#undef CLEAR_RAPID_FIRE
 		state.rapidFire[port] = 0;
 	}
 
@@ -1457,7 +1482,7 @@ int module_start(SceSize args, void *argp)
 
 	memset(&state, 0, sizeof(state));
 	ring.writeIndex = 0;
-	memset(ring.readIndex, 0, sizeof(ring.readIndex));
+	__builtin_memset(ring.readIndex, 0, sizeof(ring.readIndex));
 	state.recvSize = sizeof(recvBuffer);
 	state.recvBuffer = (CtrlpPacket *)recvBuffer;
 	state.sendSize = sizeof(sendBuffer);
@@ -1486,7 +1511,7 @@ int module_start(SceSize args, void *argp)
 	protocol.subVersion = 0x00010000;
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
-	memset(protocol.name, 0, sizeof(protocol.name));
+	__builtin_memset(protocol.name, 0, sizeof(protocol.name));
 	strncpy(protocol.name, "CTRLP", sizeof(protocol.name));
 	protocol.flags |= ksceKernelCheckDipsw(CTRLP_DIPSW_AUTO_ENABLE) ?
 			  DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
