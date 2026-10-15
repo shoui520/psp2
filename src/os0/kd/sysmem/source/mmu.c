@@ -455,14 +455,14 @@ int MMUContextRestore(const MMUContext *context)
 	int flags = MMUSuspendIntr();
 	uint32_t ttbr1 = context->ttbr1 | MMU_TTBR_ATTR;
 	uint32_t dacr = context->dacr & DACR_ALL_CLIENT;
-	uint32_t contextId = readContextId();
+	uint32_t contextId = (readContextId() & ~0xff) | (SceUInt8)context->contextId;
 
 	/* no ASID while TTBR1 changes */
 	writeContextId(0);
 	MMU_ISB();
 	writeTtbr1(ttbr1);
 	MMU_ISB();
-	writeContextId((contextId & ~0xff) | (SceUInt8)context->contextId);
+	writeContextId(contextId);
 	writeDacr(dacr);
 	MMUResumeIntr(flags);
 	return 0;
