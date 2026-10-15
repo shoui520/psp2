@@ -244,8 +244,8 @@ SceUInt32 MemBlockKeyHigh(SceUInt32 code)
 
 static inline SceUInt32 MemBlockKey(SceUInt32 code)
 {
-	if (code >> 28 == 0)
-		return (code >> 24) & 0xf;
+	if ((code & 0xf0000000) == 0)
+		return (code & 0x0f000000) >> 24;
 	return MemBlockKeyHigh(code);
 }
 
@@ -264,13 +264,13 @@ const MemBlockCodeInfo *MemBlockCode2CodeInfo(SceUInt32 code)
 	const MemBlockCodeInfo *entry = s_codeIndex[key], *end = &s_codeInfo[sizeof(s_codeInfo) /
 							       sizeof(s_codeInfo[0])];
 
-	if (entry >= end)
-		return NULL;
-	while (entry->code != code) {
-		if (MemBlockKey(entry->code) != key || ++entry == end)
+	for (; entry < end; entry++) {
+		if (entry->code == code)
+			return entry;
+		if (MemBlockKey(entry->code) != key)
 			return NULL;
 	}
-	return entry;
+	return NULL;
 }
 
 int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info)
@@ -279,12 +279,14 @@ int MemBlockType2TypeInfo(SceUInt32 type, const MemBlockTypeInfo **info)
 	const MemBlockTypeInfo *entry = s_typeIndex[key], *end = &s_typeInfo[sizeof(s_typeInfo) /
 							       sizeof(s_typeInfo[0])];
 
-	if (entry >= end)
-		goto unknown;
-	while (entry->type != type) {
-		if (MemBlockKey(entry->type) != key || ++entry == end)
+	for (; entry < end; entry++) {
+		if (entry->type == type)
+			break;
+		if (MemBlockKey(entry->type) != key)
 			goto unknown;
 	}
+	if (entry >= end)
+		goto unknown;
 	if (!(entry->attr & MEMBLOCK_TYPE_ATTR_TOOL_ONLY) ||
 	    ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART)) {
 		*info = entry;
