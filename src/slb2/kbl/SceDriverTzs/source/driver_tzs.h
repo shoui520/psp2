@@ -26,6 +26,7 @@
 #define sceKernelCpuAtomicOrAndGet32		SceCpuForTZS_75D87321
 #define sceKernelDcacheCleanInvalidateRange	SceCpuForTZS_7A5373EB
 #define sceKernelDcacheCleanInvalidateAll	SceCpuForTZS_7CCE9480
+#define sceKernelSysrootGetModelInfoForTZS	SceSysrootForTZS_D6FBF445	/* the wiki's guess */
 
 #include <fw.h>
 #include <stdint.h>
@@ -37,6 +38,7 @@
 #include "sce/pervasive_regs.h"
 #include "sce/mailbox_regs.h"
 #include "sce/uart_regs.h"
+#include "sce/grab_regs.h"
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -53,6 +55,7 @@ int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
 int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);
 void sceKernelDcacheCleanInvalidateRange(const void *addr, unsigned int size);
 void sceKernelDcacheCleanInvalidateAll(void);
+unsigned int sceKernelSysrootGetModelInfoForTZS(void);
 void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before a core parks */
 
 #define PERVASIVE_ERROR			((int)0x803f0000)
@@ -65,6 +68,13 @@ void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before 
 #define EMC_MONCALL_SET_TIMING		0x117
 #define EMC_MONCALL_SELF_REFRESH_ENTER	0x118
 #define EMC_MONCALL_SELF_REFRESH_EXIT	0x119
+#define GRAB_MONCALL_STOP		0x11b
+#define GRAB_MONCALL_PORT_CONFIG	0x11c
+#define GRAB_MONCALL_SET_CMP_MAP	0x11d
+#define GRAB_MONCALL_COMPAT		0x11e
+#define GRAB_MONCALL_REGBUS_WAIT	0x11f
+#define GRAB_MONCALL_GET_CMP_MAP	0x120
+#define GRAB_MONCALL_GPU_CLOCK		0x121
 
 /* Sony's DMB and DSB are also compiler barriers here: register pointers
  * held across them are reloaded. */
