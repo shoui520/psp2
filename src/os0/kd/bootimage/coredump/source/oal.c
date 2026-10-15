@@ -61,8 +61,11 @@ extern unsigned int SceGpuEs4ForDriver_395F7689(void);
 extern unsigned int SceGpuEs4ForDriver_18C90B42(void);
 extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
 	unsigned int size);
-extern int SceThreadmgrForDriver_374C3267(SceUID rwLockId,
-	SceKernelRWLockInfo *info);
+/* imports under the names of our NID db (src/common/nids/kernel.yml) */
+extern int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info);
+extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
+extern SceUInt32 sceKernelGetGPI(void);
+extern SceUID sceKernelGetProcessId(void);
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
@@ -702,7 +705,7 @@ closeFile:
 	ksceIoClose(fd);
 finish:
 	memMgrFinal();
-	result = ksceRegMgrGetKeyInt("/CONFIG/COREDUMP", "always_encrypt_dump",
+	result = sceRegMgrGetKeyInt("/CONFIG/COREDUMP", "always_encrypt_dump",
 		(int *)&end);
 	alwaysEncryptDump = result == 0 && end == (char *)1;
 	return result;
@@ -1387,7 +1390,7 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	}
 	info->qaEnabled = qaEnabled;
 	info->vshBuildNumber = buildVerInfo.vshBuildNumber;
-	info->gpi = ksceKernelGetGPI();
+	info->gpi = sceKernelGetGPI();
 	info->grownPhyMemPartSize = SceSysmemForKernel_BC36755F();
 }
 
@@ -2795,7 +2798,7 @@ void oalGetRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info)
 	memset(&rwLock, 0, sizeof(rwLock));
 	rwLock.size = sizeof(rwLock);
 	guid = kscePUIDtoGUID(pid, rwLockId);
-	if (guid < 0 || SceThreadmgrForDriver_374C3267(guid, &rwLock) < 0)
+	if (guid < 0 || sceKernelGetRWLockInfo(guid, &rwLock) < 0)
 		return;
 	if (scePUIDGetAttr(pid, rwLockId, &uidAttr) >= 0 && (uidAttr & 0x80000))
 		rwLock.attr |= 0x80000;
@@ -3358,7 +3361,7 @@ int oalGetNumOfExtnlProcs(SceUID pid)
 		memMgrLocalFree(processes);
 		return count;
 	}
-	currentPid = ksceKernelGetProcessId();
+	currentPid = sceKernelGetProcessId();
 	num = 0;
 	for (i = 0; i < (int)count; i++) {
 		if (processes[i].pid != currentPid)
@@ -3383,7 +3386,7 @@ void oalGetExtnlProcIdList(SceUID pid, SceUID *ids, int capacity)
 		return;
 	if (SceProcessmgrForDriver_BA0A06A4(5, processes, size, &count) >= 0) {
 		systemProgram = _isSystemProgram(pid);
-		currentPid = ksceKernelGetProcessId();
+		currentPid = sceKernelGetProcessId();
 		if (systemProgram != 0) {
 			for (i = 0; i < (int)count && i < capacity; i++)
 				ids[i] = processes[i].pid;
