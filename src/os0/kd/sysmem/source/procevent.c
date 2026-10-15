@@ -115,7 +115,7 @@ SceUID ksceKernelRegisterProcEventHandler(const char *name,
 					  const SceKernelProcEventHandler *handler, void *args)
 {
 	ProcEventObject *object;
-	ProcEventLink *link;
+	ProcEventLink *link, *tail;
 	SceUID uid;
 	int state;
 
@@ -129,20 +129,21 @@ SceUID ksceKernelRegisterProcEventHandler(const char *name,
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 137, "sceKernelRegisterProcEventHandler");
 		return uid;
 	}
-	link = &object->link;
-	link->create = handler->create;
-	link->exit = handler->exit;
-	link->kill = handler->kill;
-	link->suspend = handler->suspend;
-	link->resume = handler->resume;
-	link->uid = uid;
-	link->args = args;
-	link->notify = handler->size == sizeof(*handler) ? handler->notify : NULL;
+	object->link.create = handler->create;
+	object->link.exit = handler->exit;
+	object->link.kill = handler->kill;
+	object->link.suspend = handler->suspend;
+	object->link.resume = handler->resume;
+	object->link.uid = uid;
+	object->link.args = args;
+	object->link.notify = handler->size == sizeof(*handler) ? handler->notify : NULL;
 	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+	link = &object->link;
+	tail = s_procEventList[1];
 	link->next = (ProcEventLink *)s_procEventList;
-	link->prev = s_procEventList[1];
-	s_procEventList[1]->next = link;
 	s_procEventList[1] = link;
+	link->prev = tail;
+	tail->next = link;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 	return uid;
 }
