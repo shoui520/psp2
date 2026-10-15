@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <psp2kern/types.h>
 #include "sce/debug.h"
+#include "sce/pervasive_regs.h"
+#include "sce/grab_regs.h"
 
 #pragma push_macro("__FILE_NAME__")
 #pragma GCC diagnostic push
@@ -39,48 +41,33 @@
 #define REG(address)		((SceUInt32 *)(address))
 
 /*
- * Pervasive reset (0xe3101000) and clock gate (0xe3102000) registers: a
- * device's error registers are only read while it is out of reset and clocked.
+ * The registers the collection reads: the Pervasive reset and clock gate
+ * words (a device's error registers are only read while it is out of reset
+ * and clocked), Pervasive2's OCP status and VIP/Venezia protection errors,
+ * and the GRAB and register bus bridges' error logs. The tables below hold
+ * each error register's physical address.
  */
-#define PERVASIVE_RESET(offset)	(*REG(0xe3101000 + (offset)))
-#define PERVASIVE_GATE(offset)	(*REG(0xe3102000 + (offset)))
-
-/* OCP bus error target status (BET0, BET1, BEBT), two sets */
-#define OCP_STATUS0		0xe3110d80
-#define OCP_STATUS1		0xe3110dc0
-
-/* error log register block of the GRAB and register bus bridges */
-typedef struct BusErrorLogRegs {
-	SceUInt32 unk0[2];
-	SceUInt32 status;			/* 0x08 bit 2 write, bit 1 read error */
-	SceUInt32 unkC;
-	SceUInt32 write[4];			/* 0x10 ID, address, attribute, info */
-	SceUInt32 read[4];			/* 0x20 */
-} BusErrorLogRegs;
-
-#define GRAB_SECURE		((const BusErrorLogRegs *)0xe8300000)
-#define GRAB			((const BusErrorLogRegs *)0xe8301000)
-#define GRAB_EXTRA		REG(0xe8301208)
-#define REGBUS_SECURE		((const BusErrorLogRegs *)0xe8000100)
-#define REGBUS			((const BusErrorLogRegs *)0xe8001100)
-
-/* VIP and Venezia protection error registers (ERRV, ERRC, ERRA per unit) */
-#define VIP_PROT		REG(0xe3110248)	/* BAP, VDPD, VDPM */
-#define VENEZIA_PROT		REG(0xe3110348)
+#define PERVASIVE_RESET		((const ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
+#define PERVASIVE_GATE		((const ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
+#define PERVASIVE2		((const ScePervasive2Registers *)PERVASIVE2_BASE)
+#define GRAB_SECURE		((const SceGrabRegisters *)GRAB_BASE)
+#define GRAB			((const SceGrabRegisters *)GRAB_NS_BASE)
+#define REGBUS_SECURE		((const SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
+#define REGBUS			((const SceSonyRegbusRegisters *)SONY_REGBUS_NS_BASE)
 
 /* SonicsSX interconnect: a bus, and an initiator/target agent on it */
 typedef struct SsxBusRegs {
-	SceUInt32 unk0[0x44];
+	SceUInt32 reserved0[0x44];
 	struct {
 		SceUInt64 value;
-		SceUInt32 unk8[6];
+		SceUInt32 reserved[6];
 	} flagStatus[5];			/* 0x110 SI_FLAG_STATUS0-4 */
 } SsxBusRegs;
 
 typedef struct SsxAgentRegs {
-	SceUInt32 unk0[10];
+	SceUInt32 reserved0[10];
 	SceUInt64 status;			/* 0x28 */
-	SceUInt32 unk30[10];
+	SceUInt32 reserved1[10];
 	SceUInt64 errorLog;			/* 0x58 */
 	SceUInt64 errorAddress;			/* 0x60 */
 } SsxAgentRegs;
@@ -91,54 +78,58 @@ typedef struct SsxAgentRegs {
 
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))
 
-/* is the device at this pervasive offset out of reset and clocked */
-static inline int pervasiveIsOn(unsigned int offset)
+/* is the device out of reset and clocked */
+#define PERVASIVE_IS_ON(device)						\
+	pervasiveIsOn(&PERVASIVE_RESET->device, &PERVASIVE_GATE->device)
+
+static inline int pervasiveIsOn(const volatile uint32_t *reset, const volatile uint32_t *gate)
 {
-	if (PERVASIVE_RESET(offset) != 0)
+	if (*reset != 0)
 		return 0;
-	return PERVASIVE_GATE(offset) != 0;
+	return *gate != 0;
 }
 
-/* the same for one bit of a shared reset/gate register */
-static inline int pervasiveBitIsOn(unsigned int offset, unsigned int bit)
+/* the same for one bit of a shared reset/gate word */
+static inline int pervasiveBitIsOn(const volatile uint32_t *reset, const volatile uint32_t *gate,
+				   unsigned int bit)
 {
-	if (PERVASIVE_RESET(offset) & (1 << bit))
+	if (*reset & (1 << bit))
 		return 0;
-	return (PERVASIVE_GATE(offset) >> bit) & 1;
+	return (*gate >> bit) & 1;
 }
 
-#define PERVASIVE_PREDICATE(name, offset)				\
+#define PERVASIVE_PREDICATE(name, device)				\
 static int __attribute__((noinline, unused)) name(void)			\
 {									\
-	return pervasiveIsOn(offset);					\
+	return PERVASIVE_IS_ON(device);					\
 }
 
-PERVASIVE_PREDICATE(isDmac0On, 0x50)
-PERVASIVE_PREDICATE(isDmac1On, 0x54)
-PERVASIVE_PREDICATE(isDmac2On, 0x58)
-PERVASIVE_PREDICATE(isDmac3On, 0x5c)
-PERVASIVE_PREDICATE(isDmac4On, 0x60)
-PERVASIVE_PREDICATE(isDmac5On, 0x64)
-PERVASIVE_PREDICATE(isDmac6On, 0x68)
+PERVASIVE_PREDICATE(isDmac0On, dmac[0])
+PERVASIVE_PREDICATE(isDmac1On, dmac[1])
+PERVASIVE_PREDICATE(isDmac2On, dmac[2])
+PERVASIVE_PREDICATE(isDmac3On, dmac[3])
+PERVASIVE_PREDICATE(isDmac4On, dmac[4])
+PERVASIVE_PREDICATE(isDmac5On, dmac[5])
+PERVASIVE_PREDICATE(isDmac6On, dmac[6])
 
 static int __attribute__((noinline, unused)) isSpm32On(void)
 {
-	return pervasiveBitIsOn(0x178, 3);
+	return pervasiveBitIsOn(&PERVASIVE_RESET->spm, &PERVASIVE_GATE->spm, 3);
 }
 
 static int __attribute__((noinline, unused)) isSpm128On(void)
 {
-	return pervasiveBitIsOn(0x178, 2);
+	return pervasiveBitIsOn(&PERVASIVE_RESET->spm, &PERVASIVE_GATE->spm, 2);
 }
 
-PERVASIVE_PREDICATE(isDdrIf0On, 0x160)
-PERVASIVE_PREDICATE(isDdrIf1On, 0x164)
+PERVASIVE_PREDICATE(isDdrIf0On, lpddr2[0])
+PERVASIVE_PREDICATE(isDdrIf1On, lpddr2[1])
 /* also guards the GRAB and register bus bridges */
-PERVASIVE_PREDICATE(isCompatRamOn, 0x28)
-PERVASIVE_PREDICATE(isDebugPaOn, 0x48)
-PERVASIVE_PREDICATE(isTimerOn, 0x170)
-PERVASIVE_PREDICATE(isSdio0On, 0x40)
-PERVASIVE_PREDICATE(isSdio1On, 0x44)
+PERVASIVE_PREDICATE(isCompatRamOn, compatRam)
+PERVASIVE_PREDICATE(isDebugPaOn, debugPa)
+PERVASIVE_PREDICATE(isTimerOn, timer)
+PERVASIVE_PREDICATE(isSdio0On, sdio[0])
+PERVASIVE_PREDICATE(isSdio1On, sdio[1])
 
 /* Pervasive and Pervasive2 are always on */
 static int __attribute__((noinline, unused)) isAlwaysOn(void)
@@ -681,12 +672,12 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 
 	rec->hdrSize = sizeof(*rec);
 	ocp->size = offsetof(BusErrorOcpInfo, target);
-	ocp->status[0][0] = *REG(OCP_STATUS0);
-	ocp->status[0][1] = *REG(OCP_STATUS0 + 0x10);
-	ocp->status[0][2] = *REG(OCP_STATUS0 + 0x14);
-	ocp->status[1][0] = *REG(OCP_STATUS1);
-	ocp->status[1][1] = *REG(OCP_STATUS1 + 0x10);
-	ocp->status[1][2] = *REG(OCP_STATUS1 + 0x14);
+	ocp->status[0][0] = PERVASIVE2->busErrorStatus[0].bet0;
+	ocp->status[0][1] = PERVASIVE2->busErrorStatus[0].bet1;
+	ocp->status[0][2] = PERVASIVE2->busErrorStatus[0].bebt;
+	ocp->status[1][0] = PERVASIVE2->busErrorStatus[1].bet0;
+	ocp->status[1][1] = PERVASIVE2->busErrorStatus[1].bet1;
+	ocp->status[1][2] = PERVASIVE2->busErrorStatus[1].bebt;
 	ocp->count = BUSERROR_OCP_TARGETS;
 	for (i = 0; i < ARRAY_SIZE(ocpTargets0); i++)
 		collectOcpTarget(ocp->target[i].error, &ocpTargets0[i]);
@@ -698,7 +689,7 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 	for (sys = systemBuses; sys != &systemBuses[ARRAY_SIZE(systemBuses)]; sys++) {
 		/* the debug bus only while it is running */
 		if (sys->address == DEBUG_BUS &&
-		    (PERVASIVE_RESET(0x154) == 1 || PERVASIVE_GATE(0x154) == 0))
+		    (PERVASIVE_RESET->debugBus == 1 || PERVASIVE_GATE->debugBus == 0))
 			continue;
 		regs = (const SsxBusRegs *)sys->address;
 		bus->address = sys->address;
@@ -719,26 +710,26 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 	if (isCompatRamOn()) {
 		grabSize = sizeof(*grab);
 		grab->size = sizeof(*grab);
-		grab->status = GRAB->status;
-		grab->write[0] = GRAB->write[0];
-		grab->write[1] = GRAB->write[1];
-		grab->write[2] = GRAB->write[2];
-		grab->write[3] = GRAB->write[3];
-		grab->read[0] = GRAB->read[0];
-		grab->read[1] = GRAB->read[1];
-		grab->read[2] = GRAB->read[2];
-		grab->read[3] = GRAB->read[3];
-		grab->secureStatus = GRAB_SECURE->status;
-		grab->secureWrite[0] = GRAB_SECURE->write[0];
-		grab->secureWrite[1] = GRAB_SECURE->write[1];
-		grab->secureWrite[2] = GRAB_SECURE->write[2];
-		grab->secureWrite[3] = GRAB_SECURE->write[3];
-		grab->secureRead[0] = GRAB_SECURE->read[0];
-		grab->secureRead[1] = GRAB_SECURE->read[1];
-		grab->secureRead[2] = GRAB_SECURE->read[2];
-		grab->secureRead[3] = GRAB_SECURE->read[3];
-		grab->auxiliaryRegisters[0] = GRAB_EXTRA[0];
-		grab->auxiliaryRegisters[1] = GRAB_EXTRA[1];
+		grab->status = GRAB->errorStatus;
+		grab->write[0] = GRAB->writeError[0];
+		grab->write[1] = GRAB->writeError[1];
+		grab->write[2] = GRAB->writeError[2];
+		grab->write[3] = GRAB->writeError[3];
+		grab->read[0] = GRAB->readError[0];
+		grab->read[1] = GRAB->readError[1];
+		grab->read[2] = GRAB->readError[2];
+		grab->read[3] = GRAB->readError[3];
+		grab->secureStatus = GRAB_SECURE->errorStatus;
+		grab->secureWrite[0] = GRAB_SECURE->writeError[0];
+		grab->secureWrite[1] = GRAB_SECURE->writeError[1];
+		grab->secureWrite[2] = GRAB_SECURE->writeError[2];
+		grab->secureWrite[3] = GRAB_SECURE->writeError[3];
+		grab->secureRead[0] = GRAB_SECURE->readError[0];
+		grab->secureRead[1] = GRAB_SECURE->readError[1];
+		grab->secureRead[2] = GRAB_SECURE->readError[2];
+		grab->secureRead[3] = GRAB_SECURE->readError[3];
+		grab->auxiliaryRegisters[0] = GRAB->readBusy;
+		grab->auxiliaryRegisters[1] = GRAB->writeBusy;
 	}
 
 	/*
@@ -751,25 +742,25 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 	if (isCompatRamOn()) {
 		regbus->size = sizeof(*regbus);
 		regbusSize = sizeof(BusErrorRegbusInfo);
-		regbus->status = REGBUS->status;
-		regbus->write[0] = REGBUS->write[0];
-		regbus->write[1] = REGBUS->write[1];
-		regbus->write[2] = REGBUS->write[2];
-		regbus->write[3] = REGBUS->write[3];
-		regbus->secureStatus = REGBUS_SECURE->status;
-		regbus->secureWrite[0] = REGBUS_SECURE->write[0];
-		regbus->secureWrite[1] = REGBUS_SECURE->write[1];
-		regbus->secureWrite[2] = REGBUS_SECURE->write[2];
-		regbus->secureWrite[3] = REGBUS_SECURE->write[3];
+		regbus->status = REGBUS->errorStatus;
+		regbus->write[0] = REGBUS->errorId;
+		regbus->write[1] = REGBUS->errorAddr;
+		regbus->write[2] = REGBUS->errorAttr;
+		regbus->write[3] = REGBUS->errorInfo;
+		regbus->secureStatus = REGBUS_SECURE->errorStatus;
+		regbus->secureWrite[0] = REGBUS_SECURE->errorId;
+		regbus->secureWrite[1] = REGBUS_SECURE->errorAddr;
+		regbus->secureWrite[2] = REGBUS_SECURE->errorAttr;
+		regbus->secureWrite[3] = REGBUS_SECURE->errorInfo;
 	}
 
 	vip = (BusErrorVipInfo *)((char *)regbus + regbusSize);
 	vip->size = sizeof(*vip);
-	if (PERVASIVE_RESET(0x180) == 0 && pervasiveIsOn(0x34)) {
+	if (PERVASIVE_RESET->vipRegisterAccess == 0 && PERVASIVE_IS_ON(vip)) {
 		for (i = 0; i < 3; i++) {
-			vip->bap[i] = VIP_PROT[i];
-			vip->vdpd[i] = VIP_PROT[3 + i];
-			vip->vdpm[i] = VIP_PROT[6 + i];
+			vip->bap[i] = PERVASIVE2->vipProtBap[i];
+			vip->vdpd[i] = PERVASIVE2->vipProtVdpd[i];
+			vip->vdpm[i] = PERVASIVE2->vipProtVdpm[i];
 		}
 	} else {
 		for (i = 0; i < 3; i++) {
@@ -778,9 +769,9 @@ static SceSize __attribute__((unused)) CollectBusErrorInfo_ES3(BusErrorRecord *r
 			vip->vdpm[i] = 0;
 		}
 	}
-	if (PERVASIVE_RESET(0x17c) == 0 && pervasiveIsOn(0x30)) {
+	if (PERVASIVE_RESET->veneziaRegisterAccess == 0 && PERVASIVE_IS_ON(venezia)) {
 		for (i = 0; i < 3; i++)
-			vip->venezia[i] = VENEZIA_PROT[i];
+			vip->venezia[i] = PERVASIVE2->veneProtReg[i];
 	} else {
 		for (i = 0; i < 3; i++)
 			vip->venezia[i] = 0;

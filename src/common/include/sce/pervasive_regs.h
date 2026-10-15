@@ -339,6 +339,16 @@ typedef struct VeneziaAddressWindow {
 	unsigned int translatedLimit;
 } VeneziaAddressWindow;
 
+/* a set of OCP bus error target status words (the bus error decoder's
+ * BET0, BET1, BEBT) */
+typedef struct ScePervasive2BusErrorStatus {
+	volatile uint32_t bet0;
+	uint32_t reserved0[3];
+	volatile uint32_t bet1;				/* 0x10 */
+	volatile uint32_t bebt;
+	uint32_t reserved1[10];
+} ScePervasive2BusErrorStatus;
+
 typedef struct ScePervasive2Registers {
 	unsigned char reserved[0x100];
 	unsigned int debuggerPhysicalBase;		/* 0x100 */
@@ -353,19 +363,30 @@ typedef struct ScePervasive2Registers {
 	volatile unsigned int upperRangeBase;
 	volatile unsigned int upperRangeEnd;
 	volatile unsigned int lowerRangeEnd;		/* 0x210 */
-	unsigned char reservedCaptureWindow[0xec];	/* VIP_PROT at 0x248 */
+	unsigned char reservedCaptureWindow[0x34];
+	/* 0x248: VIP protection errors (BAP, VDPD, VDPM): ERRV, ERRC, ERRA */
+	volatile uint32_t vipProtBap[3];
+	volatile uint32_t vipProtVdpd[3];
+	volatile uint32_t vipProtVdpm[3];
+	unsigned char reservedVipProt[0x94];
 	unsigned int mappingControl;			/* 0x300 */
 	unsigned int kernelStart;
 	unsigned int imageStart;
 	unsigned int imageEnd;
 	unsigned int kernelEnd;				/* 0x310 */
-	unsigned char reservedMapping[0x6c];		/* VENE_PROT at 0x348 */
+	unsigned char reservedMapping[0x34];
+	volatile uint32_t veneProtReg[3];		/* 0x348: ERRV, ERRC, ERRA */
+	unsigned char reservedVeneProt[0x2c];
 	unsigned int imagePhysicalBase;			/* 0x380 */
 	unsigned char reservedImage[0xc];
 	VeneziaAddressWindow windows[3];		/* 0x390 */
 	unsigned char reservedWindows[0x40];
 	unsigned int bootPhysicalBase;			/* 0x400 */
-	unsigned char reservedBoot[0xa04];		/* bus error words at 0xd00 */
+	/* 0xd00: the OCP targets' error logs, two sets, in the bus error
+	 * tables (sce/buserror_es3.h) */
+	unsigned char reservedBoot[0x97c];
+	ScePervasive2BusErrorStatus busErrorStatus[2];	/* 0xd80 */
+	unsigned char reservedBusError[0x8];
 	unsigned int interruptControl;			/* 0xe08 */
 	unsigned char reservedInterrupt[0x38];
 	unsigned int bootControl;			/* 0xe44 */
@@ -398,6 +419,13 @@ _Static_assert(sizeof(ScePervasive2Registers) == PERVASIVE_PAGE_SIZE, "Pervasive
 _Static_assert(offsetof(ScePervasive2Registers, windows) == 0x390, "Pervasive2 windows");
 _Static_assert(offsetof(ScePervasive2Registers, bootControl) == 0xe44, "Pervasive2 boot control");
 _Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "Pervasive2 USB PHY");
+_Static_assert(offsetof(ScePervasive2Registers, vipProtBap) == 0x248, "Pervasive2 VIP protection");
+_Static_assert(offsetof(ScePervasive2Registers, veneProtReg) == 0x348, "Pervasive2 Venezia protection");
+_Static_assert(offsetof(ScePervasive2Registers, busErrorStatus) == 0xd80, "Pervasive2 bus error status");
+_Static_assert(offsetof(ScePervasive2Registers, interruptControl) == 0xe08, "Pervasive2 interrupt control");
+_Static_assert(offsetof(ScePervasiveDeviceRegisters, debugBus) == 0x154, "Pervasive debug bus");
+_Static_assert(offsetof(ScePervasiveDeviceRegisters, spm) == 0x178, "Pervasive SPM");
+_Static_assert(offsetof(ScePervasiveDeviceRegisters, vipRegisterAccess) == 0x180, "Pervasive VIP access");
 _Static_assert(offsetof(ScePervasive2Registers, memoryCardInsert) == 0xf40, "Pervasive2 memory card");
 _Static_assert(offsetof(ScePervasive2Registers, usbVbusInterruptEnable) == 0xf58, "Pervasive2 VBUS");
 _Static_assert(offsetof(ScePervasive2Registers, mainMemoryPageBase) == 0xf60, "Pervasive2 page base");
