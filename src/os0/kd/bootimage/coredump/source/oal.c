@@ -2616,9 +2616,9 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 
 void oalGetCondInfo(SceUID pid, SceUID condId, CoredumpCondInfo *info)
 {
+	SceUInt32 uidAttr, attr;
 	SceUID guid, mutexId;
 	SceSize count;
-	SceUInt32 uidAttr, attr;
 
 	SCE_DBG_ASSERT(info != NULL, 4152);
 	memset(info, 0, sizeof(*info));
