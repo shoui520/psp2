@@ -704,17 +704,19 @@ void SceSysrootForKernel_5B5EBFB1(volatile uint32_t *time)
 
 unsigned int ksceKernelSysrootCheckModelCapability(unsigned int capability)
 {
-	uint32_t flags = s_sysrootState->modelCapability;
-
-	capability &= 0xff;
-	return capability < 32 ? (flags >> capability) & 1 : 0;
+	/* the shift by register takes the low byte; 32 and up give 0 */
+	return (s_sysrootState->modelCapability >> capability) & 1;
 }
 
 int sceKernelCheckModelCapability(unsigned int capability)
 {
-	if (capability != 7 && capability != 10)
+	switch (capability) {
+	case 7:
+	case 10:
+		return (s_sysrootState->modelCapability >> capability) & 1;
+	default:
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return (s_sysrootState->modelCapability >> capability) & 1;
+	}
 }
 
 /* PLACEHOLDER: unnamed capability/attribute bits in the boot-process template. */
