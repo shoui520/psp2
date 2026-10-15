@@ -63,7 +63,7 @@
  /*
    This is a version (aka dlmalloc) of malloc/free/realloc written by
    Doug Lea and released to the public domain, as explained at
-@@ -1128,7 +1190,7 @@
+@@ -1128,7 +1187,7 @@
    compiling with a different DEFAULT_GRANULARITY or dynamically
    setting with mallopt(M_GRANULARITY, value).
  */
@@ -72,7 +72,7 @@
  
  /*
    destroy_mspace destroys the given space, and attempts to return all
-@@ -1147,7 +1209,7 @@
+@@ -1147,7 +1206,7 @@
    Destroying this space will deallocate all additionally allocated
    space (if possible) but not the initial base.
  */
@@ -81,17 +81,17 @@
  
  /*
    mspace_track_large_chunks controls whether requests for large chunks
-@@ -1246,14 +1308,28 @@
+@@ -1246,13 +1305,27 @@
    mspace_malloc_stats behaves as malloc_stats, but reports
    properties of the given space.
  */
 -void mspace_malloc_stats(mspace msp);
 +int mspace_malloc_stats(mspace msp);
- 
++
 +/* SCE: mspace_malloc_stats' numbers */
 +struct malloc_stats;
 +void mspace_get_malloc_stats(mspace msp, struct malloc_stats* stats);
-+
+ 
  /*
    mspace_trim behaves as malloc_trim, but
    operates within the given space.
@@ -103,15 +103,14 @@
 +
 +/* SCE: walks and checks every chunk */
 +int mspace_verify_all_chunk(mspace msp, const char* name, void* mem);
- 
++
 +/* SCE: the ranges of the mmapped segments */
 +size_t mspace_get_mmapped_segments(mspace msp, size_t max,
 +                                   struct malloc_segment_range* list);
-+
+ 
  /*
    An alias for mallopt.
- */
-@@ -1562,21 +1638,10 @@
+@@ -1562,21 +1635,10 @@
  #if HAVE_MMAP
      #define USE_MMAP_BIT            (SIZE_T_ONE)
  
@@ -137,7 +136,7 @@
  #else  /* HAVE_MMAP */
      #define USE_MMAP_BIT            (SIZE_T_ZERO)
  
-@@ -2684,19 +2749,15 @@
+@@ -2684,19 +2746,15 @@
  #define treebin_at(M,i)     (&((M)->treebins[i]))
  
  /* assign tree index for size S to variable I. Use x86 asm if possible  */
@@ -162,7 +161,7 @@
  }
  
  #elif defined (__INTEL_COMPILER)
-@@ -2788,11 +2849,11 @@
+@@ -2788,11 +2846,11 @@
  
  /* index corresponding to given bit. Use x86 asm if possible */
  
@@ -176,7 +175,7 @@
    I = (bindex_t)J;\
  }
  
-@@ -2860,7 +2921,13 @@
+@@ -2860,7 +2918,13 @@
  
  #if !INSECURE
  /* Check if address a is at least as high as any from MORECORE or MMAP */
@@ -191,7 +190,7 @@
  /* Check if address of next chunk n is higher than base chunk p */
  #define ok_next(p, n)    ((char*)(p) < (char*)(n))
  /* Check if p has inuse status */
-@@ -2945,7 +3012,8 @@
+@@ -2945,7 +3009,8 @@
  /* ---------------------------- setting mparams -------------------------- */
  
  /* Initialize mparams */
@@ -201,7 +200,7 @@
  #ifdef NEED_GLOBAL_LOCK_INIT
    if (malloc_global_mutex_status <= 0)
      init_malloc_global_mutex();
-@@ -3016,6 +3084,9 @@
+@@ -3016,6 +3081,9 @@
  #endif /* USE_DEV_RANDOM */
  #ifdef WIN32
          magic = (size_t)(GetTickCount() ^ (size_t)0x55555555U);
@@ -211,7 +210,7 @@
  #else
          magic = (size_t)(time(0) ^ (size_t)0x55555555U);
  #endif
-@@ -3364,7 +3435,14 @@
+@@ -3364,7 +3432,14 @@
  }
  #endif /* !NO_MALLINFO */
  
@@ -227,7 +226,7 @@
    ensure_initialization();
    if (!PREACTION(m)) {
      size_t maxfp = 0;
-@@ -3389,14 +3467,74 @@
+@@ -3389,14 +3464,75 @@
        }
      }
  
@@ -245,6 +244,7 @@
 +/* SCE: walks every chunk, checking the footers of the chunks in use, and
 +   whether mem (when given) is one of them; returns the chunks in use.
 +   Corruption is reported in every build, the rest only in debug builds. */
++#line 3584	/* SCE: the line in Sony's dlmalloc/malloc.c */
 +int mspace_verify_all_chunk(mspace msp, const char* name, void* mem) {
 +  mstate m = (mstate)msp;
 +  int count = 0;
@@ -305,7 +305,7 @@
  /* ----------------------- Operations on smallbins ----------------------- */
  
  /*
-@@ -3661,7 +3799,7 @@
+@@ -3661,7 +3797,7 @@
  static void* mmap_alloc(mstate m, size_t nb) {
    size_t mmsize = mmap_align(nb + SIX_SIZE_T_SIZES + CHUNK_ALIGN_MASK);
    if (mmsize > nb) {     /* Check for wrap around 0 */
@@ -314,7 +314,7 @@
      if (mm != CMFAIL) {
        size_t offset = align_offset(chunk2mem(mm));
        size_t psize = mmsize - offset - MMAP_FOOT_PAD;
-@@ -3763,49 +3901,7 @@
+@@ -3763,50 +3899,9 @@
    init_bins(m);
  }
  #endif /* PROCEED_ON_ERROR */
@@ -362,9 +362,11 @@
 -}
 -
  /* Add a segment to hold a new noncontiguous region */
++#line 4110	/* SCE: the line in Sony's dlmalloc/malloc.c */
  static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
    /* Determine locations and sizes of segment, fenceposts, old top */
-@@ -3960,7 +4056,7 @@
+   char* old_top = (char*)m->top;
+@@ -3960,7 +4055,7 @@
    if (HAVE_MMAP && tbase == CMFAIL) {  /* Try MMAP */
      size_t rsize = granularity_align(nb + SYS_ALLOC_PADDING);
      if (rsize > nb) { /* Fail if wraps around zero */
@@ -373,7 +375,7 @@
        if (mp != CMFAIL) {
          tbase = mp;
          tsize = rsize;
-@@ -4015,35 +4111,10 @@
+@@ -4015,35 +4110,10 @@
      }
  
      else {
@@ -413,6 +415,14 @@
      }
  
      if (nb < m->topsize) { /* Allocate from new or extended top space */
+@@ -4065,6 +4135,7 @@
+ /* -----------------------  system deallocation -------------------------- */
+ 
+ /* Unmap and unlink any mmapped segments that don't contain used chunks */
++#line 4377	/* SCE: the line in Sony's dlmalloc/malloc.c */
+ static size_t release_unused_segments(mstate m) {
+   size_t released = 0;
+   int nsegs = 0;
 @@ -4089,7 +4160,7 @@
          else {
            unlink_large_chunk(m, tp);
@@ -441,13 +451,30 @@
                released = extra;
              }
            }
-@@ -4449,137 +4521,7 @@
+@@ -4180,6 +4252,7 @@
+ /* ---------------------------- malloc support --------------------------- */
+ 
+ /* allocate a large request from the best fitting chunk in a treebin */
++#line 4492	/* SCE: the line in Sony's dlmalloc/malloc.c */
+ static void* tmalloc_large(mstate m, size_t nb) {
+   tchunkptr v = 0;
+   size_t rsize = -nb; /* Unsigned negation */
+@@ -4251,6 +4324,7 @@
+ }
+ 
+ /* allocate a small request from the best fitting chunk in a treebin */
++#line 4564	/* SCE: the line in Sony's dlmalloc/malloc.c */
+ static void* tmalloc_small(mstate m, size_t nb) {
+   tchunkptr t, v;
+   size_t rsize;
+@@ -4448,138 +4522,8 @@
+     }
    }
    return 0;
- }
+-}
 -
 -/* ------------------------ comalloc/coalloc support --------------------- */
- 
+-
 -static void** ialloc(mstate m,
 -                     size_t n_elements,
 -                     size_t* sizes,
@@ -573,13 +600,13 @@
 -
 -  POSTACTION(m);
 -  return marray;
--}
--
+ }
+ 
 -
  /* -------------------------- public routines ---------------------------- */
  
  #if !ONLY_MSPACES
-@@ -4747,7 +4689,7 @@
+@@ -4747,7 +4691,7 @@
            size_t prevsize = p->prev_foot;
            if (is_mmapped(p)) {
              psize += prevsize + MMAP_FOOT_PAD;
@@ -588,7 +615,7 @@
                fm->footprint -= psize;
              goto postaction;
            }
-@@ -4928,8 +4870,6 @@
+@@ -4928,8 +4872,6 @@
    return change_mparam(param_number, value);
  }
  
@@ -597,7 +624,7 @@
  size_t dlmalloc_usable_size(void* mem) {
    if (mem != 0) {
      mchunkptr p = mem2chunk(mem);
-@@ -4939,11 +4879,13 @@
+@@ -4939,11 +4881,13 @@
    return 0;
  }
  
@@ -612,7 +639,7 @@
    size_t msize = pad_request(sizeof(struct malloc_state));
    mchunkptr mn;
    mchunkptr msp = align_as_chunk(tbase);
-@@ -4956,7 +4898,7 @@
+@@ -4956,7 +4900,7 @@
    m->magic = mparams.magic;
    m->release_checks = MAX_RELEASE_CHECK_RATE;
    m->mflags = mparams.default_mflags;
@@ -621,7 +648,7 @@
    m->exts = 0;
    disable_contiguous(m);
    init_bins(m);
-@@ -4966,7 +4908,7 @@
+@@ -4966,7 +4910,7 @@
    return m;
  }
  
@@ -630,7 +657,7 @@
    mstate m = 0;
    size_t msize;
    ensure_initialization();
-@@ -4975,9 +4917,9 @@
+@@ -4975,9 +4919,9 @@
      size_t rs = ((capacity == 0)? mparams.granularity :
                   (capacity + TOP_FOOT_SIZE + msize));
      size_t tsize = granularity_align(rs);
@@ -642,7 +669,7 @@
        m->seg.sflags = USE_MMAP_BIT;
        set_lock(m, locked);
      }
-@@ -4985,33 +4927,44 @@
+@@ -4985,35 +4929,47 @@
    return (mspace)m;
  }
  
@@ -699,8 +726,11 @@
 +  return count;
  }
  
++#line 5362	/* SCE: the line in Sony's dlmalloc/malloc.c */
  size_t destroy_mspace(mspace msp) {
-@@ -5025,7 +4978,7 @@
+   size_t freed = 0;
+   mstate ms = (mstate)msp;
+@@ -5025,7 +4981,7 @@
        flag_t flag = sp->sflags;
        sp = sp->next;
        if ((flag & USE_MMAP_BIT) && !(flag & EXTERN_BIT) &&
@@ -709,7 +739,7 @@
          freed += size;
      }
    }
-@@ -5165,6 +5118,7 @@
+@@ -5165,6 +5121,7 @@
      mstate fm = (mstate)msp;
  #endif /* FOOTERS */
      if (!ok_magic(fm)) {
@@ -717,7 +747,7 @@
        USAGE_ERROR_ACTION(fm, p);
        return;
      }
-@@ -5177,7 +5131,7 @@
+@@ -5177,7 +5134,7 @@
            size_t prevsize = p->prev_foot;
            if (is_mmapped(p)) {
              psize += prevsize + MMAP_FOOT_PAD;
@@ -726,7 +756,7 @@
                fm->footprint -= psize;
              goto postaction;
            }
-@@ -5256,26 +5210,6 @@
+@@ -5256,26 +5213,7 @@
    }
  }
  
@@ -750,10 +780,11 @@
 -  return mem;
 -}
 -
++#line 5625	/* SCE: the line in Sony's dlmalloc/malloc.c */
  void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
    if (oldmem == 0)
      return mspace_malloc(msp, bytes);
-@@ -5309,70 +5243,70 @@
+@@ -5309,70 +5247,72 @@
    return internal_memalign(ms, alignment, bytes);
  }
  
@@ -786,6 +817,7 @@
 -      result = sys_trim(ms, pad);
 -      POSTACTION(ms);
 +/* SCE: frees every segment that has become one free chunk */
++#line 5725	/* SCE: the line in Sony's dlmalloc/malloc.c */
 +size_t mspace_release_unused_segment(mspace msp) {
 +  size_t released = 0;
 +  mstate m = (mstate)msp;
@@ -846,6 +878,7 @@
  
 -size_t mspace_footprint(mspace msp) {
 -  size_t result = 0;
++#line 5832	/* SCE: the line in Sony's dlmalloc/malloc.c */
 +void mspace_get_malloc_stats(mspace msp, struct malloc_stats* stats) {
    mstate ms = (mstate)msp;
    if (ok_magic(ms)) {
@@ -857,8 +890,8 @@
    }
 -  return result;
  }
- 
 -
+ 
 -size_t mspace_max_footprint(mspace msp) {
 +size_t mspace_footprint(mspace msp) {
    size_t result = 0;
@@ -869,7 +902,15 @@
    }
    else {
      USAGE_ERROR_ACTION(ms,ms);
-@@ -5400,8 +5334,9 @@
+@@ -5382,6 +5322,7 @@
+ 
+ 
+ #if !NO_MALLINFO
++#line 5870	/* SCE: the line in Sony's dlmalloc/malloc.c */
+ struct mallinfo mspace_mallinfo(mspace msp) {
+   mstate ms = (mstate)msp;
+   if (!ok_magic(ms)) {
+@@ -5400,8 +5341,9 @@
    return 0;
  }
  
