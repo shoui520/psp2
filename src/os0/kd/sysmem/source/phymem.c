@@ -292,15 +292,17 @@ static inline __attribute__((always_inline))
 PhyPage *PhyPageTableMgrGetPhyPage(PhyPageTableMgr *mgr, SceUInt32 pindex)
 {
 	PhyPage *page = PhyPageTableGetPhyPage(mgr->tables[0], pindex);
+	PhyPageTable *table;
 
 	if (page != NULL)
 		return page;
-	page = PhyPageTableGetPhyPage(mgr->tables[1], pindex);
+	table = mgr->tables[1];
+	page = PhyPageTableGetPhyPage(table, pindex);
 	if (page != NULL)
 		return page;
 	SCE_PANIC_PRINTF_FUNC(1194, "PhyPageTableMgrGetPhyPage",
-			      "no pNext: %p: 0x%08x <= 0x%08x=pindex\n", mgr->tables[1],
-			      mgr->tables[1]->pindexMax, pindex);
+			      "no pNext: %p: 0x%08x <= 0x%08x=pindex\n", table, table->pindexMax,
+			      pindex);
 }
 
 /* the descriptor of pindex in whichever segment holds it */
@@ -416,8 +418,10 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 {
 	PhyPageTable *table = NULL;
 	uintptr_t address = (uintptr_t)va, pa;
+	int ret;
 
-	if (ksceKernelVAtoPA(va, &pa) >= 0) {
+	ret = ksceKernelVAtoPA(va, &pa);
+	if (ret >= 0) {
 		table = mgr->tables[0];
 		if (address >= (uintptr_t)table->entries &&
 		    address < (uintptr_t)table->entries + (table->pindexMax - table->basePindex) * 4)
@@ -426,11 +430,12 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 		if (address >= (uintptr_t)table->entries &&
 		    address < (uintptr_t)table->entries + (table->pindexMax - table->basePindex) * 4)
 			return 0;
+		ret = SCE_KERNEL_ERROR_ERROR;
 	}
 	if (mode == 1)
-		SCE_PANIC_PRINTF(1244, "no pNext: %p: %p: %p-%p\n", va, table, table->entries,
+		SCE_PANIC_PRINTF(1244, "no pNext: %p: %p: %p-%p\n", table, va, table->entries,
 				 (char *)table->entries + (table->pindexMax - table->basePindex) * 4);
-	return SCE_KERNEL_ERROR_ERROR;
+	return ret;
 }
 #endif
 
