@@ -17,13 +17,15 @@ extern int CheckProcessDebugCapability(int processId);
 /* Name unknown; called before the first startup DIP-switch query. */
 int InitializeDipsw(const struct SysmemBootContext *context)
 {
-	const union DipswState *initial =
-		(const union DipswState *)&context->kblParam->dipsw;
-	unsigned int word;
+	const uint32_t *word = ((const union DipswState *)&context->kblParam->dipsw)->words;
+	const uint32_t *end = word + 8;
+	union DipswState *dipsw = &s_bootDipsw;
+	uint32_t *copy = dipsw->words;
 
-	for (word = 0; word < 8; word++)
-		s_bootDipsw.words[word] = initial->words[word];
-	s_dipsw = &s_bootDipsw;
+	do
+		*copy++ = *word++;
+	while (word != end);
+	s_dipsw = dipsw;
 	return 0;
 }
 

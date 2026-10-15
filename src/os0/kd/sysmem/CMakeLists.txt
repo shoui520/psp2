@@ -124,6 +124,9 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 set_source_files_properties(../../../common/sysclib/bsd_strtoll_kernel.c
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
+# Sony built the DIP switch file for size: literal pools, not movw/movt.
+set_source_files_properties(source/dipsw.c PROPERTIES COMPILE_OPTIONS "-Os")
+
 # Sony's exported atomic entry points use ARM instructions in every firmware.
 set_source_files_properties(source/atomics32.c source/atomics64.c
 	source/atomics_small.c source/atomic_counters.c
