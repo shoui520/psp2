@@ -29,13 +29,18 @@ int rdrfpInitQueue(RdrfpQueue *queue)
 
 void rdrfpEnqueue(RdrfpQueue *queue, RdrfpRequest *req)
 {
+	RdrfpLink *link = &req->link;
+	RdrfpLink *head = &queue->head;
+	int count;
+
 	ksceKernelLockMutex(queue->mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, &req->link == req->link.next, 81);
-	req->link.next = &queue->head;
-	req->link.prev = queue->head.prev;
-	queue->head.prev = &req->link;
-	req->link.prev->next = &req->link;
-	queue->count++;
+	count = queue->count;
+	link->next = head;
+	link->prev = head->prev;
+	head->prev = link;
+	link->prev->next = link;
+	queue->count = count + 1;
 	ksceKernelSetEventFlag(queue->evf, 1);
 	ksceKernelUnlockMutex(queue->mutex, 1);
 }

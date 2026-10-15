@@ -26,12 +26,12 @@ int rdrfpInitBufferTable(void)
 	rdrfpBufferTable[RDRFP_BUF_RECV].size = 0x11000;
 	rdrfpBufferTable[RDRFP_BUF_RECV].count = 9;
 	rdrfpBufferTable[RDRFP_BUF_RECV].buffers = rdrfpRecvBuffers;
-	rdrfpBufferTable[RDRFP_BUF_READ].size = 0x41000;
 	rdrfpBufferTable[RDRFP_BUF_READ].count = 2;
 	rdrfpBufferTable[RDRFP_BUF_READ].buffers = rdrfpReadBuffers;
-	rdrfpBufferTable[RDRFP_BUF_WRITE].size = 0x41000;
 	rdrfpBufferTable[RDRFP_BUF_WRITE].count = 8;
 	rdrfpBufferTable[RDRFP_BUF_WRITE].buffers = rdrfpWriteBuffers;
+	rdrfpBufferTable[RDRFP_BUF_READ].size = 0x41000;
+	rdrfpBufferTable[RDRFP_BUF_WRITE].size = 0x41000;
 
 	for (type = 0; type < RDRFP_BUF_TYPES; type++) {
 		table = &rdrfpBufferTable[type];

@@ -88,12 +88,19 @@ typedef struct RdrfpHeader {
 
 /* a read too large for one go continues later from where it stopped */
 typedef struct RdrfpReadState {
-	SceUInt8 continued;
-	SceUInt8 reserved[3];
+	union {
+		SceUInt32 flags;
+		struct {
+			SceUInt8 continued;
+			SceUInt8 reserved[3];
+		};
+	};
 	SceSize remaining;
-	SceOff offset;
+	SceOff offset __attribute__((packed, aligned(4)));
 	SceUInt16 seq;
 } RdrfpReadState;
+
+_Static_assert(sizeof(RdrfpReadState) == 20, "RdrfpReadState size");
 
 /* a write piece: header, then (from 0x1000 of its buffer) the data */
 typedef struct RdrfpWriteHeader {

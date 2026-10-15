@@ -93,10 +93,16 @@ static inline void fixStatMode(SceIoStat *stat)
 
 static inline void fixChstatMode(SceIoStat *stat)
 {
-	if (stat->st_mode & SCE_S_IRUSR)
-		stat->st_mode = (stat->st_mode & ~SCE_S_IRUSR) | SCE_S_IRSYS;
-	if (stat->st_mode & SCE_S_IWUSR)
-		stat->st_mode = (stat->st_mode & ~SCE_S_IWUSR) | SCE_S_IWSYS;
+	SceMode mode = stat->st_mode;
+
+	if (mode & SCE_S_IRUSR) {
+		mode = (mode & ~SCE_S_IRUSR) | SCE_S_IRSYS;
+		stat->st_mode = mode;
+	}
+	if (mode & SCE_S_IWUSR) {
+		mode = (mode & ~SCE_S_IWUSR) | SCE_S_IWSYS;
+		stat->st_mode = mode;
+	}
 }
 
 /* ux0:data/savedata or a title's directory in it, while not mounted whole */
@@ -134,13 +140,20 @@ static int normalizePath(const char *path, char *buf)
 		n = __builtin_clz(~(c << 24));
 		if (n > 6)
 			return SCE_ERROR_ERRNO_EINVAL;
-		code = c & (0xff >> (n + 1));
-		for (i = 1; i < n; i++) {
-			if ((s[i] & 0xc0) != 0x80)
-				return SCE_ERROR_ERRNO_EINVAL;
-			code = (code << 6) | (s[i] & 0x3f);
+		code = c & (0xffu >> (n + 1));
+		if (n <= 1) {
+			s++;
+		} else {
+			for (i = 1; i < 6; i++) {
+				if ((s[i] & 0xc0) != 0x80)
+					return SCE_ERROR_ERRNO_EINVAL;
+				code = (code << 6) | (s[i] & 0x3f);
+				if (n == i + 1) {
+					s += i + 1;
+					break;
+				}
+			}
 		}
-		s += n;
 		if (code < 0x80)
 			return SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -166,8 +179,12 @@ static int normalizePath(const char *path, char *buf)
 		if (len == 1 && comp[0] == '.')
 			continue;
 		if (len == 2 && comp[0] == '.' && comp[1] == '.') {
-			if (d - 1 != root) {
-				for (t = d - 1; t != root && *t != '/'; t--)
+			if (d - 1 == root) {
+				d = root + 1;
+			} else if (d[-1] == '/') {
+				d--;
+			} else {
+				for (t = d - 2; t != root && *t != '/'; t--)
 					;
 				d = t == root ? root + 1 : t;
 			}
@@ -187,19 +204,22 @@ int checkSavedataSceSysAccess(const char *path)
 {
 	const char *const *name;
 	const char *p;
+	int ret;
 
-	if (strncmp(path, "ux0:data/savedata", 0x11) == 0) {
+	ret = strncmp(path, "ux0:data/savedata", 0x11);
+	if (ret == 0) {
 		if (rdrfpSavedataMountPoint.path[0] == '\0')
-			return 0;
+			return ret;
 		p = path[4] == '/' ? path + 5 : path + 4;
 		if (p[0xd] != '/')
-			return 0;
+			return ret;
 		p += 0xe;
 		if (strncmp(p, "sce_sys", 7) != 0)
-			return 0;
+			return ret;
 	} else {
-		if (strncmp(path, "ux0:", 4) == 0)
-			return 0;
+		ret = strncmp(path, "ux0:", 4);
+		if (ret == 0)
+			return ret;
 		for (p = path; *p != '\0' && *p != ':'; p++)
 			;
 		if (*p == '\0') {
@@ -303,21 +323,24 @@ failed:
 
 int rdrfpVDTreeInit(void)
 {
-	RdrfpRoot *r;
+	RdrfpRoot *r = rdrfpRoots;
+	RdrfpVDEntry *titles;
 
 	__builtin_memset(&rdrfpSavedataMountPoint, 0, sizeof(rdrfpSavedataMountPoint));
-	for (r = rdrfpRoots; r != &rdrfpRoots[2]; r++) {
+	do {
 		r->root = rdrfpCreateVDEntry(r->name);
 		if (r->root == NULL) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 318, "couldn't create root entry\n");
 			return -1;
 		}
-		r->titles = rdrfpAddVDEntry(r->root, "game titles");
-		if (r->titles == NULL) {
+		titles = rdrfpAddVDEntry(r->root, "game titles");
+		r->titles = titles;
+		r++;
+		if (titles == NULL) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 328, "couldn't create \"%s\" entry\n", "game titles");
 			return -1;
 		}
-	}
+	} while (r != &rdrfpRoots[2]);
 	return 0;
 }
 
@@ -362,7 +385,7 @@ int rdrfpUpdateVDTree(void)
 	for (which = 0; which < 2; which++) {
 		ret = rdrfpUpdateVDTreeOfSavedata(which);
 		if (ret < 0 && ret != (int)SCE_ERROR_ERRNO_ENOENT && ret != (int)SCE_ERROR_ERRNO_ENODEV)
-			break;
+			return ret;
 		titles = &rdrfpRoots[which].titles->children;
 		i = 0;
 		while ((elem = rdrfpGetListElem(titles, i)) != NULL) {
@@ -384,7 +407,7 @@ int rdrfpUpdateVDTree(void)
 			i++;
 		}
 	}
-	return ret;
+	return 0;
 }
 
 /* the game card went: its titles go */
@@ -467,12 +490,19 @@ static int rdrfpVDTreeFindEntry(const char *path, SceSize size, RdrfpVDEntry **e
 		found = rdrfpFindVDEntry(e, rest);
 		if (found == NULL)
 			break;
-		e = found;
-		if (*next == '\0' || rdrfpVDEntryIsMounted(e))
+		if (*next == '\0') {
+			e = found;
 			break;
+		}
+		if (rdrfpVDEntryIsMounted(found)) {
+			e = found;
+			goto mounted;
+		}
+		e = found;
 		rest = next;
 	}
 	if (rdrfpVDEntryIsMounted(e)) {
+mounted:
 		found = NULL;
 		ret = rdrfpVDEntryMakePath(e, next, &real);
 	}
@@ -508,16 +538,22 @@ int rdrfpGetstat(const char *path, SceSize len, SceIoStat *stat)
 	}
 	if (realPath) {
 		p = realPath;
-		elevated = checkSavedataSceSysAccess(realPath);
+		elevated = checkSavedataSceSysAccess(realPath) != 0;
 	} else {
 		p = buf;
 		elevated = isSavedataDir(buf) || checkSavedataSceSysAccess(buf);
 	}
-	beginIo(&ctx, elevated);
-	ret = ksceIoGetstat(p, stat);
-	endIo(&ctx);
-	if (elevated && ret == 0)
-		fixStatMode(stat);
+	if (elevated) {
+		beginIo(&ctx, 1);
+		ret = ksceIoGetstat(p, stat);
+		endIo(&ctx);
+		if (ret == 0)
+			fixStatMode(stat);
+	} else {
+		beginIo(&ctx, 0);
+		ret = ksceIoGetstat(p, stat);
+		endIo(&ctx);
+	}
 out:
 	if (realPath)
 		rdrfpFree(realPath);
@@ -631,7 +667,7 @@ int rdrfpOpen(const char *path, SceSize len, int flags, SceIoMode mode, RdrfpFd 
 		if (found >= 0) {
 			if (entry == NULL) {
 				p = realPath ? realPath : buf;
-				elevated = checkSavedataSceSysAccess(p);
+				elevated = checkSavedataSceSysAccess(p) != 0;
 				beginIo(&ctx, elevated);
 				uid = ksceIoOpen(p, flags, mode);
 				endIo(&ctx);

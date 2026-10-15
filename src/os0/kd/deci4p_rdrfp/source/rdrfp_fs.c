@@ -131,16 +131,15 @@ static int rdrfpMountCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32 no
 	if ((events & RDRFP_MOUNT_EVENT_UNMOUNTED) &&
 	    rdrfpDevices[dev].mountPoint == RDRFP_MOUNT_POINT_GAME_CARD)
 		rdrfpDeleteVDTreeOfGameCard();
+	mounted = events & RDRFP_MOUNT_EVENT_MOUNTED;
 	if (!rdrfpIsEnabled())
 		return 0;
-	if (events & RDRFP_MOUNT_EVENT_MOUNTED) {
+	if (mounted) {
 		if (getDeviceInfo(dev, &total, &free) < 0)
 			return 0;
-		mounted = 1;
 	} else {
 		total = 0;
 		free = 0;
-		mounted = 0;
 	}
 	rdrfpSendDeviceNotify(dev, mounted, total, free);
 	return 0;
@@ -219,21 +218,25 @@ int rdrfpInitFS(void)
 /* whether a path names one of the devices, as the host shows them */
 int rdrfpCheckDeviceName(const char *path, SceSize len)
 {
+	const char *cursor = path;
 	SceSize i;
+	int ret;
 
-	if (len > 0x1f)
+	if (len >= 0x20)
 		len = 0x20;
-	for (i = 0; i < len; i++) {
-		if (path[i] == ':')
+	for (i = 0; i != len; i++, cursor++) {
+		if (*cursor == ':')
 			break;
-		if (path[i] == '\0')
+		if (*cursor == '\0')
 			return SCE_ERROR_ERRNO_EACCES;
 	}
 	if (i == 0x20)
 		return SCE_ERROR_ERRNO_EACCES;
-	if (strncmp(rdrfpDevices[0].name, path, i + 1) != 0 &&
-	    strncmp(rdrfpDevices[1].name, path, i + 1) != 0 &&
-	    strncmp(rdrfpDevices[2].name, path, i + 1) != 0)
-		return SCE_ERROR_ERRNO_EACCES;
-	return 0;
+	ret = strncmp(rdrfpDevices[0].name, path, i + 1);
+	if (ret == 0)
+		return ret;
+	ret = strncmp(rdrfpDevices[1].name, path, i + 1);
+	if (ret == 0)
+		return ret;
+	return strncmp(rdrfpDevices[2].name, path, i + 1) ? SCE_ERROR_ERRNO_EACCES : 0;
 }

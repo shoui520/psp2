@@ -53,10 +53,14 @@ typedef struct RdrfpReadReply {
 	SceSize size;				/* data following */
 } RdrfpReadReply;
 
-typedef struct RdrfpWriteReplyPacket {
-	RdrfpHeader head;
+typedef struct RdrfpWriteReply {
 	int result;
 	SceSize written;
+} RdrfpWriteReply;
+
+typedef struct RdrfpWriteReplyPacket {
+	RdrfpHeader head;
+	RdrfpWriteReply reply;
 } RdrfpWriteReplyPacket;
 
 typedef struct RdrfpReaddirEntry {
@@ -97,7 +101,7 @@ static inline int checkPath(RdrfpPath *arg, SceSize *size)
 /* Sony's build keeps these out of line */
 static __attribute__((noinline)) int rdrfpConvertErrorCode(int error)
 {
-	switch ((SceUInt32)error) {
+	switch (error) {
 	case 0:
 		return 0;
 	case 0x80010001:			/* EPERM */
@@ -243,7 +247,7 @@ static int rdrfpFSCommandHandlerMountAppData(RdrfpRequest *req, RdrfpHeader *pac
 
 static int rdrfpFSCommandHandlerRename(RdrfpRequest *req, RdrfpHeader *packet, void *args)
 {
-	RdrfpPath *from = args, *to;
+	RdrfpPath *from = (RdrfpPath *)(packet + 1), *to;
 	SceSize fromSize, toSize, len;
 	int result, ret;
 
@@ -343,13 +347,6 @@ static int rdrfpFSCommandHandlerMkdir(RdrfpRequest *req, RdrfpHeader *packet, vo
 	return ret;
 }
 
-typedef struct RdrfpWriteArgs {
-	SceUInt32 fd;
-	SceUInt32 flags;			/* RDRFP_WRITE_* */
-	SceOff offset __attribute__((packed, aligned(4)));
-	SceSize size;
-} RdrfpWriteArgs;
-
 /*
  * A write, or the write buffer collecting several: each piece the host sent
  * gets its reply. A failed write is remembered in the file cache, and the
@@ -357,11 +354,12 @@ typedef struct RdrfpWriteArgs {
  */
 static int rdrfpFSCommandHandlerWrite(RdrfpRequest *req, RdrfpHeader *packet, void *args)
 {
-	RdrfpWriteArgs *arg = args;
+	RdrfpWriteHeader *arg = args;
 	RdrfpDesc *desc = req->desc;
 	RdrfpWritebuf *wb = desc->extra;
 	RdrfpFileCacheEntry *cache;
 	RdrfpWriteReplyPacket *reply;
+	RdrfpWriteReply *response = args;
 	RdrfpRequest *pieceReq;
 	SceUInt32 fd = arg->fd, id;
 	SceOff offset = arg->offset;
@@ -370,12 +368,12 @@ static int rdrfpFSCommandHandlerWrite(RdrfpRequest *req, RdrfpHeader *packet, vo
 
 	cache = rdrfpFindFileCache(fd, offset);
 	if (cache) {
-		if (arg->flags & RDRFP_WRITE_FIRST) {
+		if (arg->kind & RDRFP_WRITE_FIRST) {
 			rdrfpDeleteFileCache(cache);
 			goto write;
 		}
 		result = cache->result;
-		if (arg->flags & RDRFP_WRITE_MORE)
+		if (arg->kind & RDRFP_WRITE_MORE)
 			rdrfpFileCacheAddOffset(cache, size);
 		else
 			rdrfpDeleteFileCache(cache);
@@ -388,14 +386,15 @@ write:
 	} else {
 		written = rdrfpWrite(arg->fd, (char *)packet + sizeof(*packet) + sizeof(*arg), size, offset);
 		if (written >= 0) {
-			if (arg->flags & RDRFP_WRITE_MORE) {
+			result = arg->kind & RDRFP_WRITE_MORE;
+			if (result) {
 				rdrfpTerminateRequest(req);
 				return 0;
 			}
 			rdrfpSetPacketSize(packet, sizeof(RdrfpWriteReplyPacket));
 			rdrfpSetPacketType(packet, RDRFP_CMD_WRITE + 1);
-			((RdrfpWriteReplyPacket *)packet)->result = arg->flags & RDRFP_WRITE_MORE;
-			((RdrfpWriteReplyPacket *)packet)->written = written;
+			response->result = result;
+			response->written = written;
 			ret = rdrfpSendPacket(req);
 			if (ret < 0)
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 1301, "rdrfpSendPacket failed? (0x%08x)\n", ret);
@@ -406,7 +405,7 @@ write:
 		else
 			result = rdrfpConvertErrorCode(written);
 	}
-	if (arg->flags & RDRFP_WRITE_MORE) {
+	if (arg->kind & RDRFP_WRITE_MORE) {
 		if (cache == NULL)
 			rdrfpAddFileCache(fd, offset + size, result);
 		else
@@ -428,8 +427,8 @@ reply:
 			rdrfpSetPacketSize(reply, sizeof(*reply));
 			rdrfpSetPacketType(&reply->head, RDRFP_CMD_WRITE + 1);
 			rdrfpSetPacketId(&reply->head, id);
-			reply->result = result;
-			reply->written = 0;
+			reply->reply.result = result;
+			reply->reply.written = 0;
 			ret = rdrfpSendPacket(pieceReq);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 1337, "rdrfpSendPacket failed? (0x%08x)\n", ret);
@@ -437,12 +436,12 @@ reply:
 			}
 		}
 		/* Sony sets the last ID one slot past the replies, not in the packet */
-		rdrfpSetPacketId(&reply->head, wb->ids[count - 1]);
+		rdrfpSetPacketId(&reply->head, wb->ids[i]);
 	}
 	rdrfpSetPacketSize(packet, sizeof(RdrfpWriteReplyPacket));
 	rdrfpSetPacketType(packet, RDRFP_CMD_WRITE + 1);
-	((RdrfpWriteReplyPacket *)packet)->result = result;
-	((RdrfpWriteReplyPacket *)packet)->written = 0;
+	response->result = result;
+	response->written = 0;
 	ret = rdrfpSendPacket(req);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 1353, "rdrfpSendPacket failed? (0x%08x)\n", ret);
@@ -589,24 +588,27 @@ static int rdrfpFSCommandHandlerTruncate(RdrfpRequest *req, RdrfpHeader *packet,
 }
 
 /* the stat fields the host changes, and which */
-static inline int makeChstat(SceUInt32 bits, const RdrfpStat *in, SceIoStat *stat)
+static inline int makeChstat(const SceUInt32 *bits, const RdrfpStat *in, SceIoStat *stat)
 {
+	SceUInt32 current = *bits;
 	int cbit = 0;
 
 	memset(stat, 0, sizeof(*stat));
-	if (bits & SCE_CST_MODE) {
+	if (current & SCE_CST_MODE) {
 		stat->st_mode = in->mode & RDRFP_MODE_MASK;
 		cbit |= SCE_CST_MODE;
 	}
-	if (bits & SCE_CST_CT) {
+	if (current & SCE_CST_CT) {
 		tickToDateTime(in->ctime, &stat->st_ctime);
 		cbit |= SCE_CST_CT;
+		current = *bits;
 	}
-	if (bits & SCE_CST_AT) {
+	if (current & SCE_CST_AT) {
 		tickToDateTime(in->atime, &stat->st_atime);
 		cbit |= SCE_CST_AT;
+		current = *bits;
 	}
-	if (bits & SCE_CST_MT) {
+	if (current & SCE_CST_MT) {
 		tickToDateTime(in->mtime, &stat->st_mtime);
 		cbit |= SCE_CST_MT;
 	}
@@ -628,7 +630,9 @@ static int rdrfpFSCommandHandlerFchstat(RdrfpRequest *req, RdrfpHeader *packet, 
 	if (arg->bits & ~RDRFP_CST_MASK) {
 		result = RDRFP_ERROR_EINVAL;
 	} else {
-		ret = rdrfpChstatByFd(arg->fd, &stat, makeChstat(arg->bits, &arg->stat, &stat));
+		int cbit = makeChstat(&arg->bits, &arg->stat, &stat);
+
+		ret = rdrfpChstatByFd(arg->fd, &stat, cbit);
 		result = ret < 0 ? rdrfpConvertErrorCode(ret) : 0;
 	}
 	rdrfpSetPacketSize(packet, sizeof(*packet) + 4);
@@ -659,8 +663,9 @@ static int rdrfpFSCommandHandlerChstat(RdrfpRequest *req, RdrfpHeader *packet, v
 		if (arg->bits & ~RDRFP_CST_MASK) {
 			result = RDRFP_ERROR_EINVAL;
 		} else {
-			ret = rdrfpChstat(arg->path.path, size, &stat,
-					  makeChstat(arg->bits, &arg->stat, &stat));
+			int cbit = makeChstat(&arg->bits, &arg->stat, &stat);
+
+			ret = rdrfpChstat(arg->path.path, size, &stat, cbit);
 			result = ret < 0 ? rdrfpConvertErrorCode(ret) : 0;
 		}
 	}
@@ -690,13 +695,23 @@ static int rdrfpFSCommandHandlerOpen(RdrfpRequest *req, RdrfpHeader *packet, voi
 	RdrfpOpenArgs *arg = args;
 	RdrfpOpenReply *reply = args;
 	SceUInt32 flags = arg->flags;
-	SceIoMode mode = arg->mode;
+	SceIoMode mode;
 	SceIoStat stat;
 	RdrfpFd *file;
-	SceSize size, replySize;
+	SceSize size, replySize, len;
 	int result, fd, ret;
 
-	result = checkPath(&arg->path, &size);
+	len = strnlen(arg->path.path, RDRFP_PATH_MAX);
+	mode = arg->mode;
+	size = (arg->path.size + 3) & ~3;
+	if (size != ((len + 4) & ~3)) {
+		result = RDRFP_ERROR_ENAMETOOLONG;
+	} else {
+		arg->path.path[size - 1] = '\0';
+		result = rdrfpCheckDeviceName(arg->path.path, size);
+		if (result != 0)
+			result = RDRFP_ERROR_EACCES;
+	}
 	if (result != 0) {
 		fd = -1;
 		replySize = sizeof(*packet) + 8;
@@ -915,7 +930,7 @@ static int sendReadRes(RdrfpRequest *req, RdrfpHeader *packet, void *args)
 	int index, n, last, result, ret, error;
 	char *buf, *data;
 
-	if (state->continued) {
+	if (state->flags) {
 		offset = state->offset;
 		remaining = state->remaining;
 		seq = state->seq;
@@ -1055,8 +1070,9 @@ int rdrfpFSCallCommandHandler(RdrfpRequest *req, SceUInt32 command, RdrfpHeader 
 {
 	int i, ret;
 
-	for (i = 0; rdrfpCommands[i].command != command; i++) {
-		if (rdrfpCommands[i + 1].command == (SceUInt32)-1)
+	for (i = 0; rdrfpCommands[i].command != command;) {
+		i++;
+		if (rdrfpCommands[i].command == (SceUInt32)-1)
 			goto unknown;
 	}
 	if (rdrfpCommands[i].handler)

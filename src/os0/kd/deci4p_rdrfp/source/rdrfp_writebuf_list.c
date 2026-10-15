@@ -23,12 +23,12 @@ static RdrfpFileCacheEntry rdrfpFileCache[RDRFP_FILE_CACHE];
 
 #define WRITEBUF_HEAD	(&rdrfpWritebufList.head)
 
-static inline void writebufUnlink(RdrfpWritebuf *wb)
+static inline void writebufUnlink(RdrfpLink *link)
 {
-	wb->link.next->prev = wb->link.prev;
-	wb->link.prev->next = wb->link.next;
-	wb->link.next = &wb->link;
-	wb->link.prev = &wb->link;
+	link->next->prev = link->prev;
+	link->prev->next = link->next;
+	link->next = link;
+	link->prev = link;
 }
 
 static int requestWritebufCallback(SceUID notifyId, SceInt32 notifyCount, SceInt32 notifyArg,
@@ -49,7 +49,7 @@ static int requestWritebufCallback(SceUID notifyId, SceInt32 notifyCount, SceInt
 			next = link->next;
 			wb = (RdrfpWritebuf *)link;
 			if (wb->flushed) {
-				writebufUnlink(wb);
+				writebufUnlink(link);
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 62, "TimerCallbackFlush\n");
 				rdrfpRequestWritebuf(wb, 2);
 				flushed = 1;
@@ -106,15 +106,18 @@ void rdrfpDeleteWritebuf(RdrfpWritebuf *wb)
 
 void rdrfpPutWritebufToList(RdrfpWritebuf *wb)
 {
+	RdrfpLink *link = &wb->link;
+	RdrfpLink *head = WRITEBUF_HEAD;
+
 	ksceKernelLockMutex(rdrfpWritebufList.mutex, 1, NULL);
-	SCE_DBG_ASSERT_LEVEL(0, &wb->link == wb->link.next, 134);
-	if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
+	SCE_DBG_ASSERT_LEVEL(0, link == link->next, 134);
+	if (head->next == head)
 		ksceKernelStartTimer(rdrfpWritebufTimer);
-	wb->link.next = WRITEBUF_HEAD;
-	wb->link.prev = rdrfpWritebufList.head.prev;
-	rdrfpWritebufList.head.prev = &wb->link;
+	link->next = head;
+	link->prev = head->prev;
+	head->prev = link;
 	wb->flushed = 0;
-	wb->link.prev->next = &wb->link;
+	link->prev->next = link;
 	ksceKernelUnlockMutex(rdrfpWritebufList.mutex, 1);
 }
 
@@ -128,7 +131,7 @@ RdrfpWritebuf *rdrfpGetWritebufFromList(void)
 	if (&wb->link == WRITEBUF_HEAD) {
 		wb = NULL;
 	} else {
-		writebufUnlink(wb);
+		writebufUnlink(&wb->link);
 		if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
 			ksceKernelStopTimer(rdrfpWritebufTimer);
 	}
@@ -147,7 +150,7 @@ RdrfpWritebuf *rdrfpFindWritebuf(SceUInt32 fd, SceOff offset, SceSize size)
 		wb = (RdrfpWritebuf *)link;
 		if (wb->fd == fd && wb->offset + wb->size == offset &&
 		    wb->size + size <= RDRFP_WRITE_MAX) {
-			writebufUnlink(wb);
+			writebufUnlink(link);
 			if (rdrfpWritebufList.head.next == WRITEBUF_HEAD)
 				ksceKernelStopTimer(rdrfpWritebufTimer);
 			goto out;

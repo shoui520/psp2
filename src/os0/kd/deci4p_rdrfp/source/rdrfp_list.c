@@ -31,6 +31,7 @@ int rdrfpDeleteList(RdrfpList *list)
 RdrfpListElem *rdrfpAddToList(RdrfpList *list, void *data)
 {
 	RdrfpListElem *elem = rdrfpAlloc(sizeof(*elem));
+	int count;
 
 	if (elem == NULL)
 		return NULL;
@@ -40,11 +41,12 @@ RdrfpListElem *rdrfpAddToList(RdrfpList *list, void *data)
 	elem->data = data;
 	ksceKernelLockMutex(list->mutex, 1, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, &elem->link == elem->link.next, 81);
+	count = list->count;
 	elem->link.next = &list->head;
 	elem->link.prev = list->head.prev;
 	list->head.prev = &elem->link;
 	elem->link.prev->next = &elem->link;
-	list->count++;
+	list->count = count + 1;
 	ksceKernelUnlockMutex(list->mutex, 1);
 	return elem;
 }
