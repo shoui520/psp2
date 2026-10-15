@@ -290,33 +290,28 @@ int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange
 	vector->count = 0;
 	vector->total = 0;
 	AddressSpaceRefer(as);
-	if (size == 0) {
-		len = 0;
-		base = 0;
-	} else {
-		len = 0;
-		base = 0;
-		do {
-			ret = MMUVAtoPAWithMemoryType(MMU_MODE_KERNEL_RW, va, &pa, memoryType);
-			if (ret < 0)
-				goto out;
-			if (len + base != pa) {
-				if (vector->total != 0 && cur != end) {
-					cur->addr = base;
-					cur->size = len;
-					cur++;
-				}
-				len = 0;
-				vector->total++;
-				base = pa;
+	len = 0;
+	base = 0;
+	while (size != 0) {
+		ret = MMUVAtoPAWithMemoryType(MMU_MODE_KERNEL_RW, va, &pa, memoryType);
+		if (ret < 0)
+			goto out;
+		if (len + base != pa) {
+			if (vector->total != 0 && cur != end) {
+				cur->addr = base;
+				cur->size = len;
+				cur++;
 			}
-			chunk = (~va & 0xfff) + 1;
-			if (size <= chunk)
-				chunk = size;
-			size -= chunk;
-			va += chunk;
-			len += chunk;
-		} while (size != 0);
+			len = 0;
+			vector->total++;
+			base = pa;
+		}
+		chunk = (~va & 0xfff) + 1;
+		if (size <= chunk)
+			chunk = size;
+		size -= chunk;
+		va += chunk;
+		len += chunk;
 	}
 	ret = 0;
 	if (cur != end) {
