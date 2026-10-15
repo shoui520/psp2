@@ -2440,14 +2440,15 @@ int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, 
 void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, SceSize size)
 {
 	AddressSpaceContext *context;
-	L2PageTable *l2pt;
+	L2PageTable *found, *l2pt;
 	int intr, l2Intr, ret;
 
 	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->mapLock);
 	context = partition->tiny.context;
 	for (; size != 0; size -= 0x100000, va += 0x100000) {
-		if (PartitionFindL2PageTable(partition, va, 0x100000, 0, &l2pt) < 0)
+		if (PartitionFindL2PageTable(partition, va, 0x100000, 0, &found) < 0)
 			continue;
+		l2pt = found;
 		if (L2PageTableGetPageCount(l2pt) != 0 || (l2pt->flags & 0x8000))
 			continue;
 		l2Intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
