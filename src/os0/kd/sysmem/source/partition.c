@@ -3016,8 +3016,8 @@ SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extra
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	Partition *partition = g_uidManager->kernelPartition;
-	MemBlockObject *block;
 	void *phyMemPart;
+	MemBlockObject *block;
 	int ret;
 
 	opt.attr = 0x40000000 | ALLOC_ATTR_HAS_EXTRA_LOW;
