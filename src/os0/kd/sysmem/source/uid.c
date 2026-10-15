@@ -666,10 +666,6 @@ static void UIDFuncAddEntryInfo(UIDFuncVector *vector, UIDEntry *entry)
 	SceKernelUIDEntryInfo *info;
 	SceObjectBase *object;
 	void *buffer = vector->buffer;
-	SceUInt32 count, attr;
-	SceUID pid;
-	SceUInt16 useCount;
-	const char *name;
 
 	vector->total++;
 	if (buffer == NULL || vector->count * sizeof(*info) >= vector->size)
@@ -677,27 +673,22 @@ static void UIDFuncAddEntryInfo(UIDFuncVector *vector, UIDEntry *entry)
 	object = entry->object;
 	info = (SceKernelUIDEntryInfo *)buffer + vector->count;
 	info->uid = entry->uid;
-	if (IsSafe(object)) {
+	if (!IsSafe(object)) {
+		info->object = NULL;
+		info->cls = NULL;
+	} else {
 		SceClass *objectClass = object->sce_class;
 
 		info->object = object;
 		info->cls = objectClass;
-	} else {
-		info->object = NULL;
-		info->cls = NULL;
 	}
-	count = vector->count;
-	useCount = entry->useCount;
 	info->guid = entry->guid;
-	attr = entry->attr;
-	name = entry->name;
-	pid = entry->pid;
 	info->linkCount = entry->linkCount;
-	info->useCount = useCount;
-	info->attr = attr;
-	info->name = name;
-	info->pid = pid;
-	vector->count = count + 1;
+	info->useCount = entry->useCount;
+	info->attr = entry->attr;
+	info->name = entry->name;
+	info->pid = entry->pid;
+	vector->count++;
 }
 
 /* walk callback of the UID vectors by class */
@@ -781,14 +772,12 @@ static int UIDEntryFuncForGetInfo(void *object, SceUInt32 index, void *arg)
 				       base);
 			return 0;
 		}
-		cls = base->sce_class;
+		for (cls = base->sce_class; cls != NULL; cls = cls->uidclass) {
+			if (cls == walk->cls)
+				break;
+		}
 		if (cls == NULL)
 			return 0;
-		while (cls != walk->cls) {
-			cls = cls->uidclass;
-			if (cls == NULL)
-				return 0;
-		}
 	}
 	if (walk->count < walk->size && walk->infos != NULL) {
 		info = &walk->infos[walk->count];
