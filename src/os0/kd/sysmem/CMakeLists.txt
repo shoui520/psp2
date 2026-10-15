@@ -24,6 +24,7 @@ else()
 endif()
 
 psp2_module(os0_kd_sysmem KIND kernel SOURCES
+	source/memory_set32.c
 	source/sha1_transform.c
 	source/oheap.c
 	source/uid.c

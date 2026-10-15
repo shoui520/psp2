@@ -14,7 +14,6 @@
 #define ADDRESS_SPACE_MAGIC		0x4d95aeec
 #define ADDRESS_SPACE_DEAD_FILL		0x07fd9f97
 
-extern void *SetMemoryCore(void *destination, int value, SceSize size);
 
 /* SceUIDHeapClass and SceUIDClass */
 static UIDHeapClass *s_uidHeapClass;
@@ -65,7 +64,7 @@ static int UIDHeapDestroy(void *object)
 /* name unknown: the destructor of an address space object */
 int AddressSpaceObjectDestroy(void *object)
 {
-	SetMemoryCore(object, ADDRESS_SPACE_DEAD_FILL, sizeof(AddressSpaceObject));
+	SetMemory32Core(object, ADDRESS_SPACE_DEAD_FILL, sizeof(AddressSpaceObject));
 	return 0;
 }
 

@@ -656,6 +656,11 @@ int ksceGUIDGetObject(SceUID guid, void *object);
 void *ksceKernelAlloc(SceSize size);
 int ksceKernelFree(void *ptr);
 
+/* sysclib fill.c: the fill core memset wraps */
+void *SetMemoryCore(void *destination, int value, SceSize size);
+/* memory_set32.c: the same fill with a 32-bit pattern */
+void *SetMemory32Core(void *destination, SceUInt32 pattern, SceSize size);
+
 
 /*
  * uid.c: a UID entry, the kernel's record of an object it hands out a UID for.

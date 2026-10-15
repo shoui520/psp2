@@ -182,7 +182,7 @@ void DeleteAddressSpace(AddressSpaceObject *as)
 	asid = context->mmu.contextId;
 	AddressSpaceFreeContext(as, context);
 	heap = as->heap;
-	memset(as, ADDRESS_SPACE_DEAD, sizeof(*as));
+	SetMemory32Core(as, ADDRESS_SPACE_DEAD, sizeof(*as));
 	heap->free(heap->heap, as);
 	ret = sceKernelBitheapFree(s_addressSpaceGlobals->asidHeap, asid & 0xff);
 	if (ret < 0)

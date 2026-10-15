@@ -2240,6 +2240,7 @@ void PartitionVirPageRelease(Partition *partition)
 Partition *PartitionInit(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
 			 const PartitionInitParam *param)
 {
+	AddressSpaceContext *context;
 	Partition *partition;
 	SceUInt32 attr;
 	int ret;
@@ -2247,10 +2248,11 @@ Partition *PartitionInit(const char *name, SceUInt8 domain, uintptr_t vbase, Sce
 	partition = ksceKernelAlloc(sizeof(*partition));
 	if (partition == NULL)
 		return NULL;
-	memset(partition, 0, sizeof(*partition));
+	SetMemory32Core(partition, 0, sizeof(*partition));
+	context = param->context;
 	partition->refCount = 0;
 	partition->tiny.base.sce_class = s_partitionClass;
-	ret = TinyPartitionInitRaw(&partition->tiny, name, vbase, size, param->context);
+	ret = TinyPartitionInitRaw(&partition->tiny, name, vbase, size, context);
 	if (ret < 0 || param->size != sizeof(*param))
 		return partition;
 	attr = param->attr;
@@ -2305,7 +2307,7 @@ int DeletePartition(Partition *partition)
 		L2PageTableFree(partition->tiny.context->l2ptHeap, l2pt);
 	}
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
-	memset(partition, TINY_PARTITION_DEAD, sizeof(*partition));
+	SetMemory32Core(partition, TINY_PARTITION_DEAD, sizeof(*partition));
 	ksceKernelFree(partition);
 	return 0;
 }

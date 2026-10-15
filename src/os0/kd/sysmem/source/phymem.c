@@ -263,7 +263,6 @@ int ksceKernelVAtoPA(const void *va, uintptr_t *pa);
 SceInt32 ksceKernelAtomicAddAndGet32(SceInt32 *address, SceInt32 value);
 SceInt32 ksceKernelAtomicSubAndGet32(SceInt32 *address, SceInt32 value);
 SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *address, SceInt32 expected, SceInt32 value);
-extern void *SetMemoryCore(void *destination, int value, SceSize size);
 
 /* phymem_low.c */
 typedef struct PhyMemLow PhyMemLow;
@@ -462,7 +461,7 @@ void PhyMemPartFreeRaw(PhyMemPart *part)
 		ksceKernelFree(segment);
 	}
 	part->segments = NULL;
-	SetMemoryCore(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
+	SetMemory32Core(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
 	ksceKernelFree(part);
 }
 
@@ -2061,7 +2060,7 @@ created:
 recovery:
 	PhyMemPartRecoveryRaw(part);
 	PhyMemPartRelease(part);
-	SetMemoryCore(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
+	SetMemory32Core(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
 	ksceKernelFree(part);
 	*out = NULL;
 	return ret;
