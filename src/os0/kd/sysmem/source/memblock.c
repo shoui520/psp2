@@ -845,7 +845,7 @@ SceUID ksceKernelAllocMemBlockWithInfo(const char *name, SceUInt32 type, SceSize
 
 		attr = opt->attr;
 		command.opt.attr = attr;
-		if (optSize != 0x30 && optSize != sizeof(*opt))
+		if (optSize != sizeof(*opt) && optSize != 0x30)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		if (attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID)
 			command.opt.pid = opt->pid;
