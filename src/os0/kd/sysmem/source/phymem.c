@@ -84,7 +84,7 @@ typedef struct PhyMemPartBuddy {
 
 typedef struct PhyMemPart {
 	SceObjectBase base;
-	SceInt32 refCount;		/* 0x08 */
+	volatile SceInt32 refCount;	/* 0x08: atomics; PhyMemPartGetARCount reads the word */
 	SceUInt32 flags;		/* 0x0c: bit0 = active */
 	SceUID uid;			/* 0x10 */
 	SceUInt32 type;			/* 0x14 */
@@ -326,7 +326,8 @@ static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemP
 
 static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 {
-	SceInt32 count = ksceKernelAtomicAddAndGetPositive32InRange(&part->refCount, 1, 0x7fffffff);
+	SceInt32 count = ksceKernelAtomicAddAndGetPositive32InRange((SceInt32 *)&part->refCount, 1,
+									      0x7fffffff);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count >= 0, 1489, "PhyMemPartRefer");
 	return count;
@@ -334,7 +335,7 @@ static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 
 static inline SceInt32 PhyMemPartRelease(PhyMemPart *part)
 {
-	SceInt32 count = ksceKernelAtomicDecIfPositive32(&part->refCount);
+	SceInt32 count = ksceKernelAtomicDecIfPositive32((SceInt32 *)&part->refCount);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count > 0, 1499, "PhyMemPartRelease");
 	return count;
@@ -2148,7 +2149,7 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 	if (ksceKernelAtomicSubAndGet32(&part->useCount, 1) > 0)
 		return 0;
 	/* no reference may be left */
-	while ((ret = ksceKernelAtomicCompareAndSet32(&part->refCount, 0, -1)) != 0)
+	while ((ret = ksceKernelAtomicCompareAndSet32((SceInt32 *)&part->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 4845, "PhyMemPartInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       part->refCount);
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
@@ -2189,7 +2190,7 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 /* the last reset drops every segment but the first and frees everything */
 int sceKernelResetPhyMemPart(PhyMemPart *part)
 {
-	PhyMemSegment *segment, *next;
+	PhyMemSegment *head, *segment, *next;
 	int intr;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0xb, 4909, "(%p [%s])\n", part, PhyMemPartGetName(part));
@@ -2210,9 +2211,10 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 		SCE_DBG_PRINTF(6, 4943, "\tfreeSize:0x%08x!=0x%08x:psize\n", part->freeSize,
 			       PhyMemPartGetPsize(part));
 	}
+	head = part->segments;
 	if (PHYMEM_PART_TYPE(part) == PHYMEM_PART_TYPE_LPDDR2) {
-		segment = part->segments->next;
-		part->segments->next = NULL;
+		segment = head->next;
+		head->next = NULL;
 		for (; segment != NULL; segment = next) {
 			SCE_DBG_PRINTF(0xb, 4958, "Shrink 0x%08x+0x%08x\n", segment->pbase,
 				       segment->psize);
