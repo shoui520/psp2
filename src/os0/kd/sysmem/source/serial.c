@@ -150,27 +150,48 @@ int ksceUartReadAvailable(int port)
 void serial_set_baud_rate(unsigned int port, unsigned int baud, SceUInt32 mode,
 			  SceUInt32 flowControl, SceUInt32 fifoConfig, SceUInt32 irqMask)
 {
-	volatile UartRegs *regs = s_uartRegs[port];
 	SceUInt32 rate;
 
 	if (baud == 0)
 		baud = 9;
 	if (mode == 0)
 		mode = 3;
-	regs->enable = 0;
+	s_uartRegs[port]->enable = 0;
 	rate = s_baudRates[baud];
-	if (port < UART_PORTS)
-		s_uartClkgen[port] = rate;
-	else
+	switch (port) {
+	case 0:
+		s_uartClkgen[0] = rate;
+		break;
+	case 1:
+		s_uartClkgen[1] = rate;
+		break;
+	case 2:
+		s_uartClkgen[2] = rate;
+		break;
+	case 3:
+		s_uartClkgen[3] = rate;
+		break;
+	case 4:
+		s_uartClkgen[4] = rate;
+		break;
+	case 5:
+		s_uartClkgen[5] = rate;
+		break;
+	case 6:
+		s_uartClkgen[6] = rate;
+		break;
+	default:
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 135);
-	regs->mode = mode;
-	regs->control = 1;
-	regs->flowControl = flowControl;
-	regs->fifoConfig = fifoConfig;
-	regs->irqConfig = 0;
-	regs->irqMask = irqMask;
-	regs->fifoControl = 0x10001;
-	regs->enable = 1;
+		break;
+	}
+	s_uartRegs[port]->mode = mode;
+	s_uartRegs[port]->control = 1;
+	s_uartRegs[port]->flowControl = flowControl;
+	s_uartRegs[port]->fifoConfig = fifoConfig;
+	s_uartRegs[port]->irqConfig = 0;
+	s_uartRegs[port]->irqMask = irqMask;
+	s_uartRegs[port]->fifoControl = 0x10001;
+	s_uartRegs[port]->enable = 1;
 }
 
 /* the UART and clock generator registers into kernel memory */
