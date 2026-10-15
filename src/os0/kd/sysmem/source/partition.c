@@ -92,7 +92,7 @@ int PartitionAsCommonFreeL2PageTable(Partition *partition, AddressSpaceContext *
 		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2BlockLock);
 		for (prev = NULL, cur = partition->l2Blocks; cur != NULL;
 		     prev = cur, cur = cur->smbNext) {
-			if (cur != block)
+			if (block != cur)
 				continue;
 			if (prev != NULL)
 				prev->smbNext = block->smbNext;
@@ -224,7 +224,7 @@ next:
 /* the CDRAM codes, freed through the CDRAM partitions */
 static inline int MemBlockCodeIsCdram(SceUInt32 code)
 {
-	return code == MEMBLOCK_CODE_KERNEL_CDRAM_L1WBWA_RW || code == MEMBLOCK_CODE_KERNEL_CDRAM_RW ||
+	return code == MEMBLOCK_CODE_KERNEL_CDRAM_RW || code == MEMBLOCK_CODE_KERNEL_CDRAM_L1WBWA_RW ||
 	       (code & ~0x20) == MEMBLOCK_CODE_USER_CDRAM_R || code == MEMBLOCK_CODE_USER_CDRAM_L1WBWA_RW;
 }
 
