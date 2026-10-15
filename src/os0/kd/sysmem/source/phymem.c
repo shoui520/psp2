@@ -2302,7 +2302,9 @@ int SceSysmemForKernel_5B434019(PhyMemPart *part, SceSize psize)
 /* name unknown: a page or block (flags 0x10) */
 int SceSysmemForKernel_B488C82E(PhyMemPart *part, SceSize size, PhyPage **page)
 {
-	if (part == NULL || page == NULL)
+	if (part == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (page == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	*page = NULL;
 	return PhyMemPartAllocPhyPage(part, size, 0x10, page);
