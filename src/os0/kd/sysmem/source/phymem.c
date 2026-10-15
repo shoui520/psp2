@@ -139,15 +139,16 @@ static PhyMemPart *s_phyPartCdram;
 static SceSize s_phyMemPartGrownSize;
 /* PLACEHOLDER: the partition tracker; only the allocation callback is known */
 typedef struct PhyMemPartHook {
-	void (*alloc)(struct PhyMemPart *part, SceSize size, struct PhyPage *page);
-	void (*free)(struct PhyMemPart *part, struct PhyPage *page);
-	void (*create)(struct PhyMemPart *part);
+	void (*alloc)(struct PhyMemPart *part, SceSize size, struct PhyPage *page,
+		      const void *caller);
+	void (*free)(struct PhyMemPart *part, struct PhyPage *page, const void *caller);
+	void (*create)(struct PhyMemPart *part, const void *caller);
 	void (*delete)(struct PhyMemPart *part, const void *caller);
 } PhyMemPartHook;
 
 /* PLACEHOLDER: the partition log; only the creation callback is known */
 typedef struct PhyMemPartLogCallback {
-	void (*create)(struct PhyMemPart *part);
+	void (*create)(void);
 	void (*delete)(struct PhyMemPart *part);
 } PhyMemPartLogCallback;
 
@@ -1526,7 +1527,7 @@ allocated:
 	ret = 0;
 #if FW_DEBUG
 	if (s_phyMemPartHook != NULL)
-		s_phyMemPartHook->alloc(part, size, *page);
+		s_phyMemPartHook->alloc(part, size, *page, __builtin_return_address(0));
 #endif
 out:
 	PhyMemPartRelease(part);
@@ -1776,7 +1777,7 @@ int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page)
 	}
 #if FW_DEBUG
 	if (s_phyMemPartHook != NULL)
-		s_phyMemPartHook->free(part, page);
+		s_phyMemPartHook->free(part, page, __builtin_return_address(0));
 #endif
 	if (PHYMEM_PART_TYPE(part) != PHYMEM_PART_TYPE_LPDDR2) {
 		SCE_DBG_ASSERT_FAIL(4300);
@@ -2069,9 +2070,9 @@ created:
 	part->uid = SceSysmemForKernel_6DB44A42(s_phyMemPartClass, part->name, part);
 #if FW_DEBUG
 	if (s_phyMemPartHook != NULL)
-		s_phyMemPartHook->create(*out);
+		s_phyMemPartHook->create(*out, __builtin_return_address(0));
 	if (s_phyMemPartLogCallback != NULL)
-		s_phyMemPartLogCallback->create(*out);
+		s_phyMemPartLogCallback->create();
 #endif
 	return 0;
 
