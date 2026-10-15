@@ -447,10 +447,11 @@ int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBloc
 			      PartitionObject *partition, SceUInt32 flags)
 {
 	AddressSpaceContext *context;
+	Partition *blockPartition;
 	AddressSpaceObject *as;
 	MMUContext saved;
 	VirPage *vp;
-	uintptr_t va, pa;
+	uintptr_t vbase, va, pa;
 	SceSize size;
 	SceUInt32 code;
 	int invalidate, intr, ret = 0;
@@ -503,14 +504,16 @@ int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBloc
 							     block, va, size, pa);
 					if (ret < 0)
 						return ret;
-					if (block->vbase < 0x40000000 || block->partition == NULL ||
-					    (as = ((Partition *)block->partition)->addressSpace) ==
-					    NULL || as->context->mmu.contextId == VplCurrentAsid()) {
+					vbase = block->vbase;
+					blockPartition = block->partition;
+					if (vbase < 0x40000000 || blockPartition == NULL ||
+					    (as = blockPartition->addressSpace) == NULL ||
+					    as->context->mmu.contextId == VplCurrentAsid()) {
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);
 					} else {
 						intr = ksceKernelCpuSuspendIntr();
 						MMUContextSave(&saved);
-						AddressSpaceSwitchContext(as);
+						AddressSpaceSwitchContext(((Partition *)block->partition)->addressSpace);
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);
 						MMUContextRestore(&saved);
 						ksceKernelCpuResumeIntr(intr);
