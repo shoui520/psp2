@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sce/dmac_regs.h>
 
-void *dmacKeyringRegisters;
+SceDmac5KeyringRegisters *dmacKeyringRegisters;
 SceKernelFastMutex dmacKeyringMutex;
 SceSblDmac5KeyRing dmacKeyringStorage[32];
 

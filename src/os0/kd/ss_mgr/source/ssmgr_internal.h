@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/ssmgr.h>
+#include <sce/dmac_regs.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 
 typedef union SsMgrQaFlags {
@@ -26,7 +27,7 @@ typedef struct SceSblDmac5KeyRing {
 _Static_assert(sizeof(SceSblDmac5KeyRing) == 44, "DMAC5 keyring entry ABI");
 
 #define SS_MGR_BSS(name) __attribute__((section(".bss.ssMgr." #name)))
-extern void *dmacKeyringRegisters SS_MGR_BSS(dmacKeyringRegisters);
+extern SceDmac5KeyringRegisters *dmacKeyringRegisters SS_MGR_BSS(dmacKeyringRegisters);
 extern SceKernelFastMutex dmacKeyringMutex SS_MGR_BSS(dmacKeyringMutex);
 extern SceSblDmac5KeyRing dmacKeyringStorage[32] SS_MGR_BSS(dmacKeyringStorage);
 extern uint32_t qafInitialized SS_MGR_BSS(qafInitialized);

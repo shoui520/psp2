@@ -16,7 +16,7 @@
 #define MG_ERROR_OPERATION	((int)0x800f1628)
 #define NOINLINE		__attribute__((noinline))
 
-static uint8_t *s_registers;
+static SceDmac5KeyringRegisters *s_keyring;
 static SceSblSmCommId s_smId;
 
 /* Original SceSelfAuthInfo request, including unknown capability/attribute bits. */
@@ -44,7 +44,7 @@ static int NOINLINE MapKeyRegisters(void)
 	if (uid < 0)
 		return MG_ERROR_OPERATION;
 	ksceKernelGetMemBlockBase(uid, &base);
-	s_registers = base;
+	s_keyring = base;
 	return 0;
 }
 
@@ -149,7 +149,7 @@ static int NOINLINE InstallDesKey(const uint32_t *key)
 		wrapped[i] = key[i];
 		wrapped[i + 4] = wrapped[i];
 	}
-	return AesTransform(wrapped, s_registers + 0x3a0, 32, 0x1e, 0);
+	return AesTransform(wrapped, (void *)s_keyring->slot[0x1d].words, 32, 0x1e, 0);
 }
 
 /* name unknown: decode two keys, xor them, and install keyslot 0x1d. */
@@ -167,7 +167,7 @@ static int NOINLINE InstallXorKey(const void *first, const void *second)
 	for (unsigned i = 0; i < 4; i++)
 		right[i] ^= left[i];
 	for (unsigned i = 0; i < 4; i++)
-		((volatile uint32_t *)(s_registers + 0x3a0))[i] = right[i];
+		s_keyring->slot[0x1d].words[i] = right[i];
 	return 0;
 }
 
@@ -302,7 +302,7 @@ static int NOINLINE TranslateAes(const void *key, void *wrapped, void *plain,
 	SceKernelSuspendForDriver_4DF40893(0);
 	ret = call_set_key_command(2);
 	if (ret == 0)
-		ret = AesTransform(key, s_registers + 0x3a0, 16, 0x1e, 0);
+		ret = AesTransform(key, (void *)s_keyring->slot[0x1d].words, 16, 0x1e, 0);
 	if (ret == 0) {
 		if (operation == 1)
 			ret = AesTransform(wrapped, intermediate, 16, 0x1e, 0);

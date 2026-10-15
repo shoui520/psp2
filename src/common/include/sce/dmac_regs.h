@@ -7,6 +7,8 @@
  */
 #pragma once
 
+#include <stddef.h>
+
 #define DMAC0_REG_BASE			0xe3000000
 #define DMAC1_REG_BASE			0xe3010000
 #define DMAC2_REG_BASE			0xe5000000
@@ -16,5 +18,21 @@
 #define DMAC6_REG_BASE			0xe50c0000
 #define DMAC_REG_SIZE			0x1000
 
-/* DMAC5's key ring (SceSblDMAC5DmacKRBase); its slots stay with the crypto code */
+/* DMAC5's key ring (SceSblDMAC5DmacKRBase): 32 key slots of 256 bits that DMAC5
+ * operations name by number (the henkaku wiki's DMAC page) */
 #define DMAC5_KEYRING_REG_BASE		0xe04e0000
+#define DMAC5_KEYRING_SLOTS		32
+
+typedef struct SceDmac5KeyringSlot {
+	volatile unsigned int words[8];
+} SceDmac5KeyringSlot;
+
+typedef struct SceDmac5KeyringRegisters {
+	SceDmac5KeyringSlot slot[DMAC5_KEYRING_SLOTS];
+	volatile unsigned int nonSecureAccess;	/* bit n: slot n readable in Non-Secure state */
+	unsigned int reserved[0x2ff];
+} SceDmac5KeyringRegisters;
+
+_Static_assert(sizeof(SceDmac5KeyringSlot) == 0x20, "keyring slot");
+_Static_assert(offsetof(SceDmac5KeyringRegisters, nonSecureAccess) == 0x400, "keyring access");
+_Static_assert(sizeof(SceDmac5KeyringRegisters) == DMAC_REG_SIZE, "keyring page");
