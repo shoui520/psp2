@@ -24,18 +24,13 @@
 #include <sce/rtc.h>
 #include <sce/sysroot.h>
 #include <sce/sm_comm.h>
+#include <sce/compat_regs.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/devctl.h>
 #include <psp2kern/npdrm.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-struct CompatMailboxRegisters {
-	volatile unsigned int raiseInterrupt[32];
-	volatile unsigned int enableInterrupt[32];
-	unsigned int reserved[960];
-};
 
 struct CompatInterruptConfig {
 	int intrcode;
@@ -44,43 +39,9 @@ struct CompatInterruptConfig {
 	int target_cpu;
 };
 
-/* The LCDDMA aperture mapped by this module; unused spans have no accesses. */
-struct CompatLcdDmaRegisters {
-	volatile unsigned int stopCommand;
-	volatile unsigned int completionAck;
-	volatile unsigned int activeStatus;
-	unsigned int reservedBeforeInitialization[6];
-	volatile unsigned int initializationMask;
-	volatile unsigned int initializationControl;
-	unsigned int reservedBeforeStatus;
-	volatile unsigned int status;
-	volatile unsigned int width;
-	volatile unsigned int widthSetup;
-	volatile unsigned int height;
-	volatile unsigned int heightSetup;
-	unsigned int reservedBeforeAddress[2];
-	volatile unsigned int physicalAddress;
-	volatile unsigned int stride;
-	unsigned int reservedBeforeBufferSetup[9];
-	volatile unsigned int bufferSetup;
-	unsigned int reservedBeforeTransferSetup[2];
-	volatile unsigned int transferSetup;
-	unsigned int reservedBeforePixelFormat[3];
-	volatile unsigned int pixelFormat;
-	volatile unsigned int enable;
-	unsigned int reservedBeforeStopControl[8];
-	volatile unsigned int stopControl;
-	volatile unsigned int startControl;
-	unsigned int reservedTail[975];
-};
-
-_Static_assert(sizeof(struct CompatLcdDmaRegisters) == 4096,
-	"compat LCDDMA mapped aperture");
-_Static_assert(offsetof(struct CompatLcdDmaRegisters, stopControl) == 0xbc,
-	"compat LCDDMA stop control");
-_Static_assert(offsetof(struct CompatLcdDmaRegisters, startControl) == 0xc0,
+_Static_assert(offsetof(SceCompatLcdDmaRegisters, startControl) == 0xc0,
 	"compat LCDDMA start control");
-_Static_assert(offsetof(struct CompatLcdDmaRegisters, physicalAddress) == 0x4c,
+_Static_assert(offsetof(SceCompatLcdDmaRegisters, physicalAddress) == 0x4c,
 	"compat LCDDMA physical address");
 
 struct CompatRequestQueue {
@@ -178,13 +139,13 @@ const SceSelfAuthInfo gCompatSecureModuleAuth = {
 	},
 };
 
-_Static_assert(sizeof(struct CompatMailboxRegisters) == 0x1000,
+_Static_assert(sizeof(SceCompatMailboxRegisters) == 0x1000,
 	"compat mailbox register page");
-_Static_assert(offsetof(struct CompatMailboxRegisters, enableInterrupt) == 0x80,
+_Static_assert(offsetof(SceCompatMailboxRegisters, enableInterrupt) == 0x80,
 	"compat mailbox interrupt enable bank");
 
 char gCompatRifPath[256];
-struct CompatMailboxRegisters *gCompatMailbox;
+SceCompatMailboxRegisters *gCompatMailbox;
 struct CompatRequestQueue gCompatRequestQueues[16];
 int gCompatRequestsEnabled;
 SceUID gCompatMutex;
@@ -199,7 +160,7 @@ SceUID gCompatSuspendSema;
 SceUID gCompatResumeSema;
 SceUInt32 gCompatResumeCookie;
 SceNpDrmActivationData gCompatActivationData;
-struct CompatLcdDmaRegisters *gCompatLcdDma;
+SceCompatLcdDmaRegisters *gCompatLcdDma;
 SceCompatSharedSram *gCompatSharedSram;
 SceUID gCompatLcdDmaMemBlock;
 SceUID gCompatMailboxMemBlock;
@@ -413,8 +374,8 @@ int compatCheckRif(void *args)
 int compatEnterRunningState(void)
 {
 	int (*volatile deci2pAvailable)(void *, void *, SceSize);
-	struct CompatMailboxRegisters *mailbox;
-	struct CompatLcdDmaRegisters *regs;
+	SceCompatMailboxRegisters *mailbox;
+	SceCompatLcdDmaRegisters *regs;
 	void *mainDdr;
 	unsigned int physicalAddress;
 	int result;
@@ -645,7 +606,7 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&allocOpt, 0, sizeof(allocOpt));
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
-	allocOpt.paddr = 0xe5071000;
+	allocOpt.paddr = COMPAT_LCDDMA_BASE;
 	memblock = ksceKernelAllocMemBlock("SceCompatLCDDMA", 0x20100806,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
@@ -663,7 +624,7 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&allocOpt, 0, sizeof(allocOpt));
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
-	allocOpt.paddr = 0xe5070000;
+	allocOpt.paddr = COMPAT_MAILBOX_BASE;
 	memblock = ksceKernelAllocMemBlock("SceCompatMailbox", 0x20100206,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
@@ -681,7 +642,7 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&allocOpt, 0, sizeof(allocOpt));
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
-	allocOpt.paddr = 0xe8100000;
+	allocOpt.paddr = COMPAT_SHARED_SRAM_BASE;
 	memblock = ksceKernelAllocMemBlock("SceCompatSharedSram", 0x20100806,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
@@ -1433,7 +1394,7 @@ out:
 int compatProcessStopHandler(SceUID pid, int event,
 	SceProcEventInvokeParam1 *param, int flags)
 {
-	struct CompatLcdDmaRegisters *lcdDma;
+	SceCompatLcdDmaRegisters *lcdDma;
 	unsigned int *requestState;
 	unsigned int state;
 	SceUInt64 start;
