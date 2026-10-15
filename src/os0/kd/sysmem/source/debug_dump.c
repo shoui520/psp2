@@ -95,12 +95,15 @@ typedef struct DebugFault {
 } DebugFault;
 
 /* the shared-memory dump: this header, then the sections it counts */
+/* the dump keeps its time on a word boundary */
+typedef SceUInt64 DebugDumpTime __attribute__((aligned(4)));
+
 typedef struct DebugDumpHeader {
 	SceSize size;
 	SceUID pid;
 	SceUID tid;
 	int cpu;
-	SceUInt64 time;
+	DebugDumpTime time;
 	SceUInt32 fileHash;
 	SceUInt32 lineHash;
 	SceUInt32 funcHash;
@@ -133,12 +136,17 @@ typedef struct DebugExceptionDumpHeader {
 _Static_assert(sizeof(DebugDumpHeader) == 0x40, "fault dump header size");
 _Static_assert(sizeof(DebugExceptionDumpHeader) == 0x38, "exception dump header size");
 
+/* name unknown: the name of the module a syscall entry is in */
+typedef struct DebugModuleName {
+	char name[0x20];
+} DebugModuleName;
+
 /* the syscall frame as dumped, with the module of its entry */
 typedef struct DebugDumpSyscall {
 	ThreadSyscallFrame frame;
 	SceUInt32 fingerprint;
 	void *textBase;
-	char moduleName[0x20];
+	DebugModuleName moduleName;
 } DebugDumpSyscall;
 
 /* where a code address lies, as dumped */
@@ -280,15 +288,21 @@ void DebugPrintSyscallFrame(SceUID pid, const ThreadSyscallFrame *frame, const S
 		ksceKernelPrintf("NID:       0x%08x [%s]\n", stub.funcnid, nidName);
 }
 
-/* name unknown: copies a backtrace into the dump */
-static inline DebugFrame *DebugDumpFrames(DebugFrame *out, const DebugFrame *frames,
-					  SceSize count)
+/* name unknown: copies whole 16-byte blocks into the dump */
+static inline void DebugDumpCopy(void *dst, const void *src, SceSize size)
 {
-	SceSize i;
+	SceUInt32 *out = dst;
+	const SceUInt32 *in;
+	SceSize offset;
 
-	for (i = 0; i != count; i++)
-		*out++ = frames[i];
-	return out;
+	for (offset = 0; offset != size; offset += 16) {
+		in = (const SceUInt32 *)((const char *)src + offset);
+		out[0] = in[0];
+		out[1] = in[1];
+		out[2] = in[2];
+		out[3] = in[3];
+		out += 4;
+	}
 }
 
 /* name unknown: the report of a failed assertion or a panic, on the fault stack */
@@ -305,8 +319,10 @@ void DebugFaultDump(void *argument)
 	int cpu = ksceKernelCpuId();
 	SceUInt32 fingerprint;
 	void *textBase;
-	char name[0x20], *report;
+	DebugModuleName name;
+	char *report;
 	SceSize count, size;
+	const void *caller, *lr;
 	SceUID tid;
 
 	if (fault->kind == DEBUG_FAULT_ASSERT) {
@@ -331,6 +347,8 @@ void DebugFaultDump(void *argument)
 	if (fault->format != NULL)
 		ksceKernelVprintf(fault->format, fault->arguments);
 
+	caller = fault->caller;
+	lr = fault->lr;
 	syscall = (const ThreadSyscallFrame *)SceSysrootForDriver_44EA3197();
 	dump = (DebugDumpHeader *)(ksceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
 				   cpu * 0x1000);
@@ -345,8 +363,8 @@ void DebugFaultDump(void *argument)
 	header.fileHash = info->fileHash;
 	header.lineHash = info->lineHash;
 	header.funcHash = info->funcHash;
-	header.caller = fault->caller;
-	header.lr = fault->lr;
+	header.caller = caller;
+	header.lr = lr;
 	header.kernelFrames = 0;
 	header.userFrames = 0;
 	header.frameSize = sizeof(DebugFrame);
@@ -357,12 +375,14 @@ void DebugFaultDump(void *argument)
 		if (s_backtraceHandler(0, frames, sizeof(s_backtraceFrames[0]), &count,
 				       DEBUG_BACKTRACE_KERNEL) >= 0) {
 			header.kernelFrames = count;
-			out = DebugDumpFrames(out, frames, count);
+			DebugDumpCopy(out, frames, count * sizeof(DebugFrame));
+			out += count;
 		}
 		if (s_backtraceHandler(0, frames, sizeof(s_backtraceFrames[0]), &count,
 				       DEBUG_BACKTRACE_USER) >= 0) {
 			header.userFrames = count;
-			out = DebugDumpFrames(out, s_backtraceFrames[cpu], count);
+			DebugDumpCopy(out, s_backtraceFrames[cpu], count * sizeof(DebugFrame));
+			out += count;
 		}
 	}
 	if (syscall != NULL) {
@@ -370,15 +390,15 @@ void DebugFaultDump(void *argument)
 		memcpy(&syscallDump->frame, syscall, sizeof(*syscall));
 		fingerprint = -1;
 		textBase = NULL;
-		memset(name, 0, sizeof(name));
+		memset(&name, 0, sizeof(name));
 		SceSysrootForKernel_1D84C4D4(SCE_KERNEL_PROCESS_ID, syscall->entry,
-					     &fingerprint, &textBase, name);
+					     &fingerprint, &textBase, name.name);
 		header.syscallWords = sizeof(*syscallDump) / 4;
-		memcpy(syscallDump->moduleName, name, sizeof(name));
+		syscallDump->moduleName = name;
 		syscallDump->fingerprint = fingerprint;
 		syscallDump->textBase = textBase;
 	}
-	*dump = header;
+	DebugDumpCopy(dump, &header, sizeof(header));
 	size = header.frameSize * (header.kernelFrames + header.userFrames) +
 	       (header.registerWords + header.syscallWords) * 4 + sizeof(header);
 
@@ -532,12 +552,16 @@ SceSize SceDebugForKernel_5D6F0CFC(DebugExceptionDumpHeader *dump, int cpu, SceU
 		frames = s_backtraceFrames[cpu];
 		if (s_backtraceHandler(-16, frames, sizeof(s_backtraceFrames[0]), &count,
 				       DEBUG_BACKTRACE_KERNEL) >= 0 &&
-		    (header.kernelFrames = count) != 0)
-			out = DebugDumpFrames(out, frames, count);
+		    (header.kernelFrames = count) != 0) {
+			DebugDumpCopy(out, frames, count * sizeof(DebugFrame));
+			out += count;
+		}
 		if (s_backtraceHandler(-16, frames, sizeof(s_backtraceFrames[0]), &count,
 				       DEBUG_BACKTRACE_USER) >= 0 &&
-		    (header.userFrames = count) != 0)
-			out = DebugDumpFrames(out, frames, count);
+		    (header.userFrames = count) != 0) {
+			DebugDumpCopy(out, frames, count * sizeof(DebugFrame));
+			out += count;
+		}
 	}
 
 	/* the context, its PC's module, then where each saved address lies */
@@ -561,18 +585,18 @@ SceSize SceDebugForKernel_5D6F0CFC(DebugExceptionDumpHeader *dump, int cpu, SceU
 	}
 	header.registerWords += 32 * 2 * sizeof(DebugDumpAddress) / 4;
 	if (syscall != NULL) {
-		char name[0x20];
+		DebugModuleName name;
 
 		syscallDump = (DebugDumpSyscall *)addresses;
 		memcpy(&syscallDump->frame, syscall, sizeof(*syscall));
 		fingerprint = -1;
 		textBase = NULL;
-		memset(name, 0, sizeof(name));
+		memset(&name, 0, sizeof(name));
 		SceSysrootForKernel_1D84C4D4(SCE_KERNEL_PROCESS_ID, syscall->entry,
-					     &fingerprint, &textBase, name);
+					     &fingerprint, &textBase, name.name);
 		syscallDump->fingerprint = fingerprint;
 		syscallDump->textBase = textBase;
-		memcpy(syscallDump->moduleName, name, sizeof(name));
+		syscallDump->moduleName = name;
 		header.syscallWords = sizeof(*syscallDump) / 4;
 	}
 	*dump = header;
