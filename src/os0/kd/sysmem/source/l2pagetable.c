@@ -133,10 +133,11 @@ int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize
 int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 type,
 			  uintptr_t va, SceSize size, uintptr_t pa, SceUInt32 flags)
 {
-	SceUInt32 asid = (SceUInt8)((Partition *)block->partition)->tiny.context->mmu.contextId;
+	const AddressSpaceContext *context;
 	int intr, ret;
 
 	type = L2PageTableSharedType(l2pt->partition, type, va);
+	context = ((Partition *)block->partition)->tiny.context;
 	if (flags & L2PT_REMAP_SYNC_CACHES) {
 		intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l2pt->lock);
 		if (block->code & 0x42)
@@ -147,12 +148,12 @@ int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 ty
 	}
 	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l2pt->lock);
 	if (size < L2PT_LARGE_PAGE) {
-		sceKernelMMUUnmapSmallPagesWithFlags(l2pt->table, asid, va, va - l2pt->vbase, size,
-						     0);
+		sceKernelMMUUnmapSmallPagesWithFlags(l2pt->table, (SceUInt8)context->mmu.contextId,
+						     va, va - l2pt->vbase, size, 0);
 		ret = sceKernelMMUMapSmallPages(l2pt->table, type, va, va - l2pt->vbase, size, pa);
 	} else {
-		sceKernelMMUUnmapLargePagesWithFlags(l2pt->table, asid, va, va - l2pt->vbase, size,
-						     0);
+		sceKernelMMUUnmapLargePagesWithFlags(l2pt->table, (SceUInt8)context->mmu.contextId,
+						     va, va - l2pt->vbase, size, 0);
 		ret = sceKernelMMUMapLargePages(l2pt->table, type, va, va - l2pt->vbase, size, pa);
 	}
 	if (ret < 0)
