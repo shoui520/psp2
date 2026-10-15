@@ -31,6 +31,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	source/uid_class.c
 	source/vslot.c
 	source/sysmem_misc.c
+	source/sysmem_heap.c
 	source/user_copy.c
 	source/memblock.c
 	source/partition.c

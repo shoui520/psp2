@@ -649,6 +649,7 @@ int snprintf(char *dst, SceSize len, const char *fmt, ...);
 
 /* exports used inside the module */
 SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object);	/* sceGUIDRegister */
+int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* wiki: sceUIDClassIsSubclassForKernel (guessed) */
 void *SceSysmemForKernel_0164D817(void);				/* sceKernelGetPhyPartKernel */
 void *SceSysmemForKernel_FA6C098C(SceUID uid);				/* sceUIDtoObject */
 int ksceGUIDGetObject(SceUID guid, void *object);
