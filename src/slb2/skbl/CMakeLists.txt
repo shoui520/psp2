@@ -17,6 +17,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	${intrmgr_source}/usleep.c
 	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
+	../../common/kbl/pervasive_init_kbl.c
 	../../common/kbl/pervasive_kbl.c
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
