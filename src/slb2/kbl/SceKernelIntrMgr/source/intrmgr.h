@@ -18,12 +18,23 @@
 #define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
 #define memset					SceSysclibForTZS_956DB750
 
+#include <fw.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/utils.h>
 #include "sce/debug.h"
 #include "sce/error.h"
 #include "sce/intrmgr_tzs.h"
+
+/* Sony built the 3.6x secure kernel without its debug output */
+#if !FW_SINCE(0x04000000)
+#undef SCE_DBG_PRINTF
+#define SCE_DBG_PRINTF(...)		((void)0)
+#undef SCE_DBG_PRINTF_LEVEL
+#define SCE_DBG_PRINTF_LEVEL(...)	((void)0)
+#undef SCE_DBG_ASSERT_FAIL
+#define SCE_DBG_ASSERT_FAIL(...)	((void)0)
+#endif
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
