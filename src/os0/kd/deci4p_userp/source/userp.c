@@ -193,7 +193,7 @@ static int UserpCheckHostParam(UserpStrBuf *strbuf, const void *uparam, void *uo
 	return 0;
 }
 
-static void UserpResetRing(UserpState *st)
+static inline __attribute__((always_inline)) void UserpResetRing(UserpState *st)
 {
 	st->writePos = 0;
 	st->readPos = 0;
@@ -270,6 +270,7 @@ static int UserpHandler(int event, void *arg, void *ctx)
 			st->recvCount = count;
 			if (event != 2 || count == 0)
 				return 0;
+			total = st->hdr.size[0] | st->hdr.size[1] << 8 | st->hdr.size[2] << 16;
 		} else if (event != 2) {
 			return 0;
 		}
@@ -340,7 +341,7 @@ static int UserpHandler(int event, void *arg, void *ctx)
 }
 
 /* free everything an object holds (fields still zero are skipped) */
-static void UserpFreeObject(UserpObject *obj)
+static inline __attribute__((always_inline)) void UserpFreeObject(UserpObject *obj)
 {
 	UserpState *st = obj->state;
 
@@ -429,6 +430,8 @@ static const SceProcEventHandler s_procHandler = {
 
 int module_start(SceSize args, void *argp)
 {
+	SceClass *parentClass;
+	char *className;
 	SceUID uid;
 
 	if (!ksceKernelCheckDipsw(0xc2))
@@ -441,14 +444,16 @@ int module_start(SceSize args, void *argp)
 	if (uid < 0)
 		goto unregister;
 	s_mutex = uid;
-	memset(s_channel, 0xff, sizeof(s_channel));
+	memset(s_channel, -1, sizeof(s_channel));
 	s_class = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, 0x2c);
 	if (s_class == NULL)
 		goto delete;
-	s_className = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, 0x20);
-	if (s_className != NULL) {
-		strncpy(s_className, "SceUIDDeci4pUserpClass", 0x20);
-		if (ksceUIDClassInitClass(s_class, s_className, ksceKernelGetUIDClass(),
+	className = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, 0x20);
+	s_className = className;
+	if (className != NULL) {
+		strncpy(className, "SceUIDDeci4pUserpClass", 0x20);
+		parentClass = ksceKernelGetUIDClass();
+		if (ksceUIDClassInitClass(s_class, className, parentClass,
 					  sizeof(UserpObject), NULL, NULL) >= 0)
 			return 0;
 	}
@@ -662,20 +667,27 @@ int sceKernelDeci4pRegisterCallback(SceUID puid, SceUID cbPuid)
 }
 
 /* the 16-byte header of the next packet in the ring */
-static void UserpPeekHeader(UserpState *st, SceUInt32 *hdr)
+static inline __attribute__((always_inline)) void UserpPeekHeader(UserpState *st, SceUInt32 *hdr)
 {
 	SceSize pos = st->readPos;
+	const SceUInt8 *ring = st->ring;
 	SceSize n;
 
 	if (st->ringSize < pos + 0x10) {
 		n = st->ringSize - pos;
-		memcpy(hdr, st->ring + pos, n);
-		memcpy((SceUInt8 *)hdr + n, st->ring, 0x10 - n);
+		memcpy(hdr, ring + pos, n);
+		memcpy((SceUInt8 *)hdr + n, ring, 0x10 - n);
 	} else {
-		hdr[0] = ((SceUInt32 *)(st->ring + pos))[0];
-		hdr[1] = ((SceUInt32 *)(st->ring + pos))[1];
-		hdr[2] = ((SceUInt32 *)(st->ring + pos))[2];
-		hdr[3] = ((SceUInt32 *)(st->ring + pos))[3];
+		const SceUInt32 *packet = (const SceUInt32 *)(ring + pos);
+		SceUInt32 first = packet[0];
+		SceUInt32 second = packet[1];
+		SceUInt32 third = packet[2];
+		SceUInt32 fourth = packet[3];
+
+		hdr[0] = first;
+		hdr[1] = second;
+		hdr[2] = third;
+		hdr[3] = fourth;
 	}
 }
 
