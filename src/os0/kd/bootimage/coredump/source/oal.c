@@ -3561,60 +3561,14 @@ void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info,
 int oalGetNumOfApp(void)
 {
 	AppMgrAppList apps;
-	int count = 0;
+	int count;
 
 	if (SceSysrootForKernel_2A03DFA1(&apps) != 0)
 		return 0;
-	do {
-		if (apps.appIds[0] == -1)
+	for (count = 0; count < 16; count++) {
+		if (apps.appIds[count] == -1)
 			break;
-		count = 1;
-		if (apps.appIds[1] == -1)
-			break;
-		count = 2;
-		if (apps.appIds[2] == -1)
-			break;
-		count = 3;
-		if (apps.appIds[3] == -1)
-			break;
-		count = 4;
-		if (apps.appIds[4] == -1)
-			break;
-		count = 5;
-		if (apps.appIds[5] == -1)
-			break;
-		count = 6;
-		if (apps.appIds[6] == -1)
-			break;
-		count = 7;
-		if (apps.appIds[7] == -1)
-			break;
-		count = 8;
-		if (apps.appIds[8] == -1)
-			break;
-		count = 9;
-		if (apps.appIds[9] == -1)
-			break;
-		count = 10;
-		if (apps.appIds[10] == -1)
-			break;
-		count = 11;
-		if (apps.appIds[11] == -1)
-			break;
-		count = 12;
-		if (apps.appIds[12] == -1)
-			break;
-		count = 13;
-		if (apps.appIds[13] == -1)
-			break;
-		count = 14;
-		if (apps.appIds[14] == -1)
-			break;
-		count = 15;
-		if (apps.appIds[15] == -1)
-			break;
-		count = 16;
-	} while (0);
+	}
 	return count;
 }
 
