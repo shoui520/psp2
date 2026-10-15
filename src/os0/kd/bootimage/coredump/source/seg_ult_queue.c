@@ -85,7 +85,7 @@ static int _writeSegs(SegIf *segment)
 	SceUInt32 *ids, *waitingIds;
 	SceUInt32 remaining, skip, batch, i;
 	SceUInt32 j, numWaiting;
-	SceSize dataWritten, padding;
+	SceSize dataWritten, dataSize, padding;
 	void *data;
 	int result;
 
@@ -137,10 +137,11 @@ static int _writeSegs(SegIf *segment)
 			dataWritten = 0;
 			if (data != NULL) {
 				for (j = 0; j < numData; ++j) {
-					memset(data, 0, info.dataSize);
+					dataSize = info.dataSize;
+					memset(data, 0, dataSize);
 					ksceKernelCopyFromUserProc(coredumpRun.pid, data,
 						(const void *)waitingIds[numWaiting + j],
-						info.dataSize);
+						dataSize);
 					result = writerWrite(currentWriter, data,
 						info.dataSize);
 					if (result != 0) {
