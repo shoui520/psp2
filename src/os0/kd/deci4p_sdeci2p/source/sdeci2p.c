@@ -27,6 +27,7 @@
 #include "sce/suspend.h"
 #include "sce/sysroot.h"
 #include "sce/threadmgr.h"
+#include "sce/compat_regs.h"
 
 #define SDECI2P_PROTOCOL	0x1000e000
 #define SDECI2P_INTR_FWD	0x41		/* compat side took a forwarded packet */
@@ -62,7 +63,7 @@ typedef struct Sdeci2pChannel {
 #define SDECI2P_CH_HDR		0x2		/* header done */
 
 typedef struct Sdeci2pContext {
-	volatile SceUInt32 *regs;		/* compat side's doorbells */
+	SceCompatMailboxRegisters *mailbox;	/* the compat side's doorbells */
 	SceUInt32 *ctl;				/* handshake words (shared) */
 	SceUInt32 flags;			/* SDECI2P_* */
 	Sdeci2pChannel acq;
@@ -94,6 +95,19 @@ _Static_assert(sizeof(Sdeci2pContext) == 0xbc, "Sdeci2pContext");
 
 static Sdeci2pContext s_ctx;
 
+/* name unknown: channel flags and context flags have separate Sony helpers. */
+static void sdeci2pSetChannelFlags(SceUInt32 *flags, SceUInt32 bits, int set)
+{
+	SceKernelIntrStatus intr;
+
+	intr = ksceKernelCpuSuspendIntr();
+	if (!set)
+		*flags &= ~bits;
+	else
+		*flags |= bits;
+	ksceKernelCpuResumeIntr(intr);
+}
+
 /* name unknown */
 static void sdeci2pSetFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 {
@@ -113,7 +127,7 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 	SceKernelIntrStatus intr;
 	SceUInt32 *ctl;
 
-	if (ctx->regs == NULL) {
+	if (ctx->mailbox == NULL) {
 		SDECI2P_PRINTF(0xf, 1572, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
@@ -123,10 +137,11 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 	ctl[11] = n;
 	ksceKernelDcacheCleanRangeForL1WBWA((void *)((SceUIntPtr)&ctl[11] & ~0x3f), 0x40);
 	dsb();
-	ctx->regs[0x84 / 4] = 0xffffffff;
+	ctx->mailbox->enableInterrupt[1] = 0xffffffff;
 	dsb();
+	(void)ctx->mailbox->raiseInterrupt[1];
 	dsb();
-	ctx->regs[1] = 1;
+	ctx->mailbox->raiseInterrupt[1] = 1;
 	dsb();
 	ksceKernelCpuResumeIntr(intr);
 	return 0;
@@ -136,15 +151,16 @@ static int notifyAcquireEnd(Sdeci2pContext *ctx)
 {
 	SceKernelIntrStatus intr;
 
-	if (ctx->regs == NULL) {
+	if (ctx->mailbox == NULL) {
 		SDECI2P_PRINTF(0xf, 1614, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
 	intr = ksceKernelCpuSuspendIntr();
-	ctx->regs[0xb8 / 4] = 0xffffffff;
+	ctx->mailbox->enableInterrupt[14] = 0xffffffff;
 	dsb();
+	(void)ctx->mailbox->raiseInterrupt[14];
 	dsb();
-	ctx->regs[0x38 / 4] = 1;
+	ctx->mailbox->raiseInterrupt[14] = 1;
 	dsb();
 	ksceKernelCpuResumeIntr(intr);
 	return 0;
@@ -172,7 +188,7 @@ static int eventReadWhenStopped(Sdeci2pContext *ctx, SceSize size)
 			return ret;
 		}
 		size -= sizeof(ch->hdr);
-		sdeci2pSetFlags(&ch->flags, SDECI2P_CH_HDR, 1);
+		sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_HDR, 1);
 	}
 	ret = sceSDfMgrExRecv(ctx->handle, (char *)ch->buf + ch->count, size);
 	if (ret < 0) {
@@ -204,7 +220,7 @@ static inline int eventReadWhenRunning(Sdeci2pContext *ctx, SceSize size)
 			return ret;
 		}
 		size -= sizeof(ch->hdr);
-		sdeci2pSetFlags(&ch->flags, SDECI2P_CH_HDR, 1);
+		sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_HDR, 1);
 	}
 	ret = sceSDfMgrExRecv(ctx->handle, (char *)ch->buf + ch->count, size);
 	if (ret < 0) {
@@ -222,7 +238,7 @@ static inline int eventReadDoneWhenRunning(Sdeci2pContext *ctx)
 	SceKernelIntrStatus intr;
 	int ret;
 
-	sdeci2pSetFlags(&ch->flags, SDECI2P_CH_FULL, 1);
+	sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_FULL, 1);
 	ksceKernelDcacheCleanRangeForL1WBWA(ch->buf, (ch->count + 0x3f) & ~0x3f);
 	ctx->last = ctx->cur;
 	if (ctx->flags & SDECI2P_ACKED) {
@@ -258,7 +274,7 @@ static inline int eventWrite(Sdeci2pContext *ctx)
 			SDECI2P_PRINTF(0, 970, "sceSDfMgrExSend() failed (0x%08X)\n", ret);
 			return ret;
 		}
-		sdeci2pSetFlags(&ch->flags, SDECI2P_CH_HDR, 1);
+		sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_HDR, 1);
 	}
 	p = (char *)ch->buf + ch->count;
 	ksceKernelDcacheInvalidateRangeForL1WBWA(p, (left + 0x2f) & ~0x3f);
@@ -275,7 +291,6 @@ static void sdeci2pHandler(int event, void *arg, void *data)
 {
 	Sdeci2pContext *ctx = data;
 	SceDfMgrStatus *status = arg;
-	SceUInt8 v;
 	int ret;
 
 	switch (event) {
@@ -287,8 +302,8 @@ static void sdeci2pHandler(int event, void *arg, void *data)
 		break;
 	case SCE_DFMGR_EVENT_REQ_DONE:
 		if (!(ctx->flags & SDECI2P_RUNNING)) {
-			sdeci2pSetFlags(&ctx->stopped.flags, SDECI2P_CH_FULL, 1);
-			sdeci2pSetFlags(&ctx->stopped.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
+			sdeci2pSetChannelFlags(&ctx->stopped.flags, SDECI2P_CH_FULL, 1);
+			sdeci2pSetChannelFlags(&ctx->stopped.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
 			ctx->stopped.count = 0;
 			return;
 		}
@@ -300,21 +315,30 @@ static void sdeci2pHandler(int event, void *arg, void *data)
 	case SCE_DFMGR_EVENT_SENT:
 		ret = notifyAcquireEnd(ctx);
 		if (ret >= 0) {
-			sdeci2pSetFlags(&ctx->acq.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
+			sdeci2pSetChannelFlags(&ctx->acq.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
 			ctx->acq.count = 0;
 			return;
 		}
 		break;
 	case SCE_DFMGR_EVENT_STATUS:
-		if (status->kind == 0)
-			v = status->connected;
-		else if (status->kind == 1)
-			v = status->enabled;
-		else
-			v = 0xff;
-		if (v == 0 || v == 1) {
-			sdeci2pSetFlags(&ctx->flags, SDECI2P_CONNECTED, v);
-			return;
+		if (status->kind == 0) {
+			if (status->connected == 0) {
+				sdeci2pSetFlags(&ctx->flags, SDECI2P_CONNECTED, 0);
+				return;
+			}
+			if (status->connected == 1) {
+				sdeci2pSetFlags(&ctx->flags, SDECI2P_CONNECTED, 1);
+				return;
+			}
+		} else if (status->kind == 1) {
+			if (status->enabled == 0) {
+				sdeci2pSetFlags(&ctx->flags, SDECI2P_CONNECTED, 0);
+				return;
+			}
+			if (status->enabled == 1) {
+				sdeci2pSetFlags(&ctx->flags, SDECI2P_CONNECTED, 1);
+				return;
+			}
 		}
 		ret = 0x80090001;
 		break;
@@ -332,23 +356,30 @@ static void sdeci2pHandler(int event, void *arg, void *data)
 /* -- the compat side took a forwarded packet ------------------------------ */
 
 /* name unknown: the buffer the compat side reports it took */
-static inline Sdeci2pChannel *sdeci2pAckedChannel(Sdeci2pContext *ctx, int line)
+static inline int sdeci2pAckedChannel(Sdeci2pContext *ctx, int line,
+				     Sdeci2pChannel **channel)
 {
 	SceUInt32 n;
 
-	if (!(ctx->flags & SDECI2P_ACKED))
-		return &ctx->fwd[ctx->cur];
+	if (!(ctx->flags & SDECI2P_ACKED)) {
+		*channel = &ctx->fwd[ctx->cur];
+		return 0;
+	}
 	ksceKernelDcacheInvalidateRangeForL1WBWA((void *)((SceUIntPtr)&ctx->ctl[3] & ~0x3f), 0x40);
 	n = ctx->ctl[3];
-	if (n < 2)
-		return &ctx->fwd[n];
-	if (n == 2)
-		return &ctx->ctrl;
+	if (n < 2) {
+		*channel = &ctx->fwd[n];
+		return 0;
+	}
+	if (n == 2) {
+		*channel = &ctx->ctrl;
+		return 0;
+	}
 	if (line == 1117)
 		SDECI2P_PRINTF_IN("forwardDonePollHandler", 0xf, 1117, "Unknown ack number (%d)\n", n);
 	else
 		SDECI2P_PRINTF_IN("forwardDoneIntrHandler", 0xf, 1291, "Unknown ack number (%d)\n", n);
-	return NULL;
+	return -1;
 }
 
 /* name unknown */
@@ -356,7 +387,7 @@ static inline void sdeci2pForwardDone(Sdeci2pContext *ctx, Sdeci2pChannel *ch, i
 {
 	int ret;
 
-	sdeci2pSetFlags(&ch->flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
+	sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
 	ch->count = 0;
 	sdeci2pSetFlags(&ctx->flags, SDECI2P_FORWARDING, 0);
 	if (ctx->flags & SDECI2P_FWD_PENDING) {
@@ -379,8 +410,7 @@ static void forwardDonePollHandler(void)
 	if (ksceKernelCpuId() != SDECI2P_CPU ||
 	    !sceKernelGetIntrPendingStatusForDebugger(SDECI2P_INTR_FWD))
 		return;
-	ch = sdeci2pAckedChannel(&s_ctx, 1117);
-	if (ch == NULL)
+	if (sdeci2pAckedChannel(&s_ctx, 1117, &ch) < 0)
 		return;
 	sceKernelClearIntrPendingStatusForDebugger(SDECI2P_INTR_FWD);
 	sdeci2pForwardDone(&s_ctx, ch, 1150);
@@ -394,8 +424,7 @@ static int forwardDoneIntrHandler(int code, void *arg)
 		SDECI2P_PRINTF(0xf, 1276, "Unknown intrcode (0x%08x)\n", code);
 		return -1;
 	}
-	ch = sdeci2pAckedChannel(&s_ctx, 1291);
-	if (ch == NULL)
+	if (sdeci2pAckedChannel(&s_ctx, 1291, &ch) < 0)
 		return -1;
 	sdeci2pForwardDone(&s_ctx, ch, 1321);
 	return -1;
@@ -405,14 +434,13 @@ static int forwardDoneIntrHandler(int code, void *arg)
 
 /*
  * name unknown: take the acquired packet; DBGP break / continue requests act
- * on the system right away. Returns nonzero if the host is to be asked to
- * send (connected), else ends the acquisition.
+ * on the system right away.
  */
-static inline int sdeci2pAcquire(Sdeci2pContext *ctx)
+static inline __attribute__((always_inline)) void sdeci2pAcquire(Sdeci2pContext *ctx)
 {
 	SceUInt16 *pkt;
 
-	sdeci2pSetFlags(&ctx->acq.flags, SDECI2P_CH_FULL, 1);
+	sdeci2pSetChannelFlags(&ctx->acq.flags, SDECI2P_CH_FULL, 1);
 	ksceKernelDcacheInvalidateRangeForL1WBWA(ctx->acq.buf, 0x40);
 	pkt = ctx->acq.buf;
 	ctx->acq.count = 0;
@@ -428,12 +456,13 @@ static inline int sdeci2pAcquire(Sdeci2pContext *ctx)
 			sdeci2pSetFlags(&ctx->flags, SDECI2P_BREAKING, 0);
 		}
 	}
-	if (ctx->flags & SDECI2P_CONNECTED)
-		return 1;
+}
+
+static inline __attribute__((always_inline)) void sdeci2pFinishAcquire(Sdeci2pContext *ctx)
+{
 	notifyAcquireEnd(ctx);
-	sdeci2pSetFlags(&ctx->acq.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
+	sdeci2pSetChannelFlags(&ctx->acq.flags, SDECI2P_CH_FULL | SDECI2P_CH_HDR, 0);
 	ctx->acq.count = 0;
-	return 0;
 }
 
 /* break hook */
@@ -445,14 +474,17 @@ static void acquireStartPollHandler(void)
 	    !sceKernelGetIntrPendingStatusForDebugger(SDECI2P_INTR_ACQ))
 		return;
 	sceKernelClearIntrPendingStatusForDebugger(SDECI2P_INTR_ACQ);
-	if (!sdeci2pAcquire(&s_ctx))
-		return;
-	ret = sceSDfMgrExReqSend(s_ctx.handle);
-	if (ret < 0 && ret != SDFMGR_ERROR_BUSY) {
-		SDECI2P_PRINTF(0xf, 1254, "ReqSend failed (0x%08X)\n", ret);
+	sdeci2pAcquire(&s_ctx);
+	if (!(s_ctx.flags & SDECI2P_CONNECTED)) {
+		sdeci2pFinishAcquire(&s_ctx);
 		return;
 	}
-	SceDeci4pSDfMgrForKernel_98AEC60E();
+	ret = sceSDfMgrExReqSend(s_ctx.handle);
+	if (ret >= 0 || ret == (int)SDFMGR_ERROR_BUSY) {
+		SceDeci4pSDfMgrForKernel_98AEC60E();
+		return;
+	}
+	SDECI2P_PRINTF(0xf, 1254, "ReqSend failed (0x%08X)\n", ret);
 }
 
 static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
@@ -461,7 +493,7 @@ static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
 	SceUInt8 *pkt = ch->buf;
 	int ret;
 
-	sdeci2pSetFlags(&ch->flags, SDECI2P_CH_FULL, 1);
+	sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_FULL, 1);
 	SceDeci4pSDfMgrForKernel_8A3B06F2(pkt, 0, 0x18);
 	pkt[8] = 0;
 	pkt[9] = 0;
@@ -500,10 +532,10 @@ static int acquireStartIntrHandler(int code, void *arg)
 		/* the compat side (re)started */
 		sdeci2pSetFlags(&ctx->flags, SDECI2P_RUNNING, 0);
 		sdeci2pSetFlags(&ctx->flags, 0x1f, 0);
-		sdeci2pSetFlags(&ctx->acq.flags, 0xffffffff, 0);
-		sdeci2pSetFlags(&ctx->fwd[0].flags, 0xffffffff, 0);
-		sdeci2pSetFlags(&ctx->fwd[1].flags, 0xffffffff, 0);
-		sdeci2pSetFlags(&ctx->ctrl.flags, 0xffffffff, 0);
+		sdeci2pSetChannelFlags(&ctx->acq.flags, 0xffffffff, 0);
+		sdeci2pSetChannelFlags(&ctx->fwd[0].flags, 0xffffffff, 0);
+		sdeci2pSetChannelFlags(&ctx->fwd[1].flags, 0xffffffff, 0);
+		sdeci2pSetChannelFlags(&ctx->ctrl.flags, 0xffffffff, 0);
 		ctx->cur = 0;
 		notifyAcquireEnd(ctx);
 		sdeci2pSetFlags(&ctx->flags, SDECI2P_RUNNING, 1);
@@ -522,13 +554,16 @@ static int acquireStartIntrHandler(int code, void *arg)
 			SDECI2P_PRINTF(0xf, 1407, "forwardPacketForInitialize() failed (0x%08X)", ret);
 		return -1;
 	}
-	if (!sdeci2pAcquire(ctx))
+	sdeci2pAcquire(ctx);
+	if (!(ctx->flags & SDECI2P_CONNECTED)) {
+		sdeci2pFinishAcquire(ctx);
 		return -1;
+	}
 	ret = sceSDfMgrExReqSend(ctx->handle);
-	if (ret < 0 && ret != SDFMGR_ERROR_BUSY)
-		SDECI2P_PRINTF(0xf, 1486, "ReqSend failed (0x%08X)\n", ret);
-	else
+	if (ret >= 0 || ret == (int)SDFMGR_ERROR_BUSY)
 		SceDeci4pSDfMgrForKernel_98AEC60E();
+	else
+		SDECI2P_PRINTF(0xf, 1486, "ReqSend failed (0x%08X)\n", ret);
 	return -1;
 }
 
@@ -539,7 +574,7 @@ static inline int sdeci2pForwardControl(Sdeci2pContext *ctx, SceUInt8 type)
 {
 	SceUInt8 *pkt = ctx->ctrl.buf;
 
-	sdeci2pSetFlags(&ctx->ctrl.flags, SDECI2P_CH_FULL, 1);
+	sdeci2pSetChannelFlags(&ctx->ctrl.flags, SDECI2P_CH_FULL, 1);
 	SceDeci4pSDfMgrForKernel_8A3B06F2(pkt, 0, 0x14);
 	*(SceUInt16 *)&pkt[0] = 0x14;
 	pkt[10] = type;
@@ -641,7 +676,8 @@ static int initThread(SceSize args, void *argp)
 	proto.alias = 0;
 	proto.version = 0x1000000;
 	proto.subVersion = 0x1000000;
-	proto.destination = 0x10000;
+	proto.destination = 0;
+	proto.flags = 1;
 	proto.name = "SDECI2P";
 	ret = SceDeci4pSDfMgrForKernel_A55F5F0D(sdeci2pHandler, &proto, ctx);
 	if (ret < 0) {
@@ -770,10 +806,10 @@ int SDeci2pModuleStart(SceSize args, void *argp)
 static inline void sdeci2pReset(void)
 {
 	sdeci2pSetFlags(&s_ctx.flags, 0x1f, 0);
-	sdeci2pSetFlags(&s_ctx.acq.flags, 0xffffffff, 0);
-	sdeci2pSetFlags(&s_ctx.fwd[0].flags, 0xffffffff, 0);
-	sdeci2pSetFlags(&s_ctx.fwd[1].flags, 0xffffffff, 0);
-	sdeci2pSetFlags(&s_ctx.ctrl.flags, 0xffffffff, 0);
+	sdeci2pSetChannelFlags(&s_ctx.acq.flags, 0xffffffff, 0);
+	sdeci2pSetChannelFlags(&s_ctx.fwd[0].flags, 0xffffffff, 0);
+	sdeci2pSetChannelFlags(&s_ctx.fwd[1].flags, 0xffffffff, 0);
+	sdeci2pSetChannelFlags(&s_ctx.ctrl.flags, 0xffffffff, 0);
 }
 
 /* name unknown: the compat side's doorbells and shared window (>= 256 KiB) */
@@ -782,7 +818,7 @@ int SceDeci2pForDriver_F6427E0F(void *regs, void *shm, SceSize size)
 	if (size < SHM_SIZE_MIN)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	sdeci2pReset();
-	s_ctx.regs = regs;
+	s_ctx.mailbox = regs;
 	s_ctx.acq.buf = shm;
 	s_ctx.fwd[0].buf = (char *)shm + SHM_FORWARD(0);
 	s_ctx.fwd[1].buf = (char *)shm + SHM_FORWARD(1);
