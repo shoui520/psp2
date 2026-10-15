@@ -2490,9 +2490,10 @@ void oalGetSemaphoreInfo(SceUID pid, SceUID semaId, CoredumpSemaphoreInfo *info)
 	guid = kscePUIDtoGUID(pid, semaId);
 	if (guid < 0 || ksceKernelGetSemaInfo(guid, &sema) < 0)
 		return;
-	attr = sema.attr;
 	if (scePUIDGetAttr(pid, semaId, &uidAttr) >= 0 && (uidAttr & 0x80000))
-		attr |= 0x80000;
+		attr = sema.attr | 0x80000;
+	else
+		attr = sema.attr;
 	info->pid = pid;
 	info->semaId = semaId;
 	strncpy(info->name, sema.name, 32);
@@ -2523,8 +2524,9 @@ void oalGetEventFlagInfo(SceUID pid, SceUID eventFlagId,
 	if (guid < 0 || ksceKernelGetEventFlagInfo(guid, &eventFlag) < 0)
 		return;
 	if (scePUIDGetAttr(pid, eventFlagId, &uidAttr) >= 0 && (uidAttr & 0x80000))
-		eventFlag.attr |= 0x80000;
-	attr = eventFlag.attr;
+		attr = eventFlag.attr | 0x80000;
+	else
+		attr = eventFlag.attr;
 	info->eventFlagId = eventFlagId;
 	info->pid = pid;
 	strncpy(info->name, eventFlag.name, 32);
@@ -2780,15 +2782,15 @@ void oalGetTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info)
 	info->timerId = timerId;
 	info->pid = pid;
 	strncpy(info->name, timer.name, 32);
-	memcpy(&info->baseTime, &timer.time, sizeof(info->baseTime));
+	__builtin_memcpy(&info->baseTime, &timer.time, sizeof(info->baseTime));
 	info->attr = attr;
-	memcpy(&info->currentTime, &timer.current, sizeof(info->currentTime));
+	__builtin_memcpy(&info->currentTime, &timer.current, sizeof(info->currentTime));
 	info->fActive = timer.running;
 	info->type = timer.pulse;
-	memcpy(&info->schedule, &timer.eventTime, sizeof(info->schedule));
+	__builtin_memcpy(&info->schedule, &timer.eventTime, sizeof(info->schedule));
 	info->fRepeat = timer.repeat;
 	info->numWaitThreads = timer.numWaitThreads;
-	memcpy(&info->interval, &timer.interval, sizeof(info->interval));
+	__builtin_memcpy(&info->interval, &timer.interval, sizeof(info->interval));
 	info->formatVersion[0] = 0;
 	info->formatVersion[1] = 0;
 	info->formatVersion[2] = 0;
