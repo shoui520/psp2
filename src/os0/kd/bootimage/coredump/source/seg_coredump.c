@@ -85,3 +85,11 @@ static int _writeSegs(SegIf *segment)
 	}
 	return 0;
 }
+
+void segSummarySetSegIfMethodPairTables(const SegIfMethodPair *pairs,
+	SceUInt32 numSegments)
+{
+	SCE_DBG_ASSERT(pairs != NULL, 190);
+	summarySegment.pairs = pairs;
+	summarySegment.numSegments = numSegments;
+}

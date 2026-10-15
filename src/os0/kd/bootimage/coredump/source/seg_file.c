@@ -25,7 +25,7 @@ static int _writeCallback(CoredumpFileInfo *info, SceSize resolvedPathSize,
 	const char *resolvedPath, SceSize resolvedPathPadding,
 	SceSize openPathSize, const char *openPath, SceSize openPathPadding,
 	void *context);
-extern int fileAccumulateSize(CoredumpFileInfo *info, SceSize resolvedPathSize,
+static int fileAccumulateSize(CoredumpFileInfo *info, SceSize resolvedPathSize,
 	const char *resolvedPath, SceSize resolvedPathPadding,
 	SceSize openPathSize, const char *openPath, SceSize openPathPadding,
 	void *context);
@@ -142,4 +142,18 @@ static int _writeCallback(CoredumpFileInfo *info, SceSize resolvedPathSize,
 	if (result == 0)
 		*writtenSize += openPathPadding;
 	return result;
+}
+
+static int fileAccumulateSize(CoredumpFileInfo *info, SceSize resolvedPathSize,
+	const char *resolvedPath, SceSize resolvedPathPadding,
+	SceSize openPathSize, const char *openPath, SceSize openPathPadding,
+	void *context)
+{
+	FileSizeContext *size = context;
+
+	size->numFiles++;
+	size->pathsSize += sizeof(resolvedPathSize) + resolvedPathSize +
+		resolvedPathPadding + sizeof(openPathSize) + openPathSize +
+		openPathPadding;
+	return 0;
 }
