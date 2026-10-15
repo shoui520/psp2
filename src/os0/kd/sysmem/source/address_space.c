@@ -232,11 +232,13 @@ int ksceKernelProcessGetContext(SceUID pid, SceKernelProcessContext **context)
 {
 	AddressSpaceObject *as;
 	SceKernelProcessContext *mmuContext;
+	void *object;
 	int ret;
 
-	ret = SysrootPIDtoAddressSpaceCB(pid, (void **)&as);
+	ret = SysrootPIDtoAddressSpaceCB(pid, &object);
 	if (ret < 0)
 		return ret;
+	as = object;
 	AddressSpaceRefer(as);
 	mmuContext = (SceKernelProcessContext *)&as->context->mmu;
 	AddressSpaceRelease(as);
@@ -1267,11 +1269,13 @@ int sceKernelAddressSpaceSetName(SceUID guid, const char *name)
 int ksceKernelAddressSpaceSetPhyMemPart(SceUID guid, SceUInt32 index, void *pPhyMemPart)
 {
 	AddressSpaceObject *as;
+	void *object;
 	int ret;
 
-	ret = ksceGUIDGetObject(guid, &as);
+	ret = ksceGUIDGetObject(guid, &object);
 	if (ret < 0)
 		return ret;
+	as = object;
 	AddressSpaceRefer(as);
 	as->phyMemPart[index] = pPhyMemPart;
 	AddressSpaceRelease(as);
@@ -1315,13 +1319,15 @@ int ksceKernelAddressSpaceUnmap(SceUID uid, int asid, int domain, void *addr, Sc
 {
 	AddressSpaceObject *as;
 	MMUContext saved;
+	void *object;
 	int ret;
 
 	if (((uintptr_t)addr & 0xfffff) || (size & 0xfffff))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceGUIDGetObject(uid, &as);
+	ret = ksceGUIDGetObject(uid, &object);
 	if (ret < 0)
 		return ret;
+	as = object;
 	AddressSpaceRefer(as);
 	MMUContextSave(&saved);
 	AddressSpaceSwitchContext(as);
@@ -1340,11 +1346,13 @@ int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_
 int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va, uintptr_t *pa)
 {
 	AddressSpaceObject *as;
+	void *object;
 	int i, ret;
 
-	ret = ksceGUIDGetObject(guid, &as);
+	ret = ksceGUIDGetObject(guid, &object);
 	if (ret < 0)
 		return ret;
+	as = object;
 	AddressSpaceRefer(as);
 	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
 		if (as->partition[i] == NULL)
