@@ -477,6 +477,49 @@ int calculateCorefileSize(void)
 	return 0;
 }
 
+static inline int finalWriters(void)
+{
+	CoredumpCdnAccessParam access;
+	int result, finalResult;
+
+	result = 0;
+	if (gzipWriterInitialized != 0) {
+		result = gzipWriterFinal(&gzipWriter);
+		gzipWriterInitialized = 0;
+	}
+	if (cafWriterInitialized != 0) {
+		finalResult = cafWriterEndSegment(&cafWriter);
+		if (finalResult != 0)
+			result = finalResult;
+		if (cafWriterGetNumSegments(&cafWriter) == 2) {
+			finalResult = cafWriterBeginSegment(&cafWriter,
+				useAlternateCafSegment ? 4 : 3);
+			if (finalResult == 0) {
+				oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
+					coredumpRun.stopReason, &access, &cdnLocation);
+				finalResult = writerWrite(&cafWriter.writer, &access,
+					sizeof(access));
+				if (finalResult == 0)
+					finalResult = cafWriterEndSegment(&cafWriter);
+			}
+			if (finalResult != 0)
+				result = finalResult;
+		}
+		finalResult = cafWriterFinal(&cafWriter);
+		if (finalResult != 0)
+			result = finalResult;
+		cafWriterInitialized = 0;
+	}
+	if (fileWriterInitialized != 0) {
+		finalResult = fileWriterFinal(&fileWriter);
+		if (finalResult < 0)
+			result = finalResult;
+		fileWriterInitialized = 0;
+	}
+	currentWriter = NULL;
+	return result;
+}
+
 int writeCrashReport(void)
 {
 	CoredumpCdnAccessParam access;
@@ -513,40 +556,7 @@ int writeCrashReport(void)
 			payloadResult = writerWritePaddingData(currentWriter,
 				16 - ((coredumpRun.trigger.titleid_len + pathSize) & 15));
 	}
-	if (gzipWriterInitialized != 0) {
-		result = gzipWriterFinal(&gzipWriter);
-		gzipWriterInitialized = 0;
-	}
-	if (cafWriterInitialized != 0) {
-		finalResult = cafWriterEndSegment(&cafWriter);
-		if (finalResult != 0)
-			result = finalResult;
-		if (cafWriterGetNumSegments(&cafWriter) == 2) {
-			finalResult = cafWriterBeginSegment(&cafWriter,
-				useAlternateCafSegment ? 4 : 3);
-			if (finalResult == 0) {
-				oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
-					coredumpRun.stopReason, &access, &cdnLocation);
-				finalResult = writerWrite(&cafWriter.writer, &access,
-					sizeof(access));
-				if (finalResult == 0)
-					finalResult = cafWriterEndSegment(&cafWriter);
-			}
-			if (finalResult != 0)
-				result = finalResult;
-		}
-		finalResult = cafWriterFinal(&cafWriter);
-		if (finalResult != 0)
-			result = finalResult;
-		cafWriterInitialized = 0;
-	}
-	if (fileWriterInitialized != 0) {
-		finalResult = fileWriterFinal(&fileWriter);
-		if (finalResult < 0)
-			result = finalResult;
-		fileWriterInitialized = 0;
-	}
-	currentWriter = NULL;
+	result = finalWriters();
 	if (result != 0)
 		goto remove;
 	if (payloadResult != 0) {
@@ -672,12 +682,12 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 		for (index = 0; index < numAvailableSegments; ++index) {
 			payloadResult = segInit(activeSegments[index].segment);
 			if (payloadResult != 0)
-				goto finalWriters;
+				goto endDump;
 		}
 		for (index = 0; index < numAvailableSegments; ++index) {
 			payloadResult = segCalcSize(activeSegments[index].segment);
 			if (payloadResult != 0)
-				goto finalWriters;
+				goto endDump;
 			numCalculatedSegments++;
 		}
 		calculateCorefileSize();
@@ -691,48 +701,15 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 				payloadResult = segWritePhdr(activeSegments[index].segment,
 					fileOffset);
 				if (payloadResult != 0)
-					goto finalWriters;
+					goto endDump;
 				numWrittenProgramHeaders++;
 				fileOffset += dataSize;
 			}
 			payloadResult = writeSegments();
 		}
-finalWriters:
+endDump:
 		oalChangeThreadPriority(handlerThreadId, 30);
-		if (gzipWriterInitialized != 0) {
-			result = gzipWriterFinal(&gzipWriter);
-			gzipWriterInitialized = 0;
-		}
-		if (cafWriterInitialized != 0) {
-			finalResult = cafWriterEndSegment(&cafWriter);
-			if (finalResult != 0)
-				result = finalResult;
-			if (cafWriterGetNumSegments(&cafWriter) == 2) {
-				finalResult = cafWriterBeginSegment(&cafWriter,
-					useAlternateCafSegment ? 4 : 3);
-				if (finalResult == 0) {
-					oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
-						coredumpRun.stopReason, &buffer.cdnParam, &cdnLocation);
-					finalResult = writerWrite(&cafWriter.writer, &buffer.cdnParam,
-						sizeof(buffer.cdnParam));
-					if (finalResult == 0)
-						finalResult = cafWriterEndSegment(&cafWriter);
-				}
-				if (finalResult != 0)
-					result = finalResult;
-			}
-			finalResult = cafWriterFinal(&cafWriter);
-			if (finalResult != 0)
-				result = finalResult;
-			cafWriterInitialized = 0;
-		}
-		if (fileWriterInitialized != 0) {
-			finalResult = fileWriterFinal(&fileWriter);
-			if (finalResult < 0)
-				result = finalResult;
-			fileWriterInitialized = 0;
-		}
-		currentWriter = NULL;
+		result = finalWriters();
 		if (result != 0)
 			goto finalMemory;
 		if (payloadResult != 0) {
@@ -1125,48 +1102,14 @@ int generatorWriteKernelDump(const void *data, SceSize size)
 int generatorEndKernelDump(void)
 {
 	CoredumpCdnAccessParam access;
-	SceSize pathSize, finalPathSize;
+	SceSize pathSize, finalPathSize, index;
 	char *finalPath;
 	int paddingResult, result, writerResult, renameResult;
 
 	paddingResult = writerWritePaddingData(currentWriter,
 		((kernelDumpWrittenSize + 3) & ~3u) - kernelDumpWrittenSize);
 	if (kernelDumpWritersInitialized != 0) {
-		writerResult = gzipWriterInitialized;
-		if (gzipWriterInitialized != 0) {
-			writerResult = gzipWriterFinal(&gzipWriter);
-			gzipWriterInitialized = 0;
-		}
-		if (cafWriterInitialized != 0) {
-			result = cafWriterEndSegment(&cafWriter);
-			if (result != 0)
-				writerResult = result;
-			if (cafWriterGetNumSegments(&cafWriter) == 2) {
-				result = cafWriterBeginSegment(&cafWriter,
-					useAlternateCafSegment != 0 ? 4 : 3);
-				if (result == 0) {
-					oalGetCdnAccessParam(coredumpRun.trigger.appVersion,
-						coredumpRun.stopReason, &access, &cdnLocation);
-					result = writerWrite(&cafWriter.writer, &access,
-						sizeof(access));
-					if (result == 0)
-						result = cafWriterEndSegment(&cafWriter);
-				}
-				if (result != 0)
-					writerResult = result;
-			}
-			result = cafWriterFinal(&cafWriter);
-			if (result != 0)
-				writerResult = result;
-			cafWriterInitialized = 0;
-		}
-		if (fileWriterInitialized != 0) {
-			result = fileWriterFinal(&fileWriter);
-			if (result < 0)
-				writerResult = result;
-			fileWriterInitialized = 0;
-		}
-		currentWriter = NULL;
+		writerResult = finalWriters();
 		if (writerResult != 0)
 			goto cleanup;
 	}
@@ -1183,10 +1126,8 @@ int generatorEndKernelDump(void)
 	strncpy(finalPath, corefilePath, finalPathSize);
 	oalFileRemove(finalPath);
 	renameResult = oalFileRename(corefilePath, finalPath);
-	corefilePath[finalPathSize] = 0;
-	corefilePath[finalPathSize + 1] = 0;
-	corefilePath[finalPathSize + 2] = 0;
-	corefilePath[finalPathSize + 3] = 0;
+	for (index = 0; index < 4; ++index)
+		corefilePath[finalPathSize + index] = 0;
 	memMgrLocalFree(finalPath);
 	if (renameResult == 0 && plaintextDumpAllowed == 0)
 		writeCrashReport();
