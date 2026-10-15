@@ -516,13 +516,14 @@ int MemBlockPartialOpRange(PartitionObject *partition, MemBlockObject *block, Sc
 SceSize MemBlockPartialGetHeadFreeSize(MemBlockObject *block)
 {
 	PartialInfo *info = MemBlockGetPartialInfoRaw(block);
-	SceSize size = 0;
+	SceUInt32 count = info->count, *units = info->units;
+	SceSize unitSize = info->unitSize, size = 0;
 	SceUInt32 i;
 
-	for (i = 0; i < info->count; i++) {
-		if (info->units[i] != 0)
+	for (i = 0; i < count; i++) {
+		if (units[i] != 0)
 			break;
-		size += info->unitSize;
+		size += unitSize;
 	}
 	return size;
 }
@@ -531,13 +532,14 @@ SceSize MemBlockPartialGetHeadFreeSize(MemBlockObject *block)
 SceSize MemBlockPartialGetTailSize(MemBlockObject *block)
 {
 	PartialInfo *info = MemBlockGetPartialInfoRaw(block);
-	SceSize size = 0;
-	SceUInt32 i;
+	SceUInt32 count = info->count, *units = info->units;
+	SceSize unitSize = info->unitSize, size = 0;
+	int i;
 
-	for (i = 0; i < info->count; i++) {
-		if (info->units[i] != 0)
+	for (i = 0; i < count; i++) {
+		if (*units++ != 0)
 			size = 0;
-		size += info->unitSize;
+		size += unitSize;
 	}
 	return size;
 }
@@ -546,12 +548,13 @@ SceSize MemBlockPartialGetTailSize(MemBlockObject *block)
 SceSize MemBlockPartialGetMappedSize(MemBlockObject *block)
 {
 	PartialInfo *info = MemBlockGetPartialInfoRaw(block);
-	SceSize size = 0;
-	SceUInt32 i;
+	SceUInt32 count = info->count, *units = info->units;
+	SceSize unitSize = info->unitSize, size = 0;
+	int i;
 
-	for (i = 0; i < info->count; i++)
-		if (PARTIAL_UNIT_MAP(info->units[i]) != PARTIAL_MAP_NONE)
-			size += info->unitSize;
+	for (i = 0; i < count; i++)
+		if (PARTIAL_UNIT_MAP(*units++) != PARTIAL_MAP_NONE)
+			size += unitSize;
 	return size;
 }
 
@@ -559,11 +562,12 @@ SceSize MemBlockPartialGetMappedSize(MemBlockObject *block)
 SceSize MemBlockPartialGetAllocatedSize(MemBlockObject *block)
 {
 	PartialInfo *info = MemBlockGetPartialInfoRaw(block);
-	SceSize size = 0;
-	SceUInt32 i;
+	SceUInt32 count = info->count, *units = info->units;
+	SceSize unitSize = info->unitSize, size = 0;
+	int i;
 
-	for (i = 0; i < info->count; i++)
-		if (info->units[i] != 0)
-			size += info->unitSize;
+	for (i = 0; i < count; i++)
+		if (*units++ != 0)
+			size += unitSize;
 	return size;
 }
