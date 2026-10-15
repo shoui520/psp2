@@ -1269,16 +1269,14 @@ int ksceKernelGetHeapInfo(SceUID uid, SceUInt32 level, void *pInfo)
 int SceSysmemForKernel_BF70207B(SceUID uid, SceUInt32 level, SceUInt32 max,
 				struct malloc_segment_range *list)
 {
-	SceObjectBase *object;
 	KernelHeap *heap;
 	int intr, ret;
 
-	if (list == NULL && max != 0)
+	if (max != 0 && list == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceGUIDReferObjectWithLevel(uid, level, &object);
+	ret = ksceGUIDReferObjectWithLevel(uid, level, (SceObjectBase **)&heap);
 	if (ret < 0)
 		return ret;
-	heap = (KernelHeap *)object;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
 	if (heap->flags & HEAP_HAS_MEMBLOCK) {
 		ret = 1;
