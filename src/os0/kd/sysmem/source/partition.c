@@ -1139,20 +1139,26 @@ int TinyPartitionAllocMemBlockRaw(TinyPartition *tiny, SceKernelAllocMemBlockCom
 {
 	MemBlockObject *head = tiny->blocks, *cur, *start;
 	uintptr_t minVa;
-	SceSize offset = command->offset, pad;
+	SceSize pad;
 	int ret;
 
-	if (tiny->size < offset) {
-		SCE_DBG_PRINTF(0xb, 3250, "Illegal offset 0x%08x\n", offset);
+	if (tiny->size < command->offset) {
+		SCE_DBG_PRINTF(0xb, 3250, "Illegal offset 0x%08x\n", command->offset);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	cur = TinyPartitionStep(head, command->opt.attr);
 	start = head;
-	if (offset != 0) {
-		minVa = offset + tiny->vbase;
-		if (head == cur)
-			goto restart;
-		while (cur->vbase < minVa) {
+	if (command->offset != 0) {
+		minVa = command->offset + tiny->vbase;
+		for (;;) {
+			if (head == cur) {
+				/* nothing at or above minVa: from the start again */
+				cur = TinyPartitionStep(head, command->opt.attr);
+				start = head;
+				goto search;
+			}
+			if (cur->vbase >= minVa)
+				break;
 			/* a free block across minVa may still hold an aligned range above it */
 			if (cur->code == 0 && command->size - cur->vbase + minVa < cur->size) {
 				pad = GetAlignmentOffset(minVa, align) + minVa - cur->vbase;
@@ -1161,11 +1167,10 @@ int TinyPartitionAllocMemBlockRaw(TinyPartition *tiny, SceKernelAllocMemBlockCom
 			}
 			start = cur;
 			cur = TinyPartitionStep(cur, command->opt.attr);
-			if (head == cur)
-				goto restart;
 		}
 		SCE_DBG_ASSERT_CHECK(minVa <= cur->vbase, 3299);
 	}
+search:
 	for (;;) {
 		if (cur->code == 0) {
 			pad = GetAlignmentOffset(cur->vbase, align);
