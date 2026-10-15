@@ -213,62 +213,61 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *v
 	va = range->addr;
 	vector->count = 0;
 	vector->total = 0;
-	if (size == 0) {
-		length = 0;
-		start = 0;
-		count = 0;
-	} else {
-		start = 0;
-		do {
-			ret = AddressSpaceVAtoPABySW(ksceKernelSysrootGetCurrentAddressSpaceCB(), va,
-						     &pa);
-			if (ret < 0)
-				return ret;
-			switch (ret) {
-			case PAGE_KIND_SMALL:
-				mask = 0xfff;
-				break;
-			case PAGE_KIND_LARGE:
-				mask = 0xffff;
-				break;
-			case PAGE_KIND_SECTION:
-				mask = 0xfffff;
-				break;
-			case PAGE_KIND_SUPERSECTION:
-				mask = 0xffffff;
-				break;
-			case PAGE_KIND_FAULT:
-				return PAGE_KIND_FAULT;
-			case PAGE_KIND_NOT_MAPPED:
-			default:
-				SCE_DBG_ASSERT_FAIL(1104);
-				return ret;
-			}
-			if (start + length != pa) {
-				SceUInt32 total = vector->total;
+	start = 0;
+	while (size != 0) {
+		ret = AddressSpaceVAtoPABySW(ksceKernelSysrootGetCurrentAddressSpaceCB(), va,
+					     &pa);
+		if (ret < 0)
+			return ret;
+		switch (ret) {
+		case PAGE_KIND_SMALL:
+			mask = 0xfff;
+			break;
+		case PAGE_KIND_LARGE:
+			mask = 0xffff;
+			break;
+		case PAGE_KIND_SECTION:
+			mask = 0xfffff;
+			break;
+		case PAGE_KIND_SUPERSECTION:
+			mask = 0xffffff;
+			break;
+#if FW_SINCE(0x04000000)
+		case PAGE_KIND_FAULT:
+			return PAGE_KIND_FAULT;
+		case PAGE_KIND_NOT_MAPPED:
+		default:
+			SCE_DBG_ASSERT_FAIL(1104);
+			return ret;
+#else
+		default:
+			return ret;
+#endif
+		}
+		if (start + length != pa) {
+			SceUInt32 total = vector->total;
 
-				if (total != 0) {
-					if (cur != end) {
-						cur->addr = start;
-						cur->size = length;
-						cur++;
-					}
+			if (total != 0) {
+				if (cur != end) {
+					cur->addr = start;
+					cur->size = length;
+					cur++;
 				}
-				length = 0;
-				vector->total = total + 1;
-				start = pa;
 			}
-			chunk = (mask & ~va) + 1;
-			if (chunk >= size)
-				chunk = size;
-			size -= chunk;
-			va += chunk;
-			length += chunk;
-		} while (size != 0);
-		count = vector->total;
-		if (vector->capacity <= count)
-			count = vector->capacity;
+			length = 0;
+			vector->total = total + 1;
+			start = pa;
+		}
+		chunk = (mask & ~va) + 1;
+		if (chunk >= size)
+			chunk = size;
+		size -= chunk;
+		va += chunk;
+		length += chunk;
 	}
+	count = vector->total;
+	if (vector->capacity <= count)
+		count = vector->capacity;
 	if (cur != end) {
 		cur->addr = start;
 		cur->size = length;
