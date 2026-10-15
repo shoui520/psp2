@@ -54,7 +54,8 @@ static int _calcSize(SegIf *segment)
 	memMgrLocalFree(ids);
 	segment->numPhdr = 1;
 	segment->dataSize = (numWaiting + count *
-		(sizeof(CoredumpMsgPipeInfo) / sizeof(CoredumpWaitingThread))) *
+		((sizeof(CoredumpMsgPipeInfo) + sizeof(CoredumpCommonEventInfo)) /
+		 sizeof(CoredumpWaitingThread))) *
 		sizeof(CoredumpWaitingThread) + 76;
 	return 0;
 }
