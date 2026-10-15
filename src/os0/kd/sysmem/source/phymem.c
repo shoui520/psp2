@@ -471,12 +471,14 @@ void PhyMemPartFreeRaw(PhyMemPart *part)
 }
 
 /* name unknown: a segment's first page as one free unit of the whole segment */
+__attribute__((noinline))
 PhyPage *PhyMemSegmentGetFreePhyPage1M(PhyMemSegment *segment)
 {
 	SceUInt32 pindex = segment->pindexStart;
+	SceSize psize = segment->psize;
 	PhyPage *page = PhyPageTableMgrGetPhyPage(segment->tables, pindex);
 
-	page->size = segment->psize;
+	page->size = psize;
 	page->info = (page->info & PHYPAGE_ORDER_MASK) | PHYPAGE_PINDEX(pindex) | PHYPAGE_FREE_1M;
 	return page;
 }
@@ -493,13 +495,12 @@ static inline void PhyMemPartResetBuddy(PhyMemPart *part)
 }
 
 /* the free size and its low-water mark: the size of every segment */
-static inline void PhyMemPartResetFreeSize(PhyMemPart *part, PhyMemSegment *first)
+static inline void PhyMemPartResetFreeSize(PhyMemPart *part, SceSize psize,
+					   PhyMemSegment *segment)
 {
-	PhyMemSegment *segment;
-
-	part->freeSize = first->psize;
-	part->freeSizeMin = first->psize;
-	for (segment = first->next; segment != NULL; segment = segment->next) {
+	part->freeSize = psize;
+	part->freeSizeMin = psize;
+	for (; segment != NULL; segment = segment->next) {
 		ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, segment->psize);
 		ksceKernelAtomicAddAndGet32(&part->freeSizeMin, segment->psize);
 	}
@@ -552,8 +553,9 @@ int PhyMemPartRecycleRaw(PhyMemPart *part)
 	case PHYMEM_PART_TYPE_LPDDR2:
 		break;
 	case PHYMEM_PART_TYPE_CDRAM:
+		segment = part->segments;
 		part->useCount = 1;
-		PhyMemPartResetFreeSize(part, part->segments);
+		PhyMemPartResetFreeSize(part, segment->psize, segment->next);
 		return 0;
 	default:
 		SCE_DBG_ASSERT_FAIL(3518);
@@ -574,21 +576,25 @@ int PhyMemPartRecycleRaw(PhyMemPart *part)
 		head->prev->next = page;
 		head->prev = page;
 	}
-	PhyMemPartResetFreeSize(part, part->segments);
+	segment = part->segments;
+	PhyMemPartResetFreeSize(part, segment->psize, segment->next);
 	return 0;
 }
 
 int PhyMemPartInitWoSegmentRaw(PhyMemPart *part)
 {
-	PhyMemSegment *segment;
+	PhyMemSegment *segment, *next;
+	SceSize psize;
 	int i, j;
 
 	SCE_DBG_ASSERT(part->segments != NULL, 3058);
 	segment = part->segments;
 	part->flags = 0;
 	part->lock = 0;
+	psize = segment->psize;
+	next = segment->next;
 	part->useCount = 1;
-	PhyMemPartResetFreeSize(part, segment);
+	PhyMemPartResetFreeSize(part, psize, next);
 	PhyMemPartResetBuddy(part);
 	part->freeList = &part->freeListHead;
 	part->freeListHead.prev = &part->freeListHead;
