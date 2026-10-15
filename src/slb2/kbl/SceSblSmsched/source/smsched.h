@@ -140,6 +140,7 @@ static inline int SmschedStateOnCmep(SceUInt32 state)
 }
 
 #define SMSCHED_REQUESTS			64
+#define SMSCHED_REQUEST_FREE			0x80000000	/* in id */
 
 /* the Cmep's interrupts: Cry2Arm0 (the secure kernel's messages), Cry2Arm1-3 */
 #define SMSCHED_INTR_CRY2ARM0			200
@@ -171,8 +172,8 @@ typedef struct SmschedRequest {
 	SceUInt32 contextType;
 	uintptr_t vectorPA;			/* the saved context's PA vector */
 	SceUInt32 vectorCount;
-	void *context;				/* 0x20000 bytes, while suspended */
-	void *vector;
+	void *volatile context;				/* 0x20000 bytes, while suspended */
+	void *volatile vector;
 	SmschedMailbox *volatile mailbox;	/* in area */
 	uintptr_t mailboxPA;
 	SceInt32 proxyId;			/* the Non-secure kernel's id, -1 none */
@@ -182,11 +183,32 @@ typedef struct SmschedRequest {
 	SceKernelSpinlock lock;			/* inside s_lock */
 	SmschedInvokeArg invokeArg;
 	SmschedIntrEntry intr[CMEP_MAILBOXES];
-	void *area;				/* 128 bytes, uncached */
+	void *volatile area;			/* 128 bytes, uncached */
 	SceUInt32 reserved;
 } SmschedRequest;
 
 _Static_assert(sizeof(SmschedRequest) == 200, "SmschedRequest");
+
+/* contextType: how reschedule starts the request; 1 and 4 run the module
+ * anew, 2 and 3 resume a saved context */
+#define SMSCHED_CONTEXT_NEW			1
+#define SMSCHED_CONTEXT_PREEMPTED		3	/* saved when reschedule preempted it */
+
+static inline void SmschedLinkRemove(SmschedLink *link)
+{
+	link->next->prev = link->prev;
+	link->prev->next = link->next;
+	link->next = link;
+	link->prev = link;
+}
+
+static inline void SmschedLinkAddTail(SmschedLink *head, SmschedLink *link)
+{
+	link->next = head;
+	link->prev = head->prev;
+	head->prev = link;
+	link->prev->next = link;
+}
 
 /* notifyMask: the state changes reported to the Non-secure kernel */
 #define SMSCHED_NOTIFY_READY			0x1	/* suspended */
