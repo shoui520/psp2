@@ -2055,6 +2055,7 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 									 SceUInt32 flags)
 {
 	MemBlockObject *block;
+	const char *name;
 	SceUInt32 smbType;
 	int intr, free, ret;
 
@@ -2078,11 +2079,12 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 		}
 	}
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
+	name = SysrootGetMemBlockName(2);
 	if (partition == g_uidManager->kernelPartition)
-		smbType = ((flags & 3) << 4) | 0x21;
+		smbType = ((flags & 1) << 4) | 0x21;
 	else
 		smbType = 1;
-	ret = AllocSimpleMemBlock(SysrootGetMemBlockName(2), 0x1001000, NULL, smbType, &block);
+	ret = AllocSimpleMemBlock(name, 0x1001000, NULL, smbType, &block);
 	if (ret < 0) {
 		if (ret == SCE_KERNEL_ERROR_NO_SMB)
 			ksceKernelPanic(SCE_DBGINFO_FUNC(4717, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
