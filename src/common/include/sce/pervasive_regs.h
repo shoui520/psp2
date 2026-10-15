@@ -134,7 +134,10 @@ typedef struct ScePervasiveMiscRegisters {
 	volatile uint32_t suspendControl;		/* bit 31 set before the CPUs park */
 	volatile uint32_t reserved1[24];
 	volatile uint32_t usbMode[3];			/* per USB port, bit 0 */
-	volatile uint32_t reserved2[32];
+	volatile uint32_t reserved2[8];
+	volatile uint32_t pervasiveAccessMode;		/* 0xb0: set by monitor call 0x104 */
+	volatile uint32_t tasAccessMode;		/* set by monitor call 0x105 */
+	volatile uint32_t reserved2b[22];
 	volatile uint32_t sdifConfig[4];		/* bits 8-10 */
 	volatile uint32_t reserved3;
 	volatile uint32_t sdifVoltage;			/* 1 << port: 1.8 V */
@@ -168,6 +171,7 @@ typedef struct ScePervasiveMiscRegisters {
 
 _Static_assert(offsetof(ScePervasiveMiscRegisters, suspendControl) == 0x20, "misc suspend");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, usbMode) == 0x84, "misc usb mode");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, pervasiveAccessMode) == 0xb0, "misc access mode");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, sdifConfig) == 0x110, "misc sdif");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, sdifVoltage) == 0x124, "misc sdif voltage");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, secureBusErrorAttribute) == 0x130, "misc bus error");
@@ -354,12 +358,16 @@ typedef struct ScePervasive2Registers {
 	/* PLACEHOLDER: page controls are cleared during capture activation. */
 	volatile unsigned int unidentifiedCapturePageControl[2];
 	volatile unsigned int capturePagePhysicalBase;	/* 0xf70 */
-	unsigned char reservedEnd[0x8c];
+	unsigned char reservedBeforeAccessMode[0x4c];
+	volatile uint32_t accessMode;			/* 0xfc0: set by monitor call 0x106 */
+	unsigned char reservedEnd[0x3c];
 } ScePervasive2Registers;
 
 _Static_assert(offsetof(ScePervasive2Registers, captureImagePhysicalAddress) == 0x110,
 	"Pervasive2 capture image");
 _Static_assert(offsetof(ScePervasive2Registers, mappingControl) == 0x300, "Pervasive2 mapping");
+_Static_assert(offsetof(ScePervasive2Registers, accessMode) == 0xfc0, "Pervasive2 access mode");
+_Static_assert(sizeof(ScePervasive2Registers) == PERVASIVE_PAGE_SIZE, "Pervasive2 page");
 _Static_assert(offsetof(ScePervasive2Registers, windows) == 0x390, "Pervasive2 windows");
 _Static_assert(offsetof(ScePervasive2Registers, bootControl) == 0xe44, "Pervasive2 boot control");
 _Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "Pervasive2 USB PHY");

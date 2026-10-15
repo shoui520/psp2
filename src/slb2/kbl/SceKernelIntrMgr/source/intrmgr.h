@@ -21,11 +21,13 @@
 #define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
 #define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
 #define memset					SceSysclibForTZS_956DB750
+#define kscePmMgrGetProductMode			ScePmMgrForTZS_CF554E69
 
 #include <fw.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/utils.h>
+#include <psp2kern/kernel/pm_mgr.h>
 #include "sce/debug.h"
 #include "sce/error.h"
 #include "sce/intrmgr_tzs.h"
@@ -62,3 +64,6 @@ int initDmacSecure(void);
 /* usleep.c */
 void sceKernelUsleep(SceUInt32 usec);
 int InitUsleepTimer(int remap);
+
+/* access_mode.c */
+int RegisterAccessModeMonitorCall(void);
