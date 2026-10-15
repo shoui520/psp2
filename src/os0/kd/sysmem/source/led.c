@@ -28,8 +28,8 @@ static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
 static SceInt32 s_gpoMask = 0xff;
 static SceUInt32 s_gpi;
-static void (*s_ledHandle0)(void);
-static void (*s_ledHandle1)(void);
+static void (*s_ledHandle0)(int a1, int a2, int a3, int a4);
+static void (*s_ledHandle1)(int a1, int a2, int a3, int a4);
 
 static inline void LedWriteGPO(SceUInt32 gpo)
 {
@@ -84,26 +84,26 @@ SceUInt32 sceKernelGetGPI(void)
 	return s_gpi;
 }
 
-void ksceDebugLedRegisterHandle1(void (*handle)(void))
+void ksceDebugLedRegisterHandle1(void (*handle)(int a1, int a2, int a3, int a4))
 {
 	s_ledHandle1 = handle;
 }
 
-void ksceDebugLedRegisterHandle0(void (*handle)(void))
+void ksceDebugLedRegisterHandle0(void (*handle)(int a1, int a2, int a3, int a4))
 {
 	s_ledHandle0 = handle;
 }
 
-void sceDebugLedInvokeHandle1(void)
+void sceDebugLedInvokeHandle1(int a1, int a2, int a3, int a4)
 {
 	if (s_ledHandle1 != NULL)
-		s_ledHandle1();
+		s_ledHandle1(a1, a2, a3, a4);
 }
 
-void sceDebugLedInvokeHandle0(void)
+void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
 {
 	if (s_ledHandle0 != NULL)
-		s_ledHandle0();
+		s_ledHandle0(a1, a2, a3, a4);
 }
 
 struct SysmemBootContext;
