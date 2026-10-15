@@ -24,7 +24,8 @@ static void (*s_lockSuspendHook)(int arg, const SuspendPowerCallbacks *callbacks
 				 int (*lockSuspend)(SceUInt32 arg));
 static void (*s_unlockSuspendHook)(int arg, const SuspendPowerCallbacks *callbacks, int result,
 				   int count);
-static void (*s_powerTickHook)(int fromProcess, int type, SceUID pid, SceUID tid, ...);
+static void (*volatile s_powerTickHook)(int fromProcess, int type, SceUID pid, SceUID tid,
+			       const void *caller);
 
 static void (*s_lockSuspendResultHook)(const SuspendPowerCallbacks *callbacks,
 				       int (*lockSuspend)(SceUInt32 arg), int result, int count);
@@ -147,19 +148,20 @@ int SceKernelSuspendForDriver_230495ED(SceUInt32 kind)
 /* in a process's thread: the hook learns the process's address space too */
 int ksceKernelPowerTick(int type)
 {
-	void (*hook)(int, int, SceUID, SceUID, ...) = s_powerTickHook;
+	ThreadSyscallFrame *frame;
 	ThreadCB *thread;
-	SceUInt32 tpidruro;
 
-	if (hook != NULL) {
-		tpidruro = readTpidruro();
-		if (!(tpidruro & 0x10000)) {
-			hook(0, type, SceSysrootForKernel_7385CADE(), SceSysrootForKernel_D441DC34());
+	if (s_powerTickHook != NULL) {
+		if (!(readTpidruro() & 0x10000)) {
+			s_powerTickHook(0, type, SceSysrootForKernel_7385CADE(),
+					SceSysrootForKernel_D441DC34(), __builtin_return_address(0));
 		} else {
 			thread = getCurrentThreadCB();
-			if (thread != NULL)
-				hook(1, type, SceSysrootForKernel_7385CADE(),
-				     SceSysrootForKernel_D441DC34(), thread->userFrame->lr);
+			if (thread != NULL) {
+				frame = thread->userFrame;
+				s_powerTickHook(1, type, SceSysrootForKernel_7385CADE(),
+						SceSysrootForKernel_D441DC34(), frame->lr);
+			}
 		}
 	}
 	if (s_callbacks != NULL)
