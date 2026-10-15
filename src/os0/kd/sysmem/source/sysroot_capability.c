@@ -24,9 +24,14 @@ int CheckProcessCapability(SceUID processId, unsigned int capability)
 /* 0 when the process has the capability */
 int CheckProcessCapabilityGranted(SceUID processId, unsigned int capability)
 {
-	if (capability != CAPABILITY_DEBUG && capability != CAPABILITY_85)
+	switch (capability) {
+	case CAPABILITY_DEBUG:
+	case CAPABILITY_85:
+		return CheckProcessCapability(processId, capability) == 1 ?
+		       0 : ACMGR_ERROR_NO_CAPABILITY;
+	default:
 		return ACMGR_ERROR_UNKNOWN_CAPABILITY;
-	return CheckProcessCapability(processId, capability) == 1 ? 0 : ACMGR_ERROR_NO_CAPABILITY;
+	}
 }
 
 __attribute__((noinline))
