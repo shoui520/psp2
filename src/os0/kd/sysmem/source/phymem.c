@@ -650,13 +650,17 @@ int PhyMemPartGetFreeSizeRaw(PhyMemPart *part, SceSize *freeSize)
 	for (page = part->freeList->next; part->freeList != page; page = page->next)
 		size += page->size;
 	for (i = 0; i < PHYMEM_BUDDY_ORDERS; i++, unit <<= 1) {
-		if (part->buddy[i].state == PHYMEM_BUDDY_EMPTY) {
+		switch (part->buddy[i].state) {
+		case PHYMEM_BUDDY_EMPTY:
 			count = 0;
-		} else if (part->buddy[i].state == PHYMEM_BUDDY_HAS) {
+			break;
+		case PHYMEM_BUDDY_HAS:
 			count = PhyMemPartFreeCountLinkByIndexRaw(part, part->buddy[i].pindex) * unit;
-		} else {
+			break;
+		default:
 			SCE_DBG_ASSERT_CHECK_FUNC(0, 4029, "PhyMemPartGetFreeSizeLpddr2Raw");
 			count = 0;
+			break;
 		}
 		size += count;
 	}
