@@ -18,8 +18,9 @@ M=$W/$T/gcc/config/arm/ldrdstrd.md
 D=$W/$T/gcc/config/arm/arm.md
 C=$W/$T/gcc/config/arm/arm.c
 U=$W/$T/gcc/config/arm/thumb2.md
-cp $M $M.orig; cp $D $D.orig; cp $C $C.orig; cp $U $U.orig
-trap 'mv $M.orig $M; mv $D.orig $D; mv $C.orig $C; mv $U.orig $U' EXIT
+V=$W/$T/gcc/config/arm/vfp.md
+cp $M $M.orig; cp $D $D.orig; cp $C $C.orig; cp $U $U.orig; cp $V $V.orig
+trap 'mv $M.orig $M; mv $D.orig $D; mv $C.orig $C; mv $U.orig $U; mv $V.orig $V' EXIT
 sed -i 's/&& current_tune->prefer_ldrd_strd/\&\& 1/' $M
 # the ldrd/strd insns the peepholes produce (arm.md "*thumb2_ldrd" ... "*thumb2_strd_base_neg")
 sed -i '12570,12670s/&& current_tune->prefer_ldrd_strd/\&\& 1/' $D
@@ -84,6 +85,54 @@ new = '''   && TARGET_USE_MOVT
    && !flag_pic && !target_word_relocations'''
 assert s.count(old) == 1
 s = s.replace(old, new)
+open(p, 'w').write(s)
+PYEOF
+# A word load or store that post-increments a low base register by 4 prints as a
+# single-register ldmia/stmia with writeback (16-bit), not ldr/str rt, [rn], #4 (32-bit):
+# Sony's kernel code uses the ldm/stm form (4.00 sysmem, threadmgr, iofilemgr, modulemgr:
+# 104 ldm rn!, {rt} and 84 stm rn!, {rt}, against 4 ldr and 5 str post-increments),
+# stock 4.8 never does (sysmem: 33 ldr post-increments, no ldm). The base must not be
+# the transferred register (its writeback would be suppressed).
+python3 - $V <<'PYEOF'
+import sys
+p = sys.argv[1]
+s = open(p).read()
+old = '''    case 5:
+    case 6:
+      return \\"ldr%?\\\\t%0, %1\\";
+    case 7:
+    case 8:
+      return \\"str%?\\\\t%1, %0\\";
+    case 9:
+      return \\"fmsr%?\\\\t%0, %1\\\\t%@ int\\";'''
+new = '''    case 5:
+    case 7:
+      {
+	rtx mem = operands[which_alternative == 5 ? 1 : 0];
+	rtx reg = operands[which_alternative == 5 ? 0 : 1];
+	rtx addr = MEM_P (mem) ? XEXP (mem, 0) : NULL_RTX;
+	if (addr && GET_CODE (addr) == POST_INC && REG_P (XEXP (addr, 0))
+	    && REGNO (XEXP (addr, 0)) <= LAST_LO_REGNUM
+	    && REGNO (XEXP (addr, 0)) != REGNO (reg))
+	  {
+	    rtx ops[2];
+	    ops[0] = XEXP (addr, 0);
+	    ops[1] = reg;
+	    output_asm_insn (which_alternative == 5 ? \\"ldmia%?\\\\t%0!, {%1}\\"
+			     : \\"stmia%?\\\\t%0!, {%1}\\", ops);
+	    return \\"\\";
+	  }
+      }
+      return which_alternative == 5 ? \\"ldr%?\\\\t%0, %1\\" : \\"str%?\\\\t%1, %0\\";
+    case 6:
+      return \\"ldr%?\\\\t%0, %1\\";
+    case 8:
+      return \\"str%?\\\\t%1, %0\\";
+    case 9:
+      return \\"fmsr%?\\\\t%0, %1\\\\t%@ int\\";'''
+i = s.index('(define_insn "*thumb2_movsi_vfp"')
+assert s.count(old, i, i + 3000) == 1, 'thumb2_movsi_vfp template'
+s = s[:i] + s[i:].replace(old, new, 1)
 open(p, 'w').write(s)
 PYEOF
 B=$W/build-$(basename $P)
