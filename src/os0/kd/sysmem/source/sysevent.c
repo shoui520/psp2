@@ -23,10 +23,14 @@ typedef struct SysEventObject {
 	SceUInt32 reserved;
 } SysEventObject;
 
+/* the handler object a list link belongs to */
+#define SYS_EVENT_OBJECT(l) \
+	((SysEventObject *)((char *)(l) - offsetof(SysEventObject, link)))
+
 _Static_assert(sizeof(SysEventObject) == 0x20, "SysEventObject size");
 
 void (*g_sysEventPreHook)(int id, int event, void *args, void *handler);
-void (*g_sysEventPostHook)(int id, int event, int result);
+void (*g_sysEventPostHook)(int id, int event, int result, SceUID failed);
 
 /* the list head (next, prev) and SceUIDSysEventClass */
 static SysEventLink *s_sysEventList[2];
@@ -112,20 +116,23 @@ int ksceKernelUnregisterSysEventHandler(SceUID uid)
 /* every handler in order; the first failure stops it, *failed is its UID */
 int ksceKernelSysEventDispatch(int id, int event, void *eventArgs, SceUID *failed)
 {
-	SysEventLink *link;
+	SysEventObject *object;
 	int state, ret = 0;
 
 	state = ksceKernelCpuSuspendIntr();
-	for (link = s_sysEventList[0]; link != (SysEventLink *)s_sysEventList; link = link->next) {
+	for (object = SYS_EVENT_OBJECT(s_sysEventList[0]);
+	     &object->link != (SysEventLink *)s_sysEventList;
+	     object = SYS_EVENT_OBJECT(object->link.next)) {
 		ksceKernelCpuResumeIntr(state);
 		if (g_sysEventPreHook != NULL)
-			g_sysEventPreHook(id, event, link->args, link->handler);
-		ret = link->handler(id, event, eventArgs, link->args);
+			g_sysEventPreHook(id, event, object->link.args, object->link.handler);
+		ret = object->link.handler(id, event, eventArgs, object->link.args);
 		state = ksceKernelCpuSuspendIntr();
 		if (g_sysEventPostHook != NULL)
-			g_sysEventPostHook(id, event, ret);
+			g_sysEventPostHook(id, event, ret,
+					   ret >= 0 ? 0 : failed != NULL ? object->link.uid : 0);
 		if (ret < 0 && failed != NULL) {
-			*failed = link->uid;
+			*failed = object->link.uid;
 			ksceKernelCpuResumeIntr(state);
 			return ret;
 		}
