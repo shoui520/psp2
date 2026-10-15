@@ -5,6 +5,7 @@
  */
 
 #include "sce/cp15.h"
+#include "sce/timer_regs.h"
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
@@ -1045,7 +1046,7 @@ static inline __attribute__((always_inline)) int AddressSpaceCreatePartitionForU
 	/* the timer page lands 8..23 pages into its 32-page window */
 	AllocMemBlockCommandInit(&command, "SceUserIOTimer", 0x20000);
 	command.opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR | (ALLOC_ATTR_HAS_EXTRA_LOW | ALLOC_ATTR_HAS_EXTRA_HIGH);
-	command.opt.paddr = 0xe20b6000;
+	command.opt.paddr = TIMER_LONG_REG_BASE(5);
 	pages = (SceSysrootForKernel_41636522() & 0xf) + 8;
 	command.opt.extraLow = pages * 0x1000;
 	command.code = MEMBLOCK_CODE_USER_IO_DEVICE_R;

@@ -14,22 +14,6 @@
 #include "private.h"
 #include "event.h"
 
-/* the LT5 timer's registers */
-struct ThreadmgrSystemTimer {
-	uint32_t countLow;			/* 0x00: the system time */
-	uint32_t countHigh;
-	union {
-		uint64_t compare;		/* 0x08: the next interrupt */
-		struct {
-			uint32_t compareLow;
-			uint32_t compareHigh;
-		};
-	};
-	uint32_t reserved[2];
-	uint32_t intrStatus;			/* 0x18: written 2 to acknowledge */
-	uint32_t control;			/* 0x1c */
-};
-
 /* a CPU timer's place in the timer queue (object +0x38) */
 struct ThreadmgrTimer {
 	struct ThreadmgrTimer *next;

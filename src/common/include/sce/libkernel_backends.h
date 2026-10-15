@@ -2,6 +2,7 @@
 #define SCE_LIBKERNEL_BACKENDS_H
 
 #include <psp2/types.h>
+#include <sce/timer_regs.h>
 #include <psp2common/kernel/threadmgr.h>
 #include <psp2common/kernel/modulemgr.h>
 #include <psp2common/kernel/iofilemgr.h>
@@ -49,7 +50,6 @@ struct MultipleEventWaitOptions;
 struct ObjectInfoRequest;
 struct PackageVerifyRequest;
 struct PcActivationChallengeRequest;
-struct ProcessTimerRegisters;
 struct PsmActivationRequest;
 struct RandomNumberRequest;
 struct SceKernelSimpleEventOptParam;
@@ -218,7 +218,7 @@ extern int _sceIoCompleteMultiple(const void *requests, int count,
 		int *completed);
 extern int _sceKernelExitCallback(int status);
 extern int _sceKernelRegisterLibkernelAddresses(const struct LibkernelAddresses *addresses);
-extern int _sceKernelGetTimer5Reg(struct ProcessTimerRegisters **timer);
+extern int _sceKernelGetTimer5Reg(SceLongTimerRegisters **timer);
 extern void _sceKernelExitProcessForUser(int status);
 extern int _sceKernelLockLwMutex(SceKernelLwMutexWork *work, int count,
 		unsigned int *timeout, unsigned int callbacks);

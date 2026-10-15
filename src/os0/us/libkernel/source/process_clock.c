@@ -6,31 +6,31 @@
 
 SceUInt32 sceKernelGetProcessTimeLow(void)
 {
-	struct ProcessTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = libkernelState.timer;
 
 	if (!timer)
 		return sceKernelGetProcessTimeLowCore();
-	return timer->low - libkernelState.processTimeBase.words.low;
+	return timer->countLo - libkernelState.processTimeBase.words.low;
 }
 
 SceUInt64 sceKernelGetProcessTimeWide(void)
 {
-	struct ProcessTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = libkernelState.timer;
 	uint32_t high, low, nextHigh;
 
 	if (!timer)
 		return sceKernelGetProcessTimeWideCore();
 	do {
-		high = timer->high;
-		low = timer->low;
-		nextHigh = timer->high;
+		high = timer->countHi;
+		low = timer->countLo;
+		nextHigh = timer->countHi;
 	} while (high != nextHigh);
 	return (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
 }
 
 int sceKernelGetProcessTime(SceKernelSysClock *clock)
 {
-	struct ProcessTimerRegisters *timer = libkernelState.timer;
+	SceLongTimerRegisters *timer = libkernelState.timer;
 	uint32_t high, low, nextHigh;
 
 	if (!timer)
@@ -38,9 +38,9 @@ int sceKernelGetProcessTime(SceKernelSysClock *clock)
 	if (!clock)
 		return SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS;
 	do {
-		high = timer->high;
-		low = timer->low;
-		nextHigh = timer->high;
+		high = timer->countHi;
+		low = timer->countLo;
+		nextHigh = timer->countHi;
 	} while (high != nextHigh);
 	*clock = (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
 	return 0;

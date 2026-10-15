@@ -1,10 +1,9 @@
 /*
  * SceSystimer: the SoC's general purpose timers.
  *
- * Two banks: 5 long-range timers (64-bit count) at 0xE20B1000 and 7 word
- * timers (32-bit count) at 0xE20B7000, 4 KiB of registers each. A 64-bit
- * software base is added to the hardware count; it absorbs SetCount and the
- * interval of periodic timers.
+ * Two banks (sce/timer_regs.h): long-range timers LT0-4 (64-bit count) and
+ * word timers WT0-6 (32-bit count). A 64-bit software base is added to the
+ * hardware count; it absorbs SetCount and the interval of periodic timers.
  */
 
 #include <psp2kern/kernel/cpu.h>
@@ -15,55 +14,21 @@
 #include "sce/intrmgr.h"
 #include "sce/sysmem.h"
 #include "sce/systimer.h"
+#include "sce/timer_regs.h"
 
 #define LONG_TIMERS		5
 #define WORD_TIMERS		7
 #define LONG_INTR_BASE		0x88
 #define WORD_INTR_BASE		0x80
-#define LONG_REG_PADDR		0xE20B1000
-#define WORD_REG_PADDR		0xE20B7000
 
 /* TimerInfo.flags */
 #define TIMER_ALLOCATED		0x1
 #define TIMER_COUNTING		0x2
 
 /* control register */
-#define CTRL_ENABLE		0x01
 #define CTRL_START_ONESHOT_LONG	0x01
 #define CTRL_START_ONESHOT_WORD	0x03
 #define CTRL_START_PERIODIC	0x1d
-#define INTR_CLEAR		3
-
-/* long-range timer registers */
-typedef struct LongTimerReg {
-	union {
-		volatile SceUInt64 count;
-		struct {
-			volatile SceUInt32 countLo;
-			volatile SceUInt32 countHi;
-		};
-	};
-	volatile SceUInt64 interval;
-	union {
-		volatile SceUInt64 value;	/* read by SceSystimerForDriver_FD5F1742 */
-		struct {
-			volatile SceUInt32 valueLo;
-			volatile SceUInt32 valueHi;
-		};
-	};
-	volatile SceUInt32 intr;
-	volatile SceUInt32 control;
-} LongTimerReg;
-
-/* word timer registers */
-typedef struct WordTimerReg {
-	volatile SceUInt32 interval;
-	volatile SceUInt32 count;
-	volatile SceUInt32 control;
-	volatile SceUInt32 value;
-	volatile SceUInt32 reserved;
-	volatile SceUInt32 intr;
-} WordTimerReg;
 
 typedef struct TimerInfo {
 	union {
@@ -87,8 +52,8 @@ typedef struct TimerInfo {
 	SceKernelSpinlock lock;
 	int intrCode;
 	union {
-		LongTimerReg *longReg;
-		WordTimerReg *wordReg;
+		SceLongTimerRegisters *longReg;
+		SceWordTimerRegisters *wordReg;
 		void *reg;
 	};
 } __attribute__((aligned(64))) TimerInfo;
@@ -116,9 +81,9 @@ static int TimerIntrHandler(int intrCode, void *userCtx)
 	int type = id >> 16;
 
 	if (type == SCE_SYSTIMER_TYPE_LONG)
-		info->longReg->intr = INTR_CLEAR;
+		info->longReg->intr = TIMER_INTR_CLEAR;
 	else
-		info->wordReg->intr = INTR_CLEAR;
+		info->wordReg->intr = TIMER_INTR_CLEAR;
 
 	if (info->interval != 0) {
 		info->base += info->interval;
@@ -159,15 +124,15 @@ int InitTimerInfo(TimerInfo *info)
 	if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG) {
 		info->longReg->control = 0;
 		info->longReg->count = 0;
-		info->longReg->interval = 0;
+		info->longReg->compare = 0;
 		info->longReg->value = 0;
-		info->longReg->intr = INTR_CLEAR;
+		info->longReg->intr = TIMER_INTR_CLEAR;
 	} else {
 		info->wordReg->control = 0;
 		info->wordReg->count = 0;
-		info->wordReg->interval = 0;
+		info->wordReg->compare = 0;
 		info->wordReg->value = 0;
-		info->wordReg->intr = INTR_CLEAR;
+		info->wordReg->intr = TIMER_INTR_CLEAR;
 	}
 
 	index = info->intrCode - WORD_INTR_BASE;
@@ -247,15 +212,15 @@ int ksceKernelSysTimerFree(SceSysTimerId id)
 	if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG) {
 		info->longReg->control = 0;
 		info->longReg->count = 0;
-		info->longReg->interval = 0;
+		info->longReg->compare = 0;
 		info->longReg->value = 0;
-		info->longReg->intr = INTR_CLEAR;
+		info->longReg->intr = TIMER_INTR_CLEAR;
 	} else {
 		info->wordReg->control = 0;
 		info->wordReg->count = 0;
-		info->wordReg->interval = 0;
+		info->wordReg->compare = 0;
 		info->wordReg->value = 0;
-		info->wordReg->intr = INTR_CLEAR;
+		info->wordReg->intr = TIMER_INTR_CLEAR;
 	}
 	info->flags = 0;
 	info->handler = NULL;
@@ -322,9 +287,9 @@ int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
 	}
 
 	if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG)
-		info->longReg->interval = interval;
+		info->longReg->compare = interval;
 	else
-		info->wordReg->interval = (SceUInt32)interval;
+		info->wordReg->compare = (SceUInt32)interval;
 	info->interval = interval;
 
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -420,9 +385,9 @@ int ksceKernelSysTimerStopCount(SceSysTimerId id)
 	}
 
 	if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG)
-		info->longReg->control &= ~CTRL_ENABLE;
+		info->longReg->control &= ~TIMER_CONTROL_ENABLE;
 	else
-		info->wordReg->control &= ~CTRL_ENABLE;
+		info->wordReg->control &= ~TIMER_CONTROL_ENABLE;
 	info->flags &= ~TIMER_COUNTING;
 
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -446,11 +411,11 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 
 	/* a running timer is stopped around the count write */
 	if (info->flags & TIMER_COUNTING) {
-		LongTimerReg *longReg = info->longReg;
-		WordTimerReg *wordReg = info->wordReg;
+		SceLongTimerRegisters *longReg = info->longReg;
+		SceWordTimerRegisters *wordReg = info->wordReg;
 
 		if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG) {
-			longReg->control &= ~CTRL_ENABLE;
+			longReg->control &= ~TIMER_CONTROL_ENABLE;
 			longReg->count = 0;
 			info->base = 0;
 			if (info->interval != 0)
@@ -458,7 +423,7 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 			else
 				longReg->control |= CTRL_START_ONESHOT_LONG;
 		} else {
-			wordReg->control &= ~CTRL_ENABLE;
+			wordReg->control &= ~TIMER_CONTROL_ENABLE;
 			wordReg->count = 0;
 			info->base = 0;
 			if (info->interval != 0)
@@ -496,7 +461,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 	/* a running timer is stopped around the count write */
 	if (info->flags & TIMER_COUNTING) {
 		if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG) {
-			info->longReg->control &= ~CTRL_ENABLE;
+			info->longReg->control &= ~TIMER_CONTROL_ENABLE;
 			info->longReg->count = count;
 			info->base += count;
 			if (info->interval != 0)
@@ -504,7 +469,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 			else
 				info->longReg->control |= CTRL_START_ONESHOT_LONG;
 		} else {
-			info->wordReg->control &= ~CTRL_ENABLE;
+			info->wordReg->control &= ~TIMER_CONTROL_ENABLE;
 			info->wordReg->count = (SceUInt32)count;
 			info->base += count;
 			if (info->interval != 0)
@@ -527,7 +492,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 int ksceKernelSysTimerGetCount(SceSysTimerId id, SceUInt64 *count)
 {
 	TimerInfo *info = GetTimerInfo(id);
-	volatile SceUInt32 *reg;
+	volatile SceLongTimerRegisters *reg;
 	SceUInt32 hi, lo, hi2;
 
 	if (!(info->flags & TIMER_ALLOCATED))
@@ -535,11 +500,11 @@ int ksceKernelSysTimerGetCount(SceSysTimerId id, SceUInt64 *count)
 
 	if (TimerType(info) == SCE_SYSTIMER_TYPE_LONG) {
 		/* re-read the high word until it is stable around the low word */
-		reg = info->reg;
+		reg = info->longReg;
 		do {
-			hi = reg[1];
-			lo = reg[0];
-			hi2 = reg[1];
+			hi = reg->countHi;
+			lo = reg->countLo;
+			hi2 = reg->countHi;
 		} while (hi != hi2);
 		*count = (SceUInt64)hi << 32 | lo;
 	} else {
@@ -661,14 +626,14 @@ int StartSystimer(SceSize args, void *argp)
 	SceKernelAllocMemBlockKernelOpt opt = {
 		.size = sizeof(opt),
 		.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR,
-		.paddr = LONG_REG_PADDR,
+		.paddr = TIMER_LONG_REG_BASE(0),
 	};
 	SceUID uid;
 	void *base;
 	SceUInt32 i;
 
 	uid = ksceKernelAllocMemBlock("SceLongRangeTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
-				      0x5000, &opt);
+				      LONG_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 836, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(837);
@@ -677,7 +642,7 @@ int StartSystimer(SceSize args, void *argp)
 	for (i = 0; i < LONG_TIMERS; i++) {
 		s_longTimer[i].id = i | SCE_SYSTIMER_TYPE_LONG << 16;
 		s_longTimer[i].intrCode = i + LONG_INTR_BASE;
-		s_longTimer[i].reg = (char *)base + (i << 12);
+		s_longTimer[i].reg = (char *)base + i * TIMER_REG_SIZE;
 		if (InitTimerInfo(&s_longTimer[i]) < 0) {
 			while (i != 0)
 				DelTimerInfo(&s_longTimer[--i]);
@@ -685,9 +650,9 @@ int StartSystimer(SceSize args, void *argp)
 		}
 	}
 
-	opt.paddr = WORD_REG_PADDR;
+	opt.paddr = TIMER_WORD_REG_BASE(0);
 	uid = ksceKernelAllocMemBlock("SceWordTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
-				      0x7000, &opt);
+				      WORD_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 865, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(866);
@@ -696,7 +661,7 @@ int StartSystimer(SceSize args, void *argp)
 	for (i = 0; i < WORD_TIMERS; i++) {
 		s_wordTimer[i].id = i | SCE_SYSTIMER_TYPE_WORD << 16;
 		s_wordTimer[i].intrCode = i + WORD_INTR_BASE;
-		s_wordTimer[i].reg = (char *)base + (i << 12);
+		s_wordTimer[i].reg = (char *)base + i * TIMER_REG_SIZE;
 		if (InitTimerInfo(&s_wordTimer[i]) < 0) {
 			while (i != 0)
 				DelTimerInfo(&s_wordTimer[--i]);

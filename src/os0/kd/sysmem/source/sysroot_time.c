@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sce/kbl_param.h>
+#include <sce/timer_regs.h>
 #include <psp2kern/kernel/cpu/corelock.h>
 #include "fw.h"
 #include <psp2kern/coredump.h>
@@ -123,7 +124,7 @@ struct SysrootState {
 		};
 	};
 	volatile uint32_t modelCapability;
-	volatile uint32_t *sharedTime;
+	volatile SceLongTimerRegisters *sharedTime;
 	volatile uint32_t initCallbackLock;
 	uint32_t initCallbackBase;
 	struct SysrootInitCallbackSlot initCallbacks[9][8];
@@ -696,7 +697,7 @@ void sceKernelSysrootSetModulePrivate(unsigned int index, void *data)
 	s_sysrootState->modulePrivate[index] = data;
 }
 
-void SceSysrootForKernel_5B5EBFB1(volatile uint32_t *time)
+void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *time)
 {
 	s_sysrootState->sharedTime = time;
 }
@@ -806,13 +807,13 @@ int SysrootPIDtoAddressSpaceCB(SceUID processId, void **addressSpaceCB)
 /* Name unknown. The high word brackets each low-word read. */
 static uint64_t ReadSysrootTimeStable(void)
 {
-	volatile uint32_t *time = s_sysrootState->sharedTime;
+	volatile SceLongTimerRegisters *time = s_sysrootState->sharedTime;
 	uint32_t low, high;
 
 	do {
-		high = time[1];
-		low = time[0];
-	} while (high != time[1]);
+		high = time->countHi;
+		low = time->countLo;
+	} while (high != time->countHi);
 	return (uint64_t)high << 32 | low;
 }
 
@@ -831,7 +832,7 @@ uint64_t SceSysrootForKernel_E20F6FC8(void)
 
 uint32_t SceSysrootForKernel_41636522(void)
 {
-	return s_sysrootState->sharedTime[0];
+	return s_sysrootState->sharedTime->countLo;
 }
 
 _Static_assert(offsetof(struct SysrootState, sysrootUid) == 0x308,

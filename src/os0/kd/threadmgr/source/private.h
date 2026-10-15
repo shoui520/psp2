@@ -11,6 +11,7 @@
 #include <sce/threadmgr_callback.h>
 #include "sce/process.h"
 #include "sce/sysmem.h"
+#include "sce/timer_regs.h"
 
 #include "private_errors.h"
 
@@ -230,7 +231,6 @@ struct ThreadmgrTlsSlot {
 };
 
 struct ThreadmgrTimer;
-struct ThreadmgrSystemTimer;
 
 /* Recovered prefix of Sony's SceKernelThreadmgrPrivate (native size 0x28c8). */
 struct SceKernelThreadmgrPrivate {
@@ -263,7 +263,7 @@ struct SceKernelThreadmgrPrivate {
 	struct ThreadmgrTlsSlot tlsSlots[8];	/* 0x2264: the kernel TLS slots (2-7 for drivers) */
 	SceUID heapId;
 	SceUID timerMemBlockId;			/* 0x2308: "SceLT5" */
-	volatile struct ThreadmgrSystemTimer *systemTime;	/* 0x230c: the LT5 timer */
+	volatile SceLongTimerRegisters *systemTime;	/* 0x230c: the LT5 timer */
 	SceKernelSpinlock timerLock;		/* 0x2310: the timer queue */
 	int timerCpuId;				/* 0x2314: the CPU running a timer's handler, or -1 */
 	SceUID timerHandlingId;			/* 0x2318: the timer being handled, or -1 */

@@ -2,11 +2,8 @@
 #define LIBKERNEL_LIFECYCLE_H
 
 #include <stdint.h>
+#include <sce/timer_regs.h>
 
-struct ProcessTimerRegisters {
-	volatile uint32_t low;
-	volatile uint32_t high;
-};
 
 union ProcessTimeBase {
 	uint64_t clock;
@@ -18,7 +15,7 @@ union ProcessTimeBase {
 
 struct LibkernelState {
 	uint32_t processSdkVersion;
-	struct ProcessTimerRegisters *timer;
+	SceLongTimerRegisters *timer;	/* the LT5, read-only */
 	union ProcessTimeBase processTimeBase;
 	unsigned int backtraceAvailable;
 	uint32_t pmUserEnable;

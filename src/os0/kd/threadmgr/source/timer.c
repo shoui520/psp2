@@ -12,6 +12,7 @@
 #include "sce/debug.h"
 #include "sce/error.h"
 #include "sce/sysmem.h"
+#include "sce/timer_regs.h"
 #include <psp2kern/kernel/sysmem.h>
 #include "scheduler.h"
 #include "timer.h"
@@ -61,7 +62,7 @@ extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
 extern uint64_t SceSysrootForKernel_E20F6FC8(void);
 extern void sceKernelSysrootCorelockLock(unsigned int cpu);
 extern void sceKernelSysrootCorelockUnlock(void);
-extern void SceSysrootForKernel_5B5EBFB1(volatile struct ThreadmgrSystemTimer *timer);
+extern void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *timer);
 extern int ksceGUIDClose(SceUID guid);
 extern SceUID ksceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **object);
 extern int SceSysmemForKernel_FF464A49(SceUID guid, void **entry);
@@ -97,13 +98,13 @@ static inline uint64_t TimerEventCaller(SceUID threadId, SceUID pid)
 
 static inline uint64_t ReadSystemTime(void)
 {
-	volatile struct ThreadmgrSystemTimer *time = s_threadmgrRuntime.manager->systemTime;
+	volatile SceLongTimerRegisters *time = s_threadmgrRuntime.manager->systemTime;
 	uint32_t high, low;
 
 	do {
-		high = time->countHigh;
-		low = time->countLow;
-	} while (high != time->countHigh);
+		high = time->countHi;
+		low = time->countLo;
+	} while (high != time->countHi);
 	return (uint64_t)high << 32 | low;
 }
 
@@ -159,8 +160,8 @@ void setNextTimer(void)
 	SCE_DBG_ASSERT_CHECK(manager->timerLock != 0, 548);
 	timer = head->next;
 	if (timer == head) {
-		manager->systemTime->compareHigh = 0xffffffff;
-		manager->systemTime->compareLow = 0xffffffff;
+		manager->systemTime->compareHi = 0xffffffff;
+		manager->systemTime->compareLo = 0xffffffff;
 		return;
 	}
 	first = timer->expiry;
@@ -401,7 +402,7 @@ relock:
 		timer = manager->timerNextToHandle;
 	}
 	manager->timerNextToHandle = NULL;
-	manager->systemTime->intrStatus = 2;
+	manager->systemTime->intr = 2;
 	setNextTimer();
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(TIMER_LOCK(), intr);
 	return -1;
@@ -702,7 +703,7 @@ SceInt64 ksceKernelGetSystemTimeWide(void)
 
 SceUInt32 ksceKernelGetSystemTimeLow(void)
 {
-	return s_threadmgrRuntime.manager->systemTime->countLow;
+	return s_threadmgrRuntime.manager->systemTime->countLo;
 }
 
 static inline void uidDelayClassInit(struct ThreadmgrWaitableClass *cls)
@@ -729,7 +730,6 @@ static inline void uidTimerClassInit(struct ThreadmgrWaitableClass *cls)
 		SCE_PANIC_FUNC(SCE_LINE(3656, 3616), "uidTimerClassInit");
 }
 
-#define LT5_PHYSICAL_ADDRESS		0xe20b6000
 #define LT5_MEMBLOCK_TYPE		0x20100806	/* kernel device, uncached */
 
 /*
@@ -749,9 +749,9 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 	if (ksceKernelCpuId() == 0) {
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
-		opt.paddr = LT5_PHYSICAL_ADDRESS;
+		opt.paddr = TIMER_LONG_REG_BASE(5);
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-		uid = ksceKernelAllocMemBlock("SceLT5", LT5_MEMBLOCK_TYPE, 0x1000, &opt);
+		uid = ksceKernelAllocMemBlock("SceLT5", LT5_MEMBLOCK_TYPE, TIMER_REG_SIZE, &opt);
 		manager = s_threadmgrRuntime.manager;
 		if (uid < 0) {
 			SCE_DBG_PRINTF(0xb, 331, "memBlockId 0x%08x\n", uid);
@@ -842,7 +842,7 @@ void suspendCpuTimer(void)
 void resumeCpuTimer(void)
 {
 	struct SceKernelThreadmgrPrivate *manager = s_threadmgrRuntime.manager;
-	volatile struct ThreadmgrSystemTimer *lt5;
+	volatile SceLongTimerRegisters *lt5;
 	uint32_t control;
 
 	sceKernelSysrootCorelockLock(0);
@@ -850,10 +850,10 @@ void resumeCpuTimer(void)
 		lt5 = manager->systemTime;
 		control = lt5->control;
 		lt5->control = 0;
-		lt5->countLow = (uint32_t)s_suspendedTime;
-		lt5->countHigh = (uint32_t)(s_suspendedTime >> 32);
-		lt5->compareLow = (uint32_t)manager->timerCompare;
-		lt5->compareHigh = (uint32_t)(manager->timerCompare >> 32);
+		lt5->countLo = (uint32_t)s_suspendedTime;
+		lt5->countHi = (uint32_t)(s_suspendedTime >> 32);
+		lt5->compareLo = (uint32_t)manager->timerCompare;
+		lt5->compareHi = (uint32_t)(manager->timerCompare >> 32);
 		lt5->control = control;
 		ksceKernelEnableIntr(TIMER_INTR);
 	}
