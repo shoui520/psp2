@@ -7,6 +7,7 @@
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
+#include <sce/dmac_regs.h>
 
 void *dmacKeyringRegisters;
 SceKernelFastMutex dmacKeyringMutex;
@@ -183,10 +184,10 @@ int sceSblDmac5Init(void)
 
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
-	option.paddr = 0xe04e0000;
+	option.paddr = DMAC5_KEYRING_REG_BASE;
 	option.attr = 2;
 	block = ksceKernelAllocMemBlock("SceSblDMAC5DmacKRBase",
-		(SceKernelMemBlockType)0x20100806, 0x1000, &option);
+		(SceKernelMemBlockType)0x20100806, DMAC_REG_SIZE, &option);
 	if (block < 0)
 		SCE_DBG_ASSERT_FAIL(176);
 	ksceKernelGetMemBlockBase(block, &base);

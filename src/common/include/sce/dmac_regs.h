@@ -15,3 +15,6 @@
 #define DMAC5_REG_BASE			0xe0410000
 #define DMAC6_REG_BASE			0xe50c0000
 #define DMAC_REG_SIZE			0x1000
+
+/* DMAC5's key ring (SceSblDMAC5DmacKRBase); its slots stay with the crypto code */
+#define DMAC5_KEYRING_REG_BASE		0xe04e0000

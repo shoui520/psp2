@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/acmgr.h>
 #include <sce/sm_comm.h>
 #include "sce/mgkeymgr.h"
+#include <sce/dmac_regs.h>
 
 #define MG_ERROR_ARGUMENT	((int)0x800f1616)
 #define MG_ERROR_UNSUPPORTED	((int)0x800f1625)
@@ -37,9 +38,9 @@ static int NOINLINE MapKeyRegisters(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = 0xe04e0000;
+	opt.paddr = DMAC5_KEYRING_REG_BASE;
 	uid = ksceKernelAllocMemBlock("SceSblDMAC5DmacKRBase", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
-		0x1000, &opt);
+		DMAC_REG_SIZE, &opt);
 	if (uid < 0)
 		return MG_ERROR_OPERATION;
 	ksceKernelGetMemBlockBase(uid, &base);
