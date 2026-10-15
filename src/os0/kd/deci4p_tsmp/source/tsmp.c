@@ -42,7 +42,7 @@ int ksceSblPostSsMgrGetExpireDate(SceUInt32 *date, int unk);
 /* SceSysrootForDriver: the software information hooks other modules call */
 int SceSysrootForDriver_1FFD2AFA(int (*setInt)(const char *name, int id, SceUInt32 value));
 int SceSysrootForDriver_7C0BE393(int (*setStr)(const char *name, int id, const char *value,
-					       SceSize length));
+					       int length));
 int SceSysrootForDriver_05CD0DD9(int (*setBin)(const char *name, int id, const void *value,
 					       SceSize length));
 int SceSysrootForDriver_ED688AEE(int (*syncLocalTime)(void));
@@ -59,6 +59,12 @@ int SceRegMgrForDebugger_D668ABD2(SceSize *size);	/* setting UI file size */
 int SceRegMgrForDebugger_8AE5757E(SceSize *size);	/* event log size */
 
 static TsmpState tsmp;
+
+/* Name and caller unknown; this retained original function returns success. */
+static int __attribute__((used)) tsmpReturnSuccess(void)
+{
+	return 0;
+}
 
 /* ===== status and buffers ===== */
 
@@ -124,7 +130,7 @@ TSMP_INLINE void tsmpSetHeader(TsmpHeader *pkt, SceUInt8 type, SceUInt8 code,
 	header.count = 0;
 	header.id[0] = id0;
 	header.id[1] = id1;
-	*pkt = header;
+	__builtin_memcpy(pkt, &header, sizeof(header));
 }
 
 /* hand the send buffer to SceDeci4pDfMgr; on failure release it again */
@@ -243,8 +249,7 @@ __attribute__((noinline)) static int tsmpPopNotification(TsmpNotificationQueue *
 		SCE_PRINTF_WITH_INFO(0xf, 3810, "0x%08X\n", ret);
 		return ret;
 	}
-	node = queue->head;
-	if (queue->count < 1 || node == NULL) {
+	if (queue->count < 1 || (node = queue->head) == NULL) {
 		ret = SCE_ERROR_ERRNO_ENODATA;
 	} else {
 		memcpy(&tsmp.current, &node->ntf, sizeof(tsmp.current));
@@ -386,7 +391,7 @@ static int tsmpSetSwInfoInt(const char *name, int id, SceUInt32 value)
 	return ret;
 }
 
-static int tsmpSetSwInfoStr(const char *name, int id, const char *value, SceSize length)
+static int tsmpSetSwInfoStr(const char *name, int id, const char *value, int length)
 {
 	TsmpNotification *ntf;
 	int ret;
@@ -503,16 +508,17 @@ TSMP_INLINE int tsmpEventSend(void)
 	const char *p;
 	int left, n;
 
+	left = tsmp.send.length;
+	p = tsmp.send.base;
 	if (!(tsmp.send.status & TSMP_BUF_BUSY)
 	    || (tsmp.send.status & (TSMP_BUF_FILLED | TSMP_BUF_HEADER))
 	       != (TSMP_BUF_FILLED | TSMP_BUF_HEADER)
-	    || tsmp.send.length == 0) {
+	    || left == 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 706, "0x%08X:%d\n", tsmp.send.status, tsmp.send.length);
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	}
-	SceDeci4pDfMgrForDebugger_6D26CC56(tsmp.send.base, tsmp.send.length);
-	p = tsmp.send.base;
-	for (left = tsmp.send.length; left > 0; left -= n, p += n) {
+	SceDeci4pDfMgrForDebugger_6D26CC56(p, left);
+	for (; left > 0; left -= n, p += n) {
 		n = sceDfMgrSend(tsmp.handle, p, left);
 		if (n < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 730, "0x%08X\n", n);
@@ -543,8 +549,7 @@ static int tsmpEventHandler(int event, void *arg, void *ctx)
 	case SCE_DFMGR_EVENT_SENT:
 		tsmpFreeSendBuf();
 		ret = ksceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SENT);
-		if (ret > 0)
-			ret = 0;
+		ret = ret < 0 ? ret : 0;
 		break;
 	case SCE_DFMGR_EVENT_STATUS:
 	case 6:
