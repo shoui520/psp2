@@ -30,7 +30,7 @@ int ksceKernelCpuId(void);
 int ksceKernelCheckDipsw(unsigned int bit);
 int SceSysrootForDriver_AE7A8F1D(void);
 
-static UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
+UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 	{ 0, 0 }, { 0, 1 }, { 0, 6 },
 };
 /* the physical addresses until serial_remap maps them */
