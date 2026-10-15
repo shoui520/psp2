@@ -751,26 +751,26 @@ int TinyPartitionSplitFreeMemBlockRaw(TinyPartition *tiny, MemBlockObject *block
 /* the list sentinel, and one free block over the whole range */
 int TinyPartitionInitList(TinyPartition *tiny)
 {
-	FixedHeap *heap = tiny->context->memBlockHeap;
-	MemBlockObject *head, *free;
+	AddressSpaceContext *context = tiny->context;
+	MemBlockObject *block;
 	int intr, ret;
 
-	ret = AllocMemBlockObject(heap, &head);
+	ret = AllocMemBlockObject(context->memBlockHeap, &block);
 	if (ret < 0)
 		return ret;
-	MemBlockInitFreeRaw(head);
-	head->vbase = 0;
-	head->size = 0;
-	tiny->blocks = head;
-	ret = AllocMemBlockObject(heap, &free);
+	MemBlockInitFreeRaw(block);
+	block->vbase = 0;
+	block->size = 0;
+	tiny->blocks = block;
+	ret = AllocMemBlockObject(context->memBlockHeap, &block);
 	if (ret < 0)
 		return ret;
-	MemBlockInitFreeRaw(free);
-	MemBlockSetNameRaw(free, "SceFree");
-	free->vbase = tiny->vbase;
-	free->size = tiny->size;
+	MemBlockInitFreeRaw(block);
+	MemBlockSetNameRaw(block, "SceFree");
+	block->vbase = tiny->vbase;
+	block->size = tiny->size;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
-	TinyPartitionLinkFreeAfter(tiny->blocks, free);
+	TinyPartitionLinkFreeAfter(tiny->blocks, block);
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
 }
