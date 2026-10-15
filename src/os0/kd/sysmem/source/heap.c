@@ -1004,10 +1004,10 @@ added:
 void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
+	void *phyMemPart, *base;
+	MemBlockObject *block;
 	AddressSpaceObject *as;
 	struct Partition *partition;
-	MemBlockObject *block;
-	void *phyMemPart, *base;
 	SceSize mapSize, total;
 	SceUInt32 code;
 	char *name;
@@ -1026,7 +1026,7 @@ void *sceKernelDlMmap(KernelHeap *heap, SceSize size)
 	    heap->size >= 0xff000)
 		SCE_DBG_PRINTF(0xb, 1534, "Grow request for pHeap %p[%s], 0x%08x += 0x%08x\n", heap,
 			       heap->name, heap->size, size);
-	if (heap->maxSize < heap->size + size) {
+	if (heap->size + size > heap->maxSize) {
 		SCE_DBG_PRINTF(0xb, 1542,
 			       "Warning:Heap[%s] size overflow 0x%08x+0x%08x > 0x%08x[max]\n",
 			       heap->name, heap->size, size, heap->maxSize);
