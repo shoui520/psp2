@@ -97,10 +97,30 @@ typedef struct TmcpReply {
 static TmcpSlot s_slot[TMCP_SLOTS];
 static TmcpLink s_link;
 
-/* name unknown: deliver an async completion to the caller's process */
-static void TmcpNotify(TmcpSlot *slot, SceUInt32 error, SceUInt32 id, SceUInt32 value)
+static int TmcpProcStop(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
 {
-	SceUInt32 rec[8] = { error, id, value };
+	return 0;
+}
+
+static int TmcpProcStart(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
+{
+	return 0;
+}
+
+/* name unknown: deliver an async completion to the caller's process */
+static inline __attribute__((always_inline)) void TmcpDeliverCompletion(TmcpSlot *slot,
+		SceUInt32 error, SceUInt32 id, SceUInt32 value)
+{
+	SceUInt32 rec[8];
+
+	rec[0] = error;
+	rec[1] = id;
+	rec[2] = value;
+	rec[3] = 0;
+	rec[4] = 0;
+	rec[5] = 0;
+	rec[6] = 0;
+	rec[7] = 0;
 
 	ksceKernelCopyToUserProc(slot->pid, slot->user, rec, sizeof(rec));
 	ksceKernelNotifyCallback(slot->callback, (int)slot->user);
@@ -116,7 +136,7 @@ static void TmcpNotify(TmcpSlot *slot, SceUInt32 error, SceUInt32 id, SceUInt32 
 	}
 }
 
-static void TmcpFreeSlot(TmcpSlot *slot)
+static inline __attribute__((always_inline)) void TmcpFreeSlot(TmcpSlot *slot)
 {
 	ksceKernelDeleteEventFlag(slot->evf);
 	memset(slot, 0, sizeof(*slot));
@@ -126,7 +146,7 @@ static void TmcpFreeSlot(TmcpSlot *slot)
 }
 
 /* name unknown: process exit / kill; drop the process' slots */
-static int TmcpProcExit(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
+static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID pid, int ctx)
 {
 	TmcpLink *link = (TmcpLink *)ctx;
 	TmcpSlot *slot;
@@ -146,20 +166,26 @@ static int TmcpProcExit(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
 	return 0;
 }
 
-static int TmcpProcStop(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
+static int TmcpProcExit(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
 {
-	return 0;
+	return TmcpReleaseProcessSlots(pid, ctx);
 }
 
-static int TmcpProcStart(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
+static void __attribute__((noinline)) TmcpNotify(TmcpSlot *slot, SceUInt32 error,
+					       SceUInt32 id, SceUInt32 value)
 {
-	return 0;
+	TmcpDeliverCompletion(slot, error, id, value);
+}
+
+static int TmcpProcKill(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
+{
+	return TmcpReleaseProcessSlots(pid, ctx);
 }
 
 static const SceProcEventHandler s_procHandler = {
 	.size = sizeof(SceProcEventHandler),
 	.exit = TmcpProcExit,
-	.kill = TmcpProcExit,
+	.kill = TmcpProcKill,
 	.stop = TmcpProcStop,
 	.start = TmcpProcStart,
 };
@@ -244,7 +270,8 @@ static int TmcpStatus(TmcpLink *link, const SceDfMgrStatus *st)
 				ksceKernelSetEventFlag(slot->evf, EVF_LINK_DOWN);
 				if (slot->used && slot->async && slot->acked &&
 				    slot->ack[0] == TMCP_STATUS_OK && !slot->notified)
-					TmcpNotify(slot, SCE_KERNEL_ERROR_DECI4P_INTERRUPTED, slot->ack[2], -1);
+					TmcpDeliverCompletion(slot, SCE_KERNEL_ERROR_DECI4P_INTERRUPTED,
+							      slot->ack[2], -1);
 			}
 		} else if (st->enabled == 1) {
 			link->connected = 1;
@@ -276,10 +303,11 @@ static int TmcpHandler(int event, void *arg, void *ctx)
 }
 
 /* append a string: length word, then the bytes padded to 4 */
-static void TmcpPutString(const char *s)
+static inline __attribute__((always_inline)) void TmcpPutString(const char *s)
 {
 	SceSize off, n, pad, len, i;
 	SceUInt8 *dst;
+	SceUInt8 c;
 
 	off = SceDeci4pDfMgrForDebugger_CACAB5F9(&s_link.pkt.hdr);
 	n = strnlen(s, TMCP_STR_MAX);
@@ -291,8 +319,14 @@ static void TmcpPutString(const char *s)
 	SceDeci4pDfMgrForDebugger_6D26CC56(&s_link.pkt.hdr, off + 4 + pad);
 	*(TmcpWord *)&s_link.raw[off] = len;
 	dst = &s_link.raw[off + 4];
-	for (i = 0; i < pad && s[i] != '\0'; i++)
-		dst[i] = s[i];
+	i = 0;
+	c = *s;
+	if (c && pad) {
+		do {
+			dst[i++] = c;
+			c = *++s;
+		} while (c && i < pad);
+	}
 	if (i < pad)
 		memset(&dst[i], 0, pad - i);
 }
