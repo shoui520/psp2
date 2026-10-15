@@ -359,7 +359,9 @@ int ksceKernelVAtoPABySW(const void *va, uintptr_t *pa)
 
 int ksceKernelVARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 {
-	if (range == NULL || out == NULL)
+	if (range == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (out == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return VARangeToPARangeBySW(range, out);
 }
@@ -388,7 +390,9 @@ int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, SceUInt32 perm, const v
 	int ret;
 
 	guid = SceSysrootForKernel_7334F1E8(pid);
-	if (guid < 0 || size == 0)
+	if (guid < 0)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (size == 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	do {
 		ret = AddressSpaceIsEqualAccessibleBySW(guid, perm, va, &pa);
@@ -423,18 +427,22 @@ int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, SceUInt32 perm, const v
 
 int ksceKernelVARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 {
-	if (range == NULL || out == NULL)
+	if (range == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (out == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return VARangeToPARangeByHW(range, out);
 }
 
 int ksceKernelVARangeToPARange(const SceKernelVARange *range, SceKernelPARange *out)
 {
-	if (range == NULL || out == NULL)
+	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (range->size > SYSMEM_VA2PA_BY_HW_MAX)
-		return VARangeToPARangeBySW(range, out);
-	return VARangeToPARangeByHW(range, out);
+	if (out == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (range->size <= SYSMEM_VA2PA_BY_HW_MAX)
+		return VARangeToPARangeByHW(range, out);
+	return VARangeToPARangeBySW(range, out);
 }
 
 int ksceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
