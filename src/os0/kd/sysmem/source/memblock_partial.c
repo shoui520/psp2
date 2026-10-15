@@ -156,8 +156,13 @@ int PartialMapUnitRW(PartitionObject *partition, MemBlockObject *block, SceSize 
 	SceUInt32 code = block->code;
 	int ret;
 
-	if ((code & 0xff) != 0x06 && (code & 0xff) != 0x60)
+	switch (code & 0xff) {
+	case 0x06:
+	case 0x60:
+		break;
+	default:
 		return SCE_KERNEL_ERROR_MEMBLOCK_NOT_ALLOW_REMAP_OP;
+	}
 	ret = PartialMapUnit(partition, block, code, unitSize, va,
 			     (const struct PhyPage *)PARTIAL_UNIT_PAGE(*unit));
 	if (ret < 0)
