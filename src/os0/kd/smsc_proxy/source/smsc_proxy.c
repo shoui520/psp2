@@ -41,11 +41,6 @@
 #define SMC_STOP		0x13b
 #define SMC_EXECUTE_F00D	0x13c
 
-/* interrupt message flags */
-#define MSG_SET_EVENT		0x1
-#define MSG_CALL_HANDLER	0x2
-#define MSG_HANDLER_ONLY	0x4
-
 #define SCE_SBL_ERROR_NO_MEMORY		0x800F040C
 #define SCE_SBL_ERROR_INVALID_ARGUMENT	0x800F0416
 #define SCE_SBL_ERROR_NOT_SUPPORTED	0x800F0425
@@ -80,16 +75,6 @@ typedef struct Session {
 	SceUID mutex;
 	Channel channel[CHANNEL_COUNT];
 } Session;
-
-typedef struct IntrMessage {
-	SceUInt32 channel;
-	SceUID id;
-	SceUInt32 flags;
-	SceUInt32 eventBits;
-	SceUInt32 ack;
-	SceUInt32 b;
-	SceUInt32 a;
-} IntrMessage;
 
 typedef struct HeapOpt {
 	SceSize size;
@@ -171,7 +156,7 @@ static Session *SessionLookup(SceUID id, int *status)
 static int softIntrHandler(int intrCode, void *userCtx)
 {
 	SceSblSmSchedCry2ArmHandler handler;
-	IntrMessage *msg;
+	SmschedIntrMessage *msg;
 	Session *s;
 	SceSize size;
 	SceUInt32 handle, flags, channel, a, b;

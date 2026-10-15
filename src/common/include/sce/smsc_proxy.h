@@ -9,6 +9,25 @@
 
 #include <psp2kern/types.h>
 
+/* interrupt message flags */
+#define MSG_SET_EVENT		0x1
+#define MSG_CALL_HANDLER	0x2
+#define MSG_HANDLER_ONLY	0x4
+
+/*
+ * The message the secure world's SceSblSmsched pushes into a bridge
+ * interrupt area before it raises software interrupt 4.
+ */
+typedef struct SmschedIntrMessage {
+	SceUInt32 channel;		/* the mailbox, 0-3 */
+	SceUID id;			/* the session's id */
+	SceUInt32 flags;		/* MSG_* */
+	SceUInt32 eventBits;
+	SceUInt32 ack;			/* the interrupt area's index */
+	SceUInt32 b;
+	SceUInt32 a;
+} SmschedIntrMessage;
+
 typedef void (*SceSblSmSchedCry2ArmHandler)(SceUID id, int channel, void *arg,
 					     SceUInt32 a, SceUInt32 b);
 
