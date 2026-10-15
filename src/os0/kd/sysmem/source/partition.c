@@ -20,8 +20,8 @@
 #define AS_L2_SLOT_TABLE		1
 #define AS_L2_SLOT_BLOCK		2
 
-/* SceUIDPartitionClass; not static: the unconverted part of the file sets it */
-SceClass *s_partitionClass;
+/* SceUIDPartitionClass */
+static SceClass *s_partitionClass;
 
 /* l1pagetable.c, l2pagetable.c, smb.c, fixed_heap.c, virpage.c */
 int L1PageTableUnsetL2PageTable(L1PageTable *l1pt, uintptr_t va);
