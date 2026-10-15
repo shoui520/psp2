@@ -82,6 +82,8 @@ typedef struct MemBlockObject {
 /*
  * memblock_obj.c keeps out-of-line copies (MEMBLOCK_OBJ_MODULE_EXTERN); files
  * that call them rather than inline them define MEMBLOCK_OBJ_MODULE_CALL.
+ * Elsewhere the body is GNU extern inline: inlined where it folds (a constant
+ * name), otherwise a call to memblock_obj.c's copy, as in Sony's partition.c.
  */
 /* the name of a named block */
 static inline const char *MemBlockGetNameRaw(MemBlockObject *block)
@@ -99,7 +101,7 @@ void MemBlockSetNameRaw(MemBlockObject *block, const char *name);
 #ifdef MEMBLOCK_OBJ_MODULE_EXTERN
 #define MEMBLOCK_OBJ_MODULE_INLINE
 #else
-#define MEMBLOCK_OBJ_MODULE_INLINE	static inline
+#define MEMBLOCK_OBJ_MODULE_INLINE	extern inline __attribute__((gnu_inline))
 #endif
 
 MEMBLOCK_OBJ_MODULE_INLINE void MemBlockSetNameRaw(MemBlockObject *block, const char *name)
