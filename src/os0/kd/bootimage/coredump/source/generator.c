@@ -608,11 +608,11 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 				event.trigger.titleid);
 		else
 			SCE_PRINTF_WITH_INFO(15, 775, "[coredump] start ID=Unknown\n");
-		if (kind == 2)
-			break;
 		memoryInitialized = 0;
 		cafInitialized = 0;
 		if (kind > 1) {
+			if (kind == 2)
+				break;
 			result = (int)0x80010016;
 			goto restorePriority;
 		}
