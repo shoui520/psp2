@@ -75,6 +75,7 @@ SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHand
 					  void *args)
 {
 	SysEventObject *object;
+	SysEventLink *tail;
 	SceUID uid;
 
 	uid = ksceGUIDKernelCreate(&s_sysEventClass, name, (SceObjectBase **)&object);
@@ -83,13 +84,14 @@ SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHand
 				    "sceGUIDKernelCreate() failed: 0x%08X\n", uid);
 		return uid;
 	}
+	tail = s_sysEventList[1];
+	object->link.next = (SysEventLink *)s_sysEventList;
+	object->link.prev = tail;
+	object->link.uid = uid;
 	object->link.handler = handler;
 	object->link.args = args;
-	object->link.next = (SysEventLink *)s_sysEventList;
-	object->link.prev = s_sysEventList[1];
-	object->link.uid = uid;
-	s_sysEventList[1]->next = &object->link;
 	s_sysEventList[1] = &object->link;
+	tail->next = &object->link;
 	return uid;
 }
 
