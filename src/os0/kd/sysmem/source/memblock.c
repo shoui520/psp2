@@ -2563,8 +2563,8 @@ static inline SceUInt32 MemBlockRestype(SceUInt32 type, SceUInt32 attr)
 /* a block of the caller freed by its PUID, the PUID closed */
 int sceKernelFreeMemBlock(SceUID puid)
 {
+	SceUInt32 attr = 0, type = 0;
 	MemBlockObject *block = NULL, *base = NULL;
-	SceUInt32 type = 0, attr = 0;
 	SceUID guid;
 	int ret = 0;
 
