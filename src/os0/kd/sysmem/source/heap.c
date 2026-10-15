@@ -661,12 +661,12 @@ void *HeapAllocPrologue(KernelHeap *heap, SceSize size, SceSize alignment)
 		SCE_DBG_ASSERT_FAIL(1051);
 	}
 	if (!(heap->flags & HEAP_ACTIVE)) {
-		SCE_DBG_PRINTF(0xb, 1063, "heap is not active.\n");
+		SCE_DBG_PRINTF(0xb, 1058, "heap is not active.\n");
 		return NULL;
 	}
 	if (heap->flags & HEAP_VERIFY) {
 		ret = mspace_verify_all_chunk(heap->msp, heap->name, NULL);
-		SCE_DBG_ASSERT_CHECK(ret >= 0, 1058);
+		SCE_DBG_ASSERT_CHECK(ret >= 0, 1063);
 	}
 	if (alignment == 0)
 		ptr = mspace_malloc(heap->msp, size);

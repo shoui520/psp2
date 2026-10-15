@@ -676,7 +676,7 @@ int FixedHeapGetIndexRaw(FixedHeap *heap, const void *object)
 
 		if ((const char *)object >= page && (const char *)object < page + heap->pageSize)
 			return heap->perPage * i +
-			       ((const char *)object - page) / heap->itemSize;
+			       (SceSize)((const char *)object - page) / heap->itemSize;
 	}
 	SCE_DBG_PRINTF(0xb, 1881, "<-Failed(pFixedHeap %p, pEntry %p), nPage=%d\n", heap, object,
 		       heap->pageCount);
