@@ -711,6 +711,7 @@ static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 {
 	HeapMmapResult result;
 	HeapMmapResult *last;
+	SceSize align;
 	void *ptr;
 	int intr;
 
@@ -718,25 +719,31 @@ static void *HeapAllocHeapMemoryWithOption(KernelHeap *heap, SceSize size,
 	if (opt == NULL) {
 		ptr = HeapAllocPrologue(heap, size, 0);
 	} else {
+		align = opt->align;
 		heap->mmapResult = &result;
 		result.kind = 0;
 		result.base = NULL;
 		result.size = 0;
-		ptr = HeapAllocPrologue(heap, size, opt->align);
+		ptr = HeapAllocPrologue(heap, size, align);
 		last = heap->mmapResult;
 		opt->mmapKind = last->kind;
-		if (last->kind == 0) {
+		switch (last->kind) {
+		case 0:
 			opt->mmapBase = NULL;
 			opt->mmapSize = 0;
-		} else if (last->kind < 3) {
+			break;
+		case 1:
+		case 2:
 			if (last->size == 0) {
 				SCE_DBG_ASSERT_FAIL(1283);
 			} else {
 				opt->mmapBase = last->base;
 				opt->mmapSize = last->size;
 			}
-		} else {
+			break;
+		default:
 			SCE_DBG_ASSERT_FAIL(1287);
+			break;
 		}
 		heap->mmapResult = NULL;
 	}
