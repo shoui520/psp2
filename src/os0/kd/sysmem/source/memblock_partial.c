@@ -57,7 +57,7 @@ static inline uintptr_t PartialPagePbase(const struct PhyPage *page)
 }
 
 /* units from start cleared over size bytes; the number cleared */
-static int PartialInfoNullRange(PartialInfo *info, SceUInt32 start, SceUInt32 *units, SceSize size)
+static int PartialInfoNullRange(PartialInfo *info, SceUInt32 start, uint32_t *units, SceSize size)
 {
 	SceUInt32 i = start;
 	int count = 0;
@@ -82,7 +82,7 @@ int PartialAllocUnit(MemBlockObject *block, SceSize unitSize, SceUInt32 *page)
 }
 
 /* name unknown: one unit's physical pages freed */
-static int PartialFreeUnit(MemBlockObject *block, SceUInt32 *unit)
+static int PartialFreeUnit(MemBlockObject *block, uint32_t *unit)
 {
 	int ret = PhyMemPartFreePhyPage(MemBlockGetPhyMemPartRaw(block),
 					(struct PhyPage *)PARTIAL_UNIT_PAGE(*unit));
@@ -124,7 +124,7 @@ int PartialMapUnit(PartitionObject *partition, MemBlockObject *block, SceUInt32 
 
 /* name unknown: mapped read-only (the block's code without its write bit) */
 int PartialMapUnitRO(PartitionObject *partition, MemBlockObject *block, SceSize unitSize,
-		     SceUInt32 *unit, uintptr_t va)
+		     uint32_t *unit, uintptr_t va)
 {
 	SceUInt32 code = block->code;
 	int ret;
@@ -151,7 +151,7 @@ int PartialMapUnitRO(PartitionObject *partition, MemBlockObject *block, SceSize 
 
 /* name unknown: mapped read-write */
 int PartialMapUnitRW(PartitionObject *partition, MemBlockObject *block, SceSize unitSize,
-		     SceUInt32 *unit, uintptr_t va)
+		     uint32_t *unit, uintptr_t va)
 {
 	SceUInt32 code = block->code;
 	int ret;
@@ -173,7 +173,7 @@ int PartialMapUnitRW(PartitionObject *partition, MemBlockObject *block, SceSize 
 
 /* one unit through the operation */
 static inline int PartialOpChangeState(PartitionObject *partition, MemBlockObject *block,
-				       SceSize unitSize, SceUInt32 *unit, uintptr_t va,
+				       SceSize unitSize, uint32_t *unit, uintptr_t va,
 				       SceUInt32 op)
 {
 	SceUInt32 page;
@@ -253,7 +253,7 @@ static inline int PartialOpChangeState(PartitionObject *partition, MemBlockObjec
  * read-write is mapped read-write once more.
  */
 static inline void PartialUnitRestore(PartitionObject *partition, MemBlockObject *block,
-				      SceSize unitSize, SceUInt32 old, SceUInt32 *unit,
+				      SceSize unitSize, SceUInt32 old, uint32_t *unit,
 				      uintptr_t va)
 {
 	SceUInt32 page;
@@ -313,7 +313,8 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 		       SceUInt32 op, uintptr_t va, SceSize size)
 {
 	SceSize unitSize = info->unitSize, rest;
-	SceUInt32 *units, *shadow, first, count, i, j;
+	uint32_t *units, *shadow;
+	SceUInt32 first, count, i, j;
 	uintptr_t vbase, unitVa;
 	int intr, ret = 0;
 
@@ -452,7 +453,8 @@ int MemBlockPartialInfoCreate(MemBlockObject *block, SceKernelAllocMemBlockComma
 int MemBlockPartialAllocPhyPage(MemBlockObject *block, SceKernelAllocMemBlockCommand *command)
 {
 	PartialInfo *info = MemBlockGetPartialInfoRaw(block);
-	SceUInt32 *units = info->units, page;
+	uint32_t *units = info->units;
+	SceUInt32 page;
 	SceUInt32 done = 0;
 	SceSize low = 0, high = 0, rest;
 	int ret;

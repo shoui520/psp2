@@ -156,8 +156,8 @@ typedef struct PartialInfo {
 	SceSize unitSize;		/* 0x04: a power of two */
 	SceKernelRWSpinlock lock;	/* 0x08 */
 	SceUInt32 reserved;
-	SceUInt32 *units;		/* 0x10 */
-	SceUInt32 *shadow;		/* 0x14: the copy an operation works on */
+	uint32_t *units;		/* 0x10 */
+	uint32_t *shadow;		/* 0x14: the copy an operation works on */
 } PartialInfo;
 
 _Static_assert(sizeof(PartialInfo) == 0x18, "PartialInfo size");
