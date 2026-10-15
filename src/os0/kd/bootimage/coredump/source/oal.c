@@ -1745,7 +1745,6 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 	CoredumpThreadSnapshot snapshot;
 	ThreadRegisterContext *context;
 	struct ThreadmgrVfpContext *vfpContext;
-	const SceArmCpuRegisters *cpuRegisters;
 	uint64_t *alignedVfp;
 	unsigned int index;
 	unsigned char *vfpBytes;
@@ -1761,11 +1760,15 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 	info->formatSize[3] = 0;
 	guid = kscePUIDtoGUID(pid, threadId);
 	if (ksceKernelGetThreadCpuRegisters(guid, &registers) == 0) {
-		cpuRegisters = (registers.entry[0].cpsr & 0x1f) == 0x10 ?
-			&registers.entry[0] : &registers.entry[1];
-		__builtin_memcpy(&info->registers, cpuRegisters,
-			offsetof(SceArmCpuRegisters, cpsr));
-		info->registers.cpsr = cpuRegisters->cpsr;
+		if ((registers.entry[0].cpsr & 0x1f) == 0x10) {
+			__builtin_memcpy(&info->registers, &registers.entry[0],
+				offsetof(SceArmCpuRegisters, cpsr));
+			info->registers.cpsr = registers.entry[0].cpsr;
+		} else {
+			__builtin_memcpy(&info->registers, &registers.entry[1],
+				offsetof(SceArmCpuRegisters, cpsr));
+			info->registers.cpsr = registers.entry[1].cpsr;
+		}
 		info->registers.fpscr = registers.entry[0].fpscr;
 	}
 	result = ksceKernelGetVfpRegisterForDebugger(guid, vfp);
