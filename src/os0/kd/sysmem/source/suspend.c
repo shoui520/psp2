@@ -160,7 +160,7 @@ int ksceKernelPowerTick(int type)
 			if (thread != NULL) {
 				frame = thread->userFrame;
 				s_powerTickHook(1, type, SceSysrootForKernel_7385CADE(),
-						SceSysrootForKernel_D441DC34(), frame->lr);
+						SceSysrootForKernel_D441DC34(), (const void *)frame->lr);
 			}
 		}
 	}
