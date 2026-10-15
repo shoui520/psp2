@@ -30,7 +30,7 @@
 static SceKernelSpinlock s_uartLock;
 static SDfCtlIf s_uart;
 
-static void uartDispatch(SDfCtlIf *ifp);
+static int uartDispatch(SDfCtlIf *ifp);
 
 static int uartSendDone(SDfCtlIf *ifp)
 {
@@ -51,9 +51,8 @@ static int uartSendUnblock(SDfCtlIf *ifp)
 	return 0;
 }
 
-static int uartNop(SDfCtlIf *ifp)
+static void uartNop(SDfCtlIf *ifp)
 {
-	return 0;
 }
 
 static int recvStart(SDfCtlIf *ifp)
@@ -65,10 +64,11 @@ static int recvStart(SDfCtlIf *ifp)
 
 static int uartStart(SDfCtlIf *ifp)
 {
-	ksceKernelEnableIntr(UART_INTR);
+	int ret = ksceKernelEnableIntr(UART_INTR);
+
 	ifp->state |= UART_UP;
 	ifp->intr |= UART_INTR_SEND;
-	return 0;
+	return ret;
 }
 
 static int uartRecvUnblock(SDfCtlIf *ifp)
@@ -103,8 +103,7 @@ static int uartStop(SDfCtlIf *ifp)
 {
 	ifp->state &= ~UART_UP;
 	ifp->intr &= ~UART_INTR_SEND;
-	ksceKernelDisableIntr(UART_INTR);
-	return 0;
+	return ksceKernelDisableIntr(UART_INTR);
 }
 
 static int uartRecvBlock(SDfCtlIf *ifp)
@@ -152,7 +151,7 @@ static int uartRecvDone(SDfCtlIf *ifp)
 }
 
 /* name unknown: ready to send now, or on the send interrupt */
-static void uartKick(SDfCtlIf *ifp, SceUInt32 *intr)
+static __attribute__((noinline, noclone)) void uartKick(SDfCtlIf *ifp, SceUInt32 *intr)
 {
 	int s;
 
@@ -167,17 +166,18 @@ static void uartKick(SDfCtlIf *ifp, SceUInt32 *intr)
 }
 
 /* name unknown: the pending transfer events to SDfCtl */
-static void uartDispatch(SDfCtlIf *ifp)
+static int uartDispatch(SDfCtlIf *ifp)
 {
 	SceUInt32 state = ifp->state;
-	int progress;
+	int progress, ret;
 
 	for (;;) {
-		progress = 0;
-		if (state & UART_SEND_DONE) {
+		progress = state & UART_SEND_DONE;
+		if (progress) {
 			ifp->state = state & ~UART_SEND_DONE;
-			if (sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_SEND_DONE, ifp->sendDone, 0, 0) < 0)
-				return;
+			ret = sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_SEND_DONE, ifp->sendDone, 0, 0);
+			if (ret < 0)
+				return ret;
 			state = ifp->state;
 			if (state & UART_UP) {
 				uartKick(ifp, &ifp->intr);
@@ -188,28 +188,32 @@ static void uartDispatch(SDfCtlIf *ifp)
 		if (!(state & UART_SEND_BLOCKED) &&
 		    (ifp->state & (UART_SEND_READY | UART_UP)) == (UART_SEND_READY | UART_UP)) {
 			ifp->state = state & ~UART_SEND_READY;
-			if (sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_SEND, (SceUIntPtr)ifp, 0, 0) < 0)
-				return;
+			ret = sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_SEND, (SceUIntPtr)ifp, 0, 0);
+			if (ret < 0)
+				return ret;
 			state = ifp->state;
 			progress = 1;
 		}
 		if (state & UART_RECV_DONE) {
 			ifp->state = state & ~UART_RECV_DONE;
-			if (sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_RECV_DONE, ifp->recvDone, 0, 0) < 0)
-				return;
+			ret = sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_RECV_DONE, ifp->recvDone, 0, 0);
+			if (ret < 0)
+				return ret;
 			state = ifp->state;
 			progress = 1;
 		}
 		if (!(state & UART_RECV_BLOCKED) && (state & UART_RECV_HEADER)) {
 			ifp->state = state & ~UART_RECV_HEADER;
-			if (sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_RECV, sdfctlGetSize(&ifp->recvHdr),
-						 ifp->recvHdr.protocol, ifp->recvHdr.dst) < 0)
-				return;
+			ret = sceSDfCtlIf2MgrEvent(ifp, SDFCTL_EVENT_RECV,
+						sdfctlGetSize(&ifp->recvHdr),
+						ifp->recvHdr.protocol, ifp->recvHdr.dst);
+			if (ret < 0)
+				return ret;
 			state = ifp->state;
 			continue;
 		}
 		if (!progress)
-			return;
+			return progress;
 	}
 }
 

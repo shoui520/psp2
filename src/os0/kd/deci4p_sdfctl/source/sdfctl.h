@@ -82,7 +82,7 @@ typedef struct SDfCtlIfOps {
 	SDfCtlIfOp sendBlock;
 	SDfCtlIfOp sendUnblock;
 	SDfCtlIfOp reserved0;			/* never called */
-	SDfCtlIfOp reserved1;			/* never called */
+	void (*reserved1)(struct SDfCtlIf *ifp);	/* never called */
 	SDfCtlIfOp stop;			/* 0x80: suspend */
 	SDfCtlIfOp start;			/* 0x84: resume */
 } SDfCtlIfOps;
@@ -114,7 +114,11 @@ typedef struct SDfCtlIf {
 #define SDFCTL_STATUS_CONNECTED		0x2
 
 /* sdfctl.c */
+#if FW_DEBUG
 SDfCtlPd *_getPdCB(SceUInt32 id);
+#else
+static inline SDfCtlPd *_getPdCB(SceUInt32 id);
+#endif
 void sdfctlMemset(void *p, int c, SceSize n);
 int sceSDfCtlExRecv(SceUID sock, void *buf, SceSize size);
 int sceSDfCtlExReqSend(SceUID sock);

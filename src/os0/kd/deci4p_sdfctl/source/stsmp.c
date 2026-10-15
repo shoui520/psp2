@@ -70,13 +70,14 @@ static SceUInt8 s_rxBuf[STSMP_PACKET_MAX];
 static SceUInt8 s_txBuf[STSMP_QUEUE][STSMP_PACKET_MAX];
 
 /* the rest of a received packet */
-static inline __attribute__((always_inline)) void _discardPacket(DcmpHeader *rx)
+static inline __attribute__((always_inline)) void _discardPacket(DcmpHeader *rx,
+							      const void *lr)
 {
 	SceSize rest, n;
 	int ret;
 
 	rest = sdfctlGetSize(rx);
-	SCE_DBG_ASSERT_CHECK(rest < 0x11000, 339);
+	SCE_DBG_ASSERT_CHECK_LR(rest < 0x11000, 339, lr);
 	rest -= 0x1c;
 	while (rest != 0) {
 		n = rest > 0xfff ? 0x1000 : rest;
@@ -89,7 +90,7 @@ static inline __attribute__((always_inline)) void _discardPacket(DcmpHeader *rx)
 	}
 }
 
-static inline __attribute__((always_inline)) void _stsmpRecv(void)
+static inline __attribute__((always_inline)) void _stsmpRecv(const void *lr)
 {
 	int ret;
 
@@ -98,14 +99,14 @@ static inline __attribute__((always_inline)) void _stsmpRecv(void)
 		SDFCTL_PRINTF(311, "error: 0x%08x\n", ret);
 		return;
 	}
-	_discardPacket(s_stsmp.rx);
+	_discardPacket(s_stsmp.rx, lr);
 }
 
 static inline __attribute__((always_inline)) void _stsmpSend(void)
 {
 	DcmpHeader *pkt;
 	SceSize size;
-	int intr, ret;
+	int intr, ret, read, next, count;
 
 	if (s_stsmp.tx.count == 0)
 		return;
@@ -126,12 +127,14 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 			SDFCTL_PRINTF(280, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
-		ret = s_stsmp.tx.read;
-		s_stsmp.tx.read++;
-		if (s_stsmp.tx.read > STSMP_QUEUE - 1)
-			s_stsmp.tx.read = 0;
-		s_stsmp.tx.count--;
-		s_stsmp.tx.size[ret] = 0;
+		read = s_stsmp.tx.read;
+		count = s_stsmp.tx.count - 1;
+		next = read + 1;
+		if (next > STSMP_QUEUE - 1)
+			next = 0;
+		s_stsmp.tx.read = next;
+		s_stsmp.tx.size[read] = 0;
+		s_stsmp.tx.count = count;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 		if (s_stsmp.tx.count == 0)
 			return;
@@ -142,9 +145,11 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 
 static void _stsmpHandler(int event, SceUIntPtr arg, void *ctx)
 {
+	const void *lr = __builtin_return_address(0);
+
 	switch (event) {
 	case SDFCTL_EVENT_RECV:
-		_stsmpRecv();
+		_stsmpRecv(lr);
 		break;
 	case SDFCTL_EVENT_RECV_DONE:
 	case SDFCTL_EVENT_SEND_DONE:
@@ -165,18 +170,20 @@ static int _workerThread(SceSize args, void *argp)
 	int ret;
 
 	for (;;) {
-		while ((ret = ksceKernelWaitEventFlag(s_stsmp.evf, STSMP_EVF_SEND,
-						      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL)) >= 0)
+		ret = ksceKernelWaitEventFlag(s_stsmp.evf, STSMP_EVF_SEND,
+					    SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+		if (ret < 0)
+			SDFCTL_PRINTF(377, "WaitEventFlag failed (0x%08X)\n", ret);
+		else
 			sdfctlReqSend(s_stsmp.sock);
-		SDFCTL_PRINTF(377, "WaitEventFlag failed (0x%08X)\n", ret);
 	}
 	return 0;
 }
 
 /* name unknown: queue a packet for the worker */
-static int stsmpQueue(const void *pkt, SceSize size)
+static __attribute__((noinline, noclone)) int stsmpQueue(const void *pkt, SceSize size)
 {
-	int intr, next;
+	int intr, next, count;
 
 	if (size > STSMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
@@ -187,10 +194,11 @@ static int stsmpQueue(const void *pkt, SceSize size)
 	}
 	sdfctlMemcpy(s_stsmp.tx.buf[s_stsmp.tx.write], pkt, size);
 	next = s_stsmp.tx.write + 1;
-	s_stsmp.tx.count++;
+	count = s_stsmp.tx.count + 1;
 	if (next < STSMP_QUEUE)
 		s_stsmp.tx.write = next;
 	s_stsmp.tx.size[next - 1] = size;
+	s_stsmp.tx.count = count;
 	if (next > STSMP_QUEUE - 1)
 		s_stsmp.tx.write = 0;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
@@ -275,6 +283,7 @@ static int stsmpSysEventHandler(int resume, int eventid, void *args, void *opt)
 
 int stsmpInit(SDfCtlPd *pd)
 {
+	const void *lr = __builtin_return_address(0);
 	SceDfMgrProtocol desc;
 	SceUID uid;
 	int ret;
@@ -316,13 +325,13 @@ int stsmpInit(SDfCtlPd *pd)
 	ret = sdfctlSetProtocolStatus(pd, SDFCTL_PD_REGISTERED, 1);
 	if (ret < 0) {
 		SDFCTL_PRINTF(151, "SetProtocolStatus failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(152);
+		SCE_DBG_ASSERT_CHECK_LR(0, 152, lr);
 		return ret;
 	}
 	ret = sdfctlSetProtocolStatus(pd, SDFCTL_PD_STARTED, 1);
 	if (ret < 0) {
 		SDFCTL_PRINTF(157, "SetProtocolStatus failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(158);
+		SCE_DBG_ASSERT_CHECK_LR(0, 158, lr);
 		return ret;
 	}
 	ksceKernelRegisterSysEventHandler("SceDeci4pSDfCtl", stsmpSysEventHandler, NULL);

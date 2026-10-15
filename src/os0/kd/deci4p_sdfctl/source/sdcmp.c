@@ -11,6 +11,7 @@
 #include "sce/suspend.h"
 #include "sdfctl.h"
 #include <sce/deci4p_memory.h>
+#include <sce/deci4p_packet.h>
 
 #define SDCMP_QUEUE		15
 #define SDCMP_PACKET_MAX	0x100
@@ -99,32 +100,27 @@ static struct {
 static SceKernelSpinlock s_sdcmpLock;
 
 /* name unknown: memcpy */
-void sdfctlMemcpy(void *dst, const void *src, SceSize n)
+__attribute__((noinline)) void sdfctlMemcpy(void *dst, const void *src, SceSize n)
 {
 	deci4pCopyBytes(dst, src, n);
 }
 
 /* name unknown: the packet's 24-bit size */
-SceSize sdfctlGetSize(const void *hdr)
+__attribute__((noinline)) SceSize sdfctlGetSize(const void *hdr)
 {
-	const SceDeci4pHeader *h = hdr;
-
-	return h->size[0] | h->size[1] << 8 | h->size[2] << 16;
+	return deci4pGetSize(hdr);
 }
 
 /* name unknown */
-void sdfctlSetSize(void *hdr, SceSize size)
+__attribute__((noinline)) void sdfctlSetSize(void *hdr, SceSize size)
 {
-	SceDeci4pHeader *h = hdr;
-
-	*(SceUInt16 *)h->size = size;
-	h->size[2] = size >> 16;
+	deci4pSetSize(hdr, size);
 }
 
 /* name unknown: queue a packet for sending */
-static int sdcmpQueue(SdcmpQueue *q, const void *pkt, SceSize size)
+static __attribute__((noinline, noclone)) int sdcmpQueue(SdcmpQueue *q, const void *pkt, SceSize size)
 {
-	int intr, next, ret;
+	int intr, next, count, ret;
 
 	if (size > SDCMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
@@ -132,8 +128,9 @@ static int sdcmpQueue(SdcmpQueue *q, const void *pkt, SceSize size)
 	if (q->count < SDCMP_QUEUE) {
 		sdfctlMemcpy(q->buf[q->write], pkt, size);
 		next = q->write + 1;
+		count = q->count + 1;
 		q->size[q->write] = size;
-		q->count++;
+		q->count = count;
 		q->write = next > SDCMP_QUEUE - 1 ? 0 : next;
 		ret = 0;
 	} else {
@@ -146,14 +143,15 @@ static int sdcmpQueue(SdcmpQueue *q, const void *pkt, SceSize size)
 /* the rest of an unknown packet */
 static void _discardPacket(DcmpHeader *rx)
 {
+	const void *lr = __builtin_return_address(0);
 	SceSize rest, n;
 	int ret;
 
 	rest = sdfctlGetSize(rx);
-	SCE_DBG_ASSERT_CHECK(rest < 0x11000, 586);
+	SCE_DBG_ASSERT_CHECK_LR(rest < 0x11000, 586, lr);
 	rest -= sizeof(DcmpHeader);
 	while (rest != 0) {
-		n = rest > 0xfff ? 0x1000 : rest;
+		n = rest < 0x1000 ? rest : 0x1000;
 		ret = sceSDfCtlExRecv(s_sdcmp.sock, (char *)rx + sizeof(SceDeci4pHeader), n);
 		if (ret < 0) {
 			SDFCTL_PRINTF(596, "error: 0x%08x\n", ret);
@@ -163,10 +161,10 @@ static void _discardPacket(DcmpHeader *rx)
 	}
 }
 
-static inline __attribute__((always_inline)) void _sdcmpEcho(DcmpHeader *rx, SceUInt8 type)
+static inline __attribute__((always_inline))
+void _sdcmpEcho(DcmpHeader *rx, SceUInt8 type, SdcmpEcho *reply)
 {
 	SdcmpEcho *req = (SdcmpEcho *)rx;
-	SdcmpEcho reply;
 	SceSize size;
 	int ret;
 
@@ -178,17 +176,17 @@ static inline __attribute__((always_inline)) void _sdcmpEcho(DcmpHeader *rx, Sce
 		SDFCTL_PRINTF(338, "error: 0x%08x\n", ret);
 		return;
 	}
-	sdfctlMemset(&reply, 0, sizeof(reply));
-	sdfctlSetSize(&reply, size);
-	reply.id = req->id;
-	reply.m.hdr.dst = SDFCTL_ROUTE_LOCAL;
-	reply.seq = req->seq + 1;
-	reply.m.reserved = 0;
-	reply.m.type = type;
-	reply.m.code = type;
+	sdfctlMemset(reply, 0, sizeof(*reply));
+	sdfctlSetSize(reply, size);
+	reply->id = req->id;
+	reply->m.hdr.dst = SDFCTL_ROUTE_LOCAL;
+	reply->seq = req->seq + 1;
+	reply->m.reserved = 0;
+	reply->m.type = type;
+	reply->m.code = type;
 	/* (copies 4 bytes more than the payload) */
-	sdfctlMemcpy(reply.data, req->data, size - sizeof(DcmpHeader));
-	ret = sdcmpQueue(&s_sdcmp.tx, &reply, size);
+	sdfctlMemcpy(reply->data, req->data, size - sizeof(DcmpHeader));
+	ret = sdcmpQueue(&s_sdcmp.tx, reply, size);
 	if (ret < 0) {
 		SDFCTL_PRINTF(376, "error: 0x%08x\n", ret);
 		return;
@@ -196,10 +194,10 @@ static inline __attribute__((always_inline)) void _sdcmpEcho(DcmpHeader *rx, Sce
 	sceSDfCtlExReqSend(s_sdcmp.sock);
 }
 
-static inline __attribute__((always_inline)) void _sdcmpControlPowerControl(DcmpHeader *rx)
+static inline __attribute__((always_inline))
+void _sdcmpControlPowerControl(DcmpHeader *rx, SdcmpControl *reply)
 {
 	SdcmpControl *req = (SdcmpControl *)rx;
-	SdcmpControl reply;
 	SceUInt32 result;
 	SceSize size;
 	int ret;
@@ -233,14 +231,14 @@ static inline __attribute__((always_inline)) void _sdcmpControlPowerControl(Dcmp
 		SDFCTL_PRINTF(427, "unknown operation (0x%08x)\n", req->value);
 		break;
 	}
-	sdfctlMemset(&reply, 0, sizeof(reply));
-	sdfctlSetSize(&reply, size);
-	reply.m.reserved = 0;
-	reply.m.hdr.dst = SDFCTL_ROUTE_LOCAL;
-	reply.m.type = SDCMP_CONTROL;
-	reply.m.code = SDCMP_CONTROL_RESULT;
-	reply.value = result;
-	ret = sdcmpQueue(&s_sdcmp.tx, &reply, size);
+	sdfctlMemset(reply, 0, sizeof(*reply));
+	sdfctlSetSize(reply, size);
+	reply->m.reserved = 0;
+	reply->m.hdr.dst = SDFCTL_ROUTE_LOCAL;
+	reply->m.type = SDCMP_CONTROL;
+	reply->m.code = SDCMP_CONTROL_RESULT;
+	reply->value = result;
+	ret = sdcmpQueue(&s_sdcmp.tx, reply, size);
 	if (ret < 0) {
 		SDFCTL_PRINTF(449, "error: 0x%08x\n", ret);
 		return;
@@ -276,7 +274,8 @@ static inline __attribute__((always_inline)) void _sdcmpLinkStop(DcmpHeader *rx)
 	sdfctlStopProtocol(*(SceUInt32 *)(rx + 1));
 }
 
-static inline __attribute__((always_inline)) void _sdcmpRecv(void)
+static inline __attribute__((always_inline))
+void _sdcmpRecv(SdcmpControl *control, SdcmpEcho *echo)
 {
 	DcmpHeader *rx;
 	int ret;
@@ -290,7 +289,7 @@ static inline __attribute__((always_inline)) void _sdcmpRecv(void)
 	switch (rx->type) {
 	case SDCMP_ECHO:
 		if (rx->code == 0) {
-			_sdcmpEcho(rx, rx->type);
+			_sdcmpEcho(rx, rx->type, echo);
 		} else {
 			SDFCTL_PRINTF(291, "unknown packet (type:ECHO, code:%02x)\n", s_sdcmp.rx->code);
 			_discardPacket(s_sdcmp.rx);
@@ -324,7 +323,7 @@ static inline __attribute__((always_inline)) void _sdcmpRecv(void)
 		break;
 	case SDCMP_CONTROL:
 		if (s_sdcmp.rx->code == SDCMP_CONTROL_POWER) {
-			_sdcmpControlPowerControl(rx);
+			_sdcmpControlPowerControl(rx, control);
 		} else {
 			SDFCTL_PRINTF(304, "unknown packet (type:CONTROL, code:%02x)\n", s_sdcmp.rx->code);
 			_discardPacket(s_sdcmp.rx);
@@ -341,7 +340,7 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 {
 	DcmpHeader *pkt;
 	SceSize size;
-	int intr, ret;
+	int intr, ret, read, next, count;
 
 	while (s_sdcmp.tx.count != 0) {
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
@@ -363,21 +362,28 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 			SDFCTL_PRINTF(223, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
-		ret = s_sdcmp.tx.read;
-		s_sdcmp.tx.read++;
-		if (s_sdcmp.tx.read > SDCMP_QUEUE - 1)
-			s_sdcmp.tx.read = 0;
-		s_sdcmp.tx.count--;
-		s_sdcmp.tx.size[ret] = 0;
+		read = s_sdcmp.tx.read;
+		count = s_sdcmp.tx.count - 1;
+		next = read + 1;
+		if (next > SDCMP_QUEUE - 1)
+			next = 0;
+		s_sdcmp.tx.read = next;
+		s_sdcmp.tx.size[read] = 0;
+		s_sdcmp.tx.count = count;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 	}
 }
 
 static void _sdcmpHandler(int event, SceUIntPtr arg, void *ctx)
 {
+	struct {
+		SdcmpControl control;
+		SdcmpEcho echo;
+	} reply;
+
 	switch (event) {
 	case SDFCTL_EVENT_RECV:
-		_sdcmpRecv();
+		_sdcmpRecv(&reply.control, &reply.echo);
 		break;
 	case SDFCTL_EVENT_RECV_DONE:
 	case SDFCTL_EVENT_SEND_DONE:
@@ -395,6 +401,7 @@ static void _sdcmpHandler(int event, SceUIntPtr arg, void *ctx)
 
 int sdcmpInit(SDfCtlPd *pd)
 {
+	const void *lr = __builtin_return_address(0);
 	SceDfMgrProtocol desc;
 	int i, ret;
 
@@ -422,13 +429,13 @@ int sdcmpInit(SDfCtlPd *pd)
 	ret = sdfctlSetProtocolStatus(pd, SDFCTL_PD_REGISTERED, 1);
 	if (ret < 0) {
 		SDFCTL_PRINTF(121, "SetProtocolStatus failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(122);
+		SCE_DBG_ASSERT_CHECK_LR(0, 122, lr);
 		return ret;
 	}
 	ret = sdfctlSetProtocolStatus(pd, SDFCTL_PD_STARTED, 1);
 	if (ret < 0) {
 		SDFCTL_PRINTF(127, "SetProtocolStatus failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(128);
+		SCE_DBG_ASSERT_CHECK_LR(0, 128, lr);
 		return ret;
 	}
 	return 0;
@@ -438,7 +445,8 @@ int sdcmpInit(SDfCtlPd *pd)
 void sdcmpSendStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc)
 {
 	SdcmpProtocolStatus pkt;
-	int ret;
+	SceUInt32 protocol, version, subVersion;
+	int cpu, ret;
 
 	if (status & ~7) {
 		SDFCTL_PRINTF(618, "unknown status (0x%08x)\n", status);
@@ -446,15 +454,19 @@ void sdcmpSendStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc)
 	}
 	sdfctlMemset(&pkt, 0, sizeof(pkt));
 	sdfctlSetSize(&pkt, sizeof(pkt));
-	pkt.subVersion = desc->subVersion;
-	pkt.protocol = desc->protocol;
-	pkt.version = desc->version;
+	protocol = desc->protocol;
+	version = desc->version;
+	subVersion = desc->subVersion;
+	pkt.subVersion = subVersion;
 	pkt.m.hdr.dst = SDFCTL_ROUTE_TARGET;
+	pkt.protocol = protocol;
+	pkt.version = version;
 	pkt.m.code = SDCMP_STATUS_PROTOCOL;
 	pkt.m.reserved = 0;
 	pkt.m.type = SDCMP_STATUS;
+	cpu = ksceKernelCpuId();
 	pkt.status = status;
-	pkt.cpu = (1 << ksceKernelCpuId()) + 0xa200;
+	pkt.cpu = (1 << cpu) + 0xa200;
 	ret = sdcmpQueue(&s_sdcmp.tx, &pkt, sizeof(pkt));
 	if (ret < 0) {
 		SDFCTL_PRINTF(655, "error: 0x%08x\n", ret);
@@ -539,6 +551,8 @@ int sdcmpMakeStatusConnection(SceUInt32 status, void *buf)
 int sdcmpMakeStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc, void *buf)
 {
 	SdcmpProtocolStatus *pkt = buf;
+	SceUInt32 protocol, version, subVersion;
+	int cpu;
 
 	if (desc == NULL || pkt == NULL) {
 		SDFCTL_PRINTF(845, "invalid arg\n");
@@ -553,14 +567,18 @@ int sdcmpMakeStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc, void
 	pkt->m.hdr.version = SCE_DECI4P_VERSION;
 	pkt->m.code = SDCMP_STATUS_PROTOCOL;
 	pkt->m.type = SDCMP_STATUS;
+	protocol = desc->protocol;
+	version = desc->version;
+	subVersion = desc->subVersion;
 	pkt->m.reserved = 0;
 	pkt->m.hdr.protocol = SDFCTL_PROTOCOL_MGR;
-	pkt->protocol = desc->protocol;
-	pkt->version = desc->version;
-	pkt->subVersion = desc->subVersion;
+	pkt->protocol = protocol;
+	pkt->version = version;
+	pkt->subVersion = subVersion;
 	pkt->m.hdr.src = SDFCTL_PORT;
 	pkt->m.hdr.dst = SDFCTL_ROUTE_HOST;
+	cpu = ksceKernelCpuId();
 	pkt->status = status;
-	pkt->cpu = (1 << ksceKernelCpuId()) + 0xa200;
+	pkt->cpu = (1 << cpu) + 0xa200;
 	return 0;
 }

@@ -29,14 +29,21 @@ static struct {
 static SceKernelSpinlock s_statusLock;
 
 /* the 24-bit packet size */
-#define HDR_SIZE(_hdr)		((_hdr)->size[0] | (_hdr)->size[1] << 8 | (_hdr)->size[2] << 16)
+#define HDR_SIZE(_hdr)		(*(const SceUInt16 *)(_hdr)->size | (_hdr)->size[2] << 16)
 
+#if FW_DEBUG
+__attribute__((noinline))
+#else
+static __attribute__((always_inline)) inline
+#endif
 SDfCtlPd *_getPdCB(SceUInt32 id)
 {
+	const void *lr = __builtin_return_address(0);
+
 	if (id < SDFCTL_PDS)
 		return &s_mgr.pd[id];
 	SDFCTL_PRINTF(1085, "invalid argument (id: %d)\n", id);
-	SCE_DBG_ASSERT_FAIL(1086);
+	SCE_DBG_ASSERT_CHECK_LR(0, 1086, lr);
 	return NULL;
 }
 
@@ -64,7 +71,7 @@ static void sdfctlSendProtocolStatus(void)
  * name unknown: start sending for the next protocol (round robin) that asked to;
  * the original keeps scanning after starting one
  */
-static void sdfctlSendNext(void)
+static __attribute__((noinline)) void sdfctlSendNext(void)
 {
 	SDfCtlIf *ifp = s_mgr.ifp;
 	SDfCtlPd *pd;
@@ -75,12 +82,15 @@ static void sdfctlSendNext(void)
 	pd = &s_mgr.pd[s_mgr.nextPd];
 	for (i = 1; ; ) {
 		if (pd->flags & SDFCTL_PD_SEND_REQ) {
+			SceUInt32 flags = ifp->flags;
+			SDfCtlIf *currentIf = s_mgr.ifp;
+
 			pd->flags &= ~SDFCTL_PD_SEND_REQ;
 			ifp->sendPd = pd;
 			ifp->sendSize = 0;
 			ifp->sendDone = 0;
-			ifp->flags |= SDFCTL_IF_SEND_STARTED;
-			s_mgr.ifp->ops.sendStart(ifp);
+			ifp->flags = flags | SDFCTL_IF_SEND_STARTED;
+			currentIf->ops.sendStart(ifp);
 			s_mgr.nextPd = i;
 			if (i == SDFCTL_PDS)
 				s_mgr.nextPd = 0;
@@ -108,6 +118,8 @@ static inline SDfCtlPd *sdfctlFindSock(SceUID sock)
 int sceSDfCtlExRecv(SceUID sock, void *buf, SceSize size)
 {
 	SDfCtlIf *ifp = s_mgr.ifp;
+	SDfCtlIfXfer recv;
+	SceSize recvDone;
 	int i;
 
 	if (buf == NULL) {
@@ -118,21 +130,25 @@ int sceSDfCtlExRecv(SceUID sock, void *buf, SceSize size)
 		SDFCTL_PRINTF(403, "invalid argument (sock: 0x%08X)\n", sock);
 		return SDFCTL_ERROR_INVALID_SOCK;
 	}
-	if (s_mgr.ifp == NULL) {
+	ifp = s_mgr.ifp;
+	if (ifp == NULL) {
 		SDFCTL_PRINTF(410, "no host if\n");
 		return SDFCTL_ERROR_NO_HOST_IF;
 	}
-	if (!(s_mgr.ifp->recvFlags & SDFCTL_IF_IN_HANDLER))
+	if (!(ifp->recvFlags & SDFCTL_IF_IN_HANDLER))
 		return SDFCTL_ERROR_BUSY;
-	if (s_mgr.ifp->recvSize != 0)
-		return s_mgr.ifp->ops.recv(s_mgr.ifp, buf, size);
+	if (ifp->recvSize != 0)
+		return ifp->ops.recv(ifp, buf, size);
 	if (size < SDFCTL_HDR_SIZE)
 		return SDFCTL_ERROR_INVALID_SIZE;
 	for (i = 0; i != SDFCTL_HDR_SIZE; i++)
-		((SceUInt8 *)buf)[i] = ((SceUInt8 *)&s_mgr.ifp->recvHdr)[i];
-	ifp->recvSize = HDR_SIZE(&ifp->recvHdr);
-	ifp->recvDone += SDFCTL_HDR_SIZE;
-	return ifp->ops.recv(ifp, (char *)buf + SDFCTL_HDR_SIZE, size - SDFCTL_HDR_SIZE) + SDFCTL_HDR_SIZE;
+		((SceUInt8 *)buf)[i] = ((SceUInt8 *)&ifp->recvHdr)[i];
+	recv = ifp->ops.recv;
+	recvDone = ifp->recvDone + SDFCTL_HDR_SIZE;
+	ifp->recvSize = *(const SceUInt16 *)ifp->recvHdr.size |
+		ifp->recvHdr.size[2] << 16;
+	ifp->recvDone = recvDone;
+	return recv(ifp, (char *)buf + SDFCTL_HDR_SIZE, size - SDFCTL_HDR_SIZE) + SDFCTL_HDR_SIZE;
 }
 
 /* ask to send: SDFCTL_EVENT_SEND follows when the interface is free */
@@ -141,8 +157,11 @@ int sceSDfCtlExReqSend(SceUID sock)
 	SDfCtlPd *pd;
 	SceUInt32 flags;
 
-	pd = sdfctlFindSock(sock);
-	if (pd == NULL) {
+	if ((s_mgr.pd[0].flags & SDFCTL_PD_REGISTERED) && sock == s_mgr.pd[0].sock)
+		pd = &s_mgr.pd[0];
+	else if ((s_mgr.pd[1].flags & SDFCTL_PD_REGISTERED) && sock == s_mgr.pd[1].sock)
+		pd = &s_mgr.pd[1];
+	else {
 		SDFCTL_PRINTF(463, "invalid argument (sock: 0x%08X)\n", sock);
 		return SDFCTL_ERROR_INVALID_SOCK;
 	}
@@ -184,40 +203,47 @@ int sceSDfCtlExSend(SceUID sock, void *buf, SceSize size)
 	SDfCtlIf *ifp = s_mgr.ifp;
 	SceDeci4pHeader *hdr = buf;
 	SDfCtlPd *pd;
+	SceUInt32 protocol, routeProtocol;
 
 	if (buf == NULL) {
 		SDFCTL_PRINTF(538, "invalid argument\n");
 		return SDFCTL_ERROR_INVALID_BUFFER;
 	}
-	pd = sdfctlFindSock(sock);
-	if (pd == NULL) {
+	if ((s_mgr.pd[0].flags & SDFCTL_PD_REGISTERED) && sock == s_mgr.pd[0].sock)
+		pd = &s_mgr.pd[0];
+	else if ((s_mgr.pd[1].flags & SDFCTL_PD_REGISTERED) && sock == s_mgr.pd[1].sock)
+		pd = &s_mgr.pd[1];
+	else {
 		SDFCTL_PRINTF(545, "invalid argument (sock: 0x%08X)\n", sock);
 		return SDFCTL_ERROR_INVALID_ARG;
 	}
-	if (s_mgr.ifp == NULL) {
+	ifp = s_mgr.ifp;
+	if (ifp == NULL) {
 		SDFCTL_PRINTF(552, "no host if\n");
 		return SDFCTL_ERROR_NO_HOST_IF;
 	}
-	if (!(s_mgr.ifp->flags & SDFCTL_IF_SENDING)) {
+	if (!(ifp->flags & SDFCTL_IF_SENDING)) {
 		SDFCTL_PRINTF(557, "blocked\n");
 		return SDFCTL_ERROR_BUSY;
 	}
 	if (pd->desc.protocol != SDFCTL_PROTOCOL_MGR &&
 	    (!(s_mgr.status & SDFCTL_STATUS_CONNECTED) || !(pd->flags & SDFCTL_PD_STARTED)))
 		return SDFCTL_ERROR_NO_ROUTE;
-	if (s_mgr.ifp->sendSize == 0) {
+	if (ifp->sendSize == 0) {
 		if (size < SDFCTL_HDR_SIZE) {
 			SDFCTL_PRINTF(586, "invalid packet size %d (%s)\n", size, pd->desc.name);
 			return SDFCTL_ERROR_INVALID_SIZE;
 		}
-		s_mgr.ifp->sendSize = HDR_SIZE(hdr);
+		ifp->sendSize = *(const SceUInt16 *)hdr->size | hdr->size[2] << 16;
 		hdr->version = SCE_DECI4P_VERSION;
+		protocol = pd->desc.protocol;
 		hdr->reserved0 = 0;
 		hdr->reserved1 = 0;
-		hdr->protocol = pd->desc.protocol;
+		routeProtocol = pd->desc.protocol;
+		hdr->protocol = protocol;
 		hdr->reserved2 = 0;
 		hdr->src = SDFCTL_PORT;
-		if (pd->desc.protocol != SDFCTL_PROTOCOL_MGR)
+		if (routeProtocol != SDFCTL_PROTOCOL_MGR)
 			hdr->dst = pd->desc.destination;
 	}
 	return ifp->ops.send(ifp, buf, size);
@@ -475,6 +501,7 @@ __attribute__((noinline)) void sdfctlMemset(void *p, int c, SceSize n)
 
 int sceSDfCtlModuleStart(SceSize args, void *argp)
 {
+	const void *lr = __builtin_return_address(0);
 	int ret;
 
 	if (!ksceKernelCheckDipsw(0xfd)) {
@@ -494,19 +521,19 @@ int sceSDfCtlModuleStart(SceSize args, void *argp)
 	ret = sdcmpInit(_getPdCB(0));
 	if (ret < 0) {
 		SDFCTL_PRINTF(103, "sdcmpInit failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(104);
+		SCE_DBG_ASSERT_CHECK_LR(0, 104, lr);
 		return ret;
 	}
 	ret = stsmpInit(_getPdCB(1));
 	if (ret < 0) {
 		SDFCTL_PRINTF(111, "stsmpInit failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(112);
+		SCE_DBG_ASSERT_CHECK_LR(0, 112, lr);
 		return ret;
 	}
 	ret = uartInit();
 	if (ret < 0) {
 		SDFCTL_PRINTF(119, "uartInit failed (0x%08x)\n", ret);
-		SCE_DBG_ASSERT_FAIL(120);
+		SCE_DBG_ASSERT_CHECK_LR(0, 120, lr);
 		return ret;
 	}
 	SceKernelSuspendForDriver_CE7A2207(0x18, sdfctlSuspend, NULL);
