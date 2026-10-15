@@ -2156,7 +2156,8 @@ int oalEachFileInfo(SceUID pid,
 	CoredumpFileInfo info;
 	SceIofileInfo file;
 	SceSize count = 0;
-	SceSize resolvedLength, openLength;
+	SceSize resolvedSize, openSize;
+	SceUID fd;
 	int index, result;
 
 	SCE_DBG_ASSERT(callback != NULL && fds != NULL, 3102);
@@ -2168,8 +2169,9 @@ int oalEachFileInfo(SceUID pid,
 		if (fds->pid == pid) {
 			memset(&file, 0, sizeof(file));
 			if (ksceIoGetFileInfo(fds->fd, pid, &file) >= 0) {
+				fd = fds->fd;
 				memset(&info, 0, sizeof(info));
-				info.fd = fds->fd;
+				info.fd = fd;
 				info.isDir = file.isDir;
 				info.flags = file.flags;
 				info.pid = file.pid;
@@ -2177,13 +2179,13 @@ int oalEachFileInfo(SceUID pid,
 				info.position = file.position;
 				info.size = file.size;
 				info.ioSchedData = file.ioSchedData;
-				resolvedLength = strnlen(file.resolvedOpenPath, 1024);
-				openLength = strnlen(file.openPath, 1024);
-				result = callback(&info, resolvedLength + 1,
+				resolvedSize = strnlen(file.resolvedOpenPath, 1024) + 1;
+				openSize = strnlen(file.openPath, 1024) + 1;
+				result = callback(&info, resolvedSize,
 					file.resolvedOpenPath,
-					((resolvedLength + 4) & ~3) - (resolvedLength + 1),
-					openLength + 1, file.openPath,
-					((openLength + 4) & ~3) - (openLength + 1), context);
+					((resolvedSize + 3) & ~3) - resolvedSize,
+					openSize, file.openPath,
+					((openSize + 3) & ~3) - openSize, context);
 				if (result != 0)
 					return result;
 			}
