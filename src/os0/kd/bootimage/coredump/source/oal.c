@@ -466,6 +466,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	SceUID *threadIds;
 	unsigned int capacity, copiedCount, i;
 	uint32_t reason, selectedReason;
+	int triggerReason;
 	int status;
 	int count;
 	int result;
@@ -475,6 +476,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	SCE_DBG_ASSERT(pid != 0 && stopReason != NULL, 1848);
 #endif
 	result = (int)(uintptr_t)memset(stopReason, 0, sizeof(*stopReason));
+	triggerReason = coredumpRun.trigger.triggerReason;
 	stopReason->reason.codeLow = 0;
 	stopReason->reason.codeHigh = 0;
 	stopReason->reason.groupLow = 0;
@@ -483,22 +485,22 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	stopReason->detail.codeHigh = 0;
 	stopReason->detail.groupLow = 0;
 	stopReason->detail.groupHigh = 0;
-	if (coredumpRun.trigger.triggerReason == 1) {
+	if (triggerReason == 1) {
 		reason = 0x50001;
 		coredumpRun.stopReason = reason;
 		goto foundReason;
 	}
-	if (coredumpRun.trigger.triggerReason == 3) {
+	if (triggerReason == 3) {
 		reason = 0x10004;
 		coredumpRun.stopReason = reason;
 		goto foundReason;
 	}
-	if (coredumpRun.trigger.triggerReason == -2) {
+	if (triggerReason == -2) {
 		reason = 0x10003;
 		goto foundReason;
 	}
 	stopEvent.threadId = coredumpRun.trigger.crash_thid;
-	stopEvent.reason = coredumpRun.trigger.triggerReason;
+	stopEvent.reason = triggerReason;
 	result = _getThreadStopReason(stopEvent.threadId, &stopEvent,
 		&threadStopReason);
 	__builtin_memcpy(&reason, &threadStopReason.reason, sizeof(reason));
@@ -1619,7 +1621,8 @@ void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity)
 			threadId = *cursor++;
 			if (threadId != 0) {
 				threadId = ksceKernelGetUserThreadId(threadId);
-				threadId &= ~(threadId >> 31);
+				if (threadId < 0)
+					threadId = 0;
 			}
 			cursor[-1] = threadId;
 			index++;
