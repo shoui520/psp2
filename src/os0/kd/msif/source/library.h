@@ -5,6 +5,10 @@
 #include <stddef.h>
 #include <sce/fat_boot.h>
 
+/* The Memory Stick interface's 4 KiB register window (SceMsif) */
+#define MSIF_REG_BASE		0xe0900000
+#define MSIF_REG_SIZE		0x1000
+
 struct MsifDmaChannelRegisters {
 	volatile uint32_t dataAddress;
 	volatile uint32_t nextDescriptorAddress;

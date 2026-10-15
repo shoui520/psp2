@@ -683,9 +683,9 @@ int module_start(SceSize args, const void *argp)
 	gMsifContext.writeDelaySequence = gMsifContext.readDelaySequence;
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
-	option.paddr = 0xe0900000;
+	option.paddr = MSIF_REG_BASE;
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	result = ksceKernelAllocMemBlock("SceMsif", 0x20100806, 4096, &option);
+	result = ksceKernelAllocMemBlock("SceMsif", 0x20100806, MSIF_REG_SIZE, &option);
 	if (result < 0)
 		return 2;
 	gMsifContext.controllerMemBlock = result;

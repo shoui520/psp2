@@ -726,7 +726,7 @@ static const struct {
 	{ 0xcd, "SceIftu0b", "SceIftu0RegB", IFTU_PAGE_BASE(0, 1), NULL, IFTUC_REG_BASE(0) },
 	{ 0xce, "SceIftu1a", "SceIftu1RegA", IFTU_PAGE_BASE(1, 0), "SceIftuc1Reg", IFTUC_REG_BASE(1) },
 	{ 0xcf, "SceIftu1b", "SceIftu1RegB", IFTU_PAGE_BASE(1, 1), NULL, IFTUC_REG_BASE(1) },
-	{ 0xff, "SceIftu2", "SceIftu2Reg", 0xe5040000, NULL, 0 },
+	{ 0xff, "SceIftu2", "SceIftu2Reg", IFTU2_REG_BASE, NULL, 0 },
 };
 
 static __attribute__((noinline)) int IftuInit(void)
