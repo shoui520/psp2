@@ -4,8 +4,6 @@
 #include "sce/fast_mutex.h"
 #include "sce/compiler.h"
 
-_Static_assert(sizeof(IntrHandler) == 64, "interrupt record ABI");
-_Static_assert(sizeof(IntrState) == 0x4200, "handler and CPU state ABI");
 _Static_assert(sizeof(SceKernelIntrHandlerInfo) == 0x70, "interrupt query ABI");
 _Static_assert(sizeof(IntrIrqFrame) == 64, "IRQ frame ABI");
 _Static_assert(sizeof(IntrLevelStack) == INTR_LEVEL_STACK_SIZE, "nesting stack ABI");

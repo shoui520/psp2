@@ -14,31 +14,11 @@
 #include "sce/threadcb.h"
 #include "sce/process.h"
 #include "sce/gic_regs.h"
+#include "sce/intrmgr_state.h"
 
-#define INTR_COUNT 256
 #define INTR_CPU_STACK_SIZE 0x20000
 #define INTR_LEVEL_STACK_SIZE 0x2000
 #define INTR_STACK_MAGIC 0x1ab4e8dfU
-
-typedef int (*SubIntrCallback)(unsigned int, unsigned int, ...);
-
-typedef struct IntrHandler {
-	void *handler;
-	SceUInt16 intrCode;
-	SceUInt16 targetCpu;
-	void *arg;
-	SceUInt16 priority;
-	SceUInt8 type;
-	SceUInt8 configuration;
-	char *name;
-	void *oldHandler;
-	SceUInt32 reserved[2];
-	SceUInt32 count[4];
-	SceKernelSpinlock lock;
-	struct IntrHandler *sub;
-	SubIntrCallback *callbacks;
-	SceUInt32 subCount;
-} IntrHandler;
 
 typedef struct SceKernelIntrHandlerInfo {
 	SceSize size;
@@ -57,17 +37,6 @@ typedef struct SceKernelIntrHandlerInfo {
 	char *name;
 	SceUInt32 typeFlag;		/* 0x10: the handler's type has 0x10 */
 } SceKernelIntrHandlerInfo;
-
-typedef struct IntrCpuState {
-	SceUInt32 nesting;
-	SceUInt32 padding[31];		/* one 0x80 line per CPU */
-} IntrCpuState;
-
-/* Handler records and their per-CPU nesting state share the native base. */
-typedef struct IntrState {
-	IntrHandler handlers[INTR_COUNT];
-	IntrCpuState cpu[4];
-} IntrState;
 
 typedef struct IntrIrqSystem {
 	SceUInt32 translationBase;
