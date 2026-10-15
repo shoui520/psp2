@@ -13,6 +13,10 @@
 #define ksceKernelAllocMemBlock			SceSysmemForTZS_402EB970
 #define ksceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
 #define ksceKernelCheckDipsw			SceDipswForTZS_ksceKernelCheckDipsw
+#define ksceKernelSpinlockLowLock		SceCpuForTZS_71FD9AB5
+#define ksceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
+#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
+#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
 #define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
 #define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
 #define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
@@ -42,9 +46,19 @@ __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 
 int ksceKernelCheckDipsw(unsigned int number);
 
+unsigned int SceCpuForTZS_44C423D3(void);		/* this core */
+
+/* intrmgr.c */
+int IllegalContext(void);
+int sceKernelSetIntrTargetCpu(int intrCode, unsigned int cpuMask);
+
 /* monitor calls of dmacmgr_tzs.c (names unknown) */
 #define DMAC_MONCALL_SET_ACCESS0	0x168
 #define DMAC_MONCALL_SET_ACCESS1	0x169
 
 /* dmacmgr_tzs.c */
 int initDmacSecure(void);
+
+/* usleep.c */
+void sceKernelUsleep(SceUInt32 usec);
+int InitUsleepTimer(int remap);

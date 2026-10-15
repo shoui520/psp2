@@ -2,6 +2,7 @@
 psp2_module(slb2_kbl_SceKernelIntrMgr KIND kernel PARTIAL SOURCES
 	source/SceKernelIntrMgr.c
 	source/dmacmgr_tzs.c
+	source/usleep.c
 )
 # Sony built dmacmgr_tzs.c for size: literal pools, unaligned strings
 set_source_files_properties(source/dmacmgr_tzs.c PROPERTIES COMPILE_OPTIONS "-Os")
