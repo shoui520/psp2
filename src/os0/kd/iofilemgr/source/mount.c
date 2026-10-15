@@ -450,7 +450,9 @@ int mnt_get_mount_opt(int id)
 	param.path = mnt_get_mount_data(id)->assign_name;
 	ret = ksceKernelRunWithStack(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt,
 				     &param);
-	return ret & ~(ret >> 31);
+	if (ret < 0)
+		ret = 0;
+	return ret;
 }
 
 SceClass g_mountEventClass;
