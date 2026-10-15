@@ -123,15 +123,15 @@ int VSlotCreate(MemBlockObject *slot)
 	return 0;
 }
 
-/* the head of the FIFO, NULL when it is empty */
-static inline MemBlockObject *VSlotFIFOPop(VSlotFIFO *fifo)
+/* the head of the FIFO taken off; an error when it is empty */
+static inline int VSlotFIFOPop(VSlotFIFO *fifo, MemBlockObject **pSlot)
 {
 	MemBlockObject *slot;
 	SceUInt16 count = fifo->count;
 
 	if (count == 0) {
-		SCE_DBG_ASSERT_FAIL(193);
-		return NULL;
+		SCE_DBG_ASSERT_CHECK(count, 193);
+		return SCE_KERNEL_ERROR_ERROR;
 	}
 	count--;
 	slot = fifo->head;
@@ -144,7 +144,8 @@ static inline MemBlockObject *VSlotFIFOPop(VSlotFIFO *fifo)
 	} else {
 		fifo->head = VSlotGetNextRaw(slot);
 	}
-	return slot;
+	*pSlot = slot;
+	return 0;
 }
 
 /* the process range's pages mapped into the slot */
@@ -208,11 +209,11 @@ int sceKernelVSlotMapProcMemory(SceUID pid, uintptr_t va, SceSize size, SceUInt3
 	}
 	fifo = GetFIFO(type);
 	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
-	slot = VSlotFIFOPop(fifo);
+	ret = VSlotFIFOPop(fifo, &slot);
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
-	if (slot == NULL) {
+	if (ret < 0) {
 		ksceKernelUnlockRangeProc(pid, (void *)va, size);
-		return SCE_KERNEL_ERROR_ERROR;
+		return ret;
 	}
 	return VSlotMap(slot, pid, va, size, pSlot, pVbase);
 }
