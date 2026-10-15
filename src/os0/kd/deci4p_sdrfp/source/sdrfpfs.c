@@ -98,12 +98,13 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	SceVfsVnode *dvp = argp->dvp;
 	SceVfsVnode **vpp = argp->vpp;
 	const char *name = argp->path->name;
+	int nameLen = argp->path->name_length;
 	SceVfsVnode *vp;
 	Deci4pFsStat stat;
 	int ret;
 
 	SDRFPFS_TRACE(234, "args = %p, %p/%p, %s\n", argp, dvp, vpp, name);
-	SDRFPFS_TRACE(235, "name_len = %d\n", argp->path->name_length);
+	SDRFPFS_TRACE(235, "name_len = %d\n", nameLen);
 	statZero(&stat);
 	ret = sdrfpGetstat(name, &stat);
 	SDRFPFS_TRACE(240, "stat ret = 0x%x\n", ret);

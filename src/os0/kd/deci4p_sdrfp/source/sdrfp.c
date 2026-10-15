@@ -84,6 +84,7 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	SceDeci4pHeader *hdr = buf;
 	SceKernelIntrStatus intr;
 	SceUInt16 seq;
+	SceUInt32 cpu;
 	int ret;
 
 	ksceKernelSpinlockLowLock(&s_sendLock);
@@ -97,9 +98,10 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	s_request.size = size;
 	SceDeci4pSDfMgrForKernel_FFC95B63(hdr, size);
 	hdr->version = SCE_DECI4P_VERSION;
+	cpu = SceCpuId();
 	((DrfpHeader *)(hdr + 1))->seq = s_request.seq;
 	hdr->protocol = DRFP_PROTOCOL;
-	hdr->src = 0xa200 + (1 << SceCpuId());
+	hdr->src = 0xa200 + (1 << cpu);
 	hdr->dst = 0;
 
 	s_send = &s_request;
@@ -259,11 +261,15 @@ static void sdrfpEventHandler(int event, void *arg, void *ctx)
 		return;
 	case SCE_DFMGR_EVENT_STATUS:
 		if (status->kind == 0) {
-			if (status->connected == 0 || status->connected == 1)
-				ch->connected = status->connected;
+			if (status->connected == 0)
+				ch->connected = 0;
+			else if (status->connected == 1)
+				ch->connected = 1;
 		} else if (status->kind == 1) {
-			if (status->enabled == 0 || status->enabled == 1)
-				ch->enabled = status->enabled;
+			if (status->enabled == 0)
+				ch->enabled = 0;
+			else if (status->enabled == 1)
+				ch->enabled = 1;
 		}
 		return;
 	case 6:
@@ -308,12 +314,17 @@ int sdrfpOpen(const char *name, int flags, int mode, Deci4pFsStat *stat)
 			src = (SceUInt32 *)&pkt->stat;
 			dst = (SceUInt32 *)stat;
 			do {
-				dst[0] = src[0];
-				dst[1] = src[1];
-				dst[2] = src[2];
-				dst[3] = src[3];
+				SceUInt32 first = src[0];
+				SceUInt32 second = src[1];
+				SceUInt32 third = src[2];
+				SceUInt32 fourth = src[3];
+
 				src += 4;
 				dst += 4;
+				dst[-4] = first;
+				dst[-3] = second;
+				dst[-2] = third;
+				dst[-1] = fourth;
 			} while (src != (SceUInt32 *)(&pkt->stat + 1));
 			ret = pkt->fd;
 		}
@@ -324,8 +335,9 @@ int sdrfpOpen(const char *name, int flags, int mode, Deci4pFsStat *stat)
 
 int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 {
-	DrfpReadPacket *pkt, *frag;
+	DrfpReadPacket *pkt, *frag, *next;
 	SceSize max, total, n;
+	SceUInt16 nfrag;
 	int ret, i;
 
 	ksceKernelSpinlockLowLock(&s_requestLock);
@@ -358,6 +370,7 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 			continue;
 
 		frag = pkt;
+		next = (DrfpReadPacket *)((char *)pkt + DRFP_FRAG_SIZE);
 		n = frag->nbytes;
 		for (i = 0; ; ) {
 			if (n > DRFP_FRAG_DATA_MAX) {
@@ -370,17 +383,19 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 			memcpy((char *)buf + total, frag->data, n);
 			n = frag->nbytes;
 			i++;
+			nfrag = frag->nfrag;
+			frag = next;
 			offset += n;
 			total += n;
-			if (i >= frag->nfrag)
+			if (i >= nfrag)
 				break;
-			frag = (DrfpReadPacket *)((char *)frag + DRFP_FRAG_SIZE);
 			if (frag->result != 0) {
 				SDRFP_PRINTF(603, "READ_RES: error - 0x%x\n", frag->result);
 				ret = -1;
 				goto out;
 			}
 			n = frag->nbytes;
+			next = (DrfpReadPacket *)((char *)next + DRFP_FRAG_SIZE);
 		}
 	}
 	ksceKernelSpinlockLowUnlock(&s_requestLock);
@@ -440,12 +455,17 @@ int sdrfpGetstat(const char *name, Deci4pFsStat *stat)
 			src = (SceUInt32 *)&pkt->stat;
 			dst = (SceUInt32 *)stat;
 			do {
-				dst[0] = src[0];
-				dst[1] = src[1];
-				dst[2] = src[2];
-				dst[3] = src[3];
+				SceUInt32 first = src[0];
+				SceUInt32 second = src[1];
+				SceUInt32 third = src[2];
+				SceUInt32 fourth = src[3];
+
 				src += 4;
 				dst += 4;
+				dst[-4] = first;
+				dst[-3] = second;
+				dst[-2] = third;
+				dst[-1] = fourth;
 			} while (src != (SceUInt32 *)(&pkt->stat + 1));
 		}
 	}
