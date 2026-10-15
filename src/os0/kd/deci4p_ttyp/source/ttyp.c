@@ -31,6 +31,12 @@
 /* (inlined as in the original: their assertions report the caller's caller) */
 #define TTYP_INLINE		static inline __attribute__((always_inline))
 
+#if FW_DEBUG
+#define TTYP_RESOURCE_HELPER	static
+#else
+#define TTYP_RESOURCE_HELPER	TTYP_INLINE
+#endif
+
 /* weak: the timestamp source may be absent */
 SceUInt64 ScePamgrForDriver_FE9BFD27(void) __attribute__((weak));
 
@@ -53,7 +59,7 @@ static const SceProcEventHandler s_procHandler = {
 
 /* -- resources and the per-channel queues ------------------------------- */
 
-static TtypResource *ttypReserveResource(void)
+TTYP_RESOURCE_HELPER TtypResource *ttypReserveResource(void)
 {
 	TtypResource *r;
 	int ret, i;
@@ -68,16 +74,18 @@ static TtypResource *ttypReserveResource(void)
 		TTYP_PRINTF(376, "LockMutex failed (0x%08X)\n", ret);
 		return NULL;
 	}
-	if (s_resource[0].state == 0) {
-		i = 0;
-	} else if (s_resource[1].state == 0) {
-		i = 1;
-	} else if (s_resource[2].state == 0) {
-		i = 2;
-	} else {
-		SCE_DBG_ASSERT_LEVEL(0, 0, 391);
-		r = NULL;
-		goto out;
+	i = s_resource[0].state;
+	if (i != 0) {
+		if (s_resource[1].state != 0) {
+			if (s_resource[2].state != 0) {
+				SCE_DBG_ASSERT_LEVEL(0, 0, 391);
+				r = NULL;
+				goto out;
+			}
+			i = 2;
+		} else {
+			i = 1;
+		}
 	}
 	r = &s_resource[i];
 	r->state = 1;
@@ -190,7 +198,7 @@ TTYP_INLINE TtypResource *ttypFindPendingRequest(TtypChannel *ch)
 }
 
 /* name unknown: the host went away, drop everything queued */
-static void ttypFlushPendingRequests(TtypChannel *ch)
+TTYP_RESOURCE_HELPER void ttypFlushPendingRequests(TtypChannel *ch)
 {
 	TtypResource *r;
 
@@ -318,7 +326,8 @@ static int TtyHandler(int event, void *arg, void *ctx)
 		if (r != NULL) {
 			SCE_DBG_ASSERT_LEVEL(0, ch->handle == r->handle, 545);
 			ch->sending = r;
-			sceDfMgrSend(ch->handle, r, SceDeci4pDfMgrForDebugger_CACAB5F9(&r->hdr.hdr));
+			len = SceDeci4pDfMgrForDebugger_CACAB5F9(&r->hdr.hdr);
+			sceDfMgrSend(ch->handle, r, len);
 			return 0;
 		}
 		TTYP_PRINTF(541, "unexpected WRITE event received.\n");
@@ -412,13 +421,13 @@ TTYP_INLINE int _prepareClose(SceUID pid)
 }
 
 /* name unknown */
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
 {
 	return _prepareClose(pid);
 }
 
 /* name unknown */
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
 {
 	return _prepareClose(pid);
 }
@@ -583,15 +592,16 @@ int TtypClose(int unit)
 static int _circgetc(TtypInput *in)
 {
 	unsigned char *p = in->rp;
+	int c;
 
 	if (in->wp == p) {
 		TTYP_PRINTF(1078, "_circgetc empty error.\n");
 		return 0;
 	}
-	in->rp = p + 1;
-	if (p + 1 >= in->data + TTYP_IN_SIZE)
+	c = *in->rp++;
+	if (in->rp >= in->data + TTYP_IN_SIZE)
 		in->rp = in->data;
-	return *p;
+	return c;
 }
 
 int TtypRead(int unit, void *buf, SceSize size, SceUInt32 flags)
@@ -668,7 +678,7 @@ int TtypRead(int unit, void *buf, SceSize size, SceUInt32 flags)
 			do {
 				j = k;
 				k = j + 1;
-				if (k < 6 ? n <= k : k > 4)
+				if (k > 5 || k >= n)
 					break;
 				c = b[n - 1 - k];
 			} while ((c & 0xc0) == 0x80);

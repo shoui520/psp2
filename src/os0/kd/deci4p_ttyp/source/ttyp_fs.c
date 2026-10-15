@@ -118,6 +118,8 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 {
 	SceVfsVnode *vp = argp->vp;
 	int unit = (int)vp->core.node_data;
+	void *buf = argp->buf;
+	SceSize nbyte = argp->nbyte;
 	int ret, err;
 
 	err = vfsUnlockVnode(vp);
@@ -125,7 +127,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 		TTYP_PRINTF(362, "vfsUnlockVnode failed (0x%08x)\n", err);
 		return err;
 	}
-	ret = TtypRead(unit, argp->buf, argp->nbyte, 0);
+	ret = TtypRead(unit, buf, nbyte, 0);
 	err = vfsLockVnode(vp);
 	if (err < 0) {
 		TTYP_PRINTF(370, "vfsLockVnode failed (0x%08x)\n", err);
@@ -169,6 +171,7 @@ static int ioctl_impl(SceVopIoctlArgs *argp)
 	const SceUInt32 *in = argp->in_data;
 	SceSize inlen = argp->in_len;
 	SceUInt32 *pid;
+	SceUInt32 value;
 	int ret;
 
 	if (unit > TTYP_CHANNELS - 1)
@@ -193,8 +196,9 @@ static int ioctl_impl(SceVopIoctlArgs *argp)
 				break;
 			}
 		}
+		value = in[1];
 		pid[0] = in[0];
-		pid[1] = in[1];
+		pid[1] = value;
 		break;
 	case TTYP_IOCTL_CLEAR_PID:
 		pid = (SceUInt32 *)file->fd;
