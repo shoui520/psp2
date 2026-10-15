@@ -51,7 +51,7 @@ _Static_assert(sizeof(SmschedInvokeArg) == 48, "SmschedInvokeArg");
 /* selfType: where the secure module comes from */
 #define SMSCHED_INVOKE_SELF_MASK		0xf000
 #define SMSCHED_INVOKE_SELF_PA			0x0000	/* the caller's, at selfPA */
-#define SMSCHED_INVOKE_SELF_INSTANCE		0x1000	/* the scheduler's own (instance->self) */
+#define SMSCHED_INVOKE_SELF_INSTANCE		0x1000	/* the scheduler's own: kprx_auth_sm */
 
 /* the argument area of SMC 0x12D (sceSblSmSchedInvokeMonitorCall) */
 typedef struct SceSblSmSchedProxyInvokeArg {

@@ -11,5 +11,5 @@ SceSblSmsched:
       version: 1
       nid: 0x5A2E5C09
       functions:
-        - SceSblSmSchedForTZS_AB169029: 0xAB169029
-        - SceSblSmSchedForTZS_E72F2886: 0xE72F2886
+        - sceSblSmSchedInitForTZS: 0xAB169029
+        - sceSblSmSchedStopForTZS: 0xE72F2886

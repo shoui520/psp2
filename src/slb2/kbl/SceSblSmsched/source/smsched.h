@@ -43,6 +43,7 @@
 #include <fw.h>
 #include <psp2kern/types.h>
 #include "sce/sysmem.h"
+#include "sce/kbl_param.h"
 #include "sce/debug.h"
 #include "sce/intrmgr_tzs.h"
 #include "sce/cmep_regs.h"
@@ -61,6 +62,7 @@ SceUID sceKernelCreateHeapForTZS(const char *name, SceSize size, SceKernelHeapCr
 int sceKernelDeleteHeapForTZS(SceUID heap);
 void *sceKernelSysrootGetSharedMemoryForTZS(void);
 int sceKernelSysrootSetModulePrivateForTZS(int index, void *data);
+const SceKblParam *sceKernelSysrootGetKblParamForTZS(void);
 void sceKernelDcacheCleanRange(const void *addr, SceSize size);
 void sceKernelDcacheInvalidateRange(const void *addr, SceSize size);
 int ksceKernelCpuId(void);
@@ -95,7 +97,7 @@ typedef struct SmschedInstance {
 	SceUID heap;				/* "SceSmsched" */
 	void *debugArea;			/* SetDebug */
 	void *skCmdArea;			/* the secure kernel's command arguments */
-	void *self;
+	SceKernelPARange *self;			/* kprx_auth_sm: the scheduler's own secure module */
 	uintptr_t selfPA;
 	struct SmschedRequest *requests;
 	SmschedLink freeList;

@@ -5,18 +5,17 @@
  * run has its mailboxes saved in its request (SmschedMailbox), which the
  * secure kernel restores when it resumes the module.
  *
- * PARTIAL: written in address order up to the smc 0x132 handler.
+ * PARTIAL: written in address order up to sceSblSmSchedStopForTZS.
  */
 #include "smsched.h"
 #include "sce/barrier.h"
 
-/* PARTIAL: not static until the functions that set them are written */
-SmschedRequest *s_running;
-int s_initialized;
-SmschedLink s_runQueue[2];		/* by priority, 0 first */
-SceKernelSpinlock s_lock;
-SmschedInstance *s_instance;
-SmschedLink s_doneList;			/* exited, killed or stopped */
+static SmschedRequest *s_running;
+static int s_initialized;
+static SmschedLink s_runQueue[2];	/* by priority, 0 first */
+static SceKernelSpinlock s_lock;
+static SmschedInstance *s_instance;
+static SmschedLink s_doneList;		/* exited, killed or stopped */
 
 /* a word written for the Cmep: made visible before going on */
 static inline void SmschedFlushWord(const volatile SceUInt32 *word)
@@ -1447,4 +1446,211 @@ int sceSblSmSchedReserved132MonitorCall(uintptr_t pa)
 	if (!SmschedIsNonSecurePA(pa))
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	return SCE_SBL_ERROR_NOT_SUPPORTED;
+}
+
+int sceSblSmSchedWaitMonitorCall(SceUInt32 id, unsigned int index);
+int sceSblSmSchedGetStatusMonitorCall(SceUInt32 id, unsigned int index);
+int sceSblSmSchedKillMonitorCall(SceUInt32 id);
+
+/* the Non-secure kernel's calls (smsc_proxy), by SMC number */
+typedef struct SmschedMonitorCall {
+	SceUInt32 callId;
+	SceKernelMonitorCallHandler handler;
+} SmschedMonitorCall;
+
+#define SMSCHED_MONITOR_CALL(id, handler)	{ (id), (SceKernelMonitorCallHandler)(handler) }
+
+static const SmschedMonitorCall s_monitorCalls[] = {
+	SMSCHED_MONITOR_CALL(0x12d, sceSblSmSchedInvokeMonitorCall),
+	SMSCHED_MONITOR_CALL(0x12e, sceSblSmSchedWaitMonitorCall),
+	SMSCHED_MONITOR_CALL(0x12f, sceSblSmSchedGetStatusMonitorCall),
+	SMSCHED_MONITOR_CALL(0x130, sceSblSmSchedKillMonitorCall),
+	SMSCHED_MONITOR_CALL(0x131, sceSblSmSchedReserved131MonitorCall),
+	SMSCHED_MONITOR_CALL(0x132, sceSblSmSchedReserved132MonitorCall),
+	SMSCHED_MONITOR_CALL(0x133, sceSblSmSchedWriteArm2CryMonitorCall),
+	SMSCHED_MONITOR_CALL(0x134, sceSblSmSchedReadArm2CryMonitorCall),
+	SMSCHED_MONITOR_CALL(0x135, sceSblSmSchedClearArm2CryMonitorCall),
+	SMSCHED_MONITOR_CALL(0x136, sceSblSmSchedWriteCry2ArmMonitorCall),
+	SMSCHED_MONITOR_CALL(0x137, sceSblSmSchedReadCry2ArmMonitorCall),
+	SMSCHED_MONITOR_CALL(0x138, sceSblSmSchedRegisterIntrHandlerMonitorCall),
+	SMSCHED_MONITOR_CALL(0x139, sceSblSmSchedReleaseIntrHandlerMonitorCall),
+	SMSCHED_MONITOR_CALL(0x13a, sceSblSmSchedIntrDoneMonitorCall),
+	SMSCHED_MONITOR_CALL(0x13b, sceSblSmSchedStopMonitorCall),
+	SMSCHED_MONITOR_CALL(0x13c, sceSblSmSchedGenerateMonitorIntr),
+};
+
+/*
+ * The scheduler's instance and its 64 requests, the secure kernel started
+ * (with the revocation list the boot loader passed), then the Cmep's
+ * interrupts and the monitor calls.
+ */
+int module_start(SceSize args, void *argp)
+{
+	SceKernelHeapCreateOpt heapOpt;
+	SceAllocOpt opt;
+	const SceKblParam *kblParam;
+	SmschedInstance *instance;
+	SmschedRequest *request;
+	SceKernelPARange kprxAuthSm;
+	uintptr_t skAddr, rvkAddr;
+	SceSize skSize, rvkSize;
+	SmschedArea *area;
+	SceUID heap;
+	int ret, i;
+
+	(void)args;
+	(void)argp;
+	kblParam = sceKernelSysrootGetKblParamForTZS();
+	skAddr = kblParam->secure_kernel.addr;
+	skSize = kblParam->secure_kernel.size;
+	rvkAddr = kblParam->prog_rvk.addr;
+	rvkSize = kblParam->prog_rvk.size;
+	kprxAuthSm = kblParam->kprx_auth_sm;
+	if (s_initialized) {
+		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		goto fail;
+	}
+
+	heapOpt.size = sizeof(heapOpt);
+	heapOpt.flags = HEAP_AUTO_EXTEND;
+	heap = sceKernelCreateHeapForTZS("SceSmsched", 0x1000, &heapOpt);
+	if (heap < 0) {
+		ret = heap;
+		goto fail;
+	}
+	instance = sceKernelAllocHeapMemoryForTZS(heap, sizeof(*instance));
+	if (instance == NULL) {
+		ret = SCE_SBL_ERROR_NO_MEMORY;
+		sceKernelDeleteHeapForTZS(heap);
+		goto fail;
+	}
+	instance->heap = heap;
+	instance->debugArea = NULL;
+	instance->skCmdArea = NULL;
+	instance->self = NULL;
+	s_instance = instance;
+
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 64;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	instance->debugArea = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_DEBUG_AREA_SIZE, &opt);
+	if (instance->debugArea == NULL)
+		goto nomem;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 64;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	instance->skCmdArea = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_SK_CMD_AREA_SIZE, &opt);
+	if (instance->skCmdArea == NULL)
+		goto nomem;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 64;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	instance->self = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(sizeof(*instance->self), &opt);
+	if (instance->self == NULL)
+		goto nomem;
+	ret = sceKernelVAtoPAForTZS(instance->self, &instance->selfPA);
+	if (ret < 0)
+		goto fail;
+	*instance->self = kprxAuthSm;
+	dmb();
+	(void)*(volatile SceSize *)&instance->self->size;
+	dsb();
+
+	instance->requests = sceKernelAllocHeapMemoryForTZS(instance->heap,
+							    SMSCHED_REQUESTS * sizeof(SmschedRequest));
+	if (instance->requests == NULL)
+		goto nomem;
+	instance->freeList.next = &instance->freeList;
+	instance->freeList.prev = &instance->freeList;
+	for (i = 0; i < SMSCHED_REQUESTS; i++) {
+		request = &instance->requests[i];
+		request->id = i | SMSCHED_REQUEST_FREE;
+		opt.size = sizeof(opt);
+		opt.mmapKind = 0;
+		opt.align = 64;
+		opt.mmapBase = NULL;
+		opt.mmapSize = 0;
+		area = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(sizeof(*area), &opt);
+		if (area == NULL)
+			goto nomem;
+		request->area = area;
+		ret = sceKernelVAtoPAForTZS(request->area, &request->areaPA);
+		if (ret < 0)
+			goto fail;
+		request->mailbox = &area->mailbox;
+		ret = sceKernelVAtoPAForTZS(request->mailbox, &request->mailboxPA);
+		if (ret < 0)
+			goto fail;
+		SmschedLinkAddTail(&instance->freeList, &request->link);
+	}
+
+	ret = smsSecureKernelProxySetInstance(s_instance);
+	if (ret < 0)
+		goto fail;
+	ret = smsSecureKernelProxyStartSecureKernel(skAddr, skSize);
+	if (ret < 0)
+		goto fail;
+	if (rvkSize != 0)
+		smsSecureKernelProxyInstallRevokeList(rvkAddr, rvkSize);
+	ret = smsSecureKernelProxySetDebug(s_instance->debugArea, SMSCHED_DEBUG_AREA_SIZE);
+	if (ret < 0)
+		goto fail;
+	sceKernelSysrootSetModulePrivateForTZS(13, s_instance);
+
+	s_runQueue[0].next = &s_runQueue[0];
+	s_runQueue[0].prev = &s_runQueue[0];
+	s_runQueue[1].next = &s_runQueue[1];
+	s_runQueue[1].prev = &s_runQueue[1];
+	s_lock = 0;
+	s_running = NULL;
+	s_doneList.next = &s_doneList;
+	s_doneList.prev = &s_doneList;
+	ret = sceKernelRegisterIntrHandler(SMSCHED_INTR_CRY2ARM0, "SceSblSmSchedCry2Arm0", 0,
+					   cry2Arm0IntHandler, NULL, 128, 8, NULL);
+	if (ret < 0)
+		goto fail;
+	ret = sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0);
+	if (ret < 0)
+		goto fail;
+	for (i = SMSCHED_INTR_CRY2ARM0 + 1; i < SMSCHED_INTR_CRY2ARM0 + CMEP_MAILBOXES; i++) {
+		ret = sceKernelRegisterIntrHandler(i, "SceSblSmSchedCry2Arm123", 0,
+						   cry2Arm123IntHandler, NULL, 128, 8, NULL);
+		if (ret < 0)
+			goto fail;
+	}
+	for (i = 0; i < (int)(sizeof(s_monitorCalls) / sizeof(s_monitorCalls[0])); i++) {
+		ret = sceKernelRegisterMonitorCallHandler(s_monitorCalls[i].callId,
+							  s_monitorCalls[i].handler);
+		if (ret < 0)
+			goto fail;
+	}
+	s_initialized = 1;
+	smsSecureKernelProxyReady();
+	return ret;
+
+nomem:
+	ret = SCE_SBL_ERROR_NO_MEMORY;
+fail:
+	sceSblSmSchedFini(0);
+	return ret;
+}
+
+int sceSblSmSchedInitForTZS(void)
+{
+	return 0;
+}
+
+int sceSblSmSchedStopForTZS(void)
+{
+	if (ksceKernelCpuId() == 0) {
+		deleteAllRequest(0);
+		sceSblSmSchedFini(0);
+	}
+	return 0;
 }
