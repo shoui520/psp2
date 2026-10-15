@@ -1351,11 +1351,10 @@ tail:
 	ret = MemBlockAllocVirPageForType(block, VIRPAGE_TYPE_1, high, partition, &va);
 	if (ret < 0)
 		return ret;
-	SCE_DBG_ASSERT_CHECK(MemBlockGetHeadType1Size(block) ==
-			     ((command->opt.attr & ALLOC_ATTR_HAS_EXTRA_LOW) ? command->opt.extraLow : 0), 1442);
-	SCE_DBG_ASSERT_CHECK(MemBlockGetTailType1Size(block) ==
-			     ((command->opt.attr & ALLOC_ATTR_HAS_EXTRA_HIGH) ? command->opt.extraHigh : 0),
-			     1444);
+	SCE_DBG_ASSERT_CHECK(((command->opt.attr & ALLOC_ATTR_HAS_EXTRA_LOW) ? command->opt.extraLow : 0) ==
+			     MemBlockGetHeadType1Size(block), 1442);
+	SCE_DBG_ASSERT_CHECK(((command->opt.attr & ALLOC_ATTR_HAS_EXTRA_HIGH) ? command->opt.extraHigh : 0) ==
+			     MemBlockGetTailType1Size(block), 1444);
 	return 0;
 }
 
@@ -1992,14 +1991,15 @@ int PartitionAllocMemBlockWithPhyMemPart(Partition *partition, void *phyMemPart,
 int AddressSpaceContextAllocL2Tables(AddressSpaceContext *context)
 {
 	MemBlockObject *block;
+	void *phyMemPart;
 	int ret;
 
 	context->l2Tables = NULL;
 	context->l2TablesBlock = NULL;
-	ret = PartitionAllocMemBlockWithPhyMemPart(context->partition,
-						   SceSysmemForKernel_0164D817(),
-						   "SceKernelASL2PTV", MEMBLOCK_CODE_KERNEL_ROOT_RW,
-						   AS_L2_TABLES_SIZE, NULL, &block);
+	phyMemPart = SceSysmemForKernel_0164D817();
+	ret = PartitionAllocMemBlockWithPhyMemPart(context->partition, phyMemPart, "SceKernelASL2PTV",
+						   MEMBLOCK_CODE_KERNEL_ROOT_RW, AS_L2_TABLES_SIZE, NULL,
+						   &block);
 	if (ret < 0)
 		return ret;
 	MemBlockSetNameRaw(block, "SceKernelASL2PTV");

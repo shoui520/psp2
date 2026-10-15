@@ -240,8 +240,8 @@ typedef struct Partition {
 	SceKernelRWSpinlock l2CacheLock;	/* 0x6c */
 	struct L2PageTable *l2Cache;		/* 0x70: free L2 page tables kept for reuse */
 	SceUInt32 l2CacheCount;			/* 0x74 */
-	SceUInt32 l2Count;			/* 0x78: the low half in use, the high half the peak */
-	SceUInt32 virPageCount;			/* 0x7c: the low half in use, the high half the peak */
+	volatile SceUInt32 l2Count;		/* 0x78: the low half in use, the high half the peak */
+	volatile SceUInt32 virPageCount;	/* 0x7c: the low half in use, the high half the peak */
 } Partition;
 
 _Static_assert(sizeof(Partition) == 0x80, "Partition size");
