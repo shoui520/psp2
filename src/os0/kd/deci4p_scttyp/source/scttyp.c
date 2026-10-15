@@ -141,11 +141,15 @@ static void deciEventHandler(int event, void *arg, void *ctx)
 	case 5:
 		st = arg;
 		if (st->kind == 0) {
-			if (st->connected == 0 || st->connected == 1)
-				port->connected = st->connected;
+			if (st->connected == 0)
+				port->connected = 0;
+			else if (st->connected == 1)
+				port->connected = 1;
 		} else if (st->kind == 1) {
-			if (st->enabled == 0 || st->enabled == 1)
-				port->connected = st->enabled;
+			if (st->enabled == 0)
+				port->connected = 0;
+			else if (st->enabled == 1)
+				port->connected = 1;
 		}
 		break;
 	default:
@@ -169,18 +173,23 @@ static int sendData(void)
 	s_port.hdr.time[1] = t >> 32;
 	s_port.sent = 0;
 	ret = sceSDfMgrExReqSend(s_port.handle);
-	if (ret < 0 && ret != SDFMGR_ERROR_BUSY) {
-		SCTTYP_PRINTF(687, "ReqSend failed (0x%08X)\n", ret);
-		return ret;
-	}
+	if (ret < 0)
+		goto negative;
+poll:
 	while (s_port.len != 0)
 		SceDeci4pSDfMgrForKernel_98AEC60E();
 	return 0;
+negative:
+	if ((SceUInt32)ret == SDFMGR_ERROR_BUSY)
+		goto poll;
+	SCTTYP_PRINTF(687, "ReqSend failed (0x%08X)\n", ret);
+	return ret;
 }
 
 /* break hook: the system is stopped, poll the UART */
 static void uartPollHandler(void)
 {
+	char c;
 	int ret;
 
 	if (ksceKernelCpuId() != SCTTYP_CPU)
@@ -189,7 +198,8 @@ static void uartPollHandler(void)
 		return;
 
 	while (ksceUartReadAvailable(SCTTYP_UART)) {
-		s_port.buf[s_port.len] = ksceUartRead(SCTTYP_UART);
+		c = ksceUartRead(SCTTYP_UART);
+		s_port.buf[s_port.len] = c;
 		if (++s_port.len > SCTTYP_LINE_MAX)
 			break;
 	}
