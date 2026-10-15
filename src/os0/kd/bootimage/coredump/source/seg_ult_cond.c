@@ -10,7 +10,7 @@ extern int oalGetNumOfUltObjects(SceUID pid, int type);
 extern void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
 	SceUInt32 skip, int type);
 extern void oalGetUltCondInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltCondInfo *info, SceUInt32 *ids, SceUInt32 *numIds);
+	CoredumpUltCondInfo *info, SceUInt32 *ids, uint32_t *numIds);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
 extern int segWritePaddingData(SegIf *segment, SceSize writtenSize);
@@ -30,7 +30,8 @@ SegIf ultCondSegment;
 static int _calcSize(SegIf *segment)
 {
 	CoredumpUltCondInfo info;
-	SceUInt32 count, numWaiting, totalWaiting = 0;
+	SceUInt32 count, totalWaiting = 0;
+	uint32_t numWaiting;
 	SceUInt32 *ids, *waitingIds;
 	SceUInt32 remaining, skip, batch, i;
 
@@ -74,7 +75,8 @@ static int _calcSize(SegIf *segment)
 
 static int _writeSegs(SegIf *segment)
 {
-	SceUInt32 count, numWaiting;
+	SceUInt32 count;
+	uint32_t numWaiting;
 	CoredumpNoteHeader header;
 	CoredumpUltCondInfo info;
 	SceUInt32 *ids, *waitingIds;

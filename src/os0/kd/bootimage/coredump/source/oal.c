@@ -3208,7 +3208,7 @@ void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
 }
 
 void oalGetUltMutexInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltMutexInfo *info, SceUInt32 *ids, SceUInt32 *numIds)
+	CoredumpUltMutexInfo *info, SceUInt32 *ids, uint32_t *numIds)
 {
 	UlobjMutexInfo mutex;
 
@@ -3231,7 +3231,7 @@ void oalGetUltMutexInfo(SceUID pid, SceUIntPtr address,
 }
 
 void oalGetUltCondInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltCondInfo *info, SceUInt32 *ids, SceUInt32 *numIds)
+	CoredumpUltCondInfo *info, SceUInt32 *ids, uint32_t *numIds)
 {
 	UlobjCondInfo cond;
 
@@ -3251,7 +3251,7 @@ void oalGetUltCondInfo(SceUID pid, SceUIntPtr address,
 }
 
 void oalGetUltSemaInfo(SceUID pid, SceUIntPtr address,
-	CoredumpUltSemaInfo *info, SceUInt32 *ids, SceUInt32 *numIds)
+	CoredumpUltSemaInfo *info, SceUInt32 *ids, uint32_t *numIds)
 {
 	UlobjSemaInfo sema;
 
