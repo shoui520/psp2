@@ -11,8 +11,12 @@ typedef int (*SceKernelIntrHandlerTzs)(int intrCode, void *userCtx);
 /* an SMC service of the secure monitor: the caller's r0-r3 */
 typedef int (*SceKernelMonitorCallHandler)(int arg0, int arg1, int arg2, int arg3);
 
-int sceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
+int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsigned int type,
 				 SceKernelIntrHandlerTzs handler, void *userCtx,
-				 int priority, int targetCpu, void *opt);
-int sceKernelEnableIntr(int intrCode);
-int sceKernelRegisterMonitorCallHandler(int callId, SceKernelMonitorCallHandler handler);
+				 unsigned int priority, unsigned int targetCpu,
+				 const struct SceKernelIntrRegisterOpt *opt);
+int sceKernelReleaseIntrHandler(unsigned int intrCode);
+int sceKernelEnableIntr(unsigned int intrCode);
+int sceKernelDisableIntr(unsigned int intrCode);
+int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsigned int target);
+int sceKernelRegisterMonitorCallHandler(unsigned int callId, SceKernelMonitorCallHandler handler);
