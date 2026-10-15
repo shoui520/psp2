@@ -182,6 +182,9 @@ int VirPageAllocPhyPage(VirPage *vp, void *partition, void *phyPart, VirPage **o
 /* the physical range a page maps, none for the unbacked types */
 int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size)
 {
+	uintptr_t pa = 0;
+	SceSize len = 0;
+
 	switch (VIRPAGE_TYPE(vp)) {
 	case VIRPAGE_TYPE_1:
 	case VIRPAGE_TYPE_PHY:
@@ -196,15 +199,15 @@ int VirPageGetMapRange(VirPage *vp, uintptr_t *pbase, SceSize *size)
 		}
 		/* fall through */
 	case VIRPAGE_TYPE_16:
-		*pbase = vp->pbase;
-		*size = vp->size;
-		return 0;
+		pa = vp->pbase;
+		len = vp->size;
+		break;
 	default:
 		SCE_DBG_ASSERT_FAIL(359);
 		break;
 	}
-	*pbase = 0;
-	*size = 0;
+	*pbase = pa;
+	*size = len;
 	return 0;
 }
 
