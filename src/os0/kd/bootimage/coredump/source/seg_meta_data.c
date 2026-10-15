@@ -35,8 +35,9 @@ SegIf metaDataSegment;
 static int _calcSize(SegIf *segment)
 {
 	SceKernelModuleInfoForDebugger *modules;
-	SceSize capacity, totalSize;
+	SceSize capacity;
 	int numMetaData;
+	SceSize totalSize;
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 62, "_calcSize");
 	segment->writtenSize = 0;
