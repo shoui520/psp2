@@ -7,6 +7,15 @@
 
 #include "sysmem_internal.h"
 
+/* Sony's records name this header; heap.c includes it from dlmalloc/ */
+#ifndef MEMBLOCK_OBJ_MODULE_FILE
+#define MEMBLOCK_OBJ_MODULE_FILE	"memblock_obj_module.h"
+#endif
+
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ MEMBLOCK_OBJ_MODULE_FILE
+
 #define MEMBLOCK_FLAG_NAMED		0x80
 
 /* MemBlockObject.attr */
@@ -341,3 +350,5 @@ static inline void MemBlockSetVirPageRaw(MemBlockObject *block, VirPage *vp)
 	}
 	block->virPages = vp;
 }
+
+#pragma pop_macro("__FILE_NAME__")

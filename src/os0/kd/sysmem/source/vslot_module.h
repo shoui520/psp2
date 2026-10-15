@@ -7,6 +7,10 @@
 
 #include "memblock_obj_module.h"
 
+#pragma push_macro("__FILE_NAME__")
+#undef __FILE_NAME__
+#define __FILE_NAME__ "vslot_module.h"
+
 #define VSLOT_TYPE_FLAG			0x10000000
 
 /* what a slot maps: a process's pages */
@@ -63,3 +67,5 @@ static inline void VSlotSetNextRaw(MemBlockObject *block, MemBlockObject *next)
 	SCE_DBG_ASSERT_CHECK_FUNC(VSlotIsVSlot(block), 196, "VSlotSetNextRaw");
 	block->vslotNext = next;
 }
+
+#pragma pop_macro("__FILE_NAME__")

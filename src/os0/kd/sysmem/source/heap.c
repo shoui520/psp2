@@ -5,6 +5,7 @@
  */
 
 #include "sysmem_internal.h"
+#define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
 #include "memblock_obj_module.h"
 #include <sce/heap_info.h>
 
