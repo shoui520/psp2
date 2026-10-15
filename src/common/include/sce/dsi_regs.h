@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define DSI_REG_BASE(head)		(0xe5050000 + (head) * 0x10000)
+
 typedef struct SceDsiRegisters {
 	volatile uint32_t control;		/* the start mode; 0 stops the output */
 	volatile uint32_t videoMode;		/* bits 0-1: 3 interlaced; bit 8: phase adjust */

@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define PWM_REG_BASE			0xe20c0000
+
 #define SCE_PWM_CONTROL_ENABLE		0x001	/* the output runs */
 #define SCE_PWM_CONTROL_UPDATE		0x002	/* load period and duty; clears when done */
 #define SCE_PWM_CONTROL_INVERT		0x100	/* output level while the duty is 0 */

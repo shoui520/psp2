@@ -413,11 +413,11 @@ static __attribute__((noinline)) int I2cInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		if (bus) {
-			opt.paddr = 0xe0510000;
+			opt.paddr = I2C_REG_BASE(1);
 			ret = ksceKernelAllocMemBlock("SceI2c1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
-			opt.paddr = 0xe0500000;
+			opt.paddr = I2C_REG_BASE(0);
 			ret = ksceKernelAllocMemBlock("SceI2c0Reg", 0x20100806,
 				0x1000, &opt);
 		}

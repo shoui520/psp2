@@ -352,10 +352,10 @@ static __attribute__((noinline)) int DsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		if (i) {
-			opt.paddr = 0xe5060000;
+			opt.paddr = DSI_REG_BASE(1);
 			ret = ksceKernelAllocMemBlock("SceDsi1Reg", 0x20100806, 0x1000, &opt);
 		} else {
-			opt.paddr = 0xe5050000;
+			opt.paddr = DSI_REG_BASE(0);
 			ret = ksceKernelAllocMemBlock("SceDsi0Reg", 0x20100806, 0x1000, &opt);
 		}
 		if (ret < 0)

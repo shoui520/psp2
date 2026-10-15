@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define I2C_REG_BASE(bus)		(0xe0500000 + (bus) * 0x10000)
+
 typedef struct SceI2cRegisters {
 	volatile uint32_t writeFifo;
 	volatile uint32_t readFifo;

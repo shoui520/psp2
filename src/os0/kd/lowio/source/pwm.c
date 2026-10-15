@@ -66,7 +66,7 @@ int LowioPwmInit(SceSize arglen, const void *argp)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = 0x58;
 	opt.attr = 2;
-	opt.paddr = 0xe20c0000;
+	opt.paddr = PWM_REG_BASE;
 	ret = ksceKernelAllocMemBlock("ScePwmReg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		return 2;
