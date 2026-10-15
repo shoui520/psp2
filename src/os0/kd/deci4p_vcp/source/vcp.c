@@ -221,7 +221,8 @@ static void VcpReplyHeader(VcpHeader *r, const VcpRequest *req, SceSize size, Sc
 }
 
 /* send a reply (header, then data) and wait until it is out */
-static int VcpSend(const void *hdr, SceSize hdrLen, const void *data, SceSize dataLen)
+static inline __attribute__((always_inline)) int VcpSend(const void *hdr,
+		SceSize hdrLen, const void *data, SceSize dataLen)
 {
 	SceUInt32 bits;
 	int ret;
@@ -412,7 +413,7 @@ reply:
 	VcpSend(r, result == 0 ? sizeof(*r) : sizeof(VcpHeader) + 4, data, dataLen);
 }
 
-static void VcpDeflateError(const VcpRequest *req)
+static inline __attribute__((always_inline)) void VcpDeflateError(const VcpRequest *req)
 {
 	VcpDeflateReply *r = &s_vcp.deflateReply;
 
@@ -589,13 +590,11 @@ int VcpModuleStart(SceSize args, void *argp)
 		goto err_heap;
 	s_vcp.heap = uid;
 
-	topt.size = sizeof(topt);
-	topt.attr = 1;
-	topt.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	topt.uStackMemType = 0;
-	topt.uTLSMemType = 0;
-	topt.uStackMemid = 0;
-	topt.data_0x18 = 0;
+	topt = (SceKernelThreadOptParam) {
+		.size = sizeof(topt),
+		.attr = 1,
+		.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+	};
 	uid = ksceKernelCreateThread("SceDeci4pVcp", VcpThread, 0x40, 0x2000, 0,
 				     (1 << GetCpuId()) ^ 0xf, &topt);
 	if (uid < 0)
