@@ -313,19 +313,20 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 		       SceUInt32 op, uintptr_t va, SceSize size)
 {
 	SceSize unitSize = info->unitSize, rest;
-	SceUInt32 *units, *shadow, first, i, j;
+	SceUInt32 *units, *shadow, first, count, i, j;
 	uintptr_t vbase, unitVa;
 	int intr, ret = 0;
 
 	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&info->lock);
 	vbase = block->vbase;
-	SCE_DBG_ASSERT_CHECK(vbase <= va, 594);
+	SCE_DBG_ASSERT_CHECK(va >= vbase, 594);
 	units = info->units;
 	first = (va - vbase) >> (31 - __builtin_clz(unitSize));
 	shadow = info->shadow;
+	count = info->count;
 
 	if (op & PARTIAL_CHECK_MASK) {
-		for (i = first, rest = size; i < info->count; i++) {
+		for (i = first, rest = size; i < count; i++) {
 			switch (op & PARTIAL_CHECK_MASK) {
 			case PARTIAL_CHECK_ALLOCATED:
 				if (units[i] == 0) {
@@ -392,7 +393,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 	}
 
 	/* the operation works on a copy, which becomes the table when it all succeeds */
-	for (i = 0; i < info->count; i++)
+	for (i = 0; i < count; i++)
 		shadow[i] = units[i];
 	unitVa = unitSize * first + vbase;
 	for (i = first, rest = size; i < info->count; i++, unitVa += unitSize) {
