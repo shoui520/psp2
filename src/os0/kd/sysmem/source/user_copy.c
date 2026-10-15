@@ -95,7 +95,7 @@ int ksceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize s
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 224);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 224, "sceKernelCopyFromUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, ksceKernelCopyFromUser(dst, src, size));
 	return ret;
 }
@@ -118,7 +118,7 @@ int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize siz
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 280);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 280, "sceKernelCopyToUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, ksceKernelCopyToUser(dst, src, size));
 	return ret;
 }
@@ -229,7 +229,7 @@ int ksceKernelCopyFromToUserProc(SceUID pid, void *dst, const void *src, SceSize
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 551);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 551, "sceKernelCopyFromToUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessCopyUserToUser(dst, src, size));
 	return ret;
 }
@@ -251,7 +251,7 @@ SceSSize ksceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUI
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 595);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 595, "sceKernelCountFillValueFromUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessCountFillUser32(src, value, size));
 	return ret;
 }
@@ -272,7 +272,7 @@ SceSSize ksceKernelCountFillValue64FromUserProc(SceUID pid, const void *src, Sce
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 639);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 639, "sceKernelCountFillValue64FromUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessCountFillUser64(src, (SceUInt32)value,
 							       (SceUInt32)(value >> 32), size));
 	return ret;
@@ -293,7 +293,7 @@ SceSSize ksceKernelStrnlenFromUserProc(SceUID pid, const char *str, SceSize max)
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 679);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 679, "sceKernelStrnlenFromUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessStrnlenUser(str, max));
 	return ret;
 }
@@ -316,7 +316,7 @@ SceSSize ksceKernelStrncpyFromUserProc(SceUID pid, char *dst, const char *src, S
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 734);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 734, "sceKernelStrncpyFromUserProc");
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessStrncpyFromUser(dst, src, n));
 	return ret;
 }
@@ -338,7 +338,7 @@ SceSSize ksceKernelStrncpyToUserProc(SceUID pid, char *dst, const char *src, Sce
 {
 	int ret;
 
-	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 786);
+	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 786, "sceKernelStrncpyToUserProc");
 	(void)*(const volatile char *)src;
 	USER_COPY_IN_PROCESS(pid, ret, VmaccessStrncpyToUser(dst, src, n));
 	return ret;
