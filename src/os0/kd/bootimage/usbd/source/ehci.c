@@ -15,6 +15,7 @@
 #include <sce/debug.h>
 #include <sce/intrmgr.h>
 #include <sce/threadmgr.h>
+#include <sce/usb_regs.h>
 #include "usbd_internal.h"
 
 /* the controller's registers: capability registers, then the operational ones */
@@ -1753,13 +1754,13 @@ int ehciInit(UsbdBus *bus)
 
 	switch (index) {
 	case 0:
-		paddr = 0xe40e0000;
+		paddr = USB_HOST0_REG_BASE;
 		break;
 	case 1:
-		paddr = 0xe40b0000;
+		paddr = USB_HOST1_REG_BASE;
 		break;
 	case 2:
-		paddr = 0xe4020000;
+		paddr = USB_HOST2_REG_BASE;
 		break;
 	default:
 		result = SCE_USBD_ERROR_FATAL;
@@ -1770,7 +1771,7 @@ int ehciInit(UsbdBus *bus)
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = paddr;
 	result = ksceKernelAllocMemBlock("SceUsbdEhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
-					 0x1000, &opt);
+					 USB_REG_SIZE, &opt);
 	if (result < 0)
 		goto fail;
 	ehci->registerBlockId = result;

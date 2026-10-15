@@ -12,6 +12,7 @@
 #include <sce/debug.h>
 #include <sce/intrmgr.h>
 #include <sce/threadmgr.h>
+#include <sce/usb_regs.h>
 #include "sce/udcd_imports.h"
 #include "udcd_internal.h"
 
@@ -1587,8 +1588,9 @@ int udcdInitializeControllers(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
-		opt.paddr = bus != 1 ? 0xe40d0000 : 0xe40c0000;
-		block = ksceKernelAllocMemBlock("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+		opt.paddr = bus != 1 ? USB_DEVICE2_REG_BASE : USB_DEVICE1_REG_BASE;
+		block = ksceKernelAllocMemBlock("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, USB_REG_SIZE,
+						 &opt);
 		if (block < 0 || ksceKernelGetMemBlockBase(block, &base) < 0) {
 			result = SCE_UDCD_ERROR_WAIT_TIMEOUT;
 			goto cleanup;
