@@ -803,7 +803,9 @@ int sceKernelAddressSpaceCtrSetObjectHeap(AddressSpaceObject *as, ObjectHeap *he
 {
 	AddressSpaceContext *context;
 
-	if (as == NULL || heap == NULL)
+	if (as == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (heap == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	AddressSpaceRefer(as);
 	context = as->context;
