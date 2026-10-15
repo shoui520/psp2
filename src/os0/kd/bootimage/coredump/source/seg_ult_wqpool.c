@@ -49,7 +49,7 @@ static int _writeSegs(SegIf *segment)
 	SceUInt32 count;
 	CoredumpNoteHeader header;
 	CoredumpUltWaitingQueueResourcePoolInfo info;
-	SceUInt32 *ids, *cursor;
+	SceUInt32 *ids;
 	SceUInt32 remaining, skip, batch, i;
 	int result;
 
@@ -77,12 +77,10 @@ static int _writeSegs(SegIf *segment)
 	for (skip = 0; skip < count; skip += 1024) {
 		batch = remaining;
 		batch = batch < 1024 ? batch : 1024;
-		cursor = ids;
-		i = 0;
 		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 5);
-		for (; i != batch; ++i) {
+		for (i = 0; i != batch; ++i) {
 			oalGetUltWaitingQueueResourcePoolInfo(coredumpRun.pid,
-				*cursor++, &info);
+				ids[i], &info);
 			result = writerWrite(currentWriter, &info, sizeof(info));
 			if (result != 0)
 				goto out;
