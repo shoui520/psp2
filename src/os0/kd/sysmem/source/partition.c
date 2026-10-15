@@ -943,13 +943,12 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 {
 	AddressSpaceContext *context;
 	MemBlockObject *head, *cur, *next, *prevFree, *prev;
-	uintptr_t va;
 	SceSize size;
 	SceUInt32 merged;
 	int intr, ret;
 
 	if (block->vbase < tiny->vbase ||
-	    tiny->size < block->vbase + block->size - tiny->vbase) {
+	    block->vbase + block->size - tiny->vbase > tiny->size) {
 		SCE_DBG_PRINTF(0xb, 3576, "pBlockTarget=%p failed, pPart=%p[%s],nBlock=%d\n", block,
 			       tiny, tiny->name, tiny->blockCount & 0xffff);
 		SCE_DBG_ASSERT_FAIL(3577);
@@ -962,16 +961,15 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 		TinyPartitionShowNoAnchor(tiny, block);
 
 	/* to the block, along the free list while it stays below it */
-	va = block->vbase;
 	prevFree = head;
 	cur = MemBlockGetFreeNextRaw(head);
-	if (!(cur->vbase < va && cur != head))
+	if (!(cur->vbase < block->vbase && cur != head))
 		cur = head->next;
 	while (cur != head) {
 		while (cur->code == 0) {
 			next = MemBlockGetFreeNextRaw(cur);
 			prevFree = cur;
-			if (va <= next->vbase)
+			if (block->vbase <= next->vbase)
 				goto step;
 			if (next == head) {
 				cur = cur->next;
