@@ -60,7 +60,7 @@ static inline int VirPageAllocPhyPageDivide(VirPage *vp, void *partition, void *
 {
 	VirPage *cur = vp, *prev;
 	struct PhyPage *page;
-	uintptr_t va = vp->vbase;
+	uintptr_t va;
 	SceSize chunk = 0x100000, want = rest, size;
 	int ret;
 
@@ -70,6 +70,7 @@ static inline int VirPageAllocPhyPageDivide(VirPage *vp, void *partition, void *
 			       PhyMemPartGetFreeSizeInternal(phyPart));
 		goto failed;
 	}
+	va = vp->vbase;
 	while (rest != 0) {
 		if (chunk >= 0x100000 && rest >= 0x100000) {
 			want = rest & 0xfff00000;
@@ -159,9 +160,11 @@ int VirPageAllocPhyPage(VirPage *vp, void *partition, void *phyPart, VirPage **o
 		size = vp->size;
 		if (vp->flags & VIRPAGE_ROUND_UP) {
 			if (size < 0x100000) {
-				size = 1u << (31 - __builtin_clz(size));
-				if (vp->size != size)
-					size <<= 1;
+				SceSize pow2 = 1u << (31 - __builtin_clz(size));
+
+				if (size != pow2)
+					pow2 <<= 1;
+				size = pow2;
 			} else {
 				size = (size + 0xfffff) & 0xfff00000;
 			}
