@@ -1072,26 +1072,25 @@ int PartitionFreeMemBlockWithBaseRaw(Partition *partition, MemBlockObject *block
 int TinyPartitionCutFreeMemBlockRaw(TinyPartition *tiny, const SceSize *size, SceUInt32 attr,
 				    MemBlockObject *block, SceSize offset, MemBlockObject **out)
 {
-	MemBlockObject *cur = block;
 	int ret;
 
 	if (attr & 0x8000000)
 		offset = *size * (((block->size - offset) >> (31 - __builtin_clz(*size))) - 1) + offset;
 	if (offset != 0) {
-		ret = TinyPartitionSplitFreeMemBlockRaw(tiny, block, offset, &cur);
+		ret = TinyPartitionSplitFreeMemBlockRaw(tiny, block, offset, &block);
 		if (ret < 0)
 			return ret;
 	}
-	if (*size < cur->size) {
-		ret = TinyPartitionSplitFreeMemBlockRaw(tiny, cur, *size, NULL);
+	if (*size < block->size) {
+		ret = TinyPartitionSplitFreeMemBlockRaw(tiny, block, *size, NULL);
 		if (ret < 0)
 			return ret;
-	} else if (*size != cur->size) {
-		*out = cur;
+	} else if (*size != block->size) {
+		*out = block;
 		return 0;
 	}
-	MemBlockUnlinkFreeRaw(cur);
-	*out = cur;
+	MemBlockUnlinkFreeRaw(block);
+	*out = block;
 	return 0;
 }
 

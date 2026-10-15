@@ -234,7 +234,7 @@ static inline void MemBlockSetFreeNextRaw(MemBlockObject *block, MemBlockObject 
 static inline void MemBlockSetFreePrevRaw(MemBlockObject *block, MemBlockObject *prev)
 {
 	SCE_DBG_ASSERT_CHECK_FUNC(block->code == 0, 587, "MemBlockSetFreePrevRaw");
-	SCE_DBG_ASSERT_CHECK_FUNC(prev->code == 0, 588, "MemBlockSetFreePrevRaw");
+	SCE_DBG_ASSERT_CHECK_FUNC(prev == NULL || prev->code == 0, 588, "MemBlockSetFreePrevRaw");
 	block->freePrev = prev;
 }
 
