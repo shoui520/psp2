@@ -2667,6 +2667,7 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	void **work, ThreadmgrLwMutexWork **lwMutexWork)
 {
 	SceUID guid;
+	ThreadmgrLwMutexWork *mutexWork;
 	SceUInt32 lwMutexId;
 	uint8_t uidBytes[4];
 
@@ -2681,9 +2682,10 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	guid = kscePUIDtoGUID(pid, lwCondId);
 	if (guid < 0 || ksceKernelGetLwCondInfo(guid, &cond) < 0)
 		return;
-	memset(uidBytes, 0, sizeof(uidBytes));
-	if (ksceKernelIsAccessibleRangeProc(pid, 16, &cond.lwMutexWork->uid, 4) == 0)
-		ksceKernelCopyFromUserProc(pid, uidBytes, &cond.lwMutexWork->uid, 4);
+	__builtin_memset(uidBytes, 0, sizeof(uidBytes));
+	mutexWork = cond.lwMutexWork;
+	if (ksceKernelIsAccessibleRangeProc(pid, 16, &mutexWork->uid, 4) == 0)
+		ksceKernelCopyFromUserProc(pid, uidBytes, &mutexWork->uid, 4);
 	lwMutexId = uidBytes[0] + ((SceUInt32)uidBytes[1] << 8) +
 		((SceUInt32)uidBytes[2] << 16) + ((SceUInt32)uidBytes[3] << 24);
 	info->lwCondId = lwCondId;
