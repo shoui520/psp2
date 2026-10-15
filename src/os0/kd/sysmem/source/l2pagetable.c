@@ -103,10 +103,10 @@ void L2PageTableUnreserve(L2PageTable *l2pt, SceSize size)
 static inline SceUInt32 L2PageTableSharedType(const Partition *partition,
 					      SceUInt32 type, uintptr_t va)
 {
-	const AddressSpaceContext *context = partition->tiny.context;
+	const L1PageTable *l1pt = partition->tiny.context->l1pt;
 
 	/* below the L1 split (TTBR0, user space) mappings are shared */
-	if (!(type & L2PT_TYPE_SHARED) && va < context->l1pt->split)
+	if (!(type & L2PT_TYPE_SHARED) && va < l1pt->split)
 		type |= L2PT_TYPE_SHARED;
 	return type;
 }
