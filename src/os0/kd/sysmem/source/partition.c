@@ -2701,7 +2701,7 @@ int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **b
 int PartitionFreeMemBlock(Partition *partition, MemBlockObject *block)
 {
 	MemBlockObject *base = NULL;
-	MemBlockBaseInfo *info = NULL;
+	MemBlockBaseInfo *info = NULL, *cur;
 	Partition *part2;
 	int ret;
 
@@ -2715,42 +2715,37 @@ int PartitionFreeMemBlock(Partition *partition, MemBlockObject *block)
 	}
 	SCE_DBG_ASSERT_CHECK(partition == block->partition, 7015);
 	ret = PartitionFreeMemBlockWithBaseRaw(partition, block, &base, (void **)&info);
-	while (base != NULL || info != NULL) {
-		block = base;
+	/* the blocks freeing this one released, while they are zombies */
+	for (block = base, cur = info; block != NULL || cur != NULL;
+	     block = base, cur = info) {
 		base = NULL;
-		{
-			MemBlockBaseInfo *cur = info;
-
-			info = NULL;
-			if (cur != NULL)
-				block = cur->block;
-			MemBlockDecMapRef(block);
-			if (MemBlockGetMapRef(block) != 0 || !(block->flags & MEMBLOCK_FLAG_ZOMBIE)) {
-				if (cur != NULL)
-					ksceKernelFree(cur);
-				break;
-			}
-			part2 = block->partition;
-			if (part2->tiny.magic != TINY_PARTITION_MAGIC) {
-				SCE_PRINTF_WITH_INFO(0xb, 7057, "pPart2=%p[%s] is deleted\n", part2,
-						     part2->tiny.name);
-				if (cur != NULL)
-					ksceKernelFree(cur);
-				break;
-			}
-			if (cur == NULL) {
-				ret = PartitionFreeMemBlockWithBaseRaw(partition == part2 ? partition :
-								       part2, block, &base,
-								       (void **)&info);
-			} else {
-				ret = PIDFreeMemBlock(cur, &base, (void **)&info);
-				if (ret < 0)
-					SCE_DBG_PRINTF(0xb, 7065, "PIDFreeMemBlock(%p) failed 0x%08x\n",
-						       cur, ret);
-				ksceKernelFree(cur);
-			}
+		info = NULL;
+		if (cur != NULL)
+			block = cur->block;
+		MemBlockDecMapRef(block);
+		if (MemBlockGetMapRef(block) != 0 || !(block->flags & MEMBLOCK_FLAG_ZOMBIE))
+			goto done;
+		part2 = block->partition;
+		if (part2->tiny.magic != TINY_PARTITION_MAGIC) {
+			SCE_PRINTF_WITH_INFO(0xb, 7057, "pPart2=%p[%s] is deleted\n", part2,
+					     part2->tiny.name);
+			goto done;
+		}
+		if (cur == NULL) {
+			ret = PartitionFreeMemBlockWithBaseRaw(partition == part2 ? partition : part2,
+							       block, &base, (void **)&info);
+		} else {
+			ret = PIDFreeMemBlock(cur, &base, (void **)&info);
+			if (ret < 0)
+				SCE_DBG_PRINTF(0xb, 7065, "PIDFreeMemBlock(%p) failed 0x%08x\n", cur,
+					       ret);
+			ksceKernelFree(cur);
 		}
 	}
+	return ret;
+done:
+	if (cur != NULL)
+		ksceKernelFree(cur);
 	return ret;
 }
 
