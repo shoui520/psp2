@@ -400,33 +400,44 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
 				if (!ksceSblACIsSystemProgram(impersonateId) &&
 				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
-					SCE_DBG_PRINTF(0xf, 538, "error : sceIoIoctl() failed\n");
-					SCE_DBG_PRINTF(0xf, 539, "impersonateId = 0x%08x\n", impersonateId);
-					SCE_DBG_PRINTF(0xf, 541, "sceSblACMgrIsSystemProgram() = %d\n",
-						       ksceSblACIsSystemProgram(impersonateId));
-					SCE_DBG_PRINTF(0xf, 543, "sceSblACMgrIsKernelProgram() = %d\n",
-						       ksceSblACMgrIsRootProgram2(impersonateId));
-					SCE_DBG_PRINTF(0xf, 544, "cmd=%x\n", cmd);
+					SCE_DBG_PRINTF_FUNC(0xf, 538, "sceIoIoctl",
+							    "error : sceIoIoctl() failed\n");
+					SCE_DBG_PRINTF_FUNC(0xf, 539, "sceIoIoctl",
+							    "impersonateId = 0x%08x\n", impersonateId);
+					SCE_DBG_PRINTF_FUNC(0xf, 541, "sceIoIoctl",
+							    "sceSblACMgrIsSystemProgram() = %d\n",
+							    ksceSblACIsSystemProgram(impersonateId));
+					SCE_DBG_PRINTF_FUNC(0xf, 543, "sceIoIoctl",
+							    "sceSblACMgrIsKernelProgram() = %d\n",
+							    ksceSblACMgrIsRootProgram2(impersonateId));
+					SCE_DBG_PRINTF_FUNC(0xf, 544, "sceIoIoctl",
+							    "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
 			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
 				   ksceSblACMgrIsRootProgram2(impersonateId)) {
-				SCE_DBG_PRINTF(0xf, 551, "error : sceIoIoctl() failed!\n");
-				SCE_DBG_PRINTF(0xf, 552, "impersonateId = 0x%08x\n", impersonateId);
-				SCE_DBG_PRINTF(0xf, 554, "sceSblACMgrIsSystemProgram() = %d\n",
-					       ksceSblACIsSystemProgram(impersonateId));
-				SCE_DBG_PRINTF(0xf, 556, "sceSblACMgrIsKernelProgram() = %d\n",
-					       ksceSblACMgrIsRootProgram2(impersonateId));
-				SCE_DBG_PRINTF(0xf, 557, "cmd=%x\n", cmd);
+				SCE_DBG_PRINTF_FUNC(0xf, 551, "sceIoIoctl",
+						    "error : sceIoIoctl() failed!\n");
+				SCE_DBG_PRINTF_FUNC(0xf, 552, "sceIoIoctl",
+						    "impersonateId = 0x%08x\n", impersonateId);
+				SCE_DBG_PRINTF_FUNC(0xf, 554, "sceIoIoctl",
+						    "sceSblACMgrIsSystemProgram() = %d\n",
+						    ksceSblACIsSystemProgram(impersonateId));
+				SCE_DBG_PRINTF_FUNC(0xf, 556, "sceIoIoctl",
+						    "sceSblACMgrIsKernelProgram() = %d\n",
+						    ksceSblACMgrIsRootProgram2(impersonateId));
+				SCE_DBG_PRINTF_FUNC(0xf, 557, "sceIoIoctl", "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;
 			}
 		}
 		if (cmd & IOFILEMGR_IOCTL_DISABLED) {
-			SCE_DBG_PRINTF(0xf, 564, "error : sceIoIoctl() failed!\n");
-			SCE_DBG_PRINTF(0xf, 565, "impersonateId = 0x%08x\n", impersonateId);
-			SCE_DBG_PRINTF(0xf, 566, "cmd=%x\n", cmd);
+			SCE_DBG_PRINTF_FUNC(0xf, 564, "sceIoIoctl",
+					    "error : sceIoIoctl() failed!\n");
+			SCE_DBG_PRINTF_FUNC(0xf, 565, "sceIoIoctl",
+					    "impersonateId = 0x%08x\n", impersonateId);
+			SCE_DBG_PRINTF_FUNC(0xf, 566, "sceIoIoctl", "cmd=%x\n", cmd);
 			sceSyscallLeave(tls);
 			return SCE_ERROR_ERRNO_EUNSUP;
 		}
@@ -436,33 +447,44 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
 				if (!ksceSblACIsSystemProgram(impersonateId) &&
 				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
-					SCE_DBG_PRINTF(0xf, 577, "error : sceIoIoctl() failed\n");
-					SCE_DBG_PRINTF(0xf, 578, "impersonateId = 0x%08x\n", impersonateId);
-					SCE_DBG_PRINTF(0xf, 580, "sceSblACMgrIsSystemProgram() = %d\n",
-						       ksceSblACIsSystemProgram(impersonateId));
-					SCE_DBG_PRINTF(0xf, 582, "sceSblACMgrIsKernelProgram() = %d\n",
-						       ksceSblACMgrIsRootProgram2(impersonateId));
-					SCE_DBG_PRINTF(0xf, 583, "cmd=%x\n", cmd);
+					SCE_DBG_PRINTF_FUNC(0xf, 577, "sceIoIoctl",
+							    "error : sceIoIoctl() failed\n");
+					SCE_DBG_PRINTF_FUNC(0xf, 578, "sceIoIoctl",
+							    "impersonateId = 0x%08x\n", impersonateId);
+					SCE_DBG_PRINTF_FUNC(0xf, 580, "sceIoIoctl",
+							    "sceSblACMgrIsSystemProgram() = %d\n",
+							    ksceSblACIsSystemProgram(impersonateId));
+					SCE_DBG_PRINTF_FUNC(0xf, 582, "sceIoIoctl",
+							    "sceSblACMgrIsKernelProgram() = %d\n",
+							    ksceSblACMgrIsRootProgram2(impersonateId));
+					SCE_DBG_PRINTF_FUNC(0xf, 583, "sceIoIoctl",
+							    "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
 			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
 				   ksceSblACMgrIsRootProgram2(impersonateId)) {
-				SCE_DBG_PRINTF(0xf, 590, "error : sceIoIoctl() failed!\n");
-				SCE_DBG_PRINTF(0xf, 591, "impersonateId = 0x%08x\n", impersonateId);
-				SCE_DBG_PRINTF(0xf, 593, "sceSblACMgrIsSystemProgram() = %d\n",
-					       ksceSblACIsSystemProgram(impersonateId));
-				SCE_DBG_PRINTF(0xf, 595, "sceSblACMgrIsKernelProgram() = %d\n",
-					       ksceSblACMgrIsRootProgram2(impersonateId));
-				SCE_DBG_PRINTF(0xf, 596, "cmd=%x\n", cmd);
+				SCE_DBG_PRINTF_FUNC(0xf, 590, "sceIoIoctl",
+						    "error : sceIoIoctl() failed!\n");
+				SCE_DBG_PRINTF_FUNC(0xf, 591, "sceIoIoctl",
+						    "impersonateId = 0x%08x\n", impersonateId);
+				SCE_DBG_PRINTF_FUNC(0xf, 593, "sceIoIoctl",
+						    "sceSblACMgrIsSystemProgram() = %d\n",
+						    ksceSblACIsSystemProgram(impersonateId));
+				SCE_DBG_PRINTF_FUNC(0xf, 595, "sceIoIoctl",
+						    "sceSblACMgrIsKernelProgram() = %d\n",
+						    ksceSblACMgrIsRootProgram2(impersonateId));
+				SCE_DBG_PRINTF_FUNC(0xf, 596, "sceIoIoctl", "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;
 			}
 		}
 		if (cmd & IOFILEMGR_IOCTL_DISABLED) {
-			SCE_DBG_PRINTF(0xf, 603, "error : sceIoIoctl() failed!\n");
-			SCE_DBG_PRINTF(0xf, 604, "impersonateId = 0x%08x\n", impersonateId);
-			SCE_DBG_PRINTF(0xf, 605, "cmd=%x\n", cmd);
+			SCE_DBG_PRINTF_FUNC(0xf, 603, "sceIoIoctl",
+					    "error : sceIoIoctl() failed!\n");
+			SCE_DBG_PRINTF_FUNC(0xf, 604, "sceIoIoctl",
+					    "impersonateId = 0x%08x\n", impersonateId);
+			SCE_DBG_PRINTF_FUNC(0xf, 605, "sceIoIoctl", "cmd=%x\n", cmd);
 			sceSyscallLeave(tls);
 			return SCE_ERROR_ERRNO_EUNSUP;
 		}
@@ -479,7 +501,8 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 	}
 	sceSyscallLeave(tls);
 	if (ret < 0)
-		SCE_DBG_PRINTF_LEVEL(2, 0xf, 631, "call org ret = %d 0x%08x\n", ret, ret);
+		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 631, "sceIoIoctl",
+					  "call org ret = %d 0x%08x\n", ret, ret);
 	return ret;
 }
 
@@ -748,18 +771,18 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 				if (!ksceSblACIsSystemProgram(impersonateId) &&
 				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1121, "sceIoDevctl",
-							  "error : sceIoDevctl() failed\n");
+								  "error : sceIoDevctl() failed\n");
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1122, "sceIoDevctl",
-							  "impersonateId = 0x%08x\n",
-						       impersonateId);
+								  "impersonateId = 0x%08x\n",
+								  impersonateId);
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1124, "sceIoDevctl",
-							  "sceSblACMgrIsSystemProgram() = %d\n",
-						       ksceSblACIsSystemProgram(impersonateId));
+								  "sceSblACMgrIsSystemProgram() = %d\n",
+								  ksceSblACIsSystemProgram(impersonateId));
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1126, "sceIoDevctl",
-							  "sceSblACMgrIsKernelProgram() = %d\n",
-						       ksceSblACMgrIsRootProgram2(impersonateId));
+								  "sceSblACMgrIsKernelProgram() = %d\n",
+								  ksceSblACMgrIsRootProgram2(impersonateId));
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1127, "sceIoDevctl",
-							  "cmd=%x\n", cmd);
+								  "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
@@ -879,7 +902,7 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1291, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
-				     ret, ret);
+					  ret, ret);
 		return ret;
 	}
 	if (dst == NULL)
@@ -891,7 +914,7 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1317, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
-				     ret, ret);
+					  ret, ret);
 		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, vector);
 		return ret;
 	}
@@ -926,11 +949,11 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 				fdnum[i] = ret;
 				total += ret;
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1374, "sceIoGetPUIDFdListForDebugger",
-						     "pid=0x%x fdnum[%d]=%d num=%d ret=%d\n", pid, i,
-						     ret, num, ret);
+							  "pid=0x%x fdnum[%d]=%d num=%d ret=%d\n", pid, i,
+							  ret, num, ret);
 			} else {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1369, "sceIoGetPUIDFdListForDebugger",
-						     "scePUIDGetUIDVectorByClass failed ... 0x%x %d\n", ret, ret);
+							  "scePUIDGetUIDVectorByClass failed ... 0x%x %d\n", ret, ret);
 				fdnum[i] = 0;
 			}
 		} else {
@@ -953,12 +976,12 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 						  fdnum[i], &num);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1407, "sceIoGetPUIDFdListForDebugger",
-					     "scePUIDGetUIDVectorByClass failed ... 0x%x %d\n", ret, ret);
+						  "scePUIDGetUIDVectorByClass failed ... 0x%x %d\n", ret, ret);
 			continue;
 		}
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1410, "sceIoGetPUIDFdListForDebugger",
 					  "fdnum[%d]=%d num=%d ret=%d\n", i, fdnum[i], num,
-				     ret);
+					  ret);
 		for (j = 0; j < (int)num; j++) {
 			dst[total + j].fd = readbuf[total + j];
 			dst[total + j].pid = pid;
@@ -970,7 +993,7 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	} else {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1430, "sceIoGetPUIDFdListForDebugger",
 					  "readbuf=%p size=0x%x\n", dst,
-				     max_size * sizeof(SceUID));
+					  max_size * sizeof(SceUID));
 		*res_size = max_size;
 	}
 	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, readbuf);

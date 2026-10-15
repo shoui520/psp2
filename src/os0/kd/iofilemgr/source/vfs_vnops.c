@@ -877,8 +877,8 @@ int ksceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 					vp->core.bc = bc;
 				else if (err != SCE_ERROR_ERRNO_ENOMEM)
 					SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1636, "sceVopOpen",
-							     "vfsBuffAllocate() failed ... %d 0x%x\n",
-							     ret, ret);
+								  "vfsBuffAllocate() failed ... %d 0x%x\n",
+								  ret, ret);
 			}
 			if (ksceKernelCheckDipsw(0xd2) != 0)
 				vfs_debug_path_create(file, path->path);
@@ -948,8 +948,8 @@ int ksceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 			err = vfsBuffFree(bc, vp->core.mnt->state != VFS_MOUNT_STATE_MOUNTED, vp, file);
 			if (err < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1782, "sceVopClose",
-							 "vfsBuffFree() failed ... 0x%x %d %p\n",
-							 err, err, vp);
+							  "vfsBuffFree() failed ... 0x%x %d %p\n",
+							  err, err, vp);
 				goto fail;
 			}
 			vp->core.bc = NULL;
@@ -967,8 +967,8 @@ int ksceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 						  file);
 				if (err < 0) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1818, "sceVopClose",
-							     "vfsBuffFree() failed ... 0x%x %d %p\n", err,
-							     err, vp);
+								  "vfsBuffFree() failed ... 0x%x %d %p\n", err,
+								  err, vp);
 					goto fail;
 				}
 				vp->core.bc = NULL;
@@ -1180,16 +1180,16 @@ int ksceVopWrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nb
 				err = vfsBuffDataFlushAll(vp->core.bc, vp, file);
 				if (err < 0) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2148, "sceVopWrite",
-							     "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
-							     err, err, vp);
+								  "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
+								  err, err, vp);
 					VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_WRITE + 1, 3, vp, err, *result);
 					return err;
 				}
 				err = vfsBuffIoFlush(vp->core.bc, vp, file);
 				if (err < 0) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2157, "sceVopWrite",
-							     "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
-							     err, err, vp);
+								  "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
+								  err, err, vp);
 					VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_WRITE + 1, 3, vp, err, *result);
 					return err;
 				}
@@ -1331,16 +1331,16 @@ int ksceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize n
 		err = vfsBuffDataFlushAll(bc, vp, file);
 		if (err < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2469, "sceVopPwrite",
-						 "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
-						 err, err, vp);
+						  "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
+						  err, err, vp);
 			VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_PWRITE + 1, 3, vp, err, *result);
 			return err;
 		}
 		err = vfsBuffIoFlush(bc, vp, file);
 		if (err < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2478, "sceVopPwrite",
-						 "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
-						 err, err, vp);
+						  "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
+						  err, err, vp);
 			VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_PWRITE + 1, 3, vp, err, *result);
 			return err;
 		}
@@ -1425,7 +1425,7 @@ int ksceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode
 	int (*op)(SceVopMkdirArgs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(dvp) == 1, 2656);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(dvp) == 1, 2656, "sceVopMkdir");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR, 3, dvp, mode, path->path);
 	if (dvp->core.state >= SCE_VNODE_STATE_INACTIVE) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
@@ -1445,7 +1445,7 @@ int ksceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode
 		args.mode = mode;
 		ret = op(&args);
 		if (ret == 0)
-			SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(*vpp) == 1, 2687);
+			SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(*vpp) == 1, 2687, "sceVopMkdir");
 		vfs_set_mnt_sync_request(dvp->core.mnt);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, ret);
@@ -1459,8 +1459,8 @@ int ksceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 
 	int (*op)(SceVopRmdirArgs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(dvp) == 1, 2728);
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 2729);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(dvp) == 1, 2728, "sceVopRmdir");
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2729, "sceVopRmdir");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR, 3, dvp, flags, path->path);
 	if (dvp->core.state >= SCE_VNODE_STATE_INACTIVE || vp->core.state >= SCE_VNODE_STATE_INACTIVE) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
@@ -1490,7 +1490,7 @@ int ksceVopInactive(SceVfsVnode *vp)
 	SceVopInactiveArgs args;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 2795);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2795, "sceVopInactive");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_INACTIVE, 1, vp);
 	if (ops->vop_inactive == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
@@ -1543,8 +1543,8 @@ int ksceVopRemove(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32
 	int ret;
 
 	if (dvp != NULL)
-		SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(dvp) == 1, 2916);
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 2918);
+		SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(dvp) == 1, 2916, "sceVopRemove");
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2918, "sceVopRemove");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_REMOVE, 3, dvp, flags, path->path);
 	if (dvp == NULL) {
 		mnt = vp->core.mnt;
@@ -1586,10 +1586,10 @@ int ksceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, Sce
 	int (*op)(SceVopRenameArgs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(odvp) == 1, 3019);
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(ovp) == 1, 3020);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(odvp) == 1, 3019, "sceVopRename");
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(ovp) == 1, 3020, "sceVopRename");
 	if (ndvp != NULL)
-		SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(ndvp) == 1, 3022);
+		SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(ndvp) == 1, 3022, "sceVopRename");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME, 3, odvp, old_path->path, new_path->path);
 	if (odvp->core.state >= SCE_VNODE_STATE_INACTIVE || ovp->core.state >= SCE_VNODE_STATE_INACTIVE ||
 	    (ndvp != NULL && ndvp->core.state >= SCE_VNODE_STATE_INACTIVE)) {
@@ -1612,7 +1612,7 @@ int ksceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, Sce
 		args.new_path = new_path;
 		ret = op(&args);
 		if (ret == 0)
-			SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(*nvpp) == 1, 3071);
+			SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(*nvpp) == 1, 3071, "sceVopRename");
 		vfs_set_mnt_sync_request(ovp->core.mnt);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME + 1, 2, odvp, ret);
@@ -1625,7 +1625,7 @@ int ksceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 	int (*op)(SceVopDopenAgrs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3108);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3108, "sceVopDopen");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN, 2, vp, path->path);
 	if (vp->core.state >= SCE_VNODE_STATE_INACTIVE) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN + 1, 2, vp, SCE_ERROR_ERRNO_EPERM);
@@ -1652,7 +1652,7 @@ int ksceVopDread(SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir)
 	int (*op)(SceVopDreadArgs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3163);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3163, "sceVopDread");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DREAD, 2, vp, dir);
 	if (dir == NULL) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DREAD + 1, 2, vp, SCE_ERROR_ERRNO_EINVAL);
@@ -1687,7 +1687,7 @@ int ksceVopDclose(SceVfsVnode *vp, SceVfsFile *file)
 	int (*op)(SceVopDcloseArgs *argp);
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3224);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3224, "sceVopDclose");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DCLOSE, 1, vp);
 	ret = vfs_get_file_closed_error(file);
 	if (ret < 0) {
@@ -1720,7 +1720,7 @@ int ksceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 	int invalidate = 0, refetch = 0;
 	int ret, err;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3298);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3298, "sceVopChstat");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CHSTAT, 4, vp, stat, bit, path->path);
 	if (stat == NULL) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CHSTAT + 1, 2, vp, SCE_ERROR_ERRNO_EINVAL);
@@ -1780,16 +1780,16 @@ int ksceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 			if (newSize == 0) {
 				err = vfs_buf_data_invalidate_all(bc);
 				if (err < 0)
-					SCE_DBG_PRINTF_LEVEL(1, 0xf, 3417,
-							     "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",
-							     err, err, newSize);
+					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 3417, "sceVopChstat",
+								  "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",
+								  err, err, newSize);
 				bc->ioBuffState = VFS_BUFF_LINE_INVALID;
 			} else {
 				err = vfs_buf_area_invalidate(bc, last, size - 1, vp);
 				if (err < 0)
-					SCE_DBG_PRINTF_LEVEL(1, 0xf, 3428,
-							     "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",
-							     err, err, last);
+					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 3428, "sceVopChstat",
+								  "Data buff invalidate failed ... %d 0x%x file end=0x%llx\n",
+								  err, err, last);
 				if (last < bc->ioBuffOffset ||
 				    vfs_buf_io_cached_overlaps(bc, last, size - last))
 					bc->ioBuffState = VFS_BUFF_LINE_INVALID;
@@ -1810,7 +1810,7 @@ int ksceVopIoctl(SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in_data
 	SceVopIoctlArgs args;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3484);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3484, "sceVopIoctl");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_IOCTL, 7, vp, file, cmd, in_data, in_len, out_data, out_len);
 	if (ops->vop_ioctl == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
@@ -1859,7 +1859,7 @@ int ksceVopSync(SceVfsVnode *vp, SceVfsFile *file, int flags)
 	SceVopSyncArgs args;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3592);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3592, "sceVopSync");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_SYNC, 3, vp, file, flags);
 	if (ops->vop_sync == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
@@ -1867,17 +1867,17 @@ int ksceVopSync(SceVfsVnode *vp, SceVfsFile *file, int flags)
 		if (file != NULL && vp->core.bc != NULL) {
 			ret = vfsBuffDataFlushAll(vp->core.bc, vp, file);
 			if (ret < 0) {
-				SCE_DBG_PRINTF_LEVEL(2, 0xf, 3605,
-						     "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
-						     ret, ret, vp);
+				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 3605, "sceVopSync",
+							  "vfsBuffDataFlushAll() failed ... 0x%x %d %p\n",
+							  ret, ret, vp);
 				VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_SYNC + 1, 2, vp, ret);
 				return ret;
 			}
 			ret = vfsBuffIoFlush(vp->core.bc, vp, file);
 			if (ret < 0) {
-				SCE_DBG_PRINTF_LEVEL(2, 0xf, 3614,
-						     "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
-						     ret, ret, vp);
+				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 3614, "sceVopSync",
+							  "vfsBuffIoFlush() failed ... 0x%x %d %p\n",
+							  ret, ret, vp);
 				VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_SYNC + 1, 2, vp, ret);
 				return ret;
 			}
@@ -1897,7 +1897,7 @@ int ksceVopFgetstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat)
 	SceVopFgetstatArgs args;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3655);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3655, "sceVopFgetstat");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_FGETSTAT, 3, vp, file, stat);
 	if (stat == NULL) {
 		/* Sony reports the result under the call's own event */
@@ -2022,8 +2022,8 @@ int ksceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
 	SceVopWhiteoutArgs args;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(dvp) == 1, 3910);
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3911);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(dvp) == 1, 3910, "sceVopWhiteout");
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3911, "sceVopWhiteout");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_WHITEOUT, 3, dvp, old_path->path, new_path->path);
 	if (ops->vop_whiteout == NULL) {
 		ret = SCE_ERROR_ERRNO_EUNSUP;
@@ -2053,9 +2053,9 @@ int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3
 	SceUID pid;
 	int ret, err;
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3960);
-	SCE_DBG_ASSERT(a2 == 0, 3962);
-	SCE_DBG_ASSERT(a3 == 0, 3963);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3960, "sceVopCleanup");
+	SCE_DBG_ASSERT_FUNC(a2 == 0, 3962, "sceVopCleanup");
+	SCE_DBG_ASSERT_FUNC(a3 == 0, 3963, "sceVopCleanup");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CLEANUP, 2, vp, file);
 	if (vp->core.state > 0xfff) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CLEANUP + 1, 2, vp, SCE_ERROR_ERRNO_EPERM);
@@ -2065,8 +2065,9 @@ int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3
 	if (vp->core.bc != NULL) {
 		err = vfsBuffFree(vp->core.bc, 1, vp, file);
 		if (err < 0)
-			SCE_DBG_PRINTF_LEVEL(1, 0xf, 3987, "vfsBuffFree() failed ... 0x%x %d %p\n",
-					     err, err, vp);
+			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 3987, "sceVopCleanup",
+						  "vfsBuffFree() failed ... 0x%x %d %p\n",
+						  err, err, vp);
 		vp->core.bc = NULL;
 		/* the cache goes on for the next process that still has the file open */
 		if (vp->core.fd_num > 1) {
@@ -2077,8 +2078,8 @@ int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3
 				if (pid != 0) {
 					bc = NULL;
 					if (vfs_is_cdialog_thread())
-						SCE_DBG_PRINTF_LEVEL(1, 0xf, 4016,
-								     "called by CDialog, unexpected sequence !!\n");
+						SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 4016, "sceVopCleanup",
+									  "called by CDialog, unexpected sequence !!\n");
 					err = vfsBuffAllocate(VFS_BUFF_DEFAULT_DATA_CACHE_SIZE,
 							      VFS_BUFF_DEFAULT_WAY_NUM,
 							      VFS_BUFF_DEFAULT_LINE_SIZE,
@@ -2087,9 +2088,9 @@ int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3
 					if (err == 0)
 						vp->core.bc = bc;
 					else if (err != SCE_ERROR_ERRNO_ENOMEM)
-						SCE_DBG_PRINTF_LEVEL(1, 0xf, 4030,
-								     "vfsBuffAllocate() returns %d 0x%x\n",
-								     err, err);
+						SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 4030, "sceVopCleanup",
+									  "vfsBuffAllocate() returns %d 0x%x\n",
+									  err, err);
 				}
 				break;
 			}
@@ -2115,7 +2116,7 @@ int ksceVopZerofill(SceVfsVnode *vp, SceUInt64 forwardedValue1, SceUInt64 forwar
 	SceVopZerofillArgs args;
 	int (*op)(SceVopZerofillArgs *argp);
 
-	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 4066);
+	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 4066, "sceVopZerofill");
 	op = (int (*)(SceVopZerofillArgs *))vp->core.ops->vop_verofill;
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;

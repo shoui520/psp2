@@ -1014,11 +1014,11 @@ int ksceIoCancel(SceUID uid)
 		return ret;
 	}
 	sched = sceIoSchedDispatcherGetIoScheduler(&g_schedDispatcher, event->request.mntOpt);
-	SCE_DBG_ASSERT(sched != NULL, 1550);
+	SCE_DBG_ASSERT_FUNC(sched != NULL, 1550, "sceIoCancel");
 	ret = sceIoSchedulerCancelAsyncIoRequest(sched, &event->request);
 	if (ret >= 0) {
 		released = ksceGUIDReleaseObject(uid);
-		SCE_DBG_ASSERT(released == 0, 1560);
+		SCE_DBG_ASSERT_FUNC(released == 0, 1560, "sceIoCancel");
 	}
 	sceSyscallLeave(tls);
 	return ret;

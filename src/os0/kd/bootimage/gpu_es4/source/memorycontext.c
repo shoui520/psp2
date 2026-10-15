@@ -26,8 +26,8 @@ int sceGpuInitMemoryContexts(void)
 	GpuMemoryContext *context;
 	unsigned pid;
 
-	SCE_DBG_ASSERT(kernelMemoryContext == 0, 147);
-	SCE_DBG_ASSERT(processMemoryContexts == 0, 148);
+	SCE_DBG_ASSERT_FUNC(kernelMemoryContext == 0, 147, "sceGpuMmuUnmapMemory");
+	SCE_DBG_ASSERT_FUNC(processMemoryContexts == 0, 148, "sceGpuMmuUnmapMemory");
 	pid = sceKernelGetProcessId();
 	context = AllocProcessGpuMemory(0x1028);
 	if (!context)

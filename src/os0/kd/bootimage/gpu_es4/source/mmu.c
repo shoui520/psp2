@@ -486,10 +486,11 @@ int ksceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 		offset = address & 0x3fffff;
 		length = 0x400000 - offset;
 		table = context->pageTables[directoryIndex];
-		SCE_DBG_ASSERT(table != NULL, 824);
+		SCE_DBG_ASSERT_FUNC(table != NULL, 824, "sceGpuMmuUnmapMemory");
 		if (length >= size)
 			length = size;
-		SCE_DBG_ASSERT(context->pageDirectory[directoryIndex] != 0, 830);
+		SCE_DBG_ASSERT_FUNC(context->pageDirectory[directoryIndex] != 0, 830,
+				    "sceGpuMmuUnmapMemory");
 		if ((length | offset) & ((1U << table->pageShift) - 1)) {
 			clearResult = (int)0x804c0000;
 		} else {
@@ -514,7 +515,7 @@ int ksceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 				RequestGpuPageTableCacheInvalidate();
 			clearResult = 0;
 		}
-		SCE_DBG_ASSERT(clearResult == 0, 837);
+		SCE_DBG_ASSERT_FUNC(clearResult == 0, 837, "sceGpuMmuUnmapMemory");
 		if (!sceGpuMmuCheckPageTableEntries(table, 0, 0x400000, 1, 0)) {
 			sceGpuMmuDestroyPageTable(table);
 			directoryChanged = 1;

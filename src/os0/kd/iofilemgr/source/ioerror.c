@@ -85,7 +85,7 @@ SceUID ksceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *us
 			ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
 			if (ret < 0) {
 				closed = ksceGUIDClose(uid);
-				SCE_DBG_ASSERT(closed == 0, 148);
+				SCE_DBG_ASSERT_FUNC(closed == 0, 148, "sceIoCreateErrorEvent");
 				return ret;
 			}
 			event->pattern = IOERROR_EVENT_PATTERN;
