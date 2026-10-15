@@ -350,10 +350,18 @@ void AlignCheck(uintptr_t address, SceSize size)
 {
 	SCE_DBG_PRINTF(0xb, 179, "align ? addr 0x%08x size 0x%08x\n", address, size);
 }
+#if FW_SINCE(0x04000000)
+/* 4.00 shifts the low bits out instead of masking them */
+#define MMU_ALIGN_CHECK(_address, _size, _mask) do {			\
+	if (((_address) | (_size)) << __builtin_clz(_mask))		\
+		AlignCheck((_address), (_size));				\
+} while (0)
+#else
 #define MMU_ALIGN_CHECK(_address, _size, _mask) do {			\
 	if (((_address) | (_size)) & (_mask))				\
 		AlignCheck((_address), (_size));				\
 } while (0)
+#endif
 #else
 #define MMU_ALIGN_CHECK(_address, _size, _mask)	do { } while (0)
 #endif
@@ -519,7 +527,14 @@ int sceKernelMMUL1Init(uint32_t *l1)
 	uint32_t *end;
 	int flags;
 
-	if ((uintptr_t)l1 & 0xfff) {
+/* an L1 table must be 4 KiB aligned; 4.00 tests it as the low 12 bits shifted out */
+#if FW_SINCE(0x04000000)
+#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) << 20)
+#else
+#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) & 0xfff)
+#endif
+
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 591, "l1base=%p\n", l1);
 		SCE_PANIC(592);
 	}
@@ -532,13 +547,6 @@ int sceKernelMMUL1Init(uint32_t *l1)
 	ksceKernelCpuResumeIntr(flags);
 	return 0;
 }
-
-/* an L1 table must be 4 KiB aligned; 4.00 tests it as the low 12 bits shifted out */
-#if FW_SINCE(0x04000000)
-#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) << 20)
-#else
-#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) & 0xfff)
-#endif
 
 int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa)
 {
@@ -582,7 +590,7 @@ int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, u
 	unsigned int i;
 
 	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 702);
-	if ((uintptr_t)l1 & 0xfff) {
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 705, "l1base=%p\n", l1);
 		SCE_PANIC(706);
 	}
@@ -606,7 +614,7 @@ int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintpt
 	unsigned int count = size >> 20, i;
 
 	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 900);
-	if ((uintptr_t)l1 & 0xfff) {
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 903, "l1base=%p\n", l1);
 		SCE_PANIC(904);
 	}
@@ -639,7 +647,7 @@ int sceKernelMMUUnmapSectionsWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va
 	unsigned int i;
 
 	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 988);
-	if ((uintptr_t)l1 & 0xfff) {
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 991, "l1base=%p\n", l1);
 		SCE_PANIC(992);
 	}
