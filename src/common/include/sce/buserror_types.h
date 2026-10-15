@@ -22,6 +22,9 @@ typedef struct BusErrorOcpError {
 
 #define BUSERROR_OCP_TARGETS	18
 
+/* the Main Xbar's error registers; an SI bus record carries this address */
+#define BUSERROR_MAIN_XBAR	0xec000000
+
 typedef struct BusErrorOcpInfo {
 	SceSize size;				/* up to target[] */
 	SceUInt32 status[2][3];			/* BET0, BET1, BEBT */

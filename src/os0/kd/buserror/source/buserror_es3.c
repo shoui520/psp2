@@ -214,7 +214,7 @@ int busErrorIntrHandler(int code, void *arg)
 	if (rec->siSize) {
 		si = (const void *)((const char *)rec + rec->hdrSize + rec->ocpSize);
 		bus = (const BusErrorSiBus *)(si + 1);
-		if (bus->address == 0xec000000 && (bus->flagStatus[0] & 3))
+		if (bus->address == BUSERROR_MAIN_XBAR && (bus->flagStatus[0] & 3))
 			for (;;)
 				;
 	}
@@ -238,8 +238,6 @@ int busErrorIntrHandler(int code, void *arg)
 #include "sce/sysroot.h"
 #include "buserror_smc.h"
 
-#define BUSERROR_TOLERATED_TARGET 0xec000000
-
 int busErrorIntrHandler(int code, void *arg)
 {
 	BusErrorRecord *rec;
@@ -262,7 +260,7 @@ int busErrorIntrHandler(int code, void *arg)
 	if (rec->siSize != 0) {
 		si = (const BusErrorSiInfo *)((char *)rec + rec->hdrSize + rec->ocpSize);
 		bus = (const BusErrorSiBus *)(si + 1);
-		if (bus->address == BUSERROR_TOLERATED_TARGET && (bus->flagStatus[0] & 3) != 0)
+		if (bus->address == BUSERROR_MAIN_XBAR && (bus->flagStatus[0] & 3) != 0)
 			goto hang;
 	}
 	if (!dump)

@@ -595,7 +595,7 @@ static const BusErrorOcpTarget __attribute__((unused)) ocpTargets1[] = {
 };
 
 static const BusErrorSystemBus __attribute__((unused)) systemBuses[] = {
-	{BUSERROR_NAME("Main Xbar"), 0x00000001, 0xec000000, mainXbarInitiators, mainXbarTargets},
+	{BUSERROR_NAME("Main Xbar"), 0x00000001, BUSERROR_MAIN_XBAR, mainXbarInitiators, mainXbarTargets},
 	{BUSERROR_NAME("Center Xbar"), 0x00000002, 0xec100000, centerXbarInitiators, centerXbarTargets},
 	{BUSERROR_NAME("Video Xbar"), 0x00000004, 0xec200000, videoXbarInitiators, videoXbarTargets},
 	{BUSERROR_NAME("IFTU Xbar"), 0x00000008, 0xec300000, iftuXbarInitiators, iftuXbarTargets},

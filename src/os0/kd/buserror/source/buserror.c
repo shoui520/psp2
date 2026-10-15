@@ -23,8 +23,6 @@
 
 int RegisterBusErrorHandler_ES3(void);
 
-#define BUSERROR_TOLERATED_TARGET	0xec000000
-
 /* Secure monitor hardware entry points: nine instructions, original order. */
 __asm__(
 	".syntax unified\n"
