@@ -2113,15 +2113,15 @@ static inline SceSize PhyMemPartGetPsize(PhyMemPart *part)
 /* the segments' memory back to where it came from */
 static inline void PhyMemPartDeleteRaw(PhyMemPart *part)
 {
-	PhyMemSegment *segment;
+	PhyMemSegment *segment = part->segments;
 
 	switch (PHYMEM_PART_TYPE(part)) {
 	case PHYMEM_PART_TYPE_LPDDR2:
-		for (segment = part->segments; segment != NULL; segment = segment->next)
+		for (; segment != NULL; segment = segment->next)
 			PhyMemLowMainFree(segment->pbase, segment->psize);
 		break;
 	case PHYMEM_PART_TYPE_CDRAM:
-		for (segment = part->segments; segment != NULL; segment = segment->next) {
+		for (; segment != NULL; segment = segment->next) {
 			PhyMemLowDestroy(segment->phyMemLow);
 			PhyMemLowStaticFree(segment->pbase, segment->psize);
 		}
