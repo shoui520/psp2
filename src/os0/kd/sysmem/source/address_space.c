@@ -914,13 +914,14 @@ free_context:
 static inline __attribute__((always_inline)) int CreateAddressSpaceUserMode(const AddressSpaceCreateOpt *opt,
 					     AddressSpaceObject **out)
 {
-	const AddressSpaceHeapOps *heap = opt->heap;
+	const AddressSpaceHeapOps *heap;
 	struct Partition *partition;
 	AddressSpaceObject *as;
 	SceUInt32 asid, i;
 	int ret;
 
 	asid = BitheapAlloc(s_addressSpaceGlobals->asidHeap);
+	heap = opt->heap;
 	as = heap->alloc(heap->heap, sizeof(*as));
 	if (as == NULL) {
 		SCE_DBG_ASSERT_FAIL(1962);
