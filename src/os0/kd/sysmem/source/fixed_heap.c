@@ -115,6 +115,21 @@ static inline unsigned int FixedHeapFindPage(const FixedHeap *heap, const void *
 }
 
 /* put a freed object on the free list; the heap is write locked */
+/* name unknown: FixedHeapFindPage with the bounds tested the other way round */
+static inline unsigned int FixedHeapHasObject(const FixedHeap *heap, const void *object)
+{
+	unsigned int i;
+
+	for (i = 0; i < heap->pageCount; i++) {
+		const char *page = heap->pages[i];
+
+		if (((const char *)object >= page) &
+		    ((const char *)object < page + heap->pageSize))
+			return 1;
+	}
+	return 0;
+}
+
 static inline void FixedHeapPushFree(FixedHeap *heap, void *object)
 {
 	void *tail = heap->freeTail;
@@ -509,7 +524,7 @@ int FixedHeapFreeObjectRaw(FixedHeap *heap, void *object)
 		SCE_DBG_ASSERT_FAIL(1632);
 		return SCE_KERNEL_ERROR_ERROR;
 	}
-	if (!FixedHeapFindPage(heap, object)) {
+	if (!FixedHeapHasObject(heap, object)) {
 		SCE_DBG_PRINTF(0xb, 1639, "*** Invalid pointer pFixedHeap=%p, pObject=%p\n", heap,
 			       object);
 		__breakpoint(0);
