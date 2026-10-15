@@ -473,11 +473,11 @@ static __attribute__((noinline)) int GpioInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		if (bank) {
-			opt.paddr = 0xe0100000;
+			opt.paddr = GPIO1_REG_BASE;
 			ret = ksceKernelAllocMemBlock("SceGpio1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
-			opt.paddr = 0xe20a0000;
+			opt.paddr = GPIO0_REG_BASE;
 			ret = ksceKernelAllocMemBlock("SceGpio0Reg", 0x20100806,
 				0x1000, &opt);
 		}

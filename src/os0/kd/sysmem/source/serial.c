@@ -9,11 +9,7 @@
 #include "sce/suspend.h"
 #include <sce/uart_regs.h>
 
-#define UART_PORTS			7
 #define UART_DEBUG_PORTS		3
-#define UART_REG_BASE			0xe2030000
-#define UART_REG_SIZE			0x10000
-#define UART_CLKGEN_BASE		0xe3105000
 #define UART_SUSPEND_SLOT		0x1b
 
 #define UART_STATUS_TX_READY		0x100	/* 0x28 */
@@ -34,11 +30,12 @@ UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 	{ 0, 0 }, { 0, 1 }, { 0, 6 },
 };
 /* the physical addresses until serial_remap maps them */
+#define UART_PORT_BASE(port)		(void *)(UART_REG_BASE + (port) * UART_REG_SIZE)
 static volatile UartRegs *s_uartRegs[UART_PORTS] = {
-	(void *)0xe2030000, (void *)0xe2040000, (void *)0xe2050000, (void *)0xe2060000,
-	(void *)0xe2070000, (void *)0xe2080000, (void *)0xe2090000,
+	UART_PORT_BASE(0), UART_PORT_BASE(1), UART_PORT_BASE(2), UART_PORT_BASE(3),
+	UART_PORT_BASE(4), UART_PORT_BASE(5), UART_PORT_BASE(6),
 };
-static volatile SceUInt32 *s_uartClkgen = (void *)UART_CLKGEN_BASE;
+static volatile SceUartClkgenRegisters *s_uartClkgen = (void *)UART_CLKGEN_BASE;
 
 /* the clock generator value of each baud rate index */
 static const SceUInt32 s_baudRates[] = {
@@ -160,25 +157,25 @@ void serial_set_baud_rate(unsigned int port, unsigned int baud, SceUInt32 mode,
 	rate = s_baudRates[baud];
 	switch (port) {
 	case 0:
-		s_uartClkgen[0] = rate;
+		s_uartClkgen->port[0] = rate;
 		break;
 	case 1:
-		s_uartClkgen[1] = rate;
+		s_uartClkgen->port[1] = rate;
 		break;
 	case 2:
-		s_uartClkgen[2] = rate;
+		s_uartClkgen->port[2] = rate;
 		break;
 	case 3:
-		s_uartClkgen[3] = rate;
+		s_uartClkgen->port[3] = rate;
 		break;
 	case 4:
-		s_uartClkgen[4] = rate;
+		s_uartClkgen->port[4] = rate;
 		break;
 	case 5:
-		s_uartClkgen[5] = rate;
+		s_uartClkgen->port[5] = rate;
 		break;
 	case 6:
-		s_uartClkgen[6] = rate;
+		s_uartClkgen->port[6] = rate;
 		break;
 	default:
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 135);

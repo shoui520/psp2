@@ -3,6 +3,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* The Pervasive pages' physical addresses, one 0x1000-byte page each */
+#define PERVASIVE_MISC_BASE		0xe3100000
+#define PERVASIVE_RESET_BASE		0xe3101000
+#define PERVASIVE_GATE_BASE		0xe3102000
+#define PERVASIVE_BASECLK_BASE		0xe3103000
+#define PERVASIVE_VID_BASE		0xe3104000
+/* 0xe3105000: SceUartClkgenReg, see uart_regs.h */
+#define PERVASIVE_MAILBOX_BASE		0xe3106000
+#define PERVASIVE_TAS_BASE(n)		(0xe3108000 + (n) * 0x1000)
+#define PERVASIVE2_BASE			0xe3110000
+#define PERVASIVE_PAGE_SIZE		0x1000
+
 /* ScePervasiveReset (physical 0xe3101000) and ScePervasiveGate (0xe3102000):
  * one control word per device, at the same offset in both pages. In the reset
  * page a set bit holds the device in reset; in the gate page it runs the

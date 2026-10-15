@@ -140,7 +140,7 @@ uint32_t kscePervasiveUartSetBaudrate(unsigned port, unsigned baud)
 	for (i = 0; i < sizeof(s_uartClockTable) / sizeof(s_uartClockTable[0]); i++) {
 		if (s_uartClockTable[i].baud != baud)
 			continue;
-		s_uartClock[port] = s_uartClockTable[i].value;
+		s_uartClock->port[port] = s_uartClockTable[i].value;
 		LowioDmb();
 		return 0;
 	}

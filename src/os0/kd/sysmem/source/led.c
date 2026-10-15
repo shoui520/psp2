@@ -7,23 +7,17 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "sysmem_internal.h"
 #include "sce/suspend.h"
+#include <sce/gpio_regs.h>
 
-#define LED_REG_BASE			0xe20a0000
 #define LED_GPO_SHIFT			16
 #define LED_GPO_BITS			0xff0000
 #define LED_SUSPEND_SLOT		5
-
-typedef struct LedRegs {
-	SceUInt32 reserved[2];
-	SceUInt32 set;				/* 0x08 */
-	SceUInt32 clear;			/* 0x0c */
-} LedRegs;
 
 int ksceKernelCpuId(void);
 SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt32 new_value);
 
 /* the registers' physical address until LedModuleStart maps them */
-static volatile LedRegs *s_ledRegs = (volatile LedRegs *)0xe20a0000;
+static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
 static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
 static volatile SceInt32 s_gpoMask = 0xff;
@@ -33,11 +27,11 @@ static void (*s_ledHandle1)(int a1, int a2, int a3, int a4);
 
 static inline void LedWriteGPO(SceUInt32 gpo)
 {
-	volatile LedRegs *regs = s_ledRegs;
+	volatile SceGpioRegisters *regs = s_ledRegs;
 	SceUInt32 bits = (s_gpoMask & gpo) << LED_GPO_SHIFT;
 
-	regs->clear = ~bits & LED_GPO_BITS;
-	regs->set = bits & LED_GPO_BITS;
+	regs->outputClear = ~bits & LED_GPO_BITS;
+	regs->outputSet = bits & LED_GPO_BITS;
 }
 
 /* name unknown: suspend and resume handlers */
@@ -120,7 +114,7 @@ int LedModuleStart(const struct SysmemBootContext *context)
 		return 0;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
-	opt.paddr = LED_REG_BASE;
+	opt.paddr = GPIO0_REG_BASE;
 	opt.attr = 2;
 	uid = ksceKernelAllocMemBlock("SceLedReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x10000, &opt);
 	if (uid < 0)

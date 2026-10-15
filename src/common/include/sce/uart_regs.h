@@ -4,6 +4,12 @@
 #include <stddef.h>
 #include <psp2kern/types.h>
 
+/* SceUartReg: seven ports, one 0x10000-byte window each; SceUartClkgenReg */
+#define UART_PORTS			7
+#define UART_REG_BASE			0xe2030000
+#define UART_REG_SIZE			0x10000
+#define UART_CLKGEN_BASE		0xe3105000
+
 typedef struct UartRegs {
 	SceUInt32 reserved0;
 	SceUInt32 enable;
@@ -36,3 +42,14 @@ _Static_assert(offsetof(UartRegs, transmitControl) == 0x24, "UART transmit contr
 _Static_assert(offsetof(UartRegs, interruptStatus) == 0x5c, "UART interrupt status");
 _Static_assert(offsetof(UartRegs, tx) == 0x70, "UART transmit FIFO");
 _Static_assert(offsetof(UartRegs, rx) == 0x78, "UART receive FIFO");
+
+/*
+ * SceUartClkgenReg: one clock generator word per port. Bits 17:16 select the
+ * input clock (1 = 3 MHz, 2 = ~12 MHz), bits 15:0 are the integer prescaler
+ * (0 stops the port).
+ */
+typedef struct SceUartClkgenRegisters {
+	SceUInt32 port[UART_PORTS];
+} SceUartClkgenRegisters;
+
+_Static_assert(sizeof(SceUartClkgenRegisters) == 0x1c, "UART clkgen size");

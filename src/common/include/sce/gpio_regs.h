@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* SceGpio0Reg (Sysmem maps it as SceLedReg) and SceGpio1Reg */
+#define GPIO0_REG_BASE			0xe20a0000
+#define GPIO1_REG_BASE			0xe0100000
+
 typedef struct SceGpioRegisters {
 	uint32_t portMode;
 	uint32_t input;
