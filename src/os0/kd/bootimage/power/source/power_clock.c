@@ -534,14 +534,14 @@ int kscePowerSetGpuClockFrequencyInternal(int first, int second)
 
 int powerInitializeClockRuntime(void)
 {
-	const struct PervasiveVidRegs *vid;
+	const ScePervasiveVidRegisters *vid;
 	uint32_t revision;
 	uint32_t mediaVoltage;
 	uint32_t gpuFrequency;
 
 	s_powerClockControl.hardwareInfo = ksceSysconGetHardwareInfo();
 
-	vid = (const struct PervasiveVidRegs *)ScePervasiveForDriver_47708C03();
+	vid = (const ScePervasiveVidRegisters *)ScePervasiveForDriver_47708C03();
 	s_powerClockControl.busVoltageTable[0] = vid->busVoltage[0];
 	s_powerClockControl.busVoltageTable[1] = vid->busVoltage[1];
 	s_powerClockControl.busVoltageTable[2] = vid->busVoltage[2];

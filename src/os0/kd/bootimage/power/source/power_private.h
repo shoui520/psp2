@@ -37,23 +37,6 @@
 					 POWER_CALLBACKARG_USB_POWER | \
 					 SCE_POWER_CALLBACKARG_POWERONLINE)
 
-/* ScePervasiveVid (0xe3104000, ScePervasiveForDriver_47708C03): the rail voltages */
-struct PervasiveVidRegs {
-	uint32_t reserved0;
-	uint32_t armVoltage[5];		/* 0x04 */
-	uint32_t reserved1[10];
-	uint32_t compatVoltage[2];	/* 0x40 */
-	uint32_t gpuVoltage[2];		/* 0x48 */
-	uint32_t reserved2[4];
-	uint32_t mediaVoltage[4];	/* 0x60 */
-	uint32_t reserved3[13];
-	uint32_t busVoltage[3];		/* 0xa4 */
-};
-_Static_assert(offsetof(struct PervasiveVidRegs, compatVoltage) == 0x40, "vid 0x40");
-_Static_assert(offsetof(struct PervasiveVidRegs, mediaVoltage) == 0x60, "vid 0x60");
-_Static_assert(offsetof(struct PervasiveVidRegs, busVoltage) == 0xa4, "vid 0xa4");
-
-
 #include <stdint.h>
 #include <stdbool.h>
 #include <sce/pervasive_regs.h>

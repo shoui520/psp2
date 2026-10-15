@@ -5,9 +5,11 @@
 #include <psp2kern/kernel/cpu.h>
 #include <sce/pervasive_regs.h>
 #include <sce/uart_regs.h>
+#include <sce/mailbox_regs.h>
 
 extern ScePervasiveMiscRegisters *s_misc;
-extern uint8_t *s_video, *s_mailbox;
+extern ScePervasiveVidRegisters *s_video;
+extern ScePervasiveMailboxRegisters *s_mailbox;
 extern ScePervasive2Registers *s_pervasive2;
 extern ScePervasiveResetRegisters *s_reset;
 extern ScePervasiveGateRegisters *s_gate;

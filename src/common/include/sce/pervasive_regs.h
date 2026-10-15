@@ -270,6 +270,27 @@ _Static_assert(offsetof(ScePervasiveBaseClkRegisters, dmac5Clock) == 0x1f0, "bas
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, srcClock) == 0x210, "base clock src");
 _Static_assert(sizeof(ScePervasiveBaseClkRegisters) == 0x1000, "base clock page");
 
+/* ScePervasiveVid (physical 0xe3104000): the rail voltage settings, one
+ * word per operating point, which ScePower reads into its voltage tables.
+ */
+typedef struct ScePervasiveVidRegisters {
+	uint32_t reserved0;
+	uint32_t armVoltage[5];		/* 0x04 */
+	uint32_t reserved1[10];
+	uint32_t compatVoltage[2];	/* 0x40 */
+	uint32_t gpuVoltage[2];		/* 0x48 */
+	uint32_t reserved2[4];
+	uint32_t mediaVoltage[4];	/* 0x60 */
+	uint32_t reserved3[13];
+	uint32_t busVoltage[3];		/* 0xa4 */
+	uint32_t reserved4[980];
+} ScePervasiveVidRegisters;
+
+_Static_assert(offsetof(ScePervasiveVidRegisters, compatVoltage) == 0x40, "vid compat");
+_Static_assert(offsetof(ScePervasiveVidRegisters, mediaVoltage) == 0x60, "vid media");
+_Static_assert(offsetof(ScePervasiveVidRegisters, busVoltage) == 0xa4, "vid bus");
+_Static_assert(sizeof(ScePervasiveVidRegisters) == 0x1000, "vid page");
+
 /* ScePervasive2 (physical 0xe3110000). Venezia's boot and capture windows
  * (vnz_wrapper; names ours, descriptive), the VIP and Venezia protection and
  * bus error words (named in sce/buserror_es3.h by address), and the insert and

@@ -2,7 +2,8 @@
 #include "lowio_internal.h"
 
 ScePervasiveMiscRegisters *s_misc;
-uint8_t *s_video, *s_mailbox;
+ScePervasiveVidRegisters *s_video;
+ScePervasiveMailboxRegisters *s_mailbox;
 ScePervasive2Registers *s_pervasive2;
 ScePervasiveResetRegisters *s_reset;
 ScePervasiveGateRegisters *s_gate;
