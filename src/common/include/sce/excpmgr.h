@@ -107,9 +107,16 @@ typedef struct SceExcpmgrData {
 } SceExcpmgrData;
 
 
-/* per-core trace area (the "SceVfpIntRegs" block, one 0x1000 page per core) */
+/*
+ * The "SceVfpIntRegs" block, one 0x1000 page per core (physical 0xe3320000):
+ * the running thread's VFP exception mask, which ThreadMgr switches with the
+ * thread, then ExcpMgr's trace control and waypoints.
+ */
+#define VFP_INT_REG_BASE		0xe3320000
+
 typedef struct ExcpTraceArea {
-	unsigned int reserved0[64];
+	volatile uint32_t vfpException;		/* the VFP exceptions that trap */
+	unsigned int reserved0[63];
 	unsigned int control;			/* 0x100 */
 	unsigned int reserved1[63];
 	SceExcpmgrWaypoint waypoint[32];	/* 0x200 */

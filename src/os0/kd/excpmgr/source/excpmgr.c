@@ -477,7 +477,7 @@ int Init(SceSize args, void *argp)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = 0xe3320000;
+	opt.paddr = VFP_INT_REG_BASE;
 	uid = ksceKernelAllocMemBlock(EXCP_REPORT_TEXT(vfpBlockName, "SceVfpIntRegs"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x4000, &opt);
 	if (uid < 0)
 		SCE_DBG_ASSERT_FAIL(1649);

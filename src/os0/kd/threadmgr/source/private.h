@@ -12,6 +12,7 @@
 #include "sce/process.h"
 #include "sce/sysmem.h"
 #include "sce/timer_regs.h"
+#include "sce/excpmgr.h"
 
 #include "private_errors.h"
 
@@ -461,14 +462,14 @@ static inline struct ThreadCB *currentThreadContext(void)
 	return thread;
 }
 
-/* VBAR+0x24: the word the VFP exception handler reads for the running thread */
+/* this core's VFP exception mask word, through its exception vector bank */
 static inline volatile uint32_t *currentVfpException(void)
 {
-	uintptr_t vbar;
+	volatile ExcpVectorBank *bank;
 
 	__asm__ volatile("mrc p15, 0, %0, c12, c0, 0"
-			 : "=r"(vbar) : : "memory");
-	return *(volatile uint32_t *volatile *)(vbar + 0x24);
+			 : "=r"(bank) : : "memory");
+	return &bank->trace->vfpException;
 }
 
 static inline struct ThreadMgrCpuCB *currentCpuState(void)
