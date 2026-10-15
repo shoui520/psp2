@@ -564,12 +564,22 @@ int MemBlockVirPageListUnmapRaw(MemBlockObject *block, PartitionObject *partitio
 
 /* a page's mappings changed to type */
 static inline void RemapVirPage(PartitionObject *partition, MemBlockObject *block,
-				SceUInt32 type, uintptr_t va, SceSize size, uintptr_t pa,
-				SceUInt32 flags)
+				SceUInt32 type, VirPage *vp, SceUInt32 flags)
 {
+	SceSize size = vp->size;
 	AddressSpaceContext *context = partition->tiny.context;
+	uintptr_t va, pa;
 	SceSize chunk;
 
+	if (vp->page == NULL) {
+		if (!(vp->flags & VIRPAGE_HAS_PBASE))
+			return;
+		pa = vp->pbase;
+	} else {
+		pa = VplPagePbase(vp->page);
+		vp->pbase = pa;
+	}
+	va = vp->vbase;
 	while (size != 0) {
 		chunk = VplChunk(va, pa, size);
 		if (chunk >= 0x100000) {
@@ -591,8 +601,6 @@ int MemBlockVirPageListRemapRaw(MemBlockObject *block, PartitionObject *partitio
 				SceUInt32 type, SceUInt32 flags)
 {
 	VirPage *vp;
-	uintptr_t pa;
-	SceUInt32 bit;
 
 	if (!(block->attr & MEMBLOCK_ATTR_MAPPED)) {
 		SCE_DBG_PRINTF(6, 1178, "pBlock=%p/attr=0x%08x already unmapped\n", block,
@@ -600,24 +608,19 @@ int MemBlockVirPageListRemapRaw(MemBlockObject *block, PartitionObject *partitio
 		return 0;
 	}
 	for (vp = MemBlockGetVirPageRaw(block); vp != NULL; vp = vp->next) {
-		if (VIRPAGE_TYPE(vp) - 1 < 16) {
-			bit = VIRPAGE_TYPE_BIT(VIRPAGE_TYPE(vp));
-			if (bit & (VIRPAGE_TYPES_UNMAPPED | VIRPAGE_TYPE_BIT(16)))
-				continue;
-			if (bit & VIRPAGE_TYPE_BIT(4)) {
-				if (vp->page == NULL) {
-					if (!(vp->flags & VIRPAGE_HAS_PBASE))
-						continue;
-					pa = vp->pbase;
-				} else {
-					pa = VplPagePbase(vp->page);
-					vp->pbase = pa;
-				}
-				RemapVirPage(partition, block, type, vp->vbase, vp->size, pa, flags);
-				continue;
-			}
+		switch (VIRPAGE_TYPE(vp)) {
+		case VIRPAGE_TYPE_1:
+		case VIRPAGE_TYPE_PHY:
+		case VIRPAGE_TYPE_8:
+		case VIRPAGE_TYPE_16:
+			break;
+		case VIRPAGE_TYPE_DIVIDED:
+			RemapVirPage(partition, block, type, vp, flags);
+			break;
+		default:
+			SCE_DBG_ASSERT_FAIL(1197);
+			break;
 		}
-		SCE_DBG_ASSERT_FAIL(1197);
 	}
 	return 0;
 }
