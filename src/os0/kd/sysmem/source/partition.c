@@ -842,7 +842,7 @@ static inline int TinyPartitionAllocMemBlockByAddrRaw(Partition *partition,
 
 	for (block = TinyPartitionNextCandidate(head); block != head;
 	     block = TinyPartitionNextCandidate(block)) {
-		if (block->vbase > va || command->size + (va - block->vbase) > block->size)
+		if (va < block->vbase || command->size + va - block->vbase > block->size)
 			continue;
 		if (block->code != 0) {
 			SCE_DBG_PRINTF(6, 3388,
