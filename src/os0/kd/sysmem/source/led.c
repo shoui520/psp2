@@ -26,7 +26,7 @@ SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt
 static volatile LedRegs *s_ledRegs = (volatile LedRegs *)0xe20a0000;
 static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
-static SceInt32 s_gpoMask = 0xff;
+static volatile SceInt32 s_gpoMask = 0xff;
 static SceUInt32 s_gpi;
 static void (*s_ledHandle0)(int a1, int a2, int a3, int a4);
 static void (*s_ledHandle1)(int a1, int a2, int a3, int a4);
@@ -60,11 +60,12 @@ static int LedResume(void *args)
 
 int ksceKernelSetGPOMask(SceUInt32 clear, SceUInt32 set)
 {
-	SceInt32 mask;
+	SceInt32 old, mask;
 
 	do {
-		mask = (s_gpoMask & ~clear) | set;
-		ksceKernelAtomicCompareAndSet32(&s_gpoMask, s_gpoMask, mask);
+		old = s_gpoMask;
+		mask = (~clear & old) | set;
+		ksceKernelAtomicCompareAndSet32((SceInt32 *)&s_gpoMask, old, mask);
 	} while (mask != s_gpoMask);
 	return 0;
 }
