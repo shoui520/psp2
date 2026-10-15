@@ -1131,39 +1131,36 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 		     SceUInt32 *type, SceUInt32 *attr)
 {
 	MemBlockClientInfo *client;
-	MemBlockObject *block, *current;
 	void *info = NULL;
+	MemBlockObject *block;
 	SceUInt32 i;
 	int ret;
 
-	while ((ret = GUIDReferObjectWithClassExclusive(guid, ksceKernelGetUIDMemBlockClass(),
-						       (SceObjectBase **)&block)) == SCE_KERNEL_ERROR_UID_REFER_NOT_ZERO)
-		SCE_DBG_PRINTF(0xb, 1386,
-			       "sceGUIDReferObjectWithClassIfNoRefer(0x%08x) retuens UID_REFER_NOT_ZERO\n",
-			       guid);
+	do {
+		ret = GUIDReferObjectWithClassExclusive(guid, ksceKernelGetUIDMemBlockClass(),
+							(SceObjectBase **)&block);
+		if (ret == SCE_KERNEL_ERROR_UID_REFER_NOT_ZERO)
+			SCE_DBG_PRINTF(0xb, 1386,
+				       "sceGUIDReferObjectWithClassIfNoRefer(0x%08x) retuens UID_REFER_NOT_ZERO\n",
+				       guid);
+	} while (ret == SCE_KERNEL_ERROR_UID_REFER_NOT_ZERO);
 	if (ret < 0)
 		return ret;
 	if (checkLock && MemBlockCheckLockStatusRaw(block)) {
 		GUIDReleaseObject(guid);
 		return SCE_KERNEL_ERROR_MEMBLOCK_LOCKED;
 	}
-	current = block;
 	if (attr != NULL)
-		*attr = current->attr;
-	if (type != NULL) {
-		MemBlockCode2Type(current->code, type);
-		current = block;
-	}
+		*attr = block->attr;
+	if (type != NULL)
+		MemBlockCode2Type(block->code, type);
 	if (base != NULL) {
-		MemBlockOptGetBase(current, base, &info);
-		current = block;
-		if (info != NULL) {
-			MemBlockOptClearBaseInfoRaw(current);
-			current = block;
-		}
+		MemBlockOptGetBase(block, base, &info);
+		if (info != NULL)
+			MemBlockOptClearBaseInfoRaw(block);
 	}
-	if ((current->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_CLIENT_INFO &&
-	    (client = (MemBlockClientInfo *)current->opt) != NULL) {
+	if ((block->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_CLIENT_INFO &&
+	    (client = (MemBlockClientInfo *)block->opt) != NULL) {
 		if (client->guids != NULL && client->count != 0) {
 			for (i = 0; i < client->count; i++) {
 				SCE_PRINTF_WITH_INFO(0, 1432,
@@ -1179,9 +1176,8 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 		}
 		ksceKernelFree(client);
 		MemBlockClearMapRef(block);
-		current = block;
 	}
-	ret = PartitionFreeMemBlock(current->partition, current);
+	ret = PartitionFreeMemBlock(block->partition, block);
 	if (ret < 0) {
 		GUIDReleaseObject(guid);
 		return ret;
