@@ -16,6 +16,16 @@ typedef struct CoredumpCancelContext {
 
 _Static_assert(sizeof(CoredumpCancelContext) == 8, "cancel context size");
 
+typedef struct CoredumpCorefileLayout {
+	SceUInt32 numProgramHeaders;
+	SceSize totalFileSize;
+	SceUInt64 programDataOffset;
+	SceSize processedFileSize;
+	SceUInt32 reservedSegmentCount;
+} CoredumpCorefileLayout;
+
+_Static_assert(sizeof(CoredumpCorefileLayout) == 24, "corefile layout size");
+
 Writer *currentWriter __attribute__((section(".data"))) = NULL;
 
 SceUInt32 numWritableSegments;
@@ -34,15 +44,11 @@ int useAlternateCafSegment;
 SceUInt32 numWrittenSegments;
 SceUInt32 numCalculatedSegments;
 SceUInt32 numWrittenProgramHeaders;
-SceUInt32 reservedSegmentCount;
 SceUID generatorMutexId;
 int shutdownRequested;
 int cancelRequested;
-SceSize processedFileSize;
-SceSize totalFileSize;
 SceUInt32 numAvailableSegments;
-SceUInt32 numProgramHeaders;
-SceUInt64 programDataOffset;
+CoredumpCorefileLayout corefileLayout;
 SceUInt64 corefileSizeLimit;
 CoredumpCdnPcAndLrInfo cdnLocation;
 int plaintextDumpAllowed;
@@ -431,10 +437,10 @@ int _getExitFlag(SceSize processedSize)
 		return (int)0x8001008c;
 	callback = progressCallback;
 	if (callback != NULL && cancelRequested != 1 && progressEnabled != 0) {
-		total = totalFileSize;
-		processed = processedFileSize + processedSize;
-		oldPercent = (SceUInt64)100 * processedFileSize / total;
-		processedFileSize = processed;
+		total = corefileLayout.totalFileSize;
+		processed = corefileLayout.processedFileSize + processedSize;
+		oldPercent = (SceUInt64)100 * corefileLayout.processedFileSize / total;
+		corefileLayout.processedFileSize = processed;
 		newPercent = 5 * ((SceUInt32)((SceUInt64)100 * processed / total) / 5);
 		notify = newPercent <= 99;
 		if (oldPercent - oldPercent % 5 == newPercent)
@@ -456,22 +462,22 @@ int calculateCorefileSize(void)
 	SceUInt32 index, numPhdr;
 	SceSize dataSize, nextSize, phdrSize;
 
-	numProgramHeaders = 0;
-	processedFileSize = 0;
-	totalFileSize = 52;
-	programDataOffset = 52;
-	reservedSegmentCount = 0;
+	corefileLayout.numProgramHeaders = 0;
+	corefileLayout.processedFileSize = 0;
+	corefileLayout.totalFileSize = 52;
+	corefileLayout.programDataOffset = 52;
+	corefileLayout.reservedSegmentCount = 0;
 	numWritableSegments = 0;
 	corefileSizeLimit = ~(SceUInt64)0;
 	for (index = 0; index < numAvailableSegments; ++index) {
 		segGetSize(activeSegments[index].segment, &numPhdr, &dataSize);
 		phdrSize = 32 * numPhdr;
-		nextSize = totalFileSize + dataSize + phdrSize;
+		nextSize = corefileLayout.totalFileSize + dataSize + phdrSize;
 		if (corefileSizeLimit < (SceUInt64)nextSize)
 			break;
-		totalFileSize = nextSize;
-		numProgramHeaders += numPhdr;
-		programDataOffset += phdrSize;
+		corefileLayout.totalFileSize = nextSize;
+		corefileLayout.numProgramHeaders += numPhdr;
+		corefileLayout.programDataOffset += phdrSize;
 		numWritableSegments++;
 	}
 	return 0;
@@ -672,11 +678,11 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 		if (result != 0)
 			goto restorePriority;
 		activeSegments = registeredSegments;
-		numProgramHeaders = 0;
-		totalFileSize = 0;
-		programDataOffset = 0;
-		processedFileSize = 0;
-		reservedSegmentCount = 0;
+		corefileLayout.numProgramHeaders = 0;
+		corefileLayout.totalFileSize = 0;
+		corefileLayout.programDataOffset = 0;
+		corefileLayout.processedFileSize = 0;
+		corefileLayout.reservedSegmentCount = 0;
 		numWritableSegments = 0;
 		numAvailableSegments = 50;
 		for (index = 0; index < numAvailableSegments; ++index) {
@@ -691,11 +697,11 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 			numCalculatedSegments++;
 		}
 		calculateCorefileSize();
-		utilsElf32MakeEhdr(&buffer.elfHeader, numProgramHeaders);
+		utilsElf32MakeEhdr(&buffer.elfHeader, corefileLayout.numProgramHeaders);
 		payloadResult = writerWrite(currentWriter, &buffer.elfHeader,
 			sizeof(buffer.elfHeader));
 		if (payloadResult == 0) {
-			fileOffset = programDataOffset;
+			fileOffset = corefileLayout.programDataOffset;
 			for (index = 0; index < numWritableSegments; ++index) {
 				segGetSize(activeSegments[index].segment, &numPhdr, &dataSize);
 				payloadResult = segWritePhdr(activeSegments[index].segment,
@@ -1064,9 +1070,9 @@ int generatorBeginKernelDump(SceCoredumpTriggerParam param, SceSize payloadSize)
 		++numCalculatedSegments;
 	}
 	calculateCorefileSize();
-	utilsElf32MakeEhdr(&buffer.elf, numProgramHeaders);
+	utilsElf32MakeEhdr(&buffer.elf, corefileLayout.numProgramHeaders);
 	writerWrite(currentWriter, &buffer.elf, sizeof(buffer.elf));
-	fileOffset = programDataOffset;
+	fileOffset = corefileLayout.programDataOffset;
 	for (index = 0; index < numWritableSegments; ++index) {
 		segGetSize(activeSegments[index].segment, &numPhdr, &dataSize);
 		if (segWritePhdr(activeSegments[index].segment, fileOffset) != 0)
