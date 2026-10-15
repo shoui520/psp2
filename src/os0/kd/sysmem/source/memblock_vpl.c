@@ -188,10 +188,15 @@ SceSize MemBlockVirPageListGetHeadFreeSize(MemBlockObject *block)
 	SceSize size = 0;
 
 	for (vp = MemBlockGetVirPageRaw(block); vp != NULL; vp = vp->next) {
-		if (VIRPAGE_TYPE(vp) - 1 >= 8 ||
-		    !(VIRPAGE_TYPE_BIT(VIRPAGE_TYPE(vp)) & VIRPAGE_TYPES_UNMAPPED))
+		switch (VIRPAGE_TYPE(vp)) {
+		case VIRPAGE_TYPE_1:
+		case VIRPAGE_TYPE_PHY:
+		case VIRPAGE_TYPE_8:
+			size += vp->size;
 			break;
-		size += vp->size;
+		default:
+			return size;
+		}
 	}
 	return size;
 }
@@ -203,11 +208,16 @@ SceSize MemBlockVirPageListGetTailFreeSize(MemBlockObject *block)
 	SceSize size = 0;
 
 	for (vp = MemBlockGetVirPageRaw(block); vp != NULL; vp = vp->next) {
-		if (VIRPAGE_TYPE(vp) - 1 < 8 &&
-		    (VIRPAGE_TYPE_BIT(VIRPAGE_TYPE(vp)) & VIRPAGE_TYPES_UNMAPPED))
+		switch (VIRPAGE_TYPE(vp)) {
+		case VIRPAGE_TYPE_1:
+		case VIRPAGE_TYPE_PHY:
+		case VIRPAGE_TYPE_8:
 			size += vp->size;
-		else
+			break;
+		default:
 			size = 0;
+			break;
+		}
 	}
 	return size;
 }
