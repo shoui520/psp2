@@ -13,7 +13,7 @@
 #include <sce/barrier.h>
 
 #define DBGSDIO_CHANNELS	2
-#define DBGSDIO_PADDR		0xe5810000
+#define DBGSDIO_PADDR		SDIO_WINDOW_PADDR(1)
 #define DBGSDIO_FUNCTION	1		/* the SDIO function: SceDbgSdio1 */
 #define DBGSDIO_INTR_BASE	0xb8		/* + channel */
 #define DBGSDIO_BUF_SIZE	0x11000

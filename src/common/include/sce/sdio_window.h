@@ -21,6 +21,8 @@
 
 #include <psp2kern/types.h>
 
+/* the windows' physical addresses: SceSDbgSdio0 and SceDbgSdio1 */
+#define SDIO_WINDOW_PADDR(n)	(0xe5800000 + (n) * SDIO_WINDOW_SIZE)
 #define SDIO_WINDOW_SIZE	0x10000
 
 /* the window offsets the descriptors carry (SdioWindowDesc.offset) */

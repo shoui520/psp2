@@ -22,7 +22,7 @@
 #include <sce/barrier.h>
 
 #define SDBG_SDIO_CHANNELS	4
-#define SDBG_SDIO_PADDR		0xE5800000
+#define SDBG_SDIO_PADDR		SDIO_WINDOW_PADDR(0)
 #define SDBG_SDIO_INTR_BASE	0xb0		/* + channel */
 #define SDBG_SDIO_BUF_SIZE	0x11000
 #define SDBG_SDIO_SUSPEND_IDX	0x1a
