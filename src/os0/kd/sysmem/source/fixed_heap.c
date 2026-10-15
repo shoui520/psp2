@@ -1077,14 +1077,15 @@ int SceSysmemForKernel_811C452B(FixedHeap *heap, FixedHeapObjectHook *hook)
 
 int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook)
 {
+	SceObjectBase *object;
 	FixedHeap *heap;
 	int state;
 
-	if (ksceGUIDGetObjectWithClass(uid, &s_fixedHeapClass->heapClass.cls,
-				       (SceObjectBase **)&heap) < 0) {
+	if (ksceGUIDGetObjectWithClass(uid, &s_fixedHeapClass->heapClass.cls, &object) < 0) {
 		SCE_DBG_PRINTF(0xb, 3112, "There is no 0x%08x\n", uid);
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
+	heap = (FixedHeap *)object;
 	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
 	heap->objectHook = hook;
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
