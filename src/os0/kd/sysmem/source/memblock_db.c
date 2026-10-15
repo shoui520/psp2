@@ -253,7 +253,7 @@ SceUInt32 MemBlockCode2PartitionIndex(SceUInt32 code)
 {
 	SCE_DBG_ASSERT_CHECK((code & 0xff000000) != 0, 1103);
 	if (code >> 28 == 0)
-		return (code >> 24) & 0xf;
+		return (code & 0x0f000000) >> 24;
 	return (code & 0x0f000000) ? code >> 24 : code >> 28;
 }
 
