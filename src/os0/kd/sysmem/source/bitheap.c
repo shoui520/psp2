@@ -37,9 +37,9 @@ int BitheapInit(Bitheap *heap, SceUInt32 count, SceUInt32 *buffer)
 	heap->freed = 0;
 	if (words != 0) {
 		for (i = 0; i < heap->words; i++)
-			*buffer++ = 0xffffffff;
+			buffer[i] = 0xffffffff;
 		for (i = 0; i < heap->words; i++)
-			*freed++ = 0;
+			freed[i] = 0;
 	}
 	return 0;
 }
