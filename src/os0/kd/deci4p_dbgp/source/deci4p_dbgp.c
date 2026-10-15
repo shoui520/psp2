@@ -1,12 +1,8 @@
 /*
- * SceDeci4pDbgp skeleton: export stubs.
- *
- * Generated (T2). Every body is a placeholder.
+ * SceDeci4pDbgp exports still awaiting C conversion.
  */
 
 #include "skeleton.h"
-
-STUB_MAIN(module_start)
 
 STUB(ksceDbgpGetDTraceBreakpointHandler)
 STUB(ksceDbgpSetDTraceBreakpointHandler)
