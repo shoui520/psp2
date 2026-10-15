@@ -192,7 +192,7 @@ static inline int _writeHeader(CafWriter *writer)
 	} output;
 	CafWriterSegment *segment;
 	Writer *destination;
-	SceOff position = 0;
+	SceOff position;
 	SceUInt32 index;
 	int result;
 
@@ -200,6 +200,7 @@ static inline int _writeHeader(CafWriter *writer)
 	if (writer->maxSegments != writer->numSegments)
 		return (int)0x80010016;
 	destination = writer->destination;
+	position = 0;
 	result = writerGetDestOffset(destination, &position);
 	if (result != 0)
 		return result;
