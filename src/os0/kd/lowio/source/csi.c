@@ -194,10 +194,10 @@ static const struct {
 	uint32_t cifPaddr;
 	uint32_t cifSize;
 } s_csiDevices[2] = {
-    {0xa0, "SceCsi0", "SceCsi0Reg", 0xe3050000, 0x1000, 0xa6, "SceCif0", "SceCif0Reg", 0xe3020000,
-	0x1000},
-    {0xa2, "SceCsi1", "SceCsi1Reg", 0xe3060000, 0x1000, 0xa8, "SceCif1", "SceCif1Reg", 0xe3030000,
-	0x1000},
+    {0xa0, "SceCsi0", "SceCsi0Reg", CSI_REG_BASE(0), CSI_REG_SIZE,
+	0xa6, "SceCif0", "SceCif0Reg", CIF_REG_BASE(0), CIF_REG_SIZE},
+    {0xa2, "SceCsi1", "SceCsi1Reg", CSI_REG_BASE(1), CSI_REG_SIZE,
+	0xa8, "SceCif1", "SceCif1Reg", CIF_REG_BASE(1), CIF_REG_SIZE},
 };
 
 /* name unknown */

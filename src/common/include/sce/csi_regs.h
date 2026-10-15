@@ -8,6 +8,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define CSI_REG_BASE(n)			(0xe3050000 + (n) * 0x10000)
+#define CIF_REG_BASE(n)			(0xe3020000 + (n) * 0x10000)
+#define CSI_REG_SIZE			0x1000
+#define CIF_REG_SIZE			0x1000
+
 typedef struct SceCsiRegisters {
 	volatile uint32_t enable;
 	volatile uint32_t reserved0;
