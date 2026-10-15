@@ -2188,9 +2188,13 @@ int TinyPartitionGetMemBlockInfoListByVA(TinyPartition *tiny, uintptr_t lo, uint
 int SceSysmemForKernel_AD19285A(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, SceUInt32 level,
 				MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count)
 {
-	if (tiny == NULL || count == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (tiny == NULL)
+		goto invalid;
+	if (count == NULL)
+		goto invalid;
 	return TinyPartitionGetMemBlockInfoListByVA(tiny, lo, hi, level, info, infoSize, count);
+invalid:
+	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
 
 /* sceKernelGetMemBlockInfoAll: ... also backed in [pa, pa + psize) */
@@ -2199,10 +2203,14 @@ int GetMemBlockInfoAll(TinyPartition *tiny, uintptr_t lo, uintptr_t hi, uintptr_
 		       SceUInt32 *count)
 {
 	SCE_DBG_PRINTF(0xb, 3258, "(pPart %p, level %d, pInfoBuffer %p)\n", tiny, level, info);
-	if (tiny == NULL || count == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (tiny == NULL)
+		goto invalid;
+	if (count == NULL)
+		goto invalid;
 	return TinyPartitionGetMemBlockInfoListByPA(tiny, lo, hi, pa, psize, level, info, infoSize,
 						    count);
+invalid:
+	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
 
 int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr);
