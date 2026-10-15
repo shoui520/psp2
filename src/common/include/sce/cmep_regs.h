@@ -30,8 +30,18 @@
 #define CMEP_MESSAGE_SUCCESS		0x1
 #define CMEP_MESSAGE_MAIN_INIT		0x101	/* the secure kernel started */
 #define CMEP_MESSAGE_SM_READY		0x102	/* a module can be loaded or resumed */
-#define CMEP_MESSAGE_SM_RESUMED		0x103
-#define CMEP_MESSAGE_SM_SHUT_DOWN	0x104
+#define CMEP_MESSAGE_SM_STARTED		0x103	/* run or resumed; after an exit, unloaded */
+#define CMEP_MESSAGE_SM_SHUT_DOWN	0x104	/* the module left the Cmep */
+#define CMEP_MESSAGE_SM_SUSPENDING	0x107	/* a suspend accepted */
+#define CMEP_MESSAGE_SM_KILLING		0x108	/* a soft kill accepted */
+#define CMEP_MESSAGE_SM_EXIT_FAILED	0x8029	/* the module's exit, unloading it failed */
+/* events, highest priority first */
+#define CMEP_EVENT_SM_EXITED		0x10000	/* the module returned: its result is set */
+#define CMEP_EVENT_SK_PANIC		0x20000	/* the debug area holds the message */
+#define CMEP_EVENT_SK_PRINT		0x40000	/* the debug area holds a line to print */
+#define CMEP_EVENT_FATAL1		0x100000
+#define CMEP_EVENT_FATAL2		0x200000
+#define CMEP_EVENT_FATAL3		0x400000
 
 typedef struct SceCmepMailboxRegisters {
 	/* 0x00: the Cmep's words; a write clears the bits written */

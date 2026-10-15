@@ -156,6 +156,17 @@ typedef struct SmschedIntrEntry {
 	SceUInt32 enabled;
 } SmschedIntrEntry;
 
+/* a request's area, shared with the secure module (uncached; its PA is
+ * passed to Run and Resume) */
+typedef struct SmschedArea {
+	SceInt32 result;			/* the module's exit value */
+	SceUInt32 reserved04[15];
+	SmschedMailbox mailbox;			/* 0x40: mailboxes 1-3 while off the Cmep */
+	SceUInt32 reserved58[10];
+} SmschedArea;
+
+_Static_assert(sizeof(SmschedArea) == 128, "SmschedArea");
+
 /* one of the 64 requests: a secure module and its run state */
 typedef struct SmschedRequest {
 	SmschedLink link;			/* in a run queue, the done list or the free list */
@@ -166,8 +177,7 @@ typedef struct SmschedRequest {
 	SceUInt64 arg2;
 	SceUInt32 arg3;
 	SceUInt32 arg4;
-	SceInt32 result;
-	volatile SceUInt32 state;
+	volatile SmschedIntrStatus status;	/* result and state, as the handler gets them */
 	uintptr_t areaPA;
 	SceUInt32 contextType;
 	uintptr_t vectorPA;			/* the saved context's PA vector */
@@ -183,7 +193,7 @@ typedef struct SmschedRequest {
 	SceKernelSpinlock lock;			/* inside s_lock */
 	SmschedInvokeArg invokeArg;
 	SmschedIntrEntry intr[CMEP_MAILBOXES];
-	void *volatile area;			/* 128 bytes, uncached */
+	struct SmschedArea *volatile area;	/* uncached */
 	SceUInt32 reserved;
 } SmschedRequest;
 
@@ -217,6 +227,7 @@ static inline void SmschedLinkAddTail(SmschedLink *head, SmschedLink *link)
 #define SMSCHED_NOTIFY_RUNNING			0x2
 #define SMSCHED_NOTIFY_EXITED			0x4
 #define SMSCHED_NOTIFY_KILLED			0x8
+#define SMSCHED_NOTIFY_STOPPED			0x10
 
 /* smsched.c: the mailbox operations, on the Cmep's registers (request NULL)
  * or on a request's saved mailbox */

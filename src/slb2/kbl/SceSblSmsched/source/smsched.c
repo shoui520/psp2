@@ -5,7 +5,7 @@
  * run has its mailboxes saved in its request (SmschedMailbox), which the
  * secure kernel restores when it resumes the module.
  *
- * PARTIAL: only the mailbox operations are written so far.
+ * PARTIAL: written in address order up to cry2Arm0IntHandler.
  */
 #include "smsched.h"
 #include "sce/barrier.h"
@@ -61,7 +61,7 @@ int sceSblSmSchedRegisterIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox,
 			request->intr[mailbox].arg = arg;
 			request->intr[mailbox].enabled = 1;
 			ret = 0;
-			if (mailbox != 0 && SmschedStateOnCmep(request->state))
+			if (mailbox != 0 && SmschedStateOnCmep(request->status.state))
 				ret = sceSblSmSchedEnableIntr(mailbox);
 		}
 	}
@@ -197,7 +197,7 @@ int sceSblSmSchedReleaseIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox)
 		ret = 0;
 		if (mailbox != 0) {
 			request->intr[mailbox].enabled = 0;
-			if (SmschedStateOnCmep(request->state))
+			if (SmschedStateOnCmep(request->status.state))
 				ret = sceSblSmSchedDisableIntr(mailbox);
 		}
 	}
@@ -271,7 +271,7 @@ void waitStateChange(SceUInt32 state, int *intr, SmschedRequest *request, SceUIn
 		ret = ksceKernelSpinlockLowTrylockCpuSuspendIntr(&s_lock);
 		if (ret >= 0) {
 			*intr = ret;
-			current = request->state;
+			current = request->status.state;
 			if (current != state)
 				break;
 			ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, ret);
@@ -306,7 +306,7 @@ int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp o
 		return SCE_SBL_ERROR_NO_REQUEST;
 	}
 	ksceKernelSpinlockLowLock(&request->lock);
-	state = request->state;
+	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_SUSPENDING:
 		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
@@ -378,7 +378,7 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 		return SCE_SBL_ERROR_NO_REQUEST;
 	}
 	ksceKernelSpinlockLowLock(&request->lock);
-	state = request->state;
+	state = request->status.state;
 	switch (state) {
 	case SMSCHED_STATE_SUSPENDING:
 		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
@@ -587,8 +587,8 @@ void exitRunningRequest(SceUInt32 message, int disable, volatile SmschedIntrMess
 	result = message;
 	if (message & CMEP_MESSAGE_ERROR)
 		result = SCE_SBL_ERROR_CMEP(message);
-	running->result = result;
-	running->state = SMSCHED_STATE_EXITED;
+	running->status.result = result;
+	running->status.state = SMSCHED_STATE_EXITED;
 	if (disable)
 		disableMbox123();
 	if (s_running->notifyMask & SMSCHED_NOTIFY_EXITED) {
@@ -686,7 +686,7 @@ int deleteAllRequest(int onlyProxied)
 				SmschedLinkRemove(&request->link);
 				deleteRequest(request->id);
 			} else {
-				request->state = SMSCHED_STATE_KILLED;
+				request->status.state = SMSCHED_STATE_KILLED;
 			}
 			request = (SmschedRequest *)s_runQueue[i].next;
 		}
@@ -696,7 +696,7 @@ int deleteAllRequest(int onlyProxied)
 	if (running == NULL || (onlyProxied && running->proxyId == -1)) {
 		ret = 0;
 	} else {
-		state = running->state;
+		state = running->status.state;
 		switch (state) {
 		case SMSCHED_STATE_STARTING:
 			waitStateChange(SMSCHED_STATE_STARTING, &intr, running, &state);
@@ -724,7 +724,7 @@ int deleteAllRequest(int onlyProxied)
 				deleteRequest(running->id);
 			} else {
 				ret = 0;
-				running->state = SMSCHED_STATE_KILLED;
+				running->status.state = SMSCHED_STATE_KILLED;
 			}
 			break;
 		case SMSCHED_STATE_STOPPING:
@@ -758,7 +758,7 @@ int deleteAllRequest(int onlyProxied)
 			SmschedLinkRemove(&request->link);
 			deleteRequest(request->id);
 		} else {
-			request->state = SMSCHED_STATE_KILLED;
+			request->status.state = SMSCHED_STATE_KILLED;
 		}
 		request = (SmschedRequest *)s_doneList.next;
 	}
@@ -865,7 +865,7 @@ void reschedule(void)
 
 	running = s_running;
 	if (running == NULL) {
-		request->state = SMSCHED_STATE_STARTING;
+		request->status.state = SMSCHED_STATE_STARTING;
 		switch (request->contextType) {
 		case SMSCHED_CONTEXT_NEW:
 		case 4:
@@ -902,24 +902,24 @@ void reschedule(void)
 
 	/* back to the head of its queue */
 	SmschedLinkAddTail(queue->next, &request->link);
-	if (running->state == SMSCHED_STATE_STARTING ||
-	    running->state == SMSCHED_STATE_SUSPENDING ||
-	    running->state == SMSCHED_STATE_STOPPING ||
-	    running->state == SMSCHED_STATE_KILLING ||
-	    running->state == SMSCHED_STATE_EXITED ||
-	    running->state == SMSCHED_STATE_STOPPED ||
-	    running->state == SMSCHED_STATE_KILLED ||
-	    running->state == SMSCHED_STATE_READY ||
-	    running->state == SMSCHED_STATE_PREEMPTING ||
-	    running->state == SMSCHED_STATE_SOFT_KILLING ||
-	    running->state == SMSCHED_STATE_EXITING)
+	if (running->status.state == SMSCHED_STATE_STARTING ||
+	    running->status.state == SMSCHED_STATE_SUSPENDING ||
+	    running->status.state == SMSCHED_STATE_STOPPING ||
+	    running->status.state == SMSCHED_STATE_KILLING ||
+	    running->status.state == SMSCHED_STATE_EXITED ||
+	    running->status.state == SMSCHED_STATE_STOPPED ||
+	    running->status.state == SMSCHED_STATE_KILLED ||
+	    running->status.state == SMSCHED_STATE_READY ||
+	    running->status.state == SMSCHED_STATE_PREEMPTING ||
+	    running->status.state == SMSCHED_STATE_SOFT_KILLING ||
+	    running->status.state == SMSCHED_STATE_EXITING)
 		return;
-	if (running->state != SMSCHED_STATE_RUNNING)
+	if (running->status.state != SMSCHED_STATE_RUNNING)
 		SCE_PANIC(1966);
 	if (request->priority >= running->priority)
 		return;
 
-	running->state = SMSCHED_STATE_PREEMPTING;
+	running->status.state = SMSCHED_STATE_PREEMPTING;
 	opt.size = sizeof(opt);
 	opt.mmapKind = 0;
 	opt.align = 64;
@@ -964,4 +964,256 @@ free:
 	sceKernelFreeUncacheHeapMemoryForTZS(vector);
 fail:
 	SCE_PANIC(1987);
+}
+
+/* acknowledge a message or event of the secure kernel */
+static inline void SmschedAckMessage(SceUInt32 bits)
+{
+	CMEP_MAILBOX_REG(cry2Arm[0]) = bits;
+	SmschedFlushWord(&CMEP_MAILBOX_REG(cry2Arm[0]));
+}
+
+static inline void enableMbox123(void)
+{
+	int mailbox;
+
+	for (mailbox = 1; mailbox < CMEP_MAILBOXES; mailbox++) {
+		if (s_running->intr[mailbox].enabled) {
+			if (sceSblSmSchedEnableIntr(mailbox) < 0)
+				SCE_PANIC(2353);
+		}
+	}
+}
+
+/*
+ * Interrupt 200: a message or event of the secure kernel about the running
+ * module moves its request on (see SMSCHED_STATE_*), reported to the
+ * Non-secure kernel as notifyMask asks; a module off the Cmep lets the next
+ * request run.
+ */
+int cry2Arm0IntHandler(int intrCode, void *userCtx)
+{
+	volatile SmschedIntrMessage message;
+	SmschedIntrHandler handler;
+	SmschedRequest *running;
+	SceUInt32 reg, msg;
+	void *arg;
+	int intr, ret, disable;
+
+	(void)intrCode;
+	(void)userCtx;
+	message.channel = 0;
+	message.id = -1;
+	message.flags = 0;
+	message.eventBits = 0;
+	message.ack = 0;
+	message.status.result = 0;
+	message.status.state = 0;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	reg = CMEP_MAILBOX_REG(cry2Arm[0]);
+	if (reg & CMEP_EVENT_SK_PRINT) {
+		SCE_DBG_PRINTF(0, 2077, "s:%s", (const char *)s_instance->debugArea);
+		SmschedAckMessage(CMEP_EVENT_SK_PRINT);
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		return -1;
+	}
+	if (reg & CMEP_EVENT_SK_PANIC) {
+		SCE_PRINTF_WITH_INFO(0, 2092, "s:%s", (const char *)s_instance->debugArea);
+		SmschedAckMessage(CMEP_EVENT_SK_PANIC);
+		SCE_PANIC(2098);
+	}
+
+	if (reg & CMEP_EVENT_SM_EXITED)
+		msg = CMEP_EVENT_SM_EXITED;
+	else if (reg & CMEP_MESSAGE_MASK)
+		msg = reg & CMEP_MESSAGE_MASK;
+	else if (reg & CMEP_EVENT_FATAL1)
+		msg = CMEP_EVENT_FATAL1;
+	else if (reg & CMEP_EVENT_FATAL2)
+		msg = CMEP_EVENT_FATAL2;
+	else if (reg & CMEP_EVENT_FATAL3)
+		msg = CMEP_EVENT_FATAL3;
+	else
+		SCE_PANIC(2070);
+
+	if (msg & CMEP_EVENT_FATAL1) {
+		SCE_PRINTF_WITH_INFO(0, 2102, "s:%s", (const char *)s_instance->debugArea);
+		SmschedAckMessage(msg);
+		SCE_PANIC(2108);
+	}
+	if (msg & CMEP_EVENT_FATAL2) {
+		SCE_PRINTF_WITH_INFO(0, 2112, "s:%s", (const char *)s_instance->debugArea);
+		SmschedAckMessage(msg);
+		SCE_PANIC(2118);
+	}
+	if (msg & CMEP_EVENT_FATAL3) {
+		SCE_PRINTF_WITH_INFO(0, 2122, "s:%s", (const char *)s_instance->debugArea);
+		SmschedAckMessage(CMEP_EVENT_FATAL3);
+		SCE_PANIC(2128);
+	}
+	SmschedAckMessage(msg);
+
+	if (s_running == NULL)
+		SCE_PANIC(2145);
+	handler = NULL;
+	arg = NULL;
+	switch (s_running->status.state) {
+	case SMSCHED_STATE_STARTING:
+		if (s_running->contextType == SMSCHED_CONTEXT_PREEMPTED)
+			freeRequestContext(s_running);
+		if (msg == CMEP_EVENT_SM_EXITED) {
+			s_running->status.state = SMSCHED_STATE_EXITING;
+			s_running->status.result = s_running->area->result;
+			handler = s_running->intr[0].handler;
+			arg = s_running->intr[0].arg;
+			message.id = s_running->proxyId;
+			message.flags |= MSG_CALL_HANDLER;
+			message.status = s_running->status;
+		} else if (msg == CMEP_MESSAGE_SM_STARTED) {
+			s_running->status.state = SMSCHED_STATE_RUNNING;
+			handler = s_running->intr[0].handler;
+			arg = s_running->intr[0].arg;
+			message.id = s_running->proxyId;
+			message.flags |= MSG_CALL_HANDLER;
+			message.status = s_running->status;
+			enableMbox123();
+			if (s_running->notifyMask & SMSCHED_NOTIFY_RUNNING) {
+				message.id = s_running->proxyId;
+				message.flags |= MSG_SET_EVENT;
+				message.eventBits |= SMSCHED_EVENT_STATE;
+			}
+			goto reschedule;
+		} else {
+			exitRunningRequest(msg, 1, &message);
+			handler = s_running->intr[0].handler;
+			arg = s_running->intr[0].arg;
+			message.id = s_running->proxyId;
+			message.flags |= MSG_CALL_HANDLER;
+			message.status = s_running->status;
+			running = s_running;
+			SmschedLinkAddTail(&s_doneList, &running->link);
+		}
+		break;
+	case SMSCHED_STATE_SUSPENDING:
+		if (msg != CMEP_MESSAGE_SM_SHUT_DOWN) {
+			disable = 0;
+			goto exit;
+		}
+		s_running->status.state = SMSCHED_STATE_READY;
+		if (s_running->notifyMask & SMSCHED_NOTIFY_READY) {
+			message.id = s_running->proxyId;
+			message.flags |= MSG_SET_EVENT;
+			message.eventBits |= SMSCHED_EVENT_STATE;
+		}
+		/* back to the head of its queue */
+		running = s_running;
+		SmschedLinkAddTail(s_runQueue[running->priority].next, &running->link);
+		break;
+	case SMSCHED_STATE_READY:
+	case SMSCHED_STATE_EXITED:
+	case SMSCHED_STATE_KILLED:
+	case SMSCHED_STATE_STOPPED:
+		if (msg != CMEP_MESSAGE_SM_READY)
+			SCE_PANIC(2297);
+		s_running = NULL;
+		goto reschedule;
+	case SMSCHED_STATE_RUNNING:
+		if (msg == CMEP_EVENT_SM_EXITED) {
+			s_running->status.state = SMSCHED_STATE_EXITED;
+			disableMbox123();
+			if (s_running->notifyMask & SMSCHED_NOTIFY_EXITED) {
+				message.id = s_running->proxyId;
+				message.flags |= MSG_SET_EVENT;
+				message.eventBits |= SMSCHED_EVENT_DONE;
+				message.eventBits |= SMSCHED_EVENT_STATE;
+			}
+			s_running->status.result = s_running->area->result;
+			running = s_running;
+			SmschedLinkAddTail(&s_doneList, &running->link);
+			break;
+		}
+		if (msg != CMEP_MESSAGE_SM_SHUT_DOWN)
+			SCE_PANIC(2199);
+killed:
+		s_running->status.state = SMSCHED_STATE_KILLED;
+		disableMbox123();
+		if (s_running->notifyMask & SMSCHED_NOTIFY_KILLED)
+			goto notify;
+		goto done;
+	case SMSCHED_STATE_STOPPING:
+		if (msg == CMEP_EVENT_SM_EXITED)
+			goto exiting;
+		if (msg != CMEP_MESSAGE_SM_SHUT_DOWN)
+			goto exit1;
+		s_running->status.state = SMSCHED_STATE_STOPPED;
+		disableMbox123();
+		if (s_running->notifyMask & SMSCHED_NOTIFY_STOPPED)
+			goto notify;
+		goto done;
+	case SMSCHED_STATE_KILLING:
+		if (msg != CMEP_MESSAGE_SM_SHUT_DOWN)
+			goto exit1;
+		goto killed;
+	case SMSCHED_STATE_EXITING:
+		if (msg != CMEP_MESSAGE_SM_STARTED && msg != CMEP_MESSAGE_SM_EXIT_FAILED)
+			SCE_PANIC(2278);
+		s_running->status.state = SMSCHED_STATE_EXITED;
+		disableMbox123();
+		if (s_running->notifyMask & SMSCHED_NOTIFY_EXITED)
+			goto notify;
+		goto done;
+	case SMSCHED_STATE_PREEMPTING:
+		if (msg == CMEP_EVENT_SM_EXITED)
+			goto exiting;
+		if (msg != CMEP_MESSAGE_SM_SUSPENDING)
+			goto exit1;
+		s_running->status.state = SMSCHED_STATE_SUSPENDING;
+		disableMbox123();
+		break;
+	case SMSCHED_STATE_SOFT_KILLING:
+		if (msg == CMEP_EVENT_SM_EXITED)
+			goto exiting;
+		if (msg == CMEP_MESSAGE_SM_KILLING) {
+			s_running->status.state = SMSCHED_STATE_KILLING;
+			break;
+		}
+		goto exit1;
+	default:
+		SCE_PANIC(2304);
+	}
+	goto out;
+
+exiting:
+	/* the module returned; the secure kernel unloads it */
+	s_running->status.state = SMSCHED_STATE_EXITING;
+	s_running->status.result = s_running->area->result;
+	goto out;
+reschedule:
+	reschedule();
+	goto out;
+exit1:
+	disable = 1;
+exit:
+	exitRunningRequest(msg, disable, &message);
+	goto done;
+notify:
+	message.id = s_running->proxyId;
+	message.flags |= MSG_SET_EVENT;
+	message.eventBits |= SMSCHED_EVENT_DONE;
+	message.eventBits |= SMSCHED_EVENT_STATE;
+done:
+	running = s_running;
+	SmschedLinkAddTail(&s_doneList, &running->link);
+out:
+	if (message.id != -1) {
+		if (sendIntrMessage((const SmschedIntrMessage *)&message) < 0)
+			SCE_PANIC(2314);
+		ret = -2;
+	} else {
+		ret = message.id;
+	}
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	if (handler != NULL)
+		handler(message.id, 0, arg, message.status.state, message.status.result);
+	return ret;
 }
