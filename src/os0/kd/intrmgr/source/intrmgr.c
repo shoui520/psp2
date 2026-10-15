@@ -928,14 +928,14 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	SceKernelAllocMemBlockKernelOpt options = {
 		.size = 0x58,
 		.attr = 2,
-		.paddr = 0x1a000000,
+		.paddr = PERIPH_REG_BASE,
 	};
 	void *base;
 	int result, cpu;
 
 	(void)arglen;
 	(void)argp;
-	result = ksceKernelAllocMemBlock(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x2000, &options);
+	result = ksceKernelAllocMemBlock(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2250, INTR_TEXT(g_intrAllocateIntcRegisterAreaFailedX, "allocate intc register area failed. 0x%08x\n"), result);
 		SCE_DBG_ASSERT_FAIL(2251);
