@@ -462,9 +462,9 @@ int MemBlockPartialAllocPhyPage(MemBlockObject *block, SceKernelAllocMemBlockCom
 	if ((command->opt.attr & ALLOC_ATTR_HAS_EXTRA_LOW) && command->opt.extraLow != 0) {
 		done = PartialInfoNullRange(info, 0, units, command->opt.extraLow);
 		units += done;
-		if (command->opt.attr & ALLOC_ATTR_HAS_EXTRA_LOW)
-			low = command->opt.extraLow;
 	}
+	if (command->opt.attr & ALLOC_ATTR_HAS_EXTRA_LOW)
+		low = command->opt.extraLow;
 	if (command->opt.attr & ALLOC_ATTR_HAS_EXTRA_HIGH)
 		high = command->opt.extraHigh;
 	for (rest = command->size - low - high; rest != 0; rest -= info->unitSize) {
