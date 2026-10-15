@@ -164,10 +164,12 @@ static inline void MMUWritePTE(volatile uint32_t *pte, uint32_t value)
 /* TLB maintenance after an unmap: user space for every ASID */
 static inline void MMUInvalidateTLBEntry(uintptr_t va, uint32_t asid)
 {
-	if (va < 0x40000000)
-		writeTlbimvaais((va >> 12) << 12);
+	uintptr_t page = va >> 12;
+
+	if (va >= 0x40000000)
+		writeTlbimvais(asid | page << 12);
 	else
-		writeTlbimvais(asid | (va >> 12) << 12);
+		writeTlbimvaais(page << 12);
 }
 
 #define MMU_DSB()	dsb()
