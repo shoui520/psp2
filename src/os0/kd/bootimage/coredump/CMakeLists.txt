@@ -63,6 +63,7 @@ psp2_module(os0_kd_bootimage_coredump KIND kernel PARTIAL SOURCES
 	source/seg_simple_event.c
 	source/kernel_dump.c
 	source/utils.c
+	source/caf.c
 	source/coredump.c
 	source/user_data.c
 	source/object_cache.c

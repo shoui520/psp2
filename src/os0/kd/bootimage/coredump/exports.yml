@@ -17,12 +17,12 @@ SceCoredump:
         - SceCoredumpForDriver_10863B61: 0x10863B61
         - SceCoredumpForDriver_12392973: 0x12392973
         - SceCoredumpForDriver_13EF8516: 0x13EF8516
-        - ksceCoredumpCafContextCreate: 0x2964AD0A
+        - sceCoredumpCafContextCreate: 0x2964AD0A
         - sceKernelCoredumpCancelForDriver: 0x340856F7
         - ksceCoredumpCafHeaderFinal: 0x65AA4991
         - ksceCoredumpCafHeaderInit: 0x7C8120C5
         - ksceCoredumpCafInit: 0x9336009B
-        - ksceCoredumpCafContextDestroy: 0x95402BF3
+        - sceCoredumpCafContextDestroy: 0x95402BF3
         - sceCoredumpTrigger: 0xA7D214A7
         - ksceCoredumpDeleteCrashReportCaf: 0xAD070837
         - ksceCoredumpCafHeaderTransform: 0xAE2C2793
