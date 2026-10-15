@@ -2400,10 +2400,8 @@ int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, 
 	} else {
 		ret = PartitionFindL2PageTable(partition, va, size, flags | PARTITION_MAP_LOCKED,
 					       &l2pt);
-		if (ret < 0)
-			ret = PartitionL2CAllocL2PageTableRaw(partition, va,
-							      flags | PARTITION_MAP_LOCKED, &l2pt);
-		if (ret >= 0)
+		if (ret >= 0 || (ret = PartitionL2CAllocL2PageTableRaw(partition, va,
+					flags | PARTITION_MAP_LOCKED, &l2pt)) >= 0)
 			ret = L2PageTableUnmapPages(l2pt, (SceUInt8)context->mmu.contextId, va, size,
 						    mode);
 	}
