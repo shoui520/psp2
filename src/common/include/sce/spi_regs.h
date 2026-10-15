@@ -8,6 +8,9 @@
 
 #define SPI_INT_RX_NOT_EMPTY	0x200
 
+/* SceSpi<n>Reg physical addresses */
+#define SPI_REG_BASE(n)		(0xe0a00000 + (n) * 0x10000)
+
 typedef struct SceSpiRegisters {
 	uint32_t receive;			/* SPI_RXFIFO */
 	uint32_t transmit;			/* SPI_TXFIFO */

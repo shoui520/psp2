@@ -12,6 +12,12 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* IFTU <n> (0, 1) occupies three pages: plane A, plane B, then its IFTUC */
+#define IFTU_REG_BASE(n)		(0xe5020000 + (n) * 0x10000)
+#define IFTU_PAGE_BASE(n, page)	(IFTU_REG_BASE(n) + (page) * 0x1000)
+#define IFTUC_REG_BASE(n)		(IFTU_REG_BASE(n) + 0x2000)
+#define IFTU2_REG_BASE			0xe5040000
+
 /* Source and destination of one configuration bank. */
 typedef struct SceIftuBufferRegisters {
 	uint32_t address[3];			/* source planes 0..2 */

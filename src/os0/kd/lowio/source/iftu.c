@@ -722,10 +722,10 @@ static const struct {
 	const char *controlName;
 	uint32_t controlPaddr;
 } s_iftuDevices[5] = {
-	{ 0xcc, "SceIftu0a", "SceIftu0RegA", 0xe5020000, "SceIftuc0Reg", 0xe5022000 },
-	{ 0xcd, "SceIftu0b", "SceIftu0RegB", 0xe5021000, NULL, 0xe5022000 },
-	{ 0xce, "SceIftu1a", "SceIftu1RegA", 0xe5030000, "SceIftuc1Reg", 0xe5032000 },
-	{ 0xcf, "SceIftu1b", "SceIftu1RegB", 0xe5031000, NULL, 0xe5032000 },
+	{ 0xcc, "SceIftu0a", "SceIftu0RegA", IFTU_PAGE_BASE(0, 0), "SceIftuc0Reg", IFTUC_REG_BASE(0) },
+	{ 0xcd, "SceIftu0b", "SceIftu0RegB", IFTU_PAGE_BASE(0, 1), NULL, IFTUC_REG_BASE(0) },
+	{ 0xce, "SceIftu1a", "SceIftu1RegA", IFTU_PAGE_BASE(1, 0), "SceIftuc1Reg", IFTUC_REG_BASE(1) },
+	{ 0xcf, "SceIftu1b", "SceIftu1RegB", IFTU_PAGE_BASE(1, 1), NULL, IFTUC_REG_BASE(1) },
 	{ 0xff, "SceIftu2", "SceIftu2Reg", 0xe5040000, NULL, 0 },
 };
 

@@ -41,7 +41,7 @@ int motionSpiInitialize(int clockDivider, uint16_t delay,
 	motionSpi.configuration = 0;
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
-	option.paddr = 0xe0a10000;
+	option.paddr = SPI_REG_BASE(1);
 	option.attr = 2;
 	result = ksceKernelAllocMemBlock("SceSpi1Reg", 0x20100806,
 		0x1000, &option);

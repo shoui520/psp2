@@ -865,7 +865,7 @@ static int sysconInitialize(void)
 	ksceGpioSetIntrMode(0, 4, 3);
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
-	options.paddr = 0xe0a00000;
+	options.paddr = SPI_REG_BASE(0);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	result = ksceKernelAllocMemBlock("SceSpi0Reg",
 					 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,

@@ -1,5 +1,8 @@
 /* BSOD privately maps IFTU, GPIO and SPI during startup. */
 #include "bsod_internal.h"
+#include <sce/gpio_regs.h>
+#include <sce/iftu_regs.h>
+#include <sce/spi_regs.h>
 
 uint8_t *s_bsodIftu[3];
 uint8_t *s_bsodSyscon[2];
@@ -30,7 +33,7 @@ int _sceKernelBsodIftuInit(int dolce)
 		memset(&options, 0, sizeof(options));
 		options.size = sizeof(options);
 		options.attr = 2;
-		options.paddr = 0xe5020000 + dolce * 0x10000 + i * 0x1000;
+		options.paddr = IFTU_PAGE_BASE(dolce, i);
 		uid = ksceKernelAllocMemBlock(names[dolce][i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					    0x1000, &options);
 		if (uid < 0) {
@@ -50,7 +53,7 @@ int _sceKernelBsodIftuInit(int dolce)
 int _sceKernelBsodSysconInit(void)
 {
 	static const char *const names[2] = { "SceBsodGpio0", "SceBsodSpi0" };
-	static const uint32_t physical[2] = { 0xe20a0000, 0xe0a00000 };
+	static const uint32_t physical[2] = { GPIO0_REG_BASE, SPI_REG_BASE(0) };
 	SceKernelAllocMemBlockKernelOpt options;
 	void *base;
 	unsigned i;

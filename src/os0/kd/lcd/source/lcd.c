@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include "sce/sysmem.h"
 #include "sce/sysevent.h"
+#include <sce/spi_regs.h>
 #include "sce/lcd.h"
 
 #if FW_VERSION >= 0x04000000
@@ -41,7 +42,7 @@ extern int ksceI2cTransferWrite(int bus, int address, const void *data, unsigned
 
 static unsigned spiDepth, ready, txBits, txValue;
 static uint16_t panelId, panelRevision, scriptRevision;
-static volatile uint32_t *spi;
+static volatile SceSpiRegisters *spi;
 static int spiUid;
 static unsigned char script[0x80];
 static unsigned synchronous;
@@ -70,9 +71,9 @@ static void spiBegin(void) /* name unknown */
 {
 	if (!spiDepth) {
 		kscePervasiveSpiClockEnable(2);
-		while (spi[10])
-			(void)spi[0];
-		spi[2] = 0x30001;
+		while (spi->receiveCount)
+			(void)spi->receive;
+		spi->control = 0x30001;
 	}
 	spiDepth++;
 }
@@ -82,9 +83,9 @@ static void spiBits(unsigned word, unsigned bits) /* name unknown */
 	txValue |= word << txBits;
 	txBits += bits;
 	while (txBits >= 16) {
-		while (spi[11] == 0x7f)
+		while (spi->transmitCount == 0x7f)
 			;
-		spi[1] = txValue & 0xffff;
+		spi->transmit = txValue & 0xffff;
 		txValue >>= 16;
 		txBits -= 16;
 	}
@@ -94,11 +95,11 @@ static void spiPad(void) /* name unknown */
 {
 	while (txBits)
 		spiBits(0, 9);
-	spi[4] = 1;
-	while (spi[11])
+	spi->enable = 1;
+	while (spi->transmitCount)
 		;
-	spi[4] = 0;
-	while (spi[4] & 1)
+	spi->enable = 0;
+	while (spi->enable & 1)
 		;
 }
 
@@ -108,16 +109,16 @@ static void spiEnd(void) /* name unknown */
 		return;
 	while (txBits)
 		spiBits(0, 9);
-	spi[4] = 1;
-	while (spi[11])
+	spi->enable = 1;
+	while (spi->transmitCount)
 		;
-	while (spi[10])
-		(void)spi[0];
-	spi[4] = 0;
-	while (spi[4] & 1)
+	while (spi->receiveCount)
+		(void)spi->receive;
+	spi->enable = 0;
+	while (spi->enable & 1)
 		;
-	spi[2] = 0x30001;
-	(void)spi[2];
+	spi->control = 0x30001;
+	(void)spi->control;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 }
@@ -129,9 +130,9 @@ static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name
 	if (!length)
 		return;
 	do {
-		while (!spi[10])
+		while (!spi->receiveCount)
 			;
-		value |= spi[0] << bits;
+		value |= spi->receive << bits;
 		bits += 16;
 		if (skip) {
 			if (bits <= skip) {
@@ -567,11 +568,11 @@ static void setupSpi(void) /* name unknown */
 {
 	kscePervasiveSpiResetDisable(2);
 	kscePervasiveSpiClockEnable(2);
-	spi[2] = 0x30001;
-	spi[5] = 15;
-	spi[3] = 4;
-	spi[8] = 0;
-	(void)spi[8];
+	spi->control = 0x30001;
+	spi->dmaControl = 15;
+	spi->intControl = 4;
+	spi->mode = 0;
+	(void)spi->mode;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 	ksceGpioSetPortMode(0, 0, 0);
@@ -613,7 +614,7 @@ int module_start(unsigned arglen, void *argp)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = 0xe0a20000;
+	opt.paddr = SPI_REG_BASE(2);
 	ret = ksceKernelAllocMemBlock("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
 		return 1;
