@@ -562,7 +562,7 @@ int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va)
 	}
 	pte = &l1[va >> 20];
 	if (MMU_L1_TYPE(*pte) != MMU_L1_TYPE_PAGE_TABLE)
-		SCE_PANIC_PRINTF(670, "Error:PTE[0x%08x] is illegal state (!=L2)\n", *pte);
+		SCE_PANIC_PRINTF(670, "Error:PTE[0x%08x] is illegal state (!=L2)\n", va);
 	MMUWritePTE(pte, MMU_L1_FAULT);
 	MMU_DSB();
 	return 0;
