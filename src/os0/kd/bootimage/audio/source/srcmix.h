@@ -6,6 +6,13 @@
 #include <sce/dmacmgr.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 
+/* The three sample-rate converter/mixers' 4 KiB windows (SceSrcMix<n>Reg). */
+#define SRCMIX_REG_STRIDE	0x10000
+#define SRCMIX_REG_BASE(n)	(0xe04a0000 + (n) * SRCMIX_REG_STRIDE)
+#define SRCMIX_REG_SIZE		0x1000
+/* SrcMix0's mixed output, which the capture DMA reads */
+#define SRCMIX0_OUTPUT_DATA	(SRCMIX_REG_BASE(0) + 0x240)
+
 /* Observed registers in each mapped 4 KiB SrcMix window. */
 struct AudioSrcMixRegisters {
 	volatile uint32_t command;

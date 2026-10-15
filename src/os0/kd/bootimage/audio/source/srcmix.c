@@ -196,8 +196,8 @@ int audioBuildCaptureDmaTags(struct AudioDmaState *state)
 		changeBlockSize = 0x800000;
 		blockSize = 0x800010;
 	} else if (mode == 1) {
-		state->captureTags[1].dst = (void *)0xe04d8000;
-		state->captureTags[0].dst = (void *)0xe04d8000;
+		state->captureTags[1].dst = (void *)SPDIF_DATA;
+		state->captureTags[0].dst = (void *)SPDIF_DATA;
 		command |= 0xd80000;
 		changeLength = 0x55000200;
 		changeBlockSize = 0x1000000;
@@ -1199,7 +1199,7 @@ int audioInitializeSrcMix(void)
 	SceKernelAllocMemBlockOptKernel option;
 	struct AudioDmaState *state;
 	struct AudioSrcMixRegisters *registers;
-	uintptr_t physicalAddress = 0xe04a0000;
+	uintptr_t physicalAddress = SRCMIX_REG_BASE(0);
 	unsigned int channel = 0;
 	unsigned int operation;
 	uint32_t status, started;
@@ -1210,10 +1210,10 @@ int audioInitializeSrcMix(void)
 	if (audioClockRegisters == NULL) {
 		memset(&option, 0, sizeof(option));
 		option.size = sizeof(option);
-		option.paddr = 0xe04dc000;
+		option.paddr = ACLKGEN_REG_BASE;
 		option.attr = 2;
 		result = ksceKernelAllocMemBlock("SceAclkgenReg", 0x20100806,
-			4096, &option);
+			ACLKGEN_REG_SIZE, &option);
 		if (result >= 0)
 			ksceKernelGetMemBlockBase(result, (void **)&audioClockRegisters);
 	}
@@ -1231,7 +1231,7 @@ int audioInitializeSrcMix(void)
 			option.attr = 2;
 			option.paddr = physicalAddress;
 			snprintf(name, sizeof(name), "SceSrcMix%dReg", channel);
-			result = ksceKernelAllocMemBlock(name, 0x20100806, 4096, &option);
+			result = ksceKernelAllocMemBlock(name, 0x20100806, SRCMIX_REG_SIZE, &option);
 			if (result < 0)
 				return result;
 			ksceKernelGetMemBlockBase(result, (void **)&state->registers);
@@ -1372,14 +1372,14 @@ nextChannel:
 			return -1;
 		++channel;
 		++state;
-		physicalAddress += 0x10000;
+		physicalAddress += SRCMIX_REG_STRIDE;
 	} while (channel != 3);
 	state = &audioDmaStates[0];
 	state->sourceMode = -1;
-	audioDmaStates[1].transfers[1].tags[0].src = (const void *)0xe04a0240;
+	audioDmaStates[1].transfers[1].tags[0].src = (const void *)SRCMIX0_OUTPUT_DATA;
 	state->captureTags[0].dst = audioDmaStates[1].transfers[1].tags[0].dst;
 	state->captureTags[1].dst = audioDmaStates[1].transfers[1].tags[0].dst;
-	audioDmaStates[1].transfers[1].tags[1].src = (const void *)0xe04a0240;
+	audioDmaStates[1].transfers[1].tags[1].src = (const void *)SRCMIX0_OUTPUT_DATA;
 	audioSetHardwareTransferMode(0, 0);
 	audioDmaStates[1].sourceMode = -1;
 	audioSetHardwareTransferMode(1, 0);

@@ -3,6 +3,10 @@
 
 #include <stdint.h>
 
+/* The audio clock generator's 4 KiB window (SceAclkgenReg). */
+#define ACLKGEN_REG_BASE	0xe04dc000
+#define ACLKGEN_REG_SIZE	0x1000
+
 struct AudioClockDivider {
 	uint16_t sampleRate;
 	uint16_t divider;

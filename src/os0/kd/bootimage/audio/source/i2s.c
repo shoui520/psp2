@@ -25,8 +25,8 @@ const uint8_t audioI2sInterrupt[8] = { 193, 194, 196, 0, 0, 0, 0, 0 };
 const uint8_t audioI2sClockPort[8] = { 3, 3, 5, 3, 5, 5, 0, 3 };
 
 const uintptr_t audioI2sPhysicalAddress[8] = {
-	0xe0420000, 0xe0430000, 0xe0440000, 0xe0450000,
-	0xe0470000, 0xe0460000, 0, 0xe0490000
+	I2S0_REG_BASE, I2S1_REG_BASE, I2S2_REG_BASE, I2S3_REG_BASE,
+	I2S4_REG_BASE, I2S5_REG_BASE, 0, I2S7_REG_BASE
 };
 
 int audioI2sInterruptHandler(int intrCode, void *userCtx)
@@ -166,6 +166,6 @@ int audioEnableI2sLocked(int port)
 
 uintptr_t audioGetI2sDataAddress(int port)
 {
-	return audioI2sPhysicalAddress[port] + 0x100;
+	return audioI2sPhysicalAddress[port] + offsetof(struct AudioI2sRegisters, data);
 }
 

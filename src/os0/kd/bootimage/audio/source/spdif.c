@@ -21,10 +21,10 @@ int audioInitializeSpdif(void)
 	if (registers == NULL) {
 		memset(&option, 0, sizeof(option));
 		option.size = sizeof(option);
-		option.paddr = 0xe04d0000;
+		option.paddr = SPDIF_REG_BASE;
 		option.attr = 2;
 		result = ksceKernelAllocMemBlock("SceSpdifReg", 0x20100806,
-			0x4000, &option);
+			SPDIF_REG_SIZE, &option);
 		if (result < 0)
 			return result;
 		ksceKernelGetMemBlockBase(result, (void **)&audioSpdifRegisters);

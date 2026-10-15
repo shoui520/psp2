@@ -3,6 +3,12 @@
 
 #include <stdint.h>
 
+/* The S/PDIF transmitter's 16 KiB window (SceSpdifReg), and the data port
+ * past it that the output DMA writes. */
+#define SPDIF_REG_BASE		0xe04d0000
+#define SPDIF_REG_SIZE		0x4000
+#define SPDIF_DATA		(SPDIF_REG_BASE + 0x8000)
+
 /* Observed register banks in the mapped 16 KiB S/PDIF window. */
 struct AudioSpdifRegisters {
 	volatile uint32_t control;
