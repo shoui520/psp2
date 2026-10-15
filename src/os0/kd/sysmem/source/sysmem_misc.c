@@ -677,7 +677,7 @@ int MemBlockModuleStart(void);
 void MemBlockObjModuleStart(const UIDManager *manager);
 int PartitionModuleStart(const UIDManager *manager);
 int SysmemHeapModuleStart(const UIDManager *manager);
-void AsidUserStart(const UIDManager *manager);
+int AsidUserStart(const UIDManager *manager);
 void sceKernelL2CacheRemap(void);
 int SuspendInit(void);
 int LedModuleStart(const struct SysmemBootContext *context);

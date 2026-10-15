@@ -272,7 +272,7 @@ int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange
 
 	if (as == NULL)
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
-	if (vector == NULL || range == NULL)
+	if (range == NULL || vector == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (vector->size != sizeof(*vector))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
@@ -323,7 +323,7 @@ int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange
 		cur->addr = base;
 		cur->size = len;
 	}
-	vector->count = vector->capacity < vector->total ? vector->capacity : vector->total;
+	vector->count = vector->total < vector->capacity ? vector->total : vector->capacity;
 out:
 	AddressSpaceRelease(as);
 	return ret;
@@ -1522,7 +1522,7 @@ int sceKernelBitheapUse(struct Bitheap *heap, int index);
 #define ASID_RESERVED_HIGH		0xf0	/* 0xf0..0xff */
 
 /* the class, the kernel address space and the user ASID heap */
-void AsidUserStart(const UIDManager *manager)
+int AsidUserStart(const UIDManager *manager)
 {
 	AddressSpaceObject *kernel;
 	struct Bitheap *heap;
@@ -1535,19 +1535,20 @@ void AsidUserStart(const UIDManager *manager)
 	cls->create_cb = AddressSpaceObjectCreate;
 	cls->destroy_cb = AddressSpaceObjectDestroy;
 	cls->name = "SceUIDAddressSpaceClass";
-	if (ksceGUIDGetObject(SCE_KERNEL_ADDRESS_SPACE_ID, &kernel) < 0)
-		return;
+	ret = ksceGUIDGetObject(SCE_KERNEL_ADDRESS_SPACE_ID, &kernel);
+	if (ret < 0)
+		return ret;
 	heap = s_addressSpaceGlobals->asidHeap;
 	s_kernelAddressSpace = kernel;
-	ret = BitheapInit(heap, ASID_COUNT, s_addressSpaceGlobals->asidBuffer);
-	if (ret < 0) {
+	if (BitheapInit(heap, ASID_COUNT, s_addressSpaceGlobals->asidBuffer) < 0) {
 		SCE_DBG_ASSERT_FAIL(188);
-		return;
+		return ret;
 	}
 	sceKernelBitheapUse(heap, 0);
 	sceKernelBitheapUse(heap, 1);
 	for (i = ASID_RESERVED_HIGH; i != ASID_COUNT; i++)
 		sceKernelBitheapUse(heap, i);
+	return ret;
 }
 
 /* the game partitions of the kernel address space */
