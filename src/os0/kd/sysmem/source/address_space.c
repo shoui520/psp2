@@ -216,9 +216,13 @@ static int AddressSpaceGetPhyMemPartByIndexRaw(SceUInt32 index)
 		SCE_DBG_PRINTF(0xb, 1421, "using pindex=%d without no TOOL environment\n", index);
 		SCE_DBG_ASSERT_FAIL(1422);
 	}
-	if (index != 1 && index != 12)
+	switch (index) {
+	case 1:
+	case 12:
+		return 0;
+	default:
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
-	return 0;
+	}
 }
 
 /* sceKernelGetUIDAddressSpaceClass */
