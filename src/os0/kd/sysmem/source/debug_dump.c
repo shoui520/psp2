@@ -753,7 +753,7 @@ int k_sceEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const voi
 SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count)
 {
 	const EventLogEntry *entry;
-	SceSize left = size;
+	SceSize left = size, entrySize;
 	SceUInt32 n = 0;
 	int flags;
 
@@ -761,12 +761,13 @@ SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count)
 		return SCE_ERROR_ERRNO_EINVAL;
 	flags = ksceKernelCpuSuspendIntr();
 	for (entry = s_eventLog; entry != &s_eventLog[EVENT_LOG_ENTRIES]; entry++) {
-		if (entry->size - offsetof(EventLogEntry, data) <= EVENT_LOG_DATA_MAX &&
-		    entry->size <= left) {
-			memcpy(buffer, entry, entry->size);
-			left -= entry->size;
+		entrySize = entry->size;
+		if (entrySize - offsetof(EventLogEntry, data) <= EVENT_LOG_DATA_MAX &&
+		    entrySize <= left) {
+			memcpy(buffer, entry, entrySize);
+			left -= entrySize;
 			n++;
-			buffer = (char *)buffer + entry->size;
+			buffer = (char *)buffer + entrySize;
 		}
 	}
 	if (count != NULL)
