@@ -94,7 +94,6 @@ extern GicCpuInterface *volatile g_intrCpuInterface;
 extern SceSyscallTable g_intrSyscall;
 #define g_intrSyscallTable (g_intrSyscall.base)
 #define g_intrSyscallBlock (g_intrSyscall.memBlock)
-extern GicDistributor *volatile g_intrDistributor;
 extern void *g_intrLeaveSubIntr;
 extern void *g_intrEnterIntr;
 extern int (*g_intrEvent)(unsigned int, unsigned int, void *);

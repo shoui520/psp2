@@ -16,16 +16,6 @@ static inline int IllegalContext(void)
 	return !getCurrentThreadCB() && CurrentNesting();
 }
 
-/* name unknown: update the interrupt configuration field. */
-static inline void SetConfiguration(unsigned int intrCode, unsigned int config)
-{
-	unsigned int index = intrCode >> 4;
-	unsigned int shift = (intrCode & 15) * 2;
-	unsigned int value = g_intrDistributor->config[index];
-
-	g_intrDistributor->config[index] = value ^ (((value >> shift) ^ config) & 3) << shift;
-}
-
 /* name unknown: write one instruction into the entry code and clean its lines. */
 static inline __attribute__((always_inline)) void PatchCode(void *address, const void *code,
 							    unsigned int size)
@@ -42,25 +32,6 @@ static inline __attribute__((always_inline)) void PatchCode(void *address, const
 	ksceKernelDcacheCleanRangeForL1WBWA((void *)start,
 		(((unsigned int)address + size + 31) & ~31U) - start);
 	writeDacr(dacr);
-}
-
-/* name unknown: convert the two accepted CPU mask encodings. */
-static inline __attribute__((always_inline)) int TargetMask(unsigned int target, unsigned int *mask)
-{
-	if (!target)
-		return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
-	if (target & 0xf0000) {
-		if (target & 15)
-			return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
-		*mask = target >> 16;
-	} else if (target & 15) {
-		if ((int)target < 0)
-			return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
-		*mask = target;
-	} else {
-		*mask = target >> 16;
-	}
-	return 0;
 }
 
 /* names unknown: suspend/resume registration callbacks. */

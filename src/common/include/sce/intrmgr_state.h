@@ -8,6 +8,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
+#include "sce/error.h"
+#include "sce/gic_regs.h"
 
 #define INTR_COUNT 256
 
@@ -44,3 +46,35 @@ typedef struct IntrState {
 
 _Static_assert(sizeof(IntrHandler) == 64, "interrupt record ABI");
 _Static_assert(sizeof(IntrState) == 0x4200, "handler and CPU state ABI");
+
+/* the distributor as each build maps it */
+extern GicDistributor *volatile g_intrDistributor;
+
+/* name unknown: update the interrupt configuration field. */
+static inline void SetConfiguration(unsigned int intrCode, unsigned int config)
+{
+	unsigned int index = intrCode >> 4;
+	unsigned int shift = (intrCode & 15) * 2;
+	unsigned int value = g_intrDistributor->config[index];
+
+	g_intrDistributor->config[index] = value ^ (((value >> shift) ^ config) & 3) << shift;
+}
+
+/* name unknown: convert the two accepted CPU mask encodings. */
+static inline __attribute__((always_inline)) int TargetMask(unsigned int target, unsigned int *mask)
+{
+	if (!target)
+		return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
+	if (target & 0xf0000) {
+		if (target & 15)
+			return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
+		*mask = target >> 16;
+	} else if (target & 15) {
+		if ((int)target < 0)
+			return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
+		*mask = target;
+	} else {
+		*mask = target >> 16;
+	}
+	return 0;
+}
