@@ -7,7 +7,7 @@
 typedef struct QmiUartPort {
 	SceInt32 index;
 	SceUInt32 interruptNumber;
-	volatile struct UartRegs *registers;
+	volatile struct SceUartRegisters *registers;
 	SceUInt32 receiveId;
 	unsigned char *receiveBuffer;
 	SceSize receiveLength;

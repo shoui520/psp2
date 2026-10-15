@@ -31,7 +31,7 @@ UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 };
 /* the physical addresses until serial_remap maps them */
 #define UART_PORT_BASE(port)		(void *)(UART_REG_BASE + (port) * UART_REG_SIZE)
-static volatile UartRegs *s_uartRegs[UART_PORTS] = {
+static volatile SceUartRegisters *s_uartRegs[UART_PORTS] = {
 	UART_PORT_BASE(0), UART_PORT_BASE(1), UART_PORT_BASE(2), UART_PORT_BASE(3),
 	UART_PORT_BASE(4), UART_PORT_BASE(5), UART_PORT_BASE(6),
 };
@@ -43,7 +43,7 @@ static const SceUInt32 s_baudRates[] = {
 	0x10068, 0x1004e, 0x10034, 0x1001a, 0x1000d, 0x1000c, 0x2001a, 0x2000d,
 };
 
-static inline void SerialWaitTxReady(volatile UartRegs *regs)
+static inline void SerialWaitTxReady(volatile SceUartRegisters *regs)
 {
 	while (!(regs->status & UART_STATUS_TX_READY))
 		;
@@ -79,7 +79,7 @@ static int SerialSuspend(void *args)
 /* name unknown: a character to a port, CR before LF */
 __attribute__((noinline)) void SerialPutcharCRLF(unsigned int port, char c)
 {
-	volatile UartRegs *regs = s_uartRegs[port];
+	volatile SceUartRegisters *regs = s_uartRegs[port];
 
 	if (c == '\n') {
 		SerialWaitTxReady(regs);
@@ -114,7 +114,7 @@ __attribute__((noinline)) void SerialPutchar(unsigned int port, char c)
 
 __attribute__((noinline)) int SerialGetchar(unsigned int port)
 {
-	volatile UartRegs *regs = s_uartRegs[port];
+	volatile SceUartRegisters *regs = s_uartRegs[port];
 
 	while (!(regs->fifoStatus & UART_FIFO_COUNT_MASK))
 		;
@@ -211,7 +211,7 @@ void serial_remap(void)
 	}
 	ksceKernelGetMemBlockBase(uid, &base);
 	for (i = 0; i < UART_PORTS; i++)
-		s_uartRegs[i] = (volatile UartRegs *)((char *)base + i * UART_REG_SIZE);
+		s_uartRegs[i] = (volatile SceUartRegisters *)((char *)base + i * UART_REG_SIZE);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.paddr = UART_CLKGEN_BASE;

@@ -10,7 +10,7 @@
 #define UART_REG_SIZE			0x10000
 #define UART_CLKGEN_BASE		0xe3105000
 
-typedef struct UartRegs {
+typedef struct SceUartRegisters {
 	SceUInt32 reserved0;
 	SceUInt32 enable;
 	SceUInt32 reserved1[2];
@@ -35,13 +35,13 @@ typedef struct UartRegs {
 	SceUInt32 tx;
 	SceUInt32 reserved9;
 	SceUInt32 rx;
-} UartRegs;
+} SceUartRegisters;
 
-_Static_assert(sizeof(UartRegs) == 0x7c, "UART register bank size");
-_Static_assert(offsetof(UartRegs, transmitControl) == 0x24, "UART transmit control");
-_Static_assert(offsetof(UartRegs, interruptStatus) == 0x5c, "UART interrupt status");
-_Static_assert(offsetof(UartRegs, tx) == 0x70, "UART transmit FIFO");
-_Static_assert(offsetof(UartRegs, rx) == 0x78, "UART receive FIFO");
+_Static_assert(sizeof(SceUartRegisters) == 0x7c, "UART register bank size");
+_Static_assert(offsetof(SceUartRegisters, transmitControl) == 0x24, "UART transmit control");
+_Static_assert(offsetof(SceUartRegisters, interruptStatus) == 0x5c, "UART interrupt status");
+_Static_assert(offsetof(SceUartRegisters, tx) == 0x70, "UART transmit FIFO");
+_Static_assert(offsetof(SceUartRegisters, rx) == 0x78, "UART receive FIFO");
 
 /*
  * SceUartClkgenReg: one clock generator word per port. Bits 17:16 select the

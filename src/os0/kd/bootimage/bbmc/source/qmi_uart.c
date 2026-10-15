@@ -8,7 +8,7 @@
 #include "qmi_device.h"
 
 static SceUID g_qmiUartMemBlock;
-static volatile UartRegs *g_qmiUartRegisters;
+static volatile SceUartRegisters *g_qmiUartRegisters;
 static QmiUartPort g_qmiUartPort;
 
 SceUInt32 ScePervasiveForDriver_34537B12(void);
@@ -17,7 +17,7 @@ SceUInt32 ScePervasiveForDriver_4B99558F(void);
 /* name unknown: service the port's receive and transmit interrupts. */
 int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 {
-	volatile UartRegs *registers;
+	volatile SceUartRegisters *registers;
 	unsigned int status, receiveDone, transmitDone;
 	SceKernelIntrStatus intr;
 	int result;
@@ -122,7 +122,7 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 		receiveDone = 1;
 	}
 	if (status & 1) {
-		volatile UartRegs *receiveRegisters = port->registers;
+		volatile SceUartRegisters *receiveRegisters = port->registers;
 		unsigned int fifoStatus;
 		unsigned int count;
 
@@ -204,10 +204,10 @@ int qmiInitializeUart(void)
 	g_qmiUartPort.index = -1;
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
-	options.paddr = 0xe2080000;
+	options.paddr = UART_REG_BASE + 5 * UART_REG_SIZE;
 	options.attr = 2;
 	result = ksceKernelAllocMemBlock("SceUart5Reg", 0x20100806,
-		0x10000, &options);
+		UART_REG_SIZE, &options);
 	if (result < 0)
 		return result;
 	g_qmiUartMemBlock = result;
@@ -244,7 +244,7 @@ int qmiFinalizeUart(void)
 int qmiOpenUart(unsigned int index, QmiUartPort **port,
 	const QmiUartConfig *config)
 {
-	volatile UartRegs *registers;
+	volatile SceUartRegisters *registers;
 	unsigned int parity, stopBits, dataBits, flow;
 	unsigned int receiveTrigger, transmitTrigger, fifo;
 	unsigned int keepTransmitControlCleared, baudRate;
@@ -371,7 +371,7 @@ int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
 	void *context)
 {
 	const unsigned char *buffer = data;
-	volatile UartRegs *registers;
+	volatile SceUartRegisters *registers;
 	SceKernelIntrStatus intr;
 	unsigned int requestId;
 	int result;
@@ -438,7 +438,7 @@ int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
 	int (*completed)(unsigned int, unsigned int, unsigned int, void *),
 	void *context)
 {
-	volatile UartRegs *registers;
+	volatile SceUartRegisters *registers;
 	SceKernelIntrStatus intr;
 	unsigned int requestId;
 	int result;
