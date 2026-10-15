@@ -1934,12 +1934,12 @@ const char *PhyMemPartGetName(PhyMemPart *part)
 /* name unknown: the partition's attribute bits (type & 0x7f) within mask */
 SceUInt32 PhyMemPartTestAttr(PhyMemPart *part, SceUInt32 mask)
 {
-	SceUInt32 type;
+	SceUInt32 attr;
 
 	PhyMemPartRefer(part);
-	type = part->type;
+	attr = part->type & 0x7f & mask;
 	PhyMemPartRelease(part);
-	return type & 0x7f & mask;
+	return attr;
 }
 
 /* sceKernelAllocWithOptForKernel */
