@@ -55,8 +55,10 @@ static int _writeSegs(SegIf *segment)
 			segment->dataSize);
 		oalGetBuildVerInfo(coredumpRun.pid, &note.info);
 		result = writerWrite(currentWriter, &note, segment->dataSize);
-		if (result == 0)
+		if (result == 0) {
 			segment->writtenSize += segment->dataSize;
+			return 0;
+		}
 	}
 	return result;
 }

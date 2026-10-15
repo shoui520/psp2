@@ -88,8 +88,10 @@ static int _writeSegs(SegIf *segment)
 			coredumpRun.appVersion % 100);
 		oalGetAppBuildSDKVersion(pid, &note.info.sdkVersion);
 		result = writerWrite(currentWriter, &note, segment->dataSize);
-		if (result == 0)
+		if (result == 0) {
 			segment->writtenSize += segment->dataSize;
+			return 0;
+		}
 	}
 	return result;
 }
