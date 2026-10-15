@@ -643,7 +643,7 @@ int MemBlockMapWithOpt(MemBlockObject *block, const SceKernelAllocMemBlockComman
 }
 
 /* whether the code is a CDRAM one exactly when res2 says it is */
-void AllocMemBlockCommandAssertCdramCode(SceUInt32 code, int res2)
+static void AllocMemBlockCommandAssertCdramCode(SceUInt32 code, int res2)
 {
 	int isCdram = MemBlockCodeIsCdram(code);
 
@@ -679,7 +679,7 @@ int AllocMemBlockCommandSetOpt(SceKernelAllocMemBlockCommand *command)
 
 /* name unknown: the last virtual page of a list block */
 __attribute__((noinline))
-VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
+static VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
 {
 	VirPage *vp = MemBlockGetVirPageRaw(block), *next;
 
