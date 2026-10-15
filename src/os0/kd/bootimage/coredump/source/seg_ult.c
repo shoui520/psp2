@@ -74,8 +74,8 @@ static int _calcSize(SegIf *segment)
 
 static int _writeSegs(SegIf *segment)
 {
-	int numRuntimes;
 	SceUInt32 counts[NUM_COUNTS];
+	int numRuntimes;
 	SceSize writtenSize;
 	CoredumpNoteHeader header;
 	SceUInt32 *ids;
