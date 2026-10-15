@@ -691,8 +691,8 @@ VirPage *MemBlockGetLastVirPage(MemBlockObject *block)
 }
 
 /* next (the block after block, before nextnext) folded into block and freed */
-void MemBlockMergeNext(MemBlockObject *block, MemBlockObject *next, MemBlockObject *nextnext,
-		       FixedHeap *heap, int isFree)
+static void MemBlockMergeNext(MemBlockObject *block, MemBlockObject *next, MemBlockObject *nextnext,
+			      FixedHeap *heap, int isFree)
 {
 	SCE_DBG_ASSERT_CHECK(next == block->next, 1143);
 	SCE_DBG_ASSERT_CHECK(nextnext == next->next, 1144);
@@ -942,8 +942,9 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 	context = tiny->context;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
 	head = tiny->blocks;
+#if FW_DEBUG
 	if (head == NULL) {
-		/* the dump of a partition whose list is gone */
+		/* the dump of a partition whose list is gone (debug builds) */
 		SCE_PRINTF_WITH_INFO(0xb, 3592, "***** pBlockAnchor is SCE_NULL *****\n");
 		SCE_PRINTF_WITH_INFO(0xb, 3595, "pPart=%p[%s],nBlock=%d\n", tiny, tiny->name,
 				     tiny->blockCount & 0xffff);
@@ -964,13 +965,17 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 					     "PartitionGetAC(pPart)->=context.contextid=0x%08x\n",
 					     tiny->context->mmu.contextId);
 	}
+#endif
 
 	/* to the block, along the free list while it stays below it */
 	prevFree = head;
 	cur = MemBlockGetFreeNextRaw(head);
-	if (!(cur->vbase < block->vbase && cur != head))
+	if (cur->vbase >= block->vbase || cur == head) {
 		cur = head->next;
-	while (cur != head) {
+		if (cur == head)
+			goto not_found;
+	}
+	for (;;) {
 		while (cur->code == 0) {
 			next = MemBlockGetFreeNextRaw(cur);
 			prevFree = cur;
@@ -980,14 +985,16 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 				cur = cur->next;
 				if (cur == head)
 					goto not_found;
-				continue;
+			} else {
+				cur = next;
 			}
-			cur = next;
 		}
 		if (cur == block)
 			goto found;
 step:
 		cur = cur->next;
+		if (cur == head)
+			goto not_found;
 	}
 not_found:
 	ret = SCE_KERNEL_ERROR_PARTITION_ERROR;
