@@ -22,10 +22,11 @@ typedef struct LedRegs {
 int ksceKernelCpuId(void);
 SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt32 new_value);
 
-static volatile LedRegs *s_ledRegs;
-static volatile SceUInt32 s_gpo;
+/* the registers' physical address until LedModuleStart maps them */
+static volatile LedRegs *s_ledRegs = (volatile LedRegs *)0xe20a0000;
+static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
-static SceInt32 s_gpoMask;
+static SceInt32 s_gpoMask = 0xff;
 static SceUInt32 s_gpi;
 static void (*s_ledHandle0)(void);
 static void (*s_ledHandle1)(void);
