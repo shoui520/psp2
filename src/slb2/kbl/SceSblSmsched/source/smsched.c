@@ -8,6 +8,7 @@
  * PARTIAL: only the mailbox operations are written so far.
  */
 #include "smsched.h"
+#include "sce/barrier.h"
 
 /* PARTIAL: not static until the functions that set them are written */
 SmschedRequest *s_running;
@@ -22,16 +23,6 @@ static inline SmschedRequest *SmschedGetRequest(SceUInt32 id)
 	if (id >= SMSCHED_REQUESTS)
 		return NULL;
 	return &s_instance->requests[id];
-}
-
-static inline void SmschedDmb(void)
-{
-	__asm__ volatile("dmb sy" : : : "memory");
-}
-
-static inline void SmschedDsb(void)
-{
-	__asm__ volatile("dsb sy" : : : "memory");
 }
 
 int sceSblSmSchedEnableIntr(int mailbox)
@@ -178,7 +169,8 @@ int cry2Arm123IntHandler(int intrCode, void *userCtx)
 		ret = running->proxyId;
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
-	__asm__ volatile("dsb sy\n\tsev" : : : "memory");
+	dsb();
+	sev();
 	if (handler != NULL)
 		handler(s_running->id, mailbox, arg, 0, 0);
 out:
@@ -225,45 +217,200 @@ int ackCry2Arm(int mailbox, SceUInt32 bits, SmschedRequest *request)
 	if (request != NULL) {
 		if (mailbox == 1) {
 			request->mailbox->cry2Arm[0] &= ~(bits & request->mailbox->cry2Arm[0]);
-			SmschedDmb();
+			dmb();
 			(void)request->mailbox->cry2Arm[0];
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 2) {
 			request->mailbox->cry2Arm[1] &= ~(bits & request->mailbox->cry2Arm[1]);
-			SmschedDmb();
+			dmb();
 			(void)request->mailbox->cry2Arm[1];
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 3) {
 			request->mailbox->cry2Arm[2] &= ~(bits & request->mailbox->cry2Arm[2]);
-			SmschedDmb();
+			dmb();
 			(void)request->mailbox->cry2Arm[2];
-			SmschedDsb();
+			dsb();
 			return 0;
 		}
 	} else {
 		if (mailbox == 1) {
 			CMEP_MAILBOX_REG(cry2Arm[1]) = bits;
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[1]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 2) {
 			CMEP_MAILBOX_REG(cry2Arm[2]) = bits;
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[2]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 3) {
 			CMEP_MAILBOX_REG(cry2Arm[3]) = bits;
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[3]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		}
 	}
 	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+}
+
+/* name unknown: s_lock dropped until the request leaves state (the Cmep's
+ * answer comes by interrupt), then held again; the new state in *newState */
+void waitStateChange(SceUInt32 state, int *intr, SmschedRequest *request, SceUInt32 *newState)
+{
+	SceUInt32 current;
+	int ret;
+
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, *intr);
+	for (;;) {
+		ret = ksceKernelSpinlockLowTrylockCpuSuspendIntr(&s_lock);
+		if (ret >= 0) {
+			*intr = ret;
+			current = request->state;
+			if (current != state)
+				break;
+			ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, ret);
+		}
+		wfe();
+	}
+	*newState = current;
+}
+
+typedef int (*SmschedMailboxOp)(int mailbox, SceUInt32 value, SmschedRequest *request);
+typedef int (*SmschedMailboxReadOp)(int mailbox, SceUInt32 *value, SmschedRequest *request);
+
+/*
+ * An operation on mailbox 1-3 of a request: on the Cmep's registers while
+ * the module runs, on the request's saved mailbox while it is off the Cmep.
+ * A module being started or suspended is waited for.
+ */
+int updateMailbox(SceUInt32 id, int mailbox, SceUInt32 value, SmschedMailboxOp op)
+{
+	SmschedRequest *request;
+	SceUInt32 state;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (mailbox < 1 || mailbox > 3)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		return SCE_SBL_ERROR_NO_REQUEST;
+	}
+	ksceKernelSpinlockLowLock(&request->lock);
+	state = request->state;
+	switch (state) {
+	case SMSCHED_STATE_SUSPENDING:
+		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
+		if (state != SMSCHED_STATE_READY) {
+			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			break;
+		}
+		/* fall through */
+	case SMSCHED_STATE_READY:
+		ret = op(mailbox, value, request);
+		if (ret < 0)
+			SCE_PANIC(2634);
+		break;
+	case SMSCHED_STATE_STARTING:
+		waitStateChange(SMSCHED_STATE_STARTING, &intr, request, &state);
+		if (state != SMSCHED_STATE_RUNNING) {
+			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			break;
+		}
+		/* fall through */
+	case SMSCHED_STATE_RUNNING:
+	case SMSCHED_STATE_PREEMPTING:
+		ret = op(mailbox, value, NULL);
+		if (ret < 0)
+			SCE_PANIC(2663);
+		break;
+	default:
+		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		break;
+	}
+	ksceKernelSpinlockLowUnlock(&request->lock);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+/* name unknown (Sony's <name>MonitorCall family): set bits of Arm2Cry 1-3 */
+int sceSblSmSchedWriteArm2CryMonitorCall(SceUInt32 id, int mailbox, SceUInt32 bits)
+{
+	return updateMailbox(id, mailbox, bits, setArm2Cry);
+}
+
+/* name unknown (Sony's <name>MonitorCall family): clear bits of Arm2Cry 1-3 */
+int sceSblSmSchedClearArm2CryMonitorCall(SceUInt32 id, int mailbox, SceUInt32 bits)
+{
+	return updateMailbox(id, mailbox, bits, clearArm2Cry);
+}
+
+/* name unknown (Sony's <name>MonitorCall family): acknowledge bits of Cry2Arm 1-3 */
+int sceSblSmSchedWriteCry2ArmMonitorCall(SceUInt32 id, int mailbox, SceUInt32 bits)
+{
+	return updateMailbox(id, mailbox, bits, ackCry2Arm);
+}
+
+/* A read of mailbox 1-3 of a request, as updateMailbox */
+int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxReadOp op)
+{
+	SmschedRequest *request;
+	SceUInt32 state;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (mailbox < 1 || mailbox > 3)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		return SCE_SBL_ERROR_NO_REQUEST;
+	}
+	ksceKernelSpinlockLowLock(&request->lock);
+	state = request->state;
+	switch (state) {
+	case SMSCHED_STATE_SUSPENDING:
+		waitStateChange(SMSCHED_STATE_SUSPENDING, &intr, request, &state);
+		if (state != SMSCHED_STATE_READY) {
+			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			break;
+		}
+		/* fall through */
+	case SMSCHED_STATE_READY:
+		ret = op(mailbox, value, request);
+		if (ret < 0)
+			SCE_PANIC(2756);
+		break;
+	case SMSCHED_STATE_STARTING:
+		waitStateChange(SMSCHED_STATE_STARTING, &intr, request, &state);
+		if (state != SMSCHED_STATE_RUNNING) {
+			ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+			break;
+		}
+		/* fall through */
+	case SMSCHED_STATE_RUNNING:
+	case SMSCHED_STATE_PREEMPTING:
+		ret = op(mailbox, value, NULL);
+		if (ret < 0)
+			SCE_PANIC(2785);
+		break;
+	default:
+		ret = SCE_SBL_ERROR_ILLEGAL_STATE;
+		break;
+	}
+	ksceKernelSpinlockLowUnlock(&request->lock);
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
 }
 
 /* name unknown: set bits of an Arm2Cry mailbox */
@@ -370,21 +517,21 @@ int readCry2Arm(int mailbox, SceUInt32 *value, SmschedRequest *request)
 	} else {
 		if (mailbox == 1) {
 			*value = CMEP_MAILBOX_REG(cry2Arm[1]);
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[1]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 2) {
 			*value = CMEP_MAILBOX_REG(cry2Arm[2]);
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[2]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		} else if (mailbox == 3) {
 			*value = CMEP_MAILBOX_REG(cry2Arm[3]);
-			SmschedDmb();
+			dmb();
 			(void)CMEP_MAILBOX_REG(cry2Arm[3]);
-			SmschedDsb();
+			dsb();
 			return 0;
 		}
 	}

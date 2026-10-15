@@ -178,7 +178,7 @@ typedef struct SmschedRequest {
 	SceUInt32 notifyMask;
 	SceUInt8 waitFlag;
 	SceUInt8 padding[3];
-	SceUInt32 lock;
+	SceKernelSpinlock lock;			/* inside s_lock */
 	SmschedInvokeArg invokeArg;
 	SmschedIntrEntry intr[CMEP_MAILBOXES];
 	void *area;				/* 128 bytes, uncached */
@@ -186,6 +186,14 @@ typedef struct SmschedRequest {
 } SmschedRequest;
 
 _Static_assert(sizeof(SmschedRequest) == 200, "SmschedRequest");
+
+/* smsched.c: the mailbox operations, on the Cmep's registers (request NULL)
+ * or on a request's saved mailbox */
+int ackCry2Arm(int mailbox, SceUInt32 bits, SmschedRequest *request);
+int setArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request);
+int readArm2Cry(int mailbox, SceUInt32 *value, SmschedRequest *request);
+int clearArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request);
+int readCry2Arm(int mailbox, SceUInt32 *value, SmschedRequest *request);
 
 /* sms_sk_proxy.c: the secure kernel's commands */
 int smsSecureKernelProxySetInstance(SmschedInstance *instance);
