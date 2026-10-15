@@ -8,6 +8,10 @@
  */
 #pragma once
 
+/* SceSonyRegbus, the GPU control region the SGX block sits in (secure side) */
+#define SONY_REGBUS_BASE		0xe8000000
+#define SONY_REGBUS_SIZE		0x1000000
+
 #define SGX_REG_BASE			0xe8400000
 #define SGX_REG_SIZE			0x20000
 
