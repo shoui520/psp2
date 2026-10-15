@@ -1411,7 +1411,7 @@ int initializeTraceHardware(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = PAMGR_PL310_PADDR;
+	opt.paddr = PL310_REG_BASE;
 	block = ksceKernelAllocMemBlock("ScePl310Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;

@@ -162,7 +162,6 @@ struct PamgrSampleConfig {
 #define PAMGR_TPIU_PADDR		0xe3203000
 #define PAMGR_FUNNEL_PADDR		0xe3204000
 #define PAMGR_ITM_PADDR			0xe3205000
-#define PAMGR_PL310_PADDR		0x1a002000
 
 /* how long a register handshake may take, in PFM timebase ticks */
 #define PAMGR_TIMEOUT			0x10000000

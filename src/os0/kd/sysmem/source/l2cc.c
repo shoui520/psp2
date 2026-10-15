@@ -15,11 +15,9 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "l2cc.c"
 
-#define CPU_L2_REGISTER_PA		0x1a002000
-
 /* physical until sceKernelL2CacheRemap maps the registers */
 static ScePl310Registers *volatile s_cpuL2RegisterBase =
-	(ScePl310Registers *)CPU_L2_REGISTER_PA;
+	(ScePl310Registers *)PL310_REG_BASE;
 
 __attribute__((noinline))
 void CpuL2CacheSyncCore(void)
@@ -108,7 +106,7 @@ void sceKernelL2CacheRemap(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	opt.paddr = CPU_L2_REGISTER_PA;
+	opt.paddr = PL310_REG_BASE;
 	block = ksceKernelAllocMemBlock("SceL2CacheReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 					0x1000, &opt);
 	if (block < 0)

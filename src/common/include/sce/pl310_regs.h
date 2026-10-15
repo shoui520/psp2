@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* in the Cortex-A9 MPCore private region */
+#define PL310_REG_BASE			0x1a002000
+
 typedef struct ScePl310Registers {
 	uint8_t reserved0[0x200];
 	volatile uint32_t eventCounterControl;	/* 0x200 */
