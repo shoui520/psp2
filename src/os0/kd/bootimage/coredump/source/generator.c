@@ -912,10 +912,12 @@ int generatorBeginShutdown(void)
 int openDumpFileAtDestination(SceUID *fd, const char *filename, char *path)
 {
 	char *hostPath, *destination;
+	const void *triggerData;
 	SceSize triggerDataSize;
+	SceUInt32 triggerDataType;
 
-	switch (coredumpRun.triggerDataType) {
-	case 0:
+	triggerDataType = coredumpRun.triggerDataType;
+	if (triggerDataType == 0) {
 		hostPath = memMgrLocalAlloc(1024);
 		if (hostPath != NULL) {
 			oalGetDestHostPathFromSettings(hostPath);
@@ -931,28 +933,28 @@ int openDumpFileAtDestination(SceUID *fd, const char *filename, char *path)
 		snprintf(path, 1330, "%s%s", "sd0:", filename);
 		if (oalFileOpen(path, fd) == 0)
 			return 0;
-		/* Fall through to the internal storage destination. */
-	case 2:
-		snprintf(path, 1330, "%s%s", "ux0:data/", filename);
-		return oalFileOpen(path, fd);
-	case 1:
+	} else if (triggerDataType == 1) {
 		snprintf(path, 1330, "%s%s", "host0:", filename);
 		return oalFileOpen(path, fd);
-	case 10:
+	} else if (triggerDataType != 2) {
+		if (triggerDataType != 10)
+			return (int)0x80010016;
 		triggerDataSize = coredumpRun.triggerDataSize;
+		triggerData = coredumpRun.triggerData;
 		destination = path + 6;
-		memcpy(path, "host0:", 6);
+		__builtin_memcpy(path, "host0:", 6);
 		if (triggerDataSize != 0) {
-			memcpy(destination, coredumpRun.triggerData, triggerDataSize);
+			memcpy(destination, triggerData, triggerDataSize);
 			snprintf(destination + triggerDataSize - 1,
 				1324 - triggerDataSize, "/%s", filename);
 		} else {
 			snprintf(destination, 1324, "%s", filename);
 		}
 		return oalFileOpen(path, fd);
-	default:
-		return (int)0x80010016;
 	}
+	/* type 2, and type 0 when neither host0: nor sd0: opens: internal storage */
+	snprintf(path, 1330, "%s%s", "ux0:data/", filename);
+	return oalFileOpen(path, fd);
 }
 
 int _createCorefile(SceUID *fd)
