@@ -145,9 +145,8 @@ int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 		     SceUInt32 domain, SceSize unit, uintptr_t va, SceSize size, uintptr_t pa,
 		     SceUInt32 flags)
 {
-	Partition *partition = block->partition;
 	SceUInt32 mapType = block->code;
-	SceUInt32 asid = (SceUInt8)partition->tiny.context->mmu.contextId;
+	AddressSpaceContext *context = ((Partition *)block->partition)->tiny.context;
 	int intr, ret;
 
 	if (!(mapType & L1PT_TYPE_SHARED) && va < l1pt->split)
@@ -163,7 +162,8 @@ int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
 	if (L1PageTableUseSupersections(unit, domain) &&
 	    !(block->attr & MEMBLOCK_ATTR_PARTIAL)) {
-		MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va), asid, va, size, 0);
+		MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va),
+					       (SceUInt8)context->mmu.contextId, va, size, 0);
 		ret = sceKernelMMUMapSupersections(L1PageTableFor(l1pt, va), mapType, 0, va, size,
 						   pa);
 	} else {
@@ -171,10 +171,11 @@ int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 			ret = SCE_KERNEL_ERROR_ERROR;
 			goto out;
 		}
-		sceKernelMMUUnmapSectionsWithFlags(L1PageTableFor(l1pt, va), asid, va, size, 0);
+		sceKernelMMUUnmapSectionsWithFlags(L1PageTableFor(l1pt, va),
+						   (SceUInt8)context->mmu.contextId, va, size, 0);
 		ret = sceKernelMMUMapSections(L1PageTableFor(l1pt, va), type, domain, va, size, pa);
 	}
-	L1PageTableCheckMap(partition, va, size, pa);
+	L1PageTableCheckMap(block->partition, va, size, pa);
 out:
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, intr);
 	return ret;
