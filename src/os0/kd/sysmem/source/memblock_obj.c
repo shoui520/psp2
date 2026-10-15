@@ -853,7 +853,7 @@ int ksceKernelGetMemBlockBase(SceUID uid, void **base)
 	return ksceKernelGetMemBlockMappedBase(uid, base);
 }
 
-void SimpleMemBlockModuleStart(const UIDManager *manager);
+int SimpleMemBlockModuleStart(const UIDManager *manager);
 
 /* name unknown: SceUIDMemBlockClass gets its callbacks, then the simple memblocks start */
 void MemBlockObjModuleStart(const UIDManager *manager)

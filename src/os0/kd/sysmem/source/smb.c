@@ -54,8 +54,8 @@ static const SceUInt32 s_smbTypes[SMB_FIFO_COUNT] = {
 	0x1001000, 0x1004002, 0x1004022, 0x1010004,
 };
 
-SceClass *s_smbClass;
-SmbFifo *s_smbFifo;
+static SceClass *s_smbClass;
+static SmbFifo *s_smbFifo;
 
 const char *SysrootGetMemBlockName(unsigned int index);
 void MemBlockClearRaw(MemBlockObject *block);
@@ -397,7 +397,7 @@ int SimpleMemBlockGetPbase(MemBlockObject *block, uintptr_t *pbase)
 }
 
 /* name unknown: the class, the boot stock of blocks, and their sections reserved */
-void SimpleMemBlockModuleStart(const UIDManager *manager)
+int SimpleMemBlockModuleStart(const UIDManager *manager)
 {
 	SceUInt32 sectionUsed[128];	/* the kernel's 1 MiB sections holding a block */
 	MemBlockObject *block;
@@ -417,7 +417,7 @@ void SimpleMemBlockModuleStart(const UIDManager *manager)
 		sectionUsed[i] = 0;
 	for (i = 0; i < SMB_FIFO_COUNT; i++) {
 		for (block = s_smbFifo[i].head; block != NULL; block = block->smbNext) {
-			index = (block->vbase + SmbGuardSize(block->smbType)) >> 20;
+			index = (SmbGuardSize(block->smbType) + block->vbase) >> 20;
 			if (sectionUsed[index] == 0)
 				sectionUsed[index] = 1;
 		}
@@ -425,4 +425,5 @@ void SimpleMemBlockModuleStart(const UIDManager *manager)
 	for (i = 0; i < 128; i++)
 		if (sectionUsed[i] == 1)
 			PartitionReserveSection(PartitionGetKernel(), i << 20);
+	return 0;
 }
