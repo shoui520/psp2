@@ -261,18 +261,16 @@ int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, S
 	SceSize size;
 	int intr, ret;
 
+	size = SMB_TYPE_SIZE(smbType);
 	switch (SMB_TYPE_LAYOUT(smbType)) {
 	case SMB_LAYOUT_GUARD1:
-		size = SMB_TYPE_SIZE(smbType) - 0x1000;
+		size -= 0x1000;
 		break;
 	case SMB_LAYOUT_GUARD2:
-		size = SMB_TYPE_SIZE(smbType) - 0x2000;
+		size -= 0x2000;
 		break;
 	case SMB_LAYOUT_ONE_PAGE:
 		size = 0x1000;
-		break;
-	default:
-		size = SMB_TYPE_SIZE(smbType);
 		break;
 	}
 	SCE_DBG_ASSERT_PRINTF(size != 0, 515, "sceKernelGetAssertLevel=%d, smbType=0x%08x\n",
