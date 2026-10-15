@@ -81,9 +81,13 @@ static int pampReadTrace(PampContext *ctx, void *dst, int unit,
 	SceUInt32 wrapped = ctx->flags & (unit ? 0x10 : 8);
 	SceUInt32 cursor = unit ? ScePamgrForDriver_80CA3B39() :
 		ScePamgrForDriver_FB46C3CD();
-	SceUInt32 available = buffer->size, position, first;
+	SceUInt32 physical = buffer->physical;
+	SceUInt32 available, position, first;
 
-	if (cursor < buffer->physical || cursor >= buffer->physical + available)
+	if (cursor < physical)
+		return PAMP_STATUS_OUT_OF_RANGE;
+	available = buffer->size;
+	if (cursor >= physical + available)
 		return PAMP_STATUS_OUT_OF_RANGE;
 	if (buffer->circular == 1) {
 		if (!wrapped) {
@@ -132,7 +136,7 @@ static int pampProtocolError(int ret)
 }
 
 /* name unknown */
-static PampPacket *pampReserveBuffer(PampContext *ctx)
+static inline __attribute__((always_inline)) PampPacket *pampReserveBuffer(PampContext *ctx)
 {
 	unsigned index, bit;
 
@@ -155,7 +159,7 @@ static PampPacket *pampReserveBuffer(PampContext *ctx)
 }
 
 /* name unknown */
-static void pampReleaseBuffer(PampContext *ctx, PampPacket *packet)
+static inline __attribute__((always_inline)) void pampReleaseBuffer(PampContext *ctx, PampPacket *packet)
 {
 	unsigned mask;
 
@@ -214,7 +218,10 @@ static int pampNotify(PampContext *ctx, SceUInt32 command, SceUInt32 value)
 	}
 	packet = pampReserveBuffer(ctx);
 	ctx->notification = packet;
-	packet->words[0] = 0;
+	packet->data[0] = 0;
+	packet->data[1] = 0;
+	packet->data[2] = 0;
+	packet->data[3] = 0;
 	packet->command = command;
 	packet->sequence = ++ctx->sequence;
 	packet->length = 4;
@@ -287,10 +294,10 @@ static int pampConfigure(PampContext *ctx)
 }
 
 /* name unknown */
-static int pampCompress(PampContext *ctx, PampPacket *packet, int initial)
+static inline __attribute__((always_inline)) int pampCompress(PampContext *ctx, PampPacket *packet, int initial)
 {
 	SceUInt32 produced = 0, size;
-	int ret, unit = (ctx->traceFlags & 0xff) != 0;
+	int ret, unit = ctx->traceUnit != 0;
 
 	ctx->zstream.next_out = packet->chunk.bytes;
 	ctx->zstream.avail_out = 0x10000;
@@ -603,7 +610,7 @@ static int pampStreamTrace(PampContext *ctx, PampPacket *packet)
 	ctx->traceFlags = ctx->request.status;
 	ctx->traceOffset = data[0];
 	ctx->traceRemaining = data[1];
-	if (ctx->traceFlags & 0x100) {
+	if (ctx->traceCompression & 1) {
 		memset(&ctx->zstream, 0, sizeof(ctx->zstream));
 		ctx->zstream.zalloc = pampZalloc;
 		ctx->zstream.zfree = pampZfree;
@@ -708,7 +715,7 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 	PampContext *ctx = opaque;
 	PampPacket *packet;
 	SceUInt32 *data = ctx->request.words;
-	SceUInt32 received, size, available;
+	SceUInt32 received, size, available, command, sequence;
 	SceUInt8 *dst;
 	int ret, status;
 
@@ -738,12 +745,16 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 			break;
 		packet = pampReserveBuffer(ctx);
 		ctx->reply = packet;
+		command = ctx->request.command;
 		packet->length = 0;
 		if (ctx->state == PAMP_STATE_CLOSED) {
-			status = ctx->request.command != PAMP_CMD_OPEN ? PAMP_STATUS_NOT_OPEN :
-								       pampOpen(ctx);
+			if (command != PAMP_CMD_OPEN) {
+				status = PAMP_STATUS_NOT_OPEN;
+				goto prepareReply;
+			}
+			status = pampOpen(ctx);
 		} else {
-			switch (ctx->request.command) {
+			switch (command) {
 			case PAMP_CMD_OPEN:
 				status = PAMP_STATUS_ALREADY_OPEN;
 				break;
@@ -844,9 +855,12 @@ static int scePerfArmPmonOpen(int event, void *arg, void *opaque)
 				break;
 			}
 		}
-		packet->command = ctx->request.command;
+		command = ctx->request.command;
+	prepareReply:
+		sequence = ctx->request.sequence;
+		packet->command = command;
 		packet->status = status;
-		packet->sequence = ctx->request.sequence;
+		packet->sequence = sequence;
 		SceDeci4pDfMgrForDebugger_6D26CC56(&packet->hdr, packet->length + 0x20);
 		if (ksceKernelLockFastMutex(&ctx->controlLock) >= 0) {
 			ctx->receiving = 0;
@@ -937,20 +951,20 @@ static int pampMainThread(SceSize arglen, void *argp)
 				continue;
 			packet = pampReserveBuffer(ctx);
 			ctx->workerPacket = packet;
-			if (!(ctx->traceFlags & 0x100)) {
+			if (!(ctx->traceCompression & 1)) {
 				size = ctx->traceRemaining;
 				if (size <= 0x10000) {
 					packet->length = size + 4;
 					packet->chunk.more = 0;
 					pampReadTrace(ctx, packet->chunk.bytes,
-						(ctx->traceFlags & 0xff) != 0, ctx->traceOffset, size);
+						ctx->traceUnit != 0, ctx->traceOffset, size);
 					ctx->traceRemaining = 0;
 					if ((ret = ksceKernelClearEventFlag(ctx->event, ~1u)) < 0)
 						break;
 				} else {
 					packet->length = 0x10004;
 					pampReadTrace(ctx, packet->chunk.bytes,
-						(ctx->traceFlags & 0xff) != 0, ctx->traceOffset, 0x10000);
+						ctx->traceUnit != 0, ctx->traceOffset, 0x10000);
 					ctx->traceOffset += 0x10000;
 					ctx->traceRemaining -= 0x10000;
 					packet->chunk.more = 1;

@@ -112,7 +112,14 @@ typedef struct PampContext {
 	PampPacket *workerPacket;
 	PampPacket *sendPacket;
 	SceUInt32 receiving;
-	SceUInt32 traceFlags;
+	union {
+		SceUInt32 traceFlags;
+		struct {
+			SceUInt8 traceUnit;
+			SceUInt8 traceCompression;
+			SceUInt8 reservedTraceFlags[2];
+		};
+	};
 	SceUInt32 traceOffset;
 	SceUInt32 traceRemaining;
 	SceUInt32 streaming;
