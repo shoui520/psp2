@@ -11,6 +11,7 @@ psp2_module(os0_kd_bootimage_coredump KIND kernel PARTIAL SOURCES
 	source/gzipwriter.c
 	source/seg_if.c
 	source/seg_corefile.c
+	source/seg_pre_read_segs.c
 	source/seg_sys.c
 	source/seg_app.c
 	source/seg_hw.c
