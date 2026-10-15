@@ -14,18 +14,20 @@
 #define L1_LINES_AFTER_FIRST(address, size) \
 	((((address) + (size) - 1) >> L1_CACHE_LINE_SHIFT) - ((address) >> L1_CACHE_LINE_SHIFT))
 
-void ksceKernelL1IcacheInvalidateEntire(void)
+int ksceKernelL1IcacheInvalidateEntire(void)
 {
 	writeIciallu(0);
 	dsb();
 	isb();
+	return 0;
 }
 
-void ksceKernelL1IcacheInvalidateEntireAllCore(void)
+int ksceKernelL1IcacheInvalidateEntireAllCore(void)
 {
 	writeIcialluis(0);
 	dsb();
 	isb();
+	return 0;
 }
 
 void ksceKernelL1DcacheInvalidate(const void *address)

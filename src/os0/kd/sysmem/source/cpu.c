@@ -251,22 +251,20 @@ uint32_t SceCpuForKernel_9818A20B(uint32_t value)
 	return value | 0x4a;
 }
 
-void ksceKernelCpuBranchPredictorInvalidateAll(void)
+int ksceKernelCpuBranchPredictorInvalidateAll(void)
 {
-	uint32_t zero = 0;
-
-	writeBpiall(zero);
+	writeBpiall(0);
 	dsb();
 	isb();
+	return 0;
 }
 
-void ksceKernelCpuBranchPredictorInvalidateAllIS(void)
+int ksceKernelCpuBranchPredictorInvalidateAllIS(void)
 {
-	uint32_t zero = 0;
-
-	writeBpiallis(zero);
+	writeBpiallis(0);
 	dsb();
 	isb();
+	return 0;
 }
 
 uint8_t ksceKernelCpuGetCONTEXTIDR(void)
