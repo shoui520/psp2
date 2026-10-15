@@ -1,5 +1,6 @@
-# slb2:kbl/SceKernelIntrMgr - secure-world interrupt manager, under conversion to C
-psp2_module(slb2_kbl_SceKernelIntrMgr KIND kernel PARTIAL SOURCES
+# slb2:kbl/SceKernelIntrMgr - secure-world interrupt manager
+psp2_module(slb2_kbl_SceKernelIntrMgr KIND kernel SOURCES
+	source/intrmgr_entry.S
 	source/dmacmgr_tzs.c
 	source/intrmgr.c
 	source/usleep.c

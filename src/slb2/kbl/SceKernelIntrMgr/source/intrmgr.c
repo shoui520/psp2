@@ -35,6 +35,12 @@ void *g_intrLeaveIntr;
 void *g_intrEnterSubIntr;
 void *g_intrLeaveSubIntr;
 
+/* name unknown: each CPU's stack for monitor calls, CPU 0's on top; it ends
+ * where g_smcHandlerTable starts, and intrmgr_entry.S takes that as its top */
+char g_monitorStack[4][0x1000];
+/* name unknown: the SMC fast calls below 0x100; nothing in the module fills it */
+void *g_smcHandlerTable[0x100];
+
 /* name unknown: the priority as the secure world writes it; a Non-secure
  * (group 1) interrupt's sits in the lower half of the range */
 void SetPriority(unsigned int intrCode, unsigned char priority)
