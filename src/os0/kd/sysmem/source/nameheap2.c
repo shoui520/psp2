@@ -64,7 +64,7 @@ static inline NameEntry *NameHeapControlNameEntryNew(NameHeapControl *control, c
 			SCE_DBG_PRINTF(0xb, 297, "NameHeapControlNameEntryAlloc failed\n");
 			return NULL;
 		}
-		ksceKernelAtomicIncrementHighwaterCounter(&control->count);
+		ksceKernelAtomicIncrementHighwaterCounter((SceUInt32 *)&control->count);
 		strncpy(entry->name, name, NAME_ENTRY_SHORT_NAME - 1);
 		entry->name[NAME_ENTRY_SHORT_NAME - 1] = '\0';
 		entry->next = NULL;
@@ -377,18 +377,29 @@ int SceSysmemForKernel_9F1A9AA6(const char *name, SceUInt32 flags, char **out)
 	return ret;
 }
 
+/* name unknown: the entries in use and their high-water mark */
+static inline void NameHeapControlGetCount(const NameHeapControl *control, SceUInt32 *count,
+					   SceUInt32 *peak)
+{
+	*count = control->count & 0xffff;
+	*peak = control->count >> 16;
+}
+
 int ksceKernelNameHeapGetInfo(void *pInfo)
 {
 	SceKernelNameHeapInfo *info = pInfo;
-	NameHeapControl *controls = s_nameHeapControls;
+	int ret;
 
-	if (info == NULL || info->size != sizeof(*info))
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	info->heaps[0].count = controls[0].count & 0xffff;
-	info->heaps[0].peak = controls[0].count >> 16;
-	info->heaps[1].count = controls[1].count & 0xffff;
-	info->heaps[1].peak = controls[1].count >> 16;
-	return 0;
+	if (info == NULL || info->size != sizeof(*info)) {
+		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	} else {
+		NameHeapControlGetCount(&s_nameHeapControls[0], &info->heaps[0].count,
+					&info->heaps[0].peak);
+		NameHeapControlGetCount(&s_nameHeapControls[1], &info->heaps[1].count,
+					&info->heaps[1].peak);
+		ret = 0;
+	}
+	return ret;
 }
 
 /* name unknown */

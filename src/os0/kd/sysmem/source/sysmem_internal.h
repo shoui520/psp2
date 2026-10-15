@@ -502,7 +502,7 @@ typedef struct NameHeapControl {
 	NameEntry **buckets;			/* 0x08 */
 	FixedHeap *entryHeap;			/* 0x0c: of 0x30-byte entries */
 	SceKernelRWSpinlock locks[NAME_HEAP_LOCKS];	/* 0x10: by hash */
-	SceUInt32 count;			/* 0x50: high-water counter, peak << 16 | count */
+	volatile SceUInt32 count;		/* 0x50: high-water counter, peak << 16 | count; atomics */
 } NameHeapControl;
 
 _Static_assert(sizeof(NameHeapControl) == 0x54, "NameHeapControl size");
