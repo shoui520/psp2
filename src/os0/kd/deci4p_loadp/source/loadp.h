@@ -55,7 +55,7 @@ typedef struct LoadpContext {
 	SceSize argSize;			/* packetSize - sizeof(LoadpHeader) */
 	LoadpHeader *recvBuf;
 	LoadpSendBuf *sendHead;			/* queued for sending */
-	int sendCount;
+	SceUInt32 sendCount;
 	LoadpSendBuf *doneList;			/* sent, freed when the queue drains */
 	LoadpHeader *pending;			/* the command the thread runs */
 	SceUID heap;

@@ -330,63 +330,81 @@ static void loadpFreeSendBuf(LoadpSendBuf *buf)
 }
 
 /* the size of a new packet, its header set */
-static SceSize loadpInitPacket(void *packet, SceSize size)
+static inline __attribute__((always_inline)) SceSize loadpInitPacketInline(void *packet,
+								 SceSize size)
 {
 	__builtin_memset(packet, 0, size);
 	SceDeci4pDfMgrForDebugger_6D26CC56(packet, size);
 	return SceDeci4pDfMgrForDebugger_CACAB5F9(packet);
 }
 
+static __attribute__((noinline)) SceSize loadpInitPacket(void *packet, SceSize size)
+{
+	return loadpInitPacketInline(packet, size);
+}
+
 LoadpSendBuf *pdLoadpAllocSendBuf(void)
 {
 	LoadpSendBuf *buf = ksceKernelAllocHeapMemory(loadp.heap, sizeof(*buf));
+	void *mem;
 
 	if (buf == NULL)
 		SCE_PANIC(1048);
 	memset(buf, 0, sizeof(*buf));
-	buf->mem = ksceKernelAllocHeapMemory(loadp.heap, LOADP_SEND_BUF_SIZE);
-	if (buf->mem == NULL) {
+	mem = ksceKernelAllocHeapMemory(loadp.heap, LOADP_SEND_BUF_SIZE);
+	buf->mem = mem;
+	if (mem == NULL) {
 		ksceKernelFreeHeapMemory(loadp.heap, buf);
 		return NULL;
 	}
-	memset(buf->mem, 0, LOADP_SEND_BUF_SIZE);
-	buf->packet = (void *)(((SceUIntPtr)buf->mem + 0x3f) & ~0x3f);
+	memset(mem, 0, LOADP_SEND_BUF_SIZE);
+	buf->packet = (void *)(((SceUIntPtr)mem + 0x3f) & ~0x3f);
 	return buf;
 }
 
 /* queue a packet; too many queued and the queue is dropped */
+#if FW_VERSION >= 0x04000000
+#define LOADP_CONTEXT_ARG
 int pdLoadpReqSend(LoadpSendBuf *buf)
 {
+	LoadpContext *ctx = &loadp;
+#else
+#define LOADP_CONTEXT_ARG &loadp,
+int pdLoadpReqSend(LoadpContext *ctx, LoadpSendBuf *buf)
+{
+#endif
 	LoadpSendBuf *p, *next;
 	int ret;
 
-	if (!(loadp.flags & LOADP_FLAG_ENABLED))
+	if (!(ctx->flags & LOADP_FLAG_ENABLED))
 		return DFMGR_ERROR_NOT_CONNECTED;
-	ret = ksceKernelLockMutex(loadp.mutex, 1, NULL);
+	ret = ksceKernelLockMutex(ctx->mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	if (loadp.sendHead == NULL) {
-		loadp.sendHead = buf;
+	if (ctx->sendHead == NULL) {
+		ctx->sendHead = buf;
 	} else {
-		for (p = loadp.sendHead; p->next != NULL; p = p->next)
+		for (p = ctx->sendHead; p->next != NULL; p = p->next)
 			;
 		p->next = buf;
 	}
 	buf->next = NULL;
-	if (++loadp.sendCount > LOADP_SEND_QUEUE_MAX) {
-		for (p = loadp.sendHead; p != NULL; p = next) {
+	if (++ctx->sendCount > LOADP_SEND_QUEUE_MAX) {
+		for (p = ctx->sendHead; p != NULL; p = next) {
 			next = p->next;
 			ksceKernelFreeHeapMemory(loadp.heap, p->mem);
 			ksceKernelFreeHeapMemory(loadp.heap, p);
 		}
-		loadp.sendHead = NULL;
-		loadp.sendCount = 0;
+		ctx->sendHead = NULL;
+		ctx->sendCount = 0;
 	}
-	ret = ksceKernelUnlockMutex(loadp.mutex, 1);
+	ret = ksceKernelUnlockMutex(ctx->mutex, 1);
 	if (ret < 0)
 		return ret;
-	ret = sceDfMgrReqSend(loadp.handle);
-	if (ret >= 0 || ret == (int)DFMGR_ERROR_BUSY)
+	ret = sceDfMgrReqSend(ctx->handle);
+	if (ret >= 0)
+		return 0;
+	if (ret == (int)DFMGR_ERROR_BUSY)
 		return 0;
 	if (ret != (int)DFMGR_ERROR_NOT_CONNECTED) {
 		SCE_PRINTF_WITH_INFO(0xf, 979, "0x%08x\n", ret);
@@ -394,16 +412,16 @@ int pdLoadpReqSend(LoadpSendBuf *buf)
 	}
 	/* disconnected: the queue is given up (Sony does not free it) */
 	do {
-		if (loadp.sendCount == 0)
+		if (ctx->sendCount == 0)
 			return DFMGR_ERROR_NOT_CONNECTED;
-		ret = ksceKernelLockMutex(loadp.mutex, 1, NULL);
+		ret = ksceKernelLockMutex(ctx->mutex, 1, NULL);
 		if (ret < 0)
 			return ret;
-		if (loadp.sendHead != NULL) {
-			loadp.sendHead = loadp.sendHead->next;
-			loadp.sendCount--;
+		if (ctx->sendHead != NULL) {
+			ctx->sendHead = ctx->sendHead->next;
+			ctx->sendCount--;
 		}
-		ret = ksceKernelUnlockMutex(loadp.mutex, 1);
+		ret = ksceKernelUnlockMutex(ctx->mutex, 1);
 	} while (ret >= 0);
 	return ret;
 }
@@ -417,18 +435,18 @@ static void loadpSendReply(SceUInt8 cmd, SceUInt8 reqCmd, SceUInt32 result)
 	if (buf == NULL)
 		return;
 	reply = buf->packet;
-	buf->size = loadpInitPacket(reply, sizeof(*reply));
+	buf->size = loadpInitPacketInline(reply, sizeof(*reply));
 	reply->head.cmd = cmd;
 	reply->head.arg = reqCmd;
 	reply->result = result;
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 }
 
 /* a kernel error as the host knows it */
-static SceUInt32 loadpConvertError(int error)
+static SceUInt32 pdLoadpKernelErrToLoadpErr(int error)
 {
-	switch ((SceUInt32)error) {
+	switch (error) {
 	case 0:
 		return LOADP_RESULT_OK;
 	case 0x80802021:
@@ -559,13 +577,13 @@ static inline __attribute__((always_inline)) int loadpNotify(SceUInt8 cmd, SceUI
 	if (buf == NULL)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
 	n = buf->packet;
-	buf->size = loadpInitPacket(n, sizeof(*n));
+	buf->size = loadpInitPacketInline(n, sizeof(*n));
 	n->a = a;
 	n->b = b;
 	n->head.arg = 0;
 	n->time = time;
 	n->head.cmd = cmd;
-	ret = pdLoadpReqSend(buf);
+	ret = pdLoadpReqSend(LOADP_CONTEXT_ARG buf);
 	if (ret < 0) {
 		loadpFreeSendBuf(buf);
 		return ret;
@@ -640,12 +658,12 @@ static void loadpOnProcessKill(SceUID pid, SceUInt64 time)
 	if (buf == NULL)
 		return;
 	n = buf->packet;
-	buf->size = loadpInitPacket(n, sizeof(*n));
+	buf->size = loadpInitPacketInline(n, sizeof(*n));
 	n->head.arg = 0;
 	n->pid = pid;
 	n->time = time;
 	n->head.cmd = LOADP_NOTIFY_PROCESS_KILL;
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 }
 
@@ -658,7 +676,7 @@ static void loadpOnProgress(SceUID pid, SceUID modid, SceUInt32 progress, const 
 	(void)pid;
 	(void)modid;
 	len = strnlen(path, 0x100);
-	if (len > 0xfe)
+	if (len > 0xff)
 		len = 0xff;
 	buf = pdLoadpAllocSendBuf();
 	if (buf == NULL)
@@ -666,14 +684,14 @@ static void loadpOnProgress(SceUID pid, SceUID modid, SceUInt32 progress, const 
 	padded = (len + 4) & ~3;
 	n = buf->packet;
 	size = sizeof(*n) + padded;
-	buf->size = loadpInitPacket(n, size);
+	buf->size = loadpInitPacketInline(n, size);
 	n->progress = progress;
 	n->pathSize = len + 1;
 	n->head.cmd = LOADP_NOTIFY_LOAD_PROGRESS;
 	n->head.arg = 0;
 	memcpy(n->path, path, len);
 	memset(n->path + len, 0, padded - len);
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 }
 
@@ -685,7 +703,7 @@ static int loadpNotifyModuleLoad(SceUID pid, SceUID modid, SceUInt64 time)
 	SceModuleCB *cb;
 	SceSize len, padded, metaSize, size;
 	char *p;
-	int ret;
+	int ret, tooLarge;
 
 	buf = pdLoadpAllocSendBuf();
 	if (buf == NULL)
@@ -697,16 +715,19 @@ static int loadpNotifyModuleLoad(SceUID pid, SceUID modid, SceUInt64 time)
 	}
 	len = strnlen(cb->path, 0x100);
 	metaSize = cb->metadataSize;
-	if (len > 0xfe)
+	if (len > 0xff)
 		len = 0xff;
 	padded = (len + 4) & ~3;
 	size = ((metaSize + 3) & ~3) + sizeof(*n) + 4 + padded;
-	if (size > LOADP_RECV_BUF_SIZE || size < metaSize) {
+	tooLarge = size < metaSize;
+	if (size > LOADP_RECV_BUF_SIZE)
+		tooLarge = 1;
+	if (tooLarge) {
 		size = LOADP_RECV_BUF_SIZE;
 		metaSize = LOADP_RECV_BUF_SIZE - (sizeof(*n) + 4) - padded;
 	}
 	n = buf->packet;
-	buf->size = loadpInitPacket(n, size);
+	buf->size = loadpInitPacketInline(n, size);
 	n->head.cmd = LOADP_NOTIFY_MODULE_LOAD;
 	n->head.arg = 0;
 	n->pid = pid;
@@ -726,7 +747,7 @@ static int loadpNotifyModuleLoad(SceUID pid, SceUID modid, SceUInt64 time)
 		memcpy(p + 4, cb->metadata, metaSize);
 		memset(p + 4 + metaSize, 0, ((metaSize + 3) & ~3) - metaSize);
 	}
-	ret = pdLoadpReqSend(buf);
+	ret = pdLoadpReqSend(LOADP_CONTEXT_ARG buf);
 	if (ret < 0) {
 		loadpFreeSendBuf(buf);
 		return ret;
@@ -760,13 +781,13 @@ static void loadpOnSpawn(SceUID pid, SceUID spawnPid, SceUInt64 time)
 
 	if (buf != NULL) {
 		n = buf->packet;
-		buf->size = loadpInitPacket(n, sizeof(*n) - 4);
+		buf->size = loadpInitPacketInline(n, sizeof(*n) - 4);
 		n->pid = pid;
 		n->time = time;
 		n->head.arg = 0;
 		n->spawnPid = spawnPid;
 		n->head.cmd = LOADP_NOTIFY_SPAWN;
-		if (pdLoadpReqSend(buf) < 0)
+		if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 			loadpFreeSendBuf(buf);
 	}
 	sceDfMgrReqSend(loadp.handle);
@@ -779,14 +800,14 @@ static void loadpOnExitSpawn(SceUID pid, SceUID spawnPid, int error, SceUInt64 t
 
 	if (buf != NULL) {
 		n = buf->packet;
-		buf->size = loadpInitPacket(n, sizeof(*n));
+		buf->size = loadpInitPacketInline(n, sizeof(*n));
 		n->pid = pid;
 		n->time = time;
 		n->head.cmd = LOADP_NOTIFY_EXIT_SPAWN;
 		n->head.arg = 0;
 		n->spawnPid = spawnPid;
-		n->error = loadpConvertError(error);
-		if (pdLoadpReqSend(buf) < 0)
+		n->error = pdLoadpKernelErrToLoadpErr(error);
+		if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 			loadpFreeSendBuf(buf);
 	}
 	sceDfMgrReqSend(loadp.handle);
@@ -810,6 +831,7 @@ static const LoadpProcessHandler loadpProcessHandler = {
 /* the next command, into the receive buffer */
 static inline __attribute__((always_inline)) int pdLoadpGetCmd(LoadpContext *ctx)
 {
+	LoadpHeader *packet;
 	SceSize size;
 	int ret;
 
@@ -818,12 +840,13 @@ static inline __attribute__((always_inline)) int pdLoadpGetCmd(LoadpContext *ctx
 		SCE_PRINTF_WITH_INFO(0xf, 658, "0x%08x\n", ret);
 		goto failed;
 	}
-	size = SceDeci4pDfMgrForDebugger_CACAB5F9(&ctx->recvBuf->hdr);
+	packet = ctx->recvBuf;
+	size = SceDeci4pDfMgrForDebugger_CACAB5F9(&packet->hdr);
 	if (size - sizeof(LoadpHeader) >= LOADP_RECV_BUF_SIZE - sizeof(LoadpHeader) + 1)
 		goto failed;
 	ctx->packetSize = size;
 	ctx->argSize = size - sizeof(LoadpHeader);
-	ret = sceDfMgrRecv(ctx->handle, ctx->recvBuf + 1, size - sizeof(LoadpHeader));
+	ret = sceDfMgrRecv(ctx->handle, packet + 1, size - sizeof(LoadpHeader));
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 686, "0x%08x\n", ret);
 		goto failed;
@@ -924,19 +947,26 @@ static int pdLoadpHandler(int event, void *arg, void *ctxp)
 		return 0;
 	case SCE_DFMGR_EVENT_STATUS:
 		status = arg;
-		if (status->kind == 0)
+		if (status->kind == 0) {
 			value = status->connected;
-		else if (status->kind == 1)
+			if (value == 0) {
+				lockFlags(0, LOADP_FLAG_ENABLED);
+				return 0;
+			}
+			if (value == 1) {
+				lockFlags(LOADP_FLAG_ENABLED, 0);
+				return 1;
+			}
+		} else if (status->kind == 1) {
 			value = status->enabled;
-		else
-			value = -1;
-		if (value == 0) {
-			lockFlags(0, LOADP_FLAG_ENABLED);
-			return 0;
-		}
-		if (value == 1) {
-			lockFlags(LOADP_FLAG_ENABLED, 0);
-			return 0;
+			if (value == 0) {
+				lockFlags(0, LOADP_FLAG_ENABLED);
+				return 0;
+			}
+			if (value == 1) {
+				lockFlags(LOADP_FLAG_ENABLED, 0);
+				return 0;
+			}
 		}
 		ret = DFMGR_ERROR_INVALID_ARGUMENT;
 		break;
@@ -996,13 +1026,13 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 		return -1;
 	}
 	r = buf->packet;
-	buf->size = loadpInitPacket(r, sizeof(*r) + padded + 0x10);
+	buf->size = loadpInitPacketInline(r, sizeof(*r) + padded + 0x10);
 	r->reply.head.cmd = LOADP_CMD_SPAWN + 1;
 	r->reply.head.arg = LOADP_CMD_SPAWN;
 	r->reply.result = 0;
 	ret = ksceKernelGetModuleCB(ksceKernelGetModuleIdByPid(pid), (void **)&cb);
 	if (ret < 0 || cb == NULL) {
-		*result = loadpConvertError(ret);
+		*result = pdLoadpKernelErrToLoadpErr(ret);
 		goto free_buf;
 	}
 	r->pid = pid;
@@ -1025,7 +1055,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	info->size = sizeof(*info);
 	ret = SceThreadmgrForDriver_555CA6BB(ksceKernelGetProcessMainThread(pid), 0, info);
 	if (ret < 0) {
-		*result = loadpConvertError(ret);
+		*result = pdLoadpKernelErrToLoadpErr(ret);
 		goto free_info;
 	}
 	r->initPriority = info->initPriority;
@@ -1054,11 +1084,11 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 							      SCE_DBGINFO_FUNC(3956, "pdLoadpProcSpawnCmd"),
 							      "sceAppMgrKillAppForDebugger failed 0x%08x\n", ret);
 #endif
-			*result = loadpConvertError(loadpAppResult);
+			*result = pdLoadpKernelErrToLoadpErr(loadpAppResult);
 			goto free_info;
 		}
 	}
-	if (pdLoadpReqSend(buf) >= 0) {
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) >= 0) {
 		ksceKernelFreeHeapMemory(loadp.heap, info);
 		return 0;
 	}
@@ -1074,14 +1104,15 @@ free_buf:
 /* spawn a process, or launch an app with a launch param */
 static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 {
+	SceSize argSize = loadp.argSize;
 	LoadpSpawnArgs *req = (LoadpSpawnArgs *)loadp.recvBuf;
-	SceSize argSize = loadp.argSize, pathSize, padded, total, size, n;
+	SceSize pathSize, padded, total, size, n, stackSize;
 	const char *argv[LOADP_ARGC_MAX];
 	const char *base = (const char *)req + sizeof(LoadpHeader);
 	SceUInt32 attr, appFlags, result;
 	SceKernelProcessOpt param;
 	const int *launchParam;
-	int argc, i, setupper, gxmDebug, debug, value, ret;
+	int argc, i, setupper, gxmDebug, debug, value, ret, priority;
 	char *path, *argBuf, *p;
 	SceUInt64 time;
 	SceUID pid;
@@ -1091,6 +1122,8 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		goto bad_packet;
 	pathSize = req->pathSize;
 	attr = req->attr;
+	priority = req->priority;
+	stackSize = req->stackSize;
 	argc = req->argc;
 	if (pathSize > LOADP_PATH_MAX) {
 		result = LOADP_RESULT_TOO_LONG;
@@ -1112,11 +1145,11 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	launchParam = (const int *)(path + padded);
 	total = 0;
 	for (i = 0; i < argc; i++) {
-		if ((const char *)launchParam + 4 - base > (int)argSize)
+		if ((SceSize)((const char *)launchParam + 4 - base) > argSize)
 			goto bad_packet;
 		n = launchParam[0];
 		p = (char *)(launchParam + 1);
-		if (p + n - base > (int)argSize)
+		if ((SceSize)(p + n - base) > argSize)
 			goto bad_packet;
 		argv[i] = p;
 		total += n;
@@ -1172,13 +1205,13 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	if (attr & (1 << 10))
 		value |= 0x20000000;
 	param.flags = value | 0x80000000;
-	param.priority = req->priority;
-	param.stackSize = req->stackSize;
+	param.priority = priority;
+	param.stackSize = stackSize;
 
 	if (launchParam == NULL) {
 		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode() && !SceQafMgrForDriver_B9770A13() &&
 		    !ksceSblQafMgrIsAllowHost0Access()) {
-			result = loadpConvertError(SCE_ERROR_ERRNO_ENOSYS);
+			result = pdLoadpKernelErrToLoadpErr(SCE_ERROR_ERRNO_ENOSYS);
 			goto free_args;
 		}
 		gxmDebug = 0;
@@ -1187,7 +1220,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		pid = sceKernelSpawnProcessExt("main", debug ? 0x81000000 : 0x01000000, path, size,
 					       argBuf, &param, gxmDebug);
 		if (pid < 0) {
-			result = loadpConvertError(pid);
+			result = pdLoadpKernelErrToLoadpErr(pid);
 			goto free_args;
 		}
 		if (debug && !SceSblACMgrForDriver_4CBD6156(pid)) {
@@ -1199,14 +1232,14 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		}
 	} else {
 		if (ksceKernelSearchModuleByName("SceAppMgr") < 0) {
-			result = loadpConvertError(SCE_ERROR_ERRNO_ENOSYS);
+			result = pdLoadpKernelErrToLoadpErr(SCE_ERROR_ERRNO_ENOSYS);
 			goto free_args;
 		}
 		/* appmgr passes the parameter on to process creation as is */
 		pid = ksceAppMgrLaunchAppByPath(path, argBuf, size, appFlags,
 						(const SceAppMgrLaunchParam *)&param, (void *)launchParam);
 		if (pid < 0) {
-			result = loadpConvertError(pid);
+			result = pdLoadpKernelErrToLoadpErr(pid);
 			goto free_args;
 		}
 		if (debug && !SceSblACMgrForDriver_4CBD6156(pid)) {
@@ -1258,7 +1291,7 @@ static inline __attribute__((always_inline)) void loadpKillCmd(void)
 	}
 	pid = req->pid;
 	if (isKernelPid(pid)) {
-		result = loadpConvertError(SCE_ERROR_ERRNO_EINVAL);
+		result = pdLoadpKernelErrToLoadpErr(SCE_ERROR_ERRNO_EINVAL);
 		goto reply;
 	}
 	count = 0;
@@ -1283,18 +1316,18 @@ static inline __attribute__((always_inline)) void loadpKillCmd(void)
 	}
 	ret = ksceAppMgrKillProcess(pid);
 	if (ret < 0) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
 	}
 	buf = pdLoadpAllocSendBuf();
 	if (buf == NULL)
 		return;
 	r = buf->packet;
-	buf->size = loadpInitPacket(r, sizeof(*r));
+	buf->size = loadpInitPacketInline(r, sizeof(*r));
 	r->pid = pid;
 	r->reply.head.cmd = LOADP_CMD_KILL + 1;
 	r->reply.head.arg = LOADP_CMD_KILL;
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 	return;
 reply:
@@ -1310,14 +1343,14 @@ static inline void sendTitleReply(SceUInt8 cmd, SceUID pid, const char *titleId)
 	if (buf == NULL)
 		return;
 	r = buf->packet;
-	buf->size = loadpInitPacket(r, sizeof(*r));
+	buf->size = loadpInitPacketInline(r, sizeof(*r));
 	r->reply.result = 0;
 	r->reply.head.cmd = cmd + 1;
 	r->reply.head.arg = cmd;
 	r->pid = pid;
 	r->size = LOADP_TITLE_ID_SIZE;
 	__builtin_memcpy(r->titleId, titleId, LOADP_TITLE_ID_SIZE);
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 }
 
@@ -1345,7 +1378,7 @@ static inline __attribute__((always_inline)) void loadpLaunchAppCmd(void)
 		sendTitleReply(LOADP_CMD_LAUNCH_APP, pid, titleId);
 		return;
 	}
-	result = loadpConvertError(ret);
+	result = pdLoadpKernelErrToLoadpErr(ret);
 reply:
 	loadpSendReply(LOADP_CMD_LAUNCH_APP + 1, LOADP_CMD_LAUNCH_APP, result);
 }
@@ -1376,7 +1409,7 @@ static inline __attribute__((always_inline)) void loadpKillAppCmd(void)
 			return;
 		}
 	}
-	result = loadpConvertError(ret);
+	result = pdLoadpKernelErrToLoadpErr(ret);
 reply:
 	loadpSendReply(LOADP_CMD_KILL_APP + 1, LOADP_CMD_KILL_APP, result);
 }
@@ -1445,20 +1478,20 @@ static inline __attribute__((always_inline)) void loadpLoadModuleCmd(void)
 		modid = SCE_ERROR_ERRNO_ENOENT;
 	}
 	if (modid < 0) {
-		result = loadpConvertError(modid);
+		result = pdLoadpKernelErrToLoadpErr(modid);
 		goto reply;
 	}
 	buf = pdLoadpAllocSendBuf();
 	if (buf == NULL)
 		return;
 	r = buf->packet;
-	buf->size = loadpInitPacket(r, sizeof(*r) + padded + 0x10);
+	buf->size = loadpInitPacketInline(r, sizeof(*r) + padded + 0x10);
 	r->reply.head.cmd = LOADP_CMD_LOAD_MODULE + 1;
 	r->reply.head.arg = LOADP_CMD_LOAD_MODULE;
 	r->reply.result = 0;
 	ret = ksceKernelGetModuleCB(modid, (void **)&cb);
 	if (ret < 0 || cb == NULL) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		loadpFreeSendBuf(buf);
 		goto reply;
 	}
@@ -1481,7 +1514,7 @@ static inline __attribute__((always_inline)) void loadpLoadModuleCmd(void)
 	tail[1] = (SceUInt32)cb->exidxBtm;
 	tail[2] = (SceUInt32)cb->extabStart;
 	tail[3] = (SceUInt32)cb->extabEnd;
-	if (pdLoadpReqSend(buf) < 0) {
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0) {
 		loadpFreeSendBuf(buf);
 		return;
 	}
@@ -1543,7 +1576,7 @@ static inline void sendModuleReply(SceUInt8 cmd, SceUID pid, SceUID modid, int *
 	r->modid = modid;
 	r->reply.head.arg = cmd;
 	r->reply.result = 0;
-	if (pdLoadpReqSend(buf) < 0) {
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0) {
 		loadpFreeSendBuf(buf);
 		return;
 	}
@@ -1556,7 +1589,7 @@ static inline SceUID moduleUid(SceUID target, SceUID modid, int kernel, SceUInt3
 	SceUID uid = kernel ? modid : kscePUIDtoGUID(target, modid);
 
 	if (uid == (SceUID)SCE_KERNEL_ERROR_INVALID_PID)
-		*result = loadpConvertError(SCE_KERNEL_ERROR_INVALID_PID);
+		*result = pdLoadpKernelErrToLoadpErr(SCE_KERNEL_ERROR_INVALID_PID);
 	else if (uid < 0)
 		*result = LOADP_RESULT_NO_MODULE;
 	return uid;
@@ -1595,7 +1628,7 @@ static inline __attribute__((always_inline)) void loadpStartModuleCmd(void)
 		ret = ksceKernelStartModuleForPid(target, uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
 	}
 	sendModuleReply(LOADP_CMD_START_MODULE, pid, modid, &sent);
@@ -1646,7 +1679,7 @@ static inline __attribute__((always_inline)) void loadpStopModuleCmd(void)
 		ret = ksceKernelStopModule(uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
 	}
 	sendModuleReply(LOADP_CMD_STOP_MODULE, pid, modid, &sent);
@@ -1684,7 +1717,7 @@ static inline __attribute__((always_inline)) void loadpUnloadModuleCmd(void)
 		ret = ksceKernelUnloadModule(uid, 0, NULL);
 	}
 	if (ret < 0) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
 	}
 	sendModuleReply(LOADP_CMD_UNLOAD_MODULE, pid, modid, &sent);
@@ -1736,7 +1769,7 @@ static inline __attribute__((always_inline)) void loadpToolAppCmd(SceUInt8 cmd, 
 	}
 	ret = SceAppMgrForDriver_3B4F305B(kind, titleId);
 	if (ret < 0) {
-		result = loadpConvertError(ret);
+		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
 	}
 	buf = pdLoadpAllocSendBuf();
@@ -1745,10 +1778,10 @@ static inline __attribute__((always_inline)) void loadpToolAppCmd(SceUInt8 cmd, 
 		goto reply;
 	}
 	r = buf->packet;
-	buf->size = loadpInitPacket(r, sizeof(*r));
+	buf->size = loadpInitPacketInline(r, sizeof(*r));
 	r->head.cmd = cmd + 1;
 	r->head.arg = cmd;
-	if (pdLoadpReqSend(buf) < 0)
+	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) < 0)
 		loadpFreeSendBuf(buf);
 	return;
 reply:
@@ -1782,7 +1815,7 @@ reply:
 	pid = ksceAppMgrLaunchAppByPath(_self, _args, _argsSize, 0,			\
 					(const SceAppMgrLaunchParam *)&param, info);	\
 	if (pid < 0) {									\
-		result = loadpConvertError(pid);					\
+		result = pdLoadpKernelErrToLoadpErr(pid);					\
 		goto free_info;								\
 	}										\
 	ret = ksceKernelWaitSema(loadp.sema, 1, NULL);					\
@@ -1793,7 +1826,7 @@ reply:
 		if (ret < 0)								\
 			SCE_DBG_PRINTF(0xf, _lKill,					\
 				       "sceAppMgrKillAppForDebugger failed 0x%08x\n", ret);	\
-		result = loadpConvertError(loadpAppResult);				\
+		result = pdLoadpKernelErrToLoadpErr(loadpAppResult);				\
 		goto free_info;								\
 	}										\
 	buf = pdLoadpAllocSendBuf();							\
@@ -1802,14 +1835,17 @@ reply:
 		goto free_info;								\
 	}										\
 	r = buf->packet;								\
-	buf->size = loadpInitPacket(r, sizeof(*r));					\
+	if ((_cmd) == LOADP_CMD_PACKAGE_INSTALL)					\
+		buf->size = loadpInitPacketInline(r, sizeof(*r));			\
+	else									\
+		buf->size = loadpInitPacket(r, sizeof(*r));			\
 	r->reply.result = 0;								\
 	r->pid = pid;									\
 	loadp.appPid = pid;								\
 	r->reply.head.cmd = (_cmd) + 1;							\
 	r->reply.head.arg = (_cmd);							\
 	loadp.appCmd = (_cmd);								\
-	ret = pdLoadpReqSend(buf);							\
+	ret = pdLoadpReqSend(LOADP_CONTEXT_ARG buf);							\
 	if (ret >= 0) {									\
 		loadpNotifyProcessCreate(-1, pid, sceKernelGetSystemTimeWide());	\
 		ret = ksceKernelFreeHeapMemory(loadp.heap, info);			\
@@ -2176,7 +2212,6 @@ static int _loadpThread(SceSize args, void *argp)
 /* Sony's LoadpModuleStart */
 int module_start(SceSize args, void *argp)
 {
-	SceKernelThreadOptParam threadOpt;
 	SceKernelHeapCreateOpt heapOpt;
 	SceDfMgrProtocol protocol;
 	SceKernelIntrStatus s;
@@ -2201,10 +2236,15 @@ int module_start(SceSize args, void *argp)
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.evf = ret;
-	threadOpt.size = sizeof(threadOpt);
-	threadOpt.attr = 1;
-	threadOpt.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	ret = ksceKernelCreateThread("SceDeci4pLoadp", _loadpThread, 0x1e, 0x4000, 0, 0xf, &threadOpt);
+	{
+		SceKernelThreadOptParam threadOpt;
+
+		threadOpt.size = sizeof(threadOpt);
+		threadOpt.attr = 1;
+		threadOpt.kStackMemType = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
+		ret = ksceKernelCreateThread("SceDeci4pLoadp", _loadpThread, 0x1e, 0x4000,
+					    0, 0xf, &threadOpt);
+	}
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.thread = ret;
@@ -2267,7 +2307,7 @@ typedef struct LoadpTestLaunchParam {
 	SceUInt32 reserved[5];
 } LoadpTestLaunchParam;
 
-static __attribute__((noinline)) int launchAppForTest2(const char *path, int option0, const char *titleId,
+__attribute__((noinline)) int launchAppForTest2(const char *path, int option0, const char *titleId,
 							int flags, const char *args, int option1,
 							int option2, const void *data)
 {
@@ -2283,14 +2323,7 @@ static __attribute__((noinline)) int launchAppForTest2(const char *path, int opt
 	return ret;
 }
 
-static __attribute__((noinline)) int launchAppForTest(const char *path, int option0, const char *titleId,
-						       int flags, const char *args, int option1, int option2,
-						       const void *data)
-{
-	return launchAppForTest2(path, option0, titleId, flags, args, option1, option2, data);
-}
-
-static __attribute__((noinline)) int destroyOtherApp(SceUID pid)
+__attribute__((noinline)) int destroyOtherApp(SceUID pid)
 {
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
@@ -2304,7 +2337,14 @@ static __attribute__((noinline)) int destroyOtherApp(SceUID pid)
 	return SCE_APPMGR_ERROR_NOEXEC;
 }
 
-static __attribute__((noinline)) int destroyOtherAppSyscall(SceUID pid)
+__attribute__((noinline)) int launchAppForTest(const char *path, int option0, const char *titleId,
+						       int flags, const char *args, int option1, int option2,
+						       const void *data)
+{
+	return launchAppForTest2(path, option0, titleId, flags, args, option1, option2, data);
+}
+
+__attribute__((noinline)) int destroyOtherAppSyscall(SceUID pid)
 {
 	return destroyOtherApp(pid);
 }
@@ -2315,17 +2355,25 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	LoadpTestLaunchParam p;
 	char *kpath = NULL, *ktitleId = NULL, *kargs = NULL;
 	void *kdata = NULL;
+	const char *args;
+	const void *data;
+	int flags, option1, option2;
 	int ret;
 
 	ret = ksceKernelCopyFromUser(&p, param, sizeof(p));
 	if (ret < 0)
 		return ret;
+	flags = p.flags;
+	args = p.args;
+	option1 = p.option1;
+	option2 = p.option2;
+	data = p.data;
 	if (path != NULL) {
 		kpath = alloca(0x124);
 		ret = ksceKernelStrncpyFromUser(kpath, path, 0x124);
 		if (ret < 0)
 			return ret;
-		if (ret == 0x124 && kpath[0x123] != '\0')
+		if (ret == 0x124 && ((signed char *)kpath)[0x123] != '\0')
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
 	if (titleId != NULL) {
@@ -2333,24 +2381,24 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 		ret = ksceKernelStrncpyFromUser(ktitleId, titleId, 0x20);
 		if (ret < 0)
 			return ret;
-		if (ret == 0x20 && ktitleId[0x1f] != '\0')
+		if (ret == 0x20 && ((signed char *)ktitleId)[0x1f] != '\0')
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
-	if (p.args != NULL) {
+	if (args != NULL) {
 		kargs = alloca(0x400);
-		ret = ksceKernelStrncpyFromUser(kargs, p.args, 0x400);
+		ret = ksceKernelStrncpyFromUser(kargs, args, 0x400);
 		if (ret < 0)
 			return ret;
-		if (ret == 0x400 && kargs[0x3ff] != '\0')
+		if (ret == 0x400 && ((signed char *)kargs)[0x3ff] != '\0')
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
-	if (p.data != NULL) {
+	if (data != NULL) {
 		kdata = alloca(0x80);
-		ret = ksceKernelCopyFromUser(kdata, p.data, 0x80);
+		ret = ksceKernelCopyFromUser(kdata, data, 0x80);
 		if (ret < 0)
 			return ret;
 	}
-	return launchAppForTest(kpath, option0, ktitleId, p.flags, kargs, p.option1, p.option2, kdata);
+	return launchAppForTest(kpath, option0, ktitleId, flags, kargs, option1, option2, kdata);
 }
 
 int SceDeci4pLoadp_AA103B3F(SceUID pid)
