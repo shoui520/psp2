@@ -626,7 +626,8 @@ void *mapDmac(const char *name, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	memBlockId = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+					   DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 2285, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(2286);
@@ -1704,15 +1705,15 @@ int module_start(SceSize args, void *argp)
 	int intrCode, targetCpu, res, i;
 	char *name;
 
-	s_dmacMgr.dmac0Reg = mapDmac("SceDmacmgrDmac0Reg", 0xe3000000);
-	s_dmacMgr.dmac1Reg = mapDmac("SceDmacmgrDmac1Reg", 0xe3010000);
-	s_dmacMgr.dmac2Reg = mapDmac("SceDmacmgrDmac2Reg", 0xe5000000);
-	s_dmacMgr.dmac3Reg = mapDmac("SceDmacmgrDmac3Reg", 0xe5010000);
-	s_dmacMgr.dmac4Reg = mapDmac("SceDmacmgrDmac4Reg", 0xe0400000);
-	s_dmacMgr.dmac5Reg = mapDmac("SceDmacmgrDmac5Reg", 0xe0410000);
+	s_dmacMgr.dmac0Reg = mapDmac("SceDmacmgrDmac0Reg", DMAC0_REG_BASE);
+	s_dmacMgr.dmac1Reg = mapDmac("SceDmacmgrDmac1Reg", DMAC1_REG_BASE);
+	s_dmacMgr.dmac2Reg = mapDmac("SceDmacmgrDmac2Reg", DMAC2_REG_BASE);
+	s_dmacMgr.dmac3Reg = mapDmac("SceDmacmgrDmac3Reg", DMAC3_REG_BASE);
+	s_dmacMgr.dmac4Reg = mapDmac("SceDmacmgrDmac4Reg", DMAC4_REG_BASE);
+	s_dmacMgr.dmac5Reg = mapDmac("SceDmacmgrDmac5Reg", DMAC5_REG_BASE);
 	if (ksceKernelCheckDipsw(0x9f) || ksceKernelCheckDipsw(0xc0) ||
 	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))
-		s_dmacMgr.dmac6Reg = mapDmac("SceDmacmgrDmac6Reg", 0xe50c0000);
+		s_dmacMgr.dmac6Reg = mapDmac("SceDmacmgrDmac6Reg", DMAC6_REG_BASE);
 	else
 		s_dmacMgr.dmac6Reg = NULL;
 	SceKernelSuspendForDriver_CE7A2207(0x12, SuspendDmacmgr, NULL);
