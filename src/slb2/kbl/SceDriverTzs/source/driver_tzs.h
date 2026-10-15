@@ -1,0 +1,103 @@
+/*
+ * SceDriverTzs, the secure world's device driver (slb2:kbl/SceDriverTzs).
+ *
+ * It holds the Pervasive devices the Non-secure kernel may not touch: the
+ * secure reset, gate and clock words (monitor calls 0x110-0x114, which
+ * SceLowio's ScePervasiveForDriver exports call), the grab and SonyRegbus
+ * windows (0x11b-0x121), the EMC's self refresh (0x117-0x119) and the crash
+ * dump (0x122). Its ForTZS imports are mapped to the os0 names here, before
+ * any declaration.
+ */
+#pragma once
+
+/* ForTZS imports: names unknown, the os0 function each one stands for */
+#define ksceKernelAllocMemBlock			SceSysmemForTZS_402EB970
+#define ksceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
+#define ksceKernelFreeMemBlock			SceSysmemForTZS_658EACE3
+#define ksceKernelCheckDipsw			SceDipswForTZS_ksceKernelCheckDipsw
+#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
+#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
+#define memset					SceSysclibForTZS_956DB750
+#define memcpy					SceSysclibForTZS_BE3AF2EE
+
+/* ForTZS imports named by the henkaku wiki (SceSysmem page) */
+#define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
+#define sceKernelCpuAtomicOrAndGet32		SceCpuForTZS_75D87321
+#define sceKernelDcacheCleanInvalidateRange	SceCpuForTZS_7A5373EB
+#define sceKernelDcacheCleanInvalidateAll	SceCpuForTZS_7CCE9480
+
+#include <fw.h>
+#include <stdint.h>
+#include <psp2kern/types.h>
+#include <psp2kern/kernel/cpu.h>
+#include <psp2kern/kernel/sysmem.h>
+#include "sce/debug.h"
+#include "sce/intrmgr_tzs.h"
+#include "sce/pervasive_regs.h"
+#include "sce/mailbox_regs.h"
+#include "sce/uart_regs.h"
+
+/* Sony built the 3.6x secure kernel without its debug output */
+#if !FW_SINCE(0x04000000)
+#undef SCE_DBG_PRINTF
+#define SCE_DBG_PRINTF(...)		((void)0)
+#endif
+
+/* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
+__asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
+	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
+
+int ksceKernelCheckDipsw(unsigned int number);
+int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
+int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);
+void sceKernelDcacheCleanInvalidateRange(const void *addr, unsigned int size);
+void sceKernelDcacheCleanInvalidateAll(void);
+void SceCpuForTZS_D4E7413D(void);	/* name unknown: cleans the data cache before a core parks */
+
+#define PERVASIVE_ERROR			((int)0x803f0000)
+
+/* the monitor calls this module serves */
+#define PERVASIVE_MONCALL_POWER		0x110
+#define PERVASIVE_MONCALL_RESET		0x111
+#define PERVASIVE_MONCALL_GATE		0x113
+#define PERVASIVE_MONCALL_CLOCK		0x114
+#define EMC_MONCALL_SET_TIMING		0x117
+#define EMC_MONCALL_SELF_REFRESH_ENTER	0x118
+#define EMC_MONCALL_SELF_REFRESH_EXIT	0x119
+
+/* Sony's DMB and DSB are also compiler barriers here: register pointers
+ * held across them are reloaded. */
+static inline void PervasiveDmb(void)
+{
+	__asm__ volatile("dmb sy" : : : "memory");
+}
+
+static inline void PervasiveDsb(void)
+{
+	__asm__ volatile("dsb sy" : : : "memory");
+}
+
+extern ScePervasiveMiscRegisters *s_misc;
+extern ScePervasiveResetRegisters *s_reset;
+extern ScePervasiveGateRegisters *s_gate;
+extern ScePervasiveBaseClkRegisters *s_baseClock;
+
+/* pervasive_tzs.c, pervasive_control_tzs.c, pervasive_clock_tzs.c */
+unsigned int GetSoCRevision(void);
+int ParkOtherCpus(int cleanCache);
+int ReleaseOtherCpus(void);
+int AllegrexPowerOn(int fast);
+int AllegrexStart(void);
+int AllegrexPowerOff(void);
+int GpuGateEnable(unsigned int mask);
+int GpuGateDisable(unsigned int mask);
+int DmacGateEnable(int n);
+int GpuClockSet(unsigned int core, unsigned int mp);
+int PervasiveModuleStart(SceSize arglen, const void *argp);
+
+/* grab.c, emc_tzs.c, crashdump_tzs.c: module_start's later stages */
+int GrabModuleStart(SceSize arglen, const void *argp);
+int EmcModuleStart(SceSize arglen, const void *argp);
+int CrashDumpModuleStart(SceSize arglen, const void *argp);
+int CrashDumpRegisterModuleStart(SceSize arglen, const void *argp);

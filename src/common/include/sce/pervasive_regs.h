@@ -132,12 +132,23 @@ typedef struct ScePervasiveMiscRegisters {
 	volatile uint32_t cacheStatus;			/* bit 1: L2 cache defective */
 	volatile uint32_t reserved0[6];
 	volatile uint32_t suspendControl;		/* bit 31 set before the CPUs park */
-	volatile uint32_t reserved1[24];
+	volatile uint32_t reserved1[4];
+	/* set while the GPU, or Venezia and VIP, are powered off (SceDriverTzs) */
+	volatile uint32_t gpuIsolation;			/* 0x34 */
+	volatile uint32_t veneziaIsolation;
+	volatile uint32_t reserved1b[6];
+	/* bit 0: idle the bus before a power-on; it clears when taken, and
+	 * busIdleStatus then reports it done */
+	volatile uint32_t gpuBusIdleRequest;		/* 0x54 */
+	volatile uint32_t veneziaBusIdleRequest;
+	volatile uint32_t reserved1c[10];
 	volatile uint32_t usbMode[3];			/* per USB port, bit 0 */
 	volatile uint32_t reserved2[8];
 	volatile uint32_t pervasiveAccessMode;		/* 0xb0: set by monitor call 0x104 */
 	volatile uint32_t tasAccessMode;		/* set by monitor call 0x105 */
-	volatile uint32_t reserved2b[22];
+	volatile uint32_t reserved2b[2];
+	volatile uint32_t busIdleStatus;		/* 0xc0: bit 1 GPU, bit 2 Venezia; write 1 to clear */
+	volatile uint32_t reserved2c[19];
 	volatile uint32_t sdifConfig[4];		/* bits 8-10 */
 	volatile uint32_t reserved3;
 	volatile uint32_t sdifVoltage;			/* 1 << port: 1.8 V */
@@ -162,7 +173,10 @@ typedef struct ScePervasiveMiscRegisters {
 	volatile uint32_t spareEnable;			/* bit 0; nothing calls its exports */
 	volatile uint32_t reserved8[4];
 	volatile uint32_t uart5PullDownRx;		/* bit 0 RX, bit 1 RFR */
-	volatile uint32_t reserved9[84];
+	volatile uint32_t reserved9[82];
+	/* set while the device is held in reset (SceDriverTzs) */
+	volatile uint32_t compatRamResetHold;		/* 0x2f8 */
+	volatile uint32_t allegrexResetHold;
 	volatile uint32_t hardwareInfo[3];
 	volatile uint32_t reserved10;
 	volatile uint32_t sdifMode;			/* 3 bits per port, port * 8 */
@@ -170,7 +184,11 @@ typedef struct ScePervasiveMiscRegisters {
 } ScePervasiveMiscRegisters;
 
 _Static_assert(offsetof(ScePervasiveMiscRegisters, suspendControl) == 0x20, "misc suspend");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, gpuIsolation) == 0x34, "misc gpu isolation");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, gpuBusIdleRequest) == 0x54, "misc gpu bus idle");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, usbMode) == 0x84, "misc usb mode");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, busIdleStatus) == 0xc0, "misc bus idle status");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamResetHold) == 0x2f8, "misc compat ram hold");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, pervasiveAccessMode) == 0xb0, "misc access mode");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, sdifConfig) == 0x110, "misc sdif");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, sdifVoltage) == 0x124, "misc sdif voltage");
@@ -240,18 +258,24 @@ typedef struct ScePervasiveBaseClkRegisters {
 	volatile uint32_t reserved7[7];
 	volatile uint32_t dramMainClock;
 	volatile uint32_t dramSubClock;
-	volatile uint32_t reserved8[3];
+	volatile uint32_t reserved8[2];
+	volatile uint32_t allegrexClockEnable;		/* 0xa0, secure */
 	volatile uint32_t auxClockEnable;		/* cleared while the aux clock changes */
 	volatile uint32_t reserved9[2];
 	volatile uint32_t msifClock;			/* bits 0-1, bit 16 */
-	volatile uint32_t reserved10[4];
+	volatile uint32_t reserved10[3];
+	volatile uint32_t allegrexBusClockEnable;	/* 0xc0, secure */
 	volatile uint32_t compatClock;
 	volatile uint32_t reserved11[14];
 	ScePervasivePixelClockRegisters dsi1PixelClock;
 	volatile uint32_t reserved12[12];
 	ScePervasivePixelClockRegisters dsi0PixelClock;
 	volatile uint32_t cecClockOut;			/* HDMI CEC clock output enable */
-	volatile uint32_t reserved13[7];
+	volatile uint32_t reserved13[3];
+	/* secure: bits 0-7 the Allegrex clock (0xa or 0xf), bit 26 set while
+	 * the GPU powers on */
+	volatile uint32_t allegrexClock;		/* 0x1e0 */
+	volatile uint32_t reserved13b[3];
 	volatile uint32_t dmac5Clock;
 	volatile uint32_t reserved14[7];
 	volatile uint32_t srcClock;			/* audio sample-rate converter */
@@ -264,7 +288,10 @@ _Static_assert(offsetof(ScePervasiveBaseClkRegisters, cameraBusClock) == 0x44, "
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, auxClockDivider) == 0x60, "base clock aux");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, audioClock) == 0x70, "base clock audio");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, dramMainClock) == 0x90, "base clock dram");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, allegrexClockEnable) == 0xa0, "base clock allegrex");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, auxClockEnable) == 0xa4, "base clock aux enable");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, allegrexBusClockEnable) == 0xc0, "base clock allegrex bus");
+_Static_assert(offsetof(ScePervasiveBaseClkRegisters, allegrexClock) == 0x1e0, "base clock allegrex clock");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, msifClock) == 0xb0, "base clock msif");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, compatClock) == 0xc4, "base clock compat");
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, dsi1PixelClock) == 0x100, "base clock dsi1");
