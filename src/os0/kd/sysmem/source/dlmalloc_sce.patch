@@ -912,14 +912,13 @@
  struct mallinfo mspace_mallinfo(mspace msp) {
    mstate ms = (mstate)msp;
    if (!ok_magic(ms)) {
-@@ -5400,8 +5341,9 @@
+@@ -5400,8 +5341,6 @@
    return 0;
  }
  
-+/* SCE: the parameters are fixed */
- int mspace_mallopt(int param_number, int value) {
+-int mspace_mallopt(int param_number, int value) {
 -  return change_mparam(param_number, value);
-+  return 0;
- }
+-}
++/* SCE: no mspace_mallopt, the parameters are fixed */
  
  #endif /* MSPACES */
