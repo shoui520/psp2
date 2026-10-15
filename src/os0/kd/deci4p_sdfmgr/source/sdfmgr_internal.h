@@ -1,4 +1,4 @@
-/* SDfMgr state shared by converted C and the remaining assembly scaffold. */
+/* SDfMgr state shared by C and the exception/interrupt entry veneers. */
 #pragma once
 #include "sce/cp15.h"
 #include <stddef.h>
@@ -14,21 +14,9 @@ typedef int (*SdfMgrPrintHandler)(void *context, uint32_t reserved,
 				const char *format, va_list args);
 
 struct SdfMgrProtocolState;
+struct SdfMgrTransport;
 
-typedef struct SdfMgrTransport {
-	uint32_t events;
-	uint32_t interruptFlags;
-	uint32_t operationFlags;
-	struct SdfMgrProtocolState *sendProtocol;
-	uint32_t sendSize;
-	uint32_t sendProgress;
-	SceDeci4pHeader sendHeader;
-	uint32_t flags;
-	struct SdfMgrProtocolState *receiveProtocol;
-	uint32_t receiveSize;
-	uint32_t receiveProgress;
-	SceDeci4pHeader receiveHeader;
-	const char *name;
+typedef struct SdfMgrTransportOperations {
 	int (*beginReceive)(struct SdfMgrTransport *transport);
 	int (*receive)(struct SdfMgrTransport *transport, void *buffer, SceSize size);
 	int (*finishReceive)(struct SdfMgrTransport *transport);
@@ -45,6 +33,23 @@ typedef struct SdfMgrTransport {
 	SdfMgrHook idle;
 	void (*disableInterrupts)(struct SdfMgrTransport *transport);
 	void (*enableInterrupts)(struct SdfMgrTransport *transport);
+} SdfMgrTransportOperations;
+
+typedef struct SdfMgrTransport {
+	uint32_t events;
+	uint32_t interruptFlags;
+	uint32_t operationFlags;
+	struct SdfMgrProtocolState *sendProtocol;
+	uint32_t sendSize;
+	uint32_t sendProgress;
+	SceDeci4pHeader sendHeader;
+	uint32_t flags;
+	struct SdfMgrProtocolState *receiveProtocol;
+	uint32_t receiveSize;
+	uint32_t receiveProgress;
+	SceDeci4pHeader receiveHeader;
+	const char *name;
+	SdfMgrTransportOperations operations;
 } SdfMgrTransport;
 
 typedef struct SdfMgrProtocolState {
@@ -151,13 +156,14 @@ _Static_assert(sizeof(SdfMgrCpuState) == 0x244, "per-core SDfMgr layout");
 _Static_assert(offsetof(SdfMgrCpuState, printContext) == 0x38, "print context");
 _Static_assert(offsetof(SdfMgrCpuState, printHandler) == 0x3c, "print callback");
 _Static_assert(offsetof(SdfMgrTransport, flags) == 0x28, "transport flags");
-_Static_assert(offsetof(SdfMgrTransport, poll) == 0x64, "transport poll callback");
+_Static_assert(offsetof(SdfMgrTransport, operations.poll) == 0x64, "transport poll callback");
 _Static_assert(offsetof(SdfMgrTransport, receiveSize) == 0x30, "receive packet size");
 _Static_assert(offsetof(SdfMgrTransport, receiveProtocol) == 0x2c, "receive protocol");
 _Static_assert(offsetof(SdfMgrTransport, receiveHeader) == 0x38, "receive header");
-_Static_assert(offsetof(SdfMgrTransport, receive) == 0x50, "receive callback");
-_Static_assert(offsetof(SdfMgrTransport, beginSend) == 0x58, "send callback");
-_Static_assert(offsetof(SdfMgrTransport, send) == 0x5c, "payload send callback");
+_Static_assert(sizeof(SdfMgrTransportOperations) == 0x40, "transport operations");
+_Static_assert(offsetof(SdfMgrTransport, operations.receive) == 0x50, "receive callback");
+_Static_assert(offsetof(SdfMgrTransport, operations.beginSend) == 0x58, "send callback");
+_Static_assert(offsetof(SdfMgrTransport, operations.send) == 0x5c, "payload send callback");
 _Static_assert(sizeof(SceDeci4pHeader) == 16, "wire header size");
 _Static_assert(offsetof(SceDeci4pHeader, reserved2) == 14, "wire reserved fields");
 _Static_assert(sizeof(SdfMgrProtocolState) == 0x40, "protocol record stride");
@@ -233,7 +239,7 @@ void sdfMgrConnect(void);
 void sdfMgrDisconnect(void);
 int sdfmgrStartProtocol(uint32_t protocol);
 int sdfmgrStopProtocol(uint32_t protocol);
-void SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
+void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
 				   SceSize size);
 unsigned ksceKernelCpuSuspendIntr(void);
 void ksceKernelCpuResumeIntr(unsigned state);

@@ -186,7 +186,7 @@ int __attribute__((noinline)) dcmpMakeStatusProtocol(uint32_t enabled,
 {
 	uint32_t source, protocol, version, subVersion;
 
-	if (!registration || !packet) {
+	if (!packet || !registration) {
 #if FW_DEBUG
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			DCMP_DEBUG_INFO(1077, 0x2de593ba, 0xafe766c3,
@@ -822,6 +822,7 @@ void dcmpSendStatusProtocol(uint32_t status, const SceSDfMgrProtocol *registrati
 {
 	DcmpProtocolStatus packet;
 	SdfMgrDcmpCpuState *cpu;
+	uint32_t protocol, version, subVersion;
 	int result;
 
 	if (status >> 3) {
@@ -836,13 +837,16 @@ void dcmpSendStatusProtocol(uint32_t status, const SceSDfMgrProtocol *registrati
 	cpu = &s_sdfMgrState.dcmp[sdfMgrCoreIndex()];
 	SceDeci4pSDfMgrForKernel_8A3B06F2(&packet, 0, sizeof(packet));
 	SceDeci4pSDfMgrForKernel_FFC95B63(&packet.message.header, sizeof(packet));
+	subVersion = registration->subVersion;
+	protocol = registration->protocol;
+	version = registration->version;
 	packet.message.header.dst = 0x4000;
 	packet.message.code = 2;
+	packet.protocol = protocol;
+	packet.version = version;
+	packet.subVersion = subVersion;
 	packet.message.kind = 1;
 	packet.message.reserved = 0;
-	packet.protocol = registration->protocol;
-	packet.version = registration->version;
-	packet.subVersion = registration->subVersion;
 	packet.cpu = sdfMgrCpuAddress();
 	packet.status = status;
 	result = sdfMgrQueuePacket(&cpu->transmit, &packet, sizeof(packet), 0);

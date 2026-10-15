@@ -137,44 +137,44 @@ int sendStart(SdfMgrTransport *transport)
 	return 0;
 }
 
-void sdioDispatchEvents(SdfMgrTransport *transport)
+int sdioDispatchEvents(SdfMgrTransport *transport)
 {
 	uint32_t events = transport->events;
+	int progress, result;
 
 	for (;;) {
-		int progressed = 0;
-
-		if (events & 0x40) {
-			uint32_t count = transport->sendProgress;
-
+		progress = events & 0x40;
+		if (progress) {
 			transport->events = events & ~0x40u;
-			if (sceSDfMgrIf2MgrEvent(transport, 4, count, 0, 0) < 0)
-				return;
+			result = sceSDfMgrIf2MgrEvent(transport, 4,
+						    transport->sendProgress, 0, 0);
+			if (result < 0)
+				return result;
 			events = transport->events;
 			if (events & 1) {
 				sdioKickSend(transport, &transport->interruptFlags);
 				events = transport->events;
 			}
-			progressed = 1;
+			progress = 1;
 		}
-		/* Native checks a fresh word here, separately from its saved flags. */
 		if (!(events & 0x10) &&
-		    (((volatile SdfMgrTransport *)transport)->events & 0x21) == 0x21) {
+		    (transport->events & 0x21) == 0x21) {
 			transport->events = events & ~0x20u;
-			if (sceSDfMgrIf2MgrEvent(transport, 3,
-					       (uintptr_t)transport, 0, 0) < 0)
-				return;
+			result = sceSDfMgrIf2MgrEvent(transport, 3,
+						    (uintptr_t)transport, 0, 0);
+			if (result < 0)
+				return result;
 			events = transport->events;
-			progressed = 1;
+			progress = 1;
 		}
 		if (events & 0x4000) {
-			uint32_t count = transport->receiveProgress;
-
 			transport->events = events & ~0x4000u;
-			if (sceSDfMgrIf2MgrEvent(transport, 2, count, 0, 0) < 0)
-				return;
+			result = sceSDfMgrIf2MgrEvent(transport, 2,
+						    transport->receiveProgress, 0, 0);
+			if (result < 0)
+				return result;
 			events = transport->events;
-			progressed = 1;
+			progress = 1;
 		}
 		if (!(events & 0x1000) && (events & 0x2000)) {
 			SceSize size;
@@ -182,15 +182,16 @@ void sdioDispatchEvents(SdfMgrTransport *transport)
 			transport->events = events & ~0x2000u;
 			size = SceDeci4pSDfMgrForKernel_68903C1D(
 							&transport->receiveHeader);
-			if (sceSDfMgrIf2MgrEvent(transport, 1, size,
-					transport->receiveHeader.protocol,
-					transport->receiveHeader.dst) < 0)
-				return;
+			result = sceSDfMgrIf2MgrEvent(transport, 1, size,
+						    transport->receiveHeader.protocol,
+						    transport->receiveHeader.dst);
+			if (result < 0)
+				return result;
 			events = transport->events;
 			continue;
 		}
-		if (!progressed)
-			return;
+		if (!progress)
+			return progress;
 	}
 }
 
@@ -305,12 +306,33 @@ int sendWrite(SdfMgrTransport *transport, const void *buffer, SceSize size)
 	/* Native accounts the requested count for every nonnegative write result. */
 	transport->sendProgress += count;
 	size = SceDeci4pSDfMgrForKernel_68903C1D(&transport->sendHeader);
-	transport->events |= transport->sendProgress < size ? 0x20 : 0x40;
+	if (transport->sendProgress < size)
+		transport->events |= 0x20;
+	else
+		transport->events |= 0x40;
 	return (int)count;
 }
 
 int sdioInit(void)
 {
+	static const SdfMgrTransportOperations operations = {
+		.beginReceive = recvStart,
+		.receive = recvRead,
+		.finishReceive = recvFinish,
+		.beginSend = sendStart,
+		.send = sendWrite,
+		.reset = sdioReset,
+		.poll = sdioPoll,
+		.processReceive = sdioProcessReceive,
+		.pauseReceive = recvPause,
+		.resumeReceive = recvResume,
+		.pause = sdioPause,
+		.resume = sdioResume,
+		.reserved = NULL,
+		.idle = sdioIdle,
+		.disableInterrupts = sdioDisableInterrupts,
+		.enableInterrupts = sdioEnableInterrupts,
+	};
 	SdfMgrTransport *transport = &s_sdfMgrState.sdio[ksceKernelCpuId()];
 	unsigned code, target;
 	int result;
@@ -319,22 +341,7 @@ int sdioInit(void)
 #endif
 
 	transport->name = "SDIO";
-	transport->beginReceive = recvStart;
-	transport->receive = recvRead;
-	transport->finishReceive = recvFinish;
-	transport->beginSend = sendStart;
-	transport->send = sendWrite;
-	transport->reset = sdioReset;
-	transport->poll = sdioPoll;
-	transport->processReceive = sdioProcessReceive;
-	transport->pauseReceive = recvPause;
-	transport->resumeReceive = recvResume;
-	transport->pause = sdioPause;
-	transport->resume = sdioResume;
-	transport->reserved = NULL;
-	transport->idle = sdioIdle;
-	transport->disableInterrupts = sdioDisableInterrupts;
-	transport->enableInterrupts = sdioEnableInterrupts;
+	transport->operations = operations;
 	code = s_sdioInterrupts[ksceKernelCpuId()];
 	target = s_sdfMgrCpuTargets[ksceKernelCpuId()];
 	result = ksceKernelRegisterIntrHandler(code, "SceSDbgSdio0Mbox", 0,

@@ -2,10 +2,7 @@
 #include "sdfmgr_internal.h"
 
 typedef struct TsmpPacket {
-	SceDeci4pHeader header;
-	uint8_t code;
-	uint8_t kind;
-	uint16_t reserved;
+	DcmpHeader message;
 	uint32_t id[2];				/* TSMP's request id */
 	uint16_t tag;				/* the first entry's */
 	uint16_t padding;
@@ -15,10 +12,7 @@ _Static_assert(sizeof(TsmpPacket) == 32, "TSMP header workspace");
 _Static_assert(offsetof(TsmpPacket, tag) == 28, "TSMP entry tag");
 
 typedef struct TsmpReceivePacket {
-	SceDeci4pHeader header;
-	uint8_t code;
-	uint8_t kind;
-	uint16_t reserved;
+	DcmpHeader message;
 	uint32_t id[2];
 } TsmpReceivePacket;
 
@@ -45,15 +39,15 @@ void sdfMgrTsmpSend(const void *payload, SceSize size)
 	TsmpPacket packet;
 
 	SceDeci4pSDfMgrForKernel_8A3B06F2(&packet, 0, sizeof(packet));
-	SceDeci4pSDfMgrForKernel_FFC95B63(&packet.header, size + sizeof(packet));
+	SceDeci4pSDfMgrForKernel_FFC95B63(&packet.message.hdr, size + sizeof(packet));
 	cpu->payloadRemaining = size;
 	cpu->payload = payload;
 	cpu->header = &packet;
 	cpu->headerRemaining = sizeof(packet);
 	packet.tag = 1;
-	packet.kind = 12;
-	packet.header.dst = 0x6000;
-	packet.code = 6;
+	packet.message.code = 12;
+	packet.message.hdr.dst = 0x6000;
+	packet.message.type = 6;
 	sceSDfMgrExReqSend(cpu->handle);
 	SceDeci4pSDfMgrForKernel_98AEC60E();
 }
@@ -72,7 +66,8 @@ void _tsmpSend(int event, void *arg, void *context)
 
 	(void)arg;
 	(void)context;
-	if (event == 3) {
+	switch (event) {
+	case 3:
 		while (cpu->headerRemaining) {
 			result = sceSDfMgrExSend(cpu->handle, cpu->header,
 						 cpu->headerRemaining);
@@ -102,13 +97,18 @@ void _tsmpSend(int event, void *arg, void *context)
 			cpu->payloadRemaining -= (uint32_t)result;
 		}
 		return;
-	}
-	if (event != 1) {
+	case 2:
+	case 4:
+	case 5:
+	case 6:
+		return;
+	case 1:
+		break;
+	default:
 #if FW_DEBUG
-		if (event < 1 || event > 6)
-			SceDeci4pSDfMgrForKernel_501CE61D(15,
-				TSMP_DEBUG_INFO(150, 0x3ccc0a31, 0x7ec7a51d, "_tsmpHandler"),
-				"unknown event (0x%08x)\n", event);
+		SceDeci4pSDfMgrForKernel_501CE61D(15,
+			TSMP_DEBUG_INFO(150, 0x3ccc0a31, 0x7ec7a51d, "_tsmpHandler"),
+			"unknown event (0x%08x)\n", event);
 #endif
 		return;
 	}
@@ -124,9 +124,9 @@ void _tsmpSend(int event, void *arg, void *context)
 #if FW_DEBUG
 	SceDeci4pSDfMgrForKernel_501CE61D(15,
 		TSMP_DEBUG_INFO(195, 0x1223f898, 0xa978ac57, "_tsmpRecv"),
-		"error (type:%02x, code:%02x)\n", packet.code, packet.kind);
+		"error (type:%02x, code:%02x)\n", packet.message.type, packet.message.code);
 #endif
-	remaining = SceDeci4pSDfMgrForKernel_68903C1D(&packet.header);
+	remaining = SceDeci4pSDfMgrForKernel_68903C1D(&packet.message.hdr);
 #if FW_DEBUG
 	if (ksceKernelGetAssertLevel() > 0)
 		ksceKernelAssertLevel(1, remaining < 0x11000,
