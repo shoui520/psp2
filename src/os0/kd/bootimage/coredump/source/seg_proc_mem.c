@@ -369,8 +369,15 @@ static int _writePhdr(SegIf *base, SceOff fileOffset)
 }
 
 /* writes [address, address + size) through buffer; inaccessible pages as zeros */
-/* Sony kept it out of line: 4 callers here and the memblock callback */
+/*
+ * Sony's debug build keeps it out of line (4 callers here and the memblock
+ * callback); the release builds, without the assert, inline it everywhere.
+ */
+#if FW_DEBUG
 static __attribute__((noinline)) int _writeRegion(uintptr_t address,
+#else
+static int _writeRegion(uintptr_t address,
+#endif
 	SceSize size, void *buffer, SceSize bufferSize)
 {
 	SceSize length;
