@@ -104,8 +104,7 @@ static int _writeSegs(SegIf *segment)
 		if (result != 0)
 			goto out;
 		numWaiting = (unsigned int)info.numWaitThreads;
-		if (numWaiting >= 320)
-			numWaiting = 320;
+		numWaiting = numWaiting < 320 ? numWaiting : 320;
 		segment->writtenSize += offsetof(CoredumpMutexInfo, ceilingPriority);
 		oalGetWaitingThreadList(coredumpRun.pid, ids[i], threads,
 			numWaiting);

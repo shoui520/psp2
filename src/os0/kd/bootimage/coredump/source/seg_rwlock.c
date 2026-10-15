@@ -101,8 +101,7 @@ static int _writeSegs(SegIf *segment)
 		if (result != 0)
 			goto out;
 		numWaiting = info.numReadWaitThreads + info.numWriteWaitThreads;
-		if (numWaiting >= 320)
-			numWaiting = 320;
+		numWaiting = numWaiting < 320 ? numWaiting : 320;
 		segment->writtenSize += offsetof(CoredumpRWLockInfo, currentOwnerId);
 		oalGetWaitingThreadList(coredumpRun.pid, ids[i], threads,
 			numWaiting);
