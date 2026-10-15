@@ -80,7 +80,8 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 	SCE_DBG_ASSERT_CHECK(domain < 16, 175);
 	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
 	if (L1PageTableUseSupersections(size, domain)) {
-		if (((va | size | pa) & (L1PT_SUPERSECTION - 1)) == 0)
+		if ((va & (L1PT_SUPERSECTION - 1)) == 0 && (size & (L1PT_SUPERSECTION - 1)) == 0 &&
+		    (pa & (L1PT_SUPERSECTION - 1)) == 0)
 			ret = sceKernelMMUMapSupersections(L1PageTableFor(l1pt, va), type, 0, va,
 							   size, pa);
 		else
@@ -100,7 +101,7 @@ int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, 
 
 	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
 	if (L1PageTableUseSupersections(size, domain)) {
-		if (((va | size) & (L1PT_SUPERSECTION - 1)) == 0)
+		if ((va & (L1PT_SUPERSECTION - 1)) == 0 && (size & (L1PT_SUPERSECTION - 1)) == 0)
 			ret = MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va), asid, va,
 							     size, 0);
 		else
