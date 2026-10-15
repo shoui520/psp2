@@ -68,9 +68,8 @@ static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 {
 	VSlotFIFO *fifo = GetFIFO(type);
 	int intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
-	SceUInt16 count = fifo->count;
 
-	if (count == 0) {
+	if (fifo->count == 0) {
 		fifo->head = slot;
 		fifo->tail = slot;
 	} else {
@@ -87,7 +86,6 @@ static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 					      SCE_DBGINFO_FUNC(196, "VSlotSetNextRaw"),
 					      __builtin_return_address(0));
 #pragma pop_macro("__FILE_NAME__")
-			count = fifo->count;
 		}
 #else
 		tail = fifo->tail;
@@ -95,7 +93,7 @@ static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 		tail->vslotNext = slot;
 		fifo->tail = slot;
 	}
-	fifo->count = count + 1;
+	fifo->count++;
 	if (isNew)
 		fifo->low++;
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
