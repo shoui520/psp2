@@ -104,7 +104,7 @@ typedef struct SmschedInstance {
 /* mailboxes 1-3 of a request's module while it does not run: the saved
  * registers, which the Cmep reads and writes too */
 typedef struct SmschedMailbox {
-	volatile SceUInt32 arm2Cry[CMEP_MAILBOXES - 1];
+	SceUInt32 arm2Cry[CMEP_MAILBOXES - 1];
 	volatile SceUInt32 cry2Arm[CMEP_MAILBOXES - 1];
 } SmschedMailbox;
 
@@ -167,7 +167,7 @@ typedef struct SmschedRequest {
 	SceUInt32 arg3;
 	SceUInt32 arg4;
 	SceInt32 result;
-	SceUInt32 state;
+	volatile SceUInt32 state;
 	uintptr_t areaPA;
 	SceUInt32 contextType;
 	uintptr_t vectorPA;			/* the saved context's PA vector */
@@ -193,6 +193,8 @@ _Static_assert(sizeof(SmschedRequest) == 200, "SmschedRequest");
  * anew, 2 and 3 resume a saved context */
 #define SMSCHED_CONTEXT_NEW			1
 #define SMSCHED_CONTEXT_PREEMPTED		3	/* saved when reschedule preempted it */
+#define SMSCHED_CONTEXT_SIZE			0x20000	/* the secure kernel's saved context */
+#define SMSCHED_CONTEXT_RANGES			16	/* its PA vector */
 
 static inline void SmschedLinkRemove(SmschedLink *link)
 {

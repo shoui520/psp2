@@ -816,3 +816,152 @@ int sceSblSmSchedFini(int stop)
 	}
 	return ret;
 }
+
+/* the module's saved mailboxes 1-3 into the Cmep's registers */
+static inline void SmschedRestoreMailbox(const SmschedRequest *request)
+{
+	CMEP_MAILBOX_REG(arm2CryClear[0]) = 0xffffffff;
+	CMEP_MAILBOX_REG(arm2CryClear[1]) = 0xffffffff;
+	CMEP_MAILBOX_REG(arm2CryClear[2]) = 0xffffffff;
+	CMEP_MAILBOX_REG(arm2Cry[1]) = request->mailbox->arm2Cry[0];
+	CMEP_MAILBOX_REG(arm2Cry[2]) = request->mailbox->arm2Cry[1];
+	CMEP_MAILBOX_REG(arm2Cry[3]) = request->mailbox->arm2Cry[2];
+}
+
+static inline void SmschedFlushWord(const volatile SceUInt32 *word)
+{
+	dmb();
+	(void)*word;
+	dsb();
+}
+
+/*
+ * The first request of the run queues (priority 0 first) onto the Cmep: run
+ * anew or resumed when nothing runs; when a module runs, it is preempted
+ * (its context saved by the secure kernel) if the request has the higher
+ * priority, and the request waits at the head of its queue.
+ */
+void reschedule(void)
+{
+	SmschedRequest *request, *running;
+	SmschedLink *queue;
+	SceKernelVARange range;
+	SceKernelPAVector paVector;
+	SceAllocOpt opt;
+	SceKernelPARange *vector;
+	uintptr_t vectorPA;
+	void *context;
+	int ret;
+
+	queue = &s_runQueue[0];
+	request = (SmschedRequest *)queue->next;
+	if (&request->link == queue) {
+		queue = &s_runQueue[1];
+		request = (SmschedRequest *)queue->next;
+		if (&request->link == queue)
+			return;
+	}
+	SmschedLinkRemove(&request->link);
+
+	running = s_running;
+	if (running == NULL) {
+		request->state = SMSCHED_STATE_STARTING;
+		switch (request->contextType) {
+		case SMSCHED_CONTEXT_NEW:
+		case 4:
+			SmschedRestoreMailbox(request);
+			request->mailbox->arm2Cry[0] = 0;
+			request->mailbox->arm2Cry[1] = 0;
+			request->mailbox->arm2Cry[2] = 0;
+			request->mailbox->cry2Arm[0] = 0;
+			request->mailbox->cry2Arm[1] = 0;
+			request->mailbox->cry2Arm[2] = 0;
+			ret = smsSecureKernelProxyRunSecureModule(request->selfPA, request->arg1,
+								  request->arg2, request->arg3,
+								  request->arg4, &request->invokeArg,
+								  request->areaPA);
+			if (ret < 0)
+				SCE_PANIC(1898);
+			break;
+		case 2:
+		case SMSCHED_CONTEXT_PREEMPTED:
+			SmschedRestoreMailbox(request);
+			ret = smsSecureKernelProxyResumeSecureModule(request->vectorPA,
+								     request->vectorCount,
+								     request->areaPA,
+								     request->mailboxPA);
+			if (ret < 0)
+				SCE_PANIC(1930);
+			break;
+		default:
+			SCE_PANIC(1938);
+		}
+		s_running = request;
+		return;
+	}
+
+	/* back to the head of its queue */
+	SmschedLinkAddTail(queue->next, &request->link);
+	if (running->state == SMSCHED_STATE_STARTING ||
+	    running->state == SMSCHED_STATE_SUSPENDING ||
+	    running->state == SMSCHED_STATE_STOPPING ||
+	    running->state == SMSCHED_STATE_KILLING ||
+	    running->state == SMSCHED_STATE_EXITED ||
+	    running->state == SMSCHED_STATE_STOPPED ||
+	    running->state == SMSCHED_STATE_KILLED ||
+	    running->state == SMSCHED_STATE_READY ||
+	    running->state == SMSCHED_STATE_PREEMPTING ||
+	    running->state == SMSCHED_STATE_SOFT_KILLING ||
+	    running->state == SMSCHED_STATE_EXITING)
+		return;
+	if (running->state != SMSCHED_STATE_RUNNING)
+		SCE_PANIC(1966);
+	if (request->priority >= running->priority)
+		return;
+
+	running->state = SMSCHED_STATE_PREEMPTING;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 64;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	context = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_CONTEXT_SIZE, &opt);
+	if (context == NULL)
+		goto fail;
+	opt.size = sizeof(opt);
+	opt.mmapKind = 0;
+	opt.align = 64;
+	opt.mmapBase = NULL;
+	opt.mmapSize = 0;
+	vector = sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SMSCHED_CONTEXT_RANGES * sizeof(*vector), &opt);
+	if (vector == NULL) {
+		sceKernelFreeHeapMemoryForTZS(s_instance->heap, context);
+		goto fail;
+	}
+	range.addr = (uint32_t)context;
+	range.size = SMSCHED_CONTEXT_SIZE;
+	paVector.size = sizeof(paVector);
+	paVector.ranges_size = SMSCHED_CONTEXT_RANGES;
+	paVector.ranges = vector;
+	if (sceKernelVARangeToPAVectorForTZS(&range, &paVector) < 0)
+		goto free;
+	SmschedFlushWord(&vector[0].addr);
+	SmschedFlushWord(&vector[0].size);
+	if (sceKernelVAtoPAForTZS(vector, &vectorPA) < 0)
+		goto free;
+	running->contextType = SMSCHED_CONTEXT_PREEMPTED;
+	running->context = context;
+	running->vector = vector;
+	running->vectorPA = vectorPA;
+	running->vectorCount = paVector.count;
+	ret = smsSecureKernelProxySuspendSecureModule(s_running->vectorPA, s_running->vectorCount,
+						      s_running->areaPA, s_running->mailboxPA);
+	if (ret < 0)
+		SCE_PANIC(1997);
+	return;
+free:
+	sceKernelFreeUncacheHeapMemoryForTZS(context);
+	sceKernelFreeUncacheHeapMemoryForTZS(vector);
+fail:
+	SCE_PANIC(1987);
+}
