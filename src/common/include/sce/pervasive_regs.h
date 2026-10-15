@@ -63,11 +63,15 @@ typedef struct ScePervasiveDeviceRegisters {
 	volatile uint32_t uart[7];
 	volatile uint32_t reserved12[6];
 	volatile uint32_t debugBus;
-	volatile uint32_t reserved13[2];
+	/* unidentified; the secure boot loader releases it after the DRAM,
+	 * with ScePervasiveMisc bootDeviceResetHold as its hold flag */
+	volatile uint32_t bootDevice;
+	volatile uint32_t reserved13;
 	volatile uint32_t lpddr2[2];		/* main, sub */
 	volatile uint32_t reserved14[2];
 	volatile uint32_t timer;
-	volatile uint32_t reserved15;
+	/* unidentified; released with the Debug Bus and Debug PA (dipsw 0x9f) */
+	volatile uint32_t debugDevice;
 	volatile uint32_t spm;			/* 4: SPM32, 8: SPM128 */
 	volatile uint32_t veneziaRegisterAccess; /* needed for bus error dumps */
 	volatile uint32_t vipRegisterAccess;
@@ -111,6 +115,8 @@ _Static_assert(offsetof(ScePervasiveDeviceRegisters, gpio) == 0x100, "gpio");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, spi) == 0x104, "spi");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, i2c) == 0x110, "i2c");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, uart) == 0x120, "uart");
+_Static_assert(offsetof(ScePervasiveDeviceRegisters, bootDevice) == 0x158, "boot device");
+_Static_assert(offsetof(ScePervasiveDeviceRegisters, debugDevice) == 0x174, "debug device");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, debugBus) == 0x154, "debugBus");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, lpddr2) == 0x160, "lpddr2");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, timer) == 0x170, "timer");
@@ -136,12 +142,19 @@ typedef struct ScePervasiveMiscRegisters {
 	/* set while the GPU, or Venezia and VIP, are powered off (SceDriverTzs) */
 	volatile uint32_t gpuIsolation;			/* 0x34 */
 	volatile uint32_t veneziaIsolation;
-	volatile uint32_t reserved1b[6];
+	/* cleared by the secure boot loader before it starts the device */
+	volatile uint32_t compatRamIsolation;		/* 0x3c */
+	volatile uint32_t sonyRegbusIsolation;
+	volatile uint32_t lpddr2Isolation[2];		/* main, sub */
+	volatile uint32_t reserved1b[2];
 	/* bit 0: idle the bus before a power-on; it clears when taken, and
 	 * busIdleStatus then reports it done */
 	volatile uint32_t gpuBusIdleRequest;		/* 0x54 */
 	volatile uint32_t veneziaBusIdleRequest;
-	volatile uint32_t reserved1c[10];
+	/* the same for CompatRAM (busIdleStatus bit 3) and SonyRegbus (bit 4) */
+	volatile uint32_t compatRamBusIdleRequest;	/* 0x5c */
+	volatile uint32_t sonyRegbusBusIdleRequest;
+	volatile uint32_t reserved1c[8];
 	volatile uint32_t usbMode[3];			/* per USB port, bit 0 */
 	volatile uint32_t reserved2[8];
 	volatile uint32_t pervasiveAccessMode;		/* 0xb0: set by monitor call 0x104 */
@@ -173,8 +186,10 @@ typedef struct ScePervasiveMiscRegisters {
 	volatile uint32_t spareEnable;			/* bit 0; nothing calls its exports */
 	volatile uint32_t reserved8[4];
 	volatile uint32_t uart5PullDownRx;		/* bit 0 RX, bit 1 RFR */
-	volatile uint32_t reserved9[82];
-	/* set while the device is held in reset (SceDriverTzs) */
+	volatile uint32_t reserved9[80];
+	/* set while the device is held in reset (SceDriverTzs, the boot loaders) */
+	volatile uint32_t bootDeviceResetHold;		/* 0x2f0 */
+	volatile uint32_t reserved9b;
 	volatile uint32_t compatRamResetHold;		/* 0x2f8 */
 	volatile uint32_t allegrexResetHold;
 	volatile uint32_t hardwareInfo[3];
@@ -186,6 +201,9 @@ typedef struct ScePervasiveMiscRegisters {
 _Static_assert(offsetof(ScePervasiveMiscRegisters, suspendControl) == 0x20, "misc suspend");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, gpuIsolation) == 0x34, "misc gpu isolation");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, gpuBusIdleRequest) == 0x54, "misc gpu bus idle");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamIsolation) == 0x3c, "misc compat isolation");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamBusIdleRequest) == 0x5c, "misc compat bus idle");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, bootDeviceResetHold) == 0x2f0, "misc boot device hold");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, usbMode) == 0x84, "misc usb mode");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, busIdleStatus) == 0xc0, "misc bus idle status");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamResetHold) == 0x2f8, "misc compat ram hold");

@@ -10,6 +10,9 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/reset.S
 	source/boot.c
 	${sysmem_source}/serial.c
+	../../common/kbl/pervasive_kbl.c
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")
+set_source_files_properties(../../common/kbl/pervasive_kbl.c PROPERTIES
+	COMPILE_DEFINITIONS PERVASIVE_SKBL)

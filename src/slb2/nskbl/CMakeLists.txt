@@ -14,6 +14,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sdif_source}/card_cmd.c
 	${sdif_source}/sd.c
 	${sdif_source}/adma.c
+	../../common/kbl/pervasive_kbl.c
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_NSKBL COMPILE_OPTIONS "-fsigned-char")

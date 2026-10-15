@@ -2,6 +2,7 @@
 #include "lowio_internal.h"
 #include <psp2kern/kernel/threadmgr.h>
 #include <sce/threadmgr.h>
+#include <sce/pervasive_pixel.h>
 
 
 typedef struct PixelClockSetting {
@@ -20,16 +21,6 @@ typedef struct PixelClockEntry {
 
 #include "pixel_clock_table.h"
 
-typedef struct PixelClockContext {
-	volatile ScePervasivePixelClockRegisters *registers;
-	const PixelClockSetting *setting;
-	uint32_t pllConfig;
-	uint32_t clock;
-	double frequency;
-	double pixelFrequency;
-} PixelClockContext;
-
-_Static_assert(sizeof(PixelClockContext) == 0x20, "pixel clock context");
 static PixelClockContext s_pixelClock[2];
 
 int LowioPixelClockInit(void)

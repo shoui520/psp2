@@ -3,17 +3,8 @@
  * and the DSI pixel clocks' state, as SceLowio keeps them.
  */
 #include "pervasive_tzs.h"
+#include <sce/pervasive_pixel.h>
 
-typedef struct PixelClockContext {
-	volatile ScePervasivePixelClockRegisters *registers;
-	const void *setting;
-	uint32_t pllConfig;
-	uint32_t clock;
-	double frequency;
-	double pixelFrequency;
-} PixelClockContext;
-
-_Static_assert(sizeof(PixelClockContext) == 0x20, "pixel clock context");
 
 static PixelClockContext s_pixelClock[2];
 
