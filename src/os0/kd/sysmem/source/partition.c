@@ -910,28 +910,6 @@ int PartitionAllocMemBlockInListByAddrByCommandRaw(Partition *partition,
 	return ret;
 }
 
-/* the dump of a partition whose list is gone */
-static inline void TinyPartitionShowNoAnchor(TinyPartition *tiny, MemBlockObject *block)
-{
-	SCE_PRINTF_WITH_INFO(0xb, 3592, "***** pBlockAnchor is SCE_NULL *****\n");
-	SCE_PRINTF_WITH_INFO(0xb, 3595, "pPart=%p[%s],nBlock=%d\n", tiny, tiny->name,
-			     tiny->blockCount & 0xffff);
-	SCE_PRINTF_WITH_INFO(0xb, 3598, ".base=0x%08x, .size=0x%08x\n", tiny->vbase, tiny->size);
-	SCE_PRINTF_WITH_INFO(0xb, 3601, ".nBlockUsed=0x%08x, .magic=0x%08x\n",
-			     tiny->blockCount & 0xffff, tiny->magic);
-	SCE_PRINTF_WITH_INFO(0xb, 3604, ".freeSize=0x%08x, .magic=0x%08x\n", tiny->freeSize,
-			     tiny->magic);
-	SCE_PRINTF_WITH_INFO(0xb, 3605, ".pAC=%p\n", tiny->context);
-	SCE_PRINTF_WITH_INFO(0xb, 3608, "pBlockTarget %p[0x%08x+0x%08x]\n", block, block->vbase,
-			     block->size);
-	SCE_PRINTF_WITH_INFO(0xb, 3609, "guid=0x%08x\n", block->guid);
-	if (block->flags & MEMBLOCK_FLAG_NAMED)
-		SCE_PRINTF_WITH_INFO(0xb, 3611, ".name=[%s]\n", MemBlockGetNameRaw(block));
-	if (tiny->context != NULL)
-		SCE_PRINTF_WITH_INFO(0xb, 3615, "PartitionGetAC(pPart)->=context.contextid=0x%08x\n",
-				     tiny->context->mmu.contextId);
-}
-
 typedef void (*TinyPartitionFreeCallback)(TinyPartition *tiny, MemBlockObject *block);
 
 /*
@@ -957,8 +935,28 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 	context = tiny->context;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
 	head = tiny->blocks;
-	if (head == NULL)
-		TinyPartitionShowNoAnchor(tiny, block);
+	if (head == NULL) {
+		/* the dump of a partition whose list is gone */
+		SCE_PRINTF_WITH_INFO(0xb, 3592, "***** pBlockAnchor is SCE_NULL *****\n");
+		SCE_PRINTF_WITH_INFO(0xb, 3595, "pPart=%p[%s],nBlock=%d\n", tiny, tiny->name,
+				     tiny->blockCount & 0xffff);
+		SCE_PRINTF_WITH_INFO(0xb, 3598, ".base=0x%08x, .size=0x%08x\n", tiny->vbase,
+				     tiny->size);
+		SCE_PRINTF_WITH_INFO(0xb, 3601, ".nBlockUsed=0x%08x, .magic=0x%08x\n",
+				     tiny->blockCount & 0xffff, tiny->magic);
+		SCE_PRINTF_WITH_INFO(0xb, 3604, ".freeSize=0x%08x, .magic=0x%08x\n", tiny->freeSize,
+				     tiny->magic);
+		SCE_PRINTF_WITH_INFO(0xb, 3605, ".pAC=%p\n", tiny->context);
+		SCE_PRINTF_WITH_INFO(0xb, 3608, "pBlockTarget %p[0x%08x+0x%08x]\n", block,
+				     block->vbase, block->size);
+		SCE_PRINTF_WITH_INFO(0xb, 3609, "guid=0x%08x\n", block->guid);
+		if (block->flags & MEMBLOCK_FLAG_NAMED)
+			SCE_PRINTF_WITH_INFO(0xb, 3611, ".name=[%s]\n", MemBlockGetNameRaw(block));
+		if (tiny->context != NULL)
+			SCE_PRINTF_WITH_INFO(0xb, 3615,
+					     "PartitionGetAC(pPart)->=context.contextid=0x%08x\n",
+					     tiny->context->mmu.contextId);
+	}
 
 	/* to the block, along the free list while it stays below it */
 	prevFree = head;

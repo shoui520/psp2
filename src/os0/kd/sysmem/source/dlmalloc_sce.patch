@@ -264,13 +264,13 @@
 +            if (q != first) {
 +              mstate fm = get_mstate_for(q);
 +              if (ksceKernelVAtoPA(fm, &pa) < 0) {
-+                SCE_PRINTF_WITH_INFO(0, __LINE__,
++                SCE_PRINTF_WITH_INFO(0, 3603,
 +                  "*** Kernel Heap Corruption. BAD ADDRESS (msp=%p[%s], q=%p, fm=%p)\n",
 +                  m, name, q, fm);
 +                return SCE_DLMALLOC_ERROR_BAD_CHUNK;
 +              }
 +              if (!ok_magic(fm))
-+                SCE_PRINTF_WITH_INFO(0, __LINE__,
++                SCE_PRINTF_WITH_INFO(0, 3608,
 +                  "*** Kernel Heap Corruption. BAD MAGIC (msp=%p[%s], q=%p)\n",
 +                  m, name, q);
 +            }
@@ -279,7 +279,7 @@
 +              found = 1;
 +          }
 +          else if (chunk2mem(q) == mem) {
-+            SCE_DBG_PRINTF_LEVEL(1, 0, __LINE__,
++            SCE_DBG_PRINTF_LEVEL(1, 0, 3621,
 +              "*** Kernel Heap Possibility of double free (msp=%p[%s], ptr=q=%p)\n",
 +              m, name, q);
 +          }
@@ -295,7 +295,7 @@
 +  }
 +  if (mem != 0 && notfound &&
 +      (!ok_address(m, mem2chunk(mem)) || (mem2chunk(mem)->head & INUSE_BITS) != 0)) {
-+    SCE_DBG_PRINTF_LEVEL(1, 0, __LINE__,
++    SCE_DBG_PRINTF_LEVEL(1, 0, 3644,
 +      "*** Kernel Heap Invalid operation (msp=%p[%s], ptr=%p)\n", m, name, mem);
 +    count = SCE_DLMALLOC_ERROR_BAD_CHUNK;
 +  }
@@ -784,7 +784,7 @@
  void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
    if (oldmem == 0)
      return mspace_malloc(msp, bytes);
-@@ -5309,70 +5247,72 @@
+@@ -5309,70 +5247,74 @@
    return internal_memalign(ms, alignment, bytes);
  }
  
@@ -839,7 +839,9 @@
 +            m->dvsize = 0;
 +          }
 +          else {
++#line 5735	/* SCE: the line in Sony's dlmalloc/malloc.c */
 +            unlink_large_chunk(m, tp);
++#line 5747
 +          }
 +          if (CALL_MUNMAP(m, sp->base, size) == 0) {
 +            released += size;

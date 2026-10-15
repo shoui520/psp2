@@ -1041,7 +1041,8 @@ int UIDEntryClose(UIDEntryHeap *heap, UIDEntry *entry, DeleteParam *param)
 		return ret;
 	/* GUIDEntryHeapCloseRaw */
 	if (object == NULL) {
-		SCE_DBG_PRINTF(0xb, 4419, "UIDEntryClose returns pObject==SCE_NULL\n");
+		SCE_DBG_PRINTF_FUNC(0xb, 4419, "GUIDEntryHeapCloseRaw",
+				    "UIDEntryClose returns pObject==SCE_NULL\n");
 		return ret;
 	}
 	return DeleteParamAdd(param, object, objectHeap,
@@ -1207,7 +1208,8 @@ int UIDEntryHeapSetPUIDEntryChainRaw(UIDEntryHeap *heap, UIDEntry *entry, SceUID
 	name = info->name;
 	entry->reserved = 0;
 	if (object == NULL)
-		SCE_DBG_PRINTF(0xb, 1075, "Warning:pObject is SCE_NULL\n");
+		SCE_DBG_PRINTF_FUNC(0xb, 1075, "UIDEntryConstructPChain",
+				    "Warning:pObject is SCE_NULL\n");
 	entry->object = object;
 	entry->pid = pid;
 	entry->attr = entryAttr;
@@ -1242,7 +1244,8 @@ int UIDEntryConstructByBase(UIDEntryHeap *heap, UIDEntry *entry, SceUID pid, UID
 	/* UIDEntryConstructGChain */
 	entry->reserved = 0;
 	if (object == NULL)
-		SCE_DBG_PRINTF(0xb, 1042, "Warning:pObject is SCE_NULL\n");
+		SCE_DBG_PRINTF_FUNC(0xb, 1042, "UIDEntryConstructGChain",
+				    "Warning:pObject is SCE_NULL\n");
 	entry->object = object;
 	entry->pid = pid;
 	entry->attr = (attr & ~(UID_ENTRY_ATTR_PUID | UID_ENTRY_ATTR_ALL)) | UID_ENTRY_ATTR_LINK;

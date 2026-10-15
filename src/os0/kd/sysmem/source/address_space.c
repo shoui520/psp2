@@ -973,7 +973,7 @@ free:
 #define USER_IOPA_VBASE			0x80000000
 
 /* the user I/O page at 0x80000000 */
-static inline void AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
+static inline int AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
 {
 	SceKernelAllocMemBlockCommand command;
 	void *va;
@@ -985,19 +985,16 @@ static inline void AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
 	command.opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	ret = MemBlockCode2TypeInfo(MEMBLOCK_CODE_USER_IO_DEVICE_RW, &command.typeInfo);
 	if (ret < 0)
-		goto fail;
+		return ret;
 	command.addressSpace = as;
 	ret = AddressSpaceAllocMemBlockByCommand(as, &command);
 	as->userIOPA = ret;
 	if (ret < 0)
-		goto fail;
+		return ret;
 	ret = ksceKernelGetMemBlockVBase(ret, &va);
 	if ((uintptr_t)va != USER_IOPA_VBASE)
 		SCE_DBG_ASSERT_FAIL(1260);
-	if (ret >= 0)
-		return;
-fail:
-	SCE_DBG_ASSERT_FAIL(1897);
+	return ret;
 }
 
 /* the user partitions, the I/O page and window, the timer page at a random offset */
@@ -1019,7 +1016,8 @@ static inline __attribute__((always_inline)) int AddressSpaceCreatePartitionForU
 	    AddressSpaceCreatePartitionByCommandRaw(as, pid, &s_userToolPartition, 0, 0) < 0)
 		SCE_DBG_ASSERT_FAIL(1887);
 	if (ksceKernelCheckDipsw(DIPSW_USER_IOPA)) {
-		AddressSpaceAddDefaultUserIOPARaw(as);
+		if (AddressSpaceAddDefaultUserIOPARaw(as) < 0)
+			SCE_DBG_ASSERT_FAIL(1897);
 		if (ksceKernelCheckDipsw(DIPSW_USER_IOPA_MAP)) {
 			if (!ksceKernelCheckDipsw(DIPSW_USER_IO_SMALL)) {
 				pa = 0x80000000;

@@ -69,9 +69,9 @@ uint32_t SysrootGetTimeLow(void);
 #define PROC_EVENT_TIMER_CHECK(limit, line, what) do {				\
 	time = SysrootGetTimeLow() - start;						\
 	if (time >= (limit))								\
-		SCE_DBG_PRINTF_LEVEL(1, 0, line,					\
-				     "  == ALERT == : [%s] process %s handler (phase 0x%08x) took %d usec\n", \
-				     ksceGUIDName(link->uid), what, phase, time);	\
+		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, line, "sceKernelInvokeProcEventHandler", \
+					  "  == ALERT == : [%s] process %s handler (phase 0x%08x) took %d usec\n", \
+					  ksceGUIDName(link->uid), what, phase, time);	\
 } while (0)
 #else
 #define PROC_EVENT_TIMER_START()	do { } while (0)
