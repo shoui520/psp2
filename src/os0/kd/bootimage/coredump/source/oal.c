@@ -2446,7 +2446,7 @@ int oalGetNumOfWaitingThreads(SceUID pid, SceUID waitId)
 	if (count != 0)
 		return count;
 	count = sceKernelGetWaitingThreadList(guid, &thread, 0, NULL);
-	return count < 0 ? 0 : count;
+	return count & ~(count >> 31);
 }
 
 void oalGetWaitingThreadList(SceUID pid, SceUID waitId,
