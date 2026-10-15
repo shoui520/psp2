@@ -1334,7 +1334,7 @@ int initializeTraceHardware(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
-		opt.paddr = PAMGR_PTM_PADDR(i);
+		opt.paddr = CORESIGHT_PTM_BASE(i);
 		block = ksceKernelAllocMemBlock(ptmNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
@@ -1346,7 +1346,7 @@ int initializeTraceHardware(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
-		opt.paddr = PAMGR_DBG_PADDR(i);
+		opt.paddr = CORESIGHT_DBG_BASE(i);
 		block = ksceKernelAllocMemBlock(dbgNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
@@ -1358,7 +1358,7 @@ int initializeTraceHardware(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
-		opt.paddr = PAMGR_PMU_PADDR(i);
+		opt.paddr = CORESIGHT_PMU_BASE(i);
 		block = ksceKernelAllocMemBlock(pmuNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
@@ -1370,7 +1370,7 @@ int initializeTraceHardware(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
-		opt.paddr = PAMGR_CTI_PADDR(i);
+		opt.paddr = CORESIGHT_CTI_BASE(i);
 		block = ksceKernelAllocMemBlock(ctiNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
@@ -1381,7 +1381,7 @@ int initializeTraceHardware(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = PAMGR_TPIU_PADDR;
+	opt.paddr = CORESIGHT_TPIU_BASE;
 	block = ksceKernelAllocMemBlock("SceTpiuReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
@@ -1391,7 +1391,7 @@ int initializeTraceHardware(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = PAMGR_FUNNEL_PADDR;
+	opt.paddr = CORESIGHT_FUNNEL_BASE;
 	block = ksceKernelAllocMemBlock("SceFunnelReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
@@ -1401,7 +1401,7 @@ int initializeTraceHardware(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = PAMGR_ITM_PADDR;
+	opt.paddr = CORESIGHT_ITM_BASE;
 	block = ksceKernelAllocMemBlock("SceItmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;

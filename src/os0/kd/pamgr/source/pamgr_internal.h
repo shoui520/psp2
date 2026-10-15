@@ -9,6 +9,7 @@
 #include <sce/intrmgr_syscall.h>
 #include <sce/pl310_regs.h>
 #include <sce/perfmon_regs.h>
+#include <sce/coresight_regs.h>
 #include <sce/cp15.h>
 #include <sce/pamgr_trace.h>
 
@@ -82,15 +83,6 @@ struct PamgrSampleConfig {
 
 /* funnel: the slave ports of the four PTMs and the ITM */
 #define FUNNEL_PORTS			0x17
-
-/* the physical registers pamgr maps: one PTM, debug, PMU and CTI block per core */
-#define PAMGR_PTM_PADDR(core)		(0xe331c000 + (core) * 0x1000)
-#define PAMGR_DBG_PADDR(core)		(0xe3310000 + (core) * 0x2000)
-#define PAMGR_PMU_PADDR(core)		(0xe3311000 + (core) * 0x2000)
-#define PAMGR_CTI_PADDR(core)		(0xe3318000 + (core) * 0x1000)
-#define PAMGR_TPIU_PADDR		0xe3203000
-#define PAMGR_FUNNEL_PADDR		0xe3204000
-#define PAMGR_ITM_PADDR			0xe3205000
 
 /* how long a register handshake may take, in PFM timebase ticks */
 #define PAMGR_TIMEOUT			0x10000000
