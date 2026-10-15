@@ -229,14 +229,14 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 
 	gpuCoreDumpIndexed.count = GPU_COREDUMP_INDEXED;
 	for (core = 0; core < cores; core++)
-		GPU_CORE_REG(regs, core, GPU_COREDUMP_DEBUG_ENABLE) = 1;
+		GPU_CORE_REG(regs, core, SCE_SGX_COUNTER_ENABLE) = 1;
 	for (i = 0; i != GPU_COREDUMP_INDEXED; i++) {
 		sel = i | i << 16;
 		gpuCoreDumpIndexed.value[i].offset = i;
 		for (core = 0; core < cores; core++) {
-			GPU_CORE_REG(regs, core, GPU_COREDUMP_DEBUG_SELECT0) = sel | 0x8000000;
-			GPU_CORE_REG(regs, core, GPU_COREDUMP_DEBUG_SELECT1) = sel | 0x18001000;
-			gpuCoreDumpIndexed.value[i].value[core] = GPU_CORE_REG(regs, core, GPU_COREDUMP_DEBUG_DATA);
+			GPU_CORE_REG(regs, core, SCE_SGX_COUNTER_SELECT_FIRST) = sel | SCE_SGX_COUNTER_FIRST_SOURCE;
+			GPU_CORE_REG(regs, core, SCE_SGX_COUNTER_SELECT_SECOND) = sel | SCE_SGX_COUNTER_SECOND_SOURCE;
+			gpuCoreDumpIndexed.value[i].value[core] = GPU_CORE_REG(regs, core, SCE_SGX_COUNTER_VALUE);
 		}
 	}
 

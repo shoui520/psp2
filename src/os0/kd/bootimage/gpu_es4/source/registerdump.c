@@ -7,6 +7,7 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <string.h>
 #include "../../../../../vendor/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
+#include <sce/sgx_regs.h>
 #include "../../../../../vendor/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 
 /* Pristine SGX MP register-bank selection, services4/include/sgx_mkif_km.h. */
@@ -167,11 +168,6 @@ int kscePowerGetGpuClockFrequencyInternal(SceUInt32 *first, SceUInt32 *second);
 int scePowerGetGpuXbarClockFrequency(void);
 int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 
-/* SCE extended counter registers, absent from the pristine hardware defs. */
-#define GPU_PERF_COUNTER_VALUE 0x70
-#define GPU_PERF_COUNTER_ENABLE 0x78
-#define GPU_PERF_SELECTOR_FIRST 0x90
-#define GPU_PERF_SELECTOR_SECOND 0x94
 #define GPU_REGISTER(base, offset) (*(volatile unsigned *)((unsigned char *)(base) + (offset)))
 
 int FindRegisterIndex(const unsigned *registers, int count, unsigned address)
@@ -378,44 +374,44 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 	for (core = 0; core < dump->coreCount; core++) {
 		dmb();
 		savedEnable[core] = GPU_REGISTER(registers,
-				SGX_MP_CORE_SELECT(GPU_PERF_COUNTER_ENABLE, core));
+				SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_ENABLE, core));
 		dmb();
 		savedFirst[core] = GPU_REGISTER(registers,
-				SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_FIRST, core));
+				SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_FIRST, core));
 		dmb();
 		savedSecond[core] = GPU_REGISTER(registers,
-				SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_SECOND, core));
+				SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_SECOND, core));
 		dmb();
-		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_COUNTER_ENABLE, core)) = 1;
+		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_ENABLE, core)) = 1;
 		dsb();
 	}
 	for (index = 0; index < GPU_DUMP_PERF_REGISTER_COUNT; index++) {
 		selector = (unsigned char)perfRegisterSelectors[index];
 		dump->perfRegisters[index].selector = selector;
 		selector |= selector << 16;
-		first = selector | 0x08000000;
-		second = selector | 0x18001000;
+		first = selector | SCE_SGX_COUNTER_FIRST_SOURCE;
+		second = selector | SCE_SGX_COUNTER_SECOND_SOURCE;
 		for (core = 0; core < dump->coreCount; core++) {
 			dmb();
-			GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_FIRST, core)) = first;
+			GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_FIRST, core)) = first;
 			dsb();
 			dmb();
-			GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_SECOND, core)) = second;
+			GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_SECOND, core)) = second;
 			dsb();
 			dmb();
 			dump->perfRegisters[index].values[core] = GPU_REGISTER(registers,
-					SGX_MP_CORE_SELECT(GPU_PERF_COUNTER_VALUE, core));
+					SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_VALUE, core));
 		}
 	}
 	for (core = 0; core < dump->coreCount; core++) {
 		dmb();
-		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_FIRST, core)) = savedFirst[core];
+		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_FIRST, core)) = savedFirst[core];
 		dsb();
 		dmb();
-		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_SELECTOR_SECOND, core)) = savedSecond[core];
+		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_SELECT_SECOND, core)) = savedSecond[core];
 		dsb();
 		dmb();
-		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(GPU_PERF_COUNTER_ENABLE, core)) = savedEnable[core];
+		GPU_REGISTER(registers, SGX_MP_CORE_SELECT(SCE_SGX_COUNTER_ENABLE, core)) = savedEnable[core];
 		dsb();
 	}
 	dump->flags |= 0x24;

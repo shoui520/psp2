@@ -1,6 +1,7 @@
 /* Native GPU register mapping and register-dump storage helpers. */
 #include "sce/sysmem.h"
 #include "gpu-dump.h"
+#include <sce/sgx_regs.h>
 
 extern void *memset(void *destination, int value, unsigned size);
 extern void *memcpy(void *destination, const void *source, unsigned size);
@@ -36,16 +37,16 @@ int MapGpuRegisters(void)
 	int uid;
 
 	platform->ui32Flags = 0;
-	platform->sRegsSysPBase.uiAddr = 0xe8400000;
-	platform->sRegsCpuPBase.uiAddr = 0xe8400000;
-	platform->ui32RegsSize = 0x20000;
+	platform->sRegsSysPBase.uiAddr = SGX_REG_BASE;
+	platform->sRegsCpuPBase.uiAddr = SGX_REG_BASE;
+	platform->ui32RegsSize = SGX_REG_SIZE;
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	options.paddr = 0xe8400000;
+	options.paddr = SGX_REG_BASE;
 	uid = ksceKernelAllocMemBlock("SceSGX543Reg",
 				    SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
-				    0x20000, &options);
+				    SGX_REG_SIZE, &options);
 	gpuDumpRegion.state.registerMemblockUid = uid;
 	ksceKernelGetMemBlockBase(uid, &platform->pvRegsCpuVBase);
 	platform->ui32IRQ = 0x34;

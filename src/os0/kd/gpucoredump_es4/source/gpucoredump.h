@@ -12,6 +12,7 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <sce/des.h>
 #include "sce/sgxmkif_sce.h"
+#include <sce/sgx_regs.h>
 
 /* what a captured value holds before the capture */
 #define GPU_COREDUMP_POISON		0x5ce0beef
@@ -188,11 +189,6 @@ typedef struct GpuCoreDumpWriter {
 #define GPU_COREDUMP_MASTER_CORE		0x4000
 #define GPU_COREDUMP_MASTER_CORE_ENABLE_MASK	0x3
 
-/* each core's debug bus, read through a select pair (not in the IMG headers) */
-#define GPU_COREDUMP_DEBUG_DATA		0x70
-#define GPU_COREDUMP_DEBUG_ENABLE	0x78
-#define GPU_COREDUMP_DEBUG_SELECT0	0x90
-#define GPU_COREDUMP_DEBUG_SELECT1	0x94
 
 /* gpucoredump_tables.c */
 extern GpuCoreDumpMasterList gpuCoreDumpMasterRegs;
