@@ -1504,7 +1504,7 @@ typedef struct MemBlockDebugCallbacks {
 
 #if FW_DEBUG
 /* not static: the debug dump reads it */
-MemBlockDebugCallbacks *s_memBlockDebugCallbacks;
+static MemBlockDebugCallbacks *s_memBlockDebugCallbacks;
 #endif
 
 int ksceKernelIncRefCountMemBlock(SceUID guid)

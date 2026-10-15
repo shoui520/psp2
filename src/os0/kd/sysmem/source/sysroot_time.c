@@ -213,7 +213,7 @@ struct SysrootAutoClockDownState {
 
 struct SysrootAutoClockDownState SceSysrootForDriver_4B8C305A = { 0 };
 /* PLACEHOLDER: meaning of the secondary native Sysroot word618. */
-uint32_t s_sysrootClass;
+static uint32_t s_sysrootClass;
 extern int SceDebugForKernel_0EDA5174(uint32_t value);
 
 _Static_assert(sizeof(struct SysrootState) == 0x41c, "Sysroot state size");
@@ -234,7 +234,7 @@ _Static_assert(offsetof(struct SysrootState, sharedTime) == 0x88,
 	       "Sysroot shared time pointer offset");
 
 /* Native BSS starts at NULL; the module startup caller remains unimplemented. */
-struct SysrootState *volatile s_sysrootState;
+static struct SysrootState *volatile s_sysrootState;
 
 void *sceKernelSysrootAlloc(SceSize size)
 {

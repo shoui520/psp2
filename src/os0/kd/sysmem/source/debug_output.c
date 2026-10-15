@@ -32,10 +32,10 @@ extern int DebugCallPrintfHandler(int argument, const char *format,
 				  va_list arguments);
 
 DebugPrintfHandler volatile s_debugKprintfHandler = DebugDefaultPrintf;
-void *volatile s_debugKprintfArgument;
+static void *volatile s_debugKprintfArgument;
 volatile uint32_t s_debugRingIndex;
 char s_debugRing[4096];
-char s_debugPrefix[256];
+static char s_debugPrefix[256];
 volatile uint32_t s_debugPrintLock;
 
 int ksceKernelRegisterKprintfHandler(DebugPrintfHandler handler, void *argument)

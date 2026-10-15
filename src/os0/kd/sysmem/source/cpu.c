@@ -21,9 +21,9 @@ struct CpuLongIrqHandlerRecord {
 };
 
 #if FW_DEBUG
-volatile uintptr_t s_cpuLastLockCaller[4];
-volatile uint32_t s_cpuIrqDisabledAt[4];
-struct CpuLongIrqHandlerRecord *volatile s_cpuLongIrqHandlerRecord;
+static volatile uintptr_t s_cpuLastLockCaller[4];
+static volatile uint32_t s_cpuIrqDisabledAt[4];
+static struct CpuLongIrqHandlerRecord *volatile s_cpuLongIrqHandlerRecord;
 #endif
 
 void SceCpuForKernel_B331AB16(struct CpuLongIrqHandlerRecord *record)

@@ -33,8 +33,8 @@ typedef struct VSlotFIFO {
 
 _Static_assert(sizeof(VSlotFIFO) == 0x10, "VSlotFIFO size");
 
-VSlotFIFO s_vslotFifo[2];
-SceClass *s_vslotClass;
+static VSlotFIFO s_vslotFifo[2];
+static SceClass *s_vslotClass;
 static SceClass s_vslotClassBody;
 
 int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,

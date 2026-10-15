@@ -56,10 +56,10 @@ typedef struct AddressSpaceGlobals {
 
 static uintptr_t s_userIOPABase;
 /* PLACEHOLDER: set by the unconverted module start */
-AddressSpaceObject *s_kernelAddressSpace;
+static AddressSpaceObject *s_kernelAddressSpace;
 static SceSize s_userIOPASize;
 /* PLACEHOLDER: where the class pointer and the ASID heap are kept; set by the unconverted module start */
-AddressSpaceGlobals *s_addressSpaceGlobals;
+static AddressSpaceGlobals *s_addressSpaceGlobals;
 
 /* name unknown: the physical window user I/O mappings get (smaller with dipsw 0xd5) */
 void AddressSpaceInitUserIOPA(void)

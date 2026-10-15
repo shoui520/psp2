@@ -125,18 +125,18 @@ typedef struct PhyMemPageRange {
 } PhyMemPageRange;
 
 
-SceClass *s_phyMemPartClass;
-const PhyMemPageRange *s_phyPageVenezia;
-const PhyMemPageRange *s_phyPageVip;
+static SceClass *s_phyMemPartClass;
+static const PhyMemPageRange *s_phyPageVenezia;
+static const PhyMemPageRange *s_phyPageVip;
 
 /* the kernel's page table manager, set by PhyMemModuleStartPhase2 */
-PhyPageTableMgr *s_phyPageTableMgr;
-PhyMemPart *s_phyPartKernel;
-PhyMemPart *s_phyPartTool;
+static PhyPageTableMgr *s_phyPageTableMgr;
+static PhyMemPart *s_phyPartKernel;
+static PhyMemPart *s_phyPartTool;
 PhyMemPart *s_phyPartGame;
-PhyMemPart *s_phyPartCdram;
+static PhyMemPart *s_phyPartCdram;
 /* how much the game partition has grown */
-SceSize s_phyMemPartGrownSize;
+static SceSize s_phyMemPartGrownSize;
 /* PLACEHOLDER: the partition tracker; only the allocation callback is known */
 typedef struct PhyMemPartHook {
 	void (*alloc)(struct PhyMemPart *part, SceSize size, struct PhyPage *page);
@@ -153,8 +153,8 @@ typedef struct PhyMemPartLogCallback {
 
 #if FW_DEBUG
 /* debug builds only: the partition tracker and log */
-const PhyMemPartHook *s_phyMemPartHook;
-const PhyMemPartLogCallback *s_phyMemPartLogCallback;
+static const PhyMemPartHook *s_phyMemPartHook;
+static const PhyMemPartLogCallback *s_phyMemPartLogCallback;
 #endif
 
 /* sceKernelSetPhyMemPartHook */
@@ -2391,7 +2391,7 @@ static SceClass s_phyMemPartClassBody;
 /* the boot CDRAM partition, a static one over the static allocator's range */
 static PhyMemSegment s_phyMemSegmentCdramBoot;
 static PhyMemPart s_phyMemPartCdramBoot;
-PhyMemPart *s_phyPartCdramBoot;
+static PhyMemPart *s_phyPartCdramBoot;
 
 /* name unknown: the partitions the boot loader made, and the kernel's free size recounted */
 int PhyMemModuleStart(const UIDManager *manager)

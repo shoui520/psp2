@@ -1023,7 +1023,7 @@ out:
 }
 
 /* the kernel/user shared tiny partition (CreateTinyPartitionRaw) */
-TinyPartition *s_tinyPartitionUserShared;
+static TinyPartition *s_tinyPartitionUserShared;
 
 /* a block freed with what it carried: its base block (out) and base info (out) */
 int PartitionFreeMemBlockWithBaseRaw(Partition *partition, MemBlockObject *block,
