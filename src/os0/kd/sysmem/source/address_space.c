@@ -1127,6 +1127,8 @@ int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 {
 	TinyPartitionClientInfoList *list;
 	MemBlockClientInfo *client;
+	void **entries;
+	SceUID *guids;
 	AddressSpaceObject *as;
 	struct Partition *partition;
 	SceUInt32 i, j;
@@ -1134,7 +1136,7 @@ int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 
 	ret = ksceGUIDGetObject(guid, &as);
 	if (ret < 0)
-		return ret;
+		goto out;	/* Sony's code releases the object it did not get */
 	AddressSpaceRefer(as);
 	if (as->type != ADDRESS_SPACE_TYPE_USER) {
 		ret = SCE_KERNEL_ERROR_ERROR;
@@ -1149,13 +1151,14 @@ int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
 	list->capacity = ADDRESS_SPACE_PARTITIONS;
 	list->count = 0;
-	list->entries = ksceKernelAlloc(ADDRESS_SPACE_PARTITIONS * sizeof(void *));
-	if (list->entries == NULL) {
+	entries = ksceKernelAlloc(ADDRESS_SPACE_PARTITIONS * sizeof(void *));
+	list->entries = entries;
+	if (entries == NULL) {
 		ksceKernelFree(list);
 		return SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
 	}
 	for (i = 0; i != list->capacity; i++)
-		list->entries[i] = NULL;
+		*entries++ = NULL;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&as->lock);
 	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
 		partition = as->partition[i];
@@ -1173,17 +1176,19 @@ int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 		if (partition != NULL && !(partition->attr & 8))
 			TinyPartitionFreeAllMemBlock(partition, list);
 	}
+	entries = list->entries;
 	for (i = 0; i < list->count; i++) {
-		client = list->entries[i];
+		client = entries[i];
 		if (client == NULL)
 			continue;
+		guids = client->guids;
 		for (j = 0; j < client->capacity; j++) {
-			if (client->guids[j] == -1)
+			if (guids[j] == -1)
 				continue;
 			SCE_PRINTF_WITH_INFO_FUNC(0, 3137, "sceKernelAddressSpaceFreeAllMemBlock",
 						  "Force sceKernelUnmapMemBlock(GUID:0x%08x)\n",
-						  client->guids[j]);
-			ksceKernelUnmapMemBlock(client->guids[j]);
+						  guids[j]);
+			ksceKernelUnmapMemBlock(guids[j]);
 		}
 	}
 	if (list->entries != NULL) {
