@@ -2800,28 +2800,41 @@ int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoLi
 	context = tiny->context;
 	if (head == NULL)
 		goto out;
-	for (cur = head->next; cur != head && cur != NULL; cur = next) {
-		next = cur->next;
-		if (cur->code == 0)
-			continue;
-		SCE_DBG_PRINTF(0, 3785, "[DeleteProcess] Force free memblock: %p:0x%08x+0x%08x [%s]\n",
-			       cur, cur->vbase, cur->size, MemBlockGetName(cur));
-		if ((cur->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_CLIENT_INFO && cur->opt != 0 &&
-		    list != NULL) {
-			count = list->count;
-			if (count < list->capacity && list->capacity != 0) {
-				for (i = 0; list->entries[i] != NULL; )
-					if (++i == list->capacity)
-						goto full;
-				list->entries[i] = (void *)cur->opt;
-				list->count = count + 1;
-			}
-		}
+	cur = head->next;
+	if (cur == head)
+		goto empty;
+	if (cur != NULL) {
+		for (;; cur = next) {
+			next = cur->next;
+			if (cur->code != 0) {
+				SCE_DBG_PRINTF(0, 3785,
+					       "[DeleteProcess] Force free memblock: %p:0x%08x+0x%08x [%s]\n",
+					       cur, cur->vbase, cur->size, MemBlockGetName(cur));
+				if ((cur->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_CLIENT_INFO &&
+				    cur->opt != 0 && list != NULL) {
+					count = list->count;
+					if (count < list->capacity && list->capacity != 0) {
+						for (i = 0; list->entries[i] != NULL; )
+							if (++i == list->capacity)
+								goto full;
+						list->entries[i] = (void *)cur->opt;
+						list->count = count + 1;
+					}
+				}
 full:
-		MemBlockClearBaseInfo(cur);
-		PartitionFreeMemBlockMappedToVirAllocRaw(partition, cur);
+				MemBlockClearBaseInfo(cur);
+				PartitionFreeMemBlockMappedToVirAllocRaw(partition, cur);
+			}
+			if (next == head)
+				break;
+			if (next == NULL)
+				break;
+		}
+		cur = head->next;
+		if (cur == head)
+			goto empty;
 	}
-	for (cur = head->next; cur != head; cur = next) {
+	do {
 		prev = cur->prev;
 		next = cur->next;
 		size = cur->size;
@@ -2833,7 +2846,9 @@ full:
 		FreeMemBlockObject(heap, cur);
 		ksceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
 		ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&tiny->blockCount);
-	}
+		cur = next;
+	} while (cur != head);
+empty:
 	head->next = head;
 	head->prev = head;
 	heap = context->memBlockHeap;
