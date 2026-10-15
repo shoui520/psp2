@@ -413,6 +413,72 @@ int accessMailbox(SceUInt32 id, int mailbox, SceUInt32 *value, SmschedMailboxRea
 	return ret;
 }
 
+int sceSblSmSchedReadArm2CryMonitorCall(SceUInt32 id, int mailbox, unsigned int index)
+{
+	SceSize areaSize;
+	SceUInt32 value;
+	SceUInt32 *area;
+	int ret, err;
+
+	ret = sceSblTzsBridgePopArgArea(index, (void **)&area, &areaSize);
+	if (ret < 0)
+		return ret;
+	if (areaSize < sizeof(*area)) {
+#if FW_SINCE(0x04000000)
+		SCE_DBG_ASSERT_FAIL(1053);
+#endif
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	ret = accessMailbox(id, mailbox, &value, readArm2Cry);
+	*area = value;
+	err = sceSblTzsBridgePushArgArea(index);
+	if (err < 0)
+		return err;
+	return ret;
+}
+
+int sceSblSmSchedReadCry2ArmMonitorCall(SceUInt32 id, int mailbox, unsigned int index)
+{
+	SceSize areaSize;
+	SceUInt32 value;
+	SceUInt32 *area;
+	int ret, err;
+
+	ret = sceSblTzsBridgePopArgArea(index, (void **)&area, &areaSize);
+	if (ret < 0)
+		return ret;
+	if (areaSize < sizeof(*area)) {
+#if FW_SINCE(0x04000000)
+		SCE_DBG_ASSERT_FAIL(1114);
+#endif
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	ret = accessMailbox(id, mailbox, &value, readCry2Arm);
+	*area = value;
+	err = sceSblTzsBridgePushArgArea(index);
+	if (err < 0)
+		return err;
+	return ret;
+}
+
+/* raise interrupt 0-4 on the Cmep for the running module */
+int sceSblSmSchedGenerateMonitorIntr(int intr)
+{
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (intr == 0)
+		return smsSecureKernelProxyGenerateIntr0();
+	else if (intr == 1)
+		return smsSecureKernelProxyGenerateIntr1();
+	else if (intr == 2)
+		return smsSecureKernelProxyGenerateIntr2();
+	else if (intr == 3)
+		return smsSecureKernelProxyGenerateIntr3();
+	else if (intr == 4)
+		return smsSecureKernelProxyGenerateIntr4();
+	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+}
+
 /* name unknown: set bits of an Arm2Cry mailbox */
 int setArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request)
 {
@@ -498,6 +564,38 @@ int clearArm2Cry(int mailbox, SceUInt32 bits, SmschedRequest *request)
 		}
 	}
 	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+}
+
+void disableMbox123(void)
+{
+	int mailbox;
+
+	for (mailbox = 1; mailbox < CMEP_MAILBOXES; mailbox++) {
+		if (sceSblSmSchedDisableIntr(mailbox) < 0)
+			SCE_PANIC(2373);
+	}
+}
+
+/* name unknown: the running module exited with the Cmep's message (its
+ * result, or an error), reported if the request asked for it */
+void exitRunningRequest(SceUInt32 message, int disable, volatile SmschedIntrMessage *notify)
+{
+	SmschedRequest *running = s_running;
+	SceInt32 result;
+
+	result = message;
+	if (message & CMEP_MESSAGE_ERROR)
+		result = SCE_SBL_ERROR_CMEP(message);
+	running->result = result;
+	running->state = SMSCHED_STATE_EXITED;
+	if (disable)
+		disableMbox123();
+	if (s_running->notifyMask & SMSCHED_NOTIFY_EXITED) {
+		notify->id = s_running->proxyId;
+		notify->flags |= MSG_SET_EVENT;
+		notify->eventBits |= SMSCHED_EVENT_DONE;
+		notify->eventBits |= SMSCHED_EVENT_STATE;
+	}
 }
 
 /* name unknown: read a Cry2Arm mailbox */

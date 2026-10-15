@@ -40,6 +40,7 @@
 #define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
 
 #include <stdint.h>
+#include <fw.h>
 #include <psp2kern/types.h>
 #include "sce/sysmem.h"
 #include "sce/debug.h"
@@ -186,6 +187,12 @@ typedef struct SmschedRequest {
 } SmschedRequest;
 
 _Static_assert(sizeof(SmschedRequest) == 200, "SmschedRequest");
+
+/* notifyMask: the state changes reported to the Non-secure kernel */
+#define SMSCHED_NOTIFY_READY			0x1	/* suspended */
+#define SMSCHED_NOTIFY_RUNNING			0x2
+#define SMSCHED_NOTIFY_EXITED			0x4
+#define SMSCHED_NOTIFY_KILLED			0x8
 
 /* smsched.c: the mailbox operations, on the Cmep's registers (request NULL)
  * or on a request's saved mailbox */

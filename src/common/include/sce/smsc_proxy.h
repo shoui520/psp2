@@ -14,6 +14,10 @@
 #define MSG_CALL_HANDLER	0x2
 #define MSG_HANDLER_ONLY	0x4
 
+/* eventBits: the session's event flag */
+#define SMSCHED_EVENT_DONE	0x1	/* the module exited or was killed */
+#define SMSCHED_EVENT_STATE	0x2	/* its state changed */
+
 /*
  * The message the secure world's SceSblSmsched pushes into a bridge
  * interrupt area before it raises software interrupt 4.
