@@ -2240,9 +2240,10 @@ SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
 	else
 		restype = (attr >> 14) & 1;
 	if (SysrootIncProcessResource(restype) < 0) {
-		SCE_PRINTF_WITH_INFO(0xb, 3836, "MemBlock overflow: restype=0x%08x\n", restype);
-		SCE_PRINTF_WITH_INFO(0xb, 3837, "name [%s], type=0x%08x, vsize=0x%08x\n", name, type,
-				     size);
+		SCE_PRINTF_WITH_INFO_FUNC(0xb, 3836, "sceKernelAllocMemBlockForUser",
+					  "MemBlock overflow: restype=0x%08x\n", restype);
+		SCE_PRINTF_WITH_INFO_FUNC(0xb, 3837, "sceKernelAllocMemBlockForUser",
+					  "name [%s], type=0x%08x, vsize=0x%08x\n", name, type, size);
 		return MEMBLOCK_ERROR_OVERFLOW_FATAL;
 	}
 	switch (type) {
@@ -2279,7 +2280,8 @@ SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
 		ret = AllocMemBlockForUser(name, type, size, attr, opt);
 		if (ret >= 0)
 			return ret;
-		SCE_DBG_PRINTF(0xb, 3854, "AllocMemBlockForUser failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 3854, "sceKernelAllocMemBlockForUser",
+				    "AllocMemBlockForUser failed 0x%08x\n", ret);
 		break;
 	default:
 		ret = SCE_KERNEL_ERROR_ILLEGAL_BLOCK_TYPE;
@@ -2399,8 +2401,8 @@ fail:
 SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
-	MemBlockObject *block = NULL;
 	SceUInt32 attr, restype;
+	MemBlockObject *block = NULL;
 	char name[0x20];
 	SceUID guid;
 	int ret;
@@ -2409,7 +2411,8 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	ret = SceSysmemForKernel_4E6D8BC3();
 	if (ret >= 1) {
-		SCE_DBG_PRINTF(0xb, 4049, "sceKernelCheckOpenVMDomain returns 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 4049, "sceKernelAllocUnmapMemBlockForUser",
+				    "sceKernelCheckOpenVMDomain returns 0x%08x\n", ret);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
 	if (userName == NULL)
@@ -2423,7 +2426,8 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 	sceKernelSysrootGetCurrentThreadAttr(&attr);
 	restype = (attr >> 14) & 1;
 	if (SysrootIncProcessResource(restype) < 0) {
-		SCE_PRINTF_WITH_INFO(0xb, 4078, "MemBlock overflow:restype=0x%08x\n", restype);
+		SCE_PRINTF_WITH_INFO_FUNC(0xb, 4078, "sceKernelAllocUnmapMemBlockForUser",
+					  "MemBlock overflow:restype=0x%08x\n", restype);
 		return SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 	}
 	memset(&opt, 0, sizeof(opt));
