@@ -758,6 +758,7 @@ int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObje
 			       void **baseInfo)
 {
 	AddressSpaceObject *as;
+	struct Partition *partition;
 	int i, intr, ret;
 
 	SCE_DBG_PRINTF(0xb, 2879, "(%p)\n", info);
@@ -767,9 +768,12 @@ int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObje
 	AddressSpaceRefer(as);
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&as->lock);
 	for (i = 0; i < ADDRESS_SPACE_PARTITIONS; i++) {
-		if (as->partitionUid[i] == info->pid && as->partition[i] != NULL) {
-			SCE_DBG_PRINTF(0xb, 2893, "->PartitionFreeMemBlock(%p)\n", as->partition[i]);
-			ret = PartitionFreeMemBlockWithBase(as->partition[i], info->block, baseBlock,
+		if (as->partitionUid[i] != info->partitionUid)
+			continue;
+		partition = as->partition[i];
+		if (partition != NULL) {
+			SCE_DBG_PRINTF(0xb, 2893, "->PartitionFreeMemBlock(%p)\n", partition);
+			ret = PartitionFreeMemBlockWithBase(partition, info->block, baseBlock,
 							    baseInfo);
 			goto out;
 		}
