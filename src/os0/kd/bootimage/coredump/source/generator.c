@@ -617,7 +617,7 @@ int _coredumpHandlerEntry(SceSize argSize, void *argp)
 			goto restorePriority;
 		}
 		coredumpRun.pid = event.pid;
-		memcpy(&coredumpRun.trigger.size, &event.trigger, sizeof(event.trigger));
+		coredumpRun.trigger = event.trigger;
 		progressCallback = event.progressCallback;
 		plaintextDumpAllowed = oalIsPlaintextDumpAllowed(event.pid);
 		useAlternateCafSegment = oalIsSystemProgram(coredumpRun.pid);
