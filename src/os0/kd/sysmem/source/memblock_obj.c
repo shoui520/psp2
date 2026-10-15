@@ -579,7 +579,7 @@ int MemBlockL2PageTableAllocFreeArea(MemBlockObject *block, SceUInt32 *quarter, 
 	if (block == NULL)
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	if (!(block->flags & MEMBLOCK_L2PT_FREE_MASK)) {
-		SCE_DBG_ASSERT_FAIL(851);
+		SCE_DBG_ASSERT_CHECK(block->flags & MEMBLOCK_L2PT_FREE_MASK, 851);
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	}
 	vbase = block->vbase;
