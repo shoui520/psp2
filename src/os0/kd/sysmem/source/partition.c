@@ -226,7 +226,7 @@ next:
 static inline int MemBlockCodeIsCdram(SceUInt32 code)
 {
 	return code == MEMBLOCK_CODE_KERNEL_CDRAM_RW || code == MEMBLOCK_CODE_KERNEL_CDRAM_L1WBWA_RW ||
-	       (code & ~0x20) == MEMBLOCK_CODE_USER_CDRAM_R || code == MEMBLOCK_CODE_USER_CDRAM_L1WBWA_RW;
+	       code == MEMBLOCK_CODE_USER_CDRAM_L1WBWA_RW || (code & ~0x20) == MEMBLOCK_CODE_USER_CDRAM_R;
 }
 
 /* the physical address behind a CDRAM block's address */
@@ -435,11 +435,14 @@ int AllocMemBlockCommandCheckParameter(SceKernelAllocMemBlockCommand *command)
 	}
 #endif
 	attr = command->opt.attr;
-	if ((attr & ALLOC_ATTR_SHARE_PHYPAGE) && !(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID))
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if ((attr & ALLOC_ATTR_SHARE_VBASE) &&
-	    !(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID))
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (attr & ALLOC_ATTR_SHARE_PHYPAGE) {
+		if (!(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID))
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
+	if (attr & ALLOC_ATTR_SHARE_VBASE) {
+		if (!(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID))
+			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
 	mirror = NULL;
 	if (attr & ALLOC_ATTR_SHARE_PHYPAGE) {
 		if (!(attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID))
