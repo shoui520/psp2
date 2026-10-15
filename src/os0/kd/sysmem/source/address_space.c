@@ -1068,30 +1068,32 @@ SceUID ksceKernelCreateAddressSpace(SceUID pid, const char *name, SceUInt32 type
 	int ret;
 
 	if (name == NULL) {
-		SCE_DBG_ASSERT_FAIL(2984);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2984, "sceKernelCreateAddressSpace");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	if (opt == NULL) {
-		SCE_DBG_ASSERT_FAIL(2988);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2988, "sceKernelCreateAddressSpace");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	if (opt->size != sizeof(*opt)) {
-		SCE_DBG_ASSERT_FAIL(2992);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2992, "sceKernelCreateAddressSpace");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	if (type != ADDRESS_SPACE_TYPE_USER) {
-		SCE_DBG_ASSERT_FAIL(3022);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 3022, "sceKernelCreateAddressSpace");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	ret = CreateAddressSpaceUserMode(opt, &as);
 	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 3001, "CreateAddressSpaceUserMode failed 0x%08x\n", ret);
-		SCE_DBG_ASSERT_FAIL(3002);
+		SCE_DBG_PRINTF_FUNC(0xb, 3001, "sceKernelCreateAddressSpace",
+				    "CreateAddressSpaceUserMode failed 0x%08x\n", ret);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 3002, "sceKernelCreateAddressSpace");
 		return ret;
 	}
 	ret = AddressSpaceCreatePartitionForUser(as, pid);
 	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 3009, "AddressSpaceCreatePartitionForUser failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 3009, "sceKernelCreateAddressSpace",
+				    "AddressSpaceCreatePartitionForUser failed 0x%08x\n", ret);
 		ret = -1;
 		goto fail;
 	}
@@ -1101,7 +1103,8 @@ SceUID ksceKernelCreateAddressSpace(SceUID pid, const char *name, SceUInt32 type
 		return uid;
 	}
 	ret = uid;
-	SCE_DBG_PRINTF(0xb, 3015, "Register failed 0x%08x\n", ret);
+	SCE_DBG_PRINTF_FUNC(0xb, 3015, "sceKernelCreateAddressSpace",
+			    "Register failed 0x%08x\n", ret);
 fail:
 	DeleteAddressSpace(as);
 	return ret;
@@ -1167,8 +1170,9 @@ int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 		for (j = 0; j < client->capacity; j++) {
 			if (client->guids[j] == -1)
 				continue;
-			SCE_PRINTF_WITH_INFO(0, 3137, "Force sceKernelUnmapMemBlock(GUID:0x%08x)\n",
-					     client->guids[j]);
+			SCE_PRINTF_WITH_INFO_FUNC(0, 3137, "sceKernelAddressSpaceFreeAllMemBlock",
+						  "Force sceKernelUnmapMemBlock(GUID:0x%08x)\n",
+						  client->guids[j]);
 			ksceKernelUnmapMemBlock(client->guids[j]);
 		}
 	}

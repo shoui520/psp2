@@ -3045,7 +3045,8 @@ SceUID ksceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUIn
 	int ret;
 
 	if (size & 0xfff) {
-		SCE_PRINTF_WITH_INFO(0, 7513, "Invalid argument:name=[%s],size=0x%08x\n", name, size);
+		SCE_PRINTF_WITH_INFO_FUNC(0, 7513, "sceKernelAllocPartitionMemBlock",
+					  "Invalid argument:name=[%s],size=0x%08x\n", name, size);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	ret = ksceGUIDGetObject(partUid, &partition);

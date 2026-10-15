@@ -120,11 +120,13 @@ SceUID ksceKernelRegisterProcEventHandler(const char *name,
 	int state;
 
 	if (handler->size != sizeof(*handler))
-		SCE_DBG_PRINTF(0xb, 124, "[%s], invalid structure size %d\n", name, handler->size);
+		SCE_DBG_PRINTF_FUNC(0xb, 124, "sceKernelRegisterProcEventHandler",
+				    "[%s], invalid structure size %d\n", name, handler->size);
 	uid = ksceGUIDKernelCreate(&s_procEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
-		SCE_DBG_PRINTF(0xb, 136, "Create Process event handler UID failed 0x%08x\n", uid);
-		SCE_DBG_ASSERT_FAIL(137);
+		SCE_DBG_PRINTF_FUNC(0xb, 136, "sceKernelRegisterProcEventHandler",
+				    "Create Process event handler UID failed 0x%08x\n", uid);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 137, "sceKernelRegisterProcEventHandler");
 		return uid;
 	}
 	link = &object->link;
@@ -228,8 +230,9 @@ int ksceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *inf
 				state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
 				break;
 			}
-			SCE_DBG_PRINTF(0xb, 287, "process %s handler [%s] failed, res 0x%08x\n", name,
-				       ksceGUIDName(link->uid), ret);
+			SCE_DBG_PRINTF_FUNC(0xb, 287, "sceKernelInvokeProcEventHandler",
+					    "process %s handler [%s] failed, res 0x%08x\n", name,
+					    ksceGUIDName(link->uid), ret);
 		}
 next:
 		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);

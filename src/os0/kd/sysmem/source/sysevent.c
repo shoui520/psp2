@@ -79,7 +79,8 @@ SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHand
 
 	uid = ksceGUIDKernelCreate(&s_sysEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
-		SCE_DBG_PRINTF(0xb, 118, "sceGUIDKernelCreate() failed: 0x%08X\n", uid);
+		SCE_DBG_PRINTF_FUNC(0xb, 118, "sceKernelRegisterSysEventHandler",
+				    "sceGUIDKernelCreate() failed: 0x%08X\n", uid);
 		return uid;
 	}
 	object->link.handler = handler;
@@ -99,7 +100,8 @@ int ksceKernelUnregisterSysEventHandler(SceUID uid)
 
 	ret = ksceGUIDGetObjectWithClass(uid, &s_sysEventClass, &object);
 	if (ret < 0) {
-		SCE_DBG_PRINTF(0xb, 140, "sceGUIDGetObjectWithClass() failed: 0x%08X\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 140, "sceKernelUnregisterSysEventHandler",
+				    "sceGUIDGetObjectWithClass() failed: 0x%08X\n", ret);
 		return ret;
 	}
 	return ksceGUIDClose(uid);

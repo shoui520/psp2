@@ -82,7 +82,8 @@ SceBool ksceKernelIsUncacheAddressInTmpFsGame(const void *address)
 	case MMU_MEMORY_TYPE_CACHED_D0:
 		return 0;
 	default:
-		SCE_DBG_PRINTF(0xb, 88, "Warning:sceKernelMMUGetMemoryType failed 0x%08x\n", type);
+		SCE_DBG_PRINTF_FUNC(0xb, 88, "sceKernelIsUncacheAddressInTmpFsGame",
+				    "Warning:sceKernelMMUGetMemoryType failed 0x%08x\n", type);
 		return 0;
 	}
 }
@@ -236,8 +237,9 @@ void ksceKernelIcacheInvalidateRange(const void *start, SceSize size)
 	SceSize remaining, chunk;
 
 	if (((uintptr_t)start | size) & 0x3f)
-		SCE_DBG_PRINTF(0xb, 101, "Error: start=%p, size=0x%08x, lr=%p\n",
-			       start, size, __builtin_return_address(0));
+		SCE_DBG_PRINTF_FUNC(0xb, 101, "sceKernelIcacheInvalidateRange",
+				    "Error: start=%p, size=0x%08x, lr=%p\n",
+				    start, size, __builtin_return_address(0));
 	if (size == 0)
 		return;
 
@@ -246,7 +248,7 @@ void ksceKernelIcacheInvalidateRange(const void *start, SceSize size)
 	remaining = size;
 	for (;;) {
 		if (ksceKernelMMUVAtoPA((const void *)va, &pa) < 0)
-			SCE_PANIC(124);
+			SCE_PANIC_FUNC(124, "sceKernelIcacheInvalidateRange");
 		if (chunk > remaining)
 			chunk = remaining;
 		CpuL2CleanInvalidateRangePA(pa, chunk);

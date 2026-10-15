@@ -938,7 +938,7 @@ int ksceKernelGetFixedHeapInfoByPointer(void *fixedHeap, void *fixedHeapInfo)
 	if (fixedHeap != NULL) {
 		if ((uintptr_t)fixedHeapInfo != 0)
 			return FixedHeapGetInfo(fixedHeap, fixedHeapInfo);
-		SCE_DBG_ASSERT_FAIL(2508);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 2508, "sceKernelGetFixedHeapInfoByPointer");
 	}
 	return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 }
@@ -955,7 +955,8 @@ static inline __attribute__((always_inline)) void FixedHeapSetGUID(SceUID guid, 
 				    "GUIDSetCNOA(guid 0x%08x, %p) failed 0x%08x\n", guid, heap, ret);
 	ret = ksceGUIDGetObject(guid, &object);
 	if (ret < 0) {
-		SCE_DBG_PRINTF_FUNC(0xb, 2647, "FixedHeapSetUID", "sceGUIDGetObject failed 0x%08x\n",
+		SCE_DBG_PRINTF_FUNC(0xb, 2647, "FixedHeapSetUID",
+				    "sceGUIDGetObject failed 0x%08x\n",
 				    ret);
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 2648, "FixedHeapSetUID");
 	}

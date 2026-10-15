@@ -2263,21 +2263,24 @@ SceUID ksceGUIDOpenByName(const char *name)
 	heap = GUID_ENTRY_HEAP();
 	ret = UIDEntryHeapAllocateObject(heap, &entry);
 	if (ret < 0) {
-		SCE_DBG_PRINTF_FUNC(0xb, 5010, "GUIDOpenByName", "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 5010, "GUIDOpenByName",
+				    "UIDEntryHeapAllocateObject failed 0x%08x\n", ret);
 		return ret;
 	}
 	state = FixedHeapWriteLock(&heap->fixedHeap, "GUIDOpenByName", 5014);
 	ret = GUIDEntryHeapFindByNameRaw(heap, name, 0, &base);
 	if (ret < 0) {
-		SCE_DBG_PRINTF_FUNC(0xb, 5018, "GUIDOpenByName", "GUIDEntryHeapFindByNameRaw([%s]) failed 0x%08x\n", name,
-			       ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 5018, "GUIDOpenByName",
+				    "GUIDEntryHeapFindByNameRaw([%s]) failed 0x%08x\n", name,
+				    ret);
 	} else {
 		ret = UIDEntryIncLinkCountForOpenByName(heap, base, entry);
 		if (ret >= 0) {
 			UID_WRITE_UNLOCK(heap, state);
 			return ret;
 		}
-		SCE_DBG_PRINTF_FUNC(0xb, 5027, "GUIDOpenByName", "UIDEntryIncLinkCountForOpenByName failed 0x%08x\n", ret);
+		SCE_DBG_PRINTF_FUNC(0xb, 5027, "GUIDOpenByName",
+				    "UIDEntryIncLinkCountForOpenByName failed 0x%08x\n", ret);
 	}
 	UID_WRITE_UNLOCK(heap, state);
 	SCE_DBG_PRINTF_FUNC(0xb, 5034, "GUIDOpenByName", "guid=0x%08x\n", ret);
@@ -2347,7 +2350,8 @@ static inline int GUIDClose(SceUID guid)
 int ksceGUIDClose(SceUID guid)
 {
 	if (!UIDIsGUID(guid)) {
-		SCE_DBG_PRINTF_FUNC(0xb, 6301, "sceGUIDClose", "GUIDIsValid(0x%08x) failed 0x%08x\n",
+		SCE_DBG_PRINTF_FUNC(0xb, 6301, "sceGUIDClose",
+				    "GUIDIsValid(0x%08x) failed 0x%08x\n",
 				    guid, UID_ERROR_INVALID_UID);
 		return UID_ERROR_INVALID_UID;
 	}
@@ -2503,7 +2507,7 @@ SceUID ksceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name,
 	}
 	flags = opt->flags;
 	if (flags & UID_CREATE_OPT_CLASS) {
-		SCE_DBG_PRINTF(0xb, 6106, "Duplicate pClass\n");
+		SCE_DBG_PRINTF_FUNC(0xb, 6106, "sceGUIDKernelCreateWithOpt", "Duplicate pClass\n");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	if (flags & UID_CREATE_OPT_OBJECT) {
