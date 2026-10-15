@@ -1718,7 +1718,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	MemBlockPAVector vector;
 	MemBlockObject *block;
 	UserMapInfo *info;
-	SceUInt32 type, mode, head, extra, total;
+	SceUInt32 type, mode, head, extra, total, startPage, endPage;
 	SceSize len;
 	int locked, memoryType, allocated, ret;
 	SceUID guid;
@@ -1743,15 +1743,17 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	if (perm == 1) {
 		type = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_R;
 		mode = 0x10;
-	} else if (perm == 2 || perm == 3) {
-		type = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW;
-		mode = 0x20;
-	} else {
+	} else if (perm == 0 || perm > 3) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		goto unlock;
+	} else {
+		type = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW;
+		mode = 0x20;
 	}
-	range.addr = va & ~0xfff;
-	len = ((size + 0xfff + va) & ~0xfff) - range.addr;
+	startPage = va >> 12;
+	endPage = (size + 0xfff + va) >> 12;
+	range.addr = startPage << 12;
+	len = (endPage << 12) - range.addr;
 	range.size = len;
 	vector.size = sizeof(vector);
 	vector.capacity = USER_MAP_VECTOR;
