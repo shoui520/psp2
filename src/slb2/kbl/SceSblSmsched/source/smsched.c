@@ -1338,3 +1338,49 @@ nomem:
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 	return SCE_SBL_ERROR_NO_MEMORY;
 }
+
+/* name unknown: a PA the Non-secure kernel may pass (0 for none): DRAM above
+ * the secure kernel's, SPAD32K, SPAD128K and 0x20000000-0x2fffffff */
+static inline int SmschedIsNonSecurePA(uintptr_t pa)
+{
+	if (pa == 0)
+		return 1;
+	if (pa >= 0x40200000 && pa < 0x80000000)
+		return 1;
+	if (pa >= 0x80000000 && pa < 0xc0000000)
+		return 1;
+	if (pa >= 0x1f000000 && pa < 0x1f008000)
+		return 1;
+	if (pa >= 0x1f840000 && pa < 0x1f860000)
+		return 1;
+	if (pa >= 0x20000000 && pa < 0x30000000)
+		return 1;
+	return 0;
+}
+
+int sceSblSmSchedInvokeMonitorCall(SceUInt32 priority, uintptr_t selfPA, SceUInt32 arg1,
+				   unsigned int index)
+{
+	SceSize areaSize;
+	SceSblSmSchedProxyInvokeArg *area;
+	int ret, err;
+
+	ret = sceSblTzsBridgePopArgArea(index, (void **)&area, &areaSize);
+	if (ret < 0)
+		return ret;
+	if (areaSize < sizeof(*area)) {
+#if FW_SINCE(0x04000000)
+		SCE_DBG_ASSERT_FAIL(860);
+#endif
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+	if (!SmschedIsNonSecurePA(selfPA))
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	ret = sceSblSmSchedInvokeInternal(priority, selfPA, arg1, area->arg2Low, area->arg2High,
+					  area->arg3, area->arg4, area->proxyId,
+					  &area->invokeArg, &area->requestId);
+	err = sceSblTzsBridgePushArgArea(index);
+	if (err < 0)
+		return err;
+	return ret;
+}

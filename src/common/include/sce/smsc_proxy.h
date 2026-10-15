@@ -37,6 +37,35 @@ typedef struct SmschedIntrMessage {
 	SmschedIntrStatus status;
 } SmschedIntrMessage;
 
+/* the secure module start arguments the Non-secure kernel passes, from
+ * its SceSblSmCommContext130 (names from the henkaku wiki) */
+typedef struct SmschedInvokeArg {
+	SceUInt32 selfType;
+	SceUInt32 mediaType;
+	SceUInt64 programAuthorityId;		/* the spawner's */
+	SceUInt64 capability[4];		/* the spawner's */
+} SmschedInvokeArg;
+
+_Static_assert(sizeof(SmschedInvokeArg) == 48, "SmschedInvokeArg");
+
+/* selfType: where the secure module comes from */
+#define SMSCHED_INVOKE_SELF_MASK		0xf000
+#define SMSCHED_INVOKE_SELF_PA			0x0000	/* the caller's, at selfPA */
+#define SMSCHED_INVOKE_SELF_INSTANCE		0x1000	/* the scheduler's own (instance->self) */
+
+/* the argument area of SMC 0x12D (sceSblSmSchedInvokeMonitorCall) */
+typedef struct SceSblSmSchedProxyInvokeArg {
+	SceUInt32 arg2Low;			/* the invoke input words */
+	SceUInt32 arg2High;
+	SceUInt32 arg3;
+	SceUInt32 arg4;
+	SceUID proxyId;				/* the session's id */
+	SceUInt32 requestId;			/* out: the scheduler's request */
+	SmschedInvokeArg invokeArg;
+} SceSblSmSchedProxyInvokeArg;
+
+_Static_assert(sizeof(SceSblSmSchedProxyInvokeArg) == 0x48, "SceSblSmSchedProxyInvokeArg");
+
 typedef void (*SceSblSmSchedCry2ArmHandler)(SceUID id, int channel, void *arg,
 					     SceUInt32 a, SceUInt32 b);
 

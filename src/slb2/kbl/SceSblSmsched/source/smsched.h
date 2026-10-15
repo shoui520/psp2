@@ -108,21 +108,6 @@ typedef struct SmschedMailbox {
 	SceUInt32 cry2Arm[CMEP_MAILBOXES - 1];
 } SmschedMailbox;
 
-/* the secure module start arguments the Non-secure kernel passes, from
- * its SceSblSmCommContext130 (names from the henkaku wiki) */
-typedef struct SmschedInvokeArg {
-	SceUInt32 selfType;
-	SceUInt32 mediaType;
-	SceUInt64 programAuthorityId;		/* the spawner's */
-	SceUInt64 capability[4];		/* the spawner's */
-} SmschedInvokeArg;
-
-_Static_assert(sizeof(SmschedInvokeArg) == 48, "SmschedInvokeArg");
-
-/* selfType: where the secure module comes from */
-#define SMSCHED_INVOKE_SELF_MASK		0xf000
-#define SMSCHED_INVOKE_SELF_PA			0x0000	/* the caller's, at selfPA */
-#define SMSCHED_INVOKE_SELF_INSTANCE		0x1000	/* the scheduler's own (instance->self) */
 
 /* a request's state, as cry2Arm0IntHandler moves it on the secure kernel's messages */
 #define SMSCHED_STATE_READY			1	/* queued, new or suspended */
