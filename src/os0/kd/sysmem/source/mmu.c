@@ -533,12 +533,19 @@ int sceKernelMMUL1Init(uint32_t *l1)
 	return 0;
 }
 
+/* an L1 table must be 4 KiB aligned; 4.00 tests it as the low 12 bits shifted out */
+#if FW_SINCE(0x04000000)
+#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) << 20)
+#else
+#define MMU_L1_MISALIGNED(l1)	((uintptr_t)(l1) & 0xfff)
+#endif
+
 int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa)
 {
 	uint32_t *pte;
 
 	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 620);
-	if ((uintptr_t)l1 & 0xfff) {
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 623, "l1base=%p\n", l1);
 		SCE_PANIC(624);
 	}
@@ -556,7 +563,7 @@ int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va)
 	uint32_t *pte;
 
 	SCE_DBG_ASSERT_CHECK(MMUInterruptsDisabled(), 658);
-	if ((uintptr_t)l1 & 0xfff) {
+	if (MMU_L1_MISALIGNED(l1)) {
 		SCE_DBG_PRINTF(0xb, 661, "l1base=%p\n", l1);
 		SCE_PANIC(662);
 	}
