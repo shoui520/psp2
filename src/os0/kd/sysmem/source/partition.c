@@ -2766,6 +2766,7 @@ int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoLi
 	TinyPartition *tiny = &partition->tiny;
 	AddressSpaceContext *context;
 	MemBlockObject *head, *cur, *next, *prev;
+	struct FixedHeap *heap;
 	SceUInt32 count, i;
 	SceSize size;
 	int intr;
@@ -2802,18 +2803,20 @@ full:
 		prev = cur->prev;
 		next = cur->next;
 		size = cur->size;
+		heap = context->memBlockHeap;
 		prev->next = next;
 		next->prev = prev;
 		cur->next = cur;
 		cur->prev = cur;
-		FreeMemBlockObject(context->memBlockHeap, cur);
+		FreeMemBlockObject(heap, cur);
 		ksceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
 		ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&tiny->blockCount);
 	}
 	head->next = head;
 	head->prev = head;
+	heap = context->memBlockHeap;
 	tiny->magic = TINY_PARTITION_DEAD;
-	FreeMemBlockObject(context->memBlockHeap, head);
+	FreeMemBlockObject(heap, head);
 	tiny->blocks = NULL;
 out:
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
