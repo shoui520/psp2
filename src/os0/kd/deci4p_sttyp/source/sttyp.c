@@ -21,6 +21,10 @@
 #include "sce/suspend.h"
 #include "sce/sysroot.h"
 
+/* Sony computes the remainder and quotient through separate runtime calls. */
+unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator);
+SceUInt64 __aeabi_uldivmod(SceUInt64 numerator, SceUInt64 denominator);
+
 #define STTYP_CPUS		4
 #define STTYP_BUF_SIZE		0x100
 #define STTYP_LINE_MAX		0xff
@@ -137,7 +141,7 @@ static void SttypFlush(SttypPort *port)
 		sceSDfMgrPoll();
 }
 
-static void SttypFlushPending(SttypPort *port)
+static void __attribute__((noinline)) SttypFlushPending(SttypPort *port)
 {
 	if (port->len != 0)
 		SttypFlush(port);
@@ -145,6 +149,8 @@ static void SttypFlushPending(SttypPort *port)
 
 static void SttypPutc(SttypPort *port, int c)
 {
+	SceSize len;
+
 	if (c == STTYP_DISCARD) {
 		port->len = 0;
 		return;
@@ -155,8 +161,10 @@ static void SttypPutc(SttypPort *port, int c)
 	}
 	if (c == '\n')
 		SttypPutc(port, '\r');
-	port->buf[port->len++] = c;
-	if (port->len == STTYP_LINE_MAX)
+	len = port->len;
+	port->buf[len] = c;
+	port->len = len + 1;
+	if (len + 1 == STTYP_LINE_MAX)
 		SttypFlush(port);
 }
 
@@ -397,7 +405,7 @@ num32:
 		q = &nbuf[sizeof(nbuf) - 2];
 		do {
 			*q-- = digits[v % base];
-			v /= base;
+			v = __aeabi_uidiv(v, base);
 		} while (v != 0);
 		goto digits_done;
 
@@ -415,7 +423,7 @@ num64:
 		q = &nbuf[sizeof(nbuf) - 2];
 		do {
 			*q-- = digits[v64 % base];
-			v64 /= base;
+			v64 = __aeabi_uldivmod(v64, base);
 		} while (v64 != 0);
 		v64 = 0;
 
@@ -442,7 +450,7 @@ emit:
 			SttypPutc(port, sign);
 		if (flags & F_PREFIX) {
 			SttypPutc(port, '0');
-			SttypPutc(port, *p == 'p' ? 'x' : *p);
+			SttypPutc(port, *p == 'p' ? 'x' : (signed char)*p);
 		}
 		if ((flags & (F_LEFT | F_ZERO)) == F_ZERO)
 			for (i = total; i < width; i++)
@@ -450,7 +458,7 @@ emit:
 		for (; len < prec; len++)
 			SttypPutc(port, '0');
 		for (i = 0; i <= last; i++)
-			SttypPutc(port, start[i]);
+			SttypPutc(port, (signed char)start[i]);
 		if (flags & F_LEFT)
 			for (i = total; i < width; i++)
 				SttypPutc(port, ' ');
@@ -485,14 +493,17 @@ int module_start(SceSize args, void *argp)
 int module_bootstart(SceSize args, void *argp)
 {
 	SttypPort *port = &s_port[SceCpuId()];
+	SceUInt32 cpu;
 	int handle;
 
 	SceDeci4pSDfMgrForKernel_8A3B06F2(port, 0, sizeof(*port));
 	port->hdr.hdr.version = SCE_DECI4P_VERSION;
+	cpu = SceCpuId();
 	port->hdr.hdr.dst = 0;
-	port->hdr.hdr.src = 0xa200 + (1 << SceCpuId());
+	port->hdr.hdr.src = 0xa200 + (1 << cpu);
+	cpu = SceCpuId();
 	port->hdr.port = TTYP_PORT_KERNEL;
-	port->hdr.hdr.protocol = s_protocol[SceCpuId()].protocol;
+	port->hdr.hdr.protocol = s_protocol[cpu].protocol;
 	handle = SceDeci4pSDfMgrForKernel_A55F5F0D(KpHandler, &s_protocol[SceCpuId()], port);
 	if (handle < 0)
 		return handle;
