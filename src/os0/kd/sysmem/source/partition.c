@@ -1162,8 +1162,14 @@ int TinyPartitionAllocMemBlockRaw(TinyPartition *tiny, SceKernelAllocMemBlockCom
 			/* a free block across minVa may still hold an aligned range above it */
 			if (cur->code == 0 && command->size - cur->vbase + minVa < cur->size) {
 				pad = GetAlignmentOffset(minVa, align) + minVa - cur->vbase;
-				if (command->size + pad < cur->size)
-					goto cut;
+				if (command->size + pad < cur->size) {
+					ret = TinyPartitionCutFreeMemBlockRaw(tiny, &command->size,
+									      command->opt.attr, cur,
+									      pad, &cur);
+					if (ret < 0)
+						return ret;
+					goto taken;
+				}
 			}
 			start = cur;
 			cur = TinyPartitionStep(cur, command->opt.attr);
@@ -1179,7 +1185,6 @@ search:
 				goto taken;
 			}
 			if (command->size + pad <= cur->size) {
-cut:
 				ret = TinyPartitionCutFreeMemBlockRaw(tiny, &command->size, command->opt.attr, cur,
 								      pad, &cur);
 				if (ret < 0)
