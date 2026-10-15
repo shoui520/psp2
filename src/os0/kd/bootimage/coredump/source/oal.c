@@ -593,7 +593,7 @@ int _getBuildVerInfo(void)
 	int result;
 	int fd;
 	int bytes;
-	int size;
+	unsigned int size;
 
 	result = memMgrInit();
 	if (result != 0)
@@ -615,8 +615,8 @@ int _getBuildVerInfo(void)
 			break;
 		size += bytes;
 	}
-	if ((bytes != 0 && bytes != (int)0x80010009) || size < 0 ||
-		decryptBuildVerInfo(buffer, size) != 0 || (unsigned int)size <= 31)
+	if ((bytes != 0 && bytes != (int)0x80010009) || (int)size < 0 ||
+		decryptBuildVerInfo(buffer, size) != 0 || size <= 31)
 		goto freeBuffer;
 	cursor = buffer + 32;
 	__builtin_memset(digest, 0, sizeof(digest));
@@ -1095,12 +1095,14 @@ unsigned int oalGetUnixTime(void)
 {
 	SceRtcTick tick;
 	SceDateTime dateTime;
-	SceUInt64 unixTime;
+	SceUInt32 unixTime[2];
 
 	ksceRtcGetCurrentTick(&tick);
 	ksceRtcConvertTickToDateTime(&dateTime, &tick);
-	ksceRtcConvertDateTimeToUnixTime(&dateTime, &unixTime);
-	return unixTime >> 32 ? (unsigned int)-1 : (unsigned int)unixTime;
+	ksceRtcConvertDateTimeToUnixTime(&dateTime, (SceUInt64 *)unixTime);
+	if (unixTime[1] != 0)
+		return (unsigned int)-1;
+	return unixTime[0];
 }
 
 int oalFileOpen(const char *path, SceUID *fd)
