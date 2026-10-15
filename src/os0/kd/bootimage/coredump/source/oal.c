@@ -533,7 +533,9 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 			if (threadIds[i] != 0) {
 				SceUID uid = ksceKernelGetUserThreadId(threadIds[i]);
 
-				threadIds[i] = uid & ~(uid >> 31);
+				if (uid < 0)
+					uid = 0;
+				threadIds[i] = uid;
 			}
 		}
 		if (capacity > copiedCount)
@@ -1924,7 +1926,9 @@ int oalGetNumOfLibs(SceUID pid)
 {
 	int count = ksceKernelGetLibraryList(pid, NULL, NULL);
 
-	return count & ~(count >> 31);
+	if (count < 0)
+		count = 0;
+	return count;
 }
 
 void oalGetLibIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2026,7 +2030,9 @@ int oalGetNumOfMemBlocks(SceUID pid)
 
 	count = SceSysmemForKernel_08C05493(pid, ksceKernelGetUIDMemBlockClass(),
 		5, NULL, 0, NULL);
-	return count & ~(count >> 31);
+	if (count < 0)
+		count = 0;
+	return count;
 }
 
 void oalGetMemBlockIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2565,7 +2571,8 @@ void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info)
 	owner = mutex.currentOwnerId;
 	if (owner != 0) {
 		owner = ksceKernelGetUserThreadId(owner);
-		owner &= ~(owner >> 31);
+		if (owner < 0)
+			owner = 0;
 	}
 	info->currentOwnerId = owner;
 	info->numWaitThreads = mutex.numWaitThreads;
@@ -2598,7 +2605,8 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		owner = mutex.currentOwnerId;
 		if (owner != 0) {
 			owner = ksceKernelGetUserThreadId(owner);
-			owner &= ~(owner >> 31);
+			if (owner < 0)
+				owner = 0;
 		}
 		info->currentOwnerId = owner;
 		info->numWaitThreads = mutex.numWaitThreads;
@@ -2736,7 +2744,8 @@ void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *inf
 	threadId = callback.threadId;
 	if (threadId != 0) {
 		threadId = ksceKernelGetUserThreadId(threadId);
-		threadId &= ~(threadId >> 31);
+		if (threadId < 0)
+			threadId = 0;
 	}
 	info->threadId = threadId;
 	strncpy(info->name, callback.name, 32);
@@ -2828,7 +2837,8 @@ void oalGetRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info)
 	owner = rwLock.writeOwnerId;
 	if (owner != 0) {
 		owner = ksceKernelGetUserThreadId(owner);
-		owner &= ~(owner >> 31);
+		if (owner < 0)
+			owner = 0;
 	}
 	info->currentOwnerId = owner;
 	info->lockCount = rwLock.lockCount;
@@ -2980,9 +2990,11 @@ int oalEachMetaDataInfo(SceUID pid,
 
 int oalGetNumOfFibers(SceUID pid)
 {
-	SceUInt32 count = sceUlobjMgrGetIdForFiber(pid, NULL, 0, 0, 1);
+	int count = sceUlobjMgrGetIdForFiber(pid, NULL, 0, 0, 1);
 
-	return count & ~((SceInt32)count >> 31);
+	if (count < 0)
+		count = 0;
+	return count;
 }
 
 int oalEachFiberInfo(SceUID pid,
@@ -3042,7 +3054,9 @@ int oalGetNumOfUltRuntimes(SceUID pid)
 {
 	int count = sceUlobjMgrGetIdForFiber(pid, NULL, 0, 0, 3);
 
-	return count & ~(count >> 31);
+	if (count < 0)
+		count = 0;
+	return count;
 }
 
 int oalEachUltRuntimeInfo(SceUID pid,
@@ -3072,7 +3086,9 @@ int oalEachUltRuntimeInfo(SceUID pid,
 				info.numUlts = runtime.numUlts;
 				numUlts = SceUlobjMgrForDriver_3D6E2EF3(pid, ids[index],
 							     NULL, 0, 0);
-				info.numUsedUlts = numUlts & ~(numUlts >> 31);
+				if (numUlts < 0)
+					numUlts = 0;
+				info.numUsedUlts = numUlts;
 			}
 			ret = callback(ids[index], &info, context);
 			if (ret != 0)
@@ -3148,7 +3164,9 @@ int oalGetNumOfUltObjects(SceUID pid, int type)
 	default:
 		return 0;
 	}
-	return count & ~(count >> 31);
+	if (count < 0)
+		count = 0;
+	return count;
 }
 
 void oalGetUltObjIds(SceUID pid, SceUInt32 *ids, SceUInt32 capacity,
@@ -4011,7 +4029,9 @@ found:
 	if (threadId == 0)
 		return 0;
 	userThreadId = ksceKernelGetUserThreadId(threadId);
-	return userThreadId & ~(userThreadId >> 31);
+	if (userThreadId < 0)
+		userThreadId = 0;
+	return userThreadId;
 }
 
 int oalPrintf(const char *fmt, ...)
@@ -4107,7 +4127,9 @@ int oalGetDebugTailLog(char *buf, SceSize size)
 	SCE_DBG_ASSERT(buf != NULL, 6477);
 	SCE_DBG_ASSERT(size != 0, 6478);
 	result = ksceKernelGetTtyInfo(buf, size);
-	return result & ~(result >> 31);
+	if (result < 0)
+		result = 0;
+	return result;
 }
 
 extern int SceSysrootForDriver_591BB490(SceUID pid, char *buf, SceSize size);
@@ -4119,7 +4141,9 @@ int oalGetDebugTailLogPid(SceUID pid, char *buf, SceSize size)
 	SCE_DBG_ASSERT(buf != NULL, 6489);
 	SCE_DBG_ASSERT(size != 0, 6490);
 	result = SceSysrootForDriver_591BB490(pid, buf, size);
-	return result & ~(result >> 31);
+	if (result < 0)
+		result = 0;
+	return result;
 }
 
 int oalGetFrameBufferInfo(SceUID pid, unsigned int index,
