@@ -5,6 +5,7 @@
 #include <sce/cpu.h>
 #include <sce/fast_mutex.h>
 #include <sce/venezia_rpc.h>
+#include <sce/pervasive_regs.h>
 
 /* name unknown: per-process Venezia suspend and clock bookkeeping. */
 typedef struct VeneziaProcessStorage {
@@ -48,56 +49,6 @@ typedef struct VeneziaKernelMemory {
 
 extern VeneziaKernelMemory g_veneziaKernelMemory; /* name unknown */
 
-/* name unknown: Venezia bus address windows in the Pervasive2 register page. */
-typedef struct VeneziaAddressWindow {
-	unsigned int regionStart;
-	unsigned int regionLimit;
-	unsigned int translatedStart;
-	unsigned int translatedLimit;
-} VeneziaAddressWindow;
-
-typedef struct VeneziaBootRegisters {
-	unsigned char reserved[0x100];
-	unsigned int debuggerPhysicalBase;
-	unsigned char reservedDebugger[0xc];
-	volatile unsigned int captureImagePhysicalAddress[2];
-	/* PLACEHOLDER: per-memory-class image control semantics remain unknown. */
-	volatile unsigned int unidentifiedCaptureImageControl[2];
-	volatile unsigned int captureAperturePhysicalBase;
-	unsigned char reservedBeforeCaptureWindow[0xdc];
-	volatile unsigned int captureWindowControl;
-	volatile unsigned int lowerRangeBase;
-	volatile unsigned int upperRangeBase;
-	volatile unsigned int upperRangeEnd;
-	volatile unsigned int lowerRangeEnd;
-	unsigned char reservedCaptureWindow[0xec];
-	unsigned int mappingControl;
-	unsigned int kernelStart;
-	unsigned int imageStart;
-	unsigned int imageEnd;
-	unsigned int kernelEnd;
-	unsigned char reservedMapping[0x6c];
-	unsigned int imagePhysicalBase;
-	unsigned char reservedImage[0xc];
-	VeneziaAddressWindow windows[3];
-	unsigned char reservedWindows[0x40];
-	unsigned int bootPhysicalBase;
-	unsigned char reservedBoot[0xa04];
-	unsigned int interruptControl;
-	unsigned char reservedInterrupt[0x38];
-	unsigned int bootControl;
-	unsigned char reservedBeforePageBase[0x118];
-	volatile unsigned int mainMemoryPageBase;
-	volatile unsigned int externalMemoryPageBase;
-	/* PLACEHOLDER: page controls are cleared during capture activation. */
-	volatile unsigned int unidentifiedCapturePageControl[2];
-	volatile unsigned int capturePagePhysicalBase;
-	unsigned char reservedEnd[0x8c];
-} VeneziaBootRegisters;
-
-_Static_assert(sizeof(VeneziaBootRegisters) == 0x1000, "Venezia register page");
-_Static_assert(offsetof(VeneziaBootRegisters, captureImagePhysicalAddress) == 0x110, "capture image registers");
-_Static_assert(offsetof(VeneziaBootRegisters, mainMemoryPageBase) == 0xf60, "main-memory page base");
 
 int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 				  const char *name, int attr, void *opt);

@@ -19,7 +19,7 @@ void udcdUpdateStateEvent(int bus);
 /* Original name unknown. Signal PHY readiness for the controller IRQ. */
 int udcdPhyInterrupt(int interrupt, void *argp)
 {
-	volatile struct udcdPhyRegisters *registers;
+	volatile ScePervasive2Registers *registers;
 	struct udcdBusState *state;
 	SceKernelIntrStatus status;
 	unsigned int mask, ready;
@@ -41,8 +41,8 @@ int udcdPhyInterrupt(int interrupt, void *argp)
 	state = &udcdState.buses[bus];
 	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	registers = udcdState.registers;
-	registers->interruptStatus = mask;
-	ready = registers->ready;
+	registers->usbPhyInterrupt = mask;
+	ready = registers->usbPhyReady;
 	if ((unsigned int)bus < 32 && ((ready >> bus) & 1))
 		ksceKernelSetEventFlag(state->phyReadyEvent, 1);
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
@@ -115,7 +115,7 @@ int udcdInitializeBusOne(int args, void *argp)
 /* Original name unknown. Poll the PHY with the native bounded busy delay. */
 int udcdPollBusInitialized(unsigned int delay, int bus)
 {
-	volatile struct udcdPhyRegisters *registers;
+	volatile ScePervasive2Registers *registers;
 	volatile unsigned int remaining;
 	unsigned int mask;
 	int attempts;
@@ -128,10 +128,10 @@ int udcdPollBusInitialized(unsigned int delay, int bus)
 		remaining = delay * 45;
 		while (remaining)
 			remaining--;
-		if (registers->ready & mask)
+		if (registers->usbPhyReady & mask)
 			break;
 	}
-	return registers->ready & mask ? 0 : UDCD_ERROR_TIMEOUT;
+	return registers->usbPhyReady & mask ? 0 : UDCD_ERROR_TIMEOUT;
 }
 
 int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
@@ -144,7 +144,7 @@ int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	state = &udcdState.buses[bus];
 	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
-	if (udcdState.registers->ready & (1u << bus)) {
+	if (udcdState.registers->usbPhyReady & (1u << bus)) {
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return 0;
 	}

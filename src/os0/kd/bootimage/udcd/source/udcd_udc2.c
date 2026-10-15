@@ -545,12 +545,12 @@ int udcdDetectCookie(int wake)
 
 	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	ScePervasiveForDriver_BB67EF58(2);
-	if ((udcdState.registers->vbus & 4) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
+	if ((udcdState.registers->usbVbus & 4) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return -1;
 	}
 	if (ksceGpioPortRead(0, 5) == 0) {
-		if (!(udcdState.registers->vbus & 4)) {
+		if (!(udcdState.registers->usbVbus & 4)) {
 			state->suspendState = UDCD_BUS_RESUMED;
 			state->usbVersion = -1;
 			state->activationState = SCE_UDCD_STATUS_ACTIVATED;
@@ -663,7 +663,7 @@ void udcdVbusConnected(int bus, SceKernelIntrStatus *status)
 /* Original name unknown. The VBUS interrupt of a bus: plugged in or pulled out. */
 int udcdVbusInterrupt(int intr, void *argp)
 {
-	volatile struct udcdPhyRegisters *phy;
+	volatile ScePervasive2Registers *phy;
 	struct udcdBusState *state;
 	SceKernelIntrStatus status;
 	unsigned int rise, fall, shift;
@@ -693,17 +693,17 @@ int udcdVbusInterrupt(int intr, void *argp)
 	state = &udcdState.buses[bus];
 	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
 	phy = udcdState.registers;
-	if ((phy->vbusInterrupt >> shift) & 1) {
-		phy->vbusInterrupt = rise;
-		if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && ((phy->vbus >> bus) & 1)) {
+	if ((phy->usbVbusInterrupt >> shift) & 1) {
+		phy->usbVbusInterrupt = rise;
+		if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && ((phy->usbVbus >> bus) & 1)) {
 			state->deviceInformation.lastEvent = 1;
 			udcdVbusConnected(bus, &status);
 			phy = udcdState.registers;
 		}
 	}
-	if (fall & phy->vbusInterrupt) {
-		phy->vbusInterrupt = fall;
-		if (state->cableState != SCE_UDCD_STATUS_CABLE_DISCONNECTED && !((phy->vbus >> bus) & 1)) {
+	if (fall & phy->usbVbusInterrupt) {
+		phy->usbVbusInterrupt = fall;
+		if (state->cableState != SCE_UDCD_STATUS_CABLE_DISCONNECTED && !((phy->usbVbus >> bus) & 1)) {
 			state->deviceInformation.lastEvent = 0x10000;
 			udcdControllerDisconnect(bus, &status);
 		}
@@ -730,7 +730,7 @@ int udcdResumeController(int bus)
 		if (state->deviceInformation.lastEvent != 4)
 			state->deviceInformation.lastEvent = 0x10;
 		if (controller->board == 0) {
-			if ((udcdState.registers->vbus >> bus) & 1)
+			if ((udcdState.registers->usbVbus >> bus) & 1)
 				udcdVbusConnected(bus, &status);
 		} else if (ksceGpioPortRead(0, 5) == 0) {
 			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
@@ -801,7 +801,7 @@ int udcdDmaInterrupt(int intr, void *argp)
 	state = &udcdState.buses[bus];
 	controller = &udcdState.controllers[bus];
 	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
-	if (((udcdState.registers->vbus >> bus) & 1) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
+	if (((udcdState.registers->usbVbus >> bus) & 1) && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 		pending = controller->registers->dmaInterrupt;
 		number = 1;
 		do {
@@ -1077,7 +1077,7 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 	struct udcdBusState *state = &udcdState.buses[bus];
 	struct udcdControllerState *controller = &udcdState.controllers[bus];
 	SceKernelAllocMemBlockKernelOpt opt;
-	volatile struct udcdPhyRegisters *phy;
+	volatile ScePervasive2Registers *phy;
 	uintptr_t base = 0, address;
 	unsigned int enabled;
 	SceUID block;
@@ -1124,11 +1124,11 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 			}
 			phy = udcdState.registers;
 			enabled = state->controllerResumed;
-			phy->vbusInterruptEnable &= ~(3 << (bus << 2));
+			phy->usbVbusInterruptEnable &= ~(3 << (bus << 2));
 			if (enabled != 1)
 				return 0;
 			if (controller->board == 0) {
-				if ((phy->vbus >> bus) & 1)
+				if ((phy->usbVbus >> bus) & 1)
 					udcdVbusConnected(bus, status);
 			} else {
 				if (ksceGpioPortRead(0, 5) == 0) {
@@ -1219,7 +1219,7 @@ int udcdControllerInterrupt(int intr, void *argp)
 		goto unlock;
 	registers = controller->registers;
 	events = registers->events;
-	if (!((udcdState.registers->vbus >> bus) & 1)) {
+	if (!((udcdState.registers->usbVbus >> bus) & 1)) {
 		registers->events = events;
 		goto unlock;
 	}
@@ -1519,13 +1519,13 @@ int udcdInitializeControllers(void)
 	SceKernelAllocMemBlockKernelOpt opt;
 	unsigned int hardware;
 	void *base;
-	volatile struct udcdPhyRegisters *phy;
+	volatile ScePervasive2Registers *phy;
 	SceUID block;
 	int bus, result, phyIntr, intr, dmaIntr, vbusIntr;
 
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
-	opt.paddr = 0xe3110000;
+	opt.paddr = PERVASIVE2_BASE;
 	opt.attr = 2;
 	block = ksceKernelAllocMemBlock("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
@@ -1536,7 +1536,7 @@ int udcdInitializeControllers(void)
 		goto release;
 	}
 	phy = base;
-	phy->vbusInterruptEnable = 0x333;
+	phy->usbVbusInterruptEnable = 0x333;
 	udcdState.registers = phy;
 	for (bus = 0; ; bus++) {
 		state = &udcdState.buses[bus];

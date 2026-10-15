@@ -489,7 +489,7 @@ typedef struct VeneziaVipState {
 	ScePervasiveMailboxRegisters *mailboxRegisters;
 	SceUID tasBlock;
 	ScePervasiveTasRegisters *tasRegisters;
-	VeneziaBootRegisters *bootRegisters;
+	ScePervasive2Registers *bootRegisters;
 	VeneziaDebugCallbackState *callbackState;
 	struct ThreadmgrFastMutex apiWrapperMutex;
 	struct ThreadmgrFastMutex *apiWrapperLock;
@@ -7069,7 +7069,7 @@ extern int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 extern int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
 	const VeneziaVipMemoryRegion *source, SceSize offset);
 #endif
-extern VeneziaBootRegisters *getVeneziaBootRegisters(void);
+extern ScePervasive2Registers *getVeneziaBootRegisters(void);
 
 /* name unknown: allocate the driver code region and map its peripheral pages. */
 int initializeVeneziaVipResources(void)
@@ -7105,7 +7105,7 @@ int initializeVeneziaVipResources(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	opt.paddr = 0xe3101000;
+	opt.paddr = PERVASIVE_RESET_BASE;
 	block = ksceKernelAllocMemBlock("ScePervasiveResetReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
@@ -7115,7 +7115,7 @@ int initializeVeneziaVipResources(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	opt.paddr = 0xe3106000;
+	opt.paddr = PERVASIVE_MAILBOX_BASE;
 	block = ksceKernelAllocMemBlock("ScePervasiveMailboxReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
@@ -7125,7 +7125,7 @@ int initializeVeneziaVipResources(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	opt.paddr = 0xe3108000;
+	opt.paddr = PERVASIVE_TAS_BASE(0);
 	block = ksceKernelAllocMemBlock("ScePervasiveTasReg", 0x20100206, 0x8000, &opt);
 	if (block < 0)
 		return block;
@@ -7135,7 +7135,7 @@ int initializeVeneziaVipResources(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	opt.paddr = 0xe3110000;
+	opt.paddr = PERVASIVE2_BASE;
 	state->bootRegisters = getVeneziaBootRegisters();
 	return 0;
 }
@@ -7483,7 +7483,7 @@ int SceCodecEngineWrapperForDriver_18197103(uint32_t physicalAddress)
 /* name unknown: program the image address for its selected memory class. */
 int programVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture, VeneziaVipState *state)
 {
-	VeneziaBootRegisters *registers = state->bootRegisters;
+	ScePervasive2Registers *registers = state->bootRegisters;
 	uint32_t physicalAddress = capture->imagePhysicalAddress;
 
 	if (capture->imageMappingMode == 1) {
@@ -7517,7 +7517,7 @@ extern int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *
 /* name unknown: select the process callbacks and activate its capture memory mapping. */
 __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state, VeneziaVipProcessStorage *storage)
 {
-	VeneziaBootRegisters *registers;
+	ScePervasive2Registers *registers;
 	uint32_t lowerBase, upperBase, upperEnd, lowerEnd;
 
 	state->callbackState = &storage->callbackState;

@@ -52,7 +52,7 @@ int allocVeneziaImage(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = 0xe3110000;
+	opt.paddr = PERVASIVE2_BASE;
 	ret = ksceKernelAllocMemBlock("ScePervasive2Reg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		goto out;
@@ -88,7 +88,7 @@ out:
 
 int _sceVeneziaBootPhase2(void)
 {
-	volatile VeneziaBootRegisters *regs = g_veneziaBootMemory.registerBase;
+	volatile ScePervasive2Registers *regs = g_veneziaBootMemory.registerBase;
 	unsigned int imageBase, kernelBase, imageEnd, kernelEnd, alignedBase;
 	unsigned int loaded;
 	int ret;
@@ -178,7 +178,7 @@ out:
 
 int _sceVeneziaResume(void)
 {
-	volatile VeneziaBootRegisters *regs = g_veneziaBootMemory.registerBase;
+	volatile ScePervasive2Registers *regs = g_veneziaBootMemory.registerBase;
 	unsigned int imageBase, kernelBase, imageEnd, kernelEnd, alignedBase;
 	int ret;
 
@@ -244,7 +244,7 @@ SceSize getVeneziaImageSize(void) /* name unknown */
 	return g_veneziaBootMemory.imageSize;
 }
 
-volatile VeneziaBootRegisters *getVeneziaBootRegisters(void) /* name unknown */
+volatile ScePervasive2Registers *getVeneziaBootRegisters(void) /* name unknown */
 {
 	return g_veneziaBootMemory.registerBase;
 }

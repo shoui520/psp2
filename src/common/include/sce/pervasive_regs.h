@@ -270,25 +270,81 @@ _Static_assert(offsetof(ScePervasiveBaseClkRegisters, dmac5Clock) == 0x1f0, "bas
 _Static_assert(offsetof(ScePervasiveBaseClkRegisters, srcClock) == 0x210, "base clock src");
 _Static_assert(sizeof(ScePervasiveBaseClkRegisters) == 0x1000, "base clock page");
 
-/* ScePervasive2 (physical 0xe3110000): bus protection and bus error words
- * (named in sce/buserror_es3.h by address) and the insert and interrupt states
- * of the memory card and the USB ports, per the henkaku wiki's Pervasive page.
- * Interrupt state words are acknowledged by writing back what was read.
+/* ScePervasive2 (physical 0xe3110000). Venezia's boot and capture windows
+ * (vnz_wrapper; names ours, descriptive), the VIP and Venezia protection and
+ * bus error words (named in sce/buserror_es3.h by address), and the insert and
+ * interrupt states of the memory card and the USB ports, per the henkaku
+ * wiki's Pervasive page. Interrupt state words are acknowledged by writing
+ * back what was read. The Venezia fields keep the volatility vnz_wrapper's
+ * accesses have: its debugger reaches the page through a plain pointer.
  */
+
+/* a Venezia bus address window: region -> translated */
+typedef struct VeneziaAddressWindow {
+	unsigned int regionStart;
+	unsigned int regionLimit;
+	unsigned int translatedStart;
+	unsigned int translatedLimit;
+} VeneziaAddressWindow;
+
 typedef struct ScePervasive2Registers {
-	volatile uint32_t reserved0[972];
-	volatile uint32_t usbPhyReady;			/* bit per port */
+	unsigned char reserved[0x100];
+	unsigned int debuggerPhysicalBase;		/* 0x100 */
+	unsigned char reservedDebugger[0xc];
+	volatile unsigned int captureImagePhysicalAddress[2];	/* 0x110 */
+	/* PLACEHOLDER: per-memory-class image control semantics remain unknown. */
+	volatile unsigned int unidentifiedCaptureImageControl[2];
+	volatile unsigned int captureAperturePhysicalBase;	/* 0x120 */
+	unsigned char reservedBeforeCaptureWindow[0xdc];
+	volatile unsigned int captureWindowControl;	/* 0x200 */
+	volatile unsigned int lowerRangeBase;
+	volatile unsigned int upperRangeBase;
+	volatile unsigned int upperRangeEnd;
+	volatile unsigned int lowerRangeEnd;		/* 0x210 */
+	unsigned char reservedCaptureWindow[0xec];	/* VIP_PROT at 0x248 */
+	unsigned int mappingControl;			/* 0x300 */
+	unsigned int kernelStart;
+	unsigned int imageStart;
+	unsigned int imageEnd;
+	unsigned int kernelEnd;				/* 0x310 */
+	unsigned char reservedMapping[0x6c];		/* VENE_PROT at 0x348 */
+	unsigned int imagePhysicalBase;			/* 0x380 */
+	unsigned char reservedImage[0xc];
+	VeneziaAddressWindow windows[3];		/* 0x390 */
+	unsigned char reservedWindows[0x40];
+	unsigned int bootPhysicalBase;			/* 0x400 */
+	unsigned char reservedBoot[0xa04];		/* bus error words at 0xd00 */
+	unsigned int interruptControl;			/* 0xe08 */
+	unsigned char reservedInterrupt[0x38];
+	unsigned int bootControl;			/* 0xe44 */
+	unsigned char reservedBeforeUsb[0xe8];
+	volatile uint32_t usbPhyReady;			/* 0xf30: bit per port */
 	volatile uint32_t usbPhyInterrupt;
-	volatile uint32_t reserved1[2];
-	volatile uint32_t memoryCardInsert;		/* bit 0 */
+	volatile uint32_t reservedUsbPhy[2];
+	volatile uint32_t memoryCardInsert;		/* 0xf40: bit 0 */
 	volatile uint32_t memoryCardInterrupt;		/* bit 0 removed, bit 1 inserted */
-	volatile uint32_t reserved2[2];
-	volatile uint32_t usbVbus;			/* bit per port */
-	volatile uint32_t usbVbusInterrupt;
-	volatile uint32_t reserved3[42];
+	volatile uint32_t reservedMemoryCard[2];
+	volatile uint32_t usbVbus;			/* 0xf50: bit per port */
+	volatile uint32_t usbVbusInterrupt;		/* port n: bit 4n rise, 4n + 1 fall */
+	volatile uint32_t usbVbusInterruptEnable;
+	volatile uint32_t reservedUsbVbus;
+	volatile unsigned int mainMemoryPageBase;	/* 0xf60 */
+	volatile unsigned int externalMemoryPageBase;
+	/* PLACEHOLDER: page controls are cleared during capture activation. */
+	volatile unsigned int unidentifiedCapturePageControl[2];
+	volatile unsigned int capturePagePhysicalBase;	/* 0xf70 */
+	unsigned char reservedEnd[0x8c];
 } ScePervasive2Registers;
 
-_Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "pervasive2 usb phy");
-_Static_assert(offsetof(ScePervasive2Registers, memoryCardInsert) == 0xf40, "pervasive2 card");
+_Static_assert(offsetof(ScePervasive2Registers, captureImagePhysicalAddress) == 0x110,
+	"Pervasive2 capture image");
+_Static_assert(offsetof(ScePervasive2Registers, mappingControl) == 0x300, "Pervasive2 mapping");
+_Static_assert(offsetof(ScePervasive2Registers, windows) == 0x390, "Pervasive2 windows");
+_Static_assert(offsetof(ScePervasive2Registers, bootControl) == 0xe44, "Pervasive2 boot control");
+_Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "Pervasive2 USB PHY");
+_Static_assert(offsetof(ScePervasive2Registers, memoryCardInsert) == 0xf40, "Pervasive2 memory card");
+_Static_assert(offsetof(ScePervasive2Registers, usbVbusInterruptEnable) == 0xf58, "Pervasive2 VBUS");
+_Static_assert(offsetof(ScePervasive2Registers, mainMemoryPageBase) == 0xf60, "Pervasive2 page base");
+
 _Static_assert(offsetof(ScePervasive2Registers, usbVbus) == 0xf50, "pervasive2 vbus");
 _Static_assert(sizeof(ScePervasive2Registers) == 0x1000, "pervasive2 page");

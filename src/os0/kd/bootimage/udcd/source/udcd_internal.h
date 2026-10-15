@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <sce/udcd_status.h>
+#include <sce/pervasive_regs.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/proc_event.h>
@@ -259,21 +260,11 @@ struct udcdControllerState {
 	unsigned int reserved;
 };
 
-struct udcdPhyRegisters {
-	unsigned char reserved0[0xf30];
-	unsigned int ready;
-	unsigned int interruptStatus;
-	unsigned int reserved1[6];
-	unsigned int vbus;			/* bit n: bus n powered; bit 2 also cookie */
-	unsigned int vbusInterrupt;		/* bus n: bit 4n rise, 4n + 1 fall */
-	unsigned int vbusInterruptEnable;	/* bus n: bit 4n rise, 4n + 1 fall */
-};
-
 struct udcdState {
 	struct udcdBusState buses[3];
 	struct udcdControllerOperations operations[3];
 	struct udcdControllerState controllers[3];
-	volatile struct udcdPhyRegisters *registers;
+	volatile ScePervasive2Registers *registers;
 	SceUID phyRegisterBlock;
 #if FW_VERSION >= 0x04000000
 	int processEventResult;
