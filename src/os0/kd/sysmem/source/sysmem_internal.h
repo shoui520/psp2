@@ -537,7 +537,7 @@ int UIDHeapCallFree(void *heap, void *object);
 /* sysmem.c: the kernel heap under its lock */
 void *HeapAllocLocked(void *heap, SceSize size);
 int HeapFreeLocked(void *heap, void *ptr);
-void *UIDManagerGetKernelHeap(void);
+void *UIDManagerGetKernelHeap(void) __attribute__((pure));
 
 /* smb.c: simple memblocks */
 struct MemBlockObject;
