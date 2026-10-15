@@ -81,10 +81,13 @@ int sceDeci4pDrfpCreate(const char *path, int mode, Deci4pFsStat *stat)
 		drfpReleaseBuffer(DRFP_BUFFER_GENERAL);
 		return SCE_ERROR_ERRNO_ENOTSUP;
 	}
-	if (pkt->res.result != 0)
+	if (pkt->res.result == 0) {
+		ret = 0;
+	} else {
 		DRFP_PRINTF(2, 271, "CREATE_RES: ERROR fname = %s, result = 0x%08x\n", path,
 			    pkt->res.result);
-	ret = drfpConvertError(pkt->res.result);
+		ret = drfpConvertError(pkt->res.result);
+	}
 	if (ret == 0)
 		*stat = pkt->res.stat;
 	drfpReleaseBuffer(DRFP_BUFFER_GENERAL);
@@ -114,10 +117,13 @@ int sceDeci4pDrfpOpen(const char *path, int flags, int mode, Deci4pFsStat *stat)
 		drfpReleaseBuffer(DRFP_BUFFER_GENERAL);
 		return ret;
 	}
-	if (pkt->res.result != 0)
+	if (pkt->res.result == 0) {
+		ret = 0;
+	} else {
 		DRFP_PRINTF(2, 371, "OPEN_RES: ERROR fname = %s, result = 0x%08x\n", path,
 			    pkt->res.result);
-	ret = drfpConvertError(pkt->res.result);
+		ret = drfpConvertError(pkt->res.result);
+	}
 	if (ret == 0) {
 		*stat = pkt->res.stat;
 		ret = pkt->res.fd;
@@ -145,13 +151,13 @@ int sceDeci4pDrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 			chunk = DRFP_READ_CHUNK_MAX;
 		info.nfrag = 0;
 		info.hostResult = 0;
-		info.buf = (char *)buf + total;
 		info.received = 0;
 		pkt->h.code = DRFP_CODE_READ;
 		pkt->fd = fd;
 		pkt->padding = 0;
 		pkt->offset = offset;
 		pkt->size = chunk;
+		info.buf = (char *)buf + total;
 		info.size = chunk;
 		ret = sceDeci4pDrfpSend(pkt, sizeof(*pkt), &info);
 		if (ret != 0) {
@@ -347,7 +353,7 @@ int sceDeci4pDrfpTranslatePath(const char *base, const char *path, SceSize size,
 			       SceSize *outLen)
 {
 	DrfpTwoPathPacket *pkt;
-	DrfpString *second;
+	DrfpString *second, *copied;
 	SceSize len, len2, pad, pktSize, n;
 	int ret;
 
@@ -362,8 +368,9 @@ int sceDeci4pDrfpTranslatePath(const char *base, const char *path, SceSize size,
 	memset(pkt, 0, pktSize);
 	pkt->name.len = len + 1;
 	pkt->h.code = DRFP_CODE_TRANSLATE_PATH;
-	second = (DrfpString *)((char *)memcpy(pkt->name.str, base, len + 1) + pad);
-	second->len = len2 + 1;
+	second = (DrfpString *)(pkt->name.str + pad);
+	copied = (DrfpString *)((char *)memcpy(pkt->name.str, base, len + 1) + pad);
+	copied->len = len2 + 1;
 	memcpy(second->str, path, len2 + 1);
 	ret = sceDeci4pDrfpSend(pkt, pktSize, NULL);
 	if (ret < 0) {
@@ -502,7 +509,7 @@ int sceDeci4pDrfpRemove(const char *path)
 int sceDeci4pDrfpRename(const char *from, const char *to, Deci4pFsStat *stat)
 {
 	DrfpTwoPathPacket *pkt;
-	DrfpString *second;
+	DrfpString *second, *copied;
 	SceSize len, len2, pad, size, resSize;
 	int ret;
 
@@ -517,8 +524,9 @@ int sceDeci4pDrfpRename(const char *from, const char *to, Deci4pFsStat *stat)
 	memset(pkt, 0, size);
 	pkt->name.len = len + 1;
 	pkt->h.code = DRFP_CODE_RENAME;
-	second = (DrfpString *)((char *)memcpy(pkt->name.str, from, len + 1) + pad);
-	second->len = len2 + 1;
+	second = (DrfpString *)(pkt->name.str + pad);
+	copied = (DrfpString *)((char *)memcpy(pkt->name.str, from, len + 1) + pad);
+	copied->len = len2 + 1;
 	memcpy(second->str, to, len2 + 1);
 	ret = sceDeci4pDrfpSend(pkt, size, NULL);
 	if (ret < 0) {

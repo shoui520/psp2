@@ -13,6 +13,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2common/kernel/iofilemgr.h>
 #include <sce/debug.h>
+#include <sce/list.h>
 #include "sce/error.h"
 /* sce/deci4p.h declares sceDfMgrClose void; it returns an error code */
 #define sceDfMgrClose sceDfMgrClose_deci4p_h
@@ -318,8 +319,7 @@ typedef struct DrfpWriteInfo {
 #define DRFP_EVF_CANCEL			4
 
 typedef struct DrfpRequest {
-	struct DrfpRequest *next;
-	struct DrfpRequest *prev;
+	ListNode link;
 	SceUInt32 flags;			/* DRFP_REQ_* */
 	SceUInt32 code;
 	SceUInt32 seq;
@@ -333,11 +333,8 @@ typedef struct DrfpRequest {
 	int result;
 } DrfpRequest;
 
-/* a list of requests; the head is linked like a request */
-typedef struct DrfpQueue {
-	DrfpRequest *next;
-	DrfpRequest *prev;
-} DrfpQueue;
+/* the queue head and every request contain the same list link */
+typedef ListNode DrfpQueue;
 
 /* the protocol handler's context */
 typedef struct DrfpProtocol {

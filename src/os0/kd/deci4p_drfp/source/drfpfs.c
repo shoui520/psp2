@@ -42,7 +42,8 @@ static void drfpUsecToDateTime(SceUInt64 usec, SceDateTime *dt)
 
 static inline __attribute__((always_inline)) int drfpDateTimeValid(const SceDateTime *dt)
 {
-	return dt->year != 0 && dt->month - 1 < 12 && dt->day - 1 < 31 && dt->hour < 24 &&
+	return dt->year != 0 && (SceUInt32)dt->month - 1 < 12 &&
+	       (SceUInt32)dt->day - 1 < 31 && dt->hour < 24 &&
 	       dt->minute < 60 && dt->second < 60 && dt->microsecond < DECI4P_FS_USEC_PER_SEC;
 }
 
@@ -180,13 +181,17 @@ static SceSSize dev_drfp_vop_write(SceVopWriteArgs *argp)
 {
 	SceVfsVnode *vp = argp->vp;
 	SceVfsFile *file = argp->file;
+	SceOff position, size;
 	int ret;
 
 	ret = sceDeci4pDrfpWrite(file->fd, argp->buf, file->position, argp->nbyte);
 	if (ret >= 0) {
-		file->position += ret;
-		if ((SceOff)vp->core.size < file->position)
-			vp->core.size = file->position;
+		position = file->position;
+		size = vp->core.size;
+		position += ret;
+		file->position = position;
+		if (size < position)
+			vp->core.size = position;
 	}
 	return ret;
 }
@@ -323,10 +328,9 @@ static int dev_drfp_vop_rename(SceVopRenameArgs *argp)
 	SceVfsVnode **nvpp = argp->nvpp;
 	SceVfsVnode *dvp, *vp;
 	SceVfsMount *mnt;
-	Deci4pFsStat st;
+	Deci4pFsStat st = {0};
 	int ret;
 
-	drfpStatZero(&st);
 	ret = sceDeci4pDrfpRename(argp->old_path->name, argp->new_path->name, &st);
 	if (ret != 0)
 		return ret;
@@ -606,13 +610,12 @@ static int dev_drfp_vop_chstat(SceVopChstatArgs *argp)
 	SceVfsVnode *vp = argp->vp;
 	const SceIoStat *stat = argp->stat;
 	SceUInt32 bit = argp->bit;
-	const char *path;
+	const char *path = argp->path->name;
 	Deci4pFsStat st;
 	int ret;
 
 	if (!drfpChstatTimesValid(stat, bit))
 		return SCE_ERROR_ERRNO_EINVAL;
-	path = argp->path->name;
 	if (drfpIsRoot(vp))
 		path = "";
 	ret = 0;

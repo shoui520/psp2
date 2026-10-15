@@ -39,23 +39,25 @@ static int s_drfpSuspended;
 
 static inline int drfpQueueEmpty(DrfpQueue *queue)
 {
-	return queue->next == (DrfpRequest *)queue;
+	return queue->next == queue;
 }
 
 static inline void drfpRequestUnlink(DrfpRequest *req)
 {
-	req->next->prev = req->prev;
-	req->prev->next = req->next;
-	req->next = req;
-	req->prev = req;
+	ListNode *next = req->link.next;
+
+	next->prev = req->link.prev;
+	req->link.prev->next = next;
+	req->link.next = &req->link;
+	req->link.prev = &req->link;
 }
 
 static inline void drfpRequestAppend(DrfpQueue *queue, DrfpRequest *req)
 {
-	req->next = (DrfpRequest *)queue;
-	req->prev = queue->prev;
-	queue->prev = req;
-	req->prev->next = req;
+	req->link.next = queue;
+	req->link.prev = queue->prev;
+	queue->prev = &req->link;
+	req->link.prev->next = &req->link;
 }
 
 /* the first request of a queue, NULL when it is empty */
@@ -69,7 +71,7 @@ static inline DrfpRequest *drfpQueueFirst(DrfpQueue *queue)
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 		return NULL;
 	}
-	req = queue->next;
+	req = (DrfpRequest *)queue->next;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 	return req;
 }
@@ -143,7 +145,7 @@ int ReadResHandler(DrfpProtocol *ctx, DrfpRequest *req)
 	}
 	base = req->read.buf;
 	end = base + req->read.size;
-	dst = base + (res.frag - 1) * DRFP_FRAG_DATA_MAX;
+	dst = base + (res.frag - 1u) * DRFP_FRAG_DATA_MAX;
 	if (dst < base || dst >= end) {
 		DRFP_PRINTF(0xf, 738, "illegal fragment number %d (0x%08x, 0x%08x)\n",
 			    res.frag, dst, end);
@@ -174,7 +176,7 @@ int ReadResHandler(DrfpProtocol *ctx, DrfpRequest *req)
 	req->read.received += ret;
 	if (res.frag >= nfrag)
 		req->flags |= DRFP_REQ_DONE;
-	if (ret < DRFP_FRAG_DATA_MAX)
+	if ((SceSize)ret < DRFP_FRAG_DATA_MAX)
 		req->flags |= DRFP_REQ_DONE;
 	return 0;
 
@@ -190,7 +192,7 @@ int ReadHandler(DrfpProtocol *ctx, SceSize size)
 	SceKernelIntrStatus s;
 	DrfpHeader h, *pkt;
 	DrfpRequest *req;
-	SceUInt32 seq;
+	SceUInt32 seq, code;
 	int ret;
 
 	ret = sceDfMgrRecv(ctx->handle, &h.hdr, sizeof(h.hdr));
@@ -205,12 +207,14 @@ int ReadHandler(DrfpProtocol *ctx, SceSize size)
 	}
 	seq = h.seq;
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
-	for (req = s_drfpRecvQueue.next; req != (DrfpRequest *)&s_drfpRecvQueue; req = req->next) {
+	for (req = (DrfpRequest *)s_drfpRecvQueue.next;
+	     &req->link != &s_drfpRecvQueue; req = (DrfpRequest *)req->link.next) {
 		if (req->seq != seq)
 			continue;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+		code = req->code;
 		ctx->readRequest = req;
-		if (req->code == DRFP_CODE_READ)
+		if (code == DRFP_CODE_READ)
 			return ReadResHandler(ctx, req);
 		pkt = req->packet;
 		*pkt = h;
@@ -357,6 +361,7 @@ int sceDeci4pDrfpInit(void)
 	DrfpRequest *req;
 	DrfpBufferPool *pool;
 	char name[32];
+	char memBlockName[32];
 	SceUID ret;
 	int i;
 
@@ -387,8 +392,8 @@ int sceDeci4pDrfpInit(void)
 	memset(s_drfpRequest, 0, sizeof(s_drfpRequest));
 	for (i = 0; i < DRFP_REQUEST_COUNT; i++) {
 		req = &s_drfpRequest[i];
-		req->next = req;
-		req->prev = req;
+		req->link.next = &req->link;
+		req->link.prev = &req->link;
 		req->flags = 0;
 		req->code = 0;
 		req->seq = 0;
@@ -398,15 +403,16 @@ int sceDeci4pDrfpInit(void)
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
 		req->evf = ksceKernelCreateEventFlag(name, 0, 0, NULL);
 	}
-	s_drfpSendQueue.next = (DrfpRequest *)&s_drfpSendQueue;
-	s_drfpSendQueue.prev = (DrfpRequest *)&s_drfpSendQueue;
-	s_drfpRecvQueue.next = (DrfpRequest *)&s_drfpRecvQueue;
-	s_drfpRecvQueue.prev = (DrfpRequest *)&s_drfpRecvQueue;
+	s_drfpSendQueue.next = &s_drfpSendQueue;
+	s_drfpSendQueue.prev = &s_drfpSendQueue;
+	s_drfpRecvQueue.next = &s_drfpRecvQueue;
+	s_drfpRecvQueue.prev = &s_drfpRecvQueue;
 
 	for (i = 0; i < DRFP_BUFFER_COUNT; i++) {
 		pool = &s_drfpBuffer[i];
-		snprintf(name, sizeof(name), DRFP_NAME "MemBlock%d", i);
-		pool->memBlock = ksceKernelAllocMemBlock(name, DRFP_MEMTYPE, pool->size, NULL);
+		snprintf(memBlockName, sizeof(memBlockName), DRFP_NAME "MemBlock%d", i);
+		pool->memBlock = ksceKernelAllocMemBlock(memBlockName, DRFP_MEMTYPE,
+						     pool->size, NULL);
 		ksceKernelGetMemBlockBase(pool->memBlock, &pool->base);
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
 		pool->sema = ksceKernelCreateSema(name, SCE_KERNEL_ATTR_THREAD_PRIO, pool->count,
@@ -462,16 +468,20 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	SceKernelIntrStatus s;
 	DrfpRequest *req;
 	SceUInt32 timeout, bits, *pTimeout;
-	int ret, retries, i;
+	int ret, retries, i, index;
 
 	if (ksceKernelWaitSema(s_drfpRequestSema, 1, NULL) != 0)
 		SCE_PANIC(460);
 
 	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
-	for (i = 0; i < DRFP_REQUEST_COUNT - 1; i++)
-		if (!(s_drfpRequest[i].flags & DRFP_REQ_USED))
+	index = -1;
+	for (i = 0; i < DRFP_REQUEST_COUNT; i++) {
+		if (!(s_drfpRequest[i].flags & DRFP_REQ_USED)) {
+			index = i;
 			break;
-	req = &s_drfpRequest[i];
+		}
+	}
+	req = &s_drfpRequest[index];
 	req->flags |= DRFP_REQ_USED;
 	req->seq = ++s_drfpSequence;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
@@ -559,8 +569,8 @@ done:
 	req->packet = NULL;
 	req->size = 0;
 	req->result = 0;
-	req->next = req;
-	req->prev = req;
+	req->link.next = &req->link;
+	req->link.prev = &req->link;
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 	ksceKernelSignalSema(s_drfpRequestSema, 1);
 	return ret;
