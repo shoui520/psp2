@@ -30,8 +30,9 @@ typedef struct SceDmac5KeyringSlot {
 
 typedef struct SceDmac5KeyringRegisters {
 	SceDmac5KeyringSlot slot[DMAC5_KEYRING_SLOTS];
-	volatile unsigned int nonSecureAccess;	/* bit n: slot n readable in Non-Secure state */
-	unsigned int reserved[0x2ff];
+	/* SKBL sets both: [0] bit n: slot n readable in Non-Secure state */
+	volatile unsigned int nonSecureAccess[2];
+	unsigned int reserved[0x2fe];
 } SceDmac5KeyringRegisters;
 
 _Static_assert(sizeof(SceDmac5KeyringSlot) == 0x20, "keyring slot");

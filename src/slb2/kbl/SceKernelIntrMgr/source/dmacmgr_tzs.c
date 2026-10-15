@@ -2,12 +2,65 @@
  * dmacmgr_tzs.c: the secure-side words of the seven DMA controllers. The
  * secure world maps each controller and gives the kernel two monitor calls
  * that set its access control words (SceDmacRegisters.accessControl).
+ * SKBL's revision (INTRMGR_SKBL) only starts the controllers and opens part
+ * of the DMAC5 key ring to the Non-secure side.
  */
 
 #include "intrmgr.h"
 #include <sce/dmac_regs.h>
 
 #define DMAC_COUNT	7
+
+#if defined(INTRMGR_SKBL)
+int ScePervasiveForDriver_FF4B3CA6(int port);		/* DMAC reset on */
+int ScePervasiveForDriver_AC475961(int port);		/* DMAC reset off */
+int ScePervasiveForDriver_A10583FF(int port);		/* DMAC clock on */
+
+static void *mapDmac(const char *name, SceUInt32 pa)
+{
+	SceKernelAllocMemBlockKernelOpt opt;
+	SceUID memBlockId;
+	void *base;
+
+	memset(&opt, 0, sizeof(opt));
+	opt.size = sizeof(opt);
+	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
+	opt.paddr = pa;
+	memBlockId = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+					     DMAC_REG_SIZE, &opt);
+	if (memBlockId < 0) {
+		SCE_DBG_PRINTF(0xb, 59, "map %s failed. 0x%08x\n", name, memBlockId);
+		SCE_DBG_ASSERT_FAIL(60);
+		return NULL;
+	}
+	ksceKernelGetMemBlockBase(memBlockId, &base);
+	return base;
+}
+
+static void StartDmac(int dmac)
+{
+	ScePervasiveForDriver_FF4B3CA6(dmac);
+	ScePervasiveForDriver_A10583FF(dmac);
+	ScePervasiveForDriver_AC475961(dmac);
+}
+
+int initDmacSecure(void)
+{
+	volatile SceDmac5KeyringRegisters *keyring;
+	int i;
+
+	for (i = 0; i < 6; i++)
+		StartDmac(i);
+	/* DMAC6 exists on these units only */
+	if (ksceKernelCheckDipsw(0x9f) || ksceKernelCheckDipsw(0xc0) ||
+	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))
+		StartDmac(6);
+	keyring = mapDmac("SceDmacmgrKeyringReg", DMAC5_KEYRING_REG_BASE);
+	keyring->nonSecureAccess[0] = 0x200000ff;
+	keyring->nonSecureAccess[1] = 0xffffffff;
+	return 0;
+}
+#else
 
 /* the access control words of each controller */
 static SceUInt32 *s_dmacAccessControl[DMAC_COUNT];
@@ -97,3 +150,4 @@ int initDmacSecure(void)
 		SCE_DBG_ASSERT_FAIL(206);
 	return 0;
 }
+#endif
