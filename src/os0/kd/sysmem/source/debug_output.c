@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <sce/debug.h>
 #include "sysmem_boot.h"
+#include "debug_tty.h"
 #include <stdarg.h>
 
 typedef int (*DebugPrintfHandler)(int argument, const char *format,
@@ -33,8 +34,7 @@ extern int DebugCallPrintfHandler(int argument, const char *format,
 
 DebugPrintfHandler volatile s_debugKprintfHandler = DebugDefaultPrintf;
 static void *volatile s_debugKprintfArgument;
-volatile uint32_t s_debugRingIndex;
-char s_debugRing[4096];
+struct DebugTty s_debugTty;
 static char s_debugPrefix[256];
 volatile uint32_t s_debugPrintLock;
 
@@ -51,12 +51,12 @@ void DebugAppendCharacter(int character)
 	uint32_t index, next;
 
 	do {
-		index = s_debugRingIndex;
+		index = s_debugTty.index;
 		next = index + 1;
-		if (next == sizeof(s_debugRing))
+		if (next == sizeof(s_debugTty.ring))
 			next = 0;
-	} while (ksceKernelAtomicCompareAndSet32(&s_debugRingIndex, index, next) != index);
-	s_debugRing[index] = character;
+	} while (ksceKernelAtomicCompareAndSet32(&s_debugTty.index, index, next) != index);
+	s_debugTty.ring[index] = character;
 }
 
 int SceDebugForKernel_3A21194E(int character)

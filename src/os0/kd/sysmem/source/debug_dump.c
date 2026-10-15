@@ -23,6 +23,7 @@
 #include <sce/threadcb.h>
 #include <sce/excpmgr.h>
 #include <sce/sysroot_modulemgr.h>
+#include "debug_tty.h"
 
 int ksceKernelCpuSuspendIntr(void);
 int ksceKernelCpuResumeIntr(int flags);
@@ -53,8 +54,7 @@ void DebugSecureCrashDump(int kind, SceUInt32 ttbr0, SceUInt32 vbar, void *sysro
 extern volatile uint32_t s_assertLevel;
 
 /* debug_output.c: the TTY ring and its lock */
-extern volatile uint32_t s_debugRingIndex;
-extern char s_debugRing[4096];
+
 extern volatile uint32_t s_debugPrintLock;
 
 typedef struct SceKernelBacktraceFrameForKernel DebugFrame;
@@ -642,20 +642,20 @@ int ksceKernelGetTtyInfo(char *buffer, SceSize size)
 	SceUInt32 index, tail;
 	int flags;
 
-	if (size > sizeof(s_debugRing))
-		size = sizeof(s_debugRing);
+	if (size >= sizeof(s_debugTty.ring))
+		size = sizeof(s_debugTty.ring);
 	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
-	index = s_debugRingIndex;
-	tail = sizeof(s_debugRing) - index;
+	index = s_debugTty.index;
+	tail = sizeof(s_debugTty.ring) - index;
 	if (tail >= size) {
 		if (size != 0)
-			memcpy(buffer, &s_debugRing[index], size);
+			memcpy(buffer, &s_debugTty.ring[index], size);
 	} else {
-		if (index != sizeof(s_debugRing))
-			memcpy(buffer, &s_debugRing[index], tail);
-		if (size + index != sizeof(s_debugRing))
-			memcpy(buffer + tail, s_debugRing,
-			       size + index - sizeof(s_debugRing));
+		if (index != sizeof(s_debugTty.ring))
+			memcpy(buffer, &s_debugTty.ring[index], tail);
+		if (size + index != sizeof(s_debugTty.ring))
+			memcpy(buffer + tail, s_debugTty.ring,
+			       size + index - sizeof(s_debugTty.ring));
 	}
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	return size;
