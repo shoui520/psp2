@@ -613,10 +613,10 @@ int SceSysrootForKernel_26458702(const SysrootThreadmgrOps *ops)
 	state->getCurrentAddressSpaceCB = ops->getCurrentAddressSpaceCB;
 	state->getCurrentUIDEntryHeapCB = ops->getCurrentUIDEntryHeapCB;
 	state->returnFromExcpToThread = ops->returnFromExcpToThread;
-	state->threadMgrStartAfterProcess = ops->threadMgrStartAfterProcess;
-	state->getCurrentThreadAttr = ops->getCurrentThreadAttr;
 	state->getThreadId = ops->getThreadId;
 	state->isUserModeThread = ops->isUserModeThread;
+	state->threadMgrStartAfterProcess = ops->threadMgrStartAfterProcess;
+	state->getCurrentThreadAttr = ops->getCurrentThreadAttr;
 	state->getProcessId = ops->getProcessId;
 	state->getCurrentProcessCB = ops->getCurrentProcessCB;
 	state->trapThreadAfterSyscall = ops->trapThreadAfterSyscall;
