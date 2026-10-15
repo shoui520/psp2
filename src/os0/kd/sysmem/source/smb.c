@@ -229,7 +229,7 @@ static inline SceUInt32 SmbMemBlockCode(SceUInt32 smbType)
 /* name unknown: one more free block of a type, placed in the kernel partition */
 int SimpleMemBlockNew(SceUInt32 smbType)
 {
-	MemBlockObject *block;
+	MemBlockObject *block, *newBlock;
 	SceUInt32 code = SmbMemBlockCode(smbType);
 	int ret;
 
@@ -243,11 +243,12 @@ int SimpleMemBlockNew(SceUInt32 smbType)
 	MemBlockStatusStateChangeVirAllocFromFreeRaw(block);
 	block->smbType = smbType;
 	SimpleMemBlockSetDefaultName(block);
-	block->code = code;
-	block->smbSize = 0;
-	block->partition = PartitionGetKernel();
-	block->smbNext = NULL;
-	SimpleMemBlockPush(smbType, block);
+	newBlock = block;
+	newBlock->code = code;
+	newBlock->partition = PartitionGetKernel();
+	newBlock->smbSize = 0;
+	newBlock->smbNext = NULL;
+	SimpleMemBlockPush(smbType, newBlock);
 	return 0;
 }
 
