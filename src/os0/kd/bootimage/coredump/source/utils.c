@@ -59,11 +59,13 @@ void utilsElf32MakePhent(Elf32_Phdr *header, Elf32_Word type, Elf32_Off offset,
 /* a PT_NOTE program header for dataSize bytes at fileOffset */
 void utilsElf32MakePtnote(Elf32_Phdr *header, SceUInt32 fileOffset, SceSize dataSize)
 {
+#if FW_DEBUG
 	void *lr = __builtin_return_address(0);
 
 	ksceKernelAssert(header != NULL, SCE_DBGINFO(112), lr);
 	/* utilsElf32MakePhent inlined, its zero fields left to the memset */
 	ksceKernelAssert(header != NULL, SCE_DBGINFO_FUNC(88, "utilsElf32MakePhent"), lr);
+#endif
 	memset(header, 0, sizeof(*header));
 	header->p_offset = fileOffset;
 	header->p_filesz = dataSize;
