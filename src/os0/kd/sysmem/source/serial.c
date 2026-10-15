@@ -2,8 +2,9 @@
  * SceSysmem: the UARTs. Seven ports of 0x10000 bytes of registers each and
  * their clock generator; kernel printf output goes to the debug ports that
  * are enabled. The secure kernel's SceSysmem (SYSMEM_TZS) has no suspend
- * handlers and no reads; NSKBL (SYSMEM_NSKBL) uses the registers at their
- * physical addresses and has only the debug output.
+ * handlers and no reads; the boot loaders (SYSMEM_NSKBL, and SKBL with
+ * SYSMEM_SKBL as well) use the registers at their physical addresses and have
+ * only the debug output.
  */
 
 #include <psp2kern/kernel/sysclib.h>
@@ -36,6 +37,7 @@ typedef struct UartDebugPort {
 
 int ksceKernelCpuId(void);
 int ksceKernelCheckDipsw(unsigned int bit);
+int ksceUartInit(int port);
 int SceSysrootForDriver_AE7A8F1D(void);
 int kscePervasiveUartResetEnable(int port);
 int kscePervasiveUartResetDisable(int port);
@@ -259,6 +261,23 @@ int serial_remap(void)
 /* name unknown: the registers mapped, the debug ports chosen, the suspend handlers set */
 struct SysmemBootContext;
 
+#if defined(SYSMEM_SKBL)
+/* the secure boot loader starts the ports itself: port 1 when either debug
+ * UART dipsw is set, used for output only with 0xc5 */
+int SerialInit(int uart0Enabled)
+{
+	if (uart0Enabled) {
+		ksceUartInit(s_debugPorts[0].port);
+		s_debugPorts[0].enabled = 1;
+	}
+	if (!ksceKernelCheckDipsw(0xc5) && !ksceKernelCheckDipsw(0xfd))
+		return 0;
+	ksceUartInit(1);
+	if (ksceKernelCheckDipsw(0xc5))
+		s_debugPorts[1].enabled = 1;
+	return 0;
+}
+#else
 #ifdef SYSMEM_NSKBL
 /* the boot loader passes its dipsw 0xc4 (the debug UART) */
 int SerialInit(int uart0Enabled)
@@ -280,6 +299,7 @@ int SerialInit(const struct SysmemBootContext *context)
 #endif
 	return 0;
 }
+#endif
 
 int ksceUartInit(int port)
 {
