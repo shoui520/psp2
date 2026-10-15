@@ -105,13 +105,24 @@ typedef struct SmschedInstance {
  * registers, which the Cmep reads and writes too */
 typedef struct SmschedMailbox {
 	SceUInt32 arm2Cry[CMEP_MAILBOXES - 1];
-	volatile SceUInt32 cry2Arm[CMEP_MAILBOXES - 1];
+	SceUInt32 cry2Arm[CMEP_MAILBOXES - 1];
 } SmschedMailbox;
 
-/* the secure module start arguments the Non-secure kernel passes */
+/* the secure module start arguments the Non-secure kernel passes, from
+ * its SceSblSmCommContext130 (names from the henkaku wiki) */
 typedef struct SmschedInvokeArg {
-	SceUInt32 word[12];
+	SceUInt32 selfType;
+	SceUInt32 mediaType;
+	SceUInt64 programAuthorityId;		/* the spawner's */
+	SceUInt64 capability[4];		/* the spawner's */
 } SmschedInvokeArg;
+
+_Static_assert(sizeof(SmschedInvokeArg) == 48, "SmschedInvokeArg");
+
+/* selfType: where the secure module comes from */
+#define SMSCHED_INVOKE_SELF_MASK		0xf000
+#define SMSCHED_INVOKE_SELF_PA			0x0000	/* the caller's, at selfPA */
+#define SMSCHED_INVOKE_SELF_INSTANCE		0x1000	/* the scheduler's own (instance->self) */
 
 /* a request's state, as cry2Arm0IntHandler moves it on the secure kernel's messages */
 #define SMSCHED_STATE_READY			1	/* queued, new or suspended */
@@ -170,11 +181,12 @@ _Static_assert(sizeof(SmschedArea) == 128, "SmschedArea");
 /* one of the 64 requests: a secure module and its run state */
 typedef struct SmschedRequest {
 	SmschedLink link;			/* in a run queue, the done list or the free list */
-	SceUInt32 id;				/* the index, bit 31 set while free */
+	volatile SceUInt32 id;			/* the index, bit 31 set while free */
 	SceUInt32 priority;			/* the run queue */
 	uintptr_t selfPA;
 	SceUInt32 arg1;
-	SceUInt64 arg2;
+	SceUInt32 arg2Low;			/* arg2, a 64-bit value in two words */
+	SceUInt32 arg2High;
 	SceUInt32 arg3;
 	SceUInt32 arg4;
 	volatile SmschedIntrStatus status;	/* result and state, as the handler gets them */
@@ -228,6 +240,8 @@ static inline void SmschedLinkAddTail(SmschedLink *head, SmschedLink *link)
 #define SMSCHED_NOTIFY_EXITED			0x4
 #define SMSCHED_NOTIFY_KILLED			0x8
 #define SMSCHED_NOTIFY_STOPPED			0x10
+#define SMSCHED_NOTIFY_DONE			(SMSCHED_NOTIFY_EXITED | SMSCHED_NOTIFY_KILLED | \
+						 SMSCHED_NOTIFY_STOPPED)
 
 /* smsched.c: the mailbox operations, on the Cmep's registers (request NULL)
  * or on a request's saved mailbox */

@@ -5,7 +5,7 @@
  * run has its mailboxes saved in its request (SmschedMailbox), which the
  * secure kernel restores when it resumes the module.
  *
- * PARTIAL: written in address order up to cry2Arm0IntHandler.
+ * PARTIAL: written in address order up to sceSblSmSchedInvokeInternal.
  */
 #include "smsched.h"
 #include "sce/barrier.h"
@@ -17,6 +17,14 @@ SmschedLink s_runQueue[2];		/* by priority, 0 first */
 SceKernelSpinlock s_lock;
 SmschedInstance *s_instance;
 SmschedLink s_doneList;			/* exited, killed or stopped */
+
+/* a word written for the Cmep: made visible before going on */
+static inline void SmschedFlushWord(const volatile SceUInt32 *word)
+{
+	dmb();
+	(void)*word;
+	dsb();
+}
 
 /* a request by its id, or NULL */
 static inline SmschedRequest *SmschedGetRequest(SceUInt32 id)
@@ -219,19 +227,19 @@ int ackCry2Arm(int mailbox, SceUInt32 bits, SmschedRequest *request)
 		if (mailbox == 1) {
 			request->mailbox->cry2Arm[0] &= ~(bits & request->mailbox->cry2Arm[0]);
 			dmb();
-			(void)request->mailbox->cry2Arm[0];
+			(void)*(volatile SceUInt32 *)&request->mailbox->cry2Arm[0];
 			dsb();
 			return 0;
 		} else if (mailbox == 2) {
 			request->mailbox->cry2Arm[1] &= ~(bits & request->mailbox->cry2Arm[1]);
 			dmb();
-			(void)request->mailbox->cry2Arm[1];
+			(void)*(volatile SceUInt32 *)&request->mailbox->cry2Arm[1];
 			dsb();
 			return 0;
 		} else if (mailbox == 3) {
 			request->mailbox->cry2Arm[2] &= ~(bits & request->mailbox->cry2Arm[2]);
 			dmb();
-			(void)request->mailbox->cry2Arm[2];
+			(void)*(volatile SceUInt32 *)&request->mailbox->cry2Arm[2];
 			dsb();
 			return 0;
 		}
@@ -828,13 +836,6 @@ static inline void SmschedRestoreMailbox(const SmschedRequest *request)
 	CMEP_MAILBOX_REG(arm2Cry[3]) = request->mailbox->arm2Cry[2];
 }
 
-static inline void SmschedFlushWord(const volatile SceUInt32 *word)
-{
-	dmb();
-	(void)*word;
-	dsb();
-}
-
 /*
  * The first request of the run queues (priority 0 first) onto the Cmep: run
  * anew or resumed when nothing runs; when a module runs, it is preempted
@@ -877,7 +878,8 @@ void reschedule(void)
 			request->mailbox->cry2Arm[1] = 0;
 			request->mailbox->cry2Arm[2] = 0;
 			ret = smsSecureKernelProxyRunSecureModule(request->selfPA, request->arg1,
-								  request->arg2, request->arg3,
+								  (SceUInt64)request->arg2High << 32 | request->arg2Low,
+								  request->arg3,
 								  request->arg4, &request->invokeArg,
 								  request->areaPA);
 			if (ret < 0)
@@ -1216,4 +1218,123 @@ out:
 	if (handler != NULL)
 		handler(message.id, 0, arg, message.status.state, message.status.result);
 	return ret;
+}
+
+/*
+ * A request for a secure module, queued by priority; the Non-secure
+ * kernel's (proxyId other than -1) are told when it is done.
+ */
+int sceSblSmSchedInvokeInternal(SceUInt32 priority, uintptr_t selfPA, SceUInt32 arg1,
+				SceUInt32 arg2Low, SceUInt32 arg2High, SceUInt32 arg3,
+				SceUInt32 arg4, SceInt32 proxyId,
+				const SmschedInvokeArg *invokeArg, SceUInt32 *id)
+{
+	volatile SmschedRequest *request;
+	SmschedLink *link;
+	SceUInt32 requestId;
+	int intr;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (priority > 1)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	if (invokeArg == NULL)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	if (id == NULL)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	switch (invokeArg->selfType & SMSCHED_INVOKE_SELF_MASK) {
+	case SMSCHED_INVOKE_SELF_PA:
+		if (selfPA == 0)
+			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		break;
+	case SMSCHED_INVOKE_SELF_INSTANCE:
+		if (selfPA != 0)
+			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		if (arg1 != 0)
+			return SCE_SBL_ERROR_INVALID_ARGUMENT;
+		selfPA = s_instance->selfPA;
+		arg1 = 1;
+		break;
+	default:
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	}
+
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	link = s_instance->freeList.next;
+	if (link == &s_instance->freeList)
+		goto nomem;
+	link->next->prev = link->prev;
+	link->prev->next = link->next;
+	request = (SmschedRequest *)link;
+	request->id &= ~SMSCHED_REQUEST_FREE;
+	request->waitFlag = 0;
+	requestId = request->id;
+	request->priority = 0;
+	request->selfPA = 0;
+	request->arg1 = 0;
+	request->arg2Low = 0;
+	request->arg2High = 0;
+	request->arg3 = 0;
+	request->arg4 = 0;
+	request->status.result = 0;
+	request->status.state = SMSCHED_STATE_READY;
+	request->contextType = SMSCHED_CONTEXT_NEW;
+	request->vectorPA = 0;
+	request->vectorCount = 0;
+	request->context = NULL;
+	request->vector = NULL;
+	request->proxyId = -1;
+	request->notifyMask = 0;
+	request->invokeArg.selfType = 0;
+	request->invokeArg.mediaType = 0;
+	request->invokeArg.programAuthorityId = 0;
+	request->invokeArg.capability[0] = 0;
+	request->invokeArg.capability[1] = 0;
+	request->invokeArg.capability[2] = 0;
+	request->invokeArg.capability[3] = 0;
+	request->intr[0].handler = NULL;
+	request->intr[0].arg = NULL;
+	request->intr[0].enabled = 1;
+	request->intr[1].handler = NULL;
+	request->intr[1].arg = NULL;
+	request->intr[1].enabled = 0;
+	request->intr[2].handler = NULL;
+	request->intr[2].arg = NULL;
+	request->intr[2].enabled = 0;
+	request->intr[3].handler = NULL;
+	request->intr[3].arg = NULL;
+	request->intr[3].enabled = 0;
+	request->lock = 0;
+	link->next = link;
+	link->prev = link;
+	request->mailbox->arm2Cry[0] = 0;
+	request->mailbox->arm2Cry[1] = 0;
+	request->mailbox->arm2Cry[2] = 0;
+	request->mailbox->cry2Arm[0] = 0;
+	request->mailbox->cry2Arm[1] = 0;
+	request->mailbox->cry2Arm[2] = 0;
+	dmb();
+	(void)*(volatile SceUInt32 *)&request->mailbox->cry2Arm[2];
+	dsb();
+	if (requestId == (SceUInt32)-1)
+		goto nomem;
+
+	request->priority = priority;
+	request->selfPA = selfPA;
+	request->arg1 = arg1;
+	request->arg2Low = arg2Low;
+	request->arg2High = arg2High;
+	request->arg3 = arg3;
+	request->arg4 = arg4;
+	request->proxyId = proxyId;
+	request->invokeArg = *invokeArg;
+	request->notifyMask = proxyId != -1 ? SMSCHED_NOTIFY_DONE : 0;
+	*id = requestId;
+	SmschedLinkAddTail(&s_runQueue[priority], link);
+	reschedule();
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return 0;
+nomem:
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return SCE_SBL_ERROR_NO_MEMORY;
 }
