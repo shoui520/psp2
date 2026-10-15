@@ -265,11 +265,11 @@ SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(void *ar
 /* the suspend handlers, first to last */
 int SceKernelSuspendForDriver_D4958E6F(int value)
 {
-	SuspendHandler *h;
+	int i;
 
-	for (h = s_suspendHandlers; h != &s_suspendHandlers[SUSPEND_HANDLERS]; h++) {
-		if (h->handler != NULL)
-			h->handler(value, h->args);
+	for (i = 0; i < SUSPEND_HANDLERS; i++) {
+		if (s_suspendHandlers[i].handler != NULL)
+			s_suspendHandlers[i].handler(value, s_suspendHandlers[i].args);
 	}
 	return 0;
 }
@@ -277,12 +277,11 @@ int SceKernelSuspendForDriver_D4958E6F(int value)
 /* the resume handlers, last to first */
 int SceKernelSuspendForDriver_FE2118BD(int value)
 {
-	SuspendHandler *h;
+	int i;
 
-	for (h = &s_resumeHandlers[SUSPEND_HANDLERS]; h != s_resumeHandlers; ) {
-		h--;
-		if (h->handler != NULL)
-			h->handler(value, h->args);
+	for (i = SUSPEND_HANDLERS - 1; i >= 0; i--) {
+		if (s_resumeHandlers[i].handler != NULL)
+			s_resumeHandlers[i].handler(value, s_resumeHandlers[i].args);
 	}
 	return 0;
 }
