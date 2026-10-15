@@ -191,17 +191,18 @@ int TinyPartitionGetMemBlockInfoList(TinyPartition *tiny, SceUInt32 flags, uintp
 				     MemBlockInfoEx *info, SceSize infoSize, SceUInt32 *count)
 {
 	MemBlockObject *block, *head;
-	SceUInt32 filled = 0;
-	SceSize capacity;
-	int intr, used = 0;
+	SceUInt32 filled;
+	int intr, used;
 
 	flags &= 1;
+	filled = 0;
 	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
-	capacity = infoSize / sizeof(*info);
 	head = tiny->blocks;
-	for (block = head; block != NULL; ) {
+	used = 0;
+	block = head;
+	while (block != NULL) {
 		if (block->code != 0) {
-			if (filled < capacity && lo <= block->vbase &&
+			if (filled < infoSize / sizeof(*info) && lo <= block->vbase &&
 			    block->vbase < hi &&
 			    (flags == 0 || pa == 0 || MemBlockWithinPhyRange(block, pa, psize) == 1)) {
 				if (MemBlockGetInfoRaw(block, arg, info) < 0)
@@ -322,7 +323,8 @@ void PartitionUnlinkBlockSlots(Partition *partition, MemBlockObject *block)
 			l2pt = (L2PageTable *)AS_L2_SLOT_PTR(value);
 			if (l2pt->firstBlock != block)
 				continue;
-			for (next = block->next; ; next = next->next) {
+			for (next = block; ; ) {
+				next = next->next;
 				if (next == block || next->vbase >> 20 != mib) {
 					l2pt->firstBlock = NULL;
 					break;
@@ -334,16 +336,17 @@ void PartitionUnlinkBlockSlots(Partition *partition, MemBlockObject *block)
 			}
 		} else if (AS_L2_SLOT_TYPE(value) == AS_L2_SLOT_BLOCK &&
 			   ((uintptr_t)self | AS_L2_SLOT_BLOCK) == value) {
-			for (next = self->next; ; next = next->next) {
-				if (next == self || next->vbase >> 20 != mib) {
-					*slot = 0;
+			value = 0;
+			for (next = self; ; ) {
+				next = next->next;
+				if (next == self || next->vbase >> 20 != mib)
 					break;
-				}
 				if (next->code != 0) {
-					*slot = ((uintptr_t)next & ~3u) | AS_L2_SLOT_BLOCK;
+					value = ((uintptr_t)next & ~3u) | AS_L2_SLOT_BLOCK;
 					break;
 				}
 			}
+			*slot = value;
 		}
 	}
 	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
