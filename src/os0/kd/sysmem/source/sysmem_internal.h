@@ -181,7 +181,7 @@ typedef struct TinyPartition {
 	uintptr_t vbase;			/* 0x14 */
 	SceSize size;				/* 0x18 */
 	AddressSpaceContext *context;		/* 0x1c */
-	SceUInt32 blockCount;			/* 0x20: the low half in use, the high half the peak */
+	volatile SceUInt32 blockCount;		/* 0x20: the low half in use, the high half the peak (atomics; Sony reads the word and masks) */
 	SceSize freeSize;			/* 0x24 */
 	SceUInt32 attr;				/* 0x28: 0x10000 = its domain for the maps of others */
 	SceUInt32 reserved0;			/* 0x2c: 0, never read */
