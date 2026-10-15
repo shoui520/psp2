@@ -2637,19 +2637,29 @@ SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
 	SceKernelAllocMemBlockKernelOpt opt;
 	MemBlockClientInfo *client;
 	MemBlockBaseInfo *info;
-	MemBlockObject *base;
 	char name[0x20], clientName[0x20];
-	SceUInt32 attr, type, restype, code, mask, i;
+	SceUInt32 attr;
+	MemBlockObject *base;
+	SceUInt32 type, restype, code, mask, i;
 	SceUID guid, mirror, puid;
 	SceSize size;
 	int intr, bit, ret;
 
 	sceKernelSysrootGetCurrentThreadAttr(&attr);
 	/* type is not set yet here in the original */
-	restype = (type == SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_CDIALOG_RW ||
-		   type == SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_CDIALOG_NC_RW) ? 2 : (attr >> 14) & 1;
-	if (userName == NULL || (flags != MEMBLOCK_OPEN_RO && flags != MEMBLOCK_OPEN_RW))
+	restype = (attr >> 14) & 1;
+	if (type == SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_CDIALOG_RW ||
+	    type == SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_CDIALOG_NC_RW)
+		restype = 2;
+	if (userName == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	switch (flags) {
+	case MEMBLOCK_OPEN_RO:
+	case MEMBLOCK_OPEN_RW:
+		break;
+	default:
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	}
 	ret = ksceKernelStrncpyFromUser(name, userName, sizeof(name));
 	if (ret < 0)
 		return ret;
