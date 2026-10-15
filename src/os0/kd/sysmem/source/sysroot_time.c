@@ -471,14 +471,14 @@ void SceSysrootForDriver_7C2C10E2(uint32_t phase, uint32_t kind)
 int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 				  void *argument, int *result)
 {
+	struct SysrootInitCallbackSlot entry = { callback, argument };
 	struct SysrootState *state;
-	uint32_t flags;
+	uint32_t flags, slot;
 	int status;
 
 	if (!callback || phase > 8)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	state = s_sysrootState;
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->initCallbackLock);
+	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysrootState->initCallbackLock);
 	state = s_sysrootState;
 	if (phase < state->initCallbackBase) {
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->initCallbackLock, flags);
@@ -487,24 +487,23 @@ int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 			*result = status;
 		return 0;
 	}
-	for (unsigned int slot = 0; slot < 8; slot++) {
-		struct SysrootInitCallbackSlot *entry = &state->initCallbacks[phase][slot];
-
-		if (!entry->callback) {
-			entry->callback = callback;
-			entry->argument = argument;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->initCallbackLock, flags);
-			return 0;
+	for (slot = 0; slot < 8; slot++) {
+		if (!state->initCallbacks[phase][slot].callback) {
+			state->initCallbacks[phase][slot] = entry;
+			status = 0;
+			goto unlock;
 		}
 	}
+	status = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 #if FW_DEBUG
 	if (ksceKernelGetAssertLevel() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, 0, 2719);
 		state = s_sysrootState;
 	}
 #endif
+unlock:
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->initCallbackLock, flags);
-	return SCE_KERNEL_ERROR_ILLEGAL_COUNT;
+	return status;
 }
 
 int ksceSysrootGetSelfInfo(uint32_t index, struct SysrootSelfInfo *info)
