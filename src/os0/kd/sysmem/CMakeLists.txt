@@ -1,18 +1,19 @@
 # Partial Sysmem foundations; remaining bodies are explicit stubs.
 include(source/vendor_patch.cmake)
+# Sony built SceSysmem without -fno-delete-null-pointer-checks: a NULL test after a
+# dereference is dropped (dlmalloc's malloc.c, partition.c's free-list helpers)
+set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks)
 set(sysmem_sfmt_source "${CMAKE_CURRENT_BINARY_DIR}/sfmt-sce.c")
 sysmem_prepare_patched(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../vendor/sfmt-1.3.3/SFMT.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/source/sfmt_sce.patch"
 	"${sysmem_sfmt_source}")
-# the kernel heap's dlmalloc/malloc.c; Sony built it without -fno-delete-null-pointer-checks
+# the kernel heap's dlmalloc/malloc.c
 set(sysmem_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 sysmem_prepare_patched(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../vendor/dlmalloc-2.8.4/malloc.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/source/dlmalloc_sce.patch"
 	"${sysmem_dlmalloc_source}")
-set_source_files_properties("${sysmem_dlmalloc_source}" PROPERTIES
-	COMPILE_OPTIONS "-fdelete-null-pointer-checks")
 
 if(FW STREQUAL "4.00-DEBUGGER")
 	set(sysmem_des_key_data source/des_key_data_400.c)
