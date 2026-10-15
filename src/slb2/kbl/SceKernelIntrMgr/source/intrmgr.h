@@ -83,11 +83,15 @@ void sceKernelPleFlushRequest(void);
 int SceCpuForTZS_9E4C0D0D(void);			/* before an L2 control change */
 int sceKernelRegisterMonitorEntryForTZS(int vector, void *entry);
 
+/* SKBL builds this module into the secure kernel boot loader (INTRMGR_SKBL) */
+int sceKernelSysrootCorelockLock(SceUInt32 core);
+void sceKernelSysrootCorelockUnlock(void);
+
 /* intrmgr.c */
 extern IntrState g_intrState;
 #define g_intrHandlers (g_intrState.handlers)
 #define g_intrCpu (g_intrState.cpu)
-extern GicCpuInterface *volatile g_intrCpuInterface;
+extern volatile GicCpuInterface *volatile g_intrCpuInterface;
 extern SceKernelMonitorCallHandler *g_moncallTable;
 extern SceUID g_moncallTableUid;
 

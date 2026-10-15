@@ -43,6 +43,9 @@ typedef struct GicCpuInterface {
 	SceUInt32 binaryPoint;		/* 0x08 */
 	SceUInt32 acknowledge;		/* 0x0c */
 	SceUInt32 endOfIntr;		/* 0x10 */
+	SceUInt32 runningPriority;	/* 0x14 */
+	SceUInt32 highestPending;	/* 0x18 */
+	SceUInt32 aliasedBinaryPoint;	/* 0x1c Non-secure binary point, secure access */
 } GicCpuInterface;
 
 /* GlobalTimer.control (Cortex-A9 MPCore TRM, Global timer) */

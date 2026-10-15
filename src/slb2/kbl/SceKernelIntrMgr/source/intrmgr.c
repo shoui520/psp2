@@ -24,7 +24,7 @@
 #define KBL_AREA_ADDRESS_SPACE		0x10007
 
 IntrState g_intrState;
-GicCpuInterface *volatile g_intrCpuInterface;
+volatile GicCpuInterface *volatile g_intrCpuInterface;
 GicDistributor *volatile g_intrDistributor;
 SceKernelMonitorCallHandler *g_moncallTable;
 SceUID g_moncallTableUid;
@@ -393,11 +393,13 @@ static inline int Start(void)
 {
 	int ret, i;
 
+#if !defined(INTRMGR_SKBL)
 	ret = sceKernelAllocMonitorCallTable();
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 1957, "alloc monitor call table. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1958);
 	}
+#endif
 	ret = sceKernelRegisterMonitorEntryForTZS(2, monitorSmcEntry);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 1965, "register smc entry handler failed. 0x%08x\n", ret);
@@ -408,6 +410,7 @@ static inline int Start(void)
 		SCE_DBG_PRINTF(6, 1972, "register Monitor FIQ entry handler failed. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1973);
 	}
+#if !defined(INTRMGR_SKBL)
 	ret = sceKernelRegisterMonitorCallHandler(INTR_MONCALL_SET_SHARED_MEMORY, SetSharedMemory_S);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 1980, "Register SCE_MONCALL_SET_SHARED_MEMORY failed. 0x%08x\n",
@@ -419,6 +422,7 @@ static inline int Start(void)
 		SCE_DBG_PRINTF(6, 1987, "Register SCE_MONCALL_UNMAP_KBL failed. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1988);
 	}
+#endif
 	for (i = 0; i < INTR_COUNT; i++) {
 		g_intrHandlers[i].handler = NULL;
 		g_intrHandlers[i].lock = 0;
@@ -426,6 +430,103 @@ static inline int Start(void)
 	return 0;
 }
 
+#if defined(INTRMGR_SKBL)
+/* names unknown: each SGI's group (1: Non-secure) and priority */
+typedef struct IntrSgiSetting {
+	unsigned char group;
+	unsigned char priority;
+} IntrSgiSetting;
+
+/* names unknown: the group of every interrupt, 1 for Non-secure; the SGIs'
+ * come from s_sgiSetting and the PPIs' are all Non-secure */
+static const signed char s_intrGroup[INTR_COUNT / 32][32] = {
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+	  1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+};
+
+static const IntrSgiSetting s_sgiSetting[16] = {
+	{ 1, 0x10 }, { 1, 0x20 }, { 1, 0x30 }, { 1, 0x80 },
+	{ 1, 0x80 }, { 1, 0x80 }, { 1, 0x40 }, { 1, 0x50 },
+	{ 1, 0x80 }, { 1, 0x80 }, { 1, 0x80 }, { 0, 0x00 },
+	{ 1, 0x80 }, { 1, 0x70 }, { 1, 0x80 }, { 1, 0xd0 },
+};
+
+/* SKBL: the GIC at its physical address, the groups and SGI priorities set
+ * here, and no monitor calls of its own */
+int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
+{
+	volatile GicCpuInterface *cpuInterface;
+	unsigned int blocks, mask;
+	int i, j;
+
+	sceKernelSysrootCorelockLock(0);
+	cpuInterface = (GicCpuInterface *)(PERIPH_REG_BASE + GIC_CPU_INTERFACE_OFFSET);
+	g_intrCpuInterface = cpuInterface;
+	g_intrDistributor = (GicDistributor *)(PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET);
+
+	cpuInterface->control = 0;
+	if (!SceCpuForTZS_44C423D3())
+		g_intrDistributor->control = 0;
+	blocks = (g_intrDistributor->type & 31) + 1;
+	i = 0;
+	do {
+		g_intrDistributor->clearEnable[i] = ~0U;
+		i++;
+	} while (i != blocks);
+
+	/* the PPIs are Non-secure */
+	mask = 0;
+	for (i = 0; i < 16; i++)
+		if (s_sgiSetting[i].group == 1)
+			mask |= 1 << i;
+	g_intrDistributor->group[0] = mask | 0xffff0000;
+	for (i = 1; i < blocks; i++) {
+		mask = 0;
+		for (j = 0; j < 32; j++)
+			if (s_intrGroup[i][j] == 1)
+				mask |= 1 << j;
+		g_intrDistributor->group[i] = mask;
+	}
+	for (i = 0; i < 16; i++)
+		SetPriority(i, s_sgiSetting[i].priority);
+
+	g_intrCpuInterface->priorityMask = 0xf8;
+	g_intrCpuInterface->binaryPoint = 2;
+	g_intrCpuInterface->aliasedBinaryPoint = 3;
+	g_intrCpuInterface->control = 9;	/* enable, FIQ for secure interrupts */
+	if (!SceCpuForTZS_44C423D3())
+		g_intrDistributor->control = 1;
+
+	g_intrCpu[SceCpuForTZS_44C423D3()].nesting = 0;
+	if (!SceCpuForTZS_44C423D3())
+		Start();
+	sceKernelSysrootSetModulePrivateForTZS(5, g_intrHandlers);
+	g_intrEnterSyscall = NULL;
+	g_intrLeaveSyscall = NULL;
+	g_intrEnterIntr = NULL;
+	g_intrLeaveIntr = NULL;
+	g_intrEnterSubIntr = NULL;
+	g_intrLeaveSubIntr = NULL;
+	InitUsleepTimer(0);
+	sceKernelSysrootCorelockUnlock();
+	enableInterrupts();
+	return 0;
+}
+#else
 static inline int RegisterMoncallHandler(void)
 {
 	int ret;
@@ -472,7 +573,7 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	}
 	ksceKernelGetMemBlockBase(ret, &base);
 	cpuInterface = (GicCpuInterface *)((char *)base + GIC_CPU_INTERFACE_OFFSET);
-	g_intrCpuInterface = (GicCpuInterface *)cpuInterface;
+	g_intrCpuInterface = cpuInterface;
 	g_intrDistributor = (GicDistributor *)((char *)base + GIC_DISTRIBUTOR_OFFSET);
 
 	/* reset the GIC: the secure world takes its interrupts as FIQs */
@@ -514,6 +615,8 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	initDmacSecure();
 	return 0;
 }
+
+#endif
 
 int module_bootstart(SceSize arglen, void *argp)
 {

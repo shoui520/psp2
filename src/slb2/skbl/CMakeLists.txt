@@ -3,16 +3,22 @@
 # TrustZone modules it loads, the data). It starts the TrustZone kernel (src/slb2/kbl/),
 # then hands over to NSKBL (src/slb2/nskbl/) in Non-secure state.
 # The reset vector and reset handler are the original's, serial.c is os0 SceSysmem's
-# (SYSMEM_SKBL), the other C functions are stubs and the TrustZone module archive is
+# (SYSMEM_SKBL), intrmgr.c and usleep.c the TrustZone SceKernelIntrMgr's (INTRMGR_SKBL),
+# the other C functions are stubs and the TrustZone module archive is
 # not packed yet.
 set(sysmem_source ../../os0/kd/sysmem/source)
+set(intrmgr_source ../kbl/SceKernelIntrMgr/source)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/reset.S
 	source/boot.c
+	${intrmgr_source}/intrmgr.c
+	${intrmgr_source}/usleep.c
 	${sysmem_source}/serial.c
 	../../common/kbl/pervasive_kbl.c
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")
+set_source_files_properties(${intrmgr_source}/intrmgr.c ${intrmgr_source}/usleep.c PROPERTIES
+	COMPILE_DEFINITIONS INTRMGR_SKBL)
 set_source_files_properties(../../common/kbl/pervasive_kbl.c PROPERTIES
 	COMPILE_DEFINITIONS PERVASIVE_SKBL)
