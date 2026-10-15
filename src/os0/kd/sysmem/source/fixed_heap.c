@@ -211,7 +211,7 @@ static void FixedHeapReleaseTables(FixedHeap *heap, int all)
 }
 
 /* name unknown: move the page tables to larger ones, from where attr says */
-static int FixedHeapReplaceTables(FixedHeap *heap, SceUInt32 attr, void **pages, void **blocks,
+static int FixedHeapReplaceTables(FixedHeap *heap, SceUInt32 attr, uintptr_t *pages, void **blocks,
 				  SceUInt32 maxPages)
 {
 	unsigned int i;
@@ -219,14 +219,14 @@ static int FixedHeapReplaceTables(FixedHeap *heap, SceUInt32 attr, void **pages,
 	for (i = 0; i < heap->pageCount; i++) {
 		void **oldBlocks = heap->blocks;
 
-		pages[i] = heap->pages[i];
+		pages[i] = (uintptr_t)heap->pages[i];
 		if (oldBlocks != NULL)
 			blocks[i] = oldBlocks[i];
 		else
 			blocks[i] = NULL;
 	}
 	FixedHeapReleaseTables(heap, 0);
-	heap->pages = pages;
+	heap->pages = (void **)pages;
 	heap->blocks = blocks;
 	heap->maxPages = maxPages;
 	heap->attr |= attr;
