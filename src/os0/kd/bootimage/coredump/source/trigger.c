@@ -225,8 +225,8 @@ int sceCoredumpTrigger(SceUID pid, SceKernelCoredumpStateUpdateCallback update,
 	if (result != 0)
 		goto error;
 	requestId = nextRequestId;
-	followingRequestId = nextRequestId + 1;
-	if (nextRequestId == 0x7ffffffe)
+	followingRequestId = requestId + 1;
+	if (followingRequestId == 0x7fffffff)
 		followingRequestId = 1;
 	nextRequestId = followingRequestId;
 	result = _prepareTriggerParam(requestId, param, &prepared);
@@ -304,8 +304,8 @@ int SceCoredumpForDriver_D064F6DC(SceUID pid, SceKernelCoredumpStateUpdateCallba
 	if (result != 0)
 		goto error;
 	requestId = nextRequestId;
-	followingRequestId = nextRequestId + 1;
-	if (nextRequestId == 0x7ffffffe)
+	followingRequestId = requestId + 1;
+	if (followingRequestId == 0x7fffffff)
 		followingRequestId = 1;
 	nextRequestId = followingRequestId;
 	result = _prepareTriggerParam(requestId, param, &prepared);
