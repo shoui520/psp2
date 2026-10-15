@@ -1341,7 +1341,8 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	info->flags[3] = 0;
 	info->reservedHardware[0] = 0;
 	info->reservedHardware[1] = 0;
-	info->isDolce = (uint16_t)-1;
+	info->isDolceBytes[0] = 0xff;
+	info->isDolceBytes[1] = 0xff;
 	info->isDolce = ksceSblAimgrIsDolce() != 0;
 	if (ksceSblAimgrGetOpenPsId(&openPsId) != 0)
 		return;

@@ -332,7 +332,10 @@ typedef struct CoredumpSystemInfo {
 		uint8_t flags[4];
 		uint32_t flagBits;
 	};
-	uint16_t isDolce;
+	union {
+		uint8_t isDolceBytes[2];
+		uint16_t isDolce;
+	};
 	uint8_t reservedHardware[2];
 	SceOpenPsId encryptedOpenPsId;
 	uint32_t timestampLow;
