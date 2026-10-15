@@ -22,6 +22,13 @@
 #include <sce/venezia_debug.h>
 #include <string.h>
 
+/* Physical addresses handed to or checked for the Venezia: a mailbox word,
+ * and the word after the lock in a TAS page */
+#define MAILBOX_PADDR(field) \
+	(PERVASIVE_MAILBOX_BASE + offsetof(ScePervasiveMailboxRegisters, field))
+#define TAS_SIGNAL_PADDR(channel) \
+	(PERVASIVE_TAS_BASE(channel) + offsetof(ScePervasiveTasChannel, unidentifiedRegisters))
+
 extern int sceKernelDelayThread(SceUInt delay);
 
 extern void *veneziaDebugMemset(void *destination, int value, SceSize size)
@@ -826,7 +833,7 @@ int initVeneziaDebugTraceRing(unsigned int ring, uint32_t buffer, unsigned int c
 	work.config.cursors[1].address = buffer;
 	work.config.cursors[2].address = buffer;
 	work.config.cursors[3].address = buffer;
-	work.config.control = 0xe310b004;
+	work.config.control = TAS_SIGNAL_PADDR(3);
 	if (buffer) {
 		if (enabledCursors & 1)
 			work.config.cursors[0].control |= 0x01000000;
@@ -929,10 +936,10 @@ int initVeneziaDebugger(const VeneziaDebugCallbacks *callbacks, uint32_t virtual
 	}
 	for (i = 0xbf000; i != 0xd88b0; i += 4)
 		writeVeneziaDebugMemoryWord(i, 0);
-	writeVeneziaDebugBankRegister(52, 0xe3108004);
-	writeVeneziaDebugBankRegister(116, 0xe3108004);
-	writeVeneziaDebugRegister(8, 0xe310a004);
-	writeVeneziaDebugRegister(712, 0xe310d004);
+	writeVeneziaDebugBankRegister(52, TAS_SIGNAL_PADDR(0));
+	writeVeneziaDebugBankRegister(116, TAS_SIGNAL_PADDR(0));
+	writeVeneziaDebugRegister(8, TAS_SIGNAL_PADDR(2));
+	writeVeneziaDebugRegister(712, TAS_SIGNAL_PADDR(5));
 	writeVeneziaDebugRegister(708, ~0u);
 	writeVeneziaDebugRegister(40, 0x80000);
 	writeVeneziaDebugRegister(316, 34);
@@ -5303,7 +5310,7 @@ int submitVeneziaVipCommand(unsigned int processor, const uint32_t *command,
 {
 	uint32_t *destination = g_veneziaVipCommandState.memory->commands[processor].words;
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t address = (uint32_t)&mailbox->debugSend[processor];
 	unsigned int index;
 
@@ -5340,7 +5347,7 @@ __attribute__((noinline))
 int getVeneziaVipStopInfo(unsigned int processor, VeneziaDebugStopInfo *info)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandBuffer *response;
 	VeneziaVipCommandContext *context;
 	uint32_t address, operation, control, status;
@@ -5431,7 +5438,7 @@ __attribute__((noinline))
 int clearVeneziaVipInterruptStatus(unsigned int processor, uint32_t *status)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t address, pending;
 
 	if (g_veneziaVipCommandState.magic != 5261654)
@@ -5455,7 +5462,7 @@ int initializeVeneziaVipCommands(const VeneziaVipCommandCallbacks *callbacks,
 				const VeneziaVipMemoryRegion *memory)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 
 	VeneziaVipCommandMemory *virtualAddress;
 	uint32_t physicalAddress;
@@ -5682,7 +5689,7 @@ int initializeVeneziaVipCommandQueues(VeneziaVipCommandContext *context,
 int requestVeneziaVipCommandStop(unsigned int processor)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandBuffer *command;
 	uint32_t address;
 
@@ -5708,7 +5715,7 @@ int requestVeneziaVipCommandStop(unsigned int processor)
 int interruptVeneziaVipCommand(unsigned int processor)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t address;
 
 	if (g_veneziaVipCommandState.magic != 5261654)
@@ -5737,7 +5744,7 @@ __attribute__((noinline)) int getVeneziaVipCommandReportedValues(uint32_t *main,
 int getVeneziaVipCommandProcessorStatus(unsigned int processor, unsigned int *status)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t magic = g_veneziaVipCommandState.magic;
 
 	*status = 0;
@@ -5894,7 +5901,7 @@ int configureVeneziaVipCaptureMemory(VeneziaVipCommandContext *context,
 int submitVeneziaVipCommandContext(unsigned int processor, VeneziaVipCommandContext *context)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandBuffer *command;
 	uint32_t address, payloadAddress;
 	uint32_t processorMode, commandValue;
@@ -5946,7 +5953,7 @@ int continueVeneziaVipCommandContext(unsigned int processor,
 				    VeneziaVipCommandContext *context, uint32_t value)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandBuffer *command;
 	uint32_t address, payloadAddress;
 
@@ -6005,7 +6012,7 @@ typedef struct VeneziaVipCaptureCommand {
 int configureVeneziaVipCommandCapture(unsigned int processor, VeneziaVipCommandContext *context)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandQueueStorage *physicalStorage;
 	VeneziaVipCaptureCommand packet;
 	unsigned int queueIndex, wordCount, mode;
@@ -6059,7 +6066,7 @@ int startVeneziaVipCommandCapture(unsigned int processor,
 				 VeneziaVipCommandContext *context, unsigned int captureMode)
 {
 	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)0xe3106000;
+		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandBuffer *command;
 	uint32_t address;
 	int ret;
@@ -7930,21 +7937,21 @@ int veneziaDebugSecondaryInterruptHandler(int interrupt, VeneziaVipState *state)
  * mapped peripheral span beginning at the TAS page. */
 uint32_t writeVeneziaVipPhysicalWord(uint32_t address, uint32_t value)
 {
-	if (address - 0xe3106000u >= 0x1000) {
-		if (address - 0xe3108000u < 0x8000)
+	if (address - PERVASIVE_MAILBOX_BASE >= PERVASIVE_PAGE_SIZE) {
+		if (address - PERVASIVE_TAS_BASE(0) < sizeof(ScePervasiveTasRegisters))
 			*(volatile uint32_t *)((uintptr_t)g_veneziaVipState.tasRegisters +
-				address - 0xe3108000u) = value;
+				address - PERVASIVE_TAS_BASE(0)) = value;
 		return address;
 	}
 	switch (address) {
-	case 0xe3106050: g_veneziaVipState.mailboxRegisters->debugReceive[0] = value; break;
-	case 0xe3106054: g_veneziaVipState.mailboxRegisters->debugReceive[1] = value; break;
-	case 0xe31060d0: g_veneziaVipState.mailboxRegisters->debugAcknowledge[0] = value; break;
-	case 0xe31060d4: g_veneziaVipState.mailboxRegisters->debugAcknowledge[1] = value; break;
-	case 0xe3106150: g_veneziaVipState.mailboxRegisters->debugSend[0] = value; break;
-	case 0xe3106154: g_veneziaVipState.mailboxRegisters->debugSend[1] = value; break;
-	case 0xe31061d0: g_veneziaVipState.mailboxRegisters->unidentifiedDebugWriteControl[0] = value; break;
-	case 0xe31061d4: g_veneziaVipState.mailboxRegisters->unidentifiedDebugWriteControl[1] = value; break;
+	case MAILBOX_PADDR(debugReceive[0]): g_veneziaVipState.mailboxRegisters->debugReceive[0] = value; break;
+	case MAILBOX_PADDR(debugReceive[1]): g_veneziaVipState.mailboxRegisters->debugReceive[1] = value; break;
+	case MAILBOX_PADDR(debugAcknowledge[0]): g_veneziaVipState.mailboxRegisters->debugAcknowledge[0] = value; break;
+	case MAILBOX_PADDR(debugAcknowledge[1]): g_veneziaVipState.mailboxRegisters->debugAcknowledge[1] = value; break;
+	case MAILBOX_PADDR(debugSend[0]): g_veneziaVipState.mailboxRegisters->debugSend[0] = value; break;
+	case MAILBOX_PADDR(debugSend[1]): g_veneziaVipState.mailboxRegisters->debugSend[1] = value; break;
+	case MAILBOX_PADDR(unidentifiedDebugWriteControl[0]): g_veneziaVipState.mailboxRegisters->unidentifiedDebugWriteControl[0] = value; break;
+	case MAILBOX_PADDR(unidentifiedDebugWriteControl[1]): g_veneziaVipState.mailboxRegisters->unidentifiedDebugWriteControl[1] = value; break;
 	default: break;
 	}
 	return address;
@@ -7952,17 +7959,17 @@ uint32_t writeVeneziaVipPhysicalWord(uint32_t address, uint32_t value)
 
 uint32_t readVeneziaVipPhysicalWord(uint32_t address)
 {
-	if (address - 0xe3106000u >= 0x1000) {
-		if (address - 0xe3108000u < 0x8000)
+	if (address - PERVASIVE_MAILBOX_BASE >= PERVASIVE_PAGE_SIZE) {
+		if (address - PERVASIVE_TAS_BASE(0) < sizeof(ScePervasiveTasRegisters))
 			return *(volatile uint32_t *)((uintptr_t)g_veneziaVipState.tasRegisters +
-				address - 0xe3108000u);
+				address - PERVASIVE_TAS_BASE(0));
 		return 0;
 	}
 	switch (address) {
-	case 0xe3106050: return g_veneziaVipState.mailboxRegisters->debugReceive[0];
-	case 0xe3106054: return g_veneziaVipState.mailboxRegisters->debugReceive[1];
-	case 0xe3106150: return g_veneziaVipState.mailboxRegisters->debugSend[0];
-	case 0xe3106154: return g_veneziaVipState.mailboxRegisters->debugSend[1];
+	case MAILBOX_PADDR(debugReceive[0]): return g_veneziaVipState.mailboxRegisters->debugReceive[0];
+	case MAILBOX_PADDR(debugReceive[1]): return g_veneziaVipState.mailboxRegisters->debugReceive[1];
+	case MAILBOX_PADDR(debugSend[0]): return g_veneziaVipState.mailboxRegisters->debugSend[0];
+	case MAILBOX_PADDR(debugSend[1]): return g_veneziaVipState.mailboxRegisters->debugSend[1];
 	default: return 0;
 	}
 }
@@ -8052,8 +8059,8 @@ int setupVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *sto
 	default: goto invalid;
 	}
 	capture->imageHeader = (VeneziaVipCaptureImageHeader *)capture->snapshotRegion.virtualAddress;
-	contextParam.commandValues[0] = 0xe3108000;
-	contextParam.commandValues[1] = 0xe3109000;
+	contextParam.commandValues[0] = PERVASIVE_TAS_BASE(0);
+	contextParam.commandValues[1] = PERVASIVE_TAS_BASE(1);
 	contextParam.physicalBase = capture->snapshotRegion.physicalAddress + 0x1000;
 	contextParam.context = (VeneziaVipCommandContext *)(capture->snapshotRegion.virtualAddress + 0x1000);
 	contextParam.size = 0x50000;
