@@ -17,7 +17,7 @@ SceSysmem:
         - SceSysmemForTZS_29DE887D: 0x29DE887D
         - SceSysmemForTZS_2F18E288: 0x2F18E288
         - SceSysmemForTZS_31273DC7: 0x31273DC7
-        - SceSysmemForTZS_402EB970: 0x402EB970
+        - ksceKernelAllocMemBlock: 0x402EB970
         - SceSysmemForTZS_42AD34AB: 0x42AD34AB
         - SceSysmemForTZS_42FB5B12: 0x42FB5B12
         - SceSysmemForTZS_473871D8: 0x473871D8
@@ -26,7 +26,7 @@ SceSysmem:
         - SceSysmemForTZS_658EACE3: 0x658EACE3
         - SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
         - SceSysmemForTZS_9D43E416: 0x9D43E416
-        - SceSysmemForTZS_E1DEDFF4: 0xE1DEDFF4
+        - ksceKernelGetMemBlockBase: 0xE1DEDFF4
         - SceSysmemForTZS_EA712806: 0xEA712806
         - SceSysmemForTZS_F459D09D: 0xF459D09D
     SceDipswForTZS:
@@ -34,13 +34,13 @@ SceSysmem:
       version: 1
       nid: 0x9DBF584C
       functions:
-        - SceDipswForTZS_ksceKernelCheckDipsw: 0xA98FC2FD
+        - ksceKernelCheckDipsw: 0xA98FC2FD
     SceUartForTZS:
       syscall: false
       version: 1
       nid: 0xA1D740D7
       functions:
-        - SceUartForTZS_3AFD5E71: 0x3AFD5E71
+        - ksceUartWrite: 0x3AFD5E71
     SceDebugForTZS:
       syscall: false
       version: 1
@@ -49,11 +49,11 @@ SceSysmem:
         - SceDebugForTZS_0D799DAE: 0x0D799DAE
         - SceDebugForTZS_1655E0E3: 0x1655E0E3
         - SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
-        - SceDebugForTZS_563B623D: 0x563B623D
-        - SceDebugForTZS_618F89E6: 0x618F89E6
+        - ksceKernelPanic: 0x563B623D
+        - ksceKernelAssertLevel: 0x618F89E6
         - SceDebugForTZS_C70CBB58: 0xC70CBB58
-        - SceDebugForTZS_D26EB4BB: 0xD26EB4BB
-        - SceDebugForTZS_F851BA4F: 0xF851BA4F
+        - ksceKernelPrintfLevelWithInfo: 0xD26EB4BB
+        - ksceKernelGetAssertLevel: 0xF851BA4F
     SceSysclibForTZS:
       syscall: false
       version: 1
@@ -62,9 +62,9 @@ SceSysmem:
         - SceSysclibForTZS_361850BB: 0x361850BB
         - SceSysclibForTZS_956DB750: 0x956DB750
         - SceSysclibForTZS_BE3AF2EE: 0xBE3AF2EE
-        - SceSysclibForTZS_E5457B97: 0xE5457B97
+        - __stack_chk_fail: 0xE5457B97
       variables:
-        - SceSysclibForTZS_BA505B15: 0xBA505B15
+        - __stack_chk_guard: 0xBA505B15
     SceQafMgrForTZS:
       syscall: false
       version: 1
@@ -116,7 +116,7 @@ SceSysmem:
         - SceCpuForTZS_190D96D5: 0x190D96D5
         - SceCpuForTZS_2B6403F8: 0x2B6403F8
         - SceCpuForTZS_31E78A4B: 0x31E78A4B
-        - SceCpuForTZS_44C423D3: 0x44C423D3
+        - ksceKernelCpuId: 0x44C423D3
         - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
         - SceCpuForTZS_596784E9: 0x596784E9
         - SceCpuForTZS_71FD9AB5: 0x71FD9AB5

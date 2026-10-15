@@ -1,7 +1,8 @@
 /*
  * SceSysmem: the debug LEDs and the general purpose inputs/outputs. The GPO
  * value goes to the LED register block through a mask; debug tools register
- * the LED handlers.
+ * the LED handlers. The secure kernel's SceSysmem (SYSMEM_TZS) only maps the
+ * registers.
  */
 
 #include <psp2kern/kernel/sysclib.h>
@@ -18,6 +19,7 @@ SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt
 
 /* the registers' physical address until LedModuleStart maps them */
 static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
+#ifndef SYSMEM_TZS
 static volatile SceUInt32 s_gpo = 0xff;
 /* the GPO bits that reach the LEDs */
 static volatile SceInt32 s_gpoMask = 0xff;
@@ -100,6 +102,7 @@ void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
 	if (s_ledHandle0 != NULL)
 		s_ledHandle0(a1, a2, a3, a4);
 }
+#endif
 
 struct SysmemBootContext;
 
@@ -121,7 +124,9 @@ int LedModuleStart(const struct SysmemBootContext *context)
 		SCE_PANIC(218);
 	ksceKernelGetMemBlockBase(uid, &base);
 	s_ledRegs = base;
+#ifndef SYSMEM_TZS
 	SceKernelSuspendForDriver_CE7A2207(LED_SUSPEND_SLOT, LedSuspend, NULL);
 	SceKernelSuspendForDriver_105C5752(LED_SUSPEND_SLOT, LedResume, NULL);
+#endif
 	return 0;
 }

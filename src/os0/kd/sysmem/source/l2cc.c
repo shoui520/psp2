@@ -1,6 +1,8 @@
 /*
  * SceSysmem: the PL310 L2 cache controller. Its registers are used at their
- * physical address until sceKernelL2CacheRemap maps them.
+ * physical address until sceKernelL2CacheRemap maps them. The secure
+ * kernel's SceSysmem (SYSMEM_TZS) keeps only the remap here; its maintenance
+ * functions are assembly.
  */
 
 #include <stddef.h>
@@ -18,6 +20,8 @@
 /* physical until sceKernelL2CacheRemap maps the registers */
 static ScePl310Registers *volatile s_cpuL2RegisterBase =
 	(ScePl310Registers *)PL310_REG_BASE;
+
+#ifndef SYSMEM_TZS
 
 __attribute__((noinline))
 void CpuL2CacheSyncCore(void)
@@ -95,6 +99,8 @@ void SceCpuForDriver_E813EBB2(void)
 	dsb();
 	CpuL2CacheSyncCore();
 }
+
+#endif
 
 /* the controller's registers into kernel virtual memory */
 void sceKernelL2CacheRemap(void)

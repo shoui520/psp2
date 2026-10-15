@@ -1,7 +1,8 @@
 /*
  * SceSysmem: the UARTs. Seven ports of 0x10000 bytes of registers each and
  * their clock generator; kernel printf output goes to the debug ports that
- * are enabled.
+ * are enabled. The secure kernel's SceSysmem (SYSMEM_TZS) only writes: no
+ * suspend handlers, no reads.
  */
 
 #include <psp2kern/kernel/sysclib.h>
@@ -49,11 +50,13 @@ static inline void SerialWaitTxReady(volatile SceUartRegisters *regs)
 		;
 }
 
+#ifndef SYSMEM_TZS
 /* name unknown: the resume handler */
 static int SerialResume(void *args)
 {
 	return 0;
 }
+#endif
 
 /* name unknown */
 __attribute__((noinline)) void SerialFlush(unsigned int port)
@@ -62,6 +65,7 @@ __attribute__((noinline)) void SerialFlush(unsigned int port)
 		;
 }
 
+#ifndef SYSMEM_TZS
 /* name unknown: the suspend handler, the debug ports drained first */
 static int SerialSuspend(void *args)
 {
@@ -75,6 +79,7 @@ static int SerialSuspend(void *args)
 	}
 	return 0;
 }
+#endif
 
 /* name unknown: a character to a port, CR before LF */
 __attribute__((noinline)) void SerialPutcharCRLF(unsigned int port, char c)
@@ -112,6 +117,7 @@ __attribute__((noinline)) void SerialPutchar(unsigned int port, char c)
 	s_uartRegs[port]->tx = c;
 }
 
+#ifndef SYSMEM_TZS
 __attribute__((noinline)) int SerialGetchar(unsigned int port)
 {
 	volatile SceUartRegisters *regs = s_uartRegs[port];
@@ -126,6 +132,7 @@ __attribute__((noinline)) unsigned int SerialReadAvailable(unsigned int port)
 {
 	return s_uartRegs[port]->fifoStatus & UART_FIFO_COUNT_MASK;
 }
+#endif
 
 int ksceUartWrite(int port, int c)
 {
@@ -134,6 +141,7 @@ int ksceUartWrite(int port, int c)
 	return 0;
 }
 
+#ifndef SYSMEM_TZS
 int ksceUartRead(int port)
 {
 	return SerialGetchar(port);
@@ -143,6 +151,7 @@ int ksceUartReadAvailable(int port)
 {
 	return SerialReadAvailable(port);
 }
+#endif
 
 void serial_set_baud_rate(unsigned int port, unsigned int baud, SceUInt32 mode,
 			  SceUInt32 flowControl, SceUInt32 fifoConfig, SceUInt32 irqMask)
@@ -192,7 +201,7 @@ void serial_set_baud_rate(unsigned int port, unsigned int baud, SceUInt32 mode,
 }
 
 /* the UART and clock generator registers into kernel memory */
-void serial_remap(void)
+int serial_remap(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	unsigned int i;
@@ -207,7 +216,7 @@ void serial_remap(void)
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 242, "allocate uart register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 243);
-		return;
+		return uid;
 	}
 	ksceKernelGetMemBlockBase(uid, &base);
 	for (i = 0; i < UART_PORTS; i++)
@@ -220,10 +229,11 @@ void serial_remap(void)
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 262, "allocate uart clkgen area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 263);
-		return;
+		return uid;
 	}
 	ksceKernelGetMemBlockBase(uid, &base);
 	s_uartClkgen = base;
+	return 0;
 }
 
 /* name unknown: the registers mapped, the debug ports chosen, the suspend handlers set */
@@ -236,8 +246,10 @@ int SerialInit(const struct SysmemBootContext *context)
 		s_debugPorts[0].enabled = 1;
 	if (ksceKernelCheckDipsw(0xc5))
 		s_debugPorts[1].enabled = 1;
+#ifndef SYSMEM_TZS
 	SceKernelSuspendForDriver_CE7A2207(UART_SUSPEND_SLOT, SerialSuspend, NULL);
 	SceKernelSuspendForDriver_105C5752(UART_SUSPEND_SLOT, SerialResume, NULL);
+#endif
 	return 0;
 }
 
