@@ -2,7 +2,7 @@
  * The seven DMA controllers, one 0x1000-byte register page each, in pairs:
  * DMAC0-1 at 0xe3000000, DMAC2-3 at 0xe5000000, DMAC4-5 at 0xe0400000 (DMAC5
  * serves the crypto engine) and DMAC6 at 0xe50c0000. SceDmacmgr maps them as
- * SceDmacmgrDmac<n>Reg; the register layout is in its dmacmgr.h. Addresses
+ * SceDmacmgrDmac<n>Reg; the register layouts follow below. Addresses
  * from those memblocks and the henkaku wiki's Physical Memory page.
  */
 #pragma once
