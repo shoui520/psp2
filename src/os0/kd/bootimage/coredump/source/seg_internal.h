@@ -35,6 +35,17 @@ typedef struct FileSegIf {
 
 _Static_assert(sizeof(FileSegIf) == 24, "file segment interface size");
 
+typedef struct ProcessSegment {
+	SegIf segment;
+	char path[256];
+	SceSize pathSize;
+} ProcessSegment;
+
+_Static_assert(sizeof(ProcessSegment) == 280, "process segment size");
+_Static_assert(__builtin_offsetof(ProcessSegment, path) == 20, "process path");
+_Static_assert(__builtin_offsetof(ProcessSegment, pathSize) == 276,
+	"process path size");
+
 typedef struct GpuSegIf {
 	SegIf base;
 	SceSize gpuInfoSize;

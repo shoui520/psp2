@@ -7,17 +7,6 @@
 #include "seg_internal.h"
 #include "writer_internal.h"
 
-typedef struct ProcessSegment {
-	SegIf segment;
-	char path[256];
-	SceSize pathSize;
-} ProcessSegment;
-
-_Static_assert(sizeof(ProcessSegment) == 280, "process segment size");
-_Static_assert(offsetof(ProcessSegment, path) == 20, "process path");
-_Static_assert(offsetof(ProcessSegment, pathSize) == 276,
-	"process path size");
-
 typedef struct ProcessInfoNote {
 	CoredumpNoteHeader header;
 	CoredumpProcessInfo info;
