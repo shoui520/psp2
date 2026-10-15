@@ -1,6 +1,7 @@
 /* SYSTEM_INFO2 screenshot-file payload. */
 
 #include <string.h>
+#include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <sce/appmgr_debugger.h>
 #include <sce/debug.h>
 #include "writer_internal.h"

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <elf.h>
 #include <psp2kern/types.h>
 
 typedef struct SegIf SegIf;
@@ -92,3 +93,9 @@ int segWritePtNoteHdr(SegIf *segment, SceOff fileOffset);
 int segWritePaddingData(SegIf *segment, SceSize writtenSize);
 int utilsMakeNoteHeader(CoredumpNoteHeader *header, const char *name,
 	SceUInt32 type, SceUInt32 count, SceSize noteSize);
+void utilsElf32MakeEhdr(Elf32_Ehdr *header, SceUInt16 numPhdr);
+void utilsElf32MakePhent(Elf32_Phdr *header, Elf32_Word type, Elf32_Off offset,
+	Elf32_Addr vaddr, Elf32_Addr paddr, Elf32_Word filesz, Elf32_Word memsz,
+	Elf32_Word flags, Elf32_Word align);
+void utilsElf32MakePtnote(Elf32_Phdr *header, SceUInt32 fileOffset,
+	SceSize dataSize);

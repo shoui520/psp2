@@ -6,8 +6,6 @@
 #include <sce/debug.h>
 
 extern Writer *currentWriter;
-extern void utilsElf32MakePtnote(Elf32_Phdr *header, SceUInt32 fileOffset,
-	SceSize dataSize);
 
 int segInit(SegIf *segment)
 {

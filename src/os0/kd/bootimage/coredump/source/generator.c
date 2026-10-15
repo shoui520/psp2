@@ -106,7 +106,6 @@ extern void segSummarySetSegIfMethodPairTables(const SegIfMethodPair *pairs,
 extern SceUID openCorefile(void);
 extern int segInit(SegIf *segment);
 extern int segCalcSize(SegIf *segment);
-extern int utilsElf32MakeEhdr(Elf32_Ehdr *header, SceUInt16 numPhdr);
 extern int oalGetCdnPcAndLrInfo(SceUID pid,
 	const CoredumpThreadStopEvent *event, CoredumpCdnPcAndLrInfo *location);
 extern int writerWritePaddingData(Writer *writer, SceSize size);
