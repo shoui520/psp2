@@ -655,7 +655,7 @@ int InitializeDebugNop(void);
 int InitializeAssertLevel(const struct SysmemBootContext *context);
 int SysrootModuleStart(const struct SysmemBootContext *context);
 int MMUInitPost(void);
-uint32_t ksceKernelGetDipswInfo(unsigned int index);
+SceUInt32 ksceKernelGetDipswInfo(unsigned int index);
 int ksceMt19937GlobalInit(SceUInt32 seed);
 void *ksceKernelSysrootGetModulePrivate(unsigned int index);
 uintptr_t ksceKernelRegisterDebugPutcharHandler(uintptr_t handler, uintptr_t argument);

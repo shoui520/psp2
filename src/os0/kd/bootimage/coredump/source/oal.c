@@ -3486,7 +3486,7 @@ void oalGetBudgetIdList(SceUID *ids, int capacity)
 }
 
 void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info,
-	CoredumpPhyMemPartInfo *parts, SceUInt32 *numParts)
+	CoredumpPhyMemPartInfo *parts, uint32_t *numParts)
 {
 	SceKernelBudgetInfoForDebugger budget;
 	const SceKernelPhyMemPartInfoForDebugger *part;

@@ -55,7 +55,7 @@ extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
 extern int kscePUIDGetClass(SceUID processId, SceUID uid, SceClass **cls);
 extern int kscePUIDClose(SceUID processId, SceUID uid);
 extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int SceSysrootForDriver_CAE820B2(SceUID processId, uint32_t *version);
+extern int SceSysrootForDriver_CAE820B2(SceUID processId, SceUInt32 *version);
 extern void *ksceKernelGetTLSAddr(unsigned int index);
 int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 int ksceKernelDeleteThread(SceUID threadId);

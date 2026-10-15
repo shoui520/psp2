@@ -272,8 +272,8 @@ int module_start(SceSize arglen, void *argp)
 	return ret;
 }
 
-int ksceSblSmCommStartSmFromFile(uint32_t priority, const char *path,
-	uint32_t command, SceAuthInfo *auth, SceSblSmCommId *id)
+int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
+	SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
 	SceKernelVARange range;
@@ -337,8 +337,8 @@ out:
 	return ret;
 }
 
-int ksceSblSmCommStartSmFromData(uint32_t priority, const void *data,
-	uint32_t size, uint32_t command, SceAuthInfo *auth, SceSblSmCommId *id)
+int ksceSblSmCommStartSmFromData(SceUInt32 priority, const void *data,
+	SceUInt32 size, SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
 	SceKernelVARange range;
@@ -381,8 +381,8 @@ out:
 	return ret;
 }
 
-int ksceSblSmCommCallFunc(SceSblSmCommId id, uint32_t service,
-	uint32_t *serviceResult, void *data, SceSize size)
+int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
+	SceUInt32 *serviceResult, void *data, SceSize size)
 {
 	uint32_t context = EnterApi();
 	uint32_t eventBits = 1, physicalAddress = 0;

@@ -568,7 +568,7 @@ typedef struct GxmPdsState {
 	SceUInt32 flags;
 } GxmPdsState;
 
-SceUInt32 gxmAttributeFormatGetSize(SceUInt8 format);
+uint32_t gxmAttributeFormatGetSize(SceUInt8 format);
 SceSize gxmPdsVertexProgramSize(SceUInt32 attributeCount, const SceGxmVertexStream *streams,
 				SceUInt32 streamCount, SceSize *dataSize, SceUInt8 instanced,
 				SceUInt8 indexed);

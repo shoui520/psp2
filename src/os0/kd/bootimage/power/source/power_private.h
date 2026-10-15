@@ -257,7 +257,7 @@ extern int ksceSysrootIsExternalBootMode(void);
 extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
-extern uint32_t ksceKernelGetSystemTimeLow(void);
+extern SceUInt32 ksceKernelGetSystemTimeLow(void);
 extern uint32_t kscePervasiveGetSoCRevision(void);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 extern uint64_t sceKernelGetSystemTimeWide(void);
@@ -675,7 +675,7 @@ int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 			     void *argument);
 uint32_t powerIsIdleTimer(uint32_t timerId);
 
-uint32_t ScePowerForDriver_394DE492(void);
+SceUInt32 ScePowerForDriver_394DE492(void);
 int powerTickInternalPredicate(void);
 
 int kscePowerTick(uint32_t mask);

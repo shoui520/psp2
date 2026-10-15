@@ -83,7 +83,7 @@ void powerRefreshDisplayBrightness(void)
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
-uint32_t ScePowerForDriver_394DE492(void)
+SceUInt32 ScePowerForDriver_394DE492(void)
 {
 	return s_powerDisplayState.displayEnabled;
 }

@@ -41,11 +41,12 @@ typedef uint16_t SceUShort16;
 typedef int16_t  SceInt16;
 typedef uint16_t SceUInt16;
 
-typedef int32_t  SceInt32;
-typedef uint32_t SceUInt32;
+/* as Sony's scetypes.h: int, not arm-none-eabi's long int32_t (which aliases no int) */
+typedef signed int   SceInt32;
+typedef unsigned int SceUInt32;
 
-typedef int32_t  SceInt;
-typedef uint32_t SceUInt;
+typedef int          SceInt;
+typedef unsigned int SceUInt;
 
 typedef int64_t  SceInt64;
 typedef uint64_t SceUInt64;

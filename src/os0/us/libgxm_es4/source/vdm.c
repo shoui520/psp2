@@ -20,7 +20,7 @@
 #define SCE_GXM_ATTRIBUTE_FORMAT_UNTYPED	10
 
 /* bytes per component */
-SceUInt32 gxmAttributeFormatGetSize(SceUInt8 format)
+uint32_t gxmAttributeFormatGetSize(SceUInt8 format)
 {
 	switch (format) {
 	case SCE_GXM_ATTRIBUTE_FORMAT_U8:

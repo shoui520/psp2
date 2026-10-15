@@ -148,7 +148,7 @@ static int sceDbgSdioMboxInterrupt(int code, void *arg)
 	SceUInt32 bits, state;
 	int ret;
 
-	if (!(c->shm->intrPending & (1U << c->index)))
+	if (!(c->shm->intrPending & (1 << c->index)))
 		return -1;
 	bits = *c->status;
 	*c->status = bits & STATUS_PENDING;

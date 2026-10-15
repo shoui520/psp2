@@ -442,7 +442,7 @@ int ksceIdStorageWriteLeaf(SceSize leaf, const void *buffer)
 	return mode ? writeLeaf(leaf, buffer, 1) : ID_INVALID_ARGUMENT;
 }
 
-int ksceIdStorageLookup(uint32_t leaf, uint32_t offset, void *buffer, uint32_t size)
+int ksceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt32 size)
 {
 	uint8_t data[LEAF_SIZE];
 	int ret;

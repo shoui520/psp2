@@ -281,12 +281,7 @@ check_name:
 	info->allocationAttributes = (attr >> 16) & 0xf;
 	info->size = size;
 	src = block;
-	if (code == 0 || (attr & MEMBLOCK_ATTR_WHOLE)) {
-		info->headFree = 0;
-		info->tailFree = 0;
-		info->partitionUid = -1;
-		info->mapSize = block->smbPage != NULL ? block->smbSize : 0;
-	} else {
+	if (code != 0 && !(attr & MEMBLOCK_ATTR_WHOLE)) {
 		opt = block->flags & MEMBLOCK_OPT_MASK;
 		if (opt == MEMBLOCK_OPT_BASE_BLOCK && (attr & MEMBLOCK_ATTR_KEEP_PHY))
 			src = MemBlockOptGetBaseBlockRaw(block);
@@ -295,7 +290,18 @@ check_name:
 		info->mapSize = MemBlockGetAllocMapSizeRaw(src);
 		info->headFree = MemBlockGetHeadFreeSize(block);
 		info->tailFree = MemBlockGetTailFreeSize(block);
-		info->partitionUid = src->partition != NULL ? ((struct Partition *)src->partition)->uid : -1;
+		if (src->partition != NULL)
+			info->partitionUid = ((struct Partition *)src->partition)->uid;
+		else
+			info->partitionUid = -1;
+	} else {
+		info->headFree = 0;
+		info->tailFree = 0;
+		info->partitionUid = -1;
+		if (block->smbPage != NULL)
+			info->mapSize = block->smbSize;
+		else
+			info->mapSize = 0;
 	}
 	info->phyMemPart = MemBlockGetPhyMemPartRaw(src);
 	return 0;
@@ -312,9 +318,15 @@ int MemBlockClientInfoAddGUID(MemBlockClientInfo *info, SceUID pid)
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
-		for (i = 0; *slot != -1; slot++)
-			if (++i == capacity)
-				goto out;
+		if (*slot != -1) {
+			i = 0;
+			do {
+				i++;
+				slot++;
+				if (i == capacity)
+					goto out;
+			} while (*slot != -1);
+		}
 		*slot = pid;
 		info->count++;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
@@ -338,9 +350,15 @@ int MemBlockClientInfoRemoveGUID(MemBlockClientInfo *info, SceUID pid)
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
-		for (i = 0; *slot != pid; slot++)
-			if (++i == capacity)
-				goto out;
+		if (*slot != pid) {
+			i = 0;
+			do {
+				i++;
+				slot++;
+				if (i == capacity)
+					goto out;
+			} while (*slot != pid);
+		}
 		*slot = -1;
 		info->count--;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);

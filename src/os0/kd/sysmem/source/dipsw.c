@@ -27,7 +27,7 @@ int InitializeDipsw(const struct SysmemBootContext *context)
 	return 0;
 }
 
-uint32_t ksceKernelGetDipswInfo(unsigned int index)
+SceUInt32 ksceKernelGetDipswInfo(unsigned int index)
 {
 	return s_dipsw->words[index];
 }

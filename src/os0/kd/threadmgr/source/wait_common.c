@@ -135,7 +135,7 @@ typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescr
 
 void cancelDelayTimer(SceUID uid, struct ThreadCB *thread);
 int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback);
-extern int SceSysrootForDriver_CAE820B2(SceUID pid, uint32_t *sdkVersion);
+extern int SceSysrootForDriver_CAE820B2(SceUID pid, SceUInt32 *sdkVersion);
 
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)

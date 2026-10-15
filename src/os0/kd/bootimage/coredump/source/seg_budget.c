@@ -10,7 +10,7 @@ extern int oalIsSystemProgram(SceUID pid);
 extern int oalGetNumOfBudgets(void);
 extern void oalGetBudgetIdList(SceUID *ids, int capacity);
 extern void oalGetBudgetInfo(SceUID budgetId, CoredumpBudgetInfo *info,
-	CoredumpPhyMemPartInfo *parts, SceUInt32 *numParts);
+	CoredumpPhyMemPartInfo *parts, uint32_t *numParts);
 extern void *memMgrLocalAlloc(SceSize size);
 extern int memMgrLocalFree(void *allocation);
 extern Writer *currentWriter;
@@ -31,7 +31,8 @@ static int _calcSize(SegIf *segment)
 {
 	CoredumpBudgetInfo info;
 	CoredumpPhyMemPartInfo parts[5];
-	SceUInt32 count, numParts, totalParts, i;
+	SceUInt32 count, totalParts, i;
+	uint32_t numParts;
 	SceUID *ids;
 
 	SCE_DBG_ASSERT_FUNC(segment != NULL, 58, "_calcSize");
@@ -69,7 +70,8 @@ static int _writeSegs(SegIf *segment)
 	CoredumpNoteHeader header;
 	CoredumpBudgetInfo info;
 	CoredumpPhyMemPartInfo parts[5];
-	SceUInt32 count, numParts, i, j;
+	SceUInt32 count, i, j;
+	uint32_t numParts;
 	SceUID *ids;
 	int result;
 

@@ -870,7 +870,7 @@ uint32_t SceSysrootForDriver_3AE319DA(void)
 	return notifiers ? notifiers->syscon : 0;
 }
 
-uint32_t SceSysrootForDriver_525B24C5(void)
+SceUInt32 SceSysrootForDriver_525B24C5(void)
 {
 	struct SysrootDebugNotifiers *notifiers = s_sysrootState->debugNotifiers;
 

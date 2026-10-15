@@ -44,7 +44,7 @@ extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 extern const char *ksceGUIDName(SceUID guid);
 extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize size);
 extern int ksceKernelCopyFromToUser(void *dst, const void *src, SceSize size);
-extern int ksceKernelIsAccessibleRange(uint32_t access, const void *addr, SceSize size);
+extern int ksceKernelIsAccessibleRange(SceUInt32 access, const void *addr, SceSize size);
 extern uintptr_t SceSysrootForKernel_5F2CE289(SceProcessObject *process);
 void initVfpContext(uintptr_t vfp);
 void __attribute__((noreturn)) threadEntry(void);
