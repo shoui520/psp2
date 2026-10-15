@@ -12,6 +12,7 @@
 #include "sce/debug.h"
 #include "sce/sysmem.h"
 #include "sce/gpuinit_es4.h"
+#include "sce/perfmon_regs.h"
 #include "../../../../../vendor/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
 #include "../../../../../vendor/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 #include "programs.h"
@@ -50,8 +51,6 @@
 #define SGX_BOOKMARK_VADDR		0x8002000
 #define SGX_BOOKMARK_SIZE		0x8000
 #define SGX_BOOKMARK_FILL		0x7a207123
-/* the Perfmon registers, mapped when a development tool runs */
-#define SGX_PERFMON_REGS_PADDR		0xe50d0000
 
 /* a script being built */
 typedef struct SgxScriptBuild {
@@ -186,7 +185,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 		bookmark[i] = SGX_BOOKMARK_FILL;
 
 	if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
-		perfmon = (void *)SGX_PERFMON_REGS_PADDR;
+		perfmon = (void *)PERFMON_REG_BASE;
 		flags = 0x80000008;
 	} else {
 		perfmon = bookmark;

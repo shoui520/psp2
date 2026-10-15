@@ -6,6 +6,7 @@
 
 #include "sce/cp15.h"
 #include "sce/timer_regs.h"
+#include "sce/perfmon_regs.h"
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
@@ -990,7 +991,7 @@ static inline int AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
 
 	AllocMemBlockCommandInit(&command, "SceUserIOPA", 0x1000);
 	command.code = MEMBLOCK_CODE_USER_IO_DEVICE_RW;
-	command.opt.paddr = 0xe50d0000;
+	command.opt.paddr = PERFMON_REG_BASE;
 	command.opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	ret = MemBlockCode2TypeInfo(MEMBLOCK_CODE_USER_IO_DEVICE_RW, &command.typeInfo);
 	if (ret < 0)

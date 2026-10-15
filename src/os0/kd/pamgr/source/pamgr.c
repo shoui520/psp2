@@ -22,7 +22,7 @@ struct PamgrState pamgrState;
 /* GPU sampling configuration with two intervals of at least 32. */
 int configureGpuTrace(const volatile struct PamgrGpuTraceConfig *config)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint32_t mode, control;
 	uint16_t interval0, interval1;
 
@@ -73,7 +73,7 @@ int ScePamgrForDriver_02ACD81C(struct PamgrGpuTraceConfig *config)
 /* Poison the saved configuration, then disable GPU sampling. */
 int clearGpuTrace(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -104,7 +104,7 @@ int clearGpuTrace(void)
 /* Enable PMU counter trace after validating the hardware mode. */
 int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config)
 {
-	struct PamgrPfmRegisters *pfm;
+	ScePerfmonRegisters *pfm;
 	uint32_t interval, selection, mode, pmcr, flags;
 	uint8_t upper, lower;
 
@@ -138,7 +138,7 @@ int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config)
 /* Disable counter trace and clear all of its configuration. */
 int __attribute__((noinline)) clearCounterTrace(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -182,7 +182,7 @@ int clearCounterTraceForUser(void)
 /* Primary trace buffer and callback-record configuration. */
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint32_t control, base, size, limit;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
@@ -221,7 +221,7 @@ int ScePamgrForDriver_606C98CD(struct PamgrPrimaryTraceConfig *config)
 /* User entries retain Sony's inlined filter operations. */
 int clearArmTraceForUser(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -240,7 +240,7 @@ int setTraceWordFilterForUser(const uint32_t *filter)
 
 int clearTraceWordFilterForUser(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -251,7 +251,7 @@ int clearTraceWordFilterForUser(void)
 
 void ScePamgrForDriver_E4AF5A5D(uint32_t *values)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	values[0] = pfm->traceReadback0[0];
 	values[1] = pfm->traceReadback0[1];
@@ -259,7 +259,7 @@ void ScePamgrForDriver_E4AF5A5D(uint32_t *values)
 
 void ScePamgrForDriver_C0EF725E(uint32_t *values)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	values[0] = pfm->traceReadback1[0];
 	values[1] = pfm->traceReadback1[1];
@@ -293,7 +293,7 @@ void disableTraceAuxControl1(void)
 
 void ScePamgrForDriver_4C4A48AF(uint32_t *controls)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	controls[0] = pfm->traceBitControls[0];
 	controls[1] = pfm->traceBitControls[1];
@@ -304,7 +304,7 @@ void ScePamgrForDriver_4C4A48AF(uint32_t *controls)
 /* Each of the four control words accepts only bit 1. */
 int setTraceBitControls(const uint32_t *controls)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -318,7 +318,7 @@ int setTraceBitControls(const uint32_t *controls)
 /* Preserve the original order of all ten device writes. */
 int configureTraceSamples(const volatile struct PamgrSampleConfig *config)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -352,7 +352,7 @@ void configureTraceControl(uint32_t config, uint32_t half)
 /* Channel 1 occupies the upper half of both shared event masks. */
 int configureTraceBuffer1(const struct PamgrTraceBufferConfig *config)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint16_t first, second;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
@@ -372,7 +372,7 @@ int configureTraceBuffer1(const struct PamgrTraceBufferConfig *config)
 /* Record selection is inverted in the low 16 mask bits. */
 int setTraceRecordMask(unsigned int mask, uint32_t selection)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -390,7 +390,7 @@ int setTraceRecordMask(unsigned int mask, uint32_t selection)
 
 int ScePamgrForDriver_6005FDAA(unsigned int mask, uint32_t *selection)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -405,7 +405,7 @@ int ScePamgrForDriver_6005FDAA(unsigned int mask, uint32_t *selection)
 
 int ScePamgrForDriver_3D299796(unsigned int bank, uint32_t *status)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -432,7 +432,7 @@ volatile uint32_t *ScePamgrForDriver_328C006F(unsigned int bank, unsigned int in
 int __attribute__((noinline)) ScePamgrForDriver_16A24732(
 			unsigned int bank, unsigned int index, uint32_t value)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -453,7 +453,7 @@ uint32_t ScePamgrForDriver_80CA3B39(void)
 /* The second trace buffer has the same 128-byte alignment. */
 int setTraceBuffer1WritePointer(uint32_t pointer)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -466,7 +466,7 @@ int setTraceBuffer1WritePointer(uint32_t pointer)
 /* Independent event-filter control bits 0, 1 and 2. */
 int clearArmTrace(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -476,7 +476,7 @@ int clearArmTrace(void)
 
 int setTracePackedFilter(const struct PamgrPackedFilter *filter)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint16_t upper, lower;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
@@ -492,7 +492,7 @@ int setTracePackedFilter(const struct PamgrPackedFilter *filter)
 
 int clearTracePackedFilter(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -503,7 +503,7 @@ int clearTracePackedFilter(void)
 
 int setTraceWordFilter(const uint32_t *filter)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -514,7 +514,7 @@ int setTraceWordFilter(const uint32_t *filter)
 
 int clearTraceWordFilter(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -626,7 +626,7 @@ void ScePamgrForDriver_A9DD2CB8(PamgrSyscallEnterCallback enter,
 
 int ScePamgrForDriver_7F3814A4(uint32_t *values)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	values[0] = pfm->gpuSampledData[0];
 	values[1] = pfm->gpuSampledData[1];
@@ -638,7 +638,7 @@ int ScePamgrForDriver_7F3814A4(uint32_t *values)
 /* User readback adds a NULL gate around the inlined reads. */
 int getGpuSampledDataForUser(uint32_t *values)
 {
-	struct PamgrPfmRegisters *pfm;
+	ScePerfmonRegisters *pfm;
 
 	if (values == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -670,7 +670,7 @@ int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection)
 
 uint32_t ScePamgrForDriver_019BD60F(unsigned int buffer)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint32_t status = pfm->traceStatus;
 
 	if (buffer == 0) {
@@ -738,7 +738,7 @@ int ScePamgrForDriver_B699F4B0(unsigned int counter, uint32_t *value)
 /* Request the trace control state and wait for acknowledgement. */
 int __attribute__((noinline)) waitTraceControl(struct PamgrPtmRegisters *trace)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint32_t start;
 
 	trace->control |= ETM_CONTROL_PROGRAMMING;
@@ -787,7 +787,7 @@ int checkDebugPermission(void)
 /* Sony inlined this stable high/low timebase read in both APIs. */
 static inline __attribute__((always_inline)) uint64_t readPfmTimebase(void)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	uint32_t high, low;
 
 	do {
@@ -815,7 +815,7 @@ unsigned int ScePamgrForDriver_FB46C3CD(void)
 /* Change the aligned hardware trace write pointer. */
 int setTraceWritePointer(uint32_t pointer)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -838,7 +838,7 @@ unsigned int ScePamgrForDriver_D4E85C87(void)
 /* Write only the supported trace interrupt state bits. */
 int setTraceInterruptStatus(uint32_t value)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
 	if (!(pfm->traceControl & PFM_TRACE_ENABLED))
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
@@ -916,7 +916,7 @@ unsigned int sceKernelPaGetIoBaseAddress(void)
 /* Start one trace channel and synchronize its control blocks. */
 int startTrace(unsigned int channel)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	struct PamgrPtmRegisters *trace;
 	uint32_t start, callbacks;
 	unsigned int i;
@@ -975,7 +975,7 @@ int startTrace(unsigned int channel)
 /* Stop tracing after flushing the TPIU. */
 int stopTrace(unsigned int channel)
 {
-	struct PamgrPfmRegisters *pfm = pamgrState.pfmRegisters;
+	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 	struct PamgrTpiuRegisters *tpiu;
 	uint32_t start;
 	unsigned int i;
@@ -1135,7 +1135,7 @@ int configureArmTrace(const volatile struct PamgrArmTraceConfig *config)
 
 int resumeTraceHardware(void)
 {
-	struct PamgrPfmRegisters *pfm;
+	ScePerfmonRegisters *pfm;
 	int primary, secondary;
 	uint32_t control;
 
@@ -1197,7 +1197,7 @@ int resumeTraceHardware(void)
 
 int suspendTraceHardware(void)
 {
-	struct PamgrPfmRegisters *pfm;
+	ScePerfmonRegisters *pfm;
 	uint32_t high, low, started, control;
 
 	if (ksceKernelCpuId() != 0)
@@ -1290,7 +1290,7 @@ int initializeTraceHardware(void)
 		ScePamgrForDriver_FE9BFD27, ScePamgrForDriver_328C006F
 	};
 	SceKernelAllocMemBlockKernelOpt opt;
-	struct PamgrPfmRegisters *pfm;
+	ScePerfmonRegisters *pfm;
 	SceUID block;
 	void *base;
 	unsigned int i;
@@ -1323,7 +1323,7 @@ int initializeTraceHardware(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = PAMGR_PFM_PADDR;
+	opt.paddr = PERFMON_REG_BASE;
 	block = ksceKernelAllocMemBlock("ScePfmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x2000, &opt);
 	if (block < 0)
 		return block;

@@ -8,6 +8,7 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <sce/intrmgr_syscall.h>
 #include <sce/pl310_regs.h>
+#include <sce/perfmon_regs.h>
 #include <sce/cp15.h>
 #include <sce/pamgr_trace.h>
 
@@ -15,77 +16,6 @@ typedef void (*PamgrTraceInterruptCallback)(uint32_t status, void *arg);
 typedef void (*PamgrSyscallEnterCallback)(ThreadSyscallFrame *frame);
 typedef void (*PamgrSyscallLeaveCallback)(ThreadSyscallFrame *frame,
 					 uint32_t *results);
-
-/* Memory-mapped PFM trace and timebase registers. */
-/* PamgrPfmRegisters.traceControl */
-#define PFM_TRACE_ENABLED		0x01
-
-/* PamgrPfmRegisters.traceEventControl: the trace sources and filters switched on */
-#define PFM_EVENT_ARM_TRACE		0x01
-#define PFM_EVENT_PACKED_FILTER		0x02
-#define PFM_EVENT_WORD_FILTER		0x04
-#define PFM_EVENT_GPU_TRACE		0x08
-#define PFM_EVENT_COUNTER_TRACE		0x10
-
-struct PamgrPfmRegisters {
-	volatile uint32_t registerBank0[16];
-	volatile uint32_t registerBank0Status;
-	uint8_t reserved0[0x3c];
-	volatile uint32_t traceBufferEnable;
-	volatile uint32_t traceStatus;
-	volatile uint32_t timebaseLow;
-	volatile uint32_t timebaseHigh;
-	uint8_t reserved1[0xf70];
-	union {
-		volatile uint32_t registerBank1[16];
-		struct {
-			uint8_t reserved2[0x18];
-			volatile uint32_t traceFifo;
-			uint8_t reserved3[0x24];
-		};
-	};
-	volatile uint32_t registerBank1Status;
-	volatile uint32_t sampleControl0;
-	volatile uint32_t traceEventMask0;
-	volatile uint32_t sampleControl1;
-	volatile uint32_t traceEventMask1;
-	uint8_t reserved4[0x2c];
-	volatile uint32_t traceEventControl;
-	volatile uint32_t traceBufferBase;
-	volatile uint32_t traceWritePointer;
-	volatile uint32_t traceBufferSize;
-	volatile uint32_t traceBufferLimit;
-	volatile uint32_t traceBufferControl;
-	volatile uint32_t traceInterruptStatus;
-	volatile uint32_t traceBitControls[4];
-	volatile uint32_t traceSampleControls[4];
-	volatile uint32_t traceControl;
-	volatile uint32_t traceConfig;
-	volatile uint32_t traceConfigHalf;
-	volatile uint32_t counterTraceBytes;
-	volatile uint32_t traceAuxControl0;
-	volatile uint32_t tracePackedFilter;
-	volatile uint32_t counterTraceSelection;
-	volatile uint32_t traceWordFilter;
-	volatile uint32_t counterTraceControl;
-	volatile uint32_t counterTraceValues[3];
-	volatile uint32_t traceAuxControl1;
-	volatile uint32_t traceReadback0[2];
-	volatile uint32_t traceReadback1[2];
-	volatile uint32_t traceBuffer1Enable;
-	volatile uint32_t traceBuffer1Base;
-	volatile uint32_t traceBuffer1WritePointer;
-	volatile uint32_t traceBuffer1Size;
-	volatile uint32_t buffer1SampleControls[4];
-	volatile uint32_t sampleStatus;
-	volatile uint32_t counterTraceFlags;
-	uint8_t reserved5[0x18];
-	volatile uint32_t gpuCounterConfig[8];
-	volatile uint32_t gpuSampledData[4];
-	volatile uint32_t gpuSampleConfig[8];
-	volatile uint32_t gpuControl;
-	volatile uint32_t gpuIntervals;
-};
 
 /* Counter trace configuration, with observed width constraints. */
 struct PamgrCounterTraceConfig {
@@ -154,7 +84,6 @@ struct PamgrSampleConfig {
 #define FUNNEL_PORTS			0x17
 
 /* the physical registers pamgr maps: one PTM, debug, PMU and CTI block per core */
-#define PAMGR_PFM_PADDR			0xe50d0000
 #define PAMGR_PTM_PADDR(core)		(0xe331c000 + (core) * 0x1000)
 #define PAMGR_DBG_PADDR(core)		(0xe3310000 + (core) * 0x2000)
 #define PAMGR_PMU_PADDR(core)		(0xe3311000 + (core) * 0x2000)
@@ -263,7 +192,7 @@ struct PamgrState {
 	PamgrSyscallEnterCallback syscallEnterCallback;
 	PamgrSyscallEnterCallback syscallEnterObserver;
 	uint32_t savedTraceControl;
-	struct PamgrPfmRegisters *pfmRegisters;
+	ScePerfmonRegisters *pfmRegisters;
 	SceUID pfmMemBlock;
 	uint32_t savedTraceBufferControlBits;
 	volatile uint32_t savedTraceConfigHalf;
@@ -353,13 +282,13 @@ _Static_assert(offsetof(struct PamgrState, registrationMutex) == 0x1a0,
 	       "Pamgr registration mutex");
 _Static_assert(offsetof(struct PamgrState, registrationId) == 0x1e0,
 	       "Pamgr registration identifier");
-_Static_assert(offsetof(struct PamgrPfmRegisters, timebaseLow) == 0x88,
+_Static_assert(offsetof(ScePerfmonRegisters, timebaseLow) == 0x88,
 	       "PFM timebase registers");
-_Static_assert(offsetof(struct PamgrPfmRegisters, traceFifo) == 0x1018,
+_Static_assert(offsetof(ScePerfmonRegisters, traceFifo) == 0x1018,
 	       "PFM trace FIFO");
-_Static_assert(offsetof(struct PamgrPfmRegisters, traceWritePointer) == 0x1088,
+_Static_assert(offsetof(ScePerfmonRegisters, traceWritePointer) == 0x1088,
 	       "PFM trace write pointer");
-_Static_assert(offsetof(struct PamgrPfmRegisters, traceControl) == 0x10bc,
+_Static_assert(offsetof(ScePerfmonRegisters, traceControl) == 0x10bc,
 	       "PFM trace control");
 
 extern struct PamgrState pamgrState;
