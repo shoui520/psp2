@@ -2,7 +2,7 @@
  * SceSysmem: the debug LEDs and the general purpose inputs/outputs. The GPO
  * value goes to the LED register block through a mask; debug tools register
  * the LED handlers. The secure kernel's SceSysmem (SYSMEM_TZS) only maps the
- * registers.
+ * registers; SKBL (SYSMEM_SKBL) writes them at their physical address.
  */
 
 #include <psp2kern/kernel/sysclib.h>
@@ -16,6 +16,7 @@
 
 int ksceKernelCpuId(void);
 SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt32 new_value);
+int kscePervasiveGpioClockEnable(void);
 
 /* the registers' physical address until LedModuleStart maps them */
 static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
@@ -104,6 +105,18 @@ void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
 }
 #endif
 
+#if defined(SYSMEM_SKBL)
+/* the LED outputs on, before anything is mapped */
+int LedModuleStart(void)
+{
+	kscePervasiveGpioClockEnable();
+	s_ledRegs->portMode |= LED_GPO_BITS;
+	s_ledRegs->enable = LED_GPO_BITS;
+	s_ledHandle1 = NULL;
+	s_ledHandle0 = NULL;
+	return 0;
+}
+#else
 struct SysmemBootContext;
 
 /* the LED register block, mapped once (CPU 0) */
@@ -130,3 +143,4 @@ int LedModuleStart(const struct SysmemBootContext *context)
 #endif
 	return 0;
 }
+#endif
