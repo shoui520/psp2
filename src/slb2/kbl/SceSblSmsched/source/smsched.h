@@ -13,12 +13,39 @@
 /* ForTZS imports, named by the henkaku wiki (SceSysmem, SceSysroot) */
 #define sceKernelVAtoPAForTZS			SceSysmemForTZS_1DEADF6C
 #define sceKernelFreeUncacheHeapMemoryForTZS	SceSysmemForTZS_2F18E288
+#define sceKernelFreeHeapMemoryForTZS		SceSysmemForTZS_42FB5B12
+#define sceKernelAllocHeapMemoryForTZS		SceSysmemForTZS_473871D8
+#define sceKernelCreateHeapForTZS		SceSysmemForTZS_56A16D84
+#define sceKernelDeleteHeapForTZS		SceSysmemForTZS_624454BC
 #define sceKernelAllocUncacheHeapMemoryWithOptionForTZS SceSysmemForTZS_6A3FBAF0
+#define sceKernelVARangeToPAVectorForTZS	SceSysmemForTZS_9D43E416
+#define sceKernelSysrootGetSharedMemoryForTZS	SceSysrootForTZS_1C96096F
+#define sceKernelSysrootGetKblParamForTZS	SceSysrootForTZS_29C1049E
+#define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
+#define ksceKernelAssert			SceDebugForTZS_2F9B8AA8
+/* ForTZS imports: the names of their 0.990 stubs, os0's for the debug ones */
+#define sceKernelDcacheCleanRange		SceCpuForTZS_190D96D5
+#define ksceKernelCpuId				SceCpuForTZS_44C423D3
+#define ksceKernelSpinlockLowLock		SceCpuForTZS_71FD9AB5
+#define ksceKernelSpinlockLowTrylockCpuSuspendIntr SceCpuForTZS_ACF209F3
+#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define ksceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
+#define sceKernelDcacheInvalidateRange		SceCpuForTZS_CDD46655
+#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
+#define atomicCompareAndSet8			SceCpuForTZS_EFD6F289
+#define ksceKernelPrintfWithInfo		SceDebugForTZS_0D799DAE
+#define ksceKernelPanic				SceDebugForTZS_563B623D
+#define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
+#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
+#define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
 
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include "sce/sysmem.h"
+#include "sce/debug.h"
+#include "sce/intrmgr_tzs.h"
 #include "sce/cmep_regs.h"
+#include "sce/smsc_proxy.h"
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
@@ -27,14 +54,40 @@ __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
 void *sceKernelAllocUncacheHeapMemoryWithOptionForTZS(SceSize size, SceAllocOpt *opt);
 int sceKernelFreeUncacheHeapMemoryForTZS(void *ptr);
+void *sceKernelAllocHeapMemoryForTZS(SceUID heap, SceSize size);
+int sceKernelFreeHeapMemoryForTZS(SceUID heap, void *ptr);
+SceUID sceKernelCreateHeapForTZS(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
+int sceKernelDeleteHeapForTZS(SceUID heap);
+void *sceKernelSysrootGetSharedMemoryForTZS(void);
+int sceKernelSysrootSetModulePrivateForTZS(int index, void *data);
+void sceKernelDcacheCleanRange(const void *addr, SceSize size);
+void sceKernelDcacheInvalidateRange(const void *addr, SceSize size);
+int ksceKernelCpuId(void);
+int ksceKernelSpinlockLowLock(SceKernelSpinlock *lock);
+int ksceKernelSpinlockLowUnlock(SceKernelSpinlock *lock);
+int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
+int ksceKernelSpinlockLowTrylockCpuSuspendIntr(SceKernelSpinlock *lock);
+void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock, int intr);
+int atomicCompareAndSet8(volatile SceUInt8 *addr, SceUInt8 expected, SceUInt8 value);
 
 #define SCE_SBL_ERROR_NO_MEMORY			((int)0x800f040c)
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		((int)0x800f0416)
+#define SCE_SBL_ERROR_NOT_SUPPORTED		((int)0x800f0425)
+#define SCE_SBL_ERROR_ILLEGAL_STATE		((int)0x800f0429)
+#define SCE_SBL_ERROR_NOT_READY			((int)0x800f0426)
+#define SCE_SBL_ERROR_NO_REQUEST		((int)0x800f042b)
+#define SCE_SBL_ERROR_BUSY			((int)0x800f042e)
 #define SCE_SBL_ERROR_SECURE_KERNEL_START	((int)0x800f0427)	/* the Cmep refused the kernel */
 #define SCE_SBL_ERROR_CMEP(message)		((int)(0x800f0300 | ((message) & 0xff)))
 
 #define SMSCHED_DEBUG_AREA_SIZE			0x80
 #define SMSCHED_SK_CMD_AREA_SIZE		0x100
+
+/* a circular list: a head is a link no request contains */
+typedef struct SmschedLink {
+	struct SmschedLink *next;
+	struct SmschedLink *prev;
+} SmschedLink;
 
 /* the scheduler's state (Sony: the instance smsSecureKernelProxySetInstance takes) */
 typedef struct SmschedInstance {
@@ -44,8 +97,7 @@ typedef struct SmschedInstance {
 	void *self;
 	uintptr_t selfPA;
 	struct SmschedRequest *requests;
-	struct SmschedRequest *freeHead;
-	struct SmschedRequest *freeTail;
+	SmschedLink freeList;
 } SmschedInstance;
 
 /* mailboxes 1-3 of a request's module while it does not run: the saved
@@ -60,6 +112,38 @@ typedef struct SmschedInvokeArg {
 	SceUInt32 word[12];
 } SmschedInvokeArg;
 
+/* a request's state, as cry2Arm0IntHandler moves it on the secure kernel's messages */
+#define SMSCHED_STATE_READY			1	/* queued, new or suspended */
+#define SMSCHED_STATE_RUNNING			2
+#define SMSCHED_STATE_EXITED			3	/* done: result set */
+#define SMSCHED_STATE_KILLED			4	/* done */
+#define SMSCHED_STATE_STOPPED			5	/* done */
+#define SMSCHED_STATE_STARTING			6	/* Run or Resume sent */
+#define SMSCHED_STATE_SUSPENDING		7
+#define SMSCHED_STATE_STOPPING			8
+#define SMSCHED_STATE_KILLING			9
+#define SMSCHED_STATE_EXITING			10
+#define SMSCHED_STATE_PREEMPTING		11	/* Suspend sent */
+#define SMSCHED_STATE_SOFT_KILLING		12	/* SoftKill sent */
+
+/* the Cmep holds the request's module: it runs, or is being preempted or killed */
+static inline int SmschedStateOnCmep(SceUInt32 state)
+{
+	switch (state) {
+	case SMSCHED_STATE_RUNNING:
+	case SMSCHED_STATE_PREEMPTING:
+	case SMSCHED_STATE_SOFT_KILLING:
+		return 1;
+	}
+	return 0;
+}
+
+#define SMSCHED_REQUESTS			64
+
+/* the Cmep's interrupts: Cry2Arm0 (the secure kernel's messages), Cry2Arm1-3 */
+#define SMSCHED_INTR_CRY2ARM0			200
+#define SMSCHED_SOFT_INTR_PROXY			4	/* to the Non-secure kernel's smsc_proxy */
+
 /* a Cry2Arm interrupt handler of a request (mailboxes 0-3) */
 typedef void (*SmschedIntrHandler)(SceInt32 proxyId, int mailbox, void *arg,
 				   SceUInt32 status, SceInt32 result);
@@ -72,8 +156,7 @@ typedef struct SmschedIntrEntry {
 
 /* one of the 64 requests: a secure module and its run state */
 typedef struct SmschedRequest {
-	struct SmschedRequest *next;		/* in a run queue or the free list */
-	struct SmschedRequest *prev;
+	SmschedLink link;			/* in a run queue, the done list or the free list */
 	SceUInt32 id;				/* the index, bit 31 set while free */
 	SceUInt32 priority;			/* the run queue */
 	uintptr_t selfPA;
@@ -125,3 +208,14 @@ int smsSecureKernelProxyGenerateIntr2(void);
 int smsSecureKernelProxyGenerateIntr3(void);
 int smsSecureKernelProxyGenerateIntr4(void);
 int smsSecureKernelProxyReady(void);
+
+/* tzs_bridge.c: the argument and interrupt areas shared with the Non-secure kernel */
+int sceSblTzsBridgeInit(void);
+int sceSblTzsBridgeAllocIntrArea(SceSize size, void **area, SceSize *areaSize);
+int sceSblTzsBridgePush(void *areas, unsigned int index);
+int sceSblTzsBridgePushArgArea(unsigned int index);
+int sceSblTzsBridgePushIntrArea(unsigned int index);
+int sceSblTzsBridgePop(void *areas, unsigned int index, void **area, SceSize *areaSize);
+int sceSblTzsBridgePopArgArea(unsigned int index, void **area, SceSize *areaSize);
+int sceSblTzsBridgeFree(void *areas, unsigned int index);
+int sceSblTzsBridgeFreeIntrArea(unsigned int index);

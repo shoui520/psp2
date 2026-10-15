@@ -18,14 +18,19 @@
  * The message the secure world's SceSblSmsched pushes into a bridge
  * interrupt area before it raises software interrupt 4.
  */
+/* the request's result and state, as the handler gets them */
+typedef struct SmschedIntrStatus {
+	SceUInt32 result;
+	SceUInt32 state;
+} SmschedIntrStatus;
+
 typedef struct SmschedIntrMessage {
 	SceUInt32 channel;		/* the mailbox, 0-3 */
 	SceUID id;			/* the session's id */
 	SceUInt32 flags;		/* MSG_* */
 	SceUInt32 eventBits;
 	SceUInt32 ack;			/* the interrupt area's index */
-	SceUInt32 b;
-	SceUInt32 a;
+	SmschedIntrStatus status;
 } SmschedIntrMessage;
 
 typedef void (*SceSblSmSchedCry2ArmHandler)(SceUID id, int channel, void *arg,

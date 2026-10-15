@@ -171,8 +171,8 @@ static int softIntrHandler(int intrCode, void *userCtx)
 
 	channel = msg->channel;
 	flags = msg->flags;
-	b = msg->b;
-	a = msg->a;
+	b = msg->status.result;
+	a = msg->status.state;
 
 	s = SessionLookup(msg->id, &status);
 	if (s == NULL) {

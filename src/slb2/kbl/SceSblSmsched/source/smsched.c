@@ -9,6 +9,21 @@
  */
 #include "smsched.h"
 
+/* PARTIAL: not static until the functions that set them are written */
+SmschedRequest *s_running;
+int s_initialized;
+SmschedLink s_runQueue[2];		/* by priority, 0 first */
+SceKernelSpinlock s_lock;
+SmschedInstance *s_instance;
+
+/* a request by its id, or NULL */
+static inline SmschedRequest *SmschedGetRequest(SceUInt32 id)
+{
+	if (id >= SMSCHED_REQUESTS)
+		return NULL;
+	return &s_instance->requests[id];
+}
+
 static inline void SmschedDmb(void)
 {
 	__asm__ volatile("dmb sy" : : : "memory");
@@ -17,6 +32,191 @@ static inline void SmschedDmb(void)
 static inline void SmschedDsb(void)
 {
 	__asm__ volatile("dsb sy" : : : "memory");
+}
+
+int sceSblSmSchedEnableIntr(int mailbox)
+{
+	if (mailbox == 0)
+		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0);
+	else if (mailbox == 1)
+		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0 + 1);
+	else if (mailbox == 2)
+		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0 + 2);
+	else if (mailbox == 3)
+		return sceKernelEnableIntr(SMSCHED_INTR_CRY2ARM0 + 3);
+	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+}
+
+int sceSblSmSchedRegisterIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox,
+					     SmschedIntrHandler handler, void *arg)
+{
+	SmschedRequest *request;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (mailbox > 3)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ret = SCE_SBL_ERROR_NO_REQUEST;
+	} else {
+		if (request->intr[mailbox].handler != NULL) {
+			ret = SCE_SBL_ERROR_BUSY;
+		} else {
+			request->intr[mailbox].handler = handler;
+			request->intr[mailbox].arg = arg;
+			request->intr[mailbox].enabled = 1;
+			ret = 0;
+			if (mailbox != 0 && SmschedStateOnCmep(request->state))
+				ret = sceSblSmSchedEnableIntr(mailbox);
+		}
+	}
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+/* name unknown (Sony's <name>MonitorCall family): the monitor call that turns
+ * a mailbox's interrupt on for the request, without a handler */
+int sceSblSmSchedRegisterIntrHandlerMonitorCall(SceUInt32 id, SceUInt32 mailbox)
+{
+	return sceSblSmSchedRegisterIntrHandlerInternal(id, mailbox, NULL, NULL);
+}
+
+int sceSblSmSchedDisableIntr(int mailbox)
+{
+	if (mailbox == 0)
+		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0);
+	else if (mailbox == 1)
+		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0 + 1);
+	else if (mailbox == 2)
+		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0 + 2);
+	else if (mailbox == 3)
+		return sceKernelDisableIntr(SMSCHED_INTR_CRY2ARM0 + 3);
+	return SCE_SBL_ERROR_INVALID_ARGUMENT;
+}
+
+/* name unknown: tell the Non-secure kernel through an interrupt area and
+ * software interrupt 4; the mailbox interrupts stay off until it is done */
+int sendIntrMessage(const SmschedIntrMessage *message)
+{
+	SceSize areaSize;
+	SmschedIntrMessage *area;
+	int index, ret, mailbox;
+
+	if (message->id == -1)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	index = sceSblTzsBridgeAllocIntrArea(sizeof(*area), (void **)&area, &areaSize);
+	if (index < 0)
+		return 0;
+	area->channel = message->channel;
+	area->id = message->id;
+	area->flags = message->flags;
+	area->eventBits = message->eventBits;
+	area->ack = index;
+	area->status = message->status;
+	ret = sceSblTzsBridgePushIntrArea(index);
+	if (ret < 0) {
+		sceSblTzsBridgeFreeIntrArea(index);
+		return ret;
+	}
+	for (mailbox = 0; mailbox < CMEP_MAILBOXES; mailbox++) {
+		ret = sceSblSmSchedDisableIntr(mailbox);
+		if (ret < 0) {
+			sceSblTzsBridgeFreeIntrArea(index);
+			return ret;
+		}
+	}
+	return sceKernelGenerateSoftIntr(SMSCHED_SOFT_INTR_PROXY, 2, 0);
+}
+
+int cry2Arm123IntHandler(int intrCode, void *userCtx)
+{
+	SmschedIntrMessage message;
+	SmschedIntrHandler handler;
+	SmschedRequest *running;
+	int intr, mailbox, ret;
+	void *arg;
+
+	(void)userCtx;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	running = s_running;
+	if (running == NULL) {
+		ret = -1;
+		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+		goto out;
+	}
+	switch (intrCode) {
+	case SMSCHED_INTR_CRY2ARM0 + 1:
+		handler = running->intr[1].handler;
+		mailbox = 1;
+		arg = running->intr[1].arg;
+		break;
+	case SMSCHED_INTR_CRY2ARM0 + 2:
+		handler = running->intr[2].handler;
+		mailbox = 2;
+		arg = running->intr[2].arg;
+		break;
+	default:
+		SCE_PANIC(2514);
+		/* fall through */
+	case SMSCHED_INTR_CRY2ARM0 + 3:
+		handler = running->intr[3].handler;
+		mailbox = 3;
+		arg = running->intr[3].arg;
+		break;
+	}
+	if (running->proxyId != -1) {
+		message.channel = mailbox;
+		message.id = running->proxyId;
+		message.flags = MSG_HANDLER_ONLY;
+		if (sendIntrMessage(&message) < 0)
+			SCE_PANIC(2535);
+		ret = -2;
+	} else {
+		ret = running->proxyId;
+	}
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	__asm__ volatile("dsb sy\n\tsev" : : : "memory");
+	if (handler != NULL)
+		handler(s_running->id, mailbox, arg, 0, 0);
+out:
+	return ret;
+}
+
+int sceSblSmSchedReleaseIntrHandlerInternal(SceUInt32 id, SceUInt32 mailbox)
+{
+	SmschedRequest *request;
+	int intr, ret;
+
+	if (s_initialized != 1)
+		return SCE_SBL_ERROR_NOT_READY;
+	if (mailbox > 3)
+		return SCE_SBL_ERROR_INVALID_ARGUMENT;
+	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	request = SmschedGetRequest(id);
+	if (request == NULL) {
+		ret = SCE_SBL_ERROR_NO_REQUEST;
+	} else {
+		request->intr[mailbox].handler = NULL;
+		request->intr[mailbox].arg = NULL;
+		ret = 0;
+		if (mailbox != 0) {
+			request->intr[mailbox].enabled = 0;
+			if (SmschedStateOnCmep(request->state))
+				ret = sceSblSmSchedDisableIntr(mailbox);
+		}
+	}
+	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	return ret;
+}
+
+/* name unknown (Sony's <name>MonitorCall family): the monitor call that turns
+ * a mailbox's interrupt off for the request */
+int sceSblSmSchedReleaseIntrHandlerMonitorCall(SceUInt32 id, SceUInt32 mailbox)
+{
+	return sceSblSmSchedReleaseIntrHandlerInternal(id, mailbox);
 }
 
 /* name unknown: acknowledge (clear) bits of a Cry2Arm mailbox */
