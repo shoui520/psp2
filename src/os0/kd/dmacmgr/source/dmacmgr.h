@@ -15,68 +15,6 @@
 #include <sce/dmac_regs.h>
 #undef ksceKernelDmaOpSync
 
-/* ===== registers ===== */
-
-/* one channel's registers, 0x80 bytes */
-typedef struct SceDmacChannelReg {
-	SceUInt32 src;
-	SceUInt32 dst;
-	SceSize len;
-	SceUInt32 cmd;
-	SceUInt32 srcKeyringId;
-	SceUInt32 iv;
-	SceSize blockSize;
-	SceUInt32 ctrl;				/* 0x1c: 0 stops the channel */
-	SceUInt32 chainStart;		/* 0x20: the first tag of a chain */
-	SceUInt32 stat;				/* 0x24: SCE_KERNEL_DMAC_STAT_* */
-	SceUInt32 intrStatus;			/* 0x28: DMAC_INTR_*, written back to clear */
-	SceUInt32 coherencyMask;
-	SceUInt32 ivCoherencyMask;
-	SceUInt32 setValue;			/* 0x34: for SCE_KERNEL_DMAC_CMD_OP_SET */
-	SceUInt32 reserved0;
-	SceUInt32 trngValue;
-	SceUInt32 errorSrc;
-	SceUInt32 errorDst;
-	SceSize errorLen;			/* 0x48: what the failing tag left undone */
-	SceUInt32 currentTag;		/* 0x4c */
-	SceUInt32 reserved1[12];
-} SceDmacChannelReg;
-
-#define DMAC_INTR_COMPLETE	0x00000001
-#define DMAC_INTR_ERROR		0x00000002
-
-/* the command flag that makes a tag raise the completion interrupt */
-#define DMAC_CMD_INTERRUPT	0x00001000
-
-/* DMAC5 channel: its external key follows the other channel's registers */
-typedef struct SceDmac5ChannelReg {
-	SceDmacChannelReg reg;
-	SceUInt8 reserved[0x180];
-	SceUInt32 key[16];			/* 0x200 */
-} SceDmac5ChannelReg;
-
-/* DMAC4's interrupt gates, one per four channels */
-typedef struct SceDmac4GateReg {
-	SceUInt32 activeIntr;
-	SceUInt32 intrMask;
-} SceDmac4GateReg;
-
-typedef struct SceDmac4Reg {
-	SceDmacChannelReg ch[16];
-	SceUInt32 reserved0[2];
-	SceUInt8 reserved1[8];
-	SceUInt32 busErrorAddress;
-	SceUInt32 busErrorAttribute;
-	SceUInt32 secureBusErrorAddress;
-	SceUInt32 secureBusErrorAttribute;
-	SceUInt8 reserved2[0x900 - 0x820];
-	SceDmac4GateReg gate[4];		/* 0x900: interrupts 0x78..0x7b */
-} SceDmac4Reg;
-
-_Static_assert(sizeof(SceDmacChannelReg) == 0x80, "SceDmacChannelReg size");
-_Static_assert(__builtin_offsetof(SceDmac5ChannelReg, key) == 0x200, "DMAC5 key");
-_Static_assert(__builtin_offsetof(SceDmac4Reg, gate) == 0x900, "DMAC4 gates");
-
 /* ===== operations ===== */
 
 /* a tag as the controller reads it, with what dmacmgr keeps about it */
