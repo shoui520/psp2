@@ -17,6 +17,7 @@
 #include <sce/debug.h>
 #include <sce/syscall.h>
 #include <sce/threadmgr.h>
+#include "fw.h"
 #include "usbd_internal.h"
 
 int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);
@@ -100,12 +101,16 @@ static __always_inline int usbdWaitDeviceResponse(void)
 
 static __always_inline void usbdSignalDeviceResponse(void)
 {
+#if FW_SINCE(0x04000000)
 	int result = ksceKernelSignalSema(s_enumerationSemaId, 1);
 
 	if (result < 0) {
 		SCE_DBG_PRINTF(15, 150, "result=%x\n", result);
 		SCE_DBG_ASSERT(0, 151);
 	}
+#else
+	ksceKernelSignalSema(s_enumerationSemaId, 1);
+#endif
 }
 
 static __always_inline UsbdDevice *usbdGetDevice(unsigned int deviceId)
