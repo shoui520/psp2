@@ -426,15 +426,17 @@ int Init(SceSize args, void *argp)
 	unsigned int dacr, code, cpu, offset, value;
 	unsigned int start, size, i;
 	char *trace;
+	unsigned int *vectors;
 	SceUID uid;
 
 	g_excpHandlers.lock = 0;
-	g_excpHandlers.vectors = ksceKernelSysrootGetVbaseResetVector();
+	vectors = ksceKernelSysrootGetVbaseResetVector();
+	g_excpHandlers.vectors = vectors;
 	size = (char *)&defaultHandler - (char *)exceptionVectors;
 	g_excpHandlers.vectorSize = size;
 	dacr = readDacr();
 	writeDacr(DACR_ALL_MANAGER);
-	start = (unsigned int)memcpy(g_excpHandlers.vectors, exceptionVectors, size);
+	start = (unsigned int)memcpy(vectors, exceptionVectors, size);
 	ksceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
