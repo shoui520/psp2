@@ -426,6 +426,7 @@ int Init(SceSize args, void *argp)
 	unsigned int dacr, code, cpu, offset, value;
 	unsigned int start, size, i;
 	char *trace;
+	unsigned char *stack;
 	unsigned int *vectors;
 	SceUID uid;
 
@@ -466,10 +467,12 @@ int Init(SceSize args, void *argp)
 		value = (unsigned int)SceSysrootForKernel_06182D59(cpu);
 		excpPokeVector((unsigned int *)((char *)g_excpHandlers.vectors + offset), &value);
 	}
+	stack = g_excpStack[0];
 	for (cpu = 0; cpu < 4; cpu++) {
 		g_excpData.nestCount[cpu] = 0;
-		g_excpData.stackBase[cpu] = g_excpStack[cpu];
-		g_excpData.stackTop[cpu] = g_excpStack[cpu] + EXCP_STACK_SIZE;
+		g_excpData.stackBase[cpu] = stack;
+		stack += EXCP_STACK_SIZE;
+		g_excpData.stackTop[cpu] = stack;
 	}
 	g_excpData.kernelMmu = SceSysrootForKernel_118657C6();
 	g_excpData.kernelBreakpoints = NULL;
