@@ -1,6 +1,4 @@
 /* Venezia DSP DMA copy operations. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/vapa.c"
 #include <sce/debug.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>

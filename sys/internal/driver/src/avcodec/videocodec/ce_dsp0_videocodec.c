@@ -1,6 +1,4 @@
 /* Sony source: videocodec/ce_dsp0_videocodec.c. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "videocodec/ce_dsp0_videocodec.c"
 #include "../audiodec/audiodec_internal.h"
 #include "videocodec_internal.h"
 #include <sce/debug.h>

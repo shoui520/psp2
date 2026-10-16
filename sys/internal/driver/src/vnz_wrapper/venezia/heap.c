@@ -1,6 +1,4 @@
 /* Sony venezia/heap.c: variable-size heap blocks. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/heap.c"
 #include <sce/debug.h>
 #include "venezia_internal.h"
 

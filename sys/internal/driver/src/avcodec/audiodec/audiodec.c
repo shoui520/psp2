@@ -1,6 +1,4 @@
 /* SceAudiodec control and information handling (Sony audiodec/audiodec.c). */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "audiodec/audiodec.c"
 #include "audiodec_internal.h"
 #include <sce/debug.h>
 #include <sce/sysmem.h>

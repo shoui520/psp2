@@ -1,6 +1,4 @@
 /* Sony venezia/booter.c: image memory and hardware bootstrap. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/booter.c"
 #include <sce/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sce/debug.h>

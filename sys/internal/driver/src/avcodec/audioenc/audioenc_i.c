@@ -1,6 +1,4 @@
 /* SceAudioenc internal management (Sony audioenc/audioenc_i.c). */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "audioenc/audioenc_i.c"
 #include "audioenc_internal.h"
 #include "../audiodec/audiodec_internal.h"
 #include <sce/debug.h>

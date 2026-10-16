@@ -1,6 +1,4 @@
 /* Sony source: videocodec/videocodec_init.c. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "videocodec/videocodec_init.c"
 #include "videocodec_internal.h"
 #include <sce/debug.h>
 #include <sce/processmgr.h>

@@ -1,6 +1,4 @@
 /* Sony venezia/simple_heap.c: fixed-block communication-memory heap. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/simple_heap.c"
 #include <sce/debug.h>
 #include "venezia_internal.h"
 

@@ -1,6 +1,4 @@
 /* Sony venezia/venezia.c: process-local suspend state. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/venezia.c"
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sce/debug.h>

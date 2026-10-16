@@ -1,6 +1,4 @@
 /* SceAudiodec internal library management (Sony audiodec/audiodec_i.c). */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "audiodec/audiodec_i.c"
 #include "audiodec_internal.h"
 #include <sce/debug.h>
 #include <psp2kern/kernel/threadmgr.h>

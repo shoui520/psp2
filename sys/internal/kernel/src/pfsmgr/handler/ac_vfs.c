@@ -5,8 +5,6 @@
  * redirect layer with a stand-in pmi.
  */
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "handler/ac_vfs.c"
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <sce/debug.h>

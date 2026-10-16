@@ -1,6 +1,4 @@
 /* SceAudioenc control and information handling (Sony audioenc/audioenc.c). */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "audioenc/audioenc.c"
 #include <psp2/audioenc.h>
 #include <sce/sysmem.h>
 #include <psp2kern/kernel/sysmem.h>

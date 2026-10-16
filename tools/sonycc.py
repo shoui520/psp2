@@ -57,6 +57,19 @@ def snc_command(opt, args):
 				     *args, *(f'-I{win(i)}' for i in includes)])
 
 
+def file_name(src):
+	"""__FILE_NAME__ of a source, as Sony's debug records name it: the path from its
+	component's folder (the nearest folder above it with a CMakeLists.txt); the bare file name
+	for a source outside a component (common/, contrib/, generated in a build folder)."""
+	src = Path(src).resolve()
+	for d in src.parents:
+		if d == ROOT or ROOT not in d.parents:
+			break
+		if (d / 'CMakeLists.txt').exists():
+			return src.relative_to(d).as_posix()
+	return src.name
+
+
 def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode='thumb', stage='object'):
 	if stage not in ('object', 'assembly') or (stage == 'assembly' and kind != 'gcc48'):
 		raise ValueError('unsupported compiler output stage')
@@ -65,7 +78,7 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 	if kind != 'gcc48' and mode != 'thumb':
 		raise ValueError('ARM source mode is not implemented for SNC')
 	out.parent.mkdir(parents=True, exist_ok=True)
-	name = f'-D__FILE_NAME__="{src.name}"'
+	name = f'-D__FILE_NAME__="{file_name(src)}"'
 	if kind == 'gcc48':
 		cmd = host.linux_command([str(gcc or GCC48), '-m' + mode, '-mcpu=cortex-a9', '-mfloat-abi=softfp', '-mfpu=neon', opt, '-std=gnu11', '-fstack-protector-strong' if gcc is None else '-fstack-protector', '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks', '-fno-section-anchors', '-fno-shrink-wrap', *extra,
 		       # arm-none-eabi defaults to short enums; Sony's (and vitasdk's) ABI has int-sized enums

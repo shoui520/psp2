@@ -67,6 +67,35 @@ foreach(ns kernel user)
 	file(GLOB PSP2_STUB_LIBS_${ns} "${out}/*_stub.a")
 endforeach()
 
+# __FILE_NAME__ of each C/C++ source, as Sony's debug records name it: the path from its
+# component's folder (the nearest folder above it with a CMakeLists.txt); the bare file name
+# outside a component (common/, contrib/, generated). tools/sonycc.py file_name() is the same.
+# Only a file in a subfolder gets the define: for the others the compiler's built-in is already
+# the bare name (and inside a header, the header's name, which a define would replace).
+function(psp2_file_names)
+	get_filename_component(root "${PSP2_SRC}" REALPATH)
+	foreach(src IN LISTS ARGN)
+		if(NOT src MATCHES "\\.(c|cpp)$")
+			continue()
+		endif()
+		get_filename_component(abs "${src}" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+		get_filename_component(name "${abs}" NAME)
+		get_filename_component(dir "${abs}" DIRECTORY)
+		string(FIND "${dir}/" "${root}/" at)
+		while(at EQUAL 0 AND NOT dir STREQUAL root)
+			if(EXISTS "${dir}/CMakeLists.txt")
+				file(RELATIVE_PATH name "${dir}" "${abs}")
+				break()
+			endif()
+			get_filename_component(dir "${dir}" DIRECTORY)
+			string(FIND "${dir}/" "${root}/" at)
+		endwhile()
+		if(name MATCHES "/")
+			set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS "__FILE_NAME__=\"${name}\"")
+		endif()
+	endforeach()
+endfunction()
+
 # the compile settings of a module's sources (psp2_module's variables in scope)
 macro(psp2_compile_settings name)
 	target_include_directories(${name} PRIVATE
@@ -75,6 +104,7 @@ macro(psp2_compile_settings name)
 		"${PSP2_SRC}/common/include"
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
+	psp2_file_names(${M_SOURCES})
 	if(DEFINED MODULE_SDK_VERSION)
 		# the SDK the original was built with (Sony's sdk_version.h name)
 		target_compile_definitions(${name} PRIVATE SCE_PSP2_SDK_VERSION=${MODULE_SDK_VERSION})
@@ -300,6 +330,7 @@ macro(psp2_sce_layout name)
 		"${PSP2_SRC}/common/include"
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
+	psp2_file_names(${M_SOURCES})
 	if(DEFINED MODULE_SDK_VERSION)
 		target_compile_definitions(${name} PRIVATE SCE_PSP2_SDK_VERSION=${MODULE_SDK_VERSION})
 	endif()
