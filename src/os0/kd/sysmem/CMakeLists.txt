@@ -67,6 +67,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	../../../common/sysclib/bsd_strtoll_kernel.c
 	../../../common/sysclib/ctype.c
 	source/memory_copy.c
+	../../../common/sysclib/copy_forward.S
 	../../../common/sysclib/copy.c
 	source/debug_state.c
 	source/dipsw.c

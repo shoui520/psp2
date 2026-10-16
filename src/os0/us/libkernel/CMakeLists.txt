@@ -63,6 +63,7 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 	source/format_io.c
 	../../../common/sysclib/fill.c
 	../../../common/sysclib/compare.c
+	../../../common/sysclib/copy_forward.S
 	../../../common/sysclib/copy.c
 	../../../common/sysclib/move.c
 	../../../common/sysclib/ctype.c
@@ -142,7 +143,8 @@ set_source_files_properties(source/thread_objects.c source/thread_status.c
 	COMPILE_OPTIONS "-fstack-protector")
 
 # This core is itself exported by LibKernel, rather than reached via a wrapper.
-set_source_files_properties(../../../common/sysclib/copy.c
+set_source_files_properties(../../../common/sysclib/copy_forward.S
+	../../../common/sysclib/copy.c
 	../../../common/sysclib/move.c PROPERTIES
 	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy")
 

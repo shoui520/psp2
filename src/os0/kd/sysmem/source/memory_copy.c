@@ -34,7 +34,7 @@ void *memcpy(void *destination, const void *source, size_t size)
 			destination, source, size, caller);
 		if (ksceKernelGetAssertLevel() > 0)
 			ksceKernelAssertLevel(1, 0, SCE_DBGINFO(47), caller);
-	} else if (size > (dst < src ? src - dst : dst - src)) {
+	} else if ((src >= dst && size > src - dst) || (dst >= src && size > dst - src)) {
 		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(50),
 			"*** error: memcpy(%p,%p,0x%08x) src/dst overlap(lr=%p)\n",
 			destination, source, size, caller);
