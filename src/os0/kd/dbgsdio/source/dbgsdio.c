@@ -508,6 +508,10 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 	}
 	size -= used;
 	out += used;
+	if (!size) {
+		ret = used;
+		goto done;
+	}
 
 	ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_MESSAGE,
 				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
