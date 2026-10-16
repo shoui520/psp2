@@ -246,15 +246,16 @@ int MapRegisters(SceKernelBootParam *param)
 }
 
 /* name unknown: the interconnects' timeouts and region 2 of the LPDDR2
- * firewalls; the Debug Bus (and the TOOL units' LPDDR2 on it) only when it is
- * out of reset */
+ * firewalls, matched on each controller's own register block (0x38 in the
+ * match word's low, non-address bits); the Debug Bus (and the TOOL units'
+ * LPDDR2 on it) only when it is out of reset */
 int SsxInit(void)
 {
 	volatile uint32_t *debugBusReset = &PERVASIVE_RESET->debugBus;
 
 	if (*debugBusReset == 0) {
 		SSX_REGISTER_TARGET(SSX_DEBUG_BUS)->networkControl = 0x400;
-		LPDDR1_FIREWALL->region[2].addrMatch = 0xe5880038;
+		LPDDR1_FIREWALL->region[2].addrMatch = LPDDR2_SUB_REG_BASE | 0x38;
 		LPDDR1_FIREWALL->region[2].reqInfoPermission = 1;
 	}
 	SSX_REGISTER_TARGET(SSX_IFTU_XBAR)->networkControl = 0;
@@ -262,7 +263,7 @@ int SsxInit(void)
 	SSX_REGISTER_TARGET(SSX_CENTER_XBAR)->networkControl = 0;
 	SSX_REGISTER_TARGET(SSX_VIDEO_XBAR)->networkControl = 0;
 	SSX_REGISTER_TARGET(SSX_VIP_XBAR)->networkControl = 0;
-	LPDDR0_FIREWALL->region[2].addrMatch = 0xe6000038;
+	LPDDR0_FIREWALL->region[2].addrMatch = LPDDR2_MAIN_REG_BASE | 0x38;
 	LPDDR0_FIREWALL->region[2].reqInfoPermission = 1;
 	/* read back: the write has reached the firewall */
 	(void)LPDDR0_FIREWALL->region[2].reqInfoPermission;
