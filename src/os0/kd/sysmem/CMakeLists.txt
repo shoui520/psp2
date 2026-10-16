@@ -116,7 +116,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	../../../common/sysclib/fill.c
 	../../../common/sysclib/compare.c
 	source/memory_set.c
-	../../../common/sysclib/move.c
+	../../../common/sysclib/move.S
 	source/memory_move.c
 	source/strlcat_chk.c
 	source/strlcpy_chk.c

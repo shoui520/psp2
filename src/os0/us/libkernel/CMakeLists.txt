@@ -65,7 +65,7 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 	../../../common/sysclib/compare.c
 	../../../common/sysclib/copy_forward.S
 	../../../common/sysclib/copy.c
-	../../../common/sysclib/move.c
+	../../../common/sysclib/move.S
 	../../../common/sysclib/ctype.c
 	../../../common/sysclib/strings.c
 	../../../common/sysclib/bsd_strings.c
@@ -145,7 +145,7 @@ set_source_files_properties(source/thread_objects.c source/thread_status.c
 # This core is itself exported by LibKernel, rather than reached via a wrapper.
 set_source_files_properties(../../../common/sysclib/copy_forward.S
 	../../../common/sysclib/copy.c
-	../../../common/sysclib/move.c PROPERTIES
+	../../../common/sysclib/move.S PROPERTIES
 	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy")
 
 set_source_files_properties(../../../common/sysclib/ctype.c PROPERTIES
