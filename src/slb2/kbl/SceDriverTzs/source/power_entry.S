@@ -36,7 +36,8 @@
 	.equ	EMC_COMMAND_SELF_REFRESH, 0x10
 	.equ	EMC_COMMAND_IN_SELF_REFRESH, 0x20
 
-/* the LPDDR2 interfaces' channel control: a word per channel, then their status */
+/* SceLpddr2Registers, sce/lpddr2_regs.h: the control words, a nibble per
+ * channel, then their status */
 	.equ	LPDDR2_MAIN_BASE,	0xe6000000
 	.equ	LPDDR2_SUB_BASE,	0xe5880000
 	.equ	LPDDR2_CHANNEL,		0x8000
