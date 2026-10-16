@@ -1461,8 +1461,9 @@ int ohciInit(UsbdBus *bus)
 	memset(ohci, 0, sizeof(*ohci));
 	ohci->bus = index;
 	ohci->hcd = &bus->ohci;
-	ohci->count = s_ohciDescriptorCount[index];
-	ohci->freeCount = ohci->count;
+	ohci->count.ed = ohci->freeCount.ed = s_ohciDescriptorCount[index].ed;
+	ohci->count.td = ohci->freeCount.td = s_ohciDescriptorCount[index].td;
+	ohci->count.itd = ohci->freeCount.itd = s_ohciDescriptorCount[index].itd;
 	s_ohci[index] = ohci;
 	ohci->lock = 0;
 
