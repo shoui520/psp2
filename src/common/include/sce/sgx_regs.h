@@ -8,15 +8,11 @@
  */
 #pragma once
 
-/* SceSonyRegbus, the GPU control region the SGX block sits in (secure side) */
-#define SONY_REGBUS_BASE		0xe8000000
-#define SONY_REGBUS_SIZE		0x1000000
+/* SceSonyRegbus (sce/grab_regs.h), the GPU control region the SGX block
+ * sits in */
+#include "sce/grab_regs.h"
 
-/* its first words: the access mode of each part, set by monitor call 0x107
- * (two 2-bit fields per word, both written with the same mode) */
-typedef struct SceSonyRegbusRegisters {
-	volatile unsigned int accessMode[5];
-} SceSonyRegbusRegisters;
+#define SONY_REGBUS_SIZE		0x1000000
 
 #define SGX_REG_BASE			0xe8400000
 #define SGX_REG_SIZE			0x20000

@@ -55,7 +55,9 @@ _Static_assert(offsetof(SceGrabRegisters, portConfig) == 0x600, "GRAB port confi
 _Static_assert(sizeof(SceGrabRegisters) == GRAB_PAGE_SIZE, "GRAB register page");
 
 typedef struct SceSonyRegbusRegisters {
-	volatile uint32_t acl[5];		/* bits 0-3: access control (wiki) */
+	/* the access mode of each part, set by monitor call 0x107: two
+	 * 2-bit fields per word, both written with the same mode */
+	volatile uint32_t accessMode[5];
 	uint32_t reserved0[59];
 	volatile uint32_t errorControl;		/* 0x100 */
 	uint32_t reserved1;

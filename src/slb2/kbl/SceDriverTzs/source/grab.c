@@ -231,7 +231,7 @@ static int GrabCompatMonitorCall(int command, int param)
 		GrabStopPorts(GRAB_PORT_COMPAT);
 		for (n = 0; n < GRAB_CMP_MAP_COUNT; n++)
 			s_grab.grab->cmpMap[n] = 0;
-		s_grab.regbus->acl[1] = 0;
+		s_grab.regbus->accessMode[1] = 0;
 		ret = AllegrexPowerOff();
 		GrabRestartPorts(GRAB_PORT_COMPAT);
 	}

@@ -645,7 +645,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	__asm__ volatile("dmb sy" : : : "memory");
 	CompatRamPowerOn();
 	SonyRegbusPowerOn();
-	SONY_REGBUS->acl[4] = 10;
+	SONY_REGBUS->accessMode[4] = 10;
 	__asm__ volatile("dmb sy" : : : "memory");
 	if ((s_bootParam.current->kermitRevision & 0x1fff0) == 0x30)
 		PERVASIVE_MISC->es3Config |= 8;
