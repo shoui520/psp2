@@ -611,7 +611,7 @@ int SceSysrootForKernel_ksceSysrootIsSafeMode(void)
 	if (wakeupFactor != 0x0b) {
 		if (wakeupFactor != 4)
 			return wakeupFactor == 0x1f || wakeupFactor - 0x18 <= 1;
-		if (!kbl->resume_context_addr)
+		if (!kbl->suspendinfo_adr)
 			return 0;
 	}
 	releasedControls = ~kbl->hold_ctrl;

@@ -199,7 +199,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 			memset(&info, 0, sizeof(info));
 			kblParam = param->kblParam;
 			info.size = sizeof(info);
-			suspendInfo = kblParam->resume_context_addr;
+			suspendInfo = kblParam->suspendinfo_adr;
 			info.wakeupFactor = kblParam->wakeup_factor;
 			info.sleepFactor = kblParam->poweroff_factor;
 			info.usbInfo = kblParam->usb_info;

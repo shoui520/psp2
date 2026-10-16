@@ -344,7 +344,7 @@ int IsSafeModeBoot(void)
 	if (factor == 0xb)
 		goto hold;
 	if (factor == 4) {
-		if (s_kblParam.resume_context_addr == 0)
+		if (s_kblParam.suspendinfo_adr == 0)
 			return 0;
 		goto hold;
 	}

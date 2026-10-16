@@ -53,7 +53,7 @@ typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	uint32_t wakeup_factor;
 	uint32_t usb_info;
 	uint32_t hold_ctrl;
-	uint32_t resume_context_addr;
+	uint32_t suspendinfo_adr;
 	uint32_t hardware_info;
 	uint32_t boot_type_indicator_2;
 	uint32_t reserved4;
