@@ -49,7 +49,35 @@ _Static_assert(offsetof(SceSsxFirewallRegisters, region[2].reqInfoPermission) ==
 #define SSX_DEBUG_BUS		5
 #define SSX_DMAC_XBAR		6
 
-#define SSX_REGISTER_TARGET_BASE(xbar)	(0xec070000 + (xbar) * 0x100000)
+/* each crossbar's 1 MiB window */
+#define SSX_WINDOW_SIZE			0x100000
+#define SSX_XBAR_BASE(xbar)		(0xec000000 + (xbar) * SSX_WINDOW_SIZE)
+
+#define SSX_REGISTER_TARGET_BASE(xbar)	(SSX_XBAR_BASE(xbar) + 0x70000)
+
+/*
+ * The buses behind the crossbars, each with its own 1 MiB window (henkaku
+ * wiki, Physical Memory): 0xed000000 and up, then 0xee000000 and up.
+ */
+#define SSX_IO_SLAVE_BUS		0x00
+#define SSX_IO_MASTER_BUS		0x01
+#define SSX_PERVASIVE_BUS		0x02
+#define SSX_MISC_IO_BUS			0x03
+#define SSX_NORTH_IO_MASTER_BUS		0x04
+#define SSX_AUDIO_BUS			0x05
+#define SSX_NORTH_IO_SLAVE_BUS		0x06
+#define SSX_SRC_BUS			0x07
+#define SSX_GPU_REGISTER_BUS		0x08
+#define SSX_IFTU_REGISTER_BUS		0x09
+#define SSX_CAMERA_SLAVE_BUS		0x10
+#define SSX_CAMERA_MASTER_BUS		0x11
+#define SSX_USB_SLAVE_BUS		0x12
+#define SSX_USB_MASTER_BUS		0x13
+#define SSX_SUBLCD_SLAVE_BUS		0x14
+#define SSX_SUBLCD_MASTER_BUS		0x15
+#define SSX_CAMERA_REGISTER_BUS		0x16
+
+#define SSX_BUS_BASE(bus)		(0xed000000 + (bus) * SSX_WINDOW_SIZE)
 
 typedef struct SceSsxRegisterTarget {
 	volatile uint64_t component;

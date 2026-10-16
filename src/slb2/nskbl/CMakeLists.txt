@@ -1,13 +1,14 @@
 # NSKBL, the non-secure kernel boot loader: segment 3 of kernel_boot_loader.self
 # (ARZL-compressed there), a flat ARM image that runs at 0x51000000.
 # Sony built it from os0 sources (SYSMEM_NSKBL in SceSysmem's); the reset vector
-# and exception entries are the original's, the rest of boot.c is stubs.
+# and exception entries are the original's; boot.c is SKBL's (BOOT_NSKBL), whose
+# exception handlers NSKBL shares, with boot() still a stub.
 set(sysmem_source ../../os0/kd/sysmem/source)
 set(sdif_source ../../os0/kd/sdif/source)
 set(intrmgr_source ../../os0/kd/intrmgr/source)
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	source/reset.S
-	source/boot.c
+	../skbl/source/boot.c
 	${intrmgr_source}/intrmgr.c
 	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
@@ -27,3 +28,4 @@ set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
+set_source_files_properties(../skbl/source/boot.c PROPERTIES COMPILE_DEFINITIONS BOOT_NSKBL)

@@ -5,8 +5,10 @@
  * tables and boot parameters, then every CPU turns the MMU and caches on and
  * enters sceKblMain (boot.c in Sony's debug records).
  *
- * The rest of SKBL (memcpy_chk.c, memory_test.c, the kernel library it
- * links) is not written yet.
+ * NSKBL is built from this file too (BOOT_NSKBL): Sony's NSKBL has the same
+ * exception handlers (the same debug records) and its own boot(), not
+ * written yet. The rest of SKBL (memcpy_chk.c, memory_test.c, the kernel
+ * library it links) is not written yet either.
  */
 
 #include "skeleton.h"
@@ -23,13 +25,23 @@
 #include <sce/ssx_firewall_regs.h>
 #include <sce/timer_regs.h>
 
+/* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */
+#ifdef BOOT_NSKBL
+#define BOOT_GPO(code)		(0xa0 | (code))
+#else
+#define BOOT_GPO(code)		(0x80 | (code))
+#endif
+
+int sceKernelSetGPO(SceUInt32 gpo);
+
+#ifndef BOOT_NSKBL
+
 #define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define SSX_REGISTER_TARGET(xbar) ((SceSsxRegisterTarget *)SSX_REGISTER_TARGET_BASE(xbar))
 #define LPDDR0_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR0_BASE)
 #define LPDDR1_FIREWALL		((SceSsxFirewallRegisters *)SSX_FIREWALL_LPDDR1_BASE)
 
 /* the other boot loader parts boot() calls */
-int sceKernelSetGPO(SceUInt32 gpo);
 int LedModuleStart(void);
 int SerialInit(int uart0Enabled);
 int SerialDebugPutchar(void *args, int c);
@@ -192,33 +204,33 @@ int KblMemoryTest(void)
 __attribute__((noinline))
 int MapRegisterSection(SceKernelBootParam *param, uintptr_t pa, SceSize size);
 
-/* name unknown: the register blocks the kernel reaches by section */
+/* name unknown: the interconnects' windows, mapped by section */
 int MapRegisters(SceKernelBootParam *param)
 {
-	MapRegisterSection(param, 0xec000000, 0x100000);
-	MapRegisterSection(param, 0xec100000, 0x100000);
-	MapRegisterSection(param, 0xec200000, 0x100000);
-	MapRegisterSection(param, 0xec300000, 0x100000);
-	MapRegisterSection(param, 0xec400000, 0x100000);
-	MapRegisterSection(param, 0xec500000, 0x100000);
-	MapRegisterSection(param, 0xec600000, 0x100000);
-	MapRegisterSection(param, 0xed000000, 0x100000);
-	MapRegisterSection(param, 0xed100000, 0x100000);
-	MapRegisterSection(param, 0xed200000, 0x100000);
-	MapRegisterSection(param, 0xed300000, 0x100000);
-	MapRegisterSection(param, 0xed400000, 0x100000);
-	MapRegisterSection(param, 0xed500000, 0x100000);
-	MapRegisterSection(param, 0xed600000, 0x100000);
-	MapRegisterSection(param, 0xed700000, 0x100000);
-	MapRegisterSection(param, 0xed800000, 0x100000);
-	MapRegisterSection(param, 0xed900000, 0x100000);
-	MapRegisterSection(param, 0xee000000, 0x100000);
-	MapRegisterSection(param, 0xee100000, 0x100000);
-	MapRegisterSection(param, 0xee200000, 0x100000);
-	MapRegisterSection(param, 0xee300000, 0x100000);
-	MapRegisterSection(param, 0xee400000, 0x100000);
-	MapRegisterSection(param, 0xee500000, 0x100000);
-	MapRegisterSection(param, 0xee600000, 0x100000);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_MAIN_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_CENTER_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_VIDEO_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_IFTU_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_VIP_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_DEBUG_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_XBAR_BASE(SSX_DMAC_XBAR), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_IO_SLAVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_IO_MASTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_PERVASIVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_MISC_IO_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_NORTH_IO_MASTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_AUDIO_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_NORTH_IO_SLAVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_SRC_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_GPU_REGISTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_IFTU_REGISTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_CAMERA_SLAVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_CAMERA_MASTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_USB_SLAVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_USB_MASTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_SUBLCD_SLAVE_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_SUBLCD_MASTER_BUS), SSX_WINDOW_SIZE);
+	MapRegisterSection(param, SSX_BUS_BASE(SSX_CAMERA_REGISTER_BUS), SSX_WINDOW_SIZE);
 	return 0;
 }
 
@@ -973,6 +985,12 @@ void boot(void)
 		;
 }
 
+#else
+
+STUB(boot)
+
+#endif /* BOOT_NSKBL */
+
 /*
  * The boot exception handlers: each reports itself on the GPO LEDs, prints
  * what the debug firmware can tell about the exception and stops. The
@@ -981,7 +999,7 @@ void boot(void)
  */
 void boot_und_handler(uint32_t lr)
 {
-	sceKernelSetGPO(0x8a);
+	sceKernelSetGPO(BOOT_GPO(0xa));
 	SCE_DBG_PRINTF(0xb, 2252, "(***** Undefined Instruction Handler *****\n");
 	SCE_DBG_PRINTF(0xb, 2253, "LR   0x%08x\n", lr);
 	SCE_DBG_PRINTF(0, 2254, "STOPPED\n");
@@ -993,7 +1011,7 @@ void boot_svc_handler(uint32_t lr)
 {
 	uint32_t cpsr, spsr;
 
-	sceKernelSetGPO(0x8b);
+	sceKernelSetGPO(BOOT_GPO(0xb));
 	SCE_DBG_PRINTF(0xb, 2265, "(***** Susperviser Call Handler *****\n");
 	SCE_DBG_PRINTF(0xb, 2266, "LR   0x%08x\n", lr);
 	cpsr = readCpsr();
@@ -1010,7 +1028,7 @@ void boot_prefetch_abort_handler(uint32_t lr)
 {
 	uint32_t ifsr, dfar, ifar;
 
-	sceKernelSetGPO(0x8c);
+	sceKernelSetGPO(BOOT_GPO(0xc));
 	SCE_DBG_PRINTF(0xb, 2285, "(***** Prefetch Abort Handler *****\n");
 	SCE_DBG_PRINTF(0xb, 2286, "LR   0x%08x\n", lr);
 	ifsr = readIfsr();
@@ -1028,7 +1046,7 @@ void boot_data_abort_handler(uint32_t lr)
 {
 	uint32_t dfsr;
 
-	sceKernelSetGPO(0x8d);
+	sceKernelSetGPO(BOOT_GPO(0xd));
 	SCE_DBG_PRINTF(0xb, 2304, "***** Data Abort Handler *****\n");
 	SCE_DBG_PRINTF(0xb, 2305, "LR   0x%08x\n", lr);
 	SCE_DBG_PRINTF(0xb, 2306, "()\n");
@@ -1044,7 +1062,7 @@ void boot_data_abort_handler(uint32_t lr)
 
 void boot_irq_handler(void)
 {
-	sceKernelSetGPO(0x8e);
+	sceKernelSetGPO(BOOT_GPO(0xe));
 	SCE_DBG_PRINTF(0xb, 2322, "()\n");
 	SCE_DBG_PRINTF(0, 2323, "STOPPED\n");
 	for (;;)
@@ -1053,12 +1071,14 @@ void boot_irq_handler(void)
 
 void boot_fiq_handler(void)
 {
-	sceKernelSetGPO(0x8f);
+	sceKernelSetGPO(BOOT_GPO(0xf));
 	SCE_DBG_PRINTF(0xb, 2331, "()\n");
 	SCE_DBG_PRINTF(0, 2332, "STOPPED\n");
 	for (;;)
 		;
 }
+
+#ifndef BOOT_NSKBL
 
 /* the monitor's SMC entry: reports the call and returns 0 */
 int monitor_call_handler(uint32_t code)
@@ -1074,3 +1094,5 @@ int monitor_call_handler(uint32_t code)
 	SCE_DBG_PRINTF(0xb, 2351, "SCR => 0x%08x\n", readScr());
 	return 0;
 }
+
+#endif
