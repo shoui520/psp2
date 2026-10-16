@@ -1,6 +1,4 @@
 #pragma once
-#include <stdint.h>
-#include <stddef.h>
 
 /*
  * The SonicsSX interconnect's protection mechanism (firewall) in front of a
@@ -11,6 +9,15 @@
 #define SSX_FIREWALL_SPAD32K_BASE	0xec060000	/* ScePowerScratchPad32KiB */
 #define SSX_FIREWALL_LPDDR0_BASE	0xec060400	/* the main LPDDR2 */
 #define SSX_FIREWALL_LPDDR1_BASE	0xec560800	/* the TOOL units' LPDDR2, on the Debug Bus */
+
+/* for assembly: region n's registers (SceSsxFirewallRegisters.region[n]) */
+#define SSX_FIREWALL_REGION(n)			(0x40 + (n) * 0x20)
+#define SSX_FIREWALL_REGION_ADDR_MATCH		0x00
+#define SSX_FIREWALL_REGION_REQ_INFO_PERMISSION	0x08
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct SceSsxFirewallRegion {
 	volatile uint64_t addrMatch;		/* regions 1 and up; region 0 is the default */
@@ -35,6 +42,8 @@ _Static_assert(offsetof(SceSsxFirewallRegisters, region[1].addrMatch) == 0x60,
 	"firewall region 1");
 _Static_assert(offsetof(SceSsxFirewallRegisters, region[2].reqInfoPermission) == 0x88,
 	"firewall region 2");
+_Static_assert(offsetof(SceSsxFirewallRegisters, region[3].reqInfoPermission) ==
+	SSX_FIREWALL_REGION(3) + SSX_FIREWALL_REGION_REQ_INFO_PERMISSION, "firewall region offsets");
 
 /*
  * Each interconnect's register target: the configuration of the interconnect
@@ -91,3 +100,5 @@ typedef struct SceSsxRegisterTarget {
 _Static_assert(offsetof(SceSsxRegisterTarget, network) == 0x10, "register target network");
 _Static_assert(offsetof(SceSsxRegisterTarget, networkControl) == 0x78,
 	"register target network control");
+
+#endif /* __ASSEMBLER__ */

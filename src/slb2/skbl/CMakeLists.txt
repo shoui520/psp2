@@ -2,7 +2,8 @@
 # kernel_boot_loader.self (the reset vector page at 0, the code at 0x40020000 with the
 # TrustZone modules it loads, the data). It starts the TrustZone kernel (src/slb2/kbl/),
 # then hands over to NSKBL (src/slb2/nskbl/) in Non-secure state.
-# The reset vector, reset handler and secure monitor (monitor.S) are the original's, serial.c is os0 SceSysmem's
+# The reset vector, reset handler, secure monitor (monitor.S) and the code copied to
+# Compat SRAM (compat_sram.S) are the original's; serial.c is os0 SceSysmem's
 # (SYSMEM_SKBL), intrmgr.c, usleep.c and dmacmgr_tzs.c the TrustZone SceKernelIntrMgr's
 # (INTRMGR_SKBL), led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL), memset and memcpy sysmem's
 # memory_set.c and memory_copy.c with sysclib's assembly cores; the other C functions are
@@ -28,6 +29,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	../../common/sysclib/fill_core.S
 	../../common/kbl/pervasive_init_kbl.c
 	../../common/kbl/pervasive_kbl.c
+	source/compat_sram.S
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")
