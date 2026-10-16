@@ -249,6 +249,7 @@ static struct SysrootState *volatile s_sysrootState;
 #define SYSROOT_MAGIC1	0xba97f5a1
 #define SYSROOT_MAGIC2	0xa008b0c3
 
+#if FW_DEBUG
 int AssertSysroot(const struct SysrootState *pSysroot)
 {
 	if (pSysroot->magic != SYSROOT_MAGIC1) {
@@ -261,6 +262,7 @@ int AssertSysroot(const struct SysrootState *pSysroot)
 	}
 	return 0;
 }
+#endif /* FW_DEBUG */
 #endif
 
 void *sceKernelSysrootAlloc(SceSize size)
@@ -300,6 +302,7 @@ void sceKernelSysrootSetStatus(uint32_t status)
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->bootHeapLock, flags);
 }
 
+#if !SYSMEM_NSKBL
 int SceSysrootForKernel_BE1EF51C(const SysrootAcmgrOps *ops)
 {
 	s_sysrootState->acmgrOps = ops;
@@ -435,8 +438,10 @@ int SceSysrootForDriver_F804F761(void)
 {
 	return 0;
 }
+#endif
 
 __attribute__((noinline))
+#if !SYSMEM_NSKBL
 void InvokeInitCallback(uint32_t phase, uint32_t kind)
 {
 	struct SysrootState *state;
@@ -494,6 +499,7 @@ void SceSysrootForDriver_7C2C10E2(uint32_t phase, uint32_t kind)
 #endif
 	InvokeInitCallback(phase, kind);
 }
+#endif
 
 int sceKernelRegisterInitCallback(SysrootInitCallback callback, uint32_t phase,
 				  void *argument, int *result)
@@ -533,6 +539,7 @@ unlock:
 	return status;
 }
 
+#if !SYSMEM_NSKBL
 int ksceSysrootGetSelfInfo(uint32_t index, struct SysrootSelfInfo *info)
 {
 	const struct SysrootSelfImage *images;
@@ -717,12 +724,14 @@ void *ksceKernelSysrootGetModulePrivate(unsigned int index)
 {
 	return s_sysrootState->modulePrivate[index];
 }
+#endif
 
 void sceKernelSysrootSetModulePrivate(unsigned int index, void *data)
 {
 	s_sysrootState->modulePrivate[index] = data;
 }
 
+#if !SYSMEM_NSKBL
 void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *time)
 {
 	s_sysrootState->sharedTime = time;
@@ -744,7 +753,9 @@ int sceKernelCheckModelCapability(unsigned int capability)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 }
+#endif
 
+#if !SYSMEM_NSKBL
 /* PLACEHOLDER: unnamed capability/attribute bits in the boot-process template. */
 static const SceSelfAuthInfo s_fallbackSelfAuthInfo = {
 	.program_authority_id = UINT64_C(0x2808000000000001),
@@ -758,9 +769,11 @@ static const SceSelfAuthInfo s_fallbackSelfAuthInfo = {
 		[28] = 0xff, [29] = 0xff, [30] = 0xff, [31] = 0xff,
 	},
 };
+#endif
 
 extern void *memcpy(void *destination, const void *source, size_t size);
 
+#if !SYSMEM_NSKBL
 int SceSysrootForKernel_733C243E(const SysrootProcessmgrOps *ops)
 {
 	if (!ops || ops->size != sizeof(*ops))
@@ -860,6 +873,7 @@ uint32_t SceSysrootForKernel_41636522(void)
 {
 	return s_sysrootState->sharedTime->countLo;
 }
+#endif
 
 _Static_assert(offsetof(struct SysrootState, sysrootUid) == 0x308,
 	       "Sysroot UID offset");
@@ -868,6 +882,7 @@ _Static_assert(offsetof(struct SysrootState, debugNotifiers) == 0x3fc,
 _Static_assert(offsetof(struct SysrootState, sendTargetStatus) == 0x408,
 	       "Sysroot target status callback offset");
 
+#if !SYSMEM_NSKBL
 /* the debugger's event notifiers: read by the modules that raise the events */
 uint32_t SceSysrootForDriver_483EF108(void)
 {
@@ -1096,6 +1111,7 @@ SceKblParam *ksceKernelSysrootGetKblParam(void)
 {
 	return s_sysrootState->kblParam;
 }
+#endif
 
 /* PLACEHOLDER: meanings and callback signatures of raw Sysroot state words. */
 _Static_assert(offsetof(struct SysrootState, status) == 0x28,
@@ -1195,6 +1211,7 @@ _Static_assert(offsetof(struct SysrootState, btOps) == 0x3f4,
 _Static_assert(offsetof(struct SysrootState, hidOps) == 0x3f8,
 	       "Sysroot word3f8 offset");
 
+#if !SYSMEM_NSKBL
 void sceKernelSysrootSetVbaseResetVector(uint32_t value)
 {
 	s_sysrootState->vbaseResetVector = value;
@@ -1309,12 +1326,14 @@ void SceSysrootForKernel_CC119171(SysrootPfsMgrGetMountInfo callback)
 {
 	s_sysrootState->pfsMgrGetMountInfo = callback;
 }
+#endif
 
 uint32_t ksceKernelSysrootGetVbaseResetVector(void)
 {
 	return s_sysrootState->vbaseResetVector;
 }
 
+#if !SYSMEM_NSKBL
 void SceSysrootForDriver_D02281A8(void)
 {
 	s_sysrootState->sdbgpNetDetach = 0;
@@ -1339,12 +1358,14 @@ void SceSysrootForDriver_ECADF8C3(SysrootNetHook callback)
 {
 	s_sysrootState->dbgpNetAttach = callback;
 }
+#endif
 
 void sceKernelSysrootSetSharedMemory(uint32_t value)
 {
 	s_sysrootState->sharedMemory = value;
 }
 
+#if !SYSMEM_NSKBL
 uint32_t SceSysrootForKernel_FFD6E24D(void)
 {
 	return s_sysrootState->pervasiveDword;
@@ -1532,6 +1553,7 @@ void ksceSysrootUtMgrSetNpTestFlag(int (*callback)(void))
 {
 	s_sysrootState->utMgrHasNpTestFlag = callback;
 }
+#endif
 
 _Static_assert(offsetof(SceKblParam, boot_flags) == 0x30,
 	       "KBL boot_flags offset");
@@ -1544,6 +1566,7 @@ _Static_assert(offsetof(SceKblParam, wakeup_factor) == 0xc4,
 _Static_assert(offsetof(SceKblParam, hardware_info) == 0xd4,
 	       "KBL hardware_info offset");
 
+#if !SYSMEM_NSKBL
 uint32_t ksceSysrootGetWakeupFactor(void)
 {
 	const SceKblParam *kbl = s_sysrootState->kblParam;
@@ -1730,9 +1753,11 @@ volatile uint32_t *SceSysrootForDriver_6655F48C(unsigned int bank, unsigned int 
 
 	return getRegister ? getRegister(bank, index) : NULL;
 }
+#endif
 
 extern uint32_t ksceKernelAtomicGetAndAdd32(uint32_t *address, uint32_t value);
 
+#if !SYSMEM_NSKBL
 void sceKernelSysrootEnableAutoClockDown(void)
 {
 	uint32_t previous = ksceKernelAtomicGetAndAdd32(
@@ -1859,11 +1884,13 @@ int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key,
 	return ops ? ops->getLocalStorageAddrForPid(pid, key, addr, create) :
 		(int)SCE_KERNEL_ERROR_ERROR;
 }
+#endif
 
 extern void *ksceKernelAllocHeapMemoryWithOpt(SceUID heap, SceSize size,
 					  void *opt, const void *caller);
 extern int ksceKernelFree(void *ptr);
 
+#if !SYSMEM_NSKBL
 void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, void *opt)
 {
 	const SysrootProcessmgrRuntimeOps *ops;
@@ -2029,6 +2056,7 @@ int SceSysrootForDriver_DC651D22(void *buffer, SceSize size, SceUInt32 *count)
 
 	return ops ? ops->dumpLists(buffer, size, count) : (int)SCE_ERROR_ERRNO_ENOTSUP;
 }
+#endif
 
 /*
  * Calls into the services other modules registered. Most return
@@ -2036,6 +2064,7 @@ int SceSysrootForDriver_DC651D22(void *buffer, SceSize size, SceUInt32 *count)
  * original has no fallback value it hands back its first argument unchanged.
  */
 
+#if !SYSMEM_NSKBL
 void SceSysrootForKernel_0DF574A9(void)
 {
 	void (*callback)(void) = s_sysrootState->debugHook;
@@ -2515,6 +2544,7 @@ int SceSysrootForDriver_F404026C(void)
 		return 0;
 	return callback();
 }
+#endif
 
 /* the result type of the API call in progress, for the debugger */
 #define SYSROOT_API_TYPE_INT32		0
@@ -2533,6 +2563,7 @@ int SceSysrootForDriver_F404026C(void)
 		SCE_DBG_ASSERT_FAIL(_line);				\
 } while (0)
 
+#if !SYSMEM_NSKBL
 void sceKernelApiDeclareTypeInt32(void)
 {
 	SYSROOT_API_DECLARE(SYSROOT_API_TYPE_INT32, 2818);
@@ -2578,10 +2609,12 @@ int sceKernelIsPSVitaTV(void)
 {
 	return s_sysrootState->model == 2;
 }
+#endif
 
 /* bootFlags: set when the system resumed rather than booted */
 #define SYSROOT_BOOT_FLAG_WARM		0x10
 
+#if !SYSMEM_NSKBL
 int ksceKernelIsColdBoot(void)
 {
 	return !(s_sysrootState->bootFlags & SYSROOT_BOOT_FLAG_WARM);
@@ -2608,6 +2641,7 @@ int sceKernelSysrootThreadMgrStartAfterProcess(void)
 		SCE_PANIC(546);
 	return ret;
 }
+#endif
 
 /* the boot-time lock that orders the cores */
 void sceKernelSysrootCorelockLock(SceUInt32 core)
@@ -2620,6 +2654,7 @@ void sceKernelSysrootCorelockUnlock(void)
 	ksceKernelCorelockUnlock(&s_sysrootState->corelock);
 }
 
+#if !SYSMEM_NSKBL
 /* name unknown: the names of the boot memblocks (sysroot.c); 4 is also the default */
 const char *SysrootGetMemBlockName(unsigned int index)
 {
@@ -2645,6 +2680,7 @@ const char *SysrootGetMemBlockName(unsigned int index)
 		return s_sysrootState->memBlockNames[4];
 	}
 }
+#endif
 
 #if SYSMEM_NSKBL
 extern int ksceKernelCpuId(void);
@@ -2676,7 +2712,9 @@ int SetupCore0(SceKernelBootParam *param)
 		state->magicEnd = SYSROOT_MAGIC2;
 		state->bootArgs = param;
 		state->bootHeapLock = 0;
+#if FW_DEBUG
 		AssertSysroot(state);
+#endif
 
 		state = s_sysrootState;
 		state->perCpuCount = SYSROOT_CPU_COUNT;
@@ -2781,7 +2819,9 @@ int SetupCore0(SceKernelBootParam *param)
 		state->factorySystemSwVersion = param->socRevision;
 		state->pervasiveDword = param->socCacheStatus;
 		state->kermitRevision = param->kermitRevision;
+#if FW_DEBUG
 		AssertSysroot(state);
+#endif
 	}
 	ksceKernelCorelockUnlock(param->corelock);
 	return 0;
