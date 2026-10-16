@@ -38,7 +38,9 @@ typedef struct SceGrabRegisters {
 	volatile uint32_t writeStop;
 	volatile uint32_t readBusy;
 	volatile uint32_t writeBusy;
-	uint32_t reserved4[252];
+	/* 0x210 Non-secure page: set to 1 by SKBL in development mode (dipsw 159) */
+	volatile uint32_t developmentMode;
+	uint32_t reserved4[251];
 	volatile uint32_t portConfig[GRAB_PORT_CONFIG_COUNT][64];	/* 0x600 */
 	uint32_t reserved5[256];
 } SceGrabRegisters;
@@ -48,6 +50,7 @@ _Static_assert(offsetof(SceGrabRegisters, readError) == 0x20, "GRAB read error l
 _Static_assert(offsetof(SceGrabRegisters, cmpMap) == 0x120, "GRAB compat map");
 _Static_assert(offsetof(SceGrabRegisters, readStop) == 0x200, "GRAB port stop");
 _Static_assert(offsetof(SceGrabRegisters, writeBusy) == 0x20c, "GRAB port busy");
+_Static_assert(offsetof(SceGrabRegisters, developmentMode) == 0x210, "GRAB development mode");
 _Static_assert(offsetof(SceGrabRegisters, portConfig) == 0x600, "GRAB port config");
 _Static_assert(sizeof(SceGrabRegisters) == GRAB_PAGE_SIZE, "GRAB register page");
 

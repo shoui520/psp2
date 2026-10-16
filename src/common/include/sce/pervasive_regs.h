@@ -186,7 +186,10 @@ typedef struct ScePervasiveMiscRegisters {
 	volatile uint32_t spareEnable;			/* bit 0; nothing calls its exports */
 	volatile uint32_t reserved8[4];
 	volatile uint32_t uart5PullDownRx;		/* bit 0 RX, bit 1 RFR */
-	volatile uint32_t reserved9[80];
+	volatile uint32_t reserved9[30];
+	/* bit 3: set by SKBL's boot() on Kermit 1.0 ES3.0 (wiki: only bits 0xffff R/W) */
+	volatile uint32_t es3Config;			/* 0x228 */
+	volatile uint32_t reserved9a[49];
 	/* set while the device is held in reset (SceDriverTzs, the boot loaders) */
 	volatile uint32_t bootDeviceResetHold;		/* 0x2f0 */
 	volatile uint32_t reserved9b;
@@ -203,6 +206,7 @@ _Static_assert(offsetof(ScePervasiveMiscRegisters, gpuIsolation) == 0x34, "misc 
 _Static_assert(offsetof(ScePervasiveMiscRegisters, gpuBusIdleRequest) == 0x54, "misc gpu bus idle");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamIsolation) == 0x3c, "misc compat isolation");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, compatRamBusIdleRequest) == 0x5c, "misc compat bus idle");
+_Static_assert(offsetof(ScePervasiveMiscRegisters, es3Config) == 0x228, "misc ES3 config");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, bootDeviceResetHold) == 0x2f0, "misc boot device hold");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, usbMode) == 0x84, "misc usb mode");
 _Static_assert(offsetof(ScePervasiveMiscRegisters, busIdleStatus) == 0xc0, "misc bus idle status");

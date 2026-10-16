@@ -8,8 +8,9 @@
  * CPU 0 sets up the SCU and saves or restores the boot save area. All CPUs then call
  * boot() in System mode with the MMU still off.
  *
- * Not written yet: the monitor vector table and its entries (the SMC entry calls
- * monitor_call_handler), the TrustZone module archive.
+ * Not written yet: the monitor vector table (monitorVectors, which boot() copies into
+ * the kernel's vector page, with setMonitorStack right after it in Sony's text) and its
+ * entries (the SMC entry calls monitor_call_handler), the TrustZone module archive.
  */
 
 	.syntax	unified
@@ -48,12 +49,22 @@ prefetchAbortVector:	.word	prefetchAbortEntry
 dataAbortVector:	.word	dataAbortEntry
 irqVector:		.word	irqEntry
 fiqVector:		.word	fiqEntry
+/* boot() places the kernel's monitor vectors after this word, 32-byte aligned */
+	.global	vectorsEnd
+vectorsEnd:
 	.word	0xffffffff
 /* the reserved vector shares the reset handler's literal */
 	.set	reservedVector, resetVector
 
-	.space	0x50
-/* PLACEHOLDER: four words of unknown meaning, the same as in NSKBL's vector page */
+	.space	0x40
+/*
+ * The DIP switches boot() turns on for a development kit whose CP has not
+ * written any (henkaku wiki, SKBL): 0x80 0x9F, 0xC0-0xC2 0xC5-0xC9 0xCC 0xD2,
+ * 0xE4 0xFD. NSKBL's vector page has the same words.
+ */
+	.global	bootDefaultDipsw
+bootDefaultDipsw:
+	.word	0, 0, 0, 0
 	.word	0x80000001, 0, 0x000413e7, 0x20000010
 	.space	0x20
 
@@ -370,6 +381,7 @@ fiqEntry:
 	ldm	sp!, {r0-r3, r12, pc}^
 
 /* Monitor mode stack, 0x400 bytes per CPU; returns in System mode */
+	.global	setMonitorStack
 setMonitorStack:
 	mrc	p15, 0, r3, c0, c0, 5		/* MPIDR */
 	and	r3, r3, #15

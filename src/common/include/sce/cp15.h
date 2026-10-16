@@ -40,6 +40,7 @@
 #define readClidr()		CP_READ(p15, 1, c0, c0, 1)
 #define readAidr()		CP_READ(p15, 1, c0, c0, 7)
 #define readCsselr()		CP_READ(p15, 2, c0, c0, 0)
+#define writeCsselr(v)		CP_WRITE(p15, 2, c0, c0, 0, v)
 
 /* CP15 system control */
 #define readSctlr()		CP_READ(p15, 0, c1, c0, 0)
@@ -50,9 +51,11 @@
 #define NSACR_PLE		0x00010000	/* the preload engine is usable */
 #define writeCpacr(v)		CP_WRITE(p15, 0, c1, c0, 2, v)
 #define readTtbr0()		CP_READ(p15, 0, c2, c0, 0)
+#define writeTtbr0(v)		CP_WRITE(p15, 0, c2, c0, 0, v)
 #define readTtbr1()		CP_READ(p15, 0, c2, c0, 1)
 #define writeTtbr1(v)		CP_WRITE(p15, 0, c2, c0, 1, v)
 #define readTtbcr()		CP_READ(p15, 0, c2, c0, 2)
+#define writeTtbcr(v)		CP_WRITE(p15, 0, c2, c0, 2, v)
 #define readDacr()		CP_READ(p15, 0, c3, c0, 0)
 #define writeDacr(v)		CP_WRITE(p15, 0, c3, c0, 0, v)
 #define DACR_ALL_CLIENT		0x55555555	/* every domain checked against the page tables */
@@ -121,10 +124,12 @@
 
 #define readVbar()		CP_READ(p15, 0, c12, c0, 0)
 #define writeVbar(v)		CP_WRITE(p15, 0, c12, c0, 0, v)
+#define writeMvbar(v)		CP_WRITE(p15, 0, c12, c0, 1, v)	/* Secure state only */
 #define readFcseidr()		CP_READ(p15, 0, c13, c0, 0)
 #define readContextId()		CP_READ(p15, 0, c13, c0, 1)
 #define writeContextId(v)	CP_WRITE(p15, 0, c13, c0, 1, v)
 #define readTpidrurw()		CP_READ(p15, 0, c13, c0, 2)
+#define writeTpidrurw(v)	CP_WRITE(p15, 0, c13, c0, 2, v)
 #define readTpidruro()		CP_READ(p15, 0, c13, c0, 3)
 #define writeTpidruro(v)	CP_WRITE(p15, 0, c13, c0, 3, v)
 #define readTpidrprw()		CP_READ(p15, 0, c13, c0, 4)
@@ -138,11 +143,14 @@
 
 /* CP14 ThumbEE */
 #define readTeecr()		CP_READ(p14, 6, c0, c0, 0)
+#define writeTeecr(v)		CP_WRITE(p14, 6, c0, c0, 0, v)
 #define readTeehbr()		CP_READ(p14, 6, c1, c0, 0)
+#define writeTeehbr(v)		CP_WRITE(p14, 6, c1, c0, 0, v)
 
 /* CP14 Jazelle (c3: implementation defined, the v1 array object layout) */
 #define readJidr()		CP_READ(p14, 7, c0, c0, 0)
 #define readJoscr()		CP_READ(p14, 7, c1, c0, 0)
+#define writeJoscr(v)		CP_WRITE(p14, 7, c1, c0, 0, v)
 #define readJmcr()		CP_READ(p14, 7, c2, c0, 0)
 #define writeJmcr(v)		CP_WRITE(p14, 7, c2, c0, 0, v)
 #define readJaolr()		CP_READ(p14, 7, c3, c0, 0)

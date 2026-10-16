@@ -20,7 +20,10 @@ SECTIONS
 		*(.data .data.*)
 	}
 	.bss (NOLOAD) : {
+		_fbss = .;
 		*(.bss .bss.* COMMON)
+		. = ALIGN(4);
+		_end = .;
 	}
 
 	/DISCARD/ : {

@@ -33,7 +33,10 @@ typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	uint8_t reserved1[0xc];
 	uint8_t qa_flags[0x10];
 	uint8_t boot_flags[0x10];
-	SceDipsw dipsw;
+	union {
+		SceDipsw dipsw;
+		uint32_t dipswWords[8];	/* the switches by word, as the boot loaders read them */
+	};
 	SceKernelPARange dram;
 	uint32_t reserved2;
 	uint32_t boot_type_indicator_1;
