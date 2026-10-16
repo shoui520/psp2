@@ -4,8 +4,8 @@
 # then hands over to NSKBL (src/slb2/nskbl/) in Non-secure state.
 # The reset vector and reset handler are the original's, serial.c is os0 SceSysmem's
 # (SYSMEM_SKBL), intrmgr.c, usleep.c and dmacmgr_tzs.c the TrustZone SceKernelIntrMgr's
-# (INTRMGR_SKBL), led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL), memcpy sysmem's
-# memory_copy.c with sysclib's copy_forward.S and move.S; the other C functions are
+# (INTRMGR_SKBL), led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL), memset and memcpy sysmem's
+# memory_set.c and memory_copy.c with sysclib's assembly cores; the other C functions are
 # stubs and the TrustZone module archive is not packed yet.
 set(sysmem_source ../../os0/kd/sysmem/source)
 set(intrmgr_source ../kbl/SceKernelIntrMgr/source)
@@ -19,9 +19,11 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	${sysmem_source}/led.c
 	${sysmem_source}/l2cc.c
 	${sysmem_source}/serial.c
+	${sysmem_source}/memory_set.c
 	${sysmem_source}/memory_copy.c
 	../../common/sysclib/copy_forward.S
 	../../common/sysclib/move.S
+	../../common/sysclib/fill_core.S
 	../../common/kbl/pervasive_init_kbl.c
 	../../common/kbl/pervasive_kbl.c
 )

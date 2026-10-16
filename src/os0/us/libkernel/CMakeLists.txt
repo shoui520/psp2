@@ -61,7 +61,9 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 	source/heap_destroy.c
 	source/heap_inspect.c
 	source/format_io.c
+	../../../common/sysclib/fill_core.S
 	../../../common/sysclib/fill.c
+	../../../common/sysclib/compare_core.S
 	../../../common/sysclib/compare.c
 	../../../common/sysclib/copy_forward.S
 	../../../common/sysclib/copy.c
