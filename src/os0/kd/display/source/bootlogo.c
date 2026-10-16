@@ -19,6 +19,7 @@
 #include "display_imports.h"
 
 #include "boot_logo.h"
+#include <sce/compat_regs.h>
 
 static SceUID bootLogoBlock;
 
@@ -34,8 +35,9 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
-	opt.paddr = 0x1c000000;
-	block = ksceKernelAllocMemBlock("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW, 0x200000, &opt);
+	opt.paddr = COMPAT_SRAM_BASE;
+	block = ksceKernelAllocMemBlock("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW,
+				       COMPAT_SRAM_SIZE, &opt);
 	if (block < 0)
 		return block;
 	bootLogoBlock = block;

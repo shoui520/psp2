@@ -21,6 +21,7 @@
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/lowio/gpio.h>
+#include <sce/compat_regs.h>
 
 int cameraInitializeConfig(void);
 int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo);
@@ -1502,7 +1503,7 @@ int cameraDriverThread(SceSize args, void *argp)
 	memset(&sramOption, 0, sizeof(sramOption));
 	sramOption.size = sizeof(sramOption);
 	sramOption.attr = 2;
-	sramOption.paddr = 0x1c000000;
+	sramOption.paddr = COMPAT_SRAM_BASE;
 	cameraSramMemBlockId = ksceKernelAllocMemBlock("SceCameraSRAM", 0x20108006,
 							 1843200, &sramOption);
 	if (cameraSramMemBlockId < 0 ||

@@ -11,6 +11,7 @@
 #include "driver_tzs.h"
 #include <sce/cp15.h>
 #include <sce/ssx_firewall_regs.h>
+#include <sce/spad_regs.h>
 
 #define SYSCON_ERROR_INVALID_MODE	((int)0x80250000)
 
@@ -25,7 +26,6 @@
 #define POWER_MODE_ARGUMENT_RESERVED	0x9ffe0421	/* bits the argument may not set */
 
 /* the scratchpad: the copied entry, then the syscon packet */
-#define SPAD32K_BASE			0x1f000000
 #define SPAD32K_ENTRY_SIZE		0x200
 #define SPAD32K_SECTION			0x1f010402	/* section, AP[0], shareable */
 #define SPAD32K_PACKET			((uint8_t *)(SPAD32K_BASE + 0x400))

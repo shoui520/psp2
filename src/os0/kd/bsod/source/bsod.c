@@ -1,5 +1,6 @@
 /* SceKernelBlueScreenOfDeath startup and public compatibility entry. */
 #include "bsod_internal.h"
+#include <sce/compat_regs.h>
 
 BsodDisplay s_bsodDisplay;
 int s_bsodQafEnabled;
@@ -27,9 +28,9 @@ int module_start(unsigned arglen, void *argp)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 2;
-	options.paddr = 0x1c000000;
+	options.paddr = COMPAT_SRAM_BASE;
 	uid = ksceKernelAllocMemBlock("SceKernelBsodSram", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
-				    0x200000, &options);
+				    COMPAT_SRAM_SIZE, &options);
 	if (uid < 0) {
 #if FW_DEBUG
 		if (ksceKernelGetAssertLevel() > 0)
@@ -40,7 +41,7 @@ int module_start(unsigned arglen, void *argp)
 	}
 	ksceKernelGetMemBlockBase(uid, &base);
 	s_bsodDisplay.pixels = base;
-	s_bsodDisplay.current.physical = 0x1c000000;
+	s_bsodDisplay.current.physical = COMPAT_SRAM_BASE;
 	s_bsodDisplay.current.pitch = 960;
 	s_bsodDisplay.current.x = 0;
 	s_bsodDisplay.current.width = 960;
