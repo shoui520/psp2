@@ -125,6 +125,7 @@
 
 #define readVbar()		CP_READ(p15, 0, c12, c0, 0)
 #define writeVbar(v)		CP_WRITE(p15, 0, c12, c0, 0, v)
+#define readMvbar()		CP_READ(p15, 0, c12, c0, 1)	/* Secure state only */
 #define writeMvbar(v)		CP_WRITE(p15, 0, c12, c0, 1, v)	/* Secure state only */
 #define readFcseidr()		CP_READ(p15, 0, c13, c0, 0)
 #define readContextId()		CP_READ(p15, 0, c13, c0, 1)

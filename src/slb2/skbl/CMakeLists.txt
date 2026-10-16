@@ -3,11 +3,13 @@
 # TrustZone modules it loads, the data). It starts the TrustZone kernel (src/slb2/kbl/),
 # then hands over to NSKBL (src/slb2/nskbl/) in Non-secure state.
 # The reset vector, reset handler, secure monitor (monitor.S) and the code copied to
-# Compat SRAM (compat_sram.S) are the original's; serial.c is os0 SceSysmem's
-# (SYSMEM_SKBL) and sysroot_time.c its sysroot setup as NSKBL builds it, intrmgr.c, usleep.c and dmacmgr_tzs.c the TrustZone SceKernelIntrMgr's
-# (INTRMGR_SKBL), led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL), memset and memcpy sysmem's
-# memory_set.c and memory_copy.c with sysclib's assembly cores; the other C functions are
-# stubs and the TrustZone module archive is not packed yet.
+# Compat SRAM (compat_sram.S) are the original's; kbl_main.c starts the kernel and hands
+# over; serial.c is os0 SceSysmem's (SYSMEM_SKBL) and sysroot_time.c its sysroot setup
+# as NSKBL builds it; intrmgr.c, usleep.c and dmacmgr_tzs.c are the TrustZone
+# SceKernelIntrMgr's (INTRMGR_SKBL); led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL);
+# memset and memcpy sysmem's memory_set.c and memory_copy.c with sysclib's assembly
+# cores. The other C functions are stubs and the TrustZone module archive is not
+# packed yet.
 set(sysmem_source ../../os0/kd/sysmem/source)
 set(intrmgr_source ../kbl/SceKernelIntrMgr/source)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
@@ -15,6 +17,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/memory_test.c
 	source/monitor.S
 	source/boot.c
+	source/kbl_main.c
 	${intrmgr_source}/dmacmgr_tzs.c
 	${intrmgr_source}/intrmgr.c
 	${intrmgr_source}/usleep.c

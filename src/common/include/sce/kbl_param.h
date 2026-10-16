@@ -56,7 +56,9 @@ typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	uint32_t resume_context_addr;
 	uint32_t hardware_info;
 	uint32_t boot_type_indicator_2;
-	uint32_t reserved4[3];
+	uint32_t reserved4;
+	uint32_t kbl_load_time;		/* microseconds second_loader took; 0 on a resume */
+	uint32_t reserved5;
 	uint8_t hardware_flags[0x10];
 	uint32_t bootldr_revision;
 	uint32_t magic;

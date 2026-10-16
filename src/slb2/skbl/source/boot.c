@@ -25,6 +25,7 @@
 #include <sce/pervasive_regs.h>
 #include <sce/ssx_firewall_regs.h>
 #include <sce/timer_regs.h>
+#include "boot.h"
 
 /* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */
 #ifdef BOOT_NSKBL
@@ -104,23 +105,13 @@ extern void BootTest(void) __attribute__((weak));
 /* kbl_main.c */
 extern int sceKblMain(SceKernelBootParam *param) __attribute__((weak));
 
-/* reset.S: the vector page, its monitor vector table and the boot save area */
+/* reset.S: the vector page and its monitor vector table */
 extern char _start[], vectorsEnd[];
 extern const uint32_t bootDefaultDipsw[8];
 /* the build's revision and date (the file before memory_test.c) */
 extern const char bootRevision[], bootBuildDate[];
 extern const uint32_t monitorVectors[], setMonitorStack[];
 
-typedef struct BootSaveArea {
-	SceUInt32 state;		/* 0: cold boot, 0x10: restored from the backup */
-	SceCorelockContext corelock;	/* the CPUs' boot steps */
-	SceCorelockContext kblCorelock;	/* the kernel boot loader's steps */
-	SceUInt32 reserved[23];
-} BootSaveArea;
-
-_Static_assert(sizeof(BootSaveArea) == 0x70, "boot save area");
-
-extern BootSaveArea bootSaveArea;
 
 /* the vector page as the kernel's exception entry holds it */
 typedef struct BootVectorPage {
@@ -336,13 +327,10 @@ uintptr_t MapASLR(SceSize size, uint32_t seed)
 		;
 }
 
-#ifdef BOOT_NSKBL
-/* name unknown: the KBL Param's QA flag "Allow Kernel Debug" */
 int IsAllowKernelDebug(void)
 {
 	return s_kblParam.qa_flags[0xd] & 1;
 }
-#endif
 
 /* name unknown: whether the KBL Param asks for a safe mode boot */
 int IsSafeModeBoot(void)

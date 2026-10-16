@@ -59,6 +59,9 @@
 	.section .rodata.compat_sram, "a", %progbits
 	.balign	4
 
+	.global	compatSramImage			/* what SKBL copies: data, not a Thumb address */
+	.type	compatSramImage, %object
+compatSramImage:
 	.thumb
 	.global	compatSramCoreSync
 	.type	compatSramCoreSync, %function
@@ -332,3 +335,6 @@ resumeJump:					/* the reset vector's target */
 	ldr	pc, [pc, #-4]
 	.word	resumeStart - compatSramResume + 1
 	.size	compatSramResume, . - compatSramResume
+
+	.global	compatSramResumeEnd		/* the end of the copy */
+compatSramResumeEnd:
