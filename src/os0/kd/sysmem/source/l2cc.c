@@ -2,7 +2,8 @@
  * SceSysmem: the PL310 L2 cache controller. Its registers are used at their
  * physical address until sceKernelL2CacheRemap maps them. The secure
  * kernel's SceSysmem (SYSMEM_TZS) keeps only the remap here; its maintenance
- * functions are assembly.
+ * functions are assembly. SKBL (SYSMEM_SKBL) sets the controller up, keeps
+ * the registers physical and adds whole-cache maintenance.
  */
 
 #include <stddef.h>
@@ -22,6 +23,61 @@ static ScePl310Registers *volatile s_cpuL2RegisterBase =
 	(ScePl310Registers *)PL310_REG_BASE;
 
 #ifndef SYSMEM_TZS
+
+#if defined(SYSMEM_SKBL)
+/* name unknown: prefetching (r3p0 and later), the auxiliary control, clock
+ * gating and the RAM latencies */
+__attribute__((noinline))
+void CpuL2CacheSetup(void)
+{
+	ScePl310Registers *registers = s_cpuL2RegisterBase;
+	int release = registers->cacheId & 0x3f;
+
+	if (release >= 6) {
+		if (release >= 7)
+			registers->prefetchControl = 0x21000000;
+		else
+			registers->prefetchControl = 0x20000000;
+	}
+	registers->auxControl = 0x60090001;
+	registers->powerControl = 2;
+	registers->tagRamControl = 0;
+	registers->dataRamControl = 0x131;
+	dsb();
+}
+
+/* name unknown: the event monitor bus, for the performance monitors */
+void CpuL2CacheSetEventMonitorBus(int enable)
+{
+	ScePl310Registers *registers = s_cpuL2RegisterBase;
+
+	if (enable)
+		registers->auxControl |= PL310_AUX_EVENT_MONITOR_BUS;
+	else
+		registers->auxControl &= ~PL310_AUX_EVENT_MONITOR_BUS;
+	dsb();
+}
+
+/* name unknown */
+void CpuL2CacheEnable(void)
+{
+	s_cpuL2RegisterBase->control = 1;
+	dsb();
+}
+
+/* name unknown: drains the controller before turning it off */
+__attribute__((noinline))
+void CpuL2CacheDisable(void)
+{
+	ScePl310Registers *registers = s_cpuL2RegisterBase;
+
+	registers->cacheSync = 0;
+	while (registers->cacheSync & 1)
+		;
+	registers->control = 0;
+	dsb();
+}
+#endif
 
 __attribute__((noinline))
 void CpuL2CacheSyncCore(void)
@@ -55,6 +111,19 @@ void CpuL2InvalidateRangePA(uintptr_t pa, SceSize size)
 	} while (remaining > 0);
 	dmb();
 }
+
+#if defined(SYSMEM_SKBL)
+/* name unknown: every way */
+void CpuL2InvalidateAll(void)
+{
+	ScePl310Registers *registers = s_cpuL2RegisterBase;
+
+	registers->invalidateWay = 0xffff;
+	dmb();
+	while (registers->invalidateWay & 1)
+		;
+}
+#endif
 
 __attribute__((noinline))
 void CpuL2CleanRangePA(uintptr_t pa, SceSize size)
@@ -94,13 +163,37 @@ void CpuL2CleanInvalidateRangePA(uintptr_t pa, SceSize size)
 	dmb();
 }
 
+#if defined(SYSMEM_SKBL)
+/* name unknown: every way */
+void CpuL2CleanInvalidateAll(void)
+{
+	ScePl310Registers *registers = s_cpuL2RegisterBase;
+
+	registers->cleanInvalidateWay = 0xffff;
+	dmb();
+	while (registers->cleanInvalidateWay & 1)
+		;
+}
+
+/* name unknown (cache.c by its address): the controller at registerBase, off
+ * and set up again */
+void CpuL2CacheInit(ScePl310Registers *registerBase)
+{
+	s_cpuL2RegisterBase = registerBase;
+	CpuL2CacheDisable();
+	CpuL2CacheSetup();
+}
+#else
 void SceCpuForDriver_E813EBB2(void)
 {
 	dsb();
 	CpuL2CacheSyncCore();
 }
+#endif
 
 #endif
+
+#if !defined(SYSMEM_SKBL)
 
 /* the controller's registers into kernel virtual memory */
 void sceKernelL2CacheRemap(void)
@@ -120,3 +213,4 @@ void sceKernelL2CacheRemap(void)
 	ksceKernelGetMemBlockBase(block, &base);
 	s_cpuL2RegisterBase = base;
 }
+#endif
