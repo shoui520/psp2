@@ -5293,7 +5293,8 @@ typedef struct VeneziaVipCommandMemory {
 
 typedef struct VeneziaVipCommandState {
 	uint32_t magic;
-	uint32_t (*write)(uint32_t address, uint32_t value);
+	/* unprototyped as in Sony's build: the stop request passes a third word */
+	uint32_t (*write)();
 	uint32_t (*read)(uint32_t address);
 	VeneziaVipCommandMemory *memory;
 	uint32_t physicalBase;
@@ -5453,7 +5454,7 @@ int clearVeneziaVipInterruptStatus(unsigned int processor, uint32_t *status)
 }
 
 typedef struct VeneziaVipCommandCallbacks {
-	uint32_t (*write)(uint32_t address, uint32_t value);
+	uint32_t (*write)();
 	uint32_t (*read)(uint32_t address);
 } VeneziaVipCommandCallbacks;
 
@@ -5466,7 +5467,7 @@ int initializeVeneziaVipCommands(const VeneziaVipCommandCallbacks *callbacks,
 
 	VeneziaVipCommandMemory *virtualAddress;
 	uint32_t physicalAddress;
-	uint32_t (*write)(uint32_t, uint32_t);
+	uint32_t (*write)();
 	uint32_t (*read)(uint32_t);
 
 	if (g_veneziaVipCommandState.magic == 5261654)
@@ -5688,41 +5689,44 @@ int initializeVeneziaVipCommandQueues(VeneziaVipCommandContext *context,
 /* name unknown: issue a stop command when the processor is idle in mode1/5. */
 int requestVeneziaVipCommandStop(unsigned int processor)
 {
-	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
-	VeneziaVipCommandBuffer *command;
+	VeneziaVipCommandBuffer *commands, *command;
 	uint32_t address;
 
 	if (g_veneziaVipCommandState.magic != 5261654)
 		return 2;
 	if (processor > 1)
 		return 1;
-	address = (uint32_t)&mailbox->debugSend[processor];
+	address = MAILBOX_PADDR(debugSend[0]) + (processor << 2);
 	if (g_veneziaVipCommandState.read(address) != 0)
 		return 2;
-	command = &g_veneziaVipCommandState.memory->commands[processor];
-	if (command->mode != 1 && command->mode != 5)
+	commands = g_veneziaVipCommandState.memory->commands;
+	command = &commands[processor];
+	switch (command->mode) {
+	case 1:
+	case 5:
+		break;
+	default:
 		return 2;
+	}
 	command->request.context = (VeneziaVipCommandContext *)UINT32_MAX;
 	command->request.payloadAddress = UINT32_MAX;
 	command->request.operation = 1;
 	g_veneziaVipCommandState.read(address);
-	g_veneziaVipCommandState.write(address, 0x80000000);
+	g_veneziaVipCommandState.write(address, 0x80000000,
+				       command->request.payloadAddress);
 	return 0;
 }
 
 /* name unknown: notify a processor to interrupt a pending command. */
 int interruptVeneziaVipCommand(unsigned int processor)
 {
-	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t address;
 
 	if (g_veneziaVipCommandState.magic != 5261654)
 		return 2;
 	if (processor > 1)
 		return 1;
-	address = (uint32_t)&mailbox->debugSend[processor];
+	address = MAILBOX_PADDR(debugSend[0]) + (processor << 2);
 	if (g_veneziaVipCommandState.read(address) == 0 &&
 	    g_veneziaVipCommandState.memory->commands[processor].mode == 0)
 		return 3;
@@ -5743,8 +5747,6 @@ __attribute__((noinline)) int getVeneziaVipCommandReportedValues(uint32_t *main,
 /* name unknown: translate command mailbox/mode into the caller's processor status. */
 int getVeneziaVipCommandProcessorStatus(unsigned int processor, unsigned int *status)
 {
-	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	uint32_t magic = g_veneziaVipCommandState.magic;
 
 	*status = 0;
@@ -5752,7 +5754,7 @@ int getVeneziaVipCommandProcessorStatus(unsigned int processor, unsigned int *st
 		return 2;
 	if (processor > 1)
 		return 1;
-	if (g_veneziaVipCommandState.read((uint32_t)&mailbox->debugSend[processor]) != 0) {
+	if (g_veneziaVipCommandState.read(MAILBOX_PADDR(debugSend[0]) + (processor << 2)) != 0) {
 		*status = 6;
 	} else {
 		switch (g_veneziaVipCommandState.memory->commands[processor].mode) {
@@ -6011,8 +6013,6 @@ typedef struct VeneziaVipCaptureCommand {
 /* name unknown: send the queue/capture region addresses required by operation10000. */
 int configureVeneziaVipCommandCapture(unsigned int processor, VeneziaVipCommandContext *context)
 {
-	ScePervasiveMailboxRegisters *mailbox =
-		(ScePervasiveMailboxRegisters *)PERVASIVE_MAILBOX_BASE;
 	VeneziaVipCommandQueueStorage *physicalStorage;
 	VeneziaVipCaptureCommand packet;
 	unsigned int queueIndex, wordCount, mode;
@@ -6021,11 +6021,16 @@ int configureVeneziaVipCommandCapture(unsigned int processor, VeneziaVipCommandC
 		return 2;
 	if (processor > 1)
 		return 1;
-	if (g_veneziaVipCommandState.read((uint32_t)&mailbox->debugSend[processor]) != 0)
+	if (g_veneziaVipCommandState.read(MAILBOX_PADDR(debugSend[0]) + (processor << 2)) != 0)
 		return 2;
 	mode = g_veneziaVipCommandState.memory->commands[processor].mode;
-	if (mode != 1 && mode != 5)
+	switch (mode) {
+	case 1:
+	case 5:
+		break;
+	default:
 		return 2;
+	}
 	if (!context || context->magic != 1129335126 || !context->activeQueue)
 		return 3;
 	if (context->processorState[processor] != 1)
