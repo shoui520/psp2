@@ -126,8 +126,8 @@ extern int SceIntrmgrForKernel_764F140A(void *handler);	/* the next context afte
 extern int SceIntrmgrForKernel_04E635AA(struct ThreadmgrCpuStates *states);
 extern int SceIntrmgrForKernel_E3B670BF(void *handler);	/* a thread's debug suspension */
 extern int SceIntrmgrForKernel_BCD3BB05(void);
-extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
-					 uintptr_t vfp) __attribute__((noreturn));
+extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
+					     uintptr_t vfp);
 extern int ksceExcpmgrRegisterHandler(int kind, int slot, void *handler);
 extern int SceKernelSuspendForDriver_CE7A2207(int order, ThreadmgrSuspendHandler handler,
 					      void *arg);	/* before a power suspend */
@@ -864,6 +864,6 @@ void returnFromExcpToThread(void)
 	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	setupNextContext_intr(0, 8);
 	thread = currentThreadContext();
-	SceIntrmgrForKernel_08FDB0CE(thread->pRegisterContext, 0,
-				     thread->pVfpRegisterContext);
+	SceIntrmgrForKernel_08FDB0CE(thread->pRegisterContext, 0, thread->pVfpRegisterContext);
+	__builtin_unreachable();
 }

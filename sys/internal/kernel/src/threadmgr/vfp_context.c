@@ -12,7 +12,7 @@
 #define __FILE_NAME__ "threadmgr.c"
 
 #define VFP_EXCEPTION_ILLEGAL		0xf7ffff60	/* bits a caller may not change */
-#define CHANGE_FUNC			"sceKernelChangeThreadVfpException"
+#define CHANGE_VFP_FUNC			"sceKernelChangeThreadVfpException"
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
@@ -28,7 +28,7 @@ uint32_t ksceKernelChangeThreadVfpException(uint32_t clear, uint32_t set)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
-		SCE_DBG_ASSERT_PRINTF_FUNC(0, 10725, CHANGE_FUNC, "*** error: illegal context\n");
+		SCE_DBG_ASSERT_PRINTF_FUNC(0, 10725, CHANGE_VFP_FUNC, "*** error: illegal context\n");
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
@@ -36,10 +36,10 @@ uint32_t ksceKernelChangeThreadVfpException(uint32_t clear, uint32_t set)
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	SCE_DBG_ASSERT_CHECK_FUNC(thread != NULL, 10745, CHANGE_FUNC);
+	SCE_DBG_ASSERT_CHECK_FUNC(thread != NULL, 10745, CHANGE_VFP_FUNC);
 	intr = ksceKernelCpuSuspendIntr();
 	word = currentVfpException();
-	SCE_DBG_ASSERT_CHECK_FUNC(word != NULL, 10750, CHANGE_FUNC);
+	SCE_DBG_ASSERT_CHECK_FUNC(word != NULL, 10750, CHANGE_VFP_FUNC);
 	previous = thread->vfpException;
 	value = set | (previous & ~clear);
 	thread->vfpException = value;

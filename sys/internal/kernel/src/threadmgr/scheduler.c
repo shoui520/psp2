@@ -85,7 +85,7 @@ static inline void insertBefore(uintptr_t node, struct ThreadCB *thread)
 	((struct ThreadCB *)thread->prev)->next = (uintptr_t)thread;
 }
 
-static inline void unlinkThread(struct ThreadCB *thread)
+static inline void unlinkQueuedThread(struct ThreadCB *thread)
 {
 	uintptr_t next = thread->next;
 
@@ -171,7 +171,7 @@ unsigned int moveStandbyToReady(void)
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 1343);
 			if (ksceKernelSpinlockLowTrylock(THREAD_LOCK(thread)) < 0)
 				break;
-			unlinkThread(thread);
+			unlinkQueuedThread(thread);
 			ksceKernelSpinlockLowUnlock(&cpu->standbyLock);
 			SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)ksceKernelCpuId(), 1356);
 			thread->status = (thread->status & THREAD_STATE_HIGH_MASK) |
@@ -253,7 +253,7 @@ void removeCommonRaw(struct ThreadCB *thread, int priority)
 		s_threadmgrRuntime.manager->globalReadyBitmap[shared / 32] &=
 			~(0x80000000u >> (shared % 32));
 	}
-	unlinkThread(context);
+	unlinkQueuedThread(context);
 	/* the DTrace probe site __sched_:dequeue */
 	__asm__ volatile(".global s_schedGlobalDequeueCodeSite\ns_schedGlobalDequeueCodeSite:");
 	probe = (ThreadmgrQueueProbe)s_schedGlobalDequeueHandler;
@@ -281,7 +281,7 @@ void removeReady(struct ThreadCB *thread, int priority)
 	cpu = currentCpuState();
 	if (context->next == context->prev && context->next != (uintptr_t)context)
 		cpu->readyBitmap[priority / 32] &= ~(0x80000000u >> (priority % 32));
-	unlinkThread(context);
+	unlinkQueuedThread(context);
 	/* the DTrace probe site __sched_:dequeue */
 	__asm__ volatile(".global s_schedCpuDequeueCodeSite\ns_schedCpuDequeueCodeSite:");
 	probe = (ThreadmgrQueueProbe)s_schedCpuDequeueHandler;

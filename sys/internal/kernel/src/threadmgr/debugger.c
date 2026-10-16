@@ -32,7 +32,7 @@
 
 #define CPSR_DEBUGGER_MASK		0xf90ffe20	/* the cpsr bits the debugger may change */
 #define CPSR_KEEP_MASK			0x06f001df
-#define STACK_FILL			0xffffffff	/* a stack's unused words */
+#define STACK_FILL_WORD			0xffffffff	/* a stack's unused words */
 #define USER_TLS_STACK_RANGE		0x7f8	/* below the user TLS: the stack's top and bottom */
 
 #define WAIT_TYPE_DELAY			0x00000001
@@ -482,16 +482,16 @@ measured:
 		info->userStackMaxUsed = 0;
 		goto unlock;
 	}
-	/* the deepest use: the stacks are filled with STACK_FILL */
+	/* the deepest use: the stacks are filled with STACK_FILL_WORD */
 	words = thread->kStackSize / 4;
-	for (i = 1; i < (int)words && ((const uint32_t *)thread->pKStack)[i] == STACK_FILL; i++)
+	for (i = 1; i < (int)words && ((const uint32_t *)thread->pKStack)[i] == STACK_FILL_WORD; i++)
 		;
 	info->stackMaxUsed = thread->kStackSize - i * 4;
 	if ((thread->currentAttr & THREAD_ATTR_USER) &&
 	    thread->pUStack + thread->uStackSize == userStack[0] &&
 	    thread->pUStack == userStack[1]) {
 		ret = ksceKernelCountFillValueFromUserProc(thread->processId,
-			(const void *)(thread->pUStack + 4), STACK_FILL,
+			(const void *)(thread->pUStack + 4), STACK_FILL_WORD,
 			thread->uStackSize - 4);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xf, 1980,

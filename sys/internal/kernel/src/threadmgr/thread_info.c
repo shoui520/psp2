@@ -21,7 +21,7 @@
 #define DIPSW_STACK_CHECK		0xd8
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name; every thread */
 #define UID_VECTOR_LEVEL		7		/* PLACEHOLDER: name */
-#define STACK_FILL			0xffffffff
+#define STACK_FILL_WORD			0xffffffff
 #define SDK_VERSION_DEFAULT_AFFINITY	0x02100000	/* older SDKs see the process default */
 #define SDK_VERSION_RUN_STATUS_PUID	0x01800000	/* newer SDKs see PUIDs in the run status */
 #define SCE_KERNEL_ERROR_ILLEGAL_ADDR	0x80020006
@@ -94,7 +94,7 @@ static inline int unknownThreadError(void)
 }
 
 /* the calling process's SDK version (kernel callers count as the newest) */
-static inline void callerSdkVersion(SceUInt32 *version)
+static inline void getCallerSdkVersion(SceUInt32 *version)
 {
 	if (currentThreadContext() == NULL ||
 	    currentThreadContext()->processId == THREADMGR_KERNEL_PID)
@@ -144,17 +144,17 @@ int ksceKernelGetThreadStackFreeSize(SceUID threadId)
 	ksceKernelCpuResumeIntr(intr);
 	if ((int)thread->currentAttr < 0) {
 		/* the untouched words past the stack's first */
-		ret = ksceKernelCountFillValueFromUserProc(thread->processId, stack + 1, STACK_FILL,
+		ret = ksceKernelCountFillValueFromUserProc(thread->processId, stack + 1, STACK_FILL_WORD,
 							   size - 4);
 		if (ret < 0)
 			goto release;	/* Sony resumes the interrupts a second time here */
 		ret = (ret + 4) * 4;
 	} else {
 		words = size >> 2;
-		if (words < 2 || stack[1] != STACK_FILL) {
+		if (words < 2 || stack[1] != STACK_FILL_WORD) {
 			ret = 4;
 		} else {
-			for (i = 2; i < words && stack[i] == STACK_FILL; i++)
+			for (i = 2; i < words && stack[i] == STACK_FILL_WORD; i++)
 				;
 			ret = i * 4;
 		}
@@ -199,7 +199,7 @@ int ksceKernelGetThreadInfo(SceUID threadId, ThreadmgrThreadInfo *output)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	callerSdkVersion(&version);
+	getCallerSdkVersion(&version);
 	memset(&info, 0, sizeof(info));
 	info.size = sizeof(info);
 	intr = ksceKernelCpuSuspendIntr();

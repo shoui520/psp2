@@ -15,7 +15,7 @@
 #define __FILE_NAME__ "threadmgr.c"
 
 #define CPU_COUNT			4
-#define CPU_MASK_ALL			0x0000000f
+#define CPU_MASK_ALL			0xf
 #define CPU_MASK_ALT			0x000f0000	/* the same mask, shifted up 16 */
 #define PERMISSION_SYSTEM		0x40	/* PLACEHOLDER: names of the permissions allowed */
 #define PERMISSION_ROOT			0x80

@@ -21,7 +21,7 @@
 #define __FILE_NAME__ "threadmgr.c"
 
 #define THREAD_CPU_NONE			0x7fff
-#define CPU_MASK_ALL			0x0000000f
+#define CPU_MASK_ALL			0xf
 #define WAIT_TYPE_THREAD_SUSPEND	0x00000008	/* PLACEHOLDER: woken when the thread is suspended */
 #define WAIT_TYPE_COND			0x00000100
 #define WAIT_TYPE_MUTEX_2		0x00000200

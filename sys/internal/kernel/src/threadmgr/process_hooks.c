@@ -6,6 +6,7 @@
  * the two delete hooks take everything down again.
  */
 
+#include <psp2common/kernel/threadmgr.h>
 #include "private.h"
 #include "sce/cpu.h"
 #include "sce/debug.h"
@@ -48,8 +49,8 @@ int stopThread(SceUID threadId, int priority, uint32_t request);
 int deleteThread(struct ThreadCB *thread);
 int waitThreadEnd(SceUID threadId, int *status, SceUInt32 *timeout, int callbacks);
 int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSource);
-SceUID ksceKernelCreateThread(const char *name, uintptr_t entry, int priority, SceSize stackSize,
-			      SceUInt32 attr, int cpuAffinityMask, const void *option);
+SceUID ksceKernelCreateThread(const char *name, uintptr_t entry, int initPriority, SceSize stackSize,
+			      uint32_t attr, uint32_t cpuAffinityMask, const SceKernelThreadOptParam *option);
 int ksceKernelDeleteThread(SceUID threadId);
 int ksceKernelInitializeFastMutex(void *mutex, const char *name, int attr, const void *option);
 SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initPattern,

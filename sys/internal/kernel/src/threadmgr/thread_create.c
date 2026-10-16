@@ -152,7 +152,7 @@ extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t mode, c
 						    SceSize size);
 extern int ksceSblACMgrIsRootProgram2(SceUID pid);
 extern int ksceSblACIsSystemProgram(SceUID pid);
-extern int ksceGUIDGetObject(SceUID guid, void *object);
+extern int ksceGUIDGetObject(SceUID guid, SceObjectBase **object);
 extern void *SceSysmemForKernel_FA6C098C(SceUID uid);		/* the object of a UID */
 extern SceUID SceSysrootForKernel_7334F1E8(SceUID pid);
 extern int ksceKernelSysrootGetPUIDEntryHeap(SceUID pid, void **heap);
@@ -344,7 +344,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 		ret = SCE_KERNEL_ERROR_INVALID_UID;
 		goto restore;
 	}
-	ret = ksceGUIDGetObject(process->budgetId, &type);
+	ret = ksceGUIDGetObject(process->budgetId, (SceObjectBase **)&type);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 3344,
 			" k: error: createThread(%s)=0x%08X, pProcess->uidBudget=0x%08X\n",

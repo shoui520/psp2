@@ -96,7 +96,7 @@ int ksceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint3
 			    SceUInt32 *timeout);
 int ksceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
 			      SceUInt32 *timeout);
-extern int SceSysmemForKernel_BDE00106(const char *name);
+extern SceUID SceSysmemForKernel_BDE00106(const char *name);
 extern SceClass *SceSysmemForKernel_368F1C36(SceUID uid);
 extern int ksceKernelStrncpyFromUser(char *dest, const char *source, unsigned int size);
 int ksceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout);

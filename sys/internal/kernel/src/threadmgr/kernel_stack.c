@@ -18,7 +18,7 @@
 
 #define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
 #define DIPSW_STACK_CHECK		0xd8
-#define STACK_MIN			0x200
+#define EXTEND_STACK_MIN			0x200
 #define STACK_PAGE			0x1000
 #define STACK_SAFETY			0x10		/* kept free below the caller */
 #define STACK_LOW_WARNING		0x400
@@ -73,7 +73,7 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 		ret = (int)SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto out;
 	}
-	if (size < STACK_MIN) {
+	if (size < EXTEND_STACK_MIN) {
 		ret = (int)SCE_KERNEL_ERROR_ILLEGAL_STACK_SIZE;
 		goto out;
 	}

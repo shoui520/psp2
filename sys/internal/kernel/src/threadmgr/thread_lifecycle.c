@@ -48,7 +48,7 @@ extern int ksceKernelFreeMemBlock(SceUID uid);
 extern int ksceKernelCheckDipsw(unsigned int bit);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
-extern uint32_t SceIntrmgrForKernel_08FDB0CE(uintptr_t context, uint32_t flags, uintptr_t vfp);
+extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags, uintptr_t vfp);
 int callThreadEventHandlers(uint32_t mask);
 int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 				    uint32_t request);
@@ -135,7 +135,7 @@ again:
 		regs->sp = thread->initSp;
 		regs->lr = (uintptr_t)kernelThreadReturnEntry;
 		regs->cpsr = (entry & 1) ? CPSR_SYS_THUMB : CPSR_SYS_ARM;
-		SceIntrmgrForKernel_08FDB0CE((uintptr_t)regs, 0, thread->pVfpRegisterContext);
+		SceIntrmgrForKernel_08FDB0CE(regs, 0, thread->pVfpRegisterContext);
 		SCE_DBG_ASSERT_CHECK((thread->flags >> 16) & 1, 4825);
 	}
 	/* a user thread: the context _sceKernelStartThread prepared */
@@ -156,7 +156,7 @@ again:
 		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags,
 					    THREAD_FLAG_RESUMED_WAIT);
 load:
-		request = SceIntrmgrForKernel_08FDB0CE((uintptr_t)context, 0, vfp);
+		request = SceIntrmgrForKernel_08FDB0CE(context, 0, vfp);
 	}
 }
 

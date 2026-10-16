@@ -13,7 +13,7 @@
 
 #define CPU_COUNT			4
 #define CPU_MASK_ALL			0xf
-#define PRIORITY_NONE			0x100	/* above every priority */
+#define PRIORITY_NO_THREAD			0x100	/* above every priority */
 #define PRIORITY_GLOBAL_FIRST_WORD	4	/* the global queues: bitmap words 4-7 of the whole */
 #define PRIORITY_CPU_LAST_WORD		7	/* priorities 0xe0-0xff: the CPU's own again */
 #define CPU_ID_GLOBAL			0x7fff
@@ -25,24 +25,24 @@ typedef void (*ThreadmgrOffCpuProbe)(const struct ThreadmgrSchedProbeDescriptor 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 
-#define SCHED_PROBE(symbol, probeName)						\
+#define SCHED_PROBE(symbol, providerName, probeName)				\
 	static uint32_t symbol##ProbeId;						\
 	volatile uintptr_t symbol##Handler;					\
 	extern const char symbol##CodeSite[];					\
 	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = {	\
-		.probeId = &symbol##ProbeId, .provider = "__sched_", .name = probeName, \
+		.probeId = &symbol##ProbeId, .provider = providerName, .name = probeName, \
 		.codeSite = symbol##CodeSite, .handler = &symbol##Handler,	\
 	}
 
-SCHED_PROBE(s_schedWait, "wait");
-SCHED_PROBE(s_schedPreempt, "preempt");
-SCHED_PROBE(s_schedOffCpu, "off__cpu");
+SCHED_PROBE(s_schedWait, "__sched_", "wait");
+SCHED_PROBE(s_schedPreempt, "__sched_", "preempt");
+SCHED_PROBE(s_schedOffCpu, "__sched_", "off__cpu");
 
-/* the most urgent priority with a ready thread for this CPU (PRIORITY_NONE: none) */
+/* the most urgent priority with a ready thread for this CPU (PRIORITY_NO_THREAD: none) */
 uint32_t searchHighestPriority(void)
 {
 	struct ThreadMgrCpuCB *cpu = currentCpuState();
-	uint32_t bitmap, priority = PRIORITY_NONE;
+	uint32_t bitmap, priority = PRIORITY_NO_THREAD;
 	unsigned int word;
 
 	for (word = 0; word < PRIORITY_GLOBAL_FIRST_WORD; word++) {
@@ -62,13 +62,13 @@ uint32_t searchHighestPriority(void)
 	}
 	ksceKernelSpinlockLowUnlock(
 		&s_threadmgrRuntime.manager->globalReadyLock);
-	if (priority == PRIORITY_NONE) {
+	if (priority == PRIORITY_NO_THREAD) {
 		bitmap = cpu->readyBitmap[PRIORITY_CPU_LAST_WORD];
 		if (bitmap != 0)
 			priority = __builtin_clz(bitmap) + PRIORITY_CPU_LAST_WORD * 32;
 	}
 found:
-	SCE_DBG_ASSERT_PRINTF(priority <= PRIORITY_NONE, 1597,
+	SCE_DBG_ASSERT_PRINTF(priority <= PRIORITY_NO_THREAD, 1597,
 			      " fatal error: searchHighestPriority() = %d\n", priority);
 	return priority;
 }
@@ -143,7 +143,7 @@ void findNextRunningThread(struct ThreadCB *current)
 	volatile unsigned int delay;
 
 	cpu = currentCpuState();
-	currentPriority = thread != NULL ? thread->currentPriority : PRIORITY_NONE;
+	currentPriority = thread != NULL ? thread->currentPriority : PRIORITY_NO_THREAD;
 
 	/* this CPU's own queues first */
 	for (word = 0; word < PRIORITY_GLOBAL_FIRST_WORD; word++) {

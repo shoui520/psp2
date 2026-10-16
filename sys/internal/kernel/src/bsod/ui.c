@@ -6,7 +6,7 @@
 
 #include "exception_record.h"
 extern void (*s_bsodPrinter)(const char *format, ...);
-void ksceKernelSpinlockLowLock(int *lock);
+int ksceKernelSpinlockLowLock(void *lock);
 int ksceKernelDisableIntr(unsigned interrupt);
 void *ksceSysrootGetSysroot(void);
 void bsodPrintf(const char *format, ...);

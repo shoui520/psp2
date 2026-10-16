@@ -33,10 +33,10 @@
 #define SCE_KERNEL_ERROR_ILLEGAL_THREAD_PARAM_COMBINATION	0x80028026
 #define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
 
-#define PRIORITY_FORMAT \
+#define CHANGE_PRIORITY_FORMAT \
 	"***\n***\n***\n*** error: sceKernelChangeThreadPriority(\"%s\"), illegal priority for user " \
 	"mode thread(%d)\n*** This will be forbidden by 2011/04/13 !\n***\n***\n***\n"
-#define CHANGE_FUNC			"sceKernelChangeThreadPriority2"
+#define CHANGE_PRIORITY_FUNC			"sceKernelChangeThreadPriority2"
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
@@ -63,10 +63,10 @@ int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 	if (uid == 0 || priority == 0) {
 		if (!hasCurrent) {
 			if (uid != 0)
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6210, CHANGE_FUNC,
+				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6210, CHANGE_PRIORITY_FUNC,
 							   "*** error: illegal context\n");
 			else
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6201, CHANGE_FUNC,
+				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6201, CHANGE_PRIORITY_FUNC,
 							   "*** error: illegal context\n");
 			result = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 			goto out;
@@ -78,7 +78,7 @@ int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 	}
 	if ((priority & PRIORITY_RELATIVE) &&
 	    priority - PRIORITY_RELATIVE_BASE >= PRIORITY_RELATIVE_RANGE) {
-		SCE_DBG_PRINTF_FUNC(0, 6220, CHANGE_FUNC, "***\n***\n***\n*** error: "
+		SCE_DBG_PRINTF_FUNC(0, 6220, CHANGE_PRIORITY_FUNC, "***\n***\n***\n*** error: "
 			"sceKernelChangeThreadPriority(\"%s\"), illegal priority offset(%d)\n"
 			"*** This will be forbidden by 2011/04/13 !\n***\n***\n***\n",
 			ksceGUIDName(uid), priority - PRIORITY_RELATIVE_OFFSET_OLD);
@@ -112,7 +112,7 @@ int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 			priority -= PRIORITY_RELATIVE_OFFSET;
 			if (type != PROCESS_TYPE_MINI_APP && type != PROCESS_TYPE_SHELL &&
 			    type != PROCESS_TYPE_KERNEL)
-				SCE_DBG_PRINTF_FUNC(0, 6263, CHANGE_FUNC, "*** warning: unknown process "
+				SCE_DBG_PRINTF_FUNC(0, 6263, CHANGE_PRIORITY_FUNC, "*** warning: unknown process "
 					"type(0x%08X), [threadId=0x%08X] priority %d\n", type, uid, priority);
 		}
 	}
@@ -123,10 +123,10 @@ int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 		    (type == PROCESS_TYPE_GAME ? PRIORITY_USER_RANGE_SYSTEM - 1 :
 						   PRIORITY_USER_RANGE - 1)) {
 			if (type == PROCESS_TYPE_GAME)
-				SCE_DBG_PRINTF_FUNC(0, 6276, CHANGE_FUNC, PRIORITY_FORMAT,
+				SCE_DBG_PRINTF_FUNC(0, 6276, CHANGE_PRIORITY_FUNC, CHANGE_PRIORITY_FORMAT,
 						    ksceGUIDName(uid), priority);
 			else
-				SCE_DBG_PRINTF_FUNC(0, 6283, CHANGE_FUNC, PRIORITY_FORMAT,
+				SCE_DBG_PRINTF_FUNC(0, 6283, CHANGE_PRIORITY_FUNC, CHANGE_PRIORITY_FORMAT,
 						    ksceGUIDName(uid), priority);
 			result = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
 			goto unlock;
@@ -141,12 +141,12 @@ int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
 		previous = thread->currentPriority;
 		if (sharedPriority(previous) != sharedPriority(priority)) {
 			if (sharedPriority(previous))
-				SCE_PRINTF_WITH_INFO_FUNC(0, SCE_LINE(6297, 6303), CHANGE_FUNC,
+				SCE_PRINTF_WITH_INFO_FUNC(0, SCE_LINE(6297, 6303), CHANGE_PRIORITY_FUNC,
 					"*** error: illegal priority change. threadId=0x%08X[%s], "
 					"%d -> %d\n", uid, ksceGUIDName(thread->threadId),
 					thread->currentPriority, priority);
 			else
-				SCE_PRINTF_WITH_INFO_FUNC(0, SCE_LINE(6307, 6313), CHANGE_FUNC,
+				SCE_PRINTF_WITH_INFO_FUNC(0, SCE_LINE(6307, 6313), CHANGE_PRIORITY_FUNC,
 					"*** error: illegal priority change. threadId=0x%08X[%s], "
 					"%d -> %d\n", uid, ksceGUIDName(thread->threadId),
 					thread->currentPriority, priority);

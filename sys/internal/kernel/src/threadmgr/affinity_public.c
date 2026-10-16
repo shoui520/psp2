@@ -31,7 +31,7 @@
 #define THREAD_ATTR_UNLIMITED		0x00004000
 #define AFFINITY_SYSTEM_CPU		0x8
 #define USER_ERROR_UNKNOWN_THREAD_ID	(SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT)
-#define CHANGE_FUNC			"sceKernelChangeThreadPriorityAndCpuAffinityMask"
+#define CHANGE_AFFINITY_FUNC			"sceKernelChangeThreadPriorityAndCpuAffinityMask"
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
@@ -71,10 +71,10 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 	if (uid == 0 || priority == 0) {
 		if (!hasCurrent) {
 			if (uid != 0)
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6920, CHANGE_FUNC,
+				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6920, CHANGE_AFFINITY_FUNC,
 							   "*** error: illegal context\n");
 			else
-				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6911, CHANGE_FUNC,
+				SCE_DBG_ASSERT_PRINTF_FUNC(0, 6911, CHANGE_AFFINITY_FUNC,
 							   "*** error: illegal context\n");
 			result = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 			goto out;
@@ -86,7 +86,7 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 	}
 	if ((priority & PRIORITY_RELATIVE) &&
 	    priority - PRIORITY_RELATIVE_BASE >= PRIORITY_RELATIVE_RANGE) {
-		SCE_DBG_PRINTF_FUNC(0, 6930, CHANGE_FUNC, "***\n***\n***\n*** error: "
+		SCE_DBG_PRINTF_FUNC(0, 6930, CHANGE_AFFINITY_FUNC, "***\n***\n***\n*** error: "
 			"sceKernelChangeThreadPriorityAndCpuAffinityMask(\"%s\"), illegal priority "
 			"offset(%d)\n***\n***\n***\n",
 			ksceGUIDName(uid), priority - PRIORITY_RELATIVE_OFFSET_OLD);
@@ -132,7 +132,7 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 			priority -= PRIORITY_RELATIVE_OFFSET;
 			if (type != PROCESS_TYPE_MINI_APP && type != PROCESS_TYPE_SHELL &&
 			    type != PROCESS_TYPE_KERNEL)
-				SCE_DBG_PRINTF_FUNC(0, 7017, CHANGE_FUNC, "*** warning: unknown process "
+				SCE_DBG_PRINTF_FUNC(0, 7017, CHANGE_AFFINITY_FUNC, "*** warning: unknown process "
 					"type(0x%08X), [threadId=0x%08X] priority %d\n", type, uid, priority);
 		}
 	}
@@ -143,12 +143,12 @@ int sceKernelChangeThreadPriorityAndCpuAffinityMask(SceUID uid, uint32_t priorit
 		    (type == PROCESS_TYPE_GAME ? PRIORITY_USER_RANGE_SYSTEM - 1 :
 						   PRIORITY_USER_RANGE - 1)) {
 			if (type == PROCESS_TYPE_GAME)
-				SCE_DBG_PRINTF_FUNC(0, 7029, CHANGE_FUNC, "***\n***\n***\n*** error: "
+				SCE_DBG_PRINTF_FUNC(0, 7029, CHANGE_AFFINITY_FUNC, "***\n***\n***\n*** error: "
 					"sceKernelChangeThreadPriorityAndCpuAffinityMask(\"%s\"), illegal "
 					"priority for user mode thread(%d)\n***\n***\n***\n",
 					ksceGUIDName(uid), priority);
 			else
-				SCE_DBG_PRINTF_FUNC(0, 7035, CHANGE_FUNC, "***\n***\n***\n*** error: "
+				SCE_DBG_PRINTF_FUNC(0, 7035, CHANGE_AFFINITY_FUNC, "***\n***\n***\n*** error: "
 					"sceKernelChangeThreadPriorityAndCpuAffinityMask(\"%s\"), illegal "
 					"priority for user mode thread(%d)\n***\n***\n***\n",
 					ksceGUIDName(uid), priority);
