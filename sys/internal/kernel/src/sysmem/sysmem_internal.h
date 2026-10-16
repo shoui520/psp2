@@ -634,7 +634,7 @@ typedef struct SceKernelPUIDInfo {
 /* memblock.c */
 int FreeMemBlockByGUID(SceUID guid);
 
-/* sysroot.c (sysroot_time.c) */
+/* sysroot.c */
 SceUID SceSysrootForKernel_7385CADE(void);	/* the current process */
 SceUID SceSysrootForKernel_D441DC34(void);	/* the current thread */
 uint32_t SceSysrootForKernel_085C2BCB(void);	/* SceUIDSysrootClass */

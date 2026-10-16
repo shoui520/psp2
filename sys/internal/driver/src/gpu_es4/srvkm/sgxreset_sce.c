@@ -2,8 +2,8 @@
  * remain in contrib/img-sgx-ddk-1.7.862890.
  */
 #include "device_sce.h"
-#include "../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
-#include "../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
+#include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
+#include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 
 /* SCE MP configuration: eight BIF lists, with list seven reserved for EDM. */
 #define SGX_FEATURE_BIF_NUM_DIRLISTS 8

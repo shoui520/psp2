@@ -44,7 +44,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	address_space.c
 	fixed_heap.c
 	phymem_low.c
-	heap.c
+	dlmalloc/heap.c
 	memblock_db.c
 	memblock_vpl.c
 	memblock_partial.c
@@ -66,12 +66,12 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	../../../../../common/sysclib/numeric.c
 	../../../../../common/sysclib/bsd_strtoll_kernel.c
 	../../../../../common/sysclib/ctype.c
-	memory_copy.c
+	memcpy_chk.c
 	../../../../../common/sysclib/copy_forward.S
 	../../../../../common/sysclib/copy.c
 	debug_state.c
 	dipsw.c
-	sysroot_time.c
+	sysroot.c
 	sysroot_time_low.c
 	sysroot_capability.c
 	aeabi.S
@@ -118,7 +118,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	../../../../../common/sysclib/fill.c
 	../../../../../common/sysclib/compare_core.S
 	../../../../../common/sysclib/compare.c
-	memory_set.c
+	memset_chk.c
 	../../../../../common/sysclib/move.S
 	memory_move.c
 	strlcat_chk.c

@@ -1,7 +1,7 @@
 /* GPU process-memory contexts. Verified meanings use native offset evidence. */
 #include <stdint.h>
 #include <stddef.h>
-#include "gpu-mmu.h"
+#include "../../gpu_es4/srvkm/gpu-mmu.h"
 #include "sce/debug.h"
 #include "sce/sysmem.h"
 #include <psp2kern/kernel/sysmem/address_space.h>

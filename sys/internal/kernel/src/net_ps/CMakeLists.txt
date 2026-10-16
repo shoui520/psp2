@@ -23,6 +23,6 @@ psp2_module(os0_kd_bootimage_net_ps KIND kernel PARTIAL SOURCES
 	strlcpy.c
 	net_ps_hmac.c
 	net_ps_aes.c
-	system_os.c
+	src/ps/osdependence/ngp/system_os.c
 	net_ps.c
 )

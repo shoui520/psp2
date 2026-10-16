@@ -72,7 +72,7 @@ psp2_module(os0_kd_threadmgr KIND kernel SOURCES
 	threadmgr_syscall_noidl.c
 	process_hooks.c
 	callback_queries.c
-	intr_requests.c
+	sgi.c
 	event_notification.c
 	event.c
 	simple_event.c

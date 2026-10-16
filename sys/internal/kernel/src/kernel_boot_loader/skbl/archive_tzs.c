@@ -17,7 +17,7 @@
 #include <sce/debug.h>
 #include <sce/kernel_boot_param.h>
 
-/* the sysroot (sysroot_time.c) */
+/* the sysroot (sysroot.c) */
 void sceKernelSysrootCorelockLock(SceUInt32 core);
 void sceKernelSysrootCorelockUnlock(void);
 

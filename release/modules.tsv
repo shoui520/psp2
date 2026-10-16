@@ -25,7 +25,7 @@ os0/kd/bootimage/ds3	sys/internal/driver/src/ds3	os0:kd/bootimage/ds3	4.00-DEBUG
 os0/kd/bootimage/error	sys/internal/kernel/src/error	os0:kd/bootimage/error	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/bootimage/fios2	sys/internal/kernel/src/fios2	os0:kd/bootimage/fios2	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/bootimage/gps	sys/internal/driver/src/gps	os0:kd/bootimage/gps	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
-os0/kd/bootimage/gpu_es4	sys/internal/driver/src/gpu_es4	os0:kd/bootimage/gpu_es4	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../../../../driver/src/gpu/memory/heap.c (gpu_es4 4 below internal/)
+os0/kd/bootimage/gpu_es4	sys/internal/driver/src/gpu_es4/srvkm	os0:kd/bootimage/gpu_es4	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../../../../driver/src/gpu/memory/heap.c: the build folder is 4 below internal/; srvkm (ours) after the SGX DDK folder that holds bridged/ common/ devices/sgx/ env/
 os0/kd/bootimage/gpuinit_es4	sys/internal/driver/src/gpuinit_es4	os0:kd/bootimage/gpuinit_es4	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/hid	sys/internal/driver/src/hid	os0:kd/bootimage/hid	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/hpremote	sys/internal/driver/src/hpremote	os0:kd/bootimage/hpremote	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)

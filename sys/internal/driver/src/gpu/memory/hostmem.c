@@ -1,6 +1,6 @@
 /* Process-owned allocations and the GPU backup heap. */
 #include <stdint.h>
-#include "gpu-blockheap.h"
+#include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include "sce/debug.h"
 
 #undef __FILE_NAME__

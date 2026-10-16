@@ -8,18 +8,18 @@ endif()
 psp2_module(os0_kd_bootimage_vnz_wrapper KIND kernel SOURCES
 	entry.c
 	entry_start.c
-	venezia.c
-	booter.c
+	venezia/venezia.c
+	venezia/booter.c
 	${VENEZIA_RPC_SOURCES}
 	dsp0_rpc_init.c
 	dsp0_rpc_history.c
 	dsp0_mailbox.c
 	dsp0_communication.c
-	heapmgr.c
-	heap.c
-	simple_heap.c
+	venezia/heapmgr.c
+	venezia/heap.c
+	venezia/simple_heap.c
 	vnzmem.c
-	dsp0_dma.c
-	system.c
+	venezia/vapa.c
+	venezia/system.c
 	dsp0_debug.c
 )

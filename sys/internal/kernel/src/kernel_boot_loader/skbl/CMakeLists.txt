@@ -4,10 +4,10 @@
 # then hands over to NSKBL (sys/internal/kernel/src/kernel_boot_loader/nskbl/) in Non-secure state.
 # The reset vector, reset handler, secure monitor (monitor.S) and the code copied to
 # Compat SRAM (compat_sram.S) are the original's; kbl_main.c starts the kernel and hands
-# over; serial.c is os0 SceSysmem's (SYSMEM_SKBL) and sysroot_time.c its sysroot setup
+# over; serial.c is os0 SceSysmem's (SYSMEM_SKBL) and sysroot.c its sysroot setup
 # as NSKBL builds it; intrmgr.c, usleep.c and dmacmgr_tzs.c are the TrustZone
 # SceKernelIntrMgr's (INTRMGR_SKBL); led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL);
-# memset and memcpy sysmem's memory_set.c and memory_copy.c with sysclib's assembly
+# memset and memcpy sysmem's memset_chk.c and memcpy_chk.c with sysclib's assembly
 # cores. The other C functions are stubs and the TrustZone module archive is not
 # packed yet.
 set(sysmem_source ../../sysmem)
@@ -26,9 +26,9 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	${sysmem_source}/l2cc.c
 	${sysmem_source}/l2cc_maintenance.S
 	${sysmem_source}/serial.c
-	${sysmem_source}/sysroot_time.c
-	${sysmem_source}/memory_set.c
-	${sysmem_source}/memory_copy.c
+	${sysmem_source}/sysroot.c
+	${sysmem_source}/memset_chk.c
+	${sysmem_source}/memcpy_chk.c
 	../../../../../../common/sysclib/copy_forward.S
 	../../../../../../common/sysclib/move.S
 	../../../../../../common/sysclib/fill_core.S
@@ -38,7 +38,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")
-set_source_files_properties(${sysmem_source}/sysroot_time.c PROPERTIES
+set_source_files_properties(${sysmem_source}/sysroot.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL")
 set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/l2cc.c
 	${sysmem_source}/l2cc_maintenance.S PROPERTIES

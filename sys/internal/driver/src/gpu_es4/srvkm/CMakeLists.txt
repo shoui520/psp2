@@ -1,18 +1,18 @@
 # Native partial implementation (T2): GPU startup and remaining services pending.
 psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel SKELETON PARTIAL SOURCES
-	bridged_sgx_bridge_sce.c
-	bridged_pvr_bridge.c
-	buffer_manager_sce.c
+	bridged/sgx/bridged_sgx_bridge_sce.c
+	bridged/bridged_pvr_bridge.c
+	common/buffer_manager_sce.c
 	handle.c
 	hash.c
 	lists.c
 	mem.c
-	memorymanager.c
-	perproc.c
-	power.c
-	pvrsrv_sce.c
-	resman_sce.c
-	sharedsync.c
+	common/memorymanager.c
+	common/perproc.c
+	common/power.c
+	common/pvrsrv.c
+	common/resman.c
+	common/sharedsync.c
 	pb_sce.c
 	sgxinit_sce.c
 	sgxkick_sce.c
@@ -20,29 +20,29 @@ psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel SKELETON PARTIAL SOURCES
 	sgxreset_sce.c
 	sgxtransfer_sce.c
 	sgxutils_sce.c
-	mmu_sce.c
-	mutex.c
-	osfunc.c
+	devices/sgx/mmu_sce.c
+	env/playstation/mutex.c
+	env/playstation/osfunc.c
 	osperproc.c
-	process.c
+	env/playstation/process.c
 	pvr_bridge_k.c
-	pvr_debug.c
+	env/playstation/pvr_debug.c
 	gpu_es4.c
-	signal-lockup.c
-	hostmem.c
-	memorycontext.c
+	../../gpu/lockup/signal-lockup.c
+	../../gpu/memory/hostmem.c
+	../../gpu/memory/memorycontext.c
 	register-map.c
 	lockup-history.c
 	gpu-heap.c
-	mmu.c
+	../../gpu/memory/mmu.c
 	gpu-blockheap.c
 	gpu-spans.c
 	cache_sce.c
-	waitmodobj.c
+	../../gpu/misc/waitmodobj.c
 	device_sce.c
 	suspend_sce.c
-	registerdump.c
-	registerdump_analysis.c
+	../../gpu/lockup/registerdump.c
+	../../gpu/lockup/registerdump_analysis.c
 	client_pb.c
 	client_render.c
 	client_ccb.c

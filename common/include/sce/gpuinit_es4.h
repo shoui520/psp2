@@ -4,10 +4,10 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include "sce/sgxmkif_sce.h"
-#include "../../../sys/internal/driver/src/gpu_es4/sgxutils_sce.h"
-#include "../../../sys/internal/driver/src/gpu_es4/perproc_sce.h"
-#include "../../../sys/internal/driver/src/gpu_es4/power_sce.h"
-#include "../../../sys/internal/driver/src/gpu_es4/gpu-mmu.h"
+#include "../../../sys/internal/driver/src/gpu_es4/srvkm/sgxutils_sce.h"
+#include "../../../sys/internal/driver/src/gpu_es4/srvkm/perproc_sce.h"
+#include "../../../sys/internal/driver/src/gpu_es4/srvkm/power_sce.h"
+#include "../../../sys/internal/driver/src/gpu_es4/srvkm/gpu-mmu.h"
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
 IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);

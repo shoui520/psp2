@@ -1,6 +1,6 @@
 /* SCE GPU modification-object wait registry. */
 #include <psp2kern/kernel/cpu/spinlock.h>
-#include "sync_sce.h"
+#include "../../gpu_es4/srvkm/sync_sce.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <sce/debug.h>
 

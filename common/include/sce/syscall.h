@@ -22,5 +22,5 @@ static inline void sceSyscallLeave(SceUInt32 t)
 	__asm__ volatile("mcr p15, 0, %0, c13, c0, 3" : : "r"(t) : "memory");
 }
 
-/* SceSysmem: a syscall that returns a 64-bit value says so first (sysroot_time.c) */
+/* SceSysmem: a syscall that returns a 64-bit value says so first (sysroot.c) */
 void sceKernelApiDeclareTypeInt64(void);

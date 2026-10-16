@@ -1,5 +1,5 @@
 psp2_module(os0_kd_bootimage_gpuinit_es4 KIND kernel SOURCES
-	sgxinit.c
+	devices/sgx/sgxinit.c
 	programs.S
 )
 

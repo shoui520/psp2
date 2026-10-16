@@ -20,7 +20,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel PARTIAL SOURCES
 	bbmc_syscon_events.c
 	bbmc_operation_mode.c
 	bbcmd.c
-	netif.c
+	netif/netif.c
 	qmi_information.c
 	qmi_uim_card_status.c
 	qmi_service_parameters.c
@@ -31,7 +31,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel PARTIAL SOURCES
 	qmi_usb.c
 	qmi_backend.c
 	qmi_state.c
-	qmi_instance.c
+	qmi_instance/qmi_instance.c
 	qmi_channel.c
 	qmi_signal.c
 	qmi_completion.c
@@ -43,7 +43,7 @@ psp2_module(os0_kd_bootimage_bbmc KIND kernel PARTIAL SOURCES
 	qmi_fifo.c
 	qmi_prot_main.c
 	qmi_uart.c
-	lib_qmi_uart.c
+	uart_framing/lib_qmi_uart.c
 	qmi_control.c
 	usb_extif.c
 	usb_host.c

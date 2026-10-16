@@ -26,7 +26,7 @@
 int sceKernelSetGPO(SceUInt32 gpo);
 void jumpToNonSecure(uintptr_t entry) __attribute__((noreturn));
 
-/* the sysroot (sysroot_time.c) */
+/* the sysroot (sysroot.c) */
 int SetupCore0(SceKernelBootParam *param);
 int sceKernelSysrootSetStatus(unsigned int status);
 void sceKernelSysrootSetVbaseResetVector(uint32_t value);

@@ -3,8 +3,8 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include "sce/threadmgr.h"
 #include "sce/sysmem.h"
-#include "gpu-dump.h"
-#include "lockup-history.h"
+#include "../../gpu_es4/srvkm/gpu-dump.h"
+#include "../../gpu_es4/srvkm/lockup-history.h"
 #include <sce/debug.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/acmgr.h>

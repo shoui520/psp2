@@ -42,5 +42,5 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel PARTIAL SOURCES
 	psf_util.c
 	fat_format.c
 	fat_format_storage.c
-	partition.c
+	../../../usermode/src/fsutil/partition.c
 )

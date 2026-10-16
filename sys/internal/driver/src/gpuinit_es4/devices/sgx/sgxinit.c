@@ -13,8 +13,8 @@
 #include "sce/sysmem.h"
 #include "sce/gpuinit_es4.h"
 #include "sce/perfmon_regs.h"
-#include "../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
-#include "../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
+#include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
+#include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 #include "programs.h"
 
 /* Debug records use Sony's relative source path, including its directories. */

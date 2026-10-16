@@ -6,7 +6,7 @@ psp2_module(os0_kd_bootimage_pfsmgr KIND kernel SKELETON SOURCES
 	gdsd.c
 	core.c
 	vd.c
-	ac_vfs.c
+	handler/ac_vfs.c
 	access.c
 	lower.c
 	lru.c
@@ -28,7 +28,7 @@ psp2_module(os0_kd_bootimage_pfsmgr KIND kernel SKELETON SOURCES
 	files_db.c
 	acid.c
 	page_alloc.c
-	page_acc.c
+	bufmgr/page_acc.c
 	crypt_buffer.c
 	hash_tree.c
 	unicv_entry.c
