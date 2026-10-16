@@ -114,7 +114,7 @@ SceSysmem:
         - SceCpuForTZS_0A15B41C: 0x0A15B41C
         - SceCpuForTZS_17A88E69: 0x17A88E69
         - SceCpuForTZS_190D96D5: 0x190D96D5
-        - SceCpuForTZS_2B6403F8: 0x2B6403F8
+        - CpuL2CacheSyncCore: 0x2B6403F8
         - SceCpuForTZS_31E78A4B: 0x31E78A4B
         - ksceKernelCpuId: 0x44C423D3
         - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
@@ -124,7 +124,7 @@ SceSysmem:
         - SceCpuForTZS_75D87321: 0x75D87321
         - SceCpuForTZS_7A5373EB: 0x7A5373EB
         - SceCpuForTZS_7CCE9480: 0x7CCE9480
-        - SceCpuForTZS_9E4C0D0D: 0x9E4C0D0D
+        - CpuL2CleanInvalidateAll: 0x9E4C0D0D
         - SceCpuForTZS_A5965CBF: 0xA5965CBF
         - SceCpuForTZS_ACF209F3: 0xACF209F3
         - SceCpuForTZS_B421FAFD: 0xB421FAFD

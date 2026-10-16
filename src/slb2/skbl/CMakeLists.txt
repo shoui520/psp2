@@ -18,6 +18,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	${intrmgr_source}/usleep.c
 	${sysmem_source}/led.c
 	${sysmem_source}/l2cc.c
+	${sysmem_source}/l2cc_maintenance.S
 	${sysmem_source}/serial.c
 	${sysmem_source}/memory_set.c
 	${sysmem_source}/memory_copy.c
@@ -29,7 +30,8 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")
-set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/l2cc.c PROPERTIES
+set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/l2cc.c
+	${sysmem_source}/l2cc_maintenance.S PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_SKBL)
 set_source_files_properties(${intrmgr_source}/intrmgr.c ${intrmgr_source}/usleep.c PROPERTIES
 	COMPILE_DEFINITIONS INTRMGR_SKBL)

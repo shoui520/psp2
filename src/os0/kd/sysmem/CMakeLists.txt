@@ -87,6 +87,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	source/cpu.c
 	source/cpu_cache.c
 	source/l2cc.c
+	source/l2cc_maintenance.S
 	source/cache.c
 	source/vmaccess.S
 	source/mmu.c

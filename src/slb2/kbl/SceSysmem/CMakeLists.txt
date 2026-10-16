@@ -9,10 +9,12 @@ psp2_module(slb2_kbl_SceSysmem KIND kernel PARTIAL SOURCES
 	${sysmem_tzs_source}/led.c
 	${sysmem_tzs_source}/serial.c
 	${sysmem_tzs_source}/l2cc.c
+	${sysmem_tzs_source}/l2cc_maintenance.S
 )
 set_source_files_properties(
 	${sysmem_tzs_source}/led.c
 	${sysmem_tzs_source}/serial.c
 	${sysmem_tzs_source}/l2cc.c
+	${sysmem_tzs_source}/l2cc_maintenance.S
 	PROPERTIES COMPILE_DEFINITIONS SYSMEM_TZS)
 set_source_files_properties(${sysmem_tzs_source}/serial.c PROPERTIES COMPILE_OPTIONS "-fsigned-char")
