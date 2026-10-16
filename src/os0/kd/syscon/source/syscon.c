@@ -833,7 +833,7 @@ static SceSysconPacket s_sysconCommandMultiCnInfo;
 static void sysconInitializeInternalPacket(SceSysconPacket *packet,
 					 uint16_t command)
 {
-	memset(packet, 0, sizeof(*packet));
+	__builtin_memset(packet, 0, sizeof(*packet));
 	packet->queue = 17;
 	packet->semaId = -1;
 	packet->request.command[0] = command;
@@ -842,7 +842,7 @@ static void sysconInitializeInternalPacket(SceSysconPacket *packet,
 	packet->request.data[0] = ~(packet->request.command[0] + packet->request.command[1] + 1);
 }
 
-static int sysconInitialize(void)
+static __attribute__((noinline)) int sysconInitialize(void)
 {
 	SceKernelAllocMemBlockKernelOpt options;
 	volatile SceSpiRegisters *spi;
