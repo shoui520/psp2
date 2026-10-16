@@ -85,7 +85,8 @@ typedef struct SceKernelBootParam {
 	SceUIntPtr resetVector;			/* 0x290: VBAR, exceptionEntry.vbase + 0x100 */
 	uint32_t reserved3[26];			/* SceSysmem's boot objects */
 	uintptr_t debugPutchar;			/* 0x2fc: the boot loader's putchar */
-	uint32_t reserved4[2];
+	uintptr_t debugPrintf;			/* 0x300: the boot loader's printf */
+	uintptr_t debugPutcharHandler;		/* the putchar handler registered with it */
 	uint32_t debugPrintLevel;		/* 0x308 */
 	uint32_t magic;				/* SCE_KERNEL_BOOT_PARAM_MAGIC */
 } SceKernelBootParam;

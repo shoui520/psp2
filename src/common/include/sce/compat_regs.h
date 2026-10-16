@@ -13,6 +13,11 @@
 #define COMPAT_LCDDMA_BASE		0xe5071000
 #define COMPAT_SHARED_SRAM_BASE		0xe8100000
 
+/* the 2 MiB SRAM ("Compati SRAM" in SKBL's messages), physical; SKBL unpacks the
+ * TrustZone SceSysmem into it, PspEmu uses it as the Allegrex side's eDRAM */
+#define COMPAT_SRAM_BASE		0x1c000000
+#define COMPAT_SRAM_SIZE		0x200000
+
 /* one doorbell per word: SceCompat sets the word in enableInterrupt, then raises it */
 typedef struct SceCompatMailboxRegisters {
 	volatile unsigned int raiseInterrupt[32];

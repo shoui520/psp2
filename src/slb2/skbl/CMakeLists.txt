@@ -18,6 +18,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/monitor.S
 	source/boot.c
 	source/kbl_main.c
+	source/archive_tzs.c
 	${intrmgr_source}/dmacmgr_tzs.c
 	${intrmgr_source}/intrmgr.c
 	${intrmgr_source}/usleep.c

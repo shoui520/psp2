@@ -53,7 +53,7 @@ int sceKernelModulemgrStart(SceKernelBootParam *param);
 int ExcpmgrModuleStart(void);
 int sceKernelIntrMgrModuleStart(SceKernelBootParam *param);
 int initDmacSecure(void);
-extern int KblArchive(SceKernelBootParam *param) __attribute__((weak));
+int KblArchive(SceKernelBootParam *param);
 int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 			   uintptr_t pa);
 int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va,
@@ -63,7 +63,7 @@ void ksceKernelL1DcacheCleanInvalidateAll(void);
 void ksceKernelL1IcacheInvalidateEntireAllCore(void);
 void CpuL2CleanInvalidateAll(void);
 SceSize sceArlzDecode(void *dst, SceSize dstSize, const void *src, int flags);
-void sceArlzArmFilter(void *buffer, SceSize size, int flags);
+int sceArlzArmFilter(void *buffer, SceSize size, int flags);
 
 /* compat_sram.S: the code put in the Power Scratchpad */
 extern const char compatSramImage[], compatSramResume[], compatSramResumeEnd[];
@@ -159,8 +159,7 @@ static void KblMainContinue(SceKernelBootParam *param)
 	ExcpmgrModuleStart();
 	sceKernelIntrMgrModuleStart(param);
 	initDmacSecure();
-	if (KblArchive)
-		KblArchive(param);
+	KblArchive(param);
 
 	ksceKernelCorelockLock(param->corelock, 0);
 	ksceKernelL1DcacheCleanInvalidateAll();
