@@ -7,6 +7,7 @@ set(sdif_source ../../os0/kd/sdif/source)
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	source/reset.S
 	source/boot.c
+	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
 	${sdif_source}/sdif.c
 	${sdif_source}/cmd_queue.c
@@ -16,6 +17,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sdif_source}/adma.c
 	../../common/kbl/pervasive_kbl.c
 )
+set_source_files_properties(${sysmem_source}/led.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL)
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_NSKBL COMPILE_OPTIONS "-fsigned-char")
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c

@@ -2,7 +2,8 @@
  * SceSysmem: the debug LEDs and the general purpose inputs/outputs. The GPO
  * value goes to the LED register block through a mask; debug tools register
  * the LED handlers. The secure kernel's SceSysmem (SYSMEM_TZS) only maps the
- * registers; SKBL (SYSMEM_SKBL) writes them at their physical address.
+ * registers; the boot loaders (SYSMEM_SKBL, SYSMEM_NSKBL) write them at their
+ * physical address.
  */
 
 #include <psp2kern/kernel/sysclib.h>
@@ -105,7 +106,7 @@ void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
 }
 #endif
 
-#if defined(SYSMEM_SKBL)
+#if defined(SYSMEM_SKBL) || defined(SYSMEM_NSKBL)
 /* the LED outputs on, before anything is mapped */
 int LedModuleStart(void)
 {

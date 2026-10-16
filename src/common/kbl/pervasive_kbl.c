@@ -426,6 +426,46 @@ int LowioPixelClockInit(void)
 	return 0;
 }
 
+#ifndef PERVASIVE_SKBL
+/* ===== the SD interfaces (lowio's, without the lock) ===== */
+
+int ScePervasiveForDriver_453BD2EC(unsigned int port, unsigned int enable)
+{
+	if (port >= 4)
+		return PERVASIVE_ERROR;
+	if (enable >= 2)
+		return PERVASIVE_ERROR;
+	PERVASIVE_MISC->sdifVoltage = (PERVASIVE_MISC->sdifVoltage & ~(1U << port)) |
+		enable << port;
+	PervasiveDmb();
+	return 0;
+}
+
+int ScePervasiveForDriver_043B33F5(unsigned int port, unsigned int mode)
+{
+	unsigned int shift;
+
+	if (port >= 4)
+		return PERVASIVE_ERROR;
+	if (mode >= 7)
+		return PERVASIVE_ERROR;
+	shift = port * 8;
+	PERVASIVE_MISC->sdifMode = (PERVASIVE_MISC->sdifMode & ~(7U << shift)) |
+		mode << shift;
+	PervasiveDmb();
+	return 0;
+}
+
+int ScePervasiveForDriver_9F8E589C(unsigned int port, uint32_t value)
+{
+	if (port >= 4 || (value & ~0x700U) != 0)
+		return PERVASIVE_ERROR;
+	PERVASIVE_MISC->sdifConfig[port] = value;
+	PervasiveDmb();
+	return 0;
+}
+#endif
+
 #ifdef PERVASIVE_SKBL
 /* ===== the secure devices' power-on ===== */
 
