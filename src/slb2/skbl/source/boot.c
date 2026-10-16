@@ -250,7 +250,9 @@ int MapRegisters(SceKernelBootParam *param)
  * out of reset */
 int SsxInit(void)
 {
-	if (PERVASIVE_RESET->debugBus == 0) {
+	volatile uint32_t *debugBusReset = &PERVASIVE_RESET->debugBus;
+
+	if (*debugBusReset == 0) {
 		SSX_REGISTER_TARGET(SSX_DEBUG_BUS)->networkControl = 0x400;
 		LPDDR1_FIREWALL->region[2].addrMatch = 0xe5880038;
 		LPDDR1_FIREWALL->region[2].reqInfoPermission = 1;
@@ -1549,6 +1551,30 @@ int monitor_call_handler(uint32_t code)
 	SCE_DBG_PRINTF(0, 2350, "\n");
 	SCE_DBG_PRINTF(0xb, 2351, "SCR => 0x%08x\n", readScr());
 	return 0;
+}
+
+/*
+ * names unknown: monitor.S's exception entries, which report the exception
+ * as the boot handlers do
+ */
+void monitor_prefetch_abort_handler(uint32_t lr)
+{
+	boot_prefetch_abort_handler(lr);
+}
+
+void monitor_data_abort_handler(uint32_t lr)
+{
+	boot_data_abort_handler(lr);
+}
+
+void monitor_irq_handler(void)
+{
+	boot_irq_handler();
+}
+
+void monitor_fiq_handler(void)
+{
+	boot_fiq_handler();
 }
 
 #endif

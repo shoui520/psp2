@@ -2,7 +2,7 @@
 # kernel_boot_loader.self (the reset vector page at 0, the code at 0x40020000 with the
 # TrustZone modules it loads, the data). It starts the TrustZone kernel (src/slb2/kbl/),
 # then hands over to NSKBL (src/slb2/nskbl/) in Non-secure state.
-# The reset vector and reset handler are the original's, serial.c is os0 SceSysmem's
+# The reset vector, reset handler and secure monitor (monitor.S) are the original's, serial.c is os0 SceSysmem's
 # (SYSMEM_SKBL), intrmgr.c, usleep.c and dmacmgr_tzs.c the TrustZone SceKernelIntrMgr's
 # (INTRMGR_SKBL), led.c and l2cc.c os0 SceSysmem's (SYSMEM_SKBL), memset and memcpy sysmem's
 # memory_set.c and memory_copy.c with sysclib's assembly cores; the other C functions are
@@ -12,6 +12,7 @@ set(intrmgr_source ../kbl/SceKernelIntrMgr/source)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/reset.S
 	source/memory_test.c
+	source/monitor.S
 	source/boot.c
 	${intrmgr_source}/dmacmgr_tzs.c
 	${intrmgr_source}/intrmgr.c

@@ -8,9 +8,8 @@
  * CPU 0 sets up the SCU and saves or restores the boot save area. All CPUs then call
  * boot() in System mode with the MMU still off.
  *
- * Not written yet: the monitor vector table (monitorVectors, which boot() copies into
- * the kernel's vector page, with setMonitorStack right after it in Sony's text) and its
- * entries (the SMC entry calls monitor_call_handler), the TrustZone module archive.
+ * The monitor vector table, setMonitorStack and the monitor entries are in monitor.S.
+ * Not written yet: the TrustZone module archive.
  */
 
 	.syntax	unified
@@ -380,22 +379,6 @@ fiqEntry:
 	clrex
 	ldm	sp!, {r0-r3, r12, pc}^
 
-/* Monitor mode stack, 0x400 bytes per CPU; returns in System mode */
-	.global	setMonitorStack
-setMonitorStack:
-	mrc	p15, 0, r3, c0, c0, 5		/* MPIDR */
-	and	r3, r3, #15
-	mov	r0, #0x400
-	mul	r0, r3, r0
-	cpsid	if, #0x16			/* Monitor */
-	ldr	sp, =monitorStackTop
-	sub	sp, sp, r0
-	mov	r1, #0
-	mov	lr, r1
-	msr	spsr_fsxc, r1
-	cpsid	if, #0x1f			/* System */
-	bx	lr
-	.ltorg
 
 /*
  * PLACEHOLDER: the boot save area (0x70 bytes) and its backup, the start of SKBL's data;
@@ -423,4 +406,5 @@ svcStackTop:
 	.space	0x1000
 irqStackTop:
 	.space	0x1000
+	.global	monitorStackTop
 monitorStackTop:
