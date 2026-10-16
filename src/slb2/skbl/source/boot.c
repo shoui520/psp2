@@ -5,10 +5,11 @@
  * tables and boot parameters, then every CPU turns the MMU and caches on and
  * enters sceKblMain (boot.c in Sony's debug records).
  *
- * NSKBL is built from this file too (BOOT_NSKBL): Sony's NSKBL has the same
- * exception handlers (the same debug records) and its own boot(), not
- * written yet. The rest of SKBL (memcpy_chk.c, memory_test.c, the kernel
- * library it links) is not written yet either.
+ * NSKBL is built from this file too (BOOT_NSKBL), as Sony's was (the same
+ * debug records): the same exception handlers and ASLR helpers, and its own
+ * boot(), which maps the kernel's DRAM and starts it in Non-secure state.
+ * The rest of SKBL (memcpy_chk.c, memory_test.c, the kernel library it
+ * links) is not written yet.
  */
 
 #include "skeleton.h"
@@ -33,8 +34,6 @@
 #endif
 
 int sceKernelSetGPO(SceUInt32 gpo);
-
-#ifndef BOOT_NSKBL
 
 #define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define SSX_REGISTER_TARGET(xbar) ((SceSsxRegisterTarget *)SSX_REGISTER_TARGET_BASE(xbar))
@@ -87,6 +86,8 @@ int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintpt
 int sceKernelMMUMapSmallPage(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			     uintptr_t pa);
 int sceKernelMMUMapSmallPages(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
+			      SceSize size, uintptr_t pa);
+int sceKernelMMUMapLargePages(uint32_t *l2, uint32_t type, uintptr_t va, uintptr_t offset,
 			      SceSize size, uintptr_t pa);
 uint32_t MMUTtbrValue(uintptr_t l1);
 int MMUSetReady(void);
@@ -182,6 +183,9 @@ static struct {
 } s_bootParam;
 
 static uint8_t s_aslrUsed[0x100];		/* the first megabyte's pages ASLR placed */
+#ifdef BOOT_NSKBL
+static uint8_t s_megaAslrUsed[0x10];		/* the megabytes of the first 16 MiB ASLR placed */
+#endif
 static SceKblParam s_kblParam;
 
 #define QA_LEVEL(_on, _off)	((s_kblParam.qa_flags[0xd] & 1) ? (_on) : (_off))
@@ -194,6 +198,13 @@ static inline uint32_t ror4(uint32_t value)
 {
 	return (value >> 4) | (value << 28);
 }
+
+static inline uint32_t ror5(uint32_t value)
+{
+	return (value >> 5) | (value << 27);
+}
+
+#ifndef BOOT_NSKBL
 
 /* name unknown: the boot-time memory test of the product line */
 int KblMemoryTest(void)
@@ -258,7 +269,21 @@ int SsxInit(void)
 }
 
 
+#else
+
+/* the CPUs' boot steps and the kernel boot loader's, taken before .bss is cleared */
+static SceCorelockContext s_bootCorelock = { .lock = 1, .core_count = 4, .last_wait_core = 4 };
+static SceCorelockContext s_kblCorelock = { .lock = 1, .core_count = 4, .last_wait_core = 4 };
+
+/* reset.S: has the secure monitor unmap the secure kernel boot loader */
+void UnmapKbl(void);
+
+#endif /* BOOT_NSKBL */
+
 /* name unknown: sections in TTBR0's or TTBR1's half, global */
+#ifdef BOOT_NSKBL
+static inline __attribute__((always_inline))
+#endif
 int MapSections(SceKernelBootParam *param, uint32_t type, uintptr_t va, SceSize size,
 		uintptr_t pa)
 {
@@ -308,6 +333,14 @@ uintptr_t MapASLR(SceSize size, uint32_t seed)
 		;
 }
 
+#ifdef BOOT_NSKBL
+/* name unknown: the KBL Param's QA flag "Allow Kernel Debug" */
+int IsAllowKernelDebug(void)
+{
+	return s_kblParam.qa_flags[0xd] & 1;
+}
+#endif
+
 /* name unknown: whether the KBL Param asks for a safe mode boot */
 int IsSafeModeBoot(void)
 {
@@ -332,6 +365,8 @@ hold:
 	return (hold & 0xc0) == 0;
 }
 
+#ifndef BOOT_NSKBL
+
 /* name unknown: one register section, physical = virtual */
 __attribute__((noinline))
 int MapRegisterSection(SceKernelBootParam *param, uintptr_t pa, SceSize size)
@@ -339,6 +374,66 @@ int MapRegisterSection(SceKernelBootParam *param, uintptr_t pa, SceSize size)
 	MapSections(param, BOOT_MAP_REGISTERS, pa, size, pa);
 	return 0;
 }
+
+#endif /* BOOT_NSKBL */
+
+/* the board's hardware dependent words, by the KBL Param's hardware info */
+static inline void SetHardwareDependent(SceKernelBootParam *param)
+{
+	switch (s_kblParam.hardware_info & 0xff0000) {
+	case 0x720000:
+	case 0x721000:
+		param->hardwareDependent[0] = 0x20110;
+		param->hardwareDependent[1] = 0x232;
+		break;
+	case 0x600000:
+		param->hardwareDependent[0] = 0x10150;
+		param->hardwareDependent[1] = 0x604;
+		break;
+	case 0x700000:
+	case 0x510000:
+		param->hardwareDependent[0] = 0x20100;
+		param->hardwareDependent[1] = 0x1232;
+		break;
+	case 0x800000:
+		param->hardwareDependent[0] = 0x10200;
+		param->hardwareDependent[1] = 0x604;
+		break;
+	case 0x820000:
+		param->hardwareDependent[0] = 0x10220;
+		param->hardwareDependent[1] = 0x604;
+		break;
+	default:
+		param->hardwareDependent[0] = 0x10100;
+		param->hardwareDependent[1] = 0x604;
+		break;
+	}
+	if (param->kblParam->boot_flags[0] != 0xff || IsSafeModeBoot())
+		ksceKernelClearDipsw(DIPSW_PLATFORM_DOLCE);
+	if (ksceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE)) {
+		param->hardwareDependent[0] = 0x20101;
+		param->hardwareDependent[1] = 0x252;
+	}
+	if (s_kblParam.hardware_flags[0] & 9)
+		param->hardwareDependent[1] |= 0x100;
+	else if (param->hardwareDependent[0] != 0x20100 && param->hardwareDependent[0] != 0x20110)
+		param->hardwareDependent[1] |= 0x80;
+	if (s_kblParam.hardware_flags[1] & 2)
+		param->hardwareDependent[1] |= 0x2000;
+	if (param->hardwareDependent[0] == 0x20110) {
+		if (s_kblParam.hardware_flags[1] & 1)
+			param->hardwareDependent[1] &= ~0x1000;
+		else
+			param->hardwareDependent[1] |= 0x1000;
+		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+	} else if ((param->hardwareDependent[0] >> 16) == 2) {
+		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+	} else {
+		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: VITA\n");
+	}
+}
+
+#ifndef BOOT_NSKBL
 
 /* the second LPDDR2 channel of the development kits */
 static inline void EnableLpddr2Sub(void)
@@ -596,57 +691,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
 			      s_kblParam.hardware_info);
 
-	switch (s_kblParam.hardware_info & 0xff0000) {
-	case 0x720000:
-	case 0x721000:
-		param->hardwareDependent[0] = 0x20110;
-		param->hardwareDependent[1] = 0x232;
-		break;
-	case 0x600000:
-		param->hardwareDependent[0] = 0x10150;
-		param->hardwareDependent[1] = 0x604;
-		break;
-	case 0x700000:
-	case 0x510000:
-		param->hardwareDependent[0] = 0x20100;
-		param->hardwareDependent[1] = 0x1232;
-		break;
-	case 0x800000:
-		param->hardwareDependent[0] = 0x10200;
-		param->hardwareDependent[1] = 0x604;
-		break;
-	case 0x820000:
-		param->hardwareDependent[0] = 0x10220;
-		param->hardwareDependent[1] = 0x604;
-		break;
-	default:
-		param->hardwareDependent[0] = 0x10100;
-		param->hardwareDependent[1] = 0x604;
-		break;
-	}
-	if (param->kblParam->boot_flags[0] != 0xff || IsSafeModeBoot())
-		ksceKernelClearDipsw(DIPSW_PLATFORM_DOLCE);
-	if (ksceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE)) {
-		param->hardwareDependent[0] = 0x20101;
-		param->hardwareDependent[1] = 0x252;
-	}
-	if (s_kblParam.hardware_flags[0] & 9)
-		param->hardwareDependent[1] |= 0x100;
-	else if (param->hardwareDependent[0] != 0x20100 && param->hardwareDependent[0] != 0x20110)
-		param->hardwareDependent[1] |= 0x80;
-	if (s_kblParam.hardware_flags[1] & 2)
-		param->hardwareDependent[1] |= 0x2000;
-	if (param->hardwareDependent[0] == 0x20110) {
-		if (s_kblParam.hardware_flags[1] & 1)
-			param->hardwareDependent[1] &= ~0x1000;
-		else
-			param->hardwareDependent[1] |= 0x1000;
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
-	} else if ((param->hardwareDependent[0] >> 16) == 2) {
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
-	} else {
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: VITA\n");
-	}
+	SetHardwareDependent(param);
 
 	sceKernelSetGPO(0x83);
 	PervasiveInit();
@@ -987,7 +1032,418 @@ void boot(void)
 
 #else
 
-STUB(boot)
+/* marks a megabyte of the first 16 MiB used, unless it already is */
+static inline int ReserveMegaASLR(unsigned int mega)
+{
+	if (s_megaAslrUsed[mega % 0x10] == 1)
+		return SKELETON_ERROR;
+	s_megaAslrUsed[mega % 0x10] = 1;
+	return 0;
+}
+
+/* a free megabyte of the first 16 MiB, chosen by the seed */
+static inline uintptr_t MapMegaASLR(uint32_t seed)
+{
+	unsigned int mega = seed % 0x10;
+	unsigned int end = mega + 0x10;
+
+	for (; mega < end; mega++) {
+		if (ReserveMegaASLR(mega) >= 0)
+			return mega << 20;
+	}
+	SCE_DBG_PRINTF(0xb, 617, "Failed\n");
+	for (;;)
+		;
+}
+
+/* CPU 0: the KBL Param, the console and the boot parameters */
+static inline uint32_t BootCpu0Init(void *lr)
+{
+	SceKernelBootParam *param = &s_bootParam.param;
+	SceKernelBootParam *current;
+	uint32_t *p;
+	uint32_t kermit;
+	uint32_t aslr = 0;
+	unsigned int i;
+	unsigned int n;
+
+	LedModuleStart();
+	sceKernelSetGPO(BOOT_GPO(1));
+	UnmapKbl();
+	for (p = _fbss; p < _end; p++)
+		*p = 0;
+	param->socRevision = PERVASIVE_MISC->revision;
+	param->socCacheStatus = PERVASIVE_MISC->cacheStatus;
+	memcpy(&s_kblParam, (void *)(SCE_KBL_PARAM_ADDRESS + 0x40200000), sizeof(s_kblParam));
+	param->kblParam = &s_kblParam;
+	InitializeDipsw(&s_kblParam.dipsw);
+	InitializeAssertLevel();
+	InitializeDebugBuffer();
+	if (ksceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
+	    ksceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
+		SerialInit(ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE));
+		sceKernelSetGPO(BOOT_GPO(2));
+		ksceKernelRegisterDebugPutcharHandler((uintptr_t)SerialDebugPutchar, 0);
+	}
+	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
+	ksceKernelPrintfLevel(QA_LEVEL(0, 2),
+			      "Starting PSP2 Kernel Boot Loader (Non-secure) [0x%08x]: %d\n",
+			      FW_VERSION, KblGetBuildNumber());
+	SCE_DBG_PRINTF_LEVEL(1, 0, 1897, "\n");
+
+	kermit = param->socRevision & 0x1ffff;
+	s_bootParam.current = param;
+	param->kermitRevision = kermit;
+	param->magic = SCE_KERNEL_BOOT_PARAM_MAGIC;
+	param->corelock = &s_kblCorelock;
+	param->size = sizeof(*param);
+	param->secure = 0;
+	if (kermit == 0)
+		SCE_DBG_ASSERT_CHECK_LR(0, 1932, lr);
+
+	/* the CP's boot switches */
+	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tBOOTSW\n");
+	for (i = 0; i < 8; i++) {
+		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\t\t%d: 0x%08x", i, s_kblParam.dipswWords[i]);
+		switch (i) {
+		case 1:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP bid & version\n");
+			break;
+		case 2:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
+			break;
+		case 3:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": ASLR\n");
+			aslr = s_kblParam.dipswWords[i];
+			break;
+		case 4:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": SDK(SCE)\n");
+			break;
+		case 5:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": SHELL\n");
+			break;
+		case 6:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": debug control\n");
+			break;
+		case 7:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": system control\n");
+			break;
+		default:
+			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
+			break;
+		}
+	}
+
+	/* the kernel's DRAM: the main LPDDR2 above the boot loaders, CDRAM, the TOOL bank */
+	current = s_bootParam.current;
+	current->numMemory = 3;
+	current->memory[0].pbase = 0x40200000;
+	if (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		current->memory[0].psize = 0x3fe00000;
+	else
+		current->memory[0].psize = 0x1fe00000;
+	current->memory[1].pbase = 0x20000000;
+	current->memory[1].psize = 0x8000000;
+	current->memory[2].pbase = 0x80000000;
+	current->memory[2].psize = 0x40000000;
+	for (n = 0; n < s_bootParam.current->numMemory; n++)
+		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
+				      n, s_bootParam.current->memory[n].pbase,
+				      s_bootParam.current->memory[n].pbase +
+				      s_bootParam.current->memory[n].psize - 1,
+				      s_bootParam.current->memory[n].psize);
+	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
+			      s_kblParam.wakeup_factor);
+	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
+			      s_kblParam.hardware_info);
+	SetHardwareDependent(param);
+
+	sceKernelSetGPO(BOOT_GPO(3));
+	PervasiveInit();
+	sceKernelSetGPO(BOOT_GPO(4));
+	return aslr;
+}
+
+void boot(void)
+{
+	void *lr = __builtin_return_address(0);
+	SceKernelBootParam *param;
+	SceUIntPtr pa;
+	uint32_t aslr;
+	uintptr_t mega;
+	unsigned int i;
+	int cpu;
+
+	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	if (ksceKernelCpuId() != 0)
+		aslr = 0;
+	else
+		aslr = BootCpu0Init(lr);
+
+	writeCsselr(0);
+	writeTeecr(1);
+	writeTeehbr(8);
+	writeJoscr(1);
+	writeVbar((uintptr_t)_start);
+	writeTpidrurw(0);
+	writeTpidruro(0);
+	writeTpidrprw(0);
+	ksceKernelCorelockUnlock(&s_bootCorelock);
+	if (BootTestEarly) {
+		ksceKernelCorelockLock(&s_kblCorelock, 0);
+		if (ksceKernelCpuId() == 0)
+			BootTestEarly();
+		ksceKernelCorelockUnlock(&s_kblCorelock);
+	}
+
+	sceKernelSetGPO(BOOT_GPO(5));
+	param = s_bootParam.current;
+	cpu = ksceKernelCpuId();
+	param->cpu[cpu].ttbcr = 2;
+	param->cpu[cpu].dacr = DACR_ALL_CLIENT;
+	param->cpu[cpu].contextId = 0xf7;
+	writeDacr(DACR_ALL_CLIENT);
+	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	if (cpu == 0) {
+		uint32_t seed = aslr;
+		param->ttbr0MaxAddress = 0x3fffffff;
+		for (i = 0; i < sizeof(s_aslrUsed); i++)
+			s_aslrUsed[i] = 0;
+		for (i = 0; i < sizeof(s_megaAslrUsed); i++)
+			s_megaAslrUsed[i] = 0;
+		ReserveASLR(0, 0x4000);
+		ReserveMegaASLR(0);
+
+		param->reset.name = "SceKernelReset";
+		param->reset.pbase = param->memory[0].pbase;
+		param->reset.vbase = 0;
+		param->reset.psize = 0x1000;
+		param->reset.vsize = 0x4000;
+		param->reset.extraHigh = 0x3000;
+
+		seed = ror5(seed);
+		param->l2PageTable000.name = "SceKernelL2PageTable000";
+		param->l2PageTable000.pbase = param->memory[0].pbase + 0x1000;
+		param->l2PageTable000.vbase = MapASLR(0x1000, seed);
+		param->l2PageTable000.psize = 0x1000;
+		param->l2PageTable000.vsize = 0x2000;
+		param->l2PageTable000.extraHigh = 0x1000;
+		param->l2PageTable000MapBase = 0;
+
+		seed = ror5(seed);
+		param->sysroot.name = "SceSysroot";
+		param->sysroot.pbase = param->memory[0].pbase + 0x4000;
+		param->sysroot.vbase = MapASLR(0x4000, seed);
+		param->sysroot.psize = 0x4000;
+		param->sysroot.vsize = 0x4000;
+		param->sysroot.extraHigh = 0;
+
+		seed = ror5(seed);
+		param->ttbr0.name = "SceKernelTTBR0";
+		param->ttbr0.pbase = param->memory[0].pbase + 0x8000;
+		param->ttbr0.vbase = MapASLR(0x4000, seed);
+		param->ttbr0.psize = 0x4000;
+		param->ttbr0.vsize = 0x4000;
+		param->ttbr0Size = 0x40000000;
+
+		seed = ror5(seed);
+		param->ttbr1.name = "SceKernelTTBR1";
+		param->ttbr1.pbase = param->memory[0].pbase + 0xc000;
+		param->ttbr1.vbase = MapASLR(0x4000, seed);
+		param->ttbr1.psize = 0x4000;
+		param->ttbr1.vsize = 0x4000;
+		param->ttbr1Size = 0xc0000000;
+
+		seed = ror5(seed);
+		param->fixedHeap32B.name = "SceKernelFixedHeap32B";
+		param->fixedHeap32B.vbase = MapASLR(0x10000, seed);
+		param->fixedHeap32B.psize = 0x10000;
+		param->fixedHeap32B.vsize = 0x10000;
+		param->fixedHeap32B.extraHigh = 0;
+
+		seed = ror5(seed);
+		param->fixedHeap48B.name = "SceKernelFixedHeap48B";
+		param->fixedHeap48B.vbase = MapASLR(0x10000, seed);
+		param->fixedHeap48B.psize = 0x10000;
+		param->fixedHeap48B.vsize = 0x10000;
+		param->fixedHeap48B.extraHigh = 0;
+
+		seed = ror5(seed);
+		param->fixedHeap64B.name = "SceKernelFixedHeap64B";
+		param->fixedHeap64B.vbase = MapASLR(0x10000, seed);
+		param->fixedHeap64B.psize = 0x10000;
+		param->fixedHeap64B.vsize = 0x10000;
+		param->fixedHeap64B.extraHigh = 0;
+
+		seed = ror5(seed);
+		param->fixedHeapUIDEntry.name = "SceKernelFixedHeapUIDEntry";
+		param->fixedHeapUIDEntry.vbase = MapASLR(0x10000, seed);
+		param->fixedHeapUIDEntry.psize = 0x10000;
+		param->fixedHeapUIDEntry.vsize = 0x10000;
+		param->fixedHeapUIDEntry.extraHigh = 0;
+
+		seed = ror5(seed);
+		param->exceptionEntry.name = "SceKernelExceptionEntry";
+		param->exceptionEntry.pbase = param->memory[0].pbase;
+		param->exceptionEntry.vbase = MapASLR(0x2000, seed);
+		param->exceptionEntry.psize = 0x1000;
+		param->exceptionEntry.vsize = 0x2000;
+		param->exceptionEntry.extraHigh = 0x1000;
+
+		seed = ror5(seed);
+		param->fixedHeapForL2Object.name = "SceKernelFixedHeapForL2Object";
+		param->fixedHeapForL2Object.vbase = MapASLR(0x2000, seed);
+		param->fixedHeapForL2Object.psize = 0x1000;
+		param->fixedHeapForL2Object.vsize = 0x2000;
+		param->fixedHeapForL2Object.extraHigh = 0x1000;
+
+		seed = ror5(seed);
+		param->l2Vector.name = "SceKernelL2Vector";
+		param->l2Vector.pbase = param->memory[0].pbase + 0x10000;
+		param->l2Vector.vbase = MapASLR(0x8000, seed);
+		param->l2Vector.psize = 0x4000;
+		param->l2Vector.vsize = 0x8000;
+		param->l2Vector.extraHigh = 0x4000;
+
+		seed = ror5(seed);
+		mega = MapMegaASLR(seed);
+		param->phyPageTable.name = "SceKernelPhyPageTable";
+		param->phyPageTable.pbase = param->memory[0].pbase + 0x80000;
+		param->phyPageTable.vbase = mega;
+		param->phyPageTable.psize = 0x80000;
+		param->phyPageTable.vsize = 0x80000;
+		param->phyPageTable.extraHigh = 0;
+
+		param->phyPageTableHigh.name = "SceKernelPhyPageTableHigh";
+		param->phyPageTableHigh.pbase = 0x77f00000;
+		param->phyPageTableHigh.vbase = mega + 0x80000;
+		param->phyPageTableHigh.psize = 0x80000;
+		param->phyPageTableHigh.vsize = 0x80000;
+		param->phyPageTableHigh.extraHigh = 0;
+
+		param->bootKernelImage.name = "SceBootKernelImage";
+		param->bootKernelImage.pbase = KBL_IMAGE_ADDRESS;
+		param->bootKernelImage.vbase = KBL_IMAGE_ADDRESS;
+		param->bootKernelImage.psize = KBL_IMAGE_SIZE;
+		param->bootKernelImage.vsize = 0x2000000;
+		param->bootKernelImage.extraHigh = 0x1000000;
+
+		param->hardwareRegisters.name = NULL;
+		param->hardwareRegisters.pbase = 0xe0000000;
+		param->hardwareRegisters.vbase = 0xe0000000;
+		param->hardwareRegisters.psize = 0x8000000;
+
+		sceKernelMMUL1Init((uint32_t *)param->ttbr0.pbase);
+		sceKernelMMUL1Init((uint32_t *)param->ttbr1.pbase);
+		MapSections(param, BOOT_MAP_CODE, param->bootKernelImage.vbase,
+			    param->bootKernelImage.psize, param->bootKernelImage.pbase);
+		MapSections(param, BOOT_MAP_REGISTERS, param->hardwareRegisters.vbase,
+			    param->hardwareRegisters.psize, param->hardwareRegisters.pbase);
+		MapSections(param, BOOT_MAP_REGISTERS, CPU_PRIVATE_BASE, 0x100000, CPU_PRIVATE_BASE);
+
+		sceKernelMMUSetL2PageTable(param->l2PageTable000MapBase <= param->ttbr0MaxAddress ?
+					   (uint32_t *)param->ttbr0.pbase :
+					   (uint32_t *)param->ttbr1.pbase,
+					   BOOT_DOMAIN_KERNEL, param->l2PageTable000MapBase,
+					   param->l2PageTable000.pbase);
+		sceKernelMMUL2Init((uint32_t *)param->l2PageTable000.pbase);
+		sceKernelMMUMapSmallPage((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
+					 param->l2PageTable000.vbase,
+					 param->l2PageTable000.vbase - param->l2PageTable000MapBase,
+					 param->l2PageTable000.pbase);
+		sceKernelMMUMapSmallPages((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
+					  param->sysroot.vbase,
+					  param->sysroot.vbase - param->l2PageTable000MapBase, 0x4000,
+					  param->sysroot.pbase);
+		sceKernelMMUMapSmallPages((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
+					  param->ttbr0.vbase,
+					  param->ttbr0.vbase - param->l2PageTable000MapBase, 0x4000,
+					  param->ttbr0.pbase);
+		sceKernelMMUMapSmallPages((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
+					  param->ttbr1.vbase,
+					  param->ttbr1.vbase - param->l2PageTable000MapBase, 0x4000,
+					  param->ttbr1.pbase);
+		sceKernelMMUMapSmallPage((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_EXCEPTION,
+					 param->exceptionEntry.vbase,
+					 param->exceptionEntry.vbase - param->l2PageTable000MapBase,
+					 param->exceptionEntry.pbase);
+		sceKernelMMUMapSmallPages((uint32_t *)param->l2PageTable000.pbase, BOOT_MAP_DATA,
+					  param->l2Vector.vbase,
+					  param->l2Vector.vbase - param->l2PageTable000MapBase, 0x4000,
+					  param->l2Vector.pbase);
+
+		/* the physical page tables: large pages in the next L2 table */
+		sceKernelMMUSetL2PageTable(param->phyPageTable.vbase <= param->ttbr0MaxAddress ?
+					   (uint32_t *)param->ttbr0.pbase :
+					   (uint32_t *)param->ttbr1.pbase,
+					   BOOT_DOMAIN_KERNEL, param->phyPageTable.vbase,
+					   param->l2PageTable000.pbase + 0x400);
+		sceKernelMMUL2Init((uint32_t *)(param->l2PageTable000.pbase + 0x400));
+		sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
+					  BOOT_MAP_DATA, param->phyPageTable.vbase, 0,
+					  param->phyPageTable.psize, param->phyPageTable.pbase);
+		if (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+			sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
+						  BOOT_MAP_DATA, param->phyPageTableHigh.vbase,
+						  0x80000, param->phyPageTableHigh.psize,
+						  param->phyPageTableHigh.pbase);
+	}
+	ksceKernelCorelockUnlock(&s_bootCorelock);
+	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
+	writeTtbr1(MMUTtbrValue(param->ttbr1.pbase));
+	writeTtbcr(param->cpu[cpu].ttbcr);
+	writeDacr(DACR_ALL_CLIENT);
+	writeContextId(param->cpu[cpu].contextId);
+
+	/* the kernel's vector page: two copies of this one */
+	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	if (ksceKernelCpuId() == 0) {
+		void *page = memcpy((void *)param->memory[0].pbase, _start, 0x100);
+
+		memcpy((char *)page + 0x100, _start, 0x100);
+		param->resetVector = param->exceptionEntry.vbase + 0x100;
+	}
+	ksceKernelCorelockUnlock(&s_bootCorelock);
+	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	ksceKernelCorelockUnlock(&s_bootCorelock);
+	CpuSctlrInit();
+	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	ksceKernelCorelockUnlock(&s_bootCorelock);
+	ksceKernelCorelockLock(&s_kblCorelock, 0);
+	ksceKernelCorelockUnlock(&s_kblCorelock);
+	writeVbar(param->resetVector);
+	MMUSetReady();
+	ksceKernelCorelockLock(&s_kblCorelock, 0);
+	ksceKernelCpuId();
+	ksceKernelCorelockUnlock(&s_kblCorelock);
+
+	sceKernelSetGPO(BOOT_GPO(6));
+	if (BootTest) {
+		ksceKernelCorelockLock(&s_kblCorelock, 0);
+		if (ksceKernelCpuId() == 0) {
+			SCE_DBG_PRINTF(0xb, 2196, "Please add test code\n");
+			BootTest();
+		}
+		ksceKernelCorelockUnlock(&s_kblCorelock);
+		for (;;)
+			;
+	}
+	sceKernelSetGPO(BOOT_GPO(7));
+	if (sceKblMain) {
+		if (ksceKernelCpuId() == 0) {
+			ksceKernelMMUVAtoPA((void *)0x8000, &pa);
+			ksceKernelMMUVAtoPA((void *)0x40100000, &pa);
+			ksceKernelMMUVAtoPA((void *)0x47000000, &pa);
+			ksceKernelMMUVAtoPA((void *)0xe0000000, &pa);
+		}
+		sceKblMain(s_bootParam.current);
+	}
+	ksceKernelCorelockLock(&s_kblCorelock, 0);
+	ksceKernelCpuId();
+	ksceKernelCorelockUnlock(&s_kblCorelock);
+	for (;;)
+		;
+}
 
 #endif /* BOOT_NSKBL */
 

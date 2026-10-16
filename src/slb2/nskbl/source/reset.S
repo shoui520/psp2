@@ -201,6 +201,20 @@ fiqEntry:
 	ldm	sp!, {r0-r3, r12, pc}^
 
 /*
+ * Name unknown: boot() asks the secure monitor to unmap the secure kernel
+ * boot loader (SCE_MONCALL_UNMAP_KBL) before it clears .bss.
+ */
+	.balign	16
+	.global	UnmapKbl
+	.type	UnmapKbl, %function
+UnmapKbl:
+	movw	r12, #0x103			/* SCE_MONCALL_UNMAP_KBL */
+	.arch_extension sec
+	smc	#0
+	bx	lr
+	.size	UnmapKbl, . - UnmapKbl
+
+/*
  * The boot stacks, 0x400 bytes per CPU in each mode (System: 0x1000), used until
  * sceKblMain moves to the SceKernelBootStackCoreX memory blocks.
  */
