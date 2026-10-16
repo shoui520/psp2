@@ -371,6 +371,21 @@ typedef struct ScePervasive2BusErrorStatus {
 	uint32_t reserved1[10];
 } ScePervasive2BusErrorStatus;
 
+/* one OCP target's bus error words in Pervasive2 */
+typedef struct ScePervasive2OcpErrorLog {
+	uint32_t reserved0;
+	volatile uint32_t address;
+	volatile uint32_t attribute;
+	uint32_t reserved1;
+} ScePervasive2OcpErrorLog;
+
+/* ScePervasive2Registers.ocpErrorLog[world][target] */
+#define PERVASIVE2_OCP_SPM128		0
+#define PERVASIVE2_OCP_SPM32		1
+#define PERVASIVE2_OCP_COMPAT_RAM	2
+#define PERVASIVE2_OCP_PERVASIVE2	3
+#define PERVASIVE2_OCP_TARGETS		4
+
 typedef struct ScePervasive2Registers {
 	unsigned char reserved[0x100];
 	unsigned int debuggerPhysicalBase;		/* 0x100 */
@@ -404,9 +419,9 @@ typedef struct ScePervasive2Registers {
 	VeneziaAddressWindow windows[3];		/* 0x390 */
 	unsigned char reservedWindows[0x40];
 	unsigned int bootPhysicalBase;			/* 0x400 */
-	/* 0xd00: the OCP targets' error logs, two sets, in the bus error
-	 * tables (sce/buserror_es3.h) */
-	unsigned char reservedBoot[0x97c];
+	unsigned char reservedBoot[0x8fc];
+	/* 0xd00: the OCP targets' error logs, non-secure then secure (0xd40) */
+	ScePervasive2OcpErrorLog ocpErrorLog[2][PERVASIVE2_OCP_TARGETS];
 	ScePervasive2BusErrorStatus busErrorStatus[2];	/* 0xd80 */
 	unsigned char reservedBusError[0x8];
 	unsigned int interruptControl;			/* 0xe08 */
@@ -444,6 +459,8 @@ _Static_assert(offsetof(ScePervasive2Registers, usbPhyReady) == 0xf30, "Pervasiv
 _Static_assert(offsetof(ScePervasive2Registers, vipProtBap) == 0x248, "Pervasive2 VIP protection");
 _Static_assert(offsetof(ScePervasive2Registers, veneProtReg) == 0x348, "Pervasive2 Venezia protection");
 _Static_assert(offsetof(ScePervasive2Registers, busErrorStatus) == 0xd80, "Pervasive2 bus error status");
+_Static_assert(offsetof(ScePervasive2Registers, ocpErrorLog[1][PERVASIVE2_OCP_SPM32].address) == 0xd54,
+	"Pervasive2 OCP error logs");
 _Static_assert(offsetof(ScePervasive2Registers, interruptControl) == 0xe08, "Pervasive2 interrupt control");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, debugBus) == 0x154, "Pervasive debug bus");
 _Static_assert(offsetof(ScePervasiveDeviceRegisters, spm) == 0x178, "Pervasive SPM");

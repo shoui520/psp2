@@ -23,6 +23,12 @@
 #include "sce/debug.h"
 #include "sce/pervasive_regs.h"
 #include "sce/grab_regs.h"
+#include "sce/dmac_regs.h"
+#include "sce/lpddr2_regs.h"
+#include "sce/perfmon_regs.h"
+#include "sce/sdio_window.h"
+#include "sce/ssx_firewall_regs.h"
+#include "sce/timer_regs.h"
 
 #pragma push_macro("__FILE_NAME__")
 #pragma GCC diagnostic push
@@ -40,6 +46,31 @@
 
 #define REG(address)		((SceUInt32 *)(address))
 
+/* an OCP target's error words: {address, attribute}, the non-secure pair first */
+#define DMAC_ERROR_LOG(base)							\
+	{{REG(&((SceDmacRegisters *)(base))->busErrorAddress),			\
+	  REG(&((SceDmacRegisters *)(base))->busErrorAttribute)},		\
+	 {REG(&((SceDmacRegisters *)(base))->secureBusErrorAddress),		\
+	  REG(&((SceDmacRegisters *)(base))->secureBusErrorAttribute)}}
+#define DMAC4_ERROR_LOG								\
+	{{REG(&((SceDmac4Reg *)DMAC4_REG_BASE)->busErrorAddress),		\
+	  REG(&((SceDmac4Reg *)DMAC4_REG_BASE)->busErrorAttribute)},		\
+	 {REG(&((SceDmac4Reg *)DMAC4_REG_BASE)->secureBusErrorAddress),	\
+	  REG(&((SceDmac4Reg *)DMAC4_REG_BASE)->secureBusErrorAttribute)}}
+#define PERVASIVE2_ERROR_LOG(target)						\
+	{{REG(&PERVASIVE2->ocpErrorLog[0][target].address), NULL},		\
+	 {REG(&PERVASIVE2->ocpErrorLog[1][target].address), NULL}}
+#define LPDDR2_ERROR_LOG(base)							\
+	{{REG(&((SceLpddr2Registers *)(base))->busErrorAddress),		\
+	  REG(&((SceLpddr2Registers *)(base))->busErrorAttribute)},		\
+	 {REG(&((SceLpddr2Registers *)(base))->control[LPDDR2_CONTROL_SECURE_BUS_ERROR_ADDRESS]),	\
+	  REG(&((SceLpddr2Registers *)(base))->control[LPDDR2_CONTROL_SECURE_BUS_ERROR_ATTRIBUTE])}}
+#define SDIO_ERROR_LOG(n)							\
+	{{REG(SDIO_WINDOW_PADDR(n) + SDIO_WINDOW_BUS_ERROR_ADDRESS),		\
+	  REG(SDIO_WINDOW_PADDR(n) + SDIO_WINDOW_BUS_ERROR_ATTRIBUTE)},		\
+	 {REG(SDIO_WINDOW_PADDR(n) + SDIO_WINDOW_SECURE_BUS_ERROR_ADDRESS),	\
+	  REG(SDIO_WINDOW_PADDR(n) + SDIO_WINDOW_SECURE_BUS_ERROR_ATTRIBUTE)}}
+
 /*
  * The registers the collection reads: the Pervasive reset and clock gate
  * words (a device's error registers are only read while it is out of reset
@@ -50,6 +81,9 @@
 #define PERVASIVE_RESET		((const ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define PERVASIVE_GATE		((const ScePervasiveGateRegisters *)PERVASIVE_GATE_BASE)
 #define PERVASIVE2		((const ScePervasive2Registers *)PERVASIVE2_BASE)
+#define PERVASIVE_MISC		((const ScePervasiveMiscRegisters *)PERVASIVE_MISC_BASE)
+#define PERFMON			((const ScePerfmonRegisters *)PERFMON_REG_BASE)
+#define TIMER_BUS_ERROR		((const SceTimerBusErrorRegisters *)TIMER_BUS_ERROR_REG_BASE)
 #define GRAB_SECURE		((const SceGrabRegisters *)GRAB_BASE)
 #define GRAB			((const SceGrabRegisters *)GRAB_NS_BASE)
 #define REGBUS_SECURE		((const SceSonyRegbusRegisters *)SONY_REGBUS_BASE)
@@ -545,71 +579,77 @@ static const BusErrorPort __attribute__((unused)) cameraRegisterBusTargets[] = {
 
 static const BusErrorOcpTarget __attribute__((unused)) ocpTargets0[] = {
 	{BUSERROR_NAME("DMAC0"), 0x00000001, isDmac0On,
-	 {{REG(0xe3000110), REG(0xe3000114)}, {REG(0xe3000118), REG(0xe300011c)}}},
+	 DMAC_ERROR_LOG(DMAC0_REG_BASE)},
 	{BUSERROR_NAME("DMAC1"), 0x00000002, isDmac1On,
-	 {{REG(0xe3010110), REG(0xe3010114)}, {REG(0xe3010118), REG(0xe301011c)}}},
+	 DMAC_ERROR_LOG(DMAC1_REG_BASE)},
 	{BUSERROR_NAME("DMAC2"), 0x00000004, isDmac2On,
-	 {{REG(0xe5000110), REG(0xe5000114)}, {REG(0xe5000118), REG(0xe500011c)}}},
+	 DMAC_ERROR_LOG(DMAC2_REG_BASE)},
 	{BUSERROR_NAME("DMAC3"), 0x00000008, isDmac3On,
-	 {{REG(0xe5010110), REG(0xe5010114)}, {REG(0xe5010118), REG(0xe501011c)}}},
+	 DMAC_ERROR_LOG(DMAC3_REG_BASE)},
 	{BUSERROR_NAME("DMAC4"), 0x00000010, isDmac4On,
-	 {{REG(0xe0400810), REG(0xe0400814)}, {REG(0xe0400818), REG(0xe040081c)}}},
+	 DMAC4_ERROR_LOG},
 	{BUSERROR_NAME("DMAC5"), 0x00000020, isDmac5On,
-	 {{REG(0xe0410110), REG(0xe0410114)}, {REG(0xe0410118), REG(0xe041011c)}}},
+	 DMAC_ERROR_LOG(DMAC5_REG_BASE)},
 	{BUSERROR_NAME("DMAC6"), 0x00000040, isDmac6On,
-	 {{REG(0xe50c0110), REG(0xe50c0114)}, {REG(0xe50c0118), REG(0xe50c011c)}}},
+	 DMAC_ERROR_LOG(DMAC6_REG_BASE)},
 	{BUSERROR_NAME("SPM32"), 0x00000800, isSpm32On,
-	 {{REG(0xe3110d14), NULL}, {REG(0xe3110d54), NULL}}},
+	 PERVASIVE2_ERROR_LOG(PERVASIVE2_OCP_SPM32)},
 	{BUSERROR_NAME("SPM128"), 0x00001000, isSpm128On,
-	 {{REG(0xe3110d04), NULL}, {REG(0xe3110d44), NULL}}},
+	 PERVASIVE2_ERROR_LOG(PERVASIVE2_OCP_SPM128)},
 	{BUSERROR_NAME("DDRIF0"), 0x00004000, isDdrIf0On,
-	 {{REG(0xe600c008), REG(0xe600c000)}, {REG(0xe60083a8), REG(0xe60083a0)}}},
+	 LPDDR2_ERROR_LOG(LPDDR2_MAIN_REG_BASE)},
 	{BUSERROR_NAME("DDRIF1"), 0x00008000, isDdrIf1On,
-	 {{REG(0xe588c008), REG(0xe588c000)}, {REG(0xe58883a8), REG(0xe58883a0)}}},
+	 LPDDR2_ERROR_LOG(LPDDR2_SUB_REG_BASE)},
 	{BUSERROR_NAME("CompatRAM"), 0x00020000, isCompatRamOn,
-	 {{REG(0xe3110d24), NULL}, {REG(0xe3110d64), NULL}}},
+	 PERVASIVE2_ERROR_LOG(PERVASIVE2_OCP_COMPAT_RAM)},
 	{BUSERROR_NAME("Pervasive"), 0x00100000, isAlwaysOn,
-	 {{REG(0xe310013c), REG(0xe3100138)}, {REG(0xe3100134), REG(0xe3100130)}}},
+	 {{REG(&PERVASIVE_MISC->busErrorAddress), REG(&PERVASIVE_MISC->busErrorAttribute)},
+	  {REG(&PERVASIVE_MISC->secureBusErrorAddress), REG(&PERVASIVE_MISC->secureBusErrorAttribute)}}},
 	{BUSERROR_NAME("Pervasive2"), 0x00200000, isAlwaysOn,
-	 {{REG(0xe3110d34), REG(0xe3110d38)}, {REG(0xe3110d74), REG(0xe3110d78)}}},
+	 {{REG(&PERVASIVE2->ocpErrorLog[0][PERVASIVE2_OCP_PERVASIVE2].address),
+	   REG(&PERVASIVE2->ocpErrorLog[0][PERVASIVE2_OCP_PERVASIVE2].attribute)},
+	  {REG(&PERVASIVE2->ocpErrorLog[1][PERVASIVE2_OCP_PERVASIVE2].address),
+	   REG(&PERVASIVE2->ocpErrorLog[1][PERVASIVE2_OCP_PERVASIVE2].attribute)}}},
 	{BUSERROR_NAME("DebugPA"), 0x00400000, isDebugPaOn,
-	 {{REG(0xe50d10f0), REG(0xe50d10f4)}, {REG(0xe50d10f8), REG(0xe50d10fc)}}},
+	 {{REG(&PERFMON->busErrorLog[0]), REG(&PERFMON->busErrorLog[1])},
+	  {REG(&PERFMON->secureBusErrorLog[0]), REG(&PERFMON->secureBusErrorLog[1])}}},
 };
 
 static const BusErrorOcpTarget __attribute__((unused)) ocpTargets1[] = {
 	{BUSERROR_NAME("TIMER"), 0x00000008, isTimerOn,
-	 {{REG(0xe20bf000), REG(0xe20bf004)}, {REG(0xe20bf008), REG(0xe20bf00c)}}},
+	 {{REG(&TIMER_BUS_ERROR->busErrorAddress), REG(&TIMER_BUS_ERROR->busErrorAttribute)},
+	  {REG(&TIMER_BUS_ERROR->secureBusErrorAddress), REG(&TIMER_BUS_ERROR->secureBusErrorAttribute)}}},
 	{BUSERROR_NAME("SDIO1"), 0x00004000, isSdio1On,
-	 {{REG(0xe581fff0), REG(0xe581fff4)}, {REG(0xe581ffe8), REG(0xe581ffec)}}},
+	 SDIO_ERROR_LOG(1)},
 	{BUSERROR_NAME("SDIO0"), 0x00008000, isSdio0On,
-	 {{REG(0xe580fff0), REG(0xe580fff4)}, {REG(0xe580ffe8), REG(0xe580ffec)}}},
+	 SDIO_ERROR_LOG(0)},
 };
 
 static const BusErrorSystemBus __attribute__((unused)) systemBuses[] = {
 	{BUSERROR_NAME("Main Xbar"), 0x00000001, BUSERROR_MAIN_XBAR, mainXbarInitiators, mainXbarTargets},
-	{BUSERROR_NAME("Center Xbar"), 0x00000002, 0xec100000, centerXbarInitiators, centerXbarTargets},
-	{BUSERROR_NAME("Video Xbar"), 0x00000004, 0xec200000, videoXbarInitiators, videoXbarTargets},
-	{BUSERROR_NAME("IFTU Xbar"), 0x00000008, 0xec300000, iftuXbarInitiators, iftuXbarTargets},
-	{BUSERROR_NAME("VIP Xbar"), 0x00000010, 0xec400000, vipXbarInitiators, vipXbarTargets},
-	{BUSERROR_NAME("Debug Bus"), 0x00000020, 0xec500000, debugBusInitiators, debugBusTargets},
-	{BUSERROR_NAME("DMAC Xbar"), 0x00000040, 0xec600000, dmacXbarInitiators, dmacXbarTargets},
-	{BUSERROR_NAME("IO Slave Bus"), 0x00000100, 0xed000000, ioSlaveBusInitiators, ioSlaveBusTargets},
-	{BUSERROR_NAME("IO Master Bus"), 0x00000200, 0xed100000, ioMasterBusInitiators, ioMasterBusTargets},
-	{BUSERROR_NAME("Pervasive Bus"), 0x00000400, 0xed200000, pervasiveBusInitiators, pervasiveBusTargets},
-	{BUSERROR_NAME("Misc IO Bus"), 0x00000800, 0xed300000, miscIoBusInitiators, miscIoBusTargets},
-	{BUSERROR_NAME("North IO Master Bus"), 0x00001000, 0xed400000, northIoMasterBusInitiators, northIoMasterBusTargets},
-	{BUSERROR_NAME("Audio Bus"), 0x00002000, 0xed500000, audioBusInitiators, audioBusTargets},
-	{BUSERROR_NAME("North IO Slave Bus"), 0x00004000, 0xed600000, northIoSlaveBusInitiators, northIoSlaveBusTargets},
-	{BUSERROR_NAME("SRC Bus"), 0x00008000, 0xed700000, srcBusInitiators, srcBusTargets},
-	{BUSERROR_NAME("GPU Register Bus"), 0x00010000, 0xed800000, gpuRegisterBusInitiators, gpuRegisterBusTargets},
-	{BUSERROR_NAME("IFTU Register Bus"), 0x00020000, 0xed900000, iftuRegisterBusInitiators, iftuRegisterBusTargets},
-	{BUSERROR_NAME("Camera Slave Bus"), 0x01000000, 0xee000000, cameraSlaveBusInitiators, cameraSlaveBusTargets},
-	{BUSERROR_NAME("Camera Master Bus"), 0x02000000, 0xee100000, cameraMasterBusInitiators, cameraMasterBusTargets},
-	{BUSERROR_NAME("USB Slave Bus"), 0x04000000, 0xee200000, usbSlaveBusInitiators, usbSlaveBusTargets},
-	{BUSERROR_NAME("USB Master Bus"), 0x08000000, 0xee300000, usbMasterBusInitiators, usbMasterBusTargets},
-	{BUSERROR_NAME("SubLCD Slave Bus"), 0x10000000, 0xee400000, subLcdSlaveBusInitiators, subLcdSlaveBusTargets},
-	{BUSERROR_NAME("SubLCD Master Bus"), 0x20000000, 0xee500000, subLcdMasterBusInitiators, subLcdMasterBusTargets},
-	{BUSERROR_NAME("Camera Register Bus"), 0x40000000, 0xee600000, cameraRegisterBusInitiators, cameraRegisterBusTargets},
+	{BUSERROR_NAME("Center Xbar"), 0x00000002, SSX_XBAR_BASE(SSX_CENTER_XBAR), centerXbarInitiators, centerXbarTargets},
+	{BUSERROR_NAME("Video Xbar"), 0x00000004, SSX_XBAR_BASE(SSX_VIDEO_XBAR), videoXbarInitiators, videoXbarTargets},
+	{BUSERROR_NAME("IFTU Xbar"), 0x00000008, SSX_XBAR_BASE(SSX_IFTU_XBAR), iftuXbarInitiators, iftuXbarTargets},
+	{BUSERROR_NAME("VIP Xbar"), 0x00000010, SSX_XBAR_BASE(SSX_VIP_XBAR), vipXbarInitiators, vipXbarTargets},
+	{BUSERROR_NAME("Debug Bus"), 0x00000020, SSX_XBAR_BASE(SSX_DEBUG_BUS), debugBusInitiators, debugBusTargets},
+	{BUSERROR_NAME("DMAC Xbar"), 0x00000040, SSX_XBAR_BASE(SSX_DMAC_XBAR), dmacXbarInitiators, dmacXbarTargets},
+	{BUSERROR_NAME("IO Slave Bus"), 0x00000100, SSX_BUS_BASE(SSX_IO_SLAVE_BUS), ioSlaveBusInitiators, ioSlaveBusTargets},
+	{BUSERROR_NAME("IO Master Bus"), 0x00000200, SSX_BUS_BASE(SSX_IO_MASTER_BUS), ioMasterBusInitiators, ioMasterBusTargets},
+	{BUSERROR_NAME("Pervasive Bus"), 0x00000400, SSX_BUS_BASE(SSX_PERVASIVE_BUS), pervasiveBusInitiators, pervasiveBusTargets},
+	{BUSERROR_NAME("Misc IO Bus"), 0x00000800, SSX_BUS_BASE(SSX_MISC_IO_BUS), miscIoBusInitiators, miscIoBusTargets},
+	{BUSERROR_NAME("North IO Master Bus"), 0x00001000, SSX_BUS_BASE(SSX_NORTH_IO_MASTER_BUS), northIoMasterBusInitiators, northIoMasterBusTargets},
+	{BUSERROR_NAME("Audio Bus"), 0x00002000, SSX_BUS_BASE(SSX_AUDIO_BUS), audioBusInitiators, audioBusTargets},
+	{BUSERROR_NAME("North IO Slave Bus"), 0x00004000, SSX_BUS_BASE(SSX_NORTH_IO_SLAVE_BUS), northIoSlaveBusInitiators, northIoSlaveBusTargets},
+	{BUSERROR_NAME("SRC Bus"), 0x00008000, SSX_BUS_BASE(SSX_SRC_BUS), srcBusInitiators, srcBusTargets},
+	{BUSERROR_NAME("GPU Register Bus"), 0x00010000, SSX_BUS_BASE(SSX_GPU_REGISTER_BUS), gpuRegisterBusInitiators, gpuRegisterBusTargets},
+	{BUSERROR_NAME("IFTU Register Bus"), 0x00020000, SSX_BUS_BASE(SSX_IFTU_REGISTER_BUS), iftuRegisterBusInitiators, iftuRegisterBusTargets},
+	{BUSERROR_NAME("Camera Slave Bus"), 0x01000000, SSX_BUS_BASE(SSX_CAMERA_SLAVE_BUS), cameraSlaveBusInitiators, cameraSlaveBusTargets},
+	{BUSERROR_NAME("Camera Master Bus"), 0x02000000, SSX_BUS_BASE(SSX_CAMERA_MASTER_BUS), cameraMasterBusInitiators, cameraMasterBusTargets},
+	{BUSERROR_NAME("USB Slave Bus"), 0x04000000, SSX_BUS_BASE(SSX_USB_SLAVE_BUS), usbSlaveBusInitiators, usbSlaveBusTargets},
+	{BUSERROR_NAME("USB Master Bus"), 0x08000000, SSX_BUS_BASE(SSX_USB_MASTER_BUS), usbMasterBusInitiators, usbMasterBusTargets},
+	{BUSERROR_NAME("SubLCD Slave Bus"), 0x10000000, SSX_BUS_BASE(SSX_SUBLCD_SLAVE_BUS), subLcdSlaveBusInitiators, subLcdSlaveBusTargets},
+	{BUSERROR_NAME("SubLCD Master Bus"), 0x20000000, SSX_BUS_BASE(SSX_SUBLCD_MASTER_BUS), subLcdMasterBusInitiators, subLcdMasterBusTargets},
+	{BUSERROR_NAME("Camera Register Bus"), 0x40000000, SSX_BUS_BASE(SSX_CAMERA_REGISTER_BUS), cameraRegisterBusInitiators, cameraRegisterBusTargets},
 };
 
 #ifndef SCE_BUSERROR_TABLES_ONLY

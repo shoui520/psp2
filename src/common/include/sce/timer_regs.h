@@ -13,6 +13,8 @@
 
 #define TIMER_LONG_REG_BASE(n)		(0xe20b1000 + (n) * 0x1000)
 #define TIMER_WORD_REG_BASE(n)		(0xe20b7000 + (n) * 0x1000)
+/* TMBERR (0.920's name): the timer block's bus error words */
+#define TIMER_BUS_ERROR_REG_BASE	0xe20bf000
 #define TIMER_REG_SIZE			0x1000
 
 /* control: bit 0 runs the count, bits 23:20 the input clock, 31:24 the prescaler */
@@ -60,3 +62,10 @@ _Static_assert(offsetof(SceLongTimerRegisters, intr) == 0x18, "LT interrupt");
 _Static_assert(offsetof(SceLongTimerRegisters, control) == 0x1c, "LT control");
 _Static_assert(offsetof(SceWordTimerRegisters, control) == 0x8, "WT control");
 _Static_assert(offsetof(SceWordTimerRegisters, intr) == 0x14, "WT interrupt");
+
+typedef struct SceTimerBusErrorRegisters {
+	volatile uint32_t busErrorAddress;
+	volatile uint32_t busErrorAttribute;
+	volatile uint32_t secureBusErrorAddress;
+	volatile uint32_t secureBusErrorAttribute;
+} SceTimerBusErrorRegisters;

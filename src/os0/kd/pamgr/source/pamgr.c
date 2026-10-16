@@ -253,27 +253,27 @@ void ScePamgrForDriver_E4AF5A5D(uint32_t *values)
 {
 	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
-	values[0] = pfm->traceReadback0[0];
-	values[1] = pfm->traceReadback0[1];
+	values[0] = pfm->busErrorLog[0];
+	values[1] = pfm->busErrorLog[1];
 }
 
 void ScePamgrForDriver_C0EF725E(uint32_t *values)
 {
 	ScePerfmonRegisters *pfm = pamgrState.pfmRegisters;
 
-	values[0] = pfm->traceReadback1[0];
-	values[1] = pfm->traceReadback1[1];
+	values[0] = pfm->secureBusErrorLog[0];
+	values[1] = pfm->secureBusErrorLog[1];
 }
 
-/* Auxiliary controls and paired readback register resets. */
-void clearTraceReadback0(void)
+/* Debug/PA bus error log resets: the attribute word is cleared. */
+void clearBusErrorLog(void)
 {
-	pamgrState.pfmRegisters->traceReadback0[1] = 0;
+	pamgrState.pfmRegisters->busErrorLog[1] = 0;
 }
 
-void clearTraceReadback1(void)
+void clearSecureBusErrorLog(void)
 {
-	pamgrState.pfmRegisters->traceReadback1[1] = 0;
+	pamgrState.pfmRegisters->secureBusErrorLog[1] = 0;
 }
 
 void enableTraceAuxControl0(void)

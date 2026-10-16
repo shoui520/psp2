@@ -27,6 +27,10 @@
 #define LPDDR2_COMMAND_INIT		1
 #define LPDDR2_STATUS_INIT_DONE		0x11
 
+/* the control words that hold the secure bus error log */
+#define LPDDR2_CONTROL_SECURE_BUS_ERROR_ATTRIBUTE	0x74
+#define LPDDR2_CONTROL_SECURE_BUS_ERROR_ADDRESS		0x75
+
 typedef struct SceLpddr2ControlWord {
 	volatile uint32_t value;
 	uint32_t reserved;
@@ -39,9 +43,14 @@ typedef struct SceLpddr2Registers {
 	volatile uint32_t ioConfig[2];			/* 0x0090 */
 	uint32_t reserved1[0x1fda];
 	SceLpddr2ControlWord control[LPDDR2_CONTROL_COUNT];	/* 0x8000 */
-	uint32_t reserved2[0x1c00];
+	uint32_t reserved2[0xc00];
+	volatile uint32_t busErrorAttribute;		/* 0xc000 */
+	uint32_t reserved3;
+	volatile uint32_t busErrorAddress;		/* 0xc008 */
+	uint32_t reserved4[0xffd];
 } SceLpddr2Registers;
 
 _Static_assert(offsetof(SceLpddr2Registers, ioConfig) == 0x90, "LPDDR2 I/O config");
 _Static_assert(offsetof(SceLpddr2Registers, control) == 0x8000, "LPDDR2 control words");
+_Static_assert(offsetof(SceLpddr2Registers, busErrorAddress) == 0xc008, "LPDDR2 bus error");
 _Static_assert(sizeof(SceLpddr2Registers) == 0x10000, "LPDDR2 register block");

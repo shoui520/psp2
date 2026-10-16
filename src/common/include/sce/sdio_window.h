@@ -25,6 +25,12 @@
 #define SDIO_WINDOW_PADDR(n)	(0xe5800000 + (n) * SDIO_WINDOW_SIZE)
 #define SDIO_WINDOW_SIZE	0x10000
 
+/* a window's last words: its bus error log, the secure words first */
+#define SDIO_WINDOW_SECURE_BUS_ERROR_ADDRESS	0xffe8
+#define SDIO_WINDOW_SECURE_BUS_ERROR_ATTRIBUTE	0xffec
+#define SDIO_WINDOW_BUS_ERROR_ADDRESS		0xfff0
+#define SDIO_WINDOW_BUS_ERROR_ATTRIBUTE		0xfff4
+
 /* the window offsets the descriptors carry (SdioWindowDesc.offset) */
 #define SHM_RX_WINDOW(n)	(0x800 + 0x100 * (n))
 #define SHM_TX_WINDOW(n)	(0xc00 + 0x100 * (n))

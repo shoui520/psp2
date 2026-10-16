@@ -66,8 +66,9 @@ typedef struct ScePerfmonRegisters {
 	volatile uint32_t counterTraceControl;
 	volatile uint32_t counterTraceValues[3];
 	volatile uint32_t traceAuxControl1;
-	volatile uint32_t traceReadback0[2];
-	volatile uint32_t traceReadback1[2];
+	/* 0x10f0: Debug/PA's bus error log, address and attribute */
+	volatile uint32_t busErrorLog[2];
+	volatile uint32_t secureBusErrorLog[2];
 	volatile uint32_t traceBuffer1Enable;
 	volatile uint32_t traceBuffer1Base;
 	volatile uint32_t traceBuffer1WritePointer;
@@ -85,3 +86,4 @@ typedef struct ScePerfmonRegisters {
 
 _Static_assert(offsetof(ScePerfmonRegisters, timebaseLow) == 0x88, "Perfmon timebase");
 _Static_assert(offsetof(ScePerfmonRegisters, registerBank1) == 0x1000, "Perfmon kernel page");
+_Static_assert(offsetof(ScePerfmonRegisters, busErrorLog) == 0x10f0, "Perfmon Debug/PA bus error");

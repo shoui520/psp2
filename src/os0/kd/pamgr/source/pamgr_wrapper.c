@@ -529,8 +529,8 @@ int ScePamgrForDriver_1A7733E0(uint32_t registration)
 	return stopSecondaryTrace();
 }
 
-void clearTraceReadback0(void);
-void clearTraceReadback1(void);
+void clearBusErrorLog(void);
+void clearSecureBusErrorLog(void);
 void enableTraceAuxControl0(void);
 void enableTraceAuxControl1(void);
 void disableTraceAuxControl1(void);
@@ -539,7 +539,7 @@ int ScePamgrForDriver_E0D151F4(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
-	clearTraceReadback0();
+	clearBusErrorLog();
 	return 0;
 }
 
@@ -547,7 +547,7 @@ int ScePamgrForDriver_48EC7C89(uint32_t registration)
 {
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
-	clearTraceReadback1();
+	clearSecureBusErrorLog();
 	return 0;
 }
 
