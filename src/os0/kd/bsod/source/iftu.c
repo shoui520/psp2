@@ -1,6 +1,66 @@
-/* BSOD reads the first IFTU buffer and programs both hardware buffers. */
+/* BSOD maps IFTU, reads the first IFTU buffer and programs both hardware buffers. */
 #include "bsod_internal.h"
 #include <sce/iftu_regs.h>
+
+/* name unknown: one register page BSOD maps for itself */
+typedef struct BsodRegisterMap {
+	const char *name;
+	uint32_t paddr;
+	SceSize size;
+	uint8_t **base;
+} BsodRegisterMap;
+
+uint8_t *s_bsodIftu[3];
+
+static const BsodRegisterMap s_iftuMaps[2][3] = {
+	{
+		{ "SceBsodIftu0RegA", IFTU_PAGE_BASE(0, 0), 0x1000, &s_bsodIftu[0] },
+		{ "SceBsodIftu0RegB", IFTU_PAGE_BASE(0, 1), 0x1000, &s_bsodIftu[1] },
+		{ "SceBsodIftuc0Reg", IFTUC_REG_BASE(0), 0x1000, &s_bsodIftu[2] },
+	},
+	{
+		{ "SceBsodIftu1RegA", IFTU_PAGE_BASE(1, 0), 0x1000, &s_bsodIftu[0] },
+		{ "SceBsodIftu1RegB", IFTU_PAGE_BASE(1, 1), 0x1000, &s_bsodIftu[1] },
+		{ "SceBsodIftuc1Reg", IFTUC_REG_BASE(1), 0x1000, &s_bsodIftu[2] },
+	},
+};
+
+#if FW_DEBUG
+static const SceKernelDebugInfo s_iftuAssert = {
+	0x6ec74984, 0x62f7350e, 0xe6d8021d,
+	"iftu.c", 94, "_sceKernelBsodIftuInit",
+};
+#endif
+
+int _sceKernelBsodIftuInit(int dolce)
+{
+	const BsodRegisterMap *map;
+	SceKernelAllocMemBlockKernelOpt options;
+	void *base;
+	unsigned i;
+	int uid;
+
+	for (i = 0; i < 3; i++) {
+		map = &s_iftuMaps[dolce][i];
+		memset(&options, 0, sizeof(options));
+		options.size = sizeof(options);
+		options.attr = 2;
+		options.paddr = map->paddr;
+		uid = ksceKernelAllocMemBlock(map->name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+					    map->size, &options);
+		if (uid < 0) {
+#if FW_DEBUG
+			if (ksceKernelGetAssertLevel() > 0)
+				ksceKernelAssertLevel(1, 0, &s_iftuAssert,
+						     __builtin_return_address(0));
+#endif
+			return uid;
+		}
+		ksceKernelGetMemBlockBase(uid, &base);
+		*map->base = base;
+	}
+	return 0;
+}
 
 int bsodReadFramebuffer(unsigned bank, BsodFramebuffer *framebuffer)
 {

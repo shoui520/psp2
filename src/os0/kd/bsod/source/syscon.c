@@ -1,9 +1,55 @@
-/* BSOD polls GPIO/SPI directly after disabling normal interrupt delivery. */
+/* BSOD maps GPIO0 and SPI0 and polls them directly after disabling normal interrupt delivery. */
 #include "bsod_internal.h"
 #include <sce/gpio_regs.h>
 #include <sce/spi_regs.h>
 #include <sce/barrier.h>
 #include <sce/moncall.h>
+
+uint8_t *s_bsodSyscon[2];
+
+#if FW_DEBUG
+static const SceKernelDebugInfo s_sysconAssert = {
+	0x0f48c989, 0x80b93d37, 0x91de3a7a,
+	"syscon.c", 92, "_sceKernelBsodSysconInit",
+};
+#endif
+
+int _sceKernelBsodSysconInit(void)
+{
+	SceKernelAllocMemBlockKernelOpt options;
+	void *base;
+	int uid;
+
+	memset(&options, 0, sizeof(options));
+	options.size = sizeof(options);
+	options.attr = 2;
+	options.paddr = GPIO0_REG_BASE;
+	uid = ksceKernelAllocMemBlock("SceBsodGpio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+				    0x1000, &options);
+	if (uid < 0)
+		goto error;
+	ksceKernelGetMemBlockBase(uid, &base);
+	s_bsodSyscon[0] = base;
+
+	memset(&options, 0, sizeof(options));
+	options.size = sizeof(options);
+	options.attr = 2;
+	options.paddr = SPI_REG_BASE(0);
+	uid = ksceKernelAllocMemBlock("SceBsodSpi0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+				    0x1000, &options);
+	if (uid < 0)
+		goto error;
+	ksceKernelGetMemBlockBase(uid, &base);
+	s_bsodSyscon[1] = base;
+	return 0;
+
+error:
+#if FW_DEBUG
+	if (ksceKernelGetAssertLevel() > 0)
+		ksceKernelAssertLevel(1, 0, &s_sysconAssert, __builtin_return_address(0));
+#endif
+	return uid;
+}
 
 static inline void bsodDsb(void)
 {

@@ -9,7 +9,6 @@ psp2_module(os0_kd_bsod KIND kernel SOURCES
 	source/formatter.c
 	source/iftu.c
 	source/log.c
-	source/mapping.c
 	source/report.c
 	source/syscon.c
 	source/ui.c
