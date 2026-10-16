@@ -14,6 +14,21 @@
 #include "lw_mutex.h"
 #include "scheduler.h"
 #include "syscall_context.h"
+#include "affinity.h"
+#include "priority_change.h"
+#include "sce/intrmgr.h"
+#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include "event_flag.h"
+#include "timer.h"
+#include "uid_waitable.h"
+
+int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
+int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
+int ksceKernelGetThreadCpuAffinityMask(SceUID uid);
+int __attribute__((noinline)) sceKernelWaitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
+int __attribute__((noinline)) sceKernelWaitSignalCB(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
+int sendSignal(SceUID threadId);
 
 /* PUID attribute: the PUID came from an open, not a create */
 #define SDK_VERSION_CLOSE_MISMATCH	0x03100000	/* SDKs before 3.10 may close what they created */
@@ -3727,4 +3742,518 @@ int _sceKernelWaitExceptionCB(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 			ret = err;
 	}
 	return ret;
+}
+
+/* sceKernelChangeThreadCpuAffinityMask (user): the old mask in bits 16-19 */
+int sceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask)
+{
+	int result = 0;
+
+	if (uid != 0)
+		result = kscePUIDtoGUID(0, uid);
+	if (result < 0)
+		return USER_ERROR_UNKNOWN_THREAD_ID;
+	result = ksceKernelChangeThreadCpuAffinityMask(result, mask);
+	return result < 0 ? result : (int)((uint32_t)result << 16);
+}
+
+/* sceKernelGetThreadCpuAffinityMask (user): the mask in bits 16-19 */
+int SceThreadmgr_sceKernelGetThreadCpuAffinityMask(SceUID uid)
+{
+	int result;
+
+	if (uid != 0) {
+		result = kscePUIDtoGUID(0, uid);
+		if (result < 0)
+			return USER_ERROR_UNKNOWN_THREAD_ID;
+		uid = result;
+	}
+	result = ksceKernelGetThreadCpuAffinityMask(uid);
+	return result < 0 ? result : (int)((uint32_t)result << 16);
+}
+
+/* sceKernelChangeThreadPriority2 (user): the old priority */
+int sceKernelChangeThreadPriority2(SceUID uid, uint32_t priority)
+{
+	int result = 0;
+
+	if (uid != 0)
+		result = kscePUIDtoGUID(0, uid);
+	if (result < 0)
+		return USER_ERROR_UNKNOWN_THREAD_ID;
+	result = ksceKernelChangeThreadPriority(result, priority);
+	SCE_DBG_ASSERT_CHECK_FUNC(result != 0, 267, "sceKernelChangeThreadPriority2ForUser");
+	return result;
+}
+
+/* sceKernelChangeThreadPriority (user): 0 or an error */
+int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority)
+{
+	int result = sceKernelChangeThreadPriority2(uid, priority);
+
+	return result < 0 ? result : 0;
+}
+
+int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint32_t userDataLow,
+		      uint32_t userDataHigh)
+{
+	SceUID event = kscePUIDtoGUID(0, eventId);
+
+	if (event < 0)
+		return USER_ERROR_UNKNOWN_EVENT_ID;
+	if (pattern & EVENT_PATTERN_KERNEL)
+		return SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
+	return ksceKernelSetEvent(event, pattern, (uint64_t)userDataHigh << 32 | userDataLow);
+}
+
+int sceKernelClearEvent(SceUID eventId, uint32_t keep)
+{
+	SceUID event = kscePUIDtoGUID(0, eventId);
+
+	if (event < 0)
+		return USER_ERROR_UNKNOWN_EVENT_ID;
+	if (keep & EVENT_PATTERN_KERNEL)
+		return SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
+	return ksceKernelClearEvent(event, keep);
+}
+
+int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
+					       uint32_t userDataLow, uint32_t userDataHigh,
+					       uint32_t arg)
+{
+	SceUID event = kscePUIDtoGUID(0, eventId);
+
+	if (event < 0)
+		return USER_ERROR_UNKNOWN_EVENT_ID;
+	if (pattern & EVENT_PATTERN_KERNEL)
+		return SCE_KERNEL_ERROR_ILLEGAL_PATTERN;
+	return sceKernelSetEventWithNotifyCallback(event, pattern,
+						   (uint64_t)userDataHigh << 32 | userDataLow, arg);
+}
+
+int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
+				  uint32_t *outPattern)
+{
+	SceUID guid = kscePUIDtoGUID(0, evfId);
+
+	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
+			  ksceKernelPollEventFlag(guid, pattern, mode, outPattern);
+}
+
+int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads)
+{
+	SceUID guid = kscePUIDtoGUID(0, evfId);
+
+	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
+			  sceKernelCancelEventFlag(guid, pattern, numWaitThreads);
+}
+
+int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info)
+{
+	uint32_t attributes;
+	int ret = kscePUIDtoGUID(0, evfId);
+
+	if (ret < 0)
+		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
+	ret = ksceKernelGetEventFlagInfo(ret, info);
+	if (ret >= 0) {
+		info->evfId = evfId;
+		ret = scePUIDGetAttr(0, evfId, &attributes);
+		if (ret >= 0 && (attributes & PUID_ATTR_OPENED))
+			info->attr |= PUID_ATTR_OPENED;
+	}
+	return ret;
+}
+
+int sceKernelClearEventFlag(SceUID evfId, uint32_t pattern)
+{
+	SceUID guid = kscePUIDtoGUID(0, evfId);
+
+	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
+			  ksceKernelClearEventFlag(guid, pattern);
+}
+
+/*
+ * SceKernelThreadMgr (threadmgr_for_user.c): the user side of event flag
+ * lifetimes (open, close, delete by PUID) and the user name copy every
+ * create and open uses.
+ */
+
+#define UID_NAME_SIZE			32
+#define UID_ATTR_NAME_CHECKED		0x00000080	/* a name too long is an error */
+#define USER_ERROR_UID_NAME_TOO_LONG	0xc0024002
+
+/* copyinUIDNameWithAttr: a user's object name; with UID_ATTR_NAME_CHECKED, at most 31 chars */
+int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes)
+{
+	int result;
+
+	if (userName == NULL) {
+		SCE_DBG_PRINTF(0, 118, " k: error: copyinUIDNameWithAttr() pName_us=NULL\n");
+		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
+	}
+	result = ksceKernelStrncpyFromUser(name, userName, UID_NAME_SIZE);
+	if (result < 0) {
+		SCE_DBG_PRINTF(0, 123, " k: error: copyinUIDNameWithAttr() -> "
+			       "sceKernelStrncpyFromUser()=0x%08X\n", result);
+		return result;
+	}
+	if (!(attributes & UID_ATTR_NAME_CHECKED) || result < UID_NAME_SIZE)
+		return 0;
+	name[UID_NAME_SIZE - 1] = '\0';
+	SCE_DBG_PRINTF(0, 129, "***\n***\n***\n*** error: copyinUIDNameWithAttr(\"%s\") = "
+		       "SCE_KERNEL_ERROR_UID_NAME_TOO_LONG\n***\n***\n***\n", name);
+	return USER_ERROR_UID_NAME_TOO_LONG;
+}
+
+/* deletes or closes a user's event flag */
+int closeEventFlagForUser(SceUID uid, int delete)
+{
+	SceClass *cls;
+	uint32_t attributes, version;
+
+	if (kscePUIDGetClass(0, uid, &cls) < 0 ||
+	    cls != s_threadmgrRuntime.manager->eventFlagClass ||
+	    scePUIDGetAttr(0, uid, &attributes) < 0)
+		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
+	if (!delete)
+		attributes ^= PUID_ATTR_OPENED;
+	if (attributes & PUID_ATTR_OPENED) {
+		if (SceSysrootForDriver_CAE820B2(0, &version) < 0)
+			version = SDK_VERSION_CLOSE_MISMATCH;
+		if (version >= SDK_VERSION_CLOSE_MISMATCH) {
+			SCE_DBG_PRINTF(0, 1523, "*** error: closeEventFlagForUser(0x%08X, 0x%08X), "
+				       "delete/close mismatch\n", uid, delete);
+			return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
+		}
+	}
+	return kscePUIDClose(0, uid);
+}
+
+/* sceKernelDeleteEventFlag (user) */
+int sceKernelDeleteEventFlag(SceUID uid)
+{
+	return closeEventFlagForUser(uid, 1);
+}
+
+/* sceKernelCloseEventFlag (user) */
+int sceKernelCloseEventFlag(SceUID uid)
+{
+	return closeEventFlagForUser(uid, 0);
+}
+
+/* sceKernelOpenEventFlag (user): a PUID for the event flag named userName */
+int sceKernelOpenEventFlag(const char *userName)
+{
+	UIDCreateOpt opt;
+	char name[UID_NAME_SIZE];
+	int result;
+
+	result = copyinUIDNameWithAttr(name, userName, UID_ATTR_NAME_CHECKED);
+	if (result < 0)
+		return result;
+	result = SceSysmemForKernel_BDE00106(name);
+	if (result < 0)
+		return result;
+	if (s_threadmgrRuntime.manager->eventFlagClass !=
+	    SceSysmemForKernel_368F1C36(result))
+		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
+	opt = (UIDCreateOpt){
+		.flags = UID_CREATE_OPT_ATTR,
+		.attr = PUID_ATTR_OPENED,
+	};
+	return SceSysmemForKernel_1FF2749A(currentThreadContext()->processId, result, &opt);
+}
+
+/* sceKernelSetEventFlag (user) */
+int sceKernelSetEventFlag(SceUID uid, uint32_t pattern)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	if (guid < 0)
+		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
+	return ksceKernelSetEventFlag(guid, pattern);
+}
+
+#define TIMER_PUID_ATTR_OPENED		0x80000
+extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
+int ksceKernelStartTimer(SceUID uid);
+int ksceKernelStopTimer(SceUID uid);
+int sceKernelGetTimerBase(SceUID uid, uint64_t *value);
+int sceKernelGetTimerTime(SceUID uid, uint64_t *value);
+uint64_t ksceKernelGetTimerBaseWide(SceUID uid);
+uint64_t ksceKernelGetTimerTimeWide(SceUID uid);
+int sceKernelSetTimerTime(SceUID uid, uint64_t *value);
+uint64_t ksceKernelSetTimerTimeWide(SceUID uid, uint64_t value);
+int sceKernelSetTimerEvent(SceUID uid, uint32_t type, const volatile uint64_t *interval, int repeat);
+int sceKernelCancelTimer(SceUID uid, uint32_t *count);
+int sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *remaining);
+
+/* name unknown */
+int cancelTimerForUser(SceUID uid, uint32_t *count)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	return guid < 0 ? (int)0xc0028241u : sceKernelCancelTimer(guid, count);
+}
+
+int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options)
+{
+	char copied[0x20];
+	int result = copyinUIDNameWithAttr(copied, name, attributes);
+
+	if (result >= 0) {
+		result = sceKernelCreateTimer(copied, attributes, options);
+		if (result >= 0)
+			result = kscePUIDOpenByGUID(currentThreadContext()->processId, result);
+	}
+	return result;
+}
+
+/* name unknown */
+int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval, uint32_t repeat)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	return guid < 0 ? (int)0xc0028241u : sceKernelSetTimerEvent(guid, type, interval, repeat);
+}
+
+/* name unknown */
+int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	return guid < 0 ? (int)0xc0028241u : sceKernelGetTimerEventRemainingTime(guid, output);
+}
+
+/* name unknown */
+int getTimerInfoForUser(SceUID uid, ThreadmgrTimerInfo *output)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+	uint32_t attributes;
+	int result;
+
+	if (guid < 0)
+		return 0xc0028241u;
+	result = SceThreadmgrForDriver_19F3E92A(guid, output);
+	if (result >= 0) {
+		output->timerId = uid;
+		result = scePUIDGetAttr(0, uid, &attributes);
+		if (result >= 0 && (attributes & 0x80000))
+			output->attr |= TIMER_PUID_ATTR_OPENED;
+	}
+	return result;
+}
+
+int sceKernelOpenTimer(const char *userName)
+{
+	struct ThreadCB *thread = currentThreadContext();
+	char name[32];
+	UIDCreateOpt options = {
+		.flags = UID_CREATE_OPT_ATTR | UID_CREATE_OPT_CLASS,
+		.attr = TIMER_PUID_ATTR_OPENED,
+	};
+	int result;
+
+	result = copyinUIDNameWithAttr(name, userName, 0x80);
+	if (result < 0)
+		return result;
+	options.cls = s_threadmgrRuntime.manager->timerClass;
+	result = SceSysmemForKernel_201E970B(0, name, &options);
+	if (result >= 0) {
+		uint32_t low = thread->processId;
+		uint32_t high = thread->userThreadId | ((int32_t)low >> 31);
+		SceUID guid = kscePUIDtoGUID(0, result);
+		int wake = sceKernelSetEventWithNotifyCallback(guid, 0x100, (uint64_t)high << 32 | low, 0x100);
+		SCE_DBG_ASSERT_CHECK_FUNC(wake >= 0, 3328, "sceKernelOpenTimerForUser");
+	}
+	return result;
+}
+
+int sceKernelCloseTimer(SceUID uid)
+{
+	SceKernelIntrStatus intrState = ksceKernelCpuSuspendIntr();
+	ThreadmgrUidTimer *object;
+	struct ThreadCB *thread;
+	SceUID guid;
+	uint32_t attributes;
+	SceUInt32 version;
+	uint32_t wake = 0;
+	int result = 0xc0028241u;
+
+	guid = kscePUIDtoGUID(0, uid);
+	if (guid < 0 || ksceGUIDReferObjectWithClass(guid,
+		s_threadmgrRuntime.manager->timerClass, (SceObjectBase **)&object) < 0)
+		goto resume;
+	if (scePUIDGetAttr(0, uid, &attributes) < 0)
+		goto release;
+	if (!(attributes & 0x80000)) {
+		int status = SceSysrootForDriver_CAE820B2(0, &version);
+		if (status < 0 || version >= 0x03100000) {
+			SCE_DBG_PRINTF_FUNC(0, 3375, "sceKernelCloseTimerForUser",
+				"*** error: sceKernelCloseTimerForUser(0x%08X), delete/close mismatch\n", uid);
+			goto release;
+		}
+	}
+	if (kscePUIDClose(0, uid) < 0)
+		goto release;
+	thread = currentThreadContext();
+	uint32_t high = thread->userThreadId;
+	thread = currentThreadContext();
+	uint32_t low = thread->processId;
+	high |= (int32_t)low >> 31;
+	ksceKernelSpinlockLowLock(&object->base.event.lock);
+	wake = setEventWithNotifyCallback(guid, 0x200, (uint64_t)high << 32 | low,
+					  0x200, &object->base.event);
+	ksceKernelSpinlockLowUnlock(&object->base.event.lock);
+	result = 0;
+release:
+	if (ksceGUIDReleaseObject(guid) < 0)
+		SCE_PANIC_FUNC(3401, "sceKernelCloseTimerForUser");
+	if (wake & 1)
+		switchThread(0);
+resume:
+	ksceKernelCpuResumeIntr(intrState);
+	return result;
+}
+
+/* name unknown */
+int getTimerBaseForUser(SceUID uid, uint64_t *value)
+{
+	int guid = kscePUIDtoGUID(0, uid);
+
+	if (guid < 0)
+		return 0xc0028241u;
+	return sceKernelGetTimerBase(guid, value);
+}
+
+/* name unknown */
+int getTimerTimeForUser(SceUID uid, uint64_t *value)
+{
+	int guid = kscePUIDtoGUID(0, uid);
+
+	if (guid < 0)
+		return 0xc0028241u;
+	return sceKernelGetTimerTime(guid, value);
+}
+
+uint64_t sceKernelGetTimerBaseWide(SceUID uid)
+{
+	int guid;
+
+	sceKernelApiDeclareTypeUInt64();
+	guid = kscePUIDtoGUID(0, uid);
+	if (guid >= 0)
+		return ksceKernelGetTimerBaseWide(guid);
+	SCE_DBG_PRINTF_FUNC(0, 3481, "sceKernelGetTimerBaseWideForUser",
+		"*** error: sceKernelGetTimerBaseWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
+	return UINT64_MAX;
+}
+
+uint64_t sceKernelGetTimerTimeWide(SceUID uid)
+{
+	int guid;
+
+	sceKernelApiDeclareTypeUInt64();
+	guid = kscePUIDtoGUID(0, uid);
+	if (guid >= 0)
+		return ksceKernelGetTimerTimeWide(guid);
+	SCE_DBG_PRINTF_FUNC(0, 3522, "sceKernelGetTimerTimeWideForUser",
+		"*** error: sceKernelGetTimerTimeWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
+	return UINT64_MAX;
+}
+
+int sceKernelStartTimer(SceUID uid)
+{
+	int guid = kscePUIDtoGUID(0, uid);
+
+	return guid < 0 ? 0xc0028241u : ksceKernelStartTimer(guid);
+}
+
+int sceKernelStopTimer(SceUID uid)
+{
+	int guid = kscePUIDtoGUID(0, uid);
+
+	return guid < 0 ? 0xc0028241u : ksceKernelStopTimer(guid);
+}
+
+/* name unknown */
+int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
+{
+	uint64_t value;
+	SceUInt32 version;
+	int result, guid;
+
+	result = ksceKernelCopyFromUser(&value, userValue, sizeof(value));
+	if (result < 0)
+		return result;
+	guid = kscePUIDtoGUID(0, uid);
+	if (guid < 0)
+		return 0xc0028241u;
+	result = sceKernelSetTimerTime(guid, &value);
+	if (result >= 0 && SceSysrootForDriver_CAE820B2(0, &version) >= 0 && version >= 0x02000000)
+		return ksceKernelCopyToUser(userValue, &value, sizeof(value));
+	return result;
+}
+
+uint64_t sceKernelSetTimerTimeWide(SceUID uid, uint64_t value)
+{
+	int guid;
+
+	sceKernelApiDeclareTypeUInt64();
+	guid = kscePUIDtoGUID(0, uid);
+	if (guid >= 0)
+		return ksceKernelSetTimerTimeWide(guid, value);
+	SCE_DBG_PRINTF_FUNC(0, 3587, "sceKernelSetTimerTimeWideForUser",
+		"*** error: sceKernelSetTimerTimeWideForUser(0x%08X), scePUIDtoGUID()=0x%08X\n", uid, guid);
+	return UINT64_MAX;
+}
+
+#define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80028022
+#define SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID	0x80028021
+
+/* the cores of _sceKernelWaitSignal and _sceKernelWaitSignalCB */
+int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
+{
+	return sceKernelWaitSignal(arg0, arg1, timeout);
+}
+
+int sceKernelWaitSignalCBForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
+{
+	return sceKernelWaitSignalCB(arg0, arg1, timeout);
+}
+
+/* sceKernelSendSignal (user) */
+int sceKernelSendSignal(SceUID threadId)
+{
+	SceUID guid;
+
+	if (threadId == 0)
+		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
+	guid = kscePUIDtoGUID(0, threadId);
+	if (guid < 0)
+		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
+	return sendSignal(guid);
+}
+
+/* Callback user syscalls: PUID to GUID, then the kernel export. */
+int ksceKernelGetCallbackCount(SceUID uid);
+int ksceKernelCancelCallback(SceUID uid);
+
+int sceKernelGetCallbackCount(SceUID uid)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	if (guid < 0)
+		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID | 0x40000000;
+	return ksceKernelGetCallbackCount(guid);
+}
+
+int sceKernelCancelCallback(SceUID uid)
+{
+	SceUID guid = kscePUIDtoGUID(0, uid);
+
+	if (guid < 0)
+		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID | 0x40000000;
+	return ksceKernelCancelCallback(guid);
 }

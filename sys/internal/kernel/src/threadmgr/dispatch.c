@@ -10,6 +10,16 @@
 #include "scheduler.h"
 #include "sce/cpu.h"
 #include "sce/debug.h"
+#include <string.h>
+#include "sce/error.h"
+#include "fast_mutex.h"
+#include "sce/sysmem.h"
+#include "syscall_context.h"
+#include "dispatch.h"
+#include "sce/intrmgr.h"
+#include "affinity.h"
+#include "uid_waitable.h"
+#include <psp2kern/kernel/cpu/atomic.h>
 
 #define CPU_COUNT			4
 #define CPU_MASK_ALL			0xf
@@ -251,19 +261,786 @@ selected:
 	cpu->nextRunningThread = (uintptr_t)thread;
 }
 
-/* PLACEHOLDER: name. Tells cpuId of a scheduling event (with the trace hook) */
-void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,
-				uint32_t event, int priority)
+void SceThreadmgrForKernel_8C07C8EC(ThreadmgrTraceHook hook)
 {
-	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_CALL_PA_SCHEDULE_HOOK);
-	ThreadmgrTraceHook hook;
+	s_threadmgrRuntime.switchHook = hook;
+}
 
-	hook = s_threadmgrRuntime.schedTraceHook;
-	request->payload[0] = processId;
-	request->payload[1] = threadId;
-	request->payload[2] = event;
-	request->payload[3] = priority;
+void SceThreadmgrForKernel_F55FDEFB(ThreadmgrTraceHook hook)
+{
+	s_threadmgrRuntime.schedTraceHook = hook;
+}
+
+void SceThreadmgrForKernel_E2DACBC2(ThreadmgrTraceHook hook)
+{
+	s_threadmgrRuntime.threadTraceHook = hook;
+}
+
+void SceThreadmgrForKernel_A3975A5A(ThreadmgrOnCpuHook hook)
+{
+	s_threadmgrRuntime.onCpuHook = hook;
+}
+
+void SceThreadmgrForKernel_F885ECCA(ThreadmgrOffCpuHook hook)
+{
+	s_threadmgrRuntime.offCpuHook = hook;
+}
+
+void SceThreadmgrForKernel_9605DF7D(ThreadmgrPriorityChangeHook hook)
+{
+	s_threadmgrRuntime.priorityChangeHook = hook;
+}
+
+int SceThreadmgrForKernel_BB56D42F(void)
+{
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	uintptr_t current;
+
+	if (cpu->disabledDispatch)
+		return 0;
+	current = cpu->runningThread;
+	if (current)
+		return current != cpu->nextRunningThread;
+	return 1;
+}
+
+#define FAST_MUTEX_MAGIC		0xa35db473
+#define PREEMPT_WAIT			4
+#define PREEMPT_EXCEPTION		8
+#define PREEMPT_INTR			2
+#define SWITCH_HOOK_OFF_CPU		2
+#define SWITCH_HOOK_ARGC		5
+#define SCHED_TRACE_OFF_CPU		2
+#define PRIORITY_NONE			0xfe
+
+#define INTR_SCHED_PROBE(symbol, label) \
+	static uint32_t symbol##ProbeId; \
+	volatile uintptr_t symbol##Handler; \
+	extern const char symbol##CodeSite[]; \
+	const struct ThreadmgrSchedProbeDescriptor symbol##Descriptor = { \
+		.probeId = &symbol##ProbeId, .provider = "__sched_", .name = label, \
+		.codeSite = symbol##CodeSite, .handler = &symbol##Handler, \
+	}
+
+INTR_SCHED_PROBE(s_schedIntrWait, "wait");
+INTR_SCHED_PROBE(s_schedIntrPreempt, "preempt");
+INTR_SCHED_PROBE(s_schedIntrOffCpu, "off__cpu");
+
+/* PLACEHOLDER: name. notifyOffCpu, from an interrupt (its own probe sites) */
+void notifyOffCpuIntr(uint32_t reason)
+{
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	struct ThreadCB *thread;
+	ThreadmgrOffCpuProbe probe;
+	ThreadmgrOffCpuHook hook;
+	SceUID id;
+
+	if (reason & 4) {
+		/* the DTrace probe site __sched_:wait */
+		__asm__ volatile(".global s_schedIntrWaitCodeSite\ns_schedIntrWaitCodeSite:");
+		probe = (ThreadmgrOffCpuProbe)s_schedIntrWaitHandler;
+		if (probe != NULL)
+			probe(&s_schedIntrWaitDescriptor);
+	} else {
+		/* the DTrace probe site __sched_:preempt */
+		__asm__ volatile(".global s_schedIntrPreemptCodeSite\ns_schedIntrPreemptCodeSite:");
+		probe = (ThreadmgrOffCpuProbe)s_schedIntrPreemptHandler;
+		if (probe != NULL)
+			probe(&s_schedIntrPreemptDescriptor);
+	}
+	/* the DTrace probe site __sched_:off__cpu */
+	__asm__ volatile(".global s_schedIntrOffCpuCodeSite\ns_schedIntrOffCpuCodeSite:");
+	probe = (ThreadmgrOffCpuProbe)s_schedIntrOffCpuHandler;
+	if (probe != NULL) {
+		thread = (struct ThreadCB *)cpu->runningThread;
+		id = thread->userThreadId;
+		if (id < 0)
+			id = thread->threadId;
+		probe(&s_schedIntrOffCpuDescriptor, id,
+		      thread->process->pid);
+	}
+	hook = s_threadmgrRuntime.offCpuHook;
+	if (hook != NULL) {
+		thread = (struct ThreadCB *)cpu->runningThread;
+		id = thread->userThreadId;
+		if (id < 0)
+			id = thread->threadId;
+		hook(thread->process->pid, id, (reason & 4) ? 4 : 2);
+	}
+}
+
+/*
+ * From an interrupt: the running thread (its lock held) leaves the CPU
+ * for reason PREEMPT_*; nothing runs on the CPU until a thread is chosen.
+ */
+void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason)
+{
+	struct ThreadCB *thread = context;
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	struct ThreadmgrFastMutex *mutex;
+	ThreadmgrTraceHook hook;
+	uint64_t ran;
+
+	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1253);
+	SCE_DBG_ASSERT_CHECK(thread->lock != 0, 1256);
+	SCE_DBG_ASSERT_CHECK(currentThreadContext() == NULL, 1258);
+	for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
+	     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
+	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1266);
+		ksceKernelSpinlockLowUnlock(&mutex->lock);
+	}
+	ran = thread->runClock;
+	thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
+	if (reason == PREEMPT_WAIT)
+		thread->threadReleaseCount++;
+	else if (reason == PREEMPT_EXCEPTION)
+		thread->threadPreemptCount++;
+	else if (reason == PREEMPT_INTR)
+		thread->intrPreemptCount++;
+	else
+		SCE_PANIC(1288);
+	hook = s_threadmgrRuntime.switchHook;
 	if (hook != NULL)
-		hook(TRACE_EVENT_SCHED, 4, processId, threadId, event, priority);
-	issueIntrRequest(cpuId, request);
+		hook(SWITCH_HOOK_OFF_CPU, SWITCH_HOOK_ARGC, thread->threadId, thread->currentPriority,
+		     -1, -1, reason);
+	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+		issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
+					   SCHED_TRACE_OFF_CPU, thread->currentPriority);
+	notifyOffCpuIntr(reason);
+	cpu->processId = -1;
+	cpu->threadId = -1;
+	cpu->priority = PRIORITY_NONE;
+	cpu->runningThread = 0;
+	SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 1313);
+	cpu->nextRunningThread = 0;
+}
+
+/*
+ * SceKernelThreadMgr (dispatch.c): switching threads from thread context.
+ * switchThread saves the running thread's context and goes to the CPU's
+ * switch stack, where switchThread2 picks the next thread
+ * (setupNextContext_thread) and restores it. The preempted thread goes
+ * back to a ready queue or to the standby list of a CPU it can preempt.
+ */
+
+#define DEBUG_KIND_STACK_OVERFLOW	4
+#define DEBUG_EVENT_SUSPEND		1
+#define SWITCH_HOOK_THREAD		0	/* the switch hook's first argument */
+#define SCHED_TRACE_WAIT		1
+#define SCHED_TRACE_ON_CPU		0
+#define WAIT_ID_NONE			((SceUID)0x80000000)
+
+/* switchThread's reasons */
+#define SWITCH_REASON_LATER		0x00000001	/* from an interrupt: request one */
+#define SWITCH_REASON_PREEMPT		0x00000002
+#define SWITCH_REASON_WAIT		0x00000004
+#define SWITCH_MODE_UNLOCK		0x00000010	/* switchThread2: the old thread's lock is held */
+
+/* what the debugger's stack overflow handler decides */
+#define OVERFLOW_PANIC			0
+#define OVERFLOW_SUSPEND_PROCESS	1
+#define OVERFLOW_IGNORE			2
+
+typedef void (*ThreadmgrProbe)(const struct ThreadmgrSchedProbeDescriptor *probe, ...);
+extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp);
+extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context,
+					     uint32_t flags, uintptr_t vfp);
+extern int ksceKernelSetEventFlag(SceUID uid, uint32_t pattern);
+/* context_runtime.S */
+extern void callSwitchThread2OnStack(uintptr_t stackTop, uint32_t mode);
+
+SCHED_PROBE(s_schedRemainCpu, "__sched_", "remain__cpu");
+SCHED_PROBE(s_schedOnCpu, "__sched_", "on__cpu");
+SCHED_PROBE(s_procStart, "__proc_", "start");
+SCHED_PROBE(s_procLwpStart, "__proc_", "lwp__start");
+
+/*
+ * Picks the thread cpu runs next, from thread context, and makes it the
+ * running one; current was running. Returns the thread to restore.
+ */
+struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
+	uint32_t reason, SceUID oldThreadId, int oldPriority)
+{
+	unsigned int cpuId = SceCpuId();
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	struct ThreadCB *thread, *selected;
+	struct ThreadmgrFastMutex *mutex;
+	volatile SceDtraceThreadCB *dtrace;
+	SceProcessObject *process;
+	ThreadmgrDebugHandler overflowHook;
+	ThreadmgrDebugHandler overflowHandler;
+	ThreadmgrTraceHook hook;
+	ThreadmgrOnCpuHook onCpu;
+	ThreadmgrProbe probe;
+	int initialPriority = cpu->priority, status;
+	uint64_t ran;
+	bool overflow = false;
+	SceUID id;
+
+	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 543);
+	if (cpu->disabledDispatch) {
+		SCE_DBG_ASSERT_LEVEL(0, (reason >> 1) & 1, 548);
+		return current;
+	}
+	thread = (struct ThreadCB *)cpu->runningThread;
+	if (thread != NULL)
+		SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == (int)cpuId &&
+				      (thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING), 556,
+			" k(%d): setupNextContext_thread(), pRunningThreadCB: threadId=0x%08X, "
+			"currentCpuId=0x%08X, status=0x%08X\n",
+			cpuId, thread->threadId, thread->currentCpuId, thread->status);
+	moveStandbyToReady();
+	selected = (struct ThreadCB *)cpu->nextRunningThread;
+	if (selected == NULL) {
+		findNextRunningThread((struct ThreadCB *)cpu->runningThread);
+		selected = (struct ThreadCB *)cpu->nextRunningThread;
+	}
+	thread = (struct ThreadCB *)cpu->runningThread;
+	if (thread == selected) {
+		cpu->remainCpuCount++;
+		__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(thread) : "memory");
+		/* the DTrace probe site __sched_:remain__cpu */
+		__asm__ volatile(".global s_schedRemainCpuCodeSite\ns_schedRemainCpuCodeSite:");
+		probe = (ThreadmgrProbe)s_schedRemainCpuHandler;
+		if (probe != NULL)
+			probe(&s_schedRemainCpuDescriptor);
+		goto notify;
+	}
+
+	/* the running thread lets go of the CPU */
+	if (thread != NULL) {
+		SCE_DBG_ASSERT_LEVEL(0, !(reason & SWITCH_REASON_WAIT), 574);
+		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		thread = (struct ThreadCB *)cpu->runningThread;
+		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
+		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
+		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 583);
+			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			thread = (struct ThreadCB *)cpu->runningThread;
+		}
+		ran = thread->runClock;
+		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
+		thread = (struct ThreadCB *)cpu->runningThread;
+		thread->threadPreemptCount++;
+		if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+			issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
+				     SCHED_TRACE_OFF_CPU, thread->currentPriority);
+		notifyOffCpu(reason);
+		thread = (struct ThreadCB *)cpu->runningThread;
+		if ((int)thread->currentAttr < 0 && !(thread->flags & THREAD_FLAG_EXITING)) {
+			status = checkThreadUserStack((struct ThreadCB *)thread);
+			thread = (struct ThreadCB *)cpu->runningThread;
+			if (status == 0) {
+				overflow = true;
+				SCE_DBG_PRINTF(0, 611, " k: setupNextContext_thread(), User Stack Overflow "
+					       "was detected. (threadId=0x%08X)\n", thread->threadId);
+				thread = (struct ThreadCB *)cpu->runningThread;
+				thread->status |= THREAD_STATE_DEBUG_SUSPENDED;
+				thread->debugSuspendReason |= DEBUG_SUSPEND_USER_STACK;
+			}
+		}
+		distributePreemptedThread(cpu, thread, cpuId, __builtin_return_address(0));
+		if (overflow) {
+			/* the debugger decides about the overflow */
+			overflowHook = s_threadmgrRuntime.manager->
+				debugHandlers[0][DEBUG_HANDLER_STACK_OVERFLOW];
+			if (overflowHook != NULL)
+				overflowHook(0, NULL);
+			overflowHandler = s_threadmgrRuntime.manager->
+				debugHandlers[1][DEBUG_HANDLER_STACK_OVERFLOW];
+			status = overflowHandler != NULL ? overflowHandler(0, NULL) :
+							   OVERFLOW_SUSPEND_PROCESS;
+			if (status == OVERFLOW_SUSPEND_PROCESS) {
+				thread = (struct ThreadCB *)cpu->runningThread;
+				process = thread->process;
+				if (!ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
+								     0, 1)) {
+					thread = (struct ThreadCB *)cpu->runningThread;
+					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
+					process->abortThread = thread->threadId;
+					status = ksceKernelSetEventFlag(process->abortEventFlag,
+									DEBUG_EVENT_SUSPEND);
+					if (status < 0) {
+						SCE_DBG_PRINTF(0, 665, "*** error: debugSuspendThreadSelf() "
+							"-> sceKernelSetEventFlag(0x%08X)=0x%08X\n",
+							process->abortEventFlag, status);
+						SCE_PANIC(666);
+					}
+				}
+			} else if (status != OVERFLOW_IGNORE) {
+				if (status != OVERFLOW_PANIC)
+					SCE_PANIC(675);
+				SCE_PANIC(653);
+			}
+		}
+		selected = (struct ThreadCB *)cpu->nextRunningThread;
+	}
+
+	/* the selected thread takes it */
+	ksceKernelSpinlockLowLock(THREAD_LOCK(selected));
+	for (mutex = (struct ThreadmgrFastMutex *)selected->ownedFastMutexNext;
+	     mutex != (struct ThreadmgrFastMutex *)&selected->ownedFastMutexNext;
+	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 689);
+		ksceKernelSpinlockLowLock(&mutex->lock);
+	}
+	ksceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
+	cpu->threadSwitchCount++;
+	cpu->lastThreadSwitchTime = SceSysrootForKernel_E20F6FC8();
+	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+		issueCallPAScheduleHookIntrRequest(SceCpuId(), selected->processId, selected->threadId,
+			     SCHED_TRACE_ON_CPU, selected->currentPriority);
+	cpu->runningThread = (uintptr_t)selected;
+	cpu->runningProcessId = selected->processId;
+	cpu->runningThreadId = selected->threadId;
+	__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(selected) : "memory");
+	dtrace = selected->dtraceState;
+	if (dtrace != NULL && (dtrace->flags & DTRACE_THREAD_START)) {
+		process = selected->process;
+		if (process->dtraceFlags & DTRACE_PROCESS_START) {
+			/* the DTrace probe site __proc_:start */
+			__asm__ volatile(".global s_procStartCodeSite\ns_procStartCodeSite:");
+			probe = (ThreadmgrProbe)s_procStartHandler;
+			if (probe != NULL) {
+				probe(&s_procStartDescriptor);
+				process = selected->process;
+			}
+			process->dtraceFlags &= ~DTRACE_PROCESS_START;
+		}
+		id = selected->userThreadId;
+		if (id < 0)
+			id = selected->threadId;
+		/* the DTrace probe site __proc_:lwp__start */
+		__asm__ volatile(".global s_procLwpStartCodeSite\ns_procLwpStartCodeSite:");
+		probe = (ThreadmgrProbe)s_procLwpStartHandler;
+		if (probe != NULL)
+			probe(&s_procLwpStartDescriptor, id, process->pid);
+		dtrace->flags &= ~DTRACE_THREAD_START;
+	}
+	/* the DTrace probe site __sched_:on__cpu */
+	__asm__ volatile(".global s_schedOnCpuCodeSite\ns_schedOnCpuCodeSite:");
+	probe = (ThreadmgrProbe)s_schedOnCpuHandler;
+	if (probe != NULL)
+		probe(&s_schedOnCpuDescriptor);
+	onCpu = s_threadmgrRuntime.onCpuHook;
+	if (onCpu != NULL) {
+		id = selected->userThreadId;
+		if (id < 0)
+			id = selected->threadId;
+		onCpu(selected->process->pid, id,
+		      selected->currentPriority, selected->currentCpuAffinityMask);
+	}
+	thread = selected;
+notify:
+	hook = s_threadmgrRuntime.switchHook;
+	if (hook != NULL)
+		hook(SWITCH_HOOK_THREAD, SWITCH_HOOK_ARGC, oldThreadId, oldPriority, thread->threadId,
+		     thread->currentPriority, reason);
+	if (initialPriority < cpu->priority) {
+		moveStandbyToReady();
+		if (cpu->nextRunningThread == 0)
+			addIntrRequest(cpuId, INTR_MASK_SCHEDULING);
+	}
+	return (struct ThreadCB *)thread;
+}
+
+/*
+ * On the CPU's switch stack: a waiting thread is taken off the CPU, then
+ * the next thread is set up and restored (until a restore sticks).
+ */
+void switchThread2(uint32_t reason)
+{
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	struct ThreadCB *thread = currentThreadContext();
+	struct ThreadmgrFastMutex *mutex;
+	struct ThreadCB *selected;
+	SceUID oldThreadId = cpu->threadId, waitId;
+	int oldPriority = cpu->priority;
+	uint32_t mode = reason;
+	uint64_t ran;
+
+	if (reason & SWITCH_REASON_WAIT) {
+		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
+		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
+		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 183);
+			ksceKernelSpinlockLowUnlock(&mutex->lock);
+		}
+		ran = thread->runClock;
+		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
+		thread->threadReleaseCount++;
+		if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+			issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
+				     SCHED_TRACE_WAIT, thread->currentPriority);
+		notifyOffCpu(reason);
+		waitId = thread->waitId;
+		cpu->processId = -1;
+		cpu->threadId = -1;
+		cpu->priority = PRIORITY_NONE;
+		cpu->runningThread = 0;
+		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		if (waitId != WAIT_ID_NONE && waitId != -1 &&
+		    s_threadmgrRuntime.manager->signalId != waitId) {
+			cpu->releasingWaitObject = 1;
+			ksceGUIDReleaseObject(waitId);
+			cpu->releasingWaitObject = 0;
+		}
+		SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 226);
+		cpu->nextRunningThread = 0;
+		mode = 0;
+	}
+	for (;;) {
+		if (mode & SWITCH_MODE_UNLOCK) {
+			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			SCE_DBG_ASSERT_CHECK(cpu->runningThread == 0, 231);
+		}
+		selected = setupNextContext_thread((struct ThreadCB *)cpu->runningThread,
+						   reason, oldThreadId, oldPriority);
+		mode = SceIntrmgrForKernel_08FDB0CE(selected->pRegisterContext, 0, selected->pVfpRegisterContext);
+	}
+}
+
+/*
+ * Leaves the CPU for another thread (reason SWITCH_REASON_*): the running
+ * thread's context is saved here and the switch goes on on the switch stack;
+ * it returns when the thread is restored.
+ */
+void switchThread(uint32_t reason)
+{
+	struct ThreadMgrCpuCB *cpu;
+	struct ThreadCB *thread;
+	uint32_t mode;
+
+	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 104);
+	SCE_DBG_ASSERT_LEVEL(0, !ksceKernelIsIntrAllowedInCurrentContext(), 107);
+	cpu = currentCpuState();
+	thread = currentThreadContext();
+	if (reason & (SWITCH_REASON_PREEMPT | SWITCH_REASON_WAIT))
+		SCE_DBG_ASSERT_CHECK(thread->lock != 0, 114);
+	if (cpu->releasingWaitObject)
+		return;
+	mode = (reason & SWITCH_REASON_PREEMPT) ? SWITCH_REASON_WAIT :
+	       (reason & SWITCH_REASON_WAIT) ? SWITCH_MODE_UNLOCK : SWITCH_REASON_PREEMPT;
+	if (reason & SWITCH_REASON_LATER) {
+		SCE_DBG_ASSERT_CHECK(!(reason & SWITCH_REASON_PREEMPT), 132);
+		addIntrRequest(SceCpuId(), INTR_MASK_SCHEDULING);
+		return;
+	}
+	if (cpu->disabledDispatch) {
+		SCE_DBG_ASSERT_CHECK(!(reason & SWITCH_REASON_PREEMPT), 139);
+		SCE_DBG_PRINTF(0xb, 140, "disabled dispatch(0x%08X)\n", cpu->disabledDispatch);
+		return;
+	}
+	if (!SceIntrmgrForKernel_71C5F42F(thread->pRegisterContext, thread->pVfpRegisterContext)) {
+		callSwitchThread2OnStack(cpu->switchStackTop, mode);
+		/* the restore comes back to the save above */
+		__asm__ volatile("" ::: "memory");
+	}
+}
+
+/*
+ * SceKernelThreadMgr (dispatch.c): switching threads at the end of an
+ * interrupt. intrmgr asks setupNextContext_intr for the context to return
+ * to: the running thread's, or the next thread's after the running one was
+ * preempted. A user thread found to have overflowed its stack is
+ * debug-suspended at once.
+ */
+
+#define SWITCH_HOOK_INTR		1
+
+SCHED_PROBE(s_intrSchedRemainCpu, "__sched_", "remain__cpu");
+SCHED_PROBE(s_intrSchedOnCpu, "__sched_", "on__cpu");
+SCHED_PROBE(s_intrProcStart, "__proc_", "start");
+SCHED_PROBE(s_intrProcLwpStart, "__proc_", "lwp__start");
+
+/* setupNextContext_intr (SceThreadmgrForKernel_FEF07EC0): the register context to return to */
+struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t reason)
+{
+	unsigned int cpuId = SceCpuId();
+	struct ThreadMgrCpuCB *cpu = currentCpuState();
+	struct ThreadCB *thread, *selected;
+	struct ThreadmgrFastMutex *mutex;
+	volatile SceDtraceThreadCB *dtrace;
+	SceProcessObject *process;
+	ThreadmgrDebugHandler overflowHook;
+	ThreadmgrDebugHandler overflowHandler;
+	ThreadmgrTraceHook hook;
+	ThreadmgrOnCpuHook onCpu;
+	ThreadmgrProbe probe;
+	int initialPriority = cpu->priority, status;
+	uint64_t ran;
+	bool overflow = false;
+	SceUID id;
+
+	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 970);
+	thread = (struct ThreadCB *)cpu->runningThread;
+	if (thread != NULL)
+		SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == (int)cpuId &&
+				      (thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING), 980,
+			" k(%d): setupNextContext_intr(), pRunningThreadCB: threadId=0x%08X, "
+			"currentCpuId=0x%08X, status=0x%08X\n",
+			cpuId, thread->threadId, thread->currentCpuId, thread->status);
+	moveStandbyToReady();
+	selected = (struct ThreadCB *)cpu->nextRunningThread;
+	if (selected == NULL) {
+		findNextRunningThread((struct ThreadCB *)cpu->runningThread);
+		selected = (struct ThreadCB *)cpu->nextRunningThread;
+	}
+	thread = (struct ThreadCB *)cpu->runningThread;
+	if (thread == selected) {
+		cpu->remainCpuCount++;
+		__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(thread) : "memory");
+		/* the DTrace probe site __sched_:remain__cpu */
+		__asm__ volatile(".global s_intrSchedRemainCpuCodeSite\ns_intrSchedRemainCpuCodeSite:");
+		probe = (ThreadmgrProbe)s_intrSchedRemainCpuHandler;
+		if (probe != NULL)
+			probe(&s_intrSchedRemainCpuDescriptor);
+		goto deferred;
+	}
+
+	/* the running thread is preempted */
+	if (thread != NULL) {
+		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		thread = (struct ThreadCB *)cpu->runningThread;
+		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
+		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
+		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1007);
+			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			thread = (struct ThreadCB *)cpu->runningThread;
+		}
+		ran = thread->runClock;
+		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
+		thread = (struct ThreadCB *)cpu->runningThread;
+		thread->intrPreemptCount++;
+		if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+			issueCallPAScheduleHookIntrRequest(SceCpuId(), thread->processId, thread->threadId,
+				     SCHED_TRACE_OFF_CPU, thread->currentPriority);
+		notifyOffCpuIntr(reason);
+		thread = (struct ThreadCB *)cpu->runningThread;
+		if ((int)thread->currentAttr < 0 && !(thread->flags & THREAD_FLAG_EXITING)) {
+			status = checkThreadUserStack((struct ThreadCB *)thread);
+			thread = (struct ThreadCB *)cpu->runningThread;
+			if (status == 0) {
+				overflow = true;
+				SCE_DBG_PRINTF(0, 1034, " k: setupNextContext_intr(), User Stack Overflow "
+					       "was detected. (threadId=0x%08X)\n", thread->threadId);
+				thread = (struct ThreadCB *)cpu->runningThread;
+				thread->debugSuspendReason |= DEBUG_SUSPEND_USER_STACK;
+				if (thread->userFrame == NULL) {
+					/* not in a syscall: it is debug-suspended now */
+					thread->currentCpuId = -1;
+					thread->status = ((thread->status & 0x7fff) << 16) |
+						THREAD_STATE_DEBUG_SUSPENDED | THREAD_STATE_OFF_CPU;
+					ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+					thread = (struct ThreadCB *)cpu->runningThread;
+					thread->next = (uintptr_t)
+						&s_threadmgrRuntime.manager->debugSuspendedNext;
+					thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
+					s_threadmgrRuntime.manager->debugSuspendedPrev = (uintptr_t)thread;
+					*(uintptr_t *)thread->prev = (uintptr_t)thread;
+					ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+					thread = (struct ThreadCB *)cpu->runningThread;
+					ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+					goto overflowed;
+				}
+				thread->status |= THREAD_STATE_DEBUG_SUSPENDED;
+			}
+		}
+		distributePreemptedThread(cpu, thread, cpuId, __builtin_return_address(0));
+		if (overflow) {
+overflowed:
+			/* the debugger decides about the overflow */
+			overflowHook = s_threadmgrRuntime.manager->
+				debugHandlers[0][DEBUG_HANDLER_STACK_OVERFLOW];
+			if (overflowHook != NULL)
+				overflowHook(0, NULL);
+			overflowHandler = s_threadmgrRuntime.manager->
+				debugHandlers[1][DEBUG_HANDLER_STACK_OVERFLOW];
+			status = overflowHandler != NULL ? overflowHandler(0, NULL) :
+							   OVERFLOW_SUSPEND_PROCESS;
+			if (status == OVERFLOW_SUSPEND_PROCESS) {
+				thread = (struct ThreadCB *)cpu->runningThread;
+				process = thread->process;
+				if (!ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
+								     0, 1)) {
+					thread = (struct ThreadCB *)cpu->runningThread;
+					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
+					process->abortThread = thread->threadId;
+					status = ksceKernelSetEventFlag(process->abortEventFlag,
+									DEBUG_EVENT_SUSPEND);
+					if (status < 0) {
+						SCE_DBG_PRINTF(0, 1103, "*** error: debugSuspendThreadSelf() "
+							"-> sceKernelSetEventFlag(0x%08X)=0x%08X\n",
+							process->abortEventFlag, status);
+						SCE_PANIC(1104);
+					}
+				}
+			} else if (status != OVERFLOW_IGNORE) {
+				if (status != OVERFLOW_PANIC)
+					SCE_PANIC(1113);
+				SCE_PANIC(1091);
+			}
+		}
+		selected = (struct ThreadCB *)cpu->nextRunningThread;
+	}
+
+	/* the selected thread takes the CPU */
+	ksceKernelSpinlockLowLock(THREAD_LOCK(selected));
+	for (mutex = (struct ThreadmgrFastMutex *)selected->ownedFastMutexNext;
+	     mutex != (struct ThreadmgrFastMutex *)&selected->ownedFastMutexNext;
+	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
+		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1127);
+		ksceKernelSpinlockLowLock(&mutex->lock);
+	}
+	ksceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
+	cpu->threadSwitchCount++;
+	cpu->lastThreadSwitchTime = SceSysrootForKernel_E20F6FC8();
+	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
+		issueCallPAScheduleHookIntrRequest(SceCpuId(), selected->processId, selected->threadId,
+			     SCHED_TRACE_ON_CPU, selected->currentPriority);
+	hook = s_threadmgrRuntime.switchHook;
+	if (hook != NULL)
+		hook(SWITCH_HOOK_INTR, SWITCH_HOOK_ARGC, cpu->runningThreadId, initialPriority,
+		     selected->threadId, selected->currentPriority, reason);
+	cpu->runningThread = (uintptr_t)selected;
+	cpu->runningProcessId = selected->processId;
+	cpu->runningThreadId = selected->threadId;
+	__asm__ volatile("mcr p15, 0, %0, c13, c0, 4" : : "r"(selected) : "memory");
+	dtrace = selected->dtraceState;
+	if (dtrace != NULL && (dtrace->flags & DTRACE_THREAD_START)) {
+		process = selected->process;
+		if (process->dtraceFlags & DTRACE_PROCESS_START) {
+			/* the DTrace probe site __proc_:start */
+			__asm__ volatile(".global s_intrProcStartCodeSite\ns_intrProcStartCodeSite:");
+			probe = (ThreadmgrProbe)s_intrProcStartHandler;
+			if (probe != NULL) {
+				probe(&s_intrProcStartDescriptor);
+				process = selected->process;
+			}
+			process->dtraceFlags &= ~DTRACE_PROCESS_START;
+		}
+		id = selected->userThreadId;
+		if (id < 0)
+			id = selected->threadId;
+		/* the DTrace probe site __proc_:lwp__start */
+		__asm__ volatile(".global s_intrProcLwpStartCodeSite\ns_intrProcLwpStartCodeSite:");
+		probe = (ThreadmgrProbe)s_intrProcLwpStartHandler;
+		if (probe != NULL)
+			probe(&s_intrProcLwpStartDescriptor, id, process->pid);
+		dtrace->flags &= ~DTRACE_THREAD_START;
+	}
+	/* the DTrace probe site __sched_:on__cpu */
+	__asm__ volatile(".global s_intrSchedOnCpuCodeSite\ns_intrSchedOnCpuCodeSite:");
+	probe = (ThreadmgrProbe)s_intrSchedOnCpuHandler;
+	if (probe != NULL)
+		probe(&s_intrSchedOnCpuDescriptor);
+	onCpu = s_threadmgrRuntime.onCpuHook;
+	if (onCpu != NULL) {
+		id = selected->userThreadId;
+		if (id < 0)
+			id = selected->threadId;
+		onCpu(selected->process->pid, id,
+		      selected->currentPriority, selected->currentCpuAffinityMask);
+	}
+	thread = selected;
+deferred:
+	if (initialPriority < cpu->priority) {
+		moveStandbyToReady();
+		if (cpu->nextRunningThread == 0)
+			addIntrRequest(cpuId, INTR_MASK_SCHEDULING);
+	}
+	return thread->pRegisterContext;
+}
+
+/*
+ * SceKernelThreadMgr (dispatch.c): an interrupt arriving while the running
+ * thread spins on a fast mutex. The spin ends: the thread takes the mutex
+ * if it is free, else it waits on the mutex's UID object (or, with a stop
+ * or exit request pending, gives up the wait).
+ */
+
+#define WAIT_TYPE_FAST_MUTEX		0x1000
+#define WAIT_TYPE_FAST_MUTEX_SPIN	0x2000
+#define WAIT_ATTR_UNINTERRUPTIBLE	0x00008000
+#define SPIN_RETRY_DELAY		10
+#define SCE_KERNEL_ERROR_WAIT_EXITING	0x8002802c	/* PLACEHOLDER: names */
+#define SCE_KERNEL_ERROR_WAIT_SUSPENDED	0x8002802d
+
+/* callThreadmgrBeforeIntrHandler: thread (running here) was spinning on a fast mutex */
+void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
+{
+	struct ThreadCB *thread = context;
+	struct ThreadmgrFastMutex *mutex;
+	struct ThreadmgrWaitQueue *queue;
+	uint32_t flags, request;
+	int count;
+	volatile unsigned int delay;
+
+	SCE_DBG_ASSERT_CHECK(thread != NULL, 814);
+	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	for (;;) {
+		SCE_DBG_ASSERT_CHECK(thread->waitType == WAIT_TYPE_FAST_MUTEX_SPIN, 821);
+		SCE_DBG_ASSERT_CHECK((thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
+				     thread->currentCpuId == (int)ksceKernelCpuId(), 823);
+		SCE_DBG_ASSERT_CHECK(thread->spinMutex->magic == FAST_MUTEX_MAGIC, 829);
+		mutex = thread->spinMutex;
+		if (ksceKernelSpinlockLowTrylock(&mutex->queue->lock) >= 0)
+			break;
+		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		for (delay = SPIN_RETRY_DELAY; delay != 0; delay--)
+			;
+		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	}
+	SCE_DBG_ASSERT_PRINTF_LEVEL(0, thread->fastMutexHandoff == 0, 839,
+				     "fSpinInterrupted=0x%08X\n", thread->fastMutexHandoff);
+	thread->fastMutexHandoff = 1;
+	count = mutex->spinWaitCount;
+	SCE_DBG_ASSERT_PRINTF_LEVEL(0, count != 0, 842, "error: spinWaitCount=0x%08X\n", count);
+	mutex->spinWaitCount--;
+	if (mutex->owner == NULL) {
+		/* free: it is the thread's */
+		thread->spinMutex = NULL;
+		thread->waitType = 0;
+		ksceKernelSpinlockLowLock(&mutex->lock);
+		acquireFastMutex(mutex, context);
+		goto unlock;
+	}
+	flags = thread->flags;
+	if (!(flags >> THREAD_FLAG_REQUEST_SHIFT) ||
+	    (((flags & THREAD_FLAG_REQUEST_VM_SUSPEND) ||
+	      !(mutex->queue->attributes & WAIT_ATTR_UNINTERRUPTIBLE)) && !ThreadmgrInSyscall())) {
+		/* it waits on the mutex */
+		runningThreadPreemptByIntr(context, PREEMPT_WAIT);
+		queue = mutex->queue;
+		thread->currentCpuId = -1;
+		thread->waitId = mutex->uid;
+		thread->waitType = WAIT_TYPE_FAST_MUTEX;
+		count = ++queue->waiting;
+		SCE_DBG_ASSERT_CHECK(count != 0, 882);
+		queue = mutex->queue;
+		thread->next = (uintptr_t)queue;
+		thread->prev = (uintptr_t)queue->prev;
+		thread->status = (thread->status & THREAD_STATE_HIGH_MASK) | SCE_KERNEL_THREAD_STATUS_WAITING;
+		queue->prev = (struct ThreadmgrWaitNode *)thread;
+		((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread;
+	} else {
+		/* a stop or exit request: no wait */
+		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
+		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
+		if (request == THREAD_FLAG_REQUEST_EXIT_DELETE || request == THREAD_FLAG_REQUEST_EXIT)
+			thread->waitResult = SCE_KERNEL_ERROR_WAIT_EXITING;
+		else if (request == THREAD_FLAG_REQUEST_SUSPEND)
+			thread->waitResult = SCE_KERNEL_ERROR_WAIT_SUSPENDED;
+		else
+			SCE_DBG_ASSERT_LEVEL(0, 0, 865);
+		thread->spinMutex = NULL;
+		thread->waitType = 0;
+	}
+unlock:
+	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	ksceKernelSpinlockLowUnlock(&mutex->queue->lock);
 }

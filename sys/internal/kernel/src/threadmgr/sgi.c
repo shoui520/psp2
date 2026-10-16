@@ -7,6 +7,14 @@
 #include "sce/debug.h"
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/sysmem.h>
+#include "fast_mutex.h"
+#include "priority_change.h"
+#include "scheduler.h"
+#include "sce/sysmem.h"
+#include "syscall_context.h"
+#include "event.h"
+#include "timer.h"
+#include <psp2kern/kernel/sysmem/data_transfers.h>
 
 static inline struct SceKernelThreadmgrPrivate *loadIntrRequestManager(void)
 {
@@ -636,4 +644,91 @@ void initIntrRequestPool(void)
 		request->fromPool = 1;
 	}
 	s_intrRequestPool[INTR_REQUEST_POOL_SIZE - 1].next = NULL;
+}
+
+#define TRACE_EVENT_AFFINITY		0x20
+
+/* cpuId sets threadId's affinity */
+void issueChangeThreadCpuAffinityIntrRequest(unsigned int cpuId, SceUID threadId, uint32_t mask)
+{
+	struct ThreadmgrIntrRequest *request =
+		allocIntrRequest(INTR_REQUEST_CHANGE_THREAD_CPU_AFFINITY);
+	ThreadmgrTraceHook hook;
+
+	hook = s_threadmgrRuntime.schedTraceHook;
+	request->payload[0] = threadId;
+	request->payload[1] = mask;
+	if (hook != NULL)
+		hook(TRACE_EVENT_AFFINITY, 3, threadId, mask, 0);
+	issueIntrRequest(cpuId, request);
+}
+
+#define TRACE_EVENT_PRIORITY		0x21
+
+/* cpuId changes threadId's priority */
+void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority)
+{
+	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_CHANGE_THREAD_PRIORITY);
+	ThreadmgrTraceHook hook;
+
+	hook = s_threadmgrRuntime.schedTraceHook;
+	request->payload[0] = threadId;
+	request->payload[1] = priority;
+	if (hook != NULL)
+		hook(TRACE_EVENT_PRIORITY, 2, threadId, priority);
+	issueIntrRequest(cpuId, request);
+}
+
+#define TRACE_EVENT_SCHED		0x2c
+
+/* PLACEHOLDER: name. Tells cpuId of a scheduling event (with the trace hook) */
+void issueCallPAScheduleHookIntrRequest(unsigned int cpuId, SceUID processId, SceUID threadId,
+				uint32_t event, int priority)
+{
+	struct ThreadmgrIntrRequest *request = allocIntrRequest(INTR_REQUEST_CALL_PA_SCHEDULE_HOOK);
+	ThreadmgrTraceHook hook;
+
+	hook = s_threadmgrRuntime.schedTraceHook;
+	request->payload[0] = processId;
+	request->payload[1] = threadId;
+	request->payload[2] = event;
+	request->payload[3] = priority;
+	if (hook != NULL)
+		hook(TRACE_EVENT_SCHED, 4, processId, threadId, event, priority);
+	issueIntrRequest(cpuId, request);
+}
+
+/* Native intr-kind 0x14 producer and scheduling probe metadata. */
+/* The first descriptor word's framework role remains unproved. */
+static uint32_t s_schedChangePriorityProbeId;
+volatile uintptr_t s_schedChangePriorityHandler;
+extern const char s_schedChangePriorityCodeSite[];
+
+const struct ThreadmgrSchedProbeDescriptor s_schedChangePriorityDescriptor = {
+	.probeId = &s_schedChangePriorityProbeId,
+	.provider = "__sched_",
+	.name = "change__pri",
+	.codeSite = s_schedChangePriorityCodeSite,
+	.handler = &s_schedChangePriorityHandler,
+	.reserved = { 0 },
+};
+
+/* The native name is unavailable; the payload establishes this helper's role. */
+__attribute__((noinline))
+void issueCallPAPriorityHookIntrRequest(unsigned int cpuId, SceUID processId,
+					SceUID threadId, int oldPriority,
+					int newPriority)
+{
+	struct ThreadmgrIntrRequest *request;
+	ThreadmgrTraceHook hook;
+
+	request = allocIntrRequest(INTR_REQUEST_CALL_PA_PRIORITY_HOOK);
+	hook = s_threadmgrRuntime.schedTraceHook;
+	request->payload[0] = processId;
+	request->payload[1] = threadId;
+	request->payload[2] = oldPriority;
+	request->payload[3] = newPriority;
+	if (hook)
+		hook(0x2d, 4, processId, threadId, oldPriority, newPriority);
+	issueIntrRequest(cpuId, request);
 }

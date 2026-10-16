@@ -8,51 +8,14 @@
 #include "sce/sysmem.h"
 #include "event_flag.h"
 
+int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);
+int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info);
+int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
+				  uint32_t *outPattern);
+
 extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-
-int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
-				  uint32_t *outPattern)
-{
-	SceUID guid = kscePUIDtoGUID(0, evfId);
-
-	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
-			  ksceKernelPollEventFlag(guid, pattern, mode, outPattern);
-}
-
-int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads)
-{
-	SceUID guid = kscePUIDtoGUID(0, evfId);
-
-	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
-			  sceKernelCancelEventFlag(guid, pattern, numWaitThreads);
-}
-
-int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info)
-{
-	uint32_t attributes;
-	int ret = kscePUIDtoGUID(0, evfId);
-
-	if (ret < 0)
-		return USER_ERROR_UNKNOWN_EVENT_FLAG_ID;
-	ret = ksceKernelGetEventFlagInfo(ret, info);
-	if (ret >= 0) {
-		info->evfId = evfId;
-		ret = scePUIDGetAttr(0, evfId, &attributes);
-		if (ret >= 0 && (attributes & PUID_ATTR_OPENED))
-			info->attr |= PUID_ATTR_OPENED;
-	}
-	return ret;
-}
-
-int sceKernelClearEventFlag(SceUID evfId, uint32_t pattern)
-{
-	SceUID guid = kscePUIDtoGUID(0, evfId);
-
-	return guid < 0 ? (int)USER_ERROR_UNKNOWN_EVENT_FLAG_ID :
-			  ksceKernelClearEventFlag(guid, pattern);
-}
 
 int _sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern)
 {
