@@ -11,6 +11,7 @@
 #include "sce/cpu.h"
 #include "sce/debug.h"
 #include "sce/error.h"
+#include "sce/intrmgr.h"
 #include "sce/sysmem.h"
 #include "sce/timer_regs.h"
 #include <psp2kern/kernel/sysmem.h>
@@ -75,8 +76,6 @@ extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 extern int kscePUIDClose(SceUID pid, SceUID puid);
 extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
-extern int ksceKernelRegisterIntrHandler(int intr, const char *name, int type,
-	int (*handler)(int code, void *arg), void *arg, int priority, int cpuMask, void *opt);
 extern int ksceKernelEnableIntr(int intr);
 extern int ksceKernelDisableIntr(int intr);
 extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);

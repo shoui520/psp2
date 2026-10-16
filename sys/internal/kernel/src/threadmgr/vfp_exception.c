@@ -10,6 +10,7 @@
 #include "private.h"
 #include "sce/cpu.h"
 #include "sce/debug.h"
+#include "sce/intrmgr.h"
 #include "sce/sysmem.h"
 #include "scheduler.h"
 #include "syscall_context.h"
@@ -68,9 +69,6 @@ extern int SceExcpmgrForKernel_B615A7DA(void);
 extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern const char *ksceGUIDName(SceUID guid);
-extern int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int interruptType,
-					 void *handler, void *userCtx, int priority,
-					 int targetCpu, void *opt);
 extern int ksceKernelEnableIntr(int intrCode);
 extern void sceKernelSysrootCorelockLock(unsigned int cpu);
 extern void sceKernelSysrootCorelockUnlock(void);

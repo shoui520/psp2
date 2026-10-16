@@ -14,6 +14,7 @@
 #include "private.h"
 #include "sce/cpu.h"
 #include "sce/debug.h"
+#include "sce/intrmgr.h"
 #include "sce/sysmem.h"
 #include "sce/sysroot.h"
 #include "sce/sysroot_threadmgr.h"
@@ -118,8 +119,6 @@ extern void *SceSysmemForKernel_FA6C098C(SceUID uid);
 extern SceUID SceSysrootForKernel_7334F1E8(SceUID pid);
 extern int ksceKernelSysrootGetPUIDEntryHeap(SceUID pid, void **heap);
 extern int ksceKernelCheckDipsw(unsigned int bit);
-extern int ksceKernelRegisterIntrHandler(int code, const char *name, int type, void *handler,
-					 void *arg, int priority, int targetCpu, void *opt);
 extern int SceIntrmgrForKernel_9CB39268(void *handler);	/* before an interrupt handler */
 extern int SceIntrmgrForKernel_46F04D82(void *handler);
 extern int SceIntrmgrForKernel_764F140A(void *handler);	/* the next context after an interrupt */

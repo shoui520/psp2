@@ -25,13 +25,13 @@ _Static_assert(sizeof(struct ThreadmgrTimerInfoCopyArgs) == 8,
 
 extern void sceKernelApiDeclareTypeUInt64(void);
 extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
-extern int SceSysrootForDriver_CAE820B2(SceUID processId, uint32_t *version);
+extern int SceSysrootForDriver_CAE820B2(SceUID processId, SceUInt32 *version);
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 extern int ksceGUIDClose(SceUID uid);
 extern SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-int sceKernelCreateTimer(const char *name, uint32_t attributes, const uint32_t *options);
+SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr, const void *option);
 int ksceKernelStartTimer(SceUID uid);
 int ksceKernelStopTimer(SceUID uid);
 int sceKernelGetTimerBase(SceUID uid, uint64_t *value);
@@ -202,7 +202,9 @@ int sceKernelCloseTimer(SceUID uid)
 	ThreadmgrUidTimer *object;
 	struct ThreadCB *thread;
 	SceUID guid;
-	uint32_t attributes, version, wake = 0;
+	uint32_t attributes;
+	SceUInt32 version;
+	uint32_t wake = 0;
 	int result = 0xc0028241u;
 
 	guid = kscePUIDtoGUID(0, uid);
@@ -329,7 +331,7 @@ int sceKernelStopTimer(SceUID uid)
 int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
 {
 	uint64_t value;
-	uint32_t version;
+	SceUInt32 version;
 	int result, guid;
 
 	result = ksceKernelCopyFromUser(&value, userValue, sizeof(value));

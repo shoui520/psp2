@@ -11,6 +11,7 @@
 #include "affinity.h"
 #include "sce/cpu.h"
 #include "sce/debug.h"
+#include "sce/intrmgr.h"
 #include "syscall_context.h"
 
 #undef __FILE_NAME__
@@ -68,8 +69,6 @@ extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
 extern int SceSysrootForDriver_DABD4A47(ThreadmgrThreadInfoForDebugger *info);
-extern int ksceKernelTriggerSGI(unsigned int intr, unsigned int targetFilter,
-				unsigned int cpuMask);
 int ksceKernelIsThreadDebugSuspended(SceUID threadId);
 int ksceKernelDebugResumeThread(SceUID threadId, uint32_t reason);
 int ksceKernelGetThreadInfoForDebugger(SceUID threadId, uint32_t flags,
