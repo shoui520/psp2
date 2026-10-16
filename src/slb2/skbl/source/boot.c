@@ -5,8 +5,8 @@
  * tables and boot parameters, then every CPU turns the MMU and caches on and
  * enters sceKblMain (boot.c in Sony's debug records).
  *
- * The exception and monitor handlers are still placeholders; memcpy is
- * memcpy_chk.c's, not written yet.
+ * The rest of SKBL (memcpy_chk.c, memory_test.c, the kernel library it
+ * links) is not written yet.
  */
 
 #include "skeleton.h"
