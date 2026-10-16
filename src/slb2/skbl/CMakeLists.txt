@@ -11,6 +11,7 @@ set(sysmem_source ../../os0/kd/sysmem/source)
 set(intrmgr_source ../kbl/SceKernelIntrMgr/source)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	source/reset.S
+	source/memory_test.c
 	source/boot.c
 	${intrmgr_source}/dmacmgr_tzs.c
 	${intrmgr_source}/intrmgr.c

@@ -55,8 +55,8 @@ void ksceKernelClearDipsw(unsigned int bit);
 int InitializeAssertLevel(void);
 int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);
-int KblSimpleMemoryTest(uintptr_t base, SceSize size, uint32_t seed, SceSize step,
-			SceSize blockSize);
+void KblSimpleMemoryTest(uintptr_t start, SceSize size, uint32_t seed, SceSize step,
+			 SceSize blockSize);
 int PervasiveInit(void);
 int TimerGateEnable(void);
 int TimerResetDisable(void);
@@ -207,9 +207,9 @@ static inline uint32_t ror5(uint32_t value)
 #ifndef BOOT_NSKBL
 
 /* name unknown: the boot-time memory test of the product line */
-int KblMemoryTest(void)
+void KblMemoryTest(void)
 {
-	return KblSimpleMemoryTest(0x40100000, 0xff00000, 0xca77eb01, 0x1000, 0x2000000);
+	KblSimpleMemoryTest(0x40100000, 0xff00000, 0xca77eb01, 0x1000, 0x2000000);
 }
 
 __attribute__((noinline))
