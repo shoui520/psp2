@@ -4,17 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sce/fat_boot.h>
-
-/* The Memory Stick interface's 4 KiB register window (SceMsif) */
-#define MSIF_REG_BASE		0xe0900000
-#define MSIF_REG_SIZE		0x1000
-
-struct MsifDmaChannelRegisters {
-	volatile uint32_t dataAddress;
-	volatile uint32_t nextDescriptorAddress;
-	volatile uint32_t transferControl;
-	volatile uint32_t diagnostic;
-};
+#include <sce/msif_regs.h>
 
 struct MsifDmaDescriptor {
 	uint32_t dataAddress;
@@ -38,69 +28,6 @@ union MsproalFifoData {
 		uint8_t writeCount;
 		uint8_t reserved[4];
 	} registerWindow;
-};
-
-/* Hardware window starts at the transfer engine, after the sequencer bank. */
-struct MsifRegisterWindow {
-	union {
-		struct {
-			volatile uint16_t transferCommand;
-			volatile uint16_t commandDiagnostic;
-		};
-		volatile uint32_t commandSnapshot;
-	};
-	volatile uint32_t transferFifo;
-	union {
-		struct {
-			volatile uint16_t interruptStatus;
-			volatile uint16_t interruptDiagnostic;
-		};
-		volatile uint32_t interruptSnapshot;
-	};
-	union {
-		struct {
-			volatile uint16_t transferControl;
-			volatile uint16_t controlDiagnostic;
-		};
-		volatile uint32_t controlSnapshot;
-	};
-	volatile uint32_t diagnostic[2];
-	uint8_t reserved[56];
-	struct MsifDmaChannelRegisters dma[2];
-	volatile uint32_t powerSupply;
-};
-
-struct MsifSequencerRegisters {
-	volatile uint16_t control;
-	volatile uint16_t command;
-	volatile uint16_t reset;
-	volatile uint16_t resetDiagnostic;
-	volatile uint16_t result;
-	volatile uint16_t resultDiagnostic;
-	volatile uint32_t configuration;
-	volatile uint16_t sectorCount;
-	volatile uint16_t countDiagnostic;
-	volatile uint16_t diagnostic;
-	volatile uint16_t commandError;
-	volatile uint32_t diagnosticWords[2];
-	union {
-		volatile uint32_t instructionDiagnostic;
-		volatile uint16_t instructionFifo;
-	};
-	union {
-		volatile uint32_t diagnostic;
-		volatile uint8_t commandFifo;
-	} commandPort;
-	volatile uint32_t mediaStatus;
-	volatile uint32_t finalDiagnostic;
-};
-
-struct MsifControllerRegisters {
-	union {
-		struct MsifSequencerRegisters sequencer;
-		volatile uint32_t sequencerSnapshot[12];
-	};
-	struct MsifRegisterWindow transfer;
 };
 
 #define MSPROAL_CONTROLLER(handle) \
