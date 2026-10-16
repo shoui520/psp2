@@ -27,11 +27,20 @@ extern int ksceGpioPortClear(int bus, int port);
 #define OLED_BUSY ((int)0x803f0a05)
 #define OLED_INVALID ((int)0x803f0a02)
 
-static unsigned spiDepth, ready;
-static uint16_t panelId, panelRevision;
-static unsigned txBits, txValue;
-static volatile SceSpiRegisters *spi;
-static int spiUid, eventUid;
+/* name unknown: the SPI link and panel state initOled clears */
+typedef struct OledLink {
+	unsigned spiDepth;			/* 0x00 */
+	unsigned ready;				/* 0x04 */
+	uint16_t panelId;			/* 0x08 */
+	uint16_t panelRevision;			/* 0x0a */
+	unsigned txBits;			/* 0x0c */
+	unsigned txValue;			/* 0x10 */
+	volatile SceSpiRegisters *spi;		/* 0x14 */
+	int spiUid;				/* 0x18 */
+	int eventUid;				/* 0x1c */
+} OledLink;
+
+static OledLink oled;
 static unsigned synchronous;
 static const unsigned char *sequence;
 static int delayFrames;
@@ -56,55 +65,55 @@ static void waitTime(unsigned usec) /* name unknown */
 
 static void spiBegin(void) /* name unknown */
 {
-	if (!spiDepth) {
+	if (!oled.spiDepth) {
 		kscePervasiveSpiClockEnable(2);
-		while (spi->receiveCount)
-			(void)spi->receive;
-		spi->control = 0x30001;
-		spi->enable = 1;
+		while (oled.spi->receiveCount)
+			(void)oled.spi->receive;
+		oled.spi->control = 0x30001;
+		oled.spi->enable = 1;
 	}
-	spiDepth++;
+	oled.spiDepth++;
 }
 
 static void spiWord(unsigned word) /* name unknown */
 {
-	txValue |= word << txBits;
-	txBits += 9;
-	if (txBits >= 16) {
-		while (spi->transmitCount == 0x7f)
+	oled.txValue |= word << oled.txBits;
+	oled.txBits += 9;
+	if (oled.txBits >= 16) {
+		while (oled.spi->transmitCount == 0x7f)
 			;
-		spi->transmit = txValue & 0xffff;
-		txValue >>= 16;
-		txBits -= 16;
+		oled.spi->transmit = oled.txValue & 0xffff;
+		oled.txValue >>= 16;
+		oled.txBits -= 16;
 	}
 }
 
 static void spiPad(void) /* name unknown */
 {
-	while (txBits)
+	while (oled.txBits)
 		spiWord(0);
-	while (spi->transmitCount)
+	while (oled.spi->transmitCount)
 		;
-	spi->enable = 0;
-	while (spi->enable & 1)
+	oled.spi->enable = 0;
+	while (oled.spi->enable & 1)
 		;
 }
 
 static void spiEnd(void) /* name unknown */
 {
-	if (--spiDepth)
+	if (--oled.spiDepth)
 		return;
-	while (txBits)
+	while (oled.txBits)
 		spiWord(0);
-	while (spi->transmitCount)
+	while (oled.spi->transmitCount)
 		;
-	while (spi->receiveCount)
-		(void)spi->receive;
-	spi->enable = 0;
-	while (spi->enable & 1)
+	while (oled.spi->receiveCount)
+		(void)oled.spi->receive;
+	oled.spi->enable = 0;
+	while (oled.spi->enable & 1)
 		;
-	spi->control = 0x30001;
-	(void)spi->control;
+	oled.spi->control = 0x30001;
+	(void)oled.spi->control;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 }
@@ -115,9 +124,9 @@ static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name
 	if (!length)
 		return;
 	do {
-		while (!spi->receiveCount)
+		while (!oled.spi->receiveCount)
 			;
-		value |= spi->receive << bits;
+		value |= oled.spi->receive << bits;
 		bits += 16;
 		while (bits > 8) {
 			if (skip)
@@ -134,9 +143,9 @@ int SceOledForDriver_2F0C4B67(unsigned char command, const unsigned char *data,
 			  unsigned length)
 {
 	unsigned i;
-	if (!ready)
+	if (!oled.ready)
 		return OLED_NOT_READY;
-	if (ready == 2)
+	if (oled.ready == 2)
 		return OLED_NO_PANEL;
 	spiBegin();
 	spiWord(reverseByte(command) << 1);
@@ -149,9 +158,9 @@ int SceOledForDriver_2F0C4B67(unsigned char command, const unsigned char *data,
 int SceOledForDriver_3E6AE8A2(unsigned command, unsigned char *data, unsigned length)
 {
 	unsigned i;
-	if (!ready)
+	if (!oled.ready)
 		return OLED_NOT_READY;
-	if (ready == 2)
+	if (oled.ready == 2)
 		return OLED_NO_PANEL;
 	spiBegin();
 	if (command < 0xb0) {
@@ -187,18 +196,18 @@ static int readPanelId(void) /* name unknown */
 	spiRead(id, 5, 2);
 	spiEnd();
 	if (id[4] == 0xff) {
-		panelId = id[0] | (id[1] << 8);
-		panelRevision = id[2] | (id[3] << 8);
+		oled.panelId = id[0] | (id[1] << 8);
+		oled.panelRevision = id[2] | (id[3] << 8);
 	}
 	if (!port)
 		ksceGpioPortClear(0, 0);
-	if (id[4] == 0xff && !panelId) {
-		ready = 1;
+	if (id[4] == 0xff && !oled.panelId) {
+		oled.ready = 1;
 		return 0;
 	}
 	kscePervasiveSpiClockDisable(2);
 	kscePervasiveSpiResetEnable(2);
-	ready = 2;
+	oled.ready = 2;
 	return OLED_NO_PANEL;
 }
 
@@ -274,20 +283,20 @@ int SceOledForDriver_9F4ABDDC(void)
 }
 int ksceOledWaitReady(void)
 {
-	while (!ready)
+	while (!oled.ready)
 		waitTime(1000);
 	return 0;
 }
 int ksceOledGetDDB(uint16_t *id, uint16_t *revision)
 {
-	if (!ready)
+	if (!oled.ready)
 		return OLED_NOT_READY;
-	if (ready == 2)
+	if (oled.ready == 2)
 		return OLED_NO_PANEL;
 	if (id)
-		*id = panelId;
+		*id = oled.panelId;
 	if (revision)
-		*revision = panelRevision;
+		*revision = oled.panelRevision;
 	return 0;
 }
 int SceOledForDriver_3C990F53(void)
@@ -439,6 +448,13 @@ int SceOledForDriver_ED2D6F19(unsigned mode)
 	synchronous = mode;
 	return 0;
 }
+
+static __attribute__((noinline)) int resetSequence(void) /* name unknown */
+{
+	sequence = 0;
+	delayFrames = 0;
+	return 0;
+}
 int SceOledForDriver_5AF31932(const unsigned char *p)
 {
 	if (sequence)
@@ -462,65 +478,71 @@ int SceOledForDriver_BF5C5624(unsigned poll)
 	return 0;
 }
 
-static void setupSpi(void) /* name unknown */
+static inline void setupSpi(volatile SceSpiRegisters *regs) /* name unknown */
 {
 	kscePervasiveSpiResetDisable(2);
 	kscePervasiveSpiClockEnable(2);
-	spi->control = 0x30001;
-	spi->dmaControl = 15;
-	spi->intControl = 3;
-	spi->mode = 0;
-	(void)spi->mode;
+	regs->control = 0x30001;
+	regs->dmaControl = 15;
+	regs->intControl = 3;
+	regs->mode = 0;
+	(void)regs->mode;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 	ksceGpioSetPortMode(0, 0, 0);
 }
+
 static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown */
 {
-	if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3))
-		setupSpi();
 	if (!resume) {
-		if (event == SYSEVENT_SUSPEND_IDLE_QUERY)
-			return SceOledForDriver_BF5C5624(1) ? -1 : 0;
-		if (event == SYSEVENT_SUSPEND_DEVICE(3)) {
+		if (event == SYSEVENT_SUSPEND_IDLE_QUERY) {
+			if (SceOledForDriver_BF5C5624(1))
+				return -1;
+		} else if (event == SYSEVENT_SUSPEND_DEVICE(3)) {
 			kscePervasiveSpiClockDisable(2);
 			kscePervasiveSpiResetEnable(2);
 			ksceGpioPortClear(0, 0);
 		}
+	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3)) {
+		setupSpi(oled.spi);
 	}
 	return 0;
 }
-int module_start(unsigned arglen, void *argp)
+
+static __attribute__((noinline)) int initOled(void) /* name unknown */
 {
 	SceKernelAllocMemBlockKernelOpt opt;
-	void *base;
+	volatile SceSpiRegisters *base;
 	int ret;
-	spiDepth = ready = panelId = panelRevision = txBits = txValue = 0;
-	spi = 0;
-	spiUid = eventUid = 0;
-	sequence = 0;
-	delayFrames = 0;
-	eventUid = ksceKernelRegisterSysEventHandler("SceOled", sysEvent, 0);
+
+	oled = (OledLink){ 0 };
+	resetSequence();
+	oled.eventUid = ksceKernelRegisterSysEventHandler("SceOled", sysEvent, 0);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = SPI_REG_BASE(2);
 	ret = ksceKernelAllocMemBlock("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
-		return 1;
-	spiUid = ret;
-	ksceKernelGetMemBlockBase(ret, &base);
-	spi = base;
-	setupSpi();
+		return ret;
+	oled.spiUid = ret;
+	ksceKernelGetMemBlockBase(ret, (void **)&base);
+	oled.spi = base;
+	setupSpi(base);
 	if ((ksceSysrootGetHardwareInfo() & 0xff0000) == 0x800000) {
 		ret = readPanelId();
 		if (ret < 0) {
-			ksceKernelUnregisterSysEventHandler(eventUid);
-			ksceKernelFreeMemBlock(spiUid);
-			return 1;
+			ksceKernelUnregisterSysEventHandler(oled.eventUid);
+			ksceKernelFreeMemBlock(oled.spiUid);
+			return ret;
 		}
 	} else {
 		ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceOledInit", initWork, 0);
 	}
 	return 0;
+}
+
+int module_start(unsigned arglen, void *argp)
+{
+	return initOled() < 0;
 }
