@@ -82,6 +82,26 @@ int ResumeController(void)
 	return 0;
 }
 
+#if defined(INTRMGR_NSKBL)
+#include "sce/sysroot_init.h"
+
+/* the block shared with the secure kernel (intrmgrSmc) */
+#define INTR_SHARED_MEMORY_SIZE	0xa000
+
+void sceKernelSysrootSetSharedMemory(void *base);
+int ksceKernelDeleteHeap(SceUID heap);
+void enableInterrupts(void);
+
+/* name unknown: NSKBL's init callback (phase 5), the heap goes when the kernel takes over */
+int IntrMgrInitCallback(uint32_t kind, void *argument)
+{
+	(void)kind;
+	(void)argument;
+	ksceKernelDeleteHeap(g_intrHeap);
+	return 0;
+}
+#endif
+
 /* name unknown: interrupt nesting depth of the current core. */
 int __attribute__((noinline)) CurrentNesting(void)
 {
@@ -857,6 +877,125 @@ void intrStackOverflow(unsigned int depth, unsigned int interrupt)
 		;
 }
 
+#if defined(INTRMGR_NSKBL)
+/* NSKBL: the block the secure kernel's requests are shared through */
+static inline __attribute__((always_inline)) int AllocSharedMemory_NS(void **base)
+{
+	SceKernelAllocMemBlockKernelOpt opt;
+	SceUID result;
+
+	memset(&opt, 0, sizeof(opt));
+	opt.size = sizeof(opt);
+	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
+	result = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
+		"SceSharedMemoryBlock_NS", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+		INTR_SHARED_MEMORY_SIZE, &opt);
+	if (result < 0) {
+		SCE_DBG_PRINTF_FUNC(0xb, 1725, "AllocSharedMemory_NS",
+				    "allocate shared memory block failed. 0x%08x\n", result);
+		SCE_DBG_ASSERT_CHECK_FUNC(0, 1726, "AllocSharedMemory_NS");
+		return result;
+	}
+	ksceKernelGetMemBlockBase(result, base);
+	return 0;
+}
+
+/* NSKBL: the heap and the IRQ entry only */
+static inline __attribute__((always_inline)) int Start(void)
+{
+	int result;
+	SceKernelHeapCreateOpt options;
+
+	result = ksceExcpmgrRegisterHandler(6, 0, interruptEntry);
+	if (result < 0) {
+		SCE_DBG_PRINTF(6, 1998, "register exception handler failed. 0x%08x\n", result);
+		return result;
+	}
+	options.size = sizeof(options);
+	options.attr = 1;
+	result = ksceKernelCreateHeap("SceIntrMgr", 0x8000, &options);
+	if (result < 0) {
+		SCE_DBG_PRINTF(0xb, 2012, "Create Heap failed. 0x%08x\n", result);
+		return result;
+	}
+	g_intrHeap = result;
+	for (unsigned int i = 0; i < INTR_COUNT; i++) {
+		g_intrHandlers[i].handler = NULL;
+		g_intrHandlers[i].lock = 0;
+	}
+	return 0;
+}
+
+/*
+ * NSKBL: the GIC at its physical address, the controller reset in line, the
+ * shared memory announced to the secure kernel and this core's nesting state
+ * in its vector page
+ */
+int sceKernelIntrMgrStart(void)
+{
+	GicCpuInterface *cpuInterface = (GicCpuInterface *)(PERIPH_REG_BASE + GIC_CPU_INTERFACE_OFFSET);
+	unsigned int blocks, i;
+	int result;
+
+	sceKernelSysrootCorelockLock(0);
+	g_intrCpuInterface = cpuInterface;
+	g_intrDistributor = (GicDistributor *)(PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET);
+	cpuInterface->control = 0;
+	if (!ksceKernelCpuId())
+		g_intrDistributor->control = 0;
+	blocks = (g_intrDistributor->type & 31) + 1;
+	i = 0;
+	do {
+		g_intrDistributor->clearEnable[i] = ~0U;
+		i++;
+	} while (i != blocks);
+	g_intrCpuInterface->control = 1;
+	if (!ksceKernelCpuId())
+		g_intrDistributor->control = 1;
+	g_intrCpu[ksceKernelCpuId()].nesting = 0;
+	if (!ksceKernelCpuId()) {
+		result = Start();
+		if (result < 0) {
+			SCE_DBG_ASSERT(0, 2165);
+			return result;
+		}
+	}
+	sceKernelSysrootSetModulePrivate(5, g_intrHandlers);
+	g_intrEnterSyscall = NULL;
+	g_intrLeaveSyscall = NULL;
+	g_intrEnterIntr = NULL;
+	g_intrLeaveIntr = NULL;
+	g_intrEnterSubIntr = NULL;
+	g_intrLeaveSubIntr = NULL;
+	if (!ksceKernelCpuId()) {
+		void *base;
+		uintptr_t paddr;
+
+		result = AllocSharedMemory_NS(&base);
+		if (result < 0) {
+			SCE_DBG_PRINTF(6, 2182, "Create shared memory failed. 0x%08x\n", result);
+			SCE_DBG_ASSERT_FAIL(2183);
+		}
+		sceKernelSysrootSetSharedMemory(base);
+		if (ksceKernelVAtoPA(base, &paddr) < 0)
+			SCE_PANIC(2192);
+		intrmgrSmc(paddr, INTR_SHARED_MEMORY_SIZE);
+		if (sceKernelRegisterInitCallback(IntrMgrInitCallback, 5, NULL, NULL) < 0)
+			SCE_DBG_ASSERT_FAIL(2200);
+	}
+	{
+		/* the vector page word 0x28 of this core points at its nesting state */
+		char *vector = (char *)ksceKernelSysrootGetVbaseResetVector() +
+			ksceKernelCpuId() * 0x40;
+		IntrCpuState *volatile state = &g_intrCpu[ksceKernelCpuId()];
+
+		PatchCode(vector + 0x28, (const void *)&state, sizeof(state));
+	}
+	sceKernelSysrootCorelockUnlock();
+	enableInterrupts();
+	return 0;
+}
+#else
 static inline __attribute__((always_inline)) int Start(void)
 {
 	int result;
@@ -947,6 +1086,7 @@ int module_bootstart(SceSize arglen, void *argp)
 	PatchCode(base + 0x28, (const void *)&state, sizeof(state));
 	return 0;
 }
+#endif
 
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state)
 {

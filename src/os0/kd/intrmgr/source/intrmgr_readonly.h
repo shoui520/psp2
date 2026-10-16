@@ -1,7 +1,8 @@
 /* Sony's interrupt-manager readonly records and text. */
 #pragma once
 
-#if FW_DEBUG
+/* NSKBL (INTRMGR_NSKBL) keeps its text with the code */
+#if FW_DEBUG && !defined(INTRMGR_NSKBL)
 extern const SceKernelDebugInfo g_intrSceKernelQueryIntrHandlerInfoLine1467Info;
 extern const SceKernelDebugInfo g_intrSceKernelIntrMgrModuleStartLine2264Info;
 extern const SceKernelDebugInfo g_intrSceKernelRegisterIntrHandlerLine395Info;

@@ -4,9 +4,11 @@
 # and exception entries are the original's, the rest of boot.c is stubs.
 set(sysmem_source ../../os0/kd/sysmem/source)
 set(sdif_source ../../os0/kd/sdif/source)
+set(intrmgr_source ../../os0/kd/intrmgr/source)
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	source/reset.S
 	source/boot.c
+	${intrmgr_source}/intrmgr.c
 	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
 	${sdif_source}/sdif.c
@@ -18,6 +20,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	../../common/kbl/pervasive_init_kbl.c
 	../../common/kbl/pervasive_kbl.c
 )
+set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 set_source_files_properties(${sysmem_source}/led.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL)
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_NSKBL COMPILE_OPTIONS "-fsigned-char")
