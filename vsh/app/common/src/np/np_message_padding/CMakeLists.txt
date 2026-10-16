@@ -5,13 +5,13 @@ if(NOT EXISTS "${fwfile}")
 endif()
 include("${fwfile}")
 set(name vs0_sys_external_np_message_padding)
-add_executable(${name} source/metadata.S)
+add_executable(${name} metadata.S)
 target_compile_definitions(${name} PRIVATE
 	MODULE_NID=${MODULE_NID} MODULE_SDK_VERSION=${MODULE_SDK_VERSION})
 target_link_options(${name} PRIVATE -nostdlib
-	-Wl,--no-fix-cortex-a8,--emit-relocs,-T,${CMAKE_CURRENT_SOURCE_DIR}/source/layout.ld)
+	-Wl,--no-fix-cortex-a8,--emit-relocs,-T,${CMAKE_CURRENT_SOURCE_DIR}/layout.ld)
 set_property(TARGET ${name} APPEND PROPERTY LINK_DEPENDS
-	"${CMAKE_CURRENT_SOURCE_DIR}/source/layout.ld")
+	"${CMAKE_CURRENT_SOURCE_DIR}/layout.ld")
 add_custom_command(OUTPUT ${name}.velf
 	COMMAND python3 "${PSP2_SRC}/tools/pack_data_module.py"
 		$<TARGET_FILE:${name}> ${name}.velf --module-info-symbol moduleInfo

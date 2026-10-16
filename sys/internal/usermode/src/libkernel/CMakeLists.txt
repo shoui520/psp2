@@ -4,63 +4,63 @@ set(libkernel_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
 gcc48_prepare_unwind(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/unwind-arm.c"
 	"${libkernel_unwind_source}")
-include(source/heap.cmake)
+include(heap.cmake)
 set(libkernel_heap_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 libkernel_prepare_heap(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/dlmalloc-2.8.3/malloc.c"
-	"${CMAKE_CURRENT_SOURCE_DIR}/source/heap_sce.patch"
+	"${CMAKE_CURRENT_SOURCE_DIR}/heap_sce.patch"
 	"${libkernel_heap_source}")
 
 psp2_module(os0_us_libkernel KIND user SOURCES
 	"${libkernel_unwind_source}"
 	"${libkernel_heap_source}"
-	source/format.c
-	source/format_wrappers.c
-	source/thread_context.c
-	source/cpu_context.S
-	source/change_stack.S
-	source/stack_fail.S
-	source/thread_objects.c
-	source/thread_status.c
-	source/events.c
-	source/timers.c
-	source/msgpipe.c
-	source/msgpipe_vectors.c
-	source/lifecycle.c
-	source/atomics.c
-	source/atomics64.c
-	source/atomics_small.c
-	source/process_clock.c
-	source/backtrace.c
-	source/backtrace_print.c
-	source/format_checked.c
-	source/backtrace_exidx.c
-	source/backtrace_walk.c
-	source/backtrace_capture.S
-	source/thread_create.c
-	source/thread_waits.c
-	source/thread_misc.c
-	source/vm.c
-	source/system_identity.c
-	source/save_context.c
-	source/auth_requests.c
-	source/adhoc_cipher.c
-	source/lw_create.c
-	source/lw_sync.c
-	source/lw_mutex.c
-	source/lw_mutex_arm.c
-	source/modules.c
-	source/library_lookup.c
-	source/io_transfer.c
-	source/io_paths.c
-	source/clib_memory.c
-	source/clib_strings.c
-	source/clib_case.c
-	source/clib_abort.c
-	source/heap.c
-	source/heap_destroy.c
-	source/heap_inspect.c
-	source/format_io.c
+	format.c
+	format_wrappers.c
+	thread_context.c
+	cpu_context.S
+	change_stack.S
+	stack_fail.S
+	thread_objects.c
+	thread_status.c
+	events.c
+	timers.c
+	msgpipe.c
+	msgpipe_vectors.c
+	lifecycle.c
+	atomics.c
+	atomics64.c
+	atomics_small.c
+	process_clock.c
+	backtrace.c
+	backtrace_print.c
+	format_checked.c
+	backtrace_exidx.c
+	backtrace_walk.c
+	backtrace_capture.S
+	thread_create.c
+	thread_waits.c
+	thread_misc.c
+	vm.c
+	system_identity.c
+	save_context.c
+	auth_requests.c
+	adhoc_cipher.c
+	lw_create.c
+	lw_sync.c
+	lw_mutex.c
+	lw_mutex_arm.c
+	modules.c
+	library_lookup.c
+	io_transfer.c
+	io_paths.c
+	clib_memory.c
+	clib_strings.c
+	clib_case.c
+	clib_abort.c
+	heap.c
+	heap_destroy.c
+	heap_inspect.c
+	format_io.c
 	../../../../../common/sysclib/fill_core.S
 	../../../../../common/sysclib/fill.c
 	../../../../../common/sysclib/compare_core.S
@@ -104,7 +104,7 @@ target_link_options(os0_us_libkernel PRIVATE
 	"-Wl,--defsym=memcpy=sceClibMemcpy")
 
 target_include_directories(os0_us_libkernel PRIVATE
-	"${CMAKE_CURRENT_SOURCE_DIR}/source"
+	"${CMAKE_CURRENT_SOURCE_DIR}"
 	../../../../../common/runtime/gcc48
 	../../../../../common/runtime/gcc48/target
 	../../../../../contrib/gcc-linaro-4.8-2014.04/gcc
@@ -130,17 +130,17 @@ set_source_files_properties("${libkernel_unwind_source}" PROPERTIES
 	"_Unwind_VRS_Get=SceLibGcc_0DFF2B2C;_Unwind_VRS_Set=SceLibGcc_DAB28374;_Unwind_VRS_Pop=SceLibGcc_F16E32FC;_Unwind_Complete=SceLibGcc_8A5F29D8;_Unwind_DeleteException=SceLibGcc_4BB45B70;_Unwind_GetCFA=SceLibGcc_DBE840D6")
 
 # These syscall marshalling wrappers have no strong stack guards in the original.
-set_source_files_properties(source/lw_mutex_arm.c PROPERTIES
+set_source_files_properties(lw_mutex_arm.c PROPERTIES
 	COMPILE_OPTIONS "-marm;-fno-inline;-fno-stack-protector")
 
-set_source_files_properties(source/backtrace_exidx.c PROPERTIES
+set_source_files_properties(backtrace_exidx.c PROPERTIES
 	COMPILE_OPTIONS "-fno-inline")
 
-set_source_files_properties(source/thread_objects.c source/thread_status.c
-	source/events.c source/timers.c source/msgpipe_vectors.c source/backtrace.c
-	source/backtrace_print.c
-	source/thread_waits.c source/lw_sync.c source/modules.c source/io_transfer.c
-	source/io_paths.c source/thread_misc.c
+set_source_files_properties(thread_objects.c thread_status.c
+	events.c timers.c msgpipe_vectors.c backtrace.c
+	backtrace_print.c
+	thread_waits.c lw_sync.c modules.c io_transfer.c
+	io_paths.c thread_misc.c
 	PROPERTIES
 	COMPILE_OPTIONS "-fstack-protector")
 

@@ -1,5 +1,5 @@
 psp2_module(os0_kd_dbgsdio KIND kernel SOURCES
-	source/dbgsdio.c
+	dbgsdio.c
 )
 
 # Preserve the channel array address, including unchecked index arithmetic.

@@ -14,15 +14,15 @@ psp2_module(os0_kd_bootimage_net_ps KIND kernel PARTIAL SOURCES
 	../../../../../common/netps_packet_cleanup.c
 	../../../../../common/netps_driver_updates.c
 	../../../../../common/netps_dump_reader.c
-	source/net_ps_glue.c
-	source/net_ps_statistics.c
-	source/net_ps_startup.c
-	source/net_ps_packet.c
-	source/net_ps_emulation.c
-	source/net_ps_socket.c
-	source/strlcpy.c
-	source/net_ps_hmac.c
-	source/net_ps_aes.c
-	source/system_os.c
-	source/net_ps.c
+	net_ps_glue.c
+	net_ps_statistics.c
+	net_ps_startup.c
+	net_ps_packet.c
+	net_ps_emulation.c
+	net_ps_socket.c
+	strlcpy.c
+	net_ps_hmac.c
+	net_ps_aes.c
+	system_os.c
+	net_ps.c
 )

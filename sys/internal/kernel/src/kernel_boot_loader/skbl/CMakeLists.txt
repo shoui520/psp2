@@ -10,15 +10,15 @@
 # memset and memcpy sysmem's memory_set.c and memory_copy.c with sysclib's assembly
 # cores. The other C functions are stubs and the TrustZone module archive is not
 # packed yet.
-set(sysmem_source ../../sysmem/source)
-set(intrmgr_source ../../intrmgr/tzs/source)
+set(sysmem_source ../../sysmem)
+set(intrmgr_source ../../intrmgr/tzs)
 psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
-	source/reset.S
-	source/memory_test.c
-	source/monitor.S
-	source/boot.c
-	source/kbl_main.c
-	source/archive_tzs.c
+	reset.S
+	memory_test.c
+	monitor.S
+	boot.c
+	kbl_main.c
+	archive_tzs.c
 	${intrmgr_source}/dmacmgr_tzs.c
 	${intrmgr_source}/intrmgr.c
 	${intrmgr_source}/usleep.c
@@ -34,7 +34,7 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	../../../../../../common/sysclib/fill_core.S
 	../../../../../../common/kbl/pervasive_init_kbl.c
 	../../../../../../common/kbl/pervasive_kbl.c
-	source/compat_sram.S
+	compat_sram.S
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS "SYSMEM_NSKBL;SYSMEM_SKBL" COMPILE_OPTIONS "-fsigned-char")

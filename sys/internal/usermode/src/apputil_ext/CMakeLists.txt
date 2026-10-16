@@ -1,4 +1,4 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
 psp2_module(vs0_sys_external_apputil_ext KIND user SKELETON SOURCES
-	source/apputil_ext.c
+	apputil_ext.c
 )

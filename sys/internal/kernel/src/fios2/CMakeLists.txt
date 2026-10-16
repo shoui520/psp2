@@ -1,17 +1,17 @@
 # os0:kd/bootimage/fios2 - SceFios2Kernel: FIOS2 overlays (C++ built by Sony with GCC)
 enable_language(CXX)
 psp2_module(os0_kd_bootimage_fios2 KIND kernel SOURCES
-	source/rwlock.cpp
-	source/path.cpp
-	source/init_term.cpp
-	source/overlay.cpp
-	source/resolve.cpp
-	source/dh.cpp
-	source/kernel.cpp
-	source/storage.cpp
-	source/platform.cpp
-	source/api.cpp
-	source/syscall.cpp
+	rwlock.cpp
+	path.cpp
+	init_term.cpp
+	overlay.cpp
+	resolve.cpp
+	dh.cpp
+	kernel.cpp
+	storage.cpp
+	platform.cpp
+	api.cpp
+	syscall.cpp
 )
 
 if(TARGET os0_kd_bootimage_fios2)

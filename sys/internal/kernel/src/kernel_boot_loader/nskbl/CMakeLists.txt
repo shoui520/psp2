@@ -4,12 +4,12 @@
 # and exception entries are the original's; boot.c is SKBL's (BOOT_NSKBL): the same
 # exception handlers and ASLR helpers, and NSKBL's own boot(); memset and memcpy are
 # SceSysmem's memory_set.c and memory_copy.c with sysclib's assembly cores.
-set(sysmem_source ../../sysmem/source)
-set(sdif_source ../../../../driver/src/sdif/source)
-set(intrmgr_source ../../intrmgr/source)
+set(sysmem_source ../../sysmem)
+set(sdif_source ../../../../driver/src/sdif)
+set(intrmgr_source ../../intrmgr)
 psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
-	source/reset.S
-	../skbl/source/boot.c
+	reset.S
+	../skbl/boot.c
 	${intrmgr_source}/intrmgr.c
 	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
@@ -35,4 +35,4 @@ set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c ${sdif_source}/card_cmd.c ${sdif_source}/sd.c
 	${sdif_source}/adma.c PROPERTIES COMPILE_DEFINITIONS SDIF_NSKBL)
-set_source_files_properties(../skbl/source/boot.c PROPERTIES COMPILE_DEFINITIONS BOOT_NSKBL)
+set_source_files_properties(../skbl/boot.c PROPERTIES COMPILE_DEFINITIONS BOOT_NSKBL)

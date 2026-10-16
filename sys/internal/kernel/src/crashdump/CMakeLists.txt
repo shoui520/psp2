@@ -8,6 +8,6 @@ set(CRASHDUMP_FW_VERSION_3.630.011-DEBUGGER 0x03630011)
 fw_value(crashdump_fw_version CRASHDUMP_FW_VERSION)
 
 psp2_module(os0_kd_crashdump KIND kernel SOURCES
-	source/crashdump.c
+	crashdump.c
 )
 target_compile_definitions(os0_kd_crashdump PRIVATE CRASHDUMP_FW_VERSION=${crashdump_fw_version})

@@ -1,6 +1,6 @@
 psp2_module(os0_kd_bootimage_gpuinit_es4 KIND kernel SOURCES
-	source/sgxinit.c
-	source/programs.S
+	sgxinit.c
+	programs.S
 )
 
 # Bootimage payloads occupy the original writable segment at +0x2000.

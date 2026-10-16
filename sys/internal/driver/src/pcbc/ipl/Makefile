@@ -35,13 +35,13 @@ OBJS	:= $(addprefix $(O)/,$(addsuffix .o,$(basename $(SRCS))))
 
 all: $(O)/ipl.bin
 
-$(O)/data.o: ASFLAGS += -DIPL_SCRAMBLE_SEED_FILE=\"../data/$(SCRAMBLE_SEED_$(FW))\"
+$(O)/data.o: ASFLAGS += -DIPL_SCRAMBLE_SEED_FILE=\"data/$(SCRAMBLE_SEED_$(FW))\"
 $(O)/data.o: $(wildcard data/*.inc)
 
-$(O)/%.o: source/%.c $(wildcard include/*.h) | $(O)
+$(O)/%.o: %.c $(wildcard include/*.h) | $(O)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(O)/%.o: source/%.S $(wildcard include/*.h) | $(O)
+$(O)/%.o: %.S $(wildcard include/*.h) | $(O)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
 $(O)/ipl.elf: $(OBJS) ipl.ld

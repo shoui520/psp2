@@ -2,18 +2,18 @@
 # prefetched and unrolled, and the number parser is cloned for constant arguments.
 set(MODULE_COMPILE_OPTIONS -O3)
 psp2_module(os0_kd_bootimage_regmgr KIND kernel SKELETON SOURCES
-	source/regmgr.c
-	source/regmgr_movevalue.c
-	source/regmgr_convertvalue.c
-	source/regmgr_wrapreg.c
-	source/regmgr_service.c
-	source/regmgr_addin.c
-	source/regmgr_syscalls.c
-	source/regmgr_debugger.c
-	source/regmgr_tool.c
-	source/reg_registry.c
-	source/reg_category.c
-	source/reg_key.c
-	source/reg_platform.c
-	source/reg_memory.c
+	regmgr.c
+	regmgr_movevalue.c
+	regmgr_convertvalue.c
+	regmgr_wrapreg.c
+	regmgr_service.c
+	regmgr_addin.c
+	regmgr_syscalls.c
+	regmgr_debugger.c
+	regmgr_tool.c
+	reg_registry.c
+	reg_category.c
+	reg_key.c
+	reg_platform.c
+	reg_memory.c
 )

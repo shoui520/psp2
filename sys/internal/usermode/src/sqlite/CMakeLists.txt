@@ -16,19 +16,19 @@ add_custom_command(OUTPUT "${sqlite_generated}/sqlite3.c"
 	COMMAND "${sqlite_native_make}" keywordhash.h "OPTS=${sqlite_keyword_options}"
 	COMMAND "${sqlite_native_make}" sqlite3.c "OPTS=${sqlite_parser_options}"
 	COMMAND "${sqlite_native_patch}" sqlite3.c
-		"${CMAKE_CURRENT_SOURCE_DIR}/source/mutex-appdef.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/mutex-appdef.patch"
 	COMMAND "${sqlite_native_patch}" sqlite3.c
-		"${CMAKE_CURRENT_SOURCE_DIR}/source/journal-alignment.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/journal-alignment.patch"
 	WORKING_DIRECTORY "${sqlite_generated}"
 	DEPENDS "${sqlite_upstream}/src/parse.y" "${sqlite_upstream}/tool/mkkeywordhash.c"
 		"${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt"
-		"${CMAKE_CURRENT_SOURCE_DIR}/source/mutex-appdef.patch"
-		"${CMAKE_CURRENT_SOURCE_DIR}/source/journal-alignment.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/mutex-appdef.patch"
+		"${CMAKE_CURRENT_SOURCE_DIR}/journal-alignment.patch"
 	VERBATIM)
 psp2_module(vs0_sys_external_sqlite KIND user SOURCES
-	source/module.c
-	source/sqlite3.c
-	source/os_psp2.c
+	module.c
+	sqlite3.c
+	os_psp2.c
 	../../../../../common/sqlite/localtime.c
 	../../../../../common/sqlite/vfs_time.c
 	../../../../../common/runtime/i32ops.c

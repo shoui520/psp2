@@ -13,11 +13,11 @@ psp2_module(os0_kd_net_ps_dev KIND kernel PARTIAL SOURCES
 	../../../../../common/netps_process_callbacks.c
 	../../../../../common/netps_packet_cleanup.c
 	../../../../../common/netps_driver_updates.c
-	source/net_ps_dump.c
+	net_ps_dump.c
 	../../../../../common/netps_dump_reader.c
-	source/net_ps_dev.c
+	net_ps_dev.c
 )
 target_include_directories(os0_kd_net_ps_dev PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}/../net_ps/include"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../net_ps/source"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../net_ps"
 )

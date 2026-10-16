@@ -1,6 +1,6 @@
 /* Shared Sony packet cleanup adapters; unchanged original bodies. */
 
-#include "../sys/internal/kernel/src/net_ps/source/net_ps_internal.h"
+#include "../sys/internal/kernel/src/net_ps/net_ps_internal.h"
 #include <string.h>
 
 extern int gNetPsPacketCount;

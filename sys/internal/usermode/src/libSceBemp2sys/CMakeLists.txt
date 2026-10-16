@@ -1,4 +1,4 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
 psp2_module(vs0_sys_external_libSceBemp2sys KIND user SKELETON SOURCES
-	source/libSceBemp2sys.c
+	libSceBemp2sys.c
 )

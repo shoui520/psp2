@@ -71,7 +71,7 @@ endforeach()
 macro(psp2_compile_settings name)
 	target_include_directories(${name} PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/include"
-		"${CMAKE_CURRENT_SOURCE_DIR}/source"
+		"${CMAKE_CURRENT_SOURCE_DIR}"
 		"${PSP2_SRC}/common/include"
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
@@ -296,7 +296,7 @@ macro(psp2_sce_layout name)
 	add_executable(${name} ${M_SOURCES} "${tables}")
 	target_include_directories(${name} PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/include"
-		"${CMAKE_CURRENT_SOURCE_DIR}/source"
+		"${CMAKE_CURRENT_SOURCE_DIR}"
 		"${PSP2_SRC}/common/include"
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})

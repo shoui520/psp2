@@ -1,143 +1,143 @@
 # Partial Sysmem foundations; remaining bodies are explicit stubs.
-include(source/vendor_patch.cmake)
+include(vendor_patch.cmake)
 # Sony built SceSysmem without -fno-delete-null-pointer-checks: a NULL test after a
 # dereference is dropped (dlmalloc's malloc.c, partition.c's free-list helpers)
 set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks)
 set(sysmem_sfmt_source "${CMAKE_CURRENT_BINARY_DIR}/sfmt-sce.c")
 sysmem_prepare_patched(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/sfmt-1.3.3/SFMT.c"
-	"${CMAKE_CURRENT_SOURCE_DIR}/source/sfmt_sce.patch"
+	"${CMAKE_CURRENT_SOURCE_DIR}/sfmt_sce.patch"
 	"${sysmem_sfmt_source}")
 # the kernel heap's dlmalloc/malloc.c
 set(sysmem_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 sysmem_prepare_patched(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/dlmalloc-2.8.4/malloc.c"
-	"${CMAKE_CURRENT_SOURCE_DIR}/source/dlmalloc_sce.patch"
+	"${CMAKE_CURRENT_SOURCE_DIR}/dlmalloc_sce.patch"
 	"${sysmem_dlmalloc_source}")
 
 if(FW STREQUAL "4.00-DEBUGGER")
-	set(sysmem_des_key_data source/des_key_data_400.c)
-	set(sysmem_hmac_data source/hmac_data_400.c)
+	set(sysmem_des_key_data des_key_data_400.c)
+	set(sysmem_hmac_data hmac_data_400.c)
 else()
-	set(sysmem_des_key_data source/des_key_data_36x.c)
-	set(sysmem_hmac_data source/hmac_data_36x.c)
+	set(sysmem_des_key_data des_key_data_36x.c)
+	set(sysmem_hmac_data hmac_data_36x.c)
 endif()
 
 psp2_module(os0_kd_sysmem KIND kernel SOURCES
-	source/memory_set32.c
-	source/sha1_transform.c
-	source/oheap.c
-	source/uid.c
-	source/murmurhash3.c
-	source/memblock_obj.c
-	source/uid_class.c
-	source/vslot.c
-	source/sysmem_misc.c
-	source/sysmem_heap.c
-	source/user_copy.c
-	source/memblock.c
-	source/partition.c
-	source/phymem.c
-	source/smb.c
-	source/nameheap2.c
-	source/l2pagetable.c
-	source/address_space.c
-	source/fixed_heap.c
-	source/phymem_low.c
-	source/heap.c
-	source/memblock_db.c
-	source/memblock_vpl.c
-	source/memblock_partial.c
-	source/virpage.c
-	source/l1pagetable.c
-	source/bitheap.c
-	source/suspend.c
-	source/sysevent.c
-	source/qafmgr.c
-	source/pmmgr.c
-	source/aimgr.c
-	source/procevent.c
-	source/led.c
-	source/serial.c
-	source/deflate.c
+	memory_set32.c
+	sha1_transform.c
+	oheap.c
+	uid.c
+	murmurhash3.c
+	memblock_obj.c
+	uid_class.c
+	vslot.c
+	sysmem_misc.c
+	sysmem_heap.c
+	user_copy.c
+	memblock.c
+	partition.c
+	phymem.c
+	smb.c
+	nameheap2.c
+	l2pagetable.c
+	address_space.c
+	fixed_heap.c
+	phymem_low.c
+	heap.c
+	memblock_db.c
+	memblock_vpl.c
+	memblock_partial.c
+	virpage.c
+	l1pagetable.c
+	bitheap.c
+	suspend.c
+	sysevent.c
+	qafmgr.c
+	pmmgr.c
+	aimgr.c
+	procevent.c
+	led.c
+	serial.c
+	deflate.c
 	../../../../../common/sysclib/strings.c
 	../../../../../common/sysclib/search.c
 	../../../../../common/sysclib/checked_strings.c
 	../../../../../common/sysclib/numeric.c
 	../../../../../common/sysclib/bsd_strtoll_kernel.c
 	../../../../../common/sysclib/ctype.c
-	source/memory_copy.c
+	memory_copy.c
 	../../../../../common/sysclib/copy_forward.S
 	../../../../../common/sysclib/copy.c
-	source/debug_state.c
-	source/dipsw.c
-	source/sysroot_time.c
-	source/sysroot_time_low.c
-	source/sysroot_capability.c
-	source/aeabi.S
-	source/unsigned_division.S
-	source/signed_division.S
-	source/signed_division64.S
-	source/atomics32.c
-	source/atomics64.c
-	source/cpu_spinlock.S
-	source/atomics_small.c
-	source/atomic_counters.c
-	source/corelock.c
-	source/cpu.c
-	source/cpu_cache.c
-	source/l2cc.c
-	source/l2cc_maintenance.S
-	source/cache.c
-	source/vmaccess.S
-	source/mmu.c
-	source/gzip.c
-	source/mt19937.c
-	source/des_permutation.c
-	source/des_round.c
+	debug_state.c
+	dipsw.c
+	sysroot_time.c
+	sysroot_time_low.c
+	sysroot_capability.c
+	aeabi.S
+	unsigned_division.S
+	signed_division.S
+	signed_division64.S
+	atomics32.c
+	atomics64.c
+	cpu_spinlock.S
+	atomics_small.c
+	atomic_counters.c
+	corelock.c
+	cpu.c
+	cpu_cache.c
+	l2cc.c
+	l2cc_maintenance.S
+	cache.c
+	vmaccess.S
+	mmu.c
+	gzip.c
+	mt19937.c
+	des_permutation.c
+	des_round.c
 	${sysmem_des_key_data}
-	source/des_key.c
-	source/des_block.c
-	source/sysmem.c
-	source/xorshift128.c
-	source/aes_block.c
-	source/kernel_utils_crypto.c
-	source/sha256_transform.c
-	source/sha2_data.c
-	source/aes_key_data.c
+	des_key.c
+	des_block.c
+	sysmem.c
+	xorshift128.c
+	aes_block.c
+	kernel_utils_crypto.c
+	sha256_transform.c
+	sha2_data.c
+	aes_key_data.c
 	${sysmem_hmac_data}
 	"${sysmem_sfmt_source}"
 	"${sysmem_dlmalloc_source}"
-	source/aes_cmac.c
-	source/debug_dump.c
-	source/debug_asm.S
+	aes_cmac.c
+	debug_dump.c
+	debug_asm.S
 	../../../../../common/sysclib/bsd_prnt.c
-	source/formatter_buffer.c
-	source/debug_output.c
+	formatter_buffer.c
+	debug_output.c
 	../../../../../common/sysclib/fill_core.S
 	../../../../../common/sysclib/fill.c
 	../../../../../common/sysclib/compare_core.S
 	../../../../../common/sysclib/compare.c
-	source/memory_set.c
+	memory_set.c
 	../../../../../common/sysclib/move.S
-	source/memory_move.c
-	source/strlcat_chk.c
-	source/strlcpy_chk.c
-	source/sprintf_chk.c
+	memory_move.c
+	strlcat_chk.c
+	strlcpy_chk.c
+	sprintf_chk.c
 )
 
 set_source_files_properties(../../../../../common/sysclib/bsd_strtoll_kernel.c
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony built the DIP switch file for size: literal pools, not movw/movt.
-set_source_files_properties(source/dipsw.c PROPERTIES COMPILE_OPTIONS "-Os")
+set_source_files_properties(dipsw.c PROPERTIES COMPILE_OPTIONS "-Os")
 
 # Sony's UART file sign-extends its characters.
-set_source_files_properties(source/serial.c PROPERTIES COMPILE_OPTIONS "-fsigned-char")
+set_source_files_properties(serial.c PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony's exported atomic entry points use ARM instructions in every firmware.
-set_source_files_properties(source/atomics32.c source/atomics64.c
-	source/atomics_small.c source/atomic_counters.c
+set_source_files_properties(atomics32.c atomics64.c
+	atomics_small.c atomic_counters.c
 	PROPERTIES COMPILE_OPTIONS "-marm")
 
 # The data segment where the original has it, with room for the VELF tables after the text.

@@ -1,6 +1,6 @@
 /* Shared SceNetPs thread adapters; original source filename is unavailable. */
 
-#include "sys/internal/kernel/src/net_ps/source/net_ps_internal.h"
+#include "sys/internal/kernel/src/net_ps/net_ps_internal.h"
 #include <sce/netps.h>
 #include <string.h>
 

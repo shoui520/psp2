@@ -1,4 +1,4 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
 psp2_module(vs0_sys_external_signin_ext KIND user SKELETON SOURCES
-	source/signin_ext.c
+	signin_ext.c
 )

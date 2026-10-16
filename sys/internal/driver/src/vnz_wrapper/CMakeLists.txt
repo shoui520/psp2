@@ -1,25 +1,25 @@
 if(FW_DEBUG)
-	set(VENEZIA_RPC_SOURCES source/dsp0_rpc.c source/dsp0_rpc_debug.c)
+	set(VENEZIA_RPC_SOURCES dsp0_rpc.c dsp0_rpc_debug.c)
 else()
-	set(VENEZIA_RPC_SOURCES source/dsp0_rpc_debug.c source/dsp0_rpc.c)
+	set(VENEZIA_RPC_SOURCES dsp0_rpc_debug.c dsp0_rpc.c)
 endif()
 
 # SceCodecEngineWrapper C implementation.
 psp2_module(os0_kd_bootimage_vnz_wrapper KIND kernel SOURCES
-	source/entry.c
-	source/entry_start.c
-	source/venezia.c
-	source/booter.c
+	entry.c
+	entry_start.c
+	venezia.c
+	booter.c
 	${VENEZIA_RPC_SOURCES}
-	source/dsp0_rpc_init.c
-	source/dsp0_rpc_history.c
-	source/dsp0_mailbox.c
-	source/dsp0_communication.c
-	source/heapmgr.c
-	source/heap.c
-	source/simple_heap.c
-	source/vnzmem.c
-	source/dsp0_dma.c
-	source/system.c
-	source/dsp0_debug.c
+	dsp0_rpc_init.c
+	dsp0_rpc_history.c
+	dsp0_mailbox.c
+	dsp0_communication.c
+	heapmgr.c
+	heap.c
+	simple_heap.c
+	vnzmem.c
+	dsp0_dma.c
+	system.c
+	dsp0_debug.c
 )

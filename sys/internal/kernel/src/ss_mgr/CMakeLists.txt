@@ -1,13 +1,13 @@
 # C implementation of the secure services manager.
 psp2_module(os0_kd_ss_mgr KIND kernel SCE_LAYOUT SOURCES
-	source/ss_mgr.c
-	source/qaf_mgr.c
-	source/dmac5mgr.c
-	source/dmac5mgr_key.c
-	source/aimgr_api.c
-	source/aimgr_secure_module_comm.c
-	source/aimgr_user.c
-	source/rng.c
+	ss_mgr.c
+	qaf_mgr.c
+	dmac5mgr.c
+	dmac5mgr_key.c
+	aimgr_api.c
+	aimgr_secure_module_comm.c
+	aimgr_user.c
+	rng.c
 )
 get_target_property(SS_MGR_LINK_OPTIONS os0_kd_ss_mgr LINK_OPTIONS)
 list(FILTER SS_MGR_LINK_OPTIONS EXCLUDE REGEX "prx\\.ld$")

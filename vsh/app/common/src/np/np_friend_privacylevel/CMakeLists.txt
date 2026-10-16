@@ -1,4 +1,4 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
 psp2_module(vs0_sys_external_np_friend_privacylevel KIND user SKELETON SOURCES
-	source/np_friend_privacylevel.c
+	np_friend_privacylevel.c
 )

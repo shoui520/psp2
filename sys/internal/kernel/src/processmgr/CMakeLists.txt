@@ -1,7 +1,7 @@
 psp2_module(os0_kd_processmgr KIND kernel SOURCES
-	source/processmgr.c
-	source/budget.c
-	source/libctime.c
+	processmgr.c
+	budget.c
+	libctime.c
 )
 # Sony's flags: reads through null pointers are kept as they are written, calls
 # stay calls (the debug asserts pass the caller's return address), and loops

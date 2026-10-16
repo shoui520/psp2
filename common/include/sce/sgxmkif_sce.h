@@ -12,8 +12,8 @@
 #pragma once
 
 #include <stddef.h>
-#include "../../../sys/internal/driver/src/gpu_es4/source/device_sce.h"
-#include "../../../sys/internal/driver/src/gpu_es4/source/memory_sce.h"
+#include "../../../sys/internal/driver/src/gpu_es4/device_sce.h"
+#include "../../../sys/internal/driver/src/gpu_es4/memory_sce.h"
 
 /* ui32PowerStatus (sgx_mkif_km.h) */
 #define PVRSRV_USSE_EDM_POWMAN_NO_WORK		(1U << 5)

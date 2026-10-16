@@ -1,3 +1,3 @@
 psp2_module(os0_kd_bootimage_usbserv KIND kernel SOURCES
-	source/usbserv.c
+	usbserv.c
 )

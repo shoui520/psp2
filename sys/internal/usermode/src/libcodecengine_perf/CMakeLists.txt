@@ -2,5 +2,5 @@
 # the SceCodecEngineWrapper syscalls. Sony built it without a stack protector.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector -fno-optimize-sibling-calls)
 psp2_module(vs0_sys_external_libcodecengine_perf KIND user SOURCES
-	source/libcodecengine_perf.c
+	libcodecengine_perf.c
 )

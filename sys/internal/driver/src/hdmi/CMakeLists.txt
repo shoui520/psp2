@@ -5,23 +5,23 @@
 # calls hdmiDeviceSmClearEvent with constants.
 set(MODULE_COMPILE_OPTIONS -O3 -fno-inline-functions -fno-inline-small-functions -fno-ipa-cp-clone)
 psp2_module(os0_kd_hdmi KIND kernel SOURCES
-	source/hdmi.c
-	source/hdmi_vic.c
-	source/hdmi_mode.c
-	source/event_handle_manager.c
-	source/infoframe.c
-	source/edid_manager.c
-	source/edid_info.c
-	source/edid_copy.c
-	source/control_hdmi_mode.c
-	source/cec.c
-	source/device/hdmi_device.c
-	source/device/hdmi_device_i2c.c
-	source/device/adi/hdmi_ad80244.c
-	source/device/hdmi_device_ddc.c
-	source/device/hdmi_device_edid.c
-	source/device/hdmi_device_packet.c
-	source/device/hdmi_device_sm.c
-	source/device/hdmi_device_status.c
-	source/device/hdmi_device_cec.c
+	hdmi.c
+	hdmi_vic.c
+	hdmi_mode.c
+	event_handle_manager.c
+	infoframe.c
+	edid_manager.c
+	edid_info.c
+	edid_copy.c
+	control_hdmi_mode.c
+	cec.c
+	device/hdmi_device.c
+	device/hdmi_device_i2c.c
+	device/adi/hdmi_ad80244.c
+	device/hdmi_device_ddc.c
+	device/hdmi_device_edid.c
+	device/hdmi_device_packet.c
+	device/hdmi_device_sm.c
+	device/hdmi_device_status.c
+	device/hdmi_device_cec.c
 )

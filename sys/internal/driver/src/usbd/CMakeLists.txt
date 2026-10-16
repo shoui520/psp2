@@ -4,11 +4,11 @@
 set(MODULE_COMPILE_OPTIONS -O3)
 set(MODULE_SCE_RESERVE ON)	# its text ends just short of the data segment
 psp2_module(os0_kd_bootimage_usbd KIND kernel SOURCES
-	source/usbd.c
-	source/usbd_os.c
-	source/ehci.c
-	source/ohci.c
-	source/hub.c
+	usbd.c
+	usbd_os.c
+	ehci.c
+	ohci.c
+	hub.c
 )
 target_compile_options(os0_kd_bootimage_usbd PRIVATE -std=gnu11
 	-fno-delete-null-pointer-checks

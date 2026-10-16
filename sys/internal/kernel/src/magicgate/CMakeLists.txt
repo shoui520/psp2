@@ -5,15 +5,15 @@ else()
 	set(MAGICGATE_WRAPPED_DATA data/wrapped-retail.c)
 endif()
 psp2_module(os0_kd_magicgate KIND kernel PARTIAL SOURCES
-	source/magicgate_lifecycle.c
-	source/magicgate_mutex.c
-	source/magicgate_tree.c
-	source/magicgate_slots.c
-	source/magicgate_record.c
-	source/magicgate_cipher.c
-	source/magicgate_api.c
-	source/magicgate_file.c
-	source/magicgate_crypto.c
-	source/magicgate_keys.c
+	magicgate_lifecycle.c
+	magicgate_mutex.c
+	magicgate_tree.c
+	magicgate_slots.c
+	magicgate_record.c
+	magicgate_cipher.c
+	magicgate_api.c
+	magicgate_file.c
+	magicgate_crypto.c
+	magicgate_keys.c
 	${MAGICGATE_WRAPPED_DATA}
 )

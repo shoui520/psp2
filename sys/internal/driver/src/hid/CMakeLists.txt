@@ -1,13 +1,13 @@
 psp2_module(os0_kd_bootimage_hid KIND kernel SOURCES
-	source/hid_tables.c
-	source/hid_main.c
-	source/hid_memory.c
-	source/hid_bluetooth.c
-	source/hid_device_diagnostics.c
-	source/hid_reports.c
-	source/hid_api.c
-	source/hid_controller.c
-	source/hid_process.c
-	source/hid_workingset.c
-	source/hid_callbacks.c
+	hid_tables.c
+	hid_main.c
+	hid_memory.c
+	hid_bluetooth.c
+	hid_device_diagnostics.c
+	hid_reports.c
+	hid_api.c
+	hid_controller.c
+	hid_process.c
+	hid_workingset.c
+	hid_callbacks.c
 )

@@ -2,7 +2,7 @@
 psp2_module(os0_kd_gcauthmgr KIND kernel PARTIAL SOURCES
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_random.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_encrypt.c
-	source/rsa_signature.c
+	rsa_signature.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_private.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_public_operation.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_arithmetic.c
@@ -11,44 +11,44 @@ psp2_module(os0_kd_gcauthmgr KIND kernel PARTIAL SOURCES
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_remainder.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_square.c
 	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_tail.c
-	source/gcauthmgr_startstop.c
-	source/drm_cipher.c
-	source/drm_crypto.c
-	source/drm_helpers.c
-	source/drm_pcact.c
-	source/pcact_activation.c
-	source/pcact_api.c
-	source/pcact_control.c
-	source/pcact_finish.c
-	source/drm_adhoc.c
-	source/drm_adhoc_seeds.c
-	source/drm_adhoc_sign.c
-	source/drm_adhoc_cert.c
-	source/drm_adhoc_create224.c
-	source/drm_adhoc_cert160.c
-	source/drm_adhoc_create160.c
-	source/drm_adhoc_verify224.c
-	source/drm_adhoc_verify_request224.c
-	source/drm_adhoc_verify160.c
-	source/drm_adhoc_verify_request160.c
-	source/drm_adhoc_hash224.c
-	source/drm_adhoc_counter.c
-	source/drm_adhoc_cbc_auth.c
-	source/drm_adhoc_packet.c
-	source/drm_adhoc_finish160.c
-	source/drm_adhoc_response160.c
-    source/drm_adhoc_authenticate160.c
-    source/drm_adhoc_response224.c
-    source/drm_adhoc_authenticate224.c
-    source/drm_adhoc_challenge224.c
-    source/drm_adhoc_finish224.c
-    source/drm_adhoc_challenge160.c
-	source/drm_adhoc_init.c
-	source/drm_adhoc_state.c
-	source/drm_adhoc_state_api.c
-	source/drm_adhoc_clear.c
-	source/drm_adhoc_clear_api.c
-    source/drm_adhoc_api.c
-	source/drm_adhoc_keys.c
-	source/gcauthmgr.c
+	gcauthmgr_startstop.c
+	drm_cipher.c
+	drm_crypto.c
+	drm_helpers.c
+	drm_pcact.c
+	pcact_activation.c
+	pcact_api.c
+	pcact_control.c
+	pcact_finish.c
+	drm_adhoc.c
+	drm_adhoc_seeds.c
+	drm_adhoc_sign.c
+	drm_adhoc_cert.c
+	drm_adhoc_create224.c
+	drm_adhoc_cert160.c
+	drm_adhoc_create160.c
+	drm_adhoc_verify224.c
+	drm_adhoc_verify_request224.c
+	drm_adhoc_verify160.c
+	drm_adhoc_verify_request160.c
+	drm_adhoc_hash224.c
+	drm_adhoc_counter.c
+	drm_adhoc_cbc_auth.c
+	drm_adhoc_packet.c
+	drm_adhoc_finish160.c
+	drm_adhoc_response160.c
+    drm_adhoc_authenticate160.c
+    drm_adhoc_response224.c
+    drm_adhoc_authenticate224.c
+    drm_adhoc_challenge224.c
+    drm_adhoc_finish224.c
+    drm_adhoc_challenge160.c
+	drm_adhoc_init.c
+	drm_adhoc_state.c
+	drm_adhoc_state_api.c
+	drm_adhoc_clear.c
+	drm_adhoc_clear_api.c
+    drm_adhoc_api.c
+	drm_adhoc_keys.c
+	gcauthmgr.c
 )
