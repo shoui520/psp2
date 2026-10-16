@@ -12,8 +12,15 @@
  *	4. wait for the syscon to take it, and stay here until it powers down.
  *
  * Only assembly can run with no stack and no memory but the scratchpad.
- * Internal names are unknown.
+ * Internal names are unknown. The register bases come from the shared
+ * headers; the offsets below are the fields of their structs.
  */
+#include <sce/emc_regs.h>
+#include <sce/gpio_regs.h>
+#include <sce/lpddr2_regs.h>
+#include <sce/pervasive_regs.h>
+#include <sce/spi_regs.h>
+
 	.syntax unified
 	.arch armv7-a
 	.thumb
@@ -24,22 +31,15 @@
 	.equ	SCTLR_I,		0x1000
 
 /* ScePervasiveDeviceRegisters, sce/pervasive_regs.h: reset and gate pages */
-	.equ	PERVASIVE_RESET_BASE,	0xe3101000
-	.equ	PERVASIVE_GATE_BASE,	0xe3102000
 	.equ	PERVASIVE_COMPAT_RAM,	0x028
 	.equ	PERVASIVE_LPDDR2_MAIN,	0x160
 	.equ	PERVASIVE_LPDDR2_SUB,	0x164
 
 /* SceEmcRegisters, sce/emc_regs.h */
-	.equ	EMC_TOP_BASE,		0xe8200000
 	.equ	EMC_COMMAND,		0x24
-	.equ	EMC_COMMAND_SELF_REFRESH, 0x10
-	.equ	EMC_COMMAND_IN_SELF_REFRESH, 0x20
 
 /* SceLpddr2Registers, sce/lpddr2_regs.h: the control words, a nibble per
  * channel, then their status */
-	.equ	LPDDR2_MAIN_BASE,	0xe6000000
-	.equ	LPDDR2_SUB_BASE,	0xe5880000
 	.equ	LPDDR2_CHANNEL,		0x8000
 	.equ	LPDDR2_CHANNEL_STATUS,	0x20
 	.equ	LPDDR2_SELF_REFRESH,	4	/* a channel's command and status nibble */
@@ -47,8 +47,6 @@
 	.equ	LPDDR2_SUB_ALL,		0x44	/* its two */
 
 /* SceGpioRegisters, sce/gpio_regs.h */
-	.equ	GPIO0_REG_BASE,		0xe20a0000
-	.equ	GPIO1_REG_BASE,		0xe0100000
 	.equ	GPIO_INPUT,		0x04
 	.equ	GPIO_OUTPUT_SET,	0x08
 	.equ	GPIO_OUTPUT_CLEAR,	0x0c
@@ -60,7 +58,6 @@
 	.equ	GPIO1_PORT7,		0x80
 
 /* SceSpiRegisters, sce/spi_regs.h: SPI0 is the syscon's */
-	.equ	SPI0_REG_BASE,		0xe0a00000
 	.equ	SPI_TRANSMIT,		0x04
 	.equ	SPI_CONTROL,		0x08
 	.equ	SPI_ENABLE,		0x10
@@ -100,7 +97,7 @@ PowerModeEntry:
 	movt	r4, #:upper16:(PERVASIVE_RESET_BASE + PERVASIVE_LPDDR2_MAIN)
 	ldr	r5, [r4]
 	cbnz	r5, 4f
-	mov.w	r4, #LPDDR2_MAIN_BASE
+	mov.w	r4, #LPDDR2_MAIN_REG_BASE
 	adds.w	r4, r4, #LPDDR2_CHANNEL
 	mov.w	r5, #LPDDR2_SELF_REFRESH
 	str	r5, [r4]
@@ -126,8 +123,8 @@ PowerModeEntry:
 	movt	r4, #:upper16:(PERVASIVE_RESET_BASE + PERVASIVE_LPDDR2_SUB)
 	ldr	r5, [r4]
 	cbnz	r5, 6f
-	movw	r4, #:lower16:LPDDR2_SUB_BASE
-	movt	r4, #:upper16:LPDDR2_SUB_BASE
+	movw	r4, #:lower16:LPDDR2_SUB_REG_BASE
+	movt	r4, #:upper16:LPDDR2_SUB_REG_BASE
 	adds.w	r4, r4, #LPDDR2_CHANNEL
 	mov.w	r5, #LPDDR2_SELF_REFRESH
 	str	r5, [r4]
@@ -161,8 +158,8 @@ PowerModeEntry:
 	ldr	r5, [r4, #GPIO_INPUT]
 	dsb	sy
 
-	movw	r4, #:lower16:SPI0_REG_BASE	/* the packet, a halfword at a time */
-	movt	r4, #:upper16:SPI0_REG_BASE
+	movw	r4, #:lower16:SPI_REG_BASE(0)	/* the packet, a halfword at a time */
+	movt	r4, #:upper16:SPI_REG_BASE(0)
 7:	ldrb	r5, [r0], #1
 	ldrb	r6, [r0], #1
 	bfi	r5, r6, #8, #8

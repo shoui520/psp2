@@ -1,8 +1,5 @@
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
-
 /* The Pervasive pages' physical addresses, one 0x1000-byte page each */
 #define PERVASIVE_MISC_BASE		0xe3100000
 #define PERVASIVE_RESET_BASE		0xe3101000
@@ -14,6 +11,10 @@
 #define PERVASIVE_TAS_BASE(n)		(0xe3108000 + (n) * 0x1000)
 #define PERVASIVE2_BASE			0xe3110000
 #define PERVASIVE_PAGE_SIZE		0x1000
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 /* ScePervasiveReset (physical 0xe3101000) and ScePervasiveGate (0xe3102000):
  * one control word per device, at the same offset in both pages. In the reset
@@ -471,3 +472,5 @@ _Static_assert(offsetof(ScePervasive2Registers, mainMemoryPageBase) == 0xf60, "P
 
 _Static_assert(offsetof(ScePervasive2Registers, usbVbus) == 0xf50, "pervasive2 vbus");
 _Static_assert(sizeof(ScePervasive2Registers) == 0x1000, "pervasive2 page");
+
+#endif /* __ASSEMBLER__ */

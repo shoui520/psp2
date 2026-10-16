@@ -9,9 +9,6 @@
  */
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
-
 #define LPDDR2_MAIN_REG_BASE		0xe6000000
 #define LPDDR2_SUB_REG_BASE		0xe5880000
 
@@ -30,6 +27,10 @@
 /* the control words that hold the secure bus error log */
 #define LPDDR2_CONTROL_SECURE_BUS_ERROR_ATTRIBUTE	0x74
 #define LPDDR2_CONTROL_SECURE_BUS_ERROR_ADDRESS		0x75
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct SceLpddr2ControlWord {
 	volatile uint32_t value;
@@ -54,3 +55,5 @@ _Static_assert(offsetof(SceLpddr2Registers, ioConfig) == 0x90, "LPDDR2 I/O confi
 _Static_assert(offsetof(SceLpddr2Registers, control) == 0x8000, "LPDDR2 control words");
 _Static_assert(offsetof(SceLpddr2Registers, busErrorAddress) == 0xc008, "LPDDR2 bus error");
 _Static_assert(sizeof(SceLpddr2Registers) == 0x10000, "LPDDR2 register block");
+
+#endif /* __ASSEMBLER__ */

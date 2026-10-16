@@ -3,13 +3,15 @@
  * SceSpi2Reg: SceOled/SceLcd); names after the Vita wiki's SPI_* registers.
  */
 #pragma once
-#include <stdint.h>
-#include <stddef.h>
 
 #define SPI_INT_RX_NOT_EMPTY	0x200
 
 /* SceSpi<n>Reg physical addresses */
 #define SPI_REG_BASE(n)		(0xe0a00000 + (n) * 0x10000)
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct SceSpiRegisters {
 	uint32_t receive;			/* SPI_RXFIFO */
@@ -28,3 +30,5 @@ typedef struct SceSpiRegisters {
 
 _Static_assert(offsetof(SceSpiRegisters, enable) == 0x10, "SPI enable");
 _Static_assert(offsetof(SceSpiRegisters, receiveCount) == 0x28, "SPI RX count");
+
+#endif /* __ASSEMBLER__ */

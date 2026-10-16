@@ -1,11 +1,13 @@
 /* GPIO registers (SceGpio0Reg/SceGpio1Reg); names after the Vita wiki. */
 #pragma once
-#include <stdint.h>
-#include <stddef.h>
 
 /* SceGpio0Reg (Sysmem maps it as SceLedReg) and SceGpio1Reg */
 #define GPIO0_REG_BASE			0xe20a0000
 #define GPIO1_REG_BASE			0xe0100000
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct SceGpioRegisters {
 	uint32_t portMode;
@@ -23,3 +25,5 @@ typedef struct SceGpioRegisters {
 _Static_assert(offsetof(SceGpioRegisters, outputClear) == 0xc, "GPIO clear");
 _Static_assert(offsetof(SceGpioRegisters, output) == 0x34, "GPIO output");
 _Static_assert(offsetof(SceGpioRegisters, interruptStatus) == 0x38, "GPIO status");
+
+#endif /* __ASSEMBLER__ */

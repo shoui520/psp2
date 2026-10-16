@@ -1,6 +1,4 @@
 #pragma once
-#include <stdint.h>
-#include <stddef.h>
 
 /*
  * SceEmcTop: the external memory controller of the CDRAM (henkaku wiki,
@@ -19,6 +17,10 @@
 #define EMC_COMMAND_KEEP		0x30	/* bits a new command keeps */
 
 #define EMC_INTR_EVENT			0x01
+
+#ifndef __ASSEMBLER__
+#include <stddef.h>
+#include <stdint.h>
 
 typedef struct SceEmcRegisters {
 	volatile uint32_t control;		/* 0x000 */
@@ -45,3 +47,5 @@ _Static_assert(offsetof(SceEmcRegisters, eventTiming) == 0x38, "EMC event timing
 _Static_assert(offsetof(SceEmcRegisters, intrEnable) == 0x230, "EMC interrupt enable");
 _Static_assert(offsetof(SceEmcRegisters, intrClear) == 0x244, "EMC interrupt clear");
 _Static_assert(sizeof(SceEmcRegisters) == EMC_TOP_SIZE, "EMC register page");
+
+#endif /* __ASSEMBLER__ */
