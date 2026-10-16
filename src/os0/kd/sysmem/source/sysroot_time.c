@@ -23,6 +23,10 @@
 #include <sce/sysroot_netps.h>
 #include <sce/sysroot_appmgr.h>
 #include "sysmem_boot.h"
+#if SYSMEM_NSKBL
+#include <string.h>
+#include <sce/kernel_boot_param.h>
+#endif
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "sysroot.c"
@@ -105,17 +109,17 @@ struct SysrootState {
 	volatile uint32_t bootHeapLock;
 	SceSize bootHeapCapacity;
 	uintptr_t bootHeapCursor;
-	uint32_t reserved0;
+	uint32_t perCpuCount;			/* 0x1c */
 	struct SysrootPerCpu *perCpu;		/* 0x20: one per CPU */
 	uint32_t bootFlags;
 	uint32_t status;
 	SceCorelockContext corelock;		/* 0x2c */
 	void *modulePrivate[14];
 	SceKblParam *kblParam;
-	uint32_t bootArgs;			/* 0x70: cleared after boot */
-	uint32_t factorySystemSwVersion;
-	uint32_t pervasiveDword;		/* 0x78: a pervasive register the bootloader read */
-	uint32_t kermitRevision;		/* 0x7c */
+	struct SceKernelBootParam *bootArgs;	/* 0x70: cleared after boot */
+	SceUInt32 factorySystemSwVersion;
+	SceUInt32 pervasiveDword;		/* 0x78: a pervasive register the bootloader read */
+	SceUInt32 kermitRevision;		/* 0x7c */
 	union {
 		uint32_t modelInfo;		/* 0x80 */
 		struct {
@@ -132,7 +136,7 @@ struct SysrootState {
 	int (*iofilemgrStart)(void);
 	uint32_t reserved1;
 	void *fallbackPUIDEntryHeap;
-	const char *memBlockNames[9];	/* 0x2e4 */
+	char *memBlockNames[9];		/* 0x2e4 */
 	SceUID sysrootUid;			/* 0x308 */
 	uint32_t sysrootClass;			/* 0x30c */
 	void *fallbackAddressSpaceCB;
@@ -235,7 +239,29 @@ _Static_assert(offsetof(struct SysrootState, sharedTime) == 0x88,
 	       "Sysroot shared time pointer offset");
 
 /* Native BSS starts at NULL; the module startup caller remains unimplemented. */
+#if SYSMEM_NSKBL
+static struct SysrootState *s_sysrootState;
+#else
 static struct SysrootState *volatile s_sysrootState;
+#endif
+
+#if SYSMEM_NSKBL
+#define SYSROOT_MAGIC1	0xba97f5a1
+#define SYSROOT_MAGIC2	0xa008b0c3
+
+int AssertSysroot(const struct SysrootState *pSysroot)
+{
+	if (pSysroot->magic != SYSROOT_MAGIC1) {
+		SCE_DBG_PRINTF(0xb, 97, "pSysroot->magic1=0x%08x\n", pSysroot->magic);
+		SCE_DBG_ASSERT_FAIL(98);
+	}
+	if (pSysroot->magicEnd != SYSROOT_MAGIC2) {
+		SCE_DBG_PRINTF(0xb, 101, "pSysroot->magic2=0x%08x\n", pSysroot->magicEnd);
+		SCE_DBG_ASSERT_FAIL(102);
+	}
+	return 0;
+}
+#endif
 
 void *sceKernelSysrootAlloc(SceSize size)
 {
@@ -2619,3 +2645,145 @@ const char *SysrootGetMemBlockName(unsigned int index)
 		return s_sysrootState->memBlockNames[4];
 	}
 }
+
+#if SYSMEM_NSKBL
+extern int ksceKernelCpuId(void);
+extern int InitializeDipsw(SceDipsw *dipsw);
+
+#define SCE_KBL_PARAM_MAGIC	0xcbac03aa
+#define SYSROOT_CPU_COUNT	4
+#define SYSROOT_NAME_SIZE	32
+
+/* NSKBL: core 0 builds the sysroot in the block SKBL mapped for it */
+int SetupCore0(SceKernelBootParam *param)
+{
+	struct SysrootState *state;
+	SceKblParam *kblParam;
+	void *block;
+	int cpu;
+
+	cpu = ksceKernelCpuId();
+	ksceKernelCorelockLock(param->corelock, 0);
+	if (cpu == 0) {
+		s_sysrootState = param->pSysroot;
+		SCE_DBG_ASSERT_CHECK(s_sysrootState == (void *)param->sysroot.vbase, 1024);
+		state = s_sysrootState;
+		__builtin_memset(state, 0, param->sysroot.psize);
+		state->bootHeapCapacity = param->sysroot.psize;
+		state->bootHeapCursor = ((uintptr_t)state + sizeof(*state) + 0x1f) & ~0x1fU;
+		state->magic = SYSROOT_MAGIC1;
+		state->size = sizeof(*state);
+		state->magicEnd = SYSROOT_MAGIC2;
+		state->bootArgs = param;
+		state->bootHeapLock = 0;
+		AssertSysroot(state);
+
+		state = s_sysrootState;
+		state->perCpuCount = SYSROOT_CPU_COUNT;
+		state->perCpu = sceKernelSysrootAlloc(SYSROOT_CPU_COUNT * sizeof(struct SysrootPerCpu));
+		block = sceKernelSysrootAlloc(0x2c);
+		s_sysrootState->sysrootClass = (uint32_t)block;
+		s_sysrootClass = (uint32_t)block;
+		sceKernelSysrootSetStatus(1);
+		ksceKernelCorelockInitialize(&s_sysrootState->corelock);
+
+		state = s_sysrootState;
+		state->reserved1 = 0;
+		state->fallbackPUIDEntryHeap = NULL;
+		state->memBlockNames[0] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[0], "SceSysrootFixedHeap", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[1] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[1], "SceSysrootHeap", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[2] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[2], "SceSysrootL2", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[3] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[3], "SceSysrootNPL2", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[4] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[4], "SceSysrootKBL", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[5] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[5], "SceSysrootSimpleMemBlock4K", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[6] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[6], "SceSysrootSimpleMemBlock8K8K", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[7] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[7], "SceSysrootSimpleMemBlock16K", SYSROOT_NAME_SIZE);
+		s_sysrootState->memBlockNames[8] = sceKernelSysrootAlloc(SYSROOT_NAME_SIZE);
+		__builtin_strncpy(s_sysrootState->memBlockNames[8], "SceSysrootSimpleMemBlock64K", SYSROOT_NAME_SIZE);
+		s_sysrootState->fallbackAddressSpaceCB = NULL;
+
+		SCE_DBG_ASSERT_CHECK(param->kblParam->magic == SCE_KBL_PARAM_MAGIC, 1094);
+		state = s_sysrootState;
+		block = sceKernelSysrootAlloc(sizeof(SceKblParam));
+		kblParam = param->kblParam;
+		state->kblParam = block;
+		__builtin_memcpy(s_sysrootState->kblParam, kblParam, sizeof(SceKblParam));
+		InitializeDipsw(&s_sysrootState->kblParam->dipsw);
+
+		state = s_sysrootState;
+		state->registeredPid = -1;
+		state->intrMMUContext = 0;
+		state->sharedMemory = 0;
+		state->acmgrOps = NULL;
+		state->modulemgrOps = NULL;
+		state->getNidName = NULL;
+		state->processmgrRuntimeOps = NULL;
+		state->processmgrOps = NULL;
+		state->isUserModeThread = NULL;
+		for (int i = 0; i < 14; i++)
+			state->modulePrivate[i] = NULL;
+		state->threadMgrStartAfterProcess = NULL;
+		state->getThreadId = NULL;
+		state->getProcessId = NULL;
+		state->getCurrentProcessCB = NULL;
+		state->getCurrentAddressSpaceCB = NULL;
+		state->getCurrentUIDEntryHeapCB = NULL;
+		state->returnFromExcpToThread = NULL;
+		state->getThreadAccessLevel = NULL;
+		state->trapThreadAfterSyscall = NULL;
+		state->getCurrentThreadAttr = NULL;
+		state->busErrorHandler = NULL;
+		state->sysStateEvent = NULL;
+		state->sendSystemError = NULL;
+		state->dfmgrOps = NULL;
+		state->processEventOps = NULL;
+		state->iofilemgrStart = NULL;
+		state->appMgrSpawnProcess = NULL;
+		state->getShellPid = NULL;
+		state->coredumpTrigger = NULL;
+		state->coredumpCancel = NULL;
+		state->licMgrGetLicenseStatus = NULL;
+		state->utMgrHasPsmTestFlag = NULL;
+		state->utMgrHasSystemDataFilePlayReadyFlag = NULL;
+		state->utMgrHasAuthId = NULL;
+		state->utMgrGetTrilithiumBuffer = NULL;
+		state->utMgrHasNpTestFlag = NULL;
+		state->getSystemSwVersion = NULL;
+		state->ledSetMode = NULL;
+		state->selfImages = NULL;
+		state->dbgpOps = NULL;
+		state->dbgpNetAttach = NULL;
+		state->dbgpNetDetach = NULL;
+		state->tmcpCommand = NULL;
+		state->sdbgpNetAttach = NULL;
+		state->sdbgpNetDetach = NULL;
+		state->appMgrGetAppInfoByPid = NULL;
+		state->appMgrGetAppInfoByAppId = NULL;
+		state->appMgrGetAppList = NULL;
+		state->pfsMgrGetMountInfo = NULL;
+		state->debugNotifiers = NULL;
+		state->profiler = NULL;
+		state->getTimebaseValue = NULL;
+		state->getTimebaseRegister = NULL;
+		state->sharedTime = (volatile SceLongTimerRegisters *)TIMER_LONG_REG_BASE(5);
+		state->initCallbackLock = 0;
+		state->initCallbackBase = 0;
+		state->modelInfo = param->hardwareDependent[0];
+		state->modelCapability = param->hardwareDependent[1];
+		state->factorySystemSwVersion = param->socRevision;
+		state->pervasiveDword = param->socCacheStatus;
+		state->kermitRevision = param->kermitRevision;
+		AssertSysroot(state);
+	}
+	ksceKernelCorelockUnlock(param->corelock);
+	return 0;
+}
+#endif

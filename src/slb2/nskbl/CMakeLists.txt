@@ -13,6 +13,7 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${intrmgr_source}/intrmgr.c
 	${sysmem_source}/led.c
 	${sysmem_source}/serial.c
+	${sysmem_source}/sysroot_time.c
 	${sysmem_source}/memory_set.c
 	${sysmem_source}/memory_copy.c
 	../../common/sysclib/copy_forward.S
@@ -27,7 +28,8 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	../../common/kbl/pervasive_kbl.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
-set_source_files_properties(${sysmem_source}/led.c PROPERTIES COMPILE_DEFINITIONS SYSMEM_NSKBL)
+set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/sysroot_time.c PROPERTIES
+	COMPILE_DEFINITIONS SYSMEM_NSKBL)
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
 	COMPILE_DEFINITIONS SYSMEM_NSKBL COMPILE_OPTIONS "-fsigned-char")
 set_source_files_properties(${sdif_source}/sdif.c ${sdif_source}/cmd_queue.c
