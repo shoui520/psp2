@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
-#include "i2s.h"
+#include <sce/audio_regs.h>
 #include "srcmix.h"
 
 
@@ -32,7 +32,7 @@ const uintptr_t audioI2sPhysicalAddress[8] = {
 int audioI2sInterruptHandler(int intrCode, void *userCtx)
 {
 	int port = (uintptr_t)userCtx;
-	struct AudioI2sRegisters *registers = audioI2sRegisters[port];
+	SceI2sRegisters *registers = audioI2sRegisters[port];
 	SceKernelIntrStatus intr;
 
 	(void)intrCode;
@@ -56,7 +56,7 @@ int audioEnableI2s(int port)
 {
 	int clockPort = audioI2sClockPort[port];
 	unsigned int bit = 1U << port;
-	struct AudioI2sRegisters *registers;
+	SceI2sRegisters *registers;
 	int clock;
 
 	if ((bit | audioI2sEnabledMask) == audioI2sEnabledMask)
@@ -166,6 +166,6 @@ int audioEnableI2sLocked(int port)
 
 uintptr_t audioGetI2sDataAddress(int port)
 {
-	return audioI2sPhysicalAddress[port] + offsetof(struct AudioI2sRegisters, data);
+	return audioI2sPhysicalAddress[port] + offsetof(SceI2sRegisters, data);
 }
 

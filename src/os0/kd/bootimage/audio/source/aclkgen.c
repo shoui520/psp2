@@ -19,8 +19,8 @@ const struct AudioClockDivider audioClockDividers[10] = {
 int audioSetClockRates(unsigned int channel, int inputRate, int outputRate,
 	int clockRate)
 {
-	struct SceAclkgenRegisters *registers;
-	struct SceAclkgenChannel *clock;
+	SceAclkgenRegisters *registers;
+	SceAclkgenChannel *clock;
 	int clockIndex = -1, inputIndex = -1, outputIndex = -1;
 	unsigned int setMask = 0, clearMask = 0;
 	uint32_t retained, requested, restart, control;

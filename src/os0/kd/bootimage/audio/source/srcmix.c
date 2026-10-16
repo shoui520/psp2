@@ -30,7 +30,7 @@ unsigned int audioGetDmaModeCommand(void);
 int audioEnableI2sLocked(int port);
 int audioStartCaptureDma(struct AudioDmaState *state);
 int audioStartTransmitDma(struct AudioDmaState *state,
-	struct AudioSrcMixRegisters *registers);
+	SceSrcMixRegisters *registers);
 uint32_t ScePervasiveForDriver_F861FEE4(unsigned int channel);
 uint32_t ScePervasiveForDriver_47F2C35C(unsigned int channel);
 uint32_t ScePervasiveForDriver_925D9D24(unsigned int mode);
@@ -137,7 +137,7 @@ int audioBuildCaptureDmaTags(struct AudioDmaState *state);
 
 int audioStartCaptureDma(struct AudioDmaState *state)
 {
-	struct AudioSrcMixRegisters *registers;
+	SceSrcMixRegisters *registers;
 	SceKernelDmaOpTag *tags;
 	unsigned int flags;
 	int result;
@@ -307,7 +307,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 		if (ksceKernelDmaOpSync(opId, 1, 0, 0) <= 0) {
 			state->captureState = 0;
 			if (state == &audioDmaStates[2]) {
-				struct AudioSrcMixRegisters *registers = state->registers;
+				SceSrcMixRegisters *registers = state->registers;
 
 				registers->captureControl = 0;
 				registers->secondTransmitControl = 0;
@@ -517,7 +517,7 @@ notify:
 }
 
 int audioStartTransmitDma(struct AudioDmaState *state,
-	struct AudioSrcMixRegisters *registers)
+	SceSrcMixRegisters *registers)
 {
 	struct AudioDmaTransfer *transfer = &state->transfers[0];
 	uint32_t command, firstLength, lastLength, blockSize;
@@ -666,7 +666,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 	if (audioDmaStates[1].sourceMode != 2 && !audioSuspended &&
 	    ksceKernelDmaOpSync(audioDmaStates[1].transfers[1].opId, 1, 0, 0) <= 0) {
 		struct AudioDmaTransfer *transfer = &audioDmaStates[1].transfers[1];
-		struct AudioSrcMixRegisters *registers = state->registers;
+		SceSrcMixRegisters *registers = state->registers;
 
 		registers->auxiliaryTransmitControl = 0;
 		(void)registers->status;
@@ -974,7 +974,7 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 	int clockRate)
 {
 	struct AudioDmaState *state = &audioDmaStates[channel];
-	struct AudioSrcMixRegisters *registers = state->registers;
+	SceSrcMixRegisters *registers = state->registers;
 	uint32_t packet[8];
 	unsigned int tail, withoutOutput;
 	int selector;
@@ -1071,7 +1071,7 @@ hardwareError:
 
 int audioSetHardwareVolume(int channel, int left, int right)
 {
-	struct AudioSrcMixRegisters *registers = audioDmaStates[channel].registers;
+	SceSrcMixRegisters *registers = audioDmaStates[channel].registers;
 	union {
 		uint32_t words[8];
 		uint64_t pairs[4];
@@ -1198,7 +1198,7 @@ int audioInitializeSrcMix(void)
 {
 	SceKernelAllocMemBlockOptKernel option;
 	struct AudioDmaState *state;
-	struct AudioSrcMixRegisters *registers;
+	SceSrcMixRegisters *registers;
 	uintptr_t physicalAddress = SRCMIX_REG_BASE(0);
 	unsigned int channel = 0;
 	unsigned int operation;

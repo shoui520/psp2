@@ -5,8 +5,7 @@
 #include "alc.h"
 #include "equalizer.h"
 #include "srcmix.h"
-#include "i2s.h"
-#include "spdif.h"
+#include <sce/audio_regs.h>
 #include "aclkgen.h"
 
 struct AudioWork {
@@ -39,9 +38,9 @@ struct AudioWork {
 	void (*portOpenCallback)(SceUID pid);
 	void (*portCloseCallback)(SceUID pid);
 	int storageKey;
-	struct SceAclkgenRegisters *clockRegisters;
-	struct AudioSpdifRegisters *spdifRegisters;
-	struct AudioI2sRegisters *i2sRegisters[8];
+	SceAclkgenRegisters *clockRegisters;
+	SceSpdifRegisters *spdifRegisters;
+	SceI2sRegisters *i2sRegisters[8];
 	SceKernelSpinlock i2sLock;
 	uint8_t reservedTail;
 	uint8_t i2sEnabledMask;
