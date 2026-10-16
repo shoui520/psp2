@@ -20,6 +20,15 @@ static inline unsigned int readCpsr(void)
 	return value;
 }
 
+/* the saved program status register of the current mode */
+static inline unsigned int readSpsr(void)
+{
+	unsigned int value;
+
+	__asm__ volatile("mrs %0, spsr" : "=r" (value));
+	return value;
+}
+
 /* CPSR's control field (mode and interrupt masks), as a saved CPSR has it */
 static inline void writeCpsrControl(unsigned int value)
 {

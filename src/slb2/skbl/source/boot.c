@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <sce/cp15.h>
 #include <sce/debug.h>
+#include <sce/excpmgr_cpu.h>
 #include <sce/grab_regs.h>
 #include <sce/kernel_boot_param.h>
 #include <sce/lpddr2_regs.h>
@@ -972,10 +973,104 @@ void boot(void)
 		;
 }
 
-STUB(boot_und_handler)
-STUB(boot_svc_handler)
-STUB(boot_prefetch_abort_handler)
-STUB(boot_data_abort_handler)
-STUB(boot_irq_handler)
-STUB(boot_fiq_handler)
-STUB(monitor_call_handler)
+/*
+ * The boot exception handlers: each reports itself on the GPO LEDs, prints
+ * what the debug firmware can tell about the exception and stops. The
+ * register reads stay in the release firmwares, whose prints are compiled
+ * out; lr is the exception's return address.
+ */
+void boot_und_handler(uint32_t lr)
+{
+	sceKernelSetGPO(0x8a);
+	SCE_DBG_PRINTF(0xb, 2252, "(***** Undefined Instruction Handler *****\n");
+	SCE_DBG_PRINTF(0xb, 2253, "LR   0x%08x\n", lr);
+	SCE_DBG_PRINTF(0, 2254, "STOPPED\n");
+	for (;;)
+		;
+}
+
+void boot_svc_handler(uint32_t lr)
+{
+	uint32_t cpsr, spsr;
+
+	sceKernelSetGPO(0x8b);
+	SCE_DBG_PRINTF(0xb, 2265, "(***** Susperviser Call Handler *****\n");
+	SCE_DBG_PRINTF(0xb, 2266, "LR   0x%08x\n", lr);
+	cpsr = readCpsr();
+	SCE_DBG_PRINTF(0, 2269, "CPSR:0x%08x - ", cpsr);
+	spsr = readSpsr();
+	SCE_DBG_PRINTF(0, 2272, "SPSR:0x%08x", spsr);
+	SCE_DBG_PRINTF(0, 2273, "\n");
+	SCE_DBG_PRINTF(0, 2274, "STOPPED\n");
+	for (;;)
+		;
+}
+
+void boot_prefetch_abort_handler(uint32_t lr)
+{
+	uint32_t ifsr, dfar, ifar;
+
+	sceKernelSetGPO(0x8c);
+	SCE_DBG_PRINTF(0xb, 2285, "(***** Prefetch Abort Handler *****\n");
+	SCE_DBG_PRINTF(0xb, 2286, "LR   0x%08x\n", lr);
+	ifsr = readIfsr();
+	SCE_DBG_PRINTF(0xb, 2288, "IFSR 0x%08x\n", ifsr);
+	dfar = readDfar();
+	SCE_DBG_PRINTF(0xb, 2290, "DFAR 0x%08x\n", dfar);
+	ifar = readIfar();
+	SCE_DBG_PRINTF(0xb, 2292, "IFAR 0x%08x\n", ifar);
+	SCE_DBG_PRINTF(0, 2293, "STOPPED\n");
+	for (;;)
+		;
+}
+
+void boot_data_abort_handler(uint32_t lr)
+{
+	uint32_t dfsr;
+
+	sceKernelSetGPO(0x8d);
+	SCE_DBG_PRINTF(0xb, 2304, "***** Data Abort Handler *****\n");
+	SCE_DBG_PRINTF(0xb, 2305, "LR   0x%08x\n", lr);
+	SCE_DBG_PRINTF(0xb, 2306, "()\n");
+	dfsr = readDfsr();
+	SCE_DBG_PRINTF(0xb, 2308, "DFSR:        0x%08x\n", dfsr);
+	SCE_DBG_PRINTF(0xb, 2310, "DFSR DOMAIN: 0x%x\n", (dfsr & 0xf0) >> 4);
+	SCE_DBG_PRINTF(0xb, 2312, "DFAR:        0x%08x\n", readDfar());
+	SCE_DBG_PRINTF(0xb, 2313, "IFAR:        0x%08x\n", readIfar());
+	SCE_DBG_PRINTF(0, 2314, "STOPPED\n");
+	for (;;)
+		;
+}
+
+void boot_irq_handler(void)
+{
+	sceKernelSetGPO(0x8e);
+	SCE_DBG_PRINTF(0xb, 2322, "()\n");
+	SCE_DBG_PRINTF(0, 2323, "STOPPED\n");
+	for (;;)
+		;
+}
+
+void boot_fiq_handler(void)
+{
+	sceKernelSetGPO(0x8f);
+	SCE_DBG_PRINTF(0xb, 2331, "()\n");
+	SCE_DBG_PRINTF(0, 2332, "STOPPED\n");
+	for (;;)
+		;
+}
+
+/* the monitor's SMC entry: reports the call and returns 0 */
+int monitor_call_handler(uint32_t code)
+{
+	uint32_t cpsr, spsr;
+
+	SCE_DBG_PRINTF(0xb, 2345, "(0x%08x) -", code);
+	cpsr = readCpsr();
+	SCE_DBG_PRINTF(0, 2347, "CPSR:0x%08x - ", cpsr);
+	spsr = readSpsr();
+	SCE_DBG_PRINTF(0, 2349, "SPSR:0x%08x", spsr);
+	SCE_DBG_PRINTF(0, 2350, "\n");
+	SCE_DBG_PRINTF(0xb, 2351, "SCR => 0x%08x\n", readScr());
+	return 0;
+}

@@ -47,6 +47,7 @@
 #define writeSctlr(v)		CP_WRITE(p15, 0, c1, c0, 0, v)
 #define readActlr()		CP_READ(p15, 0, c1, c0, 1)
 #define readCpacr()		CP_READ(p15, 0, c1, c0, 2)
+#define readScr()		CP_READ(p15, 0, c1, c1, 0)	/* Secure state only */
 #define readNsacr()		CP_READ(p15, 0, c1, c1, 2)
 #define NSACR_PLE		0x00010000	/* the preload engine is usable */
 #define writeCpacr(v)		CP_WRITE(p15, 0, c1, c0, 2, v)
