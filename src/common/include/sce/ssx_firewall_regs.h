@@ -4,18 +4,19 @@
 
 /*
  * The SonicsSX interconnect's protection mechanism (firewall) in front of a
- * target agent (henkaku wiki, Memory System: "Protection Mechanism"; the
+ * target agent, and its register target (henkaku wiki, Memory System: "Protection Mechanism"; the
  * register names are the OMAP35x TRM's L3 PM ones the wiki refers to).
  * Each register is 64 bits wide.
  */
 #define SSX_FIREWALL_SPAD32K_BASE	0xec060000	/* ScePowerScratchPad32KiB */
-#define SSX_FIREWALL_LPDDR0_BASE	0xec060400
+#define SSX_FIREWALL_LPDDR0_BASE	0xec060400	/* the main LPDDR2 */
+#define SSX_FIREWALL_LPDDR1_BASE	0xec560800	/* the TOOL units' LPDDR2, on the Debug Bus */
 
 typedef struct SceSsxFirewallRegion {
+	volatile uint64_t addrMatch;		/* regions 1 and up; region 0 is the default */
 	volatile uint64_t reqInfoPermission;	/* the initiators allowed in */
 	volatile uint64_t readPermission;
 	volatile uint64_t writePermission;
-	volatile uint64_t addrMatch;		/* regions 1 and up */
 } SceSsxFirewallRegion;
 
 typedef struct SceSsxFirewallRegisters {
@@ -24,11 +25,41 @@ typedef struct SceSsxFirewallRegisters {
 	volatile uint64_t control;
 	volatile uint64_t errorClearSingle;
 	volatile uint64_t errorClearMulti;
-	uint32_t reserved1[2];
-	SceSsxFirewallRegion region[8];		/* 0x48 */
+	SceSsxFirewallRegion region[8];		/* 0x40 */
 } SceSsxFirewallRegisters;
 
 _Static_assert(offsetof(SceSsxFirewallRegisters, errorLog) == 0x20, "firewall error log");
-_Static_assert(offsetof(SceSsxFirewallRegisters, region) == 0x48, "firewall region 0");
-_Static_assert(offsetof(SceSsxFirewallRegisters, region[1].reqInfoPermission) == 0x68,
+_Static_assert(offsetof(SceSsxFirewallRegisters, region[0].reqInfoPermission) == 0x48,
+	"firewall region 0");
+_Static_assert(offsetof(SceSsxFirewallRegisters, region[1].addrMatch) == 0x60,
 	"firewall region 1");
+_Static_assert(offsetof(SceSsxFirewallRegisters, region[2].reqInfoPermission) == 0x88,
+	"firewall region 2");
+
+/*
+ * Each interconnect's register target: the configuration of the interconnect
+ * itself (henkaku wiki, Memory System: "Register Target"), at 0x70000 in its
+ * 1 MiB window. Each register is 64 bits wide.
+ */
+#define SSX_MAIN_XBAR		0
+#define SSX_CENTER_XBAR		1
+#define SSX_VIDEO_XBAR		2
+#define SSX_IFTU_XBAR		3
+#define SSX_VIP_XBAR		4
+#define SSX_DEBUG_BUS		5
+#define SSX_DMAC_XBAR		6
+
+#define SSX_REGISTER_TARGET_BASE(xbar)	(0xec070000 + (xbar) * 0x100000)
+
+typedef struct SceSsxRegisterTarget {
+	volatile uint64_t component;
+	uint32_t reserved0[2];
+	volatile uint64_t network;		/* 0x10: the interconnect's ID in bits 63:48 */
+	uint32_t reserved1[22];
+	volatile uint64_t initIdReadback;	/* 0x70 */
+	volatile uint64_t networkControl;	/* 0x78: TIMEOUT_BASE in bits 10:8 */
+} SceSsxRegisterTarget;
+
+_Static_assert(offsetof(SceSsxRegisterTarget, network) == 0x10, "register target network");
+_Static_assert(offsetof(SceSsxRegisterTarget, networkControl) == 0x78,
+	"register target network control");
