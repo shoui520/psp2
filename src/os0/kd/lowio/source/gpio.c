@@ -437,12 +437,14 @@ static SceKernelIntrOptParam s_gpioIntrOpt = {
 	0x14, 0x20, (SceKernelIntrOptHandlers *)&s_gpioIntrHandlers, 0, 0,
 };
 
-static const struct {
+typedef struct GpioIntr {
 	int code;
 	const char *name;
 	unsigned priority;
 	unsigned targetCpu;
-} s_gpioIntrs[2][5] = {
+} GpioIntr;
+
+static const GpioIntr s_gpioIntrs[2][5] = {
 	{
 		{ 0xf8, "SceGpio0Gate0", 0x50, 0xf },
 		{ 0xf9, "SceGpio0Gate1", 0x70, 0xf },
@@ -461,6 +463,7 @@ static const struct {
 static __attribute__((noinline)) int GpioInit(void)
 {
 	SceKernelAllocMemBlockKernelOpt opt;
+	const GpioIntr *intr;
 	GpioContext *ctx;
 	void *base;
 	unsigned bank, gate;
@@ -486,13 +489,12 @@ static __attribute__((noinline)) int GpioInit(void)
 		ctx->uid = ret;
 		ksceKernelGetMemBlockBase(ret, &base);
 		ctx->base = base;
-		for (gate = 0; gate < 5; gate++) {
-			ctx->intrCodes[gate] = s_gpioIntrs[bank][gate].code;
-			ksceKernelRegisterIntrHandler(ctx->intrCodes[gate],
-				s_gpioIntrs[bank][gate].name, 0, GpioIntrHandler,
-				ctx, s_gpioIntrs[bank][gate].priority,
-				s_gpioIntrs[bank][gate].targetCpu,
-				&s_gpioIntrOpt);
+		intr = s_gpioIntrs[bank];
+		for (gate = 0; gate < 5; gate++, intr++) {
+			ctx->intrCodes[gate] = intr->code;
+			ksceKernelRegisterIntrHandler(intr->code, intr->name, 0,
+				GpioIntrHandler, ctx, intr->priority,
+				intr->targetCpu, &s_gpioIntrOpt);
 		}
 	}
 	kscePervasiveGpioClockEnable();
