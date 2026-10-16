@@ -13,9 +13,6 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/memorymanager.c"
-
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int ksceKernelMemBlockTypeGetPrivileges(SceUInt32 type);
 int SceSysmemForDriver_CB0F3A33(SceUInt32 type);

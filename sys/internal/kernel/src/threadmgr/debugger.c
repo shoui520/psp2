@@ -21,9 +21,6 @@
 #include "syscall_context.h"
 #include <psp2kern/kernel/dipsw.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "debugger.c"
-
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
 #define THREAD_CPU_NONE			0x7fff	/* PLACEHOLDER: cpuId of a thread on no CPU */

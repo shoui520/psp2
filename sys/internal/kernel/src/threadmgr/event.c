@@ -15,9 +15,6 @@
 #include "event.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "event.c"
-
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001	/* only the timed-wait flag */
 #define EVENT_ATTR_PRIORITY		0x00002000	/* waiters queue by priority */

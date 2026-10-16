@@ -10,9 +10,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "thread_event.c"
-
 #define THREAD_EVENT_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define THREAD_EVENT_TARGET_ALL		0x00010025	/* every thread */
 #define THREAD_EVENT_TARGET_PROCESS	0x00010027	/* every thread of a process */

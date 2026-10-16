@@ -12,9 +12,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/pvrsrv.c"
-
 static IMG_UINT32 g_ui32InitFlags = 0;
 #define INIT_DATA_ENABLE_PDUMPINIT 0x1U
 

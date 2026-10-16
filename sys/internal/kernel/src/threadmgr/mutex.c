@@ -14,9 +14,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "mutex.c"
-
 #define MUTEX_ITEM_SIZE			0x80	/* the class's object allocation size */
 #define THREAD_ATTR_USER		0x80000000
 #define USER_TLS_PRIORITY_OFFSET	(-0x7e0)	/* the priority word below the user TLS */

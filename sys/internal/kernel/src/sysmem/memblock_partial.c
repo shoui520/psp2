@@ -9,9 +9,6 @@
 #define MEMBLOCK_OBJ_MODULE_CALL
 #include "memblock_obj_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "memblock_partial.c"
-
 /* a unit: its PhyPage (word aligned) and the mapping in bits 0..1 */
 #define PARTIAL_UNIT_PAGE(_unit)	((_unit) & ~3u)
 #define PARTIAL_UNIT_MAP(_unit)		((_unit) & 3)

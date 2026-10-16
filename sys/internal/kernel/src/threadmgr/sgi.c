@@ -8,9 +8,6 @@
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/sysmem.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "sgi.c"
-
 static inline struct SceKernelThreadmgrPrivate *loadIntrRequestManager(void)
 {
 	struct SceKernelThreadmgrPrivate *volatile *slot;

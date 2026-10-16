@@ -13,9 +13,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "fast_mutex.c"
-
 #define FAST_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define FAST_MUTEX_ATTR_MASK		0x0000a00e
 #define FAST_MUTEX_OPTION_MAX_SIZE	8

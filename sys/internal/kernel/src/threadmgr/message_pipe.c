@@ -18,9 +18,6 @@
 #include "fast_mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "message_pipe.c"
-
 #define WAIT_TYPE_MSG_PIPE		0x00040000
 #define MSG_PIPE_WAIT_SEND		1	/* waitDirection: senders wait */
 #define MSG_PIPE_WAIT_RECEIVE		2	/* receivers wait */

@@ -12,9 +12,6 @@
 #include "uid_waitable.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "semaphore.c"
-
 #define SEMA_ATTR_PRIORITY		0x00002000
 #define SEMA_ITEM_SIZE			0x80	/* the class's object allocation size */
 

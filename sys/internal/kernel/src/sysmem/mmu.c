@@ -19,9 +19,6 @@
 #include "cpu_irq.h"
 #include <sce/barrier.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "mmu.c"
-
 int ksceKernelCpuSuspendIntr(void);
 int ksceKernelCpuResumeIntr(int flags);
 

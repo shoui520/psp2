@@ -10,9 +10,6 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "address_space.c"
-
 static inline __attribute__((always_inline)) void AddressSpaceRefer(AddressSpaceObject *as)
 {
 	int count = ksceKernelAtomicAddAndGetPositive32InRange(&as->refCount, 1, 0x7fffffff);

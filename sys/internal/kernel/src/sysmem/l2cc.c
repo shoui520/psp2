@@ -16,9 +16,6 @@
 #include <sce/pl310_regs.h>
 #include <sce/barrier.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "l2cc.c"
-
 /* physical until sceKernelL2CacheRemap maps the registers; l2cc_maintenance.S reads it */
 ScePl310Registers *volatile s_cpuL2RegisterBase =
 	(ScePl310Registers *)PL310_REG_BASE;

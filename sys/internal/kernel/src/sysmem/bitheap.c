@@ -6,9 +6,6 @@
 
 #include "sysmem_internal.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "bitheap.c"
-
 #define BITHEAP_MAGIC			0xba46d66f
 
 typedef struct Bitheap {

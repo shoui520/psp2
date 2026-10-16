@@ -8,9 +8,6 @@
 #include "sce/sysmem.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "dtrace.c"
-
 #define DTRACE_STATE_SIZE		0x28
 #define DTRACE_HEAP_SIZE		0x20000
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */

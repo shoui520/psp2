@@ -12,9 +12,6 @@
 #include "event_flag.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "event_flag.c"
-
 #define EVF_ITEM_SIZE			0x80	/* the class's object allocation size */
 #define EVF_KERNEL_ATTR_MASK		0x0000b080	/* what kernel callers may pass */
 #define EVF_USER_ATTR_MASK		0x00003080	/* what a syscall may pass */

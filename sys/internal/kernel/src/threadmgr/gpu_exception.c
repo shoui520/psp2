@@ -9,9 +9,6 @@
 #include "sce/debug.h"
 #include "sce/sysmem.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "gpu_exception.c"
-
 #define THREAD_ATTR_USER		0x80000000
 #define THREADMGR_KERNEL_PID		0x10005
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */

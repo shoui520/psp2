@@ -5,9 +5,6 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/power.c"
-
 /* Pristine IMG state words, ordered as in the SCE native data. */
 static IMG_BOOL gbInitServerRunning = IMG_FALSE;
 static IMG_BOOL gbInitSuccessful = IMG_FALSE;

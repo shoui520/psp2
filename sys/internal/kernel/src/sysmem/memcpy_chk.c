@@ -7,9 +7,6 @@
 extern void *CopyMemoryForward(void *destination, const void *source, size_t size);
 
 #if FW_SINCE(0x04000000)
-#undef __FILE_NAME__
-#define __FILE_NAME__ "memcpy_chk.c"
-
 void *memcpy(void *destination, const void *source, size_t size)
 {
 	const void *caller = __builtin_return_address(0);

@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "env/playstation/pvr_debug.c"
-
 static SceKernelSpinlock gsDebugLockIRQ;
 
 #if FW_DEBUG

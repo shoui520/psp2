@@ -13,9 +13,6 @@
 #include "lw_mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "lw_mutex.c"
-
 #define LW_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define LW_MUTEX_ATTR_MASK		0x00002002
 #define LW_MUTEX_OPTION_MAX_SIZE	4

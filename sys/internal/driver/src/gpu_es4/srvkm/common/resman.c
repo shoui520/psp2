@@ -3,9 +3,6 @@
 #include <stddef.h>
 #include <stdarg.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/resman.c"
-
 RESMAN_LIST *gpsResList = NULL;
 
 PVRSRV_ERROR OSFreeMem_Impl(IMG_UINT32 ui32Flags, IMG_SIZE_T ui32Size,

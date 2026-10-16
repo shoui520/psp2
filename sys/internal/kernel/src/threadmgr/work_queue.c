@@ -17,9 +17,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "work_queue.c"
-
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
 #define TRAP_REQUEST_UNK2000000		0x02000000	/* PLACEHOLDER: name */

@@ -9,9 +9,6 @@
 #include "memblock_obj_module.h"
 #include "memblock/status_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "partition.c"
-
 /* MemBlockObject flags bits 20..22 */
 
 /* an L2 table slot of the address space context: an L2PageTable | 1, or a section owner | 2 */

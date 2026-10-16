@@ -17,10 +17,6 @@
 #include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 #include "programs.h"
 
-/* Debug records use Sony's relative source path, including its directories. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "devices/sgx/sgxinit.c"
-
 /* services.h */
 #define PVRSRV_MAX_CLIENT_HEAPS		32
 #define HEAP_IDX(id)			((id) & ((1 << 24) - 1))

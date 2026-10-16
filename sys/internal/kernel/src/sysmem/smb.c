@@ -10,9 +10,6 @@
 #include "memblock_obj_module.h"
 #include "memblock/status_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "smb.c"
-
 /*
  * The simple memblock type: bits 0..3 the FIFO, 4..11 the layout, 12..23 the
  * size with any guard pages, 24..27 the memory.

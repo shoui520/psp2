@@ -7,9 +7,6 @@
 
 #include "sysmem_internal.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "memblock_db.c"
-
 
 int ksceKernelCheckDipsw(unsigned int bit);
 

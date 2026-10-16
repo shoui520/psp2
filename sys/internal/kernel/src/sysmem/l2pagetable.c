@@ -6,9 +6,6 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "l2pagetable.c"
-
 int sceKernelMMUL2Init(uint32_t *l2);
 int sceKernelMMUMapLargePages(uint32_t *l2, uint32_t type, uint32_t domain, uintptr_t offset,
 			      SceSize size, uintptr_t pa);

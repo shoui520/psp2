@@ -18,9 +18,6 @@
 #include "timer.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "timer.c"
-
 #define TIMER_INTR			0x8d	/* the LT5's interrupt */
 #define TIMER_MIN_DELAY			200	/* microseconds */
 #define TIMER_ITEM_SIZE			0x80	/* the class's object allocation size */

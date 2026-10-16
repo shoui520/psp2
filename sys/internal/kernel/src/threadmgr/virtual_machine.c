@@ -17,9 +17,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "virtual_machine.c"
-
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
 #define THREAD_CPU_NONE			0x7fff

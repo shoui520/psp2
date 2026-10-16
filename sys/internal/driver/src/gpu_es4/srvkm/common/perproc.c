@@ -6,9 +6,6 @@
 #include <sce/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/perproc.c"
-
 HASH_TABLE *psHashTab;
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
 IMG_UINTPTR_T HASH_Remove(HASH_TABLE *pHash, IMG_UINTPTR_T k);

@@ -10,9 +10,6 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "common/buffer_manager_sce.c"
-
 PVRSRV_DEVICE_NODE *SetGpuDeviceNode(PVRSRV_DEVICE_NODE *psDeviceNode);
 int sceGpuInitMemoryContexts(void);
 int GetKernelMemoryContext(GpuMemoryContext **output);

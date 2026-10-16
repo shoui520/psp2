@@ -11,9 +11,6 @@
 #include "lw_mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "lw_cond.c"
-
 #define LW_COND_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define LW_COND_ATTR_MASK		0x00002000
 #define LW_COND_ATTR_UNLIMITED		0x00004000

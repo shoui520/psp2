@@ -7,9 +7,6 @@
 
 #include "sysmem_internal.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "virpage.c"
-
 
 
 /* phymem.c */

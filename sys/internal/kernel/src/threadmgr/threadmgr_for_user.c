@@ -15,9 +15,6 @@
 #include "scheduler.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "threadmgr_for_user.c"
-
 /* PUID attribute: the PUID came from an open, not a create */
 #define SDK_VERSION_CLOSE_MISMATCH	0x03100000	/* SDKs before 3.10 may close what they created */
 #define EVENT_CLOSE_DELETE		0x00000008	/* closeMsgPipe/SimpleEvent: a delete */

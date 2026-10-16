@@ -19,9 +19,6 @@
 #include "event.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "callback.c"
-
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001

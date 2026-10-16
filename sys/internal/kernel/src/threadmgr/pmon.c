@@ -11,9 +11,6 @@
 #include "scheduler.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "pmon.c"
-
 #define PMON_COUNTER_MASK		0x8000003f	/* event counters 0..5 and the cycle counter */
 #define PMON_CYCLE_COUNTER		31
 #define PMON_EVENT_COUNTERS		6

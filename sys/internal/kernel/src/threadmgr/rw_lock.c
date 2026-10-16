@@ -12,9 +12,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "rw_lock.c"
-
 #define RW_LOCK_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define RW_LOCK_ATTR_RECURSIVE		0x00000002
 #define RW_LOCK_ATTR_KERNEL		0x00000040

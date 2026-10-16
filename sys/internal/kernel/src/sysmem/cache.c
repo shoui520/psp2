@@ -12,9 +12,6 @@
 #include "fw.h"
 #include <sce/debug.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "cache.c"
-
 /* what the range functions do */
 #define CACHE_RANGE_SKIP_UNCACHED	0x01	/* leave uncached ranges alone */
 #define CACHE_RANGE_L1_ONLY		0x20	/* L1 is write-back write-allocate, no L2 */

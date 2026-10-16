@@ -8,9 +8,6 @@
 #include "sce/sysmem.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "syslibtrace.c"
-
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 

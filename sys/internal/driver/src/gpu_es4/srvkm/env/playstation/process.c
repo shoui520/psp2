@@ -7,9 +7,6 @@
 #include <psp2kern/kernel/acmgr.h>
 #include <sce/debug.h>
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "env/playstation/process.c"
-
 extern int gPVRSRVLock;
 unsigned LinuxLockMutex(int *psMutex);
 unsigned LinuxLockMutexForPid(int *psMutex, int pid);

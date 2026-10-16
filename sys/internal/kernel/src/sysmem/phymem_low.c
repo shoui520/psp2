@@ -7,9 +7,6 @@
 
 #include "sysmem_internal.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "phymem_low.c"
-
 
 /* the memory type codes the exports take */
 #define PHYMEM_LOW_TYPE_MAIN		0x10001

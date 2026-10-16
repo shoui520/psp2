@@ -11,9 +11,6 @@
 #include "sce/cpu.h"
 #include "sce/debug.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "dispatch.c"
-
 #define CPU_COUNT			4
 #define CPU_MASK_ALL			0xf
 #define PRIORITY_NONE			0x100	/* above every priority */

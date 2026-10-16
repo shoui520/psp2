@@ -7,9 +7,6 @@
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "l1pagetable.c"
-
 int sceKernelMMUSetL2PageTable(uint32_t *l1, uint32_t domain, uintptr_t va, uintptr_t l2pa);
 int sceKernelMMUUnsetL2PageTable(uint32_t *l1, uintptr_t va);
 int sceKernelMMUMapSupersections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,

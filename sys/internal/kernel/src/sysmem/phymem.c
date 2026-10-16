@@ -6,9 +6,6 @@
 
 #include "sysmem_internal.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "phymem.c"
-
 /* the globals are not static: the unconverted part of the file sets them */
 
 #define PHYMEM_PAGE_SHIFT		12

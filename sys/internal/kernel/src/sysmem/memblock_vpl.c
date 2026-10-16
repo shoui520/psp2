@@ -10,9 +10,6 @@
 #define MEMBLOCK_OBJ_MODULE_CALL
 #include "memblock_obj_module.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "memblock_vpl.c"
-
 /* the memblock code a page is invalidated through when unmapped */
 #define MEMBLOCK_CODE_INVALIDATE	0x40c04006
 

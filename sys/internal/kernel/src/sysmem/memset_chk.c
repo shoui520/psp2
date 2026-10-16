@@ -7,9 +7,6 @@
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 
 #if FW_DEBUG
-#undef __FILE_NAME__
-#define __FILE_NAME__ "memset_chk.c"
-
 void *memset(void *destination, int value, size_t size)
 {
 	const void *caller = __builtin_return_address(0);

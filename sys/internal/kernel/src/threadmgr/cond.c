@@ -13,9 +13,6 @@
 #include "mutex.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "cond.c"
-
 #if FW_DEBUG
 /* Native data retains this record without an executable reference. */
 static const SceKernelDebugInfo s_openCondDebugInfo

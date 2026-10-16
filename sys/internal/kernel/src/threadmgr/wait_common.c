@@ -13,9 +13,6 @@
 #include "uid_waitable.h"
 #include "syscall_context.h"
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "wait_common.c"
-
 #define WAIT_TYPE_LW_OBJECT		0x40000
 typedef void (*ThreadmgrSchedProbeHandler)(const struct ThreadmgrSchedProbeDescriptor *probe,
 					   SceUID threadId, SceUID processId);

@@ -28,9 +28,6 @@
 #include <sce/kernel_boot_param.h>
 #endif
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "sysroot.c"
-
 
 struct SysrootInitCallbackSlot {
 	SysrootInitCallback callback;
