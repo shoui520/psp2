@@ -1,0 +1,1072 @@
+--- malloc.c
++++ malloc.c
+@@ -1,3 +1,33 @@
++/* SCE allocator adaptation; pristine upstream is kept in contrib. */
++#include <psp2common/kernel/threadmgr.h>
++#include "heap_state.h"
++struct malloc_state;
++extern void HeapAbort(void) __attribute__((noreturn));
++extern void *sceClibMemset(void *destination, int value, SceSize size);
++extern void *sceClibMemcpy(void *, const void *, SceSize);
++extern int sceKernelLockLwMutex(SceKernelLwMutexWork *, int, SceUInt *);
++extern int sceKernelUnlockLwMutex(SceKernelLwMutexWork *, int);
++extern int sceKernelCreateLwMutex(SceKernelLwMutexWork *, const char *,
++  SceUInt32, int, const void *);
++extern void *HeapGrow(struct malloc_state *, SceSize, int);
++SceSize heapLimit;
++extern int sceClibSnprintf(char *, SceSize, const char *, ...);
++extern SceUID sceKernelAllocMemBlock(const char *, SceUInt32, SceSize, const void *);
++extern int sceKernelGetMemBlockBase(SceUID, void **);
++extern void *sceKernelGetTLSAddr(unsigned int);
++extern int sceKernelFreeMemBlock(SceUID);
++extern SceUID sceKernelFindMemBlockByAddr(const void *, SceSize);
++#define PROCEED_ON_ERROR 1
++#define reset_on_error HeapReset
++#define malloc_corruption_error_count heapInitialized
++#define DEBUG 0
++#define ABORT HeapAbort()
++#include "heap_config.h"
++
++struct MspaceBackingBlock {
++  SceUInt32 encodedId;
++};
++
+ /*
+   This is a version (aka dlmalloc) of malloc/free/realloc written by
+   Doug Lea and released to the public domain, as explained at
+@@ -1109,7 +1139,8 @@
+   mspace_malloc_stats behaves as malloc_stats, but reports
+   properties of the given space.
+ */
+-void mspace_malloc_stats(mspace msp);
++/* SCE returns validation status and writes the native four-word statistics. */
++int mspace_malloc_stats(mspace msp, struct MspaceStats *stats);
+ 
+ /*
+   mspace_trim behaves as malloc_trim, but
+@@ -1666,7 +1697,8 @@
+ /* extraction of fields from head words */
+ #define cinuse(p)           ((p)->head & CINUSE_BIT)
+ #define pinuse(p)           ((p)->head & PINUSE_BIT)
+-#define chunksize(p)        ((p)->head & ~(INUSE_BITS))
++/* SCE: the additional bit marks a chunk carrying a runtime-selected footer. */
++#define chunksize(p)        ((p)->head & ~(size_t)7)
+ 
+ #define clear_pinuse(p)     ((p)->head &= ~PINUSE_BIT)
+ #define clear_cinuse(p)     ((p)->head &= ~CINUSE_BIT)
+@@ -1676,7 +1708,7 @@
+ #define chunk_minus_offset(p, s) ((mchunkptr)(((char*)(p)) - (s)))
+ 
+ /* Ptr to next or previous physical malloc_chunk. */
+-#define next_chunk(p) ((mchunkptr)( ((char*)(p)) + ((p)->head & ~INUSE_BITS)))
++#define next_chunk(p) ((mchunkptr)(((char*)(p)) + chunksize(p)))
+ #define prev_chunk(p) ((mchunkptr)( ((char*)(p)) - ((p)->prev_foot) ))
+ 
+ /* extract next chunk's pinuse bit */
+@@ -1987,14 +2019,30 @@
+   tbinptr    treebins[NTREEBINS];
+   size_t     footprint;
+   size_t     max_footprint;
++  /* SCE accounting fields are present before flags in every native space. */
++  size_t     current_in_use;
++  size_t     peak_in_use;
+   flag_t     mflags;
+-#if USE_LOCKS
+-  MLOCK_T    mutex;     /* locate lock among fields that rarely change */
+-#endif /* USE_LOCKS */
++  SceKernelLwMutexWork mutex;
+   msegment   seg;
++  /* SCE space-local system allocation parameters. */
++  size_t     page_size;
++  size_t     granularity;
+ };
+ 
+ typedef struct malloc_state*    mstate;
++
++_Static_assert(__builtin_offsetof(struct malloc_state, footprint) == 0x1ac,
++  "native allocator footprint");
++_Static_assert(__builtin_offsetof(struct malloc_state, mflags) == 0x1bc,
++  "native allocator flags");
++_Static_assert(__builtin_offsetof(struct malloc_state, mutex) == 0x1c0,
++  "native allocator mutex");
++_Static_assert(__builtin_offsetof(struct malloc_state, seg) == 0x1e0,
++  "native allocator segment");
++_Static_assert(__builtin_offsetof(struct malloc_state, granularity) == 0x1f4,
++  "native allocator granularity");
++_Static_assert(sizeof(struct malloc_state) <= 0x240, "native state reservation");
+ 
+ /* ------------- Global malloc_state and malloc_params ------------------- */
+ 
+@@ -2059,7 +2107,9 @@
+   ((char*)(A) >= S->base && (char*)(A) < S->base + S->size)
+ 
+ /* Return segment holding given address */
+-static msegmentptr segment_holding(mstate m, char* addr) {
++/* SCE preserves native inlining in the allocation API bodies. */
++static inline __attribute__((always_inline))
++msegmentptr segment_holding(mstate m, char* addr) {
+   msegmentptr sp = &m->seg;
+   for (;;) {
+     if (addr >= sp->base && addr < sp->base + sp->size)
+@@ -2092,7 +2142,7 @@
+   noncontiguous segments are added.
+ */
+ #define TOP_FOOT_SIZE\
+-  (align_offset(chunk2mem(0))+pad_request(sizeof(struct malloc_segment))+MIN_CHUNK_SIZE)
++  (pad_request(MIN_CHUNK_SIZE + sizeof(struct malloc_segment))) /* SCE */
+ 
+ 
+ /* -------------------------------  Hooks -------------------------------- */
+@@ -2133,7 +2183,8 @@
+ #if PROCEED_ON_ERROR
+ 
+ /* A count of the number of corruption errors causing resets */
+-int malloc_corruption_error_count;
++/* SCE recovery indicator is shared with the inspection wrappers. */
++extern unsigned int malloc_corruption_error_count;
+ 
+ /* default corruption action */
+ static void reset_on_error(mstate m);
+@@ -2368,21 +2419,27 @@
+ 
+ #if !FOOTERS
+ 
+-#define mark_inuse_foot(M,p,s)
++/* SCE: footer mode is selected per space, recorded in bit2 of each chunk. */
++#define mark_inuse_foot(M,p,s) \
++  (((M)->mflags & 16) ? \
++    ((p)->head |= 4, chunk_plus_offset(p,s)->prev_foot = \
++      ((size_t)(M) ^ mparams.magic)) : 0)
+ 
+ /* Set cinuse bit and pinuse bit of next chunk */
+ #define set_inuse(M,p,s)\
+   ((p)->head = (((p)->head & PINUSE_BIT)|s|CINUSE_BIT),\
+-  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT)
++  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT, \
++  mark_inuse_foot(M,p,s))
+ 
+ /* Set cinuse and pinuse of this chunk and pinuse of next chunk */
+ #define set_inuse_and_pinuse(M,p,s)\
+   ((p)->head = (s|PINUSE_BIT|CINUSE_BIT),\
+-  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT)
++  ((mchunkptr)(((char*)(p)) + (s)))->head |= PINUSE_BIT, \
++  mark_inuse_foot(M,p,s))
+ 
+ /* Set size, cinuse and pinuse bit of this chunk */
+ #define set_size_and_pinuse_of_inuse_chunk(M, p, s)\
+-  ((p)->head = (s|PINUSE_BIT|CINUSE_BIT))
++  ((p)->head = (s|PINUSE_BIT|CINUSE_BIT), mark_inuse_foot(M,p,s))
+ 
+ #else /* FOOTERS */
+ 
+@@ -3083,7 +3140,12 @@
+   if (is_small(S)) unlink_small_chunk(M, P, S)\
+   else { tchunkptr TP = (tchunkptr)(P); unlink_large_chunk(M, TP); }
+ 
++/* SCE named wrapper for the native out-of-line upstream unlink macro. */
++void HeapUnlink(mstate space, mchunkptr chunk, size_t size) {
++  unlink_chunk(space, chunk, size);
++}
+ 
++
+ /* Relays to internal calls to malloc/free from realloc, memalign etc */
+ 
+ #if ONLY_MSPACES
+@@ -3207,16 +3269,18 @@
+ /* default corruption action */
+ static void reset_on_error(mstate m) {
+   int i;
+-  ++malloc_corruption_error_count;
++  /* SCE records that recovery has occurred, rather than counting errors. */
++  if (!malloc_corruption_error_count)
++    malloc_corruption_error_count = 1;
+   /* Reinitialize fields to forget about all memory */
+-  m->smallbins = m->treebins = 0;
++  /* SCE corrects the upstream assignment to array fields: clear the maps. */
++  m->smallmap = m->treemap = 0;
+   m->dvsize = m->topsize = 0;
+   m->seg.base = 0;
+   m->seg.size = 0;
+   m->seg.next = 0;
+   m->top = m->dv = 0;
+-  for (i = 0; i < NTREEBINS; ++i)
+-    *treebin_at(m, i) = 0;
++  sceClibMemset(m->treebins, 0, sizeof(m->treebins));
+   init_bins(m);
+ }
+ #endif /* PROCEED_ON_ERROR */
+@@ -3265,7 +3329,8 @@
+ 
+ 
+ /* Add a segment to hold a new noncontiguous region */
+-static void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
++static inline __attribute__((always_inline))
++void add_segment(mstate m, char* tbase, size_t tsize, flag_t mmapped) {
+   /* Determine locations and sizes of segment, fenceposts, old top */
+   char* old_top = (char*)m->top;
+   msegmentptr oldsp = segment_holding(m, old_top);
+@@ -3319,6 +3384,74 @@
+ 
+ /* -------------------------- System allocation -------------------------- */
+ 
++/* SCE replaces host mmap/MORECORE with user kernel memblocks. */
++void *HeapGrow(mstate space, size_t bytes, int growOnly) {
++  size_t size = (space->granularity + TOP_FOOT_SIZE + 1 + bytes) &
++    -space->granularity;
++  char name[36];
++  char *allocated = 0;
++  register char *base __asm__("r11");
++  SceUID id;
++  mchunkptr chunk, remainder;
++  size_t remainderSize;
++
++  /* Native's invalid zero-ID return path retains incoming r11. */
++  __asm__("" : "=r"(base));
++  if (size <= bytes)
++    return 0;
++  if ((void *)space == primaryHeap) {
++    if (heapLimit != (size_t)-1 && heapLimit < space->footprint + size)
++      return 0;
++    id = sceKernelAllocMemBlock("SceLibcMalloc", 0x0c20d060, size, 0);
++  } else {
++    sceClibSnprintf(name, 0x23, "SceLibcMspaceS%08X", (unsigned int)space);
++    id = sceKernelAllocMemBlock(name, 0x0c20d060, size, 0);
++  }
++  if (id < 0)
++    return 0;
++  if (id > 0) {
++    if (sceKernelGetMemBlockBase(id, (void **)&allocated))
++      return 0;
++    ((struct MspaceBackingBlock *)allocated)->encodedId = (SceUInt32)id ^
++      *(SceUInt32 *)sceKernelGetTLSAddr(7);
++    base = allocated;
++  }
++  if (base == CMFAIL)
++    return 0;
++  space->footprint += size;
++  if (space->max_footprint < space->footprint)
++    space->max_footprint = space->footprint;
++  if (!space->top) {
++    space->least_addr = base;
++    space->seg.base = base;
++    space->seg.size = size;
++    space->seg.sflags = 1;
++    init_bins(space);
++    space->current_in_use = 0x40;
++    if (space->peak_in_use < 0x40)
++      space->peak_in_use = 0x40;
++    init_top(space, (mchunkptr)base, size - TOP_FOOT_SIZE);
++  } else {
++    if (base < space->least_addr)
++      space->least_addr = base;
++    space->current_in_use += 0x40;
++    if (space->peak_in_use < space->current_in_use)
++      space->peak_in_use = space->current_in_use;
++    add_segment(space, base, size, 1);
++  }
++  (void)segment_holding(space, (char*)space->top);
++  if (!growOnly && bytes < space->topsize) {
++    remainderSize = space->topsize -= bytes;
++    chunk = space->top;
++    remainder = space->top = chunk_plus_offset(chunk, bytes);
++    remainder->head = remainderSize | PINUSE_BIT;
++    set_size_and_pinuse_of_inuse_chunk(space, chunk, bytes);
++    (void)segment_holding(space, (char*)space->top);
++    base = chunk2mem(chunk);
++  }
++  return base;
++}
++
+ /* Get memory from system using MORECORE or MMAP */
+ static void* sys_alloc(mstate m, size_t nb) {
+   char* tbase = CMFAIL;
+@@ -3618,7 +3751,8 @@
+ /* ---------------------------- malloc support --------------------------- */
+ 
+ /* allocate a large request from the best fitting chunk in a treebin */
+-static void* tmalloc_large(mstate m, size_t nb) {
++static inline __attribute__((always_inline))
++void* tmalloc_large(mstate m, size_t nb) {
+   tchunkptr v = 0;
+   size_t rsize = -nb; /* Unsigned negation */
+   tchunkptr t;
+@@ -3691,7 +3825,8 @@
+ }
+ 
+ /* allocate a small request from the best fitting chunk in a treebin */
+-static void* tmalloc_small(mstate m, size_t nb) {
++static inline __attribute__((always_inline))
++void* tmalloc_small(mstate m, size_t nb) {
+   tchunkptr t, v;
+   size_t rsize;
+   bindex_t i;
+@@ -4384,7 +4519,46 @@
+   check_top_chunk(m, m->top);
+   return m;
+ }
++
++/* SCE: only reviewed native entry points are selected at this checkpoint. */
++void *sceClibMspaceCreate(void *base, SceSize capacity) {
++  static const struct malloc_params defaults = {
++    0x58585858, 0x10000, 0x10000, (size_t)-1, (size_t)-1, 7
++  };
++  mchunkptr chunk;
++  mstate space;
++  char name[36];
+ 
++  if (!mparams.page_size)
++    mparams = defaults;
++  if (capacity <= 0x270 || capacity >= (size_t)-(mparams.page_size + 0x270))
++    return 0;
++  chunk = align_as_chunk((char *)base);
++  space = chunk2mem(chunk);
++  /* SCE reserves0x240 state bytes, including unclassified trailing fields. */
++  sceClibMemset(space, 0, 0x240);
++  chunk->head = 0x243;
++  space->seg.base = space->least_addr = base;
++  space->seg.size = space->footprint = space->max_footprint = capacity;
++  space->magic = mparams.magic;
++  space->mflags = mparams.default_mflags | USE_NONCONTIGUOUS_BIT;
++  space->page_size = mparams.page_size;
++  space->granularity = mparams.granularity;
++  space->current_in_use = space->peak_in_use = 0x280;
++  init_bins(space);
++  init_top(space, chunk_plus_offset(chunk, 0x240),
++    ((char *)base + capacity - (char *)chunk) - 0x240 - TOP_FOOT_SIZE);
++  (void)segment_holding(space, (char *)space->top);
++  if (space->mflags & 2) {
++    sceClibSnprintf(name, 0x23, "%s%08X_%08X", "SceLibcMspaceS", capacity,
++      (unsigned int)base);
++    if (sceKernelCreateLwMutex(&space->mutex, name, 0x2002, 0, 0) < 0)
++      return 0;
++  }
++  return space;
++}
++
++#if 0
+ mspace create_mspace(size_t capacity, int locked) {
+   mstate m = 0;
+   size_t msize = pad_request(sizeof(struct malloc_state));
+@@ -4439,12 +4613,28 @@
+   return freed;
+ }
+ 
++#endif /* SCE selected creation and destruction live in their own sources. */
++
+ /*
+   mspace versions of routines are near-clones of the global
+   versions. This is not so nice but better than the alternatives.
+ */
+ 
+ 
++/* SCE: the native allocator locks with LwMutex and chooses footer overhead
++ * at runtime. These overrides apply only to the mspace API below. */
++#undef PREACTION
++#undef POSTACTION
++#define PREACTION(M) (((M)->mflags & 2) && \
++  sceKernelLockLwMutex(&(M)->mutex,1,0) < 0 ? (ABORT,0) : 0)
++#define POSTACTION(M) do { if (((M)->mflags & 2) && \
++  sceKernelUnlockLwMutex(&(M)->mutex,1) < 0) ABORT; } while (0)
++#define sce_chunk_overhead(M) (((M)->mflags & 16) ? 8U : 4U)
++#define sce_pad_request(M,REQ) \
++  (((REQ) + sce_chunk_overhead(M) + CHUNK_ALIGN_MASK) & ~CHUNK_ALIGN_MASK)
++
++/* SCE compiles the same allocation engine inline into calloc and realloc. */
++inline __attribute__((always_inline))
+ void* mspace_malloc(mspace msp, size_t bytes) {
+   mstate ms = (mstate)msp;
+   if (!ok_magic(ms)) {
+@@ -4454,10 +4644,11 @@
+   if (!PREACTION(ms)) {
+     void* mem;
+     size_t nb;
+-    if (bytes <= MAX_SMALL_REQUEST) {
++    if (bytes <= MAX_SMALL_SIZE - CHUNK_ALIGN_MASK - sce_chunk_overhead(ms)) {
+       bindex_t idx;
+       binmap_t smallbits;
+-      nb = (bytes < MIN_REQUEST)? MIN_CHUNK_SIZE : pad_request(bytes);
++      nb = (bytes < MIN_CHUNK_SIZE - sce_chunk_overhead(ms) - 1U)?
++        MIN_CHUNK_SIZE : sce_pad_request(ms,bytes);
+       idx = small_index(nb);
+       smallbits = ms->smallmap >> idx;
+ 
+@@ -4510,7 +4701,7 @@
+     else if (bytes >= MAX_REQUEST)
+       nb = MAX_SIZE_T; /* Too big to allocate. Force failure (in sys alloc) */
+     else {
+-      nb = pad_request(bytes);
++      nb = sce_pad_request(ms,bytes);
+       if (ms->treemap != 0 && (mem = tmalloc_large(ms, nb)) != 0) {
+         check_malloced_chunk(ms, mem, nb);
+         goto postaction;
+@@ -4545,13 +4736,22 @@
+       set_size_and_pinuse_of_inuse_chunk(ms, p, nb);
+       mem = chunk2mem(p);
+       check_top_chunk(ms, ms->top);
++      /* SCE retains the native segment-list read walk after splitting top. */
++      (void)segment_holding(ms, (char*)ms->top);
+       check_malloced_chunk(ms, mem, nb);
+       goto postaction;
+     }
+ 
+-    mem = sys_alloc(ms, nb);
++    /* SCE supplies a kernel memblock-backed growth boundary. */
++    mem = HeapGrow(ms, nb, 0);
+ 
+   postaction:
++    /* SCE tracks total allocated chunk sizes, including native overhead. */
++    if (mem != 0) {
++      ms->current_in_use += chunksize(mem2chunk(mem));
++      if (ms->peak_in_use < ms->current_in_use)
++        ms->peak_in_use = ms->current_in_use;
++    }
+     POSTACTION(ms);
+     return mem;
+   }
+@@ -4559,31 +4759,110 @@
+   return 0;
+ }
+ 
++/* SCE: memblocks contain an encoded ID, with a stale-ID lookup fallback. */
++static inline __attribute__((always_inline)) void HeapReleaseBlock(char *base,
++                                                                  size_t size) {
++  SceUInt32 encodedId = ((struct MspaceBackingBlock *)base)->encodedId;
++  SceUID id = encodedId ^ *(SceUInt32 *)sceKernelGetTLSAddr(7);
++  int result = sceKernelFreeMemBlock(id);
++  if (result != 0) {
++    if (result != (int)0x80024501)
++      ABORT;
++    id = sceKernelFindMemBlockByAddr(base, size);
++    if (id <= 0 || sceKernelFreeMemBlock(id) != 0)
++      ABORT;
++  }
++}
++
++/* SCE: release checks are inlined in the native free entry. The non-head
++   record uses the later0x38 reserve while the head retains0x30. */
++static inline __attribute__((always_inline)) void HeapReleaseUnused(mstate m,
++                                                                   mchunkptr p) {
++  if (m->seg.base == 0)
++    return;
++  if (m->seg.next != 0) {
++    size_t mask = m->granularity - 1;
++    if (((size_t)p & mask) != 8 || m->seg.base == (char *)p - 8)
++      return;
++    mchunkptr following = next_chunk(p);
++    size_t followingHead = following->head;
++    if (((size_t)following & mask) != m->granularity - 0x38 ||
++        (followingHead & ~(size_t)7) != 0x20 ||
++        (followingHead & CINUSE_BIT) == 0)
++      return;
++    msegmentptr previous = &m->seg;
++    msegmentptr segment = previous->next;
++    while (segment != 0) {
++      char *base = segment->base;
++      size_t size = segment->size;
++      msegmentptr next = segment->next;
++      flag_t flags = segment->sflags;
++      if ((flags & 0xb) == 1) {
++        mchunkptr first = align_as_chunk(base);
++        if (!cinuse(first) &&
++            (char *)first + chunksize(first) >= base + size - 0x38) {
++          assert(segment_holds(segment, (char *)segment));
++          if (first == m->dv) {
++            m->dv = 0;
++            m->dvsize = 0;
++          }
++          else {
++            tchunkptr tree = (tchunkptr)first;
++            unlink_large_chunk(m, tree);
++          }
++          HeapReleaseBlock(base, size);
++          m->footprint -= size;
++          m->current_in_use -= 0x40;
++          previous->next = next;
++          segment = next;
++          continue;
++        }
++      }
++      previous = segment;
++      segment = next;
++    }
++    if (m->seg.next != 0)
++      return;
++  }
++  if ((m->seg.sflags & 3) == 1) {
++    char *base = m->seg.base;
++    size_t size = m->seg.size;
++    if (base == 0)
++      ABORT;
++    mchunkptr first = align_as_chunk(base);
++    if (!cinuse(first) &&
++        (char *)first + chunksize(first) >= base + size - 0x30) {
++      HeapReleaseBlock(base, size);
++      m->footprint -= size;
++      m->current_in_use -= 0x40;
++      reset_on_error(m);
++    }
++  }
++}
++
+ void mspace_free(mspace msp, void* mem) {
+   if (mem != 0) {
+     mchunkptr p  = mem2chunk(mem);
+-#if FOOTERS
+-    mstate fm = get_mstate_for(p);
+-#else /* FOOTERS */
+     mstate fm = (mstate)msp;
+-#endif /* FOOTERS */
+-    if (!ok_magic(fm)) {
+-      USAGE_ERROR_ACTION(fm, p);
+-      return;
++    /* SCE chooses footer ownership at runtime, including a null-space call. */
++    if (fm == 0) {
++      if (p->head & 4)
++        fm = (mstate)(next_chunk(p)->prev_foot ^ mparams.magic);
+     }
++    else if ((fm->mflags & 16) &&
++             (mstate)(next_chunk(p)->prev_foot ^ mparams.magic) != fm) {
++      ABORT;
++    }
+     if (!PREACTION(fm)) {
+       check_inuse_chunk(fm, p);
+       if (RTCHECK(ok_address(fm, p) && ok_cinuse(p))) {
+         size_t psize = chunksize(p);
+         mchunkptr next = chunk_plus_offset(p, psize);
++        fm->current_in_use -= psize;
+         if (!pinuse(p)) {
+           size_t prevsize = p->prev_foot;
+-          if ((prevsize & IS_MMAPPED_BIT) != 0) {
+-            prevsize &= ~IS_MMAPPED_BIT;
+-            psize += prevsize + MMAP_FOOT_PAD;
+-            if (CALL_MUNMAP((char*)p - prevsize, psize) == 0)
+-              fm->footprint -= psize;
+-            goto postaction;
++          if ((prevsize & 1) != 0) { /* SCE rejects this bit even without mmap. */
++            ABORT;
+           }
+           else {
+             mchunkptr prev = chunk_minus_offset(p, prevsize);
+@@ -4591,10 +4870,12 @@
+             p = prev;
+             if (RTCHECK(ok_address(fm, prev))) { /* consolidate backward */
+               if (p != fm->dv) {
+-                unlink_chunk(fm, p, prevsize);
++                mem2chunk(mem)->head &= ~CINUSE_BIT;
++                HeapUnlink(fm, p, prevsize);
+               }
+               else if ((next->head & INUSE_BITS) == INUSE_BITS) {
+                 fm->dvsize = psize;
++                mem2chunk(mem)->head &= ~CINUSE_BIT;
+                 set_free_with_pinuse(p, psize, next);
+                 goto postaction;
+               }
+@@ -4614,8 +4895,8 @@
+                 fm->dv = 0;
+                 fm->dvsize = 0;
+               }
+-              if (should_trim(fm, tsize))
+-                sys_trim(fm, 0);
++              if ((void *)fm == primaryHeap && fm->trim_check < tsize)
++                ABORT;
+               goto postaction;
+             }
+             else if (next == fm->dv) {
+@@ -4627,7 +4908,7 @@
+             else {
+               size_t nsize = chunksize(next);
+               psize += nsize;
+-              unlink_chunk(fm, next, nsize);
++              HeapUnlink(fm, next, nsize);
+               set_size_and_pinuse_of_free_chunk(p, psize);
+               if (p == fm->dv) {
+                 fm->dvsize = psize;
+@@ -4645,6 +4926,7 @@
+     erroraction:
+       USAGE_ERROR_ACTION(fm, p);
+     postaction:
++      HeapReleaseUnused(fm, p);
+       POSTACTION(fm);
+     }
+   }
+@@ -4666,13 +4948,94 @@
+   }
+   mem = internal_malloc(ms, req);
+   if (mem != 0 && calloc_must_clear(mem2chunk(mem)))
+-    memset(mem, 0, req);
++    sceClibMemset(mem, 0, req); /* SCE uses its own public memory engine. */
+   return mem;
++}
++
++/* SCE adaptation of upstream internal_realloc: runtime overhead, accounting,
++   explicit locking and an in-place-only entry used by reallocalign. */
++/* SCE: calloc inlines malloc, while resize calls its public ABI boundary. */
++extern void *HeapMallocCall(mspace, size_t) __asm__("sceClibMspaceMalloc");
++static inline __attribute__((always_inline))
++void *HeapResizeEngine(mstate m, void *oldmem, size_t bytes, int inplaceOnly) {
++  if (bytes > (size_t)-0x41)
++    return 0;
++  flag_t flags = m->mflags;
++  if (flags & 2) {
++    if (sceKernelLockLwMutex(&m->mutex, 1, 0) < 0)
++      ABORT;
++    flags = m->mflags;
++  }
++  mchunkptr oldp = mem2chunk(oldmem);
++  size_t oldsize = chunksize(oldp);
++  mchunkptr next = chunk_plus_offset(oldp, oldsize);
++  mchunkptr newp = 0;
++  void *extra = 0;
++  if (!ok_address(m, oldp) || !cinuse(oldp) ||
++      !ok_next(oldp, next) || !pinuse(next)) {
++    if ((flags & 2) && sceKernelUnlockLwMutex(&m->mutex, 1) < 0)
++      ABORT;
++    return 0;
++  }
++  size_t overhead = (flags & 16) ? 8 : 4;
++  size_t nb = bytes < 15 - overhead ? MIN_CHUNK_SIZE :
++              (bytes + overhead + CHUNK_ALIGN_MASK) & ~CHUNK_ALIGN_MASK;
++  if (oldsize >= nb) {
++    size_t rsize = oldsize - nb;
++    newp = oldp;
++    if (rsize >= MIN_CHUNK_SIZE) {
++      mchunkptr remainder = chunk_plus_offset(newp, nb);
++      set_inuse(m, newp, nb);
++      set_inuse(m, remainder, rsize);
++      extra = chunk2mem(remainder);
++    }
++  }
++  else if (next == m->top && oldsize + m->topsize > nb) {
++    size_t newtopsize = oldsize + m->topsize - nb;
++    mchunkptr newtop = chunk_plus_offset(oldp, nb);
++    set_inuse(m, oldp, nb);
++    newtop->head = newtopsize | PINUSE_BIT;
++    m->top = newtop;
++    m->topsize = newtopsize;
++    m->current_in_use += nb - oldsize;
++    if (m->peak_in_use < m->current_in_use)
++      m->peak_in_use = m->current_in_use;
++    newp = oldp;
++  }
++  if (newp != 0) {
++    /* SCE retains the in-use assertions even in the normal API build. */
++    assert(is_aligned(chunk2mem(newp)) || newp->head == FENCEPOST_HEAD);
++    assert(ok_address(m, newp));
++    assert(cinuse(newp));
++    assert(next_pinuse(newp));
++    assert(pinuse(newp) ||
++           newp->prev_foot == chunksize(prev_chunk(newp)));
++  }
++  if ((flags & 2) && sceKernelUnlockLwMutex(&m->mutex, 1) < 0)
++    ABORT;
++  if (newp != 0) {
++    if (extra != 0)
++      mspace_free(m, extra);
++    return chunk2mem(newp);
++  }
++  if (inplaceOnly)
++    return 0;
++  void *newmem = HeapMallocCall(m, bytes);
++  if (newmem != 0) {
++    size_t capacity = oldsize - overhead;
++    sceClibMemcpy(newmem, oldmem, capacity < bytes ? capacity : bytes);
++    mspace_free(m, oldmem);
++  }
++  return newmem;
+ }
+ 
++void *HeapResize(mstate m, void *mem, size_t bytes, int inplaceOnly) {
++  return HeapResizeEngine(m, mem, bytes, inplaceOnly);
++}
++
+ void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
+   if (oldmem == 0)
+-    return mspace_malloc(msp, bytes);
++    return HeapMallocCall(msp, bytes);
+ #ifdef REALLOC_ZERO_BYTES_FREES
+   if (bytes == 0) {
+     mspace_free(msp, oldmem);
+@@ -4680,29 +5043,363 @@
+   }
+ #endif /* REALLOC_ZERO_BYTES_FREES */
+   else {
+-#if FOOTERS
+     mchunkptr p  = mem2chunk(oldmem);
+-    mstate ms = get_mstate_for(p);
+-#else /* FOOTERS */
+     mstate ms = (mstate)msp;
+-#endif /* FOOTERS */
+-    if (!ok_magic(ms)) {
+-      USAGE_ERROR_ACTION(ms,ms);
+-      return 0;
++    if (ms == 0) {
++      if (p->head & 4)
++        ms = (mstate)(next_chunk(p)->prev_foot ^ mparams.magic);
+     }
+-    return internal_realloc(ms, oldmem, bytes);
++    else if ((ms->mflags & 16) &&
++             (mstate)(next_chunk(p)->prev_foot ^ mparams.magic) != ms) {
++      ABORT;
++    }
++    return HeapResizeEngine(ms, oldmem, bytes, 0);
+   }
+ }
+ 
++/* SCE adaptation of upstream internal_memalign; its public and private native
++   entries share the same inlined algorithm and runtime footer configuration. */
++static inline __attribute__((always_inline))
++void *HeapAlignEngine(mstate m, size_t alignment, size_t bytes) {
++  if ((int)alignment < 0)
++    return 0;
++  if (alignment <= MALLOC_ALIGNMENT)
++    return HeapMallocCall(m, bytes);
++  if ((alignment & (alignment - 1)) != 0) {
++    size_t rounded = MALLOC_ALIGNMENT << 1;
++    while (rounded < alignment)
++      rounded <<= 1;
++    alignment = rounded;
++  }
++  if (bytes >= (size_t)-0x40 - alignment)
++    return 0;
++  size_t overhead = sce_chunk_overhead(m);
++  size_t nb = bytes < 15 - overhead ? MIN_CHUNK_SIZE : sce_pad_request(m, bytes);
++  size_t request = nb + alignment + MIN_CHUNK_SIZE - overhead;
++  char *mem = HeapMallocCall(m, request);
++  if (mem == 0)
++    return 0;
++  void *leader = 0;
++  void *trailer = 0;
++  mchunkptr p = mem2chunk(mem);
++  PREACTION(m);
++  if ((size_t)mem % alignment != 0) {
++    char *aligned = (char *)mem2chunk(((size_t)mem + alignment - 1) & -alignment);
++    char *position = (size_t)(aligned - (char *)p) >= MIN_CHUNK_SIZE ?
++                     aligned : aligned + alignment;
++    mchunkptr newp = (mchunkptr)position;
++    size_t leadsize = position - (char *)p;
++    size_t newsize = chunksize(p) - leadsize;
++    set_inuse(m, newp, newsize);
++    set_inuse(m, p, leadsize);
++    leader = chunk2mem(p);
++    p = newp;
++  }
++  size_t size = chunksize(p);
++  if (size > nb + MIN_CHUNK_SIZE) {
++    size_t remainderSize = size - nb;
++    mchunkptr remainder = chunk_plus_offset(p, nb);
++    set_inuse(m, p, nb);
++    set_inuse(m, remainder, remainderSize);
++    trailer = chunk2mem(remainder);
++  }
++  assert(chunksize(p) >= nb);
++  assert((size_t)chunk2mem(p) % alignment == 0);
++  POSTACTION(m);
++  if (leader != 0)
++    mspace_free(m, leader);
++  if (trailer != 0)
++    mspace_free(m, trailer);
++  return chunk2mem(p);
++}
++
++void *HeapAlign(mstate m, size_t alignment, size_t bytes) {
++  return HeapAlignEngine(m, alignment, bytes);
++}
++
+ void* mspace_memalign(mspace msp, size_t alignment, size_t bytes) {
+-  mstate ms = (mstate)msp;
+-  if (!ok_magic(ms)) {
+-    USAGE_ERROR_ACTION(ms,ms);
++  return HeapAlignEngine((mstate)msp, alignment, bytes);
++}
++
++/* SCE-only four-argument realloc extension. The original space argument is
++   deliberately retained for the final free, even after footer resolution. */
++void *sceClibMspaceReallocalign(mspace msp, void *oldmem, size_t bytes,
++                              size_t alignment) {
++  if (oldmem == 0)
++    return HeapAlign((mstate)msp, alignment, bytes);
++  if ((int)alignment < 0)
+     return 0;
++  size_t mask;
++  if (alignment <= MALLOC_ALIGNMENT) {
++    alignment = MALLOC_ALIGNMENT;
++    mask = MALLOC_ALIGNMENT - 1;
+   }
+-  return internal_memalign(ms, alignment, bytes);
++  else {
++    mask = alignment - 1;
++    if ((alignment & mask) != 0) {
++      size_t rounded = MALLOC_ALIGNMENT;
++      do {
++        rounded <<= 1;
++      } while (rounded < alignment);
++      mask = rounded - 1;
++    }
++  }
++  mchunkptr p = mem2chunk(oldmem);
++  mstate m = (mstate)msp;
++  if (m == 0) {
++    if (p->head & 4)
++      m = (mstate)(next_chunk(p)->prev_foot ^ mparams.magic);
++  }
++  else if ((m->mflags & 16) &&
++           (mstate)(next_chunk(p)->prev_foot ^ mparams.magic) != m) {
++    ABORT;
++  }
++  size_t overhead = sce_chunk_overhead(m);
++  size_t oldsize = chunksize(p);
++  size_t nb = bytes < 15 - overhead ? MIN_CHUNK_SIZE : sce_pad_request(m, bytes);
++  if (((size_t)oldmem & mask) == 0 && nb <= oldsize)
++    return HeapResize(m, oldmem, bytes, 1);
++  void *mem = HeapAlign(m, alignment, bytes);
++  if (mem == 0)
++    return 0;
++  size_t capacity = oldsize - overhead;
++  sceClibMemcpy(mem, oldmem, capacity < bytes ? capacity : bytes);
++  mspace_free(msp, oldmem);
++  return mem;
++}
++
++/* SCE statistics use the upstream debug traversal as a returning validator,
++   rather than aborting on every failed assertion. Runtime footer bits are
++   masked from chunk sizes and no host mallinfo/stdio interface is exposed. */
++#define HEAP_CHECK(condition) do { if (!(condition)) return 1; } while (0)
++
++static inline __attribute__((always_inline))
++int HeapCheckAny(mstate m, mchunkptr p) {
++  HEAP_CHECK(is_aligned(chunk2mem(p)) || p->head == FENCEPOST_HEAD);
++  HEAP_CHECK(ok_address(m, p));
++  return 0;
++}
++
++static inline __attribute__((always_inline))
++int HeapCheckInuse(mstate m, mchunkptr p) {
++  HEAP_CHECK(!HeapCheckAny(m, p));
++  HEAP_CHECK(cinuse(p));
++  HEAP_CHECK(next_pinuse(p));
++  HEAP_CHECK(pinuse(p) || p->prev_foot == chunksize(prev_chunk(p)));
++  return 0;
++}
++
++static inline __attribute__((always_inline))
++int HeapCheckFree(mstate m, mchunkptr p) {
++  size_t size = chunksize(p);
++  mchunkptr next = chunk_plus_offset(p, size);
++  HEAP_CHECK(!HeapCheckAny(m, p));
++  HEAP_CHECK(!cinuse(p));
++  HEAP_CHECK(!pinuse(next));
++  if (p != m->dv && p != m->top) {
++    HEAP_CHECK(size >= MIN_CHUNK_SIZE);
++    HEAP_CHECK((size & CHUNK_ALIGN_MASK) == 0);
++    HEAP_CHECK(is_aligned(chunk2mem(p)));
++    HEAP_CHECK(next->prev_foot == size);
++    HEAP_CHECK(pinuse(p));
++    HEAP_CHECK(next == m->top || cinuse(next));
++    HEAP_CHECK(p->fd->bk == p);
++    HEAP_CHECK(p->bk->fd == p);
++  }
++  return 0;
+ }
+ 
++int HeapCheckTree(mstate m, tchunkptr t) {
++  tchunkptr head = 0;
++  tchunkptr node = t;
++  bindex_t index = t->index;
++  size_t size = chunksize(t);
++  bindex_t expected;
++  compute_tree_index(size, expected);
++  HEAP_CHECK(index == expected);
++  HEAP_CHECK(size >= MIN_LARGE_SIZE);
++  HEAP_CHECK(size >= minsize_for_tree_index(index));
++  HEAP_CHECK(index == NTREEBINS - 1 || size < minsize_for_tree_index(index + 1));
++  do {
++    HEAP_CHECK(!HeapCheckAny(m, (mchunkptr)node));
++    HEAP_CHECK(node->index == index);
++    HEAP_CHECK(chunksize(node) == size);
++    HEAP_CHECK(!cinuse(node));
++    HEAP_CHECK(!next_pinuse(node));
++    HEAP_CHECK(node->fd->bk == node);
++    HEAP_CHECK(node->bk->fd == node);
++    if (node->parent == 0) {
++      HEAP_CHECK(node->child[0] == 0);
++      HEAP_CHECK(node->child[1] == 0);
++    }
++    else {
++      HEAP_CHECK(head == 0);
++      head = node;
++      HEAP_CHECK(node->parent != node);
++      HEAP_CHECK(node->parent->child[0] == node ||
++                 node->parent->child[1] == node ||
++                 *(tbinptr *)node->parent == node);
++      if (node->child[0] != 0) {
++        HEAP_CHECK(node->child[0]->parent == node);
++        HEAP_CHECK(node->child[0] != node);
++        HEAP_CHECK(!HeapCheckTree(m, node->child[0]));
++      }
++      if (node->child[1] != 0) {
++        HEAP_CHECK(node->child[1]->parent == node);
++        HEAP_CHECK(node->child[1] != node);
++        HEAP_CHECK(!HeapCheckTree(m, node->child[1]));
++      }
++      if (node->child[0] != 0 && node->child[1] != 0)
++        HEAP_CHECK(chunksize(node->child[0]) < chunksize(node->child[1]));
++    }
++    node = node->fd;
++  } while (node != t);
++  HEAP_CHECK(head != 0);
++  return 0;
++}
++
++int HeapBinFind(mstate m, mchunkptr chunk) {
++  size_t size = chunksize(chunk);
++  if (is_small(size)) {
++    bindex_t index = small_index(size);
++    sbinptr bin = smallbin_at(m, index);
++    if (smallmap_is_marked(m, index)) {
++      mchunkptr node = bin;
++      do {
++        if (node == chunk)
++          return 1;
++      } while ((node = node->fd) != bin);
++    }
++  }
++  else {
++    bindex_t index;
++    compute_tree_index(size, index);
++    if (treemap_is_marked(m, index)) {
++      tchunkptr tree = *treebin_at(m, index);
++      size_t bits = size << leftshift_for_tree_index(index);
++      while (tree != 0 && chunksize(tree) != size) {
++        tree = tree->child[(bits >> (SIZE_T_BITSIZE - SIZE_T_ONE)) & 1];
++        bits <<= 1;
++      }
++      if (tree != 0) {
++        tchunkptr node = tree;
++        do {
++          if (node == (tchunkptr)chunk)
++            return 1;
++        } while ((node = node->fd) != tree);
++      }
++    }
++  }
++  return 0;
++}
++
++static inline __attribute__((always_inline)) int HeapCheckState(mstate m) {
++  bindex_t index;
++  for (index = 0; index < NSMALLBINS; index++) {
++    sbinptr bin = smallbin_at(m, index);
++    mchunkptr p = bin->bk;
++    int empty = !smallmap_is_marked(m, index);
++    if (p == bin)
++      HEAP_CHECK(empty);
++    if (!empty) {
++      for (; p != bin; p = p->bk) {
++        HEAP_CHECK(!HeapCheckFree(m, p));
++        HEAP_CHECK(small_index(chunksize(p)) == index);
++        HEAP_CHECK(p->bk == bin || chunksize(p->bk) == chunksize(p));
++        mchunkptr next = next_chunk(p);
++        if (next->head != FENCEPOST_HEAD)
++          HEAP_CHECK(!HeapCheckInuse(m, next));
++      }
++    }
++  }
++  for (index = 0; index < NTREEBINS; index++) {
++    tchunkptr tree = *treebin_at(m, index);
++    int empty = !treemap_is_marked(m, index);
++    if (tree == 0)
++      HEAP_CHECK(empty);
++    if (!empty)
++      HEAP_CHECK(!HeapCheckTree(m, tree));
++  }
++  if (m->dvsize != 0) {
++    HEAP_CHECK(!HeapCheckAny(m, m->dv));
++    HEAP_CHECK(m->dvsize == chunksize(m->dv));
++    HEAP_CHECK(m->dvsize >= MIN_CHUNK_SIZE);
++    HEAP_CHECK(!HeapBinFind(m, m->dv));
++  }
++  size_t total = 0;
++  if (m->top != 0) {
++    mchunkptr top = m->top;
++    msegmentptr segment = segment_holding(m, (char *)top);
++    HEAP_CHECK(segment != 0);
++    HEAP_CHECK(!HeapCheckAny(m, top));
++    HEAP_CHECK(chunksize(top) == m->topsize);
++    HEAP_CHECK(m->topsize != 0);
++    HEAP_CHECK(m->topsize == segment->base + segment->size - (char *)top - 0x30);
++    HEAP_CHECK(pinuse(top));
++    HEAP_CHECK(!next_pinuse(top));
++    HEAP_CHECK(!HeapBinFind(m, top));
++    total = m->topsize + 0x30;
++    msegmentptr s = &m->seg;
++    while (s != 0) {
++      mchunkptr p = align_as_chunk(s->base);
++      mchunkptr previous = 0;
++      HEAP_CHECK(pinuse(p));
++      while (segment_holds(s, p) && p != top && p->head != FENCEPOST_HEAD) {
++        total += chunksize(p);
++        if (cinuse(p)) {
++          HEAP_CHECK(!HeapBinFind(m, p));
++          HEAP_CHECK(!HeapCheckInuse(m, p));
++        }
++        else {
++          HEAP_CHECK(p == m->dv || HeapBinFind(m, p));
++          HEAP_CHECK(previous == 0 || cinuse(previous));
++          HEAP_CHECK(!HeapCheckFree(m, p));
++        }
++        previous = p;
++        p = next_chunk(p);
++      }
++      s = s->next;
++    }
++  }
++  HEAP_CHECK(total <= m->footprint);
++  HEAP_CHECK(m->footprint <= m->max_footprint);
++  return 0;
++}
++
++int mspace_malloc_stats(mspace msp, struct MspaceStats *stats) {
++  mstate m = (mstate)msp;
++  flag_t locked = m->mflags & 2;
++  if (locked) {
++    if (sceKernelLockLwMutex(&m->mutex, 1, 0) < 0)
++      ABORT;
++    locked = m->mflags & 2;
++  }
++  int result = HeapCheckState(m);
++  struct MspaceStats value = { 0 };
++  if (result == 0 && (m->top != 0 || malloc_corruption_error_count != 0)) {
++    value.capacity = m->max_footprint;
++    value.footprint = m->footprint;
++    value.peakInUse = m->peak_in_use;
++    value.currentInUse = m->current_in_use;
++    if (m->top != 0) {
++      msegmentptr segment = &m->seg;
++      do {
++        mchunkptr p = align_as_chunk(segment->base);
++        while (segment_holds(segment, p) && p != m->top && p->head != FENCEPOST_HEAD)
++          p = next_chunk(p);
++        segment = segment->next;
++      } while (segment != 0);
++    }
++  }
++  if (locked && sceKernelUnlockLwMutex(&m->mutex, 1) < 0)
++    ABORT;
++  if (result == 0 && stats != 0)
++    *stats = value;
++  return result;
++}
++#undef HEAP_CHECK
++
++#if 0 /* SCE unused allocator API. */
+ void** mspace_independent_calloc(mspace msp, size_t n_elements,
+                                  size_t elem_size, void* chunks[]) {
+   size_t sz = elem_size; /* serves as 1-element array */
+@@ -4785,6 +5482,7 @@
+   return change_mparam(param_number, value);
+ }
+ 
++#endif /* SCE selected mspace API */
+ #endif /* MSPACES */
+ 
+ /* -------------------- Alternative MORECORE functions ------------------- */

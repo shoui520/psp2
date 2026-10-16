@@ -1,0 +1,415 @@
+# Module folders in Sony's source tree. rel: the module's firmware path without the
+# extension (its identity; agent data and target names key on it). folder: where its
+# source lives. evidence: record (debug records), string (paths in the binaries), sdk,
+# pattern (Sony's layout rule, no direct evidence), ours (no Sony name known).
+rel	folder	devpath	firmwares	evidence	detail
+os0/kd/acmgr	sys/internal/kernel/src/acmgr	os0:kd/acmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/authmgr	sys/internal/kernel/src/authmgr	os0:kd/authmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage	sys/internal/kernel/src/bootimage	os0:kd/bootimage.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/appmgr	sys/internal/kernel/src/appmgr	os0:kd/bootimage/appmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../../../usermode/src/fsutil/partition.c (appmgr 3 below internal/: kernel/src)
+os0/kd/bootimage/audio	sys/internal/driver/src/audio	os0:kd/bootimage/audio	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/audioin	sys/internal/driver/src/audioin	os0:kd/bootimage/audioin	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/av_config	sys/internal/driver/src/av_config	os0:kd/bootimage/av_config	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/avcodec	sys/internal/driver/src/avcodec	os0:kd/bootimage/avcodec	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/bbmc	sys/internal/driver/src/bbmc	os0:kd/bootimage/bbmc	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/bt	sys/internal/driver/src/bt	os0:kd/bootimage/bt	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/camera	sys/internal/driver/src/camera	os0:kd/bootimage/camera	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/camera_dummy	sys/internal/driver/src/camera_dummy	os0:kd/bootimage/camera_dummy	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/clockgen	sys/internal/driver/src/clockgen	os0:kd/bootimage/clockgen	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/codec	sys/internal/driver/src/codec	os0:kd/bootimage/codec	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/codec_cx	sys/internal/driver/src/codec_cx	os0:kd/bootimage/codec_cx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/compat	sys/internal/kernel/src/compat	os0:kd/bootimage/compat	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/coredump	sys/internal/kernel/src/coredump	os0:kd/bootimage/coredump	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/ctrl	sys/internal/driver/src/ctrl	os0:kd/bootimage/ctrl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/ds3	sys/internal/driver/src/ds3	os0:kd/bootimage/ds3	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/error	sys/internal/kernel/src/error	os0:kd/bootimage/error	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/fios2	sys/internal/kernel/src/fios2	os0:kd/bootimage/fios2	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/gps	sys/internal/driver/src/gps	os0:kd/bootimage/gps	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/gpu_es4	sys/internal/driver/src/gpu_es4	os0:kd/bootimage/gpu_es4	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../../../../driver/src/gpu/memory/heap.c (gpu_es4 4 below internal/)
+os0/kd/bootimage/gpuinit_es4	sys/internal/driver/src/gpuinit_es4	os0:kd/bootimage/gpuinit_es4	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/hid	sys/internal/driver/src/hid	os0:kd/bootimage/hid	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/hpremote	sys/internal/driver/src/hpremote	os0:kd/bootimage/hpremote	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/idstorage	sys/internal/kernel/src/idstorage	os0:kd/bootimage/idstorage	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/krm	sys/internal/kernel/src/krm/bootimage	os0:kd/bootimage/krm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of krm
+os0/kd/bootimage/motion	sys/internal/driver/src/motion	os0:kd/bootimage/motion	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/motion_dummy	sys/internal/driver/src/motion_dummy	os0:kd/bootimage/motion_dummy	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/mtpif	sys/internal/driver/src/mtpif	os0:kd/bootimage/mtpif	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/net_ps	sys/internal/kernel/src/net_ps	os0:kd/bootimage/net_ps	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/ngs	sys/internal/kernel/src/ngs	os0:kd/bootimage/ngs	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/npdrm	sys/internal/kernel/src/npdrm	os0:kd/bootimage/npdrm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/pfsmgr	sys/internal/kernel/src/pfsmgr	os0:kd/bootimage/pfsmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/post_ss_mgr	sys/internal/kernel/src/post_ss_mgr	os0:kd/bootimage/post_ss_mgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/power	sys/internal/driver/src/power	os0:kd/bootimage/power	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/regmgr	sys/internal/kernel/src/regmgr	os0:kd/bootimage/regmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/sysmodule	sys/internal/kernel/src/sysmodule	os0:kd/bootimage/sysmodule	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/touch	sys/internal/driver/src/touch	os0:kd/bootimage/touch	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/touch_dummy	sys/internal/driver/src/touch_dummy	os0:kd/bootimage/touch_dummy	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/tty2uart	sys/internal/driver/src/tty2uart	os0:kd/bootimage/tty2uart	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/udcd	sys/internal/driver/src/udcd	os0:kd/bootimage/udcd	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/ulobjmgr	sys/internal/kernel/src/ulobjmgr	os0:kd/bootimage/ulobjmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/umass	sys/internal/driver/src/umass	os0:kd/bootimage/umass	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/update_mgr	sys/internal/kernel/src/update_mgr	os0:kd/bootimage/update_mgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/usb_ether_rtl	sys/internal/driver/src/usb_ether_rtl	os0:kd/bootimage/usb_ether_rtl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usb_ether_smsc	sys/internal/driver/src/usb_ether_smsc/bootimage	os0:kd/bootimage/usb_ether_smsc	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usb_ether_smsc
+os0/kd/bootimage/usbaudio	sys/internal/driver/src/usbaudio	os0:kd/bootimage/usbaudio	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usbd	sys/internal/driver/src/usbd	os0:kd/bootimage/usbd	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usbmtp	sys/internal/driver/src/usbmtp	os0:kd/bootimage/usbmtp	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usbpspcm	sys/internal/driver/src/usbpspcm/bootimage	os0:kd/bootimage/usbpspcm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbpspcm
+os0/kd/bootimage/usbserial	sys/internal/driver/src/usbserial	os0:kd/bootimage/usbserial	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usbserv	sys/internal/driver/src/usbserv	os0:kd/bootimage/usbserv	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/usbstor	sys/internal/driver/src/usbstor/bootimage	os0:kd/bootimage/usbstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbstor
+os0/kd/bootimage/usbstorvstor	sys/internal/driver/src/usbstorvstor/bootimage	os0:kd/bootimage/usbstorvstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbstorvstor
+os0/kd/bootimage/vnz_wrapper	sys/internal/driver/src/vnz_wrapper	os0:kd/bootimage/vnz_wrapper	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/bootimage/vshbridge	sys/internal/kernel/src/vshbridge	os0:kd/bootimage/vshbridge	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/bootimage/wlanbt	sys/internal/driver/src/wlanbt	os0:kd/bootimage/wlanbt	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../robin/wlan/wlan_dcm.c (sibling robin/ of the build folder)
+os0/kd/bsod	sys/internal/kernel/src/bsod	os0:kd/bsod.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/buserror	sys/internal/kernel/src/buserror	os0:kd/buserror.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/crashdump	sys/internal/kernel/src/crashdump	os0:kd/crashdump.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/dbgsdio	sys/internal/deci/dbgsdio	os0:kd/dbgsdio.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/dbgusb	sys/internal/deci/dbgusb	os0:kd/dbgusb.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_cpup	sys/internal/deci/deci4p_cpup	os0:kd/deci4p_cpup.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_ctrlp	sys/internal/deci/deci4p_ctrlp	os0:kd/deci4p_ctrlp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_dbgp	sys/internal/deci/deci4p_dbgp	os0:kd/deci4p_dbgp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_dfmgr	sys/internal/deci/deci4p_dfmgr	os0:kd/deci4p_dfmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_drfp	sys/internal/deci/deci4p_drfp	os0:kd/deci4p_drfp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_dtracep	sys/internal/deci/deci4p_dtracep	os0:kd/deci4p_dtracep.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_loadp	sys/internal/deci/deci4p_loadp	os0:kd/deci4p_loadp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_pamp	sys/internal/deci/deci4p_pamp	os0:kd/deci4p_pamp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_rdrfp	sys/internal/deci/deci4p_rdrfp	os0:kd/deci4p_rdrfp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_scttyp	sys/internal/deci/deci4p_scttyp	os0:kd/deci4p_scttyp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sdbgp	sys/internal/deci/deci4p_sdbgp	os0:kd/deci4p_sdbgp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sdeci2p	sys/internal/deci/deci4p_sdeci2p	os0:kd/deci4p_sdeci2p.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sdfctl	sys/internal/deci/deci4p_sdfctl	os0:kd/deci4p_sdfctl.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sdfmgr	sys/internal/deci/deci4p_sdfmgr	os0:kd/deci4p_sdfmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sdrfp	sys/internal/deci/deci4p_sdrfp	os0:kd/deci4p_sdrfp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_sttyp	sys/internal/deci/deci4p_sttyp	os0:kd/deci4p_sttyp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_tmcp	sys/internal/deci/deci4p_tmcp	os0:kd/deci4p_tmcp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_tsmp	sys/internal/deci/deci4p_tsmp	os0:kd/deci4p_tsmp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_ttyp	sys/internal/deci/deci4p_ttyp	os0:kd/deci4p_ttyp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_userp	sys/internal/deci/deci4p_userp	os0:kd/deci4p_userp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/deci4p_vcp	sys/internal/deci/deci4p_vcp	os0:kd/deci4p_vcp.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/display	sys/internal/driver/src/display	os0:kd/display.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/dmacmgr	sys/internal/kernel/src/dmacmgr	os0:kd/dmacmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/enum_wakeup	sys/internal/driver/src/enum_wakeup	os0:kd/enum_wakeup.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/excpmgr	sys/internal/kernel/src/excpmgr	os0:kd/excpmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/exfatfs	sys/internal/kernel/src/exfatfs	os0:kd/exfatfs.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/gcauthmgr	sys/internal/kernel/src/gcauthmgr	os0:kd/gcauthmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/gpucoredump_es4	sys/internal/driver/src/gpucoredump_es4	os0:kd/gpucoredump_es4.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/hdmi	sys/internal/driver/src/hdmi	os0:kd/hdmi.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/intrmgr	sys/internal/kernel/src/intrmgr	os0:kd/intrmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/iofilemgr	sys/internal/kernel/src/iofilemgr	os0:kd/iofilemgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/krm	sys/internal/kernel/src/krm	os0:kd/krm.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/lcd	sys/internal/driver/src/lcd	os0:kd/lcd.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/lowio	sys/internal/driver/src/lowio	os0:kd/lowio.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/magicgate	sys/internal/kernel/src/magicgate	os0:kd/magicgate.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/marlin_hci	sys/internal/driver/src/marlin_hci	os0:kd/marlin_hci.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/mgkeymgr	sys/internal/kernel/src/mgkeymgr	os0:kd/mgkeymgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/mgvideo	sys/internal/driver/src/mgvideo	os0:kd/mgvideo.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/modulemgr	sys/internal/kernel/src/modulemgr	os0:kd/modulemgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/msif	sys/internal/driver/src/msif	os0:kd/msif.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/net_ps_dev	sys/internal/kernel/src/net_ps_dev	os0:kd/net_ps_dev.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/oled	sys/internal/driver/src/oled	os0:kd/oled.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/pamgr	sys/internal/kernel/src/pamgr	os0:kd/pamgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/pcbc	sys/internal/driver/src/pcbc	os0:kd/pcbc.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/processmgr	sys/internal/kernel/src/processmgr	os0:kd/processmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/rtc	sys/internal/driver/src/rtc	os0:kd/rtc.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/sdbgsdio	sys/internal/deci/sdbgsdio	os0:kd/sdbgsdio.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	debug (deci): sys/internal/deci
+os0/kd/sdif	sys/internal/driver/src/sdif	os0:kd/sdif.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/sdstor	sys/internal/driver/src/sdstor	os0:kd/sdstor.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/sm_comm	sys/internal/kernel/src/sm_comm	os0:kd/sm_comm.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/smsc_proxy	sys/internal/driver/src/smsc_proxy	os0:kd/smsc_proxy.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/ss_mgr	sys/internal/kernel/src/ss_mgr	os0:kd/ss_mgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/syscon	sys/internal/driver/src/syscon	os0:kd/syscon.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/syslibtrace	sys/internal/kernel/src/syslibtrace	os0:kd/syslibtrace.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/sysmem	sys/internal/kernel/src/sysmem	os0:kd/sysmem.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/sysstatemgr	sys/internal/kernel/src/sysstatemgr	os0:kd/sysstatemgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/systimer	sys/internal/kernel/src/systimer	os0:kd/systimer.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/threadmgr	sys/internal/kernel/src/threadmgr	os0:kd/threadmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/usb_ether_smsc	sys/internal/driver/src/usb_ether_smsc	os0:kd/usb_ether_smsc.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/usbdev_serial	sys/internal/driver/src/usbdev_serial	os0:kd/usbdev_serial.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/usbpspcm	sys/internal/driver/src/usbpspcm	os0:kd/usbpspcm.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/usbstor	sys/internal/driver/src/usbstor	os0:kd/usbstor.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/usbstormg	sys/internal/driver/src/usbstormg	os0:kd/usbstormg.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/usbstorvstor	sys/internal/driver/src/usbstorvstor	os0:kd/usbstorvstor.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/vipimg	sys/internal/driver/src/vipimg	os0:kd/vipimg.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/vnzimg	sys/internal/driver/src/vnzimg	os0:kd/vnzimg.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/kd/wlanbt_robin_img_ax	sys/internal/driver/src/wlanbt_robin_img_ax	os0:kd/wlanbt_robin_img_ax.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
+os0/psp2bootconfig	sys/internal/kernel/src/psp2bootconfig	os0:psp2bootconfig.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	boot configuration
+os0/psp2config_dolce	sys/internal/kernel/src/psp2config/dolce	os0:psp2config_dolce.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	one component, two products (vita, dolce)
+os0/psp2config_vita	sys/internal/kernel/src/psp2config/vita	os0:psp2config_vita.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	one component, two products (vita, dolce)
+os0/ue/cui_setupper	sys/internal/usermode/src/cui_setupper	os0:ue/cui_setupper.self	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	string	updater_core in sys/internal/usermode/src; vsh/paf/src/std
+os0/ue/safemode	vsh/app/safemode	os0:ue/safemode.self	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/system_update, vsh/paf/src/std
+os0/us/avcodec_us	sys/internal/usermode/src/avcodec_us	os0:us/avcodec_us.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
+os0/us/driver_us	sys/internal/usermode/src/driver_us	os0:us/driver_us.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
+os0/us/libgpu_es4	sys/internal/usermode/src/libgpu_es4	os0:us/libgpu_es4.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
+os0/us/libgxm_es4	sys/internal/usermode/src/libgxm_es4	os0:us/libgxm_es4.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
+os0/us/libkernel	sys/internal/usermode/src/libkernel	os0:us/libkernel.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
+pd0/app/NPXS10007/eboot	wp/prog/wp	pd0:app/NPXS10007/eboot.bin	3.65-CEX	string	D:/sce_prj/psp2/wp/prog/wp/PSP2_Release/wp.self (build folder prog/wp; sources prog/{app,common,control,graphics,np,sound})
+pup/cui_setupper	sys/internal/usermode/src/cui_setupper/pup	pup:cui_setupper.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	same code as os0:ue/cui_setupper
+pup/psp2swu	sys/internal/usermode/src/psp2swu	pup:psp2swu.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	updater_core in sys/internal/usermode/src; vsh/paf/src/graphics
+slb2/kbl/SceDriverTzs	sys/internal/secure/driver_tzs	slb2:kbl/SceDriverTzs	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	ours	TrustZone-only module; no Sony folder known
+slb2/kbl/SceExcpmgr	sys/internal/kernel/src/excpmgr/tzs	slb2:kbl/SceExcpmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	TrustZone build of excpmgr
+slb2/kbl/SceKernelBusError	sys/internal/kernel/src/buserror/tzs	slb2:kbl/SceKernelBusError	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	TrustZone build of buserror
+slb2/kbl/SceKernelIntrMgr	sys/internal/kernel/src/intrmgr/tzs	slb2:kbl/SceKernelIntrMgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	TrustZone build of intrmgr
+slb2/kbl/SceSblSmsched	sys/internal/secure/sbl_smsched	slb2:kbl/SceSblSmsched	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	ours	TrustZone-only module; no Sony folder known
+slb2/kbl/SceSysmem	sys/internal/kernel/src/sysmem/tzs	slb2:kbl/SceSysmem	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	dlmalloc/ memblock/ records as os0 sysmem
+slb2/nskbl	sys/internal/kernel/src/kernel_boot_loader/nskbl	slb2:nskbl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	sysmem dlmalloc/ memblock/ records; slb2 kernel_boot_loader
+slb2/skbl	sys/internal/kernel/src/kernel_boot_loader/skbl	slb2:skbl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	sysmem dlmalloc/ memblock/ records; slb2 kernel_boot_loader
+vs0/app/NPXS10000/eboot	vsh/app/near/eboot	vs0:app/NPXS10000/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/near (9 paths)
+vs0/app/NPXS10001/eboot	vsh/app/party/eboot	vs0:app/NPXS10001/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party (9 paths)
+vs0/app/NPXS10001/np_party_app	vsh/app/party/np_party_app	vs0:app/NPXS10001/np_party_app.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party (9 paths)
+vs0/app/NPXS10002/eboot	vsh/app/store/eboot	vs0:app/NPXS10002/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/store (111 paths)
+vs0/app/NPXS10003/eboot	vsh/app/NPXS10003/eboot	vs0:app/NPXS10003/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10004/eboot	vsh/app/photocam/eboot	vs0:app/NPXS10004/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/photocam (21 paths)
+vs0/app/NPXS10006/eboot	vsh/app/NPXS10006/eboot	vs0:app/NPXS10006/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10008/eboot	vsh/app/trophy/eboot	vs0:app/NPXS10008/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/trophy (57 paths)
+vs0/app/NPXS10009/eboot	vsh/app/musicbrowser/eboot	vs0:app/NPXS10009/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/musicbrowser (3 paths)
+vs0/app/NPXS10010/eboot	vsh/app/videoplayer/eboot	vs0:app/NPXS10010/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/videoplayer (99 paths)
+vs0/app/NPXS10012/eboot	vsh/app/remoteplay/eboot	vs0:app/NPXS10012/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/remoteplay (18 paths)
+vs0/app/NPXS10013/eboot	vsh/app/ps4link/eboot	vs0:app/NPXS10013/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
+vs0/app/NPXS10013/gaikai-player	vsh/app/ps4link/gaikai-player	vs0:app/NPXS10013/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
+vs0/app/NPXS10013/libSceSecondScreen	vsh/app/ps4link/libSceSecondScreen	vs0:app/NPXS10013/libSceSecondScreen.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
+vs0/app/NPXS10014/eboot	vsh/app/mail/eboot	vs0:app/NPXS10014/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/mail (177 paths)
+vs0/app/NPXS10015/eboot	vsh/app/settings/eboot	vs0:app/NPXS10015/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/settings (129 paths)
+vs0/app/NPXS10015/system_settings_core	vsh/app/settings/system_settings_core	vs0:app/NPXS10015/system_settings_core.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/settings (129 paths)
+vs0/app/NPXS10018/eboot	vsh/app/NPXS10018/eboot	vs0:app/NPXS10018/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10021/eboot	vsh/app/telephony/eboot	vs0:app/NPXS10021/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (48 paths)
+vs0/app/NPXS10021/tel_reg	vsh/app/telephony/tel_reg	vs0:app/NPXS10021/tel_reg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (48 paths)
+vs0/app/NPXS10023/eboot	vsh/app/NPXS10023/eboot	vs0:app/NPXS10023/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10024/eboot	vsh/app/NPXS10024/eboot	vs0:app/NPXS10024/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10025/eboot	vsh/app/NPXS10025/eboot	vs0:app/NPXS10025/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10026/eboot	vsh/app/host_collabo/eboot	vs0:app/NPXS10026/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/host_collabo (18 paths)
+vs0/app/NPXS10027/eboot	vsh/app/NPXS10027/eboot	vs0:app/NPXS10027/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10028/eboot	vsh/app/NPXS10028/eboot	vs0:app/NPXS10028/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10028/pcff	vsh/app/NPXS10028/pcff	vs0:app/NPXS10028/pcff.skprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10029/eboot	vsh/app/NPXS10029/eboot	vs0:app/NPXS10029/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10030/eboot	vsh/app/NPXS10030/eboot	vs0:app/NPXS10030/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10031/eboot	vsh/app/NPXS10031/eboot	vs0:app/NPXS10031/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10032/eboot	vsh/app/NPXS10032/eboot	vs0:app/NPXS10032/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10036/eboot	vsh/app/NPXS10036/eboot	vs0:app/NPXS10036/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10063/eboot	vsh/app/NPXS10063/eboot	vs0:app/NPXS10063/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10065/eboot	vsh/app/NPXS10065/eboot	vs0:app/NPXS10065/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10065/grief_report_dialog	vsh/app/NPXS10065/grief_report_dialog	vs0:app/NPXS10065/grief_report_dialog.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10068/eboot	vsh/app/NPXS10068/eboot	vs0:app/NPXS10068/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10072/eboot	vsh/app/email/eboot	vs0:app/NPXS10072/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/email (513 paths)
+vs0/app/NPXS10072/email_engine	vsh/app/email/email_engine	vs0:app/NPXS10072/email_engine.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/email (513 paths)
+vs0/app/NPXS10073/eboot	vsh/app/NPXS10073/eboot	vs0:app/NPXS10073/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10077/eboot	vsh/app/NPXS10077/eboot	vs0:app/NPXS10077/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10078/eboot	vsh/app/NPXS10078/eboot	vs0:app/NPXS10078/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10079/eboot	vsh/app/NPXS10079/eboot	vs0:app/NPXS10079/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10080/eboot	vsh/app/NPXS10080/eboot	vs0:app/NPXS10080/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10081/eboot	vsh/app/NPXS10081/eboot	vs0:app/NPXS10081/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10082/spawn	vsh/app/NPXS10082/spawn	vs0:app/NPXS10082/spawn.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10083/eboot	vsh/app/NPXS10083/eboot	vs0:app/NPXS10083/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10084/eboot	vsh/app/NPXS10084/eboot	vs0:app/NPXS10084/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10085/eboot	vsh/app/NPXS10085/eboot	vs0:app/NPXS10085/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10091/eboot	vsh/app/NPXS10091/eboot	vs0:app/NPXS10091/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10092/eboot	vsh/app/NPXS10092/eboot	vs0:app/NPXS10092/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10094/eboot	vsh/app/NPXS10094/eboot	vs0:app/NPXS10094/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10095/eboot	vsh/app/panorama/eboot	vs0:app/NPXS10095/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
+vs0/app/NPXS10098/eboot	vsh/app/ps4link/NPXS10098/eboot	vs0:app/NPXS10098/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths); same folder as vs0/app/NPXS10013/eboot
+vs0/app/NPXS10098/gaikai-player	vsh/app/ps4link/NPXS10098/gaikai-player	vs0:app/NPXS10098/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths); same folder as vs0/app/NPXS10013/gaikai-player
+vs0/app/NPXS10100/eboot	vsh/app/NPXS10100/eboot	vs0:app/NPXS10100/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10101/eboot	vsh/app/NPXS10101/eboot	vs0:app/NPXS10101/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10103/ds4_pairing	vsh/app/NPXS10103/ds4_pairing	vs0:app/NPXS10103/ds4_pairing.self	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10104/eboot	vsh/app/NPXS10104/eboot	vs0:app/NPXS10104/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
+vs0/data/external/webcore/ScePsp2Compat	third-party-libs-psp2/webcore/ScePsp2Compat	vs0:data/external/webcore/ScePsp2Compat.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	third-party-libs-psp2.release_03.500.Release
+vs0/data/external/webcore/SceWebKitModule	third-party-libs-psp2/webcore/SceWebKitModule	vs0:data/external/webcore/SceWebKitModule.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
+vs0/data/external/webcore/jx_web_filtering	third-party-libs-psp2/webcore/jx_web_filtering	vs0:data/external/webcore/jx_web_filtering.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
+vs0/data/external/webcore/vita_jsextobj	third-party-libs-psp2/webcore/vita_jsextobj	vs0:data/external/webcore/vita_jsextobj.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
+vs0/sys/external/activity_db	sys/internal/usermode/src/activity_db	vs0:sys/external/activity_db.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/adhoc_matching	sys/internal/usermode/src/adhoc_matching	vs0:sys/external/adhoc_matching.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/apputil	sys/internal/usermode/src/apputil	vs0:sys/external/apputil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/apputil_ext	sys/internal/usermode/src/apputil_ext	vs0:sys/external/apputil_ext.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/audiocodec	sys/internal/usermode/src/audiocodec	vs0:sys/external/audiocodec.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/avcdec_for_player	sys/internal/usermode/src/avcdec_for_player	vs0:sys/external/avcdec_for_player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/bXCe	sys/internal/usermode/src/bXCe	vs0:sys/external/bXCe.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/bgapputil	sys/internal/usermode/src/bgapputil	vs0:sys/external/bgapputil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/common_gui_dialog	sys/internal/usermode/src/common_gui_dialog	vs0:sys/external/common_gui_dialog.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/dbrecovery_utility	sys/internal/usermode/src/dbrecovery_utility	vs0:sys/external/dbrecovery_utility.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/dbutil	sys/internal/usermode/src/dbutil	vs0:sys/external/dbutil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/friend_select	sys/internal/usermode/src/friend_select	vs0:sys/external/friend_select.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/incoming_dialog	sys/internal/usermode/src/incoming_dialog	vs0:sys/external/incoming_dialog.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/ini_file_processor	sys/internal/usermode/src/ini_file_processor	vs0:sys/external/ini_file_processor.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceBeisobmf	sys/internal/usermode/src/libSceBeisobmf	vs0:sys/external/libSceBeisobmf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceBemp2sys	sys/internal/usermode/src/libSceBemp2sys	vs0:sys/external/libSceBemp2sys.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceCompanionUtil	sys/internal/usermode/src/libSceCompanionUtil	vs0:sys/external/libSceCompanionUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceDtcpIp	sys/internal/usermode/src/libSceDtcpIp	vs0:sys/external/libSceDtcpIp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceFt2	sys/internal/usermode/src/libSceFt2	vs0:sys/external/libSceFt2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceJson	sys/internal/usermode/src/libSceJson	vs0:sys/external/libSceJson.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceMp4Rec	sys/internal/usermode/src/libSceMp4Rec	vs0:sys/external/libSceMp4Rec.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceMusicExport	sys/internal/usermode/src/libSceMusicExport	vs0:sys/external/libSceMusicExport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceNearDialogUtil	sys/internal/usermode/src/libSceNearDialogUtil	vs0:sys/external/libSceNearDialogUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceNearUtil	sys/internal/usermode/src/libSceNearUtil	vs0:sys/external/libSceNearUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libScePhotoExport	sys/internal/usermode/src/libScePhotoExport	vs0:sys/external/libScePhotoExport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libScePromoterUtil	sys/internal/usermode/src/libScePromoterUtil	vs0:sys/external/libScePromoterUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceScreenShot	sys/internal/usermode/src/libSceScreenShot	vs0:sys/external/libSceScreenShot.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceShutterSound	sys/internal/usermode/src/libSceShutterSound	vs0:sys/external/libSceShutterSound.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceSqlite	vsh/app/common/src/sqlite_sdk	vs0:sys/external/libSceSqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/sqlite_sdk (45 paths)
+vs0/sys/external/libSceTelephonyUtil	sys/internal/usermode/src/libSceTelephonyUtil	vs0:sys/external/libSceTelephonyUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceTeleportClient	sys/internal/usermode/src/libSceTeleportClient	vs0:sys/external/libSceTeleportClient.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceTeleportServer	sys/internal/usermode/src/libSceTeleportServer	vs0:sys/external/libSceTeleportServer.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceVideoExport	sys/internal/usermode/src/libSceVideoExport	vs0:sys/external/libSceVideoExport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceVideoSearchEmpr	sys/internal/usermode/src/libSceVideoSearchEmpr	vs0:sys/external/libSceVideoSearchEmpr.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceXml	sys/internal/usermode/src/libSceXml	vs0:sys/external/libSceXml.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libatrac	sys/internal/usermode/src/libatrac	vs0:sys/external/libatrac.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libc	sys/internal/usermode/src/libc	vs0:sys/external/libc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libcdlg	vsh/cdlg/src/cdlg_mgr	vs0:sys/external/libcdlg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/cdlg_mgr (6 paths)
+vs0/sys/external/libcdlg_calendar_review	vsh/cdlg/src/calendar_review_dialog	vs0:sys/external/libcdlg_calendar_review.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/calendar_review_dialog (9 paths)
+vs0/sys/external/libcdlg_cameraimport	vsh/cdlg/src/cameraimport_dialog	vs0:sys/external/libcdlg_cameraimport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_checkout	vsh/cdlg/src/checkout_dialog	vs0:sys/external/libcdlg_checkout.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_companion	vsh/cdlg/src/companion_dialog	vs0:sys/external/libcdlg_companion.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/companion_dialog (9 paths)
+vs0/sys/external/libcdlg_compat	vsh/cdlg/src/compat_dialog	vs0:sys/external/libcdlg_compat.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_cross_controller	vsh/cdlg/src/cross_controller_dialog	vs0:sys/external/libcdlg_cross_controller.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_friendlist	vsh/cdlg/src/friendlist_dialog	vs0:sys/external/libcdlg_friendlist.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_friendlist2	vsh/cdlg/src/friendlist2_dialog	vs0:sys/external/libcdlg_friendlist2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_game_custom_data	vsh/cdlg/src/game_custom_data_dialog	vs0:sys/external/libcdlg_game_custom_data.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_game_custom_data_impl	vsh/cdlg/src/game_custom_data_impl_dialog	vs0:sys/external/libcdlg_game_custom_data_impl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_ime	vsh/cdlg/src/ime_dialog	vs0:sys/external/libcdlg_ime.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/ime_dialog (3 paths)
+vs0/sys/external/libcdlg_invitation	vsh/cdlg/src/invitation_dialog	vs0:sys/external/libcdlg_invitation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_invitation_impl	vsh/cdlg/src/invitation_impl_dialog	vs0:sys/external/libcdlg_invitation_impl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_main	vsh/cdlg/src/cdlg_main	vs0:sys/external/libcdlg_main.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/cdlg_main (3 paths)
+vs0/sys/external/libcdlg_msg	vsh/cdlg/src/msg_dialog	vs0:sys/external/libcdlg_msg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/msg_dialog (3 paths)
+vs0/sys/external/libcdlg_near	vsh/cdlg/src/near_dialog	vs0:sys/external/libcdlg_near.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_netcheck	vsh/cdlg/src/netcheck_dialog	vs0:sys/external/libcdlg_netcheck.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/netcheck_dialog (3 paths)
+vs0/sys/external/libcdlg_np_message	vsh/cdlg/src/np_message_dialog	vs0:sys/external/libcdlg_np_message.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_np_sns_fb	vsh/cdlg/src/np_sns_fb_dialog	vs0:sys/external/libcdlg_np_sns_fb.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_np_trophy_setup	vsh/cdlg/src/trophysetup_dialog	vs0:sys/external/libcdlg_np_trophy_setup.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/trophysetup_dialog (12 paths)
+vs0/sys/external/libcdlg_npeula	vsh/cdlg/src/npeula_dialog	vs0:sys/external/libcdlg_npeula.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_npprofile2	vsh/cdlg/src/npprofile2_dialog	vs0:sys/external/libcdlg_npprofile2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_photoimport	vsh/cdlg/src/photoimport_dialog	vs0:sys/external/libcdlg_photoimport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/photoimport_dialog (3 paths)
+vs0/sys/external/libcdlg_photoreview	vsh/cdlg/src/photoreview_dialog	vs0:sys/external/libcdlg_photoreview.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/photoreview_dialog (3 paths)
+vs0/sys/external/libcdlg_pocketstation	vsh/cdlg/src/pocketstation_dialog	vs0:sys/external/libcdlg_pocketstation.suprx	3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_remote_osk	vsh/cdlg/src/remote_osk_dialog	vs0:sys/external/libcdlg_remote_osk.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_savedata	vsh/cdlg/src/savedata_dialog	vs0:sys/external/libcdlg_savedata.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/savedata_dialog (3 paths)
+vs0/sys/external/libcdlg_tw_login	vsh/cdlg/src/tw_login_dialog	vs0:sys/external/libcdlg_tw_login.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_twitter	vsh/cdlg/src/twitter_dialog	vs0:sys/external/libcdlg_twitter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	libcdlg_<x> -> vsh/cdlg/src/<x>_dialog
+vs0/sys/external/libcdlg_videoimport	vsh/cdlg/src/videoimport_dialog	vs0:sys/external/libcdlg_videoimport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/cdlg/src/videoimport_dialog (9 paths)
+vs0/sys/external/libclipboard	sys/internal/usermode/src/libclipboard	vs0:sys/external/libclipboard.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libcodecengine_perf	sys/internal/usermode/src/libcodecengine_perf	vs0:sys/external/libcodecengine_perf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libdbg	sys/internal/usermode/src/libdbg	vs0:sys/external/libdbg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libfiber	sys/internal/usermode/src/fiber	vs0:sys/external/libfiber.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	sys/internal/usermode/src/fiber (9 paths)
+vs0/sys/external/libfios2	sys/internal/usermode/src/fios2	vs0:sys/external/libfios2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	sys/internal/usermode/src/fios2 (30 paths)
+vs0/sys/external/libg729	sys/internal/usermode/src/libg729	vs0:sys/external/libg729.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libgameupdate	sys/internal/usermode/src/libgameupdate	vs0:sys/external/libgameupdate.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libgxm_dbg_es4	sys/internal/usermode/src/libgxm_dbg_es4	vs0:sys/external/libgxm_dbg_es4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libhandwriting	sys/internal/usermode/src/libhandwriting	vs0:sys/external/libhandwriting.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libhttp	sys/internal/usermode/src/libhttp	vs0:sys/external/libhttp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libime	sys/internal/usermode/src/libime	vs0:sys/external/libime.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libipmi_nongame	vsh/lowlayer/src/ipmi_nongame	vs0:sys/external/libipmi_nongame.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vsh/lowlayer/src/ipmi
+vs0/sys/external/liblocation	sys/internal/usermode/src/liblocation	vs0:sys/external/liblocation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/liblocation_extension	sys/internal/usermode/src/liblocation_extension	vs0:sys/external/liblocation_extension.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/liblocation_factory	sys/internal/usermode/src/liblocation_factory	vs0:sys/external/liblocation_factory.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/liblocation_internal	sys/internal/usermode/src/liblocation_internal	vs0:sys/external/liblocation_internal.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libmln	sys/internal/usermode/src/libmln	vs0:sys/external/libmln.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libmlnapplib	sys/internal/usermode/src/libmlnapplib	vs0:sys/external/libmlnapplib.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libmlndownloader	sys/internal/usermode/src/libmlndownloader	vs0:sys/external/libmlndownloader.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libnaac	sys/internal/usermode/src/libnaac	vs0:sys/external/libnaac.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libnet	sys/internal/usermode/src/libnet	vs0:sys/external/libnet.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libnetctl	sys/internal/usermode/src/libnetctl	vs0:sys/external/libnetctl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libngs	sys/internal/usermode/src/libngs	vs0:sys/external/libngs.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libpaf	vsh/paf	vs0:sys/external/libpaf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/paf/src/{graphics,misc,std}
+vs0/sys/external/libpaf_web_map_view	vsh/paf/web_map_view	vs0:sys/external/libpaf_web_map_view.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	PAF component
+vs0/sys/external/libperf	sys/internal/usermode/src/libperf	vs0:sys/external/libperf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libpgf	sys/internal/usermode/src/libpgf	vs0:sys/external/libpgf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libpvf	sys/internal/usermode/src/libpvf	vs0:sys/external/libpvf.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/librazorcapture_es4	sys/internal/usermode/src/librazorcapture_es4	vs0:sys/external/librazorcapture_es4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/librazorhud_es4	sys/internal/usermode/src/librazorhud_es4	vs0:sys/external/librazorhud_es4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/librudp	sys/internal/usermode/src/librudp	vs0:sys/external/librudp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libsas	sys/internal/usermode/src/libsas	vs0:sys/external/libsas.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libsceavplayer	sys/internal/usermode/src/libsceavplayer	vs0:sys/external/libsceavplayer.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libscejpegarm	sys/internal/usermode/src/libscejpegarm	vs0:sys/external/libscejpegarm.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libscejpegencarm	sys/internal/usermode/src/libscejpegencarm	vs0:sys/external/libscejpegencarm.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libscemp4	sys/internal/usermode/src/libscemp4	vs0:sys/external/libscemp4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libshellsvc	vsh/lowlayer/src/shell_svc	vs0:sys/external/libshellsvc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/lowlayer/src/shell_svc (6 paths)
+vs0/sys/external/libssl	sys/internal/usermode/src/libssl	vs0:sys/external/libssl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libsulpha	sys/internal/usermode/src/libsulpha	vs0:sys/external/libsulpha.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libsystemgesture	sys/internal/usermode/src/libsystemgesture	vs0:sys/external/libsystemgesture.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libult	sys/internal/usermode/src/ult	vs0:sys/external/libult.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	sys/internal/usermode/src/ult (645 paths)
+vs0/sys/external/libvoice	sys/internal/usermode/src/libvoice	vs0:sys/external/libvoice.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libvoiceqos	sys/internal/usermode/src/libvoiceqos	vs0:sys/external/libvoiceqos.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/livearea_util	sys/internal/usermode/src/livearea_util	vs0:sys/external/livearea_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/mail_api_for_local_libc	sys/internal/usermode/src/mail_api_for_local_libc	vs0:sys/external/mail_api_for_local_libc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/near_profile	sys/internal/usermode/src/near_profile	vs0:sys/external/near_profile.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/notification_util	sys/internal/usermode/src/notification_util	vs0:sys/external/notification_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/np_activity	vsh/app/common/src/np/activity	vs0:sys/external/np_activity.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/np/activity (named in 5 binaries)
+vs0/sys/external/np_activity_sdk	vsh/app/common/src/np/np_activity_sdk	vs0:sys/external/np_activity_sdk.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_basic	vsh/app/common/src/np/npbasic	vs0:sys/external/np_basic.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/np/npbasic (named in 4 binaries)
+vs0/sys/external/np_commerce2	vsh/app/common/src/np/np_commerce2	vs0:sys/external/np_commerce2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_common	vsh/app/common/src/np/np_common	vs0:sys/external/np_common.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_common_ps4	vsh/app/common/src/np/np_common_ps4	vs0:sys/external/np_common_ps4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/np/np_common_ps4 (named in 1 binaries)
+vs0/sys/external/np_friend_privacylevel	vsh/app/common/src/np/np_friend_privacylevel	vs0:sys/external/np_friend_privacylevel.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_kdc	vsh/app/common/src/np/np_kdc	vs0:sys/external/np_kdc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_manager	vsh/app/common/src/np/np_manager	vs0:sys/external/np_manager.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_matching2	vsh/app/common/src/np/np_matching2	vs0:sys/external/np_matching2.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_message	vsh/app/common/src/np/np_message	vs0:sys/external/np_message.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_message_contacts	vsh/app/common/src/np/np_message_contacts	vs0:sys/external/np_message_contacts.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_message_dialog_impl	vsh/app/common/src/np/np_message_dialog_impl	vs0:sys/external/np_message_dialog_impl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_message_padding	vsh/app/common/src/np/np_message_padding	vs0:sys/external/np_message_padding.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_party	vsh/app/common/src/np/np_party	vs0:sys/external/np_party.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_ranking	vsh/app/common/src/np/np_ranking	vs0:sys/external/np_ranking.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_signaling	vsh/app/common/src/np/np_signaling	vs0:sys/external/np_signaling.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_sns_facebook	vsh/app/common/src/np/np_sns_facebook	vs0:sys/external/np_sns_facebook.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_trophy	vsh/app/common/src/np/np_trophy	vs0:sys/external/np_trophy.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_tus	vsh/app/common/src/np/np_tus	vs0:sys/external/np_tus.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_utility	vsh/app/common/src/np/np_utility	vs0:sys/external/np_utility.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_webapi	vsh/app/common/src/np/np_webapi	vs0:sys/external/np_webapi.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/np/np_webapi (named in 1 binaries)
+vs0/sys/external/party_member_list	sys/internal/usermode/src/party_member_list	vs0:sys/external/party_member_list.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/psmkdc	sys/internal/usermode/src/psmkdc	vs0:sys/external/psmkdc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/pspnet_adhoc	sys/internal/usermode/src/pspnet_adhoc	vs0:sys/external/pspnet_adhoc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/signin_ext	sys/internal/usermode/src/signin_ext	vs0:sys/external/signin_ext.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/sqlite	sys/internal/usermode/src/sqlite	vs0:sys/external/sqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/store_checkout_plugin	sys/internal/usermode/src/store_checkout_plugin	vs0:sys/external/store_checkout_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/trigger_util	sys/internal/usermode/src/trigger_util	vs0:sys/external/trigger_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/web_ui_plugin	sys/internal/usermode/src/web_ui_plugin	vs0:sys/external/web_ui_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/vsh/common/app_settings	vsh/app/common/src/app_settings	vs0:vsh/common/app_settings.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/auth_plugin	vsh/app/common/src/auth_plugin	vs0:vsh/common/auth_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/av_content_handler	vsh/app/common/src/av_content_handler	vs0:vsh/common/av_content_handler.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/backup_restore	vsh/app/common/src/backup_restore	vs0:vsh/common/backup_restore.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/content_operation	vsh/app/common/src/content_operation	vs0:vsh/common/content_operation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/dbrecovery_plugin	vsh/app/common/src/dbrecovery_plugin	vs0:vsh/common/dbrecovery_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/dbsetup	vsh/app/common/src/dbsetup	vs0:vsh/common/dbsetup.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libBEAVCorePlayer	vsh/app/common/src/libBEAVCorePlayer	vs0:vsh/common/libBEAVCorePlayer.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libFflMp4	vsh/app/common/src/libFflMp4	vs0:vsh/common/libFflMp4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libSenvuabsFFsdk	vsh/app/common/src/libSenvuabsFFsdk	vs0:vsh/common/libSenvuabsFFsdk.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libical	vsh/app/common/src/libical	vs0:vsh/common/libical.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libicalss	vsh/app/common/src/libicalss	vs0:vsh/common/libicalss.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libmarlin	vsh/app/common/src/libmarlin	vs0:vsh/common/libmarlin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libmarlin_pb	vsh/app/common/src/libmarlin_pb	vs0:vsh/common/libmarlin_pb.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libmarlindownloader	vsh/app/common/src/libmarlindownloader	vs0:vsh/common/libmarlindownloader.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libmtp	vsh/app/common/src/mtp	vs0:vsh/common/libmtp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/mtp (9 paths)
+vs0/vsh/common/libmtphttp	vsh/app/common/src/libmtphttp	vs0:vsh/common/libmtphttp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libmtphttp_wrapper	vsh/app/common/src/libmtphttp_wrapper	vs0:vsh/common/libmtphttp_wrapper.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libvideoprofiler	vsh/app/common/src/libvideoprofiler	vs0:vsh/common/libvideoprofiler.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mail_api_for_local	vsh/app/common/src/mail_api_for_local	vs0:vsh/common/mail_api_for_local.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/AACPromoter	vsh/app/common/src/mms/AACPromoter	vs0:vsh/common/mms/AACPromoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/Mp3Promoter	vsh/app/common/src/mms/Mp3Promoter	vs0:vsh/common/mms/Mp3Promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/MsvPromoter	vsh/app/common/src/mms/MsvPromoter	vs0:vsh/common/mms/MsvPromoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/RiffPromoter	vsh/app/common/src/mms/RiffPromoter	vs0:vsh/common/mms/RiffPromoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/SensMe	vsh/app/common/src/mms/SensMe	vs0:vsh/common/mms/SensMe.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/bmp_promoter	vsh/app/common/src/mms/bmp_promoter	vs0:vsh/common/mms/bmp_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/gif_promoter	vsh/app/common/src/mms/gif_promoter	vs0:vsh/common/mms/gif_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/jpeg_promoter	vsh/app/common/src/mms/jpeg_promoter	vs0:vsh/common/mms/jpeg_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/meta_gen	vsh/app/common/src/mms/meta_gen	vs0:vsh/common/mms/meta_gen.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/png_promoter	vsh/app/common/src/mms/png_promoter	vs0:vsh/common/mms/png_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mms/tiff_promoter	vsh/app/common/src/mms/tiff_promoter	vs0:vsh/common/mms/tiff_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mtp_client	vsh/app/common/src/mtp_client	vs0:vsh/common/mtp_client.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mtpr3	vsh/app/common/src/mtpr3	vs0:vsh/common/mtpr3.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/np_grief_report	vsh/app/common/src/np_grief_report	vs0:vsh/common/np_grief_report.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/game/gamecard_installer_plugin	vsh/app/game/gamecard_installer_plugin	vs0:vsh/game/gamecard_installer_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/game/gamedata_plugin	vsh/app/game/gamedata_plugin	vs0:vsh/game/gamedata_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/initialsetup/initialsetup	vsh/app/initialsetup	vs0:vsh/initialsetup/initialsetup.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<app> -> vsh/app/<app>
+vs0/vsh/online_storage/online_storage_plugin	vsh/app/online_storage/online_storage_plugin	vs0:vsh/online_storage/online_storage_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/auth_reset_plugin	vsh/app/shell/auth_reset_plugin	vs0:vsh/shell/auth_reset_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/idu_update_plugin	vsh/app/shell/idu_update_plugin	vs0:vsh/shell/idu_update_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/ime_plugin	vsh/app/shell/ime_plugin	vs0:vsh/shell/ime_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/impose_net_plugin	vsh/app/shell/impose_net_plugin	vs0:vsh/shell/impose_net_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/liblocation_permission	vsh/app/shell/liblocation_permission	vs0:vsh/shell/liblocation_permission.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/livespace_db	vsh/app/shell/livespace_db	vs0:vsh/shell/livespace_db.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/location_dialog_plugin	vsh/app/shell/location_dialog_plugin	vs0:vsh/shell/location_dialog_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/shell	vsh/app/shell	vs0:vsh/shell/shell.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src
+vs0/vsh/shell/telephony/initial_check/tel_initial_check_plugin	vsh/app/telephony/tel_initial_check_plugin	vs0:vsh/shell/telephony/initial_check/tel_initial_check_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (36 paths)
+vs0_tarpatch/app/NPXS10095/stitch_core_prx	vsh/app/panorama/stitch_core_prx	vs0_tarpatch:app/NPXS10095/stitch_core_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
+vs0_tarpatch/app/NPXS10095/stitch_prx	vsh/app/panorama/stitch_prx	vs0_tarpatch:app/NPXS10095/stitch_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
+vs0_tarpatch/vsh/shell/liblocation_dolce_provider	vsh/app/shell/liblocation_dolce_provider	vs0_tarpatch:vsh/shell/liblocation_dolce_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0_tarpatch/vsh/shell/liblocation_provider	vsh/app/shell/liblocation_provider	vs0_tarpatch:vsh/shell/liblocation_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>

@@ -11,12 +11,28 @@ Names like the "TOOL" or "DEBUGGER" suffixes are mine/whatever:
 Extra type names and strings have been taken from the `0.990.030-I` internal system debugger firmware. 
 
 ## Layout
-For the sake of simplicity, the project layout mirrors the PUP layout.  
-For example, the following path contains the reimplementation of `os0:kd/acmgr.skprx`:  
+The source tree mirrors Sony's own, as far as Sony's binaries show it: folder and file names
+come from the paths in their debug records, asserts and SDK libraries.
+* `sys/`: the platform. `sys/internal/kernel/src/` (kernel core and managers),
+  `sys/internal/driver/src/` (drivers), `sys/internal/usermode/src/` (user libraries),
+  `sys/internal/deci/` (debug modules), `sys/internal/secure/` (secure processor and
+  TrustZone code; our folder name).
+* `vsh/`: the system software UI: `vsh/paf`, `vsh/cdlg/src/` (common dialogs),
+  `vsh/lowlayer/src/`, `vsh/app/` (applications and plugins), `vsh/app/common/src/` (NP and
+  other shared libraries).
+* `wp/` (Welcome Park, its own project in Sony's tree), `cp/` (devkit communication
+  processor), `barkley/` (motion controller), `third-party-libs-psp2/` (webcore), `ernie/`
+  (syscon; our folder name).
+* `release/`: what each firmware contains. `release/<FW>.list` lists its modules;
+  `release/modules.tsv` gives the folder each module is built from and why it is there.
+* `cmake/`, `tools/`, `common/`, `contrib/` (pristine upstream code), `toolchains/`.
+
+For example, `os0:kd/acmgr.skprx` is built from `sys/internal/kernel/src/acmgr/`:
 ```
-src/os0/kd/acmgr/source/
+cmake -S . -B build -DFW=4.00-DEBUGGER && cmake --build build
 ```
-This can be built back into a .skprx so it can (*hopefully*) be used in place of `os0:kd/acmgr.skprx` on PSP2.
+builds every module of that firmware; each lands in `build/<partition>/<path>/`
+(`build/os0/kd/acmgr/`), so it can (*hopefully*) be used in place of the original on PSP2.
 ## Current status
 To summarize:
 * `os0`: substantial C reimplementation exists for nearly all modules. Not complete and not exact yet. No progress so far on MeP modules.
@@ -24,9 +40,9 @@ To summarize:
 * `pup`: Not started. this is for `psp2swu`. `pup/cui_setupper` is identical to `os0:ue/cui_setupper`.
 * `vs0`: WIP. A little progress made. `os0:ue/safemode.elf` will be deferred until `vs0` becomes the priority.
 * `pd0:app/NPXS10007`: Not started
-* `first_loader`: Not started
+* `sys/internal/secure/first_loader`: Not started
 * `ernie`: Not started
-* `pup/devkit_cp`: Not started
+* `cp/` (devkit communication processor): Not started
 
 Contributions welcome!
 ## AI disclosure
