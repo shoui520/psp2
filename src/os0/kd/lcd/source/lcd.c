@@ -40,10 +40,20 @@ extern int ksceI2cTransferWrite(int bus, int address, const void *data, unsigned
 #define LCD_NOT_READY ((int)0x803f0c04)
 #define LCD_BUSY ((int)0x803f0c05)
 
-static unsigned spiDepth, ready, txBits, txValue;
-static uint16_t panelId, panelRevision, scriptRevision;
-static volatile SceSpiRegisters *spi;
-static int spiUid;
+/* name unknown: the SPI link and panel state initLcd clears */
+typedef struct LcdLink {
+	unsigned spiDepth;			/* 0x00 */
+	unsigned ready;				/* 0x04 */
+	uint16_t panelId;			/* 0x08 */
+	uint16_t panelRevision;			/* 0x0a */
+	unsigned txBits;			/* 0x0c */
+	unsigned txValue;			/* 0x10 */
+	volatile SceSpiRegisters *spi;		/* 0x14 */
+	int spiUid;				/* 0x18 */
+} LcdLink;
+
+static LcdLink lcd;
+static uint16_t scriptRevision;
 static unsigned char script[0x80];
 static unsigned synchronous;
 static const unsigned char *sequence;
@@ -69,56 +79,56 @@ static void waitTime(unsigned usec) /* name unknown */
 
 static void spiBegin(void) /* name unknown */
 {
-	if (!spiDepth) {
+	if (!lcd.spiDepth) {
 		kscePervasiveSpiClockEnable(2);
-		while (spi->receiveCount)
-			(void)spi->receive;
-		spi->control = 0x30001;
+		while (lcd.spi->receiveCount)
+			(void)lcd.spi->receive;
+		lcd.spi->control = 0x30001;
 	}
-	spiDepth++;
+	lcd.spiDepth++;
 }
 
 static void spiBits(unsigned word, unsigned bits) /* name unknown */
 {
-	txValue |= word << txBits;
-	txBits += bits;
-	while (txBits >= 16) {
-		while (spi->transmitCount == 0x7f)
+	lcd.txValue |= word << lcd.txBits;
+	lcd.txBits += bits;
+	while (lcd.txBits >= 16) {
+		while (lcd.spi->transmitCount == 0x7f)
 			;
-		spi->transmit = txValue & 0xffff;
-		txValue >>= 16;
-		txBits -= 16;
+		lcd.spi->transmit = lcd.txValue & 0xffff;
+		lcd.txValue >>= 16;
+		lcd.txBits -= 16;
 	}
 }
 
 static void spiPad(void) /* name unknown */
 {
-	while (txBits)
+	while (lcd.txBits)
 		spiBits(0, 9);
-	spi->enable = 1;
-	while (spi->transmitCount)
+	lcd.spi->enable = 1;
+	while (lcd.spi->transmitCount)
 		;
-	spi->enable = 0;
-	while (spi->enable & 1)
+	lcd.spi->enable = 0;
+	while (lcd.spi->enable & 1)
 		;
 }
 
 static void spiEnd(void) /* name unknown */
 {
-	if (--spiDepth)
+	if (--lcd.spiDepth)
 		return;
-	while (txBits)
+	while (lcd.txBits)
 		spiBits(0, 9);
-	spi->enable = 1;
-	while (spi->transmitCount)
+	lcd.spi->enable = 1;
+	while (lcd.spi->transmitCount)
 		;
-	while (spi->receiveCount)
-		(void)spi->receive;
-	spi->enable = 0;
-	while (spi->enable & 1)
+	while (lcd.spi->receiveCount)
+		(void)lcd.spi->receive;
+	lcd.spi->enable = 0;
+	while (lcd.spi->enable & 1)
 		;
-	spi->control = 0x30001;
-	(void)spi->control;
+	lcd.spi->control = 0x30001;
+	(void)lcd.spi->control;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 }
@@ -130,9 +140,9 @@ static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name
 	if (!length)
 		return;
 	do {
-		while (!spi->receiveCount)
+		while (!lcd.spi->receiveCount)
 			;
-		value |= spi->receive << bits;
+		value |= lcd.spi->receive << bits;
 		bits += 16;
 		if (skip) {
 			if (bits <= skip) {
@@ -157,9 +167,9 @@ int SceLcdForDriver_5127FB5E(unsigned char command, const unsigned char *data,
 			  unsigned length)
 {
 	unsigned intr, i;
-	if (!ready)
+	if (!lcd.ready)
 		return LCD_NOT_READY;
-	if (ready == 2)
+	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
 	intr = ksceKernelCpuSuspendIntr();
 	spiBegin();
@@ -174,9 +184,9 @@ int SceLcdForDriver_5127FB5E(unsigned char command, const unsigned char *data,
 int SceLcdForDriver_223C8375(unsigned command, unsigned char *data, unsigned length)
 {
 	unsigned intr, i;
-	if (!ready)
+	if (!lcd.ready)
 		return LCD_NOT_READY;
-	if (ready == 2)
+	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
 	intr = ksceKernelCpuSuspendIntr();
 	spiBegin();
@@ -218,19 +228,19 @@ static int initWork(void *arg) /* name unknown */
 	spiEnd();
 	ksceKernelCpuResumeIntr(intr);
 	if (id[4] == 0xff) {
-		panelId = id[0] | (id[1] << 8);
-		panelRevision = id[2] | (id[3] << 8);
+		lcd.panelId = id[0] | (id[1] << 8);
+		lcd.panelRevision = id[2] | (id[3] << 8);
 	}
 	if (!port) {
 		ksceGpioPortClear(0, 0);
 		ksceGpioPortClear(1, 7);
 	}
-	if (id[4] == 0xff && !panelId) {
-		ready = 1;
+	if (id[4] == 0xff && !lcd.panelId) {
+		lcd.ready = 1;
 	} else {
 		kscePervasiveSpiClockDisable(2);
 		kscePervasiveSpiResetEnable(2);
-		ready = 2;
+		lcd.ready = 2;
 	}
 	return 1;
 }
@@ -253,20 +263,20 @@ int SceLcdForDriver_6A08623C(void)
 }
 int ksceLcdWaitReady(void)
 {
-	while (!ready)
+	while (!lcd.ready)
 		waitTime(1000);
 	return 0;
 }
 int ksceLcdGetDDB(uint16_t *id, uint16_t *revision)
 {
-	if (!ready)
+	if (!lcd.ready)
 		return LCD_NOT_READY;
-	if (ready == 2)
+	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
 	if (id)
-		*id = panelId;
+		*id = lcd.panelId;
 	if (revision)
-		*revision = panelRevision;
+		*revision = lcd.panelRevision;
 	return 0;
 }
 int SceLcdForDriver_8C965153(void)
@@ -333,6 +343,19 @@ int SceLcdForDriver_04E9269A(const unsigned char *p)
 int SceLcdForDriver_4CC1E8C1(unsigned mode)
 {
 	synchronous = mode;
+	return 0;
+}
+
+static __attribute__((noinline)) int readHardwareInfo(void) /* name unknown */
+{
+	unsigned char flags[16];
+
+	ksceSysrootGetHardwareFlags(flags);
+	if ((flags[0] & 3) == 1)
+		hardwareSpecial = 1;
+	hardwareInfo = ksceSysrootGetHardwareInfo();
+	sequence = NULL;
+	delayFrames = 0;
 	return 0;
 }
 
@@ -564,15 +587,15 @@ int SceLcdForDriver_3E7C2CCA(void)
 	scriptRevision = revision;
 	return ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdBlResetSeq", resetBacklightWork, 0);
 }
-static void setupSpi(void) /* name unknown */
+static inline void setupSpi(volatile SceSpiRegisters *regs) /* name unknown */
 {
 	kscePervasiveSpiResetDisable(2);
 	kscePervasiveSpiClockEnable(2);
-	spi->control = 0x30001;
-	spi->dmaControl = 15;
-	spi->intControl = 4;
-	spi->mode = 0;
-	(void)spi->mode;
+	regs->control = 0x30001;
+	regs->dmaControl = 15;
+	regs->intControl = 4;
+	regs->mode = 0;
+	(void)regs->mode;
 	dsb();
 	kscePervasiveSpiClockDisable(2);
 	ksceGpioSetPortMode(0, 0, 0);
@@ -580,36 +603,29 @@ static void setupSpi(void) /* name unknown */
 }
 static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown */
 {
-	if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3))
-		setupSpi();
 	if (!resume) {
 		if (event == SYSEVENT_SUSPEND_IDLE_QUERY)
 			return SceLcdForDriver_4735059C(1) ? -1 : 0;
 		if (event == SYSEVENT_SUSPEND_DEVICE(3)) {
 			kscePervasiveSpiClockDisable(2);
 			kscePervasiveSpiResetEnable(2);
-			SceLcdForDriver_949D45E4();
+			/* SceLcdForDriver_949D45E4, inlined in Sony's build */
+			ksceGpioPortClear(0, 0);
+			ksceGpioPortClear(1, 7);
 		}
+	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3)) {
+		setupSpi(lcd.spi);
 	}
 	return 0;
 }
-int module_start(unsigned arglen, void *argp)
+static __attribute__((noinline)) int initLcd(void) /* name unknown */
 {
 	SceKernelAllocMemBlockKernelOpt opt;
-	unsigned char flags[16];
 	void *base;
 	int ret;
-	if (ksceKernelSearchModuleByName("SceOled") >= 0)
-		return 1;
-	spiDepth = ready = panelId = panelRevision = txBits = txValue = 0;
-	spi = 0;
-	spiUid = 0;
-	ksceSysrootGetHardwareFlags(flags);
-	if ((flags[0] & 3) == 1)
-		hardwareSpecial = 1;
-	hardwareInfo = ksceSysrootGetHardwareInfo();
-	sequence = 0;
-	delayFrames = 0;
+
+	lcd = (LcdLink){ 0 };
+	readHardwareInfo();
 	ksceKernelRegisterSysEventHandler("SceLcd", sysEvent, 0);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
@@ -617,11 +633,18 @@ int module_start(unsigned arglen, void *argp)
 	opt.paddr = SPI_REG_BASE(2);
 	ret = ksceKernelAllocMemBlock("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
-		return 1;
-	spiUid = ret;
+		return ret;
+	lcd.spiUid = ret;
 	ksceKernelGetMemBlockBase(ret, &base);
-	spi = base;
-	setupSpi();
+	lcd.spi = base;
+	setupSpi(base);
 	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdInit", initWork, 0);
 	return 0;
+}
+
+int module_start(unsigned arglen, void *argp)
+{
+	if (ksceKernelSearchModuleByName("SceOled") >= 0)
+		return 1;
+	return initLcd() < 0;
 }
