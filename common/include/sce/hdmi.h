@@ -1,7 +1,7 @@
 /*
  * SceHdmi (os0:kd/hdmi.skprx) structures shared with its callers (SceDisplay).
  * No Sony name is known for these types or fields; the names describe how
- * SceHdmi uses each one (agent/namecheck/os0/kd/hdmi.tsv).
+ * SceHdmi uses each one.
  */
 #pragma once
 

@@ -4,8 +4,8 @@
  * block of the process it belongs to; senders and receivers move data
  * through it in vectors of buffers, waiting (sender or receiver side, one
  * at a time) when it is full or empty.
- * The user syscall wrappers are still threadmgr.c's stubs
- * (agent/match-notes/os0/kd/threadmgr.txt).
+ * The user syscall wrappers are still
+ * threadmgr.c's stubs.
  */
 
 #include <string.h>

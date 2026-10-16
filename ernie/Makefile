@@ -8,7 +8,7 @@
 #   make HW=<hardware ID> FW=<version> [PROGRAM=app|updater]
 #     e.g. make HW=0x00415000 FW=0x01000306 PROGRAM=updater   (DEM-3000L, logging build)
 # targets.list lists every board/version with an update patch; hw/<id>.mk describes the
-# boards. Originals: agent/fw/ernie/<hw>/<version>/ (dump.bin, patch.bin).
+# boards. Originals: ${PSP2_FW_DIR}/ernie/<hw>/<version>/ (dump.bin, patch.bin).
 #
 # Compiler: Renesas CA78K0R (cc78k0r, ra78k0r, lk78k0r): the startup is CA78K0R's
 # cstart.asm. Windows programs, run like psp2snc.exe (tools/host.py). Device option and

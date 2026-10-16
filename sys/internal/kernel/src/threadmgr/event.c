@@ -2,7 +2,7 @@
  * SceKernelThreadMgr: event.c, the events (SceUIDEventClass) and the waits
  * on several events at once (WME). Message pipes and CPU timers derive from
  * SceUIDEventClass. The user syscall wrappers are still in
- * event_notification.c (agent/match-notes/os0/kd/threadmgr.txt).
+ * event_notification.c.
  */
 
 #include <string.h>

@@ -2,7 +2,7 @@
  * SceHdmi InfoFrames: the source product description (SPD), auxiliary video
  * information (AVI) and audio InfoFrames of CEA-861, built in one packet buffer
  * and handed to the device layer. No debug record names this file; its name
- * and the names below are ours (agent/namecheck/os0/kd/hdmi.tsv).
+ * and the names below are ours.
  */
 #include <psp2kern/types.h>
 #include "hdmi_internal.h"

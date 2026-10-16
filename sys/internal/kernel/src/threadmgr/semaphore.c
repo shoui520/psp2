@@ -1,7 +1,7 @@
 /*
  * SceKernelThreadMgr: semaphore.c, the semaphores (SceUIDSemaphoreClass).
  * PLACEHOLDER: only part of the file is C so far; the rest is in threadmgr.c's
- * stubs (agent/match-notes/os0/kd/threadmgr.txt).
+ * stubs.
  */
 
 #include "timer.h"

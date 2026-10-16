@@ -3,8 +3,8 @@
  * under the manager's timerLock, drives the LT5 hardware timer: its
  * interrupt ends delays (timed waits), calls alarms (kernel callbacks) and
  * sets or pulses the events of timers (counters of their process's time).
- * The user syscall wrappers are still in timer_syscalls.c
- * (agent/match-notes/os0/kd/threadmgr.txt).
+ * The user syscall wrappers are still in
+ * timer_syscalls.c.
  */
 
 #include <string.h>

@@ -1,5 +1,5 @@
 # Application builds: hardware ID, firmware version (one per update patch).
-# The originals are agent/fw/ernie/<hw>/<version>/patch.bin.
+# The originals are ${PSP2_FW_DIR}/ernie/<hw>/<version>/patch.bin.
 0x00102003 0x00080302
 0x00102403 0x00080307
 0x00102403 0x00080502

@@ -4,7 +4,7 @@
  * registered, supplies samples of DUALSHOCK controllers on ports 1-4.
  *
  * No debug records or strings name the private functions and structures;
- * the names are ours (agent/namecheck/os0/kd/bootimage/motion_dummy.tsv).
+ * the names are ours.
  */
 #pragma once
 

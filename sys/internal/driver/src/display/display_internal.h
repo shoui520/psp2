@@ -2,7 +2,7 @@
  * SceDisplay internal state.
  *
  * No debug record names a structure or field of this module; the names below
- * describe what the code does with each one (see agent/namecheck/os0/kd/display.tsv).
+ * describe what the code does with each one.
  */
 #pragma once
 

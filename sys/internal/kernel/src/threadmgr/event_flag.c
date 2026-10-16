@@ -1,7 +1,7 @@
 /*
  * SceKernelThreadMgr: event_flag.c, the event flags (SceUIDEventFlagClass).
  * The user syscall wrappers are still in event_flag_queries.c and
- * event_flag_lifecycle.c (agent/match-notes/os0/kd/threadmgr.txt).
+ * event_flag_lifecycle.c.
  */
 
 #include "timer.h"

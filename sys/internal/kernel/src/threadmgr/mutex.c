@@ -1,7 +1,7 @@
 /*
  * SceKernelThreadMgr: mutex.c, the mutexes (SceUIDMutexClass).
- * PLACEHOLDER: the exports are still threadmgr.c stubs
- * (agent/match-notes/os0/kd/threadmgr.txt).
+ * PLACEHOLDER: the exports are still
+ * threadmgr.c stubs.
  */
 
 #include "timer.h"

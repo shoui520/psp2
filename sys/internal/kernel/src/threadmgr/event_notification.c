@@ -1,6 +1,6 @@
 /*
  * SceKernelThreadMgr: the user syscall wrappers of event.c's exports.
- * PLACEHOLDER: these belong with the syscall files (agent/match-notes/os0/kd/threadmgr.txt).
+ * PLACEHOLDER: these belong with the syscall files.
  */
 #include "event.h"
 #include "sce/cpu.h"
