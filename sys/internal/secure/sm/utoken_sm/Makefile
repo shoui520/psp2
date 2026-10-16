@@ -2,4 +2,4 @@
 MODULE := utoken_sm
 SOURCES := utoken_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

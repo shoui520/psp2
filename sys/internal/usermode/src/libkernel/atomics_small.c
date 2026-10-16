@@ -1,4 +1,4 @@
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 void sceKernelAtomicSet8(int8_t *address, int8_t value)
 {

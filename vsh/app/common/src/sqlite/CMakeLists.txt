@@ -29,8 +29,8 @@ psp2_module(vs0_sys_external_sqlite KIND user SOURCES
 	module.c
 	sqlite3.c
 	os_psp2.c
-	../../../../../common/sqlite/localtime.c
-	../../../../../common/sqlite/vfs_time.c
+	localtime.c
+	vfs_time.c
 	../../../../../common/runtime/i32ops.c
 	../../../../../common/runtime/i64ops.c
 	../../../../../common/runtime/aeabi_ldivmod.S
@@ -41,5 +41,5 @@ add_custom_target(vs0_sys_external_sqlite_core
 	DEPENDS "${sqlite_generated}/sqlite3.c")
 add_dependencies(vs0_sys_external_sqlite vs0_sys_external_sqlite_core)
 target_include_directories(vs0_sys_external_sqlite PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
-set_source_files_properties("../../../../../common/sqlite/vfs_time.c" PROPERTIES
+set_source_files_properties("vfs_time.c" PROPERTIES
 	COMPILE_DEFINITIONS "memset=sce_paf_memset;memcpy=sce_paf_memcpy")

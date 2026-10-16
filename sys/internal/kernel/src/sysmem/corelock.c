@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <psp2kern/kernel/cpu/corelock.h>
 #include <sce/barrier.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 extern int ksceKernelCpuId(void);
 extern void ksceKernelSpinlockLowLock(int *lock);

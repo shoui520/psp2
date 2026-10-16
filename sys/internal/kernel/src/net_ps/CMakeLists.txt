@@ -3,17 +3,17 @@
 # stack buffer and Sleep/StartStack's address-taken locals in both TOOL builds.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
 psp2_module(os0_kd_bootimage_net_ps KIND kernel PARTIAL SOURCES
-	../../../../../common/netps_allocator_adapters.c
-	../../../../../common/netps_thread.c
-	../../../../../common/netps_process.c
-	../../../../../common/netps_resource.c
-	../../../../../common/netps_driver.c
-	../../../../../common/netps_socket_adapters.c
-	../../../../../common/netps_packet_adapters.c
-	../../../../../common/netps_process_callbacks.c
-	../../../../../common/netps_packet_cleanup.c
-	../../../../../common/netps_driver_updates.c
-	../../../../../common/netps_dump_reader.c
+	netps_allocator_adapters.c
+	netps_thread.c
+	netps_process.c
+	netps_resource.c
+	netps_driver.c
+	netps_socket_adapters.c
+	netps_packet_adapters.c
+	netps_process_callbacks.c
+	netps_packet_cleanup.c
+	netps_driver_updates.c
+	netps_dump_reader.c
 	net_ps_glue.c
 	net_ps_statistics.c
 	net_ps_startup.c

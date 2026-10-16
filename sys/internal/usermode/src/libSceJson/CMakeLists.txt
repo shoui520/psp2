@@ -1,12 +1,12 @@
 # SceLibJson (vs0:sys/external/libSceJson.suprx): sce::Json, C++ built by Sony
-# with SNC 3.57.  The library is linked statically into other modules too, so
-# the sources live in common/json/.
+# with SNC 3.57.  The library is linked statically into other modules too,
+# which build these sources from here.
 enable_language(CXX)
 psp2_module(vs0_sys_external_libSceJson KIND user SOURCES
-	../../../../../common/json/json_libc.cpp
-	../../../../../common/json/json_runtime.cpp
-	../../../../../common/json/json_value.cpp
-	../../../../../common/json/json_container.cpp
+	json_libc.cpp
+	json_runtime.cpp
+	json_value.cpp
+	json_container.cpp
 	../../../../../common/runtime/unwind_pr0.c
 	../../../../../common/runtime/unwind_pr1.c
 )

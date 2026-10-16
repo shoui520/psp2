@@ -3,18 +3,18 @@
 # All present originals lack SSP guard/fail imports and guards on stack locals.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
 psp2_module(os0_kd_net_ps_dev KIND kernel PARTIAL SOURCES
-	../../../../../common/netps_allocator_adapters.c
-	../../../../../common/netps_thread.c
-	../../../../../common/netps_process.c
-	../../../../../common/netps_resource.c
-	../../../../../common/netps_driver.c
-	../../../../../common/netps_socket_adapters.c
-	../../../../../common/netps_packet_adapters.c
-	../../../../../common/netps_process_callbacks.c
-	../../../../../common/netps_packet_cleanup.c
-	../../../../../common/netps_driver_updates.c
+	../net_ps/netps_allocator_adapters.c
+	../net_ps/netps_thread.c
+	../net_ps/netps_process.c
+	../net_ps/netps_resource.c
+	../net_ps/netps_driver.c
+	../net_ps/netps_socket_adapters.c
+	../net_ps/netps_packet_adapters.c
+	../net_ps/netps_process_callbacks.c
+	../net_ps/netps_packet_cleanup.c
+	../net_ps/netps_driver_updates.c
 	net_ps_dump.c
-	../../../../../common/netps_dump_reader.c
+	../net_ps/netps_dump_reader.c
 	net_ps_dev.c
 )
 target_include_directories(os0_kd_net_ps_dev PRIVATE

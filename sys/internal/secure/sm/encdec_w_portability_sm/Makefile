@@ -2,4 +2,4 @@
 MODULE := encdec_w_portability_sm
 SOURCES := encdec_w_portability_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

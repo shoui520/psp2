@@ -13,7 +13,7 @@
 #include <psp2kern/registrymgr.h>
 #include <stddef.h>
 #include <string.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 struct SharedFbProcess {
 	SceUID pid;

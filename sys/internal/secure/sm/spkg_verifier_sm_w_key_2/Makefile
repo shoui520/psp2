@@ -2,4 +2,4 @@
 MODULE := spkg_verifier_sm_w_key_2
 SOURCES := spkg_verifier_sm_w_key_2.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

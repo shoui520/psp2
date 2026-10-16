@@ -2,7 +2,7 @@
 #include "lw_sync.h"
 #include "thread_context.h"
 #include <sce/error.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 _Static_assert(sizeof(struct LwMutexState) == sizeof(SceKernelLwMutexWork),
 	       "lightweight mutex work layout");

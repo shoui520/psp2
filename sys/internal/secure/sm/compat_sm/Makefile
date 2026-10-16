@@ -2,4 +2,4 @@
 MODULE := compat_sm
 SOURCES := compat_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

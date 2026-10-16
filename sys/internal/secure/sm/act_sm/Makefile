@@ -2,4 +2,4 @@
 MODULE := act_sm
 SOURCES := act_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

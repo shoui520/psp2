@@ -1,6 +1,6 @@
 /* Shared Sony capture-ring reader; original source filename unavailable. */
 
-#include "../sys/internal/kernel/src/net_ps/net_ps_internal.h"
+#include "net_ps_internal.h"
 #include <string.h>
 
 int sceNetPsDumpRead(int dumpId, void *buffer, int length, int *flags)

@@ -2,4 +2,4 @@
 MODULE := gcauthmgr_sm
 SOURCES := gcauthmgr_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

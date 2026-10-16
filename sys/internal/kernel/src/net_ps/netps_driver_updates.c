@@ -1,6 +1,6 @@
 /* Shared Sony driver state adapters; unchanged original bodies. */
 
-#include "../sys/internal/kernel/src/net_ps/net_ps_internal.h"
+#include "net_ps_internal.h"
 #include <string.h>
 
 extern struct NetDriver *gNetPsDriverHead;

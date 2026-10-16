@@ -1,4 +1,4 @@
-#include "../../../../../common/module_library.h"
+#include "sce/module_library.h"
 #include "sce/error.h"
 
 extern int sceKernelGetLibraryInfoByNID(SceUID moduleId, SceNID libraryNid,

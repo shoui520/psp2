@@ -1,6 +1,6 @@
 # os0:sm: the secure modules, MeP programs the Cmep loads at 0x80b000 (SELFs on the
 # device). fw/<FW>.list names the modules of each firmware; each module's folder holds
-# its sources and includes ../../../common/sm/sm.mk (the shared entry, constructors,
+# its sources and includes ../sm.mk (the shared entry, constructors,
 # link script and rules).
 #
 #   tools/mepbuild.sh sys/internal/secure/sm FW=<FW> O=<build directory> [MODULES=<names>]

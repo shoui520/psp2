@@ -1,5 +1,5 @@
 /* Shared32-bit atomic primitives; ARM exclusives stay in the common header. */
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 uint32_t ksceKernelAtomicCompareAndSet32(uint32_t *address, uint32_t expected,
 				     uint32_t replacement)

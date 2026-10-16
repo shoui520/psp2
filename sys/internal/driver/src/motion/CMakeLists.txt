@@ -7,9 +7,9 @@ psp2_module(os0_kd_bootimage_motion KIND kernel SOURCES
 	motion_device.c
 	motion_spi.c
 	motion_manager.c
-	../../../../../common/motion/ring.c
+	ring.c
 	syscall.c
 	motion_heap.c
-	../../../../../common/motion/heap.c
-	../../../../../common/motion/filter.c
+	heap.c
+	filter.c
 )

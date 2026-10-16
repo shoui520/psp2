@@ -4,7 +4,7 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <sce/threadmgr.h>
 #include <sce/wlanbt.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 #include "bt_transport.h"
 
 SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index);

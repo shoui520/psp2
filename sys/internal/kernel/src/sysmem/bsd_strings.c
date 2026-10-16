@@ -3,4 +3,4 @@
 #define __FBSDID(record)
 #endif
 
-#include "../../contrib/bsd-string-1998/strlcpy.c"
+#include "../../../../../contrib/bsd-string-1998/strlcpy.c"

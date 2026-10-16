@@ -17,7 +17,7 @@
 #include "sce/modulemgr_patch.h"
 #include <psp2common/kernel/modulemgr.h>
 #include <psp2common/kernel/iofilemgr.h>
-#include "../../../../../common/module_library.h"
+#include "sce/module_library.h"
 #include "sce/debug.h"
 #include "sce/modulemgr_imports.h"
 #include <sce/modulemgr_control.h>

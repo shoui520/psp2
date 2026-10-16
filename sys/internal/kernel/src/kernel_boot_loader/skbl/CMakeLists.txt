@@ -29,11 +29,11 @@ psp2_image(slb2_skbl ADDRESS 0x40020000 LINKER_SCRIPT skbl.ld PARTIAL SOURCES
 	${sysmem_source}/sysroot.c
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c
-	../../../../../../common/sysclib/copy_forward.S
-	../../../../../../common/sysclib/move.S
-	../../../../../../common/sysclib/fill_core.S
-	../../../../../../common/kbl/pervasive_init_kbl.c
-	../../../../../../common/kbl/pervasive_kbl.c
+	../../sysmem/copy_forward.S
+	../../sysmem/move.S
+	../../sysmem/fill_core.S
+	../pervasive_init_kbl.c
+	../pervasive_kbl.c
 	compat_sram.S
 )
 set_source_files_properties(${sysmem_source}/serial.c PROPERTIES
@@ -47,5 +47,5 @@ set_source_files_properties(${intrmgr_source}/intrmgr.c ${intrmgr_source}/usleep
 	COMPILE_DEFINITIONS INTRMGR_SKBL)
 set_source_files_properties(${intrmgr_source}/dmacmgr_tzs.c PROPERTIES
 	COMPILE_DEFINITIONS INTRMGR_SKBL COMPILE_OPTIONS "-Os")
-set_source_files_properties(../../../../../../common/kbl/pervasive_kbl.c PROPERTIES
+set_source_files_properties(../pervasive_kbl.c PROPERTIES
 	COMPILE_DEFINITIONS PERVASIVE_SKBL)

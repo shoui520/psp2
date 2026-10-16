@@ -2,7 +2,7 @@
 #include "lw_sync.h"
 #include "thread_context.h"
 #include <sce/error.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 extern int sceKernelTryLockLwMutex(SceKernelLwMutexWork *work, int count);
 

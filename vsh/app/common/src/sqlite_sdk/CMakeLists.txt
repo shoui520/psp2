@@ -6,8 +6,8 @@ psp2_module(vs0_sys_external_libSceSqlite KIND user SOURCES
 	os_psp2.c
 	libc_psp2.c
 	sqlite3.c
-	../../../../../common/sqlite/localtime.c
-	../../../../../common/sqlite/vfs_time.c
+	../sqlite/localtime.c
+	../sqlite/vfs_time.c
 	../../../../../common/runtime/i32ops.c
 	../../../../../common/runtime/i64ops.c
 	../../../../../common/runtime/aeabi_ldivmod.S

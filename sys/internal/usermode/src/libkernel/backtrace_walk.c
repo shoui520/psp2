@@ -1,6 +1,6 @@
 #include "backtrace_walk.h"
-#include "../../../../../common/backtrace_unwind.h"
-#include "../../../../../common/exidx.h"
+#include "backtrace_unwind.h"
+#include "exidx.h"
 #include "sce/error.h"
 
 struct BacktraceInstructionReader {

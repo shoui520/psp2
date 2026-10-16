@@ -19,7 +19,7 @@
 #include <psp2/io/stat.h>
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
-#include "common/sqlite/vfs_time.h"
+#include "vsh/app/common/src/sqlite/vfs_time.h"
 #include <sce/appmgr_savedata.h>
 #include "contrib/sqlite-3.6.23.1/sqlite3.h"
 

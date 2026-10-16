@@ -61,19 +61,19 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 	heap_destroy.c
 	heap_inspect.c
 	format_io.c
-	../../../../../common/sysclib/fill_core.S
-	../../../../../common/sysclib/fill.c
-	../../../../../common/sysclib/compare_core.S
-	../../../../../common/sysclib/compare.c
-	../../../../../common/sysclib/copy_forward.S
-	../../../../../common/sysclib/copy.c
-	../../../../../common/sysclib/move.S
-	../../../../../common/sysclib/ctype.c
-	../../../../../common/sysclib/strings.c
-	../../../../../common/sysclib/bsd_strings.c
-	../../../../../common/sysclib/bsd_strtoll.c
-	../../../../../common/sysclib/search.c
-	../../../../../common/sysclib/checked_strings.c
+	../../../kernel/src/sysmem/fill_core.S
+	../../../kernel/src/sysmem/fill.c
+	../../../kernel/src/sysmem/compare_core.S
+	../../../kernel/src/sysmem/compare.c
+	../../../kernel/src/sysmem/copy_forward.S
+	../../../kernel/src/sysmem/copy.c
+	../../../kernel/src/sysmem/move.S
+	../../../kernel/src/sysmem/ctype.c
+	../../../kernel/src/sysmem/strings.c
+	../../../kernel/src/sysmem/bsd_strings.c
+	../../../kernel/src/sysmem/bsd_strtoll.c
+	../../../kernel/src/sysmem/search.c
+	../../../kernel/src/sysmem/checked_strings.c
 	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/lib1funcs.S
 	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/libunwind.S
 	../../../../../common/runtime/gcc48/mul.c
@@ -145,19 +145,19 @@ set_source_files_properties(thread_objects.c thread_status.c
 	COMPILE_OPTIONS "-fstack-protector")
 
 # This core is itself exported by LibKernel, rather than reached via a wrapper.
-set_source_files_properties(../../../../../common/sysclib/copy_forward.S
-	../../../../../common/sysclib/copy.c
-	../../../../../common/sysclib/move.S PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/copy_forward.S
+	../../../kernel/src/sysmem/copy.c
+	../../../kernel/src/sysmem/move.S PROPERTIES
 	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy")
 
-set_source_files_properties(../../../../../common/sysclib/ctype.c PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/ctype.c PROPERTIES
 	COMPILE_DEFINITIONS
 	"look_ctype_table=sceClibLookCtypeTable;tolower=sceClibTolower;toupper=sceClibToupper")
 
-set_source_files_properties(../../../../../common/sysclib/compare.c PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/compare.c PROPERTIES
 	COMPILE_DEFINITIONS "timingsafe_memcmp=sceClibMemcmpConstTime")
 
-set_property(SOURCE ../../../../../common/sysclib/strings.c PROPERTY
+set_property(SOURCE ../../../kernel/src/sysmem/strings.c PROPERTY
 	COMPILE_DEFINITIONS
 	SYSCLIB_SELECT_STRINGS
 	SYSCLIB_WANT_MEMCHR memchr=sceClibMemchr
@@ -170,18 +170,18 @@ set_property(SOURCE ../../../../../common/sysclib/strings.c PROPERTY
 	SYSCLIB_WANT_STRLEN
 	SYSCLIB_WANT_STRLCAT strlcat=sceClibStrlcat)
 
-set_source_files_properties(../../../../../common/sysclib/bsd_strings.c PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/bsd_strings.c PROPERTIES
 	COMPILE_DEFINITIONS "strlcpy=sceClibStrlcpy")
 
-set_source_files_properties(../../../../../common/sysclib/bsd_strtoll.c PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/bsd_strtoll.c PROPERTIES
 	COMPILE_OPTIONS "-fsigned-char"
 	COMPILE_DEFINITIONS "strtoll=sceClibStrtoll")
 
-set_source_files_properties(../../../../../common/sysclib/search.c PROPERTIES
+set_source_files_properties(../../../kernel/src/sysmem/search.c PROPERTIES
 	COMPILE_DEFINITIONS
 	"strstr=sceClibStrstr;strchr=sceClibStrchr;memcmp=sceClibMemcmp")
 
-set_property(SOURCE ../../../../../common/sysclib/checked_strings.c PROPERTY
+set_property(SOURCE ../../../kernel/src/sysmem/checked_strings.c PROPERTY
 	COMPILE_DEFINITIONS
 	strncat=sceClibStrncat strnlen=sceClibStrnlen
 	strncpy=sceClibStrncpy memcpy=sceClibMemcpy_safe

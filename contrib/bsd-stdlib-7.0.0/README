@@ -5,4 +5,4 @@ Commit: ba209d619d07461cc752dcdd596ab0d9b50e847a
 Path: lib/libc/stdlib/strtoll.c
 
 The complete University of California license is retained in strtoll.c.
-Platform adaptations belong in src/common/sysclib/bsd_strtoll.c.
+Platform adaptations belong in sys/internal/kernel/src/sysmem/bsd_strtoll.c.

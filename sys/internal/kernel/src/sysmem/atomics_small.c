@@ -1,5 +1,5 @@
 /* Shared byte/halfword atomic primitives preserve native signed returns. */
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 void ksceKernelAtomicSet8(int8_t *address, int8_t value)
 {

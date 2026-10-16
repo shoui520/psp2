@@ -17,4 +17,4 @@ extern int look_ctype_table(int character);
 #undef errno
 #define errno ((int){0})
 
-#include "../../contrib/bsd-stdlib-7.0.0/strtoll.c"
+#include "../../../../../contrib/bsd-stdlib-7.0.0/strtoll.c"

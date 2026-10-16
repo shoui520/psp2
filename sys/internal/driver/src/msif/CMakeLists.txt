@@ -10,6 +10,6 @@ psp2_module(os0_kd_msif KIND kernel PARTIAL SOURCES
 	msif.c
 	msif_auth.c
 	rmauth.c
-	../../../../../common/crypto/msif_ecdsa.c
+	msif_ecdsa.c
 )
 

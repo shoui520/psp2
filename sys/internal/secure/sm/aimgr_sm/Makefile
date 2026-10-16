@@ -2,4 +2,4 @@
 MODULE := aimgr_sm
 SOURCES := aimgr_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

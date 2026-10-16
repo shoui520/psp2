@@ -1,7 +1,7 @@
 /* Bluetooth synchronization; the original source filename is unavailable. */
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 #include "bt_transport.h"
 
 int BtCreateSignal(BtSignal *signal, unsigned int events, const char *name)

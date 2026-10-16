@@ -1,4 +1,4 @@
-#include "../../../../../common/exidx.h"
+#include "exidx.h"
 #include "lifecycle.h"
 #include <psp2/types.h>
 #include "sce/error.h"

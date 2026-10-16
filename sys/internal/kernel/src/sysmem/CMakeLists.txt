@@ -60,15 +60,15 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	led.c
 	serial.c
 	deflate.c
-	../../../../../common/sysclib/strings.c
-	../../../../../common/sysclib/search.c
-	../../../../../common/sysclib/checked_strings.c
-	../../../../../common/sysclib/numeric.c
-	../../../../../common/sysclib/bsd_strtoll_kernel.c
-	../../../../../common/sysclib/ctype.c
+	strings.c
+	search.c
+	checked_strings.c
+	numeric.c
+	bsd_strtoll_kernel.c
+	ctype.c
 	memcpy_chk.c
-	../../../../../common/sysclib/copy_forward.S
-	../../../../../common/sysclib/copy.c
+	copy_forward.S
+	copy.c
 	debug_state.c
 	dipsw.c
 	sysroot.c
@@ -111,22 +111,22 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	aes_cmac.c
 	debug_dump.c
 	debug_asm.S
-	../../../../../common/sysclib/bsd_prnt.c
+	bsd_prnt.c
 	formatter_buffer.c
 	debug_output.c
-	../../../../../common/sysclib/fill_core.S
-	../../../../../common/sysclib/fill.c
-	../../../../../common/sysclib/compare_core.S
-	../../../../../common/sysclib/compare.c
+	fill_core.S
+	fill.c
+	compare_core.S
+	compare.c
 	memset_chk.c
-	../../../../../common/sysclib/move.S
+	move.S
 	memory_move.c
 	strlcat_chk.c
 	strlcpy_chk.c
 	sprintf_chk.c
 )
 
-set_source_files_properties(../../../../../common/sysclib/bsd_strtoll_kernel.c
+set_source_files_properties(bsd_strtoll_kernel.c
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony built the DIP switch file for size: literal pools, not movw/movt.

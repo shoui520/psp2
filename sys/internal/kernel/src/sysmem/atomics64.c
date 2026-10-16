@@ -1,5 +1,5 @@
 /* Shared64-bit atomic primitives; doubleword exclusives stay in the common header. */
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 
 uint64_t ksceKernelAtomicCompareAndSet64(uint64_t *address, uint64_t expected,
 		uint64_t replacement)

@@ -2,4 +2,4 @@
 MODULE := qaf_sm
 SOURCES := qaf_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

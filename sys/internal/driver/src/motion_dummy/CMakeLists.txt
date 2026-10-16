@@ -3,8 +3,8 @@
 # anchors: each object is addressed by its own movw/movt.
 set(MODULE_COMPILE_OPTIONS -O3)
 psp2_module(os0_kd_bootimage_motion_dummy KIND kernel SOURCES motion_dummy.c
-		../../../../../common/motion/ring.c syscall.c
-		../../../../../common/motion/heap.c ../../../../../common/motion/filter.c
+		../motion/ring.c syscall.c
+		../motion/heap.c ../motion/filter.c
 	IMPORTS ksceKernelCreateHeap ksceKernelDeleteHeap __aeabi_uidivmod
 		sceKernelGetSystemTimeWide SceProcessmgrForDriver_8CB01675
 )

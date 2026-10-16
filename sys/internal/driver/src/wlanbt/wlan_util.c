@@ -1,6 +1,6 @@
 /* WLAN utility methods; the original does not record a source filename. */
 #include "wlanbt_internal.h"
-#include "../../../../../common/sysclib/atomic.h"
+#include "sce/atomic.h"
 #include <string.h>
 
 /* WPA vendor-element OUI and type. */

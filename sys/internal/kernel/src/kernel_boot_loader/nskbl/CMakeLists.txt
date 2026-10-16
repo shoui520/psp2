@@ -16,16 +16,16 @@ psp2_image(slb2_nskbl ADDRESS 0x51000000 PARTIAL SOURCES
 	${sysmem_source}/sysroot.c
 	${sysmem_source}/memset_chk.c
 	${sysmem_source}/memcpy_chk.c
-	../../../../../../common/sysclib/copy_forward.S
-	../../../../../../common/sysclib/fill_core.S
+	../../sysmem/copy_forward.S
+	../../sysmem/fill_core.S
 	${sdif_source}/sdif.c
 	${sdif_source}/cmd_queue.c
 	${sdif_source}/mmc.c
 	${sdif_source}/card_cmd.c
 	${sdif_source}/sd.c
 	${sdif_source}/adma.c
-	../../../../../../common/kbl/pervasive_init_kbl.c
-	../../../../../../common/kbl/pervasive_kbl.c
+	../pervasive_init_kbl.c
+	../pervasive_kbl.c
 )
 set_source_files_properties(${intrmgr_source}/intrmgr.c PROPERTIES COMPILE_DEFINITIONS INTRMGR_NSKBL)
 set_source_files_properties(${sysmem_source}/led.c ${sysmem_source}/sysroot.c PROPERTIES

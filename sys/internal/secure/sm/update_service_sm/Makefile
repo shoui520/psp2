@@ -2,4 +2,4 @@
 MODULE := update_service_sm
 SOURCES := update_service_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

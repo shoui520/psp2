@@ -358,7 +358,7 @@ vs0/sys/external/party_member_list	sys/internal/usermode/src/party_member_list	v
 vs0/sys/external/psmkdc	sys/internal/usermode/src/psmkdc	vs0:sys/external/psmkdc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/pspnet_adhoc	sys/internal/usermode/src/pspnet_adhoc	vs0:sys/external/pspnet_adhoc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/signin_ext	sys/internal/usermode/src/signin_ext	vs0:sys/external/signin_ext.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/sqlite	sys/internal/usermode/src/sqlite	vs0:sys/external/sqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/sqlite	vsh/app/common/src/sqlite	vs0:sys/external/sqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/sqlite/os_psp2.c (silk.elf, the same SQLite build, module SceSqliteVsh)
 vs0/sys/external/store_checkout_plugin	sys/internal/usermode/src/store_checkout_plugin	vs0:sys/external/store_checkout_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/trigger_util	sys/internal/usermode/src/trigger_util	vs0:sys/external/trigger_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/web_ui_plugin	sys/internal/usermode/src/web_ui_plugin	vs0:sys/external/web_ui_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src

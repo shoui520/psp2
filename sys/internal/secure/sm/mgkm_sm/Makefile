@@ -2,4 +2,4 @@
 MODULE := mgkm_sm
 SOURCES := mgkm_sm.c
 
-include ../../../../../common/sm/sm.mk
+include ../sm.mk

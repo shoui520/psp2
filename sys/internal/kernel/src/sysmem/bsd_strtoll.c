@@ -21,4 +21,4 @@ extern void *sceKernelGetTLSAddr(unsigned int offset);
 #undef EINVAL
 #define EINVAL ((int)0x80010016)
 
-#include "../../contrib/bsd-stdlib-7.0.0/strtoll.c"
+#include "../../../../../contrib/bsd-stdlib-7.0.0/strtoll.c"

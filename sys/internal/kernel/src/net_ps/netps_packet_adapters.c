@@ -1,6 +1,6 @@
 /* Shared SceNetPs packet adapters; unchanged Sony glue bodies. */
 
-#include "../sys/internal/kernel/src/net_ps/net_ps_internal.h"
+#include "net_ps_internal.h"
 #include <sce/netps.h>
 #include <string.h>
 
