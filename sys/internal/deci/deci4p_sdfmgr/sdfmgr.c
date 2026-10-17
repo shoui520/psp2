@@ -129,6 +129,21 @@ void SceDeci4pSDfMgrForKernel_FFC95B63(SceDeci4pHeader *header, SceSize size)
 	deci4pSetSize(header, size);
 }
 
+void __attribute__((noinline)) sdfMgrDisconnect(void)
+{
+	DcmpConnectionStatus packet;
+	unsigned i;
+
+	sdfMgrUpdateCpuFlags(2, 0);
+	dcmpMakeStatusConnection(0, &packet);
+	for (i = 2; i < 8; i++) {
+		SdfMgrProtocolState *protocol = _getPdCB(i);
+
+		if (protocol->flags & 1)
+			protocol->handler(5, &packet, protocol->context);
+	}
+}
+
 /* Names inferred from the registered suspend/resume callbacks. */
 int sdfMgrSuspend(void)
 {
@@ -148,6 +163,42 @@ int sdfMgrSuspend(void)
 		transport->operations.disableInterrupts(transport);
 	sceKernelSysrootCorelockUnlock();
 	return 0;
+}
+
+void __attribute__((noinline)) sdfMgrReportProtocols(void)
+{
+	unsigned i;
+
+	for (i = 2; i < 8; i++) {
+		SdfMgrProtocolState *protocol = _getPdCB(i);
+		uint32_t flags = protocol->flags;
+		uint32_t status;
+
+		if (!(flags & 1))
+			continue;
+		status = flags & 2 ? 3 : 1;
+		if (protocol->registration.flags & 2)
+			status |= 4;
+		dcmpSendStatusProtocol(status, &protocol->registration);
+		if (protocol->registration.flags & 2)
+			dcmpSendStatusProtocolAlias(&protocol->registration);
+	}
+}
+
+void sdfMgrConnect(void)
+{
+	DcmpConnectionStatus packet;
+	unsigned i;
+
+	sdfMgrUpdateCpuFlags(2, 1);
+	sdfMgrReportProtocols();
+	dcmpMakeStatusConnection(1, &packet);
+	for (i = 2; i < 8; i++) {
+		SdfMgrProtocolState *protocol = _getPdCB(i);
+
+		if (protocol->flags & 1)
+			protocol->handler(5, &packet, protocol->context);
+	}
 }
 
 int sdfMgrResume(void)
@@ -866,7 +917,6 @@ void sdfMgrFinishException(const SceExcpmgrContext *context)
 		writeTpidrprw(context->thread);
 }
 
-
 typedef struct SdfMgrIrqStack {
 	SceUInt32 guard;
 	unsigned char storage[0x2000 - sizeof(SceUInt32)];
@@ -1508,6 +1558,82 @@ int SceDeci4pSDfMgrForKernel_86CFC8C6(int handle)
 
 	ksceKernelCpuResumeIntr(state);
 	return result;
+}
+
+int sdfmgrStartProtocol(uint32_t id)
+{
+	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
+	DcmpProtocolStatus packet;
+	unsigned i;
+
+	for (i = 0; i < 8; i++) {
+		SdfMgrProtocolState *protocol = &cpu->protocols[i];
+		int result;
+
+		if (!(protocol->flags & 1) || protocol->registration.protocol != id)
+			continue;
+		result = sdfMgrSetProtocolStatus(protocol, 2, 1);
+		if (result < 0) {
+#if FW_DEBUG
+			SceDeci4pSDfMgrForKernel_501CE61D(15,
+				SDFMGR_DEBUG_INFO(1360, 0x6dd3d97d, 0x9a31b4b9,
+						"sdfmgrStartProtocol"),
+				"SetProtocolStatus failed (0x%08X)\n", result);
+#endif
+			return result;
+		}
+		result = dcmpMakeStatusProtocol(1, &protocol->registration, &packet);
+		if (result < 0) {
+#if FW_DEBUG
+			SceDeci4pSDfMgrForKernel_501CE61D(15,
+				SDFMGR_DEBUG_INFO(1368, 0x1ebe38be, 0x9a31b4b9,
+						"sdfmgrStartProtocol"),
+				"couldn't make DCMP packet (0x%08x)\n", result);
+#endif
+			return result;
+		}
+		protocol->handler(5, &packet, protocol->context);
+		return 0;
+	}
+	return (int)0x8009000e;
+}
+
+int sdfmgrStopProtocol(uint32_t id)
+{
+	SdfMgrCpuState *cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
+	DcmpProtocolStatus packet;
+	unsigned i;
+
+	for (i = 0; i < 8; i++) {
+		SdfMgrProtocolState *protocol = &cpu->protocols[i];
+		int result;
+
+		if (!(protocol->flags & 1) || protocol->registration.protocol != id)
+			continue;
+		result = sdfMgrSetProtocolStatus(protocol, 2, 0);
+		if (result < 0) {
+#if FW_DEBUG
+			SceDeci4pSDfMgrForKernel_501CE61D(15,
+				SDFMGR_DEBUG_INFO(1395, 0xd54a5173, 0xdfedc380,
+						"sdfmgrStopProtocol"),
+				"SetProtocolStatus failed (0x%08X)\n", result);
+#endif
+			return result;
+		}
+		result = dcmpMakeStatusProtocol(0, &protocol->registration, &packet);
+		if (result < 0) {
+#if FW_DEBUG
+			SceDeci4pSDfMgrForKernel_501CE61D(15,
+				SDFMGR_DEBUG_INFO(1403, 0x77029b80, 0xdfedc380,
+						"sdfmgrStopProtocol"),
+				"couldn't make DCMP packet (0x%08x)\n", result);
+#endif
+			return result;
+		}
+		protocol->handler(5, &packet, protocol->context);
+		return 0;
+	}
+	return (int)0x80090001;
 }
 
 int sceSDfMgrSendSpace(int handle)

@@ -107,6 +107,38 @@ typedef struct SdfMgrPacketQueue {
 	SceSize sizes[16];
 } SdfMgrPacketQueue;
 
+/* DCMP status packets, built by pd_dcmp.c and sent by the manager */
+typedef struct DcmpStatusHeader {
+	SceDeci4pHeader header;
+	uint8_t code;
+	uint8_t kind;
+	uint16_t reserved;
+} DcmpStatusHeader;
+
+typedef struct DcmpProtocolStatus {
+	DcmpStatusHeader message;
+	uint32_t protocol;
+	uint32_t version;
+	uint32_t subVersion;
+	uint16_t cpu;
+	uint16_t reserved;
+	uint8_t status;
+	uint8_t padding[3];
+} DcmpProtocolStatus;
+
+typedef struct DcmpConnectionStatus {
+	DcmpStatusHeader message;
+	uint8_t connected;
+	uint8_t padding[3];
+} DcmpConnectionStatus;
+
+_Static_assert(sizeof(DcmpProtocolStatus) == 0x28, "protocol status size");
+_Static_assert(sizeof(DcmpConnectionStatus) == 0x18, "connection status size");
+
+int dcmpMakeStatusConnection(uint32_t connected, DcmpConnectionStatus *packet);
+int dcmpMakeStatusProtocol(uint32_t enabled, const SceSDfMgrProtocol *registration,
+	DcmpProtocolStatus *packet);
+
 typedef struct SdfMgrDcmpCpuState {
 	int handle;
 	SceUID memblock;
