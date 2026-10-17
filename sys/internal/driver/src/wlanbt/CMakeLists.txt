@@ -10,8 +10,7 @@ endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
 	"${wlanbt_upstream}/cmm_wpa.c" "${wlanbt_upstream}/SCE.patch")
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
-include_directories(${CMAKE_CURRENT_LIST_DIR}/../../../kernel/src/net_ps/include
-	${CMAKE_CURRENT_LIST_DIR}/../../../kernel/src/net_ps)
+include_directories(${CMAKE_CURRENT_LIST_DIR}/../../../kernel/src/net_ps/include)
 psp2_module(os0_kd_bootimage_wlanbt KIND kernel SOURCES
 	wlanbt.c
 	wlan_syscall.c

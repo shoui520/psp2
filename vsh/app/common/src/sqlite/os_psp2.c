@@ -8,7 +8,7 @@
 #include <psp2/kernel/processmgr.h>
 #include <psp2/kernel/threadmgr.h>
 #include "contrib/sqlite-3.7.6.3/sqlite3.h"
-#include "vsh/app/common/src/sqlite/vfs_time.h"
+#include "vfs_time.h"
 
 extern void *sce_paf_memset(void *buffer, int value, unsigned int size);
 extern void *sce_paf_memcpy(void *dest, const void *source, unsigned int size);

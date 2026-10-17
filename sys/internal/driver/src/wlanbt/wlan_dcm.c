@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <string.h>
 #include <net_ps/netps_thread.h>
-#include "net_ps_bsd.h"
+#include <net_ps/net_ps_bsd.h>
 
 static const WlanLlcSnapPrefix gWlanRfc1042Prefix = {
 	.destinationSap = 0xaa,

@@ -22,7 +22,7 @@ _Static_assert(sizeof(SceNetPsGatewayState) == 8, "gateway state size");
 _Static_assert(offsetof(SceNetPsGatewayState, socket) == 4, "gateway socket");
 
 
-#include "net_ps_bsd.h"
+#include <net_ps/net_ps_bsd.h>
 
 
 typedef struct SceNetPsSysEventHooks {

@@ -2,7 +2,7 @@
 
 #include "netps_driver.h"
 #include <net_ps/netps_thread.h>
-#include "net_ps_bsd.h"
+#include <net_ps/net_ps_bsd.h>
 #include <string.h>
 
 int sceNetPsNotifyDriverCallbacks(struct SceNetPsDriverContext *context,
