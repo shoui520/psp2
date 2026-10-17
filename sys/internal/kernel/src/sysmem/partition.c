@@ -2589,7 +2589,7 @@ int PartitionGetMemBlockPARange(Partition *partition, MemBlockObject *block,
 }
 
 /* name unknown: the physical ranges a list block maps, as many as fit */
-int PartitionGetSceKernelPAVector(Partition *partition, MemBlockObject *block,
+int PartitionGetMemBlockPAVector(Partition *partition, MemBlockObject *block,
 				 SceKernelPAVector *vector)
 {
 	SceKernelPARange *range;

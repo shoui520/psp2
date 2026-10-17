@@ -1556,7 +1556,7 @@ int SceSysmemForDriver_F50BDC0C(SceUID guid)
 
 int PartitionGetMemBlockPARange(struct Partition *partition, MemBlockObject *block,
 				SceKernelPARange *range);
-int PartitionGetSceKernelPAVector(struct Partition *partition, MemBlockObject *block,
+int PartitionGetMemBlockPAVector(struct Partition *partition, MemBlockObject *block,
 				 SceKernelPAVector *vector);
 
 int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range)
@@ -1593,7 +1593,7 @@ int SceSysmemForDriver_19A51AC7(SceUID guid, SceKernelPAVector *vector)
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_EC53D007(&block->lock);
-	ret = PartitionGetSceKernelPAVector(block->partition, block, vector);
+	ret = PartitionGetMemBlockPAVector(block->partition, block, vector);
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
 	sceGUIDReleaseObject(guid);
 	return ret;
