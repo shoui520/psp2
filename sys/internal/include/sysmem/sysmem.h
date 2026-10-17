@@ -4,19 +4,41 @@
 
 #pragma once
 
-/* vitasdk's SceKernelAllocMemBlockKernelOpt names few fields: Sony's layout below */
+/*
+ * vitasdk's SceKernelAllocMemBlockKernelOpt names few fields: Sony's layouts below. vitasdk's
+ * declarations of these names are moved aside (_vitasdk); a macro the includer has for one of
+ * them (the ForTZS builds map them to their imports) is kept.
+ */
 #if defined(_PSP2KERN_KERNEL_SYSMEM_H_) || defined(_PSP2KERN_KERNEL_SYSMEM_HEAP_H_)
 #error "include sysmem/sysmem.h before <psp2kern/kernel/sysmem.h>"
 #endif
-#define SceKernelAllocMemBlockKernelOpt	SceKernelAllocMemBlockKernelOpt_vitasdk
-#define SceKernelAllocMemBlockOptKernel	SceKernelAllocMemBlockOptKernel_vitasdk
-#define ksceKernelAllocMemBlock		ksceKernelAllocMemBlock_vitasdk
+#pragma push_macro("SceKernelAllocMemBlockKernelOpt")
+#pragma push_macro("SceKernelAllocMemBlockOptKernel")
+#pragma push_macro("ksceKernelAllocMemBlock")
+#pragma push_macro("ksceKernelAllocPartitionMemBlock")
+#pragma push_macro("SceKernelHeapCreateOpt")
+#pragma push_macro("ksceKernelCreateHeap")
+#pragma push_macro("SceAllocOpt")
+#pragma push_macro("ksceKernelAllocHeapMemoryWithOption")
+#undef SceKernelAllocMemBlockKernelOpt
+#undef SceKernelAllocMemBlockOptKernel
+#undef ksceKernelAllocMemBlock
+#undef ksceKernelAllocPartitionMemBlock
+#undef SceKernelHeapCreateOpt
+#undef ksceKernelCreateHeap
+#undef SceAllocOpt
+#undef ksceKernelAllocHeapMemoryWithOption
+#define SceKernelAllocMemBlockKernelOpt		SceKernelAllocMemBlockKernelOpt_vitasdk
+#define SceKernelAllocMemBlockOptKernel		SceKernelAllocMemBlockOptKernel_vitasdk
+#define ksceKernelAllocMemBlock			ksceKernelAllocMemBlock_vitasdk
 #define ksceKernelAllocPartitionMemBlock	ksceKernelAllocPartitionMemBlock_vitasdk
-#define SceKernelHeapCreateOpt		SceKernelHeapCreateOpt_vitasdk
-#define ksceKernelCreateHeap		ksceKernelCreateHeap_vitasdk
-#define SceAllocOpt			SceAllocOpt_vitasdk
+#define SceKernelHeapCreateOpt			SceKernelHeapCreateOpt_vitasdk
+#define ksceKernelCreateHeap			ksceKernelCreateHeap_vitasdk
+#define SceAllocOpt				SceAllocOpt_vitasdk
 #define ksceKernelAllocHeapMemoryWithOption	ksceKernelAllocHeapMemoryWithOption_vitasdk
+#define SYSMEM_INCLUDE_VITASDK	/* past cmake/compat/vitasdk's psp2kern/kernel/sysmem.h */
 #include <psp2kern/kernel/sysmem.h>
+#undef SYSMEM_INCLUDE_VITASDK
 #include <stddef.h>
 #undef SceKernelAllocMemBlockKernelOpt
 #undef SceKernelAllocMemBlockOptKernel
@@ -26,6 +48,14 @@
 #undef ksceKernelCreateHeap
 #undef SceAllocOpt
 #undef ksceKernelAllocHeapMemoryWithOption
+#pragma pop_macro("SceKernelAllocMemBlockKernelOpt")
+#pragma pop_macro("SceKernelAllocMemBlockOptKernel")
+#pragma pop_macro("ksceKernelAllocMemBlock")
+#pragma pop_macro("ksceKernelAllocPartitionMemBlock")
+#pragma pop_macro("SceKernelHeapCreateOpt")
+#pragma pop_macro("ksceKernelCreateHeap")
+#pragma pop_macro("SceAllocOpt")
+#pragma pop_macro("ksceKernelAllocHeapMemoryWithOption")
 
 /*
  * ksceKernelAllocMemBlock's options (Sony: SceKernelAllocMemBlockOptKernel);
@@ -51,7 +81,9 @@ typedef struct SceKernelAllocMemBlockKernelOpt {
 	SceUInt32 capabilities[8];		/* 0x38: CLIENT_INFO, those an opener needs */
 } SceKernelAllocMemBlockKernelOpt;
 
+#ifndef __cplusplus	/* C only; g++ 4.8 (C++98) has no static_assert */
 _Static_assert(sizeof(SceKernelAllocMemBlockKernelOpt) == 0x58, "SceKernelAllocMemBlockKernelOpt size");
+#endif
 
 typedef SceKernelAllocMemBlockKernelOpt SceKernelAllocMemBlockOptKernel;
 
@@ -120,7 +152,9 @@ typedef struct SceKernelHeapCreateOpt {
 	struct KernelHeap *heap;		/* 0x18 */
 } SceKernelHeapCreateOpt;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SceKernelHeapCreateOpt) == 0x1c, "SceKernelHeapCreateOpt size");
+#endif
 
 SceUID ksceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
 
@@ -133,7 +167,9 @@ typedef struct SceAllocOpt {
 	SceSize mmapSize;			/* 0x10: out */
 } SceAllocOpt;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SceAllocOpt) == 0x14, "SceAllocOpt size");
+#endif
 
 void *ksceKernelAllocHeapMemoryWithOption(SceUID uid, SceSize len, SceAllocOpt *opt);
 
@@ -209,8 +245,10 @@ typedef struct SceKernelPhyMemPartInfoForDebugger {
 	} *freeBlocks;			/* 0xac: may be NULL */
 } SceKernelPhyMemPartInfoForDebugger;
 
+#ifndef __cplusplus
 _Static_assert(offsetof(SceKernelPhyMemPartInfoForDebugger, freeBlocks) == 0xac,
 	       "debugger phymem info");
+#endif
 
 /* the allocator an address space keeps its own objects with (sceKernelCreateAddressSpace) */
 typedef struct AddressSpaceHeapOps {
@@ -247,7 +285,9 @@ typedef struct AddressSpaceInfo {
 	void *phyMemPart[ADDRESS_SPACE_PHYMEMPARTS];	/* 0x614 */
 } AddressSpaceInfo;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(AddressSpaceInfo) == 0x654, "AddressSpaceInfo size");
+#endif
 
 /* names unknown (os0:kd/deci4p_pamp.skprx) */
 int SceSysmemForDriver_C9928F5E(uintptr_t *base, SceSize *size);	/* the user I/O physical window */
@@ -293,7 +333,9 @@ typedef struct MemBlockInfoEx {
 	MemBlockInfoDetails details;
 } MemBlockInfoEx;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(MemBlockInfoEx) == 0x30, "MemBlockInfoEx size");
+#endif
 
 /* MemBlockInfoEx with the physical ranges (sceKernelGetMemBlockInfo) */
 typedef struct MemBlockPhyInfo {
@@ -304,7 +346,9 @@ typedef struct MemBlockPhyInfo {
 	SceSize size[16];		/* 0x78 */
 } MemBlockPhyInfo;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(MemBlockPhyInfo) == 0xb8, "MemBlockPhyInfo size");
+#endif
 
 int ksceKernelMemBlockGetInfoEx(SceUID uid, MemBlockPhyInfo *info);
 int ksceKernelMemBlockType2Memtype(SceUInt32 type);

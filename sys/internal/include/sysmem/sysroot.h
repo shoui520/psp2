@@ -26,7 +26,7 @@ SceUInt32 SceSysrootForDriver_ksceSysrootIsManufacturingMode(void);
 
 static inline SceSysrootSharedMemory *sysrootSharedMemory(void)
 {
-	return ksceKernelSysrootGetSharedMemory();
+	return (SceSysrootSharedMemory *)ksceKernelSysrootGetSharedMemory();
 }
 
 /* Name unknown: returns the hardware model classification. */
