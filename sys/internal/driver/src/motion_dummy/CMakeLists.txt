@@ -2,7 +2,7 @@
 # process and ring-reader searches are unrolled into compare chains. No section
 # anchors: each object is addressed by its own movw/movt.
 set(MODULE_COMPILE_OPTIONS -O3)
-psp2_module(os0_kd_bootimage_motion_dummy KIND kernel SOURCES motion_dummy.c
+psp2_module(os0_kd_bootimage_motion_dummy KIND kernel COMPILER gcc48 SOURCES motion_dummy.c
 		../motion/ring.c syscall.c
 		../motion/heap.c ../motion/filter.c
 	IMPORTS SceSysmemForDriver_9328E0E8 sceKernelDeleteHeap __aeabi_uidivmod

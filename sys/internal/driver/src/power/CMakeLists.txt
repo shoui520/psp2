@@ -1,6 +1,6 @@
 # ScePower: power requests, clocks, idle timers, suspend/resume and device state.
 # The units follow Sony's: their functions keep the original's inlining.
-psp2_module(os0_kd_bootimage_power KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_power KIND kernel COMPILER gcc48 SOURCES
 	power_cpu.S
 	power.c
 	power_switch.c

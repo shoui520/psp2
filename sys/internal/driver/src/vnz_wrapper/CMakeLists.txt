@@ -1,5 +1,5 @@
 # SceCodecEngineWrapper C implementation.
-psp2_module(os0_kd_bootimage_vnz_wrapper KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_vnz_wrapper KIND kernel COMPILER gcc48 SOURCES
 	entry.c
 	entry_start.c
 	venezia/venezia.c

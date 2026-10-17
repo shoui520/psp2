@@ -1,4 +1,4 @@
-psp2_module(os0_kd_bootimage_gpuinit_es4 KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_gpuinit_es4 KIND kernel COMPILER gcc48 SOURCES
 	devices/sgx/sgxinit.c
 	programs.S
 )

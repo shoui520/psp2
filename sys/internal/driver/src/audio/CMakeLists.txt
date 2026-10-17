@@ -1,5 +1,5 @@
 # Audio implementation; remaining exports are compiled as placeholders.
-psp2_module(os0_kd_bootimage_audio KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_audio KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	audio_work.c
 	biquad.c
 	audio.c

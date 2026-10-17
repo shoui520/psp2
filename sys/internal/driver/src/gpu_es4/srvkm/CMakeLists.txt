@@ -1,5 +1,5 @@
 # Native partial implementation (T2): GPU startup and remaining services pending.
-psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel SKELETON PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel COMPILER gcc48 SKELETON PARTIAL SOURCES
 	bridged/sgx/bridged_sgx_bridge_sce.c
 	bridged/bridged_pvr_bridge.c
 	common/buffer_manager_sce.c

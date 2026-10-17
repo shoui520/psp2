@@ -195,6 +195,10 @@ def tables(a):
 				    vars=[(int(n, 0), v) for v, n in lib.get("variables", [])]))
 	for nid, sym in nid0_vars:			# placeholders until the module defines them
 		s(f"\t.weak {sym}")
+	# an export the module's C does not define yet stays 0 (mkprx.py elf lists it)
+	for e in exports[1:]:
+		for _, sym in e["funcs"] + e["vars"]:
+			s(f"\t.weak {sym}")
 	if a.nid0_var_order:
 		order = [int(n, 0) for n in a.nid0_var_order]
 		own = exports[0]["vars"]
@@ -461,6 +465,14 @@ def elf(a):
 	e = Elf(a.input)
 	if len(e.segs) not in (1, 2):
 		raise SystemExit("mkprx: expected one or two loaded segments")
+	# the exports the module's C does not define yet (weak in the tables)
+	(_, mod), = parse_yaml(a.exports).items()
+	exported = {sym for lib in mod.get("libraries", {}).values()
+		    for sym, _ in lib.get("functions", []) + lib.get("variables", [])}
+	missing = sorted({name for name, value, shndx, bind in e.syms
+			  if name in exported and shndx == SHN_UNDEF})
+	if missing:
+		print(f"mkprx: warning: {a.input}: not defined, left 0: {' '.join(missing)}", file=sys.stderr)
 	sym = e.symbol
 	text = e.segs[0]
 	refs = references(e)
@@ -578,6 +590,7 @@ def main():
 	x = sub.add_parser("elf")
 	x.add_argument("input")
 	x.add_argument("output")
+	x.add_argument("--exports", required=True)
 	a = ap.parse_args()
 	tables(a) if a.cmd == "tables" else elf(a)
 

@@ -4,7 +4,7 @@
 # global accessors stay calls. No IPA-CP clones either: hdmi_device_sm.c
 # calls hdmiDeviceSmClearEvent with constants.
 set(MODULE_COMPILE_OPTIONS -O3 -fno-inline-functions -fno-inline-small-functions -fno-ipa-cp-clone)
-psp2_module(os0_kd_hdmi KIND kernel SOURCES
+psp2_module(os0_kd_hdmi KIND kernel COMPILER gcc48 SOURCES
 	hdmi.c
 	hdmi_vic.c
 	hdmi_mode.c

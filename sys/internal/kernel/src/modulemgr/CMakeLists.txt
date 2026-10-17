@@ -1,4 +1,4 @@
-psp2_module(os0_kd_modulemgr KIND kernel SOURCES
+psp2_module(os0_kd_modulemgr KIND kernel COMPILER gcc48 SOURCES
 	backtrace_entry.S
 	loadelf.c
 	relocator.c

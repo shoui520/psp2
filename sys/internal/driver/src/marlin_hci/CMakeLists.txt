@@ -1,5 +1,5 @@
 # Original module/export/import tables; C sources follow original address order.
-psp2_module(os0_kd_marlin_hci KIND kernel SCE_LAYOUT SOURCES
+psp2_module(os0_kd_marlin_hci KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	buffer.c
 	memory.c
     storage.c

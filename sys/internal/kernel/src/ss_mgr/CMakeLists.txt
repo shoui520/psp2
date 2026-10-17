@@ -1,5 +1,5 @@
 # C implementation of the secure services manager.
-psp2_module(os0_kd_ss_mgr KIND kernel SCE_LAYOUT SOURCES
+psp2_module(os0_kd_ss_mgr KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	ss_mgr.c
 	qaf_mgr.c
 	dmac5mgr.c

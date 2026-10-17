@@ -1,5 +1,5 @@
 # Partial C implementation of SceBbmc.
-psp2_module(os0_kd_bootimage_bbmc KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_bbmc KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	message_command.c
 	bbmc_gpio.c
 	bbmc_memory.c

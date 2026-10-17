@@ -1,4 +1,4 @@
-psp2_module(os0_kd_processmgr KIND kernel SOURCES
+psp2_module(os0_kd_processmgr KIND kernel COMPILER gcc48 SOURCES
 	processmgr.c
 	budget.c
 	libctime.c

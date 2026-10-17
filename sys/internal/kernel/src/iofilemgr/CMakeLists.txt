@@ -1,6 +1,6 @@
 include("${CMAKE_CURRENT_SOURCE_DIR}/fw/native_layout.cmake")
 fw_value(IOFILEMGR_NATIVE_LINKER_SCRIPT IOFILEMGR_NATIVE_LINKER_SCRIPT)
-psp2_module(os0_kd_iofilemgr KIND kernel SCE_LAYOUT SOURCES
+psp2_module(os0_kd_iofilemgr KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	iofilemgr.c
 	iofilemgr_for_kernel.c
 	flock.c

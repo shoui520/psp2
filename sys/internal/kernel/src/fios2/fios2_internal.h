@@ -309,4 +309,10 @@ static inline void *fiosStorageAlloc(SceFiosKernelStorage *storage, SceSize size
 }
 #endif
 
+/* Sony's 4.00 build calls the checked string copies, the destination's size unknown */
+#if FW_VERSION >= 0x04000000
+#define strlcpy(dst, src, size)	__strlcpy_chk(dst, src, size, (size_t)-1)
+#define strlcat(dst, src, size)	__strlcat_chk(dst, src, size, (size_t)-1)
+#endif
+
 #endif /* FIOS2_INTERNAL_H */

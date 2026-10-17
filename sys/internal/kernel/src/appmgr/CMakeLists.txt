@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_appmgr KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_appmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	appmgr.c
 	appmgr_process.c
 	appmgr_applist.c

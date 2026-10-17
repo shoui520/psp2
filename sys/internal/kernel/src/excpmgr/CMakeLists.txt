@@ -1,4 +1,4 @@
-psp2_module(os0_kd_excpmgr KIND kernel
+psp2_module(os0_kd_excpmgr KIND kernel COMPILER gcc48
 	SOURCES excpmgr_vector.S
 		excpmgr_panic_dabt.S excpmgr_panic_dabt.c
 		excpmgr_panic_pabt.S excpmgr_panic_pabt.c

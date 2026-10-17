@@ -1,5 +1,5 @@
 # C implementation in original address order.
-psp2_module(os0_kd_mgvideo KIND kernel SOURCES
+psp2_module(os0_kd_mgvideo KIND kernel COMPILER gcc48 SOURCES
 	mgvideo_errors.c
 	mgvideo_lifecycle.c
 	mgvideo_callbacks.c

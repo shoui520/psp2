@@ -1,6 +1,14 @@
 # Shared module build for every module folder of the tree (release/modules.tsv).
 #
-#   psp2_module(<target> KIND kernel|user [SKELETON] [SCE_LAYOUT] [PARTIAL] SOURCES <files...>)
+#   psp2_module(<target> KIND kernel|user [COMPILER gcc48|snc] [SKELETON] [SCE_LAYOUT] [PARTIAL]
+#               SOURCES <files...>)
+#
+# COMPILER: the compiler Sony built the module with (agent index compilers.<FW>.json): GCC 4.8
+# (the kernel, LibKernel, some libraries) or SNC (most user libraries and apps). With the project's
+# toolchain (cmake/toolchain.cmake) every module is built in Sony's layout (SCE_LAYOUT) by its
+# compiler; a folder without COMPILER is not built with Sony's compilers yet (its roadmap stage
+# has not started) and the superbuild skips it. vitasdk's toolchain (-DCMAKE_TOOLCHAIN_FILE)
+# builds every module with its GCC and ignores COMPILER.
 #
 # PARTIAL: a module being converted to C whose code still calls functions not written
 # yet. Its sources are compiled with the module's flags (errors and warnings show, and
@@ -59,7 +67,11 @@ set(PSP2_STUBS "${CMAKE_BINARY_DIR}/stubs")
 # here; it is not part of src/. Set -DPSP2_FW_DIR or the PSP2_FW_DIR environment variable.
 set(PSP2_FW_DIR "$ENV{PSP2_FW_DIR}" CACHE PATH "extracted original firmware")
 
+# import stub archives for vitasdk's packaging (vita-elf-create); Sony's layout makes its own stubs
 foreach(ns kernel user)
+	if(PSP2_TOOLCHAIN STREQUAL "sony")
+		break()
+	endif()
 	set(db "${PSP2_SRC}/tools/nids/${ns}.yml")
 	set(out "${PSP2_STUBS}/${ns}")
 	if(NOT EXISTS "${out}/.stamp" OR "${db}" IS_NEWER_THAN "${out}/.stamp"
@@ -80,9 +92,9 @@ endforeach()
 
 # __FILE_NAME__ of each C/C++ source, as Sony's debug records name it: the path from its
 # component's folder (the nearest folder above it with a CMakeLists.txt); the bare file name
-# outside a component (common/, contrib/, generated). tools/sonycc.py file_name() is the same.
-# Only a file in a subfolder gets the define: for the others the compiler's built-in is already
-# the bare name (and inside a header, the header's name, which a define would replace).
+# outside a component (contrib/, generated). tools/sonycc.py file_name() is the same. GCC 4.8
+# has no built-in __FILE_NAME__, so every source gets the define (a header whose records name
+# the header defines it itself).
 function(psp2_file_names)
 	get_filename_component(root "${PSP2_SRC}" REALPATH)
 	foreach(src IN LISTS ARGN)
@@ -101,9 +113,7 @@ function(psp2_file_names)
 			get_filename_component(dir "${dir}" DIRECTORY)
 			string(FIND "${dir}/" "${root}/" at)
 		endwhile()
-		if(name MATCHES "/")
-			set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS "__FILE_NAME__=\"${name}\"")
-		endif()
+		set_property(SOURCE "${src}" APPEND PROPERTY COMPILE_DEFINITIONS "__FILE_NAME__=\"${name}\"")
 	endforeach()
 endfunction()
 
@@ -115,7 +125,12 @@ macro(psp2_compile_settings name)
 		${PSP2_INCLUDE_DIRS}
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
-	psp2_file_names(${M_SOURCES})
+	# after the module's CMakeLists, which may set a source's COMPILE_DEFINITIONS outright
+	set(names "")
+	foreach(src IN LISTS M_SOURCES)
+		string(APPEND names " [==[${src}]==]")
+	endforeach()
+	cmake_language(EVAL CODE "cmake_language(DEFER CALL psp2_file_names ${names})")
 	if(DEFINED MODULE_SDK_VERSION)
 		# the SDK the original was built with (Sony's sdk_version.h name)
 		target_compile_definitions(${name} PRIVATE SCE_PSP2_SDK_VERSION=${MODULE_SDK_VERSION})
@@ -123,10 +138,18 @@ macro(psp2_compile_settings name)
 	if(MODULE_DEPENDS)
 		set_source_files_properties(${M_SOURCES} PROPERTIES OBJECT_DEPENDS "${MODULE_DEPENDS}")
 	endif()
-	# GCC 14 and later make incompatible pointer types an error; Sony's GCC 4.8 warns
+	# a call without a declaration is an error (GCC 4.8 only warns); GCC 14 and later make
+	# incompatible pointer types an error, which Sony's GCC 4.8 warns about
 	target_compile_options(${name} PRIVATE
 		-Wall -Wno-unused-parameter -O2 -fno-builtin -ffreestanding -fstack-protector-strong
-		"$<$<COMPILE_LANGUAGE:C>:-Wno-error=incompatible-pointer-types>")
+		"$<$<COMPILE_LANGUAGE:C>:-Werror=implicit-function-declaration>"
+		"$<$<AND:$<COMPILE_LANGUAGE:C>,$<VERSION_GREATER_EQUAL:$<C_COMPILER_VERSION>,14>>:-Wno-error=incompatible-pointer-types>")
+	if(PSP2_TOOLCHAIN STREQUAL "sony" AND M_COMPILER STREQUAL "snc")
+		# SNC compiles in place of the GCC command CMake makes
+		set_target_properties(${name} PROPERTIES C_COMPILER_LAUNCHER
+			"python3;-I;${PSP2_SRC}/tools/sonycc.py;snc"
+			CXX_COMPILER_LAUNCHER "python3;-I;${PSP2_SRC}/tools/sonycc.py;snc")
+	endif()
 	if(MODULE_COMPILE_OPTIONS)
 		# per module, after the defaults: flags of Sony's own build that change behaviour
 		target_compile_options(${name} PRIVATE ${MODULE_COMPILE_OPTIONS})
@@ -137,11 +160,14 @@ macro(psp2_compile_settings name)
 endmacro()
 
 function(psp2_module name)
-	cmake_parse_arguments(M "SKELETON;SCE_LAYOUT;PARTIAL" "KIND" "SOURCES;IMPORTS" ${ARGN})
+	cmake_parse_arguments(M "SKELETON;SCE_LAYOUT;PARTIAL" "KIND;COMPILER" "SOURCES;IMPORTS" ${ARGN})
 	set(fwfile "${CMAKE_CURRENT_SOURCE_DIR}/fw/${FW}.cmake")
 	if(NOT EXISTS "${fwfile}")
 		message(STATUS "psp2: ${name} not in ${FW}, skipped")
 		return()
+	endif()
+	if(PSP2_TOOLCHAIN STREQUAL "sony" AND NOT M_COMPILER)
+		message(FATAL_ERROR "${name}: psp2_module needs COMPILER with Sony's toolchain")
 	endif()
 	set(MODULE_ATTR 0)
 	set(MODULE_IMPORT_LIBS "")
@@ -172,7 +198,7 @@ function(psp2_module name)
 		return()
 	endif()
 
-	if(M_SCE_LAYOUT OR PSP2_SCE_LAYOUT)
+	if(M_SCE_LAYOUT OR PSP2_SCE_LAYOUT OR PSP2_TOOLCHAIN STREQUAL "sony")
 		psp2_sce_layout(${name})
 		return()
 	endif()
@@ -298,8 +324,11 @@ function(psp2_image name)
 	set_target_properties(${name} PROPERTIES SUFFIX ".elf" LINK_DEPENDS "${script}")
 	# RWX regions, like the originals (NSKBL runs from an RWX identity mapping)
 	target_link_options(${name} PRIVATE -nostdlib -Wl,--defsym=IMAGE_ADDRESS=${M_ADDRESS}
-		-Wl,-T,${script} -Wl,--no-warn-rwx-segments)
-	target_link_libraries(${name} PRIVATE gcc)
+		-Wl,-T,${script})
+	if(NOT PSP2_TOOLCHAIN STREQUAL "sony")
+		target_link_options(${name} PRIVATE -Wl,--no-warn-rwx-segments)
+		target_link_libraries(${name} PRIVATE gcc)
+	endif()
 	add_custom_command(OUTPUT ${name}.bin
 		COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${name}> ${name}.bin
 		DEPENDS ${name}
@@ -335,32 +364,12 @@ macro(psp2_sce_layout name)
 	# the stubs bind every import; the old path's hand-made bindings would collide
 	list(FILTER M_SOURCES EXCLUDE REGEX "(^|/)import_bindings\\.S$")
 	add_executable(${name} ${M_SOURCES} "${tables}")
-	target_include_directories(${name} PRIVATE
-		"${CMAKE_CURRENT_SOURCE_DIR}/include"
-		"${CMAKE_CURRENT_SOURCE_DIR}"
-		${PSP2_INCLUDE_DIRS}
-		"${PSP2_SRC}")
-	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
-	psp2_file_names(${M_SOURCES})
-	if(DEFINED MODULE_SDK_VERSION)
-		target_compile_definitions(${name} PRIVATE SCE_PSP2_SDK_VERSION=${MODULE_SDK_VERSION})
-	endif()
-	if(MODULE_DEPENDS)
-		set_source_files_properties(${M_SOURCES} PROPERTIES OBJECT_DEPENDS "${MODULE_DEPENDS}")
-	endif()
 	# Sony's objects carry unwind tables (an .ARM.exidx entry per function)
-	target_compile_options(${name} PRIVATE
-		-Wall -Wno-unused-parameter -O2 -fno-builtin -ffreestanding -fstack-protector-strong
-		"$<$<COMPILE_LANGUAGE:C>:-funwind-tables>"
-		"$<$<COMPILE_LANGUAGE:C>:-Wno-error=incompatible-pointer-types>")
-	if(MODULE_COMPILE_OPTIONS)
-		target_compile_options(${name} PRIVATE ${MODULE_COMPILE_OPTIONS})
-	endif()
-	if(M_KIND STREQUAL "kernel")
-		target_compile_definitions(${name} PRIVATE PSP2_KERNEL=1)
-	endif()
+	target_compile_options(${name} PRIVATE "$<$<COMPILE_LANGUAGE:C>:-funwind-tables>")
+	psp2_compile_settings(${name})
+	# -q keeps the relocations, which mkprx.py turns into the module's SCE relocations
 	set_target_properties(${name} PROPERTIES LINK_DEPENDS "${PSP2_SRC}/cmake/prx.ld")
-	target_link_options(${name} PRIVATE -nostdlib -Wl,-T,${PSP2_SRC}/cmake/prx.ld
+	target_link_options(${name} PRIVATE -nostdlib -Wl,-q -Wl,-T,${PSP2_SRC}/cmake/prx.ld
 		-Wl,--no-merge-exidx-entries)
 
 	add_custom_command(TARGET ${name} POST_BUILD
@@ -368,6 +377,7 @@ macro(psp2_sce_layout name)
 		VERBATIM)
 	add_custom_command(OUTPUT ${name}.velf
 		COMMAND python3 "${PSP2_SRC}/tools/mkprx.py" elf $<TARGET_FILE:${name}> ${name}.velf
+			--exports "${CMAKE_CURRENT_SOURCE_DIR}/${MODULE_EXPORTS}"
 		DEPENDS ${name} $<TARGET_FILE:${name}> "${PSP2_SRC}/tools/mkprx.py"
 		VERBATIM)
 	add_custom_target(${name}_velf ALL DEPENDS ${name}.velf)

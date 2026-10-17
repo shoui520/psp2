@@ -1,4 +1,4 @@
-psp2_module(os0_kd_dbgsdio KIND kernel SOURCES
+psp2_module(os0_kd_dbgsdio KIND kernel COMPILER gcc48 SOURCES
 	dbgsdio.c
 )
 

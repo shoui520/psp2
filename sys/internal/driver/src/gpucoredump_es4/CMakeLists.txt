@@ -1,5 +1,5 @@
 # SceGpuEs4CoreDump: GPU crash capture, analysis and dump files (Sony's file names unknown).
-psp2_module(os0_kd_gpucoredump_es4 KIND kernel SOURCES
+psp2_module(os0_kd_gpucoredump_es4 KIND kernel COMPILER gcc48 SOURCES
 	gpucoredump_file.c
 	gpucoredump.c
 	gpucoredump_analysis.c

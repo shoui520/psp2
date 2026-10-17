@@ -2,7 +2,7 @@
 # The remaining export bodies are honest placeholders during C conversion.
 # All present originals lack SSP guard/fail imports and guards on stack locals.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
-psp2_module(os0_kd_net_ps_dev KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_net_ps_dev KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	../netps_allocator_adapters.c
 	../netps_thread.c
 	../netps_process.c

@@ -1,5 +1,5 @@
 # SceDeci4pLoadp: Sony's loadp.c.
-psp2_module(os0_kd_deci4p_loadp KIND kernel SOURCES
+psp2_module(os0_kd_deci4p_loadp KIND kernel COMPILER gcc48 SOURCES
 	loadp.c
 )
 # Sony built this module with -O3 (prefetching loop in pdLoadpProcSpawnCmd)

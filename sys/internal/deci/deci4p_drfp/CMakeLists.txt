@@ -1,4 +1,4 @@
-psp2_module(os0_kd_deci4p_drfp KIND kernel SOURCES
+psp2_module(os0_kd_deci4p_drfp KIND kernel COMPILER gcc48 SOURCES
 	drfp.c
 	drfpif.c
 	drfpfs.c

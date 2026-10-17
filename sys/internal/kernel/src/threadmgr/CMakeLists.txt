@@ -1,6 +1,6 @@
 # SceKernelThreadMgr. Sony's kernel build: no tail calls (callers' lr reach panics/asserts).
 set(MODULE_COMPILE_OPTIONS -fno-optimize-sibling-calls)
-psp2_module(os0_kd_threadmgr KIND kernel SOURCES
+psp2_module(os0_kd_threadmgr KIND kernel COMPILER gcc48 SOURCES
 	vfp_poison.S
 	kernel_stack_space.c
 	excp_handlers.S

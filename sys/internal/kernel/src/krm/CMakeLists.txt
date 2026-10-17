@@ -6,7 +6,7 @@ endif()
 
 # one Sony build, shipped as os0:kd/krm and inside bootimage (os0:kd/bootimage/krm):
 # the target is named from the rel
-psp2_module(${PSP2_TARGET} KIND kernel SCE_LAYOUT SOURCES
+psp2_module(${PSP2_TARGET} KIND kernel COMPILER gcc48 SCE_LAYOUT SOURCES
 	driver.c
 	${krm_order}
 	krm.c

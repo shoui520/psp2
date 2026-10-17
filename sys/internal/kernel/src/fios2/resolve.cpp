@@ -37,7 +37,7 @@ static int fiosOverlayResolveTime(SceFiosKernelResolveParam *param, int index, c
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	memset(resolved, 0, FIOS_PATH_MAX);
-	__strlcpy_chk(resolved, path, FIOS_PATH_MAX, (size_t)-1);
+	strlcpy(resolved, path, FIOS_PATH_MAX);
 	ret = sceFiosKernelOverlayResolve(param, index, out, resolved);
 	param->maxOrder = maxOrder;
 	if (ret >= 0) {

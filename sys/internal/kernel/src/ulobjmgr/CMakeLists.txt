@@ -1,5 +1,5 @@
 # os0:kd/bootimage/ulobjmgr - kernel support for libult's user-level objects
-psp2_module(os0_kd_bootimage_ulobjmgr KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_ulobjmgr KIND kernel COMPILER gcc48 SOURCES
 	ulobjmgr.c
 	instance.c
 	info_array.c

@@ -2,7 +2,7 @@
 # Sony's build keeps small static helpers out of line (fatfsGetAttr,
 # pfsSetAttr, getAuthInfoAndCheckAttribute, isGameProgramForUser).
 set(MODULE_COMPILE_OPTIONS -fno-inline-small-functions)
-psp2_module(os0_kd_acmgr KIND kernel SOURCES
+psp2_module(os0_kd_acmgr KIND kernel COMPILER gcc48 SOURCES
 	acmgr.c
 	acmgr_fatfs_attr.c
 	acmgr_pfs_attr.c

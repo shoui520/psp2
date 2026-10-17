@@ -3,7 +3,7 @@
 # start and stop are inlined into resume, suspend and term.
 set(MODULE_COMPILE_OPTIONS -O3)
 set(MODULE_SCE_RESERVE ON)	# its text ends just short of the data segment
-psp2_module(os0_kd_bootimage_usbd KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_usbd KIND kernel COMPILER gcc48 SOURCES
 	usbd.c
 	usbd_os.c
 	ehci.c

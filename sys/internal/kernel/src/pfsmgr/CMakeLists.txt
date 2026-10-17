@@ -1,5 +1,5 @@
 # Complete native graph; behavioral verification remains open.
-psp2_module(os0_kd_bootimage_pfsmgr KIND kernel SKELETON SOURCES
+psp2_module(os0_kd_bootimage_pfsmgr KIND kernel COMPILER gcc48 SKELETON SOURCES
 	pfsmgr.c
 	pmi.c
 	gdsd_vfs.c

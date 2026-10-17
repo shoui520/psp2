@@ -1,5 +1,5 @@
 # SceDeci4pRDrfp: Sony's rdrfp*.c (and the fd table, file name unknown).
-psp2_module(os0_kd_deci4p_rdrfp KIND kernel SOURCES
+psp2_module(os0_kd_deci4p_rdrfp KIND kernel COMPILER gcc48 SOURCES
 	rdrfp.c
 	rdrfp_queue.c
 	rdrfp_buffer.c

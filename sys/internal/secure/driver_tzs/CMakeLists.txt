@@ -1,5 +1,5 @@
 # slb2:kbl/SceDriverTzs - the secure world's Pervasive, grab, EMC and crash dump driver
-psp2_module(slb2_kbl_SceDriverTzs KIND kernel PARTIAL SOURCES
+psp2_module(slb2_kbl_SceDriverTzs KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	power_entry.S
 	pervasive_tzs.c
 	pervasive_control_tzs.c

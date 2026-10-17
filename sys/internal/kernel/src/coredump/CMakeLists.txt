@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_coredump KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_coredump KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	entry.c
 	oal.c
 	trigger.c

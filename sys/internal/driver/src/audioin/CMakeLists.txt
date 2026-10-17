@@ -4,7 +4,7 @@ else()
 	set(audioin_capture_order capture_buffers.c capture_process.c)
 endif()
 
-psp2_module(os0_kd_bootimage_audioin KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_audioin KIND kernel COMPILER gcc48 SOURCES
 	capture_config.c
 	${audioin_capture_order}
 	capture.c

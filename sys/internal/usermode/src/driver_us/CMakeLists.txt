@@ -1,4 +1,4 @@
-psp2_module(os0_us_driver_us KIND user SOURCES
+psp2_module(os0_us_driver_us KIND user COMPILER gcc48 SOURCES
 	motion_math.c
 	fios.c
 	rtc.c

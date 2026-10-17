@@ -9,7 +9,7 @@ else()
 	set(update_touch_flags_late touch_config_flags.c)
 endif()
 
-psp2_module(os0_kd_bootimage_update_mgr KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_update_mgr KIND kernel COMPILER gcc48 SOURCES
 	update_start.c
 	update_peripherals.c
 	update_events.c

@@ -1,5 +1,5 @@
 # SceSdstor: C conversion in original source and address order.
-psp2_module(os0_kd_sdstor KIND kernel SOURCES
+psp2_module(os0_kd_sdstor KIND kernel COMPILER gcc48 SOURCES
 	main.c
 	sdstor.c
 	sdpart.c

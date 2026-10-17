@@ -1,5 +1,5 @@
 # Crash console/reporting and exception capture in C with CPU entry veneers.
-psp2_module(os0_kd_bsod KIND kernel SOURCES
+psp2_module(os0_kd_bsod KIND kernel COMPILER gcc48 SOURCES
 	bsod.c
 	console.c
 	dummyhostfs.c

@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_bootimage_motion KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_motion KIND kernel COMPILER gcc48 SOURCES
 	magnetometer.c
 	motion_command.c
 	motion_protocol.c

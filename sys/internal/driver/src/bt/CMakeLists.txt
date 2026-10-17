@@ -1,5 +1,5 @@
 # Bluetooth implementation with original module/export/import tables.
-psp2_module(os0_kd_bootimage_bt KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_bt KIND kernel COMPILER gcc48 SOURCES
 	bt_sbc.c
 	bt_tables.c
 	bt_hci_callbacks.c

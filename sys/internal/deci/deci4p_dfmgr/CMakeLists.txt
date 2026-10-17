@@ -1,5 +1,5 @@
 # os0:kd/deci4p_dfmgr - the DECI4P link manager (SDIO and USB links, DCMP)
-psp2_module(os0_kd_deci4p_dfmgr KIND kernel SOURCES
+psp2_module(os0_kd_deci4p_dfmgr KIND kernel COMPILER gcc48 SOURCES
 	dfmgr.c
 	dcmp.c
 	sdio.c

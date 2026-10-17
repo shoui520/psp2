@@ -1,7 +1,7 @@
 # os0:kd/bootimage/regmgr - SceRegistryMgr. Sony built it at -O3: its loops are
 # prefetched and unrolled, and the number parser is cloned for constant arguments.
 set(MODULE_COMPILE_OPTIONS -O3)
-psp2_module(os0_kd_bootimage_regmgr KIND kernel SKELETON SOURCES
+psp2_module(os0_kd_bootimage_regmgr KIND kernel COMPILER gcc48 SKELETON SOURCES
 	regmgr.c
 	regmgr_movevalue.c
 	regmgr_convertvalue.c

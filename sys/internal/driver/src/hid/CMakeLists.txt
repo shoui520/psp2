@@ -1,4 +1,4 @@
-psp2_module(os0_kd_bootimage_hid KIND kernel SOURCES
+psp2_module(os0_kd_bootimage_hid KIND kernel COMPILER gcc48 SOURCES
 	hid_tables.c
 	hid_main.c
 	hid_memory.c

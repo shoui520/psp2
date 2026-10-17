@@ -1,5 +1,5 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(os0_kd_gcauthmgr KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_gcauthmgr KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	../../../driver/src/marlin_hci/rsa_random.c
 	../../../driver/src/marlin_hci/rsa_encrypt.c
 	rsa_signature.c

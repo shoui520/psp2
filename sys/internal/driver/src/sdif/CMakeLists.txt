@@ -1,5 +1,5 @@
 # SceSdif C implementation, in Sony source order.
-psp2_module(os0_kd_sdif KIND kernel SOURCES
+psp2_module(os0_kd_sdif KIND kernel COMPILER gcc48 SOURCES
 	sdif.c
 	cmd_queue.c
 	sdio_intr.c

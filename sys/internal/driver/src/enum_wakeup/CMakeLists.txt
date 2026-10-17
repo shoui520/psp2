@@ -1,5 +1,5 @@
 # SceEnumWakeUp: the USB-charging wake-up screen and its MTP responder.
-psp2_module(os0_kd_enum_wakeup KIND kernel SOURCES
+psp2_module(os0_kd_enum_wakeup KIND kernel COMPILER gcc48 SOURCES
 	enum_wakeup.c
 	draw.c
 	mtp_utf.c

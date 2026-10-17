@@ -11,7 +11,7 @@ libkernel_prepare_heap(
 	"${CMAKE_CURRENT_SOURCE_DIR}/heap_sce.patch"
 	"${libkernel_heap_source}")
 
-psp2_module(os0_us_libkernel KIND user SOURCES
+psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	"${libkernel_unwind_source}"
 	"${libkernel_heap_source}"
 	format.c
@@ -94,10 +94,13 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 # User backtraces and the local C++ ABI unwinder consume these generated tables.
 target_compile_options(os0_us_libkernel PRIVATE
 	"$<$<COMPILE_LANGUAGE:C>:-funwind-tables>")
-add_custom_command(OUTPUT os0_us_libkernel.velf APPEND
-	COMMAND python3 "${PSP2_SRC}/tools/fixup_unwind.py"
-		$<TARGET_FILE:os0_us_libkernel> os0_us_libkernel.velf
-	DEPENDS "${PSP2_SRC}/tools/fixup_unwind.py")
+if(NOT PSP2_TOOLCHAIN STREQUAL "sony")
+	# vita-elf-create leaves the module info's unwind ranges zero (Sony's layout fills them)
+	add_custom_command(OUTPUT os0_us_libkernel.velf APPEND
+		COMMAND python3 "${PSP2_SRC}/tools/fixup_unwind.py"
+			$<TARGET_FILE:os0_us_libkernel> os0_us_libkernel.velf
+		DEPENDS "${PSP2_SRC}/tools/fixup_unwind.py")
+endif()
 
 # Structure copies emitted by GCC use LibKernel's own native memory engine.
 target_link_options(os0_us_libkernel PRIVATE
@@ -144,11 +147,12 @@ set_source_files_properties(thread_objects.c thread_status.c
 	PROPERTIES
 	COMPILE_OPTIONS "-fstack-protector")
 
-# This core is itself exported by LibKernel, rather than reached via a wrapper.
+# This core is itself exported by LibKernel, rather than reached via a wrapper; its memcpy is
+# the --defsym above, not the core's own alias.
 set_source_files_properties(../../../kernel/src/sysmem/copy_forward.S
 	../../../kernel/src/sysmem/copy.c
 	../../../kernel/src/sysmem/move.S PROPERTIES
-	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy")
+	COMPILE_DEFINITIONS "CopyMemoryForward=sceClibMemcpy;SYSCLIB_NO_STANDARD_ALIASES")
 
 set_source_files_properties(../../../kernel/src/sysmem/ctype.c PROPERTIES
 	COMPILE_DEFINITIONS

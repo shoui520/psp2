@@ -1,6 +1,6 @@
 # Children under conversion do not emit VELFs yet, so the container cannot link.
 # Remove this partial declaration and early return when every child links again.
-psp2_module(os0_kd_bootimage KIND kernel PARTIAL SOURCES bootimage.c)
+psp2_module(os0_kd_bootimage KIND kernel COMPILER gcc48 PARTIAL SOURCES bootimage.c)
 return()
 
 # The parent contains an ordered table of independently rebuilt child VELFs.
@@ -29,7 +29,7 @@ endforeach()
 configure_file(bootimage.S.in "${CMAKE_CURRENT_BINARY_DIR}/bootimage.S" @ONLY)
 set_source_files_properties("${CMAKE_CURRENT_BINARY_DIR}/bootimage.S"
 	PROPERTIES OBJECT_DEPENDS "${bootimage_child_files}")
-psp2_module(os0_kd_bootimage KIND kernel SOURCES
+psp2_module(os0_kd_bootimage KIND kernel COMPILER gcc48 SOURCES
 	bootimage.c
 	"${CMAKE_CURRENT_BINARY_DIR}/bootimage.S")
 add_dependencies(os0_kd_bootimage ${bootimage_child_targets})

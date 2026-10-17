@@ -2,7 +2,7 @@
 # Originals have no SSP imports or guards, including if_clone_list's 16-byte
 # stack buffer and Sleep/StartStack's address-taken locals in both TOOL builds.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
-psp2_module(os0_kd_bootimage_net_ps KIND kernel PARTIAL SOURCES
+psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	netps_allocator_adapters.c
 	netps_thread.c
 	netps_process.c

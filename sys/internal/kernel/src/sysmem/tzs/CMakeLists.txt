@@ -4,7 +4,7 @@
 set(sysmem_tzs_source ..)
 # os0 SceSysmem's flags: no -fno-delete-null-pointer-checks
 set(MODULE_COMPILE_OPTIONS -fdelete-null-pointer-checks)
-psp2_module(slb2_kbl_SceSysmem KIND kernel PARTIAL SOURCES
+psp2_module(slb2_kbl_SceSysmem KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	SceSysmem.c
 	${sysmem_tzs_source}/led.c
 	${sysmem_tzs_source}/serial.c

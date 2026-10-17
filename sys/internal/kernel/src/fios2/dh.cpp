@@ -35,7 +35,7 @@ static int fiosDHGetstat(SceUID pid, int resolveFlag, const char *path, SceIoSta
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	memset(resolved, 0, FIOS_PATH_MAX);
-	__strlcpy_chk(resolved, path, FIOS_PATH_MAX, (size_t)-1);
+	strlcpy(resolved, path, FIOS_PATH_MAX);
 	ret = sceFiosKernelOverlayResolve(&param, index, scratch, resolved);
 	if (ret >= 0) {
 		ret = sceFiosKernelPlatformGetstat(resolved, stat);
@@ -78,9 +78,9 @@ static int fiosDHOverlayApplies(SceUID pid, const char *path, const SceFiosOverl
 	if (joined == NULL)
 		return 1;
 	ret = 0;
-	__strlcpy_chk(joined, overlay->src, FIOS_PATH_MAX, (size_t)-1);
-	__strlcat_chk(joined, "/", FIOS_PATH_MAX, (size_t)-1);
-	if (__strlcat_chk(joined, path + overlay->dst_len, FIOS_PATH_MAX, (size_t)-1) < FIOS_PATH_MAX)
+	strlcpy(joined, overlay->src, FIOS_PATH_MAX);
+	strlcat(joined, "/", FIOS_PATH_MAX);
+	if (strlcat(joined, path + overlay->dst_len, FIOS_PATH_MAX) < FIOS_PATH_MAX)
 		ret = sceFiosKernelPathNormalizeDefault(out, joined, FIOS_PATH_MAX) < FIOS_PATH_MAX;
 	fiosPathFree(joined);
 	return ret;
@@ -199,7 +199,7 @@ static int fiosDHBuild(SceFiosKernelDHBuild *build, SceFiosKernelDH **outDH, con
 		dh->head = NULL;
 		dh->tail = NULL;
 		dh->next = NULL;
-		__strlcpy_chk(dh->path, normal, FIOS_PATH_MAX, (size_t)-1);
+		strlcpy(dh->path, normal, FIOS_PATH_MAX);
 		dh->path[FIOS_PATH_MAX - 1] = '\0';
 	}
 
@@ -240,15 +240,13 @@ static int fiosDHBuild(SceFiosKernelDHBuild *build, SceFiosKernelDH **outDH, con
 			}
 			componentLen = separator != NULL ? (SceSize)(separator - overlay->dst) :
 							   overlay->dst_len;
-			if (__strlcpy_chk(*build->path, overlay->dst, componentLen + 1,
-					  (size_t)-1) >= FIOS_PATH_MAX)
+			if (strlcpy(*build->path, overlay->dst, componentLen + 1) >= FIOS_PATH_MAX)
 				goto next;
 			memset(build->dirent, 0, sizeof(*build->dirent));
 			name = *build->path + prefixLen;
 			while (*name == '/' || *name == '\\')
 				name++;
-			__strlcpy_chk(build->dirent->d_name, name, sizeof(build->dirent->d_name),
-				      (size_t)-1);
+			strlcpy(build->dirent->d_name, name, sizeof(build->dirent->d_name));
 			if (fiosDHGetstat(build->pid, 0, *build->path, build->stat, *build->resolved,
 					  index, build->minOrder, build->maxOrder) != 0) {
 				if (separator == NULL)
@@ -264,7 +262,7 @@ static int fiosDHBuild(SceFiosKernelDHBuild *build, SceFiosKernelDH **outDH, con
 merge:
 		if (overlay->type == SCE_FIOS_OVERLAY_TYPE_OPAQUE) {
 			/* the source replaces the directory */
-			__strlcpy_chk(normal, resolved, FIOS_PATH_MAX, (size_t)-1);
+			strlcpy(normal, resolved, FIOS_PATH_MAX);
 			if (SceProcessmgrForDriver_D141C076(build->pid, &sdkVersion) != 0 ||
 			    sdkVersion < 0x1800000) {
 				entries = 0;

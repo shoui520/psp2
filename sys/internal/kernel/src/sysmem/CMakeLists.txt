@@ -23,7 +23,7 @@ else()
 	set(sysmem_hmac_data hmac_data_36x.c)
 endif()
 
-psp2_module(os0_kd_sysmem KIND kernel SOURCES
+psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	memory_set32.c
 	sha1_transform.c
 	oheap.c

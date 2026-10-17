@@ -1,5 +1,5 @@
 # slb2:kbl/SceKernelIntrMgr - secure-world interrupt manager
-psp2_module(slb2_kbl_SceKernelIntrMgr KIND kernel SOURCES
+psp2_module(slb2_kbl_SceKernelIntrMgr KIND kernel COMPILER gcc48 SOURCES
 	intrmgr_entry.S
 	dmacmgr_tzs.c
 	intrmgr.c
