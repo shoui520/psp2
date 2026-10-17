@@ -1,5 +1,5 @@
-# Make rules for one secure module, included by sys/internal/secure/sm/<module>/Makefile after it
-# sets MODULE and SOURCES. GCC, BINUTILS, O and FW come from sys/internal/secure/sm/Makefile.
+# Make rules for one secure module, included by security/sm/<module>/Makefile after it
+# sets MODULE and SOURCES. GCC, BINUTILS, O and FW come from security/sm/Makefile.
 #
 # The modules are little-endian MeP C5 with the IVC2 coprocessor. Sony's compiler is not
 # identified yet; this builds with GCC 4.5.4 and binutils 2.27 for mep-elf.

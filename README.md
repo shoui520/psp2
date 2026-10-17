@@ -15,11 +15,17 @@ The source tree mirrors Sony's own, as far as Sony's binaries show it: folder an
 come from the paths in their debug records, asserts and SDK libraries.
 * `sys/`: the platform. `sys/internal/kernel/src/` (kernel core and managers),
   `sys/internal/driver/src/` (drivers), `sys/internal/usermode/src/` (user libraries),
-  `sys/internal/deci/` (debug modules), `sys/internal/secure/` (secure processor and
-  TrustZone code; our folder name).
+  `sys/internal/deci/` (debug modules), `sys/internal/secure/` (the TrustZone-only modules;
+  our folder name).
+* `security/`: the secure processor's code (`security/sm`, the secure modules;
+  `security/first_loader`). Sony keeps a `security` repository beside `sys` and `vsh` (the
+  firmware's version file names all three, each with its own revision); what it holds is
+  inferred.
 * `vsh/`: the system software UI: `vsh/paf`, `vsh/cdlg/src/` (common dialogs),
   `vsh/lowlayer/src/`, `vsh/app/` (applications and plugins), `vsh/app/common/src/` (NP and
   other shared libraries).
+* `compat/`: the PSP emulator (`vs0:app/NPXS10028`), which prints the branch of Sony's `compat`
+  repository.
 * `wp/` (Welcome Park, its own project in Sony's tree), `cp/` (devkit communication
   processor), `barkley/` (motion controller), `sys661/` (the PSP system tree: the ePSP boot
   loader in os0:kd/pcbc's payload), `third-party-libs-psp2/` (webcore), `ernie/` (syscon; our
@@ -47,7 +53,7 @@ To summarize:
 * `pup`: Not started. this is for `psp2swu`. `pup/cui_setupper` is identical to `os0:ue/cui_setupper`.
 * `vs0`: WIP. A little progress made. `os0:ue/safemode.elf` will be deferred until `vs0` becomes the priority.
 * `pd0:app/NPXS10007`: Not started
-* `sys/internal/secure/first_loader`: Not started
+* `security/first_loader`: Not started
 * `ernie`: Not started
 * `cp/` (devkit communication processor): Not started
 

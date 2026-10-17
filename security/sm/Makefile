@@ -3,7 +3,7 @@
 # its sources and includes ../sm.mk (the shared entry, constructors,
 # link script and rules).
 #
-#   tools/mepbuild.sh sys/internal/secure/sm FW=<FW> O=<build directory> [MODULES=<names>]
+#   tools/mepbuild.sh security/sm FW=<FW> O=<build directory> [MODULES=<names>]
 #   -> $(O)/<FW>/<module>/<module>.elf
 #
 # Skeletons: each module's sm_main is a stub. The firmwares differ only in data (16 to

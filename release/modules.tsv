@@ -182,8 +182,8 @@ vs0/app/NPXS10024/eboot	vsh/app/near/auto_location	vs0:app/NPXS10024/eboot.bin	3
 vs0/app/NPXS10025/eboot	vsh/app/near/auto_checkin	vs0:app/NPXS10025/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceNearAutoCheckin (near family: vsh/app/near/core/common/op_util.cpp)
 vs0/app/NPXS10026/eboot	vsh/app/host_collabo/content_manager	vs0:app/NPXS10026/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/host_collabo/content_manager/src/account_bind_plugin (SceContentManager)
 vs0/app/NPXS10027/eboot	vsh/app/game_manual	vs0:app/NPXS10027/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	game_manual_plugin (SceGameManual)
-vs0/app/NPXS10028/eboot	vsh/app/pspemu	vs0:app/NPXS10028/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	ScePspemu (0.990 compat_process)
-vs0/app/NPXS10028/pcff	vsh/app/pspemu/pcff	vs0:app/NPXS10028/pcff.skprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	pcff.skprx (SceSblPcffBin), the PSP emulator's firmware file
+vs0/app/NPXS10028/eboot	compat/pspemu	vs0:app/NPXS10028/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	compat/release_branches/release_03.650 (Sony's compat repository, r6665); the folder by ScePspemu (0.990 compat_process)
+vs0/app/NPXS10028/pcff	compat/pspemu/pcff	vs0:app/NPXS10028/pcff.skprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	pcff.skprx (SceSblPcffBin), the PSP emulator's firmware file; with its eboot in compat/
 vs0/app/NPXS10029/eboot	vsh/app/marlin_bg_mtp	vs0:app/NPXS10029/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceMarlinBgMtp (SceMtpMlnSvc)
 vs0/app/NPXS10030/eboot	vsh/app/signup/quick_signup	vs0:app/NPXS10030/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	name	quick_signup_plugin (SceQuickSignup); signup family (app/signup/library)
 vs0/app/NPXS10031/eboot	vsh/app/fake_package_installer	vs0:app/NPXS10031/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	fake_package_installer (module name); sample_plugin

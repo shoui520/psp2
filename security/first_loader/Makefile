@@ -3,7 +3,7 @@
 # henkaku wiki); it starts second_loader.
 #
 #   make GCC=<gcc prefix> BINUTILS=<binutils prefix> O=<build directory> FW=<build date>
-#   tools/mepbuild.sh sys/internal/secure/first_loader FW=20110616 O=<build directory>
+#   tools/mepbuild.sh security/first_loader FW=20110616 O=<build directory>
 #
 # FW selects fw/<date>.mk: 20110616 (retail, PCH-1000), 20110117 (CEM-3000ND1).
 # Sony's file names (a prototype firmware's first_loader folder: boot.c, boot.s, boot.ld,
