@@ -32,7 +32,7 @@ os0/kd/bootimage/gpuinit_es4	sys/internal/driver/src/gpuinit_es4	os0:kd/bootimag
 os0/kd/bootimage/hid	sys/internal/driver/src/hid	os0:kd/bootimage/hid	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/hpremote	sys/internal/driver/src/hpremote	os0:kd/bootimage/hpremote	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/idstorage	sys/internal/kernel/src/idstorage	os0:kd/bootimage/idstorage	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
-os0/kd/bootimage/krm	sys/internal/kernel/src/krm/bootimage	os0:kd/bootimage/krm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of krm
+os0/kd/bootimage/krm	sys/internal/kernel/src/krm	os0:kd/bootimage/krm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of os0:kd/krm (one Sony build): its folder
 os0/kd/bootimage/motion	sys/internal/driver/src/motion	os0:kd/bootimage/motion	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/motion_dummy	sys/internal/driver/src/motion_dummy	os0:kd/bootimage/motion_dummy	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/mtpif	sys/internal/driver/src/mtpif	os0:kd/bootimage/mtpif	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
@@ -52,15 +52,15 @@ os0/kd/bootimage/ulobjmgr	sys/internal/kernel/src/ulobjmgr	os0:kd/bootimage/ulob
 os0/kd/bootimage/umass	sys/internal/driver/src/umass	os0:kd/bootimage/umass	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/update_mgr	sys/internal/kernel/src/update_mgr	os0:kd/bootimage/update_mgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/bootimage/usb_ether_rtl	sys/internal/driver/src/usb_ether_rtl	os0:kd/bootimage/usb_ether_rtl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
-os0/kd/bootimage/usb_ether_smsc	sys/internal/driver/src/usb_ether_smsc/bootimage	os0:kd/bootimage/usb_ether_smsc	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usb_ether_smsc
+os0/kd/bootimage/usb_ether_smsc	sys/internal/driver/src/usb_ether_smsc	os0:kd/bootimage/usb_ether_smsc	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of os0:kd/usb_ether_smsc (one Sony build): its folder
 os0/kd/bootimage/usbaudio	sys/internal/driver/src/usbaudio	os0:kd/bootimage/usbaudio	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/usbd	sys/internal/driver/src/usbd	os0:kd/bootimage/usbd	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/usbmtp	sys/internal/driver/src/usbmtp	os0:kd/bootimage/usbmtp	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
-os0/kd/bootimage/usbpspcm	sys/internal/driver/src/usbpspcm/bootimage	os0:kd/bootimage/usbpspcm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbpspcm
+os0/kd/bootimage/usbpspcm	sys/internal/driver/src/usbpspcm	os0:kd/bootimage/usbpspcm	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of os0:kd/usbpspcm (one Sony build): its folder
 os0/kd/bootimage/usbserial	sys/internal/driver/src/usbserial	os0:kd/bootimage/usbserial	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/usbserv	sys/internal/driver/src/usbserv	os0:kd/bootimage/usbserv	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
-os0/kd/bootimage/usbstor	sys/internal/driver/src/usbstor/bootimage	os0:kd/bootimage/usbstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbstor
-os0/kd/bootimage/usbstorvstor	sys/internal/driver/src/usbstorvstor/bootimage	os0:kd/bootimage/usbstorvstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	bootimage copy of usbstorvstor
+os0/kd/bootimage/usbstor	sys/internal/driver/src/usbstor	os0:kd/bootimage/usbstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of os0:kd/usbstor (one Sony build): its folder
+os0/kd/bootimage/usbstorvstor	sys/internal/driver/src/usbstorvstor	os0:kd/bootimage/usbstorvstor	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of os0:kd/usbstorvstor (one Sony build): its folder
 os0/kd/bootimage/vnz_wrapper	sys/internal/driver/src/vnz_wrapper	os0:kd/bootimage/vnz_wrapper	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/bootimage/vshbridge	sys/internal/kernel/src/vshbridge	os0:kd/bootimage/vshbridge	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/bootimage/wlanbt	sys/internal/driver/src/wlanbt	os0:kd/bootimage/wlanbt	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	../robin/wlan/wlan_dcm.c (sibling robin/ of the build folder)

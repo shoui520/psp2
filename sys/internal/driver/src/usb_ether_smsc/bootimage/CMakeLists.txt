@@ -1,1 +1,0 @@
-psp2_module(os0_kd_bootimage_usb_ether_smsc KIND kernel SOURCES usb_ether_smsc.c)

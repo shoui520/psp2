@@ -1,3 +1,5 @@
-psp2_module(os0_kd_usbpspcm KIND kernel SOURCES
-	bootimage/usbpspcm.c
+# one Sony build, shipped as os0:kd/usbpspcm and inside bootimage (os0:kd/bootimage/usbpspcm):
+# the target is named from the rel
+psp2_module(${PSP2_TARGET} KIND kernel SOURCES
+	usbpspcm.c
 )
