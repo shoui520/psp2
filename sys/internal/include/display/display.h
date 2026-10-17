@@ -61,3 +61,7 @@ int ksceDisplayCaptureFrameBufDMACInternal(SceUID pid, int head, int index, SceD
 
 /* the frame buffer set on head (index 0: current) */
 int ksceDisplayGetFrameBufInternal(int head, int index, SceDisplayFrameBuf *fb, int sync);
+
+int SceDisplayForDriver_332C5410(int head);
+int SceDisplayForDriver_BC76296A(int enable);
+int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha);

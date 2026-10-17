@@ -21,12 +21,10 @@
 #include <sysmem/sysclib.h>
 #include <power/led.h>
 #include <power/power.h>
+#include <psp2kern/display.h>
 
 int ksceKernelSearchModuleByName(const char *name);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-
-int ksceDisplayWaitVblankStart(void);
-int ksceDisplayWaitVblankStartCB(void);
 
 /* display brightness: the OLED or the LCD driver, whichever is present */
 int ksceOledSetBrightness(int brightness) __attribute__((weak));

@@ -218,8 +218,6 @@ SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrTranslationInfo, 751, "mapMainDDR");
 SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrBankInfo, 753, "mapMainDDR");
 #endif
 
-int SceDisplayForDriver_332C5410(int head);
-int ksceDisplaySetColorSpaceMode(SceUInt32 head, int mode);
 int ksceDisplayGetDeviceType(SceUInt32 head, SceUInt32 *type);
 int SceGrabForDriver_F13C63DD(void);
 int SceGrabForDriver_379130B2(void);

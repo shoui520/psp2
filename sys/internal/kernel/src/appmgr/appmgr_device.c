@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "appmgr_device.h"
+#include <display/display.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
@@ -18,9 +19,7 @@ extern int dumpBgmState(void);
 extern int _sceAppMgrReleaseSoundOutExclusive(void);
 extern void updateAudioArbitration2NoLock(void);
 extern int _updateDeviceArbitration2(void);
-extern int SceDisplayForDriver_BC76296A(int enable);
 extern int sceAudioOutSetAdoptMode(int mode);
-extern int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha);
 extern int SceAudioForDriver_629261CD(SceUID pid, int mask, unsigned int volume,
 		int duration);
 extern int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,

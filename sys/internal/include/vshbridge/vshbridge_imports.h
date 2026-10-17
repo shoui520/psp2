@@ -23,6 +23,7 @@
 #include <power/power.h>
 #include <processmgr/processmgr.h>
 #include <iofilemgr/iofilemgr.h>
+#include <psp2kern/display.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -105,10 +106,8 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb);
 int ksceRtcUnregisterSecureAlarmCallback(SceUID cb);
 
 /* Display, Ctrl, Motion, Touch, Hdmi */
-int ksceDisplaySetInvertColors(int head, int enable);
 int ksceDisplaySetViewportConf(int head, const void *conf, int unk);
 int ksceDisplayGetActualViewportConf(int head, void *conf, int unk);
-int ksceDisplayRegisterFrameBufCallback(SceUID cb);
 int ksceCtrlSetIdleCancelKey(int a, int b, int c, int d);
 int ksceCtrlSetIdleCancelThreshold(int a, int b);
 int ksceCtrlSetVibrationSetting(int setting);
