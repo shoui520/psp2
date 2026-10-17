@@ -1,8 +1,8 @@
 /* Shared SceNetPs process bookkeeping; original source filename unavailable. */
 
-#include <sce/netps.h>
-#include <sce/netps_thread.h>
-#include <sce/netps_process.h>
+#include <net_ps/netps.h>
+#include <net_ps/netps_thread.h>
+#include "netps_process.h"
 #include <stddef.h>
 
 extern SceUID sceNetPsGetProcessId(void);

@@ -1,7 +1,7 @@
 /* EXTNL_PROC_INFO note: every other process with its path and unwind tables. */
 
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 #include "oal_internal.h"

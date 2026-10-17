@@ -1,13 +1,13 @@
 /* CPU context policy, separated from the live-register entry veneers. */
-#include "sce/cp15.h"
-#include "sce/excpmgr_cpu.h"
+#include <sysmem/cp15.h>
+#include <excpmgr/excpmgr_cpu.h>
 #include "intrmgr.h"
-#include "sce/excpmgr.h"
-#include <sce/intrmgr_syscall.h>
-#include <sce/arm_thread_context.h>
-#include <sce/mmu.h>
-#include <sce/barrier.h>
-#include "sce/compiler.h"
+#include <excpmgr/excpmgr.h>
+#include <intrmgr/intrmgr_syscall.h>
+#include <threadmgr/arm_thread_context.h>
+#include <sysmem/mmu.h>
+#include <sysmem/barrier.h>
+#include <sysmem/compiler.h>
 
 
 

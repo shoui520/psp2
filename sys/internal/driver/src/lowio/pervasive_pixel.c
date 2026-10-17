@@ -1,8 +1,8 @@
 /* Pervasive DSI pixel clocks (ScePervasiveBaseClk dsi0PixelClock, dsi1PixelClock). */
 #include "lowio_internal.h"
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/pervasive_pixel.h>
+#include <threadmgr/threadmgr.h>
+#include <lowio/pervasive_pixel.h>
 
 
 typedef struct PixelClockSetting {

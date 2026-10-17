@@ -3,15 +3,15 @@
  */
 
 #include "skeleton.h"
-#include <sce/sysmem.h>
-#include <sce/sysevent.h>
-#include <sce/sysroot_init.h>
-#include <sce/threadmgr.h>
-#include <sce/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/sysroot_init.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/suspend.h>
 #include "msif_context.h"
 #include "msif_auth.h"
-#include <sce/debug.h>
-#include <sce/msif.h>
+#include <sysmem/debug.h>
+#include <msif/msif.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/intrmgr.h>

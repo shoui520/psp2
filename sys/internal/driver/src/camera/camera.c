@@ -1,27 +1,27 @@
 /* SceCamera driver initialization and control. */
 
 #include "skeleton.h"
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include "camera_config.h"
-#include "sce/intrmgr.h"
-#include "sce/sysevent.h"
-#include "sce/power.h"
-#include "sce/clockgen.h"
-#include "sce/csi.h"
-#include "sce/idstorage.h"
-#include "sce/processmgr.h"
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysevent.h>
+#include <power/power.h>
+#include <clockgen/clockgen.h>
+#include <lowio/csi.h>
+#include <idstorage/idstorage.h>
+#include <processmgr/processmgr.h>
 #include <psp2kern/power.h>
 #include <string.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2/camera.h>
-#include "sce/camera.h"
-#include "sce/iftu.h"
+#include <camera/camera.h>
+#include <lowio/iftu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/lowio/gpio.h>
-#include <sce/compat_regs.h>
+#include <compat/compat_regs.h>
 
 int cameraInitializeConfig(void);
 int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo);

@@ -2,7 +2,7 @@
 
 #include <psp2/appmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 #include <string.h>
 
 typedef struct AppmgrSaveDataSlotGetParamArguments {

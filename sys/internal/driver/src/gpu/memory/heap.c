@@ -1,6 +1,6 @@
 /* GPU heap objects, their spans and ordered allocation ranges. */
 #include <stdint.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 #include "../../gpu_es4/srvkm/gpu-heap.h"
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"

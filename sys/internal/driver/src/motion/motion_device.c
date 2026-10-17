@@ -1,6 +1,6 @@
 /* Hardware selection between command-driven and directly attached sensors. */
 #include "motion_command.h"
-#include <sce/syscon.h>
+#include <syscon/syscon.h>
 
 static uint32_t motionHardwareType;
 

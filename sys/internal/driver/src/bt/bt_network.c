@@ -1,6 +1,6 @@
 /* Bluetooth network packet processing; original filename unavailable. */
 #include "bt_internal.h"
-#include <sce/netps_gateway.h>
+#include <net_ps/netps_gateway.h>
 #include <string.h>
 
 #if FW_VERSION < 0x04000000

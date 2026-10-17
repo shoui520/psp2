@@ -1,10 +1,10 @@
 /* FAT/exFAT drive information owned by vfs_exfatfs.c. */
 #pragma once
 
-#include <sce/fast_mutex_object.h>
-#include <sce/vfs.h>
-#include <sce/fat_boot.h>
-#include <sce/exfat_directory.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <iofilemgr/vfs.h>
+#include <exfatfs/fat_boot.h>
+#include <exfatfs/exfat_directory.h>
 
 struct SceExfatfsFileSystem;
 struct ExfatfsLegacyOperations;

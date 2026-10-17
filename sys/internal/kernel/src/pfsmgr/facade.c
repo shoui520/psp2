@@ -6,7 +6,7 @@
  */
 
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
 
 #define SCE_PFS_ERROR_FACADE_UNSUPPORTED	0x8014231c	/* name unknown */

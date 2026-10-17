@@ -6,7 +6,7 @@
  */
 
 #include <psp2/types.h>
-#include "sce/avcodec.h"
+#include "avcodec.h"
 
 /* the syscalls (the kernel side declares their real prototypes) */
 #define WRAP(_name, _syscall)	int _syscall(int a0, int a1, int a2, int a3);

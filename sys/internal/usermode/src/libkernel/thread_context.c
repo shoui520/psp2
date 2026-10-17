@@ -1,6 +1,6 @@
 /* User thread metadata preceding the TPIDRURO thread-local storage address. */
 
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include "thread_context.h"
 
 extern void *sceKernelGetThreadTLSAddr(SceUID threadId, unsigned int index);

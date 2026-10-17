@@ -1,6 +1,6 @@
 /* SceUsbSerial: boot USB CDC serial driver. Private names are unknown. */
 #include "usbserial.h"
-#include "sce/syscall.h"
+#include <intrmgr/syscall.h>
 #include <stddef.h>
 
 /* Error names are unknown: these values are absent from the SDK error index. */

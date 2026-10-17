@@ -2,8 +2,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <sce/barrier.h>
-#include <sce/excpmgr_cpu.h>
+#include <sysmem/barrier.h>
+#include <excpmgr/excpmgr_cpu.h>
 
 /* SCTLR */
 #define SCTLR_A			0x00000002	/* alignment fault checking */

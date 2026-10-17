@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <arm_neon.h>
-#include <sce/threadmgr.h>
-#include <sce/debug.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/sysmem/address_space.h>

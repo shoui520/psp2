@@ -15,8 +15,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include "sce/debug.h"
-#include "sce/deci4p.h"
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
 
 #define LOADP_RECV_BUF_SIZE		0x11000
 #define LOADP_SEND_BUF_SIZE		(LOADP_RECV_BUF_SIZE + 0x3f)	/* aligned to 64 inside */

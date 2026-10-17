@@ -1,9 +1,9 @@
 /* Confirmed private error definitions shared by C and named Thumb wrappers. */
 #pragma once
 
-#include "sce/error.h"
+#include <kernel/error.h>
 
-/* Confirmed SDK names; move to sce/error.h at the next shared-header window. */
+/* Confirmed SDK names; move to kernel/error.h at the next shared-header window. */
 #ifndef SCE_KERNEL_ERROR_INVALID_UID
 #define SCE_KERNEL_ERROR_INVALID_UID	0x80024501
 #endif

@@ -1,5 +1,5 @@
 /* The physical motion device creates its heap during module startup. */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 
 extern SceUID motionHeap;
 

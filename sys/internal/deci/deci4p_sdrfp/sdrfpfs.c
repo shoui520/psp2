@@ -6,7 +6,7 @@
 
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/vfs.h>
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 #include "sdrfp.h"
 
 #define SDRFP_FS_NAME		"deci4p_drfp_dev_fs"

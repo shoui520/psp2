@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <string.h>
-#include "sce/atomic.h"
+#include <sysmem/atomic.h>
 #include "bt_transport.h"
 
 void BtWriteLe24(uint8_t *destination, unsigned int value);

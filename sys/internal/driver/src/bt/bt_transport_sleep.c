@@ -1,7 +1,7 @@
 /* Controller sleep completion; original source filename unavailable. */
-#include <sce/intrmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/wlanbt.h>
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <wlanbt/wlanbt.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include "bt_transport.h"
 

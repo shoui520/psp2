@@ -10,11 +10,11 @@
 #pragma GCC diagnostic pop
 
 #if FW_DEBUG
-#include "sce/excpmgr_debug_events.h"
+#include "excpmgr_debug_events.h"
 #define EXCP_REPORT_EXTERNAL_DATA
 #define EXCP_IT_TEXT(_index) g_excpmgrITText##_index
 #define EXCP_DEBUG_EVENT_ENTRY(_index, _text) g_debugEventText.text##_index,
-#include "sce/excpmgr_report_data.h"
+#include "excpmgr_report_data.h"
 
 /* GCC emits these explicit readonly definitions in reverse declaration order. */
 const char *const ifsrNames[] = EXCP_IFSR_NAMES;
@@ -213,7 +213,7 @@ SCE_DBGINFO_DEFINE(, g_printWPTEventInfo, 1026, g_printWPTName);
 const char g_printDFSRName[] __attribute__((aligned(4))) = "printDFSR";
 SCE_DBGINFO_DEFINE(, g_printWPTExceptionInfo, 1015, g_printWPTName);
 const char g_printWPTName[] __attribute__((aligned(4))) = "printWPT";
-#include "sce/excpmgr_it_names.h"
+#include "excpmgr_it_names.h"
 #define EXCP_IT_TEXT_DEFINE(_index) \
 	const char g_excpmgrITText##_index[] __attribute__((aligned(4))) = \
 		SCE_EXCP_IT_TEXT_##_index;

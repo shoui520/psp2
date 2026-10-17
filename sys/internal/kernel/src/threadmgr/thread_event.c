@@ -4,9 +4,9 @@
  * the thread meets one of the events in its mask.
  */
 
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "mutex.h"
 #include "syscall_context.h"
 

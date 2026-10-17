@@ -6,8 +6,8 @@
  * drmbridge_user.c.
  */
 #include <psp2kern/types.h>
-#include "sce/syscall.h"
-#include "sce/vshbridge_imports.h"
+#include <intrmgr/syscall.h>
+#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 
 int drmBridgeGetCurrentSecureTick(SceRtcTick *tick)

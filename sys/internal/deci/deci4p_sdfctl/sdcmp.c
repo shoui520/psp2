@@ -7,11 +7,11 @@
 
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/suspend.h"
+#include <sysmem/debug.h>
+#include <sysmem/suspend.h>
 #include "sdfctl.h"
-#include <sce/deci4p_memory.h>
-#include <sce/deci4p_packet.h>
+#include <deci4p_sdfmgr/deci4p_memory.h>
+#include <deci4p_dfmgr/deci4p_packet.h>
 
 #define SDCMP_QUEUE		15
 #define SDCMP_PACKET_MAX	0x100

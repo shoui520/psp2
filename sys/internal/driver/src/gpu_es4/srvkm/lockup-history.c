@@ -1,7 +1,7 @@
 /* Ordered lockup history snapshots; native process and record counts wrap. */
 #include "lockup-history.h"
 #include "registerdump_sce.h"
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 extern void *memset(void *destination, int value, unsigned size);

@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/utils.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 #define ZLIB_CM_DEFLATE		8
 #define ZLIB_FLG_FDICT		0x20

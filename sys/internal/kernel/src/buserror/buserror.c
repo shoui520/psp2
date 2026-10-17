@@ -10,12 +10,12 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysroot.h>
-#include "sce/debug.h"
-#include "sce/intrmgr.h"
-#include "sce/suspend.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
-#include "sce/buserror_types.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <buserror/buserror_types.h>
 #include "buserror_smc.h"
 
 #define BUSERROR_INTR		0x20

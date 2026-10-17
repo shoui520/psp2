@@ -1,7 +1,7 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2/kernel/processmgr.h>
 #include "lifecycle.h"
-#include <sce/error.h>
+#include <kernel/error.h>
 
 
 SceUInt32 sceKernelGetProcessTimeLow(void)

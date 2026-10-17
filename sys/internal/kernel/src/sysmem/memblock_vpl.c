@@ -5,7 +5,7 @@
  * unmapped as a whole.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include "sysmem_internal.h"
 #define MEMBLOCK_OBJ_MODULE_CALL
 #include "memblock_obj_module.h"

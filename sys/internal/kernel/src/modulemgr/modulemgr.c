@@ -3,7 +3,7 @@
  */
 
 #include "modulemgr_internal.h"
-#include <sce/modulemgr_debugger.h>
+#include <modulemgr/modulemgr_debugger.h>
 
 SceUID g_mutex;
 SceClass *g_moduleClass;

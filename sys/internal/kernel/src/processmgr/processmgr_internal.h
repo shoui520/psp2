@@ -10,11 +10,11 @@
 #define PROCESSMGR_INTERNAL_H
 
 #include <psp2kern/types.h>
-#include "sce/sysmem.h"
-#include "sce/debug.h"
-#include "sce/threadcb.h"
-#include "sce/processmgr_imports.h"
-#include "sce/process.h"
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadcb.h>
+#include <processmgr/processmgr_imports.h>
+#include <processmgr/process.h>
 
 #define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
 

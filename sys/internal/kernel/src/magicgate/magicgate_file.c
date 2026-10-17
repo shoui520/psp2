@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <sce/rtc.h>
-#include <sce/threadmgr.h>
+#include <rtc/rtc.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 int SceKernelSuspendForDriver_4DF40893(int kind);

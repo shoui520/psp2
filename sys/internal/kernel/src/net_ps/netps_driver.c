@@ -1,7 +1,7 @@
 /* Shared SceNetPs driver services; original bodies retain their owners. */
 
-#include <sce/netps_driver.h>
-#include <sce/netps_thread.h>
+#include "netps_driver.h"
+#include <net_ps/netps_thread.h>
 #include "net_ps_bsd.h"
 #include <string.h>
 

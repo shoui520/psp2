@@ -1,10 +1,10 @@
 /* The motion sensor's SPI1 mapping and transfer state. */
 #include "motion_command.h"
-#include <sce/threadmgr.h>
-#include <sce/sysmem.h>
-#include <sce/spi_regs.h>
-#include <sce/barrier.h>
-#include <sce/pervasive.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysmem.h>
+#include <lowio/spi_regs.h>
+#include <sysmem/barrier.h>
+#include <lowio/pervasive.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>

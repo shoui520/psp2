@@ -1,10 +1,10 @@
 /* Application launch and arbitration helpers. */
 
-#include <sce/debug.h>
-#include <sce/barrier.h>
-#include <sce/threadmgr.h>
-#include <sce/threadmgr_event.h>
-#include <sce/iofilemgr.h>
+#include <sysmem/debug.h>
+#include <sysmem/barrier.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/threadmgr_event.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>

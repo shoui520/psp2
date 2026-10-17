@@ -1,7 +1,7 @@
 /* UART interrupt handling and port lifetime. */
 #include <string.h>
-#include <sce/sysmem.h>
-#include <sce/intrmgr.h>
+#include <sysmem/sysmem.h>
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>

@@ -14,15 +14,15 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/uart.h>
 #include <psp2kern/lowio/pervasive.h>
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/intrmgr.h"
-#include "sce/qafmgr.h"
-#include "sce/sdfmgr.h"
-#include "sce/suspend.h"
-#include "sce/sysroot.h"
-#include "sce/threadmgr.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/qafmgr.h>
+#include <deci4p_sdfmgr/sdfmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define SCTTYP_UART		6
 #define SCTTYP_INTR		0xe6

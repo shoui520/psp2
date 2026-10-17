@@ -1,5 +1,5 @@
 /* Sony venezia/heap.c: variable-size heap blocks. */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "venezia_internal.h"
 
 static inline __attribute__((always_inline)) UnitFixedCtrl *getVeneziaRegionCtrl(VeneziaHeap *heap, UnitFixedCtrl *ctrl)

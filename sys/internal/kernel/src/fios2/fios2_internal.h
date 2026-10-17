@@ -18,7 +18,7 @@
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2common/fios2.h>
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 #ifdef __cplusplus
 extern "C" {

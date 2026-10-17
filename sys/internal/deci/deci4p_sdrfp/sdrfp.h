@@ -8,8 +8,8 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "sce/deci4p.h"
-#include "sce/deci4p_fs.h"
+#include <deci4p_dfmgr/deci4p.h>
+#include <deci4p_drfp/deci4p_fs.h>
 
 #define DRFP_PROTOCOL		0x10011000
 

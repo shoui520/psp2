@@ -8,10 +8,10 @@
 #include <psp2kern/io/stat.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/rtc.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 
 #define SCE_SBL_ERROR_UT_NOT_FOUND		0x800f1a02	/* names unknown */

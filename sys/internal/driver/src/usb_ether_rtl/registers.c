@@ -3,7 +3,7 @@
 
 /* Sony's 4.00 build is fortified */
 #if FW_SINCE(0x04000000)
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 static unsigned int readValue __attribute__((aligned(64)));

@@ -2,7 +2,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include "fw.h"
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 #include "display_internal.h"
 #include "display_imports.h"
 

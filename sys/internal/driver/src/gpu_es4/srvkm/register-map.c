@@ -1,7 +1,7 @@
 /* Native GPU register mapping and register-dump storage helpers. */
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include "gpu-dump.h"
-#include <sce/sgx_regs.h>
+#include <gpu/sgx_regs.h>
 
 extern void *memset(void *destination, int value, unsigned size);
 extern void *memcpy(void *destination, const void *source, unsigned size);

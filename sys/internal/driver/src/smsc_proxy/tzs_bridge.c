@@ -1,6 +1,6 @@
 /* tzs_bridge.c: the Non-secure kernel's side of the bridge areas */
 #include <psp2kern/kernel/cpu.h>
-#include "sce/sysroot.h"
+#include <sysmem/sysroot.h>
 
 #define TZS_BRIDGE_SECURE			0
 

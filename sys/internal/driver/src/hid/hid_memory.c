@@ -1,6 +1,6 @@
 /* Descriptive filename; internal memory helpers have no debug source records. */
-#include <sce/sysmem.h>
-#include <sce/fast_mutex.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/fast_mutex.h>
 #include "hid_internal.h"
 
 SceUID hidHeapId;

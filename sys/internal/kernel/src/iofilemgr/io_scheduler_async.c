@@ -8,9 +8,9 @@
  * mapped into the kernel, since the caller's memory may be gone by then.
  */
 
-#include <sce/excpmgr_cpu.h>
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
 #include "iofilemgr_internal.h"
 
 SceClass g_ioAsyncEventClass;

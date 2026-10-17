@@ -12,7 +12,7 @@
 #endif
 
 #include <psp2/types.h>
-#include <sce/shellsvc.h>
+#include <vsh/lowlayer/src/shell_svc/shellsvc.h>
 
 #define SCE_ERROR_ERRNO_EFAULT		0x8001000E
 

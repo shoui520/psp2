@@ -5,8 +5,8 @@
 #include <psp2kern/io/devctl.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
-#include "sce/iofilemgr.h"
-#include "sce/threadmgr.h"
+#include <iofilemgr/iofilemgr.h>
+#include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
 #define SCE_ERROR_ERRNO_ENODEV		0x80010013

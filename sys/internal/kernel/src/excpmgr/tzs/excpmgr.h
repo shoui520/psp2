@@ -3,7 +3,7 @@
  *
  * Sony built this module from the same excpmgr.c as os0:kd/excpmgr.skprx,
  * against the ForTZS libraries of the secure kernel. The shared parts live in
- * sce/excpmgr_context.h and sce/excpmgr_handler.h and call the os0 import
+ * ../excpmgr_context.h and ../excpmgr_handler.h and call the os0 import
  * names; they are mapped to the ForTZS imports here, before any declaration.
  */
 #pragma once
@@ -26,8 +26,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include "sce/debug.h"
-#include "sce/excpmgr.h"
+#include <sysmem/debug.h>
+#include <excpmgr/excpmgr.h>
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"

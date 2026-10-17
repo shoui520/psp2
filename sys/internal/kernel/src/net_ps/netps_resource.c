@@ -1,7 +1,7 @@
 /* Shared SceNetPs resource accounting and identifier allocation. */
 
-#include <sce/netps_process.h>
-#include <sce/netps_resource.h>
+#include "netps_process.h"
+#include "netps_resource.h"
 #include <stddef.h>
 
 int sceNetPsIsApplicationProgram(int *error);

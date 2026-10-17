@@ -3,7 +3,7 @@
 #define ROBIN_MACTX_H
 
 #include <stdint.h>
-#include <sce/wlanbt_protocol.h>
+#include <wlanbt/wlanbt_protocol.h>
 #include "robin/conn.h"
 #include "robin/wlan.h"
 

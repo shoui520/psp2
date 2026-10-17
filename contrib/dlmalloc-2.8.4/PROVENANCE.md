@@ -9,4 +9,4 @@ This is the base of the kernel heap in os0:kd/sysmem.skprx (Sony's
 dlmalloc/malloc.c). The version follows from Sony's debug records: their line
 numbers fit 2.8.4 plus Sony's insertions, and 2.8.5 already places
 destroy_mspace after Sony's line for it. Sony's changes are kept separate in
-sys/internal/kernel/src/sysmem/source/dlmalloc_sce.patch, applied at configure time.
+sys/internal/kernel/src/sysmem/dlmalloc_sce.patch, applied at configure time.

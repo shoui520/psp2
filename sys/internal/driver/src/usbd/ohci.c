@@ -14,11 +14,11 @@
 
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/sysmem.h>
-#include <sce/debug.h>
-#include <sce/intrmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/usb_regs.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <usbd/usb_regs.h>
 #include "usbd_internal.h"
 
 /* the operational registers, 0x200 into the EHCI's register page */

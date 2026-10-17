@@ -2,8 +2,8 @@
 #define SYSCON_PRIVATE_H
 
 #include <psp2kern/types.h>
-#include <sce/spi_regs.h>
-#include <sce/syscon.h>
+#include <lowio/spi_regs.h>
+#include <syscon/syscon.h>
 #include <stddef.h>
 #include <stdint.h>
 

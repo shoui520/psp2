@@ -12,10 +12,10 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/kbl/kbl.h>
 #include <psp2kern/kernel/rtc.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 
 #define SCE_SBL_ERROR_LIC_KBL			0x800f1028	/* names unknown */

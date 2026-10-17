@@ -101,7 +101,7 @@
 #define EXCP_TEXT_REF_fault01 g_fault01
 #define EXCP_TEXT_REF_fault04 g_fault04
 #define EXCP_TEXT_REF_fault16 g_fault16
-#include "sce/excpmgr_debug_events.h"
+#include "excpmgr_debug_events.h"
 
 /* These strings are individually aligned in Sony's readonly region. */
 #define EXCP_DEBUG_EVENT_FIELD(_index, _text) \

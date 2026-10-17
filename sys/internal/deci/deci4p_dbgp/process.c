@@ -1,7 +1,7 @@
 /* Debugger process control (Sony's process.c). */
 
-#include <sce/debug.h>
-#include <sce/process.h>
+#include <sysmem/debug.h>
+#include <processmgr/process.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include "dbgp_internal.h"

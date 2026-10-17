@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/kbl_param.h>
+#include <kernel_boot_loader/kbl_param.h>
 
 struct SysrootState;
 

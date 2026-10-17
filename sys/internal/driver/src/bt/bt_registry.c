@@ -1,7 +1,7 @@
 /* Registered-device queries; original source filename unavailable. */
 #include <string.h>
-#include <sce/intrmgr.h>
-#include <sce/bt_registered.h>
+#include <intrmgr/intrmgr.h>
+#include <bt/bt_registered.h>
 #include "bt_internal.h"
 
 int BtLockTransport(void);

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Fill in the hashes of SceKernelDebugInfo records in a linked module ELF, in place,
-# from the non-allocated .sce_dbgsrc side table. See common/include/sce/debug.h.
+# from the non-allocated .sce_dbgsrc side table. See sys/internal/include/sysmem/debug.h.
 #
 #   dbginfo.py module.elf
 

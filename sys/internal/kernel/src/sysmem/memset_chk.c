@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "fw.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 

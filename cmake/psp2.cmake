@@ -1,4 +1,4 @@
-# Shared module build for every src/<partition>/<path>/<module>/.
+# Shared module build for every module folder of the tree (release/modules.tsv).
 #
 #   psp2_module(<target> KIND kernel|user [SKELETON] [SCE_LAYOUT] [PARTIAL] SOURCES <files...>)
 #
@@ -42,6 +42,15 @@
 # by tools/mkstubs.py into ${PSP2_STUBS}/<kernel|user>; KIND picks the set.
 
 set(PSP2_SRC "${CMAKE_CURRENT_LIST_DIR}/..")
+# the include roots of every module, after its own folder: Sony's internal interfaces
+# (sys/internal/include/<component>/), the SDK headers we write at Sony's SDK paths
+# (sys/sdk/target/include), the build parameters (cmake/include: fw.h, skeleton.h) and the
+# shims that complete vitasdk's headers (cmake/compat/vitasdk)
+set(PSP2_INCLUDE_DIRS
+	"${PSP2_SRC}/sys/internal/include"
+	"${PSP2_SRC}/sys/sdk/target/include"
+	"${PSP2_SRC}/cmake/include"
+	"${PSP2_SRC}/cmake/compat/vitasdk")
 # every module in Sony's layout (psp2_module SCE_LAYOUT), e.g. to check the tables
 option(PSP2_SCE_LAYOUT "build every module with Sony's layout" OFF)
 set(PSP2_STUBS "${CMAKE_BINARY_DIR}/stubs")
@@ -101,7 +110,7 @@ macro(psp2_compile_settings name)
 	target_include_directories(${name} PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}"
-		"${PSP2_SRC}/common/include"
+		${PSP2_INCLUDE_DIRS}
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
 	psp2_file_names(${M_SOURCES})
@@ -327,7 +336,7 @@ macro(psp2_sce_layout name)
 	target_include_directories(${name} PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}"
-		"${PSP2_SRC}/common/include"
+		${PSP2_INCLUDE_DIRS}
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
 	psp2_file_names(${M_SOURCES})

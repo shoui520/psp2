@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "fw.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern int CompareMemoryCore(const void *left, const void *right, size_t size);
 

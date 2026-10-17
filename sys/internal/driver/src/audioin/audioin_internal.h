@@ -2,8 +2,8 @@
 #define AUDIOIN_INTERNAL_H
 
 #include <stdint.h>
-#include <sce/fast_mutex.h>
-#include <sce/processmgr.h>
+#include <threadmgr/fast_mutex.h>
+#include <processmgr/processmgr.h>
 
 /* Complete module-owned port record. Unidentified members remain explicit. */
 typedef struct AudioInPort {

@@ -15,12 +15,12 @@
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/idstorage_imports.h"
-#include "sce/sysevent.h"
-#include "sce/touch_dummy.h"
+#include <sysmem/debug.h>
+#include <idstorage/idstorage_imports.h>
+#include <sysmem/sysevent.h>
+#include <touch_dummy/touch_dummy.h>
 #include "rtc_internal.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 SceUInt64 sceKernelGetSystemTimeWide(void);
 

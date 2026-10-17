@@ -1,5 +1,5 @@
 #include <psp2/kernel/clib.h>
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 extern SceSize sceClibStrlcpy(char *destination, const char *source,
 		SceSize capacity);

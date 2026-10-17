@@ -25,6 +25,10 @@ come from the paths in their debug records, asserts and SDK libraries.
   (syscon; our folder name).
 * `release/`: what each firmware contains. `release/<FW>.list` lists its modules;
   `release/modules.tsv` gives the folder each module is built from and why it is there.
+* Headers: `sys/internal/include/<component>/` holds the interfaces several modules share,
+  under the component that owns them (`<threadmgr/threadcb.h>`, `<sysmem/sysroot.h>`);
+  `sys/sdk/target/include/` the SDK headers we write, under Sony's SDK names (`<libhmac.h>`,
+  `<kernel/error.h>`); a header only one component uses sits in that component.
 * `cmake/`, `tools/`, `common/`, `contrib/` (pristine upstream code), `toolchains/`.
 
 For example, `os0:kd/acmgr.skprx` is built from `sys/internal/kernel/src/acmgr/`:

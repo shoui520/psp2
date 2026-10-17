@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 
 #define MOTION_PROCESS_MAX	16
 #define MOTION_PORT_MAX		4

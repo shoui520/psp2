@@ -8,7 +8,7 @@
  */
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/perfmon_regs.h>
+#include <pamgr/perfmon_regs.h>
 
 static struct {
 	ScePerfmonRegisters *regs;

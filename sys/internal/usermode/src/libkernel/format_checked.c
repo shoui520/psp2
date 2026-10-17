@@ -1,6 +1,6 @@
 #include <stdarg.h>
 #include <psp2/kernel/clib.h>
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 int sceClibSnprintfChk(char *destination, SceSize size, int flags,
 		SceSize destinationSize, const char *format, ...)

@@ -2,10 +2,10 @@
  * ScePower: the power switch: requests, suspend/resume transitions, switch locks.
  */
 
-#include <sce/sysroot.h>
-#include <sce/cp15.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/cp15.h>
 #include "power_private.h"
-#include "sce/syscon_scratchpad.h"
+#include <syscon/syscon_scratchpad.h>
 
 /* the CPU state each core saves before suspend */
 static uint8_t s_powerCpuContext[4][0x1000] __attribute__((aligned(8)));

@@ -13,11 +13,11 @@
 #include "mmu.h"
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/memtype.h>
-#include "sce/cpu.h"
-#include "sce/sysmem.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/threadcb.h"
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <threadmgr/threadcb.h>
 
 /*
  * l1pagetable.c: an address space's two L1 tables (below and above the
@@ -249,7 +249,7 @@ _Static_assert(sizeof(Partition) == 0x80, "Partition size");
 /* the name the converted files first used */
 typedef Partition PartitionObject;
 
-/* debug_dump.c (sce/debug.h leaves it to the modules) */
+/* debug_dump.c (sysmem/debug.h leaves it to the modules) */
 void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
 				 const void *lr, const char *fmt, ...);
 

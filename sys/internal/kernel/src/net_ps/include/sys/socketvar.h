@@ -34,7 +34,7 @@
 #ifndef _SYS_SOCKETVAR_H_
 #define	_SYS_SOCKETVAR_H_
 
-#include <sce/netps_socket.h> /* SCE: canonical complete socket owners. */
+#include "../../netps_socket.h" /* SCE: canonical complete socket owners. */
 #include <sys/queue.h>
 
 #if !defined(_KERNEL) || defined(LKM)
@@ -45,7 +45,7 @@ struct uio;
 /*
  * Variables for socket buffering.
  */
-/* SCE: struct sockbuf is canonical in sce/netps_socket.h. */
+/* SCE: struct sockbuf is canonical in ../../netps_socket.h. */
 #define sb_startzero sb_cc
 
 #ifndef SB_MAX
@@ -68,7 +68,7 @@ struct uio;
  * handle on protocol and pointer to protocol
  * private data and error information.
  */
-/* SCE: struct socket is canonical in sce/netps_socket.h. */
+/* SCE: struct socket is canonical in ../../netps_socket.h. */
 
 #define	SB_EMPTY_FIXUP(sb)						\
 do {									\

@@ -2,7 +2,7 @@
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/usbstormg.h>
+#include <usbstormg/usbstormg.h>
 
 int loadVideoKeyring(MgVideoContext *context)
 {

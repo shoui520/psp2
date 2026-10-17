@@ -1,11 +1,11 @@
 /* CPU identity and debug-context diagnostics. */
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/barrier.h>
-#include <sce/cpu_id.h>
-#include <sce/debug.h>
-#include <sce/threadcb.h>
+#include <sysmem/barrier.h>
+#include <sysmem/cpu_id.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadcb.h>
 #include "cpu_irq.h"
 
 extern void *memset(void *destination, int value, size_t size);

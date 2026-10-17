@@ -2,11 +2,11 @@
 /* S/PDIF lifecycle. */
 #include <stdint.h>
 #include <string.h>
-#include <sce/sysmem.h>
-#include <sce/qafmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/qafmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/dipsw.h>
-#include <sce/audio_regs.h>
+#include "audio_regs.h"
 
 
 uint32_t ScePervasiveForDriver_6B5DEDA2(void);

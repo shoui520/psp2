@@ -1,8 +1,8 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include "lw_sync.h"
 #include "thread_context.h"
-#include <sce/error.h>
-#include "sce/atomic.h"
+#include <kernel/error.h>
+#include <sysmem/atomic.h>
 
 extern int sceKernelTryLockLwMutex(SceKernelLwMutexWork *work, int count);
 

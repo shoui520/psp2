@@ -7,10 +7,10 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "sce/vshbridge_imports.h"
+#include <vshbridge/vshbridge_imports.h>
 #include <alloca.h>
 
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 
 /* the stack of the requests that run on their own (ksceKernelRunWithStack) */
 #define VSH_STACK_SIZE			0x2000

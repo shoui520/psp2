@@ -5,7 +5,7 @@
 #include "alc.h"
 #include "equalizer.h"
 #include "srcmix.h"
-#include <sce/audio_regs.h>
+#include "audio_regs.h"
 #include "aclkgen.h"
 
 struct AudioWork {

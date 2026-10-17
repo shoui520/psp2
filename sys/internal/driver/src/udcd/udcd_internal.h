@@ -2,8 +2,8 @@
 #define UDCD_INTERNAL_H
 
 #include <stddef.h>
-#include <sce/udcd_status.h>
-#include <sce/pervasive_regs.h>
+#include "udcd_status.h"
+#include <lowio/pervasive_regs.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/proc_event.h>

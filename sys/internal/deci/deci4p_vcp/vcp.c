@@ -12,21 +12,21 @@
  * Replies carry the request code + 1; an unknown request gets error 8.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <psp2kern/display.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/debug.h"
-#include "sce/deci4p.h"
-#include "sce/display.h"
-#include "sce/error.h"
-#include "sce/threadmgr.h"
-#include "sce/zlib.h"
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <display/display.h>
+#include <kernel/error.h>
+#include <threadmgr/threadmgr.h>
+#include <post_ss_mgr/zlib.h>
 
 #define VCP_PROTOCOL		0x2b000
 #define VCP_RECV_SIZE		0x200

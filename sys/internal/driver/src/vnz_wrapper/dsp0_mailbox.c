@@ -1,8 +1,8 @@
 /* Venezia mailbox interrupt and completion handling. */
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <sce/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/mailbox_regs.h>
+#include <lowio/mailbox_regs.h>
 #include "venezia_internal.h"
 
 /* name unknown: host-side Venezia mailbox interrupt state. */

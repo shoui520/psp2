@@ -1,11 +1,11 @@
 /* Sony env/playstation/osfunc.c: SCE native environment replacement.
  * Pristine IMG Linux implementation remains in the vendor directory.
  */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "system_sce.h"
 #include "osfunc_sce.h"
 #include <stddef.h>

@@ -5,12 +5,12 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/coredump.h>
-#include <sce/coredump.h>
+#include <coredump/coredump.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
-#include <sce/threadmgr_debugger.h>
-#include <sce/lw_mutex.h>
-#include <sce/sdif.h>
+#include <threadmgr/threadmgr_debugger.h>
+#include <threadmgr/lw_mutex.h>
+#include <sdif/sdif.h>
 
 typedef struct CoredumpVitaCardInfo {
 	uint8_t size[4];

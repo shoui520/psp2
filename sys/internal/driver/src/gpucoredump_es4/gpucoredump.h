@@ -10,9 +10,9 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <sce/des.h>
-#include "sce/sgxmkif_sce.h"
-#include <sce/sgx_regs.h>
+#include <sysmem/des.h>
+#include <gpu/sgxmkif_sce.h>
+#include <gpu/sgx_regs.h>
 
 /* what a captured value holds before the capture */
 #define GPU_COREDUMP_POISON		0x5ce0beef

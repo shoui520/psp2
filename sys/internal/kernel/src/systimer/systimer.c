@@ -1,20 +1,20 @@
 /*
  * SceSystimer: the SoC's general purpose timers.
  *
- * Two banks (sce/timer_regs.h): long-range timers LT0-4 (64-bit count) and
+ * Two banks (systimer/timer_regs.h): long-range timers LT0-4 (64-bit count) and
  * word timers WT0-6 (32-bit count). A 64-bit software base is added to the
  * hardware count; it absorbs SetCount and the interval of periodic timers.
  */
 
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/compiler.h"
-#include "sce/error.h"
-#include "sce/intrmgr.h"
-#include "sce/sysmem.h"
-#include "sce/systimer.h"
-#include "sce/timer_regs.h"
+#include <sysmem/debug.h>
+#include <sysmem/compiler.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysmem.h>
+#include <systimer/systimer.h>
+#include <systimer/timer_regs.h>
 
 #define LONG_TIMERS		5
 #define WORD_TIMERS		7

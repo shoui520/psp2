@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 #include "ngs_module_memory.h"
 #include "ngs_system.h"

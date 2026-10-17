@@ -6,7 +6,7 @@
 +#include <stdint.h>
 +#include <psp2kern/types.h>
 +#include "fw.h"
-+#include <sce/debug.h>
++#include <sysmem/debug.h>
 +#undef __FILE_NAME__
 +#define __FILE_NAME__ "dlmalloc/malloc.c"
 +extern void *memset(void *, int, SceSize);
@@ -47,7 +47,7 @@
 +#define CORRUPTION_ERROR_ACTION(m)	SCE_DLMALLOC_PANIC()
 +#define SCE_DLMALLOC_ERROR_BAD_CHUNK	0x80024904
 +/* Shared with the heap-information interface. */
-+#include <sce/heap_info.h>
++#include <sysmem/heap_info.h>
 +/* the locks are kernel spinlocks that keep the interrupt state of their holder */
 +typedef struct SceDlMallocLock {
 +  volatile int lock;

@@ -1,8 +1,8 @@
 /* Common heap used by the FAT and exFAT implementations. */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/sysmem.h>
-#include <sce/debug.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
 
 struct SceExfatfsDrive;
 

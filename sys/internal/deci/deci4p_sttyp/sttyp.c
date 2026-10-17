@@ -9,17 +9,17 @@
  * newline or when the buffer is full. Output stops while suspended.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stdarg.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/pm_mgr.h>
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sdfmgr.h"
-#include "sce/suspend.h"
-#include "sce/sysroot.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <deci4p_sdfmgr/sdfmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
 
 /* Sony computes the remainder and quotient through separate runtime calls. */
 unsigned int __aeabi_uidiv(unsigned int numerator, unsigned int denominator);

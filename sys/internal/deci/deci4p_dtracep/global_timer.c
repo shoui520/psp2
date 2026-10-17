@@ -9,8 +9,8 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "fw.h"
-#include <sce/debug.h>
-#include <sce/gic_regs.h>
+#include <sysmem/debug.h>
+#include <intrmgr/gic_regs.h>
 
 /* the error messages are new in 4.00 */
 #if FW_SINCE(0x04000000)

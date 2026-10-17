@@ -1,5 +1,5 @@
-#include "sce/module_library.h"
-#include "sce/error.h"
+#include <modulemgr/module_library.h>
+#include <kernel/error.h>
 
 extern int sceKernelGetLibraryInfoByNID(SceUID moduleId, SceNID libraryNid,
 		SceKernelLibraryInfo *info);

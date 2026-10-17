@@ -1,7 +1,7 @@
 /*
  * SceKernelBusError (secure world): the bus error interrupt (0x21) and the
  * monitor calls with which the kernel has the error registers collected into
- * the sysroot shared memory (see sce/buserror_es3.h).
+ * the sysroot shared memory (see ../buserror_es3.h).
  */
 
 #include "buserror.h"

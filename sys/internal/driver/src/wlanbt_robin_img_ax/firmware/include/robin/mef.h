@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
-#include <sce/wlanbt_protocol.h>
+#include <wlanbt/wlanbt_protocol.h>
 
 /* The stack: bytes are pushed after the length. */
 struct WlanMefStack {

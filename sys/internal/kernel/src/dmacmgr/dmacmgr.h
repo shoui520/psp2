@@ -11,8 +11,8 @@
 
 /* vitasdk's prototype takes the timeout by address. */
 #define ksceKernelDmaOpSync		ksceKernelDmaOpSync_vitasdk
-#include <sce/dmacmgr.h>
-#include <sce/dmac_regs.h>
+#include <dmacmgr/dmacmgr.h>
+#include <dmacmgr/dmac_regs.h>
 #undef ksceKernelDmaOpSync
 
 /* ===== operations ===== */

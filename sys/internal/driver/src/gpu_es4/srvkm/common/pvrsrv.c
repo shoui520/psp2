@@ -2,7 +2,7 @@
 #include "device_sce.h"
 #include "gpu-dump.h"
 #include "power_sce.h"
-#include <sce/gpu_es4_trace.h>
+#include <gpu/gpu_es4_trace.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/lowio/pervasive.h>

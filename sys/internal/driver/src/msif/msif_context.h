@@ -2,7 +2,7 @@
 #define MSIF_CONTEXT_H
 
 #include "library.h"
-#include <sce/fast_mutex_object.h>
+#include <threadmgr/fast_mutex_object.h>
 
 /* The driver clears this complete work area at initialization. */
 struct MsifContext {

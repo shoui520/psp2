@@ -3,8 +3,8 @@
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "oal_internal.h"
 
 typedef struct CoredumpTriggerRequest {

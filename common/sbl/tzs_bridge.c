@@ -1,5 +1,5 @@
 /*
- * tzs_bridge.c: the bridge areas (sce/tzs_bridge.h), Sony's one source for
+ * tzs_bridge.c: the bridge areas (smsc_proxy/tzs_bridge.h), Sony's one source for
  * both sides. A module's own tzs_bridge.c includes it after declaring the
  * imports under the Non-secure kernel's names, with TZS_BRIDGE_SECURE set
  * to 1 in the secure world and 0 in the Non-secure kernel.
@@ -9,8 +9,8 @@
  * sceSblTzsBridgeFreeArgArea, the call in between.
  */
 #include <stddef.h>
-#include "sce/debug.h"
-#include "sce/tzs_bridge.h"
+#include <sysmem/debug.h>
+#include <smsc_proxy/tzs_bridge.h>
 
 #ifndef SCE_SBL_ERROR_NO_MEMORY
 #define SCE_SBL_ERROR_NO_MEMORY		((int)0x800f040c)

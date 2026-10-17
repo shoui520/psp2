@@ -10,7 +10,7 @@
 #endif
 
 #include <psp2/types.h>
-#include <sce/shellsvc.h>
+#include <vsh/lowlayer/src/shell_svc/shellsvc.h>
 
 #define SCE_SHUTTER_SOUND_ERROR_INVALID_ARGUMENT	0x80105201
 

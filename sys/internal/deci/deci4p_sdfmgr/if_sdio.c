@@ -1,7 +1,7 @@
 /* SDIO byte-stream transport and its per-core packet accounting. */
 #include "sdfmgr_internal.h"
-#include <sce/sdbgsdio.h>
-#include <sce/intrmgr.h>
+#include <sdbgsdio/sdbgsdio.h>
+#include <intrmgr/intrmgr.h>
 
 /* ARM context wrapper retained with the module's exception entries. */
 extern int sdioIntrEntry(int code, void *context);

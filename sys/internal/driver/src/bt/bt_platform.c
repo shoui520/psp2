@@ -1,7 +1,7 @@
 /* Bluetooth platform adapters; the original source filename is unavailable. */
-#include <sce/threadmgr.h>
-#include <sce/sysevent.h>
-#include <sce/sysroot_bt.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/sysroot_bt.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/pm_mgr.h>
 #include <psp2kern/kernel/aimgr.h>

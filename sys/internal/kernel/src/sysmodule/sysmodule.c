@@ -7,7 +7,7 @@
  * it was.
  */
 
-#include "sce/sysmodule_ids.h"
+#include "sysmodule_ids.h"
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
@@ -16,13 +16,13 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/acmgr.h>
-#include "sce/acmgr.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/processmgr.h"
-#include "sce/qafmgr.h"
-#include "sce/syscall.h"
-#include "sce/threadmgr.h"
+#include <acmgr/acmgr.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/qafmgr.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <stddef.h>
 
 #define SYSMODULE_LIBS		0x7d

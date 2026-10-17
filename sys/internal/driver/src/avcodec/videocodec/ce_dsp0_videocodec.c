@@ -1,7 +1,7 @@
 /* Sony source: videocodec/ce_dsp0_videocodec.c. */
 #include "../audiodec/audiodec_internal.h"
 #include "videocodec_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/cpu.h>

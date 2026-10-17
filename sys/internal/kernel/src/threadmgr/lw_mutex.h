@@ -8,7 +8,7 @@
 
 #include "private.h"
 #include "mutex.h"
-#include <sce/lw_mutex.h>
+#include <threadmgr/lw_mutex.h>
 
 #define LW_MUTEX_ATTR_RECURSIVE		0x00000002
 #define LW_MUTEX_ATTR_PRIORITY		0x00002000

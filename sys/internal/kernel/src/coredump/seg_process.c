@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "oal_internal.h"
 #include "seg_internal.h"
 #include "writer_internal.h"

@@ -1,9 +1,9 @@
 /* Register transfers for the directly attached motion sensor. */
 #include "motion_command.h"
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/syscon.h>
-#include <sce/threadmgr.h>
-#include <sce/clockgen.h>
+#include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
+#include <clockgen/clockgen.h>
 #include <string.h>
 
 typedef struct MotionSensorFifoSample {

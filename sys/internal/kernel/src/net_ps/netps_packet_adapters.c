@@ -1,7 +1,7 @@
 /* Shared SceNetPs packet adapters; unchanged Sony glue bodies. */
 
 #include "net_ps_internal.h"
-#include <sce/netps.h>
+#include <net_ps/netps.h>
 #include <string.h>
 
 extern struct NetDriver *gNetPsDriverHead;

@@ -6,13 +6,13 @@
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/heap.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/processmgr.h"
-#include "sce/sysroot.h"
-#include "sce/threadmgr.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 #include "pamp.h"
 
 static PampContext s_pamp;

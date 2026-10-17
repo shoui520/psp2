@@ -11,15 +11,15 @@
 #include <stdint.h>
 #include <string.h>
 #include "fw.h"
-#include <sce/kbl_param.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/cpu/corelock.h>
-#include <sce/barrier.h>
-#include <sce/cp15.h>
-#include <sce/debug.h>
-#include <sce/kernel_boot_param.h>
-#include <sce/spad_regs.h>
-#include <sce/sysroot.h>
+#include <sysmem/barrier.h>
+#include <sysmem/cp15.h>
+#include <sysmem/debug.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include <power/spad_regs.h>
+#include <sysmem/sysroot.h>
 #include "boot.h"
 
 /* boot.c and monitor.S */

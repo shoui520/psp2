@@ -12,7 +12,7 @@
  */
 
 #include <psp2/io/fcntl.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 #include "json_internal.h"
 
 namespace sce {

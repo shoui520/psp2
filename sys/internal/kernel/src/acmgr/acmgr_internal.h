@@ -2,8 +2,8 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/acmgr.h>
-#include <sce/error.h>
+#include <acmgr/acmgr.h>
+#include <kernel/error.h>
 
 /* SceSblACMgr's own error codes (no Sony names found) */
 #define ACMGR_ERROR_NOT_FOUND		((int)0x800f0902)

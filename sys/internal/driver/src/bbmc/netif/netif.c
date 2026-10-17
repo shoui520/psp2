@@ -4,8 +4,8 @@
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/ethernet.h>
-#include <sce/debug.h>
+#include <net_ps/ethernet.h>
+#include <sysmem/debug.h>
 #include "bbmc_netif.h"
 #include "bbmc_memory.h"
 #include "bbmc_control.h"

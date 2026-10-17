@@ -1,8 +1,8 @@
 /* CPU cache maintenance. */
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/barrier.h>
-#include <sce/cp15.h>
+#include <sysmem/barrier.h>
+#include <sysmem/cp15.h>
 
 /* the Cortex-A9 L1 data cache: 32 KiB, 4 ways of 256 sets of 32-byte lines */
 #define L1_CACHE_LINE_SHIFT	5

@@ -4,7 +4,7 @@
 
 /* Sony's 4.00 BSS stack-buffer copies use the checked object-size interface. */
 #if FW_VERSION >= 0x04000000
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 static const uint8_t gWmmElementSelector[4] = { 0x00, 0x50, 0xf2, 0x02 };

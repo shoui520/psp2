@@ -29,7 +29,7 @@
  */
 
 #include "net_ps_internal.h"
-#include <sce/netps_gateway.h>
+#include <net_ps/netps_gateway.h>
 #include <string.h>
 
 struct mbuf *m_get(int how, int type);

@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "fw.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);
 

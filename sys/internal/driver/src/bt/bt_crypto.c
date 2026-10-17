@@ -1,5 +1,5 @@
 /* Bluetooth crypto adapters; the original source filename is unavailable. */
-#include <sce/aes.h>
+#include <sysmem/aes.h>
 #include "bt_internal.h"
 
 int ksceAesInit1(SceAesFullContext *context, unsigned int blockBits,

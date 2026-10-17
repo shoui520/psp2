@@ -2,7 +2,7 @@
  * SceSDbgSdio: byte-stream channels to the development host over the debug
  * SDIO link (DevKit/TestKit only; dipsw 0xC1 enables it).
  *
- * The window protocol is in sce/sdio_window.h. Received bytes that do not
+ * The window protocol is in sdbgsdio/sdio_window.h. Received bytes that do not
  * fit the caller's buffer are kept in the channel and returned first by the
  * next read.
  */
@@ -12,14 +12,14 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sdbgsdio.h"
-#include "sce/sdio_window.h"
-#include "sce/suspend.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
-#include <sce/barrier.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sdbgsdio/sdbgsdio.h>
+#include <sdbgsdio/sdio_window.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/barrier.h>
 
 #define SDBG_SDIO_CHANNELS	4
 #define SDBG_SDIO_PADDR		SDIO_WINDOW_PADDR(0)

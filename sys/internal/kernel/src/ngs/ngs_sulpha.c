@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <string.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 #include "ngs_module_memory.h"
 

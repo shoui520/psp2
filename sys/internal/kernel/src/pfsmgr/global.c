@@ -3,7 +3,7 @@
  * crypt engine, and a random number generator.
  */
 
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "pfsmgr_internal.h"
 
 static SceMt19937Context g_pfsRandom;

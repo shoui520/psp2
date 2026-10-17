@@ -7,7 +7,7 @@
  */
 
 #include "modulemgr_internal.h"
-#include <sce/self.h>
+#include <modulemgr/self.h>
 
 
 #define BOOTIMAGE_FD		0x7f7f7f7f	/* reads come from the boot image */

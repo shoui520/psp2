@@ -3,8 +3,8 @@
  * PLACEHOLDER: these belong with the syscall files.
  */
 #include "event.h"
-#include "sce/cpu.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 

@@ -3,16 +3,16 @@
  * receive ring between the syscalls and the bulk endpoints.
  */
 #include <stdint.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/excpmgr_cpu.h"
-#include "sce/error.h"
-#include "sce/usbdev_serial.h"
+#include <excpmgr/excpmgr_cpu.h>
+#include <kernel/error.h>
+#include "usbdev_serial.h"
 
 #define TX_SIZE		0x4000
 #define RX_SIZE		0x1000

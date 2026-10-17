@@ -1,5 +1,5 @@
 /* Sysmem-specific counters use the shared exclusive-access primitives. */
-#include "sce/atomic.h"
+#include <sysmem/atomic.h>
 
 uint32_t ksceKernelAtomicDecIfLowPositive32(uint32_t *address)
 {

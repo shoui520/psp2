@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sce/venezia_rpc.h>
-#include <sce/jpeg.h>
-#include <sce/fast_mutex_object.h>
+#include <vnz_wrapper/venezia_rpc.h>
+#include "../jpeg.h"
+#include <threadmgr/fast_mutex_object.h>
 
 /* Complete host-side output-information query transferred through RPC. */
 typedef struct JpegQueryCommand {

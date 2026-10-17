@@ -3,9 +3,9 @@
  * library tracer. It lives in the DTrace heap (dtrace.c creates it).
  */
 
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "syscall_context.h"
 
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */

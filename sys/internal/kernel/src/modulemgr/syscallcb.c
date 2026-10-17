@@ -4,7 +4,7 @@
  */
 
 #include "modulemgr_internal.h"
-#include "sce/excpmgr_cpu.h"
+#include <excpmgr/excpmgr_cpu.h>
 
 #define SYSCALLCB_MAX_SYSCALLNUM	0x1000
 

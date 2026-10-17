@@ -1,7 +1,7 @@
 #pragma once
 
 #include <psp2/audioenc.h>
-#include <sce/fast_mutex_object.h>
+#include <threadmgr/fast_mutex_object.h>
 
 #define AUDIOENC_TYPE_SILK 0x2007U
 #define AUDIOENC_SILK_ERROR_INVALID_SAMPLING_RATE ((int)0x80861801)

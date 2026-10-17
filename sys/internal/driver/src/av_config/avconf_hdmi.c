@@ -1,14 +1,14 @@
 /* HDMI state and configuration. */
 
 #include "av_config_internal.h"
-#include <sce/debug.h>
-#include <sce/hdmi.h>
-#include <sce/display.h>
-#include <sce/threadmgr.h>
-#include <sce/suspend.h>
+#include <sysmem/debug.h>
+#include <hdmi/hdmi.h>
+#include <display/display.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <string.h>
-#include <sce/regmgr.h>
+#include <regmgr/regmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/sysroot.h>
 

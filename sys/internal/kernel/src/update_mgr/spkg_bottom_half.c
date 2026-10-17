@@ -1,6 +1,6 @@
-#include <sce/sysmem.h>
-#include <sce/sm_comm.h>
-#include <sce/certified_file.h>
+#include <sysmem/sysmem.h>
+#include <sm_comm/sm_comm.h>
+#include <modulemgr/certified_file.h>
 #include <psp2kern/kernel/cpu/cache.h>
 #include <psp2kern/io/fcntl.h>
 #include <string.h>

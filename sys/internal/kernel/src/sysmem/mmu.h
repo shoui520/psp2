@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include "sce/mmu.h"
+#include <sysmem/mmu.h>
 
 /* a memblock type code: access in bits 7:0, memory type in 15:8 (henkaku wiki "memtype bit value") */
 #define MEMBLOCK_CODE_ACCESS(type)		((type) & 0xff)

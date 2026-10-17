@@ -2,7 +2,7 @@
 #include "motion_manager.h"
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 struct SceMotionDevDs3CalibData;
 

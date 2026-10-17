@@ -3,7 +3,7 @@
 #define MGVIDEO_PRIVATE_H
 
 #include <stdint.h>
-#include <sce/magicgate.h>
+#include <magicgate/magicgate.h>
 #include <psp2common/kernel/rtc.h>
 
 struct MgVideoContext;

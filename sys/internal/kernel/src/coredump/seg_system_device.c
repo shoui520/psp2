@@ -1,6 +1,6 @@
 /* SYS_DEVICE_INFO note. */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

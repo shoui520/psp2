@@ -9,7 +9,7 @@
 
 #include "private.h"
 #include "uid_waitable.h"
-#include "sce/fast_mutex.h"
+#include <threadmgr/fast_mutex.h>
 
 #define FAST_MUTEX_MAGIC		0xa35db473
 #define FAST_MUTEX_ATTR_RECURSIVE	0x00000002

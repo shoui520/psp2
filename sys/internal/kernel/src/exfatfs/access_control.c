@@ -1,7 +1,7 @@
 /* Sony: access_control.c */
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/acmgr.h>
-#include <sce/debug.h>
+#include <acmgr/acmgr.h>
+#include <sysmem/debug.h>
 
 #include "exfatfs_internal.h"
 

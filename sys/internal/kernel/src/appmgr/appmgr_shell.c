@@ -1,7 +1,7 @@
 /* Shell power-save settings and watchdog. */
 
-#include <sce/debug.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 extern SceUID g_appmgrMainMutex;

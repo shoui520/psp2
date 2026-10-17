@@ -1,8 +1,8 @@
 /* Connection timers; original source filename unavailable. */
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/intrmgr.h>
-#include <sce/syscall.h>
-#include <sce/bt_pairing.h>
+#include <intrmgr/intrmgr.h>
+#include <intrmgr/syscall.h>
+#include <bt/bt_pairing.h>
 #include "bt_internal.h"
 
 extern BtStack gBtStack;

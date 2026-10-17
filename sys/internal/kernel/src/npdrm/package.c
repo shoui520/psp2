@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/syscall.h>
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall.h>
+#include <intrmgr/syscall_copy.h>
 
 #define NPDRM_BE32(value) \
 	((((value) & 0xff000000U) >> 24) | (((value) & 0x00ff0000U) >> 8) | \

@@ -1,4 +1,4 @@
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include "update_objects.h"

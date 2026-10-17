@@ -15,7 +15,7 @@
 
 #include <psp2kern/kernel/sysclib.h>
 #include <string.h>
-#include <sce/vfs.h>
+#include <iofilemgr/vfs.h>
 
 int ksceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd,
 	const void *indata, SceSize inlen, void *outdata, SceSize outlen);
@@ -24,7 +24,7 @@ int ksceVfsOpDecodePathElem(SceVfsMount *mnt, const char *path, const char **pat
 int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
 	void *outdata, SceSize outlen);
 
-#include <sce/error.h>
+#include <kernel/error.h>
 
 /* PFS's own errors; vfs operations turn them into errno codes (pfsErrorToErrno) */
 #define SCE_PFS_ERROR_BAD_MODE		0x80142109	/* name unknown */

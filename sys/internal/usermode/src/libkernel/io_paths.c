@@ -1,4 +1,4 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2common/kernel/iofilemgr.h>
 
 /* The kernel copies these reserved words but does not use their values. */

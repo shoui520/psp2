@@ -1,6 +1,6 @@
 /* SceSdstor device handles (Sony source: sdstor.c). */
-#include <sce/debug.h>
-#include <sce/sysmem.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "sdstor_internal.h"
 
 SceUID sdstorHeapId = 0;

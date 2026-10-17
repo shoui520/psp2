@@ -1,6 +1,6 @@
 /* Descriptive filename; these exports have no source-file debug records. */
 #include "hid_internal.h"
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2/kernel/threadmgr/thread.h>
 #include <string.h>

@@ -4,9 +4,9 @@
  * partitions its blocks are backed from (by code bits 20..23).
  */
 
-#include "sce/cp15.h"
-#include "sce/timer_regs.h"
-#include "sce/perfmon_regs.h"
+#include <sysmem/cp15.h>
+#include <systimer/timer_regs.h>
+#include <pamgr/perfmon_regs.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
 

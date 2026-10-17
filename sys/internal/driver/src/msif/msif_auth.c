@@ -2,8 +2,8 @@
 #include "skeleton.h"
 #include "msif_auth.h"
 #include "rmauth.h"
-#include <sce/mgkeymgr.h>
-#include <sce/debug.h>
+#include <mgkeymgr/mgkeymgr.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/utils.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <arm_neon.h>

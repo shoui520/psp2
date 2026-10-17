@@ -2,7 +2,7 @@
 #ifndef BT_TRANSPORT_H
 #define BT_TRANSPORT_H
 
-#include <sce/sdif.h>
+#include <sdif/sdif.h>
 #include "bt_internal.h"
 
 typedef struct BtSdioPacket {

@@ -10,8 +10,8 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "fw.h"
-#include "sce/debug.h"
-#include "sce/dtrace.h"
+#include <sysmem/debug.h>
+#include <dtrace/sce/dtrace.h>
 #include "hdmi_internal.h"
 
 void *memcpy(void *dst, const void *src, SceSize len);

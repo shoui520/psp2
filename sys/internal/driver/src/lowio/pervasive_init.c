@@ -5,8 +5,8 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/dipsw.h>
-#include <sce/threadmgr.h>
-#include <sce/sysevent.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysevent.h>
 
 extern uint32_t s_hardwareInfo[5];
 int LowioPixelClockInit(void);

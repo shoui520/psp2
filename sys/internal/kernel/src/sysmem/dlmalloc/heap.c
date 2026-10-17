@@ -7,7 +7,7 @@
 #include "sysmem_internal.h"
 #define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
 #include "memblock_obj_module.h"
-#include <sce/heap_info.h>
+#include <sysmem/heap_info.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "dlmalloc/heap.c"
@@ -52,7 +52,7 @@ void mspace_get_malloc_stats(mspace msp, struct malloc_stats *stats);
 SceSize mspace_get_mmapped_segments(mspace msp, SceSize max, struct malloc_segment_range *list);
 
 
-/* SceKernelHeapCreateOpt flags kept in the heap (HEAP_HAS_*: sce/sysmem.h) */
+/* SceKernelHeapCreateOpt flags kept in the heap (HEAP_HAS_*: sysmem/sysmem.h) */
 #define HEAP_VERIFY			0x00000010	/* every chunk checked around a free */
 #define HEAP_ACTIVE			0x00000020
 #define HEAP_OPT_INVALID		0x0000e0ec

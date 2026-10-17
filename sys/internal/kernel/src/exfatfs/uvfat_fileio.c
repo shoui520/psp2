@@ -1,4 +1,4 @@
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <string.h>
 #include "exfatfs_internal.h"
 

@@ -1,5 +1,5 @@
 #include "hid_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 int ksceHidKeyboardEnumerate(SceUID *handles, int count);
 int ksceHidKeyboardClear(SceUID handle);

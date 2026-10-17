@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "gpu-mmu.h"
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern int gPVRSRVLock;
 unsigned LinuxLockMutex(int *psMutex);

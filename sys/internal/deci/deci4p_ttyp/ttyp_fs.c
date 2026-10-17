@@ -4,7 +4,7 @@
 
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/vfs.h>
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 #include "ttyp.h"
 
 #define TTYP_FS_NAME		"deci4p_ttyp_dev_fs"

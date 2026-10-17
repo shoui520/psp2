@@ -2,7 +2,7 @@
 #include "library.h"
 #include "msif_context.h"
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 
 void *MsproalInitializeErrorLog(struct MsproalHandle *handle,
 	unsigned int capacity, uint32_t *index,

@@ -6,10 +6,10 @@
 #include <stdint.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/error.h"
-#include "sce/sysmem.h"
-#include "sce/usbstor.h"
-#include "sce/usbstormg.h"
+#include <kernel/error.h>
+#include <sysmem/sysmem.h>
+#include <usbstor/usbstor.h>
+#include <usbstormg/usbstormg.h>
 
 #define MG_ERROR_MEMORY	((int)0x8024410a)
 #define MG_ERROR_INIT	((int)0x80244101)

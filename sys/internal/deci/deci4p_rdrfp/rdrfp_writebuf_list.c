@@ -6,7 +6,7 @@
  */
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
-#include "sce/threadmgr.h"
+#include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
 #define RDRFP_FLUSH_INTERVAL	3000000		/* us */

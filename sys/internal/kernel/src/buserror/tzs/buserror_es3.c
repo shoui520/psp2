@@ -1,7 +1,7 @@
 /* ES3 bus error collection in the secure world. */
 
 #include "buserror.h"
-#include "sce/buserror_es3.h"
+#include "../buserror_es3.h"
 
 static BusErrorRecord *busErrorRecord(void)
 {

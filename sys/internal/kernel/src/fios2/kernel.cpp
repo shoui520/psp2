@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "fios2_internal.h"
 
 extern "C" int ksceIoSyncByFd2(SceUID fd, int flag);	/* name unknown */

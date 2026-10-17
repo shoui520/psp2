@@ -6,7 +6,7 @@
  * the power LED, which Syscon also drives.
  */
 
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include "power_private.h"
 
 /* LED 2 across a suspend */

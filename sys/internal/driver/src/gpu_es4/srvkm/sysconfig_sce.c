@@ -1,7 +1,7 @@
 /* IMG sysconfig.c platform port; SCE native interrupt/environment ownership.
  * The pristine unified platform remains in the vendored kernel DDK.
  */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "gpu-dump.h"
 #include <psp2kern/kernel/intrmgr.h>
 

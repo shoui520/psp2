@@ -1,9 +1,9 @@
 /* SceKernelBlueScreenOfDeath startup and public compatibility entry. */
-#include <sce/compat_regs.h>
-#include <sce/cp15.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/moncall.h>
-#include <sce/sysroot.h>
+#include <compat/compat_regs.h>
+#include <sysmem/cp15.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <excpmgr/moncall.h>
+#include <sysmem/sysroot.h>
 
 #include "bsod_internal.h"
 #include "exception_record.h"

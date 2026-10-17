@@ -1,15 +1,15 @@
 /* No JPEG encoder source-file name survives in this module's debug records. */
 #include "../audiodec/audiodec_internal.h"
-#include <sce/venezia_rpc.h>
-#include <sce/jpegenc.h>
+#include <vnz_wrapper/venezia_rpc.h>
+#include <scejpegenc.h>
 #include "jpegenc_internal.h"
 #include "../jpeg/jpeg_internal.h"
 #include <psp2kern/jpegenc.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/syscall.h>
-#include <sce/iftu.h>
+#include <intrmgr/syscall.h>
+#include <lowio/iftu.h>
 #include <string.h>
 
 int _lockProcessSuspendCore(void);

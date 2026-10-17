@@ -13,11 +13,11 @@
 #include <string.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/debug.h>
-/* sce/deci4p.h declares sceDfMgrClose void; it returns an error code */
+#include <sysmem/debug.h>
+/* deci4p_dfmgr/deci4p.h declares sceDfMgrClose void; it returns an error code */
 #define sceDfMgrClose sceDfMgrClose_deci4p_h
-#include <sce/deci4p.h>
-#include <sce/threadmgr.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <threadmgr/threadmgr.h>
 #undef sceDfMgrClose
 int sceDfMgrClose(SceUID handle);
 

@@ -4,9 +4,9 @@
  * init/transform/final, IV creation) are cryptographic and deferred.
  */
 
-#include <sce/debug.h>
-#include <sce/sysmem.h>
-#include <sce/uid_class.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/uid_class.h>
 #include <string.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/sysmem/uid_guid.h>

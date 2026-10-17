@@ -7,8 +7,8 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <string.h>
-#include <sce/syscall.h>
-#include <sce/iftu.h>
+#include <intrmgr/syscall.h>
+#include <lowio/iftu.h>
 
 int _lockProcessSuspendCore(void);
 int _unlockProcessSuspendCore(void);

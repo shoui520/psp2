@@ -1,10 +1,10 @@
 /* Physical address translation and checked kernel/user buffer access. */
 
 #include <stdint.h>
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/sysmem.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysmem.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 

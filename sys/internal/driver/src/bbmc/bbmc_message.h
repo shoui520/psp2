@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sce/bbmc.h>
+#include <bbmc/bbmc.h>
 
 #include "bbmc_memory.h"
 #include "bbmc_queue.h"

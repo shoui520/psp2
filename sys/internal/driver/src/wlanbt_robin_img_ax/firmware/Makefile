@@ -25,7 +25,7 @@ O ?= build
 
 ARCH_FLAGS := -march=armv5te -mthumb-interwork -mfloat-abi=soft
 CFLAGS := $(ARCH_FLAGS) -mthumb -O2 -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
-	-Iinclude -I$(ROOT)/common/include
+	-Iinclude -I$(ROOT)/sys/internal/include
 ASFLAGS := $(ARCH_FLAGS) -g -Iinclude
 
 BOOT_SRCS := $(wildcard boot/*.S)

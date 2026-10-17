@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/rtc.h>
-#include <sce/rsa.h>
+#include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include "drm_crypto.h"
 

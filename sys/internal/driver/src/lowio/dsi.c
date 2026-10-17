@@ -5,8 +5,8 @@
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/dsi_regs.h>
-#include <sce/sysevent.h>
+#include "dsi_regs.h"
+#include <sysmem/sysevent.h>
 
 #define DSI_ERROR_HEAD		((int)0x803f0600)
 #define DSI_ERROR_VIC		((int)0x803f0601)

@@ -15,11 +15,11 @@
  * Internal names are unknown. The register bases come from the shared
  * headers; the offsets below are the fields of their structs.
  */
-#include <sce/emc_regs.h>
-#include <sce/gpio_regs.h>
-#include <sce/lpddr2_regs.h>
-#include <sce/pervasive_regs.h>
-#include <sce/spi_regs.h>
+#include "emc_regs.h"
+#include <lowio/gpio_regs.h>
+#include <buserror/lpddr2_regs.h>
+#include <lowio/pervasive_regs.h>
+#include <lowio/spi_regs.h>
 
 	.syntax unified
 	.arch armv7-a
@@ -30,15 +30,15 @@
 	.equ	SCTLR_C,		0x0004
 	.equ	SCTLR_I,		0x1000
 
-/* ScePervasiveDeviceRegisters, sce/pervasive_regs.h: reset and gate pages */
+/* ScePervasiveDeviceRegisters, lowio/pervasive_regs.h: reset and gate pages */
 	.equ	PERVASIVE_COMPAT_RAM,	0x028
 	.equ	PERVASIVE_LPDDR2_MAIN,	0x160
 	.equ	PERVASIVE_LPDDR2_SUB,	0x164
 
-/* SceEmcRegisters, sce/emc_regs.h */
+/* SceEmcRegisters, emc_regs.h */
 	.equ	EMC_COMMAND,		0x24
 
-/* SceLpddr2Registers, sce/lpddr2_regs.h: the control words, a nibble per
+/* SceLpddr2Registers, buserror/lpddr2_regs.h: the control words, a nibble per
  * channel, then their status */
 	.equ	LPDDR2_CHANNEL,		0x8000
 	.equ	LPDDR2_CHANNEL_STATUS,	0x20
@@ -46,7 +46,7 @@
 	.equ	LPDDR2_MAIN_ALL,	0x4444	/* its four channels in self refresh */
 	.equ	LPDDR2_SUB_ALL,		0x44	/* its two */
 
-/* SceGpioRegisters, sce/gpio_regs.h */
+/* SceGpioRegisters, lowio/gpio_regs.h */
 	.equ	GPIO_INPUT,		0x04
 	.equ	GPIO_OUTPUT_SET,	0x08
 	.equ	GPIO_OUTPUT_CLEAR,	0x0c
@@ -57,7 +57,7 @@
 	.equ	GPIO0_SYSCON_READY,	0x10	/* port 4 */
 	.equ	GPIO1_PORT7,		0x80
 
-/* SceSpiRegisters, sce/spi_regs.h: SPI0 is the syscon's */
+/* SceSpiRegisters, lowio/spi_regs.h: SPI0 is the syscon's */
 	.equ	SPI_TRANSMIT,		0x04
 	.equ	SPI_CONTROL,		0x08
 	.equ	SPI_ENABLE,		0x10

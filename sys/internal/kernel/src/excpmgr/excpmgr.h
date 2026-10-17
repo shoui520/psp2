@@ -3,11 +3,11 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/excpmgr.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <excpmgr/excpmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 #define EXCP_STACK_SIZE		0x1000
 

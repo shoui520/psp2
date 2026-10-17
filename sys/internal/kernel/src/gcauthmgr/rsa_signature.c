@@ -1,5 +1,5 @@
 /* Descriptive source name: the original library has no debug records. */
-#include <sce/rsa.h>
+#include <marlin_hci/rsa.h>
 
 int GcAuthRsaEncodeDigest(unsigned char *output, int size,
 			const MarlinRsaData *digest, int algorithm);

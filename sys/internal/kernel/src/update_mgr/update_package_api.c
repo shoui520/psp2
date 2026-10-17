@@ -1,6 +1,6 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 
 int ksceSblACIsSystemProgram(SceUID pid);

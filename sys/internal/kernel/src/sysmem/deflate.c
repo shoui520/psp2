@@ -13,7 +13,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/utils.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 void *memcpy(void *dst, const void *src, SceSize n);
 

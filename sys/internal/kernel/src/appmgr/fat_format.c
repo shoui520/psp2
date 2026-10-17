@@ -1,10 +1,10 @@
 /* FAT formatting helpers; source-family attribution is inferred. */
 
 #include "fat_format_internal.h"
-#include <sce/fat_boot.h>
-#include <sce/exfat_directory.h>
-#include <sce/mbr.h>
-#include <sce/sdstor.h>
+#include <exfatfs/fat_boot.h>
+#include <exfatfs/exfat_directory.h>
+#include <sdstor/mbr.h>
+#include <sdstor/sdstor.h>
 #include <psp2kern/kernel/debug.h>
 #include <psp2kern/io/fcntl.h>
 #include <string.h>

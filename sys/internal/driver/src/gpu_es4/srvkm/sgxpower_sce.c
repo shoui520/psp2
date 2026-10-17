@@ -2,7 +2,7 @@
  * remain in contrib/img-sgx-ddk-1.7.862890.
  */
 #include "sgxinit_sce.h"
-#include <sce/sgxmkif_sce.h>
+#include <gpu/sgxmkif_sce.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 

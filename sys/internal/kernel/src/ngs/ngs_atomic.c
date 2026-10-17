@@ -1,6 +1,6 @@
 /* SceNgs atomic service wrapper; original call boundary is kept. */
 
-#include <sce/processmgr_imports.h>
+#include <processmgr/processmgr_imports.h>
 #include <psp2kern/kernel/cpu/cache.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <stdint.h>

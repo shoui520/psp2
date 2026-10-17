@@ -1,8 +1,8 @@
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/aimgr.h>
-#include <sce/debug.h>
-#include <sce/certified_file.h>
+#include <sysmem/debug.h>
+#include <modulemgr/certified_file.h>
 #include "update_internal.h"
 #include "spkg.h"
 

@@ -1,10 +1,10 @@
 /* Compass identification, factory adjustment and self-test. */
 #include <string.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/i2c.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 #include "magnetometer.h"
 
 #define MAGN_I2C_BUS	1

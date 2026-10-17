@@ -10,10 +10,10 @@
 
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysmem/heap.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/syslibtrace.h"
-#include "sce/threadcb.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <syslibtrace/syslibtrace.h>
+#include <threadmgr/threadcb.h>
 #include "syslibtrace.h"
 #include <stddef.h>
 

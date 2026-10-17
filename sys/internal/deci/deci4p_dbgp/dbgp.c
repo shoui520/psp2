@@ -1,13 +1,13 @@
 /* SceDeci4pDbgp debugger protocol. */
 
 #include <fw.h>
-#include <sce/debug.h>
-#include <sce/deci4p.h>
-#include <sce/error.h>
-#include <sce/processmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/sysmem.h>
-#include <sce/sysevent.h>
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <kernel/error.h>
+#include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysevent.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/cpu/cache.h>
 #include <psp2kern/kernel/dipsw.h>

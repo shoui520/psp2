@@ -7,7 +7,7 @@
 #include <psp2/kernel/error.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/net/net.h>
-#include <sce/netctl.h>
+#include <libnetctl.h>
 
 /* Error codes the SDK headers do not name (names unknown). */
 #define NETCTL_ERROR_UNK_80412190	0x80412190	/* empty or over-long SSID */

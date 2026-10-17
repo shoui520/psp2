@@ -17,9 +17,9 @@ static void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned in
 	__attribute__((noreturn));
 
 /* registration, default/panic handlers and register report, shared with os0 */
-#include "sce/excpmgr_handler.h"
+#include "../excpmgr_handler.h"
 /* the state save and return path of the vector stubs, shared with os0 */
-#include "sce/excpmgr_context.h"
+#include "../excpmgr_context.h"
 
 /*
  * name unknown: copy code into a read-only page (the vector templates) and

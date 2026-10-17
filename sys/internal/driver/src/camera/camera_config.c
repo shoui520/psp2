@@ -1,14 +1,14 @@
 /* SceCamera: process-aware driver configuration. */
 
-#include "sce/intrmgr.h"
-#include "sce/threadmgr.h"
-#include "sce/processmgr.h"
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <processmgr/processmgr.h>
 #include "camera_config.h"
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <string.h>
 #include <psp2/camera.h>
-#include "sce/camera.h"
+#include <camera/camera.h>
 
 void *cameraSramFrameBufferBase[2][3] = {0};
 void *cameraFrameBufferBase[2][3] = {0};

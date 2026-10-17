@@ -1,4 +1,4 @@
-#include <sce/syscon.h>
+#include <syscon/syscon.h>
 #include "../bbmc_message.h"
 
 int testModeSysconPending;

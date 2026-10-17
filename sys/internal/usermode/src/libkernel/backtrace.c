@@ -1,7 +1,7 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include "backtrace.h"
 #include "lifecycle.h"
-#include <sce/error.h>
+#include <kernel/error.h>
 
 struct BacktraceOptions {
 	SceUInt32 *count;

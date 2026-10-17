@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 #define MT_N			624
 #define MT_M			397

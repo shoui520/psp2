@@ -6,11 +6,11 @@
 
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/error.h>
-#include <sce/sysevent.h>
+#include <kernel/error.h>
+#include <sysmem/sysevent.h>
 #include "drfp_internal.h"
 
 #define DRFP_NAME		"SceDeci4pDrfp"

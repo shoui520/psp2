@@ -3,8 +3,8 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/lowio/i2c.h>
-#include "sce/codec.h"
-#include "sce/sysevent_ids.h"
+#include <codec/codec.h>
+#include <sysmem/sysevent_ids.h>
 #include "registers.h"
 
 extern int sceKernelDelayThread(unsigned int delay);

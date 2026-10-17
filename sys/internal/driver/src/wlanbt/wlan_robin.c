@@ -1,11 +1,11 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../robin/wlan/wlan_robin.c"
 #include "wlanbt_internal.h"
-#include <sce/debug.h>
-#include <sce/sysevent.h>
-#include <sce/threadmgr.h>
-#include <sce/wlanbt.h>
-#include <sce/regmgr.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysevent.h>
+#include <threadmgr/threadmgr.h>
+#include <wlanbt/wlanbt.h>
+#include <regmgr/regmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>

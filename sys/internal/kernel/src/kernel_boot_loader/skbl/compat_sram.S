@@ -16,7 +16,7 @@
  * suspend before it returns to the address saved with it.
  */
 
-#include <sce/ssx_firewall_regs.h>
+#include <buserror/ssx_firewall_regs.h>
 
 	.syntax	unified
 

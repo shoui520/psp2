@@ -11,9 +11,9 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
-#include "sce/sysmem.h"
-#include "sce/error.h"
-#include "sce/gps.h"
+#include <sysmem/sysmem.h>
+#include <kernel/error.h>
+#include <gps/gps.h>
 /* Official SDK name, not yet present in the shared error header. */
 #ifndef SCE_KERNEL_ERROR_NO_MEMORY
 #define SCE_KERNEL_ERROR_NO_MEMORY 0x8002710b

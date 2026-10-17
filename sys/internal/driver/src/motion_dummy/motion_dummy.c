@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/sysevent.h>
-#include <sce/motion_dummy.h>
+#include <sysmem/sysevent.h>
+#include <motion_dummy/motion_dummy.h>
 #include "fw.h"
 #include "motion_dummy.h"
 

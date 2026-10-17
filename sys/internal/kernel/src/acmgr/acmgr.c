@@ -10,10 +10,10 @@
  * GetFSAttributeByThreadAccessLevel; syslibtrace: HasCapability, IsGameProgram;
  * applier: GetMediaType), otherwise vitasdk's NID database names.
  */
-#include <sce/ctype.h>
-#include <sce/sysclib.h>
+#include <sysmem/ctype.h>
+#include <sysmem/sysclib.h>
 #include <psp2kern/kernel/dipsw.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "acmgr_internal.h"
 
 /*

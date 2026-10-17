@@ -7,7 +7,7 @@
  */
 
 #include "gxm_internal.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 #define GXM_TLS_GPU_SIGNAL	0x44
 

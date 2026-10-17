@@ -1,15 +1,15 @@
 #include "pamgr_internal.h"
 #include <string.h>
-#include <sce/qaf_cache.h>
-#include <sce/cpu.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/debug.h>
-#include <sce/threadmgr.h>
-#include <sce/sysroot.h>
-#include <sce/syslibtrace.h>
+#include "qaf_cache.h"
+#include <sysmem/cpu.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysroot.h>
+#include <syslibtrace/syslibtrace.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 int checkDebugPermission(void);
 int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);

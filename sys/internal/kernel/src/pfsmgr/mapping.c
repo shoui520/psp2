@@ -3,7 +3,7 @@
  * read checks before reading a file as usual.
  */
 
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 SceUID g_pfsThreadMappingKey = -1;

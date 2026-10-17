@@ -3,7 +3,7 @@
 #include "file.h"
 #include <stdint.h>
 #include <psp2kern/io/fcntl.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 unsigned int MarlinStringLength(const char *string);
 

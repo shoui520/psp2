@@ -1,7 +1,7 @@
 /* Descriptive file name: the original has no source-file debug records. */
 #include "magicgate_private.h"
-#include <sce/aes.h>
-#include <sce/des.h>
+#include <sysmem/aes.h>
+#include <sysmem/des.h>
 
 int ksceAesInit1(SceAesFullContext *context, SceSize blockSize,
 		 SceSize keySize, const void *key);

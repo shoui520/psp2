@@ -12,7 +12,7 @@
 #define SDFCTL_H
 
 #include <psp2kern/types.h>
-#include "sce/deci4p.h"
+#include <deci4p_dfmgr/deci4p.h>
 
 #if FW_DEBUG
 #define SDFCTL_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)

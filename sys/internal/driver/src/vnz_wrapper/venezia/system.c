@@ -1,5 +1,5 @@
 /* Sony venezia/system.c: DSP execution-group and performance-monitor setup. */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "venezia_internal.h"
 

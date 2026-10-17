@@ -5,9 +5,9 @@
 #include <stddef.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/sdif.h>
-#include <sce/sdif_regs.h>
-#include <sce/fast_mutex.h>
+#include <sdif/sdif.h>
+#include "sdif_regs.h"
+#include <threadmgr/fast_mutex.h>
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;

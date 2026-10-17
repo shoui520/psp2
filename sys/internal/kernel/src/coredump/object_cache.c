@@ -8,7 +8,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "oal_internal.h"
 

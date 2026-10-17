@@ -4,11 +4,11 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include "sce/deci4p.h"
-#include "sce/pamgr.h"
-#include "sce/processmgr.h"
-#include "sce/sysmem.h"
-#include "sce/zlib.h"
+#include <deci4p_dfmgr/deci4p.h>
+#include <pamgr/pamgr.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysmem.h>
+#include <post_ss_mgr/zlib.h>
 #include <stddef.h>
 
 /* names unknown: the protocol number, and the status codes it reports */
@@ -153,4 +153,4 @@ _Static_assert(sizeof(PampPacket) == 0x11000, "packet slot");
 _Static_assert(offsetof(PampContext, zstream) == 0x3316c, "zstream");
 _Static_assert(sizeof(PampContext) == 0x431c0, "context");
 
-/* (unnamed imports: sce/pamgr.h, sce/processmgr.h, sce/sysmem.h) */
+/* (unnamed imports: pamgr/pamgr.h, processmgr/processmgr.h, sysmem/sysmem.h) */

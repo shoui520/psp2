@@ -1,5 +1,5 @@
 /* DES block operations, using the original two-round loop. */
-#include <sce/des.h>
+#include <sysmem/des.h>
 #include "des_internal.h"
 
 uint64_t SceKernelUtilsForDriver_A0D45D25(const DesContext *context, uint64_t block)

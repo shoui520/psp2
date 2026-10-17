@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
-#include "sce/appmgr_rdrfp.h"
+#include <appmgr/appmgr_rdrfp.h>
 #include "rdrfp.h"
 
 #define SCE_ERROR_ERRNO_ENOENT		0x80010002

@@ -5,9 +5,9 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
-#include <sce/debug.h>
-#include <sce/cp15.h>
-#include <sce/threadmgr_debugger.h>
+#include <sysmem/debug.h>
+#include <sysmem/cp15.h>
+#include <threadmgr/threadmgr_debugger.h>
 #include "dbgp_internal.h"
 
 int dbgpCheckSwbrkptSize(const SceSize *size)

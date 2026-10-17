@@ -10,7 +10,7 @@
 #endif
 
 #include <psp2/types.h>
-#include <sce/shellsvc.h>
+#include <vsh/lowlayer/src/shell_svc/shellsvc.h>
 
 /* SDK teleport/teleport_error.h, teleport_server_types.h */
 #define SCE_TELEPORT_ERROR_FATAL			0x80108401

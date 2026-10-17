@@ -7,7 +7,7 @@
  */
 
 #include "intrmgr.h"
-#include <sce/dmac_regs.h>
+#include <dmacmgr/dmac_regs.h>
 
 #define DMAC_COUNT	7
 

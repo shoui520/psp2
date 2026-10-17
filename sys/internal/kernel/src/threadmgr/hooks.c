@@ -4,8 +4,8 @@
  */
 
 #include "private.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "threadmgr.c"

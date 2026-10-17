@@ -1,5 +1,5 @@
 /* SceBbmc control access and heap wrappers. */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "bbmc_memory.h"
 
 /* The complete control object is defined by its owner in the manager code. */

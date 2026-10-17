@@ -3,10 +3,10 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/sysmem.h>
-#include <sce/syscall.h>
-#include <sce/regmgr.h>
-#include <sce/self.h>
+#include <sysmem/sysmem.h>
+#include <intrmgr/syscall.h>
+#include <regmgr/regmgr.h>
+#include <modulemgr/self.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>

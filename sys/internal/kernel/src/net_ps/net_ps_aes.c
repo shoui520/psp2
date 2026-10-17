@@ -3,7 +3,7 @@
 #include <psp2kern/kernel/utils.h>
 #include <string.h>
 #if FW_VERSION >= 0x04000000
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 extern void *(*gNetPsCryptoAllocate)(SceSize size);

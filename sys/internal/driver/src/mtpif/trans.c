@@ -1,11 +1,11 @@
 /* SceMtpIfDriver: privileged MTP transport and bounded user-buffer staging. */
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/mtpif.h"
-#include "sce/sysmem.h"
-#include "sce/threadmgr.h"
-#include "sce/syscall.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <mtpif/mtpif.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <intrmgr/syscall.h>
 
 #define MTP_INVALID	((int)0x80543603)
 #define MTP_UNAVAILABLE	((int)0x8054360c)

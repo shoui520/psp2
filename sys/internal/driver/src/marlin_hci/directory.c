@@ -1,7 +1,7 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
 #include "path.h"
-#include <sce/error.h>
+#include <kernel/error.h>
 #include <psp2kern/io/stat.h>
 
 unsigned int MarlinStringLength(const char *string);

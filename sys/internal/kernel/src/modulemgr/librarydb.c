@@ -5,7 +5,7 @@
  */
 
 #include "modulemgr_internal.h"
-#include <sce/modulemgr_debugger.h>
+#include <modulemgr/modulemgr_debugger.h>
 
 #define PROCESS_TYPE_SHARED	0x4000000	/* processes that share module images */
 

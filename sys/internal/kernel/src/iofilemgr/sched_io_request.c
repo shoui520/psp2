@@ -6,7 +6,7 @@
  * scheduler runs one at a time; the request keeps the chunks not yet run.
  */
 
-#include <sce/excpmgr_cpu.h>
+#include <excpmgr/excpmgr_cpu.h>
 #include "iofilemgr_internal.h"
 
 /* the bit TPIDRURO has while the kernel works for a user thread's syscall */

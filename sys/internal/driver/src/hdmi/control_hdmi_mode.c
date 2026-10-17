@@ -8,8 +8,8 @@
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/i2c.h>
 #include "fw.h"
-#include "sce/debug.h"
-#include "sce/sysevent.h"
+#include <sysmem/debug.h>
+#include <sysmem/sysevent.h>
 #include "hdmi_internal.h"
 
 void *memcpy(void *dst, const void *src, SceSize len);

@@ -1,8 +1,8 @@
 /* Shell services and application path queries. */
 
-#include <sce/debug.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2/appmgr.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>

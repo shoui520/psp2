@@ -1,4 +1,4 @@
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
 extern int UVFAT_InitDirEntry_ex(SceExfatfsSharedResource *sharedResource,

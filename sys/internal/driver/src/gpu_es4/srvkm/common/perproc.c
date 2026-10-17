@@ -3,7 +3,7 @@
 #include "handle-types.h"
 #include "gpu-blockheap.h"
 #include "mapped_memory_sce.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 HASH_TABLE *psHashTab;

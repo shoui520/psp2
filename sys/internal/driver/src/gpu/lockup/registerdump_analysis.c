@@ -1,6 +1,6 @@
 /* Sony register-dump analysis; hardware field names come from pristine IMG. */
 #include "../../gpu_es4/srvkm/registerdump_sce.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
 
 #undef __FILE_NAME__

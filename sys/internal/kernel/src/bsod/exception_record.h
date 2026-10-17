@@ -2,8 +2,8 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/excpmgr.h>
-#include <sce/sysroot_modulemgr.h>
+#include <excpmgr/excpmgr.h>
+#include <sysmem/sysroot_modulemgr.h>
 
 typedef struct SceKernelBacktraceFrameForKernel BsodStackFrame;
 

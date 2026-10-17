@@ -6,7 +6,7 @@
 
 #include "skeleton.h"
 #include <psp2kern/types.h>
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 #include <string.h>
 #include "appmgr_device.h"
 #include "appmgr_event.h"

@@ -7,9 +7,9 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/sm_comm.h>
-#include "sce/mgkeymgr.h"
-#include <sce/dmac_regs.h>
+#include <sm_comm/sm_comm.h>
+#include <mgkeymgr/mgkeymgr.h>
+#include <dmacmgr/dmac_regs.h>
 
 #define MG_ERROR_ARGUMENT	((int)0x800f1616)
 #define MG_ERROR_UNSUPPORTED	((int)0x800f1625)

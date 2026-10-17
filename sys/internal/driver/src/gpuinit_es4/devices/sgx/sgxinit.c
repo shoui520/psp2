@@ -9,10 +9,10 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
-#include "sce/debug.h"
-#include "sce/sysmem.h"
-#include "sce/gpuinit_es4.h"
-#include "sce/perfmon_regs.h"
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
+#include "../../gpuinit_es4.h"
+#include <pamgr/perfmon_regs.h>
 #include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
 #include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 #include "programs.h"

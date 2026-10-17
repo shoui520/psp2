@@ -1,7 +1,7 @@
 /* Buffered writer interface. */
 
 #include "writer_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <string.h>
 
 extern void *memMgrAlloc(SceSize size);

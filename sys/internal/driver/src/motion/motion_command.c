@@ -5,8 +5,8 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/lowio/gpio.h>
-#include <sce/syscon.h>
-#include <sce/threadmgr.h>
+#include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
 
 MotionWorkerContext motionWorker;
 MotionCommandContext motionCommand;

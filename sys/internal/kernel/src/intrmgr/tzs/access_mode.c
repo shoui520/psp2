@@ -5,8 +5,8 @@
  */
 
 #include "intrmgr.h"
-#include <sce/pervasive_regs.h>
-#include <sce/sgx_regs.h>
+#include <lowio/pervasive_regs.h>
+#include <gpu/sgx_regs.h>
 
 #define ACCESS_MODE_MONCALL_PERVASIVE	0x104
 #define ACCESS_MODE_MONCALL_TAS		0x105

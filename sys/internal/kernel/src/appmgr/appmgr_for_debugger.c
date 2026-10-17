@@ -1,6 +1,6 @@
 /* Application-state queries registered for debugger clients. */
 
-#include <sce/sysroot_appmgr.h>
+#include <sysmem/sysroot_appmgr.h>
 
 extern int appmgrGetAppInfoByPid(int pid, void *out);
 extern int appmgrGetAppInfoByAppId(int appId, void *out);

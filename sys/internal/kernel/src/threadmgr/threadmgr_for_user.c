@@ -7,16 +7,16 @@
 
 #include <string.h>
 #include "private.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "event.h"
 #include "lw_mutex.h"
 #include "scheduler.h"
 #include "syscall_context.h"
 #include "affinity.h"
 #include "priority_change.h"
-#include "sce/intrmgr.h"
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include "event_flag.h"

@@ -1,8 +1,8 @@
 /*
  * SceDeci4pLoadp (Sony's loadp.c): see loadp.h.
  */
-#include <sce/sysroot.h>
-#include <sce/appmgr_launch.h>
+#include <sysmem/sysroot.h>
+#include <appmgr/appmgr_launch.h>
 #include <psp2kern/appmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dipsw.h>
@@ -15,14 +15,14 @@
 #include <psp2kern/registrymgr.h>
 #include <stdio.h>
 #include <string.h>
-#include "sce/deci4p_loadp_imports.h"
-#include "sce/modulemgr_control.h"
-#include "sce/processmgr.h"
-#include "sce/qafmgr.h"
-#include "sce/syscall.h"
-#include "sce/threadmgr_debugger.h"
+#include "deci4p_loadp_imports.h"
+#include <modulemgr/modulemgr_control.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/qafmgr.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr_debugger.h>
 #include "loadp.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 #include <alloca.h>
 
 /* SceAppMgr (henkaku wiki SceAppMgr, vitasdk psp2/appmgr.h) */
@@ -124,7 +124,7 @@
 
 /* Sony's 4.00 build is fortified */
 #if FW_VERSION >= 0x04000000
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 /* ===== packets ===== */

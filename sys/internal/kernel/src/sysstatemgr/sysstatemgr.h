@@ -12,8 +12,8 @@
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/aimgr.h>
-#include "sce/debug.h"
-#include "sce/qafmgr.h"
+#include <sysmem/debug.h>
+#include <sysmem/qafmgr.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))
 #define CONF_NOT_FOUND ((int)0xffff0001U)

@@ -7,7 +7,7 @@
  * The first word of the auth info's capability block holds the program's
  * access level (0x10, 0x20, 0x40 or 0x80, as the thread access levels).
  */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "acmgr_internal.h"
 
 /* an attribute and the accesses it grants a kernel / a user program */

@@ -6,9 +6,9 @@
  */
 
 #include "modulemgr_internal.h"
-#include "sce/excpmgr.h"
-#include "sce/excpmgr_cpu.h"
-#include "sce/threadcb.h"
+#include <excpmgr/excpmgr.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <threadmgr/threadcb.h>
 
 #define BACKTRACE_FLAG_KERNEL_STACK	0x1	/* the kernel stack of a user thread */
 #define BACKTRACE_FLAG_LIMIT		0x2	/* stop when the buffer is full */
@@ -36,7 +36,7 @@ typedef struct SceKernelBacktraceFrame {
 	SceUInt32 pc;
 } SceKernelBacktraceFrame;
 
-/* one frame (sce/sysroot_modulemgr.h) */
+/* one frame (sysmem/sysroot_modulemgr.h) */
 typedef struct SceKernelBacktraceFrameForKernel SceKernelBacktraceFrameForKernel;
 
 /* the reader of the unwind instructions */

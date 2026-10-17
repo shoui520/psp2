@@ -1,13 +1,13 @@
 /* Sony GPU register-list lookup and validation. */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "../../gpu_es4/srvkm/gpu-dump.h"
-#include <sce/debug.h>
-#include <sce/barrier.h>
-#include <sce/rtc.h>
+#include <sysmem/debug.h>
+#include <sysmem/barrier.h>
+#include <rtc/rtc.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <string.h>
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
-#include <sce/sgx_regs.h>
+#include <gpu/sgx_regs.h>
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
 
 /* Pristine SGX MP register-bank selection, services4/include/sgx_mkif_km.h. */

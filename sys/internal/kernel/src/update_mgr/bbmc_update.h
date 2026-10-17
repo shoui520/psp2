@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/bbmc.h>
+#include <bbmc/bbmc.h>
 #include "update_internal.h"
 
 typedef struct BbmcUtilContext {

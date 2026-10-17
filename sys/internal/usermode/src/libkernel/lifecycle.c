@@ -1,10 +1,10 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2/types.h>
 #include <psp2common/kernel/modulemgr.h>
 #include "lifecycle.h"
 #include "backtrace.h"
-#include <sce/error.h>
-#include "sce/compiler.h"
+#include <kernel/error.h>
+#include <sysmem/compiler.h>
 
 struct ProcessParamHeader {
 	uint32_t size;

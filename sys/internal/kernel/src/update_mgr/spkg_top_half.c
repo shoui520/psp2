@@ -1,4 +1,4 @@
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include "spkg.h"

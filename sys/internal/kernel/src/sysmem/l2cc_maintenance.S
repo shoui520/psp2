@@ -6,7 +6,7 @@
  * SKBL (SYSMEM_SKBL) adds the controller's setup, enable and disable and
  * invalidate-all; it and the TrustZone build (SYSMEM_TZS) add
  * clean-and-invalidate-all, by way.
- * Register offsets: sce/pl310_regs.h.
+ * Register offsets: sysmem/pl310_regs.h.
  */
 	.syntax unified
 	.arch	armv7-a

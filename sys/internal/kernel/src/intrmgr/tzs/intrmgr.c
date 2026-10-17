@@ -6,9 +6,9 @@
  */
 
 #include "intrmgr.h"
-#include <sce/pl310_regs.h>
-#include <sce/threadcb.h>
-#include <sce/cp15.h>
+#include <sysmem/pl310_regs.h>
+#include <threadmgr/threadcb.h>
+#include <sysmem/cp15.h>
 
 #define INTR_MONCALL_SET_SHARED_MEMORY	0x101	/* SCE_MONCALL_SET_SHARED_MEMORY */
 #define INTR_MONCALL_UNMAP_KBL		0x103	/* SCE_MONCALL_UNMAP_KBL */

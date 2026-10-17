@@ -1,7 +1,7 @@
 /* THREAD_REG_INFO note. */
 
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

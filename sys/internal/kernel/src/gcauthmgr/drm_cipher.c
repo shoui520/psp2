@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/drm_bb.h>
+#include "drm_bb.h"
 
 SceUID gcAuthDrmBbSemaphore;
 unsigned char gcAuthDrmWorkBuffer[2048];

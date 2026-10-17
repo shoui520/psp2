@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem/heap.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 #include "drfp_internal.h"
 
 /* the host's result as an SCE error */

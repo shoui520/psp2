@@ -4,8 +4,8 @@
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/pwm_regs.h>
-#include <sce/sysevent.h>
+#include "pwm_regs.h"
+#include <sysmem/sysevent.h>
 
 #define PWM_ERROR_CHANNEL ((int)0x803f0200)
 #define PWM_ERROR_ARGUMENT ((int)0x803f0201)

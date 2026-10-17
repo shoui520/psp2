@@ -3,7 +3,7 @@
  * still, the average of a window of samples is its zero-rate output.
  */
 #include <string.h>
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 
 int SceMotionDevForDriver_77BA3A04(void);
 

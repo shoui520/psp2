@@ -13,8 +13,8 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/debug.h"
-#include "sce/deci4p.h"
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
 
 #define CPUP_PROTOCOL		0x3000
 #define CPUP_BUF_SIZE		0x11000

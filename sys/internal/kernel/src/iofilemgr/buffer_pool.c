@@ -4,7 +4,7 @@
  */
 
 #include "iofilemgr_internal.h"
-#include "sce/atomic.h"
+#include <sysmem/atomic.h>
 
 /* push node onto a stack */
 static inline __attribute__((always_inline)) void bufferPoolPush(BufferPoolNode *volatile *list,

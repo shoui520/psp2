@@ -2,7 +2,7 @@
 #pragma once
 
 #include "motion_command.h"
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 
 /* The two calibration channel groups each contain two three-axis values. */
 typedef struct SceMotionDevMagnCalibData {

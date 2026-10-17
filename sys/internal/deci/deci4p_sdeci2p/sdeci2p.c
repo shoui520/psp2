@@ -18,16 +18,16 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/barrier.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/intrmgr.h"
-#include "sce/qafmgr.h"
-#include "sce/sdfmgr.h"
-#include "sce/suspend.h"
-#include "sce/sysroot.h"
-#include "sce/threadmgr.h"
-#include "sce/compat_regs.h"
+#include <sysmem/barrier.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/qafmgr.h>
+#include <deci4p_sdfmgr/sdfmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
+#include <compat/compat_regs.h>
 
 #define SDECI2P_PROTOCOL	0x1000e000
 #define SDECI2P_INTR_FWD	0x41		/* compat side took a forwarded packet */

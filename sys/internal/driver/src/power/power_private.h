@@ -4,15 +4,15 @@
 
 #pragma once
 
-#include "sce/power_imports.h"
-#include <sce/power.h>
-#include <sce/led.h>
-#include <sce/idstorage.h>
-#include "sce/suspend.h"
-#include "sce/sysevent.h"
-#include "sce/barrier.h"
-#include "sce/sysroot.h"
-#include "sce/syscall.h"
+#include "power_imports.h"
+#include <power/power.h>
+#include <power/led.h>
+#include <idstorage/idstorage.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/barrier.h>
+#include <sysmem/sysroot.h>
+#include <intrmgr/syscall.h>
 
 /*
  * Power callback argument bits. Sony's SDK (power.h) names the ones user code
@@ -39,16 +39,16 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <sce/pervasive_regs.h>
+#include <lowio/pervasive_regs.h>
 #include <psp2kern/ctrl.h>
 #include <psp2common/power.h>
-#include "sce/error.h"
+#include <kernel/error.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <stddef.h>
 #include <string.h>
-#include "sce/intrmgr.h"
-#include "sce/debug.h"
+#include <intrmgr/intrmgr.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/acmgr.h>

@@ -2,16 +2,16 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <sce/sysroot_bt.h>
-#include <sce/syscall.h>
-#include <sce/intrmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/bt_hid.h>
-#include <sce/bt_event.h>
-#include <sce/bt_registered.h>
-#include <sce/bt_pairing.h>
-#include <sce/bt_audio.h>
-#include <sce/bt_test.h>
+#include <sysmem/sysroot_bt.h>
+#include <intrmgr/syscall.h>
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <bt/bt_hid.h>
+#include <bt/bt_event.h>
+#include <bt/bt_registered.h>
+#include <bt/bt_pairing.h>
+#include <bt/bt_audio.h>
+#include <bt/bt_test.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>

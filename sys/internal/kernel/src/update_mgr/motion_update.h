@@ -1,7 +1,7 @@
 #pragma once
 
 #include <psp2/types.h>
-#include <sce/motion_command.h>
+#include <motion/motion_command.h>
 
 typedef struct MotionUtilEventContext {
 	SceUID eventFlagId;

@@ -5,10 +5,10 @@
 #include <stddef.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/motion_dev.h>
-#include <sce/touch.h>
-#include <sce/mbr.h>
-#include <sce/threadmgr.h>
+#include <motion/motion_dev.h>
+#include <touch/touch.h>
+#include <sdstor/mbr.h>
+#include <threadmgr/threadmgr.h>
 #include "pup.h"
 
 typedef char SceUpdateMode;

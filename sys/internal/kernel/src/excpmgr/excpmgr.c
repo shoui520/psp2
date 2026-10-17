@@ -2,7 +2,7 @@
 #define SCE_DBGINFO_SECTION ".rodata"
 #include "excpmgr.h"
 #include "excpmgr_readonly.h"
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 /* Shared definition groups retain Sony's original diagnostic source name. */
 #pragma GCC diagnostic push
@@ -33,7 +33,7 @@ SceExcpmgrCallback g_undefCallback = NULL;
 SceExcpmgrData g_excpData = { 0 };
 
 /* Handler definitions are shared with the KBL and emitted in Sony's order. */
-#include "sce/excpmgr_handler_cpu.h"
+#include "excpmgr_handler_cpu.h"
 
 #if !FW_DEBUG
 static const unsigned int armNop = 0xe320f000;
@@ -95,7 +95,7 @@ static int excpResume(void)
 #define EXCP_IT_TEXT(_index) g_excpmgrITText##_index
 #define EXCP_REPORT_LINKAGE
 #endif
-#include "sce/excpmgr_handler_report.h"
+#include "excpmgr_handler_report.h"
 #undef EXCP_REPORT_LINKAGE
 
 void printVfpRegisters(SceExcpmgrContext *context)
@@ -236,7 +236,7 @@ void SceExcpmgrForKernel_1FBF5654(SceExcpmgrCallback callback)
 	g_undefCallback = callback;
 }
 
-#include "sce/excpmgr_handler_register.h"
+#include "excpmgr_handler_register.h"
 
 int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handler)
 {
@@ -323,7 +323,7 @@ SceExcpmgrHandler *SceExcpmgrForKernel_4337DD78(void)
 	return g_excpHandlers.defaultHandler;
 }
 
-#include "sce/excpmgr_handler_default.h"
+#include "excpmgr_handler_default.h"
 
 /*
  * name unknown: data aborts on unprivileged Thumb stores (STRBT/STRT, LDRSBT)

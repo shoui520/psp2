@@ -3,7 +3,7 @@
 
 #include "backtrace.h"
 #include "lifecycle.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 extern SceUID sceKernelGetProcessId(void);
 extern int sceKernelGetModuleInfoByAddr(const void *address,

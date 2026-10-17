@@ -1,6 +1,6 @@
 /* Boot-script commands, path policy, and the two-pass configuration reader. */
-#include "sce/sysmem.h"
-#include "sce/processmgr.h"
+#include <sysmem/sysmem.h>
+#include <processmgr/processmgr.h>
 #include "sysstatemgr.h"
 
 static const struct { const char *path; unsigned size; } s_devices[] = {

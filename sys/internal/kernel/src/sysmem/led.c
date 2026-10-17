@@ -8,8 +8,8 @@
 
 #include <psp2kern/kernel/sysclib.h>
 #include "sysmem_internal.h"
-#include "sce/suspend.h"
-#include <sce/gpio_regs.h>
+#include <sysmem/suspend.h>
+#include <lowio/gpio_regs.h>
 
 #define LED_GPO_SHIFT			16
 #define LED_GPO_BITS			0xff0000

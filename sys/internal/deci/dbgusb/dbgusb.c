@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/usbserv.h>
-#include "sce/debug.h"
-#include <sce/barrier.h>
+#include <sysmem/debug.h>
+#include <sysmem/barrier.h>
 
 #define BUFFER_SIZE 0x12000
 #define ERR_REGISTERED ((int)0x8024fff1)

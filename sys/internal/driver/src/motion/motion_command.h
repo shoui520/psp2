@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/motion_dev.h>
-#include <sce/motion_command.h>
+#include <motion/motion_dev.h>
+#include <motion/motion_command.h>
 #include "magnetometer.h"
 
 typedef struct MotionSensorStatistics {

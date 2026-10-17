@@ -1,9 +1,9 @@
 /* BSOD maps GPIO0 and SPI0 and polls them directly after disabling normal interrupt delivery. */
 #include "bsod_internal.h"
-#include <sce/gpio_regs.h>
-#include <sce/spi_regs.h>
-#include <sce/barrier.h>
-#include <sce/moncall.h>
+#include <lowio/gpio_regs.h>
+#include <lowio/spi_regs.h>
+#include <sysmem/barrier.h>
+#include <excpmgr/moncall.h>
 
 uint8_t *s_bsodSyscon[2];
 

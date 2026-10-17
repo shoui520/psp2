@@ -1,8 +1,8 @@
 /* SceKernelIntrMgr: GIC interrupts, subinterrupts and CPU exception state. */
 #include "intrmgr.h"
 #include "intrmgr_readonly.h"
-#include "sce/fast_mutex.h"
-#include "sce/compiler.h"
+#include <threadmgr/fast_mutex.h>
+#include <sysmem/compiler.h>
 
 _Static_assert(sizeof(SceKernelIntrHandlerInfo) == 0x70, "interrupt query ABI");
 _Static_assert(sizeof(IntrIrqFrame) == 64, "IRQ frame ABI");
@@ -83,7 +83,7 @@ int ResumeController(void)
 }
 
 #if defined(INTRMGR_NSKBL)
-#include "sce/sysroot_init.h"
+#include <sysmem/sysroot_init.h>
 
 /* the block shared with the secure kernel (intrmgrSmc) */
 #define INTR_SHARED_MEMORY_SIZE	0xa000

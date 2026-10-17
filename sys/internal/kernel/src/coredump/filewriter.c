@@ -1,7 +1,7 @@
 /* fileWriter destination operations. */
 
 #include "writer_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/iofilemgr.h>
 
 extern int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize);

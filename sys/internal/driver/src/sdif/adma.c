@@ -1,7 +1,7 @@
 /* SceSdif DMA descriptors (Sony source: adma.c). */
 #include "sdif_internal.h"
-#include <sce/debug.h>
-#include <sce/sysmem.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <string.h>

@@ -1,11 +1,11 @@
 /* SceGpio port and interrupt controls. Private context names are inferred. */
 #include "lowio_internal.h"
-#include <sce/gpio_regs.h>
+#include <lowio/gpio_regs.h>
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/sysevent.h>
+#include <sysmem/sysevent.h>
 
 #define GPIO_ERROR_BANK ((int)0x803f0100)
 #define GPIO_ERROR_PORT ((int)0x803f0101)

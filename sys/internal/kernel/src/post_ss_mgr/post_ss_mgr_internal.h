@@ -14,7 +14,7 @@
 #include <psp2kern/kernel/sysmem/heap.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <string.h>
 
 int ksceSblAimgrIsToolRev4(void);

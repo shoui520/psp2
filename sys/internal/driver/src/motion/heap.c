@@ -1,8 +1,8 @@
 /*
  * Temporary buffers allocated from the module's motion heap.
  */
-#include <sce/sysmem.h>
-#include <sce/motion_dev.h>
+#include <sysmem/sysmem.h>
+#include <motion/motion_dev.h>
 
 SceUID motionHeap;
 

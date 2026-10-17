@@ -1,9 +1,9 @@
 /* SceNetPs operating-system glue; original source filename is unavailable. */
 
 #include "net_ps_internal.h"
-#include <sce/netdrv.h>
-#include <sce/netps.h>
-#include <sce/netps_gateway.h>
+#include <net_ps/netdrv.h>
+#include <net_ps/netps.h>
+#include <net_ps/netps_gateway.h>
 #include <string.h>
 
 int sceNetPsCheckMemoryAvailability(int size, int count);

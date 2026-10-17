@@ -14,7 +14,7 @@
 
 #define VIP_LOCAL_RAM		0x200000	/* each core's own */
 #define VIP_IMAGE		0x800000	/* the firmware image in DRAM */
-#define VIP_MAILBOX_BASE	0xe3106000	/* the pervasive mailbox (sce/mailbox_regs.h) */
+#define VIP_MAILBOX_BASE	0xe3106000	/* the pervasive mailbox (lowio/mailbox_regs.h) */
 
 /* control registers (ldc/stc), by MeP register number */
 #define VIP_CR_LP	1
@@ -139,7 +139,7 @@
 #endif
 #endif
 
-#include <sce/mailbox_regs.h>
+#include <lowio/mailbox_regs.h>
 
 #define VIP_MAILBOX ((ScePervasiveMailboxRegisters *)VIP_MAILBOX_BASE)
 

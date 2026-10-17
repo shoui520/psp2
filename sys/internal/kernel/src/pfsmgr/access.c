@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/acmgr.h>
+#include <acmgr/acmgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_ACMGR_ATTR		6	/* name unknown: SceSblACMgrValue.type of a file attribute */

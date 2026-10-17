@@ -12,11 +12,11 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/qafmgr.h"
-#include "sce/sdfmgr.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/qafmgr.h>
+#include <deci4p_sdfmgr/sdfmgr.h>
 #include "sdrfp.h"
 
 #define SDRFP_RESOURCES		2

@@ -1,4 +1,4 @@
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/cpu/cache.h>
 #include <string.h>
 #include "update_internal.h"

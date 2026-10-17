@@ -2,7 +2,7 @@
 
 #include <psp2/camera.h>
 #include <psp2kern/kernel/sysmem.h>
-#include "sce/camera.h"
+#include <camera/camera.h>
 
 int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo);
 int SceCameraForDriver_0E9B4B9E(int devnum);

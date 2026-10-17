@@ -1,5 +1,5 @@
 /* DES key expansion. No source-name record survives for these routines. */
-#include <sce/des.h>
+#include <sysmem/des.h>
 #include "des_internal.h"
 
 int SceKernelUtilsForDriver_AE6C45FB(DesContext *context, uint64_t key)

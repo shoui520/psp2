@@ -4,9 +4,9 @@
 #include <stddef.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/npdrm.h>
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
-#include <sce/rtc.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
+#include <rtc/rtc.h>
 
 int sceCompatCacheInternal(int mode, void *base, int size);
 int compatAllocCdramWithHole(SceCompatCdram *cdram);

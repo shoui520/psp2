@@ -7,9 +7,9 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/lowio/iftu.h>
-#include "sce/oled.h"
-#include "sce/lcd.h"
-#include "sce/sysmem.h"
+#include <oled/oled.h>
+#include <lcd/lcd.h>
+#include <sysmem/sysmem.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,

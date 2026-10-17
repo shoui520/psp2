@@ -5,14 +5,14 @@
  * the return address and SPSR into a SceExcpmgrContext on the exception-mode
  * stack and call their C entry policies. Context return and debug-register
  * state are C, shared with the secure-world KBL build in
- * sce/excpmgr_context.h. Sony wrote all of this as ARM assembly, so none of
+ * excpmgr_context.h. Sony wrote all of this as ARM assembly, so none of
  * these functions has a debug-record name: the names are descriptive.
  */
 #include "excpmgr_context_private.h"
 
 /* The banked return boundary rearms trace after selecting the Abort stack. */
 #define excpRearmTrace() ((void)0)
-#include "sce/excpmgr_context_return.h"
+#include "excpmgr_context_return.h"
 #undef excpRearmTrace
-#include "sce/excpmgr_context_debug.h"
-#include "sce/excpmgr_context_copy.h"
+#include "excpmgr_context_debug.h"
+#include "excpmgr_context_copy.h"

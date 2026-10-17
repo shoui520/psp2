@@ -1,10 +1,10 @@
 /* Private AV configuration operations. */
 
 #include "av_config_internal.h"
-#include <sce/regmgr.h>
-#include <sce/power.h>
-#include <sce/display.h>
-#include <sce/compat.h>
+#include <regmgr/regmgr.h>
+#include <power/power.h>
+#include <display/display.h>
+#include <compat/compat.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/suspend.h>

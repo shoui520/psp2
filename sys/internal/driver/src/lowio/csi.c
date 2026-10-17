@@ -2,10 +2,10 @@
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/sysevent.h>
-#include <sce/csi.h>
-#include <sce/csi_regs.h>
-#include <sce/threadmgr.h>
+#include <sysmem/sysevent.h>
+#include <lowio/csi.h>
+#include "csi_regs.h"
+#include <threadmgr/threadmgr.h>
 
 #define CSI_ERROR_HEAD ((uint32_t)0x803f0900)
 #define CSI_ERROR_MODE ((uint32_t)0x803f0901)

@@ -6,19 +6,19 @@
  * completion and starts the next queued one on the freed channel.
  */
 
-#include <sce/sysmem.h>
-#include <sce/threadmgr.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/barrier.h>
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/intrmgr.h>
-#include <sce/suspend.h>
-#include <sce/sysroot.h>
+#include <sysmem/barrier.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
 #include "dmacmgr.h"
 
 /* SceSysmem's fixed heaps (names from sysmem) */

@@ -3,9 +3,9 @@
 #define SDSTOR_INTERNAL_H
 
 #include <stdint.h>
-#include <sce/fast_mutex.h>
-#include <sce/sdstor.h>
-#include <sce/mbr.h>
+#include <threadmgr/fast_mutex.h>
+#include <sdstor/sdstor.h>
+#include <sdstor/mbr.h>
 
 typedef struct SceSdstorSddev SceSdstorSddev;
 typedef struct SceSdstorSdpart SceSdstorSdpart;

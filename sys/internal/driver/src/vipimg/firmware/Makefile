@@ -24,7 +24,7 @@ OBJCOPY := $(BINUTILS)objcopy
 CORE := -mno-mult -mno-div -mno-bitops -mno-leadz -mno-minmax -mno-absdiff \
 	-mno-average -mno-clip -mno-satur -mrepeat
 CFLAGS := -meb -O2 -g -std=gnu99 -Wall -ffreestanding -fno-builtin -mtiny=0 $(CORE) \
-	-Iinclude -I../../../../../../common/include
+	-Iinclude -I../../../../../../sys/internal/include
 ASFLAGS := -meb -g -Iinclude
 
 # programs: their sources, and the shared code each one builds in

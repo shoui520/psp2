@@ -1,8 +1,8 @@
 /* Four-core rendezvous. */
 #include <stdint.h>
 #include <psp2kern/kernel/cpu/corelock.h>
-#include <sce/barrier.h>
-#include "sce/atomic.h"
+#include <sysmem/barrier.h>
+#include <sysmem/atomic.h>
 
 extern int ksceKernelCpuId(void);
 extern void ksceKernelSpinlockLowLock(int *lock);

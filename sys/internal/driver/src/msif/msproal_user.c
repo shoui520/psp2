@@ -1,8 +1,8 @@
 /* Sony debug records identify this source as msproal_user.c. */
 #include "library.h"
 #include "msif_context.h"
-#include <sce/debug.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>

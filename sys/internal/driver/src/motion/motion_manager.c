@@ -6,12 +6,12 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <string.h>
-#include <sce/processmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/idstorage_imports.h>
-#include <sce/idstorage.h>
-#include <sce/syscon.h>
-#include <sce/sysevent.h>
+#include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <idstorage/idstorage_imports.h>
+#include <idstorage/idstorage.h>
+#include <syscon/syscon.h>
+#include <sysmem/sysevent.h>
 #include <psp2kern/kernel/sysmem.h>
 
 static SceMotionDevData motionRingSamples[MOTION_RING_SAMPLES];

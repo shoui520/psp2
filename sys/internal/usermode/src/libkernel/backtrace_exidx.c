@@ -1,7 +1,7 @@
 #include "exidx.h"
 #include "lifecycle.h"
 #include <psp2/types.h>
-#include "sce/error.h"
+#include <kernel/error.h>
 
 /* the exception index of each user page in [USER_BASE, USER_END), kept by the kernel */
 #define EXIDX_PAGES		((const struct ExidxPage *)0xee000000)

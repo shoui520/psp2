@@ -1,6 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
-#include <sce/rsa.h>
-#include <sce/rsa_arithmetic.h>
+#include <marlin_hci/rsa.h>
+#include <marlin_hci/rsa_arithmetic.h>
 
 int MarlinRsaExponentOperation(unsigned int *output, const unsigned int *input,
 			       const MarlinRsaExponentKey *key, int count);

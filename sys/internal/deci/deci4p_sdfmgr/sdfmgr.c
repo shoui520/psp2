@@ -1,22 +1,22 @@
 /* SceDeci4pSDfMgr: Sony's sdfmgr.c translation unit. */
 #include <psp2/types.h>
 #include "sdfmgr_internal.h"
-#include <sce/intrmgr.h>
-#include <sce/sysroot.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/deci4p_packet.h>
-#include <sce/deci4p_memory.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysroot.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <deci4p_dfmgr/deci4p_packet.h>
+#include <deci4p_sdfmgr/deci4p_memory.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <psp2kern/kernel/sysmem/memtype.h>
-#include <sce/excpmgr.h>
+#include <excpmgr/excpmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/suspend.h>
-#include <sce/sysmem.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
-#include <sce/arm_thread_context.h>
-#include <sce/arm_psr_text.h>
-#include <sce/modulemgr_control.h>
-#include <sce/coresight_regs.h>
+#include <threadmgr/arm_thread_context.h>
+#include <excpmgr/arm_psr_text.h>
+#include <modulemgr/modulemgr_control.h>
+#include <pamgr/coresight_regs.h>
 
 SdfMgrState s_sdfMgrState;
 

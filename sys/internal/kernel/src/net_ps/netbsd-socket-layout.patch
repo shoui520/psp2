@@ -1,4 +1,4 @@
-# SCE adaptation; full licensed definitions moved once to sce/netps_socket.h.
+# SCE adaptation; full licensed definitions moved once to netps_socket.h (the net_ps folder).
 # Canonical differences: no selinfo; 32-bit options/linger/buffer flags/timeouts;
 # policy at12; preserved MBUFTRACE owner slots; original-backed SCE tail192..255.
 --- contrib/netbsd-2.1/sys/sys/socketvar.h	2026-10-12 19:26:41
@@ -8,7 +8,7 @@
  #define	_SYS_SOCKETVAR_H_
  
 -#include <sys/select.h>			/* for struct selinfo */
-+#include <sce/netps_socket.h> /* SCE: canonical complete socket owners. */
++#include "../../netps_socket.h" /* SCE: canonical complete socket owners. */
  #include <sys/queue.h>
  
  #if !defined(_KERNEL) || defined(LKM)
@@ -37,7 +37,7 @@
 -	short	sb_flags;		/* flags, see below */
 -	short	sb_timeo;		/* timeout for read/write */
 -};
-+/* SCE: struct sockbuf is canonical in sce/netps_socket.h. */
++/* SCE: struct sockbuf is canonical in ../../netps_socket.h. */
 +#define sb_startzero sb_cc
  
  #ifndef SB_MAX
@@ -92,7 +92,7 @@
 -	struct mowner	*so_mowner;	/* who owns mbufs for this socket */
 -	uid_t		so_uid;		/* who opened the socket */
 -};
-+/* SCE: struct socket is canonical in sce/netps_socket.h. */
++/* SCE: struct socket is canonical in ../../netps_socket.h. */
  
  #define	SB_EMPTY_FIXUP(sb)						\
  do {									\

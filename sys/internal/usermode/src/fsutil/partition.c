@@ -1,8 +1,8 @@
 /* Storage partition selection and formatting. */
 
-#include <sce/debug.h>
-#include <sce/mbr.h>
-#include <sce/sdstor.h>
+#include <sysmem/debug.h>
+#include <sdstor/mbr.h>
+#include <sdstor/sdstor.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/devctl.h>
 #include <stdint.h>

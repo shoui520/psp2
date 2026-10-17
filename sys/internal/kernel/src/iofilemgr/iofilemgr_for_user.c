@@ -8,7 +8,7 @@
  * never is), and a buffer is mapped into the kernel for the call.
  */
 
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
 
 int g_ioFiosPathEnabled __attribute__((section(".data"))) = 0;

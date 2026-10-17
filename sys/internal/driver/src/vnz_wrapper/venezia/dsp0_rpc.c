@@ -1,5 +1,5 @@
 /* Sony venezia/dsp0_rpc.c. */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>

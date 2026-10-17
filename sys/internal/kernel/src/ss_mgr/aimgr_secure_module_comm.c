@@ -1,7 +1,7 @@
 #include "ssmgr_internal.h"
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/idstorage.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/rtc.h>
 

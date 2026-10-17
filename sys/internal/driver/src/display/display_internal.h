@@ -11,8 +11,8 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/lowio/iftu.h>
 #include <psp2common/display.h>
-#include "sce/dtrace.h"
-#include <sce/display.h>
+#include <dtrace/sce/dtrace.h>
+#include <display/display.h>
 
 #define DISPLAY_HEAD_COUNT	3	/* 0: main panel (OLED/LCD), 1: HDMI, 2: unused */
 #define DISPLAY_PLANE_COUNT	2

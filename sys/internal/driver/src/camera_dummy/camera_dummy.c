@@ -7,7 +7,7 @@
  */
 
 #include <psp2kern/kernel/sysmem.h>
-#include "sce/camera.h"
+#include <camera/camera.h>
 
 /* the device argument: 0 (front) or 1 (back) */
 #define CAMERA_DEVICE_VALID(dev)	(((dev) & ~1u) == 0)

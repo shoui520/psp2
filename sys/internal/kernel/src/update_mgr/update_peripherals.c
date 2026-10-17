@@ -1,6 +1,6 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <sce/syscon.h>
+#include <syscon/syscon.h>
 #include "update_internal.h"
 
 int ksceSblAimgrIsGenuineDolce(void);

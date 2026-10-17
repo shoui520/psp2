@@ -1,8 +1,8 @@
 /* Application events and launch-parameter queues. */
 
-#include <sce/debug.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/acmgr.h>

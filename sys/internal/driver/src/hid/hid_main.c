@@ -1,12 +1,12 @@
 /* Descriptive filename; this part has no source-file debug records. */
-#include <sce/bt_hid.h>
+#include <bt/bt_hid.h>
 #include <psp2kern/kernel/debug.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2/power.h>
 #include <psp2/kernel/threadmgr/thread.h>
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include "hid_internal.h"
 
 unsigned int hidFlags;

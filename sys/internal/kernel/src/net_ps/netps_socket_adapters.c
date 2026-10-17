@@ -1,6 +1,6 @@
-#include <sce/netps_socket.h>
-#include <sce/netps_resource.h>
-#include <sce/netps_process.h>
+#include "netps_socket.h"
+#include "netps_resource.h"
+#include "netps_process.h"
 
 SceUID sceNetPsGetProcessId(void);
 

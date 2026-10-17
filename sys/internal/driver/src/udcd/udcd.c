@@ -1,14 +1,14 @@
-#include "sce/udcd_imports.h"
+#include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 #include <string.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/threadmgr.h>
-#include <sce/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 
 struct udcdState udcdState = { 0 };
 

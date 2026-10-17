@@ -1,10 +1,10 @@
 /* Shared frame buffers; Sony's source file is sharedfb.c. */
 
-#include <sce/debug.h>
-#include <sce/processmgr.h>
-#include <sce/syscall.h>
-#include <sce/sharedfb.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
+#include <intrmgr/syscall.h>
+#include <appmgr/sharedfb.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
@@ -13,7 +13,7 @@
 #include <psp2kern/registrymgr.h>
 #include <stddef.h>
 #include <string.h>
-#include "sce/atomic.h"
+#include <sysmem/atomic.h>
 
 struct SharedFbProcess {
 	SceUID pid;

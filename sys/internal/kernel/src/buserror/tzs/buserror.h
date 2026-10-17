@@ -8,8 +8,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include "sce/debug.h"
-#include "sce/intrmgr_tzs.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr_tzs.h>
 
 /* the bus error record in the sysroot shared memory */
 #define BUSERROR_SHM_RECORD	0x6000

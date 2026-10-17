@@ -2,7 +2,7 @@
 #include "bsod_internal.h"
 #include <psp2kern/vfs.h>
 #include <stddef.h>
-#include "sce/error.h"
+#include <kernel/error.h>
 
 _Static_assert(offsetof(SceVfsMount, available_entry_num) == 0x68, "mount entries");
 _Static_assert(offsetof(SceVfsMount, default_io_cache_size) == 0xc0, "mount cache");

@@ -4,14 +4,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2/types.h>
-#include <sce/ip.h>
-#include <sce/udp.h>
-#include <sce/tcp.h>
-#include <sce/bt_event.h>
-#include <sce/bt_hid.h>
-#include <sce/bt_registered.h>
-#include <sce/netdrv.h>
-#include <sce/ethernet.h>
+#include <net/header/ip.h>
+#include "udp.h"
+#include "tcp.h"
+#include <bt/bt_event.h>
+#include <bt/bt_hid.h>
+#include <bt/bt_registered.h>
+#include <net_ps/netdrv.h>
+#include <net_ps/ethernet.h>
 #include "bt_sbc_codec.h"
 
 typedef struct BtStack BtStack;

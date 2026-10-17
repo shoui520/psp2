@@ -11,9 +11,9 @@
 #include <stddef.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/ulobjmgr.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <ulobjmgr/ulobjmgr.h>
 
 #ifndef SCE_KERNEL_ERROR_ILLEGAL_TYPE
 #define SCE_KERNEL_ERROR_ILLEGAL_TYPE		0x8002000C

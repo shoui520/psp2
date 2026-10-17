@@ -1,7 +1,7 @@
 /* Sony venezia/venezia.c: process-local suspend state. */
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "venezia_internal.h"
 
 VeneziaState g_veneziaState = { .processStorageKey = -1 };

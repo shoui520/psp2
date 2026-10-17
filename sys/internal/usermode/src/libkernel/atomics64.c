@@ -1,4 +1,4 @@
-#include "sce/atomic.h"
+#include <sysmem/atomic.h>
 
 uint64_t sceKernelAtomicCompareAndSet64(uint64_t *address, uint64_t expected,
 		uint64_t replacement)

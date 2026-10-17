@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/proc_event.h>
 extern "C" {
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 }
 #include "fios2_internal.h"
 

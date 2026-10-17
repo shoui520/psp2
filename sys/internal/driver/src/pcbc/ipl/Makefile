@@ -20,7 +20,6 @@ FW_VERSION_3.65-CEX := 0x03650000
 
 CFLAGS	:= -O2 -G0 -march=allegrex -ffreestanding -fno-builtin -fno-common \
 	   -fno-pic -mno-abicalls -Wall -Wno-unused-parameter -Iinclude \
-	   -I../../../../../../common/include \
 	   -I$(PSPDEV)/psp/sdk/include \
 	   -DFW_ID=\"$(FW)\" -DFW_VERSION=$(FW_VERSION_$(FW))
 ASFLAGS	:= -G0 -march=allegrex -Iinclude

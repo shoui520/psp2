@@ -1,5 +1,5 @@
 /* Descriptive source name: the original library has no debug records. */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 
 int MarlinRandomCreate(SceMt19937Context **context);
 int MarlinRandomRead(SceMt19937Context *context, int size, void *data);

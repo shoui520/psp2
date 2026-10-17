@@ -11,7 +11,7 @@
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/lowio/i2c.h>
-#include "sce/sysevent_ids.h"
+#include <sysmem/sysevent_ids.h>
 
 #define CLOCKGEN_I2C_BUS	0
 #define CLOCKGEN_I2C_ADDR	0xd2

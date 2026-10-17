@@ -1,10 +1,10 @@
 /* SceAudiodec control and information handling (Sony audiodec/audiodec.c). */
 #include "audiodec_internal.h"
-#include <sce/debug.h>
-#include <sce/sysmem.h>
-#include <sce/processmgr.h>
-#include <sce/cpu.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/cpu.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>

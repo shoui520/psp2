@@ -1,7 +1,7 @@
 /* LibKernel public entry points for the shared Sysclib memory engines. */
 #include <stddef.h>
 #include <psp2/kernel/clib.h>
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);
 extern int CompareMemoryCore(const void *left, const void *right, size_t size);

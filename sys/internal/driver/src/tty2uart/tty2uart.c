@@ -14,14 +14,14 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/uart.h>
 #include <psp2kern/vfs.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sysroot.h"
-#include "sce/threadmgr.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define TTY2_FS_NAME		"uart_ttyp_dev_fs"
 #define TTY2_BUFFERS		16

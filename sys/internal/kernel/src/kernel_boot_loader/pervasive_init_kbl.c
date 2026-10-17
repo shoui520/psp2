@@ -4,9 +4,9 @@
  * read as SceDriverTzs reads it.
  */
 #include <stdint.h>
-#include <sce/pervasive_regs.h>
-#include <sce/mailbox_regs.h>
-#include <sce/uart_regs.h>
+#include <lowio/pervasive_regs.h>
+#include <lowio/mailbox_regs.h>
+#include <lowio/uart_regs.h>
 
 /* SceLowio's register pointers (as SceDriverTzs declares them); pervasive_kbl.c
  * reaches the registers through the physical addresses instead */

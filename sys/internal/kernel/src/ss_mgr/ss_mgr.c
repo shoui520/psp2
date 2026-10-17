@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <sce/sm_comm.h>
-#include <sce/debug.h>
+#include <sm_comm/sm_comm.h>
+#include <sysmem/debug.h>
 #include <string.h>
 
 int sceKernelGetProcessId(void);

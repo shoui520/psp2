@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <sce/list.h>
+#include <sysmem/list.h>
 
 typedef struct AudioVolumeRamp {
 	int8_t direction;

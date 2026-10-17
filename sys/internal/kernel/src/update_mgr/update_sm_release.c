@@ -1,4 +1,4 @@
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 
 int UpdateUtilStopSmWithResult(int *smId, SceSblSmCommPair *result);

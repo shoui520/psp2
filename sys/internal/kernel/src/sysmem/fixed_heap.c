@@ -6,7 +6,7 @@
  */
 
 #include "sysmem_internal.h"
-#include "sce/compiler.h"
+#include <sysmem/compiler.h>
 
 /* name unknown */
 /* name unknown: AllocSimpleMemBlock found no free physical memory */

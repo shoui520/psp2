@@ -1,20 +1,20 @@
 /* Interrupt controller state shared with the CPU exception entry. */
 #pragma once
 
-#include "sce/cp15.h"
-#include "sce/barrier.h"
+#include <sysmem/cp15.h>
+#include <sysmem/barrier.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
-#include "sce/intrmgr.h"
-#include "sce/threadcb.h"
-#include "sce/process.h"
-#include "sce/gic_regs.h"
-#include "sce/intrmgr_state.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadcb.h>
+#include <processmgr/process.h>
+#include <intrmgr/gic_regs.h>
+#include "intrmgr_state.h"
 
 #define INTR_CPU_STACK_SIZE 0x20000
 #define INTR_LEVEL_STACK_SIZE 0x2000

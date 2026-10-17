@@ -2,10 +2,10 @@
 #include <string.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/debug.h>
-#include <sce/processmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <kernel/error.h>
 
 uint64_t ScePamgrForDriver_FE9BFD27(void);
 int setTraceWritePointer(uint32_t pointer);

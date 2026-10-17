@@ -30,11 +30,11 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/utils.h>
 #include <psp2kern/kernel/pm_mgr.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/intrmgr.h"
-#include "sce/intrmgr_tzs.h"
-#include "sce/intrmgr_state.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <intrmgr/intrmgr_tzs.h>
+#include "../intrmgr_state.h"
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)

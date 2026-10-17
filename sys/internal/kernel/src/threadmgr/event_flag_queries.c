@@ -3,9 +3,9 @@
 #include <string.h>
 #include "scheduler.h"
 #include "timer.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "event_flag.h"
 
 int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);

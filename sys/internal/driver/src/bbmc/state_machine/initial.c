@@ -1,6 +1,6 @@
-#include <sce/syscon.h>
-#include <sce/debug.h>
-#include <sce/sysroot.h>
+#include <syscon/syscon.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysroot.h>
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"
 #include "../bbmc_memory.h"

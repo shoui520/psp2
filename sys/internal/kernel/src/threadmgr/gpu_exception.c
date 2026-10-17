@@ -5,9 +5,9 @@
  */
 
 #include "private.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREADMGR_KERNEL_PID		0x10005

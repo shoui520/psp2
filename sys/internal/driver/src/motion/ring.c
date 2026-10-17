@@ -3,7 +3,7 @@
  * MOTION_RING_READERS readers, each a process reading that port.
  */
 #include <string.h>
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 
 int motionRingInit(MotionRing *ring, SceMotionDevData *samples, SceUID *owners,
 		   unsigned int capacity)

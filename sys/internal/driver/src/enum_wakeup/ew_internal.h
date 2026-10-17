@@ -4,7 +4,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/io/fcntl.h>
 #include <string.h>
@@ -14,8 +14,8 @@
 #define SCE_KERNEL_START_SUCCESS	0
 #define SCE_KERNEL_START_FAILED		2
 
-#include "sce/enum_wakeup_imports.h"
-#include "sce/mtpif_driver.h"
+#include "enum_wakeup_imports.h"
+#include <mtpif/mtpif_driver.h>
 
 #define EW_MEMTYPE_FB		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW	/* uncached, physically contiguous */
 

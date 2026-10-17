@@ -6,7 +6,7 @@
 
 /* Sony's 4.00 password copies use the checked object-size interface. */
 #if FW_VERSION >= 0x04000000
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 /* Pinned upstream PBKDF2 loop with the separately recorded Sony adaptation. */

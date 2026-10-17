@@ -1,5 +1,5 @@
 /* Shared Rijndael word transformations (original internal names unknown). */
-#include <sce/aes_helpers.h>
+#include "aes_helpers.h"
 #include <arm_neon.h>
 
 /* Rijndael substitution, indexed by the input byte. */

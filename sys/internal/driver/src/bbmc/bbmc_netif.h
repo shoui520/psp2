@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stddef.h>
-#include <sce/netdrv.h>
-#include <sce/fast_mutex_object.h>
+#include <net_ps/netdrv.h>
+#include <threadmgr/fast_mutex_object.h>
 
 typedef struct BbmcPacketInterface BbmcPacketInterface;
 

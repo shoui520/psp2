@@ -1,7 +1,7 @@
 /* The constant-time compare; memcmp itself is CompareMemoryCore (compare_core.S). */
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 
 int timingsafe_memcmp(const void *left, const void *right, size_t count)
 {

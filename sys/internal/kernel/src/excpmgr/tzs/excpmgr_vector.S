@@ -6,7 +6,7 @@
  * touched (the per-core stack switch, r0-r12, banked user SP/LR, SPSR), the
  * System-mode stack switch, the d0-d31 store, the chain jump with its
  * register arguments, and the exception return (LDM ^ / RFE). The state
- * handling is in excpmgr.c and sce/excpmgr_context.h.
+ * handling is in excpmgr.c and ../excpmgr_context.h.
  *
  * Every handler is a SceExcpmgrHandler: two link words patched by the
  * registration functions, then ARM code entered at +8.

@@ -3,8 +3,8 @@
  * on kernel buffers and copy the result out.
  */
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/syscall.h>
-#include <sce/motion_dummy.h>
+#include <intrmgr/syscall.h>
+#include <motion_dummy/motion_dummy.h>
 #include "motion_dummy.h"
 
 int ksceMotionDevIsReady(void);

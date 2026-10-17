@@ -49,7 +49,7 @@ static const char s_bsodTextMenuStart[] = "\t\t[START]    : Reboot system and ge
 static const char s_bsodTextMenuNewline[] = "\n";
 static const char s_bsodTextMenuStandby[] = "\t\t[STANDBY]  : Power off\n";
 static const char *const s_bsodReasons[] = {"Reset exception", "Undefined instruction exception", "Supervisor call", "Prefetch abort exception", "Data abort exception", "Reserved exception", "IRQ exception", "FIQ exception"};
-#include <sce/arm_psr_text.h>
+#include <excpmgr/arm_psr_text.h>
 static const char *const s_bsodIfsr[] = {"0x00", "0x01", "Debug event", "Section Access Flag fault", "0x04", "Section Translation fault", "Page Access Flag fault", "Page Translation fault", "Synchronous external abort", "Section Domain fault", "0x0A", "Page Domain fault", "1st level Translation table walk synchronous external abort", "Section Permission fault", "2nd level Translation table walk synchronous external abort", "Page Permission fault", "0x10", "0x11", "0x12", "0x13", "Lockdown", "0x15", "0x16", "0x17", "0x18", "Memory access synchronous parity error", "Coprocessor abort", "0x1B", "1st level Translation table walk synchronous parity error", "0x1D", "2nd level Translation table walk synchronous parity error", "0x1F"};
 static const char *const s_bsodDebugStatus[] = {"Halt Request debug event", "Breakpoint debug event", "Asynchronous Watchpoint debug event", "BKPT Instruction debug event", "External Debug Request debug event", "Vector Catch debug event", "0x6", "0x7", "OS Unlock Catch debug event", "0x9", "Synchronous Watchpoint debug event", "0xB", "0xC", "0xD", "0xE", "0xF"};
 static const char *const s_bsodDomains[] = {"No access", "Client", "Reserved", "Manager"};

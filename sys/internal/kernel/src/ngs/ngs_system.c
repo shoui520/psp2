@@ -1,7 +1,7 @@
 /* SceNgs system memory sizing. */
 
 #include <psp2kern/types.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 typedef struct SceNgsSystemInitParams {
 	SceInt32 nMaxRacks;

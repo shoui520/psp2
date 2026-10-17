@@ -5,7 +5,7 @@
 #include <string.h>
 #include <psp2kern/kernel/cpu.h>
 #include "ulobjmgr_internal.h"
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 
 UlobjInstance g_ulobjInstance;
 

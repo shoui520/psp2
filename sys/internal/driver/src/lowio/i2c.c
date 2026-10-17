@@ -1,13 +1,13 @@
 /* SceI2c transfers. Private helper and context field names are inferred. */
 #include "lowio_internal.h"
-#include <sce/i2c_regs.h>
+#include "i2c_regs.h"
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/sysevent.h>
+#include <sysmem/sysevent.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/oled.h>
+#include <oled/oled.h>
 
 #define I2C_ERROR_BUS ((int)0x803f0300)
 #define I2C_ERROR_SIZE ((int)0x803f0302)

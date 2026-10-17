@@ -21,13 +21,13 @@
 	.fpu neon
 	.arm
 
-/* GicCpuInterface, sce/gic_regs.h */
+/* GicCpuInterface, intrmgr/gic_regs.h */
 	.equ	GICC_PRIORITY_MASK,	0x04
 	.equ	GICC_ACKNOWLEDGE,	0x0c
 	.equ	GICC_END_OF_INTR,	0x10
 /* GicDistributor */
 	.equ	GICD_CLEAR_ENABLE,	0x180
-/* IntrHandler, sce/intrmgr_state.h */
+/* IntrHandler, ../intrmgr_state.h */
 	.equ	INTR_HANDLER_SIZE,	0x40
 	.equ	INTR_HANDLER_INTR_CODE,	0x04
 	.equ	INTR_HANDLER_ARG,	0x08

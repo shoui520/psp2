@@ -1,7 +1,7 @@
 /* SceCompat implementation. */
 
 #include <psp2/compat.h>
-#include <sce/compat.h>
+#include <compat/compat.h>
 #include <psp2/power.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
@@ -9,22 +9,22 @@
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
-#include <sce/sysevent.h>
-#include <sce/syscall.h>
+#include <sysmem/sysevent.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/debug.h>
-#include <sce/display.h>
-#include <sce/idstorage.h>
-#include <sce/rtc.h>
-#include <sce/sysroot.h>
-#include <sce/sm_comm.h>
-#include <sce/compat_regs.h>
+#include <sysmem/debug.h>
+#include <display/display.h>
+#include <idstorage/idstorage.h>
+#include <rtc/rtc.h>
+#include <sysmem/sysroot.h>
+#include <sm_comm/sm_comm.h>
+#include <compat/compat_regs.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/devctl.h>
 #include <psp2kern/npdrm.h>

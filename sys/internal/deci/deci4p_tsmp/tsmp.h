@@ -13,7 +13,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include "sce/deci4p.h"
+#include <deci4p_dfmgr/deci4p.h>
 #include <stddef.h>
 
 #define TSMP_BUF_SIZE		0x11000

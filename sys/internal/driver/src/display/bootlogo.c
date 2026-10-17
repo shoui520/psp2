@@ -5,21 +5,21 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/systimer.h>
 #include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <psp2kern/lowio/iftu.h>
-#include "sce/display.h"
-#include "sce/syscall.h"
-#include "sce/error.h"
+#include <display/display.h>
+#include <intrmgr/syscall.h>
+#include <kernel/error.h>
 #include "display_internal.h"
 #include "display_imports.h"
 
 #include "boot_logo.h"
-#include <sce/compat_regs.h>
+#include <compat/compat_regs.h>
 
 static SceUID bootLogoBlock;
 

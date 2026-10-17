@@ -1,7 +1,7 @@
 #ifndef LIBKERNEL_THREAD_CONTEXT_H
 #define LIBKERNEL_THREAD_CONTEXT_H
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2/types.h>

@@ -1,7 +1,7 @@
 #include <psp2kern/types.h>
 #include <psp2common/kernel/iofilemgr.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
 

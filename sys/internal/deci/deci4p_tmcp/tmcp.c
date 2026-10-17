@@ -17,10 +17,10 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/deci4p.h"
-#include "sce/error.h"
-#include "sce/sysroot.h"
-#include "sce/threadmgr.h"
+#include <deci4p_dfmgr/deci4p.h>
+#include <kernel/error.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #define TMCP_PROTOCOL		0x2e000
 #define TMCP_SLOTS		32

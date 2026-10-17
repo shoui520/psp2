@@ -10,7 +10,7 @@
 #define THREADMGR_TIMER_H
 
 #include <stdbool.h>
-#include <sce/threadmgr_timer.h>
+#include <threadmgr/threadmgr_timer.h>
 #include "private.h"
 #include "event.h"
 

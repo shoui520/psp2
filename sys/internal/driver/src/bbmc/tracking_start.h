@@ -2,7 +2,7 @@
 #ifndef BBMC_TRACKING_START_H
 #define BBMC_TRACKING_START_H
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 #if FW_DEBUG
 static const SceKernelDebugInfo dbg__constructTrackingStartQmi_L321

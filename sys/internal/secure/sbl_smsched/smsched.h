@@ -42,12 +42,12 @@
 #include <stdint.h>
 #include <fw.h>
 #include <psp2kern/types.h>
-#include "sce/sysmem.h"
-#include "sce/kbl_param.h"
-#include "sce/debug.h"
-#include "sce/intrmgr_tzs.h"
-#include "sce/cmep_regs.h"
-#include "sce/smsc_proxy.h"
+#include <sysmem/sysmem.h>
+#include <kernel_boot_loader/kbl_param.h>
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr_tzs.h>
+#include "cmep_regs.h"
+#include <smsc_proxy/smsc_proxy.h>
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
@@ -262,4 +262,4 @@ int smsSecureKernelProxyGenerateIntr4(void);
 int smsSecureKernelProxyReady(void);
 
 /* tzs_bridge.c */
-#include "sce/tzs_bridge.h"
+#include <smsc_proxy/tzs_bridge.h>

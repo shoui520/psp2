@@ -2,8 +2,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
 
 int compatIsPocketStationTitle(const signed char *titleId);
 int sceCompatIsPocketStationTitle(const char *titleId);

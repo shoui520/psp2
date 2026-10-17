@@ -10,7 +10,7 @@
 int ksceGpioSetPortMode(int bus, int port, int mode);
 int ksceGpioPortSet(int bus, int port);
 int ksceGpioPortClear(int bus, int port);
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 
 /* Names unknown: hardware operations identified by their import NIDs. */
 int ScePwmForDriver_13161CCC(unsigned channel, uint32_t flags, uint32_t period, uint32_t duty);

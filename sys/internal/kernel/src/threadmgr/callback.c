@@ -11,10 +11,10 @@
 
 #include <string.h>
 #include "timer.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysmem.h>
 #include "scheduler.h"
 #include "event.h"
 #include "syscall_context.h"

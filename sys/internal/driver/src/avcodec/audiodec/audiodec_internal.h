@@ -1,8 +1,8 @@
 #pragma once
 
 #include <psp2/audiodec.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/venezia_rpc.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <vnz_wrapper/venezia_rpc.h>
 
 #define AUDIODEC_TYPE_SILK 0x1007U
 #define AUDIODEC_TYPE_AAC_MULTICHANNEL 0x1008U

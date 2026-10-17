@@ -1,12 +1,12 @@
 #include "pamgr_internal.h"
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
-#include <sce/debug.h>
-#include <sce/processmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/sysroot.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysroot.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <kernel/error.h>
 
 int ksceKernelSetPermission(int level);
 void *ksceKernelAlloc(SceSize size);

@@ -1,7 +1,7 @@
 /* Process capability queries used by Sysroot and DIP-switch services. */
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/acmgr.h>
+#include <acmgr/acmgr.h>
 
 /* Names unknown; capabilities are numbered most-significant bit first. */
 __attribute__((noinline))

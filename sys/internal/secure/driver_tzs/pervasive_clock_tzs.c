@@ -3,7 +3,7 @@
  * and the DSI pixel clocks' state, as SceLowio keeps them.
  */
 #include "pervasive_tzs.h"
-#include <sce/pervasive_pixel.h>
+#include <lowio/pervasive_pixel.h>
 
 
 static PixelClockContext s_pixelClock[2];

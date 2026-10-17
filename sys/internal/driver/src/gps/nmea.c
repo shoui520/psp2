@@ -3,7 +3,7 @@
 
 /* Sony's debug build is fortified */
 #if FW_DEBUG
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 #define GPS_ERROR_SENTENCE	0x80390012	/* malformed */

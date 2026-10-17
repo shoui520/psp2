@@ -1,6 +1,6 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
 int UVFAT_InitLockMountPoint(SceExfatfsFileSystem *fileSystem)

@@ -1,8 +1,8 @@
 /* Descriptive source name: the original has no source-file debug records. */
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
-#include <sce/processmgr_imports.h>
-#include <sce/usbstormg.h>
+#include <processmgr/processmgr_imports.h>
+#include <usbstormg/usbstormg.h>
 #include <psp2kern/kernel/sysclib.h>
 
 int SceMagicGateForDriver_F2502A3B(void *output, const void *input,

@@ -1,6 +1,6 @@
 #include "update_internal.h"
 #include "snvs.h"
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 
 int ksceSysconNvsReadData(unsigned int offset, void *buffer, SceSize size);
 

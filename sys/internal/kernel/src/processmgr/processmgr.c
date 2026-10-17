@@ -5,10 +5,10 @@
 
 #include <psp2common/kernel/threadmgr.h>
 #include "processmgr_internal.h"
-#include "sce/modulemgr_patch.h"
-#include <sce/processmgr.h>
-#include <sce/process_info.h>
-#include <sce/sysroot_processmgr.h>
+#include <modulemgr/modulemgr_patch.h>
+#include <processmgr/processmgr.h>
+#include <processmgr/process_info.h>
+#include <sysmem/sysroot_processmgr.h>
 
 /* the process private memory (PPM): per slot one 0x4000 byte area for the
  * address space and one 0x1000 byte area for process objects */

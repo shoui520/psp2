@@ -1,7 +1,7 @@
 /* QMI client-instance synchronization and selection. */
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "qmi_backend.h"
 
 extern int qmiInitializeDeviceDriver(void);

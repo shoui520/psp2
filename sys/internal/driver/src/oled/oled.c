@@ -4,12 +4,12 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/sysroot.h>
-#include "sce/sysmem.h"
-#include "sce/sysevent.h"
-#include <sce/spi_regs.h>
-#include "sce/oled.h"
+#include <sysmem/sysmem.h>
+#include <sysmem/sysevent.h>
+#include <lowio/spi_regs.h>
+#include <oled/oled.h>
 #include "panel_data.h"
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 
 /* Internal names are unknown; no debug function records exist in this module. */
 extern int sceKernelDelayThread(unsigned usec);

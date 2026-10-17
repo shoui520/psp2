@@ -1,12 +1,12 @@
 #pragma once
 
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/sysroot_hid.h>
-#include <sce/bt_hid.h>
-#include <sce/bt_event.h>
-#include <sce/bt_registered.h>
-#include <sce/hid.h>
-#include <sce/list.h>
+#include <sysmem/sysroot_hid.h>
+#include <bt/bt_hid.h>
+#include <bt/bt_event.h>
+#include <bt/bt_registered.h>
+#include "hid.h"
+#include <sysmem/list.h>
 
 int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
 void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock,

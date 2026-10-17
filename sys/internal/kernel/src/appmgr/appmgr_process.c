@@ -1,8 +1,8 @@
 /* Process event adapters. */
 
-#include <sce/processmgr.h>
-#include <sce/debug.h>
-#include <sce/threadmgr.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2/appmgr.h>
 #include <psp2kern/power.h>
 #include <psp2kern/kernel/proc_event.h>

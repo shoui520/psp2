@@ -2,24 +2,24 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/pervasive_regs.h>
-#include <sce/mailbox_regs.h>
-#include <sce/intrmgr.h>
-#include <sce/processmgr.h>
-#include <sce/syscall.h>
+#include <lowio/pervasive_regs.h>
+#include <lowio/mailbox_regs.h>
+#include <intrmgr/intrmgr.h>
+#include <processmgr/processmgr.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "venezia_internal.h"
-#include <sce/venezia_debug.h>
+#include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 
 /* Physical addresses handed to or checked for the Venezia: a mailbox word,

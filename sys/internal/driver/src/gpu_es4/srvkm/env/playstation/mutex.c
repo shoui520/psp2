@@ -2,7 +2,7 @@
  * Pristine IMG Linux mutex implementation remains in the vendor directory.
  */
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <stddef.h>
 #include "sce_ddk_port.h"
 

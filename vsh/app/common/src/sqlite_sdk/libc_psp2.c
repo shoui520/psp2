@@ -10,7 +10,7 @@
 #include <string.h>
 #include <psp2/kernel/clib.h>
 #include <psp2/kernel/processmgr.h>
-#include <sce/sqlite3_util.h>
+#include <sqlite/sqlite3_util.h>
 
 #define STRLEN_MAX	0x800		/* longest string strlen measures */
 

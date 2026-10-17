@@ -3,9 +3,9 @@
  * for the DTrace provider.
  */
 
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "syscall_context.h"
 
 #define DTRACE_STATE_SIZE		0x28

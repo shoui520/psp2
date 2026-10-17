@@ -5,10 +5,10 @@
  * the calls.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include "sysmem_internal.h"
-#include "sce/sysevent.h"
-#include "sce/suspend.h"
+#include <sysmem/sysevent.h>
+#include <sysmem/suspend.h>
 #include "sysevent_internal.h"
 
 #define SUSPEND_HANDLERS		32

@@ -3,8 +3,8 @@
  * the icon screen and module_start.
  */
 #include "ew_internal.h"
-#include "sce/error.h"
-#include "sce/syscon_scratchpad.h"
+#include <kernel/error.h>
+#include <syscon/syscon_scratchpad.h>
 
 EwGlobals ewg;
 

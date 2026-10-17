@@ -1,6 +1,6 @@
 #include <psp2kern/types.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
 extern SceExfatfsFnode *UVFAT_GetParentFnode(SceExfatfsSharedResource *sharedResource,

@@ -3,7 +3,7 @@
 #define GPU_OSFUNC_SCE_H
 
 #include "sce_ddk_port.h"
-#include <sce/systimer.h>
+#include <systimer/systimer.h>
 
 typedef IMG_VOID (*PFN_TIMER_FUNC)(IMG_VOID *pvData);
 

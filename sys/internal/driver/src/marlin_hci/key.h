@@ -2,7 +2,7 @@
 #define MARLIN_HCI_KEY_H
 
 #include "buffer.h"
-#include <sce/rsa.h>
+#include <marlin_hci/rsa.h>
 
 typedef struct MarlinKey {
 	MarlinBuffer *data;

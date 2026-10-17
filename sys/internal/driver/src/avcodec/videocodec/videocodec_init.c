@@ -1,15 +1,15 @@
 /* Sony source: videocodec/videocodec_init.c. */
 #include "videocodec_internal.h"
-#include <sce/debug.h>
-#include <sce/processmgr.h>
-#include <sce/sysmem.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <string.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <sce/avcdec.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
+#include <avcdec.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 VideocodecResident videocodecResident = {

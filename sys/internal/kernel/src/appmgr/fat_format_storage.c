@@ -1,7 +1,7 @@
 /* FAT storage helpers; the source-family filename is inferred. */
 
 #include "fat_format_internal.h"
-#include <sce/fat_boot.h>
+#include <exfatfs/fat_boot.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/debug.h>
 #include <string.h>

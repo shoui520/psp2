@@ -8,11 +8,11 @@
 #include <psp2kern/types.h>
 #include <stdio.h>
 #include <string.h>
-#include "sce/debug.h"
-#include "sce/sdif.h"
-#include "sce/msif.h"
-#include "sce/syscall.h"
-#include "sce/vshbridge_imports.h"
+#include <sysmem/debug.h>
+#include <sdif/sdif.h>
+#include <msif/msif.h>
+#include <intrmgr/syscall.h>
+#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016

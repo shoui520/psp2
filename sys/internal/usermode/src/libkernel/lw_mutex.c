@@ -1,8 +1,8 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include "lw_sync.h"
 #include "thread_context.h"
-#include <sce/error.h>
-#include "sce/atomic.h"
+#include <kernel/error.h>
+#include <sysmem/atomic.h>
 
 _Static_assert(sizeof(struct LwMutexState) == sizeof(SceKernelLwMutexWork),
 	       "lightweight mutex work layout");

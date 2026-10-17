@@ -1,5 +1,5 @@
 /* Descriptive names: original export NIDs have no SDK identifiers. */
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 #include "kernel_wrappers.h"
 int MarlinHciInitialize(void);
 int MarlinHciTerminate(void);

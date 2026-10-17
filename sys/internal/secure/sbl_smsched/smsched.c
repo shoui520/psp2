@@ -6,7 +6,7 @@
  * secure kernel restores when it resumes the module.
  */
 #include "smsched.h"
-#include "sce/barrier.h"
+#include <sysmem/barrier.h>
 
 static SmschedRequest *s_running;
 static int s_initialized;

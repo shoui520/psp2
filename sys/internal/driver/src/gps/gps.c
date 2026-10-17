@@ -2,7 +2,7 @@
  * Internal names unknown: descriptive names follow the observed behavior.
  */
 #include "gps_internal.h"
-#include "sce/sysevent_ids.h"
+#include <sysmem/sysevent_ids.h>
 
 #define GPS_ERROR(code) ((int)(0x80390000U | (code)))
 GpsGlobals s_gps;

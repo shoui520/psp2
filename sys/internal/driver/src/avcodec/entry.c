@@ -1,5 +1,5 @@
 /* SceAvcodec process event dispatch. */
-#include <sce/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/modulemgr.h>
 

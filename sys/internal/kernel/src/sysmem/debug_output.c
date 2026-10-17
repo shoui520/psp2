@@ -1,8 +1,8 @@
 /* Debug output handler state and character ring. */
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "sysmem_boot.h"
 #include "debug_tty.h"
 #include <stdarg.h>

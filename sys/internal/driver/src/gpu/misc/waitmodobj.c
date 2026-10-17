@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include "../../gpu_es4/srvkm/sync_sce.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/misc/waitmodobj.c"

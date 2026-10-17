@@ -1,9 +1,9 @@
 /* Audio input ports; original source filename unavailable. */
 #include "audioin_internal.h"
-#include <sce/cp15.h>
-#include <sce/processmgr.h>
-#include <sce/sysevent.h>
-#include <sce/threadmgr.h>
+#include <sysmem/cp15.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysevent.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2/audioin.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/proc_event.h>

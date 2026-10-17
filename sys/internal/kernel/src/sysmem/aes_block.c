@@ -1,6 +1,6 @@
 /* SceKernelUtils Rijndael encryption data and entries. */
 #include <psp2kern/kernel/utils.h>
-#include <sce/aes.h>
+#include <sysmem/aes.h>
 #include <stdint.h>
 
 /* Shift each byte row one column farther, wrapping at the block width. */

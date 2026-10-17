@@ -12,12 +12,12 @@
  */
 
 #include <psp2kern/kernel/cpu.h>
-#include "sce/debug.h"
-#include "sce/smsc_proxy.h"
-#include "sce/sysroot.h"
-#include "sce/tzs_bridge.h"
-#include "sce/syscall.h"
-#include "sce/sysevent_ids.h"
+#include <sysmem/debug.h>
+#include <smsc_proxy/smsc_proxy.h>
+#include <sysmem/sysroot.h>
+#include <smsc_proxy/tzs_bridge.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysevent_ids.h>
 
 #define SESSION_COUNT	64
 #define CHANNEL_COUNT	4

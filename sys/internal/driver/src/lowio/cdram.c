@@ -1,8 +1,8 @@
 /* SceCdram asynchronous secure-monitor initialization. */
 #include "lowio_internal.h"
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/touch_dummy.h>
+#include <threadmgr/threadmgr.h>
+#include <touch_dummy/touch_dummy.h>
 
 uint32_t Smc117(uint32_t command);
 static volatile uint32_t s_cdramReady;

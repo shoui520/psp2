@@ -4,9 +4,9 @@
 #include <string.h>
 #include "timer.h"
 #include "scheduler.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 
 int cancelTimerForUser(SceUID uid, uint32_t *count);

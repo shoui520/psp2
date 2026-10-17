@@ -2,7 +2,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 /* Private implementations follow in their original source files. */
 extern int coredumpMemoryInit(void);

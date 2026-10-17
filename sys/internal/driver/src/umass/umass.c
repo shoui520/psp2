@@ -1,7 +1,7 @@
 /* USB bulk-only mass storage for the Dolce safe-mode boot image. */
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 #include <psp2kern/usbd.h>
 #include <psp2kern/usbserv.h>
 #include <psp2kern/kernel/aimgr.h>
@@ -13,8 +13,8 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
-#include "sce/error.h"
-#include "sce/umass.h"
+#include <kernel/error.h>
+#include <umass/umass.h>
 
 #define UMASS_ERROR(n) ((int)(0x802a0000U | (n))) /* official names unavailable */
 #define logError(func, fmt, ...) ksceKernelPrintf("[Umass]%08x:%s: " fmt, \

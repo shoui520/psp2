@@ -2,8 +2,8 @@
 
 #include "writer_internal.h"
 #include "seg_internal.h"
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include <elf.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <string.h>

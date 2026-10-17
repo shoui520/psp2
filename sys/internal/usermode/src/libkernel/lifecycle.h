@@ -2,7 +2,7 @@
 #define LIBKERNEL_LIFECYCLE_H
 
 #include <stdint.h>
-#include <sce/timer_regs.h>
+#include <systimer/timer_regs.h>
 
 
 union ProcessTimeBase {

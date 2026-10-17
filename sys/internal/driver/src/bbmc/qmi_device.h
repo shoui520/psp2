@@ -2,7 +2,7 @@
 #define BBMC_QMI_DEVICE_H
 
 #include "qmi_usb.h"
-#include <sce/uart_regs.h>
+#include <lowio/uart_regs.h>
 
 typedef struct QmiUartPort {
 	SceInt32 index;

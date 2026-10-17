@@ -1,7 +1,7 @@
 /* Process-owned allocations and the GPU backup heap. */
 #include <stdint.h>
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"

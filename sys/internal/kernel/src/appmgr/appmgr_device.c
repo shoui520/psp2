@@ -1,10 +1,10 @@
 /* Audio and device arbitration. */
 
-#include <sce/debug.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
-#include <sce/touch.h>
-#include <sce/appmgr_debugger.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
+#include <touch/touch.h>
+#include <appmgr/appmgr_debugger.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>

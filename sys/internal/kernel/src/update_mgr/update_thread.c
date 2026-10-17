@@ -1,4 +1,4 @@
-#include <sce/cp15.h>
+#include <sysmem/cp15.h>
 #include "update_internal.h"
 
 int UpdateUtilCreateThread(const char *name, SceKernelThreadEntry entry,

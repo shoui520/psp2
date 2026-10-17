@@ -3,8 +3,8 @@
 #include "skeleton.h"
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/idstorage.h>
-#include <sce/debug.h>
-#include <sce/wlanbt.h>
+#include <sysmem/debug.h>
+#include <wlanbt/wlanbt.h>
 #include <psp2kern/kernel/pm_mgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/syscon.h>

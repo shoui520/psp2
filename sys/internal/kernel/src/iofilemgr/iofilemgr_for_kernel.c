@@ -4,7 +4,7 @@
  * leave switched off (g_ioFiosOpenEnabled, ...).
  */
 
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
 
 int g_ioFiosOpenEnabled __attribute__((section(".data"))) = 0;

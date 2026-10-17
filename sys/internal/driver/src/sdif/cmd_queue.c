@@ -1,6 +1,6 @@
 /* SceSdif command queues (Sony source: cmd_queue.c). */
 #include "sdif_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 void sdifCommandQueueInitialize(SdifCommandQueue *queue)
 {

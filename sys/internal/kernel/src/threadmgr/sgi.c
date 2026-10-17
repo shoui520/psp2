@@ -1,16 +1,16 @@
 /* Interrupt-request queues and masks recovered from native sgi.c. */
 #include <string.h>
 #include "private.h"
-#include "sce/intrmgr.h"
+#include <intrmgr/intrmgr.h>
 #include "uid_waitable.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/sysmem.h>
 #include "fast_mutex.h"
 #include "priority_change.h"
 #include "scheduler.h"
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include "syscall_context.h"
 #include "event.h"
 #include "timer.h"

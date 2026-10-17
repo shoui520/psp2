@@ -1,6 +1,6 @@
 #pragma once
 
-#include <sce/aes.h>
+#include <sysmem/aes.h>
 
 struct GcAuthAesCbcState {
 	SceAesFullContext aes;

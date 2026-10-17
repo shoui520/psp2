@@ -14,17 +14,17 @@
 
 #include "skeleton.h"
 #include <stdint.h>
-#include <sce/kbl_param.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/cp15.h>
-#include <sce/debug.h>
-#include <sce/excpmgr_cpu.h>
-#include <sce/grab_regs.h>
-#include <sce/kernel_boot_param.h>
-#include <sce/lpddr2_regs.h>
-#include <sce/pervasive_regs.h>
-#include <sce/ssx_firewall_regs.h>
-#include <sce/timer_regs.h>
+#include <sysmem/cp15.h>
+#include <sysmem/debug.h>
+#include <excpmgr/excpmgr_cpu.h>
+#include <compat/grab_regs.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
+#include <buserror/lpddr2_regs.h>
+#include <lowio/pervasive_regs.h>
+#include <buserror/ssx_firewall_regs.h>
+#include <systimer/timer_regs.h>
 #include "boot.h"
 
 /* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */

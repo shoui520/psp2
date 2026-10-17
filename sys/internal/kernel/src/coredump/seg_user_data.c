@@ -1,8 +1,8 @@
 /* USER_INFO note and fixed-capacity handler data. */
 
 #include <string.h>
-#include <sce/error.h>
-#include <sce/debug.h>
+#include <kernel/error.h>
+#include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

@@ -1,9 +1,9 @@
 /* Bluetooth data tables; the original source filename is unavailable. */
 #include <stdint.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/bt_registered.h>
-#include <sce/bt_audio.h>
-#include <sce/sysroot_bt.h>
+#include <bt/bt_registered.h>
+#include <bt/bt_audio.h>
+#include <sysmem/sysroot_bt.h>
 #include "bt_internal.h"
 
 BtStack gBtStack;

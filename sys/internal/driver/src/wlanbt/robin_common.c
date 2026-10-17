@@ -1,8 +1,8 @@
 /* Robin initialization work; filename inferred, no source-name debug record. */
 #include "wlanbt_internal.h"
 #include <psp2kern/kernel/aimgr.h>
-#include <sce/sdif.h>
-#include <sce/debug.h>
+#include <sdif/sdif.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <string.h>

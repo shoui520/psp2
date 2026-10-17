@@ -4,13 +4,13 @@
  */
 
 #include "skeleton.h"
-#include <sce/bbmc.h>
-#include <sce/debug.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/power.h>
-#include <sce/syscon.h>
-#include <sce/sysevent.h>
-#include <sce/threadmgr.h>
+#include <bbmc/bbmc.h>
+#include <sysmem/debug.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <power/power.h>
+#include <syscon/syscon.h>
+#include <sysmem/sysevent.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/modulemgr.h>

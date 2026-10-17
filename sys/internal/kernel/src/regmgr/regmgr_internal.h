@@ -10,7 +10,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "reg.h"
 
 int regMgrLoadCache(void);

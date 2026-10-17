@@ -1,15 +1,15 @@
 /* SceSdstor device management (Sony source: sddev.c). */
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/gcauthmgr/gc_auth.h>
 #include <psp2kern/lowio/pervasive.h>
-#include <sce/sdif.h>
-#include <sce/msif.h>
-#include <sce/umass.h>
-#include <sce/led.h>
+#include <sdif/sdif.h>
+#include <msif/msif.h>
+#include <umass/umass.h>
+#include <power/led.h>
 
 #if FW_DEBUG
 static const uint8_t sddevHardwarePorts[5] = { 0, 1, 255, 255, 3 };

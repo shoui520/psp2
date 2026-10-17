@@ -1,11 +1,11 @@
 /* Application manager initialization and suspend notifications. */
 
-#include <sce/debug.h>
-#include <sce/iofilemgr.h>
-#include <sce/sysevent.h>
-#include <sce/sysroot_appmgr.h>
-#include <sce/sysmem.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <iofilemgr/iofilemgr.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/sysroot_appmgr.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/pm_mgr.h>

@@ -11,10 +11,10 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
-#include "sce/debug.h"
-#include "sce/deci4p.h"
-#include "sce/pamgr.h"
-#include "sce/threadmgr.h"
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <pamgr/pamgr.h>
+#include <threadmgr/threadmgr.h>
 #include "ttyp.h"
 
 

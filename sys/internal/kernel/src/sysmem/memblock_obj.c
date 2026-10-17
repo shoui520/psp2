@@ -6,7 +6,7 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"
 #define MEMBLOCK_OBJ_MODULE_EXTERN
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include "memblock_obj_module.h"
 
 #undef __FILE_NAME__

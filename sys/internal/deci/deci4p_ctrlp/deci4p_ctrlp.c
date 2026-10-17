@@ -21,10 +21,10 @@
 #include <psp2kern/kernel/debug.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
-#include "sce/error.h"
-#include "sce/ctrl_sample.h"
-#include "sce/deci4p.h"
-#include "sce/deci4p_ctrlp.h"
+#include <kernel/error.h>
+#include <ctrl/ctrl_sample.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include "deci4p_ctrlp.h"
 
 #if FW_VERSION >= 0x04000000
 #define error(line, fmt, ...) ksceKernelPrintf("[CTRLP E2]::%d " fmt, line, ##__VA_ARGS__)

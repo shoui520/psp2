@@ -22,11 +22,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/lowio/pervasive.h>
-#include "sce/coredump.h"
-#include "sce/debug.h"
-#include "sce/display.h"
-#include "sce/qafmgr.h"
-#include "sce/syscon.h"
+#include <coredump/coredump.h>
+#include <sysmem/debug.h>
+#include <display/display.h>
+#include <sysmem/qafmgr.h>
+#include <syscon/syscon.h>
 
 #define CRASHDUMP_BUF_SIZE	0x100000	/* notes, then one copy window */
 #define CRASHDUMP_WINDOW	0x100000

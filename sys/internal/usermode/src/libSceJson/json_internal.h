@@ -20,7 +20,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2/kernel/threadmgr.h>
-#include <sce/json.h>
+#include <json.h>
 
 extern "C" {
 /* SceLibKernel / SceSysclib imports */

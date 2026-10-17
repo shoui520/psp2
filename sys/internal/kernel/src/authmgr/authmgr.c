@@ -5,13 +5,13 @@
  */
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/cpu.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
-#include "sce/debug.h"
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/debug.h>
 
 #define AM_EINVAL ((int)0x800f0516)
 #define AM_EHANDLE ((int)0x800f0509)

@@ -3,7 +3,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <sce/fast_mutex_object.h>
+#include <threadmgr/fast_mutex_object.h>
 
 struct NgsSynSystem;
 

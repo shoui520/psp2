@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 /* the next test value: an LCG whose increment is its multiplier */
 #define MEMORY_TEST_FACTOR	0x91e6d6a5

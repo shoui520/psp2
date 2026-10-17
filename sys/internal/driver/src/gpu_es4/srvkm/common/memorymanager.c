@@ -7,8 +7,8 @@
 #include "gpu-blockheap.h"
 #include "mapped_memory_sce.h"
 #include "handle-types.h"
-#include <sce/debug.h>
-#include <sce/sysmem.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>

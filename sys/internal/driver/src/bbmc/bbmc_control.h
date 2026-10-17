@@ -2,9 +2,9 @@
 #define BBMC_CONTROL_H
 
 #include <stddef.h>
-#include <sce/bbmc.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/syscon.h>
+#include <bbmc/bbmc.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <syscon/syscon.h>
 #include "bbmc_memory.h"
 #include "bbmc_network_info.h"
 #include "bbmc_pin.h"

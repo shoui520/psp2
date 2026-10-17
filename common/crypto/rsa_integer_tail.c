@@ -1,5 +1,5 @@
 /* Descriptive source name: the original library has no debug records. */
-#include <sce/rsa_arithmetic.h>
+#include <marlin_hci/rsa_arithmetic.h>
 
 unsigned int MarlinSubtractIntegerWords(unsigned int *output,
 	const unsigned int *first, const unsigned int *second, int count,

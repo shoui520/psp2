@@ -7,8 +7,8 @@
  */
 #include <psp2kern/types.h>
 #include "fw.h"
-#include "sce/debug.h"
-#include "sce/dtrace.h"
+#include <sysmem/debug.h>
+#include <dtrace/sce/dtrace.h>
 #include "../hdmi_internal.h"
 
 #define HDMI_DBG_FRAM	0x00000200	/* "[hdmiFRAM] " */

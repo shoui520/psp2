@@ -6,7 +6,7 @@
  */
 
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "post_ss_mgr_internal.h"

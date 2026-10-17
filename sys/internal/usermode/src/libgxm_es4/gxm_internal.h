@@ -12,7 +12,7 @@
 #include <psp2/kernel/clib.h>
 #include <psp2/kernel/sysmem.h>
 #include <psp2/kernel/threadmgr.h>
-#include "sce/pvrsrv_client.h"
+#include <gpu/pvrsrv_client.h>
 #include <stddef.h>
 
 int sceKernelIsGameBudget(void);

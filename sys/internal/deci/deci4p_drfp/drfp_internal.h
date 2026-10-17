@@ -12,13 +12,13 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2common/kernel/iofilemgr.h>
-#include <sce/debug.h>
-#include <sce/list.h>
-#include "sce/error.h"
-/* sce/deci4p.h declares sceDfMgrClose void; it returns an error code */
+#include <sysmem/debug.h>
+#include <sysmem/list.h>
+#include <kernel/error.h>
+/* deci4p_dfmgr/deci4p.h declares sceDfMgrClose void; it returns an error code */
 #define sceDfMgrClose sceDfMgrClose_deci4p_h
-#include <sce/deci4p.h>
-#include <sce/deci4p_fs.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <deci4p_drfp/deci4p_fs.h>
 #undef sceDfMgrClose
 int sceDfMgrClose(SceUID handle);
 
@@ -83,7 +83,7 @@ int sceDfMgrClose(SceUID handle);
 #define DRFP_HOST_ENOTEMPTY		0x11027
 #define DRFP_HOST_ENOTSUP		0x110c0
 
-/* host file modes (POSIX; the bits in sce/deci4p_fs.h) */
+/* host file modes (POSIX; the bits in deci4p_drfp/deci4p_fs.h) */
 #define DRFP_MODE_DIR_DEFAULT		0x1c0
 #define DRFP_MODE_FILE_DEFAULT		0x180
 

@@ -3,7 +3,7 @@
  */
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "ulobjmgr_internal.h"
 
 SceUID sceKernelGetProcessId(void);

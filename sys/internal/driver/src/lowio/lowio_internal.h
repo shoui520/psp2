@@ -3,9 +3,9 @@
 
 #include <stdint.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/pervasive_regs.h>
-#include <sce/uart_regs.h>
-#include <sce/mailbox_regs.h>
+#include <lowio/pervasive_regs.h>
+#include <lowio/uart_regs.h>
+#include <lowio/mailbox_regs.h>
 
 extern ScePervasiveMiscRegisters *s_misc;
 extern ScePervasiveVidRegisters *s_video;

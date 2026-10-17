@@ -1,6 +1,6 @@
 /*
  * SceUsbEtherSmsc: the USB Ethernet driver for the SMSC LAN9500 family
- * (smsc_driver.c, smsc_usb.c), a SceNetPs network driver (sce/netdrv.h).
+ * (smsc_driver.c, smsc_usb.c), a SceNetPs network driver (net_ps/netdrv.h).
  * Function names marked 0.990 come from the prototype's strings; register
  * names are the LAN9500 datasheet's.
  */
@@ -17,11 +17,11 @@
 #include <psp2common/net.h>
 #include <stddef.h>
 #include <string.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/netdrv.h"
-#include "sce/sysevent_ids.h"
-#include "sce/usb_ether_smsc.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <net_ps/netdrv.h>
+#include <sysmem/sysevent_ids.h>
+#include <usb_ether_smsc/usb_ether_smsc.h>
 
 /* names unknown */
 #define SMSC_ERROR_INVALID_ARGUMENT	((int)0x80418001)

@@ -7,7 +7,7 @@ int bsodFormat(BsodFormatCallback callback, void *context, int count,
 	       const char *format, const void *args);
 #include <stddef.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysmem.h>
 
 typedef struct BsodFramebuffer {

@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/fat_boot.h>
-#include <sce/msif_regs.h>
+#include <exfatfs/fat_boot.h>
+#include "msif_regs.h"
 
 struct MsifDmaDescriptor {
 	uint32_t dataAddress;

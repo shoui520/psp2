@@ -2,7 +2,7 @@
 #include "hid_internal.h"
 #include <psp2/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/ctrl.h>
+#include <ctrl/ctrl.h>
 #include <string.h>
 
 unsigned int hidProcessCount;

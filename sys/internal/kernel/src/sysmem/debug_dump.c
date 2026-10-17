@@ -11,18 +11,18 @@
  * Also the kernel TTY ring's reader and the event log.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "fw.h"
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/threadcb.h>
-#include <sce/excpmgr.h>
-#include <sce/sysroot_modulemgr.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <threadmgr/threadcb.h>
+#include <excpmgr/excpmgr.h>
+#include <sysmem/sysroot_modulemgr.h>
 #include "debug_tty.h"
 
 int ksceKernelCpuSuspendIntr(void);

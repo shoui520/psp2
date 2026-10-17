@@ -5,7 +5,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "sce/error.h"
+#include <kernel/error.h>
 
 /* the caller is not a system program (errno 0x58) */
 

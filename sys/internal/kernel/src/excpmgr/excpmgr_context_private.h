@@ -4,7 +4,7 @@
 
 #define excpReturnToContext SceExcpmgrForKernel_3E55B5C3
 #define EXCP_CONTEXT_DEBUG_LINKAGE extern
-#include "sce/excpmgr_context_state.h"
+#include "excpmgr_context_state.h"
 
 static inline void excpCallback(SceExcpmgrCallback callback, SceExcpmgrContext *context)
 {

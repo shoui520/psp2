@@ -1,11 +1,11 @@
 /* Sony: prxexport.c */
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <sce/debug.h>
-#include <sce/vfs.h>
+#include <sysmem/debug.h>
+#include <iofilemgr/vfs.h>
 
 extern SceVfsInfo g_exfatfsInfo;
 extern int _register_exfatfs_vops(SceVfsInfo *info);

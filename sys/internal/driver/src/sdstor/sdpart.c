@@ -1,11 +1,11 @@
 /* SceSdstor partition management (Sony source: sdpart.c). */
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <stdio.h>
 #include <string.h>
-#include <sce/mbr.h>
-#include <sce/sdif.h>
+#include <sdstor/mbr.h>
+#include <sdif/sdif.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <stdlib.h>
 

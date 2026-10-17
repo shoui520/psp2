@@ -6,12 +6,12 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <sce/intrmgr_syscall.h>
-#include <sce/pl310_regs.h>
-#include <sce/perfmon_regs.h>
-#include <sce/coresight_regs.h>
-#include <sce/cp15.h>
-#include <sce/pamgr_trace.h>
+#include <intrmgr/intrmgr_syscall.h>
+#include <sysmem/pl310_regs.h>
+#include <pamgr/perfmon_regs.h>
+#include <pamgr/coresight_regs.h>
+#include <sysmem/cp15.h>
+#include <pamgr/pamgr_trace.h>
 
 typedef void (*PamgrTraceInterruptCallback)(uint32_t status, void *arg);
 typedef void (*PamgrSyscallEnterCallback)(ThreadSyscallFrame *frame);

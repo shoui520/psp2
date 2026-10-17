@@ -1,8 +1,8 @@
 /* Filesystem registration; operation tables are installed during phase one. */
-#include <sce/vfs.h>
-#include <sce/sdstor.h>
-#include <sce/iofilemgr.h>
-#include <sce/debug.h>
+#include <iofilemgr/vfs.h>
+#include <sdstor/sdstor.h>
+#include <iofilemgr/iofilemgr.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "exfatfs_internal.h"

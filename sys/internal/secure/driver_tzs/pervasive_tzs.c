@@ -9,7 +9,7 @@
  * pervasive_gate.c) where the code is the same.
  */
 #include "pervasive_tzs.h"
-#include <sce/cp15.h>
+#include <sysmem/cp15.h>
 
 /* the preload engine operation c11, c2, 1 (ARMv7 PLE), run before parking */
 #define plePark()		CP_WRITE(p15, 0, c11, c2, 1, 0)

@@ -1,16 +1,16 @@
 /* SceDbgSdio: two SDIO debug channels with mailbox and DMA transfers. */
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/dbgsdio.h"
-#include "sce/debug.h"
-#include "sce/intrmgr.h"
-#include "sce/sdio_window.h"
-#include "sce/sysevent.h"
-#include <sce/barrier.h>
+#include <dbgsdio/dbgsdio.h>
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <sdbgsdio/sdio_window.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/barrier.h>
 
 #define DBGSDIO_CHANNELS	2
 #define DBGSDIO_PADDR		SDIO_WINDOW_PADDR(1)

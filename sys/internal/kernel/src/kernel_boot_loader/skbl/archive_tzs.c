@@ -13,9 +13,9 @@
 #include "fw.h"
 #include <psp2common/kernel/modulemgr.h>
 #include <psp2kern/kernel/cpu.h>
-#include <sce/compat_regs.h>
-#include <sce/debug.h>
-#include <sce/kernel_boot_param.h>
+#include <compat/compat_regs.h>
+#include <sysmem/debug.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
 
 /* the sysroot (sysroot.c) */
 void sceKernelSysrootCorelockLock(SceUInt32 core);

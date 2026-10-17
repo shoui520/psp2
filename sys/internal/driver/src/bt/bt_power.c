@@ -1,9 +1,9 @@
 /* Power events; original source filename unavailable. */
 #include <psp2kern/registrymgr.h>
-#include <sce/debug.h>
-#include <sce/regmgr.h>
-#include <sce/sysevent.h>
-#include <sce/wlanbt.h>
+#include <sysmem/debug.h>
+#include <regmgr/regmgr.h>
+#include <sysmem/sysevent.h>
+#include <wlanbt/wlanbt.h>
 #include "bt_internal.h"
 
 extern uint64_t gBtBusyDumpTime;

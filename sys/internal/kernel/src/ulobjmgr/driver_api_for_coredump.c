@@ -5,7 +5,7 @@
  */
 #include <string.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/ulobjmgr.h>
+#include <ulobjmgr/ulobjmgr.h>
 #include "ulobjmgr_internal.h"
 #include "util.h"
 

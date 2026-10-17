@@ -1,7 +1,7 @@
 /* BUDGET_INFO note: every budget and its physical memory partitions. */
 
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 #include "oal_internal.h"

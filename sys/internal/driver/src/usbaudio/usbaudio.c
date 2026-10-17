@@ -1,8 +1,8 @@
 /* SceUsbAudio: composite USB audio host driver and input service. */
 #include "usbaudio.h"
 #include <psp2kern/kernel/sysmem/memtype.h>
-#include "sce/error.h"
-#include "sce/syscall.h"
+#include <kernel/error.h>
+#include <intrmgr/syscall.h>
 
 #define USBAUDIO_HEAP_SIZE	0x40000
 

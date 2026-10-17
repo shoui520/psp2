@@ -1,5 +1,5 @@
 #include "heap_state.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 struct MspaceBackingBlock {
 	SceUInt32 encodedId;

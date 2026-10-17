@@ -1,7 +1,7 @@
 /* Descriptive source name: this original has no debug source records. */
-#include <sce/syscall.h>
-#include <sce/vshbridge_imports.h>
-#include <sce/error.h>
+#include <intrmgr/syscall.h>
+#include <vshbridge/vshbridge_imports.h>
+#include <kernel/error.h>
 #include "kernel_wrappers.h"
 #include "buffer.h"
 

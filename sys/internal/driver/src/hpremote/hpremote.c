@@ -5,8 +5,8 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/hpremote.h"
-#include "sce/sysevent_ids.h"
+#include <hpremote/hpremote.h>
+#include <sysmem/sysevent_ids.h>
 
 /* Field and internal function names are unknown; names describe observed use. */
 struct HpremoteState {

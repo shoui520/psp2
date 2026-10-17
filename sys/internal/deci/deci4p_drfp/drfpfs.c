@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem/heap.h>
 #include <psp2kern/vfs.h>
-#include <sce/error.h>
-#include <sce/deci4p_fs.h>
+#include <kernel/error.h>
+#include <deci4p_drfp/deci4p_fs.h>
 #include "drfp_internal.h"
 
 #define DRFP_FS_NAME		"deci4p_drfp_dev_fs"

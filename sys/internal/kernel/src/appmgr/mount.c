@@ -1,7 +1,7 @@
 /* Application content mounts. */
 
 #include <psp2kern/types.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -10,15 +10,15 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/npdrm.h>
 #include <psp2kern/fios2.h>
-#include <sce/acmgr.h>
-#include <sce/appmgr_launch.h>
-#include <sce/appmgr_rdrfp.h>
-#include <sce/regmgr.h>
-#include <sce/npdrm_package.h>
-#include <sce/rtc.h>
-#include <sce/suspend.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
+#include <acmgr/acmgr.h>
+#include <appmgr/appmgr_launch.h>
+#include <appmgr/appmgr_rdrfp.h>
+#include <regmgr/regmgr.h>
+#include <npdrm/npdrm_package.h>
+#include <rtc/rtc.h>
+#include <sysmem/suspend.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
 #include "mount.h"

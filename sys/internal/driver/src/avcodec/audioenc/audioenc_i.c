@@ -1,7 +1,7 @@
 /* SceAudioenc internal management (Sony audioenc/audioenc_i.c). */
 #include "audioenc_internal.h"
 #include "../audiodec/audiodec_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <string.h>
 

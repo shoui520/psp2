@@ -10,7 +10,7 @@
 #include "gpu-dump.h"
 #include "osfunc_sce.h"
 #include "bridge_sce.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 

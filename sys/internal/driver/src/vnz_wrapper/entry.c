@@ -1,6 +1,6 @@
 /* CodecEngineWrapper process event dispatch (Sony entry.c). */
-#include <sce/debug.h>
-#include <sce/processmgr.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/suspend.h>

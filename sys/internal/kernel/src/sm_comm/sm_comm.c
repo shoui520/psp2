@@ -5,15 +5,15 @@
  */
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/sm_comm.h>
-#include <sce/suspend.h>
+#include <sm_comm/sm_comm.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/iofilemgr.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
-#include "sce/barrier.h"
-#include "sce/syscall.h"
+#include <iofilemgr/iofilemgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/barrier.h>
+#include <intrmgr/syscall.h>
 
 #define SM_ERROR_START		((int)0x800f0002)
 #define SM_ERROR_CHANNEL	((int)0x800f0001)

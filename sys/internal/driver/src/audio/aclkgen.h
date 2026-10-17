@@ -2,7 +2,7 @@
 #define SCE_AUDIO_ACLKGEN_H
 
 #include <stdint.h>
-#include <sce/audio_regs.h>
+#include "audio_regs.h"
 
 struct AudioClockDivider {
 	uint16_t sampleRate;

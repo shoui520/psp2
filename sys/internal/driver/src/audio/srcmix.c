@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <sce/threadmgr.h>
-#include <sce/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/sysmem.h>
 #include "srcmix.h"
 #include "aclkgen.h"
 #include "audio_work.h"

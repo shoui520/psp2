@@ -1,6 +1,6 @@
 /* Mapping-file parsing and overlay configuration. */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2common/fios2.h>
 #include <stddef.h>

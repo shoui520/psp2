@@ -4,8 +4,8 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/utils.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/debug.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
 
 uint8_t rngSeed[20];
 SceUID rngMutex;

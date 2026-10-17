@@ -1,4 +1,4 @@
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/cpu/cache.h>

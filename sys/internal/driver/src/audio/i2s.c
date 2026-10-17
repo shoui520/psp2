@@ -4,11 +4,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
-#include <sce/audio_regs.h>
+#include "audio_regs.h"
 #include "srcmix.h"
 
 

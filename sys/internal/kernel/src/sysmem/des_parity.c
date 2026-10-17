@@ -1,5 +1,5 @@
 /* Shared DES key utilities; names are descriptive (original names unknown). */
-#include <sce/des.h>
+#include <sysmem/des.h>
 #include <arm_neon.h>
 #include "fw.h"
 

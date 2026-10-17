@@ -2,9 +2,9 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/threadmgr.h>
-#include <sce/wlanbt.h>
-#include "sce/atomic.h"
+#include <threadmgr/threadmgr.h>
+#include <wlanbt/wlanbt.h>
+#include <sysmem/atomic.h>
 #include "bt_transport.h"
 
 SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index);

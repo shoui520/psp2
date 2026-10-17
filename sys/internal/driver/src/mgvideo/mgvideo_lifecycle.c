@@ -1,8 +1,8 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
 #include "mgvideo_private.h"
-#include <sce/usbstormg.h>
-#include <sce/sysmem.h>
-#include <sce/processmgr_imports.h>
+#include <usbstormg/usbstormg.h>
+#include <sysmem/sysmem.h>
+#include <processmgr/processmgr_imports.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "mgvideo_result.h"
 

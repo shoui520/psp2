@@ -9,9 +9,9 @@
  * Internal names are unknown.
  */
 #include "driver_tzs.h"
-#include <sce/cp15.h>
-#include <sce/ssx_firewall_regs.h>
-#include <sce/spad_regs.h>
+#include <sysmem/cp15.h>
+#include <buserror/ssx_firewall_regs.h>
+#include <power/spad_regs.h>
 
 #define SYSCON_ERROR_INVALID_MODE	((int)0x80250000)
 

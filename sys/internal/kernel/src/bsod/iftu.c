@@ -1,6 +1,6 @@
 /* BSOD maps IFTU, reads the first IFTU buffer and programs both hardware buffers. */
 #include "bsod_internal.h"
-#include <sce/iftu_regs.h>
+#include <lowio/iftu_regs.h>
 
 /* name unknown: one register page BSOD maps for itself */
 typedef struct BsodRegisterMap {

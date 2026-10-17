@@ -12,9 +12,9 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "fw.h"
-#include <sce/debug.h>
-#include <sce/pl310_regs.h>
-#include <sce/barrier.h>
+#include <sysmem/debug.h>
+#include <sysmem/pl310_regs.h>
+#include <sysmem/barrier.h>
 
 /* physical until sceKernelL2CacheRemap maps the registers; l2cc_maintenance.S reads it */
 ScePl310Registers *volatile s_cpuL2RegisterBase =

@@ -7,8 +7,8 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/coredump.h>
-#include <sce/syscall.h>
+#include <coredump/coredump.h>
+#include <intrmgr/syscall.h>
 
 extern int oalMutexInit(SceUID *mutexId);
 extern int oalMutexFinal(SceUID mutexId);

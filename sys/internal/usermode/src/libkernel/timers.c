@@ -1,5 +1,5 @@
 /* Timer APIs forward clock pointers and marshal the info size request. */
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2/types.h>
 
 typedef struct SceKernelTimerOptParam {

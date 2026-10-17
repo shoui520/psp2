@@ -7,7 +7,7 @@
 
 #include "intrmgr.h"
 #include <psp2kern/kernel/cpu.h>
-#include <sce/timer_regs.h>
+#include <systimer/timer_regs.h>
 
 #define USLEEP_TIMER		7
 #define USLEEP_INTR		0x87

@@ -8,10 +8,10 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sysevent.h"
-#include "sce/sysroot.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/sysroot.h>
 #include "sdfctl.h"
 
 #define STSMP_QUEUE		3

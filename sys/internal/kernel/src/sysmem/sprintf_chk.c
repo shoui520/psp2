@@ -1,7 +1,7 @@
 #include <stdarg.h>
 #include <stddef.h>
-#include <sce/debug.h>
-#include "sce/compiler.h"
+#include <sysmem/debug.h>
+#include <sysmem/compiler.h>
 
 extern int vsnprintf(char *destination, size_t size, const char *format,
 		     va_list arguments);

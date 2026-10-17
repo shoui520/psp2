@@ -1,7 +1,7 @@
 #ifndef MSIF_RMAUTH_H
 #define MSIF_RMAUTH_H
 
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 
 extern const SceSelfAuthInfo gMsifSmAuthInfo;
 extern SceSblSmCommId gMsifSmId;

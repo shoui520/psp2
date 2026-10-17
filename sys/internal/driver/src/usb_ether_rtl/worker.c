@@ -1,7 +1,7 @@
 /* RTL8152 worker; all private function names are unknown. */
 #include "rtl_internal.h"
 #include "phy_patch.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 /* name unknown */
 static void drainReferences(struct RtlAdapter *a)

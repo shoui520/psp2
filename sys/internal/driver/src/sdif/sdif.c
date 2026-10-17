@@ -2,16 +2,16 @@
 #include "sdif_internal.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <sce/debug.h>
-#include <sce/sysevent.h>
-#include <sce/intrmgr.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysevent.h>
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/lowio/pervasive.h>
-#include <sce/smsc_proxy.h>
+#include <smsc_proxy/smsc_proxy.h>
 #include <string.h>
 
 int sdifEnableSubIntr(int interrupt, int subInterrupt);

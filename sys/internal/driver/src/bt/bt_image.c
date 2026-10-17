@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
 SceUID BtOpenFile(const char *path, int mode);

@@ -1,10 +1,10 @@
 /* Bluetooth audio device state and event handling. */
 
 #include "av_config_internal.h"
-#include <sce/bt_registered.h>
-#include <sce/bt_event.h>
-#include <sce/bt_audio.h>
-#include <sce/threadmgr.h>
+#include <bt/bt_registered.h>
+#include <bt/bt_event.h>
+#include <bt/bt_audio.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 

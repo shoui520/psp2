@@ -1,7 +1,7 @@
 /* SceUsbServ: USB port selection, accessory power and suspend/resume service. */
 #include "usbserv.h"
-#include "sce/syscall.h"
-#include "sce/sysevent_ids.h"
+#include <intrmgr/syscall.h>
+#include <sysmem/sysevent_ids.h>
 
 #define SERV_ERROR(name) ((int)SCE_USBSERV_ERROR_##name)
 #if FW_DEBUG

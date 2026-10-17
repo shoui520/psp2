@@ -9,8 +9,8 @@
 
 #include <psp2kern/kernel/sysclib.h>
 #include "sysmem_internal.h"
-#include "sce/suspend.h"
-#include <sce/uart_regs.h>
+#include <sysmem/suspend.h>
+#include <lowio/uart_regs.h>
 
 /* what each build has */
 #if !defined(SYSMEM_TZS) && !defined(SYSMEM_NSKBL)

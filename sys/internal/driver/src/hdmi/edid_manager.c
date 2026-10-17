@@ -4,7 +4,7 @@
  */
 #include <psp2kern/types.h>
 #include "fw.h"
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 #include "hdmi_internal.h"
 
 int ksceSblAimgrIsDolce(void);

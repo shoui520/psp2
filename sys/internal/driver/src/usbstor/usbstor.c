@@ -3,7 +3,7 @@
  * Both device paths and all supported firmwares share the same executable code.
  *
  * The transport takes a command block wrapper (CBW) from the host, hands its
- * SCSI command to the registered storage functions (sce/usbstor.h), moves the
+ * SCSI command to the registered storage functions (usbstor/usbstor.h), moves the
  * data and answers with a command status wrapper (CSW). REQUEST SENSE is
  * answered here from the sense the functions leave for each unit.
  *
@@ -25,10 +25,10 @@
 #include <psp2kern/idstorage.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/sysmem.h"
-#include "sce/syscall.h"
-#include "sce/error.h"
-#include "sce/usbstor.h"
+#include <sysmem/sysmem.h>
+#include <intrmgr/syscall.h>
+#include <kernel/error.h>
+#include <usbstor/usbstor.h>
 
 /* The SDK has no names for these storage-specific error values. */
 #define STOR_ERROR_GENERAL ((int)0x80244101)

@@ -4,10 +4,10 @@
  * system program, the QA mini settings, or allowed USB serial.
  */
 #include <psp2kern/types.h>
-#include <sce/syscall.h>
-#include "sce/error.h"
-#include "sce/threadmgr.h"
-#include "sce/udcd_imports.h"
+#include <intrmgr/syscall.h>
+#include <kernel/error.h>
+#include <threadmgr/threadmgr.h>
+#include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 
 extern SceUID ksceKernelGetThreadId(void);

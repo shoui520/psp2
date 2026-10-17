@@ -1,7 +1,7 @@
 /* SCREENSHOT_INFO note. */
 
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

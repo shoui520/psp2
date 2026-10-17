@@ -9,7 +9,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "sce/hdmi.h"
+#include <hdmi/hdmi.h>
 
 #define SCE_HDMI_ERROR_INVALID_ARGUMENT	0x80370001
 #define SCE_HDMI_ERROR_BUSY		0x80370002

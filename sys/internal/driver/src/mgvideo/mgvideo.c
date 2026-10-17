@@ -1,9 +1,9 @@
 /* Exported SceMgVideo APIs. */
 
 #include "mgvideo_private.h"
-#include <sce/processmgr_imports.h>
-#include <sce/syscall.h>
-#include <sce/usbstormg.h>
+#include <processmgr/processmgr_imports.h>
+#include <intrmgr/syscall.h>
+#include <usbstormg/usbstormg.h>
 
 
 

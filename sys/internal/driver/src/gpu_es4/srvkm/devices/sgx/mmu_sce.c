@@ -1,8 +1,8 @@
 /* Sony devices/sgx/mmu_sce.c: native SCE replacement for DDK reset pages.
  * Pristine IMG implementation/license remain in the vendor directory.
  */
-#include <sce/sysmem.h>
-#include <sce/debug.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include "device_sce.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <psp2/types.h>
-#include <sce/jpegenc.h>
+#include <scejpegenc.h>
 
 /* The syscall setters copy this complete 40-byte host control record.
  * Opaque arrays are live coprocessor data, not unused padding. */

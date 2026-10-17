@@ -9,11 +9,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/sysmem.h"
-#include "sce/usbstor.h"
-#include "sce/mtpif.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <sysmem/sysmem.h>
+#include <usbstor/usbstor.h>
+#include <mtpif/mtpif.h>
 
 int SceUdcdForDriver_28BFEC45(void);
 

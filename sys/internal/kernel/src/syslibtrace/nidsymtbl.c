@@ -4,9 +4,9 @@
  * system application debugging is allowed.
  */
 
-#include "sce/acmgr.h"
-#include "sce/error.h"
-#include "sce/syslibtrace.h"
+#include <acmgr/acmgr.h>
+#include <kernel/error.h>
+#include <syslibtrace/syslibtrace.h>
 #include "syslibtrace.h"
 
 #define NIDSYM(_flags, _nid, _name)	{ SCE_NIDSYMTBL_##_flags, (_nid), (_name) }

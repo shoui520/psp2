@@ -2,10 +2,10 @@
 
 #include <stddef.h>
 
-#include <sce/cpu.h>
-#include <sce/fast_mutex.h>
-#include <sce/venezia_rpc.h>
-#include <sce/pervasive_regs.h>
+#include <sysmem/cpu.h>
+#include <threadmgr/fast_mutex.h>
+#include <vnz_wrapper/venezia_rpc.h>
+#include <lowio/pervasive_regs.h>
 
 /* name unknown: per-process Venezia suspend and clock bookkeeping. */
 typedef struct VeneziaProcessStorage {

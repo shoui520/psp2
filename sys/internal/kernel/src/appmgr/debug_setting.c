@@ -1,8 +1,8 @@
 /* Registry-backed application-manager debug settings. */
 
 #include "debug_setting.h"
-#include <sce/regmgr.h>
-#include <sce/syscall.h>
+#include <regmgr/regmgr.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 extern SceUID g_appmgrAppMutex;

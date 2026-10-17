@@ -1,13 +1,13 @@
 /* QAF boot flags and secure non-volatile token services. */
 #include "ssmgr_internal.h"
-#include <sce/error.h>
-#include <sce/syscall.h>
+#include <kernel/error.h>
+#include <intrmgr/syscall.h>
 #include <string.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/syscon.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 
 uint32_t qafInitialized;
 SsMgrQaFlags qaFlags;

@@ -6,7 +6,7 @@
  */
 #include <psp2kern/types.h>
 #include "fw.h"
-#include "sce/debug.h"
+#include <sysmem/debug.h>
 #include "../../hdmi_internal.h"
 
 void *memset(void *dst, int c, SceSize len);

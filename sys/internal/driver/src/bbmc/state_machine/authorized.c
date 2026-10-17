@@ -1,5 +1,5 @@
 /* Authorized transition family; Sony's source filename is not recorded. */
-#include <sce/syscon.h>
+#include <syscon/syscon.h>
 #include "../bbmc_message.h"
 
 SceUInt32 authorizedTransitionStep;

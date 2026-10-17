@@ -1,10 +1,10 @@
 /* Bluetooth audio transfer workers and lifecycle. */
 
 #include "av_config_internal.h"
-#include <sce/audio.h>
-#include <sce/audioin.h>
-#include <sce/bt_audio.h>
-#include <sce/threadmgr.h>
+#include <audio/audio.h>
+#include <audioin/audioin.h>
+#include <bt/bt_audio.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <string.h>

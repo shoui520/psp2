@@ -1,7 +1,7 @@
 /* Allegrex IPL startup and boot-file services. */
 #include "ipl.h"
 #include "ipl_data.h"
-#include <sce/psp_ipl.h>
+#include "../psp_ipl.h"
 
 extern int boot_main(void *memBase, SceSize memSize, u32 bootArg,
 		     u32 bootMode, u32 bootFlags, u32 resumeArg, u32 model);

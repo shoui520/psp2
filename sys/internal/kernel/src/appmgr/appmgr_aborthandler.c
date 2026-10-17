@@ -1,7 +1,7 @@
 /* Application abort handling and coredump controls. */
 
-#include <sce/debug.h>
-#include <sce/barrier.h>
+#include <sysmem/debug.h>
+#include <sysmem/barrier.h>
 #include <stdint.h>
 #include <psp2kern/kernel/threadmgr.h>
 

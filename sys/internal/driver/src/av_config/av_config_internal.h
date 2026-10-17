@@ -1,5 +1,5 @@
 #pragma once
-#include <sce/hdmi.h>
+#include <hdmi/hdmi.h>
 
 #include <psp2kern/types.h>
 

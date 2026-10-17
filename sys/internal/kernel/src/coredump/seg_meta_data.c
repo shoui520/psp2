@@ -1,8 +1,8 @@
 /* META_DATA_INFO note. */
 
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/modulemgr_debugger.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <modulemgr/modulemgr_debugger.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

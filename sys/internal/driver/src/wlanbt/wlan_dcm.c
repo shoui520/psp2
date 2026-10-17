@@ -1,17 +1,17 @@
 /* WLAN DCM family; this opening hook has no source-name debug record. */
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../robin/wlan/wlan_dcm.c"
-#include <sce/debug.h>
-#include <sce/sysmem.h>
-#include <sce/sdif.h>
-#include <sce/threadmgr.h>
-#include <sce/wlanbt.h>
-#include <sce/wlanbt_protocol.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
+#include <sdif/sdif.h>
+#include <threadmgr/threadmgr.h>
+#include <wlanbt/wlanbt.h>
+#include <wlanbt/wlanbt_protocol.h>
 #include "wlanbt_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <string.h>
-#include <sce/netps_thread.h>
+#include <net_ps/netps_thread.h>
 #include "net_ps_bsd.h"
 
 static const WlanLlcSnapPrefix gWlanRfc1042Prefix = {

@@ -3,18 +3,18 @@
  * and the protocol modules, and power events (Sony's dfmgr.c).
  */
 
-#include <sce/sysroot.h>
-#include <sce/sysroot_dfmgr.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/sysroot_dfmgr.h>
 #include <string.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/error.h>
-#include <sce/sysevent.h>
+#include <kernel/error.h>
+#include <sysmem/sysevent.h>
 #include "dfmgr_internal.h"
-#include <sce/deci4p_packet.h>
+#include <deci4p_dfmgr/deci4p_packet.h>
 
 static void sendCallback(DfMgrLinkCB *link);
 static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt);
@@ -677,7 +677,7 @@ int sceDfMgrReqSend(SceUID handle)
 	return ret;
 }
 
-/* fills in the header of the caller's packet, though sce/deci4p.h says const */
+/* fills in the header of the caller's packet, though deci4p_dfmgr/deci4p.h says const */
 int sceDfMgrSend(SceUID handle, const void *data, SceSize size)
 {
 	SceDeci4pHeader *buf = (SceDeci4pHeader *)data;

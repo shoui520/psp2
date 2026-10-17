@@ -1,7 +1,7 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
-#include <sce/processmgr_imports.h>
+#include <processmgr/processmgr_imports.h>
 #include <psp2kern/kernel/sysclib.h>
 
 unsigned int copyFileGroupToUser(void *destination, unsigned int size,

@@ -1,7 +1,7 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-#include <sce/rtc.h>
-#include <sce/sysmem.h>
+#include <rtc/rtc.h>
+#include <sysmem/sysmem.h>
 
 int MarlinRandomCreate(SceMt19937Context **context)
 {

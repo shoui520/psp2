@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <sce/dmac_regs.h>
+#include <dmacmgr/dmac_regs.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 
 typedef union SsMgrQaFlags {

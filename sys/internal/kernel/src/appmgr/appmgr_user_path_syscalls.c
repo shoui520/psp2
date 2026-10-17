@@ -1,6 +1,6 @@
 /* User-memory arguments and outputs for application path queries. */
 
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 #include <string.h>
 
 typedef struct AppmgrRawPathArguments {

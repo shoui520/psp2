@@ -2,7 +2,7 @@
 
 #include <psp2kern/types.h>
 #include <stddef.h>
-#include <sce/fast_mutex_object.h>
+#include <threadmgr/fast_mutex_object.h>
 
 typedef struct BbcmdControl BbcmdControl;
 typedef struct BbcmdRequest BbcmdRequest;

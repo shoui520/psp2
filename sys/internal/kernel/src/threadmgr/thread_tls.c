@@ -6,9 +6,9 @@
 
 #include <string.h>
 #include "private.h"
-#include "sce/intrmgr.h"
-#include "sce/cpu.h"
-#include "sce/sysmem.h"
+#include <intrmgr/intrmgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include "syscall_context.h"
 
 #define TLS_SLOT_FIRST			2

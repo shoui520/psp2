@@ -1,6 +1,6 @@
 /* Shared SceNetPs zero-filled allocation and release adapters. */
 
-#include <sce/netps.h>
+#include <net_ps/netps.h>
 
 void *sceNetPsCalloc(SceSize size)
 {

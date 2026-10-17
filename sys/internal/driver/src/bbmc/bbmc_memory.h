@@ -1,7 +1,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <sce/syscon.h>
+#include <syscon/syscon.h>
 
 typedef struct BbmcControl BbmcControl;
 struct ThreadmgrFastMutex;

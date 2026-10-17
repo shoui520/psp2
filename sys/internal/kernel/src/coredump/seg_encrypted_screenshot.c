@@ -2,8 +2,8 @@
 
 #include <string.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/appmgr_debugger.h>
-#include <sce/debug.h>
+#include <appmgr/appmgr_debugger.h>
+#include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

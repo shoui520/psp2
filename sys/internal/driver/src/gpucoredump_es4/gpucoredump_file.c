@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "gpucoredump.h"
-#include "sce/gpucoredump_es4_imports.h"
+#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 #define GPU_COREDUMP_TRACE_CHUNK	0x100000
 

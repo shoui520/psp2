@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "sce/syslibtrace.h"
+#include <syslibtrace/syslibtrace.h>
 
 #ifndef SCE_KERNEL_ERROR_ILLEGAL_ADDR
 #define SCE_KERNEL_ERROR_ILLEGAL_ADDR	0x80020006

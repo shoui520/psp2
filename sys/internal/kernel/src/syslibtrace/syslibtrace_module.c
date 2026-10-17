@@ -2,8 +2,8 @@
  * SceSysLibTrace module start.
  */
 
-#include "sce/debug.h"
-#include "sce/syslibtrace.h"
+#include <sysmem/debug.h>
+#include <syslibtrace/syslibtrace.h>
 #include "syslibtrace.h"
 
 int SyslibtraceStart(SceSize args, void *argp)

@@ -4,7 +4,7 @@
  */
 
 #include "modulemgr_internal.h"
-#include "sce/excpmgr_cpu.h"
+#include <excpmgr/excpmgr_cpu.h>
 
 /* DACR with every domain in manager mode: kernel text is writable */
 #define STUBLINKER_DACR_WRITABLE	0xffff0000

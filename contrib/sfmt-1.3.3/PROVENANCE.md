@@ -6,6 +6,6 @@ and Makoto Matsumoto, BSD license (LICENSE.txt). Only the files the MEXP=19937 b
 unchanged.
 
 SceSysmem's KernelUtils SFMT (ksceSfmt19937*) is NEON assembly in the original; it computes this
-algorithm with a per-call context. The adaptation is the patch sys/internal/kernel/src/sysmem/source/sfmt_sce.patch.
+algorithm with a per-call context. The adaptation is the patch sys/internal/kernel/src/sysmem/sfmt_sce.patch.
 The SFMT19937 output sequence is the same in every upstream version, so the version choice does not
 change behaviour.

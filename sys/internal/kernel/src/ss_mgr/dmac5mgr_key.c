@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2/dmac5.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 int __attribute__((noinline, noclone)) decKeyRingKeyUseCount(unsigned int keyRingIndex)
 {

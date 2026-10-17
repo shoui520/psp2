@@ -1,6 +1,6 @@
 /* Core locks. */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
 
 extern SceUID g_appmgrMainMutex;

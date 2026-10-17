@@ -4,7 +4,7 @@
  *
  * Functions follow the original's address order.
  */
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 #include "iofilemgr_internal.h"
 
 int g_iofilemgrTlsKey = -1;
@@ -1573,7 +1573,7 @@ int ksceIoGetRemoteKPLSData(SceUID pid, void *dst)
 }
 
 /*
- * The system calls: the arguments are copied from user memory (sce/syscall_copy.h)
+ * The system calls: the arguments are copied from user memory (intrmgr/syscall_copy.h)
  * and passed to the sceIo*ForUser functions. Only the argument blocks named below
  * are used; the others are read and ignored.
  */

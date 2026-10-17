@@ -5,7 +5,7 @@
  */
 
 #include "sysmem_internal.h"
-#include "sce/sysevent.h"
+#include <sysmem/sysevent.h>
 #include "sysevent_internal.h"
 
 /* a handler's list link */

@@ -7,10 +7,10 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/cpu.h>
-#include "sce/sysmem.h"
-#include "sce/sysevent.h"
-#include <sce/spi_regs.h>
-#include "sce/lcd.h"
+#include <sysmem/sysmem.h>
+#include <sysmem/sysevent.h>
+#include <lowio/spi_regs.h>
+#include <lcd/lcd.h>
 
 #if FW_VERSION >= 0x04000000
 #include "data-4.00-DEBUGGER.h"
@@ -19,7 +19,7 @@
 #else
 #include "data-3.630.011-DEBUGGER.h"
 #endif
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 
 extern int sceKernelDelayThread(unsigned usec);
 extern int ksceKernelSearchModuleByName(const char *name);

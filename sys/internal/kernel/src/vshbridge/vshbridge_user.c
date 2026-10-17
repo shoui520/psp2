@@ -6,7 +6,7 @@
  * separate kernel stack (ksceKernelRunWithStack).
  */
 #include <psp2kern/types.h>
-#include "sce/vshbridge_imports.h"
+#include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"
 #include <alloca.h>

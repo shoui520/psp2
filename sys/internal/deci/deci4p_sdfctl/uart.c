@@ -6,8 +6,8 @@
 
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/uart.h>
-#include "sce/debug.h"
-#include "sce/intrmgr.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
 #include "sdfctl.h"
 
 #define UART_PORT		1

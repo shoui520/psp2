@@ -4,7 +4,7 @@
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysmem/memtype.h>
-#include <sce/dbgsdio.h>
+#include <dbgsdio/dbgsdio.h>
 #include "dfmgr_internal.h"
 
 #define SDIO_CHANNEL	0

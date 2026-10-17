@@ -5,9 +5,9 @@
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/utils.h>
-#include <sce/error.h>
-#include <sce/sha2.h>
-#include <sce/aes.h>
+#include <kernel/error.h>
+#include "sha2.h"
+#include <sysmem/aes.h>
 #include <string.h>
 #include "fw.h"
 #include "sha1_internal.h"

@@ -8,15 +8,15 @@
  * interrupt handlers fill them.
  */
 
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/debug.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include "fw.h"
 #include "usbd_internal.h"
 

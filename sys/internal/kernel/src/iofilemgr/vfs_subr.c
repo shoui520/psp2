@@ -4,8 +4,8 @@
  */
 
 #include "iofilemgr_internal.h"
-#include <sce/mutex.h>
-#include "sce/atomic.h"
+#include <threadmgr/mutex.h>
+#include <sysmem/atomic.h>
 
 extern int vfsGetMutexInfo(SceUID uid, ThreadmgrMutexInfo *info)
 	__asm__("ksceKernelGetMutexInfo");

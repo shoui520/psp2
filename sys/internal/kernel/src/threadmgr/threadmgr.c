@@ -1,18 +1,18 @@
 /* threadmgr.c */
 #include "private.h"
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "priority_change.h"
 #include "scheduler.h"
 #include "syscall_context.h"
 #include "timer.h"
 #include "uid_waitable.h"
 #include <string.h>
-#include "sce/intrmgr.h"
-#include "sce/sysroot.h"
-#include "sce/sysroot_threadmgr.h"
-#include "sce/error.h"
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/sysroot_threadmgr.h>
+#include <kernel/error.h>
 #include "event.h"
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include "fast_mutex.h"

@@ -1,7 +1,7 @@
 /* QMI command request completion callbacks. */
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/gps.h>
+#include <gps/gps.h>
 #include "bbcmd.h"
 #include "qmi_backend.h"
 #include "qmi_gps_report.h"

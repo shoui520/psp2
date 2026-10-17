@@ -1,7 +1,7 @@
 /* Aimgr syscalls: the OpenPSID for user processes. */
 #include "ssmgr_internal.h"
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
 

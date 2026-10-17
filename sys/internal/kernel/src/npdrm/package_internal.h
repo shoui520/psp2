@@ -5,9 +5,9 @@
 #include <stdint.h>
 #include <psp2/dmac5.h>
 #include <psp2common/npdrm.h>
-#include <sce/aes.h>
-#include <sce/npdrm_package.h>
-#include <sce/rsa.h>
+#include <sysmem/aes.h>
+#include <npdrm/npdrm_package.h>
+#include <marlin_hci/rsa.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {

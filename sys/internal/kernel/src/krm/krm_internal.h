@@ -4,16 +4,16 @@
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include "sce/fast_mutex.h"
-#include "sce/debug.h"
-#include "sce/syscall.h"
-#include "sce/aes.h"
+#include <threadmgr/fast_mutex.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/aes.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/utils.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/rtc.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 
 /* Name unknown: driver-owned CBC chaining state after the compact schedule. */
 typedef struct KrmAesCbcContext {

@@ -1,4 +1,4 @@
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "buffer.h"
 
 SceUID marlinMemBlockId;

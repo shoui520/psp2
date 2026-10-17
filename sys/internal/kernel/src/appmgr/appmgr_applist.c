@@ -1,7 +1,7 @@
 /* Application-list storage. */
 
-#include <sce/debug.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"

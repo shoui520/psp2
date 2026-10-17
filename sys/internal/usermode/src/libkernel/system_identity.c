@@ -1,4 +1,4 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2/types.h>
 #include <psp2/kernel/openpsid.h>
 #include <psp2/kernel/rng.h>

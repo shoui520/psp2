@@ -8,11 +8,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/sysmem.h"
-#include "sce/threadmgr.h"
-#include "sce/error.h"
-#include "sce/usbstorvstor.h"
-#include "sce/syscall.h"
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <kernel/error.h>
+#include "usbstorvstor.h"
+#include <intrmgr/syscall.h>
 
 /* Original VStor error names are absent from the SDK. */
 #define VSTOR_ERROR_ARGUMENT ((int)0x80244103)

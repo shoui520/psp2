@@ -4,7 +4,7 @@
  */
 
 #include "processmgr_internal.h"
-#include <sce/process_budget.h>
+#include <processmgr/process_budget.h>
 
 /* sceKernelGetBudgetInfo's output */
 /* SceKernelBudgetInfo.part[]: the partitions of a budget */

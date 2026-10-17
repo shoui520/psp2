@@ -2,8 +2,8 @@
 #include "sdfmgr_internal.h"
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/dipsw.h>
-#include <sce/aes.h>
-#include <sce/qafmgr.h>
+#include <sysmem/aes.h>
+#include <sysmem/qafmgr.h>
 #include <stdio.h>
 
 typedef struct DcmpStatusHeader {

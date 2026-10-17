@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/dipsw.h>
 #include <string.h>
 #include "gpucoredump.h"
-#include "sce/gpucoredump_es4_imports.h"
+#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 #define GPU_COREDUMP_NAME		"SceGpuCoreDump"
 

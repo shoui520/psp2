@@ -8,9 +8,9 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/iftu.h>
-#include <sce/iftu_regs.h>
-#include <sce/sysevent.h>
+#include <lowio/iftu.h>
+#include <lowio/iftu_regs.h>
+#include <sysmem/sysevent.h>
 
 #define IFTU_PLANE_COUNT	4	/* IFTU0 A/B, IFTU1 A/B */
 #define IFTU_CONVERTER		4	/* IFTU2 */

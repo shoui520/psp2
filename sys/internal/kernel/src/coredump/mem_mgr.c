@@ -3,7 +3,7 @@
 #include <psp2kern/types.h>
 #include <stddef.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 typedef struct CoredumpLargeAllocation {
 	SceUID blockId;

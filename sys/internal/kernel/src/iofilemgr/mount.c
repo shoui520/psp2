@@ -1,5 +1,5 @@
 /* SceIofilemgr's mount daemon and inherited mount events (Sony's mount.c). */
-#include <sce/event.h>
+#include <threadmgr/event.h>
 #include "iofilemgr_internal.h"
 
 /* Names unknown: the mount daemon's command and mount-point records. */

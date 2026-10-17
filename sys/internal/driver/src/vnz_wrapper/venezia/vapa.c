@@ -1,5 +1,5 @@
 /* Sony venezia/vapa.c: codec memory address translation. */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/cpu.h>
 #include "venezia_internal.h"

@@ -1,7 +1,7 @@
 /* Descriptive source name: the original has no source-file debug records. */
 #include "mgvideo_private.h"
-#include <sce/processmgr_imports.h>
-#include <sce/usbstormg.h>
+#include <processmgr/processmgr_imports.h>
+#include <usbstormg/usbstormg.h>
 
 /* Pinned SDK declaration; its full proc_event.h conflicts with unrelated APIs. */
 int ksceKernelUnregisterProcEventHandler(SceUID uid);

@@ -1,6 +1,6 @@
 /* Crashdump segment writer. */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "seg_internal.h"
 
 extern SceSize kernelDumpPayloadSize;

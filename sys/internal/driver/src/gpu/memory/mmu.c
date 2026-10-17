@@ -1,8 +1,8 @@
 /* Native GPU page-table pool and entry-validation prerequisites. */
 #include "../../gpu_es4/srvkm/gpu-mmu.h"
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/lowio/pervasive.h>
 

@@ -1,7 +1,7 @@
 /* Registered-device persistence; original source filename unavailable. */
 #include <stdio.h>
 #include <string.h>
-#include <sce/regmgr.h>
+#include <regmgr/regmgr.h>
 #include "bt_internal.h"
 
 uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,

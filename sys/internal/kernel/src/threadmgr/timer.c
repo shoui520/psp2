@@ -8,12 +8,12 @@
  */
 
 #include <string.h>
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/intrmgr.h"
-#include "sce/sysmem.h"
-#include "sce/timer_regs.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysmem.h>
+#include <systimer/timer_regs.h>
 #include <psp2kern/kernel/sysmem.h>
 #include "scheduler.h"
 #include "timer.h"

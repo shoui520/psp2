@@ -9,11 +9,11 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/heap.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/idstorage.h>
-#include <sce/idstorage_imports.h>
-#include <sce/mbr.h>
-#include <sce/sysevent.h>
-#include <sce/threadmgr.h>
+#include <idstorage/idstorage.h>
+#include <idstorage/idstorage_imports.h>
+#include <sdstor/mbr.h>
+#include <sysmem/sysevent.h>
+#include <threadmgr/threadmgr.h>
 
 enum {
 	LEAF_SIZE = 512,

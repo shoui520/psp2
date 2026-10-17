@@ -1,7 +1,7 @@
 #ifndef UPDATE_MGR_OBJECTS_H
 #define UPDATE_MGR_OBJECTS_H
 
-#include <sce/fast_mutex_object.h>
+#include <threadmgr/fast_mutex_object.h>
 #include "update_internal.h"
 
 typedef struct SceSblUpdateMgrNode {

@@ -3,8 +3,8 @@
  */
 
 #include <psp2kern/kernel/utils.h>
-#include <sce/error.h>
-#include <sce/aes.h>
+#include <kernel/error.h>
+#include <sysmem/aes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

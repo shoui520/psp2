@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include <sce/shellsvc.h>
+#include <vsh/lowlayer/src/shell_svc/shellsvc.h>
 
 static int sendDialogRequest(uint32_t operation,
 			     const struct ShellSvcBuffer *inputs, uint32_t inputCount,

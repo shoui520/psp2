@@ -5,7 +5,7 @@
  * changes them.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock_obj_module.h"

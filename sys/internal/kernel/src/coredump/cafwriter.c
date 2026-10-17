@@ -1,7 +1,7 @@
 /* cafWriter destination operations. */
 
 #include "writer_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern int oalCafSegmentTransform(SceUID context, const void *source,
 	void *destination, SceSize size);

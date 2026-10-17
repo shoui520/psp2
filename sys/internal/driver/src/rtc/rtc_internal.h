@@ -6,9 +6,9 @@
 #define RTC_INTERNAL_H
 
 #include <psp2kern/types.h>
-#include "sce/excpmgr_cpu.h"
-#include "sce/rtc.h"
-#include "sce/syscon_scratchpad.h"
+#include <excpmgr/excpmgr_cpu.h>
+#include <rtc/rtc.h>
+#include <syscon/syscon_scratchpad.h>
 
 #define RTC_AUX_CLOCKS		8
 

@@ -1,7 +1,7 @@
 /* Sony: path_utility.c */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 
 extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);

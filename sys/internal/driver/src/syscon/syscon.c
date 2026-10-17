@@ -4,8 +4,8 @@
  * Packet transport, notifications, startup and the command wrappers.
  */
 
-#include <sce/sysmem.h>
-#include <sce/moncall.h>
+#include <sysmem/sysmem.h>
+#include <excpmgr/moncall.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -13,19 +13,19 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/pervasive.h>
-#include <sce/barrier.h>
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/intrmgr.h>
-#include <sce/sysevent.h>
-#include <sce/sysroot.h>
-#include <sce/threadmgr.h>
+#include <sysmem/barrier.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysevent.h>
+#include <sysmem/sysroot.h>
+#include <threadmgr/threadmgr.h>
 
 #include "syscon_private.h"
 
 /* Sony's debug build is fortified */
 #if FW_DEBUG
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 struct SysconControl s_sysconControl;

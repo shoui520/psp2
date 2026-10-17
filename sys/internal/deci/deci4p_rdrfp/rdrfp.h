@@ -14,8 +14,8 @@
 #include <psp2kern/types.h>
 #include <psp2kern/io/dirent.h>
 #include <psp2kern/io/stat.h>
-#include "sce/debug.h"
-#include "sce/deci4p.h"
+#include <sysmem/debug.h>
+#include <deci4p_dfmgr/deci4p.h>
 
 /* a doubly linked list; an unlinked node points at itself */
 typedef struct RdrfpLink {

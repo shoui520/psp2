@@ -3,11 +3,11 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/deci4p.h>
-#include <sce/netps.h>
-#include <sce/modulemgr_debugger.h>
-#include <sce/sysroot_dbgp.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <deci4p_dfmgr/deci4p.h>
+#include <net_ps/netps.h>
+#include <modulemgr/modulemgr_debugger.h>
+#include <sysmem/sysroot_dbgp.h>
 
 typedef struct DbgpPrefix {
 	SceDeci4pHeader hdr;

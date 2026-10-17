@@ -34,13 +34,13 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem.h>
-#include "sce/debug.h"
-#include "sce/intrmgr_tzs.h"
-#include "sce/pervasive_regs.h"
-#include "sce/mailbox_regs.h"
-#include "sce/uart_regs.h"
-#include "sce/grab_regs.h"
-#include "sce/emc_regs.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr_tzs.h>
+#include <lowio/pervasive_regs.h>
+#include <lowio/mailbox_regs.h>
+#include <lowio/uart_regs.h>
+#include <compat/grab_regs.h>
+#include "emc_regs.h"
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)

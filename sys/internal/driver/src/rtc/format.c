@@ -1,6 +1,6 @@
 /*
  * SceRtc text forms of a tick: RFC 2822 and RFC 3339 output, and parsing
- * of RFC 3339, RFC 2822 and asctime() dates (sce/rtc_parse.h, shared with
+ * of RFC 3339, RFC 2822 and asctime() dates (rtc/rtc_parse.h, shared with
  * the user library).
  */
 
@@ -13,7 +13,7 @@
 
 int rtcGetTickUnchecked(const SceDateTime *time, SceRtcTick *tick);
 
-#include "sce/rtc_parse.h"
+#include <rtc/rtc_parse.h>
 
 static const char s_rtcDayAbbr[] = "SunMonTueWedThuFriSat";
 static const char s_rtcMonthAbbr[] = "JanFebMarAprMayJunJulAugSepOctNovDec";

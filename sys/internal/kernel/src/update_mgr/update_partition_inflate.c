@@ -1,4 +1,4 @@
-#include <sce/zlib.h>
+#include <post_ss_mgr/zlib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_objects.h"
 

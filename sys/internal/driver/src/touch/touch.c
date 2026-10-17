@@ -17,14 +17,14 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/processmgr.h>
-#include "sce/syscon.h"
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <sce/motion_dummy.h>
-#include <sce/processmgr.h>
-#include <sce/sysevent.h>
-#include <sce/syscall.h>
-#include <sce/touch_dummy.h>
-#include <sce/touch.h>
+#include <motion_dummy/motion_dummy.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysevent.h>
+#include <intrmgr/syscall.h>
+#include <touch_dummy/touch_dummy.h>
+#include <touch/touch.h>
 
 #define TOUCH_ERROR(n)		((int)(0x80350000U | (n)))
 #define TOUCH_ERROR_BUSY	TOUCH_ERROR(0x103)

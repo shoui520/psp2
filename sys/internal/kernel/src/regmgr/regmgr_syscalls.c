@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
-#include <sce/error.h>
+#include <kernel/error.h>
 #include "regmgr_internal.h"
 
 #define REGMGR_SYS_KEYS_MAX	32	/* names unknown */

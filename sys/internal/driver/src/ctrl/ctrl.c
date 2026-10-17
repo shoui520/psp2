@@ -1,18 +1,18 @@
 /* Controller sampling, per-process rings and remote-control notification. */
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "ctrl_internal.h"
 #include <psp2kern/kernel/processmgr.h>
-#include <sce/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/acmgr.h>
-#include <sce/processmgr.h>
-#include <sce/debug.h>
-#include <sce/sysevent.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysevent.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <string.h>
-#include <sce/threadmgr.h>
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 
 struct ctrlStorage ctrlStorage = {

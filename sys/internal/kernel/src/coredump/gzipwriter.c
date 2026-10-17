@@ -1,7 +1,7 @@
 /* gzipWriter destination operations. */
 
 #include "writer_internal.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 extern void *memMgrAlloc(SceSize size);
 extern int memMgrFreeForWriter(void *allocation);

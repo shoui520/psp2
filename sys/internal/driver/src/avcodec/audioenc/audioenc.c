@@ -1,9 +1,9 @@
 /* SceAudioenc control and information handling (Sony audioenc/audioenc.c). */
 #include <psp2/audioenc.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/debug.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
 #include <stdint.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>

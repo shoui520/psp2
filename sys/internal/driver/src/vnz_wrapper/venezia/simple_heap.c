@@ -1,5 +1,5 @@
 /* Sony venezia/simple_heap.c: fixed-block communication-memory heap. */
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "venezia_internal.h"
 
 void _sceVeneziaSimpleHeapInit(void *base, SceSize size, VeneziaSimpleHeap *heap,

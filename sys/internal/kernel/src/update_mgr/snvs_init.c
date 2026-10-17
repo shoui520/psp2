@@ -1,5 +1,5 @@
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "snvs.h"
 

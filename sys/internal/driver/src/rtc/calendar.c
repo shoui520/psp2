@@ -1,5 +1,5 @@
 /*
- * SceRtc calendar arithmetic (sce/rtc_calendar.h, shared with the user
+ * SceRtc calendar arithmetic (rtc/rtc_calendar.h, shared with the user
  * library). The kernel exports the functions by NID; the user library's
  * names map onto them here.
  */
@@ -33,4 +33,4 @@
 #define sceRtcTickAddYears		SceRtcForDriver_85F3026C
 #define sceRtcCompareTick		SceRtcForDriver_0EBB3F12
 
-#include "sce/rtc_calendar.h"
+#include <rtc/rtc_calendar.h>

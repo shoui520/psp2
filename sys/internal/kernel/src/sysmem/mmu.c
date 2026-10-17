@@ -8,16 +8,16 @@
  * opens the page-table domain for that one write.
  */
 
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include "fw.h"
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "mmu.h"
 #include "cpu_irq.h"
-#include <sce/barrier.h>
+#include <sysmem/barrier.h>
 
 int ksceKernelCpuSuspendIntr(void);
 int ksceKernelCpuResumeIntr(int flags);

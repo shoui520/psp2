@@ -2,7 +2,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 #include "codepage_tables.h"
 

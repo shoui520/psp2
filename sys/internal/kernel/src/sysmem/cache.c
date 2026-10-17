@@ -5,12 +5,12 @@
  * caller asks for it; the "ForL1WBWA" variants maintain L1 only.
  */
 
-#include <sce/cp15.h>
+#include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include "fw.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 
 /* what the range functions do */
 #define CACHE_RANGE_SKIP_UNCACHED	0x01	/* leave uncached ranges alone */

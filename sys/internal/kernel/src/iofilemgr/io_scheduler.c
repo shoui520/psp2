@@ -6,7 +6,7 @@
  * to the dispatcher and waits for its result.
  */
 
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
 
 SceUID g_ioSchedHeap;

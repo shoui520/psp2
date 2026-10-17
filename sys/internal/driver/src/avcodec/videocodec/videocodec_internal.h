@@ -2,9 +2,9 @@
 
 #include <psp2/types.h>
 #include <psp2kern/types.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/venezia_debug.h>
-#include <sce/avcdec.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <vnz_wrapper/venezia_debug.h>
+#include <avcdec.h>
 #include <stddef.h>
 
 struct M4vdecPicture;

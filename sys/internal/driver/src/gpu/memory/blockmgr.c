@@ -1,7 +1,7 @@
 /* GPU memblocks: ownership, shadow mappings and the backing-range heaps. */
 #include <psp2kern/kernel/sysmem/uid_puid.h>
-#include <sce/debug.h>
-#include <sce/sysmem.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 

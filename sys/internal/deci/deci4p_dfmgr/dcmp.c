@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "dfmgr_internal.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 static DcmpCB s_dcmp[DFMGR_LINK_COUNT];
 

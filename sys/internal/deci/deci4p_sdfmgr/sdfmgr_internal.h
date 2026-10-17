@@ -1,11 +1,11 @@
 /* SDfMgr state shared by C and the exception/interrupt entry veneers. */
 #pragma once
-#include "sce/cp15.h"
+#include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <sce/intrmgr.h>
-#include <sce/sdfmgr.h>
+#include <intrmgr/intrmgr.h>
+#include <deci4p_sdfmgr/sdfmgr.h>
 
 typedef void (*SdfMgrHook)(void);
 typedef void (*SdfMgrControl)(int id);

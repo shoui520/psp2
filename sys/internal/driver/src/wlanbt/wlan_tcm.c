@@ -2,10 +2,10 @@
 #include "wlanbt_internal.h"
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <sce/threadmgr.h>
-#include <sce/wlanbt.h>
+#include <threadmgr/threadmgr.h>
+#include <wlanbt/wlanbt.h>
 #if FW_DEBUG
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 /* 802.11b rates in 500 kb/s units; 1 and 2 Mb/s are basic rates. */

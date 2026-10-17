@@ -1,5 +1,5 @@
-#include <sce/sysmem.h>
-#include <sce/sm_comm.h>
+#include <sysmem/sysmem.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/cpu/cache.h>
 #include "update_internal.h"
 #include "update_packet.h"

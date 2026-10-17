@@ -1,4 +1,4 @@
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2common/kernel/modulemgr.h>
 
 struct ModuleCallOptions {

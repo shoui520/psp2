@@ -6,9 +6,9 @@
 #include <psp2common/net.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <sce/netdrv.h>
+#include <net_ps/netdrv.h>
 
-#include <sce/wlanbt.h>
+#include <wlanbt/wlanbt.h>
 struct SdifSdioContext;
 
 typedef struct WlanInformationElement {

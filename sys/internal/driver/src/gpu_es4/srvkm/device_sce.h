@@ -8,7 +8,7 @@
 #define DEVICE_SCE_H
 
 #include "sce_ddk_port.h"
-#include <sce/pvrsrv_misc.h>
+#include <gpu/pvrsrv_misc.h>
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/include4/sgxscript.h"
 
 struct ResourceContext;

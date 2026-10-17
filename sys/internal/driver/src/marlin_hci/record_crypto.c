@@ -1,6 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 
 MarlinBuffer *MarlinGetRecordSecret(void *allocator);
 int MarlinSha256Digest(const void *data, unsigned int size, void *digest);

@@ -11,8 +11,8 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "sce/deci4p.h"
-#include "sce/error.h"
+#include <deci4p_dfmgr/deci4p.h>
+#include <kernel/error.h>
 
 #define TTYP_CHANNELS		8
 #define TTYP_RESOURCES		3

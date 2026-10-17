@@ -1,8 +1,8 @@
 /* Audio input capture implementation; original source filename unavailable. */
 #include "audioin_internal.h"
-#include <sce/cp15.h>
-#include <sce/processmgr.h>
-#include <sce/threadmgr.h>
+#include <sysmem/cp15.h>
+#include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2/audioin.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>

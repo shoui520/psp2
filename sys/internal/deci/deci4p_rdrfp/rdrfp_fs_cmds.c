@@ -5,8 +5,8 @@
  */
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
-#include "sce/deci4p_fs.h"
-#include "sce/threadmgr.h"
+#include <deci4p_drfp/deci4p_fs.h>
+#include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
 #define SCE_ERROR_ERRNO_EACCES		0x8001000d

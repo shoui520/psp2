@@ -4,15 +4,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include "sce/error.h"
-#include "sce/threadcb.h"
-#include "sce/threadmgr_debugger.h"
-#include "sce/threadmgr_vfp.h"
-#include <sce/threadmgr_callback.h>
-#include "sce/process.h"
-#include "sce/sysmem.h"
-#include "sce/timer_regs.h"
-#include "sce/excpmgr.h"
+#include <kernel/error.h>
+#include <threadmgr/threadcb.h>
+#include <threadmgr/threadmgr_debugger.h>
+#include <threadmgr/threadmgr_vfp.h>
+#include <threadmgr/threadmgr_callback.h>
+#include <processmgr/process.h>
+#include <sysmem/sysmem.h>
+#include <systimer/timer_regs.h>
+#include <excpmgr/excpmgr.h>
 
 #include "private_errors.h"
 

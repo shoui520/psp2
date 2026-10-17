@@ -1,31 +1,31 @@
 /* Sysroot state, descriptor and shared time services. */
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/kbl_param.h>
-#include <sce/timer_regs.h>
+#include <kernel_boot_loader/kbl_param.h>
+#include <systimer/timer_regs.h>
 #include <psp2kern/kernel/cpu/corelock.h>
 #include "fw.h"
 #include <psp2kern/coredump.h>
-#include <sce/debug.h>
-#include <sce/error.h>
-#include <sce/threadcb.h>
-#include <sce/sysroot_processmgr.h>
-#include <sce/sysroot_modulemgr.h>
-#include <sce/sysroot_pamgr.h>
-#include <sce/sysroot_dfmgr.h>
-#include <sce/sysroot_hid.h>
-#include <sce/sysroot_bt.h>
-#include <sce/sysroot_acmgr.h>
-#include <sce/sysroot_process_events.h>
-#include <sce/sysroot_dbgp.h>
-#include <sce/sysroot_threadmgr.h>
-#include <sce/sysroot_init.h>
-#include <sce/sysroot_netps.h>
-#include <sce/sysroot_appmgr.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <threadmgr/threadcb.h>
+#include <sysmem/sysroot_processmgr.h>
+#include <sysmem/sysroot_modulemgr.h>
+#include <sysmem/sysroot_pamgr.h>
+#include <sysmem/sysroot_dfmgr.h>
+#include <sysmem/sysroot_hid.h>
+#include <sysmem/sysroot_bt.h>
+#include <sysmem/sysroot_acmgr.h>
+#include <sysmem/sysroot_process_events.h>
+#include <sysmem/sysroot_dbgp.h>
+#include <sysmem/sysroot_threadmgr.h>
+#include <sysmem/sysroot_init.h>
+#include <sysmem/sysroot_netps.h>
+#include <sysmem/sysroot_appmgr.h>
 #include "sysmem_boot.h"
 #if SYSMEM_NSKBL
 #include <string.h>
-#include <sce/kernel_boot_param.h>
+#include <kernel_boot_loader/kernel_boot_param.h>
 #endif
 
 

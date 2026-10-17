@@ -10,8 +10,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/threadmgr_event.h>
-#include <sce/event.h>
+#include <threadmgr/threadmgr_event.h>
+#include <threadmgr/event.h>
 #include "private.h"
 #include "uid_waitable.h"
 #include "mutex.h"

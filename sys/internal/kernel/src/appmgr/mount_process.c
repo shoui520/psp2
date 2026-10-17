@@ -4,11 +4,11 @@
 #include "process_content_internal.h"
 #include "savedata_params_internal.h"
 #include "param_sfo.h"
-#include <sce/sysmem.h>
-#include <sce/threadmgr.h>
-#include <sce/suspend.h>
-#include <sce/rtc.h>
-#include <sce/regmgr.h>
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/suspend.h>
+#include <rtc/rtc.h>
+#include <regmgr/regmgr.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>

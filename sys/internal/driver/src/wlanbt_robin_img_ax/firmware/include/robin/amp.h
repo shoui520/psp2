@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
-#include <sce/wlanbt_protocol.h>
+#include <wlanbt/wlanbt_protocol.h>
 
 #define AMP_PHYSICAL_LINKS	2
 #define AMP_LOGICAL_LINKS	2

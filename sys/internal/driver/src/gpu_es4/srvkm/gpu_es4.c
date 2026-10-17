@@ -7,7 +7,7 @@
 
 #include "skeleton.h"
 #include "sce_ddk_port.h"
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/suspend.h>
 #include <string.h>

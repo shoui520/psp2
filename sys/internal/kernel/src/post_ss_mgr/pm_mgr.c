@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/kbl/kbl.h>
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 
 #define PM_SM_PATH		"os0:sm/pm_sm.self"

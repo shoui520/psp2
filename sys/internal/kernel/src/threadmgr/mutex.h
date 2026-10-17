@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <sce/mutex.h>
+#include <threadmgr/mutex.h>
 #include "private.h"
 #include "uid_waitable.h"
 #include "priority_change.h"

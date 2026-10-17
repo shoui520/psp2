@@ -1,13 +1,13 @@
 #include "dmac5mgr.h"
 #include "ssmgr_internal.h"
-#include <sce/debug.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
 #include <psp2/dmac5.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/dmac_regs.h>
+#include <dmacmgr/dmac_regs.h>
 
 SceDmac5KeyringRegisters *dmacKeyringRegisters;
 SceKernelFastMutex dmacKeyringMutex;

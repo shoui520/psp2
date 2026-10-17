@@ -7,12 +7,12 @@
 #include <psp2kern/kernel/sysroot.h>
 #if FW_DEBUG
 #define SCE_BUSERROR_TABLES_ONLY
-#include "sce/buserror_es3.h"
+#include "buserror_es3.h"
 #undef SCE_BUSERROR_TABLES_ONLY
-#include "sce/debug.h"
-#include "sce/intrmgr.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include "buserror_smc.h"
 
 #include "buserror_text.h"
@@ -231,11 +231,11 @@ int busErrorIntrHandler(int code, void *arg)
 }
 
 #else
-#include "sce/buserror_types.h"
-#include "sce/debug.h"
-#include "sce/intrmgr.h"
-#include "sce/sysmem.h"
-#include "sce/sysroot.h"
+#include <buserror/buserror_types.h>
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include "buserror_smc.h"
 
 int busErrorIntrHandler(int code, void *arg)

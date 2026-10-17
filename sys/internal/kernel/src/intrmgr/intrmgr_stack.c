@@ -1,6 +1,6 @@
 /* Interrupt nesting stack guards and CPU entry configuration. */
 #include "intrmgr.h"
-#include <sce/moncall.h>
+#include <excpmgr/moncall.h>
 
 /* name unknown: write the overflow magic below every nesting stack. */
 void __attribute__((noinline)) initStackGuards(unsigned int magic)

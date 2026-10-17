@@ -6,7 +6,7 @@
 #include "perproc_sce.h"
 #include "sync_sce.h"
 #include "render_sce.h"
-#include <sce/sgxmkif_sce.h>
+#include <gpu/sgxmkif_sce.h>
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
 #include <stddef.h>
 #include <string.h>

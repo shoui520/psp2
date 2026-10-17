@@ -1,6 +1,6 @@
 /* Shared event-flag wait objects. */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "appmgr_internal_util.h"
 

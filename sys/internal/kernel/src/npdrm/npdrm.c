@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
-#include <sce/rtc.h>
+#include <rtc/rtc.h>
 #include <string.h>
 #include <stdio.h>
 

@@ -7,8 +7,8 @@
 #include <string.h>
 #include <psp2common/kernel/threadmgr.h>
 #include "private.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_NAME_SIZE		0x20

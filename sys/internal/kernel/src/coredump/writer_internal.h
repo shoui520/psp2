@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <sce/zlib.h>
+#include <post_ss_mgr/zlib.h>
 #include "oal_internal.h"
 
 typedef struct Writer Writer;

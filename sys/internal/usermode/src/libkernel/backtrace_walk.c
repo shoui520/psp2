@@ -1,7 +1,7 @@
 #include "backtrace_walk.h"
 #include "backtrace_unwind.h"
 #include "exidx.h"
-#include "sce/error.h"
+#include <kernel/error.h>
 
 struct BacktraceInstructionReader {
 	const uint32_t *cursor;

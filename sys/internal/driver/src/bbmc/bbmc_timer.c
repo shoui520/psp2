@@ -2,9 +2,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/debug.h>
-#include <sce/fast_mutex_object.h>
-#include <sce/threadmgr.h>
+#include <sysmem/debug.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <threadmgr/threadmgr.h>
 #include "bbmc_memory.h"
 
 typedef struct BbmcTimerNode {

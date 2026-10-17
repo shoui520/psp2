@@ -5,9 +5,9 @@
  * is reached with an SGI and a request the caller waits on.
  */
 
-#include "sce/cpu.h"
-#include "sce/debug.h"
-#include "sce/sysmem.h"
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/sysmem.h>
 #include "scheduler.h"
 #include "syscall_context.h"
 

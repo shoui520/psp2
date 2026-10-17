@@ -8,11 +8,11 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include "sce/debug.h"
-#include "sce/suspend.h"
-#include "sce/sysroot.h"
+#include <sysmem/debug.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
 #include "sdfctl.h"
-#include <sce/deci4p_memory.h>
+#include <deci4p_sdfmgr/deci4p_memory.h>
 
 #define SDFCTL_PDS		2
 

@@ -1,6 +1,6 @@
 /* RTL8152 USB Ethernet driver. Private function names are unknown. */
 #include "rtl_internal.h"
-#include "sce/sysevent_ids.h"
+#include <sysmem/sysevent_ids.h>
 
 struct RtlAdapter rtlAdapter;
 static unsigned int suspendRequested, suspending;

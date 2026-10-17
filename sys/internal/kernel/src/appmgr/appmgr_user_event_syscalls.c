@@ -1,6 +1,6 @@
 /* User-memory copies for application system-event delivery. */
 
-#include <sce/syscall_copy.h>
+#include <intrmgr/syscall_copy.h>
 
 typedef struct AppmgrSystemEventArguments {
 	SceUInt32 reserved[4];

@@ -13,15 +13,15 @@
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/rtc.h>
-#include "sce/debug.h"
-#include "sce/error.h"
-#include "sce/iofilemgr.h"
-#include "sce/modulemgr.h"
-#include "sce/sysevent.h"
-#include "sce/syscall.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
+#include <iofilemgr/iofilemgr.h>
+#include <modulemgr/modulemgr.h>
+#include <sysmem/sysevent.h>
+#include <intrmgr/syscall.h>
 
 #define HISTORY_ENTRIES		10
 #define HISTORY_PATH		"vd0:history/data.bin"

@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
 
 #define SCE_PFS_ERROR_REQUEST_BUSY	0x80140609	/* name unknown */

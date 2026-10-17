@@ -14,9 +14,9 @@
 #include <psp2common/net.h>
 #include <stddef.h>
 #include <string.h>
-#include "sce/netdrv.h"
-#include "sce/usb_ether_rtl.h"
-#include "sce/debug.h"
+#include <net_ps/netdrv.h>
+#include "usb_ether_rtl.h"
+#include <sysmem/debug.h>
 #include "fw.h"
 
 /* Error names and private structure names are unknown. */

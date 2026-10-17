@@ -1,9 +1,9 @@
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/io/stat.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <sce/syscon.h>
-#include <sce/sysstatemgr.h>
+#include <syscon/syscon.h>
+#include <sysstatemgr/sysstatemgr.h>
 #include "update_internal.h"
 
 int SceSysconForDriver_D2F456DC(unsigned char *information);

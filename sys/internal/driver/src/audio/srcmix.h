@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sce/audio_regs.h>
-#include <sce/dmacmgr.h>
+#include "audio_regs.h"
+#include <dmacmgr/dmacmgr.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 
 struct AudioCaptureSampleBlock {

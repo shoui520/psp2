@@ -1,7 +1,7 @@
 /* LIBRARY_INFO note. */
 
-#include <sce/debug.h>
-#include <sce/error.h>
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include "writer_internal.h"
 #include "seg_internal.h"

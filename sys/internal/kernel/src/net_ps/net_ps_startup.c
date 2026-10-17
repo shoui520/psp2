@@ -1,7 +1,7 @@
 /* SCE module startup; original source filename is unavailable. */
 
 #include "net_ps_internal.h"
-#include <sce/netps_gateway.h>
+#include <net_ps/netps_gateway.h>
 #include <string.h>
 
 extern struct NetDriver *gNetPsDriverHead;

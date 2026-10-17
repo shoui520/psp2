@@ -3,7 +3,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2common/kernel/threadmgr.h>
-#include "sce/threadmgr.h"
+#include <threadmgr/threadmgr.h>
 
 typedef struct CameraSensorRegister {
 	SceUInt16 address;

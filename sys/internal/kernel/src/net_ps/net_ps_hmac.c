@@ -3,10 +3,10 @@
  * outer key pad and reuses its SHA1 state when producing the final digest.
  */
 
-#include <sce/hmac.h>
+#include <libhmac.h>
 #include <string.h>
 #if FW_VERSION >= 0x04000000
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,

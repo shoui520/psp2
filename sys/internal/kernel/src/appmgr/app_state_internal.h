@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <sce/appmgr_launch.h>
+#include <appmgr/appmgr_launch.h>
 #include "appmgr_event.h"
 #include "appmgr_internal_util.h"
 #include "mount_holder_internal.h"

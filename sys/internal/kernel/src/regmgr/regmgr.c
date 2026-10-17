@@ -4,7 +4,7 @@
  * live in the registry files, in the NVS, or in the caches here.
  */
 
-#include <sce/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/excpmgr_cpu.h>
+#include <excpmgr/excpmgr_cpu.h>
 #include "regmgr_internal.h"
 
 #define REGMGR_DB_PATH		"os0:/kd/registry.db0"	/* names unknown */

@@ -12,16 +12,16 @@
 
 #include <psp2kern/types.h>
 #include <psp2common/kernel/threadmgr.h>
-#include "sce/sysmem.h"
-#include "sce/process.h"
-#include "sce/modulemgr_patch.h"
+#include <sysmem/sysmem.h>
+#include <processmgr/process.h>
+#include <modulemgr/modulemgr_patch.h>
 #include <psp2common/kernel/modulemgr.h>
 #include <psp2common/kernel/iofilemgr.h>
-#include "sce/module_library.h"
-#include "sce/debug.h"
-#include "sce/modulemgr_imports.h"
-#include <sce/modulemgr_control.h>
-#include <sce/sysroot_modulemgr.h>
+#include <modulemgr/module_library.h>
+#include <sysmem/debug.h>
+#include "modulemgr_imports.h"
+#include <modulemgr/modulemgr_control.h>
+#include <sysmem/sysroot_modulemgr.h>
 
 #define KERNEL_PID			0x10005
 
@@ -499,7 +499,7 @@ typedef struct PreloadModule {
 #define PRELOAD_DIPSW_D4		0x00000080
 #define PRELOAD_ERROR_SHIFT		28
 
-/* info of the library function a stub address calls (sce/sysroot_modulemgr.h) */
+/* info of the library function a stub address calls (sysmem/sysroot_modulemgr.h) */
 typedef struct ModulemgrStubInfo ModulemgrStubInfo;
 
 

@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/syscon.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/ctrl.h>
+#include <ctrl/ctrl.h>
 
 SceInt64 sceKernelGetSystemTimeWide(void);
 int ksceKernelPowerTick(int type);

@@ -5,7 +5,7 @@
 
 #include <psp2kern/types.h>
 #include "gpucoredump.h"
-#include "sce/gpucoredump_es4_imports.h"
+#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 
 /* name unknown: the area of the GPU address space an address is in */
 const char *gpuCoreDumpRangeName(SceUInt32 address)

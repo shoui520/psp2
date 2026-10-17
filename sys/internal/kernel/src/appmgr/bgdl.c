@@ -1,7 +1,7 @@
 /* Background-download queue storage and publication. */
 
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 

@@ -1,5 +1,5 @@
 /* Descriptive source name: the original library has no debug records. */
-#include <sce/rsa.h>
+#include <marlin_hci/rsa.h>
 
 int MarlinRsaHasRandomGenerator(void);
 void MarlinRsaFillNonzeroRandom(unsigned char *data, int size);

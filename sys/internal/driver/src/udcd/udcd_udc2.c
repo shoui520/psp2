@@ -9,11 +9,11 @@
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <string.h>
 #include <psp2kern/lowio/gpio.h>
-#include <sce/debug.h>
-#include <sce/intrmgr.h>
-#include <sce/threadmgr.h>
-#include <sce/usb_regs.h>
-#include "sce/udcd_imports.h"
+#include <sysmem/debug.h>
+#include <intrmgr/intrmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <usbd/usb_regs.h>
+#include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 
 /* controller commands (command register, with the endpoint in bits 4-7) */

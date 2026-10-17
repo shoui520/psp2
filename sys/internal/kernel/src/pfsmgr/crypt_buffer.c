@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <sce/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_CRYPT_BUF_POOLS		3

@@ -13,8 +13,8 @@
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include "sce/sysmem.h"
-#include "sce/debug.h"
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
 
 #include <psp2kern/kernel/proc_event.h>
 SceUID sceKernelGetProcessId(void);

@@ -3,7 +3,7 @@
  * locking another page releases the one held.
  */
 
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "pfsmgr_internal.h"
 
 void page_acc_init(ScePfsPageAcc *acc, ScePfsLru *lru, ScePfsLowerFile *lf, SceOff base)

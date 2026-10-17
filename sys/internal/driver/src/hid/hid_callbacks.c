@@ -3,7 +3,7 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2/kernel/threadmgr/thread.h>
-#include <sce/syscall.h>
+#include <intrmgr/syscall.h>
 #include <string.h>
 
 HidHintCallbacks hidMouseCallbacks;

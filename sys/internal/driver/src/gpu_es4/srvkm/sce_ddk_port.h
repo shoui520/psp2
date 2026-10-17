@@ -2,7 +2,7 @@
 #ifndef SCE_DDK_PORT_H
 #define SCE_DDK_PORT_H
 
-#include <sce/img_bool.h>
+#include <gpu/img_bool.h>
 
 typedef unsigned int IMG_UINT;
 typedef int IMG_INT;

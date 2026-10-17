@@ -9,8 +9,8 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "fw.h"
-#include "sce/debug.h"
-#include "sce/dtrace.h"
+#include <sysmem/debug.h>
+#include <dtrace/sce/dtrace.h>
 #include "../hdmi_internal.h"
 
 int sceKernelDelayThread(SceUInt32 usec);

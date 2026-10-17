@@ -2,8 +2,8 @@
 #define ROBIN_WLAN_H
 
 #include <stdint.h>
-#include <sce/wlanbt_protocol.h>
-#include <sce/ethernet.h>
+#include <wlanbt/wlanbt_protocol.h>
+#include <net_ps/ethernet.h>
 #include "robin/buffer.h"
 
 typedef struct WlanSnapHeader {

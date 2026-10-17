@@ -7,8 +7,8 @@
 #include "memory_sce.h"
 #include "kick_sce.h"
 #include "misc_sce.h"
-#include <sce/debug.h>
-#include <sce/gpucoredump_es4_imports.h>
+#include <sysmem/debug.h>
+#include <gpucoredump_es4/gpucoredump_es4_imports.h>
 #include <string.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 

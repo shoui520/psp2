@@ -12,11 +12,11 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
-#include "sce/sysmem.h"
-#include "sce/threadmgr.h"
-#include "sce/syscall.h"
-#include "sce/error.h"
-#include "sce/usbpspcm.h"
+#include <sysmem/sysmem.h>
+#include <threadmgr/threadmgr.h>
+#include <intrmgr/syscall.h>
+#include <kernel/error.h>
+#include "usbpspcm.h"
 
 /*
  * The SDK error index has no names for this range (0x802445xx); these are

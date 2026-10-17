@@ -3,13 +3,13 @@
 
 #include <psp2/types.h>
 #include <psp2/net/net.h>
-#include <sce/netdrv.h>
-#include <sce/netps_gateway.h>
-#include <sce/netps_thread.h>
-#include <sce/netps_process.h>
-#include <sce/netps_resource.h>
-#include <sce/netps_driver.h>
-#include <sce/netps_dump.h>
+#include <net_ps/netdrv.h>
+#include <net_ps/netps_gateway.h>
+#include <net_ps/netps_thread.h>
+#include "netps_process.h"
+#include "netps_resource.h"
+#include "netps_driver.h"
+#include "netps_dump.h"
 #include "contrib/netbsd-3.0/sys/sys/callout.h"
 
 /* Sony's private names are unavailable; layouts follow complete owners. */

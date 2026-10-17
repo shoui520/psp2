@@ -1,4 +1,4 @@
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"
 #include "../bbcmd.h"

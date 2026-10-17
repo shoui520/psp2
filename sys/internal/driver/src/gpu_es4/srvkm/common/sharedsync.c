@@ -1,6 +1,6 @@
 /* SCE common/sharedsync.c: shared synchronization-handle registry. */
 #include "sce_ddk_port.h"
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include <stddef.h>
 
 typedef struct SharedSyncObject {

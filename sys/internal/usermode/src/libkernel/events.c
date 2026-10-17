@@ -1,5 +1,5 @@
 /* Event APIs and their compact syscall parameter records. */
-#include <sce/libkernel_backends.h>
+#include "libkernel_backends.h"
 #include <psp2/types.h>
 
 typedef struct SceKernelWaitEvent {

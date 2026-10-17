@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 

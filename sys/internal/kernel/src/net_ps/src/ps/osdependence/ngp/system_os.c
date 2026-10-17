@@ -11,12 +11,12 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <sce/threadmgr.h>
-#include <sce/debug.h>
-#include <sce/syscall.h>
-#include <sce/sysmem.h>
-#include <sce/sysroot_netps.h>
-#include <sce/sysevent.h>
+#include <threadmgr/threadmgr.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot_netps.h>
+#include <sysmem/sysevent.h>
 #include "net_ps_internal.h"
 #include "net_ps_atomic.h"
 

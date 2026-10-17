@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <arm_neon.h>
-#include <sce/syscall.h>
-#include <sce/threadmgr.h>
-#include <sce/processmgr.h>
-#include <sce/uid_class.h>
-#include <sce/debug.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/uid_class.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/proc_event.h>
@@ -17,7 +17,7 @@
 
 #include "audio_private.h"
 #include "audio_work.h"
-#include <sce/sysevent.h>
+#include <sysmem/sysevent.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include "alc.h"
 #include "equalizer.h"

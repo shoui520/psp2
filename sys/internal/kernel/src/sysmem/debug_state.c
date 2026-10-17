@@ -1,6 +1,6 @@
 /* Debug handler registration and assertion-level state. */
 #include <stdint.h>
-#include <sce/debug.h>
+#include <sysmem/debug.h>
 #include "sysmem_boot.h"
 
 volatile uint32_t s_assertLevel;

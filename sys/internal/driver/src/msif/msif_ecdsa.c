@@ -1,5 +1,5 @@
 /* Shared ECC implementation; the original source filename is unavailable. */
-#include <sce/msif_ecdsa.h>
+#include "msif_ecdsa.h"
 
 int MsifEcdsaVerifyCore(const struct MsifEcdsaSignature *signature,
 	const uint8_t *digest, const struct MsifEcdsaPoint *publicKey,

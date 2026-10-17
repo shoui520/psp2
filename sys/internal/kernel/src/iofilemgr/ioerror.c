@@ -7,7 +7,7 @@
  * clears it.
  */
 
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "iofilemgr_internal.h"
 
 SceClass g_ioErrorEventClass;

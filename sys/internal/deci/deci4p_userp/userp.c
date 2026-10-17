@@ -14,19 +14,19 @@
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "sce/sysmem.h"
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "sce/deci4p.h"
-#include "sce/sysroot.h"
-#include "sce/syscall.h"
-#include "sce/threadmgr.h"
+#include <deci4p_dfmgr/deci4p.h>
+#include <sysmem/sysroot.h>
+#include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 #include <stddef.h>
 
 /* Sony's debug build is fortified */
 #if FW_DEBUG
-#include <sce/fortify.h>
+#include <sysmem/fortify.h>
 #endif
 
 #define USERP_CHANNELS		16

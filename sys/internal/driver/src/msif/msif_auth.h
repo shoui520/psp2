@@ -2,8 +2,8 @@
 #define MSIF_AUTH_H
 
 #include "library.h"
-#include <sce/msif_ecdsa.h>
-#include <sce/aes.h>
+#include "msif_ecdsa.h"
+#include <sysmem/aes.h>
 
 union MsifEcdsaParameters {
 	struct {

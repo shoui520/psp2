@@ -1,8 +1,8 @@
 /* Application system events. */
 
 #include <stddef.h>
-#include <sce/debug.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2/appmgr.h>

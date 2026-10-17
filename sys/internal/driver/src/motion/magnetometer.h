@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <sce/motion_dev.h>
+#include <motion/motion_dev.h>
 
 typedef struct MotionMagnStatistics {
 	uint32_t samples;

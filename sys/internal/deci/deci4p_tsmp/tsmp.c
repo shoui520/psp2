@@ -7,8 +7,8 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
-#include "sce/debug.h"
-#include "sce/error.h"
+#include <sysmem/debug.h>
+#include <kernel/error.h>
 #include "tsmp.h"
 
 #define SCE_ERROR_ERRNO_ENODATA			0x8001003d

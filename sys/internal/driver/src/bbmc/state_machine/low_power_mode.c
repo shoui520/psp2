@@ -1,5 +1,5 @@
-#include <sce/syscon.h>
-#include <sce/debug.h>
+#include <syscon/syscon.h>
+#include <sysmem/debug.h>
 #include <string.h>
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"

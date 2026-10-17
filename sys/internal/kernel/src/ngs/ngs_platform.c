@@ -1,11 +1,11 @@
 /* SceNgs kernel platform services. Internal Sony names are unavailable. */
 
 #include <psp2kern/types.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
-#include <sce/threadmgr.h>
-#include <sce/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <stddef.h>
 #include <string.h>

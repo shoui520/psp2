@@ -5,7 +5,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "usbd_internal.h"
 
 static SceUID s_heapId;

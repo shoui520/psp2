@@ -1,7 +1,7 @@
 /* Built-in serialized voice definitions. */
 
-#include <sce/debug.h>
-#include <sce/syscall.h>
+#include <sysmem/debug.h>
+#include <intrmgr/syscall.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "ngs_voice_definition.h"
 

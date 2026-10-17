@@ -4,7 +4,7 @@
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 #include <stddef.h>
-#include <sce/sysmem.h>
+#include <sysmem/sysmem.h>
 /* These SDK prototypes split the original's reserved 64-bit arguments. */
 #define ksceIoMount vitaSdkIoMount
 #define ksceIoUmount vitaSdkIoUmount
@@ -21,20 +21,20 @@ int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <sce/vfs.h>
-#include <sce/acmgr.h>
+#include <iofilemgr/vfs.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/fios2.h>
-#include <sce/debug.h>
-#include <sce/processmgr.h>
-#include <sce/syscall.h>
-#include <sce/error.h>
-#include <sce/iofilemgr.h>
-#include <sce/event.h>
-#include <sce/fast_mutex.h>
+#include <sysmem/debug.h>
+#include <processmgr/processmgr.h>
+#include <intrmgr/syscall.h>
+#include <kernel/error.h>
+#include <iofilemgr/iofilemgr.h>
+#include <threadmgr/event.h>
+#include <threadmgr/fast_mutex.h>
 
 /* Shared declarations describe caller buffers, mount/vnode/file objects,
  * scheduler requests and VFS/VOP callback tables. */

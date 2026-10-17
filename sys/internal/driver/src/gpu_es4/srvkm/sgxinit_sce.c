@@ -6,8 +6,8 @@
 #include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
 #include <stddef.h>
 #include <string.h>
-#include <sce/debug.h>
-#include <sce/sgxmkif_sce.h>
+#include <sysmem/debug.h>
+#include <gpu/sgxmkif_sce.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/acmgr.h>
