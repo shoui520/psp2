@@ -6,8 +6,8 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/debug.h>
-#include "system_sce.h"
-#include "osfunc_sce.h"
+#include "../../system_sce.h"
+#include "../../osfunc_sce.h"
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>

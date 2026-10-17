@@ -5,7 +5,7 @@
  */
 #pragma once
 
-#include "application.h"
+#include "../application.h"
 
 #define VIDEO_ERROR_MEMORY		(-10001)
 

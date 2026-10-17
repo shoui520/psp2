@@ -2,9 +2,9 @@
  * Upstream reference: services4/srvkm/common/buffer_manager.c in the pristine
  * img-sgx-ddk-1.7.862890 vendor tree; this Sony implementation is separate.
  */
-#include "device_sce.h"
-#include "gpu-mmu.h"
-#include "gpu-blockheap.h"
+#include "../device_sce.h"
+#include "../gpu-mmu.h"
+#include "../gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>

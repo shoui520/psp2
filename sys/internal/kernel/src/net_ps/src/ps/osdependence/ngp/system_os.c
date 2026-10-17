@@ -17,8 +17,8 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot_netps.h>
 #include <sysmem/sysevent.h>
-#include "net_ps_internal.h"
-#include "net_ps_atomic.h"
+#include "../../../../net_ps_internal.h"
+#include "../../../../net_ps_atomic.h"
 
 void sceKernelApiDeclareTypeUInt32(void);
 int SceProcessmgrForDriver_D141C076(SceUID processId, SceUInt32 *sdkVersion);

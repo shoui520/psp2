@@ -1,12 +1,12 @@
 /* Sony's common/memorymanager.c replaces IMG's generic device-memory paths. */
-#include "memory_sce.h"
-#include "sync_sce.h"
-#include "perproc_sce.h"
-#include "device_sce.h"
-#include "gpu-mmu.h"
-#include "gpu-blockheap.h"
-#include "mapped_memory_sce.h"
-#include "handle-types.h"
+#include "../memory_sce.h"
+#include "../sync_sce.h"
+#include "../perproc_sce.h"
+#include "../device_sce.h"
+#include "../gpu-mmu.h"
+#include "../gpu-blockheap.h"
+#include "../mapped_memory_sce.h"
+#include "../handle-types.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem.h>

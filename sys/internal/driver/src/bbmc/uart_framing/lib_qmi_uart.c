@@ -1,7 +1,7 @@
 /* UART framing queue and encoded packet transport. */
 #include <string.h>
 #include <sysmem/debug.h>
-#include "qmi_uart_framing.h"
+#include "../qmi_uart_framing.h"
 
 static QmiUartFramingControl g_qmiUartFramingStorage;
 static QmiUartFramingControl *g_qmiUartFramingControl;

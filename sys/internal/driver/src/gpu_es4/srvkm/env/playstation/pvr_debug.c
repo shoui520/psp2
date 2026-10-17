@@ -1,5 +1,5 @@
 /* IMG pvr_debug.c formatting with the SCE unified native spinlock port. */
-#include "sce_ddk_port.h"
+#include "../../sce_ddk_port.h"
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include <stdarg.h>

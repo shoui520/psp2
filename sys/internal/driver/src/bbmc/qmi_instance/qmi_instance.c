@@ -2,7 +2,7 @@
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
-#include "qmi_backend.h"
+#include "../qmi_backend.h"
 
 extern int qmiInitializeDeviceDriver(void);
 extern int qmiFinalizeDeviceDriver(void);

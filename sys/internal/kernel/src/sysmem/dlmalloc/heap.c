@@ -4,9 +4,9 @@
  * sceKernelDlMmap/DlMunmap are the mspace's system memory.
  */
 
-#include "sysmem_internal.h"
+#include "../sysmem_internal.h"
 #define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
-#include "memblock_obj_module.h"
+#include "../memblock_obj_module.h"
 #include <sysmem/heap_info.h>
 
 #undef __FILE_NAME__

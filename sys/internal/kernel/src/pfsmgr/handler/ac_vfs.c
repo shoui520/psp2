@@ -8,7 +8,7 @@
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
-#include "pfsmgr_internal.h"
+#include "../pfsmgr_internal.h"
 
 static inline ScePfsVd *pfsVnodeVd(SceVfsVnode *vp)	/* name unknown */
 {

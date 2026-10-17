@@ -6,15 +6,15 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <net_ps/ethernet.h>
 #include <sysmem/debug.h>
-#include "bbmc_netif.h"
-#include "bbmc_memory.h"
-#include "bbmc_control.h"
-#include "bbmc_message.h"
+#include "../bbmc_netif.h"
+#include "../bbmc_memory.h"
+#include "../bbmc_control.h"
+#include "../bbmc_message.h"
 #include <sysmem/sysmem.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/kernel/cpu/cache.h>
-#include "usb_serial.h"
-#include "usb_device.h"
+#include "../usb_serial.h"
+#include "../usb_device.h"
 
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)

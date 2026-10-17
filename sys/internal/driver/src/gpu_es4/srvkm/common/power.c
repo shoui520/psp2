@@ -1,7 +1,7 @@
 /* IMG power.c base; SCE deltas are marked beside their native paths. */
-#include "device_sce.h"
-#include "power_sce.h"
-#include "gpu-dump.h"
+#include "../device_sce.h"
+#include "../power_sce.h"
+#include "../gpu-dump.h"
 #include <stdarg.h>
 #include <stddef.h>
 

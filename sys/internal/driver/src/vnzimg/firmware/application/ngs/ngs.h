@@ -11,7 +11,7 @@
  */
 #pragma once
 
-#include "application.h"
+#include "../application.h"
 
 /* Sony's SDK, ngs/Error.h */
 #define SCE_NGS_ERROR				((int32_t)0x804A0001)

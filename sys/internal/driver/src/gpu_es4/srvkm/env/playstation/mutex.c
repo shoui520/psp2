@@ -4,7 +4,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
 #include <stddef.h>
-#include "sce_ddk_port.h"
+#include "../../sce_ddk_port.h"
 
 unsigned SetRemoteAllocProcess(unsigned pid);
 

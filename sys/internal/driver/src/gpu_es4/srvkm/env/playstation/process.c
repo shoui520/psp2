@@ -1,9 +1,9 @@
 /* Sony env/playstation/process.c: native process and system lifecycle. */
-#include "sce_ddk_port.h"
-#include "perproc_sce.h"
-#include "memory_sce.h"
+#include "../../sce_ddk_port.h"
+#include "../../perproc_sce.h"
+#include "../../memory_sce.h"
 #include <stddef.h>
-#include "gpu-mmu.h"
+#include "../../gpu-mmu.h"
 #include <psp2kern/kernel/acmgr.h>
 #include <sysmem/debug.h>
 

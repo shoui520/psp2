@@ -12,7 +12,7 @@
  * All products are 8.24: ngsMultiply(a, b) = (a b) >> 24 on 64 bits.
  */
 #include "reverb.h"
-#include "ivc2.h"
+#include "../ivc2.h"
 
 #define PATH_GAIN_SCALE		0x1699c10	/* +3 dB */
 #define SQRT_2			0x16a09e6

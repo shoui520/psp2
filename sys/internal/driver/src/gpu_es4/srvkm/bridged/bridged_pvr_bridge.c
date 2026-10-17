@@ -1,15 +1,15 @@
 /* IMG bridge core with SCE kernel-port changes, marked at each body.
  * Pristine upstream remains in contrib/img-sgx-ddk-1.7.862890.
  */
-#include "sce_ddk_port.h"
-#include "device_sce.h"
-#include "perproc_sce.h"
-#include "sync_sce.h"
-#include "mapped_memory_sce.h"
-#include "gpu-mmu.h"
-#include "gpu-dump.h"
-#include "osfunc_sce.h"
-#include "bridge_sce.h"
+#include "../sce_ddk_port.h"
+#include "../device_sce.h"
+#include "../perproc_sce.h"
+#include "../sync_sce.h"
+#include "../mapped_memory_sce.h"
+#include "../gpu-mmu.h"
+#include "../gpu-dump.h"
+#include "../osfunc_sce.h"
+#include "../bridge_sce.h"
 #include <sysmem/debug.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
