@@ -4,11 +4,10 @@
 #include <sysmem/debug.h>
 #include "../venezia_internal.h"
 #include <lowio/pervasive.h>
+#include <power/power.h>
 
 VeneziaState g_veneziaState = { .processStorageKey = -1 };
 
-extern int kscePowerSetVeneziaClockFrequency(int frequency);
-extern int kscePowerGetVeneziaClockFrequency(void);
 extern int SceCodecEngineWrapperForDriver_0D3BB164(int command, ...);
 
 #if FW_VERSION >= 0x04000000

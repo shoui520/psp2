@@ -29,3 +29,5 @@ _Static_assert(offsetof(LedModeParam, blink.repeatCount) == 12, "LED repeat coun
 _Static_assert(offsetof(LedModeParam, blink.endState) == 16, "LED final state");
 
 #endif
+
+int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option);

@@ -15,11 +15,5 @@
 /* ScePervasiveForDriver: the USB blocks of a bus */
 
 /* ScePowerForDriver: USB charging */
-int kscePowerBatteryEnableUsbCharging(void);
-int kscePowerBatteryDisableUsbCharging(void);
-int kscePowerBatteryStopUsbCharging(void);
-int kscePowerBatterySetUsbStatus(int status);
-int ScePowerForDriver_8C0D2051(unsigned int *status);
-int ScePowerForDriver_F535D928(unsigned int mask, int enabled);
 
 int ksceSblACMgrIsAllowedUsbSerial(void);

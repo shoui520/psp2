@@ -19,6 +19,8 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <appmgr/appmgr_rdrfp.h>
+#include <power/led.h>
+#include <power/power.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -81,14 +83,6 @@ int ksceIdStorageFlush(void);
 int ksceIdStorageRestart(int unk);
 
 /* Syscon, LED, power */
-int ksceLedSetMode(int led, int mode, const void *conf);
-int scePowerRequestColdReset(void);
-int kscePowerRequestShutdown(int mode);
-int kscePowerRequestHibernate(void);
-int kscePowerSetPowerSwMode(int mode);
-int kscePowerSetStandbyButtonPushTime(int time);
-int kscePowerSetPsButtonPushTime(int time);
-int kscePowerGetWakeupFactor(void);
 int kscePowerSetBatteryFakeStatus(const void *status);
 
 /* Rtc */

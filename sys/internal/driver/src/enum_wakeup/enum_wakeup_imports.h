@@ -19,6 +19,8 @@
 #include <sysmem/qafmgr.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
+#include <power/led.h>
+#include <power/power.h>
 
 int ksceKernelSearchModuleByName(const char *name);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
@@ -43,20 +45,6 @@ int ksceCtrlReadBufferPositive(int port, EwCtrlData *data, int count);
 int ksceMotionDevIsReady(void);
 int SceMotionDevForDriver_031AF7A1(void);	/* stop the motion device */
 int SceHpremoteForDriver_7735C403(void);	/* headphone remote off */
-int ksceLedSetMode(int led, int mode, void *config);
-
-int kscePowerSetPowerSwMode2(int mode);
-int scePowerSetArmClockFrequency(int mhz);
-int scePowerSetBusClockFrequency(int mhz);
-int kscePowerSetGpuClockFrequencyInternal(int core, int mhz);
-int scePowerSetGpuXbarClockFrequency(int mhz);
-int kscePowerSetCameraBusClockFrequency(int mhz);
-int scePowerIsBatteryExist(void);
-int scePowerGetBatteryLifePercent(void);
-int scePowerCancelRequest(void);
-int scePowerRequestStandby(void);
-int scePowerRequestColdReset(void);
-int kscePowerBatterySetUsbStatus(int status);
 
 int ScePervasiveForDriver_E0711D42(void);
 int SceClockgenForDriver_5130682D(void);

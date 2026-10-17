@@ -9,6 +9,7 @@
 #include "sgx543_v1.164defs.h"
 #include <gpu/sgx_regs.h>
 #include "sgxmpdefs.h"
+#include <power/power.h>
 
 /* Pristine SGX MP register-bank selection, services4/include/sgx_mkif_km.h. */
 #define SGX_REG_BANK_SHIFT 14
@@ -157,15 +158,11 @@ static const unsigned masterDirectoryRegisters[8] = {
 	EUR_CR_BIF_DIR_LIST_BASE7 + SGX_REG_BANK_SIZE,
 };
 
-
-
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/lockup/registerdump.c"
 
 PVRSRV_DEVICE_NODE *GetGpuDeviceNode(void);
-int kscePowerGetGpuClockFrequencyInternal(SceUInt32 *first, SceUInt32 *second);
 /* The existing module import uses the user spelling for driver NID 0A750DEE. */
-int scePowerGetGpuXbarClockFrequency(void);
 int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
 
 #define GPU_REGISTER(base, offset) (*(volatile unsigned *)((unsigned char *)(base) + (offset)))

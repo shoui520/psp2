@@ -13,6 +13,7 @@
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
+#include <power/power.h>
 
 /* SCE stores the services mutex UID in the native module's zeroed state. */
 SceUID gPVRSRVLock;
@@ -21,8 +22,6 @@ IMG_VOID LinuxUnLockMutex(int *psMutex);
 IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
 PVRSRV_ERROR PVRSRVProcessConnect(IMG_UINT32 ui32PID, IMG_UINT32 ui32Flags);
 IMG_VOID PVRSRVProcessDisconnect(IMG_UINT32 ui32PID);
-int kscePowerGetGpuClockFrequencyProc(int pid);
-int kscePowerSetGpuClockFrequencyProc(int pid, int frequency);
 
 /* SCE native user entry: start services and select the default GPU clock. */
 int PVRSRVOpen(void)

@@ -12,6 +12,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <power/power.h>
 
 #define SGXMKIF_CC_INVAL_BIF_SL 0x4U
 #define DEVICE_MEMORY_HEAP_KERNEL 1
@@ -80,10 +81,6 @@ PVRSRV_ERROR PVRSRVRegisterPowerDevice(IMG_UINT32 ui32DeviceIndex,
 		PFN_PRE_CLOCKSPEED_CHANGE pfnPreClockSpeedChange,
 		PFN_POST_CLOCKSPEED_CHANGE pfnPostClockSpeedChange, IMG_HANDLE hDevCookie,
 		PVRSRV_DEV_POWER_STATE eCurrentPowerState, PVRSRV_DEV_POWER_STATE eDefaultPowerState);
-int ScePowerForDriver_711C68DF(
-		void (*pre)(IMG_UINT32, IMG_UINT32, IMG_INT, IMG_VOID *), IMG_VOID *preData,
-		void (*post)(IMG_UINT32, IMG_UINT32, IMG_INT, IMG_VOID *), IMG_VOID *postData);
-int kscePowerGetGpuClockFrequencyInternal(IMG_UINT32 *first, IMG_UINT32 *second);
 IMG_UINT64 ksceKernelGetProcessTimeWideCore(void);
 int SceSysrootForDriver_6655F48C(int operation, int flags);
 int SceDisplayForDriver_086DEFB6(int handle, int mode);

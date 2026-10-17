@@ -62,7 +62,6 @@ int bbmcFinalizeMailbox(void);
 int bbmcCreateMailbox(struct BbmcMailbox **mailbox);
 unsigned int bbmcDeleteMailbox(struct BbmcMailbox *mailbox);
 int managerThread(SceSize argumentSize, void *arguments);
-extern int ScePowerForDriver_F535D928(SceUInt32 mask, int enabled);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);

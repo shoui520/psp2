@@ -13,6 +13,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
+#include <power/power.h>
 
 static IMG_UINT32 g_ui32InitFlags = 0;
 #define INIT_DATA_ENABLE_PDUMPINIT 0x1U
@@ -56,8 +57,6 @@ IMG_VOID OSSleepms(IMG_UINT32 ui32TimeInms);
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
 IMG_INT32 OSSNPrintf(IMG_CHAR *pszStr, IMG_UINT32 ui32Size,
 		const IMG_CHAR *pszFormat, ...);
-int kscePowerGetGpuClockFrequencyInternal(SceUInt32 *first, SceUInt32 *second);
-int ScePowerForDriver_06AF03DB(SceUID pid);
 PVRSRV_DEVICE_NODE *GetGpuDeviceNode(IMG_VOID);
 IMG_UINT32 OSReadHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset);
 int SceGpuEs4ForDriver_7AA79658(unsigned physical, unsigned *pid);
