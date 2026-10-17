@@ -18,6 +18,7 @@
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -165,13 +166,9 @@ int ksceNpDrmUpdateDebugSettings(void);
 int ksceNpDrmUpdateAccountId(void *a, void *b);
 
 /* AppMgr */
-int ksceAppMgrSystemParamDateTimeSetConf(const void *conf);
-int ksceAppMgrBgdlSetQueueStatus(const void *status);
-int ksceAppMgrDebugSettingNotifyUpdate(int setting);
 int ksceAppMgrCheckContentInstallPeriod(void *a);
 int ksceAppMgrUpdateRifInfo(const void *info);
 int ksceAppMgrRegisterPath(const char *path, void *a);
-int ksceAppMgrCheckPfsMounted(const char *path);
 int ksceAppMgrCloudDataCreateHeader(const void *a, int b, const void *c, void *d);
 int ksceAppMgrCloudDataVerifyHeader(const void *header);
 int ksceAppMgrCloudDataSetupKey(void *key);

@@ -21,3 +21,8 @@ int SceAppMgrForDriver_1574E1A4(int type, const char *path, const SceAppMgrRdrfp
 				SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpMount */
 int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
 int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */
+
+int ksceAppMgrBgdlSetQueueStatus(const void *status);
+int ksceAppMgrCheckPfsMounted(const char *path);
+int ksceAppMgrDebugSettingNotifyUpdate(int setting);
+int ksceAppMgrSystemParamDateTimeSetConf(const void *conf);
