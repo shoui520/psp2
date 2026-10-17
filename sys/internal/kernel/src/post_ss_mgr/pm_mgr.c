@@ -213,7 +213,7 @@ int sceSblPmMgrSetProductModeOffForUser(void)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -230,7 +230,7 @@ int sceSblPmMgrGetProductModeForUser(SceUInt8 *mode)
 	SceUInt8 value = 0;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -250,7 +250,7 @@ int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 	SceUInt8 value = 0;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -271,7 +271,7 @@ int sceSblPmMgrGetCurrentMode(SceUInt8 *mode)
 	SceUInt8 value = 0;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -290,7 +290,7 @@ int sceSblPmMgrAuthEtoIForUser(void)	/* name unknown */
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}

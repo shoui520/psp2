@@ -73,7 +73,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelNotifyCallback
 	ksceKernelSetEventFlag
 	ksceKernelEnqueueWorkQueue
-	ksceSblACMgrIsAllowedUsbSerial
+	SceSblACMgrForDriver_062CAEB2
 	ksceUdcdUnregister
 	ksceUdcdStop
 	ksceUdcdReqSend

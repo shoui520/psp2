@@ -87,10 +87,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterSysEventHandler
 	ksceKernelPowerTick
 	SceSysrootForDriver_34281746
-	ksceSblACMgrIsRootProgram
+	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_2E992B02
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsSceShell
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_991FDC15
 	ksceBtHidGetReportDescriptor
 	ksceBtRegisterCallback
 	ksceBtReadEvent

@@ -177,7 +177,7 @@ static int ConfHasUd0(void)
 }
 static int ConfDevelopment(void)
 {
-	return ksceSblACMgrIsDevelopmentMode2() != 0;
+	return SceSblACMgrForKernel_BBA13D9C() != 0;
 }
 static int ConfConexant(void)
 {

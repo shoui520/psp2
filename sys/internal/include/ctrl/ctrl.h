@@ -6,7 +6,7 @@
 #include <psp2kern/types.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysroot.h>
-#include <acmgr/sblacmgr.h>
+#include <acmgr/acmgr.h>
 
 int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 		void (*callback)(uint32_t, uint32_t, void *), void *arg,

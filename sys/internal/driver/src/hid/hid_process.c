@@ -1,7 +1,7 @@
 /* Descriptive filename; these helpers have no debug source records. */
 #include "hid_internal.h"
 #include <psp2/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <ctrl/ctrl.h>
 #include <string.h>
 
@@ -23,11 +23,11 @@ int hidAddProcess(SceUID pid)
 	process->pid = pid;
 	process->flags = 1;
 	process->privilegeFlags = 0;
-	if (ksceSblACMgrIsSceShell(pid) != 0 ||
-	    ksceSblACMgrIsRootProgram(pid) != 0 ||
+	if (SceSblACMgrForDriver_991FDC15(pid) != 0 ||
+	    sceSblACMgrIsKernelProgram(pid) != 0 ||
 	    SceSblACMgrForDriver_2E992B02(pid) != 0)
 		process->privilegeFlags |= 1;
-	if (ksceSblACMgrIsSystemProgram(pid) != 0)
+	if (sceSblACMgrIsSystemProgram(pid) != 0)
 		process->privilegeFlags |= 2;
 	process->keyboardIntercept.pending = 0;
 	process->keyboardIntercept.enabled = 0;

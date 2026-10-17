@@ -243,8 +243,8 @@ set(MODULE_IMPORT_FUNCS
 	SceDisplayForDriver_086DEFB6
 	SceSysrootForDriver_6655F48C
 	SceSysrootForDriver_BFD8F2A2
-	ksceSblACMgrIsGameProgram
-	ksceSblACMgrIsDevelopmentMode
+	sceSblACMgrIsGameProgram
+	SceSblACMgrForDriver_E87D1777
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

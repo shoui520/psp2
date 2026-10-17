@@ -4,7 +4,7 @@
 #include <psp2kern/kernel/utils.h>
 #include <psp2kern/npdrm.h>
 #include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <intrmgr/syscall_copy.h>
@@ -1413,7 +1413,7 @@ __attribute__((noinline)) int PsmDrmGetRifKey(const ScePsmDrmLicense *license,
 	unsigned int syscall = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsPSMRuntime(0)) {
+	if (!SceSblACMgrForDriver_091F7247(0)) {
 		sceSyscallLeave(syscall);
 		return 0x80010058;
 	}
@@ -1605,11 +1605,11 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 	SceUID mapId;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = 0x80010058;
 		goto out;
 	}
-	ret = ksceSblACMgrGetProcessProgramAuthId(0, &authId);
+	ret = sceSblACMgrGetPaid(0, &authId);
 	if (ret < 0)
 		goto out;
 	if (authId != UINT64_C(0x2800000000000001) &&
@@ -1658,11 +1658,11 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 	SceUID mapId;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = 0x80010058;
 		goto out;
 	}
-	ret = ksceSblACMgrGetProcessProgramAuthId(0, &authId);
+	ret = sceSblACMgrGetPaid(0, &authId);
 	if (ret < 0)
 		goto out;
 	if (authId != UINT64_C(0x2800000000000001) &&
@@ -1708,11 +1708,11 @@ __attribute__((noinline)) int NpDrmPackageTransformForUser(void *buffer,
 	SceUID mapId;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = 0x80010058;
 		goto out;
 	}
-	ret = ksceSblACMgrGetProcessProgramAuthId(0, &authId);
+	ret = sceSblACMgrGetPaid(0, &authId);
 	if (ret < 0)
 		goto out;
 	if (authId != UINT64_C(0x2800000000000001) &&
@@ -1757,11 +1757,11 @@ int sceNpDrmPackageIsGameExist(void)
 	unsigned int syscall = sceSyscallEnter(); \
 	uint64_t authId = 0; \
 	int ret; \
-	if (!ksceSblACMgrIsSystemProgram(0)) { \
+	if (!sceSblACMgrIsSystemProgram(0)) { \
 		ret = 0x80010058; \
 		goto out; \
 	} \
-	ret = ksceSblACMgrGetProcessProgramAuthId(0, &authId); \
+	ret = sceSblACMgrGetPaid(0, &authId); \
 	if (ret < 0) \
 		goto out; \
 	if (authId == UINT64_C(0x2800000000000001)) \

@@ -7,7 +7,7 @@
 #include "../../gpu_es4/srvkm/lockup-history.h"
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <sysmem/sysclib.h>
 
 int signalMutex = -1;
@@ -391,7 +391,7 @@ int LockupThread(SceSize args, void *argp)
 		}
 		recovered = 0;
 		if (analysis > 2 && analysis <= 4) {
-			if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
+			if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
 				if (lockupEndCallback)
 					lockupEndCallback(token);
 				ksceKernelPrintf("GPU coredump analysis: GPU may have been halted by a known clipper hardware bug.\n");

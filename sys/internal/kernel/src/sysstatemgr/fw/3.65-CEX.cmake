@@ -138,7 +138,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblQafMgrIsAllowHost0Access
 	ksceSblQafMgrIsAllowDecryptedBootConfigLoad
 	SceQafMgrForDriver_B9770A13
-	ksceSblACMgrIsDevelopmentMode2
+	SceSblACMgrForKernel_BBA13D9C
 	SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess
 	SceSysrootForKernel_ksceSysrootIsBsodReboot
 	SceSysrootForKernel_47724459

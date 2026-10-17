@@ -9,7 +9,7 @@ int sceSblUsVerifyPupAdditionalSignForUser(const char *path)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = ksceKernelStrncpyFromUser(buffer, path, sizeof(buffer));

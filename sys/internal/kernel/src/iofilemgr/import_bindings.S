@@ -694,33 +694,33 @@ sceKernelFreeRemoteCDialogHeap:
 .word 0x10, 0x746ec971, 0xdd0a58d1, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsGameProgram2
-.type ksceSblACMgrIsGameProgram2, %function
-ksceSblACMgrIsGameProgram2:
+.global SceSblACMgrForKernel_sceSblACMgrIsGameProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsGameProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsGameProgram:
 .word 0x10, 0x11f9b314, 0x5fdc646, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global SceSblACMgrForKernel_1B160234
-.type SceSblACMgrForKernel_1B160234, %function
-SceSblACMgrForKernel_1B160234:
+.global SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint
+.type SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint, %function
+SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint:
 .word 0x10, 0x11f9b314, 0x1b160234, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsRootProgram2
-.type ksceSblACMgrIsRootProgram2, %function
-ksceSblACMgrIsRootProgram2:
+.global SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsKernelProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsKernelProgram:
 .word 0x10, 0x11f9b314, 0x31c23b66, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsNonGameProgram2
-.type ksceSblACMgrIsNonGameProgram2, %function
-ksceSblACMgrIsNonGameProgram2:
+.global SceSblACMgrForKernel_3F99279F
+.type SceSblACMgrForKernel_3F99279F, %function
+SceSblACMgrForKernel_3F99279F:
 .word 0x10, 0x11f9b314, 0x3f99279f, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsNonGameOrGameProgram2
-.type ksceSblACMgrIsNonGameOrGameProgram2, %function
-ksceSblACMgrIsNonGameOrGameProgram2:
+.global SceSblACMgrForKernel_570D6AD3
+.type SceSblACMgrForKernel_570D6AD3, %function
+SceSblACMgrForKernel_570D6AD3:
 .word 0x10, 0x11f9b314, 0x570d6ad3, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
@@ -730,21 +730,21 @@ SceSblACMgrForKernel_75AAF981:
 .word 0x10, 0x11f9b314, 0x75aaf981, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrGetProcessProgramAuthId2
-.type ksceSblACMgrGetProcessProgramAuthId2, %function
-ksceSblACMgrGetProcessProgramAuthId2:
+.global SceSblACMgrForKernel_sceSblACMgrGetPaid
+.type SceSblACMgrForKernel_sceSblACMgrGetPaid, %function
+SceSblACMgrForKernel_sceSblACMgrGetPaid:
 .word 0x10, 0x11f9b314, 0x7c2af978, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACIsSystemProgram
-.type ksceSblACIsSystemProgram, %function
-ksceSblACIsSystemProgram:
+.global SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsSystemProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsSystemProgram:
 .word 0x10, 0x11f9b314, 0x930cd037, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrGetMediaType2
-.type ksceSblACMgrGetMediaType2, %function
-ksceSblACMgrGetMediaType2:
+.global SceSblACMgrForKernel_sceSblACMgrGetMediaType
+.type SceSblACMgrForKernel_sceSblACMgrGetMediaType, %function
+SceSblACMgrForKernel_sceSblACMgrGetMediaType:
 .word 0x10, 0x11f9b314, 0xd442962e, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
@@ -1565,33 +1565,33 @@ sceKernelFreeRemoteCDialogHeap:
 .word 0x10, 0x746ec971, 0xdd0a58d1, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsGameProgram2
-.type ksceSblACMgrIsGameProgram2, %function
-ksceSblACMgrIsGameProgram2:
+.global SceSblACMgrForKernel_sceSblACMgrIsGameProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsGameProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsGameProgram:
 .word 0x10, 0x11f9b314, 0x5fdc646, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global SceSblACMgrForKernel_1B160234
-.type SceSblACMgrForKernel_1B160234, %function
-SceSblACMgrForKernel_1B160234:
+.global SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint
+.type SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint, %function
+SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint:
 .word 0x10, 0x11f9b314, 0x1b160234, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsRootProgram2
-.type ksceSblACMgrIsRootProgram2, %function
-ksceSblACMgrIsRootProgram2:
+.global SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsKernelProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsKernelProgram:
 .word 0x10, 0x11f9b314, 0x31c23b66, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsNonGameProgram2
-.type ksceSblACMgrIsNonGameProgram2, %function
-ksceSblACMgrIsNonGameProgram2:
+.global SceSblACMgrForKernel_3F99279F
+.type SceSblACMgrForKernel_3F99279F, %function
+SceSblACMgrForKernel_3F99279F:
 .word 0x10, 0x11f9b314, 0x3f99279f, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrIsNonGameOrGameProgram2
-.type ksceSblACMgrIsNonGameOrGameProgram2, %function
-ksceSblACMgrIsNonGameOrGameProgram2:
+.global SceSblACMgrForKernel_570D6AD3
+.type SceSblACMgrForKernel_570D6AD3, %function
+SceSblACMgrForKernel_570D6AD3:
 .word 0x10, 0x11f9b314, 0x570d6ad3, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
@@ -1601,21 +1601,21 @@ SceSblACMgrForKernel_75AAF981:
 .word 0x10, 0x11f9b314, 0x75aaf981, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrGetProcessProgramAuthId2
-.type ksceSblACMgrGetProcessProgramAuthId2, %function
-ksceSblACMgrGetProcessProgramAuthId2:
+.global SceSblACMgrForKernel_sceSblACMgrGetPaid
+.type SceSblACMgrForKernel_sceSblACMgrGetPaid, %function
+SceSblACMgrForKernel_sceSblACMgrGetPaid:
 .word 0x10, 0x11f9b314, 0x7c2af978, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACIsSystemProgram
-.type ksceSblACIsSystemProgram, %function
-ksceSblACIsSystemProgram:
+.global SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
+.type SceSblACMgrForKernel_sceSblACMgrIsSystemProgram, %function
+SceSblACMgrForKernel_sceSblACMgrIsSystemProgram:
 .word 0x10, 0x11f9b314, 0x930cd037, 0xe320f000
 .section .vitalink.fstubs.SceSblACMgrForKernel, "ax", %progbits
 .balign 4
-.global ksceSblACMgrGetMediaType2
-.type ksceSblACMgrGetMediaType2, %function
-ksceSblACMgrGetMediaType2:
+.global SceSblACMgrForKernel_sceSblACMgrGetMediaType
+.type SceSblACMgrForKernel_sceSblACMgrGetMediaType, %function
+SceSblACMgrForKernel_sceSblACMgrGetMediaType:
 .word 0x10, 0x11f9b314, 0xd442962e, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4

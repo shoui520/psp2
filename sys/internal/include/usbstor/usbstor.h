@@ -111,4 +111,3 @@ unsigned SceUsbstorForDriver_77B7E69E(void);				/* nonzero: a function is busy *
 
 /* Private UDCD device-information operation; original name unknown. */
 int SceUdcdForDriver_78BF2A28(void *info);
-int ksceSblACMgrIsMiniSettingsForQA(void);

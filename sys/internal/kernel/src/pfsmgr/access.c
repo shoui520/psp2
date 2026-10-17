@@ -6,7 +6,6 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <acmgr/acmgr.h>
 #include "pfsmgr_internal.h"
 
@@ -160,7 +159,7 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 	always = (unsigned int)op < 9 && ((1 << op) & 0x1ef) != 0;
 	isRead = pfsOpIsRead(op, arg);
 	level = ksceKernelSysrootGetThreadAccessLevel();
-	isSystem = ksceSblACMgrIsSystemProgram(ksceKernelGetProcessIdFromTLS());
+	isSystem = sceSblACMgrIsSystemProgram(ksceKernelGetProcessIdFromTLS());
 	if ((unsigned int)(pmi->mode - 0x1f) < 3) {
 		owner = pmi->parent;
 		if (ksceKernelGetProcessSelfAuthInfo(ksceKernelGetProcessIdFromTLS(), &authInfo) < 0)

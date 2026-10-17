@@ -156,7 +156,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	ksceSblAimgrIsVITA
 	ksceSblAimgrIsDolce
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	ksceIoRemove
 	SceCtrlForDriver_FF9D4DD4
 	SceCodecForDriver_762BF716

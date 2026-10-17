@@ -267,7 +267,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnregisterSysEventHandler
 	ksceKernelSearchModuleByName
 	ksceSblQafMgrIsAllowRemotePlayDebug
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	kscePmMgrGetProductMode
 	SceSblPostSsMgrForDriver_128FB35A
 	ksceKernelRegisterProcEventHandler

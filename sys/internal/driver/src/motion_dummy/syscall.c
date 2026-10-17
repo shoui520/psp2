@@ -160,7 +160,7 @@ int sceMotionDevReadForMagnCalib(SceMotionDevData *data, int count)
 		sceSyscallLeave(state);
 		return MOTION_ERROR_INVALID_ARG;
 	}
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return MOTION_ERROR_NOT_PERMITTED;
 	}
@@ -246,7 +246,7 @@ int sceMotionDevUpdateMagnCalibData(const void *data, SceUInt32 *tag)
 	SceUInt32 result;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = MOTION_ERROR_NOT_PERMITTED;
 	} else if (tag == NULL || data == NULL) {
 		ret = MOTION_ERROR_INVALID_ARG;
@@ -301,7 +301,7 @@ int sceMotionDevUpdateMagnStabilityLevel(SceUInt32 level)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return MOTION_ERROR_NOT_PERMITTED;
 	}
@@ -453,7 +453,7 @@ int sceMotionDevGetMeasMode(void *info)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = MOTION_ERROR_NOT_PERMITTED;
 	} else if (info == NULL) {
 		ret = MOTION_ERROR_INVALID_ARG;

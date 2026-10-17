@@ -4,7 +4,7 @@
 #include "../../memory_sce.h"
 #include <stddef.h>
 #include "../../gpu-mmu.h"
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <sysmem/debug.h>
 
 extern int gPVRSRVLock;
@@ -37,7 +37,7 @@ int sceGpuProcessCreateEvent(SceUID pid)
 	GpuMemoryContext *context;
 	int result;
 
-	if (ksceSblACMgrIsGameProgram(pid)) {
+	if (sceSblACMgrIsGameProgram(pid)) {
 		LinuxLockMutexForPid(&gPVRSRVLock, pid);
 		result = AddMemoryContextToList(&context, pid);
 		if (result == 0) {

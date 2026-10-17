@@ -24,6 +24,7 @@
 #include <processmgr/processmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/display.h>
+#include <acmgr/acmgr.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -39,11 +40,6 @@ int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 int SceUdcdForDriver_2D91F8C3(int enable);		/* USB charging */
 
 /* SblACMgr, Aimgr, QafMgr, Ss, PostSsMgr, UtMgr, PmMgr */
-int ksceSblACMgrIsSystemProgram(SceUID pid);
-int ksceSblACMgrHasCapability(SceUID pid, int capability);
-int ksceSblACMgrIsDevelopmentMode(void);
-int ksceSblACMgrIsPSMDevAssistant(void);
-int SceSblACMgrForDriver_F5AE24AC(SceUID pid);		/* may use SceDrmBridge */
 int ksceSblAimgrGetConsoleId(void *id);
 int ksceSblAimgrGetPscode(void *code);
 int ksceSblAimgrGetPscode2(void *code);

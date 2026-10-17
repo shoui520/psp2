@@ -101,7 +101,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnableCrashDump
 	ksceSblAimgrIsDolce
 	ksceSblAimgrIsCEX
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	SceQafMgrForDriver_382C71E8
 )
 set(MODULE_IMPORT_VARS

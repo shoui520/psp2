@@ -6,7 +6,7 @@
 
 #include <sysmem/sysroot.h>
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/debugled.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -2063,7 +2063,7 @@ int regMgrGetRegion(int masquerade)
 		    regMgrGetKeyInt("/DEVENV/TOOL", "region_masquerade", &value) == 0 &&
 		    (SceUInt32)(value - 1) <= 0xc)
 			region = value;
-		if (ksceSblACMgrIsDevelopmentMode() == 1 && code != 0x102) {
+		if (SceSblACMgrForDriver_E87D1777() == 1 && code != 0x102) {
 			g_regMgrConfig = 2;
 			g_regMgrPermission = g_regMgrIsQaf == 1 ? 8 : 2;
 			return region;
@@ -2898,7 +2898,7 @@ void regMgrRecordError(int error, int api, const char *category, const char *nam
 	record.api = api;
 	record.type = type;
 	record.error = error;
-	if (ksceSblACMgrGetProcessProgramAuthId(0, &authId) != 0)
+	if (sceSblACMgrGetPaid(0, &authId) != 0)
 		authId = 0;
 	record.authId = authId;
 	snprintf(errPath, sizeof(errPath), "/REGISTRY/ERROR/%02d", max % REGMGR_ERROR_RECORD_MAX);

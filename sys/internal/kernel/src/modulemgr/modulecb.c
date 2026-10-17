@@ -231,7 +231,7 @@ void ModuleCBDumpLoadAddress(SceModuleCB *cb)
 
 void ModuleCBShowStartMessage(SceModuleCB *cb, int noResident, SceUInt32 usec)
 {
-	if (!ksceSblACMgrIsDevelopmentMode2() && cb->pid != KERNEL_PID)
+	if (!SceSblACMgrForKernel_BBA13D9C() && cb->pid != KERNEL_PID)
 		return;
 	if (noResident < 1)
 		SCE_PRINTF_WITH_INFO(0, 354, "[%-27s]:Starting...  OK   %8uusec\n", cb->name, usec);

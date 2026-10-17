@@ -49,7 +49,7 @@ int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type
 	int ret;
 
 	if (g_ioPathMappingFunction == NULL || pid == SCE_KERNEL_PROCESS_ID) {
-		ret = ksceSblACMgrGetMediaType2(path, type);
+		ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, type);
 	} else {
 		mapped = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x400);
 		if (mapped == NULL)
@@ -61,7 +61,7 @@ int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type
 			ksceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
 			return ret;
 		}
-		ret = ksceSblACMgrGetMediaType2(mapped, type);
+		ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(mapped, type);
 		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
 	}
 	if (ret < 0) {

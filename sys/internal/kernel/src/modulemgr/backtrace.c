@@ -353,7 +353,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 	int intr, inIntr, excp, refer, ret;
 
 	saved = ModulemgrSyscallEnter();
-	if (!ksceSblACMgrIsDevelopmentMode2()) {
+	if (!SceSblACMgrForKernel_BBA13D9C()) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
 		goto leave;
 	}

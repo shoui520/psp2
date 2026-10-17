@@ -268,8 +268,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblDmac5Sha1
 	SceSblACMgrForDriver_3B356B98
 	SceSblACMgrForDriver_6210D745
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsDevelopmentMode
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_E87D1777
 	ksceSblAimgrIsCEX
 	ksceSblRSA2048VerifySignature
 	ksceKernelGetProcessSelfAuthInfo

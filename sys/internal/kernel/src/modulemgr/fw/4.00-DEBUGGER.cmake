@@ -299,10 +299,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblAuthMgrCompareSwVersion
 	ksceSblAuthMgrLoadBlock
 	ksceSblAuthMgrAuthHeader
-	ksceSblACMgrIsGameProgram2
-	ksceSblACMgrIsNonGameProgram2
-	ksceSblACMgrIsDevelopmentMode2
-	ksceSblACMgrGetMediaType2
+	SceSblACMgrForKernel_sceSblACMgrIsGameProgram
+	SceSblACMgrForKernel_3F99279F
+	SceSblACMgrForKernel_BBA13D9C
+	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	ksceSblQafMgrIsAllowHost0Access
 	SceQafMgrForDriver_382C71E8
 	SceQafMgrForDriver_B9770A13

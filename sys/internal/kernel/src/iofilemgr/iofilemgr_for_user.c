@@ -100,7 +100,7 @@ SceSSize sceIoReadForUser(SceUID fd, void *data, SceSize size)
 	kernelData = NULL;
 	if (size != 0) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapRead", IO_USER_MAP_WRITE,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -134,7 +134,7 @@ SceSSize sceIoWriteForUser(SceUID fd, const void *data, SceSize size)
 	kernelData = NULL;
 	if (size != 0) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapWrite", IO_USER_MAP_READ,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -408,17 +408,17 @@ int sceIoDevctlForUser(const char *dev, unsigned int cmd, const void *indata, Sc
 
 	IO_CHECK_VM_DOMAIN(898);
 	if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
-		if (!ksceSblACIsSystemProgram(0)) {
+		if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 902, "error : sceIoDevctlForUser() failed!\n");
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 903, "process id = 0x%08x\n", sceKernelGetProcessId());
-			SCE_DBG_PRINTF_LEVEL(1, 0xf, 905, "sceSblACMgrIsSystemProgram() = %d\n", ksceSblACIsSystemProgram(0));
+			SCE_DBG_PRINTF_LEVEL(1, 0xf, 905, "sceSblACMgrIsSystemProgram() = %d\n", SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0));
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 906, "cmd=%x\n", cmd);
 			return SCE_ERROR_ERRNO_EUNSUP;
 		}
 	} else if (cmd & (IOFILEMGR_IOCTL_ACCESS_SYSTEM | IOFILEMGR_IOCTL_DISABLED)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 911, "error : sceIoDevctlForUser() failed!\n");
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 912, "process id = 0x%08x\n", sceKernelGetProcessId());
-		SCE_DBG_PRINTF_LEVEL(1, 0xf, 914, "sceSblACMgrIsSystemProgram() = %d\n", ksceSblACIsSystemProgram(0));
+		SCE_DBG_PRINTF_LEVEL(1, 0xf, 914, "sceSblACMgrIsSystemProgram() = %d\n", SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0));
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 915, "cmd=%x\n", cmd);
 		return SCE_ERROR_ERRNO_EUNSUP;
 	}
@@ -488,17 +488,17 @@ int sceIoIoctlForUser(SceUID fd, unsigned int cmd, const void *indata, SceSize i
 	if (guid < 0)
 		return ioPuidError(guid);
 	if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
-		if (!ksceSblACIsSystemProgram(0)) {
+		if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1022, "error : sceIoIoctlForUser() failed!\n");
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1023, "process id = 0x%08x\n", sceKernelGetProcessId());
-			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1025, "sceSblACMgrIsSystemProgram() = %d\n", ksceSblACIsSystemProgram(0));
+			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1025, "sceSblACMgrIsSystemProgram() = %d\n", SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0));
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1026, "cmd=%x\n", cmd);
 			return SCE_ERROR_ERRNO_EUNSUP;
 		}
 	} else if (cmd & (IOFILEMGR_IOCTL_ACCESS_SYSTEM | IOFILEMGR_IOCTL_DISABLED)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1031, "error : sceIoIoctlForUser() failed!\n");
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1032, "process id = 0x%08x\n", sceKernelGetProcessId());
-		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1034, "sceSblACMgrIsSystemProgram() = %d\n", ksceSblACIsSystemProgram(0));
+		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1034, "sceSblACMgrIsSystemProgram() = %d\n", SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0));
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1035, "cmd=%x\n", cmd);
 		return SCE_ERROR_ERRNO_EUNSUP;
 	}
@@ -1140,7 +1140,7 @@ SceSSize sceIoPreadForUser(SceUID fd, void *data, SceSize size, SceOff offset)
 	kernelData = NULL;
 	if (size != 0) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPRead", IO_USER_MAP_WRITE,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -1174,7 +1174,7 @@ SceSSize sceIoPwriteForUser(SceUID fd, const void *data, SceSize size, SceOff of
 	kernelData = NULL;
 	if (size != 0) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPwrite", IO_USER_MAP_READ,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);

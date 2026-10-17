@@ -16,4 +16,3 @@
 
 /* ScePowerForDriver: USB charging */
 
-int ksceSblACMgrIsAllowedUsbSerial(void);

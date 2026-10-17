@@ -51,7 +51,7 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
@@ -117,8 +117,6 @@ extern int __aeabi_idiv(int numerator, int denominator);
 
 extern int ksceCtrlGetActiveControllerPort(void);
 
-extern int ksceSblACMgrIsGameProgram(SceUID pid);
-
 extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
 
 /* name unknown: told the new power flags of a process */
@@ -135,7 +133,6 @@ extern int ksceKernelPrintfAssertLevel(uint32_t level, int condition,
 				     const void *caller, const char *format, ...);
 extern int ksceKernelRegisterProcEventHandler(const char *, const void *, void *);
 extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
-extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSysrootIsExternalBootMode(void);
 extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);

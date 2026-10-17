@@ -225,7 +225,7 @@ SceSyscon:
         - ksceSysconGetElmoVersion: 0xA039B563
         - SceSysconForDriver_A1F1B973: 0xA1F1B973
         - SceSysconForDriver_A26586B2: 0xA26586B2
-        - ksceSysconCtrlWirelessPower2: 0xA2E85DB9
+        - SceSysconForDriver_A2E85DB9: 0xA2E85DB9
         - SceSysconForDriver_A2FE9BF9: 0xA2FE9BF9
         - ksceSysconBeginConfigstorageTransaction: 0xA4968B8C
         - SceSysconForDriver_A57B5433: 0xA57B5433
@@ -280,7 +280,7 @@ SceSyscon:
         - SceSysconForDriver_CE346793: 0xCE346793
         - ksceSysconGetConfigStorageInfo: 0xCE48E8EB
         - SceSysconForDriver_CEE2B8F7: 0xCEE2B8F7
-        - ksceSysconGetWakeupFactor: 0xCF5B2F2F
+        - SceSysconForDriver_CF5B2F2F: 0xCF5B2F2F
         - SceSysconForDriver_CFCEE733: 0xCFCEE733
         - ksceSysconMotionGetDeviceInfo: 0xD01E64FC
         - ksceSysconJigSetConfig: 0xD24BF916

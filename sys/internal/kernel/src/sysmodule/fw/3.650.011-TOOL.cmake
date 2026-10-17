@@ -80,10 +80,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_B1C3EFCA
 	SceProcessmgrForDriver_D141C076
-	ksceSblACMgrIsNonGameProgram
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsPSMDevAssistant
-	ksceSblACMgrIsDevelopmentMode
+	SceSblACMgrForDriver_6C5AB07F
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_C98D82EE
+	SceSblACMgrForDriver_E87D1777
 	SceQafMgrForDriver_B9770A13
 	ksceKernelRegisterProcEventHandler
 )

@@ -5,6 +5,7 @@
 #include <kernel/error.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/acmgr.h>
 
 _Static_assert(offsetof(SceVfsMount, available_entry_num) == 0x68, "mount entries");
 _Static_assert(offsetof(SceVfsMount, default_io_cache_size) == 0xc0, "mount cache");
@@ -14,8 +15,6 @@ _Static_assert(offsetof(SceVfsVnode, core.mnt) == 0x4c, "vnode mount");
 _Static_assert(offsetof(SceVfsVnode, core.fid) == 0x60, "vnode file ID");
 _Static_assert(offsetof(SceVfsVnode, core.state) == 0x74, "vnode state");
 _Static_assert(offsetof(SceVfsVnode, core.size) == 0x80, "vnode size");
-
-int ksceSblACMgrIsSystemProgram(void);
 
 #if FW_DEBUG
 #define FS_INFO(lineHash, funcHash, line, func) \
@@ -38,7 +37,7 @@ void _sceKernelBsodDummyFsError(const char *name)
 
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return;
-	if (ksceSblACMgrIsSystemProgram()) {
+	if (sceSblACMgrIsSystemProgram(pid)) {
 		if (SceQafMgrForDriver_382C71E8())
 			ksceKernelPrintfWithInfo(0, &s_fsSystemAccess,
 				"Host file system access is forbidden: name='%s'\n", name);

@@ -2292,7 +2292,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		memcpy(&param, option, option->size);
 #endif
 		flags = param.flags & MSG_PIPE_OPT_FLAG_PID;
-		if (flags && ksceSblACMgrIsNonGameOrGameProgram2(0)) {
+		if (flags && SceSblACMgrForKernel_570D6AD3(0)) {
 			ret = SCE_KERNEL_ERROR_ILLEGAL_ATTR;
 			goto restore;
 		}
@@ -2310,14 +2310,14 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		blockOpt.attr = 0x70000080;
 		blockType = 0x10c0d006;
 	} else if (memType == MSG_PIPE_MEMORY_USER_SHARED &&
-		   (!ThreadmgrInSyscall() || !ksceSblACMgrIsNonGameOrGameProgram2(0) ||
+		   (!ThreadmgrInSyscall() || !SceSblACMgrForKernel_570D6AD3(0) ||
 		    ksceKernelGetModuleIsSharedByAddr(thread->processId, lr))) {
 		pid = flags ? param.pid : sceKernelGetProcessId();
 		blockType = 0x10a0d006;
 		blockOpt.pid = pid;
 		blockOpt.attr = 0x70000080;
 	} else if (memType == MSG_PIPE_MEMORY_KERNEL && !ThreadmgrInSyscall() &&
-		   !ksceSblACMgrIsNonGameOrGameProgram2(0)) {
+		   !SceSblACMgrForKernel_570D6AD3(0)) {
 		blockOpt.attr = 0x70000000;
 		blockType = 0x1020d006;
 		pid = THREADMGR_KERNEL_PID;

@@ -8,7 +8,7 @@
  * sceSblACMgrGetPaid, IsKernelProgram, IsSystemProgram,
  * SetFSAttributeByAttributeWithMountPoint; exfatfs:
  * GetFSAttributeByThreadAccessLevel; syslibtrace: HasCapability, IsGameProgram;
- * applier: GetMediaType), otherwise vitasdk's NID database names.
+ * applier: GetMediaType), otherwise <Library>_<NID>.
  */
 #include <sysmem/ctype.h>
 #include <sysmem/sysclib.h>
@@ -270,7 +270,7 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 	return 0;
 }
 
-int kscePfsACSetFSAttrByMode(SceUID pid, SceSblACMgrValue *attr, SceUInt32 mode)
+int SceSblACMgrForKernel_2AE6CF27(SceUID pid, SceSblACMgrValue *attr, SceUInt32 mode)
 {
 	SceSelfAuthInfo info;
 	int ret;
@@ -487,12 +487,12 @@ int sceSblACMgrIsSystemProgram(SceUID pid)
 	return sceSblACMgrHasCapability(pid, 1);
 }
 
-int ksceSblACMgrIsNonGameOrGameProgram(SceUID pid)
+int SceSblACMgrForDriver_8A54DF3A(SceUID pid)
 {
 	return sceSblACMgrHasCapability(pid, 2) || sceSblACMgrHasCapability(pid, 3);
 }
 
-int ksceSblACMgrIsNonGameProgram(SceUID pid)
+int SceSblACMgrForDriver_6C5AB07F(SceUID pid)
 {
 	return sceSblACMgrHasCapability(pid, 3);
 }
@@ -507,7 +507,7 @@ int sceSblACMgrIsGameProgram(SceUID pid)
 		paid == 0x2f00000000000001ULL;
 }
 
-int ksceSblACMgrIsFself(SceUID pid)
+int SceSblACMgrForDriver_426A4E8C(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -521,17 +521,17 @@ int SceSblACMgrForKernel_30575458(SceUID pid)
 {
 	if (sceSblACMgrHasCapability(pid, 0x22))
 		return 1;
-	return ksceSblACMgrIsFself(pid) && SceSysrootForDriver_26AA237C() != 0;
+	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
 }
 
-int ksceSblACMgrIsSceShell(SceUID pid)
+int SceSblACMgrForDriver_991FDC15(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
 	return sceSblACMgrGetPaid(pid, &paid) == 0 && paid == 0x2800000000000001ULL;
 }
 
-int ksceSblACMgrIsWebCoreOrWebKitProcess(SceUID pid)
+int SceSblACMgrForDriver_0139FC20(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -549,7 +549,7 @@ int SceSblACMgrForDriver_0924896F(SceUID pid)
 	return paid == 0x220000101cd2000cULL || paid == 0x220000101cd2000dULL;
 }
 
-int ksceSblACMgrIsUpdaterUISetupperOrPkgInstallerSpawn(SceUID pid)
+int SceSblACMgrForDriver_962CD237(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -590,7 +590,7 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 	return hasAttribute(pid, 0x10) == 0;
 }
 
-int ksceSblACMgrIsDevelopmentMode(void)
+int SceSblACMgrForDriver_E87D1777(void)
 {
 	return ksceKernelCheckDipsw(0x9f);
 }
@@ -600,11 +600,11 @@ int SceSblACMgrForDriver_AD717E7A(SceUID pid)
 	return sceSblACMgrHasCapability(pid, 0x20);
 }
 
-int ksceSblACMgrIsAllowedUsbSerial(SceUID pid)
+int SceSblACMgrForDriver_062CAEB2(SceUID pid)
 {
 	if (sceSblACMgrHasCapability(pid, 1) || sceSblACMgrHasCapability(pid, 0x83))
 		return 1;
-	return ksceSblACMgrIsFself(pid) && SceSysrootForDriver_26AA237C() != 0;
+	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
 }
 
 int SceSblACMgrForDriver_B836CF13(SceUID pid)
@@ -612,7 +612,7 @@ int SceSblACMgrForDriver_B836CF13(SceUID pid)
 	return hasAttribute(pid, 0x81);
 }
 
-int ksceSblACMgrIsPSMDevAssistant(SceUID pid)
+int SceSblACMgrForDriver_C98D82EE(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -620,10 +620,10 @@ int ksceSblACMgrIsPSMDevAssistant(SceUID pid)
 		return 0;
 	if (paid == 0x2800c0101cd2000bULL || paid - 0x210000101cd20007ULL < 4)
 		return 1;
-	return ksceSblACMgrIsFself(pid) && SceSysrootForDriver_26AA237C() != 0;
+	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
 }
 
-int ksceSblACMgrIsPSMRuntime(SceUID pid)
+int SceSblACMgrForDriver_091F7247(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -641,7 +641,7 @@ int SceSblACMgrForDriver_5C4BC352(SceUID pid)
 	return paid == 0x210000101cd2000aULL;
 }
 
-int ksceSblACMgrIsSIEApp(SceUID pid)
+int SceSblACMgrForDriver_A67E8E5B(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -650,7 +650,7 @@ int ksceSblACMgrIsSIEApp(SceUID pid)
 	return paid - 0x210000101cd20007ULL < 3;
 }
 
-int ksceSblACMgrIsMiniSettingsForQA(SceUID pid)
+int SceSblACMgrForDriver_D0E11C89(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -661,7 +661,7 @@ int ksceSblACMgrIsMiniSettingsForQA(SceUID pid)
 	return sceSblACMgrHasCapability(pid, 0x82) != 0;
 }
 
-int ksceSblACMgrIsAllowedExtendedMemory(SceUID pid)
+int SceSblACMgrForDriver_4DB7F512(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -704,7 +704,7 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 	return 0;
 }
 
-int ksceSblACMgrIsNotSandboxed(SceUID pid)
+int SceSblACMgrForDriver_0B6E6CD7(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -722,7 +722,7 @@ int SceSblACMgrForDriver_6D8A88B7(SceUID pid)
 
 	if (sceSblACMgrGetPaid(pid, &paid) != 0)
 		return 0;
-	return sceSblACMgrIsGameProgram(pid) || ksceSblACMgrIsNotSandboxed(pid);
+	return sceSblACMgrIsGameProgram(pid) || SceSblACMgrForDriver_0B6E6CD7(pid);
 }
 
 int SceSblACMgrForDriver_456DA7AC(SceUID pid)
@@ -733,12 +733,12 @@ int SceSblACMgrForDriver_456DA7AC(SceUID pid)
 		return 0;
 	if (sceSblACMgrHasCapability(pid, 3) || paid - 0x210000101cd20007ULL < 3)
 		return 1;
-	if (ksceSblACMgrIsFself(pid) && SceSysrootForDriver_26AA237C() != 0)
+	if (SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0)
 		return 1;
 	return paid == 0x2800000000000044ULL || paid == 0x280000000000001eULL;
 }
 
-int ksceSblACMgrIsPspEmu(SceUID pid)
+int SceSblACMgrForDriver_FD00C72A(SceUID pid)
 {
 	SceUInt64 paid = 0;
 
@@ -747,11 +747,11 @@ int ksceSblACMgrIsPspEmu(SceUID pid)
 	return paid == 0x2800000000000013ULL || paid == 0x2800000000007009ULL;
 }
 
-int ksceSblACMgrIsAllowedVirtualMachine(SceUID pid)
+int SceSblACMgrForDriver_2A29453C(SceUID pid)
 {
 	if (sceSblACMgrHasCapability(pid, 0x84))
 		return 1;
-	return ksceSblACMgrIsFself(pid) && SceSysrootForDriver_26AA237C() != 0;
+	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_26AA237C() != 0;
 }
 
 int SceSblACMgrForDriver_A27E47A7(SceUID pid)
@@ -768,7 +768,7 @@ int SceSblACMgrForDriver_AE1AF154(SceUID pid)
 {
 	if (sceSblACMgrHasCapability(pid, 0x86))
 		return 1;
-	return ksceSblACMgrIsFself(pid) && SceSysrootForDriver_E2515A08() != 0;
+	return SceSblACMgrForDriver_426A4E8C(pid) && SceSysrootForDriver_E2515A08() != 0;
 }
 
 int SceSblACMgrForDriver_A92CD636(SceUID pid)

@@ -154,7 +154,7 @@ int sceSblRtcMgrSetCpActivationKeyForUser(void)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -169,7 +169,7 @@ int sceSblRtcMgrSetCpRtcPhysicalAndKeyForUser(SceUInt32 time)
 	SceUInt8 productMode;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		productMode = 0;
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			if (rtcMgrIsPhysicalTimeValid(time)) {
@@ -193,7 +193,7 @@ int sceSblRtcMgrGetCpSerialIdForUser(void *serialId)
 	SceUInt8 productMode;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		if (serialId == NULL) {
 			sceSyscallLeave(state);
 			return SCE_SBL_ERROR_RTC_INVALID_ARGUMENT;
@@ -217,7 +217,7 @@ int sceSblRtcMgrSetCpRtcPhysicalForUser(SceUInt32 time)
 	SceUInt8 productMode;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		productMode = 0;
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			if (rtcMgrIsPhysicalTimeValid(time)) {
@@ -241,7 +241,7 @@ int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time)
 	SceUInt8 productMode;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		if (time == NULL) {
 			sceSyscallLeave(state);
 			return SCE_SBL_ERROR_RTC_INVALID_ARGUMENT;
@@ -263,7 +263,7 @@ int sceSblRtcMgrSetCpRtcLogicalForUser(SceUInt32 time)
 {
 	SceUInt32 state = sceSyscallEnter();
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -279,7 +279,7 @@ int sceSblRtcMgrGetCpRtcLogicalForUser(SceUInt32 *time)
 	SceUInt32 value;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}

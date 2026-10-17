@@ -1,7 +1,7 @@
 /* User entry points reuse the motion driver's syscall argument checks. */
 #include "motion_manager.h"
 #include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
 
 struct SceMotionDevDs3CalibData;
@@ -161,7 +161,7 @@ int sceMotionDevReadForMagnCalib(SceMotionDevData *data, int count)
 		sceSyscallLeave(state);
 		return (int)0x80360001;
 	}
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return (int)0x80360002;
 	}
@@ -238,7 +238,7 @@ int sceMotionDevUpdateMagnCalibData(const SceMotionDevMagnCalibData *data,
 	SceUInt32 value;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return (int)0x80360002;
 	}
@@ -295,7 +295,7 @@ int sceMotionDevUpdateMagnStabilityLevel(SceUInt32 level)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return (int)0x80360002;
 	}
@@ -411,7 +411,7 @@ int sceMotionDevGetMeasMode(void *info)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return (int)0x80360002;
 	}

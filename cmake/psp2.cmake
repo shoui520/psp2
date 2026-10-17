@@ -73,6 +73,8 @@ foreach(ns kernel user)
 		endif()
 		file(TOUCH "${out}/.stamp")
 	endif()
+	# a changed database (or generator) reconfigures the build, which makes the stubs again
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${db}" "${PSP2_SRC}/tools/mkstubs.py")
 	file(GLOB PSP2_STUB_LIBS_${ns} "${out}/*_stub.a")
 endforeach()
 

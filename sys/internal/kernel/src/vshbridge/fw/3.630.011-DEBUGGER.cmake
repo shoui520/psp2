@@ -303,10 +303,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoGetstatForVshbridge
 	ksceKernelSearchModuleByName
 	SceProcessmgrForDriver_D141C076
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrHasCapability
-	ksceSblACMgrIsPSMDevAssistant
-	ksceSblACMgrIsDevelopmentMode
+	sceSblACMgrIsSystemProgram
+	sceSblACMgrHasCapability
+	SceSblACMgrForDriver_C98D82EE
+	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_F5AE24AC
 	ksceSblAimgrGetVisibleId
 	ksceSblSsEncryptWithPortability

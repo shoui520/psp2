@@ -80,7 +80,7 @@ SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry,
 				      SceSize stack, SceUInt32 attr, int cpu, void *opt);
 
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
-int ksceSblACMgrGetMediaType2(const char *path, void *type);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);
 int ksceSblAuthMgrCompareSwVersion(SceUInt32 version);
 int ksceSblAuthMgrOpen(int *ctx);
 int ksceSblAuthMgrClose(int ctx);

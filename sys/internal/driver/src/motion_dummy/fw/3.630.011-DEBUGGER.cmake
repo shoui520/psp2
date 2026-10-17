@@ -55,7 +55,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_8CB01675
 	ksceKernelRegisterProcEventHandler
 	ksceKernelRegisterSysEventHandler
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

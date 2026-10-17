@@ -5,7 +5,7 @@
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2/appmgr.h>
 #include "app_state_internal.h"
 #include "appmgr_internal_util.h"
@@ -329,7 +329,7 @@ int sceAppMgrPeekLaunchParamForShell(int appId, char *param)
 	int count;
 	int result;
 
-	if (!ksceSblACMgrIsSceShell(0) ||
+	if (!SceSblACMgrForDriver_991FDC15(0) ||
 	    (shell = appmgrGetShellApp()) == NULL ||
 	    shell->process.processId != ksceKernelGetProcessId()) {
 		result = (int)0x8080201f;
@@ -386,7 +386,7 @@ int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param)
 	int count;
 	int result;
 
-	if (!ksceSblACMgrIsSceShell(0) ||
+	if (!SceSblACMgrForDriver_991FDC15(0) ||
 	    (shell = appmgrGetShellApp()) == NULL ||
 	    shell->process.processId != ksceKernelGetProcessId()) {
 		result = (int)0x8080201f;
@@ -548,7 +548,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 	SceUInt32 count, index;
 	int result, lockResult;
 
-	if (!ksceSblACMgrIsSceShell(0) || !(app = appmgrGetShellApp()) ||
+	if (!SceSblACMgrForDriver_991FDC15(0) || !(app = appmgrGetShellApp()) ||
 	    app->process.processId != sceKernelGetProcessId()) {
 		sceSyscallLeave(syscallState);
 		return 0x8080201c;

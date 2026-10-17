@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <sm_comm/sm_comm.h>
 #include <mgkeymgr/mgkeymgr.h>
 #include <dmacmgr/dmac_regs.h>
@@ -56,7 +56,7 @@ static int NOINLINE StartSecureModule(void)
 
 	memset(&auth, 0, sizeof(auth));
 	memcpy(&auth.request, s_request, sizeof(s_request));
-	ret = ksceSblACMgrGetMediaType("os0:sm/mgkm_sm.self", &auth.media_type);
+	ret = sceSblACMgrGetMediaType("os0:sm/mgkm_sm.self", &auth.media_type);
 	if (ret < 0)
 		return ret;
 	auth.self_type = (auth.self_type & ~0xfU) | 2;

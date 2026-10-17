@@ -150,9 +150,9 @@ set(MODULE_IMPORT_FUNCS
 	SceRtcForDriver_09AF419B
 	ksceRtcGetCurrentClockLocalTime
 	ksceRtcGetCurrentClock
-	SceSblACMgrForDriver_0606B87E
+	sceSblACMgrGetFSAttributeByThreadAccessLevel
 	SceSblACMgrForDriver_3B356B98
-	SceSblACMgrForDriver_48CFCEA2
+	sceSblACMgrSetFSAttributeByAttributeWithMountPoint
 	SceSblACMgrForDriver_6210D745
 	SceSblACMgrForDriver_B12CEAA8
 	SceSblACMgrForDriver_BE5667C5

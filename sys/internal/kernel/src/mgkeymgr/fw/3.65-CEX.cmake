@@ -47,7 +47,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblDmac5DesEcbEncWithKeyslot
 	ksceSblDmac5AesEcbDecWithKeyslot
 	ksceSblDmac5DesEcbDecWithKeyslot
-	ksceSblACMgrGetMediaType
+	sceSblACMgrGetMediaType
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -9,7 +9,7 @@ int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = SpkgUtilGetUpdateMode(&mode);
@@ -24,7 +24,7 @@ int sceSblUsSetUpdateModeForUser(SceUpdateMode mode)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = SpkgUtilSetUpdateMode(mode);
@@ -36,7 +36,7 @@ int sceSblUsCheckSystemIntegrityForUser(void)
 {
 	unsigned int state;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	EXIT_SYSCALL(state);
@@ -48,7 +48,7 @@ int sceSblUsPowerControlForUser(int operation, int flags)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = SpkgUtilPowerControl(operation, flags);
@@ -62,7 +62,7 @@ int sceSblUsGetApplicableVersionForUser(int type, UpdateApplicableVersion *outpu
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = SpkgInfoUtilGetApplicableVersion(type, &info);

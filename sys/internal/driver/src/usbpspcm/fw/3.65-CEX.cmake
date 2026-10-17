@@ -97,8 +97,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCreateThread
 	ksceKernelSignalSema
 	ksceKernelSetEventFlag
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsPspEmu
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_FD00C72A
 	ksceUdcdUnregister
 	ksceUdcdStop
 	ksceUdcdReqSend

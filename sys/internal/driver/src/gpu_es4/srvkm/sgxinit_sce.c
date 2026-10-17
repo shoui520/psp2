@@ -10,7 +10,7 @@
 #include <gpu/sgxmkif_sce.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
@@ -875,7 +875,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 		psMiscInfo->uData.sTimers.ui64CPUTimer = ksceKernelGetProcessTimeWideCore();
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_DISPLAY_CONTROL:
-		if (!ksceSblAimgrIsTool() || !ksceSblACMgrIsDevelopmentMode())
+		if (!ksceSblAimgrIsTool() || !SceSblACMgrForDriver_E87D1777())
 			return PVRSRV_OK;
 		ui32Flags = psMiscInfo->uData.ui32DisplayControlFlags;
 		if (ui32Flags & ~3U)

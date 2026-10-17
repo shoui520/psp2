@@ -15,7 +15,6 @@ int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64
 int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <psp2kern/io/dirent.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/processmgr.h>
@@ -979,7 +978,7 @@ int rfs_get_root(const VfsPathElem *elem, int num, RfsRootInfo *root, int *depth
 #define VFS_AC_MODE_CHSTAT		8
 
 int SceSblACMgrForKernel_75AAF981(SceUID pid, SceSblACMgrValue *info, SceUInt32 mode);
-int SceSblACMgrForKernel_1B160234(SceUID pid, SceSblACMgrValue *in, SceSblACMgrValue *out,
+int SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid, SceSblACMgrValue *in, SceSblACMgrValue *out,
 				  SceUInt32 mntId);	/* sceSblACMgrSetFSAttributeByAttributeWithMountPoint */
 void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, SceUID pid);
 int vfs_check_vnode_rw_access(SceVfsVnode *vp);
@@ -1279,7 +1278,7 @@ SceUID sceIoPreadAsyncForUser(SceUID fd, void *data, SceSize size, SceOff offset
 SceUID sceIoPwriteAsyncForUser(SceUID fd, const void *data, SceSize size, SceOff offset, void *asyncParam);
 
 /* SceSblACMgr */
-int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *type);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *type);
 
 /* SceFios2Kernel: the overlay's directory calls (names unknown) */
 int SceFios2KernelForDriver_3B329E86(int *handle, const char *dirname, int a2, int a3);

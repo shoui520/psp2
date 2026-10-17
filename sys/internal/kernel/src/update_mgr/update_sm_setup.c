@@ -4,7 +4,7 @@
 #include <string.h>
 #include "update_internal.h"
 
-int ksceSblACMgrGetMediaType2(const char *path, void *type);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);
 
 typedef struct UpdateUtilSmPath {
 	const char *sm_path;
@@ -51,7 +51,7 @@ int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 	}
 	memset(&auth, 0, sizeof(auth));
 	memcpy(&auth.request, &updateSmAuthInfo, sizeof(auth.request));
-	result = ksceSblACMgrGetMediaType2(sm_path, &auth.media_type);
+	result = SceSblACMgrForKernel_sceSblACMgrGetMediaType(sm_path, &auth.media_type);
 	if (result < 0)
 		goto restorePermission;
 	auth.self_type = (auth.self_type & ~15) | 2;

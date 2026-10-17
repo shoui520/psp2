@@ -12,9 +12,8 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/sysmem.h>
+#include <acmgr/acmgr.h>
 
-extern int ksceSblACMgrIsSystemProgram(SceUID pid);
-extern int ksceSblACMgrIsMiniSettingsForQA(void);
 extern int ksceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout);
 extern int ksceUdcdGetDeviceState(void);
 extern int ksceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information);
@@ -109,8 +108,8 @@ int SceUdcdForDriver_1A5A3851(void)
 /* the callers user mode may serve */
 static inline int udcdUserAllowed(void)
 {
-	return ksceSblACMgrIsSystemProgram(0) || ksceSblACMgrIsMiniSettingsForQA() ||
-	       ksceSblACMgrIsAllowedUsbSerial();
+	return sceSblACMgrIsSystemProgram(0) || SceSblACMgrForDriver_D0E11C89(0) ||
+	       SceSblACMgrForDriver_062CAEB2(0);
 }
 
 int sceUdcdRegisterCallback(SceUID callback, unsigned int mask)

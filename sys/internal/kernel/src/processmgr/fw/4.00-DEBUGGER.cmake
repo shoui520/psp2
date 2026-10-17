@@ -233,9 +233,9 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0xE0489831
 )
 set(MODULE_IMPORT_FUNCS
-	ksceSblACMgrIsGameProgram2
+	SceSblACMgrForKernel_sceSblACMgrIsGameProgram
 	SceSblACMgrForKernel_49509A83
-	ksceSblACMgrIsDevelopmentMode2
+	SceSblACMgrForKernel_BBA13D9C
 	SceExcpmgrForKernel_293DFA04
 	SceExcpmgrForKernel_B615A7DA
 	SceExcpmgrForKernel_E7487AFD

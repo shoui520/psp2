@@ -13,6 +13,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysclib.h>
+#include <acmgr/acmgr.h>
 
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
 int InsertMappedMemoryLegacy(GpuMappedMemoryList *list, IMG_VOID *address,
@@ -393,7 +394,6 @@ PVRSRV_ERROR PVRSRVFreeDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	return PVRSRV_OK;
 }
 
-int ksceSblACMgrIsGameProgram(SceUID pid);
 int GetMemoryContext(GpuMemoryContext **output, unsigned pid);
 int AddMemoryContextToList(GpuMemoryContext **output, unsigned pid);
 int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid);
@@ -430,7 +430,7 @@ PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 	if (!psDeviceNode || GetKernelMemoryContext(&psKernelContext) < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	pid = ksceKernelGetProcessId();
-	if (!ksceSblACMgrIsGameProgram(pid) || GetMemoryContext(&psContext, pid) != 0) {
+	if (!sceSblACMgrIsGameProgram(pid) || GetMemoryContext(&psContext, pid) != 0) {
 		if (AddMemoryContextToList(&psContext, pid) < 0)
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 		if (sceGpuMmuAllocatePageTablePool(&psContext->mmu.pageTablePool, pid) < 0)

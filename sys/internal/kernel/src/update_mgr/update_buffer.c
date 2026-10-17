@@ -33,7 +33,7 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		if (index == 4)
 			goto failed;
 	}
-	if (ksceSblACMgrIsRootProgram2(pid)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid)) {
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
 		kernelOption.alignment = 4096;

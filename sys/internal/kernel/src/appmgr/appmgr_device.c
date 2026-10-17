@@ -5,7 +5,7 @@
 #include <threadmgr/threadmgr.h>
 #include <touch/touch.h>
 #include <appmgr/appmgr_debugger.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "appmgr_device.h"
@@ -1145,7 +1145,7 @@ int _sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1216,7 +1216,7 @@ int _sceAppMgrReleaseSoundOutExclusive(void)
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1421,7 +1421,7 @@ int sceAppMgrAcquireBgmPortForMusicPlayer(void)
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1597,7 +1597,7 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority)
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1691,7 +1691,7 @@ int sceAppMgrSetBgmSubPriority(int enabled, int priority)
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1776,7 +1776,7 @@ int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled)
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1890,7 +1890,7 @@ int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled,
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -1963,7 +1963,7 @@ int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled,
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2038,7 +2038,7 @@ int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 	SceUID pid, mutexOwner;
 	int result, index;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2107,7 +2107,7 @@ int sceAppMgrDeclareSystemChatApp(void)
 	SceUID mutexOwner;
 #endif
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2191,7 +2191,7 @@ int sceAppMgrEnablePrioritizingSystemChat(int enabled)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2258,7 +2258,7 @@ int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2367,7 +2367,7 @@ int sceAppMgrSetBgmProxyApp(const char *appName)
 	int result, index;
 	AppmgrAudioApp *app;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2799,7 +2799,7 @@ int sceAppMgrAcquireBtrm(void)
 	int result, index;
 	AppmgrAudioApp *app;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}
@@ -2880,7 +2880,7 @@ int sceAppMgrReleaseBtrm(void)
 	int result, index;
 	AppmgrAudioApp *app;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsNonGameProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x8080201f;
 	}

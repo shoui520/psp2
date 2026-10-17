@@ -312,7 +312,7 @@ int name(const void *port) \
 { \
 	SceUInt32 saved = sceSyscallEnter(); \
 	int ret = SCE_ERROR_ERRNO_ENOSYS; \
-	if (ksceSblACMgrIsSystemProgram(0)) \
+	if (sceSblACMgrIsSystemProgram(0)) \
 		ret = driver(port); \
 	return leaveSyscall(saved, ret); \
 }
@@ -330,7 +330,7 @@ int sceMtpIfWaitConnect(const void *port, SceUInt32 timeout)
 
 	if (!SceThreadmgrForDriver_20C228E4()) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
-		if (ksceSblACMgrIsSystemProgram(0))
+		if (sceSblACMgrIsSystemProgram(0))
 			ret = SceMtpIfForDriver_05408B5B(port, timeout);
 	}
 	return leaveSyscall(saved, ret);
@@ -341,7 +341,7 @@ int sceMtpIfChangePhase(const void *port, int phase)
 	SceUInt32 saved = sceSyscallEnter();
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0))
+	if (sceSblACMgrIsSystemProgram(0))
 		ret = SceMtpIfForDriver_8D16B997(port, phase);
 	return leaveSyscall(saved, ret);
 }
@@ -351,7 +351,7 @@ int sceMtpIfStartDriver(int port)
 	SceUInt32 saved = sceSyscallEnter();
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0) || ksceSblACMgrIsMiniSettingsForQA())
+	if (sceSblACMgrIsSystemProgram(0) || SceSblACMgrForDriver_D0E11C89(0))
 		ret = SceMtpIfForDriver_CB685AC0(port);
 	return leaveSyscall(saved, ret);
 }
@@ -361,7 +361,7 @@ int sceMtpIfStopDriver(int port)
 	SceUInt32 saved = sceSyscallEnter();
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0) || ksceSblACMgrIsMiniSettingsForQA())
+	if (sceSblACMgrIsSystemProgram(0) || SceSblACMgrForDriver_D0E11C89(0))
 		ret = SceMtpIfForDriver_FDF8C3C0(port);
 	return leaveSyscall(saved, ret);
 }
@@ -372,7 +372,7 @@ const void *sceMtpIfGetPort(int port)
 	const void *ret = NULL;
 
 	sceKernelApiDeclareTypeUInt32();
-	if (ksceSblACMgrIsSystemProgram(0))
+	if (sceSblACMgrIsSystemProgram(0))
 		ret = SceMtpIfForDriver_16D7DBCC(port);
 	leaveSyscall(saved, 0);
 	return ret;
@@ -384,7 +384,7 @@ int sceMtpIfRecvCommand(const void *port, void *command)
 	SceUInt32 local[9];
 	int ret = SCE_ERROR_ERRNO_ENOSYS, copy;
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = SceMtpIfForDriver_117F7519(port, local);
 		if (ret >= 0) {
 			copy = ksceKernelCopyToUser(command, local, sizeof(local));
@@ -401,7 +401,7 @@ int sceMtpIfSendResponse(const void *port, const void *response)
 	SceUInt32 local[9];
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = ksceKernelLockFastMutex(s_mtp.mutex);
 		if (ret >= 0) {
 			ret = ksceKernelCopyFromUser(local, response, sizeof(local));
@@ -419,7 +419,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 	MtpIfTransfer local;
 	int ret = SCE_ERROR_ERRNO_ENOSYS, copy;
 
-	if (!ksceSblACMgrIsSystemProgram(0))
+	if (!sceSblACMgrIsSystemProgram(0))
 		goto out;
 	ret = ksceKernelLockFastMutex(s_mtp.mutex);
 	if (ret < 0)
@@ -456,7 +456,7 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 	MtpIfTransfer local, transfer;
 	int ret = SCE_ERROR_ERRNO_ENOSYS, copy;
 
-	if (!ksceSblACMgrIsSystemProgram(0))
+	if (!sceSblACMgrIsSystemProgram(0))
 		goto out;
 	ret = ksceKernelLockFastMutex(s_mtp.mutex);
 	if (ret < 0)
@@ -502,7 +502,7 @@ int sceMtpIfSendEvent(const void *port, const void *command, const void *event)
 	SceUInt32 localCommand[9], localEvent[7];
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = ksceKernelCopyFromUser(localCommand, command,
 					     sizeof(localCommand));
 		if (ret >= 0) {

@@ -38,9 +38,9 @@ void ksceKernelSpinlockLowLock(SceKernelSpinlock *lock);
 void ksceKernelSpinlockLowUnlock(SceKernelSpinlock *lock);
 
 /* SceSblACMgrForKernel */
-int ksceSblACMgrIsGameProgram2(SceUID pid);
+int SceSblACMgrForKernel_sceSblACMgrIsGameProgram(SceUID pid);
 int SceSblACMgrForKernel_49509A83(SceUID pid);
-int ksceSblACMgrIsDevelopmentMode2(void);
+int SceSblACMgrForKernel_BBA13D9C(void);	/* vitasdk: ksceSblACMgrIsDevelopmentMode2 */
 
 /* SceExcpmgrForKernel */
 void SceExcpmgrForKernel_293DFA04(void);

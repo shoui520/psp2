@@ -10,8 +10,8 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <usbstor/usbstor.h>
+#include <acmgr/acmgr.h>
 
-int ksceSblACMgrIsAllowedUsbSerial(unsigned pid);
 int sceUsbSerialStart(void);
 int sceUsbSerialClose(void);
 int sceUsbSerialSetup(unsigned mode);

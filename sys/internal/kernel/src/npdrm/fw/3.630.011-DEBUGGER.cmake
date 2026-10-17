@@ -173,9 +173,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	ksceKernelRunWithStack
 	ksceKernelCreateMutex
-	ksceSblACMgrIsPSMRuntime
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrGetProcessProgramAuthId
+	SceSblACMgrForDriver_091F7247
+	sceSblACMgrIsSystemProgram
+	sceSblACMgrGetPaid
 	ksceIoRemove
 	ksceIoWrite
 	ksceIoPread

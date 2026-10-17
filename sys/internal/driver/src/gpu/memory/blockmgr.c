@@ -5,13 +5,13 @@
 
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/sysclib.h>
+#include <acmgr/acmgr.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/blockmgr.c"
 
 extern void *AllocProcessGpuMemory(unsigned size);
 extern int FreeProcessGpuMemory(void *address);
-extern int ksceSblACMgrIsGameProgram(int pid);
 extern GpuMemBlockHeap *kernelMemBlockHeap;
 
 unsigned nextMemBlockGroupId = 0x12340000;
@@ -58,7 +58,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 			shadowType = 0x40408006;
 		} else if (type == 0x0d808060 || type == 0x0e208050 ||
 			   type == 0x0e208060 || type == 0x0c208060) {
-			shadowType = ksceSblACMgrIsGameProgram(0) ?
+			shadowType = sceSblACMgrIsGameProgram(0) ?
 				     0x11208006 : 0x10208006;
 		} else {
 			SCE_DBG_PRINTF(0, 113,

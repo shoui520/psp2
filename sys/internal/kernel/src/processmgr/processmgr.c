@@ -554,7 +554,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 	}
 	if (process->kplsHeap != -1) {
 #if FW_DEBUG
-		if (ksceSblACMgrIsDevelopmentMode2() != 0) {
+		if (SceSblACMgrForKernel_BBA13D9C() != 0) {
 			sceKernelVerifyHeap(process->kplsHeap, 0);
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2850, "process KPLS heap verified\n");
 		}
@@ -624,7 +624,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 	}
 	if (process->cdialogHeap != -1) {
 #if FW_DEBUG
-		if (ksceSblACMgrIsDevelopmentMode2() != 0) {
+		if (SceSblACMgrForKernel_BBA13D9C() != 0) {
 			sceKernelVerifyHeap(process->cdialogHeap, 0);
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2935, "process CDialog heap verified\n");
 		}
@@ -647,7 +647,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 	}
 	if (process->uniqueHeap != -1) {
 #if FW_DEBUG
-		if (ksceSblACMgrIsDevelopmentMode2() != 0) {
+		if (SceSblACMgrForKernel_BBA13D9C() != 0) {
 			sceKernelVerifyHeap(process->uniqueHeap, 0);
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2969, "process unique heap verified\n");
 		}
@@ -5880,7 +5880,7 @@ int sceKernelCallAbortHandlerForUser(SceUInt32 code, const void *opt)
 	process = GetCurrentProcess();
 	pid = process->pid;
 	if ((ksceKernelCheckDipsw(0x9f) == 0 || SceSysrootForDriver_6050A467(pid) == 1)
-	    && (ksceKernelCheckDipsw(0x9f) != 0 || ksceSblACMgrIsGameProgram2(pid) != 0)) {
+	    && (ksceKernelCheckDipsw(0x9f) != 0 || SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) != 0)) {
 		if (ksceKernelCheckDipsw(0x9f) == 0 || SceSysrootForDriver_6050A467(pid) == 0) {
 			if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
 				process->abortCode = code;

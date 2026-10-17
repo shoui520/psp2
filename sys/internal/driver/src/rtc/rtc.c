@@ -13,7 +13,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <sysmem/suspend.h>
@@ -707,7 +707,7 @@ int ksceRtcGetCurrentSecureTick(SceRtcTick *tick)
 
 int ksceRtcGetCurrentNetworkTick(SceRtcTick *tick)
 {
-	if (ksceSblACMgrIsFself(0) && ksceRtcGetCurrentDebugNetworkTick(tick) == 0)
+	if (SceSblACMgrForDriver_426A4E8C(0) && ksceRtcGetCurrentDebugNetworkTick(tick) == 0)
 		return 0;
 	return ksceRtcGetCurrentRetainedNetworkTick(tick);
 }

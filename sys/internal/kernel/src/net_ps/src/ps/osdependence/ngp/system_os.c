@@ -1,6 +1,6 @@
 /* SceNetPs platform adapters, adjacent to Sony's system_os.c debug records. */
 #include <psp2/registrymgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -121,7 +121,7 @@ int sceNetPsIsApplicationProgram(int *error)
 {
 	if (error)
 		*error = (int)0x80010058;
-	if (!ksceSblACMgrIsSystemProgram(0) && !ksceSblACMgrIsRootProgram(0))
+	if (!sceSblACMgrIsSystemProgram(0) && !sceSblACMgrIsKernelProgram(0))
 		return 1;
 	if (error)
 		*error = 0;
@@ -135,7 +135,7 @@ int sceNetPsIsGameBudget(void)
 
 int sceNetPsIsDevelopmentMode(void)
 {
-	return ksceSblACMgrIsDevelopmentMode() != 0;
+	return SceSblACMgrForDriver_E87D1777() != 0;
 }
 
 int sceNetPsIsCEX(void)

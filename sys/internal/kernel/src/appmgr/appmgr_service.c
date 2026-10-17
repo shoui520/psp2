@@ -4,7 +4,7 @@
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/appmgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
@@ -158,7 +158,7 @@ int sceAppMgrGetNameById(SceUID pid, char *appName)
 	struct AppState *app;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -221,7 +221,7 @@ int sceAppMgrGetAppIdByAppId(int appId)
 	int id;
 
 	sceKernelApiDeclareTypeUInt32();
-	if (!ksceSblACMgrIsSceShell(0))
+	if (!SceSblACMgrForDriver_991FDC15(0))
 		goto denied;
 	app = appmgrGetShellApp();
 	if (app == NULL)
@@ -272,7 +272,7 @@ int sceAppMgrGetIdByName(SceUID *pid, const char *appName)
 	int result;
 	int status;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -323,7 +323,7 @@ SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId)
 	SceUID pid;
 	int result;
 
-	if (!ksceSblACMgrIsSceShell(0))
+	if (!SceSblACMgrForDriver_991FDC15(0))
 		goto denied;
 	app = appmgrGetShellApp();
 	if (app == NULL)
@@ -391,7 +391,7 @@ int sceAppMgrGetStatusById(SceUID id, void *appStatus)
 	int result;
 	int statusResult;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -452,7 +452,7 @@ int sceAppMgrGetStatusByAppId(int appId, void *appStatus)
 	int result;
 	int statusResult;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -513,7 +513,7 @@ int sceAppMgrGetStatusByName(const char *appName, void *appStatus)
 	int result;
 	int statusResult;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && appName != NULL) {
+	if (!sceSblACMgrIsSystemProgram(0) && appName != NULL) {
 		sceSyscallLeave(syscall);
 		return 0x8080201c;
 	}
@@ -575,7 +575,7 @@ SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output)
 	SceUID mutex;
 	int result;
 
-	if (!ksceSblACMgrIsNonGameProgram(0)) {
+	if (!SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -639,7 +639,7 @@ int sceAppMgrGetFgAppInfo(void *output)
 	SceUID mutex;
 	int result;
 
-	if (!ksceSblACMgrIsNonGameProgram(0)) {
+	if (!SceSblACMgrForDriver_6C5AB07F(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -724,7 +724,7 @@ int sceAppMgrSendLiveBoardMode(int mode)
 	int result;
 
 	memset(&event, 0, sizeof(event));
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -814,7 +814,7 @@ int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode)
 	int result;
 	int eventResult;
 
-	if (!ksceSblACMgrIsSceShell(0))
+	if (!SceSblACMgrForDriver_991FDC15(0))
 		goto denied;
 	app = appmgrGetShellApp();
 	if (app == NULL)
@@ -900,7 +900,7 @@ int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char path[292])
 	SceUID pid;
 	int result;
 
-	if (!ksceSblACMgrIsSceShell(0)) {
+	if (!SceSblACMgrForDriver_991FDC15(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}
@@ -971,7 +971,7 @@ int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 	struct AppState *app;
 	int result;
 
-	if (!ksceSblACMgrIsSceShell(0)) {
+	if (!SceSblACMgrForDriver_991FDC15(0)) {
 		sceSyscallLeave(syscall);
 		return 0x8080201f;
 	}

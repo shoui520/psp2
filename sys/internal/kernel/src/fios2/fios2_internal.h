@@ -14,7 +14,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/io/stat.h>
 #include <psp2kern/io/dirent.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2common/fios2.h>
@@ -275,7 +275,7 @@ SceUInt64 sceFiosKernelPlatformDateTimeToTime(const SceDateTime *time);
 /* the caller may do anything with any overlay */
 static inline int fiosCallerIsPrivileged(SceUID caller)	/* name unknown */
 {
-	return ksceSblACMgrIsSystemProgram(caller) || ksceSblACMgrIsRootProgram(caller) ||
+	return sceSblACMgrIsSystemProgram(caller) || sceSblACMgrIsKernelProgram(caller) ||
 	       SceThreadmgrForDriver_332E127C() >= 0x40;
 }
 

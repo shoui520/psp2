@@ -715,7 +715,7 @@ failed:
 static int permission(void)
 {
 	uint8_t mode = 0;
-	if (!ksceSblACMgrIsSystemProgram(0) && !SceSblPostSsMgrForDriver_128FB35A() &&
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblPostSsMgrForDriver_128FB35A() &&
 	    !ksceSblQafMgrIsAllowRemotePlayDebug()) {
 		int ret = kscePmMgrGetProductMode(&mode);
 		if (ret < 0)

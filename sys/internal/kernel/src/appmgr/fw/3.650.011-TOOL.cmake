@@ -470,28 +470,28 @@ set(MODULE_IMPORT_FUNCS
 	SceQafMgrForDriver_41E04800
 	SceQafMgrForDriver_7B14DC45
 	kscePmMgrGetProductMode
-	ksceSblACMgrIsWebCoreOrWebKitProcess
-	ksceSblACMgrIsPSMRuntime
+	SceSblACMgrForDriver_0139FC20
+	SceSblACMgrForDriver_091F7247
 	SceSblACMgrForDriver_0924896F
-	ksceSblACMgrIsNotSandboxed
-	ksceSblACMgrIsGameProgram
-	ksceSblACMgrIsFself
+	SceSblACMgrForDriver_0B6E6CD7
+	sceSblACMgrIsGameProgram
+	SceSblACMgrForDriver_426A4E8C
 	SceSblACMgrForDriver_456DA7AC
-	ksceSblACMgrIsAllowedExtendedMemory
+	SceSblACMgrForDriver_4DB7F512
 	SceSblACMgrForDriver_5C4BC352
 	SceSblACMgrForDriver_5F9AF49C
-	ksceSblACMgrIsNonGameProgram
+	SceSblACMgrForDriver_6C5AB07F
 	SceSblACMgrForDriver_6D8A88B7
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsNonGameOrGameProgram
-	ksceSblACMgrIsSceShell
-	ksceSblACMgrIsSIEApp
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_8A54DF3A
+	SceSblACMgrForDriver_991FDC15
+	SceSblACMgrForDriver_A67E8E5B
 	SceSblACMgrForDriver_A92CD636
 	SceSblACMgrForDriver_AE1AF154
-	ksceSblACMgrIsPSMDevAssistant
-	ksceSblACMgrIsMiniSettingsForQA
+	SceSblACMgrForDriver_C98D82EE
+	SceSblACMgrForDriver_D0E11C89
 	SceSblACMgrForDriver_E79C7A8D
-	ksceSblACMgrIsDevelopmentMode
+	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_F5AE24AC
 	ksceSblRSA2048CreateSignature
 	ksceSblPostSsMgrEncryptSealedkey

@@ -20,6 +20,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot_init.h>
 #include <processmgr/processmgr.h>
+#include <acmgr/acmgr.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,
@@ -44,9 +45,6 @@ int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleId, SceSize size);
 /* SceThreadmgrForDriver */
 
 /* SceSblACMgrForDriver / SceSblAIMgrForDriver */
-int ksceSblACMgrIsPspEmu(SceUID pid);
-int ksceSblACMgrIsGameProgram(SceUID pid);
-int ksceSblACMgrIsDevelopmentMode(void);
 
 /* SceDsiForDriver */
 

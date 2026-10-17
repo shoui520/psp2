@@ -11,7 +11,7 @@ int sceSblUsInformUpdateStartedForUser(int number1, int number2,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if ((len - 1 > 63) | (str == NULL)) {
@@ -35,7 +35,7 @@ int sceSblUsInformUpdateOngoingForUser(int number1, int number2)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = DeciUtilInformUpdateOngoing(number1, number2);
@@ -49,7 +49,7 @@ int sceSblUsInformUpdateFinishedForUser(int number, const char *str, SceSize len
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if ((len - 1 > 63) | (str == NULL)) {

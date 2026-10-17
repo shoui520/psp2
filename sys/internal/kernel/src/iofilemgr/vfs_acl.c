@@ -24,7 +24,7 @@ void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, Sce
 					       (SceUInt8)mnt->mnt_flags);
 			if ((vp->core.type & SCE_VNODE_TYPE_ROOTDIR) != SCE_VNODE_TYPE_ROOTDIR)
 				SCE_DBG_PRINTF(0xf, 73, "%p it not root vnode but SCE_ELONG is set\n", vp);
-			ret = SceSblACMgrForKernel_1B160234(pid, info, info, mntData->mnt_id);
+			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mnt_id);
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xf, 82,
 					       "sceSblACMgrSetFSAttributeByAttributeWithMountPoint() failed ... %x\n",
@@ -42,7 +42,7 @@ void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, Sce
 			if ((vp->core.type & SCE_VNODE_TYPE_ROOTDIR) != SCE_VNODE_TYPE_ROOTDIR)
 				SCE_DBG_PRINTF(0xf, 105, "%p it not root vnode but SCE_ELONG is set\n",
 					       vp);
-			ret = SceSblACMgrForKernel_1B160234(pid, info, info, mntData->mnt_id);
+			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mnt_id);
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xf, 114,
 					       "sceSblACMgrSetFSAttributeByAttributeWithMountPoint() failed ... %x\n",

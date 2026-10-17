@@ -338,9 +338,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCreateThread
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
-	ksceSblACMgrIsRootProgram2
-	ksceSblACIsSystemProgram
-	ksceSblACMgrGetMediaType2
+	SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
+	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
+	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	SceZlibForDriver_9030BAE4
 	SceZlibForDriver_B03E109B
 	SceZlibForDriver_D4A85178

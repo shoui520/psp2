@@ -196,10 +196,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCopyFromUser
 	ksceKernelAllocMemBlock
 	ksceKernelStrncpyFromUser
-	ksceSblACMgrGetProcessProgramAuthId2
-	ksceSblACIsSystemProgram
-	ksceSblACMgrIsDevelopmentMode2
-	ksceSblACMgrGetMediaType2
+	SceSblACMgrForKernel_sceSblACMgrGetPaid
+	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
+	SceSblACMgrForKernel_BBA13D9C
+	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	ksceSblSmCommStopSm
 	ksceSblSmCommStartSmFromFile
 	ksceSblSmCommCallFunc

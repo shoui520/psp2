@@ -6950,14 +6950,14 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	}
 
 	/* the attributes this caller may give */
-	if (ksceSblACMgrIsRootProgram2(pid)) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid)) {
 		if (attr & THREAD_ATTR_ILLEGAL_ROOT) {
 			SCE_DBG_PRINTF(0, 3206, " k: error: createThread(%s), attr=0x%08X\n",
 				       name, attr);
 			ret = SCE_KERNEL_ERROR_ILLEGAL_ATTR;
 			goto restore;
 		}
-	} else if (ksceSblACIsSystemProgram(pid)) {
+	} else if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid)) {
 		if (attr & THREAD_ATTR_ILLEGAL_SYSTEM) {
 			SCE_DBG_PRINTF(0, 3224, " k: error: createThread(%s), attr=0x%08X\n",
 				       name, attr);

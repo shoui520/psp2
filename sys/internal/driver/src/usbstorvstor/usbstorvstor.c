@@ -2,7 +2,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -111,7 +111,7 @@ static int closeImage(void);
 
 static int authorized(void)
 {
-	return ksceSblACMgrIsMiniSettingsForQA() || ksceSblACMgrIsSystemProgram(0);
+	return SceSblACMgrForDriver_D0E11C89(0) || sceSblACMgrIsSystemProgram(0);
 }
 
 static int setSense(struct UsbstorSense *sense, int key, int asc)

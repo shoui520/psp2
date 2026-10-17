@@ -19,7 +19,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/idstorage.h>
@@ -739,7 +739,7 @@ int SceUsbstor_5B3DF8DF(void)
 	unsigned saved = sceSyscallEnter();
 	int result = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsMiniSettingsForQA() || ksceSblACMgrIsSystemProgram(0))
+	if (SceSblACMgrForDriver_D0E11C89(0) || sceSblACMgrIsSystemProgram(0))
 		result = SceUsbstorForDriver_77B7E69E();
 	sceSyscallLeave(saved);
 	return result;

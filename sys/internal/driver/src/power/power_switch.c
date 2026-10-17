@@ -217,7 +217,7 @@ int scePowerRequestStandby(void)
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
 	    ksceSysrootIsSafeMode() || ksceSysrootIsUpdateMode() ||
-	    SceSysrootForDriver_ksceSysrootIsManufacturingMode() || ksceSblACMgrIsSystemProgram(0))
+	    SceSysrootForDriver_ksceSysrootIsManufacturingMode() || sceSblACMgrIsSystemProgram(0))
 		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x10);
 	sceSyscallLeave(context);
 	return 0;
@@ -230,7 +230,7 @@ int scePowerRequestColdReset(void)
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
 	    ksceSysrootIsSafeMode() || ksceSysrootIsUpdateMode() ||
 	    SceSysrootForDriver_ksceSysrootIsManufacturingMode() ||
-	    ksceSblACMgrIsSystemProgram(0))
+	    sceSblACMgrIsSystemProgram(0))
 		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 0x80);
 	sceSyscallLeave(context);
 	return 0;
@@ -983,7 +983,7 @@ int scePowerRequestDisplayOff(void)
 	uint32_t context = sceSyscallEnter();
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
-	    ksceSblACMgrIsSystemProgram(0)) {
+	    sceSblACMgrIsSystemProgram(0)) {
 		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 				       ~UINT32_C(4));
 		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 8);
@@ -997,7 +997,7 @@ int scePowerRequestDisplayOn(void)
 	uint32_t context = sceSyscallEnter();
 
 	if (sceKernelGetProcessId() == SCE_KERNEL_PROCESS_ID ||
-	    ksceSblACMgrIsSystemProgram(0)) {
+	    sceSblACMgrIsSystemProgram(0)) {
 		ksceKernelClearEventFlag(s_powerSwitchState.eventFlag,
 				       ~UINT32_C(8));
 		ksceKernelSetEventFlag(s_powerSwitchState.eventFlag, 4);

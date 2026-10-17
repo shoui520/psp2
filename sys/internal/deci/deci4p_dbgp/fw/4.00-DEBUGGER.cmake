@@ -304,7 +304,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelL1IcacheInvalidateEntireAllCore
 	ksceKernelCheckDipsw
 	SceSblACMgrForDriver_4CBD6156
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_AD717E7A
 	ksceKernelRegisterSysEventHandler
 	sceAppMgrSuspendAppForDebugger

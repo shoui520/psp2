@@ -136,9 +136,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceSha1Digest
 	ksceSha1BlockInit
 	SceQafMgrForDriver_0E588747
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrGetProcessProgramAuthId
-	ksceSblACMgrIsDevelopmentMode
+	sceSblACMgrIsSystemProgram
+	sceSblACMgrGetPaid
+	SceSblACMgrForDriver_E87D1777
 	ksceSblAimgrGetProductCode
 	ksceSblAimgrIsDolce
 	ksceSblSsSetNvsData

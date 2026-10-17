@@ -305,10 +305,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelPanic
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
-	ksceSblACMgrIsRootProgram2
-	ksceSblACMgrIsNonGameOrGameProgram2
+	SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
+	SceSblACMgrForKernel_570D6AD3
 	SceSblACMgrForKernel_8241AB5C
-	ksceSblACIsSystemProgram
+	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	ksceKernelGetModuleIdByPid
 	ksceKernelGetModuleInfo
 	ksceKernelGetModuleIsSharedByAddr

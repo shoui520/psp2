@@ -1186,7 +1186,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 	SceUInt32 t;
 
 	head = primaryHead;
-	if (ksceSblACMgrIsPspEmu(0) != 1)
+	if (SceSblACMgrForDriver_FD00C72A(0) != 1)
 		return SCE_ERROR_ERRNO_ENOSYS;
 	t = sceSyscallEnter();
 	ret = ksceKernelLockFastMutex(&mutex);
@@ -1725,7 +1725,7 @@ int ksceDisplayGetMaximumFrameBufResolution(int *width, int *height)
 	flags = 0;
 	if (pls != NULL)
 		flags = pls->resolutionFlags;
-	if (ksceSblAimgrIsDolce() == 0 || ksceSblACMgrIsGameProgram(0) != 0) {
+	if (ksceSblAimgrIsDolce() == 0 || sceSblACMgrIsGameProgram(0) != 0) {
 		if (isHighResolutionTitle())
 			flags |= 1;
 	} else {
@@ -1751,7 +1751,7 @@ int ksceDisplayGetMaximumFrameBufResolution(int *width, int *height)
 /* Development mode: report display state to a process's status word. */
 void SceDisplayForDriver_086DEFB6(SceUInt32 *status, SceUID pid)
 {
-	if (ksceSblACMgrIsDevelopmentMode() != 1)
+	if (SceSblACMgrForDriver_E87D1777() != 1)
 		return;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
@@ -1762,7 +1762,7 @@ void SceDisplayForDriver_086DEFB6(SceUInt32 *status, SceUID pid)
 /* A title may use a frame buffer beyond the panel's resolution. */
 static inline __attribute__((always_inline)) int highResolutionAllowed(void) /* name unknown */
 {
-	if (ksceSblAimgrIsDolce() != 0 && ksceSblACMgrIsGameProgram(0) == 0)
+	if (ksceSblAimgrIsDolce() != 0 && sceSblACMgrIsGameProgram(0) == 0)
 		return 1;
 	return isHighResolutionTitle();
 }
@@ -1921,7 +1921,7 @@ int ksceDisplaySetFrameBufInternal(int head, int plane, const SceDisplayFrameBuf
 	ret = framebufPaddr(base, size, 0x20000000, &paddr);
 	if (ret < 0)
 		goto unlock;
-	if (paddr - 0x20000000 >= 0x10000000 && ksceSblACMgrIsGameProgram(0) != 0) {
+	if (paddr - 0x20000000 >= 0x10000000 && sceSblACMgrIsGameProgram(0) != 0) {
 		ret = SCE_DISPLAY_ERROR_INVALID_ADDR;
 		goto unlock;
 	}

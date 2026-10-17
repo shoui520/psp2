@@ -41,6 +41,10 @@ come from the paths in their debug records, asserts and SDK libraries.
 * `sys/sdk/target/src/`: SDK libraries modules link (`libsnc`, SNC's runtime).
 * `cmake/`, `tools/`, `contrib/` (pristine upstream code), `toolchains/` (the compilers'
   recipes and `toolchains/libgcc`, the GCC runtime routines LibKernel links).
+* Exports are called by Sony's names where Sony's binaries give them, otherwise
+  `<Library>_<NID>` (`SceSysmemForDriver_C94850C9`). `tools/nids/vitasdk.tsv` lists vitasdk's
+  name for each of them (`grep C94850C9 tools/nids/vitasdk.tsv`), and each such declaration
+  carries it in a comment.
 
 For example, `os0:kd/acmgr.skprx` is built from `sys/internal/kernel/src/acmgr/`:
 ```

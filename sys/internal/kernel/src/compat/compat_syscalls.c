@@ -2,7 +2,7 @@
 
 #include <psp2/compat.h>
 #include <stddef.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/npdrm.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
@@ -41,7 +41,7 @@ int sceCompatCache(int mode, void *addr, SceSize size)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = sceCompatCacheInternal(mode, addr, size);
 		sceSyscallLeave(syscall);
 		return result;
@@ -57,7 +57,7 @@ int sceCompatAllocCdramWithHole(SceCompatCdram *cdram)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatAllocCdramWithHole(&localCdram);
 		if (result >= 0)
 			result = ksceKernelCopyToUser(cdram, &localCdram,
@@ -75,7 +75,7 @@ int sceCompatFrameBufferInit(void *framebuffer)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatFrameBufferInit((SceUID)framebuffer);
 		sceSyscallLeave(syscall);
 		return result;
@@ -92,7 +92,7 @@ int sceCompatIdStorageLookup(short leaf, unsigned int offset, void *buffer,
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		if (size >= sizeof(localBuffer))
 			size = sizeof(localBuffer);
 		if (offset >= sizeof(localBuffer) ||
@@ -117,7 +117,7 @@ int sceCompatReadShared32(int location, int *value)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatReadShared32(location, &localValue);
 		if (result >= 0)
 			result = ksceKernelCopyToUser(value, &localValue,
@@ -136,7 +136,7 @@ int sceCompatWriteSharedCtrl(SceCtrlDataPsp *pad_data)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = ksceKernelCopyFromUser(&localData, pad_data,
 			offsetof(SceCtrlDataPsp, Rsrv));
 		if (result >= 0)
@@ -154,7 +154,7 @@ int sceCompatWriteShared32(int location, int value)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatWriteShared32(location, value);
 		sceSyscallLeave(syscall);
 		return result;
@@ -169,7 +169,7 @@ int sceCompatSetDisplayConfig(int resolution, int colorSpaceMode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatSetDisplayConfig(resolution, colorSpaceMode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -184,7 +184,7 @@ int sceCompatGetPeripheralState(int mode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatGetPeripheralState(mode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -202,7 +202,7 @@ int sceCompatDatRead(int index, unsigned int offset, void *buffer,
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) != 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) != 1) {
 		sceSyscallLeave(syscall);
 		return (int)0x80010058;
 	}
@@ -245,7 +245,7 @@ int sceCompatGetPspSystemSoftwareVersion(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		result = compatGetPspSystemSoftwareVersion();
 		sceSyscallLeave(syscall);
 		return result;
@@ -260,7 +260,7 @@ int sceCompatSuspendResume(int mode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatSuspendResume(mode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -276,7 +276,7 @@ int sceCompatGetDevInf(SceIoDevInfo *info)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatGetDevInf(&localInfo);
 		if (result == 0)
 			result = ksceKernelCopyToUser(info, &localInfo,
@@ -294,7 +294,7 @@ int sceCompatGetStatus(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatGetStatus();
 		sceSyscallLeave(syscall);
 		return result;
@@ -310,7 +310,7 @@ int sceCompatSetRif(const char *rif)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = ksceKernelCopyFromUser(contentId, rif, sizeof(contentId));
 		if (result >= 0)
 			result = compatSetRifPath(contentId);
@@ -327,7 +327,7 @@ int sceCompatLCDCSync(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatLCDCSync();
 		sceSyscallLeave(syscall);
 		return result;
@@ -342,7 +342,7 @@ int sceCompatSetSuspendSema(SceUID semaid1, SceUID semaid2)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatSetSuspendSema(semaid1, semaid2);
 		sceSyscallLeave(syscall);
 		return result;
@@ -357,7 +357,7 @@ int sceCompatGetUpdateState(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatGetUpdateState();
 		sceSyscallLeave(syscall);
 		return result;
@@ -373,7 +373,7 @@ int sceCompatSetUpdateState(int state)
 
 	(void)state;
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatSetUpdateState(1);
 		sceSyscallLeave(syscall);
 		return result;
@@ -389,7 +389,7 @@ int sceCompatGetCurrentSecureTick(SceRtcTick *tick)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = ksceRtcGetCurrentSecureTick(&localTick);
 		if (result >= 0)
 			result = ksceKernelCopyToUser(tick, &localTick,
@@ -407,7 +407,7 @@ int sceCompatGetTitleList(void *buf, SceSize length)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (length != sizeof(gCompatTitleListBuffer)) {
 			sceSyscallLeave(syscall);
 			return (int)0x8002000b;
@@ -429,7 +429,7 @@ int sceCompatAvailableColorSpaceSetting(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatAvailableColorSpaceSetting();
 		sceSyscallLeave(syscall);
 		return result;
@@ -444,7 +444,7 @@ int sceCompatCheckPocketStation(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatCheckPocketStationRif();
 		sceSyscallLeave(syscall);
 		return result;

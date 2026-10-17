@@ -147,9 +147,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDmaOpSetCallback
 	ksceKernelDmaOpAssign
 	ksceKernelRegisterProcEventHandler
-	ksceSblACMgrIsNonGameProgram
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsPspEmu
+	SceSblACMgrForDriver_6C5AB07F
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_FD00C72A
 	ksceSblAimgrIsTool
 	SceQafMgrForDriver_382C71E8
 	ksceKernelCheckDipsw

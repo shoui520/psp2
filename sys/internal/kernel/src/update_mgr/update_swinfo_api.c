@@ -16,7 +16,7 @@ int sceSblUsSetSwInfoIntForUser(const char *name, SceSize nameLength,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if ((name == NULL) | (nameLength - 1 > 30)) {
@@ -43,7 +43,7 @@ int sceSblUsSetSwInfoStrForUser(const char *name, SceSize nameLength,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if (((name == NULL) | (nameLength - 1 > 30)) ||
@@ -78,7 +78,7 @@ int sceSblUsSetSwInfoBinForUser(const char *name, SceSize nameLength,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	/* The first validation failure retains the entered syscall state. */

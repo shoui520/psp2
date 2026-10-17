@@ -14,7 +14,7 @@
 #include <codec/codec.h>
 #include <psp2kern/power.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <sysmem/debug.h>
@@ -918,7 +918,7 @@ int sceAVConfigChangeReg(int setting, unsigned int value)
 	SceKernelIntrStatus intr;
 	int result = (int)0x803a0101;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -970,7 +970,7 @@ int sceAVConfigSetDisplayBrightness(unsigned int brightness)
 	unsigned int maximum;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		maximum = kscePowerGetDisplayMaxBrightness();
 		if (maximum < brightness)
 			brightness = maximum;
@@ -992,7 +992,7 @@ int sceAVConfigGetDisplayMaxBrightness(unsigned int *brightness)
 	unsigned int maximum;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		maximum = kscePowerGetDisplayMaxBrightness();
 		if (ksceKernelCopyToUser(brightness, &maximum, sizeof(maximum)) != 0)
 			result = (int)0x803a0102;
@@ -1011,7 +1011,7 @@ int sceAVConfigGetAcStatus(int *online)
 	int active;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		active = scePowerIsPowerOnline() != 0;
 		if (ksceKernelCopyToUser(online, &active, sizeof(active)) != 0)
 			result = (int)0x803a0102;
@@ -1030,7 +1030,7 @@ int sceAVConfigSetAutoSuspend2(unsigned int interval)
 	SceUInt64 timeout;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		timeout = (SceUInt64)interval * 1000000;
 		kscePowerSetIdleTimer(0, timeout);
 		if (ksceSblAimgrIsDolce() == 0)
@@ -1053,7 +1053,7 @@ int sceAVConfigClearAutoSuspend2(void)
 	SceUInt64 dimmingTime;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1092,7 +1092,7 @@ int sceAVConfigSetAutoSuspend(unsigned int interval)
 	SceUInt64 dimmingTime;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1126,7 +1126,7 @@ int sceAVConfigSetAutoDisplayDimming(unsigned int interval)
 	SceKernelIntrStatus intr;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (ksceSblAimgrIsDolce() != 0) {
 			intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 			avConfigConfiguration.settings.dimmingInterval = interval;
@@ -1149,7 +1149,7 @@ int sceAVConfigSetDisplayColorSpaceMode(int mode)
 	SceKernelIntrStatus intr;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (ksceSblAimgrIsDolce() != 0) {
 			result = (int)0x803a0109;
 		} else {
@@ -1179,7 +1179,7 @@ int sceAVConfigGetVolCtrlEnable(int *mode, int *muted, int *avls)
 	int avlsValue;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		avConfigGetVolumeControlState(&modeValue, &mutedValue);
 		avlsValue = avConfigAvlsEnabled;
 		if (ksceKernelCopyToUser(mode, &modeValue, sizeof(modeValue)) != 0 ||
@@ -1201,7 +1201,7 @@ int sceAVConfigGetBtVol(int *notified, int *volume)
 	int volumeValue;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		volumeValue = avConfigConfiguration.settings.btVolume;
 		notifiedValue = avConfigConfiguration.settings.btVolumeNotified;
@@ -1224,7 +1224,7 @@ int sceAVConfigGetSystemVol(int *volume)
 	int volumeValue;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		volumeValue = avConfigConfiguration.settings.systemVolume;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
@@ -1247,7 +1247,7 @@ int sceAVConfigSetSystemVol(int volume)
 	int muted;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		avConfigGetVolumeControlState(&mode, &muted);
 		if ((unsigned int)(mode - 1) > 1) {
 			result = (int)0x803a0105;
@@ -1273,7 +1273,7 @@ int sceAVConfigWriteRegSystemVol(int volume)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		sceRegMgrSetKeyInt(avConfigSystemVolumeCategory, avConfigSystemVolumeKey, volume);
 		result = 0;
 	} else {
@@ -1289,7 +1289,7 @@ int sceAVConfigSendVolKey(int command)
 	SceKernelIntrStatus intr;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.volumeKeyCommand = command;
 		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
@@ -1308,7 +1308,7 @@ int sceAVConfigRegisterCallback(SceUID callback, SceUInt32 mask)
 	SceUID guid;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		guid = kscePUIDtoGUID(0, callback);
 		result = guid;
 		if (guid >= 0) {
@@ -1327,7 +1327,7 @@ int sceAVConfigUnRegisterCallback(void)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		avConfigSetNotificationCallback(0, 0);
 		result = 0;
 	} else {
@@ -1342,7 +1342,7 @@ int sceAVConfigMuteOn(void)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		avConfigSetEventFlag(4);
 		result = 0;
 	} else {
@@ -1359,7 +1359,7 @@ int sceAVConfigDisplayOn(void)
 	SceUInt32 devices;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (avConfigDisplayStarted == 0) {
 			if (avConfigAudioDevicesEnabled == 1) {
 				devices = SceHpremoteForDriver_2229EF51() == 1 ? 2 : 0;
@@ -1389,7 +1389,7 @@ int sceAVConfigHdmiCecEnable(void)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		result = (int)0x80010058;
 	else if (avConfigIsHdmiAvailable() == 0)
 		result = (int)0x803a0107;
@@ -1406,7 +1406,7 @@ int sceAVConfigHdmiCecDisable(void)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		result = (int)0x80010058;
 	else if (avConfigIsHdmiAvailable() == 0)
 		result = (int)0x803a0107;
@@ -1423,7 +1423,7 @@ int sceAVConfigHdmiCecCmdOneTouchPlay(int mode)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		if (avConfigIsHdmiAvailable() == 0)
 			result = (int)0x803a0107;
 		else if (ksceSblAimgrIsDolce() == 0)
@@ -1444,7 +1444,7 @@ int sceAVConfigHdmiSetResolution(int vic, int force)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		result = (int)0x80010058;
 	else if (avConfigIsHdmiAvailable() == 0)
 		result = (int)0x803a0107;
@@ -1461,7 +1461,7 @@ int sceAVConfigHdmiSetRgbRangeMode(unsigned int mode)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		result = (int)0x80010058;
 	else if (avConfigIsHdmiAvailable() == 0)
 		result = (int)0x803a0107;
@@ -1478,7 +1478,7 @@ int sceAVConfigHdmiSetOutScalingRatio(const AvConfigScalingRatio *ratio)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1509,7 +1509,7 @@ int sceAVConfigHdmiGetOutScalingRatio(AvConfigScalingRatio *ratio)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1543,7 +1543,7 @@ int sceAVConfigHdmiGetMonitorInfo(AvConfigMonitorInfo *info)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1577,7 +1577,7 @@ int sceAVConfigHdmiGetCecInfo(CecStatistics *statistics)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		result = (int)0x80010058;
 		goto out;
 	}
@@ -1611,7 +1611,7 @@ int sceAVConfigHdmiClearCecInfo(void)
 	SceUInt32 syscall = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		result = (int)0x80010058;
 	else if (avConfigIsHdmiAvailable() == 0)
 		result = (int)0x803a0107;
@@ -1651,7 +1651,7 @@ int sceAVConfigSetMasterVol(unsigned int volume)
 	SceUInt32 syscall;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		return (int)0x80010058;
 	syscall = sceSyscallEnter();
 	if (ksceSblAimgrIsDolce() != 0) {
@@ -1675,7 +1675,7 @@ int sceAVConfigGetMasterVol(int *volume)
 	SceUInt32 syscall;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) == 1) {
+	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		syscall = sceSyscallEnter();
 		if (ksceSblAimgrIsDolce() != 0) {
 			masterVolume = avConfigConfiguration.settings.masterVolume;
@@ -1698,7 +1698,7 @@ int sceAVConfigWriteMasterVol(void)
 	SceUInt32 syscall;
 	int result;
 
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		return (int)0x80010058;
 	syscall = sceSyscallEnter();
 	if (ksceSblAimgrIsDolce() != 0)

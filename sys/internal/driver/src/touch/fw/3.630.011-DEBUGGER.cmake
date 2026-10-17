@@ -100,7 +100,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_8CB01675
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	ksceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

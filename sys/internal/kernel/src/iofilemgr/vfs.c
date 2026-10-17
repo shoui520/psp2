@@ -3191,7 +3191,7 @@ int vfsDevctl(IofilemgrDevctlParam *param)
 	}
 	if (cmd == VFS_DEVCTL_SYSTEM_ONLY) {
 		pid = ksceKernelGetProcessIdFromTLS();
-		if (ksceSblACIsSystemProgram(pid) == 0 && ksceSblACMgrIsRootProgram2(pid) == 0) {
+		if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 && SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0) {
 			ret = SCE_ERROR_ERRNO_EUNSUP;
 			goto release;
 		}
@@ -3804,7 +3804,7 @@ int vfsIoctl(IofilemgrIoctlParam *param)
 	if (cmd - VFS_IOCTL_BUFFCTL_SET <= VFS_IOCTL_VFS_MAX - VFS_IOCTL_BUFFCTL_SET) {
 		if ((int)cmd > VFS_IOCTL_BUFFCTL_MAX) {
 			pid = ksceKernelGetProcessIdFromTLS();
-			if (ksceSblACIsSystemProgram(pid) == 0 && ksceSblACMgrIsRootProgram2(pid) == 0)
+			if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 && SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0)
 				return SCE_ERROR_ERRNO_EUNSUP;
 			if (cmd == VFS_IOCTL_SET_INTERNAL)
 				return vfs_change_file_attr(fd, VFS_FILE_ATTR_INTERNAL, 1);
@@ -4165,8 +4165,8 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 3051, "flag = %x\n", param->flags);
 	}
 	pid = ksceKernelGetProcessIdFromTLS();
-	if ((flags & SCE_O_NOBUF) != 0 && ksceSblACIsSystemProgram(pid) == 0 &&
-	    ksceSblACMgrIsRootProgram2(pid) == 0)
+	if ((flags & SCE_O_NOBUF) != 0 && SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 0 &&
+	    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 0)
 		flags &= ~SCE_O_NOBUF;
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
@@ -4323,7 +4323,7 @@ open:
 			vfs_debug_set_open_param(file, flags, mode);
 		}
 		if ((flags & VFS_O_EXTERNAL_FILE) != 0 &&
-		    (ksceSblACIsSystemProgram(pid) != 0 || ksceSblACMgrIsRootProgram2(pid) != 0))
+		    (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) != 0 || SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) != 0))
 			file->idata &= ~VFS_FILE_ATTR_INTERNAL;
 		vfsUnlockVnode(vp);
 		if (g_vfsSuspended > 0 && (file->idata & VFS_FILE_ATTR_INTERNAL) != 0)

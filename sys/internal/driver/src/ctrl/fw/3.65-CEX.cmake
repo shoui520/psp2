@@ -115,11 +115,11 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_8CB01675
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
-	ksceSblACMgrIsRootProgram
-	ksceSblACMgrIsGameProgram
+	sceSblACMgrIsKernelProgram
+	sceSblACMgrIsGameProgram
 	SceSblACMgrForDriver_2E992B02
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsSceShell
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_991FDC15
 	ksceKernelRegisterSysEventHandler
 	ksceKernelUnregisterSysEventHandler
 	ksceKernelPowerTick

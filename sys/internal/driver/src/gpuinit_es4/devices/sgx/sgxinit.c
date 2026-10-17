@@ -7,7 +7,7 @@
 
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
@@ -180,7 +180,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	for (unsigned i = 0; i < SGX_BOOKMARK_SIZE / 4; i++)
 		bookmark[i] = SGX_BOOKMARK_FILL;
 
-	if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
+	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
 		perfmon = (void *)PERFMON_REG_BASE;
 		flags = 0x80000008;
 	} else {
@@ -202,7 +202,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	}
 
 	flags = 0;
-	if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode())
+	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777())
 		flags = 8;
 	ret = ksceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, bookmark, SGX_BOOKMARK_SIZE, flags);
 	if (ret >= 0)

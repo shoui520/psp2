@@ -4,5 +4,5 @@
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
+#include <acmgr/acmgr.h>
 
-int ksceSblACMgrIsSystemProgram(SceUID pid);

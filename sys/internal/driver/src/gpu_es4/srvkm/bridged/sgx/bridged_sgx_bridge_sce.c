@@ -12,6 +12,7 @@
 #include <string.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <threadmgr/threadmgr.h>
+#include <acmgr/acmgr.h>
 
 typedef struct SGX_BRIDGE_OUT_TRACE_COUNTERS {
 	PVRSRV_ERROR eError;
@@ -128,7 +129,6 @@ typedef struct SGX_BRIDGE_OUT_SET_RENDER_CONTEXT_PRIORITY {
 	IMG_UINT32 ui32Priority;
 } SGX_BRIDGE_OUT_SET_RENDER_CONTEXT_PRIORITY;
 
-int ksceSblACMgrIsGameProgram(int pid);
 PVRSRV_ERROR SGXSetRenderContextPriorityKM(IMG_HANDLE hHWRenderContext,
 		IMG_UINT32 *priority);
 
@@ -715,7 +715,7 @@ int SGXSetRenderContextPriorityBW(IMG_UINT32 ui32BridgeID,
 
 	if (!psBridgeIn->hRenderContext)
 		goto invalid;
-	if ((priority <= 1 || !ksceSblACMgrIsGameProgram(0)) && priority != 1) {
+	if ((priority <= 1 || !sceSblACMgrIsGameProgram(0)) && priority != 1) {
 		if (priority == 0)
 			hardwarePriority = 2;
 		else if (priority == 2)

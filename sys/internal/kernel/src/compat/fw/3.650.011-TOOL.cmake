@@ -166,9 +166,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSmCommStartSmFromFile
 	ksceSblSmCommCallFunc
 	ksceSblAimgrIsDEX
-	ksceSblACMgrGetMediaType
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsPspEmu
+	sceSblACMgrGetMediaType
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_FD00C72A
 	ksceSblRngPseudoRandomNumber
 	ksceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967

@@ -20,20 +20,20 @@ SceSblACMgr:
         - SceSblACMgrForDriver_E79C7A8D: 0x165C3C7A
         - SceSblACMgrForKernel_1948E9DB: 0x1948E9DB
         - sceSblACMgrSetFSAttributeByAttributeWithMountPoint: 0x1B160234
-        - kscePfsACSetFSAttrByMode: 0x2AE6CF27
+        - SceSblACMgrForKernel_2AE6CF27: 0x2AE6CF27
         - SceSblACMgrForKernel_30575458: 0x30575458
         - sceSblACMgrIsKernelProgram: 0x31C23B66
-        - ksceSblACMgrIsSIEApp: 0x3388F595
+        - SceSblACMgrForDriver_A67E8E5B: 0x3388F595
         - SceSblACMgrForDriver_FF7125DE: 0x356B9139
-        - ksceSblACMgrIsAllowedExtendedMemory: 0x384D20FD
-        - ksceSblACMgrIsNonGameProgram: 0x3F99279F
+        - SceSblACMgrForDriver_4DB7F512: 0x384D20FD
+        - SceSblACMgrForDriver_6C5AB07F: 0x3F99279F
         - SceSblACMgrForDriver_AE1AF154: 0x410357AF
-        - ksceSblACMgrIsPspEmu: 0x47B67F72
+        - SceSblACMgrForDriver_FD00C72A: 0x47B67F72
         - SceSblACMgrForDriver_84604EED: 0x48F4D5EE
         - SceSblACMgrForDriver_4CBD6156: 0x49509A83
         - SceSblACMgrForDriver_456DA7AC: 0x4C4B7D6B
-        - ksceSblACMgrIsNonGameOrGameProgram: 0x570D6AD3
-        - ksceSblACMgrIsFself: 0x5AC59172
+        - SceSblACMgrForDriver_8A54DF3A: 0x570D6AD3
+        - SceSblACMgrForDriver_426A4E8C: 0x5AC59172
         - SceSblACMgrForDriver_A92CD636: 0x5E6BA11C
         - SceSblACMgrForDriver_6D8A88B7: 0x7529E364
         - SceSblACMgrForDriver_BE5667C5: 0x75AAF981
@@ -41,21 +41,21 @@ SceSblACMgr:
         - SceSblACMgrForDriver_5F9AF49C: 0x7F294A09
         - SceSblACMgrForKernel_8241AB5C: 0x8241AB5C
         - sceSblACMgrIsSystemProgram: 0x930CD037
-        - ksceSblACMgrIsAllowedVirtualMachine: 0x96403142
-        - ksceSblACMgrIsPSMRuntime: 0x966B3738
-        - ksceSblACMgrIsUpdaterUISetupperOrPkgInstallerSpawn: 0x98B28671
+        - SceSblACMgrForDriver_2A29453C: 0x96403142
+        - SceSblACMgrForDriver_091F7247: 0x966B3738
+        - SceSblACMgrForDriver_962CD237: 0x98B28671
         - sceSblACMgrHasCapability: 0x9EDAF856
         - SceSblACMgrForDriver_B836CF13: 0xA50FDA27
-        - ksceSblACMgrIsWebCoreOrWebKitProcess: 0xA7C3001D
-        - ksceSblACMgrIsMiniSettingsForQA: 0xAF6F208E
-        - ksceSblACMgrIsDevelopmentMode: 0xBBA13D9C
-        - ksceSblACMgrIsPSMDevAssistant: 0xC90A9216
+        - SceSblACMgrForDriver_0139FC20: 0xA7C3001D
+        - SceSblACMgrForDriver_D0E11C89: 0xAF6F208E
+        - SceSblACMgrForDriver_E87D1777: 0xBBA13D9C
+        - SceSblACMgrForDriver_C98D82EE: 0xC90A9216
         - SceSblACMgrForDriver_B12CEAA8: 0xCCDBB74D
         - sceSblACMgrGetMediaType: 0xD442962E
-        - ksceSblACMgrIsAllowedUsbSerial: 0xDC49E160
+        - SceSblACMgrForDriver_062CAEB2: 0xDC49E160
         - SceSblACMgrForDriver_0924896F: 0xE273ED8C
-        - ksceSblACMgrIsNotSandboxed: 0xF5AD56E4
-        - ksceSblACMgrIsSceShell: 0xF9FEF5F0
+        - SceSblACMgrForDriver_0B6E6CD7: 0xF5AD56E4
+        - SceSblACMgrForDriver_991FDC15: 0xF9FEF5F0
         - SceSblACMgrForDriver_D7AD8471: 0xFB2AC5B4
         - SceSblACMgrForKernel_FBA1A256: 0xFBA1A256
     SceSblACMgrForDriver:
@@ -63,36 +63,36 @@ SceSblACMgr:
       version: 1
       nid: 0x9AD8E213
       functions:
-        - ksceSblACMgrIsWebCoreOrWebKitProcess: 0x0139FC20
+        - SceSblACMgrForDriver_0139FC20: 0x0139FC20
         - sceSblACMgrGetFSAttributeByThreadAccessLevel: 0x0606B87E
-        - ksceSblACMgrIsAllowedUsbSerial: 0x062CAEB2
-        - ksceSblACMgrIsPSMRuntime: 0x091F7247
+        - SceSblACMgrForDriver_062CAEB2: 0x062CAEB2
+        - SceSblACMgrForDriver_091F7247: 0x091F7247
         - SceSblACMgrForDriver_0924896F: 0x0924896F
         - sceSblACMgrIsKernelProgram: 0x0948F41C
-        - ksceSblACMgrIsNotSandboxed: 0x0B6E6CD7
+        - SceSblACMgrForDriver_0B6E6CD7: 0x0B6E6CD7
         - sceSblACMgrIsGameProgram: 0x1298C647
-        - ksceSblACMgrIsAllowedVirtualMachine: 0x2A29453C
+        - SceSblACMgrForDriver_2A29453C: 0x2A29453C
         - SceSblACMgrForDriver_2E992B02: 0x2E992B02
         - SceSblACMgrForDriver_3B356B98: 0x3B356B98
-        - ksceSblACMgrIsFself: 0x426A4E8C
+        - SceSblACMgrForDriver_426A4E8C: 0x426A4E8C
         - sceSblACMgrGetMediaType: 0x4322F188
         - SceSblACMgrForDriver_456DA7AC: 0x456DA7AC
         - sceSblACMgrSetFSAttributeByAttributeWithMountPoint: 0x48CFCEA2
         - SceSblACMgrForDriver_4CBD6156: 0x4CBD6156
-        - ksceSblACMgrIsAllowedExtendedMemory: 0x4DB7F512
+        - SceSblACMgrForDriver_4DB7F512: 0x4DB7F512
         - SceSblACMgrForDriver_5C4BC352: 0x5C4BC352
         - SceSblACMgrForDriver_5F9AF49C: 0x5F9AF49C
-        - kscePfsACSetFSAttrByMode: 0x6210D745
-        - ksceSblACMgrIsNonGameProgram: 0x6C5AB07F
+        - SceSblACMgrForKernel_2AE6CF27: 0x6210D745
+        - SceSblACMgrForDriver_6C5AB07F: 0x6C5AB07F
         - SceSblACMgrForDriver_6D8A88B7: 0x6D8A88B7
         - SceSblACMgrForDriver_84604EED: 0x84604EED
         - sceSblACMgrIsSystemProgram: 0x8612B243
-        - ksceSblACMgrIsNonGameOrGameProgram: 0x8A54DF3A
-        - ksceSblACMgrIsUpdaterUISetupperOrPkgInstallerSpawn: 0x962CD237
+        - SceSblACMgrForDriver_8A54DF3A: 0x8A54DF3A
+        - SceSblACMgrForDriver_962CD237: 0x962CD237
         - sceSblACMgrGetPaid: 0x96AF69BD
-        - ksceSblACMgrIsSceShell: 0x991FDC15
+        - SceSblACMgrForDriver_991FDC15: 0x991FDC15
         - SceSblACMgrForDriver_A27E47A7: 0xA27E47A7
-        - ksceSblACMgrIsSIEApp: 0xA67E8E5B
+        - SceSblACMgrForDriver_A67E8E5B: 0xA67E8E5B
         - SceSblACMgrForDriver_A92CD636: 0xA92CD636
         - SceSblACMgrForDriver_AD717E7A: 0xAD717E7A
         - SceSblACMgrForDriver_AE1AF154: 0xAE1AF154
@@ -100,13 +100,13 @@ SceSblACMgr:
         - SceSblACMgrForDriver_B836CF13: 0xB836CF13
         - SceSblACMgrForDriver_BE5667C5: 0xBE5667C5
         - sceSblACMgrHasCapability: 0xC2D1F2FC
-        - ksceSblACMgrIsPSMDevAssistant: 0xC98D82EE
-        - ksceSblACMgrIsMiniSettingsForQA: 0xD0E11C89
+        - SceSblACMgrForDriver_C98D82EE: 0xC98D82EE
+        - SceSblACMgrForDriver_D0E11C89: 0xD0E11C89
         - SceSblACMgrForDriver_D7AD8471: 0xD7AD8471
         - SceSblACMgrForDriver_E79C7A8D: 0xE79C7A8D
-        - ksceSblACMgrIsDevelopmentMode: 0xE87D1777
+        - SceSblACMgrForDriver_E87D1777: 0xE87D1777
         - SceSblACMgrForDriver_F5AE24AC: 0xF5AE24AC
-        - ksceSblACMgrIsPspEmu: 0xFD00C72A
+        - SceSblACMgrForDriver_FD00C72A: 0xFD00C72A
         - SceSblACMgrForDriver_FF7125DE: 0xFF7125DE
     SceSblACMgr:
       syscall: true

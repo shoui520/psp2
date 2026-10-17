@@ -109,7 +109,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	ksceIdStorageLookup
 	ScePervasiveForDriver_132E514A
 	kscePervasiveSpiResetEnable

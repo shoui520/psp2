@@ -310,7 +310,7 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 	SceUID thid;
 
 	stack = 0x4000;
-	if (ksceSblACMgrIsGameProgram2(pid) && (cb->flags & MODULE_FLAG_1000) == 0)
+	if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) && (cb->flags & MODULE_FLAG_1000) == 0)
 		stack = 0x40000;
 	prio = 0x10000100;
 	cpu = 0;
@@ -1344,7 +1344,7 @@ int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt
 		}
 	}
 	mflags = obj->cb.flags;
-	if ((mflags & MODULE_FLAG_NO_STOP) != 0 && !ksceSblACMgrIsDevelopmentMode2()) {
+	if ((mflags & MODULE_FLAG_NO_STOP) != 0 && !SceSblACMgrForKernel_BBA13D9C()) {
 		ksceGUIDReleaseObject(modid);
 		if (pid != KERNEL_PID)
 			ksceGUIDReleaseObject(pid);
@@ -1701,7 +1701,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 					     m->path);
 			continue;
 		}
-		if ((m->flags & PRELOAD_DEVELOPMENT) != 0 && !ksceSblACMgrIsDevelopmentMode2())
+		if ((m->flags & PRELOAD_DEVELOPMENT) != 0 && !SceSblACMgrForKernel_BBA13D9C())
 			continue;
 		if ((m->flags & PRELOAD_DIPSW_D4) != 0 && !ksceKernelCheckDipsw(0xd4))
 			continue;
@@ -1753,8 +1753,8 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 			ret = ModulemgrLoadSharedModuleForPid(pid, path, lflags);
 		} else {
 			if (m->appPath != NULL) {
-				if (!ksceSblACMgrIsGameProgram2(pid) &&
-				    !ksceSblACMgrIsNonGameProgram2(pid)) {
+				if (!SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) &&
+				    !SceSblACMgrForKernel_3F99279F(pid)) {
 					ksceKernelSysrootGetProcessTitleId(pid, buf, 0x20);
 					if (strncmp(buf, "NPXS10007", 0x20) != 0)
 						goto system;
@@ -1764,7 +1764,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 					goto next;
 			}
 system:
-			if ((!ksceSblACMgrIsGameProgram2(pid) && !ksceSblACMgrIsNonGameProgram2(pid)) ||
+			if ((!SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) && !SceSblACMgrForKernel_3F99279F(pid)) ||
 			    m->appPath == NULL)
 				ret = ksceKernelLoadModuleForPid(pid, path, lflags, NULL);
 			else if ((flags & 2) == 0)
@@ -2078,7 +2078,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3157, "start failed (res:0x%08x)\n", ret);
 		goto unload;
 	}
-	if (ksceSblACMgrIsGameProgram2(pid) &&
+	if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) &&
 	    (ret = ksceSblAuthMgrCompareSwVersion(obj->cb.sdkVersion)) < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3171, "unknown SDK version (%08x)\n",
 				     obj->cb.sdkVersion);

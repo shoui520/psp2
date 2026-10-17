@@ -1384,7 +1384,7 @@ select:
 	return -1;
 }
 
-int ksceSysconGetWakeupFactor(uint32_t *value)
+int SceSysconForDriver_CF5B2F2F(uint32_t *value)
 {
 	return sysconReadWord(value, SYSCON_CMD_GET_WAKEUP_FACTOR);
 }
@@ -1478,7 +1478,7 @@ int ksceSysconCtrlAccPower(uint32_t value)
 	return sysconWriteWord(value, SYSCON_CMD_CTRL_ACC_POWER, 2);
 }
 
-int ksceSysconCtrlWirelessPower2(uint32_t value)
+int SceSysconForDriver_A2E85DB9(uint32_t value)
 {
 	return sysconWriteWord(value, SYSCON_CMD_CTRL_WIRELESS_POWER, 2);
 }

@@ -1558,7 +1558,7 @@ int sceTouchSetProcessPrivilege(unsigned privilege)
 	unsigned t = sceSyscallEnter();
 	int ret = TOUCH_ERROR(2);
 
-	if (ksceSblACMgrIsSystemProgram(0))
+	if (sceSblACMgrIsSystemProgram(0))
 		ret = setPrivilege(privilege);
 	sceSyscallLeave(t);
 	return ret;
@@ -1585,7 +1585,7 @@ int sceTouchEnableIdleTimerCancelSetting(unsigned port, int enable)
 	unsigned t = sceSyscallEnter();
 	int ret = TOUCH_ERROR(2);
 
-	if (ksceSblACMgrIsSystemProgram(0))
+	if (sceSblACMgrIsSystemProgram(0))
 		ret = ksceTouchEnableIdleTimerCancelSetting(port, enable);
 	sceSyscallLeave(t);
 	return ret;
@@ -1597,7 +1597,7 @@ int sceTouchGetDeviceInfo(unsigned port, void *out)
 	unsigned t = sceSyscallEnter();
 	int ret = TOUCH_ERROR(2);
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = ksceTouchGetDeviceInfo(port, &info);
 		if (ret >= 0)
 			ret = ksceKernelCopyToUser(out, &info, 12);

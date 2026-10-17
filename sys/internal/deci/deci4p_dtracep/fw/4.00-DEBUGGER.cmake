@@ -381,9 +381,9 @@ set(MODULE_IMPORT_FUNCS
 	sceSyslibtraceStopSyscallTrace
 	sceSyslibtraceCallbackDeregisterLibs
 	SceSyslibtraceForKernel_F9CB8BA9
-	ksceSblACMgrIsGameProgram
+	sceSblACMgrIsGameProgram
 	SceSblACMgrForDriver_4CBD6156
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	SceQafMgrForDriver_382C71E8
 	ksceSblQafMgrIsAllowSystemAppDebug
 	SceBacktraceForDriver_888E99B8

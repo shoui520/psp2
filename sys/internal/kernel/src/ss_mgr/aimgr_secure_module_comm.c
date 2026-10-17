@@ -1,5 +1,5 @@
 #include "ssmgr_internal.h"
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/idstorage.h>
 #include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -20,7 +20,7 @@ const SceSelfAuthInfo aimgrSmAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-int ksceSblACMgrGetMediaType2(const char *path, uint32_t *mediaType);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *mediaType);
 
 int invoke_aimgr_secure_module(void)
 {
@@ -29,7 +29,7 @@ int invoke_aimgr_secure_module(void)
 
 	memset(&authInfo, 0, sizeof(authInfo));
 	memcpy(&authInfo.request, &aimgrSmAuthInfo, sizeof(aimgrSmAuthInfo));
-	ret = ksceSblACMgrGetMediaType2("os0:sm/aimgr_sm.self", &authInfo.media_type);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType("os0:sm/aimgr_sm.self", &authInfo.media_type);
 	if (ret)
 		return ret;
 	authInfo.self_type = (authInfo.self_type & ~0xf) | 2;

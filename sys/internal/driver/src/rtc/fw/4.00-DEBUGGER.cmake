@@ -83,7 +83,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceSblACMgrIsFself
+	SceSblACMgrForDriver_426A4E8C
 	SceQafMgrForDriver_4BC1883F
 	ksceSblUtMgrHasStoreFlag
 	ksceSysconReadCommand

@@ -128,7 +128,7 @@ int sceSblQafManagerGetQafNameForUser(char *name, SceSize size)
 	char buffer[QAF_NAME_SIZE];
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(frame);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -174,7 +174,7 @@ int sceSblQafMgrGetQafName(char *name, SceSize size)
 	uint64_t token[QAF_TOKEN_SIZE / sizeof(uint64_t)];
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(frame);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -564,7 +564,7 @@ const SceSelfAuthInfo qafSmAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-int ksceSblACMgrGetMediaType2(const char *path, uint32_t *mediaType);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *mediaType);
 
 int qafLoadSecureModule(const char *path)
 {
@@ -574,7 +574,7 @@ int qafLoadSecureModule(const char *path)
 
 	memset(&auth, 0, sizeof(auth));
 	memcpy(&auth.request, &qafSmAuthInfo, sizeof(auth.request));
-	ret = ksceSblACMgrGetMediaType2(path, &auth.media_type);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.media_type);
 	if (ret < 0)
 		return ret;
 	auth.self_type = (auth.self_type & ~0xfU) | 2;
@@ -923,7 +923,7 @@ int sceSblQafMgrDeleteQafToken2(void)
 	SceUInt32 frame = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(frame);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -938,7 +938,7 @@ int sceSblQafMgrSetQafToken2(const void *token)
 	uint64_t buffer[QAF_TOKEN_SIZE / sizeof(uint64_t)];
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(frame);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -959,7 +959,7 @@ int sceSblQafMgrGetQafToken2(void *token)
 	uint64_t buffer[QAF_TOKEN_SIZE / sizeof(uint64_t)];
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(frame);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}

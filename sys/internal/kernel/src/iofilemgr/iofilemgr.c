@@ -33,7 +33,7 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, SceProcEventInvokeParam1 *p
 
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_RESUME:
-		if (ksceSblACMgrIsGameProgram2(pid) == 1)
+		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
 			ksceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
 		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
@@ -56,7 +56,7 @@ int IofilemgrModuleProcSuspend(SceUID pid, int phase, SceProcEventInvokeParam1 *
 
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_SUSPEND:
-		if (ksceSblACMgrIsGameProgram2(pid) == 1)
+		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
 			ksceKernelAtomicSubAndGet32(&g_gameProgramCount, 1);
 		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
@@ -150,13 +150,13 @@ int IofilemgrModuleProcCreate(SceUID pid, SceProcEventInvokeParam2 *param, int u
 	}
 	if (i != IOFILEMGR_PROCESS_MAX)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1573, "Create PID = 0x%x\n", g_iofilemgrPid[i]);
-	if (ksceSblACMgrIsRootProgram2(pid) == 1 || ksceSblACIsSystemProgram(pid) == 1) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 1 || SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(pid) == 1) {
 		kpls->priority = 0xe;
-	} else if (ksceSblACMgrIsNonGameProgram2(pid) == 1) {
+	} else if (SceSblACMgrForKernel_3F99279F(pid) == 1) {
 		kpls->priority = 0xb;
 	} else {
 		kpls->priority = 8;
-		if (ksceSblACMgrIsGameProgram2(pid) == 1)
+		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
 			ksceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
 	}
 	limit.size = sizeof(limit);
@@ -185,7 +185,7 @@ int IofilemgrModuleProcCreate(SceUID pid, SceProcEventInvokeParam2 *param, int u
 	}
 	kpls->fdMax = limit.limit0;
 	paid = 0;
-	ret = ksceSblACMgrGetProcessProgramAuthId2(pid, &paid);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetPaid(pid, &paid);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 6, 1658, "sceSblACMgrGetPaid() failed. %x\n", ret);
 	if (paid == 0x2800000000007001ULL)
@@ -398,35 +398,35 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 	if (g_ioSchedEnabled == 1 && ret >= 0 && info.mntOpt >= 0) {
 		if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
-				if (!ksceSblACIsSystemProgram(impersonateId) &&
-				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
+				if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) &&
+				    !SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 					SCE_DBG_PRINTF_FUNC(0xf, 538, "sceIoIoctl",
 							    "error : sceIoIoctl() failed\n");
 					SCE_DBG_PRINTF_FUNC(0xf, 539, "sceIoIoctl",
 							    "impersonateId = 0x%08x\n", impersonateId);
 					SCE_DBG_PRINTF_FUNC(0xf, 541, "sceIoIoctl",
 							    "sceSblACMgrIsSystemProgram() = %d\n",
-							    ksceSblACIsSystemProgram(impersonateId));
+							    SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 					SCE_DBG_PRINTF_FUNC(0xf, 543, "sceIoIoctl",
 							    "sceSblACMgrIsKernelProgram() = %d\n",
-							    ksceSblACMgrIsRootProgram2(impersonateId));
+							    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 					SCE_DBG_PRINTF_FUNC(0xf, 544, "sceIoIoctl",
 							    "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
-			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
-				   ksceSblACMgrIsRootProgram2(impersonateId)) {
+			} else if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) ||
+				   SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 				SCE_DBG_PRINTF_FUNC(0xf, 551, "sceIoIoctl",
 						    "error : sceIoIoctl() failed!\n");
 				SCE_DBG_PRINTF_FUNC(0xf, 552, "sceIoIoctl",
 						    "impersonateId = 0x%08x\n", impersonateId);
 				SCE_DBG_PRINTF_FUNC(0xf, 554, "sceIoIoctl",
 						    "sceSblACMgrIsSystemProgram() = %d\n",
-						    ksceSblACIsSystemProgram(impersonateId));
+						    SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 				SCE_DBG_PRINTF_FUNC(0xf, 556, "sceIoIoctl",
 						    "sceSblACMgrIsKernelProgram() = %d\n",
-						    ksceSblACMgrIsRootProgram2(impersonateId));
+						    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 				SCE_DBG_PRINTF_FUNC(0xf, 557, "sceIoIoctl", "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;
@@ -445,35 +445,35 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 	} else {
 		if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
-				if (!ksceSblACIsSystemProgram(impersonateId) &&
-				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
+				if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) &&
+				    !SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 					SCE_DBG_PRINTF_FUNC(0xf, 577, "sceIoIoctl",
 							    "error : sceIoIoctl() failed\n");
 					SCE_DBG_PRINTF_FUNC(0xf, 578, "sceIoIoctl",
 							    "impersonateId = 0x%08x\n", impersonateId);
 					SCE_DBG_PRINTF_FUNC(0xf, 580, "sceIoIoctl",
 							    "sceSblACMgrIsSystemProgram() = %d\n",
-							    ksceSblACIsSystemProgram(impersonateId));
+							    SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 					SCE_DBG_PRINTF_FUNC(0xf, 582, "sceIoIoctl",
 							    "sceSblACMgrIsKernelProgram() = %d\n",
-							    ksceSblACMgrIsRootProgram2(impersonateId));
+							    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 					SCE_DBG_PRINTF_FUNC(0xf, 583, "sceIoIoctl",
 							    "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
-			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
-				   ksceSblACMgrIsRootProgram2(impersonateId)) {
+			} else if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) ||
+				   SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 				SCE_DBG_PRINTF_FUNC(0xf, 590, "sceIoIoctl",
 						    "error : sceIoIoctl() failed!\n");
 				SCE_DBG_PRINTF_FUNC(0xf, 591, "sceIoIoctl",
 						    "impersonateId = 0x%08x\n", impersonateId);
 				SCE_DBG_PRINTF_FUNC(0xf, 593, "sceIoIoctl",
 						    "sceSblACMgrIsSystemProgram() = %d\n",
-						    ksceSblACIsSystemProgram(impersonateId));
+						    SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 				SCE_DBG_PRINTF_FUNC(0xf, 595, "sceIoIoctl",
 						    "sceSblACMgrIsKernelProgram() = %d\n",
-						    ksceSblACMgrIsRootProgram2(impersonateId));
+						    SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 				SCE_DBG_PRINTF_FUNC(0xf, 596, "sceIoIoctl", "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;
@@ -768,8 +768,8 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 	if (g_ioSchedEnabled == 1) {
 		if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
-				if (!ksceSblACIsSystemProgram(impersonateId) &&
-				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
+				if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) &&
+				    !SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1121, "sceIoDevctl",
 								  "error : sceIoDevctl() failed\n");
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1122, "sceIoDevctl",
@@ -777,23 +777,23 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 								  impersonateId);
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1124, "sceIoDevctl",
 								  "sceSblACMgrIsSystemProgram() = %d\n",
-								  ksceSblACIsSystemProgram(impersonateId));
+								  SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1126, "sceIoDevctl",
 								  "sceSblACMgrIsKernelProgram() = %d\n",
-								  ksceSblACMgrIsRootProgram2(impersonateId));
+								  SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 					SCE_DBG_PRINTF_LEVEL_FUNC(1, 0xf, 1127, "sceIoDevctl",
 								  "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
-			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
-				   ksceSblACMgrIsRootProgram2(impersonateId)) {
+			} else if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) ||
+				   SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 				SCE_DBG_PRINTF(0xf, 1134, "error : sceIoDevctl() failed!\n");
 				SCE_DBG_PRINTF(0xf, 1135, "impersonateId = 0x%08x\n", impersonateId);
 				SCE_DBG_PRINTF(0xf, 1137, "sceSblACMgrIsSystemProgram() = %d\n",
-					       ksceSblACIsSystemProgram(impersonateId));
+					       SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 				SCE_DBG_PRINTF(0xf, 1139, "sceSblACMgrIsKernelProgram() = %d\n",
-					       ksceSblACMgrIsRootProgram2(impersonateId));
+					       SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 				SCE_DBG_PRINTF(0xf, 1140, "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;
@@ -810,27 +810,27 @@ int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, voi
 	} else {
 		if (cmd & IOFILEMGR_IOCTL_ACCESS_CHECK) {
 			if (cmd & IOFILEMGR_IOCTL_ACCESS_SYSTEM) {
-				if (!ksceSblACIsSystemProgram(impersonateId) &&
-				    !ksceSblACMgrIsRootProgram2(impersonateId)) {
+				if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) &&
+				    !SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 					SCE_DBG_PRINTF(0xf, 1160, "error : sceIoDevctl() failed\n");
 					SCE_DBG_PRINTF(0xf, 1161, "impersonateId = 0x%08x\n",
 						       impersonateId);
 					SCE_DBG_PRINTF(0xf, 1163, "sceSblACMgrIsSystemProgram() = %d\n",
-						       ksceSblACIsSystemProgram(impersonateId));
+						       SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 					SCE_DBG_PRINTF(0xf, 1165, "sceSblACMgrIsKernelProgram() = %d\n",
-						       ksceSblACMgrIsRootProgram2(impersonateId));
+						       SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 					SCE_DBG_PRINTF(0xf, 1166, "cmd=%x\n", cmd);
 					sceSyscallLeave(tls);
 					return SCE_ERROR_ERRNO_EUNSUP;
 				}
-			} else if (!ksceSblACIsSystemProgram(impersonateId) ||
-				   ksceSblACMgrIsRootProgram2(impersonateId)) {
+			} else if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId) ||
+				   SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId)) {
 				SCE_DBG_PRINTF(0xf, 1173, "error : sceIoDevctl() failed!\n");
 				SCE_DBG_PRINTF(0xf, 1174, "impersonateId = 0x%08x\n", impersonateId);
 				SCE_DBG_PRINTF(0xf, 1176, "sceSblACMgrIsSystemProgram() = %d\n",
-					       ksceSblACIsSystemProgram(impersonateId));
+					       SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(impersonateId));
 				SCE_DBG_PRINTF(0xf, 1178, "sceSblACMgrIsKernelProgram() = %d\n",
-					       ksceSblACMgrIsRootProgram2(impersonateId));
+					       SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(impersonateId));
 				SCE_DBG_PRINTF(0xf, 1179, "cmd=%x\n", cmd);
 				sceSyscallLeave(tls);
 				return SCE_ERROR_ERRNO_EUNSUP;

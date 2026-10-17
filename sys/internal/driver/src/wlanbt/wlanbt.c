@@ -121,11 +121,11 @@ void wlanBtPowerOnDevice(void)
 	int result;
 
 	if (SceSysconForDriver_C0F215B7() != 1 ||
-	    (result = ksceSysconCtrlWirelessPower2(0)) >= 0) {
+	    (result = SceSysconForDriver_A2E85DB9(0)) >= 0) {
 		result = SceClockgenForDriver_7B28A724();
 		if (result >= 0) {
 			sceKernelDelayThread(5000);
-			result = ksceSysconCtrlWirelessPower2(1);
+			result = SceSysconForDriver_A2E85DB9(1);
 			if (result >= 0) {
 				result = ksceSysconCtrlDeviceReset(16, 0);
 				if (result >= 0) {
@@ -145,7 +145,7 @@ void wlanBtPowerDownDevice(void)
 	int result;
 
 	ksceSysconCtrlDeviceReset(16, 0);
-	ksceSysconCtrlWirelessPower2(0);
+	SceSysconForDriver_A2E85DB9(0);
 	result = ksceClockgenWlanBtClkDisable();
 	sceKernelDelayThread(500000);
 	SCE_DBG_ASSERT(result >= 0, 372);
@@ -172,7 +172,7 @@ void wlanBtCompleteWakeWait(void)
 	SceSdifForDriver_5D65E66B(ksceSdifGetSdContextPartValidateSdio(2), 4, 1,
 				 &interruptEnable);
 	wakeupFactor = 0;
-	ksceSysconGetWakeupFactor(&wakeupFactor);
+	SceSysconForDriver_CF5B2F2F(&wakeupFactor);
 	wakeupFactor &= 0x7f;
 	if (wakeupFactor == 2) {
 		wakeSources = 0;
@@ -198,7 +198,7 @@ void wlanBtCompleteWakeWait(void)
 		int result;
 
 		ksceSysconCtrlDeviceReset(16, 0);
-		ksceSysconCtrlWirelessPower2(0);
+		SceSysconForDriver_A2E85DB9(0);
 		result = ksceClockgenWlanBtClkDisable();
 		sceKernelDelayThread(500000);
 		SCE_DBG_ASSERT_FUNC(result >= 0, 372, "wlanBtPowerDownDevice");

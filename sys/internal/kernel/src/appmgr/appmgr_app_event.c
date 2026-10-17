@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2/appmgr.h>
 #include <string.h>
@@ -173,17 +173,17 @@ int sceAppMgrReceiveSystemEvent(SceAppMgrSystemEvent *event)
 		result = (int)0x80802012;
 		goto leave;
 	}
-	if (app->pendingActivate && ksceSblACMgrIsNonGameProgram(0) &&
+	if (app->pendingActivate && SceSblACMgrForDriver_6C5AB07F(0) &&
 	    (app->processAttr & 2)) {
 		memset(event, 0, sizeof(*event));
 		event->systemEvent = 0x10000001;
 		app->pendingActivate = 0;
-	} else if (app->pendingDeactivate && ksceSblACMgrIsNonGameProgram(0) &&
+	} else if (app->pendingDeactivate && SceSblACMgrForDriver_6C5AB07F(0) &&
 		   (app->processAttr & 2)) {
 		memset(event, 0, sizeof(*event));
 		event->systemEvent = 0x10000002;
 		app->pendingDeactivate = 0;
-	} else if (app->pendingQuit && ksceSblACMgrIsNonGameProgram(0)) {
+	} else if (app->pendingQuit && SceSblACMgrForDriver_6C5AB07F(0)) {
 		memset(event, 0, sizeof(*event));
 		event->systemEvent = 0x20000001;
 		app->pendingQuit = 0;
@@ -222,7 +222,7 @@ int sceAppMgrReceiveEventNum(int *eventNum)
 	struct AppState *app;
 	int count;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return (int)0x8080201f;
 	}
@@ -270,7 +270,7 @@ int sceAppMgrReceiveEventInternal(void *appEvent)
 	struct AppState *app;
 	int result = 0;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return (int)0x8080201f;
 	}
@@ -341,7 +341,7 @@ int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event, SceUID pid)
 	struct AppState *app;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0) &&
+	if (!sceSblACMgrIsSystemProgram(0) &&
 	    ksceKernelGetProcessId() != 0x10005) {
 		result = (int)0x8080201f;
 		goto leave;
@@ -395,7 +395,7 @@ int sceAppMgrSendSystemEvent2(const char *appName, const char *titleId, int even
 	int index;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscall);
 		return (int)0x8080201f;
 	}

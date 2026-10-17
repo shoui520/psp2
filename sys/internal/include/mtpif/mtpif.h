@@ -5,6 +5,7 @@
 
 #include <psp2kern/types.h>
 #include <threadmgr/threadmgr.h>
+#include <acmgr/acmgr.h>
 
 /* USB MTP data phase: a buffer and its progress */
 typedef struct MtpIfTransfer {
@@ -29,8 +30,6 @@ int SceUsbMtpForDriver_6F7DF4B8(void);
 int SceUsbMtpForDriver_E64513A9(int phase);
 
 void sceKernelApiDeclareTypeUInt32(void);
-int ksceSblACMgrIsSystemProgram(SceUID pid);
-int ksceSblACMgrIsMiniSettingsForQA(void);
 int ksceKernelInitializeFastMutex(void *mutex, const char *name,
 				SceUInt32 attributes, SceUInt32 unk);
 int ksceKernelLockFastMutex(void *mutex);

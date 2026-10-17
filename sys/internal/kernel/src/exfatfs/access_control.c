@@ -5,11 +5,6 @@
 
 #include "exfatfs_internal.h"
 
-int SceSblACMgrForDriver_0606B87E(int accessLevel, int permission,
-				SceSblACMgrValue *value);
-int SceSblACMgrForDriver_48CFCEA2(SceUID pid, SceSblACMgrValue *output,
-				SceSblACMgrValue *input, SceUInt32 mountId);
-
 int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
 				      SceUInt32 permission,
 				      unsigned char *attribute)
@@ -82,7 +77,7 @@ int sceFatfsACGetFSAttributeByThreadAccessLevel(SceExfatfsDrive *drive,
 		value.type = 3;
 		value.size = 1;
 	}
-	result = SceSblACMgrForDriver_0606B87E(accessLevel, permission, &value);
+	result = sceSblACMgrGetFSAttributeByThreadAccessLevel(accessLevel, permission, &value);
 	if (result < 0)
 		SCE_DBG_PRINTF(0, 158,
 			      "%s: sceSblACMgrGetFSAttributeByThreadAccessLevel failed[%#x]\n",
@@ -126,7 +121,7 @@ static inline int set_attr_info_for_check(SceExfatfsDrive *drive,
 			value->type = 3;
 			value->size = 1;
 		}
-		result = SceSblACMgrForDriver_48CFCEA2(pid, value, &inputValue,
+		result = sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, value, &inputValue,
 						    drive->deviceInfo.mount_misc->mnt_id);
 		if (result < 0)
 			return result;

@@ -103,7 +103,7 @@ int SceSysconForDriver_76506A57(uint32_t mode, uint32_t offset,
 				 void *data, uint32_t size);
 
 /* name unknown: a syscon state word; (state & 0x7f) == 0x17 after a crash reboot */
-int SceSysconForDriver_CF5B2F2F(SceUInt32 *state);
+int SceSysconForDriver_CF5B2F2F(uint32_t *state);
 
 int SceSysconForDriver_63B14156(void);
 int SceSysconForDriver_99A254A9(void);
@@ -220,7 +220,6 @@ int ksceSysconCtrlDolceUsbPower(uint32_t value);
 int ksceSysconCtrlHdmiCecPower(uint32_t value);
 int ksceSysconCtrlLED(uint32_t led, int enabled);
 int ksceSysconCtrlManualChargeMode(uint32_t value);
-int ksceSysconCtrlWirelessPower2(uint32_t value);
 int ksceSysconEnableHibernateIO(uint32_t value);
 int ksceSysconEndConfigstorageTransaction(void);
 int ksceSysconGetBatteryCalibData(uint32_t *first, uint32_t *second, uint32_t *third, uint32_t *fourth);
@@ -234,7 +233,6 @@ int ksceSysconGetMultiCnInfo(uint32_t *information);
 int ksceSysconGetTemperatureLog(uint32_t *information);
 int ksceSysconGetTouchpanelDeviceInfo(uint16_t *information);
 int ksceSysconGetUsbDetStatus(uint32_t *value);
-int ksceSysconGetWakeupFactor(uint32_t *value);
 int ksceSysconIduModeClear(void);
 int ksceSysconIduModeSet(void);
 int ksceSysconIsDownLoaderMode(void);

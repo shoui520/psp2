@@ -286,8 +286,8 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_D4958E6F
 	SceKernelSuspendForDriver_FE2118BD
 	ksceKernelRegisterProcEventHandler
-	ksceSblACMgrIsGameProgram
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsGameProgram
+	sceSblACMgrIsSystemProgram
 	ksceSblAimgrIsDolce
 	ksceSblAimgrIsGenuineDolce
 	ScePervasiveForDriver_03E1FAA6

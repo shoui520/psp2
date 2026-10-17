@@ -13,7 +13,7 @@ int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if (!args || !requestId) {
@@ -43,7 +43,7 @@ int sceSblUsInspectSpackageForUser(int packageType, const SceKernelSpackageArgs 
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if (!args || !requestId) {
@@ -73,7 +73,7 @@ int sceSblUsExtractSpackageForUser(int packageType, const SceKernelSpackageArgs 
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if (!args || !requestId) {
@@ -104,7 +104,7 @@ int sceSblUsGetExtractSpackageForUser(int nodeType, uint32_t requestId,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = ksceKernelCopyFromUser(&request, args, sizeof(request));
@@ -136,7 +136,7 @@ int sceSblUsAllocateBufferForUser(SceSize size, void **output)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = UpdateUtilAllocateBuffer(size, &kernelBuffer, sceKernelGetProcessId());
@@ -157,7 +157,7 @@ int sceSblUsReleaseBufferForUser(void *userBuffer)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	result = UpdateUtilUA2KA(userBuffer, sceKernelGetProcessId(), &kernelBuffer);
@@ -180,7 +180,7 @@ int sceSblUsGetStatusForUser(int nodeType, uint32_t requestId,
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	if (!args)
 		return (int)0x800f0216;
@@ -213,7 +213,7 @@ int sceSblUsGetSpkgInfoForUser(int packageType, SceSblUsSpkgInfo *output)
 	unsigned int state;
 	int result;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
 	if (output) {

@@ -15,7 +15,6 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -202,27 +201,27 @@ static int sysmoduleFind(SysmoduleProc **proc, SceUInt16 **state, const Sysmodul
 	*entry = e;
 	flags = e->flags;
 	if (flags & SYSMODULE_MOD_DEVONLY) {
-		if (!ksceSblACMgrIsDevelopmentMode())
+		if (!SceSblACMgrForDriver_E87D1777())
 			return SYSMODULE_ERROR_NOT_ALLOWED;
 		flags = e->flags;
 	}
 	if (flags & SYSMODULE_MOD_SYSONLY) {
-		if (!ksceSblACMgrIsSystemProgram(0))
+		if (!sceSblACMgrIsSystemProgram(0))
 			return SYSMODULE_ERROR_NOT_ALLOWED;
 		flags = e->flags;
 	}
 	if (flags & SYSMODULE_MOD_NONGAME) {
-		if ((id & SYSMODULE_ID_SYSTEM) || ksceSblACMgrIsSystemProgram(0))
+		if ((id & SYSMODULE_ID_SYSTEM) || sceSblACMgrIsSystemProgram(0))
 			goto allowed;
-		flags = ksceSblACMgrIsNonGameProgram(0);
+		flags = SceSblACMgrForDriver_6C5AB07F(0);
 	} else if (flags & SYSMODULE_MOD_PSMDEV) {
-		if ((id & SYSMODULE_ID_SYSTEM) || ksceSblACMgrIsSystemProgram(0))
+		if ((id & SYSMODULE_ID_SYSTEM) || sceSblACMgrIsSystemProgram(0))
 			goto allowed;
-		flags = ksceSblACMgrIsPSMDevAssistant(0);
+		flags = SceSblACMgrForDriver_C98D82EE(0);
 	} else if (flags & SYSMODULE_MOD_SYSTEM) {
 		if (id & SYSMODULE_ID_SYSTEM)
 			goto allowed;
-		flags = ksceSblACMgrIsSystemProgram(0);
+		flags = sceSblACMgrIsSystemProgram(0);
 	} else {
 		flags &= SYSMODULE_MOD_PUBLIC;
 	}
@@ -344,12 +343,12 @@ static inline int sysmoduleLibWanted(const SysmoduleLib *lib)
 	SceUInt32 flags = lib->flags;
 
 	if (flags & SYSMODULE_LIB_DEVONLY) {
-		if (!ksceSblACMgrIsDevelopmentMode())
+		if (!SceSblACMgrForDriver_E87D1777())
 			return 0;
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_RETAILONLY) {
-		if (ksceSblACMgrIsDevelopmentMode())
+		if (SceSblACMgrForDriver_E87D1777())
 			return 0;
 		flags = lib->flags;
 	}
@@ -578,29 +577,29 @@ static int sysmoduleIsLoaded(SceUInt32 id)
 	}
 	flags = entry->flags;
 	if (flags & SYSMODULE_MOD_DEVONLY) {
-		if (!ksceSblACMgrIsDevelopmentMode())
+		if (!SceSblACMgrForDriver_E87D1777())
 			goto denied;
 		flags = entry->flags;
 	}
 	if (flags & SYSMODULE_MOD_SYSONLY) {
-		if (!ksceSblACMgrIsSystemProgram(0))
+		if (!sceSblACMgrIsSystemProgram(0))
 			goto denied;
 		flags = entry->flags;
 	}
 	if (flags & SYSMODULE_MOD_NONGAME) {
-		if (!(id & SYSMODULE_ID_SYSTEM) && !ksceSblACMgrIsSystemProgram(0)) {
-			if (ksceSblACMgrIsNonGameProgram(0) != 1)
+		if (!(id & SYSMODULE_ID_SYSTEM) && !sceSblACMgrIsSystemProgram(0)) {
+			if (SceSblACMgrForDriver_6C5AB07F(0) != 1)
 				goto denied;
 		}
 	} else {
 		if (flags & SYSMODULE_MOD_PSMDEV) {
-			if ((id & SYSMODULE_ID_SYSTEM) || ksceSblACMgrIsSystemProgram(0))
+			if ((id & SYSMODULE_ID_SYSTEM) || sceSblACMgrIsSystemProgram(0))
 				goto allowed;
-			flags = ksceSblACMgrIsPSMDevAssistant(0);
+			flags = SceSblACMgrForDriver_C98D82EE(0);
 		} else if (flags & SYSMODULE_MOD_SYSTEM) {
 			if (id & SYSMODULE_ID_SYSTEM)
 				goto allowed;
-			flags = ksceSblACMgrIsSystemProgram(0);
+			flags = sceSblACMgrIsSystemProgram(0);
 		} else {
 			flags &= SYSMODULE_MOD_PUBLIC;
 		}

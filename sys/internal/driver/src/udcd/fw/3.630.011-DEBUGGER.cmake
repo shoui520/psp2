@@ -158,9 +158,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	sceKernelCancelEventFlag
 	ksceKernelRegisterProcEventHandler
-	ksceSblACMgrIsAllowedUsbSerial
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsMiniSettingsForQA
+	SceSblACMgrForDriver_062CAEB2
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_D0E11C89
 	ksceSblAimgrIsDolce
 	ksceKernelPowerTick
 )

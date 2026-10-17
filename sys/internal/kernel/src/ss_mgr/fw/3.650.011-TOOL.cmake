@@ -138,8 +138,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDmaOpAlloc
 	ksceKernelDmaOpFree
 	ksceKernelDmaOpAssign
-	ksceSblACIsSystemProgram
-	ksceSblACMgrGetMediaType2
+	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
+	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	ksceSblAuthMgrSetDmac5Key
 	ksceSblSmCommStartSmFromData
 	ksceSblSmCommStopSm

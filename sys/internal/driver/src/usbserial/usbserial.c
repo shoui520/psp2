@@ -975,7 +975,7 @@ static int queryStatus(void)
 int name decl \
 { \
 	unsigned context = sceSyscallEnter(); \
-	int ret = ksceSblACMgrIsAllowedUsbSerial(0) ? (expression) : (int)SCE_ERROR_ERRNO_ENOSYS; \
+	int ret = SceSblACMgrForDriver_062CAEB2(0) ? (expression) : (int)SCE_ERROR_ERRNO_ENOSYS; \
 	sceSyscallLeave(context); \
 	return ret; \
 }
@@ -998,7 +998,7 @@ int sceUsbSerialRecv(void *buffer, unsigned size, unsigned mode, int timeout)
 	int ret;
 	if (SceThreadmgrForDriver_20C228E4()) {
 		ret = SERIAL_NOT_STARTED;
-	} else if (!ksceSblACMgrIsAllowedUsbSerial(0)) {
+	} else if (!SceSblACMgrForDriver_062CAEB2(0)) {
 		ret = (int)SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = serialStatus();
@@ -1021,7 +1021,7 @@ int sceUsbSerialSend(const void *buffer, unsigned size, unsigned mode, int timeo
 {
 	unsigned context = sceSyscallEnter();
 	int ret;
-	if (!ksceSblACMgrIsAllowedUsbSerial(0)) {
+	if (!SceSblACMgrForDriver_062CAEB2(0)) {
 		ret = (int)SCE_ERROR_ERRNO_ENOSYS;
 	} else if (SceThreadmgrForDriver_20C228E4()) {
 		ret = SERIAL_NOT_STARTED;
@@ -1047,7 +1047,7 @@ int SceUsbSerial_405DB744(int timeout)
 	int ret;
 	if (SceThreadmgrForDriver_20C228E4())
 		ret = SERIAL_NOT_STARTED;
-	else if (!ksceSblACMgrIsAllowedUsbSerial(0))
+	else if (!SceSblACMgrForDriver_062CAEB2(0))
 		ret = (int)SCE_ERROR_ERRNO_ENOSYS;
 	else
 		ret = drainSerial(timeout);

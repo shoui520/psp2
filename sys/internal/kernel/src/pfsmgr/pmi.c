@@ -5,7 +5,7 @@
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include "pfsmgr_internal.h"
 
@@ -97,7 +97,7 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 	} else {
 		memcpy(pmi->klicensee, klicensee, sizeof(pmi->klicensee));
 	}
-	if (!ksceSblACMgrIsDevelopmentMode())
+	if (!SceSblACMgrForDriver_E87D1777())
 		pmi->flags |= PFS_PMI_NOT_DEVELOPMENT;
 
 	if (mode == 3) {

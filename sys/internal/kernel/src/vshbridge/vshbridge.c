@@ -28,7 +28,7 @@
 	SceUInt32 _t = sceSyscallEnter();				\
 	int _ret;							\
 									\
-	if (!ksceSblACMgrIsSystemProgram(0)) {				\
+	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		sceSyscallLeave(_t);					\
 		return SCE_ERROR_ERRNO_ENOSYS;				\
 	}								\
@@ -43,7 +43,7 @@
 	SceUID uid;							\
 	int _ret;							\
 									\
-	if (!ksceSblACMgrIsSystemProgram(0)) {				\
+	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		sceSyscallLeave(_t);					\
 		return SCE_ERROR_ERRNO_ENOSYS;				\
 	}								\
@@ -63,7 +63,7 @@
 	SceProductMode _mode = 0;					\
 	int _ret;							\
 									\
-	if (!ksceSblACMgrIsSystemProgram(0)) {				\
+	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		_ret = SCE_ERROR_ERRNO_ENOSYS;				\
 	} else if (kscePmMgrGetProductMode(&_mode) != 0) {		\
 		_mode = 0;						\
@@ -84,7 +84,7 @@ SceUInt32 vshKernelShutdownSystemForUser(const SceKernelShutdownParam *param)
 	SceUInt32 t = sceSyscallEnter();
 	int perm, ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -117,7 +117,7 @@ SceUInt32 vshKernelSendSysEventForUser(int event)
 {
 	SceUInt32 t = sceSyscallEnter();
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -140,7 +140,7 @@ SceUInt32 vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *version)
 	SceUInt32 v = 0;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = SceProcessmgrForDriver_D141C076(pid, &v);
@@ -156,7 +156,7 @@ SceUInt32 vshKernelCheckModelCapability(int bit)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -169,7 +169,7 @@ int vshKernelEnableAutoClockDown(void)
 {
 	SceUInt32 t = sceSyscallEnter();
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		sceKernelSysrootEnableAutoClockDown();
 		sceSyscallLeave(t);
 		return 0;
@@ -182,7 +182,7 @@ int vshKernelDisableAutoClockDown(void)
 {
 	SceUInt32 t = sceSyscallEnter();
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		sceKernelSysrootDisableAutoClockDown();
 		sceSyscallLeave(t);
 		return 0;
@@ -350,7 +350,7 @@ SceUInt32 vshTouchSetTouchEmulationData(const void *front, const void *back)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -370,7 +370,7 @@ SceUInt32 vshLedSetMode(int led, int mode, const void *conf)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -457,7 +457,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 	SceUInt8 buf[8];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (info == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
@@ -496,7 +496,7 @@ SceUInt32 vshSysconGetTemperatureLog(SceUInt8 *log)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -518,7 +518,7 @@ SceUInt32 vshSysconClearTemperatureLog(int unk)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -537,7 +537,7 @@ SceUInt32 vshSysconClearTemperatureLog(int unk)
 	SceUInt32 _t = sceSyscallEnter();				\
 	SceUInt32 _ret;							\
 									\
-	if (!ksceSblACMgrIsSystemProgram(0)) {				\
+	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		sceSyscallLeave(_t);					\
 		return SCE_ERROR_ERRNO_ENOSYS;				\
 	}								\
@@ -596,7 +596,7 @@ SceUInt32 vshSysconGetUsbDetStatus(void *status)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -613,7 +613,7 @@ SceUInt32 vshSysconGetHardwareInfo(SceUInt32 *info)
 {
 	SceUInt32 t = sceSyscallEnter();
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -632,7 +632,7 @@ SceUInt32 vshSysconGetHardwareInfo2(void *info)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -706,7 +706,7 @@ SceUInt32 vshSysconGetBatteryCalibData(int *a, int *b, int *c, int *d)
 	int va = 0, vb = 0, vc = 0, vd = 0;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceSysconGetBatteryCalibData(&va, &vb, &vc, &vd);
@@ -757,7 +757,7 @@ SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf)
 	SceUInt8 data[0x200];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceIdStorageReadLeaf(leaf, data);
@@ -774,7 +774,7 @@ SceUInt32 vshIdStorageWriteLeaf(SceSize leaf, const void *buf)
 	SceUInt8 data[0x200];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceKernelCopyFromUser(data, buf, sizeof(data));
@@ -797,7 +797,7 @@ SceUInt32 vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 	SceUInt16 buf[0x20];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((SceUInt32)(num - 1) < 0x20) {
 		ret = ksceKernelCopyFromUser(buf, leaves, num * 2);
@@ -826,7 +826,7 @@ SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len
 	SceUInt8 data[0x200];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
 		ret = ksceIdStorageLookup(key, offset, data, len);
@@ -845,7 +845,7 @@ SceUInt32 vshIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSi
 	SceUInt8 data[0x200];
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
 		ret = ksceKernelCopyFromUser(data, buf, len);
@@ -935,7 +935,7 @@ SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -949,7 +949,7 @@ SceUInt32 vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -965,7 +965,7 @@ SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const S
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -985,7 +985,7 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const S
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -1106,15 +1106,15 @@ SceUInt32 vshSblSsIsDevelopmentMode(void)
 	SceUInt32 t = sceSyscallEnter();
 	int ret = 0;
 
-	if (ksceSblACMgrIsSystemProgram(0))
-		ret = ksceSblACMgrIsDevelopmentMode();
+	if (sceSblACMgrIsSystemProgram(0))
+		ret = SceSblACMgrForDriver_E87D1777();
 	sceSyscallLeave(t);
 	return ret;
 }
 
 SceUInt32 vshSblACMgrHasCapability(SceUID pid, int capability)
 {
-	VSH_BRIDGE(ksceSblACMgrHasCapability(pid, capability) == 1 ? 0 : (int)SCE_SBL_ERROR_NO_CAPABILITY);
+	VSH_BRIDGE(sceSblACMgrHasCapability(pid, capability) == 1 ? 0 : (int)SCE_SBL_ERROR_NO_CAPABILITY);
 }
 
 SceUInt32 vshSblGcAuthMgrMlnpsnlAuth1(void *a, void *b, void *c, void *d)
@@ -1169,7 +1169,7 @@ SceUInt32 vshIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events)
 	SceUInt32 t = sceSyscallEnter();
 	SceUID uid, puid;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -1200,7 +1200,7 @@ SceUInt32 vshIoCreateErrorEvent(int a, int b, int c)
 	SceUInt32 t = sceSyscallEnter();
 	SceUID uid, puid;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -1227,7 +1227,7 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 	SceUID uid;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -1282,7 +1282,7 @@ SceUInt32 vshMsifGetMsInfo(void *info)
 	SceMsInfo buf;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceMsifGetMsInfo(&buf);
@@ -1306,7 +1306,7 @@ SceUInt32 vshSdGetCardInfo(void *info)
 	SdifCardInfo kinfo;
 	int ret, i;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -1354,7 +1354,7 @@ SceUInt32 vshHdmiEnableCec(void)
 	SceProductMode mode = 0;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		kscePmMgrGetProductMode(&mode);
@@ -1370,7 +1370,7 @@ SceUInt32 vshHdmiDisableCec(void)
 	SceProductMode mode = 0;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		kscePmMgrGetProductMode(&mode);
@@ -1455,7 +1455,7 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 	SceSize dataSize = 0;
 	int ret, ret2;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret2 = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceSblPostSsMgrInitializeSpfsoCtx(path, ctx);
@@ -1618,7 +1618,7 @@ SceUInt32 vshCoredumpCafContextCreate(void)
 	SceUInt32 t = sceSyscallEnter();
 	SceUID uid, puid = SCE_ERROR_ERRNO_ENOSYS;
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		uid = ksceCoredumpCafContextCreate();
 		if (uid < 0) {
 			sceSyscallLeave(t);
@@ -1694,7 +1694,7 @@ SceUInt32 vshSblGetSystemSwVersion(SceKernelSystemSwVersion *info)
 	SceUInt32 v;
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (info == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
@@ -1719,7 +1719,7 @@ SceUInt32 vshSblAimgrGetSMI(void *smi)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (smi != NULL) {
 		ret = ksceSblAimgrGetSMI(smi);
@@ -1737,7 +1737,7 @@ SceUInt32 vshSblSsGenerateAppKey(void *a, void *b)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
@@ -1755,7 +1755,7 @@ SceUInt32 vshSblSsCreatePassPhrase(void *a, void *b)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}

@@ -3,7 +3,7 @@
 #include "../gpu-dump.h"
 #include "../power_sce.h"
 #include <gpu/gpu_es4_trace.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/power.h>
@@ -469,7 +469,7 @@ int SceGpuEs4ForDriver_990338F6(GpuTraceInfo *info)
 
 	if (info == NULL)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
+	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
 		info->socRevision = kscePervasiveGetSoCRevision() & 0x1ffffU;
 		kscePowerGetGpuClockFrequencyInternal(&first, &second);
 		info->gpuClockFrequency[0] = first * 1000000U;
@@ -502,7 +502,7 @@ int SceGpuEs4ForDriver_C0C73C1B(GpuTraceCounters *names)
 	if (psDeviceNode == NULL || psDeviceNode->pvDevice == NULL || names == NULL)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	psDevInfo = psDeviceNode->pvDevice;
-	if (ksceSblAimgrIsTool() && ksceSblACMgrIsDevelopmentMode()) {
+	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
 		OSMemSet(names, 0, sizeof(*names));
 		for (i = 0; i < 8; i++) {
 			IMG_UINT32 physical = OSReadHWReg(psDevInfo->pvRegsBaseKM,

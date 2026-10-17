@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -1903,7 +1903,7 @@ done:
 
 static int allowed(void)
 {
-	return ksceSblACMgrIsPspEmu(0) || ksceSblACMgrIsSystemProgram(0);
+	return SceSblACMgrForDriver_FD00C72A(0) || sceSblACMgrIsSystemProgram(0);
 }
 
 static int checkReady(void)

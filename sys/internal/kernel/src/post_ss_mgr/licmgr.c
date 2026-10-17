@@ -8,7 +8,6 @@
 #include <psp2kern/io/dirent.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/kbl/kbl.h>
 #include <psp2kern/kernel/rtc.h>
@@ -93,7 +92,7 @@ typedef struct SceActivationKey {
 } SceActivationKey;
 
 int ksceSblQafManagerGetQAFlags(void *flags);
-int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 int SceRtcForDriver_A0D7899A(SceRtcTick *tick);
 int SceSysrootForKernel_ksceSysrootRegisterLicMgrGetLicenseStatus(int (*func)(void));
 
@@ -314,7 +313,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 
 	memset(&act, 0, sizeof(act));
 	memset(&sig, 0, sizeof(sig));
-	if (ksceSblAimgrIsTool() && !ksceSblACMgrIsDevelopmentMode2())
+	if (ksceSblAimgrIsTool() && !SceSblACMgrForKernel_BBA13D9C())
 		return SCE_SBL_ERROR_LIC_NOT_DEVELOPMENT2;
 	if (path == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -462,7 +461,7 @@ int ksceSblPostSsMgrActivate(const char *path)
 	if (ksceSblAimgrIsTool()) {
 		if (ksceSblAimgrIsToolRev4() && !ksceSblAimgrIsDEX())
 			return SCE_SBL_ERROR_LIC_UNSUPPORTED;
-		if (!ksceSblACMgrIsDevelopmentMode2())
+		if (!SceSblACMgrForKernel_BBA13D9C())
 			return SCE_SBL_ERROR_LIC_NOT_DEVELOPMENT;
 	} else if (!ksceSblAimgrIsDEX()) {
 		return SCE_SBL_ERROR_LIC_UNSUPPORTED;
@@ -514,7 +513,7 @@ int sceSblLicMgrGetIssueNoForUser(SceUInt32 *issueNo, int fromNvs)
 	SceUInt32 state;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	if (issueNo == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -532,7 +531,7 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 	SceUInt32 state;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	if (key == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -548,7 +547,7 @@ int sceSblLicMgrGetLicenseStatus(void)
 {
 	SceUInt32 state;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	state = sceSyscallEnter();
 	sceSyscallLeave(state);
@@ -562,7 +561,7 @@ int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit)
 	SceUInt32 state;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	if (limit == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -601,7 +600,7 @@ int sceSblLicMgrGetExpireDateForUser(SceUInt32 *date, int fromNvs)
 	SceUInt32 state;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	if (date == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -623,7 +622,7 @@ int sceSblLicMgrActivateDevkitForUser(const char *path)
 	SceUInt32 state;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0))
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	if (path == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
@@ -646,7 +645,7 @@ int sceSblLicMgrClearActivationData(void)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -660,7 +659,7 @@ int sceSblLicMgrActivateFromFs(void)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -991,7 +990,7 @@ int invoke_act_secure_module(const char *path)	/* name unknown */
 
 	memset(&info, 0, sizeof(info));
 	memcpy(&info.request, &g_actSmAuthInfo, sizeof(info.request));
-	ret = ksceSblACMgrGetMediaType2(path, &info.media_type);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &info.media_type);
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;

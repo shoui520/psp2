@@ -2,7 +2,7 @@
 
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
@@ -1052,7 +1052,7 @@ int sceAppMgrReceiveShellEventNum(void)
 	int result;
 	int count;
 
-	if (!ksceSblACMgrIsSceShell(0))
+	if (!SceSblACMgrForDriver_991FDC15(0))
 		goto denied;
 	shell = appmgrGetShellApp();
 	if (!shell)
@@ -1110,7 +1110,7 @@ int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event)
 	int writeIndex;
 	int oldest;
 
-	if (!ksceSblACMgrIsSceShell(0))
+	if (!SceSblACMgrForDriver_991FDC15(0))
 		goto denied;
 	shell = appmgrGetShellApp();
 	if (!shell)

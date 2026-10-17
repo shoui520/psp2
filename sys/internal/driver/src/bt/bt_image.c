@@ -1,7 +1,7 @@
 /* Bluetooth imaging exchange; original source filename unavailable. */
 #include <string.h>
 #include <stdio.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
@@ -120,7 +120,7 @@ int BtPushImage(BtConnection *connection, const char *path)
 	int result, length;
 
 	if (sceKernelGetProcessId() != 0x10005 &&
-	    !ksceSblACMgrIsSystemProgram(0))
+	    !sceSblACMgrIsSystemProgram(0))
 		return (int)0x80010058;
 	if (gBtImageSend.state)
 		return (int)0x802f0f0d;
@@ -156,7 +156,7 @@ int BtPushImage(BtConnection *connection, const char *path)
 int BtSetImageReceivePath(const char *path)
 {
 	if (sceKernelGetProcessId() != 0x10005 &&
-	    !ksceSblACMgrIsSystemProgram(0))
+	    !sceSblACMgrIsSystemProgram(0))
 		return (int)0x80010058;
 	if (gBtImageReceive.deviceAddress)
 		return (int)0x802f0f0d;

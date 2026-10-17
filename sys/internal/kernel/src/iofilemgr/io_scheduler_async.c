@@ -251,7 +251,7 @@ SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncP
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapReadAsync", IO_USER_MAP_WRITE,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -320,7 +320,7 @@ SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam 
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapWriteAsync", IO_USER_MAP_READ,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -812,7 +812,7 @@ SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPreadAsync", IO_USER_MAP_WRITE,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);
@@ -880,7 +880,7 @@ SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offse
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
 		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPwriteAsync", IO_USER_MAP_READ,
-						    ksceSblACMgrIsGameProgram2(0) == 1 ?
+						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
 						    &kernelOffset);

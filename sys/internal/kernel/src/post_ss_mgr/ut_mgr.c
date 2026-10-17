@@ -6,7 +6,6 @@
 
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysmem.h>
@@ -103,7 +102,7 @@ typedef struct SceUtSmCommand {
 	SceUInt32 reserved[4];
 } SceUtSmCommand;
 
-int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 int SceSysrootForDriver_E25D2FD5(SceUInt8 (*func)(void));
 int SceSysrootForDriver_A12C9950(int (*func)(SceUInt64 authId));
 int SceSysrootForDriver_E2E88E3E(SceUInt8 (*func)(void));
@@ -501,7 +500,7 @@ int SceSblPostSsMgrForDriver_128FB35A(SceUID pid)
 {
 	SceUInt64 authId;
 
-	if (!g_utMgrComTestFlag || ksceSblACMgrGetProcessProgramAuthId2(pid, &authId) != 0)
+	if (!g_utMgrComTestFlag || SceSblACMgrForKernel_sceSblACMgrGetPaid(pid, &authId) != 0)
 		return 0;
 	return authId == g_utMgrComTestAuthId;
 }
@@ -512,7 +511,7 @@ int sceSblUtMgrUpdateUtoken(const void *utoken, SceSize size)
 	void *kutoken;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -539,7 +538,7 @@ int sceSblUtMgrReadUtoken(void *utoken, SceSize size)
 	void *kutoken;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -565,7 +564,7 @@ int sceSblUtMgrResetUtokenFile(void)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -581,7 +580,7 @@ int sceSblUtMgrGetCurrentSecureTick(SceUInt32 *left)
 	SceUInt32 now = 0, value = 0;
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -619,7 +618,7 @@ int sceSblUtMgrIsTrilithiumFlagEnabled(char *flag, SceSize size)
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (!ksceSblACIsSystemProgram(0)) {
+	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
@@ -645,7 +644,7 @@ int utSmStart(const char *path)	/* name unknown */
 
 	memset(&info, 0, sizeof(info));
 	memcpy(&info.request, &g_utSmAuthInfo, sizeof(info.request));
-	ret = ksceSblACMgrGetMediaType2(path, &info.media_type);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &info.media_type);
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;

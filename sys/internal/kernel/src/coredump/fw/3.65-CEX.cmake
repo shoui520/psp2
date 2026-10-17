@@ -379,9 +379,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCreateMutex
 	SceThreadmgrForDriver_FDC044AC
 	SceThreadmgrForDriver_FF8DA217
-	ksceSblACMgrIsRootProgram
+	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_4CBD6156
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	ksceSblAimgrGetProductCode
 	ksceSblAimgrIsTool
 	ksceSblAimgrIsDolce

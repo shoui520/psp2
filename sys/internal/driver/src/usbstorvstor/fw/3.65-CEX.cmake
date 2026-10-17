@@ -77,8 +77,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDeleteThread
 	ksceKernelCreateThread
 	ksceKernelSetEventFlag
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsMiniSettingsForQA
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_D0E11C89
 	ksceIoWrite
 	ksceIoLseek
 	ksceIoOpen

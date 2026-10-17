@@ -6,7 +6,6 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/npdrm.h>
 #include <psp2kern/fios2.h>
@@ -209,7 +208,7 @@ int appmgrGetConsoleType(void)
 		return 0;
 	if (ksceSblAimgrIsDEX())
 		return 1;
-	if (ksceSblACMgrIsDevelopmentMode())
+	if (SceSblACMgrForDriver_E87D1777())
 		return 3;
 	return 2;
 }
@@ -781,7 +780,7 @@ int appmgrGetAddContPath(const AppmgrProcessContent *content, const char *titleI
 	    strncmp(directory, "ux0:/data", 9) == 0) {
 		if (ksceSblAimgrIsCEX() || ksceSblAimgrIsDEX())
 			return (int)0x8080000e;
-		ksceSblACMgrIsDevelopmentMode();
+		SceSblACMgrForDriver_E87D1777();
 		goto internalContent;
 	}
 	if (strncmp(directory, "gro0:", 5) == 0) {
@@ -1133,7 +1132,7 @@ updateParams:
 		else if (ksceSblAimgrIsDEX())
 			++params->dexUseCount;
 		else {
-			ksceSblACMgrIsDevelopmentMode();
+			SceSblACMgrForDriver_E87D1777();
 			++params->otherUseCount;
 		}
 		params->lastTitleId[0] = 0;
@@ -1229,7 +1228,7 @@ int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerificati
 			if (ksceSblUtMgrHasStoreFlag())
 				goto contentParams;
 		} else {
-			ksceSblACMgrIsDevelopmentMode();
+			SceSblACMgrForDriver_E87D1777();
 		}
 	}
 	result = appmgrReadKeystone(pid, driveId.drive_id, keystone);
@@ -1488,15 +1487,15 @@ int appmgrCountPfsMountReferences(unsigned int mountId, int flags)
 			}
 			if (mountId < 110) {
 				if (mountId - 106 <= 1 &&
-				    !ksceSblACMgrIsPSMDevAssistant(0))
-					ksceSblACMgrIsSystemProgram(0);
+				    !SceSblACMgrForDriver_C98D82EE(0))
+					sceSblACMgrIsSystemProgram(0);
 				goto count;
 			}
 		}
 		goto checkAuth;
 	}
 	if (mountId == 600) {
-		ksceSblACMgrIsAllowedExtendedMemory(0);
+		SceSblACMgrForDriver_4DB7F512(0);
 	} else if (mountId > 600) {
 		if (mountId - 900 <= 1)
 			goto checkAuth;
@@ -1509,7 +1508,7 @@ checkAuth:
 		if (mountId == 111)
 			SceSblACMgrForDriver_F5AE24AC(0);
 		else if (mountId == 112)
-			ksceSblACMgrIsNonGameProgram(0);
+			SceSblACMgrForDriver_6C5AB07F(0);
 	}
 count:
 	result = (int)0x80800001;
@@ -2403,7 +2402,7 @@ int appmgrResolveLaunchDirectory(const char *path,
 			strncpy(output, path, slash - path);
 	}
 	if (ksceSblAimgrIsCEX() || ksceSblAimgrIsDEX() ||
-	    !ksceSblACMgrIsDevelopmentMode())
+	    !SceSblACMgrForDriver_E87D1777())
 		return 0;
 	if (mapFile != NULL && mapFile->file > 0 && mapFile->app0[0] != 0) {
 		directory = mapFile->app0;

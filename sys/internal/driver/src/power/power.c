@@ -317,7 +317,7 @@ int kscePowerRegisterCallback(SceUID callback)
 	if (ksceKernelGetThreadmgrUIDClass(callback) != 8)
 		return (int)0xc00280a1;
 	permittedMask = 0xfcf71f80;
-	if (sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID && !ksceSblACMgrIsSystemProgram(0))
+	if (sceKernelGetProcessId() != SCE_KERNEL_PROCESS_ID && !sceSblACMgrIsSystemProgram(0))
 		permittedMask = 0x00361180;
 	record = SceProcessmgrForDriver_5468892A(sizeof(*record), 0);
 	if (!record)

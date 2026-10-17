@@ -169,7 +169,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 					} else {
 						memtype = 0x0390d050;
 						if (!text)
-							memtype = ksceSblACMgrIsGameProgram2(pid) ?
+							memtype = SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) ?
 								  0x0390d060 : 0x0320d060;
 					}
 				} else {
@@ -555,7 +555,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 	ret = ksceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.caller);
 	if (ret < 0)
 		return ret;
-	ret = ksceSblACMgrGetMediaType2(path, &auth.mediaType);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.mediaType);
 	if (ret < 0)
 		return ret;
 	auth.flags = flags;

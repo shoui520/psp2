@@ -187,10 +187,10 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyInt
 	ksceSysconCtrlDeviceReset
 	ksceSysconIsDownLoaderMode
-	ksceSysconCtrlWirelessPower2
+	SceSysconForDriver_A2E85DB9
 	SceSysconForDriver_C0F215B7
 	ksceSysconGetHardwareInfo
-	ksceSysconGetWakeupFactor
+	SceSysconForDriver_CF5B2F2F
 	ksceUsbServEtherEnable
 	ksceUsbServEtherDisable
 	SceClockgenForDriver_7B28A724

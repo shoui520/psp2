@@ -152,9 +152,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceAesDecrypt1
 	ksceSha1BlockInit
 	ksceAesInit1
-	ksceSblACMgrIsRootProgram
-	ksceSblACMgrIsSystemProgram
-	ksceSblACMgrIsDevelopmentMode
+	sceSblACMgrIsKernelProgram
+	sceSblACMgrIsSystemProgram
+	SceSblACMgrForDriver_E87D1777
 	ksceSblAimgrIsCEX
 	ksceSblAimgrIsDEX
 	ksceSblRngPseudoRandomNumber

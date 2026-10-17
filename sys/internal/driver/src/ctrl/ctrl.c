@@ -3,7 +3,7 @@
 #include "ctrl_internal.h"
 #include <psp2kern/kernel/processmgr.h>
 #include <intrmgr/intrmgr.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
@@ -1677,7 +1677,7 @@ int ctrlCreateProcess(SceUID pid)
 	process->processState = 0;
 	process->activation = 0;
 	SceProcessmgrForDriver_D141C076(pid, &process->sdkVersion);
-	process->mode3Blocked = ksceSblACMgrIsGameProgram(pid);
+	process->mode3Blocked = sceSblACMgrIsGameProgram(pid);
 	for (port = 0;
 	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
 	     port++) {
@@ -1697,13 +1697,13 @@ int ctrlCreateProcess(SceUID pid)
 		ring->readIndex = 0;
 		ring->readIndexExt = 0;
 	}
-	process->privileged = ksceSblACMgrIsSceShell(pid) ||
-		ksceSblACMgrIsRootProgram(pid) || SceSblACMgrForDriver_2E992B02(pid);
+	process->privileged = SceSblACMgrForDriver_991FDC15(pid) ||
+		sceSblACMgrIsKernelProgram(pid) || SceSblACMgrForDriver_2E992B02(pid);
 	ksceKernelGetProcessSelfAuthInfo(pid, &auth);
 	process->specialAuthority = auth.program_authority_id == 0x2800000000000013ULL ||
 		(uint64_t)(auth.program_authority_id - 0x2800000000007009ULL) < 2 ||
 		(uint64_t)(auth.program_authority_id - 0x220000101cd2000cULL) < 2;
-	process->systemProgram = ksceSblACMgrIsSystemProgram(pid) != 0;
+	process->systemProgram = sceSblACMgrIsSystemProgram(pid) != 0;
 	process->samplingMode = 0;
 	process->samplingModeExt = 0;
 	process->buttonInterceptPending = 0;
@@ -2568,7 +2568,7 @@ int sceCtrlSetAnalogStickCheckTarget(uint32_t target)
 	uint32_t context = sceSyscallEnter();
 	int result = SCE_CTRL_ERROR_PRIV_REQUIRED;
 
-	if (ksceSblACMgrIsSystemProgram(sceKernelGetProcessId()))
+	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId()))
 		result = ctrlSetAnalogStickCheckTarget(target);
 	sceSyscallLeave(context);
 	return result;
@@ -2582,7 +2582,7 @@ int sceCtrlGetAnalogStickCheckTarget(uint32_t *target)
 	if (!target)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	if (ksceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
+	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckTarget(&local);
 		if (!result)
 			result = ksceKernelCopyToUser(target, &local, sizeof(local));
@@ -2596,7 +2596,7 @@ int sceCtrlSetAnalogStickCheckMode(uint32_t mode)
 	uint32_t context = sceSyscallEnter();
 	int result = SCE_CTRL_ERROR_PRIV_REQUIRED;
 
-	if (ksceSblACMgrIsSystemProgram(sceKernelGetProcessId()))
+	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId()))
 		result = ctrlSetAnalogStickCheckMode(mode);
 	sceSyscallLeave(context);
 	return result;
@@ -2610,7 +2610,7 @@ int sceCtrlGetAnalogStickCheckMode(uint32_t *mode)
 	if (!mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	if (ksceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
+	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckMode(&local);
 		if (!result)
 			result = ksceKernelCopyToUser(mode, &local, sizeof(local));

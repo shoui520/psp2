@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/registrymgr.h>
 #include <stddef.h>
 #include <string.h>
@@ -358,7 +358,7 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 	SceUID memBlock, processId, beginEvent, endEvent;
 	int result, portIndex;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		result = (int)0x80010058;
 		goto done;
 	}
@@ -454,7 +454,7 @@ int sceSharedFbDelete(SceUID fbId)
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		result = (int)0x80010058;
 		goto done;
 	}
@@ -521,7 +521,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 	unsigned int count, index;
 	int result, portIndex;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		result = (int)0x80010058;
 		goto done;
 	}
@@ -607,7 +607,7 @@ int sceSharedFbUpdateProcess(void)
 	unsigned int retryCount;
 	int result, enabled, vsync;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		result = (int)0x80010058;
 		goto done;
 	}
@@ -648,7 +648,7 @@ int sceSharedFbUpdateProcess(void)
 			continue;
 		}
 		SCE_DBG_PRINTF(0, 1772, "[SceSharedFb] Timeout pid=%#x\n", processId);
-		if (ksceSblACMgrIsDevelopmentMode() &&
+		if (SceSblACMgrForDriver_E87D1777() &&
 		    (ksceRegMgrGetKeyInt("/DEVENV/TOOL", "enable_sharedfb_timeout",
 					 &enabled) || !enabled)) {
 			timeoutPtr = NULL;
@@ -708,7 +708,7 @@ int sceSharedFbUpdateProcessEnd(void)
 	unsigned int index;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
@@ -740,7 +740,7 @@ int sceSharedFbGetShellRenderPort(void)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int permission, result;
 
-	if (ksceSblACMgrIsSystemProgram(0)) {
+	if (sceSblACMgrIsSystemProgram(0)) {
 		permission = ksceKernelSetPermission(128);
 		result = ksceKernelLockFastMutex(&gSharedFbManager.mutex);
 		if (result) {
@@ -770,7 +770,7 @@ int sceSharedFbGetRenderingInfo(SceUID processId)
 	unsigned int portIndex, index;
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0)) {
+	if (!sceSblACMgrIsSystemProgram(0)) {
 		result = (int)0x80010058;
 		goto done;
 	}

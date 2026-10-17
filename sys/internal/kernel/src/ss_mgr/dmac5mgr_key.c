@@ -372,7 +372,7 @@ int sceSblDmac5EncDecKeyGen(SceSblDmac5EncDecParam *param, int keyId,
 	SceSize ivSize = 0;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0) == 0) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0) == 0) {
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
@@ -450,7 +450,7 @@ int sceSblDmac5HmacKeyGen(SceSblDmac5HashTransformParam *param, int keyId,
 	int copyDigest;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0) == 0) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0) == 0) {
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}

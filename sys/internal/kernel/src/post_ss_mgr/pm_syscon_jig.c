@@ -5,7 +5,7 @@
  * reads and writes it in an exchange with the syscon.
  */
 
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <sm_comm/sm_comm.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -46,7 +46,7 @@ typedef struct ScePmSmSysconModeCommand {
 	SceUInt8 response[0x30];
 } ScePmSmSysconModeCommand;
 
-int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
+int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 
 static SceSblSmCommId g_pmSmId;	/* name unknown */
 
@@ -233,7 +233,7 @@ int invoke_pm_secure_module(const char *path)
 
 	memset(&info, 0, sizeof(info));
 	memcpy(&info.request, &g_pmSmAuthInfo, sizeof(info.request));
-	ret = ksceSblACMgrGetMediaType2(path, &info.media_type);
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &info.media_type);
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;

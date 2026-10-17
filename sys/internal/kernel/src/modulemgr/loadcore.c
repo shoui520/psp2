@@ -347,7 +347,7 @@ int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 		goto unlock;
 	}
 	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0 && ksceKernelSysrootGetStatus() > 0xff &&
-	    !ksceSblACMgrIsDevelopmentMode2()) {
+	    !SceSblACMgrForKernel_BBA13D9C()) {
 		ret = SCE_KERNEL_ERROR_MODULEMGR_IN_USE;
 		goto unlock;
 	}

@@ -1,6 +1,5 @@
 /* Registry-backed system parameters exposed by the application manager. */
 
-#include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <regmgr/regmgr.h>
 #include <intrmgr/syscall.h>
@@ -53,7 +52,7 @@ int appmgrSystemParamGetInt(int parameter, int *value)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsGameProgram(0)) {
+	if (sceSblACMgrIsGameProgram(0)) {
 		result = (int)0x80800009;
 		goto out;
 	}
@@ -95,7 +94,7 @@ int appmgrSystemParamGetString(int parameter, char *value, SceSize size)
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result;
 
-	if (ksceSblACMgrIsGameProgram(0)) {
+	if (sceSblACMgrIsGameProgram(0)) {
 		result = (int)0x80800009;
 		goto out;
 	}

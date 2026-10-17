@@ -3,7 +3,7 @@
 #include <psp2/compat.h>
 #include <compat/compat.h>
 #include <psp2/power.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
@@ -1556,7 +1556,7 @@ int sceCompatGetPrimaryHead(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = ksceDisplayGetPrimaryHead();
 		sceSyscallLeave(syscall);
 		return result;
@@ -2098,7 +2098,7 @@ int compatAvailableColorSpaceSetting(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		head = ksceDisplayGetPrimaryHead();
 		sceSyscallLeave(syscall);
 		result = 0;
@@ -2139,7 +2139,7 @@ int compatStartSecureModule(void)
 
 	memset(&auth, 0, sizeof(auth));
 	memcpy(&auth.request, &gCompatSecureModuleAuth, sizeof(auth.request));
-	result = ksceSblACMgrGetMediaType(gCompatSecureModulePath,
+	result = sceSblACMgrGetMediaType(gCompatSecureModulePath,
 		&auth.media_type);
 	if (result == 0) {
 		auth.self_type = (auth.self_type & ~0xfU) | 2;
@@ -2203,7 +2203,7 @@ int sceCompatInitEx(int mode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatInitEx(mode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -2218,7 +2218,7 @@ int sceCompatUninit(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatReleaseFrameBuffer();
 		sceSyscallLeave(syscall);
 		return result;
@@ -2233,7 +2233,7 @@ int sceCompatStart(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatStart();
 		sceSyscallLeave(syscall);
 		return result;
@@ -2248,7 +2248,7 @@ int sceCompatStop(void)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatStop();
 		sceSyscallLeave(syscall);
 		return result;
@@ -2263,7 +2263,7 @@ int sceCompatWaitAndGetRequest(int mode, int id)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatWaitAndGetRequest(mode, id);
 		sceSyscallLeave(syscall);
 		return result;
@@ -2278,7 +2278,7 @@ int sceCompatWaitSpecialRequest(int mode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatWaitSpecialRequest(mode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -2293,7 +2293,7 @@ int sceCompatInterrupt(int intrCode)
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatInterrupt(intrCode);
 		sceSyscallLeave(syscall);
 		return result;
@@ -2310,7 +2310,7 @@ int sceCompatReturnValueEx(SceUInt32 channel, const SceUInt32 *values,
 	int result;
 
 	syscall = sceSyscallEnter();
-	if (ksceSblACMgrIsPspEmu(0) == 1) {
+	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = ksceKernelCopyFromUser(localValues, values,
 			sizeof(localValues));
 		if (result >= 0)

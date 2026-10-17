@@ -115,8 +115,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoDopen
 	ksceIoGetstat
 	ksceIoChstatByFd
-	ksceSblACMgrIsRootProgram
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsKernelProgram
+	sceSblACMgrIsSystemProgram
 	ksceRtcConvertDateTimeToUnixTime
 )
 set(MODULE_IMPORT_VARS

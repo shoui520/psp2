@@ -277,9 +277,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddr
 	ksceKernelRegisterSysEventHandler
 	ksceKernelRegisterProcEventHandler
-	ksceSblACMgrIsGameProgram
-	ksceSblACMgrIsDevelopmentMode
-	ksceSblACMgrIsPspEmu
+	sceSblACMgrIsGameProgram
+	SceSblACMgrForDriver_E87D1777
+	SceSblACMgrForDriver_FD00C72A
 	ksceSblAimgrIsDolce
 	ksceSblAimgrIsGenuineDolce
 	ksceGzipDecompress

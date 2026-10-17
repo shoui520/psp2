@@ -15,7 +15,7 @@ int drmBridgeGetCurrentSecureTick(SceRtcTick *tick)
 	SceUInt32 t = sceSyscallEnter();
 	int ret;
 
-	if (!SceSblACMgrForDriver_F5AE24AC(0) && !ksceSblACMgrIsPSMDevAssistant()) {
+	if (!SceSblACMgrForDriver_F5AE24AC(0) && !SceSblACMgrForDriver_C98D82EE(0)) {
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}

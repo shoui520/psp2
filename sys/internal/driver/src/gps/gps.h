@@ -16,11 +16,11 @@
 #include <gps/gps.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysevent.h>
+#include <acmgr/acmgr.h>
 /* Official SDK name, not yet present in the shared error header. */
 #ifndef SCE_KERNEL_ERROR_NO_MEMORY
 #define SCE_KERNEL_ERROR_NO_MEMORY 0x8002710b
 #endif
-int ksceSblACMgrIsSystemProgram(int pid);
 int kscePmMgrGetProductMode(uint8_t *mode);
 int SceSblPostSsMgrForDriver_128FB35A(void);
 int SceRtcForDriver_F139E359(const void *date, void *tick);

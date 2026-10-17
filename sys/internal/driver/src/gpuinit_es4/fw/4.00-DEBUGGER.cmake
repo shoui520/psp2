@@ -78,7 +78,7 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
 	ksceSblAimgrIsTool
-	ksceSblACMgrIsDevelopmentMode
+	SceSblACMgrForDriver_E87D1777
 	ksceKernelGetModuleInfoByAddr
 )
 set(MODULE_IMPORT_VARS

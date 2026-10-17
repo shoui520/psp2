@@ -4,7 +4,7 @@
  * them, and the results are copied out.
  */
 
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <kernel/error.h>
@@ -355,7 +355,7 @@ int sceRegMgrResetRegistryLvInternal2(const char *category, int level)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -385,7 +385,7 @@ int sceRegMgrSetKeyIntInternal2(const char *category, const char *name, int valu
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (category == NULL || name == NULL) {
 				ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 			} else {
@@ -413,7 +413,7 @@ int sceRegMgrGetKeyIntInternal2(const char *category, const char *name, int *val
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) != 1) {
+		if (sceSblACMgrIsSystemProgram(0) != 1) {
 			ret = SCE_ERROR_ERRNO_ENOSYS;
 		} else if (category == NULL || name == NULL || value == NULL) {
 			ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
@@ -442,7 +442,7 @@ static inline __attribute__((always_inline)) int regMgrSysSetKey(const char *cat
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -480,7 +480,7 @@ static inline __attribute__((always_inline)) int regMgrSysGetKey(const char *cat
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -536,7 +536,7 @@ int sceRegMgrGetKeysInfoInternal2(const char *category, RegMgrKeyInfo *keys, int
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -561,7 +561,7 @@ int sceRegMgrSetKeysInternal2(const char *category, const RegMgrKeyInfo *keys, i
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -584,7 +584,7 @@ int sceRegMgrGetKeysInternal2(const char *category, RegMgrKeyInfo *keys, int cou
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -609,7 +609,7 @@ int sceRegMgrGetInitValsInternal2(const char *category, RegMgrKeyInfo *keys, int
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		goto out;
-	if (ksceSblACMgrIsSystemProgram(0) != 1) {
+	if (sceSblACMgrIsSystemProgram(0) != 1) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 		goto out;
 	}
@@ -634,7 +634,7 @@ static inline __attribute__((always_inline)) int regMgrSysCallback(SceUID cbid, 
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			ret = kscePUIDtoGUID(0, cbid);
 			if (ret >= 0) {
 				regMgrSetStatus(REGMGR_STATUS_SYSCALL);
@@ -661,7 +661,7 @@ int sceRegMgrAddRegistryCallbackInternal2(SceUID cbid, const char *path)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			ret = guid = kscePUIDtoGUID(0, cbid);
 			if (guid >= 0) {
 				if (path == NULL) {
@@ -721,7 +721,7 @@ int sceRegMgrDbBackupInternal2(const char *path, int level)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (path == NULL)
 				goto invalid;
 			ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, path,
@@ -752,7 +752,7 @@ int sceRegMgrDbRestoreInternal2(const char *path)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (path == NULL)
 				goto invalid;
 			ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, path,
@@ -786,7 +786,7 @@ int sceRegMgrIsBlueScreenInternal2(int error)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret < 0)
 		error = ret;
-	if (ksceSblACMgrIsSystemProgram(0) != 1)
+	if (sceSblACMgrIsSystemProgram(0) != 1)
 		error = SCE_ERROR_ERRNO_ENOSYS;
 	regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 	ret = sceRegMgrIsBlueScreen(error);
@@ -805,7 +805,7 @@ static inline __attribute__((always_inline)) int regMgrSysCall(int (*func)(void)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 			ret = func();
 			regMgrClearStatus();
@@ -836,7 +836,7 @@ int sceRegMgrSrvGetRegionStrInternal2(char *buf, SceSize size)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			memset(name, 0, sizeof(name));
 			regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 			ret = sceRegMgrSrvGetRegionStr(name, sizeof(name));
@@ -867,7 +867,7 @@ int sceRegMgrSrvCnvRegionStrInternal2(int region, char *buf, SceSize size)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			memset(name, 0, sizeof(name));
 			regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 			ret = sceRegMgrSrvCnvRegionStr(region, name, sizeof(name));
@@ -894,7 +894,7 @@ int sceRegMgrSrvCnvRegionIntInternal2(const char *name)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (name == NULL)
 				goto invalid;
 			ret = ksceKernelStrncpyFromUser(buf, name, sizeof(buf));
@@ -924,7 +924,7 @@ int sceRegMgrSrvCnvRegionPsCodeInternal2(int region)
 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
-		if (ksceSblACMgrIsSystemProgram(0) == 1) {
+		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 			ret = sceRegMgrSrvCnvRegionPsCode(region);
 			regMgrClearStatus();

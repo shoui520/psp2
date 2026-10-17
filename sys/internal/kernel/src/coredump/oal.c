@@ -136,8 +136,6 @@ extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
 extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
-extern int ksceSblACMgrIsSystemProgram(SceUID pid);
-extern int ksceSblACMgrIsRootProgram(SceUID pid);
 extern int ksceSblQafManagerGetQAFlags(void *flags);
 extern int ksceSblQafManagerGetQafName(char *name, SceSize size);
 extern SceUID sceCoredumpCafContextCreate(void);
@@ -710,7 +708,7 @@ static inline int _isSystemProgram(SceUID pid)
 	return (isCurrentProcess &&
 		(strncmp(titleid, "NPXS10083", titleSize) == 0 ||
 		 strncmp(titleid, "NPXS10084", titleSize) == 0)) ||
-		ksceSblACMgrIsSystemProgram(pid) != 0;
+		sceSblACMgrIsSystemProgram(pid) != 0;
 }
 
 int oalIsPlaintextDumpAllowed(SceUID pid)
@@ -725,7 +723,7 @@ int oalIsSystemProgram(SceUID pid)
 
 int oalIsRootProgram(SceUID pid)
 {
-	return ksceSblACMgrIsRootProgram(pid) != 0;
+	return sceSblACMgrIsKernelProgram(pid) != 0;
 }
 
 int oalIsCEX(void)
@@ -905,7 +903,7 @@ void oalGetProcessDumpName(SceUID pid, char *name)
 	SceKernelProcessInfo process;
 
 	memset(name, 0, 32);
-	if (_isSystemProgram(pid) != 0 || ksceSblACMgrIsRootProgram(pid) != 0)
+	if (_isSystemProgram(pid) != 0 || sceSblACMgrIsKernelProgram(pid) != 0)
 		strncpy(name, "system", 32);
 	else
 		strncpy(name, "nonsystem", 32);
@@ -1262,8 +1260,8 @@ void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info)
 	if ((isCurrentProcess &&
 		(strncmp(titleid, "NPXS10083", titleSize) == 0 ||
 		 strncmp(titleid, "NPXS10084", titleSize) == 0)) ||
-		ksceSblACMgrIsSystemProgram(pid) != 0 ||
-		ksceSblACMgrIsRootProgram(pid) != 0)
+		sceSblACMgrIsSystemProgram(pid) != 0 ||
+		sceSblACMgrIsKernelProgram(pid) != 0)
 		info->programClass = 2;
 	else
 		info->programClass = 1;
@@ -1331,8 +1329,8 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	if ((isCurrentProcess &&
 		(strncmp(titleid, "NPXS10083", titleSize) == 0 ||
 		 strncmp(titleid, "NPXS10084", titleSize) == 0)) ||
-		ksceSblACMgrIsSystemProgram(pid) != 0 ||
-		ksceSblACMgrIsRootProgram(pid) != 0)
+		sceSblACMgrIsSystemProgram(pid) != 0 ||
+		sceSblACMgrIsKernelProgram(pid) != 0)
 		info->openPsId = openPsId;
 	else
 		memset(&info->openPsId, 0, sizeof(info->openPsId));

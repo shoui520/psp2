@@ -161,7 +161,7 @@ void powerCreateProcessState(SceUID pid)
 	state->pid = pid;
 	state->clockExcluded = 0;
 	state->powerLockCount = 0;
-	game = pid == SCE_KERNEL_PROCESS_ID ? 1 : ksceSblACMgrIsGameProgram(pid);
+	game = pid == SCE_KERNEL_PROCESS_ID ? 1 : sceSblACMgrIsGameProgram(pid);
 	state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 222;
 	state->clockFrequency[POWER_PROCESS_CLOCK_ARM] = 333;
 	state->clockFrequency[POWER_PROCESS_CLOCK_GPU_XBAR] = 111;
@@ -228,7 +228,7 @@ void powerProcessSuspendEvent(SceUID pid, uint32_t event)
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	state->clockExcluded = 1;
-	if (ksceSblACMgrIsGameProgram(pid))
+	if (sceSblACMgrIsGameProgram(pid))
 		sceKernelSysrootEnableAutoClockDown();
 	powerRecomputeClockFrequencies();
 }
@@ -243,7 +243,7 @@ void powerProcessResumeEvent(SceUID pid, uint32_t event)
 	state->clockExcluded = 0;
 	powerRecordProcessIdleTick(state);
 	powerRecomputeClockFrequencies();
-	if (ksceSblACMgrIsGameProgram(pid))
+	if (sceSblACMgrIsGameProgram(pid))
 		sceKernelSysrootDisableAutoClockDown();
 }
 
@@ -410,7 +410,7 @@ int scePowerSetGpuClockFrequency(int frequency)
 	uint32_t context = sceSyscallEnter();
 	int result;
 
-	if (!ksceSblACMgrIsSystemProgram(0) && ((unsigned int)frequency - 1) >= 166)
+	if (!sceSblACMgrIsSystemProgram(0) && ((unsigned int)frequency - 1) >= 166)
 		result = SCE_POWER_ERROR_INVALID_VALUE;
 	else
 		result = setProcessGpuFrequency(0, frequency);

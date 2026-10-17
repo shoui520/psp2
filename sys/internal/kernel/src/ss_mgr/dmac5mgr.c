@@ -618,7 +618,7 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 	SceSize ivSize = 0;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0) == 0) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0) == 0) {
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
@@ -694,7 +694,7 @@ int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
 	int copyDigest;
 	int ret;
 
-	if (ksceSblACIsSystemProgram(0) == 0) {
+	if (SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0) == 0) {
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}

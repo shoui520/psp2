@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/acmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2/audioout.h>
 
 #include "audio_private.h"
@@ -783,7 +783,7 @@ selectedMain:
 		compress = 0;
 		break;
 	case 3:
-		if (ksceSblACMgrIsNonGameProgram(0) == 0) {
+		if (SceSblACMgrForDriver_6C5AB07F(0) == 0) {
 			result = (int)0xc026000a;
 			goto unlock;
 		}
@@ -799,7 +799,7 @@ selectedMain:
 	ksceKernelWaitEventFlag(audioEventFlag, direct->eventMask, 5, NULL, NULL);
 	if (freq != 48000 && freq != 44100 && freq != 32000 && freq != 24000 &&
 	    freq != 22050 && freq != 16000 && freq != 12000 && freq != 11025 && freq != 8000) {
-		if (ksceSblACMgrIsPspEmu(0) != 1 || freq != 44184) {
+		if (SceSblACMgrForDriver_FD00C72A(0) != 1 || freq != 44184) {
 			result = (int)0x80260008;
 			goto unlockDirect;
 		}
@@ -1360,9 +1360,9 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 			volume[0] = direct->volume[0];
 		if ((ch & 2) == 0)
 			volume[1] = direct->volume[1];
-		if (ksceSblACMgrIsNonGameProgram(0) != 0)
+		if (SceSblACMgrForDriver_6C5AB07F(0) != 0)
 			maximum = 0xffff;
-		else if (ksceSblACMgrIsSystemProgram(0) != 0)
+		else if (sceSblACMgrIsSystemProgram(0) != 0)
 			maximum = 0xffff;
 		else
 			maximum = 0x8000;
@@ -1390,9 +1390,9 @@ unlockDirect:
 			volume[0] = main->volume[0];
 		if ((ch & 2) == 0)
 			volume[1] = main->volume[1];
-		if (ksceSblACMgrIsNonGameProgram(0) != 0)
+		if (SceSblACMgrForDriver_6C5AB07F(0) != 0)
 			maximum = 0xffff;
-		else if (ksceSblACMgrIsSystemProgram(0) != 0)
+		else if (sceSblACMgrIsSystemProgram(0) != 0)
 			maximum = 0xffff;
 		else
 			maximum = 0x8000;
@@ -1454,7 +1454,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 		else if (freq != 48000 && freq != 44100 && freq != 32000 &&
 			 freq != 24000 && freq != 22050 && freq != 16000 &&
 			 freq != 12000 && freq != 11025 && freq != 8000) {
-			if (ksceSblACMgrIsPspEmu(0) != 1 || freq != 44184) {
+			if (SceSblACMgrForDriver_FD00C72A(0) != 1 || freq != 44184) {
 				result = (int)0x80260008;
 				goto unlockDirect;
 			}
@@ -1548,7 +1548,7 @@ int sceAudioOutGetAdopt(SceAudioOutPortType type)
 		port = &storage->direct[type - 1];
 		break;
 	case 3:
-		if (ksceSblACMgrIsNonGameProgram(0) == 0) {
+		if (SceSblACMgrForDriver_6C5AB07F(0) == 0) {
 			result = (int)0xc026000a;
 			goto out;
 		}

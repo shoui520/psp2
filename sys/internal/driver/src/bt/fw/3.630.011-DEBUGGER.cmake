@@ -143,7 +143,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnregisterSysEventHandler
 	SceSysrootForDriver_5A4A7F7E
 	SceSysrootForDriver_E06C14FD
-	ksceSblACMgrIsSystemProgram
+	sceSblACMgrIsSystemProgram
 	ksceSblAimgrGetProductCode
 	ksceSblAimgrIsDolce
 	ksceKernelRegisterProcEventHandler
