@@ -18,6 +18,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -208,7 +209,6 @@ extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern const char *ksceGUIDName(SceUID guid);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelFreeHeapMemory(SceUID heap, void *entry);
 extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
 				       SceSize *count);

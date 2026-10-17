@@ -23,6 +23,7 @@
 #include <processmgr/processmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <acmgr/acmgr.h>
+#include <intrmgr/intrmgr.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -57,7 +58,6 @@ SceSize ksceKernelStrnlenFromUser(const char *s, SceSize len);
 int ksceKernelUserUnmap(SceUID uid);
 int SceSysmemForKernel_FCB5745A(void *addr, SceUInt32 time);			/* name unknown */
 void ksceMt19937GlobalUninit(void *buf, SceSize len);	/* fills buf with random bytes */
-SceUInt32 sceKernelAllocSystemCallTable(SceUInt32 count, void **table);	/* name per NID db */
 
 /* SceCpuForDriver / SceCpuForKernel */
 void ksceKernelDcacheCleanRange(void *start, SceSize size);
@@ -121,7 +121,6 @@ int SceDebugForKernel_91E7D24F(void *func);
 void *SceExcpmgrForKernel_5420ED8F(int cpu);		/* top of the exception stack of a CPU */
 int SceExcpmgrForKernel_B615A7DA(void);			/* exception nesting level */
 
-int ksceKernelIsIntrAllowedInCurrentContext(void);
 int SceIntrmgrForDriver_C568F145(int code);
 int SceIntrmgrForKernel_71C5F42F(void *handler);
 

@@ -17,6 +17,7 @@
 #include "mutex.h"
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
+#include <intrmgr/intrmgr.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
@@ -71,7 +72,6 @@ _Static_assert(sizeof(struct ThreadmgrException) == 0x38 &&
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,

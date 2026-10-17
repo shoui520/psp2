@@ -13,6 +13,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 #define SEMA_ATTR_PRIORITY		0x00002000
 #define SEMA_ITEM_SIZE			0x80	/* the class's object allocation size */
@@ -192,7 +193,6 @@ int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 
 #define WAIT_TYPE_SEMAPHORE		0x20
 #define THREAD_ATTR_CHECK_STACK		0x80000000

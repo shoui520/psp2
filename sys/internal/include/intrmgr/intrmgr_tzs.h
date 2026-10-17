@@ -21,3 +21,5 @@ int sceKernelDisableIntr(unsigned int intrCode);
 int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsigned int target);
 int sceKernelRegisterMonitorCallHandler(unsigned int callId, SceKernelMonitorCallHandler handler);
 void sceKernelUsleep(SceUInt32 usec);
+
+int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target);

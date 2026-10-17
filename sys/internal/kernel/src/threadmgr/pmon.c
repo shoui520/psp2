@@ -10,6 +10,7 @@
 #include <sysmem/sysmem.h>
 #include "scheduler.h"
 #include "syscall_context.h"
+#include <intrmgr/intrmgr.h>
 
 #define PMON_COUNTER_MASK		0x8000003f	/* event counters 0..5 and the cycle counter */
 #define PMON_CYCLE_COUNTER		31
@@ -22,7 +23,6 @@ void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID th
 void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *request);
 void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *request);
 void issueSimpleIntrRequestToOtherCpuAndWait(void);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 

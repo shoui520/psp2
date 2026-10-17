@@ -62,9 +62,6 @@ extern void sceKernelSysrootCorelockUnlock(void);
 extern void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *timer);
 extern int SceSysmemForKernel_FF464A49(SceUID guid, void **entry);
 extern SceUID SceSysmemForKernel_03A2CAF0(void *entry);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
-extern int ksceKernelEnableIntr(int intr);
-extern int ksceKernelDisableIntr(int intr);
 
 #define TIMER_LOCK()	(&s_threadmgrRuntime.manager->timerLock)
 #define PROCESS_CLASS()	(s_threadmgrRuntime.manager->processClass)

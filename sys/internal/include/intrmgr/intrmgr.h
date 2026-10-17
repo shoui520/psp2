@@ -64,3 +64,9 @@ int sceKernelClearIntrPendingStatusForDebugger(int intrCode);
 
 /* Name unknown: install the syscall entry and return trace hooks. */
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
+
+void *SceIntrmgrForKernel_01911612(unsigned int cpu, unsigned int level);
+void SceIntrmgrForKernel_7E3D4560(void *handler);
+void *SceIntrmgrForKernel_807B2004(void);
+void SceIntrmgrForKernel_ABEB5A69(void *handler);
+int sceKernelAllocSystemCallTable(unsigned int count, void **table);	/* name per NID db */

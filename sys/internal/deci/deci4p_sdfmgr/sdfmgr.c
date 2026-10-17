@@ -891,8 +891,6 @@ typedef struct SdfMgrCpuInterface {
 	SceUInt32 endOfIntr;
 } SdfMgrCpuInterface;
 
-extern volatile SdfMgrCpuInterface *SceIntrmgrForKernel_807B2004(void);
-extern void *SceIntrmgrForKernel_01911612(unsigned int cpu, unsigned int level);
 extern void sceSDfMgrExcpAssert(void);
 
 /* A handled exception may return only after leaving the outermost level. */

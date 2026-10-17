@@ -8,6 +8,7 @@
 #include "bsod_internal.h"
 #include "exception_record.h"
 #include "report_data.h"
+#include <intrmgr/intrmgr.h>
 
 BsodDisplay s_bsodDisplay;
 int s_bsodQafEnabled;
@@ -72,7 +73,6 @@ int module_start(unsigned arglen, void *argp)
 /* Fatal screen loop: real display changes, input edges and reset/power SMCs. */
 extern void (*s_bsodPrinter)(const char *format, ...);
 int ksceKernelSpinlockLowLock(void *lock);
-int ksceKernelDisableIntr(unsigned interrupt);
 void *ksceSysrootGetSysroot(void);
 void bsodPrintf(const char *format, ...);
 int bsodFreezeLog(void);

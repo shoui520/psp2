@@ -13,6 +13,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 #define EVF_ITEM_SIZE			0x80	/* the class's object allocation size */
 #define EVF_KERNEL_ATTR_MASK		0x0000b080	/* what kernel callers may pass */
@@ -40,7 +41,6 @@ typedef struct ThreadmgrEventFlagOptParam {
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);

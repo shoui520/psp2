@@ -15,6 +15,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 #define MUTEX_ITEM_SIZE			0x80	/* the class's object allocation size */
 #define THREAD_ATTR_USER		0x80000000
@@ -411,7 +412,6 @@ int mutexProcessExit(SceProcessObject *process)
 extern SceUID kscePUIDOpenByGUIDWithFlags(SceUID pid, SceUID guid, int flags);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,

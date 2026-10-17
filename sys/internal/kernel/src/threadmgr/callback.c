@@ -20,6 +20,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -87,7 +88,6 @@ extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector,
 				       SceSize *count);
 extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t access, uintptr_t addr,
 						    SceSize size);
-extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelFreeHeapMemory(SceUID heap, void *entry);
 extern int ksceKernelGetMemBlockMappedBase(SceUID uid, void **base);
 int sceKernelIsUserModeThread(void);

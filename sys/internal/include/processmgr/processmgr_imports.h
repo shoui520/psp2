@@ -24,6 +24,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <intrmgr/intrmgr.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -48,13 +49,6 @@ int SceExcpmgrForKernel_B615A7DA(void);			/* in an exception context */
 void SceExcpmgrForKernel_E7487AFD(void *phwp);
 
 /* SceIntrmgrForKernel / SceIntrmgrForDriver */
-void SceIntrmgrForKernel_7E3D4560(void *phwp);
-void SceIntrmgrForKernel_ABEB5A69(void *phbp);
-int ksceKernelIsIntrAllowedInCurrentContext(void);
-int ksceKernelTriggerSGI(int intrCode, SceUInt32 targetListFilter, SceUInt32 cpuTargetList);
-int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
-				  int (*handler)(int code, void *arg), void *arg,
-				  int priority, int targetCpu, void *opt);
 
 /* SceModulemgrForKernel / SceModulemgrForDriver */
 int ksceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags);

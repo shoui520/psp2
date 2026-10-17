@@ -21,6 +21,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <sysmem/sysevent.h>
+#include <intrmgr/intrmgr.h>
 
 #define SESSION_COUNT	64
 #define CHANNEL_COUNT	4
@@ -92,9 +93,6 @@ SceUID ksceKernelCreateHeap(const char *name, SceSize size, HeapOpt *opt);
 int ksceKernelDeleteHeap(SceUID uid);
 void *ksceKernelAllocHeapMemory(SceUID uid, SceSize size);
 void ksceKernelFreeHeapMemory(SceUID uid, void *ptr);
-int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
-				  int (*handler)(int, void *), void *userCtx,
-				  int priority, int targetCpu, void *opt);
 
 static SceUID s_heap;
 static SceUID s_lastId;
