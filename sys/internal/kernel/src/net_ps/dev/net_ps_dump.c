@@ -1,7 +1,7 @@
 /* SceNetPs development packet capture; original filename is unavailable. */
 #include <net_ps/netps.h>
-#include "../net_ps/netps_dump.h"
-#include "../net_ps/netps_resource.h"
+#include "../netps_dump.h"
+#include "../netps_resource.h"
 #include <net_ps/netps_thread.h>
 
 int sce_psnet_bnet_mutex_lock(SceNetPsMutex *mutex, unsigned int *timeout);

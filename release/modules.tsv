@@ -109,7 +109,7 @@ os0/kd/mgkeymgr	sys/internal/kernel/src/mgkeymgr	os0:kd/mgkeymgr.skprx	4.00-DEBU
 os0/kd/mgvideo	sys/internal/driver/src/mgvideo	os0:kd/mgvideo.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/modulemgr	sys/internal/kernel/src/modulemgr	os0:kd/modulemgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/msif	sys/internal/driver/src/msif	os0:kd/msif.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
-os0/kd/net_ps_dev	sys/internal/kernel/src/net_ps_dev	os0:kd/net_ps_dev.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
+os0/kd/net_ps_dev	sys/internal/kernel/src/net_ps/dev	os0:kd/net_ps_dev.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	a product of net_ps's tree (both record src/ps/osdependence/ngp/system_os.c): <family>_<x> under its family, like psp2config/dolce
 os0/kd/oled	sys/internal/driver/src/oled	os0:kd/oled.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
 os0/kd/pamgr	sys/internal/kernel/src/pamgr	os0:kd/pamgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/pcbc	sys/internal/driver/src/pcbc	os0:kd/pcbc.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	hardware block -> driver/src (driver/src/gpu)
