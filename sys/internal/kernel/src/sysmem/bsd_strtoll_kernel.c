@@ -1,3 +1,4 @@
+#include <sysmem/sysclib.h>
 #include <sys/cdefs.h>
 #include <limits.h>
 #include <errno.h>
@@ -9,7 +10,6 @@
 #endif
 
 /* SCE: kernel Sysclib uses its own character classification. */
-extern int look_ctype_table(int character);
 #undef isspace
 #define isspace(character) (look_ctype_table(character) & 8)
 

@@ -7,8 +7,8 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadcb.h>
 #include "cpu_irq.h"
+#include <sysmem/sysclib.h>
 
-extern void *memset(void *destination, int value, size_t size);
 extern int sceKernelSysrootBacktrace(int pid, void *buffer, size_t capacity,
 				     uint32_t *length, int mode);
 extern int sceKernelSysrootPrintBacktrace(uint32_t type, const void *buffer,

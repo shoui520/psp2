@@ -1,13 +1,11 @@
 /*
- * Kernel character classes: SceSysclib's class table (NID 0xCDF7F155, the PSP
- * sysclib name). Sony's callers pass the character sign-extended (char is
- * signed SceChar8) and use the class bits as an int; vitasdk's
- * psp2kern/kernel/sysclib.h declares it char look_ctype_table(char), so a file
- * includes one of the two.
+ * Kernel character classes: the bits of SceSysclib's class table, look_ctype_table (NID
+ * 0xCDF7F155, the PSP sysclib name; declared in sysmem/sysclib.h). Sony's callers pass the
+ * character sign-extended (char is signed SceChar8) and use the class bits as an int.
  */
 #pragma once
 
-int look_ctype_table(int c) __attribute__((pure));
+#include <sysmem/sysclib.h>
 
 /* the class bits (BSD ctype) */
 #define _U	0x01	/* upper case */

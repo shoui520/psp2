@@ -9,6 +9,7 @@
 #include <pamgr/perfmon_regs.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"
+#include <sysmem/sysclib.h>
 
 static inline __attribute__((always_inline)) void AddressSpaceRefer(AddressSpaceObject *as)
 {
@@ -1224,7 +1225,6 @@ int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
 	return 0;
 }
 
-int snprintf(char *buf, SceSize size, const char *fmt, ...);
 int SceSysmemForDriver_4CFA4100(SceUID guid, const char *name);
 
 /* the GUID names of the user partitions, prefixed */

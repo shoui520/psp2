@@ -3,10 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sysmem/debug.h>
-/* vitasdk's sysclib.h, which cpu.h brings, types __prnt otherwise: moved aside */
-#define __prnt __prnt_vitasdk
 #include <sysmem/cpu.h>
-#undef __prnt
+#include <sysmem/sysclib.h>
 #include "sysmem_boot.h"
 #include "debug_tty.h"
 #include <stdarg.h>
@@ -23,8 +21,6 @@ extern SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 extern int SceQafMgrForDriver_382C71E8(void);	/* qafmgr.c */
 struct SysrootState;
 extern struct SysrootState *SceSysrootForKernel_3E455842(void);
-extern int __prnt(DebugPutcharHandler output, uintptr_t argument,
-		  const char *format, va_list arguments);
 extern volatile uintptr_t s_debugPutcharHandler;
 extern volatile uintptr_t s_debugPutcharArgument;
 extern volatile uint32_t s_debugPrintLevel;
@@ -65,11 +61,11 @@ int SceDebugForKernel_3A21194E(int character)
 }
 
 __attribute__((noinline))
-void DebugPutcharCallback(uintptr_t argument, int character)
+void DebugPutcharCallback(void *context, int character)
 {
 	DebugPutcharHandler handler;
 
-	(void)argument;
+	(void)context;
 	if (character != 0x200 && character != 0x201)
 		DebugAppendCharacter(character);
 
@@ -80,7 +76,7 @@ void DebugPutcharCallback(uintptr_t argument, int character)
 
 int SceDebugForKernel_2AABAEDA(int character)
 {
-	DebugPutcharCallback(0, character);
+	DebugPutcharCallback(NULL, character);
 	return 1;
 }
 
@@ -88,7 +84,7 @@ int DebugDefaultPrintf(int argument, const char *format,
 		       va_list arguments)
 {
 	(void)argument;
-	return __prnt(DebugPutcharCallback, 0, format, arguments);
+	return __prnt(DebugPutcharCallback, NULL, format, arguments);
 }
 
 __attribute__((noinline))

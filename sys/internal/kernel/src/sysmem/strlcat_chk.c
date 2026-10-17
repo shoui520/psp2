@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <sysmem/debug.h>
-
-extern size_t strlcat(char *destination, const char *source, size_t size);
+#include <sysmem/sysclib.h>
 
 size_t __strlcat_chk(char *destination, const char *source, size_t size,
 		    size_t capacity)

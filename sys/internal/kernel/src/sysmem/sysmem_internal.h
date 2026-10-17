@@ -16,6 +16,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <threadmgr/threadcb.h>
+#include <sysmem/sysclib.h>
 
 /*
  * l1pagetable.c: an address space's two L1 tables (below and above the
@@ -156,7 +157,6 @@ _Static_assert(sizeof(VirPage) == 0x20, "VirPage size");
 #define VIRPAGE_HAS_PBASE		0x10000	/* pbase is given */
 #define VIRPAGE_ROUND_UP		0x20000	/* a power of two (1 MiB multiples from 1 MiB) */
 
-
 /*
  * A tiny partition: an address range and the memblocks placed in it
  * (partition.c).
@@ -237,7 +237,6 @@ _Static_assert(sizeof(Partition) == 0x80, "Partition size");
 
 /* the name the converted files first used */
 typedef Partition PartitionObject;
-
 
 struct UIDManager;
 
@@ -634,7 +633,6 @@ void *SysrootGetProcessObjectHeap(SceUID pid, int kind);
 SceInt16 SceCpuForDriver_59F74E94(SceInt16 *address, SceInt16 value);
 /* vitasdk: ksceKernelAtomicDecIfPositive16 */
 SceInt16 SceCpuForDriver_9A693F5B(SceInt16 *address);
-int snprintf(char *dst, SceSize len, const char *fmt, ...);
 
 /* exports used inside the module */
 SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object);	/* sceGUIDRegister */
@@ -649,7 +647,6 @@ int SceSysmemForKernel_4233C16D(void *ptr);	/* vitasdk: ksceKernelFree */
 void *SetMemoryCore(void *destination, int value, SceSize size);
 /* memory_set32.c: the same fill with a 32-bit pattern */
 void *SetMemory32Core(void *destination, SceUInt32 pattern, SceSize size);
-
 
 /*
  * uid.c: a UID entry, the kernel's record of an object it hands out a UID for.

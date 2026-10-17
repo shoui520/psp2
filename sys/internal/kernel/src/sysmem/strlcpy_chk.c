@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <sysmem/debug.h>
-
-extern size_t strlcpy(char *destination, const char *source, size_t size);
+#include <sysmem/sysclib.h>
 
 size_t __strlcpy_chk(char *destination, const char *source, size_t size,
 		    size_t capacity)

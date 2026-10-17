@@ -22,18 +22,17 @@
 #include <sysmem/sysroot_netps.h>
 #include <sysmem/sysroot_appmgr.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/sysclib.h>
 #include "sysmem_boot.h"
 #if SYSMEM_NSKBL
 #include <string.h>
 #include <kernel_boot_loader/kernel_boot_param.h>
 #endif
 
-
 struct SysrootInitCallbackSlot {
 	SysrootInitCallback callback;
 	void *argument;
 };
-
 
 struct SysrootSelfImage {
 	void *data;
@@ -66,7 +65,6 @@ struct SysrootProfiler {
 struct SysrootPerCpu {
 	uint8_t data[0x20];
 };
-
 
 struct SysrootState {
 	void *object;				/* the UID object header */
@@ -738,8 +736,6 @@ static const SceSelfAuthInfo s_fallbackSelfAuthInfo = {
 	},
 };
 #endif
-
-extern void *memcpy(void *destination, const void *source, size_t size);
 
 #if !SYSMEM_NSKBL
 int SceSysrootForKernel_733C243E(const SysrootProcessmgrOps *ops)

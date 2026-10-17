@@ -1,7 +1,5 @@
 #include <stdint.h>
-
-extern int look_ctype_table(int value);
-extern int toupper(int value);
+#include <sysmem/sysclib.h>
 
 /* Name unknown; shared character classification used by integer parsers. */
 __attribute__((noinline))

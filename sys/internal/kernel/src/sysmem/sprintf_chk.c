@@ -2,9 +2,7 @@
 #include <stddef.h>
 #include <sysmem/debug.h>
 #include <sysmem/compiler.h>
-
-extern int vsnprintf(char *destination, size_t size, const char *format,
-		     va_list arguments);
+#include <sysmem/sysclib.h>
 
 __attribute__((noinline))
 int __vsnprintf_chk(char *destination, size_t size, int flags, size_t capacity,

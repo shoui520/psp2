@@ -14,8 +14,7 @@
 #include <psp2kern/types.h>
 #include <sysmem/utils.h>
 #include <kernel/error.h>
-
-void *memcpy(void *dst, const void *src, SceSize n);
+#include <sysmem/sysclib.h>
 
 #define DEFLATE_MAX_BITS		15
 #define DEFLATE_LITLEN_CODES		288

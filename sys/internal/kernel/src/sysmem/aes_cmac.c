@@ -9,14 +9,13 @@
 #include <stdint.h>
 #include <string.h>
 #include <fw.h>
+#include <sysmem/sysclib.h>
 
 _Static_assert(sizeof(struct CmacContext) == 0x2a0, "CMAC context size");
 _Static_assert(offsetof(struct CmacContext, ullTotalLen) == 0x1f0, "CMAC length offset");
 _Static_assert(offsetof(struct CmacContext, remains) == 0x1f8, "CMAC buffered length offset");
 _Static_assert(offsetof(struct CmacContext, result) == 0x200, "CMAC result offset");
 _Static_assert(offsetof(struct CmacContext, buffer) == 0x280, "CMAC input buffer offset");
-
-void *__memcpy_chk(void *dst, const void *src, size_t size, size_t capacity);
 
 /* Only the debug original fortifies the stack block copies. */
 #if FW_SINCE(0x04000000)

@@ -12,6 +12,7 @@
 #include "memblock_obj_module.h"
 #pragma pop_macro("__FILE_NAME__")
 #include "memblock/status_module.h"
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock.c"
@@ -1203,7 +1204,6 @@ int GUIDFindByName(const char *name);
 SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);
 int SceSysmemForDriver_B81CF0A3(SceUID guid, void **vbase);
 int ksceDmacMemset(void *dst, int c, SceSize size);
-int strncmp(const char *s1, const char *s2, SceSize n);
 
 /* the user allocation options (SceKernelAllocMemBlockOpt), up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
@@ -2546,7 +2546,6 @@ SceUID PUIDFindByGUID(SceUID pid, SceUID guid);
 int MemBlockSetBaseInfo(SceUID guid, MemBlockBaseInfo *info);
 int CheckProcessCapabilityGranted(SceUID pid, unsigned int capability);
 int SceSysmemForDriver_9C78064C(SceUInt32 mode, const void *addr, SceSize size);
-int snprintf(char *buf, SceSize size, const char *fmt, ...);
 
 #define MEMBLOCK_ERROR_LOCKED_FATAL	0xc0024b10
 

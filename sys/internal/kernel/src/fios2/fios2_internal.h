@@ -19,6 +19,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2common/fios2.h>
 #include <sysmem/compiler.h>
+#include <sysmem/sysclib.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,8 +81,6 @@ int SceThreadmgrForDriver_B645C7EF(SceSize size, void (*destructor)(void *, uint
 int SceThreadmgrForDriver_332E127C(void);	/* the current thread's permission */
 void *SceThreadmgrForDriver_89CA5698(int slot, SceUID threadId, int create);
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
-size_t __strlcpy_chk(char *dst, const char *src, size_t size, size_t dstSize);
-size_t __strlcat_chk(char *dst, const char *src, size_t size, size_t dstSize);
 void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);	/* the caller's process heap */
 int SceProcessmgrForDriver_FC2A424E(void *ptr);
 int sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);

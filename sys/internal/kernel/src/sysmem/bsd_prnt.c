@@ -51,8 +51,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
-
-extern int look_ctype_table(int character);
+#include <sysmem/sysclib.h>
 
 enum {
 	LONGINT = 0x01,
@@ -63,8 +62,6 @@ enum {
 	ZEROPAD = 0x20,
 	HEXPREFIX = 0x40
 };
-
-typedef void (*PrntOutput)(void *context, int character);
 
 int __prnt(PrntOutput output, void *context, const char *format, va_list arguments)
 {

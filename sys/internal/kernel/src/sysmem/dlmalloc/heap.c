@@ -8,6 +8,7 @@
 #define MEMBLOCK_OBJ_MODULE_FILE	"dlmalloc/../memblock_obj_module.h"
 #include "../memblock_obj_module.h"
 #include <sysmem/heap_info.h>
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "dlmalloc/heap.c"
@@ -50,7 +51,6 @@ struct malloc_stats {
 struct mallinfo mspace_mallinfo(mspace msp);
 void mspace_get_malloc_stats(mspace msp, struct malloc_stats *stats);
 SceSize mspace_get_mmapped_segments(mspace msp, SceSize max, struct malloc_segment_range *list);
-
 
 /* SceKernelHeapCreateOpt flags kept in the heap (HEAP_HAS_*: sysmem/sysmem.h) */
 #define HEAP_VERIFY			0x00000010	/* every chunk checked around a free */
@@ -161,7 +161,6 @@ int AddressSpaceGetPhyMemPartByIndex(AddressSpaceObject *as, SceUInt32 index, vo
 void *SceSysmemForKernel_0164D817(void);
 uint32_t SceSysrootForKernel_5C426B19(void);
 void *sceKernelSysrootAlloc(SceSize size);
-char *strncpy(char *dst, const char *src, SceSize n);
 
 /* name unknown: SceUIDKernelHeapClass's constructor */
 static int HeapObjectCreate(SceObjectBase *object)

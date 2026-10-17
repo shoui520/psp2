@@ -1,6 +1,6 @@
 --- a/vfprintf.c
 +++ b/vfprintf.c
-@@ -34,953 +34,257 @@
+@@ -34,953 +34,254 @@
   * SUCH DAMAGE.
   */
  
@@ -38,6 +38,7 @@
 -#include "fvwrite.h"
 +#include <stdint.h>
 +#include <string.h>
++#include <sysmem/sysclib.h>
  
 -/*
 - * Define FLOATING_POINT to get floating point.
@@ -46,9 +47,6 @@
 -#ifndef CSH
 -#define	FLOATING_POINT
 -#endif
-+extern int look_ctype_table(int character);
- 
--/* end of configuration stuff */
 +enum {
 +	LONGINT = 0x01,
 +	QUADINT = 0x02,
@@ -59,8 +57,9 @@
 +	HEXPREFIX = 0x40
 +};
  
-+typedef void (*PrntOutput)(void *context, int character);
- 
+-/* end of configuration stuff */
+-
+-
 -#ifdef CSH
 -/*
 - * C shell hacks.  Ick, gag.
@@ -371,11 +370,12 @@
 -			goto done;
 -		fmt++;		/* skip over '%' */
 -
- 		flags = 0;
+-		flags = 0;
 -		dprec = 0;
 -#ifdef FLOATING_POINT
 -		fpprec = 0;
 -#endif
++		flags = 0;
  		width = 0;
 -		prec = -1;
 -		sign = '\0';
@@ -599,7 +599,13 @@
 -			size = cvt(_double, prec, flags, &softsign, ch,
 -			    cp, buf + sizeof(buf));
 -			if (softsign)
--				sign = '-';
++			if ((flags & ALT) && base == 16 && quad)
++				flags |= HEXPREFIX;
++		} else {
++			number = va_arg(arguments, uint32_t);
++			if (signedNumber && (int32_t)number < 0) {
++				number = 0U - number;
+ 				sign = '-';
 -			if (*cp == '\0')
 -				cp++;
 -			break;
@@ -671,7 +677,8 @@
 -			base = HEX;
 -			/* leading 0x/X only if non-zero */
 -			if (flags & ALT && _ulong != 0)
-+			if ((flags & ALT) && base == 16 && quad)
++			}
++			if ((flags & ALT) && base == 16 && number)
  				flags |= HEXPREFIX;
 -
 -			/* unsigned conversions */
@@ -728,11 +735,19 @@
 -					size = strlen(cp);
 -					goto skipsize;
 -				}
-+		} else {
-+			number = va_arg(arguments, uint32_t);
-+			if (signedNumber && (int32_t)number < 0) {
-+				number = 0U - number;
-+				sign = '-';
++		}
++		if (precision != -1)
++			flags &= ~ZEROPAD;
++		cursor = buffer + sizeof(buffer);
++		if (flags & QUADINT) {
++			if (quad || precision != 0) {
++				do {
++					*--cursor = digits[quad % (uint32_t)base];
++					quad /= (uint32_t)base;
++				} while (quad);
++				if ((flags & ALT) && base == 8 && *cursor != '0')
++					*--cursor = '0';
++				digits = "0123456789abcdef";
  			}
 -			size = buf + BUF - cp;
 -		skipsize:
@@ -746,8 +761,19 @@
 -			size = 1;
 -			sign = '\0';
 -			break;
-+			if ((flags & ALT) && base == 16 && number)
-+				flags |= HEXPREFIX;
++		} else if (number || precision != 0) {
++			do {
++				if (base == 10) {
++					*--cursor = digits[number % 10];
++					number /= 10;
++				} else {
++					*--cursor = digits[number & (base - 1)];
++					number >>= 31 - __builtin_clz((uint32_t)base);
++				}
++			} while (number);
++			if ((flags & ALT) && base == 8 && *cursor != '0')
++				*--cursor = '0';
++			digits = "0123456789abcdef";
  		}
 -
 -		/*
@@ -773,33 +799,6 @@
 -#else
 -		fieldsz = size;
 -#endif
-+		if (precision != -1)
-+			flags &= ~ZEROPAD;
-+		cursor = buffer + sizeof(buffer);
-+		if (flags & QUADINT) {
-+			if (quad || precision != 0) {
-+				do {
-+					*--cursor = digits[quad % (uint32_t)base];
-+					quad /= (uint32_t)base;
-+				} while (quad);
-+				if ((flags & ALT) && base == 8 && *cursor != '0')
-+					*--cursor = '0';
-+				digits = "0123456789abcdef";
-+			}
-+		} else if (number || precision != 0) {
-+			do {
-+				if (base == 10) {
-+					*--cursor = digits[number % 10];
-+					number /= 10;
-+				} else {
-+					*--cursor = digits[number & (base - 1)];
-+					number >>= 31 - __builtin_clz((uint32_t)base);
-+				}
-+			} while (number);
-+			if ((flags & ALT) && base == 8 && *cursor != '0')
-+				*--cursor = '0';
-+			digits = "0123456789abcdef";
-+		}
 +		text = cursor;
 +		size = buffer + sizeof(buffer) - cursor;
 +field:
@@ -857,8 +856,26 @@
 -		ret += width > realsz ? width : realsz;
 -
 -		FLUSH();	/* copy out the I/O vectors */
--	}
--done:
++			output(context, '0');
++			/* SCE reloads the conversion byte after the first callback. */
++			prefix = (signed char)format[-1];
++			output(context, prefix == 'p' ? 'x' : prefix);
++		}
++		if ((flags & (LADJUST | ZEROPAD)) == ZEROPAD) {
++			for (int32_t position = realSize; position < (int32_t)width; position++)
++				output(context, '0');
++		}
++		for (int32_t position = fieldSize; position < precision; position++)
++			output(context, '0');
++		for (int32_t position = 0; position < size; position++)
++			output(context, (signed char)text[position]);
++		if (flags & LADJUST) {
++			for (int32_t position = realSize; position < (int32_t)width; position++)
++				output(context, ' ');
++		}
++		count += (int32_t)width > realSize ? width : (uint32_t)realSize;
+ 	}
+ done:
 -	FLUSH();
 -error:
 -	return (__sferror(fp) ? EOF : ret);
@@ -928,11 +945,7 @@
 -			if (fract)
 -				startp = round(fract, (int *)NULL, startp,
 -				    t - 1, (char)0, signp);
-+			output(context, '0');
-+			/* SCE reloads the conversion byte after the first callback. */
-+			prefix = (signed char)format[-1];
-+			output(context, prefix == 'p' ? 'x' : prefix);
- 		}
+-		}
 -		for (; prec--; *t++ = '0');
 -		break;
 -	case 'e':
@@ -956,10 +969,7 @@
 -			}
 -			/* adjust expcnt for digit in front of decimal */
 -			--expcnt;
-+		if ((flags & (LADJUST | ZEROPAD)) == ZEROPAD) {
-+			for (int32_t position = realSize; position < (int32_t)width; position++)
-+				output(context, '0');
- 		}
+-		}
 -		/* until first fractional digit, decrement exponent */
 -		else if (fract) {
 -			/* adjust expcnt for digit in front of decimal */
@@ -971,14 +981,7 @@
 -			*t++ = to_char((int)tmp);
 -			if (prec || flags&ALT)
 -				*t++ = '.';
-+		for (int32_t position = fieldSize; position < precision; position++)
-+			output(context, '0');
-+		for (int32_t position = 0; position < size; position++)
-+			output(context, (signed char)text[position]);
-+		if (flags & LADJUST) {
-+			for (int32_t position = realSize; position < (int32_t)width; position++)
-+				output(context, ' ');
- 		}
+-		}
 -		else {
 -			*t++ = '0';
 -			if (prec || flags&ALT)
@@ -1073,10 +1076,8 @@
 -			if (*t != '.')
 -				++t;
 -		}
-+		count += (int32_t)width > realSize ? width : (uint32_t)realSize;
- 	}
+-	}
 -	return (t - startp);
-+done:
 +	output(context, 0x201);
 +	return count;
  }

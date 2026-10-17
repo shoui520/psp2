@@ -1,14 +1,10 @@
 /* Shared Sysclib strings preserve native address-boundary behavior. */
 #include <stddef.h>
 #include <stdint.h>
+#include <sysmem/sysclib.h>
 
 /* Define SYSCLIB_SELECT_STRINGS and SYSCLIB_WANT_<NAME> for a shared subset. */
-extern size_t strlen(const char *string);
-extern size_t strnlen(const char *string, size_t count);
-
 typedef uint32_t StringWord __attribute__((aligned(1), may_alias));
-extern void *memset(void *destination, int value, size_t size);
-extern void *memcpy(void *destination, const void *source, size_t size);
 
 #if !defined(SYSCLIB_SELECT_STRINGS) || defined(SYSCLIB_WANT_STRCMP)
 int strcmp(const char *left, const char *right)

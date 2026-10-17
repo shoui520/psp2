@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <sysmem/sysclib.h>
 
 struct FormatBuffer {
 	uint32_t capacity;
@@ -9,13 +10,11 @@ struct FormatBuffer {
 	char *cursor;
 };
 
-typedef void (*FormatOutput)(struct FormatBuffer *buffer, int character);
-extern int __prnt(FormatOutput output, struct FormatBuffer *buffer,
-		  const char *format, va_list arguments);
-
 __attribute__((noinline))
-void FormatBufferCharacter(struct FormatBuffer *buffer, int character)
+void FormatBufferCharacter(void *context, int character)
 {
+	struct FormatBuffer *buffer = context;
+
 	if (character == 0x200)
 		return;
 	if (character == 0x201) {
