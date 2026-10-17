@@ -16,7 +16,6 @@ psp2_module(os0_kd_bootimage_appmgr KIND kernel PARTIAL SOURCES
 	appmgr_control.c
 	appmgr_control_syscalls.c
 	mount.c
-	mount_process.c
 	savedata.c
 	system_param.c
 	bgdl.c

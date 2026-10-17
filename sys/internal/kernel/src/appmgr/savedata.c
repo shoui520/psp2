@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <string.h>
 
+int appmgrExtractSaveDataDeviceName(const char *path, char *device,
+				    SceSize capacity);
+
 extern SceUID g_appmgrSaveDataHeap;
 extern SceUID g_appmgrSaveDataMutex;
 extern int g_appmgrSafeMemoryKey;
@@ -50,8 +53,6 @@ extern char *__strncpy_chk(char *destination, const char *source,
 
 extern int SceSblACMgrForDriver_0924896F(SceUID pid);
 extern SceUInt64 ksceKernelGetProcessTimeWideCore(void);
-extern int appmgrExtractSaveDataDeviceName(const char *path, char *device,
-					 SceSize capacity);
 extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataFile *file,
 				     const char *path);
 extern int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB);
@@ -77,29 +78,6 @@ extern int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *o
 
 int g_appmgrAppInfoCacheKey;
 AppmgrSaveDataSlotCache g_appmgrSaveDataSlotCache;
-
-int appmgrExtractSaveDataDeviceName(const char *path, char *device,
-				    SceSize capacity)
-{
-	const signed char *source = (const signed char *)path;
-	SceSize index;
-
-	memset(device, 0, capacity);
-	if (capacity) {
-		device[0] = source[0];
-		if (source[0] == ':')
-			return 0;
-		index = 0;
-		while (index != capacity - 1) {
-			index++;
-			device[index] = source[index];
-			if (source[index] == ':')
-				return 0;
-		}
-	}
-	device[capacity - 1] = 0;
-	return -1;
-}
 
 int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
 {
