@@ -147,7 +147,7 @@ os0/us/libgpu_es4	sys/internal/usermode/src/libgpu_es4	os0:us/libgpu_es4.suprx	4
 os0/us/libgxm_es4	sys/internal/usermode/src/libgxm_es4	os0:us/libgxm_es4.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
 os0/us/libkernel	sys/internal/usermode/src/libkernel	os0:us/libkernel.suprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	os0:us user library -> usermode/src
 pd0/app/NPXS10007/eboot	wp/prog/wp	pd0:app/NPXS10007/eboot.bin	3.65-CEX	string	D:/sce_prj/psp2/wp/prog/wp/PSP2_Release/wp.self (build folder prog/wp; sources prog/{app,common,control,graphics,np,sound})
-pup/cui_setupper	sys/internal/usermode/src/cui_setupper/pup	pup:cui_setupper.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	same code as os0:ue/cui_setupper
+pup/cui_setupper	sys/internal/usermode/src/cui_setupper	pup:cui_setupper.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	byte-identical copy of os0:ue/cui_setupper where both ship (3.630, 3.650; CEX has only this one): one Sony build, its folder
 pup/psp2swu	sys/internal/usermode/src/psp2swu	pup:psp2swu.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	updater_core in sys/internal/usermode/src; vsh/paf/src/graphics
 slb2/kbl/SceDriverTzs	sys/internal/secure/driver_tzs	slb2:kbl/SceDriverTzs	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	ours	TrustZone-only module; no Sony folder known
 slb2/kbl/SceExcpmgr	sys/internal/kernel/src/excpmgr/tzs	slb2:kbl/SceExcpmgr	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	TrustZone build of excpmgr
@@ -303,7 +303,7 @@ vs0/sys/external/liblocation	vsh/app/shell/src/liblocation/src/location_client	v
 vs0/sys/external/liblocation_extension	sys/internal/usermode/src/liblocation_extension	vs0:sys/external/liblocation_extension.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/liblocation_factory	sys/internal/usermode/src/liblocation_factory	vs0:sys/external/liblocation_factory.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/liblocation_internal	sys/internal/usermode/src/liblocation_internal	vs0:sys/external/liblocation_internal.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/libmln	sys/internal/usermode/src/libmln	vs0:sys/external/libmln.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libmln	vsh/app/common/src/libmarlin	vs0:sys/external/libmln.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	byte-identical copy of vs0:vsh/common/libmarlin (one Sony build): its folder
 vs0/sys/external/libmlnapplib	sys/internal/usermode/src/libmlnapplib	vs0:sys/external/libmlnapplib.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libmlndownloader	sys/internal/usermode/src/libmlndownloader	vs0:sys/external/libmlndownloader.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libnaac	sys/internal/usermode/src/libnaac	vs0:sys/external/libnaac.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
