@@ -25,10 +25,9 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
+#include <psp2kern/io/fcntl.h>
 
 /* SceIofilemgrForDriver */
-SceUID ksceIoOpen(const char *path, int flags, int mode);
-int ksceIoClose(SceUID fd);
 
 /* SceCpuForDriver / SceCpuForKernel */
 int ksceKernelCpuSuspendIntr(void);

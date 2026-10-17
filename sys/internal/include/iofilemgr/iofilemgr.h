@@ -295,3 +295,17 @@ int vfsPwrite(IofilemgrPwriteParam *param);
 int vfsIoctl(IofilemgrIoctlParam *param);
 int vfsChstat(IofilemgrChstatParam *param);
 int vfsChstatByFd(IofilemgrChstatByFdParam *param);
+
+int ksceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits);
+int ksceIoClearErrorEvent(SceUID uid);
+int ksceIoDeleteErrorEvent(SceUID uid);
+int ksceIoDreadForVshbridge(SceUID fd, SceIoDirent *dir);
+int ksceIoFlock(SceUID fd, int op);
+int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type);
+SceInt32 ksceIoGetProcessDefaultPriorityForSystem(void);
+int ksceIoGetstatForVshbridge(const char *file, SceIoStat *stat);
+SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode);
+int ksceIoSetProcessDefaultPriorityForSystem(SceInt32 priority);
+int ksceIoSyncByFd2(SceUID fd, int flag);
+int sceIoSetMountEvent(int id, SceUInt32 pattern, SceInt64 result, SceUInt32 reserved);
+int vfsNotifyDeviceStatus(int mntId);

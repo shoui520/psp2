@@ -33,6 +33,7 @@
 #include <psp2kern/pfsmgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysclib.h>
+#include <iofilemgr/iofilemgr.h>
 
 struct AppmgrMapFile;
 
@@ -1952,7 +1953,6 @@ out:
 
 extern int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 				      SceUInt32 slotCount);
-extern int ksceIoSyncByFd2(SceUID fd, int flags);
 
 int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 				const char *parentDirectory, unsigned int mountId,

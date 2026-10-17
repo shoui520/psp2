@@ -24,14 +24,10 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/intrmgr.h>
+#include <iofilemgr/iofilemgr.h>
+#include <psp2kern/io/fcntl.h>
 
 /* SceIofilemgrForDriver */
-SceUID ksceIoOpen(const char *path, int flags, int mode);
-SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, int mode);
-int ksceIoClose(SceUID fd);
-int ksceIoRead(SceUID fd, void *buf, SceSize size);
-SceOff ksceIoLseek(SceUID fd, SceOff offset, int whence);
-int ksceIoGetMediaType(SceUID pid, const char *path, int unk, void *type);
 
 /* SceSysmemForKernel / SceSysmemForDriver */
 int ksceKernelFreeMemBlock(SceUID uid);

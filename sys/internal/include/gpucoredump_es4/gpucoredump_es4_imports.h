@@ -13,6 +13,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <power/power.h>
+#include <iofilemgr/iofilemgr.h>
 
 /* SceGpuEs4ForDriver */
 /* registers the PA-trace stop and the core-dump callbacks */
@@ -49,4 +50,3 @@ SceSize ScePamgrForDriver_019BD60F(int unit);			/* bytes traced */
 int ksceKernelGetModuleInfoByAddr(const void *address, void *info);
 int ksceRtcGetCurrentClockLocalTime(SceDateTime *time);
 int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);
-int ksceIoIoctl(SceUID fd, int cmd, const void *in, SceSize inLength, void *out, SceSize outLength);

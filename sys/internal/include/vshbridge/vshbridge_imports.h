@@ -22,6 +22,7 @@
 #include <power/led.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
+#include <iofilemgr/iofilemgr.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -128,17 +129,7 @@ int SceHdmiForDriver_6D2D10D8(void);			/* CEC forced polling message */
 int ksceIoMount(int id, const char *path, int permission, void *data, SceUInt32 reservedLow,
 		SceUInt32 reservedHigh);
 int ksceIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh);
-SceUID ksceIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events);
-int ksceIoDeleteMountEvent(SceUID event);
-int ksceIoFlock(SceUID fd, int flags);
 SceUID ksceIoCreateErrorEvent(int a, int b, int c);
-int ksceIoClearErrorEvent(SceUID event);
-int ksceIoDeleteErrorEvent(SceUID event);
-int ksceIoGetstatForVshbridge(const char *path, void *stat);
-int ksceIoChstatForVshbridge(const char *path, const void *stat, int bits);
-int ksceIoDreadForVshbridge(SceUID fd, void *dirent);
-int ksceIoSetProcessDefaultPriorityForSystem(int priority);
-int ksceIoGetProcessDefaultPriorityForSystem(void);
 int SceSdifForDriver_F37CF8E5(void);			/* SD slow mode */
 int ksceSdifGetCardInsertState1(int card);
 int ksceSdifGetCardInsertState2(int card);

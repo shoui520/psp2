@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <syscon/syscon.h>
+#include <iofilemgr/iofilemgr.h>
 
 typedef struct SceSdstorIntrHeader {
 	SceKernelSubIntrHandler insertHandler;
@@ -111,9 +112,6 @@ static const uint32_t sdintrStateRequests[3] = {0x110, 0x103, 0x1001};
 
 int sdpart_valid_internal_mbr(const SceMbr *mbr);
 int sddev_is_read_write(SceSdstorSddev *device);
-int sceIoSetMountEvent(int id, uint32_t pattern, int64_t result,
-		       uint32_t reserved);
-int vfsNotifyDeviceStatus(int mountId);
 unsigned int sdpart_get_mc_port(void);
 unsigned int sdpart_get_xmc_port(void);
 unsigned int sdpart_grab_mc(unsigned int port);
