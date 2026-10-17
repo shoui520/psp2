@@ -49,4 +49,7 @@ _Static_assert(offsetof(BbmcUsbSerialDevice, atIn) == 404, "USB AT IN");
 _Static_assert(offsetof(BbmcUsbSerialDevice, controlInBuffer) == 468, "USB buffers");
 _Static_assert(offsetof(BbmcUsbSerialDevice, controlInSetup) == 508, "USB control setup");
 
+extern BbmcUsbSerialDevice *g_usbSerialDevice;
+extern SceUdcdEndpoint g_usbSerialEndpoints[6];
+
 #endif

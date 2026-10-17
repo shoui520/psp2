@@ -6,10 +6,13 @@
 #include "usb_serial.h"
 #include "usb_device.h"
 
+int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
+int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
+
 BbmcUsbSerialDevice *g_usbSerialDevice;
 BbmcUsbSerialDevice g_usbSerialDeviceStorage;
 
-static SceUdcdEndpoint g_usbSerialEndpoints[6] = {
+SceUdcdEndpoint g_usbSerialEndpoints[6] = {
 	{ 0, 0, 0, 0 },
 	{ 0x80, 1, 0, 0 },
 	{ 0, 2, 0, 0 },
@@ -36,8 +39,6 @@ int bbmcUsbDeviceProcessRequest(int recipient, int endpoint,
 			       SceUdcdEP0DeviceRequest *request, void *context);
 int bbmcUsbDeviceAttached(int usbVersion, void *context);
 void bbmcUsbDeviceDetached(void *context);
-int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context);
-int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context);
 
 static SceUdcdEndpointDescriptor g_usbSerialFullEndpoints[6];
 static SceUdcdInterfaceDescriptor g_usbSerialHighInterfaces[3];
@@ -124,152 +125,6 @@ static SceUdcdInterfaceSettings g_usbSerialFullSettings[2] = {
 	{ &g_usbSerialFullInterfaces[0], 0, 1 },
 	{ &g_usbSerialFullInterfaces[1], 0, 1 },
 };
-
-int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context)
-{
-	BbmcUsbSerialDevice *device;
-
-	ksceKernelSetEventFlag(g_usbSerialDevice->event, 0x80000000u);
-	ksceKernelWaitThreadEnd(g_usbSerialDevice->thread, NULL, NULL);
-	device = g_usbSerialDevice;
-	if (device->memoryBlock > 0) {
-		ksceKernelFreeMemBlock(device->memoryBlock);
-		device = g_usbSerialDevice;
-		device->memoryBlock = 0;
-	}
-	device->controlOutBuffer = NULL;
-	device->controlInBuffer = NULL;
-	device->qcomOutBuffer = NULL;
-	device->qcomInBuffer = NULL;
-	device->atInterruptBuffer = NULL;
-	device->atOutBuffer = NULL;
-	device->atInBuffer = NULL;
-	return 0;
-}
-
-int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context)
-{
-	SceKernelAllocMemBlockKernelOpt option;
-	BbmcUsbSerialDevice *device = g_usbSerialDevice;
-	void *base = NULL;
-	unsigned char *buffer;
-	int result;
-
-	if (!device) {
-		result = 0x80330003;
-		goto failed;
-	}
-	__builtin_memset(&option, 0, sizeof(option));
-	option.size = sizeof(option);
-	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = ksceKernelAllocMemBlock("SceUsbQcomSer", 0x1020d006,
-				       8192, &option);
-	device = g_usbSerialDevice;
-	if (result < 0)
-		goto failed;
-	device->memoryBlock = result;
-	result = ksceKernelGetMemBlockBase(result, &base);
-	if (result < 0)
-		goto reload;
-	buffer = (unsigned char *)(((SceUIntPtr)base + 63) & ~63u);
-	device = g_usbSerialDevice;
-	device->controlOutBuffer = buffer + 64;
-	device->controlIn.request.data = buffer + 64;
-	device->qcomIn.request.data = buffer + 128;
-	device->controlInBuffer = buffer;
-	device->controlOut.request.next = NULL;
-	device->controlOut.request.unused = device;
-	device->controlOut.request.data = buffer;
-	device->controlIn.request.onComplete = bbmcUsbDeviceControlSent;
-	device->controlOut.request.onComplete = bbmcUsbDeviceControlOutCompleted;
-	device->qcomIn.request.endpoint = &g_usbSerialEndpoints[1];
-	device->qcomInBuffer = device->qcomIn.request.data;
-	device->controlIn.request.size = 64;
-	device->controlOut.request.size = 64;
-	device->controlIn.request.endpoint = &g_usbSerialEndpoints[0];
-	device->controlOut.request.endpoint = &g_usbSerialEndpoints[0];
-	device->qcomOutBuffer = buffer + 1152;
-	device->atInterruptBuffer = buffer + 2176;
-	device->atOutBuffer = buffer + 4736;
-	device->atInBuffer = buffer + 3200;
-	device->controlIn.request.isControlRequest = 1;
-	device->controlIn.request.returnCode = 1;
-	device->controlIn.request.next = NULL;
-	device->controlIn.request.unused = device;
-	device->controlIn.request.attributes = 0;
-	device->controlIn.request.transmitted = 0;
-	device->controlOut.request.attributes = 0;
-	device->controlOut.request.transmitted = 0;
-	device->controlOut.request.isControlRequest = 1;
-	device->qcomIn.request.size = 1024;
-	device->qcomIn.request.isControlRequest = 1;
-	device->qcomOut.request.size = 1024;
-	device->qcomOut.request.isControlRequest = 1;
-	device->qcomOut.request.data = buffer + 1152;
-	device->atInterruptIn.request.data = buffer + 2176;
-	device->atIn.request.data = buffer + 3200;
-	device->atInterruptIn.request.size = 1024;
-	device->qcomIn.request.onComplete = bbmcUsbDeviceQcomInCompleted;
-	device->controlOut.request.returnCode = 1;
-	device->qcomIn.request.transmitted = 0;
-	device->qcomIn.request.returnCode = 1;
-	device->qcomOut.request.transmitted = 0;
-	device->qcomOut.request.returnCode = 1;
-	device->atInterruptIn.request.isControlRequest = 1;
-	device->atInterruptIn.request.transmitted = 0;
-	device->atInterruptIn.request.returnCode = 1;
-	device->atIn.request.isControlRequest = 1;
-	device->qcomOut.request.endpoint = &g_usbSerialEndpoints[2];
-	device->atInterruptIn.request.onComplete = bbmcUsbDeviceAtInterruptCompleted;
-	device->qcomIn.request.next = NULL;
-	device->qcomIn.request.unused = device;
-	device->qcomIn.request.attributes = 0;
-	device->qcomOut.request.next = NULL;
-	device->qcomOut.request.unused = device;
-	device->qcomOut.request.attributes = 0;
-	device->atInterruptIn.request.next = NULL;
-	device->atInterruptIn.request.unused = device;
-	device->atInterruptIn.request.attributes = 0;
-	device->atIn.request.next = NULL;
-	device->atIn.request.unused = device;
-	device->qcomOut.request.onComplete = bbmcUsbDeviceQcomOutCompleted;
-	device->atInterruptIn.request.endpoint = &g_usbSerialEndpoints[3];
-	device->atIn.request.endpoint = &g_usbSerialEndpoints[5];
-	device->atIn.request.attributes = 0;
-	device->atIn.request.size = 1536;
-	device->atOut.request.endpoint = &g_usbSerialEndpoints[4];
-	device->atOut.request.data = buffer + 4736;
-	device->atIn.request.transmitted = 0;
-	device->atIn.request.returnCode = 1;
-	device->atOut.request.size = 1536;
-	device->atOut.request.isControlRequest = 1;
-	device->atOut.request.next = NULL;
-	device->atOut.request.unused = device;
-	device->atOut.request.transmitted = 0;
-	device->atOut.request.returnCode = 1;
-	device->atIn.request.onComplete = bbmcUsbDeviceAtInCompleted;
-	device->atOut.request.attributes = 0;
-	device->atOut.request.onComplete = bbmcUsbDeviceAtOutCompleted;
-	result = ksceKernelStartThread(device->thread, 0, NULL);
-	if (result >= 0)
-		return result;
-reload:
-	device = g_usbSerialDevice;
-failed:
-	if (device->memoryBlock > 0) {
-		ksceKernelFreeMemBlock(device->memoryBlock);
-		device = g_usbSerialDevice;
-		device->memoryBlock = 0;
-	}
-	device->controlInBuffer = NULL;
-	device->controlOutBuffer = NULL;
-	device->qcomOutBuffer = NULL;
-	device->qcomInBuffer = NULL;
-	device->atInterruptBuffer = NULL;
-	device->atOutBuffer = NULL;
-	device->atInBuffer = NULL;
-	return result;
-}
 
 int bbmcUsbSerialDeviceThread(SceSize argumentSize, void *arguments)
 {
