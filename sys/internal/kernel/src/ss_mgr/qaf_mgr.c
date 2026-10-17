@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <sm_comm/sm_comm.h>
 
 uint32_t qafInitialized;
@@ -299,9 +299,6 @@ int sceSblQafMgrIsAllowNpFullTest(void)
 	return allow;
 }
 
-int SceSysconForDriver_EBE3262C(void);
-int SceSysconForDriver_D2F456DC(uint32_t *version);
-
 /* Names unknown: the QAF service's 32-byte secure NVS record. */
 typedef struct QafNvsVersionRecord {
 	uint32_t flags;
@@ -335,11 +332,6 @@ typedef struct QafToken {
 	uint8_t headerData[122];
 	uint8_t body[256];
 } QafToken;
-
-int SceSysconForDriver_EBDF88B9(const void *challenge, SceSize challengeSize,
-	void *response, SceSize responseSize);
-int SceSysconForDriver_63683B9B(const void *challenge, SceSize challengeSize,
-	void *response, SceSize responseSize);
 
 __attribute__((noinline)) int qafLoadSecureModule(const char *path);
 __attribute__((noinline)) int qafStopSecureModule(void);

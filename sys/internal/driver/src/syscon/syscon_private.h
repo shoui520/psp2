@@ -124,19 +124,10 @@ static inline void sysconPacketSetCommand(SceSysconPacket *packet, uint16_t comm
 	packet->request.command[1] = command >> 8;
 }
 
-/* the value is the notification's new state */
-typedef void (*SceSysconCallback)(int value, void *argp);
-
 typedef struct SceSysconCallbackEntry {
 	SceSysconCallback callback;
 	void *argp;
 } SceSysconCallbackEntry;
-
-typedef struct SceSysconDebugHandlers {
-	uint32_t size;
-	void (*start)(SceSysconPacket *packet);
-	void (*end)(SceSysconPacket *packet);
-} SceSysconDebugHandlers;
 
 typedef void (*SysconLogger)(uint32_t event, uint32_t count, ...);
 

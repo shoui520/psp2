@@ -15,7 +15,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <string.h>

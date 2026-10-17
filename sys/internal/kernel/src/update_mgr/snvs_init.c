@@ -2,12 +2,9 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "snvs.h"
+#include <syscon/syscon.h>
 
 extern int updateUseSysconSnvs;
-int ksceSysconNvsReadData(unsigned int offset, void *buffer, SceSize size);
-int ksceSysconNvsWriteData(unsigned int offset, const void *buffer, SceSize size);
-int SceSysconForDriver_63683B9B(const void *input, unsigned int inputSize,
-		void *output, unsigned int outputSize);
 
 int SpkgInfoUtilInitForUpdater(uint32_t *status, uint32_t *flags)
 {

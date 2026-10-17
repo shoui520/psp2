@@ -53,7 +53,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysroot.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
@@ -100,7 +100,6 @@ extern int sceKernelFreeRemoteProcessHeap(SceUID pid, void *address);
 extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
 /* Voltage codes decrease as the required voltage increases. */
-extern int SceSysconForDriver_7F198FA2(unsigned int rail, unsigned int code);
 
 extern int ksceKernelCheckDipsw(unsigned int index);
 
@@ -114,25 +113,10 @@ extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
 
 /* LED callback and script engine; appended after the existing LED state. */
 
-/* Native Syscon bodies take no arguments and return a sign-extended byte. */
-extern int ksceSysconIsLowBatteryInhibitUpdateReboot(void);
-
 extern SceUID ksceKernelRegisterTimer(const char *name, unsigned int period,
 				    int (*handler)(void *argp), void *argp);
 
 extern SceUID sceKernelGetProcessId(void);
-
-extern int SceSysconForDriver_4A184B7C(void);
-
-extern int SceSysconForDriver_4E0EB57B(uint32_t, const void *, uint32_t);
-
-extern int SceSysconForDriver_ACEE1C70(void);
-
-extern int SceSysconForDriver_CF5B2F2F(volatile uint32_t *);
-
-extern int SceSysconForDriver_D7BEFF8B(void *);
-
-extern int SceSysconForDriver_D7F5A797(void);
 
 extern int __aeabi_idiv(int numerator, int denominator);
 
@@ -156,35 +140,6 @@ extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
 extern int SceProcessmgrForDriver_879153D9(SceUID pid, uint32_t mask);
 extern int SceProcessmgrForDriver_FC2A424E(void *memory);
-extern int SceSysconForDriver_03C50DC3(void);
-extern int SceSysconForDriver_03F11220(uint32_t *voltage);
-extern int SceSysconForDriver_0826BA07(uint32_t *current);
-extern int SceSysconForDriver_0D0B6D25(void);
-extern int SceSysconForDriver_129EA022(SceSysconCallback callback, void *argp);
-extern int SceSysconForDriver_14B99945(void);
-extern int SceSysconForDriver_26F9D729(uint32_t *maximum, uint32_t *level);
-extern int SceSysconForDriver_27758A64(void);
-extern int SceSysconForDriver_2A4B0437(uint32_t control, uint32_t enabled);
-extern int SceSysconForDriver_2D471528(SceSysconCallback callback, void *argp);
-extern int SceSysconForDriver_373ECF8A(unsigned int);
-extern int SceSysconForDriver_4278E614(unsigned int);
-extern int SceSysconForDriver_50CAE242(void);
-extern int SceSysconForDriver_596B17B7(uint32_t enabled);
-extern int SceSysconForDriver_59DC5938(uint32_t status);
-extern int SceSysconForDriver_6F586D1A(uint32_t, uint32_t);
-extern int SceSysconForDriver_80D6E061(SceSysconCallback callback, void *argp);
-extern int SceSysconForDriver_901D6CD4(unsigned int);
-extern int SceSysconForDriver_9070F139(uint32_t *temperature);
-extern int SceSysconForDriver_91D3B7A3(uint32_t *health, uint32_t *unk);
-extern int SceSysconForDriver_9DA2A5AB(void);
-extern int SceSysconForDriver_9F8340FF(void (*)(uint32_t), void *);
-extern int SceSysconForDriver_A2FE9BF9(uint32_t *status);
-extern int SceSysconForDriver_AD0A8275(uint32_t *percent);
-extern int SceSysconForDriver_B841C141(uint32_t *time);
-extern int SceSysconForDriver_C562AF3A(uint32_t *capacity);
-extern int SceSysconForDriver_CD73079D(uint32_t *count);
-extern int SceSysconForDriver_D7F5A797(void);
-extern int SceSysconForDriver_F93CF833(uint32_t *capacity);
 extern int SceSysrootForDriver_89532E2F(void);
 extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
 extern int ksceDisplayGetDeviceType(int head, int unused);
@@ -197,10 +152,6 @@ extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblAimgrIsDolce(void);
 extern int ksceSblAimgrIsGenuineDolce(void);
-extern int ksceSysconCtrlDolceLED(uint32_t mode);
-extern int ksceSysconGetHardwareInfo(void);
-extern int ksceSysconIsLowBatteryInhibitUpdateDownload(void);
-extern int ksceSysconWaitInitialized(void);
 extern int ksceSysrootIsExternalBootMode(void);
 extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);

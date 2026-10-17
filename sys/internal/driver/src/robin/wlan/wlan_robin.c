@@ -11,7 +11,7 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <string.h>
 
 #if FW_DEBUG

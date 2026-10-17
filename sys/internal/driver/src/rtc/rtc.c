@@ -12,7 +12,7 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/dipsw.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>

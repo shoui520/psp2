@@ -11,6 +11,7 @@
 #include <idstorage/idstorage.h>
 #include <sdif/sdif.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <syscon/syscon.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -110,30 +111,6 @@ int ksceIdStorageFlush(void);
 int ksceIdStorageRestart(int unk);
 
 /* Syscon, LED, power */
-int ksceSysconGetHardwareInfo(void);
-int ksceSysconGetHardwareInfo2(void *info);
-int ksceSysconGetManufacturesStatus(int *status);
-int ksceSysconGetManualChargeMode(int *mode);
-int ksceSysconCtrlManualChargeMode(int mode);
-int ksceSysconEnableHibernateIO(int enable);
-int ksceSysconGetLogInfo(void *info);
-int ksceSysconLogStart(void);
-int ksceSysconLogReadData(int a, void *buf, SceSize size);
-int ksceSysconLogStartWaiting(void);
-int ksceSysconGetTemperatureLog(SceUInt8 *log);
-int ksceSysconClearTemperatureLog(int unk);
-int ksceSysconIduModeSet(void);
-int ksceSysconIduModeClear(void);
-int ksceSysconShowModeSet(void);
-int ksceSysconShowModeClear(void);
-int ksceSysconIsDownLoaderMode(void);
-int ksceSysconGetUsbDetStatus(void *status);
-int ksceSysconBeginConfigstorageTransaction(void);
-int ksceSysconEndConfigstorageTransaction(void);
-int ksceSysconCommitConfigstorageTransaction(void);
-int ksceSysconLoadConfigstorageScript(int a, const void *script, SceSize size);
-int ksceSysconVerifyConfigstorageScript(int a, const void *script, SceSize size);
-int ksceSysconGetBatteryCalibData(int *a, int *b, int *c, int *d);
 int ksceLedSetMode(int led, int mode, const void *conf);
 int scePowerRequestColdReset(void);
 int kscePowerRequestShutdown(int mode);

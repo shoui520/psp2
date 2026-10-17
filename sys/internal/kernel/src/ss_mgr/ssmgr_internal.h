@@ -6,6 +6,7 @@
 #include <psp2kern/kernel/ssmgr.h>
 #include <dmacmgr/dmac_regs.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <syscon/syscon.h>
 
 typedef union SsMgrQaFlags {
 	uint32_t words[4];
@@ -66,7 +67,6 @@ int qafSetToken(const void *token);
 int qafDeleteToken(void);
 int qafGetToken(uint8_t *token);
 int nvs_write_data(uint32_t offset, const void *buffer, uint32_t size);
-int ksceSysconNvsSetRunMode(int mode);
 
 /* Aimgr secure-processor queries. */
 int aimgrReadPscode2(ScePsCode *pscode);
@@ -74,5 +74,3 @@ int aimgrReadConsoleId(SceConsoleId *consoleId);
 int aimgrReadVisibleId(void *visibleId);
 int aimgrInit(void);
 int qafInit(void);
-int ksceSysconNvsReadData(uint32_t offset, void *buffer, uint32_t size);
-int ksceSysconNvsWriteData(uint32_t offset, const void *buffer, uint32_t size);

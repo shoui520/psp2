@@ -11,6 +11,7 @@
 #include <lowio/pervasive.h>
 #include <lowio/pwm.h>
 #include <psp2kern/lowio/gpio.h>
+#include <syscon/syscon.h>
 
 /* Names unknown: hardware operations identified by their import NIDs. */
 int SceUdcdForDriver_1A5A3851(void);
@@ -18,16 +19,6 @@ int SceUdcdForDriver_2A234CAF(int port);
 int SceUdcdForDriver_9E7F7EFE(void);
 int SceUdcdForDriver_D01CFD22(void);
 int SceUdcdForDriver_E9E75C49(int port);
-int SceSysconForDriver_4A42712F(void (*callback)(unsigned, void *), void *arg);
-int SceSysconForDriver_67A4CB9F(void (*callback)(unsigned, void *), void *arg);
-int SceSysconForDriver_A26586B2(void (*callback)(unsigned, void *), void *arg);
-int SceSysconForDriver_B9EA2FA8(void);
-int ksceSysconGetMultiCnInfo(unsigned *info);
-int ksceSysconGetMicroUsbInfo(unsigned *info);
-int ksceSysconGetHardwareInfo(void);
-int ksceSysconCtrlDolceUsbPower(int enable);
-int ksceSysconCtrlAccPower(int enable);
-int ksceSysconCtrlDevKitUsbPower(int enable);
 int ksceSysrootIsSafeMode(void);
 int sceKernelIsUserModeThread(void);
 int sceKernelGetProcessId(void);

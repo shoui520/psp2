@@ -7,7 +7,7 @@
 #include <wlanbt/wlanbt.h>
 #include <psp2kern/kernel/pm_mgr.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <string.h>
@@ -17,13 +17,9 @@ int ksceIdStorageLookup(unsigned int leafId, unsigned int offset,
 			void *buffer, unsigned int size);
 int SceQafMgrForDriver_52B4E164(void);
 int wlanBtInitializeRobin(void);
-int SceSysconForDriver_C0F215B7(void);
-int ksceSysconCtrlWirelessPower2(uint32_t enabled);
-int ksceSysconCtrlDeviceReset(uint32_t devices, uint32_t resetMode);
 int SceClockgenForDriver_7B28A724(void);
 int sceKernelDelayThread(unsigned int delay);
 int ksceClockgenWlanBtClkDisable(void);
-int ksceSysconGetWakeupFactor(uint32_t *factor);
 int wlanBtResumeRobin(unsigned int *wakeSources);
 int wlanBtStartRobin(void);
 int wlanBtStopRobin(void);

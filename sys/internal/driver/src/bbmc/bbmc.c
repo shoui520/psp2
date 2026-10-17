@@ -42,11 +42,6 @@ extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	__asm__("ksceKernelInitializeFastMutex");
 int bbmcAcquireGpio(int *previous);
 int bbmcReleaseGpio(int *previous);
-extern int SceSysconForDriver_C9DB5BFF(SceSysconPacket *packet);
-extern int SceSysconForDriver_50CAE242(void);
-extern int SceSysconForDriver_03C50DC3(void);
-extern int SceSysconForDriver_D7F5A797(void);
-extern int ksceSysconCmdSync(SceSysconPacket *packet, int noWait);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int command);
 int bbmcTimerSetHandler(SceUInt32 delay, void (*callback)(void *arg), void *arg);
 int bbmcTimerCancelHandler(int timerId);
@@ -68,8 +63,6 @@ int bbmcCreateMailbox(struct BbmcMailbox **mailbox);
 unsigned int bbmcDeleteMailbox(struct BbmcMailbox *mailbox);
 int managerThread(SceSize argumentSize, void *arguments);
 extern int ScePowerForDriver_F535D928(SceUInt32 mask, int enabled);
-extern int SceSysconForDriver_4E88B4D9(void (*callback)(int, void *),
-	void *argument);
 BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
@@ -3719,7 +3712,6 @@ int bbmcLookupModeConfiguration(int mode,
 	*output = &bbmcModeConfigurations[mode];
 	return 0;
 }
-
 
 STUB(SceBbmcForDriver_009C73D2)
 STUB(SceBbmcForDriver_07ADDA90)

@@ -76,13 +76,4 @@ _Static_assert(offsetof(TouchProcessPriorities, processIds) == 4, "touch priorit
 
 int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities);
 
-/* names unknown: touch panel queries of the syscon */
-int SceSysconForDriver_030D447F(void *info);		/* both panels' device info (newer syscon) */
-int SceSysconForDriver_9B6B8BB9(SceUInt32 *version);	/* front panel firmware version */
-int SceSysconForDriver_C4A61241(SceUInt32 *version);	/* back panel firmware version */
-int SceSysconForDriver_142D5E82(void);
-int SceSysconForDriver_9DA2A5AB(void);
-int SceSysconForDriver_1546A141(int front, int back);
-
 int sceKernelDelayThread(SceUInt32 usec);
-int ksceSysconGetTouchpanelDeviceInfo(void *info);

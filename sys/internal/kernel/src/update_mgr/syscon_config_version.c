@@ -1,6 +1,5 @@
 #include "spkg_peripherals.h"
-
-int SceSysconForDriver_CE48E8EB(uint16_t information[4]);
+#include <syscon/syscon.h>
 
 int SysconUtilGetConfigVersion(uint32_t *version)
 {

@@ -4,6 +4,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <syscon/syscon.h>
 
 int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 		void (*callback)(uint32_t, uint32_t, void *), void *arg,
@@ -19,7 +20,6 @@ int ksceKernelSysrootCheckModelCapability(unsigned int capability);
 int SceSblACMgrForDriver_2E992B02(SceUID pid);
 
 /* name unknown: SceCtrl calls it with 0 at start-up */
-int SceSysconForDriver_901D6CD4(int arg);
 
 /* the BD remote control's state as the HDMI driver reports it */
 typedef struct SceHdmiBdRemoconState {

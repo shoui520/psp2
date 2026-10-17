@@ -9,12 +9,10 @@
 #include <hdmi/hdmi.h>
 #include <stdint.h>
 #include <lowio/pervasive.h>
+#include <syscon/syscon.h>
 
 /* SceLowio (pervasive) */
 int SceGrabForDriver_B22EE8BC(unsigned int mask, unsigned int enable);	/* SMC passthrough; power passes two words */
-
-/* SceSyscon */
-int SceSysconForDriver_9CA6EB70(uint32_t enabled);
 
 /* SceSysmem (sysroot) */
 int SceSysrootForDriver_7918D44E(void);

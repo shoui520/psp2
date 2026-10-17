@@ -1,6 +1,6 @@
 /* HCI event dispatch; original source filename unavailable. */
 #include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <string.h>
 #include "bt_internal.h"
 

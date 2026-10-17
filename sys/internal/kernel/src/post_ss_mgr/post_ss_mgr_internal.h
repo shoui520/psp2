@@ -16,18 +16,13 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <sysmem/debug.h>
 #include <string.h>
+#include <syscon/syscon.h>
 
 int ksceSblAimgrIsToolRev4(void);
 int ksceSblAimgrIsPrototypeRev2(void);
 int ksceSblAimgrIsToolRev3(void);
 int ksceSblAimgrIsToolRev5(void);
 int ksceSblAimgrIsPrototypeRev7(void);
-int ksceSysconSetMultiCnPort(SceUInt32 port);
-int ksceSysconCtrlAccPower(SceUInt32 value);
-int ksceSysconCtrlHostOutputViaDongle(SceUInt32 value);
-int ksceSysconJigOpenPort(void);
-int ksceSysconJigClosePort(void);
-int ksceSysconJigSetConfig(SceUInt32 first, SceUInt32 second);
 int sceKernelDelayThread(SceUInt32 usec);
 
 #define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002	/* name unknown */
@@ -51,14 +46,6 @@ int ksceSblNvsReadData(SceUInt32 offset, void *buf, SceSize size);
 int ksceSblNvsWriteData(SceUInt32 offset, const void *buf, SceSize size);
 int SceKernelSuspendForDriver_4DF40893(int unk);
 int SceKernelSuspendForDriver_2BB92967(int unk);
-int SceSysconForDriver_EBE3262C(void);
-int SceSysconForDriver_D2F456DC(void *information);
-int SceSysconForDriver_0D0B6D25(void);
-int SceSysconForDriver_4BC63A40(void);
-int SceSysconForDriver_29CF4335(void);
-int SceSysconForDriver_7BFBA09E(SceUInt32 mode, SceUInt32 offset, SceUInt32 size, const void *data);
-int SceSysconForDriver_933D813F(SceUInt32 mode, SceUInt32 offset, SceUInt32 size);
-int SceSysconForDriver_3C80B529(SceUInt32 offset, SceUInt32 size, void *data);
 void *ksceKernelSysrootGetKblParam(void);
 
 /* a deferred placeholder stays a call, as the routine it stands for is */

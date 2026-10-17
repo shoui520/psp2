@@ -2,7 +2,7 @@
 #include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/gcauthmgr/gc_auth.h>
 #include <psp2kern/lowio/pervasive.h>

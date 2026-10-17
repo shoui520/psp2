@@ -24,6 +24,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <stdio.h>
 #include <string.h>
+#include <syscon/syscon.h>
 
 typedef struct SceSdstorIntrHeader {
 	SceKernelSubIntrHandler insertHandler;
@@ -123,7 +124,6 @@ int sdpart_release_mc(unsigned int port);
 int sdpart_release_xmc(unsigned int port);
 int sddev_suspend(SceSdstorSddev *device);
 int ksceSdifGetCID(SdifMmcContext *part, void *cid);
-int SceSysconForDriver_F99BC858(uint32_t *value);
 int SceSysrootForDriver_F804F761(void);
 int sddev_remove(SceSdstorSddev *device);
 int sddev_power_off(SceSdstorSddev *device);

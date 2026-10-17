@@ -6,9 +6,6 @@
 int ksceSblAimgrIsGenuineDolce(void);
 int ksceMotionDevIsReady(void);
 int SceTouchForDriver_63DCF2FE(void);
-int ksceSysconNvsSetRunMode(int mode);
-int ksceSysconGetBatteryVersion(unsigned int *hardware,
-			       unsigned int *firmware, unsigned int *dataFlash);
 int SceDeci4pCpupForDriver_C0AB956B(unsigned int *protocol,
 				 unsigned int *board, unsigned int *version)
 	__attribute__((weak));

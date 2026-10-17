@@ -15,6 +15,7 @@
 #include <usbd/usb_regs.h>
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
+#include <syscon/syscon.h>
 
 /* controller commands (command register, with the endpoint in bits 4-7) */
 #define UDC2_COMMAND_SETUP_DONE		2
@@ -31,7 +32,6 @@
 
 extern int ksceKernelPowerTick(int type);
 extern int sceKernelCancelAlarm(SceUID alarm);
-extern unsigned int ksceSysconGetHardwareInfo(void);
 extern unsigned int ksceKernelGetSystemTimeLow(void);
 
 /* the interrupts of a bus: the controller, its DMA, and VBUS */

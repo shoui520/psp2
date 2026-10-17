@@ -1,8 +1,7 @@
 #include "update_internal.h"
 #include "snvs.h"
 #include <sm_comm/sm_comm.h>
-
-int ksceSysconNvsReadData(unsigned int offset, void *buffer, SceSize size);
+#include <syscon/syscon.h>
 
 int SpkgInfoUtilGetNVSFlagStatus(uint32_t *status, uint32_t *flags)
 {

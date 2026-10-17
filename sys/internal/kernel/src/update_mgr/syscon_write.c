@@ -1,20 +1,12 @@
 #include "spkg_peripherals.h"
 #include "syscon_update.h"
+#include <syscon/syscon.h>
 
 extern int updateSysconFirmwareUpdateStarted;
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconLargeChunks;
-int SceSysconForDriver_D2F456DC(uint32_t *version);
-int SceSysconForDriver_CBA836FF(const void *signature, unsigned int size);
-int ksceSysconUpdaterSetRunMode(int mode);
-int ksceSysconUpdaterCalcChecksum(const void *data, unsigned int size, int *checksum);
-int ksceSysconUpdaterSetSegment(unsigned int segment);
-int ksceSysconUpdaterExecProgramming(int checksum);
-int ksceSysconUpdaterExecFinalize(const void *digest, unsigned int size);
 int SysconUtilHandshake(void);
 int UpdateUtilUpdateNodeStatus(unsigned int nodeType, UpdateUtilNodeStatus *status);
-int SceSysconForDriver_356B9696(const void *data, unsigned int offset, unsigned int size);
-int SceSysconForDriver_734544E4(const void *data, unsigned int offset, unsigned int size);
 
 int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 		unsigned int nodeType, UpdateUtilNodeStatus *status)

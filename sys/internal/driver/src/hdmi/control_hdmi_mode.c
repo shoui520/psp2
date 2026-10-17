@@ -11,10 +11,9 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
 #include "hdmi_internal.h"
+#include <syscon/syscon.h>
 
 void *memcpy(void *dst, const void *src, SceSize len);
-int ksceSysconCtrlHdmiCecPower(int power);
-int ksceSysconGetHardwareInfo(void);
 int ksceSblAimgrIsTool(void);
 int SceQafMgrForDriver_382C71E8(void);
 int ksceKernelCheckDipsw(SceUInt32 bit);

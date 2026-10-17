@@ -19,7 +19,7 @@
 #include <lowio/iftu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/lowio/gpio.h>
 #include <compat/compat_regs.h>
 

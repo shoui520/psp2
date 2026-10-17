@@ -1,15 +1,8 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "spkg_peripherals.h"
 #include "bic_update.h"
+#include <syscon/syscon.h>
 
-int ksceSysconBatteryStartBLMode(void);
-int ksceSysconBatteryStopBLMode(void);
-int ksceSysconBatterySWReset(void);
-int ksceSysconBatteryReadBLCommand(uint32_t cmdNo, uint32_t address,
-		uint32_t offset, void *data, uint32_t size);
-int ksceSysconBatterySetBLCommand(uint32_t cmdNo, uint32_t cmdOff,
-		const void *data, uint32_t size);
-int ksceSysconBatteryExecBLCommand(uint32_t cmdNo);
 int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
 		const UpdateUtilNodeStatus *status);
 

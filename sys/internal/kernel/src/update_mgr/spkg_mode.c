@@ -1,8 +1,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "update_internal.h"
+#include <syscon/syscon.h>
 
-int ksceSysconNvsReadData(unsigned int offset, void *buffer, SceSize size);
-int ksceSysconNvsWriteData(unsigned int offset, const void *buffer, SceSize size);
 int SpkgUtilApplyMBR(void);
 
 int SpkgUtilGetUpdateMode(SceUpdateMode *mode)

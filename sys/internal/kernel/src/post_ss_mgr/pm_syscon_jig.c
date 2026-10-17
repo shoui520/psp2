@@ -7,7 +7,7 @@
 
 #include <psp2kern/kernel/acmgr.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "post_ss_mgr_internal.h"
 
@@ -46,10 +46,6 @@ typedef struct ScePmSmSysconModeCommand {
 	SceUInt8 response[0x30];
 } ScePmSmSysconModeCommand;
 
-int SceSysconForDriver_EBDF88B9(const void *request, SceSize requestSize, void *response,
-				SceSize responseSize);
-int SceSysconForDriver_63683B9B(const void *request, SceSize requestSize, void *response,
-				SceSize responseSize);
 int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
 
 static SceSblSmCommId g_pmSmId;	/* name unknown */

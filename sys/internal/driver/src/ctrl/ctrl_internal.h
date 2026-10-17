@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <psp2common/ctrl.h>
 #include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <ctrl/ctrl.h>

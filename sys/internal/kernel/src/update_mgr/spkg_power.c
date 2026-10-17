@@ -2,6 +2,7 @@
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/lowio/gpio.h>
 #include "update_internal.h"
+#include <syscon/syscon.h>
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
@@ -12,7 +13,6 @@ int SpkgUtilCpShutdown(int mode);
 int kscePowerRequestShutdown(int mode);
 int scePowerRequestColdReset(void);
 int scePowerRequestStandby(void);
-int ksceSysconCtrlLED(int led, int enable);
 int ksceSblAimgrIsTool(void);
 int ksceSblAimgrIsTest(void);
 int ksceKernelCheckDipsw(int index);

@@ -1,9 +1,7 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "snvs.h"
-
-int SceSysconForDriver_EBDF88B9(const void *input, unsigned int inputSize,
-		void *output, unsigned int outputSize);
+#include <syscon/syscon.h>
 
 int SpkgInfoUtilGetSNVSFlagStatus(uint32_t *status, uint32_t *flags,
 		int loadSm, int existingSmId)

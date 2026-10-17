@@ -9,7 +9,7 @@
 #include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <smsc_proxy/smsc_proxy.h>
 #include <string.h>

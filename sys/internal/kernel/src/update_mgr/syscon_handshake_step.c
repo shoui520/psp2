@@ -1,9 +1,7 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "syscon_handshake.h"
-
-int SceSysconForDriver_4D03754A(const void *input, unsigned int inputSize,
-		void *output, unsigned int outputSize);
+#include <syscon/syscon.h>
 
 int SysconUtilHandshakeStep(unsigned int phase, int smId,
 		const SysconHandshakeData *input, SysconHandshakeData *output)

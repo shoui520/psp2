@@ -1,7 +1,7 @@
 #include "update_internal.h"
+#include <syscon/syscon.h>
 
 extern unsigned int updateSysconFirmwareVersion;
-int SceSysconForDriver_DFB024C4(uint32_t *status);
 
 int BicUtilWaitCookieStatus(void)
 {

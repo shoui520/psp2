@@ -3,7 +3,7 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/suspend.h>
 #include <psp2kern/lowio/i2c.h>
-#include "codec_wm1803.h"
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <string.h>
 #include <codec/codec.h>

@@ -1,10 +1,9 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "snvs.h"
+#include <syscon/syscon.h>
 
 extern uint8_t updateSnvsFailureStage;
-int SceSysconForDriver_EBDF88B9(const void *input, unsigned int inputSize,
-		void *output, unsigned int outputSize);
 
 int SpkgInfoUtilReadSNVSSector(int sectorIndex, SpkgSnvsSector *sector,
 		int loadSm, int existingSmId)

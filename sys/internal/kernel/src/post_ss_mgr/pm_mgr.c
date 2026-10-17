@@ -6,7 +6,7 @@
 
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/kbl/kbl.h>
-#include <psp2kern/kernel/syscon.h>
+#include <syscon/syscon.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"

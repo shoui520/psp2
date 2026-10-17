@@ -1,10 +1,9 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "update_internal.h"
 #include "snvs.h"
+#include <syscon/syscon.h>
 
 extern uint32_t updateLastResult;
-int ksceSysconNvsReadData(unsigned int offset, void *buffer, SceSize size);
-int ksceSysconNvsWriteData(unsigned int offset, const void *buffer, SceSize size);
 
 int SpkgInfoUtilSetSNVSValue(int purpose, int valueType, int bank,
 		const void *buffer, SceSize size, int loadSm, int existingSmId)

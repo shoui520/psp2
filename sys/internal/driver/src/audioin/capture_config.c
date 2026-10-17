@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
+#include <syscon/syscon.h>
 
 extern int ksceSblAimgrIsGenuineDolce(void);
 extern int SceCodecForDriver_41CFFE48(int *gain, int *alternateGain);
@@ -17,7 +18,6 @@ extern int startAudioInAec(AudioInAecContext *context);
 extern int processAudioInAecBuffers(AudioInAecContext *context,
 		int16_t *first, int16_t *second, int gain, unsigned int flags);
 extern int SceCodecForDriver_C1DB7BAF(unsigned int input);
-extern int ksceSysconGetHardwareInfo2(void *info);
 extern void initializeAudioInResampler(void);
 extern int configureAudioInAec(AudioInAecContext *context, const void *control);
 extern void initializeAudioInLegacyQueue(void);

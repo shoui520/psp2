@@ -6,8 +6,6 @@
 #include <sysstatemgr/sysstatemgr.h>
 #include "update_internal.h"
 
-int SceSysconForDriver_D2F456DC(unsigned char *information);
-int SceSysconForDriver_EBE3262C(void);
 int SceQafMgrForDriver_3CB55F98(void);
 
 int module_start(SceSize arglen, const void *argp)

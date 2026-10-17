@@ -1,10 +1,9 @@
 #include <sm_comm/sm_comm.h>
 #include "update_internal.h"
 #include "snvs.h"
+#include <syscon/syscon.h>
 
 extern uint8_t updateSnvsFailureStage;
-int SceSysconForDriver_63683B9B(const void *input, unsigned int inputSize,
-		void *output, unsigned int outputSize);
 
 int SpkgInfoUtilWriteSNVSSector(int sectorIndex, const SpkgSnvsSector *sector,
 		int loadSm, int existingSmId)

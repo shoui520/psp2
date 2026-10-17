@@ -8,6 +8,7 @@
 
 #include <psp2kern/types.h>
 #include <psp2common/kernel/rtc.h>
+#include <syscon/syscon.h>
 
 /* SceRtcForDriver: clocks and alarms */
 int sceRtcSynchronize(void);
@@ -85,16 +86,6 @@ int ksceRtcFormatRFC3339LocalTime(char *buf, const SceRtcTick *tick);
  */
 
 /* syscon RTC counter, in units of 0.5 s since boot */
-int SceSysconForDriver_D7BEFF8B(SceUInt32 *count);
-/* syscon alarm: seconds * 2 until the alarm (-1: none), and a caller word kept with it */
-int SceSysconForDriver_51164951(int alarm, int arg);
-/* syscon alarm: the stored alarm and its word */
-int SceSysconForDriver_3168F3AF(SceUInt32 *alarm, SceUInt32 *arg);
-/* syscon: whether the alarm fired (1) */
-int SceSysconForDriver_86BAAF7D(void);
-int SceSysconForDriver_9B6A6F64(int unk);
-/* syscon: alarm event handler */
-int SceSysconForDriver_8351526D(void (*handler)(int arg), void *argp);
 /* threadmgr: a one-shot alarm calling handler(argp) after *delay microseconds */
 SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
 				      int (*handler)(void *argp), void *argp);
