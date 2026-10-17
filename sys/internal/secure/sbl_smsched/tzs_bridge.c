@@ -6,4 +6,4 @@
 #define ksceKernelDcacheCleanRange		sceKernelDcacheCleanRange
 #define ksceKernelDcacheInvalidateRange		sceKernelDcacheInvalidateRange
 
-#include "common/sbl/tzs_bridge.c"
+#include "../../driver/src/smsc_proxy/tzs_bridge.c"

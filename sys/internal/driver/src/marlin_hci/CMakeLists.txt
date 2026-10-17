@@ -32,20 +32,20 @@ psp2_module(os0_kd_marlin_hci KIND kernel SCE_LAYOUT SOURCES
     directory.c
     asn1.c
     integer_words.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_random.c
+    rsa_random.c
     rsa_crt.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_private.c
+    rsa_private.c
     rsa_exponent.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_public_operation.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_encrypt.c
+    rsa_public_operation.c
+    rsa_encrypt.c
     rsa_sign.c
     integer_encode.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_arithmetic.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_montgomery.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_multiply.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_remainder.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_square.c
-    ${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_tail.c
+    rsa_integer_arithmetic.c
+    rsa_montgomery.c
+    rsa_integer_multiply.c
+    rsa_integer_remainder.c
+    rsa_integer_square.c
+    rsa_integer_tail.c
 	marlin_hci.c
     kernel_wrappers.c
     exports.c

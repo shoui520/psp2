@@ -7,8 +7,8 @@ psp2_module(vs0_sys_external_libSceJson KIND user SOURCES
 	json_runtime.cpp
 	json_value.cpp
 	json_container.cpp
-	../../../../../common/runtime/unwind_pr0.c
-	../../../../../common/runtime/unwind_pr1.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
 
 if(TARGET vs0_sys_external_libSceJson)

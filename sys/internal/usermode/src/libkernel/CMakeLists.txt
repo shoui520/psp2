@@ -1,8 +1,8 @@
 # SceLibKernel: one implementation with firmware-selected interface tables.
-include(../../../../../common/runtime/gcc48/unwind.cmake)
+include(../../../../../toolchains/libgcc/unwind.cmake)
 set(libkernel_unwind_source "${CMAKE_CURRENT_BINARY_DIR}/gcc48-unwind.c")
 gcc48_prepare_unwind(
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/unwind-arm.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/unwind-arm.c"
 	"${libkernel_unwind_source}")
 include(heap.cmake)
 set(libkernel_heap_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
@@ -74,21 +74,21 @@ psp2_module(os0_us_libkernel KIND user SOURCES
 	../../../kernel/src/sysmem/bsd_strtoll.c
 	../../../kernel/src/sysmem/search.c
 	../../../kernel/src/sysmem/checked_strings.c
-	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/lib1funcs.S
-	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/libunwind.S
-	../../../../../common/runtime/gcc48/mul.c
-	../../../../../common/runtime/gcc48/f2lz.c
-	../../../../../common/runtime/gcc48/f2ulz.c
-	../../../../../common/runtime/gcc48/d2lz.c
-	../../../../../common/runtime/gcc48/d2ulz.c
-	../../../../../common/runtime/gcc48/udiv.S
-	../../../../../common/runtime/gcc48/idiv.S
-	../../../../../common/runtime/gcc48/div64.c
-	../../../../../common/runtime/gcc48/udiv64.c
-	../../../../../common/runtime/gcc48/unwind_pr.c
-	../../../../../common/runtime/gcc48/ldivmod.S
-	../../../../../common/runtime/gcc48/uldivmod.S
-	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/bpabi.c
+	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
+	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/libunwind.S
+	../../../../../toolchains/libgcc/mul.c
+	../../../../../toolchains/libgcc/f2lz.c
+	../../../../../toolchains/libgcc/f2ulz.c
+	../../../../../toolchains/libgcc/d2lz.c
+	../../../../../toolchains/libgcc/d2ulz.c
+	../../../../../toolchains/libgcc/udiv.S
+	../../../../../toolchains/libgcc/idiv.S
+	../../../../../toolchains/libgcc/div64.c
+	../../../../../toolchains/libgcc/udiv64.c
+	../../../../../toolchains/libgcc/unwind_pr.c
+	../../../../../toolchains/libgcc/ldivmod.S
+	../../../../../toolchains/libgcc/uldivmod.S
+	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/bpabi.c
 )
 
 # User backtraces and the local C++ ABI unwinder consume these generated tables.
@@ -105,21 +105,21 @@ target_link_options(os0_us_libkernel PRIVATE
 
 target_include_directories(os0_us_libkernel PRIVATE
 	"${CMAKE_CURRENT_SOURCE_DIR}"
-	../../../../../common/runtime/gcc48
-	../../../../../common/runtime/gcc48/target
-	../../../../../contrib/gcc-linaro-4.8-2014.04/gcc
-	../../../../../contrib/gcc-linaro-4.8-2014.04/gcc/ginclude
-	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc
-	../../../../../contrib/gcc-linaro-4.8-2014.04/include)
+	../../../../../toolchains/libgcc
+	../../../../../toolchains/libgcc/target
+	../../../../../contrib/gcc-4.8-2014.05/gcc
+	../../../../../contrib/gcc-4.8-2014.05/gcc/ginclude
+	../../../../../contrib/gcc-4.8-2014.05/libgcc
+	../../../../../contrib/gcc-4.8-2014.05/include)
 
-set_source_files_properties(../../../../../common/runtime/gcc48/mul.c
-	../../../../../common/runtime/gcc48/f2lz.c ../../../../../common/runtime/gcc48/f2ulz.c
-	../../../../../common/runtime/gcc48/d2lz.c ../../../../../common/runtime/gcc48/d2ulz.c
-	../../../../../common/runtime/gcc48/div64.c ../../../../../common/runtime/gcc48/udiv64.c
+set_source_files_properties(../../../../../toolchains/libgcc/mul.c
+	../../../../../toolchains/libgcc/f2lz.c ../../../../../toolchains/libgcc/f2ulz.c
+	../../../../../toolchains/libgcc/d2lz.c ../../../../../toolchains/libgcc/d2ulz.c
+	../../../../../toolchains/libgcc/div64.c ../../../../../toolchains/libgcc/udiv64.c
 	PROPERTIES COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc"
 	COMPILE_DEFINITIONS "IN_LIBGCC2")
 
-set_source_files_properties(../../../../../common/runtime/gcc48/unwind_pr.c PROPERTIES
+set_source_files_properties(../../../../../toolchains/libgcc/unwind_pr.c PROPERTIES
 	COMPILE_OPTIONS "-fno-inline;-fno-stack-protector"
 	COMPILE_DEFINITIONS
 	"_Unwind_GetRegionStart=SceLibGcc_DA5097CE;_Unwind_GetLanguageSpecificData=SceLibGcc_BAC00FF7;_Unwind_GetDataRelBase=SceLibGcc_AC15DBA5;_Unwind_GetTextRelBase=SceLibGcc_8D4953C7;_Unwind_VRS_Get=SceLibGcc_0DFF2B2C;_Unwind_VRS_Set=SceLibGcc_DAB28374;_Unwind_VRS_Pop=SceLibGcc_F16E32FC")
@@ -190,6 +190,6 @@ set_property(SOURCE ../../../kernel/src/sysmem/checked_strings.c PROPERTY
 
 # Pristine compiler ABI helpers; select only the native shifts and comparisons.
 set_source_files_properties(
-	../../../../../contrib/gcc-linaro-4.8-2014.04/libgcc/config/arm/lib1funcs.S PROPERTIES
+	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S PROPERTIES
 	COMPILE_DEFINITIONS
 	"L_lshrdi3;L_ashrdi3;L_ashldi3;L_aeabi_lcmp;L_aeabi_ulcmp;L_dvmd_tls")

@@ -31,11 +31,11 @@ psp2_module(vs0_sys_external_sqlite KIND user SOURCES
 	os_psp2.c
 	localtime.c
 	vfs_time.c
-	../../../../../common/runtime/i32ops.c
-	../../../../../common/runtime/i64ops.c
-	../../../../../common/runtime/aeabi_ldivmod.S
-	../../../../../common/runtime/unwind_pr0.c
-	../../../../../common/runtime/unwind_pr1.c
+	../../../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../../../sys/sdk/target/src/libsnc/i64ops.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_ldivmod.S
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
 add_custom_target(vs0_sys_external_sqlite_core
 	DEPENDS "${sqlite_generated}/sqlite3.c")

@@ -29,7 +29,9 @@ come from the paths in their debug records, asserts and SDK libraries.
   under the component that owns them (`<threadmgr/threadcb.h>`, `<sysmem/sysroot.h>`);
   `sys/sdk/target/include/` the SDK headers we write, under Sony's SDK names (`<libhmac.h>`,
   `<kernel/error.h>`); a header only one component uses sits in that component.
-* `cmake/`, `tools/`, `common/`, `contrib/` (pristine upstream code), `toolchains/`.
+* `sys/sdk/target/src/`: SDK libraries modules link (`libsnc`, SNC's runtime).
+* `cmake/`, `tools/`, `contrib/` (pristine upstream code), `toolchains/` (the compilers'
+  recipes and `toolchains/libgcc`, the GCC runtime routines LibKernel links).
 
 For example, `os0:kd/acmgr.skprx` is built from `sys/internal/kernel/src/acmgr/`:
 ```

@@ -8,11 +8,11 @@ psp2_module(vs0_sys_external_libSceSqlite KIND user SOURCES
 	sqlite3.c
 	../sqlite/localtime.c
 	../sqlite/vfs_time.c
-	../../../../../common/runtime/i32ops.c
-	../../../../../common/runtime/i64ops.c
-	../../../../../common/runtime/aeabi_ldivmod.S
-	../../../../../common/runtime/unwind_pr0.c
-	../../../../../common/runtime/unwind_pr1.c
+	../../../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../../../sys/sdk/target/src/libsnc/i64ops.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_ldivmod.S
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
 
 if(TARGET vs0_sys_external_libSceSqlite)

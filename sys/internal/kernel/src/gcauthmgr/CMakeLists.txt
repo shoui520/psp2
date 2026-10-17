@@ -1,16 +1,16 @@
 # generated skeleton (T2): stub bodies, original module/export/import tables
 psp2_module(os0_kd_gcauthmgr KIND kernel PARTIAL SOURCES
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_random.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_encrypt.c
+	../../../driver/src/marlin_hci/rsa_random.c
+	../../../driver/src/marlin_hci/rsa_encrypt.c
 	rsa_signature.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_private.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_public_operation.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_arithmetic.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_montgomery.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_multiply.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_remainder.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_square.c
-	${CMAKE_SOURCE_DIR}/common/crypto/rsa_integer_tail.c
+	../../../driver/src/marlin_hci/rsa_private.c
+	../../../driver/src/marlin_hci/rsa_public_operation.c
+	../../../driver/src/marlin_hci/rsa_integer_arithmetic.c
+	../../../driver/src/marlin_hci/rsa_montgomery.c
+	../../../driver/src/marlin_hci/rsa_integer_multiply.c
+	../../../driver/src/marlin_hci/rsa_integer_remainder.c
+	../../../driver/src/marlin_hci/rsa_integer_square.c
+	../../../driver/src/marlin_hci/rsa_integer_tail.c
 	gcauthmgr_startstop.c
 	drm_cipher.c
 	drm_crypto.c

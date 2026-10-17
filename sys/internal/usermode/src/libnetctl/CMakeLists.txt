@@ -10,6 +10,6 @@ psp2_module(vs0_sys_external_libnetctl KIND user PARTIAL SOURCES
 	upnp.c
 	upnp_http.c
 	upnp_xml.c
-	../../../../../common/runtime/unwind_pr0.c
-	../../../../../common/runtime/unwind_pr1.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
