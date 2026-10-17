@@ -9,3 +9,5 @@ typedef struct SysrootAcmgrOps {
 
 _Static_assert(sizeof(SysrootAcmgrOps) == 4,
 	       "Sysroot access-manager service table size");
+
+int SceSysrootForKernel_BE1EF51C(const SysrootAcmgrOps *ops);

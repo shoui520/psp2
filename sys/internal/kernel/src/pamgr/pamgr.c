@@ -6,6 +6,7 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/sysroot_pamgr.h>
 #include <syslibtrace/syslibtrace.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -1309,14 +1310,6 @@ int suspendTraceHardware(void)
 	return 0;
 }
 
-struct PamgrTimebaseProvider {
-	uint32_t size;
-	unsigned int (*getFrequency)(void);
-	uint64_t (*getValue)(void);
-	volatile uint32_t *(*getRegister)(unsigned int bank, unsigned int index);
-};
-
-void SceSysrootForDriver_C94C76FA(const struct PamgrTimebaseProvider *provider);
 int SceKernelSuspendForDriver_CE7A2207(unsigned int priority,
 				     int (*callback)(void), void *arg);
 int SceKernelSuspendForDriver_105C5752(unsigned int priority,

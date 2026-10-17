@@ -14,6 +14,7 @@
 #include <sysmem/sysclib.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysroot_acmgr.h>
 #include "acmgr_internal.h"
 
 /*
@@ -90,8 +91,8 @@ static const AcMgrProgramPaths programPaths[] = {
 	{ 0x220000101cd2000dULL, certPaths },
 };
 
-static const void *const sysrootOps[] = {
-	SceSblACMgrForKernel_30575458,
+static const SysrootAcmgrOps sysrootOps = {
+	.checkRemapCodeForUser = SceSblACMgrForKernel_30575458,
 };
 
 static const AcMgrDeviceRule deviceRules[] = {			/* ux0: sd0: pd0: host0: */
@@ -189,7 +190,7 @@ static int getAuthInfoAndCheckAttribute(SceUID pid, SceSblACMgrValue *attr, SceS
 int sceSblACMgrModuleStart(unsigned int arglen, void *argp)
 {
 	SCE_DBG_PRINTF_LEVEL(2, 0xb, 120, "()\n");
-	SceSysrootForKernel_BE1EF51C(sysrootOps);
+	SceSysrootForKernel_BE1EF51C(&sysrootOps);
 	return 0;
 }
 

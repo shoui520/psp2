@@ -4,7 +4,6 @@
 
 int ksceKernelSysrootGetThreadAccessLevel(void);
 int ksceSysrootGetSelfAuthInfo(SceUID pid, void *authInfo);
-int SceSysrootForKernel_BE1EF51C(const void *table);
 int SceSysrootForDriver_26AA237C(void);
 int SceSysrootForDriver_E2515A08(void);
 int SceSysrootForDriver_56D85EB0(SceUInt32 authIdLow, SceUInt32 authIdHigh);
