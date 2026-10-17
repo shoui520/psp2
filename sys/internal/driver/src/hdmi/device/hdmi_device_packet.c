@@ -6,7 +6,7 @@
  * Internal names are ours unless a comment says otherwise.
  */
 #include <psp2kern/types.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>
 #include "../hdmi_internal.h"

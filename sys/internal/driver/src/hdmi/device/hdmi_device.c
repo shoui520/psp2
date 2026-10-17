@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/gpio.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
 

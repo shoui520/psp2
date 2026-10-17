@@ -12,7 +12,7 @@
  * links) is not written yet.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <stdint.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <psp2kern/kernel/cpu.h>

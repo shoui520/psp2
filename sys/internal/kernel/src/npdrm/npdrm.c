@@ -2,7 +2,7 @@
  * SceNpDrm startup and remaining export placeholders.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/io/fcntl.h>

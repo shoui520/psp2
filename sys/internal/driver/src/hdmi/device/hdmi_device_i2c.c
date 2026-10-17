@@ -5,7 +5,7 @@
  */
 #include <psp2kern/types.h>
 #include <psp2kern/lowio/i2c.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
 

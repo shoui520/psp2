@@ -1,6 +1,6 @@
 /* SceCamera driver initialization and control. */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <sysmem/sysmem.h>
 #include "camera_config.h"
 #include <intrmgr/intrmgr.h>

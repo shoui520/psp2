@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceAudiocodec_1F9A3722)
 STUB(SceAudiocodec_2DDF5699)

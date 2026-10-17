@@ -4,7 +4,7 @@
  * Export bodies below remain placeholders during C conversion.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceSblGcAuthMgrDrmBBForDriver_050DC6DF)
 STUB(ksceSblGcAuthMgrDrmBBCheckCartHash)

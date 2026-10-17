@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceAvcdecForPlayer_291780A0)
 STUB(SceAvcdecForPlayer_32A8BBA9)

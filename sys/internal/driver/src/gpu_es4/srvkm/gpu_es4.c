@@ -5,7 +5,7 @@
  * are being recovered from the original; the remaining STUB bodies are T2.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include "sce_ddk_port.h"
 #include <intrmgr/syscall.h>
 #include <psp2kern/kernel/proc_event.h>

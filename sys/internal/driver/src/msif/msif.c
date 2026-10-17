@@ -2,7 +2,7 @@
  * Sony's msif.c: driver work area and controller callbacks.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <sysmem/sysroot_init.h>

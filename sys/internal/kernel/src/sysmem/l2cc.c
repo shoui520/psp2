@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/pl310_regs.h>
 #include <sysmem/barrier.h>

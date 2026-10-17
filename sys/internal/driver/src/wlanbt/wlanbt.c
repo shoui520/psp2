@@ -1,6 +1,6 @@
 /* Sony wlanbt.c: configuration and device power management. */
 #include "wlanbt_internal.h"
-#include "skeleton.h"
+#include <skeleton.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/idstorage.h>
 #include <sysmem/debug.h>

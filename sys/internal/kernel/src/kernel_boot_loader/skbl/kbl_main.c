@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "fw.h"
+#include <fw.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/cpu/corelock.h>

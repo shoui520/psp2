@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(sceNpPartyGetMemberInfo)
 STUB(SceNpPartyGameUtil_089134D1)

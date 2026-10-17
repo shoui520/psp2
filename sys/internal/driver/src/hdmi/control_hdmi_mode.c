@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/i2c.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
 #include "hdmi_internal.h"

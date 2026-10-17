@@ -8,7 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "fw.h"
+#include <fw.h>
 
 struct CmacContext {
 	SceAesCompactContext aes;

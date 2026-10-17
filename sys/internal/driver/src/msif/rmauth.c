@@ -1,5 +1,5 @@
 /* Sony's rmauth.c: removable-media secure-module requests. */
-#include "skeleton.h"
+#include <skeleton.h>
 #include "rmauth.h"
 #include <psp2kern/kernel/sysroot.h>
 #include <string.h>

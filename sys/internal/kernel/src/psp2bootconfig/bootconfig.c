@@ -7,7 +7,7 @@
  * debug channel (SDBG over SDIO, deci4p) right after the core group.
  */
 
-#include "fw.h"
+#include <fw.h>
 #include <kernel_boot_loader/kbl.h>
 
 #define ARRAY_SIZE(a)	(sizeof(a) / sizeof((a)[0]))

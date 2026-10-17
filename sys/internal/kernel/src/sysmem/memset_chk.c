@@ -1,7 +1,7 @@
 /* Debug diagnostics wrap the shared optimized fill engine. */
 #include <stddef.h>
 #include <stdint.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);

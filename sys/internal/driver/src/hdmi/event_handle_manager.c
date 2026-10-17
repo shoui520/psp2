@@ -5,7 +5,7 @@
  * ("%s Ch UnPluged", "%s Ch Pluged"); the EDID is dropped or read first.
  */
 #include <psp2kern/types.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"
 

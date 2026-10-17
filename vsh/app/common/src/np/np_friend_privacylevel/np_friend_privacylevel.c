@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceNpFriendPrivacyLevel_0DBE63D7)
 STUB(SceNpFriendPrivacyLevel_0FCF5624)

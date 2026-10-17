@@ -22,7 +22,7 @@
 #include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <display/display.h>
 #include <psp2kern/lowio/iftu.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <excpmgr/excpmgr_cpu.h>

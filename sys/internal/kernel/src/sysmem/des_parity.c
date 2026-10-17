@@ -1,7 +1,7 @@
 /* Shared DES key utilities; names are descriptive (original names unknown). */
 #include <sysmem/des.h>
 #include <arm_neon.h>
-#include "fw.h"
+#include <fw.h>
 
 #if FW_SINCE(0x04000000)
 /* The debug build uses NEON population counts rather than the byte table. */

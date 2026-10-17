@@ -17,7 +17,7 @@
 #include <net_ps/netdrv.h>
 #include "usb_ether_rtl.h"
 #include <sysmem/debug.h>
-#include "fw.h"
+#include <fw.h>
 
 /* Error names and private structure names are unknown. */
 #define RTL_ERROR(n) ((int)(0x80418000U | (n)))

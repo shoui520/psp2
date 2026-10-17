@@ -9,7 +9,7 @@
 #include "sha2.h"
 #include <sysmem/aes.h>
 #include <string.h>
-#include "fw.h"
+#include <fw.h>
 #include "sha1_internal.h"
 #include "sha2_internal.h"
 #include "hmac_internal.h"

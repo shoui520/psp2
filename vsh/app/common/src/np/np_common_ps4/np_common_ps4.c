@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceNpCommonPs4_0005DF9E)
 STUB(SceNpCommonPs4_00F74689)

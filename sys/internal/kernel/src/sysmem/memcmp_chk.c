@@ -1,7 +1,7 @@
 /* Debug memcmp diagnostics precede the shared compare engine. */
 #include <stddef.h>
 #include <stdint.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 
 extern int CompareMemoryCore(const void *left, const void *right, size_t size);

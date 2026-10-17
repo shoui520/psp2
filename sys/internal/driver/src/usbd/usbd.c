@@ -17,7 +17,7 @@
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
-#include "fw.h"
+#include <fw.h>
 #include "usbd_internal.h"
 
 int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);

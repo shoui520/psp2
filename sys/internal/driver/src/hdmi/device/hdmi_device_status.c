@@ -6,7 +6,7 @@
  */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include "fw.h"
+#include <fw.h>
 #include "../hdmi_internal.h"
 
 /* HdmiDevice.request */

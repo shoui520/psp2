@@ -4,7 +4,7 @@
 #include <kernel_boot_loader/kbl_param.h>
 #include <systimer/timer_regs.h>
 #include <psp2kern/kernel/cpu/corelock.h>
-#include "fw.h"
+#include <fw.h>
 #include <psp2kern/coredump.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

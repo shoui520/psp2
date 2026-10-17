@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceDtcpIp_0584D86E)
 STUB(SceDtcpIp_0AA185AC)

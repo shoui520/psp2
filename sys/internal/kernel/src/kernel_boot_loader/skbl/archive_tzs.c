@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include "fw.h"
+#include <fw.h>
 #include <psp2common/kernel/modulemgr.h>
 #include <psp2kern/kernel/cpu.h>
 #include <compat/compat_regs.h>

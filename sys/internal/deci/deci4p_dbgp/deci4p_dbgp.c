@@ -2,7 +2,7 @@
  * SceDeci4pDbgp exports still awaiting C conversion.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(ksceDbgpGetDTraceBreakpointHandler)
 STUB(ksceDbgpSetDTraceBreakpointHandler)

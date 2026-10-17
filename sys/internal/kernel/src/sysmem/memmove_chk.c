@@ -1,7 +1,7 @@
 /* Debug memmove diagnostics precede the shared move engine. */
 #include <stddef.h>
 #include <stdint.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 
 extern void *MoveMemoryCore(void *destination, const void *source, size_t size);

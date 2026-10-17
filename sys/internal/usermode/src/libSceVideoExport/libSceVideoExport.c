@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(sceVideoExportFromFile)
 STUB(SceVideoExportEmpr_8493BF31)

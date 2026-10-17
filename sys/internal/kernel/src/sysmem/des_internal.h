@@ -3,7 +3,7 @@
 #define SYSMEM_DES_INTERNAL_H
 
 #include <stdint.h>
-#include "fw.h"
+#include <fw.h>
 
 extern const uint16_t desKeySelection[24];
 extern const uint32_t desKeyRotationSequence;

@@ -3,7 +3,7 @@
  * The remaining exports are explicit skeleton placeholders.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <bbmc/bbmc.h>
 #include <sysmem/debug.h>
 #include <threadmgr/fast_mutex_object.h>

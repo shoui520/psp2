@@ -9,7 +9,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include "fw.h"
+#include <fw.h>
 #include "mmu.h"
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/memtype.h>

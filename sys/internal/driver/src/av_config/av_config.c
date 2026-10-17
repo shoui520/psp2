@@ -1,6 +1,6 @@
 /* SceAVConfig settings and notifications. */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include "av_config_internal.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/callback.h>

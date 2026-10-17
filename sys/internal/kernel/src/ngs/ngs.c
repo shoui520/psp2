@@ -4,7 +4,7 @@
  * Remaining exports are placeholders pending C implementation.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 
 STUB(sceNgsSystemGetCallbackListInternal)

@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(ScePromoterUtil_0D76CD38)
 STUB(scePromoterUtilityUpdateLiveArea)

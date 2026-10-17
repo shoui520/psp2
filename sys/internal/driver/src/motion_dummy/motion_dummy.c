@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/proc_event.h>
 #include <sysmem/sysevent.h>
 #include <motion_dummy/motion_dummy.h>
-#include "fw.h"
+#include <fw.h>
 #include "motion_dummy.h"
 
 /* 4.00 is built with _FORTIFY_SOURCE: memset into an object of known size is checked */

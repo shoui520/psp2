@@ -1,5 +1,5 @@
 /* Sony's msif_auth.c: medium identity and authentication helpers. */
-#include "skeleton.h"
+#include <skeleton.h>
 #include "msif_auth.h"
 #include "rmauth.h"
 #include <mgkeymgr/mgkeymgr.h>

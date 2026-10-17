@@ -1,7 +1,7 @@
 /* Debug memcpy diagnostics precede the shared optimized copy engine. */
 #include <stddef.h>
 #include <stdint.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 
 extern void *CopyMemoryForward(void *destination, const void *source, size_t size);

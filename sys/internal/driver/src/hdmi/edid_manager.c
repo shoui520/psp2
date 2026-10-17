@@ -3,7 +3,7 @@
  * parses what SceHdmi uses from it into SceHdmiEdidInfo.
  */
 #include <psp2kern/types.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"
 

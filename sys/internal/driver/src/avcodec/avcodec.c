@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include "audiodec/audiodec_internal.h"
 #include "audioenc/audioenc_internal.h"
 #include "jpeg/jpeg_internal.h"

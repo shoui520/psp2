@@ -1,7 +1,7 @@
 /* SceDisplay: the DTrace probe __interrupt_vblank (SGI 8, subinterrupt 1). */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include "fw.h"
+#include <fw.h>
 #include <sysmem/debug.h>
 #include "display_internal.h"
 #include "display_imports.h"

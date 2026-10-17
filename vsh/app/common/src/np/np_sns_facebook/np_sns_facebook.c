@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 
 STUB(SceNpSnsFacebook_06A167FC)
 STUB(SceNpSnsFacebook_0CDD6B52)

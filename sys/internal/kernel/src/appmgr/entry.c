@@ -4,7 +4,7 @@
  * Generated (T2). Every body is a placeholder.
  */
 
-#include "skeleton.h"
+#include <skeleton.h>
 #include <psp2kern/types.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
