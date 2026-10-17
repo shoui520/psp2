@@ -26,6 +26,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
+#include <acmgr/acmgr.h>
 
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
 int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
@@ -6859,8 +6860,6 @@ struct ThreadmgrUserTls {
 extern int ksceKernelGetModuleIsSharedByAddr(SceUID pid, const void *addr);
 extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t mode, const void *addr,
 						    SceSize size);
-extern int ksceSblACMgrIsRootProgram2(SceUID pid);
-extern int ksceSblACIsSystemProgram(SceUID pid);
 extern SceUID ksceKernelGetModuleIdByPid(SceUID pid);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 extern int ksceMt19937GlobalUninit(void *buffer, SceSize size);	/* PLACEHOLDER: fills it with random bytes */

@@ -5,16 +5,10 @@
 
 #include "exfatfs_internal.h"
 
-int SceSblACMgrForDriver_B12CEAA8(SceUID pid, SceSblACMgrValue *output,
-				SceSblACMgrValue *input);
 int SceSblACMgrForDriver_0606B87E(int accessLevel, int permission,
 				SceSblACMgrValue *value);
 int SceSblACMgrForDriver_48CFCEA2(SceUID pid, SceSblACMgrValue *output,
 				SceSblACMgrValue *input, SceUInt32 mountId);
-int SceSblACMgrForDriver_BE5667C5(SceUID pid, SceSblACMgrValue *value,
-				SceUInt32 access);
-int SceSblACMgrForDriver_FF7125DE(SceUID pid, const char *assignName,
-				SceInt32 *permission);
 
 int sceFatfsACSetFSAttributeByPermission(SceExfatfsDrive *drive,
 				      SceUInt32 permission,

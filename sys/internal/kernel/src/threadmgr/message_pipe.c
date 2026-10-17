@@ -20,6 +20,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
+#include <acmgr/acmgr.h>
 
 #define WAIT_TYPE_MSG_PIPE		0x00040000
 #define MSG_PIPE_WAIT_SEND		1	/* waitDirection: senders wait */
@@ -2219,7 +2220,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000c	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_ILLEGAL_HEAP	0x80020011	/* PLACEHOLDER: name */
 
-extern int ksceSblACMgrIsNonGameOrGameProgram2(SceUID pid);
 extern int ksceKernelGetModuleIsSharedByAddr(SceUID pid, const void *addr);
 extern void *__memcpy_chk(void *dst, const void *src, SceSize len, SceSize dstlen);
 
@@ -2495,7 +2495,6 @@ SceUID ksceKernelCreateMsgPipe(const char *name, int memType, SceUInt32 attr, Sc
 #define MSG_PIPE_EVENT_OPENED		0x00000100
 
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
-extern int SceSblACMgrForKernel_8241AB5C(SceUID pid, uint32_t value);
 
 /* a kernel caller closes the pipe, which sets MSG_PIPE_EVENT_DELETED */
 int ksceKernelDeleteMsgPipe(SceUID msgPipeId)

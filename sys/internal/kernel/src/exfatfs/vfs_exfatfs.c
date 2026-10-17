@@ -7,6 +7,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "exfatfs_internal.h"
 #include <threadmgr/threadmgr.h>
+#include <acmgr/acmgr.h>
 
 SceVfsInfo g_exfatfsInfo = {
 	.vfs_ops = NULL,
@@ -1501,7 +1502,6 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 	return result;
 }
 
-extern int SceSblACMgrForDriver_D7AD8471(SceUID pid, const char *assignName);
 extern int exfatfs_get_drive_information(SceExfatfsDrive *drive, void *information, int size);
 extern int exfatfs_get_file_size_limit(SceExfatfsDrive *drive, SceUInt64 *limit);
 extern int exfatfs_set_fake_free(SceExfatfsDrive *drive, SceUInt64 freeSize);

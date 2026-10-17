@@ -7,8 +7,8 @@
 #include <threadmgr/threadmgr.h>
 #include <stddef.h>
 #include <string.h>
+#include <acmgr/acmgr.h>
 
-extern int SceSblACMgrForDriver_0924896F(SceUID pid);
 extern int ksceRegMgrSystemParamGetStr(int id, char *buffer, SceSize size);
 extern SceUID g_appmgrAppMutex;
 

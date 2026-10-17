@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <acmgr/acmgr.h>
 
 typedef struct AppmgrPlayReadyFileHeader {
 	char magic[4];
@@ -37,8 +38,6 @@ _Static_assert(offsetof(AppmgrPlayReadyFileHeader, reserved) == 20,
 
 extern int appmgrDecodeString(const unsigned char *source, char *destination,
 			      SceSize size);
-extern int SceSblACMgrForDriver_AE1AF154(SceUID pid);
-extern int SceSblACMgrForDriver_A92CD636(SceUID pid);
 extern SceUID ksceKernelUserMap(const char *name, int permission,
 		const void *userBuffer, SceSize size, void **kernelPage,
 		SceSize *kernelSize, SceUInt32 *kernelOffset);

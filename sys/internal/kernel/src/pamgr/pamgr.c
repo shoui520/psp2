@@ -16,9 +16,9 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
+#include <acmgr/acmgr.h>
 
 int checkDebugPermission(void);
-int SceSblACMgrForKernel_49509A83(SceUID process);
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);

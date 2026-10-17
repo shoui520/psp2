@@ -320,11 +320,6 @@ typedef struct IofilemgrSyncParam {
 #define IOFILEMGR_IOCTL_ACCESS_CHECK	0x800
 
 /* imports vitasdk does not declare */
-int ksceSblACMgrIsGameProgram2(SceUID pid);
-int ksceSblACMgrIsNonGameProgram2(SceUID pid);
-int ksceSblACMgrIsRootProgram2(SceUID pid);
-int ksceSblACIsSystemProgram(SceUID pid);
-int ksceSblACMgrGetProcessProgramAuthId2(SceUID pid, SceUInt64 *paid);
 SceInt64 sceKernelExtendKernelStackWide(SceSize size, SceInt64 (*func)(void *), void *arg);
 int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize itemSize,
 					SceClassCallback create, SceClassCallback destroy);

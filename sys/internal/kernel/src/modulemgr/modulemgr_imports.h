@@ -22,6 +22,7 @@
 #include <sysmem/sysroot.h>
 #include <processmgr/processmgr.h>
 #include <psp2kern/kernel/processmgr.h>
+#include <acmgr/acmgr.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -83,9 +84,6 @@ SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry,
 				      SceSize stack, SceUInt32 attr, int cpu, void *opt);
 
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
-int ksceSblACMgrIsGameProgram2(SceUID pid);
-int ksceSblACMgrIsNonGameProgram2(SceUID pid);
-int ksceSblACMgrIsDevelopmentMode2(void);
 int ksceSblACMgrGetMediaType2(const char *path, void *type);
 int ksceSblAuthMgrCompareSwVersion(SceUInt32 version);
 int ksceSblAuthMgrOpen(int *ctx);

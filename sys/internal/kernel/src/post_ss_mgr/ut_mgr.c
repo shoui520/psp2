@@ -13,6 +13,7 @@
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
+#include <acmgr/acmgr.h>
 
 #define SCE_SBL_ERROR_UT_NOT_FOUND		0x800f1a02	/* names unknown */
 #define SCE_SBL_ERROR_UT_NO_MEMORY		0x800f1a0c
@@ -103,7 +104,6 @@ typedef struct SceUtSmCommand {
 } SceUtSmCommand;
 
 int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
-int ksceSblACMgrGetProcessProgramAuthId2(SceUID pid, SceUInt64 *authId);
 int SceSysrootForDriver_E25D2FD5(SceUInt8 (*func)(void));
 int SceSysrootForDriver_A12C9950(int (*func)(SceUInt64 authId));
 int SceSysrootForDriver_E2E88E3E(SceUInt8 (*func)(void));

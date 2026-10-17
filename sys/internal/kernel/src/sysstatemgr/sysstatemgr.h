@@ -20,6 +20,7 @@
 #include <sysmem/uid_class.h>
 #include <processmgr/processmgr.h>
 #include <psp2kern/kernel/processmgr.h>
+#include <acmgr/acmgr.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))
 #define CONF_NOT_FOUND ((int)0xffff0001U)
@@ -30,7 +31,6 @@ int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, v
 int ksceKernelInvokeInitCallback(int stage);
 SceUID SceSysmemForKernel_0164D817(void);
 int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);
-int ksceSblACMgrIsDevelopmentMode2(void);
 int sceKernelSysrootSetStatus(int flags);
 int SceSysrootForDriver_7C2C10E2(int kind, int value);
 int SceSysrootForKernel_ksceSysrootIsExternalBootMode(void);

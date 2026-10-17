@@ -1,8 +1,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include "update_internal.h"
-
-int ksceSblACIsSystemProgram(SceUID pid);
+#include <acmgr/acmgr.h>
 
 int sceSblUsVerifyPupSegmentForUser(const char *path, uint64_t segment_index)
 {

@@ -17,6 +17,7 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
+#include <acmgr/acmgr.h>
 
 int appmgrExtractSaveDataDeviceName(const char *path, char *device,
 				    SceSize capacity);
@@ -47,7 +48,6 @@ extern void *__memcpy_chk(void *destination, const void *source,
 			  size_t length, size_t destinationSize);
 #endif
 
-extern int SceSblACMgrForDriver_0924896F(SceUID pid);
 extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataFile *file,
 				     const char *path);
 extern int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB);

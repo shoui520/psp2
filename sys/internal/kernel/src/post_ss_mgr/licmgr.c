@@ -17,6 +17,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
+#include <acmgr/acmgr.h>
 
 #define SCE_SBL_ERROR_LIC_KBL			0x800f1028	/* names unknown */
 #define SCE_SBL_ERROR_LIC_NOT_FOUND		0x800f1302
@@ -92,7 +93,6 @@ typedef struct SceActivationKey {
 } SceActivationKey;
 
 int ksceSblQafManagerGetQAFlags(void *flags);
-int ksceSblACMgrIsDevelopmentMode2(void);
 int ksceSblACMgrGetMediaType2(const char *path, SceUInt32 *mediaType);
 int SceRtcForDriver_A0D7899A(SceRtcTick *tick);
 int SceSysrootForKernel_ksceSysrootRegisterLicMgrGetLicenseStatus(int (*func)(void));

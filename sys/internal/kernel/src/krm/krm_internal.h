@@ -14,6 +14,7 @@
 #include <psp2kern/kernel/proc_event.h>
 #include <psp2kern/kernel/rtc.h>
 #include <sysmem/sysmem.h>
+#include <acmgr/acmgr.h>
 
 /* Name unknown: driver-owned CBC chaining state after the compact schedule. */
 typedef struct KrmAesCbcContext {
@@ -309,7 +310,6 @@ int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 				const char *name, int attr, void *opt);
-int SceSblACMgrForDriver_AE1AF154(SceUID pid);
 
 int KrmDriverLock(void);
 int KrmDriverUnlock(void);

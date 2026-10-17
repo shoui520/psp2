@@ -21,6 +21,7 @@
 #include <psp2kern/kernel/sysroot.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/suspend.h>
+#include <acmgr/acmgr.h>
 
 #define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002	/* name unknown */
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
@@ -38,7 +39,6 @@
 #define SCE_KERNEL_ERROR_NOT_ALLOWED		0x80010058	/* name unknown */
 
 void *ksceSblSsMemset(void *dst, int c, SceSize len);
-int ksceSblACIsSystemProgram(SceUID pid);
 int ksceSblNvsReadData(SceUInt32 offset, void *buf, SceSize size);
 int ksceSblNvsWriteData(SceUInt32 offset, const void *buf, SceSize size);
 

@@ -69,10 +69,6 @@ int appmgrCloneTemporaryMounts(SceUID pid, const char *titleId,
 			       ScePfsRndDriveId *outDriveId);
 
 extern int sceSblSsDecryptSealedKey(const void *sealedKey, void *key);
-extern int SceSblACMgrForDriver_E79C7A8D(SceUID pid, const char *path);
-extern int SceSblACMgrForDriver_456DA7AC(SceUID pid);
-extern int SceSblACMgrForDriver_F5AE24AC(SceUID pid);
-extern int ksceSblACMgrIsAllowedExtendedMemory(SceUID pid);
 extern int kscePfsAcidDirSet(const char *name, const char *directory);
 extern int appmgrGetMountPointById(int mountId, char *mountPoint);
 

@@ -6,6 +6,7 @@
 #include <psp2kern/types.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/sblacmgr.h>
 
 int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 		void (*callback)(uint32_t, uint32_t, void *), void *arg,
@@ -15,7 +16,6 @@ int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 int ksceCtrlNotifyCallBacks(int notification);
 
 /* name unknown: nonzero for a further privileged program class (ctrl's "privileged" test) */
-int SceSblACMgrForDriver_2E992B02(SceUID pid);
 
 /* name unknown: SceCtrl calls it with 0 at start-up */
 

@@ -2,8 +2,7 @@
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
-
-int ksceSblACIsSystemProgram(SceUID pid);
+#include <acmgr/acmgr.h>
 
 int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *args,
 			 uint32_t *requestId)

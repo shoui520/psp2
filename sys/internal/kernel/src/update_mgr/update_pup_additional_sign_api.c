@@ -1,8 +1,7 @@
 #include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include "update_internal.h"
-
-int ksceSblACIsSystemProgram(SceUID pid);
+#include <acmgr/acmgr.h>
 
 int sceSblUsVerifyPupAdditionalSignForUser(const char *path)
 {

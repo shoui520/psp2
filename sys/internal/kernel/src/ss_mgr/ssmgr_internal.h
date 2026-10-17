@@ -9,6 +9,7 @@
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/acmgr.h>
 
 typedef union SsMgrQaFlags {
 	uint32_t words[4];
@@ -57,7 +58,6 @@ int qafLoadToken(uint8_t *token);
 #define SSMGR_ERROR_NO_QAF		0x800F0726
 #define SSMGR_ERROR_NVS			0x800F0705
 
-int ksceSblACIsSystemProgram(int pid);
 int nvs_read_data(uint32_t offset, void *buffer, uint32_t size);
 int ksceSblQafManagerGetQAFlags(void *flags);
 int qafValidateToken(void *token, int service);

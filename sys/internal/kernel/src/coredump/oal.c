@@ -54,6 +54,7 @@
 #include <sysmem/debugled.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/acmgr.h>
 
 extern void *memMgrLocalAlloc(SceSize size);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
@@ -135,7 +136,6 @@ extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
 extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
-extern int SceSblACMgrForDriver_4CBD6156(SceUID pid);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblACMgrIsRootProgram(SceUID pid);
 extern int ksceSblQafManagerGetQAFlags(void *flags);

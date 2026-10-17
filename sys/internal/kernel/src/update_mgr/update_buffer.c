@@ -2,8 +2,7 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <string.h>
 #include "update_objects.h"
-
-int ksceSblACMgrIsRootProgram2(SceUID pid);
+#include <acmgr/acmgr.h>
 
 static const char *const updateUserBufferNames[] = {
 	"SceSblUsUser0", "SceSblUsUser1", "SceSblUsUser2", "SceSblUsUser3"

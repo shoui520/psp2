@@ -11,6 +11,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/acmgr.h>
 
 /* SceAppMgrForDriver, debugger interface */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
@@ -24,8 +25,6 @@ int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app cont
 /* SceProcessmgrForDriver */
 
 /* SceSblACMgrForDriver */
-int SceSblACMgrForDriver_4CBD6156(SceUID pid);		/* the process may be debugged */
-int SceSblACMgrForDriver_AD717E7A(int unk);		/* the caller may use test app launch */
 
 /* named imports vitasdk declares only under other names */
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);

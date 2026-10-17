@@ -12,6 +12,7 @@
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
+#include <acmgr/acmgr.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {
@@ -252,7 +253,6 @@ int PsmDrmGetRifNameForInstallForDriver(char *name,
 int kscePsmDrmGetRifKey(const ScePsmDrmLicense *license,
 	ScePsmDrmKeySet *keydata, int *flags, SceRtcTick *startTime,
 	SceRtcTick *expirationTime);
-int ksceSblACMgrIsPSMRuntime(int pid);
 int NpDrmPackageCheckForUser(const void *buffer, unsigned int size,
 	const unsigned char *digest, unsigned int identifier);
 
