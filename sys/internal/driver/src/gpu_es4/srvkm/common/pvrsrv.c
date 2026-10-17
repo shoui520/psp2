@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/power.h>
-#include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
+#include "sgx543_v1.164defs.h"
 #include <string.h>
 #include <stdarg.h>
 #include <stddef.h>

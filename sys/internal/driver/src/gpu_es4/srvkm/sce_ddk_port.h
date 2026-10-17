@@ -39,7 +39,7 @@ typedef struct _IMG_DEV_PHYADDR {
 
 #define IMG_CALLCONV
 
-#include "../../../../../../contrib/img-sgx-ddk-1.7.862890/include4/servicesext.h"
+#include "servicesext.h"
 
 typedef struct PVRSRV_BRIDGE_RETURN_TAG {
 	PVRSRV_ERROR eError;

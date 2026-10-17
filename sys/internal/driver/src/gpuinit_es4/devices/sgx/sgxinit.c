@@ -13,8 +13,8 @@
 #include <sysmem/sysmem.h>
 #include "../../gpuinit_es4.h"
 #include <pamgr/perfmon_regs.h>
-#include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
-#include "../../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgxmpdefs.h"
+#include "sgx543_v1.164defs.h"
+#include "sgxmpdefs.h"
 #include "../../programs.h"
 
 /* services.h */

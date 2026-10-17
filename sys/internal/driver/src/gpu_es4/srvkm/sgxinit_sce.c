@@ -3,7 +3,7 @@
  */
 #include "sgxinit_sce.h"
 #include "memory_sce.h"
-#include "../../../../../../contrib/img-sgx-ddk-1.7.862890/services4/srvkm/hwdefs/sgx543_v1.164defs.h"
+#include "sgx543_v1.164defs.h"
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/debug.h>
