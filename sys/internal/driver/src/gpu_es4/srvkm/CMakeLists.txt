@@ -33,10 +33,9 @@ psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel SKELETON PARTIAL SOURCES
 	../../gpu/memory/memorycontext.c
 	register-map.c
 	lockup-history.c
-	gpu-heap.c
+	../../gpu/memory/heap.c
 	../../gpu/memory/mmu.c
-	gpu-blockheap.c
-	gpu-spans.c
+	../../gpu/memory/blockmgr.c
 	cache_sce.c
 	../../gpu/misc/waitmodobj.c
 	device_sce.c
@@ -47,7 +46,6 @@ psp2_module(os0_kd_bootimage_gpu_es4 KIND kernel SKELETON PARTIAL SOURCES
 	client_render.c
 	client_ccb.c
 	sysconfig_sce.c
-	gpu-blocks.c
 	handle-base.c
 )
 
