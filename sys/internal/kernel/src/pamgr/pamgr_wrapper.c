@@ -24,24 +24,17 @@ int setTraceBitControls(const uint32_t *controls);
 int configureTraceSamples(const volatile struct PamgrSampleConfig *config);
 void configureTraceControl(uint32_t config, uint32_t half);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
-int SceSysmemForDriver_A7C0D1FC(const void *address);
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
-uint32_t ksceKernelCpuGetCONTEXTIDR(void);
-
-int __attribute__((noinline)) configureArmTraceForUser(
-		const struct PamgrArmTraceConfig *config)
-{
-	struct PamgrArmTraceConfig local;
-
-	if (config == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	local = *config;
-	if (local.modeAndContext - 1 <= 1)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (local.modeAndContext - 5 <= 1)
-		local.modeAndContext |= ksceKernelCpuGetCONTEXTIDR() << 24;
-	return configureArmTrace(&local);
-}
+int configureArmTraceForUser(const struct PamgrArmTraceConfig *config);
+int configurePrimaryTraceForUser(const struct PamgrPrimaryTraceConfig *config);
+int configureGpuTraceForUser(const struct PamgrGpuTraceConfig *config);
+int clearGpuTraceForUser(void);
+int startPrimaryTrace(void);
+int startSecondaryTrace(void);
+int stopPrimaryTrace(void);
+int stopSecondaryTrace(void);
+int startPrimaryTraceForUser(void);
+int stopPrimaryTraceForUser(void);
 
 int ScePamgrForDriver_5D3D46E4(uint32_t registration,
 			    const struct PamgrArmTraceConfig *config)
@@ -139,24 +132,8 @@ int sceKernelPaInitPamgrWrapper(void)
 }
 int configureCounterTrace(const volatile struct PamgrCounterTraceConfig *config);
 int clearCounterTrace(void);
-int startTrace(unsigned int channel);
-int stopTrace(unsigned int channel);
 int configureGpuTrace(const volatile struct PamgrGpuTraceConfig *config);
 int clearGpuTrace(void);
-
-/* Distinct user entries add the user-pointer NULL gate. */
-int __attribute__((noinline)) configureGpuTraceForUser(
-				const struct PamgrGpuTraceConfig *config)
-{
-	if (config == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return configureGpuTrace(config);
-}
-
-int __attribute__((noinline)) clearGpuTraceForUser(void)
-{
-	return clearGpuTrace();
-}
 
 int ScePamgrForDriver_49A43754(uint32_t registration,
 			     const struct PamgrGpuTraceConfig *config)
@@ -188,37 +165,6 @@ int sceKernelPaRemoveGpuTraceByKey(uint32_t registration)
 	return clearGpuTraceForUser();
 }
 
-/* Distinct driver/user ABI entries select the trace channel. */
-int __attribute__((noinline)) startPrimaryTrace(void)
-{
-	return startTrace(0);
-}
-
-int __attribute__((noinline)) startSecondaryTrace(void)
-{
-	return startTrace(1);
-}
-
-int __attribute__((noinline)) stopPrimaryTrace(void)
-{
-	return stopTrace(0);
-}
-
-int __attribute__((noinline)) stopSecondaryTrace(void)
-{
-	return stopTrace(1);
-}
-
-int __attribute__((noinline)) startPrimaryTraceForUser(void)
-{
-	return startTrace(0);
-}
-
-int __attribute__((noinline)) stopPrimaryTraceForUser(void)
-{
-	return stopTrace(0);
-}
-
 int ScePamgrForDriver_17C81A92(uint32_t registration,
 			     const struct PamgrCounterTraceConfig *config)
 {
@@ -232,30 +178,6 @@ int ScePamgrForDriver_0B7F6F53(uint32_t registration)
 	if (registration == 0 || registration != pamgrState.registrationId)
 		return SCE_KERNEL_ERROR_PA_INVALID_KEY;
 	return clearCounterTrace();
-}
-
-/* User virtual buffer adapter, translation precedes validation. */
-int __attribute__((noinline)) configurePrimaryTraceForUser(
-				const struct PamgrPrimaryTraceConfig *config)
-{
-	struct PamgrPrimaryTraceConfig physicalConfig;
-	uintptr_t physical;
-	uint32_t virtual;
-	int result;
-
-	if (config == NULL)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	physicalConfig = *config;
-	virtual = physicalConfig.base;
-	result = ksceKernelVAtoPA((const void *)virtual, &physical);
-	if (result < 0)
-		return result;
-	if (SceSysmemForDriver_A7C0D1FC((const void *)virtual) < 0)
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	pamgrState.traceBufferVirtual = virtual;
-	pamgrState.traceBufferPhysical = physical;
-	physicalConfig.base = physical;
-	return configurePrimaryTrace(&physicalConfig);
 }
 
 int ScePamgrForDriver_F2D5105A(uint32_t registration,
@@ -737,20 +659,3 @@ int _sceKernelPaAddGpuTraceByKey(uint32_t registration,
 	return configureRegisteredGpuTraceForUser(registration, config);
 }
 
-int ksceKernelCheckDipsw(unsigned int number);
-int initializeTraceHardware(void);
-
-int module_start(void)
-{
-	if (ksceKernelCheckDipsw(0xd4) == 0)
-		return 1;
-	if (initializeTraceHardware() < 0)
-		return 2;
-	if (sceKernelPaInitPamgrWrapper() < 0)
-		return 2;
-	pamgrState.syscallLeaveObserver = NULL;
-	pamgrState.syscallEnterObserver = NULL;
-	pamgrState.syscallEnterCallback = NULL;
-	pamgrState.syscallLeaveCallback = NULL;
-	return 0;
-}

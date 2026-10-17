@@ -16,6 +16,13 @@ int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
 int SceSblACMgrForKernel_49509A83(SceUID process);
 int sceKernelSetSyscallTraceFlag(SceUID process, SceUInt32 flag);
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
+int SceSysmemForDriver_A7C0D1FC(const void *address);
+int ksceKernelCheckDipsw(unsigned int number);
+int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
+int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
+int startTrace(unsigned int channel);
+int stopTrace(unsigned int channel);
+int sceKernelPaInitPamgrWrapper(void);
 
 struct PamgrState pamgrState;
 
@@ -155,6 +162,30 @@ int __attribute__((noinline)) clearCounterTrace(void)
 
 int ksceKernelSetPermission(int level);
 
+/* User virtual buffer adapter, translation precedes validation. */
+int configurePrimaryTraceForUser(
+				const struct PamgrPrimaryTraceConfig *config)
+{
+	struct PamgrPrimaryTraceConfig physicalConfig;
+	uintptr_t physical;
+	uint32_t virtual;
+	int result;
+
+	if (config == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	physicalConfig = *config;
+	virtual = physicalConfig.base;
+	result = ksceKernelVAtoPA((const void *)virtual, &physical);
+	if (result < 0)
+		return result;
+	if (SceSysmemForDriver_A7C0D1FC((const void *)virtual) < 0)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	pamgrState.traceBufferVirtual = virtual;
+	pamgrState.traceBufferPhysical = physical;
+	physicalConfig.base = physical;
+	return configurePrimaryTrace(&physicalConfig);
+}
+
 int sceKernelPaAddCounterTraceForUser(const struct PamgrCounterTraceConfig *config)
 {
 	int permission, result;
@@ -216,6 +247,21 @@ int ScePamgrForDriver_606C98CD(struct PamgrPrimaryTraceConfig *config)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	*config = pamgrState.primaryTraceConfig;
 	return 0;
+}
+
+int configureArmTraceForUser(
+		const struct PamgrArmTraceConfig *config)
+{
+	struct PamgrArmTraceConfig local;
+
+	if (config == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	local = *config;
+	if (local.modeAndContext - 1 <= 1)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	if (local.modeAndContext - 5 <= 1)
+		local.modeAndContext |= ksceKernelCpuGetCONTEXTIDR() << 24;
+	return configureArmTrace(&local);
 }
 
 /* User entries retain Sony's inlined filter operations. */
@@ -635,6 +681,20 @@ int ScePamgrForDriver_7F3814A4(uint32_t *values)
 	return 0;
 }
 
+/* Distinct user entries add the user-pointer NULL gate. */
+int configureGpuTraceForUser(
+				const struct PamgrGpuTraceConfig *config)
+{
+	if (config == NULL)
+		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
+	return configureGpuTrace(config);
+}
+
+int clearGpuTraceForUser(void)
+{
+	return clearGpuTrace();
+}
+
 /* User readback adds a NULL gate around the inlined reads. */
 int getGpuSampledDataForUser(uint32_t *values)
 {
@@ -660,12 +720,6 @@ unsigned int sceKernelPaGetWritePointer(void)
 int sceKernelPaInsertBookmark(unsigned int bank, unsigned int index, uint32_t value)
 {
 	return ScePamgrForDriver_16A24732(bank, index, value);
-}
-
-/* User bookmark-channel mask forwards to the common setter. */
-int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection)
-{
-	return setTraceRecordMask(mask, selection);
 }
 
 uint32_t ScePamgrForDriver_019BD60F(unsigned int buffer)
@@ -785,6 +839,27 @@ int setTraceWritePointer(uint32_t pointer)
 	return 0;
 }
 
+/* Distinct driver/user ABI entries select the trace channel. */
+int startPrimaryTrace(void)
+{
+	return startTrace(0);
+}
+
+int startSecondaryTrace(void)
+{
+	return startTrace(1);
+}
+
+int stopPrimaryTrace(void)
+{
+	return stopTrace(0);
+}
+
+int stopSecondaryTrace(void)
+{
+	return stopTrace(1);
+}
+
 unsigned int ScePamgrForDriver_3ACF4316(void)
 {
 	return pamgrState.pfmRegisters->traceStatus;
@@ -849,10 +924,26 @@ int registerTraceInterruptCallback(PamgrTraceInterruptCallback callback, void *a
 	return result;
 }
 
+int startPrimaryTraceForUser(void)
+{
+	return startTrace(0);
+}
+
+int stopPrimaryTraceForUser(void)
+{
+	return stopTrace(0);
+}
+
 unsigned int sceKernelPaGetTraceBufferStatus(void)
 {
 	sceKernelApiDeclareTypeUInt32();
 	return pamgrState.pfmRegisters->traceStatus;
+}
+
+/* User bookmark-channel mask forwards to the common setter. */
+int setTraceRecordMaskForUser(unsigned int mask, uint32_t selection)
+{
+	return setTraceRecordMask(mask, selection);
 }
 
 uint64_t sceKernelPaGetTimebaseValue(void)
@@ -1402,5 +1493,20 @@ int initializeTraceHardware(void)
 	SceSysrootForDriver_C94C76FA(&provider);
 	SceKernelSuspendForDriver_CE7A2207(0xb, suspendTraceHardware, NULL);
 	SceKernelSuspendForDriver_105C5752(0xb, resumeTraceHardware, NULL);
+	return 0;
+}
+
+int module_start(void)
+{
+	if (ksceKernelCheckDipsw(0xd4) == 0)
+		return 1;
+	if (initializeTraceHardware() < 0)
+		return 2;
+	if (sceKernelPaInitPamgrWrapper() < 0)
+		return 2;
+	pamgrState.syscallLeaveObserver = NULL;
+	pamgrState.syscallEnterObserver = NULL;
+	pamgrState.syscallEnterCallback = NULL;
+	pamgrState.syscallLeaveCallback = NULL;
 	return 0;
 }
