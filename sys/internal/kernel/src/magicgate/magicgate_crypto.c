@@ -2,7 +2,7 @@
 #include "magicgate_private.h"
 #include <sysmem/aes.h>
 #include <sysmem/des.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 /* The block's byte fields are numbered from the network-order least byte. */
 typedef union MagicGateDesBlock {
@@ -339,37 +339,37 @@ int encryptRecordEcb(const MagicGateKey *key, const void *input, void *output,
 	const uint8_t *end;
 	unsigned int remainder;
 
-	ksceAesInit1(&context, 128, 128, key);
+	SceKernelUtilsForDriver_F12B6451(&context, 128, 128, key);
 	if (size > 15) {
 		next = source + 16;
 		remainder = ((size - 16) >> 4) & 3;
 		end = next + ((size - 16) & ~15U);
 		if (remainder) {
-			ksceAesEncrypt1(&context, source, destination);
+			SceKernelUtilsForDriver_C2A61770(&context, source, destination);
 			destination += 16;
 			source += 16;
 			next += 16;
 			if (remainder != 1) {
 				if (remainder != 2) {
-					ksceAesEncrypt1(&context, source, destination);
+					SceKernelUtilsForDriver_C2A61770(&context, source, destination);
 					source = next;
 					destination += 16;
 					next += 16;
 				}
-				ksceAesEncrypt1(&context, source, destination);
+				SceKernelUtilsForDriver_C2A61770(&context, source, destination);
 				source = next;
 				destination += 16;
 				next += 16;
 			}
 		}
 		for (;;) {
-			ksceAesEncrypt1(&context, source, destination);
+			SceKernelUtilsForDriver_C2A61770(&context, source, destination);
 			if (next == end)
 				break;
-			ksceAesEncrypt1(&context, next, destination + 16);
+			SceKernelUtilsForDriver_C2A61770(&context, next, destination + 16);
 			source = next + 48;
-			ksceAesEncrypt1(&context, next + 16, destination + 32);
-			ksceAesEncrypt1(&context, next + 32, destination + 48);
+			SceKernelUtilsForDriver_C2A61770(&context, next + 16, destination + 32);
+			SceKernelUtilsForDriver_C2A61770(&context, next + 32, destination + 48);
 			next += 64;
 			destination += 64;
 		}
@@ -387,37 +387,37 @@ int decryptRecordEcb(const MagicGateKey *key, const void *input, void *output,
 	const uint8_t *end;
 	unsigned int remainder;
 
-	ksceAesInit1(&context, 128, 128, key);
+	SceKernelUtilsForDriver_F12B6451(&context, 128, 128, key);
 	if (size > 15) {
 		next = source + 16;
 		remainder = ((size - 16) >> 4) & 3;
 		end = next + ((size - 16) & ~15U);
 		if (remainder) {
-			ksceAesDecrypt1(&context, source, destination);
+			SceKernelUtilsForDriver_D8678061(&context, source, destination);
 			destination += 16;
 			source += 16;
 			next += 16;
 			if (remainder != 1) {
 				if (remainder != 2) {
-					ksceAesDecrypt1(&context, source, destination);
+					SceKernelUtilsForDriver_D8678061(&context, source, destination);
 					source = next;
 					destination += 16;
 					next += 16;
 				}
-				ksceAesDecrypt1(&context, source, destination);
+				SceKernelUtilsForDriver_D8678061(&context, source, destination);
 				source = next;
 				destination += 16;
 				next += 16;
 			}
 		}
 		for (;;) {
-			ksceAesDecrypt1(&context, source, destination);
+			SceKernelUtilsForDriver_D8678061(&context, source, destination);
 			if (next == end)
 				break;
-			ksceAesDecrypt1(&context, next, destination + 16);
+			SceKernelUtilsForDriver_D8678061(&context, next, destination + 16);
 			source = next + 48;
-			ksceAesDecrypt1(&context, next + 16, destination + 32);
-			ksceAesDecrypt1(&context, next + 32, destination + 48);
+			SceKernelUtilsForDriver_D8678061(&context, next + 16, destination + 32);
+			SceKernelUtilsForDriver_D8678061(&context, next + 32, destination + 48);
 			next += 64;
 			destination += 64;
 		}
@@ -439,7 +439,7 @@ int encryptRecordCbc(const void *key, const void *input, void *output,
 	unsigned int blockSize;
 	unsigned int index;
 
-	if (ksceAesInit1(&context, 128, 128, key) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&context, 128, 128, key) >= 0) {
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			chain[index] = initial[index];
@@ -448,7 +448,7 @@ int encryptRecordCbc(const void *key, const void *input, void *output,
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			block[index] = chain[index] ^ source[index];
-		ksceAesEncrypt1(&context, block, destination);
+		SceKernelUtilsForDriver_C2A61770(&context, block, destination);
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			chain[index] = destination[index];
@@ -474,13 +474,13 @@ int decryptRecordCbc(const MagicGateKey *key, const void *input, void *output,
 	unsigned int index;
 	uint8_t decrypted;
 
-	if (ksceAesInit1(&context, 128, 128, key) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&context, 128, 128, key) >= 0) {
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			chain[index] = initial[index];
 	}
 	while (size > 15) {
-		ksceAesDecrypt1(&context, source, block);
+		SceKernelUtilsForDriver_D8678061(&context, source, block);
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++) {
 			decrypted = chain[index] ^ block[index];
@@ -505,7 +505,7 @@ int calculateRecordMac(const MagicGateKey *key, const void *input, void *output,
 	unsigned int blockSize;
 	unsigned int index;
 
-	if (ksceAesInit1(&context, 128, 128, key) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&context, 128, 128, key) >= 0) {
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			chain[index] = initial[index];
@@ -514,7 +514,7 @@ int calculateRecordMac(const MagicGateKey *key, const void *input, void *output,
 		blockSize = context.encryption.blockWords * 4;
 		for (index = 0; index < blockSize; index++)
 			chain[index] ^= source[index];
-		ksceAesEncrypt1(&context, chain, chain);
+		SceKernelUtilsForDriver_C2A61770(&context, chain, chain);
 		source += 16;
 		size -= 16;
 	}

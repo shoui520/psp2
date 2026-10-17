@@ -47,7 +47,7 @@ int _sceAppMgrConvertVs0UserDrivePath(const char *path, char *convertedPath,
 	length = strnlen(buffer, 292) + 1;
 	if (length >= 292)
 		length = 292;
-	return copyResult(ret, ksceKernelCopyToUser(convertedPath, buffer, length));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(convertedPath, buffer, length));
 }
 
 int _sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity,
@@ -69,7 +69,7 @@ int _sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity,
 	length = strnlen(buffer, 292) + 1;
 	if (length >= 292)
 		length = 292;
-	return copyResult(ret, ksceKernelCopyToUser(resolvedPath, buffer, length));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(resolvedPath, buffer, length));
 }
 
 int _sceAppMgrGetUserDirPath(int partitionId, char *path, unsigned int capacity,
@@ -89,7 +89,7 @@ int _sceAppMgrGetUserDirPath(int partitionId, char *path, unsigned int capacity,
 	length = strnlen(buffer, 32) + 1;
 	if (length >= 32)
 		length = 32;
-	return copyResult(ret, ksceKernelCopyToUser(path, buffer, length));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(path, buffer, length));
 }
 
 int _sceAppMgrGetUserDirPathById(int userId, int partitionId, char *path,
@@ -113,7 +113,7 @@ int _sceAppMgrGetUserDirPathById(int userId, int partitionId, char *path,
 	length = strnlen(buffer, 32) + 1;
 	if (length >= 32)
 		length = 32;
-	return copyResult(ret, ksceKernelCopyToUser(path, buffer, length));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(path, buffer, length));
 }
 
 int _sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path)
@@ -126,7 +126,7 @@ int _sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path)
 	buffer = __builtin_alloca(292);
 	__builtin_memset(buffer, 0, 292);
 	result = appmgrGetRawPathOfApp0ByAppIdForShellSyscall(appId, buffer);
-	return copyResult(result, ksceKernelCopyToUser(path, buffer, 292));
+	return copyResult(result, SceSysmemForDriver_6D88EF8A(path, buffer, 292));
 }
 
 int _sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
@@ -139,5 +139,5 @@ int _sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path)
 	buffer = __builtin_alloca(292);
 	__builtin_memset(buffer, 0, 292);
 	result = appmgrGetRawPathOfApp0ByPidForShellSyscall(pid, buffer);
-	return copyResult(result, ksceKernelCopyToUser(path, buffer, 292));
+	return copyResult(result, SceSysmemForDriver_6D88EF8A(path, buffer, 292));
 }

@@ -16,8 +16,7 @@
 #define LED_GPO_BITS			0xff0000
 #define LED_SUSPEND_SLOT		5
 
-int ksceKernelCpuId(void);
-SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt32 new_value);
+int sceKernelCpuId(void);
 
 /* the registers' physical address until LedModuleStart maps them */
 static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;
@@ -56,24 +55,24 @@ static int LedResume(void *args)
 	return sceKernelSetGPO(s_gpo);
 }
 
-int ksceKernelSetGPOMask(SceUInt32 clear, SceUInt32 set)
+int SceDebugLedForDriver_098473B0(SceUInt32 clear, SceUInt32 set)
 {
 	SceInt32 old, mask;
 
 	do {
 		old = s_gpoMask;
 		mask = (~clear & old) | set;
-		ksceKernelAtomicCompareAndSet32((SceInt32 *)&s_gpoMask, old, mask);
+		SceCpuForDriver_CDA96E81(&s_gpoMask, old, mask);
 	} while (mask != s_gpoMask);
 	return 0;
 }
 
-SceUInt32 ksceKernelGetGPO(void)
+SceUInt32 SceDebugLedForDriver_3BB289F7(void)
 {
 	return s_gpo;
 }
 
-void ksceKernelSetGPI(SceUInt32 gpi)
+void SceDebugLedForDriver_51C5325A(SceUInt32 gpi)
 {
 	s_gpi = gpi;
 }
@@ -83,12 +82,12 @@ SceUInt32 sceKernelGetGPI(void)
 	return s_gpi;
 }
 
-void ksceDebugLedRegisterHandle1(void (*handle)(int a1, int a2, int a3, int a4))
+void SceDebugLedForDriver_F62154E7(void (*handle)(int a1, int a2, int a3, int a4))
 {
 	s_ledHandle1 = handle;
 }
 
-void ksceDebugLedRegisterHandle0(void (*handle)(int a1, int a2, int a3, int a4))
+void SceDebugLedForDriver_24173819(void (*handle)(int a1, int a2, int a3, int a4))
 {
 	s_ledHandle0 = handle;
 }
@@ -127,16 +126,16 @@ int LedModuleStart(const struct SysmemBootContext *context)
 	void *base;
 	SceUID uid;
 
-	if (ksceKernelCpuId() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.paddr = GPIO0_REG_BASE;
 	opt.attr = 2;
-	uid = ksceKernelAllocMemBlock("SceLedReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x10000, &opt);
+	uid = SceSysmemForDriver_C94850C9("SceLedReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x10000, &opt);
 	if (uid < 0)
 		SCE_PANIC(218);
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_ledRegs = base;
 #ifndef SYSMEM_TZS
 	SceKernelSuspendForDriver_CE7A2207(LED_SUSPEND_SLOT, LedSuspend, NULL);

@@ -276,7 +276,7 @@ int powerSuspendBatteryControl(void)
 	SceKernelIntrStatus intrState;
 	uint32_t events = 0x40000000;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	if (s_powerBatteryBase.chargingAlarm > 0) {
 		events |= 0x200;
 		sceKernelCancelAlarm(s_powerBatteryBase.chargingAlarm);
@@ -286,7 +286,7 @@ int powerSuspendBatteryControl(void)
 		events |= 0x200;
 	ksceKernelClearEventFlag(s_powerBatteryBase.eventFlag, ~0x20000000U);
 	ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, events);
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	return 0;
 }
 
@@ -294,11 +294,11 @@ int powerSuspendBatteryControl(void)
 static inline __attribute__((always_inline)) void notifyBatteryWorker(void)
 {
 	uint32_t context = sceSyscallEnter();
-	SceKernelIntrStatus intrState = ksceKernelCpuSuspendIntr();
+	SceKernelIntrStatus intrState = SceCpuForDriver_821FC0EE();
 
 	ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x10000000);
 	ksceKernelClearEventFlag(s_powerBatteryBase.eventFlag, ~0x10000000U);
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	sceSyscallLeave(context);
 }
 
@@ -312,7 +312,7 @@ int kscePowerBatteryForbidCharging(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	if (!s_powerBatteryBase.chargingInhibitCount) {
 		if (s_powerBatteryBase.chargingAlarm > 0) {
 			sceKernelCancelAlarm(s_powerBatteryBase.chargingAlarm);
@@ -323,7 +323,7 @@ int kscePowerBatteryForbidCharging(void)
 	}
 	s_powerBatteryBase.chargingInhibitCount++;
 	notifyBatteryWorker();
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	return 0;
 }
 
@@ -331,7 +331,7 @@ int kscePowerBatteryPermitCharging(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	if ((int32_t)s_powerBatteryBase.chargingInhibitCount > 0) {
 		s_powerBatteryBase.chargingInhibitCount--;
 		if (!s_powerBatteryBase.chargingInhibitCount) {
@@ -342,7 +342,7 @@ int kscePowerBatteryPermitCharging(void)
 		}
 	}
 	notifyBatteryWorker();
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	return 0;
 }
 
@@ -354,7 +354,7 @@ int kscePowerBatterySetUsbStatus(uint32_t status)
 
 	if (s_powerBatteryBase.workerPaused)
 		return 0;
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	state->usbStatus = status;
 	if (state->usbStatusPending) {
 		result = -1;
@@ -372,7 +372,7 @@ int kscePowerBatterySetUsbStatus(uint32_t status)
 		else
 			ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x1000);
 	}
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	return result;
 }
 
@@ -383,7 +383,7 @@ uint32_t kscePowerBatteryEnableUsbCharging(void)
 
 	if (s_powerBatteryBase.workerPaused)
 		return 0;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intrState = SceCpuForDriver_D32ACE9E(
 					(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	previous = s_powerBatteryBase.usbChargingEnabled;
 	if (previous != 1) {
@@ -391,7 +391,7 @@ uint32_t kscePowerBatteryEnableUsbCharging(void)
 		ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, 0x800);
 		ksceKernelClearEventFlag(s_powerBatteryBase.eventFlag, ~0x400U);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock, intrState);
 	return previous;
 }
@@ -400,7 +400,7 @@ int kscePowerBatteryDisableUsbCharging(void)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intrState = SceCpuForDriver_D32ACE9E(
 					(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	if (s_powerBatteryBase.usbChargingEnabled) {
 		s_powerBatteryBase.usbChargingEnabled = 0;
@@ -408,7 +408,7 @@ int kscePowerBatteryDisableUsbCharging(void)
 		ksceKernelClearEventFlag(s_powerBatteryBase.eventFlag, ~0x800U);
 	}
 	notifyBatteryWorker();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock, intrState);
 	return 0;
 }
@@ -419,10 +419,10 @@ int kscePowerBatteryStopUsbCharging(void)
 	SceKernelIntrStatus intrState;
 	int previous, result;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intrState = SceCpuForDriver_D32ACE9E(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock);
 	if (s_powerBatteryBase.usbChargingEnabled) {
-		previous = ksceKernelAtomicCompareAndSet32(
+		previous = SceCpuForDriver_CDA96E81(
 				(SceInt32 *)&state->usbStopPending, 0, 1);
 		if (!previous) {
 			state->usbStopPacket.tx[2] = 1;
@@ -436,7 +436,7 @@ int kscePowerBatteryStopUsbCharging(void)
 		}
 	}
 	notifyBatteryWorker();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 				(SceKernelSpinlock *)&s_powerBatteryBase.chargingLock, intrState);
 	return 0;
 }
@@ -674,7 +674,7 @@ int powerResumeBatteryControl(const struct PowerResumeInformation *information)
 	SceKernelIntrStatus intrState;
 	uint32_t events;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	s_powerBatteryBase.hardwareStatus = information->powerInfo;
 	s_powerBatteryBase.state.fakeStatusSize = 0;
 	s_powerBatteryBase.state.fakeRemainCapacity = 0;
@@ -688,7 +688,7 @@ int powerResumeBatteryControl(const struct PowerResumeInformation *information)
 	ksceKernelClearEventFlag(s_powerBatteryBase.eventFlag, 0xffffc5ff);
 	ksceKernelSetEventFlag(s_powerBatteryBase.eventFlag, events);
 	notifyBatteryWorker();
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	return 0;
 }
 

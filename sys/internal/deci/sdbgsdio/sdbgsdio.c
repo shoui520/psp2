@@ -7,8 +7,8 @@
  * next read.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -111,7 +111,7 @@ static int SetupCis(void)
 static int SDbgSdioSuspend(void *args)
 {
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == 0)
+	if (sceKernelCpuId() == 0)
 		s_sdbgSdio.channel[0].shm->cisValid = 0;
 	sceKernelSysrootCorelockUnlock();
 	return 0;
@@ -120,7 +120,7 @@ static int SDbgSdioSuspend(void *args)
 /* name unknown: resume handler */
 static int SDbgSdioResume(void *args)
 {
-	if (ksceKernelCpuId() == 0)
+	if (sceKernelCpuId() == 0)
 		SetupCis();
 	return 0;
 }
@@ -139,13 +139,13 @@ int sceSDbgSdioInit(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = SDBG_SDIO_PADDR;
-	uid = ksceKernelAllocMemBlock("SceSDbgSdio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceSDbgSdio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      SDIO_WINDOW_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_ASSERT(0, 277);
 		return uid;
 	}
-	ksceKernelGetMemBlockBase(uid, (void **)&shm);
+	SceSysmemForDriver_A841EDDA(uid, (void **)&shm);
 
 	s_sdbgSdio.index = 0;
 	s_sdbgSdio.memblock = uid;
@@ -189,7 +189,7 @@ int sceSDbgSdioInit(void)
 
 int sceSDbgSdioModuleStart(SceSize args, void *argp)
 {
-	if (!ksceKernelCheckDipsw(0xc1)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 210, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -203,7 +203,7 @@ int sceSDbgSdioModuleStart(SceSize args, void *argp)
 
 int SceSDbgSdioForKernel_356C6621(void)
 {
-	ksceKernelFreeMemBlock(s_sdbgSdio.memblock);
+	SceSysmemForDriver_009E1C61(s_sdbgSdio.memblock);
 	return 0;
 }
 

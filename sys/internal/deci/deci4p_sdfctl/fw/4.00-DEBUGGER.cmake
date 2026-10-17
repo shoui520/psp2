@@ -77,23 +77,23 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelReleaseIntrHandler
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
-	ksceKernelCpuId
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceUartWrite
-	ksceUartInit
-	ksceUartRead
-	ksceKernelPrintfWithInfo
-	ksceKernelGetAssertLevel
-	ksceKernelPrintf
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
-	ksceKernelCheckDipsw
+	sceKernelCpuId
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceUartForKernel_430C48F1
+	SceUartForKernel_4C02AA05
+	SceUartForKernel_4E97D3AD
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
+	SceDipswForDriver_A98FC2FD
 	strncpy
 	__stack_chk_fail
 	strnlen
 	SceKernelSuspendForDriver_0106C0F0
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_0A6CA124
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_AEA9440D

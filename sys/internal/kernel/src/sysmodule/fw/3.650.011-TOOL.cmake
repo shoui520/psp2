@@ -53,13 +53,13 @@ set(MODULE_IMPORT_NIDS
 	0x887F19D0:F:0x2A43912D
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelPrintf
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
+	SceDebugForDriver_391B74B7
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	ksceKernelStopUnloadSharedModuleForPid
 	ksceKernelStopUnloadModuleForPid
 	ksceKernelLoadStartModuleForPid
@@ -85,7 +85,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_C98D82EE
 	SceSblACMgrForDriver_E87D1777
 	SceQafMgrForDriver_B9770A13
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -1,12 +1,12 @@
 /* Sony wlanbt.c: configuration and device power management. */
 #include "wlanbt_internal.h"
 #include <skeleton.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/idstorage.h>
 #include <sysmem/debug.h>
 #include <wlanbt/wlanbt.h>
-#include <psp2kern/kernel/pm_mgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/pmmgr.h>
+#include <sysmem/procevent.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
@@ -34,8 +34,6 @@ int robinInitialize(void);
 int ScePowerForDriver_B24263F0(unsigned int index,
 		int (*callback)(int eventId, uint32_t flags, void *argument),
 		void *argument);
-int k_sceEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg,
-		     const void *data, SceSize size);
 
 static SceWlanBtRobinConfig gWlanBtConfig;
 static SceWlan gWlan;
@@ -77,8 +75,8 @@ int module_start(SceSize arglen, const void *argp)
 				gWlanBtConfig.available = 0;
 				goto initialize;
 			}
-			if (ksceSblAimgrIsTest() == 0) {
-				result = kscePmMgrGetProductMode(&productMode);
+			if (SceSblAIMgrForDriver_3B638885() == 0) {
+				result = ScePmMgrForDriver_2AC815A2(&productMode);
 				if (result < 0)
 					return result;
 				if (productMode == 0 &&
@@ -91,7 +89,7 @@ int module_start(SceSize arglen, const void *argp)
 	if (availability != 1)
 		goto available;
 	gWlanBtConfig.available = 0;
-	ksceKernelPrintf("[SceWlanBt]: WLAN/BT is Not Available.\n");
+	SceDebugForDriver_391B74B7("[SceWlanBt]: WLAN/BT is Not Available.\n");
 initialize:
 	if (wlanBtInitializeRobin() < 0)
 		return 2;
@@ -431,24 +429,23 @@ int ksceWlanBtDetachMonitor(SceWlanBtMonitorCallback *monitor)
 	gWlanBtConfig.monitor = NULL;
 	return 0;
 }
-int wlanBtSwitchProcess(int eventId, int eventType,
-			SceProcEventInvokeParam2 *param, int flags)
+int wlanBtSwitchProcess(int eventId, int eventType, void *param, int flags)
 {
 	return robinWlanSwitchProcess(eventId);
 }
 
 int wlanBtStartProcess(SceUID pid, int eventType,
-		       SceProcEventInvokeParam1 *param, int flags)
+		       ProcEventParam *param, int flags)
 {
 	return robinWlanStartProcess(pid, eventType);
 }
 
-int wlanBtKillProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int wlanBtKillProcess(SceUID pid, ProcEventParam *param, int flags)
 {
 	return robinWlanKillProcess(pid);
 }
 
-int wlanBtExitProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int wlanBtExitProcess(SceUID pid, ProcEventParam *param, int flags)
 {
 	return robinWlanExitProcess(pid);
 }
@@ -568,7 +565,7 @@ int wlanBtInitializeRobin(void)
 		gWlan.region.flags = 0;
 	} else
 		gWlan.region.channelMask &= 0x1fff;
-	if (kscePmMgrGetProductMode(&productMode) < 0)
+	if (ScePmMgrForDriver_2AC815A2(&productMode) < 0)
 		productMode = 0;
 	else if (productMode == 1)
 		gWlan.region.channelMask = 0x1fff;
@@ -577,14 +574,14 @@ int wlanBtInitializeRobin(void)
 		return result;
 	if (robinInitialize() < 0)
 		return 2;
-	gWlan.procEventHandler.start = wlanBtStartProcess;
-	gWlan.procEventHandler.switch_process = wlanBtSwitchProcess;
+	gWlan.procEventHandler.resume = wlanBtStartProcess;
+	gWlan.procEventHandler.notify = wlanBtSwitchProcess;
 	gWlan.procEventHandler.exit = wlanBtExitProcess;
 	gWlan.procEventHandler.kill = wlanBtKillProcess;
 	gWlan.procEventHandler.create = NULL;
-	gWlan.procEventHandler.stop = NULL;
+	gWlan.procEventHandler.suspend = NULL;
 	gWlan.procEventHandler.size = sizeof(gWlan.procEventHandler);
-	handlerId = ksceKernelRegisterProcEventHandler("SceWlan", &gWlan.procEventHandler, 0);
+	handlerId = sceKernelRegisterProcEventHandler("SceWlan", &gWlan.procEventHandler, 0);
 	if (handlerId < 0)
 		return 2;
 	gWlan.procEventHandlerId = handlerId;

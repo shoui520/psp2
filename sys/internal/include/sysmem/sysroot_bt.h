@@ -11,6 +11,8 @@ typedef struct SysrootBtOps {
 	int (*getConnectingInfo)(uint64_t deviceAddress);	/* ksceBtGetConnectingInfo */
 } SysrootBtOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootBtOps) == 0xc, "Sysroot Bluetooth service table size");
 _Static_assert(offsetof(SysrootBtOps, getConnectingInfo) == 8,
 	       "Sysroot Bluetooth second service offset");
+#endif

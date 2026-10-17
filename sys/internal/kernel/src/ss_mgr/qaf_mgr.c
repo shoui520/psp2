@@ -4,8 +4,9 @@
 #include <intrmgr/syscall.h>
 #include <string.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <syscon/syscon.h>
 #include <sm_comm/sm_comm.h>
 
@@ -99,7 +100,7 @@ int ksceSblQafManagerGetQafName(char *name, SceSize size)
 SS_MGR_QAF(qafInit)
 int qafInit(void)
 {
-	const SceKblParam *parameters = ksceKernelSysrootGetKblParam();
+	const SceKblParam *parameters = SceSysrootForKernel_9DB56D1F();
 
 	if (parameters)
 		__builtin_memcpy(&qaFlags, parameters->qa_flags, sizeof(qaFlags));
@@ -140,9 +141,9 @@ int sceSblQafManagerGetQafNameForUser(char *name, SceSize size)
 	}
 
 	if (__builtin_expect(
-		(ret = ksceKernelCopyFromUser(buffer, name, size)) != 0 ||
+		(ret = SceSysmemForDriver_BC996A7A(buffer, name, size)) != 0 ||
 		(ret = ksceSblQafManagerGetQafName(buffer, size)) != 0 ||
-		(ret = ksceKernelCopyToUser(name, buffer, size)) != 0, 0))
+		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, size)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
 	return 0;
@@ -189,9 +190,9 @@ int sceSblQafMgrGetQafName(char *name, SceSize size)
 
 	if (__builtin_expect(
 		(ret = qafLoadToken((uint8_t *)token)) != 0 ||
-		(ret = ksceKernelCopyFromUser(buffer, name, QAF_NAME_SIZE)) != 0 ||
+		(ret = SceSysmemForDriver_BC996A7A(buffer, name, QAF_NAME_SIZE)) != 0 ||
 		(ret = ksceSblQafManagerGetQafName(buffer, QAF_NAME_SIZE)) != 0 ||
-		(ret = ksceKernelCopyToUser(name, buffer, QAF_NAME_SIZE)) != 0, 0))
+		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, QAF_NAME_SIZE)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
 	return 0;
@@ -206,7 +207,7 @@ __attribute__((noinline)) int qafIsAllowNpTest(void)
 	if (qafFlag(QAF_ALLOW_MINIMUM_DEBUG_MENU))
 		return 1;
 
-	return ksceSysrootUtMgrHasNpTestFlag() != 0;
+	return SceSysrootForDriver_A43599E9() != 0;
 }
 
 int sceSblQafManagerIsAllowKernelDebugForUser(void)
@@ -946,7 +947,7 @@ int sceSblQafMgrSetQafToken2(const void *token)
 		sceSyscallLeave(frame);
 		return SSMGR_ERROR_INVALID_ARGUMENT;
 	}
-	ret = ksceKernelCopyFromUser(buffer, token, sizeof(buffer));
+	ret = SceSysmemForDriver_BC996A7A(buffer, token, sizeof(buffer));
 	if (__builtin_expect(ret == 0, 1))
 		ret = qafSetToken(buffer);
 	sceSyscallLeave(frame);
@@ -969,7 +970,7 @@ int sceSblQafMgrGetQafToken2(void *token)
 	}
 	ret = qafGetToken((uint8_t *)buffer);
 	if (__builtin_expect(ret == 0, 1))
-		ret = ksceKernelCopyToUser(token, buffer, sizeof(buffer));
+		ret = SceSysmemForDriver_6D88EF8A(token, buffer, sizeof(buffer));
 	sceSyscallLeave(frame);
 	return ret;
 }

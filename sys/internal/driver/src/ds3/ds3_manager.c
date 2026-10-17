@@ -13,10 +13,10 @@
 #include <touch/touch.h>
 #include <sysmem/sysmem.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/cpu.h>
+#include <sysmem/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -84,7 +84,7 @@ int ds3PortManagerThread(SceSize args, void *argp)
 		}
 		ds3UsbPollBattery();
 		if (ds3IsUsbCharging())
-			ksceKernelPowerTick(1);
+			SceKernelSuspendForDriver_E0489831(1);
 	}
 }
 

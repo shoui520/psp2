@@ -1,5 +1,5 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include "update_internal.h"
 
 int updateInitializeAsync = 1;
@@ -10,13 +10,13 @@ uint32_t updateRequestIdCounter = 1;
 SceUID updateHeapId = -1;
 int slskSmId = -1;
 
-int UpdateMgrProcessCreate(SceUID pid, SceProcEventInvokeParam2 *param, int flags)
+int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags)
 {
 	return 0;
 }
 
 int UpdateMgrProcessStart(SceUID pid, int eventType,
-			 SceProcEventInvokeParam1 *param, int flags)
+			 ProcEventParam *param, int flags)
 {
 	return 0;
 }
@@ -36,12 +36,12 @@ int invalidate_prev_system_info(SceSize arglen, void *argp)
 	return result;
 }
 
-int UpdateMgrProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, int flags)
 {
 	return UpdateUtilReleaseAllBuffers(pid);
 }
 
-int UpdateMgrProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, int flags)
 {
 	return UpdateUtilReleaseAllBuffers(pid);
 }

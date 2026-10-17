@@ -70,8 +70,8 @@ int recvStart(SdfMgrTransport *transport)
 #if FW_DEBUG
 	void *caller = __builtin_return_address(0);
 
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, transport != NULL,
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, transport != NULL,
 			SDIO_DEBUG_INFO(231, 0xfa73a99f, 0x050cf044, "recvStart"),
 			caller);
 #endif
@@ -82,7 +82,7 @@ int recvStart(SdfMgrTransport *transport)
 int recvPause(SdfMgrTransport *transport)
 {
 	transport->events |= 0x1000;
-	ksceKernelDisableIntr(s_sdioInterrupts[ksceKernelCpuId()]);
+	ksceKernelDisableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	return 0;
 }
 
@@ -95,7 +95,7 @@ int recvFinish(SdfMgrTransport *transport)
 	transport->interruptFlags = interrupts & ~0x100u;
 	SceDeci4pSDfMgrForKernel_FFC95B63(&transport->receiveHeader, 0);
 	if (!(transport->events & 0x1000))
-		ksceKernelEnableIntr(s_sdioInterrupts[ksceKernelCpuId()]);
+		ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	transport->receiveSize = 0;
 	transport->receiveProgress = 0;
 	return 0;
@@ -107,22 +107,22 @@ int recvResume(SdfMgrTransport *transport)
 
 	transport->events = events & ~0x1000u;
 	if (!(events & 0x6000))
-		ksceKernelEnableIntr(s_sdioInterrupts[ksceKernelCpuId()]);
+		ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	return 0;
 }
 
 void sdioKickSend(SdfMgrTransport *transport, const uint32_t *interruptFlags)
 {
-	unsigned state = ksceKernelCpuSuspendIntr();
+	unsigned state = SceCpuForDriver_821FC0EE();
 	uint32_t events = transport->events;
 
 	if (events & 1) {
 		if (*interruptFlags & 1)
 			transport->events = events | 0x20;
 		else
-			ksceKernelEnableIntr(s_sdioInterrupts[ksceKernelCpuId()]);
+			ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	}
-	ksceKernelCpuResumeIntr(state);
+	sceKernelCpuResumeIntr(state);
 }
 
 int sendStart(SdfMgrTransport *transport)
@@ -197,7 +197,7 @@ int sdioDispatchEvents(SdfMgrTransport *transport)
 
 void _sdioRecv(SdfMgrTransport *transport)
 {
-	int result = SceSDbgSdioForKernel_2EC24C58(ksceKernelCpuId(),
+	int result = SceSDbgSdioForKernel_2EC24C58(sceKernelCpuId(),
 			&transport->receiveHeader, sizeof(transport->receiveHeader));
 
 	if (result < 0) {
@@ -216,16 +216,16 @@ void _sdioRecv(SdfMgrTransport *transport)
 
 void sdioPollInterrupt(void)
 {
-	unsigned state = ksceKernelCpuSuspendIntr();
-	unsigned cpu = ksceKernelCpuId();
+	unsigned state = SceCpuForDriver_821FC0EE();
+	unsigned cpu = sceKernelCpuId();
 
 	if (sceKernelGetIntrPendingStatusForDebugger(
-			s_sdioInterrupts[ksceKernelCpuId()])) {
+			s_sdioInterrupts[sceKernelCpuId()])) {
 		_sdioRecv(&s_sdfMgrState.sdio[cpu]);
 		sceKernelClearIntrPendingStatusForDebugger(
-				s_sdioInterrupts[ksceKernelCpuId()]);
+				s_sdioInterrupts[sceKernelCpuId()]);
 	}
-	ksceKernelCpuResumeIntr(state);
+	sceKernelCpuResumeIntr(state);
 }
 
 int sdioPoll(SdfMgrTransport *transport)
@@ -253,7 +253,7 @@ int recvRead(SdfMgrTransport *transport, void *buffer, SceSize size)
 		SceSize done = 0;
 
 		do {
-			int result = SceSDbgSdioForKernel_2EC24C58(ksceKernelCpuId(),
+			int result = SceSDbgSdioForKernel_2EC24C58(sceKernelCpuId(),
 					(uint8_t *)buffer + done, count - done);
 
 			done += (uint32_t)result;
@@ -294,7 +294,7 @@ int sendWrite(SdfMgrTransport *transport, const void *buffer, SceSize size)
 			SceDeci4pSDfMgrForKernel_68903C1D(&transport->sendHeader);
 		return 0;
 	}
-	result = SceSDbgSdioForKernel_7876806C(ksceKernelCpuId(), buffer, count);
+	result = SceSDbgSdioForKernel_7876806C(sceKernelCpuId(), buffer, count);
 	if (result < 0) {
 #if FW_DEBUG
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
@@ -333,7 +333,7 @@ int sdioInit(void)
 		.disableInterrupts = sdioDisableInterrupts,
 		.enableInterrupts = sdioEnableInterrupts,
 	};
-	SdfMgrTransport *transport = &s_sdfMgrState.sdio[ksceKernelCpuId()];
+	SdfMgrTransport *transport = &s_sdfMgrState.sdio[sceKernelCpuId()];
 	unsigned code, target;
 	int result;
 #if FW_DEBUG
@@ -342,8 +342,8 @@ int sdioInit(void)
 
 	transport->name = "SDIO";
 	transport->operations = operations;
-	code = s_sdioInterrupts[ksceKernelCpuId()];
-	target = s_sdfMgrCpuTargets[ksceKernelCpuId()];
+	code = s_sdioInterrupts[sceKernelCpuId()];
+	target = s_sdfMgrCpuTargets[sceKernelCpuId()];
 	result = ksceKernelRegisterIntrHandler(code, "SceSDbgSdio0Mbox", 0,
 				       sdioIntrEntry, transport, 0x10, target, NULL);
 	if (result < 0) {
@@ -351,8 +351,8 @@ int sdioInit(void)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(127, 0x55933570, 0x019bb6f4, "sdioInit"),
 			"RegisterIntrHandler failed (0x%08x)\n", result);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SDIO_DEBUG_INFO(128, 0x1daa83bf, 0x019bb6f4,
 						"sdioInit"), caller);
 #endif
@@ -364,8 +364,8 @@ int sdioInit(void)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(135, 0x2de51a8b, 0x019bb6f4, "sdioInit"),
 			"RegisterIf failed (0x%08x)\n", result);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SDIO_DEBUG_INFO(136, 0xe1e27a59, 0x019bb6f4,
 						"sdioInit"), caller);
 #endif
@@ -377,8 +377,8 @@ int sdioInit(void)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(144, 0xdf928b90, 0x019bb6f4, "sdioInit"),
 			"RegisterBreakHook failed (0x%08x)\n", result);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SDIO_DEBUG_INFO(145, 0x18cfa0ac, 0x019bb6f4,
 						"sdioInit"), caller);
 #endif
@@ -390,22 +390,22 @@ int sdioInit(void)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(153, 0x23d2bb8d, 0x019bb6f4, "sdioInit"),
 			"If2MgrEvent failed (0x%08x)\n", result);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SDIO_DEBUG_INFO(154, 0xf33d24d0, 0x019bb6f4,
 						"sdioInit"), caller);
 #endif
 		return result;
 	}
 	transport->interruptFlags |= 1;
-	result = ksceKernelEnableIntr(s_sdioInterrupts[ksceKernelCpuId()]);
+	result = ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	if (result < 0) {
 #if FW_DEBUG
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(164, 0xbe3ff066, 0x019bb6f4, "sdioInit"),
 			"sceKernelEnableIntr failed (0x%08x)\n", result);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SDIO_DEBUG_INFO(165, 0x3476882a, 0x019bb6f4,
 						"sdioInit"), caller);
 #endif
@@ -416,17 +416,17 @@ int sdioInit(void)
 
 int sdioIntrHandler(int code, SdfMgrTransport *transport)
 {
-	unsigned state = ksceKernelCpuSuspendIntr();
+	unsigned state = SceCpuForDriver_821FC0EE();
 	SdfMgrDebugCpuState **debugCpu;
 	SdfMgrDebugCpuState *records;
 
-	if (s_sdioInterrupts[ksceKernelCpuId()] != (unsigned)code) {
+	if (s_sdioInterrupts[sceKernelCpuId()] != (unsigned)code) {
 #if FW_DEBUG
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
 			SDIO_DEBUG_INFO(618, 0x6f6155cc, 0xef172c42,
 					"sdioIntrHandler"), "Unknown intrcode\n");
 #endif
-		ksceKernelCpuResumeIntr(state);
+		sceKernelCpuResumeIntr(state);
 		return -2;
 	}
 	_sdioRecv(transport);
@@ -434,8 +434,8 @@ int sdioIntrHandler(int code, SdfMgrTransport *transport)
 		sdfMgrPollCurrentBreakHooks();
 	debugCpu = SceDeci4pSDfMgrForKernel_BFB482D8();
 	if (debugCpu && (records = *debugCpu) != NULL &&
-	    records[ksceKernelCpuId()].stepMode == SDFMGR_STEP_ARM_POLL)
+	    records[sceKernelCpuId()].stepMode == SDFMGR_STEP_ARM_POLL)
 		return SDFMGR_STEP_ARM_POLL;
-	ksceKernelCpuResumeIntr(state);
+	sceKernelCpuResumeIntr(state);
 	return -1;
 }

@@ -96,19 +96,19 @@ set(MODULE_IMPORT_NIDS
 	0x3691DA45:F:0xEC3124A3
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelUserUnmap
-	ksceGUIDReferObject
-	ksceGUIDReleaseObject
-	ksceKernelUserMap
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelIsUncacheAddressInTmpFsGame
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelUserUnmap
+	SceSysmemForDriver_0F5C84B7
+	sceGUIDReleaseObject
+	SceSysmemForDriver_278BC201
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelIsUncacheAddressInTmpFsGame
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
 	memset
 	strncmp
 	__aeabi_idiv
@@ -134,7 +134,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
 	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	ksceKernelDmaOpQuit
 	ksceKernelDmaOpSetupChain
 	ksceKernelDmaOpSync
@@ -143,13 +143,13 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDmaOpConcatenate
 	ksceKernelDmaOpSetCallback
 	ksceKernelDmaOpAssign
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_6C5AB07F
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
-	ksceSblAimgrIsTool
+	SceSblAIMgrForDriver_274663A0
 	SceQafMgrForDriver_382C71E8
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	ScePervasiveForDriver_146108D4
 	ScePervasiveForDriver_2FB5F88F
 	ScePervasiveForDriver_4235EB7D
@@ -164,7 +164,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_F861FEE4
 	SceClockgenForDriver_820D3516
 	SceCodecForDriver_CCDE1B04
-	ksceKernelSysrootGetProcessTitleId
+	SceSysrootForKernel_EC3124A3
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

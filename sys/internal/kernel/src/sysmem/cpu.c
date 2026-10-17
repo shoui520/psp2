@@ -39,7 +39,7 @@ extern uint32_t SceSysrootForKernel_41636522(void);
 
 #if FW_DEBUG
 
-int ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_F02467D1(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockTryReadLockIrq(lock);
@@ -53,7 +53,7 @@ int ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(volatile uint32_t *lock)
 	return previous;
 }
 
-int ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_4C38CE4D(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockWriteLockIrq(lock);
@@ -67,7 +67,7 @@ int ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(volatile uint32_t *lock)
 	return previous;
 }
 
-int ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_DE6482C6(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockTryWriteLockIrq(lock);
@@ -81,7 +81,7 @@ int ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr(volatile uint32_t *lock)
 	return previous;
 }
 
-int ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_EC53D007(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockReadLockIrq(lock);
@@ -117,7 +117,7 @@ int CpuResumeIntrLow(int flags)
 }
 
 #if FW_DEBUG
-int ksceKernelSpinlockLowTrylockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_27C0B340(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockTrylockIrqWithCaller(lock, caller);
@@ -131,7 +131,7 @@ int ksceKernelSpinlockLowTrylockCpuSuspendIntr(volatile uint32_t *lock)
 	return previous;
 }
 
-int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile uint32_t *lock)
+int SceCpuForDriver_D32ACE9E(volatile uint32_t *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockLockIrqWithCaller(lock, caller);
@@ -145,7 +145,7 @@ int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile uint32_t *lock)
 	return previous;
 }
 
-int ksceKernelCpuSuspendIntr(void)
+int SceCpuForDriver_821FC0EE(void)
 {
 	int previous = CpuSuspendIntrLow();
 
@@ -158,19 +158,19 @@ int ksceKernelCpuSuspendIntr(void)
 	return previous;
 }
 
-int ksceKernelCpuResumeIntr(int flags)
+int sceKernelCpuResumeIntr(int flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
 
 	status = readCpsr();
 	if (!(status & PSR_I_BIT)) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(165, "sceKernelCpuResumeIntr"),
 			"***\n*** warning: sceKernelCpuResumeIntr() called. But IRQ has been enabled.(lr=%p)\n***\n",
 			caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(166, "sceKernelCpuResumeIntr"), caller);
 	} else if (!(flags & PSR_I_BIT)) {
 		struct CpuLongIrqHandlerRecord *record;
@@ -194,14 +194,14 @@ int ksceKernelCpuResumeIntr(int flags)
 	return CpuResumeIntrLow(flags);
 }
 #else
-extern __typeof__(CpuSuspendIntrLow) ksceKernelCpuSuspendIntr
+extern __typeof__(CpuSuspendIntrLow) SceCpuForDriver_821FC0EE
 	__attribute__((alias("CpuSuspendIntrLow")));
-extern __typeof__(CpuResumeIntrLow) ksceKernelCpuResumeIntr
+extern __typeof__(CpuResumeIntrLow) sceKernelCpuResumeIntr
 	__attribute__((alias("CpuResumeIntrLow")));
 #endif
 
 #if FW_DEBUG
-int ksceKernelCpuId(void)
+int sceKernelCpuId(void)
 {
 	uint32_t status;
 	uint32_t length;
@@ -210,7 +210,7 @@ int ksceKernelCpuId(void)
 	if (getCurrentThreadCB() != NULL) {
 		status = readCpsr();
 		if (!(status & PSR_I_BIT)) {
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(488, "sceKernelCpuId"),
 				"***\n*** warning: sceKernelCpuId() called. But IRQ has been enabled.(lr=%p)\n***\n",
 				__builtin_return_address(0));
@@ -229,24 +229,24 @@ int ksceKernelCpuId(void)
 #endif
 
 #if FW_DEBUG
-void ksceKernelSpinlockLowUnlock(volatile uint32_t *lock)
+void sceKernelSpinlockLowUnlock(volatile uint32_t *lock)
 {
 	if (!*lock) {
 		void *caller = __builtin_return_address(0);
 
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(232, "sceKernelSpinlockLowUnlock"),
 			"***\n*** warning: sceKernelSpinlockLowUnlock() called. But spinlock has not been locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(233, "sceKernelSpinlockLowUnlock"), caller);
 	}
 	CpuSpinlockUnlock(lock);
 }
 #endif
 
-int ksceKernelCpuBranchPredictorInvalidateAll(void)
+int SceCpuForKernel_050B8EF6(void)
 {
 	writeBpiall(0);
 	dsb();
@@ -254,7 +254,7 @@ int ksceKernelCpuBranchPredictorInvalidateAll(void)
 	return 0;
 }
 
-int ksceKernelCpuBranchPredictorInvalidateAllIS(void)
+int SceCpuForKernel_7B0643E2(void)
 {
 	writeBpiallis(0);
 	dsb();
@@ -262,7 +262,7 @@ int ksceKernelCpuBranchPredictorInvalidateAllIS(void)
 	return 0;
 }
 
-void ksceKernelCpuUpdateSCTLR(void)
+void SceCpuForKernel_C6426313(void)
 {
 	uint32_t control;
 
@@ -274,29 +274,29 @@ void ksceKernelCpuUpdateSCTLR(void)
 }
 
 #if FW_DEBUG
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
 
 	if (!*lock) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(252, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelSpinlockLowUnlockCpuResumeIntr() called. But spinlock has not been locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(253, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 				caller);
 	}
 	status = readCpsr();
 	if (!(status & PSR_I_BIT)) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(259, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelSpinlockLowUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(260, "sceKernelSpinlockLowUnlockCpuResumeIntr"),
 				caller);
 	} else if (!(flags & PSR_I_BIT)) {
@@ -320,45 +320,45 @@ void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t 
 	CpuSpinlockUnlockIrq(lock, flags);
 }
 
-void ksceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
+void sceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
 {
 	if (!*lock || *lock == 0x80000000U) {
 		void *caller = __builtin_return_address(0);
 
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(330, "sceKernelRWSpinlockLowReadUnlock"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlock() called. But spinlock has not been read locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(331, "sceKernelRWSpinlockLowReadUnlock"), caller);
 	}
 	CpuRWSpinlockReadUnlock(lock);
 }
 
-void ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
 
 	if (!*lock || *lock == 0x80000000U) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(349, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlockCpuResumeIntr() called. But spinlock has not been read locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(350, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 				caller);
 	}
 	status = readCpsr();
 	if (!(status & PSR_I_BIT)) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(356, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowReadUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(357, "sceKernelRWSpinlockLowReadUnlockCpuResumeIntr"),
 				caller);
 	} else if (!(flags & PSR_I_BIT)) {
@@ -382,29 +382,29 @@ void ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uin
 	CpuRWSpinlockReadUnlockIrq(lock, flags);
 }
 
-void ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
 
 	if (*lock != 0x80000000U) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(445, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr() called. But spinlock has not been write locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(446, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 				caller);
 	}
 	status = readCpsr();
 	if (!(status & PSR_I_BIT)) {
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(452, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr() called. But IRQ has been enabled.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(453, "sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr"),
 				caller);
 	} else if (!(flags & PSR_I_BIT)) {
@@ -428,17 +428,17 @@ void ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, ui
 	CpuRWSpinlockWriteUnlockIrq(lock, flags);
 }
 
-void ksceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock)
+void sceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock)
 {
 	if (*lock != 0x80000000U) {
 		void *caller = __builtin_return_address(0);
 
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(426, "sceKernelRWSpinlockLowWriteUnlock"),
 			"***\n*** warning: sceKernelRWSpinlockLowWriteUnlock() called. But spinlock has not been write locked.(lock=%p, lr=%p)\n***\n",
 			lock, caller);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(427, "sceKernelRWSpinlockLowWriteUnlock"), caller);
 	}
 	CpuRWSpinlockWriteUnlock(lock);

@@ -6,14 +6,14 @@
  * part is unknown.
  */
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include "ulobjmgr_internal.h"
 
 static SceUID g_ulobjProcEventHandler;
-static SceProcEventHandler g_ulobjProcEvents;
+static SceKernelProcEventHandler g_ulobjProcEvents;
 
 /* name unknown: the process is going away, drop its info array */
-static int ulobjProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int unk)
+static int ulobjProcessExit(SceUID pid, ProcEventParam *param, int unk)
 {
 	UlobjProcCB *procCB = getAndLockUlobjInfoArrayForKernel(pid);
 
@@ -25,7 +25,7 @@ static int ulobjProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int unk
 }
 
 /* name unknown */
-static int ulobjProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int unk)
+static int ulobjProcessKill(SceUID pid, ProcEventParam *param, int unk)
 {
 	UlobjProcCB *procCB = getAndLockUlobjInfoArrayForKernel(pid);
 
@@ -39,12 +39,12 @@ static int ulobjProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int unk
 /* name unknown */
 int registerUlobjProcessEvents(void)
 {
-	g_ulobjProcEvents = (SceProcEventHandler){
-		.size = sizeof(SceProcEventHandler),
+	g_ulobjProcEvents = (SceKernelProcEventHandler){
+		.size = sizeof(SceKernelProcEventHandler),
 		.exit = ulobjProcessExit,
 		.kill = ulobjProcessKill,
 	};
-	g_ulobjProcEventHandler = ksceKernelRegisterProcEventHandler("SceUlobjmgr",
+	g_ulobjProcEventHandler = sceKernelRegisterProcEventHandler("SceUlobjmgr",
 								     &g_ulobjProcEvents, 0);
 	return g_ulobjProcEventHandler & (g_ulobjProcEventHandler >> 31);
 }

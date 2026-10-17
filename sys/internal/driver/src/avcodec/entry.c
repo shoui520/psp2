@@ -1,6 +1,6 @@
 /* SceAvcodec process event dispatch. */
 #include <processmgr/processmgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/modulemgr.h>
 
 extern int _sceVideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
@@ -139,25 +139,25 @@ int avcodecProcessKillHandler(SceUID pid, const ProcEventParam *param)
 
 int module_start(SceSize arglen, const void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 
 	if (initializeAudiodec() < 0 || initializeAudioenc() < 0 ||
 	    initializeJpeg() < 0 || initializeJpegEncoder() < 0 ||
 	    initializeDsp0Videocodec() < 0 || initializeVideocodec() < 0)
 		return SCE_KERNEL_START_FAILED;
-	handler.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))
+	handler.create = (int (*)(SceUID, ProcEventCreateParam *, int))
 		avcodecProcessCreateHandler;
-	handler.stop = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))
+	handler.suspend = (int (*)(SceUID, int, ProcEventParam *, int))
 		avcodecProcessSuspendHandler;
-	handler.start = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))
+	handler.resume = (int (*)(SceUID, int, ProcEventParam *, int))
 		avcodecProcessResumeHandler;
 	handler.exit = NULL;
 	handler.kill = NULL;
-	handler.switch_process = NULL;
+	handler.notify = NULL;
 	handler.size = sizeof(handler);
 	if (sceCodecEngineRegisterProcExitHandler(avcodecProcessExitHandler) < 0 ||
 	    sceCodecEngineRegisterProcKillHandler(avcodecProcessKillHandler) < 0 ||
-	    ksceKernelRegisterProcEventHandler("SceAvcodec", &handler, 0) < 0)
+	    sceKernelRegisterProcEventHandler("SceAvcodec", &handler, 0) < 0)
 		return SCE_KERNEL_START_FAILED;
 	return SCE_KERNEL_START_SUCCESS;
 }

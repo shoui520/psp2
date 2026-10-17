@@ -11,27 +11,27 @@ EXCP_CONTEXT_DEBUG_LINKAGE void excpRestoreDebugRegisters(SceExcpmgrContext *con
 	regs = thread == NULL ? g_excpData.kernelBreakpoints : thread->process->phbp;
 	if (regs == NULL)
 		return;
-	ksceKernelSpinlockLowLock(&regs->lock);
+	SceCpuForDriver_BF82DEB2(&regs->lock);
 	writeBreakpoint(0, regs->reg[0].value, regs->reg[0].control);
 	writeBreakpoint(1, regs->reg[1].value, regs->reg[1].control);
 	writeBreakpoint(2, regs->reg[2].value, regs->reg[2].control);
 	writeBreakpoint(3, regs->reg[3].value, regs->reg[3].control);
 	writeBreakpoint(4, regs->reg[4].value, regs->reg[4].control);
-	ksceKernelSpinlockLowUnlock(&regs->lock);
+	sceKernelSpinlockLowUnlock(&regs->lock);
 
 	/* Sony bug kept: the watchpoint path takes the process's breakpoint image */
 	watch = thread == NULL ? g_excpData.kernelWatchpoints :
 		(ProcessHwWatchpoints *)thread->process->phbp;
 	if (watch == NULL)
 		return;
-	ksceKernelSpinlockLowLock(&watch->lock);
+	SceCpuForDriver_BF82DEB2(&watch->lock);
 	/* Sony bug kept: the values come from context + 8, not from regs->pair */
 	wp = &context->r[2];
 	writeWatchpoint(0, wp[0], wp[1]);
 	writeWatchpoint(1, wp[2], wp[3]);
 	writeWatchpoint(2, wp[4], wp[5]);
 	writeWatchpoint(3, wp[6], wp[7]);
-	ksceKernelSpinlockLowUnlock(&watch->lock);
+	sceKernelSpinlockLowUnlock(&watch->lock);
 
 	if (thread == NULL)
 		return;

@@ -5,9 +5,8 @@
 #include "jpegenc_internal.h"
 #include "../jpeg/jpeg_internal.h"
 #include <psp2kern/jpegenc.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <lowio/iftu.h>
 #include <string.h>
@@ -138,12 +137,12 @@ int ksceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr)
 			control->pJpegEnd = pJpegEnd;
 			alignedOutput = (unsigned int)pJpeg & ~255U;
 			if ((control->option & 1) != 0 && ret >= 0)
-				ksceKernelDcacheInvalidateRange((void *)alignedOutput,
+				SceCpuForDriver_02796361((void *)alignedOutput,
 					((unsigned int)pJpeg + 255 - alignedOutput + ret) & ~255U);
-			ksceKernelUnlockRangeWithMode(32, (void *)alignedOutput,
+			SceSysmemForDriver_22CBE925(32, (void *)alignedOutput,
 				((unsigned int)pJpeg + 255 - alignedOutput + outputSize) & ~255U);
 		}
-		ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pYCbCr & ~255U),
+		SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pYCbCr & ~255U),
 			((unsigned int)pYCbCr + 255 - ((unsigned int)pYCbCr & ~255U) + inputSize) & ~255U);
 	}
 	_unlockProcessSuspendCore();
@@ -244,10 +243,10 @@ int ksceJpegEncoderCsc(SceJpegEncoderContext context, void *pYCbCr,
 	destination.paddr1 = lumaSize + outputPhysical;
 	destination.paddr2 = chromaSize + lumaSize + outputPhysical;
 	ret = ksceIftuCsc(&destination, &source, &conversion);
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pYCbCr & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pYCbCr & ~255U),
 		((unsigned int)pYCbCr + 255 - ((unsigned int)pYCbCr & ~255U) + outputSize) & ~255U);
 unlockInput:
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pRGBA & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pRGBA & ~255U),
 		(inputSize + (unsigned int)pRGBA + 255 - ((unsigned int)pRGBA & ~255U)) & ~255U);
 finish:
 	sceSyscallLeave(syscallState);

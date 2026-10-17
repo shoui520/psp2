@@ -23,8 +23,6 @@ void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID th
 void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *request);
 void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *request);
 void issueSimpleIntrRequestToOtherCpuAndWait(void);
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 
 static inline int PmonCounterValid(uint32_t counter)
 {
@@ -113,12 +111,12 @@ int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (inIntr && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	thread = PmonCpuThread();
 	if (threadId == 0 || thread->threadId == threadId) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		thread->pRegisterContext->pmevent[counter].eventType = eventType;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
 		if (!inIntr) {
 			SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 67);
@@ -126,20 +124,20 @@ int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 			PmonWriteEventType(eventType);
 			ret = 0;
 		}
-	} else if (ksceGUIDReferObjectWithClass(threadId,
+	} else if (SceSysmemForDriver_00ED6C14(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		object->context.pRegisterContext->pmevent[counter].eventType = eventType;
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING)
 			addIntrRequest(object->context.currentCpuId, INTR_MASK_SIMPLE);
 		ret = 0;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(threadId);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(threadId);
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -159,7 +157,7 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 190);
 	mask &= PMON_COUNTER_MASK;
 	if (threadId == 0 || thread->threadId == threadId) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		enabled = PmonReadEnableSet();
 		if (!enable) {
 			thread->pRegisterContext->pmcntenset = enabled & ~mask;
@@ -170,13 +168,13 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 			if (!ksceKernelIsIntrAllowedInCurrentContext())
 				PmonWriteEnableSet(mask);
 		}
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		return 0;
 	}
-	if (ksceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
+	if (SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
 					 (SceObjectBase **)&object) < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
-	ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING)
 		issuePMonThreadChangeCounterEnableIntrRequest(object->context.currentCpuId, threadId,
 							      mask, enable);
@@ -184,8 +182,8 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 		object->context.pRegisterContext->pmcntenset &= ~mask;
 	else
 		object->context.pRegisterContext->pmcntenset |= mask;
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-	ksceGUIDReleaseObject(threadId);
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+	sceGUIDReleaseObject(threadId);
 	return 0;
 }
 
@@ -196,9 +194,9 @@ int SceThreadmgrForKernel_7F831213(SceUID threadId, uint32_t mask)
 
 	if (ksceKernelIsIntrAllowedInCurrentContext() && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ret = pmonThreadChangeEnableCounter(threadId, mask, 1);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -209,9 +207,9 @@ int SceThreadmgrForKernel_1D2A6815(SceUID threadId, uint32_t mask)
 
 	if (ksceKernelIsIntrAllowedInCurrentContext() && threadId == 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ret = pmonThreadChangeEnableCounter(threadId, mask, 0);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -240,28 +238,28 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 		else
 			thread->pRegisterContext->pmevent[request->counter].count = request->value;
 		ret = 0;
-	} else if (ksceGUIDReferObjectWithClass(threadId,
+	} else if (SceSysmemForDriver_00ED6C14(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 			issuePMonThreadSetCounterIntrRequest(object->context.currentCpuId, request);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-			ksceGUIDReleaseObject(threadId);
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+			sceGUIDReleaseObject(threadId);
 			return;
 		}
 		if (request->counter == PMON_CYCLE_COUNTER)
 			object->context.pRegisterContext->pmccntr = request->value;
 		else
 			object->context.pRegisterContext->pmevent[request->counter].count = request->value;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(threadId);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(threadId);
 		ret = 0;
 	}
 	*request->result = ret;
-	ksceKernelSpinlockLowUnlock(request->done);
+	sceKernelSpinlockLowUnlock(request->done);
 }
 
 /* SceThreadmgrForKernel_7B3368F1: sets a counter (31: the cycle counter) of a thread */
@@ -284,14 +282,14 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
 	}
 	thread = PmonCpuThread();
 	if (threadId == 0 || thread->threadId == threadId) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		if (counter == PMON_CYCLE_COUNTER) {
 			thread->pRegisterContext->pmccntr = value;
 			if (!ksceKernelIsIntrAllowedInCurrentContext())
@@ -303,17 +301,17 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 				PmonWriteEventCount(value);
 			}
 		}
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
 		goto resume;
 	}
-	ret = ksceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
+	ret = SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
 					   (SceObjectBase **)&object);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 		request.result = &ret;
 		request.done = &done;
@@ -323,21 +321,21 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		request.counter = counter;
 		request.value = value;
 		issuePMonThreadSetCounterIntrRequest(object->context.currentCpuId, &request);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(threadId);
-		ksceKernelCpuResumeIntr(intr);
-		ksceKernelSpinlockLowLock(&done);	/* until the target CPU unlocks it */
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(threadId);
+		sceKernelCpuResumeIntr(intr);
+		SceCpuForDriver_BF82DEB2(&done);	/* until the target CPU unlocks it */
 		goto restore;
 	}
 	if (counter == PMON_CYCLE_COUNTER)
 		object->context.pRegisterContext->pmccntr = value;
 	else
 		object->context.pRegisterContext->pmevent[counter].count = value;
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-	ksceGUIDReleaseObject(threadId);
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+	sceGUIDReleaseObject(threadId);
 	ret = 0;
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -363,28 +361,28 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 			*out = thread->pRegisterContext->pmccntr;
 		else
 			*out = thread->pRegisterContext->pmevent[request->counter].count;
-	} else if (ksceGUIDReferObjectWithClass(threadId,
+	} else if (SceSysmemForDriver_00ED6C14(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 			issuePMonThreadGetCounterIntrRequest(object->context.currentCpuId, request);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-			ksceGUIDReleaseObject(threadId);
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+			sceGUIDReleaseObject(threadId);
 			return;
 		}
 		if (request->counter == PMON_CYCLE_COUNTER)
 			*out = object->context.pRegisterContext->pmccntr;
 		else
 			*out = object->context.pRegisterContext->pmevent[request->counter].count;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(threadId);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(threadId);
 		ret = 0;
 	}
 	*request->result = ret;
-	ksceKernelSpinlockLowUnlock(request->done);
+	sceKernelSpinlockLowUnlock(request->done);
 }
 
 /* SceThreadmgrForKernel_170F69D6: reads a counter (31: the cycle counter) of a thread */
@@ -412,7 +410,7 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto resume;
@@ -420,12 +418,12 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 	if (inIntr && PmonCpuThread()->threadId == threadId) {
 		/* the interrupted thread: its saved registers */
 		thread = PmonCpuThread();
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		if (counter == PMON_CYCLE_COUNTER)
 			*value = thread->pRegisterContext->pmccntr;
 		else
 			*value = thread->pRegisterContext->pmevent[counter].count;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
 		goto resume;
 	}
@@ -439,13 +437,13 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		ret = 0;
 		goto resume;
 	}
-	ret = ksceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
+	ret = SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
 					   (SceObjectBase **)&object);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 	if (object->context.status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 		request.result = &ret;
 		request.done = &done;
@@ -455,21 +453,21 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		request.counter = counter;
 		request.value = (uintptr_t)value;
 		issuePMonThreadGetCounterIntrRequest(object->context.currentCpuId, &request);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(threadId);
-		ksceKernelCpuResumeIntr(intr);
-		ksceKernelSpinlockLowLock(&done);	/* until the target CPU unlocks it */
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(threadId);
+		sceKernelCpuResumeIntr(intr);
+		SceCpuForDriver_BF82DEB2(&done);	/* until the target CPU unlocks it */
 		goto restore;
 	}
 	if (counter == PMON_CYCLE_COUNTER)
 		*value = object->context.pRegisterContext->pmccntr;
 	else
 		*value = object->context.pRegisterContext->pmevent[counter].count;
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-	ksceGUIDReleaseObject(threadId);
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+	sceGUIDReleaseObject(threadId);
 	ret = 0;
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -496,23 +494,23 @@ int sceKernelPMonSetUserEnableRegister(SceUID pid, uint32_t value)
 		process = currentThreadContext()->process;
 		ret = 0;
 	} else {
-		ret = ksceGUIDGetObjectWithClass(pid,
+		ret = SceSysmemForKernel_0E43E113(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			return ret;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
+	intr = SceCpuForDriver_D32ACE9E(&process->lock);
 	for (link = process->threads.next; link != &process->threads; link = link->next) {
 		thread = THREAD_FROM_PROCESS_LINK(link);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		if (thread->pRegisterContext != NULL) {
 			thread->pRegisterContext->pmuserenr = value;
 			if (thread->pRegisterContext->callbackContext != NULL)
 				thread->pRegisterContext->callbackContext->pmuserenr = value;
 		}
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	if (pid == 0)
 		PmonWriteUserEnable(value);
 	issueSimpleIntrRequestToOtherCpuAndWait();
@@ -537,23 +535,23 @@ int sceKernelPMonSetControlRegister(SceUID pid, uint32_t value)
 		process = currentThreadContext()->process;
 		ret = 0;
 	} else {
-		ret = ksceGUIDGetObjectWithClass(pid,
+		ret = SceSysmemForKernel_0E43E113(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			return ret;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&process->lock);
+	intr = SceCpuForDriver_D32ACE9E(&process->lock);
 	for (link = process->threads.next; link != &process->threads; link = link->next) {
 		thread = THREAD_FROM_PROCESS_LINK(link);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		if (thread->pRegisterContext != NULL) {
 			thread->pRegisterContext->pmcr = value;
 			if (thread->pRegisterContext->callbackContext != NULL)
 				thread->pRegisterContext->callbackContext->pmcr = value;
 		}
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 	if (pid == 0)
 		PmonWriteControl(value);
 	issueSimpleIntrRequestToOtherCpuAndWait();

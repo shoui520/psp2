@@ -7,10 +7,9 @@
 #include <sysmem/sysroot.h>
 #include <psp2kern/io/fcntl.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/debugled.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/debugled.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include "regmgr_internal.h"
@@ -2051,7 +2050,7 @@ int regMgrGetRegion(int masquerade)
 {
 	int code, region, value;
 
-	code = ksceSblAimgrGetProductCode();
+	code = SceSblAIMgrForDriver_14345161();
 	if (code < 0)
 		return code;
 	switch (code) {
@@ -2221,12 +2220,12 @@ int regMgrInitWork(void *arg)
 	g_regMgrErrorMasquerade = 0;
 	g_regMgrVolatileMode = 0;
 	g_regMgrDrvErrCallback = -1;
-	if (ksceSysrootIsSafeMode() != 0)
+	if (SceSysrootForDriver_834439A7() != 0)
 		g_regMgrVolatileMode = 1;
-	if (ksceSysrootIsUpdateMode() != 0)
+	if (SceSysrootForDriver_B0E1FC67() != 0)
 		g_regMgrVolatileMode = 1;
 	g_regMgrIsQaf = SceQafMgrForDriver_0E588747() == 1;
-	g_regMgrIsDolce = ksceSblAimgrIsDolce() == 1;
+	g_regMgrIsDolce = SceSblAIMgrForDriver_71608CA3() == 1;
 
 	region = regMgrGetRegion(0);
 	if (region < 0) {
@@ -2362,7 +2361,7 @@ reset:
 		g_regMgrInitNotice |= 3;
 	regMgrInitRegistry("/REGISTRY/ERROR", 0x20);
 	g_regMgrResetLevel = level;
-	if (noRegistry && SceSysrootForDriver_ksceSysrootIsManufacturingMode() == 1) {
+	if (noRegistry && SceSysrootForDriver_55392965() == 1) {
 		ret = regMgrSetKeyInt("/CONFIG/TEL", "enable_wwan", 0);
 		if (ret != 0)
 			goto out;
@@ -2383,7 +2382,7 @@ settings:
 	if (g_regMgrConfig & 2) {
 		if (g_regMgrVolatileMode != 1 &&
 		    regMgrGetKeyInt("/DEVENV/TOOL", "gpi_switch", &value) == 0)
-			ksceKernelSetGPI(value);
+			SceDebugLedForDriver_51C5325A(value);
 		if ((g_regMgrConfig & 1) && g_regMgrRegion == REGMGR_REGION_TOOL)
 			g_regMgrRegion = 2;
 		if (g_regMgrIsDolce == 1)

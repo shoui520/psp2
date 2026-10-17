@@ -6,10 +6,9 @@
 
 #include <sysmem/sysmem.h>
 #include <excpmgr/moncall.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/pervasive.h>
@@ -35,10 +34,10 @@ static int sysconSetCallback(SceSysconCallback callback, void *argument,
 {
 	uint32_t state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
+	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
 	s_sysconControl.callbacks[slot].callback = callback;
 	s_sysconControl.callbacks[slot].argp = argument;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock,
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock,
 					       state);
 	return 0;
 }
@@ -378,9 +377,9 @@ int ksceSysconCmdExecAsync(SceSysconPacket *packet, uint32_t flags,
 	result = sysconPreparePacket(packet, flags, callback, argument);
 	if (result < 0)
 		return result;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
+	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
 	sysconQueuePacket(packet, flags);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return 0;
 }
 
@@ -395,42 +394,42 @@ int ksceSysconCmdSync(SceSysconPacket *packet, int noWait)
 			result = sceKernelCheckWaitableStatus();
 			if (result < 0) {
 #if FW_DEBUG
-				if (ksceKernelGetAssertLevel() > 0)
-					ksceKernelAssertLevel(1, 0,
+				if (SceDebugForDriver_374B7868() > 0)
+					SceDebugForDriver_FD753E7A(1, 0,
 						SCE_DBGINFO_FUNC(2454, "sceSysconCmdSync"),
 						__builtin_return_address(0));
 #endif
 				return result;
 			}
-			state = ksceKernelSpinlockLowLockCpuSuspendIntr(
+			state = SceCpuForDriver_D32ACE9E(
 						&s_sysconControl.callbackLock);
 			if (!(packet->status & SYSCON_PACKET_DONE)) {
 				semaphore = ksceKernelCreateSema("SceSysconSync", 0,
 							       0, 1, NULL);
 				if (semaphore < 0) {
-					ksceKernelSpinlockLowUnlockCpuResumeIntr(
+					sceKernelSpinlockLowUnlockCpuResumeIntr(
 						&s_sysconControl.callbackLock, state);
 					return semaphore;
 				}
 				packet->semaId = semaphore;
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&s_sysconControl.callbackLock, state);
 				result = ksceKernelWaitSema(semaphore, 1, NULL);
 #if FW_DEBUG
-				if (ksceKernelGetAssertLevel() > 0)
-					ksceKernelAssertLevel(1, result >= 0,
+				if (SceDebugForDriver_374B7868() > 0)
+					SceDebugForDriver_FD753E7A(1, result >= 0,
 						SCE_DBGINFO_FUNC(2493, "sceSysconCmdSync"),
 						__builtin_return_address(0));
 #endif
 				result = ksceKernelDeleteSema(semaphore);
 #if FW_DEBUG
-				if (ksceKernelGetAssertLevel() > 0)
-					ksceKernelAssertLevel(1, result >= 0,
+				if (SceDebugForDriver_374B7868() > 0)
+					SceDebugForDriver_FD753E7A(1, result >= 0,
 						SCE_DBGINFO_FUNC(2495, "sceSysconCmdSync"),
 						__builtin_return_address(0));
 #endif
 			} else {
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&s_sysconControl.callbackLock, state);
 			}
 		} else {
@@ -475,8 +474,8 @@ static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 		result = sceKernelCheckWaitableStatus();
 		if (result < 0) {
 #if FW_DEBUG
-			if (ksceKernelGetAssertLevel() > 0)
-				ksceKernelAssertLevel(1, 0,
+			if (SceDebugForDriver_374B7868() > 0)
+				SceDebugForDriver_FD753E7A(1, 0,
 					SCE_DBGINFO_FUNC(2153, "sceSysconCmdExec"),
 					caller);
 #endif
@@ -488,9 +487,9 @@ static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 	result = sysconPreparePacket(packet, flags, NULL, NULL);
 	if (result < 0)
 		return result;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
+	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
 	sysconQueuePacket(packet, flags);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return 0;
 }
 
@@ -511,7 +510,7 @@ int SceSysconForDriver_C9DB5BFF(SceSysconPacket *packet)
 	uint32_t state, slot = packet->queue;
 	int result = 0;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
+	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
 	current = s_sysconControl.queueHeads[slot];
 	while (current && current != packet) {
 		previous = current;
@@ -529,7 +528,7 @@ int SceSysconForDriver_C9DB5BFF(SceSysconPacket *packet)
 		if (!current->next)
 			s_sysconControl.queueTails[slot] = previous;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return result;
 }
 
@@ -867,19 +866,19 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	options.size = sizeof(options);
 	options.paddr = SPI_REG_BASE(0);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	result = ksceKernelAllocMemBlock("SceSpi0Reg",
+	result = SceSysmemForDriver_C94850C9("SceSpi0Reg",
 					 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					 0x1000, &options);
 	if (result < 0)
 		return result;
 	s_sysconControl.spiMemblock = result;
-	ksceKernelGetMemBlockBase(result, (void **)&s_sysconControl.spiRegisters);
+	SceSysmemForDriver_A841EDDA(result, (void **)&s_sysconControl.spiRegisters);
 	ksceKernelRegisterSubIntrHandler(0xf8, 4, "SceSysconCmdclr",
 				       _sceSysconGpioIntr, NULL);
 	ksceKernelEnableSubIntr(0xf8, 4);
-	s_sysconControl.hardwareInfo = ksceSysrootGetHardwareInfo();
-	ksceSysrootGetHardwareFlags(s_sysconControl.hardwareFlags);
-	ksceKernelRegisterSysEventHandler("SceSyscon", sysconSysEvent, NULL);
+	s_sysconControl.hardwareInfo = SceSysrootForDriver_930B1342();
+	SceSysrootForDriver_46E72428(s_sysconControl.hardwareFlags);
+	sceKernelRegisterSysEventHandler("SceSyscon", sysconSysEvent, NULL);
 	result = ksceKernelCreateMutex("SceSyscon", 0, 0, NULL);
 	s_sysconControl.mutex = result;
 	spi = s_sysconControl.spiRegisters;
@@ -1110,8 +1109,8 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 
 #if FW_DEBUG
 #define SYSCON_EXECUTION_WARNING(line) do { \
-	if (ksceKernelGetAssertLevel() > 0) \
-		ksceKernelPrintfAssertLevel(1, 0, \
+	if (SceDebugForDriver_374B7868() > 0) \
+		SceDebugForDriver_821A2D59(1, 0, \
 			SCE_DBGINFO_FUNC(line, "_sceSysconGpioIntr"), caller, \
 			"[SceSyscon]: unexpected cmd execution info 0x%02X\n", \
 			length); \
@@ -1155,8 +1154,8 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 		pending = s_sysconControl.queueHeads[queue];
 		if (!pending) {
 #if FW_DEBUG
-			if (ksceKernelGetAssertLevel() > 0)
-				ksceKernelPrintfAssertLevel(1, 0,
+			if (SceDebugForDriver_374B7868() > 0)
+				SceDebugForDriver_821A2D59(1, 0,
 					SCE_DBGINFO_FUNC(1803, "_sceSysconGpioIntr"),
 					caller,
 					"[SceSyscon]: unexpected cmd completion 0x%04X\n",
@@ -1173,8 +1172,8 @@ static void sysconDecodeCommandCompletions(SceSysconPacket *packet,
 		} else {
 			pending->status |= SYSCON_PACKET_WRONG_COMPLETION;
 #if FW_DEBUG
-			if (ksceKernelGetAssertLevel() > 0)
-				ksceKernelPrintfAssertLevel(1, 0,
+			if (SceDebugForDriver_374B7868() > 0)
+				SceDebugForDriver_821A2D59(1, 0,
 					SCE_DBGINFO_FUNC(1817, "_sceSysconGpioIntr"),
 					caller,
 					"[SceSyscon]: invalid cmd completion 0x%04X (should be 0x%04X)\n",
@@ -1241,7 +1240,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 	int semaphore = -1, callbackResult = 2, result;
 	const void *caller = __builtin_return_address(0);
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sysconControl.callbackLock);
+	state = SceCpuForDriver_D32ACE9E(&s_sysconControl.callbackLock);
 	packet = s_sysconControl.currentPacket;
 	s_sysconControl.interruptActive = 1;
 	s_sysconControl.currentPacket = NULL;
@@ -1249,7 +1248,7 @@ static int _sceSysconGpioIntr(void *subintrArg, void *registerArg, unsigned char
 		ksceGpioPortClear(0, 3);
 	s_sysconControl.lastTransferTime = ksceKernelGetSystemTimeLow();
 	ksceGpioAcquireIntr(0, 4);
-	ksceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
+	sceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
 	spi = s_sysconControl.spiRegisters;
 	if (packet->status & SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX) {
 		response = packet->externalRx + packet->received;
@@ -1301,7 +1300,7 @@ invalid:
 		sysconDecodePacketResponse(packet, &requestStatus,
 					   &requestCompletions, first);
 	}
-	ksceKernelSpinlockLowLock(&s_sysconControl.callbackLock);
+	SceCpuForDriver_BF82DEB2(&s_sysconControl.callbackLock);
 	if (!(packet->status & (SYSCON_PACKET_BAD_CHECKSUM | SCE_SYSCON_PACKET_FLAG_NO_RETRY)) &&
 	    ((packet->reply.result & 0x40) ||
 	     (packet->queue != 17 && (packet->reply.result ^ 0x80) < 2)))
@@ -1323,13 +1322,13 @@ invalid:
 	callbackResult = 0;
 	if (!packet->callback)
 		goto queueInternal;
-	ksceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
+	sceKernelSpinlockLowUnlock(&s_sysconControl.callbackLock);
 	sysconLogPacket(3, packet, packet->rx);
 	callbackResult = packet->callback(packet, packet->argp);
 	if (s_sysconControl.logger)
 		s_sysconControl.logger(4, 2, (int16_t)sysconPacketCommand(packet),
 				      callbackResult);
-	ksceKernelSpinlockLowLock(&s_sysconControl.callbackLock);
+	SceCpuForDriver_BF82DEB2(&s_sysconControl.callbackLock);
 	if (callbackResult == 1) {
 		packet->next = s_sysconControl.queueHeads[packet->queue];
 		s_sysconControl.queueHeads[packet->queue] = packet;
@@ -1374,13 +1373,13 @@ select:
 		result = ksceKernelSignalSema(semaphore, 1);
 		(void)result;
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, result >= 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, result >= 0,
 				SCE_DBGINFO_FUNC(2101, "_sceSysconGpioIntr"), caller);
 #endif
 	}
 	s_sysconControl.interruptActive = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sysconControl.callbackLock, state);
 	return -1;
 }
 
@@ -2815,7 +2814,7 @@ int SceSysconForDriver_769F9AC4(void)
 {
 	int state;
 
-	if (ksceSblAimgrIsDolce())
+	if (SceSblAIMgrForDriver_71608CA3())
 		return 1;
 	state = s_sysconControl.notificationState[SYSCON_STATE_N0_BIT6];
 	return state < 0 ? 0 : state;
@@ -2847,7 +2846,7 @@ int ksceSysconGetMultiCnInfo(uint32_t *information)
 		value = (value & ~0xff00U) | revision << 8;
 	}
 	if (information) {
-		if (ksceSblAimgrIsGenuineDolce())
+		if (SceSblAIMgrForDriver_C6E83F34())
 			value &= ~0xff00U;
 		*information = value;
 	}

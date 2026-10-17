@@ -10,7 +10,7 @@
 #include <lowio/pervasive.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 
 /* ScePervasiveForDriver: the USB blocks of a bus */
 

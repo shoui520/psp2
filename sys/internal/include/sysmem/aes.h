@@ -1,7 +1,7 @@
 /* SceKernelUtils compact AES context, owned by SceSysmem.
  *
- * ksceAesInit2/3 select the 0x1f0-byte single-schedule representation;
- * ksceAesInit1 selects the 0x3d0-byte two-schedule representation.
+ * SceKernelUtilsForDriver_EDA97D6D/3 select the 0x1f0-byte single-schedule representation;
+ * SceKernelUtilsForDriver_F12B6451 selects the 0x3d0-byte two-schedule representation.
  * Field names are inferred from the initializer's writes: key/block bit
  * lengths are divided by 32, and rounds is their maximum plus six.
  */

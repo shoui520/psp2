@@ -49,8 +49,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID 0x80028261	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
 
 /* SceUIDSimpleEventObject (0x3c) */
@@ -88,12 +86,12 @@ static int uidSimpleEvent_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 877);
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	pid = simple->event.ownerPid;
-	if (ksceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
+	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			ksceKernelSpinlockLowLock(&process->resourceLock);
+			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (simple->event.attr & SIMPLE_EVENT_ATTR_LW)
 				process->uidLwCount--;
 			else if (simple->event.attr & SIMPLE_EVENT_ATTR_UNLIMITED)
@@ -101,11 +99,11 @@ static int uidSimpleEvent_Destructor(void *object)
 			else
 				process->uidCount--;
 			process->simpleEventCount--;
-			ksceKernelSpinlockLowUnlock(&process->resourceLock);
+			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
-		ksceGUIDReleaseObject(pid);
+		sceGUIDReleaseObject(pid);
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	__builtin_memset(&simple->uid, 0, sizeof(simple->uid));
 	return 0;
 }
@@ -115,7 +113,7 @@ int startSimpleEvent(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(77);
 	ret = sceKernelUIDInheritedEventClassInit(cls, "SceUIDSimpleEventClass", SIMPLE_EVENT_ITEM_SIZE,
@@ -145,36 +143,36 @@ int simpleEventProcessExit(SceProcessObject *process)
 	}
 	vector = NULL;
 	while (num != 0) {
-		vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 121);
 		num = SceSysmemForKernel_08C05493(process->pid, SIMPLE_EVENT_CLASS(), 5, vector,
 						  num, &got);
 		if ((int)got >= num)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < num; i++) {
-		guid = kscePUIDtoGUID(process->pid, vector[i]);
+		guid = SceSysmemForDriver_45D22597(process->pid, vector[i]);
 		/* Sony's: interrupts stay suspended when the event is gone already */
-		intr = ksceKernelCpuSuspendIntr();
-		if (ksceGUIDReferObjectWithClass(guid, SIMPLE_EVENT_CLASS(),
+		intr = SceCpuForDriver_821FC0EE();
+		if (SceSysmemForDriver_00ED6C14(guid, SIMPLE_EVENT_CLASS(),
 						 (SceObjectBase **)&simple) < 0)
 			continue;
-		if (kscePUIDClose(process->pid, vector[i]) < 0)
+		if (SceSysmemForDriver_84A4AF5E(process->pid, vector[i]) < 0)
 			SCE_PANIC(144);
-		ksceKernelSpinlockLowLock(&simple->event.lock);
+		SceCpuForDriver_BF82DEB2(&simple->event.lock);
 		wake = setEventWithNotifyCallback(guid, SIMPLE_EVENT_PROCESS_EXITED,
 			(uint64_t)(int64_t)process->pid, SIMPLE_EVENT_PROCESS_EXITED, &simple->event);
-		ksceKernelSpinlockLowUnlock(&simple->event.lock);
+		sceKernelSpinlockLowUnlock(&simple->event.lock);
 		if ((int)wake < 0)
 			SCE_PANIC(151);
-		if (ksceGUIDReleaseObject(guid) < 0)
+		if (sceGUIDReleaseObject(guid) < 0)
 			SCE_PANIC(156);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelCpuResumeIntr(intr);
 	}
 	if (vector != NULL) {
-		ret = ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		ret = sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		SCE_DBG_ASSERT_CHECK(ret >= 0, 163);
 	}
 	return 0;
@@ -240,13 +238,13 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 		}
 	}
 	if (!ThreadmgrInSyscall()) {
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
+		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
 		if (attr & SIMPLE_EVENT_ATTR_LW) {
 			if (process->uidLwCount >= UID_LW_MAX_PER_PROCESS) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 281, "sceKernelCreateSimpleEvent", "sceKernelCreateSimpleEvent(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -260,7 +258,7 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
 		} else {
 			if (process->uidCount >= UID_MAX_PER_PROCESS) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_PRINTF_FUNC(0xb, 298, "sceKernelCreateSimpleEvent",
 					"(), SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -272,13 +270,13 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 		}
 		if (++process->simpleEventCount > process->simpleEventPeak)
 			process->simpleEventPeak = process->simpleEventCount;
-		ksceKernelSpinlockLowUnlock(&process->resourceLock);
+		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = ksceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
 					  (SceObjectBase **)&simple);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			ksceKernelSpinlockLowLock(&process->resourceLock);
+			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (attr & SIMPLE_EVENT_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & SIMPLE_EVENT_ATTR_UNLIMITED)
@@ -286,7 +284,7 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 			else
 				process->uidCount--;
 			process->simpleEventCount--;
-			ksceKernelSpinlockLowUnlock(&process->resourceLock);
+			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
 		simple->uid = uid;
@@ -299,7 +297,7 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 		SCE_DBG_ASSERT_CHECK_FUNC(ret >= 0, 334, "sceKernelCreateSimpleEvent");
 	}
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return uid;
@@ -317,19 +315,19 @@ int sceKernelDeleteSimpleEvent(SceUID simpleEventId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF(0, 378, "*** error: illegal context. simpleEventId=0x%08x[%s]\n",
-				      simpleEventId, ksceGUIDName(simpleEventId));
+				      simpleEventId, SceSysmemForDriver_E655852F(simpleEventId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	if (ksceGUIDReferObjectWithClass(simpleEventId, SIMPLE_EVENT_CLASS(),
+	intr = SceCpuForDriver_821FC0EE();
+	if (SceSysmemForDriver_00ED6C14(simpleEventId, SIMPLE_EVENT_CLASS(),
 					 (SceObjectBase **)&simple) < 0) {
 		ret = ThreadmgrInSyscall() ?
 			(SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID | SYSCALL_ERROR_BIT) :
 			SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID;
 		goto resume;
 	}
-	if (ksceGUIDClose(simpleEventId) < 0)
+	if (sceGUIDClose(simpleEventId) < 0)
 		SCE_PANIC(SCE_LINE(407, 400));
 	if (ThreadmgrInSyscall()) {
 		/* not for syscalls: they have sceKernelDeleteSimpleEventForUser */
@@ -337,21 +335,21 @@ int sceKernelDeleteSimpleEvent(SceUID simpleEventId)
 		wake = 0;
 	} else {
 		thread = currentThreadContext();
-		ksceKernelSpinlockLowLock(&simple->event.lock);
+		SceCpuForDriver_BF82DEB2(&simple->event.lock);
 		wake = setEventWithNotifyCallback(simpleEventId, SIMPLE_EVENT_DELETED,
 			SimpleEventCaller(thread->threadId, thread->processId), SIMPLE_EVENT_DELETED,
 			&simple->event);
-		ksceKernelSpinlockLowUnlock(&simple->event.lock);
+		sceKernelSpinlockLowUnlock(&simple->event.lock);
 		if ((int)wake < 0)
 			SCE_PANIC(SCE_LINE(418, 411));
 	}
-	if (ksceGUIDReleaseObject(simpleEventId) < 0)
+	if (sceGUIDReleaseObject(simpleEventId) < 0)
 		SCE_PANIC(SCE_LINE(427, 420));
 	ret = 0;
 	if (wake & 1)
 		switchThread(0);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -388,13 +386,13 @@ SceUID sceKernelOpenSimpleEventForUser(const char *userName)
 	puid = SceSysmemForKernel_201E970B(0, name, &opt);
 	if (puid < 0)
 		return puid;
-	ret = kscePUIDGetObject(0, puid, &object);
+	ret = SceSysmemForDriver_FE6D7FAE(0, puid, &object);
 	if (ret < 0) {
-		if (kscePUIDClose(0, puid) < 0)
+		if (SceSysmemForDriver_84A4AF5E(0, puid) < 0)
 			SCE_PANIC(SCE_LINE(539, 532));
 		return ret;
 	}
-	wake = sceKernelSetEventWithNotifyCallback(kscePUIDtoGUID(0, puid), SIMPLE_EVENT_OPENED,
+	wake = sceKernelSetEventWithNotifyCallback(SceSysmemForDriver_45D22597(0, puid), SIMPLE_EVENT_OPENED,
 		SimpleEventCaller(thread->userThreadId, thread->processId), SIMPLE_EVENT_OPENED);
 	SCE_DBG_ASSERT_CHECK((int)wake >= 0, 556);
 	return puid;
@@ -411,15 +409,15 @@ int SceThreadmgrForDriver_4DE77569(int level, ThreadmgrEventInfo *infos, SceSize
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = ksceGUIDGetUIDVectorByClass(SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
+	num = SceSysmemForKernel_52137FA3(SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = ksceGUIDGetUIDVectorByClass(SIMPLE_EVENT_CLASS(), level, vector, num, &got);
+		total = SceSysmemForKernel_52137FA3(SIMPLE_EVENT_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -440,7 +438,7 @@ int SceThreadmgrForDriver_4DE77569(int level, ThreadmgrEventInfo *infos, SceSize
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }
 
@@ -459,13 +457,13 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, ThreadmgrEventInfo *in
 	num = SceSysmemForKernel_08C05493(pid, SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
 		total = SceSysmemForKernel_08C05493(pid, SIMPLE_EVENT_CLASS(), level, vector, num,
 						    &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -475,7 +473,7 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, ThreadmgrEventInfo *in
 	for (i = 0; i < total; i++) {
 		memset(&info, 0, sizeof(info));
 		info.size = sizeof(info);
-		if (SceThreadmgrForDriver_CBA7FAAA(kscePUIDtoGUID(pid, vector[i]), &info) != 0)
+		if (SceThreadmgrForDriver_CBA7FAAA(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
 			continue;
 		info.eventId = vector[i];
 		if (scePUIDGetAttr(pid, info.eventId, &attr) >= 0 && (attr & PUID_ATTR_OPENED))
@@ -489,6 +487,6 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, ThreadmgrEventInfo *in
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }

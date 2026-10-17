@@ -5,6 +5,7 @@
 #include <lowio/mailbox_regs.h>
 #include "venezia_internal.h"
 #include <lowio/pervasive.h>
+#include <sysmem/cpu.h>
 
 /* name unknown: host-side Venezia mailbox interrupt state. */
 typedef struct VeneziaMailboxState {
@@ -27,20 +28,20 @@ int veneziaMailboxIntrHandler(int intrCode, void *userCtx)
 	int intr;
 
 	receive = registers->receive;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	pending = receive[channel];
 	receive[channel] = pending;
 	__asm__ volatile("dmb sy" ::: "memory");
 	(void)receive[channel];
 	__asm__ volatile("dsb sy" ::: "memory");
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	if (pending << 16)
 		ksceKernelSetEventFlag(g_veneziaMailboxState.blockingEvent, mask);
 	if (pending >> 16) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(
+		intr = SceCpuForDriver_D32ACE9E(
 			&g_veneziaMailboxState.completionLock);
 		g_veneziaMailboxState.completedChannels |= mask;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(
+		sceKernelSpinlockLowUnlockCpuResumeIntr(
 			&g_veneziaMailboxState.completionLock, intr);
 	}
 	return -1;
@@ -92,8 +93,6 @@ int enableVeneziaMailboxInterrupts(void)
 	return 0;
 }
 
-extern void SceCpuForDriver_E813EBB2(void);
-
 /* name unknown: flush shared RPC data and notify the DSP mailbox. */
 int submitVeneziaRpc(unsigned int channel)
 {
@@ -120,11 +119,11 @@ unsigned int getCompletedVeneziaRpc(void)
 	unsigned int completed;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intr = SceCpuForDriver_D32ACE9E(
 		&g_veneziaMailboxState.completionLock);
 	completed = g_veneziaMailboxState.completedChannels;
 	g_veneziaMailboxState.completedChannels = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 		&g_veneziaMailboxState.completionLock, intr);
 	return completed;
 }

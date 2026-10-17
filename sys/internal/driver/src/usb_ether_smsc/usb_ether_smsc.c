@@ -6,11 +6,11 @@
  */
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/cpu/atomic.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/procevent.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/usbd.h>
 #include <psp2kern/usbserv.h>
 #include <psp2kern/idstorage.h>
@@ -188,7 +188,7 @@ struct SceUsbEtherSmscContext {
 	int references;
 	int active;
 	unsigned int rxCount;
-	SceProcEventHandler proc;
+	SceKernelProcEventHandler proc;
 	int procId;
 	unsigned int state;
 };
@@ -412,7 +412,7 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 	s_driver.detach = detachDevice;
 	if (ksceSysconIsDownLoaderMode())
 		return SMSC_ERROR_NOT_READY;
-	if (ksceSblAimgrIsDolce()) {
+	if (SceSblAIMgrForDriver_71608CA3()) {
 		ksceSysconCtrlDolceUsbPower(1);
 		ksceSysconCtrlDeviceReset(0x20, 1);
 	}
@@ -623,7 +623,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
 	ksceKernelLockFastMutex(&a->mutex);
 	if (!addresses) {
 		if (length) {
@@ -665,7 +665,7 @@ static int setMulticast(struct NetDriver *driver, const unsigned char *addresses
 	}
 out:
 	ksceKernelUnlockFastMutex(&a->mutex);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
 static int kickTx(struct NetDriver *driver, int argument)
@@ -676,10 +676,10 @@ static int kickTx(struct NetDriver *driver, int argument)
 
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
 	if (__atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST) == 0)
 		ksceKernelSetEventFlag(a->workerEvent, WORKER_TX);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
 static int interfaceStart(struct NetDriver *driver, void *memoryBase)
@@ -689,8 +689,8 @@ static int interfaceStart(struct NetDriver *driver, void *memoryBase)
 	(void)memoryBase;
 	if (!a->active)
 		return SMSC_ERROR_NOT_READY;
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
 static int interfaceStop(struct NetDriver *driver, void *memoryBase, int memorySize)
@@ -735,7 +735,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	} else {
 		if (!a->active)
 			return SMSC_ERROR_NOT_READY;
-		ksceKernelAtomicAddAndGet32(&a->references, 1);
+		SceCpuForDriver_5F6A8743(&a->references, 1);
 		switch (command) {
 		case NET_DRIVER_CTL_SET_LINK:
 			ret = setLink(a, *value);
@@ -759,10 +759,10 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 		}
 	}
 	/* Sony also decrements this on the paths which never incremented it. */
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
-static int processEvent(int event, int type, SceProcEventInvokeParam2 *param, int context)
+static int processEvent(int event, int type, ProcEventCreateParam *param, int context)
 {
 	struct SceUsbEtherSmscContext *a = (void *)context;
 
@@ -889,7 +889,7 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 	ret = setLink(a, NET_DRIVER_LINK_ANY);
 	if (ret < 0)
 		return ret;
-	if (ksceSblAimgrIsGenuineDolce()) {
+	if (SceSblAIMgrForDriver_C6E83F34()) {
 		ret = ksceIdStorageLookup(0x119, 0, mac, 6);
 		if (ret < 0)
 			return ret;
@@ -959,12 +959,12 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT |
 			   SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 		opt.alignment = 0x1000;
-		uid = ksceKernelAllocMemBlock("SceNetDrvEtherTx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+		uid = SceSysmemForDriver_C94850C9("SceNetDrvEtherTx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					    (a->bufferSize + 0xfff) & ~0xfffU, &opt);
 		ret = uid;
 		if (ret < 0)
 			return ret;
-		ret = ksceKernelGetMemBlockBase(uid, (void **)&value);
+		ret = SceSysmemForDriver_A841EDDA(uid, (void **)&value);
 		if (ret < 0 || !value)
 			return ret;
 		a->txBuffer = (void *)value;
@@ -973,12 +973,12 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT |
 			   SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 		opt.alignment = 0x1000;
-		uid = ksceKernelAllocMemBlock("SceNetDrvEtherRx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+		uid = SceSysmemForDriver_C94850C9("SceNetDrvEtherRx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					    (a->bufferSize + 0xfff) & ~0xfffU, &opt);
 		ret = uid;
 		if (ret < 0)
 			return ret;
-		ret = ksceKernelGetMemBlockBase(uid, (void **)&value);
+		ret = SceSysmemForDriver_A841EDDA(uid, (void **)&value);
 		if (ret < 0 || !value)
 			return ret;
 		a->rxBuffer = (void *)value;
@@ -1240,17 +1240,17 @@ static int workerEntry(SceSize arglen, void *argp)
 	a->proc.exit = NULL;
 	a->proc.kill = NULL;
 	a->proc.size = sizeof(a->proc);
-	a->proc.switch_process = processEvent;
+	a->proc.notify = processEvent;
 	a->proc.create = NULL;
-	a->proc.stop = NULL;
-	a->proc.start = NULL;
-	ret = ksceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
+	a->proc.suspend = NULL;
+	a->proc.resume = NULL;
+	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
 	if (ret < 0) {
 		if (a->procId > 0) {
-			ksceKernelUnregisterProcEventHandler(a->procId);
+			SceProcEventForDriver_3DED57CC(a->procId);
 			a->procId = 0;
 		}
-		ksceKernelPrintf("UsbEtherSmsc workerEntry Exit. ret=0x%08x\n", ret);
+		SceDebugForDriver_391B74B7("UsbEtherSmsc workerEntry Exit. ret=0x%08x\n", ret);
 		sceKernelExitThread(0);
 		return ret;
 	}
@@ -1313,7 +1313,7 @@ int module_start(unsigned int arglen, void *argp)
 	(void)arglen;
 	(void)argp;
 	hardware = ksceSysconGetHardwareInfo();
-	if (ksceSblAimgrIsCEX() && !(hardware & 0x80))
+	if (SceSblAIMgrForDriver_D78B04A2() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));
 	ret = ksceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherSmscControl", 0x2000, NULL);
@@ -1330,7 +1330,7 @@ int module_start(unsigned int arglen, void *argp)
 	ret = ksceKernelStartThread(ret, 4, &a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelRegisterSysEventHandler("SceUsbEtherSmsc", systemEvent, a);
+	ret = sceKernelRegisterSysEventHandler("SceUsbEtherSmsc", systemEvent, a);
 	if (ret < 0)
 		return ret;
 	ret = initializeUsb(a);

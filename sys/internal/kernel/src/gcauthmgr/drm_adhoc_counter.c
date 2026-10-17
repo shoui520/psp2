@@ -2,7 +2,7 @@
 #include <psp2/types.h>
 #include "adhoc.h"
 #include "drm_crypto.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 extern const unsigned char gcAuthAdhocCounterAesKey[16];
 
@@ -59,14 +59,14 @@ int GcAuthAdhocGenerateCbcCounterStream(GcAuthAdhocCounterStream *stream,
 	}
 	for (index = 0; index != 16; ++index)
 		iv[index] = 0;
-	if (ksceAesInit1(&state.aes, 128, 128, gcAuthAdhocCounterAesKey) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 128, gcAuthAdhocCounterAesKey) >= 0) {
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; ++index)
 			state.chain[index] = iv[index];
 	}
 	end = cursor + size;
 	while (cursor < end) {
-		ksceAesDecrypt1(&state.aes, cursor, block);
+		SceKernelUtilsForDriver_D8678061(&state.aes, cursor, block);
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; ++index) {
 			previous = state.chain[index];

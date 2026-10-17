@@ -77,17 +77,17 @@ set(MODULE_IMPORT_NIDS
 	0xFF160234:F:0x66AC5580
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	memcpy
 	__aeabi_uidivmod
@@ -105,8 +105,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_8CB01675
-	ksceKernelRegisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceSblACMgrIsSystemProgram

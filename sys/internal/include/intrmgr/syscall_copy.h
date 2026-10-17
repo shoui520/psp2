@@ -8,7 +8,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <kernel/error.h>
 
 /* the argument block of the calls with one variable size (the blocks are 8 byte aligned) */
@@ -32,7 +32,7 @@ static inline int copyResult(int ret, int copy)
 #define BLOCK_IN(_ptr, _user, _size) do {				\
 	if ((_user) != NULL) {						\
 		(_ptr) = __builtin_alloca(_size);			\
-		ret = ksceKernelCopyFromUser((_ptr), (_user), (_size));	\
+		ret = SceSysmemForDriver_BC996A7A((_ptr), (_user), (_size));	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -44,7 +44,7 @@ static inline int copyResult(int ret, int copy)
 		if ((_size) > (_max))					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		(_ptr) = __builtin_alloca(_max);			\
-		ret = ksceKernelCopyFromUser((_ptr), (_user), (_size));	\
+		ret = SceSysmemForDriver_BC996A7A((_ptr), (_user), (_size));	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -54,7 +54,7 @@ static inline int copyResult(int ret, int copy)
 #define STRING_IN(_ptr, _user, _size) do {				\
 	if ((_user) != NULL) {						\
 		(_ptr) = __builtin_alloca(_size);			\
-		ret = ksceKernelStrncpyFromUser((_ptr), (_user), (_size));	\
+		ret = SceSysmemForDriver_DB3EC244((_ptr), (_user), (_size));	\
 		if (ret < 0)						\
 			return ret;					\
 		if (ret == (_size) && ((signed char *)(_ptr))[(_size) - 1] != 0)	\
@@ -64,7 +64,7 @@ static inline int copyResult(int ret, int copy)
 
 /* the argument block */
 #define ARGS_IN(_args, _uargs) do {					\
-	ret = ksceKernelCopyFromUser(&(_args), (_uargs), sizeof(_args));	\
+	ret = SceSysmemForDriver_BC996A7A(&(_args), (_uargs), sizeof(_args));	\
 	if (ret < 0)							\
 		return ret;						\
 } while (0)
@@ -78,7 +78,7 @@ static inline int copyResult(int ret, int copy)
 	k = __builtin_alloca(_size);					\
 	__builtin_memset(k, 0, (_size));				\
 	ret = _call_k;							\
-	return copyResult(ret, ksceKernelCopyToUser((_user), k, (_size)));	\
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A((_user), k, (_size)));	\
 } while (0)
 
 /* out, optional, zeroed first: up to max bytes, the size from the argument block */
@@ -92,6 +92,6 @@ static inline int copyResult(int ret, int copy)
 	k = __builtin_alloca(_max);					\
 	__builtin_memset(k, 0, (_max));					\
 	ret = _call_k;							\
-	return copyResult(ret, ksceKernelCopyToUser((_user), k, (_size)));	\
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A((_user), k, (_size)));	\
 } while (0)
 

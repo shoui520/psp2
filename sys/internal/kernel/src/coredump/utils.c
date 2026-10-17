@@ -62,9 +62,9 @@ void utilsElf32MakePtnote(Elf32_Phdr *header, SceUInt32 fileOffset, SceSize data
 #if FW_DEBUG
 	void *lr = __builtin_return_address(0);
 
-	ksceKernelAssert(header != NULL, SCE_DBGINFO(112), lr);
+	SceDebugForDriver_35A35322(header != NULL, SCE_DBGINFO(112), lr);
 	/* utilsElf32MakePhent inlined, its zero fields left to the memset */
-	ksceKernelAssert(header != NULL, SCE_DBGINFO_FUNC(88, "utilsElf32MakePhent"), lr);
+	SceDebugForDriver_35A35322(header != NULL, SCE_DBGINFO_FUNC(88, "utilsElf32MakePhent"), lr);
 #endif
 	memset(header, 0, sizeof(*header));
 	header->p_offset = fileOffset;

@@ -1,5 +1,5 @@
 /* Module lifecycle. */
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 
 unsigned char gcAuthProcessStopBlocked;
 
@@ -11,7 +11,7 @@ int GcAuthResetState(void);
 int GcAuthInitializeGcAuth(void);
 
 int GcAuthProcessStopHandler(SceUID pid, int eventType,
-			   SceProcEventInvokeParam1 *param, int unused)
+			   ProcEventParam *param, int unused)
 {
 	if (eventType != 0x202)
 		return 0;
@@ -20,17 +20,17 @@ int GcAuthProcessStopHandler(SceUID pid, int eventType,
 
 int module_start(SceSize arglen, const void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 
 	gcAuthProcessStopBlocked = 0;
 	handler.create = 0;
 	handler.exit = 0;
 	handler.kill = 0;
-	handler.start = 0;
-	handler.switch_process = 0;
-	handler.stop = GcAuthProcessStopHandler;
+	handler.resume = 0;
+	handler.notify = 0;
+	handler.suspend = GcAuthProcessStopHandler;
 	handler.size = sizeof(handler);
-	ksceKernelRegisterProcEventHandler("SceSblGcAuthMgr", &handler, 0);
+	sceKernelRegisterProcEventHandler("SceSblGcAuthMgr", &handler, 0);
 	if (GcAuthInitializeDrmBb() != 0 ||
 	    GcAuthInitializePcact() != 0 ||
 	    GcAuthInitializeAdhocBb() != 0 ||

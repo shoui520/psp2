@@ -342,7 +342,7 @@ int sceKrmInternalGenerateKey(KrmState *state, const KrmKey *key)
 					       &dst->material.ecc.privateKey);
 		if (ret < 0) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, &g_krmGenerateEccDebug,
+			SceDebugForDriver_D9703808(1, 0, &g_krmGenerateEccDebug,
 				g_krmGenerateEccError,
 				g_krmGenerateKeyName, ret);
 #endif
@@ -354,7 +354,7 @@ int sceKrmInternalGenerateKey(KrmState *state, const KrmKey *key)
 			ret = KrmDriverGetRandomBytes(dst->material.symmetric, 4 * key->info.keyWords);
 			if (ret < 0) {
 #if FW_DEBUG
-				ksceKernelPrintfLevelWithInfo(1, 0, &g_krmGenerateRandomDebug,
+				SceDebugForDriver_D9703808(1, 0, &g_krmGenerateRandomDebug,
 					g_krmGenerateRandomError,
 					g_krmGenerateKeyName, ret);
 #endif
@@ -807,7 +807,7 @@ int module_start(SceSize arglen, const void *argp)
 	return 0;
 }
 
-int KrmProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int KrmProcessKill(SceUID pid, ProcEventParam *param, int flags)
 {
 	int ret = KrmDriverLock();
 
@@ -821,7 +821,7 @@ int KrmProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 	return ret;
 }
 
-int KrmProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int KrmProcessExit(SceUID pid, ProcEventParam *param, int flags)
 {
 	int ret = KrmDriverLock();
 
@@ -837,12 +837,12 @@ int KrmProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 
 int KrmRegisterProcEventHandler(void)
 {
-	SceProcEventHandler handler = {0};
+	SceKernelProcEventHandler handler = {0};
 
 	handler.size = sizeof(handler);
 	handler.exit = KrmProcessExit;
 	handler.kill = KrmProcessKill;
-	g_krmProcEventHandler = ksceKernelRegisterProcEventHandler(
+	g_krmProcEventHandler = sceKernelRegisterProcEventHandler(
 		g_krmProcEventHandlerName, &handler, 0);
 	return g_krmProcEventHandler & (g_krmProcEventHandler >> 31);
 }

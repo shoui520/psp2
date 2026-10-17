@@ -59,13 +59,13 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xE26488B9
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelCpuSuspendIntr
-	ksceKernelCpuResumeIntr
-	ksceKernelGetAssertLevel
-	ksceKernelAssertLevel
-	ksceKernelCheckDipsw
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	SceCpuForDriver_821FC0EE
+	sceKernelCpuResumeIntr
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_FD753E7A
+	SceDipswForDriver_A98FC2FD
 	memset
 	memcpy
 	__aeabi_ldivmod
@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_4140D633
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	SceSblACMgrForDriver_426A4E8C

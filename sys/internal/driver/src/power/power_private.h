@@ -43,21 +43,17 @@
 #include <psp2kern/ctrl.h>
 #include <psp2common/power.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <stddef.h>
 #include <string.h>
 #include <intrmgr/intrmgr.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <lowio/pervasive.h>
@@ -65,11 +61,12 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
 #include <psp2kern/display.h>
+#include <sysmem/procevent.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -128,13 +125,6 @@ extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
 extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
 extern int ksceDisplayGetDeviceType(int head, int unused);
-extern int ksceKernelPrintfAssertLevel(uint32_t level, int condition,
-				     const SceKernelDebugInfo *info,
-				     const void *caller, const char *format, ...);
-extern int ksceKernelRegisterProcEventHandler(const char *, const void *, void *);
-extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
-extern int ksceSysrootIsExternalBootMode(void);
-extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
@@ -506,19 +496,6 @@ _Static_assert(offsetof(struct PowerProcessState, idleInterval) == 0x10,
 _Static_assert(offsetof(struct PowerProcessState, lastIdleTick) == 0x18,
 	       "Power process idle tick offset");
 
-struct PowerProcessEventHandlers {
-	uint32_t size;
-	int (*create)(SceUID pid);
-	int (*kill)(SceUID pid);
-	int (*exit)(SceUID pid);
-	int (*suspend)(SceUID pid, uint32_t event);
-	int (*resume)(SceUID pid, uint32_t event);
-	void *reserved;
-};
-
-_Static_assert(sizeof(struct PowerProcessEventHandlers) == 0x1c,
-	       "Power process event handler size");
-
 /* shared state */
 extern struct PowerCallbackControl s_powerCallbackControl;
 extern struct PowerClockControl s_powerClockControl;
@@ -614,9 +591,9 @@ int powerInitializeKernelProcessState(void);
 
 void powerCreateProcessState(SceUID pid);
 
-void powerUnlinkExitedProcess(SceUID pid);
-
 void powerUnlinkKilledProcess(SceUID pid);
+
+void powerUnlinkExitedProcess(SceUID pid);
 
 void powerProcessSuspendEvent(SceUID pid, uint32_t event);
 

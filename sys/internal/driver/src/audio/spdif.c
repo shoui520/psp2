@@ -4,8 +4,8 @@
 #include <string.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/qafmgr.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include "audio_regs.h"
 #include <lowio/pervasive.h>
 
@@ -20,11 +20,11 @@ int audioInitializeSpdif(void)
 		option.size = sizeof(option);
 		option.paddr = SPDIF_REG_BASE;
 		option.attr = 2;
-		result = ksceKernelAllocMemBlock("SceSpdifReg", 0x20100806,
+		result = SceSysmemForDriver_C94850C9("SceSpdifReg", 0x20100806,
 			SPDIF_REG_SIZE, &option);
 		if (result < 0)
 			return result;
-		ksceKernelGetMemBlockBase(result, (void **)&audioSpdifRegisters);
+		SceSysmemForDriver_A841EDDA(result, (void **)&audioSpdifRegisters);
 		registers = audioSpdifRegisters;
 	}
 	ScePervasiveForDriver_6B5DEDA2();
@@ -56,8 +56,8 @@ int audioInitializeSpdif(void)
 	registers->configuration[10] = 0;
 	registers->configuration[11] = 0;
 	registers->configuration[11] = 0;
-	if (ksceSblAimgrIsTool() &&
-	    (!SceQafMgrForDriver_382C71E8() || ksceKernelCheckDipsw(229))) {
+	if (SceSblAIMgrForDriver_274663A0() &&
+	    (!SceQafMgrForDriver_382C71E8() || SceDipswForDriver_A98FC2FD(229))) {
 		registers->configuration[12] = 0x1e0040;
 		registers->configuration[12] = 0x1e0040;
 	} else {

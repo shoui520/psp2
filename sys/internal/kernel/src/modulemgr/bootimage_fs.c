@@ -98,7 +98,7 @@ int sceKernelUmountBootimageFS(void)
 	ret = ksceKernelStopUnloadModule(g_bootimage->modid, 0, NULL, 0, NULL, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 154);
 	(void)ret;
-	ksceKernelFree(g_bootimage);
+	SceSysmemForKernel_4233C16D(g_bootimage);
 	g_bootimage = NULL;
 	return 0;
 }

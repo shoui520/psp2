@@ -4,6 +4,7 @@
 #include <threadmgr/fast_mutex.h>
 #include <sysmem/compiler.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 _Static_assert(sizeof(SceKernelIntrHandlerInfo) == 0x70, "interrupt query ABI");
 _Static_assert(sizeof(IntrIrqFrame) == 64, "IRQ frame ABI");
@@ -30,7 +31,7 @@ static inline __attribute__((always_inline)) void PatchCode(void *address, const
 		*(volatile SceUInt16 *)address = *(const SceUInt16 *)code;
 	else
 		*(volatile SceUInt32 *)address = *(const SceUInt32 *)code;
-	ksceKernelDcacheCleanRangeForL1WBWA((void *)start,
+	SceCpuForDriver_9CB9F0CE((void *)start,
 		(((unsigned int)address + size + 31) & ~31U) - start);
 	writeDacr(dacr);
 }
@@ -47,7 +48,7 @@ void ResetController(void)
 	unsigned int blocks, i;
 
 	g_intrCpuInterface->control = 0;
-	if (!ksceKernelCpuId())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 0;
 	blocks = (g_intrDistributor->type & 31) + 1;
 	i = 0;
@@ -56,7 +57,7 @@ void ResetController(void)
 		i++;
 	} while (i != blocks);
 	g_intrCpuInterface->control = 1;
-	if (!ksceKernelCpuId())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 1;
 }
 
@@ -68,7 +69,7 @@ int ResumeController(void)
 	ResetController();
 	sceKernelSysrootCorelockUnlock();
 	sceKernelSysrootCorelockLock(0);
-	if (!ksceKernelCpuId()) {
+	if (!sceKernelCpuId()) {
 		for (unsigned int i = 0; i < INTR_COUNT; i++) {
 			IntrHandler *info = &g_intrHandlers[i];
 			g_intrDistributor->priority[i] = info->priority;
@@ -76,7 +77,7 @@ int ResumeController(void)
 			if (info->configuration == 3)
 				SetConfiguration(i, 3);
 		}
-		ksceKernelVAtoPA(ksceKernelSysrootGetSharedMemory(), &paddr);
+		SceSysmemForDriver_8D160E65(SceSysrootForKernel_C8C8C321(), &paddr);
 		intrmgrSmc(paddr, 0xa000);
 	}
 	sceKernelSysrootCorelockUnlock();
@@ -89,7 +90,6 @@ int ResumeController(void)
 /* the block shared with the secure kernel (intrmgrSmc) */
 #define INTR_SHARED_MEMORY_SIZE	0xa000
 
-void sceKernelSysrootSetSharedMemory(void *base);
 void enableInterrupts(void);
 
 /* name unknown: NSKBL's init callback (phase 5), the heap goes when the kernel takes over */
@@ -97,7 +97,7 @@ int IntrMgrInitCallback(uint32_t kind, void *argument)
 {
 	(void)kind;
 	(void)argument;
-	ksceKernelDeleteHeap(g_intrHeap);
+	sceKernelDeleteHeap(g_intrHeap);
 	return 0;
 }
 #endif
@@ -227,12 +227,12 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 		}
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (info->handler) {
 		result = SCE_KERNEL_ERROR_FOUND_HANDLER;
 		SCE_DBG_PRINTF(0xb, 452, INTR_TEXT(g_intrAlreadyRegistered, "already registered: %d %s %p\n"),
 			       intrCode, name, info->handler);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		goto Return;
 	}
 	if (name)
@@ -248,10 +248,10 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 	info->oldHandler = NULL;
 	if (opt && opt->num) {
 		unsigned int size = opt->num * sizeof(IntrHandler);
-		info->sub = ksceKernelAllocHeapMemory(g_intrHeap, size);
+		info->sub = SceSysmemForDriver_7B4CB60A(g_intrHeap, size);
 		if (!info->sub) {
 			result = SCE_KERNEL_ERROR_NO_MEMORY;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			goto Return;
 		}
 		info->callbacks = opt->handlers;
@@ -268,7 +268,7 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 	}
 	info->targetCpu = g_intrDistributor->target[intrCode];
 	info->configuration = config;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	if (g_intrRegistered)
 		g_intrRegistered(intrCode);
 Return:
@@ -287,9 +287,9 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!info->handler) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		SCE_DBG_PRINTF(0xb, 543, INTR_TEXT(g_intrInterruptHandlerIsNotRegistered, "interrupt handler is not registered. %d\n"), intrCode);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
@@ -304,13 +304,13 @@ int sceKernelReleaseIntrHandler(unsigned int intrCode)
 	info->targetCpu = 0;
 	info->configuration = 0;
 	if (info->sub) {
-		ksceKernelFreeHeapMemory(g_intrHeap, info->sub);
+		sceKernelFreeHeapMemory(g_intrHeap, info->sub);
 		info->sub = NULL;
 		info->callbacks = NULL;
 		info->subCount = 0;
 	}
 	SceSysmemForKernel_634D0D0C(info->name, 0);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	if (g_intrReleased)
 		g_intrReleased(intrCode);
 	return 0;
@@ -336,19 +336,19 @@ int sceKernelRegisterIntrHookHandler(int intrCode, void *handler, void **oldHand
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!info->handler) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	if (info->oldHandler) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_FOUND_HANDLER;
 	}
 	info->oldHandler = info->handler;
 	*oldHandler = info->handler;
 	info->handler = handler;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -364,14 +364,14 @@ int sceKernelReleaseIntrHookHandler(unsigned int intrCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!info->handler || !info->oldHandler) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	info->handler = info->oldHandler;
 	info->oldHandler = NULL;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -472,10 +472,10 @@ int sceKernelSetIntrPriority(unsigned int intrCode, unsigned int priority)
 		SCE_DBG_PRINTF(0xb, 789, INTR_TEXT(g_intrInvalidPriority, "invalid priority. %d\n"), priority);
 		goto Return;
 	}
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	info->priority = priority;
 	((GicDistributor *)g_intrDistributor)->priority[intrCode] = priority;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 Return:
 	return result;
 }
@@ -513,10 +513,10 @@ int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target)
 		SCE_DBG_PRINTF(0xb, 843, INTR_TEXT(g_intrInvalidTargetCpu, "invalid target cpu. %d\n"), target);
 		return SCE_KERNEL_ERROR_ILLEGAL_TARGET_CPU;
 	}
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	info->targetCpu = mask;
 	((GicDistributor *)g_intrDistributor)->target[intrCode] = mask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -597,31 +597,31 @@ int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode,
 		return SCE_KERNEL_ERROR_ILLEGAL_HANDLER;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!info->handler) {
 		SCE_DBG_PRINTF(0xb, 992, INTR_TEXT(g_intrNotYetRegistered, "not yet registered. %d\n"), intrCode);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	if (!info->callbacks) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_ERROR;
 	}
 	if ((int)subCode < 0 || info->subCount <= subCode) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	sub = &info->sub[subCode];
 	if (sub->handler) {
 		SCE_DBG_PRINTF(0xb, 1005, INTR_TEXT(g_intrAlreadyRegistered2, "already registered: %d-%d %s %p\n"),
 			       intrCode, subCode, name, sub->handler);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_FOUND_HANDLER;
 	}
 	if (info->callbacks[1]) {
 		result = info->callbacks[1](intrCode, subCode, handler, arg);
 		if (result < 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			return result;
 		}
 	}
@@ -642,11 +642,11 @@ int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode,
 		result = info->callbacks[2](intrCode, subCode, handler, arg);
 		if (result < 0) {
 			sub->handler = NULL;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			return result;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -665,15 +665,15 @@ int sceKernelReleaseSubIntrHandler(int intrCode, int subCode)
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	info = &g_intrHandlers[intrCode];
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!info->handler) {
 		SCE_DBG_PRINTF(0xb, 1074, INTR_TEXT(g_intrInterruptHandlerIsNotRegistered, "interrupt handler is not registered. %d\n"), intrCode);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	if (subCode < 0 || info->subCount <= (unsigned int)subCode) {
 		SCE_DBG_PRINTF(0xb, 1079, INTR_TEXT(g_intrUnknownSubinterruptCode, "Unknown subinterrupt code. %d-%d\n"), intrCode, subCode);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE;
 	}
 	sub = &info->sub[subCode];
@@ -681,13 +681,13 @@ int sceKernelReleaseSubIntrHandler(int intrCode, int subCode)
 	if (!handler) {
 		SCE_DBG_PRINTF(0xb, 1086, INTR_TEXT(g_intrSubInterruptHandlerIsNotRegistered, "sub interrupt handler is not registered. %d-%d\n"),
 			       intrCode, subCode);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER;
 	}
 	if (info->callbacks[3]) {
 		result = info->callbacks[3](intrCode, subCode);
 		if (result < 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			return result;
 		}
 		handler = sub->handler;
@@ -698,12 +698,12 @@ int sceKernelReleaseSubIntrHandler(int intrCode, int subCode)
 		result = callback(intrCode, subCode);
 		if (result < 0) {
 			sub->handler = handler;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			return result;
 		}
 	}
 	SceSysmemForKernel_634D0D0C(sub->name, 0);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -719,18 +719,18 @@ int _name(int intrCode, int subCode _args) \
 	} \
 	_nullCheck \
 	info = &g_intrHandlers[intrCode]; \
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock); \
+	state = SceCpuForDriver_D32ACE9E(&info->lock); \
 	if (subCode < 0 || (unsigned int)subCode >= info->subCount) { \
 		SCE_DBG_PRINTF(0xb, _subLine, INTR_TEXT(g_intrUnknownSubinterruptCode, "Unknown subinterrupt code. %d-%d\n"), intrCode, subCode); \
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
 		return SCE_KERNEL_ERROR_ILLEGAL_INTRCODE; \
 	} \
 	if (!info->handler || !info->callbacks || !info->callbacks[_slot]) { \
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
 		return SCE_KERNEL_ERROR_NOTFOUND_HANDLER; \
 	} \
 	result = info->callbacks[_slot](intrCode, subCode, ##__VA_ARGS__); \
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state); \
 	return result; \
 }
 
@@ -787,13 +787,13 @@ int sceKernelAllocSystemCallTable(unsigned int count, void **table)
 
 	if (!count || g_intrSyscallBlock || g_intrSyscallTable)
 		return -1;
-	result = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, INTR_TEXT(g_intrSceSyscallTable, "SceSyscallTable"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, count * 4, NULL);
+	result = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, INTR_TEXT(g_intrSceSyscallTable, "SceSyscallTable"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, count * 4, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 1446, INTR_TEXT(g_intrAllocateSystemCallTableFailedX, "allocate system call table failed. 0x%08x\n"), result);
 		return result;
 	}
 	g_intrSyscallBlock = result;
-	ksceKernelGetMemBlockBase(result, table);
+	SceSysmemForDriver_A841EDDA(result, table);
 	g_intrSyscallTable = *table;
 	return 0;
 }
@@ -869,9 +869,9 @@ void SceIntrmgrForKernel_7E3D4560(void *handler) { g_intrKernelWatchpoints = han
 
 void intrStackOverflow(unsigned int depth, unsigned int interrupt)
 {
-	ksceKernelPrintf(INTR_TEXT(g_intrDetectIntrStackOverflow, "!!! detect intr stack overflow !!!\n"));
-	ksceKernelPrintf(INTR_TEXT(g_intrCPUIntrNameXNestCount, "     CPU = %d, intr name %s (0x%08x:%d), nest count = %d\n"),
-		ksceKernelCpuId(), g_intrHandlers[interrupt & 0x3ff].name,
+	SceDebugForDriver_391B74B7(INTR_TEXT(g_intrDetectIntrStackOverflow, "!!! detect intr stack overflow !!!\n"));
+	SceDebugForDriver_391B74B7(INTR_TEXT(g_intrCPUIntrNameXNestCount, "     CPU = %d, intr name %s (0x%08x:%d), nest count = %d\n"),
+		sceKernelCpuId(), g_intrHandlers[interrupt & 0x3ff].name,
 		interrupt, interrupt & 0x3ff, depth);
 	for (;;)
 		;
@@ -887,7 +887,7 @@ static inline __attribute__((always_inline)) int AllocSharedMemory_NS(void **bas
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
+	result = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
 		"SceSharedMemoryBlock_NS", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 		INTR_SHARED_MEMORY_SIZE, &opt);
 	if (result < 0) {
@@ -896,7 +896,7 @@ static inline __attribute__((always_inline)) int AllocSharedMemory_NS(void **bas
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1726, "AllocSharedMemory_NS");
 		return result;
 	}
-	ksceKernelGetMemBlockBase(result, base);
+	SceSysmemForDriver_A841EDDA(result, base);
 	return 0;
 }
 
@@ -913,7 +913,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	}
 	options.size = sizeof(options);
 	options.attr = 1;
-	result = ksceKernelCreateHeap("SceIntrMgr", 0x8000, &options);
+	result = SceSysmemForDriver_9328E0E8("SceIntrMgr", 0x8000, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2012, "Create Heap failed. 0x%08x\n", result);
 		return result;
@@ -941,7 +941,7 @@ int sceKernelIntrMgrStart(void)
 	g_intrCpuInterface = cpuInterface;
 	g_intrDistributor = (GicDistributor *)(PERIPH_REG_BASE + GIC_DISTRIBUTOR_OFFSET);
 	cpuInterface->control = 0;
-	if (!ksceKernelCpuId())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 0;
 	blocks = (g_intrDistributor->type & 31) + 1;
 	i = 0;
@@ -950,10 +950,10 @@ int sceKernelIntrMgrStart(void)
 		i++;
 	} while (i != blocks);
 	g_intrCpuInterface->control = 1;
-	if (!ksceKernelCpuId())
+	if (!sceKernelCpuId())
 		g_intrDistributor->control = 1;
-	g_intrCpu[ksceKernelCpuId()].nesting = 0;
-	if (!ksceKernelCpuId()) {
+	g_intrCpu[sceKernelCpuId()].nesting = 0;
+	if (!sceKernelCpuId()) {
 		result = Start();
 		if (result < 0) {
 			SCE_DBG_ASSERT(0, 2165);
@@ -967,7 +967,7 @@ int sceKernelIntrMgrStart(void)
 	g_intrLeaveIntr = NULL;
 	g_intrEnterSubIntr = NULL;
 	g_intrLeaveSubIntr = NULL;
-	if (!ksceKernelCpuId()) {
+	if (!sceKernelCpuId()) {
 		void *base;
 		uintptr_t paddr;
 
@@ -977,7 +977,7 @@ int sceKernelIntrMgrStart(void)
 			SCE_DBG_ASSERT_FAIL(2183);
 		}
 		sceKernelSysrootSetSharedMemory(base);
-		if (ksceKernelVAtoPA(base, &paddr) < 0)
+		if (SceSysmemForDriver_8D160E65(base, &paddr) < 0)
 			SCE_PANIC(2192);
 		intrmgrSmc(paddr, INTR_SHARED_MEMORY_SIZE);
 		if (sceKernelRegisterInitCallback(IntrMgrInitCallback, 5, NULL, NULL) < 0)
@@ -985,9 +985,9 @@ int sceKernelIntrMgrStart(void)
 	}
 	{
 		/* the vector page word 0x28 of this core points at its nesting state */
-		char *vector = (char *)ksceKernelSysrootGetVbaseResetVector() +
-			ksceKernelCpuId() * 0x40;
-		IntrCpuState *volatile state = &g_intrCpu[ksceKernelCpuId()];
+		char *vector = (char *)SceSysrootForKernel_CC85905B() +
+			sceKernelCpuId() * 0x40;
+		IntrCpuState *volatile state = &g_intrCpu[sceKernelCpuId()];
 
 		PatchCode(vector + 0x28, (const void *)&state, sizeof(state));
 	}
@@ -1008,7 +1008,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	}
 	options.size = sizeof(options);
 	options.attr = 1;
-	result = ksceKernelCreateHeap(INTR_TEXT(g_intrSceIntrMgr, "SceIntrMgr"), 0x8000, &options);
+	result = SceSysmemForDriver_9328E0E8(INTR_TEXT(g_intrSceIntrMgr, "SceIntrMgr"), 0x8000, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2012, INTR_TEXT(g_intrCreateHeapFailedX, "Create Heap failed. 0x%08x\n"), result);
 		return result;
@@ -1043,19 +1043,19 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	result = ksceKernelAllocMemBlock(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &options);
+	result = SceSysmemForDriver_C94850C9(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2250, INTR_TEXT(g_intrAllocateIntcRegisterAreaFailedX, "allocate intc register area failed. 0x%08x\n"), result);
 		SCE_DBG_ASSERT_FAIL(2251);
 		return result;
 	}
-	ksceKernelGetMemBlockBase(result, &base);
+	SceSysmemForDriver_A841EDDA(result, &base);
 	g_intrCpuInterface = (GicCpuInterface *)((char *)base + GIC_CPU_INTERFACE_OFFSET);
 	g_intrDistributor = (GicDistributor *)((char *)base + GIC_DISTRIBUTOR_OFFSET);
 	ResetController();
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	g_intrCpu[cpu].nesting = 0;
-	if (likely(ksceKernelCpuId() == 0)) {
+	if (likely(sceKernelCpuId() == 0)) {
 		result = Start();
 		if (result < 0) {
 			SCE_DBG_ASSERT(0, 2264);
@@ -1075,13 +1075,13 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 
 int module_bootstart(SceSize arglen, void *argp)
 {
-	char *base = ksceKernelSysrootGetVbaseResetVector();
+	char *base = SceSysrootForKernel_CC85905B();
 	IntrCpuState *volatile state;
 
 	(void)arglen;
 	(void)argp;
-	base += ksceKernelCpuId() * 0x40;
-	state = &g_intrCpu[ksceKernelCpuId()];
+	base += sceKernelCpuId() * 0x40;
+	state = &g_intrCpu[sceKernelCpuId()];
 	/* the vector page word 0x28 of this core points at its nesting state */
 	PatchCode(base + 0x28, (const void *)&state, sizeof(state));
 	return 0;
@@ -1103,14 +1103,14 @@ void invalidFastMutexOwnerCfunc(void)
 
 	SCE_DBG_PRINTF(0, 2333, INTR_TEXT(g_intrFastMutexHasNotBeenUnlockedAfterSyscall, "\n*** FastMutex has not been unlocked after syscall.\n"));
 	SCE_DBG_PRINTF(0, 2334, INTR_TEXT(g_intrProcessIDX, "** ProcessID: 0x%08X [%s]\n"),
-		thread->processId, ksceGUIDName(thread->processId));
+		thread->processId, SceSysmemForDriver_E655852F(thread->processId));
 	SCE_DBG_PRINTF(0, 2335, INTR_TEXT(g_intrThreadIDX, "** ThreadID:  0x%08X [%s]\n"),
-		thread->threadId, ksceGUIDName(thread->threadId));
+		thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
 	for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 	     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 	     mutex = mutex->next)
 		SCE_DBG_PRINTF(0, 2338, INTR_TEXT(g_intrFastMutexX, "*  FastMutex: 0x%08X [%s]\n"),
-			mutex->uid, ksceGUIDName(mutex->uid));
+			mutex->uid, SceSysmemForDriver_E655852F(mutex->uid));
 	SCE_PANIC(2341);
 }
 
@@ -1118,9 +1118,9 @@ void illegalUserDACRCfunc(const ThreadCB *thread, unsigned int dacr)
 {
 	SCE_DBG_PRINTF(0, 2350, INTR_TEXT(g_intrIllegalUserDACRX, "\n*** Illegal User DACR = 0x%08X.\n"), dacr);
 	SCE_DBG_PRINTF(0, 2351, INTR_TEXT(g_intrProcessIDX, "** ProcessID: 0x%08X [%s]\n"),
-		thread->processId, ksceGUIDName(thread->processId));
+		thread->processId, SceSysmemForDriver_E655852F(thread->processId));
 	SCE_DBG_PRINTF(0, 2352, INTR_TEXT(g_intrThreadIDX, "** ThreadID:  0x%08X [%s]\n"),
-		thread->threadId, ksceGUIDName(thread->threadId));
+		thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
 	SCE_PANIC(2354);
 }
 

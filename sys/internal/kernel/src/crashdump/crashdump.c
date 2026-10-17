@@ -14,13 +14,13 @@
 #include <psp2kern/display.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <coredump/coredump.h>
 #include <sysmem/debug.h>
@@ -207,7 +207,7 @@ static inline SceUID crashdumpMap(SceUInt32 phys)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = phys & 0xfff00000;
-	return ksceKernelAllocMemBlock("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, 2 * CRASHDUMP_WINDOW, &opt);
+	return SceSysmemForDriver_C94850C9("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, 2 * CRASHDUMP_WINDOW, &opt);
 }
 
 /* name unknown */
@@ -225,10 +225,10 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 	int ret, ret2;
 	void *p;
 
-	uid = ksceKernelAllocMemBlock("SceCrashDumpBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, CRASHDUMP_BUF_SIZE, NULL);
+	uid = SceSysmemForDriver_C94850C9("SceCrashDumpBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, CRASHDUMP_BUF_SIZE, NULL);
 	if (uid < 0)
 		return uid;
-	ret = ksceKernelGetMemBlockBase(uid, (void **)&buf);
+	ret = SceSysmemForDriver_A841EDDA(uid, (void **)&buf);
 	if (ret < 0)
 		goto free;
 
@@ -242,7 +242,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 	} else {
 		count = rec->nranges;
 		if (count > CRASHDUMP_MAX_RANGES) {
-			ksceKernelFreeMemBlock(uid);
+			SceSysmemForDriver_009E1C61(uid);
 			return -1;
 		}
 		n = count + (rec->ttbSize != 0);
@@ -362,9 +362,9 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 				ret = block;
 				goto fail;
 			}
-			ret = ksceKernelGetMemBlockBase(block, (void **)&map);
+			ret = SceSysmemForDriver_A841EDDA(block, (void **)&map);
 			if (ret < 0) {
-				ksceKernelFreeMemBlock(block);
+				SceSysmemForDriver_009E1C61(block);
 				goto fail;
 			}
 			n = rec->range[i].size - off;
@@ -374,7 +374,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			ret = ops->write(buf, n);
 			if (ret < 0)
 				goto fail;	/* (the window stays mapped) */
-			ksceKernelFreeMemBlock(block);
+			SceSysmemForDriver_009E1C61(block);
 			total += ret;
 		}
 	}
@@ -390,9 +390,9 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			block = crashdumpMap(phys);
 			if (block < 0)
 				return block;	/* (nothing closed or freed) */
-			ret = ksceKernelGetMemBlockBase(block, (void **)&map);
+			ret = SceSysmemForDriver_A841EDDA(block, (void **)&map);
 			if (ret < 0) {
-				ksceKernelFreeMemBlock(block);
+				SceSysmemForDriver_009E1C61(block);
 				goto fail;
 			}
 			n = rec->ttbSize - off;
@@ -401,22 +401,22 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			memcpy(buf, map + (phys & 0xfffff), n);
 			ret = ops->write(buf, n);
 			if (ret < 0) {
-				ksceKernelFreeMemBlock(block);
+				SceSysmemForDriver_009E1C61(block);
 				goto fail;
 			}
-			ksceKernelFreeMemBlock(block);
+			SceSysmemForDriver_009E1C61(block);
 		}
 	}
 done:
 	ops->close();
-	ksceKernelFreeMemBlock(uid);
+	SceSysmemForDriver_009E1C61(uid);
 	return 0;
 
 fail:
 	ops->close();
 	ops->remove(name);
 free:
-	ksceKernelFreeMemBlock(uid);
+	SceSysmemForDriver_009E1C61(uid);
 	return ret;
 }
 
@@ -434,7 +434,7 @@ static inline void crashdumpMarkScreen(void)
 		for (x = 0; x < fb.width; x++, px++)
 			*px = *px != 0 ? 0xc0 : 0;
 	}
-	ksceKernelDcacheCleanInvalidateRange(fb.base, fb.width * fb.height * 4);
+	SceCpuForDriver_364E68A4(fb.base, fb.width * fb.height * 4);
 }
 
 int module_start(SceSize args, void *argp)
@@ -453,18 +453,18 @@ int module_start(SceSize args, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = crashdumpPhysBase();
-	uid = ksceKernelAllocMemBlock("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, CRASHDUMP_RECORD_SIZE, &opt);
+	uid = SceSysmemForDriver_C94850C9("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, CRASHDUMP_RECORD_SIZE, &opt);
 	if (uid < 0)
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	if (ksceKernelGetMemBlockBase(uid, (void **)&rec) < 0 ||
+	if (SceSysmemForDriver_A841EDDA(uid, (void **)&rec) < 0 ||
 	    memcmp(rec, s_magic, sizeof(s_magic)) != 0 || rec->version != CRASHDUMP_RECORD_VER)
 		goto out;
 
 	if (ksceRtcGetCurrentClockLocalTime(&t) < 0)
 		memset(&t, 0, sizeof(t));
-	if (!ksceSblAimgrIsTool()) {
-		if (!ksceSblAimgrIsDEX() && !SceQafMgrForDriver_382C71E8()) {
+	if (!SceSblAIMgrForDriver_274663A0()) {
+		if (!SceSblAIMgrForDriver_F4B98F66() && !SceQafMgrForDriver_382C71E8()) {
 			full = 0;
 			goto coredump;
 		}
@@ -472,7 +472,7 @@ int module_start(SceSize args, void *argp)
 		goto mark;
 	}
 	if (SceQafMgrForDriver_382C71E8()) {
-		if (!ksceKernelCheckDipsw(0xc1) && !ksceKernelCheckDipsw(0xc2)) {
+		if (!SceDipswForDriver_A98FC2FD(0xc1) && !SceDipswForDriver_A98FC2FD(0xc2)) {
 			ret = SceQafMgrForDriver_382C71E8();
 			goto mark;
 		}
@@ -491,12 +491,12 @@ int module_start(SceSize args, void *argp)
 		}
 		snprintf(coreName, sizeof(coreName), "host0:./psp2crashdump_%04d%02d%02d_%02d%02d%02d.elf",
 			 t.year, t.month, t.day, t.hour, t.minute, t.second);
-		ksceKernelPrintf("[CrashDump] Generating %s start\n", coreName);
+		SceDebugForDriver_391B74B7("[CrashDump] Generating %s start\n", coreName);
 		ret = crashdumpWriteCore(&s_fileOps, rec, coreName, 1);
 		if (ret < 0)
-			ksceKernelPrintf("[CrashDump] Generating %s failed 0x%08X\n", coreName, ret);
+			SceDebugForDriver_391B74B7("[CrashDump] Generating %s failed 0x%08X\n", coreName, ret);
 		else
-			ksceKernelPrintf("[CrashDump] Generating %s done\n", coreName);
+			SceDebugForDriver_391B74B7("[CrashDump] Generating %s done\n", coreName);
 		ret = SceQafMgrForDriver_382C71E8();
 mark:
 		if (ret != 0)
@@ -504,14 +504,14 @@ mark:
 	}
 	full = 1;
 coredump:
-	ksceKernelPrintf("[CrashDump] Generating coredump for crashdump start\n");
+	SceDebugForDriver_391B74B7("[CrashDump] Generating coredump for crashdump start\n");
 	ret = crashdumpWriteCore(&s_coredumpOps, rec, coreName, full);
 	if (ret < 0)
-		ksceKernelPrintf("[CrashDump] Generating coredump for crashdump failed 0x%08X\n", ret);
+		SceDebugForDriver_391B74B7("[CrashDump] Generating coredump for crashdump failed 0x%08X\n", ret);
 	else
-		ksceKernelPrintf("[CrashDump] Generating coredump for crashdump done\n");
+		SceDebugForDriver_391B74B7("[CrashDump] Generating coredump for crashdump done\n");
 	memset(rec, 0xff, CRASHDUMP_RECORD_VER);
 out:
-	ksceKernelFreeMemBlock(uid);
+	SceSysmemForDriver_009E1C61(uid);
 	return SCE_KERNEL_START_NO_RESIDENT;
 }

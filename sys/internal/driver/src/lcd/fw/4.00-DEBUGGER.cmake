@@ -46,23 +46,23 @@ set(MODULE_IMPORT_NIDS
 	0xE14BEF6E:F:0xCA94A759
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelSpinlockLowTrylock
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelCpuResumeIntr
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_5AC9D394
+	SceCpuForDriver_821FC0EE
+	sceKernelSpinlockLowUnlock
+	sceKernelCpuResumeIntr
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceSysrootGetHardwareFlags
-	ksceSysrootGetHardwareInfo
+	SceSysrootForDriver_46E72428
+	SceSysrootForDriver_930B1342
 	ksceKernelGetSystemTimeLow
 	sceKernelDelayThread
 	ksceKernelEnqueueWorkQueue
 	ksceKernelSearchModuleByName
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	kscePervasiveSpiResetEnable
 	kscePervasiveSpiClockDisable
 	kscePervasiveSpiClockEnable

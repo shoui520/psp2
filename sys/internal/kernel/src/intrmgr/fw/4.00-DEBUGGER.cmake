@@ -55,35 +55,35 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
 	ksceExcpmgrRegisterHandler
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceGUIDName
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_E655852F
 	SceSysmemForKernel_634D0D0C
-	ksceKernelAllocPartitionMemBlock
+	sceKernelAllocPartitionMemBlock
 	SceSysmemForKernel_B628B46B
 	SceSysrootForKernel_118657C6
 	sceKernelSysrootSetModulePrivate
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootTrapThreadAfterSyscall
 	sceKernelSysrootCorelockUnlock
-	ksceKernelSysrootGetSharedMemory
-	ksceKernelSysrootGetVbaseResetVector
-	ksceKernelCpuId
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelDcacheCleanRangeForL1WBWA
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelAssert
-	ksceKernelGetAssertLevel
-	ksceKernelPanic
-	ksceKernelPrintf
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	SceSysrootForKernel_C8C8C321
+	SceSysrootForKernel_CC85905B
+	sceKernelCpuId
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_9CB9F0CE
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	memset
 	__stack_chk_fail
 )

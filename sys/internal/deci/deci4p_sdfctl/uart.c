@@ -4,8 +4,8 @@
  * starts with a 4-byte sync sequence.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/uart.h>
+#include <sysmem/cpu.h>
+#include <sysmem/uart.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>
 #include "sdfctl.h"
@@ -90,7 +90,7 @@ static int uartRecv(SDfCtlIf *ifp, void *buf, SceSize size)
 	if (size < n)
 		n = size;
 	for (; p != (SceUInt8 *)buf + n; p++)
-		*p = ksceUartRead(UART_PORT);
+		*p = SceUartForKernel_4E97D3AD(UART_PORT);
 	ifp->recvDone += n;
 	if (ifp->recvDone < ifp->recvSize)
 		ifp->state |= UART_RECV_HEADER;
@@ -129,7 +129,7 @@ static int uartSend(SDfCtlIf *ifp, void *buf, SceSize size)
 		return 0;
 	}
 	for (; p != (const signed char *)buf + n; p++)
-		ksceUartWrite(UART_PORT, *p);
+		SceUartForKernel_430C48F1(UART_PORT, *p);
 	ifp->sendDone += n;
 	if (ifp->sendDone < sdfctlGetSize(&ifp->sendHdr))
 		ifp->state |= UART_SEND_READY;
@@ -155,14 +155,14 @@ static __attribute__((noinline, noclone)) void uartKick(SDfCtlIf *ifp, SceUInt32
 {
 	int s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_uartLock);
+	s = SceCpuForDriver_D32ACE9E(&s_uartLock);
 	if (ifp->state & UART_UP) {
 		if (*intr & UART_INTR_SEND)
 			ifp->state |= UART_SEND_READY;
 		else
 			ksceKernelEnableIntr(UART_INTR);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_uartLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_uartLock, s);
 }
 
 /* name unknown: the pending transfer events to SDfCtl */
@@ -229,10 +229,10 @@ static int uartSendStart(SDfCtlIf *ifp)
 	ifp->state |= UART_UP;
 	ifp->intr |= UART_INTR_SEND;
 	uartKick(ifp, &ifp->intr);
-	ksceUartWrite(UART_PORT, 0xd);
-	ksceUartWrite(UART_PORT, 0xe);
-	ksceUartWrite(UART_PORT, 0xc);
-	ksceUartWrite(UART_PORT, 1);
+	SceUartForKernel_430C48F1(UART_PORT, 0xd);
+	SceUartForKernel_430C48F1(UART_PORT, 0xe);
+	SceUartForKernel_430C48F1(UART_PORT, 0xc);
+	SceUartForKernel_430C48F1(UART_PORT, 1);
 	return 0;
 }
 
@@ -249,7 +249,7 @@ static int _uartIntrHandler(int code, void *arg)
 		return -2;
 	}
 	for (i = 0; i != sizeof(ifp->recvHdr); i++)
-		((SceUInt8 *)&ifp->recvHdr)[i] = ksceUartRead(UART_PORT);
+		((SceUInt8 *)&ifp->recvHdr)[i] = SceUartForKernel_4E97D3AD(UART_PORT);
 	ifp->state |= UART_RECV_HEADER;
 	uartDispatch(ifp);
 	return -1;
@@ -292,7 +292,7 @@ int uartInit(void)
 		SCE_DBG_ASSERT_FAIL(121);
 		return ret;
 	}
-	ksceUartInit(UART_PORT);
+	SceUartForKernel_4C02AA05(UART_PORT);
 	ret2 = sceSDfCtlIf2MgrEvent(&s_uart, 5, 0, 0, 0);
 	if (ret2 < 0) {
 		SDFCTL_PRINTF(131, "sceSDfCtlIf2MgrEvent failed (0x%08x)\n", ret2);

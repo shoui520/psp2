@@ -78,7 +78,7 @@ LibraryDB *LibraryDBLock(SceUID pid, int *intr)
 		return NULL;
 	db = LibraryDBGetDB(pid);
 	if (db != NULL)
-		*intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&db->lock);
+		*intr = SceCpuForDriver_D32ACE9E(&db->lock);
 	ModulemgrReleaseProcess(pid);
 	return db;
 }
@@ -169,7 +169,7 @@ static SceUID GetLibGUIDByLibUID(SceUID pid, SceUID uid)
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 149);
 	if (pid != KERNEL_PID && LibraryDBUsesPUID(pid) == 1)
-		return kscePUIDtoGUID(pid, uid);
+		return SceSysmemForDriver_45D22597(pid, uid);
 	return uid;
 }
 
@@ -180,10 +180,10 @@ SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 	SceUID guid;
 
 	guid = GetLibGUIDByLibUID(pid, uid);
-	if (guid < 0 || ksceGUIDReferObjectWithClass(guid, g_libraryClass, &obj) < 0)
+	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, g_libraryClass, &obj) < 0)
 		return NULL;
 	if (ModulemgrReferModule(obj->modid) == NULL) {
-		ksceGUIDReleaseObject(guid);
+		sceGUIDReleaseObject(guid);
 		return NULL;
 	}
 	return obj;
@@ -200,7 +200,7 @@ static SceUID GetLibUIDByLibEntCB(SceUID pid, const SceUID *guid, const SceUID *
 /* name unknown */
 void LibraryDBUnlock(LibraryDB *db, int intr)
 {
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 void LibraryDBDelete(SceUID pid)
@@ -215,7 +215,7 @@ void LibraryDBDelete(SceUID pid)
 		return;
 	old = *db;
 	memset(db, 0, offsetof(LibraryDB, lock));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 
 	stub = old.lostClients;
 	while (stub != NULL) {
@@ -227,11 +227,11 @@ void LibraryDBDelete(SceUID pid)
 	}
 	tbl = old.addr2mod;
 	if (tbl != NULL) {
-		ksceKernelFreeMemBlock(tbl->tableBlock);
+		SceSysmemForDriver_009E1C61(tbl->tableBlock);
 		if (tbl->exidxKernelBlock > 0)
-			ksceKernelFreeMemBlock(tbl->exidxKernelBlock);
+			SceSysmemForDriver_009E1C61(tbl->exidxKernelBlock);
 		if (tbl->exidxBlock > 0)
-			ksceKernelFreeMemBlock(tbl->exidxBlock);
+			SceSysmemForDriver_009E1C61(tbl->exidxBlock);
 		sceKernelFreeRemoteToolHeap(pid, tbl);
 	}
 	SCE_DBG_ASSERT_LEVEL(0, old.libCount == 0, 273);
@@ -253,7 +253,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 	memset(db, 0, sizeof(*db));
 	db->pid = pid;
 
-	if (ksceKernelCheckDipsw(0xd2)) {
+	if (SceDipswForDriver_A98FC2FD(0xd2)) {
 		SCE_DBG_ASSERT(pid != KERNEL_PID, 405);
 		tbl = sceKernelAllocRemoteToolHeap(pid, sizeof(*tbl));
 		if (tbl != NULL) {
@@ -263,21 +263,21 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 			memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
 			opt.attr = 0xd0000000;
-			tbl->tableBlock = ksceKernelAllocMemBlock("SceModuleMgrAddr2ModTbl",
+			tbl->tableBlock = SceSysmemForDriver_C94850C9("SceModuleMgrAddr2ModTbl",
 								  0x10f0d006, 0x1bc000, &opt);
 			if (tbl->tableBlock < 0) {
 				sceKernelFreeRemoteToolHeap(pid, tbl);
 				db->addr2mod = NULL;
 				goto fail;
 			}
-			ksceKernelGetMemBlockBase(tbl->tableBlock, &tbl->table);
+			SceSysmemForDriver_A841EDDA(tbl->tableBlock, &tbl->table);
 
 			memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
 			opt.attr = 0xe0080081;
 			opt.vbase = 0xee000000;
 			opt.pid = pid;
-			tbl->exidxBlock = ksceKernelAllocMemBlock("SceModuleMgrA2ExidxTmp",
+			tbl->exidxBlock = SceSysmemForDriver_C94850C9("SceModuleMgrA2ExidxTmp",
 								  0x3f0d040, 0x378000, &opt);
 			if (tbl->exidxBlock < 0)
 				goto fail;
@@ -286,19 +286,19 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 			opt.size = sizeof(opt);
 			opt.attr = 0xe1000040;
 			opt.mirror_blockid = tbl->exidxBlock;
-			tbl->exidxKernelBlock = ksceKernelAllocMemBlock("SceModuleMgrA2ExidxTmp",
+			tbl->exidxKernelBlock = SceSysmemForDriver_C94850C9("SceModuleMgrA2ExidxTmp",
 									0x10f0d006, 0, &opt);
 			if (tbl->exidxKernelBlock < 0)
 				goto fail;
-			ksceKernelGetMemBlockBase(tbl->exidxKernelBlock, &tbl->exidx);
-			if (ksceKernelMapMemBlock(tbl->exidxBlock) < 0)
+			SceSysmemForDriver_A841EDDA(tbl->exidxKernelBlock, &tbl->exidx);
+			if (SceSysmemForDriver_58D21746(tbl->exidxBlock) < 0)
 				goto fail;
 		}
 	}
 
 	if (g_sharedFlag)
 		db->flags |= LIBDB_FLAG_SHARED;
-	if (ksceKernelSysrootGetProcessTitleId(pid, titleid, sizeof(titleid)) >= 0 &&
+	if (SceSysrootForKernel_EC3124A3(pid, titleid, sizeof(titleid)) >= 0 &&
 	    strncmp(titleid, "PCSG00307", sizeof(titleid)) == 0)
 		db->flags |= LIBDB_FLAG_PCSG00307;
 	return db;
@@ -313,18 +313,18 @@ int LibraryDBInitializeAddr2ModuleTableForKernel(LibraryDB *db)
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceModuleCB *cb;
 
-	if (ksceKernelCheckDipsw(0xd2)) {
+	if (SceDipswForDriver_A98FC2FD(0xd2)) {
 		db->addr2mod = &g_kernelAddr2Mod;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 0xd0000000;
-		g_kernelAddr2Mod.tableBlock = ksceKernelAllocMemBlock("SceKernelProcess", 0x10f0d006,
+		g_kernelAddr2Mod.tableBlock = SceSysmemForDriver_C94850C9("SceKernelProcess", 0x10f0d006,
 								      0x40000, &opt);
 		if (g_kernelAddr2Mod.tableBlock < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 384);
 			return g_kernelAddr2Mod.tableBlock;
 		}
-		ksceKernelGetMemBlockBase(g_kernelAddr2Mod.tableBlock, &g_kernelAddr2Mod.table);
+		SceSysmemForDriver_A841EDDA(g_kernelAddr2Mod.tableBlock, &g_kernelAddr2Mod.table);
 		for (cb = db->modules; cb != NULL; cb = cb->next)
 			Addr2ModRegister(&g_kernelAddr2Mod, cb);
 	}
@@ -337,15 +337,15 @@ SharedModuleEntry *SharedModuleFind(const char *path)
 	SharedModuleEntry *ent;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
 	for (ent = g_sharedModules; ent != NULL; ent = ent->next) {
 		if (strncmp(ent->cb->path, path, 0x100) == 0) {
 			ent->refCount++;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 			return ent;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 	return NULL;
 }
 
@@ -354,9 +354,9 @@ int SharedModuleRelease(SharedModuleEntry *ent)
 {
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
 	ent->refCount--;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 	return 0;
 }
 
@@ -365,7 +365,7 @@ static inline void SharedLibraryDBReleaseModule(SceModuleCB *cb)
 	SharedModuleEntry *ent, *prev;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_sharedLock);
 	ent = g_sharedModules;
 	if (ent == NULL)
 		goto unlock;
@@ -380,18 +380,18 @@ static inline void SharedLibraryDBReleaseModule(SceModuleCB *cb)
 		} while (ent->cb != cb);
 		prev->next = ent->next;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 	if (ent->refCount != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 565, "shared module with client is killed!?\n");
 		SCE_PANIC(566);
 	}
 	if (ent->dataCopy != NULL)
-		ksceKernelFree(ent->dataCopy);
-	ksceKernelFree(ent);
+		SceSysmemForKernel_4233C16D(ent->dataCopy);
+	SceSysmemForKernel_4233C16D(ent);
 	return;
 
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, intr);
 }
 
 void LibraryDBReleaseModule(SceModuleCB *cb)
@@ -452,7 +452,7 @@ void LibraryDBReleaseModule(SceModuleCB *cb)
 notfound:
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 697, "not found a module\n");
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 void LibraryDBRegisterLostClient(LibStubCB *stub)
@@ -469,7 +469,7 @@ void LibraryDBRegisterLostClient(LibStubCB *stub)
 	stub->next = db->lostClients;
 	db->lostCount++;
 	db->lostClients = stub;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 void LibraryDBReleaseLostClient(LibStubCB *stub)
@@ -500,7 +500,7 @@ void LibraryDBReleaseLostClient(LibStubCB *stub)
 	db->lostCount--;
 	stub->next = NULL;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 /* an older version of the library may only be replaced by a newer one of the same kind */
@@ -575,16 +575,16 @@ int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 		optp = &opt;
 		usePuid = 1;
 	}
-	uid = ksceGUIDKernelCreateWithOpt(g_libraryClass, ent->exports->libname, optp, &obj);
+	uid = sceGUIDKernelCreateWithOpt(g_libraryClass, ent->exports->libname, optp, &obj);
 	if (uid < 0)
 		goto clear;
 	ent->guid = uid;
 	obj->libEntCB = ent;
 	obj->modid = ent->cb->modid;
 	if (usePuid) {
-		uid = kscePUIDOpenByGUID(pid, uid);
+		uid = SceSysmemForDriver_BF209859(pid, uid);
 		if (uid < 0) {
-			ksceGUIDClose(ent->guid);
+			sceGUIDClose(ent->guid);
 			ent->guid = 0;
 			goto unlock;
 		}
@@ -595,13 +595,13 @@ int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 	ent->next = db->libList;
 	db->libCount++;
 	db->libList = ent;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return 0;
 
 clear:
 	LibEntCBClear(ent);
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return uid;
 }
 
@@ -650,11 +650,11 @@ static inline LibEntCB *findLib(SceUID pid, SceNID libnid, const char *name)
 		if (lib->exports->libnid == libnid &&
 		    (lib->exports->attr & LIBRARY_ATTR_NOLINK) == 0 &&
 		    strncmp(lib->exports->libname, name, 0x100) == 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 			return lib;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return NULL;
 }
 
@@ -697,7 +697,7 @@ LibEntCB *LibraryDBFindSyscallLib(const char *name)
 		    strncmp(lib->exports->libname, name, 0x100) == 0)
 			break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return lib;
 }
 
@@ -733,7 +733,7 @@ int LibraryDBGetLibraryInfoByNID(SceUID pid, SceUID modid, SceNID libnid,
 	}
 	ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -750,7 +750,7 @@ LibStubCB *LibraryDBGetLostClientHead(SceUID pid)
 		return NULL;
 	}
 	head = db->lostClients;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return head;
 }
 
@@ -823,7 +823,7 @@ int LibraryDBGetModuleInfoById(SceUID pid, SceUID modid, SceKernelModuleInfo *in
 release:
 	ModulemgrReleaseModule(modid);
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -846,7 +846,7 @@ int LibraryDBGetModuleCBList(SceUID pid, SceModuleCB **list, int *count)
 			cb = cb->next;
 		} while (n != max && cb != NULL);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*count = n;
 	return 0;
 }
@@ -886,7 +886,7 @@ int sceKernelGetLostLibraryInfo(SceUID pid, SceUID modid, SceNID libnid,
 	}
 	ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -925,7 +925,7 @@ int ksceKernelGetModuleIsSharedByAddr(SceUID pid, SceUInt32 addr)
 		return 0;
 	if (LibraryDBFindModuleByAddr(db, addr, &cb) >= 0)
 		ret = (cb->flags & MODULE_FLAG_1000) != 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -940,7 +940,7 @@ int ksceKernelGetModuleCBByAddr(SceUID pid, SceUInt32 addr, SceModuleCB **out)
 	if (db == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	ret = LibraryDBFindModuleByAddr(db, addr, out);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -957,7 +957,7 @@ SceUID LibraryDBGetModuleUIDByAddr(SceUID pid, SceUInt32 addr)
 	ret = LibraryDBFindModuleByAddr(db, addr, &cb);
 	if (ret == 0)
 		ret = cb->modid;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -999,7 +999,7 @@ SceUID LibraryDBFindModuleByName(SceUID pid, const char *name)
 	}
 	ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -1022,7 +1022,7 @@ SceUID sceKernelGetModuleIdByPid(SceUID pid)
 			ret = SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 		ModulemgrReleaseModule(db->mainModid);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -1048,7 +1048,7 @@ LibStubCB *LibraryDBGetStubCBByStubCodeAddrForTool(SceModuleCB *cb, SceUInt32 ad
 	}
 	stub = NULL;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return stub;
 }
 
@@ -1062,7 +1062,7 @@ int sceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags)
 	if (db == NULL)
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	*flags = db->flags;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return 0;
 }
 
@@ -1089,10 +1089,10 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 2133);
 		return;
 	}
-	ksceGUIDSetName(db->addr2mod->tableBlock, name);
-	ksceGUIDSetName(db->addr2mod->exidxKernelBlock, name);
-	ksceGUIDSetName(db->addr2mod->exidxBlock, name);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	SceSysmemForDriver_4CFA4100(db->addr2mod->tableBlock, name);
+	SceSysmemForDriver_4CFA4100(db->addr2mod->exidxKernelBlock, name);
+	SceSysmemForDriver_4CFA4100(db->addr2mod->exidxBlock, name);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 int ksceKernelGetModuleInfoMinByAddr(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
@@ -1114,7 +1114,7 @@ int ksceKernelGetModuleInfoMinByAddr(SceUID pid, SceUInt32 addr, SceUInt32 *fing
 		if (name != NULL)
 			strncpy(name, cb->name, 0x1b);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return ret;
 }
 
@@ -1150,7 +1150,7 @@ void LibraryDBRegisterModule(SceModuleCB *cb)
 		if (sceKernelGetProcessType(pid) != PROCESS_TYPE_SHARED || LibraryDBIsShared(pid)) {
 			cb->flags &= ~MODULE_FLAG_SHARED_ORIGINAL;
 		} else {
-			ent = ksceKernelAlloc(sizeof(*ent));
+			ent = SceSysmemForKernel_85571907(sizeof(*ent));
 			if (ent == NULL)
 				goto unlock;
 			ent->cb = cb;
@@ -1159,23 +1159,23 @@ void LibraryDBRegisterModule(SceModuleCB *cb)
 			seg = &cb->segment[cb->nSegments - 1];
 			if ((seg->perms & SEGMENT_PERM_WRITE) != 0 && seg->vaddr != NULL &&
 			    seg->filesz != 0) {
-				copy = ksceKernelAlloc(seg->filesz);
+				copy = SceSysmemForKernel_85571907(seg->filesz);
 				if (copy == NULL)
 					goto unlock;
-				if (ksceKernelCopyFromUserProc(pid, copy, seg->vaddr, seg->filesz) < 0) {
-					ksceKernelFree(copy);
+				if (sceKernelCopyFromUserProc(pid, copy, seg->vaddr, seg->filesz) < 0) {
+					SceSysmemForKernel_4233C16D(copy);
 					goto unlock;
 				}
 				ent->dataCopy = copy;
 			}
-			lock = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_sharedLock);
+			lock = SceCpuForDriver_D32ACE9E(&g_sharedLock);
 			ent->next = g_sharedModules;
 			g_sharedModules = ent;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, lock);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_sharedLock, lock);
 		}
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
 /* name unknown */
@@ -1227,7 +1227,7 @@ int sceKernelGetLibEntCBListForSyslibtrace(LibEntCB **list, SceSize *num)
 		for (ver = lib; n != max && ver != NULL; ver = ver->older)
 			list[n++] = ver;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1249,7 +1249,7 @@ static inline int getNumOfLostLibrariesInModule(SceUID pid, SceUID modid)
 		if (id == modid)
 			n++;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return n;
 }
 
@@ -1274,7 +1274,7 @@ static inline int getLostLibrariesInModule(SceUID pid, SceUID modid,
 			n++;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1299,7 +1299,7 @@ int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list, Sce
 	if (list == NULL) {
 		db = LibraryDBLock(pid, &intr);
 		n = db->lostCount;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return n;
 	}
 	db = LibraryDBLock(pid, &intr);
@@ -1311,7 +1311,7 @@ int sceKernelGetLostLibraryList(SceUID pid, SceKernelLostLibraryEntry *list, Sce
 		list[n].modid = pid == KERNEL_PID ? stub->cb->modid : stub->cb->puid;
 		n++;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1329,7 +1329,7 @@ int sceKernelGetLibraryList(SceUID pid, SceUID *list, SceSize *num)
 		if (db == NULL)
 			return 0;
 		n = db->libCount;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return n;
 	}
 	db = LibraryDBLock(pid, &intr);
@@ -1340,7 +1340,7 @@ int sceKernelGetLibraryList(SceUID pid, SceUID *list, SceSize *num)
 		for (ver = lib; n < *num && ver != NULL; ver = ver->older)
 			list[n++] = GetLibUIDByLibEntCB(pid, &ver->guid, &ver->puid);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1365,7 +1365,7 @@ static inline int getNumOfModulesWithType(SceUID pid, SceUInt32 flags)
 		}
 		n++;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	return n;
 }
 
@@ -1400,7 +1400,7 @@ static inline int getModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, Sce
 		}
 		n = putModuleId(list, n, cb, type);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1453,7 +1453,7 @@ int sceKernelGetModuleInfoForDebugger(SceUID pid, SceKernelModuleInfoForDebugger
 		if (db == NULL)
 			return 0;
 		n = db->moduleCount;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return n;
 	}
 	db = LibraryDBLock(pid, &intr);
@@ -1510,7 +1510,7 @@ int sceKernelGetModuleInfoForDebugger(SceUID pid, SceKernelModuleInfoForDebugger
 		exidx->extabEnd = cb->extabEnd;
 		info = (SceKernelModuleInfoForDebugger *)(exidx + 1);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1536,7 +1536,7 @@ int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *li
 					n++;
 			}
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return n;
 	}
 	db = LibraryDBLock(pid, &intr);
@@ -1550,7 +1550,7 @@ int sceKernelGetExportedLibraryListInModule(SceUID pid, SceUID modid, SceUID *li
 				list[n++] = GetLibUIDByLibEntCB(pid, &ver->guid, &ver->puid);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1570,7 +1570,7 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 			return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 		obj = ModulemgrReferModule(modid);
 		if (obj == NULL) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 			return SCE_KERNEL_ERROR_MODULEMGR_NO_MOD;
 		}
 		stub = obj->cb.libStubCB;
@@ -1580,7 +1580,7 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 				n++;
 		}
 		ModulemgrReleaseModule(modid);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return n;
 	}
 	db = LibraryDBLock(pid, &intr);
@@ -1588,7 +1588,7 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 		return SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 	obj = ModulemgrReferModule(modid);
 	if (obj == NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 		return SCE_KERNEL_ERROR_MODULEMGR_NO_MOD;
 	}
 	stub = obj->cb.libStubCB;
@@ -1599,7 +1599,7 @@ static inline int getImportedLibrariesInModule(SceUID pid, SceUID modid, SceUID 
 							&stub->linked->puid);
 	}
 	ModulemgrReleaseModule(modid);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 	*num = n;
 	return 0;
 }
@@ -1647,7 +1647,7 @@ int sceKernelGetLibraryInfoForDebugger(SceUID pid, SceUID libid,
 		info->libname[0xff] = 0;
 		strncpy(info->libname, ent->exports->libname, 0xff);
 		ModulemgrReleaseModule(obj->modid);
-		ksceGUIDReleaseObject(obj->libEntCB->guid);
+		sceGUIDReleaseObject(obj->libEntCB->guid);
 		ret = 0;
 	}
 	ModulemgrReleaseProcess(pid);
@@ -1692,7 +1692,7 @@ int sceKernelGetLibraryExportInfoForDebugger(SceUID pid, SceUID libid,
 	*num = n;
 release:
 	ModulemgrReleaseModule(obj->modid);
-	ksceGUIDReleaseObject(obj->libEntCB->guid);
+	sceGUIDReleaseObject(obj->libEntCB->guid);
 out:
 	ModulemgrReleaseProcess(pid);
 	return ret;
@@ -1720,7 +1720,7 @@ int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSiz
 		} else {
 			ret = obj->libEntCB->clientCount;
 			ModulemgrReleaseModule(obj->modid);
-			ksceGUIDReleaseObject(obj->libEntCB->guid);
+			sceGUIDReleaseObject(obj->libEntCB->guid);
 		}
 	} else {
 		guid = GetLibGUIDByLibUID(pid, libid);
@@ -1730,7 +1730,7 @@ int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSiz
 			if (db == NULL) {
 				ret = SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 			} else {
-				ret = ksceGUIDReferObjectWithClass(guid, g_libraryClass, &obj);
+				ret = SceSysmemForDriver_00ED6C14(guid, g_libraryClass, &obj);
 				if (ret >= 0) {
 					n = 0;
 					if (obj->libEntCB->clientCount > 0) {
@@ -1745,10 +1745,10 @@ int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSiz
 								break;
 						}
 					}
-					ksceGUIDReleaseObject(guid);
+					sceGUIDReleaseObject(guid);
 					*num = n;
 				}
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
+				sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 			}
 		}
 	}

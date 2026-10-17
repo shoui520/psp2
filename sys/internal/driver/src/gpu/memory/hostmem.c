@@ -4,13 +4,12 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
+#include <sysmem/sysmem.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"
 
 extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
-extern int ksceKernelCreateHeap(const char *name, unsigned size,
-			       const void *options);
 extern void *OSAllocMem(unsigned size);
 int InitKernelMemBlockHeap(void);
 
@@ -49,7 +48,7 @@ int sceGpuHostMemInit(void)
 {
 	int ret;
 
-	ret = ksceKernelCreateHeap("SceGpuBackup", 0x80000, 0);
+	ret = SceSysmemForDriver_9328E0E8("SceGpuBackup", 0x80000, 0);
 	hostMemHeapUid = ret;
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 109, "%s: Failed to create memblock (%08x)\n",

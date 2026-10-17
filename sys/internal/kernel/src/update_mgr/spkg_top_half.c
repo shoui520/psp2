@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include "spkg.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 
 int UpdateUtilLockPupHeader(void);
 int UpdateUtilUnlockPupHeader(void);
@@ -66,10 +66,10 @@ int SpkgUtilSpackageTopHalf(unsigned int nodeType, int packageType,
 		return permission;
 	if (!buffer || !size || !requestId)
 		goto invalid;
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
+	if (SceSysrootForDriver_55392965()) {
 		if ((flags & 5) == 5)
 			goto authorized;
-	} else if (!ksceSblAimgrIsCEX() && (flags & 5) == 5) {
+	} else if (!SceSblAIMgrForDriver_D78B04A2() && (flags & 5) == 5) {
 		goto authorized;
 	}
 	if ((flags & 9) != 9)

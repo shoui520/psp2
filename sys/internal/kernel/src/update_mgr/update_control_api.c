@@ -1,5 +1,5 @@
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
 
@@ -14,7 +14,7 @@ int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
 	ENTER_SYSCALL(state);
 	result = SpkgUtilGetUpdateMode(&mode);
 	if (result == 0)
-		result = ksceKernelCopyToUser(output, &mode, sizeof(mode));
+		result = SceSysmemForDriver_6D88EF8A(output, &mode, sizeof(mode));
 	EXIT_SYSCALL(state);
 	return result;
 }
@@ -67,7 +67,7 @@ int sceSblUsGetApplicableVersionForUser(int type, UpdateApplicableVersion *outpu
 	ENTER_SYSCALL(state);
 	result = SpkgInfoUtilGetApplicableVersion(type, &info);
 	if (result == 0)
-		result = ksceKernelCopyToUser(output, &info, sizeof(info));
+		result = SceSysmemForDriver_6D88EF8A(output, &info, sizeof(info));
 	EXIT_SYSCALL(state);
 	return result;
 }

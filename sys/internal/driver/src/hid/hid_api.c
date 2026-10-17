@@ -1,7 +1,7 @@
 /* Descriptive filename; these exports have no source-file debug records. */
 #include "hid_internal.h"
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2/kernel/threadmgr/thread.h>
 #include <string.h>
 
@@ -50,7 +50,7 @@ int sceHidMouseEnumerate(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = ksceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
+			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -129,7 +129,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = ksceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
+			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -186,7 +186,7 @@ int sceHidKeyboardEnumerate(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = ksceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
+			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -265,7 +265,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = ksceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
+			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -305,7 +305,7 @@ leave:
 	} \
 	pid = sceKernelGetProcessId(); \
 	hidGetProcessPrivileges(pid, &privileges); \
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock); \
+	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock); \
 	copied = cursor->peekCount; \
 	if ((capCount) && copied >= 16) \
 		copied = 16; \
@@ -314,7 +314,7 @@ leave:
 	position = cursor->readIndex + cursor->pendingCount - copied; \
 	if (position < 0) \
 		position += 16; \
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState); \
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState); \
 	for (copyIndex = 0; copyIndex < copied; copyIndex++) { \
 		HidReportEntry *entry = &collection->reports[position]; \
 		switch (collection->type) { \
@@ -417,7 +417,7 @@ found:
 		PEEK_COLLECTION_REPORTS(buffer, 0);
 		status = copied;
 		if (copied > 0)
-			status = ksceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
+			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -628,7 +628,7 @@ int sceHidKeyboardGetIntercept(int *enable)
 		result = hidGetKeyboardIntercept(pid, &intercept);
 		if (result >= 0) {
 			value = intercept.enabled == 1;
-			result = ksceKernelCopyToUser(enable, &value, sizeof(value));
+			result = SceSysmemForDriver_6D88EF8A(enable, &value, sizeof(value));
 		}
 		hidUnlock();
 	}
@@ -682,7 +682,7 @@ int sceHidConsumerControlEnumerate(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = ksceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
+			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -763,7 +763,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = ksceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
+			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:

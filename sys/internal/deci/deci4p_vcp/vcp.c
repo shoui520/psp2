@@ -14,12 +14,11 @@
 
 #include <sysmem/cp15.h>
 #include <psp2kern/display.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
@@ -198,12 +197,12 @@ static int VcpHandler(int event, void *arg, void *ctx)
 /* name unknown: zlib allocator on our heap */
 static void *VcpZAlloc(void *opaque, SceUInt32 items, SceUInt32 size)
 {
-	return ksceKernelAllocHeapMemory(((VcpCtx *)opaque)->heap, items * size);
+	return SceSysmemForDriver_7B4CB60A(((VcpCtx *)opaque)->heap, items * size);
 }
 
 static void VcpZFree(void *opaque, void *address)
 {
-	ksceKernelFreeHeapMemory(((VcpCtx *)opaque)->heap, address);
+	sceKernelFreeHeapMemory(((VcpCtx *)opaque)->heap, address);
 }
 
 static void VcpReplyHeader(VcpHeader *r, const VcpRequest *req, SceSize size, SceUInt32 code)
@@ -294,7 +293,7 @@ static void VcpCaptureFrame(const VcpRequest *req)
 	fb->size = sizeof(*fb);
 	fb->base = s_vcp.fbBase;
 	pid = info->pid;
-	if (ksceSblAimgrIsDolce()) {
+	if (SceSblAIMgrForDriver_71608CA3()) {
 		fb->pitch = 1280;
 		fb->width = 1280;
 		fb->height = 736;
@@ -509,14 +508,14 @@ static int VcpThread(SceSize args, void *argp)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x600000;
-	uid = ksceKernelAllocMemBlock("SceDeci4pVcpFrameBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+	uid = SceSysmemForDriver_C94850C9("SceDeci4pVcpFrameBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 				      s_vcp.fbSize, &opt);
 	if (uid < 0)
 		return uid;
 	s_vcp.fbMemblock = uid;
-	if ((ret = ksceKernelGetMemBlockBase(uid, &s_vcp.fbBase)) < 0 ||
-	    (ret = ksceKernelVAtoPA(s_vcp.fbBase, &s_vcp.fbPaddr)) < 0) {
-		ksceKernelFreeMemBlock(s_vcp.fbMemblock);
+	if ((ret = SceSysmemForDriver_A841EDDA(uid, &s_vcp.fbBase)) < 0 ||
+	    (ret = SceSysmemForDriver_8D160E65(s_vcp.fbBase, &s_vcp.fbPaddr)) < 0) {
+		SceSysmemForDriver_009E1C61(s_vcp.fbMemblock);
 		return ret;
 	}
 	ksceKernelChangeThreadCpuAffinityMask(0, 0xf);
@@ -564,13 +563,13 @@ int VcpModuleStart(SceSize args, void *argp)
 	SceKernelThreadOptParam topt;
 	SceUID uid;
 
-	if (!ksceKernelCheckDipsw(0xc2)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 127, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
 
 	memset(&s_vcp, 0, sizeof(s_vcp));
-	s_vcp.fbSize = ksceSblAimgrIsDolce() ? 0x3c0000 : 0x200000;
+	s_vcp.fbSize = SceSblAIMgrForDriver_71608CA3() ? 0x3c0000 : 0x200000;
 	s_vcp.req = (VcpRequest *)s_recvBuf;
 
 	uid = ksceKernelCreateEventFlag("SceDeci4pVcp", SCE_EVENT_WAITMULTIPLE, 0, NULL);
@@ -585,7 +584,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	hopt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
 	hopt.pid = 0;
 	hopt.heap = NULL;
-	uid = ksceKernelCreateHeap("SceDeci4pVcp", 0x2000, &hopt);
+	uid = SceSysmemForDriver_9328E0E8("SceDeci4pVcp", 0x2000, &hopt);
 	if (uid < 0)
 		goto err_heap;
 	s_vcp.heap = uid;
@@ -612,14 +611,14 @@ int VcpModuleStart(SceSize args, void *argp)
 	s_protocol.size = sizeof(s_protocol);
 	s_protocol.protocol = VCP_PROTOCOL;
 	strncpy(s_protocol.name, "VCP", sizeof(s_protocol.name));
-	if (!ksceKernelCheckDipsw(0xc3))
+	if (!SceDipswForDriver_A98FC2FD(0xc3))
 		s_protocol.flags |= DFMGR_PROTOCOL_USB;
 	s_vcp.flags = VCP_FLAG_2;
 	s_vcp.handle = sceDfMgrOpen(VcpHandler, &s_protocol, &s_vcp);
 	return SCE_KERNEL_START_SUCCESS;
 
 err_thread:
-	ksceKernelDeleteHeap(s_vcp.heap);
+	sceKernelDeleteHeap(s_vcp.heap);
 err_heap:
 	ksceKernelDeleteEventFlag(s_vcp.evf);
 	return SCE_KERNEL_START_FAILED;

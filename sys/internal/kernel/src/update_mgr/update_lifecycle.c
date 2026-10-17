@@ -1,7 +1,6 @@
 #include <sysmem/sysroot.h>
 #include <psp2kern/io/stat.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <syscon/syscon.h>
 #include <sysstatemgr/sysstatemgr.h>
 #include "update_internal.h"
@@ -48,7 +47,7 @@ checkDownloader:
 		hostUpdate = 1;
 		updateInitializeAsync = 0;
 	}
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() || ksceSysrootIsUpdateMode())
+	if (SceSysrootForDriver_55392965() || SceSysrootForDriver_B0E1FC67())
 		updateInitializeAsync = 0;
 	if (updateInitializeAsync) {
 		thread = ksceKernelCreateThread("SceSblUsInitialize",
@@ -66,7 +65,7 @@ checkDownloader:
 		result = UpdateMgrdoUpdate(UpdateUtilGetHeapId(), "host0:PSP2UPDAT.PUP");
 		if (result != (int)0x800f0202) {
 			if (result == 0) {
-				ksceKernelInvokeInitCallback(8);
+				SceSysrootForDriver_93CD44CD(8);
 				sceSblUsPowerControlForKernel(1, 1);
 				for (;;)
 					;

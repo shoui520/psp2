@@ -6,7 +6,7 @@
 
 #include "sysmem_internal.h"
 
-uint32_t ksceKernelSysrootGetStatus(void);
+uint32_t SceSysrootForKernel_5C426B19(void);
 void *sceKernelSysrootAlloc(SceSize size);
 char *strncpy(char *dst, const char *src, SceSize n);
 
@@ -15,10 +15,10 @@ char *SysmemAllocName(const char *name)
 {
 	char *copy;
 
-	if (ksceKernelSysrootGetStatus() < 3)
+	if (SceSysrootForKernel_5C426B19() < 3)
 		copy = sceKernelSysrootAlloc(0x20);
 	else
-		copy = ksceKernelAlloc(0x20);
+		copy = SceSysmemForKernel_85571907(0x20);
 	strncpy(copy, name, 0x20);
 	return copy;
 }
@@ -26,8 +26,8 @@ char *SysmemAllocName(const char *name)
 /* name unknown: such a copy given back (the sysroot heap's are kept) */
 void SysmemFreeName(char *name)
 {
-	if (ksceKernelSysrootGetStatus() > 2)
-		ksceKernelFree(name);
+	if (SceSysrootForKernel_5C426B19() > 2)
+		SceSysmemForKernel_4233C16D(name);
 }
 
 /* name unknown: an allocation from a heap, under its lock */

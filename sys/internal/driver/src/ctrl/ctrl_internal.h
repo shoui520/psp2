@@ -5,13 +5,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <psp2common/ctrl.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <ctrl/ctrl.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 
 SceUInt32 ctrlAlarmCallback(void *arg);
 int ctrlSampleComplete(SceSysconPacket *packet, void *arg);

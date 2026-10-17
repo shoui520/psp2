@@ -6,12 +6,9 @@
 #include <psp2kern/io/stat.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/heap.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysroot.h>
-#include <psp2kern/kernel/dipsw.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/qafmgr.h>
 #include <threadmgr/threadmgr.h>
@@ -28,12 +25,6 @@
 
 /* Kernel-only imports not declared by the public SDK headers. */
 int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
-int ksceKernelInvokeInitCallback(int stage);
-SceUID SceSysmemForKernel_0164D817(void);
-int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);
-int sceKernelSysrootSetStatus(int flags);
-int SceSysrootForDriver_7C2C10E2(int kind, int value);
-int SceSysrootForKernel_ksceSysrootIsExternalBootMode(void);
 extern char SceKernelPsp2Config_A6483A7C[];
 extern char SceKernelPsp2Config_C1BA20DA[];
 

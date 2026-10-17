@@ -35,18 +35,18 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	look_ctype_table
 	memcmp
-	ksceKernelSysrootGetThreadAccessLevel
-	ksceSysrootGetSelfAuthInfo
+	SceSysrootForKernel_20009397
+	SceSysrootForKernel_4F0A4066
 	SceSysrootForKernel_BE1EF51C
 	SceSysrootForDriver_26AA237C
 	SceSysrootForDriver_56D85EB0
 	SceSysrootForDriver_E2515A08
-	ksceKernelCopyToUser
-	ksceKernelAssert
-	ksceKernelPrintfLevelWithInfo
+	SceSysmemForDriver_6D88EF8A
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_D9703808
 	SceQafMgrForDriver_694D1096
-	ksceSblQafMgrIsAllowSystemAppDebug
-	ksceKernelCheckDipsw
+	SceQafMgrForDriver_CAD47130
+	SceDipswForDriver_A98FC2FD
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

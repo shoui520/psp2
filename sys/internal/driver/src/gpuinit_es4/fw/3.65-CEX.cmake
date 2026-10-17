@@ -66,14 +66,14 @@ set(MODULE_IMPORT_FUNCS
 	PVRSRVAcquireDeviceDataKM
 	PVRSRVEnumerateDevicesKM
 	ksceGpuMmuMapMemory
-	ksceKernelPrintf
+	SceDebugForDriver_391B74B7
 	kscePervasiveGetSoCRevision
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
 	memset
 	__stack_chk_fail
-	ksceSblAimgrIsTool
+	SceSblAIMgrForDriver_274663A0
 	SceSblACMgrForDriver_E87D1777
 	ksceKernelGetModuleInfoByAddr
 )

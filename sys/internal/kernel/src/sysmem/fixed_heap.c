@@ -60,7 +60,7 @@ static inline int CpuCacheFree(FixedHeap *heap, void *object)
 	FixedHeapCpuCache *cache;
 	int state;
 
-	state = ksceKernelCpuSuspendIntr();
+	state = SceCpuForDriver_821FC0EE();
 	cache = &heap->caches[SceCpuId()];
 #if FW_DEBUG
 	if (cache->count != 0) {
@@ -90,11 +90,11 @@ static inline int CpuCacheFree(FixedHeap *heap, void *object)
 			cache->tail = object;
 		}
 		cache->count++;
-		ksceKernelCpuResumeIntr(state);
-		ksceKernelAtomicAddAndGet16(&heap->freeCount, 1);
+		sceKernelCpuResumeIntr(state);
+		SceCpuForDriver_59F74E94(&heap->freeCount, 1);
 		return 1;
 	} else {
-		ksceKernelCpuResumeIntr(state);
+		sceKernelCpuResumeIntr(state);
 		return 0;
 	}
 }
@@ -143,7 +143,7 @@ static inline void FixedHeapPushFree(FixedHeap *heap, void *object)
 		heap->freeTail = object;
 	}
 	heap->fifoCount++;
-	ksceKernelAtomicAddAndGet16(&heap->freeCount, 1);
+	SceCpuForDriver_59F74E94(&heap->freeCount, 1);
 }
 
 /* take the oldest object off the free list; the heap is write locked */
@@ -169,7 +169,7 @@ static inline void FixedHeapCountAlloc(FixedHeap *heap)
 {
 	SceUInt16 used;
 
-	ksceKernelAtomicDecIfPositive16(&heap->freeCount);
+	SceCpuForDriver_9A693F5B(&heap->freeCount);
 	used = heap->totalCount - heap->freeCount;
 	if (used > heap->peakCount)
 		heap->peakCount = used;
@@ -286,7 +286,7 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 	if (heap->attr & FIXED_HEAP_ATTR_CPU_CACHE) {
 		FixedHeapCpuCache *cache;
 
-		state = ksceKernelCpuSuspendIntr();
+		state = SceCpuForDriver_821FC0EE();
 		cache = &heap->caches[SceCpuId()];
 		if (cache->count != 0) {
 			entry = cache->head;
@@ -298,21 +298,21 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 				cache->head = *(void **)entry;
 			}
 			*(void **)entry = NULL;
-			ksceKernelCpuResumeIntr(state);
+			sceKernelCpuResumeIntr(state);
 			FixedHeapCountAlloc(heap);
 			*object = entry;
 			return 0;
 		}
-		ksceKernelCpuResumeIntr(state);
+		sceKernelCpuResumeIntr(state);
 	}
 
 	if (raw == 0) {
-		state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+		state = SceCpuForDriver_4C38CE4D(&heap->lock);
 	} else {
 #if FW_DEBUG
-		state = ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(&heap->lock);
+		state = SceCpuForDriver_F02467D1(&heap->lock);
 		if (state >= 0) {
-			ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+			sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 			SCE_DBG_PRINTF(0xb, 1272, "Raw mode but not write locked\n");
 			SCE_DBG_ASSERT_FAIL(1273);
 		}
@@ -357,7 +357,7 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 		ret = SceSysmemForKernel_39D5A3B7(smb, &base);
 		if (ret < 0) {
 			if (smb != NULL)
-				ksceKernelFreeSimpleMemBlock(smb);
+				SceSysmemForKernel_A4DB88E1(smb);
 			goto failed;
 		}
 		FixedHeapAddPage(heap, base, smb);
@@ -370,12 +370,12 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 		FixedHeapCountAlloc(heap);
 
 	if (raw == 0) {
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	} else {
 #if FW_DEBUG
-		state = ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(&heap->lock);
+		state = SceCpuForDriver_F02467D1(&heap->lock);
 		if (state >= 0) {
-			ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+			sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 			SCE_DBG_ASSERT_FAIL(1422);
 		}
 #endif
@@ -387,12 +387,12 @@ __attribute__((noinline)) int FixedHeapAllocObjectWithOpt(FixedHeap *heap, SceUI
 
 failed:
 	if (raw == 0) {
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	} else {
 #if FW_DEBUG
-		state = ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(&heap->lock);
+		state = SceCpuForDriver_F02467D1(&heap->lock);
 		if (state >= 0) {
-			ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+			sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 			SCE_DBG_ASSERT_FAIL(1448);
 		}
 #endif
@@ -498,22 +498,22 @@ void FixedHeapInitLock(FixedHeap *heap)
 
 int FixedHeapWriteLock(FixedHeap *heap, const char *func, int line)
 {
-	return ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+	return SceCpuForDriver_4C38CE4D(&heap->lock);
 }
 
 void FixedHeapWriteUnlock(FixedHeap *heap, int state)
 {
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 }
 
 int FixedHeapReadLock(FixedHeap *heap, const char *func, int line)
 {
-	return ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&heap->lock);
+	return SceCpuForDriver_EC53D007(&heap->lock);
 }
 
 void FixedHeapReadUnlock(FixedHeap *heap, int state)
 {
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 }
 
 int FixedHeapFreeObjectRaw(FixedHeap *heap, void *object)
@@ -522,9 +522,9 @@ int FixedHeapFreeObjectRaw(FixedHeap *heap, void *object)
 #if FW_DEBUG
 	int state;
 
-	state = ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_F02467D1(&heap->lock);
 	if (state >= 0) {
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 		SCE_DBG_PRINTF(0xb, 1631, "FATAL ERROR: %p is not LOCKED!!!\n", heap);
 		SCE_DBG_ASSERT_FAIL(1632);
 		return SCE_KERNEL_ERROR_ERROR;
@@ -548,21 +548,21 @@ int FixedHeapFreeObject(FixedHeap *heap, void *object)
 
 	FixedHeapCallFreeHook(heap, object, __builtin_return_address(0));
 #if FW_DEBUG
-	state = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_EC53D007(&heap->lock);
 	if (!FixedHeapFindPage(heap, object)) {
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 		SCE_DBG_PRINTF(0xb, 1677, "*** Invalid pointer pFixedHeap=%p, pObject=%p\n", heap,
 			       object);
 		__breakpoint(0);
 		return SCE_KERNEL_ERROR_ERROR;
 	}
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 #endif
 	if ((heap->attr & FIXED_HEAP_ATTR_CPU_CACHE) && CpuCacheFree(heap, object))
 		return 0;
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_4C38CE4D(&heap->lock);
 	FixedHeapPushFree(heap, object);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
 
@@ -650,7 +650,7 @@ int FixedHeapGetInfo(FixedHeap *heap, SceKernelFixedHeapInfo *info)
 		SCE_DBG_ASSERT_FAIL(1761);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	}
-	state = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_EC53D007(&heap->lock);
 	info->itemSize = heap->itemSize;
 	info->totalSize = heap->pageSize * heap->pageCount;
 	info->perPage = heap->perPage;
@@ -681,7 +681,7 @@ int FixedHeapGetInfo(FixedHeap *heap, SceKernelFixedHeapInfo *info)
 	}
 	SCE_DBG_PRINTF(0xb, 1844, "%p:pFixedHeap->nItemInFifo=0x%08x\n", heap, heap->fifoCount);
 	SCE_DBG_PRINTF(0xb, 1846, "%p:pInfo->nListCount      =0x%08x\n", heap, info->listCount);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
 
@@ -807,7 +807,7 @@ static __attribute__((noinline)) int FixedHeapInit(FixedHeap *heap, char *name, 
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	heap->lock = 0;
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_4C38CE4D(&heap->lock);
 	heap->magic = FIXED_HEAP_MAGIC;
 	heap->name = name;
 	heap->attr = attr;
@@ -838,7 +838,7 @@ static __attribute__((noinline)) int FixedHeapInit(FixedHeap *heap, char *name, 
 		heap->caches[i].tail = NULL;
 	}
 	heap->objectHook = NULL;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
 
@@ -897,7 +897,7 @@ int FixedHeapInitForProcess(FixedHeap *heap, SceUID pid, const char *name, SceUI
 			    maxPages, pages, blocks);
 	if (ret < 0) {
 		if (smb != NULL)
-			ksceKernelFreeSimpleMemBlock(smb);
+			SceSysmemForKernel_A4DB88E1(smb);
 		hook = heap->hook;
 		if (hook != NULL) {
 			if (pages != NULL)
@@ -929,7 +929,7 @@ int FixedHeapFinish(FixedHeap *heap)
 
 	for (i = 0; i < heap->pageCount; i++) {
 		if (blocks[i] != NULL)
-			ksceKernelFreeSimpleMemBlock(blocks[i]);
+			SceSysmemForKernel_A4DB88E1(blocks[i]);
 	}
 	FixedHeapReleaseTables(heap, 1);
 	return 0;
@@ -953,7 +953,7 @@ int sceKernelGetFixedHeapInfo(SceUID uid, SceKernelFixedHeapInfo *info)
 	return FixedHeapGetInfo(heap, info);
 }
 
-int ksceKernelGetFixedHeapInfoByPointer(void *fixedHeap, void *fixedHeapInfo)
+int sceKernelGetFixedHeapInfoByPointer(void *fixedHeap, void *fixedHeapInfo)
 {
 	if (fixedHeap != NULL) {
 		if ((uintptr_t)fixedHeapInfo != 0)
@@ -973,7 +973,7 @@ static inline __attribute__((always_inline)) void FixedHeapSetGUID(SceUID guid, 
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xb, 2642, "FixedHeapSetUID",
 				    "GUIDSetCNOA(guid 0x%08x, %p) failed 0x%08x\n", guid, heap, ret);
-	ret = ksceGUIDGetObject(guid, &object);
+	ret = SceSysmemForDriver_0FC24464(guid, &object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 2647, "FixedHeapSetUID",
 				    "sceGUIDGetObject failed 0x%08x\n",
@@ -1069,9 +1069,9 @@ int SceSysmemForKernel_811C452B(FixedHeap *heap, FixedHeapObjectHook *hook)
 {
 	int state;
 
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_4C38CE4D(&heap->lock);
 	heap->objectHook = hook;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }
 
@@ -1081,13 +1081,13 @@ int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook)
 	FixedHeap *heap;
 	int state;
 
-	if (ksceGUIDGetObjectWithClass(uid, &s_fixedHeapClass->heapClass.cls, &object) < 0) {
+	if (SceSysmemForKernel_0E43E113(uid, &s_fixedHeapClass->heapClass.cls, &object) < 0) {
 		SCE_DBG_PRINTF(0xb, 3112, "There is no 0x%08x\n", uid);
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}
 	heap = (FixedHeap *)object;
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&heap->lock);
+	state = SceCpuForDriver_4C38CE4D(&heap->lock);
 	heap->objectHook = hook;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&heap->lock, state);
 	return 0;
 }

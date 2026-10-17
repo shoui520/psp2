@@ -6,7 +6,7 @@
 
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 extern "C" {
 #include <sysmem/debug.h>
 }
@@ -22,7 +22,7 @@ static void fiosTlsDestructor(void *addr, uintptr_t argument)
 }
 
 /* the process is killed: its overlays and open directory handles go (name unknown) */
-static int fiosProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int a3)
+static int fiosProcessKill(SceUID pid, ProcEventParam *param, int a3)
 {
 	SceFiosKernelProcessStorage *storage;
 	SceFiosKernelDH *dh;
@@ -44,7 +44,7 @@ static int fiosProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int a3)
 }
 
 /* the process exits: the same (name unknown) */
-static int fiosProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int a3)
+static int fiosProcessExit(SceUID pid, ProcEventParam *param, int a3)
 {
 	SceFiosKernelProcessStorage *storage;
 	SceFiosKernelDH *dh;
@@ -67,7 +67,7 @@ static int fiosProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int a3)
 
 extern "C" int sceFiosKernelInit(SceSize args, void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	int ret;
 
 	g_fiosPlsKey = ksceKernelCreateProcessLocalStorage("SceFios",
@@ -87,10 +87,10 @@ extern "C" int sceFiosKernelInit(SceSize args, void *argp)
 	handler.create = NULL;
 	handler.exit = fiosProcessExit;
 	handler.kill = fiosProcessKill;
-	handler.stop = NULL;
-	handler.start = NULL;
-	handler.switch_process = NULL;
-	ret = ksceKernelRegisterProcEventHandler("SceFios", &handler, 0);
+	handler.suspend = NULL;
+	handler.resume = NULL;
+	handler.notify = NULL;
+	ret = sceKernelRegisterProcEventHandler("SceFios", &handler, 0);
 	if (ret < 0) {
 		sceFiosKernelRwlockTerm(&g_fiosOverlayLock);
 		return SCE_KERNEL_START_FAILED;

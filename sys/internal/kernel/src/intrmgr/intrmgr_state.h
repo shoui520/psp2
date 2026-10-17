@@ -7,7 +7,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <intrmgr/gic_regs.h>
 

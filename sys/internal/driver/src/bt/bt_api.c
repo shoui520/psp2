@@ -14,7 +14,7 @@
 #include <bt/bt_test.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include <sysmem/sysmem.h>
 #include "bt_internal.h"
 
 /* Name unknown; the final argument selects user-buffer copying. */
@@ -704,7 +704,7 @@ int sceBtRegisterCallback(SceUID callback, uint64_t eventMask)
 
 	if (processId < 0)
 		return processId;
-	kernelCallback = kscePUIDtoGUID(processId, callback);
+	kernelCallback = SceSysmemForDriver_45D22597(processId, callback);
 	if (kernelCallback < 0)
 		return kernelCallback;
 	saved = sceSyscallEnter();
@@ -1794,7 +1794,7 @@ int sceBtHidVuRegisterCallback(SceUID callback, int vendorId, int productId)
 
 	if (processId < 0)
 		return processId;
-	kernelCallback = kscePUIDtoGUID(processId, callback);
+	kernelCallback = SceSysmemForDriver_45D22597(processId, callback);
 	if (kernelCallback < 0)
 		return kernelCallback;
 	saved = sceSyscallEnter();

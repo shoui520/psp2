@@ -1,11 +1,11 @@
 /*
  * SceKernelUtils: zlib (RFC 1950) and gzip (RFC 1952) headers around the
- * raw deflate decoder (ksceDeflateDecompress).
+ * raw deflate decoder (SceKernelUtilsForDriver_8AF1FAD4).
  */
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <kernel/error.h>
 
 #define ZLIB_CM_DEFLATE		8
@@ -41,7 +41,7 @@ typedef struct GzipTrailer {
 	SceUInt32 isize;
 } GzipTrailer;
 
-int ksceZlibGetInfo(const void *src, unsigned char *cmf, unsigned char *flg,
+int SceKernelUtilsForDriver_5B9BCD75(const void *src, unsigned char *cmf, unsigned char *flg,
 		    unsigned int *dictid, const void **data)
 {
 	const ZlibHeader *header = src;
@@ -66,38 +66,38 @@ int ksceZlibGetInfo(const void *src, unsigned char *cmf, unsigned char *flg,
 	return 0;
 }
 
-int ksceZlibDecompress(void *dst, SceSize dst_size, const void *src, uint32_t *adler32)
+int SceKernelUtilsForDriver_900148DB(void *dst, SceSize dst_size, const void *src, uint32_t *adler32)
 {
 	unsigned char cmf, flg;
 	const void *data, *next;
 	int ret;
 
-	ret = ksceZlibGetInfo(src, &cmf, &flg, NULL, &data);
+	ret = SceKernelUtilsForDriver_5B9BCD75(src, &cmf, &flg, NULL, &data);
 	if (ret < 0)
 		return ret;
 	if ((cmf & 0xf) != ZLIB_CM_DEFLATE || (flg & ZLIB_FLG_FDICT))
 		return SCE_KERNEL_ERROR_ERROR;
-	ret = ksceDeflateDecompress(dst, dst_size, data, &next);
+	ret = SceKernelUtilsForDriver_8AF1FAD4(dst, dst_size, data, &next);
 	if (ret >= 0 && adler32 != NULL)
 		*adler32 = __builtin_bswap32(*(const SceUInt32 *)next);
 	return ret;
 }
 
-const void *ksceZlibGetCompressedData(const void *src)
+const void *SceKernelUtilsForDriver_01EB6C45(const void *src)
 {
 	const void *data;
 
-	if (ksceZlibGetInfo(src, NULL, NULL, NULL, &data) < 0)
+	if (SceKernelUtilsForDriver_5B9BCD75(src, NULL, NULL, NULL, &data) < 0)
 		return NULL;
 	return data;
 }
 
-int ksceGzipIsValid(const void *src)
+int SceKernelUtilsForDriver_D8FAEFD4(const void *src)
 {
 	return ((const GzipHeader *)src)->magic == GZIP_MAGIC;
 }
 
-int ksceGzipGetInfo(const void *src, const void **extra, const char **name,
+int SceKernelUtilsForDriver_FFC6A10F(const void *src, const void **extra, const char **name,
 		    const char **comment, unsigned short *crc, const void **data)
 {
 	const GzipHeader *header = src;
@@ -150,18 +150,18 @@ int ksceGzipGetInfo(const void *src, const void **extra, const char **name,
 	return 0;
 }
 
-int ksceGzipDecompress(void *dst, SceSize dst_size, const void *src, uint32_t *crc32)
+int SceKernelUtilsForDriver_367EE3DF(void *dst, SceSize dst_size, const void *src, uint32_t *crc32)
 {
 	const GzipTrailer *trailer;
 	const void *data;
 	int ret;
 
-	ret = ksceGzipGetInfo(src, NULL, NULL, NULL, NULL, &data);
+	ret = SceKernelUtilsForDriver_FFC6A10F(src, NULL, NULL, NULL, NULL, &data);
 	if (ret < 0)
 		return ret;
 	if (((const GzipHeader *)src)->cm != GZIP_CM_DEFLATE)
 		return SCE_KERNEL_ERROR_ERROR;
-	ret = ksceDeflateDecompress(dst, dst_size, data, (const void **)&trailer);
+	ret = SceKernelUtilsForDriver_8AF1FAD4(dst, dst_size, data, (const void **)&trailer);
 	if (ret < 0)
 		return ret;
 	if (trailer->isize != (SceUInt32)ret)
@@ -171,29 +171,29 @@ int ksceGzipDecompress(void *dst, SceSize dst_size, const void *src, uint32_t *c
 	return ret;
 }
 
-const char *ksceGzipGetName(const void *src)
+const char *SceKernelUtilsForDriver_F901FD3E(const void *src)
 {
 	const char *name;
 
-	if (ksceGzipGetInfo(src, NULL, &name, NULL, NULL, NULL) < 0)
+	if (SceKernelUtilsForDriver_FFC6A10F(src, NULL, &name, NULL, NULL, NULL) < 0)
 		return NULL;
 	return name;
 }
 
-const char *ksceGzipGetComment(const void *src)
+const char *SceKernelUtilsForDriver_CD3AE08F(const void *src)
 {
 	const char *comment;
 
-	if (ksceGzipGetInfo(src, NULL, NULL, &comment, NULL, NULL) < 0)
+	if (SceKernelUtilsForDriver_FFC6A10F(src, NULL, NULL, &comment, NULL, NULL) < 0)
 		return NULL;
 	return comment;
 }
 
-const void *ksceGzipGetCompressedData(const void *src)
+const void *SceKernelUtilsForDriver_63619124(const void *src)
 {
 	const void *data;
 
-	if (ksceGzipGetInfo(src, NULL, NULL, NULL, NULL, &data) < 0)
+	if (SceKernelUtilsForDriver_FFC6A10F(src, NULL, NULL, NULL, NULL, &data) < 0)
 		return NULL;
 	return data;
 }

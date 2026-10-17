@@ -7,7 +7,7 @@
 
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "reg_internal.h"
 #include <sysmem/suspend.h>
 
@@ -134,7 +134,7 @@ int regFlushIndex(int registry)
 		image = reg->image;
 		size = image->categorySize + image->bitmapSize + REG_INDEX_HEADER_SIZE;
 		memset(image->digest, 0, sizeof(image->digest));
-		ret = ksceSha1Digest(image, size, digest);
+		ret = SceKernelUtilsForDriver_87DC7F2F(image, size, digest);
 		if (ret >= 0) {
 			for (i = 0; i < 5; i++)
 				image->digest[i] = digest[i];
@@ -224,7 +224,7 @@ int regLoadRegistry(const SceUInt32 *param, const char *indexPath, const char *d
 	for (i = 0; i < 5; i++)
 		saved[i] = image->digest[i];
 	memset(image->digest, 0, sizeof(image->digest));
-	ret = ksceSha1Digest(image, size[0], digest);
+	ret = SceKernelUtilsForDriver_87DC7F2F(image, size[0], digest);
 	if (ret < 0)
 		goto close;
 	if (memcmp(digest, saved, sizeof(digest)) != 0) {
@@ -414,7 +414,7 @@ static inline __attribute__((always_inline)) int regMakeRegistryFiles(const RegM
 		ret = regFileRead(image, 1, total, fd, &written);
 		if (ret == 0) {
 			memset(header.digest, 0, sizeof(header.digest));
-			ret = ksceSha1Digest(image, total, digest);
+			ret = SceKernelUtilsForDriver_87DC7F2F(image, total, digest);
 			if (ret >= 0) {
 				for (i = 0; i < 5; i++)
 					header.digest[i] = image->digest[i] = digest[i];
@@ -983,11 +983,11 @@ int regExportRegistry(const char *path)
 			}
 			g_regExportHeader.fileSize[i] += ret;
 			if (block == 0) {
-				ret = ksceSha1BlockInit(&g_regSha1Context);
+				ret = SceKernelUtilsForDriver_E4390FFA(&g_regSha1Context);
 				if (ret < 0)
 					goto close_in;
 			}
-			ret = ksceSha1BlockUpdate(&g_regSha1Context, buf, len);
+			ret = SceKernelUtilsForDriver_478A6F3C(&g_regSha1Context, buf, len);
 			if (ret < 0)
 				goto close_in;
 			if (len < REG_COPY_SIZE)
@@ -1001,7 +1001,7 @@ int regExportRegistry(const char *path)
 		}
 	}
 
-	ret = ksceSha1BlockResult(&g_regSha1Context, g_regExportHeader.digest);
+	ret = SceKernelUtilsForDriver_48F24106(&g_regSha1Context, g_regExportHeader.digest);
 	if (ret >= 0) {
 		ret = regFileSeek(out, 0, SCE_SEEK_SET);
 		if (ret == 0) {
@@ -1116,11 +1116,11 @@ int regImportRegistry(const char *path)
 			}
 			left -= ret;
 			if (block == 0) {
-				ret = ksceSha1BlockInit(&g_regSha1Context);
+				ret = SceKernelUtilsForDriver_E4390FFA(&g_regSha1Context);
 				if (ret < 0)
 					goto close_out;
 			}
-			ret = ksceSha1BlockUpdate(&g_regSha1Context, buf, got);
+			ret = SceKernelUtilsForDriver_478A6F3C(&g_regSha1Context, buf, got);
 			if (ret < 0)
 				goto close_out;
 			if (left == 0)
@@ -1138,7 +1138,7 @@ int regImportRegistry(const char *path)
 		}
 	}
 
-	ret = ksceSha1BlockResult(&g_regSha1Context, digest);
+	ret = SceKernelUtilsForDriver_48F24106(&g_regSha1Context, digest);
 	if (ret >= 0)
 		ret = memcmp(g_regImportHeader.digest, digest, sizeof(digest)) == 0 ?
 		      0 : REG_ERROR_EXPORT_DIGEST;

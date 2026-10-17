@@ -1,6 +1,10 @@
 /* Private candidate: BSOD display and mapping contracts from native code. */
 #pragma once
 #include <stdint.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sblaimgr.h>
 
 typedef int (*BsodFormatCallback)(void *context, const uint32_t *state, int character);
 int bsodFormat(BsodFormatCallback callback, void *context, int count,
@@ -8,7 +12,7 @@ int bsodFormat(BsodFormatCallback callback, void *context, int count,
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 
 typedef struct BsodFramebuffer {
 	uint32_t physical;
@@ -34,15 +38,7 @@ extern uint8_t *s_bsodIftu[3];
 extern uint8_t *s_bsodSyscon[2];
 extern int s_bsodQafEnabled;
 
-int ksceKernelCheckDipsw(unsigned bit);
-int ksceSblAimgrIsCEX(void);
-int ksceSblAimgrIsDolce(void);
-int SceQafMgrForDriver_382C71E8(void);
-unsigned ksceKernelCpuSuspendIntr(void);
-void ksceKernelCpuResumeIntr(unsigned state);
 int ksceExcpmgrRegisterHandler(unsigned kind, unsigned priority, void *handler);
-void SceDebugForKernel_67E9D1EC(void *handler);
-int ksceKernelEnableCrashDump(int enable);
 
 int _sceKernelBsodIftuInit(int dolce);
 int _sceKernelBsodSysconInit(void);

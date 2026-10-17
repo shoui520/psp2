@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <sysmem/debug.h>
@@ -15,7 +15,6 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "../venezia_internal.h"
@@ -23,7 +22,6 @@
 #include <string.h>
 #include <sysmem/sysclib.h>
 
-extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
 SceKernelDmaOpChainParam g_veneziaHwdDmaChainParam = {
 	.size = sizeof(SceKernelDmaOpChainParam),
 	.coherencyMask = 0x3ffff,
@@ -33,7 +31,7 @@ VeneziaHwdDmaState g_veneziaHwdDmaState;
 static inline __attribute__((always_inline)) int isVeneziaHwdUncachedAddress(uintptr_t address)
 {
 	if ((unsigned int)(address - 0x18000000) < 0x08000000)
-		return ksceKernelIsUncacheAddressInTmpFsGame((void *)address);
+		return sceKernelIsUncacheAddressInTmpFsGame((void *)address);
 	return (unsigned int)(address - 0x20000000) < 0x20000000 ||
 		(unsigned int)(address - 0x60000000) < 0x21000000;
 }
@@ -44,13 +42,13 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 	int ret;
 
 #if FW_DEBUG
-	ksceKernelAssert(request != NULL, SCE_DBGINFO_FUNC(282, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(request != NULL, SCE_DBGINFO_FUNC(282, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
 #endif
 	count = request->count;
 	channel = request->channel;
 #if FW_DEBUG
-	ksceKernelAssert(channel == 0, SCE_DBGINFO_FUNC(286, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
-	ksceKernelAssert(count <= 8, SCE_DBGINFO_FUNC(287, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(channel == 0, SCE_DBGINFO_FUNC(286, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(count <= 8, SCE_DBGINFO_FUNC(287, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
 #endif
 	if (!count)
 		return 0;
@@ -76,7 +74,7 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 		if (!isVeneziaHwdUncachedAddress(destination))
 			command += 0x01ffe000;
 #if FW_DEBUG
-		ksceKernelAssert(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
+		SceDebugForDriver_35A35322(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
 #endif
 		tag->src = transfer->source;
 		tag->dst = transfer->destination;
@@ -116,15 +114,15 @@ int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 	if (physicalAddress) {
 		opt.paddr = physicalAddress;
 		opt.attr = 2;
-		uid = ksceKernelAllocMemBlock(name, type, size, &opt);
+		uid = SceSysmemForDriver_C94850C9(name, type, size, &opt);
 	} else {
-		uid = ksceKernelAllocMemBlock(name, type, size, NULL);
+		uid = SceSysmemForDriver_C94850C9(name, type, size, NULL);
 	}
 	if (uid < 0 || !block)
 		return uid;
 	block->uid = uid;
-	ksceKernelGetMemBlockBase(uid, (void **)&block->region.virtualAddress);
-	ret = ksceKernelVAtoPA((void *)block->region.virtualAddress,
+	SceSysmemForDriver_A841EDDA(uid, (void **)&block->region.virtualAddress);
+	ret = SceSysmemForDriver_8D160E65((void *)block->region.virtualAddress,
 		&block->region.physicalAddress);
 	if (ret >= 0) {
 		ret = 0;
@@ -135,7 +133,7 @@ int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 
 int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block)
 {
-	ksceKernelFreeMemBlock(block->uid);
+	SceSysmemForDriver_009E1C61(block->uid);
 	block->uid = -1;
 	block->region.physicalAddress = 0;
 	block->region.virtualAddress = 0;

@@ -21,7 +21,7 @@ static inline __attribute__((always_inline)) void updateGpuWirelessLimits(void)
 	int maximum = 0, unlimited;
 
 	powerLockClockControl();
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (!process->clockExcluded) {
 			if (process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
@@ -29,7 +29,7 @@ static inline __attribute__((always_inline)) void updateGpuWirelessLimits(void)
 			flags |= process->wirelessFlags;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	unlimited = powerGpuLimitOverride() || maximum < 166 || !(flags & 3);
 	kscePowerSetDisplayMaxBrightness(unlimited ? 0x10000 : 0xc4ec);
 	powerNotifyWirelessLimit(unlimited);
@@ -72,7 +72,7 @@ void powerRecomputeClockFrequencies(void)
 	int unlimited;
 
 	powerLockClockControl();
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (process->clockExcluded)
 			continue;
@@ -86,7 +86,7 @@ void powerRecomputeClockFrequencies(void)
 			gpu = process->clockFrequency[POWER_PROCESS_CLOCK_GPU];
 		flags |= process->wirelessFlags;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	kscePowerSetBusClockFrequency(bus);
 	kscePowerSetArmClockFrequency(arm);
 	kscePowerSetGpuXbarClockFrequency(xbar);
@@ -119,7 +119,7 @@ int powerInitializeKernelProcessState(void)
 
 	s_powerProcessList = NULL;
 	powerResetProcessClockFlags();
-	override = ksceKernelCheckDipsw(0x9f) && ksceKernelCheckDipsw(0xec);
+	override = SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec);
 	powerInitializeProcessClockFlags(override);
 	result = ksceKernelGetProcessLocalStorageAddrForPid(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 1);
@@ -134,10 +134,10 @@ int powerInitializeKernelProcessState(void)
 	state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 222;
 	state->clockFrequency[POWER_PROCESS_CLOCK_ARM] = 333;
 	powerInitializeProcessIdleState(state);
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	state->next = s_powerProcessList;
 	s_powerProcessList = state;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 }
 
@@ -170,10 +170,10 @@ void powerCreateProcessState(SceUID pid)
 	if (pid != SCE_KERNEL_PROCESS_ID && game)
 		sceKernelSysrootDisableAutoClockDown();
 	powerInitializeProcessIdleState(state);
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	state->next = s_powerProcessList;
 	s_powerProcessList = state;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return;
 	if (powerBeginKernelClockReduction() &&
@@ -196,7 +196,7 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	if (s_powerProcessList == state)
 		s_powerProcessList = state->next;
 	else {
@@ -207,15 +207,15 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 			}
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
-void powerUnlinkExitedProcess(SceUID pid)
+void powerUnlinkKilledProcess(SceUID pid)
 {
 	powerUnlinkProcessState(pid);
 }
 
-void powerUnlinkKilledProcess(SceUID pid)
+void powerUnlinkExitedProcess(SceUID pid)
 {
 	powerUnlinkProcessState(pid);
 }
@@ -269,14 +269,14 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 	state->clockFrequency[lane] = frequency;
 	/* The native caller deliberately ignores the outer lock result. */
 	powerLockClockControl();
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		int requested = process->clockFrequency[lane];
 
 		if (!process->clockExcluded && requested > maximum)
 			maximum = requested;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (lane == POWER_PROCESS_CLOCK_BUS)
 		result = kscePowerSetBusClockFrequency(maximum);
 	else if (lane == POWER_PROCESS_CLOCK_ARM)
@@ -389,11 +389,11 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 		return result;
 	state->clockFrequency[POWER_PROCESS_CLOCK_GPU] = frequency;
 	powerLockClockControl();
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next)
 		if (!process->clockExcluded && process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
 			maximum = process->clockFrequency[POWER_PROCESS_CLOCK_GPU];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	result = kscePowerSetGpuClockFrequencyInternal(maximum, maximum);
 	updateGpuWirelessLimits();
 	powerUnlockClockControl();
@@ -455,12 +455,12 @@ int powerSetProcessConfigurationFlags(uint32_t mask, uint32_t enabled)
 	if (!((previous ^ current) & 0x30))
 		return 0;
 	powerLockClockControl();
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (process = s_powerProcessList; process; process = process->next) {
 		if (!process->clockExcluded)
 			flags |= process->wirelessFlags;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (powerGpuLimitOverride())
 		flags &= ~0x30U;
 	powerNotifyProcessFlags(SCE_KERNEL_ALL_PROCESS_ID, flags);
@@ -606,7 +606,7 @@ int scePowerSetConfigurationMode(uint32_t mode)
 		goto setMediaClocks;
 	case 0x10888:
 		/* Native rejection leaves the shifted syscall context in place. */
-		if (!ksceSblAimgrIsDolce())
+		if (!SceSblAIMgrForDriver_71608CA3())
 			return SCE_POWER_ERROR_INVALID_VALUE;
 		powerSetProcessConfigurationFlags(0x30, 0);
 		result = powerSetConfigurationWireless(3, 1);

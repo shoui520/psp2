@@ -1,5 +1,4 @@
 /* GPU memblocks: ownership, shadow mappings and the backing-range heaps. */
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 
@@ -35,7 +34,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	int referencedUid, mappingUid, ret;
 
 	kernel = *group == 1;
-	referencedUid = kernel ? uid : kscePUIDtoGUID(0, uid);
+	referencedUid = kernel ? uid : SceSysmemForDriver_45D22597(0, uid);
 	if (referencedUid <= 0) {
 		SCE_DBG_PRINTF(0, 75, "%s: Failed to get GUID for MemBlock %08x\n",
 			       __func__, uid);
@@ -43,13 +42,13 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	}
 	memset((void *)&info, 0, sizeof(info));
 	info.ex.size = sizeof(info);
-	ret = ksceKernelMemBlockGetInfoEx(referencedUid, (MemBlockPhyInfo *)&info);
+	ret = SceSysmemForDriver_24A99FFF(referencedUid, (MemBlockPhyInfo *)&info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 84, "Failed to get memblock info for %08x: %08x\n",
 			       referencedUid, ret);
 		return 0;
 	}
-	if (ksceKernelMemBlockTypeGetPrivileges(info.ex.details.type) & 0x44)
+	if (SceSysmemForDriver_6A0792A3(info.ex.details.type) & 0x44)
 		return 0;
 	mappingUid = uid;
 	if (!kernel) {
@@ -67,7 +66,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 			return 0;
 		}
 		if (restoreMapping) {
-			ret = ksceKernelUnmapMemBlock(referencedUid);
+			ret = SceSysmemForDriver_FFCD9B60(referencedUid);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 120,
 					"Failed to unmap memblock %08x:%08x from usermode with error %08x.\n",
@@ -79,7 +78,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 		options.size = sizeof(options);
 		options.attr = 0x01000040;
 		options.mirror_blockid = referencedUid;
-		mappingUid = ksceKernelAllocMemBlock("SceGpuShadowMemBlock",
+		mappingUid = SceSysmemForDriver_C94850C9("SceGpuShadowMemBlock",
 						    shadowType, 0, &options);
 		if (mappingUid < 0) {
 			SCE_DBG_PRINTF(0, 127,
@@ -92,7 +91,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	if (!block)
 		goto releaseMapping;
 	memset((void *)block, 0, sizeof(*block));
-	ksceKernelGetMemBlockBase(mappingUid, &mappedBase);
+	SceSysmemForDriver_A841EDDA(mappingUid, &mappedBase);
 	base = info.ex.details.vbase;
 	alternate = (unsigned)mappedBase;
 	size = info.ex.details.size;
@@ -106,8 +105,8 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	range->alternateAddress = alternate;
 	range->size = size;
 	if (!kernel) {
-		ksceKernelIncRefCountMemBlock(referencedUid);
-		ksceKernelIncRefCountMemBlock(mappingUid);
+		SceSysmemForDriver_EAF3849B(referencedUid);
+		SceSysmemForDriver_EAF3849B(mappingUid);
 	}
 	block->inputUid = uid;
 	block->referencedUid = kernel ? -1 : referencedUid;
@@ -115,7 +114,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	block->restoreMapping = restoreMapping;
 	block->ranges = range;
 	attributes = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
-	attributes |= ksceKernelMemBlockType2Memtype(info.ex.details.type);
+	attributes |= SceSysmemForDriver_20C811FA(info.ex.details.type);
 	block->next = 0;
 	block->allocatedRangeCount = 0;
 	block->attributes = attributes;
@@ -137,9 +136,9 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 
 releaseMapping:
 	if (restoreMapping)
-		ksceKernelMapMemBlock(referencedUid);
+		SceSysmemForDriver_58D21746(referencedUid);
 	if (!kernel)
-		ksceKernelFreeMemBlock(mappingUid);
+		SceSysmemForDriver_009E1C61(mappingUid);
 	return 0;
 }
 
@@ -220,17 +219,17 @@ int sceGpuMemBlockDelBlock(GpuMemBlockHeap *heap, int uid, int *referencedOut)
 		}
 		block->ranges = 0;
 		if (block->mappingUid != -1) {
-			ksceKernelDecRefCountMemBlock(block->mappingUid);
-			ksceKernelFreeMemBlock(block->mappingUid);
+			SceSysmemForDriver_F50BDC0C(block->mappingUid);
+			SceSysmemForDriver_009E1C61(block->mappingUid);
 		}
 		if (block->referencedUid != -1)
-			ksceKernelDecRefCountMemBlock(block->referencedUid);
+			SceSysmemForDriver_F50BDC0C(block->referencedUid);
 		if (referencedOut)
 			*referencedOut = block->referencedUid;
 		if (block->restoreMapping) {
-			referenced = kscePUIDtoGUID(0, block->inputUid);
+			referenced = SceSysmemForDriver_45D22597(0, block->inputUid);
 			if (referenced == block->referencedUid)
-				ksceKernelMapMemBlock(referenced);
+				SceSysmemForDriver_58D21746(referenced);
 		}
 		FreeProcessGpuMemory((void *)block);
 		return 0;
@@ -258,12 +257,12 @@ int DestroyMemBlockHeap(GpuMemBlockHeap *heap)
 		block->ranges = 0;
 		uid = block->mappingUid;
 		if (uid != -1) {
-			ksceKernelDecRefCountMemBlock(uid);
-			ksceKernelFreeMemBlock(block->mappingUid);
+			SceSysmemForDriver_F50BDC0C(uid);
+			SceSysmemForDriver_009E1C61(block->mappingUid);
 		}
 		uid = block->referencedUid;
 		if (uid != -1)
-			ksceKernelDecRefCountMemBlock(uid);
+			SceSysmemForDriver_F50BDC0C(uid);
 		FreeProcessGpuMemory((void *)block);
 	}
 	FreeProcessGpuMemory(heap);

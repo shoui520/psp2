@@ -143,7 +143,7 @@ int _rxMessage(SceWlanBtRobinWlanDcm *dcm, WlanSdioMessageHeader *message,
 				unsigned int responseSize;
 
 				if (result) {
-					ksceKernelPrintf("[SceWlanBt]:  Command failed. "
+					SceDebugForDriver_391B74B7("[SceWlanBt]:  Command failed. "
 							 "(com=0x%04x, resp=0x%04x, result=%d)\n",
 							 command->commandId, responseId, result);
 					command->result = 0x80418004;
@@ -158,7 +158,7 @@ int _rxMessage(SceWlanBtRobinWlanDcm *dcm, WlanSdioMessageHeader *message,
 				dcm->currentCommand = NULL;
 				goto nextCommand;
 			}
-			ksceKernelPrintf("[SceWlanBt]: Skip unexpected Response. (resp=0x%04x)\n",
+			SceDebugForDriver_391B74B7("[SceWlanBt]: Skip unexpected Response. (resp=0x%04x)\n",
 					 responseId);
 		}
 		dcm->context->driver.releaseTx(&dcm->context->driver, packet);
@@ -374,7 +374,7 @@ readBatch:
 					}
 				}
 			} else {
-				ksceKernelPrintf("[SceWlanBt]: too large message size=%d\n", size);
+				SceDebugForDriver_391B74B7("[SceWlanBt]: too large message size=%d\n", size);
 			}
 			dcm->aggregateStartPort = 0;
 			dcm->aggregateCount = 0;
@@ -393,7 +393,7 @@ readBatch:
 						_rxMessage(dcm, message, message->messageSize, &received);
 				}
 			} else {
-				ksceKernelPrintf("[SceWlanBt]: too large message size=%d\n", size);
+				SceDebugForDriver_391B74B7("[SceWlanBt]: too large message size=%d\n", size);
 			}
 		}
 		if (received)
@@ -556,11 +556,11 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	result = ksceKernelAllocMemBlock("SceWlanBtRobinWlan", 0x1020d006, 0x1000, &options);
+	result = SceSysmemForDriver_C94850C9("SceWlanBtRobinWlan", 0x1020d006, 0x1000, &options);
 	if (result < 0)
 		return result;
 	dcm->commandMemory = result;
-	result = ksceKernelGetMemBlockBase(result, (void **)&base);
+	result = SceSysmemForDriver_A841EDDA(result, (void **)&base);
 	if (result < 0)
 		return result;
 	dcm->requestBuffer = base;
@@ -569,12 +569,12 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 	options.size = sizeof(options);
 	options.attr = 0x200004;
 	options.alignment = 0x1000;
-	result = ksceKernelAllocMemBlock("SceWlanBtRobinWlanSdioAggrRx",
+	result = SceSysmemForDriver_C94850C9("SceWlanBtRobinWlanSdioAggrRx",
 				       0x10208006, 0x4000, &options);
 	if (result < 0)
 		return result;
 	dcm->aggregateMemory = result;
-	result = ksceKernelGetMemBlockBase(result, (void **)&base);
+	result = SceSysmemForDriver_A841EDDA(result, (void **)&base);
 	if (result >= 0) {
 		dcm->aggregateCapacity = 0x4000;
 		dcm->packetHeadroom = 20;
@@ -662,7 +662,7 @@ int _commandClear(SceWlanBtRobinWlanDcm *dcm)
 	command = dcm->currentCommand;
 	if (command) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &gDcmClearCurrentCommand,
+		SceDebugForDriver_D9703808(1, 0, &gDcmClearCurrentCommand,
 			"[SceWlanBt]: Free CurCmd cc=%04x, cb=%p\n",
 			command->commandId, command->callback);
 		command = dcm->currentCommand;
@@ -691,7 +691,7 @@ int _commandClear(SceWlanBtRobinWlanDcm *dcm)
 	while (command) {
 		next = command->next;
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &gDcmClearPendingCommand,
+		SceDebugForDriver_D9703808(1, 0, &gDcmClearPendingCommand,
 			"[SceWlanBt]: Free PendingCmd cc=%04x, cb=%p\n",
 			command->commandId, command->callback);
 #endif
@@ -1120,10 +1120,10 @@ int robinWlanDcmInterruptRequest(SceWlanBtRobinWlanDcm *dcm)
 	result = ksceKernelEnableSubIntr(222, dcm->subInterrupt);
 #if FW_DEBUG
 	if (result < 0) {
-		ksceKernelPrintfLevelWithInfo(1, 0, &gDcmInterruptError,
+		SceDebugForDriver_D9703808(1, 0, &gDcmInterruptError,
 			"%s : sceKernelEnableSubIntr err:0x%08x\n",
 			"robinWlanDcmInterruptRequest", result);
-		ksceKernelAssert(0, &gDcmInterruptAssert, __builtin_return_address(0));
+		SceDebugForDriver_35A35322(0, &gDcmInterruptAssert, __builtin_return_address(0));
 	}
 #endif
 	if (readPending)

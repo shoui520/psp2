@@ -120,17 +120,17 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
-	ksceKernelFreeMemBlock
-	ksceGUIDReferObject
-	ksceGUIDReleaseObject
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelVARangeToPARange
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelUnmapMemBlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_0F5C84B7
+	sceGUIDReleaseObject
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_AE36C775
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_FFCD9B60
 	ksceKernelDeleteSema
 	ksceKernelLockMutex
 	ksceKernelUnlockMutex
@@ -141,11 +141,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSignalSema
 	ksceKernelRunWithStack
 	ksceKernelCreateMutex
-	ksceKernelCpuSuspendIntr
-	ksceKernelDcacheInvalidateRangeForL1WBWA
-	ksceKernelDcacheCleanRangeForL1WBWA
-	ksceKernelDcacheCleanInvalidateRangeForL1WBWA
-	ksceKernelCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_8B4C26DF
+	SceCpuForDriver_9CB9F0CE
+	SceCpuForDriver_E551F99B
+	sceKernelCpuResumeIntr
 	memset
 	strncmp
 	memcpy
@@ -163,11 +163,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSmCommStopSm
 	ksceSblSmCommStartSmFromFile
 	ksceSblSmCommCallFunc
-	ksceSblAimgrIsDEX
+	SceSblAIMgrForDriver_F4B98F66
 	sceSblACMgrGetMediaType
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	ksceIoRemove
@@ -178,8 +178,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRead
 	ksceIoClose
 	ksceKernelGetProcessTimeWideCore
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	sceDeci2pTermForCompat
 	SceDeci2pForDriver_F6427E0F
 	ksceIdStorageLookup

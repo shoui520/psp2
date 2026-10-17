@@ -204,37 +204,37 @@ set(MODULE_IMPORT_NIDS
 	0x58A1A1C5:F:0x3126A070
 )
 set(MODULE_IMPORT_FUNCS
-	kscePUIDtoGUID
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceGUIDName
-	ksceKernelAtomicGetAndAnd32
-	ksceKernelAtomicGetAndOr32
-	ksceKernelCpuId
-	ksceKernelAtomicAddAndGet32
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelAtomicOrAndGet32
-	ksceKernelAtomicCompareAndSet32
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelAtomicAndAndGet32
-	ksceKernelCpuResumeIntr
-	ksceKernelGetAssertLevel
-	ksceKernelPrintf
-	ksceKernelPrintfAssertLevel
-	ksceKernelCheckDipsw
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_E655852F
+	SceCpuForDriver_10EB35EB
+	SceCpuForDriver_2A40BB93
+	sceKernelCpuId
+	SceCpuForDriver_5F6A8743
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_BC248C30
+	SceCpuForDriver_CDA96E81
+	SceCpuForDriver_D32ACE9E
+	SceCpuForDriver_DF899E4B
+	sceKernelCpuResumeIntr
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_821A2D59
+	SceDipswForDriver_A98FC2FD
 	SceSysrootForDriver_0A52A59C
 	SceSysrootForDriver_10788257
 	SceSysrootForDriver_246AAAB3
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
+	SceSysrootForDriver_55392965
 	sceKernelRegisterInitCallback
 	SceSysrootForDriver_7918D44E
-	ksceSysrootIsUsbEnumWakeup
-	ksceSysrootIsSafeMode
+	SceSysrootForDriver_79C9AE10
+	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_89532E2F
-	ksceSysrootIsExternalBootMode
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_89D19090
+	SceSysrootForDriver_B0E1FC67
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	memset
@@ -280,16 +280,16 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	ksceKernelGetProcessLocalStorageAddr
 	SceProcessmgrForDriver_FC2A424E
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_250ACD90
-	ksceKernelSysEventDispatch
+	SceKernelSuspendForDriver_D4622EA8
 	SceKernelSuspendForDriver_D4958E6F
 	SceKernelSuspendForDriver_FE2118BD
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	sceSblACMgrIsGameProgram
 	sceSblACMgrIsSystemProgram
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_03E1FAA6
 	ScePervasiveForDriver_12D17D47
 	ScePervasiveForDriver_15237AF8

@@ -82,7 +82,7 @@ static int fatfsSetAttrByThreadAccessLevel(SceSblACMgrValue *attr, SceUInt32 att
 	int level;
 
 	bits = fatfsGetAttr(attr) | attribute;
-	level = ksceKernelSysrootGetThreadAccessLevel();
+	level = SceSysrootForKernel_20009397();
 	if ((bits & 4) && level != 0x80 && level != 0x40)
 		return SCE_ERROR_ERRNO_EACCES;
 	fatfsSetAttr(attr, attribute);
@@ -105,7 +105,7 @@ int setFatfsAttributeByMode(const SceSelfAuthInfo *info, SceSblACMgrValue *attr,
 		}
 		return 0;
 	}
-	level = ksceKernelSysrootGetThreadAccessLevel();
+	level = SceSysrootForKernel_20009397();
 	if (level == 0x40 || level == 0x80) {
 		table = fatfsKernelModes;
 		count = 10;
@@ -175,7 +175,7 @@ int checkFatfsAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue *att
 	const SceUInt32 *permissions;
 	SceUInt32 attribute;
 
-	switch (ksceKernelSysrootGetThreadAccessLevel()) {
+	switch (SceSysrootForKernel_20009397()) {
 	case 0x10: case 0x20:
 		permissions = fatfsUserPermissions;
 		break;

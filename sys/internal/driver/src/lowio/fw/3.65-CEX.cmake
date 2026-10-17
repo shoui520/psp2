@@ -59,15 +59,15 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0x04C05D10
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelCpuResumeIntr
-	ksceKernelCheckDipsw
-	ksceSysrootGetHardwareInfo
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_D32ACE9E
+	sceKernelCpuResumeIntr
+	SceDipswForDriver_A98FC2FD
+	SceSysrootForDriver_930B1342
 	memset
 	memcpy
 	__aeabi_uidiv
@@ -98,7 +98,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	sceKernelGetSystemTimeWide
 	ksceKernelCreateMutex
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 )
 set(MODULE_IMPORT_VARS
 	SceSysrootForDriver_4B8C305A

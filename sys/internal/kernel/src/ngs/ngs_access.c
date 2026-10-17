@@ -5,8 +5,6 @@
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
 
 #include "ngs_platform.h"
 #include "ngs_system.h"
@@ -63,7 +61,7 @@ uintptr_t ngsGetPhysicalAddress(const void *address)
 		return 0;
 	virtualRange.addr = (uintptr_t)address;
 	virtualRange.size = 4;
-	if (ksceKernelVARangeToPARange(&virtualRange, &physicalRange) != 0)
+	if (SceSysmemForDriver_AE36C775(&virtualRange, &physicalRange) != 0)
 		return 0;
 	return physicalRange.addr;
 }
@@ -75,7 +73,7 @@ int ngsCopyToCaller(void *destination, const void *source, SceSize size,
 		if ((uintptr_t)destination >= (uintptr_t)destination + size)
 			return SCE_NGS_ERROR_INVALID_PARAM;
 		if (copyUserData == 1)
-			return ksceKernelCopyToUser(destination, source, size);
+			return SceSysmemForDriver_6D88EF8A(destination, source, size);
 		memcpy(destination, source, size);
 	}
 	return 0;
@@ -89,7 +87,7 @@ int ngsCopyFromCaller(void *destination, const void *source, SceSize size,
 	if ((uintptr_t)source >= (uintptr_t)source + size)
 		return SCE_NGS_ERROR_INVALID_PARAM;
 	if (copyUserData == 1)
-		return ksceKernelCopyFromUser(destination, source, size);
+		return SceSysmemForDriver_BC996A7A(destination, source, size);
 	memcpy(destination, source, size);
 	return 0;
 }
@@ -99,25 +97,25 @@ int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserDa
 	int result;
 
 	if (copyUserData == 1) {
-		result = ksceKernelIsAccessibleRange(0x30, address, size);
+		result = SceSysmemForDriver_9C78064C(0x30, address, size);
 		if (result != 0)
 			goto error;
 	} else {
-		result = ksceKernelIsAccessibleRange(3, address, size);
+		result = SceSysmemForDriver_9C78064C(3, address, size);
 		if (result != 0)
 			goto error;
 	}
 	return 1;
 
 error:
-	ksceKernelPrintf("res = %d code = %d\n", result,
+	SceDebugForDriver_391B74B7("res = %d code = %d\n", result,
 			(int)SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR);
 	return 0;
 }
 
 int ngsIsRangeReadable(const void *address, SceSize size)
 {
-	return ksceKernelIsAccessibleRange(1, address, size) == 0;
+	return SceSysmemForDriver_9C78064C(1, address, size) == 0;
 }
 
 unsigned int ngsGetSystemHandle(NgsSynSystem *system)

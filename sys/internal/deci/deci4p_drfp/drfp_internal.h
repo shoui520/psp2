@@ -10,7 +10,7 @@
 
 #include <fw.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2common/kernel/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/list.h>

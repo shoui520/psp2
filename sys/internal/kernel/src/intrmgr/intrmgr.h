@@ -4,7 +4,7 @@
 #include <sysmem/cp15.h>
 #include <sysmem/barrier.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -119,10 +119,6 @@ extern char intrEnterHook[], intrLeaveHook[], syscallEnterHook[], syscallLeaveHo
 extern SceUInt32 intrEnterBranch, intrLeaveBranch;
 extern SceUInt16 syscallEnterBranch, syscallLeaveBranch;
 
-void *SceSysrootForKernel_118657C6(void);
-int sceKernelSysrootSetModulePrivate(unsigned int slot, void *value);
-int sceKernelSysrootTrapThreadAfterSyscall(void *args, void *results, unsigned int flags);
-void *ksceKernelSysrootGetVbaseResetVector(void);
 int ksceExcpmgrRegisterHandler(int code, int flags, void *handler);
 
 int callIntrEvent(unsigned int event, unsigned int size, void *data);

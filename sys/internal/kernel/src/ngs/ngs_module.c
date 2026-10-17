@@ -1,6 +1,6 @@
 /* SceNgs process lifecycle integration. Internal Sony names are unavailable. */
 
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <stddef.h>
 
 int ngsProcessRelease(SceUID pid);
@@ -10,21 +10,21 @@ int ngsProcessResume(SceUID pid);
 int ngsPlatformInitialize(void);
 int ngsPlatformShutdown(void);
 
-int ngsProcessKill(SceUID pid, SceProcEventInvokeParam1 *event, int flags)
+int ngsProcessKill(SceUID pid, ProcEventParam *event, int flags)
 {
 	int result = ngsProcessRelease(pid);
 
 	return result & (result >> 31);
 }
 
-int ngsProcessExit(SceUID pid, SceProcEventInvokeParam1 *event, int flags)
+int ngsProcessExit(SceUID pid, ProcEventParam *event, int flags)
 {
 	int result = ngsProcessRelease(pid);
 
 	return result & (result >> 31);
 }
 
-int ngsProcessCreate(SceUID pid, SceProcEventInvokeParam2 *event, int flags)
+int ngsProcessCreate(SceUID pid, ProcEventCreateParam *event, int flags)
 {
 	int result = ngsProcessInitialize(pid);
 
@@ -32,7 +32,7 @@ int ngsProcessCreate(SceUID pid, SceProcEventInvokeParam2 *event, int flags)
 }
 
 int ngsProcessStart(SceUID pid, int eventType,
-		    SceProcEventInvokeParam1 *event, int flags)
+		    ProcEventParam *event, int flags)
 {
 	int result;
 
@@ -43,7 +43,7 @@ int ngsProcessStart(SceUID pid, int eventType,
 }
 
 int ngsProcessStop(SceUID pid, int eventType,
-		   SceProcEventInvokeParam1 *event, int flags)
+		   ProcEventParam *event, int flags)
 {
 	int result;
 
@@ -55,18 +55,18 @@ int ngsProcessStop(SceUID pid, int eventType,
 
 int module_start(SceSize arglen, const void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	int result;
 
 	if (ngsPlatformInitialize() >= 0) {
 		handler.create = ngsProcessCreate;
 		handler.exit = ngsProcessExit;
 		handler.kill = ngsProcessKill;
-		handler.stop = ngsProcessStop;
-		handler.start = ngsProcessStart;
-		handler.switch_process = NULL;
+		handler.suspend = ngsProcessStop;
+		handler.resume = ngsProcessStart;
+		handler.notify = NULL;
 		handler.size = sizeof(handler);
-		if (ksceKernelRegisterProcEventHandler("SceNgs", &handler, 0) >= 0)
+		if (sceKernelRegisterProcEventHandler("SceNgs", &handler, 0) >= 0)
 			result = 0;
 		else
 			result = 2;

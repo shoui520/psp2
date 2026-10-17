@@ -3,7 +3,6 @@
 #include "sdstor_internal.h"
 #include <sysmem/debug.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/gcauthmgr/gc_auth.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <sdif/sdif.h>
@@ -133,7 +132,7 @@ int sddev_init(void)
 		device->mediaInfo.sectorCount = 0;
 		device->mediaInfo.eraseBlockCount = 0;
 		device->sdif_ctx = NULL;
-		if (ksceSysrootIsBsodReboot()) {
+		if (SceSysrootForDriver_4373AC96()) {
 			result = sddev_power_off(device);
 			if (result != 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 182, "sddev_initialize",
@@ -265,7 +264,7 @@ int sddev_power_on(SceSdstorSddev *device)
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 15, 284, "sddev_mmc_init",
 					"init count = %d, ret_dev = 0x%08x\n", count, result);
 		}
-		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode() &&
+		if (!SceSysrootForDriver_55392965() &&
 		    !SceSysrootForDriver_F804F761())
 			goto initialized;
 		goto initializeSd;

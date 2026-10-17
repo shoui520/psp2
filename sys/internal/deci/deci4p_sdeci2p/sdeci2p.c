@@ -13,10 +13,10 @@
  * Both interrupts also have break hooks for when the system is stopped.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/barrier.h>
 #include <sysmem/debug.h>
@@ -100,12 +100,12 @@ static void sdeci2pSetChannelFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (!set)
 		*flags &= ~bits;
 	else
 		*flags |= bits;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 }
 
 /* name unknown */
@@ -113,12 +113,12 @@ static void sdeci2pSetFlags(SceUInt32 *flags, SceUInt32 bits, int set)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (!set)
 		*flags &= ~bits;
 	else
 		*flags |= bits;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 }
 
 
@@ -131,11 +131,11 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 		SDECI2P_PRINTF(0xf, 1572, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	sdeci2pSetFlags(&ctx->flags, SDECI2P_FORWARDING, 1);
 	ctl = ctx->ctl;
 	ctl[11] = n;
-	ksceKernelDcacheCleanRangeForL1WBWA((void *)((SceUIntPtr)&ctl[11] & ~0x3f), 0x40);
+	SceCpuForDriver_9CB9F0CE((void *)((SceUIntPtr)&ctl[11] & ~0x3f), 0x40);
 	dsb();
 	ctx->mailbox->enableInterrupt[1] = 0xffffffff;
 	dsb();
@@ -143,7 +143,7 @@ static int notifyForwardStart(Sdeci2pContext *ctx, SceUInt32 n)
 	dsb();
 	ctx->mailbox->raiseInterrupt[1] = 1;
 	dsb();
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -155,14 +155,14 @@ static int notifyAcquireEnd(Sdeci2pContext *ctx)
 		SDECI2P_PRINTF(0xf, 1614, "not initialized!\n");
 		return SCE_KERNEL_ERROR_NOT_INITIALIZED;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ctx->mailbox->enableInterrupt[14] = 0xffffffff;
 	dsb();
 	(void)ctx->mailbox->raiseInterrupt[14];
 	dsb();
 	ctx->mailbox->raiseInterrupt[14] = 1;
 	dsb();
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -239,20 +239,20 @@ static inline int eventReadDoneWhenRunning(Sdeci2pContext *ctx)
 	int ret;
 
 	sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_FULL, 1);
-	ksceKernelDcacheCleanRangeForL1WBWA(ch->buf, (ch->count + 0x3f) & ~0x3f);
+	SceCpuForDriver_9CB9F0CE(ch->buf, (ch->count + 0x3f) & ~0x3f);
 	ctx->last = ctx->cur;
 	if (ctx->flags & SDECI2P_ACKED) {
 		ctx->cur++;
 		if (ctx->cur > 1)
 			ctx->cur = 0;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (ctx->flags & SDECI2P_FORWARDING) {
 		sdeci2pSetFlags(&ctx->flags, SDECI2P_FWD_PENDING, 1);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelCpuResumeIntr(intr);
 		return 0;
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ret = notifyForwardStart(ctx, ctx->last);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 915, "notifyForwardStart() failed (0x%08X)\n", ret);
@@ -277,7 +277,7 @@ static inline int eventWrite(Sdeci2pContext *ctx)
 		sdeci2pSetChannelFlags(&ch->flags, SDECI2P_CH_HDR, 1);
 	}
 	p = (char *)ch->buf + ch->count;
-	ksceKernelDcacheInvalidateRangeForL1WBWA(p, (left + 0x2f) & ~0x3f);
+	SceCpuForDriver_8B4C26DF(p, (left + 0x2f) & ~0x3f);
 	ret = sceSDfMgrExSend(ctx->handle, p, left - sizeof(ch->hdr));
 	if (ret < 0) {
 		SDECI2P_PRINTF(0, 988, "sceSDfMgrExSend() failed (0x%08X)\n", ret);
@@ -365,7 +365,7 @@ static inline int sdeci2pAckedChannel(Sdeci2pContext *ctx, int line,
 		*channel = &ctx->fwd[ctx->cur];
 		return 0;
 	}
-	ksceKernelDcacheInvalidateRangeForL1WBWA((void *)((SceUIntPtr)&ctx->ctl[3] & ~0x3f), 0x40);
+	SceCpuForDriver_8B4C26DF((void *)((SceUIntPtr)&ctx->ctl[3] & ~0x3f), 0x40);
 	n = ctx->ctl[3];
 	if (n < 2) {
 		*channel = &ctx->fwd[n];
@@ -407,7 +407,7 @@ static void forwardDonePollHandler(void)
 {
 	Sdeci2pChannel *ch;
 
-	if (ksceKernelCpuId() != SDECI2P_CPU ||
+	if (sceKernelCpuId() != SDECI2P_CPU ||
 	    !sceKernelGetIntrPendingStatusForDebugger(SDECI2P_INTR_FWD))
 		return;
 	if (sdeci2pAckedChannel(&s_ctx, 1117, &ch) < 0)
@@ -441,7 +441,7 @@ static inline __attribute__((always_inline)) void sdeci2pAcquire(Sdeci2pContext 
 	SceUInt16 *pkt;
 
 	sdeci2pSetChannelFlags(&ctx->acq.flags, SDECI2P_CH_FULL, 1);
-	ksceKernelDcacheInvalidateRangeForL1WBWA(ctx->acq.buf, 0x40);
+	SceCpuForDriver_8B4C26DF(ctx->acq.buf, 0x40);
 	pkt = ctx->acq.buf;
 	ctx->acq.count = 0;
 	SceDeci4pSDfMgrForKernel_FFC95B63(&ctx->acq.hdr, pkt[0] + sizeof(SceDeci4pHeader));
@@ -470,7 +470,7 @@ static void acquireStartPollHandler(void)
 {
 	int ret;
 
-	if (ksceKernelCpuId() != SDECI2P_CPU ||
+	if (sceKernelCpuId() != SDECI2P_CPU ||
 	    !sceKernelGetIntrPendingStatusForDebugger(SDECI2P_INTR_ACQ))
 		return;
 	sceKernelClearIntrPendingStatusForDebugger(SDECI2P_INTR_ACQ);
@@ -502,7 +502,7 @@ static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
 	pkt[6] = 0x48;
 	pkt[7] = 0x53;
 	*(SceUInt16 *)&pkt[0] = 0x18;
-	ksceKernelDcacheCleanRangeForL1WBWA(pkt, 0x40);
+	SceCpuForDriver_9CB9F0CE(pkt, 0x40);
 	ret = ksceKernelDisableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 1657, "DisableIntr() failed (0x%08X)\n", ret);
@@ -584,7 +584,7 @@ static inline int sdeci2pForwardControl(Sdeci2pContext *ctx, SceUInt8 type)
 	pkt[9] = 0;
 	pkt[11] = 0;
 	pkt[6] = 0x48;
-	ksceKernelDcacheCleanRangeForL1WBWA(pkt, 0x40);
+	SceCpuForDriver_9CB9F0CE(pkt, 0x40);
 	return notifyForwardStart(ctx, 2);
 }
 
@@ -626,7 +626,7 @@ static int suspendHandler(void *args)
 	int ret;
 
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == SDECI2P_CPU) {
+	if (sceKernelCpuId() == SDECI2P_CPU) {
 		ret = ksceKernelDisableIntr(SDECI2P_INTR_ACQ);
 		if (ret < 0)
 			SDECI2P_PRINTF(0xf, 1698, "DisableIntr() failed (0x%08X)\n", ret);
@@ -653,7 +653,7 @@ static int initThread(SceSize args, void *argp)
 		sceKernelExitThread(SCE_KERNEL_ERROR_INVALID_ARGUMENT);
 	}
 	ctx = *(Sdeci2pContext **)argp;
-	ret = ksceKernelAllocMemBlock("SceDeci4pSDeci2p", SceDeci4pSDfMgrForKernel_35238B8A(),
+	ret = SceSysmemForDriver_C94850C9("SceDeci4pSDeci2p", SceDeci4pSDfMgrForKernel_35238B8A(),
 				      SDECI2P_STOPPED_SIZE, NULL);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 414, "AllocMemBlockForKernel failed (0x%08x)\n", ret);
@@ -661,7 +661,7 @@ static int initThread(SceSize args, void *argp)
 		return ret;
 	}
 	ctx->memblock = ret;
-	ret = ksceKernelGetMemBlockBase(ret, &base);
+	ret = SceSysmemForDriver_A841EDDA(ret, &base);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 423, "GetMemBlockBase failed (0x%08x)\n", ret);
 		SCE_DBG_ASSERT_FAIL(424);
@@ -765,7 +765,7 @@ int SDeci2pModuleStart(SceSize args, void *argp)
 	int status, ret;
 	SceUID thid;
 
-	if (!ksceKernelCheckDipsw(0xc1)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 278, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

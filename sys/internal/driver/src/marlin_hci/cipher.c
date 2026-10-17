@@ -649,7 +649,7 @@ int MarlinKeyScheduleCreate(SceAesContext **context, int operation,
 	if (keySize == 16 || keySize == 24 || keySize == 32) {
 		blockBits = keySize * 8;
 		keyBits = blockBits;
-		result = ksceAesInit1(schedule, blockBits, keyBits, key);
+		result = SceKernelUtilsForDriver_F12B6451(schedule, blockBits, keyBits, key);
 		*context = schedule;
 	} else {
 		result = 0x22020002;
@@ -682,7 +682,7 @@ int MarlinEncryptBlock(SceAesContext *key, const void *data, void *encrypted)
 		result = 3;
 		goto out;
 	}
-	ksceAesEncrypt1(schedule, data, encrypted);
+	SceKernelUtilsForDriver_C2A61770(schedule, data, encrypted);
 out:
 	return result;
 }
@@ -700,7 +700,7 @@ int MarlinDecryptBlock(SceAesContext *key, const void *encrypted, void *data)
 		result = 3;
 		goto out;
 	}
-	ksceAesDecrypt1(schedule, encrypted, data);
+	SceKernelUtilsForDriver_D8678061(schedule, encrypted, data);
 out:
 	return result;
 }

@@ -6,7 +6,7 @@
 #include "lowio_internal.h"
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <lowio/iftu.h>
 #include <lowio/iftu_regs.h>
@@ -169,9 +169,9 @@ static int IftuIntrHandler(int intrCode, void *arg)
 	uint32_t intr, pending;
 
 	(void)intrCode;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	if (plane->state == IFTU_STATE_DISABLED) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return -2;
 	}
 	pending = plane->pending;
@@ -193,7 +193,7 @@ static int IftuIntrHandler(int intrCode, void *arg)
 		plane->pending = 0;
 	}
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return -1;
 }
 
@@ -223,10 +223,10 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		if (eventId != 0x4005)
 			break;
 		for (plane = s_iftuPlanes; plane != converter; plane++) {
-			intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+			intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 			if (plane->state != IFTU_STATE_DISABLED)
 				IftuStop(plane);
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		}
 		break;
 	case 1:
@@ -238,18 +238,18 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		LowioDsb();
 		converter->registers->pathConfig = 0x108;
 		ksceKernelEnableIntr(converter->intrCode);
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
+		intr = SceCpuForDriver_D32ACE9E(&converter->lock);
 		if (converter->state != IFTU_STATE_DISABLED) {
 			IftuLoadCsc1(converter->registers, &converter->cscParams1);
 			LowioDmb();
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
+		intr = SceCpuForDriver_D32ACE9E(&converter->lock);
 		if (converter->state != IFTU_STATE_DISABLED) {
 			IftuLoadCsc2(converter->registers, &converter->cscParams2);
 			LowioDmb();
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
 		(void)converter->registers->pathConfig;
 		LowioDsb();
 		ScePervasiveForDriver_5AFE0AF0();
@@ -266,7 +266,7 @@ int SceIftuForDriver_0FCBF457(unsigned int index, SceIftuCscParams *param)
 	if (index > IFTU_CONVERTER)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	if (param != NULL)
 		__builtin_memcpy(&plane->cscParams2, param, sizeof(*param));
 	else
@@ -275,7 +275,7 @@ int SceIftuForDriver_0FCBF457(unsigned int index, SceIftuCscParams *param)
 		IftuLoadCsc2(plane->registers, param);
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -287,7 +287,7 @@ int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param)
 	if (index > IFTU_CONVERTER)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	if (param != NULL)
 		__builtin_memcpy(&plane->cscParams1, param, sizeof(*param));
 	else
@@ -296,7 +296,7 @@ int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param)
 		IftuLoadCsc1(plane->registers, param);
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -324,17 +324,17 @@ int ksceIftuSetOutputFormat(int index, unsigned int width,
 		return SCE_IFTU_ERROR_INVALID_PIXELFORMAT;
 	}
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	state = plane->state;
 	if (state != IFTU_STATE_DISABLED) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return SCE_IFTU_ERROR_PLANE_BUSY;
 	}
 	plane->output.width = width;
 	plane->output.height = height;
 	plane->output.pixelFormat = pixelFormat;
 	plane->output.planeEnable = planeEnable;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return state;
 }
 
@@ -380,11 +380,11 @@ int ksceIftuSetInputFrameBuffer(unsigned int index, SceIftuPlaneState *state,
 	plane = &s_iftuPlanes[index];
 	if (state == NULL) {
 		state = &plane->planeState;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+		intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	} else {
 		if (!IftuValidSourceFormat(state->fb.pixelformat))
 			return SCE_IFTU_ERROR_INVALID_PIXELFORMAT;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+		intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 		memcpy(&plane->planeState, state, sizeof(*state));
 	}
 	if (bilinear >= 0)
@@ -438,7 +438,7 @@ int ksceIftuSetInputFrameBuffer(unsigned int index, SceIftuPlaneState *state,
 done:
 	LowioDmb();
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -453,7 +453,7 @@ int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha)
 	if (alpha > IFTU_NO_BLEND)
 		return SCE_IFTU_ERROR_INVALID_PARAM;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	plane->alpha = alpha;
 	if (plane->state != IFTU_STATE_DISABLED) {
 		regs = plane->registers;
@@ -465,7 +465,7 @@ int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha)
 			regs->alphaControl = 0;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -478,7 +478,7 @@ int ksceIftuSetMergeSetting(unsigned int index, int setting)
 	if ((index & ~2) != 1)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	plane->mergeSetting = setting;
 	if (plane->state != IFTU_STATE_DISABLED) {
 		control = plane->control;
@@ -490,7 +490,7 @@ int ksceIftuSetMergeSetting(unsigned int index, int setting)
 			control->planeControl |= 1;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -505,9 +505,9 @@ int ksceIftuEnable(unsigned int index)
 	if (index > 3)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	if (plane->state != IFTU_STATE_DISABLED) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 		return 0;
 	}
 	regs = plane->registers;
@@ -569,7 +569,7 @@ int ksceIftuEnable(unsigned int index)
 	LowioDmb();
 	plane->state = IFTU_STATE_STARTING;
 	ksceKernelEnableIntr(plane->intrCode);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -581,10 +581,10 @@ int ksceIftuDisable(unsigned int index)
 	if (index > 3)
 		return SCE_IFTU_ERROR_INVALID_PLANE;
 	plane = &s_iftuPlanes[index];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&plane->lock);
+	intr = SceCpuForDriver_D32ACE9E(&plane->lock);
 	if (plane->state != IFTU_STATE_DISABLED)
 		IftuStop(plane);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
 
@@ -623,7 +623,7 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	ret = ksceKernelLockFastMutex(&s_iftuFastMutex);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&converter->lock);
+	intr = SceCpuForDriver_D32ACE9E(&converter->lock);
 	ScePervasiveForDriver_07F2A738();
 	regs = converter->registers;
 	(void)regs->pathConfig;
@@ -706,7 +706,7 @@ int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 		regs->control = 1;
 	}
 	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&converter->lock, intr);
 	ksceKernelWaitEventFlag(converter->eventFlag, 1, 5, NULL, NULL);
 	ScePervasiveForDriver_5AFE0AF0();
 	ret = ksceKernelUnlockFastMutex(&s_iftuFastMutex);
@@ -753,12 +753,12 @@ static __attribute__((noinline)) int IftuInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_iftuDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(s_iftuDevices[i].name, 0x20100806,
+		ret = SceSysmemForDriver_C94850C9(s_iftuDevices[i].name, 0x20100806,
 			0x1000, &opt);
 		if (ret < 0)
 			return ret;
 		plane->controlUid = ret;
-		ksceKernelGetMemBlockBase(ret, &base);
+		SceSysmemForDriver_A841EDDA(ret, &base);
 		plane->registers = base;
 		if (s_iftuDevices[i].controlPaddr != 0) {
 			if (i & 1) {
@@ -769,11 +769,11 @@ static __attribute__((noinline)) int IftuInit(void)
 				opt.size = 0x58;
 				opt.attr = 2;
 				opt.paddr = s_iftuDevices[i].controlPaddr;
-				ret = ksceKernelAllocMemBlock(
+				ret = SceSysmemForDriver_C94850C9(
 					s_iftuDevices[i].controlName, 0x20100806,
 					0x1000, &opt);
 				/* Sony does not check this allocation or mapping. */
-				ksceKernelGetMemBlockBase(ret, &base);
+				SceSysmemForDriver_A841EDDA(ret, &base);
 				plane->controlUid = ret;
 				plane->control = base;
 				plane->planeControl = &plane->control->plane[0];
@@ -807,7 +807,7 @@ static __attribute__((noinline)) int IftuInit(void)
 	LowioDsb();
 	ScePervasiveForDriver_5AFE0AF0();
 	ksceKernelInitializeFastMutex(&s_iftuFastMutex, "SceIftu2", 2, NULL);
-	ksceKernelRegisterSysEventHandler("SceIftu", IftuSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceIftu", IftuSysEvent, NULL);
 	return 0;
 }
 

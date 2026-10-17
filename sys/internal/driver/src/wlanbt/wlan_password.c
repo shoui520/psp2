@@ -1,8 +1,8 @@
 /* Password derivation family; the original records no source filename. */
 #include <stdint.h>
 #include <string.h>
-#include <psp2kern/kernel/debug.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/debug.h>
+#include <sysmem/utils.h>
 
 /* Sony's 4.00 password copies use the checked object-size interface. */
 #if FW_VERSION >= 0x04000000
@@ -14,7 +14,7 @@
 #define SHA1_DIGEST_SIZE 20
 #define strlen(password) strnlen(password, 64)
 #define HMAC_SHA1(key, keySize, input, inputSize, output, outputSize) \
-	ksceHmacSha1Digest(key, keySize, input, inputSize, output)
+	SceKernelUtilsForDriver_29A28957(key, keySize, input, inputSize, output)
 #include "cmm_wpa_sce.c"
 #undef HMAC_SHA1
 #undef strlen

@@ -1,10 +1,9 @@
 /* Debug ES3 bus-error console decoding. Private type/table names are unknown. */
 
 #include <stddef.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysroot.h>
 #if FW_DEBUG
 #define SCE_BUSERROR_TABLES_ONLY
 #include "buserror_es3.h"
@@ -202,10 +201,10 @@ int busErrorIntrHandler(int code, void *arg)
 	void *sysroot;
 	int dump;
 
-	dump = ksceKernelEnableCrashDump(0);
+	dump = SceDebugForKernel_A465A31A(0);
 	busErrorSmc10D();
 	if (dump)
-		ksceKernelGetTtyInfo(sysrootSharedMemory()->tty, 0x1000);
+		SceDebugForDriver_62466B0A(sysrootSharedMemory()->tty, 0x1000);
 	rec = &sysrootSharedMemory()->busError;
 	FormatBusErrorInfo_ES3(NULL, 0, rec);
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
@@ -219,7 +218,7 @@ int busErrorIntrHandler(int code, void *arg)
 	if (!dump)
 		for (;;)
 			;
-	sysroot = ksceSysrootGetSysroot();
+	sysroot = SceSysrootForKernel_3E455842();
 	__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
 	__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
 	busErrorSmc122(2, ttbr0, vbar, sysroot);
@@ -246,10 +245,10 @@ int busErrorIntrHandler(int code, void *arg)
 	SceUInt32 ttbr0, vbar;
 	int dump;
 
-	dump = ksceKernelEnableCrashDump(0);
+	dump = SceDebugForKernel_A465A31A(0);
 	busErrorSmc10D();
 	if (dump)
-		ksceKernelGetTtyInfo(sysrootSharedMemory()->tty, 0x1000);
+		SceDebugForDriver_62466B0A(sysrootSharedMemory()->tty, 0x1000);
 	rec = &sysrootSharedMemory()->busError;
 	/* This callback consumes the fixed OCP status words, not hdrSize. */
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
@@ -261,7 +260,7 @@ int busErrorIntrHandler(int code, void *arg)
 	}
 	if (!dump)
 		goto hang;
-	sysroot = ksceSysrootGetSysroot();
+	sysroot = SceSysrootForKernel_3E455842();
 	__asm__ volatile("mrc p15, 0, %0, c2, c0, 0" : "=r"(ttbr0));
 	__asm__ volatile("mrc p15, 0, %0, c12, c0, 0" : "=r"(vbar));
 	busErrorSmc122(2, ttbr0, vbar, sysroot);

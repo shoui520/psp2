@@ -5,7 +5,7 @@
  * last error, with the line it was met at.
  */
 
-#include <psp2kern/kernel/debugled.h>
+#include <sysmem/debugled.h>
 #include "regmgr_internal.h"
 
 #define REGMGR_REG_ERROR_FACILITY	0x800c0000	/* names unknown */
@@ -339,7 +339,7 @@ int regMgrWrapRegSetKey(int handle, const char *category, const char *name, cons
 			}
 			if (key->gpi) {
 				key++;
-				ksceKernelSetGPI(*(const int *)buf);
+				SceDebugLedForDriver_51C5325A(*(const int *)buf);
 				continue;
 			}
 			err = ksceSblSsSetNvsData(key->areaNo, buf, areaSize);

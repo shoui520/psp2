@@ -1,7 +1,9 @@
 /* Sony's aimgr_api.c: console identity values. The PS code and OpenPSID come from the boot
  * parameters; the rest is queried from the secure processor under one mutex. */
 #include "ssmgr_internal.h"
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/pmmgr.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -10,7 +12,6 @@ ScePsCode aimgrPscode;
 SceOpenPsId aimgrOpenPsId;
 SceUID aimgrMutex;
 
-int kscePmMgrGetProductMode(uint8_t *mode);
 int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase);
 
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
@@ -25,7 +26,7 @@ static inline unsigned int swap16(unsigned int value)
 /* Internal name inferred: module_start's Aimgr setup. */
 int aimgrInit(void)
 {
-	const SceKblParam *parameters = ksceKernelSysrootGetKblParam();
+	const SceKblParam *parameters = SceSysrootForKernel_9DB56D1F();
 	SceUID mutex;
 
 	if (parameters) {
@@ -61,7 +62,7 @@ int ksceSblAimgrGetPscode2(ScePsCode *pscode)
 
 	if (!pscode)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
-	if (kscePmMgrGetProductMode(&productMode))
+	if (ScePmMgrForDriver_2AC815A2(&productMode))
 		return AIMGR_ERROR_PRODUCT_MODE;
 	if (!productMode)
 		return AIMGR_ERROR_NOT_PRODUCTION;

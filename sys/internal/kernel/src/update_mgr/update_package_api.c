@@ -1,5 +1,5 @@
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
@@ -19,14 +19,14 @@ int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
-		result = ksceKernelCopyFromUser(&request, args, sizeof(request));
+		result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 		if (result == 0) {
 			result = UpdateUtilUA2KA(request.addr, sceKernelGetProcessId(), &buffer);
 			if (result == 0) {
 				result = SpkgUtilUpdateSpackage(packageType, buffer,
 					request.size, request.flags, &id);
 				if (result == 0)
-					result = ksceKernelCopyToUser(requestId, &id, sizeof(id));
+					result = SceSysmemForDriver_6D88EF8A(requestId, &id, sizeof(id));
 			}
 		}
 	}
@@ -49,14 +49,14 @@ int sceSblUsInspectSpackageForUser(int packageType, const SceKernelSpackageArgs 
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
-		result = ksceKernelCopyFromUser(&request, args, sizeof(request));
+		result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 		if (result == 0) {
 			result = UpdateUtilUA2KA(request.addr, sceKernelGetProcessId(), &buffer);
 			if (result == 0) {
 				result = SpkgUtilInspectSpackage(packageType, buffer,
 					request.size, request.flags, &id);
 				if (result == 0)
-					result = ksceKernelCopyToUser(requestId, &id, sizeof(id));
+					result = SceSysmemForDriver_6D88EF8A(requestId, &id, sizeof(id));
 			}
 		}
 	}
@@ -79,14 +79,14 @@ int sceSblUsExtractSpackageForUser(int packageType, const SceKernelSpackageArgs 
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
-		result = ksceKernelCopyFromUser(&request, args, sizeof(request));
+		result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 		if (result == 0) {
 			result = UpdateUtilUA2KA(request.addr, sceKernelGetProcessId(), &buffer);
 			if (result == 0) {
 				result = SpkgUtilExtractSpackage(packageType, buffer,
 					request.size, request.flags, &id);
 				if (result == 0)
-					result = ksceKernelCopyToUser(requestId, &id, sizeof(id));
+					result = SceSysmemForDriver_6D88EF8A(requestId, &id, sizeof(id));
 			}
 		}
 	}
@@ -107,7 +107,7 @@ int sceSblUsGetExtractSpackageForUser(int nodeType, uint32_t requestId,
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	ENTER_SYSCALL(state);
-	result = ksceKernelCopyFromUser(&request, args, sizeof(request));
+	result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 	if (result == 0) {
 		result = UpdateUtilGetNodeStatusLocked(nodeType, &status);
 		if (result == 0) {
@@ -117,7 +117,7 @@ int sceSblUsGetExtractSpackageForUser(int nodeType, uint32_t requestId,
 							&userBuffer);
 				if (result == 0) {
 					request.addr = userBuffer;
-					result = ksceKernelCopyToUser(args, &request, sizeof(request));
+					result = SceSysmemForDriver_6D88EF8A(args, &request, sizeof(request));
 				}
 			} else {
 				result = (int)0x800f0202;
@@ -144,7 +144,7 @@ int sceSblUsAllocateBufferForUser(SceSize size, void **output)
 		buffer = kernelBuffer;
 		result = UpdateUtilKA2UA(buffer, sceKernelGetProcessId(), &userBuffer);
 		if (result == 0)
-			result = ksceKernelCopyToUser(output, &userBuffer, sizeof(userBuffer));
+			result = SceSysmemForDriver_6D88EF8A(output, &userBuffer, sizeof(userBuffer));
 	}
 	EXIT_SYSCALL(state);
 	return result;
@@ -185,19 +185,19 @@ int sceSblUsGetStatusForUser(int nodeType, uint32_t requestId,
 	if (!args)
 		return (int)0x800f0216;
 	ENTER_SYSCALL(state);
-	result = ksceKernelCopyFromUser(&request, args, sizeof(request));
+	result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 	if (result >= 0) {
 		result = SpkgUtilGetStatus(nodeType, requestId, &seq_no, &status,
 					 &progress, &written_rates);
 		if (result == 0) {
-			result = ksceKernelCopyToUser(request.seq_no, &seq_no, sizeof(seq_no));
+			result = SceSysmemForDriver_6D88EF8A(request.seq_no, &seq_no, sizeof(seq_no));
 			if (result >= 0) {
-				result = ksceKernelCopyToUser(request.result, &status, sizeof(status));
+				result = SceSysmemForDriver_6D88EF8A(request.result, &status, sizeof(status));
 				if (result >= 0) {
-					result = ksceKernelCopyToUser(request.progress, &progress,
+					result = SceSysmemForDriver_6D88EF8A(request.progress, &progress,
 								    sizeof(progress));
 					if (result >= 0)
-						result = ksceKernelCopyToUser(request.written_rates,
+						result = SceSysmemForDriver_6D88EF8A(request.written_rates,
 							&written_rates, sizeof(written_rates));
 				}
 			}
@@ -219,7 +219,7 @@ int sceSblUsGetSpkgInfoForUser(int packageType, SceSblUsSpkgInfo *output)
 	if (output) {
 		result = SpkgInfoUtilGetSpkgInfo(packageType, &info);
 		if (result == 0)
-			result = ksceKernelCopyToUser(output, &info, sizeof(info));
+			result = SceSysmemForDriver_6D88EF8A(output, &info, sizeof(info));
 	} else {
 		result = (int)0x800f0216;
 	}

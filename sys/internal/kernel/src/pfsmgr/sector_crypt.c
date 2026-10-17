@@ -1,6 +1,6 @@
 /*
  * The sector ciphers of the crypt engine, each an encrypt/decrypt pair: AES
- * through the DMAC5 engine (ECB, CMAC) or ksceAesEncrypt2, with the XTS tweak
+ * through the DMAC5 engine (ECB, CMAC) or SceKernelUtilsForDriver_302947B6, with the XTS tweak
  * step in software. Names unknown; the modes in the names other than Xts are
  * provisional until the deferred routines are reversed.
  */

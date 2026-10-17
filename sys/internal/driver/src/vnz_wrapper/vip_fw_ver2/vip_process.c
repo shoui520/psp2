@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <sysmem/debug.h>
@@ -15,7 +15,6 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "../venezia_internal.h"
@@ -63,7 +62,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid)
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
-		ksceKernelAssert(storage != NULL,
+		SceDebugForDriver_35A35322(storage != NULL,
 			SCE_DBGINFO_FUNC(98, "_sceHwd0ProcessCreateEntry"), __builtin_return_address(0));
 #endif
 		memset(storage, 0, sizeof(*storage));
@@ -110,7 +109,7 @@ VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 		storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
 	}
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
+	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
 		__builtin_return_address(0));
 #endif
 	return storage;
@@ -124,7 +123,7 @@ int waitVeneziaVipProcessReady(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
+	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
 		__builtin_return_address(0));
 #endif
 	if (!storage)
@@ -148,7 +147,7 @@ int _sceHwd0StartProcessSuspend(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(225, "_sceHwd0StartProcessSuspend"),
+		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(225, "_sceHwd0StartProcessSuspend"),
 			__builtin_return_address(0));
 #endif
 		process = storage;
@@ -180,7 +179,7 @@ int _sceHwd0ProcessResume(SceUID pid)
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(281, "_sceHwd0ProcessResume"),
+		SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(281, "_sceHwd0ProcessResume"),
 			__builtin_return_address(0));
 #endif
 		process = storage;
@@ -195,4 +194,3 @@ int _sceHwd0ProcessResume(SceUID pid)
 	}
 	return ret;
 }
-extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);

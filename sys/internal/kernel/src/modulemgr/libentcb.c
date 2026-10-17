@@ -183,11 +183,11 @@ int LibEntGetIndex(SceModuleCB *cb, SceUInt32 addr)
 void LibEntCBClear(LibEntCB *ent)
 {
 	if (ent->puid > 0) {
-		kscePUIDClose(ent->cb->pid, ent->puid);
+		SceSysmemForDriver_84A4AF5E(ent->cb->pid, ent->puid);
 		ent->puid = 0;
 	}
 	if (ent->guid > 0) {
-		ksceGUIDClose(ent->guid);
+		sceGUIDClose(ent->guid);
 		ent->guid = 0;
 	}
 	ent->syscallIndex = 0;
@@ -240,11 +240,11 @@ int LibEntGetNidTable(LibEntCB *ent, LibEntNidTable *info)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOMEM_LIB;
 		info->copy = copy;
 		info->nidtable = (SceNID *)copy;
-		ret = ksceKernelCopyFromUserProc(pid, copy, ent->exports->nidtable, size);
+		ret = sceKernelCopyFromUserProc(pid, copy, ent->exports->nidtable, size);
 		if (ret < 0)
 			return ret;
 		info->entrytable = (void **)(copy + size);
-		ret = ksceKernelCopyFromUserProc(pid, copy + size, ent->exports->entrytable, nidSize);
+		ret = sceKernelCopyFromUserProc(pid, copy + size, ent->exports->entrytable, nidSize);
 		if (ret < 0)
 			return ret;
 		if ((ent->flags & LIBENT_FLAG_SHARED) == 0) {

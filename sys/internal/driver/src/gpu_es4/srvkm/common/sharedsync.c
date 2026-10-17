@@ -71,7 +71,7 @@ IMG_INT sceGpuSharedSyncObjectCreate(IMG_UINT32 ui32SharedKey, IMG_SID hHandle)
 
 	if (sceGpuSharedSyncObjectFind(ui32SharedKey) != NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectCreate_L37,
 				"%s: Sync object with key %08x was already registered!\n",
 				"sceGpuSharedSyncObjectCreate", ui32SharedKey);
@@ -81,7 +81,7 @@ IMG_INT sceGpuSharedSyncObjectCreate(IMG_UINT32 ui32SharedKey, IMG_SID hHandle)
 	psObject = sceGpuSharedSyncObjectFind(0);
 	if (psObject == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectCreate_L44,
 				"%s: Too many shared sync objects!\n",
 				"sceGpuSharedSyncObjectCreate");
@@ -100,7 +100,7 @@ IMG_INT sceGpuSharedSyncObjectDelete(IMG_UINT32 ui32SharedKey)
 
 	if (psObject == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectDelete_L65,
 				"%s: Sync object with key %08x was not found!\n",
 				"sceGpuSharedSyncObjectDelete", ui32SharedKey);
@@ -109,7 +109,7 @@ IMG_INT sceGpuSharedSyncObjectDelete(IMG_UINT32 ui32SharedKey)
 	}
 	if (psObject->ui32RefCount != 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectDelete_L71,
 				"%s: Sync object with key %08x is still referenced!\n",
 				"sceGpuSharedSyncObjectDelete", ui32SharedKey);
@@ -128,7 +128,7 @@ IMG_INT sceGpuSharedSyncObjectOpen(IMG_UINT32 ui32SharedKey, IMG_SID *hHandle)
 
 	if (hHandle == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectOpen_L89,
 				"%s: Invalid parameters\n",
 				"sceGpuSharedSyncObjectOpen");
@@ -138,7 +138,7 @@ IMG_INT sceGpuSharedSyncObjectOpen(IMG_UINT32 ui32SharedKey, IMG_SID *hHandle)
 	psObject = sceGpuSharedSyncObjectFind(ui32SharedKey);
 	if (psObject == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectOpen_L97,
 				"%s: Sync object with key %08x was not found!\n",
 				"sceGpuSharedSyncObjectOpen", ui32SharedKey);
@@ -156,7 +156,7 @@ IMG_INT sceGpuSharedSyncObjectClose(IMG_UINT32 ui32SharedKey)
 
 	if (psObject == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectClose_L118,
 				"%s: Sync object with key %08x was not found!\n",
 				"sceGpuSharedSyncObjectClose", ui32SharedKey);
@@ -165,7 +165,7 @@ IMG_INT sceGpuSharedSyncObjectClose(IMG_UINT32 ui32SharedKey)
 	}
 	if (psObject->ui32RefCount == 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectClose_L124,
 				"%s: Sync object with key %08x was not opened!\n",
 				"sceGpuSharedSyncObjectClose", ui32SharedKey);
@@ -183,7 +183,7 @@ IMG_INT sceGpuSharedSyncObjectGetHandle(IMG_UINT32 ui32SharedKey,
 
 	if (hHandle == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectGetHandle_L140,
 				"%s: Invalid parameters\n",
 				"sceGpuSharedSyncObjectGetHandle");
@@ -193,7 +193,7 @@ IMG_INT sceGpuSharedSyncObjectGetHandle(IMG_UINT32 ui32SharedKey,
 	psObject = sceGpuSharedSyncObjectFind(ui32SharedKey);
 	if (psObject == NULL) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_sceGpuSharedSyncObjectGetHandle_L148,
 				"%s: Sync object with key %08x was not found!\n",
 				"sceGpuSharedSyncObjectGetHandle", ui32SharedKey);

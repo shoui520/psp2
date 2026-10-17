@@ -4,6 +4,7 @@
  */
 
 #include <sysmem/sysmem.h>
+#include <sysmem/utils.h>
 #include "pfsmgr_internal.h"
 
 static SceMt19937Context g_pfsRandom;
@@ -35,10 +36,10 @@ void pfsGlobalTerm(void)
 
 void pfsRandomInit(SceUInt32 seed)
 {
-	ksceMt19937Init(&g_pfsRandom, seed);
+	SceKernelUtilsForDriver_4C9A5730(&g_pfsRandom, seed);
 }
 
 SceUInt32 pfsRandom(void)
 {
-	return ksceMt19937UInt(&g_pfsRandom);
+	return SceKernelUtilsForDriver_92AEDFBC(&g_pfsRandom);
 }

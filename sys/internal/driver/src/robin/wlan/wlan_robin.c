@@ -6,11 +6,11 @@
 #include <threadmgr/threadmgr.h>
 #include <wlanbt/wlanbt.h>
 #include <regmgr/regmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <syscon/syscon.h>
 #include <string.h>
 
@@ -391,7 +391,7 @@ int robinWlanRetryWakeOnConfiguration(SceWlanBtRobinWlanContext *context)
 					context->connectionSize);
 		elapsed = sceKernelGetSystemTimeWide() - started;
 		if (result >= 0) {
-			ksceKernelPrintf("[SceWlanBt]: Set Wake On WLAN (MagicPacket) : OK (num=%d, %lldms)\n",
+			SceDebugForDriver_391B74B7("[SceWlanBt]: Set Wake On WLAN (MagicPacket) : OK (num=%d, %lldms)\n",
 					 attempt, (long long)(elapsed / 1000));
 			return robinWlanBeginWakeOnConfiguration(context);
 		}
@@ -399,7 +399,7 @@ int robinWlanRetryWakeOnConfiguration(SceWlanBtRobinWlanContext *context)
 			break;
 		++attempt;
 	} while (attempt != 10);
-	ksceKernelPrintf("[SceWlanBt]: Set Wake On WLAN (MagicPacket) : NG (ret=0x%08x,num=%d, %lldms)\n",
+	SceDebugForDriver_391B74B7("[SceWlanBt]: Set Wake On WLAN (MagicPacket) : NG (ret=0x%08x,num=%d, %lldms)\n",
 			 result, attempt, (long long)(elapsed / 1000));
 	__atomic_fetch_and(&context->status, ~0x80u, __ATOMIC_RELEASE);
 	context->wakeFlags &= ~4u;
@@ -513,7 +513,7 @@ int robinWlanDriverControl(struct NetDriver *driver, unsigned int command,
 		result = _infraScanJoin(tcm, (void *)argument, capacity);
 		if (result < 0)
 			context->connectionSize = 0;
-		else if (ksceSblAimgrIsDolce())
+		else if (SceSblAIMgrForDriver_71608CA3())
 			ksceUsbServEtherDisable();
 		break;
 	case 0x50110002:
@@ -1345,7 +1345,7 @@ wakeResult:
 						}
 					}
 				} else {
-					ksceSblAimgrIsDolce();
+					SceSblAIMgrForDriver_71608CA3();
 				}
 				context->wakeFlags = 0;
 			}
@@ -1498,7 +1498,7 @@ int robinInitializeWlanContext(void)
 	result = ksceKernelSetEventFlag(context->workerEventFlag, 1);
 	if (result < 0)
 		goto out;
-	result = ksceKernelRegisterSysEventHandler("SceWlanBtRobin", _debugDumpStatus, context);
+	result = sceKernelRegisterSysEventHandler("SceWlanBtRobin", _debugDumpStatus, context);
 	if (result < 0)
 		goto out;
 	context->sysEventHandler = result;
@@ -1680,7 +1680,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 		case SYSEVENT_SUSPEND_IDLE_ENTER:
 			if (((struct PowerSuspendEvent *)arguments)->sleepMode) {
 				__atomic_fetch_and(&context->status, ~0x80, __ATOMIC_RELEASE);
-			} else if (ksceSblAimgrIsDolce()) {
+			} else if (SceSblAIMgrForDriver_71608CA3()) {
 				if (!context->wakeFlags && (context->status & 0x400)) {
 					context->wakeFlags = 4;
 					__atomic_fetch_or(&context->status, 0x80, __ATOMIC_RELEASE);
@@ -1708,7 +1708,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 				context->savedConfiguration = wlanGetConfiguration() & 3;
 				gWlanContext.pendingStateMarker = 0x80000300;
 				sceRegMgrSetKeyInt("/CONFIG/NET", "wifi_config", context->wakeRestoreMode == 2);
-				if (ksceSblAimgrIsDolce() && (context->wakeFlags & 4) &&
+				if (SceSblAIMgrForDriver_71608CA3() && (context->wakeFlags & 4) &&
 				    sceRegMgrGetKeyInt("/CONFIG/NET/", "wol_config", &wol) >= 0 && !wol) {
 					context->wakeFlags &= ~4;
 					__atomic_fetch_and(&context->status, ~0x80, __ATOMIC_RELEASE);
@@ -1742,24 +1742,24 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 			    now < gWlanContext.suspendTimestamp + 30000000) {
 				gWlanContext.suspendTimeoutReported = 1;
 #if FW_DEBUG
-				ksceKernelPrintfLevelWithInfo(1, 0, &gSuspendTimeoutStatus,
+				SceDebugForDriver_D9703808(1, 0, &gSuspendTimeoutStatus,
 					"[SceWlanBt]: delta=%lldms, status=0x%08x, intError=0x%08x\n",
 					(now - gWlanContext.suspendTimestamp) / 1000,
 					gWlanContext.status, gWlanContext.ioctlError);
-				ksceKernelPrintfLevelWithInfo(1, 0, &gSuspendVisitorStatus,
+				SceDebugForDriver_D9703808(1, 0, &gSuspendVisitorStatus,
 					"[SceWlanBt]: gk cnt=%d, ec=0x%08x, available=%d\n",
 					gWlanContext.visitor.count, gWlanContext.visitor.result,
 					gWlanContext.visitor.accepting);
-				ksceKernelPrintfLevelWithInfo(1, 0, &gSuspendCommandStatus,
+				SceDebugForDriver_D9703808(1, 0, &gSuspendCommandStatus,
 					"[SceWlanBt]: curCmdDesc=%p, pendingCmdDesc=%p\n",
 					gWlanContext.dcm.currentCommand, gWlanContext.dcm.pendingCommands);
 				if (gWlanContext.dcm.currentCommand)
-					ksceKernelPrintfLevelWithInfo(1, 0, &gCurrentCommandSuspendWait,
+					SceDebugForDriver_D9703808(1, 0, &gCurrentCommandSuspendWait,
 						"[SceWlanBt]: curCmdCode=%04x, wait=%lldms\n",
 						gWlanContext.dcm.currentCommand->commandId,
 						(now - gWlanContext.dcm.currentCommand->timestamp) / 1000);
 				if (gWlanContext.dcm.pendingCommands)
-					ksceKernelPrintfLevelWithInfo(1, 0, &gPendingCommandSuspendWait,
+					SceDebugForDriver_D9703808(1, 0, &gPendingCommandSuspendWait,
 						"[SceWlanBt]: pendingCmdCode=%04x, wait=%lldms\n",
 						gWlanContext.dcm.pendingCommands->commandId,
 						(now - gWlanContext.dcm.pendingCommands->timestamp) / 1000);

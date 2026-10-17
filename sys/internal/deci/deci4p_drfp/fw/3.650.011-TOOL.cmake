@@ -60,13 +60,13 @@ set(MODULE_IMPORT_NIDS
 	0x849E3DF5:F:0xCACAB5F9
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	memcpy
 	strncpy
@@ -74,10 +74,10 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
-	ksceKernelPrintf
-	ksceKernelCheckDipsw
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
+	SceDipswForDriver_A98FC2FD
 	ksceKernelWaitEventFlag
 	ksceKernelDeleteSema
 	ksceKernelCreateSema
@@ -93,7 +93,7 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	sceDfMgrClose
 	sceDfMgrOpen
 	sceDfMgrRecv

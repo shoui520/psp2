@@ -8,11 +8,11 @@
 #include <psp2kern/io/stat.h>
 #include <psp2kern/kernel/rtc.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 #include <acmgr/acmgr.h>
+#include <sysmem/sysroot.h>
 
 #define SCE_SBL_ERROR_UT_NOT_FOUND		0x800f1a02	/* names unknown */
 #define SCE_SBL_ERROR_UT_NO_MEMORY		0x800f1a0c
@@ -103,11 +103,6 @@ typedef struct SceUtSmCommand {
 } SceUtSmCommand;
 
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
-int SceSysrootForDriver_E25D2FD5(SceUInt8 (*func)(void));
-int SceSysrootForDriver_A12C9950(int (*func)(SceUInt64 authId));
-int SceSysrootForDriver_E2E88E3E(SceUInt8 (*func)(void));
-int SceSysrootForDriver_35875119(int (*func)(void *buffer));
-int ksceSysrootUtMgrSetNpTestFlag(SceUInt8 (*func)(void));
 int utSmOpen(void *utoken, SceSize size, SceUInt32 now);
 int utSmSeal(void *utoken, SceSize size, SceUInt32 now);
 
@@ -352,7 +347,7 @@ void *utMgrAllocUtoken(void)	/* name unknown */
 {
 	SceAllocOpt opt = { .size = sizeof(opt), .align = 0x20 };
 
-	return ksceKernelAllocHeapMemoryWithOption(g_postSsMgrHeap, UT_SIZE, &opt);
+	return SceSysmemForDriver_49D4DD9B(g_postSsMgrHeap, UT_SIZE, &opt);
 }
 
 int utMgrReadFile(void *utoken, SceSize *size)	/* name unknown */
@@ -392,7 +387,7 @@ int sceSblUtMgrInit(void)
 	SceSysrootForDriver_A12C9950(SceSblPostSsMgrForDriver_D8A2D465);
 	SceSysrootForDriver_E2E88E3E(SceSblPostSsMgrForDriver_9B49C249);
 	SceSysrootForDriver_35875119(ksceSblUtMgrGetTrilithiumBuffer);
-	ksceSysrootUtMgrSetNpTestFlag(ksceSblUtMgrHasNpTestFlag);
+	SceSysrootForDriver_EE5D6CE9(ksceSblUtMgrHasNpTestFlag);
 	if (utMgrGetCurrentTime(&now) != 0)
 		now = 0xffffffff;
 	size = 0;
@@ -401,7 +396,7 @@ int sceSblUtMgrInit(void)
 		return SCE_SBL_ERROR_UT_NO_MEMORY;
 	ret = utMgrReadFile(utoken, &size);
 	if (ret != 0) {
-		ksceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
+		sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
 		return ret;
 	}
 	SceKernelSuspendForDriver_4DF40893(0);
@@ -411,7 +406,7 @@ int sceSblUtMgrInit(void)
 		g_utMgrLoaded = 1;
 		ret = utMgrParseUtoken(utoken, size);
 	}
-	ksceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
+	sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
 	return ret;
 }
 
@@ -466,7 +461,7 @@ int ksceSblUtMgrResetUtokenFile(void)
 		ret = ksceIoRemove(UT_PATH);
 		ret = ret < 0 ? ret : 0;
 	}
-	ksceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
+	sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);
 	return ret;
 }
 
@@ -524,10 +519,10 @@ int sceSblUtMgrUpdateUtoken(const void *utoken, SceSize size)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_UT_NO_MEMORY;
 	}
-	ret = ksceKernelCopyFromUser(kutoken, utoken, UT_SIZE);
+	ret = SceSysmemForDriver_BC996A7A(kutoken, utoken, UT_SIZE);
 	if (ret == 0)
 		ret = ksceSblUtMgrExecuteUtokenSmCommand1(kutoken, UT_SIZE);
-	ksceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
+	sceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -553,8 +548,8 @@ int sceSblUtMgrReadUtoken(void *utoken, SceSize size)
 	}
 	ret = utMgrReadUtoken(kutoken, UT_SIZE);
 	if (ret == 0)
-		ret = ksceKernelCopyToUser(utoken, kutoken, UT_SIZE);
-	ksceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
+		ret = SceSysmemForDriver_6D88EF8A(utoken, kutoken, UT_SIZE);
+	sceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -608,7 +603,7 @@ int sceSblUtMgrGetCurrentSecureTick(SceUInt32 *left)
 		sceSyscallLeave(state);
 		return ret;
 	}
-	ret = ksceKernelCopyToUser(left, &value, sizeof(value));
+	ret = SceSysmemForDriver_6D88EF8A(left, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -632,7 +627,7 @@ int sceSblUtMgrIsTrilithiumFlagEnabled(char *flag, SceSize size)
 	}
 	if (size > sizeof(g_utMgrTrilithiumFlag))
 		size = sizeof(g_utMgrTrilithiumFlag);
-	ret = ksceKernelCopyToUser(flag, g_utMgrTrilithiumFlag, size);
+	ret = SceSysmemForDriver_6D88EF8A(flag, g_utMgrTrilithiumFlag, size);
 	sceSyscallLeave(state);
 	return ret;
 }

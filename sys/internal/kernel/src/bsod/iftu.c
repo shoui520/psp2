@@ -46,17 +46,17 @@ int _sceKernelBsodIftuInit(int dolce)
 		options.size = sizeof(options);
 		options.attr = 2;
 		options.paddr = map->paddr;
-		uid = ksceKernelAllocMemBlock(map->name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+		uid = SceSysmemForDriver_C94850C9(map->name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					    map->size, &options);
 		if (uid < 0) {
 #if FW_DEBUG
-			if (ksceKernelGetAssertLevel() > 0)
-				ksceKernelAssertLevel(1, 0, &s_iftuAssert,
+			if (SceDebugForDriver_374B7868() > 0)
+				SceDebugForDriver_FD753E7A(1, 0, &s_iftuAssert,
 						     __builtin_return_address(0));
 #endif
 			return uid;
 		}
-		ksceKernelGetMemBlockBase(uid, &base);
+		SceSysmemForDriver_A841EDDA(uid, &base);
 		*map->base = base;
 	}
 	return 0;

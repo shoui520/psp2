@@ -3,8 +3,6 @@
  */
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include "../../device_sce.h"
 #include <stddef.h>
 
@@ -28,7 +26,7 @@ static const SceKernelDebugInfo dbg_MMU_BIFResetPDAlloc_L44 = {
 	"devices/sgx/mmu_sce.c", 44, "MMU_BIFResetPDAlloc"
 };
 #define BIF_PHYS_ERROR(line) \
-	ksceKernelPrintfLevelWithInfo(1, 0, &dbg_MMU_BIFResetPDAlloc_L##line, \
+	SceDebugForDriver_D9703808(1, 0, &dbg_MMU_BIFResetPDAlloc_L##line, \
 			"%s: Failed to get physical address for %p with error %08x\n", \
 			"MMU_BIFResetPDAlloc", pui32BIFResetPD, res)
 #else
@@ -41,31 +39,31 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo)
 	SceUID uid;
 	int res;
 
-	uid = ksceKernelAllocMemBlock("SceGpuBifReset",
+	uid = SceSysmemForDriver_C94850C9("SceGpuBifReset",
 			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x3000, NULL);
 	if (uid < 0)
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
-	res = ksceKernelGetMemBlockBase(uid, (IMG_VOID **)&pui32BIFResetPD);
+	res = SceSysmemForDriver_A841EDDA(uid, (IMG_VOID **)&pui32BIFResetPD);
 	if (res < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &dbg_MMU_BIFResetPDAlloc_L25,
+		SceDebugForDriver_D9703808(1, 0, &dbg_MMU_BIFResetPDAlloc_L25,
 				"%s: Failed to get address for %08x with error %08x\n",
 				"MMU_BIFResetPDAlloc", uid, res);
 #endif
 		goto fail;
 	}
-	res = ksceKernelVAtoPA(pui32BIFResetPD, &psDevInfo->sBIFResetPDDevPAddr.uiAddr);
+	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD, &psDevInfo->sBIFResetPDDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(32);
 		goto fail;
 	}
-	res = ksceKernelVAtoPA(pui32BIFResetPD + 1024,
+	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD + 1024,
 			&psDevInfo->sBIFResetPTDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(38);
 		goto fail;
 	}
-	res = ksceKernelVAtoPA(pui32BIFResetPD + 2048,
+	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD + 2048,
 			&psDevInfo->sBIFResetPageDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(44);
@@ -80,11 +78,11 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo)
 	OSMemSet(pui32BIFResetPD + 2048, 0xdb, 0x1000);
 	return PVRSRV_OK;
 fail:
-	ksceKernelFreeMemBlock(uid);
+	SceSysmemForDriver_009E1C61(uid);
 	return PVRSRV_ERROR_OUT_OF_MEMORY;
 }
 
 IMG_VOID MMU_BIFResetPDFree(PVRSRV_SGXDEV_INFO *psDevInfo)
 {
-	ksceKernelFreeMemBlock((SceUID)psDevInfo->hBIFResetPDOSMemHandle);
+	SceSysmemForDriver_009E1C61((SceUID)psDevInfo->hBIFResetPDOSMemHandle);
 }

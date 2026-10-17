@@ -3,7 +3,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <lowio/spi_regs.h>
@@ -511,23 +511,23 @@ static __attribute__((noinline)) int initOled(void) /* name unknown */
 
 	oled = (OledLink){ 0 };
 	resetSequence();
-	oled.eventUid = ksceKernelRegisterSysEventHandler("SceOled", sysEvent, 0);
+	oled.eventUid = sceKernelRegisterSysEventHandler("SceOled", sysEvent, 0);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = SPI_REG_BASE(2);
-	ret = ksceKernelAllocMemBlock("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	ret = SceSysmemForDriver_C94850C9("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 	oled.spiUid = ret;
-	ksceKernelGetMemBlockBase(ret, (void **)&base);
+	SceSysmemForDriver_A841EDDA(ret, (void **)&base);
 	oled.spi = base;
 	setupSpi(base);
-	if ((ksceSysrootGetHardwareInfo() & 0xff0000) == 0x800000) {
+	if ((SceSysrootForDriver_930B1342() & 0xff0000) == 0x800000) {
 		ret = readPanelId();
 		if (ret < 0) {
-			ksceKernelUnregisterSysEventHandler(oled.eventUid);
-			ksceKernelFreeMemBlock(oled.spiUid);
+			sceKernelUnregisterSysEventHandler(oled.eventUid);
+			SceSysmemForDriver_009E1C61(oled.spiUid);
 			return ret;
 		}
 	} else {

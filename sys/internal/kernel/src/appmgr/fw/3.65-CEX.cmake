@@ -319,30 +319,30 @@ set(MODULE_IMPORT_NIDS
 	0xC9E26388:F:0xA98FC2FD
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelUserUnmap
-	ksceKernelFreeMemBlock
-	ksceGUIDReferObject
-	ksceGUIDReleaseObject
-	ksceKernelUserMap
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	kscePUIDClose
-	ksceKernelCreateHeap
-	ksceKernelIsAccessibleRange
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelAllocMemBlock
-	kscePUIDOpenByGUIDWithFlags
-	ksceKernelDeleteHeap
-	ksceKernelStrncpyFromUser
-	ksceKernelPrintfPanic
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
-	ksceKernelPrintf
+	sceKernelUserUnmap
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_0F5C84B7
+	sceGUIDReleaseObject
+	SceSysmemForDriver_278BC201
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_CED1547B
+	sceKernelDeleteHeap
+	SceSysmemForDriver_DB3EC244
+	SceDebugForDriver_00CCE39C
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
 	memset
 	strncmp
 	strchr
@@ -369,14 +369,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_6050A467
 	sceKernelApiDeclareTypeUInt32
 	SceSysrootForDriver_70AD47A9
-	ksceSysrootIsSafeMode
+	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_84C0BE05
 	sceKernelApiDeclareTypeRaw
 	SceSysrootForDriver_9A8871F1
 	SceSysrootForDriver_9AF075D4
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_B0E1FC67
 	SceSysrootForDriver_E9B4221F
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	ksceKernelSetPermission
@@ -459,17 +459,17 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_C715591F
 	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	ksceSblRngPseudoRandomNumber
 	ksceSblAimgrGetOpenPsId
 	ksceSblSsGetNvsData
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
 	SceQafMgrForDriver_41E04800
 	SceQafMgrForDriver_7B14DC45
-	kscePmMgrGetProductMode
+	ScePmMgrForDriver_2AC815A2
 	SceSblACMgrForDriver_0139FC20
 	SceSblACMgrForDriver_091F7247
 	SceSblACMgrForDriver_0924896F
@@ -511,8 +511,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSblGcAuthMgrMsSaveBBForDriver_805C860B
 	SceSblGcAuthMgrMsSaveBBForDriver_8E6626A0
 	SceSblGcAuthMgrMsSaveBBForDriver_F66D5F76
-	ksceHmacSha256Digest
-	ksceSha256Digest
+	SceKernelUtilsForDriver_83EFA1CC
+	SceKernelUtilsForDriver_A773A6A8
 	sceKernelStartProcessExt
 	sceKernelWaitProcessEventCompletion
 	sceKernelSuspendProcess
@@ -590,7 +590,7 @@ set(MODULE_IMPORT_FUNCS
 	SceAudioInForDriver_3EC79053
 	SceAudioInForDriver_E4042F6F
 	SceAvcodecForDriver_C84AFFC4
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

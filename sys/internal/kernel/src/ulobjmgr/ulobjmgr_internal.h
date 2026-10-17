@@ -10,7 +10,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <ulobjmgr/ulobjmgr.h>
@@ -97,7 +97,7 @@ void freeInfoArray(UlobjProcCB *procCB);
 void initializeInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVersion);
 
 /* ---------------------------------------------------------------------------
- * libult objects in user memory (read with ksceKernelCopyFromUserProc)
+ * libult objects in user memory (read with sceKernelCopyFromUserProc)
  */
 
 /* a pointer field of a user object is valid unless it is NULL or -1 */

@@ -13,10 +13,10 @@
 #include <touch/touch.h>
 #include <sysmem/sysmem.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/cpu.h>
+#include <sysmem/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -294,10 +294,10 @@ int ds3UsbReadInput(unsigned int port, Ds3UsbInputReport *report)
 	controller = ds3FindDeviceByPort(port);
 	if (controller == NULL || controller->inputReady == 0)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
+	intr = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
 	*report = *(Ds3UsbInputReport *)
 		controller->inputRequests[controller->inputIndex]->buffer;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
 	if (controller->idProduct == 0x0268) {
 		if (report->bytes[6] == 0 && report->bytes[7] == 0 && report->bytes[8] == 0 &&
 			report->bytes[9] == 0) {
@@ -429,7 +429,7 @@ void ds3UsbAdvanceSetup(Ds3Device *controller, int transferred)
 		if (ksceBtGetRegisteredInfo(address, &scratch.info, 1) != 1) {
 			request.bmRequestType = 8;
 			request.bRequest = 5;
-			if (ds3IsSafeMode() == 0 && ksceSysrootIsUpdateMode() == 0 &&
+			if (ds3IsSafeMode() == 0 && SceSysrootForDriver_B0E1FC67() == 0 &&
 				memcmp(ds3Usb.localAddress, ds3EmptyBluetoothAddress, 6) != 0) {
 				deviceId = controller->usbDeviceId;
 				if (deviceId == DS3_USB_DEVICE_UNUSED)
@@ -553,10 +553,10 @@ startInput:
 	usb = &ds3Usb.devices[index];
 	if (usb->inputPipe < 0)
 		return;
-	interruptState = ksceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
+	interruptState = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
 	ksceUsbdInterruptTransfer(usb->inputPipe, input, usb->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }
@@ -659,7 +659,7 @@ void ds3UsbSetupComplete(int result, int transferred, void *argument)
 					((uint64_t)usb->deviceAddress[3] << 16) |
 					((uint64_t)usb->deviceAddress[4] << 8) | usb->deviceAddress[5];
 			}
-			if (ds3IsSafeMode() == 0 && ksceSysrootIsUpdateMode() == 0 &&
+			if (ds3IsSafeMode() == 0 && SceSysrootForDriver_B0E1FC67() == 0 &&
 				memcmp(ds3Usb.localAddress, ds3EmptyBluetoothAddress, 6) != 0) {
 				controller->setupStage = 4;
 				ds3UsbGetFeatureReport(controller, 0xf5, 8);
@@ -814,7 +814,7 @@ void ds3UsbSetupComplete(int result, int transferred, void *argument)
 			for (axis = 0; axis < 6; axis++)
 				usb->hostAddress[axis] = report[15 - axis];
 		}
-		if (ds3IsSafeMode() != 0 || ksceSysrootIsUpdateMode() != 0 ||
+		if (ds3IsSafeMode() != 0 || SceSysrootForDriver_B0E1FC67() != 0 ||
 			memcmp(ds3Usb.localAddress, ds3EmptyBluetoothAddress, 6) == 0)
 			goto startInput;
 		deviceId = controller->usbDeviceId;
@@ -1008,10 +1008,10 @@ startInput:
 	usb = &ds3Usb.devices[index];
 	if (usb->inputPipe < 0)
 		return;
-	interruptState = ksceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
+	interruptState = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
 	ksceUsbdInterruptTransfer(usb->inputPipe, input, usb->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }
@@ -1283,7 +1283,7 @@ void ds3UsbInputComplete(int result, int transferred, void *argument)
 			device->psSuppressionCount = 6;
 			ds3AssignPort(controller->deviceAddress, &controller->port, 1);
 			ds3SignalPortChange();
-			ksceKernelPowerTick(0);
+			SceKernelSuspendForDriver_E0489831(0);
 			goto ds3Battery;
 		}
 		if (result == -100) {
@@ -1341,7 +1341,7 @@ ds3Battery:
 				device->psSuppressionCount = 6;
 				ds3AssignPort(controller->deviceAddress, &controller->port, 2);
 				ds3SignalPortChange();
-				ksceKernelPowerTick(0);
+				SceKernelSuspendForDriver_E0489831(0);
 			} else {
 				ds3UsbSetDs4Control(controller, 1);
 			}
@@ -1371,11 +1371,11 @@ ds4Battery:
 	device = &ds3Usb.devices[index];
 	if (device->inputPipe < 0)
 		return;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ds3Usb.inputLock);
+	intr = SceCpuForDriver_D32ACE9E(&ds3Usb.inputLock);
 	index = controller->inputIndex;
 	input = controller->inputRequests[index]->buffer;
 	controller->inputIndex = index ^ 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
 	ksceUsbdInterruptTransfer(device->inputPipe, input, device->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }

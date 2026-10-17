@@ -5,7 +5,7 @@
 
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/cpu/atomic.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <intrmgr/syscall.h>
 #include "fios2_internal.h"
@@ -212,7 +212,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		goto out;
 	}
 	for (i = 0; i < FIOS_DH_MAX; i++) {
-		if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&storage->dh[i], 0, -1) != 0)
+		if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->dh[i], 0, -1) != 0)
 			continue;
 		/* the first pass measures, the second builds */
 		size = sceFiosKernelDHOpenInternal(ksceKernelGetProcessIdFromTLS(), outDH, path,

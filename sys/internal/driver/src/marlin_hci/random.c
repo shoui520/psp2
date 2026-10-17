@@ -2,6 +2,7 @@
 #include "buffer.h"
 #include <rtc/rtc.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/utils.h>
 
 int MarlinRandomCreate(SceMt19937Context **context)
 {
@@ -22,7 +23,7 @@ int MarlinRandomCreate(SceMt19937Context **context)
 	}
 	ksceRtcGetCurrentTick(&tick);
 	seed = (unsigned int)tick.tick;
-	ksceMt19937Init(memory, seed);
+	SceKernelUtilsForDriver_4C9A5730(memory, seed);
 	*context = memory;
 out:
 	if (*context == 0)
@@ -56,7 +57,7 @@ int MarlinRandomRead(SceMt19937Context *context, int size, void *data)
 		result = 3;
 	} else {
 		while (size != 0) {
-			value = ksceMt19937UInt(random);
+			value = SceKernelUtilsForDriver_92AEDFBC(random);
 			cursor[0] = value;
 			size--;
 			if (size == 0)

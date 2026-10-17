@@ -48,14 +48,14 @@ extern "C" {
  *
  * @return The CPU ID
  */
-int ksceKernelCpuId(void);
+int sceKernelCpuId(void);
 
 /**
  * @brief Suspend intr of calling processor
  *
  * @return The prev intr status
  */
-SceKernelIntrStatus ksceKernelCpuSuspendIntr(void);
+SceKernelIntrStatus SceCpuForDriver_821FC0EE(void);
 
 /**
  * @brief Suspend intr of calling processor
@@ -64,7 +64,7 @@ SceKernelIntrStatus ksceKernelCpuSuspendIntr(void);
  *
  * @return The prev intr status
  */
-SceKernelIntrStatus ksceKernelCpuResumeIntr(SceKernelIntrStatus prev_state);
+SceKernelIntrStatus sceKernelCpuResumeIntr(SceKernelIntrStatus prev_state);
 
 
 // sceKernelDomainTextMemcpy removed from 3.63
@@ -89,15 +89,15 @@ int ksceKernelDomainTextMemcpy(void *dst, const void *src, SceSize len);
 
 
 // sceKernelGetVmaccessRange had prototype changed in some times
-void ksceKernelGetVmaccessRange(SceUIntPtr *pRangeStart, SceUIntPtr *pRangeEnd);
+void SceCpuForKernel_C32687D0(SceUIntPtr *pRangeStart, SceUIntPtr *pRangeEnd);
 
-void ksceKernelCpuBranchPredictorInvalidateAll(void);
-void ksceKernelCpuBranchPredictorInvalidateAllIS(void);
+void SceCpuForKernel_050B8EF6(void);
+void SceCpuForKernel_7B0643E2(void);
 
-SceUInt8 ksceKernelCpuGetCONTEXTIDR(void);
-void ksceKernelCpuUpdateSCTLR(void);
+SceUInt8 SceCpuForKernel_FD54A91D(void);
+void SceCpuForKernel_C6426313(void);
 
-SceBool ksceKernelIsUncacheAddressInTmpFsGame(void *address);
+SceBool sceKernelIsUncacheAddressInTmpFsGame(void *address);
 
 
 #ifdef __cplusplus

@@ -6,7 +6,7 @@
  */
 
 #include "intrmgr.h"
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <systimer/timer_regs.h>
 
 #define USLEEP_TIMER		7
@@ -47,7 +47,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 	SceUInt32 control, now, next = 0;
 	int cpu;
 
-	ksceKernelSpinlockLowLock(USLEEP_LOCK);
+	SceCpuForDriver_BF82DEB2(USLEEP_LOCK);
 	control = s_timer->control;
 	s_timer->control = 0;
 	s_timer->intr = TIMER_INTR_CLEAR;
@@ -58,7 +58,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 		if (now > s_usleep.wakeTime[cpu]) {
 			s_usleep.waitingCpus &= ~(1 << cpu);
 			s_usleep.wakeTime[cpu] = 0;
-			ksceKernelSpinlockLowUnlock(&s_cpuWait[cpu]);
+			sceKernelSpinlockLowUnlock(&s_cpuWait[cpu]);
 		} else if (next == 0 || s_usleep.wakeTime[cpu] < next) {
 			next = s_usleep.wakeTime[cpu];
 			s_usleep.targetCpu = cpu;
@@ -69,7 +69,7 @@ static int UsleepIntrHandler(int intrCode, void *userCtx)
 		s_timer->compare = next;
 		s_timer->control = control;
 	}
-	ksceKernelSpinlockLowUnlock(USLEEP_LOCK);
+	sceKernelSpinlockLowUnlock(USLEEP_LOCK);
 	return -1;
 }
 
@@ -81,11 +81,11 @@ void sceKernelUsleep(SceUInt32 usec)
 
 	if (IllegalContext())
 		SCE_DBG_ASSERT_FAIL(127);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(USLEEP_LOCK);
+	intr = SceCpuForDriver_D32ACE9E(USLEEP_LOCK);
 	if (usec >= USLEEP_MAX)
 		usec = USLEEP_MAX;
 	s_cpuWait[cpu] = 0;
-	ksceKernelSpinlockLowLock(&s_cpuWait[cpu]);
+	SceCpuForDriver_BF82DEB2(&s_cpuWait[cpu]);
 	if (s_usleep.waitingCpus) {
 		wake = usec + s_timer->count;
 		s_usleep.wakeTime[cpu] = wake;
@@ -103,9 +103,9 @@ void sceKernelUsleep(SceUInt32 usec)
 		s_timer->control = USLEEP_TIMER_CONTROL;
 	}
 	s_usleep.waitingCpus |= 1 << cpu;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(USLEEP_LOCK, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(USLEEP_LOCK, intr);
 	/* until UsleepIntrHandler releases it */
-	ksceKernelSpinlockLowLock(&s_cpuWait[cpu]);
+	SceCpuForDriver_BF82DEB2(&s_cpuWait[cpu]);
 }
 
 int InitUsleepTimer(int remap)
@@ -122,14 +122,14 @@ int InitUsleepTimer(int remap)
 		opt.size = sizeof(opt);
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 		opt.paddr = TIMER_WORD_REG_BASE(USLEEP_TIMER);
-		memBlockId = ksceKernelAllocMemBlock("SceTimerForUsleep",
+		memBlockId = SceSysmemForDriver_C94850C9("SceTimerForUsleep",
 						     SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 						     TIMER_REG_SIZE, &opt);
 		if (memBlockId < 0) {
 			SCE_DBG_PRINTF(0xb, 205, "remap Word Timer7 failed. 0x%08x\n", memBlockId);
 			SCE_DBG_ASSERT_FAIL(206);
 		}
-		ksceKernelGetMemBlockBase(memBlockId, &base);
+		SceSysmemForDriver_A841EDDA(memBlockId, &base);
 		s_timer = base;
 	} else {
 		s_timer = (void *)TIMER_WORD_REG_BASE(USLEEP_TIMER);

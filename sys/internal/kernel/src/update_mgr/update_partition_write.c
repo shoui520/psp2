@@ -52,7 +52,7 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 4096;
-	readBuffer = ksceKernelAllocHeapMemoryWithOption(heapId, 0x40000, &option);
+	readBuffer = SceSysmemForDriver_49D4DD9B(heapId, 0x40000, &option);
 	if (!readBuffer) {
 		result = (int)0x800f020c;
 		goto close;
@@ -114,7 +114,7 @@ ioError:
 	result = (int)0x800f0205;
 	updateLastResult = error | 0x0d010000;
 free:
-	ksceKernelFreeHeapMemory(heapId, readBuffer);
+	sceKernelFreeHeapMemory(heapId, readBuffer);
 close:
 	ksceIoClose(fd);
 restorePermission:

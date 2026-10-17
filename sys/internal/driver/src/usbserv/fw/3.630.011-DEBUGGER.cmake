@@ -101,14 +101,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCreateThread
 	ksceKernelSetEventFlag
 	ksceKernelCreateMutex
-	ksceSysrootIsSafeMode
-	ksceKernelPrintfWithInfo
-	ksceKernelRegisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
-	ksceKernelPowerTick
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	SceSysrootForDriver_834439A7
+	SceDebugForDriver_02B04343
+	sceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
+	SceKernelSuspendForDriver_E0489831
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	ScePwmForDriver_13161CCC
 	ScePervasiveForDriver_13CC07C9
 	ScePervasiveForDriver_29E65AE1

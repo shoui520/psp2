@@ -7,7 +7,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/lowio/iftu.h>
 #include <psp2common/display.h>

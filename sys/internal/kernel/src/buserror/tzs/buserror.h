@@ -2,9 +2,9 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
-#define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
-#define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
+#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
+#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
+#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
 
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/modulemgr.h>

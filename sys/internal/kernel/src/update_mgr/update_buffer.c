@@ -37,12 +37,12 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
 		kernelOption.alignment = 4096;
-		kernelMemBlock = ksceKernelAllocMemBlock(updateKernelBufferNames[index],
+		kernelMemBlock = SceSysmemForDriver_C94850C9(updateKernelBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_GAME_RW,
 				((size + 4095) >> 12) << 12, &kernelOption);
 		if (kernelMemBlock < 0)
 			goto failed;
-		userMemBlock = ksceKernelGetMemBlockBase(kernelMemBlock, &kernelBuffer);
+		userMemBlock = SceSysmemForDriver_A841EDDA(kernelMemBlock, &kernelBuffer);
 		if (userMemBlock)
 			goto failed;
 	} else {
@@ -51,10 +51,10 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		userOption.pid = pid;
 		userOption.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 		userOption.alignment = 4096;
-		userMemBlock = ksceKernelAllocMemBlock(updateUserBufferNames[index],
+		userMemBlock = SceSysmemForDriver_C94850C9(updateUserBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW,
 				((size + 4095) >> 12) << 12, &userOption);
-		if (userMemBlock < 0 || ksceKernelGetMemBlockBase(userMemBlock, &userBuffer))
+		if (userMemBlock < 0 || SceSysmemForDriver_A841EDDA(userMemBlock, &userBuffer))
 			goto failed;
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
@@ -62,9 +62,9 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		kernelOption.alignment = 4096;
 		kernelOption.attr = ALLOC_ATTR_SHARE_PHYPAGE |
 				SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
-		kernelMemBlock = ksceKernelAllocMemBlock(updateKernelBufferNames[index],
+		kernelMemBlock = SceSysmemForDriver_C94850C9(updateKernelBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW, 0, &kernelOption);
-		if (kernelMemBlock < 0 || ksceKernelGetMemBlockBase(kernelMemBlock, &kernelBuffer))
+		if (kernelMemBlock < 0 || SceSysmemForDriver_A841EDDA(kernelMemBlock, &kernelBuffer))
 			goto failed;
 	}
 	if (!kernelBuffer)
@@ -107,9 +107,9 @@ int UpdateUtilReleaseBuffer(void *buffer, SceUID pid)
 			entry->allocated = 0;
 		}
 		if (entry->kernelBuffer && !entry->allocated && !entry->inUse) {
-			kernelFreeResult = ksceKernelFreeMemBlock(entry->kernelMemBlock);
+			kernelFreeResult = SceSysmemForDriver_009E1C61(entry->kernelMemBlock);
 			if (entry->userMemBlock > 0)
-				userFreeResult = ksceKernelFreeMemBlock(entry->userMemBlock);
+				userFreeResult = SceSysmemForDriver_009E1C61(entry->userMemBlock);
 			entry->kernelMemBlock = 0;
 			entry->userMemBlock = 0;
 			if (userFreeResult < 0 && buffer == entry->kernelBuffer)

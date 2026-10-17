@@ -4,7 +4,7 @@
 #include "dsi_data.h"
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "dsi_regs.h"
 #include <sysmem/sysevent.h>
 
@@ -77,7 +77,7 @@ static int DsiIntrPending(int intrCode, int subIntr)
 static int DsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	uint32_t mask;
 
 	mask = (ctx->subIntrMask & ~(1U << subIntr)) | ((handler != NULL) << subIntr);
@@ -87,7 +87,7 @@ static int DsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 		(void)ctx->registers->interruptEnable;
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -95,7 +95,7 @@ static int DsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 static int DsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	uint32_t mask = ctx->subIntrMask;
 
 	if (enabled != NULL)
@@ -107,7 +107,7 @@ static int DsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 		(void)ctx->registers->interruptEnable;
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -143,9 +143,9 @@ static int DsiShortWrite(unsigned head, uint32_t packet)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_DISABLED;
 	}
 	regs = s_dsi[head].registers;
@@ -164,7 +164,7 @@ static int DsiShortWrite(unsigned head, uint32_t packet)
 	regs->commandStatusClear = SCE_DSI_COMMAND_DONE;
 	while (regs->commandStatus & SCE_DSI_COMMAND_DONE)
 		;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -182,9 +182,9 @@ static int DsiRead(unsigned head, uint32_t packet, uint8_t *data, int size)
 	if ((unsigned)size > 32)
 		return DSI_ERROR_PARAM;
 	ctx = &s_dsi[head];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_DISABLED;
 	}
 	regs = s_dsi[head].registers;
@@ -200,7 +200,7 @@ static int DsiRead(unsigned head, uint32_t packet, uint8_t *data, int size)
 		data[i + 2] = word >> 16;
 		data[i + 3] = word >> 24;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -213,9 +213,9 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	uint64_t target, output;
 	uint32_t intr, status, mask;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return -2;
 	}
 	status = regs->interruptStatus;
@@ -240,7 +240,7 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	}
 	LowioDmb();
 	mask = ctx->subIntrMask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	if ((status & 1) && (mask & 1))
 		ksceKernelTriggerSubIntr(intrCode, 0, (void *)0);
 	if ((status & 2) && (mask & 2))
@@ -258,7 +258,7 @@ static int DsiIntrHandler(int intrCode, void *arg)
 static int DsiDisableSubIntr(int intrCode, int subIntr)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	uint32_t mask;
 
 	mask = ctx->subIntrMask & ~(1U << subIntr);
@@ -268,7 +268,7 @@ static int DsiDisableSubIntr(int intrCode, int subIntr)
 		(void)ctx->registers->interruptEnable;
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -276,7 +276,7 @@ static int DsiDisableSubIntr(int intrCode, int subIntr)
 static int DsiEnableSubIntr(int intrCode, int subIntr)
 {
 	DsiContext *ctx = intrCode == DSI_INTR_HEAD1 ? &s_dsi[1] : &s_dsi[0];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	uint32_t mask;
 
 	mask = ctx->subIntrMask | 1U << subIntr;
@@ -286,7 +286,7 @@ static int DsiEnableSubIntr(int intrCode, int subIntr)
 		(void)ctx->registers->interruptEnable;
 		LowioDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -353,15 +353,15 @@ static __attribute__((noinline)) int DsiInit(void)
 		opt.attr = 2;
 		if (i) {
 			opt.paddr = DSI_REG_BASE(1);
-			ret = ksceKernelAllocMemBlock("SceDsi1Reg", 0x20100806, 0x1000, &opt);
+			ret = SceSysmemForDriver_C94850C9("SceDsi1Reg", 0x20100806, 0x1000, &opt);
 		} else {
 			opt.paddr = DSI_REG_BASE(0);
-			ret = ksceKernelAllocMemBlock("SceDsi0Reg", 0x20100806, 0x1000, &opt);
+			ret = SceSysmemForDriver_C94850C9("SceDsi0Reg", 0x20100806, 0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		s_dsi[i].uid = ret;
-		ksceKernelGetMemBlockBase(ret, &base);
+		SceSysmemForDriver_A841EDDA(ret, &base);
 		s_dsi[i].registers = base;
 	}
 	s_dsi[0].intrCode = DSI_INTR_HEAD0;
@@ -370,7 +370,7 @@ static __attribute__((noinline)) int DsiInit(void)
 		&s_dsi[0], 0xa0, 0xf, &s_dsiIntrOpt);
 	ksceKernelRegisterIntrHandler(DSI_INTR_HEAD1, "SceDsi1", 0, DsiIntrHandler,
 		&s_dsi[1], 0xa0, 0xf, &s_dsiIntrOpt);
-	ksceKernelRegisterSysEventHandler("SceDsi", DsiSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceDsi", DsiSysEvent, NULL);
 	s_dsi[0].continuousClock = 0;
 	s_dsi[1].continuousClock = 1;
 	ret = kscePervasiveGetSoCRevision();
@@ -767,9 +767,9 @@ int ksceDsiEnableHead(unsigned head)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
 	ScePervasiveForDriver_350BF570(head);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;
 	}
 	regs = s_dsi[head].registers;
@@ -816,7 +816,7 @@ int ksceDsiEnableHead(unsigned head)
 		regs->videoProgram = program[i];
 	regs->commandMode = 1;
 	ctx->enabled = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	ksceKernelEnableIntr(ctx->intrCode);
 	return 0;
 }
@@ -830,9 +830,9 @@ int ksceDsiDisableHead(unsigned head)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;
 	}
 	ctx->enabled = 0;
@@ -850,7 +850,7 @@ int ksceDsiDisableHead(unsigned head)
 	regs->phyReset = 1;
 	(void)regs->status;
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	ScePervasiveForDriver_F1908D3C(head);
 	return 0;
 }
@@ -870,9 +870,9 @@ int ksceDsiStartDisplay(unsigned head, unsigned start)
 	if (start > 4)
 		return DSI_ERROR_PARAM;
 	ctx = &s_dsi[head];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return DSI_ERROR_VIC;
 	}
 	mode = ctx->mode;
@@ -975,7 +975,7 @@ int ksceDsiStartDisplay(unsigned head, unsigned start)
 		control = s_dsiStartModes[start - 1];
 	regs->control = control;
 	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -988,9 +988,9 @@ int ksceDsiSendBlankingPacket(unsigned head)
 	if (head > 1)
 		return DSI_ERROR_HEAD;
 	ctx = &s_dsi[head];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	if (!ctx->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 		return 0;
 	}
 	regs = s_dsi[head].registers;
@@ -1018,7 +1018,7 @@ int ksceDsiSendBlankingPacket(unsigned head)
 	regs->control = 0;
 	(void)regs->control;
 	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 

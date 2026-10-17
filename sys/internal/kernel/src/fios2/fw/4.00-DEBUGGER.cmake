@@ -69,13 +69,13 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0x497B5DC9
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelStrncpyFromUser
-	ksceKernelAtomicCompareAndSet32
-	ksceKernelPrintfWithInfo
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_DB3EC244
+	SceCpuForDriver_CDA96E81
+	SceDebugForDriver_02B04343
 	memset
 	strncmp
 	__strlcat_chk

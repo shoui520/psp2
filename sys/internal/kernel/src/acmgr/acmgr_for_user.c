@@ -2,7 +2,7 @@
  * User syscalls (library SceSblACMgr). No debug records; the file name follows
  * Sony's <module>_for_user.c (iofilemgr_for_user.c, threadmgr_for_user.c).
  */
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include "acmgr_internal.h"
 
 static int isGameProgramForUser(SceUInt32 *result);
@@ -17,7 +17,7 @@ int _sceSblACMgrIsGameProgram(SceUInt32 *pResult)
 	result = __builtin_alloca(sizeof(*result));
 	*result = 0;
 	ret = isGameProgramForUser(result);
-	err = ksceKernelCopyToUser(pResult, result, sizeof(*result));
+	err = SceSysmemForDriver_6D88EF8A(pResult, result, sizeof(*result));
 	return err < 0 ? err : ret;
 }
 

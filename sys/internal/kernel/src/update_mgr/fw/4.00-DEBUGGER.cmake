@@ -265,28 +265,28 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoSync
 	ksceIoRead
 	ksceIoClose
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelStrncpyFromUser
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsTest
-	ksceSblAimgrIsJapaneseFat
-	ksceSblAimgrIsGenuineVITA
-	ksceSblAimgrIsGenuineDolce
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelPrintfWithInfo
-	ksceKernelCheckDipsw
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceSysmemForDriver_DB3EC244
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_3B638885
+	SceSblAIMgrForDriver_6D5A3FC9
+	SceSblAIMgrForDriver_963CA644
+	SceSblAIMgrForDriver_C6E83F34
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceDebugForDriver_02B04343
+	SceDipswForDriver_A98FC2FD
 	memset
 	strncmp
 	memcpy
@@ -300,21 +300,21 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	ksceSha256BlockUpdate
-	ksceSha256BlockResult
-	ksceSha256Digest
-	ksceSha256BlockInit
+	SceKernelUtilsForDriver_236A9097
+	SceKernelUtilsForDriver_4899CD4B
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_D909FA2C
 	SceSysrootForDriver_17DD213C
 	SceSysrootForDriver_217B2871
-	ksceKernelSysrootSetGetSystemSwVersionFunc
+	SceSysrootForDriver_3276086B
 	SceSysrootForDriver_47724459
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
+	SceSysrootForDriver_55392965
 	SceSysrootForDriver_631141E2
-	ksceKernelInvokeInitCallback
+	SceSysrootForDriver_93CD44CD
 	SceSysrootForDriver_9A486846
 	SceSysrootForDriver_9E96D990
 	SceSysrootForDriver_9EC02A41
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_B0E1FC67
 	ksceKernelSetPermission
 	ksceKernelWaitEventFlag
 	sceKernelExitThread
@@ -438,11 +438,11 @@ set(MODULE_IMPORT_FUNCS
 	SceTouchForDriver_63DCF2FE
 	SceTouchForDriver_DDCF5145
 	ksceTouchGetDeviceInfo
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceKernelPowerTick
-	ksceKernelRegisterProcEventHandler
+	SceKernelSuspendForDriver_E0489831
+	sceKernelRegisterProcEventHandler
 	SceDeci4pCpupForDriver_02CDA82C
 	SceDeci4pCpupForDriver_2BAD7B39
 	SceDeci4pCpupForDriver_7998FFD8

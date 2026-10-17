@@ -75,14 +75,14 @@ SceVfsMount *vfs_alloc_mount(void)
 	SceUID uid;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
 	mnt = g_freeMntList;
 	if (mnt == NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 		return NULL;
 	}
 	g_freeMntList = mnt->mnt_list_next;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 	fdlock = (struct FdLock *)mnt->opaque;
 	mnt->fd_lock = fdlock;
 	uid = ksceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
@@ -99,11 +99,11 @@ SceVfsMount *vfs_alloc_mount(void)
 		ksceKernelDeleteMutex(fdlock->mutex);
 		fdlock->mutex = -1;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
 		mnt->mnt_list_next = g_freeMntList;
 	g_freeMntList = mnt;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 	return NULL;
 }
 
@@ -254,7 +254,7 @@ int vfs_free_vop_table(SceVopTable *tbl)
 			return 0;
 		}
 	}
-	ret = ksceKernelFreeHeapMemory(g_vfsNcacheHeap, tbl);
+	ret = sceKernelFreeHeapMemory(g_vfsNcacheHeap, tbl);
 	vfs_unlock_vfs();
 	return ret;
 }
@@ -332,7 +332,7 @@ SceVopTable *vfs_alloc_vop_table(void)
 			return tbl;
 		}
 	}
-	tbl = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, sizeof(SceVopTable));
+	tbl = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, sizeof(SceVopTable));
 	vfs_unlock_vfs();
 	return tbl;
 }
@@ -350,17 +350,17 @@ int vfs_debug_extend_buff(int index)
 		ret = 0;
 		goto out;
 	}
-	uid = ksceKernelAllocMemBlock("SceIoFileDebug", 0x10f0d006, 0x10000, NULL);
+	uid = SceSysmemForDriver_C94850C9("SceIoFileDebug", 0x10f0d006, 0x10000, NULL);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 2918, "cound not allocate dbg memory ... %d 0x%x\n", uid,
 				     uid);
 		ret = uid;
 		goto out;
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
-	pool = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, 0x220);
+	SceSysmemForDriver_A841EDDA(uid, &base);
+	pool = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, 0x220);
 	if (pool == NULL) {
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 		goto out;
 	}
@@ -370,8 +370,8 @@ int vfs_debug_extend_buff(int index)
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 2948, "bufferPoolInitialize() failed ... %d 0x%x\n",
 				     ret, ret);
-		ksceKernelFreeMemBlock(uid);
-		ksceKernelFreeHeapMemory(g_vfsNcacheHeap, pool);
+		SceSysmemForDriver_009E1C61(uid);
+		sceKernelFreeHeapMemory(g_vfsNcacheHeap, pool);
 	} else {
 		g_vfsDebugMemBlock[index] = uid;
 		g_vfsDebugBufferPool[index] = pool;
@@ -479,11 +479,11 @@ void vfs_free_mount(SceVfsMount *mnt)
 			SCE_DBG_PRINTF(0xf, 379, "fumount table free failed ret=0x%x tbl=%p\n", ret,
 				       mnt->fumount);
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_freeMntListLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
 		mnt->mnt_list_next = g_freeMntList;
 	g_freeMntList = mnt;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 }
 
 SceBool vfsIsLockedMnt(SceVfsMount *mnt)
@@ -616,7 +616,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 		return ret;
 	}
 	if ((info.currentOwnerId & 0x40000000) != 0)
-		info.currentOwnerId = kscePUIDtoGUID(SCE_KERNEL_PROCESS_ID, info.currentOwnerId);
+		info.currentOwnerId = SceSysmemForDriver_45D22597(SCE_KERNEL_PROCESS_ID, info.currentOwnerId);
 	owner = info.currentOwnerId;
 	if (ksceKernelGetThreadId() != owner) {
 		SCE_DBG_PRINTF(0xf, 1005, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n",
@@ -782,12 +782,12 @@ struct Ncache *vfs_alloc_ncache(SceUID heap, const VfsPathElem *elem)
 	struct Ncache *nc;
 	char *name;
 
-	name = ksceKernelAllocHeapMemory(heap, elem->len + 1);
+	name = SceSysmemForDriver_7B4CB60A(heap, elem->len + 1);
 	if (name == NULL)
 		return NULL;
-	nc = ksceKernelAllocHeapMemory(heap, sizeof(*nc));
+	nc = SceSysmemForDriver_7B4CB60A(heap, sizeof(*nc));
 	if (nc == NULL) {
-		ksceKernelFreeHeapMemory(heap, name);
+		sceKernelFreeHeapMemory(heap, name);
 		return NULL;
 	}
 	memset(nc, 0, sizeof(*nc));
@@ -797,8 +797,8 @@ struct Ncache *vfs_alloc_ncache(SceUID heap, const VfsPathElem *elem)
 
 void vfs_free_ncache_heap(struct Ncache *nc, SceUID heap)
 {
-	ksceKernelFreeHeapMemory(heap, nc->name);
-	ksceKernelFreeHeapMemory(heap, nc);
+	sceKernelFreeHeapMemory(heap, nc->name);
+	sceKernelFreeHeapMemory(heap, nc);
 }
 
 void vfs_free_ncache(struct Ncache *nc)
@@ -933,7 +933,7 @@ int vfsFreeVnode(SceVfsVnode *vp)
 	vfsUnlockMnt(vp->core.mnt);
 	fini_vnode(vp);
 	ret = bufferPoolFree(&g_vnodePool, vp);
-	ksceKernelAtomicSubAndGet32(&g_total_vnode_num, 1);
+	SceCpuForDriver_A4884C4E(&g_total_vnode_num, 1);
 	return ret;
 }
 
@@ -1134,14 +1134,14 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 /* name unknown: drops a file's opened-entry count and closes its UID */
 int vfs_close_file(SceVfsVnode *vp, SceUID fd)
 {
-	ksceKernelAtomicSubAndGet32(&vp->core.mnt->opened_entry_num, 1);
-	return ksceGUIDClose(fd);
+	SceCpuForDriver_A4884C4E(&vp->core.mnt->opened_entry_num, 1);
+	return sceGUIDClose(fd);
 }
 
 /* name unknown: closes a dummy file's UID */
 int vfs_close_file_dummy(SceUID fd)
 {
-	return ksceGUIDClose(fd);
+	return sceGUIDClose(fd);
 }
 
 int vfs_convert_file(SceUID fd, SceVfsFile **file)
@@ -1149,7 +1149,7 @@ int vfs_convert_file(SceUID fd, SceVfsFile **file)
 	SceUIDVfsFileObject *obj;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(fd, &g_vfsFileClass, (SceObjectBase **)&obj);
+	ret = SceSysmemForDriver_00ED6C14(fd, &g_vfsFileClass, (SceObjectBase **)&obj);
 	if (ret == 0) {
 		*file = &obj->file;
 	} else {
@@ -1168,7 +1168,7 @@ int vfs_release_file(SceUID fd)
 {
 	int ret;
 
-	ret = ksceGUIDReleaseObject(fd);
+	ret = sceGUIDReleaseObject(fd);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 1844, "sceGUIDReleaseObject failed 0x%x 0x%x\n", ret,
 				     ret);
@@ -1244,7 +1244,7 @@ SceVfsMount *vfs_get_mnt_list(void)
 int vfs_file_class_init(void)
 {
 	__builtin_memset(&g_vfsFileClass, 0, sizeof(g_vfsFileClass));
-	return ksceUIDClassInitClass(&g_vfsFileClass, "SceUIDVfsFileClass", ksceKernelGetUIDClass(),
+	return SceSysmemForDriver_61317102(&g_vfsFileClass, "SceUIDVfsFileClass", SceSysmemForDriver_85336A1C(),
 				     sizeof(SceUIDVfsFileObject), vfs_file_class_constructor,
 				     vfs_file_class_destructor);
 }
@@ -1258,13 +1258,13 @@ int vfs_vnode_initialize(void)
 	SceSize size;
 	int ret, i;
 
-	buf = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, VFS_VNODE_MAX * sizeof(SceVfsVnode) + 8);
+	buf = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, VFS_VNODE_MAX * sizeof(SceVfsVnode) + 8);
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	vp = (SceVfsVnode *)(((SceUIntPtr)buf + 7) & ~7);
-	nodes = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, VFS_VNODE_MAX * sizeof(BufferPoolNode));
+	nodes = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, VFS_VNODE_MAX * sizeof(BufferPoolNode));
 	if (nodes == NULL) {
-		ksceKernelFreeHeapMemory(g_vfsNcacheHeap, vp);
+		sceKernelFreeHeapMemory(g_vfsNcacheHeap, vp);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
 	memset(vp, 0, VFS_VNODE_MAX * sizeof(SceVfsVnode));
@@ -1434,7 +1434,7 @@ int vfs_process_finalize(SceUID pid)
 		if (ret < 0 || (int)num < 1)
 			return ret;
 		for (i = 0; i < (int)num; i++) {
-			guid = kscePUIDtoGUID(pid, puid[i]);
+			guid = SceSysmemForDriver_45D22597(pid, puid[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF(0xf, 2224, "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
 					       guid, guid, puid[i]);
@@ -1453,7 +1453,7 @@ int vfs_process_finalize(SceUID pid)
 				ret = vfs_process_close(guid, file);
 			}
 			if (ret == 0)
-				kscePUIDClose(pid, puid[i]);
+				SceSysmemForDriver_84A4AF5E(pid, puid[i]);
 			vfs_release_file(guid);
 		}
 	} while (num == 0x40);
@@ -1472,7 +1472,7 @@ void vfs_vop_table_cache_initialize(void)
 
 	for (entry = g_vopTableCache; entry != g_vopTableCache + VFS_VOP_TABLE_CACHE_NUM;
 	     entry++)
-		*entry = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, sizeof(SceVopTable));
+		*entry = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, sizeof(SceVopTable));
 }
 
 char *vfs_path_buff_alloc(void)
@@ -1480,17 +1480,17 @@ char *vfs_path_buff_alloc(void)
 	char *buf;
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_pathBuffLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_pathBuffLock);
 	for (i = 0; i < VFS_PATH_BUFF_CACHE_NUM; i++) {
 		buf = g_pathBuffCache[i];
 		if (buf != NULL) {
 			g_pathBuffCache[i] = NULL;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
 			goto clear;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
-	buf = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, VFS_PATH_BUFF_SIZE);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
+	buf = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, VFS_PATH_BUFF_SIZE);
 	if (buf == NULL)
 		return NULL;
 clear:
@@ -1502,16 +1502,16 @@ void vfs_path_buff_free(char *buf)
 {
 	int intr, ret, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_pathBuffLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_pathBuffLock);
 	for (i = 0; i < VFS_PATH_BUFF_CACHE_NUM; i++) {
 		if (g_pathBuffCache[i] == NULL) {
 			g_pathBuffCache[i] = buf;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
 			return;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
-	ret = ksceKernelFreeHeapMemory(g_vfsNcacheHeap, buf);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_pathBuffLock, intr);
+	ret = sceKernelFreeHeapMemory(g_vfsNcacheHeap, buf);
 	if (ret != 0) {
 		SCE_DBG_PRINTF(0xf, 2455, "free buffer is %p retval=0x%x\n", buf, ret);
 		SCE_DBG_ASSERT(0, 2456);
@@ -1649,13 +1649,13 @@ int vfs_debug_path_create(SceVfsFile *file, const char *path)
 	char *buf;
 	int index;
 
-	dp = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, sizeof(*dp));
+	dp = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, sizeof(*dp));
 	if (dp == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	memset(dp, 0, sizeof(*dp));
 	buf = vfs_debug_allocate_buff(&index);
 	if (buf == NULL) {
-		ksceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
+		sceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
 	file->debug_path = dp;
@@ -1740,7 +1740,7 @@ int vfs_debug_path_free(SceVfsFile *file)
 	if (dp->openPathLength != 0 &&
 	    dp->openPathLength + dp->resolvedOpenPathLength + 2 > VFS_PATH_BUFF_SIZE)
 		bufferPoolFree(g_vfsDebugBufferPool[dp->openPathPool], dp->openPath);
-	ksceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
+	sceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
 	file->debug_path = NULL;
 	return 0;
 }
@@ -1771,7 +1771,7 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	if (ret == 0) {
 		vp->core.fd_num--;
 		file->vp = NULL;
-		if (ksceKernelCheckDipsw(0xd2) != 0) {
+		if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 			vfs_debug_path_free(file);
 			return 0;
 		}
@@ -1901,7 +1901,7 @@ int vfs_process_suspend(SceUID pid, int num)
 	SceUID guid;
 	int ret, err, i;
 
-	puid = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, num * sizeof(SceUID));
+	puid = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, num * sizeof(SceUID));
 	if (puid == NULL) {
 		SCE_DBG_PRINTF(0xf, 2779, "no memory ... 0x%x\n", num * sizeof(SceUID));
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -1909,7 +1909,7 @@ int vfs_process_suspend(SceUID pid, int num)
 	ret = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, puid, num, &got);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 2791, "scePUIDGetUIDVectorByClass failed ... 0x%x %d\n", ret, ret);
-		ksceKernelFreeHeapMemory(g_vfsNcacheHeap, puid);
+		sceKernelFreeHeapMemory(g_vfsNcacheHeap, puid);
 		return ret;
 	}
 	if (num != (int)got) {
@@ -1917,7 +1917,7 @@ int vfs_process_suspend(SceUID pid, int num)
 		num = got;
 	}
 	for (i = 0; i < (int)got; i++) {
-		guid = kscePUIDtoGUID(pid, puid[i]);
+		guid = SceSysmemForDriver_45D22597(pid, puid[i]);
 		if (guid < 0) {
 			SCE_DBG_PRINTF(0xf, 2807, "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", guid,
 				       guid, puid[i]);
@@ -1927,7 +1927,7 @@ int vfs_process_suspend(SceUID pid, int num)
 		if (err != 0)
 			SCE_DBG_PRINTF(0xf, 2815, "retval=0x%x\n", err);
 	}
-	ksceKernelFreeHeapMemory(g_vfsNcacheHeap, puid);
+	sceKernelFreeHeapMemory(g_vfsNcacheHeap, puid);
 	return ret;
 }
 
@@ -2017,7 +2017,7 @@ int vfs_create_file_object(SceUIDVfsFileObject **obj, const char *name)
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID:
-		return ksceGUIDKernelCreate(&g_vfsFileClass, name, (SceObjectBase **)obj);
+		return SceSysmemForDriver_56A13E90(&g_vfsFileClass, name, (SceObjectBase **)obj);
 	}
 	opt.pid = pid;
 	opt.object = NULL;
@@ -2032,7 +2032,7 @@ int vfs_create_file_object(SceUIDVfsFileObject **obj, const char *name)
 		opt.heapKind = 1;
 	else
 		opt.heapKind = 0;
-	return ksceGUIDKernelCreateWithOpt(&g_vfsFileClass, name,
+	return sceGUIDKernelCreateWithOpt(&g_vfsFileClass, name,
 		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)obj);
 }
 
@@ -2059,7 +2059,7 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 		return uid;
 	}
 	*file = &obj->file;
-	ksceKernelAtomicAddAndGet32(&mnt->opened_entry_num, 1);
+	SceCpuForDriver_5F6A8743(&mnt->opened_entry_num, 1);
 	return uid;
 }
 
@@ -2127,7 +2127,7 @@ int vfsGetNewVnode(SceVfsMount *mnt, SceVopTable *ops, int unused, SceVfsVnode *
 		heap = g_vfsNcacheHeap;
 	do {
 		while ((cur = g_total_vnode_num) < g_available_vnode_num) {
-			if (ksceKernelAtomicCompareAndSet32(&g_total_vnode_num, cur, cur + 1) != cur)
+			if (SceCpuForDriver_CDA96E81(&g_total_vnode_num, cur, cur + 1) != cur)
 				continue;
 			vp = bufferPoolAlloc(&g_vnodePool);
 			if (vp == NULL) {
@@ -2164,7 +2164,7 @@ int vfs_mount_initialize(SceUID heap)
 {
 	SceVfsMount *mnt, *end;
 
-	mnt = ksceKernelAllocHeapMemory(heap, VFS_MOUNT_MAX * sizeof(SceVfsMount));
+	mnt = SceSysmemForDriver_7B4CB60A(heap, VFS_MOUNT_MAX * sizeof(SceVfsMount));
 	if (mnt == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	g_freeMntListLock = 0;

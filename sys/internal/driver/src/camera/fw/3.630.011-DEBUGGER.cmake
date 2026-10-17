@@ -93,21 +93,21 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0x6FE062D1
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelFreeMemBlock
-	ksceKernelUnlockRangeWithMode
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelUnlockRangeProc
-	ksceKernelVARangeToPARange
-	ksceKernelLockRangeWithMode
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelGetMemBlockMemtypeByAddr
+	SceCpuForDriver_02796361
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_22CBE925
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_A8525B06
+	SceSysmemForDriver_AE36C775
+	sceKernelLockRangeWithMode
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_F3BBE2E1
 	memset
 	__aeabi_idiv
 	memcpy
@@ -139,8 +139,8 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_8CB01675
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
-	ksceKernelRegisterSysEventHandler
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	sceKernelRegisterProcEventHandler
 	ksceI2cTransferWriteRead
 	ksceI2cTransferWrite
 	ksceGpioSetPortMode

@@ -59,35 +59,35 @@ set(MODULE_IMPORT_NIDS
 	0x9AD8E213:F:0xF5AE24AC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceSha256BlockUpdate
-	ksceHmacSha1Digest
-	ksceSha1BlockUpdate
-	ksceSha256BlockResult
-	ksceSha1BlockResult
-	ksceMt19937Init
-	ksceHmacSha256Digest
-	ksceSha1Digest
-	ksceMt19937UInt
-	ksceSha256Digest
-	ksceAesEncrypt1
-	ksceAesDecrypt1
-	ksceSha256BlockInit
-	ksceSha1BlockInit
-	ksceAesInit1
+	SceKernelUtilsForDriver_236A9097
+	SceKernelUtilsForDriver_29A28957
+	SceKernelUtilsForDriver_478A6F3C
+	SceKernelUtilsForDriver_4899CD4B
+	SceKernelUtilsForDriver_48F24106
+	SceKernelUtilsForDriver_4C9A5730
+	SceKernelUtilsForDriver_83EFA1CC
+	SceKernelUtilsForDriver_87DC7F2F
+	SceKernelUtilsForDriver_92AEDFBC
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_D909FA2C
+	SceKernelUtilsForDriver_E4390FFA
+	SceKernelUtilsForDriver_F12B6451
 	ksceRtcGetCurrentTick
 	ksceKernelDeleteMutex
 	ksceKernelLockMutex
 	ksceKernelUnlockMutex
 	ksceKernelRunWithStack
 	ksceKernelCreateMutex
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
 	memset
 	__aeabi_uidivmod
 	__aeabi_uidiv

@@ -36,7 +36,7 @@ static inline void bt_busy_dump(int result)
 		time = BtGetSystemTimeWide();
 		if (time >= gBtBusyDumpTime) {
 			if (result)
-				ksceKernelPrintf("%s: r=%d mode=0x%x state=%d last_error=0x%x\n",
+				SceDebugForDriver_391B74B7("%s: r=%d mode=0x%x state=%d last_error=0x%x\n",
 						 __func__, result, gBtStack.mode,
 						 gBtStack.state, gBtStack.lastError);
 			gBtBusyDumpTime = time + 10000000;

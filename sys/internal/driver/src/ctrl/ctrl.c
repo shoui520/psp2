@@ -7,13 +7,12 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/procevent.h>
+#include <sysmem/sysroot.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 
 struct ctrlStorage ctrlStorage = {
 	.bdRemoconNotify = 0xff,
@@ -122,7 +121,7 @@ static inline __attribute__((always_inline)) int ctrlPeekBuffer(
 
 	if ((uint32_t)count - 1 >= 64)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	if (ksceKernelSysrootCheckModelCapability(1)) {
+	if (SceSysrootForDriver_8AA268D6(1)) {
 		if ((uint32_t)port > 4)
 			return SCE_CTRL_ERROR_INVALID_ARG;
 	} else if (port) {
@@ -131,7 +130,7 @@ static inline __attribute__((always_inline)) int ctrlPeekBuffer(
 	if (!samples)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 			ctrlStorage.processStorageKey, (void **)&process, 0) < 0 ||
 	    !process) {
@@ -160,7 +159,7 @@ static inline __attribute__((always_inline)) int ctrlPeekBuffer(
 		process->processState = 0;
 	result = count;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -188,7 +187,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 
 	if ((uint32_t)count - 1 >= 64)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	if (ksceKernelSysrootCheckModelCapability(1)) {
+	if (SceSysrootForDriver_8AA268D6(1)) {
 		if ((uint32_t)port > 4)
 			return SCE_CTRL_ERROR_INVALID_ARG;
 	} else if (port) {
@@ -199,7 +198,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	pid = sceKernelGetProcessId();
 	event = extended ? ctrlStorage.ports[port].negative :
 			   ctrlStorage.ports[port].positive;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 			ctrlStorage.processStorageKey, (void **)&lookup, 0) < 0 ||
 	    !lookup) {
@@ -213,11 +212,11 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	}
 	eventBit = process->ports[port].eventBit;
 	ring = process->ports[port].ring;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	result = ksceKernelWaitEventFlag(event, eventBit, SCE_EVENT_WAITOR, NULL, NULL);
 	if (result < 0)
 		return result;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ksceKernelClearEventFlag(event, ~eventBit);
 	lookup = NULL;
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
@@ -254,7 +253,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 		process->processState = 0;
 	result = count;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -357,7 +356,7 @@ static inline __attribute__((always_inline)) int ctrlUserBuffer(
 		result = ksceCtrlPeekBufferPositive(port, buffer->samples, count);
 	}
 	if (result > 0) {
-		copied = ksceKernelCopyToUser(samples, buffer->samples,
+		copied = SceSysmemForDriver_6D88EF8A(samples, buffer->samples,
 					    result * sizeof(*samples));
 		if (copied < 0) {
 			ksceKernelUnlockMutex(buffer->mutex, 1);
@@ -452,7 +451,7 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 	SceKernelIntrStatus intr;
 	int port, source, threshold, key;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (port = 0; port < 5; port++) {
 		sample = &samples[port];
 		memset(sample, 0, sizeof(*sample));
@@ -529,7 +528,7 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 	ctrlStorage.cachedRight = sample->sample.right;
 	ctrlStorage.cachedDown = sample->sample.down;
 	ctrlStorage.cachedLeft = sample->sample.left;
-	source = ksceKernelSysrootCheckModelCapability(1) ? 1 : 0;
+	source = SceSysrootForDriver_8AA268D6(1) ? 1 : 0;
 	for (port = source ? 4 : 0; port >= 0; port--) {
 		if (port)
 			previous[port] = ctrlStorage.cachedButtons[port];
@@ -551,14 +550,14 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 			ctrlStorage.powerTickPending = 1;
 	}
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5 : 1);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5 : 1);
 	     port++) {
 		events = ctrlStorage.ports[port].active & ~ctrlStorage.ports[port].blocked;
 		ksceKernelSetEventFlag(ctrlStorage.ports[port].positive, events);
 		ksceKernelSetEventFlag(ctrlStorage.ports[port].negative, events);
 	}
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -995,7 +994,7 @@ int SceCtrlForDriver_B26C2231(SceUID pid)
 	struct ctrlProcessStorage *process = NULL;
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.foregroundSelected = 1;
 	if (ctrlStorage.activeProcess != pid) {
 		ctrlStorage.activeProcessChangePending = 1;
@@ -1009,14 +1008,14 @@ int SceCtrlForDriver_B26C2231(SceUID pid)
 	}
 	if (ctrlStorage.virtualDriver)
 		ctrlStorage.virtualDriver->foregroundChanged(pid);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
 /* Names unknown: kernel side of the corresponding user APIs. */
 int ctrlIsMultiControllerSupported(void)
 {
-	return ksceKernelSysrootCheckModelCapability(1);
+	return SceSysrootForDriver_8AA268D6(1);
 }
 
 int ctrlGetWirelessControllerInfo(struct ctrlWirelessControllerInfo *info)
@@ -1046,7 +1045,7 @@ int ctrlSetButtonRemappingInfo(const struct ctrlButtonRemappingInfo *info)
 	unsigned int index;
 	int result = 0;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (!info) {
 		ctrlStorage.buttonRemapEnabled = 0;
 		goto out;
@@ -1062,7 +1061,7 @@ int ctrlSetButtonRemappingInfo(const struct ctrlButtonRemappingInfo *info)
 	__builtin_memcpy(&ctrlStorage.remapping, info, sizeof(*info));
 	ctrlStorage.buttonRemapEnabled = 1;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1126,7 +1125,7 @@ int ksceCtrlRegisterNotifyCallBack(SceUID callback)
 	result = ksceKernelGetCallbackCount(callback);
 	if (result < 0)
 		return result;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (index = 0; index < 16; index++) {
 		if (ctrlStorage.bdRemoconCallbacks[index] == -1) {
 			ctrlStorage.bdRemoconCallbacks[index] = callback;
@@ -1134,7 +1133,7 @@ int ksceCtrlRegisterNotifyCallBack(SceUID callback)
 			break;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1146,14 +1145,14 @@ int ksceCtrlUnregisterNotifyCallBack(SceUID callback)
 	result = ksceKernelGetCallbackCount(callback);
 	if (result < 0)
 		return result;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (index = 0; index < 16; index++) {
 		if (ctrlStorage.bdRemoconCallbacks[index] == callback) {
 			ctrlStorage.bdRemoconCallbacks[index] = -1;
 			ctrlStorage.bdRemoconCallbackOwners[index] = -1;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1166,7 +1165,7 @@ int ctrlRegisterBdRMCCallback(SceUID callback)
 	result = ksceKernelGetCallbackCount(callback);
 	if (result < 0)
 		return SCE_CTRL_ERROR_FATAL;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (index = 0; index < 16; index++) {
 		if (ctrlStorage.remoconReleaseCallbacks[index] == -1) {
 			ctrlStorage.remoconReleaseCallbacks[index] = callback;
@@ -1174,7 +1173,7 @@ int ctrlRegisterBdRMCCallback(SceUID callback)
 			break;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return index == 16 ? (int)SCE_CTRL_ERROR_FATAL : result;
 }
 
@@ -1186,7 +1185,7 @@ int ctrlUnregisterBdRMCCallback(SceUID callback)
 	result = ksceKernelGetCallbackCount(callback);
 	if (result < 0)
 		return SCE_CTRL_ERROR_FATAL;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (index = 0; index < 16; index++) {
 		if (ctrlStorage.remoconReleaseCallbacks[index] == callback) {
 			ctrlStorage.remoconReleaseCallbacks[index] = -1;
@@ -1195,7 +1194,7 @@ int ctrlUnregisterBdRMCCallback(SceUID callback)
 			break;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return index == 16 ? (int)SCE_CTRL_ERROR_FATAL : result;
 }
 
@@ -1205,13 +1204,13 @@ int ctrlGetProcessStatus(SceUID pid, int *status)
 	SceKernelIntrStatus intr;
 	int result = SCE_CTRL_ERROR_PRIV_REQUIRED;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 && process) {
 		*status = process->buttonIntercept == 1;
 		result = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1227,10 +1226,10 @@ int SceCtrlForDriver_5B708A15(SceUID pid, int mode)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.ctrlpProcess = mode ? pid : -1;
 	ctrlStorage.ctrlpMode = mode;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1240,9 +1239,9 @@ int ksceCtrlSetCtrlpCallback(void (*callback)(int, struct ctrlNativeSample *, in
 
 	if (!callback)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.ctrlpCallback = callback;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1256,7 +1255,7 @@ int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 
 	if (!callback)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	for (index = 0; index < 4; index++) {
 		entry = &ctrlStorage.buttonChangeCallbacks[index];
 		if (!entry->callback) {
@@ -1270,7 +1269,7 @@ int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 		index = SCE_CTRL_ERROR_FATAL;
 	if (buttons)
 		*buttons = ctrlStorage.notificationButtons;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return index;
 }
 
@@ -1317,7 +1316,7 @@ int ksceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 	mask = rule->Mask;
 	trigger = rule->Trigger;
 	target = rule->Target;
-	if (!ksceKernelSysrootCheckModelCapability(1)) {
+	if (!SceSysrootForDriver_8AA268D6(1)) {
 		if (mask & 0x100)
 			mask = (mask & ~0x100) | 0x400;
 		if (mask & 0x200)
@@ -1334,7 +1333,7 @@ int ksceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 	if (!ksceKernelIsIntrAllowedInCurrentContext() && sceKernelIsUserModeThread() &&
 	    ((mask | trigger | target) & (~ctrlStorage.maskForNonShell | 0x20000)))
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	pid = sceKernelGetProcessId();
 	entry = &ctrlStorage.rapidFire[0][index];
 	entry->make = rule->Make;
@@ -1347,7 +1346,7 @@ int ksceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 	entry->target = target;
 	entry->counter = 0;
 	entry->delay = delay;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1361,7 +1360,7 @@ int ksceCtrlSetButtonIntercept(int intercept)
 	if ((unsigned int)intercept > 1)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto out;
@@ -1377,7 +1376,7 @@ int ksceCtrlSetButtonIntercept(int intercept)
 	}
 	result = 0;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1391,13 +1390,13 @@ int ksceCtrlGetButtonIntercept(int *intercept)
 	if (!intercept)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 && process) {
 		*intercept = process->buttonIntercept == 1;
 		result = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1416,12 +1415,12 @@ int ksceCtrlSetButtonEmulation(unsigned int port, unsigned char slot,
 
 	if (port || slot > 3)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	emulation = &ctrlStorage.emulation[0][slot];
 	emulation->userButtons = userButtons;
 	emulation->kernelButtons = kernelButtons;
 	emulation->buttonDuration = duration;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1437,7 +1436,7 @@ int ksceCtrlSetAnalogEmulation(unsigned int port, unsigned char slot,
 
 	if (port || slot > 3)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	emulation = &ctrlStorage.emulation[0][slot];
 	emulation->userLx = userLx;
 	emulation->userLy = userLy;
@@ -1448,7 +1447,7 @@ int ksceCtrlSetAnalogEmulation(unsigned int port, unsigned char slot,
 	emulation->kernelRx = kernelRx;
 	emulation->kernelRy = kernelRy;
 	emulation->analogDuration = duration;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1457,12 +1456,12 @@ int ksceCtrlSetIdleCancelKey(uint32_t key0, uint32_t key1,
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.idleCancelKeys[0] = key0;
 	ctrlStorage.idleCancelKeys[1] = key1;
 	ctrlStorage.idleCancelKeys[2] = key2;
 	ctrlStorage.idleCancelKeys[3] = key3;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1471,7 +1470,7 @@ int ksceCtrlGetIdleCancelKey(uint32_t *key0, uint32_t *key1,
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (key0)
 		*key0 = ctrlStorage.idleCancelKeys[0];
 	if (key1)
@@ -1480,7 +1479,7 @@ int ksceCtrlGetIdleCancelKey(uint32_t *key0, uint32_t *key1,
 		*key2 = ctrlStorage.idleCancelKeys[2];
 	if (key3)
 		*key3 = ctrlStorage.idleCancelKeys[3];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1495,10 +1494,10 @@ int ksceCtrlSetIdleCancelThreshold(int threshold0, int threshold1)
 		threshold0 = 0x81;
 	if (threshold1 == -1)
 		threshold1 = 0x81;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.idleCancelThresholds[0] = threshold0;
 	ctrlStorage.idleCancelThresholds[1] = threshold1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1509,12 +1508,12 @@ int ksceCtrlGetIdleCancelThreshold(int *threshold0, int *threshold1)
 
 	if (!threshold0 || !threshold1)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	value = ctrlStorage.idleCancelThresholds[0];
 	*threshold0 = value == 0x81 ? -1 : value;
 	value = ctrlStorage.idleCancelThresholds[1];
 	*threshold1 = value == 0x81 ? -1 : value;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1543,7 +1542,7 @@ int ctrlPublishCachedSample(void)
 	sample.extended[3] = sample.sample.left;
 	ctrlPublishSample(0, &sample, 0);
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++) {
 		events = ctrlStorage.ports[port].active &
 			 ~ctrlStorage.ports[port].blocked;
@@ -1557,10 +1556,10 @@ SceUInt32 ctrlAlarmCallback(void *arg)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlPublishCachedSample();
 	ctrlStorage.samplingTimer = -1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1569,13 +1568,13 @@ int ctrlSamplingModeComplete(SceSysconPacket *packet, void *arg)
 	SceKernelIntrStatus intr;
 	int result = -1;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.samplingModePending = 0;
 	if ((packet->tx[0] | packet->tx[1] << 8) == 0x180) {
 		ctrlStorage.samplingMode = packet->tx[3] ? 2 : 0;
 		result = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1587,7 +1586,7 @@ int ctrlVblankCallback(void *arg, void *context, unsigned char priority)
 	uint32_t requestedMode;
 	uint8_t modeCommand;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (!ctrlStorage.samplePending && ctrlStorage.vblankSampling == 1) {
 		sample = &ctrlStorage.samplePacket;
 		sample->tx[0] = 0;
@@ -1617,9 +1616,9 @@ int ctrlVblankCallback(void *arg, void *context, unsigned char priority)
 	}
 	if (ctrlStorage.powerTickPending) {
 		ctrlStorage.powerTickPending = 0;
-		ksceKernelPowerTick(0);
+		SceKernelSuspendForDriver_E0489831(0);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	if (sample && ksceSysconCmdExecAsync(sample, 0, ctrlSampleComplete, NULL) < 0)
 		ctrlStorage.samplePending = 0;
 	if (mode && ksceSysconCmdExecAsync(mode, 0, ctrlSamplingModeComplete, NULL) < 0)
@@ -1669,7 +1668,7 @@ int ctrlCreateProcess(SceUID pid)
 	unsigned int port, bit, slot;
 	int result = SCE_CTRL_ERROR_FATAL;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 1) < 0 || !process)
 		goto unlock;
@@ -1679,7 +1678,7 @@ int ctrlCreateProcess(SceUID pid)
 	SceProcessmgrForDriver_D141C076(pid, &process->sdkVersion);
 	process->mode3Blocked = sceSblACMgrIsGameProgram(pid);
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++) {
 		eventBit = 0;
 		for (bit = 0; bit < 16; bit++) {
@@ -1691,7 +1690,7 @@ int ctrlCreateProcess(SceUID pid)
 		}
 		process->ports[port].eventBit = eventBit;
 		ctrlStorage.ports[port].blocked &= ~eventBit;
-		ring = ksceKernelAllocHeapMemory(ctrlStorage.sampleHeap, sizeof(*ring));
+		ring = SceSysmemForDriver_7B4CB60A(ctrlStorage.sampleHeap, sizeof(*ring));
 		process->ports[port].ring = ring;
 		ring->writeIndex = 0;
 		ring->readIndex = 0;
@@ -1710,7 +1709,7 @@ int ctrlCreateProcess(SceUID pid)
 	process->buttonIntercept = 0;
 	process->pendingButtonIntercept = 0;
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++) {
 		ksceKernelClearEventFlag(ctrlStorage.ports[port].positive,
 					 ~process->ports[port].eventBit);
@@ -1726,7 +1725,7 @@ int ctrlCreateProcess(SceUID pid)
 		}
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1739,17 +1738,17 @@ int ctrlDestroyProcess(SceUID pid)
 	int capability;
 	int result = SCE_CTRL_ERROR_FATAL;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ctrlStorage.activeProcess == pid)
 		ctrlStorage.activeProcess = -1;
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
 	for (port = 0; ; port++) {
-		capability = ksceKernelSysrootCheckModelCapability(1);
+		capability = SceSysrootForDriver_8AA268D6(1);
 		if (port >= (capability ? 5U : 1U))
 			break;
-		ksceKernelFreeHeapMemory(ctrlStorage.sampleHeap,
+		sceKernelFreeHeapMemory(ctrlStorage.sampleHeap,
 			process->ports[port].ring);
 	}
 	if (pid != -1) {
@@ -1768,7 +1767,7 @@ int ctrlDestroyProcess(SceUID pid)
 				entry->counter = 0;
 			}
 		}
-		capability = ksceKernelSysrootCheckModelCapability(1);
+		capability = SceSysrootForDriver_8AA268D6(1);
 	}
 	for (port = 0; port < (capability ? 5U : 1U); port++) {
 		ksceKernelClearEventFlag(ctrlStorage.ports[port].positive,
@@ -1777,7 +1776,7 @@ int ctrlDestroyProcess(SceUID pid)
 					 ~process->ports[port].eventBit);
 		ctrlStorage.ports[port].blocked &= ~process->ports[port].eventBit;
 		ctrlStorage.ports[port].active &= ~process->ports[port].eventBit;
-		capability = ksceKernelSysrootCheckModelCapability(1);
+		capability = SceSysrootForDriver_8AA268D6(1);
 	}
 	for (slot = 0; slot < 16; slot++) {
 		if (ctrlStorage.processes[slot] == pid) {
@@ -1788,33 +1787,33 @@ int ctrlDestroyProcess(SceUID pid)
 		}
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
 /* Names unknown: process lifecycle registration callbacks. */
-int ctrlCreateProcessCallback(SceUID pid, SceProcEventInvokeParam2 *args, int flags)
+int ctrlCreateProcessCallback(SceUID pid, ProcEventCreateParam *args, int flags)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlCreateProcess(pid);
 }
 
-int ctrlKillProcessCallback(SceUID pid, SceProcEventInvokeParam1 *args, int flags)
+int ctrlKillProcessCallback(SceUID pid, ProcEventParam *args, int flags)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlDestroyProcess(pid);
 }
 
-int ctrlExitProcessCallback(SceUID pid, SceProcEventInvokeParam1 *args, int flags)
+int ctrlExitProcessCallback(SceUID pid, ProcEventParam *args, int flags)
 {
 	if (pid < 0)
 		return pid;
 	return ctrlDestroyProcess(pid);
 }
 
-int ctrlActivateProcess(SceUID pid, int event, SceProcEventInvokeParam1 *args, int flags)
+int ctrlActivateProcess(SceUID pid, int event, ProcEventParam *args, int flags)
 {
 	struct ctrlProcessStorage *process = NULL;
 	SceKernelIntrStatus intr;
@@ -1823,7 +1822,7 @@ int ctrlActivateProcess(SceUID pid, int event, SceProcEventInvokeParam1 *args, i
 
 	if (event != 0x10000)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
@@ -1833,12 +1832,12 @@ int ctrlActivateProcess(SceUID pid, int event, SceProcEventInvokeParam1 *args, i
 		ctrlStorage.requestedSamplingMode++;
 	process->processState = 3;
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++)
 		ctrlStorage.ports[port].blocked &= ~process->ports[port].eventBit;
 	result = 0;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1875,7 +1874,7 @@ int _sceCtrlBdRMCForceReleaseCallback(SceUID pid)
 	return result;
 }
 
-int ctrlProcessEvent(SceUID pid, int event, SceProcEventInvokeParam1 *args, int flags)
+int ctrlProcessEvent(SceUID pid, int event, ProcEventParam *args, int flags)
 {
 	struct ctrlProcessStorage *process = NULL;
 	SceKernelIntrStatus intr;
@@ -1885,7 +1884,7 @@ int ctrlProcessEvent(SceUID pid, int event, SceProcEventInvokeParam1 *args, int 
 
 	if (event != 0x200 && event != 0x800)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
@@ -1894,7 +1893,7 @@ int ctrlProcessEvent(SceUID pid, int event, SceProcEventInvokeParam1 *args, int 
 		_sceCtrlBdRMCForceReleaseCallback(pid);
 	} else {
 		for (port = 0;
-		     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+		     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 		     port++)
 			ctrlStorage.ports[port].blocked |= process->ports[port].eventBit;
 		process->processState = 2;
@@ -1907,7 +1906,7 @@ int ctrlProcessEvent(SceUID pid, int event, SceProcEventInvokeParam1 *args, int 
 	}
 	result = 0;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return result;
 }
 
@@ -1918,10 +1917,10 @@ int _sceCtrlBdRemoconSendNotify(uint32_t notify)
 	unsigned int slot;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ctrlStorage.lock != 0, 2834);
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, ctrlStorage.lock != 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, ctrlStorage.lock != 0,
 				SCE_DBGINFO_FUNC(3062, "_sceCtrlGetBdRMCOwner"),
 				__builtin_return_address(0));
 	}
@@ -1954,7 +1953,7 @@ int _sceCtrlBdRemoconSendMergedNotify(const SceHdmiBdRemoconState *state)
 	uint32_t notify, current, buttons;
 	int result;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	buttons = state->buttons;
 	notify = state->state | state->stateExt;
 	ctrlStorage.bdRemoconButtons = buttons;
@@ -1979,7 +1978,7 @@ int _sceCtrlBdRemoconSendMergedNotify(const SceHdmiBdRemoconState *state)
 			SCE_DBG_ASSERT_FAIL(2951);
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -1990,12 +1989,12 @@ int _sceCtrlBdRemoconSendMergedNotify2(uint32_t buttons, uint32_t state,
 	uint32_t notify, current;
 	int result;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.bdRemoconButtons = buttons;
 	notify = state | (connected == 1 ? 0x10000000 : 0);
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, ctrlStorage.lock != 0,
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, ctrlStorage.lock != 0,
 			SCE_DBGINFO_FUNC(2879, "_sceCtrlBdRemoconSendMergedNotify"),
 			__builtin_return_address(0));
 #endif
@@ -2009,8 +2008,8 @@ int _sceCtrlBdRemoconSendMergedNotify2(uint32_t buttons, uint32_t state,
 		else
 			result = _sceCtrlBdRemoconSendNotify(current | 0x2000000);
 #if FW_DEBUG
-		if (result < 0 && ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		if (result < 0 && SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(2924, "_sceCtrlBdRemoconSendMergedNotify"),
 				__builtin_return_address(0));
 #endif
@@ -2020,14 +2019,14 @@ int _sceCtrlBdRemoconSendMergedNotify2(uint32_t buttons, uint32_t state,
 		if (result >= 0)
 			ctrlStorage.bdRemoconNotify = notify;
 #if FW_DEBUG
-		else if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0,
+		else if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0,
 				SCE_DBGINFO_FUNC(2951, "_sceCtrlBdRemoconSendMergedNotify"),
 				__builtin_return_address(0));
 #endif
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -2043,13 +2042,13 @@ int ctrlInitialize(void)
 	static const char *const extendedEventNames[5] = {
 		"SceCtrlExt0", "SceCtrlExt1", "SceCtrlExt2", "SceCtrlExt3", "SceCtrlExt4"
 	};
-	static const SceProcEventHandler events = {
+	static const SceKernelProcEventHandler events = {
 		.size = sizeof(events),
 		.create = ctrlCreateProcessCallback,
 		.exit = ctrlExitProcessCallback,
 		.kill = ctrlKillProcessCallback,
-		.stop = ctrlProcessEvent,
-		.start = ctrlActivateProcess,
+		.suspend = ctrlProcessEvent,
+		.resume = ctrlActivateProcess,
 	};
 	unsigned int port, slot;
 	SceSize heapSize;
@@ -2070,7 +2069,7 @@ int ctrlInitialize(void)
 	for (slot = 0; slot < 4; slot++)
 		ctrlStorage.accumulatedAxes[slot].analog = 0x80;
 	for (port = 0;
-	     port < (ksceKernelSysrootCheckModelCapability(1) ? 5U : 1U);
+	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
 	     port++) {
 		ctrlStorage.ports[port].active = 0;
 		ctrlStorage.ports[port].blocked = 0;
@@ -2079,9 +2078,9 @@ int ctrlInitialize(void)
 		ctrlStorage.ports[port].negative =
 			ksceKernelCreateEventFlag(extendedEventNames[port], 0x9000, 0, NULL);
 	}
-	ctrlStorage.systemEvents = ksceKernelRegisterSysEventHandler("SceCtrl",
+	ctrlStorage.systemEvents = sceKernelRegisterSysEventHandler("SceCtrl",
 						ctrlSystemEventCallback, NULL);
-	ctrlStorage.processEvents = ksceKernelRegisterProcEventHandler("SceCtrl", &events, 0);
+	ctrlStorage.processEvents = sceKernelRegisterProcEventHandler("SceCtrl", &events, 0);
 	SceSysconForDriver_901D6CD4(0);
 	ctrlStorage.maskForAll = 0x643fffff;
 	ctrlStorage.maskForNonShell = 0x403ffff;
@@ -2100,8 +2099,8 @@ int ctrlInitialize(void)
 	ctrlStorage.activeProcess = -1;
 	ctrlStorage.pendingActiveProcess = -1;
 	ctrlStorage.ctrlpProcess = -1;
-	ctrlStorage.updateMode = ksceSysrootIsUpdateMode();
-	ctrlStorage.safeMode = ksceSysrootIsSafeMode();
+	ctrlStorage.updateMode = SceSysrootForDriver_B0E1FC67();
+	ctrlStorage.safeMode = SceSysrootForDriver_834439A7();
 	ctrlStorage.processCount = 0;
 	memset(ctrlStorage.processes, 0xff, sizeof(ctrlStorage.processes));
 	ctrlStorage.lock = 0;
@@ -2109,8 +2108,8 @@ int ctrlInitialize(void)
 	ctrlStorage.processStorageKey = result;
 	if (result < 0)
 		return result;
-	heapSize = ksceKernelSysrootCheckModelCapability(1) ? 0x32500 : 0xa100;
-	ctrlStorage.sampleHeap = ksceKernelCreateHeap("SceCtrlHeap", heapSize, NULL);
+	heapSize = SceSysrootForDriver_8AA268D6(1) ? 0x32500 : 0xa100;
+	ctrlStorage.sampleHeap = SceSysmemForDriver_9328E0E8("SceCtrlHeap", heapSize, NULL);
 	ctrlCreateProcess(SCE_KERNEL_PROCESS_ID);
 	if (SceHdmiForDriver_05174BC2) {
 		result = SceHdmiForDriver_05174BC2(_sceCtrlBdRemoconSendMergedNotify);
@@ -2312,9 +2311,9 @@ int ksceCtrlSetBdRemoconConnected(uint32_t connected)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	ctrlStorage.bdRemoconConnected = connected;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -2328,14 +2327,14 @@ int ksceCtrlSetSamplingMode(int mode)
 	if ((uint32_t)mode > 3)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
 	}
 	if (mode == 3 && process->mode3Blocked) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	}
 	previous = process->samplingMode;
@@ -2346,7 +2345,7 @@ int ksceCtrlSetSamplingMode(int mode)
 		else if (ctrlStorage.requestedSamplingMode != 0)
 			ctrlStorage.requestedSamplingMode--;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return previous;
 }
 
@@ -2361,14 +2360,14 @@ int ctrlSetSamplingModeExt(int mode)
 	if ((uint32_t)mode > 3)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
 	}
 	if (mode == 3 && process->mode3Blocked) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	}
 	previous = process->samplingModeExt;
@@ -2379,7 +2378,7 @@ int ctrlSetSamplingModeExt(int mode)
 		else if (ctrlStorage.requestedSamplingMode != 0)
 			ctrlStorage.requestedSamplingMode--;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return previous;
 }
 
@@ -2392,14 +2391,14 @@ int ksceCtrlGetSamplingMode(int *mode)
 	if (!mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
 	}
 	*mode = process->samplingMode;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -2413,14 +2412,14 @@ int ctrlGetSamplingModeExt(int *mode)
 	if (!mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctrlStorage.lock);
+	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
 	}
 	*mode = process->samplingModeExt;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 	return 0;
 }
 
@@ -2451,7 +2450,7 @@ int sceCtrlGetSamplingMode(int *mode)
 	if (mode) {
 		result = ksceCtrlGetSamplingMode(&value);
 		if (!result)
-			result = ksceKernelCopyToUser(mode, &value, sizeof(value));
+			result = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2466,7 +2465,7 @@ int sceCtrlGetSamplingModeExt(int *mode)
 	if (mode) {
 		result = ctrlGetSamplingModeExt(&value);
 		if (!result)
-			result = ksceKernelCopyToUser(mode, &value, sizeof(value));
+			result = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2537,7 +2536,7 @@ int sceCtrlIsMultiControllerSupported(void)
 
 int sceCtrlRegisterBdRMCCallback(SceUID callback)
 {
-	SceUID guid = kscePUIDtoGUID(0, callback);
+	SceUID guid = SceSysmemForDriver_45D22597(0, callback);
 	uint32_t context;
 	int result;
 
@@ -2551,7 +2550,7 @@ int sceCtrlRegisterBdRMCCallback(SceUID callback)
 
 int sceCtrlUnregisterBdRMCCallback(SceUID callback)
 {
-	SceUID guid = kscePUIDtoGUID(0, callback);
+	SceUID guid = SceSysmemForDriver_45D22597(0, callback);
 	uint32_t context;
 	int result;
 
@@ -2585,7 +2584,7 @@ int sceCtrlGetAnalogStickCheckTarget(uint32_t *target)
 	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckTarget(&local);
 		if (!result)
-			result = ksceKernelCopyToUser(target, &local, sizeof(local));
+			result = SceSysmemForDriver_6D88EF8A(target, &local, sizeof(local));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2613,7 +2612,7 @@ int sceCtrlGetAnalogStickCheckMode(uint32_t *mode)
 	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckMode(&local);
 		if (!result)
-			result = ksceKernelCopyToUser(mode, &local, sizeof(local));
+			result = SceSysmemForDriver_6D88EF8A(mode, &local, sizeof(local));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2628,7 +2627,7 @@ int sceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 	if (!rule)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	result = ksceKernelCopyFromUser(&local, rule, sizeof(local));
+	result = SceSysmemForDriver_BC996A7A(&local, rule, sizeof(local));
 	if (!result)
 		result = ksceCtrlSetRapidFire(port, index, &local);
 	sceSyscallLeave(context);
@@ -2645,7 +2644,7 @@ int sceCtrlGetButtonIntercept(int *intercept)
 	context = sceSyscallEnter();
 	result = ksceCtrlGetButtonIntercept(&local);
 	if (!result)
-		result = ksceKernelCopyToUser(intercept, &local, sizeof(local));
+		result = SceSysmemForDriver_6D88EF8A(intercept, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2659,7 +2658,7 @@ int sceCtrlSetActuator(int port, const SceCtrlActuator *state)
 	if (!state)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	result = ksceKernelCopyFromUser(&local, state, sizeof(local));
+	result = SceSysmemForDriver_BC996A7A(&local, state, sizeof(local));
 	if (!result)
 		result = ctrlSetActuator(port, &local);
 	sceSyscallLeave(context);
@@ -2677,7 +2676,7 @@ int sceCtrlGetBatteryInfo(int port, uint8_t *battery)
 	context = sceSyscallEnter();
 	result = ctrlGetBatteryInfo(port, &local);
 	if (!result)
-		result = ksceKernelCopyToUser(battery, &local, sizeof(local));
+		result = SceSysmemForDriver_6D88EF8A(battery, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2693,7 +2692,7 @@ int sceCtrlGetControllerPortInfo(SceCtrlPortInfo *info)
 	context = sceSyscallEnter();
 	result = ksceCtrlGetControllerPortInfo(&local);
 	if (!result)
-		result = ksceKernelCopyToUser(info, &local, sizeof(local));
+		result = SceSysmemForDriver_6D88EF8A(info, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2708,7 +2707,7 @@ int sceCtrlGetProcessStatus(SceUID pid, int *status)
 	context = sceSyscallEnter();
 	result = ctrlGetProcessStatus(pid, &local);
 	if (!result)
-		result = ksceKernelCopyToUser(status, &local, sizeof(local));
+		result = SceSysmemForDriver_6D88EF8A(status, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2724,7 +2723,7 @@ int sceCtrlGetWirelessControllerInfo(struct ctrlWirelessControllerInfo *info)
 	context = sceSyscallEnter();
 	result = ctrlGetWirelessControllerInfo(&local);
 	if (!result)
-		result = ksceKernelCopyToUser(info, &local, sizeof(local));
+		result = SceSysmemForDriver_6D88EF8A(info, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2736,7 +2735,7 @@ int sceCtrlSetButtonRemappingInfo(const struct ctrlButtonRemappingInfo *info)
 	int result;
 
 	if (info) {
-		result = ksceKernelCopyFromUser(&local, info, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, info, sizeof(local));
 		if (result)
 			goto out;
 		info = &local;

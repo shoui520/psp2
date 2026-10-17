@@ -97,16 +97,16 @@ set(MODULE_IMPORT_NIDS
 	0xEB4E3738:F:0xFCE4171A
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
 	SceSysmemForDriver_C9928F5E
 	memset
 	memmove
 	strncpy
 	__stack_chk_fail
-	ksceKernelPrintfLevelWithInfo
+	SceDebugForDriver_D9703808
 	ksceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelPMonSetControlRegister
@@ -150,7 +150,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePamgrForDriver_FB04BBEF
 	ScePamgrForDriver_FB46C3CD
 	SceSysrootForDriver_39F1FD07
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	sceDfMgrOpen
 	sceDfMgrRecv
 	SceDeci4pDfMgrForDebugger_6D26CC56

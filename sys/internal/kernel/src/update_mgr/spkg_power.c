@@ -1,10 +1,10 @@
 #include <psp2kern/power.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/lowio/gpio.h>
 #include "update_internal.h"
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include <power/power.h>
 
 extern int updateSysconShutdownWorkaround;
@@ -95,14 +95,14 @@ int SpkgUtilPowerControl(int operation, int flags)
 		result = ksceGpioSetPortMode(0, 7, 0);
 		break;
 	case 7:
-		result = ksceKernelPowerTick(flags);
+		result = SceKernelSuspendForDriver_E0489831(flags);
 		break;
 	case 8:
 		result = 0;
-		if (!ksceSblAimgrIsTool() && !ksceSblAimgrIsTest())
+		if (!SceSblAIMgrForDriver_274663A0() && !SceSblAIMgrForDriver_3B638885())
 			break;
 		result = (int)0x800f0233;
-		if (ksceKernelCheckDipsw(194))
+		if (SceDipswForDriver_A98FC2FD(194))
 			result = 0;
 		break;
 	default:

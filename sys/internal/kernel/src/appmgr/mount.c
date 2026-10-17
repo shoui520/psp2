@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/npdrm.h>
 #include <psp2kern/fios2.h>
 #include <acmgr/acmgr.h>
@@ -28,7 +28,7 @@
 #include "process_content_internal.h"
 #include "savedata_params_internal.h"
 #include "param_sfo.h"
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/pfsmgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysclib.h>
@@ -204,9 +204,9 @@ int appmgrAddVirtualMountOverlay(SceUID pid, AppmgrVirtualMount *mount)
 
 int appmgrGetConsoleType(void)
 {
-	if (ksceSblAimgrIsCEX())
+	if (SceSblAIMgrForDriver_D78B04A2())
 		return 0;
-	if (ksceSblAimgrIsDEX())
+	if (SceSblAIMgrForDriver_F4B98F66())
 		return 1;
 	if (SceSblACMgrForDriver_E87D1777())
 		return 3;
@@ -243,7 +243,7 @@ char *appmgrAllocMountPath(void)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	return ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	return SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 }
 
 int appmgrCheckSaveDataFreeSpace(const char *path, SceUInt64 requiredBytes)
@@ -415,7 +415,7 @@ removeHead:
 	if (g_appmgrPfsMounts != NULL)
 		g_appmgrPfsMounts->prev = NULL;
 freeMount:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
 	return 0;
 
 restore:
@@ -471,7 +471,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	license = ksceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, 512, &opt);
+	license = SceSysmemForDriver_49D4DD9B(g_appmgrCoreHeap, 512, &opt);
 	if (license == NULL) {
 		result = (int)0x80801006;
 		SceKernelSuspendForDriver_2BB92967(0);
@@ -552,7 +552,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	}
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelFreeHeapMemory(g_appmgrCoreHeap, license);
+	sceKernelFreeHeapMemory(g_appmgrCoreHeap, license);
 	return result;
 }
 
@@ -570,7 +570,7 @@ int appmgrCheckPackageLicenseFlag(const char *appPath, int *hasLicense)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	path = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	path = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (path == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -596,7 +596,7 @@ int appmgrCheckPackageLicenseFlag(const char *appPath, int *hasLicense)
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, path);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, path);
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
 	return result;
@@ -613,7 +613,7 @@ int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone)
 	permission = ksceKernelSetPermission(128);
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	resolvedPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292,
+	resolvedPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292,
 							 &opt);
 	if (resolvedPath == NULL) {
 		result = (int)0x80801006;
@@ -633,7 +633,7 @@ int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone)
 			result = count == 96 ? 0 : (int)0x80800005;
 		}
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
 out:
 	SceKernelSuspendForDriver_2BB92967(0);
 	ksceKernelSetPermission(permission);
@@ -681,7 +681,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 	AppmgrPfsMount *pfsMount;
 	int result, status, index;
 
-	mount = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
+	mount = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
 						 sizeof(*mount), &opt);
 	if (mount == NULL)
 		return (int)0x80801006;
@@ -758,7 +758,7 @@ duplicateMount:
 authError:
 	result = status;
 freeMount:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
 	return result;
 }
 
@@ -778,7 +778,7 @@ int appmgrGetAddContPath(const AppmgrProcessContent *content, const char *titleI
 	    strncmp(directory, "ux0:data", 8) == 0 ||
 	    strncmp(directory, "ux0:\\data", 9) == 0 ||
 	    strncmp(directory, "ux0:/data", 9) == 0) {
-		if (ksceSblAimgrIsCEX() || ksceSblAimgrIsDEX())
+		if (SceSblAIMgrForDriver_D78B04A2() || SceSblAIMgrForDriver_F4B98F66())
 			return (int)0x8080000e;
 		SceSblACMgrForDriver_E87D1777();
 		goto internalContent;
@@ -811,7 +811,7 @@ int appmgrReadSealedKey(const char *appPath, void *key)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	path = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	path = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (path != NULL) {
 		snprintf(path, 292, "%s/sce_sys/%s", appPath, "sealedkey");
 		result = ksceIoOpen(path, 0x10001, 4);
@@ -832,7 +832,7 @@ int appmgrReadSealedKey(const char *appPath, void *key)
 					memset(key, 0, 16);
 			}
 		}
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, path);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, path);
 	} else {
 		result = (int)0x80801006;
 	}
@@ -859,7 +859,7 @@ int appmgrReadSaveDataMetadata(const char *path, AppmgrProcessContent *content,
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -983,7 +983,7 @@ restorePermission:
 badData:
 	result = (int)0x80800034;
 freePath:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
 out:
 	appmgrReleaseSfoFile(&file);
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -1063,7 +1063,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -1073,9 +1073,9 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 	result = appmgrLoadSfoFile(sfoPath, &file);
 	if (result < 0)
 		goto freePath;
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	params = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
+	params = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
 						   sizeof(*params), &opt);
 	if (params == NULL) {
 		result = (int)0x80801006;
@@ -1127,9 +1127,9 @@ updateParams:
 		params->maxSize = maxSize;
 	}
 	if (titleId != NULL) {
-		if (ksceSblAimgrIsCEX())
+		if (SceSblAIMgrForDriver_D78B04A2())
 			++params->cexUseCount;
-		else if (ksceSblAimgrIsDEX())
+		else if (SceSblAIMgrForDriver_F4B98F66())
 			++params->dexUseCount;
 		else {
 			SceSblACMgrForDriver_E87D1777();
@@ -1153,15 +1153,15 @@ updateParams:
 		result = appmgrSetSfoParams(&file, params);
 		if (result < 0)
 			goto freeParams;
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, params);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 		goto writeFile;
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, params);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 	if (modified == 0)
 		goto out;
 writeFile:
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	sfoPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	sfoPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (sfoPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -1191,10 +1191,10 @@ restorePermission:
 badData:
 	result = (int)0x80800034;
 freeParams:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, params);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 	goto out;
 freePath:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, sfoPath);
 out:
 	appmgrReleaseSfoFile(&file);
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -1223,8 +1223,8 @@ int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerificati
 	    strncmp(path, "ux0:\\data", 9) == 0 ||
 	    strncmp(path, "ux0:/data", 9) == 0)
 		goto contentParams;
-	if (!ksceSblAimgrIsCEX()) {
-		if (ksceSblAimgrIsDEX()) {
+	if (!SceSblAIMgrForDriver_D78B04A2()) {
+		if (SceSblAIMgrForDriver_F4B98F66()) {
 			if (ksceSblUtMgrHasStoreFlag())
 				goto contentParams;
 		} else {
@@ -1234,7 +1234,7 @@ int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerificati
 	result = appmgrReadKeystone(pid, driveId.drive_id, keystone);
 	if (result >= 0) {
 		if ((SceQafMgrForDriver_41E04800() != 1 ||
-		     ksceKernelCheckDipsw(218) == 0) &&
+		     SceDipswForDriver_A98FC2FD(218) == 0) &&
 		    timingsafe_memcmp(keystone, content->keystone, sizeof(keystone)) != 0)
 			return (int)0x80800006;
 	} else if (result != (int)0x80010002 && result != (int)0x80010013) {
@@ -1611,7 +1611,7 @@ int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint)
 		if (mount->next != NULL)
 			mount->next->prev = previous;
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
 	result = 0;
 unlock:
 	ksceKernelUnlockMutex(g_appmgrMountMutex, 1);
@@ -1656,7 +1656,7 @@ int appmgrSetPfsAcidDirectory(const char *path, const char *directory)
 		resolvedPath[15] = 0;
 		result = kscePfsAcidDirSet(resolvedPath, directory);
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
 unlock:
 	ksceKernelUnlockMutex(g_appmgrMountMutex, 1);
 out:
@@ -1805,7 +1805,7 @@ removeHead:
 		if (g_appmgrPfsMounts != NULL)
 			g_appmgrPfsMounts->prev = NULL;
 freePfsMount:
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, pfsMount);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, pfsMount);
 		goto freeVirtualMount;
 restoreAuthority:
 		if (!removed)
@@ -1836,7 +1836,7 @@ restoreAuthority:
 restoreAuthorityValue:
 		pfsMount->programAuthorityIds[index] = authorityId;
 freeVirtualMount:
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
 		mount = next;
 	}
 	return result;
@@ -1896,7 +1896,7 @@ removeHead:
 		if (holder->firstMount != NULL)
 			holder->firstMount->prev = NULL;
 freeMount:
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, mount);
 		removed = 1;
 	}
 finished:
@@ -1912,9 +1912,9 @@ int appmgrCleanupProcessMount(struct AppmgrMountHolder *holder,
 		result = appmgrUnmountDrive(sceKernelGetProcessId(), holder,
 					    cleanup->driveId, 0);
 	if (cleanup->resolvedPath)
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, cleanup->resolvedPath);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, cleanup->resolvedPath);
 	if (cleanup->mapFile)
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, cleanup->mapFile);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, cleanup->mapFile);
 	memset(cleanup, 0, sizeof(*cleanup));
 	return result;
 }
@@ -1979,7 +1979,7 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 	permission = ksceKernelSetPermission(128);
 	SceKernelSuspendForDriver_4DF40893(0);
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	metadataPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	metadataPath = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (metadataPath == NULL) {
 		result = (int)0x80801006;
 		goto out;
@@ -2086,7 +2086,7 @@ buildSfo:
 #endif
 	input = (AppmgrSavedataSfoParam) {0};
 	opt = (SceAllocOpt) { .size = sizeof(opt), .align = 32 };
-	params = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap,
+	params = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap,
 						  sizeof(*params), &opt);
 	if (params == NULL) {
 		result = (int)0x80801006;
@@ -2123,7 +2123,7 @@ buildSfo:
 				if (count >= 0) {
 					result = ksceIoClose(fd);
 					if (result >= 0) {
-						ksceKernelFreeHeapMemory(g_appmgrMountHeap, params);
+						sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 						result = appmgrCreateSaveDataSlotFile(pid, path, 256);
 						goto freePath;
 					}
@@ -2137,13 +2137,13 @@ buildSfo:
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, params);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 	goto freePath;
 closeError:
 	result = count;
 	ksceIoClose(fd);
 freePath:
-	ksceKernelFreeHeapMemory(g_appmgrMountHeap, metadataPath);
+	sceKernelFreeHeapMemory(g_appmgrMountHeap, metadataPath);
 out:
 	appmgrReleaseSfoFile(&file);
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -2401,7 +2401,7 @@ int appmgrResolveLaunchDirectory(const char *path,
 		if (slash != NULL)
 			strncpy(output, path, slash - path);
 	}
-	if (ksceSblAimgrIsCEX() || ksceSblAimgrIsDEX() ||
+	if (SceSblAIMgrForDriver_D78B04A2() || SceSblAIMgrForDriver_F4B98F66() ||
 	    !SceSblACMgrForDriver_E87D1777())
 		return 0;
 	if (mapFile != NULL && mapFile->file > 0 && mapFile->app0[0] != 0) {
@@ -2417,7 +2417,7 @@ int appmgrResolveLaunchDirectory(const char *path,
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	resolved = ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, 292, &opt);
+	resolved = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (resolved == NULL)
 		return (int)0x80801006;
 	memset(resolved, 0, 292);
@@ -2449,7 +2449,7 @@ validate:
 	result = appmgrCreateDirectories(output, 0) == 0 ? 0 : (int)0x80800022;
 free_path:
 	if (resolved != NULL)
-		ksceKernelFreeHeapMemory(g_appmgrMountHeap, resolved);
+		sceKernelFreeHeapMemory(g_appmgrMountHeap, resolved);
 	return result;
 }
 
@@ -2647,10 +2647,10 @@ void *appmgrAllocMountHeapMemory(SceSize size)
 	opt.align = 32;
 	opt.mmapBase = NULL;
 	opt.mmapSize = 0;
-	return ksceKernelAllocHeapMemoryWithOption(g_appmgrMountHeap, size, &opt);
+	return SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, size, &opt);
 }
 
 int appmgrFreeMountHeapMemory(void *memory)
 {
-	return ksceKernelFreeHeapMemory(g_appmgrMountHeap, memory);
+	return sceKernelFreeHeapMemory(g_appmgrMountHeap, memory);
 }

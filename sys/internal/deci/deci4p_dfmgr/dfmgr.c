@@ -6,10 +6,9 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/sysroot_dfmgr.h>
 #include <string.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <kernel/error.h>
 #include <sysmem/sysevent.h>
@@ -252,18 +251,18 @@ static inline void dfmgrSetFlags(SceUInt32 mask)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_dfmgrLock);
+	s = SceCpuForDriver_D32ACE9E(&s_dfmgrLock);
 	s_dfmgrFlags |= mask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 }
 
 static inline void dfmgrClearFlags(SceUInt32 mask)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_dfmgrLock);
+	s = SceCpuForDriver_D32ACE9E(&s_dfmgrLock);
 	s_dfmgrFlags &= ~mask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 }
 
 /* SceSysrootForDriver_C5EAF5F7: 0 power off, 1 power button, 2 low battery */
@@ -321,13 +320,13 @@ int dfmgrSetProtocolStatus(DfMgrProtocolCB *pd, SceUInt32 mask, int on)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&pd->lock);
+	s = SceCpuForDriver_D32ACE9E(&pd->lock);
 	if (on) {
 		pd->flags |= mask;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&pd->lock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&pd->lock, s);
 	} else {
 		pd->flags &= ~mask;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&pd->lock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&pd->lock, s);
 	}
 	return 0;
 }
@@ -478,7 +477,7 @@ int sceDfMgrInit(void)
 		}
 	}
 
-	ksceKernelRegisterSysEventHandler("SceDeci4pDfMgr", _suspendHandlerQuery, NULL);
+	sceKernelRegisterSysEventHandler("SceDeci4pDfMgr", _suspendHandlerQuery, NULL);
 	SceSysrootForDriver_C5EAF5F7(_sysstatemgrEvent);
 	SceSysrootForDriver_579CC758(&s_dfmgrSysrootCallbacks);
 	dfmgrSetFlags(DFMGR_INITIALIZED);
@@ -488,7 +487,7 @@ int sceDfMgrInit(void)
 
 int sceDfMgrModuleStart(SceSize args, void *argp)
 {
-	if (ksceKernelCheckDipsw(0xc2) == 0) {
+	if (SceDipswForDriver_A98FC2FD(0xc2) == 0) {
 		SCE_DBG_PRINTF(0xb, 164, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -525,10 +524,10 @@ int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void
 	}
 
 	flags = protocol->flags;
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_dfmgrLock);
+	s = SceCpuForDriver_D32ACE9E(&s_dfmgrLock);
 	for (pd = s_dfmgrPd; pd != &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]; pd++) {
 		if ((pd->flags & DFMGR_PD_OPEN) && pd->info.protocol == protocol->protocol) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 			return DFMGR_ERROR_ALREADY_OPENED;
 		}
 	}
@@ -537,7 +536,7 @@ int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void
 			break;
 	if (pd == &s_dfmgrPd[DFMGR_PROTOCOL_COUNT]) {
 		SCE_PRINTF_WITH_INFO(15, 826, "\n");
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 		return DFMGR_ERROR_NO_SLOT;
 	}
 
@@ -555,12 +554,12 @@ int sceDfMgrOpen(SceDfMgrHandler handler, const SceDfMgrProtocol *protocol, void
 	if ((s_dfmgrLink[linkIndex].flags & DFMGR_LINK_CONNECTED) && (flags & DFMGR_PROTOCOL_ENABLE)) {
 		pd->flags = DFMGR_PD_HEADER_PENDING | DFMGR_PD_STARTED | DFMGR_PD_OPEN;
 		aliasSt = 7;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 		st = 3;
 	} else {
 		pd->flags = DFMGR_PD_HEADER_PENDING | DFMGR_PD_OPEN;
 		aliasSt = 5;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 		st = 1;
 	}
 	if (protocol->flags & DFMGR_PROTOCOL_ALIAS)
@@ -610,12 +609,12 @@ int sceDfMgrClose(SceUID handle)
 	ret = ksceKernelWaitSema(pd->link->eventSema, 2, NULL);
 	if (ret < 0)
 		return ret;
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_dfmgrLock);
+	s = SceCpuForDriver_D32ACE9E(&s_dfmgrLock);
 	info = pd->info;
 	linkIndex = pd->linkIndex;
 	link = pd->link;
 	memset(pd, 0, sizeof(*pd));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_dfmgrLock, s);
 	ksceKernelSignalSema(link->eventSema, 2);
 	dcmpSendStatusProtocol(linkIndex, 0, &info);
 	return 0;
@@ -643,20 +642,20 @@ int sceDfMgrReqSend(SceUID handle)
 		}
 	}
 	link = pd->link;
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->lock);
+	s = SceCpuForDriver_D32ACE9E(&link->lock);
 	if (pd->flags & DFMGR_PD_SEND_REQUESTED) {
 		ret = DFMGR_ERROR_BUSY;
 	} else {
 		if (!dfmgrIsAlwaysOpen(pd->info.protocol) &&
 		    (!(link->flags & DFMGR_LINK_CONNECTED) || !(pd->flags & DFMGR_PD_STARTED))) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
 			return DFMGR_ERROR_NOT_CONNECTED;
 		}
 		dfmgrSetProtocolStatus(pd, DFMGR_PD_SEND_REQUESTED, 1);
 		handle = pd->handle;
-		rs = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->reqLock);
+		rs = SceCpuForDriver_D32ACE9E(&link->reqLock);
 		if (link->reqCount > DFMGR_REQ_QUEUE - 1) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
 			ret = DFMGR_ERROR_QUEUE_FULL;
 		} else {
 			int write = link->reqWrite;
@@ -667,13 +666,13 @@ int sceDfMgrReqSend(SceUID handle)
 				next = 0;
 			link->req[write] = handle;
 			link->reqWrite = next;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, rs);
 			ret = ksceKernelSetEventFlag(link->sendEvf, 1);
 			if (ret < 0)
 				SCE_DBG_ASSERT(0, 1032);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
 	return ret;
 }
 
@@ -764,9 +763,9 @@ static void sendCallback(DfMgrLinkCB *link)
 	int ret, read, next;
 
 	link->sendRemaining = 0;
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->reqLock);
+	s = SceCpuForDriver_D32ACE9E(&link->reqLock);
 	if (link->reqCount <= 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
 		return;
 	}
 	read = link->reqRead;
@@ -776,7 +775,7 @@ static void sendCallback(DfMgrLinkCB *link)
 		next = 0;
 	handle = link->req[read];
 	link->reqRead = next;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&link->reqLock, s);
 	if (handle < 0)
 		return;
 	pd = s_dfmgrPd;
@@ -907,13 +906,13 @@ int dfmgrSetLinkStatus(DfMgrLinkCB *link, SceUInt32 mask, int on)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&link->lock);
+	s = SceCpuForDriver_D32ACE9E(&link->lock);
 	if (on) {
 		link->flags |= mask;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
 	} else {
 		link->flags &= ~mask;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&link->lock, s);
 	}
 	return 0;
 }
@@ -1031,7 +1030,7 @@ static inline int _resumeHandlerEnd(void)
 
 	if (!(s_dfmgrFlags & DFMGR_SUSPENDING))
 		return 0;
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() != 0)
+	if (SceSysrootForDriver_55392965() != 0)
 		dfmgrConnectLink(&s_dfmgrLink[0], 1);
 	if (s_dfmgrResumeRetries++ < 100) {
 		link = &s_dfmgrLink[0];
@@ -1084,7 +1083,7 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 			return 0;
 		case SYSEVENT_SUSPEND_QUERY:
 			sleepMode = suspend->sleepMode;
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() != 0)
+			if (SceSysrootForDriver_55392965() != 0)
 				return 0;
 			if (SceProcessmgrForDriver_C715591F() == 0)
 				return 0;
@@ -1098,14 +1097,14 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 				return 0;
 			code = sleepMode == POWER_SLEEP_SUSPEND ? 0x8e : 0x8f;
 			dfmgrSetFlags(DFMGR_SUSPENDING);
-			if (ksceKernelCheckDipsw(0xc3) == 0)
+			if (SceDipswForDriver_A98FC2FD(0xc3) == 0)
 				dcmpSendStatusPower(1, code, 0, 0);
 			dcmpSendStatusPower(0, code, 0, 0);
 			return 0;
 		case SYSEVENT_SUSPEND_IDLE_QUERY:
 			if (s_dfmgrFlags & DFMGR_SUSPENDED)
 				return 0;
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() == 0) {
+			if (SceSysrootForDriver_55392965() == 0) {
 				if (s_dfmgrLink[0].flags & DFMGR_LINK_CONNECTED)
 					return SCE_ERROR_ERRNO_EBUSY;
 			} else if (s_dfmgrLink[0].flags & DFMGR_LINK_CONNECTED) {

@@ -68,21 +68,21 @@ int sceKernelSysEventInit(void)
 
 	s_sysEventList[0] = (SysEventLink *)s_sysEventList;
 	s_sysEventList[1] = (SysEventLink *)s_sysEventList;
-	ret = ksceUIDClassInitClass(&s_sysEventClass, "SceUIDSysEventClass", ksceKernelGetUIDClass(),
+	ret = SceSysmemForDriver_61317102(&s_sysEventClass, "SceUIDSysEventClass", SceSysmemForDriver_85336A1C(),
 				    sizeof(SysEventObject), SysEventCreate, SysEventDestroy);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xb, 102, "sceUIDClassInitClass() failed: 0x%08X\n", ret);
 	return ret;
 }
 
-SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHandler handler,
+SceUID sceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHandler handler,
 					  void *args)
 {
 	SysEventObject *object;
 	SysEventLink *tail;
 	SceUID uid;
 
-	uid = ksceGUIDKernelCreate(&s_sysEventClass, name, (SceObjectBase **)&object);
+	uid = SceSysmemForDriver_56A13E90(&s_sysEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 118, "sceKernelRegisterSysEventHandler",
 				    "sceGUIDKernelCreate() failed: 0x%08X\n", uid);
@@ -99,44 +99,44 @@ SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHand
 	return uid;
 }
 
-int ksceKernelUnregisterSysEventHandler(SceUID uid)
+int sceKernelUnregisterSysEventHandler(SceUID uid)
 {
 	SceObjectBase *object;
 	int ret;
 
-	ret = ksceGUIDGetObjectWithClass(uid, &s_sysEventClass, &object);
+	ret = SceSysmemForKernel_0E43E113(uid, &s_sysEventClass, &object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 140, "sceKernelUnregisterSysEventHandler",
 				    "sceGUIDGetObjectWithClass() failed: 0x%08X\n", ret);
 		return ret;
 	}
-	return ksceGUIDClose(uid);
+	return sceGUIDClose(uid);
 }
 
 /* every handler in order; the first failure stops it, *failed is its UID */
-int ksceKernelSysEventDispatch(int id, int event, void *eventArgs, SceUID *failed)
+int SceKernelSuspendForDriver_D4622EA8(int id, int event, void *eventArgs, SceUID *failed)
 {
 	SysEventObject *object;
 	int state, ret = 0;
 
-	state = ksceKernelCpuSuspendIntr();
+	state = SceCpuForDriver_821FC0EE();
 	for (object = SYS_EVENT_OBJECT(s_sysEventList[0]);
 	     &object->link != (SysEventLink *)s_sysEventList;
 	     object = SYS_EVENT_OBJECT(object->link.next)) {
-		ksceKernelCpuResumeIntr(state);
+		sceKernelCpuResumeIntr(state);
 		if (g_sysEventPreHook != NULL)
 			g_sysEventPreHook(id, event, object->link.args, object->link.handler);
 		ret = object->link.handler(id, event, eventArgs, object->link.args);
-		state = ksceKernelCpuSuspendIntr();
+		state = SceCpuForDriver_821FC0EE();
 		if (g_sysEventPostHook != NULL)
 			g_sysEventPostHook(id, event, ret,
 					   ret >= 0 ? 0 : failed != NULL ? object->link.uid : 0);
 		if (ret < 0 && failed != NULL) {
 			*failed = object->link.uid;
-			ksceKernelCpuResumeIntr(state);
+			sceKernelCpuResumeIntr(state);
 			return ret;
 		}
 	}
-	ksceKernelCpuResumeIntr(state);
+	sceKernelCpuResumeIntr(state);
 	return ret;
 }

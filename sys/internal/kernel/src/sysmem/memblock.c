@@ -22,16 +22,15 @@ int AddressSpaceAllocMemBlockByCommand(struct AddressSpaceObject *as,
 int AddressSpaceFindMemBlockCB(struct AddressSpaceObject *as, uintptr_t va, SceSize size,
 			       MemBlockObject **block);
 int SceSysrootForKernel_7385CADE(void);					/* current PID */
-void *ksceKernelSysrootGetCurrentAddressSpaceCB(void);
-int ksceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object);
+void *SceSysrootForKernel_63EBB05B(void);
+int SceSysmemForDriver_F6DB54BA(SceUID guid, SceUInt32 level, SceObjectBase **object);
 int PUIDReferObjectWithLevel(SceUID pid, SceUID puid, SceUInt32 level, SceObjectBase **object);
 int UIDEntryReleaseObject(SceUID pid, SceUID puid);
-int SceSysmemForKernel_4E923101(void);					/* the caller's level */
-int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size);
-int ksceKernelCopyToUser(void *dst, const void *src, SceSize size);
-int ksceKernelVAtoPA(const void *va, uintptr_t *pa);
-int ksceKernelCheckDipsw(unsigned int bit);
-SceUID ksceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
+int SceSysmemForDriver_BC996A7A(void *dst, const void *src, SceSize size);
+int SceSysmemForDriver_6D88EF8A(void *dst, const void *src, SceSize size);
+int SceSysmemForDriver_8D160E65(const void *va, uintptr_t *pa);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
+SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
 					SceSize size, const SceKernelAllocMemBlockKernelOpt *opt);
 int PartitionMapMemBlock(struct Partition *partition, MemBlockObject *block,
 			 const SceKernelAllocMemBlockCommand *command, SceUInt32 flags);
@@ -105,7 +104,7 @@ int AllocMemBlockForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 		return AllocMemBlockLowForKernelByCommand(command);
 	}
 	if (attr & MEMBLOCK_TYPE_TOOL_PARTITION)
-		return ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, command->name,
+		return sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, command->name,
 							command->type, command->size, &command->opt);
 	if (attr & MEMBLOCK_TYPE_PADDR) {
 		if (!(command->opt.attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR))
@@ -128,7 +127,7 @@ int AllocMemBlockForKernelByCommand(SceKernelAllocMemBlockCommand *command)
 		return AllocMemBlockLowByCommand(command);
 	}
 	if (attr & MEMBLOCK_TYPE_TOOL_PHYMEMPART) {
-		if (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
 			return AllocMemBlockLowByCommand(command);
 		SCE_DBG_PRINTF(0xb, 524, "Only SCE_DIPSW_ENABLE_TOOL_PHYMEMPART\n");
 		SCE_DBG_ASSERT_FAIL(525);
@@ -165,17 +164,17 @@ int MapMemBlockByGUID(SceUID guid, SceUInt32 flags)
 	MemBlockObject *block;
 	int intr, ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	if (flags & ~1) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
-		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&block->lock);
+		intr = SceCpuForDriver_4C38CE4D(&block->lock);
 		ret = PartitionMapMemBlock(block->partition, block, NULL, flags);
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
-		ksceGUIDReleaseObject(guid);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
+		sceGUIDReleaseObject(guid);
 	}
 	return ret;
 }
@@ -187,7 +186,7 @@ int PartialMapUnmapMemBlock(SceUID guid, SceUInt32 op, uintptr_t va, SceSize siz
 	SceSize unit;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(3, 1059, "GUIDReferMemBlock(0x%08x) failed 0x%08x\n", guid, ret);
@@ -209,7 +208,7 @@ int PartialMapUnmapMemBlock(SceUID guid, SceUInt32 op, uintptr_t va, SceSize siz
 			ret = MemBlockPartialOpRange(block->partition, block, op, va, size);
 		}
 	}
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
@@ -241,7 +240,7 @@ int MemBlockGetInfoDetails(MemBlockObject *block, SceInt32 level, MemBlockInfoDe
 	MemBlockCode2Type(block->code, &info->type);
 	info->guid = block->guid;
 	if (info->guid > 0) {
-		if (SceSysmemForKernel_4E923101() > level) {
+		if (SceSysmemForKernel_4E923101(info->guid) > level) {
 			vbase = block->vbase;
 			size = block->size;
 			info->guid = 0;
@@ -256,7 +255,7 @@ int MemBlockGetInfoDetails(MemBlockObject *block, SceInt32 level, MemBlockInfoDe
 			return SCE_KERNEL_ERROR_UID_NOT_VISIBLE;
 		}
 		if (info->guid > 0) {
-			info->name = ksceGUIDName(info->guid);
+			info->name = SceSysmemForDriver_E655852F(info->guid);
 			goto check_name;
 		}
 	}
@@ -270,7 +269,7 @@ named:
 	else
 		info->name = "SceNULL";
 check_name:
-	ret = ksceKernelVAtoPA(info->name, &pa);
+	ret = SceSysmemForDriver_8D160E65(info->name, &pa);
 	code = block->code;
 	if (ret < 0)
 		info->name = "SceInvalid";
@@ -314,7 +313,7 @@ int MemBlockClientInfoAddGUID(MemBlockClientInfo *info, SceUID pid)
 	SceUInt32 i, capacity;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	intr = SceCpuForDriver_D32ACE9E(&info->lock);
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
@@ -329,11 +328,11 @@ int MemBlockClientInfoAddGUID(MemBlockClientInfo *info, SceUID pid)
 		}
 		*slot = pid;
 		info->count++;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
 		return 0;
 	}
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
 	return 0;
 }
 
@@ -346,7 +345,7 @@ int MemBlockClientInfoRemoveGUID(MemBlockClientInfo *info, SceUID pid)
 
 	if (pid == -1)
 		return SCE_KERNEL_ERROR_SYSMEM_MEMBLOCK_ERROR;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	intr = SceCpuForDriver_D32ACE9E(&info->lock);
 	capacity = info->capacity;
 	slot = info->guids;
 	if (capacity != 0) {
@@ -361,11 +360,11 @@ int MemBlockClientInfoRemoveGUID(MemBlockClientInfo *info, SceUID pid)
 		}
 		*slot = -1;
 		info->count--;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
 		return 0;
 	}
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, intr);
 	return 0;
 }
 
@@ -391,7 +390,7 @@ int UIDReferObjectWithLevelForPID(SceUID pid, SceUID uid, SceUInt32 level, SceOb
 	} else if (uid & 0x40000000) {
 		return PUIDReferObjectWithLevel(pid, uid, level, object);
 	}
-	return ksceGUIDReferObjectWithLevel(uid, level, object);
+	return SceSysmemForDriver_F6DB54BA(uid, level, object);
 }
 
 /* name unknown */
@@ -405,7 +404,7 @@ int UIDReleaseObjectForPID(SceUID pid, SceUID uid)
 	} else if (uid & 0x40000000) {
 		return UIDEntryReleaseObject(pid, uid);
 	}
-	return ksceGUIDReleaseObject(uid);
+	return sceGUIDReleaseObject(uid);
 }
 
 #define MEMBLOCK_INFO_BY_RANGE		2	/* [va, va + size) must lie in the block */
@@ -430,12 +429,12 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	SceUInt32 type, code;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&info, userInfo, sizeof(info));
+	ret = SceSysmemForDriver_BC996A7A(&info, userInfo, sizeof(info));
 	if (ret < 0)
 		return ret;
 	if (info.size != sizeof(info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = AddressSpaceFindMemBlockCB(ksceKernelSysrootGetCurrentAddressSpaceCB(), va, 0, &block);
+	ret = AddressSpaceFindMemBlockCB(SceSysrootForKernel_63EBB05B(), va, 0, &block);
 	if (ret < 0)
 		return ret;
 	if (mode == MEMBLOCK_INFO_BY_RANGE &&
@@ -453,7 +452,7 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	info.memoryType = (code >> 8) & 0xd0;
 	info.access = (code >> 4) & 6;
 	info.type = type;
-	return ksceKernelCopyToUser(userInfo, &info, sizeof(info));
+	return SceSysmemForDriver_6D88EF8A(userInfo, &info, sizeof(info));
 }
 
 int AddressSpaceFindMemBlockCtlByAddr(struct AddressSpaceObject *as, uintptr_t va, SceSize size,
@@ -552,7 +551,7 @@ int UnlockRangeForPID(SceUID pid, uintptr_t va, SceSize size)
 	int ret;
 
 	if (pid == 0) {
-		as = ksceKernelSysrootGetCurrentAddressSpaceCB();
+		as = SceSysrootForKernel_63EBB05B();
 	} else {
 		ret = SysrootPIDtoAddressSpaceCB(pid, &as);
 		if (ret < 0)
@@ -617,7 +616,7 @@ int LockRangeForPID(SceUID pid, uintptr_t va, SceSize size)
 	int ret;
 
 	if (pid == 0) {
-		as = ksceKernelSysrootGetCurrentAddressSpaceCB();
+		as = SceSysrootForKernel_63EBB05B();
 	} else {
 		ret = SysrootPIDtoAddressSpaceCB(pid, &as);
 		if (ret < 0)
@@ -748,7 +747,7 @@ int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
 int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
 void AllocMemBlockCommandInitWithType(SceKernelAllocMemBlockCommand *command, const char *name,
 				      SceUInt32 type, SceSize size);
-int ksceKernelSysrootIsUserModeThread(void);
+int SceSysrootForKernel_7FC7A163(void);
 int PartitionUnmapMemBlock(struct Partition *partition, MemBlockObject *block);
 int PartitionRemapMemBlock(struct Partition *partition, MemBlockObject *block, SceUInt32 type,
 			   SceUInt32 flags);
@@ -798,7 +797,7 @@ int sceKernelAllocMemBlockByCommand(SceKernelAllocMemBlockCommand *command)
 /* the kernel tmp types as user code may ask for them */
 static inline void KernelTmp2UserKtmpType(SceUInt32 type)
 {
-	if (!ksceKernelSysrootIsUserModeThread())
+	if (!SceSysrootForKernel_7FC7A163())
 		return;
 	switch (type) {
 	case SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_NC_R:
@@ -815,7 +814,7 @@ static inline void KernelTmp2UserKtmpType(SceUInt32 type)
 #define MEMBLOCK_CODE_W			0x20
 
 /* a kernel block, with where it landed in info */
-SceUID ksceKernelAllocMemBlockWithInfo(const char *name, SceUInt32 type, SceSize size,
+SceUID sceKernelAllocMemBlockWithInfoForKernel(const char *name, SceUInt32 type, SceSize size,
 				       const SceKernelAllocMemBlockKernelOpt *opt,
 				       MemBlockAllocResult *info)
 {
@@ -883,7 +882,7 @@ SceUID ksceKernelAllocMemBlockWithInfo(const char *name, SceUInt32 type, SceSize
 		attr &= ~ALLOC_ATTR_KEEP_CLEAR;
 		command.opt.attr = attr;
 	} else if (!(command.code & MEMBLOCK_CODE_W)) {
-		if (ksceKernelCheckDipsw(DIPSW_NO_CLEAR))
+		if (SceDipswForDriver_A98FC2FD(DIPSW_NO_CLEAR))
 			command.opt.attr |= ALLOC_ATTR_NO_CLEAR;
 		attr = command.opt.attr;
 	}
@@ -900,14 +899,14 @@ SceUID ksceKernelAllocMemBlockWithInfo(const char *name, SceUInt32 type, SceSize
 	return ret;
 }
 
-SceUID ksceKernelAllocMemBlock(const char *name, SceKernelMemBlockType type, SceSize size,
+SceUID SceSysmemForDriver_C94850C9(const char *name, SceKernelMemBlockType type, SceSize size,
 			       SceKernelAllocMemBlockKernelOpt *opt)
 {
-	return ksceKernelAllocMemBlockWithInfo(name, type, size, opt, NULL);
+	return sceKernelAllocMemBlockWithInfoForKernel(name, type, size, opt, NULL);
 }
 
 /* the access a type grants, as SCE_KERNEL_MEMORY_REF_PERM bits */
-SceUInt32 ksceKernelMemBlockTypeGetPrivileges(SceUInt32 type)
+SceUInt32 SceSysmemForDriver_6A0792A3(SceUInt32 type)
 {
 	SceUInt32 code, perm;
 
@@ -950,7 +949,7 @@ SceUInt32 SceSysmemForDriver_CB0F3A33(SceUInt32 type)
 	}
 }
 
-int ksceKernelMemBlockType2Memtype(SceUInt32 type)
+int SceSysmemForDriver_20C811FA(SceUInt32 type)
 {
 	SceUInt32 code;
 	int ret;
@@ -970,12 +969,12 @@ SceUInt32 SceSysmemForKernel_48D2E408(SceUInt32 type)
 	return (SceUInt8)code;
 }
 
-int ksceKernelMapMemBlockWithFlag(SceUID guid, int flags)
+int SceSysmemForDriver_04059C4B(SceUID guid, int flags)
 {
 	return MapMemBlockByGUID(guid, flags);
 }
 
-int ksceKernelMapMemBlock(SceUID guid)
+int SceSysmemForDriver_58D21746(SceUID guid)
 {
 	return MapMemBlockByGUID(guid, 0);
 }
@@ -1072,13 +1071,13 @@ static inline int MemBlockRemapAllowed(const MemBlockRemapRule *rule, SceUInt32 
 }
 
 /* a block given another type, among the allowed changes */
-int ksceKernelRemapMemBlock(SceUID guid, SceKernelMemBlockType type)
+int SceSysmemForDriver_DFE2C8CB(SceUID guid, SceKernelMemBlockType type)
 {
 	MemBlockObject *block;
 	SceUInt32 code, currentCode, newCode;
 	int intr, ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
@@ -1087,33 +1086,33 @@ int ksceKernelRemapMemBlock(SceUID guid, SceKernelMemBlockType type)
 		newCode = code;
 		currentCode = block->code;
 		if (MemBlockRemapAllowed(s_remapKernel, currentCode, newCode) ||
-		    (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
+		    (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART) &&
 		     MemBlockRemapAllowed(s_remapTool, currentCode, newCode)) ||
 		    MemBlockRemapAllowed(s_remapCdram, currentCode, newCode)) {
-			intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&block->lock);
+			intr = SceCpuForDriver_4C38CE4D(&block->lock);
 			ret = PartitionRemapMemBlock(block->partition, block, code, 0);
-			ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
+			sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
 		} else {
 			ret = SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_REMAP_TYPE;
 		}
 	}
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
-int ksceKernelUnmapMemBlock(SceUID guid)
+int SceSysmemForDriver_FFCD9B60(SceUID guid)
 {
 	MemBlockObject *block;
 	int intr, ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&block->lock);
+	intr = SceCpuForDriver_4C38CE4D(&block->lock);
 	ret = PartitionUnmapMemBlock(block->partition, block);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
-	ksceGUIDReleaseObject(guid);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&block->lock, intr);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
@@ -1137,7 +1136,7 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 	int ret;
 
 	do {
-		ret = GUIDReferObjectWithClassExclusive(guid, ksceKernelGetUIDMemBlockClass(),
+		ret = GUIDReferObjectWithClassExclusive(guid, SceSysmemForKernel_86681B64(),
 							(SceObjectBase **)&block);
 		if (ret == SCE_KERNEL_ERROR_UID_REFER_NOT_ZERO)
 			SCE_DBG_PRINTF(0xb, 1386,
@@ -1166,15 +1165,15 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 				SCE_PRINTF_WITH_INFO(0, 1432,
 						     "GUID=0x%08x:Force sceKernelUnmapMemBlock(GUID:0x%08x)\n",
 						     guid, client->guids[i]);
-				ksceKernelUnmapMemBlock(client->guids[i]);
+				SceSysmemForDriver_FFCD9B60(client->guids[i]);
 			}
 		}
 		MemBlockOptClearClientInfoRaw(block);
 		if (client->guids != NULL) {
-			ksceKernelFree(client->guids);
+			SceSysmemForKernel_4233C16D(client->guids);
 			client->guids = NULL;
 		}
-		ksceKernelFree(client);
+		SceSysmemForKernel_4233C16D(client);
 		MemBlockClearMapRef(block);
 	}
 	ret = PartitionFreeMemBlock(block->partition, block);
@@ -1185,24 +1184,24 @@ int FreeMemBlockCore(SceUID guid, int checkLock, MemBlockObject **freed, MemBloc
 	GUIDReleaseObject(guid);
 	ret = GUIDUnregisterChecked(guid);
 	if (info != NULL)
-		ksceKernelFree(info);
+		SceSysmemForKernel_4233C16D(info);
 	if (freed != NULL)
 		*freed = block;
 	return ret;
 }
 
-int ksceKernelFreeMemBlock(SceUID guid)
+int SceSysmemForDriver_009E1C61(SceUID guid)
 {
 	return FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 }
 
-int ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize len);
-int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleId, SceSize len);
+int SceSysmemForDriver_DB3EC244(char *dst, const char *src, SceSize len);
+int SceSysrootForKernel_EC3124A3(SceUID pid, char *titleId, SceSize len);
 int CheckProcessDebugCapability(SceUID pid);
 SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls);
 int GUIDFindByName(const char *name);
-SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
-int ksceKernelGetMemBlockVBase(SceUID guid, void **vbase);
+SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);
+int SceSysmemForDriver_B81CF0A3(SceUID guid, void **vbase);
 int ksceDmacMemset(void *dst, int c, SceSize size);
 int strncmp(const char *s1, const char *s2, SceSize n);
 
@@ -1231,7 +1230,7 @@ typedef struct MemBlockUserOpt {
 /* the titles that may still pass the attr bits a newer SDK rejects */
 static inline int checkTitle(char *titleId)
 {
-	if (ksceKernelSysrootGetProcessTitleId(0, titleId, 0x20) < 0)
+	if (SceSysrootForKernel_EC3124A3(0, titleId, 0x20) < 0)
 		return 0;
 	SCE_DBG_PRINTF(0xb, 3377, "TitleId [%s]\n", titleId);
 	return strncmp(titleId, "PCSC80009", 0x20) == 0 ||
@@ -1278,7 +1277,7 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 
 	if (userName == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	ret = ksceKernelStrncpyFromUser(name, userName, sizeof(name));
+	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
 	if (ret < 0)
 		return ret;
 	name[sizeof(name) - 1] = '\0';
@@ -1289,7 +1288,7 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 		referred = 0;
 		goto check_size;
 	}
-	ret = ksceKernelCopyFromUser(&uopt, userOpt, 0x14);
+	ret = SceSysmemForDriver_BC996A7A(&uopt, userOpt, 0x14);
 	if (ret < 0)
 		return ret;
 	switch (uopt.size) {
@@ -1297,21 +1296,21 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 		invalid = USER_OPT_ATTR_INVALID_14;
 		break;
 	case 0x38:
-		ret = ksceKernelCopyFromUser(&uopt, userOpt, 0x38);
+		ret = SceSysmemForDriver_BC996A7A(&uopt, userOpt, 0x38);
 		if (ret < 0)
 			return ret;
 		uopt.extAttr = 0;
 		invalid = USER_OPT_ATTR_INVALID_38;
 		break;
 	case 0x3c:
-		ret = ksceKernelCopyFromUser(&uopt, userOpt, sizeof(uopt));
+		ret = SceSysmemForDriver_BC996A7A(&uopt, userOpt, sizeof(uopt));
 		if (ret < 0)
 			return ret;
 		uopt.extAttr = 0;
 		invalid = USER_OPT_ATTR_INVALID_40;
 		break;
 	case 0x40:
-		ret = ksceKernelCopyFromUser(&uopt, userOpt, sizeof(uopt));
+		ret = SceSysmemForDriver_BC996A7A(&uopt, userOpt, sizeof(uopt));
 		if (ret < 0)
 			return ret;
 		if (uopt.extAttr >> 2) {
@@ -1347,7 +1346,7 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 		}
 	}
 	if (attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID) {
-		baseGuid = PUID2GUIDWithRefer(0, uopt.uidBaseBlock, ksceKernelGetUIDMemBlockClass());
+		baseGuid = PUID2GUIDWithRefer(0, uopt.uidBaseBlock, SceSysmemForKernel_86681B64());
 		if (baseGuid < 0)
 			return baseGuid | 0x40000000;
 		kopt.mirror_blockid = baseGuid;
@@ -1360,19 +1359,19 @@ SceUID AllocMemBlockForUser(const char *userName, SceUInt32 type, SceSize size, 
 	}
 	referred = attr & USER_OPT_ATTR_BASE_NAME;
 	if (referred) {
-		ret = ksceKernelStrncpyFromUser(title, uopt.strBaseBlockName, sizeof(title));
+		ret = SceSysmemForDriver_DB3EC244(title, uopt.strBaseBlockName, sizeof(title));
 		if (ret < 0)
 			return ret;
 		title[sizeof(title) - 1] = '\0';
 		baseGuid = GUIDFindByName(title);
 		if (baseGuid < 0)
 			return baseGuid;
-		ret = ksceGUIDReferObjectWithClass(baseGuid, ksceKernelGetUIDMemBlockClass(),
+		ret = SceSysmemForDriver_00ED6C14(baseGuid, SceSysmemForKernel_86681B64(),
 						   (SceObjectBase **)&base);
 		if (ret < 0)
 			return ret;
 		if (!MemBlockCodeIsMirrorable(base->code)) {
-			ksceGUIDReleaseObject(baseGuid);
+			sceGUIDReleaseObject(baseGuid);
 			return SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_TYPE;
 		}
 		referred = 1;
@@ -1430,18 +1429,18 @@ type_clear:
 alloc:
 	if (flags & MEMBLOCK_ALLOC_USER_CLIENT)
 		kopt.attr |= ALLOC_ATTR_USER_CLIENT;
-	guid = ksceKernelAllocMemBlockWithInfo(name, type, size, &kopt, NULL);
+	guid = sceKernelAllocMemBlockWithInfoForKernel(name, type, size, &kopt, NULL);
 	if (guid < 0) {
 		SCE_DBG_PRINTF(0xb, 3663, "sceKernelAllocMemBlockForKernel failed 0x%08x\n", guid);
 		if (hasBase == 1 && referred == 1)
-			ksceGUIDReleaseObject(baseGuid);
+			sceGUIDReleaseObject(baseGuid);
 		return guid;
 	}
 	if (hasBase == 1) {
 		MemBlockObject *current = base;
 
 		if (current == NULL) {
-			if (ksceGUIDReferObjectWithClass(baseGuid, ksceKernelGetUIDMemBlockClass(),
+			if (SceSysmemForDriver_00ED6C14(baseGuid, SceSysmemForKernel_86681B64(),
 							 (SceObjectBase **)&base) < 0)
 				goto clear;
 			referred = hasBase;
@@ -1457,25 +1456,25 @@ alloc:
 			MemBlockClientInfoAddGUID((MemBlockClientInfo *)current->opt, guid);
 release:
 		if (referred == 1)
-			ksceGUIDReleaseObject(baseGuid);
+			sceGUIDReleaseObject(baseGuid);
 	}
 clear:
 	if (kopt.attr & ALLOC_ATTR_NO_CLEAR) {
 		tpidruro = readTpidruro();
 		writeTpidruro(tpidruro << 16);
-		ksceKernelGetMemBlockVBase(guid, &vbase);
+		SceSysmemForDriver_B81CF0A3(guid, &vbase);
 		ksceDmacMemset(vbase, 0, size);
 		writeTpidruro(tpidruro);
 	}
-	puid = kscePUIDOpenByGUID(0, guid);
+	puid = SceSysmemForDriver_BF209859(0, guid);
 	if (puid < 0) {
-		ksceKernelFreeMemBlock(guid);
+		SceSysmemForDriver_009E1C61(guid);
 		return puid;
 	}
 	return puid;
 }
 
-SceUID ksceKernelFindProcMemBlockByAddr(SceUID pid, const void *addr, SceSize size)
+SceUID SceSysmemForDriver_857F1D5A(SceUID pid, const void *addr, SceSize size)
 {
 	void *as;
 	int ret;
@@ -1486,9 +1485,9 @@ SceUID ksceKernelFindProcMemBlockByAddr(SceUID pid, const void *addr, SceSize si
 	return AddressSpaceFindMemBlockCB(as, (uintptr_t)addr, size, NULL);
 }
 
-SceUID ksceKernelFindMemBlockByAddr(const void *addr, SceSize size)
+SceUID SceSysmemForDriver_8A1742F6(const void *addr, SceSize size)
 {
-	return AddressSpaceFindMemBlockCB(ksceKernelSysrootGetCurrentAddressSpaceCB(),
+	return AddressSpaceFindMemBlockCB(SceSysrootForKernel_63EBB05B(),
 					  (uintptr_t)addr, size, NULL);
 }
 
@@ -1507,12 +1506,12 @@ typedef struct MemBlockDebugCallbacks {
 static MemBlockDebugCallbacks *s_memBlockDebugCallbacks;
 #endif
 
-int ksceKernelIncRefCountMemBlock(SceUID guid)
+int SceSysmemForDriver_EAF3849B(SceUID guid)
 {
 	MemBlockObject *block;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
@@ -1527,16 +1526,16 @@ int ksceKernelIncRefCountMemBlock(SceUID guid)
 						__builtin_return_address(0));
 	}
 #endif
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return 0;
 }
 
-int ksceKernelDecRefCountMemBlock(SceUID guid)
+int SceSysmemForDriver_F50BDC0C(SceUID guid)
 {
 	MemBlockObject *block;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
@@ -1551,7 +1550,7 @@ int ksceKernelDecRefCountMemBlock(SceUID guid)
 						__builtin_return_address(0));
 	}
 #endif
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
@@ -1560,25 +1559,25 @@ int PartitionGetMemBlockPARange(struct Partition *partition, MemBlockObject *blo
 int PartitionGetMemBlockPAVector(struct Partition *partition, MemBlockObject *block,
 				 MemBlockPAVector *vector);
 
-int ksceKernelGetMemBlockPARange(SceUID guid, SceKernelPARange *range)
+int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range)
 {
 	MemBlockObject *block;
 	int intr, ret;
 
 	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
+	intr = SceCpuForDriver_EC53D007(&block->lock);
 	ret = PartitionGetMemBlockPARange(block->partition, block, range);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
-	ksceGUIDReleaseObject(guid);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
-int ksceKernelGetMemBlockPAVector(SceUID guid, MemBlockPAVector *vector)
+int SceSysmemForDriver_19A51AC7(SceUID guid, MemBlockPAVector *vector)
 {
 	MemBlockObject *block;
 	int intr, ret;
@@ -1589,14 +1588,14 @@ int ksceKernelGetMemBlockPAVector(SceUID guid, MemBlockPAVector *vector)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	if (vector->capacity != 0 && vector->ranges == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
+	intr = SceCpuForDriver_EC53D007(&block->lock);
 	ret = PartitionGetMemBlockPAVector(block->partition, block, vector);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
-	ksceGUIDReleaseObject(guid);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
@@ -1610,21 +1609,21 @@ SceUID sceKernelGetMemBlockProcess(SceUID guid)
 	SceUID pid;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	pid = GetMemBlockPartition(block)->addressSpace->pid;
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return pid;
 }
 
-int ksceKernelGetMemBlockMemtypeByAddr(const void *addr)
+int SceSysmemForDriver_F3BBE2E1(const void *addr)
 {
 	MemBlockObject *block;
 	int ret;
 
-	ret = AddressSpaceFindMemBlockCtlByAddr(ksceKernelSysrootGetCurrentAddressSpaceCB(),
+	ret = AddressSpaceFindMemBlockCtlByAddr(SceSysrootForKernel_63EBB05B(),
 						(uintptr_t)addr, 0, &block);
 	if (ret < 0)
 		return ret;
@@ -1632,18 +1631,18 @@ int ksceKernelGetMemBlockMemtypeByAddr(const void *addr)
 }
 
 /* kernel addresses below 0x60000000 need no lock */
-int ksceKernelLockRange(void *addr, SceSize size)
+int SceSysmemForDriver_59A4402F(void *addr, SceSize size)
 {
 	uintptr_t va = (uintptr_t)addr;
 
 	if (va >= 0x40000000 && va - 0x40000000 + size <= 0x20000000)
 		return 1;
-	return ASLockRangeWithMode(ksceKernelSysrootGetCurrentAddressSpaceCB(), 0, va, size);
+	return ASLockRangeWithMode(SceSysrootForKernel_63EBB05B(), 0, va, size);
 }
 
-int ksceKernelUnlockRange(void *addr, SceSize size)
+int SceSysmemForDriver_75C70DE0(void *addr, SceSize size)
 {
-	return ASUnlockRangeWithMode(ksceKernelSysrootGetCurrentAddressSpaceCB(), 0, (uintptr_t)addr,
+	return ASUnlockRangeWithMode(SceSysrootForKernel_63EBB05B(), 0, (uintptr_t)addr,
 				     size);
 }
 
@@ -1728,7 +1727,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	    mapSize == NULL || offset == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (pid == 0) {
-		locked = ksceKernelLockRange((void *)va, size);
+		locked = SceSysmemForDriver_59A4402F((void *)va, size);
 		if (locked < 0)
 			return SCE_KERNEL_ERROR_ERROR;
 	} else {
@@ -1765,7 +1764,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 		goto unlock;
 	allocated = 0;
 	if (vector.total > USER_MAP_VECTOR) {
-		vector.ranges = ksceKernelAlloc(vector.total * sizeof(SceKernelPARange));
+		vector.ranges = SceSysmemForKernel_85571907(vector.total * sizeof(SceKernelPARange));
 		if (vector.ranges == NULL) {
 			ret = SCE_KERNEL_ERROR_HEAPLIB_NOMEM;
 			goto unlock;
@@ -1818,24 +1817,24 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	opt.size = sizeof(opt);
 	opt.paddr_list = (void *)&vector;
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST | ALLOC_ATTR_NO_CLEAR;
-	guid = ksceKernelAllocMemBlockWithInfo(name, type, len, &opt, NULL);
+	guid = sceKernelAllocMemBlockWithInfoForKernel(name, type, len, &opt, NULL);
 	ret = guid;
 	if (guid >= 0) {
 		block = NULL;
-		ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+		ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 						   (SceObjectBase **)&block);
 		if (ret >= 0) {
-			info = ksceKernelAlloc(sizeof(*info));
+			info = SceSysmemForKernel_85571907(sizeof(*info));
 			if (info != NULL) {
 				info->pid = pid != 0 ? pid : SceSysrootForKernel_7385CADE();
 				info->va = va;
 				info->size = size;
 				info->noLock = locked == 1;
 				MemBlockOptSetUserMapInfoRaw(block, info);
-				ksceGUIDReleaseObject(guid);
-				ret = ksceKernelGetMemBlockVBase(guid, &vbase);
+				sceGUIDReleaseObject(guid);
+				ret = SceSysmemForDriver_B81CF0A3(guid, &vbase);
 				if (ret < 0) {
-					ksceKernelFreeMemBlock(guid);
+					SceSysmemForDriver_009E1C61(guid);
 				} else {
 					*base = vbase;
 					*mapSize = len;
@@ -1845,7 +1844,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 				goto done;
 			}
 			/* the original releases the error code, not the GUID */
-			ksceGUIDReleaseObject(SCE_KERNEL_ERROR_HEAPLIB_NOMEM);
+			sceGUIDReleaseObject(SCE_KERNEL_ERROR_HEAPLIB_NOMEM);
 			ret = SCE_KERNEL_ERROR_HEAPLIB_NOMEM;
 		}
 		info = NULL;
@@ -1854,33 +1853,33 @@ done:
 	if (allocated) {
 free_vector:
 		if (vector.ranges != NULL)
-			ksceKernelFree(vector.ranges);
+			SceSysmemForKernel_4233C16D(vector.ranges);
 	}
 	if (ret >= 0)
 		return ret;
 	if (info != NULL)
-		ksceKernelFree(info);
+		SceSysmemForKernel_4233C16D(info);
 unlock:
 	if (pid == 0)
-		ksceKernelUnlockRange((void *)va, size);
+		SceSysmemForDriver_75C70DE0((void *)va, size);
 	return ret;
 }
 
-int ksceKernelLockRangeProc(SceUID pid, void *addr, SceSize size)
+int SceSysmemForDriver_659586BF(SceUID pid, void *addr, SceSize size)
 {
 	return LockRangeForPID(pid, (uintptr_t)addr, size);
 }
 
-int ksceKernelUnlockRangeProc(SceUID pid, void *addr, SceSize size)
+int SceSysmemForDriver_A8525B06(SceUID pid, void *addr, SceSize size)
 {
 	return UnlockRangeForPID(pid, (uintptr_t)addr, size);
 }
 
-int ksceKernelLockRangeWithMode(SceKernelMemoryRefPerm mode, void *addr, SceSize size)
+int sceKernelLockRangeWithMode(SceKernelMemoryRefPerm mode, void *addr, SceSize size)
 {
 	int ret;
 
-	ret = ASLockRangeWithMode(ksceKernelSysrootGetCurrentAddressSpaceCB(), mode,
+	ret = ASLockRangeWithMode(SceSysrootForKernel_63EBB05B(), mode,
 				  (uintptr_t)addr, size);
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xb, 2037, "sceKernelLockRangeWithMode",
@@ -1889,20 +1888,20 @@ int ksceKernelLockRangeWithMode(SceKernelMemoryRefPerm mode, void *addr, SceSize
 	return ret;
 }
 
-int ksceKernelUnlockRangeWithMode(SceKernelMemoryRefPerm mode, void *addr, SceSize size)
+int SceSysmemForDriver_22CBE925(SceKernelMemoryRefPerm mode, void *addr, SceSize size)
 {
-	return ASUnlockRangeWithMode(ksceKernelSysrootGetCurrentAddressSpaceCB(), mode,
+	return ASUnlockRangeWithMode(SceSysrootForKernel_63EBB05B(), mode,
 				     (uintptr_t)addr, size);
 }
 
-SceUID ksceKernelUserMap(const char *name, int permission, const void *user_buf, SceSize size,
+SceUID SceSysmemForDriver_278BC201(const char *name, int permission, const void *user_buf, SceSize size,
 			 void **kernel_page, SceSize *kernel_size, SceUInt32 *kernel_offset)
 {
 	return UserMap(0, name, permission, 0, (uintptr_t)user_buf, size, kernel_page, kernel_size,
 		       kernel_offset);
 }
 
-SceUID ksceKernelUserMapWithFlags(const char *name, int permission, int flags,
+SceUID SceSysmemForDriver_7D4F8B5F(const char *name, int permission, int flags,
 				  const void *user_buf, SceSize size, void **kernel_page,
 				  SceSize *kernel_size, unsigned int *kernel_offset)
 {
@@ -1910,7 +1909,7 @@ SceUID ksceKernelUserMapWithFlags(const char *name, int permission, int flags,
 		       kernel_size, kernel_offset);
 }
 
-SceUID ksceKernelProcUserMap(SceUID pid, const char *name, int permission, const void *user_buf,
+SceUID SceSysmemForDriver_0091D74D(SceUID pid, const char *name, int permission, const void *user_buf,
 			     SceSize size, void **kernel_page, SceSize *kernel_size,
 			     SceUInt32 *kernel_offset)
 {
@@ -1918,8 +1917,8 @@ SceUID ksceKernelProcUserMap(SceUID pid, const char *name, int permission, const
 		       kernel_size, kernel_offset);
 }
 
-/* a user map freed and the user range unlocked again */
-int ksceKernelUserUnmap(SceUID guid)
+/* a user map freed and the user range unlocked again; the range is the caller's note only */
+int sceKernelUserUnmap(SceUID guid, const void *userBuffer, SceSize userSize)
 {
 	MemBlockObject *block;
 	UserMapInfo *info;
@@ -1928,24 +1927,24 @@ int ksceKernelUserUnmap(SceUID guid)
 	SceUInt32 noLock;
 	int intr, ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
+	intr = SceCpuForDriver_EC53D007(&block->lock);
 	if ((block->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_USER_MAP &&
 	    (info = MemBlockOptGetUserMapInfoRaw(block)) != NULL) {
 		va = info->va;
 		size = info->size;
 		noLock = info->noLock;
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
-		ksceGUIDReleaseObject(guid);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+		sceGUIDReleaseObject(guid);
 		ret = FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 		if (ret < 0)
 			goto fail;
 		if (noLock != 1) {
 			if (info->pid == SceSysrootForKernel_7385CADE()) {
-				ret = ksceKernelUnlockRange((void *)va, size);
+				ret = SceSysmemForDriver_75C70DE0((void *)va, size);
 				if (ret < 0) {
 					SCE_DBG_PRINTF_FUNC(0xb, 2637, "sceKernelUserUnmap",
 						       "sceKernelUnlockRange(0x%08x, 0x%08x) failed 0x%08x\n",
@@ -1962,11 +1961,11 @@ int ksceKernelUserUnmap(SceUID guid)
 				}
 			}
 		}
-		ksceKernelFree(info);
+		SceSysmemForKernel_4233C16D(info);
 		return ret;
 	}
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
-	ksceGUIDReleaseObject(guid);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+	sceGUIDReleaseObject(guid);
 	ret = FreeMemBlockCore(guid, 0, NULL, NULL, NULL, NULL);
 	if (ret >= 0)
 		return ret;
@@ -1984,12 +1983,12 @@ int SceSysmemForDriver_64DBE472(SceUID guid, uintptr_t range[2])
 	MemBlockObject *block;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	ret = MemBlockGetPhyRange(block, range);
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 
@@ -2022,13 +2021,13 @@ int sceKernelMemBlockToPAVector(SceUID guid, MemBlockPAVector *vector)
 	}
 	vector->count = 0;
 	vector->total = 0;
-	ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	MemBlockGetPhyRangeList(block, vector, cur, end);
 	vector->count = vector->capacity < vector->total ? vector->capacity : vector->total;
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return 0;
 }
 
@@ -2086,7 +2085,7 @@ int GetMemBlockInfoForPID(SceUID pid, SceUID uid, SceInt32 level, MemBlockPhyInf
 	if (ret < 0)
 		return ret;
 	current = block;
-	cls = ksceKernelGetUIDMemBlockClass();
+	cls = SceSysmemForKernel_86681B64();
 	if (current->cls != cls)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = MemBlockGetInfo(current, level, info);
@@ -2167,12 +2166,12 @@ int SceSysmemForKernel_BA441FD0(SceUID uid, MemBlockInfoEx *info)
 	return 0;
 }
 
-int ksceKernelMemBlockGetInfoEx(SceUID uid, MemBlockPhyInfo *info)
+int SceSysmemForDriver_24A99FFF(SceUID uid, MemBlockPhyInfo *info)
 {
 	return GetMemBlockInfoForPID(MemBlockUIDOwner(uid), uid, 7, info);
 }
 
-int ksceKernelGetMemBlockInfo(SceUID uid, SceInt32 level, MemBlockPhyInfo *info)
+int SceSysmemForDriver_A73CFFEF(SceUID uid, SceInt32 level, MemBlockPhyInfo *info)
 {
 	return GetMemBlockInfoForPID(MemBlockUIDOwner(uid), uid, level, info);
 }
@@ -2216,8 +2215,8 @@ invalid:
 int sceKernelSysrootGetCurrentThreadAttr(uint32_t *attr);
 int SysrootIncProcessResource(SceUInt32 type);
 int SysrootDecProcessResource(SceUInt32 type);
-int ksceSysrootGetSelfAuthInfo(SceUID pid, void *info);
-int ksceKernelSysrootCheckRemapCodeForUser(SceUID pid);
+int SceSysrootForKernel_4F0A4066(SceUID pid, void *info);
+int SceSysrootForKernel_F8769E86(SceUID pid);
 SceUInt32 SceSysmemForKernel_4E6D8BC3(void);
 void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
 void *SceSysrootForKernel_2F75C1DC(SceSize size, void *opt);
@@ -2256,7 +2255,7 @@ SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
 	}
 	switch (type) {
 	case SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_GAME_RW:
-		ret = ksceSysrootGetSelfAuthInfo(0, &auth);
+		ret = SceSysrootForKernel_4F0A4066(0, &auth);
 		if (ret >= 0 && MemBlockAuthDenied((SceUInt32)auth.program_authority_id,
 						(SceUInt32)(auth.program_authority_id >> 32))) {
 			ret = SCE_KERNEL_ERROR_MEMBLOCK_TYPE_FOR_UPDATER_OR_SAFEMODE;
@@ -2313,7 +2312,7 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 	char name[0x20];
 	int intr, rintr, ret;
 
-	if (!ksceKernelSysrootCheckRemapCodeForUser(0))
+	if (!SceSysrootForKernel_F8769E86(0))
 		return SCE_ERROR_ERRNO_ENOSYS;
 	ret = SceSysmemForKernel_4E6D8BC3();
 	if (ret >= 1) {
@@ -2324,7 +2323,7 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 	}
 	if (userName == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	ret = ksceKernelStrncpyFromUser(name, userName, sizeof(name));
+	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
 	if (ret < 0)
 		return ret;
 	name[sizeof(name) - 1] = '\0';
@@ -2342,8 +2341,8 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 		ret = SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 		goto fail;
 	}
-	if ((SceSize)ksceKernelAtomicAddAndGet32((SceInt32 *)&storage->vmSize, size) > VM_SIZE_MAX) {
-		ksceKernelAtomicSubAndGet32((SceInt32 *)&storage->vmSize, size);
+	if ((SceSize)SceCpuForDriver_5F6A8743((SceInt32 *)&storage->vmSize, size) > VM_SIZE_MAX) {
+		SceCpuForDriver_A4884C4E((SceInt32 *)&storage->vmSize, size);
 		ret = SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 		goto fail;
 	}
@@ -2351,29 +2350,29 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 	opt.size = sizeof(opt);
 	opt.attr = ALLOC_ATTR_KEEP_CLEAR | ALLOC_ATTR_HAS_DOMAIN;
 	opt.domain = DOMAIN_VM;
-	guid = ksceKernelAllocMemBlockWithInfo(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RX, size,
+	guid = sceKernelAllocMemBlockWithInfoForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RX, size,
 					       &opt, NULL);
 	ret = guid;
 	if (guid < 0)
 		goto fail;
-	puid = kscePUIDOpenByGUID(0, guid);
+	puid = SceSysmemForDriver_BF209859(0, guid);
 	ret = puid;
 	if (puid >= 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&storage->lock);
+		intr = SceCpuForDriver_D32ACE9E(&storage->lock);
 		if (storage->vmBlocks == NULL) {
 			storage->vmBlocks = SceSysrootForKernel_2F75C1DC(
 				SYSMEM_VM_BLOCKS * sizeof(SysmemVMBlock), NULL);
 			if (storage->vmBlocks == NULL)
-				ksceKernelPanic(SCE_DBGINFO_FUNC(3976, "sceKernelAllocMemBlockForVMForUser"),
+				SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(3976, "sceKernelAllocMemBlockForVMForUser"),
 						__builtin_return_address(0));
 			for (entry = storage->vmBlocks; entry != storage->vmBlocks + SYSMEM_VM_BLOCKS;
 			     entry++)
 				entry->puid = -1;
 		}
-		ret = ksceGUIDReferObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+		ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 						   (SceObjectBase **)&block);
 		if (ret >= 0) {
-			rintr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
+			rintr = SceCpuForDriver_EC53D007(&block->lock);
 			entry = storage->vmBlocks;
 			end = entry + SYSMEM_VM_BLOCKS;
 			do {
@@ -2391,15 +2390,15 @@ SceUID sceKernelAllocMemBlockForVM(const char *userName, SceSize size)
 				}
 				entry++;
 			} while (entry != end);
-			ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, rintr);
-			ksceGUIDReleaseObject(guid);
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&storage->lock, intr);
+			sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, rintr);
+			sceGUIDReleaseObject(guid);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&storage->lock, intr);
 			return puid;
 		}
 		/* the original keeps the storage lock here */
 	}
-	ksceKernelAtomicSubAndGet32((SceInt32 *)&storage->vmSize, size);
-	ksceKernelFreeMemBlock(guid);
+	SceCpuForDriver_A4884C4E((SceInt32 *)&storage->vmSize, size);
+	SceSysmemForDriver_009E1C61(guid);
 fail:
 	SysrootDecProcessResource(restype);
 	return ret;
@@ -2415,7 +2414,7 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 	SceUID guid;
 	int ret;
 
-	if (!ksceKernelSysrootCheckRemapCodeForUser(0))
+	if (!SceSysrootForKernel_F8769E86(0))
 		return SCE_ERROR_ERRNO_ENOSYS;
 	ret = SceSysmemForKernel_4E6D8BC3();
 	if (ret >= 1) {
@@ -2425,7 +2424,7 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 	}
 	if (userName == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	ret = ksceKernelStrncpyFromUser(name, userName, sizeof(name));
+	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
 	if (ret < 0)
 		return ret;
 	name[sizeof(name) - 1] = '\0';
@@ -2441,19 +2440,19 @@ SceUID sceKernelAllocUnmapMemBlock(const char *userName, SceSize size)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_NO_MAP;
-	guid = ksceKernelAllocMemBlockWithInfo(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RX, size,
+	guid = sceKernelAllocMemBlockWithInfoForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RX, size,
 					       &opt, NULL);
 	ret = guid;
 	if (guid >= 0) {
-		ret = ksceGUIDGetObject(guid, &block);
+		ret = SceSysmemForDriver_0FC24464(guid, &block);
 		if (ret >= 0) {
 			MemBlockSetLockStatusRaw(block, MEMBLOCK_STATUS_UNMAP);
 			MemBlockSetLockStatusRaw(block, MEMBLOCK_STATUS_LOCKED);
-			ret = kscePUIDOpenByGUID(0, guid);
+			ret = SceSysmemForDriver_BF209859(0, guid);
 			if (ret >= 0)
 				return ret;
 		}
-		ksceKernelFreeMemBlock(guid);
+		SceSysmemForDriver_009E1C61(guid);
 	}
 	SysrootDecProcessResource(restype);
 	return ret;
@@ -2469,7 +2468,7 @@ int sceKernelSyncVMDomain(SceUID puid, uintptr_t va, SceSize size)
 	MemBlockObject *block = NULL;
 	int ret;
 
-	if (!ksceKernelSysrootCheckRemapCodeForUser(0))
+	if (!SceSysrootForKernel_F8769E86(0))
 		return SCE_ERROR_ERRNO_ENOSYS;
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
 	if (storage != NULL && (entry = storage->vmBlocks) != NULL) {
@@ -2488,7 +2487,7 @@ int sceKernelSyncVMDomain(SceUID puid, uintptr_t va, SceSize size)
 overflow:
 	SCE_DBG_PRINTF_FUNC(0xb, 4201, "sceKernelSyncVMDomainForUser",
 			    "Warning: VM Block overflow\n");
-	ret = SceSysmemForKernel_9C23DFF7(0, puid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForKernel_9C23DFF7(0, puid, SceSysmemForKernel_86681B64(),
 					  (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret | 0x40000000;
@@ -2498,8 +2497,8 @@ overflow:
 	}
 	UIDEntryReleaseObject(0, puid);
 sync:
-	ksceKernelL1DcacheCleanInvalidateRange((void *)va, size);
-	ksceKernelL1IcacheInvalidateRange((void *)va, size);
+	SceCpuForKernel_4F442396((void *)va, size);
+	SceCpuForKernel_2E637B1D((void *)va, size);
 	return ret;
 }
 
@@ -2523,7 +2522,7 @@ int MemBlockClearBaseInfo(MemBlockObject *block)
 	if (info == NULL)
 		return 0;
 	MemBlockOptClearBaseInfoRaw(block);
-	ksceKernelFree(info);
+	SceSysmemForKernel_4233C16D(info);
 	return 0;
 }
 
@@ -2540,13 +2539,13 @@ int FreeMemBlockByGUID(SceUID guid)
 	return ret;
 }
 
-SceUID kscePUIDtoGUIDWithClass(SceUID pid, SceUID puid, SceClass *cls);
-int ksceGUIDGetObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
+SceUID SceSysmemForDriver_184172B1(SceUID pid, SceUID puid, SceClass *cls);
+int SceSysmemForKernel_0E43E113(SceUID guid, SceClass *cls, SceObjectBase **object);
 int PUIDCloseWithFlags(SceUID pid, SceUID puid, SceUInt32 flags);
 SceUID PUIDFindByGUID(SceUID pid, SceUID guid);
 int MemBlockSetBaseInfo(SceUID guid, MemBlockBaseInfo *info);
 int CheckProcessCapabilityGranted(SceUID pid, unsigned int capability);
-int ksceKernelIsAccessibleRange(SceUInt32 mode, const void *addr, SceSize size);
+int SceSysmemForDriver_9C78064C(SceUInt32 mode, const void *addr, SceSize size);
 int snprintf(char *buf, SceSize size, const char *fmt, ...);
 
 #define MEMBLOCK_ERROR_LOCKED_FATAL	0xc0024b10
@@ -2570,13 +2569,13 @@ int sceKernelFreeMemBlock(SceUID puid)
 
 	if (puid == -1)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	guid = kscePUIDtoGUIDWithClass(0, puid, ksceKernelGetUIDMemBlockClass());
+	guid = SceSysmemForDriver_184172B1(0, puid, SceSysmemForKernel_86681B64());
 	if (guid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 4340, "sceKernelFreeMemBlockForUser",
 			"MemBlockPUIDtoGUID(puid:0x%08x) failed 0x%08x\n", puid, guid);
 		return guid | 0x40000000;
 	}
-	if (ksceGUIDGetObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	if (SceSysmemForKernel_0E43E113(guid, SceSysmemForKernel_86681B64(),
 				       (SceObjectBase **)&block) < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 4348, "sceKernelFreeMemBlockForUser",
 			"GUIDGetMemBlock(0x%08x) failed\n", guid);
@@ -2620,7 +2619,7 @@ int sceKernelFreeMemBlockForVM(SceUID puid)
 		if (entry == end)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ksceKernelAtomicSubAndGet32((SceInt32 *)&storage->vmSize, entry->size);
+	SceCpuForDriver_A4884C4E((SceInt32 *)&storage->vmSize, entry->size);
 	entry->puid = -1;
 	return sceKernelFreeMemBlock(puid);
 }
@@ -2660,21 +2659,21 @@ SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
 	default:
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = ksceKernelStrncpyFromUser(name, userName, sizeof(name));
+	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
 	if (ret < 0)
 		return ret;
 	name[sizeof(name) - 1] = '\0';
 	guid = GUIDFindByName(name);
 	if (guid < 0)
 		return guid;
-	ret = ksceGUIDGetObjectWithClass(guid, ksceKernelGetUIDMemBlockClass(),
+	ret = SceSysmemForKernel_0E43E113(guid, SceSysmemForKernel_86681B64(),
 					 (SceObjectBase **)&base);
 	if (ret < 0)
 		return ret;
-	info = ksceKernelAlloc(sizeof(*info));
+	info = SceSysmemForKernel_85571907(sizeof(*info));
 	if (info == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&base->lock);
+	intr = SceCpuForDriver_EC53D007(&base->lock);
 	{
 		MemBlockObject *current = base;
 		struct Partition *partition = current->partition;
@@ -2688,7 +2687,7 @@ SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
 		info->pid = pid;
 		info->partitionUid = partitionUid;
 		info->guid = guid;
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&current->lock, intr);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&current->lock, intr);
 	}
 	if ((base->flags & MEMBLOCK_OPT_MASK) == MEMBLOCK_OPT_CLIENT_INFO) {
 		client = (MemBlockClientInfo *)base->opt;
@@ -2750,7 +2749,7 @@ SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
 		ret = SCE_KERNEL_ERROR_MEMBLOCK_OVERFLOW;
 		goto fail;
 	}
-	mirror = ksceKernelAllocMemBlockWithInfo(clientName, type, size, &opt, NULL);
+	mirror = sceKernelAllocMemBlockWithInfoForKernel(clientName, type, size, &opt, NULL);
 	ret = mirror;
 	if (mirror < 0)
 		goto uncharge;
@@ -2762,19 +2761,19 @@ SceUID sceKernelOpenMemBlock(const char *userName, SceUInt32 flags)
 	}
 	ret = MemBlockClientInfoAddGUID(client, mirror);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(mirror);
+		SceSysmemForDriver_009E1C61(mirror);
 		goto uncharge;
 	}
-	puid = kscePUIDOpenByGUID(0, mirror);
+	puid = SceSysmemForDriver_BF209859(0, mirror);
 	if (puid >= 0)
 		return puid;
 	MemBlockClientInfoRemoveGUID(client, mirror);
-	ksceKernelFreeMemBlock(mirror);
+	SceSysmemForDriver_009E1C61(mirror);
 	ret = puid;
 uncharge:
 	SysrootDecProcessResource(restype);
 fail:
-	ksceKernelFree(info);
+	SceSysmemForKernel_4233C16D(info);
 	return ret;
 }
 
@@ -2793,32 +2792,32 @@ int sceKernelGetMemBlockBase(SceUID puid, void **userBase)
 
 	if (userBase == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	guid = PUID2GUIDWithRefer(0, puid, ksceKernelGetUIDMemBlockClass());
+	guid = PUID2GUIDWithRefer(0, puid, SceSysmemForKernel_86681B64());
 	if (guid < 0)
 		return guid | 0x40000000;
-	ret = ksceGUIDGetObject(guid, &block);
+	ret = SceSysmemForDriver_0FC24464(guid, &block);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 4937, "sceKernelGetMemBlockBaseForUser",
 			"sceGUIDGetObject failed 0x%08x\n", ret);
 		goto none;
 	}
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&block->lock);
+	intr = SceCpuForDriver_EC53D007(&block->lock);
 	ret = MemBlockCodeCheckUserInfo(block->code);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 4947, "sceKernelGetMemBlockBaseForUser",
 			"MemBlockCheckUserBlockRaw failed 0x%08x\n", ret);
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
 		goto none;
 	}
 	base = block->vbase;
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
-	ret = ksceKernelCopyToUser(userBase, &base, sizeof(base));
-	ksceGUIDReleaseObject(guid);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
+	ret = SceSysmemForDriver_6D88EF8A(userBase, &base, sizeof(base));
+	sceGUIDReleaseObject(guid);
 	return ret;
 none:
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	base = 0;
-	copied = ksceKernelCopyToUser(userBase, &base, sizeof(base));
+	copied = SceSysmemForDriver_6D88EF8A(userBase, &base, sizeof(base));
 	return copied < 0 ? copied : ret;
 }
 
@@ -2829,10 +2828,10 @@ SceUID sceKernelFindMemBlockByAddr(const void *addr, SceSize size)
 	SceUID guid;
 	int ret;
 
-	ret = ksceKernelIsAccessibleRange(0x10, addr, size);
+	ret = SceSysmemForDriver_9C78064C(0x10, addr, size);
 	if (ret < 0)
 		return ret;
-	guid = AddressSpaceFindMemBlockCB(ksceKernelSysrootGetCurrentAddressSpaceCB(),
+	guid = AddressSpaceFindMemBlockCB(SceSysrootForKernel_63EBB05B(),
 					  (uintptr_t)addr, size, &block);
 	if (guid <= 0)
 		return guid;
@@ -2846,7 +2845,7 @@ int sceKernelGetMemBlockInfoByAddr(const void *addr, MemBlockUserInfo *info)
 {
 	int ret;
 
-	ret = ksceKernelIsAccessibleRange(0x10, addr, 0);
+	ret = SceSysmemForDriver_9C78064C(0x10, addr, 0);
 	if (ret < 0)
 		return ret;
 	return GetMemBlockInfoByRangeForUser(1, (uintptr_t)addr, 0, info);
@@ -2856,7 +2855,7 @@ int sceKernelGetMemBlockInfoByRange(const void *addr, SceSize size, MemBlockUser
 {
 	int ret;
 
-	ret = ksceKernelIsAccessibleRange(0x10, addr, size);
+	ret = SceSysmemForDriver_9C78064C(0x10, addr, size);
 	if (ret < 0)
 		return ret;
 	return GetMemBlockInfoByRangeForUser(MEMBLOCK_INFO_BY_RANGE, (uintptr_t)addr, size, info);
@@ -2898,12 +2897,12 @@ int MemBlockOptSetClientInfoRaw(MemBlockObject *block, const SceKernelAllocMemBl
 
 	if (block->flags & MEMBLOCK_OPT_MASK)
 		return SCE_KERNEL_ERROR_SYSMEM_MEMBLOCK_ERROR;
-	info = ksceKernelAlloc(sizeof(*info));
+	info = SceSysmemForKernel_85571907(sizeof(*info));
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_SYSMEM_MEMBLOCK_ERROR;
 	info->lock = 0;
 	info->capacity = MEMBLOCK_CLIENT_PIDS;
-	slot = ksceKernelAlloc(MEMBLOCK_CLIENT_PIDS * sizeof(SceUID));
+	slot = SceSysmemForKernel_85571907(MEMBLOCK_CLIENT_PIDS * sizeof(SceUID));
 	info->guids = slot;
 	if (slot == NULL) {
 		info->capacity = 0;
@@ -2936,7 +2935,7 @@ SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 att
 {
 	SceUID guid;
 
-	guid = GUIDRegister(ksceKernelGetUIDMemBlockClass(), name, (SceObjectBase *)block,
+	guid = GUIDRegister(SceSysmemForKernel_86681B64(), name, (SceObjectBase *)block,
 			    (attr & 0x4000) ? MEMBLOCK_GUID_ATTR_CLIENT : MEMBLOCK_GUID_ATTR);
 	if (guid >= 0)
 		block->guid = guid;

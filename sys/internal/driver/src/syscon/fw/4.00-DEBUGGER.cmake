@@ -68,24 +68,24 @@ set(MODULE_IMPORT_NIDS
 	0xF0EF5743:F:0xF6310435
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
 	memset
 	memcpy
 	memmove
 	__memcpy_chk
 	__stack_chk_fail
-	ksceKernelGetAssertLevel
-	ksceKernelPrintfAssertLevel
-	ksceKernelAssertLevel
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_821A2D59
+	SceDebugForDriver_FD753E7A
 	SceSysrootForDriver_3AE319DA
-	ksceSysrootGetHardwareFlags
-	ksceSysrootGetHardwareInfo
+	SceSysrootForDriver_46E72428
+	SceSysrootForDriver_930B1342
 	ksceKernelIsIntrAllowedInCurrentContext
 	ksceKernelDisableSubIntr
 	ksceKernelReleaseSubIntrHandler
@@ -104,9 +104,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCheckWaitableStatus
 	ksceKernelEnqueueWorkQueue
 	ksceKernelCreateMutex
-	ksceKernelRegisterSysEventHandler
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	kscePervasiveSpiClockEnable
 	kscePervasiveSpiResetDisable
 	ksceGpioQueryIntr

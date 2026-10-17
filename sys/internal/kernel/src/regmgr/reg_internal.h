@@ -10,7 +10,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <string.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "reg.h"
 
 /* 4.00 builds the reg library with _FORTIFY_SOURCE=1: whole-object sizes */

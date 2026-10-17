@@ -5,15 +5,15 @@
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/audioin.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 
-extern const SceProcEventHandler g_audioInProcEventHandler;
+extern const SceKernelProcEventHandler g_audioInProcEventHandler;
 
 int sceAudioInReleasePort(int port)
 {
@@ -198,7 +198,7 @@ int sceAudioInInputWithInputDeviceState(int port, void *destPtr,
 				}
 				result = sceKernelGetProcessId();
 				if (result >= 0)
-					result = ksceKernelCopyToUserProc(result, inputDeviceState, &bits, 4);
+					result = sceKernelCopyToUserProc(result, inputDeviceState, &bits, 4);
 			}
 		}
 	}
@@ -242,7 +242,7 @@ int sceAudioInGetStatus(int select)
 		result = g_audioInRequestFlags & 1;
 		if (g_audioInRequestFlags & 1)
 			result = 1;
-		else if (ksceSblAimgrIsDolce())
+		else if (SceSblAIMgrForDriver_71608CA3())
 			result = g_audioInCaptureDevice != 1;
 	} else {
 		SceProcessmgrForDriver_D141C076(sceKernelGetProcessId(), &sdkVersion);
@@ -290,11 +290,11 @@ int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 	if (g_audioInPorts[index].pid == pid) { \
 		g_audioInDeviceStateEnabled = 0; \
 		g_audioInPorts[index].flags &= ~0x80u; \
-		ksceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~0x1000u); \
+		SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~0x1000u); \
 		if (g_audioInPorts[index].flags & 0x10000) \
 			g_audioInDeviceStateEnabled = 1; \
 		if (g_audioInPorts[index].flags & 0x20000) \
-			ksceKernelAtomicOrAndGet32(&g_audioInAecFlags, 0x1000); \
+			SceCpuForDriver_BC248C30(&g_audioInAecFlags, 0x1000); \
 	} \
 } while (0)
 	ACTIVATE_OWNER_PORT(0);
@@ -323,7 +323,7 @@ int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 		MUTE_OWNER_PORT(3);
 #undef MUTE_OWNER_PORT
 	}
-	ksceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 256);
+	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&g_audioInLock);
 	return 0;
 }
@@ -334,9 +334,9 @@ int sceAudioInSetMute(int select)
 
 	writeTpidruro(userState << 16);
 	if (select == 1) {
-		select = ksceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 1);
+		select = SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 1);
 	} else if (select == 2) {
-		select = ksceKernelAtomicAndAndGet32(&g_audioInRequestFlags, ~1u);
+		select = SceCpuForDriver_DF899E4B(&g_audioInRequestFlags, ~1u);
 		writeTpidruro(userState);
 		return select;
 	}
@@ -389,8 +389,8 @@ int module_start(SceSize unusedSize, const void *unusedArgument)
 	result = ksceKernelStartThread(event, 0, NULL);
 	if (result < 0)
 		return result;
-	ksceKernelRegisterSysEventHandler(g_audioInModuleName, audioInSysEventHandler, NULL);
-	ksceKernelRegisterProcEventHandler(g_audioInModuleName, &g_audioInProcEventHandler, 0);
+	sceKernelRegisterSysEventHandler(g_audioInModuleName, audioInSysEventHandler, NULL);
+	sceKernelRegisterProcEventHandler(g_audioInModuleName, &g_audioInProcEventHandler, 0);
 	g_audioInOwnerPid = -2;
 	g_audioInInitialized = 1;
 	g_audioInRequestFlags = 0;
@@ -431,7 +431,7 @@ int sceAudioInSelectInput(int input)
 		result = 0;
 	} else {
 		g_audioInRequestedInput = input;
-		ksceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 512);
+		SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 512);
 		event = g_audioInAppliedInput == 16 ? 264 : 256;
 		result = ksceKernelSetEventFlag(g_audioInRequestEventFlag, event);
 	}

@@ -3,7 +3,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <string.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 
@@ -139,7 +139,7 @@ static int _writeSegs(SegIf *segment)
 				for (j = 0; j < numData; ++j) {
 					dataSize = info.dataSize;
 					memset(data, 0, dataSize);
-					ksceKernelCopyFromUserProc(coredumpRun.pid, data,
+					sceKernelCopyFromUserProc(coredumpRun.pid, data,
 						(const void *)waitingIds[numWaiting + j],
 						dataSize);
 					result = writerWrite(currentWriter, data,

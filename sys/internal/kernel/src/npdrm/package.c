@@ -1,11 +1,11 @@
 /* Package implementation; the original source filename is unavailable. */
 #include "package_internal.h"
 #include <string.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <psp2kern/npdrm.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <intrmgr/syscall_copy.h>
 
@@ -338,7 +338,7 @@ int NpDrmPackageVerifyMainHeader(unsigned char *data, unsigned int size,
 	if (offset + 384 <= size) {
 		unsigned char *signature = data + offset;
 
-		ksceSha256Digest(data, offset, digest);
+		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
 		memset(exponent, 0, sizeof(exponent));
 		key.modulus = (unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_VITA];
 		key.exponent = exponent;
@@ -391,7 +391,7 @@ int NpDrmPackageVerifyLiveAreaHeader(unsigned char *data,
 	if (size >= offset + 384) {
 		unsigned char *signature = data + offset;
 
-		ksceSha256Digest(data, offset, digest);
+		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
 		result = NpDrmPackageVerifyRsaSignature(signature, digest,
 			(unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_LIVE_AREA]);
 	}
@@ -471,7 +471,7 @@ int NpDrmPackageVerifyAlternateHeader(unsigned char *data,
 	if (size >= offset + 384) {
 		unsigned char *signature = data + offset;
 
-		ksceSha256Digest(data, offset, digest);
+		SceKernelUtilsForDriver_A773A6A8(data, offset, digest);
 		result = NpDrmPackageVerifyRsaSignature(signature, digest,
 			(unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_ALTERNATE]);
 	}
@@ -500,7 +500,7 @@ int NpDrmPackageCryptDebugData(struct NpDrmPackageContext *context,
 		unsigned int length = size < 16 ? size : 16;
 		unsigned int i;
 
-		ksceSha1Digest((unsigned char *)&seed + skip,
+		SceKernelUtilsForDriver_87DC7F2F((unsigned char *)&seed + skip,
 			sizeof(seed) - skip, digest);
 		seed.blockCounter = __builtin_bswap64(
 			__builtin_bswap64(seed.blockCounter) + 1);
@@ -539,7 +539,7 @@ int NpDrmPackageVerifyDebugSignature(const unsigned char *signature,
 	for (i = 0; i < sizeof(output); i++)
 		output[i] = 0;
 	skip = seed.hashSuffix[23] & 0x10;
-	ksceSha1Digest((unsigned char *)&seed + skip,
+	SceKernelUtilsForDriver_87DC7F2F((unsigned char *)&seed + skip,
 		sizeof(seed) - skip, hash);
 	seed.blockCounter = __builtin_bswap64(
 		__builtin_bswap64(seed.blockCounter) + 1);
@@ -561,7 +561,7 @@ int NpDrmPackageVerifyDebugHeader(unsigned char *data,
 		((offset & 0xff00ff00) >> 8);
 	offset = (offset >> 16) | (offset << 16);
 	if (size >= offset + 384) {
-		ksceSha1Digest(data, offset, digest);
+		SceKernelUtilsForDriver_87DC7F2F(data, offset, digest);
 		result = NpDrmPackageVerifyDebugSignature(data + offset, digest);
 	}
 	return result;
@@ -691,7 +691,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 			((keyId & 0x08000000) != 0) != ((keyId & 7) == 4))
 			return 0x80871003;
 	}
-	ksceSha1Digest(data, hmacOffset, hash);
+	SceKernelUtilsForDriver_87DC7F2F(data, hmacOffset, hash);
 	if (!operations->verifySignature(data + hmacOffset, hash))
 		return 0x80871004;
 	if ((keyId & 7) - 1 > 3)
@@ -706,7 +706,7 @@ int NpDrmPackageProcessHeader(unsigned char *data, unsigned int size,
 		offset = NPDRM_BE32(extended->metadataHmacOffset);
 		if (offset + dataSize > 0x8000)
 			return 0x80871003;
-		ksceSha1Digest(data + metadataOffset, metadataSize - 64, hash);
+		SceKernelUtilsForDriver_87DC7F2F(data + metadataOffset, metadataSize - 64, hash);
 		if (!operations->verifySignature(data + offset, hash))
 			return 0x80871004;
 	}
@@ -797,7 +797,7 @@ unsigned int NpDrmPackageTransformData(unsigned char *data, unsigned int size,
 		memset(license.ecdsa_signature, 0, sizeof(license.ecdsa_signature));
 		memset(license.key2, 0, 32);
 		memset(license.open_psid, 0, 60);
-		ksceSha256Digest(&license, 256, hash);
+		SceKernelUtilsForDriver_A773A6A8(&license, 256, hash);
 		privateKey.primeP = (unsigned int *)material->primeP;
 		privateKey.primeQ = (unsigned int *)material->primeQ;
 		privateKey.exponentP = (unsigned int *)material->exponentP;
@@ -816,7 +816,7 @@ unsigned int NpDrmPackageTransformData(unsigned char *data, unsigned int size,
 	if (flags & 0x20000) {
 		if (size < sizeof(license))
 			return 0x80871014;
-		ksceSha256Digest(data, 256, hash);
+		SceKernelUtilsForDriver_A773A6A8(data, 256, hash);
 		memset(exponent, 0, sizeof(exponent));
 		exponent[0] = 65537;
 		publicKey.modulus = (unsigned int *)gNpDrmPackageRsaModuli[NPDRM_RSA_LIVE_AREA];
@@ -914,28 +914,28 @@ __attribute__((noinline)) int NpDrmPackageSetAesWorkspace(void *workspace,
 	result = _call(kernelActType, kernelVersionFlag, kernelAccountId, \
 		kernelStartTime, kernelExpirationTime); \
 	if (actType) { \
-		ret = ksceKernelCopyToUser(actType, kernelActType, sizeof(*actType)); \
+		ret = SceSysmemForDriver_6D88EF8A(actType, kernelActType, sizeof(*actType)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (versionFlag) { \
-		ret = ksceKernelCopyToUser(versionFlag, kernelVersionFlag, sizeof(*versionFlag)); \
+		ret = SceSysmemForDriver_6D88EF8A(versionFlag, kernelVersionFlag, sizeof(*versionFlag)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (accountId) { \
-		ret = ksceKernelCopyToUser(accountId, kernelAccountId, sizeof(*accountId)); \
+		ret = SceSysmemForDriver_6D88EF8A(accountId, kernelAccountId, sizeof(*accountId)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (args.startTime) { \
-		ret = ksceKernelCopyToUser(args.startTime, kernelStartTime, \
+		ret = SceSysmemForDriver_6D88EF8A(args.startTime, kernelStartTime, \
 			sizeof(*args.startTime)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (args.expirationTime) \
-		return copyResult(result, ksceKernelCopyToUser(args.expirationTime, \
+		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.expirationTime, \
 			kernelExpirationTime, sizeof(*args.expirationTime))); \
 	return result; \
 
@@ -1012,47 +1012,47 @@ int _sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int license_siz
 		kernel.license_flags, kernel.flags, kernel.sku_flags,
 		kernel.lic_start_time, kernel.lic_exp_time, kernel.flags2);
 	if (args.content_id) {
-		ret = ksceKernelCopyToUser(args.content_id, kernel.content_id, 48);
+		ret = SceSysmemForDriver_6D88EF8A(args.content_id, kernel.content_id, 48);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.account_id) {
-		ret = ksceKernelCopyToUser(args.account_id, kernel.account_id, 8);
+		ret = SceSysmemForDriver_6D88EF8A(args.account_id, kernel.account_id, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.license_version) {
-		ret = ksceKernelCopyToUser(args.license_version, kernel.license_version, 4);
+		ret = SceSysmemForDriver_6D88EF8A(args.license_version, kernel.license_version, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.license_flags) {
-		ret = ksceKernelCopyToUser(args.license_flags, kernel.license_flags, 4);
+		ret = SceSysmemForDriver_6D88EF8A(args.license_flags, kernel.license_flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.flags) {
-		ret = ksceKernelCopyToUser(args.flags, kernel.flags, 4);
+		ret = SceSysmemForDriver_6D88EF8A(args.flags, kernel.flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.sku_flags) {
-		ret = ksceKernelCopyToUser(args.sku_flags, kernel.sku_flags, 4);
+		ret = SceSysmemForDriver_6D88EF8A(args.sku_flags, kernel.sku_flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.lic_start_time) {
-		ret = ksceKernelCopyToUser(args.lic_start_time, kernel.lic_start_time, 8);
+		ret = SceSysmemForDriver_6D88EF8A(args.lic_start_time, kernel.lic_start_time, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.lic_exp_time) {
-		ret = ksceKernelCopyToUser(args.lic_exp_time, kernel.lic_exp_time, 8);
+		ret = SceSysmemForDriver_6D88EF8A(args.lic_exp_time, kernel.lic_exp_time, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.flags2)
-		return copyResult(result, ksceKernelCopyToUser(args.flags2,
+		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.flags2,
 			kernel.flags2, 8));
 	return result;
 }
@@ -1087,7 +1087,7 @@ int _sceNpDrmGetRifNameForInstall(char *rif_name,
 	BLOCK_IN(kernelLicense, license, sizeof(*kernelLicense));
 	ret = NpDrmGetRifNameForInstall(kernelName, kernelLicense, is_fixed);
 	if (rif_name)
-		return copyResult(ret, ksceKernelCopyToUser(rif_name, kernelName, 48));
+		return copyResult(ret, SceSysmemForDriver_6D88EF8A(rif_name, kernelName, 48));
 	return ret;
 }
 
@@ -1118,11 +1118,11 @@ int _sceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license)
 		return NpDrmPresetRifProvisionalFlag(NULL);
 	kernelLicense = __builtin_alloca(sizeof(*kernelLicense));
 	memset(kernelLicense, 0, sizeof(*kernelLicense));
-	ret = ksceKernelCopyFromUser(kernelLicense, license, sizeof(*kernelLicense));
+	ret = SceSysmemForDriver_BC996A7A(kernelLicense, license, sizeof(*kernelLicense));
 	if (ret < 0)
 		return ret;
 	ret = NpDrmPresetRifProvisionalFlag(kernelLicense);
-	return copyResult(ret, ksceKernelCopyToUser(license, kernelLicense,
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(license, kernelLicense,
 		sizeof(*kernelLicense)));
 }
 
@@ -1255,23 +1255,23 @@ int scePsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId,
 	result = PsmDrmGetRifInfo(kernelLicense, kernelContentId, kernelAccountId,
 		kernelStartTime, kernelExpirationTime);
 	if (contentId) {
-		ret = ksceKernelCopyToUser(contentId, kernelContentId, 48);
+		ret = SceSysmemForDriver_6D88EF8A(contentId, kernelContentId, 48);
 		if (ret < 0)
 			return ret;
 	}
 	if (accountId) {
-		ret = ksceKernelCopyToUser(accountId, kernelAccountId, sizeof(*accountId));
+		ret = SceSysmemForDriver_6D88EF8A(accountId, kernelAccountId, sizeof(*accountId));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.startTime) {
-		ret = ksceKernelCopyToUser(args.startTime, kernelStartTime,
+		ret = SceSysmemForDriver_6D88EF8A(args.startTime, kernelStartTime,
 			sizeof(*args.startTime));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.expirationTime)
-		return copyResult(result, ksceKernelCopyToUser(args.expirationTime,
+		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.expirationTime,
 			kernelExpirationTime, sizeof(*args.expirationTime)));
 	return result;
 }
@@ -1297,7 +1297,7 @@ int scePsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license)
 	BLOCK_IN(kernelLicense, license, sizeof(*kernelLicense));
 	ret = PsmDrmGetRifNameForInstall(kernelName, kernelLicense);
 	if (name)
-		return copyResult(ret, ksceKernelCopyToUser(name, kernelName, 48));
+		return copyResult(ret, SceSysmemForDriver_6D88EF8A(name, kernelName, 48));
 	return ret;
 }
 
@@ -1334,23 +1334,23 @@ int scePsmDrmGetRifKey(const ScePsmDrmLicense *license_buf,
 	result = PsmDrmGetRifKey(kernelLicense, kernelKeydata, kernelFlags,
 		kernelStartTime, kernelExpirationTime);
 	if (keydata) {
-		ret = ksceKernelCopyToUser(keydata, kernelKeydata, sizeof(*keydata));
+		ret = SceSysmemForDriver_6D88EF8A(keydata, kernelKeydata, sizeof(*keydata));
 		if (ret < 0)
 			return ret;
 	}
 	if (flags) {
-		ret = ksceKernelCopyToUser(flags, kernelFlags, sizeof(*flags));
+		ret = SceSysmemForDriver_6D88EF8A(flags, kernelFlags, sizeof(*flags));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.start_date) {
-		ret = ksceKernelCopyToUser(args.start_date, kernelStartTime,
+		ret = SceSysmemForDriver_6D88EF8A(args.start_date, kernelStartTime,
 			sizeof(*args.start_date));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.end_date)
-		return copyResult(result, ksceKernelCopyToUser(args.end_date,
+		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.end_date,
 			kernelExpirationTime, sizeof(*args.end_date)));
 	return result;
 }
@@ -1452,13 +1452,13 @@ int _sceNpDrmPackageTransform(void *buffer, unsigned int size,
 	if (context) {
 		kernelContext = __builtin_alloca(sizeof(*kernelContext));
 		*kernelContext = (SceSblDmac5HashTransformContext){ 0 };
-		ret = ksceKernelCopyFromUser(kernelContext, context,
+		ret = SceSysmemForDriver_BC996A7A(kernelContext, context,
 			sizeof(*kernelContext));
 		if (ret < 0)
 			return ret;
 		result = NpDrmPackageTransformForUser(buffer, size, kernelContext,
 			flags);
-		return copyResult(result, ksceKernelCopyToUser(context,
+		return copyResult(result, SceSysmemForDriver_6D88EF8A(context,
 			kernelContext, sizeof(*kernelContext)));
 	}
 	return NpDrmPackageTransformForUser(buffer, size, NULL, flags);
@@ -1548,13 +1548,13 @@ int NpDrmPackageDecryptOnStack(void *argp)
 __attribute__((noinline)) int NpDrmPackageAesInitialize(
 	SceAesCompactContext *context, const void *key, unsigned int keySize)
 {
-	return ksceAesInit2((void *)context, 128, keySize * 8, key);
+	return SceKernelUtilsForDriver_EDA97D6D((void *)context, 128, keySize * 8, key);
 }
 
 __attribute__((noinline)) int NpDrmPackageAesEncrypt(
 	SceAesCompactContext *context, void *output, const void *input)
 {
-	return ksceAesEncrypt2((void *)context, input, output);
+	return SceKernelUtilsForDriver_302947B6((void *)context, input, output);
 }
 
 __attribute__((noinline)) int NpDrmPackageAesCtr(const void *input,
@@ -1582,15 +1582,15 @@ __attribute__((noinline)) int NpDrmPackageHashTransform(const void *input,
 __attribute__((noinline)) int NpDrmPackageIsHardwareAllowed(unsigned int retail)
 {
 	if (retail) {
-		if (ksceSblAimgrIsCEX())
+		if (SceSblAIMgrForDriver_D78B04A2())
 			return 1;
 		if (ksceSblUtMgrHasStoreFlag())
 			return 1;
 		return SceQafMgrForDriver_AE033133() != 0;
 	}
-	if (ksceSblAimgrIsDEX())
+	if (SceSblAIMgrForDriver_F4B98F66())
 		return 1;
-	return ksceSblAimgrIsTool() != 0;
+	return SceSblAIMgrForDriver_274663A0() != 0;
 }
 
 __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
@@ -1622,10 +1622,10 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = ksceKernelIsAccessibleRangeProc(0, 0x10, buffer, size);
+	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = ksceKernelUserMap("SceNpDrmPackageChk", 1, buffer, size,
+	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageChk", 1, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;
@@ -1640,7 +1640,7 @@ __attribute__((noinline)) int NpDrmPackageCheckForUser(const void *buffer,
 		args.flags = identifier;
 		ret = ksceKernelRunWithStack(0x2000, NpDrmPackageCheckOnStack, &args);
 	}
-	ksceKernelUserUnmap(mapId);
+	sceKernelUserUnmap(mapId, buffer, size);
 out:
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1675,10 +1675,10 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = ksceKernelIsAccessibleRangeProc(0, 0x30, buffer, size);
+	ret = SceSysmemForDriver_9F6E45E3(0, 0x30, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = ksceKernelUserMap("SceNpDrmPackageDec", 3, buffer, size,
+	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageDec", 3, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;
@@ -1690,7 +1690,7 @@ __attribute__((noinline)) int NpDrmPackageDecryptForUser(void *buffer,
 	args.flags = identifier;
 	args.reserved = 0;
 	ret = ksceKernelRunWithStack(0x2000, NpDrmPackageDecryptOnStack, &args);
-	ksceKernelUserUnmap(mapId);
+	sceKernelUserUnmap(mapId, buffer, size);
 out:
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1725,10 +1725,10 @@ __attribute__((noinline)) int NpDrmPackageTransformForUser(void *buffer,
 		ret = 0x80010016;
 		goto out;
 	}
-	ret = ksceKernelIsAccessibleRangeProc(0, 0x10, buffer, size);
+	ret = SceSysmemForDriver_9F6E45E3(0, 0x10, buffer, size);
 	if (ret < 0)
 		goto out;
-	mapId = ksceKernelUserMap("SceNpDrmPackageTrans", 1, buffer, size,
+	mapId = SceSysmemForDriver_278BC201("SceNpDrmPackageTrans", 1, buffer, size,
 		&kernelPage, &kernelSize, &kernelOffset);
 	if (mapId < 0) {
 		ret = mapId;
@@ -1736,7 +1736,7 @@ __attribute__((noinline)) int NpDrmPackageTransformForUser(void *buffer,
 	}
 	ret = NpDrmPackageHashData((unsigned char *)kernelPage + kernelOffset,
 		size, context, flags);
-	ksceKernelUserUnmap(mapId);
+	sceKernelUserUnmap(mapId, buffer, size);
 out:
 	sceSyscallLeave(syscall);
 	return ret;

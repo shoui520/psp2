@@ -69,17 +69,17 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelCpuId
-	ksceKernelCpuSuspendIntr
-	ksceKernelDcacheInvalidateRangeForL1WBWA
-	ksceKernelDcacheCleanRangeForL1WBWA
-	ksceKernelCpuResumeIntr
-	ksceKernelGetAssertLevel
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelCpuId
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_8B4C26DF
+	SceCpuForDriver_9CB9F0CE
+	sceKernelCpuResumeIntr
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	ksceKernelDisableIntr
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
@@ -87,7 +87,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetIntrPendingStatusForDebugger
 	sceKernelClearIntrPendingStatusForDebugger
 	__stack_chk_fail
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	SceQafMgrForDriver_382C71E8
 	sceKernelExitThread
 	ksceKernelStartThread

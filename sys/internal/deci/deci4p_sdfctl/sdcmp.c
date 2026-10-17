@@ -5,7 +5,7 @@
  * wait in a ring of 15 until the interface can send.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <sysmem/suspend.h>
@@ -124,7 +124,7 @@ static __attribute__((noinline, noclone)) int sdcmpQueue(SdcmpQueue *q, const vo
 
 	if (size > SDCMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
 	if (q->count < SDCMP_QUEUE) {
 		sdfctlMemcpy(q->buf[q->write], pkt, size);
 		next = q->write + 1;
@@ -136,7 +136,7 @@ static __attribute__((noinline, noclone)) int sdcmpQueue(SdcmpQueue *q, const vo
 	} else {
 		ret = SDFCTL_ERROR_QUEUE_FULL;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 	return ret;
 }
 
@@ -213,16 +213,16 @@ void _sdcmpControlPowerControl(DcmpHeader *rx, SdcmpControl *reply)
 	switch (req->value) {
 	case SDCMP_POWER_SUSPEND:
 		result = 0;
-		ksceKernelPrintf("Suspend from Host\n");
+		SceDebugForDriver_391B74B7("Suspend from Host\n");
 		SceKernelSuspendForDriver_0106C0F0();
 		break;
 	case SDCMP_POWER_COLD_RESET:
 		result = 0;
-		ksceKernelPrintf("Cold Reset from Host\n");
+		SceDebugForDriver_391B74B7("Cold Reset from Host\n");
 		SceKernelSuspendForDriver_AEA9440D();
 		break;
 	case SDCMP_POWER_STANDBY:
-		ksceKernelPrintf("Standby from Host\n");
+		SceDebugForDriver_391B74B7("Standby from Host\n");
 		SceKernelSuspendForDriver_0A6CA124();
 		result = 0;
 		break;
@@ -343,15 +343,15 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 	int intr, ret, read, next, count;
 
 	while (s_sdcmp.tx.count != 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
+		intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
 		if (s_sdcmp.tx.count < 1) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 			SDFCTL_PRINTF(213, "error: 0x%08x\n", SDFCTL_ERROR_QUEUE_EMPTY);
 			return;
 		}
 		pkt = s_sdcmp.tx.buf[s_sdcmp.tx.read];
 		size = s_sdcmp.tx.size[s_sdcmp.tx.read];
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 		if (pkt->hdr.dst == SDFCTL_ROUTE_LOCAL || sdfctlTestStatus(SDFCTL_STATUS_CONNECTED)) {
 			ret = sceSDfCtlExSend(s_sdcmp.sock, pkt, size);
 			if (ret < 0) {
@@ -361,7 +361,7 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 		} else {
 			SDFCTL_PRINTF(223, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdcmpLock);
+		intr = SceCpuForDriver_D32ACE9E(&s_sdcmpLock);
 		read = s_sdcmp.tx.read;
 		count = s_sdcmp.tx.count - 1;
 		next = read + 1;
@@ -370,7 +370,7 @@ static inline __attribute__((always_inline)) void _sdcmpSend(void)
 		s_sdcmp.tx.read = next;
 		s_sdcmp.tx.size[read] = 0;
 		s_sdcmp.tx.count = count;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdcmpLock, intr);
 	}
 }
 
@@ -464,7 +464,7 @@ void sdcmpSendStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc)
 	pkt.m.code = SDCMP_STATUS_PROTOCOL;
 	pkt.m.reserved = 0;
 	pkt.m.type = SDCMP_STATUS;
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	pkt.status = status;
 	pkt.cpu = (1 << cpu) + 0xa200;
 	ret = sdcmpQueue(&s_sdcmp.tx, &pkt, sizeof(pkt));
@@ -577,7 +577,7 @@ int sdcmpMakeStatusProtocol(SceUInt32 status, const SceDfMgrProtocol *desc, void
 	pkt->subVersion = subVersion;
 	pkt->m.hdr.src = SDFCTL_PORT;
 	pkt->m.hdr.dst = SDFCTL_ROUTE_HOST;
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	pkt->status = status;
 	pkt->cpu = (1 << cpu) + 0xa200;
 	return 0;

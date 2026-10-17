@@ -33,7 +33,7 @@ unsigned LinuxLockMutexForPid(SceUID *psPVRSRVMutex, SceUID pid)
 	res = ksceKernelLockMutex(*psPVRSRVMutex, 1, NULL);
 	if (res != 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &dbg_LinuxLockMutexForPid_L53,
+		SceDebugForDriver_D9703808(1, 0, &dbg_LinuxLockMutexForPid_L53,
 				"%s failed with error: %08x\n", "LinuxLockMutexForPid", res);
 #endif
 		pid = -1;

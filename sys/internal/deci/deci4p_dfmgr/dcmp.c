@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "dfmgr_internal.h"
 #include <kernel/error.h>
@@ -57,9 +57,9 @@ static inline DcmpCB *_getDcmpCB(SceUInt32 linkIndex)
 /* the send queue: lock it unless it is full, fill dcmp->buf[dcmp->write], commit */
 static inline int dcmpQueueLock(DcmpCB *dcmp, SceKernelIntrStatus *s)
 {
-	*s = ksceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
+	*s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
 	if (dcmp->count >= DCMP_SEND_QUEUE) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, *s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, *s);
 		return DFMGR_ERROR_QUEUE_FULL;
 	}
 	return 0;
@@ -76,7 +76,7 @@ static inline void dcmpQueueCommit(DcmpCB *dcmp, SceSize size, int errPending,
 	dcmp->write = next;
 	dcmp->count++;
 	dcmp->errPending = errPending;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 	sceDfMgrReqSend(dcmp->handle);
 }
 
@@ -233,15 +233,15 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 	SceSize size;
 	int count, read, next, errPending, ret;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
+	s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
 	if (dcmp->count <= 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 		return DFMGR_ERROR_NOTHING_TO_SEND;
 	}
 	errPending = dcmp->errPending;
 	msg = dcmp->buf[dcmp->read];
 	size = dcmp->size[dcmp->read];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 
 	if (msg->hdr.dst == DCMP_PORT_POWER ||
 	    (dfmgrTestLinkStatus(dcmp->link, DFMGR_LINK_READY) &&
@@ -257,7 +257,7 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 		}
 	}
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&dcmp->lock);
+	s = SceCpuForDriver_D32ACE9E(&dcmp->lock);
 	count = dcmp->count;
 	read = dcmp->read;
 	next = read + 1;
@@ -267,7 +267,7 @@ static inline int _dcmpSend(DcmpCB *dcmp)
 	dcmp->read = next;
 	dcmp->size[read] = 0;
 	dcmp->count = count - 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&dcmp->lock, s);
 	return 0;
 }
 
@@ -331,14 +331,14 @@ int dcmpInit(DfMgrProtocolCB *pd, SceUInt32 linkIndex, DfMgrLinkCB *link)
 	pd->flags = 0;
 	dcmp->lock = 0;
 
-	ret = ksceKernelAllocMemBlock("SceDeci4pDfMgrDcmp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, 0x15000, NULL);
+	ret = SceSysmemForDriver_C94850C9("SceDeci4pDfMgrDcmp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, 0x15000, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 200, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(201);
 		return ret;
 	}
 	dcmp->memBlock = ret;
-	ret = ksceKernelGetMemBlockBase(dcmp->memBlock, (void **)&base);
+	ret = SceSysmemForDriver_A841EDDA(dcmp->memBlock, (void **)&base);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 209, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(210);

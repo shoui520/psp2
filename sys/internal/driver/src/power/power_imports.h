@@ -11,13 +11,11 @@
 #include <lowio/pervasive.h>
 #include <syscon/syscon.h>
 #include <display/display.h>
+#include <sysmem/sysroot.h>
 
 /* SceLowio (pervasive) */
 int SceGrabForDriver_B22EE8BC(unsigned int mask, unsigned int enable);	/* SMC passthrough; power passes two words */
 
 /* SceSysmem (sysroot) */
-int SceSysrootForDriver_7918D44E(void);
-int SceSysrootForDriver_246AAAB3(int (*setLedMode)(uint32_t led, uint32_t mode,
-						 const void *option));
 
 /* SceDisplay */

@@ -12,7 +12,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
 #include <regmgr/regmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <stdio.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
@@ -44,8 +44,6 @@ extern int appmgrGetFakeSdSlotBroken(void);
 extern int ScePfsMgrForKernel_27FB7618(const char *name,
 				    SceUInt32 *quota, SceUInt32 *usage);
 #if FW_VERSION >= 0x04000000
-extern void *__memcpy_chk(void *destination, const void *source,
-			  size_t length, size_t destinationSize);
 #endif
 
 extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataFile *file,
@@ -133,14 +131,14 @@ int appmgrInitializeSaveDataSlotCache(void)
 	g_appmgrSaveDataSlotCache.fd = -1;
 	option.size = sizeof(option);
 	option.align = 32;
-	g_appmgrSaveDataSlotCache.header = ksceKernelAllocHeapMemoryWithOption(
+	g_appmgrSaveDataSlotCache.header = SceSysmemForDriver_49D4DD9B(
 		g_appmgrSaveDataHeap, 1024, &option);
 	if (!g_appmgrSaveDataSlotCache.header)
 		return (int)0x80801006;
-	g_appmgrSaveDataSlotCache.readWindow = ksceKernelAllocHeapMemoryWithOption(
+	g_appmgrSaveDataSlotCache.readWindow = SceSysmemForDriver_49D4DD9B(
 		g_appmgrSaveDataHeap, 32768, &option);
 	if (!g_appmgrSaveDataSlotCache.readWindow) {
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap,
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap,
 					g_appmgrSaveDataSlotCache.header);
 		g_appmgrSaveDataSlotCache.header = NULL;
 		return (int)0x80801006;
@@ -190,7 +188,7 @@ int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 32;
-	filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	filePath = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						     292, &option);
 	if (!filePath) {
 		result = (int)0x80801006;
@@ -249,7 +247,7 @@ int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 closeFile:
 	ksceIoClose(fd);
 freePath:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 unlockMutex:
 	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 unlockPower:
@@ -315,7 +313,7 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 			}
 			option.size = sizeof(option);
 			option.align = 32;
-			header = ksceKernelAllocHeapMemoryWithOption(
+			header = SceSysmemForDriver_49D4DD9B(
 				g_appmgrSaveDataHeap, sizeof(*header), &option);
 			if (!header) {
 				ksceIoClose(fd);
@@ -327,9 +325,9 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 				ksceIoClose(fd);
 				result = header->slotCount == param->slotCount ?
 					0 : (int)0x80801085;
-				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 			} else {
-				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 				ksceIoClose(fd);
 				result = (int)0x80801088;
 			}
@@ -341,7 +339,7 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 	}
 	option.size = sizeof(option);
 	option.align = 32;
-	header = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	header = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						   sizeof(*header), &option);
 	if (!header) {
 		result = (int)0x80801006;
@@ -356,20 +354,20 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 	header->slotCount = param->slotCount;
 	fd = ksceIoOpen(path, 1538, 390);
 	if (fd < 0) {
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 		result = fd == (int)0x80010013 ? fd : (int)0x80801087;
 		goto restorePermission;
 	}
 	if (ksceIoWrite(fd, header, sizeof(*header)) != sizeof(*header)) {
 		ksceIoClose(fd);
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 		result = (int)0x80801089;
 		goto restorePermission;
 	}
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 	option.size = sizeof(option);
 	option.align = 32;
-	zeroSlots = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	zeroSlots = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						      4096, &option);
 	if (!zeroSlots) {
 		ksceIoClose(fd);
@@ -382,7 +380,7 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 		do {
 			if (ksceIoWrite(fd, zeroSlots, 4096) != 4096) {
 				ksceIoClose(fd);
-				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
+				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
 				result = (int)0x80801089;
 				goto restorePermission;
 			}
@@ -390,7 +388,7 @@ int ksceAppMgrSaveDataSlotInit(void *parameters)
 		} while (block < (param->slotCount >> 2));
 	}
 	ksceIoClose(fd);
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, zeroSlots);
 	result = 0;
 restorePermission:
 	ksceKernelSetPermission(permission);
@@ -931,15 +929,15 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 		quotaBytes = 0xFFFFFFFFULL;
 		freeBytes = 0xFFFFFFFFLL;
 	}
-	value = ksceSblAimgrIsCEX();
+	value = SceSblAIMgrForDriver_D78B04A2();
 	if (!value) {
 		if (ksceRegMgrSystemParamGetInt(0x154A2C, &value) == 0 && value == 1)
 			freeBytes = 0;
-		value = ksceSblAimgrIsCEX();
+		value = SceSblAIMgrForDriver_D78B04A2();
 	}
 	if (freeBytes < 0x200000) {
 		missingFilesystemKiB = (0x200000 - freeBytes) >> 10;
-		value = ksceSblAimgrIsCEX();
+		value = SceSblAIMgrForDriver_D78B04A2();
 	} else {
 		missingFilesystemKiB = 0;
 	}
@@ -1017,7 +1015,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			mappedPage = NULL;
 			mappedSize = 0;
 			mappedOffset = 0;
-			mapping = ksceKernelUserMap("SceAppMgrSaveDataSlotParam", 1,
+			mapping = SceSysmemForDriver_278BC201("SceAppMgrSaveDataSlotParam", 1,
 				operation->slotParam, 1024, &mappedPage, &mappedSize,
 				&mappedOffset);
 			if (mapping < 0) {
@@ -1027,7 +1025,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			result = appmgrWriteSaveDataSlot(operation->slotId,
 				(SceAppMgrSaveDataSlotParam *)((char *)mappedPage + mappedOffset),
 				1, mountPoint);
-			ksceKernelUserUnmap(mapping);
+			sceKernelUserUnmap(mapping, operation->slotParam, 1024);
 			if (result != 0)
 				goto freeDirectories;
 			slotCreated = 1;
@@ -1055,18 +1053,18 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	for (index = 0; index < 5 && operation->fileNum > index; index++) {
 		createdFiles[index] = 0;
 		memset(&file, 0, sizeof(file));
-		result = ksceKernelCopyFromUser(&file, operation->files + index, sizeof(file));
+		result = SceSysmemForDriver_BC996A7A(&file, operation->files + index, sizeof(file));
 		if (result != 0)
 			goto freeDirectories;
 		option.size = sizeof(option);
 		option.align = 32;
-		filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 200, &option);
+		filePath = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, 200, &option);
 		if (!filePath) {
 			result = (int)0x80801006;
 			goto freeDirectories;
 		}
 		memset(filePath, 0, 200);
-		result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+		result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
 		if (result < 0)
 			goto freeFirstFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1076,7 +1074,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 		memset(resolvedPath, 0, sizeof(resolvedPath));
 		option.size = sizeof(option);
 		option.align = 32;
-		parentPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 292, &option);
+		parentPath = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, 292, &option);
 		if (!parentPath) {
 			result = (int)0x80801006;
 			goto freeFirstFilePath;
@@ -1128,7 +1126,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					mappedPage = NULL;
 					mappedSize = 0;
 					mappedOffset = 0;
-					mapping = ksceKernelUserMap("SceAppMgrSaveDataBuf", 1,
+					mapping = SceSysmemForDriver_278BC201("SceAppMgrSaveDataBuf", 1,
 						file.buf, file.bufSize, &mappedPage, &mappedSize, &mappedOffset);
 					if (mapping < 0) {
 						result = mapping;
@@ -1150,7 +1148,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					} else {
 						value = bytes;
 					}
-					ksceKernelUserUnmap(mapping);
+					sceKernelUserUnmap(mapping, file.buf, file.bufSize);
 					if (bytes != value) {
 						result = bytes;
 						ksceIoClose(fd);
@@ -1182,31 +1180,31 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			}
 			changed = 1;
 		}
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 	}
 	writtenBytes = 0;
 	for (directoryIndex = 0; directoryIndex < 20; directoryIndex++) {
 		if (directories[directoryIndex]) {
-			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directories[directoryIndex]);
+			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directories[directoryIndex]);
 			directories[directoryIndex] = NULL;
 			writtenBytes += allocationUnit;
 		}
 	}
 	for (index = 0; index < 5 && operation->fileNum > index; index++) {
 		memset(&file, 0, sizeof(file));
-		result = ksceKernelCopyFromUser(&file, operation->files + index, sizeof(file));
+		result = SceSysmemForDriver_BC996A7A(&file, operation->files + index, sizeof(file));
 		if (result != 0)
 			goto restorePermission;
 		option.size = sizeof(option);
 		option.align = 32;
-		filePath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 200, &option);
+		filePath = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, 200, &option);
 		if (!filePath) {
 			result = (int)0x80801006;
 			goto restorePermission;
 		}
 		memset(filePath, 0, 200);
-		result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+		result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
 		if (result < 0)
 			goto freeSecondFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1226,7 +1224,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 				mappedPage = NULL;
 				mappedSize = 0;
 				mappedOffset = 0;
-				mapping = ksceKernelUserMap("SceAppMgrSaveDataBuf", 1,
+				mapping = SceSysmemForDriver_278BC201("SceAppMgrSaveDataBuf", 1,
 					file.buf, file.bufSize, &mappedPage, &mappedSize, &mappedOffset);
 				if (mapping < 0) {
 					result = mapping;
@@ -1245,7 +1243,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 						bytes = ksceIoPwrite(fd, buffer, value, file.offset);
 					}
 					if (bytes != value) {
-						ksceKernelUserUnmap(mapping);
+						sceKernelUserUnmap(mapping, file.buf, file.bufSize);
 						ksceIoClose(fd);
 						result = (int)0x8080108F;
 						goto freeSecondFilePath;
@@ -1263,7 +1261,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					}
 					changed = 1;
 				}
-				ksceKernelUserUnmap(mapping);
+				sceKernelUserUnmap(mapping, file.buf, file.bufSize);
 			}
 			ksceIoClose(fd);
 			if (file.mode == 1) {
@@ -1289,7 +1287,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			}
 			writtenBytes += growth;
 		}
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 		appmgrAccumulateSaveDataWriteSize(writtenBytes >> 10);
 	}
 	if (operation->slotId != (unsigned int)-1) {
@@ -1297,7 +1295,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			mappedPage = NULL;
 			mappedSize = 0;
 			mappedOffset = 0;
-			mapping = ksceKernelUserMap("SceAppMgrSaveDataSlotParam", 1,
+			mapping = SceSysmemForDriver_278BC201("SceAppMgrSaveDataSlotParam", 1,
 				operation->slotParam, 1024, &mappedPage, &mappedSize, &mappedOffset);
 			if (mapping < 0) {
 				result = mapping;
@@ -1306,7 +1304,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			result = appmgrOverwriteSaveDataSlot(operation->slotId,
 				(SceAppMgrSaveDataSlotParam *)((char *)mappedPage + mappedOffset),
 				0, mountPoint);
-			ksceKernelUserUnmap(mapping);
+			sceKernelUserUnmap(mapping, operation->slotParam, 1024);
 			if (result != 0)
 				goto restorePermission;
 		} else {
@@ -1329,14 +1327,14 @@ firstWriteError:
 		result = (int)0x8080108D;
 	}
 freeFirstParentPath:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, parentPath);
 freeFirstFilePath:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 freeDirectories:
 	appmgrFreeSaveDataDirectories(directories);
 	goto restorePermission;
 freeSecondFilePath:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 restorePermission:
 	ksceKernelSetPermission(permission);
 	ksceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
@@ -1384,13 +1382,13 @@ int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
 	option.mmapBase = NULL;
 	option.mmapSize = 0;
 	option.size = sizeof(option);
-	header = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	header = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						   sizeof(*header), &option);
 	if (!header)
 		return (int)0x80801006;
 	memset(header, 0, sizeof(*header));
 	if (ksceIoRead(fd, header, sizeof(*header)) != sizeof(*header)) {
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 		ksceIoClose(fd);
 		return (int)0x80801088;
 	}
@@ -1406,7 +1404,7 @@ int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
 	} else {
 		result = 0;
 	}
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, header);
 	return result;
 }
 
@@ -1610,7 +1608,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 	memset(&file, 0, sizeof(file));
 	memset(path, 0, sizeof(path));
 	memset(resolvedPath, 0, sizeof(resolvedPath));
-	result = ksceKernelCopyFromUser(&file, userFile, sizeof(file));
+	result = SceSysmemForDriver_BC996A7A(&file, userFile, sizeof(file));
 	if (result != 0)
 		return result;
 	option.size = sizeof(option);
@@ -1618,12 +1616,12 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 	option.align = 32;
 	option.mmapBase = NULL;
 	option.mmapSize = 0;
-	filePath = ksceKernelAllocHeapMemoryWithOption(
+	filePath = SceSysmemForDriver_49D4DD9B(
 		g_appmgrSaveDataHeap, 200, &option);
 	if (!filePath)
 		return (int)0x80801006;
 	memset(filePath, 0, 200);
-	result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+	result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
 	if (result < 0)
 		goto freeFilePath;
 	snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
@@ -1639,7 +1637,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 			option.align = 32;
 			option.mmapBase = NULL;
 			option.mmapSize = 0;
-			prefix = ksceKernelAllocHeapMemoryWithOption(
+			prefix = SceSysmemForDriver_49D4DD9B(
 				g_appmgrSaveDataHeap, 292, &option);
 			if (!prefix) {
 				result = (int)0x80801006;
@@ -1666,10 +1664,10 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 						option.align = 32;
 						option.mmapBase = NULL;
 						option.mmapSize = 0;
-						directory = ksceKernelAllocHeapMemoryWithOption(
+						directory = SceSysmemForDriver_49D4DD9B(
 							g_appmgrSaveDataHeap, 292, &option);
 						if (!directory) {
-							ksceKernelFreeHeapMemory(
+							sceKernelFreeHeapMemory(
 								g_appmgrSaveDataHeap, prefix);
 							result = (int)0x80801006;
 							goto freeFilePath;
@@ -1686,7 +1684,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 					}
 				}
 			}
-			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, prefix);
+			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, prefix);
 		}
 		if (file.mode <= 1) {
 			totalSize = file.offset + file.bufSize;
@@ -1700,7 +1698,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 			option.align = 32;
 			option.mmapBase = NULL;
 			option.mmapSize = 0;
-			directory = ksceKernelAllocHeapMemoryWithOption(
+			directory = SceSysmemForDriver_49D4DD9B(
 				g_appmgrSaveDataHeap, 292, &option);
 			if (!directory) {
 				result = (int)0x80801006;
@@ -1731,7 +1729,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 	}
 	result = 0;
 freeFilePath:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 	return result;
 }
 
@@ -1762,7 +1760,7 @@ int appmgrWriteSaveDataSlot(unsigned int slotId,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 32;
-	copy = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	copy = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						 sizeof(*copy), &option);
 	if (!copy) {
 		result = (int)0x80801006;
@@ -1778,7 +1776,7 @@ int appmgrWriteSaveDataSlot(unsigned int slotId,
 		result = (int)0x80801089;
 		goto closeAndFree;
 	}
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
 	result = (int)ksceIoLseek(fd, (SceOff)(slotId + 512), 0);
 	if (result < 0)
 		goto closeFile;
@@ -1792,7 +1790,7 @@ closeFile:
 	return result;
 closeAndFree:
 	ksceIoClose(fd);
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
 	return result;
 }
 
@@ -1821,7 +1819,7 @@ int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint)
 	option.size = sizeof(option);
 	option.align = 32;
 	option.mmapSize = 0;
-	record = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	record = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						   sizeof(*record), &option);
 	if (!record) {
 		result = (int)0x80801006;
@@ -1841,7 +1839,7 @@ int appmgrDeleteSaveDataSlot(unsigned int slotId, const char *mountPoint)
 	else
 		result = 0;
 freeRecord:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, record);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, record);
 closeFile:
 	ksceIoClose(fd);
 	return result;
@@ -1863,7 +1861,7 @@ int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 32;
-	path = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, 128,
+	path = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, 128,
 						 &option);
 	if (!path)
 		return (int)0x80801006;
@@ -1872,10 +1870,10 @@ int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 	option.mmapSize = 0;
 	option.size = sizeof(option);
 	option.align = 32;
-	resolvedPath = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	resolvedPath = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 							 292, &option);
 	if (!resolvedPath) {
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
 		return (int)0x80801006;
 	}
 	memset(path, 0, 128);
@@ -1887,7 +1885,7 @@ int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 	option.mmapBase = NULL;
 	option.mmapSize = 0;
 	option.size = sizeof(option);
-	copy = ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap,
+	copy = SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap,
 						 sizeof(*copy), &option);
 	if (!copy) {
 		result = (int)0x80801006;
@@ -1914,10 +1912,10 @@ int appmgrOverwriteSaveDataSlot(unsigned int slotId,
 closeFile:
 	ksceIoClose(fd);
 freeBuffers:
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
-	ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, resolvedPath);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, path);
+	sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, resolvedPath);
 	if (copy)
-		ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
+		sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, copy);
 	return result;
 }
 
@@ -1974,7 +1972,7 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 	if (operation->fileNum) {
 		do {
 			memset(&file, 0, sizeof(file));
-			result = ksceKernelCopyFromUser(&file,
+			result = SceSysmemForDriver_BC996A7A(&file,
 					operation->files + index, sizeof(file));
 			if (result != 0)
 				return result;
@@ -1983,14 +1981,14 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 			option.size = sizeof(option);
 			option.mmapSize = 0;
 			option.align = 32;
-			filePath = ksceKernelAllocHeapMemoryWithOption(
+			filePath = SceSysmemForDriver_49D4DD9B(
 				g_appmgrSaveDataHeap, 200, &option);
 			if (!filePath)
 				return (int)0x80801006;
 			memset(filePath, 0, 200);
-			result = ksceKernelStrncpyFromUser(filePath, file.filePath, 199);
+			result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
 			if (result < 0) {
-				ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 				return result;
 			}
 			memset(path, 0, sizeof(path));
@@ -2005,7 +2003,7 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 				__builtin_prefetch(originalSizes + index + 1);
 				ksceIoChstat(resolvedPath, &stat, 4);
 			}
-			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
+			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 			totalSize = file.offset + file.bufSize;
 			if ((SceUInt64)totalSize % allocationUnit != 0) {
 				*requiredSizeKiB +=
@@ -2103,7 +2101,7 @@ void appmgrFreeSaveDataDirectories(char **directories)
 	do {
 		directory = *directories++;
 		if (directory) {
-			ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directory);
+			sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, directory);
 			directories[-1] = NULL;
 		}
 	} while (directories != end);

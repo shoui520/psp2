@@ -77,13 +77,13 @@ static int SetKernelGamePhyMemPart(SceUID addressSpace)
 {
 	int ret;
 
-	ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 8, g_phyContPart);
+	ret = SceSysmemForKernel_7DF07D60(addressSpace, 8, g_phyContPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(737);
-	ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart);
+	ret = SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(745);
-	ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, g_gameCDialogPart);
+	ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, g_gameCDialogPart);
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(753);
 	return ret;
@@ -178,7 +178,7 @@ int SceProcessmgrForKernel_459A223B(SceUID budgetId)
 		ksceKernelUnlockMutex(budget->mutex, 1);
 		return SCE_KERNEL_ERROR_PROCESSMGR_BUDGET_IN_USE;
 	}
-	return ksceGUIDClose(budgetId);
+	return sceGUIDClose(budgetId);
 }
 
 int sceKernelResetGameBudget(void)
@@ -220,7 +220,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	ret = ksceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, level, &budget);
+	ret = SceSysmemForDriver_77066FD1(budgetId, &g_budgetClass, level, &budget);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 431, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n", ret);
 		return ret;
@@ -228,19 +228,19 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 	info->budgetId = budgetId;
 	switch (budget->type) {
 	case PROCESS_TYPE_MINI_APP:
-		name = ksceGUIDName(budgetId);
+		name = SceSysmemForDriver_E655852F(budgetId);
 		break;
 	case PROCESS_TYPE_GAME:
-		name = ksceGUIDName(g_gameBudgetId);
+		name = SceSysmemForDriver_E655852F(g_gameBudgetId);
 		break;
 	case PROCESS_TYPE_SHELL:
-		name = ksceGUIDName(g_shellBudgetId);
+		name = SceSysmemForDriver_E655852F(g_shellBudgetId);
 		break;
 	case PROCESS_TYPE_KERNEL:
-		name = ksceGUIDName(g_kernelBudgetId);
+		name = SceSysmemForDriver_E655852F(g_kernelBudgetId);
 		break;
 	default:
-		ksceGUIDReleaseObject(budgetId);
+		sceGUIDReleaseObject(budgetId);
 		return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
 	}
 	strncpy(info->name, name, sizeof(info->name));
@@ -295,7 +295,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 	for (i = 0; i != PROCESS_MAX; i++)
 		info->process[i] = budget->process[i];
 out:
-	ksceGUIDReleaseObject(budgetId);
+	sceGUIDReleaseObject(budgetId);
 	return ret;
 }
 
@@ -335,7 +335,7 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
 		}
 	} else {
-		ret = ksceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, 7, &budget);
+		ret = SceSysmemForDriver_77066FD1(budgetId, &g_budgetClass, 7, &budget);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 578, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n",
 					     ret);
@@ -393,7 +393,7 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 	info->count = count;
 out:
 	if (referred == 1)
-		ksceGUIDReleaseObject(budgetId);
+		sceGUIDReleaseObject(budgetId);
 	return ret;
 }
 
@@ -409,24 +409,24 @@ int SceProcessmgrForKernel_23EF9D8E(SceUInt32 level, SceKernelBudgetInfoForDebug
 	if (count == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	*count = 0;
-	ret = ksceGUIDGetUIDVectorByClass(&g_budgetClass, level, NULL, 0, &n);
+	ret = SceSysmemForKernel_52137FA3(&g_budgetClass, level, NULL, 0, &n);
 	if (ret < 0)
 		return ret;
 	num = size / sizeof(*info);
 	if (ret < (int)num)
 		num = ret;
 	if (num != 0) {
-		ids = ksceKernelAlloc(num * sizeof(*ids));
-		ksceGUIDGetUIDVectorByClass(&g_budgetClass, level, ids, num, &n);
+		ids = SceSysmemForKernel_85571907(num * sizeof(*ids));
+		SceSysmemForKernel_52137FA3(&g_budgetClass, level, ids, num, &n);
 		for (i = 0; i < (int)n; i++, info++) {
 			info->size = sizeof(*info);
 			ret = sceKernelGetBudgetInfoForDebugger(ids[i], level, info);
 			if (ret < 0) {
-				ksceKernelFree(ids);
+				SceSysmemForKernel_4233C16D(ids);
 				return ret;
 			}
 		}
-		ksceKernelFree(ids);
+		SceSysmemForKernel_4233C16D(ids);
 	}
 	*count = n;
 	return num;
@@ -558,13 +558,13 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	}
 
 	if (uid == -1) {
-		uid = ksceGUIDKernelCreate(&g_budgetClass, name, &budget);
+		uid = SceSysmemForDriver_56A13E90(&g_budgetClass, name, &budget);
 		if (uid < 0) {
 			ret = uid;
 			goto failed;
 		}
 	} else {
-		budget = ksceKernelAlloc(sizeof(*budget));
+		budget = SceSysmemForKernel_85571907(sizeof(*budget));
 		if (budget == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY_SYSMEM;
 			goto failed;
@@ -572,7 +572,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		ProcessBudgetConstructor(budget);
 		ret = SceSysmemForKernel_5EDDEEB5(uid, &g_budgetClass, name, budget, 0x1551000);
 		if (ret < 0) {
-			ksceKernelFree(budget);
+			SceSysmemForKernel_4233C16D(budget);
 			goto failed;
 		}
 	}
@@ -588,7 +588,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	if (mutex < 0) {
 		if (fixedUid)
 			SCE_PANIC(292);
-		ksceGUIDClose(uid);
+		sceGUIDClose(uid);
 		return mutex;
 	}
 	budget->mutex = mutex;
@@ -636,76 +636,76 @@ int SetBudget(SceUInt32 type, SceUID addressSpace, ProcessBudget *budget)
 	void *partition;
 	int ret;
 
-	ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 6, g_kernelPart);
+	ret = SceSysmemForKernel_7DF07D60(addressSpace, 6, g_kernelPart);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(863);
 		return ret;
 	}
 	partition = (void *)SceSysmemForKernel_0B1B4ACA();
 	if (partition != NULL) {
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 15, partition);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 15, partition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(872);
 			return ret;
 		}
 	}
-	ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 5, g_gamePart);
+	SceSysmemForKernel_7DF07D60(addressSpace, 5, g_gamePart);
 	switch (type) {
 	case PROCESS_TYPE_MINI_APP:
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, budget->mainPartition);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, budget->mainPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(929);
 			return ret;
 		}
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, budget->cdialogPartition);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, budget->cdialogPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(937);
 			return ret;
 		}
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 8, budget->phyContPartition);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 8, budget->phyContPartition);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(945);
 			return ret;
 		}
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_shellCdramPart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_shellCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(955);
 			return ret;
 		}
-		if (ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart) < 0)
+		if (SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart) < 0)
 			SCE_DBG_ASSERT_FAIL(965);
 		return 0;
 	case PROCESS_TYPE_GAME:
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, g_gamePart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, g_gamePart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(898);
 			return ret;
 		}
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 10, g_gameCDialogPart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 10, g_gameCDialogPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(906);
 			return ret;
 		}
 		if (SetKernelGamePhyMemPart(addressSpace) < 0)
 			SCE_DBG_ASSERT_FAIL(912);
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_gameCdramPart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_gameCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(919);
 			return ret;
 		}
 		return 0;
 	case PROCESS_TYPE_SHELL:
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 11, g_shellPart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 11, g_shellPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(974);
 			return ret;
 		}
-		ret = ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 12, g_shellCdramPart);
+		ret = SceSysmemForKernel_7DF07D60(addressSpace, 12, g_shellCdramPart);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(983);
 			return ret;
 		}
-		if (ksceKernelAddressSpaceSetPhyMemPart(addressSpace, 9, g_sharedPart) < 0)
+		if (SceSysmemForKernel_7DF07D60(addressSpace, 9, g_sharedPart) < 0)
 			SCE_DBG_ASSERT_FAIL(992);
 		return 0;
 	case PROCESS_TYPE_KERNEL:
@@ -721,7 +721,7 @@ static inline __attribute__((always_inline)) int initializeBudget(void)
 {
 	int ret;
 
-	ret = ksceUIDClassInitClass(&g_budgetClass, "SceUIDProcBudgetClass", ksceKernelGetUIDClass(),
+	ret = SceSysmemForDriver_61317102(&g_budgetClass, "SceUIDProcBudgetClass", SceSysmemForDriver_85336A1C(),
 				    sizeof(ProcessBudget), (SceClassCallback)ProcessBudgetConstructor,
 				    (SceClassCallback)ProcessBudgetDestructor);
 	if (ret < 0) {
@@ -733,15 +733,15 @@ static inline __attribute__((always_inline)) int initializeBudget(void)
 
 static inline __attribute__((always_inline)) void SetKernelPhyMemPart(void)
 {
-	if (ksceKernelAddressSpaceSetPhyMemPart(KERNEL_ADDRESS_SPACE, 5, g_gamePart) < 0)
+	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 5, g_gamePart) < 0)
 		SCE_DBG_ASSERT_FAIL(768);
 	if (SetKernelGamePhyMemPart(KERNEL_ADDRESS_SPACE) < 0)
 		SCE_DBG_ASSERT_FAIL(775);
-	if (ksceKernelAddressSpaceSetPhyMemPart(KERNEL_ADDRESS_SPACE, 12, g_gameCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 12, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(782);
-	if (ksceKernelAddressSpaceSetPhyMemPart(KERNEL_ADDRESS_SPACE, 13, g_gameCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 13, g_gameCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(789);
-	if (ksceKernelAddressSpaceSetPhyMemPart(KERNEL_ADDRESS_SPACE, 14, g_shellCdramPart) < 0)
+	if (SceSysmemForKernel_7DF07D60(KERNEL_ADDRESS_SPACE, 14, g_shellCdramPart) < 0)
 		SCE_DBG_ASSERT_FAIL(796);
 }
 
@@ -762,7 +762,7 @@ static inline __attribute__((always_inline)) SceSize ShellPartSize(void)
 	case 0x10220:
 		return 0x3200000;
 	default:
-		ksceKernelPrintfLevelWithInfo(1, 0xb, SCE_DBGINFO_FUNC(1171, "CreateDefaultBudget"),
+		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(1171, "CreateDefaultBudget"),
 					      "Unknown model 0x%08x\n", model);
 		return 0x3200000;
 #else
@@ -822,7 +822,7 @@ int CreateDefaultBudget(void)
 		SCE_DBG_ASSERT_FAIL(1184);
 		return 0;
 	}
-	if (ksceKernelCheckDipsw(0xbf) != 0) {
+	if (SceDipswForDriver_A98FC2FD(0xbf) != 0) {
 		ret = sceKernelGrowPhyMemPartByPbase(g_shellPart, 0x78000000, 0x3000000);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1196, "sceKernelGrowPhyMemPartByPbase failed 0x%08x\n",
@@ -837,7 +837,7 @@ int CreateDefaultBudget(void)
 			SCE_DBG_ASSERT_FAIL(1207);
 			return 0;
 		}
-	} else if (ksceKernelCheckDipsw(0xbe) == 0 && ksceKernelCheckDipsw(0xd2) != 0) {
+	} else if (SceDipswForDriver_A98FC2FD(0xbe) == 0 && SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 		ret = CreateDefaultPhyMemPart("ScePhyMemPartShellDummy", 0x10002, 0x78000000, 0x8000000,
 					      &g_shellDummyPart);
 		if (ret < 0) {
@@ -847,14 +847,14 @@ int CreateDefaultBudget(void)
 		}
 	}
 	ret = CreateDefaultPhyMemPart("ScePhyMemPartGame", 0x10004, 0x50000000,
-				      ksceKernelCheckDipsw(0x80) != 0 ? 0x20000000 : 0x10000000,
+				      SceDipswForDriver_A98FC2FD(0x80) != 0 ? 0x20000000 : 0x10000000,
 				      &g_gamePart);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1248, "CreateDefaultPhyMemPart failed 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(1249);
 		return 0;
 	}
-	if (ksceKernelCheckDipsw(0x80) == 0) {
+	if (SceDipswForDriver_A98FC2FD(0x80) == 0) {
 		ret = CreateDefaultPhyMemPart("ScePhyMemPartGameDummy", 0x10002, 0x60000000, 0x10000000,
 					      &g_gameDummyPart);
 		if (ret < 0)
@@ -970,7 +970,7 @@ int sceKernelGrowBudget(SceUID budgetId, int index, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 1479, "pPhyMemPart %p\n", partition);
-	ret = SceSysmemForKernel_5B434019(partition, (void *)size);
+	ret = SceSysmemForKernel_5B434019(partition, size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1483, "grow partition failed. 0x%08x\n", ret);
 		ksceKernelUnlockMutex(budget->mutex, 1);

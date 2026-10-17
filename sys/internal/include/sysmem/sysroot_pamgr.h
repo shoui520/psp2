@@ -11,7 +11,9 @@ struct PamgrTimebaseProvider {
 	volatile uint32_t *(*getRegister)(unsigned int bank, unsigned int index);
 };
 
+#ifndef __cplusplus
 _Static_assert(sizeof(struct PamgrTimebaseProvider) == 0x10,
 	       "Sysroot performance-monitor timebase table size");
 _Static_assert(offsetof(struct PamgrTimebaseProvider, getRegister) == 0xc,
 	       "Sysroot performance-monitor register query offset");
+#endif

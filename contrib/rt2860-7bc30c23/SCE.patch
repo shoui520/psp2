@@ -36,8 +36,8 @@
 +		unsigned int value = *character++;
 +
 +		if (value - 32 > 94) {
-+			ksceKernelPrintf("[SceWlanBt]: invalid password character : %x\n",
-+					 (signed char)value);
++			SceDebugForDriver_391B74B7("[SceWlanBt]: invalid password character : %x\n",
++						   (signed char)value);
 +			return;
 +		}
 +	}

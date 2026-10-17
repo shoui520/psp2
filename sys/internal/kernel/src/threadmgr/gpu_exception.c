@@ -51,14 +51,14 @@ int threadmgrGpuExceptionHandler(SceUID pid)
 	}
 	handler = manager->debugHandlers[1][DEBUG_HANDLER_GPU_EXCEPTION];
 	if (handler == NULL) {
-		ret = ksceGUIDReferObjectWithClass(pid, manager->processClass,
+		ret = SceSysmemForDriver_00ED6C14(pid, manager->processClass,
 						   (SceObjectBase **)&process);
 		if (ret < 0)
 			goto invalid;
 	} else {
 		message = pid;
 		action = handler(sizeof(message), &message);
-		ret = ksceGUIDReferObjectWithClass(pid,
+		ret = SceSysmemForDriver_00ED6C14(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			goto invalid;
@@ -75,7 +75,7 @@ int threadmgrGpuExceptionHandler(SceUID pid)
 			SCE_PANIC(119);
 		}
 	}
-	if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
+	if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) == 0) {
 		if (pid != THREADMGR_KERNEL_PID) {
 			ret = SceSysrootForKernel_1247A825(pid, PROCESS_DEBUG_SUSPEND_EXCEPTION);
 			if (ret < 0) {
@@ -91,7 +91,7 @@ int threadmgrGpuExceptionHandler(SceUID pid)
 			     s_threadmgrRuntime.manager->processDebugSuspendArg);
 	}
 release:
-	ksceGUIDReleaseObject(pid);
+	sceGUIDReleaseObject(pid);
 	return ret;
 invalid:
 	SCE_DBG_PRINTF(0, 86, "error: threadmgrGpuExceptionHandler(), invalid processId(0x%08X)\n",

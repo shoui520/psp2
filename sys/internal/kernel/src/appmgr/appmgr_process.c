@@ -5,16 +5,15 @@
 #include <threadmgr/threadmgr.h>
 #include <psp2/appmgr.h>
 #include <psp2kern/power.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "appmgr_internal_util.h"
 #include "app_state_internal.h"
 #include <sysmem/sysroot.h>
+#include <sysmem/sysclib.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
-extern void *__memcpy_chk(void *dst, const void *src, size_t size,
-			  size_t capacity);
 
 extern int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **app);
 extern int _appListFindAndLockAppByName(const char *appName, struct AppState **app);
@@ -25,9 +24,6 @@ extern int _resumeAppForDebugger(struct AppState *app,
 extern int _appListUnlockApp(struct AppState *app);
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-				      const SceKernelDebugInfo *info,
-				      const void *lr, const char *fmt, ...);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId,
@@ -38,9 +34,9 @@ extern int appmgrReturnSuccess(void);
 extern int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags);
 int appmgrProcKillHandler(SceUID pid, ProcEventParam *param, int flags);
 extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
-		SceProcEventInvokeParam1 *param, int flags);
+		ProcEventParam *param, int flags);
 extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
-		SceProcEventInvokeParam1 *param, int flags);
+		ProcEventParam *param, int flags);
 extern int SceAvcodecForDriver_C84AFFC4(void (*callback)(void));
 extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
@@ -75,14 +71,14 @@ SceUID g_appmgrVideoCodecPid = -1;
 int (*g_appmgrProcTerminatedCallback)(struct AppState *app);
 SceUID g_appmgrProcEventHandlerUid;
 
-static const SceProcEventHandler processEventHandlers = {
-	.size = sizeof(SceProcEventHandler),
-	.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))appmgrReturnSuccess,
-	.exit = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))_sceAppMgrProcExitHandler,
-	.kill = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))appmgrProcKillHandler,
-	.stop = _sceAppMgrProcSuspendHandler,
-	.start = _sceAppMgrProcResumeHandler,
-	.switch_process = NULL,
+static const SceKernelProcEventHandler processEventHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
+	.create = (int (*)(SceUID, ProcEventCreateParam *, int))appmgrReturnSuccess,
+	.exit = (int (*)(SceUID, ProcEventParam *, int))_sceAppMgrProcExitHandler,
+	.kill = (int (*)(SceUID, ProcEventParam *, int))appmgrProcKillHandler,
+	.suspend = _sceAppMgrProcSuspendHandler,
+	.resume = _sceAppMgrProcResumeHandler,
+	.notify = NULL,
 };
 
 #if !FW_DEBUG
@@ -94,7 +90,7 @@ static const SceKernelDebugInfo processPanicInfo = {
 
 void appmgrProcessPanic(void)
 {
-	ksceKernelPanic(&processPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&processPanicInfo, __builtin_return_address(0));
 }
 
 static const SceKernelDebugInfo videoCodecPanicInfo = {
@@ -130,7 +126,7 @@ static const SceKernelDebugInfo resumeGameExistPanicInfo = {
 
 void vcStateChangedPanic(void)
 {
-	ksceKernelPanic(&videoCodecPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&videoCodecPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -162,9 +158,9 @@ void vcStateChangedPanic(void)
 		int assertLevel; \
 		sceAppMgrDump(); \
 		dumpBgmState(); \
-		assertLevel = ksceKernelGetAssertLevel(); \
+		assertLevel = SceDebugForDriver_374B7868(); \
 		if (assertLevel > 0) \
-			return ksceKernelPrintfAssertLevel(1, 0, \
+			return SceDebugForDriver_821A2D59(1, 0, \
 				SCE_DBGINFO_FUNC(_line, "vcStateChanged"), \
 				__builtin_return_address(0), \
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n", \
@@ -428,7 +424,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 			dumpBgmState();
 			SCE_DBG_ASSERT_CHECK_FUNC(0, 375, "_sceAppMgrProcTerminatedHandler");
 #else
-			ksceKernelPanic(&shellTerminatedPanicInfo,
+			SceDebugForDriver_391B5B74(&shellTerminatedPanicInfo,
 				__builtin_return_address(0));
 #endif
 		}
@@ -455,7 +451,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 #endif
 
 int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
-		SceProcEventInvokeParam1 *param, int flags)
+		ProcEventParam *param, int flags)
 {
 	struct AppState *app, *lockedApp;
 	struct AppmgrWaitObject *waiter;
@@ -475,7 +471,7 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 			PROCESS_SUSPEND_RESULT(result, 216);
 #else
 			if (result != 0)
-				ksceKernelPrintfPanic(&suspendGameExistPanicInfo,
+				SceDebugForDriver_00CCE39C(&suspendGameExistPanicInfo,
 					__builtin_return_address(0),
 					"0x%08x,0x%08x\n", result, 0);
 #endif
@@ -584,9 +580,9 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 		int assertLevel;
 		sceAppMgrDump();
 		dumpBgmState();
-		assertLevel = ksceKernelGetAssertLevel();
+		assertLevel = SceDebugForDriver_374B7868();
 		if (assertLevel > 0)
-			return ksceKernelPrintfAssertLevel(1, 0,
+			return SceDebugForDriver_821A2D59(1, 0,
 				SCE_DBGINFO_FUNC(1478, "videocodecUsageChangedCallback2"),
 				__builtin_return_address(0),
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
@@ -618,7 +614,7 @@ int videocodecUsageChangedCallback2(SceUID pid, unsigned int usage)
 #endif
 
 int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
-		SceProcEventInvokeParam1 *param, int flags)
+		ProcEventParam *param, int flags)
 {
 	struct AppState *app, *lockedApp;
 	struct AppmgrWaitObject *waiter;
@@ -655,7 +651,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 			PROCESS_RESUME_RESULT(result, 271);
 #else
 			if (result != 0)
-				ksceKernelPrintfPanic(&resumeGameExistPanicInfo,
+				SceDebugForDriver_00CCE39C(&resumeGameExistPanicInfo,
 					__builtin_return_address(0),
 					"0x%08x,0x%08x\n", result, 0);
 #endif
@@ -850,7 +846,7 @@ int _sceAppMgrProcExitHandler(SceUID pid, ProcEventParam *param, int flags)
 		return 0;
 #if FW_DEBUG
 	for (index = 0; index != 20; ++index) {
-		if (ksceKernelGetAssertLevel() > 0) {
+		if (SceDebugForDriver_374B7868() > 0) {
 			__builtin_prefetch(&g_appmgrAppStates[index + 5].mutexOwner);
 			owner = g_appmgrAppStates[index].mutexOwner;
 			SCE_DBG_ASSERT_CHECK_FUNC(owner != ksceKernelGetThreadId(),
@@ -1641,7 +1637,7 @@ int sceAppMgrResumeAppByNameForDebugger(const char *appName)
 #else
 #define PROCESS_INITIALIZE_CHECK(_failed, _line, _info) do { \
 	if (_failed) \
-		ksceKernelPanic(&(_info), __builtin_return_address(0)); \
+		SceDebugForDriver_391B5B74(&(_info), __builtin_return_address(0)); \
 } while (0)
 #endif
 
@@ -1653,7 +1649,7 @@ int _appmgrProcessInitialize(int (*callback)(struct AppState *app))
 	result = SceProcessmgrForDriver_5E882B60(
 		(void (*)(SceUID, int))_sceAppMgrProcTerminatedHandler);
 	PROCESS_INITIALIZE_CHECK(result != 0, 1496, terminatedRegistrationPanicInfo);
-	g_appmgrProcEventHandlerUid = ksceKernelRegisterProcEventHandler(
+	g_appmgrProcEventHandlerUid = sceKernelRegisterProcEventHandler(
 		"SceAppMgr", &processEventHandlers, 0);
 	PROCESS_INITIALIZE_CHECK(g_appmgrProcEventHandlerUid < 0, 1499,
 		processEventRegistrationPanicInfo);

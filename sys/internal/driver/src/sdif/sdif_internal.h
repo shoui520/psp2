@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sdif/sdif.h>
 #include "sdif_regs.h"
 #include <threadmgr/fast_mutex.h>
 #include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysroot.h>
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;
@@ -167,7 +168,6 @@ int freeAdmaDescriptorArea(SdifCommand *command);
 int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex);
-int ksceKernelIsSomeBootMode(void);
 SdifContextGlobal *ksceSdifGetSdContextGlobal(unsigned int index);
 int sceSdifReset(SdifContextGlobal *context, int flags);
 int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl);

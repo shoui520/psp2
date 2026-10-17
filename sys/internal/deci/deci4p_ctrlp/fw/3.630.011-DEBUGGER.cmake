@@ -43,15 +43,15 @@ set(MODULE_IMPORT_NIDS
 	0xD48CA62D:F:0xE6F659E0
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	memcpy
 	strncpy
 	__stack_chk_fail
 	sceKernelGetSystemTimeWide
-	ksceSblAimgrIsDolce
-	ksceKernelCheckDipsw
+	SceSblAIMgrForDriver_71608CA3
+	SceDipswForDriver_A98FC2FD
 	sceDfMgrOpen
 	sceDfMgrRecv
 	SceDeci4pDfMgrForDebugger_6D26CC56

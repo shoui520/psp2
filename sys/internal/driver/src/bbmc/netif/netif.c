@@ -1,8 +1,7 @@
 /* Baseband network driver callbacks. */
 #include <string.h>
 #include <psp2kern/usbd.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
-#include <psp2kern/kernel/cpu/atomic.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <net_ps/ethernet.h>
 #include <sysmem/debug.h>
@@ -12,7 +11,6 @@
 #include "../bbmc_message.h"
 #include <sysmem/sysmem.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/cpu/cache.h>
 #include "../usb_serial.h"
 #include "../usb_device.h"
 #include <threadmgr/threadmgr.h>
@@ -315,7 +313,7 @@ static inline __attribute__((always_inline)) int PrepareTxPacket(
 		goto consumed;
 #if FW_DEBUG
 	} else {
-		ksceKernelAssert(0, &dbg_PrepareTxPacket_L1552, caller);
+		SceDebugForDriver_35A35322(0, &dbg_PrepareTxPacket_L1552, caller);
 		packetLength = packet->length;
 #endif
 	}
@@ -371,7 +369,7 @@ SceUInt32 bbmcPacketInterfaceExpire(void *context)
 {
 	BbmcPacketInterface *control = context;
 	SceKernelIntrStatus intr =
-		ksceKernelSpinlockLowLockCpuSuspendIntr(&control->expiryLock);
+		SceCpuForDriver_D32ACE9E(&control->expiryLock);
 
 	if (++control->expiryCount > 11) {
 		BbmcControl *manager = bbmcGetControl();
@@ -379,10 +377,10 @@ SceUInt32 bbmcPacketInterfaceExpire(void *context)
 		control->expiryCount = 0;
 		control->expiryTimer = 0;
 		bbmcSendSimpleMessage(manager, 114);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&control->expiryLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&control->expiryLock, intr);
 		return 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&control->expiryLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&control->expiryLock, intr);
 	return 3600000000U;
 }
 
@@ -395,7 +393,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 	SceUInt32 startBusy, packetRequest;
 	int result;
 
-	ksceKernelAtomicAddAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	SceCpuForDriver_5F6A8743((SceInt32 *)&interface->activeCalls, 1);
 	if (command == 0x40800002) {
 		result = (int)0x8041810c;
 	} else if (command <= 0x40800002) {
@@ -419,7 +417,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 			} else {
 				result = (int)0x80330005;
 #if FW_DEBUG
-				ksceKernelAssert(0, &dbg_GetCommRate_L1053,
+				SceDebugForDriver_35A35322(0, &dbg_GetCommRate_L1053,
 					__builtin_return_address(0));
 #endif
 			}
@@ -471,7 +469,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 				} else {
 					result = (int)0x80330005;
 #if FW_DEBUG
-					ksceKernelAssert(0, &dbg_DisconnectNetwork_L1005,
+					SceDebugForDriver_35A35322(0, &dbg_DisconnectNetwork_L1005,
 						__builtin_return_address(0));
 #endif
 				}
@@ -480,7 +478,7 @@ int GetCommRate(struct NetDriver *driver, unsigned int command,
 			bbmcLeaveCS(&manager->mutex);
 		}
 	}
-	ksceKernelAtomicSubAndGet32((SceInt32 *)&interface->activeCalls, 1);
+	SceCpuForDriver_A4884C4E((SceInt32 *)&interface->activeCalls, 1);
 	return result;
 }
 
@@ -661,7 +659,7 @@ int bbmcStopUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	ksceKernelWaitThreadEnd(g_usbSerialDevice->thread, NULL, NULL);
 	device = g_usbSerialDevice;
 	if (device->memoryBlock > 0) {
-		ksceKernelFreeMemBlock(device->memoryBlock);
+		SceSysmemForDriver_009E1C61(device->memoryBlock);
 		device = g_usbSerialDevice;
 		device->memoryBlock = 0;
 	}
@@ -690,13 +688,13 @@ int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	__builtin_memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = ksceKernelAllocMemBlock("SceUsbQcomSer", 0x1020d006,
+	result = SceSysmemForDriver_C94850C9("SceUsbQcomSer", 0x1020d006,
 				       8192, &option);
 	device = g_usbSerialDevice;
 	if (result < 0)
 		goto failed;
 	device->memoryBlock = result;
-	result = ksceKernelGetMemBlockBase(result, &base);
+	result = SceSysmemForDriver_A841EDDA(result, &base);
 	if (result < 0)
 		goto reload;
 	buffer = (unsigned char *)(((SceUIntPtr)base + 63) & ~63u);
@@ -785,7 +783,7 @@ reload:
 	device = g_usbSerialDevice;
 failed:
 	if (device->memoryBlock > 0) {
-		ksceKernelFreeMemBlock(device->memoryBlock);
+		SceSysmemForDriver_009E1C61(device->memoryBlock);
 		device = g_usbSerialDevice;
 		device->memoryBlock = 0;
 	}

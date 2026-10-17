@@ -2,8 +2,8 @@
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/utils.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/utils.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 
@@ -66,10 +66,10 @@ int sceSblRngInit(void)
 			       "rng.c", 141, "sceSblRngInit", ret);
 		ksceKernelDeleteMutex(rngMutex);
 	} else {
-		ksceHmacSha1Digest(rngKeyHmacKey, sizeof(rngKeyHmacKey), random,
+		SceKernelUtilsForDriver_29A28957(rngKeyHmacKey, sizeof(rngKeyHmacKey), random,
 				   sizeof(random), rngKey);
 		random[0] = ksceKernelGetSystemTimeLow();
-		ksceHmacSha1Digest(rngSeedHmacKey, sizeof(rngSeedHmacKey), random,
+		SceKernelUtilsForDriver_29A28957(rngSeedHmacKey, sizeof(rngSeedHmacKey), random,
 				   sizeof(random), rngSeed);
 	}
 	return ret;
@@ -102,7 +102,7 @@ int _sceKernelGetRandomNumber(void *result, SceSize size,
 	uint8_t *buffer;
 	int ret, copyRet;
 
-	ret = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	ret = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (ret < 0)
 		return ret;
 	if (!result)
@@ -112,7 +112,7 @@ int _sceKernelGetRandomNumber(void *result, SceSize size,
 	buffer = __builtin_alloca(64);
 	memset(buffer, 0, 64);
 	ret = rngGetRandomNumberForUser(buffer, size);
-	copyRet = ksceKernelCopyToUser(result, buffer, param.size);
+	copyRet = SceSysmemForDriver_6D88EF8A(result, buffer, param.size);
 	if (copyRet < 0)
 		return copyRet;
 	return ret;

@@ -202,9 +202,9 @@ POST_SS_DEFERRED int postSsMgrDecryptKeySet(const void *const *encA, const void 
 {
 	/* as when neither copy checks */
 	ksceSblSsMemset(outA, 0xff, count * POST_SS_KEY_SIZE);
-	ksceKernelDcacheCleanRange(outA, count * POST_SS_KEY_SIZE);
+	SceCpuForDriver_103872A5(outA, count * POST_SS_KEY_SIZE);
 	ksceSblSsMemset(outB, 0xff, count * POST_SS_KEY_SIZE);
-	ksceKernelDcacheCleanRange(outB, count * POST_SS_KEY_SIZE);
+	SceCpuForDriver_103872A5(outB, count * POST_SS_KEY_SIZE);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -260,13 +260,13 @@ int SceSblPostSsMgrForDriver_4100B9E9(void)
 	ksceSblSsMemset(g_keySetA0, 0xff, sizeof(g_keySetA0));
 	ksceSblSsMemset(g_keySetA1, 0xff, sizeof(g_keySetA1));
 	g_keySetA = NULL;
-	ksceKernelDcacheCleanRange(g_keySetA0, sizeof(g_keySetA0));
-	ksceKernelDcacheCleanRange(g_keySetA1, sizeof(g_keySetA1));
+	SceCpuForDriver_103872A5(g_keySetA0, sizeof(g_keySetA0));
+	SceCpuForDriver_103872A5(g_keySetA1, sizeof(g_keySetA1));
 	ksceSblSsMemset(g_keySetB0, 0xff, sizeof(g_keySetB0));
 	ksceSblSsMemset(g_keySetB1, 0xff, sizeof(g_keySetB1));
 	g_keySetB = NULL;
-	ksceKernelDcacheCleanRange(g_keySetB0, sizeof(g_keySetB0));
-	ksceKernelDcacheCleanRange(g_keySetB1, sizeof(g_keySetB1));
+	SceCpuForDriver_103872A5(g_keySetB0, sizeof(g_keySetB0));
+	SceCpuForDriver_103872A5(g_keySetB1, sizeof(g_keySetB1));
 	ret = ksceKernelUnlockFastMutex(&g_postSsMgrKeysMutex);
 	return ret < 0 ? ret : 0;
 }
@@ -341,9 +341,9 @@ POST_SS_DEFERRED int postSsMgrLoadCloudKeys(void)
 		return 0;
 	/* as when neither copy checks */
 	ksceSblSsMemset(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
-	ksceKernelDcacheCleanRange(g_cloudKeys0, sizeof(g_cloudKeys0));
+	SceCpuForDriver_103872A5(g_cloudKeys0, sizeof(g_cloudKeys0));
 	ksceSblSsMemset(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
-	ksceKernelDcacheCleanRange(g_cloudKeys1, sizeof(g_cloudKeys1));
+	SceCpuForDriver_103872A5(g_cloudKeys1, sizeof(g_cloudKeys1));
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -402,8 +402,8 @@ int SceSblPostSsMgrForDriver_2BF04B8E(void)
 		ksceSblSsMemset(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
 		ksceSblSsMemset(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
 		g_cloudKeys = NULL;
-		ksceKernelDcacheCleanRange(g_cloudKeys0, sizeof(g_cloudKeys0));
-		ksceKernelDcacheCleanRange(g_cloudKeys1, sizeof(g_cloudKeys1));
+		SceCpuForDriver_103872A5(g_cloudKeys0, sizeof(g_cloudKeys0));
+		SceCpuForDriver_103872A5(g_cloudKeys1, sizeof(g_cloudKeys1));
 	}
 	if (g_cloudKeyTable != NULL)
 		g_cloudKeyTable = NULL;

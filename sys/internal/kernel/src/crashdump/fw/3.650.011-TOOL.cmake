@@ -50,24 +50,24 @@ set(MODULE_IMPORT_NIDS
 	0xA351714A:F:0x13EF8516
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
 	memset
 	memcpy
 	snprintf
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceKernelCheckDipsw
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelPrintf
+	SceDipswForDriver_A98FC2FD
+	SceCpuForDriver_364E68A4
+	SceDebugForDriver_391B74B7
 	ksceIoRemove
 	ksceIoWrite
 	ksceIoOpen
 	ksceIoClose
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsDEX
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_F4B98F66
 	SceQafMgrForDriver_382C71E8
 	kscePervasiveGetSoCRevision
 	SceSysconForDriver_CF5B2F2F

@@ -9,11 +9,13 @@
 #include <sysmem/debug.h>
 #include <gpu/sgxmkif_sce.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
+#include <sysmem/sysroot.h>
+#include <display/display.h>
 
 #define SGXMKIF_CC_INVAL_BIF_SL 0x4U
 #define DEVICE_MEMORY_HEAP_KERNEL 1
@@ -82,8 +84,6 @@ PVRSRV_ERROR PVRSRVRegisterPowerDevice(IMG_UINT32 ui32DeviceIndex,
 		PFN_PRE_CLOCKSPEED_CHANGE pfnPreClockSpeedChange,
 		PFN_POST_CLOCKSPEED_CHANGE pfnPostClockSpeedChange, IMG_HANDLE hDevCookie,
 		PVRSRV_DEV_POWER_STATE eCurrentPowerState, PVRSRV_DEV_POWER_STATE eDefaultPowerState);
-int SceSysrootForDriver_6655F48C(int operation, int flags);
-int SceDisplayForDriver_086DEFB6(int handle, int mode);
 PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
 		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,
@@ -311,7 +311,7 @@ PVRSRV_ERROR DevDeInitSGX(IMG_VOID *pvDeviceNode)
 		return eError;
 #if FW_DEBUG
 	if (psSGXDeviceMap->pvRegsCpuVBase == NULL && psDevInfo->pvRegsBaseKM != NULL)
-		ksceKernelAssert(0, &dbg_DevDeInitSGX_L1265,
+		SceDebugForDriver_35A35322(0, &dbg_DevDeInitSGX_L1265,
 				__builtin_return_address(0));
 #endif
 	OSFreeMem_Impl(2, sizeof(PVRSRV_SGXDEV_INFO), psDevInfo, NULL);
@@ -613,7 +613,7 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		psDevInfo->pvRegsBaseKM = psSGXDeviceMap->pvRegsCpuVBase;
 #if FW_VERSION >= 0x04000000
 	else
-		ksceKernelAssert(0, &dbg_DevInitSGXPart2KM_L1047, __builtin_return_address(0));
+		SceDebugForDriver_35A35322(0, &dbg_DevInitSGXPart2KM_L1047, __builtin_return_address(0));
 #endif
 	psDevInfo->ui32RegSize = psSGXDeviceMap->ui32RegsSize;
 	psDevInfo->sRegsPhysBase = psSGXDeviceMap->sRegsSysPBase;
@@ -794,7 +794,8 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 	IMG_UINT32 ui32ClockSpeed, ui32RegOffset;
 	IMG_UINT32 ui32PerfSelect0, ui32PerfSelect1, ui32PerfSelect2, ui32PerfSelect3;
 	IMG_UINT32 ui32Flags;
-	int displayHandle, displayMode;
+	SceUInt32 *displayStatus;
+	SceUID displayPid;
 
 	psMiscInfoData->ui32MiscInfoFlags = 0;
 	switch (psMiscInfo->eRequest) {
@@ -875,19 +876,19 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 		psMiscInfo->uData.sTimers.ui64CPUTimer = ksceKernelGetProcessTimeWideCore();
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_DISPLAY_CONTROL:
-		if (!ksceSblAimgrIsTool() || !SceSblACMgrForDriver_E87D1777())
+		if (!SceSblAIMgrForDriver_274663A0() || !SceSblACMgrForDriver_E87D1777())
 			return PVRSRV_OK;
 		ui32Flags = psMiscInfo->uData.ui32DisplayControlFlags;
 		if (ui32Flags & ~3U)
 			return PVRSRV_ERROR_INVALID_PARAMS;
 		if (ui32Flags & 2U) {
-			displayHandle = SceSysrootForDriver_6655F48C(1, 3);
-			displayMode = 0;
+			displayStatus = (SceUInt32 *)SceSysrootForDriver_6655F48C(1, 3);
+			displayPid = 0;
 		} else {
-			displayHandle = 0;
-			displayMode = -1;
+			displayStatus = NULL;
+			displayPid = -1;
 		}
-		SceDisplayForDriver_086DEFB6(displayHandle, displayMode);
+		SceDisplayForDriver_086DEFB6(displayStatus, displayPid);
 		return PVRSRV_OK;
 	default:
 		return PVRSRV_ERROR_INVALID_PARAMS;

@@ -36,9 +36,9 @@ typedef struct UartDebugPort {
 	SceUInt32 port;
 } UartDebugPort;
 
-int ksceKernelCpuId(void);
-int ksceKernelCheckDipsw(unsigned int bit);
-int ksceUartInit(int port);
+int sceKernelCpuId(void);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
+int SceUartForKernel_4C02AA05(int port);
 int SceSysrootForDriver_AE7A8F1D(void);
 
 UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
@@ -85,7 +85,7 @@ static int SerialSuspend(void *args)
 {
 	unsigned int i;
 
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		for (i = 0; i < UART_DEBUG_PORTS; i++) {
 			if (s_debugPorts[i].enabled)
 				SerialFlush(s_debugPorts[i].port);
@@ -151,7 +151,7 @@ __attribute__((noinline)) unsigned int SerialReadAvailable(unsigned int port)
 #endif
 
 #if SERIAL_WRITE
-int ksceUartWrite(int port, int c)
+int SceUartForKernel_430C48F1(int port, int c)
 {
 	SerialPutchar(port, c);
 	SerialFlush(port);
@@ -160,12 +160,12 @@ int ksceUartWrite(int port, int c)
 #endif
 
 #if SERIAL_READ
-int ksceUartRead(int port)
+int SceUartForKernel_4E97D3AD(int port)
 {
 	return SerialGetchar(port);
 }
 
-int ksceUartReadAvailable(int port)
+int SceUartForKernel_16780BC3(int port)
 {
 	return SerialReadAvailable(port);
 }
@@ -231,26 +231,26 @@ int serial_remap(void)
 	opt.size = sizeof(opt);
 	opt.paddr = UART_REG_BASE;
 	opt.attr = 2;
-	uid = ksceKernelAllocMemBlock("SceUartReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, UART_PORTS * UART_REG_SIZE, &opt);
+	uid = SceSysmemForDriver_C94850C9("SceUartReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, UART_PORTS * UART_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 242, "allocate uart register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 243);
 		return uid;
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	for (i = 0; i < UART_PORTS; i++)
 		s_uartRegs[i] = (volatile SceUartRegisters *)((char *)base + i * UART_REG_SIZE);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.paddr = UART_CLKGEN_BASE;
 	opt.attr = 2;
-	uid = ksceKernelAllocMemBlock("SceUartClkgenReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x1000, &opt);
+	uid = SceSysmemForDriver_C94850C9("SceUartClkgenReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x1000, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 262, "allocate uart clkgen area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 263);
 		return uid;
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_uartClkgen = base;
 	return 0;
 }
@@ -265,13 +265,13 @@ struct SysmemBootContext;
 int SerialInit(int uart0Enabled)
 {
 	if (uart0Enabled) {
-		ksceUartInit(s_debugPorts[0].port);
+		SceUartForKernel_4C02AA05(s_debugPorts[0].port);
 		s_debugPorts[0].enabled = 1;
 	}
-	if (!ksceKernelCheckDipsw(0xc5) && !ksceKernelCheckDipsw(0xfd))
+	if (!SceDipswForDriver_A98FC2FD(0xc5) && !SceDipswForDriver_A98FC2FD(0xfd))
 		return 0;
-	ksceUartInit(1);
-	if (ksceKernelCheckDipsw(0xc5))
+	SceUartForKernel_4C02AA05(1);
+	if (SceDipswForDriver_A98FC2FD(0xc5))
 		s_debugPorts[1].enabled = 1;
 	return 0;
 }
@@ -289,7 +289,7 @@ int SerialInit(const struct SysmemBootContext *context)
 	if (SceSysrootForDriver_AE7A8F1D())
 		s_debugPorts[0].enabled = 1;
 #endif
-	if (ksceKernelCheckDipsw(0xc5))
+	if (SceDipswForDriver_A98FC2FD(0xc5))
 		s_debugPorts[1].enabled = 1;
 #if SERIAL_SUSPEND
 	SceKernelSuspendForDriver_CE7A2207(UART_SUSPEND_SLOT, SerialSuspend, NULL);
@@ -299,7 +299,7 @@ int SerialInit(const struct SysmemBootContext *context)
 }
 #endif
 
-int ksceUartInit(int port)
+int SceUartForKernel_4C02AA05(int port)
 {
 	SceUInt32 flowControl, fifoConfig, irqMask, baud;
 

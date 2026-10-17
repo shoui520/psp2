@@ -1,6 +1,6 @@
 /* Common heap used by the FAT and exFAT implementations. */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 
@@ -29,7 +29,7 @@ int sceFatfsInitializeHeap(int reuseHeap)
 #endif
 			return 0x80010011;
 		}
-		heapId = ksceKernelCreateHeap("SceExfatfsCommon", 0x7f000, &opt);
+		heapId = SceSysmemForDriver_9328E0E8("SceExfatfsCommon", 0x7f000, &opt);
 		g_commonHeapId = heapId;
 	}
 #if FW_VERSION >= 0x04000000
@@ -54,7 +54,7 @@ int sceFatfsFinalizeHeap(int reuseHeap)
 #endif
 			return 0x80010002;
 		}
-		result = ksceKernelDeleteHeap(g_commonHeapId);
+		result = sceKernelDeleteHeap(g_commonHeapId);
 		if (result < 0) {
 #if FW_VERSION >= 0x04000000
 			SCE_DBG_PRINTF_LEVEL(1, 0, 112, "%s: sceKernelDeleteHeap failed[%#x]\n",
@@ -74,12 +74,12 @@ void *allocateHeapBuffer(struct SceExfatfsDrive *unusedDrive)
 	int intrState;
 
 	(void)unusedDrive;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
+	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
 	if (g_heapBlockCacheCount <= 0)
-		buffer = ksceKernelAllocHeapMemory(g_commonHeapId, 0x800);
+		buffer = SceSysmemForDriver_7B4CB60A(g_commonHeapId, 0x800);
 	else
 		buffer = g_heapBlockCache[--g_heapBlockCacheCount];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 	return buffer;
 }
 
@@ -88,15 +88,15 @@ void freeHeapBuffer(int unused, void *buffer)
 	int intrState;
 	int count;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
+	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
 	count = g_heapBlockCacheCount;
 	if (count > 3) {
-		ksceKernelFreeHeapMemory(g_commonHeapId, buffer);
+		sceKernelFreeHeapMemory(g_commonHeapId, buffer);
 	} else {
 		g_heapBlockCacheCount = count + 1;
 		g_heapBlockCache[count] = buffer;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 }
 
 void *allocateCommonHeapMemory(int unused, SceSize size)
@@ -104,9 +104,9 @@ void *allocateCommonHeapMemory(int unused, SceSize size)
 	int intrState;
 	void *memory;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
-	memory = ksceKernelAllocHeapMemory(g_commonHeapId, size);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
+	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	memory = SceSysmemForDriver_7B4CB60A(g_commonHeapId, size);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 	return memory;
 }
 
@@ -114,7 +114,7 @@ void freeCommonHeapMemory(int unused, void *memory)
 {
 	int intrState;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_heapLock);
-	ksceKernelFreeHeapMemory(g_commonHeapId, memory);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
+	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
+	sceKernelFreeHeapMemory(g_commonHeapId, memory);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 }

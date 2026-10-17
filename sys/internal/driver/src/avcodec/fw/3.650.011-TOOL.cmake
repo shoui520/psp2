@@ -100,13 +100,13 @@ set(MODULE_IMPORT_NIDS
 	0x51593F20:F:0xFBD4853E
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowTrylock
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	SceCpuForDriver_5AC9D394
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
 	ksceKernelFinalizeFastMutex
 	sceKernelDelayThread
 	ksceKernelLockFastMutex
@@ -118,18 +118,18 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	ksceKernelGetProcessLocalStorageAddr
 	ksceKernelIsGameBudget
-	ksceKernelRegisterProcEventHandler
-	ksceKernelFreeMemBlock
-	ksceKernelUnlockRangeWithMode
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelIsAccessibleRange
-	ksceKernelGetMemBlockBase
-	ksceKernelUnlockRangeProc
-	ksceKernelLockRangeWithMode
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
+	sceKernelRegisterProcEventHandler
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_22CBE925
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_A8525B06
+	sceKernelLockRangeWithMode
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
 	memset
 	memcpy
 	__aeabi_ldivmod

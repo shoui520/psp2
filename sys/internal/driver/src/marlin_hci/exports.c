@@ -88,12 +88,12 @@ int MarlinHciExportStoredList(void *outputHandles, unsigned int *outputCount,
 	}
 	ret = MarlinHciExportStoredListChecked(handles, count);
 	if (outputHandles != NULL) {
-		copy = ksceKernelCopyToUser(outputHandles, handles, args.size);
+		copy = SceSysmemForDriver_6D88EF8A(outputHandles, handles, args.size);
 		if (copy < 0)
 			return copy;
 	}
 	if (outputCount != NULL)
-		return copyResult(ret, ksceKernelCopyToUser(outputCount, count,
+		return copyResult(ret, SceSysmemForDriver_6D88EF8A(outputCount, count,
 							 sizeof(*count)));
 	return ret;
 }
@@ -107,11 +107,11 @@ int MarlinHciImportWrappedKey(MarlinWrappedKeyImport *userRequest)
 		return MarlinHciImportWrappedKeyChecked(NULL);
 	request = __builtin_alloca(sizeof(*request));
 	__builtin_memset(request, 0, sizeof(*request));
-	ret = ksceKernelCopyFromUser(request, userRequest, sizeof(*request));
+	ret = SceSysmemForDriver_BC996A7A(request, userRequest, sizeof(*request));
 	if (ret < 0)
 		return ret;
 	ret = MarlinHciImportWrappedKeyChecked(request);
-	return copyResult(ret, ksceKernelCopyToUser(userRequest, request,
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(userRequest, request,
 						 sizeof(*request)));
 }
 

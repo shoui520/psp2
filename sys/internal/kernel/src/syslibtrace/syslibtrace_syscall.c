@@ -9,7 +9,7 @@
  */
 
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <syslibtrace/syslibtrace.h>
@@ -138,14 +138,14 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 	if (flags != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 190);
 		return ret;
 	}
@@ -163,7 +163,7 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 		list[i]->traceFlags |= SCE_SYSLIBTRACE_LIB_REGISTERED;
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 
@@ -178,14 +178,14 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 	if (flags != 0)
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 232);
 		return ret;
 	}
@@ -203,7 +203,7 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 		list[i]->traceFlags &= ~SCE_SYSLIBTRACE_LIB_REGISTERED;
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 
@@ -239,14 +239,14 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 	SceUInt32 i, first, end;
 	int ret;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 271);
 		return ret;
 	}
@@ -265,7 +265,7 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 		}
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 
@@ -277,14 +277,14 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 	SceUInt32 i, first, end;
 	int ret;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 328);
 		return ret;
 	}
@@ -303,7 +303,7 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 		}
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 
@@ -320,14 +320,14 @@ int sceSyslibtraceStartSyscallTrace(void)
 	SceUInt32 i, k;
 	int ret;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 386);
 		return ret;
 	}
@@ -357,7 +357,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 		}
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 
@@ -369,14 +369,14 @@ int sceSyslibtraceStopSyscallTrace(void)
 	SceUInt32 i, k;
 	int ret;
 
-	list = ksceKernelAlloc(LIBENT_LIST_SIZE);
+	list = SceSysmemForKernel_85571907(LIBENT_LIST_SIZE);
 	if (list == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
 	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
 	if (ret < 0) {
-		ksceKernelFree(list);
+		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 438);
 		return ret;
 	}
@@ -395,7 +395,7 @@ int sceSyslibtraceStopSyscallTrace(void)
 		}
 	}
 
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	return 0;
 }
 

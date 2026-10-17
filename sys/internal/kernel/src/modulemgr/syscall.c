@@ -14,7 +14,7 @@ int ModulemgrCopyPathFromUser(const char *upath, char **path)
 	char *buf;
 	int len, ret;
 
-	len = ksceKernelStrnlenFromUser(upath, 0x400);
+	len = SceSysmemForDriver_B429D419(upath, 0x400);
 	if (len < 0)
 		return len;
 	if (len >= 0x400)
@@ -24,7 +24,7 @@ int ModulemgrCopyPathFromUser(const char *upath, char **path)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 	buf[len] = '\0';
 	if (len != 0) {
-		ret = ksceKernelCopyFromUser(buf, upath, len);
+		ret = SceSysmemForDriver_BC996A7A(buf, upath, len);
 		if (ret < 0) {
 			ModulemgrFree(0, buf);
 			return ret;
@@ -87,7 +87,7 @@ int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = kscePUIDtoGUID(0, modid);
+	ret = SceSysmemForDriver_45D22597(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -109,7 +109,7 @@ int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = kscePUIDtoGUID(0, modid);
+	ret = SceSysmemForDriver_45D22597(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -131,7 +131,7 @@ int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = kscePUIDtoGUID(0, modid);
+	ret = SceSysmemForDriver_45D22597(0, modid);
 	if (ret < 0)
 		ret |= SYSCALL_ERROR_PUID;
 	else if (flags != 0)
@@ -181,7 +181,7 @@ int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
 	SceUID uid;
 
 	state = ModulemgrSyscallEnter();
-	uid = kscePUIDtoGUID(0, modid);
+	uid = SceSysmemForDriver_45D22597(0, modid);
 	if (uid < 0) {
 		ret = uid | SYSCALL_ERROR_PUID;
 	} else if (flags != 0) {
@@ -242,7 +242,7 @@ int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = kscePUIDtoGUID(0, modid);
+	ret = SceSysmemForDriver_45D22597(0, modid);
 	if (ret < 0)
 		ret |= SYSCALL_ERROR_PUID;
 	else if (flags != 0)
@@ -270,12 +270,12 @@ int sceKernelGetModuleListForUser(SceUInt32 flags, SceUID *ulist, SceSize *unum)
 		ModulemgrSyscallLeave(state);
 		return ret;
 	}
-	ret = ksceKernelCopyFromUser(&count, unum, sizeof(count));
+	ret = SceSysmemForDriver_BC996A7A(&count, unum, sizeof(count));
 	if (ret < 0) {
 		ModulemgrSyscallLeave(state);
 		return ret;
 	}
-	list = ksceKernelAlloc(count * sizeof(SceUID));
+	list = SceSysmemForKernel_85571907(count * sizeof(SceUID));
 	if (list == NULL) {
 		ModulemgrSyscallLeave(state);
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
@@ -283,11 +283,11 @@ int sceKernelGetModuleListForUser(SceUInt32 flags, SceUID *ulist, SceSize *unum)
 	n = count;
 	ret = sceKernelGetModuleList(0, flags, 2, list, &n);
 	if (ret >= 0) {
-		ret = ksceKernelCopyToUser(ulist, list, n * sizeof(SceUID));
+		ret = SceSysmemForDriver_6D88EF8A(ulist, list, n * sizeof(SceUID));
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(unum, &n, sizeof(n));
+			ret = SceSysmemForDriver_6D88EF8A(unum, &n, sizeof(n));
 	}
-	ksceKernelFree(list);
+	SceSysmemForKernel_4233C16D(list);
 	ModulemgrSyscallLeave(state);
 	return ret;
 }
@@ -299,7 +299,7 @@ int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo)
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = kscePUIDtoGUID(0, modid);
+	ret = SceSysmemForDriver_45D22597(0, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else {
@@ -307,7 +307,7 @@ int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo)
 		info.size = sizeof(info);
 		ret = LibraryDBGetModuleInfoById(sceKernelGetProcessId(), ret, &info);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(uinfo, &info, sizeof(info));
+			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;
@@ -332,11 +332,11 @@ int _sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *uinfo)
 	state = ModulemgrSyscallEnter();
 	SceKernelSystemSwVersion info __attribute__((aligned(8))) = { 0 };
 
-	ret = ksceKernelCopyFromUser(&info, uinfo, 4);
+	ret = SceSysmemForDriver_BC996A7A(&info, uinfo, 4);
 	if (ret >= 0) {
 		ret = sceKernelGetSystemSwVersion(&info);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(uinfo, &info, sizeof(info));
+			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;
@@ -365,7 +365,7 @@ int sceKernelGetLibraryInfoByNID(SceUID modid, SceNID libnid, SceKernelLibraryIn
 
 	state = ModulemgrSyscallEnter();
 	pid = sceKernelGetProcessId();
-	ret = kscePUIDtoGUID(pid, modid);
+	ret = SceSysmemForDriver_45D22597(pid, modid);
 	if (ret < 0) {
 		ret |= SYSCALL_ERROR_PUID;
 	} else {
@@ -373,7 +373,7 @@ int sceKernelGetLibraryInfoByNID(SceUID modid, SceNID libnid, SceKernelLibraryIn
 
 		ret = LibraryDBGetLibraryInfoByNID(pid, ret, libnid, &info);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(uinfo, &info, sizeof(info));
+			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;

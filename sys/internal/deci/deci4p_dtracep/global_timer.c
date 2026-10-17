@@ -6,7 +6,7 @@
  *
  * Internal names are unknown (no debug records name them).
  */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <fw.h>
 #include <sysmem/debug.h>
@@ -15,7 +15,7 @@
 /* the error messages are new in 4.00 */
 #if FW_SINCE(0x04000000)
 #define GLOBAL_TIMER_ERROR(_fmt, _ret, _line)					\
-	ksceKernelPrintf("[dtrace] ERROR:   " _fmt " (0x%08x) [%s:%d]\n",		\
+	SceDebugForDriver_391B74B7("[dtrace] ERROR:   " _fmt " (0x%08x) [%s:%d]\n",		\
 			 (_ret), "global_timer.c", (_line))
 #else
 #define GLOBAL_TIMER_ERROR(_fmt, _ret, _line)	((void)(_ret))
@@ -56,14 +56,14 @@ static inline void GlobalTimerStart(SceUInt64 count)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERIPH_REG_BASE;
-	uid = ksceKernelAllocMemBlock("ScePeriphReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = SceSysmemForDriver_C94850C9("ScePeriphReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      PERIPH_REG_SIZE, &opt);
 	if (uid < 0) {
 		GLOBAL_TIMER_ERROR("failed to allocate global timer memory block", uid, 48);
 		return;
 	}
 	s_globalTimer.uid = uid;
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_globalTimer.base = base;
 	timer = (GlobalTimer *)((char *)base + GLOBAL_TIMER_OFFSET);
 	s_globalTimer.timer = timer;
@@ -83,7 +83,7 @@ static inline void GlobalTimerUnmap(void)
 {
 	int ret;
 
-	ret = ksceKernelFreeMemBlock(s_globalTimer.uid);
+	ret = SceSysmemForDriver_009E1C61(s_globalTimer.uid);
 	if (ret != 0)
 		GLOBAL_TIMER_ERROR("failed to free global timer memory block", ret, 90);
 }

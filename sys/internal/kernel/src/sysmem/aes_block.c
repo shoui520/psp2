@@ -1,5 +1,5 @@
 /* SceKernelUtils Rijndael encryption data and entries. */
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <sysmem/aes.h>
 #include <stdint.h>
 
@@ -218,12 +218,12 @@ const uint8_t aesInverseSubstitution[256] = {
 };
 
 
-int ksceAesEncrypt2(SceAesContext *ctx, const void *src, void *dst)
+int SceKernelUtilsForDriver_302947B6(SceAesContext *ctx, const void *src, void *dst)
 {
-	return ksceAesEncrypt1(ctx, src, dst);
+	return SceKernelUtilsForDriver_C2A61770(ctx, src, dst);
 }
 
-int ksceAesEncrypt1(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_C2A61770(SceAesContext *context, const void *src, void *dst)
 {
 	const SceAesCompactContext *ctx = (const SceAesCompactContext *)context;
 	const uint32_t *input = src;
@@ -298,7 +298,7 @@ int ksceAesEncrypt1(SceAesContext *context, const void *src, void *dst)
 	return 0;
 }
 
-int ksceAesDecrypt2(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_E39CD272(SceAesContext *context, const void *src, void *dst)
 {
 	const SceAesCompactContext *ctx = (const SceAesCompactContext *)context;
 	const uint32_t *input = src;
@@ -373,7 +373,7 @@ int ksceAesDecrypt2(SceAesContext *context, const void *src, void *dst)
 	return 0;
 }
 
-int ksceAesDecrypt1(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_D8678061(SceAesContext *context, const void *src, void *dst)
 {
 	const SceAesFullContext *full = (const SceAesFullContext *)context;
 	const SceAesCompactContext *ctx = &full->encryption;

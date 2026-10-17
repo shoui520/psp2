@@ -67,8 +67,8 @@ set(MODULE_IMPORT_FUNCS
 	SceGpuEs4ForDriver_C0C73C1B
 	PVRSRVAcquireDeviceDataKM
 	PVRSRVEnumerateDevicesKM
-	ksceKernelPrintf
-	ksceKernelCheckDipsw
+	SceDebugForDriver_391B74B7
+	SceDipswForDriver_A98FC2FD
 	memset
 	vsnprintf
 	memcpy
@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_A0D45D25
 	SceKernelUtilsForDriver_AE6C45FB
 	ksceKernelGetModuleInfoByAddr
-	ksceGUIDName
+	SceSysmemForDriver_E655852F
 	kscePowerGetGpuClockFrequencyInternal
 	kscePervasiveGetSoCRevision
 	ksceIoIoctl

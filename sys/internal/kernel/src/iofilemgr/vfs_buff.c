@@ -9,10 +9,10 @@ void *vfs_buf_allocate_memory(SceUID id, SceSize size, int memType)
 {
 	switch (memType & 7) {
 	case VFS_BUFF_MEM_HEAP:
-		return ksceKernelAllocHeapMemory(id, size);
+		return SceSysmemForDriver_7B4CB60A(id, size);
 	case VFS_BUFF_MEM_DEFAULT:
 	case VFS_BUFF_MEM_HOST:
-		return ksceKernelAllocHeapMemory2(id, size, NULL);
+		return SceSysrootForKernel_D351EBC8(id, size, NULL);
 	case VFS_BUFF_MEM_CDIALOG:
 		return sceKernelAllocRemoteCDialogHeap(id, size, NULL);
 	default:
@@ -25,7 +25,7 @@ int vfs_buf_free_memory(SceUID id, void *ptr, int memType)
 {
 	switch (memType & 7) {
 	case VFS_BUFF_MEM_HEAP:
-		return ksceKernelFreeHeapMemory(id, ptr);
+		return sceKernelFreeHeapMemory(id, ptr);
 	case VFS_BUFF_MEM_DEFAULT:
 	case VFS_BUFF_MEM_HOST:
 		return SceSysrootForKernel_7968F091(id, ptr);
@@ -716,16 +716,16 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 		data += lineSize * wayNum;
 	}
 
-	if (memType == VFS_BUFF_MEM_HOST && ksceKernelCheckDipsw(0xd2)) {
-		bc->hostMemBlock = ksceKernelAllocMemBlock("SceIoBuffCacheForHost", 0x10f0d006,
+	if (memType == VFS_BUFF_MEM_HOST && SceDipswForDriver_A98FC2FD(0xd2)) {
+		bc->hostMemBlock = SceSysmemForDriver_C94850C9("SceIoBuffCacheForHost", 0x10f0d006,
 							   ioCacheSize, NULL);
 		if (bc->hostMemBlock < 0)
 			goto free_data;
-		ksceKernelGetMemBlockBase(bc->hostMemBlock, &bc->ioBuffMemory);
+		SceSysmemForDriver_A841EDDA(bc->hostMemBlock, &bc->ioBuffMemory);
 		bc->hostBuff = vfs_buf_allocate_memory(pid, 0x8200, VFS_BUFF_MEM_HOST);
 		if (bc->hostBuff == NULL) {
 			vfs_buf_free_data_buff(bc, NULL, NULL);
-			ksceKernelFreeMemBlock(bc->hostMemBlock);
+			SceSysmemForDriver_009E1C61(bc->hostMemBlock);
 			goto free_bc;
 		}
 		ioBuff = (char *)(((SceUIntPtr)bc->ioBuffMemory + 0x1ff) & ~0x1ff);
@@ -850,16 +850,16 @@ static inline int vfs_buf_free_io_buff(struct BuffCache *bc)
 	SceUID pid = bc->pid;
 	int ret;
 
-	if (bc->memType == VFS_BUFF_MEM_HOST && ksceKernelCheckDipsw(0xd2)) {
+	if (bc->memType == VFS_BUFF_MEM_HOST && SceDipswForDriver_A98FC2FD(0xd2)) {
 		ret = vfs_buf_free_memory(pid, bc->hostBuff, bc->memType);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 390,
 					     "vfs_buf_free_memory failed ... %d 0x%x free address is %p\n",
 					     ret, ret, bc->hostBuff);
-			ksceKernelFreeMemBlock(bc->hostMemBlock);
+			SceSysmemForDriver_009E1C61(bc->hostMemBlock);
 			return ret;
 		}
-		return ksceKernelFreeMemBlock(bc->hostMemBlock);
+		return SceSysmemForDriver_009E1C61(bc->hostMemBlock);
 	}
 
 	ret = vfs_buf_free_memory(pid, bc->ioBuffMemory, bc->memType);

@@ -5,7 +5,7 @@
  * (LDRT/STRT), so a user pointer to kernel memory faults. Before an access the
  * routine points ip at its recovery code; the data abort handler resumes at ip
  * when the faulting PC lies in [VmaccessStart, VmaccessEnd) (see
- * ksceKernelGetVmaccessRange), and the routine returns VMACCESS_ERROR_FAULT.
+ * SceCpuForKernel_C32687D0), and the routine returns VMACCESS_ERROR_FAULT.
  * The recovery code first undoes whatever the routine pushed at the time.
  *
  * Assembly because C has no unprivileged access with fault recovery. The

@@ -150,13 +150,13 @@ set(MODULE_IMPORT_NIDS
 	0x3691DA45:F:0xCC119171
 )
 set(MODULE_IMPORT_FUNCS
-	ksceHmacSha1Digest
-	ksceAesEncrypt2
-	ksceMt19937Init
-	ksceSha1Digest
-	ksceMt19937UInt
-	ksceSha256Digest
-	ksceAesInit2
+	SceKernelUtilsForDriver_29A28957
+	SceKernelUtilsForDriver_302947B6
+	SceKernelUtilsForDriver_4C9A5730
+	SceKernelUtilsForDriver_87DC7F2F
+	SceKernelUtilsForDriver_92AEDFBC
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_EDA97D6D
 	ksceVopDopen
 	ksceVopFchstat
 	vfsPread
@@ -211,14 +211,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceVopWhiteout
 	ksceVfsOpDecodePathElem
 	vfsMountForPFS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelAtomicAddAndGet32
-	ksceKernelAtomicSubAndGet32
-	ksceKernelPanic
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	SceCpuForDriver_5F6A8743
+	SceCpuForDriver_A4884C4E
+	SceDebugForDriver_391B5B74
 	memset
 	strncmp
 	strchr
@@ -270,11 +270,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_6210D745
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_E87D1777
-	ksceSblAimgrIsCEX
+	SceSblAIMgrForDriver_D78B04A2
 	ksceSblRSA2048VerifySignature
 	ksceKernelGetProcessSelfAuthInfo
-	ksceKernelRegisterSysEventHandler
-	ksceKernelSysrootGetThreadAccessLevel
+	sceKernelRegisterSysEventHandler
+	SceSysrootForKernel_20009397
 	SceSysrootForKernel_CC119171
 )
 set(MODULE_IMPORT_VARS

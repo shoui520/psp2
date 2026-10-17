@@ -3,5 +3,5 @@ psp2_module(os0_kd_bootimage_tty2uart KIND kernel SOURCES
 	tty2uart.c
 IMPORTS
 	ksceKernelDeleteMutex
-	ksceKernelUnregisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 )

@@ -49,25 +49,25 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0xF1517B38
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyToUser
-	ksceKernelIsAccessibleRange
-	ksceKernelCopyFromUser
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_BC996A7A
 	memset
 	memcpy
 	__aeabi_uidivmod
 	__aeabi_uidiv
 	timingsafe_memcmp
 	__stack_chk_fail
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_AE1AF154
 	SceKernelUtilsForDriver_1DF3792A
-	ksceSha256BlockUpdate
-	ksceAesEncrypt2
-	ksceSha256BlockResult
-	ksceAesInit3
-	ksceSha256BlockInit
-	ksceAesDecrypt2
-	ksceAesInit2
+	SceKernelUtilsForDriver_236A9097
+	SceKernelUtilsForDriver_302947B6
+	SceKernelUtilsForDriver_4899CD4B
+	SceKernelUtilsForDriver_72408E29
+	SceKernelUtilsForDriver_D909FA2C
+	SceKernelUtilsForDriver_E39CD272
+	SceKernelUtilsForDriver_EDA97D6D
 	ksceKernelLockFastMutex
 	sceKernelGetProcessId
 	ksceKernelInitializeFastMutex
@@ -75,9 +75,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSsDecryptWithPortability
 	ksceSblAimgrGetOpenPsId
 	ksceSblRngGenuineRandomNumber
-	ksceKernelGetAssertLevel
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	ksceRtcGetCurrentNetworkTick
 )
 set(MODULE_IMPORT_VARS

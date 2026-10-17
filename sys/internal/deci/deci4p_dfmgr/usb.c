@@ -3,7 +3,7 @@
  */
 
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/sysmem/memtype.h>
+#include <sysmem/sysmem.h>
 #include "dfmgr_internal.h"
 
 #define USB_ERROR_DISCONNECTED	0x8024fff2

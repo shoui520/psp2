@@ -127,22 +127,22 @@ set(MODULE_IMPORT_NIDS
 	0x7CFA62CD:F:0x6EBD9E01
 )
 set(MODULE_IMPORT_FUNCS
-	ksceSysrootIsSafeMode
-	ksceSysrootIsUpdateMode
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelRegisterSysEventHandler
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_B0E1FC67
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceKernelPowerTick
+	SceKernelSuspendForDriver_E0489831
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelGetAssertLevel
-	ksceKernelAssertLevel
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_FD753E7A
 	ksceKernelWaitEventFlag
 	ksceKernelCreateCallback
 	ksceKernelStartThread
@@ -154,8 +154,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	sceKernelCheckCallback
 	sceKernelGetSystemTimeWide
-	ksceSblAimgrIsVITA
-	ksceSblAimgrIsDolce
+	SceSblAIMgrForDriver_4273B97B
+	SceSblAIMgrForDriver_71608CA3
 	sceSblACMgrIsSystemProgram
 	ksceIoRemove
 	SceCtrlForDriver_FF9D4DD4

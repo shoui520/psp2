@@ -3,14 +3,13 @@
  * File name unknown; the module links its parts in this order.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/systimer.h>
-#include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <psp2kern/lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
@@ -36,17 +35,17 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = COMPAT_SRAM_BASE;
-	block = ksceKernelAllocMemBlock("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW,
+	block = SceSysmemForDriver_C94850C9("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW,
 				       COMPAT_SRAM_SIZE, &opt);
 	if (block < 0)
 		return block;
 	bootLogoBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
-	if (ksceGzipDecompress(base, 960 * 544 * 4, bootLogo, NULL) < 0) {
-		ksceKernelFreeMemBlock(block);
+	SceSysmemForDriver_A841EDDA(block, &base);
+	if (SceKernelUtilsForDriver_367EE3DF(base, 960 * 544 * 4, bootLogo, NULL) < 0) {
+		SceSysmemForDriver_009E1C61(block);
 		return -1;
 	}
-	ksceKernelDcacheCleanInvalidateRange(base, 960 * 544 * 4);
+	SceCpuForDriver_364E68A4(base, 960 * 544 * 4);
 	frameBuf.size = sizeof(frameBuf);
 	frameBuf.base = base;
 	frameBuf.pitch = 960;
@@ -67,10 +66,10 @@ void freeBootLogo(SceUInt32 head) /* name unknown */
 {
 	SceUID block;
 
-	block = ksceKernelAtomicGetAndAnd32(&bootLogoBlock, 0);
+	block = SceCpuForDriver_10EB35EB(&bootLogoBlock, 0);
 	if (block > 0) {
 		ksceDisplaySetFrameBufInternal(head, 0, NULL, 1);
 		ksceDisplaySetOwner(head, 0, -1);
-		ksceKernelFreeMemBlock(block);
+		SceSysmemForDriver_009E1C61(block);
 	}
 }

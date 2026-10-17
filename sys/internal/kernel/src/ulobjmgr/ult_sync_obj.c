@@ -16,7 +16,7 @@ int countAvailableQueueConnection(SceUID pid, SceUIntPtr freeList, SceUInt32 max
 	p = freeList & ~7;
 	if (isValidUltPointer(p)) {
 		for (;;) {
-			ret = ksceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
+			ret = sceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
 			if (ret != 0)
 				return ret;
 			if (!isValidUltPointer(link.next))

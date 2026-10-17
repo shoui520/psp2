@@ -12,8 +12,7 @@
 #include <string.h>
 #include <fw.h>
 #include <kernel_boot_loader/kbl_param.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/cpu/corelock.h>
+#include <sysmem/cpu.h>
 #include <sysmem/barrier.h>
 #include <sysmem/cp15.h>
 #include <sysmem/debug.h>
@@ -21,7 +20,7 @@
 #include <power/spad_regs.h>
 #include <sysmem/sysroot.h>
 #include "boot.h"
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/debugled.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/uid_class.h>
@@ -31,13 +30,11 @@ void jumpToNonSecure(uintptr_t entry) __attribute__((noreturn));
 
 /* the sysroot (sysroot.c) */
 int SetupCore0(SceKernelBootParam *param);
-int sceKernelSysrootSetStatus(unsigned int status);
 void sceKernelSysrootSetVbaseMonitorVector(uint32_t value);
 void sceKernelSysrootSetBootStatus(unsigned int status);
 
 /* the rest of the TrustZone kernel */
 int KblMainGetBuildNumber(void);
-int ksceKernelPrintfLevel(int level, const char *format, ...);
 int SysmemInitNop(void);
 int InitializeDebugPutcharPrivate(void);
 int KblMMUInit(SceKernelBootParam *param);
@@ -55,9 +52,6 @@ int sceKernelMMUMapSection(uint32_t *l1, uint32_t type, uint32_t domain, uintptr
 			   uintptr_t pa);
 int sceKernelMMUUnmapSectionWithFlags(uint32_t *l1, uint32_t asid, uintptr_t va,
 				      uint32_t flags);
-void ksceKernelL1DcacheCleanAll(void);
-void ksceKernelL1DcacheCleanInvalidateAll(void);
-void ksceKernelL1IcacheInvalidateEntireAllCore(void);
 void CpuL2CleanInvalidateAll(void);
 SceSize sceArlzDecode(void *dst, SceSize dstSize, const void *src, int flags);
 int sceArlzArmFilter(void *buffer, SceSize size, int flags);
@@ -126,8 +120,8 @@ static const char *const s_bootStackNames[SCE_KERNEL_BOOT_CPU_MAX] = {
 #if FW_DEBUG
 /* the hand-off's messages: core 0 prints them, when the QA flags allow it */
 #define KBL_PRINTF(...) do {						\
-	if (ksceKernelCpuId() == 0 && IsAllowKernelDebug())		\
-		ksceKernelPrintf(__VA_ARGS__);				\
+	if (sceKernelCpuId() == 0 && IsAllowKernelDebug())		\
+		SceDebugForDriver_391B74B7(__VA_ARGS__);				\
 } while (0)
 #else
 #define KBL_PRINTF(...)	do { } while (0)
@@ -136,8 +130,8 @@ static const char *const s_bootStackNames[SCE_KERNEL_BOOT_CPU_MAX] = {
 /* name unknown: waits until every core has reached this point */
 void KblCorelockSync(SceCorelockContext **corelock)
 {
-	ksceKernelCorelockLock(*corelock, 0);
-	ksceKernelCorelockUnlock(*corelock);
+	SceCpuForKernel_2FF54320(*corelock, 0);
+	SceCpuForKernel_FE2B77A3(*corelock);
 }
 
 /* name unknown: the boot stack's part of sceKblMain */
@@ -149,8 +143,8 @@ static void KblMainContinue(SceKernelBootParam *param)
 	uintptr_t suspendInfo, offset;
 
 	sceKernelSetGPO(0x88);
-	ksceKernelCpuId();
-	if (ksceKernelCpuId() == 0)
+	sceKernelCpuId();
+	if (sceKernelCpuId() == 0)
 		sceKernelSysrootSetStatus(4);
 	sceKernelModulemgrStart(param);
 	ExcpmgrModuleStart();
@@ -158,13 +152,13 @@ static void KblMainContinue(SceKernelBootParam *param)
 	initDmacSecure();
 	KblArchive(param);
 
-	ksceKernelCorelockLock(param->corelock, 0);
-	ksceKernelL1DcacheCleanInvalidateAll();
-	ksceKernelCorelockUnlock(param->corelock);
+	SceCpuForKernel_2FF54320(param->corelock, 0);
+	SceCpuForKernel_4BBA5C82();
+	SceCpuForKernel_FE2B77A3(param->corelock);
 
 	/* line the cores up in the scratchpad */
-	ksceKernelCorelockLock(param->corelock, 0);
-	if (ksceKernelCpuId() == 0) {
+	SceCpuForKernel_2FF54320(param->corelock, 0);
+	if (sceKernelCpuId() == 0) {
 		sceKernelMMUMapSection(KBL_L1(param), SPAD_MAP_DATA, SPAD_DOMAIN, SPAD_WINDOW, SPAD32K_BASE);
 		sceKernelMMUMapSection(KBL_L1(param), SPAD_MAP_CODE, SPAD_DOMAIN, SPAD_WINDOW_EXEC,
 				       SPAD32K_BASE);
@@ -172,27 +166,27 @@ static void KblMainContinue(SceKernelBootParam *param)
 		memcpy((void *)SPAD_WINDOW, compatSramImage, CORE_SYNC_IMAGE_SIZE);
 		(void)*(volatile uint32_t *)SPAD_WINDOW;
 		dsb();
-		ksceKernelL1DcacheCleanInvalidateAll();
-		ksceKernelL1IcacheInvalidateEntireAllCore();
+		SceCpuForKernel_4BBA5C82();
+		SceCpuForKernel_803C84BF();
 		CpuL2CleanInvalidateAll();
 	}
-	ksceKernelCorelockUnlock(param->corelock);
+	SceCpuForKernel_FE2B77A3(param->corelock);
 	((void (*)(void *))(SPAD_WINDOW_EXEC + 1))(SPAD_CORE_SYNC);
 	KblCorelockSync(&param->corelock);
 
-	ksceKernelCorelockLock(param->corelock, 0);
-	if (ksceKernelCpuId() == 0) {
+	SceCpuForKernel_2FF54320(param->corelock, 0);
+	if (sceKernelCpuId() == 0) {
 		memset((void *)SPAD_WINDOW, 0, SPAD_WINDOW_SIZE);
 		(void)*(volatile uint32_t *)SPAD_WINDOW;
 		dsb();
 		sceKernelMMUUnmapSectionWithFlags(KBL_L1(param), SPAD_UNMAP_ASID, SPAD_WINDOW, 0);
 		sceKernelMMUUnmapSectionWithFlags(KBL_L1(param), SPAD_UNMAP_ASID, SPAD_WINDOW_EXEC, 0);
 	}
-	ksceKernelCorelockUnlock(param->corelock);
+	SceCpuForKernel_FE2B77A3(param->corelock);
 
-	if (!ksceKernelIsColdBoot()) {
+	if (!SceSysrootForKernel_D7198963()) {
 		/* resume: the scratchpad gets the resume image and the context it restores */
-		if (ksceKernelCpuId() == 0) {
+		if (sceKernelCpuId() == 0) {
 			memset(&info, 0, sizeof(info));
 			kblParam = param->kblParam;
 			info.size = sizeof(info);
@@ -221,8 +215,8 @@ static void KblMainContinue(SceKernelBootParam *param)
 			*SPAD_RESUME_INFO = info;
 			sceKernelMMUUnmapSectionWithFlags(KBL_L1(param), SPAD_UNMAP_ASID, SPAD_WINDOW,
 							  suspendInfo & 7);
-			ksceKernelL1DcacheCleanAll();
-			ksceKernelL1IcacheInvalidateEntireAllCore();
+			SceCpuForKernel_49180814();
+			SceCpuForKernel_803C84BF();
 			CpuL2CleanInvalidateAll();
 		}
 		KBL_PRINTF(" Jump to Non-secure power.kprx resume!!!\n");
@@ -234,12 +228,12 @@ static void KblMainContinue(SceKernelBootParam *param)
 
 	KBL_PRINTF("\n\n\n");
 	KBL_PRINTF("========= Jump to Non-secure KBL from Secure KBL =========\n");
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		sceArlzArmFilter((void *)NSKBL_ADDRESS,
 				 sceArlzDecode((void *)NSKBL_ADDRESS, NSKBL_SIZE,
 					       (const void *)NSKBL_ARCHIVE, 0), 0);
-		ksceKernelL1DcacheCleanAll();
-		ksceKernelL1IcacheInvalidateEntireAllCore();
+		SceCpuForKernel_49180814();
+		SceCpuForKernel_803C84BF();
 		CpuL2CleanInvalidateAll();
 	}
 	KBL_PRINTF(" Jump to Non-secure KBL!!!\n");
@@ -255,33 +249,33 @@ int sceKblMain(SceKernelBootParam *param)
 	void *stack;
 	int core;
 
-	core = ksceKernelCpuId();
-	ksceKernelCorelockLock(param->corelock, 0);
+	core = sceKernelCpuId();
+	SceCpuForKernel_2FF54320(param->corelock, 0);
 	if (core == 0) {
 		param->reserved2 = 0;
 		param->pL2PageTable000 = (void *)param->l2PageTable000.vbase;
 		param->pSysroot = (void *)param->sysroot.vbase;
-		ksceKernelCorelockUnlock(param->corelock);
+		SceCpuForKernel_FE2B77A3(param->corelock);
 		SetupCore0(param);
 		sceKernelSysrootCorelockLock(0);
-		sceKernelSysrootSetVbaseResetVector(param->resetVector);
+		sceKernelSysrootSetVbaseResetVector((void *)param->resetVector);
 		sceKernelSysrootSetVbaseMonitorVector(readMvbar());
 		sceKernelSysrootSetBootStatus(bootSaveArea.state);
 		sceKernelSysrootCorelockUnlock();
 #if FW_DEBUG
-		ksceKernelPrintfLevel(IsAllowKernelDebug() ? 1 : 2,
+		SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
 				      "Starting PSP2 Kernel [0x%08x]: %d\n", FW_VERSION,
 				      KblMainGetBuildNumber());
-		if (ksceKernelIsColdBoot())
-			ksceKernelPrintfLevel(IsAllowKernelDebug() ? 1 : 2,
+		if (SceSysrootForKernel_D7198963())
+			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 1 : 2,
 					      "Time taken to load KBL: %d us\n",
 					      param->kblParam->kbl_load_time);
 #endif
-		if (SceSysrootForKernel_ksceSysrootIsSafeMode())
-			ksceKernelPrintfLevel(IsAllowKernelDebug() ? 0 : 2,
+		if (SceSysrootForKernel_834439A7())
+			SceDebugForDriver_1A3F2AA4(IsAllowKernelDebug() ? 0 : 2,
 					      "\tSafe Mode : [ YES ]\n");
 	} else {
-		ksceKernelCorelockUnlock(param->corelock);
+		SceCpuForKernel_FE2B77A3(param->corelock);
 		SetupCore0(param);
 		sceKernelSysrootCorelockLock(0);
 		sceKernelSysrootCorelockUnlock();
@@ -294,16 +288,16 @@ int sceKblMain(SceKernelBootParam *param)
 	KblCorelockSync(&param->corelock);
 
 	/* each core's boot stack */
-	ksceKernelCorelockLock(param->corelock, 0);
+	SceCpuForKernel_2FF54320(param->corelock, 0);
 	cpu = &param->cpu[core];
 	cpu->stackSize = KBL_STACK_SIZE;
 	cpu->stackBlockId = SceSysmemForKernel_40870E74(SysmemAllocName(s_bootStackNames[core]),
 							KBL_STACK_SIZE, KBL_STACK_ALIGN);
-	ksceKernelGetMemBlockVBase(cpu->stackBlockId, &stack);
+	SceSysmemForDriver_B81CF0A3(cpu->stackBlockId, &stack);
 	cpu->stackBottom = (char *)stack + cpu->stackSize;
-	if (ksceKernelCheckDipsw(DIPSW_WIPE_KERNEL_STACK))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_WIPE_KERNEL_STACK))
 		memset((char *)stack + KBL_STACK_GUARD, 0xff, KBL_STACK_SIZE - KBL_STACK_GUARD);
-	ksceKernelCorelockUnlock(param->corelock);
+	SceCpuForKernel_FE2B77A3(param->corelock);
 	KblCorelockSync(&param->corelock);
 	KblCallWithStack(param, KblMainContinue, cpu->stackBottom);
 	SCE_DBG_ASSERT_FAIL(825);

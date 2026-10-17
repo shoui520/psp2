@@ -23,14 +23,14 @@ int appmgrInitializeBgdlQueueStorage(void)
 
 	if (result >= 0) {
 		if (g_appmgrBgdlQueueStorage != NULL)
-			ksceKernelFreeHeapMemory(g_appmgrCoreHeap, g_appmgrBgdlQueueStorage);
+			sceKernelFreeHeapMemory(g_appmgrCoreHeap, g_appmgrBgdlQueueStorage);
 		result = 0;
 		opt.mmapKind = 0;
 		opt.mmapBase = NULL;
 		opt.mmapSize = 0;
 		opt.size = sizeof(opt);
 		opt.align = 32;
-		g_appmgrBgdlQueueStorage = ksceKernelAllocHeapMemoryWithOption(
+		g_appmgrBgdlQueueStorage = SceSysmemForDriver_49D4DD9B(
 			g_appmgrCoreHeap, BGDL_QUEUE_STORAGE_SIZE, &opt);
 		if (g_appmgrBgdlQueueStorage != NULL)
 			memset(g_appmgrBgdlQueueStorage, 0, BGDL_QUEUE_STORAGE_SIZE);

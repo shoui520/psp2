@@ -11,8 +11,6 @@
 #include <psp2kern/types.h>
 #include <fw.h>
 #include "mmu.h"
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/memtype.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
@@ -249,9 +247,6 @@ _Static_assert(sizeof(Partition) == 0x80, "Partition size");
 /* the name the converted files first used */
 typedef Partition PartitionObject;
 
-/* debug_dump.c (sysmem/debug.h leaves it to the modules) */
-void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
-				 const void *lr, const char *fmt, ...);
 
 struct UIDManager;
 
@@ -544,7 +539,7 @@ struct MemBlockObject;
 int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, SceUInt32 flags,
 			struct MemBlockObject **smb);
 int SceSysmemForKernel_39D5A3B7(struct MemBlockObject *smb, void **base);	/* sceKernelGetSimpleMemBlockBase */
-int ksceKernelFreeSimpleMemBlock(void *smb);	/* vitasdk: void * */
+int SceSysmemForKernel_A4DB88E1(void *smb);	/* vitasdk: void * */
 
 /* 0x81012970 (partition.c): the kernel partition (UIDManager +0x40) */
 struct Partition *PartitionGetKernel(void);
@@ -638,13 +633,16 @@ int FreeMemBlockByGUID(SceUID guid);
 SceUID SceSysrootForKernel_7385CADE(void);	/* the current process */
 SceUID SceSysrootForKernel_D441DC34(void);	/* the current thread */
 uint32_t SceSysrootForKernel_085C2BCB(void);	/* SceUIDSysrootClass */
-int ksceKernelSysrootGetPUIDEntryHeap(SceUID processId, void **entryHeap);
+/* vitasdk: ksceKernelSysrootGetPUIDEntryHeap */
+int SceSysrootForKernel_88DE85EF(SceUID processId, void **entryHeap);
 int SysrootPIDtoAddressSpaceCB(SceUID processId, void **addressSpaceCB);
 void *SysrootGetProcessObjectHeap(SceUID pid, int kind);
 
 /* the atomics of atomics_small.c */
-SceInt16 ksceKernelAtomicAddAndGet16(SceInt16 *address, SceInt16 value);
-SceInt16 ksceKernelAtomicDecIfPositive16(SceInt16 *address);
+/* vitasdk: ksceKernelAtomicAddAndGet16 */
+SceInt16 SceCpuForDriver_59F74E94(SceInt16 *address, SceInt16 value);
+/* vitasdk: ksceKernelAtomicDecIfPositive16 */
+SceInt16 SceCpuForDriver_9A693F5B(SceInt16 *address);
 int snprintf(char *dst, SceSize len, const char *fmt, ...);
 
 /* exports used inside the module */
@@ -652,9 +650,9 @@ SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* wiki: sceUIDClassIsSubclassForKernel (guessed) */
 void *SceSysmemForKernel_0164D817(void);				/* sceKernelGetPhyPartKernel */
 void *SceSysmemForKernel_FA6C098C(SceUID uid);				/* sceUIDtoObject */
-int ksceGUIDGetObject(SceUID guid, void *object);
-void *ksceKernelAlloc(SceSize size);
-int ksceKernelFree(void *ptr);
+int SceSysmemForDriver_0FC24464(SceUID guid, void *object);	/* vitasdk: ksceGUIDGetObject */
+void *SceSysmemForKernel_85571907(SceSize size);	/* vitasdk: ksceKernelAlloc */
+int SceSysmemForKernel_4233C16D(void *ptr);	/* vitasdk: ksceKernelFree */
 
 /* sysclib fill.c: the fill core memset wraps */
 void *SetMemoryCore(void *destination, int value, SceSize size);

@@ -65,24 +65,24 @@ set(MODULE_IMPORT_NIDS
 	0x4E29D3B6:F:0x382C71E8
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCheckDipsw
-	ksceKernelCpuId
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelCpuResumeIntr
+	SceDipswForDriver_A98FC2FD
+	sceKernelCpuId
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_BF82DEB2
+	sceKernelCpuResumeIntr
 	memset
 	__aeabi_uidiv
 	snprintf
 	__stack_chk_fail
 	SceSysrootForDriver_CAE820B2
-	ksceSysrootGetSysroot
-	ksceSysrootGetSessionId
-	ksceKernelSysrootGetSharedMemory
+	SceSysrootForKernel_3E455842
+	SceSysrootForKernel_84783B71
+	SceSysrootForKernel_C8C8C321
 	sceKernelSysrootBacktrace
 	SceSysrootForKernel_E20F6FC8
-	ksceGUIDGetName
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_A78755EB
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
 	ksceExcpmgrRegisterHandler
 	ksceKernelDisableIntr
 	ksceKernelGetProcessIdFromTLS
@@ -91,16 +91,16 @@ set(MODULE_IMPORT_FUNCS
 	ksceVfsDeleteVfs
 	vfsMount
 	ksceKernelGetModuleInfoMinByAddr
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
-	ksceKernelGetTtyInfo
-	ksceKernelRegisterDebugPutcharHandler
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_62466B0A
+	SceDebugForKernel_22546577
 	SceDebugForKernel_5D6F0CFC
 	SceDebugForKernel_67E9D1EC
-	ksceKernelGetDebugPutcharHandler
-	ksceKernelEnableCrashDump
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsCEX
+	SceDebugForKernel_8D474850
+	SceDebugForKernel_A465A31A
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_D78B04A2
 	sceSblACMgrIsSystemProgram
 	SceQafMgrForDriver_382C71E8
 )

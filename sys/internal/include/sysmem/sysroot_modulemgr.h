@@ -40,9 +40,13 @@ typedef struct SysrootModulemgrOps {
 			      SceSize count, SceUInt32 start);
 } SysrootModulemgrOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootModulemgrOps) == 0x18,
 	       "Sysroot module-manager service table size");
 _Static_assert(offsetof(SysrootModulemgrOps, backtrace) == 0x10,
 	       "Sysroot module-manager backtrace service offset");
+#endif
 
+#ifndef __cplusplus
 _Static_assert(sizeof(struct ModulemgrStubInfo) == 0x3c, "module stub info size");
+#endif

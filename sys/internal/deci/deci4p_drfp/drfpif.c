@@ -6,7 +6,7 @@
 
 #include <stddef.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include "drfp_internal.h"
 
@@ -49,7 +49,7 @@ static inline __attribute__((always_inline)) int drfpConvertError(int result)
 	case DRFP_HOST_ENOTSUP:
 		return SCE_ERROR_ERRNO_ENOTSUP;
 	default:
-		ksceKernelPrintf("DRFP: unknown error code %d\n", result);
+		SceDebugForDriver_391B74B7("DRFP: unknown error code %d\n", result);
 		return SCE_ERROR_ERRNO_ENOTSUP;
 	}
 }
@@ -623,7 +623,7 @@ int sceDeci4pDrfpDread(int fd, DrfpDirent **ent)
 	}
 	ret = drfpConvertError(pkt->res.result);
 	if (ret == 0 && pkt->res.count != 0) {
-		p = ksceKernelAllocHeapMemory(drfpGetHeap(), pkt->res.size);
+		p = SceSysmemForDriver_7B4CB60A(drfpGetHeap(), pkt->res.size);
 		*ent = p;
 		if (p != NULL) {
 			memcpy(p, pkt->res.ent, pkt->res.size);

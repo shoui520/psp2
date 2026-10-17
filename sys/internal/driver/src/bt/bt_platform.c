@@ -2,20 +2,20 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysevent.h>
 #include <sysmem/sysroot_bt.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/pm_mgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/procevent.h>
+#include <sysmem/pmmgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/io/fcntl.h>
 #include "bt_internal.h"
+#include <sysmem/sysroot.h>
 
 int BtInitializeTimers(const char *threadName);
 int BtInitializeAudio(void);
 void BtInitializeHidCapture(void);
 int BtSystemEvent(int resume, int eventId, void *args, void *opt);
-int SceSysrootForDriver_5A4A7F7E(const SysrootBtOps *ops);
 extern SceUID gBtSysEventHandlerId;
-extern const SceProcEventHandler gBtProcEventHandler;
+extern const SceKernelProcEventHandler gBtProcEventHandler;
 extern const SysrootBtOps gBtSysrootOps;
 
 int BtInitializeEventHandlers(void)
@@ -23,11 +23,11 @@ int BtInitializeEventHandlers(void)
 	SceProductMode productMode;
 	int result;
 
-	result = ksceKernelRegisterSysEventHandler("SceBt", BtSystemEvent, NULL);
+	result = sceKernelRegisterSysEventHandler("SceBt", BtSystemEvent, NULL);
 	if (result < 0)
 		return result;
 	gBtSysEventHandlerId = result;
-	result = ksceKernelRegisterProcEventHandler("SceBt", &gBtProcEventHandler, 0);
+	result = sceKernelRegisterProcEventHandler("SceBt", &gBtProcEventHandler, 0);
 	if (result < 0)
 		goto unregisterSystem;
 	gBtStack.inquiryProcessId = -1;
@@ -36,18 +36,18 @@ int BtInitializeEventHandlers(void)
 	SceSysrootForDriver_5A4A7F7E(&gBtSysrootOps);
 	result = BtInitializeAudio();
 	if (result < 0) {
-		ksceKernelUnregisterSysEventHandler(gBtStack.procEventHandlerId);
+		sceKernelUnregisterSysEventHandler(gBtStack.procEventHandlerId);
 		goto unregisterSystem;
 	}
 	BtInitializeHidCapture();
-	if (kscePmMgrGetProductMode(&productMode) >= 0 && productMode == 1)
+	if (ScePmMgrForDriver_2AC815A2(&productMode) >= 0 && productMode == 1)
 		gBtStack.mode |= 0x1000;
-	if (ksceSblAimgrIsDolce())
+	if (SceSblAIMgrForDriver_71608CA3())
 		gBtStack.mode |= 0x10000;
 	return 0;
 
 unregisterSystem:
-	ksceKernelUnregisterSysEventHandler(gBtSysEventHandlerId);
+	sceKernelUnregisterSysEventHandler(gBtSysEventHandlerId);
 	return result;
 }
 

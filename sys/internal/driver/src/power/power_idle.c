@@ -26,7 +26,7 @@ static inline __attribute__((always_inline)) void powerHandleProcessIdleTimers(u
 	uint64_t elapsed;
 	uint32_t idle;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (state = s_powerProcessList; state; state = state->next) {
 		idle = state->idleState;
 		if (idle != 2) {
@@ -60,7 +60,7 @@ static inline __attribute__((always_inline)) void powerHandleProcessIdleTimers(u
 					 s_powerIdleTimers.processCallback.argument);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
 int powerIdleVblankHandler(void *subintrArgument, void *registerArgument,
@@ -279,9 +279,9 @@ int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 		return SCE_POWER_ERROR_INVALID_VALUE;
 
 	timer = &s_powerIdleTimers.timers[timerId];
-	context = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	context = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	if (callback && timer->callback) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock,
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock,
 						      context);
 		return SCE_POWER_ERROR_ALREADY_REGISTERED;
 	}
@@ -293,7 +293,7 @@ int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 	timer->propagationMask = 0;
 	timer->tickRecorded = 0;
 	timer->idleState = 0xff;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, context);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, context);
 	return 0;
 }
 
@@ -318,10 +318,10 @@ int ScePowerForDriver_FB5C3C75(SceUID pid, uint32_t unused,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
-	context = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	context = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	state->idleInterval = interval;
 	state->lastIdleTick = sceKernelGetSystemTimeWide();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, context);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, context);
 	return 0;
 }
 
@@ -336,10 +336,10 @@ int scePowerSetIdleTimerCount(uint64_t interval)
 	result = ksceKernelGetProcessLocalStorageAddrForPid(0,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0) {
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+		intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 		state->idleInterval = interval;
 		state->lastIdleTick = sceKernelGetSystemTimeWide();
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		result = 0;
 	}
 	sceSyscallLeave(context);

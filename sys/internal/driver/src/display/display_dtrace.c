@@ -9,7 +9,7 @@
 /* From 4.00 a failure is reported with Sony's file name and line number. */
 #if FW_SINCE(0x04000000)
 #define DTRACE_CHECK(ret, what)	do { if ((ret) < 0)				\
-	ksceKernelPrintf("[dtrace] ERROR:   %s - " what " (0x%x) [%s:%d]\n",	\
+	SceDebugForDriver_391B74B7("[dtrace] ERROR:   %s - " what " (0x%x) [%s:%d]\n",	\
 			 __func__, (ret), "display_dtrace.c", __LINE__); } while (0)
 #else
 #define DTRACE_CHECK(ret, what)	((void)(ret))

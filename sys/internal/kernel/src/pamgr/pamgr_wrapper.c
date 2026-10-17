@@ -1,11 +1,11 @@
 #include "pamgr_internal.h"
 #include <string.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>
+#include <sysmem/procevent.h>
 
 uint64_t ScePamgrForDriver_FE9BFD27(void);
 int setTraceWritePointer(uint32_t pointer);
@@ -102,9 +102,6 @@ struct PamgrProcessEvents {
 	void *switchProcess;
 };
 
-int ksceKernelRegisterProcEventHandler(const char *name, const void *handlers,
-				     int flags);
-
 int sceKernelPaInitPamgrWrapper(void)
 {
 	struct PamgrProcessEvents events = {
@@ -114,7 +111,7 @@ int sceKernelPaInitPamgrWrapper(void)
 	};
 	int result;
 
-	result = ksceKernelRegisterProcEventHandler("ScePamgr", &events, 0);
+	result = sceKernelRegisterProcEventHandler("ScePamgr", &events, 0);
 	if (result < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 121);
 		return result;
@@ -581,7 +578,7 @@ int _sceKernelPaGetGpuSampledData(uint32_t *values)
 	if (values == NULL)
 		return getGpuSampledDataForUser(NULL);
 	result = getGpuSampledDataForUser(local);
-	copied = ksceKernelCopyToUser(values, local, sizeof(local));
+	copied = SceSysmemForDriver_6D88EF8A(values, local, sizeof(local));
 	return copied < 0 ? copied : result;
 }
 
@@ -592,7 +589,7 @@ int _sceKernelPaSetupTraceBufferByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = ksceKernelCopyFromUser(&local, config, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -607,7 +604,7 @@ int _sceKernelPaAddCounterTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = ksceKernelCopyFromUser(&local, config, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -622,7 +619,7 @@ int _sceKernelPaAddArmTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = ksceKernelCopyFromUser(&local, config, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -636,7 +633,7 @@ int _sceKernelPaAddBusTraceByKey(uint32_t registration, const uint32_t *filter)
 	int result;
 
 	if (filter != NULL) {
-		result = ksceKernelCopyFromUser(&local, filter, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, filter, sizeof(local));
 		if (result < 0)
 			return result;
 		filter = &local;
@@ -651,7 +648,7 @@ int _sceKernelPaAddGpuTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = ksceKernelCopyFromUser(&local, config, sizeof(local));
+		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;

@@ -6,11 +6,11 @@
 #include <display/display.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <string.h>
 #include <regmgr/regmgr.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/sysroot.h>
 
 static int avConfigHdmiLastVic = -1;
 static int avConfigHdmiInitialOutput = 1;
@@ -102,10 +102,10 @@ int avConfigInitializeHdmiOutput(void)
 		scale = videoMode == 0x40020 ? 0.0f : 1.0f;
 		break;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	if (avConfigConfiguration.settings.hdcpState == 1)
 		avConfigConfiguration.settings.hdcpState = 2;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	ksceDisplaySetOutputMode(1, vic, fullRange);
 	ksceDisplaySetScaleConf(scale, 1, 0, flags);
 	ksceDisplaySetScaleConf(scale, 1, 1, flags);
@@ -157,11 +157,11 @@ int avConfigHdmiUpdateMonitor(void)
 
 	result = SceHdmiForDriver_8EB0FD9C(&info);
 	if (result == 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		if (avConfigGetHdmiAudioMode() != 0)
 			avConfigConfiguration.settings.connectedDevices |= 8;
 		avConfigConfiguration.settings.hdcpState = 1;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 		result = avConfigSetEventFlag(0x100);
 	}
 	return result;
@@ -249,10 +249,10 @@ int hdmiSetOutput(int vic, unsigned int rangeMode, int flags)
 			force = 1;
 	} else {
 		valid = 1;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigHdmiMonitorLock);
+		intr = SceCpuForDriver_D32ACE9E(&avConfigHdmiMonitorLock);
 		avConfigHdmiMonitorValid = 1;
 		memcpy(&avConfigHdmiMonitor, &monitor, sizeof(monitor));
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigHdmiMonitorLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigHdmiMonitorLock, intr);
 	}
 	if (flags < 0 && avConfigHdmiInitialOutput != 0) {
 		if (force == 0)
@@ -426,7 +426,7 @@ int avConfigHdmiSetInitialOutput(void)
 	int vic;
 	unsigned int flags;
 
-	if (ksceSysrootIsSafeMode() != 0 || ksceSysrootIsUpdateMode() != 0) {
+	if (SceSysrootForDriver_834439A7() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
 		vic = 0x8300;
 		flags = 0x80000001;
 	} else if (sceRegMgrGetKeyInt(avConfigDisplayCategory,
@@ -499,7 +499,7 @@ int avConfigGetMonitorInfo(AvConfigMonitorInfo *info)
 		return (int)0x803a0101;
 	if (avConfigHdmiMonitorValid == 0)
 		return (int)0x803a010a;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigHdmiMonitorLock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigHdmiMonitorLock);
 	__builtin_memcpy(info->productId, avConfigHdmiMonitor.productId,
 			sizeof(info->productId));
 	blockCount = avConfigHdmiMonitor.blockCount;
@@ -514,7 +514,7 @@ int avConfigGetMonitorInfo(AvConfigMonitorInfo *info)
 	__builtin_memcpy(&info->videoFormats[3], &avConfigHdmiMonitor.videoFormats[3],
 			sizeof(info->videoFormats[3]));
 	info->blockCount = blockCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigHdmiMonitorLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigHdmiMonitorLock, intr);
 	return 0;
 }
 
@@ -537,7 +537,7 @@ int avConfigHdmiConfigureCec(void)
 	int enabled;
 	int result;
 
-	if (avConfigIsHdmiAvailable() == 0 || ksceSblAimgrIsDolce() == 0)
+	if (avConfigIsHdmiAvailable() == 0 || SceSblAIMgrForDriver_71608CA3() == 0)
 		return 0;
 	result = sceRegMgrGetKeyInt(avConfigCecSystemCategory, avConfigCecEnabledKey,
 				 &enabled);

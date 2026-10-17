@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sysmem/debug.h>
+/* vitasdk's sysclib.h, which cpu.h brings, types __prnt otherwise: moved aside */
+#define __prnt __prnt_vitasdk
+#include <sysmem/cpu.h>
+#undef __prnt
 #include "sysmem_boot.h"
 #include "debug_tty.h"
 #include <stdarg.h>
@@ -15,20 +19,15 @@ typedef int (*DebugPrintfInvocation)(int argument, const char *format,
 
 extern int DebugDefaultPrintf(int argument, const char *format,
 			      va_list arguments);
-extern uint32_t ksceKernelAtomicCompareAndSet32(volatile uint32_t *address,
-					      uint32_t expected, uint32_t replacement);
-extern SceKblParam *ksceKernelSysrootGetKblParam(void);
+extern SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 extern int SceQafMgrForDriver_382C71E8(void);	/* qafmgr.c */
 struct SysrootState;
-extern struct SysrootState *ksceSysrootGetSysroot(void);
+extern struct SysrootState *SceSysrootForKernel_3E455842(void);
 extern int __prnt(DebugPutcharHandler output, uintptr_t argument,
 		  const char *format, va_list arguments);
 extern volatile uintptr_t s_debugPutcharHandler;
 extern volatile uintptr_t s_debugPutcharArgument;
 extern volatile uint32_t s_debugPrintLevel;
-extern int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile uint32_t *lock);
-extern void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock,
-						   uint32_t flags);
 extern int DebugCallPrintfHandler(int argument, const char *format,
 				  va_list arguments);
 
@@ -38,7 +37,7 @@ struct DebugTty s_debugTty;
 static char s_debugPrefix[256];
 volatile uint32_t s_debugPrintLock;
 
-int ksceKernelRegisterKprintfHandler(DebugPrintfHandler handler, void *argument)
+int SceDebugForKernel_88AD6D0C(DebugPrintfHandler handler, void *argument)
 {
 	s_debugKprintfHandler = handler;
 	s_debugKprintfArgument = argument;
@@ -55,7 +54,7 @@ void DebugAppendCharacter(int character)
 		next = index + 1;
 		if (next == sizeof(s_debugTty.ring))
 			next = 0;
-	} while (ksceKernelAtomicCompareAndSet32(&s_debugTty.index, index, next) != index);
+	} while (SceCpuForDriver_CDA96E81(&s_debugTty.index, index, next) != index);
 	s_debugTty.ring[index] = character;
 }
 
@@ -79,7 +78,7 @@ void DebugPutcharCallback(uintptr_t argument, int character)
 		handler(s_debugPutcharArgument, character);
 }
 
-int ksceKernelDebugPutchar(int character)
+int SceDebugForKernel_2AABAEDA(int character)
 {
 	DebugPutcharCallback(0, character);
 	return 1;
@@ -97,7 +96,7 @@ int DebugLevelEnabled(int level)
 {
 	if ((int32_t)s_debugPrintLevel < level)
 		return 0;
-	if (!ksceSysrootGetSysroot() || !ksceKernelSysrootGetKblParam())
+	if (!SceSysrootForKernel_3E455842() || !SceSysrootForKernel_9DB56D1F())
 		return 1;
 	return SceQafMgrForDriver_382C71E8() != 0;
 }
@@ -112,34 +111,34 @@ int DebugCallPrintfHandler(int argument, const char *format,
 	return handler ? handler(argument, format, arguments, 0) : 0;
 }
 
-int ksceKernelPrintf(const char *format, ...)
+int SceDebugForDriver_391B74B7(const char *format, ...)
 {
 	va_list arguments;
 	uint32_t flags;
 	int result;
 
 	va_start(arguments, format);
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	va_end(arguments);
 	return result;
 }
 
-int ksceKernelVprintf(const char *format, va_list arguments)
+int SceDebugForDriver_411C0733(const char *format, va_list arguments)
 {
 	uint32_t flags;
 	int result;
 
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	return result;
 }
 
-int ksceKernelPrintfLevel(int level, const char *format, ...)
+int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...)
 {
 	va_list arguments;
 	uint32_t flags;
@@ -147,16 +146,16 @@ int ksceKernelPrintfLevel(int level, const char *format, ...)
 
 	va_start(arguments, format);
 	if (!level || DebugLevelEnabled(level)) {
-		flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+		flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 		result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 					       format, arguments);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	}
 	va_end(arguments);
 	return result;
 }
 
-int ksceKernelVprintfLevel(int level, const char *format,
+int SceDebugForDriver_611A158B(int level, const char *format,
 			  va_list arguments)
 {
 	uint32_t flags;
@@ -164,10 +163,10 @@ int ksceKernelVprintfLevel(int level, const char *format,
 
 	if (level && !DebugLevelEnabled(level))
 		return 0;
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	return result;
 }
 
@@ -223,7 +222,7 @@ int DebugFormatPrefix(uint32_t flags, const SceKernelDebugInfo *info)
 	return DebugPrintfPrefix("%s", s_debugPrefix);
 }
 
-int ksceKernelPrintfWithInfo(SceUInt32 flags, const SceKernelDebugInfo *info,
+int SceDebugForDriver_02B04343(SceUInt32 flags, const SceKernelDebugInfo *info,
 			    const char *format, ...)
 {
 	va_list arguments;
@@ -231,16 +230,16 @@ int ksceKernelPrintfWithInfo(SceUInt32 flags, const SceKernelDebugInfo *info,
 	int result;
 
 	va_start(arguments, format);
-	savedFlags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+	savedFlags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 	DebugFormatPrefix(flags, info);
 	result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 				       format, arguments);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, savedFlags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, savedFlags);
 	va_end(arguments);
 	return result;
 }
 
-int ksceKernelPrintfLevelWithInfo(SceUInt32 level, SceUInt32 flags,
+int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 				 const SceKernelDebugInfo *info,
 				 const char *format, ...)
 {
@@ -250,11 +249,11 @@ int ksceKernelPrintfLevelWithInfo(SceUInt32 level, SceUInt32 flags,
 
 	va_start(arguments, format);
 	if (!level || DebugLevelEnabled(level)) {
-		savedFlags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+		savedFlags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 		DebugFormatPrefix(flags, info);
 		result = DebugCallPrintfHandler((uintptr_t)s_debugKprintfArgument,
 					       format, arguments);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, savedFlags);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, savedFlags);
 	}
 	va_end(arguments);
 	return result;

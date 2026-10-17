@@ -5,9 +5,9 @@
 #include <power/power.h>
 #include <display/display.h>
 #include <compat/compat.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <stddef.h>
@@ -109,9 +109,9 @@ int avConfigSetSuspendInterval(unsigned int interval)
 	SceUInt64 suspendTime;
 	SceUInt64 dimmingTime;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.suspendInterval = interval;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (interval == 0) {
 		suspendTime = 0;
 		dimmingTime = 0;
@@ -122,9 +122,9 @@ int avConfigSetSuspendInterval(unsigned int interval)
 		suspendTime = (SceUInt64)(interval + 15) * 1000000;
 		dimmingTime = 60000000;
 	}
-	ksceKernelPowerTick(0);
+	SceKernelSuspendForDriver_E0489831(0);
 	kscePowerSetIdleTimer(0, suspendTime);
-	if (ksceSblAimgrIsDolce() == 0)
+	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		kscePowerSetIdleTimer(1, dimmingTime);
 	kscePowerSetIdleTimer(2, (SceUInt64)interval * 1000000);
 	return 0;
@@ -134,11 +134,11 @@ int avConfigSetDimmingInterval(unsigned int interval)
 {
 	SceKernelIntrStatus intr;
 
-	if (ksceSblAimgrIsDolce() == 0)
+	if (SceSblAIMgrForDriver_71608CA3() == 0)
 		return (int)0x803a0109;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.dimmingInterval = interval;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	kscePowerSetIdleTimer(1, (SceUInt64)interval * 1000000);
 	return 0;
 }
@@ -148,11 +148,11 @@ int avConfigSetDisplayColorSpaceMode(int mode)
 	SceKernelIntrStatus intr;
 	int result;
 
-	if (ksceSblAimgrIsDolce() != 0)
+	if (SceSblAIMgrForDriver_71608CA3() != 0)
 		return (int)0x803a0109;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.colorSpaceMode = mode;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (mode == 1) {
 		result = ksceDisplaySetColorSpaceMode(0, 2);
 		SceCompatForDriver_6EBD9E01(2);
@@ -172,12 +172,12 @@ int avConfigSetRoutingVolume(int volume)
 	avConfigGetVolumeControlState(&mode, &muted);
 	if ((unsigned int)(mode - 1) > 1)
 		return (int)0x803a0105;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	if (mode == 1)
 		avConfigConfiguration.settings.systemVolume = volume;
 	else if (mode == 2)
 		avConfigConfiguration.settings.btVolume = volume;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	avConfigSetEventFlag(2);
 	return 0;
 }
@@ -186,7 +186,7 @@ int avConfigApplyHdmiScalingRatio(const AvConfigScalingRatio *ratio)
 {
 	if (avConfigIsHdmiAvailable() == 0)
 		return (int)0x803a0107;
-	if (ksceSblAimgrIsDolce() != 0)
+	if (SceSblAIMgrForDriver_71608CA3() != 0)
 		return avConfigSetHdmiScalingRatio(ratio);
 	return (int)0x803a0109;
 }

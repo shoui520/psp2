@@ -56,12 +56,12 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 	SceUInt8 *pa = NULL, *pkey = NULL, *out;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, uargs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, uargs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (a != NULL) {
 		pa = alloca(0x200);
-		ret = ksceKernelCopyFromUser(pa, a, 0x200);
+		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x200);
 		if (ret < 0)
 			return ret;
 	}
@@ -69,7 +69,7 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 		if (args.keySize > 0x200)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		pkey = alloca(0x200);
-		ret = ksceKernelCopyFromUser(pkey, key, args.keySize);
+		ret = SceSysmemForDriver_BC996A7A(pkey, key, args.keySize);
 		if (ret < 0)
 			return ret;
 	}
@@ -78,7 +78,7 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 	out = alloca(0x10);
 	__builtin_memset(out, 0, 0x10);
 	ret = vshNpDrmGetLegacyDocKey(pa, pkey, c, out);
-	return copyResult(ret, ksceKernelCopyToUser(args.out, out, 0x10));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(args.out, out, 0x10));
 }
 
 static int npDrmGetLegacyDocKeyOnStack(void *argp)
@@ -104,7 +104,7 @@ static int npDrmEbootSigConvert(const char *path, const void *oldSignature, void
 	pnew = alloca(0x200);
 	__builtin_memset(pnew, 0, 0x200);
 	ret = vshNpDrmEbootSigConvert(ppath, pold, pnew);
-	return copyResult(ret, ksceKernelCopyToUser(newSignature, pnew, 0x200));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(newSignature, pnew, 0x200));
 }
 
 static int npDrmEbootSigConvertOnStack(void *argp)
@@ -121,13 +121,13 @@ static int appMgrCloudDataCreateHeader(const void *a, int b, const void *c, void
 
 	if (a != NULL) {
 		pa = alloca(0x18);
-		ret = ksceKernelCopyFromUser(pa, a, 0x18);
+		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x18);
 		if (ret < 0)
 			return ret;
 	}
 	if (c != NULL) {
 		pc = alloca(0x20);
-		ret = ksceKernelCopyFromUser(pc, c, 0x20);
+		ret = SceSysmemForDriver_BC996A7A(pc, c, 0x20);
 		if (ret < 0)
 			return ret;
 	}
@@ -136,7 +136,7 @@ static int appMgrCloudDataCreateHeader(const void *a, int b, const void *c, void
 	kheader = alloca(0x170);
 	__builtin_memset(kheader, 0, 0x170);
 	ret = vshAppMgrCloudDataCreateHeader(pa, b, pc, kheader);
-	return copyResult(ret, ksceKernelCopyToUser(header, kheader, 0x170));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(header, kheader, 0x170));
 }
 
 static int appMgrCloudDataCreateHeaderOnStack(void *argp)
@@ -153,7 +153,7 @@ static int appMgrCloudDataVerifyHeader(const void *header)
 
 	if (header != NULL) {
 		p = alloca(0x170);
-		ret = ksceKernelCopyFromUser(p, header, 0x170);
+		ret = SceSysmemForDriver_BC996A7A(p, header, 0x170);
 		if (ret < 0)
 			return ret;
 	}
@@ -172,13 +172,13 @@ static int appMgrAcInstGetAcdirParam(const void *a, const void *b, void *param)
 
 	if (a != NULL) {
 		pa = alloca(0x10);
-		ret = ksceKernelCopyFromUser(pa, a, 0x10);
+		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x10);
 		if (ret < 0)
 			return ret;
 	}
 	if (b != NULL) {
 		pb = alloca(0x14);
-		ret = ksceKernelCopyFromUser(pb, b, 0x14);
+		ret = SceSysmemForDriver_BC996A7A(pb, b, 0x14);
 		if (ret < 0)
 			return ret;
 	}
@@ -187,7 +187,7 @@ static int appMgrAcInstGetAcdirParam(const void *a, const void *b, void *param)
 	kparam = alloca(0xe0);
 	__builtin_memset(kparam, 0, 0xe0);
 	ret = vshAppMgrAcInstGetAcdirParam(pa, pb, kparam);
-	return copyResult(ret, ksceKernelCopyToUser(param, kparam, 0xe0));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(param, kparam, 0xe0));
 }
 
 static int appMgrAcInstGetAcdirParamOnStack(void *argp)
@@ -204,7 +204,7 @@ static int appMgrLocalBackupVerifyOfflineHeader(const void *header)
 
 	if (header != NULL) {
 		p = alloca(0x170);
-		ret = ksceKernelCopyFromUser(p, header, 0x170);
+		ret = SceSysmemForDriver_BC996A7A(p, header, 0x170);
 		if (ret < 0)
 			return ret;
 	}
@@ -298,13 +298,13 @@ int _vshRtcGetAlarmTick(SceRtcTick *tick, int *unk)
 	}
 	ret = vshRtcGetAlarmTick(ktick, kunk);
 	if (tick != NULL) {
-		ret2 = ksceKernelCopyToUser(tick, ktick, sizeof(*ktick));
+		ret2 = SceSysmemForDriver_6D88EF8A(tick, ktick, sizeof(*ktick));
 		if (ret2 < 0)
 			return ret2;
 	}
 	if (unk == NULL)
 		return ret;
-	return copyResult(ret, ksceKernelCopyToUser(unk, kunk, sizeof(*kunk)));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(unk, kunk, sizeof(*kunk)));
 }
 
 int _vshRtcSetSecureAlarmTick(const SceRtcTick *tick)
@@ -349,11 +349,11 @@ int _vshDisplayGetActualViewportConf(int head, void *unused, void *conf, const S
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	kconf = alloca(0x14);
 	__builtin_memset(kconf, 0, 0x14);
-	ret = ksceKernelCopyFromUser(kconf, conf, args.size);
+	ret = SceSysmemForDriver_BC996A7A(kconf, conf, args.size);
 	if (ret < 0)
 		return ret;
 	ret = vshDisplayGetActualViewportConf(head, unused, (int)kconf);
-	return copyResult(ret, ksceKernelCopyToUser(conf, kconf, args.size));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(conf, kconf, args.size));
 }
 
 int _vshTouchSetTouchEmulationData(const void *front, const void *back)
@@ -505,11 +505,11 @@ int _vshIoDread(SceUID fd, void *dirent)
 		return vshIoDread(fd, NULL);
 	kdirent = alloca(0x160);
 	__builtin_memset(kdirent, 0, 0x160);
-	ret = ksceKernelCopyFromUser(kdirent, dirent, 0x160);
+	ret = SceSysmemForDriver_BC996A7A(kdirent, dirent, 0x160);
 	if (ret < 0)
 		return ret;
 	ret = vshIoDread(fd, kdirent);
-	return copyResult(ret, ksceKernelCopyToUser(dirent, kdirent, 0x160));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(dirent, kdirent, 0x160));
 }
 
 int _vshSblAimgrGetConsoleId(void *id)
@@ -884,13 +884,13 @@ int _vshAppMgrLocalBackupGetOfflineId(void *id, void *b)
 	}
 	ret = vshAppMgrLocalBackupGetOfflineId(kid, kb);
 	if (id != NULL) {
-		ret2 = ksceKernelCopyToUser(id, kid, sizeof(*kid));
+		ret2 = SceSysmemForDriver_6D88EF8A(id, kid, sizeof(*kid));
 		if (ret2 < 0)
 			return ret2;
 	}
 	if (b == NULL)
 		return ret;
-	return copyResult(ret, ksceKernelCopyToUser(b, kb, sizeof(*kb)));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(b, kb, sizeof(*kb)));
 }
 
 int _vshAppMgrLocalBackupVerifyOfflineHeader(const void *header)
@@ -1024,7 +1024,7 @@ typedef struct VshEventLogArgs {
 	SceUInt32 reserved;
 } __attribute__((aligned(8))) VshEventLogArgs;
 
-int _vshEventLogPut(int id, int index, int a3, const VshEventLogArgs *uargs)
+int _vshEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const VshEventLogArgs *uargs)
 {
 	VshEventLogArgs args;
 	SceUInt8 *kbuf = NULL;
@@ -1032,7 +1032,7 @@ int _vshEventLogPut(int id, int index, int a3, const VshEventLogArgs *uargs)
 
 	ARGS_IN(args, uargs);
 	BLOCK_IN_SIZED(kbuf, args.pBuf, args.copySize, 0x7c0);
-	return vshEventLogPut(id, index, a3, kbuf, args.bufSize);
+	return vshEventLogPut(type, subtype, arg, kbuf, args.bufSize);
 }
 
 /* in and out: the bridge checks the record's size */
@@ -1045,11 +1045,11 @@ int _vshSblGetSystemSwVersion(SceKernelSystemSwVersion *info)
 		return vshSblGetSystemSwVersion(NULL);
 	kinfo = alloca(sizeof(*kinfo));
 	__builtin_memset(kinfo, 0, sizeof(*kinfo));
-	ret = ksceKernelCopyFromUser(kinfo, info, sizeof(*kinfo));
+	ret = SceSysmemForDriver_BC996A7A(kinfo, info, sizeof(*kinfo));
 	if (ret < 0)
 		return ret;
 	ret = vshSblGetSystemSwVersion(kinfo);
-	return copyResult(ret, ksceKernelCopyToUser(info, kinfo, sizeof(*kinfo)));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(info, kinfo, sizeof(*kinfo)));
 }
 
 int _vshSblAimgrGetSMI(void *smi)

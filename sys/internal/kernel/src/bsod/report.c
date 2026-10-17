@@ -33,11 +33,11 @@ void bsodReportRegisters(const BsodCrashRecord *frame)
 	if (!context) {
 		s_bsodPrinter(s_bsodTextHandlerContext);
 	} else {
-		if (ksceGUIDGetName(context->processId, &name) < 0)
+		if (SceSysmemForDriver_A78755EB(context->processId, &name) < 0)
 			s_bsodPrinter(s_bsodTextProcessId, context->processId);
 		else
 			s_bsodPrinter(s_bsodTextProcessIdName, context->processId, name);
-		if (ksceGUIDGetName(context->threadId, &name) < 0)
+		if (SceSysmemForDriver_A78755EB(context->threadId, &name) < 0)
 			s_bsodPrinter(s_bsodTextThreadId, context->threadId);
 		else
 			s_bsodPrinter(s_bsodTextThreadIdName, context->threadId, name);

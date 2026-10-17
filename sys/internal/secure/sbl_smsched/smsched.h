@@ -22,22 +22,22 @@
 #define sceKernelSysrootGetSharedMemoryForTZS	SceSysrootForTZS_1C96096F
 #define sceKernelSysrootGetKblParamForTZS	SceSysrootForTZS_29C1049E
 #define sceKernelSysrootSetModulePrivateForTZS	SceSysrootForTZS_EA572BD9
-#define ksceKernelAssert			SceDebugForTZS_2F9B8AA8
+#define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
 /* ForTZS imports: the names of their 0.990 stubs, os0's for the debug ones */
 #define sceKernelDcacheCleanRange		SceCpuForTZS_190D96D5
-#define ksceKernelCpuId				SceCpuForTZS_44C423D3
-#define ksceKernelSpinlockLowLock		SceCpuForTZS_71FD9AB5
-#define ksceKernelSpinlockLowTrylockCpuSuspendIntr SceCpuForTZS_ACF209F3
-#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
-#define ksceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
+#define sceKernelCpuId				SceCpuForTZS_44C423D3
+#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
+#define SceCpuForDriver_27C0B340 SceCpuForTZS_ACF209F3
+#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
 #define sceKernelDcacheInvalidateRange		SceCpuForTZS_CDD46655
-#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
+#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
 #define atomicCompareAndSet8			SceCpuForTZS_EFD6F289
-#define ksceKernelPrintfWithInfo		SceDebugForTZS_0D799DAE
-#define ksceKernelPanic				SceDebugForTZS_563B623D
-#define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
-#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
-#define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
+#define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
+#define SceDebugForDriver_391B5B74				SceDebugForTZS_563B623D
+#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
+#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
+#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
 
 #include <stdint.h>
 #include <fw.h>
@@ -48,6 +48,7 @@
 #include <intrmgr/intrmgr_tzs.h>
 #include "cmep_regs.h"
 #include <smsc_proxy/smsc_proxy.h>
+#include <sysmem/cpu.h>
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
@@ -66,12 +67,6 @@ int sceKernelSysrootSetModulePrivateForTZS(int index, void *data);
 const SceKblParam *sceKernelSysrootGetKblParamForTZS(void);
 void sceKernelDcacheCleanRange(const void *addr, SceSize size);
 void sceKernelDcacheInvalidateRange(const void *addr, SceSize size);
-int ksceKernelCpuId(void);
-int ksceKernelSpinlockLowLock(SceKernelSpinlock *lock);
-int ksceKernelSpinlockLowUnlock(SceKernelSpinlock *lock);
-int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
-int ksceKernelSpinlockLowTrylockCpuSuspendIntr(SceKernelSpinlock *lock);
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock, int intr);
 int atomicCompareAndSet8(volatile SceUInt8 *addr, SceUInt8 expected, SceUInt8 value);
 
 #define SCE_SBL_ERROR_NO_MEMORY			((int)0x800f040c)
@@ -110,7 +105,6 @@ typedef struct SmschedMailbox {
 	SceUInt32 arm2Cry[CMEP_MAILBOXES - 1];
 	SceUInt32 cry2Arm[CMEP_MAILBOXES - 1];
 } SmschedMailbox;
-
 
 /* a request's state, as cry2Arm0IntHandler moves it on the secure kernel's messages */
 #define SMSCHED_STATE_READY			1	/* queued, new or suspended */

@@ -58,7 +58,7 @@ int copyWord(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 		*dst = *src;
 		return 0;
 	}
-	ret = ksceKernelCopyFromUserProc(pid, dst, src, 4);
+	ret = sceKernelCopyFromUserProc(pid, dst, src, 4);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 120,
 			" error: sceKernelCopyFromUserProc(0x%08X, %p %p, 0x%08X) = 0x%08X\n",
@@ -97,14 +97,14 @@ int copyStack(SceUID pid, SceUInt32 *dst, const SceUInt32 *src)
 	int ret;
 
 	if (pid == KERNEL_PID) {
-		ret = ksceKernelMMUVAtoPA((void *)src, &pa);
+		ret = SceCpuForKernel_14E0B0C4((uintptr_t)src, &pa);
 		if (ret > 0)
 			ret = 0;
 		if (ret == 0)
 			*dst = *src;
 		return ret;
 	}
-	ret = ksceKernelCopyFromUserProc(pid, dst, src, 4);
+	ret = sceKernelCopyFromUserProc(pid, dst, src, 4);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 204,
 			" error: sceKernelCopyFromUserProc(0x%08X, %p %p, 0x%08X) = 0x%08X\n",
@@ -277,7 +277,7 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 	}
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ksceKernelPrintf(pid == KERNEL_PID ? "[%d]=== Print Backtrace(Kernel stack) ===\n" :
+	SceDebugForDriver_391B74B7(pid == KERNEL_PID ? "[%d]=== Print Backtrace(Kernel stack) ===\n" :
 					     "[%d]=== Print Backtrace(User stack) =====\n", cpu);
 	for (i = 0, f = frames; i != count; i++, f++) {
 		fingerprint = 0;
@@ -285,19 +285,19 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 		ret = ksceKernelGetModuleInfoMinByAddr(pid, f->pc, &fingerprint, &textBase, name);
 		if (ret < 0) {
 			size = i == count - 1 ? 0 : f[1].sp - f->sp;
-			ksceKernelPrintf(
+			SceDebugForDriver_391B74B7(
 				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [no module info]\n",
 				cpu, i, f->pc, f->sp, size);
 		} else {
 			if (pid == KERNEL_PID && !SceQafMgrForDriver_382C71E8())
 				snprintf(name, 0x1b, "0x%08X", fingerprint);
 			size = i == count - 1 ? 0 : f[1].sp - f->sp;
-			ksceKernelPrintf(
+			SceDebugForDriver_391B74B7(
 				"[%d](%d) PC:0x%08X, SP:0x%08X(size=0x%08X byte) [%s + 0x%08X]\n",
 				cpu, i, f->pc, f->sp, size, name, f->pc - (SceUInt32)textBase);
 		}
 	}
-	ksceKernelPrintf("[%d]=====================================\n", cpu);
+	SceDebugForDriver_391B74B7("[%d]=====================================\n", cpu);
 	return 0;
 }
 
@@ -372,7 +372,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 		goto leave;
 	}
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ctx = getCurrentThreadCB();
 	inIntr = ksceKernelIsIntrAllowedInCurrentContext();
 	excp = SceExcpmgrForKernel_B615A7DA();
@@ -396,11 +396,11 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}
-	ret = ksceGUIDReferObject(thid, (void **)&obj);
+	ret = SceSysmemForDriver_0F5C84B7(thid, (void **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
-	ksceKernelSpinlockLowLock(&ctx->lock);
+	SceCpuForDriver_BF82DEB2(&ctx->lock);
 	refer = 1;
 	if ((ctx->status & 1) != 0) {
 		ret = SCE_KERNEL_ERROR_THREAD_TERMINATED;
@@ -416,7 +416,7 @@ exception:
 		goto resume;
 	}
 	/* the frame of the current exception ends at the top of the CPU's stack */
-	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(ksceKernelCpuId()) - 1;
+	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(sceKernelCpuId()) - 1;
 	BacktraceCopyException(regs, exc);
 	if (excp > 1) {
 		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
@@ -434,7 +434,7 @@ exception:
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 712);
 	thid = BACKTRACE_THID_EXCEPTION;
-	ksceKernelSpinlockLowLock(&ctx->lock);
+	SceCpuForDriver_BF82DEB2(&ctx->lock);
 	goto locked;
 
 current:
@@ -442,7 +442,7 @@ current:
 		goto intr_context;
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 748);
-	ksceKernelSpinlockLowLock(&ctx->lock);
+	SceCpuForDriver_BF82DEB2(&ctx->lock);
 	goto locked;
 
 intr_context:
@@ -512,11 +512,11 @@ walk:
 
 unlock:
 	if (ctx != NULL)
-		ksceKernelSpinlockLowUnlock(&ctx->lock);
+		sceKernelSpinlockLowUnlock(&ctx->lock);
 	if (refer)
-		ksceGUIDReleaseObject(thid);
+		sceGUIDReleaseObject(thid);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 leave:
 	ModulemgrSyscallLeave(saved);
 	return ret;
@@ -549,7 +549,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		goto leave;
 	}
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ctx = getCurrentThreadCB();
 	inIntr = ksceKernelIsIntrAllowedInCurrentContext();
 	excp = SceExcpmgrForKernel_B615A7DA();
@@ -574,11 +574,11 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}
-	ret = ksceGUIDReferObject(thid, (void **)&obj);
+	ret = SceSysmemForDriver_0F5C84B7(thid, (void **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
-	locked = ksceKernelSpinlockLowTrylock(&ctx->lock) >= 0;
+	locked = SceCpuForDriver_5AC9D394(&ctx->lock) >= 0;
 	refer = 1;
 	if ((ctx->status & 1) != 0) {
 		ret = SCE_KERNEL_ERROR_THREAD_TERMINATED;
@@ -594,7 +594,7 @@ exception:
 		goto resume;
 	}
 	/* the frame of the current exception ends at the top of the CPU's stack */
-	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(ksceKernelCpuId()) - 1;
+	exc = (const SceExcpmgrContext *)SceExcpmgrForKernel_5420ED8F(sceKernelCpuId()) - 1;
 	BacktraceCopyException(regs, exc);
 	if (excp > 1) {
 		ret = SCE_KERNEL_ERROR_NOT_IN_EXCEPTION;
@@ -612,7 +612,7 @@ exception:
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 1135);
 	thid = BACKTRACE_THID_EXCEPTION;
-	locked = ksceKernelSpinlockLowTrylock(&ctx->lock) >= 0;
+	locked = SceCpuForDriver_5AC9D394(&ctx->lock) >= 0;
 	goto check;
 
 current:
@@ -620,7 +620,7 @@ current:
 		goto intr_context;
 	if (ctx == NULL)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 1173);
-	locked = ksceKernelSpinlockLowTrylock(&ctx->lock) >= 0;
+	locked = SceCpuForDriver_5AC9D394(&ctx->lock) >= 0;
 	goto check;
 
 intr_context:
@@ -700,11 +700,11 @@ walk:
 
 unlock:
 	if (locked)
-		ksceKernelSpinlockLowUnlock(&ctx->lock);
+		sceKernelSpinlockLowUnlock(&ctx->lock);
 	if (refer)
-		ksceGUIDReleaseObject(thid);
+		sceGUIDReleaseObject(thid);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 leave:
 	ModulemgrSyscallLeave(saved);
 	return ret;
@@ -726,12 +726,12 @@ int sceKernelBacktraceForUser(SceUID thid, SceKernelBacktraceFrame *ubuf, SceSiz
 	int ret;
 
 	if (thid != 0) {
-		thid = kscePUIDtoGUID(0, thid);
+		thid = SceSysmemForDriver_45D22597(0, thid);
 		if (thid < 0)
 			return thid;
 	}
 	if (ubuf != NULL) {
-		kbuf = ksceKernelAlloc(size);
+		kbuf = SceSysmemForKernel_85571907(size);
 		if (kbuf == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY_BACKTRACE;
 	} else {
@@ -740,15 +740,15 @@ int sceKernelBacktraceForUser(SceUID thid, SceKernelBacktraceFrame *ubuf, SceSiz
 	ret = ksceKernelBacktrace(thid, kbuf, size, &count, flags);
 	if (ret >= 0) {
 		if (ubuf != NULL) {
-			ret = ksceKernelCopyToUser(ubuf, kbuf, count * sizeof(*kbuf));
+			ret = SceSysmemForDriver_6D88EF8A(ubuf, kbuf, count * sizeof(*kbuf));
 			if (ret < 0)
 				goto out;
 		}
 		if (ucount != NULL)
-			ret = ksceKernelCopyToUser(ucount, &count, sizeof(count));
+			ret = SceSysmemForDriver_6D88EF8A(ucount, &count, sizeof(count));
 	}
 out:
-	ksceKernelFree(kbuf);
+	SceSysmemForKernel_4233C16D(kbuf);
 	return ret;
 }
 
@@ -765,7 +765,7 @@ int _sceKernelBacktrace(SceUID thid, SceKernelBacktraceFrame *buf, SceSize size,
 	SceKernelBacktraceParam p;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&p, param, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, param, sizeof(p));
 	if (ret < 0)
 		return ret;
 	return sceKernelBacktraceForUser(thid, buf, size, p.count, p.flags);

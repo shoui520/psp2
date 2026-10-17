@@ -74,20 +74,20 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_1FFD2AFA
 	SceSysrootForDriver_7C0BE393
 	SceSysrootForDriver_ED688AEE
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
 	memset
 	strncmp
 	memcpy
 	strncpy
 	__stack_chk_fail
 	strnlen
-	ksceKernelPrintfWithInfo
+	SceDebugForDriver_02B04343
 	ksceKernelWaitEventFlag
 	sceKernelExitThread
 	ksceKernelStartThread
@@ -103,7 +103,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	ksceSblPostSsMgrActivate
 	ksceSblPostSsMgrGetExpireDate
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	ksceRtcConvertDateTimeToUnixTime
 	ksceRtcGetCurrentClockLocalTime
 	SceRegMgrForDebugger_46AC0CCB

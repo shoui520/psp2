@@ -1,15 +1,15 @@
 #include <sysmem/sysmem.h>
 #include <sm_comm/sm_comm.h>
 #include <modulemgr/certified_file.h>
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/io/fcntl.h>
 #include <string.h>
 #include "update_internal.h"
 #include "update_packet.h"
 #include "spkg_peripherals.h"
 #include "sbls.h"
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/utils.h>
 #include <sysmem/qafmgr.h>
 
 extern int spkgMbrLoaded;
@@ -140,7 +140,7 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 			args->buffer, args->size);
 	if (result)
 		goto releasePacket;
-	ksceKernelDcacheCleanRange(args->buffer, (args->size + 63) & ~63);
+	SceCpuForDriver_103872A5(args->buffer, (args->size + 63) & ~63);
 	if (args->packageType == 27) {
 		result = UpdateUtilSetupSm(1, &smId, 0);
 		if (result)
@@ -159,20 +159,20 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 	result = serviceResult;
 	if (result)
 		goto releasePacket;
-	ksceKernelDcacheInvalidateRange(args->buffer, (args->size + 63) & ~63);
+	SceCpuForDriver_02796361(args->buffer, (args->size + 63) & ~63);
 	info = packet->records.returned.packageInfo;
 	chunk = packet->records.returned.chunkInfo;
 releasePacket:
 	if (dataVector) {
 		UpdateUtilFreePARangeVector(heapId, dataVector);
-		ksceKernelFreeHeapMemory(heapId, dataVector);
+		sceKernelFreeHeapMemory(heapId, dataVector);
 	}
 	if (vectorVector) {
 		UpdateUtilFreePARangeVector(heapId, vectorVector);
-		ksceKernelFreeHeapMemory(heapId, vectorVector);
+		sceKernelFreeHeapMemory(heapId, vectorVector);
 	}
 	if (packet)
-		ksceKernelFreeHeapMemory(heapId, packet);
+		sceKernelFreeHeapMemory(heapId, packet);
 	if (smId != -1)
 		UpdateUtilStopSm(&smId);
 	if (result)
@@ -184,10 +184,10 @@ releasePacket:
 		updateFlag = 0;
 	if ((info.requirements & 2) && !updateFlag)
 		goto alreadyModified;
-	if (info.platform && (!ksceSblAimgrIsCEX() || !(info.platform & 0x40000000))) {
-		isDex = ksceSblAimgrIsDEX();
+	if (info.platform && (!SceSblAIMgrForDriver_D78B04A2() || !(info.platform & 0x40000000))) {
+		isDex = SceSblAIMgrForDriver_F4B98F66();
 		if ((!isDex || !(info.platform & 0x20000000)) &&
-		    ((!ksceSblAimgrIsTool() && !ksceSblAimgrIsTest()) ||
+		    ((!SceSblAIMgrForDriver_274663A0() && !SceSblAIMgrForDriver_3B638885()) ||
 		     (!(info.platform & 0x10000000) &&
 		      (!SceQafMgrForDriver_3CB55F98() || !(info.requirements & 1)))) &&
 		    (!isDex || !(info.platform & 0x40000000) ||
@@ -466,7 +466,7 @@ releasePacket:
 		if (sbls->magic != SCE_SLB2_MAGIC)
 			goto invalidFormat;
 		last = &sbls->entryList[sbls->entryNum - 1];
-		result = ksceSha256Digest(sbls, (last->fileStartSector << 9) +
+		result = SceKernelUtilsForDriver_A773A6A8(sbls, (last->fileStartSector << 9) +
 				((last->fileSizeInByte + 511) >> 9 << 9), digest);
 		if (result)
 			goto error;

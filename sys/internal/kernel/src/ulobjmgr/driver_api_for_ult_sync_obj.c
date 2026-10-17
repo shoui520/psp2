@@ -55,7 +55,7 @@ int sceUlobjMgrGetUltSyncObjId(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds, Sce
 		if (!(entry & ULOBJ_ENTRY_USED) ||
 		    (entry & ULOBJ_ENTRY_KIND_MASK) != ULOBJ_KIND_SYNC_OBJECT)
 			continue;
-		if (ksceKernelCopyFromUserProc(pid, &obj, (const void *)ULOBJ_ENTRY_ADDRESS(entry),
+		if (sceKernelCopyFromUserProc(pid, &obj, (const void *)ULOBJ_ENTRY_ADDRESS(entry),
 					       sizeof(obj)) != 0)
 			continue;
 		if (obj.header.type != objectType)

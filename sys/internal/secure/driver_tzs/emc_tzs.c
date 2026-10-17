@@ -63,7 +63,7 @@ static int EmcIntrHandler(int intrCode, void *userCtx)
 
 	(void)intrCode;
 	(void)userCtx;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_emc.lock);
+	state = SceCpuForDriver_D32ACE9E(&s_emc.lock);
 	status = regs->intrStatus;
 	regs->intrClear = 1;
 	if (status & EMC_INTR_EVENT) {
@@ -72,7 +72,7 @@ static int EmcIntrHandler(int intrCode, void *userCtx)
 		regs->intrEnable = 0;
 		PervasiveDmb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_emc.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_emc.lock, state);
 	return -1;
 }
 
@@ -174,11 +174,11 @@ int EmcModuleStart(SceSize arglen, const void *argp)
 	opt.size = 0x58;
 	opt.attr = 2;
 	opt.paddr = EMC_TOP_BASE;
-	ret = ksceKernelAllocMemBlock("SceEmcTop", 0x20100806, EMC_TOP_SIZE, &opt);
+	ret = SceSysmemForDriver_C94850C9("SceEmcTop", 0x20100806, EMC_TOP_SIZE, &opt);
 	if (ret < 0)
 		return 2;
 	s_emc.uid = ret;
-	ksceKernelGetMemBlockBase(ret, &base);
+	SceSysmemForDriver_A841EDDA(ret, &base);
 	s_emc.regs = base;
 	sceKernelRegisterIntrHandler(EMC_INTR, "SceEmcTop", 0, EmcIntrHandler, NULL,
 		0x50, ALL_CPUS, NULL);

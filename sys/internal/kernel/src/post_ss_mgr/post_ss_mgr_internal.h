@@ -8,17 +8,17 @@
 #define POST_SS_MGR_INTERNAL_H
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <sysmem/debug.h>
 #include <string.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/suspend.h>
 #include <acmgr/acmgr.h>

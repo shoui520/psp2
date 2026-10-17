@@ -3,6 +3,7 @@
  */
 #include "sgxkick_sce.h"
 #include <stddef.h>
+#include <sysmem/cpu.h>
 
 #define SGXMKIF_CMDTA_CTRLFLAGS_READY 1U
 #define SGXMKIF_CMD_TA 0
@@ -12,7 +13,6 @@ extern int gPVRSRVLock;
 int LinuxLockMutex(int *mutex);
 int LinuxUnLockMutex(int *mutex);
 /* NID is absent from the pinned vitasdk vocabulary. */
-IMG_VOID SceCpuForDriver_E813EBB2(IMG_VOID);
 PVRSRV_ERROR SGXScheduleCCBCommandKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		IMG_UINT32 eCmdType, SGXMKIF_COMMAND *psCommand,
 		IMG_UINT32 ui32CallerID, IMG_UINT32 ui32PDumpFlags,

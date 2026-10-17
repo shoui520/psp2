@@ -15,15 +15,15 @@ void ConfReaderInit(ConfReader *reader, int depth)
 	reader->confBlock = -1;
 	reader->cmdBlock = -1;
 	reader->confModule = -1;
-	reader->cwd = ksceKernelAlloc(0x400);
+	reader->cwd = SceSysmemForKernel_85571907(0x400);
 	if (!reader->cwd)
 		SCE_DBG_ASSERT_FAIL(167);
 	reader->cwd[0x3ff] = 0;
-	reader->absPath = ksceKernelAlloc(0x400);
+	reader->absPath = SceSysmemForKernel_85571907(0x400);
 	if (!reader->absPath)
 		SCE_DBG_ASSERT_FAIL(173);
 	reader->absPath[0x3ff] = 0;
-	reader->remotePath = ksceKernelAlloc(0x400);
+	reader->remotePath = SceSysmemForKernel_85571907(0x400);
 	if (!reader->remotePath)
 		SCE_DBG_ASSERT_FAIL(179);
 	reader->remotePath[0x3ff] = 0;
@@ -41,13 +41,13 @@ static void ConfReaderClose(ConfReader *reader)
 		ksceKernelStopUnloadModule(reader->confModule, 0, NULL, 0, NULL, &status);
 	for (i = 0; i < 4; i++)
 		if (reader->rpath[i])
-			ksceKernelFree(reader->rpath[i]);
+			SceSysmemForKernel_4233C16D(reader->rpath[i]);
 	ConfReaderUtilsFreeLoaded(reader);
-	ksceKernelFree(reader->absPath);
-	ksceKernelFree(reader->cwd);
-	ksceKernelFree(reader->remotePath);
+	SceSysmemForKernel_4233C16D(reader->absPath);
+	SceSysmemForKernel_4233C16D(reader->cwd);
+	SceSysmemForKernel_4233C16D(reader->remotePath);
 	if (reader->shellFilename)
-		ksceKernelFree(reader->shellFilename);
+		SceSysmemForKernel_4233C16D(reader->shellFilename);
 }
 
 static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
@@ -59,7 +59,7 @@ static char *ConfReaderRelToAbsPath(ConfReader *reader, char *path)
 		return NULL;
 	if (path[0] == '/' || path[0] == '\\')
 		return path;
-	external = ksceSysrootIsManufacturingMode();
+	external = SceSysrootForKernel_55392965();
 	for (i = 0; s_devices[i].path; i++) {
 		if (!strncmp(s_devices[i].path, path, s_devices[i].size)) {
 			if (external || (strncmp("sd0:", path, 4) && strncmp("ux0:", path, 4)))
@@ -82,8 +82,8 @@ static char *ConfReaderGetRemotePath(char **buffer, const char *path)
 {
 	int i = strnlen(path, 0x3ff);
 
-	if (s_noRemoteModule || !ksceSblQafMgrIsAllowHost0Access() ||
-	    !ksceKernelCheckDipsw(0xfc) || !strncmp("host0:", path, 6))
+	if (s_noRemoteModule || !SceQafMgrForDriver_082A4FC2() ||
+	    !SceDipswForDriver_A98FC2FD(0xfc) || !strncmp("host0:", path, 6))
 		return NULL;
 	strncpy(*buffer, "host0:module", 0x3ff);
 	(*buffer)[12] = '/';
@@ -304,7 +304,7 @@ static int ConfReaderCmdUnloadOnly(ConfReader *reader, int argc, char **argv, un
 
 static int ConfReaderCmdSLoad(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
 {
-	if (ksceSysrootGetHardwareInfo() & 0x40)
+	if (SceSysrootForDriver_930B1342() & 0x40)
 		return ConfReaderCmdLoad(reader, argc, argv, len, args);
 	return 0;
 }
@@ -314,7 +314,7 @@ static int ConfReaderCmdToolLoad(ConfReader *reader, int argc, char **argv, unsi
 	char *path, *remote;
 	int ret, status;
 
-	if (!ksceKernelCheckDipsw(0xd2))
+	if (!SceDipswForDriver_A98FC2FD(0xd2))
 		return 0;
 	if (argc < 1)
 		return CONF_ERROR(22);
@@ -461,16 +461,16 @@ static int ConfReaderCmdAppSpawn(ConfReader *reader, int argc, char **argv, unsi
 			return CONF_ERROR(22);
 		}
 	}
-	if (!remote || (pid = SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess(
+	if (!remote || (pid = SceSysrootForKernel_3ACACD22(
 		"main", type, remote, 0, NULL, &opt, out)) < 0) {
 		for (i = 0; i < 4; i++) {
 			remote = ConfReaderGetRemoteRpath(reader, path, i);
-			if (remote && (pid = SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess(
+			if (remote && (pid = SceSysrootForKernel_3ACACD22(
 				"main", type, remote, 0, NULL, &opt, out)) >= 0)
 				goto spawned;
 		}
 		remote = path;
-		pid = SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess(
+		pid = SceSysrootForKernel_3ACACD22(
 			"main", type, path, 0, NULL, &opt, out);
 	}
 spawned:
@@ -512,7 +512,7 @@ static __attribute__((always_inline)) inline int ConfReaderCmdUmountBootfs(
 {
 	if (s_bootimage) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(2, 0, SCE_DBGINFO_FUNC(1430, "ConfReaderCmdUmountBootfs"),
+		SceDebugForDriver_D9703808(2, 0, SCE_DBGINFO_FUNC(1430, "ConfReaderCmdUmountBootfs"),
 			"ConfReaderCmdUmountBootfs() cancel mount %s\n", s_bootimage);
 #endif
 		s_bootimage = NULL;
@@ -653,7 +653,7 @@ static __attribute__((always_inline)) inline int ConfReaderReadPrxFmt(ConfReader
 	reader->confModule = ksceKernelLoadModule(path, 0x100, NULL);
 	if (reader->confModule < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(501, "ConfReaderReadPrxFmt"),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(501, "ConfReaderReadPrxFmt"),
 			"ConfReaderReadPrxFmt : failed (path=%s, ret=0x%08x)\n", path, reader->confModule);
 #endif
 		return reader->confModule;
@@ -679,7 +679,7 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 			break;
 		if (ret != (int)0x8009000aU) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 15, SCE_DBGINFO_FUNC(279, "ConfReaderOpen"),
+			SceDebugForDriver_D9703808(1, 15, SCE_DBGINFO_FUNC(279, "ConfReaderOpen"),
 				"ConfReaderOpen : not found %s (0x%08X)\n", path, ret);
 #endif
 			return CONF_ERROR(2);
@@ -690,7 +690,7 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 		}
 		sceKernelDelayThread(200000);
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(294, "ConfReaderOpen"), ".");
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(294, "ConfReaderOpen"), ".");
 #endif
 	}
 	*opened = 1;
@@ -703,13 +703,13 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 		if (magic == 0x00454353) {
 			ret = ConfReaderReadPrxFmt(reader, path);
 			if (ret < 0)
-				ksceKernelPanic(SCE_DBGINFO_FUNC(315, "ConfReaderOpen"), __builtin_return_address(0));
+				SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(315, "ConfReaderOpen"), __builtin_return_address(0));
 			return ret;
 		}
-		if (ksceSblQafMgrIsAllowDecryptedBootConfigLoad()) {
+		if (SceQafMgrForDriver_883E9465()) {
 			ret = ConfReaderReadTextFmt(reader);
 			if (ret < 0)
-				ksceKernelPanic(SCE_DBGINFO_FUNC(323, "ConfReaderOpen"), __builtin_return_address(0));
+				SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(323, "ConfReaderOpen"), __builtin_return_address(0));
 		} else {
 			ret = CONF_ERROR(2);
 		}
@@ -726,7 +726,7 @@ static __attribute__((always_inline)) inline void ConfReaderReadRpath(ConfReader
 	char buf[512], *argv[8];
 	int fd, ret, count = 0, argc, size;
 
-	if (!SceQafMgrForDriver_B9770A13() && !ksceSblQafMgrIsAllowHost0Access())
+	if (!SceQafMgrForDriver_B9770A13() && !SceQafMgrForDriver_082A4FC2())
 		return;
 	fd = ksceIoOpen("host0:psp2config.rpath", 1, 0);
 	if (fd < 0)
@@ -741,7 +741,7 @@ static __attribute__((always_inline)) inline void ConfReaderReadRpath(ConfReader
 		ret = ConfReaderUtilsAllocCmdBuf(&remote, 0x8000);
 		if (ret < 0) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(398, "ConfReaderReadRpath"),
+			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(398, "ConfReaderReadRpath"),
 				"ConfReaderReadRpath : alloc cmdbuf failed\n");
 #endif
 		} else {
@@ -750,16 +750,16 @@ static __attribute__((always_inline)) inline void ConfReaderReadRpath(ConfReader
 				if (argc < 1 || argv[0][0] == '#')
 					continue;
 				if (!strncmp(argv[0], "set_shell_filename", 0xff) && !reader->shellFilename) {
-					reader->shellFilename = ksceKernelAlloc(0x40);
+					reader->shellFilename = SceSysmemForKernel_85571907(0x40);
 #if FW_DEBUG
-					ksceKernelAssertLevel(0, reader->shellFilename != NULL,
+					SceDebugForDriver_FD753E7A(0, reader->shellFilename != NULL,
 						SCE_DBGINFO_FUNC(417, "ConfReaderReadRpath"), __builtin_return_address(0));
 #endif
 					reader->shellFilename[63] = 0;
 					strncpy(reader->shellFilename, argc == 1 ? "no file" : argv[1], 63);
 				} else {
 					size = strnlen(argv[0], 0x100);
-					reader->rpath[count] = ksceKernelAlloc(size + 1);
+					reader->rpath[count] = SceSysmemForKernel_85571907(size + 1);
 					reader->rpath[count][size] = 0;
 					strncpy(reader->rpath[count++], argv[0], size);
 				}
@@ -781,7 +781,7 @@ static __attribute__((always_inline)) inline int ConfReaderParseCmd(ConfReader *
 	ret = ConfReaderUtilsAllocCmdBuf(reader, 0x8000);
 	if (ret < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(564, "ConfReaderParseCmd"),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(564, "ConfReaderParseCmd"),
 			"ConfReaderReadParseCmd :alloc cmdbuf failed\n");
 #endif
 		return CONF_ERROR(12);
@@ -821,7 +821,7 @@ static __attribute__((always_inline)) inline int ConfReaderParseCmd(ConfReader *
 			id = CONF_CMD_UNKNOWN;
 		if (!id) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(696, "ConfReaderParseCmd"),
+			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(696, "ConfReaderParseCmd"),
 				"unknown command (%d)\n", 0);
 #endif
 			ret = 0;
@@ -879,7 +879,7 @@ static __attribute__((always_inline)) inline int ConfReaderParseCmd(ConfReader *
 			payload += strnlen(argv[i], 0x100) + 1;
 			if (payload >= 512) {
 #if FW_DEBUG
-				ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(723, "ConfReaderParseCmd"),
+				SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(723, "ConfReaderParseCmd"),
 					"no space for args (%d)\n", id);
 #endif
 				return CONF_ERROR(11);
@@ -887,7 +887,7 @@ static __attribute__((always_inline)) inline int ConfReaderParseCmd(ConfReader *
 		}
 		if (offset + payload + sizeof(*cmd) > reader->cmdSize) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(736, "ConfReaderParseCmd"),
+			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(736, "ConfReaderParseCmd"),
 				"ConfReaderReadParseCmd : no space\n");
 #endif
 			return CONF_ERROR(12);
@@ -913,7 +913,7 @@ invalid:
 	ret = CONF_ERROR(22);
 syntax:
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO_FUNC(777, "ConfReaderParseCmd"),
+	SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(777, "ConfReaderParseCmd"),
 		"syntax error at line %d\n", lineno);
 #endif
 	/* Unknown commands and nonpositive repeats report an error but return zero;

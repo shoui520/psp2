@@ -94,34 +94,34 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
 	ksceKernelReleaseIntrHandler
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUserProc
-	ksceKernelCopyToUser
-	ksceKernelAllocUncacheHeapMemory
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelStrncpyFromUser
-	ksceKernelGetMemBlockMemtypeByAddr
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_49D4DD9B
+	sceKernelCopyToUserProc
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7750CEA7
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceSysmemForDriver_DB3EC244
+	SceSysmemForDriver_F3BBE2E1
 	memset
 	strncmp
 	memcpy
 	__aeabi_uidiv
 	__aeabi_idivmod
 	__stack_chk_fail
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

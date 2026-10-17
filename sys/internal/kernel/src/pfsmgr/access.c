@@ -5,7 +5,7 @@
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <acmgr/acmgr.h>
 #include "pfsmgr_internal.h"
 
@@ -158,7 +158,7 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 
 	always = (unsigned int)op < 9 && ((1 << op) & 0x1ef) != 0;
 	isRead = pfsOpIsRead(op, arg);
-	level = ksceKernelSysrootGetThreadAccessLevel();
+	level = SceSysrootForKernel_20009397();
 	isSystem = sceSblACMgrIsSystemProgram(ksceKernelGetProcessIdFromTLS());
 	if ((unsigned int)(pmi->mode - 0x1f) < 3) {
 		owner = pmi->parent;
@@ -225,14 +225,14 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 
 grant:
 	*oldPermission = ksceKernelSetPermission(PFS_PERMISSION);
-	ksceKernelAtomicAddAndGet32(&g_pfsBusy, 1);
+	SceCpuForDriver_5F6A8743(&g_pfsBusy, 1);
 	return 0;
 }
 
 void pfsAccessEnd(int oldPermission)
 {
 	ksceKernelSetPermission(oldPermission);
-	ksceKernelAtomicSubAndGet32(&g_pfsBusy, 1);
+	SceCpuForDriver_A4884C4E(&g_pfsBusy, 1);
 }
 
 const ScePfsModeInfo *pfsModeInfo(SceUInt32 mode)

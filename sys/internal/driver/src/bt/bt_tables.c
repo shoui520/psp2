@@ -1,6 +1,6 @@
 /* Bluetooth data tables; the original source filename is unavailable. */
 #include <stdint.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <bt/bt_registered.h>
 #include <bt/bt_audio.h>
 #include <sysmem/sysroot_bt.h>
@@ -20,21 +20,21 @@ BtInquiryResultForTest gBtTestInquiryResult;
 int gBtPanUserEnabled;
 int gBtNetworkAccessPointEnabled;
 
-int BtProcessExit(SceUID processId, SceProcEventInvokeParam1 *param, int argument);
-int BtProcessKill(SceUID processId, SceProcEventInvokeParam1 *param, int argument);
+int BtProcessExit(SceUID processId, ProcEventParam *param, int argument);
+int BtProcessKill(SceUID processId, ProcEventParam *param, int argument);
 int BtProcessSuspend(SceUID processId, int eventType,
-		     SceProcEventInvokeParam1 *param, int argument);
+		     ProcEventParam *param, int argument);
 int BtProcessResume(SceUID processId, int eventType,
-		    SceProcEventInvokeParam1 *param, int argument);
+		    ProcEventParam *param, int argument);
 
-const SceProcEventHandler gBtProcEventHandler = {
-	.size = sizeof(SceProcEventHandler),
+const SceKernelProcEventHandler gBtProcEventHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = NULL,
 	.exit = BtProcessExit,
 	.kill = BtProcessKill,
-	.stop = BtProcessSuspend,
-	.start = BtProcessResume,
-	.switch_process = NULL
+	.suspend = BtProcessSuspend,
+	.resume = BtProcessResume,
+	.notify = NULL
 };
 
 const char gBtEmptyHciFormat[] = "";

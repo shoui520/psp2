@@ -187,7 +187,7 @@ static SmbFifo *GetFIFO(SceUInt32 smbType)
 int SimpleMemBlockPush(SceUInt32 smbType, MemBlockObject *block)
 {
 	SmbFifo *fifo = GetFIFO(smbType);
-	int intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
+	int intr = SceCpuForDriver_4C38CE4D(&fifo->lock);
 
 	if (fifo->count != 0) {
 		fifo->count++;
@@ -200,7 +200,7 @@ int SimpleMemBlockPush(SceUInt32 smbType, MemBlockObject *block)
 		fifo->count = 1;
 		fifo->lowCount++;
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 	return 0;
 }
 
@@ -271,17 +271,17 @@ int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, S
 		break;
 	}
 	SCE_DBG_ASSERT_PRINTF(size != 0, 515, "sceKernelGetAssertLevel=%d, smbType=0x%08x\n",
-			      ksceKernelGetAssertLevel(), smbType);
+			      SceDebugForDriver_374B7868(), smbType);
 	if (phyMemPart == NULL)
 		phyMemPart = SceSysmemForKernel_0164D817();
 	if ((flags & ~0x33) || pBlock == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	fifo = GetFIFO(smbType);
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
+	intr = SceCpuForDriver_4C38CE4D(&fifo->lock);
 	if (fifo->count == 0) {
 		*pBlock = NULL;
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 		SCE_PRINTF_WITH_INFO(0, 529, "There is no SMB for name=[%s],type=0x%08x\n", name,
 				     smbType);
 		return SCE_KERNEL_ERROR_NO_SMB;
@@ -293,7 +293,7 @@ int AllocSimpleMemBlock(const char *name, SceUInt32 smbType, void *phyMemPart, S
 		fifo->lowCount = fifo->count;
 	if (fifo->count != 0)
 		fifo->head = block->smbNext;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 
 	(*pBlock)->smbType = smbType;
 	MemBlockSetPhyMemPartRaw(*pBlock, phyMemPart);
@@ -347,7 +347,7 @@ int FreeSimpleMemBlock(MemBlockObject *block, SceUInt32 flags)
 	return SimpleMemBlockPush(smbType, block);
 }
 
-int ksceKernelFreeSimpleMemBlock(void *block)
+int SceSysmemForKernel_A4DB88E1(void *block)
 {
 	return FreeSimpleMemBlock(block, 0);
 }

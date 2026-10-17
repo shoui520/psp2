@@ -1,7 +1,6 @@
 /* Sony: prxexport.c */
 #include <sysmem/sysroot.h>
 #include <psp2kern/kernel/iofilemgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <sysmem/debug.h>
@@ -11,7 +10,6 @@ extern SceVfsInfo g_exfatfsInfo;
 extern int _register_exfatfs_vops(SceVfsInfo *info);
 extern int sceExfatfsInit(void);
 /* SceSysrootForDriver NID 0x7B7F8171; absent from the pinned SDK header. */
-extern int ksceKernelIsSomeBootMode(void);
 
 int sceExfatInitPhase2(void *unused)
 {
@@ -61,10 +59,10 @@ int sceExfatInitPhase2(void *unused)
 		SCE_DBG_PRINTF_LEVEL(2, 0, 262,
 			"_mount_drive of exfatfs for USER on eMMC failed[%#x]\n", result);
 #endif
-	if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
+	if (!SceSysrootForDriver_55392965()) {
 		__builtin_memcpy(memoryCard, "mcd-lp-act-entire", 18);
 		__builtin_memcpy(storageCard, "usd-lp-act-entire", 18);
-		if (ksceSysrootUseInternalStorage()) {
+		if (SceSysrootForDriver_50FE3B4D()) {
 			result = ksceIoMount(0x800, NULL, 0, 0, 0, 0);
 #if FW_VERSION >= 0x04000000
 			if (result < 0)
@@ -74,7 +72,7 @@ int sceExfatInitPhase2(void *unused)
 		}
 		ksceIoDevctl("sdstor0:", 5, memoryCard, 18, NULL, 0);
 		ksceIoDevctl("sdstor0:", 5, storageCard, 18, NULL, 0);
-		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
+		if (!SceSysrootForDriver_55392965()) {
 			__builtin_memcpy(storageCard, "gcd-lp-act-entire", 18);
 			ksceIoDevctl("sdstor0:", 5, storageCard, 18, NULL, 0);
 		}
@@ -102,8 +100,8 @@ int sceExfatInitPhase1(SceSize arglen, const void *argp)
 		SCE_DBG_PRINTF_LEVEL(2, 0, 139,
 			"_mount_drive of exfatfs for OS on eMMC failed[%#x]\n", result);
 #endif
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
-		bootMode = ksceKernelIsSomeBootMode();
+	if (SceSysrootForDriver_55392965()) {
+		bootMode = SceSysrootForDriver_7B7F8171();
 		if (bootMode) {
 			result = ksceIoMount(0x100, NULL, 0, 0, 0, 0);
 			if (result == (int)0x8001000d)

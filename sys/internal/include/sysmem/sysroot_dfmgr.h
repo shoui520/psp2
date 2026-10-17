@@ -26,7 +26,9 @@ typedef struct SysrootDfmgrOps {
 	int (*saveDataFormatFinished)(SceUInt32 result, const char *msg, int len);
 } SysrootDfmgrOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootDfmgrOps) == 0x40,
 	       "Sysroot DECI4P progress service table size");
 _Static_assert(offsetof(SysrootDfmgrOps, saveDataFormatFinished) == 0x3c,
 	       "Sysroot DECI4P final progress service offset");
+#endif

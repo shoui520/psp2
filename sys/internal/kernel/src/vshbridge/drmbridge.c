@@ -40,7 +40,7 @@ int drmBridgeGetCurrentSecureTick(SceRtcTick *tick)
 
 int drmBridgeIsAllowRemotePlayDebug(void)
 {
-	DRM_BRIDGE(ksceSblQafMgrIsAllowRemotePlayDebug());
+	DRM_BRIDGE(SceQafMgrForDriver_BFD5E463());
 }
 
 int drmBridgeB81B597A(void)

@@ -1,6 +1,6 @@
 /*
- * SceKernelUtils: the raw deflate decoder (ksceDeflateDecompress, and
- * ksceDeflateDecompressPartial, which asks a callback for more input).
+ * SceKernelUtils: the raw deflate decoder (SceKernelUtilsForDriver_8AF1FAD4, and
+ * SceKernelUtilsForDriver_3D74CCDF, which asks a callback for more input).
  *
  * The original is hand-written assembly (0x81027cf0..0x81028564) with C
  * table builders (0x81029a18..0x81029d88) for its own two-level tables.
@@ -12,7 +12,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <kernel/error.h>
 
 void *memcpy(void *dst, const void *src, SceSize n);
@@ -97,7 +97,7 @@ static void DeflateRefill(DeflateStream *s)
 	const SceUInt8 *in;
 	SceSize size;
 
-	in = param->SceDeflateDecompressPartialInputCallback(param, s->out - s->dst);
+	in = param->callback(param, s->out - s->dst);
 	if (in == NULL) {
 		s->error = SCE_DEFLATE_ERROR_INVALID_POINTER;
 		return;
@@ -400,7 +400,7 @@ static int DeflateStored(DeflateStream *s)
 		in += chunk;
 		s->out += chunk;
 		if (in == s->param->pBufEnd) {
-			in = s->param->SceDeflateDecompressPartialInputCallback(s->param,
+			in = s->param->callback(s->param,
 									s->out - s->dst);
 			if (in == NULL || in == s->param->pBufEnd ||
 			    (((const SceUInt8 *)s->param->pBufEnd - in) & 1))
@@ -448,7 +448,7 @@ static int DeflateBlocks(DeflateStream *s, const void **next)
 	return s->out - s->dst;
 }
 
-int ksceDeflateDecompress(void *dst, SceSize dst_size, const void *src, const void **next)
+int SceKernelUtilsForDriver_8AF1FAD4(void *dst, SceSize dst_size, const void *src, const void **next)
 {
 	DeflateStream s;
 	const SceUInt8 *in = (const SceUInt8 *)((uintptr_t)src & ~1);
@@ -464,7 +464,7 @@ int ksceDeflateDecompress(void *dst, SceSize dst_size, const void *src, const vo
 	return DeflateBlocks(&s, next);
 }
 
-int ksceDeflateDecompressPartial(void *dst, SceSize dst_size, const void *src, const void **next,
+int SceKernelUtilsForDriver_3D74CCDF(void *dst, SceSize dst_size, const void *src, const void **next,
 				 SceDeflatePartialInputParam *cbInfo)
 {
 	DeflateStream s;

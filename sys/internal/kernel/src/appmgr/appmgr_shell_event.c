@@ -14,8 +14,6 @@ extern SceUID g_appmgrDebugShellEventSemaphore;
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern SceInt64 appmgrUpdateShellWatchDogActivity(void);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 extern int appmgrCoalesceShellEvent(const AppmgrShellEvent *event);
 extern int appmgrHasLoadExecShellEvents(int appId);
 extern int _deleteDuplicatedShellEventQueueByLoadExec(int appId);
@@ -37,12 +35,12 @@ static const SceKernelDebugInfo shellEventOwnerPanicInfo = {
 
 _Noreturn void appmgrShellEventOwnerPanic(void)
 {
-	ksceKernelPanic(&shellEventOwnerPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&shellEventOwnerPanicInfo, __builtin_return_address(0));
 }
 
 _Noreturn void appmgrShellEventMutexPanic(void)
 {
-	ksceKernelPanic(&shellEventMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&shellEventMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -494,11 +492,11 @@ static inline void signalSemaForDebuggerShellEventCount(void)
 #if FW_DEBUG
 	sceAppMgrDump();
 	dumpBgmState();
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, 0, &debuggerShellEventCountPanicInfo,
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, 0, &debuggerShellEventCountPanicInfo,
 				     __builtin_return_address(0));
 #else
-	ksceKernelPanic(&debuggerShellEventCountPanicInfo,
+	SceDebugForDriver_391B5B74(&debuggerShellEventCountPanicInfo,
 		       __builtin_return_address(0));
 #endif
 }

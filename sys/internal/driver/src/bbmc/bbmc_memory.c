@@ -7,7 +7,7 @@ SceUID g_bbmcHeap;
 /* name unknown: creates the heap used by the manager's allocation wrappers. */
 int bbmcCreateHeap(SceSize size)
 {
-	int ret = ksceKernelCreateHeap("SceBbmcMain", size, NULL);
+	int ret = SceSysmemForDriver_9328E0E8("SceBbmcMain", size, NULL);
 
 	if (ret >= 0)
 		g_bbmcHeap = ret;
@@ -17,7 +17,7 @@ int bbmcCreateHeap(SceSize size)
 /* name unknown: the stored heap UID is cleared even if deletion fails. */
 int bbmcDeleteHeap(void)
 {
-	int ret = ksceKernelDeleteHeap(g_bbmcHeap);
+	int ret = sceKernelDeleteHeap(g_bbmcHeap);
 
 	g_bbmcHeap = 0;
 	return ret;
@@ -37,11 +37,11 @@ void *bbmcAlloc(SceSize size, SceSize alignment)
 		opt.mmapSize = 0;
 		option = &opt;
 	}
-	return ksceKernelAllocHeapMemoryWithOption(g_bbmcHeap, size, option);
+	return SceSysmemForDriver_49D4DD9B(g_bbmcHeap, size, option);
 }
 
 /* name unknown: same heap-release wrapper used in usbd. */
 int bbmcFree(void *ptr)
 {
-	return ksceKernelFreeHeapMemory(g_bbmcHeap, ptr);
+	return sceKernelFreeHeapMemory(g_bbmcHeap, ptr);
 }

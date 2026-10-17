@@ -2,7 +2,7 @@
  * SceDeci4pRDrfp file descriptors: the numbers the host gets for the files
  * and directories it opens (Sony's file name unknown).
  */
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <string.h>
 #include "rdrfp.h"
 
@@ -25,7 +25,7 @@ RdrfpFd *rdrfpCreateFd(RdrfpVDEntry *entry, SceUID uid)
 
 	if (f) {
 		memset(f, 0, sizeof(*f));
-		f->fd = ksceKernelAtomicGetAndAdd32(&rdrfpFdCounter, 1);
+		f->fd = SceCpuForDriver_341B6E81(&rdrfpFdCounter, 1);
 		f->uid = uid;
 		f->entry = entry;
 		rdrfpAddToList(&rdrfpFdList, f);

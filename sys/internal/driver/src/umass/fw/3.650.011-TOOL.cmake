@@ -55,8 +55,8 @@ set(MODULE_IMPORT_NIDS
 	0xA75BBDF2:F:0xAA6D4409
 )
 set(MODULE_IMPORT_FUNCS
-	ksceSblAimgrIsDolce
-	ksceKernelPrintf
+	SceSblAIMgrForDriver_71608CA3
+	SceDebugForDriver_391B74B7
 	memset
 	memcpy
 	__stack_chk_fail
@@ -72,16 +72,16 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCancelMutex
 	ksceKernelSetEventFlag
 	ksceKernelCreateMutex
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceSysrootIsSafeMode
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysrootForDriver_834439A7
 	ksceKernelTriggerSGI
 	ksceKernelTriggerSubIntr
-	ksceKernelAtomicGetAndOr32
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelAtomicGetAndClear32
+	SceCpuForDriver_2A40BB93
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceCpuForDriver_E36F3A46
 	ksceUsbdOpenPipe
 	ksceUsbdRegisterDriver
 	ksceUsbdBulkTransfer

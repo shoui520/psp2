@@ -40,16 +40,16 @@ static inline int LoadcoreSwitchProcess(SceUID pid, LoadcoreProcessContext *pc)
 
 	if (pid == KERNEL_PID)
 		return 0;
-	ret = ksceKernelProcessGetContext(pid, &pc->ctx);
+	ret = SceSysmemForDriver_2ECF7944(pid, &pc->ctx);
 	if (ret < 0)
 		return ret;
-	return ksceKernelProcessSwitchContext(pc->ctx, pc->saved);
+	return SceSysmemForDriver_2D711589(pc->ctx, pc->saved);
 }
 
 static inline void LoadcoreRestoreProcess(SceUID pid, LoadcoreProcessContext *pc)
 {
 	if (pid != KERNEL_PID)
-		ksceKernelProcessSwitchContext(pc->saved, NULL);
+		SceSysmemForDriver_2D711589(pc->saved, NULL);
 }
 
 static inline int LoadcoreLibraryMatches(const LibEntCB *ent, const LibStubCB *stub)
@@ -129,7 +129,7 @@ int LoadcoreSetModuleEntry(SceNID nid, void *entry, int type, void *arg)
 			cb->sdkVersion = *(SceUInt32 *)entry;
 			return 0;
 		}
-		ret = ksceKernelCopyFromUserProc(cb->pid, &cb->sdkVersion, entry, 4);
+		ret = sceKernelCopyFromUserProc(cb->pid, &cb->sdkVersion, entry, 4);
 		return ret < 0 ? ret : 0;
 	case NID_MODULE_PROBES_INFO:
 		if (cb->pid == KERNEL_PID)
@@ -346,7 +346,7 @@ int LoadcoreReleaseLibrary(SceModuleCB *cb, int index, SceUInt32 flags)
 		ret = (SceInt16)ent->exports->attr < 0 ? 0 : SCE_KERNEL_ERROR_LIBRARYDB_NO_LIB;
 		goto unlock;
 	}
-	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0 && ksceKernelSysrootGetStatus() > 0xff &&
+	if ((ent->exports->attr & LIBRARY_ATTR_SYSCALL) != 0 && SceSysrootForKernel_5C426B19() > 0xff &&
 	    !SceSblACMgrForKernel_BBA13D9C()) {
 		ret = SCE_KERNEL_ERROR_MODULEMGR_IN_USE;
 		goto unlock;
@@ -726,6 +726,6 @@ int sceKernelLinkWeakLibraryByLibname(SceUID pid, const char *libname)
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1101, "linkLostClientLibrary : failed (res:0x%08x)\n",
 				     ret);
-	ksceKernelL1IcacheInvalidateEntireAllCore();
+	SceCpuForKernel_803C84BF();
 	return ret;
 }

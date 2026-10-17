@@ -48,11 +48,11 @@ set(MODULE_IMPORT_NIDS
 	0xBC05A8FB:F:0xFBEA3703
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_821FC0EE
+	sceKernelCpuResumeIntr
 	memset
 	memcpy
 	memmove

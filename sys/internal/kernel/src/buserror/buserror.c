@@ -6,10 +6,9 @@
  * +0x6000 (header, then records); SceBusErrorForKernel_EBB1F135 copies it out.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>
 #include <sysmem/suspend.h>
@@ -74,7 +73,7 @@ SceSize SceBusErrorForKernel_EBB1F135(void *buf, SceSize size)
 /* name unknown: resume handler */
 static int busErrorResume(void *args)
 {
-	if (ksceKernelCpuId() == 0)
+	if (sceKernelCpuId() == 0)
 		ksceKernelEnableIntr(BUSERROR_INTR);
 	return 0;
 }

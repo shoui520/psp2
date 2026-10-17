@@ -2,14 +2,13 @@
 #include "udcd_internal.h"
 #include <string.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 
 struct udcdState udcdState = { 0 };
 
@@ -38,13 +37,13 @@ int udcdPhyInterrupt(int interrupt, void *argp)
 		bus = -1;
 	}
 	state = &udcdState.buses[bus];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	registers = udcdState.registers;
 	registers->usbPhyInterrupt = mask;
 	ready = registers->usbPhyReady;
 	if ((unsigned int)bus < 32 && ((ready >> bus) & 1))
 		ksceKernelSetEventFlag(state->phyReadyEvent, 1);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return -1;
 }
 
@@ -54,7 +53,7 @@ int udcdInitializeBusTwo(int args, void *argp)
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	state->suspendState = -1;
 	state->cableState = SCE_UDCD_STATUS_CABLE_DISCONNECTED;
 	state->stringDescriptorCount = 0;
@@ -76,7 +75,7 @@ int udcdInitializeBusTwo(int args, void *argp)
 	state->controlEndpoint.driverEndpointNumber = 0;
 	state->controlEndpoint.endpointNumber = 0;
 	udcdState.operations[2].initializeQueues(2);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return 0;
 }
 
@@ -85,7 +84,7 @@ int udcdInitializeBusOne(int args, void *argp)
 	struct udcdBusState *state = &udcdState.buses[1];
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	state->suspendState = -1;
 	state->cableState = SCE_UDCD_STATUS_CABLE_DISCONNECTED;
 	state->controllerState = UDCD_CONTROLLER_STOPPED;
@@ -107,7 +106,7 @@ int udcdInitializeBusOne(int args, void *argp)
 	state->endpoints[0].requestTail = NULL;
 	state->endpoints[0].requestHead = NULL;
 	udcdState.operations[1].initializeQueues(1);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return 0;
 }
 
@@ -142,13 +141,13 @@ int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
 	if (bus < 0 || bus > 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	state = &udcdState.buses[bus];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (udcdState.registers->usbPhyReady & (1u << bus)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return 0;
 	}
 	ksceKernelClearEventFlag(state->phyReadyEvent, ~1u);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	result = ksceKernelWaitEventFlag(state->phyReadyEvent, 1, SCE_EVENT_WAITOR, NULL,
 				       timeout ? &timeout : NULL);
 	return result == SCE_KERNEL_ERROR_WAIT_TIMEOUT ? UDCD_ERROR_TIMEOUT : result;
@@ -226,7 +225,7 @@ SceUInt32 udcdAlarmTick(void *argp)
 	ScePowerForDriver_8C0D2051(&powerStatus);
 	if (state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED && state->busPowered == 1 && state->chargingEnabled == 1 &&
 	    (powerStatus & 0xf00) != 0x200) {
-		ksceKernelPowerTick(1);
+		SceKernelSuspendForDriver_E0489831(1);
 		state->alarmTickTimer = ksceKernelRegisterTimer("SceUdcdAlarmTickTimer",
 			5000000, udcdAlarmTick, argp);
 	}
@@ -384,7 +383,7 @@ static inline __attribute__((always_inline)) void udcdApplyUsbCharging(int bus)
 					state->highSpeedDescriptorData) < 0)
 					return;
 			}
-			ksceKernelDcacheCleanRange(state->fullSpeedDescriptorData, 0x1000);
+			SceCpuForDriver_103872A5(state->fullSpeedDescriptorData, 0x1000);
 		}
 	}
 	if (enabled)
@@ -407,7 +406,7 @@ int udcdDeactivateBus(int bus)
 	SceUdcdDriver *driver;
 	int result, index;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->controllerDriverState == UDCD_CONTROLLER_DRIVER_ABSENT) {
 		result = SCE_UDCD_ERROR_ALREADY_DONE;
 		goto unlock;
@@ -425,17 +424,17 @@ int udcdDeactivateBus(int bus)
 	if (result < 0)
 		goto unlock;
 	result = SCE_UDCD_ERROR_WAIT_CANCEL;
-	if (ksceKernelFreeMemBlock(state->descriptorMemBlock) < 0)
+	if (SceSysmemForDriver_009E1C61(state->descriptorMemBlock) < 0)
 		goto unlock;
 	state->descriptorMemBlock = 0;
-	if (ksceKernelFreeMemBlock(state->deviceMemBlock) < 0)
+	if (SceSysmemForDriver_009E1C61(state->deviceMemBlock) < 0)
 		goto unlock;
 	state->deviceMemBlock = 0;
-	if (ksceKernelFreeMemBlock(state->fullSpeedConfigMemBlock) < 0)
+	if (SceSysmemForDriver_009E1C61(state->fullSpeedConfigMemBlock) < 0)
 		goto unlock;
 	state->fullSpeedConfigMemBlock = 0;
 	if (state->highSpeedConfiguration) {
-		if (ksceKernelFreeMemBlock(state->highSpeedConfigMemBlock) < 0)
+		if (SceSysmemForDriver_009E1C61(state->highSpeedConfigMemBlock) < 0)
 			goto unlock;
 		state->highSpeedConfigMemBlock = 0;
 	}
@@ -457,7 +456,7 @@ int udcdDeactivateBus(int bus)
 	state->busPowered = 0;
 	result = 0;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -470,9 +469,9 @@ int ksceUdcdDeactivateInternal(int bus)
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	state = &udcdState.buses[bus];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	enabled = state->activationEnabled;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return enabled ? udcdDeactivateBus(bus) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
@@ -482,9 +481,9 @@ int ksceUdcdDeactivate(void)
 	SceKernelIntrStatus status;
 	unsigned int enabled;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	enabled = state->activationEnabled;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return enabled ? udcdDeactivateBus(2) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
@@ -529,7 +528,7 @@ int udcdAssignEndpointNumbers(int bus)
 }
 
 /* Original name unknown. A process dies: drop its state callback. */
-int udcdProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int unk)
+int udcdProcessKill(SceUID pid, ProcEventParam *param, int unk)
 {
 	udcdUnregisterCallback(pid, 0);
 	return 0;
@@ -579,8 +578,8 @@ SceUdcdConfiguration *udcdBuildConfiguration(int speed, const int *stringCounts,
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	*memBlock = ksceKernelAllocMemBlock("SceUdcdConfigDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, 0x1000, &options);
-	if (*memBlock < 0 || ksceKernelGetMemBlockBase(*memBlock, (void **)&allocation) < 0)
+	*memBlock = SceSysmemForDriver_C94850C9("SceUdcdConfigDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, 0x1000, &options);
+	if (*memBlock < 0 || SceSysmemForDriver_A841EDDA(*memBlock, (void **)&allocation) < 0)
 		return NULL;
 	settings = (SceUdcdInterfaceSettings *)(allocation + 1);
 	interface = (SceUdcdInterfaceDescriptor *)(settings + interfaces);
@@ -731,10 +730,10 @@ int udcdBuildDeviceDescriptors(unsigned short productId, int bus)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	state->deviceMemBlock = ksceKernelAllocMemBlock("SceUdcdDevDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	state->deviceMemBlock = SceSysmemForDriver_C94850C9("SceUdcdDevDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 						    0x1000, &options);
 	if (state->deviceMemBlock < 0 ||
-	    ksceKernelGetMemBlockBase(state->deviceMemBlock, (void **)&allocation) < 0)
+	    SceSysmemForDriver_A841EDDA(state->deviceMemBlock, (void **)&allocation) < 0)
 		return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 	state->fullSpeedDevice = allocation;
 	memcpy(allocation, state->drivers->descriptor, sizeof(*allocation));
@@ -797,7 +796,7 @@ int udcdBuildDeviceDescriptors(unsigned short productId, int bus)
 	}
 	state->languageDescriptor = state->stringDescriptorCount || state->stringDescriptors ?
 		&udcdState.languageDescriptors[bus] : NULL;
-	ksceKernelDcacheCleanRange(state->fullSpeedDevice, 0x1000);
+	SceCpuForDriver_103872A5(state->fullSpeedDevice, 0x1000);
 	state->fullSpeedConfiguration = udcdBuildConfiguration(1, stringCounts, bus);
 	if (!state->fullSpeedConfiguration)
 		return 0x80243302;
@@ -894,10 +893,10 @@ static inline __attribute__((always_inline)) int udcdCallDriverRequest(
 
 	if (!driver->processRequest)
 		return -1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 	result = driver->processRequest(recipient, number, &state->controlRequest,
 					driver->user_data);
-	*status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	*status = SceCpuForDriver_D32ACE9E(&state->lock);
 	return result;
 }
 
@@ -925,11 +924,11 @@ int udcdDispatchDriverRequest(SceKernelIntrStatus *status, int bus)
 		if (!driver)
 			return -1;
 		if (driver->processRequest) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 			result = driver->processRequest(1,
 				number - interface->interfaceNumber, &state->controlRequest,
 				driver->user_data);
-			*status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+			*status = SceCpuForDriver_D32ACE9E(&state->lock);
 		}
 	} else if (recipient == 2) {
 		number = state->controlRequest.wIndex & 0xf;
@@ -945,10 +944,10 @@ int udcdDispatchDriverRequest(SceKernelIntrStatus *status, int bus)
 		return -1;
 foundEndpoint:
 		if (driver->processRequest) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 			result = driver->processRequest(2, endpoint->driverEndpointNumber,
 						&state->controlRequest, driver->user_data);
-			*status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+			*status = SceCpuForDriver_D32ACE9E(&state->lock);
 		}
 	} else {
 		for (; driver; driver = driver->link) {
@@ -1003,9 +1002,9 @@ int udcdCallBusTwoOperation(int args, void *argp)
 {
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&udcdState.buses[2].lock);
+	status = SceCpuForDriver_D32ACE9E(&udcdState.buses[2].lock);
 	udcdState.operations[2].clearQueues(2);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[2].lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[2].lock, status);
 	return 0;
 }
 
@@ -1013,9 +1012,9 @@ int udcdCallBusOneOperation(int args, void *argp)
 {
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&udcdState.buses[1].lock);
+	status = SceCpuForDriver_D32ACE9E(&udcdState.buses[1].lock);
 	udcdState.operations[1].clearQueues(1);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[1].lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[1].lock, status);
 	return 0;
 }
 
@@ -1055,13 +1054,13 @@ int udcdValidateRequests(SceUdcdDeviceRequest *request, int bus)
 				/* Native leaves data_in_vector uninitialized on entry. */
 				vector.count = 0;
 				vector.ranges = &physicalRange;
-				if (ksceKernelVARangeToPAVector(&virtualRange, &vector) < 0)
+				if (sceKernelVARangeToPAVector(&virtualRange, &vector) < 0)
 					return 0x80243407;
 				if (vector.count > 1)
 					return 0x80243404;
 				request->physicalAddress = (void *)(uintptr_t)vector.ranges->addr;
 			} else {
-				if (ksceKernelVAtoPA(request->data, &physicalAddress) < 0)
+				if (SceSysmemForDriver_8D160E65(request->data, &physicalAddress) < 0)
 					return 0x80243407;
 				request->physicalAddress = (void *)physicalAddress;
 			}
@@ -1079,9 +1078,9 @@ unsigned int udcdGetActivationEnabled(int bus)
 	SceKernelIntrStatus status;
 	unsigned int flag;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&udcdState.buses[bus].lock);
+	status = SceCpuForDriver_D32ACE9E(&udcdState.buses[bus].lock);
 	flag = udcdState.buses[bus].activationEnabled;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock, status);
 	return flag;
 }
 
@@ -1089,9 +1088,9 @@ int udcdSetActivationEnabled(unsigned int flag, int bus)
 {
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&udcdState.buses[bus].lock);
+	status = SceCpuForDriver_D32ACE9E(&udcdState.buses[bus].lock);
 	udcdState.buses[bus].activationEnabled = flag;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock, status);
 	return 0;
 }
 
@@ -1102,7 +1101,7 @@ static const char *const s_phyReadyNames[3] = { "SceUdcd0PhyReady", "SceUdcd1Phy
 int module_start(SceSize args, void *argp)
 {
 	struct udcdBusState *state;
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	SceUdcdStringDescriptor *language;
 	int bus;
 
@@ -1160,10 +1159,10 @@ int module_start(SceSize args, void *argp)
 			handler.create = NULL;
 			handler.exit = NULL;
 			handler.kill = udcdProcessKill;
-			handler.stop = udcdProcessEvent;
-			handler.start = NULL;
-			handler.switch_process = NULL;
-			state->procEventHandler = ksceKernelRegisterProcEventHandler("SceUdcd", &handler, 0);
+			handler.suspend = udcdProcessEvent;
+			handler.resume = NULL;
+			handler.notify = NULL;
+			state->procEventHandler = sceKernelRegisterProcEventHandler("SceUdcd", &handler, 0);
 			if (state->procEventHandler >= 0)
 				state->mtpProcess = -1;
 			return SCE_KERNEL_START_SUCCESS;
@@ -1177,14 +1176,14 @@ void udcdAttachDrivers(SceKernelIntrStatus *intrStatus, int bus)
 {
 	SceUdcdDriver *driver;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock,
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock,
 					       *intrStatus);
 	for (driver = udcdState.buses[bus].drivers; driver; driver = driver->link) {
 		if (driver->attach)
 			driver->attach(udcdState.buses[bus].usbVersion,
 				       driver->user_data);
 	}
-	*intrStatus = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	*intrStatus = SceCpuForDriver_D32ACE9E(
 						&udcdState.buses[bus].lock);
 }
 
@@ -1192,13 +1191,13 @@ void udcdDetachDrivers(SceKernelIntrStatus *intrStatus, int bus)
 {
 	SceUdcdDriver *driver;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock,
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock,
 					       *intrStatus);
 	for (driver = udcdState.buses[bus].drivers; driver; driver = driver->link) {
 		if (driver->detach)
 			driver->detach(driver->user_data);
 	}
-	*intrStatus = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	*intrStatus = SceCpuForDriver_D32ACE9E(
 						&udcdState.buses[bus].lock);
 }
 
@@ -1429,10 +1428,10 @@ int udcdAllocateDescriptorData(int bus)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	result = ksceKernelAllocMemBlock("SceUdcdGetDescData", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	result = SceSysmemForDriver_C94850C9("SceUdcdGetDescData", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 				       0x1000, &options);
 	state->descriptorMemBlock = result;
-	if (result < 0 || ksceKernelGetMemBlockBase(result, (void **)&base) < 0)
+	if (result < 0 || SceSysmemForDriver_A841EDDA(result, (void **)&base) < 0)
 		return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 	state->fullSpeedDescriptorData = base;
 	cursor = base + ((state->fullSpeedConfiguration->configDescriptors->wTotalLength +
@@ -1460,7 +1459,7 @@ int udcdAllocateDescriptorData(int bus)
 		if (result < 0)
 			return result;
 	}
-	ksceKernelDcacheCleanRange(state->fullSpeedDescriptorData, 0x1000);
+	SceCpuForDriver_103872A5(state->fullSpeedDescriptorData, 0x1000);
 	return 0;
 }
 
@@ -1495,12 +1494,12 @@ int udcdGetDescriptorRequest(SceKernelIntrStatus *status, int bus)
 			for (driver = state->drivers; driver; driver = driver->link) {
 				if (!strncmp(driver->driverName, "USB_MTP_Driver", 0x40) &&
 				    driver->processRequest) {
-					ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock,
+					sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock,
 										*status);
 					result = driver->processRequest(
 						state->controlRequest.bmRequestType & 0x1f,
 						0, &state->controlRequest, driver->user_data);
-					*status = ksceKernelSpinlockLowLockCpuSuspendIntr(
+					*status = SceCpuForDriver_D32ACE9E(
 										&state->lock);
 					return result;
 				}
@@ -1552,7 +1551,7 @@ configuration:
 			goto notify;
 		if (size > config->wTotalLength)
 			size = config->wTotalLength;
-		ksceKernelDcacheCleanRange(transfer->data, 0x20);
+		SceCpuForDriver_103872A5(transfer->data, 0x20);
 		break;
 	default:
 		return udcdDispatchDriverRequest(status, bus);
@@ -1576,9 +1575,9 @@ static inline __attribute__((always_inline)) int udcdSubmitDriverRequest(
 	result = udcdValidateRequests(request, bus);
 	if (result < 0)
 		return result;
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	result = udcdQueueRequest(request, &status, bus, receive);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -1627,9 +1626,9 @@ static inline __attribute__((always_inline)) void udcdRetireRequest(
 				driverEndpoint->endpointNumber, status, bus);
 	}
 	if (request->onComplete) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 		request->onComplete(request);
-		*status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		*status = SceCpuForDriver_D32ACE9E(&state->lock);
 	}
 }
 
@@ -1684,12 +1683,12 @@ int ksceUdcdReqCancelAll(SceUdcdEndpoint *endpoint)
 
 	if (!endpoint)
 		return 0x80243401;
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->controllerState == UDCD_CONTROLLER_STARTED)
 		result = udcdDrainEndpointRequests(endpoint->endpointNumber, &status, 2);
 	else
 		result = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -1733,10 +1732,10 @@ static inline __attribute__((always_inline)) int udcdUnlinkRequest(
 			request->next = NULL;
 			/* Sony leaves requestTail unchanged for a non-head cancellation. */
 			if (request->onComplete) {
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock,
+				sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock,
 								*status);
 				request->onComplete(request);
-				*status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+				*status = SceCpuForDriver_D32ACE9E(&state->lock);
 			}
 			return 0;
 		}
@@ -1758,9 +1757,9 @@ int SceUdcdForDriver_AA5FD90E(SceUdcdDeviceRequest *request)
 	SceKernelIntrStatus status;
 	int result;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	result = udcdUnlinkRequest(request, &status, 2);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -1773,9 +1772,9 @@ int SceUdcdForDriver_03781649(SceUdcdDeviceRequest *request, int bus)
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	state = &udcdState.buses[bus];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	result = udcdUnlinkRequest(request, &status, bus);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -1884,7 +1883,7 @@ static inline __attribute__((always_inline)) int udcdActivateBusImpl(
 	int occupied[8] = { -2, -2, -2, -2, -2, -2, -2, -2 };
 	int index, count, number, nextNumber, result;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->controllerDriverState == UDCD_CONTROLLER_DRIVER_ABSENT) {
 		result = SCE_UDCD_ERROR_ALREADY_DONE;
 		goto unlock;
@@ -2015,23 +2014,23 @@ static inline __attribute__((always_inline)) int udcdActivateBusImpl(
 	goto unlock;
 cleanup:
 	if (state->descriptorMemBlock) {
-		ksceKernelFreeMemBlock(state->descriptorMemBlock);
+		SceSysmemForDriver_009E1C61(state->descriptorMemBlock);
 		state->descriptorMemBlock = 0;
 	}
 	if (state->deviceMemBlock) {
-		ksceKernelFreeMemBlock(state->deviceMemBlock);
+		SceSysmemForDriver_009E1C61(state->deviceMemBlock);
 		state->deviceMemBlock = 0;
 	}
 	if (state->fullSpeedConfigMemBlock) {
-		ksceKernelFreeMemBlock(state->fullSpeedConfigMemBlock);
+		SceSysmemForDriver_009E1C61(state->fullSpeedConfigMemBlock);
 		state->fullSpeedConfigMemBlock = 0;
 	}
 	if (state->highSpeedConfigMemBlock) {
-		ksceKernelFreeMemBlock(state->highSpeedConfigMemBlock);
+		SceSysmemForDriver_009E1C61(state->highSpeedConfigMemBlock);
 		state->highSpeedConfigMemBlock = 0;
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -2047,9 +2046,9 @@ static inline __attribute__((always_inline)) int udcdActivateIfEnabled(
 	SceKernelIntrStatus status;
 	unsigned int enabled;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	enabled = state->activationEnabled;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return enabled ? udcdActivateBusImpl(productId, policy, bus) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
@@ -2339,7 +2338,7 @@ stop_controller:
 }
 
 /* Original name unknown. Restore MTP after its tracked process exits. */
-int udcdProcessEvent(SceUID process, int event, SceProcEventInvokeParam1 *param, int flags)
+int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, int flags)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
@@ -2353,9 +2352,9 @@ int udcdProcessEvent(SceUID process, int event, SceProcEventInvokeParam1 *param,
 	if (process == state->mtpProcess && ksceUdcdGetDrvState("USB_MTP_Driver") == 1 &&
 	    ksceUdcdGetDrvState("USBStor_Driver") != 2) {
 		if (event == 0x200) {
-			status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+			status = SceCpuForDriver_D32ACE9E(&state->lock);
 			state->activationEnabled = 0;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		} else {
 			result = ksceUdcdStopCurrentInternal(2);
 			if (result < 0) {
@@ -2367,9 +2366,9 @@ int udcdProcessEvent(SceUID process, int event, SceProcEventInvokeParam1 *param,
 			information = state->pendingEventDetail;
 			udcdActivateBus(0x4e4, state->busPowered, 2);
 			state->pendingEventDetail = information;
-			status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+			status = SceCpuForDriver_D32ACE9E(&state->lock);
 			state->activationEnabled = 1;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		}
 	}
 	udcdState.processEventResult = event == 0x200 ? -1 : 0;
@@ -2383,7 +2382,7 @@ static inline __attribute__((always_inline)) int udcdChangeEndpointState(
 	SceKernelIntrStatus status;
 	int number, result;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (!endpoint) {
 		result = 0x80243401;
 	} else {
@@ -2402,7 +2401,7 @@ static inline __attribute__((always_inline)) int udcdChangeEndpointState(
 			result = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 
@@ -2442,12 +2441,12 @@ int SceUdcdForDriver_B1C2EA5A(SceUdcdEndpoint *endpoint, int bus)
 	if (!endpoint)
 		return 0x80243401;
 	state = &udcdState.buses[bus];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->controllerState == UDCD_CONTROLLER_STARTED)
 		result = udcdCancelEndpointRequests(endpoint->endpointNumber, &status, bus);
 	else
 		result = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return result;
 }
 

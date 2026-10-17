@@ -5,11 +5,11 @@
 #include "../venezia_internal.h"
 #include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/cpu.h>
 
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;
 
-extern void SceCpuForDriver_E813EBB2(void);
 extern int ksceSblFwLoaderLock(const char *path, int flags);
 extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
 extern int ksceSblFwLoaderUnlock(void);
@@ -48,11 +48,11 @@ int allocVeneziaImage(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = PERVASIVE2_BASE;
-	ret = ksceKernelAllocMemBlock("ScePervasive2Reg", 0x20100806, 0x1000, &opt);
+	ret = SceSysmemForDriver_C94850C9("ScePervasive2Reg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		goto out;
 	g_veneziaBootMemory.registerBlock = ret;
-	ksceKernelGetMemBlockBase(ret, &result.base);
+	SceSysmemForDriver_A841EDDA(ret, &result.base);
 	g_veneziaBootMemory.registerBase = result.base;
 	result.info.size = sizeof(result.info);
 	result.info.base = 0;
@@ -70,11 +70,11 @@ int allocVeneziaImage(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = g_veneziaBootMemory.imagePhysicalBase;
-	ret = ksceKernelAllocMemBlock("SceVeneziaImage", 0x20108006,
+	ret = SceSysmemForDriver_C94850C9("SceVeneziaImage", 0x20108006,
 				    g_veneziaBootMemory.imageSize, &opt);
 	if (ret >= 0) {
 		g_veneziaBootMemory.imageBlock = ret;
-		ksceKernelGetMemBlockBase(ret, &result.base);
+		SceSysmemForDriver_A841EDDA(ret, &result.base);
 		g_veneziaBootMemory.imageBase = result.base;
 	}
 out:

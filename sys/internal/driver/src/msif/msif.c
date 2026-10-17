@@ -12,8 +12,8 @@
 #include "msif_auth.h"
 #include <sysmem/debug.h>
 #include <msif/msif.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -21,6 +21,7 @@
 #include <string.h>
 #include <lowio/pervasive.h>
 #include <power/power.h>
+#include <sysmem/sysclib.h>
 
 int MsproalSleep(void);
 int msproal_init(void);
@@ -35,8 +36,6 @@ int msproal_mount(int busMode);
 int msproal_control_power_supply(uint32_t value, uint32_t preserveMask);
 int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 	uint64_t interval, PowerIdleCallback callback, void *argument);
-void *__memcpy_chk(void *destination, const void *source, size_t length,
-	size_t destinationSize);
 
 _Static_assert(sizeof(SceMsInfo) == 64, "MSIF media-information result");
 
@@ -102,45 +101,45 @@ int MsifSleepThread(SceSize args, void *argp)
 
 int MsifDisableInsertionSubInterrupt(int interrupt, int subInterrupt)
 {
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
+	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
 
 	gMsifContext.insertionInterruptMask &= ~(1U << subInterrupt);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
 	return 0;
 }
 
 int MsifEnableInsertionSubInterrupt(int interrupt, int subInterrupt)
 {
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
+	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
 
 	gMsifContext.insertionInterruptMask |= 1U << subInterrupt;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
 	return 0;
 }
 
 int MsifInsertionInterrupt(int interrupt, void *argp)
 {
 	struct MsifContext *context = argp;
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
+	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
 	uint32_t status = ScePervasiveForDriver_F9E7B023();
 
 	if ((status & 1) && (context->insertionInterruptMask & 2))
 		ksceKernelTriggerSubIntr(interrupt, 1, NULL);
 	if ((status & 2) && (context->insertionInterruptMask & 1))
 		ksceKernelTriggerSubIntr(interrupt, 0, NULL);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
 	return -1;
 }
 
 int MsifControllerInterrupt(int interrupt, void *argp)
 {
 	struct MsifContext *context = argp;
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&gMsifContext.lock);
+	int state = SceCpuForDriver_D32ACE9E(&gMsifContext.lock);
 
 	gMsifContext.interruptTime = sceKernelGetSystemTimeWide();
 	if (context->started)
 		MsproalUserCompleteTransfer(context->handle);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
 	return -1;
 }
 
@@ -157,7 +156,7 @@ void sceMsifIdleCallback(uint32_t event, uint32_t idle, void *argument,
 	result = ksceKernelSetEventFlag(gMsifContext.sleepEventFlag, 1);
 #if FW_DEBUG
 	if (result != 0)
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(2287),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2287),
 			"Can't set msif sleep ctrl event flag. ret:0x%x\n", result);
 #endif
 }
@@ -169,7 +168,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 	result = ksceKernelStartThread(gMsifContext.sleepThread, 4, NULL);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(2306),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2306),
 			"Can't start msif sleep control thread. ret:0x%x\n",
 			result);
 #endif
@@ -180,7 +179,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 
 		if (idleCallback == NULL) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(2313),
+			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2313),
 				"Can't set msif Idle Callback. link not resolved\n");
 #endif
 		} else {
@@ -190,7 +189,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 				gMsifContext.mediaAccessTickEnabled = 1;
 #if FW_DEBUG
 			else
-				ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(2323),
+				SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2323),
 					"Can't set msif Idle Callback. ret:0x%x\n",
 					result);
 #endif
@@ -310,7 +309,7 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 			.ranges_size = 32,
 			.ranges = ranges,
 		};
-		result = ksceKernelVARangeToPAVector(&virtualRange, &vector);
+		result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 		if (result < 0)
 			return result;
 		rangeCount = vector.count;
@@ -346,13 +345,13 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 					.ranges_size = 1,
 					.ranges = &physicalRange,
 				};
-				result = ksceKernelVARangeToPAVector(&virtualRange, &vector);
+				result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 				if (result < 0)
 					return result;
 				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 1149,
 					"sceMsifGetDmaTableEntryNum");
 				if (vector.data_in_vector != 1) {
-					ksceKernelPrintfWithInfo(0, SCE_DBGINFO_FUNC(1152,
+					SceDebugForDriver_02B04343(0, SCE_DBGINFO_FUNC(1152,
 						"sceMsifGetDmaTableEntryNum"),
 						"0x%x %d 0x%x 0x%x\n", 0x803d0008,
 						1152, cursor, remaining);
@@ -368,7 +367,7 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 			}
 		}
 		if (entries > 8192) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1386),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1386),
 				"0x%x %d 0x%x 0x%x %p 0x%x\n", 0x803d0005,
 				1386, entries, rangeCount, data, length);
 			return 0x803d0005;
@@ -376,12 +375,12 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	if (gMsifContext.headLength) {
 		if (write)
-			ksceKernelDcacheCleanRange(gMsifContext.headBuffer, 64);
+			SceCpuForDriver_103872A5(gMsifContext.headBuffer, 64);
 		else
-			ksceKernelDcacheCleanInvalidateRange(gMsifContext.headBuffer, 64);
+			SceCpuForDriver_364E68A4(gMsifContext.headBuffer, 64);
 		SCE_DBG_ASSERT((gMsifContext.headLength & 3) == 0, 1405);
 		if (gMsifContext.headLength & 3) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1410),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1410),
 				"0x%x %d 0x%x %p\n", 0x803d0001,
 				1410, gMsifContext.headLength, data);
 			return 0x803d0001;
@@ -394,9 +393,9 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	if (alignedLength) {
 		if (write)
-			ksceKernelDcacheCleanRange(alignedData, alignedLength);
+			SceCpuForDriver_103872A5(alignedData, alignedLength);
 		else
-			ksceKernelDcacheCleanInvalidateRange(alignedData, alignedLength);
+			SceCpuForDriver_364E68A4(alignedData, alignedLength);
 		if (ranges) {
 			for (i = 0; i != rangeCount; ++i) {
 				uintptr_t address = ranges[i].addr;
@@ -448,14 +447,14 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 					.ranges_size = 1,
 					.ranges = &physicalRange,
 				};
-				result = ksceKernelVARangeToPAVector(&virtualRange, &vector);
+				result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 				if (result < 0)
 					goto aligned_error;
 				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 1302,
 					"sceMsifWriteLinkListForAlignedData");
 				if (vector.data_in_vector != 1) {
 					result = 0x803d0008;
-					ksceKernelPrintfWithInfo(0, SCE_DBGINFO_FUNC(1305,
+					SceDebugForDriver_02B04343(0, SCE_DBGINFO_FUNC(1305,
 						"sceMsifWriteLinkListForAlignedData"),
 						"0x%x %d 0x%x 0x%x\n", result,
 						1305, alignedData, remaining);
@@ -504,12 +503,12 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 				gMsifContext.dmaDescriptorsPhysicalAddress +
 				index * sizeof(*descriptors);
 		if (write)
-			ksceKernelDcacheCleanRange(gMsifContext.tailBuffer, 64);
+			SceCpuForDriver_103872A5(gMsifContext.tailBuffer, 64);
 		else
-			ksceKernelDcacheCleanInvalidateRange(gMsifContext.tailBuffer, 64);
+			SceCpuForDriver_364E68A4(gMsifContext.tailBuffer, 64);
 		SCE_DBG_ASSERT((gMsifContext.tailLength & 3) == 0, 1472);
 		if (gMsifContext.tailLength & 3) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1476),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1476),
 				"0x%x %d 0x%x %p\n", 0x803d0001,
 				1476, gMsifContext.tailLength, data);
 			return 0x803d0001;
@@ -522,19 +521,19 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 	}
 	SCE_DBG_ASSERT(index == entries, 1495);
 	if (index != entries) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1499),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(1499),
 			"0x%x %d %d %d %p 0x%x\n", 0x803d0008,
 			1499, index, entries, data, length);
 		return 0x803d0008;
 	}
 	if (index)
 		descriptors[index - 1].transferControl &= ~0x40000000U;
-	ksceKernelDcacheCleanRange(descriptors,
+	SceCpuForDriver_103872A5(descriptors,
 		((entries * sizeof(*descriptors)) & ~63U) + 64);
 	return index;
 
 aligned_error:
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1449), "0x%x %d\n", result, 1449);
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1449), "0x%x %d\n", result, 1449);
 	return result;
 }
 
@@ -557,7 +556,7 @@ int sceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 
 		if ((uint32_t)(result + 205) <= 204)
 			error = gMsifLibraryErrors[result + 205];
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(1782),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(1782),
 			"Msif Retry. 0x%x %d 0x%x %p 0x%x\n",
 			error, 1782, sector, data, count);
 #endif
@@ -570,23 +569,23 @@ int sceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 		else
 			result = 0x803d0000;
 		if (result != (int)0x803d0001)
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1789),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(1789),
 				"0x%x %d 0x%x %p 0x%x\n", result,
 				1789, sector, data, count);
 		goto unlock;
 	}
 	endTime = sceKernelGetSystemTimeWide();
 	if (gMsifContext.headLength) {
-		ksceKernelDcacheInvalidateRange(gMsifContext.headBuffer, 64);
+		SceCpuForDriver_02796361(gMsifContext.headBuffer, 64);
 		memcpy(data, gMsifContext.headBuffer, gMsifContext.headLength);
 	}
 	if (gMsifContext.tailLength) {
-		ksceKernelDcacheInvalidateRange(gMsifContext.tailBuffer, 64);
+		SceCpuForDriver_02796361(gMsifContext.tailBuffer, 64);
 		memcpy(gMsifContext.alignedData + gMsifContext.alignedLength,
 			gMsifContext.tailBuffer, gMsifContext.tailLength);
 	}
 	if (gMsifContext.alignedLength)
-		ksceKernelDcacheInvalidateRange(gMsifContext.alignedData,
+		SceCpuForDriver_02796361(gMsifContext.alignedData,
 			gMsifContext.alignedLength);
 	if (gMsifContext.slowCardMode == 1) {
 		uint64_t period = startTime / 3000000;
@@ -597,7 +596,7 @@ int sceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 			gMsifContext.slowDelaySelector) {
 			delay = startTime % 40 ? 350000 : 400000;
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(913, "sceMsifSlowModeDelay"),
 				"MemoryCard special delay in Slow Card Mode\n");
 #endif
@@ -644,7 +643,7 @@ tick:
 
 #if FW_DEBUG
 		if (tickResult < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
@@ -685,11 +684,11 @@ int module_start(SceSize args, const void *argp)
 	option.size = sizeof(option);
 	option.paddr = MSIF_REG_BASE;
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	result = ksceKernelAllocMemBlock("SceMsif", 0x20100806, MSIF_REG_SIZE, &option);
+	result = SceSysmemForDriver_C94850C9("SceMsif", 0x20100806, MSIF_REG_SIZE, &option);
 	if (result < 0)
 		return 2;
 	gMsifContext.controllerMemBlock = result;
-	ksceKernelGetMemBlockBase(result, (void **)&gMsifContext.controller);
+	SceSysmemForDriver_A841EDDA(result, (void **)&gMsifContext.controller);
 	gMsifContext.eventFlag = ksceKernelCreateEventFlag("SceMsif", 0, 0, NULL);
 	if (gMsifContext.eventFlag < 0)
 		goto free_controller;
@@ -699,21 +698,21 @@ int module_start(SceSize args, const void *argp)
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = ksceKernelAllocMemBlock("SceMsif", 0x1020d006, 98304, &option);
+	result = SceSysmemForDriver_C94850C9("SceMsif", 0x1020d006, 98304, &option);
 	if (result < 0)
 		goto finalize_mutex;
 	gMsifContext.dmaMemBlock = result;
-	ksceKernelGetMemBlockBase(result, (void **)&gMsifContext.dmaDescriptors);
+	SceSysmemForDriver_A841EDDA(result, (void **)&gMsifContext.dmaDescriptors);
 	memset(gMsifContext.dmaDescriptors, 0, 98304);
-	result = ksceKernelVAtoPA(gMsifContext.dmaDescriptors,
+	result = SceSysmemForDriver_8D160E65(gMsifContext.dmaDescriptors,
 		&gMsifContext.dmaDescriptorsPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
-	result = ksceKernelVAtoPA(gMsifContext.headBuffer,
+	result = SceSysmemForDriver_8D160E65(gMsifContext.headBuffer,
 		&gMsifContext.headPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
-	result = ksceKernelVAtoPA(gMsifContext.tailBuffer,
+	result = SceSysmemForDriver_8D160E65(gMsifContext.tailBuffer,
 		&gMsifContext.tailPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
@@ -726,7 +725,7 @@ int module_start(SceSize args, const void *argp)
 		(SceKernelIntrOptParam *)&gMsifInsertionOptions);
 	if (result < 0)
 		goto release_controller_interrupt;
-	result = ksceKernelRegisterSysEventHandler("SceMsif",
+	result = sceKernelRegisterSysEventHandler("SceMsif",
 		(SceKernelSysEventHandler)MsifSysEventHandler, NULL);
 	if (result < 0)
 		goto release_insertion_interrupt;
@@ -766,7 +765,7 @@ delete_sleep_thread:
 delete_sleep_event:
 	ksceKernelDeleteEventFlag(gMsifContext.sleepEventFlag);
 unregister_sys_event:
-	ksceKernelUnregisterSysEventHandler(gMsifSysEventHandler);
+	sceKernelUnregisterSysEventHandler(gMsifSysEventHandler);
 release_insertion_interrupt:
 	ksceKernelDisableIntr(60);
 	ksceKernelReleaseIntrHandler(60);
@@ -774,16 +773,16 @@ release_controller_interrupt:
 	ksceKernelDisableIntr(61);
 	ksceKernelReleaseIntrHandler(61);
 free_dma:
-	ksceKernelFreeMemBlock(gMsifContext.dmaMemBlock);
+	SceSysmemForDriver_009E1C61(gMsifContext.dmaMemBlock);
 finalize_mutex:
 	ksceKernelFinalizeFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 	ksceKernelDeleteEventFlag(gMsifContext.eventFlag);
-	ksceKernelFreeMemBlock(gMsifContext.controllerMemBlock);
+	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
 	return result < 0 ? 2 : 0;
 delete_event:
 	ksceKernelDeleteEventFlag(gMsifContext.eventFlag);
 free_controller:
-	ksceKernelFreeMemBlock(gMsifContext.controllerMemBlock);
+	SceSysmemForDriver_009E1C61(gMsifContext.controllerMemBlock);
 	return 2;
 }
 
@@ -804,7 +803,7 @@ int sceMsifSwReset(void)
 		if (result == (int)0x803d0021)
 			goto unlock;
 		if (result != (int)0x803d0020) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(376),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(376),
 				"0x%x %d\n", result, 376);
 			goto unlock;
 		}
@@ -812,7 +811,7 @@ int sceMsifSwReset(void)
 	gMsifContext.started = 1;
 	revision = kscePervasiveGetSoCRevision() & 0x1ff00;
 	if (!revision) {
-		if (ksceSblAimgrIsGenuineDolce())
+		if (SceSblAIMgrForDriver_C6E83F34())
 			result = msproal_control_power_supply(0, 0xffff80ff);
 		else
 			result = msproal_control_power_supply(0x300, 0xffff80ff);
@@ -834,7 +833,7 @@ int sceMsifSwReset(void)
 			error = gMsifLibraryErrors[result + 205];
 		else
 			error = 0x803d0000;
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(419),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(419),
 			"0x%x %d\n", error, 419);
 	}
 check_media:
@@ -860,7 +859,7 @@ check_media:
 	else
 		result = 0x803d0000;
 	if (result != (int)0x803d0020)
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(427),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(427),
 			"0x%x %d\n", result, 427);
 unlock:
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
@@ -950,7 +949,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 		result = kscePowerTick(16);
 #if FW_DEBUG
 		if (result < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", result);
 #endif
@@ -1017,7 +1016,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 
 		if ((uint32_t)(result + 205) <= 204)
 			error = gMsifLibraryErrors[result + 205];
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			SCE_DBGINFO_FUNC(1925, "sceMsifWriteSector"),
 			"Msif Retry. 0x%x %d 0x%x %p 0x%x\n",
 			error, 1925, sector, data, count);
@@ -1030,7 +1029,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 			result = gMsifLibraryErrors[result + 205];
 		else
 			result = 0x803d0000;
-		ksceKernelPrintfWithInfo(0,
+		SceDebugForDriver_02B04343(0,
 			SCE_DBGINFO_FUNC(1931, "sceMsifWriteSector"),
 			"0x%x %d 0x%x %p 0x%x\n", result,
 			1931, sector, data, count);
@@ -1049,7 +1048,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 				else
 					readResult = 0x803d0000;
 				if (readResult != (int)0x803d0001)
-					ksceKernelPrintfWithInfo(0,
+					SceDebugForDriver_02B04343(0,
 						SCE_DBGINFO_FUNC(1848, "sceMsifBug29526DummyRead"),
 						"0x%x %d\n", readResult, 1848);
 			}
@@ -1066,7 +1065,7 @@ int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 			gMsifContext.slowDelaySelector) {
 			delay = startTime % 40 ? 350000 : 400000;
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(913, "sceMsifSlowModeDelay"),
 				"MemoryCard special delay in Slow Card Mode\n");
 #endif
@@ -1108,7 +1107,7 @@ tick:
 
 #if FW_DEBUG
 		if (tickResult < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
@@ -1172,14 +1171,14 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 		}
 		SCE_DBG_ASSERT_FUNC(entries <= 8192, 1570, "sceMsifDevNullPrepareDmaTable");
 		if (entries > 8192) {
-			ksceKernelPrintfWithInfo(0,
+			SceDebugForDriver_02B04343(0,
 				SCE_DBGINFO_FUNC(1574, "sceMsifDevNullPrepareDmaTable"),
 				"0x%x %d %d 0x%x\n", 0x803d0005, 1574, entries, length);
 			ksceKernelUnlockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex);
 			return 0x803d0005;
 		}
 		descriptors[entries - 1].transferControl &= ~0x40000000U;
-		ksceKernelDcacheCleanRange(descriptors,
+		SceCpuForDriver_103872A5(descriptors,
 			((entries * sizeof(*descriptors)) & ~63U) + 64);
 		result = msproal_write(currentSector, sectors, gMsifContext.dmaDescriptors);
 		if (result) {
@@ -1187,7 +1186,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 				result = gMsifLibraryErrors[result + 205];
 			else
 				result = 0x803d0000;
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(2030),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(2030),
 				"0x%x %d 0x%x 0x%x\n", result, 2030, sector, count);
 			goto unlock;
 		}
@@ -1199,7 +1198,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 
 #if FW_DEBUG
 		if (tickResult < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
@@ -1228,7 +1227,7 @@ int sceMsifFormat(int mode)
 			result = gMsifLibraryErrors[result + 205];
 		else
 			result = 0x803d0000;
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(2068),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(2068),
 			"0x%x %d\n", result, 2068);
 	}
 	if (gMsifContext.mediaAccessTickEnabled) {
@@ -1236,7 +1235,7 @@ int sceMsifFormat(int mode)
 
 #if FW_DEBUG
 		if (tickResult < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
@@ -1273,7 +1272,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 			result = gMsifLibraryErrors[result + 205];
 		else
 			result = 0x803d0000;
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(2122),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(2122),
 			"0x%x %d\n", result, 2122);
 		goto unlock;
 	}
@@ -1283,7 +1282,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 			result = gMsifLibraryErrors[result + 205];
 		else
 			result = 0x803d0000;
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(2131),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(2131),
 			"0x%x %d\n", result, 2131);
 		goto unlock;
 	}
@@ -1292,7 +1291,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 
 #if FW_DEBUG
 		if (tickResult < 0)
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(2339, "sceMsifMediaAccessTick"),
 				"msif power tick error. ret:0x%x\n", tickResult);
 #endif
@@ -1313,7 +1312,7 @@ unlock:
 int ksceMsifEnableSlowMode(void)
 {
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0,
+	SceDebugForDriver_D9703808(1, 0,
 		SCE_DBGINFO_FUNC(2151, "sceMsifEnableSlowCardMode"),
 		"Enable MSIF Slow Card Mode\n");
 #endif
@@ -1324,7 +1323,7 @@ int ksceMsifEnableSlowMode(void)
 int ksceMsifDisableSlowMode(void)
 {
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0,
+	SceDebugForDriver_D9703808(1, 0,
 		SCE_DBGINFO_FUNC(2162, "sceMsifDisableSlowCardMode"),
 		"Disable MSIF Slow Card Mode\n");
 #endif

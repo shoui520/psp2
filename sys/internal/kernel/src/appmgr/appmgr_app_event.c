@@ -15,8 +15,6 @@ extern SceUID g_appmgrMainMutexOwner;
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern struct AppState *appmgrFindCurrentApp(struct AppState *apps);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo appEventMutexPanicInfo = {
@@ -33,12 +31,12 @@ static const SceKernelDebugInfo appEventArgumentPanicInfo = {
 
 _Noreturn void appmgrAppEventArgumentPanic(void)
 {
-	ksceKernelPanic(&appEventArgumentPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&appEventArgumentPanicInfo, __builtin_return_address(0));
 }
 
 _Noreturn void appmgrAppEventMutexPanic(void)
 {
-	ksceKernelPanic(&appEventMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&appEventMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 

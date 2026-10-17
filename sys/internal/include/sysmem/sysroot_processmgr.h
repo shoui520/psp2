@@ -15,10 +15,12 @@ typedef struct SysrootProcessmgrOps {
 	int (*decResource)(SceUInt32 type);
 } SysrootProcessmgrOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootProcessmgrOps) == 0x20,
 	       "Sysroot process-manager service table size");
 _Static_assert(offsetof(SysrootProcessmgrOps, getSelfAuthInfo) == 0x10,
 	       "Sysroot process-manager authentication query offset");
+#endif
 
 struct SceProcessObject;
 
@@ -28,9 +30,9 @@ typedef struct SysrootProcessmgrRuntimeOps {
 	void *(*getLibkernelAddr0)(struct SceProcessObject *process);
 	void *(*getLibkernelAddr1)(struct SceProcessObject *process);
 	void *(*getLibkernelAddr2)(struct SceProcessObject *process);
-	void *(*allocCurrentHeap)(SceSize size, void *opt);
+	void *(*allocCurrentHeap)(SceSize size, void *opt, const void *caller);
 	int (*freeCurrentHeap)(void *ptr);
-	void *(*allocRemoteHeap)(SceUID pid, SceSize size, void *opt);
+	void *(*allocRemoteHeap)(SceUID pid, SceSize size, void *opt, const void *caller);
 	int (*freeRemoteHeap)(SceUID pid, void *ptr);
 	int (*moduleStart2)(void);
 	int (*inhibitProcEvent)(SceUID pid);
@@ -43,7 +45,9 @@ typedef struct SysrootProcessmgrRuntimeOps {
 	int (*getSdkVersion)(SceUID pid, SceUInt32 *sdkVersion);
 } SysrootProcessmgrRuntimeOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootProcessmgrRuntimeOps) == 0x44,
 	       "Sysroot process-manager runtime service table size");
 _Static_assert(offsetof(SysrootProcessmgrRuntimeOps, getSdkVersion) == 0x40,
 	       "Sysroot process-manager SDK version service offset");
+#endif

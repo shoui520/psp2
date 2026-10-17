@@ -2,7 +2,7 @@
  * Fixed-size buffers carved out of one memory block, kept on a free list.
  */
 
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "pfsmgr_internal.h"
 
@@ -27,16 +27,16 @@ int pfsBufferListInit(ScePfsBufferList *list, const char *name, SceSize elementS
 
 	stride = elementSize + (align - elementSize % align) % align;
 	total = count * stride;
-	list->memBlock = ksceKernelAllocMemBlock(name, PFS_BUFFER_MEMBLOCK_TYPE,
+	list->memBlock = SceSysmemForDriver_C94850C9(name, PFS_BUFFER_MEMBLOCK_TYPE,
 						 total + (-total & (PFS_BUFFER_MEMBLOCK_ALIGN - 1)),
 						 &opt);
 	if (list->memBlock < 0) {
 		ret = SCE_PFS_ERROR_NO_MEMORY;
 		goto deleteMutex;
 	}
-	ret = ksceKernelGetMemBlockBase(list->memBlock, (void **)&base);
+	ret = SceSysmemForDriver_A841EDDA(list->memBlock, (void **)&base);
 	if (ret != 0) {
-		ksceKernelFreeMemBlock(list->memBlock);
+		SceSysmemForDriver_009E1C61(list->memBlock);
 		goto deleteMutex;
 	}
 
@@ -63,7 +63,7 @@ deleteMutex:
 
 void pfsBufferListTerm(ScePfsBufferList *list)
 {
-	ksceKernelFreeMemBlock(list->memBlock);
+	SceSysmemForDriver_009E1C61(list->memBlock);
 	ksceKernelDeleteMutex(list->mutex);
 }
 

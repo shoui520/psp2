@@ -9,7 +9,7 @@
  */
 
 #include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/lowio/i2c.h>
 #include <sysmem/sysevent_ids.h>
 
@@ -191,7 +191,7 @@ int module_start(SceSize argc, const void *argv)
 	if (ret < 0)
 		return 2;
 	clockgen.mutex = ret;
-	ksceKernelRegisterSysEventHandler("SceClockgen", systemEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceClockgen", systemEvent, NULL);
 	clockgen.singleRead = 1;
 	SceClockgenForDriver_0BA41732();
 	if (!supportsSpread(clockgen.registers[0]))

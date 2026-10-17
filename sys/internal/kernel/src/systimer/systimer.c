@@ -6,7 +6,7 @@
  * hardware count; it absorbs SetCount and the interval of periodic timers.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <sysmem/compiler.h>
@@ -176,13 +176,13 @@ SceSysTimerId ksceKernelSysTimerAlloc(int type)
 
 	for (i = 0; i < count; i++) {
 		info = &table[i];
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+		state = SceCpuForDriver_D32ACE9E(&info->lock);
 		if (!(info->flags & TIMER_ALLOCATED)) {
 			info->flags |= TIMER_ALLOCATED;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 			break;
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	}
 	if (i >= count)
 		return SCE_KERNEL_ERROR_NO_FREE_TIMER;
@@ -203,9 +203,9 @@ int ksceKernelSysTimerFree(SceSysTimerId id)
 	info = GetTimerInfo(id);
 	ksceKernelDisableIntr(info->intrCode);
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 
@@ -228,7 +228,7 @@ int ksceKernelSysTimerFree(SceSysTimerId id)
 	info->base = 0;
 	info->interval = 0;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -244,13 +244,13 @@ int ksceKernelSysTimerSetClockSource(SceSysTimerId id, SceUInt32 source, SceUInt
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -263,7 +263,7 @@ int ksceKernelSysTimerSetClockSource(SceSysTimerId id, SceUInt32 source, SceUInt
 	else
 		info->wordReg->control = ((info->wordReg->control & 0xff8ff) | prescale << 24) | sel;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -276,13 +276,13 @@ int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -292,7 +292,7 @@ int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
 		info->wordReg->compare = (SceUInt32)interval;
 	info->interval = interval;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -319,13 +319,13 @@ int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
 	}
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -337,7 +337,7 @@ int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
 		ksceKernelSetIntrTarget(info->intrCode, targetCpu);
 	}
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -346,13 +346,13 @@ int ksceKernelSysTimerStartCount(SceSysTimerId id)
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -369,7 +369,7 @@ int ksceKernelSysTimerStartCount(SceSysTimerId id)
 			info->wordReg->control |= CTRL_START_ONESHOT_WORD;
 	}
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -378,9 +378,9 @@ int ksceKernelSysTimerStopCount(SceSysTimerId id)
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_COUNTING)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_STOPPED;
 	}
 
@@ -390,7 +390,7 @@ int ksceKernelSysTimerStopCount(SceSysTimerId id)
 		info->wordReg->control &= ~TIMER_CONTROL_ENABLE;
 	info->flags &= ~TIMER_COUNTING;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -403,9 +403,9 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 
@@ -439,7 +439,7 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 		info->base = 0;
 	}
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -452,9 +452,9 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 
@@ -485,7 +485,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 		info->base += count;
 	}
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -549,13 +549,13 @@ int SceSystimerForDriver_904DF737(SceSysTimerId id, SceUInt32 a, SceUInt32 b)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -564,7 +564,7 @@ int SceSystimerForDriver_904DF737(SceSysTimerId id, SceUInt32 a, SceUInt32 b)
 	else
 		info->wordReg->control = (info->wordReg->control & 0xfff0ff7f) | b << 7 | 0x40 | a << 16;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -580,13 +580,13 @@ int SceSystimerForDriver_C34D7940(SceSysTimerId id, SceUInt32 a)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	info = GetTimerInfo(id);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&info->lock);
+	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (unlikely(!(info->flags & TIMER_ALLOCATED))) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_NOT_ALLOCATED;
 	}
 	if (info->flags & TIMER_COUNTING) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 		return SCE_KERNEL_ERROR_TIMER_COUNTING;
 	}
 
@@ -595,7 +595,7 @@ int SceSystimerForDriver_C34D7940(SceSysTimerId id, SceUInt32 a)
 	else
 		info->wordReg->control = (info->wordReg->control & 0xffff0fff) | a << 12 | 0x20;
 
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
 	return 0;
 }
 
@@ -632,13 +632,13 @@ int StartSystimer(SceSize args, void *argp)
 	void *base;
 	SceUInt32 i;
 
-	uid = ksceKernelAllocMemBlock("SceLongRangeTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceLongRangeTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				      LONG_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 836, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(837);
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	for (i = 0; i < LONG_TIMERS; i++) {
 		s_longTimer[i].id = i | SCE_SYSTIMER_TYPE_LONG << 16;
 		s_longTimer[i].intrCode = i + LONG_INTR_BASE;
@@ -651,13 +651,13 @@ int StartSystimer(SceSize args, void *argp)
 	}
 
 	opt.paddr = TIMER_WORD_REG_BASE(0);
-	uid = ksceKernelAllocMemBlock("SceWordTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceWordTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				      WORD_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 865, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(866);
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	for (i = 0; i < WORD_TIMERS; i++) {
 		s_wordTimer[i].id = i | SCE_SYSTIMER_TYPE_WORD << 16;
 		s_wordTimer[i].intrCode = i + WORD_INTR_BASE;

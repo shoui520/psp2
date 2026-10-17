@@ -58,9 +58,9 @@ set(MODULE_IMPORT_NIDS
 	0x1590166F:F:0x04B7766E
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelPrintf
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceDebugForDriver_391B74B7
 	memset
 	memcpy
 	__stack_chk_fail
@@ -76,14 +76,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelCreateThread
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelRegisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
-	ksceKernelPowerTick
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	sceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	SceKernelSuspendForDriver_E0489831
 	SceSysrootForDriver_34281746
 	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_2E992B02

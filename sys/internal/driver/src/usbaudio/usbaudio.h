@@ -16,7 +16,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
 int ksceUsbAudioGetDeviceIdList(unsigned *list, int size);
 int ksceUsbAudioRegisterCallback(int callback);

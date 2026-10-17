@@ -1,11 +1,12 @@
 /* DCMP status packets queued by the per-core polling manager. */
 #include "sdfmgr_internal.h"
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/aes.h>
 #include <sysmem/qafmgr.h>
 #include <stdio.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
+#include <sysmem/sysroot.h>
 
 typedef struct DcmpPacket {
 	DcmpStatusHeader message;
@@ -105,7 +106,6 @@ static const uint8_t s_dcmpSystemErrorIv[16] = {
 	0x47, 0xfb, 0x05, 0x0e, 0xa6, 0xf5, 0xfe, 0xcb,
 	0xcc, 0x01, 0x9d, 0xe0, 0x90, 0x1f, 0xc1, 0x67,
 };
-int ksceSysrootGetSessionId(void *session);
 
 #if FW_DEBUG
 #define DCMP_DEBUG_INFO(_line, _lineHash, _funcHash, _func) ({ \
@@ -204,8 +204,8 @@ void _discardPacket(SdfMgrDcmpCpuState *cpu, SceDeci4pHeader *header)
 	void *buffer = header + 1;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, remaining < 0x11000,
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, remaining < 0x11000,
 			DCMP_DEBUG_INFO(686, 0x236c9862, 0x68bd4e89, "_discardPacket"),
 			caller);
 #endif
@@ -243,11 +243,11 @@ void _dcmpRecv(int event, void *arg, void *context)
 			SceDeci4pHeader *out;
 			SceSize size;
 			uint32_t direct;
-			unsigned state = ksceKernelCpuSuspendIntr();
+			unsigned state = SceCpuForDriver_821FC0EE();
 			int read;
 
 			if (queue->count <= 0) {
-				ksceKernelCpuResumeIntr(state);
+				sceKernelCpuResumeIntr(state);
 #if FW_DEBUG
 				SceDeci4pSDfMgrForKernel_501CE61D(15,
 					DCMP_DEBUG_INFO(325, 0xf00ddcfe, 0x309bcef3, "_dcmpSend"),
@@ -259,7 +259,7 @@ void _dcmpRecv(int event, void *arg, void *context)
 			direct = queue->directMode;
 			out = queue->packets[read];
 			size = queue->sizes[read];
-			ksceKernelCpuResumeIntr(state);
+			sceKernelCpuResumeIntr(state);
 			if (direct)
 				out = cpu->systemError;
 			if (out->dst == 0x6000 || sdfMgrGetCpuFlags(2)) {
@@ -280,14 +280,14 @@ void _dcmpRecv(int event, void *arg, void *context)
 					"no route (0x%04x)\n", out->dst);
 #endif
 			}
-			state = ksceKernelCpuSuspendIntr();
+			state = SceCpuForDriver_821FC0EE();
 			read = queue->read;
 			queue->sizes[read] = 0;
 			read = (int)((uint32_t)read + 1);
 			queue->read = read > 15 ? 0 : read;
 			queue->count = (int)((uint32_t)queue->count - 1);
 			queue->directMode = 0;
-			ksceKernelCpuResumeIntr(state);
+			sceKernelCpuResumeIntr(state);
 		}
 		return;
 	}
@@ -457,8 +457,8 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 	protocol->handle = 0xfff;
 	protocol->flags = 0;
 	snprintf(name, sizeof(name), "%s%d", "SceDeci4pSDfMgrDcmp",
-		 (int)ksceKernelCpuId());
-	result = ksceKernelAllocMemBlock(name, SceDeci4pSDfMgrForKernel_35238B8A(),
+		 (int)sceKernelCpuId());
+	result = SceSysmemForDriver_C94850C9(name, SceDeci4pSDfMgrForKernel_35238B8A(),
 					 sizeof(*buffers), NULL);
 	if (result < 0) {
 #if FW_DEBUG
@@ -471,7 +471,7 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 #endif
 	}
 	cpu->memblock = result;
-	result = ksceKernelGetMemBlockBase(result, &base);
+	result = SceSysmemForDriver_A841EDDA(result, &base);
 	if (result < 0) {
 #if FW_DEBUG
 		errorInfo = DCMP_DEBUG_INFO(140, 0x917b6dd8, 0xb000cfda, "dcmpInit");
@@ -514,8 +514,8 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 #if FW_DEBUG
 error:
 	SceDeci4pSDfMgrForKernel_501CE61D(15, errorInfo, failure, result);
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, 0, assertInfo, caller);
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, 0, assertInfo, caller);
 	return result;
 #endif
 }
@@ -598,14 +598,14 @@ void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source)
 		packet->mode = qa ? 0x10000001 : 0x20000001;
 		packet->payloadSize = aligned;
 		packet->metadataSize = 0x28;
-		packet->dipsw = qa ? ksceKernelGetDipswInfo(3) : 0;
-		ksceSysrootGetSessionId(packet->session);
+		packet->dipsw = qa ? SceDipswForDriver_B2AD48BE(3) : 0;
+		SceSysrootForKernel_84783B71(packet->session);
 		if (!qa) {
 			DcmpAesWorkspace context;
 			uint8_t block[32];
 			uint32_t blockSize, offset, i;
 
-			result = ksceAesInit2(&context.aes, 128, 256, s_dcmpSystemErrorKey);
+			result = SceKernelUtilsForDriver_EDA97D6D(&context.aes, 128, 256, s_dcmpSystemErrorKey);
 			blockSize = context.aes.blockWords * 4;
 			if (result >= 0)
 				for (i = 0; i < blockSize; i++)
@@ -615,7 +615,7 @@ void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source)
 
 				for (i = 0; i < blockSize; i++)
 					block[i] = out[i] ^ context.chain[i];
-				ksceAesEncrypt2(&context.aes, block, out);
+				SceKernelUtilsForDriver_302947B6(&context.aes, block, out);
 				blockSize = context.aes.blockWords * 4;
 				for (i = 0; i < blockSize; i++)
 					context.chain[i] = out[i];

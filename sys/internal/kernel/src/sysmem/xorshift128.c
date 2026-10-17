@@ -1,10 +1,6 @@
 /* SceKernelUtils: Marsaglia's xorshift128 generator. */
 
-#include <psp2kern/types.h>
-
-typedef struct SceXorshift128State {
-	SceUInt32 x, y, z, w;
-} SceXorshift128State;
+#include <sysmem/utils.h>
 
 /* a state of all zeros never leaves zero: make it all ones */
 int SceKernelUtilsForDriver_B55C69B7(SceXorshift128State *state)

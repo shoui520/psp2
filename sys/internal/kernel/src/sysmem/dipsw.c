@@ -1,6 +1,6 @@
 /* Boot DIP-switch state and kernel accessors. */
 #include <stdint.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include "sysmem_boot.h"
 
 union DipswState {
@@ -29,25 +29,25 @@ int InitializeDipsw(const struct SysmemBootContext *context)
 	return 0;
 }
 
-SceUInt32 ksceKernelGetDipswInfo(unsigned int index)
+SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index)
 {
 	return s_dipsw->words[index];
 }
 
 __attribute__((noinline))
-int ksceKernelCheckDipsw(unsigned int bit)
+int SceDipswForDriver_A98FC2FD(unsigned int bit)
 {
 	return (s_dipsw->words[bit >> 5] >> (bit & 31)) & 1;
 }
 
 __attribute__((noinline))
-void ksceKernelSetDipsw(unsigned int bit)
+void SceDipswForDriver_82E45FBF(unsigned int bit)
 {
 	s_dipsw->words[bit >> 5] |= UINT32_C(1) << (bit & 31);
 }
 
 __attribute__((noinline))
-void ksceKernelClearDipsw(unsigned int bit)
+void SceDipswForDriver_F1F3E9FE(unsigned int bit)
 {
 	s_dipsw->words[bit >> 5] &= ~(UINT32_C(1) << (bit & 31));
 }
@@ -71,7 +71,7 @@ int sceKernelCheckDipsw(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	return ksceKernelCheckDipsw(bit);
+	return SceDipswForDriver_A98FC2FD(bit);
 }
 
 int sceKernelSetDipsw(unsigned int bit)
@@ -85,7 +85,7 @@ int sceKernelSetDipsw(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	ksceKernelSetDipsw(bit);
+	SceDipswForDriver_82E45FBF(bit);
 	return 0;
 }
 
@@ -100,6 +100,6 @@ int sceKernelClearDipsw(unsigned int bit)
 		if (result < 0)
 			return result;
 	}
-	ksceKernelClearDipsw(bit);
+	SceDipswForDriver_F1F3E9FE(bit);
 	return 0;
 }

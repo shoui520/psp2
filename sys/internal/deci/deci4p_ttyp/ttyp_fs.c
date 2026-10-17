@@ -2,7 +2,7 @@
  * SceDeci4pTtyp: "deci4p_ttyp_dev_fs", the tty0: .. tty7: devices.
  */
 
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/vfs.h>
 #include <sysmem/debug.h>
 #include "ttyp.h"
@@ -82,7 +82,7 @@ static int dev_tty_vop_close(SceVopCloseArgs *argp)
 	int unit = (int)argp->vp->core.node_data;
 
 	if (pid != NULL) {
-		ksceKernelFreeHeapMemory(ttypGetHeap(), pid);
+		sceKernelFreeHeapMemory(ttypGetHeap(), pid);
 		argp->file->fd = 0;
 	}
 	return TtypClose(unit);
@@ -189,7 +189,7 @@ static int ioctl_impl(SceVopIoctlArgs *argp)
 		}
 		pid = (SceUInt32 *)file->fd;
 		if (pid == NULL) {
-			pid = ksceKernelAllocHeapMemory(ttypGetHeap(), inlen);
+			pid = SceSysmemForDriver_7B4CB60A(ttypGetHeap(), inlen);
 			file->fd = (SceUInt32)pid;
 			if (pid == NULL) {
 				ret = SCE_ERROR_ERRNO_ENOMEM;
@@ -203,7 +203,7 @@ static int ioctl_impl(SceVopIoctlArgs *argp)
 	case TTYP_IOCTL_CLEAR_PID:
 		pid = (SceUInt32 *)file->fd;
 		if (pid != NULL) {
-			ksceKernelFreeHeapMemory(ttypGetHeap(), pid);
+			sceKernelFreeHeapMemory(ttypGetHeap(), pid);
 			file->fd = 0;
 		}
 		break;

@@ -1,6 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 int MarlinSha1Create(SceSha1Context **context)
 {
@@ -13,7 +13,7 @@ int MarlinSha1Create(SceSha1Context **context)
 		result = 2;
 		goto out;
 	}
-	ksceSha1BlockInit(memory);
+	SceKernelUtilsForDriver_E4390FFA(memory);
 	*context = memory;
 out:
 	if (*context == 0)
@@ -26,7 +26,7 @@ int MarlinSha1Finish(SceSha1Context *context, void *digest)
 	int result = 0;
 	SceSha1Context *memory = context;
 
-	ksceSha1BlockResult(memory, digest);
+	SceKernelUtilsForDriver_48F24106(memory, digest);
 	MarlinFreeMemory(0, memory);
 	return result;
 }
@@ -37,7 +37,7 @@ int MarlinSha1Update(SceSha1Context *context, const void *data,
 	int result = 0;
 	SceSha1Context *sha = context;
 
-	ksceSha1BlockUpdate(sha, data, size);
+	SceKernelUtilsForDriver_478A6F3C(sha, data, size);
 	return result;
 }
 
@@ -45,7 +45,7 @@ int MarlinSha1Digest(const void *data, unsigned int size, void *digest)
 {
 	int result = 0;
 
-	ksceSha1Digest(data, size, digest);
+	SceKernelUtilsForDriver_87DC7F2F(data, size, digest);
 	return result;
 }
 
@@ -60,7 +60,7 @@ int MarlinSha256Create(SceSha256Context **context)
 		result = 2;
 		goto out;
 	}
-	ksceSha256BlockInit(memory);
+	SceKernelUtilsForDriver_D909FA2C(memory);
 	*context = memory;
 out:
 	if (*context == 0)
@@ -73,7 +73,7 @@ int MarlinSha256Finish(SceSha256Context *context, void *digest)
 	int result = 0;
 	SceSha256Context *memory = context;
 
-	ksceSha256BlockResult(memory, digest);
+	SceKernelUtilsForDriver_4899CD4B(memory, digest);
 	MarlinFreeMemory(0, memory);
 	return result;
 }
@@ -84,7 +84,7 @@ int MarlinSha256Update(SceSha256Context *context, const void *data,
 	int result = 0;
 	SceSha256Context *sha = context;
 
-	ksceSha256BlockUpdate(sha, data, size);
+	SceKernelUtilsForDriver_236A9097(sha, data, size);
 	return result;
 }
 
@@ -92,6 +92,6 @@ int MarlinSha256Digest(const void *data, unsigned int size, void *digest)
 {
 	int result = 0;
 
-	ksceSha256Digest(data, size, digest);
+	SceKernelUtilsForDriver_A773A6A8(data, size, digest);
 	return result;
 }

@@ -6,9 +6,8 @@
 #include <appmgr/sharedfb.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/registrymgr.h>
 #include <stddef.h>
@@ -78,14 +77,14 @@ int sharedFbProcessStop(SceUID pid, int event, ProcEventParam *param, int flags)
 int sharedFbProcessStart(SceUID pid, int event, ProcEventParam *param, int flags);
 
 /* ProcEventParam and the SDK invocation types describe the same provider ABI. */
-const SceProcEventHandler gSharedFbProcessHandler = {
-	.size = sizeof(SceProcEventHandler),
-	.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))sharedFbProcessCreate,
-	.exit = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))sharedFbProcessExit,
-	.kill = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))sharedFbProcessKill,
-	.stop = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))sharedFbProcessStop,
-	.start = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))sharedFbProcessStart,
-	.switch_process = NULL,
+const SceKernelProcEventHandler gSharedFbProcessHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
+	.create = (int (*)(SceUID, ProcEventCreateParam *, int))sharedFbProcessCreate,
+	.exit = (int (*)(SceUID, ProcEventParam *, int))sharedFbProcessExit,
+	.kill = (int (*)(SceUID, ProcEventParam *, int))sharedFbProcessKill,
+	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))sharedFbProcessStop,
+	.resume = (int (*)(SceUID, int, ProcEventParam *, int))sharedFbProcessStart,
+	.notify = NULL,
 };
 
 int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags)
@@ -260,7 +259,7 @@ int sharedFbReleaseProcess(SceUID processId)
 	process = &port->processes[index];
 	if (!process)
 		goto done;
-	result = ksceKernelFreeMemBlock(process->shareMemBlock);
+	result = SceSysmemForDriver_009E1C61(process->shareMemBlock);
 	if (result < 0) {
 		ksceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 		return result;
@@ -366,10 +365,10 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 		result = (int)0x80200007;
 		goto done;
 	}
-	result = ksceKernelCopyFromUser(&create, param, sizeof(create));
+	result = SceSysmemForDriver_BC996A7A(&create, param, sizeof(create));
 	if (result)
 		goto done;
-	memBlock = ksceKernelAllocMemBlock("SceSharedFb",
+	memBlock = SceSysmemForDriver_C94850C9("SceSharedFb",
 					SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW,
 					create.AllocMemSize, NULL);
 	if (memBlock < 0) {
@@ -377,7 +376,7 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 		goto done;
 	}
 	base = NULL;
-	result = ksceKernelGetMemBlockBase(memBlock, &base);
+	result = SceSysmemForDriver_A841EDDA(memBlock, &base);
 	if (result)
 		goto freeMemBlock;
 	processId = sceKernelGetProcessId();
@@ -429,14 +428,14 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 	port->memBlock = memBlock;
 	port->info.fb_base = base;
 	port->info.fb_size = create.AllocMemSize;
-	result = kscePUIDOpenByGUID(processId, memBlock);
+	result = SceSysmemForDriver_BF209859(processId, memBlock);
 	ksceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 	if (result >= 0)
 		goto done;
 	ksceKernelDeleteEventFlag(beginEvent);
 	ksceKernelDeleteEventFlag(endEvent);
 freeMemBlock:
-	ksceKernelFreeMemBlock(memBlock);
+	SceSysmemForDriver_009E1C61(memBlock);
 done:
 	sceSyscallLeave(syscallState);
 	return result;
@@ -450,7 +449,7 @@ int sceSharedFbDelete(SceUID fbId)
 	int result, portIndex;
 
 	processId = sceKernelGetProcessId();
-	memBlock = kscePUIDtoGUID(processId, fbId);
+	memBlock = SceSysmemForDriver_45D22597(processId, fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -496,10 +495,10 @@ int sceSharedFbDelete(SceUID fbId)
 	memset(port->assignedPids, -1, sizeof(port->assignedPids));
 	memset(port->requestedPids, -1, sizeof(port->requestedPids));
 	ksceKernelUnlockFastMutex(&gSharedFbManager.mutex);
-	result = ksceKernelFreeMemBlock(memBlock);
+	result = SceSysmemForDriver_009E1C61(memBlock);
 	if (result < 0)
 		goto done;
-	result = kscePUIDClose(ownerPid, fbId);
+	result = SceSysmemForDriver_84A4AF5E(ownerPid, fbId);
 	if (result >= 0)
 		result = 0;
 	goto done;
@@ -531,7 +530,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		result = (int)0x80200007;
 		goto done;
 	}
-	memBlock = kscePUIDtoGUID(sceKernelGetProcessId(), fbId);
+	memBlock = SceSysmemForDriver_45D22597(sceKernelGetProcessId(), fbId);
 	result = memBlock;
 	if (memBlock < 0)
 		goto done;
@@ -547,7 +546,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		goto unlock;
 	}
 	port = &gSharedFbManager.ports[portIndex];
-	result = ksceKernelCopyFromUser(&port->info.fb_base2, info, 64);
+	result = SceSysmemForDriver_BC996A7A(&port->info.fb_base2, info, 64);
 	if (result)
 		goto unlock;
 	firstPid = port->requestedPids[0];
@@ -587,7 +586,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		    SHARED_FB_PROCESS_MATCHES(port, processId, 15))
 			++count;
 	}
-	result = ksceKernelCopyToUser(processCount, &count, sizeof(count));
+	result = SceSysmemForDriver_6D88EF8A(processCount, &count, sizeof(count));
 	if (!result)
 		gSharedFbManager.currentPort = port;
 unlock:
@@ -812,7 +811,7 @@ int sharedFbInitialize(void)
 		ksceKernelFinalizeFastMutex(&gSharedFbManager.mutex);
 		return result;
 	}
-	ksceKernelRegisterProcEventHandler("SceSharedFb", &gSharedFbProcessHandler, 0);
+	sceKernelRegisterProcEventHandler("SceSharedFb", &gSharedFbProcessHandler, 0);
 	return 0;
 }
 

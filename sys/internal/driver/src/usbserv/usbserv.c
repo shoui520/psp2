@@ -6,12 +6,12 @@
 #define SERV_ERROR(name) ((int)SCE_USBSERV_ERROR_##name)
 #if FW_DEBUG
 #define DEBUG(flags, line, func, fmt, ...) \
-	ksceKernelPrintfLevelWithInfo(1, flags, SCE_DBGINFO_FUNC(line, func), fmt, ##__VA_ARGS__)
+	SceDebugForDriver_D9703808(1, flags, SCE_DBGINFO_FUNC(line, func), fmt, ##__VA_ARGS__)
 #else
 #define DEBUG(flags, line, func, fmt, ...) do { } while (0)
 #endif
 #define ERROR(line, func) \
-	ksceKernelPrintfWithInfo(15, SCE_DBGINFO_FUNC(line, func), "### error ###\n")
+	SceDebugForDriver_02B04343(15, SCE_DBGINFO_FUNC(line, func), "### error ###\n")
 
 /* Private state/helper names unknown unless recovered from debug records. */
 static SceUID s_timer = -1;
@@ -30,8 +30,8 @@ static inline __attribute__((always_inline)) void lock(void)
 	int ret = ksceKernelLockMutex(s_serv.mutex, 1, NULL);
 	(void)ret;
 #if FW_DEBUG
-	if (ret < 0 && ksceKernelGetAssertLevel() > 0)
-		ksceKernelPrintfAssertLevel(1, 0, SCE_DBGINFO_FUNC(1548, "lock"),
+	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO_FUNC(1548, "lock"),
 			__builtin_return_address(0), "ret=%08x\n", ret);
 #endif
 }
@@ -40,8 +40,8 @@ static inline __attribute__((always_inline)) void unlock(void)
 	int ret = ksceKernelUnlockMutex(s_serv.mutex, 1);
 	(void)ret;
 #if FW_DEBUG
-	if (ret < 0 && ksceKernelGetAssertLevel() > 0)
-		ksceKernelPrintfAssertLevel(1, 0, SCE_DBGINFO_FUNC(1557, "unlock"),
+	if (ret < 0 && SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO_FUNC(1557, "unlock"),
 			__builtin_return_address(0), "ret=%08x\n", ret);
 #endif
 }
@@ -59,7 +59,7 @@ static int usbEnabled(unsigned port, unsigned mode)
 	for (unsigned i = 0; i < 2000; i++)
 		if (!ksceUdcdWaitBusInitialized(500, port))
 			return 1;
-	ksceKernelPrintfWithInfo(6, SCE_DBGINFO_FUNC(207, "usbEnabled"),
+	SceDebugForDriver_02B04343(6, SCE_DBGINFO_FUNC(207, "usbEnabled"),
 		"timeout: USB PHY ready(ch=%d sel=%d)\n", port, mode);
 	return 0;
 }
@@ -131,7 +131,7 @@ static int usb1_mac_select(unsigned mode, unsigned action)
 static int port2Host(void)
 {
 	unsigned info;
-	if (ksceSblAimgrIsGenuineDolce())
+	if (SceSblAIMgrForDriver_C6E83F34())
 		return s_serv.ether != 0;
 	unsigned hardware = ksceSysconGetHardwareInfo() & 0xff0000;
 	if (hardware <= 0x600000) {
@@ -163,7 +163,7 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 		return action == 2 ? ksceUsbdResume(2) : ksceUsbdHostStart(2);
 	}
 	/* Genuine Dolce is excluded from the physical connector policy here. */
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		unsigned info;
 		unsigned hardware = ksceSysconGetHardwareInfo() & 0xff0000;
 		int host = 0;
@@ -289,7 +289,7 @@ int sceUsbServAccessoryDeactivate(void)
 }
 int ksceUsbServEtherEnable(void)
 {
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		DEBUG(15, 1224, "sceUsbServEtherEnable", "Not supported\n");
 		return SERV_ERROR(UNAVAILABLE);
 	}
@@ -307,7 +307,7 @@ int ksceUsbServEtherEnable(void)
 }
 int ksceUsbServEtherDisable(void)
 {
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		DEBUG(15, 1253, "sceUsbServEtherDisable", "Not supported\n");
 		return SERV_ERROR(UNAVAILABLE);
 	}
@@ -325,7 +325,7 @@ int ksceUsbServEtherDisable(void)
 }
 int ksceUsbServDisableEtherSuspend(void)
 {
-	if (!ksceSblAimgrIsGenuineDolce())
+	if (!SceSblAIMgrForDriver_C6E83F34())
 		return SERV_ERROR(UNAVAILABLE);
 	s_serv.etherSuspend = 0;
 	return 0;
@@ -359,7 +359,7 @@ static unsigned is_supported_device(unsigned id)
 			else if (type == 3)
 				hid = 1;
 			else if (type == 6 || type == 8) {
-				if (type == 8 && ksceSysrootIsSafeMode())
+				if (type == 8 && SceSysrootForDriver_834439A7())
 					return 0;
 				return type;
 			}
@@ -371,7 +371,7 @@ static int tickTimer(void *arg)
 {
 	s_timer = -1;
 	if (s_serv.attached > 0) {
-		ksceKernelPowerTick(1);
+		SceKernelSuspendForDriver_E0489831(1);
 		s_timer = ksceKernelRegisterTimer("SceUsbservTickTimer", 5000000, tickTimer, NULL);
 	}
 	return 0;
@@ -443,10 +443,10 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
 	if (!phase) {
 		if (event == SYSEVENT_SUSPEND_PREPARE(0)) {
 			int ret = SceUdcdForDriver_9E7F7EFE();
-			if (ksceSblAimgrIsDolce() && !s_serv.mode[0]) {
+			if (SceSblAIMgrForDriver_71608CA3() && !s_serv.mode[0]) {
 				ret = ksceUsbdSuspendPhase2(0, 1);
 				if (ret)
-					ksceKernelPrintfWithInfo(6, SCE_DBGINFO_FUNC(728, "_sceUsbServSysEventHandler"),
+					SceDebugForDriver_02B04343(6, SCE_DBGINFO_FUNC(728, "_sceUsbServSysEventHandler"),
 						"Fail: sceUsbdSuspendPhase2(%08x)\n", ret);
 			}
 			return ret;
@@ -469,7 +469,7 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
 			ksceSysconGetMultiCnInfo(&info);
 			if ((info & 0xff00) != 0x200 && (hardware & 0xff0000) <= 0x600000)
 				ksceSysconCtrlDevKitUsbPower(0);
-			if (ksceSblAimgrIsGenuineDolce() && s_serv.etherSuspend)
+			if (SceSblAIMgrForDriver_C6E83F34() && s_serv.etherSuspend)
 				ksceSysconCtrlDolceUsbPower(0);
 			ksceGpioPortClear(1, 3);
 		}
@@ -529,14 +529,14 @@ static int UsbServThread(unsigned arglen, void *arg)
 		s_serv.owner[i].process = -1;
 	}
 	ksceSysconCtrlAccPower(0);
-	if (ksceSblAimgrIsGenuineDolce()) {
+	if (SceSblAIMgrForDriver_C6E83F34()) {
 		ksceSysconCtrlDolceUsbPower(1);
 		s_serv.ether = 1;
 	}
 	s_serv.accessory = SceSysconForDriver_B9EA2FA8();
 	if (s_serv.accessory && used())
 		usb0_mac_select(0, 1);
-	if (ksceSblAimgrIsDolce()) {
+	if (SceSblAIMgrForDriver_71608CA3()) {
 		s_serv.accessory = 1;
 		if (used())
 			ksceSysconCtrlAccPower(1);
@@ -580,7 +580,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 		ksceGpioSetPortMode(1, 3, 0);
 		ksceGpioPortClear(1, 3);
 		SceUdcdForDriver_1A5A3851();
-		if (ksceSblAimgrIsGenuineDolce()) {
+		if (SceSblAIMgrForDriver_C6E83F34()) {
 			lock();
 			ksceSysconCtrlDolceUsbPower(1);
 			s_serv.ether = 1;
@@ -589,7 +589,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 		ScePervasiveForDriver_BB67EF58(0);
 		usb0_mac_select(0, 2);
 		s_serv.accessory = SceSysconForDriver_B9EA2FA8();
-		if (ksceSblAimgrIsDolce()) {
+		if (SceSblAIMgrForDriver_71608CA3()) {
 			s_serv.accessory = 1;
 			if (used())
 				ksceSysconCtrlAccPower(1);
@@ -611,7 +611,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 		} else {
 			usb2_mac_select(1, 1);
 		}
-		if (ksceSblAimgrIsGenuineDolce())
+		if (SceSblAIMgrForDriver_C6E83F34())
 			s_serv.etherSuspend = 1;
 		registerConnectors();
 		s_serv.resumed = 1;
@@ -654,18 +654,18 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		goto deleteEvent;
 	}
 	ksceKernelStartThread(s_serv.thread, 0, NULL);
-	s_serv.systemHandler = ksceKernelRegisterSysEventHandler("SceUsbServ", _sceUsbServSysEventHandler, NULL);
+	s_serv.systemHandler = sceKernelRegisterSysEventHandler("SceUsbServ", _sceUsbServSysEventHandler, NULL);
 	if (s_serv.systemHandler < 0) {
 		DEBUG(6, 1083, "_sceUsbServInit", "# ERROR # sceKernelRegisterSysEventHandler 0x%08x\n", s_serv.systemHandler);
 		goto deleteThread;
 	}
-	s_serv.processHandler = ksceKernelRegisterProcEventHandler("SceUsbserv", &events, 0);
+	s_serv.processHandler = sceKernelRegisterProcEventHandler("SceUsbserv", &events, 0);
 	if (s_serv.processHandler < 0) {
 		DEBUG(6, 1090, "_sceUsbServInit", "# ERROR # sceKernelRegisterProcEventHandler 0x%08x\n", s_serv.processHandler);
-		ksceKernelUnregisterSysEventHandler(s_serv.systemHandler);
+		sceKernelUnregisterSysEventHandler(s_serv.systemHandler);
 		goto deleteThread;
 	}
-	if (ksceSblAimgrIsDolce())
+	if (SceSblAIMgrForDriver_71608CA3())
 		ksceUsbdRegisterDriver(&driver);
 	return 0;
 deleteThread:

@@ -40,7 +40,7 @@ void RecordGpuLockup(SceGpuRegisterDump *dump, unsigned reason,
 			processIndex = (processIndex + 1) & 7;
 		history->processCount = processCount + 1;
 		if (processUid != -1) {
-			name = ksceGUIDName(processUid);
+			name = SceSysmemForDriver_E655852F(processUid);
 			if (name) {
 				nameLength = strnlen(name, 31);
 				if (nameLength > 0)

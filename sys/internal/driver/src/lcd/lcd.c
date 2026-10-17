@@ -5,8 +5,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/sysroot.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <lowio/spi_regs.h>
@@ -164,13 +163,13 @@ int SceLcdForDriver_5127FB5E(unsigned char command, const unsigned char *data,
 		return LCD_NOT_READY;
 	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	spiBegin();
 	spiBits(reverseByte(command) << 1, 9);
 	for (i = 0; i != length; i++)
 		spiBits((reverseByte(data[i]) << 1) | 1, 9);
 	spiEnd();
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -181,7 +180,7 @@ int SceLcdForDriver_223C8375(unsigned command, unsigned char *data, unsigned len
 		return LCD_NOT_READY;
 	if (lcd.ready == 2)
 		return LCD_NO_PANEL;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	spiBegin();
 	if (command >= 0xb0)
 		spiBits(0x15e, 9);
@@ -197,7 +196,7 @@ int SceLcdForDriver_223C8375(unsigned command, unsigned char *data, unsigned len
 		spiBits(0xde, 9);
 	}
 	spiEnd();
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -211,7 +210,7 @@ static int initWork(void *arg) /* name unknown */
 		ksceGpioPortSet(1, 7);
 		sceKernelDelayThread(20000);
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	spiBegin();
 	spiBits(0x10a, 9);
 	for (i = 0; i < 6; i++)
@@ -219,7 +218,7 @@ static int initWork(void *arg) /* name unknown */
 	spiPad();
 	spiRead(id, 5, 9);
 	spiEnd();
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	if (id[4] == 0xff) {
 		lcd.panelId = id[0] | (id[1] << 8);
 		lcd.panelRevision = id[2] | (id[3] << 8);
@@ -343,10 +342,10 @@ static __attribute__((noinline)) int readHardwareInfo(void) /* name unknown */
 {
 	unsigned char flags[16];
 
-	ksceSysrootGetHardwareFlags(flags);
+	SceSysrootForDriver_46E72428(flags);
 	if ((flags[0] & 3) == 1)
 		hardwareSpecial = 1;
-	hardwareInfo = ksceSysrootGetHardwareInfo();
+	hardwareInfo = SceSysrootForDriver_930B1342();
 	sequence = NULL;
 	delayFrames = 0;
 	return 0;
@@ -397,7 +396,7 @@ static int backlightWork(void *arg) /* name unknown */
 	unsigned char data[2];
 	int current, target;
 	do {
-		if (ksceKernelSpinlockLowTrylock(&backlightLock) < 0)
+		if (SceCpuForDriver_5AC9D394(&backlightLock) < 0)
 			break;
 		current = backlightCurrent;
 		target = backlightTarget;
@@ -427,7 +426,7 @@ static int backlightWork(void *arg) /* name unknown */
 			ksceI2cTransferWrite(1, 200, data, 2);
 		}
 		backlightCurrent = target;
-		ksceKernelSpinlockLowUnlock(&backlightLock);
+		sceKernelSpinlockLowUnlock(&backlightLock);
 	} while (backlightCurrent != backlightTarget);
 	return 1;
 }
@@ -619,16 +618,16 @@ static __attribute__((noinline)) int initLcd(void) /* name unknown */
 
 	lcd = (LcdLink){ 0 };
 	readHardwareInfo();
-	ksceKernelRegisterSysEventHandler("SceLcd", sysEvent, 0);
+	sceKernelRegisterSysEventHandler("SceLcd", sysEvent, 0);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = SPI_REG_BASE(2);
-	ret = ksceKernelAllocMemBlock("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	ret = SceSysmemForDriver_C94850C9("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 	lcd.spiUid = ret;
-	ksceKernelGetMemBlockBase(ret, &base);
+	SceSysmemForDriver_A841EDDA(ret, &base);
 	lcd.spi = base;
 	setupSpi(base);
 	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdInit", initWork, 0);

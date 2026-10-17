@@ -14,7 +14,6 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <string.h>
 
@@ -357,7 +356,7 @@ int dev_sdstor_vfs_remove(SceVopRemoveArgs *args)
 		if (result < 0)
 			return result;
 	}
-	result = ksceKernelFreeHeapMemory(heap, vnode->core.node_data);
+	result = sceKernelFreeHeapMemory(heap, vnode->core.node_data);
 	if (result != 0)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 705, "0x%08x\n", result);
 	vnode->core.node_data = NULL;
@@ -381,13 +380,13 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 577, "called LOOCK UP dvp=%p %s\n",
 			     parent, name);
-	data = ksceKernelAllocHeapMemory(heap, sizeof(*data));
+	data = SceSysmemForDriver_7B4CB60A(heap, sizeof(*data));
 	if (!data)
 		return 0x8001000c;
 	__builtin_memset(data, 0, sizeof(*data));
 	data->pentry = sdpart_get_object(name, length);
 	if (!data->pentry) {
-		result = ksceKernelFreeHeapMemory(heap, data);
+		result = sceKernelFreeHeapMemory(heap, data);
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 591, "0x%08x\n", result);
 			return result;
@@ -396,7 +395,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 	}
 	table = data->pentry->sdpart;
 	if (!table) {
-		result = ksceKernelFreeHeapMemory(heap, data);
+		result = sceKernelFreeHeapMemory(heap, data);
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 601, "0x%08x\n", result);
 			return result;
@@ -410,7 +409,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 		result = ksceKernelUnlockFastMutex(&table->fastmutex);
 		if (result < 0)
 			return result;
-		result = ksceKernelFreeHeapMemory(heap, data);
+		result = sceKernelFreeHeapMemory(heap, data);
 		if (result != 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 613, "0x%08x\n", result);
 			return result;
@@ -429,7 +428,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 		(SceVopTable *)parent->core.mnt->mnt_vfs_inf->default_vops, 0, &vnode);
 	if (result != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 15, 652, "err ret = 0x%08x\n", result);
-		freeResult = ksceKernelFreeHeapMemory(heap, data);
+		freeResult = sceKernelFreeHeapMemory(heap, data);
 		if (freeResult != 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 656, "0x%08x\n", freeResult);
 			return freeResult;
@@ -598,7 +597,7 @@ int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args)
 			return 0x80010016;
 		}
 		if (sdinst.port == 1) {
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+			if (SceSysrootForDriver_55392965())
 				goto eraseAccess;
 			if (!SceSysrootForDriver_F804F761()) {
 				SCE_DBG_PRINTF_LEVEL(1, 15, 979,
@@ -606,7 +605,7 @@ int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args)
 				return 0x80010016;
 			}
 		}
-		if (sdinst.port == 4 && !ksceKernelSysrootCheckModelCapability(11)) {
+		if (sdinst.port == 4 && !SceSysrootForDriver_8AA268D6(11)) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 986,
 				"SD in SD slot not supported in this machine\n");
 			return 0x80010016;
@@ -625,7 +624,7 @@ eraseAccess:
 		}
 		callback = erase->callback;
 		if (callback != -1) {
-			callback = kscePUIDtoGUID(0, callback);
+			callback = SceSysmemForDriver_45D22597(0, callback);
 			if (erase->callback != -1 && callback < 0)
 				return callback;
 		}
@@ -772,7 +771,7 @@ eraseAccess:
 			return 0x80010016;
 		}
 		if (sdinst.port == 1) {
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+			if (SceSysrootForDriver_55392965())
 				goto invalidateAccess;
 			if (!SceSysrootForDriver_F804F761()) {
 				SCE_DBG_PRINTF_LEVEL(1, 15, 1054,
@@ -780,7 +779,7 @@ eraseAccess:
 				return 0x80010016;
 			}
 		}
-		if (sdinst.port == 4 && !ksceKernelSysrootCheckModelCapability(11)) {
+		if (sdinst.port == 4 && !SceSysrootForDriver_8AA268D6(11)) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 1061,
 				"SD in SD slot not supported in this machine\n");
 			return 0x80010016;
@@ -815,7 +814,7 @@ int sdstor_vfs_initialize(void)
 
 	opt.size = sizeof(opt);
 	opt.flags = HEAP_AUTO_EXTEND;
-	sdstorVfsHeapId = ksceKernelCreateHeap("SceSdStorVfs", 0x2000, &opt);
+	sdstorVfsHeapId = SceSysmemForDriver_9328E0E8("SceSdStorVfs", 0x2000, &opt);
 	if (sdstorVfsHeapId < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 15, 111, "0x%08x\n", sdstorVfsHeapId);
 		return sdstorVfsHeapId;
@@ -828,7 +827,7 @@ int sdstor_vfs_initialize(void)
 	sdstorVfsInfo.vfs_data = NULL;
 	result = ksceVfsAddVfs(&sdstorVfsInfo);
 	if (result) {
-		error = ksceKernelDeleteHeap(sdstorVfsHeapId);
+		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 125, "0x%08x\n", result);
 		if (error) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 127, "0x%08x\n", error);
@@ -838,7 +837,7 @@ int sdstor_vfs_initialize(void)
 	}
 	result = ksceIoMount(1, NULL, 0, 0, 0, 0);
 	if (result) {
-		error = ksceKernelDeleteHeap(sdstorVfsHeapId);
+		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 136, "0x%08x\n", result);
 		if (error) {
 			SCE_DBG_PRINTF_LEVEL(1, 15, 138, "0x%08x\n", error);

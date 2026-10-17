@@ -4,7 +4,6 @@
 #include "../../gpu_es4/srvkm/gpu-mmu.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 
@@ -196,16 +195,16 @@ int AllocateGpuPageDirectory(GpuMmuContext *context)
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 	options.pid = sceKernelGetProcessId();
-	uid = ksceKernelAllocMemBlock("SceGpuPageDirectory",
+	uid = SceSysmemForDriver_C94850C9("SceGpuPageDirectory",
 				    SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 				    0x1000, 0);
 	if (uid < 0)
 		return uid;
-	ret = ksceKernelGetMemBlockBase(uid, &base);
+	ret = SceSysmemForDriver_A841EDDA(uid, &base);
 	if (ret >= 0)
-		ret = ksceKernelVAtoPA(base, &physical);
+		ret = SceSysmemForDriver_8D160E65(base, &physical);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		return ret;
 	}
 	memset(base, 0, 0x1000);
@@ -221,7 +220,7 @@ int FreeGpuPageDirectory(GpuMmuContext *context)
 		return (int)0x80020005;
 	context->pageDirectory = 0;
 	if (context->pageDirectoryMemblockUid != (unsigned)-1) {
-		ksceKernelFreeMemBlock(context->pageDirectoryMemblockUid);
+		SceSysmemForDriver_009E1C61(context->pageDirectoryMemblockUid);
 		context->pageDirectoryMemblockUid = -1;
 	}
 	context->pageDirectoryPhysicalAddress = 0;

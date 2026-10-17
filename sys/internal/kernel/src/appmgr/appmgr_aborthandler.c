@@ -88,7 +88,7 @@ void _sceAppMgrNotifyAppMgrHandler(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 940, "_sceAppMgrNotifyAppMgrHandler");
 #else
-		ksceKernelPanic(&notifyAbortPanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&notifyAbortPanicInfo, __builtin_return_address(0));
 #endif
 	}
 }
@@ -104,7 +104,7 @@ void _sceAppMgrNotifyAppMgrHandler(void)
 #else
 #define ABORT_INITIALIZE_CHECK(result, line, panicInfo) do { \
 	if ((result) != 0) \
-		ksceKernelPanic(&(panicInfo), __builtin_return_address(0)); \
+		SceDebugForDriver_391B5B74(&(panicInfo), __builtin_return_address(0)); \
 } while (0)
 #endif
 

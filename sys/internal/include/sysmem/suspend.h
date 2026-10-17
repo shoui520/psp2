@@ -5,6 +5,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <sysmem/sysevent.h>
 
 int SceKernelSuspendForDriver_4DF40893(int argument);
 int SceKernelSuspendForDriver_2BB92967(int argument);
@@ -52,3 +53,19 @@ int SceKernelSuspendForDriver_AEA9440D(void);	/* cold reset */
 
 int SceKernelSuspendForDriver_230495ED(SceUInt32 kind);
 int SceKernelSuspendForDriver_254525F8(SceUInt32 kind);
+
+void SceKernelSuspendForDriver_0DE3CC02(void *hook);
+int SceKernelSuspendForDriver_1FA2F8F1(SceUID pid, SceUInt32 mask);
+void SceKernelSuspendForDriver_4E5A3A23(void *hook);
+int SceKernelSuspendForDriver_6A503956(SceUInt32 argument);
+int SceKernelSuspendForDriver_81D9E41C(SceUInt32 timerId);
+void SceKernelSuspendForDriver_8B3F02B8(void *hook);
+int SceKernelSuspendForDriver_B4B13615(SceUInt32 timerId, SceUInt32 mask);
+void SceKernelSuspendForDriver_B5C58EE8(void *hook);
+void SceKernelSuspendForDriver_C00826AC(void *hook);
+/* vitasdk: ksceKernelSysEventDispatch */
+int SceKernelSuspendForDriver_D4622EA8(int id, int event, void *eventArgs, SceUID *failed);
+void SceKernelSuspendForDriver_D6124071(void *hook);
+int SceKernelSuspendForDriver_E0489831(int type);	/* vitasdk: ksceKernelPowerTick */
+int SceKernelSuspendForDriver_E677B343(SceUInt32 timerId, SceUInt32 tickFlags, SceUInt64 interval, PowerIdleCallback callback, void *argument);
+void SceKernelSuspendForDriver_F2B07167(void *hook);

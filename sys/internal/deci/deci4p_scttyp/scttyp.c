@@ -8,11 +8,10 @@
  * CPU 1; data from the host is read and dropped.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/uart.h>
+#include <sysmem/uart.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
@@ -57,11 +56,11 @@ static int resumeHandler(void *args)
 	int ret;
 
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == SCTTYP_CPU) {
+	if (sceKernelCpuId() == SCTTYP_CPU) {
 		kscePervasiveUartResetEnable(SCTTYP_UART);
 		kscePervasiveUartClockEnable(SCTTYP_UART);
 		kscePervasiveUartResetDisable(SCTTYP_UART);
-		ret = ksceUartInit(SCTTYP_UART);
+		ret = SceUartForKernel_4C02AA05(SCTTYP_UART);
 		if (ret < 0) {
 			/* (returns with the core lock held) */
 			SCTTYP_PRINTF(739, "UartChStart() failed (0x%08X)\n", ret);
@@ -82,7 +81,7 @@ static int suspendHandler(void *args)
 	int ret;
 
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == SCTTYP_CPU) {
+	if (sceKernelCpuId() == SCTTYP_CPU) {
 		ret = ksceKernelDisableIntr(SCTTYP_INTR);
 		if (ret < 0)
 			SCTTYP_PRINTF(712, "DisableIntr() failed (0x%08X)\n", ret);
@@ -192,13 +191,13 @@ static void uartPollHandler(void)
 	char c;
 	int ret;
 
-	if (ksceKernelCpuId() != SCTTYP_CPU)
+	if (sceKernelCpuId() != SCTTYP_CPU)
 		return;
 	if (sceKernelGetIntrPendingStatusForDebugger(SCTTYP_INTR) == 0)
 		return;
 
-	while (ksceUartReadAvailable(SCTTYP_UART)) {
-		c = ksceUartRead(SCTTYP_UART);
+	while (SceUartForKernel_16780BC3(SCTTYP_UART)) {
+		c = SceUartForKernel_4E97D3AD(SCTTYP_UART);
 		s_port.buf[s_port.len] = c;
 		if (++s_port.len > SCTTYP_LINE_MAX)
 			break;
@@ -220,12 +219,12 @@ static int uartIntrHandler(int intrCode, void *userCtx)
 
 	c = 0;
 	for (;;) {
-		if (!ksceUartReadAvailable(SCTTYP_UART)) {
+		if (!SceUartForKernel_16780BC3(SCTTYP_UART)) {
 			if (c != '\n')
 				return -1;	/* send whole lines only */
 			break;
 		}
-		c = ksceUartRead(SCTTYP_UART);
+		c = SceUartForKernel_4E97D3AD(SCTTYP_UART);
 		s_port.buf[s_port.len] = c;
 		if (++s_port.len > SCTTYP_LINE_MAX)
 			break;
@@ -251,7 +250,7 @@ static int initThread(SceSize args, void *argp)
 	kscePervasiveUartResetEnable(SCTTYP_UART);
 	kscePervasiveUartClockEnable(SCTTYP_UART);
 	kscePervasiveUartResetDisable(SCTTYP_UART);
-	ret = ksceUartInit(SCTTYP_UART);
+	ret = SceUartForKernel_4C02AA05(SCTTYP_UART);
 	if (ret < 0) {
 		SCTTYP_PRINTF(254, "UartChStart() failed (0x%08X)\n", ret);
 		return ret;
@@ -313,7 +312,7 @@ int SCTtypModuleStart(SceSize args, void *argp)
 	SceUID thid;
 	int ret, status;
 
-	if (!ksceKernelCheckDipsw(0xc1)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 116, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

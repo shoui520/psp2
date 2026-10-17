@@ -122,9 +122,6 @@ int SceSblACMgrForKernel_FBA1A256(void);
 /* SceSblACMgr: the system call */
 int _sceSblACMgrIsGameProgram(SceUInt32 *pResult);
 
-/* sysmem's export, here until sysmem/sysroot.h declares it (it takes one SceUInt64 there) */
-int SceSysrootForDriver_56D85EB0(SceUInt32 authIdLow, SceUInt32 authIdHigh);
-
 #ifdef __cplusplus
 }
 #endif

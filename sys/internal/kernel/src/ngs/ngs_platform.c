@@ -470,7 +470,7 @@ foundStorage:
 		if (coherentAllocation == NULL)
 			return (int)0x804a0011;
 		memset(coherentAllocation, 0, coherentSize);
-		ksceKernelDcacheCleanRange(coherentAllocation, coherentSize);
+		SceCpuForDriver_103872A5(coherentAllocation, coherentSize);
 		for (index = 0; index < 65; ++index) {
 			if (storage->allocations[index].address == NULL) {
 				storage->allocations[index].address = coherentAllocation;
@@ -495,9 +495,9 @@ foundStorage:
 		opt.size = sizeof(opt);
 		opt.attr = 0x80;
 		opt.pid = sceKernelGetProcessId();
-		*memBlock = ksceKernelAllocMemBlock("SceNgsBlock", 0x10c0d006,
+		*memBlock = SceSysmemForDriver_C94850C9("SceNgsBlock", 0x10c0d006,
 			(callbackSize + 4095 + systemSize) >> 12 << 12, &opt);
-		if (ksceKernelGetMemBlockBase(*memBlock, &memBlockBase) != 0) {
+		if (SceSysmemForDriver_A841EDDA(*memBlock, &memBlockBase) != 0) {
 			*systemMemory = NULL;
 			*coherentMemory = NULL;
 			*dspHeapMemory = NULL;
@@ -602,7 +602,7 @@ foundStorage:
 		system->dspHeapUsed = used - dspHeapSize;
 	}
 	if (systemMemory != NULL && systemSize != 0) {
-		ksceKernelFreeMemBlock(memBlock);
+		SceSysmemForDriver_009E1C61(memBlock);
 		for (index = 0; index < 65; ++index) {
 			if (storage->memBlocks[index] == memBlock) {
 				storage->memBlocks[index] = 0;
@@ -636,7 +636,7 @@ int ngsReleaseDebugBuffer(SceNgsBufferInfo *buffer, SceUID memBlock)
 
 	if (buffer->data == NULL || buffer->size == 0)
 		return SCE_NGS_ERROR;
-	result = ksceKernelFreeMemBlock(memBlock);
+	result = SceSysmemForDriver_009E1C61(memBlock);
 	buffer->data = NULL;
 	buffer->size = 0;
 	return result;
@@ -649,9 +649,9 @@ int ngsAllocateDebugBuffer(SceNgsBufferInfo *buffer, SceUID *memBlock, int size)
 
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
-	*memBlock = ksceKernelAllocMemBlock("SceNgsDbgBlk", 0x10f0d006,
+	*memBlock = SceSysmemForDriver_C94850C9("SceNgsDbgBlk", 0x10f0d006,
 		(unsigned int)(size + 4095) >> 12 << 12, &opt);
-	result = ksceKernelGetMemBlockBase(*memBlock, &buffer->data);
+	result = SceSysmemForDriver_A841EDDA(*memBlock, &buffer->data);
 	if (result != 0) {
 		buffer->data = NULL;
 		size = 0;

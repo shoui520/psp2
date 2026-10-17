@@ -14,7 +14,7 @@
 #define L1_LINES_AFTER_FIRST(address, size) \
 	((((address) + (size) - 1) >> L1_CACHE_LINE_SHIFT) - ((address) >> L1_CACHE_LINE_SHIFT))
 
-int ksceKernelL1IcacheInvalidateEntire(void)
+int SceCpuForKernel_15A48AB4(void)
 {
 	writeIciallu(0);
 	dsb();
@@ -22,7 +22,7 @@ int ksceKernelL1IcacheInvalidateEntire(void)
 	return 0;
 }
 
-int ksceKernelL1IcacheInvalidateEntireAllCore(void)
+int SceCpuForKernel_803C84BF(void)
 {
 	writeIcialluis(0);
 	dsb();
@@ -30,25 +30,25 @@ int ksceKernelL1IcacheInvalidateEntireAllCore(void)
 	return 0;
 }
 
-void ksceKernelL1DcacheInvalidate(const void *address)
+void SceCpuForKernel_7ED856FE(const void *address)
 {
 	writeDcimvac(address);
 	dsb();
 }
 
-void ksceKernelL1DcacheClean(const void *address)
+void SceCpuForKernel_74B7F445(const void *address)
 {
 	writeDccmvac(address);
 	dsb();
 }
 
-void ksceKernelL1DcacheCleanInvalidate(const void *address)
+void SceCpuForKernel_597426D2(const void *address)
 {
 	writeDccimvac(address);
 	dsb();
 }
 
-void ksceKernelL1IcacheInvalidateRange(const void *start, uint32_t size)
+void SceCpuForKernel_2E637B1D(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
 	uint32_t remaining = L1_LINES_AFTER_FIRST(address, size);
@@ -60,7 +60,7 @@ void ksceKernelL1IcacheInvalidateRange(const void *start, uint32_t size)
 	dsb();
 }
 
-void ksceKernelL1DcacheInvalidateRange(const void *start, uint32_t size)
+void SceCpuForKernel_4236E06A(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
 	uint32_t remaining = L1_LINES_AFTER_FIRST(address, size);
@@ -73,7 +73,7 @@ void ksceKernelL1DcacheInvalidateRange(const void *start, uint32_t size)
 	dsb();
 }
 
-void ksceKernelL1DcacheCleanRange(const void *start, uint32_t size)
+void SceCpuForKernel_70350360(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
 	uint32_t remaining = L1_LINES_AFTER_FIRST(address, size);
@@ -86,7 +86,7 @@ void ksceKernelL1DcacheCleanRange(const void *start, uint32_t size)
 	dsb();
 }
 
-void ksceKernelL1DcacheCleanInvalidateRange(const void *start, uint32_t size)
+void SceCpuForKernel_4F442396(const void *start, uint32_t size)
 {
 	uint32_t address = (uintptr_t)start;
 	uint32_t remaining = L1_LINES_AFTER_FIRST(address, size);
@@ -99,7 +99,7 @@ void ksceKernelL1DcacheCleanInvalidateRange(const void *start, uint32_t size)
 	dsb();
 }
 
-void ksceKernelL1DcacheInvalidateAll(void)
+void SceCpuForKernel_F9B0B171(void)
 {
 	uint32_t set, way;
 
@@ -113,7 +113,7 @@ void ksceKernelL1DcacheInvalidateAll(void)
 	dsb();
 }
 
-void ksceKernelL1DcacheCleanAll(void)
+void SceCpuForKernel_49180814(void)
 {
 	uint32_t set, way;
 
@@ -127,7 +127,7 @@ void ksceKernelL1DcacheCleanAll(void)
 	dsb();
 }
 
-void ksceKernelL1DcacheCleanInvalidateAll(void)
+void SceCpuForKernel_4BBA5C82(void)
 {
 	uint32_t set, way;
 

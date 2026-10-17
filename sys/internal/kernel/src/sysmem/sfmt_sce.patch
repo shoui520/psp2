@@ -7,7 +7,7 @@
 -#include <string.h>
 -#include <assert.h>
 +/*
-+ * SCE: SceKernelUtils' SFMT19937 (ksceSfmt19937*). The state is the caller's
++ * SCE: SceKernelUtils' SFMT19937 exports. The state is the caller's
 + * SceSfmt19937Context instead of file globals; failed preconditions return
 + * -1 instead of asserting.
 + */
@@ -124,7 +124,7 @@
   * @return 32-bit pseudorandom number
   */
 -uint32_t gen_rand32(void) {
-+SceUInt32 ksceSfmt19937GenRand32(SceSfmt19937Context *ctx) {
++SceUInt32 SceKernelUtilsForDriver_BBE4701A(SceSfmt19937Context *ctx) {
      uint32_t r;
  
 -    assert(initialized);
@@ -142,7 +142,7 @@
 -#if defined(BIG_ENDIAN64) && !defined(ONLY64)
 -    uint32_t r1, r2;
 -#else
-+SceUInt64 ksceSfmt19937GenRand64(SceSfmt19937Context *ctx) {
++SceUInt64 SceKernelUtilsForDriver_45DEAAD6(SceSfmt19937Context *ctx) {
      uint64_t r;
 -#endif
  
@@ -182,7 +182,7 @@
 -    assert(idx == N32);
 -    assert(size % 4 == 0);
 -    assert(size >= N32);
-+int ksceSfmt19937FillArray32(SceSfmt19937Context *ctx, uint32_t *array, int size) {
++int SceKernelUtilsForDriver_2B30548B(SceSfmt19937Context *ctx, uint32_t *array, int size) {
 +    if (size % 4 != 0 || idx != N32 || size < N32)
 +	return -1;
  
@@ -202,7 +202,7 @@
 -    assert(idx == N32);
 -    assert(size % 2 == 0);
 -    assert(size >= N64);
-+int ksceSfmt19937FillArray64(SceSfmt19937Context *ctx, uint64_t *array, int size) {
++int SceKernelUtilsForDriver_49B41540(SceSfmt19937Context *ctx, uint64_t *array, int size) {
 +    if (size % 2 != 0 || idx != N32 || size < N64)
 +	return -1;
  
@@ -222,7 +222,7 @@
   * @param seed a 32-bit integer used as the seed.
   */
 -void init_gen_rand(uint32_t seed) {
-+int ksceSfmt19937InitGenRand(SceSfmt19937Context *ctx, uint32_t seed) {
++int SceKernelUtilsForDriver_AB48C3CA(SceSfmt19937Context *ctx, uint32_t seed) {
      int i;
  
      psfmt32[idxof(0)] = seed;
@@ -242,7 +242,7 @@
   * @param key_length the length of init_key.
   */
 -void init_by_array(uint32_t *init_key, int key_length) {
-+int ksceSfmt19937InitByArray(SceSfmt19937Context *ctx, const uint32_t *init_key, int key_length) {
++int SceKernelUtilsForDriver_33AE1203(SceSfmt19937Context *ctx, const uint32_t *init_key, int key_length) {
      int i, j, count;
      uint32_t r;
      int lag;

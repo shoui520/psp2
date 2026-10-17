@@ -192,13 +192,13 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 
 	if (thread != NULL) {
 		id = thread->processId;
-		if (ksceGUIDGetName(id, &processName) < 0)
+		if (SceSysmemForDriver_A78755EB(id, &processName) < 0)
 			SCE_DBG_PRINTF(0, 1135, EXCP_REPORT_TEXT(processIdFormat, "ProcessId: 0x%08X\n"), id);
 		else
 			SCE_DBG_PRINTF(0, 1137,
 				EXCP_REPORT_TEXT(processIdNameFormat, "ProcessId: 0x%08X [%s]\n"), id, processName);
 		id = thread->threadId;
-		if (ksceGUIDGetName(id, &threadName) < 0)
+		if (SceSysmemForDriver_A78755EB(id, &threadName) < 0)
 			SCE_DBG_PRINTF(0, 1143, EXCP_REPORT_TEXT(threadIdFormat, "ThreadId:  0x%08X\n"), id);
 		else
 			SCE_DBG_PRINTF(0, 1145,
@@ -219,6 +219,7 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 		for (;;)
 			;
 	SceDebugForKernel_CCABDD98(info, context, reason, message);
+	__builtin_unreachable();	/* sysmem's report stops the CPU */
 }
 
 void SceExcpmgrForKernel_58F7212B(SceExcpmgrCallback callback)
@@ -262,7 +263,7 @@ int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handl
 		return SCE_KERNEL_ERROR_ILLEGAL_EXCPCODE;
 	}
 
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
+	flags = SceCpuForDriver_D32ACE9E(&g_excpHandlers.lock);
 	first = g_excpHandlers.first[code];
 	head = g_excpHandlers.head[code];
 	if (head == NULL) {
@@ -310,11 +311,11 @@ int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handl
 		}
 	}
 	excpPokeWord((unsigned int)handler, 0);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
 	return 0;
 
 notFound:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
 	return SCE_KERNEL_ERROR_NOTFOUND_EXCPHANDLER;
 }
 
@@ -372,17 +373,17 @@ unsigned int PatchUserInstruction(SceExcpmgrContext *context)
 	pid = thread->processId;
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return 0;
-	if (ksceKernelCopyFromUserProc(pid, &instruction, (void *)pc, 4) < 0)
+	if (sceKernelCopyFromUserProc(pid, &instruction, (void *)pc, 4) < 0)
 		return 0;
 	if (cpsr & 0x20) {
 		instruction = instruction >> 16 | instruction << 16;
 		if ((instruction & 0x0ff00fff) != 0x0c400f0b)
 			return 0;
-		res = ksceKernelCopyToUserProcTextDomain(pid, (void *)pc, &thumbNop, 4);
+		res = SceSysmemForKernel_2995558D(pid, (void *)pc, &thumbNop, 4);
 	} else {
 		if ((instruction & 0x0ff00fff) != 0x0c400f0b)
 			return 0;
-		res = ksceKernelCopyToUserProcTextDomain(pid, (void *)pc, &armNop, 4);
+		res = SceSysmemForKernel_2995558D(pid, (void *)pc, &armNop, 4);
 	}
 	if (res < 0)
 		for (;;)
@@ -431,18 +432,18 @@ int Init(SceSize args, void *argp)
 	SceUID uid;
 
 	g_excpHandlers.lock = 0;
-	vectors = ksceKernelSysrootGetVbaseResetVector();
+	vectors = SceSysrootForKernel_CC85905B();
 	g_excpHandlers.vectors = vectors;
 	size = (char *)&defaultHandler - (char *)exceptionVectors;
 	g_excpHandlers.vectorSize = size;
 	dacr = readDacr();
 	writeDacr(DACR_ALL_MANAGER);
 	start = (unsigned int)memcpy(vectors, exceptionVectors, size);
-	ksceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(start),
+	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
-	ksceKernelL1IcacheInvalidateEntireAllCore();
-	ksceKernelGetVmaccessRange(&g_vmStart, &g_vmEnd);
+	SceCpuForKernel_803C84BF();
+	SceCpuForKernel_C32687D0(&g_vmStart, &g_vmEnd);
 
 	g_excpHandlers.defaultHandler = NULL;
 	for (code = 0; code < SCE_EXCP_MAX; code++) {
@@ -483,11 +484,11 @@ int Init(SceSize args, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = VFP_INT_REG_BASE;
-	uid = ksceKernelAllocMemBlock(EXCP_REPORT_TEXT(vfpBlockName, "SceVfpIntRegs"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x4000, &opt);
+	uid = SceSysmemForDriver_C94850C9(EXCP_REPORT_TEXT(vfpBlockName, "SceVfpIntRegs"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x4000, &opt);
 	if (uid < 0)
 		SCE_DBG_ASSERT_FAIL(1649);
 	else
-		ksceKernelGetMemBlockBase(uid, (void **)&trace);
+		SceSysmemForDriver_A841EDDA(uid, (void **)&trace);
 	for (i = 0, offset = 0x24; i < 0x4000; i += 0x1000, offset += 0x40) {
 		value = (unsigned int)(trace + i);
 		((ExcpTraceArea *)value)->control = 1;
@@ -503,9 +504,9 @@ int Init(SceSize args, void *argp)
 
 int module_bootstart(SceSize args, void *argp)
 {
-	unsigned int cpu = ksceKernelCpuId();
+	unsigned int cpu = sceKernelCpuId();
 
-	writeVbar((unsigned int)ksceKernelSysrootGetVbaseResetVector() + cpu * 0x40);
+	writeVbar((unsigned int)SceSysrootForKernel_CC85905B() + cpu * 0x40);
 	return 0;
 }
 
@@ -544,7 +545,7 @@ void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 	memset(uids, 0, sizeof(uids));
 	if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
 		sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
-	res = ksceGUIDGetName(pid, &processName);
+	res = SceSysmemForDriver_A78755EB(pid, &processName);
 	if (res < 0)
 		SCE_DBG_PRINTF(0, 1861,
 			EXCP_REPORT_TEXT(processNameErrorFormat, "ProcessName: error 0x%08X (pid=0x%08X)\n"), res, pid);
@@ -552,7 +553,7 @@ void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 		SCE_DBG_PRINTF(0, 1863,
 			EXCP_REPORT_TEXT(processNameFormat, "ProcessName: %p[%s] (pid=0x%08X)\n"),
 			processName, processName, pid);
-	res = ksceGUIDGetName(tid, &threadName);
+	res = SceSysmemForDriver_A78755EB(tid, &threadName);
 	if (res < 0)
 		SCE_DBG_PRINTF(0, 1867,
 			EXCP_REPORT_TEXT(threadNameErrorFormat, "ThreadName:  error 0x%08X (tid=0x%08X)\n"), res, tid);
@@ -598,7 +599,7 @@ void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 		memset(uids, 0, sizeof(uids));
 		if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
 			sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
-		res = ksceGUIDGetName(pid, &processName);
+		res = SceSysmemForDriver_A78755EB(pid, &processName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 1944,
 				EXCP_REPORT_TEXT(processNameErrorFormat, "ProcessName: error 0x%08X (pid=0x%08X)\n"), res, pid);
@@ -606,7 +607,7 @@ void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 			SCE_DBG_PRINTF(0, 1946,
 				EXCP_REPORT_TEXT(processNameFormat, "ProcessName: %p[%s] (pid=0x%08X)\n"),
 				processName, processName, pid);
-		res = ksceGUIDGetName(tid, &threadName);
+		res = SceSysmemForDriver_A78755EB(tid, &threadName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 1950,
 				EXCP_REPORT_TEXT(threadNameErrorFormat, "ThreadName:  error 0x%08X (tid=0x%08X)\n"), res, tid);
@@ -657,7 +658,7 @@ void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 		memset(uids, 0, sizeof(uids));
 		if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
 			sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
-		res = ksceGUIDGetName(pid, &processName);
+		res = SceSysmemForDriver_A78755EB(pid, &processName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 2035,
 				EXCP_REPORT_TEXT(processNameErrorFormat, "ProcessName: error 0x%08X (pid=0x%08X)\n"), res, pid);
@@ -665,7 +666,7 @@ void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 			SCE_DBG_PRINTF(0, 2037,
 				EXCP_REPORT_TEXT(processNameFormat, "ProcessName: %p[%s] (pid=0x%08X)\n"),
 				processName, processName, pid);
-		res = ksceGUIDGetName(tid, &threadName);
+		res = SceSysmemForDriver_A78755EB(tid, &threadName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 2041,
 				EXCP_REPORT_TEXT(threadNameErrorFormat, "ThreadName:  error 0x%08X (tid=0x%08X)\n"), res, tid);

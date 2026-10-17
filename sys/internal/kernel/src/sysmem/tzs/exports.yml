@@ -17,7 +17,7 @@ SceSysmem:
         - SceSysmemForTZS_29DE887D: 0x29DE887D
         - SceSysmemForTZS_2F18E288: 0x2F18E288
         - SceSysmemForTZS_31273DC7: 0x31273DC7
-        - ksceKernelAllocMemBlock: 0x402EB970
+        - SceSysmemForDriver_C94850C9: 0x402EB970
         - SceSysmemForTZS_42AD34AB: 0x42AD34AB
         - SceSysmemForTZS_42FB5B12: 0x42FB5B12
         - SceSysmemForTZS_473871D8: 0x473871D8
@@ -26,7 +26,7 @@ SceSysmem:
         - SceSysmemForTZS_658EACE3: 0x658EACE3
         - SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
         - SceSysmemForTZS_9D43E416: 0x9D43E416
-        - ksceKernelGetMemBlockBase: 0xE1DEDFF4
+        - SceSysmemForDriver_A841EDDA: 0xE1DEDFF4
         - SceSysmemForTZS_EA712806: 0xEA712806
         - SceSysmemForTZS_F459D09D: 0xF459D09D
     SceDipswForTZS:
@@ -34,13 +34,13 @@ SceSysmem:
       version: 1
       nid: 0x9DBF584C
       functions:
-        - ksceKernelCheckDipsw: 0xA98FC2FD
+        - SceDipswForDriver_A98FC2FD: 0xA98FC2FD
     SceUartForTZS:
       syscall: false
       version: 1
       nid: 0xA1D740D7
       functions:
-        - ksceUartWrite: 0x3AFD5E71
+        - SceUartForKernel_430C48F1: 0x3AFD5E71
     SceDebugForTZS:
       syscall: false
       version: 1
@@ -49,11 +49,11 @@ SceSysmem:
         - SceDebugForTZS_0D799DAE: 0x0D799DAE
         - SceDebugForTZS_1655E0E3: 0x1655E0E3
         - SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
-        - ksceKernelPanic: 0x563B623D
-        - ksceKernelAssertLevel: 0x618F89E6
+        - SceDebugForDriver_391B5B74: 0x563B623D
+        - SceDebugForDriver_FD753E7A: 0x618F89E6
         - SceDebugForTZS_C70CBB58: 0xC70CBB58
-        - ksceKernelPrintfLevelWithInfo: 0xD26EB4BB
-        - ksceKernelGetAssertLevel: 0xF851BA4F
+        - SceDebugForDriver_D9703808: 0xD26EB4BB
+        - SceDebugForDriver_374B7868: 0xF851BA4F
     SceSysclibForTZS:
       syscall: false
       version: 1
@@ -116,7 +116,7 @@ SceSysmem:
         - SceCpuForTZS_190D96D5: 0x190D96D5
         - CpuL2CacheSyncCore: 0x2B6403F8
         - SceCpuForTZS_31E78A4B: 0x31E78A4B
-        - ksceKernelCpuId: 0x44C423D3
+        - sceKernelCpuId: 0x44C423D3
         - SceCpuForTZS_4FED4BCE: 0x4FED4BCE
         - SceCpuForTZS_596784E9: 0x596784E9
         - SceCpuForTZS_71FD9AB5: 0x71FD9AB5

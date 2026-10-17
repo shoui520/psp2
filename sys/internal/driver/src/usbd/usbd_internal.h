@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <psp2kern/types.h>
 #include <psp2kern/usbd.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 
 /* Sony's helpers are inline functions; GCC would outline the bigger ones */
 #define __always_inline		inline __attribute__((always_inline))

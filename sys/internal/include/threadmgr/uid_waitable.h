@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/kernel/sysmem/uid_class.h>
+#include <sysmem/sysmem.h>
 
 struct ThreadCB;
 

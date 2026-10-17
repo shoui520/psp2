@@ -2,7 +2,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
@@ -10,18 +10,17 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include <gps/gps.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysevent.h>
+#include <sysmem/pmmgr.h>
 #include <acmgr/acmgr.h>
 /* Official SDK name, not yet present in the shared error header. */
 #ifndef SCE_KERNEL_ERROR_NO_MEMORY
 #define SCE_KERNEL_ERROR_NO_MEMORY 0x8002710b
 #endif
-int kscePmMgrGetProductMode(uint8_t *mode);
 int SceSblPostSsMgrForDriver_128FB35A(void);
 int SceRtcForDriver_F139E359(const void *date, void *tick);
 int SceRtcForDriver_A7236656(const void *tick);

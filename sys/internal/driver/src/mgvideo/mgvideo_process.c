@@ -2,7 +2,7 @@
 #include "mgvideo_private.h"
 #include <processmgr/processmgr_imports.h>
 #include <usbstormg/usbstormg.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 
 int releaseProcessVideoContexts(int processId)
 {
@@ -61,8 +61,8 @@ int releaseProcessVideoContexts(int processId)
 						goto unreference;
 					ksceKernelDeleteEventFlag(context->eventFlag);
 					videoContexts[slot] = 0;
-					ksceKernelFreeHeapMemory(contextHeaps[slot], context);
-					ksceKernelDeleteHeap(contextHeaps[slot]);
+					sceKernelFreeHeapMemory(contextHeaps[slot], context);
+					sceKernelDeleteHeap(contextHeaps[slot]);
 					contextHeaps[slot] = -1;
 				}
 			}
@@ -71,8 +71,8 @@ unreference:
 				continue;
 			if (--videoReferences != 0)
 				continue;
-			ksceKernelUnregisterProcEventHandler(processEventHandler);
-			intr = ksceKernelCpuSuspendIntr();
+			SceProcEventForDriver_3DED57CC(processEventHandler);
+			intr = SceCpuForDriver_821FC0EE();
 			for (index = 0; index <= 1; index++) {
 				if (recordStreams[index].active == 0)
 					continue;
@@ -85,7 +85,7 @@ unreference:
 				stream->active = 0;
 				stream->processId = -1;
 			}
-			ksceKernelCpuResumeIntr(intr);
+			sceKernelCpuResumeIntr(intr);
 			SceMagicGateForDriver_6D3B42E6();
 		}
 		reference->processId = -1;
@@ -97,15 +97,15 @@ unlock:
 	return 0;
 }
 
-struct SceProcEventInvokeParam1;
+struct ProcEventParam;
 
-int onVideoProcessKill(int processId, struct SceProcEventInvokeParam1 *event,
+int onVideoProcessKill(int processId, struct ProcEventParam *event,
 		       int eventType)
 {
 	return releaseProcessVideoContexts(processId);
 }
 
-int onVideoProcessExit(int processId, struct SceProcEventInvokeParam1 *event,
+int onVideoProcessExit(int processId, struct ProcEventParam *event,
 		       int eventType)
 {
 	return releaseProcessVideoContexts(processId);

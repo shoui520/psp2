@@ -3,16 +3,16 @@
  * and the module's start.
  */
 
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysroot.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/suspend.h>
+#include <sysmem/utils.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/devctl.h>
 #include <psp2kern/io/dirent.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_IOCTL_ACID_DIR_SET		0x4401
@@ -51,8 +51,6 @@ SceVfsInfo g_pfsAcVfsInfo = {
 SceUID g_pfsPmiListMutex;
 ScePfsListNode g_pfsPmiList;
 SceInt32 g_pfsBusy;
-
-void SceSysrootForKernel_CC119171(int (*callback)(SceVfsMount *mount, ScePfsMountInfo *info));
 
 static inline int pfsNameIsValid(const char *name)	/* name unknown */
 {
@@ -430,7 +428,7 @@ int module_start(SceSize args, void *argp)
 {
 	int ret;
 
-	ret = ksceKernelRegisterSysEventHandler("ScePfsMgr", pfsSysEventHandler, NULL);
+	ret = sceKernelRegisterSysEventHandler("ScePfsMgr", pfsSysEventHandler, NULL);
 	if (ret < 0)
 		return ret;
 	SceSysrootForKernel_CC119171(ScePfsMgrForKernel_4C148288);

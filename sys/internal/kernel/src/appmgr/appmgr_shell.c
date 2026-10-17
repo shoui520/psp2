@@ -13,8 +13,6 @@ extern int dumpBgmState(void);
 extern int _updatePowerTickStateForNonSuspendableApp(void);
 extern void _deviceRefreshAudioPort(SceUID pid);
 extern int _updateDeviceArbitration2(void);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 SceInt64 g_appmgrShellWatchDogLastActivity;
 int g_appmgrShellWatchDogStopRequested;
@@ -28,7 +26,7 @@ static const SceKernelDebugInfo shellMutexPanicInfo = {
 
 void appmgrShellMutexPanic(void)
 {
-	ksceKernelPanic(&shellMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&shellMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 

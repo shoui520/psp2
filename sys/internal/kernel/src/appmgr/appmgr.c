@@ -8,11 +8,12 @@
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/pm_mgr.h>
+#include <sysmem/pmmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_event.h"
 #include "appmgr_shell_event.h"
+#include <sysmem/sysroot.h>
 
 extern int _sceAppMgrSystemResume(void);
 extern int _sceAppMgrSystemSuspend(void);
@@ -38,8 +39,6 @@ extern int appmgrInitializeDebugSettings(void);
 extern int appmgrRegisterMountDebugSettingCallback(void);
 extern int appmgrInitializeSaveDataSlotCache(void);
 extern int appmgrMountShellExternalDirectories(SceUID pid);
-extern int ksceSysrootIsSafeMode(void);
-extern int ksceSysrootIsUpdateMode(void);
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern void appmgrRegisterDebuggerCallbacks(void);
@@ -47,9 +46,6 @@ extern SceUID sceAppMgrGetShellPidForDriver(void);
 extern SceUID sceAppMgrSpawnProcessForDriver(const char *name, int type,
 		const char *path, SceSize length, const void *args, void *opt, void *out);
 extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-				      const SceKernelDebugInfo *info,
-				      const void *lr, const char *fmt, ...);
 
 int g_appmgrPowerSaveMode;
 SceUID g_appmgrAppMutex = -1;
@@ -109,7 +105,7 @@ INIT_RECORD(productModePanicInfo, 0x551c1b34);
 
 void appmgrInitializationPanic(void)
 {
-	ksceKernelPanic(&initializationPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&initializationPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -147,7 +143,7 @@ int appmgrSysEventHandler(int resume, int eventid, void *args, void *opt)
 #else
 #define INIT_ASSERT(condition, line, record) do { \
 	if (!(condition)) \
-		ksceKernelPanic(&(record), __builtin_return_address(0)); \
+		SceDebugForDriver_391B5B74(&(record), __builtin_return_address(0)); \
 } while (0)
 #define INIT_RESULT(result, line) do { \
 	if ((result) != 0) \
@@ -168,7 +164,7 @@ int sceAppMgrInit(void)
 	heapOpt.maxSize = 0x80000;
 	result = appmgrInitializeShellEventQueue();
 	INIT_RESULT(result, 170);
-	uid = ksceKernelCreateHeap("SceAppMgrApp", 4096, &heapOpt);
+	uid = SceSysmemForDriver_9328E0E8("SceAppMgrApp", 4096, &heapOpt);
 	INIT_ASSERT(uid >= 0, 175, coreHeapPanicInfo);
 	g_appmgrCoreHeap = uid;
 	uid = ksceKernelCreateMutex("SceAppMgrApp", 0, 0, NULL);
@@ -181,13 +177,13 @@ int sceAppMgrInit(void)
 	if (result < 0)
 		appmgrInitializationPanic();
 #endif
-	uid = ksceKernelCreateHeap("SceAppMgrMount", 0x10000, &heapOpt);
+	uid = SceSysmemForDriver_9328E0E8("SceAppMgrMount", 0x10000, &heapOpt);
 	INIT_ASSERT(uid >= 0, 189, mountHeapPanicInfo);
 	g_appmgrMountHeap = uid;
 	uid = ksceKernelCreateMutex("SceAppMgrMount", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 193, mountMutexPanicInfo);
 	g_appmgrMountMutex = uid;
-	uid = ksceKernelCreateHeap("SceAppMgrSaveData", 40960, &heapOpt);
+	uid = SceSysmemForDriver_9328E0E8("SceAppMgrSaveData", 40960, &heapOpt);
 	INIT_ASSERT(uid >= 0, 200, saveDataHeapPanicInfo);
 	g_appmgrSaveDataHeap = uid;
 	uid = ksceKernelCreateMutex("SceAppMgrSaveData", 0, 0, NULL);
@@ -239,17 +235,17 @@ int sceAppMgrInit(void)
 	INIT_RESULT(result, 296);
 #else
 	if (result != 0)
-		ksceKernelPrintfPanic(&idleCallbackPanicInfo,
+		SceDebugForDriver_00CCE39C(&idleCallbackPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	result = _appmgrQueueInit();
 	INIT_RESULT(result, 299);
-	result = kscePmMgrGetProductMode(&productMode);
+	result = ScePmMgrForDriver_2AC815A2(&productMode);
 #if FW_DEBUG
 	INIT_RESULT(result, 303);
 #else
 	if (result != 0)
-		ksceKernelPrintfPanic(&productModePanicInfo,
+		SceDebugForDriver_00CCE39C(&productModePanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	result = appmgrInitializeDebugSettings();
@@ -258,7 +254,7 @@ int sceAppMgrInit(void)
 	INIT_RESULT(result, 309);
 	result = appmgrInitializeSaveDataSlotCache();
 	INIT_RESULT(result, 312);
-	if (!ksceSysrootIsSafeMode() && !ksceSysrootIsUpdateMode() && productMode == 0) {
+	if (!SceSysrootForDriver_834439A7() && !SceSysrootForDriver_B0E1FC67() && productMode == 0) {
 		result = appmgrMountShellExternalDirectories(sceKernelGetProcessId());
 		INIT_RESULT(result, 320);
 	}
@@ -284,7 +280,7 @@ int _sceAppMgrModuleStart(SceSize arglen, const void *argp)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&moduleStartPanicInfo,
+		SceDebugForDriver_00CCE39C(&moduleStartPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -304,7 +300,7 @@ int _sceAppMgrModuleStart(SceSize arglen, const void *argp)
 	appmgrRegisterDebuggerCallbacks();
 	SceSysrootForDriver_E9B4221F(sceAppMgrGetShellPidForDriver);
 	ksceIoSetPathMappingFunction(appmgrMapPath);
-	ksceKernelRegisterSysEventHandler("SceAppMgr", appmgrSysEventHandler, NULL);
+	sceKernelRegisterSysEventHandler("SceAppMgr", appmgrSysEventHandler, NULL);
 	g_appmgrDebugNotifier = SceSysrootForDriver_525B24C5();
 	return 0;
 }

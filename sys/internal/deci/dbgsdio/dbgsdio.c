@@ -1,7 +1,7 @@
 /* SceDbgSdio: two SDIO debug channels with mailbox and DMA transfers. */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -36,7 +36,7 @@
 #define DMA_COMMAND_LAST	0x00001000	/* the last tag of the chain */
 #define DMA_COHERENCY		0x73		/* L2 coherent virtual accesses */
 
-/* ksceKernelGetPhysicalMemoryType: mapped at its physical address */
+/* SceSysmemForDriver_0AAA4FDD: mapped at its physical address */
 #define PHYSICAL_MEMORY_TYPE_DIRECT	3
 
 struct DbgSdio;
@@ -157,13 +157,13 @@ static int sceDbgSdioMboxInterrupt(int code, void *arg)
 	ret = ksceKernelSetEventFlag(c->event, bits & ~STATUS_RX_NOTIFY);
 	if (ret < 0)
 		SCE_PRINTF_WITH_INFO(0, 1674, "0x%x %d 0x%x\n", DBGSDIO_ERROR, 1674, ret);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&sdio->lock);
+	state = SceCpuForDriver_D32ACE9E(&sdio->lock);
 	if (c->active && (bits & STATUS_RX_NOTIFY)) {
 		ret = ksceKernelSetEventFlag(c->notify, 1);
 		if (ret < 0)
 			SCE_PRINTF_WITH_INFO(0, 1685, "0x%x %d 0x%x\n", DBGSDIO_ERROR, 1685, ret);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&sdio->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&sdio->lock, state);
 	return -1;
 }
 
@@ -192,11 +192,11 @@ int sceDbgSdioInit(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = DBGSDIO_PADDR;
-	ret = ksceKernelAllocMemBlock("SceDbgSdio1", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	ret = SceSysmemForDriver_C94850C9("SceDbgSdio1", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      SDIO_WINDOW_SIZE, &opt);
 	if (ret < 0)
 		return ret;
-	ksceKernelGetMemBlockBase(ret, (void **)&shm);
+	SceSysmemForDriver_A841EDDA(ret, (void **)&shm);
 	s_sdio.memblock = ret;
 
 	ret = ksceKernelInitializeFastMutex(&s_sdio.mutex, "SceDbgSdio1", 2, 0);
@@ -246,7 +246,7 @@ int sceDbgSdioInit(void)
 	s_sdio.txDma = tx;
 	s_sdio.rxDma = rx;
 	configureFunction();
-	s_sdio.sysEvent = ksceKernelRegisterSysEventHandler("SceDbgSdio1", sysEvent, NULL);
+	s_sdio.sysEvent = sceKernelRegisterSysEventHandler("SceDbgSdio1", sysEvent, NULL);
 	return 0;
 
 freeTx:
@@ -254,13 +254,13 @@ freeTx:
 freeMutex:
 	ksceKernelFinalizeFastMutex(&s_sdio.mutex);
 freeBlock:
-	ksceKernelFreeMemBlock(s_sdio.memblock);
+	SceSysmemForDriver_009E1C61(s_sdio.memblock);
 	return ret;
 }
 
 int _sceDbgSdioModuleStart(SceSize args, void *argp)
 {
-	if (!ksceKernelCheckDipsw(0xc2)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 225, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -281,27 +281,27 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 		return DBGSDIO_ERROR_ARGUMENT;
 	c = &s_sdio.channel[index];
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdio.lock);
+	state = SceCpuForDriver_D32ACE9E(&s_sdio.lock);
 	if (c->active) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return DBGSDIO_ERROR_BUSY;
 	}
 	event = ksceKernelCreateEventFlag("SceDbgSdio1", 0, 0, NULL);
 	if (event < 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return event;
 	}
 	ret = ksceKernelRegisterIntrHandler(DBGSDIO_INTR_BASE + index, "SceDbgSdio1Mbox0", 0,
 					    sceDbgSdioMboxInterrupt, c, 0x80, 0xf, NULL);
 	if (ret < 0) {
 		ksceKernelDeleteEventFlag(event);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return ret;
 	}
 	c->active = 1;
 	c->event = event;
 	c->notify = notify;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 	ksceKernelEnableIntr(DBGSDIO_INTR_BASE + index);
 	return 0;
 }
@@ -316,14 +316,14 @@ int SceDbgSdioForDriver_361E1BB6(SceUInt32 index)
 		return DBGSDIO_ERROR_ARGUMENT;
 	c = &s_sdio.channel[index];
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_sdio.lock);
+	state = SceCpuForDriver_D32ACE9E(&s_sdio.lock);
 	if (c->active) {
 		ksceKernelDisableIntr(DBGSDIO_INTR_BASE + index);
 		ksceKernelReleaseIntrHandler(DBGSDIO_INTR_BASE + index);
 		ksceKernelDeleteEventFlag(c->event);
 		c->active = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 	return 0;
 }
 
@@ -333,7 +333,7 @@ static int isUncached(const void *ptr)
 	SceUIntPtr addr = (SceUIntPtr)ptr;
 
 	if (addr - 0x18000000 < 0x08000000)		/* the game tmpfs window */
-		return ksceKernelIsUncacheAddressInTmpFsGame((void *)ptr);
+		return sceKernelIsUncacheAddressInTmpFsGame((void *)ptr);
 	return addr - 0x20000000 < 0x20000000 || addr - 0x60000000 < 0x21000000;
 }
 
@@ -427,7 +427,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 	}
 
 	*c->txControl = CTRL_TX_DATA;
-	virtual = ksceKernelGetPhysicalMemoryType(data) != PHYSICAL_MEMORY_TYPE_DIRECT;
+	virtual = SceSysmemForDriver_0AAA4FDD(data) != PHYSICAL_MEMORY_TYPE_DIRECT;
 	if (virtual || ((SceUIntPtr)data & (DBGSDIO_DMA_ALIGN - 1)) == 0) {
 		head = whole ? &chain : &tail;
 		if (whole) {
@@ -441,7 +441,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 				if (!isUncached(data))
 					chain.cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_SRC;
 			} else {
-				ksceKernelDcacheCleanRange((void *)data, whole);
+				SceCpuForDriver_103872A5((void *)data, whole);
 			}
 		}
 		if (!rest) {
@@ -457,7 +457,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 				if (!isUncached(tail.src))
 					tail.cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_SRC;
 			} else {
-				ksceKernelDcacheCleanRange((void *)tail.src, DBGSDIO_DMA_ALIGN);
+				SceCpuForDriver_103872A5((void *)tail.src, DBGSDIO_DMA_ALIGN);
 			}
 			tail.cmd |= DMA_COMMAND_LAST;
 			chain.pNext = &tail;
@@ -598,7 +598,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			}
 		}
 	} else {
-		virtual = ksceKernelGetPhysicalMemoryType(dst) != PHYSICAL_MEMORY_TYPE_DIRECT;
+		virtual = SceSysmemForDriver_0AAA4FDD(dst) != PHYSICAL_MEMORY_TYPE_DIRECT;
 		if (virtual || ((SceUIntPtr)dst & (DBGSDIO_DMA_ALIGN - 1)) == 0) {
 			whole = amount & ~(DBGSDIO_DMA_ALIGN - 1);
 			rest = amount & (DBGSDIO_DMA_ALIGN - 1);
@@ -614,7 +614,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 					if (!isUncached(dst))
 						chain.cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_DST;
 				} else {
-					ksceKernelDcacheCleanRange(dst, whole);
+					SceCpuForDriver_103872A5(dst, whole);
 				}
 			}
 			if (!rest) {
@@ -630,7 +630,7 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 					if (!isUncached(c->rxTail))
 						tail.cmd |= SCE_KERNEL_DMAC_CMD_COHERENT_DST;
 				} else {
-					ksceKernelDcacheCleanRange(c->rxTail, DBGSDIO_DMA_ALIGN);
+					SceCpuForDriver_103872A5(c->rxTail, DBGSDIO_DMA_ALIGN);
 				}
 				tail.cmd |= DMA_COMMAND_LAST;
 				chain.pNext = &tail;
@@ -641,9 +641,9 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			if (ret >= 0) {
 				if (!virtual) {
 					if (whole)
-						ksceKernelDcacheInvalidateRange(dst, whole);
+						SceCpuForDriver_02796361(dst, whole);
 					if (rest)
-						ksceKernelDcacheInvalidateRange(c->rxTail, DBGSDIO_DMA_ALIGN);
+						SceCpuForDriver_02796361(c->rxTail, DBGSDIO_DMA_ALIGN);
 				}
 				if (rest)
 					memcpy(dst + whole, c->rxTail, rest);
@@ -689,7 +689,7 @@ int sceDbgSdioWrite(SceUInt32 index, const void *buffer, SceSize size)
 	vector.data_in_vector = 0;
 	vector.count = 0;
 	vector.ranges = ranges;
-	ret = ksceKernelVARangeToPAVector(&range, &vector);
+	ret = sceKernelVARangeToPAVector(&range, &vector);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 1867, "%s.%d VARangeToPARange error:0x%x(%d)\n", __func__, 1867, ret, ret);
 		SCE_DBG_PRINTF(0, 1869, "%s. VARangeToPARange base:%p size:0x%x\n", __func__, buffer, size);

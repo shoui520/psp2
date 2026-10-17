@@ -74,7 +74,7 @@ int UIDHeapObjectDestroy(void *object)
 	return 0;
 }
 
-SceClass *ksceKernelGetUIDHeapClass(void)
+SceClass *SceSysmemForKernel_7C878E94(void)
 {
 	return &s_uidHeapClass->cls;
 }
@@ -183,7 +183,7 @@ int RegisterClass(SceClass *cls)
 	return 0;
 }
 
-int ksceKernelFindClassByName(const char *name, SceClass **cls)
+int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls)
 {
 	SceClass *head, *c;
 	int ret;
@@ -232,7 +232,7 @@ found:
 	return 0;
 }
 
-int ksceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
+int SceSysmemForDriver_61317102(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 			  SceClassCallback create, SceClassCallback destroy)
 {
 	SceSize aligned;
@@ -259,7 +259,7 @@ int ksceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSi
 	return 0;
 }
 
-SceClass *ksceKernelGetUIDClass(void)
+SceClass *SceSysmemForDriver_85336A1C(void)
 {
 	return s_uidClass;
 }

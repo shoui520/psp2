@@ -5,6 +5,7 @@
 
 #include <libhmac.h>
 #include <string.h>
+#include <sysmem/utils.h>
 #if FW_VERSION >= 0x04000000
 #include <sysmem/fortify.h>
 #endif
@@ -18,9 +19,9 @@ int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,
 	unsigned int i;
 
 	if (keylen > SCE_SHA1_BLOCK_SIZE) {
-		ksceSha1BlockInit(&temporary);
-		ksceSha1BlockUpdate(&temporary, secretkey, keylen);
-		ksceSha1BlockResult(&temporary, digest);
+		SceKernelUtilsForDriver_E4390FFA(&temporary);
+		SceKernelUtilsForDriver_478A6F3C(&temporary, secretkey, keylen);
+		SceKernelUtilsForDriver_48F24106(&temporary, digest);
 		secretkey = digest;
 		keylen = sizeof(digest);
 	}
@@ -32,15 +33,15 @@ int sceNetPsHmacSha1Init(SceHmacSha1Context *pContext,
 		innerPad[i] ^= 0x36;
 		pContext->keybuf[i] ^= 0x5c;
 	}
-	ksceSha1BlockInit(&pContext->sha1);
-	ksceSha1BlockUpdate(&pContext->sha1, innerPad, SCE_SHA1_BLOCK_SIZE);
+	SceKernelUtilsForDriver_E4390FFA(&pContext->sha1);
+	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, innerPad, SCE_SHA1_BLOCK_SIZE);
 	return 0;
 }
 
 int sceNetPsHmacSha1Update(SceHmacSha1Context *pContext,
 			 const void *plain, unsigned int len)
 {
-	ksceSha1BlockUpdate(&pContext->sha1, plain, len);
+	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, plain, len);
 	return 0;
 }
 
@@ -49,11 +50,11 @@ int sceNetPsHmacSha1Result(unsigned char *digest,
 {
 	unsigned char innerDigest[SCE_SHA1_DIGEST_SIZE];
 
-	ksceSha1BlockResult(&pContext->sha1, innerDigest);
-	ksceSha1BlockInit(&pContext->sha1);
-	ksceSha1BlockUpdate(&pContext->sha1, pContext->keybuf,
+	SceKernelUtilsForDriver_48F24106(&pContext->sha1, innerDigest);
+	SceKernelUtilsForDriver_E4390FFA(&pContext->sha1);
+	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, pContext->keybuf,
 			   SCE_SHA1_BLOCK_SIZE);
-	ksceSha1BlockUpdate(&pContext->sha1, innerDigest, sizeof(innerDigest));
-	ksceSha1BlockResult(&pContext->sha1, digest);
+	SceKernelUtilsForDriver_478A6F3C(&pContext->sha1, innerDigest, sizeof(innerDigest));
+	SceKernelUtilsForDriver_48F24106(&pContext->sha1, digest);
 	return 0;
 }

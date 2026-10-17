@@ -1,5 +1,6 @@
 /* BSOD's bounded-width circular debug log and screen viewport. */
 #include "bsod_internal.h"
+#include <sysmem/debug.h>
 
 typedef int (*BsodPutchar)(unsigned tty, int character);
 typedef void (*BsodPrinter)(const char *format, ...);
@@ -22,9 +23,6 @@ static const char *bsodLogLine(int32_t index)
 	/* a short log can have a negative cursor: that reads before the buffer */
 	return (const char *)s_bsodLogBuffer[index];
 }
-
-void *ksceKernelGetDebugPutcharHandler(void);
-int ksceKernelRegisterDebugPutcharHandler(void *handler, void *context);
 
 int bsodLogPutchar(unsigned tty, int character)
 {
@@ -70,8 +68,8 @@ int bsodInitializePutchar(void)
 	s_bsodLog.lines = 0;
 	s_bsodLog.firstLine = 0;
 	s_bsodLog.cursor = -1;
-	s_bsodLog.previous = ksceKernelGetDebugPutcharHandler();
-	ksceKernelRegisterDebugPutcharHandler(bsodLogPutchar, NULL);
+	s_bsodLog.previous = (BsodPutchar)SceDebugForKernel_8D474850();
+	SceDebugForKernel_22546577((uintptr_t)bsodLogPutchar, 0);
 	return 0;
 }
 

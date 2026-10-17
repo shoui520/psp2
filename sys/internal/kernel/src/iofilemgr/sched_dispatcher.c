@@ -172,10 +172,10 @@ int sceIoSchedDispatcherFreeAllAsyncEvents(SchedDispatcher *dispatcher, SceUID p
 		freed = 0;
 		if ((int)num > 0) {
 			for (i = 0; i < (int)num; i++) {
-				guid = kscePUIDtoGUID(pid, list[i]);
+				guid = SceSysmemForDriver_45D22597(pid, list[i]);
 				if (guid < 0)
 					continue;
-				ret = ksceGUIDReferObjectWithClass(guid, &g_ioAsyncEventClass,
+				ret = SceSysmemForDriver_00ED6C14(guid, &g_ioAsyncEventClass,
 								   (SceObjectBase **)&event);
 				if (ret < 0)
 					continue;
@@ -184,9 +184,9 @@ int sceIoSchedDispatcherFreeAllAsyncEvents(SchedDispatcher *dispatcher, SceUID p
 				if (current->request.isCanceled != 0 ||
 				    (ret = sceIoSchedDispatcherRemoveIoRequest(dispatcher, &current->request)) >= 0) {
 					freed++;
-					ksceGUIDReleaseObject(guid);
-					ksceGUIDClose(guid);
-					ret = kscePUIDClose(pid, list[i]);
+					sceGUIDReleaseObject(guid);
+					sceGUIDClose(guid);
+					ret = SceSysmemForDriver_84A4AF5E(pid, list[i]);
 				}
 			}
 			if (num == 8)

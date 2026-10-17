@@ -45,18 +45,18 @@ set(MODULE_IMPORT_NIDS
 	0xC9E26388:F:0xA98FC2FD
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelPrintfWithInfo
-	ksceKernelPrintf
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B74B7
 	ksceVfsAddVfs
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
 	memset
 	memcpy
 	strncpy
@@ -71,7 +71,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSDfMgrExRecv
 	SceDeci4pSDfMgrForKernel_FFC95B63
 	SceQafMgrForDriver_382C71E8
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

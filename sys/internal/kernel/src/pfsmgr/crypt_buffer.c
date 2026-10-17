@@ -5,7 +5,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
@@ -90,12 +90,12 @@ int pfsCryptBufferInit(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.alignment = 0x1000;
 		opt.size = sizeof(opt);
-		ret = ksceKernelAllocMemBlock(g_pfsCryptBufNames[i], 0x1020d006,
+		ret = SceSysmemForDriver_C94850C9(g_pfsCryptBufNames[i], 0x1020d006,
 					      PFS_CRYPT_BUF_BLOCKS * PFS_CRYPT_BUF_BLOCK_SIZE, &opt);
 		if (ret < 0)
 			goto fail;
 		pool->block = ret;
-		ret = ksceKernelGetMemBlockBase(ret, &pool->base);
+		ret = SceSysmemForDriver_A841EDDA(ret, &pool->base);
 		if (ret != 0)
 			goto fail;
 
@@ -103,11 +103,11 @@ int pfsCryptBufferInit(void)
 		opt.size = sizeof(opt);
 		opt.attr = 0x1000040;
 		opt.mirror_blockid = pool->block;
-		ret = ksceKernelAllocMemBlock(g_pfsCryptBufSharedNames[i], 0x10208006, 0, &opt);
+		ret = SceSysmemForDriver_C94850C9(g_pfsCryptBufSharedNames[i], 0x10208006, 0, &opt);
 		if (ret < 0)
 			goto fail;
 		pool->sharedBlock = ret;
-		ret = ksceKernelGetMemBlockBase(ret, &pool->sharedBase);
+		ret = SceSysmemForDriver_A841EDDA(ret, &pool->sharedBase);
 		if (ret != 0)
 			goto fail;
 
@@ -121,12 +121,12 @@ fail:
 	for (; i >= 0; i--) {
 		pool = &g_pfsCryptBufPools[i];
 		if (pool->sharedBlock != -1) {
-			ksceKernelFreeMemBlock(pool->sharedBlock);
+			SceSysmemForDriver_009E1C61(pool->sharedBlock);
 			pool->sharedBlock = -1;
 			pool->sharedBase = NULL;
 		}
 		if (pool->block != -1) {
-			ksceKernelFreeMemBlock(pool->block);
+			SceSysmemForDriver_009E1C61(pool->block);
 			pool->block = -1;
 			pool->base = NULL;
 		}
@@ -149,8 +149,8 @@ void pfsCryptBufferTerm(void)
 	for (i = 0; i < PFS_CRYPT_BUF_POOLS; i++) {
 		ksceKernelDeleteCond(g_pfsCryptBufCond[i]);
 		ksceKernelDeleteMutex(g_pfsCryptBufMutex[i]);
-		ksceKernelFreeMemBlock(g_pfsCryptBufPools[i].block);
-		ksceKernelFreeMemBlock(g_pfsCryptBufPools[i].sharedBlock);
+		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].block);
+		SceSysmemForDriver_009E1C61(g_pfsCryptBufPools[i].sharedBlock);
 	}
 }
 

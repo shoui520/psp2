@@ -63,13 +63,13 @@ int suspendDuringFromComBootToStandby(BbmcControl *control,
 			if (suspendStep == 5) {
 				result = bbmcFinalizeGps();
 				if (result < 0 && result != (int)0x80390005)
-					ksceKernelPanic(
+					SceDebugForDriver_391B5B74(
 						&dbg_suspendDuringFromComBootToStandby_L1664,
 						__builtin_return_address(0));
 				input[0].value = 0;
 				goto requestZero;
 			}
-			ksceKernelPanic(
+			SceDebugForDriver_391B5B74(
 				&dbg_suspendDuringFromComBootToStandby_L1679,
 				__builtin_return_address(0));
 		}

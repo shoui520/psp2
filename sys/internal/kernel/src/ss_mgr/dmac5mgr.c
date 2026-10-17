@@ -3,9 +3,8 @@
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <psp2/dmac5.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <dmacmgr/dmac_regs.h>
 #include <sysmem/sysroot.h>
@@ -60,7 +59,7 @@ static inline __attribute__((always_inline)) int dmac5IsUncached(const void *add
 	uintptr_t value = (uintptr_t)address;
 
 	if (value - 0x18000000 < 0x08000000)
-		return ksceKernelIsUncacheAddressInTmpFsGame((void *)address);
+		return sceKernelIsUncacheAddressInTmpFsGame((void *)address);
 	return value - 0x20000000 < 0x20000000 ||
 		value - 0x60000000 < 0x21000000;
 }
@@ -86,7 +85,7 @@ int _sceSblDmac5DirectCrypt(SceKernelDmaOpId operation, const void *src,
 		uintptr_t dstPhysical = 0;
 
 		if (!(command & 0x400)) {
-			ret = ksceKernelVAtoPA(dst, &dstPhysical);
+			ret = SceSysmemForDriver_8D160E65(dst, &dstPhysical);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0xb, 490, "dst addr conversion failed\n");
 				return (int)0x800f1528;
@@ -104,7 +103,7 @@ int _sceSblDmac5DirectCrypt(SceKernelDmaOpId operation, const void *src,
 convertIv:
 		if (iv == NULL)
 			return (int)0x800f1516;
-		ret = ksceKernelVAtoPA(iv, &ivPhysical);
+		ret = SceSysmemForDriver_8D160E65(iv, &ivPhysical);
 		if (ret < 0)
 			return (int)0x800f1528;
 	}
@@ -168,7 +167,7 @@ keyError:
 	}
 #if FW_DEBUG
 	if (ret < 0)
-		ksceKernelPrintfLevelWithInfo(1, 0xb, errorInfo, errorMessage, ret);
+		SceDebugForDriver_D9703808(1, 0xb, errorInfo, errorMessage, ret);
 #endif
 	SceKernelSuspendForDriver_2BB92967(0);
 	return ret;
@@ -185,11 +184,11 @@ int sceSblDmac5Init(void)
 	option.size = sizeof(option);
 	option.paddr = DMAC5_KEYRING_REG_BASE;
 	option.attr = 2;
-	block = ksceKernelAllocMemBlock("SceSblDMAC5DmacKRBase",
+	block = SceSysmemForDriver_C94850C9("SceSblDMAC5DmacKRBase",
 		(SceKernelMemBlockType)0x20100806, DMAC_REG_SIZE, &option);
 	if (block < 0)
 		SCE_DBG_ASSERT_FAIL(176);
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	dmacKeyringRegisters = base;
 	ret = ksceKernelInitializeFastMutex(&dmacKeyringMutex,
 		"SceSblDmac5KeyRing", 0, NULL);
@@ -622,7 +621,7 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
-	ret = ksceKernelCopyFromUser(&local, param, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, param, sizeof(local));
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -655,13 +654,13 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 			sceSyscallLeave(syscallState);
 			return (int)0x800f1516;
 		}
-		ret = ksceKernelCopyFromUser(iv, userIv, ivSize);
+		ret = SceSysmemForDriver_BC996A7A(iv, userIv, ivSize);
 		if (ret != 0) {
 			sceSyscallLeave(syscallState);
 			return ret;
 		}
 	}
-	ret = ksceKernelCopyFromUser(key, userKey, keyBits >> 3);
+	ret = SceSysmemForDriver_BC996A7A(key, userKey, keyBits >> 3);
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -675,7 +674,7 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 		key, keyBits, iv, 1, command);
 	dmac5UnlockUserBuffers(src, size, dst, size);
 	if (ret == 0 && ivSize != 0)
-		ret = ksceKernelCopyToUser(userIv, iv, ivSize);
+		ret = SceSysmemForDriver_6D88EF8A(userIv, iv, ivSize);
 	sceSyscallLeave(syscallState);
 	return ret;
 }
@@ -698,7 +697,7 @@ int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
-	ret = ksceKernelCopyFromUser(&local, param, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, param, sizeof(local));
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -726,7 +725,7 @@ int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
 		contextSize = (command & 0x38) == 0x38 ? 16 : 40;
 		if (userContext == NULL)
 			goto invalid;
-		ret = ksceKernelCopyFromUser(context, userContext, contextSize);
+		ret = SceSysmemForDriver_BC996A7A(context, userContext, contextSize);
 		if (ret != 0) {
 			sceSyscallLeave(syscallState);
 			return ret;
@@ -742,9 +741,9 @@ int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
 	dmac5UnlockUserBuffers(src, size, dst, digestSize);
 	if (ret == 0) {
 		if (contextSize != 0)
-			ret = ksceKernelCopyToUser(userContext, context, contextSize);
+			ret = SceSysmemForDriver_6D88EF8A(userContext, context, contextSize);
 		if (ret == 0 && copyDigest)
-			ret = ksceKernelCopyToUser(dst, digest, digestSize);
+			ret = SceSysmemForDriver_6D88EF8A(dst, digest, digestSize);
 	}
 	sceSyscallLeave(syscallState);
 	return ret;
@@ -763,12 +762,12 @@ int dmac5ClearKeyring(void)
 int dmac5LockUserBuffers(const void *src, SceSize srcSize, void *dst,
 	SceSize dstSize)
 {
-	int ret = ksceKernelLockRangeWithMode(16, (void *)src, srcSize);
+	int ret = sceKernelLockRangeWithMode(16, (void *)src, srcSize);
 
 	if (ret >= 0) {
 		if (dstSize != 0 &&
-			(ret = ksceKernelLockRangeWithMode(32, dst, dstSize)) < 0) {
-			ksceKernelUnlockRangeWithMode(16, (void *)src, srcSize);
+			(ret = sceKernelLockRangeWithMode(32, dst, dstSize)) < 0) {
+			SceSysmemForDriver_22CBE925(16, (void *)src, srcSize);
 			return ret;
 		}
 		ret = 0;
@@ -779,10 +778,10 @@ int dmac5LockUserBuffers(const void *src, SceSize srcSize, void *dst,
 int dmac5UnlockUserBuffers(const void *src, SceSize srcSize, void *dst,
 	SceSize dstSize)
 {
-	int ret = ksceKernelUnlockRangeWithMode(16, (void *)src, srcSize);
+	int ret = SceSysmemForDriver_22CBE925(16, (void *)src, srcSize);
 
 	if (dstSize != 0)
-		return ksceKernelUnlockRangeWithMode(32, dst, dstSize);
+		return SceSysmemForDriver_22CBE925(32, dst, dstSize);
 	return ret;
 }
 

@@ -1,7 +1,7 @@
 /* Descriptive filename; these callbacks have no source-file debug records. */
 #include "hid_internal.h"
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include <sysmem/sysmem.h>
 #include <psp2/kernel/threadmgr/thread.h>
 #include <intrmgr/syscall.h>
 #include <string.h>
@@ -223,7 +223,7 @@ int sceHidMouseRegisterEnumHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -288,7 +288,7 @@ int sceHidMouseUnregisterEnumHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -356,7 +356,7 @@ int sceHidMouseRegisterReadHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -421,7 +421,7 @@ int sceHidMouseUnregisterReadHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -489,7 +489,7 @@ int sceHidKeyboardRegisterEnumHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -555,7 +555,7 @@ int sceHidKeyboardUnregisterEnumHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -624,7 +624,7 @@ int sceHidKeyboardRegisterReadHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -689,7 +689,7 @@ int sceHidKeyboardUnregisterReadHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -757,7 +757,7 @@ int sceHidConsumerControlRegisterEnumHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -822,7 +822,7 @@ int sceHidConsumerControlUnregisterEnumHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -890,7 +890,7 @@ int sceHidConsumerControlRegisterReadHintCallback(SceUID callbackId)
 	ListNode *link, *previous;
 	HidHintCallback *entry;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;
@@ -955,7 +955,7 @@ int sceHidConsumerControlUnregisterReadHintCallback(SceUID callbackId)
 	int result;
 	ListNode *link, *previous;
 
-	kernelId = kscePUIDtoGUID(0, callbackId);
+	kernelId = SceSysmemForDriver_45D22597(0, callbackId);
 	if (kernelId < 0) {
 		sceSyscallLeave(syscallState);
 		return kernelId;

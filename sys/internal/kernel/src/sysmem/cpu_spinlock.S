@@ -63,14 +63,14 @@
 	.endm
 
 /* int sceKernelGetCpuId(void): this CPU's number, 0-3 (MPIDR) */
-	func	sceKernelGetCpuId, ksceKernelCpuId
+	func	sceKernelGetCpuId, sceKernelCpuId
 	mrc	p15, 0, r0, c0, c0, 5
 	and.w	r0, r0, #0xf
 	bx	lr
-	endfunc	sceKernelGetCpuId, ksceKernelCpuId
+	endfunc	sceKernelGetCpuId, sceKernelCpuId
 
-/* void ksceKernelSpinlockLowLock(lock): spins (wfe) until the lock is free */
-	func	ksceKernelSpinlockLowLock
+/* void SceCpuForDriver_BF82DEB2(lock): spins (wfe) until the lock is free */
+	func	SceCpuForDriver_BF82DEB2
 0:	ldrex	r1, [r0]
 	cbnz	r1, 1f
 	strex	r1, lr, [r0]
@@ -79,10 +79,10 @@
 	bx	lr
 1:	wfe
 2:	b	0b
-	endfunc	ksceKernelSpinlockLowLock
+	endfunc	SceCpuForDriver_BF82DEB2
 
-/* int ksceKernelSpinlockLowTrylock(lock): 0, or -1 when the lock is taken */
-	func	ksceKernelSpinlockLowTrylock
+/* int SceCpuForDriver_5AC9D394(lock): 0, or -1 when the lock is taken */
+	func	SceCpuForDriver_5AC9D394
 0:	ldrex	r1, [r0]
 	cbnz	r1, 1f
 	strex	r1, lr, [r0]
@@ -93,24 +93,24 @@
 	bx	lr
 1:	movs.w	r0, #-1
 	bx	lr
-	endfunc	ksceKernelSpinlockLowTrylock
+	endfunc	SceCpuForDriver_5AC9D394
 
 /* void CpuSpinlockUnlock(lock) */
-	func	CpuSpinlockUnlock, ksceKernelSpinlockLowUnlock
+	func	CpuSpinlockUnlock, sceKernelSpinlockLowUnlock
 	movs	r1, #0
 	dmb	sy
 	str	r1, [r0]
 	dsb	sy
 	sev
 	bx	lr
-	endfunc	CpuSpinlockUnlock, ksceKernelSpinlockLowUnlock
+	endfunc	CpuSpinlockUnlock, sceKernelSpinlockLowUnlock
 
 /*
  * int CpuSpinlockLockIrqCore(lock): takes the lock with the IRQs off and returns
  * the previous I bit; the IRQs are back on while it waits.
  * CpuSpinlockLockIrqWithCaller(lock, caller) records caller as the owner.
  */
-	func	CpuSpinlockLockIrqCore, ksceKernelSpinlockLowLockCpuSuspendIntr
+	func	CpuSpinlockLockIrqCore, SceCpuForDriver_D32ACE9E
 	mov	r2, lr
 1:	mrs	r3, cpsr
 	cpsid	i
@@ -131,13 +131,13 @@
 #endif
 	mov	r2, r1
 	b	1b
-	endfunc	CpuSpinlockLockIrqWithCaller, ksceKernelSpinlockLowLockCpuSuspendIntr
+	endfunc	CpuSpinlockLockIrqWithCaller, SceCpuForDriver_D32ACE9E
 
 /*
  * int CpuSpinlockTrylockIrqCore(lock): as CpuSpinlockLockIrqCore, or -1 with the
  * IRQs as they were when the lock is taken.
  */
-	func	CpuSpinlockTrylockIrqCore, ksceKernelSpinlockLowTrylockCpuSuspendIntr
+	func	CpuSpinlockTrylockIrqCore, SceCpuForDriver_27C0B340
 	mov	r2, lr
 1:	mrs	r3, cpsr
 	cpsid	i
@@ -158,10 +158,10 @@
 #endif
 	mov	r2, r1
 	b	1b
-	endfunc	CpuSpinlockTrylockIrqWithCaller, ksceKernelSpinlockLowTrylockCpuSuspendIntr
+	endfunc	CpuSpinlockTrylockIrqWithCaller, SceCpuForDriver_27C0B340
 
 /* void CpuSpinlockUnlockIrq(lock, flags): unlocks; IRQs on unless flags */
-	func	CpuSpinlockUnlockIrq, ksceKernelSpinlockLowUnlockCpuResumeIntr
+	func	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr
 	movs	r2, #0
 	dmb	sy
 	str	r2, [r0]
@@ -170,13 +170,13 @@
 	cbnz	r1, 1f
 	cpsie	i
 1:	bx	lr
-	endfunc	CpuSpinlockUnlockIrq, ksceKernelSpinlockLowUnlockCpuResumeIntr
+	endfunc	CpuSpinlockUnlockIrq, sceKernelSpinlockLowUnlockCpuResumeIntr
 
 /*
- * void ksceKernelRWSpinlockLowWriteLock(lock). As in Sony's code, a successful
+ * void SceCpuForDriver_3F42B434(lock). As in Sony's code, a successful
  * strex loops back (and then waits on its own lock) and a failed one returns.
  */
-	func	ksceKernelRWSpinlockLowWriteLock
+	func	SceCpuForDriver_3F42B434
 	movs.w	r2, #RW_WRITER
 1:	ldrex	r1, [r0]
 	cbnz	r1, 2f
@@ -186,10 +186,10 @@
 	bx	lr
 2:	wfe
 3:	b	1b
-	endfunc	ksceKernelRWSpinlockLowWriteLock
+	endfunc	SceCpuForDriver_3F42B434
 
-/* int ksceKernelRWSpinlockLowTryWriteLock(lock): 0, or -1 when held */
-	func	ksceKernelRWSpinlockLowTryWriteLock
+/* int SceCpuForDriver_4F7790B4(lock): 0, or -1 when held */
+	func	SceCpuForDriver_4F7790B4
 	movs.w	r2, #RW_WRITER
 1:	ldrex	r1, [r0]
 	cbnz	r1, 2f
@@ -201,20 +201,20 @@
 	bx	lr
 2:	movs.w	r0, #-1
 	bx	lr
-	endfunc	ksceKernelRWSpinlockLowTryWriteLock
+	endfunc	SceCpuForDriver_4F7790B4
 
 /* void CpuRWSpinlockWriteUnlock(lock) */
-	func	CpuRWSpinlockWriteUnlock, ksceKernelRWSpinlockLowWriteUnlock
+	func	CpuRWSpinlockWriteUnlock, sceKernelRWSpinlockLowWriteUnlock
 	movs	r1, #0
 	dmb	sy
 	str	r1, [r0]
 	dsb	sy
 	sev
 	bx	lr
-	endfunc	CpuRWSpinlockWriteUnlock, ksceKernelRWSpinlockLowWriteUnlock
+	endfunc	CpuRWSpinlockWriteUnlock, sceKernelRWSpinlockLowWriteUnlock
 
 /* int CpuRWSpinlockWriteLockIrq(lock): the previous I bit */
-	func	CpuRWSpinlockWriteLockIrq, ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr
+	func	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
 	mrs	r3, cpsr
 	movs.w	r2, #RW_WRITER
 	cpsid	i
@@ -229,10 +229,10 @@
 	wfe
 	cpsid	i
 3:	b	1b
-	endfunc	CpuRWSpinlockWriteLockIrq, ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr
+	endfunc	CpuRWSpinlockWriteLockIrq, SceCpuForDriver_4C38CE4D
 
 /* int CpuRWSpinlockTryWriteLockIrq(lock): the previous I bit, or -1 when held */
-	func	CpuRWSpinlockTryWriteLockIrq, ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr
+	func	CpuRWSpinlockTryWriteLockIrq, SceCpuForDriver_DE6482C6
 	mrs	r3, cpsr
 	cpsid	i
 	movs.w	r2, #RW_WRITER
@@ -247,10 +247,10 @@
 2:	msr	cpsr_c, r3
 	movs.w	r0, #-1
 	bx	lr
-	endfunc	CpuRWSpinlockTryWriteLockIrq, ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr
+	endfunc	CpuRWSpinlockTryWriteLockIrq, SceCpuForDriver_DE6482C6
 
 /* void CpuRWSpinlockWriteUnlockIrq(lock, flags) */
-	func	CpuRWSpinlockWriteUnlockIrq, ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
+	func	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 	movs	r2, #0
 	dmb	sy
 	str	r2, [r0]
@@ -259,10 +259,10 @@
 	cbnz	r1, 1f
 	cpsie	i
 1:	bx	lr
-	endfunc	CpuRWSpinlockWriteUnlockIrq, ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
+	endfunc	CpuRWSpinlockWriteUnlockIrq, sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
 
-/* void ksceKernelRWSpinlockLowReadLock(lock): waits while a writer holds it */
-	func	ksceKernelRWSpinlockLowReadLock
+/* void SceCpuForDriver_CAC9AE80(lock): waits while a writer holds it */
+	func	SceCpuForDriver_CAC9AE80
 0:	ldrex	r1, [r0]
 	adds	r1, #1
 	bmi	1f
@@ -272,13 +272,13 @@
 	b.w	0b
 2:	dmb	sy
 	bx	lr
-	endfunc	ksceKernelRWSpinlockLowReadLock
+	endfunc	SceCpuForDriver_CAC9AE80
 
 /*
- * int ksceKernelRWSpinlockLowTryReadLock(lock): 0, or -1 when a writer holds it.
+ * int SceCpuForDriver_093925BD(lock): 0, or -1 when a writer holds it.
  * As in Sony's code, the retry tests the new count, not the strex status.
  */
-	func	ksceKernelRWSpinlockLowTryReadLock
+	func	SceCpuForDriver_093925BD
 0:	ldrex	r1, [r0]
 	adds	r1, #1
 	bmi	1f
@@ -290,10 +290,10 @@
 	bx	lr
 1:	movs.w	r0, #-1
 	bx	lr
-	endfunc	ksceKernelRWSpinlockLowTryReadLock
+	endfunc	SceCpuForDriver_093925BD
 
 /* void CpuRWSpinlockReadUnlock(lock): wakes the waiters when the last reader leaves */
-	func	CpuRWSpinlockReadUnlock, ksceKernelRWSpinlockLowReadUnlock
+	func	CpuRWSpinlockReadUnlock, sceKernelRWSpinlockLowReadUnlock
 	dmb	sy
 1:	ldrex	r1, [r0]
 	subs	r1, #1
@@ -304,10 +304,10 @@
 	dsb	sy
 	sev
 2:	bx	lr
-	endfunc	CpuRWSpinlockReadUnlock, ksceKernelRWSpinlockLowReadUnlock
+	endfunc	CpuRWSpinlockReadUnlock, sceKernelRWSpinlockLowReadUnlock
 
 /* int CpuRWSpinlockReadLockIrq(lock): the previous I bit */
-	func	CpuRWSpinlockReadLockIrq, ksceKernelRWSpinlockLowReadLockCpuSuspendIntr
+	func	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
 	mrs	r3, cpsr
 	cpsid	i
 1:	ldrex	r1, [r0]
@@ -322,10 +322,10 @@
 	wfe
 	cpsid	i
 3:	b	1b
-	endfunc	CpuRWSpinlockReadLockIrq, ksceKernelRWSpinlockLowReadLockCpuSuspendIntr
+	endfunc	CpuRWSpinlockReadLockIrq, SceCpuForDriver_EC53D007
 
 /* int CpuRWSpinlockTryReadLockIrq(lock): the previous I bit, or -1 */
-	func	CpuRWSpinlockTryReadLockIrq, ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr
+	func	CpuRWSpinlockTryReadLockIrq, SceCpuForDriver_F02467D1
 	mrs	r3, cpsr
 	cpsid	i
 1:	ldrex	r1, [r0]
@@ -340,10 +340,10 @@
 2:	msr	cpsr_c, r3
 	movs.w	r0, #-1
 	bx	lr
-	endfunc	CpuRWSpinlockTryReadLockIrq, ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr
+	endfunc	CpuRWSpinlockTryReadLockIrq, SceCpuForDriver_F02467D1
 
 /* void CpuRWSpinlockReadUnlockIrq(lock, flags) */
-	func	CpuRWSpinlockReadUnlockIrq, ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr
+	func	CpuRWSpinlockReadUnlockIrq, sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
 	dmb	sy
 1:	ldrex	r2, [r0]
 	subs	r2, #1
@@ -356,4 +356,4 @@
 2:	cbnz	r1, 3f
 	cpsie	i
 3:	bx	lr
-	endfunc	CpuRWSpinlockReadUnlockIrq, ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr
+	endfunc	CpuRWSpinlockReadUnlockIrq, sceKernelRWSpinlockLowReadUnlockCpuResumeIntr

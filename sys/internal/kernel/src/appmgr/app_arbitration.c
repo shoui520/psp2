@@ -5,10 +5,10 @@
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_event.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/pm_mgr.h>
+#include <sysmem/pmmgr.h>
 #include <psp2/appmgr.h>
 #include "app_state_internal.h"
 #include <processmgr/processmgr.h>
@@ -17,8 +17,6 @@ extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutexOwner;
 extern int appmgrGetAppRunState(const struct AppState *app);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 struct AppState;
 extern int _appListFindAndLockAppByProcessId(SceUID pid, struct AppState **app);
@@ -99,12 +97,12 @@ static const SceKernelDebugInfo removableGameCheckProcessEventsPanicInfo = {
 
 void appmgrArbitrationPanic(void)
 {
-	ksceKernelPanic(&arbitrationPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&arbitrationPanicInfo, __builtin_return_address(0));
 }
 
 _Noreturn void appmgrGcListenerMutexPanic(void)
 {
-	ksceKernelPanic(&gcListenerMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&gcListenerMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -144,7 +142,7 @@ int copyArgv(char *destination, const char *const *userArgv)
 	if (userArgv == NULL)
 		return 0;
 	for (;;) {
-		result = ksceKernelCopyFromUser(&argument, userArgv, sizeof(argument));
+		result = SceSysmemForDriver_BC996A7A(&argument, userArgv, sizeof(argument));
 		if (result != 0)
 			return result;
 		if (argument == NULL) {
@@ -155,7 +153,7 @@ int copyArgv(char *destination, const char *const *userArgv)
 			}
 			return total;
 		}
-		result = ksceKernelStrncpyFromUser(cursor, argument, 1024 - total);
+		result = SceSysmemForDriver_DB3EC244(cursor, argument, 1024 - total);
 		if (result == 1024 - total)
 			return (int)0x8001005bU;
 		if (result < 0)
@@ -321,7 +319,7 @@ int getMiniAppValue(struct AppState *app)
 } while (0)
 #define GC_PROCESS_CHECK(_result, _line, _func, _info) do { \
 	if (_result != 0) \
-		ksceKernelPrintfPanic(&_info, __builtin_return_address(0), \
+		SceDebugForDriver_00CCE39C(&_info, __builtin_return_address(0), \
 			"0x%08x,0x%08x\n", _result, 0); \
 } while (0)
 #define GC_SUSPEND_CHECK(_result, _line, _func) do { \
@@ -433,7 +431,7 @@ int _gcListenerThreadEntry(SceSize args, void *argp)
 					gcGameWaitProcessEventsPanicInfo, gcGameCheckProcessEventsPanicInfo);
 			}
 			if (removableChanged) {
-				kscePmMgrGetProductMode(&productMode);
+				ScePmMgrForDriver_2AC815A2(&productMode);
 				if (productMode != 1) {
 					GC_SUSPEND_MEDIA("suspendAppBootedfromGCorRM", 2589, 2592,
 						2596, 2599, 2601, 2607, 2609, 1, 0, 0,
@@ -489,7 +487,7 @@ void initProcessStateUpdaterThread(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 2825, "initProcessStateUpdaterThread");
 #else
-		ksceKernelPanic(&processStateUpdaterStartPanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&processStateUpdaterStartPanicInfo, __builtin_return_address(0));
 #endif
 	}
 	g_appmgrGro0MountEvent = ksceIoCreateMountEvent(0x900, 0x202);
@@ -513,7 +511,7 @@ void initProcessStateUpdaterThread(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 2846, "initProcessStateUpdaterThread");
 #else
-		ksceKernelPanic(&gcListenerStartPanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&gcListenerStartPanicInfo, __builtin_return_address(0));
 #endif
 	}
 }

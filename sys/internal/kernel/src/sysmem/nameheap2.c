@@ -64,7 +64,7 @@ static inline NameEntry *NameHeapControlNameEntryNew(NameHeapControl *control, c
 			SCE_DBG_PRINTF(0xb, 297, "NameHeapControlNameEntryAlloc failed\n");
 			return NULL;
 		}
-		ksceKernelAtomicIncrementHighwaterCounter((SceUInt32 *)&control->count);
+		SceCpuForKernel_9DA58A9E((SceUInt32 *)&control->count);
 		strncpy(entry->name, name, NAME_ENTRY_SHORT_NAME - 1);
 		entry->name[NAME_ENTRY_SHORT_NAME - 1] = '\0';
 		entry->next = NULL;
@@ -72,7 +72,7 @@ static inline NameEntry *NameHeapControlNameEntryNew(NameHeapControl *control, c
 		entry->attr = bucket << NAME_ENTRY_ATTR_BUCKET_SHIFT | NAME_ENTRY_ATTR_VALID;
 	} else {
 		length = strnlen(name, 0x100);
-		entry = ksceKernelAlloc(length + 1 + offsetof(NameEntry, name));
+		entry = SceSysmemForKernel_85571907(length + 1 + offsetof(NameEntry, name));
 		if (entry == NULL) {
 			SCE_DBG_PRINTF(0xb, 288, "SceKernelAlloc(%d) failed\n", length + 1);
 			return NULL;
@@ -113,30 +113,30 @@ static inline int NameHeapControlLink(NameHeapControl *control, const char *name
 		self = NameEntryFromName(name);
 		if (NameEntryGetBucket(self, &bucket)) {
 			lock = &control->locks[bucket % NAME_HEAP_LOCKS];
-			state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(lock);
+			state = SceCpuForDriver_4C38CE4D(lock);
 			for (link = &control->buckets[bucket]; (entry = *link) != NULL;
 			     link = &entry->next) {
 				if (strncmp(entry->name, name, NAME_ENTRY_SHORT_NAME) == 0) {
 					NameEntryIncCount(entry);
-					ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+					sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 					*out = *link;
 					return 0;
 				}
 			}
-			ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+			sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 		}
 	}
 
 	hash = NameHeapHash(control, name);
 	bucket = hash % NAME_HEAP_BUCKETS;
 	lock = &control->locks[hash % NAME_HEAP_LOCKS];
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(lock);
+	state = SceCpuForDriver_4C38CE4D(lock);
 	for (link = &control->buckets[bucket]; (entry = *link) != NULL; link = &entry->next) {
 		if (strncmp(entry->name, name, NAME_ENTRY_SHORT_NAME) == 0)
 			break;
 	}
 	if (entry == NULL) {
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 		SCE_DBG_PRINTF(0xb, 504, "NOT FOUND:pControl=%p, Error for %p[%s], hash=0x%08x\n",
 			       control, name, name, bucket);
 		*out = NULL;
@@ -146,7 +146,7 @@ static inline int NameHeapControlLink(NameHeapControl *control, const char *name
 	if (flags & NAME_HEAP_FLAG_BY_LINK)
 		SCE_DBG_PRINTF(0xb, 492, "search by link=NG, str=OK [%s][%p-%p]\n", name, name,
 			       self);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 	*out = *link;
 	return 0;
 }
@@ -162,7 +162,7 @@ static inline int NameHeapControlInsert(NameHeapControl *control, const char *na
 	hash = NameHeapHash(control, name);
 	bucket = hash % NAME_HEAP_BUCKETS;
 	lock = &control->locks[hash % NAME_HEAP_LOCKS];
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(lock);
+	state = SceCpuForDriver_4C38CE4D(lock);
 	head = &control->buckets[bucket];
 	for (link = head; (entry = *link) != NULL; link = &entry->next) {
 		if (strncmp(entry->name, name, NAME_ENTRY_SHORT_NAME) != 0)
@@ -184,12 +184,12 @@ static inline int NameHeapControlInsert(NameHeapControl *control, const char *na
 	*head = entry;
 	link = head;
 found:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 	*out = *link;
 	return 0;
 
 failed:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 	*out = NULL;
 	return ret;
 }
@@ -203,10 +203,10 @@ static inline void NameHeapControlRelease(NameHeapControl *control, NameEntry **
 		return;
 	*link = entry->next;
 	if (entry->attr & NAME_ENTRY_ATTR_KERNEL_HEAP)
-		ksceKernelFree(entry);
+		SceSysmemForKernel_4233C16D(entry);
 	else
 		SceSysmemForKernel_93344755(control->entryHeap, entry);
-	ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&control->count);
+	SceCpuForKernel_0E04BD2E((SceInt32 *)&control->count);
 }
 
 static inline int NameHeapControlDelete(NameHeapControl *control, const char *name,
@@ -222,24 +222,24 @@ static inline int NameHeapControlDelete(NameHeapControl *control, const char *na
 		self = NameEntryFromName(name);
 		if (NameEntryGetBucket(self, &bucket)) {
 			lock = &control->locks[bucket % NAME_HEAP_LOCKS];
-			state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(lock);
+			state = SceCpuForDriver_4C38CE4D(lock);
 			for (link = &control->buckets[bucket]; (entry = *link) != NULL;
 			     link = &entry->next) {
 				if (entry == self) {
 					SCE_DBG_ASSERT_CHECK(self->refCount != 0, 632);
 					NameHeapControlRelease(control, link);
-					ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+					sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 					return 0;
 				}
 			}
-			ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+			sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 		}
 	}
 
 	hash = NameHeapHash(control, name);
 	bucket = hash % NAME_HEAP_BUCKETS;
 	lock = &control->locks[hash % NAME_HEAP_LOCKS];
-	state = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(lock);
+	state = SceCpuForDriver_4C38CE4D(lock);
 	for (link = &control->buckets[bucket]; (entry = *link) != NULL; link = &entry->next) {
 		if (strncmp(entry->name, name, NAME_ENTRY_SHORT_NAME) == 0)
 			break;
@@ -247,7 +247,7 @@ static inline int NameHeapControlDelete(NameHeapControl *control, const char *na
 	if (entry == NULL) {
 		SCE_DBG_PRINTF(0xb, 680, "search by str %p failed [%s] hash 0x%08x\n", self, name,
 			       bucket);
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 		return SCE_KERNEL_ERROR_ERROR;
 	}
 	SCE_DBG_ASSERT_CHECK(entry->refCount != 0, 659);
@@ -255,7 +255,7 @@ static inline int NameHeapControlDelete(NameHeapControl *control, const char *na
 	if (flags & NAME_HEAP_FLAG_BY_LINK)
 		SCE_DBG_PRINTF(0xb, 670, "search by link=NG, str=OK [%s][%p-%p], hash=0x%08x\n",
 			       name, name, self, bucket);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(lock, state);
 	return 0;
 }
 
@@ -314,7 +314,7 @@ int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out)
 	control = NameHeapGetControl(flags);
 	hash = NameHeapHash(control, name);
 	lock = &control->locks[hash % NAME_HEAP_LOCKS];
-	state = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(lock);
+	state = SceCpuForDriver_EC53D007(lock);
 	ret = SCE_KERNEL_ERROR_ERROR;
 	for (link = &control->buckets[hash % NAME_HEAP_BUCKETS]; (entry = *link) != NULL;
 	     link = &entry->next) {
@@ -325,7 +325,7 @@ int NameHeapFind(const char *name, SceUInt32 flags, NameEntry **out)
 	}
 	if (entry == NULL)
 		*link = NULL;		/* already NULL; as in the original */
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(lock, state);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(lock, state);
 	*out = *link;
 	return ret;
 }
@@ -385,7 +385,7 @@ static inline void NameHeapControlGetCount(const NameHeapControl *control, SceUI
 	*peak = control->count >> 16;
 }
 
-int ksceKernelNameHeapGetInfo(void *pInfo)
+int SceSysmemForKernel_01194C2E(void *pInfo)
 {
 	SceKernelNameHeapInfo *info = pInfo;
 	int ret;

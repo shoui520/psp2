@@ -48,19 +48,19 @@ set(MODULE_IMPORT_NIDS
 	0x2ED7F97A:F:0xAA770EF7
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockVBase
-	ksceKernelAllocMemBlock
-	ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelRWSpinlockLowReadLockCpuSuspendIntr
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_B81CF0A3
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_4C38CE4D
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceCpuForDriver_EC53D007
 	memcpy
 	__stack_chk_fail
-	ksceKernelPrintfWithInfo
-	ksceKernelPrintf
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B74B7
 	ksceKernelDeleteMutex
 	ksceKernelLockMutex
 	ksceKernelUnlockMutex
@@ -71,10 +71,10 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
-	ksceUartRead
-	ksceKernelCheckDipsw
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
+	SceUartForKernel_4E97D3AD
+	SceDipswForDriver_A98FC2FD
 	SceSysrootForDriver_AA770EF7
 )
 set(MODULE_IMPORT_VARS

@@ -236,11 +236,11 @@ void iofile_daemon_start(void)
 	SceUInt64 now;
 	int ret;
 
-	g_iofDaemonDevList = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x100);
+	g_iofDaemonDevList = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x100);
 	if (g_iofDaemonDevList == NULL)
 		SCE_DBG_ASSERT(0, 324);
 	devlist_initialize(g_iofDaemonDevList);
-	g_iofDaemonInitialDevList = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x100);
+	g_iofDaemonInitialDevList = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x100);
 	if (g_iofDaemonInitialDevList == NULL)
 		SCE_DBG_ASSERT(0, 334);
 	ret = ksceKernelInitializeFastMutex(&g_iofDaemonLock, "SceIofileDaemonLock", 2, NULL);

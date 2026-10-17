@@ -47,7 +47,7 @@ int mtpPackString(MtpString *out, const char *str)
 		out->length = 0;
 		return 0;
 	}
-	tmp = ksceKernelAllocHeapMemoryWithOption(ewg.heap, room * 2, &ewg.allocOpt);
+	tmp = SceSysmemForDriver_49D4DD9B(ewg.heap, room * 2, &ewg.allocOpt);
 	if (tmp == NULL)
 		return MTP_ERROR_NO_MEMORY;
 	ret = mtpUtf8ToUtf16(tmp, room * 2, (const SceUInt8 *)str);
@@ -58,7 +58,7 @@ int mtpPackString(MtpString *out, const char *str)
 		ret = (char *)end - (char *)tmp + 2;
 		memcpy(out->buf, tmp, ret);
 	}
-	ksceKernelFreeHeapMemory(ewg.heap, tmp);
+	sceKernelFreeHeapMemory(ewg.heap, tmp);
 	return ret;
 }
 

@@ -22,7 +22,7 @@ int sceKernelMMUL1IsEqualAccessibleBySW(const uint32_t *l1, uint32_t perm, uintp
 					uintptr_t *pa);
 int sceKernelMMUL1GetMemoryType(const uint32_t *l1, uintptr_t va);
 int MMUIsValidMap(const MMUContext *context, uintptr_t va, SceSize size, uintptr_t pa);
-int ksceKernelSysrootGetStatus(void);
+int SceSysrootForKernel_5C426B19(void);
 
 /* memblock type bit: a shared (S) mapping */
 #define L1PT_TYPE_SHARED		0x10000
@@ -50,7 +50,7 @@ int L1PageTableCheckMap(Partition *partition, uintptr_t va, SceSize size, uintpt
 	MMUContext *context = NULL;
 
 	if (partition == NULL) {
-		if ((SceUInt32)ksceKernelSysrootGetStatus() > 3)
+		if ((SceUInt32)SceSysrootForKernel_5C426B19() > 3)
 			return 0;
 	} else if (partition->addressSpace != NULL) {
 		context = AddressSpaceGetMMUContext(partition->addressSpace);
@@ -75,7 +75,7 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 	int flags, ret;
 
 	SCE_DBG_ASSERT_CHECK(domain < 16, 175);
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	if (L1PageTableUseSupersections(size, domain)) {
 		if ((va & (L1PT_SUPERSECTION - 1)) == 0 && (size & (L1PT_SUPERSECTION - 1)) == 0 &&
 		    (pa & (L1PT_SUPERSECTION - 1)) == 0)
@@ -86,7 +86,7 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 	} else {
 		ret = sceKernelMMUMapSections(L1PageTableFor(l1pt, va), type, domain, va, size, pa);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -96,7 +96,7 @@ int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, 
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	if (L1PageTableUseSupersections(size, domain)) {
 		if ((va & (L1PT_SUPERSECTION - 1)) == 0 && (size & (L1PT_SUPERSECTION - 1)) == 0)
 			ret = MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va), asid, va,
@@ -107,7 +107,7 @@ int L1PageTableUnmapDirect(L1PageTable *l1pt, SceUInt32 asid, SceUInt32 domain, 
 		ret = sceKernelMMUUnmapSectionsWithFlags(L1PageTableFor(l1pt, va), asid, va, size,
 							 0);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -117,7 +117,7 @@ int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	if (!(type & L1PT_TYPE_SHARED) && va < l1pt->split)
 		type |= L1PT_TYPE_SHARED;
 	if (L1PageTableUseSupersections(unit, domain)) {
@@ -133,7 +133,7 @@ int L1PageTableMap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 	}
 	ret = sceKernelMMUMapSections(L1PageTableFor(l1pt, va), type, domain, va, size, pa);
 out:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -149,14 +149,14 @@ int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 	if (!(mapType & L1PT_TYPE_SHARED) && va < l1pt->split)
 		mapType |= L1PT_TYPE_SHARED;
 	if (flags & 1) {
-		intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l1pt->lock);
+		intr = SceCpuForDriver_EC53D007(&l1pt->lock);
 		if (block->code & 0x42)
-			ksceKernelL1DcacheCleanInvalidateRange((void *)va, size);
+			SceCpuForKernel_4F442396((void *)va, size);
 		if (mapType & 0x11)
-			ksceKernelL1IcacheInvalidateRange((void *)va, size);
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, intr);
+			SceCpuForKernel_2E637B1D((void *)va, size);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, intr);
 	}
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	intr = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	if (L1PageTableUseSupersections(unit, domain) &&
 	    !(block->attr & MEMBLOCK_ATTR_PARTIAL)) {
 		MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va),
@@ -174,7 +174,7 @@ int L1PageTableRemap(L1PageTable *l1pt, MemBlockObject *block, SceUInt32 type,
 	}
 	L1PageTableCheckMap(block->partition, va, size, pa);
 out:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, intr);
 	return ret;
 }
 
@@ -184,9 +184,9 @@ int L1PageTableSetL2PageTable(L1PageTable *l1pt, SceUInt32 domain, uintptr_t va,
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	ret = sceKernelMMUSetL2PageTable(L1PageTableFor(l1pt, va), domain, va, l2pa);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -195,9 +195,9 @@ int L1PageTableUnsetL2PageTable(L1PageTable *l1pt, uintptr_t va)
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	ret = sceKernelMMUUnsetL2PageTable(L1PageTableFor(l1pt, va), va);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -210,7 +210,7 @@ int L1PageTableUnmap(L1PageTable *l1pt, MemBlockObject *block, SceSize unit,
 		SCE_DBG_ASSERT_FAIL(441);
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	}
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l1pt->lock);
+	intr = SceCpuForDriver_4C38CE4D(&l1pt->lock);
 	if (L1PageTableUseSupersections(unit, domain)) {
 		if (block == NULL || !(block->attr & MEMBLOCK_ATTR_PARTIAL)) {
 			ret = MMUUnmapSupersectionsWithFlags(L1PageTableFor(l1pt, va), asid, va,
@@ -224,7 +224,7 @@ int L1PageTableUnmap(L1PageTable *l1pt, MemBlockObject *block, SceSize unit,
 	}
 	ret = sceKernelMMUUnmapSectionsWithFlags(L1PageTableFor(l1pt, va), asid, va, size, flags);
 out:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l1pt->lock, intr);
 	return ret;
 }
 
@@ -233,9 +233,9 @@ int L1PageTableVAtoPABySW(L1PageTable *l1pt, uintptr_t va, uintptr_t *pa)
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_EC53D007(&l1pt->lock);
 	ret = sceKernelMMUL1VAtoPABySW(L1PageTableFor(l1pt, va), va, pa);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -245,9 +245,9 @@ int L1PageTableIsEqualAccessibleBySW(L1PageTable *l1pt, SceUInt32 perm, uintptr_
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_EC53D007(&l1pt->lock);
 	ret = sceKernelMMUL1IsEqualAccessibleBySW(L1PageTableFor(l1pt, va), perm, va, pa);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 
@@ -256,9 +256,9 @@ int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va)
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l1pt->lock);
+	flags = SceCpuForDriver_EC53D007(&l1pt->lock);
 	ret = sceKernelMMUL1GetMemoryType(L1PageTableFor(l1pt, va), va);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l1pt->lock, flags);
 	return ret;
 }
 

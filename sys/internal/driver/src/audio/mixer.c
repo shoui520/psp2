@@ -8,13 +8,12 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
+#include <sysmem/sysmem.h>
 
 #include "audio_private.h"
 #include <lowio/pervasive.h>
 #include <processmgr/processmgr.h>
 
-int ksceKernelUserUnmap(SceUID uid, const void *address, int flags);
 int audioSubmitDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount,
 			 unsigned int bank, unsigned int stream);
 int audioSubmitSingleDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount);
@@ -45,9 +44,9 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	result = ksceKernelVAtoPA(audioMixerBuffers[0], &physicalAddress[0]);
+	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[0], &physicalAddress[0]);
 	SCE_DBG_ASSERT(result >= 0, 253);
-	result = ksceKernelVAtoPA(audioMixerBuffers[1], &physicalAddress[1]);
+	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[1], &physicalAddress[1]);
 	SCE_DBG_ASSERT(result >= 0, 255);
 	audioMixerDeadline = ksceKernelGetProcessTimeLowCore();
 	while (ksceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL) >= 0) {
@@ -157,7 +156,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 					state |= 4;
 					if (remaining == 0) {
 						input = NULL;
-						ksceKernelUserUnmap(port->current.mapping, NULL, 0);
+						sceKernelUserUnmap(port->current.mapping, NULL, 0);
 						port->current.mapping = 0;
 					}
 				}

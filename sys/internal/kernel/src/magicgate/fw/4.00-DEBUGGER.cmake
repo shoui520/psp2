@@ -88,10 +88,10 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_801D0ED4
 	SceKernelUtilsForDriver_A0D45D25
 	SceKernelUtilsForDriver_AE6C45FB
-	ksceAesEncrypt1
-	ksceAesDecrypt1
-	ksceAesInit1
-	ksceKernelPrintf
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_F12B6451
+	SceDebugForDriver_391B74B7
 	ksceSblRngPseudoRandomNumber
 	ksceSblAimgrGetOpenPsId
 	SceSblMgKeyMgrForDriver_1263FB04

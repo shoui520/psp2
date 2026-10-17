@@ -64,18 +64,18 @@ set(MODULE_IMPORT_NIDS
 	0xBC05A8FB:F:0xFBEA3703
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	memcpy
 	__stack_chk_fail

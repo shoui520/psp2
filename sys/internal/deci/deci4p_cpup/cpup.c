@@ -8,10 +8,10 @@
  * the results. One request is in flight at a time.
  */
 
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
@@ -143,9 +143,9 @@ static __attribute__((noinline)) int CpupInit(void)
 	if (s_cpupMutex < 0)
 		return s_cpupMutex;
 
-	s_cpupMemBlock = ksceKernelAllocMemBlock("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+	s_cpupMemBlock = SceSysmemForDriver_C94850C9("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 						  CPUP_BUF_SIZE, NULL);
-	ksceKernelGetMemBlockBase(s_cpupMemBlock, (void **)&s_cpupBuffer);
+	SceSysmemForDriver_A841EDDA(s_cpupMemBlock, (void **)&s_cpupBuffer);
 
 	s_cpupRequestSemaphore = ksceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
 	if (s_cpupRequestSemaphore < 0) {
@@ -179,7 +179,7 @@ static __attribute__((noinline)) int CpupInit(void)
 
 int CpupModuleStart(SceSize args, void *argp)
 {
-	if (!ksceKernelCheckDipsw(0xc2)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 102, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

@@ -80,20 +80,20 @@ int L2PageTableInit(L2PageTable *l2pt)
 /* name unknown: the pages mapped and reserved through the table */
 int L2PageTableGetPageCount(L2PageTable *l2pt)
 {
-	int flags = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l2pt->lock);
+	int flags = SceCpuForDriver_EC53D007(&l2pt->lock);
 	SceInt16 mapped = l2pt->mappedPages, reserved = l2pt->reservedPages;
 
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l2pt->lock, flags);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l2pt->lock, flags);
 	return mapped + reserved;
 }
 
 /* name unknown: releases reserved pages */
 void L2PageTableUnreserve(L2PageTable *l2pt, SceSize size)
 {
-	int flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l2pt->lock);
+	int flags = SceCpuForDriver_4C38CE4D(&l2pt->lock);
 
 	l2pt->reservedPages -= size >> 12;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, flags);
 }
 
 /* the low part of an address space is mapped shared */
@@ -113,7 +113,7 @@ int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize
 {
 	int flags, ret;
 
-	flags = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l2pt->lock);
+	flags = SceCpuForDriver_4C38CE4D(&l2pt->lock);
 	type = L2PageTableSharedType(l2pt->partition, type, va);
 	if (size < L2PT_LARGE_PAGE)
 		ret = sceKernelMMUMapSmallPages(l2pt->table, type, va, va - l2pt->vbase, size, pa);
@@ -123,7 +123,7 @@ int L2PageTableMapPages(L2PageTable *l2pt, SceUInt32 type, uintptr_t va, SceSize
 		SCE_DBG_ASSERT_FAIL(512);
 	else
 		l2pt->mappedPages += size >> 12;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, flags);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, flags);
 	return ret;
 }
 
@@ -136,14 +136,14 @@ int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 ty
 	type = L2PageTableSharedType(l2pt->partition, type, va);
 	context = ((Partition *)block->partition)->tiny.context;
 	if (flags & L2PT_REMAP_SYNC_CACHES) {
-		intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&l2pt->lock);
+		intr = SceCpuForDriver_EC53D007(&l2pt->lock);
 		if (block->code & 0x42)
-			ksceKernelL1DcacheCleanInvalidateRange((void *)va, size);
+			SceCpuForKernel_4F442396((void *)va, size);
 		if (type & 0x11)
-			ksceKernelL1IcacheInvalidateRange((void *)va, size);
-		ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l2pt->lock, intr);
+			SceCpuForKernel_2E637B1D((void *)va, size);
+		sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&l2pt->lock, intr);
 	}
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l2pt->lock);
+	intr = SceCpuForDriver_4C38CE4D(&l2pt->lock);
 	if (size < L2PT_LARGE_PAGE) {
 		sceKernelMMUUnmapSmallPagesWithFlags(l2pt->table, (SceUInt8)context->mmu.contextId,
 						     va, va - l2pt->vbase, size, 0);
@@ -155,7 +155,7 @@ int L2PageTableRemapPages(L2PageTable *l2pt, MemBlockObject *block, SceUInt32 ty
 	}
 	if (ret < 0)
 		SCE_DBG_ASSERT_FAIL(593);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, intr);
 	return ret;
 }
 
@@ -164,7 +164,7 @@ int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSi
 {
 	int intr, ret;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&l2pt->lock);
+	intr = SceCpuForDriver_4C38CE4D(&l2pt->lock);
 	if (size < L2PT_LARGE_PAGE)
 		ret = sceKernelMMUUnmapSmallPagesWithFlags(l2pt->table, asid, va, va - l2pt->vbase,
 							   size, flags);
@@ -177,7 +177,7 @@ int L2PageTableUnmapPages(L2PageTable *l2pt, SceUInt32 asid, uintptr_t va, SceSi
 		l2pt->mappedPages -= size >> 12;
 	else
 		l2pt->reservedPages += size >> 12;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&l2pt->lock, intr);
 	return ret;
 }
 

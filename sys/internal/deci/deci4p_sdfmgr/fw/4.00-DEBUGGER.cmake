@@ -94,36 +94,36 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelClearIntrPendingStatusForDebugger
 	ksceExcpmgrRegisterHandler
 	ksceExcpmgrGetData
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
 	SceSysrootForKernel_2D6B2A79
-	ksceSysrootIsManufacturingMode
-	ksceSysrootGetSessionId
+	SceSysrootForKernel_55392965
+	SceSysrootForKernel_84783B71
 	SceSysrootForKernel_8747D415
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
 	SceSysrootForKernel_C5EAF5F7
 	SceSysrootForKernel_CD4B84F7
-	ksceKernelCpuId
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	sceKernelCpuId
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_D32ACE9E
+	sceKernelCpuResumeIntr
 	SceDebugForKernel_78027203
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelGetAssertLevel
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
-	ksceKernelCheckDipsw
-	ksceKernelGetDipswInfo
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
+	SceDipswForDriver_A98FC2FD
+	SceDipswForDriver_B2AD48BE
 	memset
 	strncpy
 	snprintf
 	__stack_chk_fail
-	ksceAesEncrypt2
-	ksceAesInit2
+	SceKernelUtilsForDriver_302947B6
+	SceKernelUtilsForDriver_EDA97D6D
 	SceSDbgSdioForKernel_2EC24C58
 	SceSDbgSdioForKernel_7876806C
 	SceKernelSuspendForDriver_105C5752

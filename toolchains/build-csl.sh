@@ -101,7 +101,7 @@ PYEOF
 	# define_split Linaro 4.8 backported from trunk; this release has only the conditional
 	# rsbs/it/movlo form. Sony's code has the clz form for a comparison with 0 (sysmem
 	# UIDEntryIsUnused) and keeps this release's sub/negs/adc form for a comparison with
-	# another value (sysmem ksceGzipIsValid).
+	# another value (sysmem SceKernelUtilsForDriver_D8FAEFD4).
 	python3 - $A/arm.md <<'PYEOF'
 import sys
 p = sys.argv[1]

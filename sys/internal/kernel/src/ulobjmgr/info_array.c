@@ -3,7 +3,7 @@
  * writes its object pointers there) and into the kernel.
  */
 #include <string.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "ulobjmgr_internal.h"
 
 #define ULOBJ_MEMBLOCK_ATTR_MIRROR_MAP	0x01000000	/* map the mirrored block's pages */
@@ -14,12 +14,12 @@ static inline __attribute__((always_inline)) void tidyUp(UlobjProcCB *procCB)
 
 	SCE_DBG_ASSERT(procCB != NULL, 38);
 	if (procCB->driverMemBlock != -1) {
-		ret = ksceKernelFreeMemBlock(procCB->driverMemBlock);
+		ret = SceSysmemForDriver_009E1C61(procCB->driverMemBlock);
 		SCE_DBG_ASSERT(ret == 0, 44);
 		procCB->driverMemBlock = -1;
 	}
 	if (procCB->userMemBlock != -1) {
-		ret = ksceKernelFreeMemBlock(procCB->userMemBlock);
+		ret = SceSysmemForDriver_009E1C61(procCB->userMemBlock);
 		SCE_DBG_ASSERT(ret == 0, 53);
 		procCB->userMemBlock = -1;
 	}
@@ -48,7 +48,7 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 	opt.pid = procCB->pid;
 	size = (numEntries * sizeof(SceUInt32) + sizeof(UlobjInfoArray) + 0xfff) & ~0xfff;
-	procCB->userMemBlock = ksceKernelAllocMemBlock("SceUlobjMgrUser",
+	procCB->userMemBlock = SceSysmemForDriver_C94850C9("SceUlobjMgrUser",
 						       SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, size, &opt);
 	if (procCB->userMemBlock < 0)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
@@ -59,7 +59,7 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 			 SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
 	mirrorOpt.mirror_blockid = procCB->userMemBlock;
 	mirrorOpt.pid = procCB->pid;
-	procCB->driverMemBlock = ksceKernelAllocMemBlock("SceUlobjMgrDriver",
+	procCB->driverMemBlock = SceSysmemForDriver_C94850C9("SceUlobjMgrDriver",
 							 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, size,
 							 &mirrorOpt);
 	if (procCB->driverMemBlock < 0) {
@@ -67,10 +67,10 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
 
-	ret = ksceKernelGetMemBlockBase(procCB->driverMemBlock, (void **)&procCB->infoArray);
+	ret = SceSysmemForDriver_A841EDDA(procCB->driverMemBlock, (void **)&procCB->infoArray);
 	if (ret < 0)
 		goto error;
-	ret = ksceKernelGetMemBlockBase(procCB->userMemBlock, pUserBase);
+	ret = SceSysmemForDriver_A841EDDA(procCB->userMemBlock, pUserBase);
 	if (ret < 0)
 		goto error;
 	return 0;

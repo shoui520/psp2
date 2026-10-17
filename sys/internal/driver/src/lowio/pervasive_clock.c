@@ -31,7 +31,7 @@ int ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 		LowioDmb();
 		return 0;
 	}
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	raw = s_baseClock->armMultiplier;
 	current = raw & 15;
 	if (current != mode) {
@@ -52,7 +52,7 @@ int ScePervasiveForDriver_E9D95643(unsigned mode, unsigned speed)
 	LowioDmb();
 	s_baseClock->armDivisor = 16 - speed;
 	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;
 }
 
@@ -62,13 +62,13 @@ int ScePervasiveForDriver_BB67EF58(unsigned head)
 
 	/* Reset-mask helper accepts the second argument unchanged. */
 	ScePervasiveForDriver_4AF7A01E(head, 8);
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	if (head == 0)
 		s_misc->usbPortControl &= ~3U;
 	else if (head == 1)
 		s_misc->usbPortControl &= ~0xcU;
 	else if (head == 2)
 		s_misc->usbPortControl &= ~0x30U;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 1;
 }

@@ -1,9 +1,8 @@
 /* SceJpeg: no source-file name survives in this module's debug records. */
 #include "../audiodec/audiodec_internal.h"
 #include "jpeg_internal.h"
-#include <psp2kern/kernel/sysmem/address_space.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <string.h>
@@ -134,7 +133,7 @@ int jpegLockDecodeBuffer(unsigned int *physicalAddress, const void *buffer,
 	unsigned int address;
 	int ret;
 
-	ret = ksceKernelLockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
+	ret = sceKernelLockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
 	if (ret < 0)
 		return ret;
 	range.addr = alignedAddress;
@@ -144,7 +143,7 @@ int jpegLockDecodeBuffer(unsigned int *physicalAddress, const void *buffer,
 	vector.data_in_vector = 0;
 	vector.count = 0;
 	vector.ranges = &physicalRange;
-	if (ksceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
 		goto invalid;
 	address = physicalRange.addr;
 	if (address == 0)
@@ -155,24 +154,24 @@ int jpegLockDecodeBuffer(unsigned int *physicalAddress, const void *buffer,
 		goto invalid;
 	if (cacheMode == 2) {
 		if (alignedSize >= 1024) {
-			ksceKernelDcacheCleanInvalidateRange((void *)alignedAddress, 256);
-			ksceKernelDcacheInvalidateRange((void *)(alignedAddress + 256),
+			SceCpuForDriver_364E68A4((void *)alignedAddress, 256);
+			SceCpuForDriver_02796361((void *)(alignedAddress + 256),
 						alignedSize - 512);
-			ksceKernelDcacheCleanInvalidateRange(
+			SceCpuForDriver_364E68A4(
 				(void *)(alignedAddress + alignedSize - 256), 256);
 			goto success;
 		}
 	} else if (cacheMode != 3) {
 		if (cacheMode == 1)
-			ksceKernelDcacheCleanRange((void *)alignedAddress, alignedSize);
+			SceCpuForDriver_103872A5((void *)alignedAddress, alignedSize);
 		goto success;
 	}
-	ksceKernelDcacheCleanInvalidateRange((void *)alignedAddress, alignedSize);
+	SceCpuForDriver_364E68A4((void *)alignedAddress, alignedSize);
 success:
 	*physicalAddress = offset + address;
 	return 0;
 invalid:
-	ksceKernelUnlockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
+	SceSysmemForDriver_22CBE925(lockMode, (void *)alignedAddress, alignedSize);
 	return 0x80650053;
 }
 
@@ -189,7 +188,7 @@ int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
 	unsigned int address;
 	int ret;
 
-	ret = ksceKernelLockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
+	ret = sceKernelLockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
 	if (ret < 0)
 		return ret;
 	range.addr = alignedAddress;
@@ -201,7 +200,7 @@ int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
 		.count = 0,
 		.ranges = &physicalRange,
 	};
-	if (ksceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
 		goto invalid;
 	address = physicalRange.addr;
 	if (address == 0)
@@ -216,23 +215,23 @@ int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
 
 			alignedSize -= 512;
 			alignedAddress += 256;
-			ksceKernelDcacheCleanInvalidateRange((void *)firstAddress, 256);
-			ksceKernelDcacheInvalidateRange((void *)alignedAddress, alignedSize);
-			ksceKernelDcacheCleanInvalidateRange(
+			SceCpuForDriver_364E68A4((void *)firstAddress, 256);
+			SceCpuForDriver_02796361((void *)alignedAddress, alignedSize);
+			SceCpuForDriver_364E68A4(
 				(void *)(alignedSize + alignedAddress), 256);
 			goto success;
 		}
 	} else if (cacheMode != 3) {
 		if (cacheMode == 1)
-			ksceKernelDcacheCleanRange((void *)alignedAddress, alignedSize);
+			SceCpuForDriver_103872A5((void *)alignedAddress, alignedSize);
 		goto success;
 	}
-	ksceKernelDcacheCleanInvalidateRange((void *)alignedAddress, alignedSize);
+	SceCpuForDriver_364E68A4((void *)alignedAddress, alignedSize);
 success:
 	*physicalAddress = offset + address;
 	return 0;
 invalid:
-	ksceKernelUnlockRangeWithMode(lockMode, (void *)alignedAddress, alignedSize);
+	SceSysmemForDriver_22CBE925(lockMode, (void *)alignedAddress, alignedSize);
 	return 0x80650206;
 }
 
@@ -565,7 +564,7 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 		ret = 0x80650060;
 		goto finish;
 	}
-	ret = ksceKernelLockRangeWithMode(16, (void *)jpegBase, jpegSize);
+	ret = sceKernelLockRangeWithMode(16, (void *)jpegBase, jpegSize);
 	if (ret < 0)
 		goto finish;
 	range.addr = jpegBase;
@@ -575,13 +574,13 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	vector.data_in_vector = 0;
 	vector.count = 0;
 	vector.ranges = &physicalRange;
-	if (ksceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1 ||
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1 ||
 	    physicalRange.addr == 0)
 		goto invalidPhysical;
 	if (physicalRange.addr < 0x20000000 || jpegSize + physicalRange.addr > 0x28000000) {
 		if (!(process->option & 1))
 			goto invalidPhysical;
-		ksceKernelDcacheCleanRange((void *)jpegBase, jpegSize);
+		SceCpuForDriver_103872A5((void *)jpegBase, jpegSize);
 	}
 	jpegPhysical = physicalRange.addr + jpegOffset;
 	ret = jpegLockDecodeBuffer(&tempPhysical, pTempBuffer, tempBufferSize,
@@ -615,11 +614,11 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	if (decoded >= 0)
 		colorSpace = command.colorSpace;
 	if (coefLocked)
-		ksceKernelUnlockRangeWithMode(48, (void *)((unsigned int)pCoefBuffer & ~255U),
+		SceSysmemForDriver_22CBE925(48, (void *)((unsigned int)pCoefBuffer & ~255U),
 			(coefBufferSize + 255 + ((unsigned int)pCoefBuffer & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pTempBuffer & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pTempBuffer & ~255U),
 		(tempBufferSize + 255 + ((unsigned int)pTempBuffer & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(16, (void *)jpegBase, jpegSize);
+	SceSysmemForDriver_22CBE925(16, (void *)jpegBase, jpegSize);
 	if (decoded < 0) {
 		ret = decoded;
 		goto finish;
@@ -713,27 +712,27 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	destination.paddr2 = 0;
 	ret = ksceIftuCsc(&destination, &source, &conversion);
 	if ((process->option & 1) && ret >= 0)
-		ksceKernelDcacheInvalidateRange((void *)((unsigned int)pRGBA & ~255U),
+		SceCpuForDriver_02796361((void *)((unsigned int)pRGBA & ~255U),
 			(rgbaSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pRGBA & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pRGBA & ~255U),
 		(rgbaSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pTempBuffer & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pTempBuffer & ~255U),
 		(ycbcrSize + 255 + ((unsigned int)pTempBuffer & 255)) & ~255U);
 	if (ret >= 0)
 		ret = decoded;
 	goto finish;
 unlockSource:
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pTempBuffer & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pTempBuffer & ~255U),
 		(ycbcrSize + 255 + ((unsigned int)pTempBuffer & 255)) & ~255U);
 	goto finish;
 invalidPhysical:
 	ret = 0x80650053;
 	goto unlockJpeg;
 unlockTemp:
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pTempBuffer & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pTempBuffer & ~255U),
 		(tempBufferSize + 255 + ((unsigned int)pTempBuffer & 255)) & ~255U);
 unlockJpeg:
-	ksceKernelUnlockRangeWithMode(16, (void *)jpegBase, jpegSize);
+	SceSysmemForDriver_22CBE925(16, (void *)jpegBase, jpegSize);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
@@ -829,17 +828,17 @@ int SceAvcodecForDriver_2A0AF392(const unsigned char *pJpeg, SceSize isize,
 	ret = SceCodecEngineWrapperForDriver_391BD4FD(448, input,
 						    jpegPackDecodeCommand, jpegFinishDecodeCommand);
 	if (coefLocked)
-		ksceKernelUnlockRangeWithMode(48, (void *)((unsigned int)pCoefBuffer & ~255U),
+		SceSysmemForDriver_22CBE925(48, (void *)((unsigned int)pCoefBuffer & ~255U),
 			(coefBufferSize + 255 + ((unsigned int)pCoefBuffer & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(32, (void *)outputBase, outputSize);
-	ksceKernelUnlockRangeWithMode(16, (void *)jpegBase, jpegSize);
+	SceSysmemForDriver_22CBE925(32, (void *)outputBase, outputSize);
+	SceSysmemForDriver_22CBE925(16, (void *)jpegBase, jpegSize);
 	if ((process->option & 1) && ret >= 0)
-		ksceKernelDcacheInvalidateRange((void *)outputBase, outputSize);
+		SceCpuForDriver_02796361((void *)outputBase, outputSize);
 	goto finish;
 unlockOutput:
-	ksceKernelUnlockRangeWithMode(32, (void *)outputBase, outputSize);
+	SceSysmemForDriver_22CBE925(32, (void *)outputBase, outputSize);
 unlockJpeg:
-	ksceKernelUnlockRangeWithMode(16, (void *)jpegBase, jpegSize);
+	SceSysmemForDriver_22CBE925(16, (void *)jpegBase, jpegSize);
 finish:
 	_unlockProcessSuspendCore();
 	sceSyscallLeave(syscallState);
@@ -952,12 +951,12 @@ int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr,
 	destination.paddr2 = 0;
 	ret = ksceIftuCsc(&destination, &source, &conversion);
 	if ((process->option & 1) && ret >= 0)
-		ksceKernelDcacheInvalidateRange((void *)((unsigned int)pRGBA & ~255U),
+		SceCpuForDriver_02796361((void *)((unsigned int)pRGBA & ~255U),
 			(outputSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pRGBA & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pRGBA & ~255U),
 		(outputSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
 unlockSource:
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pYCbCr & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pYCbCr & ~255U),
 		(sourceSize + 255 + ((unsigned int)pYCbCr & 255)) & ~255U);
 finish:
 	sceSyscallLeave(syscallState);
@@ -1036,12 +1035,12 @@ int jpegCscForUser(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 	ret = SceCodecEngineWrapperForDriver_391BD4FD(454, input,
 						    jpegPackDecodeCommand, jpegFinishDecodeCommand);
 	if ((process->option & 1) && ret >= 0)
-		ksceKernelDcacheInvalidateRange((void *)((unsigned int)pRGBA & ~255U),
+		SceCpuForDriver_02796361((void *)((unsigned int)pRGBA & ~255U),
 			(outputSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
-	ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pRGBA & ~255U),
+	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pRGBA & ~255U),
 		(outputSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
 unlockSource:
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pYCbCr & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pYCbCr & ~255U),
 		(sourceSize + 255 + ((unsigned int)pYCbCr & 255)) & ~255U);
 finish:
 	_unlockProcessSuspendCore();
@@ -1132,7 +1131,7 @@ int SceAvcodecForDriver_F305E3B3(const unsigned char *pJpeg, SceSize isize,
 			(((colorSpace >> 4) & 15) << 16) |
 			((1U << (((colorSpace >> 2) & 3) - 1)) << 8);
 	pOutputInfo->colorSpace = colorSpace;
-	ksceKernelUnlockRangeWithMode(16, (void *)((unsigned int)pJpeg & ~255U),
+	SceSysmemForDriver_22CBE925(16, (void *)((unsigned int)pJpeg & ~255U),
 		(isize + 255 + ((unsigned int)pJpeg & 255)) & ~255U);
 finish:
 	_unlockProcessSuspendCore();
@@ -1375,21 +1374,21 @@ copyResult:
 	pCtrl->internalData[0] = command.internalData[0];
 	if (process->option & 1) {
 		if (!pCtrl->isEndOfStream)
-			ksceKernelDcacheInvalidateRange((void *)((unsigned int)pCtrl->pStreamBuffer & ~255U),
+			SceCpuForDriver_02796361((void *)((unsigned int)pCtrl->pStreamBuffer & ~255U),
 				(pCtrl->streamBufferSize + 255 + ((unsigned int)pCtrl->pStreamBuffer & 255)) & ~255U);
 		if (ret >= 0)
-			ksceKernelDcacheInvalidateRange((void *)((unsigned int)pCtrl->pOutputBuffer & ~255U),
+			SceCpuForDriver_02796361((void *)((unsigned int)pCtrl->pOutputBuffer & ~255U),
 				(pCtrl->outputInfo.outputBufferSize + 255 + ((unsigned int)pCtrl->pOutputBuffer & 255)) & ~255U);
 	}
 cleanup:
 	if (command.pCoefBuffer != NULL)
-		ksceKernelUnlockRangeWithMode(48, (void *)((unsigned int)pCtrl->pCoefBuffer & ~255U),
+		SceSysmemForDriver_22CBE925(48, (void *)((unsigned int)pCtrl->pCoefBuffer & ~255U),
 			(pCtrl->outputInfo.coefBufferSize + 255 + ((unsigned int)pCtrl->pCoefBuffer & 255)) & ~255U);
 	if (command.pOutputBuffer != NULL)
-		ksceKernelUnlockRangeWithMode(32, (void *)((unsigned int)pCtrl->pOutputBuffer & ~255U),
+		SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pCtrl->pOutputBuffer & ~255U),
 			(pCtrl->outputInfo.outputBufferSize + 255 + ((unsigned int)pCtrl->pOutputBuffer & 255)) & ~255U);
 	if (command.pStreamBuffer != NULL)
-		ksceKernelUnlockRangeWithMode(48, (void *)((unsigned int)pCtrl->pStreamBuffer & ~255U),
+		SceSysmemForDriver_22CBE925(48, (void *)((unsigned int)pCtrl->pStreamBuffer & ~255U),
 			(pCtrl->streamBufferSize + 255 + ((unsigned int)pCtrl->pStreamBuffer & 255)) & ~255U);
 	lockRet = ksceKernelLockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (lockRet == 0) {

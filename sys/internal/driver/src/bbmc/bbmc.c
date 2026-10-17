@@ -15,7 +15,7 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/idstorage.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <arm_neon.h>
 #include <stdarg.h>
 #include <string.h>
@@ -67,15 +67,15 @@ static BbmcControl bbmcMainControl;
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
 int sceBbmcTurnOffForDriver(int subscriberId);
 int bbmcProcessKillHandler(SceUID processId,
-	SceProcEventInvokeParam1 *parameters, int argument);
+	ProcEventParam *parameters, int argument);
 
-const SceProcEventHandler bbmcProcessEventHandlers = {
-	.size = sizeof(SceProcEventHandler),
+const SceKernelProcEventHandler bbmcProcessEventHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.kill = bbmcProcessKillHandler,
 };
 
 int bbmcProcessKillHandler(SceUID processId,
-	SceProcEventInvokeParam1 *parameters, int argument)
+	ProcEventParam *parameters, int argument)
 {
 	BbmcControl *control = g_bbmcControl;
 	int keepPower = 0, result = 0;
@@ -547,12 +547,12 @@ int module_start(SceSize argumentSize, const void *arguments)
 	if (result < 0)
 		goto deleteMailbox;
 	control->threadId = result;
-	result = ksceKernelRegisterSysEventHandler("SceBbmcMain",
+	result = sceKernelRegisterSysEventHandler("SceBbmcMain",
 		bbmcSystemEventHandler, control);
 	if (result < 0)
 		goto deleteThread;
 	control->eventFlag = result;
-	result = ksceKernelRegisterProcEventHandler("SceBbmcMain",
+	result = sceKernelRegisterProcEventHandler("SceBbmcMain",
 		&bbmcProcessEventHandlers, 0);
 	if (result < 0)
 		goto unregisterSystemEvent;
@@ -569,9 +569,9 @@ int module_start(SceSize argumentSize, const void *arguments)
 disablePower:
 	ScePowerForDriver_F535D928(256, 0);
 unregisterProcessEvent:
-	ksceKernelUnregisterProcEventHandler(control->processEventHandler);
+	SceProcEventForDriver_3DED57CC(control->processEventHandler);
 unregisterSystemEvent:
-	ksceKernelUnregisterSysEventHandler(control->eventFlag);
+	sceKernelUnregisterSysEventHandler(control->eventFlag);
 deleteThread:
 	ksceKernelDeleteThread(control->threadId);
 deleteMailbox:

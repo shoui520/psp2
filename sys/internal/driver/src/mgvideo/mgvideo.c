@@ -830,7 +830,7 @@ int SceMgVideo_BCC6E991(int handle, unsigned int index,
 
 	if (recordInput) {
 		recordCopy = __builtin_alloca(sizeof(*recordCopy));
-		result = ksceKernelCopyFromUser(recordCopy, recordInput,
+		result = SceSysmemForDriver_BC996A7A(recordCopy, recordInput,
 					       sizeof(*recordCopy));
 		if (result < 0)
 			return result;
@@ -838,7 +838,7 @@ int SceMgVideo_BCC6E991(int handle, unsigned int index,
 	if (input) {
 		MgVideoUserBuffer *inputCopy = __builtin_alloca(sizeof(*inputCopy));
 
-		result = ksceKernelCopyFromUser(inputCopy, input, sizeof(*inputCopy));
+		result = SceSysmemForDriver_BC996A7A(inputCopy, input, sizeof(*inputCopy));
 		input = inputCopy;
 		if (result < 0)
 			return result;
@@ -853,7 +853,7 @@ int SceMgVideo_E9367823(int handle, unsigned int index, int blockNumber,
 	const MgVideoUserBuffer *keyring, *recordInput, *input;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	keyring = arguments.keyring;
@@ -862,7 +862,7 @@ int SceMgVideo_E9367823(int handle, unsigned int index, int blockNumber,
 	if (keyring) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, keyring, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, keyring, sizeof(*copy));
 		keyring = copy;
 		if (result < 0)
 			return result;
@@ -870,7 +870,7 @@ int SceMgVideo_E9367823(int handle, unsigned int index, int blockNumber,
 	if (recordInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, recordInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, recordInput, sizeof(*copy));
 		recordInput = copy;
 		if (result < 0)
 			return result;
@@ -878,7 +878,7 @@ int SceMgVideo_E9367823(int handle, unsigned int index, int blockNumber,
 	if (input) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, input, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, input, sizeof(*copy));
 		input = copy;
 		if (result < 0)
 			return result;
@@ -898,7 +898,7 @@ int SceMgVideo_3F3E3A8E(int handle, const MgVideoBoxHeader *input, int size,
 	MgVideoCipherOpenArguments arguments;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	if (input) {
@@ -907,7 +907,7 @@ int SceMgVideo_3F3E3A8E(int handle, const MgVideoBoxHeader *input, int size,
 		if (arguments.copySize > 1024)
 			return (int)0x8002710b;
 		copy = __builtin_alloca(1024);
-		result = ksceKernelCopyFromUser(copy, input, arguments.copySize);
+		result = SceSysmemForDriver_BC996A7A(copy, input, arguments.copySize);
 		if (result < 0)
 			return result;
 		input = copy;
@@ -938,7 +938,7 @@ int SceMgVideo_1F9409D1(unsigned int handle, void *output, const void *input,
 	unsigned int size, totalSize, *processed;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	size = arguments.size;
@@ -949,12 +949,12 @@ int SceMgVideo_1F9409D1(unsigned int handle, void *output, const void *input,
 		int cipherResult;
 
 		*copy = 0;
-		result = ksceKernelCopyFromUser(copy, processed, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, processed, sizeof(*copy));
 		if (result < 0)
 			return result;
 		cipherResult = decryptUserVideoCipherStream(handle, output, input,
 							  size, totalSize, copy);
-		result = ksceKernelCopyToUser(processed, copy, sizeof(*copy));
+		result = SceSysmemForDriver_6D88EF8A(processed, copy, sizeof(*copy));
 		if (result < 0)
 			return result;
 		return cipherResult;
@@ -968,7 +968,7 @@ int SceMgVideo_ECB4B61C(unsigned int handle, void *output, const void *input,
 	MgVideoCipherBufferArguments arguments;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	return encryptUserVideoCipherBuffer(handle, output, input, arguments.size,
@@ -983,7 +983,7 @@ int SceMgVideo_A4B68884(unsigned int handle, void *output, const void *input,
 	uint32_t blockIndex;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	size = arguments.size;
@@ -995,12 +995,12 @@ int SceMgVideo_A4B68884(unsigned int handle, void *output, const void *input,
 		int cipherResult;
 
 		*copy = 0;
-		result = ksceKernelCopyFromUser(copy, processed, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, processed, sizeof(*copy));
 		if (result < 0)
 			return result;
 		cipherResult = encryptUserVideoCipherStream(handle, output, input,
 						 size, totalSize, copy, blockIndex);
-		result = ksceKernelCopyToUser(processed, copy, sizeof(*copy));
+		result = SceSysmemForDriver_6D88EF8A(processed, copy, sizeof(*copy));
 		if (result < 0)
 			return result;
 		return cipherResult;
@@ -1018,7 +1018,7 @@ int SceMgVideo_0F3F58E3(int handle, unsigned int index,
 	const MgVideoUserBuffer *input;
 	int blockCount, result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	blockNumbers = arguments.blockNumbers;
@@ -1027,7 +1027,7 @@ int SceMgVideo_0F3F58E3(int handle, unsigned int index,
 	if (recordInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, recordInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, recordInput, sizeof(*copy));
 		recordInput = copy;
 		if (result < 0)
 			return result;
@@ -1038,7 +1038,7 @@ int SceMgVideo_0F3F58E3(int handle, unsigned int index,
 		if (arguments.copySize > 1024)
 			return (int)0x8002710b;
 		copy = __builtin_alloca(1024);
-		result = ksceKernelCopyFromUser(copy, blockNumbers, arguments.copySize);
+		result = SceSysmemForDriver_BC996A7A(copy, blockNumbers, arguments.copySize);
 		blockNumbers = copy;
 		if (result < 0)
 			return result;
@@ -1046,7 +1046,7 @@ int SceMgVideo_0F3F58E3(int handle, unsigned int index,
 	if (input) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, input, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, input, sizeof(*copy));
 		input = copy;
 		if (result < 0)
 			return result;
@@ -1080,7 +1080,7 @@ int SceMgVideo_0F6359B1(int handle, void *output, unsigned int outputSize,
 	void *copy = 0;
 	int mode, result, queryResult;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	input = arguments.input;
@@ -1094,14 +1094,14 @@ int SceMgVideo_0F6359B1(int handle, void *output, unsigned int outputSize,
 	if (input) {
 		MgVideoUserBuffer *inputCopy = __builtin_alloca(sizeof(*inputCopy));
 
-		result = ksceKernelCopyFromUser(inputCopy, input, sizeof(*inputCopy));
+		result = SceSysmemForDriver_BC996A7A(inputCopy, input, sizeof(*inputCopy));
 		input = inputCopy;
 		if (result < 0)
 			return result;
 	}
 	queryResult = queryUserVideoPlaybackInfo(handle, copy, outputSize, input, mode);
 	if (output) {
-		result = ksceKernelCopyToUser(output, copy, arguments.copySize);
+		result = SceSysmemForDriver_6D88EF8A(output, copy, arguments.copySize);
 		if (result < 0)
 			return result;
 	}
@@ -1114,7 +1114,7 @@ int SceMgVideo_FBF16BC5(int handle, const MgVideoUserBuffer *output)
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 		int result;
 
-		result = ksceKernelCopyFromUser(copy, output, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, output, sizeof(*copy));
 		if (result < 0)
 			return result;
 		output = copy;
@@ -1132,7 +1132,7 @@ int SceMgVideo_ACD50568(int handle, const MgVideoUserBuffer *output,
 	MgVideoGeneratedProtectionInfo *protection = 0;
 	int mode, result, keyringResult;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	avOut = arguments.avOut;
@@ -1141,7 +1141,7 @@ int SceMgVideo_ACD50568(int handle, const MgVideoUserBuffer *output,
 	if (output) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, output, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, output, sizeof(*copy));
 		output = copy;
 		if (result < 0)
 			return result;
@@ -1153,7 +1153,7 @@ int SceMgVideo_ACD50568(int handle, const MgVideoUserBuffer *output,
 	if (avOut) {
 		MgVideoAvOut *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, avOut, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, avOut, sizeof(*copy));
 		avOut = copy;
 		if (result < 0)
 			return result;
@@ -1161,7 +1161,7 @@ int SceMgVideo_ACD50568(int handle, const MgVideoUserBuffer *output,
 	if (parameters) {
 		MgVideoKeyGenerationParameters *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, parameters, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, parameters, sizeof(*copy));
 		parameters = copy;
 		if (result < 0)
 			return result;
@@ -1169,7 +1169,7 @@ int SceMgVideo_ACD50568(int handle, const MgVideoUserBuffer *output,
 	keyringResult = createUserVideoKeyring(handle, output, protection, avOut,
 					      parameters, mode);
 	if (protectionOutput) {
-		result = ksceKernelCopyToUser(protectionOutput, protection,
+		result = SceSysmemForDriver_6D88EF8A(protectionOutput, protection,
 					     sizeof(*protection));
 		if (result < 0)
 			return result;
@@ -1184,7 +1184,7 @@ int SceMgVideo_74907E1E(int handle, unsigned int index, int blockNumber,
 	const MgVideoUserBuffer *keyring, *input, *recordInput, *replacementInput;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	keyring = arguments.keyring;
@@ -1194,7 +1194,7 @@ int SceMgVideo_74907E1E(int handle, unsigned int index, int blockNumber,
 	if (keyring) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, keyring, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, keyring, sizeof(*copy));
 		keyring = copy;
 		if (result < 0)
 			return result;
@@ -1202,7 +1202,7 @@ int SceMgVideo_74907E1E(int handle, unsigned int index, int blockNumber,
 	if (input) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, input, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, input, sizeof(*copy));
 		input = copy;
 		if (result < 0)
 			return result;
@@ -1210,7 +1210,7 @@ int SceMgVideo_74907E1E(int handle, unsigned int index, int blockNumber,
 	if (recordInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, recordInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, recordInput, sizeof(*copy));
 		recordInput = copy;
 		if (result < 0)
 			return result;
@@ -1218,7 +1218,7 @@ int SceMgVideo_74907E1E(int handle, unsigned int index, int blockNumber,
 	if (replacementInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, replacementInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, replacementInput, sizeof(*copy));
 		replacementInput = copy;
 		if (result < 0)
 			return result;
@@ -1236,7 +1236,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	const void *extensionInput;
 	int result;
 
-	result = ksceKernelCopyFromUser(&arguments, inputArguments, sizeof(arguments));
+	result = SceSysmemForDriver_BC996A7A(&arguments, inputArguments, sizeof(arguments));
 	if (result < 0)
 		return result;
 	keyring = arguments.keyring;
@@ -1248,7 +1248,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (keyring) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, keyring, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, keyring, sizeof(*copy));
 		keyring = copy;
 		if (result < 0)
 			return result;
@@ -1256,7 +1256,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (input) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, input, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, input, sizeof(*copy));
 		input = copy;
 		if (result < 0)
 			return result;
@@ -1264,7 +1264,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (recordInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, recordInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, recordInput, sizeof(*copy));
 		recordInput = copy;
 		if (result < 0)
 			return result;
@@ -1272,7 +1272,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (replacementInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, replacementInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, replacementInput, sizeof(*copy));
 		replacementInput = copy;
 		if (result < 0)
 			return result;
@@ -1280,7 +1280,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (optionInput) {
 		MgVideoUserBuffer *copy = __builtin_alloca(sizeof(*copy));
 
-		result = ksceKernelCopyFromUser(copy, optionInput, sizeof(*copy));
+		result = SceSysmemForDriver_BC996A7A(copy, optionInput, sizeof(*copy));
 		optionInput = copy;
 		if (result < 0)
 			return result;
@@ -1288,7 +1288,7 @@ int SceMgVideo_03F7BC67(int handle, unsigned int index, int blockNumber,
 	if (extensionInput) {
 		void *copy = __builtin_alloca(16);
 
-		result = ksceKernelCopyFromUser(copy, extensionInput, 16);
+		result = SceSysmemForDriver_BC996A7A(copy, extensionInput, 16);
 		extensionInput = copy;
 		if (result < 0)
 			return result;

@@ -9,12 +9,11 @@
  * sceSblTzsBridgeFreeArgArea, the call in between.
  */
 #ifndef TZS_BRIDGE_SECURE
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/sysroot.h>
 
 #define TZS_BRIDGE_SECURE			0
 
-int ksceKernelCpuId(void);
 #endif
 
 #include <stddef.h>
@@ -68,7 +67,7 @@ int sceSblTzsBridgeInit(void)
 	SceSblTzsBridgeMemory *memory;
 	int i;
 
-	memory = ksceKernelSysrootGetSharedMemory();
+	memory = SceSysrootForKernel_C8C8C321();
 	s_memory = memory;
 	if (memory == NULL)
 		return SCE_SBL_ERROR_NO_MEMORY;
@@ -94,9 +93,9 @@ int sceSblTzsBridgeStart(void)
 	int ret = sceSblTzsBridgeInit();
 
 	if (ret >= 0) {
-		ksceKernelDcacheCleanRange(s_argArea, sizeof(s_memory->argArea));
-		ksceKernelDcacheCleanRange(s_intrArea, sizeof(s_memory->intrArea));
-		ksceKernelDcacheCleanRange(s_intrIndex, 0x40);
+		SceCpuForDriver_103872A5(s_argArea, sizeof(s_memory->argArea));
+		SceCpuForDriver_103872A5(s_intrArea, sizeof(s_memory->intrArea));
+		SceCpuForDriver_103872A5(s_intrIndex, 0x40);
 	}
 	return ret;
 }
@@ -127,7 +126,7 @@ int sceSblTzsBridgeAlloc(void *areas, SceSize size, void **area, SceSize *areaSi
 	node->prev = node;
 	*area = nodeArea;
 	*areaSize = size;
-	ksceKernelDcacheInvalidateRange(nodeArea, TZS_BRIDGE_AREA_SIZE);
+	SceCpuForDriver_02796361(nodeArea, TZS_BRIDGE_AREA_SIZE);
 	return ((char *)node->area - (char *)areas) >> 7;
 }
 
@@ -138,9 +137,9 @@ int sceSblTzsBridgeAllocIntrArea(SceSize size, void **area, SceSize *areaSize)
 
 	if (s_memory == NULL && (ret = sceSblTzsBridgeInit()) < 0)
 		return ret;
-	ksceKernelSpinlockLowLock(&s_listLock);
+	SceCpuForDriver_BF82DEB2(&s_listLock);
 	ret = sceSblTzsBridgeAlloc(s_intrArea, size, area, areaSize);
-	ksceKernelSpinlockLowUnlock(&s_listLock);
+	sceKernelSpinlockLowUnlock(&s_listLock);
 	return ret;
 }
 #else
@@ -150,15 +149,15 @@ int sceSblTzsBridgeAllocArgArea(SceSize size, void **area, SceSize *areaSize)
 
 	if (s_memory == NULL && (ret = sceSblTzsBridgeInit()) < 0)
 		return ret;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_listLock);
-	s_savedIntr[ksceKernelCpuId()] = intr;
+	intr = SceCpuForDriver_D32ACE9E(&s_listLock);
+	s_savedIntr[sceKernelCpuId()] = intr;
 	ret = sceSblTzsBridgeAlloc(s_argArea, size, area, areaSize);
 	if (ret >= 0) {
 		/* interrupts stay suspended until sceSblTzsBridgeFreeArgArea */
-		ksceKernelSpinlockLowUnlock(&s_listLock);
+		sceKernelSpinlockLowUnlock(&s_listLock);
 		return ret;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_listLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_listLock, intr);
 	return ret;
 }
 #endif
@@ -174,7 +173,7 @@ int sceSblTzsBridgePush(void *areas, int index)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	if ((unsigned int)index >= TZS_BRIDGE_AREAS)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	ksceKernelDcacheCleanRange((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
+	SceCpuForDriver_103872A5((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
 				   TZS_BRIDGE_AREA_SIZE);
 	return 0;
 }
@@ -188,7 +187,7 @@ int sceSblTzsBridgePushArgArea(int index)
 int sceSblTzsBridgePushIntrArea(int index)
 {
 	*s_intrIndex = index;
-	ksceKernelDcacheCleanRange(s_intrIndex, TZS_BRIDGE_AREA_SIZE);
+	SceCpuForDriver_103872A5(s_intrIndex, TZS_BRIDGE_AREA_SIZE);
 	return sceSblTzsBridgePush(s_intrArea, index);
 }
 #endif
@@ -206,7 +205,7 @@ int sceSblTzsBridgePop(void *areas, int index, void **area, SceSize *areaSize)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	*area = (char *)areas + index * TZS_BRIDGE_AREA_SIZE;
 	*areaSize = TZS_BRIDGE_AREA_SIZE;
-	ksceKernelDcacheInvalidateRange(*area, TZS_BRIDGE_AREA_SIZE);
+	SceCpuForDriver_02796361(*area, TZS_BRIDGE_AREA_SIZE);
 	return 0;
 }
 
@@ -226,7 +225,7 @@ int sceSblTzsBridgePopIntrArea(void **area, SceSize *areaSize)
 
 	if (s_memory == NULL && (ret = sceSblTzsBridgeInit()) < 0)
 		return ret;
-	ksceKernelDcacheInvalidateRange(s_intrIndex, TZS_BRIDGE_AREA_SIZE);
+	SceCpuForDriver_02796361(s_intrIndex, TZS_BRIDGE_AREA_SIZE);
 	return sceSblTzsBridgePop(s_intrArea, *s_intrIndex, area, areaSize);
 }
 #endif
@@ -246,7 +245,7 @@ int sceSblTzsBridgeFree(void *areas, int index)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	head = (areas == s_argArea) ? &s_argFree : &s_intrFree;
 	nodes = (areas == s_argArea) ? s_argNode : s_intrNode;
-	ksceKernelDcacheCleanRange((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
+	SceCpuForDriver_103872A5((char *)areas + index * TZS_BRIDGE_AREA_SIZE,
 				   TZS_BRIDGE_AREA_SIZE);
 	ListAddTail(head, &nodes[index]);
 	return 0;
@@ -257,9 +256,9 @@ int sceSblTzsBridgeFreeIntrArea(int index)
 {
 	int ret;
 
-	ksceKernelSpinlockLowLock(&s_listLock);
+	SceCpuForDriver_BF82DEB2(&s_listLock);
 	ret = sceSblTzsBridgeFree(s_intrArea, index);
-	ksceKernelSpinlockLowUnlock(&s_listLock);
+	sceKernelSpinlockLowUnlock(&s_listLock);
 	return ret;
 }
 #else
@@ -267,9 +266,9 @@ int sceSblTzsBridgeFreeArgArea(int index)
 {
 	int ret;
 
-	ksceKernelSpinlockLowLock(&s_listLock);
+	SceCpuForDriver_BF82DEB2(&s_listLock);
 	ret = sceSblTzsBridgeFree(s_argArea, index);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_listLock, s_savedIntr[ksceKernelCpuId()]);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_listLock, s_savedIntr[sceKernelCpuId()]);
 	return ret;
 }
 #endif

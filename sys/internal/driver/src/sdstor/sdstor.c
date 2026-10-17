@@ -12,7 +12,7 @@ int sdstor_initialize(void)
 
 	opt.size = sizeof(opt);
 	opt.flags = HEAP_AUTO_EXTEND;
-	sdstorHeapId = ksceKernelCreateHeap("SceSdStorDeviceHandle", 0x2000, &opt);
+	sdstorHeapId = SceSysmemForDriver_9328E0E8("SceSdStorDeviceHandle", 0x2000, &opt);
 	if (sdstorHeapId < 0) {
 		SCE_DBG_PRINTF(15, 47, "0x%08x\n", sdstorHeapId);
 		return sdstorHeapId;
@@ -28,14 +28,14 @@ int sdstor_construct(SceSdstorPartitionEntry *partition, int flags,
 	int result, port;
 
 	SCE_DBG_ASSERT(partition && resultHandle, 71);
-	handle = ksceKernelAllocHeapMemory(sdstorHeapId, sizeof(*handle));
+	handle = SceSysmemForDriver_7B4CB60A(sdstorHeapId, sizeof(*handle));
 	if (!handle)
 		return 0x8001000c;
 	result = ksceKernelInitializeFastMutex(&handle->fastmutex,
 			"SceSdStorDeviceHandle", 0, 0);
 	if (result != 0) {
 		SCE_DBG_PRINTF(15, 89, "0x%08x\n", result);
-		ksceKernelFreeHeapMemory(sdstorHeapId, handle);
+		sceKernelFreeHeapMemory(sdstorHeapId, handle);
 		return result;
 	}
 	table = partition->sdpart;
@@ -77,7 +77,7 @@ int sdstor_destruct(SceSdstorFd *handle)
 	handle->blockSize = 0;
 	handle->flags = 0;
 	--sdstorOpenCount[port];
-	result = ksceKernelFreeHeapMemory(sdstorHeapId, handle);
+	result = sceKernelFreeHeapMemory(sdstorHeapId, handle);
 	if (result != 0)
 		SCE_DBG_PRINTF(15, 143, "0x%08x\n", result);
 	return result;

@@ -1,5 +1,5 @@
 #include "pamgr_internal.h"
-#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
@@ -9,8 +9,6 @@
 #include <kernel/error.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 
-void *ksceKernelAlloc(SceSize size);
-void ksceKernelFree(void *memory);
 int sceKernelPerfArmPmonOpen(void);
 int sceKernelPerfArmPmonClose(void);
 int sceKernelPerfArmPmonReset(SceUID thread);
@@ -76,7 +74,7 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 		return result;
 	}
 	bytes = (uint32_t)result * sizeof(*threads);
-	threads = ksceKernelAlloc(bytes);
+	threads = SceSysmemForKernel_85571907(bytes);
 	if (threads == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	result = ksceKernelGetThreadIdList(process, threads, bytes, &count);
@@ -133,7 +131,7 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 	}
 	result = 0;
 freeThreads:
-	ksceKernelFree(threads);
+	SceSysmemForKernel_4233C16D(threads);
 	return result;
 }
 
@@ -306,7 +304,7 @@ int sceKernelPerfArmPmonClose(void)
 static inline __attribute__((always_inline)) int translatePmonThread(SceUID *thread)
 {
 	if (*thread != 0 && *thread != SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID && *thread != -1) {
-		*thread = kscePUIDtoGUID(0, *thread);
+		*thread = SceSysmemForDriver_45D22597(0, *thread);
 		if (*thread < 0)
 			return *thread | 0x40000000;
 	}

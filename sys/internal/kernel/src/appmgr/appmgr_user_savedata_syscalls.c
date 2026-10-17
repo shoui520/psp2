@@ -38,11 +38,11 @@ int appmgrSaveDataSlotGetParamForUser(SceAppMgrSaveDataSlot *userSlot,
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	slot = __builtin_alloca(sizeof(*slot));
 	__builtin_memset(slot, 0, sizeof(*slot));
-	ret = ksceKernelCopyFromUser(slot, userSlot, size);
+	ret = SceSysmemForDriver_BC996A7A(slot, userSlot, size);
 	if (ret < 0)
 		return ret;
 	ret = appmgrSaveDataSlotGetParamSyscall(slot);
-	return copyResult(ret, ksceKernelCopyToUser(userSlot, slot, arguments.size));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(userSlot, slot, arguments.size));
 }
 
 int appmgrSaveDataSlotGetParamOnStack(void *arg)
@@ -140,11 +140,11 @@ int _sceAppMgrSaveDataSlotGetStatus(void *userStatus,
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	status = __builtin_alloca(28);
 	__builtin_memset(status, 0, 28);
-	ret = ksceKernelCopyFromUser(status, userStatus, size);
+	ret = SceSysmemForDriver_BC996A7A(status, userStatus, size);
 	if (ret < 0)
 		return ret;
 	ret = appmgrSaveDataSlotGetStatusSyscall(status);
-	return copyResult(ret, ksceKernelCopyToUser(userStatus, status, arguments.size));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(userStatus, status, arguments.size));
 }
 
 int _sceAppMgrSaveDataSlotFileGetParam(unsigned int slotId, void *param)

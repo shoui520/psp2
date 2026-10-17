@@ -11,25 +11,25 @@ int SysStateMgrModuleStart(SceSize arglen, const void *argp)
 	SceUID reserved;
 	int ret, time;
 
-	ksceKernelInvokeInitCallback(5);
+	SceSysrootForDriver_93CD44CD(5);
 	ksceKernelFinalizeKbl();
-	ksceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc, (void *)0x51000000, 0x1000000);
-	ksceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0xe0000000, 0x8000000);
-	ksceKernelAddressSpaceUnmap(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0x1a000000, 0x100000);
+	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf7, 0xc, (void *)0x51000000, 0x1000000);
+	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0xe0000000, 0x8000000);
+	SceSysmemForKernel_73C38695(SCE_KERNEL_ADDRESS_SPACE_ID, 0xf0, 0xc, (void *)0x1a000000, 0x100000);
 	SceSysmemForKernel_16A54BFE();
 	time = (int)sceKernelGetSystemTimeWide();
 	SCE_PRINTF_WITH_INFO(0, 129, "\nPSP2 Kernel Time : %d [msec]\n\n", time / 1000);
 	ksceKernelRegisterModulesAfterBoot();
-	if (!SceSysrootForKernel_ksceSysrootIsExternalBootMode()) {
+	if (!SceSysrootForKernel_89D19090()) {
 		s_bootimage = "os0:kd/bootimage.skprx";
 		ConfReader_mountDefaultBootimage();
 	}
-	if (ksceSblQafMgrIsAllowHost0Access()) {
+	if (SceQafMgrForDriver_082A4FC2()) {
 		ret = ConfReaderExecCommand("host0:psp2config.skprx", 0);
 		if (ret != CONF_NOT_FOUND)
 			goto configured;
 	}
-	if (ksceSysrootIsManufacturingMode()) {
+	if (SceSysrootForKernel_55392965()) {
 		ret = ConfReaderExecCommand("sd0:psp2config.skprx", 0);
 		if (ret != CONF_NOT_FOUND)
 			goto configured;
@@ -37,14 +37,14 @@ int SysStateMgrModuleStart(SceSize arglen, const void *argp)
 		if (ret != CONF_NOT_FOUND)
 			goto configured;
 	}
-	ret = ConfReaderExecCommand(ksceSblAimgrIsDolce() ?
+	ret = ConfReaderExecCommand(SceSblAIMgrForDriver_71608CA3() ?
 		"os0:psp2config_dolce.skprx" : "os0:psp2config_vita.skprx", 0);
 configured:
 	ksceKernelUmountBootfs();
-	reserved = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, "SceSysstatemgrReserved",
+	reserved = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID, "SceSysstatemgrReserved",
 		CONF_MEMTYPE, SYSSTATEMGR_RESERVED_SIZE, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, reserved > 0, 202);
-	ksceKernelUnmapMemBlock(reserved);
+	SceSysmemForDriver_FFCD9B60(reserved);
 	if (ret < 0)
 		SceSysrootForKernel_47724459(2);
 	else if (s_appProcess <= 0)

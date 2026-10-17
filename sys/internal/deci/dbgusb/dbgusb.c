@@ -1,8 +1,8 @@
 /* SceDbgUsb: development USB byte transport, bus 1. */
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/usbserv.h>
@@ -124,19 +124,19 @@ static SceUdcdDriver s_driver = {
 
 static void QueuePut(DbgUsbQueue *queue, DbgUsbBuffer *buffer) /* name unknown */
 {
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
+	int state = SceCpuForDriver_D32ACE9E(&queue->lock);
 
 	buffer->next = (DbgUsbBuffer *)queue;
 	buffer->prev = queue->prev;
 	queue->prev = buffer;
 	buffer->prev->next = buffer;
 	ksceKernelSetEventFlag(queue->event, 1);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
 }
 
 static DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
 {
-	int state = ksceKernelSpinlockLowLockCpuSuspendIntr(&queue->lock);
+	int state = SceCpuForDriver_D32ACE9E(&queue->lock);
 	DbgUsbBuffer *buffer = queue->next;
 
 	if (buffer == (DbgUsbBuffer *)queue) {
@@ -149,7 +149,7 @@ static DbgUsbBuffer *QueueGet(DbgUsbQueue *queue) /* name unknown */
 	}
 	if (queue->next == (DbgUsbBuffer *)queue)
 		ksceKernelClearEventFlag(queue->event, ~1u);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&queue->lock, state);
 	return buffer;
 }
 
@@ -283,9 +283,9 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 		}
 	}
 	if (!s_pending || s_pending->remaining) {
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_done.lock);
+		state = SceCpuForDriver_D32ACE9E(&s_done.lock);
 		ready = s_done.next != (DbgUsbBuffer *)&s_done;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_done.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_done.lock, state);
 		if (ready)
 			ksceKernelSetEventFlag(s_notify, 2);
 	}
@@ -357,7 +357,7 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	unsigned int threadOpt[7];
 	int i, ret;
 
-	if (!ksceKernelCheckDipsw(0xc2) || ksceKernelCheckDipsw(0xc3)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2) || SceDipswForDriver_A98FC2FD(0xc3)) {
 		SCE_DBG_PRINTF(0xb, 1136, "disabled by dipsw\n");
 		return 1;
 	}
@@ -367,13 +367,13 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 		opt.size = sizeof(opt);
 		opt.attr = 0x200004;
 		opt.alignment = 0x1000;
-		s_read[i].memblock = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+		s_read[i].memblock = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 							 BUFFER_SIZE, &opt);
 		if (s_read[i].memblock < 0)
 			goto readFail;
-		if (ksceKernelGetMemBlockBase(s_read[i].memblock,
+		if (SceSysmemForDriver_A841EDDA(s_read[i].memblock,
 					    &s_read[i].data) < 0) {
-			ksceKernelFreeMemBlock(s_read[i].memblock);
+			SceSysmemForDriver_009E1C61(s_read[i].memblock);
 			s_read[i].memblock = 0;
 			goto readFail;
 		}
@@ -385,12 +385,12 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = 0x200004;
 	opt.alignment = 0x1000;
-	s_write.memblock = ksceKernelAllocMemBlock("SceDbgUsbWrite", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+	s_write.memblock = SceSysmemForDriver_C94850C9("SceDbgUsbWrite", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 						 BUFFER_SIZE, &opt);
 	if (s_write.memblock < 0)
 		goto writeFail;
-	if (ksceKernelGetMemBlockBase(s_write.memblock, &s_write.data) < 0) {
-		ksceKernelFreeMemBlock(s_write.memblock);
+	if (SceSysmemForDriver_A841EDDA(s_write.memblock, &s_write.data) < 0) {
+		SceSysmemForDriver_009E1C61(s_write.memblock);
 		s_write.memblock = 0;
 		goto writeFail;
 	}
@@ -474,16 +474,16 @@ statusFail:
 writeMutexFail:
 	ksceKernelDeleteMutex(s_readMutex);
 readMutexFail:
-	ksceKernelFreeMemBlock(s_write.memblock);
+	SceSysmemForDriver_009E1C61(s_write.memblock);
 writeFail:
-	ksceKernelFreeMemBlock(s_write.memblock);
+	SceSysmemForDriver_009E1C61(s_write.memblock);
 	i = 1;
 	goto readPrevious;
 readFail:
-	ksceKernelFreeMemBlock(s_read[i].memblock);
+	SceSysmemForDriver_009E1C61(s_read[i].memblock);
 	i--;
 readPrevious:
 	if (i >= 0)
-		ksceKernelFreeMemBlock(s_read[i].memblock);
+		SceSysmemForDriver_009E1C61(s_read[i].memblock);
 	return 2;
 }

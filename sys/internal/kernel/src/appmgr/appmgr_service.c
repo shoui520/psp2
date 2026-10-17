@@ -18,14 +18,11 @@ extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
 			     SceSize size);
 extern void _appListShowAppState(struct AppState *app);
 extern int dumpBgmState(void);
-extern void sceKernelApiDeclareTypeUInt32(void);
 extern int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event,
 				     SceUID pid);
 extern int _appListPushEvent(struct AppState *app,
 			     const SceAppMgrSystemEvent *event);
 extern void _shellEventRecommendedScreenOrientationStatusChangedQueuePush(void);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 #if FW_DEBUG
 SCE_DBGINFO_DEFINE(static, appmgrDumpSeparatorInfo, 31, "sceAppMgrDump");
@@ -36,15 +33,15 @@ SCE_DBGINFO_DEFINE(static, appmgrDumpIndexInfo, 37, "sceAppMgrDump");
 /* Sony inlines the complete dump at each failed service mutex operation. */
 #define sceAppMgrDumpInline() do { \
 	int index; \
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpSeparatorInfo, \
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpSeparatorInfo, \
 		"------------------------------------------\n"); \
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpTitleInfo, "AppMgrDump\n"); \
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpHeaderInfo, \
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpTitleInfo, "AppMgrDump\n"); \
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpHeaderInfo, \
 		"------------------------------------------\n"); \
 	for (index = 0; index != 20; ++index) { \
 		struct AppState *app = &g_appmgrAppStates[index]; \
 		if (app->appId > 0 || app->process.processId > 0) { \
-			ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpIndexInfo, \
+			SceDebugForDriver_D9703808(1, 0, &appmgrDumpIndexInfo, \
 				"[%d]\n", index); \
 			_appListShowAppState(app); \
 		} \
@@ -99,10 +96,10 @@ int sceAppMgrDump(void)
 	int index;
 
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpSeparatorInfo,
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpSeparatorInfo,
 		"------------------------------------------\n");
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpTitleInfo, "AppMgrDump\n");
-	ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpHeaderInfo,
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpTitleInfo, "AppMgrDump\n");
+	SceDebugForDriver_D9703808(1, 0, &appmgrDumpHeaderInfo,
 		"------------------------------------------\n");
 #endif
 	for (index = 0; index != 20; ++index) {
@@ -110,7 +107,7 @@ int sceAppMgrDump(void)
 
 		if (app->appId > 0 || app->process.processId > 0) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, &appmgrDumpIndexInfo,
+			SceDebugForDriver_D9703808(1, 0, &appmgrDumpIndexInfo,
 				"[%d]\n", index);
 #endif
 			_appListShowAppState(app);

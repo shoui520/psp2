@@ -202,5 +202,5 @@ void _timeoutHandler(void *argp)
 		return;
 	}
 	if (msgSendMsgPacket(control, message) < 0)
-		ksceKernelPanic(&dbg__timeoutHandler_L675, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&dbg__timeoutHandler_L675, __builtin_return_address(0));
 }

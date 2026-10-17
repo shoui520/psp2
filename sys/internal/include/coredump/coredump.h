@@ -23,6 +23,7 @@ typedef struct SceCoredumpTriggerParam {
 	SceUInt32 triggerFlags;
 } SceCoredumpTriggerParam;
 
+#ifndef __cplusplus	/* C only; g++ 4.8 (C++98) has no static_assert */
 _Static_assert(sizeof(SceCoredumpTriggerParam) == 52,
 	"SceCoredumpTriggerParam");
 _Static_assert(offsetof(SceCoredumpTriggerParam, triggerData) == 16,
@@ -31,6 +32,7 @@ _Static_assert(offsetof(SceCoredumpTriggerParam, appVersion) == 36,
 	"SceCoredumpTriggerParam.appVersion");
 _Static_assert(offsetof(SceCoredumpTriggerParam, triggerFlags) == 48,
 	"SceCoredumpTriggerParam.triggerFlags");
+#endif
 
 typedef int (*SceKernelCoredumpStateUpdateCallback)(int task_id, SceUID pid,
 	int progress);

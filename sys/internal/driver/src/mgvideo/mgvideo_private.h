@@ -524,10 +524,10 @@ extern int contextHeaps[2];
 extern MgVideoContext *videoContexts[2];
 extern MgVideoRecordStream recordStreams[2];
 
-struct SceProcEventInvokeParam1;
-int onVideoProcessKill(int processId, struct SceProcEventInvokeParam1 *event,
+struct ProcEventParam;
+int onVideoProcessKill(int processId, struct ProcEventParam *event,
 		       int eventType);
-int onVideoProcessExit(int processId, struct SceProcEventInvokeParam1 *event,
+int onVideoProcessExit(int processId, struct ProcEventParam *event,
 		       int eventType);
 
 typedef struct MgVideoFileGroupInfo {

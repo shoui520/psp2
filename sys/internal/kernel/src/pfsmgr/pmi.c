@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_PMI_COUNT		0x5c
@@ -66,7 +66,7 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 	pathLen = strnlen(path, PFS_PATH_MAX);
 	if (pathLen > PFS_PATH_MAX - 1 || (nameLen = strnlen(name, PFS_MOUNT_NAME_MAX)) > PFS_MOUNT_NAME_MAX - 1 ||
 	    (klicensee != NULL && mode == 10) ||
-	    ((mode - 2 < 2 || mode == 10 || mode == 13) && klicensee == NULL && ksceSblAimgrIsCEX()))
+	    ((mode - 2 < 2 || mode == 10 || mode == 13) && klicensee == NULL && SceSblAIMgrForDriver_D78B04A2()))
 		return SCE_ERROR_ERRNO_EINVAL;
 
 	pmi = pfsBufferListAlloc(&g_pfsPmiBufferList);

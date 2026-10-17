@@ -16,11 +16,11 @@ int getUltWaitThreadIds(SceUID pid, SceUIntPtr waitList, SceUInt32 mask, SceUInt
 	int i = 0, ret;
 
 	for (p = waitList & ~7; isValidUltPointer(p); p = link.next & ~7) {
-		ret = ksceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
+		ret = sceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
 		if (ret != 0)
 			return ret;
 		if (i != 0) {
-			ret = ksceKernelCopyFromUserProc(pid, &waiter, (const void *)link.data,
+			ret = sceKernelCopyFromUserProc(pid, &waiter, (const void *)link.data,
 							 sizeof(waiter));
 			if (ret != 0)
 				return ret;
@@ -54,14 +54,14 @@ int copyUltQueueData(SceUID pid, SceUIntPtr dataList, SceUInt32 maxData, SceSize
 	int first = 1, ret;
 
 	for (p = dataList & ~7; isValidUltPointer(p); p = link.next & ~7) {
-		ret = ksceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
+		ret = sceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
 		if (ret != 0)
 			return ret;
 		if (!first) {
 			if (link.data != 0 && data != NULL) {
 				if (n >= maxData)
 					return SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS;
-				ret = ksceKernelCopyFromUserProc(pid, data, (const void *)link.data,
+				ret = sceKernelCopyFromUserProc(pid, data, (const void *)link.data,
 								 dataSize);
 				if (ret != 0)
 					return ret;
@@ -84,7 +84,7 @@ int getUltQueueDataIds(SceUID pid, SceUIntPtr dataList, SceUInt32 maxData, SceUI
 	int first = 1, ret;
 
 	for (p = dataList & ~7; isValidUltPointer(p); p = link.next & ~7) {
-		ret = ksceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
+		ret = sceKernelCopyFromUserProc(pid, &link, (const void *)p, sizeof(link));
 		if (ret != 0)
 			return ret;
 		if (!first) {

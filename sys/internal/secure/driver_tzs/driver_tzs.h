@@ -11,13 +11,13 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define ksceKernelAllocMemBlock			SceSysmemForTZS_402EB970
-#define ksceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
-#define ksceKernelFreeMemBlock			SceSysmemForTZS_658EACE3
-#define ksceKernelCheckDipsw			SceDipswForTZS_ksceKernelCheckDipsw
-#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
-#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
-#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
+#define SceSysmemForDriver_C94850C9			SceSysmemForTZS_402EB970
+#define SceSysmemForDriver_A841EDDA		SceSysmemForTZS_E1DEDFF4
+#define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
+#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_ksceKernelCheckDipsw
+#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
+#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
 #define memset					SceSysclibForTZS_956DB750
 #define memcpy					SceSysclibForTZS_BE3AF2EE
 
@@ -32,8 +32,8 @@
 #include <fw.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr_tzs.h>
 #include <lowio/pervasive_regs.h>
@@ -41,7 +41,7 @@
 #include <lowio/uart_regs.h>
 #include <compat/grab_regs.h>
 #include "emc_regs.h"
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)

@@ -26,8 +26,6 @@ extern int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 		int duration, int wait);
 extern int SceAudioInForDriver_E4042F6F(int pid, int unusedArgument1,
 		int unusedArgument2, int delay);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 SceUInt32 g_appmgrDisplayMergeAlpha = 256;
 SceUInt32 g_appmgrDisplayMergeSetting = 128;
@@ -97,12 +95,12 @@ static const SceKernelDebugInfo enableOutPortPanicInfo = {
 
 void appmgrDeviceLockPanic(void)
 {
-	ksceKernelPanic(&deviceLockPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&deviceLockPanicInfo, __builtin_return_address(0));
 }
 
 void appmgrMainMutexPanic(void)
 {
-	ksceKernelPanic(&mainMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&mainMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -199,7 +197,7 @@ int lockAudioUpdate(void)
 #if !FW_DEBUG
 void appmgrEnableOutPortPanic(void)
 {
-	ksceKernelPanic(&enableOutPortPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&enableOutPortPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -231,7 +229,7 @@ void setVolume(const SceUID *exclusivePid, const SceUInt32 *otherVolume)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, 0, 0);
 #else
-			ksceKernelPrintfPanic(&mainVolumePanicInfo,
+			SceDebugForDriver_00CCE39C(&mainVolumePanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
@@ -244,7 +242,7 @@ void setVolume(const SceUID *exclusivePid, const SceUInt32 *otherVolume)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, 0, 0);
 #else
-			ksceKernelPrintfPanic(&bgmVolumePanicInfo,
+			SceDebugForDriver_00CCE39C(&bgmVolumePanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
@@ -3076,7 +3074,7 @@ void _deviceRefreshAudioPort(SceUID pid)
 				dumpBgmState();
 				SCE_DBG_ASSERT_CHECK_FUNC(0, 930, "enableInPort");
 #else
-				ksceKernelPanic(&enableInPortPanicInfo, __builtin_return_address(0));
+				SceDebugForDriver_391B5B74(&enableInPortPanicInfo, __builtin_return_address(0));
 #endif
 			}
 		}

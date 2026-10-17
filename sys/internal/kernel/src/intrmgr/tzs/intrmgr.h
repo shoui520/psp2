@@ -10,32 +10,34 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define ksceKernelAllocMemBlock			SceSysmemForTZS_402EB970
-#define ksceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
-#define ksceKernelCheckDipsw			SceDipswForTZS_ksceKernelCheckDipsw
-#define ksceKernelSpinlockLowLock		SceCpuForTZS_71FD9AB5
-#define ksceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
-#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
-#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
-#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
-#define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
-#define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
+#define SceSysmemForDriver_C94850C9			SceSysmemForTZS_402EB970
+#define SceSysmemForDriver_A841EDDA		SceSysmemForTZS_E1DEDFF4
+#define SceDipswForDriver_A98FC2FD			SceDipswForTZS_ksceKernelCheckDipsw
+#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
+#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
+#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
+#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
+#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
+#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
 #define memset					SceSysclibForTZS_956DB750
-#define kscePmMgrGetProductMode			ScePmMgrForTZS_CF554E69
-#define ksceKernelAssert			SceDebugForTZS_2F9B8AA8
-#define ksceKernelFreeMemBlock			SceSysmemForTZS_658EACE3
+#define ScePmMgrForDriver_2AC815A2			ScePmMgrForTZS_CF554E69
+#define SceDebugForDriver_35A35322			SceDebugForTZS_2F9B8AA8
+#define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
 
 #include <fw.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/utils.h>
-#include <psp2kern/kernel/pm_mgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/utils.h>
+#include <sysmem/pmmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <intrmgr/intrmgr.h>
 #include <intrmgr/intrmgr_tzs.h>
 #include "../intrmgr_state.h"
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysroot.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -50,8 +52,6 @@
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
-
-unsigned int SceCpuForTZS_44C423D3(void);		/* this core */
 
 /* ForTZS imports named by the henkaku wiki's SceSysmem and SceExcpmgr pages */
 #define sceKernelAllocPartitionMemBlockForTZS	SceSysmemForTZS_0028E26C
@@ -83,8 +83,6 @@ int SceCpuForTZS_9E4C0D0D(void);			/* before an L2 control change */
 int sceKernelRegisterMonitorEntryForTZS(int vector, void *entry);
 
 /* SKBL builds this module into the secure kernel boot loader (INTRMGR_SKBL) */
-int sceKernelSysrootCorelockLock(SceUInt32 core);
-void sceKernelSysrootCorelockUnlock(void);
 
 /* intrmgr.c */
 extern IntrState g_intrState;

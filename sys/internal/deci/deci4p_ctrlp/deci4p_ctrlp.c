@@ -14,20 +14,20 @@
 #include <psp2/touch.h>
 #include <psp2kern/bt.h>
 #include <psp2kern/ctrl.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/debug.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <ctrl/ctrl_sample.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include "deci4p_ctrlp.h"
 
 #if FW_VERSION >= 0x04000000
-#define error(line, fmt, ...) ksceKernelPrintf("[CTRLP E2]::%d " fmt, line, ##__VA_ARGS__)
+#define error(line, fmt, ...) SceDebugForDriver_391B74B7("[CTRLP E2]::%d " fmt, line, ##__VA_ARGS__)
 #else
 #define error(line, fmt, ...) ((void)0)
 #endif
@@ -569,7 +569,7 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 
 	state.version = version;
 	getPortInfo();
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	buttons = normalizeButtons(emulate->data.buttons, version);
 	if (state.version) {
 		port = emulate->portType.port;
@@ -578,7 +578,7 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 		emulate->port = port;
 		if (emulate->portType.type &&
 		    (port > 5 || emulate->portType.type != controllerType(port))) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 			return CTRLP_RESULT_TYPE_MISMATCH;
 		}
 	} else {
@@ -592,10 +592,10 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 			emulate->data.up, emulate->data.right,
 			emulate->data.down, emulate->data.left,
 			CTRLP_EMULATION_TIME) < 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_INVALID;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return CTRLP_RESULT_OK;
 }
 
@@ -604,14 +604,14 @@ static inline int stopMode(SceUInt32 mode)
 	SceUInt32 intr;
 	int result;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode == mode) {
 		state.mode = CTRLP_MODE_IDLE;
 		result = CTRLP_RESULT_OK;
 	} else {
 		result = CTRLP_RESULT_ILLEGAL_STATE;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return result;
 }
 
@@ -700,7 +700,7 @@ static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample)
 	if (state.mode == CTRLP_MODE_RECORD) {
 		if (port >= CTRLP_PORT_NUM)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+		intr = SceCpuForDriver_D32ACE9E(&state.lock);
 		if (state.mode != CTRLP_MODE_RECORD || !(state.streams & CTRLP_STREAM_CTRL))
 			goto out;
 		record = &ring.record[ring.writeIndex];
@@ -726,7 +726,7 @@ static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample)
 		error(2274, "ILLEGAL PARAM\n");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK || !(state.streams & CTRLP_STREAM_CTRL))
 		goto out;
 	time = sceKernelGetSystemTimeWide() - state.baseTime;
@@ -767,7 +767,7 @@ static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample)
 	}
 	checkSpace();
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return 0;
 }
 
@@ -789,14 +789,14 @@ int appendRecords(CtrlpPutRecords *put, SceUInt32 length, SceUInt32 *space,
 	state.spaceThreshold = put->spaceThreshold;
 	*space = 0;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_ILLEGAL_STATE;
 	}
 	free = freeRecords();
 	if (free < count) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		*space = free;
 		state.spaceWanted = 1;
 		return CTRLP_RESULT_NO_SPACE;
@@ -815,7 +815,7 @@ int appendRecords(CtrlpPutRecords *put, SceUInt32 length, SceUInt32 *space,
 				record->header.port = port;
 				if (record->header.portType.type &&
 				    (port > 5 || record->header.portType.type != controllerType(port))) {
-					ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+					sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 					return CTRLP_RESULT_TYPE_MISMATCH;
 				}
 				record->header.portType.type = 0;
@@ -851,11 +851,11 @@ int appendRecords(CtrlpPutRecords *put, SceUInt32 length, SceUInt32 *space,
 		ringAdvanceWrite();
 		if (inserted == count) {
 			*space = free - inserted;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 			return CTRLP_RESULT_OK;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return CTRLP_RESULT_INVALID;
 }
 
@@ -877,9 +877,9 @@ static inline int startRecord(const CtrlpStartRecord *start, SceUInt32 length)
 	getPortInfo();
 	findPrimaryPort();
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode != CTRLP_MODE_IDLE) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_BUSY;
 	}
 	ring.writeIndex = 0;
@@ -892,7 +892,7 @@ static inline int startRecord(const CtrlpStartRecord *start, SceUInt32 length)
 	memset(ring.readIndex, 0, sizeof(ring.readIndex));
 	state.baseTime = sceKernelGetSystemTimeWide();
 	resetSaved();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return CTRLP_RESULT_OK;
 }
 
@@ -905,9 +905,9 @@ static inline int startPlayback(const CtrlpStartPlayback *start, SceUInt32 lengt
 	getPortInfo();
 	findPrimaryPort();
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode != CTRLP_MODE_IDLE) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_BUSY;
 	}
 	ring.writeIndex = 0;
@@ -921,7 +921,7 @@ static inline int startPlayback(const CtrlpStartPlayback *start, SceUInt32 lengt
 	memset(ring.readIndex, 0, sizeof(ring.readIndex));
 	resetSaved();
 	state.baseTime = sceKernelGetSystemTimeWide();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return CTRLP_RESULT_OK;
 }
 
@@ -937,7 +937,7 @@ static inline int setRapidFire(const CtrlpSetRapidFire *set, SceUInt32 length)
 	if (set->port >= CTRLP_PORT_NUM)
 		return CTRLP_RESULT_INVALID;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	rule = set->rule;
 	if (ksceCtrlSetRapidFire(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
 		result = CTRLP_RESULT_INVALID;
@@ -945,7 +945,7 @@ static inline int setRapidFire(const CtrlpSetRapidFire *set, SceUInt32 length)
 		state.rapidFire[set->port] |= 1 << set->index;
 		result = CTRLP_RESULT_OK;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return result;
 }
 
@@ -960,14 +960,14 @@ static inline int clearRapidFire(const CtrlpClearRapidFire *clear, SceUInt32 len
 	if (clear->port >= CTRLP_PORT_NUM)
 		return CTRLP_RESULT_INVALID;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (ksceCtrlClearRapidFire(state.version ? clear->portType.port : 0, clear->index) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
 		state.rapidFire[clear->port] &= ~(1 << clear->index);
 		result = CTRLP_RESULT_OK;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return result;
 }
 
@@ -1130,9 +1130,9 @@ static inline int processRequest(void)
 		break;
 	}
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.pending & CTRLP_SEND_RESPONSE) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		error(934, "dup resp req 0x%02X 0x%02X\n", code, state.responseHeader.code);
 		return DFMGR_ERROR_QUEUE_FULL;
 	}
@@ -1166,7 +1166,7 @@ static inline int processRequest(void)
 		break;
 	}
 	requestSend(CTRLP_SEND_RESPONSE);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return 0;
 }
 
@@ -1236,13 +1236,13 @@ static inline int recvPacket(SceSize size)
 	SceUInt32 intr;
 	int ret, left;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.pending & CTRLP_SEND_RESPONSE) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		state.recvCount = 0;
 		return DFMGR_ERROR_QUEUE_FULL;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 
 	if ((int)size > (int)state.recvSize) {
 		error(1078, "data size error[%d]\n", size);
@@ -1269,10 +1269,10 @@ static inline int sendPacket(void)
 	SceUInt32 intr, what, size;
 	int ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.sending) {
 		error(1212, "Already sending\n");
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return SCE_KERNEL_ERROR_ILLEGAL_MODE;
 	}
 	if (state.pending & CTRLP_SEND_RECORDS)
@@ -1304,13 +1304,13 @@ static inline int sendPacket(void)
 		break;
 	default:
 		error(1234, "Unknown send event %08X\n", what);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	state.pending &= ~what;
 	state.sending = what;
 	state.sendCount = size;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 
 	buffer = (SceUInt8 *)packet;
 	do {
@@ -1330,7 +1330,7 @@ static inline int sentPacket(void)
 	SceUInt32 intr;
 	int ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.sending == CTRLP_SEND_RECORDS)
 		state.recordReady = 1;
 	state.sending = 0;
@@ -1339,7 +1339,7 @@ static inline int sentPacket(void)
 		if (ret < 0)
 			error(1292, "sceDfMgrReqSend error %d\n", ret);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return 0;
 }
 
@@ -1417,7 +1417,7 @@ static int touchCallback(SceUInt32 panel, SceTouchData *sample)
 	}
 
 	if (state.mode == CTRLP_MODE_RECORD) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+		intr = SceCpuForDriver_D32ACE9E(&state.lock);
 		if (state.mode != CTRLP_MODE_RECORD || !(state.streams & CTRLP_STREAM_TOUCH))
 			goto out;
 		record = &ring.record[ring.writeIndex];
@@ -1439,7 +1439,7 @@ static int touchCallback(SceUInt32 panel, SceTouchData *sample)
 	if (state.mode != CTRLP_MODE_PLAYBACK)
 		return 0;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state.lock);
+	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	if (state.mode != CTRLP_MODE_PLAYBACK || !(state.streams & CTRLP_STREAM_TOUCH))
 		goto out;
 	time = sceKernelGetSystemTimeWide() - state.baseTime;
@@ -1467,7 +1467,7 @@ static int touchCallback(SceUInt32 panel, SceTouchData *sample)
 		applyTouch(sample, &saved[reader].touch, panel);
 	checkSpace();
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 	return 0;
 }
 
@@ -1477,7 +1477,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!ksceKernelCheckDipsw(CTRLP_DIPSW))
+	if (!SceDipswForDriver_A98FC2FD(CTRLP_DIPSW))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	memset(&state, 0, sizeof(state));
@@ -1491,7 +1491,7 @@ int module_start(SceSize args, void *argp)
 	ksceTouchGetPanelInfo(SCE_TOUCH_PORT_FRONT, &state.panelInfo[SCE_TOUCH_PORT_FRONT]);
 	ksceTouchGetPanelInfo(SCE_TOUCH_PORT_BACK, &state.panelInfo[SCE_TOUCH_PORT_BACK]);
 	state.buttonMask = 0x31ffff;
-	state.dolce = ksceSblAimgrIsDolce() != 0;
+	state.dolce = SceSblAIMgrForDriver_71608CA3() != 0;
 
 	ret = ksceCtrlSetCtrlpCallback(controllerCallback);
 	if (ret != 0) {
@@ -1513,7 +1513,7 @@ int module_start(SceSize args, void *argp)
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	__builtin_memset(protocol.name, 0, sizeof(protocol.name));
 	strncpy(protocol.name, "CTRLP", sizeof(protocol.name));
-	protocol.flags |= ksceKernelCheckDipsw(CTRLP_DIPSW_AUTO_ENABLE) ?
+	protocol.flags |= SceDipswForDriver_A98FC2FD(CTRLP_DIPSW_AUTO_ENABLE) ?
 			  DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
 	ret = sceDfMgrOpen(protocolHandler, &protocol, NULL);
 	if (ret < 0) {

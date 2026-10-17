@@ -1,5 +1,5 @@
 #include "audioin_internal.h"
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 
 /* This compiler emits these definitions in reverse order. */
 /* Command 421 expands sixteen byte values into a 512-byte interpolated curve.
@@ -34,14 +34,14 @@ const unsigned char g_audioInInternalAecControl[16] = {
 	255, 255, 255, 255, 255, 255, 255, 127,
 	63, 31, 31, 31, 31, 63, 127, 255
 };
-const SceProcEventHandler g_audioInProcEventHandler = {
-	.size = sizeof(SceProcEventHandler),
-	.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))audioInReturnZero,
-	.exit = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))audioInProcessExitHandler,
-	.kill = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))audioInProcessKillHandler,
-	.stop = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))audioInProcessStopHandler,
-	.start = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))audioInProcessStartHandler,
-	.switch_process = NULL
+const SceKernelProcEventHandler g_audioInProcEventHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
+	.create = (int (*)(SceUID, ProcEventCreateParam *, int))audioInReturnZero,
+	.exit = (int (*)(SceUID, ProcEventParam *, int))audioInProcessExitHandler,
+	.kill = (int (*)(SceUID, ProcEventParam *, int))audioInProcessKillHandler,
+	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))audioInProcessStopHandler,
+	.resume = (int (*)(SceUID, int, ProcEventParam *, int))audioInProcessStartHandler,
+	.notify = NULL
 };
 
 unsigned int g_audioInAecSampleCount = 0;

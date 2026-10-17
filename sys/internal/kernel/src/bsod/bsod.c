@@ -9,6 +9,8 @@
 #include "exception_record.h"
 #include "report_data.h"
 #include <intrmgr/intrmgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/debug.h>
 
 BsodDisplay s_bsodDisplay;
 int s_bsodQafEnabled;
@@ -30,24 +32,24 @@ int module_start(unsigned arglen, void *argp)
 	(void)arglen;
 	(void)argp;
 	s_bsodQafEnabled = SceQafMgrForDriver_382C71E8();
-	if ((ksceSblAimgrIsCEX() && !s_bsodQafEnabled) ||
-	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))
+	if ((SceSblAIMgrForDriver_D78B04A2() && !s_bsodQafEnabled) ||
+	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
 		return 1;
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = COMPAT_SRAM_BASE;
-	uid = ksceKernelAllocMemBlock("SceKernelBsodSram", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
+	uid = SceSysmemForDriver_C94850C9("SceKernelBsodSram", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
 				    COMPAT_SRAM_SIZE, &options);
 	if (uid < 0) {
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelAssertLevel(1, 0, &s_initAssert,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_FD753E7A(1, 0, &s_initAssert,
 					     __builtin_return_address(0));
 #endif
 		return 1;
 	}
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_bsodDisplay.pixels = base;
 	s_bsodDisplay.current.physical = COMPAT_SRAM_BASE;
 	s_bsodDisplay.current.pitch = 960;
@@ -57,23 +59,21 @@ int module_start(unsigned arglen, void *argp)
 	s_bsodDisplay.current.scaleX = 0x10000;
 	s_bsodDisplay.current.scaleY = 0x10000;
 	_sceKernelBsodSysconInit();
-	_sceKernelBsodIftuInit(ksceSblAimgrIsDolce() != 0);
-	state = ksceKernelCpuSuspendIntr();
+	_sceKernelBsodIftuInit(SceSblAIMgrForDriver_71608CA3() != 0);
+	state = SceCpuForDriver_821FC0EE();
 	ksceExcpmgrRegisterHandler(3, 2, bsodPrefetchEntry);
 	ksceExcpmgrRegisterHandler(4, 2, bsodDataEntry);
 	ksceExcpmgrRegisterHandler(1, 2, bsodUndefinedEntry);
 	SceDebugForKernel_67E9D1EC(bsodDebugCrashCallback);
 	bsodInitializePutchar();
-	ksceKernelEnableCrashDump(0);
-	ksceKernelCpuResumeIntr(state);
+	SceDebugForKernel_A465A31A(0);
+	sceKernelCpuResumeIntr(state);
 	_sceKernelBsodDummyFsInit();
 	return 0;
 }
 
 /* Fatal screen loop: real display changes, input edges and reset/power SMCs. */
 extern void (*s_bsodPrinter)(const char *format, ...);
-int ksceKernelSpinlockLowLock(void *lock);
-void *ksceSysrootGetSysroot(void);
 void bsodPrintf(const char *format, ...);
 int bsodFreezeLog(void);
 int bsodPrintLog(const void *frame, uint32_t buttons);
@@ -90,7 +90,7 @@ uint32_t s_bsodButtons;
 
 static void bsodReboot(unsigned dump)
 {
-	void *sysroot = ksceSysrootGetSysroot();
+	void *sysroot = SceSysrootForKernel_3E455842();
 
 	moncall4(MONCALL_CRASH_DUMP, dump, readTtbr0(), readVbar(), (uintptr_t)sysroot);
 }
@@ -100,7 +100,7 @@ void bsodCrashHandler(int kind)
 	uint32_t buttons, edge;
 	unsigned page = kind ? 0 : 3;
 
-	ksceKernelSpinlockLowLock(&s_bsodDisplay.lock);
+	SceCpuForDriver_BF82DEB2(&s_bsodDisplay.lock);
 	ksceKernelDisableIntr(0xd5);
 	ksceKernelDisableIntr(0xd2);
 	ksceKernelDisableIntr(0xf8);
@@ -172,14 +172,6 @@ void bsodDebugCrashCallback(void)
 }
 
 /* Capture a saved exception context and the live diagnostic CPU registers. */
-int ksceSysrootGetSessionId(void *session);
-int sceKernelSysrootBacktrace(int thread, void *frames, unsigned size,
-			       void *count, int flags);
-uint64_t SceSysrootForKernel_E20F6FC8(void);
-unsigned ksceKernelCpuId(void);
-int SceDebugForKernel_5D6F0CFC(void *buffer, unsigned core, uint64_t time,
-			    const char *name, const SceExcpmgrContext *context,
-			    unsigned exception);
 
 void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 			  const char *name)
@@ -191,7 +183,7 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	unsigned core, i;
 	char *report;
 
-	ksceKernelSpinlockLowLock(&s_bsodDisplay.captureLock);
+	SceCpuForDriver_BF82DEB2(&s_bsodDisplay.captureLock);
 	record->excpCode = context->excpCode;
 	for (i = 0; i < 13; i++)
 		record->r[i] = context->r[i];
@@ -280,16 +272,16 @@ void bsodCaptureException(const SceExcpmgrContext *context, unsigned exception,
 	record->jaolr = readJaolr();
 	writeJmcr(jmcr);
 	record->dbgdscr = readDbgdscr();
-	ksceSysrootGetSessionId(record->sessionId);
+	SceSysrootForKernel_84783B71(record->sessionId);
 	sceKernelSysrootBacktrace(-16, record->kernelFrames,
 				   sizeof(record->kernelFrames), &record->kernelFrameCount, 3);
 	if (record->thread)
 		sceKernelSysrootBacktrace(-16, record->userFrames,
 					   sizeof(record->userFrames), &record->userFrameCount, 10);
 	time = SceSysrootForKernel_E20F6FC8();
-	core = ksceKernelCpuId();
+	core = sceKernelCpuId();
 	shared = sysrootSharedMemory();
-	ksceKernelGetTtyInfo(shared->tty, sizeof(shared->tty));
+	SceDebugForDriver_62466B0A(shared->tty, sizeof(shared->tty));
 	report = shared->report[core];
 	memset(report, 0, sizeof(shared->report[core]));
 	SceDebugForKernel_5D6F0CFC(report, core, time, name, context, exception);

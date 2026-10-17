@@ -38,10 +38,6 @@ _Static_assert(offsetof(AppmgrPlayReadyFileHeader, reserved) == 20,
 
 extern int appmgrDecodeString(const unsigned char *source, char *destination,
 			      SceSize size);
-extern SceUID ksceKernelUserMap(const char *name, int permission,
-		const void *userBuffer, SceSize size, void **kernelPage,
-		SceSize *kernelSize, SceUInt32 *kernelOffset);
-extern int ksceKernelUserUnmap(SceUID uid);
 extern SceUID g_appmgrCoreHeap;
 SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 			      SceSize capacity);
@@ -77,12 +73,12 @@ void *appmgrAllocSaveDataHeapMemory(SceSize size)
 	opt.mmapSize = 0;
 	opt.size = sizeof(opt);
 	opt.align = 32;
-	return ksceKernelAllocHeapMemoryWithOption(g_appmgrSaveDataHeap, size, &opt);
+	return SceSysmemForDriver_49D4DD9B(g_appmgrSaveDataHeap, size, &opt);
 }
 
 int appmgrFreeSaveDataHeapMemory(void *memory)
 {
-	return ksceKernelFreeHeapMemory(g_appmgrSaveDataHeap, memory);
+	return sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, memory);
 }
 
 int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
@@ -164,10 +160,10 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 		result = (int)0x808010f3;
 		goto closeFile;
 	}
-	result = ksceKernelIsAccessibleRange(48, userData, 16384);
+	result = SceSysmemForDriver_9C78064C(48, userData, 16384);
 	if (result < 0)
 		goto closeFile;
-	mapping = ksceKernelUserMap("SceAppMgrGetSystemData", 2, userData, 16384,
+	mapping = SceSysmemForDriver_278BC201("SceAppMgrGetSystemData", 2, userData, 16384,
 				    &kernelPage, &kernelSize, &kernelOffset);
 	result = mapping;
 	if (mapping < 0)
@@ -177,10 +173,10 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 	result = ksceIoRead(fd, payload, header.payloadSize);
 	if (header.payloadSize == (SceUInt32)result) {
 		result = header.payloadSize;
-		ksceKernelUserUnmap(mapping);
+		sceKernelUserUnmap(mapping, userData, 16384);
 	} else {
 		memset(payload, 0, 16384);
-		ksceKernelUserUnmap(mapping);
+		sceKernelUserUnmap(mapping, userData, 16384);
 		result = (int)0x808010f0;
 	}
 closeFile:
@@ -313,12 +309,12 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 		if (dataSize == 0) {
 			ksceIoClose(fd);
 		} else {
-			result = ksceKernelIsAccessibleRange(48, userData, dataSize);
+			result = SceSysmemForDriver_9C78064C(48, userData, dataSize);
 			if (result < 0) {
 				ksceIoClose(fd);
 				goto unlockAndFree;
 			}
-			mapping = ksceKernelUserMap("SceAppMgrSetSystemData", 1,
+			mapping = SceSysmemForDriver_278BC201("SceAppMgrSetSystemData", 1,
 					userData, dataSize, &kernelPage,
 					&kernelSize, &kernelOffset);
 			result = mapping;
@@ -329,7 +325,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 			transferred = ksceIoWrite(fd,
 					(char *)kernelPage + kernelOffset, dataSize);
 			ksceIoClose(fd);
-			ksceKernelUserUnmap(mapping);
+			sceKernelUserUnmap(mapping, userData, dataSize);
 			if ((SceUInt32)transferred != dataSize) {
 				result = (int)0x808010f4;
 				goto unlockAndFree;
@@ -372,13 +368,13 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 		result = (int)0x80800001;
 		goto leave;
 	}
-	keys = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*keys));
+	keys = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, sizeof(*keys));
 	if (keys == NULL) {
 		result = (int)0x80801006;
 		goto leave;
 	}
 	memset(keys, 0, sizeof(*keys));
-	result = ksceKernelCopyFromUser(keys, userData, 4096);
+	result = SceSysmemForDriver_BC996A7A(keys, userData, 4096);
 	if (result < 0)
 		goto freeKeys;
 	result = sceRegMgrSetKeyInt("/CONFIG/VIDEOSERVICE/MARLINIPTV",
@@ -403,7 +399,7 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 	result = sceRegMgrSetKeyInt("/CONFIG/VIDEOSERVICE/MARLINIPTV",
 				 "dirty_flag", 0);
 freeKeys:
-	ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, keys);
+	sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, keys);
 leave:
 	ksceKernelSetPermission(permission);
 	sceSyscallLeave(syscallState);
@@ -451,7 +447,7 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 	size = header.controlInfoSize;
 	opt.size = sizeof(opt);
 	opt.align = 32;
-	records = ksceKernelAllocHeapMemoryWithOption(g_appmgrCoreHeap, size, &opt);
+	records = SceSysmemForDriver_49D4DD9B(g_appmgrCoreHeap, size, &opt);
 	if (records == NULL) {
 		result = (int)0x80801006;
 		goto closeFile;
@@ -497,7 +493,7 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 		result = 0;
 	}
 freeRecords:
-	cleanupResult = ksceKernelFreeHeapMemory(g_appmgrCoreHeap, records);
+	cleanupResult = sceKernelFreeHeapMemory(g_appmgrCoreHeap, records);
 	if (cleanupResult < 0)
 		return cleanupResult;
 closeFile:

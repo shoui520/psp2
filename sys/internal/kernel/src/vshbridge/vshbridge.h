@@ -224,7 +224,7 @@ SceUInt32 vshCoredumpCafSegmentTransform(SceUID ctx, void *a, void *b, void *c);
 SceUInt32 vshCoredumpCafSegmentFinal(SceUID ctx, void *a, void *b);
 SceUInt32 vshCoredumpDeleteCrashReportCaf(void);
 SceUInt32 vshCoredumpCreateDump(int a, const void *b, int c, const void *d, int e, int f, void *g, int h);
-SceUInt32 vshEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize);
+SceUInt32 vshEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *pBuf, SceSize bufSize);
 SceUInt32 vshSblGetSystemSwVersion(SceKernelSystemSwVersion *info);
 SceUInt32 vshSblAimgrGetSMI(void *smi);
 SceUInt32 vshSblSsGenerateAppKey(void *a, void *b);

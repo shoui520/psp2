@@ -1,24 +1,23 @@
 /* Four-core rendezvous. */
 #include <stdint.h>
-#include <psp2kern/kernel/cpu/corelock.h>
+#include <sysmem/cpu.h>
 #include <sysmem/barrier.h>
 #include <sysmem/atomic.h>
 
-extern int ksceKernelCpuId(void);
-extern void ksceKernelSpinlockLowLock(int *lock);
-extern void ksceKernelSpinlockLowUnlock(int *lock);
-extern int16_t ksceKernelAtomicGetAndSub16(int16_t *address, int16_t value);
+extern int sceKernelCpuId(void);
+extern void SceCpuForDriver_BF82DEB2(int *lock);
+extern int16_t SceCpuForDriver_3EE9B5B8(int16_t *address, int16_t value);
 
-void ksceKernelCorelockInitialize(SceCorelockContext *context)
+void SceCpuForKernel_A65F6F14(SceCorelockContext *context)
 {
 	context->lock = 1;
 	context->core_count = 4;
 	context->last_wait_core = 4;
 }
 
-void ksceKernelCorelockLock(SceCorelockContext *context, SceUInt32 core)
+void SceCpuForKernel_2FF54320(SceCorelockContext *context, SceUInt32 core)
 {
-	int current = ksceKernelCpuId();
+	int current = sceKernelCpuId();
 	volatile int16_t *owner = &context->last_wait_core;
 
 	AtomicFullBarrier();
@@ -28,12 +27,12 @@ void ksceKernelCorelockLock(SceCorelockContext *context, SceUInt32 core)
 	}
 	while (*owner != (int16_t)current)
 		wfe();
-	ksceKernelSpinlockLowLock(&context->lock);
+	SceCpuForDriver_BF82DEB2(&context->lock);
 }
 
-void ksceKernelCorelockUnlock(SceCorelockContext *context)
+void SceCpuForKernel_FE2B77A3(SceCorelockContext *context)
 {
-	int next = ksceKernelCpuId() + 1;
+	int next = sceKernelCpuId() + 1;
 	volatile int16_t *count = &context->core_count;
 	int16_t previous;
 
@@ -41,8 +40,8 @@ void ksceKernelCorelockUnlock(SceCorelockContext *context)
 		next = 0;
 	AtomicFullBarrier();
 	context->last_wait_core = next;
-	previous = ksceKernelAtomicGetAndSub16(&context->core_count, 1);
-	ksceKernelSpinlockLowUnlock(&context->lock);
+	previous = SceCpuForDriver_3EE9B5B8(&context->core_count, 1);
+	sceKernelSpinlockLowUnlock(&context->lock);
 	dsb();
 	sev();
 	if (previous == 4) {

@@ -1,7 +1,7 @@
 /* Sysmem-specific counters use the shared exclusive-access primitives. */
 #include <sysmem/atomic.h>
 
-uint32_t ksceKernelAtomicDecIfLowPositive32(uint32_t *address)
+uint32_t SceCpuForKernel_0E04BD2E(uint32_t *address)
 {
 	uint32_t next;
 
@@ -16,7 +16,7 @@ uint32_t ksceKernelAtomicDecIfLowPositive32(uint32_t *address)
 	return next;
 }
 
-int ksceKernelAtomicAddAndGetPositive32InRange(uint32_t *address, uint32_t value,
+int SceCpuForKernel_8F40D0FD(uint32_t *address, uint32_t value,
 					     int32_t limit)
 {
 	uint32_t next;
@@ -37,7 +37,7 @@ int ksceKernelAtomicAddAndGetPositive32InRange(uint32_t *address, uint32_t value
 	return reached;
 }
 
-uint32_t ksceKernelAtomicIncrementHighwaterCounter(uint32_t *address)
+uint32_t SceCpuForKernel_9DA58A9E(uint32_t *address)
 {
 	uint32_t next;
 
@@ -51,7 +51,7 @@ uint32_t ksceKernelAtomicIncrementHighwaterCounter(uint32_t *address)
 	return next;
 }
 
-int32_t ksceKernelAtomicSetIfGreaterGet32(uint32_t *address, int32_t value)
+int32_t SceCpuForDriver_26F71995(uint32_t *address, int32_t value)
 {
 	int32_t previous;
 
@@ -65,7 +65,7 @@ int32_t ksceKernelAtomicSetIfGreaterGet32(uint32_t *address, int32_t value)
 	return value > previous ? value : previous;
 }
 
-int32_t ksceKernelAtomicSetIfGreaterGet16(uint16_t *address, int32_t value)
+int32_t SceCpuForDriver_875B094D(uint16_t *address, int32_t value)
 {
 	int32_t previous;
 
@@ -80,7 +80,7 @@ int32_t ksceKernelAtomicSetIfGreaterGet16(uint16_t *address, int32_t value)
 	return value > previous ? value : previous;
 }
 
-int32_t ksceKernelAtomicSetIfGreaterGet8(uint8_t *address, int32_t value)
+int32_t SceCpuForDriver_C3868071(uint8_t *address, int32_t value)
 {
 	int32_t previous;
 
@@ -94,20 +94,20 @@ int32_t ksceKernelAtomicSetIfGreaterGet8(uint8_t *address, int32_t value)
 	return value > previous ? value : previous;
 }
 
-int32_t ksceKernelAtomicGet32AndSet64(uint64_t *address, int32_t value)
+int32_t SceCpuForKernel_59448055(uint64_t *address, int32_t value)
 {
 	AtomicSet64(address, ((uint64_t)(uint32_t)value << 32) | (uint32_t)value);
 	/* Native leaves the destination address in its declared result register. */
 	return (int32_t)(uintptr_t)address;
 }
 
-int32_t ksceKernelAtomicGet32AndSet64_2(uint64_t *address, int32_t value)
+int32_t SceCpuForKernel_1A62AD6A(uint64_t *address, int32_t value)
 {
 	AtomicSet64(address, ((uint64_t)(uint32_t)value << 32) | (uint32_t)value);
 	return (int32_t)(uintptr_t)address;
 }
 
-int ksceKernelAtomicSubIfGreater64(uint64_t *address, int32_t value)
+int SceCpuForKernel_3D4FBB32(uint64_t *address, int32_t value)
 {
 	uint64_t previous, next;
 	uint32_t low;
@@ -126,7 +126,7 @@ int ksceKernelAtomicSubIfGreater64(uint64_t *address, int32_t value)
 	return insufficient;
 }
 
-int ksceKernelAtomicAdd32AndGet64InRange(uint64_t *address, uint32_t value,
+int SceCpuForKernel_A12D4388(uint64_t *address, uint32_t value,
 				      int32_t limit)
 {
 	uint64_t previous, next;
@@ -147,7 +147,7 @@ int ksceKernelAtomicAdd32AndGet64InRange(uint64_t *address, uint32_t value,
 	return reached;
 }
 
-int ksceKernelAtomicAdd32AndGet64InHiLoRange(uint64_t *address, uint32_t value,
+int SceCpuForKernel_61DDA758(uint64_t *address, uint32_t value,
 					  int32_t limit)
 {
 	uint64_t previous, next;
@@ -172,7 +172,7 @@ int ksceKernelAtomicAdd32AndGet64InHiLoRange(uint64_t *address, uint32_t value,
 	return reached;
 }
 
-int ksceKernelAtomicLimit64(uint64_t *address, int32_t value)
+int SceCpuForKernel_A3D7140F(uint64_t *address, int32_t value)
 {
 	uint64_t previous, next;
 	uint32_t low, high;

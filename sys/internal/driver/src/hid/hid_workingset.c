@@ -5,7 +5,7 @@ int ksceHidKeyboardEnumerate(SceUID *handles, int count);
 int ksceHidKeyboardClear(SceUID handle);
 
 int processResumeStart(SceUID pid, int eventType,
-		       SceProcEventInvokeParam1 *param, int arg)
+		       ProcEventParam *param, int arg)
 {
 	SceUID handles[8];
 	ListNode *link;
@@ -33,10 +33,10 @@ int processResumeStart(SceUID pid, int eventType,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = ksceKernelSpinlockLowLockCpuSuspendIntr(
+				state = SceCpuForDriver_D32ACE9E(
 					&process->spinlock);
 				entry->process->flags &= ~0x100u;
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&entry->process->spinlock, state);
 				break;
 			}
@@ -49,10 +49,10 @@ int processResumeStart(SceUID pid, int eventType,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = ksceKernelSpinlockLowLockCpuSuspendIntr(
+				state = SceCpuForDriver_D32ACE9E(
 					&process->spinlock);
 				entry->process->flags &= ~0x10u;
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&entry->process->spinlock, state);
 				return 0;
 			}
@@ -66,10 +66,10 @@ int processResumeStart(SceUID pid, int eventType,
 				entry = (HidProcessLink *)link;
 				process = entry->process;
 				if (pid == process->pid) {
-					state = ksceKernelSpinlockLowLockCpuSuspendIntr(
+					state = SceCpuForDriver_D32ACE9E(
 						&process->spinlock);
 					entry->process->flags |= 0x100;
-					ksceKernelSpinlockLowUnlockCpuResumeIntr(
+					sceKernelSpinlockLowUnlockCpuResumeIntr(
 						&entry->process->spinlock, state);
 					break;
 				}

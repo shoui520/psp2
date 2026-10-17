@@ -25,26 +25,26 @@
 #include <sysmem/sysroot_modulemgr.h>
 #include "debug_tty.h"
 
-int ksceKernelCpuSuspendIntr(void);
-int ksceKernelCpuResumeIntr(int flags);
-int ksceKernelCpuId(void);
-int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile SceUInt32 *lock);
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
-int ksceKernelVprintf(const char *format, va_list arguments);
-int ksceKernelCheckDipsw(unsigned int bit);
+int SceCpuForDriver_821FC0EE(void);
+int sceKernelCpuResumeIntr(int flags);
+int sceKernelCpuId(void);
+int SceCpuForDriver_D32ACE9E(volatile SceUInt32 *lock);
+void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
+int SceDebugForDriver_411C0733(const char *format, va_list arguments);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
 SceUInt64 SceSysrootForKernel_E20F6FC8(void);
 SceUID SceSysrootForKernel_7385CADE(void);
 SceUID SceSysrootForKernel_D441DC34(void);
 SceUInt32 SceSysrootForDriver_44EA3197(void);
-SceUInt32 ksceKernelSysrootGetSharedMemory(void);
+SceUInt32 SceSysrootForKernel_C8C8C321(void);
 int SceSysrootForDriver_CC7A0E63(int type, SceSize size, const char *buffer);
 void SceSysrootForKernel_0DF574A9(void);
-void *ksceSysrootGetSysroot(void);
+void *SceSysrootForKernel_3E455842(void);
 int SceQafMgrForDriver_382C71E8(void);
-int ksceSysrootGetModuleInfoForPid(SceUID pid, SceUInt32 addr, struct ModulemgrStubInfo *info);
+int SceSysrootForKernel_FF9F80FF(SceUID pid, SceUInt32 addr, struct ModulemgrStubInfo *info);
 int SceSysrootForKernel_1D84C4D4(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
 				void **textBase, char *name);
-int ksceSysrootGetNidName(uint32_t nid, const char **name);
+int SceSysrootForKernel_0B79E220(uint32_t nid, const char **name);
 
 /* debug_asm.S */
 void DebugCallOnStack(void *argument, void *stackTop, void (*func)(void *));
@@ -57,18 +57,6 @@ extern volatile uint32_t s_assertLevel;
 
 extern volatile uint32_t s_debugPrintLock;
 
-typedef struct SceKernelBacktraceFrameForKernel DebugFrame;
-
-/* the services that report a fault (all optional) */
-typedef int (*DebugBacktraceHandler)(SceUID thid, DebugFrame *frames, SceSize size,
-				     SceSize *count, SceUInt32 flags);
-typedef int (*DebugPrintBacktraceHandler)(SceUID pid, const DebugFrame *frames,
-					  SceSize count, const void *lr);
-typedef int (*DebugCrashDumpHandler)(int type, SceSize size, void *dump);
-typedef void (*DebugFaultHandler)(SceUInt64 time, int cpu, SceUInt32 fileHash,
-				  SceUInt32 lineHash, SceUInt32 funcHash, int reserved0, int reserved1,
-				  const void *caller, const void *lr);
-typedef int (*EventLogHandler)(const void *entry, SceSize size);
 
 /* the backtrace flags: whose frames */
 #define DEBUG_BACKTRACE_USER		2
@@ -86,7 +74,7 @@ typedef int (*EventLogHandler)(const void *entry, SceSize size);
 /* a failed assertion or a panic, as Assert/Panic hand it to DebugFaultDump */
 typedef struct DebugFault {
 	int kind;
-	int interrupts;			/* ksceKernelCpuSuspendIntr's result */
+	int interrupts;			/* SceCpuForDriver_821FC0EE's result */
 	const SceKernelDebugInfo *info;
 	const void *caller;		/* where Assert/Panic itself was called */
 	const void *lr;			/* the return address the caller passed */
@@ -115,23 +103,6 @@ typedef struct DebugDumpHeader {
 	SceUInt32 registerWords;	/* the exception context and its lookups */
 	SceUInt32 syscallWords;		/* the syscall frame and its module */
 } DebugDumpHeader;
-
-/* the exception dump's header has no return addresses */
-typedef struct DebugExceptionDumpHeader {
-	SceSize size;
-	SceUID pid;
-	SceUID tid;
-	int cpu;
-	SceUInt64 time;
-	SceUInt32 fileHash;
-	SceUInt32 lineHash;
-	SceUInt32 funcHash;
-	SceUInt32 kernelFrames;
-	SceUInt32 userFrames;
-	SceSize frameSize;
-	SceUInt32 registerWords;
-	SceUInt32 syscallWords;
-} DebugExceptionDumpHeader;
 
 _Static_assert(sizeof(DebugDumpHeader) == 0x40, "fault dump header size");
 _Static_assert(sizeof(DebugExceptionDumpHeader) == 0x38, "exception dump header size");
@@ -171,7 +142,7 @@ void SceDebugForKernel_4C62F8CC(DebugCrashDumpHandler handler)
 	s_crashDumpHandler = handler;
 }
 
-int ksceKernelEnableCrashDump(int enable)
+int SceDebugForKernel_A465A31A(int enable)
 {
 	int previous = s_crashDumpEnabled;
 
@@ -208,7 +179,7 @@ void DebugPrintBacktrace(SceUID pid, SceUID thid, const void *lr)
 
 	if (s_backtraceHandler == NULL || s_printBacktraceHandler == NULL)
 		return;
-	frames = s_backtraceFrames[ksceKernelCpuId()];
+	frames = s_backtraceFrames[sceKernelCpuId()];
 	memset(frames, 0, sizeof(s_backtraceFrames[0]));
 	if (s_backtraceHandler(thid, frames, sizeof(s_backtraceFrames[0]), &count,
 			       DEBUG_BACKTRACE_KERNEL) >= 0)
@@ -240,52 +211,52 @@ void DebugPrintSyscallFrame(SceUID pid, const ThreadSyscallFrame *frame, const S
 		if (frame == NULL)
 			return;
 	}
-	ksceKernelPrintf("=== Syscall Frame ===\n");
-	ksceKernelPrintf("r0-r3:     0x%08X 0x%08X 0x%08X 0x%08X\n",
+	SceDebugForDriver_391B74B7("=== Syscall Frame ===\n");
+	SceDebugForDriver_391B74B7("r0-r3:     0x%08X 0x%08X 0x%08X 0x%08X\n",
 			 frame->r[0], frame->r[1], frame->r[2], frame->r[3]);
-	ksceKernelPrintf("r12:       0x%08X\n", frame->r[12]);
-	ksceKernelPrintf("SP:        0x%08X\n", frame->sp);
-	ksceKernelPrintf("LR:        0x%08X\n", frame->lr);
-	ksceKernelPrintf("PC:        0x%08X\n", frame->pc);
+	SceDebugForDriver_391B74B7("r12:       0x%08X\n", frame->r[12]);
+	SceDebugForDriver_391B74B7("SP:        0x%08X\n", frame->sp);
+	SceDebugForDriver_391B74B7("LR:        0x%08X\n", frame->lr);
+	SceDebugForDriver_391B74B7("PC:        0x%08X\n", frame->pc);
 	if (SceQafMgrForDriver_382C71E8()) {
 		if (SceSysrootForKernel_1D84C4D4(SCE_KERNEL_PROCESS_ID, frame->entry,
 						 &fingerprint, &textBase, name) < 0)
-			ksceKernelPrintf("Entry:     0x%08X\n", frame->entry);
+			SceDebugForDriver_391B74B7("Entry:     0x%08X\n", frame->entry);
 		else
-			ksceKernelPrintf("Entry:     0x%08X [%s + 0x%08X] # 0x%08X\n", frame->entry,
+			SceDebugForDriver_391B74B7("Entry:     0x%08X [%s + 0x%08X] # 0x%08X\n", frame->entry,
 					 name, frame->entry - (SceUInt32)textBase, fingerprint);
 	}
 	if (result != NULL) {
 		/* bit 30 of a result marks an error the syscall layer passes on */
 		switch (frame->apiDeclare) {
 		case 0:
-			ksceKernelPrintf("Result:    0x%08X\n", result[0] & ~0x40000000);
+			SceDebugForDriver_391B74B7("Result:    0x%08X\n", result[0] & ~0x40000000);
 			break;
 		case 1:
-			ksceKernelPrintf("Result:    0x%08X%08X\n", result[1],
+			SceDebugForDriver_391B74B7("Result:    0x%08X%08X\n", result[1],
 					 result[0] & ~0x40000000);
 			break;
 		case 2:
-			ksceKernelPrintf("Result:    0x%08X\n", result[0]);
+			SceDebugForDriver_391B74B7("Result:    0x%08X\n", result[0]);
 			break;
 		case 3:
-			ksceKernelPrintf("Result:    0x%08X%08X\n", result[1], result[0]);
+			SceDebugForDriver_391B74B7("Result:    0x%08X%08X\n", result[1], result[0]);
 			break;
 		default:
-			ksceKernelPrintf("Result:    0x%08X 0x%08X 0x%08X 0x%08X\n",
+			SceDebugForDriver_391B74B7("Result:    0x%08X 0x%08X 0x%08X 0x%08X\n",
 					 result[0], result[1], result[2], result[3]);
 			break;
 		}
 	}
 	stub.size = sizeof(stub);
-	if (ksceSysrootGetModuleInfoForPid(pid, frame->pc - 8, &stub) < 0)
+	if (SceSysrootForKernel_FF9F80FF(pid, frame->pc - 8, &stub) < 0)
 		return;
-	ksceKernelPrintf("Module:    0x%08x [%s]\n", stub.modid, stub.moduleName);
-	ksceKernelPrintf("Library:   %s (ver:%d)\n", stub.libname, stub.libVersion);
-	if (ksceSysrootGetNidName(stub.funcnid, &nidName) < 0)
-		ksceKernelPrintf("NID:       0x%08x\n", stub.funcnid);
+	SceDebugForDriver_391B74B7("Module:    0x%08x [%s]\n", stub.modid, stub.moduleName);
+	SceDebugForDriver_391B74B7("Library:   %s (ver:%d)\n", stub.libname, stub.libVersion);
+	if (SceSysrootForKernel_0B79E220(stub.funcnid, &nidName) < 0)
+		SceDebugForDriver_391B74B7("NID:       0x%08x\n", stub.funcnid);
 	else
-		ksceKernelPrintf("NID:       0x%08x [%s]\n", stub.funcnid, nidName);
+		SceDebugForDriver_391B74B7("NID:       0x%08x [%s]\n", stub.funcnid, nidName);
 }
 
 /* name unknown: copies whole 16-byte blocks into the dump */
@@ -316,7 +287,7 @@ void DebugFaultDump(void *argument)
 	const ThreadSyscallFrame *syscall;
 	DebugDumpSyscall *syscallDump;
 	SceUInt64 time = SceSysrootForKernel_E20F6FC8();
-	int cpu = ksceKernelCpuId();
+	int cpu = sceKernelCpuId();
 	SceUInt32 fingerprint;
 	void *textBase;
 	DebugModuleName name;
@@ -327,30 +298,30 @@ void DebugFaultDump(void *argument)
 
 	if (fault->kind == DEBUG_FAULT_ASSERT) {
 		if (info->file == NULL)
-			ksceKernelPrintf("*** Kernel Assertion failed at <%d:0x%08x%08x:0x%08x:%p>\n",
+			SceDebugForDriver_391B74B7("*** Kernel Assertion failed at <%d:0x%08x%08x:0x%08x:%p>\n",
 					 cpu, info->fileHash, info->lineHash, info->funcHash,
 					 fault->lr);
 		else
-			ksceKernelPrintf("*** Kernel Assertion failed at <%d:0x%08x%08x(%s:%d):0x%08x(%s):%p>\n",
+			SceDebugForDriver_391B74B7("*** Kernel Assertion failed at <%d:0x%08x%08x(%s:%d):0x%08x(%s):%p>\n",
 					 cpu, info->fileHash, info->lineHash, info->file,
 					 info->line, info->funcHash, info->func, fault->lr);
 	} else {
 		if (info->file == NULL)
-			ksceKernelPrintf("*** Kernel Panic at <%d:0x%08x%08x:0x%08x:%p>\n",
+			SceDebugForDriver_391B74B7("*** Kernel Panic at <%d:0x%08x%08x:0x%08x:%p>\n",
 					 cpu, info->fileHash, info->lineHash, info->funcHash,
 					 fault->lr);
 		else
-			ksceKernelPrintf("*** Kernel Panic at <%d:0x%08x%08x(%s:%d):0x%08x(%s):%p>\n",
+			SceDebugForDriver_391B74B7("*** Kernel Panic at <%d:0x%08x%08x(%s:%d):0x%08x(%s):%p>\n",
 					 cpu, info->fileHash, info->lineHash, info->file,
 					 info->line, info->funcHash, info->func, fault->lr);
 	}
 	if (fault->format != NULL)
-		ksceKernelVprintf(fault->format, fault->arguments);
+		SceDebugForDriver_411C0733(fault->format, fault->arguments);
 
 	caller = fault->caller;
 	lr = fault->lr;
 	syscall = (const ThreadSyscallFrame *)SceSysrootForDriver_44EA3197();
-	dump = (DebugDumpHeader *)(ksceKernelSysrootGetSharedMemory() + DEBUG_DUMP_OFFSET +
+	dump = (DebugDumpHeader *)(SceSysrootForKernel_C8C8C321() + DEBUG_DUMP_OFFSET +
 				   cpu * 0x1000);
 	out = (DebugFrame *)(dump + 1);
 	memset(dump, 0, 0x1000);
@@ -405,14 +376,14 @@ void DebugFaultDump(void *argument)
 	/* with crash dumps on, the handlers get the TTY's last output instead */
 	report = (char *)dump;
 	if (s_crashDumpEnabled) {
-		report = (char *)(ksceKernelSysrootGetSharedMemory() + DEBUG_TTY_OFFSET);
-		ksceKernelGetTtyInfo(report, 0x1000);
+		report = (char *)(SceSysrootForKernel_C8C8C321() + DEBUG_TTY_OFFSET);
+		SceDebugForDriver_62466B0A(report, 0x1000);
 	}
 	if (s_crashDumpHandler != NULL)
 		s_crashDumpHandler(DEBUG_DUMP_FAULT, size, report);
 	SceSysrootForDriver_CC7A0E63(DEBUG_DUMP_FAULT, size, report);
 	if (s_crashDumpEnabled) {
-		void *sysroot = ksceSysrootGetSysroot();
+		void *sysroot = SceSysrootForKernel_3E455842();
 		SceUInt32 ttbr0, vbar;
 
 		ttbr0 = readTtbr0();
@@ -425,10 +396,10 @@ void DebugFaultDump(void *argument)
 		s_faultHandler(time, cpu, info->fileHash, info->lineHash, info->funcHash, 0, 0,
 			       fault->caller, fault->lr);
 	if ((fault->kind == DEBUG_FAULT_ASSERT &&
-	     ksceKernelCheckDipsw(DEBUG_DIPSW_STOP_ON_ASSERT)) ||
+	     SceDipswForDriver_A98FC2FD(DEBUG_DIPSW_STOP_ON_ASSERT)) ||
 	    fault->kind == DEBUG_FAULT_PANIC) {
-		ksceKernelCpuResumeIntr(fault->interrupts);
-		ksceKernelPrintf("Stopped\n");
+		sceKernelCpuResumeIntr(fault->interrupts);
+		SceDebugForDriver_391B74B7("Stopped\n");
 		for (;;)
 			SceSysrootForKernel_0DF574A9();
 	}
@@ -437,45 +408,46 @@ void DebugFaultDump(void *argument)
 /* the top of this CPU's fault stack */
 #define DEBUG_FAULT_STACK()	(&s_faultStacks[DebugCpuId()][0xff8])
 
-void ksceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
+void SceDebugForDriver_35A35322(SceBool cond, const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
 
 	if (cond)
 		return;
-	fault.interrupts = ksceKernelCpuSuspendIntr();
+	fault.interrupts = SceCpuForDriver_821FC0EE();
 	fault.kind = DEBUG_FAULT_ASSERT;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
 	fault.lr = lr;
 	fault.format = NULL;
 	DebugCallOnStack(&fault, DEBUG_FAULT_STACK(), DebugFaultDump);
-	ksceKernelCpuResumeIntr(fault.interrupts);
+	sceKernelCpuResumeIntr(fault.interrupts);
 }
 
-void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
-				 const void *lr, const char *fmt, ...)
+/* returns no value: its callers' int is what r0 holds */
+int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
+			       const void *lr, const char *fmt, ...)
 {
 	DebugFault fault;
 
 	va_start(fault.arguments, fmt);
-	if (cond || (int)level > (int)s_assertLevel)
-		return;
-	fault.interrupts = ksceKernelCpuSuspendIntr();
-	fault.kind = DEBUG_FAULT_ASSERT;
-	fault.info = info;
-	fault.caller = __builtin_return_address(0);
-	fault.lr = lr;
-	fault.format = fmt;
-	DebugCallOnStack(&fault, DEBUG_FAULT_STACK(), DebugFaultDump);
-	ksceKernelCpuResumeIntr(fault.interrupts);
+	if (!cond && (int)level <= (int)s_assertLevel) {
+		fault.interrupts = SceCpuForDriver_821FC0EE();
+		fault.kind = DEBUG_FAULT_ASSERT;
+		fault.info = info;
+		fault.caller = __builtin_return_address(0);
+		fault.lr = lr;
+		fault.format = fmt;
+		DebugCallOnStack(&fault, DEBUG_FAULT_STACK(), DebugFaultDump);
+		sceKernelCpuResumeIntr(fault.interrupts);
+	}
 }
 
-void ksceKernelPanic(const SceKernelDebugInfo *info, const void *lr)
+void SceDebugForDriver_391B5B74(const SceKernelDebugInfo *info, const void *lr)
 {
 	DebugFault fault;
 
-	fault.interrupts = ksceKernelCpuSuspendIntr();
+	fault.interrupts = SceCpuForDriver_821FC0EE();
 	fault.kind = DEBUG_FAULT_PANIC;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
@@ -486,12 +458,12 @@ void ksceKernelPanic(const SceKernelDebugInfo *info, const void *lr)
 		;
 }
 
-void ksceKernelPrintfPanic(const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...)
+void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...)
 {
 	DebugFault fault;
 
 	va_start(fault.arguments, fmt);
-	fault.interrupts = ksceKernelCpuSuspendIntr();
+	fault.interrupts = SceCpuForDriver_821FC0EE();
 	fault.kind = DEBUG_FAULT_PANIC;
 	fault.info = info;
 	fault.caller = __builtin_return_address(0);
@@ -616,31 +588,31 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 	SceSize size;
 	int cpu;
 
-	ksceKernelCpuSuspendIntr();
-	cpu = ksceKernelCpuId();
+	SceCpuForDriver_821FC0EE();
+	cpu = sceKernelCpuId();
 	if (context->thread != NULL)
 		pid = context->thread->processId;
 	if (info->file == NULL)
-		ksceKernelPrintf("*** Kernel %s Exception at CPU%d <0x%08x%08x:0x%08x>\n", type, cpu,
+		SceDebugForDriver_391B74B7("*** Kernel %s Exception at CPU%d <0x%08x%08x:0x%08x>\n", type, cpu,
 				 info->fileHash, info->lineHash, info->funcHash);
 	else
-		ksceKernelPrintf("*** Kernel %s Exception at CPU%d <0x%08x%08x(%s:%d):0x%08x(%s)>\n",
+		SceDebugForDriver_391B74B7("*** Kernel %s Exception at CPU%d <0x%08x%08x(%s:%d):0x%08x(%s)>\n",
 				 type, cpu, info->fileHash, info->lineHash, info->file,
 				 info->line, info->funcHash, info->func);
-	dump = (DebugExceptionDumpHeader *)(ksceKernelSysrootGetSharedMemory() +
+	dump = (DebugExceptionDumpHeader *)(SceSysrootForKernel_C8C8C321() +
 					    DEBUG_DUMP_OFFSET + cpu * 0x1000);
 	memset(dump, 0, 0x1000);
 	size = SceDebugForKernel_5D6F0CFC(dump, cpu, time, info, context, arg);
 	report = (char *)dump;
 	if (s_crashDumpEnabled) {
-		report = (char *)(ksceKernelSysrootGetSharedMemory() + DEBUG_TTY_OFFSET);
-		ksceKernelGetTtyInfo(report, 0x1000);
+		report = (char *)(SceSysrootForKernel_C8C8C321() + DEBUG_TTY_OFFSET);
+		SceDebugForDriver_62466B0A(report, 0x1000);
 	}
 	if (s_crashDumpHandler != NULL)
 		s_crashDumpHandler(DEBUG_DUMP_EXCEPTION, size, report);
 	SceSysrootForDriver_CC7A0E63(DEBUG_DUMP_EXCEPTION, size, report);
 	if (s_crashDumpEnabled) {
-		void *sysroot = ksceSysrootGetSysroot();
+		void *sysroot = SceSysrootForKernel_3E455842();
 		SceUInt32 ttbr0, vbar;
 
 		ttbr0 = readTtbr0();
@@ -649,7 +621,7 @@ void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info,
 	}
 	DebugPrintBacktrace(pid, -16, NULL);
 	DebugPrintSyscallFrame(pid, NULL, NULL);
-	ksceKernelPrintf("Stopped\n");
+	SceDebugForDriver_391B74B7("Stopped\n");
 	for (;;)
 		SceSysrootForKernel_0DF574A9();
 }
@@ -661,14 +633,14 @@ void SceDebugForKernel_BCC8D0B2(SceUID pid, const ThreadSyscallFrame *frame,
 }
 
 /* the last output in the TTY ring, oldest first */
-int ksceKernelGetTtyInfo(char *buffer, SceSize size)
+int SceDebugForDriver_62466B0A(char *buffer, SceSize size)
 {
 	SceUInt32 index, tail;
 	int flags;
 
 	if (size >= sizeof(s_debugTty.ring))
 		size = sizeof(s_debugTty.ring);
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_debugPrintLock);
+	flags = SceCpuForDriver_D32ACE9E(&s_debugPrintLock);
 	index = s_debugTty.index;
 	tail = sizeof(s_debugTty.ring) - index;
 	if (tail >= size) {
@@ -681,7 +653,7 @@ int ksceKernelGetTtyInfo(char *buffer, SceSize size)
 			memcpy(buffer + tail, s_debugTty.ring,
 			       size + index - sizeof(s_debugTty.ring));
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_debugPrintLock, flags);
 	return size;
 }
 
@@ -727,7 +699,7 @@ void SceDebugForKernel_78027203(EventLogHandler handler)
 	s_eventLogHandler = handler;
 }
 
-int ksceEventLogPut(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16 subtype, SceUInt32 arg,
+int SceDebugForDriver_912CF2BA(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16 subtype, SceUInt32 arg,
 		    const void *data, SceSize size)
 {
 	EventLogEntry *entry;
@@ -740,7 +712,7 @@ int ksceEventLogPut(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16 subtype, S
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (size > EVENT_LOG_DATA_MAX)
 		return SCE_ERROR_ERRNO_EDOM;
-	flags = ksceKernelCpuSuspendIntr();
+	flags = SceCpuForDriver_821FC0EE();
 	cpu = DebugCpuId();
 	index = s_eventLogNext[cpu];
 	entrySize = (size + offsetof(EventLogEntry, data) + 3) & ~3;
@@ -762,19 +734,19 @@ int ksceEventLogPut(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16 subtype, S
 	memcpy(entry->data, data, size);
 	if (s_eventLogHandler != NULL)
 		s_eventLogHandler(entry, entrySize);
-	ksceKernelCpuResumeIntr(flags);
+	sceKernelCpuResumeIntr(flags);
 	return 0;
 }
 
 int k_sceEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *data,
 		     SceSize size)
 {
-	return ksceEventLogPut(SCE_KERNEL_PROCESS_ID, SceSysrootForKernel_D441DC34(), type,
+	return SceDebugForDriver_912CF2BA(SCE_KERNEL_PROCESS_ID, SceSysrootForKernel_D441DC34(), type,
 			       subtype, arg, data, size);
 }
 
 /* copies the valid entries out; returns the bytes copied */
-SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count)
+SceSSize SceDebugForDriver_CC5365D3(void *buffer, SceSize size, SceUInt32 *count)
 {
 	const EventLogEntry *entry;
 	SceSize left = size, entrySize;
@@ -783,7 +755,7 @@ SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count)
 
 	if (buffer == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
-	flags = ksceKernelCpuSuspendIntr();
+	flags = SceCpuForDriver_821FC0EE();
 	for (entry = s_eventLog; entry != &s_eventLog[EVENT_LOG_ENTRIES]; entry++) {
 		entrySize = entry->size;
 		if (entrySize - offsetof(EventLogEntry, data) <= EVENT_LOG_DATA_MAX &&
@@ -796,6 +768,6 @@ SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count)
 	}
 	if (count != NULL)
 		*count = n;
-	ksceKernelCpuResumeIntr(flags);
+	sceKernelCpuResumeIntr(flags);
 	return size - left;
 }

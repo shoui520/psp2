@@ -15,6 +15,7 @@
 #include <excpmgr/excpmgr.h>
 
 #include "private_errors.h"
+#include <sysmem/sysroot.h>
 
 /* a PUID attribute: the PUID came from an open, not a create */
 #define PUID_ATTR_OPENED		0x00080000
@@ -78,10 +79,7 @@ struct ThreadmgrWaitNode;
 struct ThreadmgrException;
 struct ThreadmgrExceptionEntry;
 
-
 struct ThreadmgrFastMutex;
-
-
 
 /* SceUIDExceptionObject (0x38) */
 struct ThreadmgrException {
@@ -123,13 +121,11 @@ typedef struct ThreadmgrExceptionInfo {
 	uint32_t reserved1;
 } ThreadmgrExceptionInfo;
 
-
 #define DTRACE_THREAD_START		0x00000004	/* __proc_:lwp__start pending */
 #define DTRACE_PROCESS_START		0x00000004	/* __proc_:start pending */
 
 /* a thread context's spinlock */
 #define THREAD_LOCK(thread)	(&(thread)->lock)
-
 
 /* a callback's control block (SceUIDCallbackObject +8), in its thread's callbacks */
 struct ThreadmgrCallbackCB {
@@ -385,17 +381,12 @@ int pushExtendedStackCache(SceUID uid, void *base);
 _Static_assert(sizeof(struct ThreadmgrExtendedStackCache) == 0x20,
 	       "per-CPU extended stack cache layout");
 
-
 /* Native Sysroot time contracts; shared declarations await header integration. */
 /* SceKernelSysClock */
 typedef struct ThreadmgrSysClock {
 	uint32_t low;
 	uint32_t high;
 } ThreadmgrSysClock;
-
-int SceSysrootForKernel_1D8DB3A5(ThreadmgrSysClock *clock);
-uint64_t SceSysrootForKernel_E20F6FC8(void);
-uint32_t SceSysrootForKernel_41636522(void);
 
 _Static_assert(offsetof(SceProcessObject, threads) == 0x2d0 &&
 	       offsetof(SceProcessObject, threadEventCount) == 0x374 &&

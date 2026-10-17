@@ -15,7 +15,6 @@
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
 extern int ksceKernelGetThreadIdList(SceUID type, SceUID *ids, SceSize size, SceSize *count);
-extern SceUID ksceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
 void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,
 				      SceSize size);
 void issueDTraceSyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), void *arg,
@@ -27,12 +26,12 @@ int dtraceThreadCBInit(struct ThreadCB *thread)
 	SceDtraceThreadCB *state;
 	int ret;
 
-	ksceKernelSpinlockLowLock(&thread->dtraceLock);
+	SceCpuForDriver_BF82DEB2(&thread->dtraceLock);
 	if (thread->dtraceState != NULL) {
 		ret = 0;
 		goto unlock;
 	}
-	state = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
+	state = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
 					  DTRACE_STATE_SIZE);
 	thread->dtraceState = state;
 	if (state == NULL) {
@@ -45,10 +44,10 @@ int dtraceThreadCBInit(struct ThreadCB *thread)
 	thread->dtraceState->flags = DTRACE_THREAD_START;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 122, "debug: allocated dtrace thread state for 0x%08x\n",
 			     thread->threadId);
-	ksceKernelSpinlockLowUnlock(&thread->dtraceLock);
+	sceKernelSpinlockLowUnlock(&thread->dtraceLock);
 	return 0;
 unlock:
-	ksceKernelSpinlockLowUnlock(&thread->dtraceLock);
+	sceKernelSpinlockLowUnlock(&thread->dtraceLock);
 	return ret;
 }
 
@@ -64,26 +63,26 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	if (!enable) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread dtrace state\n",
 				     "disabling");
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(
+		intr = SceCpuForDriver_D32ACE9E(
 			&s_threadmgrRuntime.manager->threadMgrCBLock);
 		s_threadmgrRuntime.manager->dtraceThreadCBEnable = 0;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(
+		sceKernelSpinlockLowUnlockCpuResumeIntr(
 			&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 		return 0;
 	}
 	SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread dtrace state\n",
 			     "enabling");
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intr = SceCpuForDriver_D32ACE9E(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	s_threadmgrRuntime.manager->dtraceThreadCBEnable = enable;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	if (s_threadmgrRuntime.manager->dtraceHeapId == 0) {
 		opt.size = sizeof(opt);
 		opt.attr = 0x400;
 		opt.memtype = 0x10f0d006;
 		s_threadmgrRuntime.manager->dtraceHeapId =
-			ksceKernelCreateHeap("SceDtraceThreadCB", DTRACE_HEAP_SIZE, &opt);
+			SceSysmemForDriver_9328E0E8("SceDtraceThreadCB", DTRACE_HEAP_SIZE, &opt);
 		if (s_threadmgrRuntime.manager->dtraceHeapId < 0)
 			SCE_PANIC(38);
 	}
@@ -93,7 +92,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		return ret;
 	}
 	count = ret;
-	ids = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
+	ids = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
 					count * sizeof(SceUID));
 	if (ids == NULL) {
 		SCE_DBG_PRINTF(0, 51, "error: failed to allocate thread id list\n");
@@ -102,42 +101,42 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	memset(ids, 0, count * sizeof(SceUID));
 	ret = ksceKernelGetThreadIdList(THREAD_ID_LIST_ALL, ids, count * sizeof(SceUID), &count);
 	if (ret < 0) {
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
 		SCE_DBG_PRINTF(0, 60, "error: failed to get thread id list (0x%08x)\n", ret);
 		return ret;
 	}
 	for (i = 0; i < count; i++) {
 		id = ids[i];
-		ret = ksceGUIDReferObjectWithClass(id,
+		ret = SceSysmemForDriver_00ED6C14(id,
 			s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 70, "error: failed to lookup thread 0x%08x (0x%08x)\n", id,
 				       ret);
 			continue;
 		}
-		ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		ret = dtraceThreadCBInit(&object->context);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0, 79, "warning: failed to init dtrace thread state for thread "
 				"id 0x%08x (0x%08x)\n", id, ret);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(id);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(id);
 	}
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
 	return ret;
 }
 
 /* frees a thread's DTrace state */
 int dtraceThreadCBExit(struct ThreadCB *thread)
 {
-	ksceKernelSpinlockLowLock(&thread->dtraceLock);
+	SceCpuForDriver_BF82DEB2(&thread->dtraceLock);
 	if (thread->dtraceState != NULL) {
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, thread->dtraceState);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, thread->dtraceState);
 		thread->dtraceState = NULL;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 145, "debug: deallocated dtrace thread state for 0x%08x\n",
 				     thread->threadId);
 	}
-	ksceKernelSpinlockLowUnlock(&thread->dtraceLock);
+	sceKernelSpinlockLowUnlock(&thread->dtraceLock);
 	return 0;
 }
 
@@ -151,20 +150,20 @@ int SceThreadmgrForKernel_0788C9BC(unsigned int cpuId, void (*fn)(void *), void 
 
 	if (cpuId >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	} else {
 		ret = 0;
-		if (ksceKernelCpuId() == cpuId) {
+		if (sceKernelCpuId() == cpuId) {
 			fn(arg);
 		} else {
-			ksceKernelCpuResumeIntr(intr);
+			sceKernelCpuResumeIntr(intr);
 			issueDTraceAsyncXCallIntrRequest(cpuId, fn, arg, size);
-			intr = ksceKernelCpuSuspendIntr();
+			intr = SceCpuForDriver_821FC0EE();
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -176,10 +175,10 @@ int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void 
 
 	if (cpuId >= 4)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
-	} else if (ksceKernelCpuId() == cpuId) {
+	} else if (sceKernelCpuId() == cpuId) {
 		fn(arg);
 		ret = 0;
 	} else {
@@ -187,11 +186,11 @@ int SceThreadmgrForKernel_DF59DF99(unsigned int cpuId, void (*fn)(void *), void 
 		__sync_synchronize();
 		issueDTraceSyncXCallIntrRequest(cpuId, fn, arg, &done);
 		ret = 0;
-		ksceKernelCpuResumeIntr(intr);
-		ksceKernelSpinlockLowLock(&done);	/* until the target CPU unlocks it */
-		intr = ksceKernelCpuSuspendIntr();
+		sceKernelCpuResumeIntr(intr);
+		SceCpuForDriver_BF82DEB2(&done);	/* until the target CPU unlocks it */
+		intr = SceCpuForDriver_821FC0EE();
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -207,7 +206,7 @@ void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done)
 {
 	if (fn != NULL)
 		fn(arg);
-	ksceKernelSpinlockLowUnlock(done);
+	sceKernelSpinlockLowUnlock(done);
 }
 
 /* SceThreadmgrForKernel_60798313 */

@@ -1,5 +1,5 @@
 /* Connection timers; original source filename unavailable. */
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <intrmgr/intrmgr.h>
 #include <intrmgr/syscall.h>
 #include <bt/bt_pairing.h>
@@ -57,7 +57,7 @@ void BtDisconnectTimedOut(void *argument)
 }
 
 int BtProcessResume(SceUID processId, int eventType,
-		    SceProcEventInvokeParam1 *param, int argument)
+		    ProcEventParam *param, int argument)
 {
 	(void)param;
 	(void)argument;
@@ -71,7 +71,7 @@ int BtProcessResume(SceUID processId, int eventType,
 }
 
 int BtProcessSuspend(SceUID processId, int eventType,
-		     SceProcEventInvokeParam1 *param, int argument)
+		     ProcEventParam *param, int argument)
 {
 	(void)param;
 	(void)argument;
@@ -149,14 +149,14 @@ static inline int BtCleanupProcess(SceUID processId)
 	return 0;
 }
 
-int BtProcessExit(SceUID processId, SceProcEventInvokeParam1 *param, int argument)
+int BtProcessExit(SceUID processId, ProcEventParam *param, int argument)
 {
 	(void)param;
 	(void)argument;
 	return BtCleanupProcess(processId);
 }
 
-int BtProcessKill(SceUID processId, SceProcEventInvokeParam1 *param, int argument)
+int BtProcessKill(SceUID processId, ProcEventParam *param, int argument)
 {
 	(void)param;
 	(void)argument;

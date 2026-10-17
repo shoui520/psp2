@@ -6,7 +6,7 @@
  * SceCameraForDriver layer underneath reports that no camera is mounted.
  */
 
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <camera/camera.h>
 
 /* the device argument: 0 (front) or 1 (back) */
@@ -177,16 +177,16 @@ int SceCameraForDriver_3590BB9B(void)
 									\
 	if (!CAMERA_DEVICE_VALID(dev) || (uparam) == NULL)			\
 		return SCE_CAMERA_ERROR_PARAM;					\
-	__ret = ksceKernelCopyFromUser(__buf, (uparam), 4);			\
+	__ret = SceSysmemForDriver_BC996A7A(__buf, (uparam), 4);			\
 	if (__ret < 0)								\
 		return __ret;							\
 	if ((SceUInt32)__buf[0] - (min) > (max) - (min))			\
 		return SCE_CAMERA_ERROR_PARAM;					\
-	__ret = ksceKernelCopyFromUser(__buf, (uparam), __buf[0]);		\
+	__ret = SceSysmemForDriver_BC996A7A(__buf, (uparam), __buf[0]);		\
 	if (__ret < 0)								\
 		return __ret;							\
 	__res = driver((dev), __buf);						\
-	__ret = ksceKernelCopyToUser((uparam), __buf, __buf[0]);		\
+	__ret = SceSysmemForDriver_6D88EF8A((uparam), __buf, __buf[0]);		\
 	__ret < 0 ? __ret : __res;						\
 })
 
@@ -237,13 +237,13 @@ int sceCameraGetDeviceLocation(int dev, void *location)
 
 	if (!CAMERA_DEVICE_VALID(dev) || location == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	ret = ksceKernelCopyFromUser(buf, location, sizeof(buf));
+	ret = SceSysmemForDriver_BC996A7A(buf, location, sizeof(buf));
 	if (ret < 0)
 		return ret;
 	ret = SceCameraForDriver_EE3D4B1C(dev, buf);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCopyToUser(location, buf, sizeof(buf));
+	ret = SceSysmemForDriver_6D88EF8A(location, buf, sizeof(buf));
 	return ret < 0 ? ret : 0;
 }
 
@@ -255,13 +255,13 @@ int name(int dev, int *value)							\
 										\
 	if (!CAMERA_DEVICE_VALID(dev) || value == NULL)				\
 		return SCE_CAMERA_ERROR_PARAM;					\
-	ret = ksceKernelCopyFromUser(&v, value, sizeof(v));			\
+	ret = SceSysmemForDriver_BC996A7A(&v, value, sizeof(v));			\
 	if (ret < 0)								\
 		return ret;							\
 	ret = driver(dev, (attr), &v, 0);					\
 	if (ret < 0)								\
 		return ret;							\
-	ret = ksceKernelCopyToUser(value, &v, sizeof(v));			\
+	ret = SceSysmemForDriver_6D88EF8A(value, &v, sizeof(v));			\
 	return ret < 0 ? ret : 0;						\
 }
 

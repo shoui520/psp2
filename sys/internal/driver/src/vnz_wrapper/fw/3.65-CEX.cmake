@@ -120,15 +120,15 @@ set(MODULE_IMPORT_NIDS
 	0x2ED7F97A:F:0x6E0BC27C
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelIsUncacheAddressInTmpFsGame
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	sceKernelIsUncacheAddressInTmpFsGame
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_D32ACE9E
 	SceCpuForDriver_E813EBB2
-	ksceKernelCpuResumeIntr
+	sceKernelCpuResumeIntr
 	ksceKernelDisableIntr
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
@@ -155,40 +155,40 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	ksceKernelEnqueueWorkQueue
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	ksceKernelCreateProcessLocalStorage
 	ksceKernelGetProcessLocalStorageAddrForPid
 	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	ksceKernelDmaOpSetupChain
 	ksceKernelDmaOpSync
 	ksceKernelDmaOpEnQueue
 	ksceKernelDmaOpAlloc
 	ksceKernelDmaOpFree
 	ksceKernelDmaOpAssign
-	ksceKernelFreeMemBlock
-	ksceGUIDReferObjectWithClass
-	ksceKernelMapMemBlockWithFlag
-	ksceGUIDClose
-	ksceGUIDReleaseObject
-	ksceKernelMemBlockType2Memtype
-	ksceKernelMemBlockGetInfoEx
-	kscePUIDtoGUID
-	ksceGUIDKernelCreate
-	ksceUIDClassInitClass
-	ksceKernelCopyToUser
-	kscePUIDClose
-	ksceKernelGetUIDClass
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_00ED6C14
+	SceSysmemForDriver_04059C4B
+	sceGUIDClose
+	sceGUIDReleaseObject
+	SceSysmemForDriver_20C811FA
+	SceSysmemForDriver_24A99FFF
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_56A13E90
+	SceSysmemForDriver_61317102
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_85336A1C
 	sceKernelGetPhyMemInfo
-	ksceKernelFindMemBlockByAddr
-	ksceKernelVAtoPA
-	ksceKernelIsAccessibleRange
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
-	ksceKernelUnmapMemBlock
+	SceSysmemForDriver_8A1742F6
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
+	SceSysmemForDriver_FFCD9B60
 	ksceSblFwLoaderLoad
 	ksceSblFwLoaderLock
 	ksceSblFwLoaderUnlock

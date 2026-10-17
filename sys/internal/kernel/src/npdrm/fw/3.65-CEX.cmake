@@ -120,7 +120,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_0F59B369
 	SceSysrootForDriver_1BA0C6C1
 	SceSysrootForDriver_56C4C949
-	ksceKernelSysrootGetSystemSwVersion
+	SceSysrootForDriver_67AAB627
 	SceSysrootForDriver_70A60BBA
 	SceSysrootForDriver_79458ACB
 	SceSysrootForDriver_7998F5B5
@@ -130,32 +130,32 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_E384DD93
 	SceSysrootForDriver_E8EBF179
 	SceSysrootForDriver_F0C91CD3
-	ksceSha256BlockUpdate
-	ksceAesEncrypt2
-	ksceSha256BlockResult
-	ksceAesInit3
-	ksceSha224BlockUpdate
-	ksceHmacSha256Digest
-	ksceSha1Digest
-	ksceSha224Digest
-	ksceSha256Digest
-	ksceSha224BlockInit
-	ksceSha256BlockInit
-	ksceAesDecrypt2
-	ksceAesInit2
-	ksceSha224BlockResult
+	SceKernelUtilsForDriver_236A9097
+	SceKernelUtilsForDriver_302947B6
+	SceKernelUtilsForDriver_4899CD4B
+	SceKernelUtilsForDriver_72408E29
+	SceKernelUtilsForDriver_7556E611
+	SceKernelUtilsForDriver_83EFA1CC
+	SceKernelUtilsForDriver_87DC7F2F
+	SceKernelUtilsForDriver_9EA9D4DC
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_C762EA6D
+	SceKernelUtilsForDriver_D909FA2C
+	SceKernelUtilsForDriver_E39CD272
+	SceKernelUtilsForDriver_EDA97D6D
+	SceKernelUtilsForDriver_FBF2A442
 	SceQafMgrForDriver_AE033133
 	SceQafMgrForDriver_DEC6DF4E
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
 	ksceSblAuthMgrDecBindData
 	ksceSblAuthMgrGetEKc
-	ksceKernelUserUnmap
-	ksceKernelUserMap
-	ksceKernelCopyToUser
-	ksceKernelIsAccessibleRangeProc
-	ksceKernelCopyFromUser
+	sceKernelUserUnmap
+	SceSysmemForDriver_278BC201
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_9F6E45E3
+	SceSysmemForDriver_BC996A7A
 	SceSblGcAuthMgrDrmBBForDriver_050DC6DF
 	ksceSblGcAuthMgrDrmBBCheckCartHash
 	SceSblGcAuthMgrDrmBBForDriver_4B506BE7

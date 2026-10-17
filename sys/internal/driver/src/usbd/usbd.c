@@ -9,9 +9,9 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
@@ -51,19 +51,19 @@ static SceUID s_callbackId;
 static SceUID s_callbackPid;
 static unsigned int s_callbackFlags;
 
-static int usbdProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg);
-static int usbdProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg);
-static int usbdProcessStop(SceUID pid, int type, SceProcEventInvokeParam1 *param, int arg);
-static int usbdProcessStart(SceUID pid, int type, SceProcEventInvokeParam1 *param, int arg);
+static int usbdProcessExit(SceUID pid, ProcEventParam *param, int arg);
+static int usbdProcessKill(SceUID pid, ProcEventParam *param, int arg);
+static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, int arg);
+static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, int arg);
 
-static const SceProcEventHandler usbdProcEventHandler = {
-	.size = sizeof(SceProcEventHandler),
+static const SceKernelProcEventHandler usbdProcEventHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = NULL,
 	.exit = usbdProcessExit,
 	.kill = usbdProcessKill,
-	.stop = usbdProcessStop,
-	.start = usbdProcessStart,
-	.switch_process = NULL,
+	.suspend = usbdProcessStop,
+	.resume = usbdProcessStart,
+	.notify = NULL,
 };
 
 /* doubly linked lists kept as head/tail pairs */
@@ -211,9 +211,9 @@ static __always_inline void usbdQueueEvent(UsbdEventQueue *queue, UsbdEvent *eve
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_queueLock);
 	USBD_LIST_APPEND(queue->head, queue->tail, event);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
 }
 
 static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
@@ -221,20 +221,20 @@ static __always_inline UsbdEvent *usbdDequeueEvent(UsbdEventQueue *queue)
 	SceKernelIntrStatus intr;
 	UsbdEvent *event;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_queueLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_queueLock);
 	event = queue->head;
 	if (event != NULL)
 		USBD_LIST_REMOVE(queue->head, queue->tail, event);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_queueLock, intr);
 	return event;
 }
 
-static int usbdProcessStop(SceUID pid, int type, SceProcEventInvokeParam1 *param, int arg)
+static int usbdProcessStop(SceUID pid, int type, ProcEventParam *param, int arg)
 {
 	return 0;
 }
 
-static int usbdProcessStart(SceUID pid, int type, SceProcEventInvokeParam1 *param, int arg)
+static int usbdProcessStart(SceUID pid, int type, ProcEventParam *param, int arg)
 {
 	return 0;
 }
@@ -363,12 +363,12 @@ out:
 	return result;
 }
 
-static int usbdProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+static int usbdProcessKill(SceUID pid, ProcEventParam *param, int arg)
 {
 	return usbdReleaseClient(pid);
 }
 
-static int usbdProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+static int usbdProcessExit(SceUID pid, ProcEventParam *param, int arg)
 {
 	return usbdReleaseClient(pid);
 }
@@ -1174,7 +1174,7 @@ static int usbdCallbackThread(SceSize args, void *argp)
 			if (pipe->direction == SCE_USBD_ENDPOINT_DIRECTION_IN &&
 			    request->poolBuffer != NULL && request->length != 0 &&
 			    request->userBuffer != NULL &&
-			    ksceKernelCopyToUserProc(request->client->pid, request->userBuffer,
+			    sceKernelCopyToUserProc(request->client->pid, request->userBuffer,
 						     request->poolBuffer, request->length) < 0) {
 				usbdFree(clientEvent);
 				usbdDiscardRequest(request);
@@ -1337,7 +1337,7 @@ int _sceUsbdInit(void)
 		}
 		bus->rootHub = rootHub;
 		rootHub->depth = 0;
-		bus->enumerationBuffer = ksceKernelAllocUncacheHeapMemory(USBD_DESCRIPTOR_BUFFER_SIZE);
+		bus->enumerationBuffer = SceSysmemForDriver_7750CEA7(USBD_DESCRIPTOR_BUFFER_SIZE);
 		if (bus->enumerationBuffer == NULL)
 			goto no_memory;
 	}
@@ -1439,7 +1439,7 @@ int _sceUsbdInit(void)
 	result = ohciInit(s_bus[2]);
 	if (result < 0)
 		goto term_ehci2;
-	result = ksceKernelRegisterProcEventHandler("SceUsbd", &usbdProcEventHandler, 0);
+	result = sceKernelRegisterProcEventHandler("SceUsbd", &usbdProcEventHandler, 0);
 	if (result < 0)
 		goto term_ohci2;
 	s_procEventHandlerId = result;
@@ -1449,7 +1449,7 @@ int _sceUsbdInit(void)
 		return 0;
 
 	s_initialized = 0;
-	if (ksceKernelUnregisterProcEventHandler(s_procEventHandlerId) < 0)
+	if (SceProcEventForDriver_3DED57CC(s_procEventHandlerId) < 0)
 		SCE_DBG_ASSERT(0, 2104);
 term_ohci2:
 	if (ohciTerm(s_bus[2]) < 0)
@@ -2347,7 +2347,7 @@ int sceUsbdInit(SceUID *uid)
 		goto out;
 	client->semaId = result;
 	USBD_LIST_APPEND(s_clientHead, s_clientTail, client);
-	result = ksceKernelCopyToUser(uid, &client->pid, sizeof(client->pid));
+	result = SceSysmemForDriver_6D88EF8A(uid, &client->pid, sizeof(client->pid));
 out:
 	usbdUnlock();
 	sceSyscallLeave(state);
@@ -2432,7 +2432,7 @@ int sceUsbdGetDeviceList(SceUID uid, SceSize num, UsbdDeviceInfo *info)
 	}
 	if (count < num)
 		num = count;
-	result = ksceKernelCopyToUser(info, list, num * sizeof(*list));
+	result = SceSysmemForDriver_6D88EF8A(info, list, num * sizeof(*list));
 	if (result >= 0)
 		result = num;
 	usbdFree(list);
@@ -2472,7 +2472,7 @@ int sceUsbdGetDescriptor(SceUID uid, unsigned int deviceId, void *descriptor, Sc
 	    (device = usbdFindDevice(deviceId)) == NULL || device->descriptor == NULL)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 	else
-		result = ksceKernelCopyToUser(descriptor, device->descriptor, size);
+		result = SceSysmemForDriver_6D88EF8A(descriptor, device->descriptor, size);
 	usbdUnlock();
 	sceSyscallLeave(state);
 	return result < 0 ? result : (int)size;
@@ -2486,7 +2486,7 @@ static __always_inline int usbdCopyName(char **name, const char *userName)
 
 	if (buffer == NULL)
 		return SCE_USBD_ERROR_NO_MEMORY;
-	result = ksceKernelStrncpyFromUser(buffer, userName, 255);
+	result = SceSysmemForDriver_DB3EC244(buffer, userName, 255);
 	if (result < 0) {
 		usbdFree(buffer);
 		return result;
@@ -2629,7 +2629,7 @@ SceUID sceUsbdOpenPipe(SceUID uid, const UsbdPipeParam *userParam)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (!usbdIsDeviceId(param.deviceId) || (device = usbdGetDevice(param.deviceId)) == NULL) {
@@ -2752,7 +2752,7 @@ int sceUsbdReceiveEvent(SceUID uid, UsbdClientEvent *userEvent)
 	}
 	USBD_LIST_REMOVE(client->eventHead, client->eventTail, event);
 	if (event->type != USBD_CLIENT_EVENT_WAKEUP) {
-		result = ksceKernelCopyToUser(userEvent, event, sizeof(*event));
+		result = SceSysmemForDriver_6D88EF8A(userEvent, event, sizeof(*event));
 		usbdFree(event);
 	}
 out:
@@ -2813,7 +2813,7 @@ int sceUsbdAttachCompositeLdd(SceUID uid, const UsbdAttachCompositeParam *userPa
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.driverId >= USBD_DRIVER_COUNT || param.bus >= USBD_BUS_COUNT ||
@@ -2865,7 +2865,7 @@ static __always_inline int usbdStageTransfer(UsbdPipe *pipe, void *poolBuffer,
 
 	if (pipe->direction != SCE_USBD_ENDPOINT_DIRECTION_OUT)
 		return 0;
-	result = ksceKernelCopyFromUser(poolBuffer, buffer, length);
+	result = SceSysmemForDriver_BC996A7A(poolBuffer, buffer, length);
 	if (result < 0)
 		usbdFreeBuffer(poolBuffer);
 	return result;
@@ -2911,11 +2911,11 @@ SceUID sceUsbdTransferData(SceUID uid, const UsbdTransferParam *userParam)
 	client = usbdFindClient(uid);
 	if (client == NULL)
 		goto invalid;
-	result = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.setup != NULL && param.setupSize == sizeof(setup)) {
-		result = ksceKernelCopyFromUser(&setup, param.setup, sizeof(setup));
+		result = SceSysmemForDriver_BC996A7A(&setup, param.setup, sizeof(setup));
 		if (result < 0)
 			goto out;
 	}
@@ -3003,7 +3003,7 @@ int sceUsbdIsochTransferData(SceUID uid, SceUID pipeId, const UsbdIsochRequest *
 	client = usbdFindClient(uid);
 	if (client == NULL)
 		goto invalid;
-	result = ksceKernelCopyFromUser(&transfer, userTransfer, sizeof(transfer));
+	result = SceSysmemForDriver_BC996A7A(&transfer, userTransfer, sizeof(transfer));
 	if (result < 0)
 		goto out;
 	if (!usbdIsPipeId(pipeId) || (pipe = usbdGetPipe(pipeId)) == NULL ||
@@ -3052,7 +3052,7 @@ int sceUsbdGetTransferStatus(SceUID uid, const UsbdTransferStatusParam *userPara
 	usbdLock();
 	if (usbdFindClient(uid) == NULL)
 		goto invalid;
-	result = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
@@ -3060,9 +3060,9 @@ int sceUsbdGetTransferStatus(SceUID uid, const UsbdTransferStatusParam *userPara
 	result = request->result;
 	count = request->count;
 	usbdFreeRequest(request);
-	result = ksceKernelCopyToUser(param.result, &result, sizeof(result));
+	result = SceSysmemForDriver_6D88EF8A(param.result, &result, sizeof(result));
 	if (result >= 0)
-		result = ksceKernelCopyToUser(param.count, &count, sizeof(count));
+		result = SceSysmemForDriver_6D88EF8A(param.count, &count, sizeof(count));
 	goto out;
 invalid:
 	result = SCE_USBD_ERROR_INVALID_PARAM;
@@ -3084,7 +3084,7 @@ int sceUsbdGetIsochTransferStatus(SceUID uid, const UsbdTransferStatusParam *use
 	usbdLock();
 	if (usbdFindClient(uid) == NULL)
 		goto invalid;
-	result = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
@@ -3092,9 +3092,9 @@ int sceUsbdGetIsochTransferStatus(SceUID uid, const UsbdTransferStatusParam *use
 	requestResult = request->result;
 	status = request->isochStatus;
 	usbdFreeRequest(request);
-	result = ksceKernelCopyToUser(param.result, &status, sizeof(status));
+	result = SceSysmemForDriver_6D88EF8A(param.result, &status, sizeof(status));
 	if (result >= 0)
-		result = ksceKernelCopyToUser(param.count, &requestResult, sizeof(requestResult));
+		result = SceSysmemForDriver_6D88EF8A(param.count, &requestResult, sizeof(requestResult));
 	goto out;
 invalid:
 	result = SCE_USBD_ERROR_INVALID_PARAM;
@@ -3119,7 +3119,7 @@ int sceUsbdGetDeviceAddress(SceUID uid, SceUID deviceId, SceUsbdDeviceAddress *a
 		result = SCE_USBD_ERROR_DEVICE_NOT_FOUND;
 	} else {
 		address = device->route.packed;
-		result = ksceKernelCopyToUser(addr, &address, sizeof(address));
+		result = SceSysmemForDriver_6D88EF8A(addr, &address, sizeof(address));
 	}
 	usbdUnlock();
 	sceSyscallLeave(state);
@@ -3148,7 +3148,7 @@ int sceUsbdGetDeviceSpeed(SceUID uid, SceUID deviceId, unsigned int *speed)
 	case SCE_USBD_DEVICE_SPEED_FS:
 	case SCE_USBD_DEVICE_SPEED_HS:
 		value = device->speed;
-		result = ksceKernelCopyToUser(speed, &value, sizeof(value));
+		result = SceSysmemForDriver_6D88EF8A(speed, &value, sizeof(value));
 		break;
 	default:
 		result = SCE_USBD_ERROR_FATAL;
@@ -3197,7 +3197,7 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 	result = pid = sceKernelGetProcessId();
 	if (result < 0)
 		goto out;
-	result = guid = kscePUIDtoGUID(pid, cbid);
+	result = guid = SceSysmemForDriver_45D22597(pid, cbid);
 	if (result < 0)
 		goto out;
 	result = ksceKernelGetThreadmgrUIDClass(guid);
@@ -3247,7 +3247,7 @@ int sceUsbdUnregisterCallback(SceUID cbid)
 	result = pid = sceKernelGetProcessId();
 	if (result < 0)
 		goto out;
-	result = kscePUIDtoGUID(pid, cbid);
+	result = SceSysmemForDriver_45D22597(pid, cbid);
 	if (result < 0)
 		goto out;
 	result = ksceKernelLockFastMutex(&s_mutex);

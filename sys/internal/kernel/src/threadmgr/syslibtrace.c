@@ -21,7 +21,7 @@ int syslibtraceThreadCBInit(struct ThreadCB *thread)
 
 	if (thread->syslibtraceState != NULL)
 		return 0;
-	state = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
+	state = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
 					  sizeof(*state));
 	thread->syslibtraceState = state;
 	if (state == NULL) {
@@ -46,10 +46,10 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 19, "debug: %s allocation of per-thread syslibtrace state\n",
 			     enable ? "enabling" : "disabling");
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(
+	intr = SceCpuForDriver_D32ACE9E(
 		&s_threadmgrRuntime.manager->threadMgrCBLock);
 	s_threadmgrRuntime.manager->syslibtraceThreadCBEnable = enable;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(
+	sceKernelSpinlockLowUnlockCpuResumeIntr(
 		&s_threadmgrRuntime.manager->threadMgrCBLock, intr);
 	if (!enable)
 		return 0;
@@ -59,7 +59,7 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 		return ret;
 	}
 	count = ret;
-	ids = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
+	ids = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
 					count * sizeof(SceUID));
 	if (ids == NULL) {
 		SCE_DBG_PRINTF(0, 39, "error: failed to allocate thread id list\n");
@@ -73,23 +73,23 @@ int sceKernelSetSyslibtraceThreadCBEnable(int enable)
 	}
 	for (i = 0; i < count; i++) {
 		id = ids[i];
-		ret = ksceGUIDReferObjectWithClass(id,
+		ret = SceSysmemForDriver_00ED6C14(id,
 			s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 58, "error: failed to lookup thread 0x%08x (0x%08x)\n", id,
 				       ret);
 			continue;
 		}
-		ksceKernelSpinlockLowLock(THREAD_LOCK(&object->context));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		ret = syslibtraceThreadCBInit(&object->context);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0, 67, "warning: failed to init syslibtrace thread state for "
 				"thread id 0x%08x (0x%08x)\n", id, ret);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
-		ksceGUIDReleaseObject(id);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
+		sceGUIDReleaseObject(id);
 	}
 free:
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId, ids);
 	return ret;
 }
 
@@ -97,7 +97,7 @@ free:
 int syslibtraceThreadCBExit(struct ThreadCB *thread)
 {
 	if (thread->syslibtraceState != NULL) {
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
 					 thread->syslibtraceState);
 		thread->syslibtraceState = NULL;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 117,

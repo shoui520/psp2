@@ -153,11 +153,11 @@ set(MODULE_IMPORT_NIDS
 	0xC9E26388:F:0xA98FC2FD
 )
 set(MODULE_IMPORT_FUNCS
-	ksceAesEncrypt2
-	ksceAesInit3
-	ksceHmacSha256Digest
-	ksceAesDecrypt2
-	ksceAesInit2
+	SceKernelUtilsForDriver_302947B6
+	SceKernelUtilsForDriver_72408E29
+	SceKernelUtilsForDriver_83EFA1CC
+	SceKernelUtilsForDriver_E39CD272
+	SceKernelUtilsForDriver_EDA97D6D
 	ksceIoRemove
 	ksceIoDclose
 	ksceIoDread
@@ -168,20 +168,20 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoMkdir
 	ksceIoRead
 	ksceIoClose
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelPrintf
-	ksceKernelPrintfLevelWithInfo
-	ksceSysrootIsManufacturingMode
-	SceSysrootForKernel_ksceSysrootRegisterLicMgrGetLicenseStatus
-	ksceKernelSysrootGetKblParam
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_D9703808
+	SceSysrootForKernel_55392965
+	SceSysrootForKernel_71DB83A2
+	SceSysrootForKernel_9DB56D1F
 	SceSysrootForDriver_35875119
 	SceSysrootForDriver_A12C9950
 	SceSysrootForDriver_E25D2FD5
 	SceSysrootForDriver_E2E88E3E
-	ksceSysrootUtMgrSetNpTestFlag
+	SceSysrootForDriver_EE5D6CE9
 	ksceKernelLockMutex
 	ksceKernelUnlockMutex
 	sceKernelDelayThread
@@ -191,19 +191,19 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	ksceKernelRunWithStack
 	ksceKernelCreateMutex
-	ksceKernelFree
-	ksceKernelAlloc
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
+	SceSysmemForKernel_4233C16D
+	SceSysmemForKernel_85571907
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
 	SceSblACMgrForKernel_sceSblACMgrGetPaid
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_BBA13D9C
@@ -225,15 +225,15 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceSblAimgrIsPrototypeRev7
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsToolRev4
-	ksceSblAimgrIsToolRev3
-	ksceSblAimgrIsGenuineDolce
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsToolRev5
-	ksceSblAimgrIsDEX
-	ksceSblAimgrIsPrototypeRev2
+	SceSblAIMgrForDriver_05F79D4A
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_37A79140
+	SceSblAIMgrForDriver_BB9D146B
+	SceSblAIMgrForDriver_C6E83F34
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_E5E47FF7
+	SceSblAIMgrForDriver_F4B98F66
+	SceSblAIMgrForDriver_FF5784B9
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	ksceSblQafManagerGetQAFlags
@@ -264,7 +264,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSysconGetBaryonVersion
 	ksceRtcGetCurrentSecureTick
 	SceRtcForDriver_A0D7899A
-	ksceSblQafMgrIsAllowHost0Access
+	SceQafMgrForDriver_082A4FC2
 	SceDeci4pCpupForDriver_2015C7CB
 	SceDeci4pCpupForDriver_4939DA45
 	SceDeci4pCpupForDriver_8139AD4E
@@ -272,7 +272,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pCpupForDriver_DAC4F630
 	ksceSblAuthMgrVerifySpfsoCtx
 	ksceKernelLoadPtLoadSegForFwloader
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -56,7 +56,7 @@ int _sceVeneziaProcessCreateEntry(void)
 	if (ret < 0)
 		goto out;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(191, "_sceVeneziaProcessCreateEntry"),
 			 __builtin_return_address(0));
 #endif
@@ -109,7 +109,7 @@ int _sceVeneziaProcessCreateEntryInternal2(SceUID pid, SceUInt32 type)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(191, "_sceVeneziaProcessCreateEntry"),
 			 __builtin_return_address(0));
 #endif
@@ -135,13 +135,13 @@ int _sceVeneziaProcessExitEntry(SceUID pid, SceUInt32 type)
 	if (ret >= 0)
 		ret = 0;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(225, "_sceVeneziaProcessExitEntry"),
 			 __builtin_return_address(0));
-	ksceKernelAssert(storage->suspendLockCount == 0,
+	SceDebugForDriver_35A35322(storage->suspendLockCount == 0,
 			 SCE_DBGINFO_FUNC(226, "_sceVeneziaProcessExitEntry"),
 			 __builtin_return_address(0));
-	ksceKernelAssert(storage->clockLockCount == 0,
+	SceDebugForDriver_35A35322(storage->clockLockCount == 0,
 			 SCE_DBGINFO_FUNC(227, "_sceVeneziaProcessExitEntry"),
 			 __builtin_return_address(0));
 #endif
@@ -163,14 +163,14 @@ int SceCodecEngineWrapperForDriver_CB8703D8(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaState.processStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
+	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
 			 __builtin_return_address(0));
 #endif
 	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
 	if (ret >= 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&storage->suspendLock);
+		intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 		storage->suspendLockCount++;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
 		ksceKernelUnlockFastMutex(&storage->suspendMutex);
 	}
 	return ret;
@@ -183,14 +183,14 @@ int _lockProcessSuspendCore(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaState.processStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
+	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(269, "_lockProcessSuspendCore"),
 			 __builtin_return_address(0));
 #endif
 	ret = ksceKernelLockFastMutex(&storage->suspendMutex);
 	if (ret >= 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&storage->suspendLock);
+		intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 		storage->suspendLockCount++;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
 		ksceKernelUnlockFastMutex(&storage->suspendMutex);
 	}
 	return ret;
@@ -203,12 +203,12 @@ int _unlockProcessSuspendCore(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaState.processStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(318, "_unlockProcessSuspendCore"),
+	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(318, "_unlockProcessSuspendCore"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&storage->suspendLock);
+	intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 	storage->suspendLockCount--;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
 	return 0;
 }
 
@@ -222,7 +222,7 @@ int _sceVeneziaStartProcessSuspend(SceUID pid)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(345, "_sceVeneziaStartProcessSuspend"),
 			 __builtin_return_address(0));
 #endif
@@ -243,13 +243,13 @@ int _sceVeneziaProcessSuspendPhase0(SceUID pid)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(374, "_sceVeneziaProcessSuspendPhase0"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaState.clockLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 	g_veneziaState.clockLockCount -= storage->clockLockCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
 	return veneziaRpcClockDown();
 }
 
@@ -264,13 +264,13 @@ int sceCodecEngineDsp0IsProcessSuspended(SceUID pid)
 	if (ret < 0)
 		return 0;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(412, "sceCodecEngineDsp0IsProcessSuspended"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&storage->suspendLock);
+	intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 	count = storage->suspendLockCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
 	if (count != 0)
 		storage->suspendPollCount++;
 	return count == 0;
@@ -286,13 +286,13 @@ int _sceVeneziaProcessResume(SceUID pid)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(444, "_sceVeneziaProcessResume"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaState.clockLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 	g_veneziaState.clockLockCount += storage->clockLockCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
 	ret = ksceKernelUnlockFastMutex(&storage->suspendMutex);
 	if (ret >= 0)
 		storage->suspendInProgress = 0;
@@ -309,7 +309,7 @@ int _sceVeneziaStartSystemSuspend(void)
 	if (ret < 0)
 		goto out;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(482, "_sceVeneziaStartSystemSuspend"),
 			 __builtin_return_address(0));
 #endif
@@ -334,13 +334,13 @@ int _sceVeneziaIsSystemSuspended(void)
 	if (ret < 0)
 		return 0;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(519, "_sceVeneziaIsSystemSuspended"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr((SceKernelSpinlock *)&storage->suspendLock);
+	intr = SceCpuForDriver_D32ACE9E((SceKernelSpinlock *)&storage->suspendLock);
 	count = storage->suspendLockCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr((SceKernelSpinlock *)&storage->suspendLock, intr);
 	suspended = isPerformanceMonitorSuspended();
 	if (count != 0)
 		storage->suspendPollCount++;
@@ -364,7 +364,7 @@ int _sceVeneziaSystemResumePhase0(void)
 	if (ret < 0)
 		goto out;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(576, "_sceVeneziaSystemResumePhase0"),
 			 __builtin_return_address(0));
 #endif
@@ -398,7 +398,7 @@ void _sceVeneziaPrintBlockingCalls(SceUID pid)
 	if (ret < 0)
 		return;
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(664, "_sceVeneziaPrintBlockingCalls"),
 			 __builtin_return_address(0));
 #endif
@@ -421,15 +421,15 @@ int _sceVeneziaRunInBackground(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaState.processStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(687, "_sceVeneziaRunInBackground"),
 			 __builtin_return_address(0));
 #endif
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaState.clockLock);
+	intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 	count = g_veneziaState.clockLockCount + 1;
 	storage->clockLockCount++;
 	g_veneziaState.clockLockCount = count;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
 	return 0;
 }
 
@@ -441,16 +441,16 @@ int _sceVeneziaStopInBackground(void)
 
 	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaState.processStorageKey);
 #if FW_DEBUG
-	ksceKernelAssert(storage != NULL,
+	SceDebugForDriver_35A35322(storage != NULL,
 			 SCE_DBGINFO_FUNC(712, "_sceVeneziaStopInBackground"),
 			 __builtin_return_address(0));
 #endif
 	if (storage->clockLockCount != 0) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaState.clockLock);
+		intr = SceCpuForDriver_D32ACE9E(&g_veneziaState.clockLock);
 		count = g_veneziaState.clockLockCount - 1;
 		storage->clockLockCount--;
 		g_veneziaState.clockLockCount = count;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaState.clockLock, intr);
 	}
 	return 0;
 }

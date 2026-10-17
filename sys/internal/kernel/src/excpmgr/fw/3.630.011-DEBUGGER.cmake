@@ -52,30 +52,30 @@ set(MODULE_IMPORT_NIDS
 	0x4E29D3B6:F:0x382C71E8
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyFromUserProc
-	ksceGUIDGetName
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelCopyToUserProcTextDomain
+	sceKernelCopyFromUserProc
+	SceSysmemForDriver_A78755EB
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysmemForKernel_2995558D
 	SceSysrootForKernel_06182D59
 	SceSysrootForKernel_0A12227B
 	SceSysrootForKernel_118657C6
 	SceSysrootForKernel_1D84C4D4
 	sceKernelSysrootPrintBacktrace
 	sceKernelSysrootSetModulePrivate
-	ksceKernelSysrootGetVbaseResetVector
+	SceSysrootForKernel_CC85905B
 	sceKernelSysrootBacktrace
-	ksceKernelIsColdBoot
+	SceSysrootForKernel_D7198963
 	sceKernelSysrootReturnFromExcpToThread
-	ksceKernelCpuId
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelDcacheCleanRangeForL1WBWA
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelL1IcacheInvalidateEntireAllCore
-	ksceKernelGetVmaccessRange
-	ksceKernelPrintfWithInfo
+	sceKernelCpuId
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_9CB9F0CE
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceCpuForKernel_803C84BF
+	SceCpuForKernel_C32687D0
+	SceDebugForDriver_02B04343
 	SceDebugForKernel_CCABDD98
 	memset
 	memcpy

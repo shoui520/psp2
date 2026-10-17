@@ -4,20 +4,19 @@
 #include <sysmem/barrier.h>
 #include <psp2kern/usbd.h>
 #include <psp2kern/usbserv.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/debug.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/cpu/atomic.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <umass/umass.h>
 
 #define UMASS_ERROR(n) ((int)(0x802a0000U | (n))) /* official names unavailable */
-#define logError(func, fmt, ...) ksceKernelPrintf("[Umass]%08x:%s: " fmt, \
+#define logError(func, fmt, ...) SceDebugForDriver_391B74B7("[Umass]%08x:%s: " fmt, \
 	ksceKernelGetSystemTimeLow(), func, ##__VA_ARGS__)
 
 /* Bulk-Only Transport (USB Mass Storage Class) */
@@ -216,7 +215,7 @@ static int _sceUsbMassDetach(int deviceId)
 	dev->capacityValid = dev->lun = 0;
 	attached = NULL;
 	ksceKernelSetEventFlag(dev->eventFlag, 2);
-	ksceKernelAtomicGetAndOr32(&pending, 2);
+	SceCpuForDriver_2A40BB93(&pending, 2);
 	ksceKernelTriggerSGI(15, 2, 0);
 	return 0;
 }
@@ -632,9 +631,9 @@ static int _sceUsbMassAttach(int deviceId)
 connected:
 			attached = dev;
 			desc = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
-			ksceKernelPrintf("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
+			SceDebugForDriver_391B74B7("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
 				ksceKernelGetSystemTimeLow(), desc->idVendor, desc->idProduct);
-			ksceKernelAtomicGetAndOr32(&pending, 1);
+			SceCpuForDriver_2A40BB93(&pending, 1);
 			ksceKernelTriggerSGI(15, 2, 0);
 			return 0;
 		}
@@ -772,7 +771,7 @@ int SceUsbMassForDriver_3C821E99(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	ksceKernelAtomicGetAndOr32(&enabled, bit < 32 ? 1U << bit : 0);
+	SceCpuForDriver_2A40BB93(&enabled, bit < 32 ? 1U << bit : 0);
 	return 0;
 }
 
@@ -782,7 +781,7 @@ int SceUsbMassForDriver_7833D935(int intr, unsigned int subintr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	ksceKernelAtomicGetAndClear32(&enabled, bit < 32 ? 1U << bit : 0);
+	SceCpuForDriver_E36F3A46(&enabled, bit < 32 ? 1U << bit : 0);
 	return 0;
 }
 
@@ -792,12 +791,12 @@ int SceUsbMassForDriver_F2BAB182(int intr)
 
 	if (intr != 15)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&intrLock);
-	if ((enabled & 1) && (ksceKernelAtomicGetAndClear32(&pending, 1) & 1))
+	state = SceCpuForDriver_D32ACE9E(&intrLock);
+	if ((enabled & 1) && (SceCpuForDriver_E36F3A46(&pending, 1) & 1))
 		ksceKernelTriggerSubIntr(15, 0, NULL);
-	if ((enabled & 2) && (ksceKernelAtomicGetAndClear32(&pending, 2) & 2))
+	if ((enabled & 2) && (SceCpuForDriver_E36F3A46(&pending, 2) & 2))
 		ksceKernelTriggerSubIntr(15, 1, NULL);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&intrLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&intrLock, state);
 	return -1;
 }
 
@@ -813,7 +812,7 @@ int module_start(SceSize args, void *argp)
 
 	(void)args;
 	(void)argp;
-	if (!ksceSblAimgrIsDolce() || !ksceSysrootIsSafeMode())
+	if (!SceSblAIMgrForDriver_71608CA3() || !SceSysrootForDriver_834439A7())
 		return 1;
 	ret = ksceKernelCreateMutex("SceUsbMassLock", 0, 0, NULL);
 	if (ret < 0)
@@ -827,21 +826,21 @@ int module_start(SceSize args, void *argp)
 	options[0] = 0x58;
 	options[2] = 0x200004;
 	options[5] = 0x1000;
-	memblock = ksceKernelAllocMemBlock("SceUsbMassIOBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x10000,
+	memblock = SceSysmemForDriver_C94850C9("SceUsbMassIOBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x10000,
 					 (SceKernelAllocMemBlockKernelOpt *)options);
 	if (memblock >= 0) {
-		ret = ksceKernelGetMemBlockBase(memblock, (void **)&ioBuffer);
+		ret = SceSysmemForDriver_A841EDDA(memblock, (void **)&ioBuffer);
 		if (ret >= 0 && ksceUsbServAccessoryActivate() >= 0) {
 			ret = ksceUsbdRegisterDriver(&driver);
 			if (ret >= 0) {
 				intrLock = 0;
-				ksceKernelAtomicGetAndOr32(&enabled, 1);
-				ksceKernelAtomicGetAndOr32(&enabled, 2);
+				SceCpuForDriver_2A40BB93(&enabled, 1);
+				SceCpuForDriver_2A40BB93(&enabled, 2);
 				return 0;
 			}
 			ksceUsbServAccessoryDeactivate();
 		}
-		ksceKernelFreeMemBlock(memblock);
+		SceSysmemForDriver_009E1C61(memblock);
 	}
 	ksceKernelDeleteEventFlag(eventFlag);
 deleteMutex:

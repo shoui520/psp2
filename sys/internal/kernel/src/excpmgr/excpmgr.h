@@ -1,7 +1,6 @@
 /* Exception manager private state. */
 #pragma once
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
@@ -25,15 +24,6 @@ extern SceExcpmgrHandler defaultHandler, resetHandler, svcHandler, reservedHandl
 extern SceExcpmgrHandler panicUndefHandler, panicPabtHandler, panicDabtHandler;
 extern SceExcpmgrHandler initialUndefHandler, initialPabtHandler, initialDabtHandler;
 void excpResumeContext(SceExcpmgrContext *context) __attribute__((noreturn));
-
-/* Import names unknown: sysroot per-core state and debug services. */
-int SceSysrootForKernel_0A12227B(SceUID pid, unsigned int value);
-int sceKernelSysrootPrintBacktrace(SceUID pid, const SceUID *uids, unsigned int count, unsigned int flags);
-int sceKernelSysrootBacktrace(unsigned int flags, SceUID *uids, unsigned int count,
-				 unsigned int *returned, unsigned int kind);
-void sceKernelSysrootReturnFromExcpToThread(SceExcpmgrContext *context, void *thread);
-void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info, SceExcpmgrContext *context,
-			     unsigned int reason, const char *message) __attribute__((noreturn));
 
 /* excpmgr.c */
 void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reason,

@@ -15,17 +15,16 @@ int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64
 int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <psp2kern/io/dirent.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/cpu/atomic.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/cpu.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <iofilemgr/vfs.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/dipsw.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/fios2.h>
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
@@ -325,11 +324,11 @@ int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize
 int sceKernelEventObjectInit(SceUID uid, SceUInt32 attr, SceUInt32 pattern, int a3, int a4);
 
 /*
- * Sony's declaration gives ksceKernelUserUnmap the mapped range as well (a cast
+ * Sony's declaration gives sceKernelUserUnmap the mapped range as well (a cast
  * of vitasdk's one-argument prototype would be a call through an incompatible
  * type, which GCC turns into abort())
  */
-int ioUserUnmap(SceUID uid, const void *data, SceSize size) __asm__("ksceKernelUserUnmap");
+int ioUserUnmap(SceUID uid, const void *data, SceSize size) __asm__("sceKernelUserUnmap");
 
 /* iofilemgr.c */
 int iofilemgrInitDummyTty(int unused0, void *unused1);
@@ -341,7 +340,7 @@ SceUID sceIoDopenInternal(const char *dirname);
 int sceIoDreadInternal(SceUID fd, SceIoDirent *dir);
 int sceIoDcloseInternal(SceUID fd);
 
-/* ksceKernelUserMapWithFlags: what a mapping allows, and its flags (names unknown) */
+/* SceSysmemForDriver_7D4F8B5F: what a mapping allows, and its flags (names unknown) */
 #define IO_USER_MAP_READ		1	/* the kernel reads the buffer: a write */
 #define IO_USER_MAP_WRITE		2	/* the kernel writes the buffer: a read */
 #define IO_USER_MAP_FLAGS		1
@@ -840,8 +839,9 @@ int vfs_buf_io_cached_overlaps(struct BuffCache *bc, SceOff pos, SceSize size);
 int vfs_buf_io_buff_contains(struct BuffCache *bc, SceOff pos, SceSize size);
 
 /* SceSysmem / SceProcessmgr heaps a buffer cache is allocated from */
-void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, void *opt);
-int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees ksceKernelAllocHeapMemory2's */
+/* vitasdk: ksceKernelAllocHeapMemory2 */
+void *SceSysrootForKernel_D351EBC8(SceUID pid, SceSize size, void *opt);
+int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees SceSysrootForKernel_D351EBC8's */
 void *sceKernelAllocRemoteCDialogHeap(SceUID pid, SceSize size, void *opt);
 int sceKernelFreeRemoteCDialogHeap(SceUID pid, void *ptr);
 

@@ -1,9 +1,9 @@
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
@@ -73,7 +73,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 	result = UpdateUtilIoRead(fd, 0, pupFileBufferSize, pupFileBuffer);
 	if (result)
 		goto cleanup;
-	ksceKernelDcacheCleanRange(pupFileBuffer, (pupFileBufferSize + 63) & ~63);
+	SceCpuForDriver_103872A5(pupFileBuffer, (pupFileBufferSize + 63) & ~63);
 	if (loadSm) {
 		pupSmId = -1;
 		result = UpdateUtilSetupSm(0, &pupSmId, 0);
@@ -101,9 +101,9 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		goto cleanup;
 	}
 	platform = pupFileHeader.platform;
-	if (platform && !(ksceSblAimgrIsCEX() && platform == 2) &&
-	    !((isDex = ksceSblAimgrIsDEX()) && platform == 4) &&
-	    !((ksceSblAimgrIsTool() || ksceSblAimgrIsTest()) &&
+	if (platform && !(SceSblAIMgrForDriver_D78B04A2() && platform == 2) &&
+	    !((isDex = SceSblAIMgrForDriver_F4B98F66()) && platform == 4) &&
+	    !((SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_3B638885()) &&
 	      (platform == 1 || (SceQafMgrForDriver_3CB55F98() && (attributes & 1)))) &&
 	    !(isDex && platform == 2 && SceQafMgrForDriver_3CB55F98() && (attributes & 1))) {
 		result = (int)0x800f0231;
@@ -124,11 +124,11 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 cleanup:
 	SceThreadmgrForDriver_84EB1EA4(ioFlags);
 	if (dataVector)
-		ksceKernelFreeHeapMemory(heapId, dataVector);
+		sceKernelFreeHeapMemory(heapId, dataVector);
 	if (vectorVector)
-		ksceKernelFreeHeapMemory(heapId, vectorVector);
+		sceKernelFreeHeapMemory(heapId, vectorVector);
 	if (packet)
-		ksceKernelFreeHeapMemory(heapId, packet);
+		sceKernelFreeHeapMemory(heapId, packet);
 	if (!residentSm && pupSmId != -1) {
 		UpdateUtilStopSm(&pupSmId);
 		pupSmId = -1;

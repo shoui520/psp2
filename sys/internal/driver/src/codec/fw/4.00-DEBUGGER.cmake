@@ -35,16 +35,16 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xCBD6D8BC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelPrintfLevelWithInfo
+	SceDebugForDriver_D9703808
 	memset
 	__stack_chk_fail
 	sceKernelDelayThread
 	ksceKernelLockFastMutex
 	ksceKernelInitializeFastMutex
 	ksceKernelUnlockFastMutex
-	ksceKernelRegisterSysEventHandler
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_925D9D24
 	ksceI2cTransferWriteRead
 	ksceI2cTransferWrite

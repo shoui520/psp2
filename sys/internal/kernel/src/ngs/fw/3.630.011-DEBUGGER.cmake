@@ -66,9 +66,9 @@ set(MODULE_IMPORT_NIDS
 	0x3691DA45:F:0xEC3124A3
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelPrintf
-	ksceKernelDcacheCleanRange
-	ksceKernelAtomicCompareAndSet32
+	SceDebugForDriver_391B74B7
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_CDA96E81
 	ksceKernelDeleteMutex
 	ksceKernelFinalizeFastMutex
 	ksceKernelLockMutex
@@ -81,18 +81,18 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	ksceKernelCreateMutex
-	ksceKernelFreeMemBlock
-	ksceKernelMemBlockGetInfoEx
-	ksceKernelLockRange
-	ksceKernelCopyToUser
-	ksceKernelUnlockRange
-	ksceKernelFindMemBlockByAddr
-	ksceKernelIsAccessibleRange
-	ksceKernelGetMemBlockBase
-	ksceKernelVARangeToPARange
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_24A99FFF
+	SceSysmemForDriver_59A4402F
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_75C70DE0
+	SceSysmemForDriver_8A1742F6
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_AE36C775
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
 	memset
 	strncmp
 	memcpy
@@ -105,14 +105,14 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	ksceKernelCreateProcessLocalStorage
 	ksceKernelGetProcessLocalStorageAddrForPid
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	_unlockProcessSuspendCore
 	SceCodecEngineWrapperForDriver_2DD83BB0
 	SceCodecEngineWrapperForDriver_391BD4FD
 	SceCodecEngineWrapperForDriver_3C5E9CC3
 	SceCodecEngineWrapperForDriver_C7C150AE
 	SceCodecEngineWrapperForDriver_CB8703D8
-	ksceKernelSysrootGetProcessTitleId
+	SceSysrootForKernel_EC3124A3
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

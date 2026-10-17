@@ -8,11 +8,10 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/sysroot_pamgr.h>
 #include <syslibtrace/syslibtrace.h>
-#include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <kernel/error.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
@@ -175,7 +174,7 @@ int configurePrimaryTraceForUser(
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	physicalConfig = *config;
 	virtual = physicalConfig.base;
-	result = ksceKernelVAtoPA((const void *)virtual, &physical);
+	result = SceSysmemForDriver_8D160E65((const void *)virtual, &physical);
 	if (result < 0)
 		return result;
 	if (SceSysmemForDriver_A7C0D1FC((const void *)virtual) < 0)
@@ -260,7 +259,7 @@ int configureArmTraceForUser(
 	if (local.modeAndContext - 1 <= 1)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (local.modeAndContext - 5 <= 1)
-		local.modeAndContext |= ksceKernelCpuGetCONTEXTIDR() << 24;
+		local.modeAndContext |= SceCpuForKernel_FD54A91D() << 24;
 	return configureArmTrace(&local);
 }
 
@@ -589,7 +588,7 @@ void sceKernelPaSetSyscallLeave(ThreadSyscallFrame *frame, uint32_t *results)
 	uint32_t flags[4];
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, (readCpsr() & PSR_I_BIT) != 0, 1662);
 	}
 #endif
@@ -606,7 +605,7 @@ void sceKernelPaSetSyscallEnter(ThreadSyscallFrame *frame)
 	uint32_t flags[4], nid;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, (readCpsr() & PSR_I_BIT) != 0, 1617);
 	}
 #endif
@@ -1190,7 +1189,7 @@ int resumeTraceHardware(void)
 	int primary, secondary;
 	uint32_t control;
 
-	if (ksceKernelCpuId() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	control = pamgrState.savedPmuControl;
 	/* PMCR is a privileged CP15 register. */
@@ -1251,7 +1250,7 @@ int suspendTraceHardware(void)
 	ScePerfmonRegisters *pfm;
 	uint32_t high, low, started, control;
 
-	if (ksceKernelCpuId() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	pfm = pamgrState.pfmRegisters;
 	if (pfm->traceStatus & 1) {
@@ -1362,22 +1361,22 @@ int initializeTraceHardware(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = PERFMON_REG_BASE;
-	block = ksceKernelAllocMemBlock("ScePfmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x2000, &opt);
+	block = SceSysmemForDriver_C94850C9("ScePfmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x2000, &opt);
 	if (block < 0)
 		return block;
 	pamgrState.pfmMemBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	pamgrState.pfmRegisters = base;
 	for (i = 0; i < 4; i++) {
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 2;
 		opt.paddr = CORESIGHT_PTM_BASE(i);
-		block = ksceKernelAllocMemBlock(ptmNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+		block = SceSysmemForDriver_C94850C9(ptmNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
 		pamgrState.ptm[i].memBlock = block;
-		ksceKernelGetMemBlockBase(block, &base);
+		SceSysmemForDriver_A841EDDA(block, &base);
 		pamgrState.ptm[i].registers = base;
 	}
 	for (i = 0; i < 4; i++) {
@@ -1385,11 +1384,11 @@ int initializeTraceHardware(void)
 		opt.size = sizeof(opt);
 		opt.attr = 2;
 		opt.paddr = CORESIGHT_DBG_BASE(i);
-		block = ksceKernelAllocMemBlock(dbgNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+		block = SceSysmemForDriver_C94850C9(dbgNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
 		pamgrState.dbg[i].memBlock = block;
-		ksceKernelGetMemBlockBase(block, &base);
+		SceSysmemForDriver_A841EDDA(block, &base);
 		pamgrState.dbg[i].registers = base;
 	}
 	for (i = 0; i < 4; i++) {
@@ -1397,11 +1396,11 @@ int initializeTraceHardware(void)
 		opt.size = sizeof(opt);
 		opt.attr = 2;
 		opt.paddr = CORESIGHT_PMU_BASE(i);
-		block = ksceKernelAllocMemBlock(pmuNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+		block = SceSysmemForDriver_C94850C9(pmuNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
 		pamgrState.pmu[i].memBlock = block;
-		ksceKernelGetMemBlockBase(block, &base);
+		SceSysmemForDriver_A841EDDA(block, &base);
 		pamgrState.pmu[i].registers = base;
 	}
 	for (i = 0; i < 4; i++) {
@@ -1409,52 +1408,52 @@ int initializeTraceHardware(void)
 		opt.size = sizeof(opt);
 		opt.attr = 2;
 		opt.paddr = CORESIGHT_CTI_BASE(i);
-		block = ksceKernelAllocMemBlock(ctiNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+		block = SceSysmemForDriver_C94850C9(ctiNames[i], SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 		if (block < 0)
 			return block;
 		pamgrState.cti[i].memBlock = block;
-		ksceKernelGetMemBlockBase(block, &base);
+		SceSysmemForDriver_A841EDDA(block, &base);
 		pamgrState.cti[i].registers = base;
 	}
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = CORESIGHT_TPIU_BASE;
-	block = ksceKernelAllocMemBlock("SceTpiuReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("SceTpiuReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	pamgrState.tpiuMemBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	pamgrState.tpiuRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = CORESIGHT_FUNNEL_BASE;
-	block = ksceKernelAllocMemBlock("SceFunnelReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("SceFunnelReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	pamgrState.funnel.memBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	pamgrState.funnel.registers = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = CORESIGHT_ITM_BASE;
-	block = ksceKernelAllocMemBlock("SceItmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("SceItmReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	pamgrState.itm.memBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	pamgrState.itm.registers = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = PL310_REG_BASE;
-	block = ksceKernelAllocMemBlock("ScePl310Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("ScePl310Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	pamgrState.pl310MemBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	pamgrState.pl310Registers = base;
 	pamgrState.mappedPl310Registers = base;
 	pfm = pamgrState.pfmRegisters;
@@ -1485,7 +1484,7 @@ int initializeTraceHardware(void)
 
 int module_start(void)
 {
-	if (ksceKernelCheckDipsw(0xd4) == 0)
+	if (SceDipswForDriver_A98FC2FD(0xd4) == 0)
 		return 1;
 	if (initializeTraceHardware() < 0)
 		return 2;

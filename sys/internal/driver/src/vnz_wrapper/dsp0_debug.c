@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <sysmem/debug.h>
@@ -15,7 +15,6 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "venezia_internal.h"
@@ -24,6 +23,7 @@
 #include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
 #include <psp2kern/kernel/processmgr.h>
+#include <sysmem/sysroot.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -2831,9 +2831,9 @@ int checkVeneziaDebugReset(void)
 {
 	uint32_t saved, reset;
 
-	saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+	saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 	reset = g_veneziaVipState.resetRegisters->vip;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return reset & 1;
 }
 
@@ -2941,7 +2941,7 @@ int veneziaDebugInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(11, 2, 0, mailbox);
 	if (callbacks) {
-		saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 		if (mailbox & 0xf) {
 			events |= 1;
 			++callbacks->counters[3].count;
@@ -2992,7 +2992,7 @@ int veneziaDebugInterruptHandler(int interrupt, VeneziaVipState *state)
 				ksceKernelNotifyCallback(callback->uid, callback->pendingEvents);
 			}
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	}
 	writeVeneziaDebuggerMailbox(0, mailbox);
 	ksceKernelSetEventFlag(state->eventFlag, events);
@@ -3027,7 +3027,7 @@ int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(95, 3, 0, status, ret);
 	if (!ret) {
-		saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 		++callbacks->counters[0].count;
 		switch ((uint32_t)info.result) {
 		case -12: events = 0x80000000; break;
@@ -3051,7 +3051,7 @@ int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 			events |= 0x20000;
 			++callbacks->counters[0].unidentifiedControl;
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 		ksceKernelSetEventFlag(state->auxiliaryEventFlag, events);
 	}
 	__asm__ volatile("dmb sy" ::: "memory");
@@ -3253,7 +3253,7 @@ int unregisterVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state
 	VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid)
 {
 	VeneziaDebugCallback *callbacks = storage->callbackState.callbacks;
-	int saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+	int saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 
 	if (!uid) {
 		clearVeneziaVipCallback(&callbacks[0], 0, pid);
@@ -3270,10 +3270,9 @@ int unregisterVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state
 		clearVeneziaVipCallback(&callbacks[4], uid, pid);
 		clearVeneziaVipCallback(&callbacks[5], uid, pid);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return 0;
 }
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID uid);
 extern SceUID sceKernelGetProcessId(void);
 __attribute__((noinline)) int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 __attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
@@ -3295,7 +3294,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 	if (processor != 1 || (eventMask & 0xffffc4f9))
 		return -2141060863;
 	lockVeneziaVipProcess(g_veneziaVipState.processLock);
-	ret = kscePUIDtoGUID(0, uid);
+	ret = SceSysmemForDriver_45D22597(0, uid);
 	if (ret >= 0) {
 		kind = ksceKernelGetThreadmgrUIDClass(ret);
 		if (kind < 0) {
@@ -3303,7 +3302,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 		} else if (kind != 8) {
 			ret = -2141060863;
 		} else {
-			saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+			saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 			for (index = 0; index < 6; index++)
 				if (!storage->callbackState.callbacks[index].uid)
 					break;
@@ -3317,7 +3316,7 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 				callback->eventMask = eventMask;
 				ret = 0;
 			}
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 		}
 	}
 	unlockVeneziaVipProcess(g_veneziaVipState.processLock);
@@ -3343,7 +3342,7 @@ int unregisterVeneziaVipCallback(unsigned int processor, SceUID uid)
 		return -2141060863;
 	lockVeneziaVipProcess(g_veneziaVipState.processLock);
 	if (uid) {
-		uid = kscePUIDtoGUID(0, uid);
+		uid = SceSysmemForDriver_45D22597(0, uid);
 		if (uid < 0) {
 			ret = uid;
 			goto unlock;
@@ -3478,7 +3477,7 @@ int registerVeneziaVipCapture(unsigned int *processor, const VeneziaVipCapturePa
 		ret = -2141060863;
 		goto unlock;
 	}
-	if (ksceKernelVAtoPA((const void *)param->storageVirtualAddress,
+	if (SceSysmemForDriver_8D160E65((const void *)param->storageVirtualAddress,
 		&region.physicalAddress) < 0)
 		goto invalid;
 	region.virtualAddress = param->storageVirtualAddress;
@@ -4585,7 +4584,7 @@ int snapshotVeneziaVipDebugger(VeneziaVipProcessStorage *storage, unsigned int f
 				g_veneziaDebugger.log(10, 4, processor, ret, debuggerState, size);
 			if (ret != 0)
 				goto failed;
-			ret = ksceKernelVAtoPA(debuggerState, &physical);
+			ret = SceSysmemForDriver_8D160E65(debuggerState, &physical);
 			if (ret < 0 || processor == 16 - index)
 				goto failed;
 			region = &snapshot->regions[index + processor];
@@ -6482,31 +6481,31 @@ int initializeVeneziaVipResources(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_RESET_BASE;
-	block = ksceKernelAllocMemBlock("ScePervasiveResetReg", 0x20100206, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("ScePervasiveResetReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	state->resetBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	state->resetRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_MAILBOX_BASE;
-	block = ksceKernelAllocMemBlock("ScePervasiveMailboxReg", 0x20100206, 0x1000, &opt);
+	block = SceSysmemForDriver_C94850C9("ScePervasiveMailboxReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	state->mailboxBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	state->mailboxRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_TAS_BASE(0);
-	block = ksceKernelAllocMemBlock("ScePervasiveTasReg", 0x20100206, 0x8000, &opt);
+	block = SceSysmemForDriver_C94850C9("ScePervasiveTasReg", 0x20100206, 0x8000, &opt);
 	if (block < 0)
 		return block;
 	state->tasBlock = block;
-	ksceKernelGetMemBlockBase(block, &base);
+	SceSysmemForDriver_A841EDDA(block, &base);
 	state->tasRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
@@ -6519,7 +6518,6 @@ int initializeVeneziaVipResources(void)
 extern int ksceSblFwLoaderLock(const char *path, int flags);
 extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
 extern int ksceSblFwLoaderUnlock(void);
-extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
 extern int veneziaVipProcessorThread0(SceSize size, void *arg);
 extern int veneziaVipProcessorThread1(SceSize size, void *arg);
 extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int processor,
@@ -6609,7 +6607,7 @@ int startVeneziaVipDriver(int mode)
 	memset((uint8_t *)firmwareBase + 0xbf000, 0, 0x10000);
 	if (initializeVeneziaHwdDma() < 0)
 		goto failed;
-	g_veneziaDebugger.log = SceSysrootForDriver_483EF108();
+	g_veneziaDebugger.log = (void (*)(unsigned int, unsigned int, ...))SceSysrootForDriver_483EF108();
 	return finishVeneziaVipStartup(state);
 failed:
 	ret = -2141060860;
@@ -6617,17 +6615,17 @@ cleanup:
 	releaseVeneziaVipMemoryBlock(&state->codeMemory);
 	if (state->resetBlock > 0) {
 		state->resetRegisters = NULL;
-		ksceKernelFreeMemBlock(state->resetBlock);
+		SceSysmemForDriver_009E1C61(state->resetBlock);
 		state->resetBlock = 0;
 	}
 	if (state->mailboxBlock > 0) {
 		state->mailboxRegisters = NULL;
-		ksceKernelFreeMemBlock(state->mailboxBlock);
+		SceSysmemForDriver_009E1C61(state->mailboxBlock);
 		state->mailboxBlock = 0;
 	}
 	if (state->tasBlock > 0) {
 		state->tasRegisters = NULL;
-		ksceKernelFreeMemBlock(state->tasBlock);
+		SceSysmemForDriver_009E1C61(state->tasBlock);
 		state->tasBlock = 0;
 	}
 	state->bootRegisters = NULL;
@@ -6810,7 +6808,7 @@ __attribute__((noinline)) int setVeneziaVipCaptureImage(VeneziaDebugProcessCaptu
 
 	capture->imageVirtualAddress = param->imageVirtualAddress;
 	capture->imageSize = param->imageSize;
-	ret = ksceKernelVAtoPA((const void *)param->imageVirtualAddress,
+	ret = SceSysmemForDriver_8D160E65((const void *)param->imageVirtualAddress,
 		&capture->imagePhysicalAddress);
 	return ret < 0 ? -2141060862 : ret;
 }
@@ -6825,7 +6823,7 @@ __attribute__((noinline)) int resumeVeneziaVipState(void)
 __attribute__((noinline)) int isVeneziaVipImageInMainMemory(uint32_t address, SceSize size)
 {
 	uintptr_t physical;
-	int ret = ksceKernelVAtoPA((const void *)address, &physical);
+	int ret = SceSysmemForDriver_8D160E65((const void *)address, &physical);
 
 	if (ret >= 0)
 		ret = physical >= 0x20000000 && physical + size <= 0x30000000;
@@ -6980,7 +6978,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 	if (lengthSize > input->payload.size)
 		goto invalid;
 	peekSize = lengthSize + 1;
-	if (ksceKernelCopyFromUser(bytes, input->payload.data, peekSize) < 0)
+	if (SceSysmemForDriver_BC996A7A(bytes, input->payload.data, peekSize) < 0)
 		goto invalid;
 	firstSize = decodeVeneziaVipNalLength(bytes, lengthSize);
 	if (firstSize + lengthSize > input->payload.size)
@@ -6988,7 +6986,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 	type = bytes[lengthSize] & 0x1f;
 	if (type == 9) {
 		if (lengthSize > input->payload.size ||
-		    ksceKernelCopyFromUser(bytes, input->payload.data, lengthSize) < 0)
+		    SceSysmemForDriver_BC996A7A(bytes, input->payload.data, lengthSize) < 0)
 			goto invalid;
 		offset = decodeVeneziaVipNalLength(bytes, lengthSize) + lengthSize;
 		if (offset >= input->payload.size)
@@ -7004,7 +7002,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		total += input->additionalData[1].size + 4;
 	required = offset + lengthSize;
 	if (required > input->payload.size ||
-	    ksceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + offset, peekSize) < 0)
+	    SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + offset, peekSize) < 0)
 		goto invalid;
 	for (;;) {
 		nalSize = decodeVeneziaVipNalLength(bytes, lengthSize);
@@ -7013,7 +7011,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		type = bytes[lengthSize] & 0x1f;
 		total += nalSize + ((unsigned int)(type - 7) <= 1 ? 4 : 3);
 		if (required > input->payload.size ||
-		    ksceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + offset, lengthSize) < 0)
+		    SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + offset, lengthSize) < 0)
 			return total;
 		nalSize = decodeVeneziaVipNalLength(bytes, lengthSize);
 		nextOffset = nalSize + lengthSize + offset;
@@ -7023,7 +7021,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		if (required > input->payload.size)
 			goto invalid;
 		offset = nextOffset;
-		if (ksceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + nextOffset, peekSize) < 0)
+		if (SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + nextOffset, peekSize) < 0)
 			goto invalid;
 	}
 invalid:
@@ -7097,7 +7095,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		return ret;
 	firstPayload = input->payload.data;
 	if (lengthSize > input->payload.size ||
-	    ksceKernelCopyFromUser(work.peek, firstPayload, lengthSize + 1) < 0)
+	    SceSysmemForDriver_BC996A7A(work.peek, firstPayload, lengthSize + 1) < 0)
 		goto invalid;
 	firstSize = decodeVeneziaVipNalLength(work.peek, lengthSize);
 	type = work.peek[lengthSize] & 0x1f;
@@ -7111,7 +7109,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		if (ret < 0)
 			return ret;
 		if (lengthSize > input->payload.size ||
-		    ksceKernelCopyFromUser(work.peek, input->payload.data, lengthSize) < 0)
+		    SceSysmemForDriver_BC996A7A(work.peek, input->payload.data, lengthSize) < 0)
 			goto invalid;
 		offset = decodeVeneziaVipNalLength(work.peek, lengthSize) + lengthSize;
 		if (offset >= input->payload.size)
@@ -7150,7 +7148,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 	if (required > input->payload.size)
 		goto invalid;
 	for (;;) {
-		if (ksceKernelCopyFromUser(work.peek, address, lengthSize + 1) < 0)
+		if (SceSysmemForDriver_BC996A7A(work.peek, address, lengthSize + 1) < 0)
 			goto invalid;
 		nalSize = decodeVeneziaVipNalLength(work.peek, lengthSize);
 		nalData = address + lengthSize;
@@ -7166,7 +7164,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		if (ret < 0)
 			return ret;
 		if (required > input->payload.size ||
-		    ksceKernelCopyFromUser(work.peek,
+		    SceSysmemForDriver_BC996A7A(work.peek,
 			(const uint8_t *)input->payload.data + offset, lengthSize) < 0)
 			break;
 		offset += decodeVeneziaVipNalLength(work.peek, lengthSize) + lengthSize;
@@ -7199,7 +7197,7 @@ int veneziaDebugSecondaryInterruptHandler(int interrupt, VeneziaVipState *state)
 	if (g_veneziaDebugger.log)
 		g_veneziaDebugger.log(95, 3, 1, status[0], ret);
 	if (!ret) {
-		saved = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_veneziaDebugger.spinlock);
+		saved = SceCpuForDriver_D32ACE9E(&g_veneziaDebugger.spinlock);
 		++callbacks->counters[1].count;
 		switch (info.result) {
 		case -12: events = 0x80000000; break;
@@ -7262,7 +7260,7 @@ int veneziaDebugSecondaryInterruptHandler(int interrupt, VeneziaVipState *state)
 				++callbacks->counters[6].count;
 			}
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 		ksceKernelSetEventFlag(state->secondaryInterruptEvent, events);
 	}
 	__asm__ volatile("dmb sy" ::: "memory");
@@ -7908,7 +7906,7 @@ int registerVeneziaVipCaptureCallback(unsigned int processor, SceUID uid,
 		ret = -2141060863;
 		goto unlockProcess;
 	}
-	ret = kscePUIDtoGUID(0, uid);
+	ret = SceSysmemForDriver_45D22597(0, uid);
 	if (ret < 0)
 		goto unlockProcess;
 	kind = ksceKernelGetThreadmgrUIDClass(ret);
@@ -7970,7 +7968,7 @@ int unregisterVeneziaVipCaptureCallback(unsigned int processor, SceUID uid)
 		goto unlock;
 	}
 	if (uid) {
-		uid = kscePUIDtoGUID(0, uid);
+		uid = SceSysmemForDriver_45D22597(0, uid);
 		if (uid < 0) {
 			ret = uid;
 			goto unlock;
@@ -8110,7 +8108,7 @@ int registerVeneziaVipMultiCapture(unsigned int *processor,
 			ret = -2141060863;
 			goto unlock;
 		}
-		if (ksceKernelVAtoPA((const void *)param->storageVirtualAddress,
+		if (SceSysmemForDriver_8D160E65((const void *)param->storageVirtualAddress,
 			&region.physicalAddress) < 0)
 			goto invalid;
 		region.virtualAddress = param->storageVirtualAddress;
@@ -12606,7 +12604,6 @@ extern int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSi
 
 extern int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager);
 
-extern void sceKernelApiDeclareTypeUInt32(void);
 extern void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 	SceSize size, SceSize alignment);
 
@@ -12765,7 +12762,7 @@ int _sceCodecEnginePmonGetProcessorLoad(CodecEngineProcessorLoad *load,
 	CodecEngineProcessorLoad *result;
 	int ret, error;
 
-	ret = ksceKernelCopyFromUser(&request, descriptor, sizeof(request));
+	ret = SceSysmemForDriver_BC996A7A(&request, descriptor, sizeof(request));
 	if (ret < 0)
 		return ret;
 	if (!load)
@@ -12775,11 +12772,11 @@ int _sceCodecEnginePmonGetProcessorLoad(CodecEngineProcessorLoad *load,
 	result = __builtin_alloca(sizeof(*result));
 	result->size = 0;
 	result->average = 0;
-	ret = ksceKernelCopyFromUser(result, load, request.size);
+	ret = SceSysmemForDriver_BC996A7A(result, load, request.size);
 	if (ret < 0)
 		return ret;
 	ret = getCodecEngineAverageProcessorLoad(result);
-	error = ksceKernelCopyToUser(load, result, request.size);
+	error = SceSysmemForDriver_6D88EF8A(load, result, request.size);
 	if (error < 0)
 		ret = error;
 	return ret;
@@ -12810,7 +12807,7 @@ int _sceCodecEngineGetProcessorLoad(void *load)
 	result = __builtin_alloca(40);
 	__builtin_memset(result, 0, 40);
 	ret = getCodecEngineProcessorLoad(result);
-	error = ksceKernelCopyToUser(load, result, 40);
+	error = SceSysmemForDriver_6D88EF8A(load, result, 40);
 	if (error < 0)
 		ret = error;
 	return ret;
@@ -12826,7 +12823,7 @@ int _sceCodecEngineGetMemoryState(void *state)
 	result = __builtin_alloca(24);
 	__builtin_memset(result, 0, 24);
 	ret = getCodecEngineMemoryState(result);
-	error = ksceKernelCopyToUser(state, result, 24);
+	error = SceSysmemForDriver_6D88EF8A(state, result, 24);
 	if (error < 0)
 		ret = error;
 	return ret;

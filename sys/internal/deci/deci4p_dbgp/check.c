@@ -2,7 +2,7 @@
 
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sysmem/debug.h>
@@ -84,7 +84,7 @@ int checkInvalidThread(SceUID pid, SceUID thid)
 	SceUID guid;
 
 	info.size = sizeof(info);
-	guid = kscePUIDtoGUID(pid, thid);
+	guid = SceSysmemForDriver_45D22597(pid, thid);
 	if (SceThreadmgrForDriver_555CA6BB(guid, 0, &info) != 0)
 		return 0x20012;
 	if (info.processId == 0x10005)
@@ -98,7 +98,7 @@ int checkInvalidModule(SceUID pid, SceUID modid)
 	SceUID guid;
 
 	info.size = sizeof(info);
-	guid = kscePUIDtoGUID(pid, modid);
+	guid = SceSysmemForDriver_45D22597(pid, modid);
 	if (guid < 0 || ksceKernelGetModuleInfo(pid, guid, &info) < 0)
 		return 0x20013;
 	return 0;
@@ -111,7 +111,7 @@ int checkInvalidOptionalThread(SceUID pid, SceUID thid)
 
 	if (thid == -1)
 		return 0;
-	guid = kscePUIDtoGUID(pid, thid);
+	guid = SceSysmemForDriver_45D22597(pid, thid);
 	info.size = sizeof(info);
 	if (SceThreadmgrForDriver_555CA6BB(guid, 0, &info) < 0)
 		return 0x20012;
@@ -182,7 +182,7 @@ int checkInvalidMemoryRange(SceUID pid, const void *address, SceSize size,
 	SceUInt32 start = (uintptr_t)address;
 	int protected;
 
-	if (ksceKernelIsAccessibleRangeProc(pid, mode, address, size) < 0)
+	if (SceSysmemForDriver_9F6E45E3(pid, mode, address, size) < 0)
 		return 0x20030;
 	protected = start <= 0x80000fff;
 	if (start < 0x80000000)
@@ -365,7 +365,7 @@ int checkIllegalThreadStatusResumeThread(SceUID pid, SceUID thid)
 	SceUID guid;
 	int status;
 
-	guid = kscePUIDtoGUID(pid, thid);
+	guid = SceSysmemForDriver_45D22597(pid, thid);
 	status = ksceKernelIsThreadDebugSuspended(guid);
 	if ((status & 1) != 0)
 		return 0;
@@ -382,7 +382,7 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 	SceUID guid;
 	int status, result;
 
-	guid = kscePUIDtoGUID(pid, thid);
+	guid = SceSysmemForDriver_45D22597(pid, thid);
 	status = ksceKernelIsThreadDebugSuspended(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 823, "0x%08x\n", status);
@@ -398,7 +398,7 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 	if ((registers.entry[0].cpsr & 0x1f) != 0x10)
 		return 0;
 	if ((registers.entry[0].cpsr & 0x20) != 0) {
-		result = ksceKernelCopyFromUserProc(pid, bytes,
+		result = sceKernelCopyFromUserProc(pid, bytes,
 				(const void *)registers.entry[0].pc, 2);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 865, "0x%08x\n", result);
@@ -408,7 +408,7 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 		if ((opcode & 0xff00) == 0xbe00)
 			*isBreakpoint = 1;
 	} else {
-		result = ksceKernelCopyFromUserProc(pid, bytes,
+		result = sceKernelCopyFromUserProc(pid, bytes,
 				(const void *)registers.entry[0].pc, 4);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 885, "0x%08x\n", result);
@@ -427,7 +427,7 @@ int checkThreadIsSuspendedAlready(SceUID pid, SceUID thid)
 	SceUID guid;
 	int status;
 
-	guid = kscePUIDtoGUID(pid, thid);
+	guid = SceSysmemForDriver_45D22597(pid, thid);
 	status = ksceKernelIsThreadDebugSuspended(guid);
 	if (status < 0) {
 		SCE_PRINTF_WITH_INFO(15, 913, "0x%08x\n", status);
@@ -516,14 +516,14 @@ int checkGetTargetAddrOpcode(const void *address, SceUInt32 cpsr, SceUID pid,
 		return (int)0x80080001;
 	if ((cpsr & 0x20) != 0) {
 		*isThumb = 1;
-		result = ksceKernelCopyFromUserProc(pid, thumbOpcode, address, 2);
+		result = sceKernelCopyFromUserProc(pid, thumbOpcode, address, 2);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 1061, "0x%08x\n", result);
 			return result;
 		}
 	} else {
 		*isThumb = 0;
-		result = ksceKernelCopyFromUserProc(pid, armOpcode, address, 4);
+		result = sceKernelCopyFromUserProc(pid, armOpcode, address, 4);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 1070, "0x%08x\n", result);
 			return result;
@@ -550,7 +550,7 @@ int checkGetTargetAddrStopCause(DbgpProcCB *proc, const void *address,
 	if (dbgdscr != 12)
 		return 1;
 	if ((cpsr & 0x20) != 0) {
-		result = ksceKernelCopyFromUserProc(pid, bytes, address, 2);
+		result = sceKernelCopyFromUserProc(pid, bytes, address, 2);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 1138, "0x%08x\n", result);
 			return result;
@@ -571,7 +571,7 @@ int checkGetTargetAddrStopCause(DbgpProcCB *proc, const void *address,
 		}
 		return 33;
 	}
-	result = ksceKernelCopyFromUserProc(pid, bytes, address, 4);
+	result = sceKernelCopyFromUserProc(pid, bytes, address, 4);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1213, "0x%08x\n", result);
 		return result;
@@ -620,7 +620,7 @@ int isDbgpThreadPcBkpt(SceUID pid, const void *address, SceUInt32 cpsr)
 	int result;
 
 	if ((cpsr & 0x20) != 0) {
-		result = ksceKernelCopyFromUserProc(pid, bytes, address, 2);
+		result = sceKernelCopyFromUserProc(pid, bytes, address, 2);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 1338, "0x%08x\n", result);
 			return result;
@@ -628,7 +628,7 @@ int isDbgpThreadPcBkpt(SceUID pid, const void *address, SceUInt32 cpsr)
 		opcode = bytes[0] + ((SceUInt32)bytes[1] << 8);
 		return (opcode & 0xff00) == 0xbe00;
 	}
-	result = ksceKernelCopyFromUserProc(pid, bytes, address, 4);
+	result = sceKernelCopyFromUserProc(pid, bytes, address, 4);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1358, "0x%08x\n", result);
 		return result;

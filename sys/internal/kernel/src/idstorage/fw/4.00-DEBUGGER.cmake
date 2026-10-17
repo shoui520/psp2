@@ -49,15 +49,15 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0x4DF40893
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceCpuForDriver_821FC0EE
+	sceKernelCpuResumeIntr
 	memset
 	memcpy
 	__stack_chk_fail
@@ -76,8 +76,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRead
 	ksceIoClose
 	SceSblACMgrForDriver_BE5667C5
-	kscePmMgrGetProductMode
-	ksceKernelRegisterSysEventHandler
+	ScePmMgrForDriver_2AC815A2
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 )

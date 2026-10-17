@@ -1,6 +1,6 @@
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
 #include <modulemgr/certified_file.h>
 #include "update_internal.h"
@@ -48,7 +48,7 @@ int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 	}
 	if (segment->size > 0x18000000)
 		return (int)0x800f0224;
-	buffer = ksceKernelAllocHeapMemory(heapId, (SceSize)segment->size);
+	buffer = SceSysmemForDriver_7B4CB60A(heapId, (SceSize)segment->size);
 	if (!buffer)
 		return (int)0x800f020c;
 	remaining = segment->size;
@@ -69,7 +69,7 @@ int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 readError:
 	result = (int)0x800f0205;
 finish:
-	ksceKernelFreeHeapMemory(heapId, buffer);
+	sceKernelFreeHeapMemory(heapId, buffer);
 	return result;
 }
 
@@ -84,22 +84,22 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 	int result, stage, updated, nodeType;
 	unsigned int index;
 
-	ksceKernelPrintfWithInfo(0, &updateStartedInfo,
+	SceDebugForDriver_02B04343(0, &updateStartedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 0, 0);
 	memset(&pup, 0, sizeof(pup));
 	fd = ksceIoOpen(path, 0x04000001, 0);
 	if (fd < 0) {
 		if (fd == (int)0x80010002)
-			ksceKernelPrintfWithInfo(0, &updateFileMissingInfo,
+			SceDebugForDriver_02B04343(0, &updateFileMissingInfo,
 				"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 1, fd);
 		else
-			ksceKernelPrintfWithInfo(0, &updateOpenErrorInfo,
+			SceDebugForDriver_02B04343(0, &updateOpenErrorInfo,
 				"[E] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 1, fd);
 		return (int)0x800f0202;
 	}
-	if ((ksceSblAimgrIsTool() || ksceSblAimgrIsTest()) && updateCpupConnected)
+	if ((SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_3B638885()) && updateCpupConnected)
 		SceSysrootForDriver_47724459(0);
-	ksceKernelPrintfWithInfo(0, &updateFileOpenedInfo,
+	SceDebugForDriver_02B04343(0, &updateFileOpenedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 1, 0);
 	if (heapId <= 0 || !path) {
 		result = (int)0x800f0216;
@@ -111,9 +111,9 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 	result = PupUtilPupGetCachedHeader(&pup);
 	if (result)
 		goto pupError;
-	ksceKernelPrintfWithInfo(0, &updatePupVerifiedInfo,
+	SceDebugForDriver_02B04343(0, &updatePupVerifiedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 2, 0);
-	ksceKernelPrintfWithInfo(0, &updateMbrStartedInfo,
+	SceDebugForDriver_02B04343(0, &updateMbrStartedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 3, 0);
 	stage = 4;
 	mbr = SpkgUtilGetMbr();
@@ -122,7 +122,7 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 	updated = 0;
 	for (index = 0; index < pup.header.m_segment_num; index++) {
 		segment = &pup.segments[index];
-		ksceKernelPrintfWithInfo(0, &updateSegmentInfo,
+		SceDebugForDriver_02B04343(0, &updateSegmentInfo,
 			"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n",
 			11, 0, (unsigned int)segment->segment_id, 0);
 		switch (segment->segment_id) {
@@ -184,16 +184,16 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 		result = 0;
 	SpkgUtilSetUpdateMode(255);
 finished:
-	ksceKernelPrintfWithInfo(0, &updateFinishedInfo,
+	SceDebugForDriver_02B04343(0, &updateFinishedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, stage, result);
 	ksceIoClose(fd);
 	if (pup.allocation)
-		ksceKernelFreeHeapMemory(heapId, pup.allocation);
+		sceKernelFreeHeapMemory(heapId, pup.allocation);
 	PupUtilPupFreeCachedHeader();
 	return result;
 
 pupError:
-	ksceKernelPrintfWithInfo(0, &updatePupErrorInfo,
+	SceDebugForDriver_02B04343(0, &updatePupErrorInfo,
 		"[E] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 2, result);
 	stage = 3;
 	goto finished;

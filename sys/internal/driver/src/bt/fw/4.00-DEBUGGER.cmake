@@ -99,11 +99,11 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xCBD6D8BC
 )
 set(MODULE_IMPORT_FUNCS
-	kscePUIDtoGUID
-	ksceKernelCopyToUserProc
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelPrintf
+	SceSysmemForDriver_45D22597
+	sceKernelCopyToUserProc
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	SceDebugForDriver_391B74B7
 	memset
 	strncmp
 	__memset_chk
@@ -142,18 +142,18 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoOpen
 	ksceIoRead
 	ksceIoClose
-	kscePmMgrGetProductMode
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
+	ScePmMgrForDriver_2AC815A2
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
 	SceSysrootForDriver_5A4A7F7E
 	SceSysrootForDriver_E06C14FD
 	sceSblACMgrIsSystemProgram
-	ksceSblAimgrGetProductCode
-	ksceSblAimgrIsDolce
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
-	ksceAesEncrypt1
-	ksceAesInit1
+	SceSblAIMgrForDriver_14345161
+	SceSblAIMgrForDriver_71608CA3
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_F12B6451
 	SceSdifForDriver_0C66E36F
 	SceSdifForDriver_3428884D
 	SceSdifForDriver_3C4CDC8B

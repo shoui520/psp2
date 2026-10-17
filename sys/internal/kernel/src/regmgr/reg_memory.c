@@ -3,7 +3,7 @@
  * would fill (empty in the kernel) and the name hash. All names unknown.
  */
 
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include "reg_internal.h"
 
 #define REG_NAME_LEN	0x1a	/* the longest name hashed */
@@ -20,7 +20,7 @@ int regMemInit(int unused, SceSize size)
 	opt.size = sizeof(opt);
 	opt.uselock = 1;
 	g_regHeap = -1;
-	heap = ksceKernelCreateHeap("SceRegMemBlock", size, &opt);
+	heap = SceSysmemForDriver_9328E0E8("SceRegMemBlock", size, &opt);
 	if (heap > 0)
 		g_regHeap = heap;
 
@@ -29,12 +29,12 @@ int regMemInit(int unused, SceSize size)
 
 void *regMemAlloc(SceSize size)
 {
-	return ksceKernelAllocHeapMemory(g_regHeap, size);
+	return SceSysmemForDriver_7B4CB60A(g_regHeap, size);
 }
 
 void regMemFree(void *ptr)
 {
-	ksceKernelFreeHeapMemory(g_regHeap, ptr);
+	sceKernelFreeHeapMemory(g_regHeap, ptr);
 }
 
 /* the hooks a port fills: a lock and pointer checks (empty here) */

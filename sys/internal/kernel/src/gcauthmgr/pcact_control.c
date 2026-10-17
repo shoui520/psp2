@@ -2,10 +2,10 @@
 #include <psp2kern/npdrm.h>
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <string.h>
 #include "pcact.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -226,7 +226,7 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 		&gcAuthActivationWorkspace.challenge, &gcAuthActivationRandom.psmact);
 	if (result != 0)
 		goto finishPsm;
-	copyResult = ksceKernelCopyToUser(output,
+	copyResult = SceSysmemForDriver_6D88EF8A(output,
 		&gcAuthActivationWorkspace.challenge, sizeof(*output));
 	if (copyResult < 0) {
 		result = copyResult;
@@ -276,7 +276,7 @@ int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys)
 			return (int)0x808a0807;
 	} while (cursor != activation->header.reserved +
 		 sizeof(activation->header.reserved));
-	if (ksceHmacSha256Digest(keys->stageTwoKey, 32, activation,
+	if (SceKernelUtilsForDriver_83EFA1CC(keys->stageTwoKey, 32, activation,
 		offsetof(GcAuthPsmactEncryptedActivation, mac), mac) != 0)
 		return (int)0x808a0808;
 	difference = 0;

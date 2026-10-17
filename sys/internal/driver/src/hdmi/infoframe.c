@@ -6,7 +6,7 @@
  */
 #include <psp2kern/types.h>
 #include "hdmi_internal.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 
 #define INFOFRAME_TYPE_AVI	0x82
 #define INFOFRAME_TYPE_SPD	0x83
@@ -107,7 +107,7 @@ int hdmiSendSpdInfoFrame(void)
 	infoFramePacket.spd.vendorName[1] = 'C';
 	infoFramePacket.spd.vendorName[2] = 'E';
 	infoFramePacket.spd.vendorName[3] = 'I';
-	if (ksceSblAimgrIsDolce()) {
+	if (SceSblAIMgrForDriver_71608CA3()) {
 		infoFramePacket.spd.productDescription[0] = 'P';
 		infoFramePacket.spd.productDescription[1] = 'S';
 		infoFramePacket.spd.productDescription[2] = ' ';

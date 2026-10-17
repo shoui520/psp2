@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <oled/oled.h>
@@ -92,7 +92,7 @@ int SceI2cForDriver_30CF9469(unsigned bus, uint32_t first, uint32_t second)
 	ctx->timing[0] = first;
 	ctx->timing[1] = second;
 	ctx->base->speed =
-		(ksceSysrootGetHardwareInfo() & 0xff0000) < 0x800000 ? 5 : 4;
+		(SceSysrootForDriver_930B1342() & 0xff0000) < 0x800000 ? 5 : 4;
 	return 0;
 }
 
@@ -363,7 +363,7 @@ static void I2cHardwareTiming(I2cContext *ctx)
 {
 	unsigned speed;
 
-	if ((ksceSysrootGetHardwareInfo() & 0xff0000) > 0x7fffff)
+	if ((SceSysrootForDriver_930B1342() & 0xff0000) > 0x7fffff)
 		speed = 4;
 	else
 		speed = 5;
@@ -414,17 +414,17 @@ static __attribute__((noinline)) int I2cInit(void)
 		opt.attr = 2;
 		if (bus) {
 			opt.paddr = I2C_REG_BASE(1);
-			ret = ksceKernelAllocMemBlock("SceI2c1Reg", 0x20100806,
+			ret = SceSysmemForDriver_C94850C9("SceI2c1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
 			opt.paddr = I2C_REG_BASE(0);
-			ret = ksceKernelAllocMemBlock("SceI2c0Reg", 0x20100806,
+			ret = SceSysmemForDriver_C94850C9("SceI2c0Reg", 0x20100806,
 				0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		s_i2c[bus].uid = ret;
-		ksceKernelGetMemBlockBase(ret, &base);
+		SceSysmemForDriver_A841EDDA(ret, &base);
 		s_i2c[bus].base = base;
 	}
 	s_i2c[0].mutex = ksceKernelCreateMutex("SceI2c0", 0, 0, NULL);
@@ -453,7 +453,7 @@ static __attribute__((noinline)) int I2cInit(void)
 		ctx->base->interruptEnable = 0x01000000;
 	}
 	ksceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
-	ksceKernelRegisterSysEventHandler("SceI2c", I2cSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceI2c", I2cSysEvent, NULL);
 	return 0;
 }
 

@@ -61,17 +61,17 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelAssert
-	ksceKernelPanic
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAllocUncacheHeapMemoryWithOption
-	ksceKernelVAtoPA
-	ksceKernelVARangeToPARange
-	ksceKernelVARangeToPAVector
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_D9703808
+	SceSysmemForDriver_0B4ED16A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_AE36C775
+	sceKernelVARangeToPAVector
 	SceSysrootForKernel_377895EB
-	ksceKernelSysrootGetKblParam
+	SceSysrootForKernel_9DB56D1F
 	SceSysrootForDriver_D75D4F37
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown

@@ -140,7 +140,7 @@ int _addAckNakTaskList(QmiUartFramingControl *control, unsigned int kind,
 prepend:
 	entry->next = head;
 #if FW_DEBUG
-	ksceKernelAssert(head != NULL, &g_qmiUartAckQueueDebug, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(head != NULL, &g_qmiUartAckQueueDebug, __builtin_return_address(0));
 #endif
 	control->head->prev = entry;
 	control->head = entry;
@@ -152,7 +152,7 @@ void qmiPanicUartReadPosition(void) __attribute__((noinline, noreturn));
 
 void qmiPanicUartReadPosition(void)
 {
-	ksceKernelPanic(&g_qmiUartReadPositionDebug, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&g_qmiUartReadPositionDebug, __builtin_return_address(0));
 }
 
 /* name unknown: apply a received ACK or NAK to queued UART fragments. */
@@ -1016,7 +1016,7 @@ buffered:
 	}
 	return ret;
 panic:
-	ksceKernelPanic(&g_qmiUartReadPositionDebug, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&g_qmiUartReadPositionDebug, __builtin_return_address(0));
 }
 
 int qmiIsUartFrameQueueEmpty(void)

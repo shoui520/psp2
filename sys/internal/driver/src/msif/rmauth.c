@@ -1,7 +1,7 @@
 /* Sony's rmauth.c: removable-media secure-module requests. */
 #include <skeleton.h>
 #include "rmauth.h"
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <string.h>
 #include <sysmem/suspend.h>
 
@@ -32,20 +32,20 @@ SceSblSmCommId gMsifSmId;
 int invoke_rm_auth_secure_module(void)
 {
 	SceAuthInfo auth;
-	SceKernelSysrootSelfInfo selfInfo;
+	struct SysrootSelfInfo selfInfo;
 
 	memset(&auth, 0, sizeof(auth));
 	memcpy(&auth.request, &gMsifSmAuthInfo, sizeof(auth.request));
-	selfInfo.self_data = NULL;
+	selfInfo.selfData = NULL;
 	auth.media_type = 2;
-	selfInfo.self_size = 0;
+	selfInfo.selfSize = 0;
 	selfInfo.size = sizeof(selfInfo);
-	if (ksceSysrootGetSelfInfo(SCE_KERNEL_SYSROOT_SELF_INDEX_RMAUTH_SM,
+	if (SceSysrootForKernel_F10AB792(SCE_KERNEL_SYSROOT_SELF_INDEX_RMAUTH_SM,
 		&selfInfo) < 0)
 		return 0x800f0016;
 	auth.self_type = (auth.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromData(0, selfInfo.self_data,
-		selfInfo.self_size, 0, &auth, &gMsifSmId);
+	return ksceSblSmCommStartSmFromData(0, selfInfo.selfData,
+		selfInfo.selfSize, 0, &auth, &gMsifSmId);
 }
 
 int call_get_key_master_gen_no(uint32_t *generation)

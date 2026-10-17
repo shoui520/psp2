@@ -114,16 +114,16 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0x6FE062D1
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	kscePUIDtoGUID
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelRemapMemBlock
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelPrintf
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DFE2C8CB
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_391B74B7
 	k_sceEventLogPut
-	ksceKernelPrintfLevelWithInfo
+	SceDebugForDriver_D9703808
 	memset
 	memcpy
 	__memcpy_chk
@@ -153,19 +153,19 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnlockFastMutex
 	ksceKernelEnqueueWorkQueue
 	sceKernelGetSystemTimeWide
-	kscePmMgrGetProductMode
+	ScePmMgrForDriver_2AC815A2
 	SceQafMgrForDriver_52B4E164
 	ksceSblSsGetNvsData
-	ksceSblAimgrIsTest
-	ksceSblAimgrIsDolce
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	SceSblAIMgrForDriver_3B638885
+	SceSblAIMgrForDriver_71608CA3
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	ksceSblFwLoaderLoad
 	ksceSblFwLoaderLock
 	ksceSblFwLoaderUnlock
-	ksceHmacSha1Digest
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
+	SceKernelUtilsForDriver_29A28957
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
 	sceKernelApiDeclareTypeUInt32
 	SceSdifForDriver_0C66E36F
 	SceSdifForDriver_3428884D

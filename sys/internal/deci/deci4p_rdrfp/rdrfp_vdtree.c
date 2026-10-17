@@ -8,7 +8,7 @@
  */
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
@@ -844,7 +844,7 @@ int rdrfpDread(SceUInt32 fd, SceIoDirent *dirent)
 	if (f->entry) {
 		ret = rdrfpVDEntryDread(f->entry, f->readIndex, dirent);
 		if (ret > 0)
-			ksceKernelAtomicAddAndGet32(&f->readIndex, 1);
+			SceCpuForDriver_5F6A8743(&f->readIndex, 1);
 		goto out;
 	}
 	for (;;) {

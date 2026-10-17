@@ -59,12 +59,12 @@ static struct Flock *alloc_lock_entry(void)
 	struct Flock *flock;
 	FlockLock *lock;
 
-	flock = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, sizeof(*flock));
+	flock = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, sizeof(*flock));
 	if (flock == NULL)
 		return NULL;
-	lock = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, sizeof(*lock));
+	lock = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, sizeof(*lock));
 	if (lock == NULL) {
-		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, flock);
+		sceKernelFreeHeapMemory(g_ioVfsHeapUid, flock);
 		return NULL;
 	}
 	flock->lock = lock;
@@ -117,7 +117,7 @@ static inline __attribute__((always_inline)) void finalize_lock(struct Flock *fl
 		}
 		ksceKernelFinalizeFastMutex(&lock->mutex);
 		ksceKernelDeleteEventFlag(lock->waitQueue);
-		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, flock->lock);
+		sceKernelFreeHeapMemory(g_ioVfsHeapUid, flock->lock);
 	}
 }
 
@@ -152,7 +152,7 @@ static int release_lock_entry(struct Flock **head, SceUInt64 fid, SceUID pid, in
 	else
 		prev->next = flock->next;
 	finalize_lock(flock);
-	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, flock);
+	sceKernelFreeHeapMemory(g_ioVfsHeapUid, flock);
 	return ret;
 }
 

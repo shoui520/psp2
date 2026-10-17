@@ -14,8 +14,7 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>

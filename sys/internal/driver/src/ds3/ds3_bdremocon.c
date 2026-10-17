@@ -13,10 +13,10 @@
 #include <touch/touch.h>
 #include <sysmem/sysmem.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/cpu.h>
+#include <sysmem/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/sysroot.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -50,7 +50,7 @@ int ds3BdRemoconThread(SceSize args, void *argp)
 	result = ksceBtRegisterCallback(callback, 0x460);
 	if (result < 0)
 		return result;
-	ksceKernelRegisterSysEventHandler("SceBdRemocon", ds3BdRemoconSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceBdRemocon", ds3BdRemoconSysEvent, NULL);
 	event = ksceKernelCreateEventFlag("SceBdRemocon", 0x1000, 0, NULL);
 	if (event < 0)
 		return event;
@@ -105,7 +105,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 					ds3BdRemocon.deviceAddress = address;
 					ksceCtrlSetBdRemoconConnected(1);
 				}
-				ksceKernelPowerTick(0);
+				SceKernelSuspendForDriver_E0489831(0);
 				ds3BdRemocon.state = 0;
 				ds3BdRemocon.connected = 0;
 				ds3BdRemocon.buttons = 0;

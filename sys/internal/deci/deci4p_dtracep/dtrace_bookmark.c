@@ -6,7 +6,7 @@
  * PARTIAL: the copy (0x81021390 in 4.00) reads DTrace's dtrace_buffer_t
  * and is written when DTrace is vendored. Internal names are unknown.
  */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <pamgr/perfmon_regs.h>
 
@@ -27,18 +27,18 @@ int dtrace_bookmark_init(void)
 	opt.size = sizeof(opt);
 	opt.paddr = PERFMON_REG_BASE;
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	uid = ksceKernelAllocMemBlock("SceDeci4pDtracepPaReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceDeci4pDtracepPaReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      2 * PERFMON_PAGE_SIZE, &opt);
 	if (uid < 0)
 		return uid;
 	s_bookmark.uid = uid;
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_bookmark.regs = base;
 	return 0;
 }
 
 int dtrace_bookmark_fini(void)
 {
-	ksceKernelFreeMemBlock(s_bookmark.uid);
+	SceSysmemForDriver_009E1C61(s_bookmark.uid);
 	return 0;
 }

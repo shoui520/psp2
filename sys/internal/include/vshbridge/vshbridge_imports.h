@@ -14,7 +14,7 @@
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
@@ -26,16 +26,12 @@
 #include <psp2kern/display.h>
 #include <acmgr/acmgr.h>
 
-typedef SceUInt8 SceProductMode;
+#include <sysmem/pmmgr.h>
+#include <sysmem/debug.h>
 typedef SceUInt64 SceRtcTick;
 
 /* sysroot, threads, modules */
-int SceSysrootForDriver_7AAC4EE7(const char *param, int value);	/* set the SDfCtl boot parameter */
-SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
-int ksceSysrootIsSafeMode(void);
-int ksceSysrootIsUpdateMode(void);
 SceUID ksceKernelSearchModuleByName(const char *name);
-int k_sceEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 int SceUdcdForDriver_2D91F8C3(int enable);		/* USB charging */
 
@@ -59,7 +55,6 @@ int _ksceSblPostSsMgrExecutePmSmF00dCommand(int command);
 int ksceSblUtMgrHasComTestFlag(void);
 int ksceSblUtMgrHasStoreFlag(void);
 int ksceSblUtMgrHasNpTestFlag(void);
-int kscePmMgrGetProductMode(SceProductMode *mode);
 int SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5(void *a, void *b, void *c, void *d);	/* Mlnpsnl auth 1 */
 int SceSblGcAuthMgrMlnpsnlForDriver_296ABD68(void *a, void *b, void *c);	/* Mlnpsnl auth 2 */
 

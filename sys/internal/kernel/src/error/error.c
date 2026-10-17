@@ -184,23 +184,23 @@ static int __attribute__((noipa)) ErrorTableInit(ErrorTable *table)
 	opt.memtype = 0;
 	opt.pid = 0;
 	opt.heap = NULL;
-	table->heap = ksceKernelCreateHeap("SceErrorTable", TABLE_HEAP_SIZE, &opt);
+	table->heap = SceSysmemForDriver_9328E0E8("SceErrorTable", TABLE_HEAP_SIZE, &opt);
 	if (table->heap < 0)
 		goto fail;
-	table->groups = ksceKernelAllocHeapMemory(table->heap, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
+	table->groups = SceSysmemForDriver_7B4CB60A(table->heap, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
 	if (table->groups == NULL)
 		goto delete;
 	memset(table->groups, 0, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
-	table->codes = ksceKernelAllocHeapMemory(table->heap, TABLE_HEAP_SIZE);
+	table->codes = SceSysmemForDriver_7B4CB60A(table->heap, TABLE_HEAP_SIZE);
 	if (table->codes == NULL) {
-		ksceKernelFreeHeapMemory(table->heap, table->groups);
+		sceKernelFreeHeapMemory(table->heap, table->groups);
 		goto delete;
 	}
 	memset(table->codes, 0, TABLE_HEAP_SIZE);
 	return 0;
 
 delete:
-	ksceKernelDeleteHeap(table->heap);
+	sceKernelDeleteHeap(table->heap);
 fail:
 	memset(table, 0, sizeof(*table));
 	return 0;
@@ -217,7 +217,7 @@ static int ErrorTableLoad(ErrorTable *table)
 	if (ksceIoRead(fd, table, 8) != 8)
 		goto close;
 	if (table->groupNum > TABLE_GROUPS_MAX) {
-		ksceKernelPrintf("[SceError] facility_group_num = %d\n", table->groupNum);
+		SceDebugForDriver_391B74B7("[SceError] facility_group_num = %d\n", table->groupNum);
 		goto close;
 	}
 	size = table->groupNum * sizeof(ErrorGroup);
@@ -226,7 +226,7 @@ static int ErrorTableLoad(ErrorTable *table)
 	if (ksceIoRead(fd, &table->base, 4) != 4)
 		goto close;
 	if (table->codeNum > TABLE_CODES_MAX) {
-		ksceKernelPrintf("[SceError] error_table_num = %d\n", table->codeNum);
+		SceDebugForDriver_391B74B7("[SceError] error_table_num = %d\n", table->codeNum);
 		goto close;
 	}
 	size = table->codeNum * sizeof(SceUInt32);
@@ -454,7 +454,7 @@ static int ErrorSysEventRegister(ErrorSysEvent *ev)
 {
 	SceUID uid;
 
-	uid = ksceKernelRegisterSysEventHandler(ev->name, ErrorSysEventHandler, ev);
+	uid = sceKernelRegisterSysEventHandler(ev->name, ErrorSysEventHandler, ev);
 	if (uid < 0)
 		return uid;
 	ev->uid = uid;
@@ -463,7 +463,7 @@ static int ErrorSysEventRegister(ErrorSysEvent *ev)
 
 static int ErrorSysEventUnregister(SceUID uid)
 {
-	int ret = ksceKernelUnregisterSysEventHandler(uid);
+	int ret = sceKernelUnregisterSysEventHandler(uid);
 
 	return ret < 0 ? ret : 0;
 }
@@ -559,7 +559,7 @@ int _sceErrorGetExternalString(char *buf, SceUInt32 code)
 	kbuf[2] = 0;
 	kbuf[3] = 0;
 	res = ERROR_SYSCALL(ErrorGetExternalString((char *)kbuf, code));
-	ret = ksceKernelCopyToUser(buf, kbuf, sizeof(kbuf));
+	ret = SceSysmemForDriver_6D88EF8A(buf, kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
 
@@ -570,7 +570,7 @@ int _sceErrorHistoryPostError(const void *rec)
 	int ret;
 
 	if (rec != NULL) {
-		ret = ksceKernelCopyFromUser(&krec, rec, sizeof(krec));
+		ret = SceSysmemForDriver_BC996A7A(&krec, rec, sizeof(krec));
 		if (ret < 0)
 			return ret;
 		p = &krec;
@@ -585,7 +585,7 @@ int _sceErrorHistorySetDefaultFormat(const void *format)
 	int ret;
 
 	if (format != NULL) {
-		ret = ksceKernelCopyFromUser(kformat, format, sizeof(kformat));
+		ret = SceSysmemForDriver_BC996A7A(kformat, format, sizeof(kformat));
 		if (ret < 0)
 			return ret;
 		p = kformat;
@@ -602,7 +602,7 @@ int _sceErrorHistoryGetError(SceUInt32 index, void *buf)
 		return ERROR_SYSCALL(ErrorGetLocked(index, NULL));
 	memset(&kbuf, 0, sizeof(kbuf));
 	res = ERROR_SYSCALL(ErrorGetLocked(index, &kbuf));
-	ret = ksceKernelCopyToUser(buf, &kbuf, sizeof(kbuf));
+	ret = SceSysmemForDriver_6D88EF8A(buf, &kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
 
@@ -613,7 +613,7 @@ int _sceErrorHistoryUpdateSequenceInfo(const void *info, int reserved)
 	int ret;
 
 	if (info != NULL) {
-		ret = ksceKernelCopyFromUser(&kinfo, info, sizeof(kinfo));
+		ret = SceSysmemForDriver_BC996A7A(&kinfo, info, sizeof(kinfo));
 		if (ret < 0)
 			return ret;
 		p = &kinfo;

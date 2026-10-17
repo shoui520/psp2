@@ -1110,18 +1110,18 @@ __attribute__((noinline)) int KrmEccRandomBytes(void *argument,
 
 __attribute__((noinline)) int KrmEccSha256Init(SceSha256Context *ctx)
 {
-	return ksceSha256BlockInit(ctx);
+	return SceKernelUtilsForDriver_D909FA2C(ctx);
 }
 
 __attribute__((noinline)) int KrmEccSha256Update(SceSha256Context *ctx,
 	const void *src, SceSize size)
 {
-	return ksceSha256BlockUpdate(ctx, src, size);
+	return SceKernelUtilsForDriver_236A9097(ctx, src, size);
 }
 
 __attribute__((noinline)) int KrmEccSha256Result(SceSha256Context *ctx, void *digest)
 {
-	return ksceSha256BlockResult(ctx, digest);
+	return SceKernelUtilsForDriver_4899CD4B(ctx, digest);
 }
 
 typedef struct KrmEccAllocationBlock {

@@ -1,7 +1,7 @@
 /*
  * The syscalls libult uses to start and stop the kernel's support.
  */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <intrmgr/syscall.h>
 #include "ulobjmgr_internal.h"
@@ -53,7 +53,7 @@ int _sceUlobjMgrStartSupportingUserlevelObject(SceUInt32 numEntries, SceUInt32 s
 							    &userBase);
 	if (ret != 0)
 		goto error;
-	ret = ksceKernelCopyToUser(pUserBase, &userBase, sizeof(userBase));
+	ret = SceSysmemForDriver_6D88EF8A(pUserBase, &userBase, sizeof(userBase));
 	if (ret != 0) {
 		procCB = getAndLockUlobjInfoArray(pid, &lockState);
 		if (procCB != NULL) {

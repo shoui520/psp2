@@ -505,14 +505,14 @@ int kscePowerSetGpuClockFrequencyInternal(int first, int second)
 	if (!firstRate && !secondRate) {
 		ScePervasiveForDriver_CA0ACFC5(0xf000f);
 	} else {
-		irqState = ksceKernelCpuSuspendIntr();
+		irqState = SceCpuForDriver_821FC0EE();
 		SceGrabForDriver_B22EE8BC(0xf00, 0);
 		start = ksceKernelGetSystemTimeLow();
 		while ((uint32_t)(ksceKernelGetSystemTimeLow() - start) < 3)
 			;
 		ScePervasiveForDriver_6AF0196F(firstSelector, secondSelector);
 		SceGrabForDriver_B22EE8BC(0xf00, 1);
-		ksceKernelCpuResumeIntr(irqState);
+		sceKernelCpuResumeIntr(irqState);
 	}
 	s_powerClockControl.voltageDemand[9] = demand;
 	s_powerClockControl.frequencies.gpuClockFrequency[0] = firstRate;
@@ -575,7 +575,7 @@ int powerInitializeClockRuntime(void)
 
 	SceSysconForDriver_7F198FA2(1, 0x8a - s_powerClockControl.busVoltageTable[0]);
 	s_powerClockControl.railVoltage[0] = s_powerClockControl.busVoltageTable[0];
-	if (ksceKernelCheckDipsw(0x9f))
+	if (SceDipswForDriver_A98FC2FD(0x9f))
 		s_powerClockControl.voltageDemand[4] =
 			s_powerClockControl.busVoltageTable[0];
 	else
@@ -606,7 +606,7 @@ int powerInitializeClockRuntime(void)
 	powerSetBusRailClockRaw(3, 190, 1, s_powerClockControl.busVoltageTable[2]);
 	kscePowerSetArmClockFrequency(333);
 
-	if (ksceKernelCheckDipsw(0x9f) && ksceKernelCheckDipsw(0xec))
+	if (SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec))
 		gpuFrequency = 166;
 	else
 		gpuFrequency = 111;

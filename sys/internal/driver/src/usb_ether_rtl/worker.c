@@ -122,17 +122,17 @@ static void suspendAdapter(struct RtlAdapter *a)
 	drainReferences(a);
 	if (!(a->flags & 4))
 		return;
-	if (ksceSblAimgrIsGenuineDolce() &&
+	if (SceSblAIMgrForDriver_C6E83F34() &&
 	    sceRegMgrGetKeyInt("/CONFIG/NET/", "wol_config", &value) >= 0 && value == 1) {
 		ret = setupWake(a);
 		if (ret < 0) {
-			ksceKernelPrintf("Set Wake On LAN : NG (ret=0x%08x)\n", ret);
-		} else if (!ksceKernelSysrootCheckModelCapability(0xc)) {
+			SceDebugForDriver_391B74B7("Set Wake On LAN : NG (ret=0x%08x)\n", ret);
+		} else if (!SceSysrootForDriver_8AA268D6(0xc)) {
 			ret = lowPower(a);
 			if (ret < 0) {
-				ksceKernelPrintf("Set Low Power Mode : NG (ret=0x%08x)\n", ret);
+				SceDebugForDriver_391B74B7("Set Low Power Mode : NG (ret=0x%08x)\n", ret);
 			} else {
-				ksceKernelPrintf("Set Low Power Mode : OK\n");
+				SceDebugForDriver_391B74B7("Set Low Power Mode : OK\n");
 				ksceUsbServDisableEtherSuspend();
 			}
 		} else {
@@ -214,7 +214,7 @@ static int initializeHardware(struct RtlAdapter *a)
 		{ 0xd404, 0x00f, 0x80001e11 },
 	};
 
-	if (ksceSblAimgrIsGenuineDolce() && !ksceKernelSysrootCheckModelCapability(0xc)) {
+	if (SceSblAIMgrForDriver_C6E83F34() && !SceSysrootForDriver_8AA268D6(0xc)) {
 		ksceGpioSetPortMode(1, 2, 0);
 		ksceGpioPortClear(1, 2);
 	}
@@ -246,7 +246,7 @@ static int initializeHardware(struct RtlAdapter *a)
 	} else {
 		a->revision = (revision & 0x7cf0) == 0x4c10 ? 2 : 0;
 	}
-	if (ksceSblAimgrIsGenuineDolce() && !ksceKernelSysrootCheckModelCapability(0xc)) {
+	if (SceSblAIMgrForDriver_C6E83F34() && !SceSysrootForDriver_8AA268D6(0xc)) {
 		for (unsigned int i = 0; i < sizeof(usbPhyPatch); i += 2) {
 			ret = rtlWriteUsb16(a, 0xf800 + i, *(const unsigned short *)(usbPhyPatch + i));
 			if (ret < 0)
@@ -305,10 +305,10 @@ static int allocateBuffer(const char *name, unsigned int length, void **base)
 	options[0] = sizeof(options);
 	options[2] = 0x200004;
 	options[5] = 0x1000;
-	ret = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, (length + 0xfff) & ~0xfff,
+	ret = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, (length + 0xfff) & ~0xfff,
 				    (SceKernelAllocMemBlockKernelOpt *)options);
 	if (ret >= 0)
-		ret = ksceKernelGetMemBlockBase(ret, base);
+		ret = SceSysmemForDriver_A841EDDA(ret, base);
 	return ret;
 }
 
@@ -593,16 +593,16 @@ int rtlWorker(SceSize length, void *arg)
 	a->proc.create = NULL;
 	a->proc.exit = NULL;
 	a->proc.kill = NULL;
-	a->proc.stop = NULL;
-	a->proc.start = NULL;
-	a->proc.switch_process = (void *)rtlProcessEvent;
-	ret = ksceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
+	a->proc.suspend = NULL;
+	a->proc.resume = NULL;
+	a->proc.notify = (ProcEventNotifyHandler)rtlProcessEvent;
+	ret = sceKernelRegisterProcEventHandler("SceNetDrvEther", &a->proc, (int)a);
 	if (ret < 0) {
 		if (a->procId > 0) {
-			ksceKernelUnregisterProcEventHandler(a->procId);
+			SceProcEventForDriver_3DED57CC(a->procId);
 			a->procId = 0;
 		}
-		ksceKernelPrintf("UsbEtherRtl workerEntry Exit. ret=0x%08x\n", ret);
+		SceDebugForDriver_391B74B7("UsbEtherRtl workerEntry Exit. ret=0x%08x\n", ret);
 		sceKernelExitThread(0);
 		return ret;
 	}

@@ -39,16 +39,16 @@ void _sceKernelBsodDummyFsError(const char *name)
 		return;
 	if (sceSblACMgrIsSystemProgram(pid)) {
 		if (SceQafMgrForDriver_382C71E8())
-			ksceKernelPrintfWithInfo(0, &s_fsSystemAccess,
+			SceDebugForDriver_02B04343(0, &s_fsSystemAccess,
 				"Host file system access is forbidden: name='%s'\n", name);
 		return;
 	}
 	if (SceSysrootForDriver_CAE820B2(pid, &identifier) < 0)
 		identifier = 0;
 	if (identifier >= 0x1800000) {
-		ksceKernelPrintfWithInfo(0, &s_fsDeniedAccess,
+		SceDebugForDriver_02B04343(0, &s_fsDeniedAccess,
 			"Host file system access is forbidden: name='%s'\n", name);
-		ksceKernelPanic(&s_fsPanic, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&s_fsPanic, __builtin_return_address(0));
 	}
 }
 
@@ -185,7 +185,7 @@ int _sceKernelBsodDummyFsInit(void)
 	static const SceKernelDebugInfo mountInfo =
 		FS_INFO(0xa4cca18a, 0x78c642a4, 167, "_sceKernelBsodDummyFsInit");
 	if (result < 0)
-		ksceKernelPrintfLevelWithInfo(1, 0xf, &unmountInfo,
+		SceDebugForDriver_D9703808(1, 0xf, &unmountInfo,
 			"vfsUmount failed (0x%08X)\n", result);
 #endif
 	ksceVfsDeleteVfs("deci4p_drfp_dev_fs", NULL);
@@ -197,7 +197,7 @@ int _sceKernelBsodDummyFsInit(void)
 	result = ksceVfsAddVfs(&s_bsodDummyInfo);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0xf, &addInfo,
+		SceDebugForDriver_D9703808(1, 0xf, &addInfo,
 			"sceVfsAddVfs failed (0x%08X)\n", result);
 #endif
 		return result;
@@ -205,7 +205,7 @@ int _sceKernelBsodDummyFsInit(void)
 	result = vfsMount(&s_bsodMount);
 #if FW_DEBUG
 	if (result < 0)
-		ksceKernelPrintfLevelWithInfo(1, 0xf, &mountInfo,
+		SceDebugForDriver_D9703808(1, 0xf, &mountInfo,
 			"vfsMount failed (0x%08X)\n", result);
 #endif
 	return result;

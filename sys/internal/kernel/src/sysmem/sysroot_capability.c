@@ -9,7 +9,7 @@ int CheckProcessCapability(SceUID processId, unsigned int capability)
 {
 	SceSelfAuthInfo info;
 
-	if (ksceSysrootGetSelfAuthInfo(processId, &info))
+	if (SceSysrootForKernel_4F0A4066(processId, &info))
 		return 0;
 	return (info.capability[(int32_t)capability >> 3] >> (~capability & 7)) & 1;
 }

@@ -5,7 +5,7 @@
  */
 #include <stdint.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <sm_comm/sm_comm.h>
 #include <mgkeymgr/mgkeymgr.h>
@@ -39,11 +39,11 @@ static int NOINLINE MapKeyRegisters(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = DMAC5_KEYRING_REG_BASE;
-	uid = ksceKernelAllocMemBlock("SceSblDMAC5DmacKRBase", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceSblDMAC5DmacKRBase", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 		DMAC_REG_SIZE, &opt);
 	if (uid < 0)
 		return MG_ERROR_OPERATION;
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_keyring = base;
 	return 0;
 }

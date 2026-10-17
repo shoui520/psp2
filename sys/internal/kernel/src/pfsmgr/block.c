@@ -4,7 +4,7 @@
  * copied out or written back, with one icv per block.
  */
 
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "pfsmgr_internal.h"
@@ -42,7 +42,7 @@ int pfsBlockWrite(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx
 		len = key->blockSize * (req->count - 1) + req->lastLen;
 	offset = (SceUInt64)key->blockSize * req->first;
 	if (!pfsModeHasFileKeys(key->mode))
-		ksceKernelDcacheCleanRange(req->plain, pfsCacheAlign(len));
+		SceCpuForDriver_103872A5(req->plain, pfsCacheAlign(len));
 	ret = pfsLowerPwrite(lf, req->disk, len, offset, &n);
 	if (ret == 0 && pfsFileKeyHasIcvs(key)) {
 		for (i = 0; i < req->count; i++) {
@@ -63,7 +63,7 @@ int pfsBlockReadEdges(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt 
 
 	len = req->headLen;
 	if (len != 0) {
-		ksceKernelDcacheCleanInvalidateRange(req->plain, pfsCacheAlign(len));
+		SceCpuForDriver_364E68A4(req->plain, pfsCacheAlign(len));
 		ret = pfsLowerPread(lf, req->disk, len, req->first * key->blockSize, &n);
 		if (ret != 0)
 			return ret;
@@ -78,7 +78,7 @@ int pfsBlockReadEdges(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt 
 
 	len = req->tailLen;
 	if (len != 0 && (req->count != 1 || req->headLen == 0)) {
-		ksceKernelDcacheCleanInvalidateRange((char *)req->plain +
+		SceCpuForDriver_364E68A4((char *)req->plain +
 						     key->blockSize * (req->count - 1),
 						     pfsCacheAlign(len));
 		ret = pfsLowerPread(lf, (char *)req->disk + key->blockSize * (req->count - 1), len,
@@ -153,7 +153,7 @@ int pfsBlockRead(ScePfsBlockRequest *req, ScePfsLowerFile *lf, ScePfsCrypt *ctx)
 	int ret;
 
 	len = key->blockSize * (req->count - 1) + req->tailLen;
-	ksceKernelDcacheCleanInvalidateRange(req->plain, pfsCacheAlign(len));
+	SceCpuForDriver_364E68A4(req->plain, pfsCacheAlign(len));
 	ret = pfsLowerPread(lf, req->disk, len, req->offset - req->offsetInBlock, &n);
 	if (ret != 0)
 		return ret;

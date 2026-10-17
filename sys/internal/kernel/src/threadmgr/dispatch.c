@@ -18,7 +18,6 @@
 #include <intrmgr/intrmgr.h>
 #include "affinity.h"
 #include <threadmgr/uid_waitable.h>
-#include <psp2kern/kernel/cpu/atomic.h>
 
 /* what both context selectors share */
 #define DISPATCH_CPU_COUNT		4
@@ -47,7 +46,7 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 	if (affinity == 0)
 		affinity = thread->process->cpuAffinity;
 	affinity &= ~(1u << cpuId);
-	SCE_DBG_ASSERT_CHECK_LR(thread->currentCpuId == (int)ksceKernelCpuId(), 260, caller);
+	SCE_DBG_ASSERT_CHECK_LR(thread->currentCpuId == (int)sceKernelCpuId(), 260, caller);
 	manager = s_threadmgrRuntime.manager;
 	if ((uint32_t)thread->currentPriority - DISPATCH_PRIORITY_SHARED_LOW < DISPATCH_PRIORITY_SHARED_RANGE) {
 		thread->status = (thread->status & DISPATCH_STATE_HIGH_MASK) |
@@ -83,7 +82,7 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 		}
 	}
 	thread = (struct ThreadCB *)cpu->runningThread;
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	if (target != UINT32_MAX)
 		addIntrRequest(target, INTR_MASK_SCHEDULING);
 }
@@ -98,9 +97,6 @@ static inline __attribute__((always_inline)) void distributePreemptedThread(
 #define LOCKED_RETRY_DELAY		10
 
 typedef void (*ThreadmgrOffCpuProbe)(const struct ThreadmgrSchedProbeDescriptor *probe, ...);
-
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 
 #define SCHED_PROBE(symbol, providerName, probeName)				\
 	static uint32_t symbol##ProbeId;						\
@@ -129,7 +125,7 @@ uint32_t searchHighestPriority(void)
 			goto found;
 		}
 	}
-	ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->globalReadyLock);
+	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->globalReadyLock);
 	for (word = 0; word < 4; word++) {
 		bitmap = s_threadmgrRuntime.manager->globalReadyBitmap[word];
 		if (bitmap != 0) {
@@ -137,7 +133,7 @@ uint32_t searchHighestPriority(void)
 			break;
 		}
 	}
-	ksceKernelSpinlockLowUnlock(
+	sceKernelSpinlockLowUnlock(
 		&s_threadmgrRuntime.manager->globalReadyLock);
 	if (priority == PRIORITY_NO_THREAD) {
 		bitmap = cpu->readyBitmap[PRIORITY_CPU_LAST_WORD];
@@ -214,7 +210,7 @@ void findNextRunningThread(struct ThreadCB *current)
 {
 	struct ThreadCB *thread = current, *next;
 	struct ThreadMgrCpuCB *cpu;
-	uint32_t cpuId = ksceKernelCpuId(), mask, bitmap, affinity, target;
+	uint32_t cpuId = sceKernelCpuId(), mask, bitmap, affinity, target;
 	unsigned int word, other;
 	int currentPriority, priority, worst;
 	volatile unsigned int delay;
@@ -232,22 +228,22 @@ void findNextRunningThread(struct ThreadCB *current)
 			goto selected;
 		thread = (struct ThreadCB *)cpu->readyQueue[priority].next;
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 348);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		removeReady((struct ThreadCB *)thread, priority);
-		SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)ksceKernelCpuId(), 353);
+		SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)sceKernelCpuId(), 353);
 		goto take;
 	}
 
 	/* the global queues: the first thread this CPU may run */
 	mask = (1u << cpuId) & CPU_MASK_ALL;
 retry:
-	ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->globalReadyLock);
+	SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->globalReadyLock);
 	for (word = 0; word < 4; word++) {
 		bitmap = s_threadmgrRuntime.manager->globalReadyBitmap[word];
 		while (bitmap != 0) {
 			priority = __builtin_clz(bitmap) + (word + PRIORITY_GLOBAL_FIRST_WORD) * 32;
 			if (priority >= currentPriority) {
-				ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
+				sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 				SCE_DBG_ASSERT_LEVEL(0, thread != NULL, 457);
 				goto selected;
 			}
@@ -261,9 +257,9 @@ retry:
 				SCE_DBG_ASSERT_PRINTF(thread->magic == THREAD_CB_MAGIC, 389,
 					"*** fatal error: pNewRunningThreadCB=%p, priority=%d\n",
 					thread, priority);
-				if (ksceKernelSpinlockLowTrylock(THREAD_LOCK(thread)) < 0) {
+				if (SceCpuForDriver_5AC9D394(THREAD_LOCK(thread)) < 0) {
 					/* held elsewhere: start over shortly */
-					ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
+					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 					for (delay = LOCKED_RETRY_DELAY; delay != 0; delay--)
 						;
 					thread = current;
@@ -278,15 +274,15 @@ retry:
 					cpu->processId = thread->processId;
 					cpu->threadId = thread->threadId;
 					cpu->priority = thread->currentPriority;
-					ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
+					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 					takeThread(cpu, thread, cpuId);
 					SCE_DBG_ASSERT_CHECK(thread->currentCpuId == CPU_ID_GLOBAL, 424);
 					thread->currentCpuId = cpuId;
-					ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					goto selected;
 				}
 				/* not for this CPU: one that may run it reschedules if it should */
-				ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+				sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				target = UINT32_MAX;
 				worst = 1;
 				for (other = 0; other < CPU_COUNT; other++) {
@@ -303,7 +299,7 @@ retry:
 			bitmap &= ~(0x80000000u >> (priority % 32));
 		}
 	}
-	ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
+	sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->globalReadyLock);
 
 	/* the least urgent of this CPU's own */
 	bitmap = cpu->readyBitmap[PRIORITY_CPU_LAST_WORD];
@@ -314,15 +310,15 @@ retry:
 		goto selected;
 	thread = (struct ThreadCB *)cpu->readyQueue[priority].next;
 	SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 477);
-	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	removeReady((struct ThreadCB *)thread, priority);
-	SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)ksceKernelCpuId(), 481);
+	SCE_DBG_ASSERT_CHECK(thread->currentCpuId == (int)sceKernelCpuId(), 481);
 take:
 	takeThread(cpu, thread, cpuId);
 	cpu->processId = thread->processId;
 	cpu->threadId = thread->threadId;
 	cpu->priority = thread->currentPriority;
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 selected:
 	SCE_DBG_ASSERT_LEVEL(0, thread != NULL, 502);
 	cpu->nextRunningThread = (uintptr_t)thread;
@@ -455,7 +451,7 @@ void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason)
 	     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1266);
-		ksceKernelSpinlockLowUnlock(&mutex->lock);
+		sceKernelSpinlockLowUnlock(&mutex->lock);
 	}
 	ran = thread->runClock;
 	thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
@@ -578,13 +574,13 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 	/* the running thread lets go of the CPU */
 	if (thread != NULL) {
 		SCE_DBG_ASSERT_LEVEL(0, !(reason & SWITCH_REASON_WAIT), 574);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		thread = (struct ThreadCB *)cpu->runningThread;
 		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 583);
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
 			thread = (struct ThreadCB *)cpu->runningThread;
 		}
 		ran = thread->runClock;
@@ -622,7 +618,7 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
 				thread = (struct ThreadCB *)cpu->runningThread;
 				process = thread->process;
-				if (!ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
+				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
 					thread = (struct ThreadCB *)cpu->runningThread;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
@@ -646,14 +642,14 @@ struct ThreadCB *setupNextContext_thread(struct ThreadCB *current,
 	}
 
 	/* the selected thread takes it */
-	ksceKernelSpinlockLowLock(THREAD_LOCK(selected));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(selected));
 	for (mutex = (struct ThreadmgrFastMutex *)selected->ownedFastMutexNext;
 	     mutex != (struct ThreadmgrFastMutex *)&selected->ownedFastMutexNext;
 	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 689);
-		ksceKernelSpinlockLowLock(&mutex->lock);
+		SceCpuForDriver_BF82DEB2(&mutex->lock);
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
 	cpu->threadSwitchCount++;
 	cpu->lastThreadSwitchTime = SceSysrootForKernel_E20F6FC8();
 	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
@@ -733,7 +729,7 @@ void switchThread2(uint32_t reason)
 		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 183);
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
 		}
 		ran = thread->runClock;
 		thread->runClock = ran - cpu->lastThreadSwitchTime + SceSysrootForKernel_E20F6FC8();
@@ -747,11 +743,11 @@ void switchThread2(uint32_t reason)
 		cpu->threadId = -1;
 		cpu->priority = PRIORITY_NONE;
 		cpu->runningThread = 0;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (waitId != WAIT_ID_NONE && waitId != -1 &&
 		    s_threadmgrRuntime.manager->signalId != waitId) {
 			cpu->releasingWaitObject = 1;
-			ksceGUIDReleaseObject(waitId);
+			sceGUIDReleaseObject(waitId);
 			cpu->releasingWaitObject = 0;
 		}
 		SCE_DBG_ASSERT_LEVEL(0, cpu == currentCpuState(), 226);
@@ -760,7 +756,7 @@ void switchThread2(uint32_t reason)
 	}
 	for (;;) {
 		if (mode & SWITCH_MODE_UNLOCK) {
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			SCE_DBG_ASSERT_CHECK(cpu->runningThread == 0, 231);
 		}
 		selected = setupNextContext_thread((struct ThreadCB *)cpu->runningThread,
@@ -869,13 +865,13 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 
 	/* the running thread is preempted */
 	if (thread != NULL) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		thread = (struct ThreadCB *)cpu->runningThread;
 		for (mutex = (struct ThreadmgrFastMutex *)thread->ownedFastMutexNext;
 		     mutex != (struct ThreadmgrFastMutex *)&thread->ownedFastMutexNext;
 		     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 			SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1007);
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
 			thread = (struct ThreadCB *)cpu->runningThread;
 		}
 		ran = thread->runClock;
@@ -901,16 +897,16 @@ struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t r
 					thread->currentCpuId = -1;
 					thread->status = ((thread->status & 0x7fff) << 16) |
 						THREAD_STATE_DEBUG_SUSPENDED | THREAD_STATE_OFF_CPU;
-					ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+					SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
 					thread = (struct ThreadCB *)cpu->runningThread;
 					thread->next = (uintptr_t)
 						&s_threadmgrRuntime.manager->debugSuspendedNext;
 					thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
 					s_threadmgrRuntime.manager->debugSuspendedPrev = (uintptr_t)thread;
 					*(uintptr_t *)thread->prev = (uintptr_t)thread;
-					ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+					sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 					thread = (struct ThreadCB *)cpu->runningThread;
-					ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 					goto overflowed;
 				}
 				thread->status |= THREAD_STATE_DEBUG_SUSPENDED;
@@ -931,7 +927,7 @@ overflowed:
 			if (status == OVERFLOW_SUSPEND_PROCESS) {
 				thread = (struct ThreadCB *)cpu->runningThread;
 				process = thread->process;
-				if (!ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested,
+				if (!SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested,
 								     0, 1)) {
 					thread = (struct ThreadCB *)cpu->runningThread;
 					process->abortCode = DEBUG_KIND_STACK_OVERFLOW;
@@ -955,14 +951,14 @@ overflowed:
 	}
 
 	/* the selected thread takes the CPU */
-	ksceKernelSpinlockLowLock(THREAD_LOCK(selected));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(selected));
 	for (mutex = (struct ThreadmgrFastMutex *)selected->ownedFastMutexNext;
 	     mutex != (struct ThreadmgrFastMutex *)&selected->ownedFastMutexNext;
 	     mutex = (struct ThreadmgrFastMutex *)mutex->next) {
 		SCE_DBG_ASSERT_CHECK(mutex->magic == FAST_MUTEX_MAGIC, 1127);
-		ksceKernelSpinlockLowLock(&mutex->lock);
+		SceCpuForDriver_BF82DEB2(&mutex->lock);
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(selected));
 	cpu->threadSwitchCount++;
 	cpu->lastThreadSwitchTime = SceSysrootForKernel_E20F6FC8();
 	if (s_threadmgrRuntime.manager->paHooks[0] != 0)
@@ -1047,19 +1043,19 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 	volatile unsigned int delay;
 
 	SCE_DBG_ASSERT_CHECK(thread != NULL, 814);
-	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	for (;;) {
 		SCE_DBG_ASSERT_CHECK(thread->waitType == WAIT_TYPE_FAST_MUTEX_SPIN, 821);
 		SCE_DBG_ASSERT_CHECK((thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING) &&
-				     thread->currentCpuId == (int)ksceKernelCpuId(), 823);
+				     thread->currentCpuId == (int)sceKernelCpuId(), 823);
 		SCE_DBG_ASSERT_CHECK(thread->spinMutex->magic == FAST_MUTEX_MAGIC, 829);
 		mutex = thread->spinMutex;
-		if (ksceKernelSpinlockLowTrylock(&mutex->queue->lock) >= 0)
+		if (SceCpuForDriver_5AC9D394(&mutex->queue->lock) >= 0)
 			break;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		for (delay = SPIN_RETRY_DELAY; delay != 0; delay--)
 			;
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	}
 	SCE_DBG_ASSERT_PRINTF_LEVEL(0, thread->fastMutexHandoff == 0, 839,
 				     "fSpinInterrupted=0x%08X\n", thread->fastMutexHandoff);
@@ -1071,7 +1067,7 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		/* free: it is the thread's */
 		thread->spinMutex = NULL;
 		thread->waitType = 0;
-		ksceKernelSpinlockLowLock(&mutex->lock);
+		SceCpuForDriver_BF82DEB2(&mutex->lock);
 		acquireFastMutex(mutex, context);
 		goto unlock;
 	}
@@ -1095,8 +1091,8 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		((struct ThreadmgrWaitNode *)thread->prev)->next = (struct ThreadmgrWaitNode *)thread;
 	} else {
 		/* a stop or exit request: no wait */
-		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
+		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_SIGNAL_DEFERRED);
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_CLEAR);
 		request = thread->flags & THREAD_FLAG_REQUEST_MASK;
 		if (request == THREAD_FLAG_REQUEST_EXIT_DELETE || request == THREAD_FLAG_REQUEST_EXIT)
 			thread->waitResult = SCE_KERNEL_ERROR_WAIT_EXITING;
@@ -1108,6 +1104,6 @@ void callThreadmgrBeforeIntrHandler(uintptr_t unused, struct ThreadCB *context)
 		thread->waitType = 0;
 	}
 unlock:
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	ksceKernelSpinlockLowUnlock(&mutex->queue->lock);
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(&mutex->queue->lock);
 }

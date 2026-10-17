@@ -2,12 +2,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/iofilemgr.h>
-#include <psp2kern/kernel/pm_mgr.h>
+#include <sysmem/pmmgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <idstorage/idstorage.h>
 #include <acmgr/acmgr.h>
@@ -197,7 +196,7 @@ static int initializeStorage(void)
 	/* Sony only initializes the first two words of this option record. */
 	createOpt.size = sizeof(createOpt);
 	createOpt.attr = 1;
-	heap = ksceKernelCreateHeap(name, 0x8000, &createOpt);
+	heap = SceSysmemForDriver_9328E0E8(name, 0x8000, &createOpt);
 	if (heap < 0)
 		return ID_NO_SPACE;
 	storage.offset = 0;
@@ -224,22 +223,22 @@ static int initializeStorage(void)
 	if ((bytes >> 9) >> 32)
 		return ID_INVALID_ARGUMENT;
 	totalLeaves = indexLeaves = (int)(bytes >> 9);
-	storage.index = ksceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &allocOpt);
+	storage.index = SceSysmemForDriver_49D4DD9B(heap, indexLeaves << 1, &allocOpt);
 	if (!storage.index)
 		return ID_NO_SPACE;
 	memset(storage.index, 0, indexLeaves << 1);
-	ret = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x4000, NULL);
+	ret = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x4000, NULL);
 	if (ret < 0)
 		return ret;
 	storage.memblock = ret;
-	ret = ksceKernelGetMemBlockBase(ret, (void **)&storage.data);
+	ret = SceSysmemForDriver_A841EDDA(ret, (void **)&storage.data);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(storage.memblock);
+		SceSysmemForDriver_009E1C61(storage.memblock);
 		return ret;
 	}
 	ret = ksceKernelCreateMutex(name, 2, 0, NULL);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(storage.memblock);
+		SceSysmemForDriver_009E1C61(storage.memblock);
 		return ret;
 	}
 	storage.mutex = ret;
@@ -252,7 +251,7 @@ static int initializeStorage(void)
 	}
 	ret = loadPermissions();
 	if (ret >= 0) {
-		ret = ksceKernelRegisterSysEventHandler(name, storageSysEvent, NULL);
+		ret = sceKernelRegisterSysEventHandler(name, storageSysEvent, NULL);
 		if (ret >= 0)
 			ret = 0;
 	}
@@ -269,7 +268,7 @@ int module_start(SceSize args, void *argp)
 int ksceIdStorageRestart(int flush)
 {
 	SceProductMode mode = 0;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -278,10 +277,10 @@ int ksceIdStorageRestart(int flush)
 	if (flush)
 		ksceIdStorageFlush();
 	ksceKernelDeleteMutex(storage.mutex);
-	ksceKernelFreeMemBlock(storage.memblock);
+	SceSysmemForDriver_009E1C61(storage.memblock);
 	if (storage.index)
-		ksceKernelFreeHeapMemory(heap, storage.index);
-	ksceKernelDeleteHeap(heap);
+		sceKernelFreeHeapMemory(heap, storage.index);
+	sceKernelDeleteHeap(heap);
 	useEntire = 1;
 	ret = initializeStorage();
 	return ret < 0 ? ret : 0;
@@ -437,7 +436,7 @@ int ksceIdStorageReadLeaf(SceSize leaf, void *buffer)
 int ksceIdStorageWriteLeaf(SceSize leaf, const void *buffer)
 {
 	SceProductMode mode = 0;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -469,7 +468,7 @@ int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 
 	if (ret < 0)
 		return ret;
@@ -502,7 +501,7 @@ int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint
 int ksceIdStorageFormat(void)
 {
 	SceProductMode mode = 0;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 	int i;
 
 	if (ret < 0)
@@ -534,7 +533,7 @@ int ksceIdStorageUnformat(void)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 	unsigned int i;
 
 	if (ret < 0)
@@ -564,12 +563,12 @@ int ksceIdStorageGetFreeLeaves(void)
 	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	ret = 0;
 	for (i = 0; i < indexLeaves; i++)
 		if (storage.index[i] == INDEX_FREE)
 			ret++;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ksceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
@@ -600,7 +599,7 @@ int ksceIdStorageCreateLeaf(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 	int previous, block, chosen, minimum, count, i;
 
 	if (ret < 0)
@@ -619,7 +618,7 @@ int ksceIdStorageCreateLeaf(uint32_t leaf)
 	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (findLeaf(leaf) >= 0) {
 		ret = ID_ALREADY_EXISTS;
 		goto done;
@@ -655,7 +654,7 @@ int ksceIdStorageCreateLeaf(uint32_t leaf)
 	storage.dirty = 1;
 	ret = 0;
 done:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ksceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
@@ -664,7 +663,7 @@ int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 	int i, block, n;
 
 	if (ret < 0)
@@ -683,7 +682,7 @@ int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	for (i = 0; i < count; i++) {
 		if (leaves[i] >= 0xfff0) {
 			ret = ID_INVALID_LEAF;
@@ -711,7 +710,7 @@ int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
 		}
 	}
 done:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ksceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
@@ -720,7 +719,7 @@ int ksceIdStorageDeleteLeaf(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
-	int ret = kscePmMgrGetProductMode(&mode);
+	int ret = ScePmMgrForDriver_2AC815A2(&mode);
 	int slot;
 
 	if (ret < 0)
@@ -739,7 +738,7 @@ int ksceIdStorageDeleteLeaf(uint32_t leaf)
 	ret = ksceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	slot = findLeaf(leaf);
 	if (slot < 0) {
 		ret = ID_NOT_FOUND;
@@ -748,7 +747,7 @@ int ksceIdStorageDeleteLeaf(uint32_t leaf)
 		storage.dirty = 1;
 		ret = 0;
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ksceKernelUnlockMutex(storage.mutex, 1);
 	return ret;
 }
@@ -762,10 +761,10 @@ static int commitStorage(void)
 	int i, j, block, destination, ret = 0;
 	int count = storage.blockLeaves;
 
-	index = ksceKernelAllocHeapMemoryWithOption(heap, indexLeaves << 1, &opt);
+	index = SceSysmemForDriver_49D4DD9B(heap, indexLeaves << 1, &opt);
 	if (!index)
 		return ID_NO_SPACE;
-	blockData = ksceKernelAllocHeapMemoryWithOption(heap, 0x4000, &opt);
+	blockData = SceSysmemForDriver_49D4DD9B(heap, 0x4000, &opt);
 	/* Sony leaks the first allocation when the second fails. */
 	if (!blockData)
 		return ID_NO_SPACE;
@@ -834,7 +833,7 @@ static int commitStorage(void)
 		clearCache();
 	}
 	SceKernelSuspendForDriver_2BB92967(0);
-	ksceKernelFreeHeapMemory(heap, index);
-	ksceKernelFreeHeapMemory(heap, blockData);
+	sceKernelFreeHeapMemory(heap, index);
+	sceKernelFreeHeapMemory(heap, blockData);
 	return ret;
 }

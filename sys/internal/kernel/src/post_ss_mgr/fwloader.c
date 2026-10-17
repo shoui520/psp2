@@ -5,9 +5,9 @@
  * the path itself.
  */
 
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
 
@@ -44,7 +44,7 @@ int g_fwLoaderState;
 int fwLoaderClearPath(void)	/* name unknown */
 {
 	if (g_fwLoaderBuf != NULL)
-		ksceKernelFreeHeapMemory(FWLOADER_HEAP, g_fwLoaderBuf);
+		sceKernelFreeHeapMemory(FWLOADER_HEAP, g_fwLoaderBuf);
 	g_fwLoaderBuf = NULL;
 	g_fwLoaderOverridePath = NULL;
 	g_fwLoaderOverridePathSize = 0;
@@ -80,11 +80,11 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	g_fwLoaderPathSize = len + 1;
 
 	prefix = FWLOADER_PREFIX_EXTERNAL;
-	if (!ksceSysrootIsManufacturingMode()) {
+	if (!SceSysrootForKernel_55392965()) {
 		prefix = NULL;
-		if (ksceSblQafMgrIsAllowHost0Access()) {
+		if (SceQafMgrForDriver_082A4FC2()) {
 			prefix = FWLOADER_PREFIX_HOST0;
-			if (!ksceKernelCheckDipsw(FWLOADER_DIPSW_HOST0))
+			if (!SceDipswForDriver_A98FC2FD(FWLOADER_DIPSW_HOST0))
 				prefix = NULL;
 		}
 	}
@@ -129,7 +129,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	if (g_fwLoaderPathSize + g_fwLoaderOverridePathSize > FWLOADER_BUF_SIZE)
 		goto fail;
 
-	buf = ksceKernelAllocHeapMemory(FWLOADER_HEAP, FWLOADER_BUF_SIZE);
+	buf = SceSysmemForDriver_7B4CB60A(FWLOADER_HEAP, FWLOADER_BUF_SIZE);
 	g_fwLoaderBuf = buf;
 	if (prefix != NULL) {
 		g_fwLoaderOverridePath = buf;

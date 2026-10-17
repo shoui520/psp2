@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
+#include <sysmem/cpu.h>
 
 /* Pristine sgx_mkif_km.h register-bank selection for SGX MP. */
 #define SGX_REG_BANK_SHIFT 14
@@ -24,7 +25,6 @@ SceUID gSGXCleanupMutex;
 IMG_UINT32 OSClockus(IMG_VOID);
 IMG_VOID OSSleepms(IMG_UINT32 ui32Timems);
 IMG_VOID OSWaitus(IMG_UINT32 ui32Timeus);
-IMG_VOID SceCpuForDriver_E813EBB2(IMG_VOID);
 IMG_VOID OSWriteHWReg(IMG_VOID *pvLinRegBaseAddr, IMG_UINT32 ui32Offset,
 		IMG_UINT32 ui32Value);
 PVRSRV_ERROR PVRSRVSetDevicePowerStateKM(IMG_UINT32 ui32DeviceIndex,

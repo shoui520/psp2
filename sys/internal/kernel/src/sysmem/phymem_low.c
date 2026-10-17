@@ -79,7 +79,7 @@ int PhyMemLowMarkUsed(PhyMemLow *pml, uintptr_t pa, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	unitShift = pml->unitShift;
 	bitmap = pml->bitmap;
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
+	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
 	index = (pa - base) >> unitShift;
 	bit = index & 0x1f;
 	start = &bitmap[index >> 5];
@@ -125,7 +125,7 @@ mark:
 	ret = 0;
 	PHYMEM_LOW_HOOK(onAlloc, pml, pa - base, size, __builtin_return_address(0));
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return ret;
 }
 
@@ -212,7 +212,7 @@ int PhyMemLowAlloc(PhyMemLow *pml, SceSize size, SceSize alignment, SceUInt32 fl
 	cur.word = 0;
 	cur.bit = 0;
 	cur.unit = pml->bitmap;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
+	intr = SceCpuForDriver_D32ACE9E(&pml->lock);
 
 	for (;;) {
 		/* the next free unit */
@@ -297,7 +297,7 @@ noSpace:
 	PhyMemLowPrint(pml);
 #endif
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, intr);
 	return ret;
 }
 
@@ -314,7 +314,7 @@ int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	index = (pa - base) >> pml->unitShift;
 	unit = pml->bitmap;
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
+	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
 	unit += index >> 5;
 	bit = index & 0x1f;
 	word = *unit;
@@ -333,7 +333,7 @@ int PhyMemLowFree(PhyMemLow *pml, uintptr_t pa, SceSize size)
 		}
 	}
 	PHYMEM_LOW_HOOK(onFree, pml, pa - base, size, __builtin_return_address(0));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return 0;
 }
 
@@ -345,13 +345,13 @@ int PhyMemLowGetFreeSize(PhyMemLow *pml, SceSize *free)
 	SceUInt32 i, b, units = 0;
 	int flags;
 
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&pml->lock);
+	flags = SceCpuForDriver_D32ACE9E(&pml->lock);
 	for (i = 0; i != pml->wordCount; i++, unit++)
 		for (b = 0; b != 32; b++)
 			if (!(*unit & (1 << b)))
 				units++;
 	*free = units << pml->unitShift;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&pml->lock, flags);
 	return 0;
 }
 
@@ -376,8 +376,8 @@ int PhyMemLowMainFree(uintptr_t pa, SceSize size)
 int PhyMemLowCreate(uintptr_t base, SceSize size, PhyMemLow **out)
 {
 	SceUInt32 words = size >> (PHYMEM_LOW_UNIT_SHIFT + 5), i;
-	PhyMemLow *pml = ksceKernelAlloc(sizeof(*pml));
-	SceUInt32 *bitmap = ksceKernelAlloc(words * sizeof(*bitmap));
+	PhyMemLow *pml = SceSysmemForKernel_85571907(sizeof(*pml));
+	SceUInt32 *bitmap = SceSysmemForKernel_85571907(words * sizeof(*bitmap));
 
 	pml->base = base;
 	pml->wordCount = words;
@@ -395,7 +395,7 @@ int PhyMemLowCreate(uintptr_t base, SceSize size, PhyMemLow **out)
 
 int PhyMemLowDestroy(PhyMemLow *pml)
 {
-	ksceKernelFree(pml);
+	SceSysmemForKernel_4233C16D(pml);
 	return 0;
 }
 

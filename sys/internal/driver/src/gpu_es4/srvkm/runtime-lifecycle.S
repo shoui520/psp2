@@ -127,7 +127,7 @@ GpuRuntimeDeviceAcquire:
 	stm.w sp, {r2, r3}
 	ldr r2, GpuRuntimeDeviceAcquireLiterald4
 	ldr r3, GpuRuntimeDeviceAcquireLiterald8
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	b .LGpuRuntimeDeviceAcquire98
 .LGpuRuntimeDeviceAcquire52:
 	movs r3, #0x50
@@ -427,7 +427,7 @@ GpuRuntimeWorker:
 	strd r3, r0, [sp]
 	mov r0, r5
 	ldr r3, GpuRuntimeWorkerLiteral6c
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	b .LGpuRuntimeWorkere
 .LGpuRuntimeWorker46:
 	movs r0, #0
@@ -666,7 +666,7 @@ GpuRuntimePendingVisitor:
 GpuSignalListLock:
 	push {r3, lr}
 	ldr r0, GpuSignalListLockLiteral10
-	bl ksceKernelSpinlockLowLockCpuSuspendIntr
+	bl SceCpuForDriver_D32ACE9E
 	ldr r3, GpuSignalListLockLiteral14
 	str r0, [r3]
 	pop {r3, pc}
@@ -686,7 +686,7 @@ GpuSignalListUnlock:
 	ldr r3, GpuSignalListUnlockLiteral10
 	ldr r0, GpuSignalListUnlockLiteral14
 	ldr r1, [r3]
-	bl ksceKernelSpinlockLowUnlockCpuResumeIntr
+	bl sceKernelSpinlockLowUnlockCpuResumeIntr
 	pop {r3, pc}
 	nop 
 .size GpuSignalListUnlock, .-GpuSignalListUnlock
@@ -773,7 +773,7 @@ GpuSignalRecordValidate:
 	subs r0, r4, r0
 	it ne
 	movne r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	mov r0, r4
 	pop.w {r4, r5, r6, r7, r8, pc}
 .LGpuSignalRecordValidate5e:

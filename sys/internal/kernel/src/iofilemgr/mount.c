@@ -723,7 +723,7 @@ static inline __attribute__((always_inline)) void init_ux0(void)
 	point->mountData = &g_mountDataUx0;
 	point->id = 0x800;
 	__builtin_memcpy(&point->param, &param, sizeof(param));
-	if (!ksceSysrootIsManufacturingMode() && ksceSysrootIsNonRemovableCardMode()) {
+	if (!SceSysrootForKernel_55392965() && SceSysrootForKernel_50FE3B4D()) {
 		point->mountData = &g_mountDataUx0Internal;
 		point->param.misc = &g_mountDataUx0Internal;
 	}
@@ -937,7 +937,7 @@ int mnt_initialize(void)
 	}
 	init_sdstor();
 	init_memdisk();
-	if (ksceSysrootIsManufacturingMode())
+	if (SceSysrootForKernel_55392965())
 		init_sd0();
 	init_os0();
 	init_vs0();
@@ -1071,12 +1071,12 @@ SceUID ksceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 			break;
 	}
 	name[sizeof(name) - 1] = '\0';
-	uid = ksceGUIDKernelCreate(&g_mountEventClass, name, (SceObjectBase **)&event);
+	uid = SceSysmemForDriver_56A13E90(&g_mountEventClass, name, (SceObjectBase **)&event);
 	if (uid < 0)
 		return uid;
 	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
 	if (ret < 0) {
-		closed = ksceGUIDClose(uid);
+		closed = sceGUIDClose(uid);
 		SCE_DBG_ASSERT_FUNC(closed == 0, 1641, "sceIoCreateMountEvent");
 		return ret;
 	}
@@ -1111,14 +1111,14 @@ int ksceIoDeleteMountEvent(SceUID uid)
 	SceUID handle;
 	int ret;
 
-	handle = ksceGUIDOpenByGUID(uid);
+	handle = SceSysmemForKernel_89D33DF0(uid);
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(uid),
 					 &g_mountEventClass))
 		return 0x80028002;
 	event = SceSysmemForKernel_FA6C098C(uid);
-	ksceGUIDClose(handle);
+	sceGUIDClose(handle);
 	ret = ksceKernelLockMutex(g_mountMutex, 1, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1696, "sceIoDeleteMountEvent",
@@ -1147,7 +1147,7 @@ int ksceIoDeleteMountEvent(SceUID uid)
 				"mutex unlock failed ... %d 0x%08x\n", ret, ret);
 		return ret;
 	}
-	return ksceGUIDClose(uid);
+	return sceGUIDClose(uid);
 }
 
 int SceIofilemgrForDriver_A39A9CA7(const char *dev, int flags, SceUInt64 reserved)
@@ -1176,7 +1176,7 @@ int mount_event_process_finalize(SceUID pid)
 		if ((int)num <= 0)
 			break;
 		for (i = 0; i < (int)num; i++) {
-			guid = kscePUIDtoGUID(pid, puids[i]);
+			guid = SceSysmemForDriver_45D22597(pid, puids[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 1752,
 					"PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
@@ -1185,7 +1185,7 @@ int mount_event_process_finalize(SceUID pid)
 			}
 			ret = ksceIoDeleteMountEvent(guid);
 			if (ret == 0) {
-				kscePUIDClose(pid, puids[i]);
+				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
 			} else {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 1761,
 					"sceIoDeleteMountEvent failed %d 0x%x uid=0x%x %d\n",

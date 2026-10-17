@@ -2,7 +2,6 @@
 #include "sdif_internal.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <string.h>
 
@@ -43,7 +42,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 			last.attributes |= 2;
 			command->descriptors[entries - 1] = last;
 		}
-		ksceKernelDcacheCleanRange(command->descriptors, 128);
+		SceCpuForDriver_103872A5(command->descriptors, 128);
 		command->descriptorPhysicalAddress = command->defaultDescriptorPhysicalAddress;
 		return 0;
 	}
@@ -111,7 +110,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 		vector.data_in_vector = 0;
 		vector.count = 0;
 		vector.ranges = command->physicalRanges;
-		result = ksceKernelVARangeToPAVector(&range, &vector);
+		result = sceKernelVARangeToPAVector(&range, &vector);
 		if (result < 0) {
 			SCE_DBG_PRINTF_FUNC(0, 80, "getPaRangeForAlignedData",
 				"%s.%d VARangeToPAVector error:0x%x(%d)\n",
@@ -152,7 +151,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 				vector.data_in_vector = 0;
 				vector.count = 0;
 				vector.ranges = command->physicalRanges;
-				result = ksceKernelVARangeToPAVector(&range, &vector);
+				result = sceKernelVARangeToPAVector(&range, &vector);
 				if (result < 0) {
 					SCE_DBG_PRINTF_FUNC(0, 159, "getAdmaDescriptorEntryNum",
 						"%s.%d VARangeToPAVector error:0x%x(%d)\n",
@@ -198,7 +197,7 @@ countedRange:
 			memset(&option, 0, sizeof(option));
 			option.attr = 0x200000;
 			option.size = sizeof(option);
-			result = ksceKernelAllocMemBlock("SceSdif", 0x1020d006, allocation, &option);
+			result = SceSysmemForDriver_C94850C9("SceSdif", 0x1020d006, allocation, &option);
 			if (result < 0) {
 				SCE_DBG_PRINTF_FUNC(0, 417, "allocateAdmaDescriptorArea",
 					"%s %d Ex ADMA desc area is too large:%d\n",
@@ -206,14 +205,14 @@ countedRange:
 				return result;
 			}
 			command->descriptorMemblock = result;
-			ksceKernelGetMemBlockBase(result, (void **)&command->descriptors);
+			SceSysmemForDriver_A841EDDA(result, (void **)&command->descriptors);
 		} else {
 			command->descriptors = command->context->port.descriptorBuffer;
 		}
 	}
 	entries = 0;
 	if (command->leadingLength) {
-		ksceKernelDcacheCleanRange(command->leadingBuffer, 64);
+		SceCpuForDriver_103872A5(command->leadingBuffer, 64);
 		descriptor = command->descriptors;
 		descriptor->address = command->leadingPhysicalAddress;
 		descriptor->length = command->leadingLength;
@@ -221,7 +220,7 @@ countedRange:
 		entries = 1;
 	}
 	if (aligned) {
-		ksceKernelDcacheCleanRange(alignedBuffer, aligned);
+		SceCpuForDriver_103872A5(alignedBuffer, aligned);
 		if (count <= 16) {
 			for (index = 0; index != count; index++) {
 				address = command->physicalRanges[index].addr;
@@ -248,7 +247,7 @@ countedRange:
 				vector.data_in_vector = 0;
 				vector.count = 0;
 				vector.ranges = command->physicalRanges;
-				result = ksceKernelVARangeToPAVector(&range, &vector);
+				result = sceKernelVARangeToPAVector(&range, &vector);
 				if (result < 0) {
 					SCE_DBG_PRINTF_FUNC(0, 250, "setAdmaDescriptorsForAlignedData",
 						"%s.%d VARangeToPAVector error:0x%x(%d)\n",
@@ -280,7 +279,7 @@ countedRange:
 		}
 	}
 	if (command->trailingLength) {
-		ksceKernelDcacheCleanRange(command->trailingBuffer, 64);
+		SceCpuForDriver_103872A5(command->trailingBuffer, 64);
 		descriptor = &command->descriptors[entries++];
 		descriptor->address = command->trailingPhysicalAddress;
 		descriptor->length = command->trailingLength;
@@ -295,12 +294,12 @@ countedRange:
 			"%s %d Warning: descriptor entry num is zero\n",
 			"prepareAdmaDescriptorTable", 559);
 	}
-	ksceKernelDcacheCleanRange(command->descriptors, bytes);
+	SceCpuForDriver_103872A5(command->descriptors, bytes);
 	if (command->descriptors == command->defaultDescriptors) {
 		command->descriptorPhysicalAddress = command->defaultDescriptorPhysicalAddress;
 		return 0;
 	}
-	result = ksceKernelVAtoPA(command->descriptors, &command->descriptorPhysicalAddress);
+	result = SceSysmemForDriver_8D160E65(command->descriptors, &command->descriptorPhysicalAddress);
 	if (result >= 0)
 		return 0;
 	SCE_DBG_PRINTF_FUNC(0, 590, "prepareAdmaDescriptorTable",
@@ -308,7 +307,7 @@ countedRange:
 		command->descriptors, command->descriptorPhysicalAddress);
 freeArea:
 	if (command->flags & 0x100000)
-		ksceKernelFreeMemBlock(command->descriptorMemblock);
+		SceSysmemForDriver_009E1C61(command->descriptorMemblock);
 	else
 		SCE_DBG_ASSERT_FUNC(command->descriptors == command->context->port.descriptorBuffer,
 			434, "freeAdmaDescriptorArea");
@@ -359,24 +358,24 @@ int freeAdmaDescriptorArea(SdifCommand *command)
 
 	if ((flags & 0x400) && command->descriptors != command->defaultDescriptors) {
 		if (flags & 0x100000)
-			ksceKernelFreeMemBlock(command->descriptorMemblock);
+			SceSysmemForDriver_009E1C61(command->descriptorMemblock);
 		else
 			SCE_DBG_ASSERT_FUNC(command->descriptors == command->context->port.descriptorBuffer,
 					    434, "freeAdmaDescriptorArea");
 	}
 	if (command->state == 3 && !(command->flags & 0x100200)) {
 		if (command->leadingLength) {
-			ksceKernelDcacheInvalidateRange(command->leadingBuffer, 64);
+			SceCpuForDriver_02796361(command->leadingBuffer, 64);
 			memcpy(command->buffer, command->leadingBuffer, command->leadingLength);
 		}
 		if (command->trailingLength) {
-			ksceKernelDcacheInvalidateRange(command->trailingBuffer, 64);
+			SceCpuForDriver_02796361(command->trailingBuffer, 64);
 			memcpy((char *)command->alignedBuffer + command->alignedLength,
 			       command->trailingBuffer, command->trailingLength);
 		}
 		if (command->state == 3 && !(command->flags & 0x100200) &&
 		    command->alignedLength)
-			ksceKernelDcacheInvalidateRange(command->alignedBuffer, command->alignedLength);
+			SceCpuForDriver_02796361(command->alignedBuffer, command->alignedLength);
 	}
 	return 0;
 }
@@ -403,12 +402,12 @@ void sceSdifDumpAdmaInfo(SdifCommand *command)
 			SCE_DBG_PRINTF(0, 831, "descriptor[%d]:0x%llx\n", index, descriptor.value);
 		}
 		SCE_DBG_PRINTF(0, 834, "# Invalidate descriptor area to read real descriptor.\n");
-		ksceKernelDcacheInvalidateRange(command->descriptors, 128);
+		SceCpuForDriver_02796361(command->descriptors, 128);
 		for (index = 0; index < 16; index++) {
 			descriptor.fields = command->descriptors[index];
 			SCE_DBG_PRINTF(0, 839, "descriptor[%d]:0x%llx\n", index, descriptor.value);
 		}
-		result = ksceKernelVAtoPA(command->descriptors, &physicalAddress);
+		result = SceSysmemForDriver_8D160E65(command->descriptors, &physicalAddress);
 		if (result < 0)
 			SCE_DBG_PRINTF(0, 845, "VA to PA error:0x%x  VA:%p PA:0x%x\n",
 				result, command->descriptors, physicalAddress);
@@ -420,7 +419,7 @@ void sceSdifDumpAdmaInfo(SdifCommand *command)
 			command->descriptors, command->descriptorPhysicalAddress);
 	}
 	SCE_DBG_PRINTF(0, 859, "alignedAddr         :0x%x\n", command->alignedBuffer);
-	result = ksceKernelVAtoPA(command->alignedBuffer, &physicalAddress);
+	result = SceSysmemForDriver_8D160E65(command->alignedBuffer, &physicalAddress);
 	if (result < 0)
 		SCE_DBG_PRINTF(0, 863, "VA to PA error:0x%x  VA:0x%x PA:0x%x\n",
 			result, command->alignedBuffer, physicalAddress);

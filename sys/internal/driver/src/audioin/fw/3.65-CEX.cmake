@@ -65,7 +65,7 @@ set(MODULE_IMPORT_NIDS
 	0x51593F20:F:0xD1F94D9D
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyToUserProc
+	sceKernelCopyToUserProc
 	memset
 	memcpy
 	__aeabi_uidivmod
@@ -86,13 +86,13 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnlockFastMutex
 	ksceKernelGetProcessTimeLowCore
 	SceProcessmgrForDriver_D141C076
-	ksceKernelRegisterSysEventHandler
-	ksceKernelRegisterProcEventHandler
-	ksceKernelAtomicGetAndOr32
-	ksceKernelAtomicOrAndGet32
-	ksceKernelAtomicAndAndGet32
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	sceKernelRegisterProcEventHandler
+	SceCpuForDriver_2A40BB93
+	SceCpuForDriver_BC248C30
+	SceCpuForDriver_DF899E4B
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	SceAudioForDriver_75915003
 	SceCodecForDriver_41CFFE48
 	SceCodecForDriver_C1DB7BAF

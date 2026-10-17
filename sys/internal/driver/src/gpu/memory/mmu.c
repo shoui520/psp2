@@ -3,7 +3,6 @@
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <sysmem/sysclib.h>
 #include <psp2kern/kernel/processmgr.h>
@@ -191,22 +190,22 @@ int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 		options.pid = pid;
 		type = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_UMAIN_NC_RW;
 	}
-	uid = ksceKernelAllocMemBlock(name, type, size, &options);
+	uid = SceSysmemForDriver_C94850C9(name, type, size, &options);
 	if (uid < 0)
 		return uid;
-	ret = ksceKernelGetMemBlockBase(uid, &base);
+	ret = SceSysmemForDriver_A841EDDA(uid, &base);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 231,
 			"%s: Failed to get address for memblock %08x with error %08x.\n",
 			__func__, uid, ret);
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		return ret;
 	}
 	ret = CreateGpuHeap((unsigned)base, size, 0, 0, &pool->heap);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 238, "%s: Failed to create heap with error %08x\n",
 			       __func__, ret);
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		return ret;
 	}
 	pool->uid = uid;
@@ -228,7 +227,7 @@ int FreeGpuPageTablePool(GpuPageTablePool *pool)
 	}
 	uid = pageTablePool->uid;
 	if (uid != -1) {
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		pageTablePool->uid = -1;
 	}
 	return 0;
@@ -248,7 +247,7 @@ int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 	revision = kscePervasiveGetSoCRevision();
 	if (!(revision & 0x1ff00) && (unsigned char)revision <= 0x32)
 		return 0;
-	ret = ksceKernelVAtoPA((void *)address, &previous);
+	ret = SceSysmemForDriver_8D160E65((void *)address, &previous);
 	if (ret < 0)
 		return ret;
 	if (!(previous & 0x3fffff)) {
@@ -269,7 +268,7 @@ int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 	}
 	for (cursor = address + 0x1000; cursor < address + 0x400000;
 	     cursor += 0x1000) {
-		ret = ksceKernelVAtoPA((void *)cursor, &physical);
+		ret = SceSysmemForDriver_8D160E65((void *)cursor, &physical);
 		if (ret < 0)
 			return ret;
 		if (physical != previous + 0x1000) {
@@ -357,7 +356,7 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 			pageShift = 12;
 			entryCount = 1024;
 #if FW_DEBUG
-			ksceKernelAssert(context->pageTables[directoryIndex] == NULL,
+			SceDebugForDriver_35A35322(context->pageTables[directoryIndex] == NULL,
 					SCE_DBGINFO_FUNC(714, "sceGpuMmuMapMemory"),
 					__builtin_return_address(0));
 #endif
@@ -369,10 +368,10 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 					return ret;
 			}
 #if FW_DEBUG
-			ksceKernelAssert(&context->pageTablePool != NULL,
+			SceDebugForDriver_35A35322(&context->pageTablePool != NULL,
 					SCE_DBGINFO_FUNC(271, "sceGpuMmuCreatePageTable"),
 					__builtin_return_address(0));
-			ksceKernelAssert(context->pageTablePool.heap != NULL,
+			SceDebugForDriver_35A35322(context->pageTablePool.heap != NULL,
 					SCE_DBGINFO_FUNC(272, "sceGpuMmuCreatePageTable"),
 					__builtin_return_address(0));
 #endif
@@ -387,7 +386,7 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 					&allocation, 0);
 			if (ret < 0) {
 #if FW_DEBUG
-				ksceKernelPrintfLevelWithInfo(1, 0,
+				SceDebugForDriver_D9703808(1, 0,
 					SCE_DBGINFO_FUNC(285, "sceGpuMmuCreatePageTable"),
 					"%s: Failed heap allocate a page table of size %08x with error %08x\n",
 					"sceGpuMmuCreatePageTable", tableSize, ret);
@@ -397,11 +396,11 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 			}
 			table->pool = &context->pageTablePool;
 			table->entries = (unsigned *)allocation.gpuAddress;
-			ret = ksceKernelVAtoPA(table->entries,
+			ret = SceSysmemForDriver_8D160E65(table->entries,
 					&table->physicalAddress);
 			if (ret < 0) {
 #if FW_DEBUG
-				ksceKernelPrintfLevelWithInfo(1, 0,
+				SceDebugForDriver_D9703808(1, 0,
 					SCE_DBGINFO_FUNC(297, "sceGpuMmuCreatePageTable"),
 					"%s: Failed to get physical address for %p with error %08x.\n",
 					"sceGpuMmuCreatePageTable", table->entries, ret);
@@ -425,7 +424,7 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 		start = offset >> table->pageShift;
 		end = start + (length >> table->pageShift);
 #if FW_DEBUG
-		ksceKernelAssert(end <= table->entryCount,
+		SceDebugForDriver_35A35322(end <= table->entryCount,
 				SCE_DBGINFO_FUNC(442, "sceGpuMmuSetPageTableEntries"),
 				__builtin_return_address(0));
 #endif
@@ -433,14 +432,14 @@ int ksceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 		ret = 0;
 		for (index = start; index < end; index++) {
 #if FW_DEBUG
-			ksceKernelAssert(table->entries[index] == 0,
+			SceDebugForDriver_35A35322(table->entries[index] == 0,
 					SCE_DBGINFO_FUNC(456, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif
 			if (permissions & 0x80000000) {
 				physical = backingAddress;
 			} else {
-				ret = ksceKernelVAtoPA((void *)backingAddress, &physical);
+				ret = SceSysmemForDriver_8D160E65((void *)backingAddress, &physical);
 				if (ret < 0) {
 					unsigned rollback;
 
@@ -497,14 +496,14 @@ int ksceGpuMmuUnmapMemory(GpuMmuContext *context, unsigned address,
 			start = offset >> table->pageShift;
 			end = start + (length >> table->pageShift);
 #if FW_DEBUG
-			ksceKernelAssert(end <= table->entryCount,
+			SceDebugForDriver_35A35322(end <= table->entryCount,
 					SCE_DBGINFO_FUNC(442, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif
 			entriesChanged = 0;
 			for (index = start; index < end; index++) {
 #if FW_DEBUG
-				ksceKernelAssert(table->entries[index] != 0,
+				SceDebugForDriver_35A35322(table->entries[index] != 0,
 					SCE_DBGINFO_FUNC(466, "sceGpuMmuSetPageTableEntries"),
 					__builtin_return_address(0));
 #endif

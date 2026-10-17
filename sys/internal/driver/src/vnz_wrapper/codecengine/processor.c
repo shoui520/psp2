@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <sysmem/debug.h>
@@ -15,7 +15,6 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/cpu.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "../venezia_internal.h"
@@ -24,7 +23,6 @@
 
 unsigned int * _sceCodecEngineGetProcessor(SceUID pid);
 
-extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
 extern int setVeneziaClockSelector(unsigned int selector);
 CodecEngineProcessorState g_codecEngineProcessorState;
 
@@ -43,11 +41,11 @@ int _sceCodecEngineProcessorProcessSuspend(SceUID pid)
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(70, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
+		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(70, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 #if FW_DEBUG
-			ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
+			SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
 				SCE_DBGINFO_FUNC(76, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
 #endif
 			if (g_codecEngineProcessorState.processorCount == *processor) {
@@ -71,7 +69,7 @@ int _sceCodecEngineProcessorProcessResume(SceUID pid)
 	if (ret >= 0) {
 		processor = _sceCodecEngineGetProcessor(pid);
 #if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(112, "_sceCodecEngineProcessorProcessResume"), __builtin_return_address(0));
+		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(112, "_sceCodecEngineProcessorProcessResume"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 			if (g_codecEngineProcessorState.processorCount == 0) {
@@ -104,11 +102,11 @@ int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
 #if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(161, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
+		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(161, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
 #endif
 		if (*processor) {
 #if FW_DEBUG
-			ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
+			SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
 				SCE_DBGINFO_FUNC(167, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
 #endif
 			if (g_codecEngineProcessorState.processorCount == 1) {
@@ -143,10 +141,10 @@ int sceCodecEngineChangeNumWorkerCoresMaxForUser(void)
 			goto unlockProcess;
 		processor = _sceCodecEngineGetProcessor(0);
 #if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(218, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
+		SceDebugForDriver_35A35322(processor != NULL, SCE_DBGINFO_FUNC(218, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
 #endif
 #if FW_DEBUG
-		ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
+		SceDebugForDriver_35A35322(*processor <= g_codecEngineProcessorState.processorCount,
 			SCE_DBGINFO_FUNC(220, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
 #endif
 		if (g_codecEngineProcessorState.processorCount == 0) {

@@ -12,7 +12,6 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysroot.h>
 
 #define AM_EINVAL ((int)0x800f0516)
 #define AM_EHANDLE ((int)0x800f0509)
@@ -23,16 +22,16 @@
 
 #if FW_DEBUG
 #define AUTH_DBG_PRINTF(function, line, format, ...) \
-	ksceKernelPrintfLevelWithInfo(1, 0xb, SCE_DBGINFO_FUNC(line, function), format, ##__VA_ARGS__)
+	SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(line, function), format, ##__VA_ARGS__)
 #define AUTH_DBG_ASSERT(function, condition, line) \
-	ksceKernelAssert(condition, SCE_DBGINFO_FUNC(line, function), __builtin_return_address(0))
+	SceDebugForDriver_35A35322(condition, SCE_DBGINFO_FUNC(line, function), __builtin_return_address(0))
 #else
 #define AUTH_DBG_PRINTF(function, line, format, ...) do { } while (0)
 #define AUTH_DBG_ASSERT(function, condition, line) do { } while (0)
 #endif
 
 #define AUTH_PANIC(debugLine, releaseLine) \
-	ksceKernelPanic(SCE_DBGINFO(FW_DEBUG ? debugLine : releaseLine), __builtin_return_address(0))
+	SceDebugForDriver_391B5B74(SCE_DBGINFO(FW_DEBUG ? debugLine : releaseLine), __builtin_return_address(0))
 
 /* Module-local ABI declarations while shared dependency headers are frozen. */
 typedef void (*AuthCryHandler)(SceUID, int, void *, uint32_t, uint32_t);
@@ -172,12 +171,12 @@ static NOINLINE int authMgrSetupSrcPARanges(const void *address, uint32_t size)
 	vector.size = sizeof(vector);
 	vector.ranges_size = 16;
 	vector.ranges = s_state.sourceRanges;
-	result = ksceKernelVARangeToPAVector(&range, &vector);
+	result = sceKernelVARangeToPAVector(&range, &vector);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1113, "ERROR: authMgrSetupSrcPARanges failed ! ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
-		ksceKernelDcacheCleanRange(s_state.sourceRanges,
+		SceCpuForDriver_103872A5(s_state.sourceRanges,
 			(vector.count * 8 + 0x1f) & ~0x1fU);
 		result = vector.count;
 	}
@@ -229,7 +228,7 @@ static NOINLINE int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
 	__asm__ volatile("dmb sy" : : : "memory");
 	(void)packet->result;
 	__asm__ volatile("dsb sy" : : : "memory");
-	result = ksceKernelVAtoPA(packet, &physicalAddress);
+	result = SceSysmemForDriver_8D160E65(packet, &physicalAddress);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1250, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
@@ -312,7 +311,7 @@ static NOINLINE int authMgrStopSM(SceUID id)
 static NOINLINE int authMgrInvokeSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
-	uint8_t *bootParameters = ksceKernelSysrootGetKblParam();
+	uint8_t *bootParameters = SceSysrootForKernel_9DB56D1F();
 	SceAuthInfo auth;
 	uint32_t *words = (uint32_t *)(void *)&auth;
 	int result;
@@ -396,12 +395,12 @@ static NOINLINE int sceSblAuthMgrStart(void)
 
 	s_state.selfHandle = -1;
 	s_state.requestId = AM_NO_REQUEST;
-	result = ksceKernelVAtoPA(s_state.sourceRanges, &s_state.sourcePhysicalAddress);
+	result = SceSysmemForDriver_8D160E65(s_state.sourceRanges, &s_state.sourcePhysicalAddress);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 239, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
-		arena = ksceKernelAllocUncacheHeapMemoryWithOption(0x408, option);
+		arena = SceSysmemForDriver_0B4ED16A(0x408, option);
 		if (arena == NULL) {
 			result = AM_ENOMEM;
 		} else {
@@ -540,7 +539,7 @@ int ksceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceA
 			memcpy(packet->payload, auth, sizeof(*auth));
 			words[0x170 / 4] = result;
 			words[0x174 / 4] = s_state.sourcePhysicalAddress;
-			ksceKernelDcacheCleanRange((void *)header, size);
+			SceCpuForDriver_103872A5((void *)header, size);
 			result = authMgrSendPacketCore(packet, 0x190, 1);
 			if (result >= 0) {
 				memcpy(&auth->response, (uint8_t *)packet + 0xd8, sizeof(auth->response));
@@ -594,11 +593,11 @@ int ksceSblAuthMgrLoadBlock(int handle, void *buffer, uint32_t size)
 	memset(packet, 0, 0x50);
 	words[16] = words[18] = result;
 	words[17] = words[19] = s_state.sourcePhysicalAddress;
-	ksceKernelDcacheCleanRange(buffer, RoundCacheSize(size));
+	SceCpuForDriver_103872A5(buffer, RoundCacheSize(size));
 	result = authMgrSendPacketCore(packet, 0x50, 3);
 	if (result < 0)
 		return result;
-	ksceKernelDcacheInvalidateRange(buffer, RoundCacheSize(size));
+	SceCpuForDriver_02796361(buffer, RoundCacheSize(size));
 	return 0;
 }
 int ksceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
@@ -700,7 +699,7 @@ int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
 	if (inputSize != 0) {
 		range.addr = (uintptr_t)input;
 		range.size = inputSize;
-		result = ksceKernelVARangeToPARange(&range, (void *)packet->payload);
+		result = SceSysmemForDriver_AE36C775(&range, (void *)packet->payload);
 		if (result < 0)
 			goto unlock;
 	}
@@ -710,14 +709,14 @@ int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
 	}
 	range.addr = (uintptr_t)output;
 	range.size = outputSize;
-	result = ksceKernelVARangeToPARange(&range, (void *)(packet->payload + 8));
+	result = SceSysmemForDriver_AE36C775(&range, (void *)(packet->payload + 8));
 	if (result >= 0) {
 		PacketWords(packet)[20] = 0;
-		ksceKernelDcacheCleanRange(input, RoundCacheSize(inputSize));
-		ksceKernelDcacheCleanRange(output, RoundCacheSize(outputSize));
+		SceCpuForDriver_103872A5(input, RoundCacheSize(inputSize));
+		SceCpuForDriver_103872A5(output, RoundCacheSize(outputSize));
 		result = authMgrSendPacket(packet, 0x58, 7);
 		if (result >= 0)
-			ksceKernelDcacheInvalidateRange(input, RoundCacheSize(inputSize));
+			SceCpuForDriver_02796361(input, RoundCacheSize(inputSize));
 	}
 unlock:
 	unlockResult = ksceKernelUnlockFastMutex(&s_state.npdrmMutex);
@@ -757,10 +756,10 @@ int ksceSblAuthMgrVerifySpfsoCtx(struct SpsfoContext *context)
 		memset(packet, 0, 0x50);
 		words[16] = result;
 		words[17] = s_state.sourcePhysicalAddress;
-		ksceKernelDcacheCleanRange(context->buffer, RoundCacheSize(context->size));
+		SceCpuForDriver_103872A5(context->buffer, RoundCacheSize(context->size));
 		result = authMgrSendPacket(packet, 0x50, 8);
 		if (result >= 0) {
-			ksceKernelDcacheInvalidateRange(context->buffer, RoundCacheSize(context->size));
+			SceCpuForDriver_02796361(context->buffer, RoundCacheSize(context->size));
 			if (context->buffer == NULL || context->size == 0) {
 				result = AM_EINVAL;
 			} else {

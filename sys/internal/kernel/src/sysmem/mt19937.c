@@ -2,14 +2,14 @@
  * SceKernelUtils: the Mersenne Twister MT19937. Sony's generator advances one
  * state word per call ("on the fly"): it returns the tempered word it is about
  * to replace, so the first 624 outputs after seeding are the seed table's and
- * ksceMt19937Init discards them.
+ * SceKernelUtilsForDriver_4C9A5730 discards them.
  *
  * The kernel's own generator (GlobalInit/GlobalUninit) is shared under a
  * spinlock.
  */
 
 #include <stdint.h>
-#include <psp2kern/types.h>
+#include <sysmem/utils.h>
 #include <kernel/error.h>
 
 #define MT_N			624
@@ -18,21 +18,16 @@
 #define MT_UPPER_MASK		0x80000000
 #define MT_LOWER_MASK		0x7fffffff
 
-typedef struct SceKernelMt19937Context {
-	SceUInt32 count;		/* the next word to replace */
-	SceUInt32 state[MT_N];
-} SceKernelMt19937Context;
+_Static_assert(sizeof(SceMt19937Context) == 0x9c4, "MT19937 context size");
 
-_Static_assert(sizeof(SceKernelMt19937Context) == 0x9c4, "MT19937 context size");
+int SceCpuForDriver_D32ACE9E(volatile SceUInt32 *lock);
+void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
 
-int ksceKernelSpinlockLowLockCpuSuspendIntr(volatile SceUInt32 *lock);
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
-
-static SceKernelMt19937Context s_mt19937;
+static SceMt19937Context s_mt19937;
 static volatile SceUInt32 s_mt19937Lock;
 
 /* note: in the original this one is hand-written assembly */
-SceUInt32 ksceMt19937UInt(SceKernelMt19937Context *context)
+SceUInt32 SceKernelUtilsForDriver_92AEDFBC(SceMt19937Context *context)
 {
 	SceUInt32 i = context->count, next, y, value;
 
@@ -51,7 +46,7 @@ SceUInt32 ksceMt19937UInt(SceKernelMt19937Context *context)
 }
 
 /* the seed table, then the first 624 outputs (the table itself) dropped */
-int ksceMt19937Init(SceKernelMt19937Context *context, SceUInt32 seed)
+int SceKernelUtilsForDriver_4C9A5730(SceMt19937Context *context, SceUInt32 seed)
 {
 	unsigned int i;
 
@@ -61,28 +56,28 @@ int ksceMt19937Init(SceKernelMt19937Context *context, SceUInt32 seed)
 			(context->state[i - 1] ^ (context->state[i - 1] >> 30)) + i;
 	context->count = 0;
 	for (i = MT_N; i != 0; i--)
-		ksceMt19937UInt(context);
+		SceKernelUtilsForDriver_92AEDFBC(context);
 	return 0;
 }
 
-int ksceMt19937GlobalInit(SceUInt32 seed)
+int SceKernelUtilsForDriver_D428CC2A(SceUInt32 seed)
 {
-	ksceMt19937Init(&s_mt19937, seed);
+	SceKernelUtilsForDriver_4C9A5730(&s_mt19937, seed);
 	return 0;
 }
 
 /* fills a word-aligned buffer from the kernel's generator */
-int ksceMt19937GlobalUninit(SceUInt32 *buffer, SceSize size)
+int SceKernelUtilsForDriver_875B2A1C(SceUInt32 *buffer, SceSize size)
 {
 	unsigned int i, count;
 	int flags;
 
 	if (((uintptr_t)buffer & 3) || (size & 3))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_mt19937Lock);
+	flags = SceCpuForDriver_D32ACE9E(&s_mt19937Lock);
 	count = size >> 2;
 	for (i = 0; i != count; i++)
-		*buffer++ = ksceMt19937UInt(&s_mt19937);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_mt19937Lock, flags);
+		*buffer++ = SceKernelUtilsForDriver_92AEDFBC(&s_mt19937);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mt19937Lock, flags);
 	return 0;
 }

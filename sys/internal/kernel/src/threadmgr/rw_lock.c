@@ -92,10 +92,6 @@ typedef struct ThreadmgrRWLockInfo {
 	int numWriteWaitThreads;		/* 0x38 */
 } ThreadmgrRWLockInfo;
 
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern int ksceKernelCpuId(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -155,11 +151,11 @@ static int uidRWLock_RevalidateMethod(void *cls, void *object)
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2011);
 			next = node->next;
-			ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 			SCE_DBG_ASSERT_CHECK(waiter->waitMode == RW_LOCK_MODE_READ, 2016);
 			rwLock->core.lockCount++;
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
 		return wake;
 	}
@@ -168,14 +164,14 @@ static int uidRWLock_RevalidateMethod(void *cls, void *object)
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 		waiter = (struct ThreadCB *)node;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 2029);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 		if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 			acquireRWLock(rwLock, waiter);
 			wake = wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 			break;
 		}
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 	}
 	SCE_DBG_ASSERT_CHECK(node != (struct ThreadmgrWaitNode *)queue, 2042);
 	return wake;
@@ -190,9 +186,9 @@ static int releaseRWLock(ThreadmgrRWLockCore *core)
 	core->writer = NULL;
 	core->lockCount = 0;
 	if (writer != NULL) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(writer));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(writer));
 		ListLinkRemove(&core->ownerLink);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(writer));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(writer));
 	}
 	return 0;
 }
@@ -216,15 +212,15 @@ static int uidRWLock_Destructor(void *object)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1912);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&rwLock->lock);
+	intr = SceCpuForDriver_D32ACE9E(&rwLock->lock);
 	wake = releaseRWLock(&rwLock->core);
 	wake |= wakeupWaitObjectAll((uintptr_t)&rwLock->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
 	pid = rwLock->ownerPid;
-	if (ksceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
+	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			ksceKernelSpinlockLowLock(&process->resourceLock);
+			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (rwLock->attr & RW_LOCK_ATTR_LW)
 				process->uidLwCount--;
 			else if (rwLock->attr & RW_LOCK_ATTR_UNLIMITED)
@@ -232,13 +228,13 @@ static int uidRWLock_Destructor(void *object)
 			else
 				process->uidCount--;
 			process->rwLockCount--;
-			ksceKernelSpinlockLowUnlock(&process->resourceLock);
+			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
-		ksceGUIDReleaseObject(pid);
+		sceGUIDReleaseObject(pid);
 	}
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	memset(&rwLock->core, 0, sizeof(rwLock->core));
 	return 0;
 }
@@ -256,14 +252,14 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF(0, 245, "*** error: illegal context. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 253, "*** error: irq suspended. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
@@ -274,7 +270,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -286,7 +282,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
 		if (mode != RW_LOCK_MODE_READ) {
@@ -310,11 +306,11 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		getWakeupTime(&wakeup, *timeout);
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
-			ksceKernelSpinlockLowUnlock(&rwLock->lock);
+			sceKernelSpinlockLowUnlock(&rwLock->lock);
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			ksceKernelSpinlockLowLock(&rwLock->lock);
+			SceCpuForDriver_BF82DEB2(&rwLock->lock);
 		}
 		if (mode == RW_LOCK_MODE_READ) {
 			if (rwLock->core.writer == NULL &&
@@ -327,35 +323,35 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 				}
 				goto unlock;
 			}
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 			thread->waitMode = RW_LOCK_MODE_READ;
 			rwLock->core.readWaiters++;
 		} else {
 			if (mode != RW_LOCK_MODE_WRITE)
 				SCE_PANIC(370);
 			if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
-				ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+				SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 				acquireRWLock(rwLock, thread);
-				ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+				sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				ret = 0;
 				goto unlock;
 			}
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 			thread->waitMode = RW_LOCK_MODE_WRITE;
 			rwLock->core.writeWaiters++;
 		}
 		if (callbacks)
-			ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_CHECK(rwLock->waiting + 1 ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 387);
 		ret = waitWaitableObject(rwLockId, (uintptr_t)&rwLock->next, WAIT_TYPE_RW_LOCK,
 					 &wakeup, timeout, NULL, &locked);
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		SCE_DBG_ASSERT_PRINTF(rwLock->waiting ==
 			(uint32_t)(rwLock->core.readWaiters + rwLock->core.writeWaiters), 399,
-			"ret=%08x cpu[%d] A :%d W :%d R :%d %p\n", ret, ksceKernelCpuId(),
+			"ret=%08x cpu[%d] A :%d W :%d R :%d %p\n", ret, sceKernelCpuId(),
 			rwLock->waiting, rwLock->core.writeWaiters, rwLock->core.readWaiters, thread);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!callbacks) {
 			if (!locked)
 				goto resume;
@@ -364,8 +360,8 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 		if (!locked)
 			goto callbacks;
 	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 	if (!callbacks)
 		goto resume;
 callbacks:
@@ -376,11 +372,11 @@ callbacks:
 	}
 	goto resume;
 unlock:
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
 release:
-	ksceGUIDReleaseObject(rwLockId);
+	sceGUIDReleaseObject(rwLockId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -397,36 +393,36 @@ static int getRWLockInfo(SceUID rwLockId, ThreadmgrRWLockInfo *info)
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT :
 					     SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID;
 	} else {
 		info->rwLockId = rwLockId;
-		strncpy(info->name, ksceGUIDName(rwLockId), sizeof(info->name) - 1);
+		strncpy(info->name, SceSysmemForDriver_E655852F(rwLockId), sizeof(info->name) - 1);
 		queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-		ksceKernelSpinlockLowLock(&rwLock->lock);
+		SceCpuForDriver_BF82DEB2(&rwLock->lock);
 		info->attr = rwLock->attr;
 		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1566);
-			ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 			if (waiter->waitMode == RW_LOCK_MODE_READ)
 				info->numReadWaitThreads++;
 			else
 				info->numWriteWaitThreads++;
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
 		info->lockCount = rwLock->core.lockCount;
 		if (rwLock->core.writer != NULL)
 			info->writeOwnerId = rwLock->core.writer->threadId;
-		ksceKernelSpinlockLowUnlock(&rwLock->lock);
-		ksceGUIDReleaseObject(rwLockId);
+		sceKernelSpinlockLowUnlock(&rwLock->lock);
+		sceGUIDReleaseObject(rwLockId);
 		ret = 0;
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -437,7 +433,7 @@ void startRWLock(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = ksceKernelAllocHeapMemory(manager->heapId, 0x38);
+	cls = SceSysmemForDriver_7B4CB60A(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(448);
 	ret = uidExtendedClassInit(cls, "SceUIDRWLockClass",
@@ -462,27 +458,27 @@ uint32_t releaseAllRWLock(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 491);
 	for (;;) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			rwLock = RW_LOCK_FROM_OWNER_LINK(link);
-			if (ksceKernelSpinlockLowTrylock(&rwLock->lock) < 0)
+			if (SceCpuForDriver_5AC9D394(&rwLock->lock) < 0)
 				break;
 			ListLinkRemove(link);
 			rwLock->core.writer = NULL;
 			rwLock->core.lockCount = 0;
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			wake |= revalidateWaitState((uintptr_t)&rwLock->next);
-			ksceKernelSpinlockLowUnlock(&rwLock->lock);
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(&rwLock->lock);
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		}
 		if (link == head)
 			break;
 		/* the lock holds its spinlock while it takes ours: back off */
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		for (delay = 10; --delay != 0;)
 			;
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	return wake;
 }
 
@@ -499,19 +495,19 @@ int rwLockProcessExit(SceProcessObject *process)
 		return 0;
 	vector = NULL;
 	while (num != 0) {
-		vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 591);
 		num = SceSysmemForKernel_08C05493(process->pid,
 			s_threadmgrRuntime.manager->rwLockClass, 5, vector, num, &got);
 		if ((int)got >= num)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		intr = ksceKernelCpuSuspendIntr();
-		ret = kscePUIDClose(process->pid, vector[i]);
-		ksceKernelCpuResumeIntr(intr);
+		intr = SceCpuForDriver_821FC0EE();
+		ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+		sceKernelCpuResumeIntr(intr);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 609, "()->scePUIDClose(0x%08X, puid=0x%08X)=0x%08X\n",
 				       process->pid, vector[i], ret);
@@ -519,7 +515,7 @@ int rwLockProcessExit(SceProcessObject *process)
 		}
 	}
 	if (vector != NULL) {
-		ret = ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		ret = sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		SCE_DBG_ASSERT_CHECK(ret >= 0, 617);
 	}
 	return 0;
@@ -581,13 +577,13 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
 	}
 	if (!ThreadmgrInSyscall()) {
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 	} else {
 		process = thread->process;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&process->resourceLock);
+		intr = SceCpuForDriver_D32ACE9E(&process->resourceLock);
 		if (attr & RW_LOCK_ATTR_LW) {
 			if (process->uidLwCount >= 0x100) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF(0, 731, "sceKernelCreateRWLock(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -601,7 +597,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
 		} else {
 			if (process->uidCount >= 0x800) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_PRINTF(0xb, 748,
 					"(), SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -613,13 +609,13 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		}
 		if (++process->rwLockCount > process->rwLockPeak)
 			process->rwLockPeak = process->rwLockCount;
-		ksceKernelSpinlockLowUnlock(&process->resourceLock);
+		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = ksceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
+	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
 		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&rwLock);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
-			ksceKernelSpinlockLowLock(&process->resourceLock);
+			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (attr & RW_LOCK_ATTR_LW)
 				process->uidLwCount--;
 			else if (attr & RW_LOCK_ATTR_UNLIMITED)
@@ -627,7 +623,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 			else
 				process->uidCount--;
 			process->rwLockCount--;
-			ksceKernelSpinlockLowUnlock(&process->resourceLock);
+			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
 	} else {
 		rwLock->core.readWaiters = 0;
@@ -639,10 +635,10 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		rwLock->core.reserved = 0xfe;
 		rwLock->core.ownerLink.next = &rwLock->core.ownerLink;
 		rwLock->core.ownerLink.prev = &rwLock->core.ownerLink;
-		ksceKernelSpinlockLowUnlock(&rwLock->lock);	/* the class hands it over locked */
+		sceKernelSpinlockLowUnlock(&rwLock->lock);	/* the class hands it over locked */
 	}
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return uid;
@@ -657,17 +653,17 @@ int sceKernelDeleteRWLock(SceUID rwLockId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF(0, 829, "*** error: illegal context. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (SceSysmemForKernel_368F1C36(rwLockId) ==
 	    s_threadmgrRuntime.manager->rwLockClass)
-		ret = ksceGUIDClose(rwLockId);
+		ret = sceGUIDClose(rwLockId);
 	else
 		ret = SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
@@ -692,8 +688,8 @@ int ksceKernelTryLockReadRWLock(SceUID rwLockId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -705,13 +701,13 @@ int ksceKernelTryLockReadRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	if (rwLock->core.writer == NULL &&
 	    rwLock->next == (struct ThreadmgrWaitQueue *)&rwLock->next) {
 		if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
 			SCE_DBG_PRINTF_FUNC(0, 942, "sceKernelTryLockReadRWLock", "*** error: sceKernelTryLockReadRWLock(0x%08X)=0x%08X, "
 				"[%s]\n", rwLockId, SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF,
-				ksceGUIDName(rwLockId));
+				SceSysmemForDriver_E655852F(rwLockId));
 			ret = SCE_KERNEL_ERROR_RW_LOCK_LOCK_OVF;
 		} else {
 			rwLock->core.lockCount++;
@@ -720,10 +716,10 @@ int ksceKernelTryLockReadRWLock(SceUID rwLockId)
 	} else {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
 	}
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
@@ -740,8 +736,8 @@ int ksceKernelUnlockReadRWLock(SceUID rwLockId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -754,7 +750,7 @@ int ksceKernelUnlockReadRWLock(SceUID rwLockId)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	ret = 0;
 	if (rwLock->core.writer != NULL) {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_UNLOCK;
@@ -772,28 +768,28 @@ int ksceKernelUnlockReadRWLock(SceUID rwLockId)
 			     node = node->next) {
 				waiter = (struct ThreadCB *)node;
 				SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1073, "sceKernelUnlockReadRWLock");
-				ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+				SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 				if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 					acquireRWLock(rwLock, waiter);
 					wake = wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0) & 1;
-					ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+					sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 					break;
 				}
-				ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 			}
 			SCE_DBG_ASSERT_CHECK_FUNC(node != (struct ThreadmgrWaitNode *)queue, 1086, "sceKernelUnlockReadRWLock");
-			ksceKernelSpinlockLowUnlock(&rwLock->lock);
-			ksceGUIDReleaseObject(rwLockId);
+			sceKernelSpinlockLowUnlock(&rwLock->lock);
+			sceGUIDReleaseObject(rwLockId);
 			if (wake && currentThreadContext() != NULL)
 				switchThread((intr >> 7) & 1);
 			goto resume;
 		}
 		SCE_DBG_ASSERT_CHECK_FUNC(rwLock->core.readWaiters == 0, 1046, "sceKernelUnlockReadRWLock");
 	}
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
@@ -822,12 +818,12 @@ int ksceKernelTryLockWriteRWLock(SceUID rwLockId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1166, "sceKernelTryLockWriteRWLock", "*** error: illegal context. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -839,7 +835,7 @@ int ksceKernelTryLockWriteRWLock(SceUID rwLockId)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	if (rwLock->core.writer == thread) {
 		if (rwLock->attr & RW_LOCK_ATTR_RECURSIVE) {
 			if (rwLock->core.lockCount == RW_LOCK_COUNT_MAX) {
@@ -852,17 +848,17 @@ int ksceKernelTryLockWriteRWLock(SceUID rwLockId)
 			ret = SCE_KERNEL_ERROR_RW_LOCK_RECURSIVE;
 		}
 	} else if (rwLock->core.writer == NULL && rwLock->core.lockCount == 0) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		acquireRWLock(rwLock, thread);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		ret = 0;
 	} else {
 		ret = SCE_KERNEL_ERROR_RW_LOCK_FAILED_TO_LOCK;
 	}
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -886,12 +882,12 @@ int ksceKernelUnlockWriteRWLock(SceUID rwLockId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1273, "sceKernelUnlockWriteRWLock", "*** error: illegal context. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -904,16 +900,16 @@ int ksceKernelUnlockWriteRWLock(SceUID rwLockId)
 		goto resume;
 	}
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	if (rwLock->core.writer != thread) {
 		if (rwLock->core.writer == NULL)
 			SCE_DBG_PRINTF_FUNC(0, 1307, "sceKernelUnlockWriteRWLock", " k: error: RW_LOCK_NOT_OWNED, rwLockId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", rwLockId, ksceGUIDName(rwLockId),
+				"threadGuid=0x%08X\n", rwLockId, SceSysmemForDriver_E655852F(rwLockId),
 				currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF_FUNC(0, 1304, "sceKernelUnlockWriteRWLock", " k: error: RW_LOCK_NOT_OWNED, rwLockId=0x%08X([%s]), "
 				"currentOwner==0x%08X, threadGuid=0x%08X\n", rwLockId,
-				ksceGUIDName(rwLockId), rwLock->core.writer->threadId,
+				SceSysmemForDriver_E655852F(rwLockId), rwLock->core.writer->threadId,
 				currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_RW_LOCK_NOT_OWNED | SYSCALL_ERROR_BIT;
@@ -932,37 +928,37 @@ int ksceKernelUnlockWriteRWLock(SceUID rwLockId)
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1373, "sceKernelUnlockWriteRWLock");
 			next = node->next;
-			ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->waitMode == RW_LOCK_MODE_READ, 1378, "sceKernelUnlockWriteRWLock");
 			rwLock->core.lockCount++;
 			wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
 	} else {
 		for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = node->next) {
 			waiter = (struct ThreadCB *)node;
 			SCE_DBG_ASSERT_CHECK_FUNC(waiter->magic == THREAD_CB_MAGIC, 1354, "sceKernelUnlockWriteRWLock");
-			ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 			if (waiter->waitMode == RW_LOCK_MODE_WRITE) {
 				acquireRWLock(rwLock, waiter);
 				wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue, 0);
-				ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+				sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 				break;
 			}
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 		}
 		SCE_DBG_ASSERT_CHECK_FUNC(node != (struct ThreadmgrWaitNode *)queue, 1367, "sceKernelUnlockWriteRWLock");
 	}
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 	goto resume;
 unlock:
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -988,17 +984,17 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL && type == 1) {
 		SCE_DBG_ASSERT_PRINTF(0, 1442, "*** error: illegal context. rwLockId=0x%08x[%s]\n",
-				      rwLockId, ksceGUIDName(rwLockId));
+				      rwLockId, SceSysmemForDriver_E655852F(rwLockId));
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
 	if (type > 1) {
 		SCE_DBG_PRINTF(0, 1450, "*** error: sceKernelCancelRWLock(0x%08X[%s])=0x%08X, "
-			"type=0x%08X\n", rwLockId, ksceGUIDName(rwLockId), SCE_KERNEL_ERROR_ILLEGAL_TYPE,
+			"type=0x%08X\n", rwLockId, SceSysmemForDriver_E655852F(rwLockId), SCE_KERNEL_ERROR_ILLEGAL_TYPE,
 			type);
 		return SCE_KERNEL_ERROR_ILLEGAL_TYPE;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(rwLockId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1012,38 +1008,38 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 	}
 	writers = 0;
 	queue = (struct ThreadmgrWaitQueue *)&rwLock->next;
-	ksceKernelSpinlockLowLock(&rwLock->lock);
+	SceCpuForDriver_BF82DEB2(&rwLock->lock);
 	wake = releaseRWLock(&rwLock->core);
 	readers = 0;
 	for (node = queue->next; node != (struct ThreadmgrWaitNode *)queue; node = next) {
 		waiter = (struct ThreadCB *)node;
 		next = node->next;
 		SCE_DBG_ASSERT_CHECK(waiter->magic == THREAD_CB_MAGIC, 1479);
-		ksceKernelSpinlockLowLock(THREAD_LOCK(waiter));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(waiter));
 		if (waiter->waitMode == RW_LOCK_MODE_READ)
 			readers++;
 		else
 			writers++;
 		wake |= wakeupAndDistributeThread(waiter, (uintptr_t)queue,
 						  SCE_KERNEL_ERROR_WAIT_CANCEL);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(waiter));
 	}
 	if (numReadWaitThreads != NULL)
 		*numReadWaitThreads = readers;
 	if (numWriteWaitThreads != NULL)
 		*numWriteWaitThreads = writers;
 	if (type == 1) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		acquireRWLock(rwLock, thread);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
-	ksceKernelSpinlockLowUnlock(&rwLock->lock);
-	ksceGUIDReleaseObject(rwLockId);
+	sceKernelSpinlockLowUnlock(&rwLock->lock);
+	sceGUIDReleaseObject(rwLockId);
 	ret = 0;
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
@@ -1068,7 +1064,7 @@ int sceKernelGetRWLockInfo(SceUID rwLockId, ThreadmgrRWLockInfo *info)
 		if (ret < 0)
 			goto restore;
 		if (ThreadmgrInSyscall() && local.writeOwnerId != 0) {
-			ret = ksceGUIDGetObject(local.writeOwnerId, &owner);
+			ret = SceSysmemForDriver_0FC24464(local.writeOwnerId, &owner);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 1630, "*** error: sceKernelGetRWLockInfo() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", local.writeOwnerId, ret);
@@ -1097,17 +1093,17 @@ int SceThreadmgrForDriver_E2B57231(int level, ThreadmgrRWLockInfo *infos, SceSiz
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = ksceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->rwLockClass,
+	num = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->rwLockClass,
 					  level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = ksceGUIDGetUIDVectorByClass(
+		total = SceSysmemForKernel_52137FA3(
 			s_threadmgrRuntime.manager->rwLockClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -1126,7 +1122,7 @@ int SceThreadmgrForDriver_E2B57231(int level, ThreadmgrRWLockInfo *infos, SceSiz
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }
 
@@ -1147,13 +1143,13 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, ThreadmgrRWLockInfo *in
 		s_threadmgrRuntime.manager->rwLockClass, level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
 		total = SceSysmemForKernel_08C05493(pid,
 			s_threadmgrRuntime.manager->rwLockClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -1161,11 +1157,11 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, ThreadmgrRWLockInfo *in
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getRWLockInfo(kscePUIDtoGUID(pid, vector[i]), &info) != 0)
+		if (getRWLockInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
 			continue;
 		info.rwLockId = vector[i];
 		if (info.writeOwnerId != 0) {
-			err = ksceGUIDGetObject(info.writeOwnerId, &owner);
+			err = SceSysmemForDriver_0FC24464(info.writeOwnerId, &owner);
 			if (err < 0)
 				SCE_DBG_PRINTF(0, 1817, "*** error: sceKernelGetRWLockInfoAllProc() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", info.writeOwnerId, err);
@@ -1183,6 +1179,6 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, ThreadmgrRWLockInfo *in
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }

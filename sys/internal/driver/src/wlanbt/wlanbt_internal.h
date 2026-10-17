@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <psp2common/net.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <net_ps/netdrv.h>
 
 #include <wlanbt/wlanbt.h>
@@ -223,7 +223,7 @@ typedef struct SceWlanCallback {
 
 /* Complete object cleared by wlanBtInitializeRobin. */
 typedef struct SceWlan {
-	SceProcEventHandler procEventHandler;
+	SceKernelProcEventHandler procEventHandler;
 	SceUID procEventHandlerId;
 	int powerSuspended;
 	int powerRestricted;

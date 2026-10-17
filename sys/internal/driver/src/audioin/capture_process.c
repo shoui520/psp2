@@ -7,10 +7,10 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 
 extern int SceCodecForDriver_41CFFE48(int *gain, int *alternateGain);
 extern int initializeAudioInAecLibrary(void);
@@ -56,7 +56,7 @@ int audioInProcessStartHandler(SceUID pid, int unusedEventType,
 	RESTART_PROCESS_PORT(2);
 	RESTART_PROCESS_PORT(3);
 #undef RESTART_PROCESS_PORT
-	ksceKernelAtomicOrAndGet32(&g_audioInRequestFlags, 256);
+	SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 256);
 	ksceKernelSetEventFlag(g_audioInRequestEventFlag, 256);
 	return 0;
 }
@@ -75,7 +75,7 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 		unsigned int requestFlags;
 
 		ksceKernelWaitEventFlag(g_audioInAecEventFlag, 1, 5, NULL, NULL);
-		ksceKernelAtomicOrAndGet32(&g_audioInAecFlags, 1);
+		SceCpuForDriver_BC248C30(&g_audioInAecFlags, 1);
 		if (g_audioInAecEnabled != 0 && g_audioInCaptureDevice != 1) {
 #define REQUIRE_AEC(index) do { \
 	if ((g_audioInPorts[index].flags & 2) && \
@@ -89,10 +89,10 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 			if ((g_audioInPorts[3].flags & 2) &&
 			    !(g_audioInPorts[3].flags & 0x2000)) {
 				needed = 1;
-				if (ksceSblAimgrIsGenuineDolce())
+				if (SceSblAIMgrForDriver_C6E83F34())
 					goto complete;
 			} else {
-				if (!needed || ksceSblAimgrIsGenuineDolce())
+				if (!needed || SceSblAIMgrForDriver_C6E83F34())
 					goto complete;
 			}
 			codecFlags = SceCodecForDriver_41CFFE48(&gain, &alternateGain);
@@ -123,10 +123,10 @@ int audioInAecThread(SceSize unusedSize, void *unusedArgument)
 					g_audioInAecSamples[0], g_audioInAecSamples[1], gain, mode);
 			if (g_audioInAecFlags & 0x2000) {
 				memset(g_audioInAecSamples[0], 0, 1024);
-				ksceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~0x2000u);
+				SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~0x2000u);
 			}
 		}
 complete:
-		ksceKernelAtomicAndAndGet32(&g_audioInAecFlags, ~1u);
+		SceCpuForDriver_DF899E4B(&g_audioInAecFlags, ~1u);
 	}
 }

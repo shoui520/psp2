@@ -47,7 +47,7 @@
 		sceSyscallLeave(_t);					\
 		return SCE_ERROR_ERRNO_ENOSYS;				\
 	}								\
-	uid = kscePUIDtoGUID(0, (_puid));				\
+	uid = SceSysmemForDriver_45D22597(0, (_puid));				\
 	if (uid < 0) {							\
 		sceSyscallLeave(_t);					\
 		return uid | 0x40000000;				\
@@ -65,7 +65,7 @@
 									\
 	if (!sceSblACMgrIsSystemProgram(0)) {				\
 		_ret = SCE_ERROR_ERRNO_ENOSYS;				\
-	} else if (kscePmMgrGetProductMode(&_mode) != 0) {		\
+	} else if (ScePmMgrForDriver_2AC815A2(&_mode) != 0) {		\
 		_mode = 0;						\
 		_ret = (_error);					\
 	} else {							\
@@ -145,7 +145,7 @@ SceUInt32 vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *version)
 	} else {
 		ret = SceProcessmgrForDriver_D141C076(pid, &v);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(version, &v, sizeof(v));
+			ret = SceSysmemForDriver_6D88EF8A(version, &v, sizeof(v));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -160,7 +160,7 @@ SceUInt32 vshKernelCheckModelCapability(int bit)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	ret = ksceKernelSysrootCheckModelCapability(bit) != 0;
+	ret = SceSysrootForDriver_8AA268D6(bit) != 0;
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -461,7 +461,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (info == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
-	} else if (kscePmMgrGetProductMode(&mode) != 0) {
+	} else if (ScePmMgrForDriver_2AC815A2(&mode) != 0) {
 		mode = 0;
 		ret = SCE_SYSCON_ERROR_NOT_PRODUCT_MODE;
 	} else if (!mode) {
@@ -469,7 +469,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 	} else {
 		ret = ksceSysconGetLogInfo(buf);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(info, buf, sizeof(buf));
+			ret = SceSysmemForDriver_6D88EF8A(info, buf, sizeof(buf));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -500,7 +500,7 @@ SceUInt32 vshSysconGetTemperatureLog(SceUInt8 *log)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		memset(log, 0, 0x10);
 		log[0] = 1;
 		log[4] = 1;
@@ -522,7 +522,7 @@ SceUInt32 vshSysconClearTemperatureLog(int unk)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		sceSyscallLeave(t);
 		return 0;
 	}
@@ -675,7 +675,7 @@ int vshSysconLoadConfigstorageScript(int a, const void *script, SceSize size)
 	if (size > sizeof(buf)) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
-		ret = ksceKernelCopyFromUser(buf, script, size);
+		ret = SceSysmemForDriver_BC996A7A(buf, script, size);
 		if (ret >= 0)
 			ret = ksceSysconLoadConfigstorageScript(a, buf, size);
 	}
@@ -692,7 +692,7 @@ int vshSysconVerifyConfigstorageScript(int a, const void *script, SceSize size)
 	if (size > sizeof(buf)) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
-		ret = ksceKernelCopyFromUser(buf, script, size);
+		ret = SceSysmemForDriver_BC996A7A(buf, script, size);
 		if (ret >= 0)
 			ret = ksceSysconVerifyConfigstorageScript(a, buf, size);
 	}
@@ -710,10 +710,10 @@ SceUInt32 vshSysconGetBatteryCalibData(int *a, int *b, int *c, int *d)
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = ksceSysconGetBatteryCalibData(&va, &vb, &vc, &vd);
-		if (ret >= 0 && (ret = ksceKernelCopyToUser(a, &va, 4)) >= 0 &&
-		    (ret = ksceKernelCopyToUser(b, &vb, 4)) >= 0 &&
-		    (ret = ksceKernelCopyToUser(c, &vc, 4)) >= 0)
-			ret = ksceKernelCopyToUser(d, &vd, 4);
+		if (ret >= 0 && (ret = SceSysmemForDriver_6D88EF8A(a, &va, 4)) >= 0 &&
+		    (ret = SceSysmemForDriver_6D88EF8A(b, &vb, 4)) >= 0 &&
+		    (ret = SceSysmemForDriver_6D88EF8A(c, &vc, 4)) >= 0)
+			ret = SceSysmemForDriver_6D88EF8A(d, &vd, 4);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -762,7 +762,7 @@ SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf)
 	} else {
 		ret = ksceIdStorageReadLeaf(leaf, data);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(buf, data, sizeof(data));
+			ret = SceSysmemForDriver_6D88EF8A(buf, data, sizeof(data));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -777,7 +777,7 @@ SceUInt32 vshIdStorageWriteLeaf(SceSize leaf, const void *buf)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ret = ksceKernelCopyFromUser(data, buf, sizeof(data));
+		ret = SceSysmemForDriver_BC996A7A(data, buf, sizeof(data));
 		if (ret >= 0)
 			ret = ksceIdStorageWriteLeaf(leaf, data);
 	}
@@ -800,7 +800,7 @@ SceUInt32 vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((SceUInt32)(num - 1) < 0x20) {
-		ret = ksceKernelCopyFromUser(buf, leaves, num * 2);
+		ret = SceSysmemForDriver_BC996A7A(buf, leaves, num * 2);
 		if (ret >= 0)
 			ret = ksceIdStorageCreateAtomicLeaves(buf, num);
 	} else {
@@ -831,7 +831,7 @@ SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
 		ret = ksceIdStorageLookup(key, offset, data, len);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(buf, data, len);
+			ret = SceSysmemForDriver_6D88EF8A(buf, data, len);
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -848,7 +848,7 @@ SceUInt32 vshIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSi
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
-		ret = ksceKernelCopyFromUser(data, buf, len);
+		ret = SceSysmemForDriver_BC996A7A(data, buf, len);
 		if (ret >= 0)
 			ret = ksceIdStorageUpdate(key, offset, data, len);
 	} else {
@@ -872,42 +872,42 @@ SceUInt32 vshIdStorageRestart(int unk)
 
 SceUInt32 vshSblAimgrIsTest(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsTest());
+	VSH_BRIDGE(SceSblAIMgrForDriver_3B638885());
 }
 
 SceUInt32 vshSblAimgrIsTool(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsTool());
+	VSH_BRIDGE(SceSblAIMgrForDriver_274663A0());
 }
 
 SceUInt32 vshSblAimgrIsDEX(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsDEX());
+	VSH_BRIDGE(SceSblAIMgrForDriver_F4B98F66());
 }
 
 SceUInt32 vshSblAimgrIsCEX(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsCEX());
+	VSH_BRIDGE(SceSblAIMgrForDriver_D78B04A2());
 }
 
 SceUInt32 vshSblAimgrIsVITA(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsVITA());
+	VSH_BRIDGE(SceSblAIMgrForDriver_4273B97B());
 }
 
 SceUInt32 vshSblAimgrIsDolce(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsDolce());
+	VSH_BRIDGE(SceSblAIMgrForDriver_71608CA3());
 }
 
 SceUInt32 vshSblAimgrIsGenuineVITA(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsGenuineVITA());
+	VSH_BRIDGE(SceSblAIMgrForDriver_963CA644());
 }
 
 SceUInt32 vshSblAimgrIsGenuineDolce(void)
 {
-	VSH_BRIDGE(ksceSblAimgrIsGenuineDolce());
+	VSH_BRIDGE(SceSblAIMgrForDriver_C6E83F34());
 }
 
 SceUInt32 vshSblAimgrGetConsoleId(void *id)
@@ -1001,22 +1001,22 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const S
 
 SceUInt32 vshSblQafMgrIsAllowNearTest(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowNearTest());
+	VSH_BRIDGE(SceQafMgrForDriver_9644171D());
 }
 
 SceUInt32 vshSblQafMgrIsAllowSystemAppDebug(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowSystemAppDebug());
+	VSH_BRIDGE(SceQafMgrForDriver_CAD47130());
 }
 
 SceUInt32 vshSblQafMgrIsAllowMarlinTest(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowMarlinTest());
+	VSH_BRIDGE(SceQafMgrForDriver_10283EB8());
 }
 
 SceUInt32 vshSblQafMgrIsAllowLoadMagicGate(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowLoadMagicGate());
+	VSH_BRIDGE(SceQafMgrForDriver_36E5312E());
 }
 
 /* these QA flags all ask SceQafMgr's one check (name unknown) */
@@ -1037,22 +1037,22 @@ SceUInt32 vshSblQafMgrIsAllowShowTitleUpgradeInfo(void)
 
 SceUInt32 vshSblQafMgrIsAllowKeepCoreFile(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowKeepCoreFile());
+	VSH_BRIDGE(SceQafMgrForDriver_C1EA75C8());
 }
 
 SceUInt32 vshSblQafMgrIsAllowDtcpIpReset(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowDtcpIpReset());
+	VSH_BRIDGE(SceQafMgrForDriver_E8B8F31F());
 }
 
 SceUInt32 vshSblQafMgrIsAllowControlIduAutoUpdate(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowControlIduAutoUpdate());
+	VSH_BRIDGE(SceQafMgrForDriver_F8BFEE48());
 }
 
 SceUInt32 vshSblQafMgrIsAllowPSPEmuShowQAInfo(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowPSPEmuShowQAInfo());
+	VSH_BRIDGE(SceQafMgrForDriver_B7B195B2());
 }
 
 SceUInt32 vshSblQafMgrIsAllowPSPEmuSelectNPEnv(void)
@@ -1077,7 +1077,7 @@ SceUInt32 vshSblQafMgrIsAllowLiblocationChangeModel(void)
 
 SceUInt32 vshSblQafMgrIsAllowRemotePlayDebug(void)
 {
-	VSH_BRIDGE(ksceSblQafMgrIsAllowRemotePlayDebug());
+	VSH_BRIDGE(SceQafMgrForDriver_BFD5E463());
 }
 
 SceUInt32 vshSblPmMgrSetSdModeOff(void)
@@ -1138,7 +1138,7 @@ int module_start(SceSize args, void *argp)
 	(void)argp;
 
 	if (getKeyInt("/CONFIG/USB", "usb_charge_enable", &value) >= 0) {
-		if (ksceSysrootIsSafeMode() || ksceSysrootIsUpdateMode())
+		if (SceSysrootForDriver_834439A7() || SceSysrootForDriver_B0E1FC67())
 			value = 0;
 		SceUdcdForDriver_2D91F8C3(value);
 	}
@@ -1178,7 +1178,7 @@ SceUInt32 vshIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events)
 		sceSyscallLeave(t);
 		return uid;
 	}
-	puid = kscePUIDOpenByGUID(0, uid);
+	puid = SceSysmemForDriver_BF209859(0, uid);
 	if (puid < 0)
 		ksceIoDeleteMountEvent(uid);
 	sceSyscallLeave(t);
@@ -1209,7 +1209,7 @@ SceUInt32 vshIoCreateErrorEvent(int a, int b, int c)
 		sceSyscallLeave(t);
 		return uid;
 	}
-	puid = kscePUIDOpenByGUID(0, uid);
+	puid = SceSysmemForDriver_BF209859(0, uid);
 	if (puid < 0)
 		ksceIoDeleteErrorEvent(uid);
 	sceSyscallLeave(t);
@@ -1231,7 +1231,7 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	uid = kscePUIDtoGUID(0, event);
+	uid = SceSysmemForDriver_45D22597(0, event);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return uid | 0x40000000;
@@ -1241,7 +1241,7 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 		sceSyscallLeave(t);
 		return ret;
 	}
-	kscePUIDClose(0, event);
+	SceSysmemForDriver_84A4AF5E(0, event);
 	sceSyscallLeave(t);
 	return 0;
 }
@@ -1287,7 +1287,7 @@ SceUInt32 vshMsifGetMsInfo(void *info)
 	} else {
 		ret = ksceMsifGetMsInfo(&buf);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(info, &buf, sizeof(buf));
+			ret = SceSysmemForDriver_6D88EF8A(info, &buf, sizeof(buf));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1311,7 +1311,7 @@ SceUInt32 vshSdGetCardInfo(void *info)
 		goto out;
 	}
 	if (SceSysrootForDriver_F804F761() == 0) {
-		if (ksceKernelSysrootCheckModelCapability(0xb))
+		if (SceSysrootForDriver_8AA268D6(0xb))
 			ctx = ksceSdifGetSdContextPartValidateSd(3);
 	} else {
 		ctx = ksceSdifGetSdContextPartValidateSd(1);
@@ -1325,7 +1325,7 @@ SceUInt32 vshSdGetCardInfo(void *info)
 	for (i = 0; i < 4; i++)
 		kinfo.ssr[i] = ctx->info.ssr[i];
 	kinfo.scr = ctx->info.scr;
-	ret = ksceKernelCopyToUser(info, &kinfo, sizeof(kinfo));
+	ret = SceSysmemForDriver_6D88EF8A(info, &kinfo, sizeof(kinfo));
 out:
 	sceSyscallLeave(t);
 	return ret;
@@ -1357,7 +1357,7 @@ SceUInt32 vshHdmiEnableCec(void)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		kscePmMgrGetProductMode(&mode);
+		ScePmMgrForDriver_2AC815A2(&mode);
 		ret = mode == 1 ? sceHdmiCecEnableCec() : (int)SCE_HDMI_ERROR_NOT_PRODUCT_MODE;
 	}
 	sceSyscallLeave(t);
@@ -1373,7 +1373,7 @@ SceUInt32 vshHdmiDisableCec(void)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		kscePmMgrGetProductMode(&mode);
+		ScePmMgrForDriver_2AC815A2(&mode);
 		ret = mode == 1 ? SceHdmiForDriver_291F000B() : (int)SCE_HDMI_ERROR_NOT_PRODUCT_MODE;
 	}
 	sceSyscallLeave(t);
@@ -1463,7 +1463,7 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 			if (dataSize == 0 || dataSize > size)
 				ret = SCE_SBL_ERROR_SPFSO_TOO_LARGE;
 			else
-				ret = ksceKernelCopyToUser(buf, data, dataSize);
+				ret = SceSysmemForDriver_6D88EF8A(buf, data, dataSize);
 		}
 		ret2 = ksceSblPostSsMgrReleaseSpfsoCtx(ctx);
 		if (ret2 >= 0)
@@ -1624,7 +1624,7 @@ SceUInt32 vshCoredumpCafContextCreate(void)
 			sceSyscallLeave(t);
 			return uid;
 		}
-		puid = kscePUIDOpenByGUID(0, uid);
+		puid = SceSysmemForDriver_BF209859(0, uid);
 		if (puid < 0)
 			ksceCoredumpCafContextDestroy(uid);
 	}
@@ -1682,9 +1682,9 @@ SceUInt32 vshCoredumpCreateDump(int a, const void *b, int c, const void *d, int 
 	return ksceCoredumpCreateDump(a, b, c, d, e, f, g, h);
 }
 
-SceUInt32 vshEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize)
+SceUInt32 vshEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *pBuf, SceSize bufSize)
 {
-	VSH_BRIDGE(k_sceEventLogPut(id, index, a3, pBuf, bufSize));
+	VSH_BRIDGE(k_sceEventLogPut(type, subtype, arg, pBuf, bufSize));
 }
 
 /* the system software version: a 0x28 byte record with its "X.YY" string */
@@ -1699,7 +1699,7 @@ SceUInt32 vshSblGetSystemSwVersion(SceKernelSystemSwVersion *info)
 	} else if (info == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	} else if (info->size == sizeof(*info)) {
-		v = ksceKernelSysrootGetSystemSwVersion();
+		v = SceSysrootForDriver_67AAB627();
 		info->size = sizeof(*info);
 		info->version = v;
 		info->versionExtra = 0;
@@ -1722,7 +1722,7 @@ SceUInt32 vshSblAimgrGetSMI(void *smi)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if (smi != NULL) {
-		ret = ksceSblAimgrGetSMI(smi);
+		ret = SceSblAIMgrForDriver_47D9CF13(smi);
 		sceSyscallLeave(t);
 		return ret;
 	} else {

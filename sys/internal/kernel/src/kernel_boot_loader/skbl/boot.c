@@ -15,7 +15,7 @@
 #include <skeleton.h>
 #include <stdint.h>
 #include <kernel_boot_loader/kbl_param.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/cp15.h>
 #include <sysmem/debug.h>
 #include <excpmgr/excpmgr_cpu.h>
@@ -27,7 +27,7 @@
 #include <systimer/timer_regs.h>
 #include "boot.h"
 #include <lowio/pervasive.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/debugled.h>
 
 /* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */
@@ -46,10 +46,6 @@
 int LedModuleStart(void);
 int SerialInit(int uart0Enabled);
 int SerialDebugPutchar(void *args, int c);
-uintptr_t ksceKernelRegisterDebugPutcharHandler(uintptr_t handler, uintptr_t argument);
-int ksceKernelPrintfWithInfo(SceUInt32 flags, const SceKernelDebugInfo *info,
-			     const char *fmt, ...);
-int ksceKernelPrintfLevel(int level, const char *format, ...);
 int InitializeDipsw(SceDipsw *dipsw);
 int InitializeAssertLevel(void);
 int InitializeDebugBuffer(void);
@@ -394,8 +390,8 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 		break;
 	}
 	if (param->kblParam->boot_flags[0] != 0xff || IsSafeModeBoot())
-		ksceKernelClearDipsw(DIPSW_PLATFORM_DOLCE);
-	if (ksceKernelCheckDipsw(DIPSW_PLATFORM_DOLCE)) {
+		SceDipswForDriver_F1F3E9FE(DIPSW_PLATFORM_DOLCE);
+	if (SceDipswForDriver_A98FC2FD(DIPSW_PLATFORM_DOLCE)) {
 		param->hardwareDependent[0] = 0x20101;
 		param->hardwareDependent[1] = 0x252;
 	}
@@ -410,11 +406,11 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 			param->hardwareDependent[1] &= ~0x1000;
 		else
 			param->hardwareDependent[1] |= 0x1000;
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
 	} else if ((param->hardwareDependent[0] >> 16) == 2) {
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: DOLCE\n");
 	} else {
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmodel: VITA\n");
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmodel: VITA\n");
 	}
 }
 
@@ -424,7 +420,7 @@ static inline void SetHardwareDependent(SceKernelBootParam *param)
 static inline void EnableLpddr2Sub(void)
 {
 	if ((int)s_bootParam.current->socRevision < 0) {
-		ksceKernelPrintfLevel(QA_LEVEL(0, 2), "Disabled LPDDR2SUB\n");
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2), "Disabled LPDDR2SUB\n");
 		return;
 	}
 	PERVASIVE_BASECLK->dramSubClock = 1;
@@ -509,86 +505,86 @@ static inline uint32_t BootCpu0Init(void *lr)
 	}
 	InitializeDipsw(&s_kblParam.dipsw);
 	if (s_kblParam.boot_flags[1] == 0xff) {
-		ksceKernelClearDipsw(DIPSW_UART0_CONSOLE);
-		ksceKernelClearDipsw(0xd3);
+		SceDipswForDriver_F1F3E9FE(DIPSW_UART0_CONSOLE);
+		SceDipswForDriver_F1F3E9FE(0xd3);
 	} else {
-		ksceKernelSetDipsw(DIPSW_UART0_CONSOLE);
-		ksceKernelSetDipsw(0xd3);
+		SceDipswForDriver_82E45FBF(DIPSW_UART0_CONSOLE);
+		SceDipswForDriver_82E45FBF(0xd3);
 	}
 	if (!(s_kblParam.boot_flags[4] & 1))
-		ksceKernelSetDipsw(DIPSW_SHELL_CRON);
+		SceDipswForDriver_82E45FBF(DIPSW_SHELL_CRON);
 
 	if ((s_kblParam.pscode.product_code & 0xfeff) == 1 &&
-	    !ksceKernelCheckDipsw(DIPSW_DISABLE_RECONFIGURATION)) {
-		if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
-			ksceKernelSetDipsw(0xc0);
-			ksceKernelSetDipsw(0xc1);
-			ksceKernelSetDipsw(0xc2);
-			ksceKernelSetDipsw(DIPSW_UART1_CONSOLE);
-			ksceKernelSetDipsw(0xc6);
-			ksceKernelSetDipsw(0xc7);
-			ksceKernelSetDipsw(0xc8);
-			ksceKernelSetDipsw(0xc9);
-			ksceKernelSetDipsw(DIPSW_ASSERT_LEVEL_1);
-			ksceKernelSetDipsw(0xce);
-			ksceKernelSetDipsw(DIPSW_HARDWARE_BREAKPOINT);
-			ksceKernelSetDipsw(DIPSW_USER_PA_MAPPING);
+	    !SceDipswForDriver_A98FC2FD(DIPSW_DISABLE_RECONFIGURATION)) {
+		if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE)) {
+			SceDipswForDriver_82E45FBF(0xc0);
+			SceDipswForDriver_82E45FBF(0xc1);
+			SceDipswForDriver_82E45FBF(0xc2);
+			SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
+			SceDipswForDriver_82E45FBF(0xc6);
+			SceDipswForDriver_82E45FBF(0xc7);
+			SceDipswForDriver_82E45FBF(0xc8);
+			SceDipswForDriver_82E45FBF(0xc9);
+			SceDipswForDriver_82E45FBF(DIPSW_ASSERT_LEVEL_1);
+			SceDipswForDriver_82E45FBF(0xce);
+			SceDipswForDriver_82E45FBF(DIPSW_HARDWARE_BREAKPOINT);
+			SceDipswForDriver_82E45FBF(DIPSW_USER_PA_MAPPING);
 			revision = param->socRevision;
 			if (revision & 0x1ff00) {
 				if ((revision & 0x30000000) == 0x20000000)
-					ksceKernelSetDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART);
+					SceDipswForDriver_82E45FBF(DIPSW_ENABLE_TOOL_PHYMEMPART);
 				else
-					ksceKernelClearDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART);
+					SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else if ((int)revision >= 0) {
-				ksceKernelSetDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART);
+				SceDipswForDriver_82E45FBF(DIPSW_ENABLE_TOOL_PHYMEMPART);
 			} else {
-				ksceKernelClearDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART);
+				SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
 			}
 			revision = param->socRevision;
 			if ((revision & 0x1ff00) == 0x100 && (int)revision < 0 &&
 			    (revision & 0x30000000) == 0x20000000)
-				ksceKernelSetDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
+				SceDipswForDriver_82E45FBF(DIPSW_USER_PA_MAPPING_ADDRESS);
 			else
-				ksceKernelClearDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
+				SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
 			if (param->kblParam->boot_type_indicator_2 & 0x40)
-				ksceKernelClearDipsw(0xc8);
+				SceDipswForDriver_F1F3E9FE(0xc8);
 		} else {
-			ksceKernelClearDipsw(0xc0);
-			ksceKernelClearDipsw(0xc1);
-			ksceKernelClearDipsw(0xc2);
-			ksceKernelClearDipsw(0xc6);
-			ksceKernelClearDipsw(0xc7);
-			ksceKernelClearDipsw(0xc8);
-			ksceKernelClearDipsw(0xc9);
-			ksceKernelClearDipsw(0xca);
-			ksceKernelClearDipsw(DIPSW_ASSERT_LEVEL_1);
-			ksceKernelClearDipsw(DIPSW_ASSERT_LEVEL_2);
-			ksceKernelClearDipsw(0xce);
-			ksceKernelClearDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART);
-			ksceKernelClearDipsw(DIPSW_HARDWARE_BREAKPOINT);
-			ksceKernelClearDipsw(DIPSW_USER_PA_MAPPING);
-			ksceKernelClearDipsw(0x80);
-			ksceKernelClearDipsw(DIPSW_USER_PA_MAPPING_ADDRESS);
-			if (ksceKernelCheckDipsw(DIPSW_RELEASE_CHECK_MODE)) {
-				ksceKernelSetDipsw(DIPSW_UART1_CONSOLE);
-				ksceKernelSetDipsw(0xd3);
+			SceDipswForDriver_F1F3E9FE(0xc0);
+			SceDipswForDriver_F1F3E9FE(0xc1);
+			SceDipswForDriver_F1F3E9FE(0xc2);
+			SceDipswForDriver_F1F3E9FE(0xc6);
+			SceDipswForDriver_F1F3E9FE(0xc7);
+			SceDipswForDriver_F1F3E9FE(0xc8);
+			SceDipswForDriver_F1F3E9FE(0xc9);
+			SceDipswForDriver_F1F3E9FE(0xca);
+			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_1);
+			SceDipswForDriver_F1F3E9FE(DIPSW_ASSERT_LEVEL_2);
+			SceDipswForDriver_F1F3E9FE(0xce);
+			SceDipswForDriver_F1F3E9FE(DIPSW_ENABLE_TOOL_PHYMEMPART);
+			SceDipswForDriver_F1F3E9FE(DIPSW_HARDWARE_BREAKPOINT);
+			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING);
+			SceDipswForDriver_F1F3E9FE(0x80);
+			SceDipswForDriver_F1F3E9FE(DIPSW_USER_PA_MAPPING_ADDRESS);
+			if (SceDipswForDriver_A98FC2FD(DIPSW_RELEASE_CHECK_MODE)) {
+				SceDipswForDriver_82E45FBF(DIPSW_UART1_CONSOLE);
+				SceDipswForDriver_82E45FBF(0xd3);
 			} else {
-				ksceKernelClearDipsw(DIPSW_UART1_CONSOLE);
-				ksceKernelClearDipsw(0xd3);
+				SceDipswForDriver_F1F3E9FE(DIPSW_UART1_CONSOLE);
+				SceDipswForDriver_F1F3E9FE(0xd3);
 			}
 		}
-		ksceKernelSetDipsw(DIPSW_CONSOLE_LOGGING);
-		if (ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE))
-			ksceKernelClearDipsw(0xc6);
+		SceDipswForDriver_82E45FBF(DIPSW_CONSOLE_LOGGING);
+		if (SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE))
+			SceDipswForDriver_F1F3E9FE(0xc6);
 	}
 
 	InitializeAssertLevel();
 	InitializeDebugBuffer();
-	if (ksceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
-	    ksceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
-		SerialInit(ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE));
+	if (SceDipswForDriver_A98FC2FD(DIPSW_UART1_CONSOLE) || SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE) ||
+	    SceDipswForDriver_A98FC2FD(DIPSW_CONSOLE_LOGGING)) {
+		SerialInit(SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE));
 		sceKernelSetGPO(0x82);
-		ksceKernelRegisterDebugPutcharHandler((uintptr_t)SerialDebugPutchar, 0);
+		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
 	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
 	SCE_PRINTF_WITH_INFO(0, 1871, "Starting PSP2 Kernel Boot Loader [0x%08x]: %d\n",
@@ -641,7 +637,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	case 0x114:
 	case 0x115:
 		if (s_bootParam.current->socCacheStatus & 2)
-			ksceKernelPrintfLevel(QA_LEVEL(0, 2), "\tL2 Cache is defective\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2), "\tL2 Cache is defective\n");
 		break;
 	default:
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1968, "\tUnknown chip revision [rev=%x]\n",
@@ -650,7 +646,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	}
 
 	aslr = s_kblParam.dipsw.aslr_seed;
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tASLR: 0x%08x\n", aslr);
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tASLR: 0x%08x\n", aslr);
 	SCE_PRINTF_WITH_INFO(0, 1993, "session ID : %02X%02X%02X%02X%02X%02X%02X%02X"
 			     "%02X%02X%02X%02X%02X%02X%02X%02X\n",
 			     s_kblParam.session_id[0], s_kblParam.session_id[1],
@@ -666,14 +662,14 @@ static inline uint32_t BootCpu0Init(void *lr)
 	s_bootParam.current->memory[0].pbase = 0x40000000;
 	s_bootParam.current->memory[0].psize = 0x200000;
 	for (n = 0; n < s_bootParam.current->numMemory; n++)
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
 				      n, s_bootParam.current->memory[n].pbase,
 				      s_bootParam.current->memory[n].pbase +
 				      s_bootParam.current->memory[n].psize - 1,
 				      s_bootParam.current->memory[n].psize);
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
 			      s_kblParam.wakeup_factor);
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
 			      s_kblParam.hardware_info);
 
 	SetHardwareDependent(param);
@@ -693,29 +689,29 @@ static inline uint32_t BootCpu0Init(void *lr)
 		PERVASIVE_MISC->es3Config |= 8;
 	BootDeviceGateEnable();
 	BootDeviceResetDisable();
-	if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE) || ksceKernelCheckDipsw(0xc0) ||
-	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2)) {
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE) || SceDipswForDriver_A98FC2FD(0xc0) ||
+	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2)) {
 		DebugBusGateEnable();
 		DebugBusResetDisable();
 	}
-	if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE)) {
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE)) {
 		DebugDeviceGateEnable();
 		DebugDeviceResetDisable();
 		DebugPaGateEnable();
 		DebugPaResetDisable();
 	}
-	if (ksceKernelCheckDipsw(0xc0) || ksceKernelCheckDipsw(0xc1)) {
+	if (SceDipswForDriver_A98FC2FD(0xc0) || SceDipswForDriver_A98FC2FD(0xc1)) {
 		ScePervasiveForDriver_D34E74C5(0);
 		ScePervasiveForDriver_EDCA3961(0);
 	}
-	if (ksceKernelCheckDipsw(DIPSW_HARDWARE_BREAKPOINT)) {
+	if (SceDipswForDriver_A98FC2FD(DIPSW_HARDWARE_BREAKPOINT)) {
 		ArmGateEnable(0xc00000);
 		ArmDebuggerGateEnable();
 		ArmDebuggerResetDisable();
 	}
-	if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
 		EnableLpddr2Sub();
-	if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
 		GRAB_NS->developmentMode = 1;
 	PERVASIVE_MISC->pervasiveAccessMode = 0x1f3da;
 	PERVASIVE_MISC->tasAccessMode = 0xff;
@@ -742,8 +738,8 @@ void boot(void)
 	uint32_t *l2;
 	int cpu;
 
-	ksceKernelCorelockLock(&bootSaveArea.corelock, 0);
-	if (ksceKernelCpuId() != 0)
+	SceCpuForKernel_2FF54320(&bootSaveArea.corelock, 0);
+	if (sceKernelCpuId() != 0)
 		aslr = 0;
 	else
 		aslr = BootCpu0Init(lr);
@@ -756,22 +752,22 @@ void boot(void)
 	writeTpidrurw(0);
 	writeTpidruro(0);
 	writeTpidrprw(0);
-	ksceKernelCorelockUnlock(&bootSaveArea.corelock);
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
 	if (BootTestEarly) {
-		ksceKernelCorelockLock(&bootSaveArea.kblCorelock, 0);
-		if (ksceKernelCpuId() == 0)
+		SceCpuForKernel_2FF54320(&bootSaveArea.kblCorelock, 0);
+		if (sceKernelCpuId() == 0)
 			BootTestEarly();
-		ksceKernelCorelockUnlock(&bootSaveArea.kblCorelock);
+		SceCpuForKernel_FE2B77A3(&bootSaveArea.kblCorelock);
 	}
 
 	sceKernelSetGPO(0x85);
 	param = s_bootParam.current;
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	param->cpu[cpu].ttbcr = 2;
 	param->cpu[cpu].dacr = DACR_ALL_CLIENT;
 	param->cpu[cpu].contextId = 0xf0;
 	writeDacr(DACR_ALL_CLIENT);
-	ksceKernelCorelockLock(&bootSaveArea.corelock, 0);
+	SceCpuForKernel_2FF54320(&bootSaveArea.corelock, 0);
 	if (cpu == 0) {
 		uint32_t seed = aslr;
 		param->ttbr0MaxAddress = 0x3fffffff;
@@ -940,7 +936,7 @@ void boot(void)
 					  param->phyPageTable.vbase - param->l2PageTable000MapBase,
 					  param->phyPageTable.psize, param->phyPageTable.pbase);
 	}
-	ksceKernelCorelockUnlock(&bootSaveArea.corelock);
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
 	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
 	writeTtbr1(MMUTtbrValue(param->ttbr1.pbase));
 	writeTtbcr(param->cpu[cpu].ttbcr);
@@ -948,8 +944,8 @@ void boot(void)
 	writeContextId(param->cpu[cpu].contextId);
 
 	/* the kernel's vector page: two copies of this one, the monitor vectors in the first */
-	ksceKernelCorelockLock(&bootSaveArea.corelock, 0);
-	if (ksceKernelCpuId() == 0) {
+	SceCpuForKernel_2FF54320(&bootSaveArea.corelock, 0);
+	if (sceKernelCpuId() == 0) {
 		void *page = memcpy((void *)param->memory[0].pbase, _start, 0x100);
 
 		memcpy((char *)page + 0x100, _start, 0x100);
@@ -959,58 +955,58 @@ void boot(void)
 		((BootVectorPage *)s_bootParam.current->memory[0].pbase)->magic =
 			BOOT_VECTOR_PAGE_MAGIC;
 	}
-	ksceKernelCorelockUnlock(&bootSaveArea.corelock);
-	if (ksceKernelCpuId() == 0)
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
+	if (sceKernelCpuId() == 0)
 		CpuL2CacheInit(CPU_L2CC);
-	ksceKernelCorelockLock(&bootSaveArea.corelock, 0);
-	ksceKernelCorelockUnlock(&bootSaveArea.corelock);
-	if (ksceKernelCpuId() == 0) {
+	SceCpuForKernel_2FF54320(&bootSaveArea.corelock, 0);
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
+	if (sceKernelCpuId() == 0) {
 		CpuL2CacheInit(CPU_L2CC);
-		if (ksceKernelCheckDipsw(DIPSW_DEVELOPMENT_MODE))
+		if (SceDipswForDriver_A98FC2FD(DIPSW_DEVELOPMENT_MODE))
 			CpuL2CacheSetEventMonitorBus(1);
 		CpuL2InvalidateAll();
 	}
-	ksceKernelL1DcacheInvalidateAll();
-	ksceKernelL1IcacheInvalidateEntire();
-	if (ksceKernelCpuId() == 0)
+	SceCpuForKernel_F9B0B171();
+	SceCpuForKernel_15A48AB4();
+	if (sceKernelCpuId() == 0)
 		CpuL2CacheEnable();
 	CpuSctlrInit();
 	CpuActlrInit();
-	ksceKernelCorelockLock(&bootSaveArea.corelock, 0);
-	ksceKernelCorelockUnlock(&bootSaveArea.corelock);
-	ksceKernelCorelockLock(&bootSaveArea.kblCorelock, 0);
-	ksceKernelCorelockUnlock(&bootSaveArea.kblCorelock);
+	SceCpuForKernel_2FF54320(&bootSaveArea.corelock, 0);
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.corelock);
+	SceCpuForKernel_2FF54320(&bootSaveArea.kblCorelock, 0);
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.kblCorelock);
 	writeVbar(param->resetVector);
 	writeMvbar(ALIGN32(param->resetVector + MONITOR_VECTORS_OFFSET));
 	MMUSetReady();
-	ksceKernelCorelockLock(&bootSaveArea.kblCorelock, 0);
-	ksceKernelCpuId();
-	ksceKernelCorelockUnlock(&bootSaveArea.kblCorelock);
+	SceCpuForKernel_2FF54320(&bootSaveArea.kblCorelock, 0);
+	sceKernelCpuId();
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.kblCorelock);
 
 	sceKernelSetGPO(0x86);
 	if (BootTest) {
-		ksceKernelCorelockLock(&bootSaveArea.kblCorelock, 0);
-		if (ksceKernelCpuId() == 0) {
+		SceCpuForKernel_2FF54320(&bootSaveArea.kblCorelock, 0);
+		if (sceKernelCpuId() == 0) {
 			SCE_DBG_PRINTF(0xb, 2196, "Please add test code\n");
 			BootTest();
 		}
-		ksceKernelCorelockUnlock(&bootSaveArea.kblCorelock);
+		SceCpuForKernel_FE2B77A3(&bootSaveArea.kblCorelock);
 		for (;;)
 			;
 	}
 	sceKernelSetGPO(0x87);
 	if (sceKblMain) {
-		if (ksceKernelCpuId() == 0) {
-			ksceKernelMMUVAtoPA((void *)0x8000, &pa);
-			ksceKernelMMUVAtoPA((void *)0x40100000, &pa);
-			ksceKernelMMUVAtoPA((void *)0x47000000, &pa);
-			ksceKernelMMUVAtoPA((void *)0xe0000000, &pa);
+		if (sceKernelCpuId() == 0) {
+			SceCpuForKernel_14E0B0C4(0x8000, &pa);
+			SceCpuForKernel_14E0B0C4(0x40100000, &pa);
+			SceCpuForKernel_14E0B0C4(0x47000000, &pa);
+			SceCpuForKernel_14E0B0C4(0xe0000000, &pa);
 		}
 		sceKblMain(s_bootParam.current);
 	}
-	ksceKernelCorelockLock(&bootSaveArea.kblCorelock, 0);
-	ksceKernelCpuId();
-	ksceKernelCorelockUnlock(&bootSaveArea.kblCorelock);
+	SceCpuForKernel_2FF54320(&bootSaveArea.kblCorelock, 0);
+	sceKernelCpuId();
+	SceCpuForKernel_FE2B77A3(&bootSaveArea.kblCorelock);
 	for (;;)
 		;
 }
@@ -1064,14 +1060,14 @@ static inline uint32_t BootCpu0Init(void *lr)
 	InitializeDipsw(&s_kblParam.dipsw);
 	InitializeAssertLevel();
 	InitializeDebugBuffer();
-	if (ksceKernelCheckDipsw(DIPSW_UART1_CONSOLE) || ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE) ||
-	    ksceKernelCheckDipsw(DIPSW_CONSOLE_LOGGING)) {
-		SerialInit(ksceKernelCheckDipsw(DIPSW_UART0_CONSOLE));
+	if (SceDipswForDriver_A98FC2FD(DIPSW_UART1_CONSOLE) || SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE) ||
+	    SceDipswForDriver_A98FC2FD(DIPSW_CONSOLE_LOGGING)) {
+		SerialInit(SceDipswForDriver_A98FC2FD(DIPSW_UART0_CONSOLE));
 		sceKernelSetGPO(BOOT_GPO(2));
-		ksceKernelRegisterDebugPutcharHandler((uintptr_t)SerialDebugPutchar, 0);
+		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	}
 	SCE_PRINTF_WITH_INFO(0, 1868, "===================================================\n");
-	ksceKernelPrintfLevel(QA_LEVEL(0, 2),
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(0, 2),
 			      "Starting PSP2 Kernel Boot Loader (Non-secure) [0x%08x]: %d\n",
 			      FW_VERSION, KblGetBuildNumber());
 	SCE_DBG_PRINTF_LEVEL(1, 0, 1897, "\n");
@@ -1087,34 +1083,34 @@ static inline uint32_t BootCpu0Init(void *lr)
 		SCE_DBG_ASSERT_CHECK_LR(0, 1932, lr);
 
 	/* the CP's boot switches */
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tBOOTSW\n");
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tBOOTSW\n");
 	for (i = 0; i < 8; i++) {
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\t\t%d: 0x%08x", i, s_kblParam.dipswWords[i]);
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\t\t%d: 0x%08x", i, s_kblParam.dipswWords[i]);
 		switch (i) {
 		case 1:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP bid & version\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP bid & version\n");
 			break;
 		case 2:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP time\n");
 			break;
 		case 3:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": ASLR\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": ASLR\n");
 			aslr = s_kblParam.dipswWords[i];
 			break;
 		case 4:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": SDK(SCE)\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": SDK(SCE)\n");
 			break;
 		case 5:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": SHELL\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": SHELL\n");
 			break;
 		case 6:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": debug control\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": debug control\n");
 			break;
 		case 7:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": system control\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": system control\n");
 			break;
 		default:
-			ksceKernelPrintfLevel(QA_LEVEL(1, 2), ": CP time\n");
+			SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), ": CP time\n");
 			break;
 		}
 	}
@@ -1123,7 +1119,7 @@ static inline uint32_t BootCpu0Init(void *lr)
 	current = s_bootParam.current;
 	current->numMemory = 3;
 	current->memory[0].pbase = 0x40200000;
-	if (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
 		current->memory[0].psize = 0x3fe00000;
 	else
 		current->memory[0].psize = 0x1fe00000;
@@ -1132,14 +1128,14 @@ static inline uint32_t BootCpu0Init(void *lr)
 	current->memory[2].pbase = 0x80000000;
 	current->memory[2].psize = 0x40000000;
 	for (n = 0; n < s_bootParam.current->numMemory; n++)
-		ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
+		SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\tmemory[%d] base: 0x%08x-0x%08x [0x%08x]\n",
 				      n, s_bootParam.current->memory[n].pbase,
 				      s_bootParam.current->memory[n].pbase +
 				      s_bootParam.current->memory[n].psize - 1,
 				      s_bootParam.current->memory[n].psize);
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\twakeupFactor: 0x%08x\n",
 			      s_kblParam.wakeup_factor);
-	ksceKernelPrintfLevel(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
+	SceDebugForDriver_1A3F2AA4(QA_LEVEL(1, 2), "\thardwareInfo: 0x%08x\n",
 			      s_kblParam.hardware_info);
 	SetHardwareDependent(param);
 
@@ -1159,8 +1155,8 @@ void boot(void)
 	unsigned int i;
 	int cpu;
 
-	ksceKernelCorelockLock(&s_bootCorelock, 0);
-	if (ksceKernelCpuId() != 0)
+	SceCpuForKernel_2FF54320(&s_bootCorelock, 0);
+	if (sceKernelCpuId() != 0)
 		aslr = 0;
 	else
 		aslr = BootCpu0Init(lr);
@@ -1173,22 +1169,22 @@ void boot(void)
 	writeTpidrurw(0);
 	writeTpidruro(0);
 	writeTpidrprw(0);
-	ksceKernelCorelockUnlock(&s_bootCorelock);
+	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
 	if (BootTestEarly) {
-		ksceKernelCorelockLock(&s_kblCorelock, 0);
-		if (ksceKernelCpuId() == 0)
+		SceCpuForKernel_2FF54320(&s_kblCorelock, 0);
+		if (sceKernelCpuId() == 0)
 			BootTestEarly();
-		ksceKernelCorelockUnlock(&s_kblCorelock);
+		SceCpuForKernel_FE2B77A3(&s_kblCorelock);
 	}
 
 	sceKernelSetGPO(BOOT_GPO(5));
 	param = s_bootParam.current;
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	param->cpu[cpu].ttbcr = 2;
 	param->cpu[cpu].dacr = DACR_ALL_CLIENT;
 	param->cpu[cpu].contextId = 0xf7;
 	writeDacr(DACR_ALL_CLIENT);
-	ksceKernelCorelockLock(&s_bootCorelock, 0);
+	SceCpuForKernel_2FF54320(&s_bootCorelock, 0);
 	if (cpu == 0) {
 		uint32_t seed = aslr;
 		param->ttbr0MaxAddress = 0x3fffffff;
@@ -1367,13 +1363,13 @@ void boot(void)
 		sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 					  BOOT_MAP_DATA, param->phyPageTable.vbase, 0,
 					  param->phyPageTable.psize, param->phyPageTable.pbase);
-		if (ksceKernelCheckDipsw(DIPSW_ENABLE_TOOL_PHYMEMPART))
+		if (SceDipswForDriver_A98FC2FD(DIPSW_ENABLE_TOOL_PHYMEMPART))
 			sceKernelMMUMapLargePages((uint32_t *)(param->l2PageTable000.pbase + 0x400),
 						  BOOT_MAP_DATA, param->phyPageTableHigh.vbase,
 						  0x80000, param->phyPageTableHigh.psize,
 						  param->phyPageTableHigh.pbase);
 	}
-	ksceKernelCorelockUnlock(&s_bootCorelock);
+	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
 	writeTtbr0(MMUTtbrValue(param->ttbr0.pbase));
 	writeTtbr1(MMUTtbrValue(param->ttbr1.pbase));
 	writeTtbcr(param->cpu[cpu].ttbcr);
@@ -1381,51 +1377,51 @@ void boot(void)
 	writeContextId(param->cpu[cpu].contextId);
 
 	/* the kernel's vector page: two copies of this one */
-	ksceKernelCorelockLock(&s_bootCorelock, 0);
-	if (ksceKernelCpuId() == 0) {
+	SceCpuForKernel_2FF54320(&s_bootCorelock, 0);
+	if (sceKernelCpuId() == 0) {
 		void *page = memcpy((void *)param->memory[0].pbase, _start, 0x100);
 
 		memcpy((char *)page + 0x100, _start, 0x100);
 		param->resetVector = param->exceptionEntry.vbase + 0x100;
 	}
-	ksceKernelCorelockUnlock(&s_bootCorelock);
-	ksceKernelCorelockLock(&s_bootCorelock, 0);
-	ksceKernelCorelockUnlock(&s_bootCorelock);
+	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
+	SceCpuForKernel_2FF54320(&s_bootCorelock, 0);
+	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
 	CpuSctlrInit();
-	ksceKernelCorelockLock(&s_bootCorelock, 0);
-	ksceKernelCorelockUnlock(&s_bootCorelock);
-	ksceKernelCorelockLock(&s_kblCorelock, 0);
-	ksceKernelCorelockUnlock(&s_kblCorelock);
+	SceCpuForKernel_2FF54320(&s_bootCorelock, 0);
+	SceCpuForKernel_FE2B77A3(&s_bootCorelock);
+	SceCpuForKernel_2FF54320(&s_kblCorelock, 0);
+	SceCpuForKernel_FE2B77A3(&s_kblCorelock);
 	writeVbar(param->resetVector);
 	MMUSetReady();
-	ksceKernelCorelockLock(&s_kblCorelock, 0);
-	ksceKernelCpuId();
-	ksceKernelCorelockUnlock(&s_kblCorelock);
+	SceCpuForKernel_2FF54320(&s_kblCorelock, 0);
+	sceKernelCpuId();
+	SceCpuForKernel_FE2B77A3(&s_kblCorelock);
 
 	sceKernelSetGPO(BOOT_GPO(6));
 	if (BootTest) {
-		ksceKernelCorelockLock(&s_kblCorelock, 0);
-		if (ksceKernelCpuId() == 0) {
+		SceCpuForKernel_2FF54320(&s_kblCorelock, 0);
+		if (sceKernelCpuId() == 0) {
 			SCE_DBG_PRINTF(0xb, 2196, "Please add test code\n");
 			BootTest();
 		}
-		ksceKernelCorelockUnlock(&s_kblCorelock);
+		SceCpuForKernel_FE2B77A3(&s_kblCorelock);
 		for (;;)
 			;
 	}
 	sceKernelSetGPO(BOOT_GPO(7));
 	if (sceKblMain) {
-		if (ksceKernelCpuId() == 0) {
-			ksceKernelMMUVAtoPA((void *)0x8000, &pa);
-			ksceKernelMMUVAtoPA((void *)0x40100000, &pa);
-			ksceKernelMMUVAtoPA((void *)0x47000000, &pa);
-			ksceKernelMMUVAtoPA((void *)0xe0000000, &pa);
+		if (sceKernelCpuId() == 0) {
+			SceCpuForKernel_14E0B0C4(0x8000, &pa);
+			SceCpuForKernel_14E0B0C4(0x40100000, &pa);
+			SceCpuForKernel_14E0B0C4(0x47000000, &pa);
+			SceCpuForKernel_14E0B0C4(0xe0000000, &pa);
 		}
 		sceKblMain(s_bootParam.current);
 	}
-	ksceKernelCorelockLock(&s_kblCorelock, 0);
-	ksceKernelCpuId();
-	ksceKernelCorelockUnlock(&s_kblCorelock);
+	SceCpuForKernel_2FF54320(&s_kblCorelock, 0);
+	sceKernelCpuId();
+	SceCpuForKernel_FE2B77A3(&s_kblCorelock);
 	for (;;)
 		;
 }

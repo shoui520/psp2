@@ -21,8 +21,8 @@
 #include <sysmem/cpu_id.h>
 #include <threadmgr/threadcb.h>
 
-int ksceKernelCpuSuspendIntr(void);
-int ksceKernelCpuResumeIntr(int flags);
+int SceCpuForDriver_821FC0EE(void);
+int sceKernelCpuResumeIntr(int flags);
 
 /* PLACEHOLDER: Sony's name for 0x8002200b is unknown */
 
@@ -445,7 +445,7 @@ privWrite:
 	return SCE_KERNEL_ERROR_VA2PA_FAULT;
 }
 
-uint8_t ksceKernelCpuGetCONTEXTIDR(void)
+uint8_t SceCpuForKernel_FD54A91D(void)
 {
 	return readContextId();
 }
@@ -547,13 +547,13 @@ int sceKernelMMUL1Init(uint32_t *l1)
 		SCE_DBG_PRINTF(0xb, 591, "l1base=%p\n", l1);
 		SCE_PANIC(592);
 	}
-	flags = ksceKernelCpuSuspendIntr();
+	flags = SceCpuForDriver_821FC0EE();
 	end = l1 + 0x1000;
 	do
 		MMUWritePTE(l1++, MMU_L1_FAULT);
 	while (l1 != end);
 	MMU_DSB();
-	ksceKernelCpuResumeIntr(flags);
+	sceKernelCpuResumeIntr(flags);
 	return 0;
 }
 
@@ -691,13 +691,13 @@ int sceKernelMMUL2Init(uint32_t *l2)
 
 	if ((uintptr_t)l2 & 0x3ff)
 		SCE_PANIC(1041);
-	flags = ksceKernelCpuSuspendIntr();
+	flags = SceCpuForDriver_821FC0EE();
 	end = l2 + 0x100;
 	do
 		MMUWritePTE(l2++, 0);
 	while (l2 != end);
 	MMU_DSB();
-	ksceKernelCpuResumeIntr(flags);
+	sceKernelCpuResumeIntr(flags);
 	return 0;
 }
 
@@ -838,7 +838,7 @@ int MMUVAtoPAWithFlags(uint32_t mode, uint32_t flags, uintptr_t va, uintptr_t *p
 	return MMUVAtoPACore(mode, flags, va, pa, NULL);
 }
 
-int ksceKernelMMUVAtoPAWithMode(uint32_t mode, uintptr_t va, uintptr_t *pa)
+int SceCpuForKernel_1BD23326(uint32_t mode, uintptr_t va, uintptr_t *pa)
 {
 	return MMUVAtoPACore(mode, 0, va, pa, NULL);
 }
@@ -850,7 +850,7 @@ int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *mem
 }
 
 /* the memory type of the first access to va that is permitted */
-int ksceKernelMMUGetMemoryType(uintptr_t va)
+int SceCpuForKernel_87F7631D(uintptr_t va)
 {
 	uint32_t dacr = readDacr(), par;
 
@@ -907,7 +907,7 @@ int MMUCheckAccessibleRange(uint32_t mode, uintptr_t va, SceSize size)
 	return 0;
 }
 
-int ksceKernelMMUVAtoPA(uintptr_t va, uintptr_t *pa)
+int SceCpuForKernel_14E0B0C4(uintptr_t va, uintptr_t *pa)
 {
 	return MMUVAtoPACore(MMU_ACCESS_ANY, 0, va, pa, NULL);
 }

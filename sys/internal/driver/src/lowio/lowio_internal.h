@@ -2,7 +2,7 @@
 #pragma once
 
 #include <stdint.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <lowio/pervasive_regs.h>
 #include <lowio/uart_regs.h>
 #include <lowio/mailbox_regs.h>

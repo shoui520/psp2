@@ -89,14 +89,14 @@ set(MODULE_IMPORT_NIDS
 	0xDCE180F8:F:0xE8DB7942
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelAtomicGetAndAdd32
-	ksceKernelAtomicAddAndGet32
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_341B6E81
+	SceCpuForDriver_5F6A8743
 	memset
 	strncmp
 	memcpy
@@ -105,8 +105,8 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
 	ksceKernelSetPermission
 	ksceKernelSetProcessIdToTLS
 	ksceKernelDeleteMutex
@@ -148,7 +148,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRename
 	ksceIoChstatByFd
 	ksceIoClose
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	sceDfMgrClose
 	sceDfMgrOpen
 	sceDfMgrRecv

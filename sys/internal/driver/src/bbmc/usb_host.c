@@ -1,5 +1,5 @@
 /* Composite USB host channels used by the modem serial bridge. */
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "usb_serial.h"
@@ -98,7 +98,7 @@ int bbmcAttachUsbSerialInterface(int deviceId, unsigned int index)
 			}
 		} while (interface->bNumEndpoints > count);
 	}
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	ksceKernelClearEventFlag(g_usbSerialHost->event, ~g_usbSerialDetachedEvents[index]);
 	ksceKernelSetEventFlag(g_usbSerialHost->event, g_usbSerialAttachedEvents[index]);
 	g_usbSerialHost->attached[index] = 1;
@@ -110,7 +110,7 @@ int bbmcAttachUsbSerialInterface(int deviceId, unsigned int index)
 				g_usbSerialHost->stateContext[subscriber]);
 		++subscriber;
 	} while (subscriber != 2);
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return 0;
 }
 
@@ -122,7 +122,7 @@ int bbmcDetachUsbQcom(int deviceId)
 
 	if (deviceId != g_usbSerialHost->deviceId[0])
 		return -1;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[0] = 0;
 	ksceKernelClearEventFlag(g_usbSerialHost->event, ~1u);
 	ksceKernelSetEventFlag(g_usbSerialHost->event, 2);
@@ -130,7 +130,7 @@ int bbmcDetachUsbQcom(int deviceId)
 		g_usbSerialHost->stateChanged[0](2, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
 		g_usbSerialHost->stateChanged[1](2, g_usbSerialHost->stateContext[1]);
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind == 1)
 		channel = &g_usbSerialChannels[0];
 	else if (g_usbSerialChannels[1].kind == 1)
@@ -142,7 +142,7 @@ int bbmcDetachUsbQcom(int deviceId)
 		if (pipe->pipeId > 0) {
 			BbmcUsbSerialRequest *request;
 
-			ksceKernelSpinlockLowLock(&pipe->lock);
+			SceCpuForDriver_BF82DEB2(&pipe->lock);
 			request = pipe->head;
 			pipe->pipeId = 0;
 			while (request != NULL) {
@@ -154,7 +154,7 @@ int bbmcDetachUsbQcom(int deviceId)
 					completed(channel->kind, request, (int)0x80332206);
 				request = next;
 			}
-			ksceKernelSpinlockLowUnlock(&pipe->lock);
+			sceKernelSpinlockLowUnlock(&pipe->lock);
 		}
 		++pipe;
 	} while (pipe != &channel->pipes[3]);
@@ -175,7 +175,7 @@ void bbmcUsbSerialOutCompleted(int result, int count, void *argument)
 		count = result;
 	request->queueOwner.channel = NULL;
 	kind = channel->kind;
-	ksceKernelSpinlockLowLock(&pipe->lock);
+	SceCpuForDriver_BF82DEB2(&pipe->lock);
 	head = pipe->head;
 	node = head;
 	if (node == NULL)
@@ -198,12 +198,12 @@ void bbmcUsbSerialOutCompleted(int result, int count, void *argument)
 	}
 	if (head == NULL)
 		pipe->tail = NULL;
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 	if (completed->completed != NULL)
 		completed->completed(kind, completed, count);
 	return;
 missing:
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 }
 
 int bbmcAttachUsbQedl(int deviceId)
@@ -237,7 +237,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 		return (int)0x80332201;
 	if (g_usbSerialHost->attached[index] == 0)
 		return (int)0x80332203;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind == channelId)
 		channel = &g_usbSerialChannels[0];
 	else if (g_usbSerialChannels[1].kind == channelId)
@@ -252,7 +252,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 			if (pipe->pipeId > 0) {
 				BbmcUsbSerialRequest *request;
 
-				ksceKernelSpinlockLowLock(&pipe->lock);
+				SceCpuForDriver_BF82DEB2(&pipe->lock);
 				ksceUsbdClosePipe(pipe->pipeId);
 				pipe->pipeId = 0;
 				request = pipe->head;
@@ -265,7 +265,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 						completed(channel->kind, request, (int)0x80332206);
 					request = next;
 				}
-				ksceKernelSpinlockLowUnlock(&pipe->lock);
+				sceKernelSpinlockLowUnlock(&pipe->lock);
 			}
 			++pipe;
 		} while (pipe != &channel->pipes[3]);
@@ -278,7 +278,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 	channel->kind = 0;
 	ret = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -317,7 +317,7 @@ void bbmcUsbSerialControlCompleted(int result, int count, void *argument)
 
 	if (result < 0)
 		count = result;
-	ksceKernelSpinlockLowLock(&pipe->lock);
+	SceCpuForDriver_BF82DEB2(&pipe->lock);
 	head = pipe->head;
 	node = head;
 	if (node == NULL)
@@ -340,12 +340,12 @@ void bbmcUsbSerialControlCompleted(int result, int count, void *argument)
 	}
 	if (head == NULL)
 		pipe->tail = NULL;
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 	if (completed->completed != NULL)
 		completed->completed(0, completed, count);
 	return;
 missing:
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 }
 
 /* name unknown: complete a bulk IN transfer on the channel's receive pipe. */
@@ -361,7 +361,7 @@ void bbmcUsbSerialInCompleted(int result, int count, void *argument)
 		count = result;
 	request->queueOwner.channel = NULL;
 	kind = channel->kind;
-	ksceKernelSpinlockLowLock(&pipe->lock);
+	SceCpuForDriver_BF82DEB2(&pipe->lock);
 	head = pipe->head;
 	node = head;
 	if (node == NULL)
@@ -384,12 +384,12 @@ void bbmcUsbSerialInCompleted(int result, int count, void *argument)
 	}
 	if (head == NULL)
 		pipe->tail = NULL;
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 	if (completed->completed != NULL)
 		completed->completed(kind, completed, count);
 	return;
 missing:
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 }
 
 /* name unknown: complete an interrupt transfer on the channel's first pipe. */
@@ -405,7 +405,7 @@ void bbmcUsbSerialInterruptCompleted(int result, int count, void *argument)
 		count = result;
 	request->queueOwner.channel = NULL;
 	kind = channel->kind;
-	ksceKernelSpinlockLowLock(&pipe->lock);
+	SceCpuForDriver_BF82DEB2(&pipe->lock);
 	head = pipe->head;
 	node = head;
 	if (node == NULL)
@@ -428,12 +428,12 @@ void bbmcUsbSerialInterruptCompleted(int result, int count, void *argument)
 	}
 	if (head == NULL)
 		pipe->tail = NULL;
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 	if (completed->completed != NULL)
 		completed->completed(kind, completed, count);
 	return;
 missing:
-	ksceKernelSpinlockLowUnlock(&pipe->lock);
+	sceKernelSpinlockLowUnlock(&pipe->lock);
 }
 
 /* name unknown: detach the Qedl interface and fail its queued transfers. */
@@ -522,7 +522,7 @@ int bbmcDetachUsbQedl(int deviceId)
 
 	if (deviceId != g_usbSerialHost->deviceId[2])
 		return -1;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[2] = 0;
 	ksceKernelClearEventFlag(g_usbSerialHost->event, ~16u);
 	ksceKernelSetEventFlag(g_usbSerialHost->event, 32);
@@ -530,7 +530,7 @@ int bbmcDetachUsbQedl(int deviceId)
 		g_usbSerialHost->stateChanged[0](32, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
 		g_usbSerialHost->stateChanged[1](32, g_usbSerialHost->stateContext[1]);
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind == 3)
 		channel = &g_usbSerialChannels[0];
 	else if (g_usbSerialChannels[1].kind == 3)
@@ -542,7 +542,7 @@ int bbmcDetachUsbQedl(int deviceId)
 		if (pipe->pipeId > 0) {
 			BbmcUsbSerialRequest *request;
 
-			ksceKernelSpinlockLowLock(&pipe->lock);
+			SceCpuForDriver_BF82DEB2(&pipe->lock);
 			request = pipe->head;
 			pipe->pipeId = 0;
 			while (request != NULL) {
@@ -554,7 +554,7 @@ int bbmcDetachUsbQedl(int deviceId)
 					completed(channel->kind, request, (int)0x80332206);
 				request = next;
 			}
-			ksceKernelSpinlockLowUnlock(&pipe->lock);
+			sceKernelSpinlockLowUnlock(&pipe->lock);
 		}
 		++pipe;
 	} while (pipe != &channel->pipes[3]);
@@ -570,7 +570,7 @@ int bbmcDetachUsbQdl(int deviceId)
 
 	if (deviceId != g_usbSerialHost->deviceId[3])
 		return -1;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[3] = 0;
 	ksceKernelClearEventFlag(g_usbSerialHost->event, ~64u);
 	ksceKernelSetEventFlag(g_usbSerialHost->event, 128);
@@ -578,7 +578,7 @@ int bbmcDetachUsbQdl(int deviceId)
 		g_usbSerialHost->stateChanged[0](128, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
 		g_usbSerialHost->stateChanged[1](128, g_usbSerialHost->stateContext[1]);
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind == 4)
 		channel = &g_usbSerialChannels[0];
 	else if (g_usbSerialChannels[1].kind == 4)
@@ -590,7 +590,7 @@ int bbmcDetachUsbQdl(int deviceId)
 		if (pipe->pipeId > 0) {
 			BbmcUsbSerialRequest *request;
 
-			ksceKernelSpinlockLowLock(&pipe->lock);
+			SceCpuForDriver_BF82DEB2(&pipe->lock);
 			request = pipe->head;
 			pipe->pipeId = 0;
 			while (request != NULL) {
@@ -602,7 +602,7 @@ int bbmcDetachUsbQdl(int deviceId)
 					completed(channel->kind, request, (int)0x80332206);
 				request = next;
 			}
-			ksceKernelSpinlockLowUnlock(&pipe->lock);
+			sceKernelSpinlockLowUnlock(&pipe->lock);
 		}
 		++pipe;
 	} while (pipe != &channel->pipes[3]);
@@ -618,7 +618,7 @@ int bbmcDetachUsbQmodem(int deviceId)
 
 	if (deviceId != g_usbSerialHost->deviceId[1])
 		return -1;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	g_usbSerialHost->attached[1] = 0;
 	ksceKernelClearEventFlag(g_usbSerialHost->event, ~4u);
 	ksceKernelSetEventFlag(g_usbSerialHost->event, 8);
@@ -626,7 +626,7 @@ int bbmcDetachUsbQmodem(int deviceId)
 		g_usbSerialHost->stateChanged[0](8, g_usbSerialHost->stateContext[0]);
 	if (g_usbSerialHost->stateChanged[1] != NULL)
 		g_usbSerialHost->stateChanged[1](8, g_usbSerialHost->stateContext[1]);
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind == 2)
 		channel = &g_usbSerialChannels[0];
 	else if (g_usbSerialChannels[1].kind == 2)
@@ -638,7 +638,7 @@ int bbmcDetachUsbQmodem(int deviceId)
 		if (pipe->pipeId > 0) {
 			BbmcUsbSerialRequest *request;
 
-			ksceKernelSpinlockLowLock(&pipe->lock);
+			SceCpuForDriver_BF82DEB2(&pipe->lock);
 			request = pipe->head;
 			pipe->pipeId = 0;
 			while (request != NULL) {
@@ -650,7 +650,7 @@ int bbmcDetachUsbQmodem(int deviceId)
 					completed(channel->kind, request, (int)0x80332206);
 				request = next;
 			}
-			ksceKernelSpinlockLowUnlock(&pipe->lock);
+			sceKernelSpinlockLowUnlock(&pipe->lock);
 		}
 		++pipe;
 	} while (pipe != &channel->pipes[3]);
@@ -754,7 +754,7 @@ int bbmcRegisterUsbSerialState(void (*callback)(SceUInt32, void *), void *contex
 
 	if (g_usbSerialHost == NULL)
 		return (int)0x80332201;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialHost->stateChanged[0] != NULL) {
 		ret = (int)0x80332207;
 		if (g_usbSerialHost->stateChanged[1] != NULL)
@@ -765,7 +765,7 @@ int bbmcRegisterUsbSerialState(void (*callback)(SceUInt32, void *), void *contex
 	g_usbSerialHost->stateContext[index] = context;
 	ret = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -776,7 +776,7 @@ int bbmcUnregisterUsbSerialState(void (*callback)(SceUInt32, void *))
 
 	if (g_usbSerialHost == NULL)
 		return (int)0x80332201;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialHost->stateChanged[0] == callback)
 		index = 0;
 	else if (g_usbSerialHost->stateChanged[1] == callback)
@@ -786,7 +786,7 @@ int bbmcUnregisterUsbSerialState(void (*callback)(SceUInt32, void *))
 	g_usbSerialHost->stateChanged[index] = NULL;
 	g_usbSerialHost->stateContext[index] = NULL;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return 0;
 }
 
@@ -805,7 +805,7 @@ int bbmcOpenUsbSerialQcom(int *channelId)
 	if (g_usbSerialHost->attached[0] == 0)
 		return (int)0x80332203;
 	*channelId = 0;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind != 0) {
 		if (g_usbSerialChannels[1].kind != 0) {
 			ret = (int)0x80332204;
@@ -873,7 +873,7 @@ fail:
 reset:
 	g_usbSerialChannels[slot].kind = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -897,7 +897,7 @@ int bbmcOpenUsbSerialAt(int *channelId)
 	if (g_usbSerialHost->attached[1] == 0)
 		return (int)0x80332203;
 	*channelId = 0;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind != 0) {
 		if (g_usbSerialChannels[1].kind != 0) {
 			ret = (int)0x80332204;
@@ -965,7 +965,7 @@ fail:
 reset:
 	g_usbSerialChannels[slot].kind = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -989,7 +989,7 @@ int bbmcOpenUsbSerialQedl(int *channelId)
 	if (g_usbSerialHost->attached[2] == 0)
 		return (int)0x80332203;
 	*channelId = 0;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind != 0) {
 		if (g_usbSerialChannels[1].kind != 0) {
 			ret = (int)0x80332204;
@@ -1057,7 +1057,7 @@ fail:
 reset:
 	g_usbSerialChannels[slot].kind = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -1081,7 +1081,7 @@ int bbmcOpenUsbSerialQdl(int *channelId)
 	if (g_usbSerialHost->attached[3] == 0)
 		return (int)0x80332203;
 	*channelId = 0;
-	ksceKernelSpinlockLowLock(&g_usbSerialHost->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbSerialHost->lock);
 	if (g_usbSerialChannels[0].kind != 0) {
 		if (g_usbSerialChannels[1].kind != 0) {
 			ret = (int)0x80332204;
@@ -1149,7 +1149,7 @@ fail:
 reset:
 	g_usbSerialChannels[slot].kind = 0;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
+	sceKernelSpinlockLowUnlock(&g_usbSerialHost->lock);
 	return ret;
 }
 
@@ -1174,7 +1174,7 @@ int bbmcControlUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	    g_usbSerialChannels[1].kind != channelId)
 		return (int)0x80332204;
 	request->queueOwner.controlPipe = &host->controlPipe;
-	ksceKernelSpinlockLowLock(&host->controlPipe.lock);
+	SceCpuForDriver_BF82DEB2(&host->controlPipe.lock);
 	request->next = NULL;
 	if (host->controlPipe.head != NULL) {
 		host->controlPipe.tail->next = request;
@@ -1183,7 +1183,7 @@ int bbmcControlUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 		host->controlPipe.head = request;
 		host->controlPipe.tail = request;
 	}
-	ksceKernelSpinlockLowUnlock(&host->controlPipe.lock);
+	sceKernelSpinlockLowUnlock(&host->controlPipe.lock);
 	if (request->transferType != 0)
 		ret = bulkTransfer(host->controlPipe.pipeId,
 				   request->arguments.bulk.data,
@@ -1196,7 +1196,7 @@ int bbmcControlUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 					     bbmcUsbSerialControlCompleted, request);
 	if (ret >= 0)
 		return ret;
-	ksceKernelSpinlockLowLock(&host->controlPipe.lock);
+	SceCpuForDriver_BF82DEB2(&host->controlPipe.lock);
 	head = host->controlPipe.head;
 	current = head;
 	if (head == NULL)
@@ -1220,7 +1220,7 @@ empty:
 		host->controlPipe.tail = NULL;
 	}
 out:
-	ksceKernelSpinlockLowUnlock(&host->controlPipe.lock);
+	sceKernelSpinlockLowUnlock(&host->controlPipe.lock);
 	request->queueOwner.controlPipe = NULL;
 	return ret;
 }
@@ -1244,7 +1244,7 @@ int bbmcWriteUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	if (channel->pipes[2].pipeId == 0)
 		return (int)0x80332206;
 	request->queueOwner.channel = channel;
-	ksceKernelSpinlockLowLock(&channel->pipes[2].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[2].lock);
 	request->next = NULL;
 	if (channel->pipes[2].head != NULL) {
 		channel->pipes[2].tail->next = request;
@@ -1253,7 +1253,7 @@ int bbmcWriteUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 		channel->pipes[2].head = request;
 		channel->pipes[2].tail = request;
 	}
-	ksceKernelSpinlockLowUnlock(&channel->pipes[2].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[2].lock);
 	if (request->transferType != 0)
 		ret = ksceUsbdBulkTransfer(channel->pipes[2].pipeId,
 				   request->arguments.bulk.data,
@@ -1266,7 +1266,7 @@ int bbmcWriteUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 					     bbmcUsbSerialOutCompleted, request);
 	if (ret >= 0)
 		return ret;
-	ksceKernelSpinlockLowLock(&channel->pipes[2].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[2].lock);
 	head = channel->pipes[2].head;
 	current = head;
 	if (head == NULL)
@@ -1290,7 +1290,7 @@ empty:
 		channel->pipes[2].tail = NULL;
 	}
 out:
-	ksceKernelSpinlockLowUnlock(&channel->pipes[2].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[2].lock);
 	request->queueOwner.channel = NULL;
 	return ret;
 }
@@ -1314,7 +1314,7 @@ int bbmcReadUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	if (channel->pipes[1].pipeId == 0)
 		return (int)0x80332206;
 	request->queueOwner.channel = channel;
-	ksceKernelSpinlockLowLock(&channel->pipes[1].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[1].lock);
 	request->next = NULL;
 	if (channel->pipes[1].head != NULL) {
 		channel->pipes[1].tail->next = request;
@@ -1323,7 +1323,7 @@ int bbmcReadUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 		channel->pipes[1].head = request;
 		channel->pipes[1].tail = request;
 	}
-	ksceKernelSpinlockLowUnlock(&channel->pipes[1].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[1].lock);
 	if (request->transferType != 0)
 		ret = ksceUsbdBulkTransfer(channel->pipes[1].pipeId,
 				   request->arguments.bulk.data,
@@ -1336,7 +1336,7 @@ int bbmcReadUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 					     bbmcUsbSerialInCompleted, request);
 	if (ret >= 0)
 		return ret;
-	ksceKernelSpinlockLowLock(&channel->pipes[1].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[1].lock);
 	head = channel->pipes[1].head;
 	current = head;
 	if (head == NULL)
@@ -1360,7 +1360,7 @@ empty:
 		channel->pipes[1].tail = NULL;
 	}
 out:
-	ksceKernelSpinlockLowUnlock(&channel->pipes[1].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[1].lock);
 	request->queueOwner.channel = NULL;
 	return ret;
 }
@@ -1384,7 +1384,7 @@ int bbmcInterruptUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	if (channel->pipes[0].pipeId == 0)
 		return (int)0x80332206;
 	request->queueOwner.channel = channel;
-	ksceKernelSpinlockLowLock(&channel->pipes[0].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[0].lock);
 	request->next = NULL;
 	if (channel->pipes[0].head != NULL) {
 		channel->pipes[0].tail->next = request;
@@ -1393,7 +1393,7 @@ int bbmcInterruptUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 		channel->pipes[0].head = request;
 		channel->pipes[0].tail = request;
 	}
-	ksceKernelSpinlockLowUnlock(&channel->pipes[0].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[0].lock);
 	if (request->transferType != 0)
 		ret = ksceUsbdInterruptTransfer(channel->pipes[0].pipeId,
 				   request->arguments.bulk.data,
@@ -1406,7 +1406,7 @@ int bbmcInterruptUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 					     bbmcUsbSerialInterruptCompleted, request);
 	if (ret >= 0)
 		return ret;
-	ksceKernelSpinlockLowLock(&channel->pipes[0].lock);
+	SceCpuForDriver_BF82DEB2(&channel->pipes[0].lock);
 	head = channel->pipes[0].head;
 	current = head;
 	if (head == NULL)
@@ -1430,7 +1430,7 @@ empty:
 		channel->pipes[0].tail = NULL;
 	}
 out:
-	ksceKernelSpinlockLowUnlock(&channel->pipes[0].lock);
+	sceKernelSpinlockLowUnlock(&channel->pipes[0].lock);
 	request->queueOwner.channel = NULL;
 	return ret;
 }

@@ -1,6 +1,6 @@
 /* Descriptive names: the original contains no source-file debug records. */
 #include "mgvideo_private.h"
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 
 const MgVideoProtectionInfoBox protectionInfoTemplate = {
 	.header = { { 0, 0, 0, 116 }, { 's', 'i', 'n', 'f' } },
@@ -31,8 +31,8 @@ const char keyringLabel[13] = "KEYRING     ";
 
 const MgVideoCipherBlock zeroVideoBlock = { { 0, 0, 0, 0 } };
 
-const SceProcEventHandler videoProcessEventCallbacks = {
-	.size = sizeof(SceProcEventHandler),
+const SceKernelProcEventHandler videoProcessEventCallbacks = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.exit = onVideoProcessExit,
 	.kill = onVideoProcessKill,
 };

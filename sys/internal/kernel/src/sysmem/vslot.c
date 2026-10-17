@@ -39,7 +39,7 @@ static SceClass s_vslotClassBody;
 
 int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 				SceClassCallback create, SceClassCallback destroy);
-int ksceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa);
+int SceSysmemForDriver_61A67D32(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa);
 AddressSpaceObject *SceSysmemForKernel_2E5CC243(void);	/* sceKernelGetKernelAddressSpace */
 void *AddressSpaceGetPartitionByIndex(AddressSpaceObject *as, SceUInt32 index);
 void MemBlockClearRaw(MemBlockObject *block);
@@ -67,7 +67,7 @@ static inline VSlotFIFO *GetFIFO(SceUInt32 type)
 static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 {
 	VSlotFIFO *fifo = GetFIFO(type);
-	int intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
+	int intr = SceCpuForDriver_4C38CE4D(&fifo->lock);
 
 	if (fifo->count == 0) {
 		fifo->head = slot;
@@ -75,14 +75,14 @@ static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 	} else {
 		MemBlockObject *tail;
 #if FW_DEBUG
-		int assertLevel = ksceKernelGetAssertLevel();
+		int assertLevel = SceDebugForDriver_374B7868();
 
 		tail = fifo->tail;
 		if (assertLevel > 0) {
 #pragma push_macro("__FILE_NAME__")
 #undef __FILE_NAME__
 #define __FILE_NAME__ "vslot_module.h"
-			ksceKernelAssertLevel(1, VSlotIsVSlot(tail),
+			SceDebugForDriver_FD753E7A(1, VSlotIsVSlot(tail),
 					      SCE_DBGINFO_FUNC(196, "VSlotSetNextRaw"),
 					      __builtin_return_address(0));
 #pragma pop_macro("__FILE_NAME__")
@@ -96,7 +96,7 @@ static int VSlotFIFOPush(SceUInt32 type, MemBlockObject *slot, int isNew)
 	fifo->count++;
 	if (isNew)
 		fifo->low++;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 	return 0;
 }
 
@@ -157,13 +157,13 @@ static inline int VSlotMap(MemBlockObject *slot, SceUID pid, uintptr_t va, SceSi
 	uintptr_t vbase, pa;
 	int intr, ret = 0;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&slot->lock);
+	intr = SceCpuForDriver_4C38CE4D(&slot->lock);
 	info = VSlotGetInfoRaw(slot);
 	info->pid = pid;
 	info->va = va;
 	info->size = size;
 	for (i = 0; i < pages; i++, va += 0x1000) {
-		ret = ksceKernelProcModeVAtoPA(pid, 0x10, (const void *)va, &pa);
+		ret = SceSysmemForDriver_61A67D32(pid, 0x10, (const void *)va, &pa);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 423,
 				       "%d/%d:sceKernelProcModeVAtoPA(0x%08x, 0x%08x) failed 0x%08x\n",
@@ -188,7 +188,7 @@ static inline int VSlotMap(MemBlockObject *slot, SceUID pid, uintptr_t va, SceSi
 	*pSlot = slot;
 	*pVbase = vbase;
 out:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&slot->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&slot->lock, intr);
 	return ret;
 }
 
@@ -202,17 +202,17 @@ int sceKernelVSlotMapProcMemory(SceUID pid, uintptr_t va, SceSize size, SceUInt3
 
 	if ((va & 0xfff) || size - 1 >= VSLOT_MAX_SIZE || (size & 0xfff))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelLockRangeProc(pid, (void *)va, size);
+	ret = SceSysmemForDriver_659586BF(pid, (void *)va, size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 506, "sceKernelLockRangeProc failed 0x%08x\n", ret);
 		return ret;
 	}
 	fifo = GetFIFO(type);
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&fifo->lock);
+	intr = SceCpuForDriver_4C38CE4D(&fifo->lock);
 	ret = VSlotFIFOPop(fifo, &slot);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 	if (ret < 0) {
-		ksceKernelUnlockRangeProc(pid, (void *)va, size);
+		SceSysmemForDriver_A8525B06(pid, (void *)va, size);
 		return ret;
 	}
 	return VSlotMap(slot, pid, va, size, pSlot, pVbase);
@@ -240,7 +240,7 @@ int sceKernelVSlotUnmapProcMemory(MemBlockObject *slot)
 
 	VSlotUnmap(slot);
 	info = VSlotGetInfoRaw(slot);
-	ret = ksceKernelUnlockRangeProc(info->pid, (void *)info->va, info->size);
+	ret = SceSysmemForDriver_A8525B06(info->pid, (void *)info->va, info->size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 626, "sceKernelUnlockRangeProc failed 0x%08x\n", ret);
 		return ret;
@@ -258,7 +258,7 @@ static inline void MakeVSlot(MemBlockObject *slot, SceUInt32 type)
 	slot->base.sce_class = s_vslotClass;
 	slot->attr |= 0x80000000;
 	VSlotSetTypeRaw(slot, type);
-	info = ksceKernelAlloc(sizeof(*info));
+	info = SceSysmemForKernel_85571907(sizeof(*info));
 	if (info == NULL) {
 		SCE_DBG_PRINTF(0xb, 308, "%p, 0x%08x: cannot allocate VSlotInfo\n", slot, type);
 		return;
@@ -267,10 +267,10 @@ static inline void MakeVSlot(MemBlockObject *slot, SceUInt32 type)
 	info->va = 0;
 	info->size = 0;
 	info->pa = NULL;
-	pa = ksceKernelAlloc(sizeof(*pa) * (VSLOT_MAX_SIZE >> 12));
+	pa = SceSysmemForKernel_85571907(sizeof(*pa) * (VSLOT_MAX_SIZE >> 12));
 	if (pa == NULL) {
 		SCE_DBG_PRINTF(0xb, 316, "%p, 0x%08x: cannot allocate pPhyPageVector\n", slot, type);
-		ksceKernelFree(info);
+		SceSysmemForKernel_4233C16D(info);
 		return;
 	}
 	pa[0] = 0;
@@ -319,7 +319,7 @@ int VSlotModuleStart(void)
 
 	s_vslotClass = &s_vslotClassBody;
 	ret = SceSysmemForKernel_7CDB7655(&s_vslotClassBody, "SceUIDVSlotClass",
-					  ksceKernelGetUIDDLinkClass(), 0x40,
+					  SceSysmemForKernel_E4193EB6(), 0x40,
 					  (SceClassCallback)VSlotCreate,
 					  (SceClassCallback)VSlotDestroy);
 	if (ret < 0) {

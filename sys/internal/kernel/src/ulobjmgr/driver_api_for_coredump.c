@@ -4,7 +4,7 @@
  * (Sony's driver_api_for_coredump.c).
  */
 #include <string.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <ulobjmgr/ulobjmgr.h>
 #include "ulobjmgr_internal.h"
 #include "util.h"
@@ -92,7 +92,7 @@ int traverseUltRuntimeByUltRuntimeInstance(SceUID pid, const UltRuntime *runtime
 	address = runtime->ultTable;
 	for (remaining = runtime->numUlts; remaining != 0; remaining -= chunk) {
 		chunk = remaining < ULT_ID_CHUNK ? remaining : ULT_ID_CHUNK;
-		ret = ksceKernelCopyFromUserProc(pid, table, (const void *)address,
+		ret = sceKernelCopyFromUserProc(pid, table, (const void *)address,
 						 chunk * sizeof(table[0]));
 		if (ret != 0)
 			return ret;
@@ -128,7 +128,7 @@ int traverseUltRuntimeByUltRuntimeId(SceUID pid, SceUIntPtr runtimeId, int mode,
 	SCE_DBG_ASSERT(pSkip != NULL, 129);
 	SCE_DBG_ASSERT(pCount != NULL, 130);
 	SCE_DBG_ASSERT(mode == TRAVERSE_FIBER || mode == TRAVERSE_ULT, 132);
-	ret = ksceKernelCopyFromUserProc(pid, &runtime, (const void *)runtimeId,
+	ret = sceKernelCopyFromUserProc(pid, &runtime, (const void *)runtimeId,
 					 sizeof(runtime));
 	if (ret != 0)
 		return ret;
@@ -307,7 +307,7 @@ int getFiberRegister(SceUID pid, const UltFiber *fiber, UltFiberContext *context
 	SCE_DBG_ASSERT(fiber != NULL, 406);
 	SCE_DBG_ASSERT(context != NULL, 407);
 	if (getFiberState(fiber) == 2)
-		return ksceKernelCopyFromUserProc(pid, context, (const void *)fiber->context,
+		return sceKernelCopyFromUserProc(pid, context, (const void *)fiber->context,
 						  sizeof(*context));
 	memset(context, 0, sizeof(*context));
 	return 0;
@@ -351,7 +351,7 @@ int SceUlobjMgrForDriver_8E200387(SceUID pid, SceUIntPtr fiberId, UlobjFiberInfo
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelCopyFromUserProc(pid, &fiber, (const void *)fiberId, sizeof(fiber));
+	ret = sceKernelCopyFromUserProc(pid, &fiber, (const void *)fiberId, sizeof(fiber));
 	if (ret != 0)
 		return ret;
 	state = getFiberState(&fiber);
@@ -394,7 +394,7 @@ int SceUlobjMgrForDriver_FFC8C811(SceUID pid, SceUIntPtr ultId, SceUInt32 runtim
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelCopyFromUserProc(pid, &ult, (const void *)ultId, sizeof(ult));
+	ret = sceKernelCopyFromUserProc(pid, &ult, (const void *)ultId, sizeof(ult));
 	if (ret != 0)
 		return ret;
 	copy32bWithNullTermination(info->name, ult.name);
@@ -421,7 +421,7 @@ int SceUlobjMgrForDriver_525A9BDB(SceUID pid, SceUIntPtr runtimeId, UlobjUltRunt
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelCopyFromUserProc(pid, &runtime, (const void *)runtimeId,
+	ret = sceKernelCopyFromUserProc(pid, &runtime, (const void *)runtimeId,
 					 sizeof(runtime));
 	if (ret != 0)
 		return ret;

@@ -1,9 +1,9 @@
 /* Robin initialization work; filename inferred, no source-name debug record. */
 #include "../../wlanbt/wlanbt_internal.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <sdif/sdif.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
@@ -254,12 +254,12 @@ int robinInitialize(void)
 	gRobin = (SceWlanBtRobin){0};
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
-	result = ksceKernelAllocMemBlock("SceWlanBtRobin",
+	result = SceSysmemForDriver_C94850C9("SceWlanBtRobin",
 					SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 					0x80000, &options);
 	if (result >= 0) {
 		gRobin.firmwareMemBlock = result;
-		result = ksceKernelGetMemBlockBase(result, &gRobin.firmwareBuffer);
+		result = SceSysmemForDriver_A841EDDA(result, &gRobin.firmwareBuffer);
 		if (result >= 0) {
 			ksceKernelEnqueueWorkQueue(0x10023, "SceWlanBtRobinInit",
 						 robinInitializeWork, NULL);
@@ -267,7 +267,7 @@ int robinInitialize(void)
 		}
 	}
 	if (gRobin.firmwareMemBlock > 0)
-		ksceKernelFreeMemBlock(gRobin.firmwareMemBlock);
+		SceSysmemForDriver_009E1C61(gRobin.firmwareMemBlock);
 	return result;
 }
 
@@ -303,13 +303,13 @@ int wlanBtStartRobin(void)
 		case '0':
 		case '1':
 			result = 0x80418007;
-			ksceKernelPrintf("[SceWlanBt]: Robin W0/W1 : NOT SUPPORTED.\n");
+			SceDebugForDriver_391B74B7("[SceWlanBt]: Robin W0/W1 : NOT SUPPORTED.\n");
 			goto releaseFunctions;
 		case '@':
 		case 'P':
 			break;
 		default:
-			ksceKernelPrintf("Unknown card rev : 0x%02x\n", gRobin.revision);
+			SceDebugForDriver_391B74B7("Unknown card rev : 0x%02x\n", gRobin.revision);
 			break;
 		}
 		if (!gRobin.firmwareLoaded) {
@@ -326,7 +326,7 @@ int wlanBtStartRobin(void)
 			if (result < 0)
 				goto releaseFunctions;
 			gRobin.firmwareLoaded = 1;
-			result = ksceKernelRemapMemBlock(gRobin.firmwareMemBlock,
+			result = SceSysmemForDriver_DFE2C8CB(gRobin.firmwareMemBlock,
 							SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_R);
 			if (result < 0)
 				goto releaseFunctions;
@@ -369,13 +369,13 @@ releaseFunctions:
 		wlanBtPowerDownDevice();
 		wlanBtPowerOnDevice();
 		if (attempts == 20) {
-			ksceKernelPrintf("[SceWlanBt]: Reset retry (%d) : NG\n", attempts);
+			SceDebugForDriver_391B74B7("[SceWlanBt]: Reset retry (%d) : NG\n", attempts);
 			wlanBtPowerDownDevice();
 			goto finished;
 		}
 	}
 	if (attempts)
-		ksceKernelPrintf("[SceWlanBt]: Reset retry (%d) : OK\n", attempts);
+		SceDebugForDriver_391B74B7("[SceWlanBt]: Reset retry (%d) : OK\n", attempts);
 finished:
 	return result;
 }
@@ -410,13 +410,13 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 	case '0':
 	case '1':
 		result = 0x80418007;
-		ksceKernelPrintf("[SceWlanBt]: Robin W0/W1 : NOT SUPPORTED.\n");
+		SceDebugForDriver_391B74B7("[SceWlanBt]: Robin W0/W1 : NOT SUPPORTED.\n");
 		goto checkWakeSources;
 	case '@':
 	case 'P':
 		break;
 	default:
-		ksceKernelPrintf("Unknown card rev : 0x%02x\n", gRobin.revision);
+		SceDebugForDriver_391B74B7("Unknown card rev : 0x%02x\n", gRobin.revision);
 		break;
 	}
 	if (!gRobin.firmwareLoaded) {
@@ -433,7 +433,7 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 		if (result < 0)
 			goto checkWakeSources;
 		gRobin.firmwareLoaded = 1;
-		result = ksceKernelRemapMemBlock(gRobin.firmwareMemBlock,
+		result = SceSysmemForDriver_DFE2C8CB(gRobin.firmwareMemBlock,
 						SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_R);
 		if (result < 0)
 			goto checkWakeSources;
@@ -472,14 +472,14 @@ checkWakeSources:
 						     &wakeStatus, 1) >= 0 && wakeStatus == 1)
 				*wakeSources |= 2;
 		}
-		if (ksceSblAimgrIsDolce()) {
+		if (SceSblAIMgrForDriver_71608CA3()) {
 			if (robinWlanNeedsDeauthentication()) {
 				if (!robinDeauthenticateForResume()) {
-					ksceKernelPrintf("[SceWlanBt]: Reset to continue resume. (deauth failure)\n");
+					SceDebugForDriver_391B74B7("[SceWlanBt]: Reset to continue resume. (deauth failure)\n");
 					*wakeSources = 0;
 				}
 			} else if (*wakeSources == 2 && !robinResetWlanForResume()) {
-				ksceKernelPrintf("[SceWlanBt]: Reset to continue resume.\n");
+				SceDebugForDriver_391B74B7("[SceWlanBt]: Reset to continue resume.\n");
 				*wakeSources = 0;
 			}
 		}

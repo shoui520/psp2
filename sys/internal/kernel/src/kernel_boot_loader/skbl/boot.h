@@ -4,7 +4,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu/corelock.h>
+#include <sysmem/cpu.h>
 
 /* reset.S: the boot save area */
 typedef struct BootSaveArea {

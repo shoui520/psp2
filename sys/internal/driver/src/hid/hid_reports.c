@@ -2,7 +2,7 @@
 #include "hid_internal.h"
 #include <string.h>
 #include <psp2/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 
 HidReportRouting hidRouting[3];
 HidCollection *hidCollections[24];
@@ -24,7 +24,7 @@ int hidClearCollectionReports(HidCollection *collection)
 	if (cursor == NULL)
 		return 0;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
+	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
 	while (cursor->pendingCount > 0) {
 		SceSize size;
 
@@ -47,7 +47,7 @@ advance:
 		cursor->readIndex = (cursor->readIndex + 1) % 16;
 	}
 	cursor->peekCount = cursor->readIndex;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
 	return 0;
 }
 
@@ -91,7 +91,7 @@ int hidReadCollectionReports(HidCollection *collection, void *buffer, int count)
 	}
 	pid = sceKernelGetProcessId();
 	hidGetProcessPrivileges(pid, &privileges);
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
+	intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
 	if (count <= 0 || cursor->pendingCount <= 0)
 		goto unlock;
 	do {
@@ -127,7 +127,7 @@ int hidReadCollectionReports(HidCollection *collection, void *buffer, int count)
 		cursor->readIndex = (cursor->readIndex + 1) % 16;
 	} while (copied != count && cursor->pendingCount > 0);
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
 	return copied;
 }
 
@@ -230,11 +230,11 @@ nextId:
 		cursor = hidNextProcessReportCursor(index);
 		if (cursor == NULL)
 			return collection;
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
 		cursor->pendingCount = 0;
 		cursor->readIndex = 0;
 		cursor->peekCount = 0;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
 	}
 }
 
@@ -280,7 +280,7 @@ release:
 			hidNotifyKeyboardEnumeration();
 		else if (type == 3)
 			hidNotifyConsumerEnumeration();
-		ksceKernelPowerTick(0);
+		SceKernelSuspendForDriver_E0489831(0);
 	}
 }
 
@@ -553,7 +553,7 @@ consumer:
 		else if (collection->type == 2)
 			hidNotifyKeyboardEnumeration();
 	}
-	ksceKernelPowerTick(0);
+	SceKernelSuspendForDriver_E0489831(0);
 attached:
 	collection->device = device;
 	return result;
@@ -841,14 +841,14 @@ void hidProcessReport(HidCollection *collection, unsigned int reportId,
 		cursor = hidNextProcessReportCursor(index);
 		if (cursor == NULL)
 			break;
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&cursor->spinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&cursor->spinlock);
 		if (cursor->pendingCount <= 15)
 			cursor->pendingCount++;
 		else
 			cursor->readIndex = collection->writeIndex;
 		if (cursor->peekCount != 16)
 			cursor->peekCount++;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&cursor->spinlock, intrState);
 	}
 	switch (collection->type) {
 	case 1:
@@ -861,7 +861,7 @@ void hidProcessReport(HidCollection *collection, unsigned int reportId,
 		hidNotifyConsumerRead();
 		break;
 	}
-	ksceKernelPowerTick(0);
+	SceKernelSuspendForDriver_E0489831(0);
 }
 
 #undef READ_BITS

@@ -1,9 +1,9 @@
 /* SceHpremote: debounced headphone/remote inputs and codec detection. */
 #include <stdint.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <hpremote/hpremote.h>
 #include <sysmem/sysevent_ids.h>
@@ -339,23 +339,23 @@ int module_start(SceSize args, void *argp)
 	ksceKernelStartThread(uid, 0, NULL);
 	ksceKernelRegisterSubIntrHandler(8, 24, "SceHprmVblank", pollInputs, NULL);
 	ksceKernelEnableSubIntr(8, 24);
-	ksceKernelRegisterSysEventHandler("SceHprm", sysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceHprm", sysEvent, NULL);
 	return 0;
 }
 
 int SceHpremoteForDriver_D22913DB(void (*handler)(int, int, int, int, int, void *), void *arg)
 {
-	int intr = ksceKernelCpuSuspendIntr();
+	int intr = SceCpuForDriver_821FC0EE();
 
 	remote.handler = handler;
 	remote.handlerArg = arg;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
 int SceHpremoteForDriver_C7154136(int callback)
 {
-	int intr = ksceKernelCpuSuspendIntr(), ret = -1, i;
+	int intr = SceCpuForDriver_821FC0EE(), ret = -1, i;
 
 	for (i = 0; i < 16; i++) {
 		if (remote.callbacks[i] < 0) {
@@ -364,13 +364,13 @@ int SceHpremoteForDriver_C7154136(int callback)
 			break;
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
 int SceHpremoteForDriver_68D64A0F(int callback)
 {
-	int intr = ksceKernelCpuSuspendIntr(), ret = -1, i;
+	int intr = SceCpuForDriver_821FC0EE(), ret = -1, i;
 
 	for (i = 0; i < 16; i++) {
 		if (remote.callbacks[i] == callback) {
@@ -379,7 +379,7 @@ int SceHpremoteForDriver_68D64A0F(int callback)
 			break;
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 

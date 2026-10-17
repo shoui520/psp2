@@ -1,8 +1,8 @@
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sm_comm.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <threadmgr/threadmgr.h>
 
@@ -69,7 +69,7 @@ verify:
 	result = UpdateUtilIoRead(fd, segment->offset, 1024, buffer);
 	if (result)
 		goto cleanup;
-	ksceKernelDcacheCleanRange(buffer, 1024);
+	SceCpuForDriver_103872A5(buffer, 1024);
 	if (loadSm) {
 		pupSmId = -1;
 		result = UpdateUtilSetupSm(0, &pupSmId, 0);
@@ -84,11 +84,11 @@ cleanup:
 	if (buffer)
 		UpdateUtilReleaseBuffer(buffer, sceKernelGetProcessId());
 	if (dataVector)
-		ksceKernelFreeHeapMemory(heapId, dataVector);
+		sceKernelFreeHeapMemory(heapId, dataVector);
 	if (vectorVector)
-		ksceKernelFreeHeapMemory(heapId, vectorVector);
+		sceKernelFreeHeapMemory(heapId, vectorVector);
 	if (packet)
-		ksceKernelFreeHeapMemory(heapId, packet);
+		sceKernelFreeHeapMemory(heapId, packet);
 	if (!residentSm && pupSmId != -1) {
 		UpdateUtilStopSm(&pupSmId);
 		pupSmId = -1;

@@ -1,6 +1,6 @@
 /* SceBbmc's single semaphore-backed intrusive message queue. */
 #include <stddef.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "bbmc_queue.h"
 
@@ -86,7 +86,7 @@ int bbmcSendMailbox(BbmcMailbox *mailbox, BbmcQueueEntry *entry)
 	if (entry == NULL)
 		return 0x80330002;
 	entry->next = NULL;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&mailbox->lock);
+	intr = SceCpuForDriver_D32ACE9E(&mailbox->lock);
 	if (mailbox->head != NULL) {
 		mailbox->tail->next = entry;
 		mailbox->tail = entry;
@@ -96,7 +96,7 @@ int bbmcSendMailbox(BbmcMailbox *mailbox, BbmcQueueEntry *entry)
 	}
 	mailbox->count++;
 	ksceKernelSignalSema(mailbox->semaphore, 1);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&mailbox->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&mailbox->lock, intr);
 	return 0;
 }
 
@@ -111,13 +111,13 @@ int bbmcReceiveMailbox(BbmcMailbox *mailbox, BbmcQueueEntry **entry, SceUInt *ti
 	ret = ksceKernelWaitSema(mailbox->semaphore, 1, timeout);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&mailbox->lock);
+	intr = SceCpuForDriver_D32ACE9E(&mailbox->lock);
 	*entry = mailbox->head;
 	mailbox->head = mailbox->head->next;
 	(*entry)->next = NULL;
 	if (mailbox->head == NULL)
 		mailbox->tail = NULL;
 	mailbox->count--;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&mailbox->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&mailbox->lock, intr);
 	return ret;
 }

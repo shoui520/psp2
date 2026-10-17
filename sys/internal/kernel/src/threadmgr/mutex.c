@@ -25,8 +25,6 @@
 #define SCE_KERNEL_ERROR_WAIT_DELETE_MUTEX 0x800281a2
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
-extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-
 /* SceUIDMutexClass's constructor */
 static int uidMutex_Constructor(void *object)
 {
@@ -44,15 +42,15 @@ int getMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
 
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		ret = ThreadmgrInSyscall() ? 0xc0028141 : 0x80028141;
 	} else {
 		info->mutexId = mutexId;
-		strncpy(info->name, ksceGUIDName(mutexId), sizeof(info->name) - 1);
-		ksceKernelSpinlockLowLock(&mutex->lock);
+		strncpy(info->name, SceSysmemForDriver_E655852F(mutexId), sizeof(info->name) - 1);
+		SceCpuForDriver_BF82DEB2(&mutex->lock);
 		info->attr = mutex->attr;
 		info->initCount = mutex->core.initCount;
 		info->currentCount = mutex->core.lockCount;
@@ -63,11 +61,11 @@ int getMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
 			info->ceilingPriority = mutex->core.ceilingPriority;
 		else
 			info->ceilingPriority = 0;
-		ksceKernelSpinlockLowUnlock(&mutex->lock);
-		ksceGUIDReleaseObject(mutexId);
+		sceKernelSpinlockLowUnlock(&mutex->lock);
+		sceGUIDReleaseObject(mutexId);
 		ret = 0;
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return ret;
 }
 
@@ -119,23 +117,23 @@ void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count)
 	    !s_threadmgrRuntime.manager->testMode) {
 		if ((uint32_t)oldPriority - PRIORITY_USER_LOW < PRIORITY_USER_COUNT) {
 			if ((uint32_t)priority - PRIORITY_USER_LOW >= PRIORITY_USER_COUNT) {
-				threadName = ksceGUIDName(thread->threadId);
+				threadName = SceSysmemForDriver_E655852F(thread->threadId);
 				if (strncmp(threadName, "ScePsp2SwuCui", 31) != 0)
 					SCE_PRINTF_WITH_INFO(0, 168, "*** error: illegal priority boost."
 						"[mutex ceiling] mutexId=0x%08X[%s], threadId=0x%08X[%s], "
 						"%d -> %d\n", mutex->core.mutexId,
-						ksceGUIDName(mutex->core.mutexId), thread->threadId,
+						SceSysmemForDriver_E655852F(mutex->core.mutexId), thread->threadId,
 						threadName, thread->currentPriority,
 						thread->boostPriority);
 				priority = PRIORITY_USER_LOW;
 				thread->boostPriority = priority;
 			}
 		} else if ((uint32_t)priority - PRIORITY_USER_LOW < PRIORITY_USER_COUNT) {
-			threadName = ksceGUIDName(thread->threadId);
+			threadName = SceSysmemForDriver_E655852F(thread->threadId);
 			if (strncmp(threadName, "ScePsp2SwuCui", 31) != 0)
 				SCE_PRINTF_WITH_INFO(0, 179, "*** error: illegal priority boost."
 					"[mutex ceiling] mutexId=0x%08X[%s], threadId=0x%08X[%s], "
-					"%d -> %d\n", mutex->core.mutexId, ksceGUIDName(mutex->core.mutexId),
+					"%d -> %d\n", mutex->core.mutexId, SceSysmemForDriver_E655852F(mutex->core.mutexId),
 					thread->threadId, threadName, thread->currentPriority,
 					thread->boostPriority);
 			priority = PRIORITY_USER_LOWEST;
@@ -144,7 +142,7 @@ void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count)
 	}
 	thread->currentPriority = priority;
 	if ((thread->currentAttr & THREAD_ATTR_USER) &&
-	    ksceKernelCopyToUserProc(thread->processId,
+	    sceKernelCopyToUserProc(thread->processId,
 				     (void *)(thread->tls + USER_TLS_PRIORITY_OFFSET),
 				     &thread->currentPriority, sizeof(thread->currentPriority)) < 0)
 		SCE_PANIC(193);
@@ -168,10 +166,10 @@ static int uidMutex_RevalidateMethod(void *cls, void *object)
 	SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 2214);
 	if (mutex->core.owner != NULL)
 		return 0;
-	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	acquireMutex(mutex, thread, thread->waitMode);
 	wake = wakeupAndDistributeThread(thread, (uintptr_t)&mutex->next, 0);
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	return wake;
 }
 
@@ -223,14 +221,14 @@ int releaseMutex(ThreadmgrMutexCore *core)
 	core->owner = NULL;
 	if (owner == NULL)
 		return 0;
-	ksceKernelSpinlockLowLock(THREAD_LOCK(owner));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(owner));
 	ListLinkRemove(&core->ownerLink);
 	priority = findNextCeilingPriority(owner);
 	if (owner->currentPriority != priority) {
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(owner));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(owner));
 		return changeThreadPriority(owner, priority);
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(owner));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(owner));
 	return 0;
 }
 
@@ -251,29 +249,29 @@ static int uidMutex_Destructor(void *object)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2128);
 retry:
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&mutex->lock);
+	intr = SceCpuForDriver_D32ACE9E(&mutex->lock);
 	for (link = mutex->core.conds.next; link != &mutex->core.conds; link = next) {
 		next = link->next;
 		cond = COND_FROM_MUTEX_LINK(link);
-		if (ksceKernelSpinlockLowTrylock(&cond->lock) < 0) {
+		if (SceCpuForDriver_5AC9D394(&cond->lock) < 0) {
 			/* the cond holds its lock while it takes ours: back off */
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&mutex->lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&mutex->lock, intr);
 			for (delay = 10; --delay != 0;)
 				;
 			goto retry;
 		}
 		wakeupWaitObjectAll((uintptr_t)&cond->next, SCE_KERNEL_ERROR_WAIT_DELETE_MUTEX, NULL);
 		cond->mutexId = -1;
-		ksceKernelSpinlockLowUnlock(&cond->lock);
+		sceKernelSpinlockLowUnlock(&cond->lock);
 	}
 	wake = releaseMutex(&mutex->core);
 	wake |= wakeupWaitObjectAll((uintptr_t)&mutex->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
 	pid = mutex->ownerPid;
-	if (ksceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
+	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
-			ksceKernelSpinlockLowLock(&process->resourceLock);
+			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (mutex->attr & MUTEX_ATTR_LW)
 				process->uidLwCount--;
 			else if (mutex->attr & MUTEX_ATTR_UNLIMITED)
@@ -281,13 +279,13 @@ retry:
 			else
 				process->uidCount--;
 			process->mutexCount--;
-			ksceKernelSpinlockLowUnlock(&process->resourceLock);
+			sceKernelSpinlockLowUnlock(&process->resourceLock);
 		}
-		ksceGUIDReleaseObject(pid);
+		sceGUIDReleaseObject(pid);
 	}
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	memset(&mutex->core, 0, sizeof(mutex->core));
 	return 0;
 }
@@ -299,7 +297,7 @@ void startMutex(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = ksceKernelAllocHeapMemory(manager->heapId, 0x38);
+	cls = SceSysmemForDriver_7B4CB60A(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(557);
 	ret = uidExtendedClassInit(cls, "SceUIDMutexClass",
@@ -329,34 +327,34 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 598);
 	for (;;) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		for (link = head->next; link != head; link = head->next) {
 			mutex = MUTEX_FROM_OWNER_LINK(link);
-			if (ksceKernelSpinlockLowTrylock(&mutex->lock) < 0)
+			if (SceCpuForDriver_5AC9D394(&mutex->lock) < 0)
 				break;
 			ListLinkRemove(link);
 			mutex->core.lockCount = 0;
 			mutex->core.owner = NULL;
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			wake |= revalidateWaitState((uintptr_t)&mutex->next);
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(&mutex->lock);
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		}
 		if (link == head)
 			break;
 		/* the mutex holds its lock while it takes ours: back off */
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		for (delay = 10; --delay != 0;)
 			;
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	oldPriority = thread->currentPriority;
 	thread->boostPriority = PRIORITY_NONE;
 	if (oldPriority != thread->basePriority) {
 		thread->currentPriority = thread->basePriority;
 		if ((thread->currentAttr & THREAD_ATTR_USER) &&
-		    ksceKernelCopyToUserProc(thread->processId,
+		    sceKernelCopyToUserProc(thread->processId,
 					     (void *)(thread->tls + USER_TLS_PRIORITY_OFFSET),
 					     &thread->currentPriority,
 					     sizeof(thread->currentPriority)) < 0)
@@ -366,7 +364,7 @@ uint32_t releaseAllMutex(struct ThreadCB *thread)
 		cpu->priority = thread->currentPriority;
 		notifyPriorityChange(thread, oldPriority);
 	}
-	ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+	sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	return wake;
 }
 
@@ -383,19 +381,19 @@ int mutexProcessExit(SceProcessObject *process)
 		return 0;
 	vector = NULL;
 	while (num != 0) {
-		vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 689);
 		num = SceSysmemForKernel_08C05493(process->pid,
 			s_threadmgrRuntime.manager->mutexClass, 5, vector, num, &got);
 		if ((int)got >= num)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	}
 	for (i = 0; i < (int)got; i++) {
-		intr = ksceKernelCpuSuspendIntr();
-		ret = kscePUIDClose(process->pid, vector[i]);
-		ksceKernelCpuResumeIntr(intr);
+		intr = SceCpuForDriver_821FC0EE();
+		ret = SceSysmemForDriver_84A4AF5E(process->pid, vector[i]);
+		sceKernelCpuResumeIntr(intr);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 707, "()->scePUIDClose(0x%08X, puid=0x%08X)=0x%08X\n",
 				       process->pid, vector[i], ret);
@@ -403,15 +401,12 @@ int mutexProcessExit(SceProcessObject *process)
 		}
 	}
 	if (vector != NULL) {
-		ret = ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		ret = sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		SCE_DBG_ASSERT_CHECK(ret >= 0, 715);
 	}
 	return 0;
 }
 
-extern SceUID kscePUIDOpenByGUIDWithFlags(SceUID pid, SceUID guid, int flags);
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -450,7 +445,7 @@ typedef struct ThreadmgrMutexOptParam {
 
 static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 {
-	SceUID puid = kscePUIDOpenByGUIDWithFlags(pid, guid, 1);
+	SceUID puid = SceSysmemForDriver_CED1547B(pid, guid, 1);
 
 	SCE_DBG_PRINTF_LEVEL_FUNC(2, 3, 45, "OpenByGUID", "0x%08x=scePUIDOpenByGUID(0x%08x)\n",
 				  puid, guid);
@@ -527,7 +522,7 @@ SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 	opt.attr = uidAttr;
 	opt.ownerPid = 0;
 	opt.cls = NULL;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	typeId = -1;
 	if (!(attr & MUTEX_ATTR_CEILING)) {
 		ceiling = PRIORITY_NONE;
@@ -550,7 +545,7 @@ SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 			uid = SCE_KERNEL_ERROR_ILLEGAL_PRIORITY;
 			goto resume;
 		}
-		uid = ksceGUIDGetObject(thread->process->budgetId, &type);
+		uid = SceSysmemForDriver_0FC24464(thread->process->budgetId, &type);
 		if (uid < 0)
 			goto resume;
 		typeId = uid;
@@ -600,10 +595,10 @@ create:
 	process = NULL;
 	if (userRo & USERRO_IN_SYSCALL) {
 		process = thread->process;
-		ksceKernelSpinlockLowLock(&process->resourceLock);
+		SceCpuForDriver_BF82DEB2(&process->resourceLock);
 		if (attr & MUTEX_ATTR_LW) {
 			if (process->uidLwCount >= 0x100) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_ASSERT_PRINTF_FUNC(0, 927, "sceKernelCreateMutex", "sceKernelCreateMutex(), "
 					"SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -617,7 +612,7 @@ create:
 				process->uidUnlimitedPeak = process->uidUnlimitedCount;
 		} else {
 			if (process->uidCount >= 0x800) {
-				ksceKernelSpinlockLowUnlock(&process->resourceLock);
+				sceKernelSpinlockLowUnlock(&process->resourceLock);
 				SCE_DBG_PRINTF_FUNC(0xb, 944, "sceKernelCreateMutex",
 					"(), SCE_KERNEL_ERROR_UID_RL_OVERFLOW, processId=0x%08X\n",
 					thread->processId);
@@ -629,9 +624,9 @@ create:
 		}
 		if (++process->mutexCount > process->mutexPeak)
 			process->mutexPeak = process->mutexCount;
-		ksceKernelSpinlockLowUnlock(&process->resourceLock);
+		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = ksceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->mutexClass, name,
+	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->mutexClass, name,
 		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&mutex);
 	if (uid < 0) {
 		if (userRo & USERRO_IN_SYSCALL)
@@ -652,8 +647,8 @@ create:
 		puid = OpenByGUID(currentThreadContext()->processId, uid);
 		SCE_DBG_ASSERT_CHECK_FUNC(puid >= 0, 982, "sceKernelCreateMutex");
 		if (puid < 0) {
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
-			uid = ksceGUIDClose(uid);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
+			uid = sceGUIDClose(uid);
 			SCE_DBG_ASSERT_CHECK_FUNC(uid >= 0, 987, "sceKernelCreateMutex");
 			uid = puid;
 			goto unaccount;
@@ -662,14 +657,14 @@ create:
 		uid = puid;
 	}
 	if (initCount != 0) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		acquireMutex(mutex, thread, initCount);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
 	goto resume;
 unaccount:
-	ksceKernelSpinlockLowLock(&process->resourceLock);
+	SceCpuForDriver_BF82DEB2(&process->resourceLock);
 	if (attr & MUTEX_ATTR_LW)
 		process->uidLwCount--;
 	else if (attr & MUTEX_ATTR_UNLIMITED)
@@ -677,9 +672,9 @@ unaccount:
 	else
 		process->uidCount--;
 	process->mutexCount--;
-	ksceKernelSpinlockLowUnlock(&process->resourceLock);
+	sceKernelSpinlockLowUnlock(&process->resourceLock);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return uid;
@@ -694,17 +689,17 @@ int ksceKernelDeleteMutex(SceUID mutexId)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (ksceKernelIsIntrAllowedInCurrentContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1045, "sceKernelDeleteMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ThreadmgrSetUserRoWord(saved);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (SceSysmemForKernel_368F1C36(mutexId) ==
 	    s_threadmgrRuntime.manager->mutexClass)
-		ret = ksceGUIDClose(mutexId);
+		ret = sceGUIDClose(mutexId);
 	else
 		ret = SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
@@ -720,10 +715,10 @@ int ksceKernelDeleteMutex(SceUID mutexId)
 		__first = (struct ThreadCB *)(mutex)->next;		\
 		SCE_DBG_ASSERT_CHECK(__first->magic == THREAD_CB_MAGIC, line);	\
 		if ((mutex)->attr & MUTEX_ATTR_PRIORITY) {				\
-			ksceKernelSpinlockLowLock(THREAD_LOCK(__first));		\
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(__first));		\
 			__firstPriority = __first->currentPriority;			\
 			__priority = (thread)->currentPriority;				\
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(__first));		\
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(__first));		\
 			if (__priority < __firstPriority)				\
 				__take = (mutex)->core.owner == NULL;			\
 		}									\
@@ -744,14 +739,14 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF(0, 366, "*** error: illegal context. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
 		SCE_DBG_ASSERT_PRINTF(0, 374, "*** error: irq suspended. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
 		goto resume;
 	}
@@ -762,7 +757,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -774,7 +769,7 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
@@ -800,40 +795,40 @@ int lockMutex(SceUID mutexId, int count, SceUInt32 *timeout, int callbacks)
 		getWakeupTime(&wakeup, *timeout);
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			ksceKernelSpinlockLowLock(&mutex->lock);
+			SceCpuForDriver_BF82DEB2(&mutex->lock);
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 473)) {
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
 		}
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		if (!callbacks) {
 			ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, WAIT_TYPE_MUTEX,
 						 &wakeup, timeout, NULL, &locked);
-			ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				goto resume;
 			break;
 		}
-		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, WAIT_TYPE_MUTEX, &wakeup,
 					 timeout, NULL, &locked);
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto callbacks;
 	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 	if (!callbacks)
 		goto resume;
 callbacks:
@@ -844,11 +839,11 @@ callbacks:
 	}
 	goto resume;
 unlock:
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
 release:
-	ksceGUIDReleaseObject(mutexId);
+	sceGUIDReleaseObject(mutexId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -877,13 +872,13 @@ int ksceKernelTryLockMutex(SceUID mutexId, int count)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (ksceKernelIsIntrAllowedInCurrentContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1132, "sceKernelTryLockMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -895,7 +890,7 @@ int ksceKernelTryLockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 	} else if (mutex->core.owner == thread) {
@@ -913,16 +908,16 @@ int ksceKernelTryLockMutex(SceUID mutexId, int count)
 	} else {
 		ret = SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN;
 		if (mutex->core.owner == NULL) {
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 		}
 	}
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -943,12 +938,12 @@ int ksceKernelUnlockMutex(SceUID mutexId, int count)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1234, "sceKernelUnlockMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	intr = SceCpuForDriver_821FC0EE();
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -960,7 +955,7 @@ int ksceKernelUnlockMutex(SceUID mutexId, int count)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	thread = currentThreadContext();
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
@@ -969,12 +964,12 @@ int ksceKernelUnlockMutex(SceUID mutexId, int count)
 	if (mutex->core.owner != thread) {
 		if (mutex->core.owner == NULL)
 			SCE_DBG_PRINTF_FUNC(0, 1277, "sceKernelUnlockMutex", " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", mutexId, ksceGUIDName(mutexId),
+				"threadGuid=0x%08X\n", mutexId, SceSysmemForDriver_E655852F(mutexId),
 				currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF_FUNC(0, 1274, "sceKernelUnlockMutex", " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
 				"currentOwner=0x%08X, threadGuid=0x%08X\n", mutexId,
-				ksceGUIDName(mutexId), mutex->core.owner->threadId,
+				SceSysmemForDriver_E655852F(mutexId), mutex->core.owner->threadId,
 				currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_MUTEX_NOT_OWNED | SYSCALL_ERROR_BIT;
@@ -1001,21 +996,21 @@ int ksceKernelUnlockMutex(SceUID mutexId, int count)
 	first = (struct ThreadCB *)mutex->next;
 	if ((struct ThreadmgrWaitQueue *)first != (struct ThreadmgrWaitQueue *)&mutex->next) {
 		SCE_DBG_ASSERT_CHECK_FUNC(first->magic == THREAD_CB_MAGIC, 1312, "sceKernelUnlockMutex");
-		ksceKernelSpinlockLowLock(THREAD_LOCK(first));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
 		acquireMutex(mutex, first, first->waitMode);
 		wake |= wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(first));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
 	}
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 	if (wake & 1)
 		switchThread((intr >> 7) & 1);
 	goto resume;
 unlock:
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -1036,13 +1031,13 @@ int ksceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	ThreadmgrSetUserRoWord(saved << 16);
 	if (currentThreadContext() == NULL && newCount != 0) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1369, "sceKernelCancelMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
-				      mutexId, ksceGUIDName(mutexId));
+				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	thread = currentThreadContext();
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1054,29 +1049,29 @@ int ksceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 		}
 		goto resume;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	if (newCount < 0)
 		newCount = mutex->core.initCount;
 	if (newCount > 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
-		ksceKernelSpinlockLowUnlock(&mutex->lock);
-		ksceGUIDReleaseObject(mutexId);
+		sceKernelSpinlockLowUnlock(&mutex->lock);
+		sceGUIDReleaseObject(mutexId);
 		goto resume;
 	}
 	wake = releaseMutex(&mutex->core);
 	wake |= wakeupWaitObjectAll((uintptr_t)&mutex->next, SCE_KERNEL_ERROR_WAIT_CANCEL,
 				    (uint32_t *)numWaitThreads);
 	if (newCount != 0) {
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		acquireMutex(mutex, thread, newCount);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 	}
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 	if ((wake & 1) && currentThreadContext() != NULL)
 		switchThread((intr >> 7) & 1);
 resume:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 restore:
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
@@ -1102,7 +1097,7 @@ int ksceKernelGetMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
 		if (ret < 0)
 			goto restore;
 		if (ThreadmgrInSyscall() && local.currentOwnerId != 0) {
-			ret = ksceGUIDGetObject(local.currentOwnerId, &owner);
+			ret = SceSysmemForDriver_0FC24464(local.currentOwnerId, &owner);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_FUNC(0, 1541, "sceKernelGetMutexInfo", "*** error: sceKernelGetMutexInfo() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", local.currentOwnerId, ret);
@@ -1131,17 +1126,17 @@ int SceThreadmgrForDriver_B6DA4669(int level, ThreadmgrMutexInfo *infos, SceSize
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = ksceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->mutexClass,
+	num = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->mutexClass,
 					  level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = ksceGUIDGetUIDVectorByClass(
+		total = SceSysmemForKernel_52137FA3(
 			s_threadmgrRuntime.manager->mutexClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -1160,7 +1155,7 @@ int SceThreadmgrForDriver_B6DA4669(int level, ThreadmgrMutexInfo *infos, SceSize
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }
 
@@ -1181,13 +1176,13 @@ int sceKernelGetMutexInfoAllProc(SceUID pid, int level, ThreadmgrMutexInfo *info
 		s_threadmgrRuntime.manager->mutexClass, level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
+	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
 		total = SceSysmemForKernel_08C05493(pid,
 			s_threadmgrRuntime.manager->mutexClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
-		ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 		num = total;
 	}
 	if (vector == NULL)
@@ -1195,11 +1190,11 @@ int sceKernelGetMutexInfoAllProc(SceUID pid, int level, ThreadmgrMutexInfo *info
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (getMutexInfo(kscePUIDtoGUID(pid, vector[i]), &info) != 0)
+		if (getMutexInfo(SceSysmemForDriver_45D22597(pid, vector[i]), &info) != 0)
 			continue;
 		info.mutexId = vector[i];
 		if (info.currentOwnerId != 0) {
-			err = ksceGUIDGetObject(info.currentOwnerId, &owner);
+			err = SceSysmemForDriver_0FC24464(info.currentOwnerId, &owner);
 			if (err < 0)
 				SCE_DBG_PRINTF(0, 1726, "*** error: sceKernelGetMutexInfoAllProc() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", info.currentOwnerId, err);
@@ -1217,7 +1212,7 @@ int sceKernelGetMutexInfoAllProc(SceUID pid, int level, ThreadmgrMutexInfo *info
 	}
 	if (count != NULL)
 		*count = got;
-	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
+	sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }
 
@@ -1234,7 +1229,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 
 	thread = currentThreadContext();
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1800);
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall())
@@ -1243,7 +1238,7 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	if (count < 1 || (count != 1 && !(mutex->attr & MUTEX_ATTR_RECURSIVE))) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_COUNT;
 		goto unlock;
@@ -1269,42 +1264,42 @@ int lockMutexForCond(SceUID mutexId, int count, SceUInt32 *timeout, int callback
 		getWakeupTime(&wakeup, *timeout);
 	do {
 		if (callbacks && (thread->flags & THREAD_FLAG_CALLBACKS)) {
-			ksceKernelSpinlockLowUnlock(&mutex->lock);
+			sceKernelSpinlockLowUnlock(&mutex->lock);
 			ret = callCallbackAll(thread);
 			if (ret < 0)
 				goto release;
-			ksceKernelSpinlockLowLock(&mutex->lock);
+			SceCpuForDriver_BF82DEB2(&mutex->lock);
 		}
 		if (MUTEX_MAY_TAKE(mutex, thread, 1884)) {
-			ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+			SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 			acquireMutex(mutex, thread, count);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			ret = 0;
 			goto unlock;
 		}
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		thread->waitMode = count;
 		thread->waitCondId = condId;
 		thread->waitMutexId = mutexId;
 		if (!callbacks) {
 			ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next,
 				WAIT_TYPE_COND_MUTEX, &wakeup, timeout, NULL, &locked);
-			ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 			if (!locked)
 				return ret;
 			break;
 		}
-		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
 		ret = waitWaitableObject(mutexId, (uintptr_t)&mutex->next, WAIT_TYPE_COND_MUTEX,
 					 &wakeup, timeout, NULL, &locked);
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAKE_PENDING);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		if (!locked)
 			goto deleted;
 	} while (ret == (int)THREADMGR_ERROR_WAIT_CANCEL);
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 deleted:
 	/* the mutex went away while the callback variant waited */
 	if (ret == SCE_KERNEL_ERROR_WAIT_DELETE && callbacks &&
@@ -1318,9 +1313,9 @@ deleted:
 	}
 	return ret;
 unlock:
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
 release:
-	ksceGUIDReleaseObject(mutexId);
+	sceGUIDReleaseObject(mutexId);
 	return ret;
 }
 
@@ -1332,7 +1327,7 @@ int unlockMutexForCond(SceUID mutexId, int count)
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 1973);
-	ret = ksceGUIDReferObjectWithClass(mutexId,
+	ret = SceSysmemForDriver_00ED6C14(mutexId,
 		s_threadmgrRuntime.manager->mutexClass, (SceObjectBase **)&mutex);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall())
@@ -1341,16 +1336,16 @@ int unlockMutexForCond(SceUID mutexId, int count)
 				      mutexId);
 		return SCE_KERNEL_ERROR_UNKNOWN_MUTEX_ID;
 	}
-	ksceKernelSpinlockLowLock(&mutex->lock);
+	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	if (mutex->core.owner != currentThreadContext()) {
 		if (mutex->core.owner == NULL)
 			SCE_DBG_PRINTF(0, 2003, " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
-				"threadGuid=0x%08X\n", mutexId, ksceGUIDName(mutexId),
+				"threadGuid=0x%08X\n", mutexId, SceSysmemForDriver_E655852F(mutexId),
 				currentThreadContext()->threadId);
 		else
 			SCE_DBG_PRINTF(0, 2000, " k: error: MUTEX_NOT_OWNED, mutexId=0x%08X([%s]), "
 				"currentOwner==0x%08X, threadGuid=0x%08X\n", mutexId,
-				ksceGUIDName(mutexId), mutex->core.owner->threadId,
+				SceSysmemForDriver_E655852F(mutexId), mutex->core.owner->threadId,
 				currentThreadContext()->threadId);
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_MUTEX_NOT_OWNED | SYSCALL_ERROR_BIT;
@@ -1373,15 +1368,15 @@ int unlockMutexForCond(SceUID mutexId, int count)
 			if ((struct ThreadmgrWaitQueue *)first !=
 			    (struct ThreadmgrWaitQueue *)&mutex->next) {
 				SCE_DBG_ASSERT_CHECK(first->magic == THREAD_CB_MAGIC, 2038);
-				ksceKernelSpinlockLowLock(THREAD_LOCK(first));
+				SceCpuForDriver_BF82DEB2(THREAD_LOCK(first));
 				acquireMutex(mutex, first, first->waitMode);
 				wakeupAndDistributeThread(first, (uintptr_t)&mutex->next, 0);
-				ksceKernelSpinlockLowUnlock(THREAD_LOCK(first));
+				sceKernelSpinlockLowUnlock(THREAD_LOCK(first));
 			}
 		}
 		ret = 0;
 	}
-	ksceKernelSpinlockLowUnlock(&mutex->lock);
-	ksceGUIDReleaseObject(mutexId);
+	sceKernelSpinlockLowUnlock(&mutex->lock);
+	sceGUIDReleaseObject(mutexId);
 	return ret;
 }

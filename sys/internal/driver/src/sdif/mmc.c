@@ -43,24 +43,24 @@ void sceMmcDumpPartitionInfo(SdifMmcContext *part)
 	int index;
 	SdifMmcPartition *partition;
 
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(425), "#%d %d\n", 425,
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(425), "#%d %d\n", 425,
 				part->currentPartition->partitionType);
 	partition = part->partitions;
 	for (index = 0; index < 9; index++, partition++) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(428),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(428),
 			"#%d %d partitionType : %d\n", 428, index,
 			partition->partitionType);
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(430),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(430),
 			"#%d %d va         : %lld\n", 430, index, partition->va);
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(432),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(432),
 			"#%d %d size       : %lld\n", 432, index, partition->size);
 		__builtin_prefetch(&partition[2].accessType);
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(434),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(434),
 			"#%d %d vsector    : %lld\n", 434, index,
 			partition->va >> 9);
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(436),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(436),
 			"#%d %d pa         : %lld\n", 436, index, partition->pa);
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(438),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(438),
 			"#%d %d accessType : %d\n", 438, index,
 			partition->accessType);
 	}
@@ -76,7 +76,7 @@ int sceMmcSetupPartitionAccess(SdifMmcContext *part, unsigned int sector,
 	int accessType, result;
 
 #if FW_DEBUG
-	ksceKernelAssert(partition != NULL,
+	SceDebugForDriver_35A35322(partition != NULL,
 		SCE_DBGINFO_FUNC(707, "sceMmcIsCurrentPartitionAccess"),
 		__builtin_return_address(0));
 #endif
@@ -139,7 +139,7 @@ selected:
 		if (result >= 0) {
 			sdifFreeCommandLocked(context, command);
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(745),
+			SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(745),
 				"Switch HW partition. accessType:%d -> %d\n",
 				part->currentPartition->accessType,
 				partition->accessType);
@@ -151,7 +151,7 @@ selected:
 	} else {
 		result = 0x80320011;
 	}
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(751), "0x%x %d -> %d\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(751), "0x%x %d -> %d\n",
 		result, part->currentPartition->accessType, partition->accessType);
 	return result;
 }
@@ -163,12 +163,12 @@ static inline uint32_t sceMmcVsector2Psector(SdifMmcContext *part,
 	uint32_t blockLength;
 
 #if FW_DEBUG
-	ksceKernelAssert(partition != NULL, SCE_DBGINFO(687),
+	SceDebugForDriver_35A35322(partition != NULL, SCE_DBGINFO(687),
 			 __builtin_return_address(0));
 #endif
 	blockLength = part->blockLength;
 #if FW_DEBUG
-	ksceKernelAssert((uint64_t)sector * part->blockLength >= partition->va,
+	SceDebugForDriver_35A35322((uint64_t)sector * part->blockLength >= partition->va,
 			 SCE_DBGINFO(690), __builtin_return_address(0));
 #endif
 	return ((uint64_t)blockLength * sector + partition->pa - partition->va) /
@@ -192,7 +192,7 @@ int sceMmcReadSectorInternal(SdifMmcContext *part, unsigned int sector,
 		return result;
 	result = sceMmcSetupPartitionAccess(part, sector, count);
 	if (result < 0) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1101),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(1101),
 			"0x%x %d %d 0x%x(%d) %d\n", result, 1101,
 			context->port.index, sector, sector, count);
 		sceMmcDumpPartitionInfo(part);
@@ -288,7 +288,7 @@ statusError:
 	info = SCE_DBGINFO(1197);
 	line = 1197;
 error:
-	ksceKernelPrintfWithInfo(0, info, "0x%x %d %d 0x%x(%d) %d\n",
+	SceDebugForDriver_02B04343(0, info, "0x%x %d %d 0x%x(%d) %d\n",
 		result, line, context->port.index, sector, sector, count);
 	sdifUnlockPort(context);
 	return result;
@@ -333,7 +333,7 @@ int sceMmcReadSector(SdifMmcContext *part, unsigned int sector, void *buffer,
 	cursor += part->blockLength * firstCount;
 	sector += firstCount;
 #if FW_DEBUG
-	ksceKernelAssert((sector & 0xfff) == 0, SCE_DBGINFO(1285),
+	SceDebugForDriver_35A35322((sector & 0xfff) == 0, SCE_DBGINFO(1285),
 			 __builtin_return_address(0));
 #endif
 	while (count) {
@@ -369,7 +369,7 @@ int sceMmcWriteSectorInternal(SdifMmcContext *part, unsigned int sector,
 		return result;
 	result = sceMmcSetupPartitionAccess(part, sector, count);
 	if (result < 0) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1340),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(1340),
 			"0x%x %d %d 0x%x(%d) %d\n", result, 1340,
 			context->port.index, sector, sector, count);
 		sceMmcDumpPartitionInfo(part);
@@ -381,7 +381,7 @@ int sceMmcWriteSectorInternal(SdifMmcContext *part, unsigned int sector,
 		goto noCommand;
 	command->flags = 0x614;
 #if FW_DEBUG
-	ksceKernelAssert(1, SCE_DBGINFO(1360), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(1, SCE_DBGINFO(1360), __builtin_return_address(0));
 #endif
 	command->size = sizeof(*command);
 	command->command = count == 1 ? 24 : 25;
@@ -443,7 +443,7 @@ noCommand:
 	sdifUnlockPort(context);
 	return 0x80320011;
 error:
-	ksceKernelPrintfWithInfo(0, info, "0x%x %d %d 0x%x(%d) %d\n",
+	SceDebugForDriver_02B04343(0, info, "0x%x %d %d 0x%x(%d) %d\n",
 		result, line, context->port.index, sector, sector, count);
 	sdifUnlockPort(context);
 	return result;
@@ -477,7 +477,7 @@ int SceSdifForDriver_60642F49(SdifMmcContext *part, unsigned int sector,
 			transferCount = maximumCount;
 		result = sceMmcSetupPartitionAccess(part, sector, transferCount);
 		if (result < 0) {
-			ksceKernelPrintfWithInfo(0,
+			SceDebugForDriver_02B04343(0,
 				SCE_DBGINFO_FUNC(1340, "sceMmcWriteSectorInternal"),
 				"0x%x %d %d 0x%x(%d) %d\n", result, 1340,
 				context->port.index, sector, sector, transferCount);
@@ -490,7 +490,7 @@ int SceSdifForDriver_60642F49(SdifMmcContext *part, unsigned int sector,
 			goto noCommand;
 		command->flags = 0x614;
 #if FW_DEBUG
-		ksceKernelAssert(1,
+		SceDebugForDriver_35A35322(1,
 			SCE_DBGINFO_FUNC(1360, "sceMmcWriteSectorInternal"),
 			__builtin_return_address(0));
 #endif
@@ -560,7 +560,7 @@ noCommand:
 		sdifUnlockPort(context);
 		goto retry;
 error:
-		ksceKernelPrintfWithInfo(0, info, "0x%x %d %d 0x%x(%d) %d\n",
+		SceDebugForDriver_02B04343(0, info, "0x%x %d %d 0x%x(%d) %d\n",
 			result, line, context->port.index, sector, sector, transferCount);
 		sdifUnlockPort(context);
 retry:
@@ -625,7 +625,7 @@ int sceMmcSendGeneralCmdData(SdifMmcContext *part, void *buffer, int length)
 		result = 0x8032000e;
 	}
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(1540),
+	SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(1540),
 		"GC error:0x%x media ctrl cmd opcode:0x%x\n", result,
 		((uint32_t *)buffer)[8]);
 #endif
@@ -657,7 +657,7 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 			return result;
 		result = sceMmcSetupPartitionAccess(part, cursor, (uint16_t)groupSize);
 		if (result < 0) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(909),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(909),
 				"0x%x %d %d 0x%x(%d)\n", result, 909,
 				context->port.index, cursor, cursor);
 			sceMmcDumpPartitionInfo(part);
@@ -681,7 +681,7 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 		command->blockCount = 0;
 		result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 		if (result < 0) {
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(944),
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(944),
 				"0x%x %d %d 0x%x(%d)\n", result, 944,
 				context->port.index, cursor, cursor);
 			sdifFreeCommandLocked(context, command);
@@ -708,7 +708,7 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 		return result;
 	result = sceMmcSetupPartitionAccess(part, endSector, 1);
 	if (result < 0) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(909),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(909),
 			"0x%x %d %d 0x%x(%d)\n", result, 909,
 			context->port.index, endSector, endSector);
 		sceMmcDumpPartitionInfo(part);
@@ -732,7 +732,7 @@ int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
 	command->blockCount = 0;
 	result = sdifSendCheckedSyncCommand(context, command, NULL, 3);
 	if (result < 0) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(944),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(944),
 			"0x%x %d %d 0x%x(%d)\n", result, 944,
 			context->port.index, endSector, endSector);
 		sdifFreeCommandLocked(context, command);

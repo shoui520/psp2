@@ -27,3 +27,19 @@ char *strncpy(char *destination, const char *source, size_t count);
 char *strncpy_s(char *destination, const char *source, size_t limit);	/* copies at most limit characters, always terminated */
 size_t strnlen(const char *string, size_t count);
 int timingsafe_memcmp(const void *left, const void *right, size_t count);
+
+void SceSysclibForTZS_E5457B97(void);
+void *__memcpy_chk(void *destination, const void *source, size_t size, size_t capacity);
+int __snprintf_chk(char *destination, size_t size, int flags, size_t capacity, const char *format, ...);
+size_t __strlcat_chk(char *destination, const char *source, size_t size, size_t capacity);
+size_t __strlcpy_chk(char *destination, const char *source, size_t size, size_t capacity);
+char *__strncpy_chk2(char *destination, const char *source, size_t capacity);
+void *memmove(void *destination, const void *source, size_t size);
+void sceLibSspStackChkFail(void);
+size_t strlcat(char *destination, const char *source, size_t capacity);
+char *strrchr(const char *string, int value);
+char *strstr(const char *string, const char *substring);
+long strtol(const char *string, char **end, int requestedBase);
+unsigned long strtoul(const char *string, char **end, int requestedBase);
+int tolower(int value);
+int toupper(int value);

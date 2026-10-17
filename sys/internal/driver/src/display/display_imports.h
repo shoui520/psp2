@@ -15,12 +15,13 @@
 #include <psp2kern/lowio/dsi.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/utils.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot_init.h>
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
+#include <sysmem/sysroot.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,
@@ -32,13 +33,6 @@ int sceKernelEventObjectInit(SceUID event, SceUInt32 attr, SceUInt64 userData,
 unsigned int __aeabi_uidiv(unsigned int n, unsigned int d);
 
 /* SceSysrootForDriver / SceSysrootForKernel */
-int ksceSysrootGetHardwareFlags(void *flags);
-int SceSysrootForDriver_7918D44E(void);
-int ksceSysrootIsUsbEnumWakeup(void);
-int ksceSysrootIsSafeMode(void);
-int ksceSysrootIsExternalBootMode(void);
-int ksceSysrootIsUpdateMode(void);
-int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleId, SceSize size);
 
 /* SceProcessmgrForDriver */
 

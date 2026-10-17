@@ -6,7 +6,7 @@
  */
 
 #include <alloca.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "fios2_internal.h"
 
@@ -53,13 +53,13 @@ typedef struct SceFiosGetRecommendedSchedulerSyscallArgs {
 
 /* the result of the call, unless copying a result back failed */
 #define FIOS_COPY_OUT(dst, src, size, ret)	({			\
-	int __copy = ksceKernelCopyToUser(dst, src, size);		\
+	int __copy = SceSysmemForDriver_6D88EF8A(dst, src, size);		\
 	__copy < 0 ? __copy : (ret);					\
 })
 
 FIOS_SYSCALL int fiosStrncpyPathFromUser(char *dst, const char *src)	/* name unknown */
 {
-	int ret = ksceKernelStrncpyFromUser(dst, src, FIOS_PATH_MAX);
+	int ret = SceSysmemForDriver_DB3EC244(dst, src, FIOS_PATH_MAX);
 
 	if (ret < 0)
 		return ret;
@@ -76,7 +76,7 @@ int _sceFiosKernelOverlayAdd(SceFiosOverlay *pOverlay, SceFiosOverlayID *pOutId)
 
 	if (pOverlay != NULL) {
 		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
-		ret = ksceKernelCopyFromUser(overlay, pOverlay, sizeof(*overlay));
+		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
@@ -113,7 +113,7 @@ int _sceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *pOverlay)
 
 	if (pOverlay != NULL) {
 		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
-		ret = ksceKernelCopyFromUser(overlay, pOverlay, sizeof(*overlay));
+		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
@@ -129,7 +129,7 @@ FIOS_SYSCALL int fiosSyscallAddForProcess(SceUID pid, SceFiosOverlay *pOverlay,
 
 	if (pOverlay != NULL) {
 		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
-		ret = ksceKernelCopyFromUser(overlay, pOverlay, sizeof(*overlay));
+		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
@@ -178,7 +178,7 @@ FIOS_SYSCALL int fiosSyscallModifyForProcess(SceUID pid, SceFiosOverlayID id,
 
 	if (pOverlay != NULL) {
 		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
-		ret = ksceKernelCopyFromUser(overlay, pOverlay, sizeof(*overlay));
+		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
@@ -198,7 +198,7 @@ FIOS_SYSCALL int fiosSyscallGetList(SceUID pid, unsigned int minOrder, unsigned 
 	SceSize *outCount;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, pArgs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	outIds = args.outIds;
@@ -215,7 +215,7 @@ FIOS_SYSCALL int fiosSyscallGetList(SceUID pid, unsigned int minOrder, unsigned 
 	}
 	ret = sceFiosKernelOverlayGetList(pid, minOrder, maxOrder, outIds, args.maxIds, outCount);
 	if (args.outIds != NULL) {
-		int copy = ksceKernelCopyToUser(args.outIds, outIds, args.outIdsSize);
+		int copy = SceSysmemForDriver_6D88EF8A(args.outIds, outIds, args.outIdsSize);
 		if (copy < 0)
 			return copy;
 	}
@@ -238,7 +238,7 @@ FIOS_SYSCALL int fiosSyscallResolveSync(SceUID pid, int resolveFlag, const char 
 	char *outPath;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, pArgs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pInPath != NULL) {
@@ -272,7 +272,7 @@ FIOS_SYSCALL int fiosSyscallResolveWithRangeSync(SceUID pid, int resolveFlag, co
 	char *outPath;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, pArgs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pInPath != NULL) {
@@ -309,7 +309,7 @@ int _sceFiosKernelOverlayDHOpenSync(SceFiosKernelDH **pOutDH, const char *pPath,
 	const char *path = pPath;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, pArgs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pOutDH != NULL) {
@@ -367,7 +367,7 @@ int _sceFiosKernelOverlayDHChstatSync(SceFiosKernelDH *dh, SceIoStat *pStat, int
 
 	if (pStat != NULL) {
 		stat = (SceIoStat *)alloca(sizeof(*stat));
-		ret = ksceKernelCopyFromUser(stat, pStat, sizeof(*stat));
+		ret = SceSysmemForDriver_BC996A7A(stat, pStat, sizeof(*stat));
 		if (ret < 0)
 			return ret;
 	}
@@ -401,7 +401,7 @@ FIOS_SYSCALL int fiosSyscallGetRecommendedScheduler(int avail, const char *pPath
 	const char *path = pPath;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&args, pArgs, sizeof(args));
+	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pPath != NULL) {

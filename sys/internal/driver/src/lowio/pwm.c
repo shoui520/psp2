@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "pwm_regs.h"
 #include <sysmem/sysevent.h>
 
@@ -67,13 +67,13 @@ int LowioPwmInit(SceSize arglen, const void *argp)
 	opt.size = 0x58;
 	opt.attr = 2;
 	opt.paddr = PWM_REG_BASE;
-	ret = ksceKernelAllocMemBlock("ScePwmReg", 0x20100806, 0x1000, &opt);
+	ret = SceSysmemForDriver_C94850C9("ScePwmReg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		return 2;
 	s_pwm.uid = ret;
-	ksceKernelGetMemBlockBase(ret, (void **)&s_pwm.registers);
+	SceSysmemForDriver_A841EDDA(ret, (void **)&s_pwm.registers);
 	PwmRestoreState();
-	ksceKernelRegisterSysEventHandler("ScePwm", PwmSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("ScePwm", PwmSysEvent, NULL);
 	return 0;
 }
 

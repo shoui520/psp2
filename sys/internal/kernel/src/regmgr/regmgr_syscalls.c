@@ -5,8 +5,7 @@
  */
 
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
+#include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include "regmgr_internal.h"
 
@@ -120,7 +119,7 @@ int regMgrSysCopyOutKeys(RegMgrKeyInfo *keys, int count, int mode)
 	if (mode == REGMGR_COPY_KERNEL) {
 		for (i = 0, key = g_regMgrSysKeys; i != count; i++, key++) {
 			if ((SceUInt16)(key->type - 1) < 2) {
-				ret = ksceKernelCopyToUser((void *)g_regMgrSysUserData[i], key->data,
+				ret = SceSysmemForDriver_6D88EF8A((void *)g_regMgrSysUserData[i], key->data,
 							   key->valueSize);
 				if (ret != 0)
 					return ret;
@@ -136,7 +135,7 @@ int regMgrSysCopyOutKeys(RegMgrKeyInfo *keys, int count, int mode)
 			g_regMgrSysKeys[i].name = g_regMgrSysUserName[i];
 		}
 	}
-	return ksceKernelCopyToUser(keys, g_regMgrSysKeys, count * sizeof(RegMgrKeyInfo));
+	return SceSysmemForDriver_6D88EF8A(keys, g_regMgrSysKeys, count * sizeof(RegMgrKeyInfo));
 }
 
 /* copy a category and keys in from the user: their names only (mode 2), or their
@@ -150,7 +149,7 @@ int regMgrSysCopyInKeys(const char *category, const RegMgrKeyInfo *keys, int cou
 
 	if (category == NULL || keys == NULL)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
+	ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
 	if (ret < 0)
 		return ret;
 	if (ret >= (int)sizeof(g_regMgrSysCategory))
@@ -158,7 +157,7 @@ int regMgrSysCopyInKeys(const char *category, const RegMgrKeyInfo *keys, int cou
 	if ((SceUInt32)(count - 1) >= REGMGR_SYS_KEYS_MAX)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	key = g_regMgrSysKeys;
-	ret = ksceKernelCopyFromUser(key, keys, count * sizeof(RegMgrKeyInfo));
+	ret = SceSysmemForDriver_BC996A7A(key, keys, count * sizeof(RegMgrKeyInfo));
 	if (ret != 0)
 		return ret;
 	if (key->size != sizeof(RegMgrKeyInfo))
@@ -167,7 +166,7 @@ int regMgrSysCopyInKeys(const char *category, const RegMgrKeyInfo *keys, int cou
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	used = 0;
 	for (i = 0; ; ) {
-		ret = ksceKernelStrncpyFromUser(g_regMgrSysKeyName[i], key->name,
+		ret = SceSysmemForDriver_DB3EC244(g_regMgrSysKeyName[i], key->name,
 						REGMGR_SYS_NAME_SIZE);
 		if (ret < 0)
 			return ret;
@@ -188,7 +187,7 @@ int regMgrSysCopyInKeys(const char *category, const RegMgrKeyInfo *keys, int cou
 				return SCE_REGMGR_ERROR_BAD_SIZE;
 			if (data == NULL)
 				return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
-			ret = ksceKernelCopyFromUser((void *)key->data, data, key->valueSize);
+			ret = SceSysmemForDriver_BC996A7A((void *)key->data, data, key->valueSize);
 			if (ret != 0)
 				return ret;
 		} else if (key->type != REGMGR_TYPE_INT) {
@@ -252,7 +251,7 @@ int regMgrSysParamGetInt(int id, int *value, int mode)
 				if (mode == REGMGR_COPY_KERNEL)
 					*value = buf;
 				else
-					err = ksceKernelCopyToUser(value, &buf, sizeof(buf));
+					err = SceSysmemForDriver_6D88EF8A(value, &buf, sizeof(buf));
 			}
 		}
 	}
@@ -307,7 +306,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamGet(int id, void 
 					if (size != 0)
 						memcpy(buf, g_regMgrSysData, size);
 				} else {
-					err = ksceKernelCopyToUser(buf, g_regMgrSysData, size);
+					err = SceSysmemForDriver_6D88EF8A(buf, g_regMgrSysData, size);
 				}
 			}
 		}
@@ -334,12 +333,12 @@ static inline __attribute__((always_inline)) int regMgrSysCopyInName(const char 
 {
 	int ret;
 
-	ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
+	ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
 	if (ret < 0)
 		return ret;
 	if (ret >= (int)sizeof(g_regMgrSysCategory))
 		return SCE_REGMGR_ERROR_BAD_CATEGORY;
-	ret = ksceKernelStrncpyFromUser(g_regMgrSysName, name, REGMGR_SYS_NAME_SIZE);
+	ret = SceSysmemForDriver_DB3EC244(g_regMgrSysName, name, REGMGR_SYS_NAME_SIZE);
 	if (ret < 0)
 		return ret;
 	if (ret >= REGMGR_SYS_NAME_SIZE)
@@ -363,7 +362,7 @@ int sceRegMgrResetRegistryLvInternal2(const char *category, int level)
 		ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 		goto out;
 	}
-	ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
+	ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, category, sizeof(g_regMgrSysCategory));
 	if (ret < 0)
 		goto out;
 	if (ret >= (int)sizeof(g_regMgrSysCategory)) {
@@ -424,7 +423,7 @@ int sceRegMgrGetKeyIntInternal2(const char *category, const char *name, int *val
 				ret = sceRegMgrGetKeyInt(g_regMgrSysCategory, g_regMgrSysName, &buf);
 				regMgrClearStatus();
 				if (ret == 0)
-					ret = ksceKernelCopyToUser(value, &buf, sizeof(buf));
+					ret = SceSysmemForDriver_6D88EF8A(value, &buf, sizeof(buf));
 			}
 		}
 	}
@@ -453,7 +452,7 @@ static inline __attribute__((always_inline)) int regMgrSysSetKey(const char *cat
 		goto out;
 	if (buf == NULL || size > REGMGR_SYS_STR_MAX)
 		goto invalid;
-	ret = ksceKernelCopyFromUser(g_regMgrSysData, buf, size);
+	ret = SceSysmemForDriver_BC996A7A(g_regMgrSysData, buf, size);
 	if (ret != 0)
 		goto out;
 	regMgrSetStatus(REGMGR_STATUS_SYSCALL);
@@ -500,7 +499,7 @@ static inline __attribute__((always_inline)) int regMgrSysGetKey(const char *cat
 		ret = sceRegMgrGetKeyStr(g_regMgrSysCategory, g_regMgrSysName, g_regMgrSysData, size);
 	regMgrClearStatus();
 	if (ret == 0)
-		ret = ksceKernelCopyToUser(buf, g_regMgrSysData, size);
+		ret = SceSysmemForDriver_6D88EF8A(buf, g_regMgrSysData, size);
 out:
 	regMgrComApiEpilogue(lock);
 	return ret;
@@ -635,7 +634,7 @@ static inline __attribute__((always_inline)) int regMgrSysCallback(SceUID cbid, 
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
-			ret = kscePUIDtoGUID(0, cbid);
+			ret = SceSysmemForDriver_45D22597(0, cbid);
 			if (ret >= 0) {
 				regMgrSetStatus(REGMGR_STATUS_SYSCALL);
 				ret = func(ret);
@@ -662,12 +661,12 @@ int sceRegMgrAddRegistryCallbackInternal2(SceUID cbid, const char *path)
 	ret = regMgrComApiPrologue(&lock);
 	if (ret >= 0) {
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
-			ret = guid = kscePUIDtoGUID(0, cbid);
+			ret = guid = SceSysmemForDriver_45D22597(0, cbid);
 			if (guid >= 0) {
 				if (path == NULL) {
 					ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 				} else {
-					ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, path,
+					ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, path,
 									sizeof(g_regMgrSysCategory));
 					if (ret >= 0) {
 						if (ret < (int)sizeof(g_regMgrSysCategory)) {
@@ -724,7 +723,7 @@ int sceRegMgrDbBackupInternal2(const char *path, int level)
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (path == NULL)
 				goto invalid;
-			ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, path,
+			ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, path,
 							sizeof(g_regMgrSysCategory));
 			if (ret < 0)
 				goto out;
@@ -755,7 +754,7 @@ int sceRegMgrDbRestoreInternal2(const char *path)
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (path == NULL)
 				goto invalid;
-			ret = ksceKernelStrncpyFromUser(g_regMgrSysCategory, path,
+			ret = SceSysmemForDriver_DB3EC244(g_regMgrSysCategory, path,
 							sizeof(g_regMgrSysCategory));
 			if (ret < 0)
 				goto out;
@@ -845,7 +844,7 @@ int sceRegMgrSrvGetRegionStrInternal2(char *buf, SceSize size)
 				if (buf == NULL || (len = strnlen(name, size)) >= size) {
 					ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 				} else {
-					err = ksceKernelCopyToUser(buf, name, len + 1);
+					err = SceSysmemForDriver_6D88EF8A(buf, name, len + 1);
 					if (err != 0)
 						ret = err;
 				}
@@ -876,7 +875,7 @@ int sceRegMgrSrvCnvRegionStrInternal2(int region, char *buf, SceSize size)
 				if (buf == NULL || (len = strnlen(name, size)) >= size)
 					ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 				else
-					ret = ksceKernelCopyToUser(buf, name, len + 1);
+					ret = SceSysmemForDriver_6D88EF8A(buf, name, len + 1);
 			}
 		} else {
 			ret = SCE_ERROR_ERRNO_ENOSYS;
@@ -897,7 +896,7 @@ int sceRegMgrSrvCnvRegionIntInternal2(const char *name)
 		if (sceSblACMgrIsSystemProgram(0) == 1) {
 			if (name == NULL)
 				goto invalid;
-			ret = ksceKernelStrncpyFromUser(buf, name, sizeof(buf));
+			ret = SceSysmemForDriver_DB3EC244(buf, name, sizeof(buf));
 			if (ret < 0)
 				goto out;
 			if ((SceUInt32)ret >= sizeof(buf))
@@ -971,7 +970,7 @@ static inline __attribute__((always_inline)) int regMgrSysParamSet(int id, int v
 	} else if (buf == NULL || size > REGMGR_SYS_STR_MAX) {
 		err = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 	} else {
-		err = ksceKernelCopyFromUser(g_regMgrSysData, buf, size);
+		err = SceSysmemForDriver_BC996A7A(g_regMgrSysData, buf, size);
 		if (err == 0 && (err = ksceKernelSetPermission(0x40)) >= 0) {
 			regMgrSetStatus(REGMGR_STATUS_FLAGS);
 			if (type == REGMGR_TYPE_BIN)

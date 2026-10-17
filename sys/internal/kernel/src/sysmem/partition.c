@@ -86,7 +86,7 @@ int PartitionAsCommonFreeL2PageTable(Partition *partition, AddressSpaceContext *
 	}
 	if (MemBlockL2PageTableIsAllFree(block) == 1) {
 		/* off the partition's list of L2 table blocks (linked through smbNext) */
-		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2BlockLock);
+		intr = SceCpuForDriver_4C38CE4D(&partition->l2BlockLock);
 		for (prev = NULL, cur = partition->l2Blocks; cur != NULL;
 		     prev = cur, cur = cur->smbNext) {
 			if (block != cur)
@@ -96,7 +96,7 @@ int PartitionAsCommonFreeL2PageTable(Partition *partition, AddressSpaceContext *
 			else
 				partition->l2Blocks = block->smbNext;
 		}
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 		if (partition != context->partition) {
 			FreeSimpleMemBlock(block, 0);
 			return L2PageTableFree(context->l2ptHeap, l2pt);
@@ -115,7 +115,7 @@ int PartitionAllocVirPageRaw(Partition *partition, VirPage **vp)
 	ret = FixedHeapAllocObjectExt(partition->tiny.context->virPageHeap, &object);
 	if (ret >= 0) {
 		VirPageInit(object);
-		ksceKernelAtomicIncrementHighwaterCounter(&partition->virPageCount);
+		SceCpuForKernel_9DA58A9E(&partition->virPageCount);
 		*vp = object;
 	}
 	return ret;
@@ -193,7 +193,7 @@ int TinyPartitionGetMemBlockInfoList(TinyPartition *tiny, SceUInt32 flags, uintp
 
 	flags &= 1;
 	filled = 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	head = tiny->blocks;
 	used = 0;
 	block = head;
@@ -214,7 +214,7 @@ next:
 		if (head == block)
 			break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	*count = filled;
 	return used;
 }
@@ -311,7 +311,7 @@ void PartitionUnlinkBlockSlots(Partition *partition, MemBlockObject *block)
 	SceUInt32 *slot, value, mib, last;
 	int intr;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	mib = block->vbase >> 20;
 	last = (block->size + block->vbase - 1) >> 20;
 	for (slot = &partition->tiny.context->l2Tables[mib]; mib <= last; mib++, slot++) {
@@ -346,7 +346,7 @@ void PartitionUnlinkBlockSlots(Partition *partition, MemBlockObject *block)
 			*slot = value;
 		}
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 }
 
 static inline void TinyPartitionSetFreeSizeR1(TinyPartition *tiny, SceSize size)
@@ -399,7 +399,7 @@ static inline void AllocMemBlockCommandCheck2(SceKernelAllocMemBlockCommand *com
 	case SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_NC_R:
 	case SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_NC_RW:
 		if (!(command->opt.attr & SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT))
-			ksceKernelAssertLevel(1, 0,
+			SceDebugForDriver_FD753E7A(1, 0,
 					      SCE_DBGINFO_FUNC(530, "AllocMemBlockCommandCheck2"),
 					      __builtin_return_address(0));
 		break;
@@ -426,9 +426,9 @@ int AllocMemBlockCommandCheckParameter(SceKernelAllocMemBlockCommand *command)
 	if (command->typeInfo->attr & 0x100)
 		command->opt.attr |= SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() >= 2) {
+	if (SceDebugForDriver_374B7868() >= 2) {
 		AllocMemBlockCommandCheck2(command);
-		ksceKernelAssertLevel(2, 1, SCE_DBGINFO(579), __builtin_return_address(0));
+		SceDebugForDriver_FD753E7A(2, 1, SCE_DBGINFO(579), __builtin_return_address(0));
 	}
 #endif
 	attr = command->opt.attr;
@@ -773,9 +773,9 @@ int TinyPartitionInitList(TinyPartition *tiny)
 	MemBlockSetNameRaw(block, "SceFree");
 	block->vbase = tiny->vbase;
 	block->size = tiny->size;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	TinyPartitionLinkFreeAfter(tiny->blocks, block);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
 }
 
@@ -795,7 +795,7 @@ static inline void MemBlockUnlinkFreeRaw(MemBlockObject *block)
 static inline void TinyPartitionDecFreeSizeR1(TinyPartition *tiny, SceSize size)
 {
 	SCE_DBG_ASSERT_CHECK_FUNC(size <= tiny->freeSize, 2827, "TinyPartitionDecFreeSizeR1");
-	ksceKernelAtomicSubAndGet32((SceInt32 *)&tiny->freeSize, size);
+	SceCpuForDriver_A4884C4E((SceInt32 *)&tiny->freeSize, size);
 }
 
 /* the MiB slots of a new block: it is the first block of a table, or owns the section */
@@ -804,7 +804,7 @@ static inline void PartitionLinkBlockSlots(Partition *partition, MemBlockObject 
 	SceUInt32 *slot, value, mib, last;
 	int intr;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	mib = block->vbase >> 20;
 	last = (block->size + block->vbase - 1) >> 20;
 	for (slot = &partition->tiny.context->l2Tables[mib]; mib <= last; mib++, slot++) {
@@ -821,7 +821,7 @@ static inline void PartitionLinkBlockSlots(Partition *partition, MemBlockObject 
 			*slot = ((uintptr_t)block & ~3u) | AS_L2_SLOT_BLOCK;
 		}
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 }
 
 /* the next block to look at: free blocks are walked along the free list */
@@ -883,7 +883,7 @@ static inline int TinyPartitionAllocMemBlockByAddrRaw(Partition *partition,
 				SCE_DBG_ASSERT_FAIL(3421);
 			}
 		}
-		ksceKernelAtomicIncrementHighwaterCounter(&tiny->blockCount);
+		SceCpuForKernel_9DA58A9E(&tiny->blockCount);
 		TinyPartitionDecFreeSizeR1(tiny, block->size);
 		MemBlockUnlinkFreeRaw(block);
 		command->block = block;
@@ -908,9 +908,9 @@ int PartitionAllocMemBlockInListByAddrByCommandRaw(Partition *partition,
 	int intr, ret;
 
 	SCE_DBG_ASSERT_CHECK(command->partition == partition, 5103);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&partition->tiny.lock);
+	intr = SceCpuForDriver_D32ACE9E(&partition->tiny.lock);
 	ret = TinyPartitionAllocMemBlockByAddrRaw(partition, command, va);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
 	return ret;
 }
 
@@ -937,7 +937,7 @@ int TinyPartitionFreeMemBlock(TinyPartition *tiny, MemBlockObject *block, SceUIn
 		return SCE_KERNEL_ERROR_PARTITION_ERROR;
 	}
 	context = tiny->context;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	head = tiny->blocks;
 #if FW_DEBUG
 	if (head == NULL) {
@@ -1023,11 +1023,11 @@ found:
 		MemBlockSetFreeNextRaw(prevFree, block);
 		MemBlockSetFreePrevRaw(block, prevFree);
 	}
-	ksceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
+	SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
 	ret = 0;
-	ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&tiny->blockCount);
+	SceCpuForKernel_0E04BD2E((SceInt32 *)&tiny->blockCount);
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
 }
 
@@ -1201,7 +1201,7 @@ restart:
 	*out = NULL;
 	return SCE_KERNEL_ERROR_PARTITION_NO_VIRTUAL_ADDRESS;
 taken:
-	ksceKernelAtomicIncrementHighwaterCounter(&tiny->blockCount);
+	SceCpuForKernel_9DA58A9E(&tiny->blockCount);
 	TinyPartitionDecFreeSizeR1(tiny, cur->size);
 	*out = cur;
 	return 0;
@@ -1217,7 +1217,7 @@ int PartitionAllocMemBlockInListByCommandRaw(Partition *partition,
 	int intr, ret;
 
 	SCE_DBG_ASSERT_CHECK(command->partition == partition, 5078);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&partition->tiny.lock);
+	intr = SceCpuForDriver_D32ACE9E(&partition->tiny.lock);
 	ret = TinyPartitionAllocMemBlockRaw(&partition->tiny, command, align, &block);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 5082, "TinyPartitionAllocMemBlockRaw failed 0x%08x\n", ret);
@@ -1228,7 +1228,7 @@ int PartitionAllocMemBlockInListByCommandRaw(Partition *partition,
 		PartitionLinkBlockSlots(partition, block);
 		command->block = block;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
 	return ret;
 }
 
@@ -1811,9 +1811,9 @@ static inline int PartitionAllocMemBlockCoreByCommandRaw(Partition *partition,
 		shared = s_tinyPartitionUserShared;
 		if (shared == NULL)
 			return SCE_KERNEL_ERROR_PARTITION_ERROR;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&shared->lock);
+		intr = SceCpuForDriver_D32ACE9E(&shared->lock);
 		ret = TinyPartitionAllocMemBlockRaw(shared, command, align, &sharedBlock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&shared->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&shared->lock, intr);
 		if (ret < 0)
 			return ret;
 		ret = PartitionAllocMemBlockInListByAddrByCommandRaw(partition, command,
@@ -2056,7 +2056,7 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 	SceUInt32 smbType;
 	int intr, free, ret;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2BlockLock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2BlockLock);
 	block = partition->l2Blocks;
 	if (block != NULL) {
 		for (;;) {
@@ -2069,13 +2069,13 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 			if (free > 0) {
 				partition->l2Blocks = block->smbNext;
 				block->smbNext = NULL;
-				ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock,
+				sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock,
 										intr);
 				return block;
 			}
 		}
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 	name = SysrootGetMemBlockName(2);
 	if (partition == g_uidManager->kernelPartition)
 		smbType = ((flags & 1) << 4) | 0x21;
@@ -2084,9 +2084,9 @@ static inline MemBlockObject *PartitionL2CAllocMemBlockForL2PageTableRaw(Partiti
 	ret = AllocSimpleMemBlock(name, 0x1001000, NULL, smbType, &block);
 	if (ret < 0) {
 		if (ret == SCE_KERNEL_ERROR_NO_SMB)
-			ksceKernelPanic(SCE_DBGINFO_FUNC(4717, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
+			SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(4717, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
 					__builtin_return_address(0));
-		ksceKernelPanic(SCE_DBGINFO_FUNC(4719, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
+		SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(4719, "PartitionL2CAllocMemBlockForL2PageTableRaw"),
 				__builtin_return_address(0));
 	}
 	block->flags |= MEMBLOCK_L2PT;
@@ -2130,22 +2130,22 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 
 	if (!(flags & PARTITION_L2C_LOCKED)) {
 		/* keep a few in the cache: no allocation under l2Lock */
-		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2CacheLock);
+		intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
 		while (partition->l2CacheCount < PARTITION_L2C_CACHE_MIN) {
 			AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &l2pt);
 			l2pt->next = partition->l2Cache;
 			partition->l2Cache = l2pt;
 			partition->l2CacheCount++;
 		}
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
-		l2Intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+		l2Intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	}
 	context = partition->tiny.context;
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2CacheLock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
 	if (partition->l2CacheCount == 0) {
 		ret = AllocL2PageTableObject(partition, partition->tiny.context->l2ptHeap, flags, &l2pt);
 		if (ret < 0) {
-			ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+			sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
 			goto out;
 		}
 	} else {
@@ -2154,7 +2154,7 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 		l2pt->next = NULL;
 		partition->l2CacheCount--;
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
 
 	block = PartitionL2CAllocMemBlockForL2PageTableRaw(partition, flags);
 	l2pt->block = block;
@@ -2197,18 +2197,18 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 			l2pt->firstBlock = (MemBlockObject *)AS_L2_SLOT_PTR(*slot);
 		*slot = ((uintptr_t)l2pt & ~3u) | AS_L2_SLOT_TABLE;
 		l2pt->partition = partition;
-		ksceKernelAtomicIncrementHighwaterCounter(&partition->l2Count);
+		SceCpuForKernel_9DA58A9E(&partition->l2Count);
 	}
 	if (MemBlockL2PageTableFreeCount(block) > 0) {
-		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2BlockLock);
+		intr = SceCpuForDriver_4C38CE4D(&partition->l2BlockLock);
 		block->smbNext = partition->l2Blocks;
 		partition->l2Blocks = block;
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2BlockLock, intr);
 	}
 	*out = l2pt;
 out:
 	if (!(flags & PARTITION_L2C_LOCKED))
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
 	return ret;
 }
 
@@ -2229,11 +2229,11 @@ int PartitionFindL2PageTable(Partition *partition, uintptr_t va, SceSize size, S
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
 	intr = (flags & PARTITION_L2C_LOCKED) ? 0 :
-	       ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	       SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	slot = partition->tiny.context->l2Tables[va >> 20];
 	l2pt = AS_L2_SLOT_TYPE(slot) == AS_L2_SLOT_TABLE ? (L2PageTable *)AS_L2_SLOT_PTR(slot) : NULL;
 	if (!(flags & PARTITION_L2C_LOCKED))
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	*out = l2pt;
 	return l2pt != NULL ? 0 : SCE_KERNEL_ERROR_NO_L2PAGETABLE;
 }
@@ -2252,7 +2252,7 @@ int PartitionGetPhyMemPart(Partition *partition, SceUInt32 code, void **phyMemPa
 /* name unknown: a virtual page of the partition given back */
 void PartitionVirPageRelease(Partition *partition)
 {
-	ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&partition->virPageCount);
+	SceCpuForKernel_0E04BD2E((SceInt32 *)&partition->virPageCount);
 }
 
 #define PARTITION_ATTR_1		0x01	/* PLACEHOLDER: not supported here */
@@ -2270,7 +2270,7 @@ Partition *PartitionInit(const char *name, SceUInt8 domain, uintptr_t vbase, Sce
 	SceUInt32 attr;
 	int ret;
 
-	partition = ksceKernelAlloc(sizeof(*partition));
+	partition = SceSysmemForKernel_85571907(sizeof(*partition));
 	if (partition == NULL)
 		return NULL;
 	SetMemory32Core(partition, 0, sizeof(*partition));
@@ -2320,10 +2320,10 @@ int DeletePartition(Partition *partition)
 
 	if (partition->attr & PARTITION_ATTR_KEEP)
 		return 0;
-	while ((ret = ksceKernelAtomicCompareAndSet32(&partition->refCount, 0, -1)) != 0)
+	while ((ret = SceCpuForDriver_CDA96E81(&partition->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 6240, "PartitionInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       partition->refCount);
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2CacheLock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2CacheLock);
 	while (partition->l2CacheCount != 0) {
 		l2pt = partition->l2Cache;
 		partition->l2Cache = l2pt->next;
@@ -2331,9 +2331,9 @@ int DeletePartition(Partition *partition)
 		partition->l2CacheCount--;
 		L2PageTableFree(partition->tiny.context->l2ptHeap, l2pt);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2CacheLock, intr);
 	SetMemory32Core(partition, TINY_PARTITION_DEAD, sizeof(*partition));
-	ksceKernelFree(partition);
+	SceSysmemForKernel_4233C16D(partition);
 	return 0;
 }
 
@@ -2349,14 +2349,14 @@ int PartitionReserveSection(Partition *partition, uintptr_t va)
 	L2PageTable *l2pt;
 	int intr, ret;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	ret = PartitionFindL2PageTable(partition, va, 0x1000, PARTITION_L2C_LOCKED, &l2pt);
 	if (ret < 0) {
 		ret = PartitionL2CAllocL2PageTableRaw(partition, va, PARTITION_L2C_LOCKED, &l2pt);
 		if (ret >= 0)
 			l2pt->flags |= 0x8000;
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	return ret;
 }
 
@@ -2373,20 +2373,20 @@ int PartitionMapPages(Partition *partition, SceUInt32 code, uintptr_t va, SceSiz
 	int mapIntr = 0, l2Intr, ret;
 
 	if (!(flags & PARTITION_MAP_LOCKED))
-		mapIntr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->mapLock);
+		mapIntr = SceCpuForDriver_4C38CE4D(&partition->mapLock);
 	if (!(flags & PARTITION_L2C_LOCKED))
-		l2Intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+		l2Intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	else
 		l2Intr = 0;
 	ret = PartitionFindL2PageTable(partition, va, size, flags | 3, &l2pt);
 	if (ret < 0)
 		ret = PartitionL2CAllocL2PageTableRaw(partition, va, flags | 3, &l2pt);
 	if (!(flags & PARTITION_L2C_LOCKED))
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
 	if (ret >= 0)
 		ret = L2PageTableMapPages(l2pt, code, va, size, pa);
 	if (!(flags & PARTITION_MAP_LOCKED))
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, mapIntr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, mapIntr);
 	return ret;
 }
 
@@ -2396,11 +2396,11 @@ int PartitionRemapPages(Partition *partition, MemBlockObject *block, SceUInt32 t
 	L2PageTable *l2pt;
 	int intr, ret;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->mapLock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->mapLock);
 	ret = PartitionFindL2PageTable(partition, va, size, PARTITION_MAP_LOCKED, &l2pt);
 	if (ret >= 0)
 		ret = L2PageTableRemapPages(l2pt, block, type, va, size, pa, flags);
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 	return ret;
 }
 
@@ -2417,7 +2417,7 @@ int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, 
 	int intr = 0, ret;
 
 	if (!(flags & PARTITION_MAP_LOCKED))
-		intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->mapLock);
+		intr = SceCpuForDriver_4C38CE4D(&partition->mapLock);
 	context = partition->tiny.context;
 	if (mode >> 1) {
 		SCE_DBG_ASSERT_FAIL(6398);
@@ -2431,7 +2431,7 @@ int PartitionUnmapL2PageTable(Partition *partition, uintptr_t va, SceSize size, 
 						    mode);
 	}
 	if (!(flags & PARTITION_MAP_LOCKED))
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 	return ret;
 }
 
@@ -2442,7 +2442,7 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 	L2PageTable *found, *l2pt;
 	int intr, l2Intr, ret;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->mapLock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->mapLock);
 	context = partition->tiny.context;
 	for (; size != 0; size -= 0x100000, va += 0x100000) {
 		if (PartitionFindL2PageTable(partition, va, 0x100000, 0, &found) < 0)
@@ -2450,16 +2450,16 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 		l2pt = found;
 		if (L2PageTableGetPageCount(l2pt) != 0 || (l2pt->flags & 0x8000))
 			continue;
-		l2Intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+		l2Intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 		partition->tiny.context->l2Tables[l2pt->vbase >> 20] = 0;
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
-		ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&partition->l2Count);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
+		SceCpuForKernel_0E04BD2E((SceInt32 *)&partition->l2Count);
 		ret = PartitionAsCommonFreeL2PageTable(partition, context, l2pt, 1);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 6469, "PartitionCheckFreeL2PageTable failed 0x%08x\n",
 				       ret);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->mapLock, intr);
 }
 
 int L1PageTableGetMemoryType(L1PageTable *l1pt, uintptr_t va);
@@ -2487,13 +2487,13 @@ static inline L2PageTable *PartitionGetL2PageTable(Partition *partition, uintptr
 	SceUInt32 slot;
 	int intr;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	slot = partition->tiny.context->l2Tables[va >> 20];
 	if (AS_L2_SLOT_TYPE(slot) != AS_L2_SLOT_TABLE) {
-		ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 		return NULL;
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	return (L2PageTable *)AS_L2_SLOT_PTR(slot);
 }
 
@@ -2738,13 +2738,13 @@ int PartitionFreeMemBlock(Partition *partition, MemBlockObject *block)
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xb, 7065, "PIDFreeMemBlock(%p) failed 0x%08x\n", cur,
 					       ret);
-			ksceKernelFree(cur);
+			SceSysmemForKernel_4233C16D(cur);
 		}
 	}
 	return ret;
 done:
 	if (cur != NULL)
-		ksceKernelFree(cur);
+		SceSysmemForKernel_4233C16D(cur);
 	return ret;
 }
 
@@ -2792,7 +2792,7 @@ int TinyPartitionFreeAllMemBlock(Partition *partition, TinyPartitionClientInfoLi
 
 	if (partition->attr & PARTITION_ATTR_KEEP)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	head = tiny->blocks;
 	context = tiny->context;
 	if (head == NULL)
@@ -2841,8 +2841,8 @@ full:
 		cur->next = cur;
 		cur->prev = cur;
 		FreeMemBlockObject(heap, cur);
-		ksceKernelAtomicAddAndGet32((SceInt32 *)&tiny->freeSize, size);
-		ksceKernelAtomicDecIfLowPositive32((SceInt32 *)&tiny->blockCount);
+		SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
+		SceCpuForKernel_0E04BD2E((SceInt32 *)&tiny->blockCount);
 		cur = next;
 	} while (cur != head);
 empty:
@@ -2853,7 +2853,7 @@ empty:
 	FreeMemBlockObject(heap, head);
 	tiny->blocks = NULL;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return 0;
 }
 
@@ -2895,20 +2895,20 @@ int TinyPartitionFindMemBlock(TinyPartition *tiny, uintptr_t va, SceSize size,
 	MemBlockObject *link;
 	int intr, ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	link = AsCommonGetBlockLink(tiny->context->l2Tables, va);
 	if (link != NULL) {
 		ret = TinyPartitionFindBlockFrom(tiny, va, size, link, block);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 		if (ret == 0)
 			return 0;
 	} else {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	}
 	/* the hint was no good: search from the start */
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	ret = TinyPartitionFindBlockFrom(tiny, va, size, tiny->blocks->next, block);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
 }
 
@@ -2917,7 +2917,7 @@ int PartitionGetMemBlockInfoByAddr(TinyPartition *tiny, uintptr_t va, SceUInt32 
 	MemBlockObject *block = NULL, *link;
 	int intr, ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&tiny->lock);
+	intr = SceCpuForDriver_D32ACE9E(&tiny->lock);
 	link = AsCommonGetBlockLink(tiny->context->l2Tables, va);
 	if ((link != NULL && (ret = TinyPartitionFindBlockFrom(tiny, va, 0, link, &block)) >= 0) ||
 	    (ret = TinyPartitionFindBlockFrom(tiny, va, 0, tiny->blocks->next, &block)) >= 0) {
@@ -2925,7 +2925,7 @@ int PartitionGetMemBlockInfoByAddr(TinyPartition *tiny, uintptr_t va, SceUInt32 
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 7262, "MemBlockGetInfo failed 0x%08x\n", ret);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
 }
 
@@ -2969,7 +2969,7 @@ int PartitionGetInfo(Partition *partition, PartitionInfo *info)
 
 	if (info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&partition->tiny.lock);
+	intr = SceCpuForDriver_D32ACE9E(&partition->tiny.lock);
 	info->vbase = partition->tiny.vbase;
 	info->vsize = partition->tiny.size;
 	info->name = partition->tiny.name;
@@ -2977,7 +2977,7 @@ int PartitionGetInfo(Partition *partition, PartitionInfo *info)
 	info->freeSize = partition->tiny.freeSize;
 	if (info->size >= sizeof(*info))
 		info->blockCountMax = partition->tiny.blockCount >> 16;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&partition->tiny.lock, intr);
 	info->partition = partition;
 	if (info->size >= sizeof(*info)) {
 		info->l2Count = partition->l2Count & 0xffff;
@@ -2995,14 +2995,12 @@ L2PageTable *SceSysmemForKernel_456ECB54(Partition *partition, uintptr_t va)
 	L2PageTable *l2pt;
 	int intr;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&partition->l2Lock);
+	intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 	slot = partition->tiny.context->l2Tables[va >> 20];
 	l2pt = AS_L2_SLOT_TYPE(slot) == AS_L2_SLOT_TABLE ? (L2PageTable *)AS_L2_SLOT_PTR(slot) : NULL;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, intr);
 	return l2pt;
 }
-
-int SceSysmemForKernel_BF275C5A(SceUID guid, SceClass *cls, const char *name, void *object);	/* sceGUIDSet */
 
 /* a partition with a GUID (param->uid, or a new one) */
 SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vbase, SceSize size,
@@ -3043,8 +3041,8 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 
 int MemBlockType2Code(SceUInt32 type, SceUInt32 *code);
 SceUID MemBlockCreateGUID(const char *name, MemBlockObject *block, SceUInt32 attr);
-int ksceKernelCheckDipsw(unsigned int bit);
-int ksceMt19937GlobalUninit(void *buffer, SceSize size);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
+int SceKernelUtilsForDriver_875B2A1C(void *buffer, SceSize size);
 
 #define DIPSW_NO_CLEAR			0xe1	/* PLACEHOLDER: name */
 
@@ -3059,7 +3057,7 @@ SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extra
 
 	opt.attr = 0x40000000 | ALLOC_ATTR_HAS_EXTRA_LOW;
 	opt.size = sizeof(opt);
-	if (ksceKernelCheckDipsw(DIPSW_NO_CLEAR))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_NO_CLEAR))
 		opt.attr |= ALLOC_ATTR_NO_CLEAR;
 	opt.extraLow = extraLow;
 	opt.extraHigh = 0;
@@ -3074,7 +3072,7 @@ SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize extra
 	return MemBlockCreateGUID(name, block, opt.attr);
 }
 
-SceUID ksceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
+SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt32 type,
 					SceSize size, const SceKernelAllocMemBlockKernelOpt *opt)
 {
 	SceKernelAllocMemBlockCommand command;
@@ -3088,7 +3086,7 @@ SceUID ksceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUIn
 					  "Invalid argument:name=[%s],size=0x%08x\n", name, size);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = ksceGUIDGetObject(partUid, &partition);
+	ret = SceSysmemForDriver_0FC24464(partUid, &partition);
 	if (ret < 0)
 		return ret;
 	ret = MemBlockType2Code(type, &code);
@@ -3110,7 +3108,7 @@ SceUID ksceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUIn
 		if (opt->attr & ALLOC_ATTR_KEEP_CLEAR)
 			goto alloc;
 	}
-	if (ksceKernelCheckDipsw(DIPSW_NO_CLEAR))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_NO_CLEAR))
 		command.opt.attr |= ALLOC_ATTR_NO_CLEAR;
 alloc:
 	ret = PartitionAllocMemBlockByCommandRaw(partition, &command);
@@ -3195,7 +3193,7 @@ int PartitionModuleStart(const UIDManager *manager)
 	s_partitionClass->destroy_cb = NULL;
 	s_partitionClass->name = "SceUIDPartitionClass";
 	for (i = 0; i < 3; i++) {
-		ret = ksceMt19937GlobalUninit(&random, sizeof(random));
+		ret = SceKernelUtilsForDriver_875B2A1C(&random, sizeof(random));
 		if (ret < 0) {
 			SCE_DBG_ASSERT_FAIL(7790);
 			return ret;
@@ -3254,7 +3252,7 @@ int CreateTinyPartitionRaw(void)
 		return 0;
 	as = SceSysmemForKernel_FA6C098C(SCE_KERNEL_ADDRESS_SPACE_ID);
 	s_userSharedContext.memBlockHeap = as->context->memBlockHeap;
-	tiny = ksceKernelAlloc(sizeof(*tiny));
+	tiny = SceSysmemForKernel_85571907(sizeof(*tiny));
 	if (tiny == NULL)
 		return SCE_KERNEL_ERROR_HEAPLIB_NOMEM;
 	memset(tiny, 0, sizeof(*tiny));

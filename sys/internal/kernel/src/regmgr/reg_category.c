@@ -5,7 +5,7 @@
 
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "reg_internal.h"
 
 SceUInt8 g_regBlockCheck[4];	/* name unknown */
@@ -117,7 +117,7 @@ int regComputeBlockCheck(RegDataBlock *block, SceSize size, SceUInt8 *check)
 	block->check[1] = 0;
 	block->check[2] = 0;
 	block->check[3] = 0;
-	ret = ksceSha1Digest(block, size, digest);
+	ret = SceKernelUtilsForDriver_87DC7F2F(block, size, digest);
 	if (ret >= 0) {
 		ret = 0;
 		for (i = 0; i < 4; i++) {

@@ -87,7 +87,7 @@ int MarlinHciImportStoredKeyChecked(unsigned int kind, unsigned int *outputHandl
 	if (ret >= 0) {
 		ret = MarlinKernelImportStoredKey(kind, &handle);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(outputHandle, &handle, sizeof(handle));
+			ret = SceSysmemForDriver_6D88EF8A(outputHandle, &handle, sizeof(handle));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -127,10 +127,10 @@ int MarlinHciExportStoredListChecked(void *outputHandles, unsigned int *outputCo
 		ret = ksceKernelRunWithStack(0x4000,
 					   (int (*)(void *))MarlinKernelExportStoredList, &list);
 		if (ret >= 0) {
-			ret = ksceKernelCopyToUser(outputCount, &list.count,
+			ret = SceSysmemForDriver_6D88EF8A(outputCount, &list.count,
 						  sizeof(list.count));
 			if (ret >= 0)
-				ret = ksceKernelCopyToUser(outputHandles, list.handles,
+				ret = SceSysmemForDriver_6D88EF8A(outputHandles, list.handles,
 							  list.count * sizeof(*list.handles));
 		}
 	}
@@ -147,7 +147,7 @@ int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *userRequest)
 
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelCopyFromUser(&input, userRequest, sizeof(input));
+	ret = SceSysmemForDriver_BC996A7A(&input, userRequest, sizeof(input));
 	if (ret < 0)
 		goto cleanup;
 	MarlinFillMemory(&request, 0, sizeof(request));
@@ -156,7 +156,7 @@ int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *userRequest)
 	request.labelSize = input.labelSize;
 	if (input.labelSize != 0 && input.labelData != NULL && input.labelSize < 0x10000) {
 		request.labelData = MarlinAllocateMemory(NULL, input.labelSize);
-		ret = ksceKernelCopyFromUser((void *)request.labelData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.labelData,
 					    input.labelData, input.labelSize);
 		if (ret < 0)
 			goto cleanup;
@@ -166,7 +166,7 @@ int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *userRequest)
 	request.inputSize = input.inputSize;
 	if (input.inputSize != 0 && input.inputData != NULL && input.inputSize < 0x10000) {
 		request.inputData = MarlinAllocateMemory(NULL, input.inputSize);
-		ret = ksceKernelCopyFromUser((void *)request.inputData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.inputData,
 					    input.inputData, input.inputSize);
 		if (ret < 0)
 			goto cleanup;
@@ -178,7 +178,7 @@ int MarlinHciImportWrappedKeyChecked(MarlinWrappedKeyImport *userRequest)
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelImportWrappedKey, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(&userRequest->outputHandle,
+		ret = SceSysmemForDriver_6D88EF8A(&userRequest->outputHandle,
 					  &request.outputHandle, sizeof(request.outputHandle));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.labelData);
@@ -196,7 +196,7 @@ int MarlinHciExportStoredInfoChecked(unsigned int *outputHandle)
 	if (ret >= 0) {
 		ret = MarlinKernelExportStoredInfo(&handle);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(outputHandle, &handle, sizeof(handle));
+			ret = SceSysmemForDriver_6D88EF8A(outputHandle, &handle, sizeof(handle));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -212,7 +212,7 @@ int MarlinHciExportEncryptedKeyChecked(unsigned int keyHandle,
 	if (ret >= 0) {
 		ret = MarlinKernelExportEncryptedKey(keyHandle, &handle);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(outputHandle, &handle, sizeof(handle));
+			ret = SceSysmemForDriver_6D88EF8A(outputHandle, &handle, sizeof(handle));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -227,7 +227,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelCopyFromUser(&input, userRequest, sizeof(input));
+	ret = SceSysmemForDriver_BC996A7A(&input, userRequest, sizeof(input));
 	if (ret < 0)
 		goto cleanup;
 	MarlinFillMemory(&request, 0, sizeof(request));
@@ -236,7 +236,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 	request.wrappedSeedSize = input.wrappedSeedSize;
 	if (input.wrappedSeedSize != 0 && input.wrappedSeedData != NULL && input.wrappedSeedSize < 0x10000) {
 		request.wrappedSeedData = MarlinAllocateMemory(NULL, input.wrappedSeedSize);
-		ret = ksceKernelCopyFromUser((void *)request.wrappedSeedData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.wrappedSeedData,
 					    input.wrappedSeedData, request.wrappedSeedSize);
 		if (ret < 0)
 			goto cleanup;
@@ -246,7 +246,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 	request.checkSize = input.checkSize;
 	if (input.checkSize != 0 && input.checkData != NULL && input.checkSize < 0x10000) {
 		request.checkData = MarlinAllocateMemory(NULL, input.checkSize);
-		ret = ksceKernelCopyFromUser((void *)request.checkData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.checkData,
 					    input.checkData, request.checkSize);
 		if (ret < 0)
 			goto cleanup;
@@ -256,7 +256,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 	request.ivSize = input.ivSize;
 	if (input.ivSize != 0 && input.ivData != NULL && input.ivSize < 0x10000) {
 		request.ivData = MarlinAllocateMemory(NULL, input.ivSize);
-		ret = ksceKernelCopyFromUser((void *)request.ivData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.ivData,
 					    input.ivData, request.ivSize);
 		if (ret < 0)
 			goto cleanup;
@@ -266,7 +266,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 	request.encryptedSize = input.encryptedSize;
 	if (input.encryptedSize != 0 && input.encryptedData != NULL && input.encryptedSize < 0x10000) {
 		request.encryptedData = MarlinAllocateMemory(NULL, input.encryptedSize);
-		ret = ksceKernelCopyFromUser((void *)request.encryptedData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.encryptedData,
 					    input.encryptedData, request.encryptedSize);
 		if (ret < 0)
 			goto cleanup;
@@ -276,7 +276,7 @@ int MarlinHciImportDerivedKeyChecked(MarlinDerivedKeyImport *userRequest)
 	request.outputHandle = 0;
 	ret = MarlinKernelImportDerivedKey(&request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(&userRequest->outputHandle,
+		ret = SceSysmemForDriver_6D88EF8A(&userRequest->outputHandle,
 					  &request.outputHandle, sizeof(request.outputHandle));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.wrappedSeedData);
@@ -302,13 +302,13 @@ int MarlinHciSignChecked(unsigned int handle, unsigned int algorithm,
 	request.keyHandle = handle;
 	request.algorithm = algorithm;
 	if (userInput != NULL) {
-		ret = ksceKernelCopyFromUser(&input, userInput, sizeof(input));
+		ret = SceSysmemForDriver_BC996A7A(&input, userInput, sizeof(input));
 		if (ret < 0)
 			goto cleanup;
 		request.dataSize = input.size;
 		if (input.size != 0 && input.data != NULL && input.size < 0x10000) {
 			request.data = MarlinAllocateMemory(NULL, input.size);
-			ret = ksceKernelCopyFromUser((void *)request.data,
+			ret = SceSysmemForDriver_BC996A7A((void *)request.data,
 						    input.data, input.size);
 			if (ret < 0)
 				goto cleanup;
@@ -320,7 +320,7 @@ int MarlinHciSignChecked(unsigned int handle, unsigned int algorithm,
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelSign, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(outputHandle, &request.outputHandle,
+		ret = SceSysmemForDriver_6D88EF8A(outputHandle, &request.outputHandle,
 					  sizeof(request.outputHandle));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.data);
@@ -337,7 +337,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelCopyFromUser(&input, userRequest, sizeof(input));
+	ret = SceSysmemForDriver_BC996A7A(&input, userRequest, sizeof(input));
 	if (ret < 0)
 		goto cleanup;
 	request.keyHandle = input.keyHandle;
@@ -345,7 +345,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 	request.mode = input.mode;
 	if (input.counter != NULL) {
 		request.counter = MarlinAllocateMemory(NULL, 8);
-		ret = ksceKernelCopyFromUser((void *)request.counter, input.counter, 8);
+		ret = SceSysmemForDriver_BC996A7A((void *)request.counter, input.counter, 8);
 		if (ret < 0)
 			goto cleanup;
 	} else {
@@ -354,7 +354,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 	request.labelSize = input.labelSize;
 	if (input.labelSize != 0 && input.labelData != NULL && input.labelSize < 0x10000) {
 		request.labelData = MarlinAllocateMemory(NULL, input.labelSize);
-		ret = ksceKernelCopyFromUser((void *)request.labelData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.labelData,
 					    input.labelData, request.labelSize);
 		if (ret < 0)
 			goto cleanup;
@@ -365,7 +365,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 	if (input.encryptedSize != 0 && input.encryptedData != NULL &&
 	    input.encryptedSize < 0x10000) {
 		request.encryptedData = MarlinAllocateMemory(NULL, input.encryptedSize);
-		ret = ksceKernelCopyFromUser((void *)request.encryptedData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.encryptedData,
 					    input.encryptedData, request.encryptedSize);
 		if (ret < 0)
 			goto cleanup;
@@ -376,7 +376,7 @@ int MarlinHciDecryptChecked(MarlinKeyDecryptRequest *userRequest)
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelDecrypt, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(&userRequest->outputHandle,
+		ret = SceSysmemForDriver_6D88EF8A(&userRequest->outputHandle,
 					  &request.outputHandle, sizeof(request.outputHandle));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.counter);
@@ -400,14 +400,14 @@ int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modu
 		goto cleanup;
 	request.keyHandle = handle;
 	if (modulus != NULL) {
-		ret = ksceKernelCopyFromUser(&modulusInput, modulus, sizeof(modulusInput));
+		ret = SceSysmemForDriver_BC996A7A(&modulusInput, modulus, sizeof(modulusInput));
 		if (ret < 0)
 			goto cleanup;
 		request.modulusSize = modulusInput.size;
 		if (modulusInput.size != 0 && modulusInput.data != NULL &&
 		    modulusInput.size < 0x10000) {
 			request.modulusData = MarlinAllocateMemory(NULL, modulusInput.size);
-			ret = ksceKernelCopyFromUser((void *)request.modulusData,
+			ret = SceSysmemForDriver_BC996A7A((void *)request.modulusData,
 						    modulusInput.data, modulusInput.size);
 			if (ret < 0)
 				goto cleanup;
@@ -416,7 +416,7 @@ int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modu
 		}
 	}
 	if (publicExponent != NULL) {
-		ret = ksceKernelCopyFromUser(&exponentInput, publicExponent,
+		ret = SceSysmemForDriver_BC996A7A(&exponentInput, publicExponent,
 					    sizeof(exponentInput));
 		if (ret < 0)
 			goto cleanup;
@@ -424,7 +424,7 @@ int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modu
 		if (exponentInput.size != 0 && exponentInput.data != NULL &&
 		    exponentInput.size < 0x10000) {
 			request.publicExponentData = MarlinAllocateMemory(NULL, exponentInput.size);
-			ret = ksceKernelCopyFromUser((void *)request.publicExponentData,
+			ret = SceSysmemForDriver_BC996A7A((void *)request.publicExponentData,
 						    exponentInput.data, exponentInput.size);
 			if (ret < 0)
 				goto cleanup;
@@ -436,7 +436,7 @@ int MarlinHciWrapRsaChecked(unsigned int handle, const MarlinUserDataInput *modu
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelWrapRsa, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(outputHandle, &request.outputHandle,
+		ret = SceSysmemForDriver_6D88EF8A(outputHandle, &request.outputHandle,
 					  sizeof(request.outputHandle));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.modulusData);
@@ -454,7 +454,7 @@ int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *userRequest)
 
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelCopyFromUser(&input, userRequest, sizeof(input));
+	ret = SceSysmemForDriver_BC996A7A(&input, userRequest, sizeof(input));
 	if (ret < 0)
 		goto cleanup;
 	request.keyHandle = input.keyHandle;
@@ -462,7 +462,7 @@ int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *userRequest)
 	request.dataSize = input.dataSize;
 	if (input.dataSize != 0 && input.data != NULL && input.dataSize < 0x10000) {
 		request.data = MarlinAllocateMemory(NULL, input.dataSize);
-		ret = ksceKernelCopyFromUser((void *)request.data, input.data, input.dataSize);
+		ret = SceSysmemForDriver_BC996A7A((void *)request.data, input.data, input.dataSize);
 		if (ret < 0)
 			goto cleanup;
 	} else {
@@ -472,7 +472,7 @@ int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *userRequest)
 	if (input.expectedSize != 0 && input.expectedData != NULL &&
 	    input.expectedSize < 0x10000) {
 		request.expectedData = MarlinAllocateMemory(NULL, input.expectedSize);
-		ret = ksceKernelCopyFromUser((void *)request.expectedData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.expectedData,
 					    input.expectedData, input.expectedSize);
 		if (ret < 0)
 			goto cleanup;
@@ -483,7 +483,7 @@ int MarlinHciVerifyMacChecked(MarlinKeyVerifyRequest *userRequest)
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelVerifyMac, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(&userRequest->verified, &request.verified,
+		ret = SceSysmemForDriver_6D88EF8A(&userRequest->verified, &request.verified,
 					  sizeof(request.verified));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.data);
@@ -501,7 +501,7 @@ int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *userRequest)
 
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelCopyFromUser(&input, userRequest, sizeof(input));
+	ret = SceSysmemForDriver_BC996A7A(&input, userRequest, sizeof(input));
 	if (ret < 0)
 		goto cleanup;
 	request.keyHandle = input.keyHandle;
@@ -509,7 +509,7 @@ int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *userRequest)
 	request.dataSize = input.dataSize;
 	if (input.dataSize != 0 && input.data != NULL && input.dataSize < 0x10000) {
 		request.data = MarlinAllocateMemory(NULL, input.dataSize);
-		ret = ksceKernelCopyFromUser((void *)request.data, input.data, input.dataSize);
+		ret = SceSysmemForDriver_BC996A7A((void *)request.data, input.data, input.dataSize);
 		if (ret < 0)
 			goto cleanup;
 	} else {
@@ -519,7 +519,7 @@ int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *userRequest)
 	if (input.expectedSize != 0 && input.expectedData != NULL &&
 	    input.expectedSize < 0x10000) {
 		request.expectedData = MarlinAllocateMemory(NULL, input.expectedSize);
-		ret = ksceKernelCopyFromUser((void *)request.expectedData,
+		ret = SceSysmemForDriver_BC996A7A((void *)request.expectedData,
 					    input.expectedData, input.expectedSize);
 		if (ret < 0)
 			goto cleanup;
@@ -530,7 +530,7 @@ int MarlinHciVerifyDigestChecked(MarlinKeyVerifyRequest *userRequest)
 	ret = ksceKernelRunWithStack(0x4000,
 				   (int (*)(void *))MarlinKernelVerifyDigest, &request);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(&userRequest->verified, &request.verified,
+		ret = SceSysmemForDriver_6D88EF8A(&userRequest->verified, &request.verified,
 					  sizeof(request.verified));
 cleanup:
 	MarlinFreeMemory(NULL, (void *)request.data);
@@ -549,17 +549,17 @@ int MarlinHciDisableKeyChecked(unsigned int handle, const MarlinUserDataInput *u
 	int ret = MarlinHciCheckAccess();
 
 	if (ret >= 0) {
-		ret = ksceKernelCopyFromUser(&input, userInput, sizeof(input));
+		ret = SceSysmemForDriver_BC996A7A(&input, userInput, sizeof(input));
 		if (ret >= 0) {
 			if (input.size < 0x10000) {
 				buffer = MarlinBufferCreate(NULL, input.size, NULL);
-				ret = ksceKernelCopyFromUser(buffer->data, input.data, input.size);
+				ret = SceSysmemForDriver_BC996A7A(buffer->data, input.data, input.size);
 				if (ret < 0)
 					goto cleanup;
 			}
 			ret = MarlinKernelDisableKey(handle, (unsigned int)buffer, &output);
 			if (ret >= 0)
-				ret = ksceKernelCopyToUser(outputHandle, &output, sizeof(output));
+				ret = SceSysmemForDriver_6D88EF8A(outputHandle, &output, sizeof(output));
 		}
 	}
 cleanup:
@@ -578,7 +578,7 @@ int MarlinHciStoreDataChecked(int selector, unsigned int size, const void *userD
 		goto cleanup;
 	if (userData != NULL && size != 0 && size < 0x10000) {
 		memory = MarlinAllocateMemory(NULL, size);
-		ret = ksceKernelCopyFromUser(memory, userData, size);
+		ret = SceSysmemForDriver_BC996A7A(memory, userData, size);
 		if (ret < 0)
 			goto cleanup;
 	}
@@ -609,7 +609,7 @@ int MarlinHciGetHandleSizeChecked(unsigned int handle, unsigned int *outputSize)
 	if (ret >= 0) {
 		ret = MarlinKernelGetHandleSize(handle, &size);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(outputSize, &size, sizeof(size));
+			ret = SceSysmemForDriver_6D88EF8A(outputSize, &size, sizeof(size));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -625,7 +625,7 @@ int MarlinHciTakeHandleObjectChecked(unsigned int handle, unsigned int unused, v
 		ret = MarlinKernelTakeHandleObject(handle, unused, (void **)&buffer);
 		if (ret >= 0) {
 			if (buffer != NULL) {
-				ret = ksceKernelCopyToUser(output, buffer->data, buffer->size);
+				ret = SceSysmemForDriver_6D88EF8A(output, buffer->data, buffer->size);
 				if (ret < 0)
 					goto done;
 			}

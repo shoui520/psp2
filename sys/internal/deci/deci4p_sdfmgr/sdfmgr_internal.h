@@ -6,6 +6,8 @@
 #include <stdarg.h>
 #include <intrmgr/intrmgr.h>
 #include <deci4p_sdfmgr/sdfmgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 
 typedef void (*SdfMgrHook)(void);
 typedef void (*SdfMgrControl)(int id);
@@ -273,10 +275,6 @@ int sdfmgrStartProtocol(uint32_t protocol);
 int sdfmgrStopProtocol(uint32_t protocol);
 void *SceDeci4pSDfMgrForKernel_5996E2DB(void *destination, const void *source,
 				   SceSize size);
-unsigned ksceKernelCpuSuspendIntr(void);
-void ksceKernelCpuResumeIntr(unsigned state);
-int ksceKernelCheckDipsw(unsigned bit);
-unsigned ksceKernelCpuId(void);
 
 static inline unsigned sdfMgrCoreIndex(void)
 {

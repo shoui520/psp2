@@ -197,7 +197,7 @@ int LibStubCBInit(LoadelfContext *ctx)
 		}
 		nfunc = imp->nfunc;
 		nvar = imp->nvar;
-		if (!ksceKernelCheckDipsw(0xd2) || nfunc + nvar == 0)
+		if (!SceDipswForDriver_A98FC2FD(0xd2) || nfunc + nvar == 0)
 			continue;
 		copy = sceKernelAllocRemoteToolHeap(pid, (nfunc + nvar) * 8);
 		stub->toolCopy = copy;
@@ -267,7 +267,7 @@ void LibStubCBClear(LibStubCB *stub)
 	stub->next = NULL;
 	stub->linked = NULL;
 	if (stub->guid > 0) {
-		ksceGUIDClose(stub->guid);
+		sceGUIDClose(stub->guid);
 		stub->guid = 0;
 	}
 }
@@ -278,7 +278,7 @@ int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index)
 	SceLibStubObject *obj;
 	SceUID uid;
 
-	uid = ksceGUIDKernelCreateWithOpt(g_stubClass, stub->imports->libname, NULL, (void **)&obj);
+	uid = sceGUIDKernelCreateWithOpt(g_stubClass, stub->imports->libname, NULL, (void **)&obj);
 	if (uid < 0)
 		return uid;
 	stub->guid = uid;
@@ -318,10 +318,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	info->varent = (void **)(copy + nfunc * 8 + nvar * 4);
 	local = (stub->cb->flags & MODULE_FLAG_SHARED_MASK) == 0;
 	if (nfunc != 0) {
-		ret = ksceKernelCopyFromUser(copy, stub->imports->funcnid, nfunc * 4);
+		ret = SceSysmemForDriver_BC996A7A(copy, stub->imports->funcnid, nfunc * 4);
 		if (ret < 0)
 			return ret;
-		ret = ksceKernelCopyFromUser(info->funcent, stub->imports->funcent, nfunc * 4);
+		ret = SceSysmemForDriver_BC996A7A(info->funcent, stub->imports->funcent, nfunc * 4);
 		if (ret < 0)
 			return ret;
 		if (local) {
@@ -332,10 +332,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 		}
 	}
 	if (nvar != 0) {
-		ret = ksceKernelCopyFromUser(info->varnid, stub->imports->varnid, nvar * 4);
+		ret = SceSysmemForDriver_BC996A7A(info->varnid, stub->imports->varnid, nvar * 4);
 		if (ret < 0)
 			return ret;
-		ret = ksceKernelCopyFromUser(info->varent, stub->imports->varent, nvar * 4);
+		ret = SceSysmemForDriver_BC996A7A(info->varent, stub->imports->varent, nvar * 4);
 		if (ret < 0)
 			return ret;
 		if (local) {
@@ -365,11 +365,11 @@ void LibStubReleaseNidTable(LibStubNidTable *info)
 	t = ksceKernelGetSystemTimeLow();
 	imp = stub->imports;
 	if (imp->nvar != 0) {
-		SceSysmemForKernel_FCB5745A(imp->varent, t);
+		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->varent, t, imp->nvar);
 		imp = stub->imports;
 	}
 	if (imp->nfunc != 0)
-		SceSysmemForKernel_FCB5745A(imp->funcent, t);
+		SceSysmemForKernel_FCB5745A((SceUInt32 *)imp->funcent, t, imp->nfunc);
 out:
 	ModulemgrFree(info->libStubCB->cb->pid, info->copy);
 }
@@ -445,9 +445,9 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 		return ret;
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = ksceGUIDReferObjectWithClass(guid, g_stubClass, (void **)&sobj)) < 0)
+	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (void **)&sobj)) < 0)
 		goto out;
-	ret = ksceGUIDReferObjectWithClass(sobj->modid, g_moduleClass, (void **)&mobj);
+	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (void **)&mobj);
 	if (ret >= 0) {
 		if (sobj->index < mobj->cb.libStubCount) {
 			stub = &mobj->cb.libStubCB[sobj->index];
@@ -476,9 +476,9 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 		} else {
 			ret = SCE_KERNEL_ERROR_MODULEMGR_INVALID_STUB;
 		}
-		ksceGUIDReleaseObject(sobj->modid);
+		sceGUIDReleaseObject(sobj->modid);
 	}
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 out:
 	ModulemgrReleaseProcess(pid);
 	return ret;
@@ -499,9 +499,9 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = ksceGUIDReferObjectWithClass(guid, g_stubClass, (void **)&sobj)) < 0)
+	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (void **)&sobj)) < 0)
 		return ret;
-	ret = ksceGUIDReferObjectWithClass(sobj->modid, g_moduleClass, (void **)&mobj);
+	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (void **)&mobj);
 	if (ret < 0)
 		goto release;
 	if (sobj->index >= mobj->cb.libStubCount) {
@@ -548,9 +548,9 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 	}
 	*count = n;
 done:
-	ksceGUIDReleaseObject(sobj->modid);
+	sceGUIDReleaseObject(sobj->modid);
 release:
-	ksceGUIDReleaseObject(guid);
+	sceGUIDReleaseObject(guid);
 	return ret;
 }
 

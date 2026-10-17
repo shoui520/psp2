@@ -315,7 +315,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 	uintptr_t vbase, unitVa;
 	int intr, ret = 0;
 
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&info->lock);
+	intr = SceCpuForDriver_4C38CE4D(&info->lock);
 	vbase = block->vbase;
 	SCE_DBG_ASSERT_CHECK(va >= vbase, 594);
 	units = info->units;
@@ -412,7 +412,7 @@ int PartialInfoOpRange(PartitionObject *partition, MemBlockObject *block, Partia
 	info->units = shadow;
 	info->shadow = units;
 out:
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&info->lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&info->lock, intr);
 	return ret;
 }
 
@@ -426,23 +426,23 @@ int MemBlockPartialInfoCreate(MemBlockObject *block, SceKernelAllocMemBlockComma
 		unitSize = command->opt.unitSize;
 	else
 		unitSize = 0x1000;
-	info = ksceKernelAlloc(sizeof(*info));
+	info = SceSysmemForKernel_85571907(sizeof(*info));
 	if (info == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	info->unitSize = unitSize;
 	info->lock = 0;
 	info->count = command->size >> (31 - __builtin_clz(unitSize));
-	info->units = ksceKernelAlloc(info->count * sizeof(*info->units));
+	info->units = SceSysmemForKernel_85571907(info->count * sizeof(*info->units));
 	if (info->units != NULL) {
-		info->shadow = ksceKernelAlloc(info->count * sizeof(*info->shadow));
+		info->shadow = SceSysmemForKernel_85571907(info->count * sizeof(*info->shadow));
 		if (info->shadow != NULL) {
 			MemBlockSetPartialInfoRaw(block, info);
 			return 0;
 		}
 		if (info->units != NULL)
-			ksceKernelFree(info->units);
+			SceSysmemForKernel_4233C16D(info->units);
 	}
-	ksceKernelFree(info);
+	SceSysmemForKernel_4233C16D(info);
 	return SCE_ERROR_ERRNO_ENOMEM;
 }
 

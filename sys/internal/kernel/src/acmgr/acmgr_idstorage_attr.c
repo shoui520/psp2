@@ -40,7 +40,7 @@ int checkIdStorageAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue 
 	default:
 		return ACMGR_ERROR_INVALID_ARGUMENT;
 	}
-	level = ksceKernelSysrootGetThreadAccessLevel();
+	level = SceSysrootForKernel_20009397();
 	if (attr->size != 6)
 		return ACMGR_ERROR_ACCESS_DENIED;
 	paid = info->program_authority_id;

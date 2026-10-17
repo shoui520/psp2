@@ -67,7 +67,7 @@ inline int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option)
 	if (mode > SCE_LED_MODE_LEVEL || (mode == SCE_LED_MODE_LEVEL && led != 2))
 		return SCE_LED_ERROR_INVALID_MODE;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerLedLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerLedLock);
 	state->repeatCount = -1;
 	state->scriptCursor = NULL;
 	previous = state->mode;
@@ -115,7 +115,7 @@ inline int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option)
 		state->offTicks = 1;
 		break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerLedLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerLedLock, intrState);
 
 	/* the power LED also goes to Syscon, unless called with interrupts off */
 	if (led != 2 || (intrState & 0xc0) != 0)
@@ -148,8 +148,8 @@ static int powerLedInitWorker(void)
 		ksceSysconCtrlLED(0x40, 1);
 	s_powerLedBootEnabled = capable;
 	s_powerLedHardwareEnabled = capable;
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() || ksceSysrootIsExternalBootMode() ||
-	    SceSysrootForDriver_7918D44E() || ksceSysrootIsUsbEnumWakeup())
+	if (SceSysrootForDriver_55392965() || SceSysrootForDriver_89D19090() ||
+	    SceSysrootForDriver_7918D44E() || SceSysrootForDriver_79C9AE10())
 		s_powerLedBootEnabled = 0;
 	if (capable)
 		SceSysconForDriver_9CA6EB70(0);
@@ -181,7 +181,7 @@ int powerInitializeLedControl(void)
 	}
 	ksceKernelRegisterSubIntrHandler(8, 0x19, "SceLedVblank", powerLedVblankHandler, NULL);
 	ksceKernelEnableSubIntr(8, 0x19);
-	ksceKernelRegisterSysEventHandler("SceLed", powerLedSysEventHandler, NULL);
+	sceKernelRegisterSysEventHandler("SceLed", powerLedSysEventHandler, NULL);
 	sceKernelRegisterInitCallback(powerLedInitCallback, 8, 0, NULL);
 	return 0;
 }
@@ -280,7 +280,7 @@ static int powerLedVblankHandler(void *subintrArg, void *registerArg, unsigned c
 	unsigned int led;
 	int phase;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerLedLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerLedLock);
 	for (led = 0; led < 8; led++) {
 		state = &s_powerLeds[led];
 		if (state->gpio == 0)
@@ -313,7 +313,7 @@ static int powerLedVblankHandler(void *subintrArg, void *registerArg, unsigned c
 		state->phase = phase;
 		powerLedSetOutput(led, phase < state->onTicks);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerLedLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerLedLock, intrState);
 	return -1;
 }
 

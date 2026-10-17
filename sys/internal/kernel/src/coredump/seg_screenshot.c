@@ -1,6 +1,6 @@
 /* SCREENSHOT_INFO note. */
 
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
@@ -103,7 +103,7 @@ static int _writeSegs(SegIf *segment)
 		source = (unsigned char *)base + row * pitch * 4;
 		while (remaining != 0) {
 			size = remaining < sizeof(data) ? remaining : sizeof(data);
-			if (ksceKernelCopyFromUserProc(coredumpRun.pid,
+			if (sceKernelCopyFromUserProc(coredumpRun.pid,
 				data, source, size) != 0)
 				return -1;
 			remaining -= size;

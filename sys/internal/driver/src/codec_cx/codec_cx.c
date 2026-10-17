@@ -1,7 +1,7 @@
 /* SceCodec: I2C register scripts and cached audio routing state. */
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/lowio/i2c.h>
 #include <codec/codec.h>
 #include <sysmem/sysevent_ids.h>
@@ -169,7 +169,7 @@ int module_start(unsigned int args, void *argp)
 	if (ksceKernelInitializeFastMutex(&s_codec.mutex, "SceCodec", 0x2000, 0) < 0)
 		return 2;
 	initializeCodec(1);
-	ksceKernelRegisterSysEventHandler("SceCodec", codecEvent, 0);
+	sceKernelRegisterSysEventHandler("SceCodec", codecEvent, 0);
 	return 0;
 }
 

@@ -20,7 +20,7 @@
 #include <stdint.h>
 #include <psp2kern/udcd.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/idstorage.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -785,12 +785,12 @@ static int initializeDescriptors(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.memblock = ksceKernelAllocMemBlock("SceUsbstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+	s.memblock = SceSysmemForDriver_C94850C9("SceUsbstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					     4096, &opt);
 	if (s.memblock < 0)
 		return STOR_ERROR_MEMORY;
-	if (ksceKernelGetMemBlockBase(s.memblock, &base) < 0) {
-		ksceKernelFreeMemBlock(s.memblock);
+	if (SceSysmemForDriver_A841EDDA(s.memblock, &base) < 0) {
+		SceSysmemForDriver_009E1C61(s.memblock);
 		return STOR_ERROR_MEMORY;
 	}
 	descriptors = base;
@@ -828,7 +828,7 @@ static int initializeDescriptors(void)
 		  sizeof(names[0]));
 	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstor", SCE_EVENT_WAITMULTIPLE, 0, NULL);
 	if (s.eventFlag < 0) {
-		ksceKernelFreeMemBlock(s.memblock);
+		SceSysmemForDriver_009E1C61(s.memblock);
 		return STOR_ERROR_GENERAL;
 	}
 	s.status = 0;
@@ -901,9 +901,9 @@ waitNormal:
 				    &bits, NULL) < 0)
 		goto wake;
 events:
-	result = ksceKernelCpuSuspendIntr();
+	result = SceCpuForDriver_821FC0EE();
 	s.flags &= ~FLAG_RESET;
-	ksceKernelCpuResumeIntr(result);
+	sceKernelCpuResumeIntr(result);
 	if (bits & EVF_OUT_CANCELLED)
 		goto next;
 	if (bits & EVF_STOP)
@@ -915,9 +915,9 @@ events:
 		state = s.cbwRequest.request.returnCode < 0;
 		if (state)
 			s.cbwRequest.request.returnCode = REQUEST_IDLE;
-		result = ksceKernelCpuSuspendIntr();
+		result = SceCpuForDriver_821FC0EE();
 		s.flags &= ~FLAG_SETTING;
-		ksceKernelCpuResumeIntr(result);
+		sceKernelCpuResumeIntr(result);
 	}
 	if (bits & EVF_DETACH) {
 		state = 0;
@@ -1193,7 +1193,7 @@ int module_stop(SceSize size, void *args)
 	ksceKernelDeleteThread(s.thread);
 	ksceKernelWaitThreadEnd(s.thread, NULL, NULL);
 	ksceKernelDeleteEventFlag(s.eventFlag);
-	ksceKernelFreeMemBlock(s.memblock);
+	SceSysmemForDriver_009E1C61(s.memblock);
 	s.status = (s.status & ~(STATUS_READY | STATUS_STARTED)) | STATUS_STOPPED;
 	return ksceUdcdUnregister(&s.driver) < 0 ? SCE_KERNEL_STOP_FAIL : SCE_KERNEL_STOP_SUCCESS;
 }

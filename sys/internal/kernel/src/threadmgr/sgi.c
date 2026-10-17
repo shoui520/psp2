@@ -5,8 +5,6 @@
 #include <threadmgr/uid_waitable.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/cpu/atomic.h>
-#include <psp2kern/kernel/sysmem.h>
 #include "fast_mutex.h"
 #include "priority_change.h"
 #include "scheduler.h"
@@ -14,7 +12,6 @@
 #include "syscall_context.h"
 #include "event.h"
 #include "timer.h"
-#include <psp2kern/kernel/sysmem/data_transfers.h>
 
 static inline struct SceKernelThreadmgrPrivate *loadIntrRequestManager(void)
 {
@@ -49,7 +46,7 @@ void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request)
 	do {
 		oldHead = cpu->intrRequestHead;
 		request->next = oldHead;
-	} while (ksceKernelAtomicCompareAndSet32(
+	} while (SceCpuForDriver_CDA96E81(
 		 (SceInt32 *)&cpu->intrRequestHead, (intptr_t)oldHead,
 		 (intptr_t)request) != (intptr_t)oldHead);
 	if (!oldHead && ksceKernelTriggerSGI(2, 0, 1u << cpuId) < 0) {
@@ -69,7 +66,7 @@ struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind)
 		manager = loadIntrRequestManager();
 		request = manager->freeIntrRequests;
 		if (!request) {
-			request = ksceKernelAllocHeapMemory(manager->heapId, sizeof(*request));
+			request = SceSysmemForDriver_7B4CB60A(manager->heapId, sizeof(*request));
 			if (!request) {
 				SCE_DBG_PRINTF(0xb, 867,
 					      "*** fatal error: can not alloc intr request.\n");
@@ -78,7 +75,7 @@ struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind)
 			request->fromPool = 0;
 			break;
 		}
-		if (ksceKernelAtomicCompareAndSet32(
+		if (SceCpuForDriver_CDA96E81(
 		    (SceInt32 *)&manager->freeIntrRequests, (intptr_t)request,
 		    (intptr_t)request->next) == (intptr_t)request)
 			break;
@@ -104,7 +101,7 @@ void addIntrRequest(unsigned int cpuId, uint32_t mask)
 	hook = s_threadmgrRuntime.schedTraceHook;
 	if (hook)
 		hook(61 - (mask ? __builtin_clz(mask) : 32), 1, cpuId);
-	if (ksceKernelAtomicGetAndOr32((SceInt32 *)&cpu->intrRequestMask,
+	if (SceCpuForDriver_2A40BB93((SceInt32 *)&cpu->intrRequestMask,
 				    mask) == 0 &&
 	    ksceKernelTriggerSGI(2, 0, 1u << cpuId) < 0) {
 		SCE_DBG_PRINTF(0xb, 453,
@@ -117,11 +114,10 @@ void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId)
 {
 	SceKernelIntrStatus intrState;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	addIntrRequest(cpuId, INTR_MASK_SIMPLE);
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 }
-
 
 /* SGI kind 0x10: change another CPU's running thread's PMU counter enables */
 void issuePMonThreadChangeCounterEnableIntrRequest(unsigned int cpuId, SceUID threadId,
@@ -187,9 +183,9 @@ void issueSimpleIntrRequestToOtherCpuAndWait(void)
 	int intr;
 
 	SCE_DBG_ASSERT_CHECK(IntrEnabled(), 526);
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	cpu = 0;
-	self = ksceKernelCpuId();
+	self = sceKernelCpuId();
 	ack = 1 << self;
 	do {
 		if (cpu != self) {
@@ -198,7 +194,7 @@ void issueSimpleIntrRequestToOtherCpuAndWait(void)
 			issueIntrRequest(cpu, request);
 		}
 	} while (++cpu != 4);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	while (ack != 0xf)
 		;
 }
@@ -216,7 +212,7 @@ void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), co
 	if (arg == NULL || size == 0) {
 		copy = NULL;
 	} else {
-		copy = ksceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, size);
+		copy = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, size);
 		if (copy == NULL) {
 			SCE_DBG_PRINTF(0xb, 782,
 				" fatal error: can not alloc intr request argument.\n");
@@ -329,10 +325,7 @@ void dtraceAsyncXCallIntr(void (*fn)(void *), void *arg);
 void dtraceSyncXCallIntr(void (*fn)(void *), void *arg, SceKernelSpinlock *done);
 int deactivateCpu(void);
 void addReady(struct ThreadCB *thread);
-extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern int ksceKernelFreeHeapMemory(SceUID heap, void *entry);
 /* intrmgr.h gives it an argument it does not take */
-
 
 typedef int (*ThreadmgrIntrRequestHandler)(SceSize size, void *message);
 
@@ -352,25 +345,25 @@ static inline void salvageExecutableStagnantThread(void)
 	volatile int spin;
 	unsigned int cpuId;
 
-	cpuId = ksceKernelCpuId();
+	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
 	SCE_DBG_ASSERT_LEVEL(0, ksceKernelIsIntrAllowedInCurrentContext() != 0, 63);
 	SCE_DBG_ASSERT_CHECK(IntrDisabled(), 66);
 	first = NULL;
 	for (;;) {
-		ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->threadMgrCBLock);
 		for (;;) {
 			manager = s_threadmgrRuntime.manager;
 			thread = (struct ThreadCB *)manager->stagnantNext;
 			if ((uintptr_t)thread == (uintptr_t)&manager->stagnantNext || thread == first) {
-				ksceKernelSpinlockLowUnlock(
+				sceKernelSpinlockLowUnlock(
 					&s_threadmgrRuntime.manager->threadMgrCBLock);
 				if (s_threadmgrRuntime.schedTraceHook)
 					(s_threadmgrRuntime.schedTraceHook)(4, 0);
 				return;
 			}
 			SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 78);
-			if (ksceKernelSpinlockLowTrylock(THREAD_LOCK(thread)) < 0)
+			if (SceCpuForDriver_5AC9D394(THREAD_LOCK(thread)) < 0)
 				break;
 			process = thread->process;
 			((ListNode *)thread->next)->prev =
@@ -412,9 +405,9 @@ keep:
 			((ListNode *)thread->prev)->next =
 				(ListNode *)thread;
 unlock:
-			ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+			sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		}
-		ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
+		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->threadMgrCBLock);
 		spin = 10;
 		do
 			spin--;
@@ -435,8 +428,8 @@ int intrRequestSGIHandler(int code, void *arg)
 	uint32_t mask, message[4];
 	int intr;
 
-	intr = ksceKernelCpuSuspendIntr();
-	mask = ksceKernelAtomicGetAndSet32((SceInt32 *)&cpu->intrRequestMask, 0);
+	intr = SceCpuForDriver_821FC0EE();
+	mask = SceCpuForDriver_0EE04C03((SceInt32 *)&cpu->intrRequestMask, 0);
 	if (mask != 0) {
 		if (mask & INTR_MASK_SCHEDULING) {
 			SCE_DBG_ASSERT_LEVEL_FUNC(0, cpu == currentCpuState(), 155,
@@ -455,7 +448,7 @@ int intrRequestSGIHandler(int code, void *arg)
 		if ((mask & INTR_MASK_SIMPLE) && s_threadmgrRuntime.schedTraceHook)
 			(s_threadmgrRuntime.schedTraceHook)(0, 0);
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	for (;;) {
 		do {
 			request = cpu->intrRequestHead;
@@ -464,10 +457,10 @@ int intrRequestSGIHandler(int code, void *arg)
 					(s_threadmgrRuntime.schedTraceHook)(0x19, 0);
 				return -1;
 			}
-		} while ((struct ThreadmgrIntrRequest *)ksceKernelAtomicCompareAndSet32(
+		} while ((struct ThreadmgrIntrRequest *)SceCpuForDriver_CDA96E81(
 				 (SceInt32 *)&cpu->intrRequestHead, (SceInt32)request,
 				 (SceInt32)request->next) != request);
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 		switch (request->kind) {
 		case INTR_REQUEST_CHANGE_THREAD_CPU_AFFINITY:
 			changeThreadCpuAffinityMask(request->payload[0], request->payload[1], NULL);
@@ -490,8 +483,8 @@ int intrRequestSGIHandler(int code, void *arg)
 			break;
 		case INTR_REQUEST_ACKNOWLEDGE:
 			/* issueSimpleIntrRequestToOtherCpuAndWait: answer */
-			ksceKernelAtomicOrAndGet32((SceInt32 *)request->payload[0],
-						   1u << ksceKernelCpuId());
+			SceCpuForDriver_BC248C30((SceInt32 *)request->payload[0],
+						   1u << sceKernelCpuId());
 			break;
 		default:
 			SCE_DBG_PRINTF_FUNC(0xb, 368, "intrRequestSGIHandler",
@@ -583,7 +576,7 @@ int intrRequestSGIHandler(int code, void *arg)
 			dtraceAsyncXCallIntr((void (*)(void *))request->payload[0],
 					     (void *)request->payload[1]);
 			if (request->payload[1] != 0)
-				ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId,
+				sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId,
 							 (void *)request->payload[1]);
 			if (s_threadmgrRuntime.schedTraceHook)
 				(s_threadmgrRuntime.schedTraceHook)(0x17, 0);
@@ -598,18 +591,18 @@ int intrRequestSGIHandler(int code, void *arg)
 		}
 		if (request->fromPool == 0) {
 			mask = 1;
-			ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, request);
-			ksceKernelCpuResumeIntr(intr);
+			sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, request);
+			sceKernelCpuResumeIntr(intr);
 		} else {
 			/* a preallocated one goes back to the free list */
 			do {
 				head = s_threadmgrRuntime.manager->freeIntrRequests;
 				request->next = head;
-			} while ((struct ThreadmgrIntrRequest *)ksceKernelAtomicCompareAndSet32(
+			} while ((struct ThreadmgrIntrRequest *)SceCpuForDriver_CDA96E81(
 					 (SceInt32 *)&s_threadmgrRuntime.manager->freeIntrRequests,
 					 (SceInt32)head, (SceInt32)request) != head);
 			mask = 1;
-			ksceKernelCpuResumeIntr(intr);
+			sceKernelCpuResumeIntr(intr);
 		}
 	}
 }

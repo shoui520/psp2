@@ -235,9 +235,9 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_08C05493
-	ksceKernelGetHeapInfo
-	ksceKernelFindClassByName
-	ksceKernelGetUIDMemBlockClass
+	sceKernelGetHeapInfo
+	SceSysmemForKernel_7D87F706
+	SceSysmemForKernel_86681B64
 	scePUIDGetAttr
 	SceSysmemForKernel_AD19285A
 	SceSysmemForKernel_BC36755F
@@ -265,25 +265,25 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	ksceKernelFreeMemBlock
-	ksceGUIDClose
-	ksceGUIDReferObject
-	ksceGUIDGetObject
-	ksceGUIDReleaseObject
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceGUIDKernelCreate
-	ksceKernelCopyFromUserProc
-	ksceUIDClassInitClass
-	ksceKernelAllocHeapMemory
-	ksceKernelGetUIDClass
-	ksceKernelCreateHeap
-	ksceKernelIsAccessibleRangeProc
-	ksceKernelGetMemBlockInfo
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
+	SceSysmemForDriver_009E1C61
+	sceGUIDClose
+	SceSysmemForDriver_0F5C84B7
+	SceSysmemForDriver_0FC24464
+	sceGUIDReleaseObject
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_56A13E90
+	sceKernelCopyFromUserProc
+	SceSysmemForDriver_61317102
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_85336A1C
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_9F6E45E3
+	SceSysmemForDriver_A73CFFEF
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
 	SceSysrootForKernel_2A03DFA1
 	SceSysrootForKernel_6D111FA7
 	SceSysrootForKernel_E20F6FC8
@@ -321,11 +321,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSblPostSsMgrForDriver_4100B9E9
 	SceSblPostSsMgrForDriver_C977601E
 	SceSblPostSsMgrForDriver_CB5436BD
-	ksceKernelPrintfWithInfo
-	ksceKernelPrintf
-	ksceKernelVprintf
-	ksceKernelGetTtyInfo
-	ksceEventLogGetInfo
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_411C0733
+	SceDebugForDriver_62466B0A
+	SceDebugForDriver_CC5365D3
 	sceKernelGetLwMutexInfoAllProc
 	SceThreadmgrForDriver_09346D1A
 	ksceKernelDeleteMutex
@@ -382,14 +382,14 @@ set(MODULE_IMPORT_FUNCS
 	sceSblACMgrIsKernelProgram
 	SceSblACMgrForDriver_4CBD6156
 	sceSblACMgrIsSystemProgram
-	ksceSblAimgrGetProductCode
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsDolce
-	ksceSblAimgrGetProductSubCode
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
-	ksceKernelCheckDipsw
-	ksceKernelGetDipswInfo
+	SceSblAIMgrForDriver_14345161
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_B33CEC8F
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
+	SceDipswForDriver_A98FC2FD
+	SceDipswForDriver_B2AD48BE
 	SceZlibForDriver_20A122F8
 	SceZlibForDriver_5492B3F2
 	SceZlibForDriver_5B718E55
@@ -398,17 +398,17 @@ set(MODULE_IMPORT_FUNCS
 	ksceRtcGetCurrentTick
 	sceRegMgrGetKeyInt
 	sceRegMgrGetKeyStr
-	ksceSha256BlockUpdate
-	ksceSha256BlockResult
-	ksceSha256Digest
-	ksceAesEncrypt1
-	ksceAesDecrypt1
-	ksceSha256BlockInit
-	ksceAesInit1
+	SceKernelUtilsForDriver_236A9097
+	SceKernelUtilsForDriver_4899CD4B
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_D909FA2C
+	SceKernelUtilsForDriver_F12B6451
 	SceSysrootForDriver_400B9793
 	SceSysrootForDriver_591BB490
 	SceSysrootForDriver_9DCD0894
-	ksceKernelSysrootRegisterCoredumpTrigger
+	SceSysrootForDriver_DD473B05
 	SceUlobjMgrForDriver_0C29AFEC
 	SceUlobjMgrForDriver_362C9488
 	SceUlobjMgrForDriver_3D6E2EF3

@@ -8,8 +8,8 @@
 #include <fw.h>
 #include <psp2kern/types.h>
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/debug.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/debug.h>
+#include <sysmem/dipsw.h>
 #include <string.h>
 #include "gpucoredump.h"
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
@@ -97,7 +97,7 @@ static int gpuCoreDumpStopTrace(void)
 	if (key < 0 || !(ScePamgrForDriver_3ACF4316() & 1) || ScePamgrForDriver_88462719(key) != 0) {
 		stopped = 0;
 	} else {
-		ksceKernelPrintf("%s: An active PMON trace has been stopped.\n",
+		SceDebugForDriver_391B74B7("%s: An active PMON trace has been stopped.\n",
 				 gpuCoreDumpModuleInfo.module_name);
 		stopped = 1;
 	}
@@ -269,7 +269,7 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 		analysis.log = &log;
 		gpuCoreDumpAnalyse(devInfo, cores, 1, &analysis);
 	} else {
-		name = ksceGUIDName(pid);
+		name = SceSysmemForDriver_E655852F(pid);
 		gpuCoreDumpLogPrintf(&log, "%s: A GPU core dump has occurred in process '%s' (0x%08x)\n",
 				     gpuCoreDumpModuleInfo.module_name, name != NULL ? name : "unknown", pid);
 		gpuCoreDumpLogOpen(&processLog, pid);
@@ -443,7 +443,7 @@ static void gpuCoreDumpOnLockup(int dumpTrace)
 	if (sgx == NULL || PVRSRVAcquireDeviceDataKM(sgx->index, 0, (void **)&node) != 0 || node == NULL)
 		return;
 	if (node->pvDevice == NULL)
-		ksceKernelPrintf("%s: psDevInfo is NULL\n", gpuCoreDumpModuleInfo.module_name);
+		SceDebugForDriver_391B74B7("%s: psDevInfo is NULL\n", gpuCoreDumpModuleInfo.module_name);
 	else
 		gpuCoreDumpCapture(node->pvDevice, dumpTrace);
 }
@@ -487,7 +487,7 @@ int module_start(SceSize args, void *argp)
 	GpuCoreDumpCoreValue *v;
 	int i;
 
-	if (ksceKernelCheckDipsw(0xd4) == 0)
+	if (SceDipswForDriver_A98FC2FD(0xd4) == 0)
 		return SCE_KERNEL_START_NO_RESIDENT;
 	if (ksceKernelGetModuleInfoByAddr(&gpuCoreDumpModuleInfo, &gpuCoreDumpModuleInfo) < 0)
 		for (i = 0; i != sizeof(GPU_COREDUMP_NAME); i++)

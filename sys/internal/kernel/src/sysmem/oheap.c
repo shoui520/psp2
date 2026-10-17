@@ -85,7 +85,7 @@ static int ObjectHeapAddKernelSizeClass(ObjectHeap *heap, SceSize size)
 	SceUID uid;
 	int ret;
 
-	fixedHeap = ksceKernelAlloc(sizeof(*fixedHeap));
+	fixedHeap = SceSysmemForKernel_85571907(sizeof(*fixedHeap));
 	if (fixedHeap == NULL)
 		return SCE_KERNEL_ERROR_ERROR;
 	fixedHeap->hook = NULL;
@@ -93,7 +93,7 @@ static int ObjectHeapAddKernelSizeClass(ObjectHeap *heap, SceSize size)
 	ret = FixedHeapInitForProcess(fixedHeap, SCE_KERNEL_PROCESS_ID, 0, 0, size,
 				      SceSysmemForKernel_0164D817(), 0x1000, 0x10);
 	if (ret < 0) {
-		ksceKernelFree(fixedHeap);
+		SceSysmemForKernel_4233C16D(fixedHeap);
 		return ret;
 	}
 	uid = SceSysmemForKernel_6DB44A42(&FixedHeapGetClass()->heapClass.cls, fixedHeap->name, fixedHeap);
@@ -175,11 +175,11 @@ int ObjectHeapAllocLimit(ObjectHeap *heap, unsigned int type, void **object)
 	if (type >= OBJECT_HEAP_TYPES)
 		return 0;
 	limit = &heap->limits[type];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
+	status = SceCpuForDriver_D32ACE9E(&heap->lock);
 	if (limit->count >= limit->max) {
 		SCE_PRINTF_WITH_INFO(0xb, 259, "Object Limit Overflow:type=%d, %d >= %d nMaxLimit\n",
 				     type, limit->count, limit->max);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
 		return 0;
 	}
 	limit->count++;
@@ -200,7 +200,7 @@ int ObjectHeapAllocLimit(ObjectHeap *heap, unsigned int type, void **object)
 		}
 	}
 	*object = reserved;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
 	return 1;
 }
 
@@ -217,9 +217,9 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object)
 	if (type >= OBJECT_HEAP_TYPES)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	limit = &heap->limits[type];
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&heap->lock);
+	status = SceCpuForDriver_D32ACE9E(&heap->lock);
 	if (limit->count == 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
 		return 0;
 	}
 	if (limit->freeCount < limit->reserve) {
@@ -239,7 +239,7 @@ int ObjectHeapFreeLimit(ObjectHeap *heap, unsigned int type, void *object)
 		kept = 0;
 	}
 	limit->count--;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&heap->lock, status);
 	return kept;
 }
 
@@ -312,7 +312,7 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 	SceUID uid;
 	int ret;
 
-	ret = ksceGUIDGetObject(heapUid, &processHeap);
+	ret = SceSysmemForDriver_0FC24464(heapUid, &processHeap);
 	if (ret < 0)
 		return ret;
 	if (processHeap == NULL)
@@ -486,8 +486,8 @@ int ObjectHeapInitShared(void)
 	SceUID heapUid;
 	int ret;
 
-	heapUid = ksceKernelCreateHeap("SceKernelHeapForShared", 0x10000, NULL);
-	ret = ksceGUIDGetObject(heapUid, &s_sharedHeap);
+	heapUid = SceSysmemForDriver_9328E0E8("SceKernelHeapForShared", 0x10000, NULL);
+	ret = SceSysmemForDriver_0FC24464(heapUid, &s_sharedHeap);
 	if (ret < 0)
 		return ret;
 	s_sharedObjectHeap = HeapAllocLocked(s_sharedHeap, sizeof(ObjectHeap));

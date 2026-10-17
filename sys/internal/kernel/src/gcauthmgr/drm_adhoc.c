@@ -1,6 +1,6 @@
 /* Authentication message assembly. */
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "adhoc.h"
 
 GcAuthAdhocWorkspace gcAuthAdhocWorkspace;

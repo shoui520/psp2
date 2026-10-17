@@ -203,31 +203,31 @@ extern SceUInt32 hdmiDebugFlags;
 /* A message with its tag printed first. */
 #define HDMI_PRINTF(_flag, _tag, _fmt, ...) do {			\
 	if (hdmiDebugFlags & (_flag)) {			\
-		ksceKernelPrintf(_tag);					\
-		ksceKernelPrintf(_fmt, ##__VA_ARGS__);			\
+		SceDebugForDriver_391B74B7(_tag);					\
+		SceDebugForDriver_391B74B7(_fmt, ##__VA_ARGS__);			\
 	}								\
 } while (0)
 
 /* A message whose format starts with its tag. */
 #define HDMI_CMD_PRINTF(_fmt, ...) do {					\
 	if (hdmiDebugFlags & HDMI_DBG_CMD)			\
-		ksceKernelPrintf(_fmt, ##__VA_ARGS__);			\
+		SceDebugForDriver_391B74B7(_fmt, ##__VA_ARGS__);			\
 } while (0)
 
 #define HDMI_ITRS_PRINTF(_fmt, ...) do {				\
 	if (hdmiDebugFlags & HDMI_DBG_ITRS)			\
-		ksceKernelPrintf(_fmt, ##__VA_ARGS__);			\
+		SceDebugForDriver_391B74B7(_fmt, ##__VA_ARGS__);			\
 } while (0)
 
 #define HDMI_ERR_PRINTF(_fmt, ...) do {					\
 	if ((int)hdmiDebugFlags < 0)				\
-		ksceKernelPrintf(_fmt, ##__VA_ARGS__);			\
+		SceDebugForDriver_391B74B7(_fmt, ##__VA_ARGS__);			\
 } while (0)
 
 /* A message whose format starts with its tag, printed when hdmiDebugFlags has _flag. */
 #define HDMI_FLAG_PRINTF(_flag, _fmt, ...) do {				\
 	if (hdmiDebugFlags & (_flag))					\
-		ksceKernelPrintf(_fmt, ##__VA_ARGS__);			\
+		SceDebugForDriver_391B74B7(_fmt, ##__VA_ARGS__);			\
 } while (0)
 #else
 #define HDMI_PRINTF(_flag, _tag, _fmt, ...)	do { } while (0)

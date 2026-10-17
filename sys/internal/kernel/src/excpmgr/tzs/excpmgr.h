@@ -9,23 +9,23 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define ksceKernelIsColdBoot			SceSysrootForTZS_0567B4B9
-#define ksceKernelSpinlockLowLock		SceCpuForTZS_71FD9AB5
-#define ksceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
-#define ksceKernelSpinlockLowLockCpuSuspendIntr	SceCpuForTZS_D67A4356
-#define ksceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
-#define ksceKernelDcacheCleanRangeForL1WBWA	SceCpuForTZS_596784E9
-#define ksceKernelPrintfWithInfo		SceDebugForTZS_0D799DAE
-#define ksceKernelPrintfLevelWithInfo		SceDebugForTZS_D26EB4BB
-#define ksceKernelGetAssertLevel		SceDebugForTZS_F851BA4F
-#define ksceKernelAssertLevel			SceDebugForTZS_618F89E6
+#define SceSysrootForKernel_D7198963			SceSysrootForTZS_0567B4B9
+#define SceCpuForDriver_BF82DEB2		SceCpuForTZS_71FD9AB5
+#define sceKernelSpinlockLowUnlock		SceCpuForTZS_CD98416C
+#define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356
+#define sceKernelSpinlockLowUnlockCpuResumeIntr SceCpuForTZS_B8F00FBE
+#define SceCpuForDriver_9CB9F0CE	SceCpuForTZS_596784E9
+#define SceDebugForDriver_02B04343		SceDebugForTZS_0D799DAE
+#define SceDebugForDriver_D9703808		SceDebugForTZS_D26EB4BB
+#define SceDebugForDriver_374B7868		SceDebugForTZS_F851BA4F
+#define SceDebugForDriver_FD753E7A			SceDebugForTZS_618F89E6
 #define memcpy					SceSysclibForTZS_BE3AF2EE
 
 /* the TZS parts of the shared excpmgr declarations */
 #define EXCPMGR_TZS	1
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <excpmgr/excpmgr.h>
 #include <sysmem/sysclib.h>
@@ -58,7 +58,6 @@ unsigned int *SceSysrootForTZS_D4E6D8E8(void);		/* monitor vector page */
 unsigned int SceSysrootForTZS_317E7556(unsigned int cpu);	/* per-core block */
 const unsigned int *SceSysrootForTZS_A8B7DAF9(void);	/* kernel MMU state */
 int SceSysrootForTZS_EA572BD9(unsigned int slot, void *data);
-unsigned int SceCpuForTZS_44C423D3(void);		/* this core */
 void SceCpuForTZS_A5965CBF(void);			/* after code was written */
 void SceCpuForTZS_17A88E69(void *start, SceSize size);	/* after the MVBAR page changed */
 void SceCpuForTZS_B421FAFD(void *start, SceSize size);

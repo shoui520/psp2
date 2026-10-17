@@ -286,6 +286,4 @@ _Static_assert(offsetof(ScePerfmonRegisters, traceControl) == 0x10bc,
 
 extern struct PamgrState pamgrState;
 
-void sceKernelApiDeclareTypeUInt32(void);
-
 #endif

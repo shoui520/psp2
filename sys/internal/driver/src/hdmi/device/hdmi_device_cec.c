@@ -8,7 +8,7 @@
  */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
@@ -499,10 +499,10 @@ int cecDevSetLogicalAddress(SceUInt8 address)
 
 int cecDevGetPhysicalAddress(SceUInt8 *physical)
 {
-	ksceKernelSpinlockLowLock(&cecDev.lock);
+	SceCpuForDriver_BF82DEB2(&cecDev.lock);
 	physical[0] = cecDev.physicalAddress[0];
 	physical[1] = cecDev.physicalAddress[1];
-	ksceKernelSpinlockLowUnlock(&cecDev.lock);
+	sceKernelSpinlockLowUnlock(&cecDev.lock);
 	return 0;
 }
 
@@ -662,22 +662,22 @@ void cecDevNotifyHpd(int on)
 {
 	int (*callback)(void);
 
-	ksceKernelSpinlockLowLock(&cecDev.lock);
+	SceCpuForDriver_BF82DEB2(&cecDev.lock);
 	if (cecDev.hpd != 0) {
 		if (on != 0) {
-			ksceKernelSpinlockLowUnlock(&cecDev.lock);
+			sceKernelSpinlockLowUnlock(&cecDev.lock);
 			return;
 		}
 		cecDev.hpd = on;
-		ksceKernelSpinlockLowUnlock(&cecDev.lock);
+		sceKernelSpinlockLowUnlock(&cecDev.lock);
 		callback = cecDev.disconnected;
 	} else {
 		if (on == 0) {
-			ksceKernelSpinlockLowUnlock(&cecDev.lock);
+			sceKernelSpinlockLowUnlock(&cecDev.lock);
 			return;
 		}
 		cecDev.hpd = on;
-		ksceKernelSpinlockLowUnlock(&cecDev.lock);
+		sceKernelSpinlockLowUnlock(&cecDev.lock);
 		callback = cecDev.nop1;
 	}
 	if (callback != NULL)
@@ -697,10 +697,10 @@ void cecDevNotifyRxSense(int on)
 
 void cecDevSetPhysicalAddress(const SceUInt8 *physical)
 {
-	ksceKernelSpinlockLowLock(&cecDev.lock);
+	SceCpuForDriver_BF82DEB2(&cecDev.lock);
 	cecDev.physicalAddress[0] = physical[0];
 	cecDev.physicalAddress[1] = physical[1];
-	ksceKernelSpinlockLowUnlock(&cecDev.lock);
+	sceKernelSpinlockLowUnlock(&cecDev.lock);
 	if (cecDev.connected != NULL)
 		cecDev.connected();
 }

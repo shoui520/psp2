@@ -3,8 +3,8 @@
 #include "msif_context.h"
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <string.h>
@@ -114,12 +114,12 @@ struct MsproalErrorRecord **MsproalUserGetErrorLogBuffer(
 
 void MsproalUserInvalidateCache(void *address, unsigned int length)
 {
-	ksceKernelDcacheInvalidateRange(address, length);
+	SceCpuForDriver_02796361(address, length);
 }
 
 void msproal_user_virt_to_bus(const void *address, uintptr_t *physicalAddress)
 {
-	int result = ksceKernelVAtoPA(address, physicalAddress);
+	int result = SceSysmemForDriver_8D160E65(address, physicalAddress);
 
 	SCE_DBG_ASSERT(result == 1, 1442);
 }

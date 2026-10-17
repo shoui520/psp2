@@ -185,41 +185,41 @@ set(MODULE_IMPORT_NIDS
 	0x58A1A1C5:F:0x99A3CABE
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceGUIDReferObject
-	ksceGUIDReleaseObject
-	ksceKernelUnlockRangeWithMode
-	kscePUIDtoGUID
-	ksceGUIDKernelCreate
-	ksceKernelProcModeVAtoPA
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelVARangeToPARange
-	ksceKernelLockRangeWithMode
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDcacheInvalidateRange
-	ksceKernelAtomicGetAndSet32
-	ksceKernelAtomicGetAndAnd32
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_0F5C84B7
+	sceGUIDReleaseObject
+	SceSysmemForDriver_22CBE925
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_56A13E90
+	SceSysmemForDriver_61A67D32
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_AE36C775
+	sceKernelLockRangeWithMode
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_02796361
+	SceCpuForDriver_0EE04C03
+	SceCpuForDriver_10EB35EB
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_D32ACE9E
+	sceKernelCpuResumeIntr
 	memset
 	strncmp
 	memcpy
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceSysrootGetHardwareFlags
+	SceSysrootForDriver_46E72428
 	sceKernelRegisterInitCallback
 	SceSysrootForDriver_7918D44E
-	ksceSysrootIsUsbEnumWakeup
-	ksceSysrootIsSafeMode
-	ksceSysrootIsExternalBootMode
-	ksceSysrootIsUpdateMode
-	ksceKernelSysrootGetProcessTitleId
+	SceSysrootForDriver_79C9AE10
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_89D19090
+	SceSysrootForDriver_B0E1FC67
+	SceSysrootForKernel_EC3124A3
 	ksceKernelDisableSubIntr
 	ksceKernelTriggerSGI
 	ksceKernelRegisterIntrHandler
@@ -270,14 +270,14 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_E1A67C86
 	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelRegisterSysEventHandler
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	sceKernelRegisterProcEventHandler
 	sceSblACMgrIsGameProgram
 	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_FD00C72A
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
-	ksceGzipDecompress
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
+	SceKernelUtilsForDriver_367EE3DF
 	kscePervasiveDsiClockDisable
 	kscePervasiveDsiSetPixelClock
 	kscePervasiveDsiClockEnable

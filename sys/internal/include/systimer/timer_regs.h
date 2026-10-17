@@ -57,11 +57,13 @@ typedef struct SceWordTimerRegisters {
 	volatile SceUInt32 intr;
 } SceWordTimerRegisters;
 
+#ifndef __cplusplus
 _Static_assert(offsetof(SceLongTimerRegisters, compare) == 0x8, "LT compare");
 _Static_assert(offsetof(SceLongTimerRegisters, intr) == 0x18, "LT interrupt");
 _Static_assert(offsetof(SceLongTimerRegisters, control) == 0x1c, "LT control");
 _Static_assert(offsetof(SceWordTimerRegisters, control) == 0x8, "WT control");
 _Static_assert(offsetof(SceWordTimerRegisters, intr) == 0x14, "WT interrupt");
+#endif
 
 typedef struct SceTimerBusErrorRegisters {
 	volatile uint32_t busErrorAddress;

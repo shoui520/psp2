@@ -2,7 +2,7 @@
 #ifndef SCE_HMAC_H
 #define SCE_HMAC_H
 
-#include <psp2kern/kernel/utils.h>
+#include <libsha1.h>
 #include <stddef.h>
 
 typedef struct SceHmacSha1Context {

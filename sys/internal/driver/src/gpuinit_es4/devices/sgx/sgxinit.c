@@ -8,7 +8,7 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include "../../gpuinit_es4.h"
@@ -164,14 +164,14 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	uid = ksceKernelAllocMemBlock("SceRazorGpuBmkWar", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	uid = SceSysmemForDriver_C94850C9("SceRazorGpuBmkWar", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 				      SGX_BOOKMARK_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0, 5304, "%s: Failed to allocate %d bytes for SceRazorGpuBmkWar with error %08x.\n",
 			       __func__, SGX_BOOKMARK_SIZE, uid);
 		return;
 	}
-	ret = ksceKernelGetMemBlockBase(uid, (void **)&bookmark);
+	ret = SceSysmemForDriver_A841EDDA(uid, (void **)&bookmark);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5311, "%s: Failed to get memory block base for SceRazorGpuBmkWar with error %08x.\n",
 			       __func__, ret);
@@ -180,7 +180,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	for (unsigned i = 0; i < SGX_BOOKMARK_SIZE / 4; i++)
 		bookmark[i] = SGX_BOOKMARK_FILL;
 
-	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
+	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777()) {
 		perfmon = (void *)PERFMON_REG_BASE;
 		flags = 0x80000008;
 	} else {
@@ -202,7 +202,7 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	}
 
 	flags = 0;
-	if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777())
+	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777())
 		flags = 8;
 	ret = ksceGpuMmuMapMemory(context, SGX_BOOKMARK_VADDR, bookmark, SGX_BOOKMARK_SIZE, flags);
 	if (ret >= 0)
@@ -213,7 +213,7 @@ unmap:
 	ksceGpuMmuUnmapMemory(context, SGX_PERFMON_KERNEL_VADDR, SGX_PERFMON_PAGE_SIZE);
 	ksceGpuMmuUnmapMemory(context, SGX_BOOKMARK_VADDR, SGX_BOOKMARK_SIZE);
 free:
-	ksceKernelFreeMemBlock(uid);
+	SceSysmemForDriver_009E1C61(uid);
 }
 
 PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
@@ -573,7 +573,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	corePDSExec = init->hKernelProgramMemInfo[3]->sDevVAddr.uiAddr & 0xfffffff0;
 	revision = kscePervasiveGetSoCRevision();
 	if ((revision & 0x1ffff) < 0x20)
-		ksceKernelPrintf("[%s]:Invalid SoC revision (%X.%01X)\n", moduleInfo.module_name,
+		SceDebugForDriver_391B74B7("[%s]:Invalid SoC revision (%X.%01X)\n", moduleInfo.module_name,
 				 (revision & 0x1ffff) >> 4, revision & 15);
 
 	/* part 1: enable the cores and their clocks */
@@ -698,19 +698,19 @@ int module_start(SceSize args, void *argp)
 	pid = OSGetCurrentProcessIDKM();
 	ret = PVRSRVPerProcessDataConnect(pid, 0);
 	if (ret != PVRSRV_OK) {
-		ksceKernelPrintf("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVPerProcessDataConnect");
+		SceDebugForDriver_391B74B7("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVPerProcessDataConnect");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
 	process = PVRSRVPerProcessData(pid);
 	if (!process) {
-		ksceKernelPrintf("%s: Failed to get process data\n", "SrvInit");
+		SceDebugForDriver_391B74B7("%s: Failed to get process data\n", "SrvInit");
 		ret = PVRSRV_ERROR_INVALID_PERPROC;
 	} else {
 		process->bInitProcess = IMG_TRUE;
 		ret = PVRSRVEnumerateDevicesKM(&count, &devId);
 		if (ret != PVRSRV_OK) {
 			PVRSRVPerProcessDataDisconnect(pid);
-			ksceKernelPrintf("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVEnumerateDevicesKM");
+			SceDebugForDriver_391B74B7("%s: Error %08x with %s\n", "SrvInit", ret, "PVRSRVEnumerateDevicesKM");
 		} else {
 			for (i = 0; i < count; i++) {
 				const PVRSRV_DEVICE_IDENTIFIER *dev = &devId + i;

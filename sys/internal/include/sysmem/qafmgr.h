@@ -20,14 +20,19 @@ int SceQafMgrForDriver_52B4E164(void);
 int SceQafMgrForDriver_694D1096(void);
 int SceQafMgrForDriver_8C423C18(void);
 int SceQafMgrForDriver_AE033133(void);
-int ksceSblQafMgrIsAllowControlIduAutoUpdate(void);
-int ksceSblQafMgrIsAllowDecryptedBootConfigLoad(void);
-int ksceSblQafMgrIsAllowDtcpIpReset(void);
-int ksceSblQafMgrIsAllowHost0Access(void);
-int ksceSblQafMgrIsAllowKeepCoreFile(void);
-int ksceSblQafMgrIsAllowLoadMagicGate(void);
-int ksceSblQafMgrIsAllowMarlinTest(void);
-int ksceSblQafMgrIsAllowNearTest(void);
-int ksceSblQafMgrIsAllowPSPEmuShowQAInfo(void);
-int ksceSblQafMgrIsAllowRemotePlayDebug(void);
-int ksceSblQafMgrIsAllowSystemAppDebug(void);
+int SceQafMgrForDriver_F8BFEE48(void);	/* vitasdk: ksceSblQafMgrIsAllowControlIduAutoUpdate */
+int SceQafMgrForDriver_883E9465(void);	/* vitasdk: ksceSblQafMgrIsAllowDecryptedBootConfigLoad */
+int SceQafMgrForDriver_E8B8F31F(void);	/* vitasdk: ksceSblQafMgrIsAllowDtcpIpReset */
+int SceQafMgrForDriver_082A4FC2(void);	/* vitasdk: ksceSblQafMgrIsAllowHost0Access */
+int SceQafMgrForDriver_C1EA75C8(void);	/* vitasdk: ksceSblQafMgrIsAllowKeepCoreFile */
+int SceQafMgrForDriver_36E5312E(void);	/* vitasdk: ksceSblQafMgrIsAllowLoadMagicGate */
+int SceQafMgrForDriver_10283EB8(void);	/* vitasdk: ksceSblQafMgrIsAllowMarlinTest */
+int SceQafMgrForDriver_9644171D(void);	/* vitasdk: ksceSblQafMgrIsAllowNearTest */
+int SceQafMgrForDriver_B7B195B2(void);	/* vitasdk: ksceSblQafMgrIsAllowPSPEmuShowQAInfo */
+int SceQafMgrForDriver_BFD5E463(void);	/* vitasdk: ksceSblQafMgrIsAllowRemotePlayDebug */
+int SceQafMgrForDriver_CAD47130(void);	/* vitasdk: ksceSblQafMgrIsAllowSystemAppDebug */
+
+int SceQafMgrForDriver_70A67A4B(void);
+int SceQafMgrForDriver_7B14DC45(void);
+int SceQafMgrForDriver_DEC6DF4E(void);
+int SceQafMgrForDriver_E573F124(void);

@@ -6,7 +6,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <coredump/coredump.h>
 #include <intrmgr/syscall.h>
 
@@ -78,7 +78,7 @@ int sceCoredumpWriteUserData(const void *data, SceSize size)
 			length = userDataCapacity - userDataUsedSize;
 			if (size < length)
 				length = size;
-			if (ksceKernelCopyFromUser((char *)userDataBuffer + userDataUsedSize,
+			if (SceSysmemForDriver_BC996A7A((char *)userDataBuffer + userDataUsedSize,
 						   data, length) < 0) {
 				result = SCE_COREDUMP_ERROR_PARAM;
 				oalMutexUnlock(userDataMutexId);

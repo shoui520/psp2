@@ -10,7 +10,7 @@
 #include <psp2common/npdrm.h>
 #include <psp2kern/kernel/gcauthmgr/drm_bb.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <rtc/rtc.h>
 #include <string.h>
@@ -560,7 +560,7 @@ int NpDrmInitializeActivation(void)
 	ret = ksceSblAimgrGetOpenPsId(&gNpDrmOpenPsId);
 	if (ret < 0)
 		return ret;
-	gNpDrmIsDevelopment = ksceSblAimgrIsTool() || ksceSblAimgrIsDEX();
+	gNpDrmIsDevelopment = SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_F4B98F66();
 	ret = ksceKernelLockMutex(gNpDrmMutex, 1, NULL);
 	if (ret < 0)
 		return ret;

@@ -6,7 +6,7 @@
 #include <bt/bt_audio.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 
 void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 {
@@ -18,7 +18,7 @@ void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 	info.profiles &= 0x20000008;
 	if (info.profiles == 0)
 		return;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	if (info.profiles & 0x20000000) {
 		avConfigConfiguration.settings.connectedDevices |= 0x810;
 	} else {
@@ -31,7 +31,7 @@ void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 		else
 			avConfigConfiguration.settings.connectedDevices &= ~0x800u;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 	bt->pending.address = address;
 	bt->pending.profiles = info.profiles;
 	bt->pending.flags = info.flags;
@@ -62,10 +62,10 @@ int avConfigReadBtEvents(AvConfigState *state)
 				if (address != bt->pending.address)
 					continue;
 				bt->disconnected = 1;
-				lockState = ksceKernelSpinlockLowLockCpuSuspendIntr(
+				lockState = SceCpuForDriver_D32ACE9E(
 					&avConfigConfiguration.lock);
 				avConfigConfiguration.settings.connectedDevices &= ~0x810u;
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&avConfigConfiguration.lock, lockState);
 				bt->pending.address = 0;
 				bt->deviceChanged = 1;
@@ -123,9 +123,9 @@ int avConfigReadBtEvents(AvConfigState *state)
 		continue;
 
 clearPending:
-		lockState = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+		lockState = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.connectedDevices &= ~0x810u;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, lockState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, lockState);
 		bt->pending.address = 0;
 		bt->deviceChanged = 1;
 	}
@@ -163,9 +163,9 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 	if (ksceBtGetConnectingInfo(bt->pending.address) == 5)
 		return 0;
 	if (ksceBtStartAudio(bt->pending.address, bt->pending.profile) < 0) {
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+		state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.connectedDevices &= ~0x810u;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 		bt->deviceChanged = 1;
 		bt->pending.address = 0;
 		return -2;
@@ -191,20 +191,20 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 			bt->pending.profiles = bt->active.profiles;
 			bt->pending.address = address;
 		}
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+		state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		if (bt->pending.profiles & 0x20000000)
 			avConfigConfiguration.settings.connectedDevices |= 0x810;
 		else
 			avConfigConfiguration.settings.connectedDevices =
 				(avConfigConfiguration.settings.connectedDevices & ~0x800u) | 0x10;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 		bt->deviceChanged = 1;
 		bt->active.address = 0;
 		return -2;
 	}
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&avConfigConfiguration.lock);
+	state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.connectedDevices &= ~0x810u;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
 	bt->pending.address = 0;
 	bt->deviceChanged = 1;
 	return -2;

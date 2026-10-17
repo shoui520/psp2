@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/heap.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/vfs.h>
 #include <kernel/error.h>
 #include <deci4p_drfp/deci4p_fs.h>
@@ -579,7 +579,7 @@ static int dev_drfp_vop_dread(SceVopDreadArgs *argp)
 		dir->d_name[sizeof(dir->d_name) - 1] = '\0';
 	}
 	if (ent != NULL)
-		ksceKernelFreeHeapMemory(drfpGetHeap(), ent);
+		sceKernelFreeHeapMemory(drfpGetHeap(), ent);
 	return ret;
 }
 

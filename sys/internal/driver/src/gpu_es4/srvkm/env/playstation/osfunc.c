@@ -3,7 +3,6 @@
  */
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/debug.h>
 #include "../../system_sce.h"
@@ -11,7 +10,7 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <psp2kern/kernel/cpu/atomic.h>
+#include <sysmem/cpu.h>
 
 IMG_BOOL PVRSRVSystemLISR(IMG_VOID *pvSysData);
 IMG_VOID PVRSRVMISR(IMG_VOID *pvSysData);
@@ -51,7 +50,7 @@ int MISRTaskletThread(SceSize argSize, IMG_VOID *pvArgs)
 			psEnvData->pfnMISR(psEnvData->pvMISRData);
 		} else {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0, &dbg_MISRTaskletThread_L817,
+			SceDebugForDriver_D9703808(1, 0, &dbg_MISRTaskletThread_L817,
 					"%s: Failed waiting %08x\n", "MISRTaskletThread", res);
 #endif
 		}
@@ -202,7 +201,7 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
 			MISRTaskletThread, 20, 0x2000, 0, 15, NULL);
 	if (psEnvData->misrThread < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &dbg_OSInstallSystemLISR_L894,
+		SceDebugForDriver_D9703808(1, 0, &dbg_OSInstallSystemLISR_L894,
 				"%s: Failed to create thread: %08x\n",
 				"OSInstallSystemLISR", psEnvData->misrThread);
 #endif
@@ -283,7 +282,7 @@ PVRSRV_ERROR OSScheduleMISR(IMG_VOID *pvSysData)
 PVRSRV_ERROR OSLockResource(PVRSRV_RESOURCE *psResource, IMG_UINT32 ui32ID)
 {
 	/* SCE native compare-and-set replaces pristine OS_TAS. */
-	if (ksceKernelAtomicCompareAndSet32((volatile SceInt32 *)&psResource->ui32Lock,
+	if (SceCpuForDriver_CDA96E81((volatile SceInt32 *)&psResource->ui32Lock,
 			0, 1) != 0)
 		return PVRSRV_ERROR_UNABLE_TO_LOCK_RESOURCE;
 	psResource->ui32ID = ui32ID;
@@ -344,7 +343,7 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData,
 	psTimerCBData->sTimer = ksceKernelSysTimerAlloc(SCE_SYSTIMER_TYPE_WORD);
 	if (psTimerCBData->sTimer < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &dbg_OSAddTimer_L1663,
+		SceDebugForDriver_D9703808(1, 0, &dbg_OSAddTimer_L1663,
 				"Creating timer failed: %08x\n", psTimerCBData->sTimer);
 #endif
 		FreeProcessGpuMemory(psTimerCBData);
@@ -392,14 +391,14 @@ PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer)
 PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_UINT32 ui32Bytes)
 {
-	return ksceKernelCopyToUser(pvDest, pvSrc, ui32Bytes) == 0
+	return SceSysmemForDriver_6D88EF8A(pvDest, pvSrc, ui32Bytes) == 0
 			? PVRSRV_OK : PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 
 PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_UINT32 ui32Bytes)
 {
-	return ksceKernelCopyFromUser(pvDest, pvSrc, ui32Bytes) == 0
+	return SceSysmemForDriver_BC996A7A(pvDest, pvSrc, ui32Bytes) == 0
 			? PVRSRV_OK : PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 

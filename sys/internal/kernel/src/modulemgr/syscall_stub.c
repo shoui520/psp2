@@ -15,7 +15,7 @@ SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLM
 
 	if (uopt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, uopt, 4);
+		ret = SceSysmemForDriver_BC996A7A(opt, uopt, 4);
 		if (ret < 0)
 			return ret;
 	}
@@ -34,14 +34,14 @@ int _sceKernelStartModule(SceUID modid, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(0x10);
-		ret = ksceKernelCopyFromUser(opt, p.opt, 0x10);
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, 0x10);
 		if (ret < 0)
 			return ret;
 	}
@@ -50,7 +50,7 @@ int _sceKernelStartModule(SceUID modid, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelStartModuleForUser(modid, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
 
@@ -62,14 +62,14 @@ int _sceKernelStopModule(SceUID modid, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(0x10);
-		ret = ksceKernelCopyFromUser(opt, p.opt, 0x10);
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, 0x10);
 		if (ret < 0)
 			return ret;
 	}
@@ -78,7 +78,7 @@ int _sceKernelStopModule(SceUID modid, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelStopModuleForUser(modid, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
 
@@ -89,7 +89,7 @@ int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelULMOpti
 
 	if (uopt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, uopt, 4);
+		ret = SceSysmemForDriver_BC996A7A(opt, uopt, 4);
 		if (ret < 0)
 			return ret;
 	}
@@ -104,14 +104,14 @@ SceUID _sceKernelLoadStartModule(const char *path, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, p.opt, sizeof(*opt));
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, sizeof(*opt));
 		if (ret < 0)
 			return ret;
 	}
@@ -120,7 +120,7 @@ SceUID _sceKernelLoadStartModule(const char *path, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelLoadStartModuleForUser(path, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
 
@@ -132,14 +132,14 @@ int _sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, p.opt, sizeof(*opt));
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, sizeof(*opt));
 		if (ret < 0)
 			return ret;
 	}
@@ -148,7 +148,7 @@ int _sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelStopUnloadModuleForUser(modid, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
 
@@ -160,14 +160,14 @@ SceUID _sceKernelOpenModule(const char *path, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, p.opt, sizeof(*opt));
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, sizeof(*opt));
 		if (ret < 0)
 			return ret;
 	}
@@ -176,7 +176,7 @@ SceUID _sceKernelOpenModule(const char *path, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelOpenModuleForUser(path, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }
 
@@ -188,14 +188,14 @@ int _sceKernelCloseModule(SceUID modid, SceSize args, void *argp,
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
-	ret = ksceKernelCopyFromUser(&p, uparam, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, uparam, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
 	ustatus = p.status;
 	if (p.opt != NULL) {
 		opt = __builtin_alloca(sizeof(*opt));
-		ret = ksceKernelCopyFromUser(opt, p.opt, sizeof(*opt));
+		ret = SceSysmemForDriver_BC996A7A(opt, p.opt, sizeof(*opt));
 		if (ret < 0)
 			return ret;
 	}
@@ -204,6 +204,6 @@ int _sceKernelCloseModule(SceUID modid, SceSize args, void *argp,
 	status = __builtin_alloca(sizeof(*status));
 	*status = 0;
 	ret = sceKernelCloseModuleForUser(modid, args, argp, flags, opt, status);
-	res = ksceKernelCopyToUser(ustatus, status, sizeof(*status));
+	res = SceSysmemForDriver_6D88EF8A(ustatus, status, sizeof(*status));
 	return res < 0 ? res : ret;
 }

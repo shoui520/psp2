@@ -35,18 +35,18 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
-	ksceKernelFreeMemBlock
-	ksceKernelCopyFromUserProc
-	ksceKernelCopyToUser
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelAssert
+	SceSysmemForDriver_009E1C61
+	sceKernelCopyFromUserProc
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceDebugForDriver_35A35322
 	sceKernelGetProcessId
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	SceSysrootForDriver_1160FCA1
 	SceSysrootForDriver_6219CC14
 )

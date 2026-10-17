@@ -9,7 +9,6 @@
 #include "../handle-types.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysclib.h>
@@ -64,10 +63,10 @@ PVRSRV_ERROR ReleaseDeviceMemBlockCallback(const IMG_VOID *address,
 {
 	SceUID blockUID;
 
-	blockUID = ksceKernelFindProcMemBlockByAddr(processID, address, 0);
+	blockUID = SceSysmemForDriver_857F1D5A(processID, address, 0);
 	if (blockUID < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	ksceKernelDecRefCountMemBlock(blockUID);
+	SceSysmemForDriver_F50BDC0C(blockUID);
 	return PVRSRV_OK;
 }
 
@@ -342,7 +341,7 @@ PVRSRV_ERROR PVRSRVAllocDeviceMemKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 
 	psCurrentDeviceNode = GetGpuDeviceNode();
 #if FW_DEBUG
-	ksceKernelAssert(psDeviceNode == psCurrentDeviceNode,
+	SceDebugForDriver_35A35322(psDeviceNode == psCurrentDeviceNode,
 			SCE_DBGINFO_FUNC(300, "_PVRSRVAllocDeviceMemKM"),
 			__builtin_return_address(0));
 #endif
@@ -608,20 +607,20 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	accessFlags = flags & 1 ? 0x10 : 0;
 	if (flags & 2)
 		accessFlags |= 0x20;
-	if (ksceKernelIsAccessibleRange(accessFlags, cpuAddress, size) < 0)
+	if (SceSysmemForDriver_9C78064C(accessFlags, cpuAddress, size) < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	guid = ksceKernelFindMemBlockByAddr(cpuAddress, 0);
+	guid = SceSysmemForDriver_8A1742F6(cpuAddress, 0);
 	if (guid < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	memset(&info, 0, sizeof(info));
 	info.ex.size = sizeof(info);
-	if (ksceKernelMemBlockGetInfoEx(guid, &info) < 0 ||
-			(ksceKernelMemBlockTypeGetPrivileges(info.ex.details.type) & 0x44))
+	if (SceSysmemForDriver_24A99FFF(guid, &info) < 0 ||
+			(SceSysmemForDriver_6A0792A3(info.ex.details.type) & 0x44))
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	selectedHeap = heap;
 	region = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
 	if (region == 0x200000) {
-		memtype = ksceKernelMemBlockType2Memtype(info.ex.details.type);
+		memtype = SceSysmemForDriver_20C811FA(info.ex.details.type);
 		if (memtype == 0x8000) {
 			heapID = 0x07000014;
 			mappingFlags = 0;
@@ -669,7 +668,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	if (ret < 0)
 		return ret == (int)0x804c0006 ? PVRSRV_ERROR_BAD_MAPPING :
 				PVRSRV_ERROR_INVALID_PARAMS;
-	ksceKernelIncRefCountMemBlock(guid);
+	SceSysmemForDriver_EAF3849B(guid);
 	if ((flags & 3) == 3) {
 		mappingFlags |= 3;
 	} else {
@@ -690,7 +689,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 			SCE_DBG_PRINTF(0, 833,
 					"%s: Failed to allocate VA with error %08x.\n", __func__, ret);
 			RemoveMappedMemory(list, cpuAddress, NULL, selectedHeap);
-			ksceKernelDecRefCountMemBlock(guid);
+			SceSysmemForDriver_F50BDC0C(guid);
 			return PVRSRV_ERROR_OUT_OF_MEMORY;
 		}
 		record->deviceAddress.uiAddr = allocation.releasedSpanBase;
@@ -707,7 +706,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		SCE_DBG_PRINTF(0, 851,
 				"%s: Failed to map memory with error %08x.\n", __func__, ret);
 		RemoveMappedMemory(list, cpuAddress, NULL, selectedHeap);
-		ksceKernelDecRefCountMemBlock(guid);
+		SceSysmemForDriver_F50BDC0C(guid);
 		return PVRSRV_ERROR_BAD_MAPPING;
 	}
 	if (deviceAddress)
@@ -740,7 +739,7 @@ PVRSRV_ERROR PVRSRVUnmapMemoryFromGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
 	if (CheckMappedMemory(list, cpuAddress, 0, heap) != 0) {
-		ksceKernelPrintfWithInfo(0, SCE_DBGINFO(884),
+		SceDebugForDriver_02B04343(0, SCE_DBGINFO(884),
 				"%s: Range check failed for VA %08x\n", __func__, cpuAddress);
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
@@ -840,7 +839,7 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 
 	if (!blockGroupId)
 		return PVRSRV_ERROR_INVALID_PARAMS;
-	guid = kscePUIDtoGUID(ksceKernelGetProcessId(), memBlockUid);
+	guid = SceSysmemForDriver_45D22597(ksceKernelGetProcessId(), memBlockUid);
 	if (guid < 0) {
 		SCE_DBG_PRINTF(0, 1020, "%s: Failed to get GUID for MemBlock %08x\n",
 				__func__, memBlockUid);
@@ -848,18 +847,18 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	}
 	memset(&info, 0, sizeof(info));
 	info.ex.size = sizeof(info);
-	ret = ksceKernelMemBlockGetInfoEx(guid, &info);
+	ret = SceSysmemForDriver_24A99FFF(guid, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 1030,
 				"%s: sceKernelGetMemBlockInfo failed for %08x:%08x with error %08x\n",
 				__func__, memBlockUid, guid, ret);
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	}
-	if (ksceKernelMemBlockTypeGetPrivileges(info.ex.details.type) & 0x44)
+	if (SceSysmemForDriver_6A0792A3(info.ex.details.type) & 0x44)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	region = SceSysmemForDriver_CB0F3A33(info.ex.details.type);
 	if (region == 0x200000 || region == 0x400000) {
-		if (ksceKernelMemBlockType2Memtype(info.ex.details.type) != 0x8000) {
+		if (SceSysmemForDriver_20C811FA(info.ex.details.type) != 0x8000) {
 #if FW_DEBUG
 			typeDebugInfo = SCE_DBGINFO(1044);
 #endif
@@ -890,7 +889,7 @@ PVRSRV_ERROR PVRSRVRegisterMemBlockKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	return PVRSRV_OK;
 unsupportedType:
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0, typeDebugInfo,
+	SceDebugForDriver_D9703808(1, 0, typeDebugInfo,
 			"%s: MemBlock ID %08x:%08x has an unsupported type %08x\n",
 			__func__, memBlockUid, guid, info.ex.details.type);
 #endif

@@ -3,7 +3,7 @@
  * supporting user-level objects, all guarded by one spinlock.
  */
 #include <string.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include "ulobjmgr_internal.h"
 #include <sysmem/barrier.h>
 
@@ -50,10 +50,10 @@ UlobjProcCB *getAndLockUlobjInfoArrayImpl(SceUID pid, SceKernelIntrStatus *pLock
 	UlobjProcCB *procCB;
 
 	SCE_DBG_ASSERT(pLockState != NULL, 117);
-	*pLockState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_ulobjInstance.lock);
+	*pLockState = SceCpuForDriver_D32ACE9E(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
 	if (procCB == NULL)
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
 	return procCB;
 }
 
@@ -67,10 +67,10 @@ UlobjProcCB *getAndLockUlobjInfoArrayForKernel(SceUID pid)
 {
 	UlobjProcCB *procCB;
 
-	ksceKernelSpinlockLowLock(&g_ulobjInstance.lock);
+	SceCpuForDriver_BF82DEB2(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
 	if (procCB == NULL)
-		ksceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
+		sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
 	return procCB;
 }
 
@@ -81,9 +81,9 @@ int allocateAndLockUlobjInfoArrayImpl(SceUID pid, UlobjProcCB **pProcCB, SceKern
 
 	SCE_DBG_ASSERT(pProcCB != NULL, 151);
 	SCE_DBG_ASSERT(pLockState != NULL, 152);
-	*pLockState = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_ulobjInstance.lock);
+	*pLockState = SceCpuForDriver_D32ACE9E(&g_ulobjInstance.lock);
 	if (searchUlobjProcCB(pid) != NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, *pLockState);
 		return SCE_KERNEL_ERROR_ALREADY_REGISTERED;
 	}
 	/* no check for a full table: Sony stores through NULL then */
@@ -104,13 +104,13 @@ int allocateAndLockUlobjInfoArray(SceUID pid, UlobjProcCB **pProcCB, SceKernelIn
 void unlockUlobjInfoArrayImpl(UlobjProcCB *procCB, SceKernelIntrStatus lockState)
 {
 	SCE_DBG_ASSERT(procCB != NULL, 138);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, lockState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, lockState);
 }
 
 void unlockUlobjInfoArrayForKernelImpl(UlobjProcCB *procCB)
 {
 	SCE_DBG_ASSERT(procCB != NULL, 229);
-	ksceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
+	sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
 }
 
 void freeAndUnlockUlobjInfoArrayImpl(UlobjProcCB *procCB, SceKernelIntrStatus lockState)
@@ -118,7 +118,7 @@ void freeAndUnlockUlobjInfoArrayImpl(UlobjProcCB *procCB, SceKernelIntrStatus lo
 	SCE_DBG_ASSERT(procCB != NULL, 181);
 	dataMemoryBarrier();
 	procCB->pid = -1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, lockState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ulobjInstance.lock, lockState);
 }
 
 void freeAndUnlockUlobjInfoArrayForKernelImpl(UlobjProcCB *procCB)
@@ -126,7 +126,7 @@ void freeAndUnlockUlobjInfoArrayForKernelImpl(UlobjProcCB *procCB)
 	SCE_DBG_ASSERT(procCB != NULL, 194);
 	dataMemoryBarrier();
 	procCB->pid = -1;
-	ksceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
+	sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
 }
 
 /* name unknown: look the slot up without keeping the lock */
@@ -134,8 +134,8 @@ UlobjProcCB *findUlobjInfoArray(SceUID pid)
 {
 	UlobjProcCB *procCB;
 
-	ksceKernelSpinlockLowLock(&g_ulobjInstance.lock);
+	SceCpuForDriver_BF82DEB2(&g_ulobjInstance.lock);
 	procCB = searchUlobjProcCB(pid);
-	ksceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
+	sceKernelSpinlockLowUnlock(&g_ulobjInstance.lock);
 	return procCB;
 }

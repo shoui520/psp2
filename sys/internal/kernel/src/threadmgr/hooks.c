@@ -24,31 +24,31 @@ void SceThreadmgrForDriver_B4A05763(void (*idleEntry)(void))
 
 void SceThreadmgrForDriver_032E8F73(SceKernelSpinlock *lock)
 {
-	ksceKernelSpinlockLowLock(lock);
+	SceCpuForDriver_BF82DEB2(lock);
 }
 
 int SceThreadmgrForDriver_0A4AD37A(SceKernelSpinlock *lock)
 {
-	return ksceKernelSpinlockLowTrylock(lock);
+	return SceCpuForDriver_5AC9D394(lock);
 }
 
 void SceThreadmgrForDriver_C03799E2(SceKernelSpinlock *lock)
 {
-	ksceKernelSpinlockLowUnlock(lock);
+	sceKernelSpinlockLowUnlock(lock);
 }
 
 SceKernelIntrStatus SceThreadmgrForDriver_A90B1E01(SceKernelSpinlock *lock)
 {
-	return ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	return SceCpuForDriver_D32ACE9E(lock);
 }
 
 SceKernelIntrStatus SceThreadmgrForDriver_F8A6013B(SceKernelSpinlock *lock)
 {
-	return ksceKernelSpinlockLowTrylockCpuSuspendIntr(lock);
+	return SceCpuForDriver_27C0B340(lock);
 }
 
 void SceThreadmgrForDriver_F96FE0D5(SceKernelSpinlock *lock,
 				SceKernelIntrStatus state)
 {
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, state);
 }

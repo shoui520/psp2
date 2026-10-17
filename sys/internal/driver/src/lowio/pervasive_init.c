@@ -2,9 +2,9 @@
 #include "lowio_internal.h"
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysevent.h>
 
@@ -47,7 +47,7 @@ static inline __attribute__((always_inline)) void PervasiveClockInit(void)
 
 	LowioPixelClockInit();
 	PervasiveMiscInit();
-	mode = ksceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
+	mode = SceDipswForDriver_A98FC2FD(0xec) == 0 ? 3 : 5;
 	ScePervasiveForDriver_6AF0196F(mode, mode);
 }
 
@@ -75,7 +75,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_pervasiveDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(s_pervasiveDevices[i].name,
+		ret = SceSysmemForDriver_C94850C9(s_pervasiveDevices[i].name,
 			i == 5 ? 0x20100206 : 0x20100806,
 			s_pervasiveDevices[i].size, &opt);
 		if (ret < 0) {
@@ -83,19 +83,19 @@ static __attribute__((noinline)) int PervasiveInit(void)
 
 			/* Sony frees the whole UID array, including untouched entries. */
 			for (j = 0; j < 16; j++)
-				ksceKernelFreeMemBlock(s_pervasiveUids[j]);
+				SceSysmemForDriver_009E1C61(s_pervasiveUids[j]);
 			ksceKernelFinalizeFastMutex(&s_pervasiveMutex);
 			return ret;
 		}
 		s_pervasiveUids[i] = ret;
-		ksceKernelGetMemBlockBase(ret, (void **)s_pervasiveDevices[i].base);
+		SceSysmemForDriver_A841EDDA(ret, (void **)s_pervasiveDevices[i].base);
 	}
 	s_hardwareInfo[0] = s_misc->revision;
 	s_hardwareInfo[1] = s_misc->cacheStatus;
 	for (i = 0; i < 3; i++)
 		s_hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PervasiveClockInit();
-	ksceKernelRegisterSysEventHandler("ScePervasive", PervasiveSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("ScePervasive", PervasiveSysEvent, NULL);
 	SceThreadmgrForDriver_B4A05763(LowioIdleEntry);
 	return 0;
 }

@@ -32,7 +32,7 @@ static int excpWriteText(void *dst, const void *src, SceSize size)
 
 	writeDacr(DACR_ALL_MANAGER);
 	start = (unsigned int)memcpy(dst, src, size);
-	ksceKernelDcacheCleanRangeForL1WBWA((void *)cacheLineDown(start),
+	SceCpuForDriver_9CB9F0CE((void *)cacheLineDown(start),
 		cacheLineDown(start + size + 31) - cacheLineDown(start));
 	writeDacr(dacr);
 	SceCpuForTZS_A5965CBF();
@@ -68,7 +68,7 @@ int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler)
 
 	if (handler == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	if (ksceKernelIsColdBoot()) {
+	if (SceSysrootForKernel_D7198963()) {
 		if (handler->next != NULL || handler->reserved != 0) {
 			SCE_DBG_ASSERT_FAIL(1433);
 			return SCE_KERNEL_ERROR_ILLEGAL_EXCPHANDLER;
@@ -79,7 +79,7 @@ int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler)
 		return SCE_KERNEL_ERROR_ILLEGAL_EXCPCODE;
 	}
 
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_excpHandlers.lock);
+	flags = SceCpuForDriver_D32ACE9E(&g_excpHandlers.lock);
 	if (g_excpHandlers.monitorFirst == NULL)
 		g_excpHandlers.monitorFirst = handler;
 	excpPokeWord((unsigned int)handler, (unsigned int)g_excpHandlers.monitorHead);
@@ -89,7 +89,7 @@ int sceKernelRegisterMonitorEntry(unsigned int code, SceExcpmgrHandler *handler)
 	excpPokeVector(&g_excpHandlers.monitorVectors[8 + code], &entry);
 	SceCpuForTZS_17A88E69(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
 	SceCpuForTZS_B421FAFD(g_excpHandlers.monitorVectors, g_excpHandlers.monitorVectorSize);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_excpHandlers.lock, flags);
 	return 0;
 }
 

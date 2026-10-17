@@ -6,25 +6,8 @@
 
 #include <psp2kern/types.h>
 
-/* Processmgr supplies this layout to process event handlers. */
-typedef struct ProcEventParam {
-	SceSize size;
-	SceUInt32 state;
-	SceUInt32 kind;
-	SceUInt32 type;
-} ProcEventParam;
-
-_Static_assert(sizeof(ProcEventParam) == 0x10, "Process event parameter ABI");
-
-typedef struct ProcEventCreateParam {
-	SceSize size;
-	SceUID pid; /* Vitasdk's SceProcEventInvokeParam2; Processmgr initializes zero. */
-	SceUInt32 kind;
-	SceUID prevPid;
-	SceUInt32 type;
-} ProcEventCreateParam;
-
-_Static_assert(sizeof(ProcEventCreateParam) == 0x14, "Process create event ABI");
+/* the process event parameters processmgr passes to the handlers: sysmem/procevent.h */
+#include <sysmem/procevent.h>
 
 /* names from SceSysmodule's error messages */
 int SceProcessmgrForDriver_61B9B6FA(SceUID pid, SceUInt32 value);	/* sceKernelSetInitialPMCR */

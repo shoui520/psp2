@@ -398,7 +398,7 @@ DevDeInitSGX:
 	cbz r3, .LDevDeInitSGX92
 	ldr r1, DevDeInitSGXLiterald0
 	mov r2, sl
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 .LDevDeInitSGX92:
 	mov r2, r4
 	movs r0, #2
@@ -1011,7 +1011,7 @@ BM_CreateContext:
 	ldr r1, BM_CreateContextLiteral18c
 	mov r8, r6
 	str r3, [sp, #0x14]
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	cbz r4, .LBM_CreateContext28
 	movs r3, #0
 	str r3, [r4]
@@ -1026,7 +1026,7 @@ BM_CreateContext:
 	movs r0, #1
 	str r3, [sp]
 	ldr r3, BM_CreateContextLiteral198
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	b .LBM_CreateContext106
 .LBM_CreateContext40:
 	mov r0, r5
@@ -1073,7 +1073,7 @@ BM_CreateContext:
 	mov.w r2, #0x80000
 	ldr r1, BM_CreateContextLiteral1b8
 	movs r3, #0
-	bl ksceKernelAllocMemBlock
+	bl SceSysmemForDriver_C94850C9
 	subs.w sl, r0, #0
 	bge .LBM_CreateContextbe
 	ldr r3, BM_CreateContextLiteral190
@@ -1114,7 +1114,7 @@ BM_CreateContext:
 	mov r0, r6
 	ldr r3, BM_CreateContextLiteral1d0
 .LBM_CreateContext102:
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 .LBM_CreateContext106:
 	movs r0, #0
 	b .LBM_CreateContext174
@@ -1130,7 +1130,7 @@ BM_CreateContext:
 	stm.w sp, {r2, r3}
 	ldr r2, BM_CreateContextLiteral1d8
 	ldr r3, BM_CreateContextLiteral1dc
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	b .LBM_CreateContext15e
 .LBM_CreateContext12a:
 	ldr r2, [sp, #0xc]
@@ -1144,7 +1144,7 @@ BM_CreateContext:
 	movs r0, #1
 	str r3, [sp]
 	ldr r3, BM_CreateContextLiteral1e4
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	b .LBM_CreateContext15e
 .LBM_CreateContext14a:
 	ldr r3, [sp, #0xc]
@@ -1274,7 +1274,7 @@ BM_CreateContext:
 	mov.w r2, #0x80000
 	ldr r1, BM_CreateContextLiterale4
 	movs r3, #0
-	bl ksceKernelAllocMemBlock
+	bl SceSysmemForDriver_C94850C9
 	subs.w sb, r0, #0
 	blt .LBM_CreateContext1c
 	movs r3, #1
@@ -1371,7 +1371,7 @@ BM_CreateHeap:
 	strd r3, r0, [sp, #4]
 	movs r0, #1
 	ldr r3, BM_CreateHeapLiteral84
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 .LBM_CreateHeap38:
 	ldr r3, [r4, #0x18]
 	cmp r3, #3
@@ -1393,7 +1393,7 @@ BM_CreateHeap:
 	strd r3, r0, [sp, #4]
 	movs r0, #1
 	ldr r3, BM_CreateHeapLiteral8c
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 .LBM_CreateHeap66:
 	ldr r2, [sp, #0x14]
 	ldr r3, [r5]
@@ -1476,11 +1476,11 @@ MMU_BIFResetPDAlloc:
 	ldr r1, MMU_BIFResetPDAllocLiteral100
 	str r3, [sp, #0x14]
 	movs r3, #0
-	bl ksceKernelAllocMemBlock
+	bl SceSysmemForDriver_C94850C9
 	subs r5, r0, #0
 	blt .LMMU_BIFResetPDAlloce6
 	add r1, sp, #0x10
-	bl ksceKernelGetMemBlockBase
+	bl SceSysmemForDriver_A841EDDA
 	cmp r0, #0
 	bge .LMMU_BIFResetPDAlloc3a
 	ldr r3, MMU_BIFResetPDAllocLiteral104
@@ -1494,7 +1494,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc3a:
 	ldr r0, [sp, #0x10]
 	addw r1, r4, #0x7cc
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	cmp r0, #0
 	ldr r3, [sp, #0x10]
 	bge .LMMU_BIFResetPDAlloc5a
@@ -1508,7 +1508,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc5a:
 	add.w r0, r3, #0x1000
 	add.w r1, r4, #0x7d0
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	cmp r0, #0
 	ldr r3, [sp, #0x10]
 	bge .LMMU_BIFResetPDAlloc7c
@@ -1522,7 +1522,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc7c:
 	add.w r0, r3, #0x2000
 	addw r1, r4, #0x7d4
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	subs r3, r0, #0
 	ldr r0, [sp, #0x10]
 	bge .LMMU_BIFResetPDAllocaa
@@ -1535,9 +1535,9 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc9c:
 	ldr r3, MMU_BIFResetPDAllocLiteral11c
 .LMMU_BIFResetPDAlloc9e:
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	mov r0, r5
-	bl ksceKernelFreeMemBlock
+	bl SceSysmemForDriver_009E1C61
 	b .LMMU_BIFResetPDAlloce6
 .LMMU_BIFResetPDAllocaa:
 	add.w r3, r0, #0x1000
@@ -1606,33 +1606,33 @@ MMU_BIFResetPDAlloc:
 	ldr r0, MMU_BIFResetPDAllocLiteralb8
 	str r3, [sp, #4]
 	movs r3, #0
-	bl ksceKernelAllocMemBlock
+	bl SceSysmemForDriver_C94850C9
 	subs r5, r0, #0
 	blt .LMMU_BIFResetPDAlloc9e
 	mov r1, sp
-	bl ksceKernelGetMemBlockBase
+	bl SceSysmemForDriver_A841EDDA
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	addw r1, r4, #0x7cc
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	add.w r1, r4, #0x7d0
 	add.w r0, r0, #0x1000
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	addw r1, r4, #0x7d4
 	add.w r0, r0, #0x2000
-	bl ksceKernelVAtoPA
+	bl SceSysmemForDriver_8D160E65
 	cmp r0, #0
 	bge .LMMU_BIFResetPDAlloc60
 .LMMU_BIFResetPDAlloc58:
 	mov r0, r5
-	bl ksceKernelFreeMemBlock
+	bl SceSysmemForDriver_009E1C61
 	b .LMMU_BIFResetPDAlloc9e
 .LMMU_BIFResetPDAlloc60:
 	ldr r0, [sp]
@@ -1696,7 +1696,7 @@ GpuTimerDestroy:
 MmuBifResetPdFree:
 	push {r3, lr}
 	ldr.w r0, [r0, #0x7c8]
-	bl ksceKernelFreeMemBlock
+	bl SceSysmemForDriver_009E1C61
 	pop {r3, pc}
 .size MmuBifResetPdFree, .-MmuBifResetPdFree
 .align 2
@@ -1805,7 +1805,7 @@ VBAppend:
 	ldr r0, VBAppendLiterala4
 	str r3, [sp]
 	str r2, [sp, #4]
-	bl ksceKernelSpinlockLowLockCpuSuspendIntr
+	bl SceCpuForDriver_D32ACE9E
 	mov.w r2, #0x200
 	ldr r1, VBAppendLiterala8
 	mov r8, r0
@@ -1824,7 +1824,7 @@ VBAppend:
 	movls r0, #1
 	ldr r1, VBAppendLiteralac
 	adds r6, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	mov r3, sb
 	adds r0, r4, r5
 	mov r1, r6
@@ -1843,10 +1843,10 @@ VBAppend:
 	ldr r0, VBAppendLiteralb4
 	ldr r1, VBAppendLiterala0
 .LVBAppend7a:
-	bl ksceKernelPrintf
+	bl SceDebugForDriver_391B74B7
 	ldr r0, VBAppendLiterala4
 	mov r1, r8
-	bl ksceKernelSpinlockLowUnlockCpuResumeIntr
+	bl sceKernelSpinlockLowUnlockCpuResumeIntr
 	ldr r2, [sp, #4]
 	ldr r3, [r7]
 	cmp r2, r3
@@ -2138,7 +2138,7 @@ RemoveMemoryContextFromList:
 	movs r0, #1
 	ldr r1, RemoveMemoryContextFromListLiterala0
 	mov r2, r7
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr r3, RemoveMemoryContextFromListLiterala4
 	ldr r0, [r3]
 	mov r6, r3
@@ -2156,7 +2156,7 @@ RemoveMemoryContextFromList:
 	it ne
 	movne r0, #1
 	mov r2, r7
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	add.w r3, r4, #0x1020
 	cbnz r5, .LRemoveMemoryContextFromList82
 	ldr r2, [r3]
@@ -2397,7 +2397,7 @@ sceGpuMmuUnmapMemory:
 	adds r0, r4, #0
 	it ne
 	movne r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr.w r3, [sl, #4]
 	mov r2, r7
 	ldr r1, sceGpuMmuUnmapMemoryLiteral164
@@ -2408,7 +2408,7 @@ sceGpuMmuUnmapMemory:
 	cmp sb, r5
 	it hs
 	movhs sb, r5
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr r3, [r4, #0xc]
 	mov.w ip, #1
 	orr.w r2, sb, r8
@@ -2428,7 +2428,7 @@ sceGpuMmuUnmapMemory:
 	ite hi
 	movhi r0, #0
 	movls r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr.w ip, [sp, #8]
 	lsl.w r3, r8, #2
 	mov r2, ip
@@ -2445,7 +2445,7 @@ sceGpuMmuUnmapMemory:
 	adds r0, #0
 	it ne
 	movne r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr r2, [r4, #8]
 	movs r1, #0
 	ldr r3, [sp, #8]
@@ -2469,7 +2469,7 @@ sceGpuMmuUnmapMemory:
 	ldr r1, sceGpuMmuUnmapMemoryLiteral170
 	lsrs r0, r0, #5
 	mov r2, r7
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	movs r1, #0
 	mov r0, r4
 	str r1, [sp]
@@ -2770,7 +2770,7 @@ sceGpuMmuDestroyPageTable:
 	adds r0, #0
 	it ne
 	movne r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr r3, [r4, #4]
 	mov r2, r5
 	ldr r1, sceGpuMmuDestroyPageTableLiteral88
@@ -2778,7 +2778,7 @@ sceGpuMmuDestroyPageTable:
 	adds r0, #0
 	it ne
 	movne r0, #1
-	bl ksceKernelAssert
+	bl SceDebugForDriver_35A35322
 	ldr r3, [r4, #4]
 	add r2, sp, #0x10
 	ldr r1, [r4, #8]
@@ -2794,7 +2794,7 @@ sceGpuMmuDestroyPageTable:
 	ldr r3, [r4, #8]
 	strd r3, r5, [sp, #4]
 	ldr r3, sceGpuMmuDestroyPageTableLiteral94
-	bl ksceKernelPrintfLevelWithInfo
+	bl SceDebugForDriver_D9703808
 	mov r0, r5
 	b .LsceGpuMmuDestroyPageTable6e
 .LsceGpuMmuDestroyPageTable5e:

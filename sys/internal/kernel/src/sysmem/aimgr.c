@@ -19,8 +19,8 @@
 /* the hardware info's model byte of a PS TV (Dolce) */
 #define HARDWARE_MODEL_MASK		0xff0000
 
-SceKblParam *ksceKernelSysrootGetKblParam(void);
-int ksceKernelCheckDipsw(unsigned int bit);
+SceKblParam *SceSysrootForKernel_9DB56D1F(void);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
 
 /* a big-endian halfword */
 #define SWAP16(x)			((SceUInt16)((x) >> 8 | (x) << 8))
@@ -57,7 +57,7 @@ static inline int AimgrIsDolceHardware(void)
 /* name unknown */
 int AimgrInit(void)
 {
-	SceKblParam *kbl = ksceKernelSysrootGetKblParam();
+	SceKblParam *kbl = SceSysrootForKernel_9DB56D1F();
 	const SceUInt32 *psCode;
 
 	if (kbl == NULL) {
@@ -74,49 +74,49 @@ int AimgrInit(void)
 	return 0;
 }
 
-int ksceSblAimgrIsTest(void)
+int SceSblAIMgrForDriver_3B638885(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TEST;
 }
 
-int ksceSblAimgrIsTool(void)
+int SceSblAIMgrForDriver_274663A0(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TOOL;
 }
 
-int ksceSblAimgrIsDEX(void)
+int SceSblAIMgrForDriver_F4B98F66(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_DEX;
 }
 
-__attribute__((noinline)) int ksceSblAimgrIsJapaneseFat(void)
+__attribute__((noinline)) int SceSblAIMgrForDriver_6D5A3FC9(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_CEX_FIRST && AimgrProductSubCode() == 0x10 &&
 	       AimgrFactoryCode() == 0x24;
 }
 
-int ksceSblAimgrIsCEX(void)
+int SceSblAIMgrForDriver_D78B04A2(void)
 {
 	if ((SceUInt16)(AimgrProductCode() - PRODUCT_CODE_CEX_FIRST) < PRODUCT_CODE_CEX_COUNT)
-		return !ksceSblAimgrIsJapaneseFat();
+		return !SceSblAIMgrForDriver_6D5A3FC9();
 	return 0;
 }
 
-__attribute__((noinline)) int ksceSblAimgrIsGenuineDolce(void)
+__attribute__((noinline)) int SceSblAIMgrForDriver_C6E83F34(void)
 {
 	if ((AimgrProductCode() == PRODUCT_CODE_TOOL && AimgrProductSubCode() == 0x408) ||
 	    (AimgrProductSubCode() & 0x200))
 		return 1;
-	if (!ksceSblAimgrIsJapaneseFat())
+	if (!SceSblAIMgrForDriver_6D5A3FC9())
 		return 0;
 	return AimgrIsDolceHardware();
 }
 
-int ksceSblAimgrIsGenuineVITA(void)
+int SceSblAIMgrForDriver_963CA644(void)
 {
 	if ((SceUInt16)(AimgrProductCode() - PRODUCT_CODE_TEST) > 0x11 ||
-	    ksceSblAimgrIsGenuineDolce()) {
-		if (!ksceSblAimgrIsJapaneseFat())
+	    SceSblAIMgrForDriver_C6E83F34()) {
+		if (!SceSblAIMgrForDriver_6D5A3FC9())
 			return 0;
 		if (AimgrIsDolceHardware())
 			return 0;
@@ -124,57 +124,57 @@ int ksceSblAimgrIsGenuineVITA(void)
 	return 1;
 }
 
-int ksceSblAimgrIsVITA(void)
+int SceSblAIMgrForDriver_4273B97B(void)
 {
-	return ksceSblAimgrIsGenuineVITA();
+	return SceSblAIMgrForDriver_963CA644();
 }
 
-int ksceSblAimgrIsDolce(void)
+int SceSblAIMgrForDriver_71608CA3(void)
 {
-	if (ksceSblAimgrIsGenuineDolce())
+	if (SceSblAIMgrForDriver_C6E83F34())
 		return 1;
-	return ksceKernelCheckDipsw(0x98) != 0;
+	return SceDipswForDriver_A98FC2FD(0x98) != 0;
 }
 
-int ksceSblAimgrIsToolRev4(void)
+int SceSblAIMgrForDriver_37A79140(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TOOL && AimgrProductSubCode() == 4;
 }
 
-int ksceSblAimgrIsPrototypeRev2(void)
+int SceSblAIMgrForDriver_FF5784B9(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_CEX_FIRST && AimgrProductSubCode() == 2;
 }
 
-int ksceSblAimgrIsToolRev3(void)
+int SceSblAIMgrForDriver_BB9D146B(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TOOL && AimgrProductSubCode() == 3;
 }
 
-int ksceSblAimgrIsToolRev5(void)
+int SceSblAIMgrForDriver_E5E47FF7(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_TOOL && AimgrProductSubCode() == 5;
 }
 
-int ksceSblAimgrIsPrototypeRev7(void)
+int SceSblAIMgrForDriver_05F79D4A(void)
 {
 	return AimgrProductCode() == PRODUCT_CODE_CEX_FIRST && AimgrProductSubCode() == 7;
 }
 
-SceUInt16 ksceSblAimgrGetProductCode(void)
+SceUInt16 SceSblAIMgrForDriver_14345161(void)
 {
 	return AimgrProductCode();
 }
 
-SceUInt16 ksceSblAimgrGetProductSubCode(void)
+SceUInt16 SceSblAIMgrForDriver_B33CEC8F(void)
 {
 	return AimgrProductSubCode();
 }
 
 /* the system software version the console left the factory with */
-int ksceSblAimgrGetSMI(SceUInt32 *smi)
+int SceSblAIMgrForDriver_47D9CF13(SceUInt32 *smi)
 {
-	SceKblParam *kbl = ksceKernelSysrootGetKblParam();
+	SceKblParam *kbl = SceSysrootForKernel_9DB56D1F();
 
 	if (smi == NULL || kbl == NULL)
 		return AIMGR_ERROR_INVALID_ARGUMENT;

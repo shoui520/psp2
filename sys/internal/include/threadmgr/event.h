@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/sysmem/uid_class.h>
+#include <sysmem/sysmem.h>
 
 struct ThreadmgrWaitNode;
 

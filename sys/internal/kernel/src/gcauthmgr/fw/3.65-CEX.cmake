@@ -66,22 +66,22 @@ set(MODULE_IMPORT_NIDS
 	0x96D306FA:F:0xB0996641
 )
 set(MODULE_IMPORT_FUNCS
-	ksceHmacSha256Digest
-	ksceSha1Digest
-	ksceSha224Digest
-	ksceSha256Digest
-	ksceAesEncrypt1
-	ksceAesDecrypt1
-	ksceAesInit1
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelRegisterProcEventHandler
+	SceKernelUtilsForDriver_83EFA1CC
+	SceKernelUtilsForDriver_87DC7F2F
+	SceKernelUtilsForDriver_9EA9D4DC
+	SceKernelUtilsForDriver_A773A6A8
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_F12B6451
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	sceKernelRegisterProcEventHandler
 	memset
 	memcpy
 	memmove
 	__aeabi_uldivmod
 	__stack_chk_fail
-	ksceSysrootGetSelfInfo
+	SceSysrootForKernel_F10AB792
 	ksceKernelSetPermission
 	ksceKernelDeleteSema
 	ksceKernelCreateSema

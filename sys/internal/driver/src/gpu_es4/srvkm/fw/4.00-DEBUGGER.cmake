@@ -170,28 +170,28 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCancelEventFlag
 	sceKernelGetSystemTimeWide
 	ksceKernelCreateMutex
-	ksceKernelFreeMemBlock
-	ksceKernelMemBlockType2Memtype
-	ksceKernelMemBlockGetInfoEx
-	kscePUIDtoGUID
-	ksceKernelMapMemBlock
-	ksceKernelMemBlockTypeGetPrivileges
-	ksceKernelCopyToUser
-	kscePUIDClose
-	ksceKernelFindProcMemBlockByAddr
-	ksceKernelFindMemBlockByAddr
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelIsAccessibleRange
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelAllocMemBlock
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_20C811FA
+	SceSysmemForDriver_24A99FFF
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_58D21746
+	SceSysmemForDriver_6A0792A3
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_857F1D5A
+	SceSysmemForDriver_8A1742F6
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_C94850C9
 	SceSysmemForDriver_CB0F3A33
-	ksceGUIDName
-	ksceKernelIncRefCountMemBlock
-	ksceKernelDecRefCountMemBlock
-	ksceKernelUnmapMemBlock
+	SceSysmemForDriver_E655852F
+	SceSysmemForDriver_EAF3849B
+	SceSysmemForDriver_F50BDC0C
+	SceSysmemForDriver_FFCD9B60
 	ksceKernelDisableIntr
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
@@ -204,16 +204,16 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_D141C076
 	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelPanic
-	ksceKernelPrintf
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelAtomicCompareAndSet32
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_D9703808
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_CDA96E81
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
 	SceCpuForDriver_E813EBB2
 	kscePervasiveGetSoCRevision
 	ScePervasiveForDriver_84EAB5BC
@@ -236,10 +236,10 @@ set(MODULE_IMPORT_FUNCS
 	kscePowerSetGpuClockFrequencyProc
 	kscePowerGetSysClockFrequency
 	ksceRtcGetCurrentClockLocalTime
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
-	ksceSblAimgrIsTool
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
+	sceKernelRegisterSysEventHandler
+	SceSblAIMgrForDriver_274663A0
 	SceDisplayForDriver_086DEFB6
 	SceSysrootForDriver_6655F48C
 	SceSysrootForDriver_BFD8F2A2

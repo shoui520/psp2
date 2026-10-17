@@ -5,8 +5,8 @@
 #include "udcd_status.h"
 #include <lowio/pervasive_regs.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/cpu.h>
+#include <sysmem/procevent.h>
 
 /* SceUdcd codes after vitasdk's SCE_UDCD_ERROR_* (names unknown) */
 #define UDCD_ERROR_INVALID_ARGUMENT	0x8024300a
@@ -339,7 +339,7 @@ int udcdInitializeBusOne(int args, void *argp);
 int udcdInitializeBusTwo(int args, void *argp);
 int udcdCallBusOneOperation(int args, void *argp);
 int udcdCallBusTwoOperation(int args, void *argp);
-int udcdProcessEvent(SceUID process, int event, SceProcEventInvokeParam1 *param, int flags);
+int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, int flags);
 
 /* udcd_user.c */
 int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask);

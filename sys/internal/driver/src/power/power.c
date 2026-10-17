@@ -10,15 +10,15 @@ static inline __attribute__((always_inline)) int powerCreateProcessStorage(void)
 /* exported, and inlined in this unit as in the original */
 int kscePowerUnregisterCallback(SceUID callback);
 
-int powerProcessSuspendNotification(SceUID pid, uint32_t event);
+int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, int args);
 
-int powerProcessExitCallback(SceUID pid);
+int powerProcessKillCallback(SceUID pid, ProcEventParam *param, int args);
 
-int powerProcessKillCallback(SceUID pid);
+int powerProcessExitCallback(SceUID pid, ProcEventParam *param, int args);
 
-int powerProcessCreateCallback(SceUID pid);
+int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, int args);
 
-int powerProcessResumeNotification(SceUID pid, uint32_t event);
+int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, int args);
 
 struct PowerCallbackControl s_powerCallbackControl;
 
@@ -26,7 +26,7 @@ struct PowerBatteryBase s_powerBatteryBase;
 
 SceKernelSpinlock s_powerIdleLock;
 volatile uint32_t s_powerCpuResumeHandshake;
-extern const struct PowerProcessEventHandlers s_powerProcessEventHandlers;
+extern const SceKernelProcEventHandler s_powerProcessEventHandlers;
 
 /* the debugger's power event notifiers (event 49): stored, never read */
 static volatile uintptr_t s_powerDebugNotifier0;
@@ -36,11 +36,11 @@ int s_processStorageKey;
 
 extern SceKernelSpinlock s_powerIdleLock;
 
-const struct PowerProcessEventHandlers s_powerProcessEventHandlers = {
-	.size = sizeof(struct PowerProcessEventHandlers),
+const SceKernelProcEventHandler s_powerProcessEventHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = powerProcessCreateCallback,
-	.kill = powerProcessKillCallback,
 	.exit = powerProcessExitCallback,
+	.kill = powerProcessKillCallback,
 	.suspend = powerProcessSuspendNotification,
 	.resume = powerProcessResumeNotification,
 };
@@ -70,9 +70,9 @@ int powerStartupWorker(void)
 	return 1;
 }
 
-int powerProcessSuspendNotification(SceUID pid, uint32_t event)
+int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, int args)
 {
-	powerProcessSuspendEvent(pid, event);
+	powerProcessSuspendEvent(pid, phase);
 	return 0;
 }
 
@@ -89,7 +89,7 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 #endif
 
 	for (;;) {
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+		intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 		previous = NULL;
 		for (record = s_powerCallbackControl.head; record; record = record->next) {
 			if (record->pid == pid)
@@ -97,18 +97,18 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 			previous = record;
 		}
 		if (!record) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 			return 0;
 		}
 		if (previous)
 			previous->next = record->next;
 		else
 			s_powerCallbackControl.head = record->next;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		result = sceKernelFreeRemoteProcessHeap(pid, record);
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelPrintfAssertLevel(1, result == 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_821A2D59(1, result == 0,
 				SCE_DBGINFO_FUNC(282, "_scePowerRemoveProcessCallback"), caller,
 				"sceKernelFreeRemoteProcessHeap(0x%08X, %p) error: 0x%08X\n",
 				pid, record, result);
@@ -118,15 +118,7 @@ int _scePowerRemoveProcessCallback(SceUID pid)
 	}
 }
 
-int powerProcessExitCallback(SceUID pid)
-{
-	powerUnlinkExitedProcess(pid);
-	powerReleaseProcessSwitchLocks(pid);
-	_scePowerRemoveProcessCallback(pid);
-	return 0;
-}
-
-int powerProcessKillCallback(SceUID pid)
+int powerProcessKillCallback(SceUID pid, ProcEventParam *param, int args)
 {
 	powerUnlinkKilledProcess(pid);
 	powerReleaseProcessSwitchLocks(pid);
@@ -134,7 +126,15 @@ int powerProcessKillCallback(SceUID pid)
 	return 0;
 }
 
-int powerProcessCreateCallback(SceUID pid)
+int powerProcessExitCallback(SceUID pid, ProcEventParam *param, int args)
+{
+	powerUnlinkExitedProcess(pid);
+	powerReleaseProcessSwitchLocks(pid);
+	_scePowerRemoveProcessCallback(pid);
+	return 0;
+}
+
+int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, int args)
 {
 	powerCreateProcessState(pid);
 	return 0;
@@ -286,9 +286,8 @@ int powerInitializeModule(void)
 				    &s_powerCallbackControl.sysconStatus[2]);
 	SceSysconForDriver_129EA022(powerUsbPowerCallback, NULL);
 	ksceSysconSetThermalAlertCallback(powerThermalCallback, NULL);
-	ksceKernelRegisterSysEventHandler("ScePower", powerSysEventHandler, NULL);
-	ksceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers,
-					   NULL);
+	sceKernelRegisterSysEventHandler("ScePower", powerSysEventHandler, NULL);
+	sceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers, 0);
 	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerInit", powerStartupWorker, NULL);
 	s_powerDebugNotifier0 = SceSysrootForDriver_10788257();
 	s_powerDebugNotifier1 = SceSysrootForDriver_0A52A59C();
@@ -328,7 +327,7 @@ int kscePowerRegisterCallback(SceUID callback)
 	record->lastNotification = s_powerCallbackControl.stateFlags;
 	record->permittedMask = permittedMask;
 	record->notified = 0;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (current = s_powerCallbackControl.head; current; current = current->next) {
 		if (current->callback == callback) {
 			result = SCE_POWER_ERROR_ALREADY_REGISTERED;
@@ -342,10 +341,10 @@ int kscePowerRegisterCallback(SceUID callback)
 		goto fail;
 	record->next = s_powerCallbackControl.head;
 	s_powerCallbackControl.head = record;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 fail:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	SceProcessmgrForDriver_FC2A424E(record);
 	return result;
 }
@@ -353,7 +352,7 @@ fail:
 int scePowerRegisterCallback(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
-	SceUID global = kscePUIDtoGUID(0, callback);
+	SceUID global = SceSysmemForDriver_45D22597(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
@@ -369,21 +368,21 @@ inline __attribute__((always_inline)) int kscePowerUnregisterCallback(SceUID cal
 
 	if (ksceKernelGetThreadmgrUIDClass(callback) != 8)
 		return (int)0xc00280a1;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record; record = record->next) {
 		if (record->callback == callback)
 			break;
 		previous = record;
 	}
 	if (!record) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		return SCE_POWER_ERROR_CALLBACK_NOT_REGISTERED;
 	}
 	if (previous)
 		previous->next = record->next;
 	else
 		s_powerCallbackControl.head = record->next;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	SceProcessmgrForDriver_FC2A424E(record);
 	return 0;
 }
@@ -391,7 +390,7 @@ inline __attribute__((always_inline)) int kscePowerUnregisterCallback(SceUID cal
 int scePowerUnregisterCallback(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
-	SceUID global = kscePUIDtoGUID(0, callback);
+	SceUID global = SceSysmemForDriver_45D22597(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
@@ -419,7 +418,7 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	state = (s_powerCallbackControl.stateFlags & ~clearMask) | setMask;
 	s_powerCallbackControl.stateFlags = state;
 	for (record = s_powerCallbackControl.head; record; record = next) {
@@ -452,24 +451,24 @@ static void _scePowerNotifyCallbackProc(SceUID pid, uint32_t clearMask,
 			s_powerCallbackControl.head = next;
 		result = sceKernelFreeRemoteProcessHeap(record->pid, record);
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0)
-			ksceKernelPrintfAssertLevel(1, result == 0,
+		if (SceDebugForDriver_374B7868() > 0)
+			SceDebugForDriver_821A2D59(1, result == 0,
 				SCE_DBGINFO_FUNC(993, "_scePowerNotifyCallbackProc"), caller,
 				"sceKernelFreeRemoteProcessHeap(0x%08X, %p) error: 0x%08X\n",
 				record->pid, record, result);
 #endif
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
-int powerProcessResumeNotification(SceUID pid, uint32_t event)
+int powerProcessResumeNotification(SceUID pid, int phase, ProcEventParam *param, int args)
 {
-	if (event == 0x20000)
+	if (phase == 0x20000)
 		_scePowerNotifyCallbackProc(pid, 0, SCE_POWER_CALLBACKARG_PROCESS_RESUMING, 0);
-	else if (event == 0x40000)
+	else if (phase == 0x40000)
 		_scePowerNotifyCallbackProc(pid, SCE_POWER_CALLBACKARG_PROCESS_RESUMING, 0,
 					    SCE_POWER_CALLBACKARG_PROCESS_RESUME_COMP);
-	powerProcessResumeEvent(pid, event);
+	powerProcessResumeEvent(pid, phase);
 	return 0;
 }
 
@@ -542,7 +541,7 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 	struct PowerCallbackRecord *record;
 	uint32_t intrState;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (record = s_powerCallbackControl.head; record;
 	     record = record->next) {
 		if (record->callback >= 0 &&
@@ -550,12 +549,12 @@ int powerHasBusyCallback(uint32_t mask, SceUID *callback)
 		    ksceKernelGetCallbackCount(record->callback) > 0) {
 			if (callback)
 				*callback = record->callback;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(
+			sceKernelSpinlockLowUnlockCpuResumeIntr(
 				&s_powerIdleLock, intrState);
 			return 1;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	return 0;
 }
 

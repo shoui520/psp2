@@ -34,7 +34,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 			return ret;
 	}
 
-	uid = ksceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, &obj);
+	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, &obj);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 78, "UIDcreate failed 0x%08x\n", uid);
 		if (pid != KERNEL_PID)
@@ -148,10 +148,10 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 	cb->version[0] = info.version[0];
 	cb->version[1] = info.version[1];
 	info.name[26] = '\0';
-	ret = ksceGUIDSetName(cb->modid, info.name);
+	ret = SceSysmemForDriver_4CFA4100(cb->modid, info.name);
 	if (ret < 0)
 		return ret;
-	cb->name = ksceGUIDName(cb->modid);
+	cb->name = SceSysmemForDriver_E655852F(cb->modid);
 	cb->fingerprint = info.fingerprint;
 	cb->libstubBtm = (void *)(SEG_OFFSET(info.libstubBtm) + base);
 	cb->tlsMemsz = info.tlsMemsz;

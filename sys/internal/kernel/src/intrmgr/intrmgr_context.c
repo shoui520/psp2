@@ -95,7 +95,7 @@ void intrRestoreSystemContext(const ThreadRegisterContext *context, int irq)
  */
 void intrRestoreBreakpoints(ProcessHwBreakpoints *regs, int synchronize)
 {
-	ksceKernelSpinlockLowLock(&regs->lock);
+	SceCpuForDriver_BF82DEB2(&regs->lock);
 	writeDbgbvr(2, regs->reg[2].value);
 	writeDbgbcr(2, regs->reg[2].control);
 	writeDbgbvr(3, regs->reg[3].value);
@@ -104,13 +104,13 @@ void intrRestoreBreakpoints(ProcessHwBreakpoints *regs, int synchronize)
 	writeDbgbcr(4, regs->reg[4].control);
 	if (synchronize)
 		isb();
-	ksceKernelSpinlockLowUnlock(&regs->lock);
+	sceKernelSpinlockLowUnlock(&regs->lock);
 }
 
 /* name unknown: restore the corresponding three watchpoint slots. */
 void intrRestoreWatchpoints(ProcessHwWatchpoints *regs, int synchronize)
 {
-	ksceKernelSpinlockLowLock(&regs->lock);
+	SceCpuForDriver_BF82DEB2(&regs->lock);
 	writeDbgwvr(1, regs->reg[1].value);
 	writeDbgwcr(1, regs->reg[1].control);
 	writeDbgwvr(2, regs->reg[2].value);
@@ -119,7 +119,7 @@ void intrRestoreWatchpoints(ProcessHwWatchpoints *regs, int synchronize)
 	writeDbgwcr(3, regs->reg[3].control);
 	if (synchronize)
 		isb();
-	ksceKernelSpinlockLowUnlock(&regs->lock);
+	sceKernelSpinlockLowUnlock(&regs->lock);
 }
 
 /* name unknown: suppress kernel-owned debug slots while changing context. */

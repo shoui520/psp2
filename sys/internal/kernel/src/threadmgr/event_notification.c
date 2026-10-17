@@ -5,8 +5,6 @@
 #include "event.h"
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 
 int sceKernelSetEventWithNotifyCallbackForUser(SceUID eventId, uint32_t pattern,
 					       uint32_t userDataLow, uint32_t userDataHigh,
@@ -17,7 +15,7 @@ int _sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, const
 	uint32_t values[4];
 	int ret;
 
-	ret = ksceKernelCopyFromUser(values, args, sizeof(values));
+	ret = SceSysmemForDriver_BC996A7A(values, args, sizeof(values));
 	if (ret < 0)
 		return ret;
 	return sceKernelSetEventWithNotifyCallbackForUser(eventId, pattern, values[0], values[1],

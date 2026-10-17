@@ -112,22 +112,22 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoGetstat
 	ksceIoRead
 	ksceIoClose
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelGetMemBlockBase
-	ksceKernelUnmapMemBlock
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_FFCD9B60
 	SceSysmemForKernel_0164D817
 	SceSysmemForKernel_16A54BFE
-	ksceKernelFree
-	ksceKernelAllocPartitionMemBlock
-	ksceKernelAddressSpaceUnmap
-	ksceKernelAlloc
+	SceSysmemForKernel_4233C16D
+	sceKernelAllocPartitionMemBlock
+	SceSysmemForKernel_73C38695
+	SceSysmemForKernel_85571907
 	sceKernelGetPhyMemPartInfoCore
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
 	sceKernelSetGPO
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	memset
 	strcmp
 	strncmp
@@ -135,24 +135,24 @@ set(MODULE_IMPORT_FUNCS
 	strncpy
 	__stack_chk_fail
 	strnlen
-	ksceSblQafMgrIsAllowHost0Access
-	ksceSblQafMgrIsAllowDecryptedBootConfigLoad
+	SceQafMgrForDriver_082A4FC2
+	SceQafMgrForDriver_883E9465
 	SceQafMgrForDriver_B9770A13
 	SceSblACMgrForKernel_BBA13D9C
-	SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess
-	SceSysrootForKernel_ksceSysrootIsBsodReboot
+	SceSysrootForKernel_3ACACD22
+	SceSysrootForKernel_4373AC96
 	SceSysrootForKernel_47724459
-	ksceSysrootIsManufacturingMode
-	SceSysrootForKernel_ksceSysrootIsUsbEnumWakeup
-	SceSysrootForKernel_ksceSysrootIsSafeMode
-	SceSysrootForKernel_ksceSysrootIsExternalBootMode
+	SceSysrootForKernel_55392965
+	SceSysrootForKernel_79C9AE10
+	SceSysrootForKernel_834439A7
+	SceSysrootForKernel_89D19090
 	sceKernelSysrootSetStatus
-	SceSysrootForKernel_ksceSysrootIsUpdateMode
-	ksceSysrootGetHardwareFlags
+	SceSysrootForKernel_B0E1FC67
+	SceSysrootForDriver_46E72428
 	SceSysrootForDriver_7C2C10E2
-	ksceSysrootGetHardwareInfo
-	ksceKernelInvokeInitCallback
-	ksceSblAimgrIsDolce
+	SceSysrootForDriver_930B1342
+	SceSysrootForDriver_93CD44CD
+	SceSblAIMgrForDriver_71608CA3
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

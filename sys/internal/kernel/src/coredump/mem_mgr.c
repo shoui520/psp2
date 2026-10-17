@@ -2,7 +2,7 @@
 
 #include <psp2kern/types.h>
 #include <stddef.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 
 typedef struct CoredumpLargeAllocation {
@@ -121,7 +121,7 @@ void *memMgrAlloc(SceSize size)
 		result = oalMemBlockInit(&allocation->blockId, size);
 	if (result != 0)
 		return NULL;
-	if (ksceKernelGetMemBlockBase(allocation->blockId, &allocation->base) == 0)
+	if (SceSysmemForDriver_A841EDDA(allocation->blockId, &allocation->base) == 0)
 		return allocation->base;
 	oalMemBlockFinal(largeAllocations[index].blockId);
 	largeAllocations[index].blockId = -1;

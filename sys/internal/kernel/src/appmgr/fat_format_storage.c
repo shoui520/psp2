@@ -3,7 +3,7 @@
 #include "fat_format_internal.h"
 #include <exfatfs/fat_boot.h>
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/debug.h>
+#include <sysmem/debug.h>
 #include <string.h>
 
 /* Byte stores preserve the FAT wire encoding, including unaligned members. */
@@ -24,11 +24,11 @@ int error_notification(AppmgrFatFormatArguments *const *arguments,
 {
 	int result;
 
-	ksceKernelPrintfLevel(1, "%s: sceIoWrite failed[%#x]\n", __func__, error);
+	SceDebugForDriver_1A3F2AA4(1, "%s: sceIoWrite failed[%#x]\n", __func__, error);
 	if (*notification) {
 		result = (*notification)(*arguments);
 		if (result < 0)
-			ksceKernelPrintfLevel(1,
+			SceDebugForDriver_1A3F2AA4(1,
 				"%s: return sceIoWrite error[%#x] instead of return value of notification[%#x]\n",
 				__func__, error, result);
 	}
@@ -65,7 +65,7 @@ int _prepare_FAT_PBR(AppmgrFatFormatContext *context)
 	STORE_LE32(parameters->hiddenSectors, context->startLba);
 	if (context->arguments->type == 0 || context->arguments->type > 3) {
 #if FW_DEBUG
-		ksceKernelPrintfLevel(1, "%s: unsupported type(%d)\n",
+		SceDebugForDriver_1A3F2AA4(1, "%s: unsupported type(%d)\n",
 			__func__, context->arguments->type);
 #endif
 		return (int)0x80010086;
@@ -115,7 +115,7 @@ static inline uint64_t _start_lba(AppmgrFatFormatContext *context, int index)
 	if (index == 0)
 		return 0;
 #if FW_DEBUG
-	ksceKernelPrintfLevel(1, "%s: unsupported index(%d)\n", __func__, index);
+	SceDebugForDriver_1A3F2AA4(1, "%s: unsupported index(%d)\n", __func__, index);
 #endif
 	return UINT64_MAX;
 }
@@ -135,7 +135,7 @@ int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 	seekResult = ksceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
 	if (seekResult < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevel(1, "%s: sceIoLseek failed[%#llx]\n",
+		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoLseek failed[%#llx]\n",
 			__func__, seekResult);
 #endif
 		return seekResult;
@@ -156,14 +156,14 @@ int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 			written += result;
 			if (result < 0) {
 #if FW_DEBUG
-				ksceKernelPrintfLevel(1, "%s: sceIoWrite failed[%#llx]\n",
+				SceDebugForDriver_1A3F2AA4(1, "%s: sceIoWrite failed[%#llx]\n",
 					__func__, (int64_t)result);
 #endif
 				return result;
 			}
 			if (result == 0 || (int64_t)result > length) {
 #if FW_DEBUG
-				ksceKernelPrintfLevel(1,
+				SceDebugForDriver_1A3F2AA4(1,
 					"%s: unexpected result[%#llx] of sceIoWrite\n",
 					__func__, (int64_t)result);
 #endif

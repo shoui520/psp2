@@ -27,11 +27,12 @@
 
 /* the kernel heap; the debug build calls the heap API directly */
 #if FW_DEBUG
-#define ModulemgrKernelAlloc(size)	ksceKernelAllocHeapMemoryWithOpt(0x1000b, (size), NULL)
-#define ModulemgrKernelFree(ptr)	ksceKernelFreeHeapMemory(0x1000b, (ptr))
+#define ModulemgrKernelAlloc(size)	SceSysmemForDriver_B415B5A8(0x1000b, (size), NULL, \
+						    __builtin_return_address(0))
+#define ModulemgrKernelFree(ptr)	sceKernelFreeHeapMemory(0x1000b, (ptr))
 #else
-#define ModulemgrKernelAlloc(size)	ksceKernelAlloc(size)
-#define ModulemgrKernelFree(ptr)	ksceKernelFree(ptr)
+#define ModulemgrKernelAlloc(size)	SceSysmemForKernel_85571907(size)
+#define ModulemgrKernelFree(ptr)	SceSysmemForKernel_4233C16D(ptr)
 #endif
 
 #define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
@@ -503,7 +504,7 @@ typedef struct PreloadModule {
 typedef struct ModulemgrStubInfo ModulemgrStubInfo;
 
 
-/* the process event handler (SceProcEventHandler) */
+/* the process event handler (SceKernelProcEventHandler) */
 typedef struct ModulemgrProcEvent {
 	SceSize size;			/* 0x1c */
 	void *create;

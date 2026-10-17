@@ -680,7 +680,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 		name.name = buf;
 		name.len = len;
 	}
-	newName = ksceKernelAllocHeapMemory(heap, name.len + 1);
+	newName = SceSysmemForDriver_7B4CB60A(heap, name.len + 1);
 	if (newName == NULL) {
 		vfs_path_buff_free(buf);
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -690,7 +690,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 	if (nc == NULL || dvp->core.ncache == NULL ||
 	    (dvp->core.ncache->state & NCACHE_STATE_VALID) == 0) {
 		vfs_unlock_ncache();
-		ksceKernelFreeHeapMemory(heap, newName);
+		sceKernelFreeHeapMemory(heap, newName);
 		vfs_path_buff_free(buf);
 		return SCE_ERROR_ERRNO_ENOENT;
 	}
@@ -731,7 +731,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 	set_ncache_state(nc, NCACHE_STATE_RENAMING, NCACHE_STATE_VALID);
 	vfs_unlock_ncache();
 	vfs_path_buff_free(buf);
-	ret = ksceKernelFreeHeapMemory(oldHeap, oldName);
+	ret = sceKernelFreeHeapMemory(oldHeap, oldName);
 	if (ret != 0)
 		SCE_DBG_PRINTF(0xf, 1612, "can not free memory %p ret = %d 0x%x\n", nc->name, ret,
 			       ret);
@@ -1865,7 +1865,7 @@ int vfsInitialize(void)
 		return ret;
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_vfsNcacheHeap = ksceKernelCreateHeap("SceIoVfsHeap", 0x1f000, &opt);
+	g_vfsNcacheHeap = SceSysmemForDriver_9328E0E8("SceIoVfsHeap", 0x1f000, &opt);
 	if (g_vfsNcacheHeap < 0) {
 		SCE_DBG_PRINTF(0xf, 566, "create heap failed ... %d\n", g_vfsNcacheHeap);
 		return g_vfsNcacheHeap;
@@ -1898,13 +1898,13 @@ int vfsInitialize(void)
 		SCE_DBG_PRINTF(0xf, 623, "mnt_initialize failed %d 0x%X !!\n", ret, ret);
 		return ret;
 	}
-	ret = ksceKernelRegisterSysEventHandler("SceIofilemgr", vfs_system_event_handler, NULL);
+	ret = sceKernelRegisterSysEventHandler("SceIofilemgr", vfs_system_event_handler, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 632, "sceKernelRegisterSysEventHandler failed %d 0x%X !!\n", ret,
 			       ret);
 		return ret;
 	}
-	if (ksceKernelCheckDipsw(0xd2) != 0)
+	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
 		vfs_debug_buff_initialize();
 	ret = ioerror_initialize();
 	if (ret < 0)
@@ -2959,7 +2959,7 @@ SceUID vfsDopen(IofilemgrDopenParam *param)
 		vfs_close_file(vp, fd);
 		goto release;
 	}
-	if (ksceKernelCheckDipsw(0xd2) != 0) {
+	if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 		vfs_debug_set_resolved_path(file, dirname);
 		vfs_debug_set_open_param(file, 0, 0);
 	}
@@ -3362,7 +3362,7 @@ SceUID vfsAllocateFileDummy(int flags, int isDir, const char *path)
 	file->has_flock_ent = 0;
 	file->idata = 0;
 	__builtin_memset(file->ioSchedData, 0, sizeof(file->ioSchedData));
-	if (ksceKernelCheckDipsw(0xd2) != 0)
+	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
 		vfs_debug_path_create(file, 0);
 	return fd;
 }
@@ -3379,7 +3379,7 @@ int SceIofilemgrForDriver_3A79FAC9(SceUID fd)
 		vfs_release_file(fd);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	if (ksceKernelCheckDipsw(0xd2) != 0)
+	if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
 		vfs_debug_path_free(file);
 	vfs_release_file(fd);
 	return vfs_close_file_dummy(fd);
@@ -3936,12 +3936,12 @@ void vfs_clear_sync_pending(void)
 
 void vfs_increment_io_count(void)
 {
-	ksceKernelAtomicGetAndAdd32(&g_vfsIoCount, 1);
+	SceCpuForDriver_341B6E81(&g_vfsIoCount, 1);
 }
 
 void vfs_decrement_io_count(void)
 {
-	ksceKernelAtomicGetAndAdd32(&g_vfsIoCount, -1);
+	SceCpuForDriver_341B6E81(&g_vfsIoCount, -1);
 }
 
 /* name unknown: marks the devices of every mounted external mount as gone */
@@ -3982,7 +3982,7 @@ int vfs_system_event_handler(int resume, int eventid, void *args, void *opt)
 					     NULL);
 		if (g_vfsSuspendQueryCount == 0) {
 			g_vfsSuspended++;
-			pid = ksceKernelSysrootGetShellPid();
+			pid = SceSysrootForDriver_05093E7B();
 			if (pid >= 0) {
 				num = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, NULL, 0,
 								  NULL);
@@ -4239,7 +4239,7 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 		if (!exists) {
 			if ((mode & VFS_OPEN_MODE_VALID) == 0 || (mode & VFS_OPEN_MODE_INVALID) != 0) {
 				ret = SCE_ERROR_ERRNO_EINVAL;
-				ksceKernelPrintf("#### Invalid mode !! sceIoOpen(%s, flag=0x%x, mode=0%o(0x%x)) ####\n",
+				SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoOpen(%s, flag=0x%x, mode=0%o(0x%x)) ####\n",
 						 filename, flags, mode, mode);
 				goto release_dvp;
 			}
@@ -4318,7 +4318,7 @@ open:
 		if (err < 0)
 			SCE_DBG_PRINTF(0xf, 3302, "Close failed %d 0x%x\n", err, err);
 	} else {
-		if (ksceKernelCheckDipsw(0xd2) != 0) {
+		if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 			vfs_debug_set_resolved_path(file, filename);
 			vfs_debug_set_open_param(file, flags, mode);
 		}
@@ -4381,10 +4381,10 @@ int vfsMkdir(IofilemgrMkdirParam *param)
 
 	if ((mode & VFS_OPEN_MODE_VALID) == 0 || (mode & VFS_OPEN_MODE_INVALID) != 0) {
 #if FW_DEBUG
-		ksceKernelPrintf("#### Invalid mode !! sceIoMkdir(%s, mode=0%o(0x%x)) ####\n", dir,
+		SceDebugForDriver_391B74B7("#### Invalid mode !! sceIoMkdir(%s, mode=0%o(0x%x)) ####\n", dir,
 				 mode, mode);
 #else
-		ksceKernelPrintfWithInfo(0xf, &vfsMkdirModeErrorInfo, "::0x10f::003::0%o(0x%x)\n",
+		SceDebugForDriver_02B04343(0xf, &vfsMkdirModeErrorInfo, "::0x10f::003::0%o(0x%x)\n",
 					 mode, param->mode);
 #endif
 		return SCE_ERROR_ERRNO_EINVAL;

@@ -53,7 +53,7 @@ int _sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size,
 	length = strnlen(buffer, 1024) + 1;
 	if (length >= 1024)
 		length = 1024;
-	return copyResult(ret, ksceKernelCopyToUser(value, buffer, length));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(value, buffer, length));
 }
 
 int _sceAppMgrGetMountProcessNum(unsigned int mountId, const char *mountPoint,

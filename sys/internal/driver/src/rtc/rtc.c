@@ -8,10 +8,10 @@
  * base (saved in the syscon) and to the system time.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <syscon/syscon.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -129,7 +129,7 @@ int module_start(SceSize args, void *argp)
 	g_rtc.alarmCallback = -1;
 	rtcRegisterLibcTime();
 	SceSysconForDriver_8351526D(rtcSysconAlarmHandler, NULL);
-	ksceKernelRegisterSysEventHandler("SceRtc", rtcSysEventHandler, NULL);
+	sceKernelRegisterSysEventHandler("SceRtc", rtcSysEventHandler, NULL);
 	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceRtcInit", rtcInitWork, NULL);
 	return 0;
 }
@@ -176,7 +176,7 @@ int sceRtcSynchronize(void)
 			SceRtcForDriver_CE51C2A1(&aux[i], &aux[i], -now);
 		}
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	g_rtc.rtcBase = rtcBase;
 	g_rtc.systemTimeBase = now;
 	g_rtc.tickOffset = tick;
@@ -186,7 +186,7 @@ int sceRtcSynchronize(void)
 			rtcSetAuxAlarm(i, &g_rtc.aux[i].alarmTick);
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -242,12 +242,12 @@ int ksceRtcSetConf(unsigned int dateFormat, unsigned int timeFormat, int timezon
 		return SCE_RTC_ERROR_INVALID_VALUE;
 	if (daylightSaving > 1440)
 		return SCE_RTC_ERROR_INVALID_VALUE;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	g_rtc.dateFormat = dateFormat;
 	g_rtc.timeFormat = timeFormat;
 	g_rtc.daylightSaving = daylightSaving;
 	g_rtc.timezone = timezone;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -265,7 +265,7 @@ int _sceRtcSetCurrentAuxTick(int index, const SceRtcTick *tick, int cmd)
 	now = sceKernelGetSystemTimeWide();
 	rtcBase = g_rtc.rtcBase;
 	systemTimeBase = g_rtc.systemTimeBase;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (tick == NULL) {
 		aux->flags = 0;
 		aux->rtcOffset.tick = 0;
@@ -277,7 +277,7 @@ int _sceRtcSetCurrentAuxTick(int index, const SceRtcTick *tick, int cmd)
 		aux->flags = RTC_AUX_VALID | RTC_AUX_SET;
 	}
 	offset = aux->rtcOffset.tick;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	rtcPackTick(g_rtc.auxPacked[index], offset);
 	ret = ksceSysconSendCommand(cmd, g_rtc.auxPacked[index], 5);
 	if (ret < 0) {
@@ -352,7 +352,7 @@ int sceRtcSetAlarmTick(const SceRtcTick *tick, int arg)
 		rtcLeave(context);
 		return ret;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	g_rtc.alarmArg = arg;
 	if (tick == NULL)
 		g_rtc.alarmTick.tick = 0;
@@ -363,7 +363,7 @@ int sceRtcSetAlarmTick(const SceRtcTick *tick, int arg)
 			g_rtc.alarmCallback = -1;
 	}
 	g_rtc.alarmState = 0;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	rtcLeave(context);
 	return 0;
 }
@@ -382,7 +382,7 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 	context = rtcEnter();
 	SceKernelSuspendForDriver_4DF40893(0);
 	g_rtc.alarmState = 1;
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	now = sceKernelGetSystemTimeWide();
 	g_rtc.tickOffset.tick = tick->tick - now;
 	delta = now + (g_rtc.rtcBase - g_rtc.systemTimeBase);
@@ -394,7 +394,7 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 	g_rtc.initialized = 1;
 	g_rtc.lastSetTick = *tick;
 	g_rtc.rtcBase = 0;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	ret = SceSysconForDriver_D7BEFF8B(&count);
 	if (ret < 0)
 		SCE_DBG_ASSERT_CHECK(0, 832);
@@ -440,13 +440,13 @@ int sceRtcSetCurrentTick(const SceRtcTick *tick)
 		SCE_DBG_ASSERT_CHECK(0, 932);
 		goto fail;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (g_rtc.alarmState != 1) {
 		if (ksceKernelNotifyCallback(g_rtc.alarmCallback, ksceRtcIsAlarmed()) < 0)
 			g_rtc.alarmCallback = -1;
 	}
 	g_rtc.alarmState = 0;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	SceKernelSuspendForDriver_2BB92967(0);
 	rtcLeave(context);
 	return 0;
@@ -489,7 +489,7 @@ int sceRtcSynchronizeCold(void)
 	dipsw = 0;
 	if (raw == 0) {
 		for (i = 0; i < 32; i++) {
-			if (ksceKernelCheckDipsw(i))
+			if (SceDipswForDriver_A98FC2FD(i))
 				dipsw |= 1 << i;
 		}
 		g_rtc.initialized = 0;
@@ -571,7 +571,7 @@ int sceRtcSynchronizeCold(void)
 		if (alarmRaw & 1)
 			SceRtcForDriver_CE51C2A1(&alarm, &alarm, RTC_COUNT_UNIT);
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	g_rtc.rtcBase = rtcBase;
 	g_rtc.tickOffset = offset;
 	g_rtc.systemTimeBase = now;
@@ -583,7 +583,7 @@ int sceRtcSynchronizeCold(void)
 	g_rtc.initialized = 1;
 	for (i = 0; i < RTC_AUX_CLOCKS; i++)
 		rtcSetAuxAlarm(i, &aux[i].alarmTick);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -622,7 +622,7 @@ int ksceRtcRegisterCallback(SceUID cb)
 	int ret;
 
 	context = rtcEnter();
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (g_rtc.alarmCallback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
@@ -632,7 +632,7 @@ int ksceRtcRegisterCallback(SceUID cb)
 			ret = 0;
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	rtcLeave(context);
 	return ret;
 }
@@ -791,7 +791,7 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb)
 		rtcLeave(context);
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID;	/* SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID */
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (g_rtc.aux[RTC_AUX_SECURE].callback >= 0) {
 		ret = SCE_RTC_ERROR_ALREADY_REGISTERD;
 	} else {
@@ -801,7 +801,7 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb)
 			ret = 0;
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	rtcLeave(context);
 	return ret;
 }

@@ -1,8 +1,7 @@
 #include <psp2kern/kernel/ssmgr.h>
 #include "update_internal.h"
 #include "spkg_hardware.h"
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/sblaimgr.h>
 
 int SpkgInfoUtilGetHardwareIndex(int *index)
@@ -17,7 +16,7 @@ int SpkgInfoUtilGetHardwareIndex(int *index)
 	result = ksceSblAimgrGetPscode(&pscode);
 	if (result)
 		return result;
-	if (ksceSblAimgrIsJapaneseFat()) {
+	if (SceSblAIMgrForDriver_6D5A3FC9()) {
 		hardwareIndex = 1;
 	} else {
 		hardwareIndex = 0;
@@ -54,8 +53,8 @@ int SpkgInfoUtilIsBelowMinimumVersion(int packageType, uint32_t version,
 	minimumVersion = spkgHardwarePolicies[index].minimumVersion;
 	if (minimumVersion == UINT32_MAX) {
 		minimumVersion = currentVersion;
-	} else if (ksceSblAimgrIsGenuineVITA() && ksceSblAimgrIsTool() &&
-		   ksceKernelCheckDipsw(152) && minimumVersion < 0x03000000) {
+	} else if (SceSblAIMgrForDriver_963CA644() && SceSblAIMgrForDriver_274663A0() &&
+		   SceDipswForDriver_A98FC2FD(152) && minimumVersion < 0x03000000) {
 		minimumVersion = 0x03000000;
 	}
 	return minimumVersion > version;

@@ -9,7 +9,6 @@
 #include <sysmem/uid_class.h>
 #include <string.h>
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/sysmem/uid_guid.h>
 
 /* a CAF transform's state behind a UID */
 typedef struct CafContextObject {
@@ -44,8 +43,8 @@ int sceCoredumpCafContextClassInit(void)
 {
 	int result;
 
-	result = ksceUIDClassInitClass(&cafContextClass, "SceUIDCafContextClass",
-		ksceKernelGetUIDClass(), sizeof(CafContextObject),
+	result = SceSysmemForDriver_61317102(&cafContextClass, "SceUIDCafContextClass",
+		SceSysmemForDriver_85336A1C(), sizeof(CafContextObject),
 		_cafContextConstructor, _cafContextDestructor);
 	if (result < 0)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 244);
@@ -57,7 +56,7 @@ SceUID sceCoredumpCafContextCreate(void)
 	SceObjectBase *object;
 	SceUID context;
 
-	context = ksceGUIDKernelCreate(&cafContextClass,
+	context = SceSysmemForDriver_56A13E90(&cafContextClass,
 		"SceCoredumpCafContextObject", &object);
 	if (context < 0)
 		SCE_DBG_PRINTF(11, 261, "sceGUIDKernelCreate() failed: 0x%08X\n",
@@ -69,7 +68,7 @@ int sceCoredumpCafContextDestroy(SceUID context)
 {
 	int result;
 
-	result = ksceGUIDClose(context);
+	result = sceGUIDClose(context);
 	if (result < 0)
 		SCE_DBG_PRINTF(11, 272, "sceGUIDClose(0x%08X) failed: 0x%08X\n",
 			context, result);

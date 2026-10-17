@@ -58,10 +58,10 @@ set(MODULE_IMPORT_NIDS
 	0xBC05A8FB:F:0xC0CA5DDB
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
 	memset
 	strncmp
 	strncpy

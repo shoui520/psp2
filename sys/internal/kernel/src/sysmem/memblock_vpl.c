@@ -508,12 +508,12 @@ int MemBlockVirPageListMapRaw(MemBlockObject *block, const SceKernelAllocMemBloc
 					    as->context->mmu.contextId == VplCurrentAsid()) {
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);
 					} else {
-						intr = ksceKernelCpuSuspendIntr();
+						intr = SceCpuForDriver_821FC0EE();
 						MMUContextSave(&saved);
 						AddressSpaceSwitchContext(((Partition *)block->partition)->addressSpace);
 						CacheInvalidateRangeWithPA((const void *)va, pa, size);
 						MMUContextRestore(&saved);
-						ksceKernelCpuResumeIntr(intr);
+						sceKernelCpuResumeIntr(intr);
 					}
 					UnmapVirPageWithOpt(partition, block, vp, 0);
 					block->code = code;

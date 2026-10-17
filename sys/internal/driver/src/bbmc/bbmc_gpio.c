@@ -1,6 +1,6 @@
 /* SceBbmc's reference-counted use of GPIO port 30. */
 #include <stddef.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/lowio/gpio.h>
 
 static int g_bbmcGpioUsers;
@@ -45,13 +45,13 @@ int bbmcResetGpio(void)
 /* name unknown: report the old count and assert the port for its first user. */
 int bbmcAcquireGpio(int *previous)
 {
-	ksceKernelSpinlockLowLock(&g_bbmcGpioLock);
+	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
 	if (g_bbmcGpioUsers == 0)
 		ksceGpioPortSet(0, 30);
 	if (previous != NULL)
 		*previous = g_bbmcGpioUsers;
 	g_bbmcGpioUsers++;
-	ksceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
+	sceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
 	return 0;
 }
 
@@ -60,7 +60,7 @@ int bbmcReleaseGpio(int *previous)
 {
 	int count;
 
-	ksceKernelSpinlockLowLock(&g_bbmcGpioLock);
+	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
 	count = g_bbmcGpioUsers;
 	if (previous != NULL)
 		*previous = count;
@@ -69,7 +69,7 @@ int bbmcReleaseGpio(int *previous)
 		if (count == 1)
 			ksceGpioPortClear(0, 30);
 	}
-	ksceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
+	sceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
 	return 0;
 }
 
@@ -78,8 +78,8 @@ int bbmcGetGpioUsers(void)
 {
 	int count;
 
-	ksceKernelSpinlockLowLock(&g_bbmcGpioLock);
+	SceCpuForDriver_BF82DEB2(&g_bbmcGpioLock);
 	count = g_bbmcGpioUsers;
-	ksceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
+	sceKernelSpinlockLowUnlock(&g_bbmcGpioLock);
 	return count;
 }

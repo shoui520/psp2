@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <motion/motion_dev.h>
 #include <touch/touch.h>
@@ -116,11 +116,11 @@ int SpkgInfoUtilSetVersion(int packageType, int flags, unsigned int version,
 			  int loadSm, int existingSmId);
 int UpdateUtilReleaseAllBuffers(int processId);
 int UpdateUtilGetNodeStatus(int nodeType, UpdateUtilNodeStatus *status, int lock);
-int UpdateMgrProcessCreate(SceUID pid, SceProcEventInvokeParam2 *param, int flags);
-int UpdateMgrProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int flags);
-int UpdateMgrProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int flags);
+int UpdateMgrProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags);
+int UpdateMgrProcessExit(SceUID pid, ProcEventParam *param, int flags);
+int UpdateMgrProcessKill(SceUID pid, ProcEventParam *param, int flags);
 int UpdateMgrProcessStart(SceUID pid, int eventType,
-			 SceProcEventInvokeParam1 *param, int flags);
+			 ProcEventParam *param, int flags);
 int UpdateMgrRegisterEventHandlers(void);
 int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp);
 int invalidate_prev_system_info(SceSize arglen, void *argp);

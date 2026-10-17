@@ -98,17 +98,17 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0xDEC408D4
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	kscePUIDClose
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
-	ksceKernelPanic
-	ksceKernelPrintf
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
 	memset
 	strcmp
 	strncmp
@@ -144,24 +144,24 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FD6150D5
 	SceProcessmgrForDriver_D141C076
 	ksceKernelIsGameBudget
-	ksceSha1BlockUpdate
-	ksceSha1BlockResult
-	ksceMt19937Init
-	ksceMt19937UInt
-	ksceAesEncrypt1
-	ksceAesDecrypt1
-	ksceSha1BlockInit
-	ksceAesInit1
+	SceKernelUtilsForDriver_478A6F3C
+	SceKernelUtilsForDriver_48F24106
+	SceKernelUtilsForDriver_4C9A5730
+	SceKernelUtilsForDriver_92AEDFBC
+	SceKernelUtilsForDriver_C2A61770
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_E4390FFA
+	SceKernelUtilsForDriver_F12B6451
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_E87D1777
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
 	ksceSblRngPseudoRandomNumber
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
 	SceSysrootForDriver_27D30DB2
 	SceSysrootForDriver_42FC9FFF
 	sceKernelApiDeclareTypeUInt32

@@ -39,9 +39,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelLockFastMutex
 	ksceKernelInitializeFastMutex
 	ksceKernelUnlockFastMutex
-	ksceKernelRegisterSysEventHandler
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_925D9D24
 	ksceI2cTransferWriteRead
 	ksceI2cTransferWrite

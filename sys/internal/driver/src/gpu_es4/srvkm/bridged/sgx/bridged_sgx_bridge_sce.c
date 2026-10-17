@@ -10,7 +10,7 @@
 #include <sysmem/debug.h>
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
 #include <string.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <acmgr/acmgr.h>
 
@@ -535,7 +535,7 @@ int SGXRemoveRenderTargetBW(IMG_UINT32 ui32BridgeID,
 		debugInfo = &dbg_SGXRemoveRenderTargetBW_L295;
 		hasRenderTarget = psPerProc->numRenderTargets[0] != 0;
 	}
-	ksceKernelAssert(hasRenderTarget, debugInfo, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(hasRenderTarget, debugInfo, __builtin_return_address(0));
 #endif
 	hRenderTarget = psBridgeIn->hRenderTarget;
 	if (psRTDataSet->hResItem)
@@ -1058,7 +1058,7 @@ int SGXDoKickInternal(PVRSRV_BRIDGE_IN_DOKICK *psBridgeIn,
 			return 0;
 	}
 	if (psBridgeIn->sKickTA.renderSync.pahRenderSurfSyncInfo) {
-		if (ksceKernelCopyFromUser(&hRenderSync,
+		if (SceSysmemForDriver_BC996A7A(&hRenderSync,
 				psBridgeIn->sKickTA.renderSync.pahRenderSurfSyncInfo,
 				sizeof(hRenderSync)) < 0) {
 			psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;

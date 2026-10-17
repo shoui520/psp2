@@ -3,8 +3,8 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/authmgr.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <psp2/dmac5.h>
 #include <intrmgr/syscall.h>
 
@@ -376,7 +376,7 @@ int sceSblDmac5EncDecKeyGen(SceSblDmac5EncDecParam *param, int keyId,
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
-	ret = ksceKernelCopyFromUser(&local, param, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, param, sizeof(local));
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -405,13 +405,13 @@ int sceSblDmac5EncDecKeyGen(SceSblDmac5EncDecParam *param, int keyId,
 		}
 		if (userIv == NULL)
 			goto invalid;
-		ret = ksceKernelCopyFromUser(iv, userIv, ivSize);
+		ret = SceSysmemForDriver_BC996A7A(iv, userIv, ivSize);
 		if (ret != 0) {
 			sceSyscallLeave(syscallState);
 			return ret;
 		}
 	}
-	ret = ksceKernelCopyFromUser(key, userKey, keyBits >> 3);
+	ret = SceSysmemForDriver_BC996A7A(key, userKey, keyBits >> 3);
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -425,7 +425,7 @@ int sceSblDmac5EncDecKeyGen(SceSblDmac5EncDecParam *param, int keyId,
 		key, keyBits, iv, keyId, 1, command);
 	dmac5UnlockUserBuffers(src, size, dst, size);
 	if (ret == 0 && ivSize != 0)
-		ret = ksceKernelCopyToUser(userIv, iv, ivSize);
+		ret = SceSysmemForDriver_6D88EF8A(userIv, iv, ivSize);
 	sceSyscallLeave(syscallState);
 	return ret;
 invalid:
@@ -454,7 +454,7 @@ int sceSblDmac5HmacKeyGen(SceSblDmac5HashTransformParam *param, int keyId,
 		sceSyscallLeave(syscallState);
 		return (int)0x80010058;
 	}
-	ret = ksceKernelCopyFromUser(&local, param, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, param, sizeof(local));
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -486,14 +486,14 @@ int sceSblDmac5HmacKeyGen(SceSblDmac5HashTransformParam *param, int keyId,
 		contextSize = (command & 0x38) == 0x38 ? 16 : 40;
 		if (userContext == NULL)
 			goto invalid;
-		ret = ksceKernelCopyFromUser(context, userContext, contextSize);
+		ret = SceSysmemForDriver_BC996A7A(context, userContext, contextSize);
 		if (ret != 0) {
 			sceSyscallLeave(syscallState);
 			return ret;
 		}
 	}
 	__builtin_memset(key, 0, sizeof(key));
-	ret = ksceKernelCopyFromUser(key, userKey, keyBits >> 3);
+	ret = SceSysmemForDriver_BC996A7A(key, userKey, keyBits >> 3);
 	if (ret != 0) {
 		sceSyscallLeave(syscallState);
 		return ret;
@@ -508,9 +508,9 @@ int sceSblDmac5HmacKeyGen(SceSblDmac5HashTransformParam *param, int keyId,
 	dmac5UnlockUserBuffers(src, size, dst, digestSize);
 	if (ret == 0) {
 		if (contextSize != 0)
-			ret = ksceKernelCopyToUser(userContext, context, contextSize);
+			ret = SceSysmemForDriver_6D88EF8A(userContext, context, contextSize);
 		if (ret == 0 && copyDigest)
-			ret = ksceKernelCopyToUser(dst, digest, digestSize);
+			ret = SceSysmemForDriver_6D88EF8A(dst, digest, digestSize);
 	}
 	sceSyscallLeave(syscallState);
 	return ret;

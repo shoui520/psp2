@@ -3,11 +3,11 @@
 
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/cpu/atomic.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/cpu.h>
+#include <sysmem/procevent.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/usbd.h>
 #include <psp2kern/usbserv.h>
@@ -46,7 +46,7 @@ struct RtlAdapter {
 	int references;
 	int active;
 	unsigned int rxCount;
-	SceProcEventHandler proc;
+	SceKernelProcEventHandler proc;
 	int procId;
 	unsigned int state;
 	unsigned int revision;

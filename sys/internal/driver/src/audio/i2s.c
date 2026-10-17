@@ -7,7 +7,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include "audio_regs.h"
 #include "srcmix.h"
 #include <lowio/pervasive.h>
@@ -30,7 +30,7 @@ int audioI2sInterruptHandler(int intrCode, void *userCtx)
 	SceKernelIntrStatus intr;
 
 	(void)intrCode;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
+	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
 	if (registers->interruptStatus & 2) {
 		if (audioDmaStates[2].transmitSourceMode == 0) {
 			struct AudioDmaTransfer *transfer =
@@ -42,7 +42,7 @@ int audioI2sInterruptHandler(int intrCode, void *userCtx)
 		audioI2sEnabledMask &= ~(1U << port);
 		ScePervasiveForDriver_146108D4(audioI2sClockIndex[port]);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return -1;
 }
 
@@ -84,9 +84,9 @@ int SceAudioForDriver_A8C38998(int port)
 	if ((unsigned int)port - 3 > 4)
 		return -1;
 	audioSelectedI2sPort = port;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
+	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
 	audioEnableI2s(port);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return 0;
 }
 
@@ -123,10 +123,10 @@ int audioInitializeI2s(void)
 			option.attr = 2;
 			option.paddr = audioI2sPhysicalAddress[port];
 			snprintf(name, sizeof(name), "SceI2s%dReg", port);
-			result = ksceKernelAllocMemBlock(name, 0x20100806, 4096, &option);
+			result = SceSysmemForDriver_C94850C9(name, 0x20100806, 4096, &option);
 			if (result < 0)
 				return result;
-			ksceKernelGetMemBlockBase(result, (void **)&audioI2sRegisters[port]);
+			SceSysmemForDriver_A841EDDA(result, (void **)&audioI2sRegisters[port]);
 			if (audioI2sInterrupt[port]) {
 				snprintf(name, sizeof(name), "SceI2s%d", port);
 				ksceKernelRegisterIntrHandler(audioI2sInterrupt[port], name, 0,
@@ -141,9 +141,9 @@ int audioInitializeI2s(void)
 	ScePervasiveForDriver_A1D2E440(1);
 	audioDmaCommandMode = 1;
 	audioSelectedI2sPort = 7;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
+	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
 	audioEnableI2s(7);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return 0;
 }
 
@@ -152,9 +152,9 @@ int audioEnableI2sLocked(int port)
 	SceKernelIntrStatus intr;
 	int result;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&audioI2sLock);
+	intr = SceCpuForDriver_D32ACE9E(&audioI2sLock);
 	result = audioEnableI2s(port);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&audioI2sLock, intr);
 	return result;
 }
 

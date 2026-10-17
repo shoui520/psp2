@@ -1,6 +1,6 @@
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include "sbls.h"
@@ -17,7 +17,7 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 	permission = ksceKernelSetPermission(128);
 	if (permission < 0)
 		return permission;
-	header = ksceKernelAllocHeapMemory(heapId, 4096);
+	header = SceSysmemForDriver_7B4CB60A(heapId, 4096);
 	if (!header) {
 		ksceKernelSetPermission(permission);
 		return (int)0x800f020c;
@@ -73,7 +73,7 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 	}
 	result = 0;
 cleanup:
-	ksceKernelFreeHeapMemory(heapId, header);
+	sceKernelFreeHeapMemory(heapId, header);
 	ksceIoClose(fd);
 	ksceKernelSetPermission(permission);
 	return result;

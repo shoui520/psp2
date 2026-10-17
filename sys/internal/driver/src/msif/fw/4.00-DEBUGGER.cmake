@@ -94,19 +94,19 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xCBD6D8BC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelPrintfLevelWithInfo
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_364E68A4
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_D9703808
 	memset
 	memcpy
 	__memcpy_chk
@@ -136,18 +136,18 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceKernelUnregisterSysEventHandler
-	ksceSha224Digest
-	ksceAesDecrypt1
-	ksceAesInit1
-	ksceSblAimgrIsGenuineDolce
+	sceKernelUnregisterSysEventHandler
+	SceKernelUtilsForDriver_9EA9D4DC
+	SceKernelUtilsForDriver_D8678061
+	SceKernelUtilsForDriver_F12B6451
+	SceSblAIMgrForDriver_C6E83F34
 	ksceSblSmCommStartSmFromData
 	ksceSblSmCommStopSm
 	ksceSblSmCommCallFunc
-	ksceSysrootGetSelfInfo
+	SceSysrootForKernel_F10AB792
 	ksceSblDmac5DesEcbEncWithKeyslot
 	ksceSblDmac5Rnd
 	ksceSblSsDecryptWithPortability

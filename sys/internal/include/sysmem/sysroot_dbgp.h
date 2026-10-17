@@ -41,6 +41,8 @@ typedef struct SysrootDbgpOps {
 	int (*updateUlobjmgrFlagForLibfiber)(SceUID pid, SceUInt32 *flag);
 } SysrootDbgpOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootDbgpOps) == 0x5c, "Sysroot debugger table size");
 _Static_assert(offsetof(SysrootDbgpOps, exitSpawn) == 0x18,
 	       "Sysroot debugger ExitSpawn callback offset");
+#endif

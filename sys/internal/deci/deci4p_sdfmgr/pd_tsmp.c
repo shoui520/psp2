@@ -1,5 +1,6 @@
 /* Per-core TSMP producer and transport callbacks. */
 #include "sdfmgr_internal.h"
+#include <sysmem/debug.h>
 
 typedef struct TsmpPacket {
 	DcmpHeader message;
@@ -19,7 +20,6 @@ typedef struct TsmpReceivePacket {
 _Static_assert(sizeof(TsmpReceivePacket) == 28, "TSMP received header");
 
 /* Name unknown: registers the TSMP producer with the debug services. */
-void SceDebugForKernel_78027203(void (*producer)(const void *, SceSize));
 
 #if FW_DEBUG
 #define TSMP_DEBUG_INFO(_line, _lineHash, _funcHash, _func) ({ \
@@ -128,8 +128,8 @@ void _tsmpSend(int event, void *arg, void *context)
 #endif
 	remaining = SceDeci4pSDfMgrForKernel_68903C1D(&packet.message.hdr);
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, remaining < 0x11000,
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, remaining < 0x11000,
 			TSMP_DEBUG_INFO(211, 0x4c2050cc, 0x68bd4e89, "_discardPacket"),
 			caller);
 #endif
@@ -194,15 +194,15 @@ int tsmpInit(SdfMgrProtocolState *protocol)
 		return result;
 #endif
 	}
-	if (ksceKernelCpuId() == 0)
+	if (sceKernelCpuId() == 0)
 		SceDebugForKernel_78027203(sdfMgrTsmpSend);
 	return 0;
 #if FW_DEBUG
 error:
 	SceDeci4pSDfMgrForKernel_501CE61D(15, errorInfo,
 		"SetProtocolStatus failed (0x%08x)\n", result);
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, 0, assertInfo, caller);
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, 0, assertInfo, caller);
 	return result;
 #endif
 }

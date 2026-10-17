@@ -5,8 +5,8 @@
  * back through sceSDfCtlIf2MgrEvent, which hands the data to the protocol.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/suspend.h>
@@ -185,15 +185,15 @@ int sdfctlReqSend(SceUID sock)
 {
 	int intr, ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	intr = SceCpuForDriver_D32ACE9E(&s_lock);
 	ret = sceSDfCtlExReqSend(sock);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 	if (ret < 0)
 		return ret;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	intr = SceCpuForDriver_D32ACE9E(&s_lock);
 	if (s_mgr.ifp != NULL && (s_mgr.ifp->flags & SDFCTL_IF_SEND_STARTED))
 		s_mgr.ifp->ops.poll(s_mgr.ifp);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, intr);
 	return 0;
 }
 
@@ -266,12 +266,12 @@ int sdfctlSetStatus(SceUInt32 mask, int on)
 {
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_statusLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_statusLock);
 	if (on)
 		s_mgr.status |= mask;
 	else
 		s_mgr.status &= ~mask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_statusLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_statusLock, intr);
 	return 0;
 }
 
@@ -282,7 +282,7 @@ static int sdfctlResume(void *args)
 	int cpu;
 
 	sceKernelSysrootCorelockLock(0);
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	if (cpu == 0) {
 		s_mgr.ifp->ops.start(s_mgr.ifp);
 		sdfctlSetStatus(SDFCTL_STATUS_CONNECTED, 1);
@@ -301,7 +301,7 @@ static int sdfctlSuspend(void *args)
 	int cpu;
 
 	sceKernelSysrootCorelockLock(0);
-	cpu = ksceKernelCpuId();
+	cpu = sceKernelCpuId();
 	if (cpu == 0) {
 		sdfctlSetStatus(SDFCTL_STATUS_CONNECTED, cpu);
 		sdcmpMakeStatusConnection(cpu, pkt);
@@ -316,12 +316,12 @@ int sdfctlSetProtocolStatus(SDfCtlPd *pd, SceUInt32 mask, int on)
 {
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_statusLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_statusLock);
 	if (on)
 		pd->flags |= mask;
 	else
 		pd->flags &= ~mask;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_statusLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_statusLock, intr);
 	return 0;
 }
 
@@ -504,13 +504,13 @@ int sceSDfCtlModuleStart(SceSize args, void *argp)
 	const void *lr = __builtin_return_address(0);
 	int ret;
 
-	if (!ksceKernelCheckDipsw(0xfd)) {
+	if (!SceDipswForDriver_A98FC2FD(0xfd)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 77, "[DECI] remote power control is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
-	ret = ksceKernelCheckDipsw(0xc4);
+	ret = SceDipswForDriver_A98FC2FD(0xc4);
 	if (ret != 0) {
-		ksceKernelPrintf("[DECI] remote power control is disabled (resource busy)\n");
+		SceDebugForDriver_391B74B7("[DECI] remote power control is disabled (resource busy)\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
 	sdfctlMemset(&s_mgr, 0, sizeof(s_mgr));

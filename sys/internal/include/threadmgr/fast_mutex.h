@@ -5,7 +5,7 @@
 #include <psp2kern/types.h>
 
 #include <threadmgr/fast_mutex_object.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 
 /* what ksceKernelGetFastMutexInfo gives (0x44); lockCount is Sony's name ("inf.lockCount") */
 typedef struct ThreadmgrFastMutexInfo {

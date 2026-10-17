@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 
 #define GPIO_ERROR_BANK ((int)0x803f0100)
@@ -78,14 +78,14 @@ int ksceGpioPortReset(unsigned bank, unsigned port)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	previous = base->input;
 	bit = 1U << port;
 	base->outputClear = previous & bit;
 	base->outputSet = ~previous & bit;
 	(void)base->output;
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return previous >> port & 1;
 }
 
@@ -103,13 +103,13 @@ int ksceGpioSetPortMode(unsigned bank, unsigned port, unsigned mode)
 		return GPIO_ERROR_MODE;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	previous = ctx->portMode;
 	bit = 1U << port;
 	ctx->portMode = (previous & ~bit) | (mode ^ 1U) << port;
 	base->portMode = ctx->portMode;
 	LowioDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return (previous & bit) == 0;
 }
 
@@ -136,7 +136,7 @@ int ksceGpioSetIntrMode(unsigned bank, unsigned port, unsigned mode)
 		return GPIO_ERROR_MODE;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	shift = port * 2;
 	if (port > 15) {
 		shift -= 32;
@@ -154,7 +154,7 @@ int ksceGpioSetIntrMode(unsigned bank, unsigned port, unsigned mode)
 		ctx->edgeMask &= ~bit;
 	else
 		ctx->edgeMask |= bit;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
 }
 
@@ -206,7 +206,7 @@ int ksceGpioAcquireIntr(unsigned bank, unsigned port)
 		return GPIO_ERROR_PORT;
 	ctx = &s_gpio[bank];
 	base = ctx->base;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	bit = 1U << port;
 	pending = (base->interruptStatus[0] & ctx->intrEnable[0]) |
 		(base->interruptStatus[1] & ctx->intrEnable[1]) |
@@ -221,7 +221,7 @@ int ksceGpioAcquireIntr(unsigned bank, unsigned port)
 	ret = (pending & bit) != 0;
 	(void)base->interruptStatus[4];
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return ret;
 }
 
@@ -278,14 +278,14 @@ static int GpioSetSubIntr(int intrCode, unsigned port, int enable)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	mask = (enable != 0) << port | (ctx->intrEnable[gate] & ~(1U << port));
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
 		~(mask | ctx->excludedPorts);
 	(void)intrMask[gate];
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
 }
 
@@ -299,14 +299,14 @@ static int GpioEnableSubIntr(int intrCode, unsigned port)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	mask = ctx->intrEnable[gate] | 1U << port;
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
 		~(mask | ctx->excludedPorts);
 	(void)intrMask[gate];
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
 }
 
@@ -321,14 +321,14 @@ static inline __attribute__((always_inline)) int GpioDisableSubIntr(
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	mask = ctx->intrEnable[gate] & ~(1U << port);
 	ctx->intrEnable[gate] = mask;
 	intrMask[gate] = (ctx->excludedPorts & intrMask[gate]) |
 		~(mask | ctx->excludedPorts);
 	(void)intrMask[gate];
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
 }
 
@@ -342,7 +342,7 @@ static int GpioSuspendSubIntr(int intrCode, unsigned port, uint32_t *previous)
 	if (GpioIntrContext(intrCode, &ctx, &gate) < 0)
 		return 0;
 	intrMask = ctx->base->interruptMask;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	state = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	mask = ctx->intrEnable[gate];
 	if (previous)
 		*previous = mask >> port & 1;
@@ -352,7 +352,7 @@ static int GpioSuspendSubIntr(int intrCode, unsigned port, uint32_t *previous)
 		~(mask | ctx->excludedPorts);
 	(void)intrMask[gate];
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return 0;
 }
 
@@ -364,7 +364,7 @@ static int GpioIntrHandler(int intrCode, void *arg)
 	uint32_t pending;
 	int state, gate;
 
-	state = ksceKernelCpuSuspendIntr();
+	state = SceCpuForDriver_821FC0EE();
 	if (intrCode > 0xf7) {
 		if (intrCode <= 0xfc) {
 			gate = intrCode - 0xf8;
@@ -387,14 +387,14 @@ static int GpioIntrHandler(int intrCode, void *arg)
 		status[gate] = 1U << port;
 		(void)status[gate];
 		LowioDsb();
-		ksceKernelCpuResumeIntr(state);
+		sceKernelCpuResumeIntr(state);
 		if (ksceKernelTriggerSubIntr(intrCode, port,
 			(void *)(uintptr_t)port) == -2)
 			GpioDisableSubIntr(intrCode, port);
 		return -1;
 	}
 empty:
-	ksceKernelCpuResumeIntr(state);
+	sceKernelCpuResumeIntr(state);
 	return -1;
 }
 
@@ -477,17 +477,17 @@ static __attribute__((noinline)) int GpioInit(void)
 		opt.attr = 2;
 		if (bank) {
 			opt.paddr = GPIO1_REG_BASE;
-			ret = ksceKernelAllocMemBlock("SceGpio1Reg", 0x20100806,
+			ret = SceSysmemForDriver_C94850C9("SceGpio1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
 			opt.paddr = GPIO0_REG_BASE;
-			ret = ksceKernelAllocMemBlock("SceGpio0Reg", 0x20100806,
+			ret = SceSysmemForDriver_C94850C9("SceGpio0Reg", 0x20100806,
 				0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		ctx->uid = ret;
-		ksceKernelGetMemBlockBase(ret, &base);
+		SceSysmemForDriver_A841EDDA(ret, &base);
 		ctx->base = base;
 		intr = s_gpioIntrs[bank];
 		for (gate = 0; gate < 5; gate++, intr++) {
@@ -513,7 +513,7 @@ static __attribute__((noinline)) int GpioInit(void)
 		for (gate = 0; gate < 5; gate++)
 			ksceKernelEnableIntr(ctx->intrCodes[gate]);
 	}
-	ksceKernelRegisterSysEventHandler("SceGpio", GpioSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceGpio", GpioSysEvent, NULL);
 	return 0;
 }
 

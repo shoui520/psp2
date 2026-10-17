@@ -30,19 +30,17 @@ int InitializeDebugPrintLevel(const struct SysmemBootContext *context)
 /* boot type indicator 2: no crash dumps */
 #define BOOT_NO_CRASH_DUMP		0x40
 
-typedef void (*DebugCrashDumpHandler)(int kind, SceSize size, const void *report);
-
 extern DebugCrashDumpHandler s_crashDumpHandler;
 extern int s_crashDumpEnabled;
-int ksceKernelCheckDipsw(unsigned int bit);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
 uint32_t SysrootGetBootTypeIndicator2(void);
 
 /* name unknown: the assertion level from the DIP switches, crash dumps on */
 int InitializeAssertLevel(const struct SysmemBootContext *context)
 {
-	if (ksceKernelCheckDipsw(DIPSW_ASSERT_LEVEL_2))
+	if (SceDipswForDriver_A98FC2FD(DIPSW_ASSERT_LEVEL_2))
 		s_assertLevel = 2;
-	else if (ksceKernelCheckDipsw(DIPSW_ASSERT_LEVEL_1))
+	else if (SceDipswForDriver_A98FC2FD(DIPSW_ASSERT_LEVEL_1))
 		s_assertLevel = 1;
 	s_crashDumpHandler = NULL;
 	if (!(SysrootGetBootTypeIndicator2() & BOOT_NO_CRASH_DUMP))
@@ -62,12 +60,12 @@ int SceDebugForKernel_0EDA5174(uint32_t value)
 	return 0;
 }
 
-int ksceKernelGetAssertLevel(void)
+int SceDebugForDriver_374B7868(void)
 {
 	return s_assertLevel;
 }
 
-uint32_t ksceKernelSetAssertLevel(uint32_t level)
+uint32_t SceDebugForKernel_A0CE3287(uint32_t level)
 {
 	uint32_t previous = s_assertLevel;
 
@@ -75,21 +73,21 @@ uint32_t ksceKernelSetAssertLevel(uint32_t level)
 	return previous;
 }
 
-void ksceKernelAssertLevel(SceUInt32 level, SceBool condition,
+void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool condition,
 			   const SceKernelDebugInfo *info, const void *caller)
 {
 	if ((int32_t)level <= (int32_t)s_assertLevel)
-		ksceKernelAssert(condition, info, caller);
+		SceDebugForDriver_35A35322(condition, info, caller);
 }
 
-uintptr_t ksceKernelGetDebugPutcharHandler(void)
+uintptr_t SceDebugForKernel_8D474850(void)
 {
 	if (s_debugPutcharGate)
 		return 0;
 	return s_debugPutcharHandler;
 }
 
-uintptr_t ksceKernelRegisterDebugPutcharHandler(uintptr_t handler,
+uintptr_t SceDebugForKernel_22546577(uintptr_t handler,
 					      uintptr_t argument)
 {
 	s_debugPutcharHandler = handler;

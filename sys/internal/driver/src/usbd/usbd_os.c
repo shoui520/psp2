@@ -17,13 +17,13 @@ int usbdCreateHeap(void)
 	opt.size = sizeof(opt);
 	opt.attr = HEAP_AUTO_EXTEND | HEAP_HAS_MAX_SIZE;
 	opt.maxSize = 0x80000;
-	s_heapId = ksceKernelCreateHeap("SceUsbd", 0x1000, &opt);
+	s_heapId = SceSysmemForDriver_9328E0E8("SceUsbd", 0x1000, &opt);
 	return s_heapId;
 }
 
 int usbdDeleteHeap(void)
 {
-	return ksceKernelDeleteHeap(s_heapId);
+	return sceKernelDeleteHeap(s_heapId);
 }
 
 /* 64-byte aligned, as the controllers' descriptors need */
@@ -33,12 +33,12 @@ void *usbdAlloc(SceSize size)
 
 	opt.size = sizeof(opt);
 	opt.align = 64;
-	return ksceKernelAllocHeapMemoryWithOption(s_heapId, size, &opt);
+	return SceSysmemForDriver_49D4DD9B(s_heapId, size, &opt);
 }
 
 int usbdFree(void *ptr)
 {
-	return ksceKernelFreeHeapMemory(s_heapId, ptr);
+	return sceKernelFreeHeapMemory(s_heapId, ptr);
 }
 
 SceUID usbdAllocMemBlock(SceSize size, void **base)
@@ -50,10 +50,10 @@ SceUID usbdAllocMemBlock(SceSize size, void **base)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
 	opt.alignment = 64;
-	blockId = ksceKernelAllocMemBlock("SceUsbd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	blockId = SceSysmemForDriver_C94850C9("SceUsbd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 					  size, &opt);
 	if (blockId >= 0)
-		ksceKernelGetMemBlockBase(blockId, base);
+		SceSysmemForDriver_A841EDDA(blockId, base);
 	return blockId;
 }
 
@@ -61,7 +61,7 @@ SceUIntPtr usbdVAtoPA(const void *va)
 {
 	uintptr_t pa;
 
-	ksceKernelVAtoPA(va, &pa);
+	SceSysmemForDriver_8D160E65(va, &pa);
 	return pa;
 }
 

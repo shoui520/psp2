@@ -11,7 +11,7 @@ struct malloc_segment_range {
 _Static_assert(sizeof(struct malloc_segment_range) == 8,
 	"malloc_segment_range size");
 
-/* ksceKernelGetHeapInfo */
+/* sceKernelGetHeapInfo */
 typedef struct HeapInfo {
 	SceSize size;				/* 0x70 */
 	SceUInt32 reserved;

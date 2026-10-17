@@ -1,11 +1,11 @@
 /* SblSsMgr core (Sony's ss_mgr.c): module start, sysevents, the physical
  * range helper and the syscon NVS areas other modules may read and write. */
 #include "ssmgr_internal.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/suspend.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/debug.h>
 #include <string.h>
@@ -102,7 +102,7 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	ret = ksceKernelRegisterSysEventHandler("SceSblSsMgr", SsMgrSysEventHandler, NULL);
+	ret = sceKernelRegisterSysEventHandler("SceSblSsMgr", SsMgrSysEventHandler, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -137,11 +137,11 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 	vector->ranges_size = 0;
 	vector->ranges = NULL;
 
-	ret = ksceKernelVARangeToPAVector(&range, vector);
+	ret = sceKernelVARangeToPAVector(&range, vector);
 	if (ret < 0)
 		return ret;
 
-	ranges = ksceKernelAllocHeapMemoryWithOption(heap,
+	ranges = SceSysmemForDriver_49D4DD9B(heap,
 			(vector->count * sizeof(*ranges) + 0x1f) & ~0x1f, &opt);
 	if (!ranges)
 		return SS_ERROR_NO_MEMORY;
@@ -149,7 +149,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 	vector->ranges = ranges;
 	vector->ranges_size = vector->count;
 
-	ret = ksceKernelVARangeToPAVector(&range, vector);
+	ret = sceKernelVARangeToPAVector(&range, vector);
 	if (ret < 0)
 		return ret;
 
@@ -164,7 +164,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 SS_MGR_CORE(SceSblSsMgrForDriver_C38D0CEA)
 int SceSblSsMgrForDriver_C38D0CEA(SceUID heap, SceKernelPAVector *vector)
 {
-	if (ksceKernelFreeHeapMemory(heap, vector->ranges) != 0)
+	if (sceKernelFreeHeapMemory(heap, vector->ranges) != 0)
 		return SS_ERROR_INVALID_ARGUMENT;
 	return 0;
 }
@@ -186,7 +186,7 @@ int ksceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 		return SS_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!ksceSblAimgrIsTool() && !ksceSblAimgrIsTest()) {
+	if (!SceSblAIMgrForDriver_274663A0() && !SceSblAIMgrForDriver_3B638885()) {
 		if (offset >= SS_NVS_RETAIL_END)
 			return SS_ERROR_INVALID_ARGUMENT;
 	} else if (offset >= SS_NVS_TOOL_END) {
@@ -315,11 +315,11 @@ secure:
 	__builtin_memcpy(request.iv, iv, sizeof(request.iv));
 	request.output.msg_size = request.input.msg_size;
 	{
-		SceKernelSysrootSelfInfo selfInfo;
+		struct SysrootSelfInfo selfInfo;
 
 		ksceSblSsMemset(&selfInfo, 0, sizeof(selfInfo));
 		selfInfo.size = sizeof(selfInfo);
-		ret = ksceSysrootGetSelfInfo(SCE_KERNEL_SYSROOT_SELF_INDEX_ENCDEC_W_PORTABILITY_SM,
+		ret = SceSysrootForKernel_F10AB792(SCE_KERNEL_SYSROOT_SELF_INDEX_ENCDEC_W_PORTABILITY_SM,
 					   &selfInfo);
 		if (__builtin_expect(ret < 0, 0)) {
 			ret = SS_ERROR_INVALID_ARGUMENT;
@@ -329,7 +329,7 @@ secure:
 		memcpy(&auth.request, &ssPortabilityAuthInfo, sizeof(auth.request));
 		auth.media_type = 2;
 		auth.self_type = (auth.self_type & ~15U) | 2;
-		ret = ksceSblSmCommStartSmFromData(0, selfInfo.self_data, selfInfo.self_size,
+		ret = ksceSblSmCommStartSmFromData(0, selfInfo.selfData, selfInfo.selfSize,
 						0, &auth, &id);
 	}
 	if (ret != 0)

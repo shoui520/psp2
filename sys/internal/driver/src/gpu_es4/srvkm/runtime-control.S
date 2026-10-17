@@ -135,7 +135,7 @@ GpuServicePairTryAcquire:
 	mov r5, r1
 	movs r1, #0
 	mov r4, r0
-	bl ksceKernelAtomicCompareAndSet32
+	bl SceCpuForDriver_CDA96E81
 	cbnz r0, .LGpuServicePairTryAcquire14
 	str r5, [r4, #4]
 	pop {r3, r4, r5, pc}

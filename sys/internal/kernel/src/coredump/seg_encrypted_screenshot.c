@@ -1,7 +1,7 @@
 /* SYSTEM_INFO2 screenshot-file payload. */
 
 #include <string.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <appmgr/appmgr_debugger.h>
 #include <sysmem/debug.h>
 #include "writer_internal.h"
@@ -202,7 +202,7 @@ int writeFrameBuffers(SceUID pid)
 					rowSize = frames[i].width * 4;
 					while (rowSize != 0) {
 						size = rowSize < sizeof(data) ? rowSize : sizeof(data);
-						if (ksceKernelCopyFromUserProc(framePid, data,
+						if (sceKernelCopyFromUserProc(framePid, data,
 						    source, size) < 0)
 							goto gzipFinal;
 						rowSize -= size;

@@ -71,7 +71,7 @@ openComplete:
 			if (ret >= 0) {
 				SCE_DBG_ASSERT(ret > 256, 1430);
 				if (req->processId != 0x10005)
-					req->args.open.result = kscePUIDOpenByGUID(req->processId,
+					req->args.open.result = SceSysmemForDriver_BF209859(req->processId,
 									 req->args.open.result);
 				ret = req->args.open.result;
 			}
@@ -83,7 +83,7 @@ openComplete:
 		IofilemgrCloseParam param;
 
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			ret = kscePUIDtoGUID(req->processId, req->args.fd.fd);
+			ret = SceSysmemForDriver_45D22597(req->processId, req->args.fd.fd);
 			param.fd = ret;
 			if (ret < 0)
 				goto closeComplete;
@@ -114,7 +114,7 @@ closeComplete:
 		result = ret;
 closePuid:
 		if (req->fromUser == 1) {
-			closed = kscePUIDClose(req->processId, req->args.fd.fd);
+			closed = SceSysmemForDriver_84A4AF5E(req->processId, req->args.fd.fd);
 			SCE_DBG_ASSERT(closed == 0, 1479);
 		}
 closeResult:
@@ -186,7 +186,7 @@ closeBadFd:
 			if (ret >= 0) {
 				SCE_DBG_ASSERT(ret > 256, 1592);
 				if (req->processId != 0x10005)
-					req->args.path.result = kscePUIDOpenByGUID(req->processId,
+					req->args.path.result = SceSysmemForDriver_BF209859(req->processId,
 									 req->args.path.result);
 				ret = req->args.path.result;
 			}
@@ -198,7 +198,7 @@ closeBadFd:
 		IofilemgrDcloseParam param;
 
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			ret = kscePUIDtoGUID(req->processId, req->args.fd.fd);
+			ret = SceSysmemForDriver_45D22597(req->processId, req->args.fd.fd);
 			param.fd = ret;
 			if (ret < 0)
 				goto dcloseComplete;
@@ -212,7 +212,7 @@ closeBadFd:
 dcloseComplete:
 		if (req->isAsync == 1) {
 			if (ret != SCE_ERROR_ERRNO_EBADF && req->fromUser == 1) {
-				closed = kscePUIDClose(req->processId, req->args.fd.fd);
+				closed = SceSysmemForDriver_84A4AF5E(req->processId, req->args.fd.fd);
 				SCE_DBG_ASSERT(closed == 0, 1635);
 			}
 			req->asyncResult = ret;
@@ -224,7 +224,7 @@ dcloseComplete:
 
 		param.fd = req->args.dread.fd;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.dir = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoDirent));
+			param.dir = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoDirent));
 			if (param.dir == NULL) {
 				req->args.dread.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -238,9 +238,9 @@ dcloseComplete:
 			req->asyncResult = req->args.dread.result;
 			if (req->fromUser == 1) {
 				if (req->args.dread.result > 0)
-					ksceKernelCopyToUserProc(req->pid, req->args.dread.dir,
+					sceKernelCopyToUserProc(req->pid, req->args.dread.dir,
 							       param.dir, sizeof(SceIoDirent));
-				ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, param.dir);
+				ret = sceKernelFreeHeapMemory(g_ioSchedHeap, param.dir);
 				SCE_DBG_ASSERT(ret == 0, 1683);
 			}
 		}
@@ -304,7 +304,7 @@ dcloseComplete:
 		if (req->isAsync == 1) {
 			req->asyncResult = ret;
 			if (req->fromUser == 1) {
-				ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, req->args.chstat.stat);
+				ret = sceKernelFreeHeapMemory(g_ioSchedHeap, req->args.chstat.stat);
 				SCE_DBG_ASSERT(ret == 0, 1783);
 			}
 			ret = sceIoAsyncFreePath(req->args.chstat.path);
@@ -330,7 +330,7 @@ dcloseComplete:
 		if (req->isAsync == 1) {
 			req->asyncResult = ret;
 			if (req->fromUser == 1) {
-				ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, req->args.chstatByFd.stat);
+				ret = sceKernelFreeHeapMemory(g_ioSchedHeap, req->args.chstatByFd.stat);
 				SCE_DBG_ASSERT(ret == 0, 1829);
 			}
 		}
@@ -341,7 +341,7 @@ dcloseComplete:
 
 		param.file = req->args.getstat.path;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.stat = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoStat));
+			param.stat = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoStat));
 			if (param.stat == NULL) {
 				req->args.getstat.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -358,9 +358,9 @@ dcloseComplete:
 			SCE_DBG_ASSERT(closed == 0, 1859);
 			if (req->fromUser == 1) {
 				if (ret >= 0)
-					ksceKernelCopyToUserProc(req->pid, req->args.getstat.stat,
+					sceKernelCopyToUserProc(req->pid, req->args.getstat.stat,
 							       param.stat, sizeof(SceIoStat));
-				ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, param.stat);
+				ret = sceKernelFreeHeapMemory(g_ioSchedHeap, param.stat);
 				SCE_DBG_ASSERT(ret == 0, 1874);
 			}
 		}
@@ -371,7 +371,7 @@ dcloseComplete:
 
 		param.fd = req->args.getstatByFd.fd;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.stat = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoStat));
+			param.stat = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoStat));
 			if (param.stat == NULL) {
 				req->args.getstatByFd.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -384,9 +384,9 @@ dcloseComplete:
 			req->asyncResult = req->args.getstatByFd.result;
 			if (req->fromUser == 1) {
 				if (req->args.getstatByFd.result >= 0)
-					ksceKernelCopyToUserProc(req->pid, req->args.getstatByFd.stat,
+					sceKernelCopyToUserProc(req->pid, req->args.getstatByFd.stat,
 							       param.stat, sizeof(SceIoStat));
-				ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, param.stat);
+				ret = sceKernelFreeHeapMemory(g_ioSchedHeap, param.stat);
 				SCE_DBG_ASSERT(ret == 0, 1916);
 			}
 		}
@@ -463,16 +463,16 @@ dcloseComplete:
 		SCE_DBG_ASSERT((unsigned int)priority <= 15 || priority == (int)0x80000000, 2021);
 		req->args.path.result = sceIoDopenInternal(req->args.path.path);
 		if (req->args.path.result > 0)
-			req->args.path.result = kscePUIDOpenByGUID(req->processId, req->args.path.result);
+			req->args.path.result = SceSysmemForDriver_BF209859(req->processId, req->args.path.result);
 		ret = setThreadIoPriority(priority);
 		SCE_DBG_ASSERT(ret == 0, 2033);
 		req->asyncResult = req->args.path.result;
-		ret = ksceKernelFreeHeapMemory(g_ioVfsHeapUid, (void *)req->args.path.path);
+		ret = sceKernelFreeHeapMemory(g_ioVfsHeapUid, (void *)req->args.path.path);
 		SCE_DBG_ASSERT(ret == 0, 2044);
 		getIofilemgrTls()->inAsyncCall = 0;
 		break;
 	case IO_REQUEST_DREAD_ASYNC: {
-		SceIoDirent *dir = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoDirent));
+		SceIoDirent *dir = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoDirent));
 
 		if (dir == NULL) {
 			req->args.dread.result = SCE_ERROR_ERRNO_ENOMEM;
@@ -480,22 +480,22 @@ dcloseComplete:
 		}
 		getIofilemgrTls()->inAsyncCall = 1;
 		req->args.dread.result = sceIoDreadInternal(
-			kscePUIDtoGUID(req->processId, req->args.dread.fd), dir);
-		ret = ksceKernelCopyToUserProc(req->pid, req->args.dread.dir, dir, sizeof(*dir));
+			SceSysmemForDriver_45D22597(req->processId, req->args.dread.fd), dir);
+		ret = sceKernelCopyToUserProc(req->pid, req->args.dread.dir, dir, sizeof(*dir));
 		SCE_DBG_ASSERT(ret == 0, 2092);
 		req->asyncResult = req->args.dread.result;
 		getIofilemgrTls()->inAsyncCall = 0;
-		ret = ksceKernelFreeHeapMemory(g_ioVfsHeapUid, dir);
+		ret = sceKernelFreeHeapMemory(g_ioVfsHeapUid, dir);
 		SCE_DBG_ASSERT(ret == 0, 2105);
 		break;
 	}
 	case IO_REQUEST_DCLOSE_ASYNC:
 		getIofilemgrTls()->inAsyncCall = 1;
-		ret = sceIoDcloseInternal(kscePUIDtoGUID(req->processId, req->args.fd.fd));
+		ret = sceIoDcloseInternal(SceSysmemForDriver_45D22597(req->processId, req->args.fd.fd));
 		req->args.fd.result = ret;
 		req->asyncResult = ret;
 		if (ret != SCE_ERROR_ERRNO_EBADF) {
-			ret = kscePUIDClose(req->processId, req->args.fd.fd);
+			ret = SceSysmemForDriver_84A4AF5E(req->processId, req->args.fd.fd);
 			SCE_DBG_ASSERT(ret == 0, 2066);
 		}
 		getIofilemgrTls()->inAsyncCall = 0;
@@ -618,7 +618,7 @@ int sceIoSchedulerCompleteAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 			param.result = req->asyncResult;
 			param.priority = req->asyncPriority;
 			param.completionStatus = 0;
-			ret = ksceKernelCopyToUserProc(req->pid, asyncParam, &param, sizeof(param));
+			ret = sceKernelCopyToUserProc(req->pid, asyncParam, &param, sizeof(param));
 			if (ret < 0)
 				SCE_DBG_ASSERT(0, 1321);
 			asyncParam = req->asyncParam;
@@ -642,7 +642,7 @@ int sceIoSchedulerCompleteIoRequest(IoScheduler *sched, IoRequest *req)
 	SCE_DBG_ASSERT(req->isRunning == 0, 1218);
 	SCE_DBG_ASSERT((unsigned int)req->priority <= 15, 1220);
 	if (req->chunkPool.base != NULL) {
-		ret = ksceKernelFreeHeapMemory(g_ioSchedHeap, req->chunkPool.base);
+		ret = sceKernelFreeHeapMemory(g_ioSchedHeap, req->chunkPool.base);
 		SCE_DBG_ASSERT(ret == 0, 1225);
 	}
 	if (req->isAsync == 1)
@@ -754,7 +754,7 @@ IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 	IoSchedulerWorker *worker;
 	int i, type, ret;
 
-	sched = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*sched));
+	sched = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*sched));
 	if (sched == NULL)
 		return NULL;
 	memset(sched, 0, sizeof(*sched));
@@ -814,7 +814,7 @@ deleteCond:
 deleteMutex:
 	ksceKernelDeleteMutex(sched->mutex);
 free:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, sched);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, sched);
 	return NULL;
 }
 
@@ -946,7 +946,7 @@ int sceIoSchedulerAddIoRequest(IoScheduler *sched, IoRequest *req)
 		ret = sceIoSchedulerNeedsIoChunks(sched, req);
 		priority = req->priority;
 		if (ret == 1) {
-			ret = ksceKernelCheckDipsw(0xe7);
+			ret = SceDipswForDriver_A98FC2FD(0xe7);
 			priority = req->priority;
 			if (ret == 0) {
 				if (priority > 10 && (req->cacheFlags != 0 || req->isWrite == 1))

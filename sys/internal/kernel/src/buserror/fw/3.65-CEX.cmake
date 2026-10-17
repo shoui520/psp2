@@ -32,14 +32,14 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_CE7A2207
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableIntr
-	ksceSysrootGetSysroot
+	SceSysrootForKernel_3E455842
 	SceSysrootForKernel_82FC6405
 	SceSysrootForKernel_B27B7530
-	ksceKernelSysrootGetSharedMemory
-	ksceKernelEnableCrashDump
+	SceSysrootForKernel_C8C8C321
+	SceDebugForKernel_A465A31A
 	memcpy
-	ksceKernelCpuId
-	ksceKernelGetTtyInfo
+	sceKernelCpuId
+	SceDebugForDriver_62466B0A
 )
 set(MODULE_IMPORT_VARS
 )

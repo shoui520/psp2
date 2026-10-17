@@ -148,18 +148,18 @@ set(MODULE_IMPORT_NIDS
 	0xB2223AEB:F:0x16DDF3DC
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelDcacheCleanRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceCpuForDriver_103872A5
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	SceKernelSuspendForDriver_2BB92967
-	ksceKernelPowerTick
-	ksceKernelSysrootGetSystemSwVersion
+	SceKernelSuspendForDriver_E0489831
+	SceSysrootForDriver_67AAB627
 	memset
 	strncmp
 	__aeabi_idiv

@@ -82,7 +82,7 @@ int seqStartNetIF(BbmcControl *control, BbmcMessage *message)
 			gBbmcStartNetIfState = 0;
 			return 0;
 		default:
-			ksceKernelPanic(&dbg_seqStartNetIF_L161,
+			SceDebugForDriver_391B5B74(&dbg_seqStartNetIF_L161,
 					__builtin_return_address(0));
 		}
 	}

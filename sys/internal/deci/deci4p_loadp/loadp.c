@@ -4,14 +4,13 @@
 #include <sysmem/sysroot.h>
 #include <appmgr/appmgr_launch.h>
 #include <psp2kern/appmgr.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/registrymgr.h>
 #include <stdio.h>
 #include <string.h>
@@ -315,18 +314,18 @@ static inline int isKernelPid(SceUID pid)
 
 static inline void lockFlags(SceUInt32 set, SceUInt32 clear)
 {
-	SceKernelIntrStatus s = ksceKernelSpinlockLowLockCpuSuspendIntr(&loadp.lock);
+	SceKernelIntrStatus s = SceCpuForDriver_D32ACE9E(&loadp.lock);
 
 	loadp.flags = (loadp.flags & ~clear) | set;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
 }
 
 /* ===== the send queue ===== */
 
 static void loadpFreeSendBuf(LoadpSendBuf *buf)
 {
-	ksceKernelFreeHeapMemory(loadp.heap, buf->mem);
-	ksceKernelFreeHeapMemory(loadp.heap, buf);
+	sceKernelFreeHeapMemory(loadp.heap, buf->mem);
+	sceKernelFreeHeapMemory(loadp.heap, buf);
 }
 
 /* the size of a new packet, its header set */
@@ -345,16 +344,16 @@ static __attribute__((noinline)) SceSize loadpInitPacket(void *packet, SceSize s
 
 LoadpSendBuf *pdLoadpAllocSendBuf(void)
 {
-	LoadpSendBuf *buf = ksceKernelAllocHeapMemory(loadp.heap, sizeof(*buf));
+	LoadpSendBuf *buf = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*buf));
 	void *mem;
 
 	if (buf == NULL)
 		SCE_PANIC(1048);
 	memset(buf, 0, sizeof(*buf));
-	mem = ksceKernelAllocHeapMemory(loadp.heap, LOADP_SEND_BUF_SIZE);
+	mem = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_SEND_BUF_SIZE);
 	buf->mem = mem;
 	if (mem == NULL) {
-		ksceKernelFreeHeapMemory(loadp.heap, buf);
+		sceKernelFreeHeapMemory(loadp.heap, buf);
 		return NULL;
 	}
 	memset(mem, 0, LOADP_SEND_BUF_SIZE);
@@ -392,8 +391,8 @@ int pdLoadpReqSend(LoadpContext *ctx, LoadpSendBuf *buf)
 	if (++ctx->sendCount > LOADP_SEND_QUEUE_MAX) {
 		for (p = ctx->sendHead; p != NULL; p = next) {
 			next = p->next;
-			ksceKernelFreeHeapMemory(loadp.heap, p->mem);
-			ksceKernelFreeHeapMemory(loadp.heap, p);
+			sceKernelFreeHeapMemory(loadp.heap, p->mem);
+			sceKernelFreeHeapMemory(loadp.heap, p);
 		}
 		ctx->sendHead = NULL;
 		ctx->sendCount = 0;
@@ -546,7 +545,7 @@ static SceUInt32 pdLoadpKernelErrToLoadpErr(int error)
 	case SCE_ERROR_ERRNO_EEXIST:
 		return LOADP_RESULT_EXISTS;
 	default:
-		ksceKernelPrintf("*** load error happened: 0x%08x ***\n", error);
+		SceDebugForDriver_391B74B7("*** load error happened: 0x%08x ***\n", error);
 		return LOADP_RESULT_UNKNOWN_ERROR;
 	}
 }
@@ -879,8 +878,8 @@ static inline void pdLoadpCleanSendDoneMsgQueue(void)
 		SCE_PANIC(1114);
 	for (buf = loadp.doneList; buf != NULL; buf = next) {
 		next = buf->next;
-		ksceKernelFreeHeapMemory(loadp.heap, buf->mem);
-		ksceKernelFreeHeapMemory(loadp.heap, buf);
+		sceKernelFreeHeapMemory(loadp.heap, buf->mem);
+		sceKernelFreeHeapMemory(loadp.heap, buf);
 	}
 	loadp.doneList = NULL;
 	if (ksceKernelUnlockMutex(loadp.mutex, 1) < 0)
@@ -983,8 +982,8 @@ static int pdLoadpHandler(int event, void *arg, void *ctxp)
 /* whether a program may come from where the path says */
 static inline int pathAllowed(const char *path)
 {
-	return SceSysrootForDriver_ksceSysrootIsManufacturingMode() || SceQafMgrForDriver_B9770A13() ||
-	       ksceSblQafMgrIsAllowHost0Access() || strncmp("host0:", path, 6) == 0 ||
+	return SceSysrootForDriver_55392965() || SceQafMgrForDriver_B9770A13() ||
+	       SceQafMgrForDriver_082A4FC2() || strncmp("host0:", path, 6) == 0 ||
 	       strncmp("ux0:data/", path, 9) == 0 || strncmp("sd0:", path, 4) == 0;
 }
 
@@ -1047,7 +1046,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	r->reserved1 = 0;
 	r->reserved2 = -1;
 	r->mainThread = ksceKernelGetUserThreadId(ksceKernelGetProcessMainThread(pid));
-	info = ksceKernelAllocHeapMemory(loadp.heap, sizeof(*info));
+	info = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*info));
 	if (info == NULL) {
 		*result = LOADP_RESULT_NO_MEMORY;
 		goto free_buf;
@@ -1074,13 +1073,13 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	if (launchParam != NULL) {
 		ret = ksceKernelWaitSema(loadp.sema, 1, NULL);
 		if (ret < 0)
-			ksceKernelPrintfWithInfo(0xf, SCE_DBGINFO_FUNC(3948, "pdLoadpProcSpawnCmd"),
+			SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(3948, "pdLoadpProcSpawnCmd"),
 						 "0x%08x\n", ret);
 		if (loadpAppResult != 0) {
 			ret = ksceAppMgrKillProcess(pid);
 #if FW_DEBUG
 			if (ret < 0)
-				ksceKernelPrintfLevelWithInfo(1, 0xf,
+				SceDebugForDriver_D9703808(1, 0xf,
 							      SCE_DBGINFO_FUNC(3956, "pdLoadpProcSpawnCmd"),
 							      "sceAppMgrKillAppForDebugger failed 0x%08x\n", ret);
 #endif
@@ -1089,15 +1088,15 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 		}
 	}
 	if (pdLoadpReqSend(LOADP_CONTEXT_ARG buf) >= 0) {
-		ksceKernelFreeHeapMemory(loadp.heap, info);
+		sceKernelFreeHeapMemory(loadp.heap, info);
 		return 0;
 	}
 	*result = 0;
 free_info:
-	ksceKernelFreeHeapMemory(loadp.heap, info);
+	sceKernelFreeHeapMemory(loadp.heap, info);
 free_buf:
-	ksceKernelFreeHeapMemory(loadp.heap, buf->mem);
-	ksceKernelFreeHeapMemory(loadp.heap, buf);
+	sceKernelFreeHeapMemory(loadp.heap, buf->mem);
+	sceKernelFreeHeapMemory(loadp.heap, buf);
 	return -1;
 }
 
@@ -1164,7 +1163,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	}
 
 	if (setupper) {
-		path = ksceKernelAllocHeapMemory(loadp.heap, sizeof(LOADP_CUI_SETUPPER));
+		path = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(LOADP_CUI_SETUPPER));
 		if (path == NULL) {
 			result = LOADP_RESULT_NO_MEMORY;
 			goto reply;
@@ -1175,7 +1174,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		pathSize = sizeof(LOADP_CUI_SETUPPER);
 	}
 	size = pathSize + total;
-	argBuf = ksceKernelAllocHeapMemory(loadp.heap, size);
+	argBuf = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
 	if (argBuf == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto free_path;
@@ -1209,8 +1208,8 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	param.stackSize = stackSize;
 
 	if (launchParam == NULL) {
-		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode() && !SceQafMgrForDriver_B9770A13() &&
-		    !ksceSblQafMgrIsAllowHost0Access()) {
+		if (!SceSysrootForDriver_55392965() && !SceQafMgrForDriver_B9770A13() &&
+		    !SceQafMgrForDriver_082A4FC2()) {
 			result = pdLoadpKernelErrToLoadpErr(SCE_ERROR_ERRNO_ENOSYS);
 			goto free_args;
 		}
@@ -1256,17 +1255,17 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		loadpNotifyProcessCreate(-1, pid, time);
 		if (debug)
 			SceSysrootForDriver_F4340469(-1, pid, time);
-		ksceKernelFreeHeapMemory(loadp.heap, argBuf);
+		sceKernelFreeHeapMemory(loadp.heap, argBuf);
 		if (setupper)
-			ksceKernelFreeHeapMemory(loadp.heap, path);
+			sceKernelFreeHeapMemory(loadp.heap, path);
 		return;
 	}
 
 free_args:
-	ksceKernelFreeHeapMemory(loadp.heap, argBuf);
+	sceKernelFreeHeapMemory(loadp.heap, argBuf);
 free_path:
 	if (setupper)
-		ksceKernelFreeHeapMemory(loadp.heap, path);
+		sceKernelFreeHeapMemory(loadp.heap, path);
 	goto reply;
 bad_packet:
 	result = LOADP_RESULT_BAD_PACKET;
@@ -1586,7 +1585,7 @@ static inline void sendModuleReply(SceUInt8 cmd, SceUID pid, SceUID modid, int *
 /* the module's GUID in the process */
 static inline SceUID moduleUid(SceUID target, SceUID modid, int kernel, SceUInt32 *result)
 {
-	SceUID uid = kernel ? modid : kscePUIDtoGUID(target, modid);
+	SceUID uid = kernel ? modid : SceSysmemForDriver_45D22597(target, modid);
 
 	if (uid == (SceUID)SCE_KERNEL_ERROR_INVALID_PID)
 		*result = pdLoadpKernelErrToLoadpErr(SCE_KERNEL_ERROR_INVALID_PID);
@@ -1805,7 +1804,7 @@ reply:
 	memset(&param, 0, sizeof(param));						\
 	param.size = sizeof(param);							\
 	param.flags = 0x80000000;							\
-	info = ksceKernelAllocHeapMemory(loadp.heap, LOADP_LAUNCH_INFO_SIZE);		\
+	info = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_LAUNCH_INFO_SIZE);		\
 	if (info == NULL) {								\
 		result = LOADP_RESULT_NO_MEMORY;					\
 		goto free_args;								\
@@ -1848,10 +1847,10 @@ reply:
 	ret = pdLoadpReqSend(LOADP_CONTEXT_ARG buf);							\
 	if (ret >= 0) {									\
 		loadpNotifyProcessCreate(-1, pid, sceKernelGetSystemTimeWide());	\
-		ret = ksceKernelFreeHeapMemory(loadp.heap, info);			\
+		ret = sceKernelFreeHeapMemory(loadp.heap, info);			\
 		if (ret < 0)								\
 			SCE_PRINTF_WITH_INFO(0xf, _lFreeInfo1, "0x%08x\n", ret);	\
-		ret = ksceKernelFreeHeapMemory(loadp.heap, _args);			\
+		ret = sceKernelFreeHeapMemory(loadp.heap, _args);			\
 		if (ret < 0)								\
 			SCE_PRINTF_WITH_INFO(0xf, _lFreeArgs1, "0x%08x\n", ret);	\
 		return;									\
@@ -1860,11 +1859,11 @@ reply:
 	loadpFreeSendBuf(buf);								\
 	result = 0;									\
 free_info:										\
-	ret = ksceKernelFreeHeapMemory(loadp.heap, info);				\
+	ret = sceKernelFreeHeapMemory(loadp.heap, info);				\
 	if (ret < 0)									\
 		SCE_PRINTF_WITH_INFO(0xf, _lFreeInfo2, "0x%08x\n", ret);		\
 free_args:										\
-	ret = ksceKernelFreeHeapMemory(loadp.heap, _args);				\
+	ret = sceKernelFreeHeapMemory(loadp.heap, _args);				\
 	if (ret < 0)									\
 		SCE_PRINTF_WITH_INFO(0xf, _lFreeArgs2, "0x%08x\n", ret);		\
 } while (0)
@@ -1896,7 +1895,7 @@ static inline __attribute__((always_inline)) void pdLoadpPackageInstallerSpawnCm
 	}
 	req->path[req->size - 1] = '\0';
 	size = req->size + 0x2a;
-	args = ksceKernelAllocHeapMemory(loadp.heap, size);
+	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -1927,7 +1926,7 @@ static inline __attribute__((always_inline)) void pdLoadpPackageUninstallerSpawn
 	}
 	req->path[req->size - 1] = '\0';
 	size = req->size + 0x35;
-	args = ksceKernelAllocHeapMemory(loadp.heap, size);
+	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -1951,7 +1950,7 @@ static inline __attribute__((always_inline)) void pdLoadpBtPairingAppSpawnCmd(vo
 		result = LOADP_RESULT_BAD_PACKET;
 		goto reply;
 	}
-	if (!ksceSblAimgrIsDolce()) {
+	if (!SceSblAIMgrForDriver_71608CA3()) {
 		result = LOADP_RESULT_NOT_DOLCE;
 		goto reply;
 	}
@@ -1960,7 +1959,7 @@ static inline __attribute__((always_inline)) void pdLoadpBtPairingAppSpawnCmd(vo
 		result = LOADP_RESULT_BUSY;
 		goto reply;
 	}
-	args = ksceKernelAllocHeapMemory(loadp.heap, sizeof(LOADP_DS4_PAIRING_SELF));
+	args = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(LOADP_DS4_PAIRING_SELF));
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2018,7 +2017,7 @@ static inline __attribute__((always_inline)) void pdLoadpSaveDataInstallerSpawnC
 		result = LOADP_RESULT_INVALID_ARG;
 		goto reply;
 	}
-	args = ksceKernelAllocHeapMemory(loadp.heap, size);
+	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2098,7 +2097,7 @@ static inline __attribute__((always_inline)) void pdLoadpSaveDataFormatterSpawnC
 		titleId = req->path;
 		req->path[9] = '\0';
 	}
-	args = ksceKernelAllocHeapMemory(loadp.heap, size);
+	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2220,9 +2219,9 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!ksceKernelCheckDipsw(LOADP_DIPSW)) {
+	if (!SceDipswForDriver_A98FC2FD(LOADP_DIPSW)) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0xb, SCE_DBGINFO_FUNC(274, "LoadpModuleStart"),
+		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(274, "LoadpModuleStart"),
 					      "disabled by dipsw\n");
 #endif
 		return SCE_KERNEL_START_NO_RESIDENT;
@@ -2254,11 +2253,11 @@ int module_start(SceSize args, void *argp)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.attr = 0x401;
 	heapOpt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	ret = ksceKernelCreateHeap("SceDeci4pLoadp", 0x20000, &heapOpt);
+	ret = SceSysmemForDriver_9328E0E8("SceDeci4pLoadp", 0x20000, &heapOpt);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.heap = ret;
-	loadp.recvBuf = ksceKernelAllocHeapMemory(loadp.heap, LOADP_RECV_BUF_SIZE);
+	loadp.recvBuf = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_RECV_BUF_SIZE);
 	if (loadp.recvBuf == NULL)
 		return SCE_KERNEL_START_FAILED;
 	memset(loadp.recvBuf, 0, LOADP_RECV_BUF_SIZE);
@@ -2274,7 +2273,7 @@ int module_start(SceSize args, void *argp)
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	strncpy(protocol.name, "LOADP", sizeof(protocol.name));
-	if (!ksceKernelCheckDipsw(LOADP_DIPSW_NO_AUTO_ENABLE))
+	if (!SceDipswForDriver_A98FC2FD(LOADP_DIPSW_NO_AUTO_ENABLE))
 		protocol.flags |= DFMGR_PROTOCOL_USB;
 	else
 		protocol.flags |= DFMGR_PROTOCOL_SDIO;
@@ -2288,10 +2287,10 @@ int module_start(SceSize args, void *argp)
 	loadp.appPid = -1;
 	loadp.appCmd = 0;
 	loadp.sema = ret;
-	ksceKernelSysrootSetProcessHandler((const SceSysrootProcessHandler *)&loadpProcessHandler);
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&loadp.lock);
+	SceSysrootForDriver_0F07C3FC((const SysrootProcessEventOps *)&loadpProcessHandler);
+	s = SceCpuForDriver_D32ACE9E(&loadp.lock);
 	loadp.flags |= LOADP_FLAG_ENABLED;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&loadp.lock, s);
 	return SCE_KERNEL_START_SUCCESS;
 }
 
@@ -2360,7 +2359,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	int flags, option1, option2;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&p, param, sizeof(p));
+	ret = SceSysmemForDriver_BC996A7A(&p, param, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
@@ -2370,7 +2369,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	data = p.data;
 	if (path != NULL) {
 		kpath = alloca(0x124);
-		ret = ksceKernelStrncpyFromUser(kpath, path, 0x124);
+		ret = SceSysmemForDriver_DB3EC244(kpath, path, 0x124);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x124 && ((signed char *)kpath)[0x123] != '\0')
@@ -2378,7 +2377,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (titleId != NULL) {
 		ktitleId = alloca(0x20);
-		ret = ksceKernelStrncpyFromUser(ktitleId, titleId, 0x20);
+		ret = SceSysmemForDriver_DB3EC244(ktitleId, titleId, 0x20);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x20 && ((signed char *)ktitleId)[0x1f] != '\0')
@@ -2386,7 +2385,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (args != NULL) {
 		kargs = alloca(0x400);
-		ret = ksceKernelStrncpyFromUser(kargs, args, 0x400);
+		ret = SceSysmemForDriver_DB3EC244(kargs, args, 0x400);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x400 && ((signed char *)kargs)[0x3ff] != '\0')
@@ -2394,7 +2393,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (data != NULL) {
 		kdata = alloca(0x80);
-		ret = ksceKernelCopyFromUser(kdata, data, 0x80);
+		ret = SceSysmemForDriver_BC996A7A(kdata, data, 0x80);
 		if (ret < 0)
 			return ret;
 	}

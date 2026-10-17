@@ -1,6 +1,6 @@
 #include <string.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
 
@@ -24,7 +24,7 @@ int sceSblUsSetSwInfoIntForUser(const char *name, SceSize nameLength,
 		return (int)0x800f0216;
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
-	result = ksceKernelCopyFromUser(nameBuffer.text, name, nameLength);
+	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;
@@ -53,13 +53,13 @@ int sceSblUsSetSwInfoStrForUser(const char *name, SceSize nameLength,
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
 	memset(valueBuffer, 0, sizeof(valueBuffer));
-	result = ksceKernelCopyFromUser(nameBuffer.text, name, nameLength);
+	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;
 	}
 	nameBuffer.text[31] = 0;
-	result = ksceKernelCopyFromUser(valueBuffer, value, valueLength);
+	result = SceSysmemForDriver_BC996A7A(valueBuffer, value, valueLength);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;
@@ -90,13 +90,13 @@ int sceSblUsSetSwInfoBinForUser(const char *name, SceSize nameLength,
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
 	memset(valueBuffer, 0, sizeof(valueBuffer));
-	result = ksceKernelCopyFromUser(nameBuffer.text, name, nameLength);
+	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;
 	}
 	nameBuffer.text[31] = 0;
-	result = ksceKernelCopyFromUser(valueBuffer, value, valueLength);
+	result = SceSysmemForDriver_BC996A7A(valueBuffer, value, valueLength);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;

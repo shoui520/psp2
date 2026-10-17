@@ -12,12 +12,6 @@
 #include <sysmem/uid_class.h>
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
+#include <sysmem/sysmem.h>
 
-int ksceKernelInvokeInitCallback(int stage);
-SceUID SceSysmemForKernel_0164D817(void);
-int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);
-int sceKernelSysrootSetStatus(int flags);
-int SceSysrootForDriver_7C2C10E2(int kind, int value);
 int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
-int ksceKernelSysrootAppMgrSpawnProcess(const char *name, int type, const char *path, SceSize len,
-					const void *args, void *opt, void *out);

@@ -1,10 +1,10 @@
 /* WM1803 codec implementation. Internal names without debug records are unknown. */
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/lowio/i2c.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <string.h>
 #include <codec/codec.h>
 #include <sysmem/debug.h>
@@ -261,7 +261,7 @@ static int startCodec(void)
 	unsigned char info[16];
 	int ret;
 
-	if (ksceSblAimgrIsGenuineDolce())
+	if (SceSblAIMgrForDriver_C6E83F34())
 		return 0;
 	SceClockgenForDriver_5130682D();
 	ScePervasiveForDriver_925D9D24(0);
@@ -281,7 +281,7 @@ static int startCodec(void)
 		return 2;
 	initializeCodec(1);
 	s_codec.modeValue = 0x127;
-	ksceKernelRegisterSysEventHandler("SceCodec", codecEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceCodec", codecEvent, NULL);
 	return 0;
 }
 
@@ -494,7 +494,7 @@ static int selectRoute(unsigned int mode)
 {
 	int route, ret;
 
-	if (ksceSblAimgrIsGenuineDolce())
+	if (SceSblAIMgrForDriver_C6E83F34())
 		return 0;
 	ret = ksceKernelLockFastMutex(&s_codec.mutex);
 	if (ret < 0)
@@ -626,6 +626,6 @@ int module_start(unsigned int arglen, void *argp)
 {
 	(void)arglen;
 	(void)argp;
-	s_ops = ksceSblAimgrIsDolce() ? NULL : &s_wm1803;
+	s_ops = SceSblAIMgrForDriver_71608CA3() ? NULL : &s_wm1803;
 	return s_ops ? s_ops->start() : 0;
 }

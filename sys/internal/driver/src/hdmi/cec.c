@@ -7,21 +7,17 @@
  * the debug records (cec.c) and the thread, timer and event flag names.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>
 #include "hdmi_internal.h"
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysclib.h>
-
-int ksceSysrootIsSafeMode(void);
-int ksceSysrootIsUpdateMode(void);
-void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
-				 const void *lr, const char *fmt, ...);
+#include <sysmem/sysroot.h>
 
 /* CEC logical addresses */
 #define CEC_ADDR_TV			0x0
@@ -147,18 +143,18 @@ static const CecOpcode *handlers[256];
 
 static inline void _setStatus(SceUInt32 flag)
 {
-	SceKernelIntrStatus intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&work.lock);
+	SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&work.lock);
 
 	work.status |= flag;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);
 }
 
 static inline void _clearStatus(SceUInt32 flag)
 {
-	SceKernelIntrStatus intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&work.lock);
+	SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&work.lock);
 
 	work.status &= ~flag;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&work.lock, intr);
 }
 
 /* Counts an event; 0 when the counter is saturated. */
@@ -184,12 +180,12 @@ static inline void _notifyKey(CecKey *key)
 static inline int _checkCecSupported(void)
 {
 	if (cecSupported == -1) {
-		if (ksceSysrootIsSafeMode() != 0 || ksceSysrootIsUpdateMode() != 0) {
+		if (SceSysrootForDriver_834439A7() != 0 || SceSysrootForDriver_B0E1FC67() != 0) {
 			cecSupported = 0;
 			return SCE_HDMI_ERROR_CEC_UNSUPPORTED;
 		}
-		if (ksceSblAimgrIsDolce() != 0 &&
-		    (SceQafMgrForDriver_382C71E8() != 0 || ksceSblAimgrIsGenuineDolce() != 0)) {
+		if (SceSblAIMgrForDriver_71608CA3() != 0 &&
+		    (SceQafMgrForDriver_382C71E8() != 0 || SceSblAIMgrForDriver_C6E83F34() != 0)) {
 			cecSupported = 1;
 		} else {
 			cecSupported = 0;

@@ -14,7 +14,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 

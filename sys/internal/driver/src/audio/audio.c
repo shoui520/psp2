@@ -11,30 +11,23 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>
 #include <psp2/audioout.h>
 
 #include "audio_private.h"
 #include "audio_work.h"
 #include <sysmem/sysevent.h>
-#include <psp2kern/kernel/sysmem/address_space.h>
+#include <sysmem/sysmem.h>
 #include "alc.h"
 #include "equalizer.h"
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 
 int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key,
 					    void **storage, int create);
 void *ksceKernelGetProcessLocalStorageAddr(int key);
-int ksceGUIDReferObject(SceUID guid, SceObjectBase **object);
-int ksceGUIDReleaseObject(SceUID guid);
 SceUInt32 ksceKernelGetProcessTimeLowCore(void);
 /* This caller preserves the three arguments of the original call interface. */
-int ksceKernelUserUnmap(SceUID uid, const void *address, int flags);
-int ksceKernelCopyFromUser(void *dst, const void *src, SceSize len);
-SceUID ksceKernelUserMap(const char *name, int permission, const void *user_buf,
-			SceSize size, void **kernel_page, SceSize *kernel_size,
-			SceUInt32 *kernel_offset);
 int SceCodecForDriver_CCDE1B04(int mode);
 int sceAudioOutSetEffectType(int type);
 int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
@@ -53,22 +46,22 @@ int audioProcessDirectPort(AudioDirectPort *port, int16_t *output,
 			   const int16_t *input, unsigned int sampleCount);
 int audioSetHardwareVolume(int channel, int left, int right);
 int SceClockgenForDriver_820D3516(int frequency);
-int audioInitializeProcess(SceUID pid, SceProcEventInvokeParam2 *param, int reason);
-int audioProcessExitCallback(SceUID pid, SceProcEventInvokeParam1 *param, int reason);
-int audioCleanupProcess(SceUID pid, SceProcEventInvokeParam1 *param, int reason);
-int audioProcessEventHandler(SceUID pid, int event, SceProcEventInvokeParam1 *param,
+int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason);
+int audioProcessExitCallback(SceUID pid, ProcEventParam *param, int reason);
+int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason);
+int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
 			    int reason);
-int audioProcessTitleEvent(SceUID pid, int event, SceProcEventInvokeParam1 *param,
+int audioProcessTitleEvent(SceUID pid, int event, ProcEventParam *param,
 			  int reason);
 
-const SceProcEventHandler audioProcessEventHandlers = {
-	.size = sizeof(SceProcEventHandler),
+const SceKernelProcEventHandler audioProcessEventHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = audioInitializeProcess,
 	.exit = audioProcessExitCallback,
 	.kill = audioCleanupProcess,
-	.stop = audioProcessEventHandler,
-	.start = audioProcessTitleEvent,
-	.switch_process = NULL,
+	.suspend = audioProcessEventHandler,
+	.resume = audioProcessTitleEvent,
+	.notify = NULL,
 };
 
 int audioWaitForDrain(int samples)
@@ -86,7 +79,7 @@ int audioWaitForDrain(int samples)
 int audioSetTitleCompatibility(SceUID pid, signed char enabled)
 {
 	char titleId[32];
-	int result = ksceKernelSysrootGetProcessTitleId(pid, titleId, sizeof(titleId));
+	int result = SceSysrootForKernel_EC3124A3(pid, titleId, sizeof(titleId));
 
 	if (result >= 0) {
 		if (strncmp(titleId, "PCSG00135", 32) == 0 ||
@@ -139,7 +132,7 @@ int audioSystemEventHandler(int phase, int event, void *args, void *opt)
 	return 0;
 }
 
-int audioCleanupProcess(SceUID pid, SceProcEventInvokeParam1 *param, int reason)
+int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
 {
 	AudioProcessLocalStorage *storage;
 	AudioMainPort *port;
@@ -172,16 +165,16 @@ int audioCleanupProcess(SceUID pid, SceProcEventInvokeParam1 *param, int reason)
 		port = process->main;
 		for (count = 9; count != 0; --count, ++port) {
 			if (port->current.mapping > 0)
-				ksceKernelUserUnmap(port->current.mapping, NULL, 0);
+				sceKernelUserUnmap(port->current.mapping, NULL, 0);
 			if (port->queued.mapping > 0)
-				ksceKernelUserUnmap(port->queued.mapping, NULL, 0);
+				sceKernelUserUnmap(port->queued.mapping, NULL, 0);
 		}
 		audioSetTitleCompatibility(pid, count);
 	}
 	return 0;
 }
 
-int audioProcessExitCallback(SceUID pid, SceProcEventInvokeParam1 *param, int reason)
+int audioProcessExitCallback(SceUID pid, ProcEventParam *param, int reason)
 {
 	return audioCleanupProcess(pid, NULL, reason);
 }
@@ -279,13 +272,13 @@ int audioSetAdoption(AudioDirectPort *port, int adopt, int duration)
 	return 0;
 }
 
-int audioProcessTitleEvent(SceUID pid, int event, SceProcEventInvokeParam1 *param,
+int audioProcessTitleEvent(SceUID pid, int event, ProcEventParam *param,
 			  int reason)
 {
 	char titleId[32];
 
 	if (event == 131073 &&
-	    ksceKernelSysrootGetProcessTitleId(pid, titleId, sizeof(titleId)) >= 0) {
+	    SceSysrootForKernel_EC3124A3(pid, titleId, sizeof(titleId)) >= 0) {
 		if (strncmp(titleId, "PCSG00135", 32) == 0 ||
 		    strncmp(titleId, "PCSE00097", 32) == 0 ||
 		    strncmp(titleId, "PCSB00232", 32) == 0 ||
@@ -301,7 +294,7 @@ int audioProcessTitleEvent(SceUID pid, int event, SceProcEventInvokeParam1 *para
 	return 0;
 }
 
-int audioInitializeProcess(SceUID pid, SceProcEventInvokeParam2 *param, int reason)
+int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason)
 {
 	AudioProcessLocalStorage *storage;
 	char titleId[32];
@@ -320,7 +313,7 @@ int audioInitializeProcess(SceUID pid, SceProcEventInvokeParam2 *param, int reas
 		storage->direct[0].ramp.volume = 256;
 		storage->direct[0].channel = 0;
 		storage->direct[0].alcMode = 0;
-		if (ksceKernelSysrootGetProcessTitleId(pid, titleId, sizeof(titleId)) >= 0) {
+		if (SceSysrootForKernel_EC3124A3(pid, titleId, sizeof(titleId)) >= 0) {
 			if (strncmp(titleId, "PCSG00135", 32) == 0 ||
 			    strncmp(titleId, "PCSE00097", 32) == 0 ||
 			    strncmp(titleId, "PCSB00232", 32) == 0 ||
@@ -337,7 +330,7 @@ int audioInitializeProcess(SceUID pid, SceProcEventInvokeParam2 *param, int reas
 	return 0;
 }
 
-int audioProcessEventHandler(SceUID pid, int event, SceProcEventInvokeParam1 *param,
+int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
 			    int reason)
 {
 	AudioProcessLocalStorage *storage;
@@ -495,7 +488,7 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = ksceGUIDReferObject(pid, NULL);
+	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (result < 0)
 		goto unlock;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
@@ -572,7 +565,7 @@ delay:
 waited:
 	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 release:
-	ksceGUIDReleaseObject(pid);
+	sceGUIDReleaseObject(pid);
 unlock:
 	ksceKernelSetEventFlag(audioEventFlag, 16);
 	return result;
@@ -593,7 +586,7 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 	result = ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = ksceGUIDReferObject(pid, NULL);
+	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (result < 0)
 		goto unlock;
 	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
@@ -670,7 +663,7 @@ delay:
 waited:
 	ksceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 release:
-	ksceGUIDReleaseObject(pid);
+	sceGUIDReleaseObject(pid);
 unlock:
 	ksceKernelSetEventFlag(audioEventFlag, 16);
 out:
@@ -1095,7 +1088,7 @@ int _audioSetptrMain(int port, const void *buf)
 		if (buf != NULL) {
 			int len;
 
-			result = ksceKernelUserMap("SceAudioUserMapMain", 1, buf,
+			result = SceSysmemForDriver_278BC201("SceAudioUserMapMain", 1, buf,
 				main->config.bytesPerFrame * main->config.len,
 				&kernelPage, &kernelSize, &kernelOffset);
 			if (result < 0)
@@ -1167,7 +1160,7 @@ int _audioSetptrMain(int port, const void *buf)
 	bytesPerFrame = direct->bytesPerFrame;
 	freq = direct->freq;
 	if (buf != NULL) {
-		result = ksceKernelUserMap("SceAudioUserMapBgm", 1, buf,
+		result = SceSysmemForDriver_278BC201("SceAudioUserMapBgm", 1, buf,
 			bytesPerFrame * direct->len, &kernelPage, &kernelSize,
 			&kernelOffset);
 		if (result < 0)
@@ -1297,7 +1290,7 @@ int _audioSetptrMain(int port, const void *buf)
 		direct->remaining = remaining;
 	} while ((uint16_t)remaining != 0);
 	audioUpdateAdoption(direct);
-	result = ksceKernelUserUnmap(mapping, userBuffer, 0);
+	result = sceKernelUserUnmap(mapping, userBuffer, 0);
 	if (transferResult < 0) {
 		result = transferResult;
 		goto unlockDirect;
@@ -1307,7 +1300,7 @@ int _audioSetptrMain(int port, const void *buf)
 		result = direct->len;
 	goto out;
 unmapDirect:
-	ksceKernelUserUnmap(mapping, userBuffer, 0);
+	sceKernelUserUnmap(mapping, userBuffer, 0);
 	result = transferResult;
 unlockDirect:
 	ksceKernelSetEventFlag(audioEventFlag, mask);
@@ -1342,7 +1335,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 		result = (int)0x80260230;
 		goto unlock;
 	}
-	result = ksceKernelCopyFromUser(volume, vol, sizeof(volume));
+	result = SceSysmemForDriver_BC996A7A(volume, vol, sizeof(volume));
 	if (result < 0)
 		goto unlock;
 	if (type != 0) {
@@ -1914,13 +1907,13 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	if (result < 0)
 		return result;
 	audioInitializeEffects();
-	ksceKernelRegisterSysEventHandler("SceAudio", audioSystemEventHandler, NULL);
-	ksceKernelRegisterProcEventHandler("SceAudio", &audioProcessEventHandlers, 0);
+	sceKernelRegisterSysEventHandler("SceAudio", audioSystemEventHandler, NULL);
+	sceKernelRegisterProcEventHandler("SceAudio", &audioProcessEventHandlers, 0);
 	for (index = 0; index < 2; ++index) {
-		result = ksceKernelVAtoPA(audioOutputBuffers[0][index],
+		result = SceSysmemForDriver_8D160E65(audioOutputBuffers[0][index],
 			&audioOutputPhysicalAddress[0][index]);
 		SCE_DBG_ASSERT(result, 2602);
-		result = ksceKernelVAtoPA(audioOutputBuffers[1][index],
+		result = SceSysmemForDriver_8D160E65(audioOutputBuffers[1][index],
 			&audioOutputPhysicalAddress[1][index]);
 		SCE_DBG_ASSERT(result, 2602);
 	}

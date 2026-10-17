@@ -1,5 +1,5 @@
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include <string.h>
 #include "update_internal.h"
 #include "update_objects.h"
@@ -29,7 +29,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 	option.align = 4096;
 	option.mmapBase = NULL;
 	option.mmapSize = 0;
-	dataVector = ksceKernelAllocHeapMemory(heapId, sizeof(*dataVector));
+	dataVector = SceSysmemForDriver_7B4CB60A(heapId, sizeof(*dataVector));
 	if (!dataVector) {
 		result = (int)0x800f020c;
 		goto freeData;
@@ -40,7 +40,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f0205;
 		goto freeData;
 	}
-	vectorVector = ksceKernelAllocHeapMemoryWithOption(heapId, 64, &option);
+	vectorVector = SceSysmemForDriver_49D4DD9B(heapId, 64, &option);
 	if (!vectorVector) {
 		result = (int)0x800f020c;
 		goto freeData;
@@ -52,7 +52,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f0205;
 		goto freeVector;
 	}
-	packet = ksceKernelAllocHeapMemory(heapId, sizeof(*packet));
+	packet = SceSysmemForDriver_7B4CB60A(heapId, sizeof(*packet));
 	if (!packet) {
 		result = (int)0x800f020c;
 		goto freeVector;
@@ -63,7 +63,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 	packet->dataVector = *dataVector;
 	if (vectorCount >= 482) {
 		result = (int)0x800f020c;
-		ksceKernelFreeHeapMemory(heapId, packet);
+		sceKernelFreeHeapMemory(heapId, packet);
 		goto freeVector;
 	}
 	packet->descriptorFormat = 1;
@@ -74,7 +74,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 	memcpy(packet->records.descriptors, vectorVector->ranges,
 			8 * vectorCount);
 #endif
-	ksceKernelDcacheCleanRange(dataVector->ranges,
+	SceCpuForDriver_103872A5(dataVector->ranges,
 			(8 * dataVector->count + 63) & ~63);
 	*packetOut = packet;
 	*dataOut = dataVector;
@@ -85,13 +85,13 @@ freeVector:
 	if (vectorVector) {
 		if (vectorVector->ranges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, vectorVector);
-		ksceKernelFreeHeapMemory(heapId, vectorVector);
+		sceKernelFreeHeapMemory(heapId, vectorVector);
 	}
 freeData:
 	if (dataVector) {
 		if (dataVector->ranges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, dataVector);
-		ksceKernelFreeHeapMemory(heapId, dataVector);
+		sceKernelFreeHeapMemory(heapId, dataVector);
 	}
 	return result;
 }

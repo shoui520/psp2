@@ -12,19 +12,16 @@
 #include <string.h>
 #include <fw.h>
 #include <psp2common/kernel/modulemgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <compat/compat_regs.h>
 #include <sysmem/debug.h>
 #include <kernel_boot_loader/kernel_boot_param.h>
+#include <sysmem/sysroot.h>
 
 /* the sysroot (sysroot.c) */
-void sceKernelSysrootCorelockLock(SceUInt32 core);
-void sceKernelSysrootCorelockUnlock(void);
 
 /* the rest of the TrustZone kernel */
 int SerialDebugPutchar(void *args, int c);
-int ksceKernelPrintf(const char *format, ...);
-uintptr_t ksceKernelGetDebugPutcharHandler(void);
 uint32_t DebugGetPrintLevel(void);
 SceUID sceKernelLoadModuleBufferWithoutStart(const void *buffer, SceSize size);
 int sceKernelStartModule(SceUID uid, SceSize args, void *argp, int flags, void *option,
@@ -83,7 +80,7 @@ static int ModuleLoadBoot(const KblModuleImage *image, SceKernelBootParam *param
 	int res;
 
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		uid = sceKernelLoadModuleBufferWithoutStart(image->start,
 							    image->end - image->start);
 		if (uid < 0) {
@@ -135,12 +132,12 @@ int KblArchive(SceKernelBootParam *param)
 	int res;
 
 	param->debugPutchar = (uintptr_t)SerialDebugPutchar;
-	param->debugPrintf = (uintptr_t)ksceKernelPrintf;
-	param->debugPutcharHandler = ksceKernelGetDebugPutcharHandler();
+	param->debugPrintf = (uintptr_t)SceDebugForDriver_391B74B7;
+	param->debugPutcharHandler = SceDebugForKernel_8D474850();
 	param->debugPrintLevel = DebugGetPrintLevel();
 
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 205,
 				     "mapping Compati SRAM : 0x%08x to 0x%08x (size 0x%x)\n",
 				     COMPAT_SRAM_BASE, COMPAT_SRAM_BASE, COMPAT_SRAM_SIZE);
@@ -164,11 +161,11 @@ int KblArchive(SceKernelBootParam *param)
 
 	/* the archive is loaded: wipe Compat SRAM and give it back */
 	sceKernelSysrootCorelockLock(1);
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		memset((void *)COMPAT_SRAM_BASE, 0, COMPAT_SRAM_SIZE);
-		ksceKernelDcacheCleanInvalidateRange((void *)COMPAT_SRAM_BASE,
+		SceCpuForDriver_364E68A4((void *)COMPAT_SRAM_BASE,
 						     COMPAT_SRAM_SIZE);
-		sceKernelMMUUnmapSectionsWithFlags(KBL_L1(param), ksceKernelCpuGetCONTEXTIDR(),
+		sceKernelMMUUnmapSectionsWithFlags(KBL_L1(param), SceCpuForKernel_FD54A91D(),
 						   COMPAT_SRAM_BASE, COMPAT_SRAM_SIZE, 0);
 	}
 	sceKernelSysrootCorelockUnlock();

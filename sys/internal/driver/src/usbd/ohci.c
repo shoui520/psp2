@@ -12,7 +12,7 @@
  * isochronous anchor after the tree's root.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
@@ -287,7 +287,7 @@ typedef struct Ohci {
 	unsigned int interruptCount[8];	/* per HcInterruptStatus bit: only start of frame */
 } Ohci;
 
-/* ksceKernelGetMemBlockMemtypeByAddr of uncached memory: no cache maintenance */
+/* SceSysmemForDriver_F3BBE2E1 of uncached memory: no cache maintenance */
 #define USBD_MEMTYPE_UNCACHED		0x8000
 
 #define USBD_CACHE_LINE			64
@@ -428,10 +428,10 @@ static int ohciPowerOffPort(UsbdBus *bus, int port)
 	Ohci *ohci = s_ohci[bus->index];
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	ohci->portState = OHCI_PORT_OFF;
 	ohci->regs->rhPortStatus = OHCI_PORT_LOW_SPEED;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return 0;
 }
 
@@ -440,10 +440,10 @@ static int ohciResetPort(UsbdBus *bus, int port)
 	Ohci *ohci = s_ohci[bus->index];
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	ohci->portState = OHCI_PORT_RESETTING;
 	ohci->regs->rhPortStatus = OHCI_PORT_RESET;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return 0;
 }
 
@@ -452,12 +452,12 @@ static int ohciPowerOnPort(UsbdBus *bus, int port)
 	Ohci *ohci = s_ohci[bus->index];
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	if (ohci->portState <= OHCI_PORT_POWERED) {
 		ohci->portState = OHCI_PORT_POWERED;
 		ohci->regs->rhPortStatus = OHCI_PORT_POWER;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return 0;
 }
 
@@ -467,12 +467,12 @@ static SceUInt32 ohciConnectDone(void *arg)
 	Ohci *ohci = arg;
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	if (ohci->portState == OHCI_PORT_CONNECTED) {
 		ohci->portState = OHCI_PORT_RESETTING;
 		ohci->regs->rhPortStatus = OHCI_PORT_RESET;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return 0;
 }
 
@@ -525,9 +525,9 @@ static int ohciClosePipe(UsbdPipe *pipe)
 	if (ohci == NULL)
 		return SCE_USBD_ERROR_INVALID_PARAM;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	if (pipe->device == NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 		return SCE_USBD_ERROR_DEVICE_NOT_FOUND;
 	}
 
@@ -599,7 +599,7 @@ static int ohciClosePipe(UsbdPipe *pipe)
 		ohciUnwaitPipe(ohci, pipe);
 	ohciFreeEd(ohci, pipe->endpoint.ohci);
 	usbdFreePipe(pipe);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return 0;
 }
 
@@ -665,7 +665,7 @@ static UsbdPipe *ohciAllocPipe(UsbdDevice *device, const SceUsbdEndpointDescript
 	if (ohci == NULL)
 		return NULL;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	pipe = usbdAllocPipe(device, endpoint);
 	if (pipe == NULL)
 		goto out;
@@ -742,7 +742,7 @@ freeEd:
 	usbdFreePipe(pipe);
 	pipe = NULL;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return pipe;
 }
 
@@ -764,13 +764,13 @@ static __always_inline SceUIntPtr ohciBufferEnd(UsbdRequest *request, SceUIntPtr
 
 static __always_inline void ohciCleanRequest(UsbdPipe *pipe, UsbdRequest *request)
 {
-	if (ksceKernelGetMemBlockMemtypeByAddr(request->buffer) == USBD_MEMTYPE_UNCACHED)
+	if (SceSysmemForDriver_F3BBE2E1(request->buffer) == USBD_MEMTYPE_UNCACHED)
 		return;
 	if (pipe->direction)
-		ksceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
+		SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
 						     USBD_CACHE_SIZE(request->buffer, request->length));
 	else
-		ksceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
+		SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
 					   USBD_CACHE_SIZE(request->buffer, request->length));
 }
 
@@ -882,8 +882,8 @@ static int ohciSubmitControl(Ohci *ohci, UsbdPipe *pipe, UsbdRequest *request)
 	pipe->busy = 1;
 
 	setup = request->setup;
-	if (ksceKernelGetMemBlockMemtypeByAddr(setup) != USBD_MEMTYPE_UNCACHED)
-		ksceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(setup),
+	if (SceSysmemForDriver_F3BBE2E1(setup) != USBD_MEMTYPE_UNCACHED)
+		SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(setup),
 					   USBD_CACHE_SIZE(setup, sizeof(*setup)));
 	td = setupStage->hw.td;
 	td->control = OHCI_TD_SETUP;
@@ -902,12 +902,12 @@ static int ohciSubmitControl(Ohci *ohci, UsbdPipe *pipe, UsbdRequest *request)
 		td->bufferEnd = usbdVAtoPA(request->buffer) + request->length - 1;
 		USBD_LIST_APPEND(pipe->descHead.ohci, pipe->descTail.ohci, dataStage);
 		ohci->tdRequest[ohciTdIndex(ohci, td)] = request;
-		if (ksceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED) {
+		if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED) {
 			if (setup->bmRequestType & SCE_USBD_ENDPOINT_DIRECTION_IN)
-				ksceKernelDcacheCleanInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
+				SceCpuForDriver_364E68A4((void *)USBD_CACHE_BASE(request->buffer),
 								     USBD_CACHE_SIZE(request->buffer, request->length));
 			else
-				ksceKernelDcacheCleanRange((void *)USBD_CACHE_BASE(request->buffer),
+				SceCpuForDriver_103872A5((void *)USBD_CACHE_BASE(request->buffer),
 							   USBD_CACHE_SIZE(request->buffer, request->length));
 		}
 	}
@@ -1012,9 +1012,9 @@ wait:
 
 static __always_inline void ohciInvalidateRequest(UsbdRequest *request)
 {
-	if (ksceKernelGetMemBlockMemtypeByAddr(request->buffer) != USBD_MEMTYPE_UNCACHED &&
+	if (SceSysmemForDriver_F3BBE2E1(request->buffer) != USBD_MEMTYPE_UNCACHED &&
 	    request->pipe->direction == SCE_USBD_ENDPOINT_DIRECTION_IN)
-		ksceKernelDcacheInvalidateRange((void *)USBD_CACHE_BASE(request->buffer),
+		SceCpuForDriver_02796361((void *)USBD_CACHE_BASE(request->buffer),
 						USBD_CACHE_SIZE(request->buffer, request->length));
 }
 
@@ -1257,7 +1257,7 @@ static int ohciInterruptHandler(int intrCode, void *arg)
 	SceUInt32 status;
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	status = ohci->regs->interruptStatus & ohci->regs->interruptEnable;
 	if (status & OHCI_INT_UNRECOVERABLE_ERROR) {
 		SCE_DBG_PRINTF(15, 1288, "Unrecoverable Error\n");
@@ -1283,7 +1283,7 @@ static int ohciInterruptHandler(int intrCode, void *arg)
 		ohciRoothubStatusChange(ohci);
 	if (status & OHCI_INT_OWNERSHIP_CHANGE)
 		ohci->regs->interruptStatus = OHCI_INT_OWNERSHIP_CHANGE;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return -1;
 }
 
@@ -1298,7 +1298,7 @@ static int ohciSubmitRequest(UsbdPipe *pipe, UsbdRequest *request)
 	if (ohci == NULL)
 		return SCE_USBD_ERROR_INVALID_PARAM;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&ohci->lock);
+	state = SceCpuForDriver_D32ACE9E(&ohci->lock);
 	if (pipe->device == NULL) {
 		result = SCE_USBD_ERROR_DEVICE_NOT_FOUND;
 		goto out;
@@ -1330,7 +1330,7 @@ static int ohciSubmitRequest(UsbdPipe *pipe, UsbdRequest *request)
 		break;
 	}
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ohci->lock, state);
 	return result;
 }
 
@@ -1484,12 +1484,12 @@ int ohciInit(UsbdBus *bus)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = paddr;
-	result = ksceKernelAllocMemBlock("SceUsbdOhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	result = SceSysmemForDriver_C94850C9("SceUsbdOhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					 USB_REG_SIZE, &opt);
 	if (result < 0)
 		goto fail;
 	ohci->registerBlockId = result;
-	result = ksceKernelGetMemBlockBase(ohci->registerBlockId, (void **)&base);
+	result = SceSysmemForDriver_A841EDDA(ohci->registerBlockId, (void **)&base);
 	if (result < 0)
 		goto freeRegisters;
 	ohci->regs = (volatile OhciRegs *)(base + OHCI_REGS_OFFSET);
@@ -1505,12 +1505,12 @@ int ohciInit(UsbdBus *bus)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 	opt.alignment = 0x1000;
-	result = ksceKernelAllocMemBlock("SceUsbdOhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW,
+	result = SceSysmemForDriver_C94850C9("SceUsbdOhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW,
 					 OHCI_DESCRIPTOR_BLOCK_SIZE, &opt);
 	if (result < 0)
 		goto freeRegisters;
 	ohci->descriptorBlockId = result;
-	result = ksceKernelGetMemBlockBase(ohci->descriptorBlockId, (void **)&base);
+	result = SceSysmemForDriver_A841EDDA(ohci->descriptorBlockId, (void **)&base);
 	if (result < 0)
 		goto freeBlocks;
 	memset(base, 0, OHCI_DESCRIPTOR_BLOCK_SIZE);
@@ -1614,9 +1614,9 @@ int ohciInit(UsbdBus *bus)
 	return 0;
 
 freeBlocks:
-	ksceKernelFreeMemBlock(ohci->descriptorBlockId);
+	SceSysmemForDriver_009E1C61(ohci->descriptorBlockId);
 freeRegisters:
-	ksceKernelFreeMemBlock(ohci->registerBlockId);
+	SceSysmemForDriver_009E1C61(ohci->registerBlockId);
 fail:
 	if (ohci->bus < USBD_BUS_COUNT) {
 		s_ohci[ohci->bus] = NULL;
@@ -1639,10 +1639,10 @@ int ohciTerm(UsbdBus *bus)
 	result = ksceKernelReleaseIntrHandler(ohci->intrCode);
 	if (result < 0)
 		return result;
-	result = ksceKernelFreeMemBlock(ohci->descriptorBlockId);
+	result = SceSysmemForDriver_009E1C61(ohci->descriptorBlockId);
 	if (result < 0)
 		return result;
-	result = ksceKernelFreeMemBlock(ohci->registerBlockId);
+	result = SceSysmemForDriver_009E1C61(ohci->registerBlockId);
 	if (result < 0)
 		return result;
 	if (ohci->bus < USBD_BUS_COUNT) {

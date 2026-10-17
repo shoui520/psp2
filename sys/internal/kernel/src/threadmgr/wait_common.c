@@ -20,10 +20,6 @@ typedef void (*ThreadmgrSchedProbeHandler)(const struct ThreadmgrSchedProbeDescr
 
 #define WAIT_FLAG_TIMED			0x01	/* waitType */
 
-extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-
 /* All waitable subclasses place their common queue after the UID base. */
 struct ThreadmgrQueuedObject {
 	SceObjectBase base;
@@ -63,11 +59,11 @@ void insertPriorityQueue(uintptr_t head, struct ThreadCB *thread)
 	struct ThreadCB *waiter;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 68);
-		if (ksceKernelGetAssertLevel() > 0) {
+		if (SceDebugForDriver_374B7868() > 0) {
 			SCE_DBG_ASSERT_LEVEL(1, thread->lock != 0, 71);
-			if (ksceKernelGetAssertLevel() > 0)
+			if (SceDebugForDriver_374B7868() > 0)
 				SCE_DBG_ASSERT_LEVEL(1, queue->lock != 0, 74);
 		}
 	}
@@ -193,11 +189,11 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 	int ret;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 128);
-		if (ksceKernelGetAssertLevel() > 0) {
+		if (SceDebugForDriver_374B7868() > 0) {
 			SCE_DBG_ASSERT_LEVEL(1, queue->lock != 0, 131);
-			if (ksceKernelGetAssertLevel() > 0)
+			if (SceDebugForDriver_374B7868() > 0)
 				SCE_DBG_ASSERT_LEVEL(1, thread->lock != 0, 134);
 		}
 	}
@@ -208,20 +204,20 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 	    (!(status & THREAD_FLAG_REQUEST_VM_SUSPEND) && (queue->attributes & WAIT_ATTR_UNINTERRUPTIBLE)
 	     ? 1 : (ThreadmgrUserRoWord() & USERRO_IN_SYSCALL) != 0)) {
 		/* a pending suspend or exit request ends the wait before it starts */
-		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, 0x4000);
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, 0x8001);
+		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x4000);
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, 0x8001);
 		switch (thread->flags & THREAD_FLAG_REQUEST_MASK) {
 		case THREAD_FLAG_REQUEST_VM_SUSPEND:
 		case THREAD_FLAG_REQUEST_SUSPEND:
 			thread->waitResult = SCE_KERNEL_ERROR_THREAD_SUSPENDED;
 			if (waitType == WAIT_TYPE_MUTEX_2)
-				ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, 0x800000);
+				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x800000);
 			else if (waitType == WAIT_TYPE_COND)
-				ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, 0x400000);
+				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x400000);
 			else if (waitType == WAIT_TYPE_LW_COND)
-				ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, 0x100000);
+				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x100000);
 			else if (waitType == WAIT_TYPE_LW_MUTEX_2)
-				ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, 0x200000);
+				SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, 0x200000);
 			else
 				goto abandon;
 			return thread->waitResult;
@@ -234,9 +230,9 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		}
 	}
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, thread->delayId == -1, 187);
-		if (ksceKernelGetAssertLevel() > 0)
+		if (SceDebugForDriver_374B7868() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, thread->timeoutOutput == 0, 188);
 	}
 #endif
@@ -253,7 +249,7 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		if (delayId < 0) {
 			SCE_DBG_ASSERT_CHECK(delayId == (SceUID)SCE_KERNEL_ERROR_WAIT_TIMEOUT, 207);
 			thread->waitResult = delayId;
-			ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, 1);
+			SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, 1);
 			if (waitType == WAIT_TYPE_RW_LOCK) {
 				if (thread->waitMode == 1)
 					queue->writeWaiters--;
@@ -267,7 +263,7 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 						*(uint32_t *)timeoutOutput = 0;
 					} else {
 						value = 0;
-						ret = ksceKernelCopyToUserProc(thread->timeoutProcessId,
+						ret = sceKernelCopyToUserProc(thread->timeoutProcessId,
 									       timeoutOutput, &value, 4);
 						if (ret < 0) {
 							SCE_DBG_PRINTF_LEVEL(1, 0, 235,
@@ -301,17 +297,17 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 	if ((thread->flags & THREAD_FLAG_CALLBACK_WAKEUP) == THREAD_FLAG_CALLBACK_WAKEUP) {
 cancelled:
 		thread->waitResult = THREADMGR_ERROR_WAIT_CANCEL;
-		ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, 1);
+		SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, 1);
 		goto abandon;
 	}
 	thread->waitType = waitType;
 	thread->waitId = waitId;
 	thread->waitResult = 0;
-	SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == ksceKernelCpuId(), 286,
+	SCE_DBG_ASSERT_PRINTF(thread->currentCpuId == sceKernelCpuId(), 286,
 		"pRunningThreadCB->currentCpuId=0x%08X\n", thread->currentCpuId);
 	thread->currentCpuId = -1;
 	if (ThreadmgrUserRoWord() & USERRO_IN_SYSCALL)
-		ksceKernelAtomicOrAndGet32((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_MARK);
+		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_MARK);
 	queue->waiting++;
 	SCE_DBG_ASSERT_CHECK(queue->waiting != 0, 294);
 	thread->status = (thread->status & 0xffff0000) | SCE_KERNEL_THREAD_STATUS_WAITING;
@@ -328,25 +324,25 @@ cancelled:
 	/* the DTrace probe site __sched_:sleep */
 	__asm__ volatile(".global s_schedSleepCodeSite\ns_schedSleepCodeSite:");
 	*locked = 0;
-	ksceKernelSpinlockLowUnlock(&queue->lock);
+	sceKernelSpinlockLowUnlock(&queue->lock);
 	sleep = (ThreadmgrSchedSleepHandler)s_schedSleepHandler;
 	if (sleep != NULL)
 		sleep(&s_schedSleepDescriptor);
 	currentCpuState()->nextRunningThread = 0;
 	switchThread(2);
 	if (waitType == WAIT_TYPE_EVENT)
-		ret = ksceGUIDReferObjectWithSubclass(waitId, WaitTypeClass(waitType), NULL);
+		ret = SceSysmemForDriver_72A98D17(waitId, WaitTypeClass(waitType), NULL);
 	else
-		ret = ksceGUIDReferObjectWithClass(waitId, WaitTypeClass(waitType), NULL);
+		ret = SceSysmemForDriver_00ED6C14(waitId, WaitTypeClass(waitType), NULL);
 	if (ret < 0) {
-		ksceKernelSpinlockLowLock(&thread->lock);
+		SceCpuForDriver_BF82DEB2(&thread->lock);
 		if (thread->waitResult == (int)THREADMGR_ERROR_WAIT_CANCEL)
 			thread->waitResult = SCE_KERNEL_ERROR_WAIT_DELETE;
 		return thread->waitResult;
 	}
 	*locked = 1;
-	ksceKernelSpinlockLowLock(&queue->lock);
-	ksceKernelSpinlockLowLock(&thread->lock);
+	SceCpuForDriver_BF82DEB2(&queue->lock);
+	SceCpuForDriver_BF82DEB2(&thread->lock);
 	return thread->waitResult;
 
 abandon:
@@ -373,20 +369,20 @@ int releaseThreadWaitState(struct ThreadCB *thread, uintptr_t waitable,
 	int ret;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 525);
-		if (ksceKernelGetAssertLevel() > 0)
+		if (SceDebugForDriver_374B7868() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, thread->lock != 0, 528);
 	}
 #endif
 	if (queue != NULL)
 		SCE_DBG_ASSERT_CHECK(queue->lock != 0, 532);
-	ksceKernelAtomicClearMask32((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_MARK);
+	SceCpuForDriver_4AE1BCC0((SceInt32 *)&thread->flags, THREAD_FLAG_WAIT_MARK);
 	delayId = thread->delayId;
 	thread->waitResult = result;
 	if (delayId != -1) {
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0) {
+		if (SceDebugForDriver_374B7868() > 0) {
 			SCE_DBG_ASSERT_PRINTF_LEVEL(1, delayId > 0, 542,
 				"error: delayId=0x%08X, threadId=0x%08X\n", delayId, thread->threadId);
 			delayId = thread->delayId;
@@ -432,9 +428,9 @@ bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 #endif
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 416);
-		if (ksceKernelGetAssertLevel() > 0)
+		if (SceDebugForDriver_374B7868() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, thread->lock != 0, 419);
 	}
 #endif
@@ -452,7 +448,7 @@ bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 	}
 	if (thread->waitType & WAIT_FLAG_TIMED) {
 #if FW_DEBUG
-		if (ksceKernelGetAssertLevel() > 0) {
+		if (SceDebugForDriver_374B7868() > 0) {
 			if (thread->delayId == -1)
 				timedOnly = false;
 			else if (thread->waitId == -1)
@@ -464,10 +460,10 @@ bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,
 				thread->delayId, thread->waitId, queue);
 		}
 #endif
-		ksceKernelSpinlockLowLock(&s_threadmgrRuntime.manager->timedWaitLock);
+		SceCpuForDriver_BF82DEB2(&s_threadmgrRuntime.manager->timedWaitLock);
 		self->next->prev = self->prev;
 		self->prev->next = self->next;
-		ksceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->timedWaitLock);
+		sceKernelSpinlockLowUnlock(&s_threadmgrRuntime.manager->timedWaitLock);
 	} else {
 		self->next->prev = self->prev;
 		self->prev->next = self->next;
@@ -485,9 +481,9 @@ uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count)
 	uint32_t woken = 0, wake = 0;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 480);
-		if (ksceKernelGetAssertLevel() > 0)
+		if (SceDebugForDriver_374B7868() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, queue->lock != 0, 483);
 	}
 #endif
@@ -496,9 +492,9 @@ uint32_t wakeupWaitObjectAll(uintptr_t waitable, int result, uint32_t *count)
 		next = node->next;
 		woken++;
 		SCE_DBG_ASSERT_CHECK(thread->magic == THREAD_CB_MAGIC, 493);
-		ksceKernelSpinlockLowLock(&thread->lock);
+		SceCpuForDriver_BF82DEB2(&thread->lock);
 		wake |= wakeupAndDistributeThread(thread, waitable, result);
-		ksceKernelSpinlockLowUnlock(&thread->lock);
+		sceKernelSpinlockLowUnlock(&thread->lock);
 	}
 	if (count != NULL)
 		*count = woken;
@@ -512,9 +508,9 @@ int revalidateWaitState(uintptr_t waitable)
 	struct ThreadmgrWaitableClass *cls;
 
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		SCE_DBG_ASSERT_LEVEL(1, ThreadmgrIntrDisabled(), 575);
-		if (ksceKernelGetAssertLevel() > 0)
+		if (SceDebugForDriver_374B7868() > 0)
 			SCE_DBG_ASSERT_LEVEL(1, queue->lock != 0, 578);
 	}
 #endif
@@ -533,9 +529,9 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 
 	SCE_DBG_ASSERT_LEVEL_CHECK(1, ThreadmgrIntrDisabled(), 601);
 	for (;;) {
-		ksceKernelSpinlockLowLock(&thread->lock);
+		SceCpuForDriver_BF82DEB2(&thread->lock);
 		waitId = thread->waitId;
-		ret = ksceGUIDReferObjectWithSubclass(waitId,
+		ret = SceSysmemForDriver_72A98D17(waitId,
 			s_threadmgrRuntime.manager->waitableClass, &object);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_PRINTF(waitId == -1 || waitId == (SceUID)0x80000000, 624,
@@ -546,15 +542,15 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 			break;
 		}
 		queue = &((struct ThreadmgrQueuedObject *)object)->queue;
-		if (ksceKernelSpinlockLowTrylock(&queue->lock) >= 0)
+		if (SceCpuForDriver_5AC9D394(&queue->lock) >= 0)
 			break;
-		ksceKernelSpinlockLowUnlock(&thread->lock);
-		ksceGUIDReleaseObject(waitId);
+		sceKernelSpinlockLowUnlock(&thread->lock);
+		sceGUIDReleaseObject(waitId);
 	}
 	if (thread->timeoutOutput != 0) {
 		if (thread->waitType == WAIT_TYPE_LW_OBJECT && thread->timeoutProcessId != 0x10005) {
 			zero = 0;
-			ret = ksceKernelCopyToUserProc(thread->timeoutProcessId,
+			ret = sceKernelCopyToUserProc(thread->timeoutProcessId,
 						       (void *)thread->timeoutOutput, &zero, 4);
 			if (ret < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 640,
@@ -567,10 +563,10 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 	}
 	if (thread->status & SCE_KERNEL_THREAD_STATUS_WAITING)
 		wakeupAndDistributeThread(thread, (uintptr_t)queue, SCE_KERNEL_ERROR_WAIT_TIMEOUT);
-	ksceKernelSpinlockLowUnlock(&thread->lock);
+	sceKernelSpinlockLowUnlock(&thread->lock);
 	if (queue != NULL) {
 		revalidateWaitState((uintptr_t)queue);
-		ksceKernelSpinlockLowUnlock(&queue->lock);
-		ksceGUIDReleaseObject(waitId);
+		sceKernelSpinlockLowUnlock(&queue->lock);
+		sceGUIDReleaseObject(waitId);
 	}
 }

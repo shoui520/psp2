@@ -1,6 +1,6 @@
 #include <string.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
 
@@ -19,7 +19,7 @@ int sceSblUsInformUpdateStartedForUser(int number1, int number2,
 		return (int)0x800f0216;
 	}
 	memset(buffer, 0, sizeof(buffer));
-	result = ksceKernelCopyFromUser(buffer, str, len);
+	result = SceSysmemForDriver_BC996A7A(buffer, str, len);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;
@@ -57,7 +57,7 @@ int sceSblUsInformUpdateFinishedForUser(int number, const char *str, SceSize len
 		return (int)0x800f0216;
 	}
 	memset(buffer, 0, sizeof(buffer));
-	result = ksceKernelCopyFromUser(buffer, str, len);
+	result = SceSysmemForDriver_BC996A7A(buffer, str, len);
 	if (result != 0) {
 		EXIT_SYSCALL(state);
 		return result;

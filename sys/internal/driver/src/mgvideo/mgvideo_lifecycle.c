@@ -6,6 +6,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "mgvideo_result.h"
 #include <magicgate/magicgate.h>
+#include <sysmem/procevent.h>
 
 int initializeVideoContext(MgVideoContext *context, uint64_t *challenge)
 {
@@ -47,11 +48,8 @@ int module_stop(SceSize arglen, const void *argp)
 	return 0;
 }
 
-struct SceProcEventHandler;
-extern const struct SceProcEventHandler videoProcessEventCallbacks;
-int ksceKernelRegisterProcEventHandler(const char *name,
-		const struct SceProcEventHandler *handler, int flags);
-int ksceKernelUnregisterProcEventHandler(SceUID handler);
+struct SceKernelProcEventHandler;
+extern const struct SceKernelProcEventHandler videoProcessEventCallbacks;
 void notifyContextFinalized(void);
 int readVideoEkb2Record(void *output, unsigned int capacity);
 
@@ -99,7 +97,7 @@ int createVideoContext(int type, int flags, int options)
 			SceMagicGateForDriver_6D3B42E6();
 			return result;
 		}
-		result = ksceKernelRegisterProcEventHandler("SceMgVideo",
+		result = sceKernelRegisterProcEventHandler("SceMgVideo",
 						   &videoProcessEventCallbacks, 0);
 		if (result < 0) {
 			SceMagicGateForDriver_6D3B42E6();
@@ -127,24 +125,24 @@ int createVideoContext(int type, int flags, int options)
 	}
 	heap = contextHeaps[owner];
 	if (heap <= 0) {
-		heap = ksceKernelCreateHeap("mgvideo", sizeof(MgVideoContext), 0);
+		heap = SceSysmemForDriver_9328E0E8("mgvideo", sizeof(MgVideoContext), 0);
 		if (heap < 0) {
 			result = (int)0x8050c004;
 			goto unreference;
 		}
 		contextHeaps[owner] = heap;
 	}
-	context = ksceKernelAllocHeapMemory(heap, sizeof(*context));
+	context = SceSysmemForDriver_7B4CB60A(heap, sizeof(*context));
 	if (!context) {
 		result = (int)0x8050c004;
-		ksceKernelDeleteHeap(heap);
+		sceKernelDeleteHeap(heap);
 		contextHeaps[owner] = -1;
 		goto unreference;
 	}
 	result = ksceKernelCreateEventFlag("SceMgVideoDrv", 0x9000, -1, 0);
 	if (result < 0) {
-		ksceKernelFreeHeapMemory(heap, context);
-		ksceKernelDeleteHeap(heap);
+		sceKernelFreeHeapMemory(heap, context);
+		sceKernelDeleteHeap(heap);
 		contextHeaps[owner] = -1;
 		goto unreference;
 	}
@@ -236,13 +234,13 @@ destroy:
 		goto unreference;
 	ksceKernelDeleteEventFlag(context->eventFlag);
 	videoContexts[owner] = 0;
-	ksceKernelFreeHeapMemory(contextHeaps[owner], context);
-	ksceKernelDeleteHeap(contextHeaps[owner]);
+	sceKernelFreeHeapMemory(contextHeaps[owner], context);
+	sceKernelDeleteHeap(contextHeaps[owner]);
 	contextHeaps[owner] = -1;
 unreference:
 	if (videoReferences > 0 && --videoReferences == 0) {
-		ksceKernelUnregisterProcEventHandler(processEventHandler);
-		intr = ksceKernelCpuSuspendIntr();
+		SceProcEventForDriver_3DED57CC(processEventHandler);
+		intr = SceCpuForDriver_821FC0EE();
 		index = 0;
 		do {
 			if (recordStreams[index].active) {
@@ -256,7 +254,7 @@ unreference:
 				stream->processId = -1;
 			}
 		} while (++index <= 1);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelCpuResumeIntr(intr);
 		SceMagicGateForDriver_6D3B42E6();
 	}
 	return result;
@@ -314,8 +312,8 @@ unreference:
 					goto reload;
 				ksceKernelDeleteEventFlag(context->eventFlag);
 				videoContexts[owner] = 0;
-				ksceKernelFreeHeapMemory(contextHeaps[owner], context);
-				ksceKernelDeleteHeap(contextHeaps[owner]);
+				sceKernelFreeHeapMemory(contextHeaps[owner], context);
+				sceKernelDeleteHeap(contextHeaps[owner]);
 				contextHeaps[owner] = -1;
 reload:
 				references = videoReferences;
@@ -327,8 +325,8 @@ reload:
 	references--;
 	videoReferences = references;
 	if (references == 0) {
-		ksceKernelUnregisterProcEventHandler(processEventHandler);
-		intr = ksceKernelCpuSuspendIntr();
+		SceProcEventForDriver_3DED57CC(processEventHandler);
+		intr = SceCpuForDriver_821FC0EE();
 		index = 0;
 		do {
 			while (!recordStreams[index].active) {
@@ -345,7 +343,7 @@ reload:
 			stream->processId = -1;
 		} while (++index <= 1);
 resume:
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelCpuResumeIntr(intr);
 		SceMagicGateForDriver_6D3B42E6();
 	}
 	return references;
@@ -440,7 +438,7 @@ int initializeVideoKeyring(int handle)
 			return result;
 		context->state = 1;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	index = 0;
 	do {
 		if (recordStreams[index].active) {
@@ -454,7 +452,7 @@ int initializeVideoKeyring(int handle)
 			stream->processId = -1;
 		}
 	} while (++index <= 1);
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	result = context->callbacks.initialize(context, &videoRandomChallenge);
 	if (result < 0)
 		return result;

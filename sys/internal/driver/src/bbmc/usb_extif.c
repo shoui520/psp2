@@ -1,7 +1,7 @@
 /* USB external-interface transfers and completion. */
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <stdint.h>
 #include <psp2kern/udcd.h>
 #include <psp2kern/usbserv.h>
@@ -55,11 +55,11 @@ int bbmcUsbExtIfReleaseGpio(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	ksceKernelSpinlockLowLock(&g_usbExtIf->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
 	if (g_usbExtIf->mode == 0)
 		bbmcCloseUsbSerialChannels();
 	ret = SceBbmcForDriver_D16D0845();
-	ksceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
+	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
 	return ret;
 }
 
@@ -70,7 +70,7 @@ int bbmcUsbExtIfAcquireGpio(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	ksceKernelSpinlockLowLock(&g_usbExtIf->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
 	ret = SceBbmcForDriver_D98DB926();
 	if (ret >= 0) {
 		if (g_usbExtIf->mode == 1)
@@ -82,7 +82,7 @@ int bbmcUsbExtIfAcquireGpio(void)
 		bbmcWakeUsbSerial();
 	}
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
+	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
 	return ret;
 }
 
@@ -104,7 +104,7 @@ int sceBbmcUsbExtIfStart(int mode)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	ksceKernelSpinlockLowLock(&g_usbExtIf->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
 	ret = SceBbmcForDriver_D98DB926();
 	if (ret < 0)
 		goto fail;
@@ -165,7 +165,7 @@ int sceBbmcUsbExtIfStart(int mode)
 		ksceUdcdStopInternal("SceUsbQcomSer", 0, NULL, 2);
 	goto fail;
 out:
-	ksceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
+	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
 	return ret;
 fail:
 	if (g_usbExtIf->qcomChannel > 0) {
@@ -176,7 +176,7 @@ fail:
 		bbmcCloseUsbSerialAt(g_usbExtIf->atChannel);
 		g_usbExtIf->atChannel = 0;
 	}
-	ksceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
+	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
 	return ret;
 }
 
@@ -186,7 +186,7 @@ int sceBbmcUsbExtIfStop(void)
 
 	if (g_usbExtIf == NULL)
 		return (int)0x80330003;
-	ksceKernelSpinlockLowLock(&g_usbExtIf->lock);
+	SceCpuForDriver_BF82DEB2(&g_usbExtIf->lock);
 	if (g_usbExtIf->mode != 0) {
 		if (g_usbExtIf->mode == 1) {
 			bbmcCloseUsbSerialQcom(g_usbExtIf->qcomChannel);
@@ -209,7 +209,7 @@ int sceBbmcUsbExtIfStop(void)
 	}
 	ret = SceBbmcForDriver_D16D0845();
 	g_usbExtIf->mode = -1;
-	ksceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
+	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
 	return ret;
 }
 
@@ -266,7 +266,7 @@ finished:
 	if (completion.semaphore > 0)
 		ksceKernelDeleteSema(completion.semaphore);
 	if (ret > 0) {
-		int copied = ksceKernelCopyToUser(data, buffer, ret);
+		int copied = SceSysmemForDriver_6D88EF8A(data, buffer, ret);
 
 		if (copied < 0)
 			return copied;
@@ -285,7 +285,7 @@ int sceBbmcUsbExtIfWrite(unsigned int channel, const void *data, SceSize length)
 		return (int)0x80330002;
 	allocation = __builtin_alloca(length + 64);
 	buffer = (void *)(((uintptr_t)allocation + 64) & ~(uintptr_t)63);
-	ret = ksceKernelCopyFromUser(buffer, data, length);
+	ret = SceSysmemForDriver_BC996A7A(buffer, data, length);
 	if (ret < 0)
 		return ret;
 	const char *names[2] = {

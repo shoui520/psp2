@@ -3,7 +3,7 @@
 #include <arm_neon.h>
 #include <stdio.h>
 #include <string.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
@@ -56,7 +56,7 @@ int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 		return (int)0x80260102;
 	if (!destination)
 		goto wait;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = transfer->state;
 	if (running > 1) {
 		result = (int)0x8026010a;
@@ -90,18 +90,18 @@ int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 		transfer->state = 1;
 	}
 	threshold = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 		running = transfer->state;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
 		ksceKernelWaitEventFlag(state->eventFlag, 2, 5, NULL, NULL);
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return result;
 }
 
@@ -178,9 +178,9 @@ int audioBuildCaptureDmaTags(struct AudioDmaState *state)
 		SceKernelIntrStatus intr;
 
 		mode = -2;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&audioDmaStates[1].lock);
+		intr = SceCpuForDriver_D32ACE9E(&audioDmaStates[1].lock);
 		audioStartCaptureDma(&audioDmaStates[1]);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&audioDmaStates[1].lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&audioDmaStates[1].lock, intr);
 		goto mixed;
 	}
 	if (mode == 0) {
@@ -230,7 +230,7 @@ mixed:
 		state->captureTags[1].dst = (void *)(destination + bytes - 256);
 		state->pendingCaptureBuffer = 0;
 		if ((uint32_t)(destination - 0x18000000) < 0x8000000) {
-			if (!ksceKernelIsUncacheAddressInTmpFsGame((void *)destination))
+			if (!sceKernelIsUncacheAddressInTmpFsGame((void *)destination))
 				command |= 0x2000000;
 		} else if ((uint32_t)(destination - 0x20000000) >= 0x20000000 &&
 			   (uint32_t)(destination - 0x60000000) >= 0x21000000) {
@@ -283,7 +283,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	ksceKernelSpinlockLowLock(&state->lock);
+	SceCpuForDriver_BF82DEB2(&state->lock);
 	if (state->previousCaptureBuffer && state->previousCaptureFrames)
 		audioDownsampleCapture(audioCaptureSampleBankIndex,
 			state->previousCaptureBuffer, state->previousCaptureFrames);
@@ -299,7 +299,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->currentCaptureFrames = 0;
 			state->previousCaptureFrames = 0;
 		}
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 		if (ksceKernelDmaOpSync(opId, 1, 0, 0) <= 0) {
 			state->captureState = 0;
 			if (state == &audioDmaStates[2]) {
@@ -315,7 +315,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			goto notify;
 		}
 	} else {
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	if (state == &audioDmaStates[2]) {
 		state->captureState = 1;
@@ -344,7 +344,7 @@ concatenate:
 notify:
 	if (state != &audioDmaStates[0])
 		ksceKernelSetEventFlag(state->eventFlag, 4);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -359,7 +359,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = (status & 1) ||
 		ksceKernelDmaOpSync(opId, 1, 0, 0) > 0;
 	state->transfers[stream].state = running;
@@ -415,7 +415,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 		    audioDmaStates[2].transfers[0].tags, concatenateMode) < 0)
 			audioDmaStates[2].transfers[0].state = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -431,7 +431,7 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 
 	(void)tag;
 	(void)completed;
-	ksceKernelSpinlockLowLock(&state->lock);
+	SceCpuForDriver_BF82DEB2(&state->lock);
 	if (state->previousCaptureBuffer && state->previousCaptureFrames)
 		audioDownsampleCapture(audioCaptureSampleBankIndex,
 			state->previousCaptureBuffer, state->previousCaptureFrames);
@@ -447,11 +447,11 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->currentCaptureFrames = 0;
 			state->previousCaptureFrames = 0;
 		}
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 		if (ksceKernelDmaOpSync(opId, 1, 0, 0) <= 0)
 			goto stop;
 	} else {
-		intr = ksceKernelCpuSuspendIntr();
+		intr = SceCpuForDriver_821FC0EE();
 	}
 	if (audioDmaStates[1].sourceMode == audioDmaStates[0].sourceMode ||
 	    (audioDmaStates[0].sourceMode != 2 &&
@@ -473,7 +473,7 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 		transfer->tags[1].dst = (void *)(source + bytes - 256);
 		state->pendingCaptureBuffer = 0;
 		if ((uint32_t)(source - 0x18000000) < 0x8000000) {
-			if (!ksceKernelIsUncacheAddressInTmpFsGame((void *)source))
+			if (!sceKernelIsUncacheAddressInTmpFsGame((void *)source))
 				command |= 0x2000000;
 		} else if ((uint32_t)(source - 0x20000000) >= 0x20000000 &&
 			   (uint32_t)(source - 0x60000000) >= 0x21000000) {
@@ -508,7 +508,7 @@ notify:
 		(void)state->registers->status;
 	}
 	ksceKernelSetEventFlag(state->eventFlag, 4);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -626,14 +626,14 @@ int audioSetHardwareTransferMode(unsigned int channel, unsigned int mode)
 	if (channel > 2)
 		return -1;
 	state = &audioDmaStates[channel ^ 1];
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->sourceMode != mode) {
 		state->sourceMode = mode;
 		if (mode <= 1)
 			state->captureFrames = 1024;
 		state->pendingCaptureBuffer = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	if (mode == 1)
 		audioStartCaptureDma(state);
 	return 0;
@@ -687,7 +687,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 				transfer->tags[1].dst = (void *)(destination + bytes - 256);
 				state->pendingCaptureBuffer = 0;
 				if ((uint32_t)(destination - 0x18000000) < 0x8000000) {
-					if (!ksceKernelIsUncacheAddressInTmpFsGame((void *)destination))
+					if (!sceKernelIsUncacheAddressInTmpFsGame((void *)destination))
 						command |= 0x2000000;
 				} else if ((uint32_t)(destination - 0x20000000) >= 0x20000000 &&
 					   (uint32_t)(destination - 0x60000000) >= 0x21000000) {
@@ -735,7 +735,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 				transfer->tags[1].dst = (void *)(destination + bytes - 256);
 				state->pendingCaptureBuffer = 0;
 				if ((uint32_t)(destination - 0x18000000) < 0x8000000) {
-					if (!ksceKernelIsUncacheAddressInTmpFsGame((void *)destination))
+					if (!sceKernelIsUncacheAddressInTmpFsGame((void *)destination))
 						command |= 0x2000000;
 				} else if ((uint32_t)(destination - 0x20000000) >= 0x20000000 &&
 					   (uint32_t)(destination - 0x60000000) >= 0x21000000) {
@@ -768,15 +768,15 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 		transfer->state = 1;
 	}
 queue:
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	while (state->pendingCaptureBuffer) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		ksceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	}
 	state->pendingCaptureBuffer = buffer;
 	state->captureFrames = wordCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 notReady:
 	sceKernelDelayThread(1000);
@@ -788,7 +788,7 @@ int audioSetSingleTransferMode(int mode)
 	struct AudioDmaState *state = &audioDmaStates[2];
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->transmitSourceMode != mode) {
 		state->transmitSourceMode = mode;
 		if (mode) {
@@ -799,7 +799,7 @@ int audioSetSingleTransferMode(int mode)
 		}
 		state->pendingTransmitBuffer = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -814,15 +814,15 @@ int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount)
 		return -2;
 	if (ksceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0)
 		audioStartTransmitDma(state, state->registers);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	while (state->pendingTransmitBuffer) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		ksceKernelWaitEventFlag(state->eventFlag, 1, 5, NULL, NULL);
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	}
 	state->pendingTransmitBuffer = buffer;
 	state->transmitFrames = wordCount;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -848,7 +848,7 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 		goto wait;
 	if (source & 15)
 		return (int)0x80260004;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = transfer->state;
 	if (running > 1) {
 		result = (int)0x80260002;
@@ -884,18 +884,18 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 	}
 	state->transfers[stream].state = submittedState;
 	threshold = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 		running = transfer->state;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
 		ksceKernelWaitEventFlag(state->eventFlag, stream + 1, 5, NULL, NULL);
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return result;
 }
 
@@ -911,7 +911,7 @@ int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount)
 		return (int)0x80260105;
 	if (!destination)
 		goto wait;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = state->captureState;
 	if (running > 1) {
 		result = (int)0x8026010a;
@@ -951,18 +951,18 @@ int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount)
 	state->captureState = 1;
 submitted:
 	threshold = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 wait:
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+		intr = SceCpuForDriver_D32ACE9E(&state->lock);
 		running = state->captureState;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 		if (running <= threshold)
 			return 0;
 		ksceKernelWaitEventFlag(state->eventFlag, 4, 5, NULL, NULL);
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return result;
 }
 
@@ -1015,7 +1015,7 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 		send = tail != 0;
 		tail = withoutOutput;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	gate = ScePervasiveForDriver_47F2C35C(channel);
 	if (send) {
 		const uint32_t *cursor = packet;
@@ -1057,11 +1057,11 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 	result = audioSetClockRates(channel, inputRate, outputRate, clockRate);
 	if (gate == 0)
 		ScePervasiveForDriver_F861FEE4(channel);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return result;
 hardwareError:
 	registers->control = 0x100;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return -1;
 }
 
@@ -1208,10 +1208,10 @@ int audioInitializeSrcMix(void)
 		option.size = sizeof(option);
 		option.paddr = ACLKGEN_REG_BASE;
 		option.attr = 2;
-		result = ksceKernelAllocMemBlock("SceAclkgenReg", 0x20100806,
+		result = SceSysmemForDriver_C94850C9("SceAclkgenReg", 0x20100806,
 			ACLKGEN_REG_SIZE, &option);
 		if (result >= 0)
-			ksceKernelGetMemBlockBase(result, (void **)&audioClockRegisters);
+			SceSysmemForDriver_A841EDDA(result, (void **)&audioClockRegisters);
 	}
 	state = audioDmaStates;
 	ScePervasiveForDriver_2FB5F88F(1);
@@ -1227,10 +1227,10 @@ int audioInitializeSrcMix(void)
 			option.attr = 2;
 			option.paddr = physicalAddress;
 			snprintf(name, sizeof(name), "SceSrcMix%dReg", channel);
-			result = ksceKernelAllocMemBlock(name, 0x20100806, SRCMIX_REG_SIZE, &option);
+			result = SceSysmemForDriver_C94850C9(name, 0x20100806, SRCMIX_REG_SIZE, &option);
 			if (result < 0)
 				return result;
-			ksceKernelGetMemBlockBase(result, (void **)&state->registers);
+			SceSysmemForDriver_A841EDDA(result, (void **)&state->registers);
 			for (operation = 0; operation < 3; ++operation) {
 				SceKernelDmaOpTag *tags;
 				SceKernelDmaOpId opId;

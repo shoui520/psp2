@@ -38,20 +38,22 @@ typedef struct SceObjectBase {
 } SceObjectBase;
 VITASDK_BUILD_ASSERT_EQ(8, SceObjectBase);
 
-SceClass *ksceKernelGetUIDClass(void);
-SceClass *ksceKernelGetUIDDLinkClass(void);
-SceClass *ksceKernelGetUIDHeapClass(void);
-SceClass *ksceKernelGetUIDMemBlockClass(void);
-int ksceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass,
+SceClass *SceSysmemForDriver_85336A1C(void);	/* vitasdk: ksceKernelGetUIDClass */
+SceClass *SceSysmemForKernel_E4193EB6(void);	/* vitasdk: ksceKernelGetUIDDLinkClass */
+SceClass *SceSysmemForKernel_7C878E94(void);	/* vitasdk: ksceKernelGetUIDHeapClass */
+SceClass *SceSysmemForKernel_86681B64(void);	/* vitasdk: ksceKernelGetUIDMemBlockClass */
+/* vitasdk: ksceUIDClassInitClass */
+int SceSysmemForDriver_61317102(SceClass *cls, const char *name, void *uidclass,
 			SceSize itemsize, SceClassCallback create, SceClassCallback destroy);
-int ksceKernelFindClassByName(const char *name, SceClass **cls);
+/* vitasdk: ksceKernelFindClassByName */
+int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls);
 
 #define ksceKernelCreateClass(cls, name, uidclass, itemsize, create, destroy) \
-	ksceUIDClassInitClass(cls, name, uidclass, itemsize, create, destroy)
-#define ksceKernelGetUidClass() ksceKernelGetUIDClass()
-#define ksceKernelGetUidDLinkClass() ksceKernelGetUIDDLinkClass()
-#define ksceKernelGetUidHeapClass() ksceKernelGetUIDHeapClass()
-#define ksceKernelGetUidMemBlockClass() ksceKernelGetUIDMemBlockClass()
+	SceSysmemForDriver_61317102(cls, name, uidclass, itemsize, create, destroy)
+#define ksceKernelGetUidClass() SceSysmemForDriver_85336A1C()
+#define ksceKernelGetUidDLinkClass() SceSysmemForKernel_E4193EB6()
+#define ksceKernelGetUidHeapClass() SceSysmemForKernel_7C878E94()
+#define ksceKernelGetUidMemBlockClass() SceSysmemForKernel_86681B64()
 
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);

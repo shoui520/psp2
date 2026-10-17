@@ -2,25 +2,13 @@
  * The encryption backend's verification remains incomplete.
  */
 
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <kernel/error.h>
 #include <sysmem/aes.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <fw.h>
-
-struct CmacContext {
-	SceAesCompactContext aes;
-	uint64_t ullTotalLen;
-	uint32_t remains;
-	uint32_t computed;
-	uint8_t result[32];
-	uint8_t chain[32];
-	uint8_t completeSubkey[32];
-	uint8_t partialSubkey[32];
-	uint8_t buffer[32];
-};
 
 _Static_assert(sizeof(struct CmacContext) == 0x2a0, "CMAC context size");
 _Static_assert(offsetof(struct CmacContext, ullTotalLen) == 0x1f0, "CMAC length offset");
@@ -48,10 +36,10 @@ int SceKernelUtilsForDriver_0C39954E(struct CmacContext *ctx,
 	if (key == NULL || ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	memset(ctx, 0, sizeof(*ctx));
-	ret = ksceAesInit2((SceAesContext *)&ctx->aes, blockBits, keyBits, key);
+	ret = SceKernelUtilsForDriver_EDA97D6D((SceAesContext *)&ctx->aes, blockBits, keyBits, key);
 	if (ret < 0)
 		return ret;
-	ksceAesEncrypt2((SceAesContext *)&ctx->aes, ctx->chain, encryptedZero);
+	SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, encryptedZero);
 	last = ctx->aes.blockWords * 4 - 1;
 	index = 0;
 	do {
@@ -103,7 +91,7 @@ int SceKernelUtilsForDriver_BB6E35CD(struct CmacContext *ctx,
 			}
 			for (index = 0; index < blockBytes; index++)
 				ctx->chain[index] ^= block[index];
-			ksceAesEncrypt2((SceAesContext *)&ctx->aes, ctx->chain, ctx->chain);
+			SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, ctx->chain);
 			if (pending <= blockBytes)
 				break;
 			pending -= blockBytes;
@@ -140,7 +128,7 @@ int SceKernelUtilsForDriver_222986EF(struct CmacContext *ctx, void *result)
 				ctx->chain[index] ^= ctx->partialSubkey[index];
 			ctx->chain[ctx->remains] ^= 0x80;
 		}
-		ksceAesEncrypt2((SceAesContext *)&ctx->aes, ctx->chain, ctx->result);
+		SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, ctx->result);
 		ctx->computed = 1;
 	}
 	memcpy(result, ctx->result, blockBytes);

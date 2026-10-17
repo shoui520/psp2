@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "audio_regs.h"
 #include <dmacmgr/dmacmgr.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 
 struct AudioCaptureSampleBlock {
 	uint32_t samples[4];

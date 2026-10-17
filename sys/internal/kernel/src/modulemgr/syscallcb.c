@@ -61,7 +61,7 @@ int SyscallCBInit(void)
 	for (p = g_syscall.table; p != end; p++)
 		*p = func_noentry;
 	writeDacr(dacr);
-	ksceMt19937GlobalUninit(&g_syscall.low, sizeof(g_syscall.low));
+	SceKernelUtilsForDriver_875B2A1C(&g_syscall.low, sizeof(g_syscall.low));
 	g_syscall.low &= SYSCALLCB_MAX_SYSCALLNUM - 1;
 	g_syscall.high = g_syscall.low + SYSCALLCB_MAX_SYSCALLNUM;
 	return 0;
@@ -73,7 +73,7 @@ int SyscallCBAssignEntry(SceUInt32 count)
 	SceUInt32 low = g_syscall.low, high = g_syscall.high;
 	SceUInt32 rnd, skip, n;
 
-	ksceMt19937GlobalUninit(&rnd, sizeof(rnd));
+	SceKernelUtilsForDriver_875B2A1C(&rnd, sizeof(rnd));
 	skip = rnd % 5;
 	n = count + skip;
 	if (n > high - low) {

@@ -1,5 +1,5 @@
 /* Two-span SHA-224 message serialization. */
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "adhoc.h"
 
 GcAuthAdhocHashScratch gcAuthAdhocHashScratch;
@@ -17,7 +17,7 @@ int GcAuthAdhocHash224Spans(const unsigned char *first,
 		input->payload[index] = first[index];
 	for (index = 0; index != secondSize; ++index)
 		input->payload[firstSize + index] = second[index];
-	if (ksceSha224Digest(input->payload, size,
+	if (SceKernelUtilsForDriver_9EA9D4DC(input->payload, size,
 			gcAuthAdhocHashScratch.digest224) != 0)
 		return (int)0x808a0103;
 	return 0;

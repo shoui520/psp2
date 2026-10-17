@@ -112,13 +112,13 @@ set(MODULE_IMPORT_NIDS
 	0x15243EC5:F:0xF2BAB182
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelDeleteHeap
-	ksceKernelAtomicCompareAndSet8
-	ksceKernelAtomicGetAndOr8
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	sceKernelDeleteHeap
+	SceCpuForDriver_3627F4E0
+	SceCpuForDriver_BDF6F8E4
 	memset
 	strncmp
 	strncpy
@@ -132,8 +132,8 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	ksceKernelAssert
-	ksceKernelPrintfLevelWithInfo
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_D9703808
 	ksceKernelDisableSubIntr
 	ksceKernelRegisterIntrHandler
 	ksceKernelEnableSubIntr
@@ -158,11 +158,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblRngPseudoRandomNumber
 	SceSblACMgrForDriver_BE5667C5
 	ksceSblGcAuthMgrGcAuthCartAuthentication
-	ksceKernelRegisterSysEventHandler
-	ksceSysrootIsBsodReboot
-	ksceSysrootUseInternalStorage
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
-	ksceKernelSysrootCheckModelCapability
+	sceKernelRegisterSysEventHandler
+	SceSysrootForDriver_4373AC96
+	SceSysrootForDriver_50FE3B4D
+	SceSysrootForDriver_55392965
+	SceSysrootForDriver_8AA268D6
 	SceSysrootForDriver_9BF782CA
 	SceSysrootForDriver_F804F761
 	kscePervasiveRemovableMemoryGetCardInsertState

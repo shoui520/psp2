@@ -246,13 +246,13 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_pervasiveDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(s_pervasiveDevices[i].name,
+		ret = SceSysmemForDriver_C94850C9(s_pervasiveDevices[i].name,
 			i != 5 ? 0x20100806 : 0x20100206,
 			s_pervasiveDevices[i].size, &opt);
 		if (ret < 0)
 			goto error;
 		s_pervasive.uid[i] = ret;
-		ksceKernelGetMemBlockBase(ret, (void **)s_pervasiveDevices[i].base);
+		SceSysmemForDriver_A841EDDA(ret, (void **)s_pervasiveDevices[i].base);
 	}
 	s_pervasive.hardwareInfo[0] = s_misc->revision;
 	s_pervasive.hardwareInfo[1] = s_misc->cacheStatus;
@@ -260,7 +260,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		s_pervasive.hardwareInfo[i + 2] = s_misc->hardwareInfo[i];
 	PixelClockInit();
 	PervasiveMiscInit();
-	mode = ksceKernelCheckDipsw(0xec) == 0 ? 3 : 5;
+	mode = SceDipswForDriver_A98FC2FD(0xec) == 0 ? 3 : 5;
 	GpuClockSet(mode, mode);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_POWER, PervasivePowerMonitorCall);
 	sceKernelRegisterMonitorCallHandler(PERVASIVE_MONCALL_RESET, PervasiveResetMonitorCall);
@@ -274,7 +274,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 error:
 	/* Sony frees the whole UID array, including untouched entries. */
 	for (i = 0; i < 16; i++)
-		ksceKernelFreeMemBlock(s_pervasive.uid[i]);
+		SceSysmemForDriver_009E1C61(s_pervasive.uid[i]);
 	return ret;
 }
 
@@ -297,7 +297,7 @@ int ParkOtherCpus(int cleanCache)
 {
 	uint32_t state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	s_parkCleanCache = cleanCache;
 	plePark();
 	s_parkedCpus = 1 << (readMpidr() & 3);
@@ -305,7 +305,7 @@ int ParkOtherCpus(int cleanCache)
 	sceKernelGenerateSoftIntr(PERVASIVE_INTR_PARK, 1, 0);
 	while (s_parkedCpus != ALL_CPUS)
 		__asm__ volatile("wfe" : : : "memory");
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;
 }
 

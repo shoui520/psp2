@@ -12,7 +12,7 @@
  */
 #include <sysmem/ctype.h>
 #include <sysmem/sysclib.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysroot_acmgr.h>
 #include "acmgr_internal.h"
@@ -180,7 +180,7 @@ static inline int matchEncoded(const SceChar8 *s, const SceChar8 *encoded, SceSi
 /* name unknown: the caller's auth info, and an attribute with a value buffer */
 static int getAuthInfoAndCheckAttribute(SceUID pid, SceSblACMgrValue *attr, SceSelfAuthInfo *info)
 {
-	if (ksceSysrootGetSelfAuthInfo(pid, info) != 0)
+	if (SceSysrootForKernel_4F0A4066(pid, info) != 0)
 		return ACMGR_ERROR_AUTH_INFO;
 	if (attr == NULL || attr->value == NULL)
 		return ACMGR_ERROR_INVALID_ARGUMENT;
@@ -250,7 +250,7 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 	SceSize i;
 	int restricted, n;
 
-	if (ksceSysrootGetSelfAuthInfo(pid, &info) != 0 || path == NULL)
+	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0 || path == NULL)
 		return 0;
 	group = info.program_authority_id & 0xfff0000000000000ULL;
 	if (group == 0x2100000000000000ULL || group == 0x2f00000000000000ULL)
@@ -259,7 +259,7 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 		restricted = 1;
 	else
 		return 1;
-	rules = ksceKernelCheckDipsw(0x9f) ? devDeviceRules : deviceRules;
+	rules = SceDipswForDriver_A98FC2FD(0x9f) ? devDeviceRules : deviceRules;
 	for (n = 0; n < 4; n++) {
 		for (i = 0; i < rules[n].prefixLen; i++)
 			if (path[i] != ~rules[n].prefix[i])
@@ -415,7 +415,7 @@ int sceSblACMgrHasCapability(SceUID pid, int bit)
 {
 	SceSelfAuthInfo info;
 
-	if (ksceSysrootGetSelfAuthInfo(pid, &info) != 0)
+	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return 0;
 	return (info.capability[bit >> 3] >> (~bit & 7)) & 1;
 }
@@ -434,7 +434,7 @@ static int hasAttribute(SceUID pid, int bit)
 {
 	SceSelfAuthInfo info;
 
-	if (ksceSysrootGetSelfAuthInfo(pid, &info) != 0)
+	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return 0;
 	return (info.attribute[bit >> 3] >> (~bit & 7)) & 1;
 }
@@ -443,7 +443,7 @@ int sceSblACMgrGetPaid(SceUID pid, SceUInt64 *paid)
 {
 	SceSelfAuthInfo info;
 
-	if (paid == NULL || ksceSysrootGetSelfAuthInfo(pid, &info) != 0)
+	if (paid == NULL || SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return ACMGR_ERROR_INVALID_ARGUMENT;
 	*paid = info.program_authority_id;
 	return 0;
@@ -581,10 +581,10 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 		return 0;
 	group = paid & 0xfff0000000000000ULL;
 	if (group == 0x2800000000000000ULL) {
-		if (ksceSblQafMgrIsAllowSystemAppDebug())
+		if (SceQafMgrForDriver_CAD47130())
 			return 1;
 	} else if (group == 0x2200000000000000ULL || group == 0x2100000000000000ULL) {
-		if (SceQafMgrForDriver_694D1096() || SceSysrootForDriver_56D85EB0((SceUInt32)paid, (SceUInt32)(paid >> 32)))
+		if (SceQafMgrForDriver_694D1096() || SceSysrootForDriver_56D85EB0(paid))
 			return 1;
 	}
 	return hasAttribute(pid, 0x10) == 0;
@@ -592,7 +592,7 @@ int SceSblACMgrForDriver_4CBD6156(SceUID pid)
 
 int SceSblACMgrForDriver_E87D1777(void)
 {
-	return ksceKernelCheckDipsw(0x9f);
+	return SceDipswForDriver_A98FC2FD(0x9f);
 }
 
 int SceSblACMgrForDriver_AD717E7A(SceUID pid)
@@ -680,7 +680,7 @@ int SceSblACMgrForDriver_D7AD8471(SceUID pid, const SceChar8 *path)
 	int level;
 	int n;
 
-	level = ksceKernelSysrootGetThreadAccessLevel();
+	level = SceSysrootForKernel_20009397();
 	paid = 0;
 	if (sceSblACMgrGetPaid(pid, &paid) != 0 || path == NULL)
 		return 0;

@@ -20,9 +20,9 @@ int UpdateUtilCheckBuffer(SceSize size, void *buffer)
 			continue;
 		}
 		if (entry->kernelBuffer && !entry->allocated && !entry->inUse) {
-			ksceKernelFreeMemBlock(entry->kernelMemBlock);
+			SceSysmemForDriver_009E1C61(entry->kernelMemBlock);
 			if (entry->userMemBlock > 0)
-				ksceKernelFreeMemBlock(entry->userMemBlock);
+				SceSysmemForDriver_009E1C61(entry->userMemBlock);
 			entry->kernelMemBlock = 0;
 			entry->userMemBlock = 0;
 			entry->kernelBuffer = NULL;

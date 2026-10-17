@@ -3,7 +3,7 @@
  * communication processor (CP), reached through SceDeci4pCpup.
  */
 
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
@@ -202,7 +202,7 @@ int sceSblRtcMgrGetCpSerialIdForUser(void *serialId)
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			ret = rtcMgrGetCpSerialId(buf);
 			if (ret == 0)
-				ret = ksceKernelCopyToUser(serialId, buf, sizeof(buf));
+				ret = SceSysmemForDriver_6D88EF8A(serialId, buf, sizeof(buf));
 			sceSyscallLeave(state);
 			return ret;
 		}
@@ -250,7 +250,7 @@ int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time)
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			ret = rtcMgrGetCpRtc(&value, 1);
 			if (ret == 0)
-				ret = ksceKernelCopyToUser(time, &value, sizeof(value));
+				ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
 			sceSyscallLeave(state);
 			return ret;
 		}
@@ -289,7 +289,7 @@ int sceSblRtcMgrGetCpRtcLogicalForUser(SceUInt32 *time)
 	}
 	ret = rtcMgrGetCpRtc(&value, 0);
 	if (ret == 0)
-		ret = ksceKernelCopyToUser(time, &value, sizeof(value));
+		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }

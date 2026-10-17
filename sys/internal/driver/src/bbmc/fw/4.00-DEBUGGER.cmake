@@ -182,32 +182,32 @@ set(MODULE_IMPORT_NIDS
 	0x4E75DFF2:F:0xF2049C02
 )
 set(MODULE_IMPORT_FUNCS
-	ksceSysrootIsBsodReboot
-	ksceKernelUserUnmap
-	ksceKernelFreeMemBlock
-	ksceKernelUserMap
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelAtomicAddAndGet32
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelAtomicSubAndGet32
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelPanic
-	ksceKernelPrintfLevelWithInfo
+	SceSysrootForDriver_4373AC96
+	sceKernelUserUnmap
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_278BC201
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	SceCpuForDriver_5F6A8743
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_A4884C4E
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_D9703808
 	memset
 	strncmp
 	memcpy
@@ -263,15 +263,15 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoOpen
 	ksceIoRead
 	ksceIoClose
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
 	ksceKernelSearchModuleByName
-	ksceSblQafMgrIsAllowRemotePlayDebug
+	SceQafMgrForDriver_BFD5E463
 	sceSblACMgrIsSystemProgram
-	kscePmMgrGetProductMode
+	ScePmMgrForDriver_2AC815A2
 	SceSblPostSsMgrForDriver_128FB35A
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	kscePervasiveUartClockDisable
 	ScePervasiveForDriver_34537B12
 	ScePervasiveForDriver_4B99558F

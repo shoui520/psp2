@@ -1,14 +1,14 @@
 /* Descriptive filename; registration tables read from the original module. */
 #include "hid_internal.h"
 
-const SceProcEventHandler hidProcessHandlers = {
-	.size = sizeof(SceProcEventHandler),
+const SceKernelProcEventHandler hidProcessHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = hidProcessCreate,
 	.exit = hidProcessExit,
 	.kill = hidProcessKill,
-	.stop = hidProcessStop,
-	.start = processResumeStart,
-	.switch_process = NULL,
+	.suspend = hidProcessStop,
+	.resume = processResumeStart,
+	.notify = NULL,
 };
 
 const SysrootHidOps hidSysrootOps = {

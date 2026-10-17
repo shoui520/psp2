@@ -113,19 +113,19 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_4F64DEF6
 	ScePervasiveForDriver_A2EFD7AF
 	ScePervasiveForDriver_BB67EF58
-	ksceKernelFreeMemBlock
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
-	ksceKernelVARangeToPAVector
-	ksceKernelDcacheCleanRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelPrintfLevelWithInfo
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
+	sceKernelVARangeToPAVector
+	SceCpuForDriver_103872A5
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceDebugForDriver_D9703808
 	memset
 	strncmp
 	memcpy
@@ -160,12 +160,12 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterTimer
 	ksceKernelSetEventFlag
 	sceKernelCancelEventFlag
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_062CAEB2
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
-	ksceSblAimgrIsDolce
-	ksceKernelPowerTick
+	SceSblAIMgrForDriver_71608CA3
+	SceKernelSuspendForDriver_E0489831
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

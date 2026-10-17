@@ -119,12 +119,12 @@ set(MODULE_IMPORT_FUNCS
 	SceMagicGateForDriver_F2502A3B
 	SceMagicGateForDriver_FEF11D84
 	SceSblACMgrForDriver_A27E47A7
-	ksceKernelFreeHeapMemory
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelDeleteHeap
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelDeleteHeap
 	ksceKernelSetPermission
 	ksceKernelDeleteMutex
 	ksceKernelWaitEventFlag
@@ -136,14 +136,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelRunWithStack
 	ksceKernelCreateMutex
-	ksceKernelCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	sceKernelCpuResumeIntr
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	SceProcessmgrForDriver_5468892A
 	SceProcessmgrForDriver_FC2A424E
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	SceRtcForDriver_32E50C36
 	ksceRtcGetCurrentSecureTick
 	ksceRtcConvertTickToDateTime

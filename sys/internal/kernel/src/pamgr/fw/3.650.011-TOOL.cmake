@@ -81,9 +81,9 @@ set(MODULE_IMPORT_NIDS
 	0x9D33EE8D:F:0x7CC73CDA
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCheckDipsw
-	ksceKernelCpuId
-	ksceKernelCpuGetCONTEXTIDR
+	SceDipswForDriver_A98FC2FD
+	sceKernelCpuId
+	SceCpuForKernel_FD54A91D
 	SceThreadmgrForKernel_170F69D6
 	SceThreadmgrForKernel_1D2A6815
 	SceThreadmgrForKernel_7B3368F1
@@ -106,23 +106,23 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelFreeMemBlock
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
 	SceSysmemForDriver_A7C0D1FC
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelFree
-	ksceKernelAlloc
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	SceSysmemForKernel_4233C16D
+	SceSysmemForKernel_85571907
 	SceSysrootForKernel_403B509E
 	sceKernelApiDeclareTypeUInt64
 	sceKernelApiDeclareTypeUInt32
 	SceSysrootForDriver_C94C76FA
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterProcEventHandler
 	sceKernelSetSyscallTraceFlag
 	SceProcessmgrForDriver_54D469E2
 	SceProcessmgrForDriver_61B9B6FA

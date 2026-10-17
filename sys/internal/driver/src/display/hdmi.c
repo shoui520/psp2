@@ -3,14 +3,13 @@
  * File name unknown; the module links its parts in this order.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/systimer.h>
-#include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <psp2kern/lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>

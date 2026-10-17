@@ -85,17 +85,17 @@ set(MODULE_IMPORT_NIDS
 	0xE692C727:F:0xD185D235
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
-	ksceKernelAssert
-	ksceKernelGetAssertLevel
-	ksceKernelPanic
-	ksceKernelPrintf
-	ksceKernelPrintfAssertLevel
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_821A2D59
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	memset
 	memcpy
 	__stack_chk_fail
@@ -125,14 +125,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelEnqueueWorkQueue
 	sceKernelGetSystemTimeWide
 	ksceKernelCreateMutex
-	ksceKernelRegisterSysEventHandler
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
 	SceQafMgrForDriver_382C71E8
-	ksceSysrootIsSafeMode
-	ksceSysrootIsUpdateMode
-	ksceKernelCheckDipsw
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_B0E1FC67
+	SceDipswForDriver_A98FC2FD
 	ksceI2cTransferWriteRead
 	ksceI2cReset
 	ksceI2cTransferWrite

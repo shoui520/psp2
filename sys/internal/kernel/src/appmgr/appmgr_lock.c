@@ -42,7 +42,7 @@ int appMgrLockInitialize(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 38, "appMgrLockInitialize");
 #else
-		ksceKernelPanic(&mainMutexInitializePanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&mainMutexInitializePanicInfo, __builtin_return_address(0));
 #endif
 	}
 	g_appmgrMainMutex = mutex;
@@ -53,7 +53,7 @@ int appMgrLockInitialize(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 42, "appMgrLockInitialize");
 #else
-		ksceKernelPanic(&core2MutexInitializePanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&core2MutexInitializePanicInfo, __builtin_return_address(0));
 #endif
 	}
 	g_appmgrCore2Mutex = mutex;
@@ -64,7 +64,7 @@ int appMgrLockInitialize(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 46, "appMgrLockInitialize");
 #else
-		ksceKernelPanic(&coreKmMutexInitializePanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&coreKmMutexInitializePanicInfo, __builtin_return_address(0));
 #endif
 	}
 	g_appmgrCoreKmMutex = mutex;

@@ -38,14 +38,14 @@ set(MODULE_IMPORT_NIDS
 	0x9AD8E213:F:0x8612B243
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelDeleteHeap
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelDeleteHeap
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	__memset_chk
 	memcpy
@@ -55,8 +55,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelRegisterTimer
 	sceKernelGetSystemTimeWide
 	SceProcessmgrForDriver_8CB01675
-	ksceKernelRegisterProcEventHandler
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
 	sceSblACMgrIsSystemProgram
 )
 set(MODULE_IMPORT_VARS

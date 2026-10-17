@@ -77,19 +77,19 @@ set(MODULE_IMPORT_NIDS
 	0xEB1F8EF7:F:0x324F2B20
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	__stack_chk_fail
-	ksceSysrootIsSafeMode
-	ksceKernelSysrootCheckModelCapability
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_8AA268D6
+	SceSysrootForDriver_B0E1FC67
 	ksceKernelIsIntrAllowedInCurrentContext
 	ksceKernelDisableSubIntr
 	ksceKernelReleaseSubIntrHandler
@@ -120,10 +120,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_2E992B02
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_991FDC15
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
-	ksceKernelPowerTick
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
+	SceKernelSuspendForDriver_E0489831
+	sceKernelRegisterProcEventHandler
 	SceSysconForDriver_901D6CD4
 	ksceSysconCmdExecAsync
 	ksceSysconGetBaryonVersion

@@ -279,12 +279,12 @@ int KrmDriverUnlock(void)
 void sceKrmDriverSetPID(SceUID pid)
 {
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0) {
+	if (SceDebugForDriver_374B7868() > 0) {
 		int valid = 1;
 
 		if (__builtin_expect(g_krmDriverPid != -1, 0))
 			valid = pid == -1;
-		ksceKernelAssertLevel(1, valid,
+		SceDebugForDriver_FD753E7A(1, valid,
 			&g_krmSetPidDebug,
 			__builtin_return_address(0));
 	}
@@ -674,20 +674,20 @@ int KrmDriverSha256(void *digest, const void *src, SceSize size)
 {
 	SceSha256Context ctx;
 
-	ksceSha256BlockInit(&ctx);
-	ksceSha256BlockUpdate(&ctx, src, size);
-	ksceSha256BlockResult(&ctx, digest);
+	SceKernelUtilsForDriver_D909FA2C(&ctx);
+	SceKernelUtilsForDriver_236A9097(&ctx, src, size);
+	SceKernelUtilsForDriver_4899CD4B(&ctx, digest);
 	return 0;
 }
 
 int KrmDriverCopyFromUser(void *dst, const void *src, SceSize size)
 {
-	return ksceKernelCopyFromUser(dst, src, size);
+	return SceSysmemForDriver_BC996A7A(dst, src, size);
 }
 
 int KrmDriverCopyToUser(void *dst, const void *src, SceSize size)
 {
-	return ksceKernelCopyToUser(dst, src, size);
+	return SceSysmemForDriver_6D88EF8A(dst, src, size);
 }
 
 int KrmDriverIsAccessible(const void *addr, SceSize size, unsigned int flags)
@@ -697,7 +697,7 @@ int KrmDriverIsAccessible(const void *addr, SceSize size, unsigned int flags)
 
 	if (!(flags & 2))
 		type = low;
-	return ksceKernelIsAccessibleRange(type, addr, size) == 0;
+	return SceSysmemForDriver_9C78064C(type, addr, size) == 0;
 }
 
 unsigned int KrmDriverGetVersion(void)

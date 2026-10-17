@@ -7,11 +7,9 @@
 #include <stdint.h>
 #include <psp2kern/udcd.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
@@ -299,12 +297,12 @@ static void resetComplete(SceUdcdDeviceRequest *request);
 static void dataComplete(SceUdcdDeviceRequest *request);
 static unsigned lock(void)
 {
-	return ksceKernelSpinlockLowLockCpuSuspendIntr(&s.lock);
+	return SceCpuForDriver_D32ACE9E(&s.lock);
 }
 
 static void unlock(unsigned state)
 {
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s.lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s.lock, state);
 }
 
 static void appendBuffer(struct BufferQueue *queue, struct Buffer *buffer)
@@ -334,7 +332,7 @@ static struct Buffer *takeBuffer(struct BufferQueue *queue)
 
 static void receiveHeader(void)
 {
-	ksceKernelDcacheInvalidateRange(s.header.data, PCM_ROUND_CACHE(s.header.size));
+	SceCpuForDriver_02796361(s.header.data, PCM_ROUND_CACHE(s.header.size));
 	s.header.returnCode = 1;
 	ksceUdcdReqRecv(&s.header);
 }
@@ -351,7 +349,7 @@ static void releaseBuffer(struct Buffer *buffer)
 			s.receive.onComplete = receiveComplete;
 			s.receive.returnCode = 1;
 			s.receive.unused = buffer;
-			ksceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(s.receive.size));
+			SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(s.receive.size));
 			ksceUdcdReqRecv(&s.receive);
 			return;
 		}
@@ -426,7 +424,7 @@ static int disconnectChannel(struct Channel *channel, int command)
 	ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_COMMAND_DONE);
 	channel->commandBuffer->command = command;
 	channel->commandBuffer->argument = channel->unit;
-	ksceKernelDcacheCleanInvalidateRange(channel->commandBuffer, PCM_CACHE_LINE);
+	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
 	if (command == PCM_COMMAND_CLOSE) {
 		unsigned state = lock();
 		releaseChannel(channel);
@@ -575,7 +573,7 @@ static void initChannel(struct Channel *channel, unsigned int unit, struct UnitM
 	channel->command.attributes = 0;
 	channel->command.transmitted = 0;
 	channel->command.returnCode = 1;
-	ksceKernelDcacheCleanInvalidateRange(&memory->resetHeader, PCM_CACHE_LINE);
+	SceCpuForDriver_364E68A4(&memory->resetHeader, PCM_CACHE_LINE);
 	s.count++;
 	channel->event = s.events[unit];
 }
@@ -606,13 +604,13 @@ static int allocUnits(unsigned int count)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.unitMemblock = ksceKernelAllocMemBlock("SceUsbPspcmUnit", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	s.unitMemblock = SceSysmemForDriver_C94850C9("SceUsbPspcmUnit", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 						 (count * PCM_UNIT_SIZE + 0xfff) & ~0xfffu, &options);
 	if (s.unitMemblock < 0)
 		return s.unitMemblock;
-	ret = ksceKernelGetMemBlockBase(s.unitMemblock, (void **)&units);
+	ret = SceSysmemForDriver_A841EDDA(s.unitMemblock, (void **)&units);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(s.unitMemblock);
+		SceSysmemForDriver_009E1C61(s.unitMemblock);
 		return ret;
 	}
 	for (i = 0; (int)i < (int)count; i++)
@@ -638,11 +636,11 @@ static int startCommunication(int size, void *args, void *context)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.memblock = ksceKernelAllocMemBlock("SceUsbPspcm", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	s.memblock = SceSysmemForDriver_C94850C9("SceUsbPspcm", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 					     0x1000, &options);
 	if (s.memblock < 0)
 		return -1;
-	if (ksceKernelGetMemBlockBase(s.memblock, (void **)&memory) < 0)
+	if (SceSysmemForDriver_A841EDDA(s.memblock, (void **)&memory) < 0)
 		goto failBlock;
 	s.headerBuffer = (PcmHeader *)memory->header;
 	s.controlBuffer = memory->control;
@@ -721,7 +719,7 @@ failSema:
 	sceKernelCancelSema(s.sema, -1, NULL);
 	ksceKernelDeleteSema(s.sema);
 failBlock:
-	ksceKernelFreeMemBlock(s.memblock);
+	SceSysmemForDriver_009E1C61(s.memblock);
 	return -1;
 }
 
@@ -755,12 +753,12 @@ static int stopCommunication(int size, void *args, void *context)
 	}
 	s.flags &= ~PCM_STATE_MASK;
 	unlock(state);
-	ksceKernelFreeMemBlock(s.unitMemblock);
+	SceSysmemForDriver_009E1C61(s.unitMemblock);
 	sceKernelCancelSema(s.sema, -1, NULL);
 	ksceKernelDeleteSema(s.sema);
 	for (i = 0; i < 8; i++)
 		ksceKernelDeleteEventFlag(s.events[i]);
-	ksceKernelFreeMemBlock(s.memblock);
+	SceSysmemForDriver_009E1C61(s.memblock);
 	return 0;
 }
 
@@ -853,7 +851,7 @@ static void controlComplete(SceUdcdDeviceRequest *request)
 		s.ports = config->ports;
 		if ((unsigned int)config->units != s.count) {
 			if (s.unitMemblock >= 0) {
-				ksceKernelFreeMemBlock(s.unitMemblock);
+				SceSysmemForDriver_009E1C61(s.unitMemblock);
 				s.unitMemblock = -1;
 				s.count = 0;
 			}
@@ -879,7 +877,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		case PCM_REQUEST_GET_TITLE:
 			s.control.size = s.titleLength;
 			memcpy(s.control.data, s.title, s.titleLength);
-			ksceKernelDcacheCleanRange(s.control.data, PCM_ROUND_CACHE(s.control.size));
+			SceCpuForDriver_103872A5(s.control.data, PCM_ROUND_CACHE(s.control.size));
 			ksceUdcdReqSend(&s.control);
 			return 0;
 		case PCM_REQUEST_ACCEPT:
@@ -901,7 +899,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		default:
 			return -1;
 		}
-		ksceKernelDcacheCleanRange(s.control.data, PCM_CACHE_LINE);
+		SceCpuForDriver_103872A5(s.control.data, PCM_CACHE_LINE);
 		ksceUdcdReqSend(&s.control);
 		return 0;
 	}
@@ -909,7 +907,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 	case PCM_REQUEST_SET_CONFIG:
 		if (request->wLength) {
 			s.control.size = request->wLength < 64 ? request->wLength : 64;
-			ksceKernelDcacheInvalidateRange(s.control.data, 64);
+			SceCpuForDriver_02796361(s.control.data, 64);
 			ksceUdcdReqRecv(&s.control);
 			return 0;
 		}
@@ -951,7 +949,7 @@ static int processRequest(int recipient, int endpoint, SceUdcdEP0DeviceRequest *
 		return 0;
 	case PCM_REQUEST_SET_VERSION:
 		s.control.size = request->wLength < 64 ? request->wLength : 64;
-		ksceKernelDcacheInvalidateRange(s.control.data, 64);
+		SceCpuForDriver_02796361(s.control.data, 64);
 		ksceUdcdReqRecv(&s.control);
 		return 0;
 	default:
@@ -991,14 +989,14 @@ static void processHeader(unsigned int unit, unsigned int flags)
 		s.receive.unused = buffer;
 		s.receive.returnCode = 1;
 		s.receive.size = length;
-		ksceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
+		SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
 		ksceUdcdReqRecv(&s.receive);
 		return;
 	}
 	if (flags & PCM_HEADER_RESET) {
 		state = lock();
 		releaseChannel(channel);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s.lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s.lock, state);
 		ksceKernelSetEventFlag(channel->event, PCM_EVENT_RESET | PCM_EVENT_RESET_RECEIVED);
 		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_RESET);
 		if (channel->reset != PCM_RESET_SENT)
@@ -1242,7 +1240,7 @@ static int connectChannel(const unsigned *args)
 	ksceKernelSignalSema(s.sema, 1);
 	channel->commandBuffer->command = PCM_COMMAND_CONNECT;
 	channel->commandBuffer->argument = ((port & 255) << 8) | (channel->unit & 255);
-	ksceKernelDcacheCleanInvalidateRange(channel->commandBuffer, PCM_CACHE_LINE);
+	SceCpuForDriver_364E68A4(channel->commandBuffer, PCM_CACHE_LINE);
 	ksceUdcdReqSend(&channel->command);
 	if (args[2]) {
 		timeout = *(unsigned *)(uintptr_t)args[2];
@@ -1334,7 +1332,7 @@ static int devctl(unsigned command, const unsigned *input, unsigned inputSize, u
 		pid = sceKernelGetProcessId();
 		if (pid < 0)
 			break;
-		ret = kscePUIDtoGUID(pid, *input);
+		ret = SceSysmemForDriver_45D22597(pid, *input);
 		if (ret >= 0)
 			return setCallback(command, ret);
 		break;
@@ -1602,7 +1600,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		if (!channel->user)
 			memcpy(channel->sendBuffer, data, length);
 		else {
-			ret = ksceKernelCopyFromUser(channel->sendBuffer, data, length);
+			ret = SceSysmemForDriver_BC996A7A(channel->sendBuffer, data, length);
 			if (ret < 0)
 				goto done;
 		}
@@ -1610,9 +1608,9 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		channel->dataRequest.size = header->length;
 	}
 	if (channel->dataRequest.data)
-		ksceKernelDcacheCleanInvalidateRange(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
+		SceCpuForDriver_364E68A4(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
 	channel->dataRequest.returnCode = 1;
-	ksceKernelDcacheCleanInvalidateRange(header, PCM_CACHE_LINE);
+	SceCpuForDriver_364E68A4(header, PCM_CACHE_LINE);
 	channel->headerRequest.request.returnCode = 1;
 	ksceUdcdReqSend(&channel->headerRequest.request);
 	for (;;) {
@@ -1647,17 +1645,17 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 			length = PCM_PACKET_MAX;
 		}
 		header->length = length;
-		ksceKernelDcacheCleanInvalidateRange(header, PCM_CACHE_LINE);
+		SceCpuForDriver_364E68A4(header, PCM_CACHE_LINE);
 		if (!channel->user)
 			memcpy(channel->sendBuffer, channel->write, length);
 		else {
-			ret = ksceKernelCopyFromUser(channel->sendBuffer, channel->write, length);
+			ret = SceSysmemForDriver_BC996A7A(channel->sendBuffer, channel->write, length);
 			if (ret < 0)
 				goto done;
 		}
 		channel->dataRequest.data = channel->sendBuffer;
 		channel->dataRequest.size = header->length;
-		ksceKernelDcacheCleanInvalidateRange(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
+		SceCpuForDriver_364E68A4(channel->sendBuffer, PCM_ROUND_CACHE(channel->dataRequest.size));
 		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		channel->dataRequest.returnCode = 1;
 		channel->headerRequest.request.returnCode = 1;
@@ -1685,7 +1683,7 @@ done:
 static int copyRead(struct Channel *channel, void *target, const void *data, unsigned size)
 {
 	if (channel->user)
-		return ksceKernelCopyToUser(target, data, size);
+		return SceSysmemForDriver_6D88EF8A(target, data, size);
 	memcpy(target, data, size);
 	return 0;
 }
@@ -1844,7 +1842,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 		length = buffer->size;
 		if (channel->readRemaining <= length) {
 			if (channel->user)
-				ksceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
+				SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
 			copyRead(channel, channel->read, buffer->data, channel->readRemaining);
 			channel->partial = buffer;
 			channel->offset = channel->readRemaining;
@@ -1869,7 +1867,7 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 			receiveHeader();
 			break;
 		}
-		ksceKernelDcacheInvalidateRange(buffer->data, PCM_ROUND_CACHE(length));
+		SceCpuForDriver_02796361(buffer->data, PCM_ROUND_CACHE(length));
 		copyRead(channel, channel->read, buffer->data, length);
 		channel->read += buffer->size;
 		channel->readRemaining -= buffer->size;
@@ -1927,7 +1925,7 @@ int sceUsbPspcmSetTitle(const char *title, unsigned size)
 			ret = (int)0x8024300a;
 			goto done;
 		}
-		ret = ksceKernelStrncpyFromUser(s.title, title, size);
+		ret = SceSysmemForDriver_DB3EC244(s.title, title, size);
 		if (ret >= 0) {
 			if (ret != 64) {
 				s.titleLength = ret + 1;
@@ -2034,15 +2032,15 @@ int sceUsbPspcmDevctl(unsigned command, const void *input, void *output, unsigne
 		ret = PCM_ERROR_ARGUMENT;
 		if (!input)
 			goto done;
-		ret = ksceKernelCopyFromUser(local, input, size);
+		ret = SceSysmemForDriver_BC996A7A(local, input, size);
 		if (ret < 0)
 			goto done;
 		if (command == 0x3435005) {
-			ret = ksceKernelCopyFromUser(duplicate, input, 12);
+			ret = SceSysmemForDriver_BC996A7A(duplicate, input, 12);
 			if (ret < 0)
 				goto done;
 			if (duplicate[2]) {
-				ret = ksceKernelCopyFromUser(&timeout, (void *)(uintptr_t)duplicate[2], 4);
+				ret = SceSysmemForDriver_BC996A7A(&timeout, (void *)(uintptr_t)duplicate[2], 4);
 				if (ret < 0)
 					goto done;
 				local[2] = (uintptr_t)&timeout;
@@ -2056,7 +2054,7 @@ int sceUsbPspcmDevctl(unsigned command, const void *input, void *output, unsigne
 		goto done;
 	ret = devctl(command, local, size, &result, outputSize);
 	if (ret >= 0 && outputSize)
-		ret = ksceKernelCopyToUser(output, &result, outputSize);
+		ret = SceSysmemForDriver_6D88EF8A(output, &result, outputSize);
 done:
 	sceSyscallLeave(syscall);
 	return ret;
@@ -2084,7 +2082,7 @@ int sceUsbPspcmIoctlWaitData(unsigned unit, const unsigned *timeout)
 	if (allowed()) {
 		ret = PCM_ERROR_NOT_READY;
 		if (checkReady()) {
-			ret = ksceKernelCopyFromUser(&time, timeout, 4);
+			ret = SceSysmemForDriver_BC996A7A(&time, timeout, 4);
 			if (ret >= 0)
 				ret = ioctlWait(unit, &time);
 		}

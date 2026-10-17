@@ -3,8 +3,7 @@
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
-
-void sceKernelApiDeclareTypeUInt32(void);
+#include <sysmem/sysroot.h>
 
 int sceWlanSetConfiguration(int request)
 {
@@ -30,7 +29,7 @@ int sceWlanRegisterCallback(SceUID callbackId)
 	SceUInt32 state;
 
 	if (result >= 0) {
-		result = kscePUIDtoGUID(result, callbackId);
+		result = SceSysmemForDriver_45D22597(result, callbackId);
 		if (result >= 0) {
 			state = sceSyscallEnter();
 			result = wlanRegisterCallback(result);

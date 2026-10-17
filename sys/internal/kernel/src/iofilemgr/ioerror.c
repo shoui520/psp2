@@ -20,7 +20,7 @@ SceClass g_ioErrorEventClass;
 /* the only event bit an error event waits for (name unknown) */
 #define IOERROR_EVENT_PATTERN		1
 
-/* ksceGUIDGetUIDVectorByClass: every visible UID (name unknown) */
+/* SceSysmemForKernel_52137FA3: every visible UID (name unknown) */
 #define IOERROR_UID_VISIBILITY		7
 
 /* the UIDs ioerror_process_finalize takes at a time */
@@ -56,7 +56,7 @@ SceUID ksceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *us
 	char c;
 
 	if (mntId != 0 && pattern == IOERROR_EVENT_PATTERN) {
-		ret = ksceKernelCopyFromUser(&info, userInfo, sizeof(info));
+		ret = SceSysmemForDriver_BC996A7A(&info, userInfo, sizeof(info));
 		if (ret < 0)
 			return ret;
 		if (info.reserved0[0] == 0 && info.reserved0[1] == 0 && info.reserved1[0] == 0 &&
@@ -78,13 +78,13 @@ SceUID ksceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *us
 			}
 			name[sizeof(name) - 1] = '\0';
 
-			uid = ksceGUIDKernelCreate(&g_ioErrorEventClass, name,
+			uid = SceSysmemForDriver_56A13E90(&g_ioErrorEventClass, name,
 						   (SceObjectBase **)&event);
 			if (uid < 0)
 				return uid;
 			ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
 			if (ret < 0) {
-				closed = ksceGUIDClose(uid);
+				closed = sceGUIDClose(uid);
 				SCE_DBG_ASSERT_FUNC(closed == 0, 148, "sceIoCreateErrorEvent");
 				return ret;
 			}
@@ -104,10 +104,10 @@ int ksceIoClearErrorEvent(SceUID uid)
 	IoErrorEvent *event;
 	int ret;
 
-	ret = ksceGUIDReferObjectWithClass(uid, &g_ioErrorEventClass, (SceObjectBase **)&event);
+	ret = SceSysmemForDriver_00ED6C14(uid, &g_ioErrorEventClass, (SceObjectBase **)&event);
 	if (ret >= 0) {
 		event->isSet = 0;
-		ksceGUIDReleaseObject(uid);
+		sceGUIDReleaseObject(uid);
 	}
 	return ret;
 }
@@ -116,14 +116,14 @@ int ksceIoDeleteErrorEvent(SceUID uid)
 {
 	SceUID handle;
 
-	handle = ksceGUIDOpenByGUID(uid);
+	handle = SceSysmemForKernel_89D33DF0(uid);
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
 					 &g_ioErrorEventClass))
 		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
-	ksceGUIDClose(handle);
-	return ksceGUIDClose(uid);
+	sceGUIDClose(handle);
+	return sceGUIDClose(uid);
 }
 
 /* a file system reports an error on a mount: each event of the mount that waits for it is set */
@@ -135,7 +135,7 @@ int sceIoSetErrorEvent(int mntId, SceUInt32 pattern, const IoErrorEventInfo *err
 	SceUID *uids;
 	int ret, copied, i;
 
-	ret = ksceGUIDGetUIDVectorByClass(&g_ioErrorEventClass, IOERROR_UID_VISIBILITY, NULL, 0,
+	ret = SceSysmemForKernel_52137FA3(&g_ioErrorEventClass, IOERROR_UID_VISIBILITY, NULL, 0,
 					  &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 220, "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
@@ -145,19 +145,19 @@ int sceIoSetErrorEvent(int mntId, SceUInt32 pattern, const IoErrorEventInfo *err
 	if (ret == 0)
 		return 0;
 
-	uids = ksceKernelAllocHeapMemory(g_vfsNcacheHeap, ret * sizeof(SceUID));
+	uids = SceSysmemForDriver_7B4CB60A(g_vfsNcacheHeap, ret * sizeof(SceUID));
 	if (uids == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = ksceGUIDGetUIDVectorByClass(&g_ioErrorEventClass, IOERROR_UID_VISIBILITY, uids, ret,
+	ret = SceSysmemForKernel_52137FA3(&g_ioErrorEventClass, IOERROR_UID_VISIBILITY, uids, ret,
 					  &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 244, "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
 				     ret, ret);
-		ksceKernelFreeHeapMemory(g_vfsNcacheHeap, uids);
+		sceKernelFreeHeapMemory(g_vfsNcacheHeap, uids);
 		return ret;
 	}
 	for (i = 0; i < (int)num; i++) {
-		ret = ksceGUIDReferObjectWithClass(uids[i], &g_ioErrorEventClass,
+		ret = SceSysmemForDriver_00ED6C14(uids[i], &g_ioErrorEventClass,
 						   (SceObjectBase **)&event);
 		if (ret == 0) {
 			if (event->mntId == mntId && (pattern & event->pattern) != 0 &&
@@ -169,7 +169,7 @@ int sceIoSetErrorEvent(int mntId, SceUInt32 pattern, const IoErrorEventInfo *err
 				info.detail = error->detail;
 				info.reserved1[0] = ret;
 				info.reserved1[1] = ret;
-				copied = ksceKernelCopyToUserProc(event->pid, event->userInfo, &info,
+				copied = sceKernelCopyToUserProc(event->pid, event->userInfo, &info,
 								  sizeof(info));
 				ret = sceKernelSetEventWithNotifyCallback(uids[i], pattern, copied, 0);
 				if (ret < 0)
@@ -178,7 +178,7 @@ int sceIoSetErrorEvent(int mntId, SceUInt32 pattern, const IoErrorEventInfo *err
 							     ret, ret, uids[i]);
 				else
 					event->isSet = 1;
-				ksceGUIDReleaseObject(uids[i]);
+				sceGUIDReleaseObject(uids[i]);
 			}
 		} else if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 288,
@@ -186,7 +186,7 @@ int sceIoSetErrorEvent(int mntId, SceUInt32 pattern, const IoErrorEventInfo *err
 					     ret, ret, uids[i]);
 		}
 	}
-	ksceKernelFreeHeapMemory(g_vfsNcacheHeap, uids);
+	sceKernelFreeHeapMemory(g_vfsNcacheHeap, uids);
 	return ret;
 }
 
@@ -209,7 +209,7 @@ int ioerror_process_finalize(SceUID pid)
 		if ((int)num <= 0)
 			break;
 		for (i = 0; i < (int)num; i++) {
-			guid = kscePUIDtoGUID(pid, puids[i]);
+			guid = SceSysmemForDriver_45D22597(pid, puids[i]);
 			if (guid < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 322,
 						     "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n",
@@ -218,7 +218,7 @@ int ioerror_process_finalize(SceUID pid)
 			}
 			ret = ksceIoDeleteErrorEvent(guid);
 			if (ret == 0) {
-				kscePUIDClose(pid, puids[i]);
+				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
 			} else {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 331,
 						     "sceIoDeleteErrorEvent failed %d 0x%x uid=0x%x %d\n",

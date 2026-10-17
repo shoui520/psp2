@@ -119,7 +119,7 @@ static void clearNotices(void)
 	while ((notice = s_gps.activeQueue->head)) {
 		removeNotice(notice);
 		if (s_gps.active)
-			ksceKernelFreeHeapMemory(s_gps.active->heap, notice);
+			sceKernelFreeHeapMemory(s_gps.active->heap, notice);
 	}
 }
 
@@ -138,7 +138,7 @@ static int notify(unsigned event, unsigned result)
 			s_gps.active->callbackPending = 1;
 		}
 	} else {
-		GpsNotice *notice = ksceKernelAllocHeapMemory(s_gps.active->heap, sizeof(*notice));
+		GpsNotice *notice = SceSysmemForDriver_7B4CB60A(s_gps.active->heap, sizeof(*notice));
 		if (notice) {
 			unsigned priority = 0;
 			switch (event) {
@@ -163,7 +163,7 @@ static int notify(unsigned event, unsigned result)
 				while (after && after->priority > priority)
 					after = after->prev;
 				if (after && after->priority == priority && priority) {
-					ksceKernelFreeHeapMemory(s_gps.active->heap, notice);
+					sceKernelFreeHeapMemory(s_gps.active->heap, notice);
 				} else if (!after) {
 					notice->prev = NULL;
 					notice->next = queue->head;
@@ -196,7 +196,7 @@ static int resumeCallback(void)
 		unsigned event = notice->event, result = notice->result;
 		removeNotice(notice);
 		if (s_gps.active)
-			ksceKernelFreeHeapMemory(s_gps.active->heap, notice);
+			sceKernelFreeHeapMemory(s_gps.active->heap, notice);
 		ret = ksceKernelNotifyCallback(s_gps.active->callback, event | (result & 0xff));
 	}
 	s_gps.active->callbackPending = 0;
@@ -236,7 +236,7 @@ static int clearPending(void)
 	}
 	memset(pending->data, 0, pending->size);
 	if (s_gps.active)
-		ksceKernelFreeHeapMemory(s_gps.active->heap, pending->data);
+		sceKernelFreeHeapMemory(s_gps.active->heap, pending->data);
 	pending->command = 0;
 	pending->data = NULL;
 	pending->size = 0;
@@ -255,7 +255,7 @@ static int stagePending(unsigned command, const void *data, unsigned size)
 	int ret = GPS_ERROR(11);
 	if (!s_gps.pending) {
 		ret = GPS_ERROR(35);
-		s_gps.request.data = size ? ksceKernelAllocHeapMemory(s_gps.active->heap, size) : NULL;
+		s_gps.request.data = size ? SceSysmemForDriver_7B4CB60A(s_gps.active->heap, size) : NULL;
 		if (s_gps.request.data) {
 			memcpy(s_gps.request.data, data, size);
 			s_gps.request.command = command;
@@ -663,7 +663,7 @@ int module_start(SceSize arglen, void *argp)
 	context->dataMutex = ksceKernelCreateMutex("SceGpsData", 2, 0, NULL);
 	if (context->dataMutex < 0)
 		goto api;
-	ret = ksceKernelCreateHeap("SceGps", 0x2000, NULL);
+	ret = SceSysmemForDriver_9328E0E8("SceGps", 0x2000, NULL);
 	if (ret < 0)
 		goto mutex;
 	context->heap = ret;
@@ -675,7 +675,7 @@ int module_start(SceSize arglen, void *argp)
 	context->queuedCallbacks = context->callbackPending = 0;
 	context->state = context->deviceState = 0;
 	context->thread = ret;
-	ret = ksceKernelRegisterSysEventHandler("SceGpsd", systemEvent, context);
+	ret = sceKernelRegisterSysEventHandler("SceGpsd", systemEvent, context);
 	if (ret < 0)
 		goto handler;
 	context->suspended = 0;
@@ -696,9 +696,9 @@ int module_start(SceSize arglen, void *argp)
 thread:
 	ksceKernelDeleteThread(context->thread);
 handler:
-	ksceKernelUnregisterSysEventHandler(context->systemHandler);
+	sceKernelUnregisterSysEventHandler(context->systemHandler);
 heap:
-	ksceKernelDeleteHeap(context->heap);
+	sceKernelDeleteHeap(context->heap);
 mutex:
 	ksceKernelDeleteMutex(context->dataMutex);
 api:
@@ -716,8 +716,8 @@ static int permission(void)
 {
 	uint8_t mode = 0;
 	if (!sceSblACMgrIsSystemProgram(0) && !SceSblPostSsMgrForDriver_128FB35A() &&
-	    !ksceSblQafMgrIsAllowRemotePlayDebug()) {
-		int ret = kscePmMgrGetProductMode(&mode);
+	    !SceQafMgrForDriver_BFD5E463()) {
+		int ret = ScePmMgrForDriver_2AC815A2(&mode);
 		if (ret < 0)
 			return ret;
 		if (mode != 1)
@@ -732,7 +732,7 @@ static int openCallback(int callback)
 	int ret = permission();
 	if (ret)
 		return ret;
-	int uid = kscePUIDtoGUID(0, callback);
+	int uid = SceSysmemForDriver_45D22597(0, callback);
 	if (uid < 0)
 		return uid | 0x40000000;
 	if (!s_gps.active)
@@ -990,7 +990,7 @@ int _sceGpsGetState(unsigned *state)
 	int ret = readState(state ? &value : NULL);
 	EXIT_SYSCALL(saved);
 	if (state) {
-		int copy = ksceKernelCopyToUser(state, &value, 4);
+		int copy = SceSysmemForDriver_6D88EF8A(state, &value, 4);
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1005,7 +1005,7 @@ int _sceGpsGetDeviceInfo(void *info)
 	int ret = readInfo(info ? value : NULL);
 	EXIT_SYSCALL(saved);
 	if (info) {
-		int copy = ksceKernelCopyToUser(info, value, 8);
+		int copy = SceSysmemForDriver_6D88EF8A(info, value, 8);
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1024,12 +1024,12 @@ int _sceGpsGetData(void *location, void *satellites)
 	int ret = readLocation(location ? value : NULL, satellites ? satelliteValue : NULL);
 	EXIT_SYSCALL(saved);
 	if (location) {
-		int copy = ksceKernelCopyToUser(location, value, sizeof(value));
+		int copy = SceSysmemForDriver_6D88EF8A(location, value, sizeof(value));
 		if (copy < 0)
 			return copy;
 	}
 	if (satellites) {
-		int copy = ksceKernelCopyToUser(satellites, satelliteValue, sizeof(satelliteValue));
+		int copy = SceSysmemForDriver_6D88EF8A(satellites, satelliteValue, sizeof(satelliteValue));
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1039,7 +1039,7 @@ int _sceGpsGetData(void *location, void *satellites)
 int _sceGpsIoctl(unsigned command, void *data, unsigned size, const unsigned *args)
 {
 	unsigned input[2];
-	int ret = ksceKernelCopyFromUser(input, args, 8);
+	int ret = SceSysmemForDriver_BC996A7A(input, args, 8);
 	if (ret < 0)
 		return ret;
 	if (!data) {
@@ -1049,13 +1049,13 @@ int _sceGpsIoctl(unsigned command, void *data, unsigned size, const unsigned *ar
 		return (int)SCE_KERNEL_ERROR_NO_MEMORY;
 	uint8_t buffer[0x640];
 	memset(buffer, 0, sizeof(buffer));
-	ret = ksceKernelCopyFromUser(buffer, data, input[0]);
+	ret = SceSysmemForDriver_BC996A7A(buffer, data, input[0]);
 	if (ret < 0)
 		return ret;
 	unsigned saved;
 	ENTER_SYSCALL(saved);
 	ret = requestIoctl(command, buffer, size);
 	EXIT_SYSCALL(saved);
-	int copy = ksceKernelCopyToUser(data, buffer, input[0]);
+	int copy = SceSysmemForDriver_6D88EF8A(data, buffer, input[0]);
 	return copy < 0 ? copy : ret;
 }

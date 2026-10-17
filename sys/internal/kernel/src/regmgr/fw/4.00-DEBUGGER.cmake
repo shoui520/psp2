@@ -103,9 +103,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelEnqueueWorkQueue
 	ksceKernelCreateMutex
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
-	ksceSysrootIsSafeMode
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_55392965
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_B0E1FC67
 	ksceKernelGetProcessTimeLowCore
 	ksceIoRemove
 	ksceIoWrite
@@ -116,14 +116,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRename
 	ksceIoRead
 	ksceIoClose
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelDeleteHeap
-	ksceKernelStrncpyFromUser
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelDeleteHeap
+	SceSysmemForDriver_DB3EC244
 	memset
 	strncmp
 	__memset_chk
@@ -141,21 +141,21 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceSha1BlockUpdate
-	ksceSha1BlockResult
-	ksceSha1Digest
-	ksceSha1BlockInit
+	SceKernelUtilsForDriver_478A6F3C
+	SceKernelUtilsForDriver_48F24106
+	SceKernelUtilsForDriver_87DC7F2F
+	SceKernelUtilsForDriver_E4390FFA
 	SceQafMgrForDriver_0E588747
 	sceSblACMgrIsSystemProgram
 	sceSblACMgrGetPaid
 	SceSblACMgrForDriver_E87D1777
-	ksceSblAimgrGetProductCode
-	ksceSblAimgrIsDolce
+	SceSblAIMgrForDriver_14345161
+	SceSblAIMgrForDriver_71608CA3
 	ksceSblSsSetNvsData
 	ksceSblAimgrGetOpenPsId
 	ksceSblSsGetNvsData
-	ksceKernelSetGPI
-	ksceKernelPrintfLevelWithInfo
+	SceDebugLedForDriver_51C5325A
+	SceDebugForDriver_D9703808
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

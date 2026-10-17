@@ -4,7 +4,7 @@
 #include <threadmgr/threadmgr.h>
 #include <processmgr/processmgr.h>
 #include "camera_config.h"
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <string.h>
 #include <psp2/camera.h>
@@ -43,7 +43,7 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 	case 5:
 		range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 		range.size = process->config.sizeIBase;
-		result = ksceKernelVARangeToPARange(&range, &physical);
+		result = SceSysmemForDriver_AE36C775(&range, &physical);
 		if (result >= 0) {
 			if (cache)
 				goto cachePhysical;
@@ -53,20 +53,20 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 	case 3:
 		range.addr = (SceUInt32)process->frameBuffer.pvUBase;
 		range.size = process->config.sizeUBase;
-		result = ksceKernelVARangeToPARange(&range, &physical);
+		result = SceSysmemForDriver_AE36C775(&range, &physical);
 		if (result < 0)
 			goto failed;
 		if (cache) {
 			device->cachedFrameBuffer.paddrUBase = physical.addr;
 			range.addr = (SceUInt32)process->frameBuffer.pvVBase;
 			range.size = process->config.sizeVBase;
-			result = ksceKernelVARangeToPARange(&range, &physical);
+			result = SceSysmemForDriver_AE36C775(&range, &physical);
 			if (result < 0)
 				goto restore;
 			device->cachedFrameBuffer.paddrVBase = physical.addr;
 			range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 			range.size = process->config.sizeIBase;
-			result = ksceKernelVARangeToPARange(&range, &physical);
+			result = SceSysmemForDriver_AE36C775(&range, &physical);
 			if (result < 0)
 				goto restore;
 			goto cachePhysical;
@@ -74,13 +74,13 @@ int cameraTranslateFrameBuffer(int devnum, CameraProcess *process, int cache)
 		process->frameBuffer.paddrUBase = physical.addr;
 		range.addr = (SceUInt32)process->frameBuffer.pvVBase;
 		range.size = process->config.sizeVBase;
-		result = ksceKernelVARangeToPARange(&range, &physical);
+		result = SceSysmemForDriver_AE36C775(&range, &physical);
 		if (result < 0)
 			return result;
 		process->frameBuffer.paddrVBase = physical.addr;
 		range.addr = (SceUInt32)process->frameBuffer.pvIBase;
 		range.size = process->config.sizeIBase;
-		result = ksceKernelVARangeToPARange(&range, &physical);
+		result = SceSysmemForDriver_AE36C775(&range, &physical);
 		if (result < 0)
 			return result;
 setPhysical:
@@ -518,13 +518,13 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			buffer->pvIBase = cameraFrameBufferBase[devnum][index];
 			buffer->pvUBase = (char *)buffer->pvIBase + pixels;
 			buffer->pvVBase = (char *)buffer->pvUBase + chroma;
-			result = ksceKernelVAtoPA(buffer->pvIBase, &buffer->paddrIBase);
+			result = SceSysmemForDriver_8D160E65(buffer->pvIBase, &buffer->paddrIBase);
 			if (result < 0)
 				return result;
-			result = ksceKernelVAtoPA(buffer->pvUBase, &buffer->paddrUBase);
+			result = SceSysmemForDriver_8D160E65(buffer->pvUBase, &buffer->paddrUBase);
 			if (result < 0)
 				return result;
-			result = ksceKernelVAtoPA(buffer->pvVBase, &buffer->paddrVBase);
+			result = SceSysmemForDriver_8D160E65(buffer->pvVBase, &buffer->paddrVBase);
 			if (result < 0)
 				return result;
 			pixels = device->config.sizeIBase;
@@ -544,7 +544,7 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			buffer->pvUBase = NULL;
 			buffer->pvVBase = NULL;
 			buffer->pvIBase = cameraFrameBufferBase[devnum][index];
-			result = ksceKernelVAtoPA(buffer->pvIBase, &buffer->paddrIBase);
+			result = SceSysmemForDriver_8D160E65(buffer->pvIBase, &buffer->paddrIBase);
 			if (result < 0)
 				return result;
 			buffer->paddrUBase = 0;

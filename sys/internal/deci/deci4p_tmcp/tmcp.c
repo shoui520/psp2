@@ -11,11 +11,11 @@
  * caller's process and a user callback is notified.
  */
 
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <kernel/error.h>
@@ -97,12 +97,12 @@ typedef struct TmcpReply {
 static TmcpSlot s_slot[TMCP_SLOTS];
 static TmcpLink s_link;
 
-static int TmcpProcStop(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
+static int TmcpProcStop(SceUID pid, int type, ProcEventParam *param, int ctx)
 {
 	return 0;
 }
 
-static int TmcpProcStart(SceUID pid, int type, SceProcEventInvokeParam1 *param, int ctx)
+static int TmcpProcStart(SceUID pid, int type, ProcEventParam *param, int ctx)
 {
 	return 0;
 }
@@ -122,7 +122,7 @@ static inline __attribute__((always_inline)) void TmcpDeliverCompletion(TmcpSlot
 	rec[6] = 0;
 	rec[7] = 0;
 
-	ksceKernelCopyToUserProc(slot->pid, slot->user, rec, sizeof(rec));
+	sceKernelCopyToUserProc(slot->pid, slot->user, rec, sizeof(rec));
 	ksceKernelNotifyCallback(slot->callback, (int)slot->user);
 	slot->notified = 1;
 	if (slot->abandoned) {
@@ -166,7 +166,7 @@ static inline __attribute__((always_inline)) int TmcpReleaseProcessSlots(SceUID 
 	return 0;
 }
 
-static int TmcpProcExit(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
+static int TmcpProcExit(SceUID pid, ProcEventParam *param, int ctx)
 {
 	return TmcpReleaseProcessSlots(pid, ctx);
 }
@@ -177,17 +177,17 @@ static void __attribute__((noinline)) TmcpNotify(TmcpSlot *slot, SceUInt32 error
 	TmcpDeliverCompletion(slot, error, id, value);
 }
 
-static int TmcpProcKill(SceUID pid, SceProcEventInvokeParam1 *param, int ctx)
+static int TmcpProcKill(SceUID pid, ProcEventParam *param, int ctx)
 {
 	return TmcpReleaseProcessSlots(pid, ctx);
 }
 
-static const SceProcEventHandler s_procHandler = {
-	.size = sizeof(SceProcEventHandler),
+static const SceKernelProcEventHandler s_procHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.exit = TmcpProcExit,
 	.kill = TmcpProcKill,
-	.stop = TmcpProcStop,
-	.start = TmcpProcStart,
+	.suspend = TmcpProcStop,
+	.resume = TmcpProcStart,
 };
 
 /* name unknown: an acknowledgement or completion from the host */
@@ -499,7 +499,7 @@ int module_start(SceSize args, void *argp)
 	TmcpSlot *slot;
 	int handle;
 
-	if (!ksceKernelCheckDipsw(0xc2))
+	if (!SceDipswForDriver_A98FC2FD(0xc2))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	mutex = ksceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
@@ -532,6 +532,6 @@ int module_start(SceSize args, void *argp)
 	s_link.handle = handle;
 
 	SceSysrootForDriver_1834D482(TmcpCommand);
-	ksceKernelRegisterProcEventHandler("SceDeci4pTmcp", &s_procHandler, (int)&s_link);
+	sceKernelRegisterProcEventHandler("SceDeci4pTmcp", &s_procHandler, (int)&s_link);
 	return SCE_KERNEL_START_SUCCESS;
 }

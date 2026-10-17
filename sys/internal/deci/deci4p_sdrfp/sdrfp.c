@@ -7,10 +7,9 @@
  * Resource 0 (one slot) carries open / close / getstat, resource 1 reads.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
@@ -87,10 +86,10 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	SceUInt32 cpu;
 	int ret;
 
-	ksceKernelSpinlockLowLock(&s_sendLock);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_seqLock);
+	SceCpuForDriver_BF82DEB2(&s_sendLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_seqLock);
 	seq = ++s_seq;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_seqLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_seqLock, intr);
 
 	s_request.seq = seq;
 	s_request.buf = buf;
@@ -107,8 +106,8 @@ static int sdrfpTransact(int multi, void *buf, SceSize size)
 	s_send = &s_request;
 	ret = _threadSignal(s_channel.handle);
 	if (ret >= 0)
-		ksceKernelSpinlockLowLock(&s_doneLock);	/* released by the handler */
-	ksceKernelSpinlockLowUnlock(&s_sendLock);
+		SceCpuForDriver_BF82DEB2(&s_doneLock);	/* released by the handler */
+	sceKernelSpinlockLowUnlock(&s_sendLock);
 
 	s_request.multi = 0;
 	s_request.reserved = 0;
@@ -159,7 +158,7 @@ static int sdrfpError(int result)
 	case 0x110c0:
 		return SCE_ERROR_ERRNO_ENOTSUP;
 	}
-	ksceKernelPrintf("DRFP: unknown error code 0x%08x\n", result);
+	SceDebugForDriver_391B74B7("DRFP: unknown error code 0x%08x\n", result);
 	return SCE_ERROR_ERRNO_ENOTSUP;
 }
 
@@ -250,7 +249,7 @@ static void sdrfpEventHandler(int event, void *arg, void *ctx)
 		req = ch->recv;
 		ch->recv = NULL;
 		if (req != NULL && req->nfrag <= req->received)
-			ksceKernelSpinlockLowUnlock(&s_doneLock);
+			sceKernelSpinlockLowUnlock(&s_doneLock);
 		return;
 	case SCE_DFMGR_EVENT_SEND:
 		ret = sdrfpWriteHandler(ch);
@@ -292,7 +291,7 @@ int sdrfpOpen(const char *name, int flags, int mode, Deci4pFsStat *stat)
 	int ret;
 
 	len = strnlen(name, 0x400);
-	ksceKernelSpinlockLowLock(&s_requestLock);
+	SceCpuForDriver_BF82DEB2(&s_requestLock);
 	pkt = s_resource[0].base;
 	size = ((len + 4) & ~3) + offsetof(DrfpOpenPacket, name);
 	if (pkt == NULL) {
@@ -329,7 +328,7 @@ int sdrfpOpen(const char *name, int flags, int mode, Deci4pFsStat *stat)
 			ret = pkt->fd;
 		}
 	}
-	ksceKernelSpinlockLowUnlock(&s_requestLock);
+	sceKernelSpinlockLowUnlock(&s_requestLock);
 	return ret;
 }
 
@@ -340,7 +339,7 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 	SceUInt16 nfrag;
 	int ret, i;
 
-	ksceKernelSpinlockLowLock(&s_requestLock);
+	SceCpuForDriver_BF82DEB2(&s_requestLock);
 	pkt = s_resource[1].base;
 	if (pkt == NULL) {
 		/* (returns with the request lock held) */
@@ -363,7 +362,7 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 		}
 		if (pkt->result != 0) {
 			SDRFP_PRINTF(569, "READ_RES: error - 0x%x\n", pkt->result);
-			ksceKernelSpinlockLowUnlock(&s_requestLock);
+			sceKernelSpinlockLowUnlock(&s_requestLock);
 			return DRFP_ERROR_READ;
 		}
 		if (pkt->nfrag == 0)
@@ -398,11 +397,11 @@ int sdrfpRead(int fd, void *buf, SceOff offset, SceSize size)
 			next = (DrfpReadPacket *)((char *)next + DRFP_FRAG_SIZE);
 		}
 	}
-	ksceKernelSpinlockLowUnlock(&s_requestLock);
+	sceKernelSpinlockLowUnlock(&s_requestLock);
 	return total;
 
 out:
-	ksceKernelSpinlockLowUnlock(&s_requestLock);
+	sceKernelSpinlockLowUnlock(&s_requestLock);
 	return ret < 0 ? ret : (int)total;
 }
 
@@ -411,7 +410,7 @@ int sdrfpClose(int fd)
 	DrfpClosePacket *pkt;
 	int ret;
 
-	ksceKernelSpinlockLowLock(&s_requestLock);
+	SceCpuForDriver_BF82DEB2(&s_requestLock);
 	pkt = s_resource[0].base;
 	if (pkt == NULL) {
 		/* (returns with the request lock held) */
@@ -425,7 +424,7 @@ int sdrfpClose(int fd)
 	ret = sdrfpTransact(0, pkt, sizeof(*pkt));
 	if (ret >= 0)
 		ret = sdrfpError(pkt->result);
-	ksceKernelSpinlockLowUnlock(&s_requestLock);
+	sceKernelSpinlockLowUnlock(&s_requestLock);
 	return ret;
 }
 
@@ -438,7 +437,7 @@ int sdrfpGetstat(const char *name, Deci4pFsStat *stat)
 	int ret;
 
 	len = strnlen(name, 0x400);
-	ksceKernelSpinlockLowLock(&s_requestLock);
+	SceCpuForDriver_BF82DEB2(&s_requestLock);
 	pkt = s_resource[0].base;
 	size = ((len + 4) & ~3) + offsetof(DrfpGetstatPacket, name);
 	if (pkt == NULL)
@@ -469,7 +468,7 @@ int sdrfpGetstat(const char *name, Deci4pFsStat *stat)
 			} while (src != (SceUInt32 *)(&pkt->stat + 1));
 		}
 	}
-	ksceKernelSpinlockLowUnlock(&s_requestLock);
+	sceKernelSpinlockLowUnlock(&s_requestLock);
 	return ret;
 }
 
@@ -483,13 +482,13 @@ static void initResourceTable(void)
 	for (i = 0, res = s_resource; i != SDRFP_RESOURCES; i++, res++) {
 		res->size = res->nfrag * DRFP_FRAG_SIZE;
 		snprintf(name, sizeof(name), "SceDeci4pSDrfpMemBlock%d", i);
-		uid = ksceKernelAllocMemBlock(name, SceDeci4pSDfMgrForKernel_35238B8A(), res->size, NULL);
+		uid = SceSysmemForDriver_C94850C9(name, SceDeci4pSDfMgrForKernel_35238B8A(), res->size, NULL);
 		if (uid < 0) {
 			SDRFP_PRINTF(1116, "AllocMemBlockForKernel failed (0x%08x)\n", uid);
 			SCE_DBG_ASSERT_FAIL(1117);
 		}
 		res->uid = uid;
-		ksceKernelGetMemBlockBase(uid, &res->base);
+		SceSysmemForDriver_A841EDDA(uid, &res->base);
 	}
 }
 
@@ -498,7 +497,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	int ret;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 216, "\n");
-	if (!ksceKernelCheckDipsw(0xc1)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc1)) {
 		SCE_DBG_PRINTF(0xb, 220, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
@@ -516,7 +515,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	s_request.received = 0;
 	s_channel.handle = 0;
 	s_channel.connected = 0;
-	ksceKernelSpinlockLowLock(&s_doneLock);
+	SceCpuForDriver_BF82DEB2(&s_doneLock);
 	initResourceTable();
 
 	ret = SceDeci4pSDfMgrForKernel_A55F5F0D(sdrfpEventHandler, &s_protocol, &s_channel);

@@ -5,7 +5,7 @@
 #pragma once
 #include <stdint.h>
 #include <psp2kern/udcd.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>

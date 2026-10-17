@@ -4,8 +4,8 @@
  */
 
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/sysmem.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
 
@@ -68,7 +68,7 @@ int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)
 	ctx->size = 0;
 	if ((strncmp(path, "gro0:", 5) != 0 && strncmp(path, "ur0:", 4) != 0 &&
 	     strncmp(path, "ux0:", 4) != 0 &&
-	     (!ksceSblQafMgrIsAllowHost0Access() || ksceSblAimgrIsCEX() ||
+	     (!SceQafMgrForDriver_082A4FC2() || SceSblAIMgrForDriver_D78B04A2() ||
 	      strncmp(path, "host0:", 6) != 0)) ||
 	    strnlen(path, SPFSO_PATH_MAX) >= SPFSO_PATH_MAX)
 		return SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
@@ -84,10 +84,10 @@ int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)
 		return SCE_SBL_ERROR_SPFSO_INVALID_FORMAT;
 	}
 	size = end;
-	uid = ksceKernelAllocMemBlock("SceSblSpsfoMgr", SPFSO_MEMBLOCK_TYPE,
+	uid = SceSysmemForDriver_C94850C9("SceSblSpsfoMgr", SPFSO_MEMBLOCK_TYPE,
 				      (size + 0xfff) & ~0xfff, NULL);
 	ctx->uid = uid;
-	if (uid < 0 || ksceKernelGetMemBlockBase(uid, &ctx->base) != 0) {
+	if (uid < 0 || SceSysmemForDriver_A841EDDA(uid, &ctx->base) != 0) {
 		ksceIoClose(fd);
 		return SCE_SBL_ERROR_SPFSO_NO_MEMORY;
 	}
@@ -112,7 +112,7 @@ int ksceSblPostSsMgrReleaseSpfsoCtx(SceSblSpfsoCtx *ctx)
 	if (ctx == NULL)
 		return SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
 	if (ctx->uid > 0)
-		ksceKernelFreeMemBlock(ctx->uid);
+		SceSysmemForDriver_009E1C61(ctx->uid);
 	return 0;
 }
 

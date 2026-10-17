@@ -14,6 +14,7 @@
 #include <sysmem/sysmem.h>
 #include "scheduler.h"
 #include "syscall_context.h"
+#include <sysmem/sysroot.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
@@ -66,9 +67,6 @@ typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, in
 
 extern void SceIntrmgrForKernel_71E08D71(ThreadmgrVfpTrace *trace, const void *raw);
 extern int SceExcpmgrForKernel_B615A7DA(void);
-extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
-extern void sceKernelSysrootCorelockLock(unsigned int cpu);
-extern void sceKernelSysrootCorelockUnlock(void);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
 int ksceKernelDebugResumeThread(SceUID threadId, uint32_t reason);
 
@@ -106,7 +104,7 @@ static inline void printVfpException(struct ThreadmgrVfpExceptionArea *area,
 	SCE_PRINTF_WITH_INFO(0, 73, "\n");
 	SCE_PRINTF_WITH_INFO(0, 74, "========================================================\n");
 	SCE_PRINTF_WITH_INFO(0, 75, "[ VFP/NEON exception occured ]\n");
-	SCE_PRINTF_WITH_INFO(0, 76, "  Core        : ARM%d\n", ksceKernelCpuId());
+	SCE_PRINTF_WITH_INFO(0, 76, "  Core        : ARM%d\n", sceKernelCpuId());
 	SCE_PRINTF_WITH_INFO(0, 77, "  VFP 1STISR  : 0x%08x\n", area->status);
 	if (s_threadmgrRuntime.vfpExceptionHook != NULL)
 		s_threadmgrRuntime.vfpExceptionHook(0, 1, area->status);
@@ -164,24 +162,24 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 			s_threadmgrRuntime.vfpExceptionHook(3, 0);
 		return -1;
 	}
-	intr = ksceKernelCpuSuspendIntr();
-	cpuId = ksceKernelCpuId();
+	intr = SceCpuForDriver_821FC0EE();
+	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
 	threadId = cpu->runningThreadId;
-	if (ksceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
+	if (SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
 					 (SceObjectBase **)&object) < 0) {
 		SCE_DBG_ASSERT_FAIL(168);
 		SCE_PRINTF_WITH_INFO(0, 169,
 			"warning: VFP/NEON exception occurred, but the thread did not exist.\n\n");
 		if (s_threadmgrRuntime.vfpExceptionHook != NULL)
 			s_threadmgrRuntime.vfpExceptionHook(4, 0);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelCpuResumeIntr(intr);
 		return -1;
 	}
 	thread = &object->context;
 	pid = thread->processId;
 	process = thread->process;
-	ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 	SCE_DBG_ASSERT_CHECK((uint16_t)thread->status == SCE_KERNEL_THREAD_STATUS_RUNNING, 182);
 	SCE_DBG_ASSERT_CHECK(thread->currentCpuId == cpuId, 183);
 	SCE_DBG_ASSERT_CHECK(thread->threadId != cpu->idleThread->threadId, 185);
@@ -194,25 +192,25 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 			     THREAD_STATE_OFF_CPU;
 	manager = s_threadmgrRuntime.manager;
 	self = (uintptr_t)thread;
-	ksceKernelSpinlockLowLock(&manager->threadMgrCBLock);
+	SceCpuForDriver_BF82DEB2(&manager->threadMgrCBLock);
 	thread->next = (uintptr_t)&s_threadmgrRuntime.manager->debugSuspendedNext;
 	thread->prev = s_threadmgrRuntime.manager->debugSuspendedPrev;
 	s_threadmgrRuntime.manager->debugSuspendedPrev = self;
 	*(uintptr_t *)thread->prev = self;
-	ksceKernelSpinlockLowUnlock(&manager->threadMgrCBLock);
+	sceKernelSpinlockLowUnlock(&manager->threadMgrCBLock);
 
 	if (!(thread->currentAttr & THREAD_ATTR_USER)) {
 		SCE_PRINTF_WITH_INFO(0, 205,
 			"fatal error: VFP/NEON exception occurred in kernel thread. ThreadId: 0x%08X [%s]\n\n",
-			thread->threadId, ksceGUIDName(thread->threadId));
+			thread->threadId, SceSysmemForDriver_E655852F(thread->threadId));
 		if (s_threadmgrRuntime.vfpExceptionHook != NULL)
 			s_threadmgrRuntime.vfpExceptionHook(5, 1, thread->threadId);
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		ksceGUIDReleaseObject(threadId);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceGUIDReleaseObject(threadId);
+		sceKernelCpuResumeIntr(intr);
 		action = VFP_EXCEPTION_PANIC;
 	} else {
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		/* the debugger decides; the second group's handler has the last word */
 		for (i = 0; i < 2; i++) {
 			handler = s_threadmgrRuntime.manager->debugHandlers[i][DEBUG_HANDLER_VFP_EXCEPTION];
@@ -228,15 +226,15 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 		}
 		action = VFP_EXCEPTION_SUSPEND_PROCESS;
 decided:
-		ksceKernelSpinlockLowLock(THREAD_LOCK(thread));
+		SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 		SCE_DBG_ASSERT_LEVEL(0, thread->pVfpRegisterContext != 0, 233);
 		/* the exception is cleared for when it runs again */
 		*(uint32_t *)(thread->pVfpRegisterContext + 0x100) &= ~area->status;
 		area->status = 1;
 		area->traceControl |= 1;
-		ksceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
-		ksceGUIDReleaseObject(threadId);
-		ksceKernelCpuResumeIntr(intr);
+		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
+		sceGUIDReleaseObject(threadId);
+		sceKernelCpuResumeIntr(intr);
 	}
 	if (thread == NULL)
 		return -1;
@@ -247,7 +245,7 @@ decided:
 			SCE_PANIC(254);
 		break;
 	case VFP_EXCEPTION_SUSPEND_PROCESS:
-		if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&process->abortRequested, 0, 1) != 0)
+		if (SceCpuForDriver_CDA96E81((SceInt32 *)&process->abortRequested, 0, 1) != 0)
 			break;
 		ret = SceSysrootForKernel_1247A825(pid, PROCESS_DEBUG_SUSPEND_EXCEPTION);
 		if (ret < 0) {
@@ -305,7 +303,7 @@ void suspendThreadmgrVfpException(void)
 void resumeThreadmgrVfpException(void)
 {
 	sceKernelSysrootCorelockLock(0);
-	if (ksceKernelCpuId() == 0) {
+	if (sceKernelCpuId() == 0) {
 		ksceKernelEnableIntr(0x24);
 		ksceKernelEnableIntr(0x25);
 		ksceKernelEnableIntr(0x26);

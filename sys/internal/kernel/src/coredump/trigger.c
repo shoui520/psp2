@@ -259,10 +259,10 @@ unlockError:
 	if (unlockResult != 0)
 		result = unlockResult;
 error:
-	ksceKernelPrintfWithInfo(0, &triggerErrorInfo,
+	SceDebugForDriver_02B04343(0, &triggerErrorInfo,
 		"0x%08x:%d,%d:0x%08x:0x%08x\n",
 		0xcf168d67U, 2, 400, 0x101, result);
-	ksceKernelPrintfWithInfo(0, &triggerParamErrorInfo,
+	SceDebugForDriver_02B04343(0, &triggerParamErrorInfo,
 		"0x%08x:%d,%d:0x%08x:0x%08x,%p,%p,0x%08x,0x%08x,0x%08x,0x%08x,%p\n",
 		0xcf168d67U, 2, 406, 0x102, pid, update, finish,
 		param->size, param->dumpLevel, param->triggerDataType,
@@ -338,10 +338,10 @@ unlockError:
 	if (unlockResult != 0)
 		result = unlockResult;
 error:
-	ksceKernelPrintfWithInfo(0, &triggerErrorInfo,
+	SceDebugForDriver_02B04343(0, &triggerErrorInfo,
 		"0x%08x:%d,%d:0x%08x:0x%08x\n",
 		0xcf168d67U, 2, 400, 0x101, result);
-	ksceKernelPrintfWithInfo(0, &triggerParamErrorInfo,
+	SceDebugForDriver_02B04343(0, &triggerParamErrorInfo,
 		"0x%08x:%d,%d:0x%08x:0x%08x,%p,%p,0x%08x,0x%08x,0x%08x,0x%08x,%p\n",
 		0xcf168d67U, 2, 406, 0x102, pid, update, finish,
 		param->size, param->dumpLevel, param->triggerDataType,

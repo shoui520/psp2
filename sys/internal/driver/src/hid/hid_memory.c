@@ -20,7 +20,7 @@ int hidInitializeMemory(void)
 	};
 	int result;
 
-	result = ksceKernelCreateHeap("SceHid", 0x7000, &options);
+	result = SceSysmemForDriver_9328E0E8("SceHid", 0x7000, &options);
 	if (result < 0)
 		return result;
 	hidHeapId = result;
@@ -32,14 +32,14 @@ void *hidAllocateMemory(SceSize size)
 {
 	if (hidHeapId <= 0)
 		return NULL;
-	return ksceKernelAllocHeapMemory(hidHeapId, size);
+	return SceSysmemForDriver_7B4CB60A(hidHeapId, size);
 }
 
 int hidFreeMemory(void *memory)
 {
 	if (memory == NULL)
 		return 0;
-	return ksceKernelFreeHeapMemory(hidHeapId, memory);
+	return sceKernelFreeHeapMemory(hidHeapId, memory);
 }
 
 /* Same wrappers as krm's driver.c, with this module's canonical mutex. */

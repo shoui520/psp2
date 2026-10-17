@@ -115,7 +115,7 @@ SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 	if (nbyte != 0) {
 		p = buf;
 		do {
-			ksceKernelDebugPutchar(*p++);
+			SceDebugForKernel_2AABAEDA(*p++);
 		} while (p != buf + nbyte);
 	}
 	return nbyte;

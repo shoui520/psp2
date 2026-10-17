@@ -8,8 +8,8 @@
 #include <skeleton.h>
 #include "sce_ddk_port.h"
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/suspend.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
@@ -81,7 +81,7 @@ int CreateSuspendWaitEvent(void);
 /* SCE startup registers native callbacks after initializing the DDK services. */
 int module_start(SceSize arglen, const void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	SceUID processHandler;
 	int result;
 
@@ -103,26 +103,26 @@ int module_start(SceSize arglen, const void *argp)
 	memset(&handler, 0, sizeof(handler));
 	handler.size = sizeof(handler);
 	/* These callbacks consume only the leading arguments of the native ABI. */
-	handler.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))
+	handler.create = (int (*)(SceUID, ProcEventCreateParam *, int))
 			sceGpuProcessCreateEvent;
-	handler.exit = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))
+	handler.exit = (int (*)(SceUID, ProcEventParam *, int))
 			sceGpuProcessExitEvent;
-	handler.kill = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))
+	handler.kill = (int (*)(SceUID, ProcEventParam *, int))
 			sceGpuProcessKillEvent;
-	handler.stop = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))
+	handler.suspend = (int (*)(SceUID, int, ProcEventParam *, int))
 			sceGpuProcessStopEvent;
-	handler.start = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))
+	handler.resume = (int (*)(SceUID, int, ProcEventParam *, int))
 			sceGpuProcessStartEvent;
-	processHandler = ksceKernelRegisterProcEventHandler(
+	processHandler = sceKernelRegisterProcEventHandler(
 			"SceGpuProcessEventHandler", &handler, 0);
 	if (processHandler < 0) {
 		result = processHandler;
 		goto failure;
 	}
-	result = ksceKernelRegisterSysEventHandler("SceGpu",
-			(SceSysEventHandler)sceGpuSysEventHandler, NULL);
+	result = sceKernelRegisterSysEventHandler("SceGpu",
+			(SceKernelSysEventHandler)sceGpuSysEventHandler, NULL);
 	if (result < 0) {
-		ksceKernelUnregisterProcEventHandler(processHandler);
+		SceProcEventForDriver_3DED57CC(processHandler);
 		goto failure;
 	}
 	if (CheckRegisterDumpRegisterLists() < 0 || InitWaitModObjList() < 0 ||

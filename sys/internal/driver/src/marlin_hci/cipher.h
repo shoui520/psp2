@@ -2,7 +2,7 @@
 #define MARLIN_HCI_CIPHER_H
 
 #include "key.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 struct MarlinCipherContext {
 	int algorithm;

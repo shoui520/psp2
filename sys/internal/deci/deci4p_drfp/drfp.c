@@ -4,7 +4,7 @@
  * and received the host's response (Sony's drfp.c).
  */
 
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -66,13 +66,13 @@ static inline DrfpRequest *drfpQueueFirst(DrfpQueue *queue)
 	SceKernelIntrStatus s;
 	DrfpRequest *req;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	if (drfpQueueEmpty(queue)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 		return NULL;
 	}
 	req = (DrfpRequest *)queue->next;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 	return req;
 }
 
@@ -80,18 +80,18 @@ static inline void drfpRemoveRequest(DrfpRequest *req)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	drfpRequestUnlink(req);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 }
 
 static inline void drfpAddRequest(DrfpQueue *queue, DrfpRequest *req)
 {
 	SceKernelIntrStatus s;
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	drfpRequestAppend(queue, req);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 }
 
 /* name unknown: a suspend makes later sends wait longer for the link */
@@ -206,12 +206,12 @@ int ReadHandler(DrfpProtocol *ctx, SceSize size)
 		return ret;
 	}
 	seq = h.seq;
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	for (req = (DrfpRequest *)s_drfpRecvQueue.next;
 	     &req->link != &s_drfpRecvQueue; req = (DrfpRequest *)req->link.next) {
 		if (req->seq != seq)
 			continue;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 		code = req->code;
 		ctx->readRequest = req;
 		if (code == DRFP_CODE_READ)
@@ -228,7 +228,7 @@ int ReadHandler(DrfpProtocol *ctx, SceSize size)
 		}
 		return ret;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 	DRFP_PRINTF(0xf, 838, "couldn't find request 0x%08x\n", seq);
 	return SCE_ERROR_ERRNO_ENOENT;
 }
@@ -372,7 +372,7 @@ int sceDeci4pDrfpInit(void)
 	opt.memtype = DRFP_MEMTYPE;
 	opt.pid = 0;
 	opt.heap = NULL;
-	ret = ksceKernelCreateHeap(DRFP_NAME, 0x1000, &opt);
+	ret = SceSysmemForDriver_9328E0E8(DRFP_NAME, 0x1000, &opt);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 305, "CreateHeap failed (0x%08x)\n", ret);
 		return ret;
@@ -411,9 +411,9 @@ int sceDeci4pDrfpInit(void)
 	for (i = 0; i < DRFP_BUFFER_COUNT; i++) {
 		pool = &s_drfpBuffer[i];
 		snprintf(memBlockName, sizeof(memBlockName), DRFP_NAME "MemBlock%d", i);
-		pool->memBlock = ksceKernelAllocMemBlock(memBlockName, DRFP_MEMTYPE,
+		pool->memBlock = SceSysmemForDriver_C94850C9(memBlockName, DRFP_MEMTYPE,
 						     pool->size, NULL);
-		ksceKernelGetMemBlockBase(pool->memBlock, &pool->base);
+		SceSysmemForDriver_A841EDDA(pool->memBlock, &pool->base);
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
 		pool->sema = ksceKernelCreateSema(name, SCE_KERNEL_ATTR_THREAD_PRIO, pool->count,
 						  pool->count, NULL);
@@ -427,7 +427,7 @@ int sceDeci4pDrfpInit(void)
 	proto.destination = 0;
 	proto.flags = DFMGR_PROTOCOL_ALIAS;
 	strncpy(proto.name, "DRFP", sizeof(proto.name));
-	if (ksceKernelCheckDipsw(0xc3) == 0)
+	if (SceDipswForDriver_A98FC2FD(0xc3) == 0)
 		proto.flags |= DFMGR_PROTOCOL_USB;
 	s_drfpProtocol.handle = sceDfMgrOpen(drfpHandler, &proto, &s_drfpProtocol);
 	s_drfpSuspended = 0;
@@ -436,7 +436,7 @@ int sceDeci4pDrfpInit(void)
 	s_drfpProtocol.registered = 0;
 	s_drfpProtocol.readRequest = NULL;
 	s_drfpProtocol.writeRequest = NULL;
-	ksceKernelRegisterSysEventHandler(DRFP_NAME, drfpSysEventHandler, NULL);
+	sceKernelRegisterSysEventHandler(DRFP_NAME, drfpSysEventHandler, NULL);
 	return 0;
 }
 
@@ -473,7 +473,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	if (ksceKernelWaitSema(s_drfpRequestSema, 1, NULL) != 0)
 		SCE_PANIC(460);
 
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	index = -1;
 	for (i = 0; i < DRFP_REQUEST_COUNT; i++) {
 		if (!(s_drfpRequest[i].flags & DRFP_REQ_USED)) {
@@ -484,7 +484,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 	req = &s_drfpRequest[index];
 	req->flags |= DRFP_REQ_USED;
 	req->seq = ++s_drfpSequence;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 
 	req->packet = pkt;
 	req->size = size;
@@ -562,7 +562,7 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 done:
 	drfpRemoveRequest(req);
 	ksceKernelClearEventFlag(req->evf, 0);
-	s = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_drfpLock);
+	s = SceCpuForDriver_D32ACE9E(&s_drfpLock);
 	req->flags = 0;
 	req->code = 0;
 	req->seq = 0;
@@ -571,7 +571,7 @@ done:
 	req->result = 0;
 	req->link.next = &req->link;
 	req->link.prev = &req->link;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_drfpLock, s);
 	ksceKernelSignalSema(s_drfpRequestSema, 1);
 	return ret;
 }
@@ -580,7 +580,7 @@ int DrfpModuleStart(SceSize args, void *argp)
 {
 	SceUID handle;
 
-	if (ksceKernelCheckDipsw(0xc2) == 0) {
+	if (SceDipswForDriver_A98FC2FD(0xc2) == 0) {
 		SCE_DBG_PRINTF(0xb, 980, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}

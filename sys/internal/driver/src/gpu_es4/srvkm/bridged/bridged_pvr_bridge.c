@@ -305,7 +305,7 @@ IMG_INT PVRSRVDeleteSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	result = sceGpuSharedSyncObjectGetHandle(psBridgeIn->ui32SharedKey, &hHandle);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVDeleteSharedSyncInfoBW_L5693,
 			"%s: Error %08x trying to get sync object handle for key %08x!\n",
 			__func__, result, psBridgeIn->ui32SharedKey);
@@ -317,7 +317,7 @@ IMG_INT PVRSRVDeleteSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 			(IMG_VOID **)&psSyncInfo, hHandle, 6);
 	if (psBridgeOut->eError != PVRSRV_OK) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVDeleteSharedSyncInfoBW_L5700,
 			"%s: Error %08x looking up original sync object for key %08x!\n",
 			__func__, psBridgeOut->eError, psBridgeIn->ui32SharedKey);
@@ -328,7 +328,7 @@ IMG_INT PVRSRVDeleteSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 		psBridgeOut->eError = ResManFreeResByPtr(psSyncInfo->hResItem, IMG_FALSE);
 		if (psBridgeOut->eError != PVRSRV_OK) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				&dbg_PVRSRVDeleteSharedSyncInfoBW_L5707,
 				"%s: Error %08x deleting original sync object for key %08x!\n",
 				__func__, psBridgeOut->eError, psBridgeIn->ui32SharedKey);
@@ -339,7 +339,7 @@ IMG_INT PVRSRVDeleteSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 		result = sceGpuSharedSyncObjectDelete(psBridgeIn->ui32SharedKey);
 		if (result < 0) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				&dbg_PVRSRVDeleteSharedSyncInfoBW_L5713,
 				"%s: Error %08x trying to delete shared sync object with key %08x!\n",
 				__func__, result, psBridgeIn->ui32SharedKey);
@@ -352,7 +352,7 @@ IMG_INT PVRSRVDeleteSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 		psSyncInfo->ui32RefCount--;
 	else {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVDeleteSharedSyncInfoBW_L5720,
 			"%s: Sync object with key %08x has a zero refcount!\n",
 			__func__, psBridgeIn->ui32SharedKey);
@@ -447,7 +447,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	result = sceGpuSharedSyncObjectGetHandle(psBridgeIn->ui32SharedKey, &hHandle);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5632,
 			"%s: Error %08x with GetHandle for sync object with key %08x\n",
 			__func__, result, psBridgeIn->ui32SharedKey);
@@ -459,7 +459,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 			(IMG_VOID **)&psSyncInfo, hHandle, 6);
 	if (psBridgeOut->eError != PVRSRV_OK) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5639,
 			"%s: Error %08x finding kernel handle for sync object with key %08x\n",
 			__func__, psBridgeOut->eError, psBridgeIn->ui32SharedKey);
@@ -470,7 +470,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 			&hHandle, psSyncInfo, 6);
 	if (psBridgeOut->eError != PVRSRV_OK) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5645,
 			"%s: Error %08x finding process handle for sync object with key %08x\n",
 			__func__, psBridgeOut->eError, psBridgeIn->ui32SharedKey);
@@ -479,7 +479,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	}
 #if FW_DEBUG
 	if (hHandle != psBridgeIn->hKernelSyncInfo)
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5650,
 			"%s: Tried to close different shared sync object with key %08x (%p vs %p)\n",
 			__func__, psBridgeIn->ui32SharedKey,
@@ -487,7 +487,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 #endif
 	if (psSyncInfo->ui32SharedKey != psBridgeIn->ui32SharedKey) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5654,
 			"%s: Tried to close shared sync object with the wrong key (%08x vs %08x)\n",
 			__func__, psSyncInfo->ui32SharedKey, psBridgeIn->ui32SharedKey);
@@ -498,7 +498,7 @@ IMG_INT PVRSRVCloseSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	result = sceGpuSharedSyncObjectClose(psSyncInfo->ui32SharedKey);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVCloseSharedSyncInfoBW_L5661,
 			"%s: Could not close sync object with key %08x\n",
 			__func__, psBridgeIn->ui32SharedKey);
@@ -548,7 +548,7 @@ IMG_INT PVRSRVOpenSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	result = sceGpuSharedSyncObjectOpen(psBridgeIn->ui32SharedKey, &hHandle);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVOpenSharedSyncInfoBW_L5585,
 			"%s: Failed to open shared sync object with key %08x: %08x",
 			__func__, psBridgeIn->ui32SharedKey, result);
@@ -562,7 +562,7 @@ IMG_INT PVRSRVOpenSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 		goto close;
 	if (psSyncInfo->ui32SharedKey != psBridgeIn->ui32SharedKey) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 			&dbg_PVRSRVOpenSharedSyncInfoBW_L5597,
 			"%s: Invalid shared key (%08x vs %08x)\n",
 			__func__, psSyncInfo->ui32SharedKey, psBridgeIn->ui32SharedKey);
@@ -1286,7 +1286,7 @@ IMG_INT PVRSRVCreateSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 			psSyncInfo, 6, 3);
 	if (psBridgeOut->eError != PVRSRV_OK) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_PVRSRVCreateSharedSyncInfoBW_L5541,
 				"Failed to create handle: %08x\n", psBridgeOut->eError);
 #endif
@@ -1295,7 +1295,7 @@ IMG_INT PVRSRVCreateSharedSyncInfoBW(IMG_UINT32 ui32BridgeID,
 	result = sceGpuSharedSyncObjectCreate(psBridgeIn->ui32SharedKey, hHandle);
 	if (result < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0,
+		SceDebugForDriver_D9703808(1, 0,
 				&dbg_PVRSRVCreateSharedSyncInfoBW_L5549,
 				"Failed to create shared object: %08x\n", result);
 #endif
@@ -1393,7 +1393,7 @@ IMG_INT PVRSRVAllocDeviceMemBW(IMG_UINT32 ui32BridgeID,
 	PVRSRVAllocHandle(psPerProc->psHandleBase,
 			&psAllocDeviceMemOUT->sClientMemInfo.hKernelMemInfo, psMemInfo, 5, 0);
 	if (!(psAllocDeviceMemIN->ui32Attribs & 8))
-		ksceKernelPanic(&dbg_PVRSRVAllocDeviceMemBW_L816,
+		SceDebugForDriver_391B5B74(&dbg_PVRSRVAllocDeviceMemBW_L816,
 				__builtin_return_address(0));
 	psPerProc->bHandlesBatched = IMG_FALSE;
 	psAllocDeviceMemOUT->eError = PVRSRVCommitHandleBatch(psPerProc->psHandleBase);
@@ -1521,7 +1521,7 @@ IMG_INT sceGpuModObjPoll(MODIFY_SYNC_OP_INFO *psModSyncOpInfo)
 	if (completed == psModSyncOpInfo->ui32NumSyncs)
 		result = 0;
 #if FW_DEBUG
-	ksceKernelAssert(result != (IMG_INT)0x804c0007,
+	SceDebugForDriver_35A35322(result != (IMG_INT)0x804c0007,
 			&dbg_sceGpuModObjPoll_L5248, __builtin_return_address(0));
 #endif
 	return result;

@@ -8,9 +8,9 @@ static inline __attribute__((always_inline)) UnitFixedCtrl *getVeneziaRegionCtrl
 	unsigned int index;
 
 #if FW_DEBUG
-	ksceKernelAssert(heap != NULL, SCE_DBGINFO_FUNC(74, "_getUnitFixedCtrl"),
+	SceDebugForDriver_35A35322(heap != NULL, SCE_DBGINFO_FUNC(74, "_getUnitFixedCtrl"),
 		__builtin_return_address(0));
-	ksceKernelAssert(address >= (uintptr_t)heap->base &&
+	SceDebugForDriver_35A35322(address >= (uintptr_t)heap->base &&
 		address < (uintptr_t)heap->base + heap->size,
 		SCE_DBGINFO_FUNC(50, "_isValidAddr"), __builtin_return_address(0));
 #endif
@@ -19,7 +19,7 @@ static inline __attribute__((always_inline)) UnitFixedCtrl *getVeneziaRegionCtrl
 		return NULL;
 	index = (address - heap->regionBase) >> 18;
 #if FW_DEBUG
-	ksceKernelAssert(index < heap->regionCount,
+	SceDebugForDriver_35A35322(index < heap->regionCount,
 		SCE_DBGINFO_FUNC(86, "_getUnitFixedCtrl"), __builtin_return_address(0));
 #endif
 	return &heap->regions[index];
@@ -100,9 +100,9 @@ int _loadUnitFixedCtrl(VeneziaHeap *heap, UnitFixedCtrl *previous, UnitFixedCtrl
 			goto invalidTag;
 		region = getVeneziaRegionCtrl(heap, ctrl);
 #if FW_DEBUG
-		ksceKernelAssert(region != NULL, SCE_DBGINFO_FUNC(114, "_loadUnitFixedCtrl"),
+		SceDebugForDriver_35A35322(region != NULL, SCE_DBGINFO_FUNC(114, "_loadUnitFixedCtrl"),
 			__builtin_return_address(0));
-		ksceKernelAssert(region->next != NULL && region->units != 0,
+		SceDebugForDriver_35A35322(region->next != NULL && region->units != 0,
 			SCE_DBGINFO_FUNC(115, "_loadUnitFixedCtrl"), __builtin_return_address(0));
 #endif
 		ctrl->next = region->next;
@@ -116,7 +116,7 @@ int _loadUnitFixedCtrl(VeneziaHeap *heap, UnitFixedCtrl *previous, UnitFixedCtrl
 	}
 	heap->allocatedUnits -= ctrl->units;
 #if FW_DEBUG
-	ksceKernelAssert((uintptr_t)previous->next >= (uintptr_t)heap->base &&
+	SceDebugForDriver_35A35322((uintptr_t)previous->next >= (uintptr_t)heap->base &&
 		(uintptr_t)previous->next < (uintptr_t)heap->base + heap->size,
 		SCE_DBGINFO_FUNC(50, "_isValidAddr"), __builtin_return_address(0));
 #endif
@@ -153,13 +153,13 @@ void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize re
 	uintptr_t regionBase = 0;
 
 #if FW_DEBUG
-	ksceKernelAssert(base != NULL, SCE_DBGINFO_FUNC(131, "_sceVeneziaHeapInit"),
+	SceDebugForDriver_35A35322(base != NULL, SCE_DBGINFO_FUNC(131, "_sceVeneziaHeapInit"),
 		__builtin_return_address(0));
-	ksceKernelAssert(heap != NULL, SCE_DBGINFO_FUNC(132, "_sceVeneziaHeapInit"),
+	SceDebugForDriver_35A35322(heap != NULL, SCE_DBGINFO_FUNC(132, "_sceVeneziaHeapInit"),
 		__builtin_return_address(0));
-	ksceKernelAssert(size > 23, SCE_DBGINFO_FUNC(133, "_sceVeneziaHeapInit"),
+	SceDebugForDriver_35A35322(size > 23, SCE_DBGINFO_FUNC(133, "_sceVeneziaHeapInit"),
 		__builtin_return_address(0));
-	ksceKernelAssert((uintptr_t)heap == (uintptr_t)base + size + 8,
+	SceDebugForDriver_35A35322((uintptr_t)heap == (uintptr_t)base + size + 8,
 		SCE_DBGINFO_FUNC(134, "_sceVeneziaHeapInit"), __builtin_return_address(0));
 #endif
 	heap->size = size;
@@ -186,7 +186,7 @@ void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize re
 static inline __attribute__((always_inline)) void assertVeneziaHeapAddress(VeneziaHeap *heap, const void *address)
 {
 #if FW_DEBUG
-	ksceKernelAssert((uintptr_t)address >= (uintptr_t)heap->base &&
+	SceDebugForDriver_35A35322((uintptr_t)address >= (uintptr_t)heap->base &&
 		(uintptr_t)address < (uintptr_t)heap->base + heap->size,
 		SCE_DBGINFO_FUNC(50, "_isValidAddr"), __builtin_return_address(0));
 #endif
@@ -276,9 +276,9 @@ void *_storeUnitFixedCtrl(VeneziaHeap *heap, SceSize size, SceSize alignment)
 	if (indirect) {
 		region = getVeneziaRegionCtrl(heap, allocated);
 #if FW_DEBUG
-		ksceKernelAssert(region != NULL, SCE_DBGINFO_FUNC(100, "_storeUnitFixedCtrl"),
+		SceDebugForDriver_35A35322(region != NULL, SCE_DBGINFO_FUNC(100, "_storeUnitFixedCtrl"),
 			__builtin_return_address(0));
-		ksceKernelAssert(region->next == NULL && region->units == 0,
+		SceDebugForDriver_35A35322(region->next == NULL && region->units == 0,
 			SCE_DBGINFO_FUNC(101, "_storeUnitFixedCtrl"), __builtin_return_address(0));
 #endif
 		region->next = allocated->next;
@@ -311,7 +311,7 @@ static inline __attribute__((always_inline)) int processVeneziaHeapMemory(
 		previous = next;
 		if (next == heap->lastFreeBlock) {
 #if FW_DEBUG
-			ksceKernelAssert(0, SCE_DBGINFO_FUNC(297, "_procMemory"),
+			SceDebugForDriver_35A35322(0, SCE_DBGINFO_FUNC(297, "_procMemory"),
 				__builtin_return_address(0));
 #endif
 			return (int)0x80600006;
@@ -337,7 +337,7 @@ static inline __attribute__((always_inline)) int processVeneziaHeapMemory(
 			if ((uintptr_t)previous->next > (uintptr_t)(ctrl - units) &&
 			    (uintptr_t)previous->next < (uintptr_t)ctrl) {
 #if FW_DEBUG
-				ksceKernelAssert(0, SCE_DBGINFO_FUNC(335, "_procMemory"),
+				SceDebugForDriver_35A35322(0, SCE_DBGINFO_FUNC(335, "_procMemory"),
 					__builtin_return_address(0));
 #endif
 				return (int)0x80600006;
@@ -345,7 +345,7 @@ static inline __attribute__((always_inline)) int processVeneziaHeapMemory(
 			if ((uintptr_t)ctrl > (uintptr_t)(previous - previous->units) &&
 			    (uintptr_t)previous > (uintptr_t)ctrl) {
 #if FW_DEBUG
-				ksceKernelAssert(0, SCE_DBGINFO_FUNC(340, "_procMemory"),
+				SceDebugForDriver_35A35322(0, SCE_DBGINFO_FUNC(340, "_procMemory"),
 					__builtin_return_address(0));
 #endif
 				return (int)0x80600006;
@@ -403,7 +403,7 @@ int _sceVeneziaHeapIsRegistered(VeneziaHeap *heap, unsigned int unused0, unsigne
 				current -= ctrl->units;
 			} while ((uintptr_t)next < (uintptr_t)current);
 #if FW_DEBUG
-			ksceKernelAssert(next == current,
+			SceDebugForDriver_35A35322(next == current,
 				SCE_DBGINFO_FUNC(514, "_sceVeneziaHeapIsRegistered"),
 				__builtin_return_address(0));
 #endif

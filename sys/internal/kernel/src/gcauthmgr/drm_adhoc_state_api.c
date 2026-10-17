@@ -1,5 +1,5 @@
 /* Adhoc session syscall entry. */
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 
 int GcAuthAdhocInitializeState(void);
 

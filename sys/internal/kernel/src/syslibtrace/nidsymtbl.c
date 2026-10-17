@@ -61,7 +61,7 @@ int SceNidsymtblForDriver_985E2935(SceUInt32 nid, const char **name)
 	if (entry == NULL)
 		return SCE_ERROR_ERRNO_ENOENT;
 
-	if (!ksceSblQafMgrIsAllowSystemAppDebug() && !(entry->flags & SCE_NIDSYMTBL_PUBLIC))
+	if (!SceQafMgrForDriver_CAD47130() && !(entry->flags & SCE_NIDSYMTBL_PUBLIC))
 		return SCE_ERROR_ERRNO_EPERM;
 	if (name == NULL)
 		return 0;

@@ -211,7 +211,7 @@ static void gpuCoreDumpPrintActive(int core, int vertex, GpuCoreDumpAnalysis *an
 			gpuCoreDumpLogPrintf(analysis->log, "%s: - %s: Active Process is unknown\n", analysis->prefix,
 					     phase);
 	} else {
-		name = ksceGUIDName(pid);
+		name = SceSysmemForDriver_E655852F(pid);
 		if (analysis->log != NULL)
 			gpuCoreDumpLogPrintf(analysis->log, "%s: - %s: Active Process is : %s (0x%08x)\n",
 					     analysis->prefix, phase, name != NULL ? name : "unknown", pid);
@@ -282,7 +282,7 @@ void gpuCoreDumpAnalyse(PVRSRV_SGXDEV_INFO *devInfo, int cores, SceUInt32 enable
 						gpuCoreDumpLogPrintf(analysis->log, "%s:   - Context ID: %d\n",
 								     analysis->prefix, context);
 				} else {
-					name = ksceGUIDName(pid);
+					name = SceSysmemForDriver_E655852F(pid);
 					if (analysis->log != NULL)
 						gpuCoreDumpLogPrintf(analysis->log, "%s:   - Process : %s (0x%08x)\n",
 								     analysis->prefix,
@@ -342,7 +342,7 @@ void gpuCoreDumpAnalyse(PVRSRV_SGXDEV_INFO *devInfo, int cores, SceUInt32 enable
 							gpuCoreDumpLogPrintf(analysis->log, "%s:   - Context ID: %d\n",
 									     analysis->prefix, context);
 					} else {
-						name = ksceGUIDName(pid);
+						name = SceSysmemForDriver_E655852F(pid);
 						if (analysis->log != NULL)
 							gpuCoreDumpLogPrintf(analysis->log,
 									     "%s:   - Process : %s (0x%08x)\n",
@@ -394,7 +394,7 @@ void gpuCoreDumpAnalyse(PVRSRV_SGXDEV_INFO *devInfo, int cores, SceUInt32 enable
 		analysis->dm[i].name = NULL;
 		analysis->dm[i].pid = pid;
 		if (pid >= 0)
-			analysis->dm[i].name = ksceGUIDName(pid);
+			analysis->dm[i].name = SceSysmemForDriver_E655852F(pid);
 	}
 	for (msg = gpuCoreDumpMessages; msg->flag != 0; msg++)
 		if ((msg->flag & analysis->flags) && analysis->log != NULL)

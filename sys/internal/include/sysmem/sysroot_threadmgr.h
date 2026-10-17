@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 
+struct ThreadSyscallFrame;
+
 /* Thread-manager services registered with Sysroot by NID 26458702. */
 typedef struct SysrootThreadmgrOps {
 	SceSize size;
@@ -16,12 +18,15 @@ typedef struct SysrootThreadmgrOps {
 	void *(*getCurrentAddressSpaceCB)(void);
 	void *(*getCurrentUIDEntryHeapCB)(void);
 	/* Entry addresses: callback argument contracts remain unreviewed. */
-	int (*returnFromExcpToThread)(void);
+	void (*returnFromExcpToThread)(void *context, void *thread);
 	int (*threadMgrStartAfterProcess)(void);
-	int (*trapThreadAfterSyscall)(void);
+	int (*trapThreadAfterSyscall)(struct ThreadSyscallFrame *frame, SceUInt32 *result,
+				      SceUInt32 request);
 } SysrootThreadmgrOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootThreadmgrOps) == 0x30,
 	       "Sysroot thread-manager service table size");
 _Static_assert(offsetof(SysrootThreadmgrOps, getThreadAccessLevel) == 0x0c,
 	       "Sysroot thread access-level callback slot");
+#endif

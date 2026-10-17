@@ -2,8 +2,8 @@
  * SceDeci4pRDrfp protocol: module start, the SceDeci4pDfMgr handler, and the
  * request / reply queues (Sony's rdrfp.c).
  */
-#include <psp2kern/kernel/dipsw.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/dipsw.h>
+#include <sysmem/sysmem.h>
 #include <string.h>
 #include "rdrfp.h"
 
@@ -54,7 +54,7 @@ RdrfpRequest *rdrfpPrepareRequest(SceUInt32 id, int bufType, int bufIndex, void 
 	desc = rdrfpCreateDesc(id, bufType, bufIndex, packet);
 	if (desc == NULL)
 		SCE_PANIC(163);
-	req = ksceKernelAllocHeapMemory(rdrfpHeap, sizeof(*req));
+	req = SceSysmemForDriver_7B4CB60A(rdrfpHeap, sizeof(*req));
 	if (req == NULL)
 		SCE_PANIC(168);
 	memset(req, 0, sizeof(*req));
@@ -71,7 +71,7 @@ void rdrfpTerminateRequest(RdrfpRequest *req)
 
 	SCE_DBG_ASSERT_LEVEL(0, req && &req->link == req->link.next, 184);
 	desc = req->desc;
-	ksceKernelFreeHeapMemory(rdrfpHeap, req);
+	sceKernelFreeHeapMemory(rdrfpHeap, req);
 	rdrfpReleaseBuffer(desc->bufType, desc->bufIndex);
 	rdrfpDeleteDesc(desc);
 }
@@ -126,7 +126,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 		.attr = 0x401,
 		.memtype = 0x10f0d006,
 	};
-	ret = ksceKernelCreateHeap("SceDeci4pRDrfp", 0x2000, &opt);
+	ret = SceSysmemForDriver_9328E0E8("SceDeci4pRDrfp", 0x2000, &opt);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 80, "CreateHeap failed (0x%08X)\n", ret);
 		return SCE_KERNEL_START_FAILED;
@@ -141,7 +141,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 	protocol.destination = 0;
 	protocol.flags = 1;
 	strncpy(protocol.name, "RDRFP", sizeof(protocol.name));
-	if (!ksceKernelCheckDipsw(RDRFP_DIPSW_NO_AUTO_ENABLE))
+	if (!SceDipswForDriver_A98FC2FD(RDRFP_DIPSW_NO_AUTO_ENABLE))
 		protocol.flags |= 0x200;
 	ret = sceDfMgrOpen(sceDeci4pRDrfpHandler, &protocol, &rdrfp);
 	if (ret < 0) {
@@ -167,9 +167,9 @@ int module_start(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	if (!ksceKernelCheckDipsw(RDRFP_DIPSW)) {
+	if (!SceDipswForDriver_A98FC2FD(RDRFP_DIPSW)) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0xb, SCE_DBGINFO_FUNC(639, "RDrfpModuleStart"),
+		SceDebugForDriver_D9703808(1, 0xb, SCE_DBGINFO_FUNC(639, "RDrfpModuleStart"),
 					      "disabled by dipsw\n");
 #endif
 		return SCE_KERNEL_START_NO_RESIDENT;
@@ -189,12 +189,12 @@ void rdrfpQueueRequest(RdrfpRequest *req)
 
 void *rdrfpAlloc(SceSize size)
 {
-	return ksceKernelAllocHeapMemory(rdrfpHeap, size);
+	return SceSysmemForDriver_7B4CB60A(rdrfpHeap, size);
 }
 
 void rdrfpFree(void *p)
 {
-	ksceKernelFreeHeapMemory(rdrfpHeap, p);
+	sceKernelFreeHeapMemory(rdrfpHeap, p);
 }
 
 /* queue a collected write: its last piece's ID answers for all of them */
@@ -353,7 +353,7 @@ static inline __attribute__((always_inline)) int ReadHandler(SceSize size, Rdrfp
 	*packet = head;
 	req = rdrfpPrepareRequest(head.id & 0xffff, bufType, index, packet);
 	if (head.type == RDRFP_CMD_READ) {
-		state = ksceKernelAllocHeapMemory(rdrfpHeap, sizeof(*state));
+		state = SceSysmemForDriver_7B4CB60A(rdrfpHeap, sizeof(*state));
 		if (state == NULL)
 			SCE_PANIC(553);
 		state->continued = 0;
@@ -392,7 +392,7 @@ static inline __attribute__((always_inline)) int WriteHandler(RdrfpContext *ctx)
 		return 0;
 	desc = req->desc;
 	rdrfpCurrentSending = desc;
-	ksceKernelFreeHeapMemory(rdrfpHeap, req);
+	sceKernelFreeHeapMemory(rdrfpHeap, req);
 	packet = desc->packet;
 	total = SceDeci4pDfMgrForDebugger_CACAB5F9(packet);
 	sent = sceDfMgrSend(ctx->handle, packet,

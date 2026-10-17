@@ -3,11 +3,10 @@
  * Only PampModuleStart and scePerfArmPmonOpen have recovered Sony names;
  * the remaining internal names describe their observed responsibilities.
  */
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/heap.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <processmgr/processmgr.h>
@@ -21,7 +20,7 @@ static PampContext s_pamp;
 
 #if FW_DEBUG
 #define PAMP_OPEN_PRINTF(_line, _fmt, ...) \
-	ksceKernelPrintfLevelWithInfo(1, 0, \
+	SceDebugForDriver_D9703808(1, 0, \
 		SCE_DBGINFO_FUNC(_line, "scePerfArmPmonOpen"), _fmt, ##__VA_ARGS__)
 #else
 #define PAMP_OPEN_PRINTF(_line, _fmt, ...) do { } while (0)
@@ -30,13 +29,13 @@ static PampContext s_pamp;
 /* name unknown */
 static void pampZfree(void *opaque, void *address)
 {
-	ksceKernelFreeHeapMemory((SceUID)opaque, address);
+	sceKernelFreeHeapMemory((SceUID)opaque, address);
 }
 
 /* name unknown */
 static void *pampZalloc(void *opaque, SceUInt32 items, SceUInt32 size)
 {
-	return ksceKernelAllocHeapMemory((SceUID)opaque, items * size);
+	return SceSysmemForDriver_7B4CB60A((SceUID)opaque, items * size);
 }
 
 /* name unknown; overlap is rejected even though the operation is a copy. */
@@ -399,13 +398,13 @@ static int pampOpen(PampContext *ctx)
 	ctx->traceSize = windowSize - 0x1000000;
 	ctx->trace[0].allocated = 0;
 	ctx->trace[0].base = ctx->traceBase;
-	ret = ksceKernelVAtoPA(ctx->traceBase, &ctx->trace[0].physical);
+	ret = SceSysmemForDriver_8D160E65(ctx->traceBase, &ctx->trace[0].physical);
 	if (ret < 0)
 		return PAMP_STATUS_ERROR;
 	ctx->trace[0].size = 0;
 	ctx->trace[1].allocated = 0;
 	ctx->trace[1].base = ctx->traceBase;
-	ret = ksceKernelVAtoPA(ctx->traceBase, &ctx->trace[1].physical);
+	ret = SceSysmemForDriver_8D160E65(ctx->traceBase, &ctx->trace[1].physical);
 	if (ret < 0)
 		return PAMP_STATUS_ERROR;
 	ctx->trace[1].size = 0;
@@ -491,7 +490,7 @@ static int pampAllocateTrace(PampContext *ctx)
 	if (other->allocated)
 		other->base = ctx->traceBase + size;
 	if (ctx->trace[0].allocated) {
-		ret = ksceKernelVAtoPA(ctx->trace[0].base, &ctx->trace[0].physical);
+		ret = SceSysmemForDriver_8D160E65(ctx->trace[0].base, &ctx->trace[0].physical);
 		if (ret < 0)
 			return PAMP_STATUS_INVALID_ARGUMENT;
 		ctx->paConfig[4] = data[2];
@@ -505,7 +504,7 @@ static int pampAllocateTrace(PampContext *ctx)
 			return pampProtocolError(ret);
 	}
 	if (ctx->trace[1].allocated) {
-		ret = ksceKernelVAtoPA(ctx->trace[1].base, &ctx->trace[1].physical);
+		ret = SceSysmemForDriver_8D160E65(ctx->trace[1].base, &ctx->trace[1].physical);
 		if (ret < 0)
 			return PAMP_STATUS_INVALID_ARGUMENT;
 		ctx->pmuAddress = ctx->trace[1].physical;
@@ -1018,11 +1017,11 @@ int PampModuleStart(SceSize arglen, void *argp)
 	SceDfMgrProtocol protocol;
 	int ret;
 
-	if (!ksceKernelCheckDipsw(0xc2)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2)) {
 		SCE_DBG_PRINTF(0xb, 271, "disabled by dipsw\n");
 		return 1;
 	}
-	if (!ksceKernelCheckDipsw(0xd4))
+	if (!SceDipswForDriver_A98FC2FD(0xd4))
 		return 1;
 	memset(ctx, 0, sizeof(*ctx));
 	if (ksceKernelInitializeFastMutex(&ctx->controlLock, "SceDeci4pPampControlLock", 2, NULL) < 0 ||
@@ -1047,7 +1046,7 @@ int PampModuleStart(SceSize arglen, void *argp)
 	heapopt.memtype = PAMP_MEMTYPE;
 	heapopt.pid = 0;
 	heapopt.heap = NULL;
-	ret = ksceKernelCreateHeap("SceDeci4pPamp", 0x100000, &heapopt);
+	ret = SceSysmemForDriver_9328E0E8("SceDeci4pPamp", 0x100000, &heapopt);
 	if (ret < 0)
 		return 2;
 	ctx->heap = ret;
@@ -1079,7 +1078,7 @@ int PampModuleStart(SceSize arglen, void *argp)
 	protocol.destination = 0;
 	protocol.flags = DFMGR_PROTOCOL_ENABLE;
 	strncpy(protocol.name, "PAMP", sizeof(protocol.name));
-	protocol.flags |= ksceKernelCheckDipsw(0xc3) ? DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
+	protocol.flags |= SceDipswForDriver_A98FC2FD(0xc3) ? DFMGR_PROTOCOL_SDIO : DFMGR_PROTOCOL_USB;
 	ret = sceDfMgrOpen(scePerfArmPmonOpen, &protocol, ctx);
 	if (ret < 0)
 		return 2;

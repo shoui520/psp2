@@ -1,7 +1,7 @@
 /* IMG pvr_debug.c formatting with the SCE unified native spinlock port. */
 #include "../../sce_ddk_port.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,10 +34,10 @@ IMG_VOID VBAppend(const IMG_CHAR *pszFormat, ...)
 	const IMG_CHAR *pszPrintFormat;
 
 	va_start(VArgs, pszFormat);
-	ulLockFlags = ksceKernelSpinlockLowLockCpuSuspendIntr(&gsDebugLockIRQ);
+	ulLockFlags = SceCpuForDriver_D32ACE9E(&gsDebugLockIRQ);
 	strncpy(gszBufferIRQ, "PVR_K: ", 512);
 	ui32Used = strnlen(gszBufferIRQ, sizeof(gszBufferIRQ));
-	ksceKernelAssert(ui32Used < sizeof(gszBufferIRQ), &dbg_VBAppend_L101,
+	SceDebugForDriver_35A35322(ui32Used < sizeof(gszBufferIRQ), &dbg_VBAppend_L101,
 			__builtin_return_address(0));
 	ui32Space = sizeof(gszBufferIRQ) - ui32Used;
 	i32Len = vsnprintf(&gszBufferIRQ[ui32Used], ui32Space, pszFormat, VArgs);
@@ -51,8 +51,8 @@ IMG_VOID VBAppend(const IMG_CHAR *pszFormat, ...)
 truncated:
 	pszPrintFormat = "PVR_K:(Message Truncated): %s\n";
 print:
-	ksceKernelPrintf(pszPrintFormat, gszBufferIRQ);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&gsDebugLockIRQ, ulLockFlags);
+	SceDebugForDriver_391B74B7(pszPrintFormat, gszBufferIRQ);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&gsDebugLockIRQ, ulLockFlags);
 	va_end(VArgs);
 }
 #endif

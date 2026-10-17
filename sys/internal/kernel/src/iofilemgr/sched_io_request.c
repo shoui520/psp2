@@ -52,7 +52,7 @@ int sceIoRequestCreateIoRequest(IoRequest *req, int type, int isAsync, SceUID as
 	req->asyncParam = asyncParam;
 	if (asyncParam != NULL) {
 		if (req->fromUser) {
-			ret = ksceKernelCopyFromUser(&param, asyncParam, sizeof(param));
+			ret = SceSysmemForDriver_BC996A7A(&param, asyncParam, sizeof(param));
 			if (ret >= 0)
 				req->asyncPriority = param.priority;
 		} else {

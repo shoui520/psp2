@@ -18,11 +18,11 @@ int mtpCacheLoad(const char *path, SceSize size)
 	int ret;
 
 	if (e->base == NULL) {
-		e->block = ksceKernelAllocMemBlock("MTPDataCacheBuffer", EW_MEMTYPE_FB,
+		e->block = SceSysmemForDriver_C94850C9("MTPDataCacheBuffer", EW_MEMTYPE_FB,
 						   (size + 0xfff) & ~0xfff, NULL);
 		if (e->block < 0)
 			return e->block;
-		ksceKernelGetMemBlockBase(e->block, &e->base);
+		SceSysmemForDriver_A841EDDA(e->block, &e->base);
 		strncpy(e->path, path, strnlen(path, 0xff));
 	}
 	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);

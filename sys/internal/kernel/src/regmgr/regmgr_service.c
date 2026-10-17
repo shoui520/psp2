@@ -3,7 +3,7 @@
  * conversions between the region number, its name and the PS code.
  */
 
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include "regmgr_internal.h"
 
 #define REGMGR_API_SRV_GET_REGION		21	/* names unknown */
@@ -110,7 +110,7 @@ int sceRegMgrSrvCnvRegionPsCode(int region)
 	switch (region) {
 	case 0:
 	case 11:
-		ret = ksceSblAimgrGetProductCode();
+		ret = SceSblAIMgrForDriver_14345161();
 		if (ret < 0)
 			goto error;
 		if (region == 11 && (SceUInt32)(ret - 0x100) >= 3)

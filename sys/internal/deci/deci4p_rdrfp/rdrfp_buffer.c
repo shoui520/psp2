@@ -3,7 +3,7 @@
  * Three pools of memory blocks: receive buffers for requests, read buffers
  * for read replies and write buffers collecting written data.
  */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,13 +49,13 @@ int rdrfpInitBufferTable(void)
 		table->evf = ret;
 		for (i = 0; i < table->count; i++) {
 			snprintf(name, sizeof(name), "SceDeci4pRDrfpMemBlock%s%d", rdrfpBufferNames[type], i);
-			ret = ksceKernelAllocMemBlock(name, 0x10f0d006, table->size, NULL);
+			ret = SceSysmemForDriver_C94850C9(name, 0x10f0d006, table->size, NULL);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 103, "AllocMemBlockForKernel failed (0x%08X)\n", ret);
 				goto failed;
 			}
 			table->buffers[i].block = ret;
-			ret = ksceKernelGetMemBlockBase(ret, &table->buffers[i].base);
+			ret = SceSysmemForDriver_A841EDDA(ret, &table->buffers[i].base);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 113, "GetMemBlockBase failed (0x%08X)\n", ret);
 				goto failed;
@@ -72,7 +72,7 @@ failed:
 			ksceKernelDeleteEventFlag(table->evf);
 		for (i = 0; i < table->count; i++) {
 			if (table->buffers[i].block)
-				ksceKernelFreeMemBlock(table->buffers[i].block);
+				SceSysmemForDriver_009E1C61(table->buffers[i].block);
 		}
 	}
 	return ret;

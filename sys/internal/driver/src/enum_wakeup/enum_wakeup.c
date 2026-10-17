@@ -17,7 +17,7 @@ void ewPowerButton(uint32_t state, uint32_t previous, void *argument)
 
 	(void)previous;
 	(void)argument;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ewg.ew.spinlock);
+	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
 	ewg.ew.powerButton = state;
 	if (state & EW_BUTTON_POWER) {
 		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
@@ -25,7 +25,7 @@ void ewPowerButton(uint32_t state, uint32_t previous, void *argument)
 	} else {
 		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
 }
 
 /* turn the system off (standby) or on (cold reset) */
@@ -41,12 +41,12 @@ int ewPowerOffThread(SceSize args, void *argp)
 
 	ewg.ew.spinlock = 0;
 	ksceSysconSendCommand(SYSCON_SCRATCH_PAD(resumeContextPA), &command, sizeof(command));
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ewg.ew.spinlock);
+	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
 	ewg.ew.powerMask = EW_BUTTON_POWER;
 	ewg.ew.powerCallback = SceCtrlForDriver_FF9D4DD4(EW_BUTTON_POWER, ewPowerButton, 0, &state);
 	if (state & EW_BUTTON_POWER)
 		ksceKernelSetEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ewg.ew.spinlock, intr);
 
 	for (;;) {
 		ksceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_UNPLUGGED
@@ -120,16 +120,16 @@ void ewInitDisplay(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;		/* physically contiguous */
-	ewg.ew.fbBlock = ksceKernelAllocMemBlock("FrameBuffer", EW_MEMTYPE_FB, 2 * EW_FB_SIZE, &opt);
+	ewg.ew.fbBlock = SceSysmemForDriver_C94850C9("FrameBuffer", EW_MEMTYPE_FB, 2 * EW_FB_SIZE, &opt);
 	if (ewg.ew.fbBlock < 0)
 		goto fail;
-	ksceKernelGetMemBlockBase(ewg.ew.fbBlock, &ewg.ew.fb[0]);
+	SceSysmemForDriver_A841EDDA(ewg.ew.fbBlock, &ewg.ew.fb[0]);
 	ewDrawSetTarget(ewg.ew.fb[0], EW_SCREEN_WIDTH, EW_SCREEN_HEIGHT, 0);
 	ewDrawClear(0xff000000);
 	ewg.ew.fb[1] = (char *)ewg.ew.fb[0] + EW_FB_SIZE;
 	ewDrawSetTarget(ewg.ew.fb[1], EW_SCREEN_WIDTH, EW_SCREEN_HEIGHT, 0);
 	ewDrawClear(0xff000000);
-	ksceKernelDcacheCleanRange(ewg.ew.fb[0], EW_FB_SIZE);
+	SceCpuForDriver_103872A5(ewg.ew.fb[0], EW_FB_SIZE);
 	fb.size = 0x18;
 	fb.base = ewg.ew.fb[0];
 	fb.pitch = EW_SCREEN_WIDTH;
@@ -139,10 +139,10 @@ void ewInitDisplay(void)
 	ksceDisplaySetFrameBufInternal(0, 0, &fb, 1);
 	ewConsoleInit();
 
-	ewg.ew.iconBlock = ksceKernelAllocMemBlock("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
+	ewg.ew.iconBlock = SceSysmemForDriver_C94850C9("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
 	if (ewg.ew.iconBlock < 0)
 		sceKernelExitThread(0);
-	ksceKernelGetMemBlockBase(ewg.ew.iconBlock, &ewg.ew.icon);
+	SceSysmemForDriver_A841EDDA(ewg.ew.iconBlock, &ewg.ew.icon);
 
 	/* the icon is a PPM: "P6\n# comment\n90 70\n255\n" then RGB */
 	i = 3;
@@ -315,7 +315,7 @@ clocks:
 		if (ewg.ew.mode == EW_MODE_MTP) {
 			sceKernelDelayThread(1000000);
 		} else {
-			ksceKernelPowerTick(0);
+			SceKernelSuspendForDriver_E0489831(0);
 			ewg.ew.setBrightness(ewg.ew.brightness);
 			if (ksceDisplayWaitVblankStartCB() < 0)
 				sceKernelExitThread(0);
@@ -344,7 +344,7 @@ clocks:
 			} else {
 				ewDrawClear(0xff000000);
 			}
-			ksceKernelDcacheCleanRange(fb, EW_FB_SIZE);
+			SceCpuForDriver_103872A5(fb, EW_FB_SIZE);
 			frame.size = 0x18;
 			frame.base = fb;
 			frame.pitch = EW_SCREEN_WIDTH;
@@ -459,7 +459,7 @@ int ewFillDeviceStrings(MtpProvidedStrings *strings, int reserved)
 		strnlen("Sony Interactive Entertainment Inc.", 0xff));
 	strncpy(strings->model, "PlayStation(R)Vita", strnlen("PlayStation(R)Vita", 0xff));
 	do {
-		version = ksceKernelSysrootGetSystemSwVersion();
+		version = SceSysrootForDriver_67AAB627();
 		if (version != 0xffffffff) {
 			if (version == 0)
 				goto names;

@@ -8,12 +8,12 @@
  */
 
 #include "sysmodule_ids.h"
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/debug.h>
@@ -116,12 +116,12 @@ static const char s_app[] = "app0:sce_module/";
 
 static int s_storage;
 
-static int procCreateHandler(SceUID pid, SceProcEventInvokeParam2 *param, int args);
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args);
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
 
-static const SceProcEventHandler s_procHandler = {
-	.size = sizeof(SceProcEventHandler),
+static const SceKernelProcEventHandler s_procHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = procCreateHandler,
 	.exit = procExitHandler,
 	.kill = procKillHandler,
@@ -152,7 +152,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 		alt = 0x8020;
 		flags = 0x8000;
 	}
-	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && ksceKernelCheckDipsw(0xd2))
+	if ((lib->flags & SYSMODULE_LIB_DEVONLY) && SceDipswForDriver_A98FC2FD(0xd2))
 		flags = alt;
 	pid = sceKernelGetProcessId();
 	perm = ksceKernelSetPermission(0x80);
@@ -172,7 +172,7 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 			proc->prefix = prefix;
 			return modid;
 		}
-		ksceKernelPrintf("Loading %s : Failed (0x%08x)\n", proc->path, modid);
+		SceDebugForDriver_391B74B7("Loading %s : Failed (0x%08x)\n", proc->path, modid);
 		return modid;
 	}
 	ref[1] = modid;
@@ -353,12 +353,12 @@ static inline int sysmoduleLibWanted(const SysmoduleLib *lib)
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_D4) {
-		if (!ksceKernelCheckDipsw(0xd4))
+		if (!SceDipswForDriver_A98FC2FD(0xd4))
 			return 0;
 		flags = lib->flags;
 	}
 	if (flags & SYSMODULE_LIB_DIPSW_C2) {
-		if (!ksceKernelCheckDipsw(0xc2))
+		if (!SceDipswForDriver_A98FC2FD(0xc2))
 			return 0;
 		flags = lib->flags;
 	}
@@ -371,8 +371,8 @@ static inline int sysmoduleLoadLibFrom(SysmoduleProc *proc, SceUInt32 *ref, cons
 	const char *prefix;
 	int ret;
 
-	if (SceQafMgrForDriver_B9770A13() && ksceKernelCheckDipsw(0xfb) &&
-	    (ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))) {
+	if (SceQafMgrForDriver_B9770A13() && SceDipswForDriver_A98FC2FD(0xfb) &&
+	    (SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))) {
 		prefix = proc->prefix;
 		if (prefix == NULL || prefix == s_host) {
 			ret = sysmoduleLoadLib(proc, ref, lib, s_host, sizeof(s_host) - 1);
@@ -637,7 +637,7 @@ out:
 
 /* -- process events ----------------------------------------------------- */
 
-static int procCreateHandler(SceUID pid, SceProcEventInvokeParam2 *param, int args)
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
 {
 	SysmoduleProc *proc = NULL;
 
@@ -663,13 +663,13 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	}
 }
 
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
 }
 
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	sysmoduleProcEnd(pid);
 	return 0;
@@ -678,7 +678,7 @@ static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args
 int module_start(SceSize args, void *argp)
 {
 	s_storage = ksceKernelCreateProcessLocalStorage("SceSysmodule", 0x1000);
-	ksceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, 0);
+	sceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, 0);
 	return SCE_KERNEL_START_SUCCESS;
 }
 
@@ -762,14 +762,14 @@ int sceSysmoduleLoadModuleInternalWithArg(SceUInt32 id, SceSize args, void *argp
 	SysmoduleUserOpt opt;
 	int status, ret, ret2;
 
-	ret = ksceKernelCopyFromUser(&opt, uopt, sizeof(opt));
+	ret = SceSysmemForDriver_BC996A7A(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
 	if (opt.status == NULL)
 		return sysmoduleLoadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleLoadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = ksceKernelCopyToUser(opt.status, &status, sizeof(status));
+	ret2 = SceSysmemForDriver_6D88EF8A(opt.status, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }
 
@@ -778,13 +778,13 @@ int sceSysmoduleUnloadModuleInternalWithArg(SceUInt32 id, SceSize args, void *ar
 	SysmoduleUserOpt opt;
 	int status, ret, ret2;
 
-	ret = ksceKernelCopyFromUser(&opt, uopt, sizeof(opt));
+	ret = SceSysmemForDriver_BC996A7A(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
 	if (opt.status == NULL)
 		return sysmoduleUnloadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleUnloadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = ksceKernelCopyToUser(opt.status, &status, sizeof(status));
+	ret2 = SceSysmemForDriver_6D88EF8A(opt.status, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }

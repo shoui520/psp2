@@ -25,10 +25,10 @@
 
 #define DIPSW_SUBBUDGET_INFO		0x9f	/* PLACEHOLDER: name */
 
-void *ksceKernelSysrootGetCurrentAddressSpaceCB(void);
-int ksceKernelSysrootCheckRemapCodeForUser(int unk);
-int ksceKernelCheckDipsw(unsigned int bit);
-int ksceKernelCopyToUser(void *dst, const void *src, SceSize size);
+void *SceSysrootForKernel_63EBB05B(void);
+int SceSysrootForKernel_F8769E86(int unk);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
+int SceSysmemForDriver_6D88EF8A(void *dst, const void *src, SceSize size);
 SceUID SceSysrootForKernel_7334F1E8(SceUID processId);
 void *SysrootGetProcessLocalStorageAddr(SceUInt32 key);
 int AddressSpaceVAtoPABySW(AddressSpaceObject *as, uintptr_t va, uintptr_t *pa);
@@ -58,7 +58,7 @@ int VARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 	int ret;
 
 	while (size != 0) {
-		ret = ksceKernelMMUVAtoPAWithMode(SYSMEM_VA2PA_MODE, (void *)va, &pa);
+		ret = SceCpuForKernel_1BD23326(SYSMEM_VA2PA_MODE, va, &pa);
 		if (ret < 0)
 			return ret;
 		if (next != pa) {
@@ -107,7 +107,7 @@ int VARangeToPAVectorByHW(const SceKernelVARange *range, MemBlockPAVector *vecto
 	} else {
 		start = 0;
 		do {
-			ret = ksceKernelMMUVAtoPAWithMode(SYSMEM_VA2PA_MODE, (void *)va, &pa);
+			ret = SceCpuForKernel_1BD23326(SYSMEM_VA2PA_MODE, va, &pa);
 			if (ret < 0)
 				return ret;
 			if (start + length != pa) {
@@ -151,7 +151,7 @@ int VARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 	int ret;
 
 	for (size = range->size; size != 0; size -= chunk) {
-		ret = AddressSpaceVAtoPABySW(ksceKernelSysrootGetCurrentAddressSpaceCB(), va, &pa);
+		ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), va, &pa);
 		if (ret < 0)
 			return ret;
 		switch (ret) {
@@ -211,7 +211,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *v
 	vector->total = 0;
 	start = 0;
 	while (size != 0) {
-		ret = AddressSpaceVAtoPABySW(ksceKernelSysrootGetCurrentAddressSpaceCB(), va,
+		ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), va,
 					     &pa);
 		if (ret < 0)
 			return ret;
@@ -284,21 +284,21 @@ int PIDFreeMemBlock(MemBlockBaseInfo *info, MemBlockObject **baseBlock, void **b
 	return AddressSpaceIdFreeMemBlock(guid, info, baseBlock, baseInfo);
 }
 
-int ksceKernelVAtoPA(const void *va, uintptr_t *pa)
+int SceSysmemForDriver_8D160E65(const void *va, uintptr_t *pa)
 {
 	if (pa == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return ksceKernelMMUVAtoPAWithMode(SYSMEM_VA2PA_MODE, va, pa);
+	return SceCpuForKernel_1BD23326(SYSMEM_VA2PA_MODE, (uintptr_t)va, pa);
 }
 
-int ksceKernelIsAccessibleRange(SceUInt32 mode, const void *addr, SceSize size)
+int SceSysmemForDriver_9C78064C(SceUInt32 mode, const void *addr, SceSize size)
 {
 	if ((uintptr_t)addr + size < (uintptr_t)addr)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return MMUCheckAccessibleRange(mode, (uintptr_t)addr, size);
 }
 
-int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode, const void *addr, SceSize size)
+int SceSysmemForDriver_9F6E45E3(SceUID pid, SceUInt32 mode, const void *addr, SceSize size)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -316,7 +316,7 @@ int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode, const void *addr
 	return AddressSpaceCheckAccessibleRange(as, mode, (uintptr_t)addr, size);
 }
 
-int ksceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa)
+int SceSysmemForDriver_61A67D32(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa)
 {
 	AddressSpaceObject *as;
 	int ret;
@@ -329,7 +329,7 @@ int ksceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr
 	return AddressSpaceVAtoPAWithMode(as, mode, (uintptr_t)va, pa);
 }
 
-int ksceKernelVAtoPABySW(const void *va, uintptr_t *pa)
+int sceKernelVAtoPABySW(const void *va, uintptr_t *pa)
 {
 	int ret;
 
@@ -337,7 +337,7 @@ int ksceKernelVAtoPABySW(const void *va, uintptr_t *pa)
 		SCE_DBG_ASSERT_CHECK_FUNC(pa != NULL, 916, "sceKernelVAtoPABySW");
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = AddressSpaceVAtoPABySW(ksceKernelSysrootGetCurrentAddressSpaceCB(), (uintptr_t)va,
+	ret = AddressSpaceVAtoPABySW(SceSysrootForKernel_63EBB05B(), (uintptr_t)va,
 				     pa);
 	switch (ret) {
 	case PAGE_KIND_SMALL:
@@ -353,7 +353,7 @@ int ksceKernelVAtoPABySW(const void *va, uintptr_t *pa)
 	}
 }
 
-int ksceKernelVARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
+int SceSysmemForDriver_32257A24(const SceKernelVARange *range, SceKernelPARange *out)
 {
 	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -362,7 +362,7 @@ int ksceKernelVARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARan
 	return VARangeToPARangeBySW(range, out);
 }
 
-int ksceKernelVARangeToPAVectorBySW(const SceKernelVARange *range, SceKernelPAVector *vector)
+int sceKernelVARangeToPAVectorBySW(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	if (range == NULL) {
 		SCE_DBG_ASSERT_CHECK_FUNC(range != NULL, 1158, "sceKernelVARangeToPAVectorBySW");
@@ -377,7 +377,7 @@ int ksceKernelVARangeToPAVectorBySW(const SceKernelVARange *range, SceKernelPAVe
 	return VARangeToPAVectorBySWCore(range, (MemBlockPAVector *)vector);
 }
 
-int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, SceUInt32 perm, const void *addr,
+int SceSysmemForDriver_F4AD89D8(SceUID pid, SceUInt32 perm, const void *addr,
 					     SceSize size)
 {
 	uintptr_t va = (uintptr_t)addr, pa, mask;
@@ -421,7 +421,7 @@ int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, SceUInt32 perm, const v
 	return 0;
 }
 
-int ksceKernelVARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
+int SceSysmemForDriver_B3575090(const SceKernelVARange *range, SceKernelPARange *out)
 {
 	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -430,7 +430,7 @@ int ksceKernelVARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARan
 	return VARangeToPARangeByHW(range, out);
 }
 
-int ksceKernelVARangeToPARange(const SceKernelVARange *range, SceKernelPARange *out)
+int SceSysmemForDriver_AE36C775(const SceKernelVARange *range, SceKernelPARange *out)
 {
 	if (range == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -441,7 +441,7 @@ int ksceKernelVARangeToPARange(const SceKernelVARange *range, SceKernelPARange *
 	return VARangeToPARangeBySW(range, out);
 }
 
-int ksceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
+int sceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	if (range == NULL) {
 		SCE_DBG_ASSERT_CHECK_FUNC(range != NULL, 1437, "sceKernelVARangeToPAVectorByHW");
@@ -456,7 +456,7 @@ int ksceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVe
 	return VARangeToPAVectorByHW(range, (MemBlockPAVector *)vector);
 }
 
-int ksceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector *vector)
+int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	if (range == NULL) {
 		SCE_DBG_ASSERT_CHECK_FUNC(range != NULL, 1459, "sceKernelVARangeToPAVector");
@@ -474,12 +474,12 @@ int ksceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector
 }
 
 /* what memory va's physical address is in */
-int ksceKernelGetPhysicalMemoryType(const void *va)
+int SceSysmemForDriver_0AAA4FDD(const void *va)
 {
 	uintptr_t pa;
 	int ret;
 
-	ret = ksceKernelMMUVAtoPAWithMode(SYSMEM_VA2PA_MODE, va, &pa);
+	ret = SceCpuForKernel_1BD23326(SYSMEM_VA2PA_MODE, (uintptr_t)va, &pa);
 	if (ret < 0)
 		return ret;
 	if (pa - 0x20000000 < 0x10000000)
@@ -494,7 +494,7 @@ int ksceKernelGetPhysicalMemoryType(const void *va)
 /* name unknown: the memory type va is mapped with in the current address space */
 int SceSysmemForKernel_0B5A3E93(const void *va)
 {
-	return AddressSpaceGetMemoryType(ksceKernelSysrootGetCurrentAddressSpaceCB(),
+	return AddressSpaceGetMemoryType(SceSysrootForKernel_63EBB05B(),
 					 (uintptr_t)va);
 }
 
@@ -509,16 +509,16 @@ int sceKernelGetSubbudgetInfo(SceUInt32 subbudget, AddressSpaceSubbudgetInfo *us
 	AddressSpaceSubbudgetInfo info;
 	int ret;
 
-	if (!ksceKernelCheckDipsw(DIPSW_SUBBUDGET_INFO))
+	if (!SceDipswForDriver_A98FC2FD(DIPSW_SUBBUDGET_INFO))
 		return SCE_KERNEL_ERROR_ONLY_DEVELOPMENT_MODE;
-	ret = ksceKernelCopyFromUser(&info, userInfo, sizeof(info));
+	ret = SceSysmemForDriver_BC996A7A(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = AddressSpaceGetSubbudgetInfo(ksceKernelSysrootGetCurrentAddressSpaceCB(), subbudget,
+	ret = AddressSpaceGetSubbudgetInfo(SceSysrootForKernel_63EBB05B(), subbudget,
 					   &info);
 	if (ret < 0)
 		return ret;
-	return ksceKernelCopyToUser(userInfo, &info, sizeof(info));
+	return SceSysmemForDriver_6D88EF8A(userInfo, &info, sizeof(info));
 }
 
 int sceKernelGetFreeMemorySize(AddressSpaceFreeMemorySize *userInfo)
@@ -526,13 +526,13 @@ int sceKernelGetFreeMemorySize(AddressSpaceFreeMemorySize *userInfo)
 	AddressSpaceFreeMemorySize info;
 	int ret;
 
-	ret = ksceKernelCopyFromUser(&info, userInfo, sizeof(info));
+	ret = SceSysmemForDriver_BC996A7A(&info, userInfo, sizeof(info));
 	if (ret < 0 || info.size != sizeof(info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = AddressSpaceGetFreeMemorySize(ksceKernelSysrootGetCurrentAddressSpaceCB(), &info);
+	ret = AddressSpaceGetFreeMemorySize(SceSysrootForKernel_63EBB05B(), &info);
 	if (ret < 0)
 		return ret;
-	return ksceKernelCopyToUser(userInfo, &info, sizeof(info));
+	return SceSysmemForDriver_6D88EF8A(userInfo, &info, sizeof(info));
 }
 
 /* sceKernelCheckOpenVMDomain: 2 while the process holds domain 2 as manager */
@@ -557,18 +557,18 @@ int sceKernelOpenVMDomain(void)
 	SceUInt32 dacr;
 	int intr;
 
-	if (!ksceKernelSysrootCheckRemapCodeForUser(0))
+	if (!SceSysrootForKernel_F8769E86(0))
 		return SCE_KERNEL_ERROR_PROCESS_CANNOT_REMAP_MEMBLOCK;
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
 	if (storage == NULL)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&storage->managerThread, 0, 1) != 0) {
+	if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->managerThread, 0, 1) != 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1631, "sceKernelOpenVMDomainForUser",
 				    "nManagerThread is not 0\n");
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1632, "sceKernelOpenVMDomainForUser");
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	thread = getCurrentThreadCB();
 	if (thread == NULL)
 		goto fail;
@@ -577,10 +577,10 @@ int sceKernelOpenVMDomain(void)
 	if (thread == NULL)
 		goto fail;
 	thread->pRegisterContext->userDacr = dacr | VM_DOMAIN_MASK;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 fail:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return SYSMEM_ERROR_NOT_THREAD;
 }
 
@@ -592,17 +592,17 @@ int sceKernelCloseVMDomain(void)
 	SceUInt32 dacr;
 	int intr;
 
-	if (!ksceKernelSysrootCheckRemapCodeForUser(0))
+	if (!SceSysrootForKernel_F8769E86(0))
 		return SCE_KERNEL_ERROR_PROCESS_CANNOT_REMAP_MEMBLOCK;
 	storage = SysrootGetProcessLocalStorageAddr(g_uidManager->processStorageKey);
 	if (storage == NULL)
 		return SCE_ERROR_ERRNO_ENOSYS;
-	if (ksceKernelAtomicCompareAndSet32((SceInt32 *)&storage->managerThread, 1, 0) != 1) {
+	if (SceCpuForDriver_CDA96E81((SceInt32 *)&storage->managerThread, 1, 0) != 1) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1671, "sceKernelCloseVMDomainForUser",
 				    "nManagerThread is not 1\n");
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	thread = getCurrentThreadCB();
 	if (thread == NULL)
 		goto fail;
@@ -611,10 +611,10 @@ int sceKernelCloseVMDomain(void)
 	if (thread == NULL)
 		goto fail;
 	thread->pRegisterContext->userDacr = (dacr & ~VM_DOMAIN_MASK) | VM_DOMAIN_CLIENT;
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 fail:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return SYSMEM_ERROR_NOT_THREAD;
 }
 
@@ -651,10 +651,9 @@ int InitializeDebugNop(void);
 int InitializeAssertLevel(const struct SysmemBootContext *context);
 int SysrootModuleStart(const struct SysmemBootContext *context);
 int MMUInitPost(void);
-SceUInt32 ksceKernelGetDipswInfo(unsigned int index);
-int ksceMt19937GlobalInit(SceUInt32 seed);
-void *ksceKernelSysrootGetModulePrivate(unsigned int index);
-uintptr_t ksceKernelRegisterDebugPutcharHandler(uintptr_t handler, uintptr_t argument);
+SceUInt32 SceDipswForDriver_B2AD48BE(unsigned int index);
+int SceKernelUtilsForDriver_D428CC2A(SceUInt32 seed);
+void *SceSysrootForKernel_37EC12BB(unsigned int index);
 int BitheapModuleStart(void);
 int PhyMemLowModuleStart(const UIDManager *manager);
 int PhyMemModuleStart(const UIDManager *manager);
@@ -701,9 +700,9 @@ int SysmemModuleStart(SceSize args, void *argp)
 	writeDacr(dacr);
 	InitializeDipsw(context);
 	InitializeDebugPrintLevel(context);
-	if (ksceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
-	    ksceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
-		ksceKernelRegisterDebugPutcharHandler(context->debugPutchar, 0);
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR) ||
+	    SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR_ALT))
+		SceDebugForKernel_22546577(context->debugPutchar, 0);
 	if (SysrootModuleStart(context) < 0)
 		SCE_PANIC(1795);
 	if (InitializeDebugNop() < 0)
@@ -712,8 +711,8 @@ int SysmemModuleStart(SceSize args, void *argp)
 		SCE_PANIC(1809);
 	if (InitializeAssertLevel(context) < 0)
 		SCE_PANIC(1815);
-	ksceMt19937GlobalInit(ksceKernelGetDipswInfo(3));
-	g_uidManager = ksceKernelSysrootGetModulePrivate(3);
+	SceKernelUtilsForDriver_D428CC2A(SceDipswForDriver_B2AD48BE(3));
+	g_uidManager = SceSysrootForKernel_37EC12BB(3);
 	BitheapModuleStart();
 	PhyMemLowModuleStart(g_uidManager);
 	PhyMemModuleStart(g_uidManager);
@@ -741,9 +740,9 @@ int SysmemModuleStart(SceSize args, void *argp)
 		SCE_PANIC(1903);
 	if (SerialInit(context) < 0)
 		SCE_PANIC(1912);
-	if (ksceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR) ||
-	    ksceKernelCheckDipsw(DIPSW_DEBUG_PUTCHAR_ALT))
-		ksceKernelRegisterDebugPutcharHandler((uintptr_t)SerialDebugPutchar, 0);
+	if (SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR) ||
+	    SceDipswForDriver_A98FC2FD(DIPSW_DEBUG_PUTCHAR_ALT))
+		SceDebugForKernel_22546577((uintptr_t)SerialDebugPutchar, 0);
 	PhyMemLowModuleStartPhase2(g_uidManager);
 	PhyMemModuleStartPhase2(g_uidManager);
 	ObjectHeapInitShared();
@@ -835,7 +834,7 @@ static inline void UserCopyTouchUser32(const void *user)
 	__asm__ volatile("ldrt %0, [%1]" : "=r"(value) : "r"(user) : "memory");
 }
 
-int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size)
+int SceSysmemForDriver_BC996A7A(void *dst, const void *src, SceSize size)
 {
 	SceUInt32 dacr;
 	int ret;
@@ -856,7 +855,7 @@ int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size)
 #define USER_COPY_IN_PROCESS(_pid, _ret, _call) do {			\
 	MMUContext saved;						\
 	void *as;							\
-	int flags = ksceKernelCpuSuspendIntr();				\
+	int flags = SceCpuForDriver_821FC0EE();				\
 									\
 	MMUContextSave(&saved);						\
 	_ret = SysrootPIDtoAddressSpaceCB((_pid), &as);			\
@@ -866,19 +865,19 @@ int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size)
 			_ret = (_call);					\
 	}								\
 	MMUContextRestore(&saved);					\
-	ksceKernelCpuResumeIntr(flags);					\
+	sceKernelCpuResumeIntr(flags);					\
 } while (0)
 
-int ksceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize size)
+int sceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
 
 	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 224, "sceKernelCopyFromUserProc");
-	USER_COPY_IN_PROCESS(pid, ret, ksceKernelCopyFromUser(dst, src, size));
+	USER_COPY_IN_PROCESS(pid, ret, SceSysmemForDriver_BC996A7A(dst, src, size));
 	return ret;
 }
 
-int ksceKernelCopyToUser(void *dst, const void *src, SceSize size)
+int SceSysmemForDriver_6D88EF8A(void *dst, const void *src, SceSize size)
 {
 	SceUInt32 dacr;
 	int ret;
@@ -892,17 +891,17 @@ int ksceKernelCopyToUser(void *dst, const void *src, SceSize size)
 	return ret;
 }
 
-int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize size)
+int sceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
 
 	SCE_DBG_ASSERT_FUNC(pid != SCE_KERNEL_PROCESS_ID, 280, "sceKernelCopyToUserProc");
-	USER_COPY_IN_PROCESS(pid, ret, ksceKernelCopyToUser(dst, src, size));
+	USER_COPY_IN_PROCESS(pid, ret, SceSysmemForDriver_6D88EF8A(dst, src, size));
 	return ret;
 }
 
 /* into user memory whatever its domain */
-int ksceKernelCopyToUserDomain(void *dst, const void *src, SceSize size)
+int SceSysmemForKernel_499A9FFF(void *dst, const void *src, SceSize size)
 {
 	SceUInt32 dacr;
 	int ret;
@@ -927,14 +926,14 @@ int UserCopyToText(void *dst, const void *src, SceSize size, SceUInt32 textDacr)
 
 	writeDacr(textDacr);
 	ret = VmaccessCopyToUser(dst, src, size);
-	ksceKernelDcacheCleanRange((void *)((uintptr_t)dst & ~0x1f),
+	SceCpuForDriver_103872A5((void *)((uintptr_t)dst & ~0x1f),
 				   (((uintptr_t)dst + size + 0x1f) & ~0x1f) -
 				   ((uintptr_t)dst & ~0x1f));
 	writeDacr(dacr);
 	return ret;
 }
 
-int ksceKernelCopyToUserTextDomain(void *dst, const void *src, SceSize size)
+int SceSysmemForKernel_5EF1DAAF(void *dst, const void *src, SceSize size)
 {
 	if (size != 0) {
 		UserCopyTouchKernel(src, size);
@@ -943,11 +942,11 @@ int ksceKernelCopyToUserTextDomain(void *dst, const void *src, SceSize size)
 	return UserCopyToText(dst, src, size, USER_COPY_DACR_TEXT);
 }
 
-int ksceKernelCopyToUserProcTextDomain(SceUID pid, void *dst, const void *src, SceSize size)
+int SceSysmemForKernel_2995558D(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
 
-	USER_COPY_IN_PROCESS(pid, ret, ksceKernelCopyToUserTextDomain(dst, src, size));
+	USER_COPY_IN_PROCESS(pid, ret, SceSysmemForKernel_5EF1DAAF(dst, src, size));
 	return ret;
 }
 
@@ -961,7 +960,7 @@ int sceKernelCopyToUserProcTextDomainForDBGP(SceUID pid, void *dst, const void *
 	SCE_DBG_ASSERT(pid != SCE_KERNEL_PROCESS_ID, 439);
 	if (size != 0)
 		UserCopyTouchKernel(src, size);
-	flags = ksceKernelCpuSuspendIntr();
+	flags = SceCpuForDriver_821FC0EE();
 	MMUContextSave(&saved);
 	ret = SysrootPIDtoAddressSpaceCB(pid, &as);
 	if (ret >= 0) {
@@ -973,7 +972,7 @@ int sceKernelCopyToUserProcTextDomainForDBGP(SceUID pid, void *dst, const void *
 		}
 	}
 	MMUContextRestore(&saved);
-	ksceKernelCpuResumeIntr(flags);
+	sceKernelCpuResumeIntr(flags);
 	return ret;
 }
 
@@ -992,7 +991,7 @@ int SceSysmemForKernel_FCB5745A(SceUInt32 *dst, SceUInt32 value, SceSize count)
 	return ret;
 }
 
-int ksceKernelCopyFromToUser(void *dst, const void *src, SceSize size)
+int SceSysmemForDriver_1BD44DD5(void *dst, const void *src, SceSize size)
 {
 	SceUInt32 dacr = readDacr();
 	int ret;
@@ -1003,7 +1002,7 @@ int ksceKernelCopyFromToUser(void *dst, const void *src, SceSize size)
 	return ret;
 }
 
-int ksceKernelCopyFromToUserProc(SceUID pid, void *dst, const void *src, SceSize size)
+int sceKernelCopyFromToUserProc(SceUID pid, void *dst, const void *src, SceSize size)
 {
 	int ret;
 
@@ -1013,7 +1012,7 @@ int ksceKernelCopyFromToUserProc(SceUID pid, void *dst, const void *src, SceSize
 }
 
 /* the bytes from src on that hold value, word by word */
-SceSSize ksceKernelCountFillValueFromUser(const void *src, SceUInt32 value, SceSize size)
+SceSSize SceSysmemForDriver_BDA6E42B(const void *src, SceUInt32 value, SceSize size)
 {
 	SceUInt32 dacr = readDacr();
 	SceSSize ret;
@@ -1024,7 +1023,7 @@ SceSSize ksceKernelCountFillValueFromUser(const void *src, SceUInt32 value, SceS
 	return ret;
 }
 
-SceSSize ksceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUInt32 value,
+SceSSize sceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUInt32 value,
 					     SceSize size)
 {
 	int ret;
@@ -1034,7 +1033,7 @@ SceSSize ksceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUI
 	return ret;
 }
 
-SceSSize ksceKernelCountFillValue64FromUser(const void *src, SceUInt64 value, SceSize size)
+SceSSize SceSysmemForDriver_BB3B02C2(const void *src, SceUInt64 value, SceSize size)
 {
 	SceUInt32 dacr = readDacr();
 	SceSSize ret;
@@ -1045,7 +1044,7 @@ SceSSize ksceKernelCountFillValue64FromUser(const void *src, SceUInt64 value, Sc
 	return ret;
 }
 
-SceSSize ksceKernelCountFillValue64FromUserProc(SceUID pid, const void *src, SceUInt64 value,
+SceSSize sceKernelCountFillValue64FromUserProc(SceUID pid, const void *src, SceUInt64 value,
 					       SceSize size)
 {
 	int ret;
@@ -1056,7 +1055,7 @@ SceSSize ksceKernelCountFillValue64FromUserProc(SceUID pid, const void *src, Sce
 	return ret;
 }
 
-SceSize ksceKernelStrnlenFromUser(const char *str, SceSize max)
+SceSize SceSysmemForDriver_B429D419(const char *str, SceSize max)
 {
 	SceUInt32 dacr = readDacr();
 	SceSize ret;
@@ -1067,7 +1066,7 @@ SceSize ksceKernelStrnlenFromUser(const char *str, SceSize max)
 	return ret;
 }
 
-SceSSize ksceKernelStrnlenFromUserProc(SceUID pid, const char *str, SceSize max)
+SceSSize sceKernelStrnlenFromUserProc(SceUID pid, const char *str, SceSize max)
 {
 	int ret;
 
@@ -1076,7 +1075,7 @@ SceSSize ksceKernelStrnlenFromUserProc(SceUID pid, const char *str, SceSize max)
 	return ret;
 }
 
-SceSSize ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize n)
+SceSSize SceSysmemForDriver_DB3EC244(char *dst, const char *src, SceSize n)
 {
 	SceUInt32 dacr;
 	SceSSize ret;
@@ -1090,7 +1089,7 @@ SceSSize ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize n)
 	return ret;
 }
 
-SceSSize ksceKernelStrncpyFromUserProc(SceUID pid, char *dst, const char *src, SceSize n)
+SceSSize sceKernelStrncpyFromUserProc(SceUID pid, char *dst, const char *src, SceSize n)
 {
 	int ret;
 
@@ -1099,7 +1098,7 @@ SceSSize ksceKernelStrncpyFromUserProc(SceUID pid, char *dst, const char *src, S
 	return ret;
 }
 
-SceSSize ksceKernelStrncpyToUser(char *dst, const char *src, SceSize n)
+SceSSize SceSysmemForDriver_80BD6FEB(char *dst, const char *src, SceSize n)
 {
 	SceUInt32 dacr;
 	SceSSize ret;
@@ -1112,7 +1111,7 @@ SceSSize ksceKernelStrncpyToUser(char *dst, const char *src, SceSize n)
 	return ret;
 }
 
-SceSSize ksceKernelStrncpyToUserProc(SceUID pid, char *dst, const char *src, SceSize n)
+SceSSize sceKernelStrncpyToUserProc(SceUID pid, char *dst, const char *src, SceSize n)
 {
 	int ret;
 

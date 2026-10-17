@@ -6,7 +6,6 @@
 #include <string.h>
 #include <sdstor/mbr.h>
 #include <sdif/sdif.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <stdlib.h>
 
 #if FW_DEBUG
@@ -736,7 +735,7 @@ unsigned int sdpart_open(unsigned int port)
 			if (count != 0)
 				goto unlock;
 		}
-		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+		if (!SceSysrootForDriver_55392965())
 			goto unlock;
 		sdpart_init_entire_entry(port, table, info.sectorCount,
 					 &sdpartDefaultAccess);
@@ -821,8 +820,8 @@ SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length)
 			"%s: psudo MC port=%d kind=%d id=%d stat=%d\n",
 			"sdpart_get_object", sdinst.port, sdinst.kind,
 			sdinst.id, sdinst.stat);
-		if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode() &&
-		    ksceSysrootUseInternalStorage())
+		if (!SceSysrootForDriver_55392965() &&
+		    SceSysrootForDriver_50FE3B4D())
 			goto resolveXmc;
 		port = sdpartMcPort;
 		if (port == 5) {
@@ -832,8 +831,8 @@ SceSdstorPartitionEntry *sdpart_get_object(const char *name, int length)
 			portsWithoutSd[0] = 2;
 			portsWithoutSd[1] = 5;
 			port = 2;
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
-				ports = ksceKernelSysrootCheckModelCapability(11) ?
+			if (SceSysrootForDriver_55392965()) {
+				ports = SceSysrootForDriver_8AA268D6(11) ?
 					portsWithSd : portsWithoutSd;
 				for (; *ports != 5; ++ports) {
 					device = sddev_get_object(*ports);
@@ -855,8 +854,8 @@ resolveXmc:
 			portsWithoutSd[0] = 2;
 			portsWithoutSd[1] = 5;
 			port = 2;
-			if (SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
-				ports = ksceKernelSysrootCheckModelCapability(11) ?
+			if (SceSysrootForDriver_55392965()) {
+				ports = SceSysrootForDriver_8AA268D6(11) ?
 					portsWithSd : portsWithoutSd;
 				for (; *ports != 5; ++ports) {
 					device = sddev_get_object(*ports);
@@ -935,19 +934,19 @@ unsigned int sdpart_grab_mc(unsigned int port)
 	if (port != 0 && port != 3 &&
 	    (port != 1 || SceSysrootForDriver_F804F761() != 0)) {
 		port = (signed char)port;
-		if (ksceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartMcPort,
+		if (SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartMcPort,
 						 5, port) == 5)
 			return port;
 	}
-	manufacturing = SceSysrootForDriver_ksceSysrootIsManufacturingMode();
-	if (!manufacturing && ksceSysrootUseInternalStorage())
+	manufacturing = SceSysrootForDriver_55392965();
+	if (!manufacturing && SceSysrootForDriver_50FE3B4D())
 		return manufacturing;
 	port = sdpartMcPort;
 	if (port != 5)
 		return port;
-	if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+	if (!SceSysrootForDriver_55392965())
 		return 2;
-	ports = ksceKernelSysrootCheckModelCapability(11) ?
+	ports = SceSysrootForDriver_8AA268D6(11) ?
 		portsWithSd : portsWithoutSd;
 	for (port = *ports; port != 5; port = *++ports) {
 		device = sddev_get_object(port);
@@ -963,7 +962,7 @@ int sdpart_release_mc(unsigned int port)
 	if (port == 0 || port == 3 ||
 	    (port == 1 && SceSysrootForDriver_F804F761() == 0))
 		return 0;
-	return ksceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartMcPort,
+	return SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartMcPort,
 					    (signed char)port, 5);
 }
 
@@ -974,17 +973,17 @@ unsigned int sdpart_get_mc_port(void)
 	unsigned int port;
 	int manufacturing;
 
-	manufacturing = SceSysrootForDriver_ksceSysrootIsManufacturingMode();
-	if (!manufacturing && ksceSysrootUseInternalStorage())
+	manufacturing = SceSysrootForDriver_55392965();
+	if (!manufacturing && SceSysrootForDriver_50FE3B4D())
 		return manufacturing;
 	port = sdpartMcPort;
 	if (port != 5)
 		return port;
 	uint8_t portsWithSd[3] = { 2, 4, 5 };
 	uint8_t portsWithoutSd[2] = { 2, 5 };
-	if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+	if (!SceSysrootForDriver_55392965())
 		return 2;
-	ports = ksceKernelSysrootCheckModelCapability(11) ?
+	ports = SceSysrootForDriver_8AA268D6(11) ?
 		portsWithSd : portsWithoutSd;
 	for (port = *ports; port != 5; port = *++ports) {
 		device = sddev_get_object(port);
@@ -1004,7 +1003,7 @@ int sdpart_grab_xmc(unsigned int port)
 	if (port != 0 && port != 3 &&
 	    (port != 1 || SceSysrootForDriver_F804F761() != 0)) {
 		port = (signed char)port;
-		if (ksceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartXmcPort,
+		if (SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartXmcPort,
 						 5, port) == 5)
 			return port;
 	}
@@ -1016,9 +1015,9 @@ int sdpart_grab_xmc(unsigned int port)
 	portsWithSd[2] = 5;
 	portsWithoutSd[0] = 2;
 	portsWithoutSd[1] = 5;
-	if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+	if (!SceSysrootForDriver_55392965())
 		return 2;
-	ports = ksceKernelSysrootCheckModelCapability(11) ?
+	ports = SceSysrootForDriver_8AA268D6(11) ?
 		portsWithSd : portsWithoutSd;
 	for (port = *ports; port != 5; port = *++ports) {
 		device = sddev_get_object(port);
@@ -1034,7 +1033,7 @@ int sdpart_release_xmc(unsigned int port)
 	if (port == 0 || port == 3 ||
 	    (port == 1 && SceSysrootForDriver_F804F761() == 0))
 		return 0;
-	return ksceKernelAtomicCompareAndSet8((SceInt8 *)&sdpartXmcPort,
+	return SceCpuForDriver_3627F4E0((SceInt8 *)&sdpartXmcPort,
 					    (signed char)port, 5);
 }
 
@@ -1049,9 +1048,9 @@ unsigned int sdpart_get_xmc_port(void)
 		return port;
 	uint8_t portsWithSd[3] = { 2, 4, 5 };
 	uint8_t portsWithoutSd[2] = { 2, 5 };
-	if (!SceSysrootForDriver_ksceSysrootIsManufacturingMode())
+	if (!SceSysrootForDriver_55392965())
 		return 2;
-	ports = ksceKernelSysrootCheckModelCapability(11) ?
+	ports = SceSysrootForDriver_8AA268D6(11) ?
 		portsWithSd : portsWithoutSd;
 	for (port = *ports; port != 5; port = *++ports) {
 		device = sddev_get_object(port);

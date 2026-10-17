@@ -54,11 +54,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoOpen
 	ksceIoRead
 	ksceIoClose
-	ksceKernelFreeMemBlock
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	memcpy

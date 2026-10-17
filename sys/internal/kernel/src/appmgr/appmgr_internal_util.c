@@ -6,8 +6,6 @@
 
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 struct AppmgrWaitObject g_appmgrWaitObjects[7];
 
@@ -47,7 +45,7 @@ int appmgrUtilWaitObjectInitialize(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 28, "appmgrUtilWaitObjectInitialize");
 #else
-		ksceKernelPanic(&waitObjectInitializePanicInfo, __builtin_return_address(0));
+		SceDebugForDriver_391B5B74(&waitObjectInitializePanicInfo, __builtin_return_address(0));
 #endif
 	}
 	g_appmgrWaitObjects[0].eventFlag = eventFlag;
@@ -91,7 +89,7 @@ void appmgrUtilWaitObjectClear(struct AppmgrWaitObject *waitObject)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&waitObjectClearPanicInfo, __builtin_return_address(0),
+		SceDebugForDriver_00CCE39C(&waitObjectClearPanicInfo, __builtin_return_address(0),
 			"0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -109,7 +107,7 @@ void appmgrUtilWaitObjectNotify(struct AppmgrWaitObject *waitObject)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&waitObjectNotifyPanicInfo, __builtin_return_address(0),
+		SceDebugForDriver_00CCE39C(&waitObjectNotifyPanicInfo, __builtin_return_address(0),
 			"0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -129,7 +127,7 @@ int appmgrUtilWaitObjectWait(struct AppmgrWaitObject *waitObject, SceUInt32 *tim
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&waitObjectWaitPanicInfo, __builtin_return_address(0),
+		SceDebugForDriver_00CCE39C(&waitObjectWaitPanicInfo, __builtin_return_address(0),
 			"0x%08x,0x%08x\n", result, 0);
 #endif
 	}

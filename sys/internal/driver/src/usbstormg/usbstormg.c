@@ -99,7 +99,7 @@ static int Finalize(void)
 		SceMagicGateForDriver_8E2E577E();
 		SceMagicGateForDriver_6D3B42E6();
 	}
-	ksceKernelFreeMemBlock(s_mg.memblock);
+	SceSysmemForDriver_009E1C61(s_mg.memblock);
 	ksceKernelSetPermission(permission);
 out:
 	LeaveContext(context);
@@ -121,16 +121,16 @@ static int AllocTemporary(void **base, unsigned *size)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	uid = ksceKernelAllocMemBlock("SceUsbstorMgTmp", 0x1020d006, bytes, &opt);
+	uid = SceSysmemForDriver_C94850C9("SceUsbstorMgTmp", 0x1020d006, bytes, &opt);
 	if (uid < 0)
 		return MG_ERROR_MEMORY;
-	if (ksceKernelGetMemBlockBase(uid, &ptr) < 0) {
-		ksceKernelFreeMemBlock(uid);
+	if (SceSysmemForDriver_A841EDDA(uid, &ptr) < 0) {
+		SceSysmemForDriver_009E1C61(uid);
 		return MG_ERROR_MEMORY;
 	}
 	ret = SceMagicGateForDriver_758D7158(ptr, bytes);
 	if (ret < 0) {
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 		return ret;
 	}
 	*base = ptr;
@@ -219,7 +219,7 @@ out:
 		s_mg.phase = 0;
 	s_mg.flags &= ~MG_AUTHENTICATED;
 	if (uid)
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 	return ret;
 }
 
@@ -296,7 +296,7 @@ out:
 		s_mg.phase = 0;
 	s_mg.flags &= ~MG_AUTHENTICATED;
 	if (uid)
-		ksceKernelFreeMemBlock(uid);
+		SceSysmemForDriver_009E1C61(uid);
 	return ret;
 }
 
@@ -520,12 +520,12 @@ static int Initialize(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	s_mg.memblock = ksceKernelAllocMemBlock("SceUsbstorMg", 0x10208006, 0x2000, &opt);
+	s_mg.memblock = SceSysmemForDriver_C94850C9("SceUsbstorMg", 0x10208006, 0x2000, &opt);
 	if (s_mg.memblock < 0) {
 		ret = MG_ERROR_MEMORY;
 		goto permissionOut;
 	}
-	if (ksceKernelGetMemBlockBase(s_mg.memblock, &base) < 0) {
+	if (SceSysmemForDriver_A841EDDA(s_mg.memblock, &base) < 0) {
 		ret = MG_ERROR_MEMORY;
 		goto freeBlock;
 	}
@@ -564,7 +564,7 @@ closeMagicGate:
 	SceMagicGateForDriver_6D3B42E6();
 freeBlock:
 	if (s_mg.memblock >= 0) {
-		ksceKernelFreeMemBlock(s_mg.memblock);
+		SceSysmemForDriver_009E1C61(s_mg.memblock);
 		s_mg.memblock = -1;
 	}
 permissionOut:

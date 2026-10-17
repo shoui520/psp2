@@ -70,10 +70,10 @@ set(MODULE_IMPORT_NIDS
 	0x3691DA45:F:0xEC3124A3
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	strncmp
 	__stack_chk_fail
@@ -101,11 +101,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceKernelPowerTick
-	ksceKernelRegisterProcEventHandler
+	SceKernelSuspendForDriver_E0489831
+	sceKernelRegisterProcEventHandler
 	SceSysconForDriver_030D447F
 	SceSysconForDriver_142D5E82
 	SceSysconForDriver_1546A141
@@ -118,7 +118,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSysconGetHardwareInfo
 	ksceSysconGetTouchpanelDeviceInfo
 	ksceSysconGetBaryonVersion
-	ksceKernelSysrootGetProcessTitleId
+	SceSysrootForKernel_EC3124A3
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

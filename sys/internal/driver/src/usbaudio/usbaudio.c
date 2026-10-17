@@ -1,6 +1,6 @@
 /* SceUsbAudio: composite USB audio host driver and input service. */
 #include "usbaudio.h"
-#include <psp2kern/kernel/sysmem/memtype.h>
+#include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include <intrmgr/syscall.h>
 
@@ -40,12 +40,12 @@ static int unlockDevices(void)
 }
 static void *allocate(unsigned size)
 {
-	return s_heap < 0 ? NULL : ksceKernelAllocHeapMemory(s_heap, size);
+	return s_heap < 0 ? NULL : SceSysmemForDriver_7B4CB60A(s_heap, size);
 }
 static void release(void *p)
 {
 	if (p)
-		ksceKernelFreeHeapMemory(s_heap, p);
+		sceKernelFreeHeapMemory(s_heap, p);
 }
 static AudioDevice *findUnlocked(unsigned id)
 {
@@ -114,11 +114,11 @@ static int cleanupProcess(int process)
 	return ret;
 }
 
-static __attribute__((noipa)) int processExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+static __attribute__((noipa)) int processExit(SceUID pid, ProcEventParam *param, int arg)
 {
 	return cleanupProcess(pid);
 }
-static __attribute__((noipa)) int processKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+static __attribute__((noipa)) int processKill(SceUID pid, ProcEventParam *param, int arg)
 {
 	return cleanupProcess(pid);
 }
@@ -130,8 +130,8 @@ static int initializeAudio(void)
 		ret = ksceKernelInitializeFastMutex(&s_audio.deviceLock,
 			"SceUsbAudioDeviceLock", 0x2000, 0);
 	if (ret) {
-		ksceKernelPrintf("USBAUDIO: sceKernelInitializeFastMutex() failed! => 0x%x", ret);
-		ksceKernelPrintf("\n");
+		SceDebugForDriver_391B74B7("USBAUDIO: sceKernelInitializeFastMutex() failed! => 0x%x", ret);
+		SceDebugForDriver_391B74B7("\n");
 		return ret;
 	}
 	SceKernelHeapCreateOpt opt = {
@@ -139,12 +139,12 @@ static int initializeAudio(void)
 		.flags = HEAP_HAS_MAX_SIZE | HEAP_HAS_MEMBLOCK,
 		.maxSize = USBAUDIO_HEAP_SIZE,
 	};
-	opt.memBlock = ksceKernelAllocMemBlock("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
+	opt.memBlock = SceSysmemForDriver_C94850C9("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 					       USBAUDIO_HEAP_SIZE, NULL);
-	s_heap = ksceKernelCreateHeap("SceUsbAudio", 0x1000, &opt);
+	s_heap = SceSysmemForDriver_9328E0E8("SceUsbAudio", 0x1000, &opt);
 	if (s_heap < 0) {
-		ksceKernelPrintf("USBAUDIO: sceKernelCreateHeap() failed! => 0x%x", s_heap);
-		ksceKernelPrintf("\n");
+		SceDebugForDriver_391B74B7("USBAUDIO: sceKernelCreateHeap() failed! => 0x%x", s_heap);
+		SceDebugForDriver_391B74B7("\n");
 		return s_heap;
 	}
 	return 0;
@@ -154,7 +154,7 @@ int module_start(unsigned arglen, const void *argp)
 	static const SceUsbdCompositeDriver driver = {
 		"SceUsbAudio", probeAudio, attachAudio, detachAudio
 	};
-	static const SceProcEventHandler events = {
+	static const SceKernelProcEventHandler events = {
 		.size = sizeof(events),
 		.exit = processExit,
 		.kill = processKill,
@@ -164,11 +164,11 @@ int module_start(unsigned arglen, const void *argp)
 		return 2;
 	int ret = ksceUsbdRegisterCompositeLdd(&driver);
 	if (ret) {
-		ksceKernelPrintf("USBAUDIO: sceUsbdRegisterCompositeLdd() failed! => 0x%x", ret);
-		ksceKernelPrintf("\n");
+		SceDebugForDriver_391B74B7("USBAUDIO: sceUsbdRegisterCompositeLdd() failed! => 0x%x", ret);
+		SceDebugForDriver_391B74B7("\n");
 		return 2;
 	}
-	return ksceKernelRegisterProcEventHandler("SceUsbAudio", &events, 0) < 0 ? 2 : 0;
+	return sceKernelRegisterProcEventHandler("SceUsbAudio", &events, 0) < 0 ? 2 : 0;
 }
 
 int ksceUsbAudioRegisterCallback(int callback)
@@ -300,7 +300,7 @@ static int getVolume(SceUInt32 id, SceUInt32 *out, unsigned req)
 			ret = AUDIO_ERROR(INVALID_ARGUMENT);
 		else if (volumeRequest(id, req, 0, &value))
 			ret = AUDIO_ERROR(NOT_SUPPORTED);
-		else if (ksceKernelCopyToUser(out, &value, 4))
+		else if (SceSysmemForDriver_6D88EF8A(out, &value, 4))
 			ret = AUDIO_ERROR(FAILED_TO_COPY_BUFFER);
 	}
 	sceSyscallLeave(domain);
@@ -343,7 +343,7 @@ SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, SceUsbAudioInDeviceInfo
 		else {
 			info.vendor = *(uint16_t *)(desc + 8);
 			info.product = *(uint16_t *)(desc + 10);
-			ret = ksceKernelCopyToUser(out, &info, sizeof(info)) ?
+			ret = SceSysmemForDriver_6D88EF8A(out, &info, sizeof(info)) ?
 				AUDIO_ERROR(FAILED_TO_COPY_BUFFER) : 0;
 		}
 	}
@@ -360,9 +360,9 @@ SceInt32 sceUsbAudioInGetDeviceIdList(SceUsbAudioInDeviceListItem *list, SceUInt
 	else {
 		int n = ksceUsbAudioGetDeviceIdList(ids, 127);
 		int copied = n < (int)size ? n : size;
-		ret = ksceKernelCopyToUser(list, ids, copied * 4);
+		ret = SceSysmemForDriver_6D88EF8A(list, ids, copied * 4);
 		if (!ret)
-			ret = ksceKernelCopyToUser(count, &copied, 4);
+			ret = SceSysmemForDriver_6D88EF8A(count, &copied, 4);
 	}
 	sceSyscallLeave(domain);
 	return ret;
@@ -536,7 +536,7 @@ SceInt32 sceUsbAudioInInput(SceUInt32 id, void *buffer)
 	}
 	if (stream->ready < 3) {
 		AudioRing *ring = &stream->ring[stream->ready];
-		ret = ksceKernelCopyToUser(buffer, ring->data, ring->size) ?
+		ret = SceSysmemForDriver_6D88EF8A(buffer, ring->data, ring->size) ?
 			AUDIO_ERROR(FAILED_TO_COPY_BUFFER) : 0;
 	} else {
 		ret = AUDIO_ERROR(NO_DATA_TO_READ);
@@ -1234,12 +1234,12 @@ static int attachAudio(int id)
 		stream->active = stream->write = stream->opened = 0;
 		stream->ready = stream->device = stream->process = -1;
 		for (unsigned i = 0; i < 3; i++) {
-			stream->memblock[i] = ksceKernelAllocMemBlock("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
+			stream->memblock[i] = SceSysmemForDriver_C94850C9("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 								 0x1000, NULL);
 			if (stream->memblock[i] < 0)
 				stream->dma[i] = NULL;
 			else {
-				ksceKernelGetMemBlockBase(stream->memblock[i], (void **)&stream->dma[i]);
+				SceSysmemForDriver_A841EDDA(stream->memblock[i], (void **)&stream->dma[i]);
 				memset(stream->dma[i], 0, sizeof(AudioDma));
 			}
 			memset(&stream->ring[i], 0, sizeof(AudioRing));
@@ -1304,7 +1304,7 @@ static int detachAudio(int id)
 		if (stream->opened && s_audio.opened)
 			s_audio.opened--;
 		for (unsigned i = 0; i < 3; i++)
-			ksceKernelFreeMemBlock(stream->memblock[i]);
+			SceSysmemForDriver_009E1C61(stream->memblock[i]);
 		release(stream);
 		ret = removeDevice(id) ? 0 : -1;
 	}

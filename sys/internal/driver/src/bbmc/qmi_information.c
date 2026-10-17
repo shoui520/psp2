@@ -2,9 +2,7 @@
 #include <string.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "qmi_information.h"
-
-extern void *__memcpy_chk(void *destination, const void *source,
-	SceSize size, SceSize destinationSize);
+#include <sysmem/sysclib.h>
 
 const QmiEmptyMessageList g_qmiDeviceMessages = {
 	4, { 33, 34, 35, 37, 48 }

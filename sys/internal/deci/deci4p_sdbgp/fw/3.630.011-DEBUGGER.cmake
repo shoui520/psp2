@@ -320,24 +320,24 @@ set(MODULE_IMPORT_NIDS
 	0x615771E2:F:0x771190E7
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelDcacheCleanInvalidateRange
-	ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr
-	ksceKernelCpuId
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelDcacheCleanRangeForL1WBWA
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelRWSpinlockLowReadLockCpuSuspendIntr
-	ksceKernelCpuResumeIntr
-	ksceKernelL1IcacheInvalidateEntireAllCore
+	SceCpuForDriver_364E68A4
+	SceCpuForDriver_4C38CE4D
+	sceKernelCpuId
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_9CB9F0CE
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceCpuForDriver_EC53D007
+	sceKernelCpuResumeIntr
+	SceCpuForKernel_803C84BF
 	SceCpuForKernel_B331AB16
-	ksceKernelPrintfWithInfo
-	ksceKernelPrintf
-	ksceKernelGetTtyInfo
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_62466B0A
 	SceDebugForKernel_4C62F8CC
-	ksceKernelEnableCrashDump
+	SceDebugForKernel_A465A31A
 	SceDeci4pSDfMgrForKernel_0A6437B6
 	SceDeci4pSDfMgrForKernel_35238B8A
 	SceDeci4pSDfMgrForKernel_3A25594F
@@ -491,35 +491,35 @@ set(MODULE_IMPORT_FUNCS
 	SceExcpmgrForKernel_B615A7DA
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc
-	ksceKernelFreeMemBlock
-	ksceGUIDClose
-	ksceGUIDGetObject
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyFromUserProc
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	kscePUIDClose
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelIsAccessibleRange
-	ksceKernelIsAccessibleRangeProc
-	ksceKernelGetMemBlockInfo
-	ksceGUIDGetName
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelAllocMemBlock
-	ksceKernelStrncpyFromUser
-	ksceGUIDName
-	ksceKernelNameHeapGetInfo
+	SceSysmemForDriver_009E1C61
+	sceGUIDClose
+	SceSysmemForDriver_0FC24464
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	sceKernelCopyFromUserProc
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_9C78064C
+	SceSysmemForDriver_9F6E45E3
+	SceSysmemForDriver_A73CFFEF
+	SceSysmemForDriver_A78755EB
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_C94850C9
+	SceSysmemForDriver_DB3EC244
+	SceSysmemForDriver_E655852F
+	SceSysmemForKernel_01194C2E
 	SceSysmemForKernel_021053DD
 	sceKernelGetPhyMemPartInfoByID
 	SceSysmemForKernel_08C05493
 	SceSysmemForKernel_0B5A3E93
 	SceSysmemForKernel_100B4029
 	SceSysmemForKernel_1380E144
-	ksceKernelGetHeapInfo
+	sceKernelGetHeapInfo
 	SceSysmemForKernel_17F12DCE
 	SceSysmemForKernel_1F84FE44
 	SceSysmemForKernel_2C7B8D65
@@ -528,12 +528,12 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_3717C322
 	SceSysmemForKernel_3BF0DE65
 	PUIDGetEntryInfoAll
-	ksceKernelFree
+	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_42834422
 	sceKernelCopyToUserProcTextDomainForDBGP
 	SceSysmemForKernel_456ECB54
 	SceSysmemForKernel_48D2E408
-	ksceGUIDGetUIDVectorByClass
+	SceSysmemForKernel_52137FA3
 	SceSysmemForKernel_5C0FC6BE
 	SceSysmemForKernel_5FD15C6E
 	SceSysmemForKernel_62800A6B
@@ -541,23 +541,23 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_6DBDA03B
 	sceKernelGetPhyMemPartInfoForDebugger
 	SceSysmemForKernel_797C858B
-	ksceKernelGetUIDHeapClass
-	ksceKernelGetHeapInfoByPtr
+	SceSysmemForKernel_7C878E94
+	sceKernelGetHeapInfoByPtr
 	SceSysmemForKernel_811C452B
-	ksceKernelAlloc
+	SceSysmemForKernel_85571907
 	SceSysmemForKernel_857408DA
-	ksceKernelGetUIDMemBlockClass
+	SceSysmemForKernel_86681B64
 	sceKernelGetFixedHeapInfo
 	sceKernelShowPhyMemPart
 	SceSysmemForKernel_93D0A183
 	SceSysmemForKernel_99D3BF76
-	ksceKernelGetFixedHeapInfoByPointer
+	sceKernelGetFixedHeapInfoByPointer
 	SceSysmemForKernel_AD19285A
 	sceGUIDGetPID
 	SceSysmemForKernel_BD625136
 	SceSysmemForKernel_C3EF4055
 	SceSysmemForKernel_C3F9607E
-	ksceKernelUIDEntryHeapGetInfo
+	SceSysmemForKernel_CCD47B97
 	PUIDGetPUIDVectorByGUID
 	sceKernelFixedHeapSetHook
 	SceSysmemForKernel_DBEACE2C
@@ -567,11 +567,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_14D81797
 	SceSysrootForKernel_21F5790B
 	SceSysrootForKernel_2A03DFA1
-	ksceSysrootGetSysroot
+	SceSysrootForKernel_3E455842
 	SceSysrootForKernel_40F28DC6
 	SceSysrootForKernel_4F57A13F
 	SceSysrootForKernel_6D111FA7
-	ksceKernelSysrootGetSharedMemory
+	SceSysrootForKernel_C8C8C321
 	SceSysrootForKernel_CCB8BB5E
 	SceSysrootForKernel_EEB867C0
 	SceSysrootForDriver_951C7943
@@ -579,8 +579,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_DC651D22
 	SceSysrootForDriver_ED22CF8F
 	SceSysrootForDriver_FF2DD7AB
-	ksceKernelCheckDipsw
-	ksceKernelGetDipswInfo
+	SceDipswForDriver_A98FC2FD
+	SceDipswForDriver_B2AD48BE
 	memset
 	strncmp
 	memcpy
@@ -600,8 +600,8 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_CE7A2207
 	SceKernelSuspendForDriver_D6124071
 	SceKernelSuspendForDriver_F2B07167
-	ksceDebugLedRegisterHandle0
-	ksceDebugLedRegisterHandle1
+	SceDebugLedForDriver_24173819
+	SceDebugLedForDriver_F62154E7
 	ScePamgrForDriver_A9DD2CB8
 	SceCodecEngineWrapperForDebugger_771190E7
 )

@@ -6,11 +6,8 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <sysmem/sysclib.h>
-
-void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
-				 const void *lr, const char *fmt, ...);
 
 #define EDID_BLOCK_SIZE			128
 #define EDID_DESCRIPTOR_COUNT		4
@@ -218,7 +215,7 @@ int edidManagerRead(void)
 		parseCeaExtension(info, &edid[i * EDID_BLOCK_SIZE]);
 
 	edidManager.valid = 1;
-	if (!ksceSblAimgrIsDolce()) {
+	if (!SceSblAIMgrForDriver_71608CA3()) {
 		ret = hdmiSetContentType(0);
 		if (ret == 0)
 			ret = hdmiSetItContent(1);

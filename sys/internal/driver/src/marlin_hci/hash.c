@@ -1,6 +1,6 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "buffer.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
 		     const MarlinBuffer *data, MarlinBuffer **digest)
@@ -17,7 +17,7 @@ int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
 			result = 2;
 			goto out;
 		}
-		ksceHmacSha1Digest(key->data, key->size, data->data,
+		SceKernelUtilsForDriver_29A28957(key->data, key->size, data->data,
 				  data->size, buffer->data);
 		break;
 	case 2:
@@ -27,7 +27,7 @@ int MarlinHmacDigest(unsigned int algorithm, const MarlinBuffer *key,
 			result = 2;
 			goto out;
 		}
-		ksceHmacSha256Digest(key->data, key->size, data->data,
+		SceKernelUtilsForDriver_83EFA1CC(key->data, key->size, data->data,
 				    data->size, buffer->data);
 		break;
 	default:

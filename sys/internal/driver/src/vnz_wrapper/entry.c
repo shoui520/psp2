@@ -2,11 +2,11 @@
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 
-extern const SceProcEventHandler codecEngineProcessEvents; /* name unknown */
+extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
 
 typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param,
 					int flags); /* name unknown */
@@ -81,7 +81,7 @@ int _veneziaWrapperModuleProcessExit(SceUID pid, ProcEventParam *param, int flag
 	SceUInt32 type;
 
 #if FW_DEBUG
-	ksceKernelAssert(handlers != NULL, SCE_DBGINFO(334), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(handlers != NULL, SCE_DBGINFO(334), __builtin_return_address(0));
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {
@@ -221,7 +221,7 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, int flag
 	SceUInt32 type;
 
 #if FW_DEBUG
-	ksceKernelAssert(handlers != NULL, SCE_DBGINFO(366), __builtin_return_address(0));
+	SceDebugForDriver_35A35322(handlers != NULL, SCE_DBGINFO(366), __builtin_return_address(0));
 #endif
 	for (i = 0; i != 4; i++) {
 		if (handlers[i] != NULL) {
@@ -245,11 +245,11 @@ int _veneziaWrapperModuleProcessKill(SceUID pid, ProcEventParam *param, int flag
 }
 
 
-const SceProcEventHandler codecEngineProcessEvents = {
-	.size = sizeof(SceProcEventHandler),
-	.create = (int (*)(SceUID, SceProcEventInvokeParam2 *, int))codecEngineProcessCreateHandler,
-	.exit = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))_veneziaWrapperModuleProcessExit,
-	.kill = (int (*)(SceUID, SceProcEventInvokeParam1 *, int))_veneziaWrapperModuleProcessKill,
-	.stop = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))codecEngineProcessSuspendHandler,
-	.start = (int (*)(SceUID, int, SceProcEventInvokeParam1 *, int))codecEngineProcessResumeHandler,
+const SceKernelProcEventHandler codecEngineProcessEvents = {
+	.size = sizeof(SceKernelProcEventHandler),
+	.create = (int (*)(SceUID, ProcEventCreateParam *, int))codecEngineProcessCreateHandler,
+	.exit = (int (*)(SceUID, ProcEventParam *, int))_veneziaWrapperModuleProcessExit,
+	.kill = (int (*)(SceUID, ProcEventParam *, int))_veneziaWrapperModuleProcessKill,
+	.suspend = (int (*)(SceUID, int, ProcEventParam *, int))codecEngineProcessSuspendHandler,
+	.resume = (int (*)(SceUID, int, ProcEventParam *, int))codecEngineProcessResumeHandler,
 };

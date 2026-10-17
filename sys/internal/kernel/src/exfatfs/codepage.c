@@ -1,7 +1,7 @@
 /* Sony: codepage.c */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/cpu.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 
 #include "codepage_tables.h"
@@ -408,10 +408,10 @@ int sceFatfsCpInitTable(void)
 
 	g_codepageMemBlock = 0;
 	g_codepageBuffer = NULL;
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	g_codepage = 13;
-	ksceKernelCpuResumeIntr(intrState);
-	memBlock = ksceKernelAllocMemBlock("SceFatfsCPTable", 0x1020d006, 0xc000, NULL);
+	sceKernelCpuResumeIntr(intrState);
+	memBlock = SceSysmemForDriver_C94850C9("SceFatfsCPTable", 0x1020d006, 0xc000, NULL);
 	if (memBlock < 0) {
 #if FW_VERSION >= 0x04000000
 		SCE_DBG_PRINTF_LEVEL(2, 15, 193, "cannot create FPL (0x%x)\n", memBlock);
@@ -419,7 +419,7 @@ int sceFatfsCpInitTable(void)
 		return memBlock;
 	}
 	g_codepageMemBlock = memBlock;
-	ksceKernelGetMemBlockBase(memBlock, &g_codepageBuffer);
+	SceSysmemForDriver_A841EDDA(memBlock, &g_codepageBuffer);
 	g_koreanTable = g_codepageBuffer;
 	g_gbkTable = g_codepageBuffer;
 	g_big5Table = g_codepageBuffer;
@@ -438,9 +438,9 @@ int utf16ToCodepage(unsigned char *destination, int capacity,
 	int codepage;
 	int count;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	codepage = g_codepage;
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
 	case 1:
 	case 2:
@@ -481,9 +481,9 @@ int utf16ToCodepage(unsigned char *destination, int capacity,
 		return 0;
 	output = destination;
 	for (;;) {
-		intrState = ksceKernelCpuSuspendIntr();
+		intrState = SceCpuForDriver_821FC0EE();
 		codepage = g_codepage;
-		ksceKernelCpuResumeIntr(intrState);
+		sceKernelCpuResumeIntr(intrState);
 		convert(codepage, (unsigned char)unicode, unicode >> 8,
 			&firstByte, &secondByte);
 		if (secondByte) {
@@ -522,9 +522,9 @@ int codepageToUtf16(SceUInt16 *destination, int capacity,
 	int intrState;
 	int count;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	codepage = g_codepage;
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
 	case 1:
 	case 2:
@@ -565,9 +565,9 @@ int codepageToUtf16(SceUInt16 *destination, int capacity,
 	end = destination + capacity;
 	output = destination + 1;
 	for (;;) {
-		intrState = ksceKernelCpuSuspendIntr();
+		intrState = SceCpuForDriver_821FC0EE();
 		codepage = g_codepage;
-		ksceKernelCpuResumeIntr(intrState);
+		sceKernelCpuResumeIntr(intrState);
 		switch (codepage) {
 		case 1:
 		case 2:
@@ -624,10 +624,10 @@ doubleByte:
 		firstByte = *source;
 		source += 2;
 convertCharacter:
-		intrState = ksceKernelCpuSuspendIntr();
+		intrState = SceCpuForDriver_821FC0EE();
 		codepage = g_codepage;
 		++count;
-		ksceKernelCpuResumeIntr(intrState);
+		sceKernelCpuResumeIntr(intrState);
 		convert(codepage, firstByte, secondByte, &lowByte, &highByte);
 		output[-1] = lowByte | (highByte << 8);
 		if (output == end)
@@ -647,9 +647,9 @@ int isCodepageDoubleByte(const unsigned char *source)
 	int codepage;
 	int result;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	codepage = g_codepage;
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
 	case 1:
 	case 2:
@@ -706,9 +706,9 @@ int isUnicodeDoubleByte(unsigned int unicode)
 	int intrState;
 	int codepage;
 
-	intrState = ksceKernelCpuSuspendIntr();
+	intrState = SceCpuForDriver_821FC0EE();
 	codepage = g_codepage;
-	ksceKernelCpuResumeIntr(intrState);
+	sceKernelCpuResumeIntr(intrState);
 	switch (codepage) {
 	case 13: {
 		SceUInt16 halfwidth = unicode + 158;

@@ -126,7 +126,7 @@ plain:
 	return 0;
 }
 
-static int procStart(SceUID pid, int event, SceProcEventInvokeParam1 *param, int arg) /* name unknown */
+static int procStart(SceUID pid, int event, ProcEventParam *param, int arg) /* name unknown */
 {
 	DisplayProcessLocal *pls;
 
@@ -142,7 +142,7 @@ static int procStart(SceUID pid, int event, SceProcEventInvokeParam1 *param, int
 	return 0;
 }
 
-static int procStop(SceUID pid, int event, SceProcEventInvokeParam1 *param, int arg) /* name unknown */
+static int procStop(SceUID pid, int event, ProcEventParam *param, int arg) /* name unknown */
 {
 	DisplayProcessLocal *pls;
 
@@ -163,7 +163,7 @@ static int isHighResolutionTitle(void) /* name unknown */
 {
 	char titleId[32];
 
-	if (ksceKernelSysrootGetProcessTitleId(0, titleId, sizeof(titleId)) < 0)
+	if (SceSysrootForKernel_EC3124A3(0, titleId, sizeof(titleId)) < 0)
 		return 0;
 	if (strncmp(titleId, "PCSG80001", sizeof(titleId)) == 0
 	    || strncmp(titleId, "PCSG80007", sizeof(titleId)) == 0

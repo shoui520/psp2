@@ -1,6 +1,6 @@
 /* Authentication message assembly. */
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "adhoc.h"
 
 extern GcAuthAdhocWorkspace gcAuthAdhocWorkspace;
@@ -88,7 +88,7 @@ int GcAuthAdhocHashSpans(GcAuthAdhocHashMessage *message,
 	cursor += secondSize;
 	for (index = 0; index != thirdSize; ++index)
 		cursor[index] = third[index];
-	if (ksceSha1Digest(message->payload, size, message) != 0)
+	if (SceKernelUtilsForDriver_87DC7F2F(message->payload, size, message) != 0)
 		return (int)0x808a0103;
 	return 0;
 }

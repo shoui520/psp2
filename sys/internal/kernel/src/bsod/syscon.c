@@ -24,29 +24,29 @@ int _sceKernelBsodSysconInit(void)
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = GPIO0_REG_BASE;
-	uid = ksceKernelAllocMemBlock("SceBsodGpio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceBsodGpio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				    0x1000, &options);
 	if (uid < 0)
 		goto error;
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_bsodSyscon[0] = base;
 
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = SPI_REG_BASE(0);
-	uid = ksceKernelAllocMemBlock("SceBsodSpi0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = SceSysmemForDriver_C94850C9("SceBsodSpi0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				    0x1000, &options);
 	if (uid < 0)
 		goto error;
-	ksceKernelGetMemBlockBase(uid, &base);
+	SceSysmemForDriver_A841EDDA(uid, &base);
 	s_bsodSyscon[1] = base;
 	return 0;
 
 error:
 #if FW_DEBUG
-	if (ksceKernelGetAssertLevel() > 0)
-		ksceKernelAssertLevel(1, 0, &s_sysconAssert, __builtin_return_address(0));
+	if (SceDebugForDriver_374B7868() > 0)
+		SceDebugForDriver_FD753E7A(1, 0, &s_sysconAssert, __builtin_return_address(0));
 #endif
 	return uid;
 }

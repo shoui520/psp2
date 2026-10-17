@@ -6,7 +6,7 @@
 #include "pcact.h"
 #include "drm_crypto.h"
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 GcAuthPcactScratch *gcAuthPcactScratchAddress;
 SceConsoleId gcAuthPcactConsoleId;
@@ -82,7 +82,7 @@ int GcAuthPcactGetAuthenticatedAesKey(const GcAuthPcactKeyRequest *request)
 	input = (const unsigned char *)activation;
 	for (index = 0; index != 64; index++)
 		gcAuthPcactScratch.hashInput.serializedChallenge[index] = input[index];
-	difference = ksceSha1Digest(gcAuthPcactScratch.hashInput.header.framing.salt,
+	difference = SceKernelUtilsForDriver_87DC7F2F(gcAuthPcactScratch.hashInput.header.framing.salt,
 			80, &gcAuthPcactScratch);
 	if (difference != 0) {
 		result = (int)0x808a0205;
@@ -266,7 +266,7 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	input = (const unsigned char *)&gcAuthPcactChallengeWorkspace.encrypted;
 	for (index = 0; index != 112; index++)
 		gcAuthPcactScratch.hashInput.serializedChallenge[index] = input[index];
-	result = ksceSha1Digest(gcAuthPcactScratch.hashInput.header.framing.salt,
+	result = SceKernelUtilsForDriver_87DC7F2F(gcAuthPcactScratch.hashInput.header.framing.salt,
 			128, &gcAuthPcactScratch);
 	if (result != 0) {
 		result = (int)0x808a0205;
@@ -413,7 +413,7 @@ int GcAuthPcactCreateRtcChallenge(const GcAuthPcactRtcChallengeRequest *request)
 		gcAuthPcactScratch.rtcPlaintext.random[index] = gcAuthPcactRtcRandom[index];
 	for (index = 0; index != 16; index++)
 		gcAuthPcactScratch.rtcPlaintext.salt[index] = gcAuthPcactRtcSalt[index];
-	if (ksceAesInit1(&state.aes, 128, 256, gcAuthPcactRtcAesKey) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 256, gcAuthPcactRtcAesKey) >= 0) {
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; index++)
 			state.chain[index] = gcAuthPsmAesIv[index];
@@ -422,13 +422,13 @@ int GcAuthPcactCreateRtcChallenge(const GcAuthPcactRtcChallengeRequest *request)
 	cursor = (unsigned char *)&gcAuthPcactScratch.rtcPlaintext;
 	for (index = 0; index != blockBytes; index++)
 		block[index] = cursor[index] ^ state.chain[index];
-	ksceAesEncrypt1(&state.aes, block, cursor);
+	SceKernelUtilsForDriver_C2A61770(&state.aes, block, cursor);
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++)
 		state.chain[index] = cursor[index];
 	for (index = 0; index != blockBytes; index++)
 		block[index] = state.chain[index] ^ cursor[index + 16];
-	ksceAesEncrypt1(&state.aes, block, cursor + 16);
+	SceKernelUtilsForDriver_C2A61770(&state.aes, block, cursor + 16);
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++)
 		state.chain[index] = cursor[index + 16];
@@ -494,7 +494,7 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 	}
 	key.modulus = gcAuthPcactRtcRsaModulus;
 	key.exponent = gcAuthPcactRtcRsaExponent;
-	if (ksceSha256Digest(activation, 48, &gcAuthPcactScratch) != 0) {
+	if (SceKernelUtilsForDriver_A773A6A8(activation, 48, &gcAuthPcactScratch) != 0) {
 		result = (int)0x808a0604;
 		goto finish;
 	}
@@ -509,19 +509,19 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 	cursor = (unsigned char *)&gcAuthPcactScratch.rtcDecoded;
 	for (index = 0; index != 32; index++)
 		cursor[index] = activation->challenge.ciphertext[index];
-	if (ksceAesInit1(&state.aes, 128, 256, gcAuthPcactRtcActivationAesKey) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 256, gcAuthPcactRtcActivationAesKey) >= 0) {
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; index++)
 			state.chain[index] = gcAuthPsmAesIv[index];
 	}
-	ksceAesDecrypt1(&state.aes, cursor, block);
+	SceKernelUtilsForDriver_D8678061(&state.aes, cursor, block);
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++) {
 		previous = state.chain[index];
 		state.chain[index] = cursor[index];
 		cursor[index] = previous ^ block[index];
 	}
-	ksceAesDecrypt1(&state.aes, cursor + 16, block);
+	SceKernelUtilsForDriver_D8678061(&state.aes, cursor + 16, block);
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++) {
 		unsigned char decrypted = block[index];

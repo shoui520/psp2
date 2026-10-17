@@ -97,7 +97,7 @@ void _sceSdifCmdQueueDump(SdifCommandQueue *queue)
 	int index = 0;
 
 	while (command) {
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(138),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(138),
 			"cmd[%d]:%p idx:%d(0x%x) arg:0x%x\n", index++,
 			command, command->command, command->command,
 			command->argument);

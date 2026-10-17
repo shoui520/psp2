@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <kernel/error.h>
 #include "sha2.h"
 #include <sysmem/aes.h>
@@ -18,7 +18,7 @@ extern const uint8_t aesRoundConstants[30];
 uint32_t SceKernelUtilsForDriver_60ED6EA9(uint32_t word);
 uint32_t SceKernelUtilsForDriver_C76A7685(uint32_t column);
 
-int ksceSha1BlockInit(SceSha1Context *ctx)
+int SceKernelUtilsForDriver_E4390FFA(SceSha1Context *ctx)
 {
 	if (ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
@@ -33,7 +33,7 @@ int ksceSha1BlockInit(SceSha1Context *ctx)
 	return 0;
 }
 
-int ksceSha1BlockUpdate(SceSha1Context *ctx, const void *plain, SceSize len)
+int SceKernelUtilsForDriver_478A6F3C(SceSha1Context *ctx, const void *plain, SceSize len)
 {
 	const uint8_t *input = plain;
 	uint32_t block[16];
@@ -89,7 +89,7 @@ int ksceSha1BlockUpdate(SceSha1Context *ctx, const void *plain, SceSize len)
 	return 0;
 }
 
-int ksceSha1BlockResult(SceSha1Context *ctx, void *result)
+int SceKernelUtilsForDriver_48F24106(SceSha1Context *ctx, void *result)
 {
 	uint32_t state[5];
 	uint32_t block[16];
@@ -174,17 +174,17 @@ int ksceSha1BlockResult(SceSha1Context *ctx, void *result)
 	return 0;
 }
 
-int ksceSha1Digest(const void *plain, SceSize len, void *digest)
+int SceKernelUtilsForDriver_87DC7F2F(const void *plain, SceSize len, void *digest)
 {
 	SceSha1Context context;
 
-	ksceSha1BlockInit(&context);
-	ksceSha1BlockUpdate(&context, plain, len);
-	ksceSha1BlockResult(&context, digest);
+	SceKernelUtilsForDriver_E4390FFA(&context);
+	SceKernelUtilsForDriver_478A6F3C(&context, plain, len);
+	SceKernelUtilsForDriver_48F24106(&context, digest);
 	return 0;
 }
 
-int ksceSha224BlockInit(SceSha224Context *context)
+int SceKernelUtilsForDriver_C762EA6D(SceSha224Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	uint32_t first, second, third, fourth;
@@ -213,7 +213,7 @@ int ksceSha224BlockInit(SceSha224Context *context)
 	return 0;
 }
 
-int ksceSha224BlockUpdate(SceSha224Context *context, const void *plain, SceSize len)
+int SceKernelUtilsForDriver_7556E611(SceSha224Context *context, const void *plain, SceSize len)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	const unsigned char *input = plain;
@@ -250,7 +250,7 @@ remainder:
 	return 0;
 }
 
-int ksceSha224BlockResult(SceSha224Context *context, void *result)
+int SceKernelUtilsForDriver_FBF2A442(SceSha224Context *context, void *result)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	union {
@@ -297,19 +297,19 @@ int ksceSha224BlockResult(SceSha224Context *context, void *result)
 	return 0;
 }
 
-int ksceSha224Digest(const void *plain, SceSize len, void *digest)
+int SceKernelUtilsForDriver_9EA9D4DC(const void *plain, SceSize len, void *digest)
 {
 	SceSha224Context context;
 	int res;
 
-	ksceSha224BlockInit(&context);
-	res = ksceSha224BlockUpdate(&context, plain, len);
+	SceKernelUtilsForDriver_C762EA6D(&context);
+	res = SceKernelUtilsForDriver_7556E611(&context, plain, len);
 	if (res >= 0)
-		res = ksceSha224BlockResult(&context, digest);
+		res = SceKernelUtilsForDriver_FBF2A442(&context, digest);
 	return res;
 }
 
-int ksceSha256BlockInit(SceSha256Context *context)
+int SceKernelUtilsForDriver_D909FA2C(SceSha256Context *context)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	uint32_t first, second, third, fourth;
@@ -338,7 +338,7 @@ int ksceSha256BlockInit(SceSha256Context *context)
 	return 0;
 }
 
-int ksceSha256BlockUpdate(SceSha256Context *context, const void *plain, SceSize len)
+int SceKernelUtilsForDriver_236A9097(SceSha256Context *context, const void *plain, SceSize len)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	const unsigned char *input = plain;
@@ -375,7 +375,7 @@ remainder:
 	return 0;
 }
 
-int ksceSha256BlockResult(SceSha256Context *context, void *result)
+int SceKernelUtilsForDriver_4899CD4B(SceSha256Context *context, void *result)
 {
 	SceKernelSha2Context *ctx = (SceKernelSha2Context *)context;
 	union {
@@ -423,15 +423,15 @@ int ksceSha256BlockResult(SceSha256Context *context, void *result)
 	return 0;
 }
 
-int ksceSha256Digest(const void *plain, SceSize len, void *digest)
+int SceKernelUtilsForDriver_A773A6A8(const void *plain, SceSize len, void *digest)
 {
 	SceSha256Context context;
 	int res;
 
-	ksceSha256BlockInit(&context);
-	res = ksceSha256BlockUpdate(&context, plain, len);
+	SceKernelUtilsForDriver_D909FA2C(&context);
+	res = SceKernelUtilsForDriver_236A9097(&context, plain, len);
 	if (res >= 0)
-		res = ksceSha256BlockResult(&context, digest);
+		res = SceKernelUtilsForDriver_4899CD4B(&context, digest);
 	return res;
 }
 
@@ -541,17 +541,17 @@ int AesInit(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize,
 	return 0;
 }
 
-int ksceAesInit1(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_F12B6451(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
 	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 0);
 }
 
-int ksceAesInit2(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_EDA97D6D(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
 	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 1);
 }
 
-int ksceAesInit3(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_72408E29(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
 	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 2);
 }
@@ -615,19 +615,19 @@ outer:
 	return 0;
 }
 
-int ksceHmacSha1Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
+int SceKernelUtilsForDriver_29A28957(const void *key, SceSize key_len, const void *plain, SceSize len,
 		       void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha1Algorithm);
 }
 
-int ksceHmacSha224Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
+int SceKernelUtilsForDriver_7F2A7B99(const void *key, SceSize key_len, const void *plain, SceSize len,
 			 void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha224Algorithm);
 }
 
-int ksceHmacSha256Digest(const void *key, SceSize key_len, const void *plain, SceSize len,
+int SceKernelUtilsForDriver_83EFA1CC(const void *key, SceSize key_len, const void *plain, SceSize len,
 			 void *digest)
 {
 	return HmacDigest(key, key_len, plain, len, digest, &hmacSha256Algorithm);

@@ -1,5 +1,5 @@
 /* HCI event dispatch; original source filename unavailable. */
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <syscon/syscon.h>
 #include <string.h>
 #include "bt_internal.h"
@@ -594,7 +594,7 @@ readBufferSize:
 			} else if (stack->state != 26) {
 				break;
 			}
-			productCode = ksceSblAimgrGetProductCode();
+			productCode = SceSblAIMgrForDriver_14345161();
 			hardwareInfo = ksceSysconGetHardwareInfo() & 0xfd0000;
 			if (hardwareInfo == 0x800000)
 				vendorSetting = 0xfff8;

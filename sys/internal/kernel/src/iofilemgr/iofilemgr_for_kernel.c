@@ -25,7 +25,7 @@ SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode)
 		return ksceIoOpen(path, flags, mode);
 
 	forWrite = (flags & IO_OPEN_WRITE_FLAGS) != 0;
-	resolved = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x400);
+	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x400);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 
@@ -33,11 +33,11 @@ SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode)
 	if (ret < 0)
 		goto error;
 	fd = ksceIoOpen(resolved, flags, mode);
-	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, resolved);
+	sceKernelFreeHeapMemory(g_ioVfsHeapUid, resolved);
 	return fd;
 
 error:
-	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, resolved);
+	sceKernelFreeHeapMemory(g_ioVfsHeapUid, resolved);
 	return convertFiosError(ret);
 }
 
@@ -51,18 +51,18 @@ int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type
 	if (g_ioPathMappingFunction == NULL || pid == SCE_KERNEL_PROCESS_ID) {
 		ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, type);
 	} else {
-		mapped = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x400);
+		mapped = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x400);
 		if (mapped == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		map = g_ioPathMappingFunction;
 		mapped[0] = '\0';
 		ret = map(path, pid, mapped, 0x400);
 		if (ret < 0) {
-			ksceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
+			sceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
 			return ret;
 		}
 		ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(mapped, type);
-		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
+		sceKernelFreeHeapMemory(g_ioVfsHeapUid, mapped);
 	}
 	if (ret < 0) {
 		*type = 8;
@@ -115,7 +115,7 @@ SceUID sceIoDopenInternal(const char *dirname)
 		fd = ret;
 		goto decrement;
 	}
-	if (ksceKernelCheckDipsw(210))
+	if (SceDipswForDriver_A98FC2FD(210))
 		SceIofilemgrForDriver_2EFDFA12(fd, dirname);
 
 	param.priority = priority;

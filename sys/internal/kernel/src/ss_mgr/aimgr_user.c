@@ -1,6 +1,6 @@
 /* Aimgr syscalls: the OpenPSID for user processes. */
 #include "ssmgr_internal.h"
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16
@@ -32,7 +32,7 @@ int _sceKernelGetOpenPsId(SceOpenPsId *openPsId)
 	kernelCopy = __builtin_alloca(sizeof(*kernelCopy));
 	*kernelCopy = (SceOpenPsId){ { 0 } };
 	ret = aimgrGetOpenPsIdForUser(kernelCopy);
-	copyRet = ksceKernelCopyToUser(openPsId, kernelCopy, sizeof(*kernelCopy));
+	copyRet = SceSysmemForDriver_6D88EF8A(openPsId, kernelCopy, sizeof(*kernelCopy));
 	if (copyRet < 0)
 		return copyRet;
 	return ret;

@@ -41,7 +41,7 @@ int powerInitializeDisplayControl(void)
 	s_powerDisplayState.brightness[1] = 0x10000;
 	s_powerDisplayState.brightness[2] = 0x10000;
 	s_powerDisplayState.displayEnabled = 1;
-	if (ksceSblAimgrIsGenuineDolce()) {
+	if (SceSblAIMgrForDriver_C6E83F34()) {
 		s_powerDisplayState.controllerIdleGate = 1;
 		s_powerDisplayState.ledWorkEnabled = 1;
 	}
@@ -70,7 +70,7 @@ void powerRefreshDisplayBrightness(void)
 	uint32_t brightness;
 	unsigned int head;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	if (s_powerDisplayState.displayEnabled) {
 		for (head = 0; head < 3; head += 2) {
 			if (!s_powerDisplayState.brightness[head])
@@ -80,7 +80,7 @@ void powerRefreshDisplayBrightness(void)
 			ksceDisplaySetBrightness(head, brightness);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 }
 
 SceUInt32 ScePowerForDriver_394DE492(void)
@@ -95,12 +95,12 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	uint32_t brightness;
 	unsigned int head;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_powerIdleLock);
+	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	previous = s_powerDisplayState.displayEnabled;
 	if ((int32_t)enabled < 0)
 		enabled = previous ^ 1;
 	if (previous == enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		return previous;
 	}
 	s_powerDisplayState.displayEnabled = enabled;
@@ -115,7 +115,7 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 		ksceCtrlUpdateMaskForAll(0, 0x0400ffff);
 		ksceTouchSetEnableFlag(0, 1);
 		ksceTouchSetEnableFlag(1, 1);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_OFF, 0, POWER_CALLBACKARG_DISPLAY_ON);
 		kscePowerTick(0);
 	} else {
@@ -124,7 +124,7 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 		ksceTouchSetEnableFlag(1, 0);
 		ScePowerForDriver_660D5AB4(1);
 		ScePowerForDriver_660D5AB4(2);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_ON, POWER_CALLBACKARG_DISPLAY_OFF, 0);
 		SceCtrlForDriver_69E45836();
 	}
@@ -247,7 +247,7 @@ uint32_t kscePowerGetDisplayMaxBrightness(void)
 	uint32_t first, second;
 	int status;
 
-	if (ksceSblAimgrIsDolce())
+	if (SceSblAIMgrForDriver_71608CA3())
 		return 0x10000;
 	status = SceSysconForDriver_9DA2A5AB();
 	first = s_powerDisplayState.maxBrightness[0];

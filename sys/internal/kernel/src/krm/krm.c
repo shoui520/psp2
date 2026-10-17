@@ -306,7 +306,7 @@ int EncryptAndSignState(KrmSignedState *state)
 	if (error < 0) {
 		ret = (int)0x80a00008;
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &g_krmRandomDebug,
+		SceDebugForDriver_D9703808(1, 0, &g_krmRandomDebug,
 			g_krmRandomError,
 			g_krmEncryptAndSignStateName, error);
 #endif
@@ -315,7 +315,7 @@ int EncryptAndSignState(KrmSignedState *state)
 	ret = KrmDriverGetNetworkTick(&g_krmEncryptedState.state.tick);
 	if (ret < 0) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &g_krmTickDebug,
+		SceDebugForDriver_D9703808(1, 0, &g_krmTickDebug,
 			g_krmTickError,
 			g_krmEncryptAndSignStateName, ret);
 #endif

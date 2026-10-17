@@ -431,8 +431,8 @@
  #ifndef MY_ZCALLOC /* Any system without a special alloc function */
  
 +#ifdef PSP2_KERNEL /* SCE: kernel heap */
-+void *ksceKernelAlloc(unsigned int size);
-+int ksceKernelFree(void *ptr);
++void *SceSysmemForKernel_85571907(unsigned int size);
++int SceSysmemForKernel_4233C16D(void *ptr);
 +#endif
  #ifndef STDC
  extern voidp  malloc OF((uInt size));
@@ -442,7 +442,7 @@
  {
      if (opaque) items += size - size; /* make compiler happy */
 +#ifdef PSP2_KERNEL /* SCE: kernel heap */
-+    return (voidpf)ksceKernelAlloc(items * size);
++    return (voidpf)SceSysmemForKernel_85571907(items * size);
 +#else
      return sizeof(uInt) > 2 ? (voidpf)malloc(items * size) :
                                (voidpf)calloc(items, size);
@@ -454,7 +454,7 @@
      voidpf ptr;
  {
 +#ifdef PSP2_KERNEL /* SCE: kernel heap */
-+    ksceKernelFree(ptr);
++    SceSysmemForKernel_4233C16D(ptr);
 +#else
      free(ptr);
 +#endif

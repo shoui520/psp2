@@ -1,8 +1,8 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sysroot.h>
 #include <syscon/syscon.h>
 #include "update_internal.h"
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 
 int ksceMotionDevIsReady(void);
 int SceTouchForDriver_63DCF2FE(void);
@@ -55,7 +55,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 			}
 		}
 	}
-	if (!ksceSblAimgrIsGenuineDolce() && updateMotionPollCount > 0) {
+	if (!SceSblAIMgrForDriver_C6E83F34() && updateMotionPollCount > 0) {
 		do {
 			if (ksceMotionDevIsReady()) {
 				if (ksceMotionDevGetDeviceInfo(&updateMotionDeviceInfo) == 0 &&
@@ -73,7 +73,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	hardware = 0;
 	firmware = 0;
 	information.dataFlashVersion = 0;
-	if (!ksceSblAimgrIsGenuineDolce()) {
+	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		if (ksceSysconGetBatteryVersion(&hardware, &firmware,
 					      &information.dataFlashVersion) != 0) {
 			updateUseBatteryService = 0;
@@ -88,7 +88,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 				updateUseBatteryService = 1;
 		}
 	}
-	if (!ksceSblAimgrIsGenuineDolce() && updateTouchPollCount > 0) {
+	if (!SceSblAIMgrForDriver_C6E83F34() && updateTouchPollCount > 0) {
 		while (!SceTouchForDriver_63DCF2FE()) {
 			sceKernelDelayThread(20000);
 			if (--updateTouchPollCount <= 0)
@@ -117,7 +117,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 finish:
 	SpkgInfoUtilInitSystemSwVersion();
 	updateInitialized = 1;
-	ksceKernelSysrootSetGetSystemSwVersionFunc(SpkgInfoUtilGetSystemSwVersion);
+	SceSysrootForDriver_3276086B(SpkgInfoUtilGetSystemSwVersion);
 	result = updateInitializeAsync;
 	if (result)
 		result = sceKernelExitDeleteThread(0);

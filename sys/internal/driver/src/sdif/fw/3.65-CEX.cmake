@@ -70,16 +70,16 @@ set(MODULE_IMPORT_NIDS
 	0x15F25C84:F:0x7894B6F0
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
-	ksceKernelDcacheInvalidateRange
-	ksceKernelDcacheCleanRange
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelPrintfWithInfo
+	SceSysmemForDriver_009E1C61
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
+	SceCpuForDriver_02796361
+	SceCpuForDriver_103872A5
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
+	SceDebugForDriver_02B04343
 	memset
 	strncmp
 	memcpy
@@ -104,10 +104,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
-	ksceKernelIsSomeBootMode
-	ksceSblAimgrIsGenuineDolce
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
+	SceSysrootForDriver_7B7F8171
+	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_043B33F5
 	ScePervasiveForDriver_3CF7A012
 	ScePervasiveForDriver_3D8A8712

@@ -11,10 +11,10 @@
 
 #include <sysmem/cp15.h>
 #include <stdarg.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/pm_mgr.h>
+#include <sysmem/pmmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <deci4p_sdfmgr/sdfmgr.h>
@@ -195,7 +195,7 @@ static int SttypKprintf(int unk, const char *fmt, va_list ap)
 	signed char c;
 	char sign;
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (fmt == NULL) {
 		count = 0;
 		goto out;
@@ -472,7 +472,7 @@ next:
 done:
 	SttypFlushPending(port);
 out:
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return count;
 }
 
@@ -480,12 +480,12 @@ int module_start(SceSize args, void *argp)
 {
 	SceProductMode mode = 0;
 
-	if (!ksceKernelCheckDipsw(0xc1) || !ksceKernelCheckDipsw(0xc6)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc1) || !SceDipswForDriver_A98FC2FD(0xc6)) {
 		if (SceCpuId() == 0)
-			ksceKernelPrintf("STTYP is disabled by dipsw\n");
+			SceDebugForDriver_391B74B7("STTYP is disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
-	if (kscePmMgrGetProductMode(&mode) < 0)
+	if (ScePmMgrForDriver_2AC815A2(&mode) < 0)
 		return SCE_KERNEL_START_SUCCESS;
 	return mode == 1 ? SCE_KERNEL_START_NO_RESIDENT : SCE_KERNEL_START_SUCCESS;
 }
@@ -510,10 +510,10 @@ int module_bootstart(SceSize args, void *argp)
 	port->handle = handle;
 
 	if (SceCpuId() == 0) {
-		ksceKernelRegisterKprintfHandler(SttypKprintf, NULL);
+		SceDebugForKernel_88AD6D0C(SttypKprintf, NULL);
 		SceKernelSuspendForDriver_CE7A2207(STTYP_SUSPEND_IDX, SttypSuspend, NULL);
 		SceKernelSuspendForDriver_105C5752(STTYP_SUSPEND_IDX, SttypResume, NULL);
 	}
-	ksceKernelPrintf("STTYP%d/DECI4p is ready\n", SceCpuId());
+	SceDebugForDriver_391B74B7("STTYP%d/DECI4p is ready\n", SceCpuId());
 	return 0;
 }

@@ -26,7 +26,7 @@ int iofilemgrInitDummyTty(int unused0, void *unused1)
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcResume")))
-int IofilemgrModuleProcResume(SceUID pid, int phase, SceProcEventInvokeParam1 *param, int unused)
+int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, int unused)
 {
 	IofilemgrKpls *kpls;
 	int ret;
@@ -34,7 +34,7 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, SceProcEventInvokeParam1 *p
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_RESUME:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			ksceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
+			SceCpuForDriver_5F6A8743(&g_gameProgramCount, 1);
 		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
@@ -49,7 +49,7 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, SceProcEventInvokeParam1 *p
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcSuspend")))
-int IofilemgrModuleProcSuspend(SceUID pid, int phase, SceProcEventInvokeParam1 *param, int unused)
+int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, int unused)
 {
 	IofilemgrKpls *kpls;
 	int ret, num;
@@ -57,7 +57,7 @@ int IofilemgrModuleProcSuspend(SceUID pid, int phase, SceProcEventInvokeParam1 *
 	switch (phase) {
 	case SCE_PROC_EVENT_PHASE_SUSPEND:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			ksceKernelAtomicSubAndGet32(&g_gameProgramCount, 1);
+			SceCpuForDriver_A4884C4E(&g_gameProgramCount, 1);
 		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
@@ -103,20 +103,20 @@ static inline __attribute__((always_inline)) int iofilemgrProcessFinalize(SceUID
 
 /* name unknown: the process event handler's exit */
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcExit")))
-int IofilemgrModuleProcExit(SceUID pid, SceProcEventInvokeParam1 *param, int unused)
+int IofilemgrModuleProcExit(SceUID pid, ProcEventParam *param, int unused)
 {
 	return iofilemgrProcessFinalize(pid);
 }
 
 /* name unknown: the process event handler's kill */
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcKill")))
-int IofilemgrModuleProcKill(SceUID pid, SceProcEventInvokeParam1 *param, int unused)
+int IofilemgrModuleProcKill(SceUID pid, ProcEventParam *param, int unused)
 {
 	return iofilemgrProcessFinalize(pid);
 }
 
 __attribute__((section(".iofilemgrEntry.IofilemgrModuleProcCreate")))
-int IofilemgrModuleProcCreate(SceUID pid, SceProcEventInvokeParam2 *param, int unused)
+int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unused)
 {
 	SceKernelProcessResourceLimit limit;
 	IofilemgrKpls *kpls;
@@ -145,7 +145,7 @@ int IofilemgrModuleProcCreate(SceUID pid, SceProcEventInvokeParam2 *param, int u
 	kpls->depth = 0x10;
 	for (i = 0; i < IOFILEMGR_PROCESS_MAX; i++) {
 		if (g_iofilemgrPid[i] == -1 &&
-		    ksceKernelAtomicCompareAndSet32(&g_iofilemgrPid[i], -1, pid) == -1)
+		    SceCpuForDriver_CDA96E81(&g_iofilemgrPid[i], -1, pid) == -1)
 			break;
 	}
 	if (i != IOFILEMGR_PROCESS_MAX)
@@ -157,7 +157,7 @@ int IofilemgrModuleProcCreate(SceUID pid, SceProcEventInvokeParam2 *param, int u
 	} else {
 		kpls->priority = 8;
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
-			ksceKernelAtomicAddAndGet32(&g_gameProgramCount, 1);
+			SceCpuForDriver_5F6A8743(&g_gameProgramCount, 1);
 	}
 	limit.size = sizeof(limit);
 	limit.limit0 = 0;
@@ -898,7 +898,7 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	int ret;
 	int i;
 
-	ret = ksceGUIDGetUIDVectorByClass(&g_vfsFileClass, vis_level, NULL, 0, &num);
+	ret = SceSysmemForKernel_52137FA3(&g_vfsFileClass, vis_level, NULL, 0, &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1291, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
@@ -907,15 +907,15 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	}
 	if (dst == NULL)
 		return ret;
-	vector = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, ret * sizeof(SceUID));
+	vector = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, ret * sizeof(SceUID));
 	if (vector == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = ksceGUIDGetUIDVectorByClass(&g_vfsFileClass, vis_level, vector, ret, &num);
+	ret = SceSysmemForKernel_52137FA3(&g_vfsFileClass, vis_level, vector, ret, &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1317, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
 					  ret, ret);
-		ksceKernelFreeHeapMemory(g_ioVfsHeapUid, vector);
+		sceKernelFreeHeapMemory(g_ioVfsHeapUid, vector);
 		return ret;
 	}
 	for (i = 0; i < (int)num; i++) {
@@ -923,7 +923,7 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 		dst[i].pid = SCE_KERNEL_PROCESS_ID;
 	}
 	*res_size = (int)max_size < (int)num ? max_size : num;
-	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, vector);
+	sceKernelFreeHeapMemory(g_ioVfsHeapUid, vector);
 	return num;
 }
 
@@ -962,7 +962,7 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	}
 	if (dst == NULL)
 		return total;
-	readbuf = ksceKernelAllocHeapMemory(g_ioVfsHeapUid, total * sizeof(SceUID));
+	readbuf = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, total * sizeof(SceUID));
 	if (readbuf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	total = 0;
@@ -996,14 +996,14 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 					  max_size * sizeof(SceUID));
 		*res_size = max_size;
 	}
-	ksceKernelFreeHeapMemory(g_ioVfsHeapUid, readbuf);
+	sceKernelFreeHeapMemory(g_ioVfsHeapUid, readbuf);
 	return total;
 }
 
 int ksceIoGetFileInfo(SceUID fd, SceUID pid, SceIofileInfo *info)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
-		fd = kscePUIDtoGUID(pid, fd);
+		fd = SceSysmemForDriver_45D22597(pid, fd);
 	return vfsGetFdInfoForDebugger(fd, info);
 }
 
@@ -1015,7 +1015,7 @@ static inline int init_iofm(void)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_ioVfsHeapUid = ksceKernelCreateHeap("SceIofile", 0x10000, &opt);
+	g_ioVfsHeapUid = SceSysmemForDriver_9328E0E8("SceIofile", 0x10000, &opt);
 	if (g_ioVfsHeapUid < 0) {
 		SCE_DBG_PRINTF(6, 155, "sceKernelCreateHeap failed: 0x%08x\n", g_ioVfsHeapUid);
 		SCE_DBG_ASSERT_FAIL(156);
@@ -1054,7 +1054,7 @@ static inline int init_iofm(void)
 
 int IofilemgrModuleStart(SceSize args, void *argp)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 
 	if (ksceKernelInitializeFastMutex(&g_iofilemgrMutex, "SceIofile", 0, 0) < 0)
 		SCE_PANIC(1475);
@@ -1064,10 +1064,10 @@ int IofilemgrModuleStart(SceSize args, void *argp)
 	handler.create = IofilemgrModuleProcCreate;
 	handler.exit = IofilemgrModuleProcExit;
 	handler.kill = IofilemgrModuleProcKill;
-	handler.stop = IofilemgrModuleProcSuspend;
-	handler.start = IofilemgrModuleProcResume;
-	handler.switch_process = NULL;
-	if (ksceKernelRegisterProcEventHandler("SceIofilemgr", &handler, 0) < 0)
+	handler.suspend = IofilemgrModuleProcSuspend;
+	handler.resume = IofilemgrModuleProcResume;
+	handler.notify = NULL;
+	if (sceKernelRegisterProcEventHandler("SceIofilemgr", &handler, 0) < 0)
 		SCE_PANIC(1496);
 	if (sceIoSchedulerInitialize() < 0)
 		SCE_PANIC(1503);
@@ -1345,7 +1345,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			SCE_DBG_PRINTF(0xf, 2279, "This thread is Common Dialog.\n");
 			SCE_DBG_PRINTF(0xf, 2280, "process id = 0x%08x\n", pid);
 			for (i = 0; i < (int)num; i++) {
-				fd = kscePUIDtoGUID(pid, fdlist[i]);
+				fd = SceSysmemForDriver_45D22597(pid, fdlist[i]);
 				if (fd < 0) {
 					SCE_DBG_PRINTF(0xf, 2287,
 						       "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", fd,
@@ -1381,10 +1381,10 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			return SCE_ERROR_ERRNO_EMFILE;
 			}
 			new++;
-			if (ksceKernelAtomicCompareAndSet32(&kpls->dialogFdCount, old, new) != old)
+			if (SceCpuForDriver_CDA96E81(&kpls->dialogFdCount, old, new) != old)
 				continue;
 			if (kpls->dialogFdPeak < new)
-				ksceKernelAtomicAddAndGet32(&kpls->dialogFdPeak, 1);
+				SceCpuForDriver_5F6A8743(&kpls->dialogFdPeak, 1);
 		} else {
 			old = new = kpls->fdCount;
 			if (kpls->fdMax <= old) {
@@ -1399,7 +1399,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			SCE_DBG_PRINTF(0xf, 2351, "This thread is not Common Dialog.\n");
 			SCE_DBG_PRINTF(0xf, 2352, "process id = 0x%08x\n", pid);
 			for (i = 0; i < (int)num; i++) {
-				fd = kscePUIDtoGUID(pid, fdlist[i]);
+				fd = SceSysmemForDriver_45D22597(pid, fdlist[i]);
 				if (fd < 0) {
 					SCE_DBG_PRINTF(0xf, 2359,
 						       "PUIDtoGUID failed err= %d 0x%x puid=0x%x\n", fd,
@@ -1435,10 +1435,10 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			return SCE_ERROR_ERRNO_EMFILE;
 			}
 			new++;
-			if (ksceKernelAtomicCompareAndSet32(&kpls->fdCount, old, new) != old)
+			if (SceCpuForDriver_CDA96E81(&kpls->fdCount, old, new) != old)
 				continue;
 			if (kpls->fdPeak < new)
-				ksceKernelAtomicAddAndGet32(&kpls->fdPeak, 1);
+				SceCpuForDriver_5F6A8743(&kpls->fdPeak, 1);
 		}
 		return 0;
 	}
@@ -1455,13 +1455,13 @@ void decrement_user_fd_count(SceUID pid, SceUID thid, int keepPeak)
 	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1) < 0)
 		return;
 	if (SceThreadmgrForDriver_1096042E(thid)) {
-		ksceKernelAtomicSubAndGet32(&kpls->dialogFdCount, 1);
+		SceCpuForDriver_A4884C4E(&kpls->dialogFdCount, 1);
 		if (!keepPeak)
-			ksceKernelAtomicSubAndGet32(&kpls->dialogFdPeak, 1);
+			SceCpuForDriver_A4884C4E(&kpls->dialogFdPeak, 1);
 	} else {
-		ksceKernelAtomicSubAndGet32(&kpls->fdCount, 1);
+		SceCpuForDriver_A4884C4E(&kpls->fdCount, 1);
 		if (!keepPeak)
-			ksceKernelAtomicSubAndGet32(&kpls->fdPeak, 1);
+			SceCpuForDriver_A4884C4E(&kpls->fdPeak, 1);
 	}
 }
 
@@ -1710,11 +1710,11 @@ int _sceIoDread(SceUID fd, SceIoDirent *dir)
 		return sceIoDreadForUser(fd, NULL);
 	kdir = __builtin_alloca(sizeof(*kdir));
 	__builtin_memset(kdir, 0, sizeof(*kdir));
-	ret = ksceKernelCopyFromUser(kdir, dir, sizeof(*kdir));
+	ret = SceSysmemForDriver_BC996A7A(kdir, dir, sizeof(*kdir));
 	if (ret < 0)
 		return ret;
 	ret = sceIoDreadForUser(fd, kdir);
-	return copyResult(ret, ksceKernelCopyToUser(dir, kdir, sizeof(*kdir)));
+	return copyResult(ret, SceSysmemForDriver_6D88EF8A(dir, kdir, sizeof(*kdir)));
 }
 
 int _sceIoGetstat(const char *file, SceIoStat *stat, const SyscallUnusedArgs *uargs)
@@ -1730,7 +1730,7 @@ int _sceIoGetstat(const char *file, SceIoStat *stat, const SyscallUnusedArgs *ua
 
 		__builtin_memset(kstat, 0, sizeof(*kstat));
 		ret = sceIoGetstatForUser(kfile, kstat);
-		return copyResult(ret, ksceKernelCopyToUser(stat, kstat, sizeof(*kstat)));
+		return copyResult(ret, SceSysmemForDriver_6D88EF8A(stat, kstat, sizeof(*kstat)));
 	}
 	return sceIoGetstatForUser(kfile, NULL);
 }

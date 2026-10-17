@@ -1,10 +1,10 @@
 /* Sony entry.c: module initialization and callback registration. */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/proc_event.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/procevent.h>
+#include <sysmem/suspend.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 
-extern const SceProcEventHandler codecEngineProcessEvents;
+extern const SceKernelProcEventHandler codecEngineProcessEvents;
 extern int codecEngineStartPhase2(void);
 extern unsigned int codecEngineSystemEventHandler(int phase, unsigned int event);
 extern int _sceVeneziaProcessCreateEntry(void);
@@ -19,10 +19,10 @@ int module_start(SceSize arglen, const void *argp)
 	if (ksceKernelEnqueueWorkQueue(0x10023, "SceCodecEngineBoot",
 		(SceKernelWorkQueueWorkFunction)codecEngineStartPhase2, NULL) < 0)
 		return 2;
-	if (ksceKernelRegisterSysEventHandler("SceVenezia",
-		(SceSysEventHandler)codecEngineSystemEventHandler, NULL) < 0)
+	if (sceKernelRegisterSysEventHandler("SceVenezia",
+		(SceKernelSysEventHandler)codecEngineSystemEventHandler, NULL) < 0)
 		return 2;
-	if (ksceKernelRegisterProcEventHandler("SceVenezia",
+	if (sceKernelRegisterProcEventHandler("SceVenezia",
 		&codecEngineProcessEvents, 0) < 0)
 		return 2;
 	return 0;

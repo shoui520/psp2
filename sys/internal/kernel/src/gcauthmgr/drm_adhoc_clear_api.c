@@ -1,5 +1,5 @@
 /* Adhoc session syscall exit. */
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 
 int GcAuthAdhocClearState(void);
 

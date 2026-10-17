@@ -148,7 +148,7 @@ int suspendSteadyConnected(BbmcControl *control, BbmcMessage *message)
 
 	control->suspendError = (int)(step | 0x80011700);
 	if (step > 12)
-		ksceKernelPanic(&dbg_suspendSteadyConnected_L1335,
+		SceDebugForDriver_391B5B74(&dbg_suspendSteadyConnected_L1335,
 				__builtin_return_address(0));
 	result = connectedSuspendHandlers[step](control, message, &nextStep);
 	if (result >= 0) {
@@ -170,7 +170,7 @@ int suspendGotoLPM(BbmcControl *control, BbmcMessage *message)
 
 	control->suspendError = (int)(connectedSuspendCompletion | 0x80011900);
 	if (connectedSuspendCompletion != 0)
-		ksceKernelPanic(&dbg_suspendGotoLPM_L1373,
+		SceDebugForDriver_391B5B74(&dbg_suspendGotoLPM_L1373,
 				__builtin_return_address(0));
 	if (message->command == 11 || message->command == 36) {
 		connectedRestartRequested = 1;

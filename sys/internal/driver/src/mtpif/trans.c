@@ -95,17 +95,17 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	memset(options, 0, sizeof(options));
 	options[0] = sizeof(options);
 	options[2] = 0x200004;
-	s_mtp.memblock = ksceKernelAllocMemBlock("SceMtpIf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+	s_mtp.memblock = SceSysmemForDriver_C94850C9("SceMtpIf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					       MTP_BUFFER_SIZE, (void *)options);
 	if (s_mtp.memblock < 0) {
 		SCE_DBG_PRINTF(0, 246, "[%s%-29s] Err(%4d) sceKernelAllocMemBlock Fail\n",
 			       "MTPIF:", __func__, 246);
 		return 1;
 	}
-	if (ksceKernelGetMemBlockBase(s_mtp.memblock, &s_mtp.buffer) < 0) {
+	if (SceSysmemForDriver_A841EDDA(s_mtp.memblock, &s_mtp.buffer) < 0) {
 		SCE_DBG_PRINTF(0, 252, "[%s%-29s] Err(%4d) cannot allocate memory\n",
 			       "MTPIF:", __func__, 252);
-		ksceKernelFreeMemBlock(s_mtp.memblock);
+		SceSysmemForDriver_009E1C61(s_mtp.memblock);
 		return 1;
 	}
 	s_mtp.usb.reset = SceUsbMtpForDriver_B958E5DE;
@@ -130,7 +130,7 @@ int _sceMtpIfModuleStart(SceSize arglen, const char *argp)
 	handlers[6] = 0;
 	s_mtp.owner = -1;
 	s_mtp.configuredPort = port;
-	s_mtp.handler = ksceKernelRegisterProcEventHandler("SceMtpIf",
+	s_mtp.handler = sceKernelRegisterProcEventHandler("SceMtpIf",
 						       (void *)handlers, 0);
 	return s_mtp.handler < 0 ? 2 : 0;
 }
@@ -387,7 +387,7 @@ int sceMtpIfRecvCommand(const void *port, void *command)
 	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = SceMtpIfForDriver_117F7519(port, local);
 		if (ret >= 0) {
-			copy = ksceKernelCopyToUser(command, local, sizeof(local));
+			copy = SceSysmemForDriver_6D88EF8A(command, local, sizeof(local));
 			if (copy < 0)
 				ret = copy;
 		}
@@ -404,7 +404,7 @@ int sceMtpIfSendResponse(const void *port, const void *response)
 	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = ksceKernelLockFastMutex(s_mtp.mutex);
 		if (ret >= 0) {
-			ret = ksceKernelCopyFromUser(local, response, sizeof(local));
+			ret = SceSysmemForDriver_BC996A7A(local, response, sizeof(local));
 			if (ret >= 0)
 				ret = SceMtpIfForDriver_5766D257(port, local);
 			ksceKernelUnlockFastMutex(s_mtp.mutex);
@@ -424,14 +424,14 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 	ret = ksceKernelLockFastMutex(s_mtp.mutex);
 	if (ret < 0)
 		goto out;
-	ret = ksceKernelCopyFromUser(&local, params, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, params, sizeof(local));
 	if (ret < 0)
 		goto unlock;
 	if (local.size > MTP_BUFFER_SIZE) {
 		ret = MTP_INVALID;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(s_mtp.buffer, local.buffer,
+	ret = SceSysmemForDriver_BC996A7A(s_mtp.buffer, local.buffer,
 				   (SceSize)local.size);
 	if (ret < 0)
 		goto unlock;
@@ -439,7 +439,7 @@ int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params)
 	ret = SceMtpIfForDriver_33F1826F(port, &local);
 	ksceKernelUnlockFastMutex(s_mtp.mutex);
 	if (ret >= 0) {
-		copy = ksceKernelCopyToUser(params, &local, sizeof(local));
+		copy = SceSysmemForDriver_6D88EF8A(params, &local, sizeof(local));
 		if (copy < 0)
 			ret = copy;
 	}
@@ -461,7 +461,7 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 	ret = ksceKernelLockFastMutex(s_mtp.mutex);
 	if (ret < 0)
 		goto out;
-	ret = ksceKernelCopyFromUser(&local, params, sizeof(local));
+	ret = SceSysmemForDriver_BC996A7A(&local, params, sizeof(local));
 	if (ret < 0)
 		goto unlock;
 	if (local.size > MTP_BUFFER_SIZE) {
@@ -479,14 +479,14 @@ int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params)
 		ret = (int)0x805436ff;
 		goto unlock;
 	}
-	copy = ksceKernelCopyToUser(local.buffer, s_mtp.buffer,
+	copy = SceSysmemForDriver_6D88EF8A(local.buffer, s_mtp.buffer,
 				  (SceSize)transfer.transferred);
 	if (copy < 0) {
 		ret = copy;
 		goto unlock;
 	}
 	ksceKernelUnlockFastMutex(s_mtp.mutex);
-	copy = ksceKernelCopyToUser(params, &local, sizeof(local));
+	copy = SceSysmemForDriver_6D88EF8A(params, &local, sizeof(local));
 	if (copy < 0)
 		ret = copy;
 	goto out;
@@ -503,10 +503,10 @@ int sceMtpIfSendEvent(const void *port, const void *command, const void *event)
 	int ret = SCE_ERROR_ERRNO_ENOSYS;
 
 	if (sceSblACMgrIsSystemProgram(0)) {
-		ret = ksceKernelCopyFromUser(localCommand, command,
+		ret = SceSysmemForDriver_BC996A7A(localCommand, command,
 					     sizeof(localCommand));
 		if (ret >= 0) {
-			ret = ksceKernelCopyFromUser(localEvent, event,
+			ret = SceSysmemForDriver_BC996A7A(localEvent, event,
 						     sizeof(localEvent));
 			if (ret >= 0)
 				ret = SceMtpIfForDriver_B5E78858(port, localCommand, localEvent);

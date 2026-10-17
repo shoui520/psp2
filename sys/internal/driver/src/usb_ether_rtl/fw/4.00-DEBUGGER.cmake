@@ -70,21 +70,21 @@ set(MODULE_IMPORT_NIDS
 	0xA75BBDF2:F:0x6D738018
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelAtomicAddAndGet32
-	ksceKernelAtomicSubAndGet32
-	ksceKernelPrintf
-	ksceKernelSysrootCheckModelCapability
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_5F6A8743
+	SceCpuForDriver_A4884C4E
+	SceDebugForDriver_391B74B7
+	SceSysrootForDriver_8AA268D6
 	memset
 	memcpy
 	__memcpy_chk
 	__stack_chk_fail
-	ksceSblAimgrIsVITA
-	ksceSblAimgrIsGenuineDolce
-	ksceSblAimgrIsCEX
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	SceSblAIMgrForDriver_4273B97B
+	SceSblAIMgrForDriver_C6E83F34
+	SceSblAIMgrForDriver_D78B04A2
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	ksceKernelWaitEventFlag
 	sceKernelExitThread
 	ksceKernelStartThread
@@ -99,7 +99,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	ksceGpioSetPortMode
 	ksceGpioPortSet
 	ksceGpioPortClear

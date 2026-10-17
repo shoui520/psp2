@@ -63,22 +63,22 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	memset
 	__stack_chk_fail
-	ksceKernelUnlockRangeWithMode
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelVAtoPA
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelLockRangeWithMode
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceGUIDName
-	ksceKernelVARangeToPAVector
+	SceSysmemForDriver_22CBE925
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	sceKernelLockRangeWithMode
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	SceSysmemForDriver_E655852F
+	sceKernelVARangeToPAVector
 	SceSysmemForKernel_3717C322
 	SceSysmemForKernel_93344755
 	SceSysmemForKernel_ABA5313C
 	SceSysmemForKernel_B628B46B
-	ksceKernelCheckDipsw
+	SceDipswForDriver_A98FC2FD
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	ksceKernelDisableIntr
@@ -92,14 +92,14 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDeleteEventFlag
 	ksceKernelPollEventFlag
 	ksceKernelSetEventFlag
-	ksceKernelPanic
-	ksceKernelIsUncacheAddressInTmpFsGame
-	ksceKernelCpuId
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelAtomicCompareAndSet32
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
+	SceDebugForDriver_391B5B74
+	sceKernelIsUncacheAddressInTmpFsGame
+	sceKernelCpuId
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_CDA96E81
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
 )

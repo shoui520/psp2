@@ -9,9 +9,9 @@
 #include <intrmgr/syscall.h>
 #include <sysmem/aes.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/rtc.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
@@ -23,13 +23,13 @@ typedef struct KrmAesCbcContext {
 } KrmAesCbcContext;
 
 int KrmAesInitDecrypt(SceAesCompactContext *ctx, SceSize blockBits,
-		      SceSize keyBits, const void *key) __asm__("ksceAesInit3");
+		      SceSize keyBits, const void *key) __asm__("SceKernelUtilsForDriver_72408E29");
 int KrmAesInitEncrypt(SceAesCompactContext *ctx, SceSize blockBits,
-		      SceSize keyBits, const void *key) __asm__("ksceAesInit2");
+		      SceSize keyBits, const void *key) __asm__("SceKernelUtilsForDriver_EDA97D6D");
 int KrmAesDecryptBlock(SceAesCompactContext *ctx, const void *src,
-		       void *dst) __asm__("ksceAesDecrypt2");
+		       void *dst) __asm__("SceKernelUtilsForDriver_E39CD272");
 int KrmAesEncryptBlock(SceAesCompactContext *ctx, const void *src,
-		       void *dst) __asm__("ksceAesEncrypt2");
+		       void *dst) __asm__("SceKernelUtilsForDriver_302947B6");
 
 int KrmAesCbcDecrypt(const unsigned char *src, unsigned char *dst,
 		     SceSize size, unsigned int keyBits, const void *key,
@@ -41,9 +41,6 @@ int KrmAesDecrypt(const void *src, void *dst, unsigned int keyBits,
 		  const void *key);
 int KrmAesEncrypt(const void *src, void *dst, unsigned int keyBits,
 		  const void *key);
-int SceKernelUtilsForDriver_1DF3792A(unsigned int blockBits,
-				  unsigned int keyBits, const void *key,
-				  const void *src, SceSize size, void *mac);
 int KrmComputeMac(const void *src, SceSize size, void *mac,
 		  SceSize keySize, const void *key);
 int KrmVerifyMac(const void *src, SceSize size, const void *mac,

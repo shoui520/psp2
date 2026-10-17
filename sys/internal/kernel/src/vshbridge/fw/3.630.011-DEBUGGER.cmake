@@ -265,22 +265,22 @@ set(MODULE_IMPORT_NIDS
 	0xDCE180F8:F:0xED87F191
 )
 set(MODULE_IMPORT_FUNCS
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	kscePUIDClose
-	ksceKernelCopyFromUser
-	kscePUIDOpenByGUID
-	ksceKernelStrncpyFromUser
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_84A4AF5E
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_BF209859
+	SceSysmemForDriver_DB3EC244
 	SceSysrootForDriver_47724459
-	ksceKernelSysrootGetSystemSwVersion
+	SceSysrootForDriver_67AAB627
 	SceSysrootForDriver_7AAC4EE7
-	ksceSysrootIsSafeMode
-	ksceKernelSysrootCheckModelCapability
-	ksceSysrootIsUpdateMode
+	SceSysrootForDriver_834439A7
+	SceSysrootForDriver_8AA268D6
+	SceSysrootForDriver_B0E1FC67
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	SceSysrootForDriver_F804F761
-	ksceKernelPrintfWithInfo
+	SceDebugForDriver_02B04343
 	k_sceEventLogPut
 	memset
 	snprintf
@@ -325,26 +325,26 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblPostSsMgrReleaseSpfsoCtx
 	ksceSblPostSsMgrInitializeSpfsoCtx
 	_ksceSblPostSsMgrExecutePmSmF00dCommand
-	ksceSblQafMgrIsAllowMarlinTest
-	ksceSblQafMgrIsAllowLoadMagicGate
+	SceQafMgrForDriver_10283EB8
+	SceQafMgrForDriver_36E5312E
 	SceQafMgrForDriver_4BC1883F
-	ksceSblQafMgrIsAllowNearTest
-	ksceSblQafMgrIsAllowPSPEmuShowQAInfo
-	ksceSblQafMgrIsAllowRemotePlayDebug
-	ksceSblQafMgrIsAllowKeepCoreFile
-	ksceSblQafMgrIsAllowSystemAppDebug
-	ksceSblQafMgrIsAllowDtcpIpReset
-	ksceSblQafMgrIsAllowControlIduAutoUpdate
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsTest
-	ksceSblAimgrIsVITA
-	ksceSblAimgrGetSMI
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineVITA
-	ksceSblAimgrIsGenuineDolce
-	ksceSblAimgrIsCEX
-	ksceSblAimgrIsDEX
-	kscePmMgrGetProductMode
+	SceQafMgrForDriver_9644171D
+	SceQafMgrForDriver_B7B195B2
+	SceQafMgrForDriver_BFD5E463
+	SceQafMgrForDriver_C1EA75C8
+	SceQafMgrForDriver_CAD47130
+	SceQafMgrForDriver_E8B8F31F
+	SceQafMgrForDriver_F8BFEE48
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_3B638885
+	SceSblAIMgrForDriver_4273B97B
+	SceSblAIMgrForDriver_47D9CF13
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_963CA644
+	SceSblAIMgrForDriver_C6E83F34
+	SceSblAIMgrForDriver_D78B04A2
+	SceSblAIMgrForDriver_F4B98F66
+	ScePmMgrForDriver_2AC815A2
 	SceSblGcAuthMgrMlnpsnlForDriver_296ABD68
 	SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5
 	ksceIdStorageCreateLeaf

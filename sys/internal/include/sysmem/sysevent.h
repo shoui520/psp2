@@ -10,8 +10,8 @@
 
 typedef int (*SceKernelSysEventHandler)(int resume, int eventid, void *args, void *opt);
 
-SceUID ksceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHandler handler, void *argp);
-int ksceKernelUnregisterSysEventHandler(SceUID uid);
+SceUID sceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHandler handler, void *argp);
+int sceKernelUnregisterSysEventHandler(SceUID uid);
 
 /*
  * The argument ScePower passes with its events: a PowerSuspendEvent while

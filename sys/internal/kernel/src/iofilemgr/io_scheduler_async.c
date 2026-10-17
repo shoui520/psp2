@@ -17,7 +17,7 @@ SceClass g_ioAsyncEventClass;
 
 /* 4.00 builds this file with _FORTIFY_SOURCE; Sony's heap declaration gives the size it checks */
 #if FW_VERSION >= 0x04000000
-void *ksceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
+void *SceSysmemForDriver_7B4CB60A(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))
 #endif
 
@@ -64,7 +64,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID:
-		uid = ksceGUIDKernelCreate(&g_ioAsyncEventClass, "SceIoAsyncEvent",
+		uid = SceSysmemForDriver_56A13E90(&g_ioAsyncEventClass, "SceIoAsyncEvent",
 					   (SceObjectBase **)&obj);
 		break;
 	default:
@@ -82,7 +82,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 		else
 			opt.heapKind = 0;
 		opt.type = IO_ASYNC_EVENT_UID_TYPE;
-		uid = ksceGUIDKernelCreateWithOpt(&g_ioAsyncEventClass, "SceIoAsyncEvent",
+		uid = sceGUIDKernelCreateWithOpt(&g_ioAsyncEventClass, "SceIoAsyncEvent",
 						  (SceGUIDKernelCreateOpt *)&opt,
 						  (SceObjectBase **)&obj);
 		break;
@@ -92,7 +92,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 
 	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
 	if (ret < 0) {
-		closed = ksceGUIDClose(uid);
+		closed = sceGUIDClose(uid);
 		SCE_DBG_ASSERT(closed == 0, 117);
 		return ret;
 	}
@@ -107,7 +107,7 @@ int sceIoAsyncEventDestroy(SceUID uid)
 	void *object;
 	int ret;
 
-	handle = ksceGUIDOpenByGUID(uid);
+	handle = SceSysmemForKernel_89D33DF0(uid);
 	if (handle < 0)
 		return handle;
 	if (!SceSysmemForKernel_7F7D5C4A(SceSysmemForKernel_368F1C36(handle),
@@ -115,10 +115,10 @@ int sceIoAsyncEventDestroy(SceUID uid)
 		return SCE_KERNEL_ERROR_DIFFERENT_UID_CLASS;
 	object = SceSysmemForKernel_FA6C098C(uid);
 	SCE_DBG_ASSERT(object != NULL, 143);
-	ret = ksceGUIDClose(handle);
+	ret = sceGUIDClose(handle);
 	if (ret < 0)
 		return ret;
-	return ksceGUIDClose(uid);
+	return sceGUIDClose(uid);
 }
 
 /* name unknown: a path's copy on the scheduler heap */
@@ -126,7 +126,7 @@ char *sceIoAsyncAllocPath(const char *path)
 {
 	char *copy;
 
-	copy = ksceKernelAllocHeapMemory(g_ioSchedHeap, VFS_PATH_BUFF_SIZE);
+	copy = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, VFS_PATH_BUFF_SIZE);
 	if (copy != NULL) {
 		strncpy(copy, path, VFS_PATH_BUFF_SIZE - 1);
 		copy[VFS_PATH_BUFF_SIZE - 1] = '\0';
@@ -137,7 +137,7 @@ char *sceIoAsyncAllocPath(const char *path)
 /* name unknown */
 int sceIoAsyncFreePath(const char *path)
 {
-	return ksceKernelFreeHeapMemory(g_ioSchedHeap, (void *)path);
+	return sceKernelFreeHeapMemory(g_ioSchedHeap, (void *)path);
 }
 
 SceUID ksceIoOpenAsync(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam)
@@ -173,7 +173,7 @@ SceUID ksceIoOpenAsync(const char *file, int flags, SceMode mode, IoAsyncParam *
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -192,7 +192,7 @@ int ksceIoCloseAsync(SceUID fd, IoAsyncParam *asyncParam)
 	tls = sceSyscallEnter();
 	guid = fd;
 	if (IO_ASYNC_FROM_USER(readTpidruro()))
-		guid = kscePUIDtoGUID(0, fd);
+		guid = SceSysmemForDriver_45D22597(0, fd);
 	ret = getFileSchedParam(guid, &info, 1);
 	if (ret == 0) {
 		ret = sceIoAsyncEventCreate(&event);
@@ -237,7 +237,7 @@ SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncP
 	if (uid < 0)
 		goto out;
 
-	chunks = ksceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -250,7 +250,7 @@ SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncP
 	if (size == 0) {
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
-		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapReadAsync", IO_USER_MAP_WRITE,
+		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapReadAsync", IO_USER_MAP_WRITE,
 						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
@@ -277,7 +277,7 @@ SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncP
 		goto out;
 	ioUserUnmap(mapUid, data, size);
 free:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 	uid = err;
@@ -306,7 +306,7 @@ SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam 
 	if (uid < 0)
 		goto out;
 
-	chunks = ksceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -319,7 +319,7 @@ SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam 
 	if (size == 0) {
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
-		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapWriteAsync", IO_USER_MAP_READ,
+		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapWriteAsync", IO_USER_MAP_READ,
 						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
@@ -344,7 +344,7 @@ SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam 
 		goto out;
 	ioUserUnmap(mapUid, data, size);
 free:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 	uid = err;
@@ -414,7 +414,7 @@ SceUID ksceIoRemoveAsync(const char *file, IoAsyncParam *asyncParam)
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -455,7 +455,7 @@ SceUID ksceIoDopenAsync(const char *dirname, IoAsyncParam *asyncParam)
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -474,7 +474,7 @@ int ksceIoDcloseAsync(SceUID fd, IoAsyncParam *asyncParam)
 	tls = sceSyscallEnter();
 	guid = fd;
 	if (IO_ASYNC_FROM_USER(readTpidruro()))
-		guid = kscePUIDtoGUID(0, fd);
+		guid = SceSysmemForDriver_45D22597(0, fd);
 	ret = getFileSchedParam(guid, &info, 1);
 	if (ret == 0) {
 		ret = sceIoAsyncEventCreate(&event);
@@ -556,7 +556,7 @@ SceUID ksceIoMkdirAsync(const char *dir, SceMode mode, IoAsyncParam *asyncParam)
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -597,7 +597,7 @@ SceUID ksceIoRmdirAsync(const char *dirname, IoAsyncParam *asyncParam)
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -643,9 +643,9 @@ SceUID ksceIoRenameAsync(const char *oldname, const char *newname, IoAsyncParam 
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, newPath);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, newPath);
 free_old:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, oldPath);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, oldPath);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -687,7 +687,7 @@ SceUID ksceIoChstatAsync(const char *file, SceIoStat *stat, unsigned int bits,
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -728,7 +728,7 @@ SceUID ksceIoGetstatAsync(const char *file, SceIoStat *stat, IoAsyncParam *async
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -769,7 +769,7 @@ SceUID ksceIoSyncAsync(const char *device, unsigned int flag, IoAsyncParam *asyn
 			}
 		}
 	}
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, path);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, path);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 out:
@@ -798,7 +798,7 @@ SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 	if (uid < 0)
 		goto out;
 
-	chunks = ksceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -811,7 +811,7 @@ SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 	if (size == 0) {
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
-		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPreadAsync", IO_USER_MAP_WRITE,
+		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPreadAsync", IO_USER_MAP_WRITE,
 						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
@@ -836,7 +836,7 @@ SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 		goto out;
 	ioUserUnmap(mapUid, data, size);
 free:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 	uid = err;
@@ -866,7 +866,7 @@ SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offse
 	if (uid < 0)
 		goto out;
 
-	chunks = ksceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -879,7 +879,7 @@ SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offse
 	if (size == 0) {
 		mapUid = 0;
 	} else if (event->request.fromUser == 1) {
-		mapUid = ksceKernelUserMapWithFlags("SceIoUserMapPwriteAsync", IO_USER_MAP_READ,
+		mapUid = SceSysmemForDriver_7D4F8B5F("SceIoUserMapPwriteAsync", IO_USER_MAP_READ,
 						    SceSblACMgrForKernel_sceSblACMgrIsGameProgram(0) == 1 ?
 						    IO_USER_MAP_FLAGS_GAME : IO_USER_MAP_FLAGS,
 						    data, size, &kernelPage, &kernelSize,
@@ -904,7 +904,7 @@ SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offse
 		goto out;
 	ioUserUnmap(mapUid, data, size);
 free:
-	ksceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
+	sceKernelFreeHeapMemory(g_ioSchedHeap, chunks);
 destroy:
 	sceIoAsyncEventDestroy(uid);
 	uid = err;
@@ -1008,7 +1008,7 @@ int ksceIoCancel(SceUID uid)
 	int ret, released;
 
 	tls = sceSyscallEnter();
-	ret = ksceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass, (SceObjectBase **)&event);
+	ret = SceSysmemForDriver_00ED6C14(uid, &g_ioAsyncEventClass, (SceObjectBase **)&event);
 	if (ret < 0) {
 		sceSyscallLeave(tls);
 		return ret;
@@ -1017,7 +1017,7 @@ int ksceIoCancel(SceUID uid)
 	SCE_DBG_ASSERT_FUNC(sched != NULL, 1550, "sceIoCancel");
 	ret = sceIoSchedulerCancelAsyncIoRequest(sched, &event->request);
 	if (ret >= 0) {
-		released = ksceGUIDReleaseObject(uid);
+		released = sceGUIDReleaseObject(uid);
 		SCE_DBG_ASSERT_FUNC(released == 0, 1560, "sceIoCancel");
 	}
 	sceSyscallLeave(tls);
@@ -1038,10 +1038,10 @@ int sceIoComplete(SceUID uid)
 			sceSyscallLeave(tls);
 			return SCE_ERROR_ERRNO_EBUSY;
 		}
-		ret = ksceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass,
+		ret = SceSysmemForDriver_00ED6C14(uid, &g_ioAsyncEventClass,
 						   (SceObjectBase **)&event);
 		if (ret >= 0) {
-			released = ksceGUIDReleaseObject(uid);
+			released = sceGUIDReleaseObject(uid);
 			SCE_DBG_ASSERT(released >= 0, 1597);
 			ret = sceIoAsyncEventDestroy(uid);
 		}

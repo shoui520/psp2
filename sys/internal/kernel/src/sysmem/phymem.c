@@ -221,7 +221,7 @@ int SceSysmemForKernel_021053DD(SceUInt32 visibility, SceUID *vector, SceSize ve
 {
 	if (count == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return ksceGUIDGetUIDVectorByClass(s_phyMemPartClass, visibility, vector, vectorSize >> 2,
+	return SceSysmemForKernel_52137FA3(s_phyMemPartClass, visibility, vector, vectorSize >> 2,
 					   count);
 }
 
@@ -259,10 +259,7 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	return 0;
 }
 
-int ksceKernelVAtoPA(const void *va, uintptr_t *pa);
-SceInt32 ksceKernelAtomicAddAndGet32(SceInt32 *address, SceInt32 value);
-SceInt32 ksceKernelAtomicSubAndGet32(SceInt32 *address, SceInt32 value);
-SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *address, SceInt32 expected, SceInt32 value);
+int SceSysmemForDriver_8D160E65(const void *va, uintptr_t *pa);
 
 /* phymem_low.c */
 typedef struct PhyMemLow PhyMemLow;
@@ -324,7 +321,7 @@ static __attribute__((noinline)) PhyPage *PhyMemPartGetPhyPageByIndexRaw(PhyMemP
 
 static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 {
-	SceInt32 count = ksceKernelAtomicAddAndGetPositive32InRange((SceInt32 *)&part->refCount, 1,
+	SceInt32 count = SceCpuForKernel_8F40D0FD((SceInt32 *)&part->refCount, 1,
 									      0x7fffffff);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count >= 0, 1489, "PhyMemPartRefer");
@@ -333,7 +330,7 @@ static inline SceInt32 PhyMemPartRefer(PhyMemPart *part)
 
 static inline SceInt32 PhyMemPartRelease(PhyMemPart *part)
 {
-	SceInt32 count = ksceKernelAtomicDecIfPositive32((SceInt32 *)&part->refCount);
+	SceInt32 count = SceCpuForDriver_2A71B03C((SceInt32 *)&part->refCount);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(count > 0, 1499, "PhyMemPartRelease");
 	return count;
@@ -421,7 +418,7 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 	uintptr_t address = (uintptr_t)va, pa;
 	int ret;
 
-	ret = ksceKernelVAtoPA(va, &pa);
+	ret = SceSysmemForDriver_8D160E65(va, &pa);
 	if (ret >= 0) {
 		table = mgr->tables[0];
 		if (address >= (uintptr_t)table->entries &&
@@ -443,7 +440,7 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 /* name unknown: an empty segment */
 PhyMemSegment *PhyMemSegmentCreate(void)
 {
-	PhyMemSegment *segment = ksceKernelAlloc(sizeof(*segment));
+	PhyMemSegment *segment = SceSysmemForKernel_85571907(sizeof(*segment));
 
 	if (segment != NULL) {
 		segment->initialized = 0;
@@ -459,16 +456,16 @@ void PhyMemPartFreeRaw(PhyMemPart *part)
 	PhyMemSegment *segment, *next;
 
 	if (part->cpuCache != NULL) {
-		ksceKernelFree(part->cpuCache);
+		SceSysmemForKernel_4233C16D(part->cpuCache);
 		part->cpuCache = NULL;
 	}
 	for (segment = part->segments; segment != NULL; segment = next) {
 		next = segment->next;
-		ksceKernelFree(segment);
+		SceSysmemForKernel_4233C16D(segment);
 	}
 	part->segments = NULL;
 	SetMemory32Core(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
-	ksceKernelFree(part);
+	SceSysmemForKernel_4233C16D(part);
 }
 
 /* name unknown: a segment's first page as one free unit of the whole segment */
@@ -502,8 +499,8 @@ static inline void PhyMemPartResetFreeSize(PhyMemPart *part, SceSize psize,
 	part->freeSize = psize;
 	part->freeSizeMin = psize;
 	for (; segment != NULL; segment = segment->next) {
-		ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, segment->psize);
-		ksceKernelAtomicAddAndGet32(&part->freeSizeMin, segment->psize);
+		SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
+		SceCpuForDriver_5F6A8743(&part->freeSizeMin, segment->psize);
 	}
 }
 
@@ -530,8 +527,8 @@ int PhyMemPartInitCdramRaw(PhyMemPart *part, uintptr_t pbase, SceSize psize)
 	part->useCount = 1;
 	if (segment != NULL) {
 		do {
-			ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, segment->psize);
-			ksceKernelAtomicAddAndGet32(&part->freeSizeMin, segment->psize);
+			SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
+			SceCpuForDriver_5F6A8743(&part->freeSizeMin, segment->psize);
 			segment = segment->next;
 		} while (segment != NULL);
 		flags = part->flags | PHYMEM_PART_ACTIVE;
@@ -672,13 +669,13 @@ int PhyMemPartGetFreeSizeRaw(PhyMemPart *part, SceSize *freeSize)
 /* the free size less size, lowering the low-water mark with it */
 static inline void PhyMemPartSubFreeSize(PhyMemPart *part, SceSize size)
 {
-	SceInt32 freeSize = ksceKernelAtomicSubAndGet32((SceInt32 *)&part->freeSize, size), low;
+	SceInt32 freeSize = SceCpuForDriver_A4884C4E(&part->freeSize, size), low;
 
 	do {
 		low = part->freeSizeMin;
 		if (low <= freeSize)
 			break;
-	} while (ksceKernelAtomicCompareAndSet32(&part->freeSizeMin, low, freeSize) != low);
+	} while (SceCpuForDriver_CDA96E81(&part->freeSizeMin, low, freeSize) != low);
 }
 
 #if FW_DEBUG
@@ -709,11 +706,11 @@ int PhyMemPartCdramFreeCore(PhyMemPart *part, uintptr_t pa, SceSize size)
 	int flags, ret;
 
 	PhyMemPartRefer(part);
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	flags = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = PhyMemLowFree(part->segments->phyMemLow, pa, size);
 		if (ret >= 0) {
-			ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, size);
+			SceCpuForDriver_5F6A8743(&part->freeSize, size);
 #if FW_DEBUG
 			PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", size);
 #endif
@@ -722,7 +719,7 @@ int PhyMemPartCdramFreeCore(PhyMemPart *part, uintptr_t pa, SceSize size)
 		SCE_DBG_PRINTF(0xb, 4455, "pPhyMemPart is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
 	PhyMemPartRelease(part);
 	return ret;
 }
@@ -733,7 +730,7 @@ int PhyMemPartCdramAllocCore(PhyMemPart *part, SceSize size, SceSize alignment, 
 	int flags, ret;
 
 	PhyMemPartRefer(part);
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	flags = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = PhyMemLowAlloc(part->segments->phyMemLow, size, alignment, 1, pa, &allocated);
 		if (ret < 0) {
@@ -748,7 +745,7 @@ int PhyMemPartCdramAllocCore(PhyMemPart *part, SceSize size, SceSize alignment, 
 		SCE_DBG_PRINTF(0xb, 4422, "pPhyMemPart is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
 	PhyMemPartRelease(part);
 	return ret;
 }
@@ -803,7 +800,7 @@ int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDeb
 	int flags, ret, i, links, n;
 
 	PhyMemPartRefer(part);
-	flags = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	flags = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4606, "PhyMemPart is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
@@ -898,7 +895,7 @@ int PhyMemPartGetInfoForDebugger(PhyMemPart *part, SceKernelPhyMemPartInfoForDeb
 	}
 	ret = 0;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, flags);
 	PhyMemPartRelease(part);
 	return ret;
 }
@@ -1351,7 +1348,7 @@ static inline PhyPage *PhyMemPartCpuCacheAllocRaw(PhyMemPart *part)
 	PhyPage *page;
 	int intr, i;
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (part->cpuCache != NULL) {
 		cache = &part->cpuCache[SceCpuId()];
 		if (cache != NULL && cache->count != 0) {
@@ -1360,13 +1357,13 @@ static inline PhyPage *PhyMemPartCpuCacheAllocRaw(PhyMemPart *part)
 				if (page != NULL) {
 					cache->count--;
 					cache->pages[i] = NULL;
-					ksceKernelCpuResumeIntr(intr);
+					sceKernelCpuResumeIntr(intr);
 					return page;
 				}
 			}
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return NULL;
 }
 
@@ -1380,7 +1377,7 @@ static inline int PhyMemPartAllocPhyPageBuddyRaw(PhyMemPart *part, SceSize size,
 
 	if (flags & ~0x33)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (size >= 0x100000) {
 		ret = PhyMemPartAllocPhyPage1MCoreAssertRaw2(part, size, flags | 1, pPage, &pindex);
 		if (ret < 0)
@@ -1483,7 +1480,7 @@ allocated:
 #if FW_DEBUG
 	PhyMemPartCheckRaw(part);
 #endif
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	return 0;
 
 failed_clear:
@@ -1492,7 +1489,7 @@ failed:
 #if FW_DEBUG
 	PhyMemPartCheckRaw(part);
 #endif
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	PhyMemPartCannotAllocateRaw(part, size, "Final");
 	return ret;
 }
@@ -1538,7 +1535,7 @@ static inline void PhyMemPartCheckPhyPageR1(PhyMemPart *part, PhyPage *page)
 	PhyMemSegment *segment;
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	switch (PHYMEM_PART_TYPE(part)) {
 	case PHYMEM_PART_TYPE_LPDDR2:
 		for (segment = part->segments; segment != NULL; segment = segment->next)
@@ -1552,7 +1549,7 @@ static inline void PhyMemPartCheckPhyPageR1(PhyMemPart *part, PhyPage *page)
 		SCE_DBG_ASSERT_FUNC(0, 4156, "PhyMemPartCheckPhyPageR1");
 		break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 }
 #endif
 
@@ -1562,7 +1559,7 @@ static inline int PhyMemPartCpuCacheFreeRaw(PhyMemPart *part, PhyPage *page)
 	PhyMemPartCpuCache *cache;
 	int intr, i;
 
-	intr = ksceKernelCpuSuspendIntr();
+	intr = SceCpuForDriver_821FC0EE();
 	if (part->cpuCache != NULL) {
 		cache = &part->cpuCache[SceCpuId()];
 		if (cache != NULL && cache->count < cache->max) {
@@ -1570,13 +1567,13 @@ static inline int PhyMemPartCpuCacheFreeRaw(PhyMemPart *part, PhyPage *page)
 				if (cache->pages[i] == NULL) {
 					cache->pages[i] = page;
 					cache->count++;
-					ksceKernelCpuResumeIntr(intr);
+					sceKernelCpuResumeIntr(intr);
 					return 1;
 				}
 			}
 		}
 	}
-	ksceKernelCpuResumeIntr(intr);
+	sceKernelCpuResumeIntr(intr);
 	return 0;
 }
 
@@ -1791,7 +1788,7 @@ int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page)
 		goto out;
 	}
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	switch (page->info & PHYPAGE_SIZED_MASK) {
 	case PHYPAGE_KIND_BUDDY:
 		ret = PhyMemPartFreePhyPageBuddyRaw(part, page);
@@ -1810,7 +1807,7 @@ int PhyMemPartFreePhyPage(PhyMemPart *part, PhyPage *page)
 		ret = SCE_KERNEL_ERROR_ERROR;
 		goto unlock;
 	}
-	ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, size);
+	SceCpuForDriver_5F6A8743(&part->freeSize, size);
 #if FW_DEBUG
 	PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", size);
 #endif
@@ -1818,7 +1815,7 @@ unlock:
 #if FW_DEBUG
 	PhyMemPartCheckRaw(part);
 #endif
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 out:
 	PhyMemPartRelease(part);
 	return ret;
@@ -1831,11 +1828,11 @@ SceSize PhyMemPartGetFreeSizeInternal(PhyMemPart *part)
 	int intr;
 
 	PhyMemPartRefer(part);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE))
 		SCE_DBG_PRINTF(0xb, 4368, "Warnig: pPhyMemPart is not active\n");
 	PhyMemPartGetFreeSizeRaw(part, &size);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	PhyMemPartRelease(part);
 	return size;
 }
@@ -1897,7 +1894,7 @@ int PhyMemPartGetInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore *info)
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		PhyMemPartGetInfoCoreRaw(part, info);
 		ret = 0;
@@ -1905,7 +1902,7 @@ int PhyMemPartGetInfoCore(PhyMemPart *part, SceKernelPhyMemPartInfoCore *info)
 		SCE_DBG_PRINTF(0xb, 4560, "pPhyMemPart is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	PhyMemPartRelease(part);
 	return ret;
 }
@@ -1952,13 +1949,13 @@ static inline void PhyMemPartRecoveryRaw(PhyMemPart *part)
 
 	SCE_DBG_PRINTF(0xb, 3222, "()\n");
 	if (part->cpuCache != NULL) {
-		ksceKernelFree(part->cpuCache);
+		SceSysmemForKernel_4233C16D(part->cpuCache);
 		part->cpuCache = NULL;
 	}
 	for (segment = part->segments; segment != NULL; segment = next) {
 		PhyMemLowMainFree(segment->pbase, segment->psize);
 		next = segment->next;
-		ksceKernelFree(segment);
+		SceSysmemForKernel_4233C16D(segment);
 	}
 	part->segments = NULL;
 }
@@ -2014,7 +2011,7 @@ int CreatePhyMemPartByPbase(const char *name, SceUInt32 type, uintptr_t pbase, S
 				if (segment != part->segments) {
 					SCE_DBG_PRINTF(0xb, 3432,
 						       "->FreePhyMemPartSegmentObject(p1=%p)\n", segment);
-					ksceKernelFree(segment);
+					SceSysmemForKernel_4233C16D(segment);
 				}
 				goto recovery;
 			}
@@ -2026,13 +2023,13 @@ int CreatePhyMemPartByPbase(const char *name, SceUInt32 type, uintptr_t pbase, S
 				if (segment != part->segments) {
 					SCE_DBG_PRINTF(0xb, 3445,
 						       "->FreePhyMemPartSegmentObject(p1=%p)\n", segment);
-					ksceKernelFree(segment);
+					SceSysmemForKernel_4233C16D(segment);
 				}
 				goto recovery;
 			}
 			if (segment != part->segments) {
 				prev->next = segment;
-				ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, segment->psize);
+				SceCpuForDriver_5F6A8743(&part->freeSize, segment->psize);
 			}
 			psize -= chunkSize;
 			SCE_DBG_PRINTF(0xb, 3458, "prest=0x%08x\n", psize);
@@ -2077,7 +2074,7 @@ recovery:
 	PhyMemPartRecoveryRaw(part);
 	PhyMemPartRelease(part);
 	SetMemory32Core(part, PHYMEM_PART_DEAD_FILL, sizeof(*part));
-	ksceKernelFree(part);
+	SceSysmemForKernel_4233C16D(part);
 	*out = NULL;
 	return ret;
 failed:
@@ -2144,26 +2141,26 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 	if (s_phyMemPartHook != NULL)
 		s_phyMemPartHook->delete(part, __builtin_return_address(0));
 #endif
-	if (ksceKernelAtomicSubAndGet32(&part->useCount, 1) > 0)
+	if (SceCpuForDriver_A4884C4E(&part->useCount, 1) > 0)
 		return 0;
 	/* no reference may be left */
-	while ((ret = ksceKernelAtomicCompareAndSet32((SceInt32 *)&part->refCount, 0, -1)) != 0)
+	while ((ret = SceCpuForDriver_CDA96E81((SceInt32 *)&part->refCount, 0, -1)) != 0)
 		SCE_DBG_PRINTF(3, 4845, "PhyMemPartInvalidate failed 0x%08x, 0x%08x\n", ret,
 			       part->refCount);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4851, "pPhyMemPart is not active\n");
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 		return SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
 	if (part->type & 2) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 		return 0;
 	}
 	if (part->type & 4) {
 		SCE_DBG_PRINTF(0xb, 4872, "Call Recycle for [%s]\n", part->name);
 		PhyMemPartRecycleRaw(part);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 		return 0;
 	}
 	if ((SceSize)part->freeSize != PhyMemPartGetPsize(part)) {
@@ -2174,7 +2171,7 @@ int sceKernelDeletePhyMemPart(PhyMemPart *part)
 	PhyMemPartDeleteRaw(part);
 	GUIDUnregisterChecked(part->uid);
 	part->flags &= ~PHYMEM_PART_ACTIVE;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 #if FW_DEBUG
 	if (s_phyMemPartHook != NULL)
 		s_phyMemPartHook->delete(part, __builtin_return_address(0));
@@ -2194,14 +2191,14 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 	SCE_DBG_PRINTF_LEVEL(2, 0xb, 4909, "(%p [%s])\n", part, PhyMemPartGetName(part));
 	if (part == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (ksceKernelAtomicSubAndGet32(&part->useCount, 1) > 0)
+	if (SceCpuForDriver_A4884C4E(&part->useCount, 1) > 0)
 		return 0;
 	while (part->refCount != 0)
 		SCE_DBG_PRINTF(3, 4929, "PhyMemPartGetARCount failed 0x%08x\n", part->refCount);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 4935, "pPhyMemPart is not active\n");
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 		return SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
 	if ((SceSize)part->freeSize != PhyMemPartGetPsize(part)) {
@@ -2219,7 +2216,7 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 			PhyMemLowMainFree(segment->pbase, segment->psize);
 			PhyMemPartSubFreeSize(part, segment->psize);
 			next = segment->next;
-			ksceKernelFree(segment);
+			SceSysmemForKernel_4233C16D(segment);
 		}
 	} else {
 		SCE_DBG_ASSERT_FAIL(4968);
@@ -2227,7 +2224,7 @@ int sceKernelResetPhyMemPart(PhyMemPart *part)
 	PhyMemPartRecycleRaw(part);
 	if (part == s_phyPartGame)
 		s_phyMemPartGrownSize = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	SCE_DBG_PRINTF_LEVEL(2, 0xb, 4981, "<-SCE_OK\n");
 	return 0;
 }
@@ -2240,7 +2237,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (!(part->flags & PHYMEM_PART_ACTIVE)) {
 		SCE_DBG_PRINTF(0xb, 5008, "pPMP is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
@@ -2256,7 +2253,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 		ret = PhyMemPartCreatePhyMemPartSegmentByPbaseRaw(part, segment, pbase, psize,
 								  &allocated);
 		if (ret < 0) {
-			ksceKernelFree(segment);
+			SceSysmemForKernel_4233C16D(segment);
 		} else {
 			for (last = part->segments; last->next != NULL; last = last->next)
 				;
@@ -2264,7 +2261,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 			ret = PhyMemPartAddFreePhyPage1MRaw(part,
 							    PhyMemSegmentGetFreePhyPage1M(segment));
 			if (ret >= 0) {
-				ksceKernelAtomicAddAndGet32((SceInt32 *)&part->freeSize, psize);
+				SceCpuForDriver_5F6A8743(&part->freeSize, psize);
 #if FW_DEBUG
 				PhyMemPartCheckAndFixFreeSizeRaw(part, "Add", psize);
 #endif
@@ -2273,7 +2270,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 				goto out;
 			}
 			SCE_DBG_PRINTF(0xb, 5054, "PhyMemPartAddFreePhyPage1MRaw failed 0x%08x\n", ret);
-			ksceKernelFree(segment);
+			SceSysmemForKernel_4233C16D(segment);
 			last->next = NULL;
 		}
 		if (ret == SCE_KERNEL_ERROR_CANNOT_ALLOC_PHYMEMLOW)
@@ -2288,7 +2285,7 @@ int sceKernelGrowPhyMemPartByPbase(PhyMemPart *part, uintptr_t pbase, SceSize ps
 		break;
 	}
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	PhyMemPartRelease(part);
 	return ret;
 }
@@ -2324,7 +2321,7 @@ SceInt32 SceSysmemForKernel_6D563733(PhyMemPart *part)
 	SceInt32 count;
 
 	PhyMemPartRefer(part);
-	count = ksceKernelAtomicAddAndGet32(&part->useCount, 1);
+	count = SceCpuForDriver_5F6A8743(&part->useCount, 1);
 	PhyMemPartRelease(part);
 	return count;
 }
@@ -2348,7 +2345,7 @@ int sceKernelShowPhyMemPart(PhyMemPart *part)
 	int intr, ret;
 
 	PhyMemPartRefer(part);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&part->lock);
+	intr = SceCpuForDriver_D32ACE9E(&part->lock);
 	if (part->flags & PHYMEM_PART_ACTIVE) {
 		ret = 0;
 		PhyMemPartShowFreeRaw(part);
@@ -2356,7 +2353,7 @@ int sceKernelShowPhyMemPart(PhyMemPart *part)
 		SCE_DBG_PRINTF(0xb, 5172, "pPMP is not active\n");
 		ret = SCE_KERNEL_ERROR_PHYMEMPART_NOT_ACTIVE;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&part->lock, intr);
 	PhyMemPartRelease(part);
 	return ret;
 #else
@@ -2377,13 +2374,13 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 		SCE_DBG_ASSERT_FAIL(5215);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	}
-	ret = ksceGUIDGetObject(uid, (SceObjectBase **)&part);
+	ret = SceSysmemForDriver_0FC24464(uid, (SceObjectBase **)&part);
 	if (ret >= 0)
 		ret = PhyMemPartGetInfoForDebugger(part, info);
 	return ret;
 }
 
-int ksceKernelCheckDipsw(unsigned int bit);
+int SceDipswForDriver_A98FC2FD(unsigned int bit);
 int SceSysmemForKernel_BF275C5A(SceUID guid, SceClass *cls, const char *name,
 				SceObjectBase *object);
 int PhyMemLowStaticInit(void);
@@ -2435,15 +2432,15 @@ int PhyMemModuleStartPhase2(const UIDManager *manager)
 	int ret;
 
 	s_phyMemPartClass = &s_phyMemPartClassBody;
-	ret = ksceUIDClassInitClass(&s_phyMemPartClassBody, "SceUIDPhyMemPartClass",
-				    ksceKernelGetUIDClass(), sizeof(PhyMemPart), NULL, NULL);
+	ret = SceSysmemForDriver_61317102(&s_phyMemPartClassBody, "SceUIDPhyMemPartClass",
+				    SceSysmemForDriver_85336A1C(), sizeof(PhyMemPart), NULL, NULL);
 	if (ret < 0)
 		SCE_PANIC(5406);
 	ret = SceSysmemForKernel_BF275C5A(SCE_KERNEL_PHYMEMPART_ID, s_phyMemPartClass, NULL,
 					  &s_phyPartKernel->base);
 	if (ret < 0)
 		return ret;
-	if (ksceKernelCheckDipsw(0xd2)) {
+	if (SceDipswForDriver_A98FC2FD(0xd2)) {
 		ret = SceSysmemForKernel_BF275C5A(SCE_KERNEL_PHYMEMPART_TOOL_ID, s_phyMemPartClass, NULL,
 						  &s_phyPartTool->base);
 		if (ret < 0)

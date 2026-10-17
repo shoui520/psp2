@@ -11,7 +11,7 @@
  * The line is Sony's original source line, given explicitly at each site. The
  * hashes are filled in after linking by tools/dbginfo.py from the .sce_dbgsrc
  * side table. Release firmwares keep only the hashes (file/line/func are 0) and
- * only for calls that remain, e.g. ksceKernelPanic. (vitasdk's SceKernelDebugInfo puts
+ * only for calls that remain, e.g. SceDebugForDriver_391B5B74. (vitasdk's SceKernelDebugInfo puts
  * func before file; the records in Sony's modules are file, line, func.)
  *
  * Release firmwares (FW_DEBUG == 0) compile all of it out.
@@ -31,10 +31,45 @@ typedef struct SceKernelDebugInfo {
 	const char *func;
 } SceKernelDebugInfo;
 
-int ksceKernelPrintfLevelWithInfo(SceUInt32 level, SceUInt32 flags,
+typedef struct ThreadSyscallFrame ThreadSyscallFrame;
+typedef struct SceExcpmgrContext SceExcpmgrContext;
+typedef struct SceKernelBacktraceFrameForKernel DebugFrame;
+
+/* the services that report a fault (all optional) */
+typedef int (*DebugBacktraceHandler)(SceUID thid, DebugFrame *frames, SceSize size,
+				     SceSize *count, SceUInt32 flags);
+typedef int (*DebugPrintBacktraceHandler)(SceUID pid, const DebugFrame *frames,
+					  SceSize count, const void *lr);
+typedef int (*DebugCrashDumpHandler)(int type, SceSize size, void *dump);
+typedef void (*DebugFaultHandler)(SceUInt64 time, int cpu, SceUInt32 fileHash,
+				  SceUInt32 lineHash, SceUInt32 funcHash, int reserved0, int reserved1,
+				  const void *caller, const void *lr);
+typedef int (*EventLogHandler)(const void *entry, SceSize size);
+
+/* the exception dump's header has no return addresses */
+typedef struct DebugExceptionDumpHeader {
+	SceSize size;
+	SceUID pid;
+	SceUID tid;
+	int cpu;
+	SceUInt64 time;
+	SceUInt32 fileHash;
+	SceUInt32 lineHash;
+	SceUInt32 funcHash;
+	SceUInt32 kernelFrames;
+	SceUInt32 userFrames;
+	SceSize frameSize;
+	SceUInt32 registerWords;
+	SceUInt32 syscallWords;
+} DebugExceptionDumpHeader;
+
+/* vitasdk: ksceKernelPrintfLevelWithInfo */
+int SceDebugForDriver_D9703808(SceUInt32 level, SceUInt32 flags,
 				  const SceKernelDebugInfo *info, const char *fmt, ...);
-int ksceKernelGetAssertLevel(void) __attribute__((pure));	/* Sony's: consecutive checks share one call */
-void ksceKernelAssertLevel(SceUInt32 level, SceBool cond,
+/* vitasdk: ksceKernelGetAssertLevel */
+int SceDebugForDriver_374B7868(void) __attribute__((pure));	/* Sony's: consecutive checks share one call */
+/* vitasdk: ksceKernelAssertLevel */
+void SceDebugForDriver_FD753E7A(SceUInt32 level, SceBool cond,
 			   const SceKernelDebugInfo *info, const void *lr);
 
 /* where a record's hashes come from; non-allocated, read by tools/dbginfo.py */
@@ -83,20 +118,23 @@ typedef struct SceKernelDebugInfoSource {
 
 #define SCE_DBGINFO(_line)	SCE_DBGINFO_FUNC(_line, __func__)
 
-void ksceKernelPanic(const SceKernelDebugInfo *info, const void *lr) __attribute__((noreturn));
-void ksceKernelAssert(SceBool cond, const SceKernelDebugInfo *info, const void *lr);
-void ksceKernelPrintfPanic(const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...)
-	__attribute__((noreturn));
+/* vitasdk: ksceKernelPanic */
+void SceDebugForDriver_391B5B74(const SceKernelDebugInfo *info, const void *lr) __attribute__((noreturn));
+/* vitasdk: ksceKernelAssert */
+void SceDebugForDriver_35A35322(SceBool cond, const SceKernelDebugInfo *info, const void *lr);
+void SceDebugForDriver_00CCE39C(const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...)
+	__attribute__((noreturn));	/* vitasdk: ksceKernelPrintfPanic */
 
-int ksceKernelPrintf(const char *fmt, ...);
-int ksceKernelRegisterKprintfHandler(int (*handler)(int unk, const char *fmt, va_list ap),
+int SceDebugForDriver_391B74B7(const char *fmt, ...);	/* vitasdk: ksceKernelPrintf */
+/* vitasdk: ksceKernelRegisterKprintfHandler */
+int SceDebugForKernel_88AD6D0C(int (*handler)(int unk, const char *fmt, va_list ap),
 				     void *argp);
-int ksceKernelPrintfWithInfo(SceUInt32 level, const SceKernelDebugInfo *info, const char *fmt, ...);
-/*
- * ksceKernelPrintfAssertLevel is not declared here: modules declare it
- * themselves (with differing return types); users of SCE_DBG_ASSERT_PRINTF
- * need a declaration in scope.
- */
+/* vitasdk: ksceKernelPrintfWithInfo */
+int SceDebugForDriver_02B04343(SceUInt32 level, const SceKernelDebugInfo *info, const char *fmt, ...);
+/* int: appmgr returns its result, though sysmem's function sets none */
+/* vitasdk: ksceKernelPrintfAssertLevel */
+int SceDebugForDriver_821A2D59(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
+			       const void *lr, const char *fmt, ...);
 
 /*
  * A line of Sony's source that moved between the 3.6x sources (3.63, 3.65)
@@ -104,62 +142,62 @@ int ksceKernelPrintfWithInfo(SceUInt32 level, const SceKernelDebugInfo *info, co
  */
 #define SCE_LINE(_line36x, _line400)	(FW_VERSION >= 0x04000000 ? (_line400) : (_line36x))
 
-/* ksceKernelPrintfWithInfo(level, ...): compiled in on every firmware */
+/* SceDebugForDriver_02B04343(level, ...): compiled in on every firmware */
 #define SCE_PRINTF_WITH_INFO(_level, _line, _fmt, ...)			\
-	ksceKernelPrintfWithInfo((_level), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
+	SceDebugForDriver_02B04343((_level), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
 
 /* the same in a function Sony named differently */
 #define SCE_PRINTF_WITH_INFO_FUNC(_level, _line, _func, _fmt, ...)	\
-	ksceKernelPrintfWithInfo((_level), SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
+	SceDebugForDriver_02B04343((_level), SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
 
 /* kernel panic: compiled in on every firmware */
 #define SCE_PANIC(_line)						\
-	ksceKernelPanic(SCE_DBGINFO(_line), __builtin_return_address(0))
+	SceDebugForDriver_391B5B74(SCE_DBGINFO(_line), __builtin_return_address(0))
 
 /* the same in a helper inlined into another function, under the helper's name */
 #define SCE_PANIC_FUNC(_line, _func)					\
-	ksceKernelPanic(SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
+	SceDebugForDriver_391B5B74(SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
 
 /* kernel panic with a message */
 #define SCE_PANIC_PRINTF(_line, _fmt, ...)				\
-	ksceKernelPrintfPanic(SCE_DBGINFO(_line), __builtin_return_address(0),	\
+	SceDebugForDriver_00CCE39C(SCE_DBGINFO(_line), __builtin_return_address(0),	\
 			      _fmt, ##__VA_ARGS__)
 
 /* the same in a helper inlined into another function, under the helper's name */
 #define SCE_PANIC_PRINTF_FUNC(_line, _func, _fmt, ...)			\
-	ksceKernelPrintfPanic(SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0), \
+	SceDebugForDriver_00CCE39C(SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0), \
 			      _fmt, ##__VA_ARGS__)
 
 #if FW_DEBUG
 
-/* ksceKernelPrintfWithInfo(level, ...), compiled in on debug firmwares only */
+/* SceDebugForDriver_02B04343(level, ...), compiled in on debug firmwares only */
 #define SCE_DBG_PRINTF_WITH_INFO(_level, _line, _fmt, ...)		\
-	ksceKernelPrintfWithInfo((_level), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
+	SceDebugForDriver_02B04343((_level), SCE_DBGINFO(_line), _fmt, ##__VA_ARGS__)
 
-/* ksceKernelPrintfLevelWithInfo(1, flags, ...) */
+/* SceDebugForDriver_D9703808(1, flags, ...) */
 #define SCE_DBG_PRINTF(_flags, _line, _fmt, ...)			\
-	ksceKernelPrintfLevelWithInfo(1, (_flags), SCE_DBGINFO(_line),	\
+	SceDebugForDriver_D9703808(1, (_flags), SCE_DBGINFO(_line),	\
 				      _fmt, ##__VA_ARGS__)
 
-/* ksceKernelPrintfLevelWithInfo(level, flags, ...) */
+/* SceDebugForDriver_D9703808(level, flags, ...) */
 #define SCE_DBG_PRINTF_LEVEL(_level, _flags, _line, _fmt, ...)		\
-	ksceKernelPrintfLevelWithInfo((_level), (_flags), SCE_DBGINFO(_line),	\
+	SceDebugForDriver_D9703808((_level), (_flags), SCE_DBGINFO(_line),	\
 				      _fmt, ##__VA_ARGS__)
 
-/* ksceKernelAssertLevel(level, cond, info, lr) */
+/* SceDebugForDriver_FD753E7A(level, cond, info, lr) */
 #define SCE_DBG_ASSERT_LEVEL(_level, _cond, _line)			\
-	ksceKernelAssertLevel((_level), (_cond), SCE_DBGINFO(_line),	\
+	SceDebugForDriver_FD753E7A((_level), (_cond), SCE_DBGINFO(_line),	\
 			      __builtin_return_address(0))
 
 /* unconditional assertion failure (the condition is already known false) */
-/* ksceKernelAssert(cond, info, lr) */
+/* SceDebugForDriver_35A35322(cond, info, lr) */
 #define SCE_DBG_ASSERT(_cond, _line)					\
-	ksceKernelAssert((_cond), SCE_DBGINFO(_line), __builtin_return_address(0))
+	SceDebugForDriver_35A35322((_cond), SCE_DBGINFO(_line), __builtin_return_address(0))
 
 /* level 1 assertion, checked only while assertions are enabled */
 #define SCE_DBG_ASSERT_CHECK(_cond, _line) do {				\
-	if (ksceKernelGetAssertLevel() > 0)				\
-		ksceKernelAssertLevel(1, (_cond), SCE_DBGINFO(_line),	\
+	if (SceDebugForDriver_374B7868() > 0)				\
+		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line),	\
 				      __builtin_return_address(0));	\
 } while (0)
 
@@ -167,54 +205,54 @@ int ksceKernelPrintfWithInfo(SceUInt32 level, const SceKernelDebugInfo *info, co
 
 /* the same, reporting a return address the caller passed down */
 #define SCE_DBG_ASSERT_CHECK_LR(_cond, _line, _lr) do {			\
-	if (ksceKernelGetAssertLevel() > 0)				\
-		ksceKernelAssertLevel(1, (_cond), SCE_DBGINFO(_line), (_lr));	\
+	if (SceDebugForDriver_374B7868() > 0)				\
+		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO(_line), (_lr));	\
 } while (0)
 
 /* level _level assertion, checked only while assertions of that level are enabled */
 #define SCE_DBG_ASSERT_LEVEL_CHECK(_level, _cond, _line) do {		\
-	if (ksceKernelGetAssertLevel() >= (_level))			\
-		ksceKernelAssertLevel((_level), (_cond), SCE_DBGINFO(_line),	\
+	if (SceDebugForDriver_374B7868() >= (_level))			\
+		SceDebugForDriver_FD753E7A((_level), (_cond), SCE_DBGINFO(_line),	\
 				      __builtin_return_address(0));	\
 } while (0)
 
 /* level 1 assertion with a message, checked only while assertions are enabled */
 #define SCE_DBG_ASSERT_PRINTF(_cond, _line, _fmt, ...) do {		\
-	if (ksceKernelGetAssertLevel() > 0)				\
-		ksceKernelPrintfAssertLevel(1, (_cond), SCE_DBGINFO(_line),	\
+	if (SceDebugForDriver_374B7868() > 0)				\
+		SceDebugForDriver_821A2D59(1, (_cond), SCE_DBGINFO(_line),	\
 					    __builtin_return_address(0), _fmt,	\
 					    ##__VA_ARGS__);			\
 } while (0)
 
-/* ksceKernelPrintfAssertLevel(level, cond, ...), checked whatever the assert level */
+/* SceDebugForDriver_821A2D59(level, cond, ...), checked whatever the assert level */
 #define SCE_DBG_ASSERT_PRINTF_LEVEL(_level, _cond, _line, _fmt, ...)		\
-	ksceKernelPrintfAssertLevel((_level), (_cond), SCE_DBGINFO(_line),	\
+	SceDebugForDriver_821A2D59((_level), (_cond), SCE_DBGINFO(_line),	\
 				    __builtin_return_address(0), _fmt, ##__VA_ARGS__)
 
 /* the same in a helper inlined into _func, sharing one record over all its copies */
 #define SCE_DBG_PRINTF_FUNC(_flags, _line, _func, _fmt, ...)		\
-	ksceKernelPrintfLevelWithInfo(1, (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
+	SceDebugForDriver_D9703808(1, (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
 				      _fmt, ##__VA_ARGS__)
 #define SCE_DBG_ASSERT_FUNC(_cond, _line, _func)			\
-	ksceKernelAssert((_cond), SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
+	SceDebugForDriver_35A35322((_cond), SCE_DBGINFO_FUNC(_line, _func), __builtin_return_address(0))
 #define SCE_DBG_PRINTF_LEVEL_FUNC(_level, _flags, _line, _func, _fmt, ...)	\
-	ksceKernelPrintfLevelWithInfo((_level), (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
+	SceDebugForDriver_D9703808((_level), (_flags), SCE_DBGINFO_FUNC(_line, _func),	\
 				      _fmt, ##__VA_ARGS__)
 #define SCE_DBG_ASSERT_PRINTF_FUNC(_cond, _line, _func, _fmt, ...) do {	\
-	if (ksceKernelGetAssertLevel() > 0)				\
-		ksceKernelPrintfAssertLevel(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
+	if (SceDebugForDriver_374B7868() > 0)				\
+		SceDebugForDriver_821A2D59(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 					    __builtin_return_address(0), _fmt,	\
 					    ##__VA_ARGS__);			\
 } while (0)
 #define SCE_DBG_PRINTF_WITH_INFO_FUNC(_level, _line, _func, _fmt, ...)	\
-	ksceKernelPrintfWithInfo((_level), SCE_DBGINFO_FUNC(_line, _func),	\
+	SceDebugForDriver_02B04343((_level), SCE_DBGINFO_FUNC(_line, _func),	\
 				 _fmt, ##__VA_ARGS__)
 #define SCE_DBG_ASSERT_LEVEL_FUNC(_level, _cond, _line, _func)		\
-	ksceKernelAssertLevel((_level), (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
+	SceDebugForDriver_FD753E7A((_level), (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 			      __builtin_return_address(0))
 #define SCE_DBG_ASSERT_CHECK_FUNC(_cond, _line, _func) do {		\
-	if (ksceKernelGetAssertLevel() > 0)				\
-		ksceKernelAssertLevel(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
+	if (SceDebugForDriver_374B7868() > 0)				\
+		SceDebugForDriver_FD753E7A(1, (_cond), SCE_DBGINFO_FUNC(_line, _func),	\
 				      __builtin_return_address(0));	\
 } while (0)
 
@@ -244,10 +282,37 @@ int ksceKernelPrintfWithInfo(SceUInt32 level, const SceKernelDebugInfo *info, co
 /* SceDebugForKernel_3A21194E: one character to the kernel console */
 int SceDebugForKernel_3A21194E(int c);
 
-int ksceKernelEnableCrashDump(SceBool enable);
-int ksceKernelGetTtyInfo(char *buf, SceSize size);
+int SceDebugForKernel_A465A31A(SceBool enable);	/* vitasdk: ksceKernelEnableCrashDump */
+int SceDebugForDriver_62466B0A(char *buf, SceSize size);	/* vitasdk: ksceKernelGetTtyInfo */
 
-SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count);
-int ksceKernelDebugPutchar(int character);
-int ksceKernelPrintfLevel(int level, const char *format, ...);
-int ksceKernelVprintf(const char *format, va_list arguments);
+/* vitasdk: ksceEventLogGetInfo */
+SceSSize SceDebugForDriver_CC5365D3(void *buffer, SceSize size, SceUInt32 *count);
+int SceDebugForKernel_2AABAEDA(int character);	/* vitasdk: ksceKernelDebugPutchar */
+/* vitasdk: ksceKernelPrintfLevel */
+int SceDebugForDriver_1A3F2AA4(int level, const char *format, ...);
+/* vitasdk: ksceKernelVprintf */
+int SceDebugForDriver_411C0733(const char *format, va_list arguments);
+
+/* vitasdk: ksceKernelVprintfLevel */
+int SceDebugForDriver_611A158B(int level, const char *format, va_list arguments);
+/* vitasdk: ksceEventLogPut */
+int SceDebugForDriver_912CF2BA(SceUID pid, SceUID tid, SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *data, SceSize size);
+int SceDebugForKernel_0EDA5174(uint32_t value);
+/* vitasdk: ksceKernelRegisterDebugPutcharHandler */
+uintptr_t SceDebugForKernel_22546577(uintptr_t handler, uintptr_t argument);
+void SceDebugForKernel_38F1A352(DebugPrintBacktraceHandler handler);
+void SceDebugForKernel_4C62F8CC(DebugCrashDumpHandler handler);
+SceSize SceDebugForKernel_5D6F0CFC(DebugExceptionDumpHeader *dump, int cpu, SceUInt64 time, const SceKernelDebugInfo *info, const SceExcpmgrContext *context, SceUInt32 arg);
+void SceDebugForKernel_67E9D1EC(DebugFaultHandler handler);
+void SceDebugForKernel_78027203(EventLogHandler handler);
+uintptr_t SceDebugForKernel_8D474850(void);	/* vitasdk: ksceKernelGetDebugPutcharHandler */
+void SceDebugForKernel_91E7D24F(DebugBacktraceHandler handler);
+uint32_t SceDebugForKernel_A0CE3287(uint32_t level);	/* vitasdk: ksceKernelSetAssertLevel */
+void SceDebugForKernel_BCC8D0B2(SceUID pid, const ThreadSyscallFrame *frame, const SceUInt32 *result);
+uint32_t SceDebugForKernel_C5889385(uint32_t level);
+void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info, const SceExcpmgrContext *context, SceUInt32 arg, const char *type);
+void SceDebugForTZS_563B623D(const SceKernelDebugInfo *info, const void *lr);
+void SceDebugForTZS_618F89E6(SceUInt32 level, SceBool condition, const SceKernelDebugInfo *info, const void *caller);
+int SceDebugForTZS_D26EB4BB(SceUInt32 level, SceUInt32 flags, const SceKernelDebugInfo *info, const char *format, ...);
+int SceDebugForTZS_F851BA4F(void);
+int k_sceEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *data, SceSize size);

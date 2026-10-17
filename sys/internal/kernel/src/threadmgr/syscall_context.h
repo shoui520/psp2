@@ -9,13 +9,12 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include "private.h"
+#include <sysmem/sysroot.h>
 
 #define USERRO_IN_SYSCALL		0x00010000	/* TPIDRURO: serving a user syscall */
 #define SYSCALL_ERROR_BIT		0x40000000	/* set in errors returned to a syscall */
 #define THREADMGR_KERNEL_PID		0x10005
 #define SDK_VERSION_KERNEL		THREADMGR_KERNEL_SYSVER	/* kernel callers: the firmware's SDK (0x03650011 on 3.65) */
-
-int SceSysrootForDriver_CAE820B2(SceUID pid, SceUInt32 *sdkVersion);
 
 static inline int ThreadmgrIntrDisabled(void)
 {

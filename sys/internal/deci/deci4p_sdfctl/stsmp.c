@@ -5,7 +5,7 @@
  * packets are discarded.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
@@ -111,12 +111,12 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 	if (s_stsmp.tx.count == 0)
 		return;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
+		intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
 		if (s_stsmp.tx.count < 1)
 			break;
 		pkt = s_stsmp.tx.buf[s_stsmp.tx.read];
 		size = s_stsmp.tx.size[s_stsmp.tx.read];
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 		if (pkt->hdr.dst == SDFCTL_ROUTE_LOCAL || sdfctlTestStatus(SDFCTL_STATUS_CONNECTED)) {
 			ret = sceSDfCtlExSend(s_stsmp.sock, pkt, size);
 			if (ret < 0) {
@@ -126,7 +126,7 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 		} else {
 			SDFCTL_PRINTF(280, "no route (0x%04x)\n", pkt->hdr.dst);
 		}
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
+		intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
 		read = s_stsmp.tx.read;
 		count = s_stsmp.tx.count - 1;
 		next = read + 1;
@@ -135,11 +135,11 @@ static inline __attribute__((always_inline)) void _stsmpSend(void)
 		s_stsmp.tx.read = next;
 		s_stsmp.tx.size[read] = 0;
 		s_stsmp.tx.count = count;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 		if (s_stsmp.tx.count == 0)
 			return;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 	SDFCTL_PRINTF(270, "error: 0x%08x\n", SDFCTL_ERROR_QUEUE_EMPTY);
 }
 
@@ -187,9 +187,9 @@ static __attribute__((noinline, noclone)) int stsmpQueue(const void *pkt, SceSiz
 
 	if (size > STSMP_PACKET_MAX)
 		return SDFCTL_ERROR_INVALID_ARG;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_stsmpLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_stsmpLock);
 	if (s_stsmp.tx.count > STSMP_QUEUE - 1) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 		return SDFCTL_ERROR_QUEUE_FULL;
 	}
 	sdfctlMemcpy(s_stsmp.tx.buf[s_stsmp.tx.write], pkt, size);
@@ -201,7 +201,7 @@ static __attribute__((noinline, noclone)) int stsmpQueue(const void *pkt, SceSiz
 	s_stsmp.tx.count = count;
 	if (next > STSMP_QUEUE - 1)
 		s_stsmp.tx.write = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_stsmpLock, intr);
 	return ksceKernelSetEventFlag(s_stsmp.evf, STSMP_EVF_SEND);
 }
 
@@ -321,7 +321,8 @@ int stsmpInit(SDfCtlPd *pd)
 	}
 	s_stsmp.evf = uid;
 	SceSysrootForDriver_E541959B(setBootParameter);
-	SceSysrootForDriver_D56A2F3E(sendTargetStatus);
+	/* sysroot passes a second word, which the sender ignores */
+	SceSysrootForDriver_D56A2F3E((SysrootSendTargetStatus)sendTargetStatus);
 	ret = sdfctlSetProtocolStatus(pd, SDFCTL_PD_REGISTERED, 1);
 	if (ret < 0) {
 		SDFCTL_PRINTF(151, "SetProtocolStatus failed (0x%08x)\n", ret);
@@ -334,7 +335,7 @@ int stsmpInit(SDfCtlPd *pd)
 		SCE_DBG_ASSERT_CHECK_LR(0, 158, lr);
 		return ret;
 	}
-	ksceKernelRegisterSysEventHandler("SceDeci4pSDfCtl", stsmpSysEventHandler, NULL);
+	sceKernelRegisterSysEventHandler("SceDeci4pSDfCtl", stsmpSysEventHandler, NULL);
 	ret = ksceKernelStartThread(s_stsmp.thread, 0, NULL);
 	return ret < 0 ? ret : 0;
 }

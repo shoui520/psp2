@@ -7,6 +7,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <sysmem/sysroot.h>
 
 static inline SceUInt32 sceSyscallEnter(void)
 {
@@ -23,4 +24,3 @@ static inline void sceSyscallLeave(SceUInt32 t)
 }
 
 /* SceSysmem: a syscall that returns a 64-bit value says so first (sysroot.c) */
-void sceKernelApiDeclareTypeInt64(void);

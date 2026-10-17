@@ -2,13 +2,13 @@
  * SceDeci4pTtyp: the TTYP channels (see ttyp.h).
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/pm_mgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/pmmgr.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sysmem/debug.h>
@@ -22,7 +22,7 @@
 #define TTYP_PRINTF(_line, _fmt, ...)	SCE_PRINTF_WITH_INFO(0xf, _line, _fmt, ##__VA_ARGS__)
 /* in code the original inlined into _func */
 #define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	\
-	ksceKernelPrintfWithInfo(0xf, SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
+	SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(_line, _func), _fmt, ##__VA_ARGS__)
 #else
 #define TTYP_PRINTF(_line, _fmt, ...)	do { } while (0)
 #define TTYP_PRINTF_IN(_func, _line, _fmt, ...)	do { } while (0)
@@ -48,11 +48,11 @@ static SceUID s_heap;
 static TtypInput s_input[TTYP_CHANNELS];
 static TtypChannel s_channel[TTYP_CHANNELS];
 
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
 
-static const SceProcEventHandler s_procHandler = {
-	.size = sizeof(SceProcEventHandler),
+static const SceKernelProcEventHandler s_procHandler = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.exit = procExitHandler,
 	.kill = procKillHandler,
 };
@@ -99,9 +99,9 @@ TTYP_INLINE void ttypReleaseResource(TtypResource *r)
 {
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_resourceLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_resourceLock);
 	memset(r, 0, sizeof(*r));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_resourceLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_resourceLock, intr);
 	ksceKernelSignalSema(s_sema, 1);
 }
 
@@ -421,13 +421,13 @@ TTYP_INLINE int _prepareClose(SceUID pid)
 }
 
 /* name unknown */
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	return _prepareClose(pid);
 }
 
 /* name unknown */
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	return _prepareClose(pid);
 }
@@ -449,7 +449,7 @@ TTYP_INLINE int TtypInit(void)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.attr = 0x401;
 	heapOpt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	uid = ksceKernelCreateHeap("SceDeci4pTtyp", 0x1000, &heapOpt);
+	uid = SceSysmemForDriver_9328E0E8("SceDeci4pTtyp", 0x1000, &heapOpt);
 	if (uid < 0) {
 		TTYP_PRINTF(242, "CreateHeap failed (0x%08X)\n", uid);
 		return uid;
@@ -498,13 +498,13 @@ TTYP_INLINE int TtypInit(void)
 
 int TtypModuleStart(SceSize args, void *argp)
 {
-	if (!ksceKernelCheckDipsw(0xc2) || !ksceKernelCheckDipsw(0xc7)) {
+	if (!SceDipswForDriver_A98FC2FD(0xc2) || !SceDipswForDriver_A98FC2FD(0xc7)) {
 		SCE_DBG_PRINTF(0xb, 172, "disabled by dipsw\n");
 		return SCE_KERNEL_START_NO_RESIDENT;
 	}
 	if (TtypInit() < 0)
 		return SCE_KERNEL_START_FAILED;
-	if (ksceKernelRegisterProcEventHandler("SceDeci4pTtyp", &s_procHandler, 0) < 0)
+	if (sceKernelRegisterProcEventHandler("SceDeci4pTtyp", &s_procHandler, 0) < 0)
 		return SCE_KERNEL_START_FAILED;
 	return SCE_KERNEL_START_SUCCESS;
 }
@@ -777,7 +777,7 @@ int TtypWrite(int unit, const void *data, SceSize size, const SceUID *pid)
 	}
 
 	mode = 0;
-	kscePmMgrGetProductMode((SceProductMode *)&mode);
+	ScePmMgrForDriver_2AC815A2((SceProductMode *)&mode);
 	if (mode == 0) {
 		if (size != 0) {
 			if ((ch->flags & TTYP_CH_ENABLED) && !(ch->in->flags & TTYP_IN_STOPPED))
@@ -788,15 +788,15 @@ int TtypWrite(int unit, const void *data, SceSize size, const SceUID *pid)
 	} else if (mode == 1) {
 		for (i = 0; i < size; ) {
 			if (i + 1 < size && buf[i] == '\\' && buf[i + 1] == 'n') {
-				ksceKernelPrintf("\n");
+				SceDebugForDriver_391B74B7("\n");
 				i += 2;
 			} else {
-				ksceKernelPrintf("%c", buf[i]);
+				SceDebugForDriver_391B74B7("%c", buf[i]);
 				i++;
 			}
 		}
 	} else {
-		ksceKernelPrintf("unknown mode %x\n", mode);
+		SceDebugForDriver_391B74B7("unknown mode %x\n", mode);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 937);
 	}
 	ksceKernelUnlockMutex(ch->writeMutex, 1);

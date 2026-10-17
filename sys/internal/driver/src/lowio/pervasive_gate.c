@@ -10,13 +10,13 @@ static __attribute__((noinline)) int GateEnable(volatile uint32_t *reg,
 {
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous | mask;
 	LowioDmb();
 	(void)*reg;
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return (previous & mask) != 0;
 }
 
@@ -31,13 +31,13 @@ static __attribute__((noinline)) int GateDisable(volatile uint32_t *reg,
 {
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous & ~mask;
 	LowioDmb();
 	(void)*reg;
 	LowioDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return (previous & mask) != 0;
 }
 

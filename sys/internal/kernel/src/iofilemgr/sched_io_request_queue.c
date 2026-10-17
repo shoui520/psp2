@@ -44,7 +44,7 @@ IoRequestQueue *sceIoRequestQueueCreateIoRequestQueue(IoScheduler *sched, int pr
 {
 	IoRequestQueue *queue;
 
-	queue = ksceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*queue));
+	queue = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*queue));
 	if (queue != NULL) {
 		queue->sched = sched;
 		queue->priority = priority;
@@ -212,7 +212,7 @@ int sceIoRequestQueueAssignIoChunksToIoRequest(IoRequestQueue *queue, IoRequest 
 				if (!(req->mntOpt & 0x10000) ||
 						(req->type != IO_REQUEST_READ && req->type != IO_REQUEST_PREAD))
 					goto wholeChunk;
-				dipsw = ksceKernelCheckDipsw(231);
+				dipsw = SceDipswForDriver_A98FC2FD(231);
 				remain = req->ioRemain;
 				if (dipsw != 0)
 					goto wholeChunk;

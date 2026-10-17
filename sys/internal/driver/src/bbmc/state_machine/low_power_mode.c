@@ -81,7 +81,7 @@ int suspendGotoConnected(BbmcControl *control, BbmcMessage *message)
 
 	control->suspendError = (int)(completion | 0x80011600);
 	if (completion)
-		ksceKernelPanic(&dbg_suspendGotoConnected_L751,
+		SceDebugForDriver_391B5B74(&dbg_suspendGotoConnected_L751,
 			       __builtin_return_address(0));
 	step = lowPowerModeStep;
 	switch (step) {

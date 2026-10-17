@@ -1,10 +1,10 @@
 /* Hardware motion lifecycle and asynchronous device completions. */
 #include "motion_manager.h"
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <string.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
@@ -12,7 +12,7 @@
 #include <idstorage/idstorage.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysevent.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 
 static SceMotionDevData motionRingSamples[MOTION_RING_SAMPLES];
 static SceMotionDevData motionReadBuffer[MOTION_RING_SAMPLES];
@@ -50,13 +50,13 @@ void motionPacketComplete(int result, void *arg)
 	int intr;
 
 	(void)arg;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	motionPacket.completion = NULL;
 	motionPacket.request = NULL;
 	motionPacket.response = NULL;
 	motionPacket.arg = NULL;
 	motionBusy = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	if (completion != NULL)
 		completion(result, request, response, completionArg);
 }
@@ -71,7 +71,7 @@ void motionSamplesComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motionBusy == 1) {
 		motionBusy = 0;
 		motionRingGetWriteSlot(motion.ring, &sample, &owner);
@@ -101,7 +101,7 @@ void motionSamplesComplete(int result, void *arg)
 			motionRingAdvance(motion.ring);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
 void motionStopComplete(int result, void *arg)
@@ -110,9 +110,9 @@ void motionStopComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motionBusy != 1) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return;
 	}
 	motionBusy = 0;
@@ -124,7 +124,7 @@ void motionStopComplete(int result, void *arg)
 	} else {
 		motion.state = 2;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
 void motionIdentityComplete(int result, void *arg)
@@ -135,7 +135,7 @@ void motionIdentityComplete(int result, void *arg)
 	if (result == 0)
 		motion.initState = 4;
 	motionBusy = 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	switch (motion.state) {
 	case 3:
 		ksceKernelSetEventFlag(motionUpdate.event, 1);
@@ -152,7 +152,7 @@ void motionIdentityComplete(int result, void *arg)
 		motion.state = 128;
 		break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
 void motionStartComplete(int result, void *arg)
@@ -161,13 +161,13 @@ void motionStartComplete(int result, void *arg)
 
 	(void)result;
 	(void)arg;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motionBusy == 1) {
 		motionBusy = 0;
 		resetGyroFilter(&motion.filter);
 		motion.state = 1;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
 uint32_t motionInitializeTimer(void *arg)
@@ -197,7 +197,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 
 	if (data == NULL || (unsigned int)(count - 1) >= MOTION_RING_SAMPLES)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	ret = 0;
 	if ((unsigned int)(motion.state - 1) > 1) {
 		if (motion.state == 128)
@@ -207,7 +207,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 	overrideSampling = motion.overrideSampling != 0;
 	if (info != NULL) {
 		if (user == 1) {
-			if (ksceKernelCopyToUser(info, &overrideSampling,
+			if (SceSysmemForDriver_6D88EF8A(info, &overrideSampling,
 						sizeof(overrideSampling)) < 0)
 				goto out;
 		} else {
@@ -249,7 +249,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 	else if (motion.processes[15].pid == pid)
 		i = 15;
 	else {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x803600ff;
 	}
 	process = &motion.processes[i];
@@ -313,14 +313,14 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 	}
 	motionRingConsume(motion.ring, process->reader);
 	if (user == 1 && j > 0 && n > 0) {
-		ret = ksceKernelCopyToUser(data, motionReadBuffer,
+		ret = SceSysmemForDriver_6D88EF8A(data, motionReadBuffer,
 			n * sizeof(*motionReadBuffer));
 		if (ret < 0)
 			goto out;
 	}
 	ret = n;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return ret;
 }
 
@@ -343,7 +343,7 @@ void motionResponseComplete(int result, void *arg)
 			return;
 	}
 complete:
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	completion = motionUpdate.completion;
 	motionBusy = 0;
 	request = motionUpdate.request;
@@ -353,7 +353,7 @@ complete:
 	completionArg = motionUpdate.arg;
 	motionUpdate.completion = NULL;
 	motionUpdate.arg = NULL;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	if (completion != NULL)
 		completion(result, request, response, completionArg);
 }
@@ -406,7 +406,7 @@ int motionInitializeMagnCalibration(int count,
 	return 0;
 }
 
-int motionStopProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, int flags)
+int motionStopProcess(SceUID pid, int event, ProcEventParam *param, int flags)
 {
 	MotionDeviceReader *process;
 	int intr, i;
@@ -415,7 +415,7 @@ int motionStopProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, in
 	(void)flags;
 	if (event != 0x800)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -455,7 +455,7 @@ int motionStopProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, in
 		process->stopped = 1;
 		process->rebase = process->sampling != 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -465,7 +465,7 @@ uint32_t motionSampleTimer(void *arg)
 	int intr, mode, i, result;
 
 	(void)arg;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	mode = motion.overrideSampling;
 	if (mode == 0) {
 		for (i = 0; i < MOTION_RING_READERS; i++) {
@@ -495,7 +495,7 @@ uint32_t motionSampleTimer(void *arg)
 		motionBusyTicks = 0;
 		motion.mode = mode;
 		motionBusy = 1;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		if (motion.samplingDisabled)
 			return period;
 		result = motionReadDeviceSamples(&motionSample, (uint8_t)mode,
@@ -512,7 +512,7 @@ uint32_t motionSampleTimer(void *arg)
 		motionBusy = 1;
 		motion.mode = mode;
 		motionBusyTicks = 0;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		if (motion.samplingDisabled)
 			return period;
 		result = motionStartDevice((uint8_t)mode, motionStartComplete, NULL);
@@ -526,7 +526,7 @@ uint32_t motionSampleTimer(void *arg)
 stop:
 		motionBusy = 1;
 		motionBusyTicks = 0;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		if (motion.samplingDisabled)
 			return period;
 		result = motionStopDevice(motionStopComplete, NULL);
@@ -538,18 +538,18 @@ stop:
 		motionBusy = 0;
 	return period;
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return period;
 }
 
-int motionCreateProcess(SceUID pid, SceProcEventInvokeParam2 *param, int flags)
+int motionCreateProcess(SceUID pid, ProcEventCreateParam *param, int flags)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
 	(void)flags;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == -1)
 		i = 0;
 	else if (motion.processes[1].pid == -1)
@@ -582,7 +582,7 @@ int motionCreateProcess(SceUID pid, SceProcEventInvokeParam2 *param, int flags)
 		i = 14;
 	else {
 		if (motion.processes[15].pid != -1) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return (int)0x80360005;
 		}
 		i = 15;
@@ -593,18 +593,18 @@ int motionCreateProcess(SceUID pid, SceProcEventInvokeParam2 *param, int flags)
 	process->reader = motionRingOpenReader(motion.ring);
 	process->stopped = 0;
 	process->sampling = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
-int motionExitProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int motionExitProcess(SceUID pid, ProcEventParam *param, int flags)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
 	(void)flags;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -640,7 +640,7 @@ int motionExitProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 	else
 		i = MOTION_RING_READERS;
 	if (i == MOTION_RING_READERS) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	process = &motion.processes[i];
@@ -651,18 +651,18 @@ int motionExitProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 	process->reader = -1;
 	process->stopped = 0;
 	process->sampling = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
-int motionKillProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
+int motionKillProcess(SceUID pid, ProcEventParam *param, int flags)
 {
 	MotionDeviceReader *process;
 	int intr, i;
 
 	(void)param;
 	(void)flags;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -698,7 +698,7 @@ int motionKillProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 	else
 		i = MOTION_RING_READERS;
 	if (i == MOTION_RING_READERS) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	process = &motion.processes[i];
@@ -709,22 +709,22 @@ int motionKillProcess(SceUID pid, SceProcEventInvokeParam1 *param, int flags)
 	process->reader = -1;
 	process->stopped = 0;
 	process->sampling = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
-int motionStartProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param,
+int motionStartProcess(SceUID pid, int event, ProcEventParam *param,
 	int flags);
 int motionSysEvent(int resume, int event, void *arg, void *param);
 
-static const SceProcEventHandler motionProcessHandlers = {
-	.size = sizeof(SceProcEventHandler),
+static const SceKernelProcEventHandler motionProcessHandlers = {
+	.size = sizeof(SceKernelProcEventHandler),
 	.create = motionCreateProcess,
 	.exit = motionExitProcess,
 	.kill = motionKillProcess,
-	.stop = motionStopProcess,
-	.start = motionStartProcess,
-	.switch_process = NULL,
+	.suspend = motionStopProcess,
+	.resume = motionStartProcess,
+	.notify = NULL,
 };
 
 int motionInitializeManager(void *arg)
@@ -823,7 +823,7 @@ int motionInitializeManager(void *arg)
 	location.type = 0;
 	motion.allowGyroControl = ksceIdStorageLookup(0x114, 256,
 		&location.type, sizeof(location.type)) < 0 || location.type != 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == -1)
 		i = 0;
 	else if (motion.processes[1].pid == -1)
@@ -866,11 +866,11 @@ int motionInitializeManager(void *arg)
 		process->stopped = 0;
 		process->sampling = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	if (motionInitializeDevice() >= 0) {
-		motion.sysEventHandler = ksceKernelRegisterSysEventHandler(
+		motion.sysEventHandler = sceKernelRegisterSysEventHandler(
 			"SceMotion", motionSysEvent, NULL);
-		motion.procEventHandler = ksceKernelRegisterProcEventHandler(
+		motion.procEventHandler = sceKernelRegisterProcEventHandler(
 			"SceMotion", &motionProcessHandlers, 0);
 		ksceKernelRegisterTimer("SceMotionAlarm0", 80000,
 			motionInitializeTimer, NULL);
@@ -931,7 +931,7 @@ void motionResumeComplete(int result, void *arg)
 	}
 }
 
-int motionStartProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, int flags)
+int motionStartProcess(SceUID pid, int event, ProcEventParam *param, int flags)
 {
 	MotionDeviceReader *process;
 	unsigned int mode;
@@ -941,7 +941,7 @@ int motionStartProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, i
 	(void)flags;
 	if (event != 0x10000)
 		return 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1003,7 +1003,7 @@ int motionStartProcess(SceUID pid, int event, SceProcEventInvokeParam1 *param, i
 		motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
 			motionSampleTimer, NULL);
 out:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1179,7 +1179,7 @@ void motionInitializeComplete(int result, void *arg)
 		motion.initState = 6;
 		return;
 	case 6:
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+		intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 		if (motion.state == 3) {
 			ksceKernelSetEventFlag(motionUpdate.event, 1);
 			goto unlock;
@@ -1247,7 +1247,7 @@ failRecords:
 		motionFreeHeap(motion.calibrationRecords[1]);
 		motion.calibrationRecords[1] = NULL;
 	}
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	switch (motion.state) {
 	case 3:
 		ksceKernelSetEventFlag(motionUpdate.event, 1);
@@ -1265,7 +1265,7 @@ failRecords:
 		break;
 	}
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 }
 
 int motionSysEvent(int resume, int event, void *arg, void *param)
@@ -1277,9 +1277,9 @@ int motionSysEvent(int resume, int event, void *arg, void *param)
 	(void)param;
 	if (resume == 0) {
 		if (event == 0x401) {
-			intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+			intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 			if (motion.suspendState == 16) {
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+				sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 				return 0;
 			}
 			if ((int32_t)motion.suspendState < 0) {
@@ -1324,14 +1324,14 @@ int motionSysEvent(int resume, int event, void *arg, void *param)
 					motion.suspendState = 16;
 				}
 			}
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return 0;
 		}
 		if (event == 0x402)
 			return motion.suspendState == 16 ? 0 : -1;
 		if (event != 0x400)
 			return 0;
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+		intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 		motion.savedState = motion.state;
 		switch (motion.state) {
 		case 0:
@@ -1379,7 +1379,7 @@ int motionSysEvent(int resume, int event, void *arg, void *param)
 			break;
 		}
 		motion.state = 5;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	if (resume != 1)
@@ -1482,19 +1482,19 @@ int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 
 	if (info == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
 		if (motion.state != 128) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return (int)0x80360004;
 		}
 		if (motion.initState == 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return (int)0x80360006;
 		}
 	}
 	*info = motion.deviceInfo;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1506,17 +1506,17 @@ int ksceMotionDevGetCalibrationHeader(unsigned int block, SceMotionDevCalibratio
 		return (int)0x80360001;
 	if (header == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		*header = motion.calibrationHeaders[block];
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	if (motion.state == 128) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360006;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return (int)0x80360004;
 }
 
@@ -1530,21 +1530,21 @@ int ksceMotionDevGetCalibrationData(unsigned int block, SceMotionDevCalibrationD
 		return (int)0x80360001;
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		available = motion.calibrationHeaders[block].recordCount;
 		if (available >= count)
 			available = count;
 		for (i = 0; i != available; i++)
 			data[i] = motion.calibrationRecords[block][i];
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return available;
 	}
 	if (motion.state == 128) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360006;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return (int)0x80360004;
 }
 
@@ -1571,21 +1571,21 @@ int ksceMotionDevSetSamplingMode(unsigned int mode)
 {
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360004;
 	}
 	if (motion.state != 2) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360003;
 	}
 	if (motionBusy != 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360003;
 	}
 	motionBusy = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return motionControlDevice((uint8_t)mode, motionClearBusy, NULL);
 }
 
@@ -1596,13 +1596,13 @@ int ksceMotionDevSamplingStart(void)
 	unsigned int mode;
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 > 1) {
 		if (motion.state == 128) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return (int)0x80360006;
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360004;
 	}
 	pid = sceKernelGetProcessId();
@@ -1639,12 +1639,12 @@ int ksceMotionDevSamplingStart(void)
 	else if (motion.processes[15].pid == pid)
 		i = 15;
 	else {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x803600ff;
 	}
 	process = &motion.processes[i];
 	if ((process->sampling & 1) != 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	motionRingResetReader(motion.ring, process->reader);
@@ -1670,7 +1670,7 @@ int ksceMotionDevSamplingStart(void)
 	if (motion.timer == -1 && motion.state == 2 && mode <= 1)
 		motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
 			motionSampleTimer, NULL);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1679,7 +1679,7 @@ int ksceMotionDevSamplingStop(void)
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1713,11 +1713,11 @@ int ksceMotionDevSamplingStop(void)
 	else if (motion.processes[15].pid == pid)
 		i = 15;
 	else {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	motion.processes[i].sampling &= ~1u;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1727,7 +1727,7 @@ int motionMagnSamplingStart(void)
 	SceUID pid;
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if ((unsigned int)motion.state - 1 <= 1) {
 		pid = sceKernelGetProcessId();
 		if (motion.processes[0].pid == pid)
@@ -1763,20 +1763,20 @@ int motionMagnSamplingStart(void)
 		else if (motion.processes[15].pid == pid)
 			i = 15;
 		else {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return (int)0x803600ff;
 		}
 		process = &motion.processes[i];
 		if ((process->sampling & 2) == 0)
 			process->sampling |= 2;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	if (motion.state == 128) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360006;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return (int)0x80360004;
 }
 
@@ -1785,7 +1785,7 @@ int motionMagnSamplingStop(void)
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == pid)
 		i = 0;
 	else if (motion.processes[1].pid == pid)
@@ -1819,11 +1819,11 @@ int motionMagnSamplingStop(void)
 	else if (motion.processes[15].pid == pid)
 		i = 15;
 	else {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
 	motion.processes[i].sampling &= ~2u;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1833,14 +1833,14 @@ int motionUpdateMagnCalibData(const SceMotionDevMagnCalibData *data, uint32_t *t
 
 	if (tag == NULL || data == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	for (group = 0; group < 2; group++)
 		for (value = 0; value < 2; value++)
 			for (axis = 0; axis < 3; axis++)
 				motion.currentMagnCalibration.parameters[group][value][axis] =
 					data->parameters[group][value][axis];
 	motion.currentMagnCalibration.generation++;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	*tag = motion.currentMagnCalibration.generation;
 	return 0;
 }
@@ -1853,14 +1853,14 @@ int motionGetCurrentMagnCalibData(SceMotionDevMagnCalibData *data)
 		return (int)0x80360001;
 	if (motion.currentMagnCalibration.generation == 0)
 		return (int)0x80360105;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	data->generation = motion.currentMagnCalibration.generation;
 	for (value = 0; value < 2; value++)
 		for (group = 0; group < 2; group++)
 			for (axis = 0; axis < 3; axis++)
 				data->parameters[group][value][axis] =
 					motion.currentMagnCalibration.parameters[group][value][axis];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1870,14 +1870,14 @@ int motionGetFactoryMagnCalibData(SceMotionDevMagnCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	data->generation = motion.factoryMagnCalibration.generation;
 	for (value = 0; value < 2; value++)
 		for (group = 0; group < 2; group++)
 			for (axis = 0; axis < 3; axis++)
 				data->parameters[group][value][axis] =
 					motion.factoryMagnCalibration.parameters[group][value][axis];
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1885,9 +1885,9 @@ int motionUpdateMagnStabilityLevel(uint32_t level)
 {
 	int intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	motion.magnStabilityLevel = level;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1897,9 +1897,9 @@ int motionGetCurrentMagnStabilityLevel(uint32_t *level)
 
 	if (level == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	*level = motion.magnStabilityLevel;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1909,9 +1909,9 @@ int motionGetGyroCalibData(SceMotionDevGyroCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	memcpy(data, &motion.gyroCalibration, sizeof(*data));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1921,9 +1921,9 @@ int motionGetAccCalibData(SceMotionDevAccCalibData *data)
 
 	if (data == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	memcpy(data, &motion.accCalibration, sizeof(*data));
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1933,9 +1933,9 @@ int motionGetGyroBias(SceMotionDevGyroBiasData *bias)
 
 	if (bias == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	*bias = motion.gyroBias;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1945,9 +1945,9 @@ int motionGetDeviceLocation(SceMotionDevDeviceLocation *location)
 
 	if (location == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	*location = motion.deviceLocation;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1982,10 +1982,10 @@ int motionGetControllerType(int port, uint8_t *type)
 
 int SceMotionDevForDriver_22CD6DCA(SceUID owner)
 {
-	int intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
 	motion.owner = owner;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -1995,9 +1995,9 @@ int SceMotionDevForDriver_3CD0CE14(SceUID *owner)
 
 	if (owner == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	*owner = motion.owner;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -2005,7 +2005,7 @@ int SceMotionDevForDriver_0808D77D(unsigned int overrideSampling)
 {
 	int intr, i;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	motion.overrideSampling = overrideSampling;
 	if (overrideSampling == 0) {
 		for (i = 0; i < MOTION_RING_READERS; i++) {
@@ -2025,7 +2025,7 @@ int SceMotionDevForDriver_0808D77D(unsigned int overrideSampling)
 			motion.timer = ksceKernelRegisterTimer("SceMotionAlarm", motion.period,
 				motionSampleTimer, NULL);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return 0;
 }
 
@@ -2040,12 +2040,12 @@ int SceMotionDevForDriver_FD1C528D(void)
 	if (result < 0)
 		return result;
 	SceKernelSuspendForDriver_4DF40893(0);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.timer == -1 && (motion.state == 2 || motion.state == 128))
 		motion.state = 4;
 	else
 		motion.state = 3;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	state = motion.state;
 	result = 0;
 	if (state == 3) {
@@ -2118,18 +2118,18 @@ int SceMotionDevForDriver_09918DAE(
 		return (int)0x80360001;
 	if ((int8_t)request->type >= 0)
 		return (int)0x80360002;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.state != 4) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360002;
 	}
 	if (motionBusy != 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360003;
 	}
 	if ((uint8_t)(request->type + 123) <= 2 &&
 	    (motion.deviceInfo.hardwareInfo >> 8) == 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360104;
 	}
 	motionUpdate.response = response;
@@ -2137,7 +2137,7 @@ int SceMotionDevForDriver_09918DAE(
 	motionUpdate.completion = completion;
 	motionBusy = 1;
 	motionUpdate.request = request;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	result = motionRequestResponse(request, response, motionResponseComplete, NULL);
 	if (result != 0)
 		motionBusy = 0;
@@ -2152,9 +2152,9 @@ int SceMotionDevForDriver_DB89D1BF(
 
 	if (request == NULL || completion == NULL || response == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.state != 2 || motionPacket.completion != NULL || motionBusy != 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return (int)0x80360003;
 	}
 	motionPacket.completion = completion;
@@ -2162,7 +2162,7 @@ int SceMotionDevForDriver_DB89D1BF(
 	motionPacket.response = response;
 	motionPacket.arg = arg;
 	motionBusy = 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	result = motionRequestPacket(motionPacket.request, motionPacket.response,
 		motionPacketComplete, NULL);
 	if (result != 0)
@@ -2182,25 +2182,25 @@ int SceMotionDevForDriver_FE6ECA41(uint32_t *available)
 
 int SceMotionDevForDriver_85E3C678(void)
 {
-	int intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
 	if (motion.state == 2) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return motionPowerOn(0);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return (int)0x80360003;
 }
 
 int SceMotionDevForDriver_031AF7A1(void)
 {
-	int intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
 	if (motion.state == 2) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return motionSuspendDevice();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return (int)0x80360003;
 }
 
@@ -2210,9 +2210,9 @@ int ksceMotionDevGetEvaInfo(void *statistics)
 
 	if (statistics == NULL)
 		return (int)0x80360001;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&motion.lock);
+	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	result = motionGetDeviceStatistics(statistics);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	return result;
 }
 

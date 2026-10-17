@@ -142,7 +142,7 @@ int pmJigClose(void)	/* name unknown */
 		return SCE_SBL_ERROR_PM_JIG;
 	}
 	if (ksceSysconGetHardwareInfo() & 8)
-		ksceKernelPrintf("UUU");
+		SceDebugForDriver_391B74B7("UUU");
 	return 0;
 }
 

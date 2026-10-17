@@ -54,14 +54,14 @@ set(MODULE_IMPORT_NIDS
 	0x887F19D0:F:0x2A43912D
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelCopyToUser
-	ksceKernelCopyFromUser
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_BC996A7A
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelPrintf
+	SceDebugForDriver_391B74B7
 	ksceKernelDisableSubIntr
 	ksceKernelEnableSubIntr
 	ksceKernelRegisterSubIntrHandler
@@ -85,9 +85,9 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelGetProcessLocalStorageAddrForPid
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram
-	ksceKernelRegisterSysEventHandler
-	ksceKernelPowerTick
-	ksceKernelRegisterProcEventHandler
+	sceKernelRegisterSysEventHandler
+	SceKernelSuspendForDriver_E0489831
+	sceKernelRegisterProcEventHandler
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

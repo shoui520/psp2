@@ -47,9 +47,9 @@ int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
 		return UDCD_ERROR_NO_THREAD;
 	if (ksceKernelGetThreadmgrUIDClass(callback) != UDCD_THREADMGR_CLASS_CALLBACK)
 		return UDCD_ERROR_INVALID_ARGUMENT;
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->callbackThread != -1 && thread != state->callbackThread) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return UDCD_ERROR_BUSY;
 	}
 	state->callback = callback;
@@ -63,7 +63,7 @@ int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
 	} else {
 		state->notifiedMask = 0x100;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return 0;
 }
 
@@ -73,9 +73,9 @@ int udcdUnregisterCallback(SceUID process, SceUID thread)
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
 
-	status = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	status = SceCpuForDriver_D32ACE9E(&state->lock);
 	if (state->callbackProcess != process && state->callbackThread != thread) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return UDCD_ERROR_INVALID_ARGUMENT;
 	}
 	state->callback = 0;
@@ -83,7 +83,7 @@ int udcdUnregisterCallback(SceUID process, SceUID thread)
 	state->callbackThread = -1;
 	state->callbackMask = 0;
 	ksceKernelUnregisterCallbackFromEvent(state->callbackEvent, 0);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 	return 0;
 }
 
@@ -127,7 +127,7 @@ int sceUdcdRegisterCallback(SceUID callback, unsigned int mask)
 		sceSyscallLeave(t);
 		return UDCD_ERROR_NO_THREAD;
 	}
-	result = udcdRegisterCallback(kscePUIDtoGUID(process, callback), process, mask);
+	result = udcdRegisterCallback(SceSysmemForDriver_45D22597(process, callback), process, mask);
 	sceSyscallLeave(t);
 	return result;
 }
@@ -168,13 +168,13 @@ int sceUdcdWaitState(const SceUdcdWaitParam *parameter, unsigned int timeout)
 		sceSyscallLeave(t);
 		return UDCD_ERROR_INTERRUPTED;
 	}
-	result = ksceKernelCopyFromUser(&kparameter, parameter, sizeof(kparameter));
+	result = SceSysmemForDriver_BC996A7A(&kparameter, parameter, sizeof(kparameter));
 	if (result < 0)
 		goto out;
 	if ((unsigned int)kparameter.connection >> 3 != 0)
 		goto invalid;
 	if (kparameter.driverName != NULL) {
-		result = ksceKernelStrncpyFromUser(name, kparameter.driverName, sizeof(name));
+		result = SceSysmemForDriver_DB3EC244(name, kparameter.driverName, sizeof(name));
 		if (result < 0)
 			goto out;
 		if (result == sizeof(name))
@@ -225,7 +225,7 @@ int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
 		kstate.cable = value & 0x30;
 		kstate.charging = (bus->busPowered == 1 && bus->chargingEnabled == 1) ? 0x800 : 0;
 		kstate.connection = (value & 8) ? 1 : value & 7;
-		result = ksceKernelCopyToUser(state, &kstate, sizeof(kstate));
+		result = SceSysmemForDriver_6D88EF8A(state, &kstate, sizeof(kstate));
 		if (result > 0)
 			result = 0;
 	}
@@ -248,7 +248,7 @@ int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *info)
 	} else {
 		result = ksceUdcdGetDeviceInfo(&kinfo);
 		if (result >= 0) {
-			result = ksceKernelCopyToUser(info, &kinfo, sizeof(kinfo));
+			result = SceSysmemForDriver_6D88EF8A(info, &kinfo, sizeof(kinfo));
 			if (result > 0)
 				result = 0;
 		}
@@ -283,7 +283,7 @@ int sceUdcdGetDrvState(const char *driverName)
 	}
 	if (driverName == NULL)
 		goto invalid;
-	result = ksceKernelStrncpyFromUser(name, driverName, sizeof(name));
+	result = SceSysmemForDriver_DB3EC244(name, driverName, sizeof(name));
 	if (result >= 0) {
 		if (result == sizeof(name))
 			goto invalid;

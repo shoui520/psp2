@@ -162,7 +162,7 @@ PVRSRV_ERROR SysSystemPrePowerState(PVRSRV_SYS_POWER_STATE eNewSysPowerState)
 			eNewSysPowerState == PVRSRV_SYS_POWER_STATE_D3 &&
 			eCurrentPowerState <= PVRSRV_SYS_POWER_STATE_D2) {
 		ksceKernelDisableIntr(gpuDumpRegion.state.platform.ui32IRQ);
-		ksceKernelFreeMemBlock(gpuDumpRegion.state.registerMemblockUid);
+		SceSysmemForDriver_009E1C61(gpuDumpRegion.state.registerMemblockUid);
 	}
 	return PVRSRV_OK;
 }

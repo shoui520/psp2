@@ -1,7 +1,7 @@
 /* Activation verification and completion. */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2common/kernel/rtc.h>
 #include "pcact.h"
 
@@ -35,7 +35,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 		return permission;
 	if (activation == NULL || random == NULL)
 		goto invalid;
-	result = ksceKernelCopyFromUser(&gcAuthActivationWorkspace.psmact,
+	result = SceSysmemForDriver_BC996A7A(&gcAuthActivationWorkspace.psmact,
 		activation, sizeof(*activation));
 	if (result < 0)
 		goto finish;
@@ -63,7 +63,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 	case 2:
 		if (encryptedActivation == NULL)
 			goto invalid;
-		result = ksceKernelCopyFromUser(
+		result = SceSysmemForDriver_BC996A7A(
 			&gcAuthActivationWorkspace.encryptedPsmact,
 			encryptedActivation, sizeof(*encryptedActivation));
 		if (result < 0)
@@ -82,7 +82,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 	case 6:
 		if (encryptedActivation == NULL)
 			goto invalid;
-		result = ksceKernelCopyFromUser(
+		result = SceSysmemForDriver_BC996A7A(
 			&gcAuthActivationWorkspace.encryptedPsmact,
 			encryptedActivation, sizeof(*encryptedActivation));
 		if (result < 0)
@@ -90,7 +90,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 		result = GcAuthPsmactDecryptActivation(&keys);
 		if (result != 0)
 			break;
-		result = ksceKernelCopyToUser(encryptedActivation,
+		result = SceSysmemForDriver_6D88EF8A(encryptedActivation,
 			gcAuthActivationWorkspace.encryptedPsmact.ciphertext,
 			sizeof(gcAuthActivationWorkspace.encryptedPsmact.ciphertext));
 		result &= result >> 31;
@@ -147,7 +147,7 @@ int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activ
 
 	ENTER_SYSCALL(state);
 	if (activation != NULL) {
-		result = ksceKernelCopyFromUser(&gcAuthActivationWorkspace.pcact,
+		result = SceSysmemForDriver_BC996A7A(&gcAuthActivationWorkspace.pcact,
 			activation, sizeof(*activation));
 		if (result >= 0) {
 			request.activation = &gcAuthActivationWorkspace.pcact;

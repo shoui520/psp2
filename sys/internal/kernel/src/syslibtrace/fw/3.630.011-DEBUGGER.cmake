@@ -25,11 +25,11 @@ set(MODULE_IMPORT_NIDS
 	0x92C9FFC2:F:0xB23286B8
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFree
-	ksceKernelAlloc
+	SceSysmemForKernel_4233C16D
+	SceSysmemForKernel_85571907
 	__stack_chk_fail
 	SceSysrootForKernel_B39CD708
-	ksceSblQafMgrIsAllowSystemAppDebug
+	SceQafMgrForDriver_CAD47130
 	sceKernelSetSyslibtraceThreadCBEnable
 	ksceKernelRegisterSyscall
 	ksceKernelGetLibEntCBListForSyslibtrace

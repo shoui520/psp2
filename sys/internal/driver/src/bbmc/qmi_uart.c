@@ -2,7 +2,7 @@
 #include <string.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/intrmgr.h>
-#include <psp2kern/kernel/cpu/spinlock.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include "qmi_device.h"
@@ -22,9 +22,9 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 
 	if (port == NULL)
 		return -2;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intr = SceCpuForDriver_D32ACE9E(&port->lock);
 	if (!port->enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
 		return 0x80332002;
 	}
 	registers = port->registers;
@@ -189,7 +189,7 @@ int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)
 	result = -1;
 	registers->rxAck = status;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
 	return result;
 }
 
@@ -204,17 +204,17 @@ int qmiInitializeUart(void)
 	options.size = sizeof(options);
 	options.paddr = UART_REG_BASE + 5 * UART_REG_SIZE;
 	options.attr = 2;
-	result = ksceKernelAllocMemBlock("SceUart5Reg", 0x20100806,
+	result = SceSysmemForDriver_C94850C9("SceUart5Reg", 0x20100806,
 		UART_REG_SIZE, &options);
 	if (result < 0)
 		return result;
 	g_qmiUartMemBlock = result;
-	ksceKernelGetMemBlockBase(result, (void **)&g_qmiUartRegisters);
+	SceSysmemForDriver_A841EDDA(result, (void **)&g_qmiUartRegisters);
 	result = ksceKernelRegisterIntrHandler(229, "SceUart5", 0,
 		(SceKernelIntrHandler)qmiUartInterrupt, &g_qmiUartPort,
 		176, 15, NULL);
 	if (result < 0) {
-		ksceKernelFreeMemBlock(g_qmiUartMemBlock);
+		SceSysmemForDriver_009E1C61(g_qmiUartMemBlock);
 		return result;
 	}
 	g_qmiUartRegisters->enable = 0;
@@ -235,7 +235,7 @@ int qmiFinalizeUart(void)
 		g_qmiUartPort.index = 255;
 	}
 	ksceKernelReleaseIntrHandler(229);
-	ksceKernelFreeMemBlock(g_qmiUartMemBlock);
+	SceSysmemForDriver_009E1C61(g_qmiUartMemBlock);
 	return 0;
 }
 
@@ -347,7 +347,7 @@ int qmiCloseUart(QmiUartPort *port)
 {
 	if (port != NULL && port->enabled) {
 		SceKernelIntrStatus intr =
-			ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			SceCpuForDriver_D32ACE9E(&port->lock);
 
 		if (port->interruptNumber != 0)
 			ksceKernelDisableIntr(port->interruptNumber);
@@ -359,7 +359,7 @@ int qmiCloseUart(QmiUartPort *port)
 		port->registers = NULL;
 		port->enabled = 0;
 		port->index = 255;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intr);
 	}
 	return 0;
 }
@@ -376,9 +376,9 @@ int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
 
 	if (port != &g_qmiUartPort || length == 0 || data == NULL)
 		return 0x80330002;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_qmiUartPort.lock);
+	intr = SceCpuForDriver_D32ACE9E(&g_qmiUartPort.lock);
 	if (!g_qmiUartPort.enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 		return 0x80332002;
 	}
 	result = 0x80332001;
@@ -428,7 +428,7 @@ int qmiUartTransmit(QmiUartPort *port, const void *data, SceSize length,
 	if (registers->irqMask & 0x700)
 		registers->irqMask &= ~0x700u;
 unlockTransmit:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 	return result;
 }
 
@@ -443,9 +443,9 @@ int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
 
 	if (port != &g_qmiUartPort || length == 0 || data == NULL)
 		return 0x80330002;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&g_qmiUartPort.lock);
+	intr = SceCpuForDriver_D32ACE9E(&g_qmiUartPort.lock);
 	if (!g_qmiUartPort.enabled) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 		return 0x80332002;
 	}
 	result = 0x80332001;
@@ -500,6 +500,6 @@ int qmiUartReceive(QmiUartPort *port, void *data, SceSize length,
 	if (registers->irqMask << 25)
 		registers->irqMask &= ~0x7fu;
 unlockReceive:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_qmiUartPort.lock, intr);
 	return result;
 }

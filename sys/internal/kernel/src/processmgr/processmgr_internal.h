@@ -12,6 +12,7 @@
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
+#include <sysmem/procevent.h>
 #include <threadmgr/threadcb.h>
 #include <processmgr/processmgr_imports.h>
 #include <processmgr/process.h>
@@ -52,14 +53,7 @@
 #define PROCESS_REQUEST_EXIT_SPAWN	0x40
 #define PROCESS_REQUEST_FORCE_SUSPEND	0x80
 
-/* process event handler events (ksceKernelInvokeProcEventHandler) */
-#define PROC_EVENT_CREATE		1
-#define PROC_EVENT_EXIT			2	/* also a failed create */
-#define PROC_EVENT_KILL			3
-#define PROC_EVENT_SUSPEND		4
-#define PROC_EVENT_RESUME		5
-#define PROC_EVENT_PRELOAD		0x10
-#define PROC_EVENT_SUSPEND_DONE		0x11
+/* process event handler events: sysmem/procevent.h */
 
 #define PROCESS_THREAD_VECTOR_MAX	192
 

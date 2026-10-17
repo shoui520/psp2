@@ -880,7 +880,7 @@ int ksceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 								  "vfsBuffAllocate() failed ... %d 0x%x\n",
 								  ret, ret);
 			}
-			if (ksceKernelCheckDipsw(0xd2) != 0)
+			if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
 				vfs_debug_path_create(file, path->path);
 		}
 	}
@@ -1639,7 +1639,7 @@ int ksceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 		args.file = file;
 		ret = op(&args);
 		vfs_set_mnt_sync_request(vp->core.mnt);
-		if (ksceKernelCheckDipsw(0xd2) != 0)
+		if (SceDipswForDriver_A98FC2FD(0xd2) != 0)
 			vfs_debug_path_create(file, path->path);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_DOPEN + 1, 2, vp, ret);
@@ -2289,20 +2289,20 @@ void vfs_dump_fast_mutex(SceKernelFastMutex *mtx)
 	info.size = sizeof(info);
 	ret = ksceKernelGetFastMutexInfo(mtx, &info);
 	if (ret < 0) {
-		ksceKernelPrintf("can not get fmtx info ... %d 0x%X\n", ret, ret);
+		SceDebugForDriver_391B74B7("can not get fmtx info ... %d 0x%X\n", ret, ret);
 		return;
 	}
-	ksceKernelPrintf("============== fast mtx =================\n");
-	ksceKernelPrintf("size = %d 0x%x\n", info.size, info.size);
-	ksceKernelPrintf("fastMutexId = %d 0x%x\n", info.uid, info.uid);
-	ksceKernelPrintf("%s\n", info.name);
-	ksceKernelPrintf("attr = %d 0x%x\n", info.attr, info.attr);
-	ksceKernelPrintf("lockCount = %d 0x%x\n", info.lockCount, info.lockCount);
-	ksceKernelPrintf("currentOwnerId = %d 0x%x\n", info.currentOwnerId, info.currentOwnerId);
-	ksceKernelPrintf("ceilingPriority = %d 0x%x\n", info.ceilingPriority, info.ceilingPriority);
-	ksceKernelPrintf("numWaitThreads = %d 0x%x\n", info.numWaitThreads, info.numWaitThreads);
-	ksceKernelPrintf("numSpinThreads = %d 0x%x\n", info.numSpinThreads, info.numSpinThreads);
-	ksceKernelPrintf("=========================================\n");
+	SceDebugForDriver_391B74B7("============== fast mtx =================\n");
+	SceDebugForDriver_391B74B7("size = %d 0x%x\n", info.size, info.size);
+	SceDebugForDriver_391B74B7("fastMutexId = %d 0x%x\n", info.uid, info.uid);
+	SceDebugForDriver_391B74B7("%s\n", info.name);
+	SceDebugForDriver_391B74B7("attr = %d 0x%x\n", info.attr, info.attr);
+	SceDebugForDriver_391B74B7("lockCount = %d 0x%x\n", info.lockCount, info.lockCount);
+	SceDebugForDriver_391B74B7("currentOwnerId = %d 0x%x\n", info.currentOwnerId, info.currentOwnerId);
+	SceDebugForDriver_391B74B7("ceilingPriority = %d 0x%x\n", info.ceilingPriority, info.ceilingPriority);
+	SceDebugForDriver_391B74B7("numWaitThreads = %d 0x%x\n", info.numWaitThreads, info.numWaitThreads);
+	SceDebugForDriver_391B74B7("numSpinThreads = %d 0x%x\n", info.numSpinThreads, info.numSpinThreads);
+	SceDebugForDriver_391B74B7("=========================================\n");
 #endif
 }
 
@@ -2310,11 +2310,11 @@ void vfs_dump_fast_mutex(SceKernelFastMutex *mtx)
 /* name unknown */
 static __attribute__((noinline)) void vfs_dump_vdlock(SceVfsVnode *vp)
 {
-	ksceKernelPrintf("ownerId=0x%x\n", vp->vdlock.owner_id);
-	ksceKernelPrintf("waiter=0x%x\n", vp->vdlock.waiter);
-	ksceKernelPrintf("recursiveCount=0x%x\n", vp->vdlock.recursive_count);
-	ksceKernelPrintf("waitId=0x%x\n", vp->vdlock.wait_id);
-	ksceKernelPrintf("waitPattern=0x%x\n", vp->vdlock.wait_pattern);
+	SceDebugForDriver_391B74B7("ownerId=0x%x\n", vp->vdlock.owner_id);
+	SceDebugForDriver_391B74B7("waiter=0x%x\n", vp->vdlock.waiter);
+	SceDebugForDriver_391B74B7("recursiveCount=0x%x\n", vp->vdlock.recursive_count);
+	SceDebugForDriver_391B74B7("waitId=0x%x\n", vp->vdlock.wait_id);
+	SceDebugForDriver_391B74B7("waitPattern=0x%x\n", vp->vdlock.wait_pattern);
 }
 
 #endif
@@ -2322,24 +2322,24 @@ static __attribute__((noinline)) void vfs_dump_vdlock(SceVfsVnode *vp)
 void vfs_dump_vnode(SceVfsVnode *vp, int unused)
 {
 #if FW_DEBUG
-	ksceKernelPrintf("============== vnode %p =================\n", vp);
+	SceDebugForDriver_391B74B7("============== vnode %p =================\n", vp);
 	vfs_dump_vdlock(vp);
-	ksceKernelPrintf("ops = %p\n", vp->core.ops);
-	ksceKernelPrintf("nodeInf = %d 0x%x\n", vp->core.node_inf, vp->core.node_inf);
-	ksceKernelPrintf("nodeData = %p\n", vp->core.node_data);
-	ksceKernelPrintf("mnt = %p\n", vp->core.mnt);
-	ksceKernelPrintf("dd = %p\n", vp->core.dd);
-	ksceKernelPrintf("refCount = %d\n", vp->core.ref_count);
-	ksceKernelPrintf("fid = %lld 0x%llx\n", *(SceUInt64 *)vp->core.fid,
+	SceDebugForDriver_391B74B7("ops = %p\n", vp->core.ops);
+	SceDebugForDriver_391B74B7("nodeInf = %d 0x%x\n", vp->core.node_inf, vp->core.node_inf);
+	SceDebugForDriver_391B74B7("nodeData = %p\n", vp->core.node_data);
+	SceDebugForDriver_391B74B7("mnt = %p\n", vp->core.mnt);
+	SceDebugForDriver_391B74B7("dd = %p\n", vp->core.dd);
+	SceDebugForDriver_391B74B7("refCount = %d\n", vp->core.ref_count);
+	SceDebugForDriver_391B74B7("fid = %lld 0x%llx\n", *(SceUInt64 *)vp->core.fid,
 			 *(SceUInt64 *)vp->core.fid);
-	ksceKernelPrintf("allocator = %d 0x%x\n", vp->core.allocator, vp->core.allocator);
-	ksceKernelPrintf("ncache = %p\n", vp->core.ncache);
-	ksceKernelPrintf("state = %d 0x%x\n", vp->core.state, vp->core.state);
-	ksceKernelPrintf("size = %lld 0x%llx\n", vp->core.size, vp->core.size);
-	ksceKernelPrintf("type = %d 0x%x\n", vp->core.type, vp->core.type);
-	ksceKernelPrintf("aclData = %lld 0x%llx\n", *(SceUInt64 *)vp->core.acl_data,
+	SceDebugForDriver_391B74B7("allocator = %d 0x%x\n", vp->core.allocator, vp->core.allocator);
+	SceDebugForDriver_391B74B7("ncache = %p\n", vp->core.ncache);
+	SceDebugForDriver_391B74B7("state = %d 0x%x\n", vp->core.state, vp->core.state);
+	SceDebugForDriver_391B74B7("size = %lld 0x%llx\n", vp->core.size, vp->core.size);
+	SceDebugForDriver_391B74B7("type = %d 0x%x\n", vp->core.type, vp->core.type);
+	SceDebugForDriver_391B74B7("aclData = %lld 0x%llx\n", *(SceUInt64 *)vp->core.acl_data,
 			 *(SceUInt64 *)vp->core.acl_data);
-	ksceKernelPrintf("fdList = %p\n", vp->core.fd_list);
-	ksceKernelPrintf("fdNum = %d\n", vp->core.fd_num);
+	SceDebugForDriver_391B74B7("fdList = %p\n", vp->core.fd_list);
+	SceDebugForDriver_391B74B7("fdNum = %d\n", vp->core.fd_num);
 #endif
 }

@@ -27,9 +27,9 @@ static inline __attribute__((always_inline)) uint32_t MiscReplaceLocked(
 {
 	uint32_t intr, previous;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = MiscReplace(reg, value);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
 	return previous;
 }
 
@@ -230,7 +230,7 @@ uint32_t ScePervasiveForDriver_6B2BE37E(unsigned port, uint32_t value)
 {
 	uint32_t intr, ret;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	switch (port) {
 	case 0:
 		ret = MiscReplace(&s_misc->usbMode[0], value & 1);
@@ -245,7 +245,7 @@ uint32_t ScePervasiveForDriver_6B2BE37E(unsigned port, uint32_t value)
 		ret = PERVASIVE_ERROR;
 		break;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
 	return ret;
 }
 
@@ -254,7 +254,7 @@ uint32_t ScePervasiveForDriver_29E65AE1(unsigned port, uint32_t address,
 {
 	uint32_t intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	intr = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	if (port == 0) {
 		s_misc->usbBufferAddress[0] = address;
 		s_misc->usbBufferSize[0] = size;
@@ -265,7 +265,7 @@ uint32_t ScePervasiveForDriver_29E65AE1(unsigned port, uint32_t address,
 		s_misc->usbBufferAddress[2] = address;
 		s_misc->usbBufferSize[2] = size;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, intr);
 	return 1;
 }
 

@@ -332,11 +332,11 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 				}
 			} else {
 				SCE_DBG_ASSERT_LEVEL(0, g_compression == 2, 179);
-				inflateResult = ksceZlibGetInfo(slot->buf, NULL, NULL, NULL, &input);
+				inflateResult = SceKernelUtilsForDriver_5B9BCD75(slot->buf, NULL, NULL, NULL, &input);
 				if (inflateResult >= 0) {
 					g_stream.inputEnd = (SceUInt8 *)slot->buf + size;
 					g_stream.slot = 0;
-					inflateResult = ksceDeflateDecompressPartial(g_destination,
+					inflateResult = SceKernelUtilsForDriver_3D74CCDF(g_destination,
 							g_outputLeft, input, NULL, &g_stream);
 				}
 				status = g_stream.slot + (inflateResult < 0 ? 2 : 0);

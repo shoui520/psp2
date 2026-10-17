@@ -6,38 +6,18 @@
  */
 
 #include "sysmem_internal.h"
-
-#define PROC_EVENT_CREATE		1
-#define PROC_EVENT_EXIT			2
-#define PROC_EVENT_KILL			3
-#define PROC_EVENT_SUSPEND		4
-#define PROC_EVENT_RESUME		5
+#include <sysmem/procevent.h>
 
 /* report a handler slower than this, in microseconds */
 #define PROC_EVENT_SLOW			100000
-
-typedef int (*ProcEventHandler)(SceUID pid, void *info, void *args);
-typedef int (*ProcEventPhaseHandler)(SceUID pid, int phase, void *info, void *args);
-typedef int (*ProcEventNotifyHandler)(int event, int phase, void *info, void *args);
-
-/* what a driver registers (size 0x18, or 0x1c with notify) */
-typedef struct SceKernelProcEventHandler {
-	SceSize size;
-	ProcEventHandler create;
-	ProcEventHandler exit;
-	ProcEventHandler kill;
-	ProcEventPhaseHandler suspend;		/* 0x10 */
-	ProcEventPhaseHandler resume;
-	ProcEventNotifyHandler notify;
-} SceKernelProcEventHandler;
 
 /* a handler's list link */
 typedef struct ProcEventLink {
 	struct ProcEventLink *next;
 	struct ProcEventLink *prev;
 	SceUID uid;
-	void *args;
-	ProcEventHandler create;		/* 0x10 */
+	int args;
+	ProcEventCreateHandler create;		/* 0x10 */
 	ProcEventHandler exit;
 	ProcEventHandler kill;
 	ProcEventPhaseHandler suspend;
@@ -71,7 +51,7 @@ uint32_t SysrootGetTimeLow(void);
 	if (time >= (limit))								\
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, line, "sceKernelInvokeProcEventHandler", \
 					  "  == ALERT == : [%s] process %s handler (phase 0x%08x) took %d usec\n", \
-					  ksceGUIDName(link->uid), what, phase, time);	\
+					  SceSysmemForDriver_E655852F(link->uid), what, phase, time);	\
 } while (0)
 #else
 #define PROC_EVENT_TIMER_START()	do { } while (0)
@@ -88,10 +68,10 @@ static int ProcEventDestroy(void *object)
 	ProcEventLink *link = &((ProcEventObject *)object)->link;
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 	link->next->prev = link->prev;
 	link->prev->next = link->next;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 	return 0;
 }
 
@@ -101,8 +81,8 @@ int sceKernelProcessEventInit(void)
 
 	s_procEventList[0] = (ProcEventLink *)s_procEventList;
 	s_procEventList[1] = (ProcEventLink *)s_procEventList;
-	ret = ksceUIDClassInitClass(&s_procEventClass, "SceUIDProcEventClass",
-				    ksceKernelGetUIDClass(), sizeof(ProcEventObject), ProcEventCreate,
+	ret = SceSysmemForDriver_61317102(&s_procEventClass, "SceUIDProcEventClass",
+				    SceSysmemForDriver_85336A1C(), sizeof(ProcEventObject), ProcEventCreate,
 				    ProcEventDestroy);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(108);
@@ -111,8 +91,8 @@ int sceKernelProcessEventInit(void)
 	return 0;
 }
 
-SceUID ksceKernelRegisterProcEventHandler(const char *name,
-					  const SceKernelProcEventHandler *handler, void *args)
+SceUID sceKernelRegisterProcEventHandler(const char *name,
+					  const SceKernelProcEventHandler *handler, int args)
 {
 	ProcEventObject *object;
 	ProcEventLink *link, *tail;
@@ -122,7 +102,7 @@ SceUID ksceKernelRegisterProcEventHandler(const char *name,
 	if (handler->size != sizeof(*handler))
 		SCE_DBG_PRINTF_FUNC(0xb, 124, "sceKernelRegisterProcEventHandler",
 				    "[%s], invalid structure size %d\n", name, handler->size);
-	uid = ksceGUIDKernelCreate(&s_procEventClass, name, (SceObjectBase **)&object);
+	uid = SceSysmemForDriver_56A13E90(&s_procEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 136, "sceKernelRegisterProcEventHandler",
 				    "Create Process event handler UID failed 0x%08x\n", uid);
@@ -137,27 +117,27 @@ SceUID ksceKernelRegisterProcEventHandler(const char *name,
 	object->link.uid = uid;
 	object->link.args = args;
 	object->link.notify = handler->size == sizeof(*handler) ? handler->notify : NULL;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 	link = &object->link;
 	tail = s_procEventList[1];
 	link->next = (ProcEventLink *)s_procEventList;
 	s_procEventList[1] = link;
 	link->prev = tail;
 	tail->next = link;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 	return uid;
 }
 
-int ksceKernelUnregisterProcEventHandler(SceUID uid)
+int SceProcEventForDriver_3DED57CC(SceUID uid)
 {
-	return ksceGUIDClose(uid);
+	return sceGUIDClose(uid);
 }
 
 /*
  * The handlers of an event in order, up to the one with UID stop; the first
  * failure stops it when the caller wants to know which (*failed).
  */
-int ksceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info,
+int sceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *info,
 				     SceUID *failed, SceUID stop)
 {
 	const char *name __attribute__((unused)) = s_eventNames[event - 1];
@@ -167,12 +147,12 @@ int ksceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *inf
 #endif
 	int state, ret = 0;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+	state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 	for (link = s_procEventList[0]; link != (ProcEventLink *)s_procEventList;
 	     link = link->next) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 		if (link->uid == stop) {
-			state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+			state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 			break;
 		}
 		switch (event) {
@@ -228,16 +208,16 @@ int ksceKernelInvokeProcEventHandler(SceUID pid, int event, int phase, void *inf
 		if (ret < 0) {
 			if (failed != NULL) {
 				*failed = link->uid;
-				state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+				state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 				break;
 			}
 			SCE_DBG_PRINTF_FUNC(0xb, 287, "sceKernelInvokeProcEventHandler",
 					    "process %s handler [%s] failed, res 0x%08x\n", name,
-					    ksceGUIDName(link->uid), ret);
+					    SceSysmemForDriver_E655852F(link->uid), ret);
 		}
 next:
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_procEventLock);
+		state = SceCpuForDriver_D32ACE9E(&s_procEventLock);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_procEventLock, state);
 	return ret;
 }

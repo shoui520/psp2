@@ -26,14 +26,14 @@ static void *mapDmac(const char *name, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	memBlockId = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					     DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 59, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(60);
 		return NULL;
 	}
-	ksceKernelGetMemBlockBase(memBlockId, &base);
+	SceSysmemForDriver_A841EDDA(memBlockId, &base);
 	return base;
 }
 
@@ -52,8 +52,8 @@ int initDmacSecure(void)
 	for (i = 0; i < 6; i++)
 		StartDmac(i);
 	/* DMAC6 exists on these units only */
-	if (ksceKernelCheckDipsw(0x9f) || ksceKernelCheckDipsw(0xc0) ||
-	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))
+	if (SceDipswForDriver_A98FC2FD(0x9f) || SceDipswForDriver_A98FC2FD(0xc0) ||
+	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
 		StartDmac(6);
 	keyring = mapDmac("SceDmacmgrKeyringReg", DMAC5_KEYRING_REG_BASE);
 	keyring->nonSecureAccess[0] = 0x200000ff;
@@ -92,14 +92,14 @@ static void *mapDmac(char n, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = ksceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	memBlockId = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					     DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 59, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(60);
 		return NULL;
 	}
-	ksceKernelGetMemBlockBase(memBlockId, &base);
+	SceSysmemForDriver_A841EDDA(memBlockId, &base);
 	return base;
 }
 
@@ -133,8 +133,8 @@ int initDmacSecure(void)
 		((SceDmacRegisters *)mapDmac(6, DMAC6_REG_BASE))->accessControl;
 
 	/* DMAC6 exists on these units only */
-	if (ksceKernelCheckDipsw(0x9f) || ksceKernelCheckDipsw(0xc0) ||
-	    ksceKernelCheckDipsw(0xc1) || ksceKernelCheckDipsw(0xc2))
+	if (SceDipswForDriver_A98FC2FD(0x9f) || SceDipswForDriver_A98FC2FD(0xc0) ||
+	    SceDipswForDriver_A98FC2FD(0xc1) || SceDipswForDriver_A98FC2FD(0xc2))
 		last = 6;
 	else
 		last = 5;

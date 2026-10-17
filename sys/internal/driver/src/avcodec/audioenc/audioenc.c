@@ -1,7 +1,6 @@
 /* SceAudioenc control and information handling (Sony audioenc/audioenc.c). */
 #include <psp2/audioenc.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <stdint.h>
@@ -50,33 +49,33 @@ int _copyOutSceAudioencCtrl(SceAudioencCtrl *userCtrl, SceAudioencInfo *userInfo
 	const void *caller = __builtin_return_address(0);
 	int hasUserInfo = userInfo != NULL;
 
-	ksceKernelAssert(hasUserInfo, &copyOutCtrlInfo, caller);
+	SceDebugForDriver_35A35322(hasUserInfo, &copyOutCtrlInfo, caller);
 #endif
 	optInfo = ctrl->pOptInfo;
 	if (optInfo && userOptInfo) {
 #if FW_DEBUG
-		ksceKernelAssert(1, &copyOutInfoSource, caller);
-		ksceKernelAssert(1, &copyOutInfoDestination, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoDestination, caller);
 #endif
-		ret = ksceKernelCopyToUser(userOptInfo, optInfo, optInfo->size);
+		ret = SceSysmemForDriver_6D88EF8A(userOptInfo, optInfo, optInfo->size);
 		if (ret < 0)
 			return ret;
 	}
 	info = ctrl->pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(info != NULL, &copyOutInfoSource, caller);
-	ksceKernelAssert(hasUserInfo, &copyOutInfoDestination, caller);
+	SceDebugForDriver_35A35322(info != NULL, &copyOutInfoSource, caller);
+	SceDebugForDriver_35A35322(hasUserInfo, &copyOutInfoDestination, caller);
 #endif
-	ret = ksceKernelCopyToUser(userInfo, info, info->size);
+	ret = SceSysmemForDriver_6D88EF8A(userInfo, info, info->size);
 	if (ret < 0)
 		return ret;
 	ctrl->pInfo = userInfo;
 	ctrl->pOptInfo = userOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyOutInfoSource, caller);
-	ksceKernelAssert(userCtrl != NULL, &copyOutInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
+	SceDebugForDriver_35A35322(userCtrl != NULL, &copyOutInfoDestination, caller);
 #endif
-	return ksceKernelCopyToUser(userCtrl, ctrl, ctrl->size);
+	return SceSysmemForDriver_6D88EF8A(userCtrl, ctrl, ctrl->size);
 }
 
 int initializeAudioenc(void)
@@ -121,7 +120,7 @@ int _sceAudioencProcessCreateEntry(SceUID pid)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &processCreateStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &processCreateStorage, caller);
 #endif
 	memset(process, 0, sizeof(*process));
 	process->internal.managers[1].maxEncoders = 0;
@@ -176,7 +175,7 @@ int _sceAudioencProcessExitEntry(SceUID pid)
 			audioencResident.processStorage, (void **)&process, 0);
 	status = ret < 0 ? ret : 0;
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &processExitStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &processExitStorage, caller);
 #endif
 	for (codec = 0; codec < 2; codec++) {
 		ret = _audioencInternalExitLibrary(pid, &process->internal.managers[codec], 0, 0);
@@ -196,7 +195,7 @@ int _sceAudioencProcessExitEntry(SceUID pid)
 SceUID _audioencGetResidentEncoderOwner(unsigned int encoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(encoder == 0, &residentOwnerGet, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(encoder == 0, &residentOwnerGet, __builtin_return_address(0));
 #endif
 	return audioencResident.owners[encoder];
 }
@@ -204,7 +203,7 @@ SceUID _audioencGetResidentEncoderOwner(unsigned int encoder)
 int _audioencSetResidentEncoderOwner(unsigned int encoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(encoder == 0, &residentOwnerSet, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(encoder == 0, &residentOwnerSet, __builtin_return_address(0));
 #endif
 	audioencResident.owners[encoder] = ksceKernelGetProcessId();
 	return 0;
@@ -213,7 +212,7 @@ int _audioencSetResidentEncoderOwner(unsigned int encoder)
 int _audioencClearResidentEncoderOwner(unsigned int encoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(encoder == 0, &residentOwnerClear, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(encoder == 0, &residentOwnerClear, __builtin_return_address(0));
 #endif
 	audioencResident.owners[encoder] = -1;
 	return 0;
@@ -234,7 +233,7 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 	ret = ksceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &initLibraryBudget,
+		SceDebugForDriver_D9703808(1, 0, &initLibraryBudget,
 			"Warning: sceAudioencInitLibrary must not be called by non-GAME process\n");
 #endif
 		goto leave;
@@ -251,13 +250,13 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userParam || ((uintptr_t)userParam & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	ret = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (ret < 0)
 		goto unlock;
 	if (param.size != sizeof(param)) {
@@ -266,7 +265,7 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 	}
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->internal.managers[0].codecType)
 		index = 0;
@@ -284,10 +283,10 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 #if FW_DEBUG
-		ksceKernelAssert(1, &copyOutInfoSource, caller);
-		ksceKernelAssert(1, &copyOutInfoDestination, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoDestination, caller);
 #endif
-		ret = ksceKernelCopyToUser(userParam, &param, param.size);
+		ret = SceSysmemForDriver_6D88EF8A(userParam, &param, param.size);
 	}
 unlock:
 	_unlockProcessSuspendCore();
@@ -311,7 +310,7 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 	ret = ksceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &termLibraryBudget,
+		SceDebugForDriver_D9703808(1, 0, &termLibraryBudget,
 			"Warning: sceAudioencTermLibrary must not be called by non-GAME process\n");
 #endif
 		goto leave;
@@ -321,7 +320,7 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 		goto leave;
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->internal.managers[0].codecType)
 		index = 0;
@@ -367,20 +366,20 @@ int sceAudioencGetContextSizeForUser(const SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -400,13 +399,13 @@ int sceAudioencGetContextSizeForUser(const SceAudioencCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -424,10 +423,10 @@ int sceAudioencGetContextSizeForUser(const SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -493,7 +492,7 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	resident = !ksceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
-		ksceKernelPrintfLevelWithInfo(1, 0, &createEncoderBudget,
+		SceDebugForDriver_D9703808(1, 0, &createEncoderBudget,
 			"Warning: sceAudioencCreateEncoder must not be called by non-GAME process\n");
 #endif
 	if (codecType == AUDIOENC_TYPE_SILK) {
@@ -506,20 +505,20 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -539,13 +538,13 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -563,10 +562,10 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -612,7 +611,7 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	ctrl.maxPcmSize = 640;
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		manager = &audioencResident.manager;
@@ -668,20 +667,20 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -701,13 +700,13 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -724,10 +723,10 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -778,7 +777,7 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 	}
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
 	(void)process;
 #endif
@@ -827,20 +826,20 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -860,13 +859,13 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -884,10 +883,10 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -939,7 +938,7 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	}
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->external.managers[0].codecType)
 		index = 0;
@@ -986,7 +985,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 	resident = !ksceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
-		ksceKernelPrintfLevelWithInfo(1, 0, &deleteEncoderBudget,
+		SceDebugForDriver_D9703808(1, 0, &deleteEncoderBudget,
 			"Warning: sceAudioencDeleteEncoder must not be called by non-GAME process\n");
 #endif
 	ctrl.pInfo = &info.publicInfo;
@@ -995,19 +994,19 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1027,13 +1026,13 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1051,10 +1050,10 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1073,7 +1072,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 		audioencIsExternalHandle(ctrl.handle);
 		process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-		ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
 		(void)process;
 #endif
@@ -1087,7 +1086,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 		external = audioencIsExternalHandle(ctrl.handle);
 		process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-		ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 		if (!external) {
 			if (codecType == process->internal.managers[0].codecType)
@@ -1156,19 +1155,19 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1188,13 +1187,13 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1212,10 +1211,10 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1231,7 +1230,7 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 	audioencIsExternalHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
 	(void)process;
 #endif
@@ -1292,19 +1291,19 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1324,13 +1323,13 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1348,10 +1347,10 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1367,7 +1366,7 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	external = audioencIsExternalHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (external) {
 		if (codecType == process->external.managers[0].codecType)
@@ -1437,19 +1436,19 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1469,13 +1468,13 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1493,10 +1492,10 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1511,7 +1510,7 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 	resident = audioencIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIOENC_TYPE_CELP > 1)
@@ -1576,11 +1575,11 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 		goto releaseRanges;
 	}
 	ctrl.inputPcmSize = manager->pWork[index].maxPcmSize;
-	ret = ksceKernelLockRangeWithMode(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
+	ret = sceKernelLockRangeWithMode(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
 	if (ret < 0)
 		goto releaseRanges;
 	manager->pWork[index].inputPcmSize = ctrl.inputPcmSize;
-	ret = ksceKernelIsAccessibleRange(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
+	ret = SceSysmemForDriver_9C78064C(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
 	if (ret < 0)
 		goto releaseRanges;
 	if (!ctrl.pOutputEs) {
@@ -1588,22 +1587,22 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 		goto releaseRanges;
 	}
 	ctrl.outputEsSize = manager->pWork[index].maxEsSize;
-	ret = ksceKernelLockRangeWithMode(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
+	ret = sceKernelLockRangeWithMode(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
 	if (ret < 0)
 		goto releaseRanges;
 	manager->pWork[index].outputEsSize = ctrl.outputEsSize;
-	ret = ksceKernelIsAccessibleRange(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
+	ret = SceSysmemForDriver_9C78064C(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
 	if (ret >= 0)
 		ret = _audioencInternalEncode(manager, &ctrl, 1);
 releaseRanges:
 	index = audioencGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputPcmSize) {
-		ksceKernelUnlockRangeWithMode(0x10, ctrl.pInputPcm,
+		SceSysmemForDriver_22CBE925(0x10, ctrl.pInputPcm,
 					     manager->pWork[index].inputPcmSize);
 		manager->pWork[index].inputPcmSize = 0;
 	}
 	if (manager->pWork[index].outputEsSize) {
-		ksceKernelUnlockRangeWithMode(0x30, ctrl.pOutputEs,
+		SceSysmemForDriver_22CBE925(0x30, ctrl.pOutputEs,
 					     manager->pWork[index].outputEsSize);
 		manager->pWork[index].outputEsSize = 0;
 	}
@@ -1646,19 +1645,19 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1678,13 +1677,13 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1702,10 +1701,10 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1720,7 +1719,7 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 	resident = audioencIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIOENC_TYPE_CELP > 1)
@@ -1792,11 +1791,11 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 		goto releaseRanges;
 	}
 	ctrl.inputPcmSize = manager->pWork[index].maxPcmSize * nFrames;
-	ret = ksceKernelLockRangeWithMode(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
+	ret = sceKernelLockRangeWithMode(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
 	if (ret < 0)
 		goto releaseRanges;
 	manager->pWork[index].inputPcmSize = ctrl.inputPcmSize;
-	ret = ksceKernelIsAccessibleRange(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
+	ret = SceSysmemForDriver_9C78064C(0x10, ctrl.pInputPcm, ctrl.inputPcmSize);
 	if (ret < 0)
 		goto releaseRanges;
 	if (!ctrl.pOutputEs) {
@@ -1804,22 +1803,22 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 		goto releaseRanges;
 	}
 	ctrl.outputEsSize = manager->pWork[index].maxEsSize * nFrames;
-	ret = ksceKernelLockRangeWithMode(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
+	ret = sceKernelLockRangeWithMode(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
 	if (ret < 0)
 		goto releaseRanges;
 	manager->pWork[index].outputEsSize = ctrl.outputEsSize;
-	ret = ksceKernelIsAccessibleRange(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
+	ret = SceSysmemForDriver_9C78064C(0x30, ctrl.pOutputEs, ctrl.outputEsSize);
 	if (ret >= 0)
 		ret = _audioencInternalEncode(manager, &ctrl, nFrames);
 releaseRanges:
 	index = audioencGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputPcmSize) {
-		ksceKernelUnlockRangeWithMode(0x10, ctrl.pInputPcm,
+		SceSysmemForDriver_22CBE925(0x10, ctrl.pInputPcm,
 					     manager->pWork[index].inputPcmSize);
 		manager->pWork[index].inputPcmSize = 0;
 	}
 	if (manager->pWork[index].outputEsSize) {
-		ksceKernelUnlockRangeWithMode(0x30, ctrl.pOutputEs,
+		SceSysmemForDriver_22CBE925(0x30, ctrl.pOutputEs,
 					     manager->pWork[index].outputEsSize);
 		manager->pWork[index].outputEsSize = 0;
 	}
@@ -1857,19 +1856,19 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -1889,13 +1888,13 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -1913,10 +1912,10 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -1951,7 +1950,7 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 	resident = audioencIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIOENC_TYPE_CELP > 1)
@@ -2023,19 +2022,19 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -2055,13 +2054,13 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -2079,10 +2078,10 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -2101,7 +2100,7 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 	resident = audioencIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIOENC_TYPE_CELP > 1)
@@ -2171,19 +2170,19 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
-	ksceKernelAssert(1, &copyInCtrlInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfoDestination, caller);
 #endif
 	kernelInfo = ctrl.pInfo;
 	kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size - 40 > 4 || (ctrl.size & 3)) {
@@ -2203,13 +2202,13 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 		goto invalidHandle;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIOENC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, infoSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, infoSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = infoSize < kernelInfo->size;
@@ -2227,10 +2226,10 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 		}
 		kernelOptInfo = ctrl.pOptInfo;
 #if FW_DEBUG
-		ksceKernelAssert(kernelOptInfo != NULL, &copyInInfoSource, caller);
+		SceDebugForDriver_35A35322(kernelOptInfo != NULL, &copyInInfoSource, caller);
 #endif
 		if (((uintptr_t)userOptInfo & 3) ||
-		    ksceKernelCopyFromUser(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
+		    SceSysmemForDriver_BC996A7A(kernelOptInfo, userOptInfo, sizeof(*kernelOptInfo)) < 0 ||
 		    kernelOptInfo->size != sizeof(*kernelOptInfo))
 			ctrl.pOptInfo = NULL;
 	} else {
@@ -2249,7 +2248,7 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 	resident = audioencIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIOENC_TYPE_CELP > 1)

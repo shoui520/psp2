@@ -3,14 +3,13 @@
  * File name unknown; the module links its parts in this order.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/systimer.h>
-#include <psp2kern/kernel/sysmem/uid_guid.h>
 #include <psp2kern/lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
@@ -44,9 +43,9 @@ static int sgiSet(int intr_code, int subintr_code, int enable) /* name unknown *
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	state->enabled = (state->enabled & ~(1 << subintr_code)) | ((enable != 0) << subintr_code);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -56,12 +55,12 @@ static int sgiTake(int intr_code, int subintr_code, int *enabled) /* name unknow
 	SceKernelIntrStatus intr;
 	SceUInt32 mask;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	mask = state->enabled;
 	if (enabled != NULL)
 		*enabled = (mask >> subintr_code) & 1;
 	state->enabled = mask & ~(1 << subintr_code);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -212,9 +211,9 @@ static int sgiDisable(int intr_code, int subintr_code) /* name unknown */
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	state->enabled &= ~(1 << subintr_code);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -223,9 +222,9 @@ static int sgiEnable(int intr_code, int subintr_code) /* name unknown */
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
 
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&state->lock);
+	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	state->enabled |= 1 << subintr_code;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, intr);
 	return 0;
 }
 
@@ -283,7 +282,7 @@ int vblankInit(void) /* name unknown */
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < 2; i++) {
-		ret = ksceGUIDKernelCreate(&vblankEventClass.base, vblankEventNames[i],
+		ret = SceSysmemForDriver_56A13E90(&vblankEventClass.base, vblankEventNames[i],
 					   (SceObjectBase **)&heads[i].vblankEventObject);
 		if (ret < 0)
 			return ret;
@@ -526,7 +525,7 @@ int sceDisplayRegisterVblankStartCallback(SceUID uid)
 	int ret;
 
 	t = sceSyscallEnter();
-	uid = kscePUIDtoGUID(0, uid);
+	uid = SceSysmemForDriver_45D22597(0, uid);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return 0xc00280a1;
@@ -559,7 +558,7 @@ int sceDisplayUnregisterVblankStartCallback(SceUID uid)
 	int ret;
 
 	t = sceSyscallEnter();
-	uid = kscePUIDtoGUID(0, uid);
+	uid = SceSysmemForDriver_45D22597(0, uid);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return 0xc00280a1;

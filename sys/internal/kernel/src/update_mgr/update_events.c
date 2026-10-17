@@ -1,8 +1,8 @@
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include "update_internal.h"
 
 int UpdateMgrProcessStop(SceUID pid, int eventType,
-			SceProcEventInvokeParam1 *param, int flags)
+			ProcEventParam *param, int flags)
 {
 	UpdateUtilNodeStatus status;
 	int idle;
@@ -39,19 +39,19 @@ int UpdateMgrSystemEvent(int resume, int eventId, void *args, void *opt)
 
 int UpdateMgrRegisterEventHandlers(void)
 {
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	int result;
 
 	handler.size = sizeof(handler);
 	handler.create = UpdateMgrProcessCreate;
 	handler.exit = UpdateMgrProcessExit;
 	handler.kill = UpdateMgrProcessKill;
-	handler.stop = UpdateMgrProcessStop;
-	handler.start = UpdateMgrProcessStart;
-	handler.switch_process = 0;
-	result = ksceKernelRegisterProcEventHandler("SceSblUpdateMgr", &handler, 0);
+	handler.suspend = UpdateMgrProcessStop;
+	handler.resume = UpdateMgrProcessStart;
+	handler.notify = 0;
+	result = sceKernelRegisterProcEventHandler("SceSblUpdateMgr", &handler, 0);
 	if (result >= 0) {
-		result = ksceKernelRegisterSysEventHandler("SceSblUpdateMgr",
+		result = sceKernelRegisterSysEventHandler("SceSblUpdateMgr",
 							UpdateMgrSystemEvent, 0);
 		if (result >= 0)
 			result = 0;

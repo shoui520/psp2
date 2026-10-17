@@ -1,6 +1,6 @@
 #include <sysmem/sysmem.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/cpu/cache.h>
+#include <sysmem/cpu.h>
 #include "update_internal.h"
 #include "update_packet.h"
 #include "sbls.h"
@@ -48,7 +48,7 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 			header->bodySize + sizeof(SlskPersonalization));
 	if (result)
 		goto cleanup;
-	ksceKernelDcacheCleanRange((uint8_t *)sbls + (sourceSector << 9),
+	SceCpuForDriver_103872A5((uint8_t *)sbls + (sourceSector << 9),
 			(sourceSize + 63) & ~63);
 	result = UpdateUtilSetupSm(0, &slskSmId, 0);
 	if (result)
@@ -60,7 +60,7 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 	result = serviceResult;
 	if (result)
 		goto cleanup;
-	ksceKernelDcacheInvalidateRange((uint8_t *)sbls + (sourceSector << 9),
+	SceCpuForDriver_02796361((uint8_t *)sbls + (sourceSector << 9),
 			(sourceSize + 63) & ~63);
 	result = StorageUtilSblsRename(sbls, entries, previousName, retiredName);
 	if (!result)
@@ -68,14 +68,14 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 cleanup:
 	if (dataVector) {
 		UpdateUtilFreePARangeVector(heapId, dataVector);
-		ksceKernelFreeHeapMemory(heapId, dataVector);
+		sceKernelFreeHeapMemory(heapId, dataVector);
 	}
 	if (vectorVector) {
 		UpdateUtilFreePARangeVector(heapId, vectorVector);
-		ksceKernelFreeHeapMemory(heapId, vectorVector);
+		sceKernelFreeHeapMemory(heapId, vectorVector);
 	}
 	if (packet)
-		ksceKernelFreeHeapMemory(heapId, packet);
+		sceKernelFreeHeapMemory(heapId, packet);
 	if (slskSmId != -1)
 		UpdateUtilStopSm(&slskSmId);
 	return result;

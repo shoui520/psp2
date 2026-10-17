@@ -13,8 +13,8 @@
 #include "hdmi_internal.h"
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/aimgr.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/dipsw.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysclib.h>
 
@@ -110,8 +110,8 @@ static int initWork(void *arg)
 			    sceHdmiDeviceGetChipId(chipId, &length) >= 0) {
 				hdmiResetVicTiming();
 				hdmiInfoFrameInitialize();
-				if (!ksceSblAimgrIsTool() ||
-				    (SceQafMgrForDriver_382C71E8() != 0 && ksceKernelCheckDipsw(0xe5) == 0))
+				if (!SceSblAIMgrForDriver_274663A0() ||
+				    (SceQafMgrForDriver_382C71E8() != 0 && SceDipswForDriver_A98FC2FD(0xe5) == 0))
 					sceHdmiDeviceSetHdcpMode(1);
 				else
 					sceHdmiDeviceSetHdcpMode(0);
@@ -152,7 +152,7 @@ int controlHdmiModuleStart(void)
 	chipIdLength = HDMI_CHIP_ID_UNKNOWN;
 	eventHandleManagerInitialize();
 	if (ksceKernelInitializeFastMutex(&mutex, "SceHdmi", 2, 0) < 0 ||
-	    ksceKernelRegisterSysEventHandler("SceHdmi", _sceHdmiSysEventHandler, NULL) < 0)
+	    sceKernelRegisterSysEventHandler("SceHdmi", _sceHdmiSysEventHandler, NULL) < 0)
 		return 7;
 	ksceKernelEnqueueWorkQueue(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceHdmiInit", initWork, NULL);
 	return 0;

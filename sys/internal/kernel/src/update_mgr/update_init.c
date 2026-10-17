@@ -45,7 +45,7 @@ unsigned int UpdateUtilInit(void)
 		.size = sizeof(option),
 		.flags = HEAP_AUTO_EXTEND,
 	};
-	updateHeapId = ksceKernelCreateHeap("SceSblUs", 0x20000, &option);
+	updateHeapId = SceSysmemForDriver_9328E0E8("SceSblUs", 0x20000, &option);
 	return updateHeapId < 0 ? (int)0x800f020c : 0;
 }
 

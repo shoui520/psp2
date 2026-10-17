@@ -1,16 +1,13 @@
 #pragma once
 
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <sysmem/sysroot_hid.h>
 #include <bt/bt_hid.h>
 #include <bt/bt_event.h>
 #include <bt/bt_registered.h>
 #include "hid.h"
 #include <sysmem/list.h>
-
-int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock,
-					    int intrState);
+#include <sysmem/cpu.h>
 
 typedef struct HidCollection HidCollection;
 typedef struct HidProcessContext HidProcessContext;
@@ -228,7 +225,7 @@ _Static_assert(sizeof(HidReportRouting) == 16, "HID report routing");
 
 extern unsigned int hidFlags;
 extern SceKernelSpinlock hidSpinlock;
-extern const SceProcEventHandler hidProcessHandlers;
+extern const SceKernelProcEventHandler hidProcessHandlers;
 extern const SysrootHidOps hidSysrootOps;
 extern HidCollection *hidCollections[24];
 extern HidReportRouting hidRouting[3];
@@ -283,12 +280,12 @@ void hidNotifyKeyboardRead(void);
 void hidNotifyConsumerEnumeration(void);
 void hidNotifyConsumerRead(void);
 extern HidProcessLink hidProcessHead;
-int hidProcessCreate(SceUID pid, SceProcEventInvokeParam2 *param, int arg);
-int hidProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg);
-int hidProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg);
-int hidProcessStop(SceUID pid, int eventType, SceProcEventInvokeParam1 *param,
+int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, int arg);
+int hidProcessExit(SceUID pid, ProcEventParam *param, int arg);
+int hidProcessKill(SceUID pid, ProcEventParam *param, int arg);
+int hidProcessStop(SceUID pid, int eventType, ProcEventParam *param,
 		   int arg);
 int processResumeStart(SceUID pid, int eventType,
-		       SceProcEventInvokeParam1 *param, int arg);
+		       ProcEventParam *param, int arg);
 int hidDumpDevices(void *buffer, SceSize size, SceUInt32 *count);
 int hidDumpLists(void *buffer, SceSize size, SceUInt32 *count);

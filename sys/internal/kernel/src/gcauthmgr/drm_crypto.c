@@ -3,7 +3,7 @@
 #include <string.h>
 #include <psp2kern/types.h>
 #include "drm_crypto.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
@@ -28,7 +28,7 @@ int GcAuthAesCbc(unsigned char *data, size_t size, const void *key,
 		zeroIv[3] = 0;
 		iv = (const unsigned char *)zeroIv;
 	}
-	if (ksceAesInit1(&state.aes, 128, 128, key) >= 0) {
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 128, key) >= 0) {
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; index++)
 			state.chain[index] = iv[index];
@@ -40,7 +40,7 @@ int GcAuthAesCbc(unsigned char *data, size_t size, const void *key,
 			do {
 				for (index = 0; index != blockBytes; index++)
 					block[index] = data[index] ^ state.chain[index];
-				ksceAesEncrypt1(&state.aes, block, data);
+				SceKernelUtilsForDriver_C2A61770(&state.aes, block, data);
 				blockBytes = state.aes.encryption.blockWords * 4;
 				for (index = 0; index != blockBytes; index++)
 					state.chain[index] = data[index];
@@ -49,7 +49,7 @@ int GcAuthAesCbc(unsigned char *data, size_t size, const void *key,
 		}
 	} else {
 		while (data < end) {
-			ksceAesDecrypt1(&state.aes, data, block);
+			SceKernelUtilsForDriver_D8678061(&state.aes, data, block);
 			blockBytes = state.aes.encryption.blockWords * 4;
 			for (index = 0; index != blockBytes; index++) {
 				previous = data[index];
@@ -135,7 +135,7 @@ int GcAuthAesEncryptZeroIv(unsigned char *data, size_t size, const void *key)
 
 	for (index = 0; index != 16; index++)
 		zeroIv[index] = 0;
-	if (ksceAesInit1(&state.aes, 128, 128, key) < 0)
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 128, key) < 0)
 		return (int)0x808a0001;
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++)
@@ -144,7 +144,7 @@ int GcAuthAesEncryptZeroIv(unsigned char *data, size_t size, const void *key)
 	while (data < end) {
 		for (index = 0; index != blockBytes; index++)
 			block[index] = data[index] ^ state.chain[index];
-		ksceAesEncrypt1(&state.aes, block, data);
+		SceKernelUtilsForDriver_C2A61770(&state.aes, block, data);
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; index++)
 			state.chain[index] = data[index];
@@ -165,14 +165,14 @@ int GcAuthAesDecryptZeroIv(unsigned char *data, size_t size, const void *key)
 
 	for (index = 0; index != 16; index++)
 		zeroIv[index] = 0;
-	if (ksceAesInit1(&state.aes, 128, 128, key) < 0)
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 128, key) < 0)
 		return (int)0x808a0001;
 	blockBytes = state.aes.encryption.blockWords * 4;
 	for (index = 0; index != blockBytes; index++)
 		state.chain[index] = zeroIv[index];
 	end = data + size;
 	while (data < end) {
-		ksceAesDecrypt1(&state.aes, data, block);
+		SceKernelUtilsForDriver_D8678061(&state.aes, data, block);
 		blockBytes = state.aes.encryption.blockWords * 4;
 		for (index = 0; index != blockBytes; index++) {
 			previous = data[index];

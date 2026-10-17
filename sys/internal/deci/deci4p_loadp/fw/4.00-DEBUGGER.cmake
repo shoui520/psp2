@@ -119,15 +119,15 @@ set(MODULE_IMPORT_NIDS
 	0x849E3DF5:F:0xD0CCF840
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelDeleteHeap
-	ksceKernelStrncpyFromUser
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelDeleteHeap
+	SceSysmemForDriver_DB3EC244
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_D32ACE9E
 	memset
 	strncmp
 	memcpy
@@ -137,9 +137,9 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceKernelSysrootSetProcessHandler
+	SceSysrootForDriver_0F07C3FC
 	SceSysrootForDriver_0F59B369
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
+	SceSysrootForDriver_55392965
 	SceSysrootForDriver_5A7FFDC1
 	SceSysrootForDriver_6050A467
 	SceSysrootForDriver_AA8D34EE
@@ -148,11 +148,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_D04C7723
 	SceSysrootForDriver_E384DD93
 	SceSysrootForDriver_F4340469
-	ksceKernelPrintfWithInfo
-	ksceKernelPanic
-	ksceKernelPrintf
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelCheckDipsw
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_391B74B7
+	SceDebugForDriver_D9703808
+	SceDipswForDriver_A98FC2FD
 	ksceKernelDeleteMutex
 	ksceKernelWaitEventFlag
 	ksceKernelDeleteSema
@@ -188,10 +188,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelUnloadModule
 	ksceKernelLoadModule
 	ksceKernelSearchModuleByName
-	ksceSblAimgrIsDolce
+	SceSblAIMgrForDriver_71608CA3
 	SceSblACMgrForDriver_4CBD6156
 	SceSblACMgrForDriver_AD717E7A
-	ksceSblQafMgrIsAllowHost0Access
+	SceQafMgrForDriver_082A4FC2
 	SceQafMgrForDriver_382C71E8
 	SceQafMgrForDriver_B9770A13
 	sceAppMgrKillAppByNameForDebugger

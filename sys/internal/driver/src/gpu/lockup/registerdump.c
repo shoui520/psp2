@@ -283,7 +283,7 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 	unsigned savedEnable[4], savedFirst[4], savedSecond[4];
 	int result;
 
-	if (ksceKernelIsAccessibleRange(3, dump, size) < 0 || size < sizeof(*dump)) {
+	if (SceSysmemForDriver_9C78064C(3, dump, size) < 0 || size < sizeof(*dump)) {
 		SCE_DBG_PRINTF(0, 398, "Invalid register dump area\n");
 		return (int)0x804c0000;
 	}
@@ -299,7 +299,7 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 	}
 	node = GetGpuDeviceNode();
 	imgDevice = node ? node->pvDevice : NULL;
-	result = ksceKernelIsAccessibleRange(3, imgDevice, sizeof(*imgDevice));
+	result = SceSysmemForDriver_9C78064C(3, imgDevice, sizeof(*imgDevice));
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 431,
 				"sceKernelIsAccessibleRange(imgDevice) returned 0x%08x\n", result);
@@ -312,7 +312,7 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 				imgDevice->ui32RegSize, registers);
 		return (int)0x804c000c;
 	}
-	result = ksceKernelIsAccessibleRange(3, registers, imgDevice->ui32RegSize);
+	result = SceSysmemForDriver_9C78064C(3, registers, imgDevice->ui32RegSize);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 451,
 				"sceKernelIsAccessibleRange(GPU control registers) returned 0x%08x\n",
@@ -486,7 +486,7 @@ int CollectRegisterDumpContexts(SceGpuRegisterDump *dump)
 	}
 	for (index = 0; index < 8; index++) {
 		if (dump->contexts[index].processUid != -1) {
-			name = ksceGUIDName(dump->contexts[index].processUid);
+			name = SceSysmemForDriver_E655852F(dump->contexts[index].processUid);
 			if (name) {
 				strncpy(dump->contexts[index].processName, name, 19);
 				dump->contexts[index].processName[19] = 0;

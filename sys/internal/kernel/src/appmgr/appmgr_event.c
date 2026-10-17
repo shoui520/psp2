@@ -20,8 +20,6 @@ extern int _appmgrProcessQuitProcess(struct AppState *app, int exitReason,
 				   int relaunch, int retry);
 extern int _appListPushEvent(struct AppState *app,
 			     const SceAppMgrSystemEvent *event);
-extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-		const SceKernelDebugInfo *info, const void *lr, const char *fmt, ...);
 
 AppmgrNotificationQueue g_appmgrNotificationQueue;
 unsigned char g_appmgrNotificationBuffer[4][64];
@@ -119,7 +117,7 @@ static const SceKernelDebugInfo notificationSignalPanicInfo = {
 
 void appmgrNotificationOverflowPanic(void)
 {
-	ksceKernelPanic(&notificationOverflowPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&notificationOverflowPanicInfo, __builtin_return_address(0));
 }
 
 static const SceKernelDebugInfo paramQueueMutexPanicInfo = {
@@ -130,7 +128,7 @@ static const SceKernelDebugInfo paramQueueMutexPanicInfo = {
 
 _Noreturn void appmgrParamQueueMutexPanic(void)
 {
-	ksceKernelPanic(&paramQueueMutexPanicInfo, __builtin_return_address(0));
+	SceDebugForDriver_391B5B74(&paramQueueMutexPanicInfo, __builtin_return_address(0));
 }
 #endif
 
@@ -510,7 +508,7 @@ int _appmgrQueueInit(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 620, "_appmgrQueueInit");
 #else
-		ksceKernelPanic(&notificationReadSemaphorePanicInfo,
+		SceDebugForDriver_391B5B74(&notificationReadSemaphorePanicInfo,
 			__builtin_return_address(0));
 #endif
 	}
@@ -522,7 +520,7 @@ int _appmgrQueueInit(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 622, "_appmgrQueueInit");
 #else
-		ksceKernelPanic(&notificationWriteSemaphorePanicInfo,
+		SceDebugForDriver_391B5B74(&notificationWriteSemaphorePanicInfo,
 			__builtin_return_address(0));
 #endif
 	}
@@ -534,7 +532,7 @@ int _appmgrQueueInit(void)
 		dumpBgmState();
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 624, "_appmgrQueueInit");
 #else
-		ksceKernelPanic(&notificationMutexPanicInfo,
+		SceDebugForDriver_391B5B74(&notificationMutexPanicInfo,
 			__builtin_return_address(0));
 #endif
 	}
@@ -567,7 +565,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, (int)0x80028102, (int)0x80028102);
 #else
-			ksceKernelPrintfPanic(&notificationPollEntryPanicInfo,
+			SceDebugForDriver_00CCE39C(&notificationPollEntryPanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n",
 				result, (int)0x80028102);
 #endif
@@ -585,7 +583,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				lockResult, lockResult, 0, 0);
 #else
-			ksceKernelPrintfPanic(&notificationPopLockPanicInfo,
+			SceDebugForDriver_00CCE39C(&notificationPopLockPanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", lockResult, 0);
 #endif
 		}
@@ -598,7 +596,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, 0, 0);
 #else
-			ksceKernelPrintfPanic(&notificationRestoreEntryPanicInfo,
+			SceDebugForDriver_00CCE39C(&notificationRestoreEntryPanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
@@ -632,7 +630,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&notificationPopUnlockPanicInfo,
+		SceDebugForDriver_00CCE39C(&notificationPopUnlockPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -645,7 +643,7 @@ int _appmgrQueuePop(AppmgrNotificationRequest *request)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&notificationReleaseSlotPanicInfo,
+		SceDebugForDriver_00CCE39C(&notificationReleaseSlotPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -680,7 +678,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 					"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 					result, result, 0, 0);
 #else
-				ksceKernelPrintfPanic(&notificationWaitSlotPanicInfo,
+				SceDebugForDriver_00CCE39C(&notificationWaitSlotPanicInfo,
 					__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 			}
@@ -697,7 +695,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 					"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 					result, result, (int)0x80028102, (int)0x80028102);
 #else
-				ksceKernelPrintfPanic(&notificationPollSlotPanicInfo,
+				SceDebugForDriver_00CCE39C(&notificationPollSlotPanicInfo,
 					__builtin_return_address(0), "0x%08x,0x%08x\n",
 					result, (int)0x80028102);
 #endif
@@ -715,7 +713,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, 0, 0);
 #else
-			ksceKernelPrintfPanic(&notificationLockPanicInfo,
+			SceDebugForDriver_00CCE39C(&notificationLockPanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
@@ -728,7 +726,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 				"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 				result, result, 0, 0);
 #else
-			ksceKernelPrintfPanic(&notificationRestoreSlotPanicInfo,
+			SceDebugForDriver_00CCE39C(&notificationRestoreSlotPanicInfo,
 				__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 		}
@@ -758,7 +756,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&notificationUnlockPanicInfo,
+		SceDebugForDriver_00CCE39C(&notificationUnlockPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}
@@ -771,7 +769,7 @@ int _appmgrQueuePush(const AppmgrNotificationRequest *request, int wait)
 			"[SceAppMgr] The actual value is %d(0x%08x), but expected value is %d(0x%08x)\n",
 			result, result, 0, 0);
 #else
-		ksceKernelPrintfPanic(&notificationSignalPanicInfo,
+		SceDebugForDriver_00CCE39C(&notificationSignalPanicInfo,
 			__builtin_return_address(0), "0x%08x,0x%08x\n", result, 0);
 #endif
 	}

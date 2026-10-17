@@ -42,11 +42,11 @@ int MapGpuRegisters(void)
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	options.paddr = SGX_REG_BASE;
-	uid = ksceKernelAllocMemBlock("SceSGX543Reg",
+	uid = SceSysmemForDriver_C94850C9("SceSGX543Reg",
 				    SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				    SGX_REG_SIZE, &options);
 	gpuDumpRegion.state.registerMemblockUid = uid;
-	ksceKernelGetMemBlockBase(uid, &platform->pvRegsCpuVBase);
+	SceSysmemForDriver_A841EDDA(uid, &platform->pvRegsCpuVBase);
 	platform->ui32IRQ = 0x34;
 	return 0;
 }

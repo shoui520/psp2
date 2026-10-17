@@ -68,20 +68,20 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0x6FE062D1
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelAtomicAddAndGet32
-	ksceKernelAtomicSubAndGet32
-	ksceKernelPrintf
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	SceCpuForDriver_5F6A8743
+	SceCpuForDriver_A4884C4E
+	SceDebugForDriver_391B74B7
 	memset
 	memcpy
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceSblAimgrIsDolce
-	ksceSblAimgrIsGenuineDolce
-	ksceSblAimgrIsCEX
-	ksceKernelRegisterProcEventHandler
-	ksceKernelUnregisterProcEventHandler
+	SceSblAIMgrForDriver_71608CA3
+	SceSblAIMgrForDriver_C6E83F34
+	SceSblAIMgrForDriver_D78B04A2
+	sceKernelRegisterProcEventHandler
+	SceProcEventForDriver_3DED57CC
 	ksceKernelWaitEventFlag
 	sceKernelExitThread
 	ksceKernelStartThread
@@ -96,7 +96,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	ksceUsbdOpenPipe
 	ksceUsbdRegisterDriver
 	ksceUsbdUnregisterDriver

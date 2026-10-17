@@ -282,7 +282,7 @@ int UVFAT_allocationbitmapentry(SceExfatfsSharedResource *sharedResource,
 		fileSystem->bitmapBuffer = (void *)(((uintptr_t)fileSystem->bitmapAllocation + 511) & ~511U);
 		if (!fileSystem->bitmapBuffer) {
 #if FW_DEBUG
-			ksceKernelPrintfLevelWithInfo(1, 0,
+			SceDebugForDriver_D9703808(1, 0,
 				SCE_DBGINFO_FUNC(365, "flush_and_read_allocationbitmap_entry"),
 				"allocbitmap_bp == NULL\n");
 #endif

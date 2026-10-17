@@ -9,14 +9,14 @@
  * a process is turned into a newline.
  */
 
-#include <psp2kern/kernel/cpu.h>
-#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/cpu.h>
+#include <sysmem/dipsw.h>
 #include <psp2kern/kernel/modulemgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/uart.h>
+#include <sysmem/uart.h>
 #include <psp2kern/vfs.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -47,16 +47,16 @@ typedef struct Tty2Buffer {
 
 typedef struct Tty2Control {
 	SceKernelRWSpinlock lock;		/* buffer ownership */
-	const SceProcEventHandler *handler;	/* = &procHandler */
+	const SceKernelProcEventHandler *handler;	/* = &procHandler */
 	SceUInt32 nbuf;
 	Tty2Buffer *buf;
 	SceUID handlerId;
-	SceProcEventHandler procHandler;
+	SceKernelProcEventHandler procHandler;
 } Tty2Control;
 
-static int procCreateHandler(SceUID pid, SceProcEventInvokeParam2 *param, int args);
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args);
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args);
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args);
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args);
 
 static Tty2Buffer s_buffer[TTY2_BUFFERS];
 static Tty2Control s_control = {
@@ -65,7 +65,7 @@ static Tty2Control s_control = {
 	.buf = s_buffer,
 	.handlerId = -1,
 	.procHandler = {
-		.size = sizeof(SceProcEventHandler),
+		.size = sizeof(SceKernelProcEventHandler),
 		.create = procCreateHandler,
 		.exit = procExitHandler,
 		.kill = procKillHandler,
@@ -96,17 +96,17 @@ static void tty2bufferStart(Tty2Buffer *p)
 
 	TTY2_TRACE(0xb, 150, "(%p)\n", p);
 	p->lock = 0;
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
+	intr = SceCpuForDriver_D32ACE9E(&p->lock);
 	p->pid = -1;
 	p->size = TTY2_BUFFER_SIZE;
-	p->uid = ksceKernelAllocMemBlock("SceTty2uartBuffer", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, TTY2_BUFFER_SIZE, NULL);
+	p->uid = SceSysmemForDriver_C94850C9("SceTty2uartBuffer", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, TTY2_BUFFER_SIZE, NULL);
 	if (p->uid < 0) {
 		TTY2_ERROR(0xb, 159, "sceKernelAllocMemBlockForKernel failed (0x%08X)\n", p->uid);
 	} else {
-		ret = ksceKernelGetMemBlockVBase(p->uid, (void **)&p->base);
+		ret = SceSysmemForDriver_B81CF0A3(p->uid, (void **)&p->base);
 		if (ret < 0) {
 			TTY2_ERROR(0xb, 165, "sceKernelGetMemBlockVBase failed (0x%08X)\n", ret);
-			ksceKernelFreeMemBlock(p->uid);
+			SceSysmemForDriver_009E1C61(p->uid);
 		} else {
 			p->count = 0;
 			p->cur = p->base;
@@ -114,7 +114,7 @@ static void tty2bufferStart(Tty2Buffer *p)
 			SceSysrootForDriver_AA770EF7(controlGetLogRaw);
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
 }
 
 static void tty2bufferPutcharRaw(Tty2Buffer *p, signed char c)
@@ -135,7 +135,7 @@ static void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
 	SceSize i;
 
 	TTY2_TRACE(0xb, 238, "(%p, [%-16s])\n", p, buf);
-	intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
+	intr = SceCpuForDriver_D32ACE9E(&p->lock);
 	for (i = 0; i < n; ) {
 		if (buf[i] == '\\' && buf[i + 1] == 'n') {
 			tty2bufferPutcharRaw(p, '\n');
@@ -145,7 +145,7 @@ static void tty2bufferWrite(Tty2Buffer *p, const signed char *buf, SceSize n)
 			i++;
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
 }
 
 /* -- process events ----------------------------------------------------- */
@@ -156,19 +156,19 @@ static int controlOpen(SceUID pid)
 	Tty2Buffer *p;
 
 	TTY2_TRACE(0xb, 466, "(pid 0x%08x)\n", pid);
-	wintr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&s_control.lock);
+	wintr = SceCpuForDriver_4C38CE4D(&s_control.lock);
 	p = tty2bufferFindByPidRaw(-1);
 	if (p == NULL) {
 		TTY2_ERROR(0xf, 474, "Cannot allocate free tty2buffer\n");
 	} else {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
+		intr = SceCpuForDriver_D32ACE9E(&p->lock);
 		p->count = 0;
 		p->pid = pid;
 		p->cur = p->base;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
 		TTY2_TRACE(0xb, 471, "pid=0x%08x\n", p->pid);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, wintr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, wintr);
 	return 0;
 }
 
@@ -178,34 +178,34 @@ static int controlClose(SceUID pid)
 	Tty2Buffer *p;
 
 	TTY2_TRACE(0xb, 533, "(pid 0x%08x)\n", pid);
-	wintr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&s_control.lock);
+	wintr = SceCpuForDriver_4C38CE4D(&s_control.lock);
 	p = tty2bufferFindByPidRaw(pid);
 	if (p == NULL) {
 		TTY2_ERROR(0xb, 542, "tty2bufferFindByPidRaw(0x%08x) failed\n", pid);
 	} else {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&p->lock);
+		intr = SceCpuForDriver_D32ACE9E(&p->lock);
 		p->pid = -1;
 		p->count = 0;
 		p->cur = p->base;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&p->lock, intr);
 	}
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, wintr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, wintr);
 	return 0;
 }
 
-static int procCreateHandler(SceUID pid, SceProcEventInvokeParam2 *param, int args)
+static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
 {
 	TTY2_TRACE(0xb, 300, "(pid 0x%08x)\n", pid);
 	return controlOpen(pid);
 }
 
-static int procExitHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procExitHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	TTY2_TRACE(0xb, 310, "(pid 0x%08x)\n", pid);
 	return controlClose(pid);
 }
 
-static int procKillHandler(SceUID pid, SceProcEventInvokeParam1 *param, int args)
+static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 {
 	TTY2_TRACE(0xb, 320, "(pid 0x%08x)\n", pid);
 	return controlClose(pid);
@@ -257,13 +257,13 @@ static int controlWrite(const signed char *buf, SceSize n)
 	SceUID pid;
 
 	pid = sceKernelGetProcessId();
-	intr = ksceKernelRWSpinlockLowReadLockCpuSuspendIntr(&s_control.lock);
+	intr = SceCpuForDriver_EC53D007(&s_control.lock);
 	p = tty2bufferFindByPidRaw(pid);
 	if (p == NULL)
 		TTY2_ERROR(0xf, 564, "tty2bufferFindByPidRaw(0x%08x) failed\n", pid);
 	else
 		tty2bufferWrite(p, buf, n);
-	ksceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&s_control.lock, intr);
+	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&s_control.lock, intr);
 	return 0;
 }
 
@@ -274,15 +274,15 @@ static int startControl(void)
 	int ret;
 
 	s_control.lock = 0;
-	intr = ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr(&s_control.lock);
+	intr = SceCpuForDriver_4C38CE4D(&s_control.lock);
 	for (i = 0; i < s_control.nbuf; i++)
 		tty2bufferStart(&s_control.buf[i]);
-	ret = ksceKernelRegisterProcEventHandler("SceTty2UartProcEvent", &s_control.procHandler,
+	ret = sceKernelRegisterProcEventHandler("SceTty2UartProcEvent", &s_control.procHandler,
 						 (int)&s_control);
 	if (ret < 0)
 		return ret;		/* (with the control lock held) */
 	s_control.handlerId = ret;
-	ksceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, intr);
+	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&s_control.lock, intr);
 	return 0;
 }
 
@@ -426,7 +426,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 		SCE_PRINTF_WITH_INFO(0xf, 900, "invalid size (%d)\n", n);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	if (!ksceKernelCheckDipsw(0xc4))
+	if (!SceDipswForDriver_A98FC2FD(0xc4))
 		return 0;
 	ret = ksceKernelLockMutex(s_mutex, 1, NULL);
 	if (ret < 0) {
@@ -434,7 +434,7 @@ static SceSSize dev_tty_vop_read(SceVopReadArgs *argp)
 		return ret;
 	}
 	for (i = 0; i != n; i++) {
-		c = ksceUartRead(TTY2_UART);
+		c = SceUartForKernel_4E97D3AD(TTY2_UART);
 		if (c < 0) {
 			ksceKernelUnlockMutex(s_mutex, 1);
 			return c;
@@ -457,14 +457,14 @@ static SceSSize dev_tty_vop_write(SceVopWriteArgs *argp)
 	n = argp->nbyte;
 	controlWrite(buf, n);
 
-	if ((ksceKernelCheckDipsw(0xc4) || ksceKernelCheckDipsw(0xc5)) &&
+	if ((SceDipswForDriver_A98FC2FD(0xc4) || SceDipswForDriver_A98FC2FD(0xc5)) &&
 	    ksceKernelLockMutex(s_mutex, 1, NULL) >= 0) {
 		for (i = 0; i < n; i++) {
 			if (buf[i] == '\\' && buf[i + 1] == 'n') {
 				i++;
-				ksceKernelPrintf("\n");
+				SceDebugForDriver_391B74B7("\n");
 			} else {
-				ksceKernelPrintf("%c", buf[i]);
+				SceDebugForDriver_391B74B7("%c", buf[i]);
 			}
 		}
 		ksceKernelUnlockMutex(s_mutex, 1);
@@ -554,7 +554,7 @@ int tty2uartModuleStart(SceSize args, void *argp)
 	int ret;
 
 	TTY2_ERROR(0xb, 666, "()\n");
-	if (!ksceKernelCheckDipsw(0xd3))
+	if (!SceDipswForDriver_A98FC2FD(0xd3))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
 	ret = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);

@@ -189,12 +189,12 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	ret = eventFlag;
 	if (ret < 0)
 		goto cleanup;
-	memBlock = ksceKernelAllocMemBlock("SceSblSmComm7EB92BED", SM_MEMBLOCK_TYPE,
+	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm7EB92BED", SM_MEMBLOCK_TYPE,
 		SM_BUFFER_SIZE, NULL);
 	ret = memBlock;
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceKernelGetMemBlockBase(memBlock, &base);
+	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
 	if (ret < 0)
 		goto cleanup;
 	originalBase = base;
@@ -202,7 +202,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	vector.ranges_size = SM_BUFFER_SIZE / sizeof(SceKernelPARange);
 	vector.ranges = base;
 	/* Sysmem defines data_in_vector/count on return; incoming words are untouched. */
-	ret = ksceKernelVARangeToPAVector(range, &vector);
+	ret = sceKernelVARangeToPAVector(range, &vector);
 	if (ret < 0)
 		goto cleanup;
 	if (vector.count * 8 > SM_BUFFER_SIZE ||
@@ -213,7 +213,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	*(volatile uint32_t *)base = *(volatile uint32_t *)base;
 	PublishWord(base);
 	vector.size = 0;
-	ret = ksceKernelVAtoPA(base, &vector.size);
+	ret = SceSysmemForDriver_8D160E65(base, &vector.size);
 	if (ret < 0)
 		goto cleanup;
 	ret = ksceSblSmSchedProxyInvoke(priority, vector.size, vector.count,
@@ -247,7 +247,7 @@ cleanup:
 		*id = -1;
 	}
 	if (memBlock >= 0)
-		ksceKernelFreeMemBlock(memBlock);
+		SceSysmemForDriver_009E1C61(memBlock);
 	if (eventFlag >= 0)
 		ksceKernelDeleteEventFlag(eventFlag);
 out:
@@ -308,13 +308,13 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 		ret = (uint32_t)position;
 		goto close;
 	}
-	memBlock = ksceKernelAllocMemBlock("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
+	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
 		((uint32_t)fileSize + 0xfff) & ~0xfffU, NULL);
 	if (memBlock < 0) {
 		ret = SM_ERROR_BUFFER;
 		goto close;
 	}
-	ret = ksceKernelGetMemBlockBase(memBlock, &base);
+	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
 	if (ret == 0) {
 		ret = ksceIoRead(fd, base, fileSize);
 		if ((uint32_t)ret == (uint32_t)fileSize) {
@@ -325,7 +325,7 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 			ret = SM_ERROR_TRANSFER;
 		}
 	}
-	ksceKernelFreeMemBlock(memBlock);
+	SceSysmemForDriver_009E1C61(memBlock);
 close:
 	ksceIoClose(fd);
 	if (ret == 0)
@@ -358,20 +358,20 @@ int ksceSblSmCommStartSmFromData(SceUInt32 priority, const void *data,
 		ret = SM_ERROR_REQUEST;
 		goto release;
 	}
-	memBlock = ksceKernelAllocMemBlock("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
+	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
 		(size + 0xfff) & ~0xfffU, NULL);
 	if (memBlock < 0) {
 		ret = SM_ERROR_BUFFER;
 		goto release;
 	}
-	ret = ksceKernelGetMemBlockBase(memBlock, &base);
+	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
 	if (ret == 0) {
 		memcpy(base, data, size);
 		range.addr = (uintptr_t)base;
 		range.size = size;
 		ret = StartSession(index, priority, &range, command, auth, id);
 	}
-	ksceKernelFreeMemBlock(memBlock);
+	SceSysmemForDriver_009E1C61(memBlock);
 	if (ret == 0)
 		goto out;
 release:
@@ -400,14 +400,14 @@ int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 		ret = SM_ERROR_BUFFER;
 		goto out;
 	}
-	ret = ksceKernelGetMemBlockBase(s_sessions[index].memBlock, (void **)&buffer);
+	ret = SceSysmemForDriver_A841EDDA(s_sessions[index].memBlock, (void **)&buffer);
 	if (ret < 0)
 		goto out;
 	if ((uintptr_t)buffer & 3) {
 		ret = SM_ERROR_ALIGNMENT;
 		goto out;
 	}
-	ret = ksceKernelVAtoPA(buffer, &physicalAddress);
+	ret = SceSysmemForDriver_8D160E65(buffer, &physicalAddress);
 	if (ret < 0)
 		goto out;
 	if (size != 0)
@@ -450,7 +450,7 @@ int ksceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
 		index = FindSessionSlot(id);
 		/* Native cleanup does not reject an unmatched (-1) slot here. */
 		session = &s_sessions[index];
-		ksceKernelFreeMemBlock(session->memBlock);
+		SceSysmemForDriver_009E1C61(session->memBlock);
 		ksceKernelDeleteEventFlag(session->eventFlag);
 		ReleaseSessionSlot(index);
 		ret = ksceKernelSignalSema(s_semaphore, 1);

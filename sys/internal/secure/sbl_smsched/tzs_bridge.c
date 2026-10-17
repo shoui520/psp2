@@ -2,8 +2,8 @@
 #include "smsched.h"
 
 #define TZS_BRIDGE_SECURE			1
-#define ksceKernelSysrootGetSharedMemory	sceKernelSysrootGetSharedMemoryForTZS
-#define ksceKernelDcacheCleanRange		sceKernelDcacheCleanRange
-#define ksceKernelDcacheInvalidateRange		sceKernelDcacheInvalidateRange
+#define SceSysrootForKernel_C8C8C321	sceKernelSysrootGetSharedMemoryForTZS
+#define SceCpuForDriver_103872A5		sceKernelDcacheCleanRange
+#define SceCpuForDriver_02796361		sceKernelDcacheInvalidateRange
 
 #include "../../driver/src/smsc_proxy/tzs_bridge.c"

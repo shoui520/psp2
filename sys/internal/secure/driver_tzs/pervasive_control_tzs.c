@@ -29,7 +29,7 @@ __attribute__((noinline)) int ResetSetWithFlag(volatile uint32_t *reg, uint32_t 
 	uint32_t state, previous;
 	int ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	ret = (previous & mask) != 0;
 	if (enable) {
@@ -51,7 +51,7 @@ __attribute__((noinline)) int ResetSetWithFlag(volatile uint32_t *reg, uint32_t 
 			PervasiveDsb();
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return ret;
 }
 
@@ -72,7 +72,7 @@ __attribute__((noinline)) int ResetSet(volatile uint32_t *reg, uint32_t mask, in
 	uint32_t state, previous;
 	int ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	ret = (previous & mask) != 0;
 	if (enable) {
@@ -84,7 +84,7 @@ __attribute__((noinline)) int ResetSet(volatile uint32_t *reg, uint32_t mask, in
 		(void)*reg;
 		PervasiveDsb();
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return ret;
 }
 
@@ -109,7 +109,7 @@ __attribute__((noinline)) int ResetEnableWithFlag(volatile uint32_t *reg,
 	uint32_t state, previous;
 	int ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	ret = previous & 1;
 	if (flag != NULL) {
@@ -119,7 +119,7 @@ __attribute__((noinline)) int ResetEnableWithFlag(volatile uint32_t *reg,
 	}
 	*reg = previous | 1;
 	PervasiveDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return ret;
 }
 
@@ -217,11 +217,11 @@ __attribute__((noinline)) int GpuIsolationEnable(void)
 	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = misc->gpuIsolation;
 	misc->gpuIsolation = 1;
 	PervasiveDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
 }
 
@@ -230,11 +230,11 @@ __attribute__((noinline)) int GpuIsolationDisable(void)
 	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = misc->gpuIsolation;
 	misc->gpuIsolation = 0;
 	PervasiveDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
 }
 
@@ -243,11 +243,11 @@ __attribute__((noinline)) int VeneziaIsolationEnable(void)
 	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = misc->veneziaIsolation;
 	misc->veneziaIsolation = 1;
 	PervasiveDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
 }
 
@@ -256,11 +256,11 @@ __attribute__((noinline)) int VeneziaIsolationDisable(void)
 	ScePervasiveMiscRegisters *misc = s_misc;
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = misc->veneziaIsolation;
 	misc->veneziaIsolation = 0;
 	PervasiveDmb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return previous != 0;
 }
 
@@ -269,7 +269,7 @@ __attribute__((noinline)) int GpuBusIdle(void)
 	volatile uint32_t *request = &s_misc->gpuBusIdleRequest;
 	uint32_t state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	*request = 1;
 	while (*request & 1)
 		;
@@ -278,7 +278,7 @@ __attribute__((noinline)) int GpuBusIdle(void)
 	s_misc->busIdleStatus = 2;
 	while (s_misc->busIdleStatus & 2)
 		;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;
 }
 
@@ -287,7 +287,7 @@ __attribute__((noinline)) int VeneziaBusIdle(void)
 	volatile uint32_t *request = &s_misc->veneziaBusIdleRequest;
 	uint32_t state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	*request = 1;
 	while (*request & 1)
 		;
@@ -296,7 +296,7 @@ __attribute__((noinline)) int VeneziaBusIdle(void)
 	s_misc->busIdleStatus = 4;
 	while (s_misc->busIdleStatus & 4)
 		;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return 0;
 }
 
@@ -307,7 +307,7 @@ __attribute__((noinline)) int GateSet(volatile uint32_t *reg, uint32_t mask, int
 	uint32_t state, previous;
 	int ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	ret = (previous & mask) != 0;
 	if (enable)
@@ -317,7 +317,7 @@ __attribute__((noinline)) int GateSet(volatile uint32_t *reg, uint32_t mask, int
 	PervasiveDmb();
 	(void)*reg;
 	PervasiveDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return ret;
 }
 
@@ -326,7 +326,7 @@ __attribute__((noinline)) int GateDevice(volatile uint32_t *reg, int enable)
 	uint32_t state, previous;
 	int ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	ret = previous & 1;
 	if (enable)
@@ -336,7 +336,7 @@ __attribute__((noinline)) int GateDevice(volatile uint32_t *reg, int enable)
 	PervasiveDmb();
 	(void)*reg;
 	PervasiveDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return ret;
 }
 
@@ -359,13 +359,13 @@ __attribute__((noinline)) int GateEnable(volatile uint32_t *reg, uint32_t mask)
 {
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous | mask;
 	PervasiveDmb();
 	(void)*reg;
 	PervasiveDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return (previous & mask) != 0;
 }
 
@@ -373,13 +373,13 @@ __attribute__((noinline)) int GateDisable(volatile uint32_t *reg, uint32_t mask)
 {
 	uint32_t state, previous;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+	state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 	previous = *reg;
 	*reg = previous & ~mask;
 	PervasiveDmb();
 	(void)*reg;
 	PervasiveDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 	return (previous & mask) != 0;
 }
 
@@ -527,14 +527,14 @@ int PervasiveClockMonitorCall(int op, unsigned int value, int arg2, int arg3)
 	case 0:
 		if (value - 2 > 4)
 			break;
-		state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_pervasiveLock);
+		state = SceCpuForDriver_D32ACE9E(&s_pervasiveLock);
 		current = s_baseClock->cmepClock & ~0x10000;
 		if (value != current) {
 			steps = s_cmepClockSteps[current - 2][value - 2];
 			CmepClockStep(steps);
 
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_pervasiveLock, state);
 		return 0;
 	case 1:
 		return s_baseClock->cmepClock & ~0x10000;

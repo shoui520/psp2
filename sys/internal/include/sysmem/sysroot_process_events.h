@@ -18,7 +18,9 @@ typedef struct SysrootProcessEventOps {
 	int (*exitSpawn)(SceUID pid, SceUID spawnPid, SceUID prevPid, uint64_t time);
 } SysrootProcessEventOps;
 
+#ifndef __cplusplus
 _Static_assert(sizeof(SysrootProcessEventOps) == 0x28,
 	       "Sysroot process-event table size");
 _Static_assert(offsetof(SysrootProcessEventOps, exitSpawn) == 0x24,
 	       "Sysroot process-event ExitSpawn callback offset");
+#endif

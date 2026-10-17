@@ -1,6 +1,6 @@
 /* Answer a peer challenge with a generated 224-bit key pair. */
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 #include "adhoc.h"
 
 extern SceUID gcAuthAdhocSemaphore;
@@ -56,7 +56,7 @@ int GcAuthAdhocAnswerChallenge224(const GcAuthAdhocAnswerChallenge224Request *re
 	result = GcAuthAdhocDecryptPacket(packet, 208);
 	if (result != 0)
 		goto finish;
-	result = ksceSha224Digest(&challenge->signedCertificate.certificate, 72,
+	result = SceKernelUtilsForDriver_9EA9D4DC(&challenge->signedCertificate.certificate, 72,
 		gcAuthAdhocHashScratch.digest224);
 	if (result != 0)
 		goto finish;

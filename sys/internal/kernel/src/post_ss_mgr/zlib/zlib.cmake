@@ -7,7 +7,13 @@ set(PSP2_ZLIB_PATCH "${PSP2_SRC}/sys/internal/kernel/src/post_ss_mgr/zlib/zlib-1
 
 function(psp2_zlib_sce prefix)
 	set(dir "${CMAKE_BINARY_DIR}/zlib-1.2.5-sce")
-	if(NOT EXISTS "${dir}/.patched")
+	file(MD5 "${PSP2_ZLIB_PATCH}" patch_md5)
+	set(stamp "")
+	if(EXISTS "${dir}/.patched")
+		file(READ "${dir}/.patched" stamp)
+	endif()
+	if(NOT stamp STREQUAL patch_md5)	# a changed patch is applied afresh
+		file(REMOVE_RECURSE "${dir}")
 		file(GLOB upstream "${PSP2_ZLIB_UPSTREAM}/*.[ch]")
 		file(COPY ${upstream} DESTINATION "${dir}")
 		execute_process(COMMAND patch -s -p1 -d "${dir}" -i "${PSP2_ZLIB_PATCH}"
@@ -15,7 +21,7 @@ function(psp2_zlib_sce prefix)
 		if(NOT result EQUAL 0)
 			message(FATAL_ERROR "zlib SCE patch failed: ${error}")
 		endif()
-		file(TOUCH "${dir}/.patched")
+		file(WRITE "${dir}/.patched" "${patch_md5}")
 	endif()
 	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${PSP2_ZLIB_PATCH}")
 	set(${prefix}_INCLUDE "${dir}" PARENT_SCOPE)

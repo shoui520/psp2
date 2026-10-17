@@ -19,9 +19,8 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/iofilemgr.h>
-#include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <stdio.h>
 #include <string.h>
 #include <syscon/syscon.h>
@@ -345,7 +344,7 @@ int sdintr_mount_rm(SceSdstorIntr *interrupt)
 
 	SCE_DBG_ASSERT(interrupt != NULL, 1814);
 	port = interrupt->port;
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode() || !ksceSysrootUseInternalStorage()) {
+	if (SceSysrootForDriver_55392965() || !SceSysrootForDriver_50FE3B4D()) {
 		if (sdpart_grab_mc(port) != port)
 			return 0;
 		mountId = 0x800;
@@ -357,7 +356,7 @@ int sdintr_mount_rm(SceSdstorIntr *interrupt)
 	result = sceIoSetMountEvent(mountId, 0x100, 0, 0);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1836, "ret = 0x%08x\n", result);
-	if ((SceSysrootForDriver_ksceSysrootIsManufacturingMode() || !ksceSysrootUseInternalStorage()) &&
+	if ((SceSysrootForDriver_55392965() || !SceSysrootForDriver_50FE3B4D()) &&
 	    !(interrupt->mountDisabled & 1)) {
 		result = ksceIoMount(mountId, NULL, 0, 0, 0, 0);
 		if (result < 0)
@@ -632,7 +631,7 @@ int sdctrl_system_event_handler(int resume, int eventId, void *eventArgs, void *
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 590, "sdctrl_suspend",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
-		if (ksceKernelSysrootCheckModelCapability(11)) {
+		if (SceSysrootForDriver_8AA268D6(11)) {
 			result = ksceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x100);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 596, "sdctrl_suspend",
@@ -648,7 +647,7 @@ int sdctrl_system_event_handler(int resume, int eventId, void *eventArgs, void *
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 617, "sdctrl_suspend",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
-		if (ksceKernelSysrootCheckModelCapability(11)) {
+		if (SceSysrootForDriver_8AA268D6(11)) {
 			result = ksceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
 							0x100, 5, NULL, NULL);
 			if (result < 0)
@@ -708,7 +707,7 @@ resumeEvents:
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 654, "sdctrl_resume",
 				"sceKernelSetEventFlag() returns 0x%08x\n", result);
-		if (ksceKernelSysrootCheckModelCapability(11)) {
+		if (SceSysrootForDriver_8AA268D6(11)) {
 			result = ksceKernelSetEventFlag(sdintrObjects[4].requestEvent, 0x1000);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 660, "sdctrl_resume",
@@ -724,7 +723,7 @@ resumeEvents:
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 681, "sdctrl_resume",
 				"sceKernelWaitEventFlag() returns 0x%08x\n", result);
-		if (ksceKernelSysrootCheckModelCapability(11)) {
+		if (SceSysrootForDriver_8AA268D6(11)) {
 			result = ksceKernelWaitEventFlag(sdintrObjects[4].syncEvent,
 							0x1000, 5, NULL, NULL);
 			if (result < 0)
@@ -860,7 +859,7 @@ int sdintr_thr_entry(SceSize args, void *argp)
 	port = *(uint8_t *)argp;
 	SCE_DBG_ASSERT_FUNC(port <= 4, 755, "sdintr_get_object");
 	interrupt = &sdintrObjects[port];
-	if (SceSysrootForDriver_ksceSysrootIsManufacturingMode()) {
+	if (SceSysrootForDriver_55392965()) {
 		device = sddev_get_object(interrupt->port);
 		if (sddev_power_on(device) == (int)0x80010013)
 			sddev_remove(device);
@@ -1405,7 +1404,7 @@ int sdctrl_initialize(void)
 	sdctrlState.handlerId = 0;
 	sdctrlState.reserved = 0;
 	sdctrlState.resumeHandled = 0;
-	result = ksceKernelRegisterSysEventHandler("SceSdstor",
+	result = sceKernelRegisterSysEventHandler("SceSdstor",
 						 sdctrl_system_event_handler, &sdctrlState);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 389, "sdctrl_initialize", "0x%08x\n", result);
@@ -1419,7 +1418,7 @@ int sdctrl_initialize(void)
 	for (port = 0, nextPort = 1; ; port++, nextPort++) {
 		if (!port)
 			continue;
-		if (port == 4 && !ksceKernelSysrootCheckModelCapability(11))
+		if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 			break;
 		SCE_DBG_ASSERT_FUNC(1, 2234, "sdintr_hdr_get_object");
 		header = &sdintrHeaders[port];
@@ -1436,7 +1435,7 @@ int sdctrl_initialize(void)
 	for (port = 0, nextPort = 1; ; port++, nextPort++) {
 		if (!port)
 			continue;
-		if (port == 4 && !ksceKernelSysrootCheckModelCapability(11))
+		if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 			break;
 		SCE_DBG_ASSERT_FUNC(1, 2492, "sdintr_thr_get_object");
 		thread = &sdintrThreads[port];
@@ -1462,7 +1461,7 @@ int sdctrl_initialize(void)
 	for (port = 0, nextPort = 1; ; port++, nextPort++) {
 		if (!port)
 			continue;
-		if (port == 4 && !ksceKernelSysrootCheckModelCapability(11))
+		if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 			break;
 		SCE_DBG_ASSERT_FUNC(1, 763, "sdintr_get_irq");
 		headerPort = sdintrHeaderPorts[port];
@@ -1562,7 +1561,7 @@ int sdctrl_remove(unsigned int port)
 	SCE_DBG_ASSERT_FUNC(port <= 4, 491, "sdctrl_remove");
 	SCE_DBG_ASSERT_FUNC(port <= 4, 755, "sdintr_get_object");
 	interrupt = &sdintrObjects[port];
-	if (port == 4 && !ksceKernelSysrootCheckModelCapability(11))
+	if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 		return 0;
 	result = ksceKernelSetEventFlag(interrupt->requestEvent, 2);
 	if (result < 0)
@@ -1579,7 +1578,7 @@ int sdctrl_insert(unsigned int port)
 	SCE_DBG_ASSERT_FUNC(port <= 4, 512, "sdctrl_insert");
 	SCE_DBG_ASSERT_FUNC(port <= 4, 755, "sdintr_get_object");
 	interrupt = &sdintrObjects[port];
-	if (port == 4 && !ksceKernelSysrootCheckModelCapability(11))
+	if (port == 4 && !SceSysrootForDriver_8AA268D6(11))
 		return 0;
 	result = ksceKernelSetEventFlag(interrupt->requestEvent, 0x10);
 	if (result < 0)
@@ -1594,7 +1593,7 @@ int sdctrl_disable_mount(unsigned int port)
 	if (port != 4 && port - 1 > 1)
 		return 0x80010016;
 	SCE_DBG_ASSERT_FUNC(port <= 4, 755, "sdintr_get_object");
-	ksceKernelAtomicGetAndOr8((SceInt8 *)&sdintrObjects[port].mountDisabled, 1);
+	SceCpuForDriver_BDF6F8E4((SceInt8 *)&sdintrObjects[port].mountDisabled, 1);
 	return 0;
 }
 

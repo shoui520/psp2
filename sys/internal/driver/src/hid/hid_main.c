@@ -1,9 +1,9 @@
 /* Descriptive filename; this part has no source-file debug records. */
 #include <bt/bt_hid.h>
-#include <psp2kern/kernel/debug.h>
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/debug.h>
+#include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
 #include <psp2/power.h>
 #include <psp2/kernel/threadmgr/thread.h>
 #include <sysmem/sysroot.h>
@@ -11,10 +11,6 @@
 
 unsigned int hidFlags;
 SceKernelSpinlock hidSpinlock;
-
-int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
-void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock,
-					    int intrState);
 
 int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 			 void *userData);
@@ -32,9 +28,9 @@ int hidBluetoothThread(SceSize args, void *argp)
 
 	eventFlag = ksceKernelCreateEventFlag("SceHid", 0x1000, 0, NULL);
 	if (eventFlag < 0) {
-		ksceKernelPrintf("HID: sceKernelCreateEventFlag() failed! => 0x%x",
+		SceDebugForDriver_391B74B7("HID: sceKernelCreateEventFlag() failed! => 0x%x",
 				 eventFlag);
-		ksceKernelPrintf("!!\n");
+		SceDebugForDriver_391B74B7("!!\n");
 		return eventFlag;
 	}
 	result = ksceKernelCreateCallback("SceBtHid", 0,
@@ -55,12 +51,12 @@ int hidBluetoothThread(SceSize args, void *argp)
 		ksceKernelWaitEventFlagCB(eventFlag, 1, 5, &pattern, NULL);
 
 registerError:
-	ksceKernelPrintf("HID: sceBtRegisterCallback() failed! => 0x%x", result);
-	ksceKernelPrintf("!!\n");
+	SceDebugForDriver_391B74B7("HID: sceBtRegisterCallback() failed! => 0x%x", result);
+	SceDebugForDriver_391B74B7("!!\n");
 	goto out;
 callbackError:
-	ksceKernelPrintf("HID: sceKernelCreateCallback(Bt) failed! => 0x%x", result);
-	ksceKernelPrintf("!!\n");
+	SceDebugForDriver_391B74B7("HID: sceKernelCreateCallback(Bt) failed! => 0x%x", result);
+	SceDebugForDriver_391B74B7("!!\n");
 out:
 	ksceKernelDeleteEventFlag(eventFlag);
 	return result;
@@ -76,13 +72,13 @@ int hidDisplayCallback(int notifyId, int notifyCount, int notifyArg,
 	if (result != 0)
 		return result;
 	if ((notifyArg & 0x400000) != 0) {
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 		hidFlags |= 0x1000;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	} else if ((notifyArg & 0x800000) != 0) {
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 		hidFlags &= ~0x1000U;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	}
 	hidUnlock();
 	return 0;
@@ -94,9 +90,9 @@ int hidSystemEvent(int resume, int eventId, void *args, void *opt)
 
 	if (resume != 0) {
 		if (resume == 1 && eventId == 0x100000) {
-			intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+			intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 			hidFlags &= ~0x20U;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		}
 		return 0;
 	}
@@ -104,18 +100,18 @@ int hidSystemEvent(int resume, int eventId, void *args, void *opt)
 	case 0x402:
 		return (int)hidFlags < 0 ? -2 : 0;
 	case 0x4000:
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 		hidFlags |= 0x20;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 		hidFlags &= ~0x10U;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		hidReleaseBluetoothDevices();
 		return 0;
 	case 0x200:
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+		intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 		hidFlags |= 0x10;
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 		return 0;
 	default:
 		return 0;
@@ -140,9 +136,9 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 		hidUnlock();
 		return 0;
 	}
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 	hidFlags |= 0x80000000U;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 #define HID_EVENT_ADDRESS() \
 	(address.words[0] = event.mac0, address.words[1] = event.mac1, address.value)
 	for (;;) {
@@ -171,15 +167,15 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 		case 12:
 			break;
 		default:
-			ksceKernelPrintf("HID: Invalid event type!! (%d)", event.id);
-			ksceKernelPrintf("!!\n");
+			SceDebugForDriver_391B74B7("HID: Invalid event type!! (%d)", event.id);
+			SceDebugForDriver_391B74B7("!!\n");
 			break;
 		}
 	}
 #undef HID_EVENT_ADDRESS
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 	hidFlags &= ~0x80000000U;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	hidUnlock();
 	return 0;
 }
@@ -202,32 +198,32 @@ int module_start(SceSize args, const void *argp)
 	result = ksceKernelCreateThread("SceHid", hidBluetoothThread, 60,
 				       0x2000, 0, 0x80000, NULL);
 	if (result < 0) {
-		ksceKernelPrintf("HID: sceKernelCreateThread() failed! => 0x%x", result);
+		SceDebugForDriver_391B74B7("HID: sceKernelCreateThread() failed! => 0x%x", result);
 		goto error;
 	}
 	result = ksceKernelStartThread(result, args, (void *)argp);
 	if (result < 0) {
-		ksceKernelPrintf("HID: sceKernelStartThread() failed! => 0x%x", result);
+		SceDebugForDriver_391B74B7("HID: sceKernelStartThread() failed! => 0x%x", result);
 		goto error;
 	}
-	result = ksceKernelRegisterSysEventHandler("SceHid", hidSystemEvent, NULL);
+	result = sceKernelRegisterSysEventHandler("SceHid", hidSystemEvent, NULL);
 	if (result < 0) {
-		ksceKernelPrintf("HID: sceKernelRegisterSysEventHandler() failed! => 0x%x",
+		SceDebugForDriver_391B74B7("HID: sceKernelRegisterSysEventHandler() failed! => 0x%x",
 				 result);
 		goto error;
 	}
-	result = ksceKernelRegisterProcEventHandler("SceHid", &hidProcessHandlers, 0);
+	result = sceKernelRegisterProcEventHandler("SceHid", &hidProcessHandlers, 0);
 	if (result < 0) {
-		ksceKernelPrintf("HID: sceKernelRegisterProcEventHandler() failed! => 0x%x",
+		SceDebugForDriver_391B74B7("HID: sceKernelRegisterProcEventHandler() failed! => 0x%x",
 				 result);
 		goto error;
 	}
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&hidSpinlock);
+	intrState = SceCpuForDriver_D32ACE9E(&hidSpinlock);
 	hidFlags |= 1;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&hidSpinlock, intrState);
 	SceSysrootForDriver_34281746(&hidSysrootOps);
 	return 0;
 error:
-	ksceKernelPrintf("!!\n");
+	SceDebugForDriver_391B74B7("!!\n");
 	return 2;
 }

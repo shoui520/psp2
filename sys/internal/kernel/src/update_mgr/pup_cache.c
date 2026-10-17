@@ -1,5 +1,5 @@
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 
@@ -18,7 +18,7 @@ int PupUtilPupGetCachedHeader(PupCachedHeader *header)
 	UpdateUtilLockPupHeader();
 	memcpy(&header->header, &pupFileHeader, sizeof(PupHeader));
 	count = pupFileHeader.m_segment_num;
-	segments = ksceKernelAllocHeapMemory(heapId,
+	segments = SceSysmemForDriver_7B4CB60A(heapId,
 		(sizeof(PupSegment) + sizeof(PupSegmentSignature)) * count + sizeof(PupHeaderDigest));
 	if (!segments) {
 		UpdateUtilUnlockPupHeader();

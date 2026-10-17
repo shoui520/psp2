@@ -90,17 +90,17 @@ set(MODULE_IMPORT_NIDS
 	0x2ED7F97A:F:0x7B7F8171
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelGetMemBlockBase
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelCpuSuspendIntr
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelCpuResumeIntr
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_821FC0EE
+	SceCpuForDriver_D32ACE9E
+	sceKernelCpuResumeIntr
 	memset
 	strncmp
 	memcpy
@@ -112,8 +112,8 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	__strncat_chk2
 	memcmp
-	ksceKernelAssert
-	ksceKernelPrintfLevelWithInfo
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_D9703808
 	ksceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_332E127C
 	ksceKernelGetSystemTimeLow
@@ -158,9 +158,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_BE5667C5
 	SceSblACMgrForDriver_D7AD8471
 	SceSblACMgrForDriver_FF7125DE
-	ksceSysrootUseInternalStorage
-	SceSysrootForDriver_ksceSysrootIsManufacturingMode
-	ksceKernelIsSomeBootMode
+	SceSysrootForDriver_50FE3B4D
+	SceSysrootForDriver_55392965
+	SceSysrootForDriver_7B7F8171
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

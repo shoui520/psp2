@@ -1,7 +1,7 @@
 /* SceCsi camera interface. Private helper and context names are unknown. */
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <lowio/csi.h>
 #include "csi_regs.h"
@@ -79,11 +79,11 @@ static int CifIntrHandler(int intrCode, void *arg)
 static int CsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 
 	ctx->subIntrMask = (ctx->subIntrMask & ~(1U << subIntr)) |
 		((handler != NULL) << subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -91,13 +91,13 @@ static int CsiSetSubIntrHandler(int intrCode, int subIntr, void *handler)
 static int CsiSuspendSubIntr(int intrCode, int subIntr, uint32_t *enabled)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 	uint32_t mask = ctx->subIntrMask;
 
 	if (enabled != NULL)
 		*enabled = (mask >> subIntr) & 1;
 	ctx->subIntrMask = mask & ~(1U << subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -136,10 +136,10 @@ static int CsiSysEvent(int resume, int eventId, void *args, void *opt)
 static int CsiDisableSubIntr(int intrCode, int subIntr)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 
 	ctx->subIntrMask &= ~(1U << subIntr);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -147,10 +147,10 @@ static int CsiDisableSubIntr(int intrCode, int subIntr)
 static int CsiEnableSubIntr(int intrCode, int subIntr)
 {
 	CsiContext *ctx = intrCode == 0xa6 ? &s_csi[0] : &s_csi[1];
-	uint32_t intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&ctx->lock);
+	uint32_t intr = SceCpuForDriver_D32ACE9E(&ctx->lock);
 
 	ctx->subIntrMask |= 1U << subIntr;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	return 0;
 }
 
@@ -216,12 +216,12 @@ static __attribute__((noinline)) int CsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(s_csiDevices[i].name, 0x20100806,
+		ret = SceSysmemForDriver_C94850C9(s_csiDevices[i].name, 0x20100806,
 			s_csiDevices[i].size, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->uid = ret;
-		ret = ksceKernelGetMemBlockBase(ret, &base);
+		ret = SceSysmemForDriver_A841EDDA(ret, &base);
 		if (ret < 0)
 			return ret;
 		ctx->registers = base;
@@ -229,12 +229,12 @@ static __attribute__((noinline)) int CsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].cifPaddr;
-		ret = ksceKernelAllocMemBlock(s_csiDevices[i].cifName, 0x20100806,
+		ret = SceSysmemForDriver_C94850C9(s_csiDevices[i].cifName, 0x20100806,
 			s_csiDevices[i].cifSize, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->cifUid = ret;
-		ret = ksceKernelGetMemBlockBase(ret, &base);
+		ret = SceSysmemForDriver_A841EDDA(ret, &base);
 		if (ret < 0)
 			return ret;
 		ctx->cifRegisters = base;
@@ -247,7 +247,7 @@ static __attribute__((noinline)) int CsiInit(void)
 		ksceKernelEnableIntr(ctx->intrCode);
 		ksceKernelEnableIntr(ctx->cifIntrCode);
 	}
-	ksceKernelRegisterSysEventHandler("SceCsi", CsiSysEvent, NULL);
+	sceKernelRegisterSysEventHandler("SceCsi", CsiSysEvent, NULL);
 	CsiReset();
 	return 0;
 }

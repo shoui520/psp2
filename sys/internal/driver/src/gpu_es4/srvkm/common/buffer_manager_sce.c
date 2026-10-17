@@ -61,7 +61,7 @@ IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 				__func__, ret);
 		return 0;
 	}
-	uid = ksceKernelAllocMemBlock("SceGpuKernelDevMem", 0x10208006,
+	uid = SceSysmemForDriver_C94850C9("SceGpuKernelDevMem", 0x10208006,
 			0x80000, 0);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0, 53,

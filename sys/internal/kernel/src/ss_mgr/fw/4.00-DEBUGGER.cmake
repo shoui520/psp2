@@ -102,24 +102,24 @@ set(MODULE_IMPORT_NIDS
 	0xE1AC6D7C:F:0xEB00C509
 )
 set(MODULE_IMPORT_FUNCS
-	ksceHmacSha1Digest
-	ksceKernelAllocUncacheHeapMemoryWithOption
-	ksceKernelUnlockRangeWithMode
-	ksceKernelFreeHeapMemory
-	ksceKernelAllocHeapMemoryWithOption
-	ksceKernelCopyToUser
-	ksceKernelVAtoPA
-	ksceKernelGetMemBlockBase
-	ksceKernelLockRangeWithMode
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelVARangeToPAVector
-	ksceKernelFreeUncacheHeapMemory
-	ksceKernelIsUncacheAddressInTmpFsGame
-	ksceKernelAssert
-	ksceKernelGetAssertLevel
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	SceKernelUtilsForDriver_29A28957
+	SceSysmemForDriver_0B4ED16A
+	SceSysmemForDriver_22CBE925
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_49D4DD9B
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_8D160E65
+	SceSysmemForDriver_A841EDDA
+	sceKernelLockRangeWithMode
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelVARangeToPAVector
+	SceSysmemForDriver_FB817A59
+	sceKernelIsUncacheAddressInTmpFsGame
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	memset
 	memcpy
 	strncpy
@@ -128,9 +128,9 @@ set(MODULE_IMPORT_FUNCS
 	timingsafe_memcmp
 	__stack_chk_fail
 	memcmp
-	ksceKernelSysrootGetKblParam
-	ksceSysrootGetSelfInfo
-	ksceSysrootUtMgrHasNpTestFlag
+	SceSysrootForKernel_9DB56D1F
+	SceSysrootForKernel_F10AB792
+	SceSysrootForDriver_A43599E9
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	ksceKernelSetPermission
@@ -157,13 +157,13 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSmCommStartSmFromFile
 	ksceSblSmCommCallFunc
 	ksceKernelGetProcessSelfAuthInfo
-	ksceSblAimgrIsTool
-	ksceSblAimgrIsTest
+	SceSblAIMgrForDriver_274663A0
+	SceSblAIMgrForDriver_3B638885
 	ksceSblSmSchedProxyExecuteF00DCommand
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	kscePmMgrGetProductMode
+	ScePmMgrForDriver_2AC815A2
 	ksceSysconNvsWriteData
 	SceSysconForDriver_63683B9B
 	ksceSysconNvsSetRunMode

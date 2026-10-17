@@ -106,7 +106,7 @@ int SceKernelSuspendForDriver_4DF40893(int arg)
 			s_lockSuspendResultHook(s_callbacks, s_callbacks->lockSuspend, ret, 0);
 		return ret;
 	}
-	ksceKernelAtomicAddUnless32(&s_earlyLockCount, 1, 0x7fffffff);
+	SceCpuForDriver_1F157DC3(&s_earlyLockCount, 1, 0x7fffffff);
 	if (s_lockSuspendResultHook != NULL)
 		s_lockSuspendResultHook(NULL, NULL, 0, s_earlyLockCount);
 	return 0;
@@ -126,7 +126,7 @@ int SceKernelSuspendForDriver_2BB92967(int arg)
 	int ret;
 
 	if (s_callbacks == NULL) {
-		ksceKernelAtomicDecIfPositive32(&s_earlyLockCount);
+		SceCpuForDriver_2A71B03C(&s_earlyLockCount);
 		if (s_unlockSuspendHook != NULL)
 			s_unlockSuspendHook(arg, NULL, 0, s_earlyLockCount);
 		return 0;
@@ -146,7 +146,7 @@ int SceKernelSuspendForDriver_230495ED(SceUInt32 kind)
 }
 
 /* in a process's thread: the hook learns the process's address space too */
-int ksceKernelPowerTick(int type)
+int SceKernelSuspendForDriver_E0489831(int type)
 {
 	ThreadSyscallFrame *frame;
 	ThreadCB *thread;
@@ -241,10 +241,10 @@ SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(void *ar
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_handlerLock);
+	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
 	s_suspendHandlers[idx].handler = (int (*)(int, void *))handler;
 	s_suspendHandlers[idx].args = args;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
 	return 0;
 }
 
@@ -255,10 +255,10 @@ SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(void *ar
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_handlerLock);
+	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
 	s_resumeHandlers[idx].handler = (int (*)(int, void *))handler;
 	s_resumeHandlers[idx].args = args;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
 	return 0;
 }
 

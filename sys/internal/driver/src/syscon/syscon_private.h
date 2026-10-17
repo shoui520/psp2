@@ -131,10 +131,6 @@ typedef struct SceSysconCallbackEntry {
 
 typedef void (*SysconLogger)(uint32_t event, uint32_t count, ...);
 
-struct SceKernelDebugInfo;
-void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
-				 const struct SceKernelDebugInfo *info, const void *lr,
-				 const char *fmt, ...);
 
 /*
  * notificationState[]: one entry per notification bit, -1 until the first

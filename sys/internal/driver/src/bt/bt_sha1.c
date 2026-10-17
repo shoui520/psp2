@@ -1,10 +1,9 @@
 /* Bluetooth SHA-1; the original source filename is unavailable. */
 #include <stdint.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 #if FW_VERSION >= 0x04000000
-void *__memcpy_chk(void *destination, const void *source, size_t length,
-		   size_t capacity);
 #define SHA1_COPY(destination, source, length) \
 	__memcpy_chk(destination, source, length, 64)
 #else

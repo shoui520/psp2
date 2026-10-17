@@ -59,7 +59,7 @@ typedef struct StubLinkerInsn {
 int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 {
 	if (pid != KERNEL_PID)
-		return ksceKernelCopyFromUser(dst, src, len);
+		return SceSysmemForDriver_BC996A7A(dst, src, len);
 	memcpy(dst, src, len);
 	return 0;
 }
@@ -78,7 +78,7 @@ int StubLinkerReadThumb(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debu
 	if (debugger) {
 		for (i = 0; i < 2; i++) {
 			if ((((SceUInt16 *)&in->orig)[i] & THUMB_BKPT_MASK) == THUMB_BKPT &&
-			    SceSysrootForKernel_9CFF80F9(pid, addr, &orig) == 0)
+			    SceSysrootForKernel_9CFF80F9(pid, (void *)addr, &orig) == 0)
 				half[i] = orig;
 		}
 	}
@@ -96,7 +96,7 @@ int StubLinkerReadArm(SceUID pid, SceUInt32 addr, StubLinkerInsn *in, int debugg
 		return ret;
 	in->orig = in->insn;
 	if (debugger && (in->insn & ARM_BKPT_MASK) == ARM_BKPT &&
-	    SceSysrootForKernel_9CFF80F9(pid, addr, &orig) == 0)
+	    SceSysrootForKernel_9CFF80F9(pid, (void *)addr, &orig) == 0)
 		in->insn = orig;
 	return 0;
 }
@@ -122,7 +122,7 @@ static inline void StubLinkerWriteKernelWord(SceUInt32 *dst, SceUInt32 value)
 	dacr = readDacr();
 	writeDacr(STUBLINKER_DACR_WRITABLE);
 	*dst = value;
-	ksceKernelDcacheCleanRangeForL1WBWA((void *)start,
+	SceCpuForDriver_9CB9F0CE((void *)start,
 					    (((SceUInt32)dst + 4 + 0x1f) & ~0x1f) - start);
 	writeDacr(dacr);
 }
@@ -158,7 +158,7 @@ int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int m
 				return ret;
 			reftable = buf;
 		} else {
-			ret = ksceKernelProcUserMap(pid, "SceModuleMgrRelocation", 1, reftable,
+			ret = SceSysmemForDriver_0091D74D(pid, "SceModuleMgrRelocation", 1, reftable,
 						    REFTABLE_SIZE(hdr), &kbase, &ksize, &koffset);
 			if (ret < 0)
 				return ret;
@@ -241,7 +241,7 @@ data:
 				ret = 0;
 				continue;
 			}
-			ret = ksceKernelCopyToUserDomain(where, &in.insn, 4);
+			ret = SceSysmemForKernel_499A9FFF(where, &in.insn, 4);
 			break;
 
 		case R_ARM_THM_CALL:
@@ -320,7 +320,7 @@ text:
 				ret = 0;
 				continue;
 			}
-			ret = ksceKernelCopyToUserTextDomain(where, &in.insn, 4);
+			ret = SceSysmemForKernel_5EF1DAAF(where, &in.insn, 4);
 			break;
 
 		case R_ARM_NONE_SCE:
@@ -336,7 +336,7 @@ text:
 	}
 out:
 	if (map != 0)
-		ksceKernelUserUnmap(map);
+		sceKernelUserUnmap(map, NULL, 0);
 	return ret;
 }
 
@@ -480,7 +480,7 @@ noentry:
 				orig = cur[j / 4];
 				if ((orig & ARM_BKPT_MASK) != ARM_BKPT)
 					continue;
-				if (SceSysrootForKernel_9CFF80F9(pid, addr + j, &cur[j / 4]) == 0) {
+				if (SceSysrootForKernel_9CFF80F9(pid, (void *)(addr + j), &cur[j / 4]) == 0) {
 					if (j < size) {
 						SceSysrootForKernel_38751FB7(pid, addr + j, code[j / 4]);
 						code[j / 4] = orig;
@@ -499,11 +499,11 @@ noentry:
 			dacr = readDacr();
 			writeDacr(STUBLINKER_DACR_WRITABLE);
 			memcpy((void *)addr, code, size);
-			ksceKernelDcacheCleanRangeForL1WBWA((void *)(addr & ~0x1f),
+			SceCpuForDriver_9CB9F0CE((void *)(addr & ~0x1f),
 				((addr + 0x1f + size) & ~0x1f) - (addr & ~0x1f));
 			writeDacr(dacr);
 		} else {
-			ret = ksceKernelCopyToUserTextDomain((void *)addr, code, size);
+			ret = SceSysmemForKernel_5EF1DAAF((void *)addr, code, size);
 			if (ret < 0)
 				return ret;
 		}

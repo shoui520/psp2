@@ -3,13 +3,13 @@
 
 int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size)
 {
-	reader->confBlock = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
+	reader->confBlock = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
 		"SceSSMConfBuf", CONF_MEMTYPE, (size + 0xfff) & ~0xfff, NULL);
 	if (reader->confBlock < 0) {
 		SCE_DBG_ASSERT_FAIL(168);
 		return CONF_ERROR(12);
 	}
-	ksceKernelGetMemBlockBase(reader->confBlock, (void **)&reader->confBuf);
+	SceSysmemForDriver_A841EDDA(reader->confBlock, (void **)&reader->confBuf);
 	reader->confSize = size;
 	reader->cursor = 0;
 	return 0;
@@ -18,7 +18,7 @@ int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size)
 void ConfReaderUtilsFreeConfBuf(ConfReader *reader) /* name unknown */
 {
 	if (reader->confBlock >= 0) {
-		ksceKernelFreeMemBlock(reader->confBlock);
+		SceSysmemForDriver_009E1C61(reader->confBlock);
 		reader->confBlock = -1;
 		reader->confSize = 0;
 		reader->confBuf = NULL;
@@ -28,13 +28,13 @@ void ConfReaderUtilsFreeConfBuf(ConfReader *reader) /* name unknown */
 
 int ConfReaderUtilsAllocCmdBuf(ConfReader *reader, SceSize size)
 {
-	reader->cmdBlock = ksceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
+	reader->cmdBlock = sceKernelAllocPartitionMemBlock(SCE_KERNEL_PARTITION_ROOT_ID,
 		"SceSSMCommandBuffer", CONF_MEMTYPE, (size + 0xfff) & ~0xfff, NULL);
 	if (reader->cmdBlock < 0) {
 		SCE_DBG_ASSERT_FAIL(208);
 		return CONF_ERROR(12);
 	}
-	ksceKernelGetMemBlockBase(reader->cmdBlock, (void **)&reader->cmdBuf);
+	SceSysmemForDriver_A841EDDA(reader->cmdBlock, (void **)&reader->cmdBuf);
 	reader->cmdSize = size;
 	return 0;
 }
@@ -42,7 +42,7 @@ int ConfReaderUtilsAllocCmdBuf(ConfReader *reader, SceSize size)
 void ConfReaderUtilsFreeCmdBuf(ConfReader *reader) /* name unknown */
 {
 	if (reader->cmdBlock >= 0) {
-		ksceKernelFreeMemBlock(reader->cmdBlock);
+		SceSysmemForDriver_009E1C61(reader->cmdBlock);
 		reader->cmdBlock = -1;
 		reader->cmdSize = 0;
 		reader->cmdBuf = NULL;
@@ -51,12 +51,12 @@ void ConfReaderUtilsFreeCmdBuf(ConfReader *reader) /* name unknown */
 
 int ConfReaderUtilsRememberLoaded(ConfReader *reader, SceUID uid, const char *path) /* name unknown */
 {
-	ConfLoaded *loaded = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*loaded));
+	ConfLoaded *loaded = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, sizeof(*loaded));
 	unsigned len;
 
 	if (loaded) {
 		len = strnlen(path, 0x100);
-		loaded->path = ksceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, len + 1);
+		loaded->path = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, len + 1);
 		if (loaded->path) {
 			loaded->path[0] = 0;
 			strncpy(loaded->path, path, len + 1);
@@ -65,7 +65,7 @@ int ConfReaderUtilsRememberLoaded(ConfReader *reader, SceUID uid, const char *pa
 			reader->loaded = loaded;
 			return 0;
 		}
-		ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
+		sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
 	}
 	return CONF_ERROR(12);
 }
@@ -90,8 +90,8 @@ int ConfReaderUtilsForgetLoaded(ConfReader *reader, SceUID uid) /* name unknown 
 				reader->loaded = loaded->next;
 			else
 				previous->next = loaded->next;
-			ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded->path);
-			ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
+			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded->path);
+			sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
 			return 0;
 		}
 		previous = loaded;
@@ -106,8 +106,8 @@ void ConfReaderUtilsFreeLoaded(ConfReader *reader) /* name unknown */
 
 	while (loaded) {
 		next = loaded->next;
-		ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded->path);
-		ksceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
+		sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded->path);
+		sceKernelFreeHeapMemory(SCE_KERNEL_HEAP_ID, loaded);
 		loaded = next;
 	}
 }
@@ -182,7 +182,7 @@ static int ConfDevelopment(void)
 static int ConfConexant(void)
 {
 	unsigned char flags[16];
-	ksceSysrootGetHardwareFlags(flags);
+	SceSysrootForDriver_46E72428(flags);
 	return (flags[0] >> 6) & 1;
 }
 
@@ -192,13 +192,13 @@ static const struct {
 } s_conditions[] = {
 	{ ConfAlways, "1" },
 	{ ConfNever, "0" },
-	{ ksceSysrootIsManufacturingMode, "MANUFACTURING_MODE" },
-	{ SceSysrootForKernel_ksceSysrootIsExternalBootMode, "EXTERNAL_BOOT_MODE" },
-	{ SceSysrootForKernel_ksceSysrootIsUpdateMode, "UPDATE_MODE" },
-	{ SceSysrootForKernel_ksceSysrootIsUsbEnumWakeup, "USB_ENUM_WAKEUP" },
-	{ SceSysrootForKernel_ksceSysrootIsBsodReboot, "BSOD_REBOOT" },
+	{ SceSysrootForKernel_55392965, "MANUFACTURING_MODE" },
+	{ SceSysrootForKernel_89D19090, "EXTERNAL_BOOT_MODE" },
+	{ SceSysrootForKernel_B0E1FC67, "UPDATE_MODE" },
+	{ SceSysrootForKernel_79C9AE10, "USB_ENUM_WAKEUP" },
+	{ SceSysrootForKernel_4373AC96, "BSOD_REBOOT" },
 	{ ConfHasUd0, "UD0_EXIST" },
-	{ SceSysrootForKernel_ksceSysrootIsSafeMode, "SAFE_MODE" },
+	{ SceSysrootForKernel_834439A7, "SAFE_MODE" },
 	{ ConfDevelopment, "DEVELOPMENT_MODE" },
 	{ ConfConexant, "AU_CODEC_IC_CONEXANT" },
 	{ NULL, NULL },

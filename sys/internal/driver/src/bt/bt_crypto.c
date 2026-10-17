@@ -1,7 +1,7 @@
 /* Bluetooth crypto adapters; the original source filename is unavailable. */
 #include <sysmem/aes.h>
 #include "bt_internal.h"
-#include <psp2kern/kernel/utils.h>
+#include <sysmem/utils.h>
 
 int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 extern const uint8_t gBtRandomKey[16];
@@ -14,6 +14,6 @@ int BtGenerateRandomBlock(uint8_t *destination)
 	SceInt64 time = BtGetSystemTimeWide();
 
 	BtPack(input, 8, "8", time);
-	ksceAesInit1(&gBtRandomContext, 128, 128, gBtRandomKey);
-	return ksceAesEncrypt1(&gBtRandomContext, input, destination);
+	SceKernelUtilsForDriver_F12B6451(&gBtRandomContext, 128, 128, gBtRandomKey);
+	return SceKernelUtilsForDriver_C2A61770(&gBtRandomContext, input, destination);
 }

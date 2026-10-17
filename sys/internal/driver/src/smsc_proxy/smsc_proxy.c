@@ -11,7 +11,7 @@
  * Every API entry stores TPIDRURO << 16 while it runs and restores it on exit.
  */
 
-#include <psp2kern/kernel/cpu.h>
+#include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <smsc_proxy/smsc_proxy.h>
 #include <sysmem/sysroot.h>
@@ -22,6 +22,7 @@
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <sysmem/sysevent.h>
 #include <intrmgr/intrmgr.h>
+#include <sysmem/sysmem.h>
 
 #define SESSION_COUNT	64
 #define CHANNEL_COUNT	4
@@ -88,12 +89,6 @@ typedef struct HeapOpt {
 
 int SmcCall(SceUInt32 r0, SceUInt32 r1, SceUInt32 r2, SceUInt32 r3, SceUInt32 command);
 
-int ksceKernelCpuId(void);
-SceUID ksceKernelCreateHeap(const char *name, SceSize size, HeapOpt *opt);
-int ksceKernelDeleteHeap(SceUID uid);
-void *ksceKernelAllocHeapMemory(SceUID uid, SceSize size);
-void ksceKernelFreeHeapMemory(SceUID uid, void *ptr);
-
 static SceUID s_heap;
 static SceUID s_lastId;
 static int s_state;
@@ -153,7 +148,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 	void *arg;
 	int state, status, ret;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	state = SceCpuForDriver_D32ACE9E(&s_lock);
 	if (sceSblTzsBridgePopIntrArea((void **)&msg, &size) < 0)
 		SCE_PANIC(964);
 	if (size < sizeof(*msg))
@@ -193,7 +188,7 @@ static int softIntrHandler(int intrCode, void *userCtx)
 		handler = s->channel[channel].handler;
 		arg = s->channel[channel].arg;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
 	if ((flags & MSG_SET_EVENT) && ksceKernelSetEventFlag(s->eventFlag, msg->eventBits) < 0)
 		SCE_PANIC(1045);
@@ -318,11 +313,11 @@ int module_start(SceSize args, void *argp)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	s_heap = ret = ksceKernelCreateHeap("SceSblSmschedProxy", 0x1000, &opt);
+	s_heap = ret = SceSysmemForDriver_9328E0E8("SceSblSmschedProxy", 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 
-	s_session = ksceKernelAllocHeapMemory(s_heap, SESSION_COUNT * sizeof(Session));
+	s_session = SceSysmemForDriver_7B4CB60A(s_heap, SESSION_COUNT * sizeof(Session));
 	if (s_session == NULL)
 		return SCE_SBL_ERROR_NO_MEMORY;
 	for (i = 0; i < SESSION_COUNT; i++)
@@ -335,7 +330,7 @@ int module_start(SceSize args, void *argp)
 					    NULL, 0x80, 0xf, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelRegisterSysEventHandler("SceSblSmSchedProxy", SysEventHandler, NULL);
+	ret = sceKernelRegisterSysEventHandler("SceSblSmSchedProxy", SysEventHandler, NULL);
 	if (ret < 0)
 		return ret;
 
@@ -346,7 +341,7 @@ int module_start(SceSize args, void *argp)
 
 int ksceSblSmSchedProxyInitialize(void)
 {
-	if (ksceKernelCpuId() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	return module_start(0, NULL);
 }
@@ -359,10 +354,10 @@ static int Terminate(void)
 	ret = SmcCall(0, 0, 0, 0, SMC_STOP);
 	if (s_heap > 0) {
 		if (s_session != NULL) {
-			ksceKernelFreeHeapMemory(s_heap, s_session);
+			sceKernelFreeHeapMemory(s_heap, s_session);
 			s_session = NULL;
 		}
-		ksceKernelDeleteHeap(s_heap);
+		sceKernelDeleteHeap(s_heap);
 		s_heap = -1;
 	}
 	s_state = STATE_STOPPED;
@@ -371,7 +366,7 @@ static int Terminate(void)
 
 int ksceSblSmSchedProxyUninitialize(void)
 {
-	if (ksceKernelCpuId() != 0)
+	if (sceKernelCpuId() != 0)
 		return 0;
 	return Terminate();
 }
@@ -396,12 +391,12 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	state = SceCpuForDriver_D32ACE9E(&s_lock);
 	for (i = 0; i < SESSION_COUNT; i++)
 		if (s_session[i].used == 0)
 			break;
 	if (i == SESSION_COUNT) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 		sceSyscallLeave(tls);
 		return SCE_SBL_ERROR_NO_MEMORY;
 	}
@@ -409,7 +404,7 @@ int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUIn
 	s->used = 1;
 	prev = s_lastId;
 	newId = ++s_lastId;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
 	s->id = newId;
 	s->handle = -1;
@@ -681,16 +676,16 @@ int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
 		goto out;
 	}
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	state = SceCpuForDriver_D32ACE9E(&s_lock);
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 		ret = SCE_SBL_ERROR_NO_SESSION;
 		goto out;
 	}
 	ch = &s->channel[channel];
 	if (ch->handler != NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 		ret = SCE_SBL_ERROR_BUSY;
 		goto out;
 	}
@@ -700,7 +695,7 @@ int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
 	a = ch->pendingA;
 	ch->pendingB = 0;
 	ch->pendingA = 0;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 
 	if (a != 0)
 		handler(id, channel, arg, a, b);
@@ -725,16 +720,16 @@ int ksceSblSmSchedProxyDisableCry2ArmInterrupt(SceUID id, int channel)
 		goto out;
 	}
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_lock);
+	state = SceCpuForDriver_D32ACE9E(&s_lock);
 	s = SessionLookup(id, &status);
 	if (s == NULL) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 		ret = SCE_SBL_ERROR_NO_SESSION;
 		goto out;
 	}
 	s->channel[channel].handler = NULL;
 	s->channel[channel].arg = NULL;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_lock, state);
 	ret = SmcCall(s->handle, channel, 0, 0, SMC_DISABLE_CRY2ARM);
 out:
 	sceSyscallLeave(tls);

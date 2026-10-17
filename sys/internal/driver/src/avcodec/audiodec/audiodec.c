@@ -5,7 +5,6 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/cpu.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -160,22 +159,22 @@ int audiodecLockDecodeBuffers(SceAudiodecCtrl *ctrl,
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
 	ctrl->inputEsSize = audiodecCalculateEsSize(codecType,
 		&(*decoderWork)[index], nFrames);
-	ret = ksceKernelLockRangeWithMode(0x10, ctrl->pEs, ctrl->inputEsSize);
+	ret = sceKernelLockRangeWithMode(0x10, ctrl->pEs, ctrl->inputEsSize);
 	if (ret < 0)
 		return ret;
 	(*decoderWork)[index].inputEsSize = ctrl->inputEsSize;
-	ret = ksceKernelIsAccessibleRange(0x10, ctrl->pEs, ctrl->inputEsSize);
+	ret = SceSysmemForDriver_9C78064C(0x10, ctrl->pEs, ctrl->inputEsSize);
 	if (ret < 0)
 		return ret;
 	if (!ctrl->pPcm || ((uintptr_t)ctrl->pPcm & 1))
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
 	ctrl->outputPcmSize = audiodecCalculatePcmSize(codecType,
 		&(*decoderWork)[index], nFrames, startSample, nSamples);
-	ret = ksceKernelLockRangeWithMode(0x30, ctrl->pPcm, ctrl->outputPcmSize);
+	ret = sceKernelLockRangeWithMode(0x30, ctrl->pPcm, ctrl->outputPcmSize);
 	if (ret < 0)
 		return ret;
 	(*decoderWork)[index].outputPcmSize = ctrl->outputPcmSize;
-	return ksceKernelIsAccessibleRange(0x30, ctrl->pPcm, ctrl->outputPcmSize);
+	return SceSysmemForDriver_9C78064C(0x30, ctrl->pPcm, ctrl->outputPcmSize);
 }
 
 int audiodecValidateDecoder(const SceAudiodecCtrl *ctrl, SceUInt32 codecType,
@@ -286,22 +285,22 @@ int _copyOutSceAudiodecCtrl(SceAudiodecCtrl *userCtrl,
 	const void *caller = __builtin_return_address(0);
 	int hasUserInfo = userInfo != NULL;
 
-	ksceKernelAssert(hasUserInfo, &copyOutCtrlInfo, caller);
+	SceDebugForDriver_35A35322(hasUserInfo, &copyOutCtrlInfo, caller);
 #endif
 	info = ctrl->pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(info != NULL, &copyOutInfoSource, caller);
-	ksceKernelAssert(hasUserInfo, &copyOutInfoDestination, caller);
+	SceDebugForDriver_35A35322(info != NULL, &copyOutInfoSource, caller);
+	SceDebugForDriver_35A35322(hasUserInfo, &copyOutInfoDestination, caller);
 #endif
-	ret = ksceKernelCopyToUser(userInfo, info, info->size);
+	ret = SceSysmemForDriver_6D88EF8A(userInfo, info, info->size);
 	if (ret < 0)
 		return ret;
 	ctrl->pInfo = userInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyOutInfoSource, caller);
-	ksceKernelAssert(userCtrl != NULL, &copyOutInfoDestination, caller);
+	SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
+	SceDebugForDriver_35A35322(userCtrl != NULL, &copyOutInfoDestination, caller);
 #endif
-	return ksceKernelCopyToUser(userCtrl, ctrl, ctrl->size);
+	return SceSysmemForDriver_6D88EF8A(userCtrl, ctrl, ctrl->size);
 }
 
 int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
@@ -316,15 +315,15 @@ int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
 #if FW_DEBUG
 	const void *caller = __builtin_return_address(0);
 
-	ksceKernelAssert(userInfoResult != NULL, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(userInfoResult != NULL, &copyInCtrlInfo, caller);
 #endif
 	info = ctrl->pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3))
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
-	ret = ksceKernelCopyFromUser(ctrl, userCtrl, sizeof(*ctrl));
+	ret = SceSysmemForDriver_BC996A7A(ctrl, userCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	if (ctrl->size != sizeof(*ctrl))
@@ -364,11 +363,11 @@ int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
 	}
 	info = ctrl->pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(info != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(info != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3))
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
-	ret = ksceKernelCopyFromUser(info, userInfo, maxSize);
+	ret = SceSysmemForDriver_BC996A7A(info, userInfo, maxSize);
 	if (ret < 0)
 		return ret;
 	invalidSize = maxSize < info->size;
@@ -436,7 +435,7 @@ int _sceAudiodecProcessCreateEntry(SceUID pid)
 	if (ret < 0)
 		return ret;
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &processCreateStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &processCreateStorage, caller);
 #endif
 	memset(process, 0, sizeof(*process));
 	process->internal.managers[0].pWork = &process->internal.work[0];
@@ -540,7 +539,7 @@ int _sceAudiodecProcessExitEntry(SceUID pid)
 			audiodecResident.processStorage, (void **)&process, 0);
 	result = ret & (ret >> 31);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &processExitStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &processExitStorage, caller);
 #endif
 	do {
 		ret = _audiodecInternalExitLibrary(pid,
@@ -566,7 +565,7 @@ int _sceAudiodecProcessExitEntry(SceUID pid)
 SceUID _audiodecGetResidentDecoderOwner(unsigned int decoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(decoder < 7, &residentOwnerGet, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(decoder < 7, &residentOwnerGet, __builtin_return_address(0));
 #endif
 	return audiodecResident.owners[decoder];
 }
@@ -574,7 +573,7 @@ SceUID _audiodecGetResidentDecoderOwner(unsigned int decoder)
 int _audiodecSetResidentDecoderOwner(unsigned int decoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(decoder < 7, &residentOwnerSet, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(decoder < 7, &residentOwnerSet, __builtin_return_address(0));
 #endif
 	audiodecResident.owners[decoder] = ksceKernelGetProcessId();
 	return 0;
@@ -583,7 +582,7 @@ int _audiodecSetResidentDecoderOwner(unsigned int decoder)
 int _audiodecClearResidentDecoderOwner(unsigned int decoder)
 {
 #if FW_DEBUG
-	ksceKernelAssert(decoder < 7, &residentOwnerClear, __builtin_return_address(0));
+	SceDebugForDriver_35A35322(decoder < 7, &residentOwnerClear, __builtin_return_address(0));
 #endif
 	audiodecResident.owners[decoder] = -1;
 	return 0;
@@ -604,7 +603,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 	ret = ksceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &initLibraryBudget,
+		SceDebugForDriver_D9703808(1, 0, &initLibraryBudget,
 			"Warning: sceAudiodecInitLibrary must not be called by non-GAME process\n");
 #endif
 		goto leave;
@@ -621,13 +620,13 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userParam || ((uintptr_t)userParam & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&param, userParam, sizeof(param));
+	ret = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
 	if (ret < 0)
 		goto unlock;
 	if (param.size != sizeof(param)) {
@@ -636,7 +635,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 	}
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->internal.managers[0].codecType)
 		index = 0;
@@ -662,10 +661,10 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0) {
 #if FW_DEBUG
-		ksceKernelAssert(1, &copyOutInfoSource, caller);
-		ksceKernelAssert(1, &copyOutInfoDestination, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
+		SceDebugForDriver_35A35322(1, &copyOutInfoDestination, caller);
 #endif
-		ret = ksceKernelCopyToUser(userParam, &param, param.size);
+		ret = SceSysmemForDriver_6D88EF8A(userParam, &param, param.size);
 	}
 unlock:
 	_unlockProcessSuspendCore();
@@ -688,7 +687,7 @@ int sceAudiodecTermLibraryForUser(SceUInt32 codecType)
 	ret = ksceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, &termLibraryBudget,
+		SceDebugForDriver_D9703808(1, 0, &termLibraryBudget,
 			"Warning: sceAudiodecTermLibrary must not be called by non-GAME process\n");
 #endif
 		goto leave;
@@ -698,7 +697,7 @@ int sceAudiodecTermLibraryForUser(SceUInt32 codecType)
 		goto leave;
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->internal.managers[0].codecType)
 		index = 0;
@@ -748,18 +747,18 @@ int sceAudiodecGetContextSizeForUser(const SceAudiodecCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -795,13 +794,13 @@ int sceAudiodecGetContextSizeForUser(const SceAudiodecCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -935,7 +934,7 @@ int sceAudiodecCreateDecoderForUser(SceAudiodecCtrl *userCtrl, SceUInt32 codecTy
 	resident = !ksceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
-		ksceKernelPrintfLevelWithInfo(1, 0, &createDecoderBudget,
+		SceDebugForDriver_D9703808(1, 0, &createDecoderBudget,
 			"Warning: sceAudiodecCreateDecoder must not be called by non-GAME process\n");
 #endif
 	if (codecType == AUDIODEC_TYPE_SILK) {
@@ -1040,7 +1039,7 @@ int sceAudiodecCreateDecoderForUser(SceAudiodecCtrl *userCtrl, SceUInt32 codecTy
 		goto unlock;
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1) {
@@ -1103,18 +1102,18 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -1150,13 +1149,13 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -1309,7 +1308,7 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 		goto unlock;
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType - SCE_AUDIODEC_TYPE_CELP > 1) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_TYPE;
@@ -1361,18 +1360,18 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
 #endif
 	copyType = codecType ? codecType : (SceUInt32)-1;
 	kernelInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -1408,13 +1407,13 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		goto unlock;
 	}
 #if FW_DEBUG
-	ksceKernelAssert(kernelInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(kernelInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3)) {
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = ksceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
+	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -1498,7 +1497,7 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		goto unlock;
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType == process->external.managers[0].codecType)
 		index = 0;
@@ -1550,7 +1549,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 	resident = !ksceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
-		ksceKernelPrintfLevelWithInfo(1, 0, &deleteDecoderBudget,
+		SceDebugForDriver_D9703808(1, 0, &deleteDecoderBudget,
 			"Warning: sceAudiodecDeleteDecoder must not be called by non-GAME process\n");
 #endif
 	ctrl.pInfo = &info.publicInfo;
@@ -1574,7 +1573,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		audiodecIsExternalHandle(ctrl.handle);
 		process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-		ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
 			goto invalid;
@@ -1587,7 +1586,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		external = audiodecIsExternalHandle(ctrl.handle);
 		process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-		ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 		if (external) {
 			if (codecType == process->external.managers[0].codecType)
@@ -1638,9 +1637,9 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 	if (ret < 0)
 		goto unlock;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -1651,7 +1650,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDeleteDecoder(manager, &ctrl, NULL);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockMutex:
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0)
@@ -1701,7 +1700,7 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 	audiodecIsExternalHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
 		goto invalid;
@@ -1721,9 +1720,9 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 	if (ret < 0)
 		goto unlock;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -1734,7 +1733,7 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDeleteDecoder(manager, &ctrl, NULL);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockMutex:
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0)
@@ -1789,7 +1788,7 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 	external = audiodecIsExternalHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (external) {
 		if (codecType == process->external.managers[0].codecType)
@@ -1839,9 +1838,9 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 	if (ret < 0)
 		goto unlock;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -1852,7 +1851,7 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDeleteDecoder(manager, &ctrl, vaContext);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockMutex:
 	ksceKernelUnlockFastMutex((SceKernelFastMutex *)manager->pMutex);
 	if (ret >= 0)
@@ -1900,7 +1899,7 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 	resident = audiodecIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
@@ -1956,9 +1955,9 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 	if (ret < 0)
 		goto unlockBuffers;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -1969,15 +1968,15 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDecode(manager, &ctrl, 1, 0, 0);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		ksceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		ksceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2029,7 +2028,7 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 	resident = audiodecIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
@@ -2085,9 +2084,9 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 	if (ret < 0)
 		goto unlockBuffers;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -2098,15 +2097,15 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDecode(manager, &ctrl, nFrames, 0, 0);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		ksceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		ksceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2155,7 +2154,7 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 	resident = audiodecIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
@@ -2211,9 +2210,9 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 	if (ret < 0)
 		goto unlockBuffers;
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -2224,15 +2223,15 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalDecode(manager, &ctrl, 0, startSample, nSamples);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 unlockBuffers:
 	index = audiodecGetHandleIndex(ctrl.handle);
 	if (manager->pWork[index].inputEsSize) {
-		ksceKernelUnlockRangeWithMode(16, ctrl.pEs, manager->pWork[index].inputEsSize);
+		SceSysmemForDriver_22CBE925(16, ctrl.pEs, manager->pWork[index].inputEsSize);
 		manager->pWork[index].inputEsSize = 0;
 	}
 	if (manager->pWork[index].outputPcmSize) {
-		ksceKernelUnlockRangeWithMode(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
+		SceSysmemForDriver_22CBE925(48, ctrl.pPcm, manager->pWork[index].outputPcmSize);
 		manager->pWork[index].outputPcmSize = 0;
 	}
 	if (ret >= 0)
@@ -2278,7 +2277,7 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	ret = SCE_AUDIODEC_ERROR_INVALID_NSTREAMS;
 	if (nStreams - 1 > 6)
 		goto leave;
-	ret = ksceKernelCopyFromUser(ctrlPtrs, userCtrls, sizeof(*ctrlPtrs) * nStreams);
+	ret = SceSysmemForDriver_BC996A7A(ctrlPtrs, userCtrls, sizeof(*ctrlPtrs) * nStreams);
 	if (ret < 0)
 		goto leave;
 	ret = _lockProcessSuspendCore();
@@ -2323,11 +2322,11 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 		}
 	}
 #if FW_DEBUG
-	ksceKernelAssert(1, &workManagersDestination, caller);
+	SceDebugForDriver_35A35322(1, &workManagersDestination, caller);
 #endif
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagersStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagersStorage, caller);
 #endif
 	for (i = 0; i < nStreams; i++) {
 		__builtin_prefetch(&ctrls[i + 3]);
@@ -2394,16 +2393,16 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	locked = 0;
 	while (locked < nStreams) {
 		index = audiodecGetHandleIndex(ctrls[locked].handle);
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&managers[locked]->pDecoders[index].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&managers[locked]->pDecoders[index].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&managers[locked]->pDecoders[index].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&managers[locked]->pDecoders[index].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&managers[locked]->pDecoders[index].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&managers[locked]->pDecoders[index].lockGuard, intr);
 		if (lockResult >= 0) {
 			locked++;
 			continue;
 		}
 		for (i = 0; i < locked; i++) {
 			index = audiodecGetHandleIndex(ctrls[i].handle);
-			ksceKernelSpinlockLowUnlock(&managers[i]->pDecoders[index].decodeLock);
+			sceKernelSpinlockLowUnlock(&managers[i]->pDecoders[index].decodeLock);
 		}
 		sdkVersion = 0;
 		if (SceProcessmgrForDriver_D141C076(0, &sdkVersion) < 0 || sdkVersion > 0x30FFFFF) {
@@ -2416,17 +2415,17 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	ret = _audiodecInternalDecodeNStreams(managers, ctrls, nStreams);
 	for (i = 0; i < nStreams; i++) {
 		index = audiodecGetHandleIndex(ctrls[i].handle);
-		ksceKernelSpinlockLowUnlock(&managers[i]->pDecoders[index].decodeLock);
+		sceKernelSpinlockLowUnlock(&managers[i]->pDecoders[index].decodeLock);
 	}
 unlockBuffers:
 	for (i = 0; i < nStreams; i++) {
 		index = audiodecGetHandleIndex(ctrls[i].handle);
 		if (managers[i]->pWork[index].inputEsSize) {
-			ksceKernelUnlockRangeWithMode(16, ctrls[i].pEs, managers[i]->pWork[index].inputEsSize);
+			SceSysmemForDriver_22CBE925(16, ctrls[i].pEs, managers[i]->pWork[index].inputEsSize);
 			managers[i]->pWork[index].inputEsSize = 0;
 		}
 		if (managers[i]->pWork[index].outputPcmSize) {
-			ksceKernelUnlockRangeWithMode(48, ctrls[i].pPcm, managers[i]->pWork[index].outputPcmSize);
+			SceSysmemForDriver_22CBE925(48, ctrls[i].pPcm, managers[i]->pWork[index].outputPcmSize);
 			managers[i]->pWork[index].outputPcmSize = 0;
 		}
 	}
@@ -2510,7 +2509,7 @@ invalidCelp:
 	resident = audiodecIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)
@@ -2563,9 +2562,9 @@ invalidCelp:
 		goto unlock;
 	}
 	for (;;) {
-		intr = ksceKernelSpinlockLowLockCpuSuspendIntr(&manager->pDecoders[decoderIndex].lockGuard);
-		lockResult = ksceKernelSpinlockLowTrylock(&manager->pDecoders[decoderIndex].decodeLock);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
+		intr = SceCpuForDriver_D32ACE9E(&manager->pDecoders[decoderIndex].lockGuard);
+		lockResult = SceCpuForDriver_5AC9D394(&manager->pDecoders[decoderIndex].decodeLock);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&manager->pDecoders[decoderIndex].lockGuard, intr);
 		if (lockResult >= 0)
 			break;
 		sdkVersion = 0;
@@ -2576,7 +2575,7 @@ invalidCelp:
 		ksceKernelDelayThread(100);
 	}
 	ret = _audiodecInternalClearContext(manager, &ctrl);
-	ksceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
+	sceKernelSpinlockLowUnlock(&manager->pDecoders[decoderIndex].decodeLock);
 	if (ret >= 0)
 		ret = _copyOutSceAudiodecCtrl(userCtrl, (SceAudiodecInfo *)userInfo, &ctrl);
 	goto unlock;
@@ -2611,15 +2610,15 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 	if (ret < 0)
 		goto leave;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInCtrlInfo, caller);
+	SceDebugForDriver_35A35322(1, &copyInCtrlInfo, caller);
 #endif
 	copyInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(1, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(1, &copyInInfoSource, caller);
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3))
 		{ ret = SCE_AUDIODEC_ERROR_INVALID_PTR; goto unlock; }
-	ret = ksceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
+	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl))
@@ -2655,11 +2654,11 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 	}
 	copyInfo = ctrl.pInfo;
 #if FW_DEBUG
-	ksceKernelAssert(copyInfo != NULL, &copyInInfoSource, caller);
+	SceDebugForDriver_35A35322(copyInfo != NULL, &copyInInfoSource, caller);
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3))
 		{ ret = SCE_AUDIODEC_ERROR_INVALID_PTR; goto unlock; }
-	ret = ksceKernelCopyFromUser(copyInfo, userInfo, maxSize);
+	ret = SceSysmemForDriver_BC996A7A(copyInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < copyInfo->size;
@@ -2680,7 +2679,7 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 	resident = audiodecIsResidentHandle(ctrl.handle);
 	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
 #if FW_DEBUG
-	ksceKernelAssert(process != NULL, &workManagerStorage, caller);
+	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
 	if (resident) {
 		if (codecType - SCE_AUDIODEC_TYPE_CELP > 1)

@@ -1,13 +1,11 @@
 /* SceNetPs platform adapters, adjacent to Sony's system_os.c debug records. */
 #include <psp2/registrymgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/proc_event.h>
+#include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
-#include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
@@ -20,8 +18,8 @@
 #include "../../../../net_ps_internal.h"
 #include "../../../../net_ps_atomic.h"
 #include <processmgr/processmgr.h>
+#include <sysmem/sysroot.h>
 
-void sceKernelApiDeclareTypeUInt32(void);
 int ksceKernelIsGameBudget(void);
 int ksceKernelUnregisterThreadEventHandler(SceUID handlerId);
 int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
@@ -140,7 +138,7 @@ int sceNetPsIsDevelopmentMode(void)
 
 int sceNetPsIsCEX(void)
 {
-	return ksceSblAimgrIsCEX() != 0;
+	return SceSblAIMgrForDriver_D78B04A2() != 0;
 }
 
 int sceNetPsIsSdkVersion2OrLater(void)
@@ -153,17 +151,17 @@ int sceNetPsIsSdkVersion2OrLater(void)
 
 int sceNetPsCopyUserOut(const void *source, void *destination, size_t length)
 {
-	return ksceKernelCopyToUser(destination, source, length);
+	return SceSysmemForDriver_6D88EF8A(destination, source, length);
 }
 
 int sceNetPsCopyUserIn(const void *source, void *destination, size_t length)
 {
-	return ksceKernelCopyFromUser(destination, source, length);
+	return SceSysmemForDriver_BC996A7A(destination, source, length);
 }
 
 int sceNetPsCopyUserString(const char *source, char *destination, size_t length)
 {
-	return ksceKernelStrncpyFromUser(destination, source, length);
+	return SceSysmemForDriver_DB3EC244(destination, source, length);
 }
 
 SceInt64 sceNetPsGetSystemTime(SceUInt64 *value)
@@ -434,7 +432,7 @@ int sce_psnet_bnet_sync_signal(SceNetPsSync *sync, unsigned int mask)
 int sceNetPsBindCallback(SceNetPsDriverCallback *callback, SceUID callbackId,
 			const char *name)
 {
-	callback->globalCallbackId = kscePUIDtoGUID(0, callbackId);
+	callback->globalCallbackId = SceSysmemForDriver_45D22597(0, callbackId);
 	callback->name = name;
 	return 0;
 }
@@ -451,7 +449,7 @@ int sceNetPsNotifyCallback(SceNetPsDriverCallback *callback,
 
 SceUID bnet_puid_to_guid(SceUID puid)
 {
-	return kscePUIDtoGUID(0, puid);
+	return SceSysmemForDriver_45D22597(0, puid);
 }
 
 unsigned int sceNetPsSyscallEnter(void)
@@ -476,7 +474,7 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 		SceNetPsProcessHooks *processHooks)
 {
 	SceKernelAllocMemBlockKernelOpt option;
-	SceProcEventHandler handler;
+	SceKernelProcEventHandler handler;
 	SceNetPsThreadParam thread;
 	void *base;
 	SceUID memoryId, systemId, threadId, processId;
@@ -484,13 +482,13 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = 0x200000;
-	memoryId = ksceKernelAllocMemBlock("SceNetPs", 0x1020d006,
+	memoryId = SceSysmemForDriver_C94850C9("SceNetPs", 0x1020d006,
 					 0x100000, &option);
 	if (memoryId < 0)
 		return 2;
-	if (ksceKernelGetMemBlockBase(memoryId, &base) < 0)
+	if (SceSysmemForDriver_A841EDDA(memoryId, &base) < 0)
 		goto freeMemory;
-	systemId = ksceKernelRegisterSysEventHandler("SceNetPs",
+	systemId = sceKernelRegisterSysEventHandler("SceNetPs",
 			(SceKernelSysEventHandler)sceNetPsSysEventHandler,
 			systemHooks);
 	if (systemId < 0)
@@ -507,11 +505,11 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	handler.create = (typeof(handler.create))sceNetPsProcessCreateHandler;
 	handler.exit = (typeof(handler.exit))sceNetPsProcessExitHandler;
 	handler.kill = (typeof(handler.kill))sceNetPsProcessKillHandler;
-	handler.stop = (typeof(handler.stop))sceNetPsProcessSuspendHandler;
-	handler.start = (typeof(handler.start))sceNetPsProcessResumeHandler;
-	handler.switch_process =
-		(typeof(handler.switch_process))sceNetPsProcessAffinityHandler;
-	processId = ksceKernelRegisterProcEventHandler("SceNetPs", &handler,
+	handler.suspend = (typeof(handler.suspend))sceNetPsProcessSuspendHandler;
+	handler.resume = (typeof(handler.resume))sceNetPsProcessResumeHandler;
+	handler.notify =
+		(typeof(handler.notify))sceNetPsProcessAffinityHandler;
+	processId = sceKernelRegisterProcEventHandler("SceNetPs", &handler,
 						     (int)processHooks);
 	if (processId < 0)
 		goto unregisterThread;
@@ -529,13 +527,13 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	return 0;
 
 unregisterProcess:
-	ksceKernelUnregisterProcEventHandler(processId);
+	SceProcEventForDriver_3DED57CC(processId);
 unregisterThread:
 	ksceKernelUnregisterThreadEventHandler(threadId);
 unregisterSystem:
-	ksceKernelUnregisterSysEventHandler(systemId);
+	sceKernelUnregisterSysEventHandler(systemId);
 freeMemory:
-	ksceKernelFreeMemBlock(memoryId);
+	SceSysmemForDriver_009E1C61(memoryId);
 	return 2;
 }
 

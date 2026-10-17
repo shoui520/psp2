@@ -3,7 +3,6 @@
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <string.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
@@ -91,7 +90,7 @@ void *_GetVideocodecGlobal(SceUID pid)
 			videocodecResident.processLocalStorageId);
 	}
 #if FW_DEBUG
-	ksceKernelAssert(storage != 0, &videocodecGlobalStorage,
+	SceDebugForDriver_35A35322(storage != 0, &videocodecGlobalStorage,
 		__builtin_return_address(0));
 #endif
 	return storage;
@@ -403,7 +402,7 @@ int _sceAvcdecQueryDecoderMemSizeInternal(unsigned int codecType,
 
 	if (pQuery != NULL) {
 		query = __builtin_alloca(sizeof(*query));
-		ret = ksceKernelCopyFromUser(query, pQuery, sizeof(*query));
+		ret = SceSysmemForDriver_BC996A7A(query, pQuery, sizeof(*query));
 		if (ret < 0)
 			return ret;
 		pQuery = query;
@@ -413,7 +412,7 @@ int _sceAvcdecQueryDecoderMemSizeInternal(unsigned int codecType,
 	decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
 	*decoderInfo = (SceAvcdecDecoderInfo){0};
 	ret = SceAvcodecForDriver_D5A34236(codecType, pQuery, decoderInfo);
-	copied = ksceKernelCopyToUser(pDecoderInfo, decoderInfo,
+	copied = SceSysmemForDriver_6D88EF8A(pDecoderInfo, decoderInfo,
 				    sizeof(*decoderInfo));
 	return copied < 0 ? copied : ret;
 }
@@ -428,13 +427,13 @@ int _sceAvcdecCreateDecoderInternal(unsigned int codecType,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pDecoderInfo != NULL) {
 		decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
-		ret = ksceKernelCopyFromUser(decoderInfo, pDecoderInfo,
+		ret = SceSysmemForDriver_BC996A7A(decoderInfo, pDecoderInfo,
 					   sizeof(*decoderInfo));
 		if (ret < 0)
 			return ret;
@@ -442,7 +441,7 @@ int _sceAvcdecCreateDecoderInternal(unsigned int codecType,
 	}
 	ret = SceAvcodecForDriver_663B3195(codecType, ctrl, pDecoderInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -460,25 +459,25 @@ int _sceAvcdecDecodeAuInternal(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_D2ACCE22(ctrl, au, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -496,7 +495,7 @@ int _sceAvcdecDecodeGetPictureInternal(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 		if (pArrayPicture != NULL)
@@ -512,25 +511,25 @@ int _sceAvcdecDecodeGetPictureInternal(SceAvcdecCtrl *pCtrl,
 copyArrayPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (SceAvcdecArrayPicture){0};
-	copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				      sizeof(*arrayPicture));
 	if (copied < 0)
 		return copied;
 copyTimeout:
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_D7CD7F82(ctrl, arrayPicture, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -551,14 +550,14 @@ int _sceAvcdecDecodeGetPictureWithWorkPictureInternal(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					      sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -566,7 +565,7 @@ int _sceAvcdecDecodeGetPictureWithWorkPictureInternal(SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		copied = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					      sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -574,7 +573,7 @@ int _sceAvcdecDecodeGetPictureWithWorkPictureInternal(SceAvcdecCtrl *pCtrl,
 	if (timeout != NULL) {
 		SceUInt *timeoutCopy = __builtin_alloca(sizeof(*timeoutCopy));
 
-		copied = ksceKernelCopyFromUser(timeoutCopy, timeout,
+		copied = SceSysmemForDriver_BC996A7A(timeoutCopy, timeout,
 					      sizeof(*timeoutCopy));
 		wait = timeoutCopy;
 		if (copied < 0)
@@ -582,18 +581,18 @@ int _sceAvcdecDecodeGetPictureWithWorkPictureInternal(SceAvcdecCtrl *pCtrl,
 	}
 	ret = SceAvcodecForDriver_6E250A5F(ctrl, arrayPicture, workPicture, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					    sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -612,25 +611,25 @@ int _sceAvcdecDecodeAuNalAuInternal(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_F714DB9A(ctrl, au, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -647,11 +646,11 @@ int _sceAvcdecRegisterCallbackInternal(SceAvcdecCtrl *pCtrl, SceUID cbid,
 		return SceAvcodecForDriver_90F394E6(pCtrl, cbid, eventMask);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_90F394E6(ctrl, cbid, eventMask);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -664,11 +663,11 @@ int _sceAvcdecUnregisterCallbackInternal(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_27211864(pCtrl);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_27211864(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -682,11 +681,11 @@ int _sceAvcdecUnregisterCallbackWithCbidInternal(SceAvcdecCtrl *pCtrl,
 		return SceAvcodecForDriver_D9FCDF3E(pCtrl, cbid);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_D9FCDF3E(ctrl, cbid);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -700,7 +699,7 @@ int _sceAvcdecGetSeiPictureTimingInternal(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -710,12 +709,12 @@ int _sceAvcdecGetSeiPictureTimingInternal(SceAvcdecCtrl *pCtrl,
 	}
 	ret = SceAvcodecForDriver_BC244D21(ctrl, field, pictureTiming);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pPictureTiming != NULL) {
-		copied = ksceKernelCopyToUser(pPictureTiming, pictureTiming,
+		copied = SceSysmemForDriver_6D88EF8A(pPictureTiming, pictureTiming,
 					    sizeof(*pictureTiming));
 		if (copied < 0)
 			return copied;
@@ -731,7 +730,7 @@ int _sceVideodecInitLibraryInternal(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -749,7 +748,7 @@ int _sceVideodecQueryMemSizeInternal(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -759,7 +758,7 @@ int _sceVideodecQueryMemSizeInternal(unsigned int codecType,
 	memInfo = __builtin_alloca(sizeof(*memInfo));
 	*memInfo = (SceVideodecMemInfo){0};
 	ret = SceAvcodecForDriver_22D7B653(codecType, pInitInfo, memInfo);
-	copied = ksceKernelCopyToUser(pMemInfo, memInfo, sizeof(*memInfo));
+	copied = SceSysmemForDriver_6D88EF8A(pMemInfo, memInfo, sizeof(*memInfo));
 	return copied < 0 ? copied : ret;
 }
 
@@ -772,11 +771,11 @@ int _sceAvcdecDecodeSetTrickModeNongameapp(SceAvcdecCtrl *pCtrl, int trickMode)
 		return SceAvcodecForDriver_C518A109(pCtrl, trickMode);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_C518A109(ctrl, trickMode);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -790,7 +789,7 @@ int _sceAvcdecQueryDecoderMemSizeNongameapp(unsigned int codecType,
 
 	if (pQuery != NULL) {
 		query = __builtin_alloca(sizeof(*query));
-		ret = ksceKernelCopyFromUser(query, pQuery, sizeof(*query));
+		ret = SceSysmemForDriver_BC996A7A(query, pQuery, sizeof(*query));
 		if (ret < 0)
 			return ret;
 		pQuery = query;
@@ -800,7 +799,7 @@ int _sceAvcdecQueryDecoderMemSizeNongameapp(unsigned int codecType,
 	decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
 	*decoderInfo = (SceAvcdecDecoderInfo){0};
 	ret = SceAvcodecForDriver_01387A93(codecType, pQuery, decoderInfo);
-	copied = ksceKernelCopyToUser(pDecoderInfo, decoderInfo,
+	copied = SceSysmemForDriver_6D88EF8A(pDecoderInfo, decoderInfo,
 				    sizeof(*decoderInfo));
 	return copied < 0 ? copied : ret;
 }
@@ -815,13 +814,13 @@ int _sceAvcdecCreateDecoderNongameapp(unsigned int codecType,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pDecoderInfo != NULL) {
 		decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
-		ret = ksceKernelCopyFromUser(decoderInfo, pDecoderInfo,
+		ret = SceSysmemForDriver_BC996A7A(decoderInfo, pDecoderInfo,
 					   sizeof(*decoderInfo));
 		if (ret < 0)
 			return ret;
@@ -829,7 +828,7 @@ int _sceAvcdecCreateDecoderNongameapp(unsigned int codecType,
 	}
 	ret = SceAvcodecForDriver_301CCA25(codecType, ctrl, pDecoderInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -846,7 +845,7 @@ int _sceVideodecQueryMemSizeNongameapp(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -856,7 +855,7 @@ int _sceVideodecQueryMemSizeNongameapp(unsigned int codecType,
 	memInfo = __builtin_alloca(sizeof(*memInfo));
 	*memInfo = (SceVideodecMemInfo){0};
 	ret = SceAvcodecForDriver_FACCD284(codecType, pInitInfo, memInfo);
-	copied = ksceKernelCopyToUser(pMemInfo, memInfo, sizeof(*memInfo));
+	copied = SceSysmemForDriver_6D88EF8A(pMemInfo, memInfo, sizeof(*memInfo));
 	return copied < 0 ? copied : ret;
 }
 
@@ -870,21 +869,21 @@ int _sceVideodecInitLibraryWithUnmapMemNongameapp(unsigned int codecType,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		__builtin_memset(ctrl, 0, sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pInitInfo != NULL) {
 		SceVideodecQueryInitInfo *initCopy = __builtin_alloca(sizeof(*initCopy));
 
-		copied = ksceKernelCopyFromUser(initCopy, pInitInfo, sizeof(*initCopy));
+		copied = SceSysmemForDriver_BC996A7A(initCopy, pInitInfo, sizeof(*initCopy));
 		initInfo = initCopy;
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_6DC39EDC(codecType, ctrl, initInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -899,7 +898,7 @@ int _sceVideodecInitLibraryNongameapp(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -918,14 +917,14 @@ int _sceAvcdecGetSeiUserDataNongameapp(SceAvcdecCtrl *pCtrl, unsigned int field,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pUserData != NULL) {
 		userData = __builtin_alloca(sizeof(*userData));
 		memset(userData, 0, sizeof(*userData));
-		copied = ksceKernelCopyFromUser(userData, pUserData,
+		copied = SceSysmemForDriver_BC996A7A(userData, pUserData,
 					      sizeof(*userData));
 		if (copied < 0)
 			return copied;
@@ -933,23 +932,23 @@ int _sceAvcdecGetSeiUserDataNongameapp(SceAvcdecCtrl *pCtrl, unsigned int field,
 	if (pBuf != NULL) {
 		buf = __builtin_alloca(sizeof(*buf));
 		*buf = (SceAvcdecBuf){0};
-		copied = ksceKernelCopyFromUser(buf, pBuf, sizeof(*buf));
+		copied = SceSysmemForDriver_BC996A7A(buf, pBuf, sizeof(*buf));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_427914D5(ctrl, field, userData, buf);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pUserData != NULL) {
-		copied = ksceKernelCopyToUser(pUserData, userData, sizeof(*userData));
+		copied = SceSysmemForDriver_6D88EF8A(pUserData, userData, sizeof(*userData));
 		if (copied < 0)
 			return copied;
 	}
 	if (pBuf != NULL) {
-		copied = ksceKernelCopyToUser(pBuf, buf, sizeof(*buf));
+		copied = SceSysmemForDriver_6D88EF8A(pBuf, buf, sizeof(*buf));
 		if (copied < 0)
 			return copied;
 	}
@@ -966,7 +965,7 @@ int _sceVideodecQueryMemSize(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -976,7 +975,7 @@ int _sceVideodecQueryMemSize(unsigned int codecType,
 	memInfo = __builtin_alloca(sizeof(*memInfo));
 	*memInfo = (SceVideodecMemInfo){0};
 	ret = SceAvcodecForDriver_536C8296(codecType, pInitInfo, memInfo);
-	copied = ksceKernelCopyToUser(pMemInfo, memInfo, sizeof(*memInfo));
+	copied = SceSysmemForDriver_6D88EF8A(pMemInfo, memInfo, sizeof(*memInfo));
 	return copied < 0 ? copied : ret;
 }
 
@@ -990,13 +989,13 @@ int _sceVideodecInitLibraryWithUnmapMem(unsigned int codecType,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		__builtin_memset(ctrl, 0, sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		copied = ksceKernelCopyFromUser(initInfo, pInitInfo,
+		copied = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo,
 					      sizeof(*initInfo));
 		if (copied < 0)
 			return copied;
@@ -1004,7 +1003,7 @@ int _sceVideodecInitLibraryWithUnmapMem(unsigned int codecType,
 	}
 	ret = SceAvcodecForDriver_C93DA0C7(codecType, ctrl, pInitInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -1021,13 +1020,13 @@ int _sceVideodecInitLibraryWithUnmapMemInternal(unsigned int codecType,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		__builtin_memset(ctrl, 0, sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		copied = ksceKernelCopyFromUser(initInfo, pInitInfo,
+		copied = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo,
 					      sizeof(*initInfo));
 		if (copied < 0)
 			return copied;
@@ -1035,7 +1034,7 @@ int _sceVideodecInitLibraryWithUnmapMemInternal(unsigned int codecType,
 	}
 	ret = SceAvcodecForDriver_BC55D10F(codecType, ctrl, pInitInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -1050,7 +1049,7 @@ int _sceVideodecInitLibrary(unsigned int codecType,
 
 	if (pInitInfo != NULL) {
 		initInfo = __builtin_alloca(sizeof(*initInfo));
-		ret = ksceKernelCopyFromUser(initInfo, pInitInfo, sizeof(*initInfo));
+		ret = SceSysmemForDriver_BC996A7A(initInfo, pInitInfo, sizeof(*initInfo));
 		if (ret < 0)
 			return ret;
 		pInitInfo = initInfo;
@@ -1073,7 +1072,7 @@ int _sceAvcdecQueryDecoderMemSize(unsigned int codecType,
 
 	if (pQuery != NULL) {
 		query = __builtin_alloca(sizeof(*query));
-		ret = ksceKernelCopyFromUser(query, pQuery, sizeof(*query));
+		ret = SceSysmemForDriver_BC996A7A(query, pQuery, sizeof(*query));
 		if (ret < 0)
 			return ret;
 		pQuery = query;
@@ -1083,7 +1082,7 @@ int _sceAvcdecQueryDecoderMemSize(unsigned int codecType,
 	decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
 	*decoderInfo = (SceAvcdecDecoderInfo){0};
 	ret = SceAvcodecForDriver_C114C499(codecType, pQuery, decoderInfo);
-	copied = ksceKernelCopyToUser(pDecoderInfo, decoderInfo,
+	copied = SceSysmemForDriver_6D88EF8A(pDecoderInfo, decoderInfo,
 				    sizeof(*decoderInfo));
 	return copied < 0 ? copied : ret;
 }
@@ -1103,13 +1102,13 @@ int _sceAvcdecCreateDecoder(unsigned int codecType, SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){ 0 };
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pDecoderInfo != NULL) {
 		decoderInfo = __builtin_alloca(sizeof(*decoderInfo));
-		ret = ksceKernelCopyFromUser(decoderInfo, pDecoderInfo,
+		ret = SceSysmemForDriver_BC996A7A(decoderInfo, pDecoderInfo,
 					   sizeof(*decoderInfo));
 		if (ret < 0)
 			return ret;
@@ -1117,7 +1116,7 @@ int _sceAvcdecCreateDecoder(unsigned int codecType, SceAvcdecCtrl *pCtrl,
 	}
 	ret = SceAvcodecForDriver_7E8CC4E5(codecType, ctrl, pDecoderInfo);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -1133,11 +1132,11 @@ int _sceAvcdecDeleteDecoder(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_EA07A3B7(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){ 0 };
-	ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_EA07A3B7(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1150,11 +1149,11 @@ int _sceAvcdecDecodeAvailableSize(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_43A9CD35(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){ 0 };
-	ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_43A9CD35(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1168,13 +1167,13 @@ int _sceAvcdecDecode(const SceAvcdecCtrl *pCtrl, const SceAvcdecAu *pAu,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		ret = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		ret = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (ret < 0)
 			return ret;
 	}
@@ -1182,12 +1181,12 @@ int _sceAvcdecDecode(const SceAvcdecCtrl *pCtrl, const SceAvcdecAu *pAu,
 		return SceAvcodecForDriver_48DECA56(ctrl, au, NULL);
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (SceAvcdecArrayPicture){ 0 };
-	ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				   sizeof(*arrayPicture));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_48DECA56(ctrl, au, arrayPicture);
-	copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+	copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 				     sizeof(*arrayPicture));
 	return copied < 0 ? copied : ret;
 }
@@ -1201,7 +1200,7 @@ int _sceAvcdecDecodeStop(const SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		SceAvcdecCtrl *ctrl = __builtin_alloca(sizeof(*ctrl));
 
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 		pCtrl = ctrl;
@@ -1217,12 +1216,12 @@ submit:
 copyPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (SceAvcdecArrayPicture){ 0 };
-	ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				   sizeof(*arrayPicture));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_DFC0AAC6(pCtrl, arrayPicture);
-	copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+	copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 				     sizeof(*arrayPicture));
 	return copied < 0 ? copied : ret;
 }
@@ -1234,7 +1233,7 @@ int _sceAvcdecDecodeFlush(const SceAvcdecCtrl *pCtrl)
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
@@ -1250,20 +1249,20 @@ int _sceAvcdecCsc(SceAvcdecPicture *pDst, const SceAvcdecPicture *pSrc)
 	if (pDst != NULL) {
 		dst = __builtin_alloca(sizeof(*dst));
 		memset(dst, 0, sizeof(*dst));
-		ret = ksceKernelCopyFromUser(dst, pDst, sizeof(*dst));
+		ret = SceSysmemForDriver_BC996A7A(dst, pDst, sizeof(*dst));
 		if (ret < 0)
 			return ret;
 	}
 	if (pSrc != NULL) {
 		src = __builtin_alloca(sizeof(*src));
-		ret = ksceKernelCopyFromUser(src, pSrc, sizeof(*src));
+		ret = SceSysmemForDriver_BC996A7A(src, pSrc, sizeof(*src));
 		if (ret < 0)
 			return ret;
 		pSrc = src;
 	}
 	ret = SceAvcodecForDriver_16B501C9(dst, pSrc);
 	if (pDst != NULL) {
-		copied = ksceKernelCopyToUser(pDst, dst, sizeof(*dst));
+		copied = SceSysmemForDriver_6D88EF8A(pDst, dst, sizeof(*dst));
 		if (copied < 0)
 			return copied;
 	}
@@ -1287,20 +1286,20 @@ int _sceAvcdecDecodeWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					      sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -1308,20 +1307,20 @@ int _sceAvcdecDecodeWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		copied = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					      sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_EAEB16D5(ctrl, au, arrayPicture, workPicture);
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					    sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -1340,14 +1339,14 @@ int _sceAvcdecDecodeStopWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					      sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -1355,20 +1354,20 @@ int _sceAvcdecDecodeStopWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (SceAvcdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		copied = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					      sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_E355CAAE(ctrl, arrayPicture, workPicture);
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					    sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -1385,7 +1384,7 @@ int _sceAvcdecDecodeNalAu(const SceAvcdecCtrl *pCtrl, const VeneziaVipVideoInput
 	if (pCtrl != NULL) {
 		SceAvcdecCtrl *ctrl = __builtin_alloca(sizeof(*ctrl));
 
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 		pCtrl = ctrl;
@@ -1393,7 +1392,7 @@ int _sceAvcdecDecodeNalAu(const SceAvcdecCtrl *pCtrl, const VeneziaVipVideoInput
 	if (pAu != NULL) {
 		VeneziaVipVideoInput *au = __builtin_alloca(sizeof(*au));
 
-		ret = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		ret = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (ret < 0)
 			return ret;
 		pAu = au;
@@ -1409,12 +1408,12 @@ submit:
 copyPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (SceAvcdecArrayPicture){ 0 };
-	ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				   sizeof(*arrayPicture));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_0CC84413(pCtrl, pAu, arrayPicture);
-	copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+	copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 				     sizeof(*arrayPicture));
 	return copied < 0 ? copied : ret;
 }
@@ -1433,13 +1432,13 @@ int _sceAvcdecDecodeNalAuWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		ret = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		ret = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (ret < 0)
 			return ret;
 		pAu = au;
@@ -1447,7 +1446,7 @@ int _sceAvcdecDecodeNalAuWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (SceAvcdecArrayPicture){ 0 };
-		ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					   sizeof(*arrayPicture));
 		if (ret < 0)
 			return ret;
@@ -1455,20 +1454,20 @@ int _sceAvcdecDecodeNalAuWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (SceAvcdecArrayPicture){ 0 };
-		ret = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		ret = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					   sizeof(*workPicture));
 		if (ret < 0)
 			return ret;
 	}
 	ret = SceAvcodecForDriver_20892154(ctrl, pAu, arrayPicture, workPicture);
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					     sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					     sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -1485,11 +1484,11 @@ int _sceM4vdecDeleteDecoder(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_77529FD2(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){ 0 };
-	ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_77529FD2(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1504,11 +1503,11 @@ int _sceM4vdecDecodeAvailableSize(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_91E94B76(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){ 0 };
-	ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_91E94B76(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1523,7 +1522,7 @@ int _sceM4vdecDecode(const SceAvcdecCtrl *pCtrl, const M4vdecAu *pAu,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 		if (pAu != NULL)
@@ -1538,7 +1537,7 @@ submit:
 
 copyAu:
 	au = __builtin_alloca(sizeof(*au));
-	ret = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+	ret = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 	if (ret < 0)
 		return ret;
 	if (pArrayPicture == NULL)
@@ -1547,12 +1546,12 @@ copyAu:
 copyPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (M4vdecArrayPicture){ 0 };
-	ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				   sizeof(*arrayPicture));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_2C7A9841(ctrl, au, arrayPicture);
-	copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+	copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 				     sizeof(*arrayPicture));
 	return copied < 0 ? copied : ret;
 }
@@ -1566,7 +1565,7 @@ int _sceM4vdecDecodeStop(const SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		SceAvcdecCtrl *ctrl = __builtin_alloca(sizeof(*ctrl));
 
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 		pCtrl = ctrl;
@@ -1582,12 +1581,12 @@ submit:
 copyPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (M4vdecArrayPicture){ 0 };
-	ret = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	ret = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				   sizeof(*arrayPicture));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_F67F93DC(pCtrl, arrayPicture);
-	copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+	copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 				     sizeof(*arrayPicture));
 	return copied < 0 ? copied : ret;
 }
@@ -1599,7 +1598,7 @@ int _sceM4vdecDecodeFlush(const SceAvcdecCtrl *pCtrl)
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
@@ -1618,20 +1617,20 @@ int _sceM4vdecDecodeWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (M4vdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					      sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -1639,20 +1638,20 @@ int _sceM4vdecDecodeWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (M4vdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		copied = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					      sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_823E187E(ctrl, au, arrayPicture, workPicture);
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					    sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -1671,14 +1670,14 @@ int _sceM4vdecDecodeStopWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
 		arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 		*arrayPicture = (M4vdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+		copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 					      sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -1686,20 +1685,20 @@ int _sceM4vdecDecodeStopWithWorkPicture(const SceAvcdecCtrl *pCtrl,
 	if (pWorkPicture != NULL) {
 		workPicture = __builtin_alloca(sizeof(*workPicture));
 		*workPicture = (M4vdecArrayPicture){0};
-		copied = ksceKernelCopyFromUser(workPicture, pWorkPicture,
+		copied = SceSysmemForDriver_BC996A7A(workPicture, pWorkPicture,
 					      sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_3F146942(ctrl, arrayPicture, workPicture);
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
 	}
 	if (pWorkPicture != NULL) {
-		copied = ksceKernelCopyToUser(pWorkPicture, workPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pWorkPicture, workPicture,
 					    sizeof(*workPicture));
 		if (copied < 0)
 			return copied;
@@ -1721,13 +1720,13 @@ int _sceAvcencSetEncoderParameter(const AvcencControl *pCtrl,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		ret = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (ret < 0)
 			return ret;
 	}
 	if (pParameter != NULL) {
 		parameter = __builtin_alloca(sizeof(*parameter));
-		ret = ksceKernelCopyFromUser(parameter, pParameter,
+		ret = SceSysmemForDriver_BC996A7A(parameter, pParameter,
 					   sizeof(*parameter));
 		if (ret < 0)
 			return ret;
@@ -1749,11 +1748,11 @@ int _sceAvcencDeleteEncoder(AvcencControl *pCtrl)
 		return SceAvcodecForDriver_2895CB6D(NULL);
 	control = __builtin_alloca(sizeof(*control));
 	*control = (AvcencControl){0};
-	copied = ksceKernelCopyFromUser(control, pCtrl, sizeof(*control));
+	copied = SceSysmemForDriver_BC996A7A(control, pCtrl, sizeof(*control));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_2895CB6D(control);
-	copied = ksceKernelCopyToUser(pCtrl, control, sizeof(*control));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, control, sizeof(*control));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1767,7 +1766,7 @@ int _sceAvcencEncode(const AvcencControl *pCtrl, const AvcencCscFrame *pFrame,
 
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 		if (pFrame != NULL)
@@ -1782,7 +1781,7 @@ submit:
 
 copyFrame:
 	frame = __builtin_alloca(sizeof(*frame));
-	copied = ksceKernelCopyFromUser(frame, pFrame, sizeof(*frame));
+	copied = SceSysmemForDriver_BC996A7A(frame, pFrame, sizeof(*frame));
 	if (copied < 0)
 		return copied;
 	if (pArrayAu == NULL)
@@ -1790,11 +1789,11 @@ copyFrame:
 copyAu:
 	arrayAu = __builtin_alloca(sizeof(*arrayAu));
 	*arrayAu = (AvcencArrayAu){0};
-	copied = ksceKernelCopyFromUser(arrayAu, pArrayAu, sizeof(*arrayAu));
+	copied = SceSysmemForDriver_BC996A7A(arrayAu, pArrayAu, sizeof(*arrayAu));
 	if (copied < 0)
 		return copied;
 	ret = ksceAvcencEncode(ctrl, frame, arrayAu);
-	copied = ksceKernelCopyToUser(pArrayAu, arrayAu, sizeof(*arrayAu));
+	copied = SceSysmemForDriver_6D88EF8A(pArrayAu, arrayAu, sizeof(*arrayAu));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1810,7 +1809,7 @@ int _sceAvcencEncodeStop(const AvcencControl *pCtrl, AvcencArrayAu *pArrayAu)
 			goto submit;
 	} else {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 		if (pArrayAu == NULL)
@@ -1819,11 +1818,11 @@ int _sceAvcencEncodeStop(const AvcencControl *pCtrl, AvcencArrayAu *pArrayAu)
 
 	arrayAu = __builtin_alloca(sizeof(*arrayAu));
 	*arrayAu = (AvcencArrayAu){0};
-	copied = ksceKernelCopyFromUser(arrayAu, pArrayAu, sizeof(*arrayAu));
+	copied = SceSysmemForDriver_BC996A7A(arrayAu, pArrayAu, sizeof(*arrayAu));
 	if (copied < 0)
 		return copied;
 	ret = ksceAvcencEncodeStop(ctrl, arrayAu);
-	copied = ksceKernelCopyToUser(pArrayAu, arrayAu, sizeof(*arrayAu));
+	copied = SceSysmemForDriver_6D88EF8A(pArrayAu, arrayAu, sizeof(*arrayAu));
 	return copied < 0 ? copied : ret;
 
 submit:
@@ -1837,7 +1836,7 @@ int _sceAvcencEncodeFlush(const AvcencControl *pCtrl)
 
 	if (pCtrl != NULL) {
 		control = __builtin_alloca(sizeof(*control));
-		ret = ksceKernelCopyFromUser(control, pCtrl, sizeof(*control));
+		ret = SceSysmemForDriver_BC996A7A(control, pCtrl, sizeof(*control));
 		if (ret < 0)
 			return ret;
 	}
@@ -1853,7 +1852,7 @@ int _sceAvcencGetNalUnit(const AvcencControl *pCtrl, unsigned int index,
 
 	if (pCtrl != NULL) {
 		control = __builtin_alloca(sizeof(*control));
-		copied = ksceKernelCopyFromUser(control, pCtrl, sizeof(*control));
+		copied = SceSysmemForDriver_BC996A7A(control, pCtrl, sizeof(*control));
 		if (copied < 0)
 			return copied;
 		if (pNalUnit != NULL)
@@ -1867,11 +1866,11 @@ int _sceAvcencGetNalUnit(const AvcencControl *pCtrl, unsigned int index,
 copyNalUnit:
 	nalUnit = __builtin_alloca(sizeof(*nalUnit));
 	*nalUnit = (AvcencNalUnit){0};
-	copied = ksceKernelCopyFromUser(nalUnit, pNalUnit, sizeof(*nalUnit));
+	copied = SceSysmemForDriver_BC996A7A(nalUnit, pNalUnit, sizeof(*nalUnit));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_1A584DB7(control, index, nalUnit);
-	copied = ksceKernelCopyToUser(pNalUnit, nalUnit, sizeof(*nalUnit));
+	copied = SceSysmemForDriver_6D88EF8A(pNalUnit, nalUnit, sizeof(*nalUnit));
 	return copied < 0 ? copied : ret;
 }
 
@@ -1884,20 +1883,20 @@ int _sceAvcencCsc(AvcencCscFrame *pDst, const AvcencCscFrame *pSrc)
 	if (pDst != NULL) {
 		destination = __builtin_alloca(sizeof(*destination));
 		*destination = (AvcencCscFrame){0};
-		copied = ksceKernelCopyFromUser(destination, pDst,
+		copied = SceSysmemForDriver_BC996A7A(destination, pDst,
 					      sizeof(*destination));
 		if (copied < 0)
 			return copied;
 	}
 	if (pSrc != NULL) {
 		source = __builtin_alloca(sizeof(*source));
-		copied = ksceKernelCopyFromUser(source, pSrc, sizeof(*source));
+		copied = SceSysmemForDriver_BC996A7A(source, pSrc, sizeof(*source));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_4F11F915(destination, source);
 	if (pDst != NULL) {
-		copied = ksceKernelCopyToUser(pDst, destination,
+		copied = SceSysmemForDriver_6D88EF8A(pDst, destination,
 					    sizeof(*destination));
 		if (copied < 0)
 			return copied;
@@ -1916,25 +1915,25 @@ int _sceAvcdecDecodeAuNongameapp(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_78BA8E98(ctrl, au, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -1952,7 +1951,7 @@ int _sceAvcdecDecodeGetPictureNongameapp(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 		if (pArrayPicture != NULL)
@@ -1968,25 +1967,25 @@ int _sceAvcdecDecodeGetPictureNongameapp(SceAvcdecCtrl *pCtrl,
 copyArrayPicture:
 	arrayPicture = __builtin_alloca(sizeof(*arrayPicture));
 	*arrayPicture = (SceAvcdecArrayPicture){0};
-	copied = ksceKernelCopyFromUser(arrayPicture, pArrayPicture,
+	copied = SceSysmemForDriver_BC996A7A(arrayPicture, pArrayPicture,
 				      sizeof(*arrayPicture));
 	if (copied < 0)
 		return copied;
 copyTimeout:
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_F8BCBE20(ctrl, arrayPicture, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pArrayPicture != NULL) {
-		copied = ksceKernelCopyToUser(pArrayPicture, arrayPicture,
+		copied = SceSysmemForDriver_6D88EF8A(pArrayPicture, arrayPicture,
 					    sizeof(*arrayPicture));
 		if (copied < 0)
 			return copied;
@@ -2005,25 +2004,25 @@ int _sceAvcdecDecodeAuNalAuNongameapp(SceAvcdecCtrl *pCtrl,
 	if (pCtrl != NULL) {
 		ctrl = __builtin_alloca(sizeof(*ctrl));
 		*ctrl = (SceAvcdecCtrl){0};
-		copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
 	if (pAu != NULL) {
 		au = __builtin_alloca(sizeof(*au));
-		copied = ksceKernelCopyFromUser(au, pAu, sizeof(*au));
+		copied = SceSysmemForDriver_BC996A7A(au, pAu, sizeof(*au));
 		if (copied < 0)
 			return copied;
 	}
 	if (timeout != NULL) {
 		wait = __builtin_alloca(sizeof(*wait));
-		copied = ksceKernelCopyFromUser(wait, timeout, sizeof(*wait));
+		copied = SceSysmemForDriver_BC996A7A(wait, timeout, sizeof(*wait));
 		if (copied < 0)
 			return copied;
 	}
 	ret = SceAvcodecForDriver_C9EF7057(ctrl, au, wait);
 	if (pCtrl != NULL) {
-		copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+		copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 		if (copied < 0)
 			return copied;
 	}
@@ -2040,11 +2039,11 @@ int _sceAvcdecRegisterCallbackNongameapp(SceAvcdecCtrl *pCtrl, SceUID cbid,
 		return SceAvcodecForDriver_E7E14DE4(pCtrl, cbid, eventMask);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_E7E14DE4(ctrl, cbid, eventMask);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -2057,11 +2056,11 @@ int _sceAvcdecUnregisterCallbackNongameapp(SceAvcdecCtrl *pCtrl)
 		return SceAvcodecForDriver_13C530E4(pCtrl);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_13C530E4(ctrl);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -2075,11 +2074,11 @@ int _sceAvcdecUnregisterCallbackWithCbidNongameapp(SceAvcdecCtrl *pCtrl,
 		return SceAvcodecForDriver_E4F668C5(pCtrl, cbid);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	*ctrl = (SceAvcdecCtrl){0};
-	copied = ksceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
 	if (copied < 0)
 		return copied;
 	ret = SceAvcodecForDriver_E4F668C5(ctrl, cbid);
-	copied = ksceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
+	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 

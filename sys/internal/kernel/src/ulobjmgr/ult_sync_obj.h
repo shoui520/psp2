@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include "ulobjmgr_internal.h"
 #include "util.h"
 
@@ -17,7 +17,7 @@ int getTidUltId(SceUID pid, SceUInt32 thread, SceUInt32 *pTid)
 		*pTid = thread >> 1;
 		return 0;
 	}
-	return ksceKernelCopyFromUserProc(pid, pTid, (const void *)thread, sizeof(*pTid));
+	return sceKernelCopyFromUserProc(pid, pTid, (const void *)thread, sizeof(*pTid));
 }
 
 /* name unknown: the number of threads the object's waiting queue pool holds */
@@ -27,7 +27,7 @@ int getUltWaitingQueueCapacity(SceUID pid, SceUIntPtr address)
 	UltWaitingQueueResourcePool pool;
 	int ret;
 
-	ret = ksceKernelCopyFromUserProc(pid, &pool, (const void *)address, sizeof(pool));
+	ret = sceKernelCopyFromUserProc(pid, &pool, (const void *)address, sizeof(pool));
 	if (ret != 0)
 		return ret;
 	if (pool.header.size < sizeof(pool) ||
@@ -44,7 +44,7 @@ int _name(SceUID pid, SceUIntPtr address, _type *obj)				\
 	int ret;								\
 										\
 	SCE_DBG_ASSERT(obj != NULL, _line);					\
-	ret = ksceKernelCopyFromUserProc(pid, obj, (const void *)address,	\
+	ret = sceKernelCopyFromUserProc(pid, obj, (const void *)address,	\
 					 sizeof(*obj));				\
 	if (ret != 0)								\
 		return ret;							\

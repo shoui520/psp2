@@ -101,7 +101,7 @@ static int GrabStopMonitorCall(unsigned int mask, int restart)
 
 	if ((mask >> 12) != 0)
 		return GRAB_ERROR;
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
+	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
 	if (restart) {
 		s_grab.grabNs->writeStop &= ~mask;
 		s_grab.grabNs->readStop &= ~mask;
@@ -112,7 +112,7 @@ static int GrabStopMonitorCall(unsigned int mask, int restart)
 		PervasiveDmb();
 		GrabWaitPortsIdle(mask);
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
 	return 0;
 }
 
@@ -175,23 +175,23 @@ static inline void GrabStopPorts(unsigned int mask)
 {
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
+	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
 	s_grab.grabNs->writeStop |= mask;
 	s_grab.grabNs->readStop |= mask;
 	PervasiveDmb();
 	GrabWaitPortsIdle(mask);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
 }
 
 static inline void GrabRestartPorts(unsigned int mask)
 {
 	int state;
 
-	state = ksceKernelSpinlockLowLockCpuSuspendIntr(&s_grabLock);
+	state = SceCpuForDriver_D32ACE9E(&s_grabLock);
 	s_grab.grabNs->writeStop &= ~mask;
 	s_grab.grabNs->readStop &= ~mask;
 	PervasiveDsb();
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_grabLock, state);
 }
 
 /* 0x121: change the GPU clock with its ports stopped and the other cores parked */
@@ -251,12 +251,12 @@ static __attribute__((noinline)) int GrabInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_grabDevices[i].paddr;
-		ret = ksceKernelAllocMemBlock(s_grabDevices[i].name, 0x20100806,
+		ret = SceSysmemForDriver_C94850C9(s_grabDevices[i].name, 0x20100806,
 			s_grabDevices[i].size, &opt);
 		if (ret < 0)
 			goto error;
 		s_grab.uid[i] = ret;
-		ksceKernelGetMemBlockBase(ret, &base);
+		SceSysmemForDriver_A841EDDA(ret, &base);
 		*s_grabDevices[i].base = base;
 	}
 	sceKernelRegisterMonitorCallHandler(GRAB_MONCALL_STOP,
@@ -277,7 +277,7 @@ static __attribute__((noinline)) int GrabInit(void)
 
 error:
 	for (i = 0; i < 4; i++)
-		ksceKernelFreeMemBlock(s_grab.uid[i]);
+		SceSysmemForDriver_009E1C61(s_grab.uid[i]);
 	return ret;
 }
 

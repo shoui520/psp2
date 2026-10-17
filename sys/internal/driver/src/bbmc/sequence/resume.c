@@ -187,7 +187,7 @@ static inline int seqResumeNasIndication(BbmcControl *control, BbmcMessage *mess
 		goto complete;
 	default:
 #if FW_DEBUG
-		ksceKernelAssert(0, &dbg_seqResumeNasIndication_L1379, __builtin_return_address(0));
+		SceDebugForDriver_35A35322(0, &dbg_seqResumeNasIndication_L1379, __builtin_return_address(0));
 #endif
 		break;
 	}
@@ -233,7 +233,7 @@ int seqResumeUartInterface(BbmcControl *control, const SceUInt32 *command)
 			return 1;
 		break;
 	default:
-		ksceKernelPanic(&dbg_seqResumeUartInterface_L1281,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeUartInterface_L1281,
 				__builtin_return_address(0));
 	}
 	resumeUartInterfaceStep = 0;
@@ -263,7 +263,7 @@ int seqResumeGotoInitialize(BbmcControl *control, BbmcMessage *message)
 			break;
 		}
 		if (bbcmdExecute(0, 48, NULL, NULL, NULL, control) < 0)
-			ksceKernelPanic(&dbg_seqResumeGotoInitialize_L1427,
+			SceDebugForDriver_391B5B74(&dbg_seqResumeGotoInitialize_L1427,
 					__builtin_return_address(0));
 		result = bbcmdExecute(0, 6, NULL, NULL,
 				      bbcmdManagerCompletion, control);
@@ -288,7 +288,7 @@ int seqResumeGotoInitialize(BbmcControl *control, BbmcMessage *message)
 		}
 		break;
 	default:
-		ksceKernelPanic(&dbg_seqResumeGotoInitialize_L1476,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeGotoInitialize_L1476,
 				__builtin_return_address(0));
 	}
 	resumeInitializeStep = 0;
@@ -428,7 +428,7 @@ static inline int seqResumeConnectedSequence(BbmcControl *control,
 		suppressCompletion = 1;
 		goto complete;
 	default:
-		ksceKernelPanic(&dbg_seqResumeFromConnected_L1100,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeFromConnected_L1100,
 				__builtin_return_address(0));
 	}
 	if (resumeConnectedStep != 8)
@@ -649,7 +649,7 @@ int seqResumeFromActivated(BbmcControl *control, BbmcMessage *message)
 		}
 		break;
 	default:
-		ksceKernelPanic(&dbg_seqResumeFromActivated_L662,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeFromActivated_L662,
 				__builtin_return_address(0));
 	}
 	if (resumeActivatedStep != 6)
@@ -752,7 +752,7 @@ int seqResumeFromAuthorized(BbmcControl *control, BbmcMessage *message)
 		}
 		break;
 	default:
-		ksceKernelPanic(&dbg_seqResumeFromAuthorized_L474,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeFromAuthorized_L474,
 				__builtin_return_address(0));
 	}
 	if (resumeAuthorizedStep != 6)
@@ -882,7 +882,7 @@ int seqResumeFromLowPowerMode(BbmcControl *control, BbmcMessage *message)
 		}
 		break;
 	default:
-		ksceKernelPanic(&dbg_seqResumeFromLowPowerMode_L879,
+		SceDebugForDriver_391B5B74(&dbg_seqResumeFromLowPowerMode_L879,
 				__builtin_return_address(0));
 	}
 	if (resumeLowPowerStep != 8)
@@ -963,7 +963,7 @@ int seqResume(BbmcControl *control, BbmcMessage *message)
 	}
 	control->resumeHandler = handler;
 #if FW_DEBUG
-	ksceKernelAssert(handler != NULL, &dbg_seqResume_L1570,
+	SceDebugForDriver_35A35322(handler != NULL, &dbg_seqResume_L1570,
 			__builtin_return_address(0));
 #endif
 	bbmcNotifyFeatureEvent(control, 0, 0x100000);

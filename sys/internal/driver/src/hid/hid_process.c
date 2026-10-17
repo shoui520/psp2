@@ -213,7 +213,7 @@ int hidSetKeyboardIntercept(SceUID pid, HidKeyboardIntercept intercept)
 	return (int)0x803b0006;
 }
 
-int hidProcessCreate(SceUID pid, SceProcEventInvokeParam2 *param, int arg)
+int hidProcessCreate(SceUID pid, ProcEventCreateParam *param, int arg)
 {
 	int result = hidLock();
 	ListNode *link;
@@ -237,7 +237,7 @@ add:
 	return result;
 }
 
-int hidProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+int hidProcessExit(SceUID pid, ProcEventParam *param, int arg)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -272,7 +272,7 @@ int hidProcessExit(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
 	return result;
 }
 
-int hidProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
+int hidProcessKill(SceUID pid, ProcEventParam *param, int arg)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -307,7 +307,7 @@ int hidProcessKill(SceUID pid, SceProcEventInvokeParam1 *param, int arg)
 	return result;
 }
 
-int hidProcessStop(SceUID pid, int eventType, SceProcEventInvokeParam1 *param,
+int hidProcessStop(SceUID pid, int eventType, ProcEventParam *param,
 		   int arg)
 {
 	ListNode *link;
@@ -347,10 +347,10 @@ int hidProcessStop(SceUID pid, int eventType, SceProcEventInvokeParam1 *param,
 			entry = (HidProcessLink *)link;
 			process = entry->process;
 			if (pid == process->pid) {
-				state = ksceKernelSpinlockLowLockCpuSuspendIntr(
+				state = SceCpuForDriver_D32ACE9E(
 					&process->spinlock);
 				entry->process->flags |= 0x10;
-				ksceKernelSpinlockLowUnlockCpuResumeIntr(
+				sceKernelSpinlockLowUnlockCpuResumeIntr(
 					&entry->process->spinlock, state);
 				return 0;
 			}

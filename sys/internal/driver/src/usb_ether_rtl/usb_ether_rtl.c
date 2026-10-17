@@ -44,11 +44,11 @@ static int kickTx(struct NetDriver *driver, int argument)
 
 	if (!a->active)
 		return RTL_ERROR(4);
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
 	old = __atomic_fetch_add(&a->pendingTx, 1, __ATOMIC_SEQ_CST);
 	if (!old)
 		ksceKernelSetEventFlag(a->workerEvent, 8);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
 
@@ -60,8 +60,8 @@ static int start(struct NetDriver *driver, void *memoryBase)
 	(void)memoryBase;
 	if (!a->active)
 		return RTL_ERROR(4);
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
 
@@ -74,8 +74,8 @@ static int stop(struct NetDriver *driver, void *memoryBase, int memorySize)
 	(void)memorySize;
 	if (!a->active)
 		return RTL_ERROR(4);
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return 0;
 }
 
@@ -160,7 +160,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 
 	if (!a->active)
 		return RTL_ERROR(4);
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
 	ksceKernelLockFastMutex(&a->mutex);
 	if ((!addresses && length) || (addresses && length % 6)) {
 		ret = RTL_ERROR(1);
@@ -193,7 +193,7 @@ static int multicast(struct NetDriver *driver, const unsigned char *addresses,
 		ret = rtlWriteRegister(a, 0xcd04, 0x10f, 4, __builtin_bswap32(hash[0]));
 out:
 	ksceKernelUnlockFastMutex(&a->mutex);
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
 
@@ -336,7 +336,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	}
 	if (!a->active)
 		return RTL_ERROR(4);
-	ksceKernelAtomicAddAndGet32(&a->references, 1);
+	SceCpuForDriver_5F6A8743(&a->references, 1);
 	switch (command) {
 	case NET_DRIVER_CTL_SET_LINK:
 		ksceKernelLockFastMutex(&a->mutex);
@@ -367,7 +367,7 @@ static int interfaceControl(struct NetDriver *driver, unsigned int command,
 	}
 out:
 	/* The original also decrements for GET_LINK and an invalid length. */
-	ksceKernelAtomicSubAndGet32(&a->references, 1);
+	SceCpuForDriver_A4884C4E(&a->references, 1);
 	return ret;
 }
 
@@ -552,7 +552,7 @@ int SceUsbEtherRtlForDriver_BAF95A47(const unsigned char *mac)
 			}
 		}
 		if (value) {
-			ksceKernelPrintf("Unknown Format Type!!\n");
+			SceDebugForDriver_391B74B7("Unknown Format Type!!\n");
 			ret = RTL_ERROR(0x801);
 			goto out;
 		}
@@ -727,7 +727,7 @@ int module_start(SceSize length, void *arg)
 	(void)length;
 	(void)arg;
 	hardware = ksceSysconGetHardwareInfo();
-	if (ksceSblAimgrIsCEX() && ksceSblAimgrIsVITA() && !(hardware & 0x80))
+	if (SceSblAIMgrForDriver_D78B04A2() && SceSblAIMgrForDriver_4273B97B() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));
 	ret = ksceKernelInitializeFastMutex(&a->mutex, "SceUsbEtherRtlControl", 0x2000, 0);
@@ -744,7 +744,7 @@ int module_start(SceSize length, void *arg)
 	ret = ksceKernelStartThread(ret, 4, &a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelRegisterSysEventHandler("SceUsbEtherRtl", systemEvent, a);
+	ret = sceKernelRegisterSysEventHandler("SceUsbEtherRtl", systemEvent, a);
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelCreateEventFlag("SceRtlControlTransfer", 0, 0, NULL);

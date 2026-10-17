@@ -7,8 +7,8 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
 #include <intrmgr/intrmgr.h>
-#include <psp2kern/kernel/sysmem.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sblaimgr.h>
 #include <syscon/syscon.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <smsc_proxy/smsc_proxy.h>
@@ -72,11 +72,11 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifEnableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
 							intrState);
 			return result;
 		}
@@ -91,7 +91,7 @@ int sdifEnableSubIntr(int interrupt, int subInterrupt)
 		registers->normalSignalEnable = enable | 0x100;
 	}
 	__asm__ volatile("dsb sy" : : : "memory");
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
 	return 0;
 }
 
@@ -113,11 +113,11 @@ int sdifDisableSubIntr(int interrupt, int subInterrupt)
 	uint32_t mask;
 	int result;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
 	if ((unsigned int)(subInterrupt - 2) <= 6) {
 		result = sdifDisableFunctionInterrupt(context, subInterrupt - 1);
 		if (result != 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock,
 							intrState);
 			return result;
 		}
@@ -129,7 +129,7 @@ int sdifDisableSubIntr(int interrupt, int subInterrupt)
 		context->port.registers->normalSignalEnable &= ~0x100;
 	}
 	__asm__ volatile("dsb sy" : : : "memory");
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
 	return 0;
 }
 
@@ -349,12 +349,12 @@ int SceSdifForDriver_E5E5F42E(void)
 	uint32_t index = 0;
 	int interrupt;
 
-	ksceKernelUnregisterSysEventHandler(gSdifState.sysEventHandler);
+	sceKernelUnregisterSysEventHandler(gSdifState.sysEventHandler);
 	if (gSdifState.portCount != 0) {
 		context = &gSdifContexts[0];
 		do {
 			port = &context->port;
-			intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[2].port.registers);
 			__builtin_prefetch(&context[2].port.part);
@@ -365,14 +365,14 @@ int SceSdifForDriver_E5E5F42E(void)
 			port->part = NULL;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			interrupt = port->index + 220;
 			ksceKernelDisableIntr(interrupt);
 			ksceKernelReleaseIntrHandler(interrupt);
 			ksceKernelDeleteEventFlag(port->eventFlag);
 			ksceKernelFinalizeFastMutex(&port->mutex);
-			ksceKernelFreeMemBlock(port->descriptorMemblock);
-			ksceKernelFreeMemBlock(port->registerMemblock);
+			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
+			SceSysmemForDriver_009E1C61(port->registerMemblock);
 			ScePervasiveForDriver_3D8A8712(index);
 			ScePervasiveForDriver_4E43299D(index);
 			context++;
@@ -416,7 +416,7 @@ int _sceSdifReset(SdifContextGlobal *context, int flags)
 		revision = kscePervasiveGetSoCRevision() & 0x1ff00;
 		index = port->index;
 		if (revision == 0) {
-			if (ksceSblAimgrIsGenuineDolce()) {
+			if (SceSblAIMgrForDriver_C6E83F34()) {
 				if (index != 0) {
 					ScePervasiveForDriver_9F8E589C(index, 0);
 					goto resetPort;
@@ -438,7 +438,7 @@ int _sceSdifReset(SdifContextGlobal *context, int flags)
 			} else {
 				if (index != 0) {
 					if (index == 1) {
-						if (ksceKernelIsSomeBootMode()) {
+						if (SceSysrootForDriver_7B7F8171()) {
 							ScePervasiveForDriver_043B33F5(1, 6);
 							goto resetPort;
 						}
@@ -458,7 +458,7 @@ resetPort:
 		} else {
 resetEmmc:
 			if (gSdifState.skipReset == 1) {
-				ksceKernelPrintfWithInfo(15, SCE_DBGINFO(1020),
+				SceDebugForDriver_02B04343(15, SCE_DBGINFO(1020),
 						"Skip sdif port[%d] reset\n", 0);
 			} else {
 				ScePervasiveForDriver_3D8A8712(0);
@@ -536,9 +536,9 @@ int sceSdifResume0(int phase, int event)
 					do {
 						port = &context->port;
 						port->polling = 1;
-						intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+						intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 						_sceSdifReset(context, 3);
-						ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+						sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 						if (index != 0) {
 							port->polling = 0;
 							ksceKernelEnableIntr(index + 220);
@@ -546,7 +546,7 @@ int sceSdifResume0(int phase, int event)
 							part = NULL;
 							result = sdifStartMmcInitialization(0, &part);
 							if (result < 0)
-								ksceKernelPrintfWithInfo(15, SCE_DBGINFO(719),
+								SceDebugForDriver_02B04343(15, SCE_DBGINFO(719),
 											"Can't resume eMMC. 0x%x\n", result);
 						}
 						++index;
@@ -557,7 +557,7 @@ int sceSdifResume0(int phase, int event)
 			} else if (event == 0x1000c) {
 				result = sdifCompleteMmcInitialization(0);
 				if (result < 0)
-					ksceKernelPrintfWithInfo(15, SCE_DBGINFO_FUNC(744, "sceSdifResume1"),
+					SceDebugForDriver_02B04343(15, SCE_DBGINFO_FUNC(744, "sceSdifResume1"),
 								"Can't resume eMMC. 0x%x\n", result);
 				gSdifContexts[0].port.polling = 0;
 				ksceKernelEnableIntr(220);
@@ -569,7 +569,7 @@ int sceSdifResume0(int phase, int event)
 		do {
 			port = &context->port;
 			ksceKernelDisableIntr(index + 220);
-			intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[3].port.registers);
 			registers->clockControl = 0;
@@ -579,7 +579,7 @@ int sceSdifResume0(int phase, int event)
 			port->part = NULL;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			ScePervasiveForDriver_3D8A8712(index);
 			ScePervasiveForDriver_4E43299D(index);
 			++index;
@@ -618,21 +618,21 @@ int sceSdifInit(void)
 		opt.size = sizeof(opt);
 		opt.paddr = index < SDIF_PORTS ? sdifRegisterAddresses[index] : 0;
 		opt.attr = 2;
-		result = ksceKernelAllocMemBlock(name, 0x20100806,
+		result = SceSysmemForDriver_C94850C9(name, 0x20100806,
 					       index < SDIF_PORTS ? SDIF_REG_SIZE : 0, &opt);
 		if (result < 0)
 			goto cleanupPorts;
 		port->registerMemblock = result;
-		ksceKernelGetMemBlockBase(result, &registerBase);
+		SceSysmemForDriver_A841EDDA(result, &registerBase);
 		port->registers = registerBase;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 0x200000;
-		result = ksceKernelAllocMemBlock(name, 0x1020d006, 0x10000, &opt);
+		result = SceSysmemForDriver_C94850C9(name, 0x1020d006, 0x10000, &opt);
 		if (result < 0)
 			goto freeRegisters;
 		port->descriptorMemblock = result;
-		ksceKernelGetMemBlockBase(result, &port->descriptorBuffer);
+		SceSysmemForDriver_A841EDDA(result, &port->descriptorBuffer);
 		result = ksceKernelInitializeFastMutex(&port->mutex, name, 2, NULL);
 		if (result < 0)
 			goto freeDescriptors;
@@ -655,13 +655,13 @@ int sceSdifInit(void)
 			command->index = commandIndex;
 			__builtin_prefetch(&command[3].state);
 			address = command->leadingBuffer;
-			result = ksceKernelVAtoPA(address, &leadingPhysicalAddress);
+			result = SceSysmemForDriver_8D160E65(address, &leadingPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3710, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
 			}
 			address = command->trailingBuffer;
-			result = ksceKernelVAtoPA(address, &trailingPhysicalAddress);
+			result = SceSysmemForDriver_8D160E65(address, &trailingPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3717, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
@@ -669,7 +669,7 @@ int sceSdifInit(void)
 			command->leadingPhysicalAddress = leadingPhysicalAddress;
 			command->trailingPhysicalAddress = trailingPhysicalAddress;
 			address = command->defaultDescriptors;
-			result = ksceKernelVAtoPA(address, &command->defaultDescriptorPhysicalAddress);
+			result = SceSysmemForDriver_8D160E65(address, &command->defaultDescriptorPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3690, "_sceSdifInitCmd");
 				goto addressError;
@@ -678,24 +678,24 @@ int sceSdifInit(void)
 			sdifCommandQueuePush(&port->freeCommands, command++);
 		} while (commandIndex != 16);
 		++index;
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 		_sceSdifReset(context, 3);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 		ksceKernelEnableIntr(interrupt);
 	} while (gSdifState.portCount > index);
-	result = ksceKernelRegisterSysEventHandler("SceSdif",
+	result = sceKernelRegisterSysEventHandler("SceSdif",
 						 (SceKernelSysEventHandler)sceSdifResume0, NULL);
 	gSdifState.sysEventHandler = result;
 #if FW_DEBUG
 	if (result < 0)
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(627),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(627),
 					     "Can't register sdif sys event handler\n");
 #endif
 	return 0;
 
 addressError:
 #if FW_DEBUG
-	ksceKernelPrintfLevelWithInfo(1, 0, debugInfo,
+	SceDebugForDriver_D9703808(1, 0, debugInfo,
 				     "VA to PA error:0x%x  VA:%p\n", result, address);
 #else
 	(void)debugInfo;
@@ -706,9 +706,9 @@ deleteEventFlag:
 finalizeMutex:
 	ksceKernelFinalizeFastMutex(&port->mutex);
 freeDescriptors:
-	ksceKernelFreeMemBlock(port->descriptorMemblock);
+	SceSysmemForDriver_009E1C61(port->descriptorMemblock);
 freeRegisters:
-	ksceKernelFreeMemBlock(port->registerMemblock);
+	SceSysmemForDriver_009E1C61(port->registerMemblock);
 cleanupPorts:
 	if (index != 0) {
 		commandIndex = 0;
@@ -721,8 +721,8 @@ cleanupPorts:
 			ksceKernelReleaseIntrHandler(interrupt);
 			ksceKernelDeleteEventFlag(port->eventFlag);
 			ksceKernelFinalizeFastMutex(&port->mutex);
-			ksceKernelFreeMemBlock(port->descriptorMemblock);
-			ksceKernelFreeMemBlock(port->registerMemblock);
+			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
+			SceSysmemForDriver_009E1C61(port->registerMemblock);
 			context++;
 			commandIndex++;
 		} while (commandIndex != index);
@@ -740,9 +740,9 @@ int sceSdifReset(SdifContextGlobal *context, int flags)
 	SceKernelIntrStatus intrState;
 	int result;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
 	result = _sceSdifReset(context, flags);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&context->port.lock, intrState);
 	return result;
 }
 
@@ -753,7 +753,7 @@ int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl)
 	volatile SdifHostRegisters *registers;
 	int retries = 102;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	registers = port->registers;
 	while (!(registers->presentState & 0x20000)) {
 		if (port->index == 1 && --retries == 0)
@@ -772,7 +772,7 @@ int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl)
 			port->registers->clockControl |= 4;
 		registers->hostControl = 0;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	return 0;
 }
 
@@ -797,7 +797,7 @@ int sdifSetClock(SdifContextGlobal *context, uint32_t frequency, int highSpeed)
 	int retries = 41;
 	volatile int delay;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&context->port.lock);
+	intrState = SceCpuForDriver_D32ACE9E(&context->port.lock);
 	if (frequency > 47999999)
 		shift = 0;
 	else if (frequency > 23999999)
@@ -826,7 +826,7 @@ setClock:
 	registers->clockControl = clockControl;
 	while (!(registers->clockControl & 2)) {
 		if (--retries == 0) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			return 0x80320004;
 		}
 		for (delay = 25000; delay != 0; --delay)
@@ -839,7 +839,7 @@ setClock:
 		registers->hostControl = hostControl | 4;
 	else
 		registers->hostControl = hostControl & 0xfb;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	return 0;
 }
 
@@ -850,7 +850,7 @@ int sdifSetBusWidth(SdifContextGlobal *context, int width)
 	SceKernelIntrStatus intrState;
 	uint8_t hostControl;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	registers = port->registers;
 	port->busWidth = width;
 	hostControl = registers->hostControl;
@@ -861,7 +861,7 @@ int sdifSetBusWidth(SdifContextGlobal *context, int width)
 	else
 		hostControl &= 0xdd;
 	registers->hostControl = hostControl;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	return 0;
 }
 
@@ -869,36 +869,36 @@ int _sceSdifDumpReg(SdifContextGlobal *context)
 {
 	volatile SdifHostRegisters *registers = context->port.registers;
 
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1437),
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1437),
 				"s+++++++++++++++++++++++++++++++++++++++i\n");
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1438), "%d\n", context->port.index);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1439), "0x%04X 0x%04X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1438), "%d\n", context->port.index);
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1439), "0x%04X 0x%04X 0x%08X\n",
 				registers->normalInterruptStatus, registers->errorInterruptStatus,
 				registers->presentState);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1440), "0x%04X 0x%04X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1440), "0x%04X 0x%04X 0x%08X\n",
 				registers->transferMode, registers->command, registers->argument);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1441), "0x%08X 0x%08X 0x%08X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1441), "0x%08X 0x%08X 0x%08X 0x%08X\n",
 				registers->response[0], registers->response[1],
 				registers->response[2], registers->response[3]);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1442), "0x%08X 0x%08X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1442), "0x%08X 0x%08X 0x%08X\n",
 				registers->dmaAddress, registers->blockSize, registers->blockCount);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1443), "0x%08X 0x%08X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1443), "0x%08X 0x%08X 0x%08X\n",
 				registers->clockControl, registers->hostControl, registers->powerControl);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1444), "0x%08X 0x%08X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1444), "0x%08X 0x%08X 0x%08X\n",
 				registers->blockGapControl, registers->wakeupControl, registers->timeoutControl);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1445), "0x%04X 0x%04X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1445), "0x%04X 0x%04X\n",
 				registers->normalInterruptEnable, registers->errorInterruptEnable);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1446), "0x%04X 0x%04X 0x%04X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1446), "0x%04X 0x%04X 0x%04X\n",
 				registers->normalSignalEnable, registers->errorSignalEnable, registers->autoCmd12Error);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1447), "0x%08X 0x%08X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1447), "0x%08X 0x%08X\n",
 				registers->capabilities, registers->maximumCurrent);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1448), "0x%04X 0x%04X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1448), "0x%04X 0x%04X\n",
 				registers->forceAutoCmd12Error, registers->forceErrorInterrupt);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1449), "0x%04X 0x%04X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1449), "0x%04X 0x%04X\n",
 				registers->AdmaErrStatus, registers->admaSystemAddress);
-	ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1450), "0x%04X 0x%04X\n",
+	SceDebugForDriver_02B04343(0, SCE_DBGINFO(1450), "0x%04X 0x%04X\n",
 				registers->ceataControl, registers->slotInterruptStatus);
-	return ksceKernelPrintfWithInfo(0, SCE_DBGINFO(1451),
+	return SceDebugForDriver_02B04343(0, SCE_DBGINFO(1451),
 				      "d---------------------------------------f\n");
 }
 
@@ -912,13 +912,13 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 	int removed = 0;
 	SdifCommand *command;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	normalStatus = registers->normalInterruptStatus;
 	errorStatus = registers->errorInterruptStatus;
 	if (errorStatus & 0x200) {
 		unsigned int admaStatus = registers->AdmaErrStatus;
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(1553),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(1553),
 			"sceSdifInterrupt(SDIF%d): AdmaErrStatus:0x%x\n",
 			port->index, admaStatus);
 #else
@@ -928,7 +928,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 	if (errorStatus & 0x100) {
 		unsigned int autoCmdStatus = registers->autoCmd12Error;
 #if FW_DEBUG
-		ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(1569),
+		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(1569),
 			"sceSdifInterrupt(SDIF%d): A12_ERR_STS=0x%04X\n",
 			port->index, autoCmdStatus);
 #else
@@ -1000,7 +1000,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 				    command->command != 55 && (command->command & ~8U) != 5 &&
 				    command->command != 8 && command->command != 52) {
 #if FW_DEBUG
-					ksceKernelPrintfLevelWithInfo(1, 0,
+					SceDebugForDriver_D9703808(1, 0,
 						SCE_DBGINFO_FUNC(1957, "_sceSdifCmdInterrupt"),
 						"ErrIntStatus:0x%x errorCode:0x%x\n",
 						errorStatus, command->errorCode);
@@ -1248,7 +1248,7 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 			}
 		}
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	sdifDispatchFunctionInterrupt(context);
 	return -1;
 }
@@ -1271,7 +1271,7 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 			SceKernelIntrStatus intrState;
 			SdifCommand *current;
 
-			intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 			current = port->currentCommand;
 			if (current) {
 				current->errorCode = 0x80320021;
@@ -1282,16 +1282,16 @@ int sceSdifWaitCmdCompletionCore(SdifCommand *command)
 
 #if FW_DEBUG
 				if (clearResult)
-					ksceKernelPrintfLevelWithInfo(1, 0, SCE_DBGINFO(2640),
+					SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(2640),
 						"%s clear event flag error:0x%x\n",
 						"sceSdifWaitCmdCompletionCore", clearResult);
 #else
 				(void)clearResult;
 #endif
 			}
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			result = 0x80320021;
-			ksceKernelPrintfWithInfo(0, SCE_DBGINFO(2648), "0x%x\n", result);
+			SceDebugForDriver_02B04343(0, SCE_DBGINFO(2648), "0x%x\n", result);
 		}
 	} else
 		result = ksceKernelWaitEventFlag(command->eventFlag, 0x11, 5, NULL, NULL);
@@ -1332,19 +1332,19 @@ int sceSdifSendSyncCmd(SdifContextGlobal *context, SdifCommand *command,
 		SceKernelIntrStatus intrState;
 		SdifCommand *completion;
 
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 		if (checkCard && (!(port->registers->powerControl & 1) || !port->deviceType)) {
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			result = 0x8032001a;
 			break;
 		}
 		if (port->currentCommand) {
 			sdifCommandQueuePush(&port->pendingCommands, command);
 			command->state = 1;
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 		} else {
 			result = _sceSdifSendCmdCore(context, command, 0);
-			ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			if (result)
 				break;
 		}
@@ -1378,9 +1378,9 @@ SdifCommand *sdifRemovePendingCommand(SdifContextGlobal *context, unsigned int i
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	command = sdifCommandQueueRemove(&context->port.pendingCommands, index);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return command;
 }
 
@@ -1395,17 +1395,17 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	int result;
 
 	(void)reserved;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	command = context->port.currentCommand;
 	if (!command || command->index != index)
 		command = sdifCommandQueueFind(&context->port.pendingCommands, index);
 	if (!command) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return 0x80320012;
 	}
 	eventFlag = ksceKernelCreateEventFlag("SceSdif", 0, 0, NULL);
 	if (eventFlag < 0) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return eventFlag;
 	}
 	completion = command->secondaryCommand;
@@ -1414,7 +1414,7 @@ int sdifWaitPendingCommand(SdifContextGlobal *context, unsigned int index,
 	completion->callback = sdifCompleteSyncCommand;
 	completion->eventFlag = eventFlag;
 	completion->context = context;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	result = sceSdifWaitCmdCompletionCore(completion);
 	*completed = completion;
 	ksceKernelDeleteEventFlag(eventFlag);
@@ -1427,17 +1427,17 @@ int sdifGetCommandState(SdifContextGlobal *context, unsigned int index)
 	SceKernelIntrStatus intrState;
 	SdifCommand *command;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	command = context->port.currentCommand;
 	if (command && command->index == index) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return 1;
 	}
 	if (sdifCommandQueueFind(&context->port.pendingCommands, index)) {
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return 2;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return 0;
 }
 
@@ -1494,7 +1494,7 @@ int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
 		}
 	}
 	lock = &context->port.lock;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	if ((context->port.registers->powerControl & 1) && context->port.deviceType) {
 		if (context->port.currentCommand) {
 			sdifCommandQueuePush(&context->port.pendingCommands, command);
@@ -1502,10 +1502,10 @@ int sdifSendAsyncCommand(SdifContextGlobal *context, SdifCommand *command,
 			result = 0;
 		} else
 			result = _sceSdifSendCmdCore(context, command, 0);
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 		return result;
 	}
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return 0x8032001a;
 }
 
@@ -1766,7 +1766,7 @@ int sdifResetCard(SdifContextGlobal *context)
 complete:
 	if (result < 0)
 		return result;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	registers = port->registers;
 	registers->clockControl = 0;
 	registers->clockControl = 0x4001;
@@ -1781,12 +1781,12 @@ complete:
 		registers->clockControl |= 4;
 	registers->hostControl &= ~4U;
 unlock:
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	registers = port->registers;
 	port->busWidth = 1;
 	registers->hostControl &= 0xdd;
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	return 0;
 }
 
@@ -2143,14 +2143,14 @@ int SceSdifForDriver_6CC8E28D(unsigned int index)
 	}
 	result = sceSdifSendSyncCmd(context, command, NULL, 0, 0);
 	if (!result && (command->response[0] & 0x1e00) == 0x800) {
-		intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 		if (!port->part) {
 			port->deviceType = port->removedDeviceType;
 			port->part = port->removedPart;
 			port->removedDeviceType = 0;
 			port->removedPart = NULL;
 		}
-		ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 		if (!port->polling)
 			ksceKernelUnlockFastMutex(&port->mutex);
 		return result;
@@ -2176,9 +2176,9 @@ int SceSdifForDriver_B83F7518(unsigned int index, SdifCommandInfo *info)
 		return 0x80320001;
 	context = &gSdifContexts[index];
 	port = &context->port;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	command = sdifCommandQueuePop(&port->freeCommands);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	if (!command)
 		return 0x80320011;
 	command->flags = info->flags;
@@ -2225,10 +2225,10 @@ complete:
 	}
 release:
 	port->lastTransferTime = command->endTime - command->startTime;
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(&port->lock);
+	intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 	command->state = 0;
 	sdifCommandQueuePush(&port->freeCommands, command);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 	return result;
 }
 
@@ -2278,9 +2278,9 @@ SdifCommand *sdifAllocateCommandLocked(SdifContextGlobal *context)
 	SdifCommand *command;
 	int intrState;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	command = sdifCommandQueuePop(&context->port.freeCommands);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 	return command;
 }
 
@@ -2295,10 +2295,10 @@ void sdifFreeCommandLocked(SdifContextGlobal *context, SdifCommand *command)
 	SceKernelSpinlock *lock = &context->port.lock;
 	int intrState;
 
-	intrState = ksceKernelSpinlockLowLockCpuSuspendIntr(lock);
+	intrState = SceCpuForDriver_D32ACE9E(lock);
 	command->state = 0;
 	sdifCommandQueuePush(&context->port.freeCommands, command);
-	ksceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
+	sceKernelSpinlockLowUnlockCpuResumeIntr(lock, intrState);
 }
 
 void sdifDelay(SdifContextGlobal *context, int microseconds)

@@ -6,7 +6,7 @@
 #include "../../gpu_es4/srvkm/gpu-dump.h"
 #include "../../gpu_es4/srvkm/lockup-history.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sysclib.h>
 
@@ -91,7 +91,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 	ret = ksceKernelLockMutex(signalMutex, 1, 0);
 	if (ret >= 0) {
 		if (user) {
-			ret = ksceKernelCopyFromUser(&observed, counter, 4);
+			ret = SceSysmemForDriver_BC996A7A(&observed, counter, 4);
 			if (ret < 0)
 				goto unlock;
 		} else {
@@ -103,7 +103,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 		}
 		if (ret == 0) {
 			if (user)
-				ret = ksceKernelCopyToUser(counter, &signalCounter, 4);
+				ret = SceSysmemForDriver_6D88EF8A(counter, &signalCounter, 4);
 			else
 				*counter = signalCounter;
 		}
@@ -391,11 +391,11 @@ int LockupThread(SceSize args, void *argp)
 		}
 		recovered = 0;
 		if (analysis > 2 && analysis <= 4) {
-			if (ksceSblAimgrIsTool() && SceSblACMgrForDriver_E87D1777()) {
+			if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777()) {
 				if (lockupEndCallback)
 					lockupEndCallback(token);
-				ksceKernelPrintf("GPU coredump analysis: GPU may have been halted by a known clipper hardware bug.\n");
-				ksceKernelPrintf("GPU coredump analysis: Please refer to https://psvita.scedev.net/technotes/view/274\n");
+				SceDebugForDriver_391B74B7("GPU coredump analysis: GPU may have been halted by a known clipper hardware bug.\n");
+				SceDebugForDriver_391B74B7("GPU coredump analysis: Please refer to https://psvita.scedev.net/technotes/view/274\n");
 			} else {
 				HWRecoveryResetSGX(node, 0, -1);
 				RecordGpuLockup(dump, analysis, processUid, detail);

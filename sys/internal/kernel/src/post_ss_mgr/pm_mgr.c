@@ -4,10 +4,10 @@
  * older ones in the NVS.
  */
 
-#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/kbl/kbl.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 
@@ -166,11 +166,11 @@ int sceSblPmMgrAuthEtoI(void)
 /* the buttons held at boot (a 3-byte code) that turn the product mode on */
 static inline int pmMgrIsProductModeKeyHeld(SceUInt32 wakeup, const SceUInt8 *key)	/* name unknown */
 {
-	if (wakeup == 0x20 && ksceSblAimgrIsGenuineDolce())
+	if (wakeup == 0x20 && SceSblAIMgrForDriver_C6E83F34())
 		return 1;
-	if (!ksceSblAimgrIsToolRev4() && !ksceSblAimgrIsPrototypeRev2() &&
-	    !ksceSblAimgrIsToolRev3() && !ksceSblAimgrIsToolRev5() &&
-	    !ksceSblAimgrIsPrototypeRev7()) {
+	if (!SceSblAIMgrForDriver_37A79140() && !SceSblAIMgrForDriver_FF5784B9() &&
+	    !SceSblAIMgrForDriver_BB9D146B() && !SceSblAIMgrForDriver_E5E47FF7() &&
+	    !SceSblAIMgrForDriver_05F79D4A()) {
 		if (key[0] != 0x3f || key[1] != 0xab)
 			return 0;
 	} else if (key[0] != 0x36 || key[1] != 0xaf) {
@@ -185,7 +185,7 @@ int sceSblPmMgrInit(void)
 	SceUInt32 wakeup, hold;
 	int ret;
 
-	kbl = ksceKernelSysrootGetKblParam();
+	kbl = SceSysrootForKernel_9DB56D1F();
 	if (kbl == NULL) {
 		g_pmInitialized = 1;
 		return 0;
@@ -239,7 +239,7 @@ int sceSblPmMgrGetProductModeForUser(SceUInt8 *mode)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
 	value = g_pmProductMode;
-	ret = ksceKernelCopyToUser(mode, &value, sizeof(value));
+	ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -260,7 +260,7 @@ int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 	}
 	ret = ksceSblPostSsMgrExecutePmSmF00dCommand8(&value);
 	if (ret == 0)
-		ret = ksceKernelCopyToUser(mode, &value, sizeof(value));
+		ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -280,7 +280,7 @@ int sceSblPmMgrGetCurrentMode(SceUInt8 *mode)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
 	value = g_pmProductMode;
-	ret = ksceKernelCopyToUser(mode, &value, sizeof(value));
+	ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }

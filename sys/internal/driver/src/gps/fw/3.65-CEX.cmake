@@ -57,13 +57,13 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0xF139E359
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelCopyFromUser
-	ksceKernelDeleteHeap
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_BC996A7A
+	sceKernelDeleteHeap
 	memset
 	strncmp
 	memcpy
@@ -87,11 +87,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelSetEventFlag
 	ksceKernelUnlockFastMutex
 	ksceKernelCreateMutex
-	ksceKernelRegisterSysEventHandler
-	ksceKernelUnregisterSysEventHandler
-	ksceSblQafMgrIsAllowRemotePlayDebug
+	sceKernelRegisterSysEventHandler
+	sceKernelUnregisterSysEventHandler
+	SceQafMgrForDriver_BFD5E463
 	sceSblACMgrIsSystemProgram
-	kscePmMgrGetProductMode
+	ScePmMgrForDriver_2AC815A2
 	SceSblPostSsMgrForDriver_128FB35A
 	SceRtcForDriver_A7236656
 	SceRtcForDriver_F139E359

@@ -179,21 +179,21 @@ set(MODULE_IMPORT_NIDS
 	0x849E3DF5:F:0xC3390112
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelSpinlockLowUnlockCpuResumeIntr
-	ksceKernelSpinlockLowLock
-	ksceKernelSpinlockLowLockCpuSuspendIntr
-	ksceKernelSpinlockLowUnlock
+	sceKernelSpinlockLowUnlockCpuResumeIntr
+	SceCpuForDriver_BF82DEB2
+	SceCpuForDriver_D32ACE9E
+	sceKernelSpinlockLowUnlock
 	memset
 	memcpy
 	strncpy
 	__stack_chk_fail
 	strnlen
-	ksceKernelPrintfWithInfo
-	ksceKernelAssert
-	ksceKernelGetAssertLevel
-	ksceKernelPanic
-	ksceKernelPrintfLevelWithInfo
-	ksceKernelAssertLevel
+	SceDebugForDriver_02B04343
+	SceDebugForDriver_35A35322
+	SceDebugForDriver_374B7868
+	SceDebugForDriver_391B5B74
+	SceDebugForDriver_D9703808
+	SceDebugForDriver_FD753E7A
 	ksceKernelGetProcessInfo
 	sceKernelSetProcessStatus
 	ksceKernelGetProcessStatus
@@ -277,36 +277,36 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitialHandlerDebugDabtCfunc
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc
-	ksceKernelFreeMemBlock
-	ksceKernelFreeHeapMemory
-	kscePUIDtoGUID
-	ksceKernelCopyFromUserProc
-	ksceKernelCopyToUser
-	ksceKernelAllocHeapMemory
-	ksceKernelCreateHeap
-	ksceKernelIsAccessibleRangeProc
-	ksceKernelGetMemBlockInfo
-	ksceKernelGetMemBlockBase
-	ksceKernelCopyFromUser
-	ksceKernelAllocMemBlock
-	ksceKernelDeleteHeap
-	ksceKernelCountFillValue64FromUserProc
+	SceSysmemForDriver_009E1C61
+	sceKernelFreeHeapMemory
+	SceSysmemForDriver_45D22597
+	sceKernelCopyFromUserProc
+	SceSysmemForDriver_6D88EF8A
+	SceSysmemForDriver_7B4CB60A
+	SceSysmemForDriver_9328E0E8
+	SceSysmemForDriver_9F6E45E3
+	SceSysmemForDriver_A73CFFEF
+	SceSysmemForDriver_A841EDDA
+	SceSysmemForDriver_BC996A7A
+	SceSysmemForDriver_C94850C9
+	sceKernelDeleteHeap
+	sceKernelCountFillValue64FromUserProc
 	SceSysmemForKernel_08C05493
 	sceKernelCopyToUserProcTextDomainForDBGP
-	ksceKernelGetUIDMemBlockClass
-	SceSysrootForKernel_ksceKernelSysrootRegisterDbgpHandler
+	SceSysmemForKernel_86681B64
+	SceSysrootForKernel_3999F917
 	SceSysrootForKernel_6C036B53
-	SceSysrootForKernel_ksceKernelSysrootUnregisterDbgpHandler
+	SceSysrootForKernel_7B7ED1E9
 	SceSysrootForKernel_A9510EFE
 	sceKernelSysrootCoredumpCancel
-	ksceKernelSysrootCoredumpTrigger
-	ksceKernelL1DcacheClean
-	ksceKernelL1IcacheInvalidateEntireAllCore
-	ksceKernelCheckDipsw
+	SceSysrootForDriver_CD8CD242
+	SceCpuForKernel_74B7F445
+	SceCpuForKernel_803C84BF
+	SceDipswForDriver_A98FC2FD
 	SceSblACMgrForDriver_4CBD6156
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_AD717E7A
-	ksceKernelRegisterSysEventHandler
+	sceKernelRegisterSysEventHandler
 	sceAppMgrSuspendAppForDebugger
 	SceAppMgrForDriver_DC13160A
 	sceAppMgrResumeAppForDebugger

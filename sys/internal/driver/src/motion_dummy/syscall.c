@@ -2,7 +2,7 @@
  * The SceMotionDev syscalls: check the user's arguments, then do the work
  * on kernel buffers and copy the result out.
  */
-#include <psp2kern/kernel/sysmem.h>
+#include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <motion_dummy/motion_dummy.h>
 #include "motion_dummy.h"
@@ -38,7 +38,7 @@ int sceMotionDevGetDeviceInfo(void *info)
 	state = sceSyscallEnter();
 	ret = ksceMotionDevGetDeviceInfo(&buffer);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(info, &buffer, sizeof(buffer));
+		ret = SceSysmemForDriver_6D88EF8A(info, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -55,7 +55,7 @@ int sceMotionDevGetEvaInfo(void *info)
 	state = sceSyscallEnter();
 	ret = ksceMotionDevGetEvaInfo();
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(info, buffer, sizeof(buffer));
+		ret = SceSysmemForDriver_6D88EF8A(info, buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -71,7 +71,7 @@ int sceMotionDevGetCalibrationHeader(SceUInt32 blockId, void *header)
 	state = sceSyscallEnter();
 	ret = ksceMotionDevGetCalibrationHeader(blockId, buffer);
 	if (ret >= 0)
-		ret = ksceKernelCopyToUser(header, buffer, sizeof(buffer));
+		ret = SceSysmemForDriver_6D88EF8A(header, buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -96,7 +96,7 @@ int sceMotionDevGetCalibrationData(SceUInt32 blockId, void *data, SceUInt32 coun
 	if (ret > 0) {
 		if (ret >= (int)count)
 			ret = count;
-		copy = ksceKernelCopyToUser(data, buffer, ret * MOTION_CALIBRATION_DATA_SIZE);
+		copy = SceSysmemForDriver_6D88EF8A(data, buffer, ret * MOTION_CALIBRATION_DATA_SIZE);
 		if (copy != 0)
 			ret = copy;
 	}
@@ -251,11 +251,11 @@ int sceMotionDevUpdateMagnCalibData(const void *data, SceUInt32 *tag)
 	} else if (tag == NULL || data == NULL) {
 		ret = MOTION_ERROR_INVALID_ARG;
 	} else {
-		ret = ksceKernelCopyFromUser(buffer, data, sizeof(buffer));
+		ret = SceSysmemForDriver_BC996A7A(buffer, data, sizeof(buffer));
 		if (ret >= 0) {
 			ret = motionUpdateMagnCalibData(buffer, &result);
 			if (ret >= 0)
-				ret = ksceKernelCopyToUser(tag, &result, sizeof(result));
+				ret = SceSysmemForDriver_6D88EF8A(tag, &result, sizeof(result));
 		}
 	}
 	sceSyscallLeave(state);
@@ -273,7 +273,7 @@ int sceMotionDevGetCurrentMagnCalibData(void *data)
 	} else {
 		ret = motionGetCurrentMagnCalibData(buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(data, buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -290,7 +290,7 @@ int sceMotionDevGetFactoryMagnCalibData(void *data)
 	} else {
 		ret = motionGetFactoryMagnCalibData(buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(data, buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -321,7 +321,7 @@ int sceMotionDevGetCurrentMagnStabilityLevel(SceUInt32 *level)
 		return MOTION_ERROR_INVALID_ARG;
 	}
 	result = motionGetCurrentMagnStabilityLevel(&value);
-	ret = ksceKernelCopyToUser(level, &value, sizeof(value));
+	ret = SceSysmemForDriver_6D88EF8A(level, &value, sizeof(value));
 	sceSyscallLeave(state);
 	if (ret >= 0)
 		return result;
@@ -339,7 +339,7 @@ int sceMotionDevGetGyroCalibData(SceMotionDevGyroCalibData *data)
 	} else {
 		ret = motionGetGyroCalibData(&buffer);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(data, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -356,7 +356,7 @@ int sceMotionDevGetGyroCalibData2(int port, SceMotionDevGyroCalibData *data)
 	} else {
 		ret = motionGetGyroCalibData2(port, &buffer);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(data, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -373,7 +373,7 @@ int sceMotionDevGetAccCalibData(SceMotionDevAccCalibData *data)
 	} else {
 		ret = motionGetAccCalibData(&buffer);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(data, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -390,7 +390,7 @@ int sceMotionDevGetAccCalibData2(int port, SceMotionDevAccCalibData *data)
 	} else {
 		ret = motionGetAccCalibData2(port, &buffer);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(data, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -407,7 +407,7 @@ int sceMotionDevGetGyroBias(SceMotionDevGyroBiasData *bias)
 	} else {
 		ret = motionGetGyroBias(&buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(bias, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(bias, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -424,7 +424,7 @@ int sceMotionDevGetGyroBias2(int port, SceMotionDevGyroBiasData *bias)
 	} else {
 		ret = motionGetGyroBias2(port, &buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(bias, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(bias, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -441,7 +441,7 @@ int sceMotionDevGetDeviceLocation(void *location)
 	} else {
 		ret = motionGetDeviceLocation(buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(location, buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(location, buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -460,7 +460,7 @@ int sceMotionDevGetMeasMode(void *info)
 	} else {
 		ret = motionGetMeasMode(buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(info, buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(info, buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -477,7 +477,7 @@ int sceMotionDevGetDs3CalibData(int port, SceMotionDevDs3CalibData *data)
 	} else {
 		ret = motionGetDs3CalibData(port, &buffer);
 		if (ret == 0)
-			ret = ksceKernelCopyToUser(data, &buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -494,7 +494,7 @@ int sceMotionDevGetControllerType(int port, uint8_t *type)
 	} else {
 		ret = motionGetControllerType(port, buffer);
 		if (ret >= 0)
-			ret = ksceKernelCopyToUser(type, buffer, sizeof(buffer));
+			ret = SceSysmemForDriver_6D88EF8A(type, buffer, sizeof(buffer));
 	}
 	sceSyscallLeave(state);
 	return ret;
