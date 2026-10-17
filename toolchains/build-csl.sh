@@ -11,11 +11,11 @@
 # Sony's changes include trunk work that Linaro 4.8 backported too: -fstack-protector-strong
 # (strong-full.diff) and the backports of csl-backports.diff (see corrections()).
 #
-# configure tests the assembler's features (e.g. SHF_MERGE string sections), so it is
-# pointed at vitasdk's ARM assembler (VITASDK must be set).
+# configure tests the assembler's features (e.g. SHF_MERGE string sections), so the binutils
+# go into the prefix first (build-binutils.sh); the driver then takes as and ld from there.
 #
-# usage: toolchains/build-csl.sh   (needs gmp, mpfr, mpc, flex, bison, texinfo, curl;
-#                                    installed with apt-get where it exists)
+# usage: toolchains/build-binutils.sh && toolchains/build-csl.sh
+#        (needs gmp, mpfr, mpc, flex, bison, texinfo, curl; installed with apt-get where it exists)
 set -e
 . "$(dirname "$0")/common.sh"
 S=$R/toolchains
@@ -26,7 +26,7 @@ SHA256=40a4a23215c77a0bb2032f8862f43b40a34d8ed261b6f6a551ce88c7a1a470c7
 D=$TC/downloads/gcc-2014.05-28
 P=${PREFIX:-$TC/csl-4.8-2014.05-strong$([ "$RAW" = 1 ] || echo -strd)}
 W=$HOME/gcc48-csl                                 # build on the machine's own disk (fast)
-AS=${VITASDK:?set VITASDK}/bin/arm-vita-eabi-as
+AS=$P/bin/arm-none-eabi-as
 LANGS=${LANGS:-c,c++}
 
 if command -v apt-get >/dev/null && ! command -v flex >/dev/null; then
@@ -300,6 +300,11 @@ assert s.count(old, i, i + 3000) == 1, 'thumb2_movsi_vfp template'
 open(p, 'w').write(s[:i] + s[i:].replace(old, new, 1))
 PYEOF
 }
+
+if [ ! -x $AS ]; then
+	echo "$AS is missing: run toolchains/build-binutils.sh first" >&2
+	exit 1
+fi
 
 mkdir -p $D
 if [ ! -f $D/$A ]; then
