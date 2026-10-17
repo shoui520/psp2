@@ -225,11 +225,34 @@ typedef struct CodecEngineProcessStorage {
 	CodecEngineUnmapMemBlockEntry unmapMemBlocks[4];
 	unsigned int processorCount;
 } CodecEngineProcessStorage;
-_Static_assert(sizeof(CodecEngineProcessStorage) == 100, "CodecEngine process storage size");typedef struct VeneziaPerformanceResult {
+_Static_assert(sizeof(CodecEngineProcessStorage) == 100, "CodecEngine process storage size");
+
+typedef struct VeneziaPerformanceResult {
 	unsigned int usage[8];
 	unsigned int average;
 	unsigned int maximum;
 } VeneziaPerformanceResult;
+
+/* the caller's VIP input buffers, read through an iterator (vip/hwd0_vapa.c) */
+typedef struct VeneziaVipInputBufferList {
+	unsigned int count;
+	const VeneziaVipInputBuffer *buffers;
+} VeneziaVipInputBufferList;
+
+/* name unknown: cursor through the caller's scatter/gather input buffers. */
+typedef struct VeneziaVipInputIterator {
+	unsigned int bufferIndex;
+	SceSize bufferOffset;
+	SceSize position;
+	SceSize totalSize;
+	const VeneziaVipInputBufferList *list;
+} VeneziaVipInputIterator;
+
+int initializeVeneziaVipInputIterator(VeneziaVipInputIterator *iterator,
+	const VeneziaVipInputBufferList *list);
+SceSize getVeneziaVipInputRemaining(const VeneziaVipInputIterator *iterator);
+int copyVeneziaVipInput(uint32_t destination, SceSize size, SceSize *copied,
+	VeneziaVipInputIterator *iterator);
 
 /* the VIP, debug-capture, HWD DMA and CodecEngine state the module's files share */
 /* PLACEHOLDER: live VIP module controls outside the mapped register and callback

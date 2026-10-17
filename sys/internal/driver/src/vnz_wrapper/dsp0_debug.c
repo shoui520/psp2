@@ -3913,11 +3913,6 @@ typedef struct VeneziaVipPesHeader {
 	uint8_t payloadPrefix;
 } VeneziaVipPesHeader;
 
-typedef struct VeneziaVipInputBufferList {
-	unsigned int count;
-	const VeneziaVipInputBuffer *buffers;
-} VeneziaVipInputBufferList;
-
 static const VeneziaVipPesHeader g_veneziaVipPesHeader = {
 	.startCode = { 0, 0, 1 },
 	.streamId = 0xe0,
@@ -4815,21 +4810,6 @@ int stopVeneziaVipCaptureChannel(unsigned int processor, VeneziaVipState *state,
 	ksceKernelClearEventFlag(state->eventFlag, 0);
 	return status == 4 ? -2141060851 : 0;
 }
-
-/* name unknown: cursor through the caller's scatter/gather input buffers. */
-typedef struct VeneziaVipInputIterator {
-	unsigned int bufferIndex;
-	SceSize bufferOffset;
-	SceSize position;
-	SceSize totalSize;
-	const VeneziaVipInputBufferList *list;
-} VeneziaVipInputIterator;
-
-extern int initializeVeneziaVipInputIterator(VeneziaVipInputIterator *iterator,
-	const VeneziaVipInputBufferList *list);
-extern SceSize getVeneziaVipInputRemaining(const VeneziaVipInputIterator *iterator);
-extern int copyVeneziaVipInput(uint32_t destination, SceSize size, SceSize *copied,
-	VeneziaVipInputIterator *iterator);
 
 /* name unknown: copy input into the trace ring, splitting at its end address. */
 int copyVeneziaVipInputToTrace(unsigned int processor, VeneziaVipState *state,

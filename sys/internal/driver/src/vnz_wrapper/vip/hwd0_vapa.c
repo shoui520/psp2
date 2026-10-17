@@ -103,20 +103,6 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
 
-typedef struct VeneziaVipInputBufferList {
-	unsigned int count;
-	const VeneziaVipInputBuffer *buffers;
-} VeneziaVipInputBufferList;
-
-/* name unknown: cursor through the caller's scatter/gather input buffers. */
-typedef struct VeneziaVipInputIterator {
-	unsigned int bufferIndex;
-	SceSize bufferOffset;
-	SceSize position;
-	SceSize totalSize;
-	const VeneziaVipInputBufferList *list;
-} VeneziaVipInputIterator;
-
 extern int snprintf(char *destination, unsigned int capacity, const char *format, ...);
 
 int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
