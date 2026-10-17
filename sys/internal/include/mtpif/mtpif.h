@@ -4,6 +4,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <threadmgr/threadmgr.h>
 
 /* USB MTP data phase: a buffer and its progress */
 typedef struct MtpIfTransfer {
@@ -27,8 +28,6 @@ int SceUsbMtpForDriver_08CD359F(void);
 int SceUsbMtpForDriver_6F7DF4B8(void);
 int SceUsbMtpForDriver_E64513A9(int phase);
 
-int sceKernelIsUserModeThread(void);
-int SceThreadmgrForDriver_20C228E4(void);
 void sceKernelApiDeclareTypeUInt32(void);
 int ksceSblACMgrIsSystemProgram(SceUID pid);
 int ksceSblACMgrIsMiniSettingsForQA(void);

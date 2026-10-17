@@ -6,6 +6,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <threadmgr/threadmgr.h>
 
 /* SCE library export record (the module's export table entry) */
 typedef struct SceModuleExports {
@@ -108,7 +109,6 @@ int SceNidsymtblForDriver_985E2935(SceUInt32 nid, const char **name);	/* name of
 
 /* imports */
 /* ksceKernelGetLibEntCBListForSyslibtrace: <psp2kern/kernel/modulemgr.h> (list of SceSyslibtraceLibEntry pointers) */
-int sceKernelSetSyslibtraceThreadCBEnable(SceBool enable);
 /* names unknown: hand the syscall table and trampoline to the module manager, the NID lookup to sysroot */
 int SceModulemgrForKernel_B23286B8(SceSyslibtraceSyscallInfo *info, void *trampoline);
 void SceSysrootForKernel_B39CD708(int (*lookup)(SceUInt32 nid, const char **name));

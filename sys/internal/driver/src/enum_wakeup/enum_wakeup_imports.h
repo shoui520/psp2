@@ -13,12 +13,9 @@
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
 
 int snprintf(char *buf, SceSize size, const char *fmt, ...);
-int sceKernelExitThread(int status);
-int sceKernelDelayThread(SceUInt32 usec);
-int sceKernelCancelAlarm(SceUID id);
-int ksceKernelRegisterTimer(const char *name, SceUInt32 usec, int (*handler)(void), void *arg);
 int ksceKernelPowerTick(int type);
 SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
 int SceKernelSuspendForDriver_2BB92967(int unk);	/* power unlock? (placeholder) */

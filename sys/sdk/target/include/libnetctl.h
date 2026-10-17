@@ -10,6 +10,8 @@
 #include <psp2/types.h>
 #include <psp2/net/netctl.h>
 #include <psp2/rtc.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/threadmgr/thread.h>
 
 #define SCE_NET_CTL_ERROR_NOT_INITIALIZED		0x80412101
 #define SCE_NET_CTL_ERROR_NOT_TERMINATED		0x80412102
@@ -52,8 +54,6 @@ extern int sceRegMgrUtilityGetBin(SceUInt32 id, void *buf, SceSize size);
 extern int sceRegMgrUtilityGetStr(SceUInt32 id, char *buf, SceSize size);
 extern int sceAppMgrGetSystemDataFile(int id, void *buf, SceSize size);
 extern int sceKernelGetSystemSwVersion(void *version);
-extern int ksceKernelExitThread(int status);			/* NID 0x0C8A38E1 */
-extern SceUInt32 ksceKernelGetSystemTimeLow(void);		/* NID 0x47F6DE49 */
 extern int SceNetInternal_0DFC23D6(SceUID pid, int a1, int a2);
 extern int SceNetInternal_333F9CB3(int sock, unsigned int request, void *arg);
 extern void *SceNetInternal_A2C2BC5F(SceSize size, int a1);

@@ -5,8 +5,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <intrmgr/syscall.h>
 #include "ulobjmgr_internal.h"
-
-SceUID sceKernelGetProcessId(void);
+#include <threadmgr/threadmgr.h>
 
 static inline __attribute__((always_inline))
 int sceUlobjMgrStartSupportingUserlevelObjectImpl(SceUID pid, SceUInt32 numEntries,

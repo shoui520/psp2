@@ -14,6 +14,7 @@
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/i2c.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <threadmgr/threadmgr.h>
 
 #if FW_VERSION >= 0x04000000
 #include "data-4.00-DEBUGGER.h"
@@ -24,7 +25,6 @@
 #endif
 #include <sysmem/barrier.h>
 
-extern int sceKernelDelayThread(unsigned usec);
 extern int ksceKernelSearchModuleByName(const char *name);
 extern unsigned ksceSysrootGetHardwareInfo(void);
 

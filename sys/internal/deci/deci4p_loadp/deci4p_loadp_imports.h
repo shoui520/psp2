@@ -8,6 +8,7 @@
 
 #include <psp2kern/types.h>
 #include <processmgr/processmgr.h>
+#include <threadmgr/threadmgr.h>
 
 /* SceAppMgrForDriver, debugger interface */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
@@ -27,7 +28,6 @@ int sceKernelKillProcess(SceUID pid, int status);
 int SceSblACMgrForDriver_4CBD6156(SceUID pid);		/* the process may be debugged */
 int SceSblACMgrForDriver_AD717E7A(int unk);		/* the caller may use test app launch */
 
-
 /* SceSysrootForDriver: debugger event hooks */
 int SceSysrootForDriver_6050A467(SceUID pid);
 int SceSysrootForDriver_F4340469(SceUID parentPid, SceUID pid, SceUInt64 time);
@@ -39,6 +39,5 @@ int SceSysrootForDriver_E384DD93(int unk, const char *path, int flag);	/* save d
 int SceSysrootForDriver_D04C7723(int unk, const char *path, int flag);	/* save data formatter done */
 
 /* named imports vitasdk declares only under other names */
-SceUInt64 sceKernelGetSystemTimeWide(void);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 int ksceSblQafMgrIsAllowHost0Access(void);

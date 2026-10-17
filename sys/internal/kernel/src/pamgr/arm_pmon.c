@@ -7,11 +7,10 @@
 #include <sysmem/sysroot.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include <kernel/error.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
-int ksceKernelSetPermission(int level);
 void *ksceKernelAlloc(SceSize size);
 void ksceKernelFree(void *memory);
-int pmonCpuSetEventSelf(SceUID thread, unsigned int counter, unsigned int event);
 int sceKernelPerfArmPmonOpen(void);
 int sceKernelPerfArmPmonClose(void);
 int sceKernelPerfArmPmonReset(SceUID thread);

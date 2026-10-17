@@ -9,8 +9,7 @@
 #include <codec/codec.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysevent_ids.h>
-
-extern int sceKernelDelayThread(unsigned int delay);
+#include <threadmgr/threadmgr.h>
 
 /* name unknown: packed burst descriptors used by the initialization scripts. */
 struct CodecBurst {

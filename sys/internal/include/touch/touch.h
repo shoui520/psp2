@@ -4,6 +4,7 @@
 #include <psp2kern/types.h>
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>
+#include <threadmgr/threadmgr.h>
 
 struct touchDeviceInfo {
 	unsigned short vendor;
@@ -76,4 +77,3 @@ _Static_assert(offsetof(TouchProcessPriorities, processIds) == 4, "touch priorit
 
 int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities);
 
-int sceKernelDelayThread(SceUInt32 usec);

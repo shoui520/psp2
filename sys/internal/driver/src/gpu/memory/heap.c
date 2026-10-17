@@ -4,6 +4,7 @@
 
 #include "../../gpu_es4/srvkm/gpu-heap.h"
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
+#include <threadmgr/threadmgr.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/heap.c"
@@ -11,7 +12,6 @@
 extern void *AllocProcessGpuMemory(unsigned size);
 extern int FreeProcessGpuMemory(void *address);
 extern void *memset(void *destination, int value, unsigned size);
-extern unsigned sceKernelGetProcessId(void);
 GpuMemBlockHeap *GetProcessMemBlockHeap(void);
 
 /* SceSysclibForDriver A46CB7DE returns quotient/remainder in R0/R1. */

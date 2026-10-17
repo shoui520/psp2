@@ -12,9 +12,9 @@
 #include <sysmem/barrier.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <threadmgr/threadmgr.h>
 
 /* Internal names are unknown; no debug function records exist in this module. */
-extern int sceKernelDelayThread(unsigned usec);
 
 #define OLED_NOT_READY ((int)0x803f0a04)
 #define OLED_NO_PANEL ((int)0x803f0a03)

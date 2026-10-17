@@ -4,6 +4,7 @@
 #include <sysmem/debug.h>
 #include "../venezia_internal.h"
 #include <lowio/pervasive.h>
+#include <threadmgr/threadmgr.h>
 
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;
@@ -12,7 +13,6 @@ extern void SceCpuForDriver_E813EBB2(void);
 extern int ksceSblFwLoaderLock(const char *path, int flags);
 extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
 extern int ksceSblFwLoaderUnlock(void);
-extern int sceKernelDelayThread(SceUInt delay);
 
 #if FW_VERSION >= 0x04000000
 extern unsigned int getVeneziaRpcBootState(void) __asm__("getRpcBootState"); /* name unknown */

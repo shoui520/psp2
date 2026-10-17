@@ -9,6 +9,11 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
 
 /* SceSysclibForDriver */
 void *memset(void *dst, int c, SceSize len);
@@ -75,37 +80,14 @@ int ksceZlibGetInfo(const void *src, SceUInt8 *cmf, SceUInt8 *flg, SceUInt32 *di
 		    const void **data);
 
 /* SceThreadmgrForDriver / SceThreadmgrForKernel */
-SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int count, void *opt);
-int ksceKernelLockMutex(SceUID mutex, int count, SceUInt32 *timeout);
-int ksceKernelUnlockMutex(SceUID mutex, int count);
-SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, SceUInt32 pattern, void *opt);
-int ksceKernelSetEventFlag(SceUID evf, SceUInt32 pattern);
-int ksceKernelWaitEventFlag(SceUID evf, SceUInt32 pattern, SceUInt32 mode,
-			    SceUInt32 *result, SceUInt32 *timeout);
 SceUID ksceKernelCreateThread(const char *name, void *entry, int prio, SceSize stack,
 			      SceUInt32 attr, int cpu, void *opt);
 int ksceKernelStartThread(SceUID thid, SceSize args, void *argp);
 int ksceKernelDeleteThread(SceUID thid);
 int ksceKernelWaitThreadEnd(SceUID thid, int *stat, SceUInt32 *timeout);
-int sceKernelExitDeleteThread(int status);
-int sceKernelGetThreadExitStatus(SceUID thid, int *status);
 SceUID ksceKernelGetThreadId(void);
-SceUID sceKernelGetProcessId(void);
-int ksceKernelChangeThreadCpuAffinityMask(SceUID thid, int mask);
-SceUInt32 ksceKernelGetSystemTimeLow(void);
-SceUInt64 sceKernelGetSystemTimeWide(void);
-int ksceKernelSetPermission(int perm);
-SceUID ksceKernelSetProcessIdToTLS(SceUID pid);
-int ksceKernelGetThreadmgrUIDClass(SceUID uid);
-int ksceKernelEnqueueWorkQueue(SceUID queue, const char *name, int (*work)(void *), void *arg);
-int SceThreadmgrForDriver_20C228E4(void);		/* is a retried syscall? name unknown */
-void *SceThreadmgrForDriver_3A72C6D8(int slot);	/* TLS slot of the current thread */
-int SceThreadmgrForDriver_B645C7EF(SceSize size, int a1, int a2);	/* allocate TLS slot */
-int SceThreadmgrForDriver_8C3C1F78(int slot);		/* free TLS slot */
-int SceThreadmgrForDriver_332E127C(void);		/* name unknown */
 SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry, int prio,
 				      SceSize stack, SceUInt32 attr, int cpu, void *opt);
-int SceThreadmgrForKernel_CBADD6B3(SceUID thid, SceSize args, void *argp);	/* start, user args */
 
 /* SceKernelSuspendForDriver */
 int SceKernelSuspendForDriver_4DF40893(int a0);	/* lock power state */

@@ -9,8 +9,8 @@
 #include <sm_comm/sm_comm.h>
 #include <sysmem/debug.h>
 #include <string.h>
+#include <threadmgr/threadmgr.h>
 
-int sceKernelGetProcessId(void);
 int ksceSblSmSchedProxyExecuteF00DCommand(int command, int a1, int a2, int a3);
 const SceSelfAuthInfo ssPortabilityAuthInfo = {
 	.program_authority_id = UINT64_C(0x2808000000000001),

@@ -9,6 +9,7 @@
 #include <power/power.h>
 #include <lowio/pervasive.h>
 #include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
 
 /* ScePervasiveForDriver: the USB blocks of a bus */
 
@@ -22,4 +23,3 @@ int ScePowerForDriver_F535D928(unsigned int mask, int enabled);
 
 int ksceSblACMgrIsAllowedUsbSerial(void);
 int ksceSblAimgrIsDolce(void);
-int sceKernelCancelEventFlag(SceUID event, unsigned int pattern, int *waiters);

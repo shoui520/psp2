@@ -6,6 +6,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "exfatfs_internal.h"
+#include <threadmgr/threadmgr.h>
 
 SceVfsInfo g_exfatfsInfo = {
 	.vfs_ops = NULL,
@@ -116,7 +117,6 @@ closed:
 }
 #endif
 
-
 extern int _VopGetstatRootdir(SceExfatfsDrive *drive, SceIoStat *stat);
 extern int _sceExfatfsVopGetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root);
 
@@ -139,7 +139,6 @@ static inline int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output)
 	return result;
 }
 #endif
-
 
 /* Sony's debug records name this inline in both root operations. */
 static inline __attribute__((always_inline)) void _set_root_directory_vnode(
@@ -213,8 +212,6 @@ int exfatfs_vfs_get_root(SceVfsOpGetRootArgs *argp)
 	*output = vnode;
 	return result;
 }
-
-
 
 extern SceExfatfsFnode *getDriveWhiteoutDirectory(SceExfatfsDrive *drive);
 extern int sceExfatfsVopDopen(SceExfatfsFnode *fnode, unsigned int *fd);
@@ -1020,7 +1017,6 @@ int exfatfs_vop_dopen(SceVopDopenAgrs *argp)
 	return result;
 }
 
-
 extern void *allocateHeapBuffer(SceExfatfsDrive *unusedDrive);
 extern void freeHeapBuffer(int unused, void *buffer);
 extern int sceExfatfsVopGetstat(SceExfatfsFnode *fnode, SceIoStat *stat);
@@ -1505,7 +1501,6 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 	return result;
 }
 
-extern int SceThreadmgrForDriver_332E127C(void);
 extern int SceSblACMgrForDriver_D7AD8471(SceUID pid, const char *assignName);
 extern int exfatfs_get_drive_information(SceExfatfsDrive *drive, void *information, int size);
 extern int exfatfs_get_file_size_limit(SceExfatfsDrive *drive, SceUInt64 *limit);

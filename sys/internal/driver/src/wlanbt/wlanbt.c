@@ -11,6 +11,7 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <string.h>
+#include <threadmgr/threadmgr.h>
 
 int ksceSblSsGetNvsData(unsigned int offset, void *buffer, SceSize size);
 int ksceIdStorageLookup(unsigned int leafId, unsigned int offset,
@@ -18,7 +19,6 @@ int ksceIdStorageLookup(unsigned int leafId, unsigned int offset,
 int SceQafMgrForDriver_52B4E164(void);
 int wlanBtInitializeRobin(void);
 int SceClockgenForDriver_7B28A724(void);
-int sceKernelDelayThread(unsigned int delay);
 int ksceClockgenWlanBtClkDisable(void);
 int wlanBtResumeRobin(unsigned int *wakeSources);
 int wlanBtStartRobin(void);

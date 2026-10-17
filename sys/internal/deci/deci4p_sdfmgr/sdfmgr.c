@@ -17,13 +17,13 @@
 #include <excpmgr/arm_psr_text.h>
 #include <modulemgr/modulemgr_control.h>
 #include <pamgr/coresight_regs.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/threadmgr/semaphores.h>
 
 SdfMgrState s_sdfMgrState;
 
 /* Per-core transport, hook and control-component registration. */
 
-int ksceKernelSignalSema(SceUID semaphore, int count);
-int ksceKernelSetEventFlag(SceUID eventFlag, uint32_t pattern);
 int ksceSysrootIsManufacturingMode(void);	/* SceSysrootForKernel 0x55392965 */
 
 #define SDFMGR_INVALID_ARGUMENT ((int)0x80090001)

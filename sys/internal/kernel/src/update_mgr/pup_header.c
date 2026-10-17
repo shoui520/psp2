@@ -7,9 +7,8 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
+#include <threadmgr/threadmgr.h>
 
-int SceThreadmgrForDriver_56C18B11(void);
-int SceThreadmgrForDriver_84EB1EA4(int value);
 int SceQafMgrForDriver_3CB55F98(void);
 int ksceSblUtMgrHasComTestFlag(void);
 int SceSblPostSsMgrForDriver_9D1D8EE5(void);

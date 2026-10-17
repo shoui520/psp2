@@ -4,6 +4,7 @@
 #include <sysmem/barrier.h>
 #include <stdint.h>
 #include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
@@ -11,7 +12,6 @@ extern int appmgrDebugConsoleInitialize(void);
 extern int handleAbortedApp(SceSize args, void *argp);
 extern int appmgrProcessDebugSuspendHandler(SceUID pid, SceUID threadId,
 					  int reason, uintptr_t arg);
-extern int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg);
 
 SceUID g_appmgrAbortEventFlag;
 SceUID g_appmgrCoredumpEventFlag;

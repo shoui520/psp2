@@ -80,7 +80,7 @@ SceUID ksceKernelRegisterTimer(const char *name, SceUInt32 usec, SceUInt32 (*han
 			       void *arg);
 
 int sceKernelDelayThread(SceUInt32 usec);
-SceInt64 sceKernelGetSystemTimeWide(void);
+SceUInt64 sceKernelGetSystemTimeWide(void);
 int ksceKernelWaitEvent(SceUID event, SceUInt32 bits, SceUInt32 *result, SceUInt64 *userData,
 			SceUInt32 *timeout);
 
@@ -124,3 +124,29 @@ void *SceThreadmgrForDriver_3A72C6D8(int slot);				/* TLS slot of the current th
 #define SCE_KERNEL_WAITTYPE_LW_MUTEX_CB		(0x80100000U)
 #define SCE_KERNEL_WAITTYPE_LW_COND_SIGNAL_CB	(0x80200000U)
 #define SCE_KERNEL_WAITTYPE_LW_COND_LW_MUTEX_CB	(0x80400000U)
+
+int SceThreadmgrForDriver_1096042E(SceUID uid);
+int SceThreadmgrForDriver_332E127C(void);
+int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg);
+SceUID SceThreadmgrForDriver_FD6150D5(const char *name, SceUID target, SceUID pid, uint32_t mask, uintptr_t handler, uint32_t arg);
+int SceThreadmgrForKernel_15D6357C(SceUID threadId, int priority);
+int SceThreadmgrForKernel_16D1961A(void);
+int SceThreadmgrForKernel_490DAF14(SceUID threadId);
+void *SceThreadmgrForKernel_565BD2DA(void);
+void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId);
+int SceThreadmgrForKernel_9928DFBA(SceUID threadId, int priority);
+int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void *arg);
+int ksceKernelClearEvent(SceUID eventId, uint32_t keep);
+int ksceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
+int ksceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData, uint32_t arg);
+int ksceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
+int ksceKernelWaitEventCB(SceUID eventId, uint32_t pattern, uint32_t *outPattern, uint64_t *outUserData, SceUInt32 *timeout);
+int sceKernelCancelAlarm(SceUID alarmId);
+int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThreads);
+int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads);
+int sceKernelCpuScanThreadForProcessmgr(SceUID processId);
+int sceKernelDeleteSimpleEvent(SceUID simpleEventId);
+int sceKernelExitDeleteThread(int status);
+int sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern);
+int sceKernelGetThreadExitStatus(SceUID uid, int *status);
+int sceKernelSetSyslibtraceThreadCBEnable(int enable);

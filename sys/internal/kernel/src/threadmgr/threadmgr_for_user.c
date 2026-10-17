@@ -1673,7 +1673,7 @@ SceUInt32 sceKernelGetSystemTimeLow(void)
 }
 
 /* sceKernelGetSystemTimeWide (user) */
-SceInt64 sceKernelGetSystemTimeWide(void)
+SceUInt64 sceKernelGetSystemTimeWide(void)
 {
 	sceKernelApiDeclareTypeUInt64();
 	return SceSysrootForKernel_E20F6FC8();

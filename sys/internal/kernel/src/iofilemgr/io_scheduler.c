@@ -8,6 +8,7 @@
 
 #include <intrmgr/syscall.h>
 #include "iofilemgr_internal.h"
+#include <threadmgr/threadmgr.h>
 
 SceUID g_ioSchedHeap;
 
@@ -25,8 +26,6 @@ void *ksceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_s
 #define IO_SCHED_CHUNK_BUFF_SIZE	(IO_REQUEST_CHUNK_NUM * sizeof(IoChunk))
 
 int ksceSblACMgrIsNonGameOrGameProgram2(SceUID pid);
-SceUID sceKernelGetProcessId(void);
-int SceThreadmgrForDriver_1096042E(SceUID thid);
 
 SceInt32 g_ioDefaultPriority = 1;	/* the system processes' default I/O priority (name unknown) */
 

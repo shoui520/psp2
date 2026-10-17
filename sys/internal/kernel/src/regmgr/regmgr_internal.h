@@ -12,6 +12,8 @@
 #include <string.h>
 #include <sysmem/debug.h>
 #include "reg.h"
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 
 int regMgrLoadCache(void);
 
@@ -294,9 +296,6 @@ int regMgrMoveNpCurrentAccount(int version, int newVersion);
 void regMgrConvertLanguage(int version, int newVersion);
 
 #define REGMGR_STATUS_SYSCALL	0x00000001	/* called by a system call (name unknown) */
-
-int SceThreadmgrForDriver_332E127C(void);	/* name unknown */
-int ksceKernelSetPermission(int perm);
 
 /* the kernel APIs */
 int sceRegMgrIsBlueScreen(int error);

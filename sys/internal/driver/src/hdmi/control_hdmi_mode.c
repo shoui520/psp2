@@ -12,12 +12,12 @@
 #include <sysmem/sysevent.h>
 #include "hdmi_internal.h"
 #include <syscon/syscon.h>
+#include <psp2kern/kernel/threadmgr/workqueues.h>
 
 void *memcpy(void *dst, const void *src, SceSize len);
 int ksceSblAimgrIsTool(void);
 int SceQafMgrForDriver_382C71E8(void);
 int ksceKernelCheckDipsw(SceUInt32 bit);
-int ksceKernelEnqueueWorkQueue(SceUID queue, const char *name, int (*work)(void *), void *arg);
 
 #define HDMI_CHIP_ID_SIZE	10
 #define HDMI_CHIP_ID_UNKNOWN	0xff	/* the init work has not run yet */

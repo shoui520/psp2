@@ -24,9 +24,6 @@ void sceKernelApiDeclareTypeUInt32(void);
 int SceProcessmgrForDriver_D141C076(SceUID processId, SceUInt32 *sdkVersion);
 int ksceKernelIsGameBudget(void);
 int ksceKernelUnregisterThreadEventHandler(SceUID handlerId);
-SceUID SceThreadmgrForDriver_FD6150D5(const char *name, SceUID target,
-		SceUID processId, unsigned int mask, uintptr_t handler,
-		unsigned int argument);
 int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
 				SceNetPsProcessHooks *hooks);
 int sceNetPsProcessExitHandler(SceUID processId, const void *param,

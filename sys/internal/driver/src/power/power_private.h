@@ -63,6 +63,8 @@
 #include <lowio/pervasive.h>
 #include <psp2kern/lowio/gpio.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -103,20 +105,10 @@ extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
 extern int ksceKernelCheckDipsw(unsigned int index);
 
-extern int ksceKernelEnqueueWorkQueue(SceUID queue, const char *name,
-				     int (*callback)(void), void *argument);
-
-extern int sceKernelDelayThread(unsigned int delay);
-
 /* Actual callbacks required by Power's startup registration sequence. */
 extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
 
 /* LED callback and script engine; appended after the existing LED state. */
-
-extern SceUID ksceKernelRegisterTimer(const char *name, unsigned int period,
-				    int (*handler)(void *argp), void *argp);
-
-extern SceUID sceKernelGetProcessId(void);
 
 extern int __aeabi_idiv(int numerator, int denominator);
 
@@ -125,8 +117,6 @@ extern int ksceCtrlGetActiveControllerPort(void);
 extern int ksceDisplayGetPrimaryHead(void);
 
 extern int ksceSblACMgrIsGameProgram(SceUID pid);
-
-extern int sceKernelCancelAlarm(SceUID alarm);
 
 extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
 
@@ -156,9 +146,7 @@ extern int ksceSysrootIsExternalBootMode(void);
 extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
-extern SceUInt32 ksceKernelGetSystemTimeLow(void);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
-extern uint64_t sceKernelGetSystemTimeWide(void);
 /* ScePervasiveMisc (0xe3100000) */
 extern uintptr_t SceSysrootForDriver_0A52A59C(void);
 extern uintptr_t SceSysrootForDriver_10788257(void);

@@ -12,7 +12,6 @@
 
 struct udcdState udcdState = { 0 };
 
-extern int sceKernelCancelAlarm(SceUID alarm);
 extern int ksceKernelPowerTick(int type);
 void udcdUpdateStateEvent(int bus);
 
@@ -1095,7 +1094,6 @@ int udcdSetActivationEnabled(unsigned int flag, int bus)
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&udcdState.buses[bus].lock, status);
 	return 0;
 }
-
 
 /* the event names of each bus */
 static const char *const s_connectNames[3] = { "SceUdcd0Connect", "SceUdcd1Connect", "SceUdcd2Connect" };

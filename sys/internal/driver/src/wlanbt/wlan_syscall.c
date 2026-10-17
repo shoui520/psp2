@@ -1,9 +1,9 @@
 /* Public WLAN syscall entry points; the original has no source-name records. */
 #include "wlanbt_internal.h"
 #include <intrmgr/syscall.h>
+#include <threadmgr/threadmgr.h>
 
 SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-SceUID sceKernelGetProcessId(void);
 void sceKernelApiDeclareTypeUInt32(void);
 
 int sceWlanSetConfiguration(int request)

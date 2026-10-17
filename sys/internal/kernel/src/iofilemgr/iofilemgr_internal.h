@@ -35,6 +35,7 @@ int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/event.h>
 #include <threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
 
 /* Shared declarations describe caller buffers, mount/vnode/file objects,
  * scheduler requests and VFS/VOP callback tables. */
@@ -112,7 +113,6 @@ typedef struct IofilemgrSchedInfo {
 	SceInt32 mntOpt;			/* the device's mount option; negative: no scheduling */
 	SceUID pid;
 } IofilemgrSchedInfo;
-
 
 /* the I/O scheduler: one per kind of device, with a worker thread and a queue per priority */
 #define IO_SCHED_PRIORITY_NUM		16
@@ -330,24 +330,18 @@ int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level, SceU
 SceInt64 sceKernelExtendKernelStackWide(SceSize size, SceInt64 (*func)(void *), void *arg);
 int SceSysmemForKernel_B591E49F(unsigned int type, SceSize size);	/* sceKernelObjectHeapSetSize */
 int SceSysrootForKernel_CBD377B7(int (*callback)(void));		/* set the iofilemgr start hook */
-int SceThreadmgrForDriver_B645C7EF(SceSize size, int a1, int a2);	/* allocate a TLS slot */
 int sceKernelRegisterInitCallback(int (*callback)(int, void *), int phase, int flags,
 				  void *argument);
 int sceKernelObjectHeapSetResourceLimit(SceUID pid, int heap, int type, SceUInt32 limit0,
 					SceUInt32 limit1);
-SceUID sceKernelGetProcessId(void);
-SceUInt64 sceKernelGetSystemTimeWide(void);
 int SceSysrootForKernel_ksceSysrootIsSafeMode(void);
 int SceSysrootForKernel_ksceSysrootIsUpdateMode(void);
-int ksceKernelGetThreadCpuAffinityMask(SceUID thid);
-int SceThreadmgrForDriver_332E127C(void);		/* name unknown */
 SceClass *SceSysmemForKernel_368F1C36(SceUID guid);		/* the class of a UID */
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* whether cls is base or below */
 void *SceSysmemForKernel_FA6C098C(SceUID guid);			/* the object of a GUID */
 int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize itemSize,
 					SceClassCallback create, SceClassCallback destroy);
 int sceKernelEventObjectInit(SceUID uid, SceUInt32 attr, SceUInt32 pattern, int a3, int a4);
-int sceKernelGetEventPattern(SceUID uid, SceUInt32 *pattern);
 
 /*
  * Sony's declaration gives ksceKernelUserUnmap the mapped range as well (a cast
@@ -613,11 +607,7 @@ _Static_assert(sizeof(BufferPool) == 0x20, "BufferPool");
 int vfs_fumount_vop_enodev(void *argp);
 int vfs_file_class_constructor(void *data);
 int vfs_file_class_destructor(void *data);
-int sceKernelDelayThread(SceUInt32 usec);
-int sceKernelCancelAlarm(SceUID alarm);
 int ksceKernelDebugPutchar(int character);
-SceUID ksceKernelRegisterTimer(const char *name, SceUInt32 period,
-			       SceUInt32 (*handler)(void *arg), void *arg);
 SceVfsMount *vfs_alloc_mount(void);
 void vfs_init_mount(SceVfsMount *mnt, SceVfsVnode *vp, SceUID allocator, SceVfsInfo *vfsInf);
 int vfs_create_mnt_list_mtx(void);
@@ -783,8 +773,6 @@ extern SceClass g_ioErrorEventClass;	/* "SceUIDIoErrorEventClass" (name unknown)
 
 int ioerror_initialize(void);					/* name unknown */
 int ksceIoDeleteErrorEvent(SceUID uid);
-int sceKernelSetEventWithNotifyCallback(SceUID uid, SceUInt32 pattern, SceInt64 result,
-					int flags);
 
 /* vfs_buff.c, sched / misc still in frames.S */
 int vfsBuffFree(struct BuffCache *bc, int flags, SceVfsVnode *vp, SceVfsFile *fdList);
@@ -1359,8 +1347,6 @@ int setThreadIoPriority(SceInt32 priority);
 SceInt32 swapThreadIoPriority(SceInt32 priority);
 SceInt32 getThreadIoPriority(void);
 
-
-
 /* io_scheduler.c: the calls the I/O scheduler runs */
 int sceIoSchedulerInitialize(void);
 int getPathMntOpt(const char *path, int full);
@@ -1465,8 +1451,6 @@ SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
 			IoAsyncParam *asyncParam);
 SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offset,
 			 IoAsyncParam *asyncParam);
-
-
 
 /* io_scheduler_async.c */
 SceUID sceIoAsyncEventCreate(IoAsyncEvent **event);

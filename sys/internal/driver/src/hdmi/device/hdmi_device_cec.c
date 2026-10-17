@@ -13,8 +13,7 @@
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
 #include <lowio/pervasive.h>
-
-int sceKernelDelayThread(SceUInt32 usec);
+#include <threadmgr/threadmgr.h>
 
 /* The transmitter's register maps (I2C slave addresses) */
 #define CEC_SLAVE_MAIN		0x7a

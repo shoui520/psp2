@@ -18,6 +18,8 @@
 #include <smsc_proxy/tzs_bridge.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysevent_ids.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/threadmgr/mutex.h>
 
 #define SESSION_COUNT	64
 #define CHANNEL_COUNT	4
@@ -94,21 +96,12 @@ int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
 				  int priority, int targetCpu, void *opt);
 int ksceKernelRegisterSysEventHandler(const char *name,
 				      int (*handler)(int, int, void *, void *), void *arg);
-SceUID ksceKernelCreateEventFlag(const char *name, int attr, int bits, void *opt);
-int ksceKernelDeleteEventFlag(SceUID uid);
-int ksceKernelSetEventFlag(SceUID uid, unsigned int bits);
-int ksceKernelWaitEventFlag(SceUID uid, unsigned int bits, unsigned int mode,
-			    unsigned int *result, unsigned int *timeout);
-SceUID ksceKernelCreateMutex(const char *name, int attr, int count, void *opt);
-int ksceKernelDeleteMutex(SceUID uid);
-int ksceKernelTryLockMutex(SceUID uid, int count);
 
 static SceUID s_heap;
 static SceUID s_lastId;
 static int s_state;
 static Session *s_session;
 static SceKernelSpinlock s_lock;
-
 
 /* name unknown */
 static Session *SessionLookup(SceUID id, int *status)

@@ -9,6 +9,7 @@
 #include "sdif_regs.h"
 #include <threadmgr/fast_mutex.h>
 #include <lowio/pervasive.h>
+#include <threadmgr/threadmgr.h>
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;
@@ -159,7 +160,6 @@ _Static_assert(offsetof(SdifPortState, lock) == 0x94, "SdifPortState.lock");
 extern SdifContextGlobal gSdifContexts[3];
 int sdifEnableFunctionInterrupt(SdifContextGlobal *context, int function);
 int sdifDisableFunctionInterrupt(SdifContextGlobal *context, int function);
-SceInt64 sceKernelGetSystemTimeWide(void);
 int sceSdifAdmaKick(SdifCommand *command, uint16_t commandFlags);
 SdifCommand *sdifCommandQueuePop(SdifCommandQueue *queue);
 void _sceSdifCmdQueueDump(SdifCommandQueue *queue);

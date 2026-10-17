@@ -1,5 +1,6 @@
 /* SceIofilemgr's scheduler worker (Sony's sched_scheduler.c). */
 #include "iofilemgr_internal.h"
+#include <threadmgr/threadmgr.h>
 
 static inline __attribute__((always_inline)) SceUID getDataIoFd(IoRequest *req)
 {
@@ -568,8 +569,6 @@ void sceIoSchedulerSignalCond(IoScheduler *sched, IoRequest *req)
 		SCE_DBG_ASSERT(ret == 0, 606);
 	}
 }
-
-int ksceKernelSetEvent(SceUID event, unsigned int pattern, SceUInt64 data);
 
 int sceIoSchedulerCompleteAsyncIoRequest(IoScheduler *sched, IoRequest *req)
 {

@@ -8,6 +8,7 @@
 #include <sysmem/aes.h>
 #include <npdrm/npdrm_package.h>
 #include <marlin_hci/rsa.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {
@@ -142,7 +143,6 @@ int SceQafMgrForDriver_AE033133(void);
 
 int ksceKernelIsAccessibleRangeProc(SceUID pid, unsigned int mode,
 	const void *addr, SceSize size);
-int ksceKernelRunWithStack(SceSize stackSize, int (*func)(void *), void *argp);
 
 int NpDrmRsaVerify2048(const MarlinRsaData *signature,
 	const MarlinRsaData *digest, const MarlinRsaExponentKey *key,

@@ -4,9 +4,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/sysmem.h>
 #include "update_internal.h"
-
-int SceThreadmgrForDriver_56C18B11(void);
-int SceThreadmgrForDriver_84EB1EA4(int value);
+#include <threadmgr/threadmgr.h>
 
 int PupUtilVerifyPupWatermarkMain(SceSize arglen, PupVerifyThreadArgs *args)
 {

@@ -11,6 +11,7 @@
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
 #include <string.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <threadmgr/threadmgr.h>
 
 typedef struct SGX_BRIDGE_OUT_TRACE_COUNTERS {
 	PVRSRV_ERROR eError;
@@ -23,7 +24,6 @@ typedef struct SGX_BRIDGE_OUT_TRACE_INFO {
 } SGX_BRIDGE_OUT_TRACE_INFO;
 
 PVRSRV_ERROR DestroyCommandContext(IMG_VOID *pvParam, IMG_UINT32 ui32Param);
-int SceThreadmgrForDriver_1096042E(int uid);
 PVRSRV_ERROR PVRSRVLookupHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_VOID **ppvData,
 			     IMG_SID hHandle, IMG_UINT32 eType);
 PVRSRV_ERROR PVRSRVReleaseHandle(struct _PVRSRV_HANDLE_BASE_ *psBase, IMG_SID hHandle,

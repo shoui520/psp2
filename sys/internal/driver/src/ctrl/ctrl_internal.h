@@ -10,10 +10,9 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <ctrl/ctrl.h>
+#include <threadmgr/threadmgr.h>
 
-SceInt64 sceKernelGetSystemTimeWide(void);
 int ksceKernelPowerTick(int type);
-int sceKernelCancelAlarm(SceUID alarm);
 SceUInt32 ctrlAlarmCallback(void *arg);
 int ctrlSampleComplete(SceSysconPacket *packet, void *arg);
 

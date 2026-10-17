@@ -2,6 +2,7 @@
 #pragma once
 #include <psp2kern/types.h>
 #include <stddef.h>
+#include <threadmgr/threadmgr.h>
 
 typedef struct SceUsbMassDevInfo {
 	SceUInt64 sectorCount;
@@ -20,4 +21,3 @@ _Static_assert(offsetof(SceUsbMassDevInfo, writeProtected) == 12,
 int _sceUsbMassGetDevInfo(SceUsbMassDevInfo *info);
 int _sceUsbMassWriteSector(SceUInt32 sector, void *buffer, SceUInt32 count);
 int _sceUsbMassReadSector(SceUInt32 sector, void *buffer, SceUInt32 count);
-int sceKernelDelayThread(SceUInt32 usec);

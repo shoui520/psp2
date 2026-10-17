@@ -4,6 +4,7 @@
 #include <processmgr/processmgr_imports.h>
 #include <usbstormg/usbstormg.h>
 #include <psp2kern/kernel/sysclib.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 int SceMagicGateForDriver_F2502A3B(void *output, const void *input,
 				unsigned int size, int slot, const void *iv);
@@ -100,7 +101,6 @@ int encryptPaddedUserVideo(void *output, const void *input, unsigned int size,
 	TRANSLATE_MAGICGATE_RESULT(result);
 	return result;
 }
-
 
 int verifyUserVideoRecord(MgVideoContext *context, int index,
 			  const uint64_t *headerTag, const MgVideoUserBuffer *input,
@@ -664,8 +664,6 @@ release:
 	SceMagicGateForDriver_144BFA76(slot);
 	return result;
 }
-
-int ksceKernelRunWithStack(unsigned int size, int (*func)(void *), void *arg);
 
 int replaceUserVideoRecordBlock(MgVideoContext *context, int index,
 			       int blockNumber, const MgVideoCipherBlock *replacement,

@@ -45,8 +45,6 @@ extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 	__asm__("ksceKernelUnlockFastMutex");
 
 /* Sony names/NIDs from the ThreadMgr owner export table. */
-extern int sceKernelCancelAlarm(SceUID alarm);
-extern int sceKernelCancelSema(SceUID semaphore, int count, int *waiters);
 
 int bbmcTimerThread(SceSize args, void *argp);
 

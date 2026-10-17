@@ -5,9 +5,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include "update_packet.h"
-
-int SceThreadmgrForDriver_56C18B11(void);
-int SceThreadmgrForDriver_84EB1EA4(int value);
+#include <threadmgr/threadmgr.h>
 
 int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args)
 {

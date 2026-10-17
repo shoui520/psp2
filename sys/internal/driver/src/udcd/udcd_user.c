@@ -9,12 +9,10 @@
 #include <threadmgr/threadmgr.h>
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/threadmgr/thread.h>
 
-extern SceUID ksceKernelGetThreadId(void);
-extern SceUID sceKernelGetProcessId(void);
-extern int ksceKernelGetThreadmgrUIDClass(SceUID uid);
 extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int SceThreadmgrForDriver_20C228E4(void);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblACMgrIsMiniSettingsForQA(void);
 extern int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size);

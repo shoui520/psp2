@@ -49,6 +49,7 @@
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/registrymgr.h>
 #include "oal_internal.h"
+#include <threadmgr/threadmgr.h>
 
 extern void *memMgrLocalAlloc(SceSize size);
 extern int ksceKernelVprintf(const char *fmt, va_list arg);
@@ -65,7 +66,6 @@ extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
 extern int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 extern SceUInt32 sceKernelGetGPI(void);
-extern SceUID sceKernelGetProcessId(void);
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
@@ -176,7 +176,6 @@ extern int ksceCoredumpCafFinal(void);
 extern int ksceCoredumpCafSegmentTransform(SceUID context, const void *source,
 	void *destination, SceSize size);
 extern int ksceCoredumpCafSegmentFinal(SceUID context, void *digest, SceSize size);
-extern int sceKernelExitDeleteThread(int status);
 extern int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode,
 	const void *address, SceSize size);
 extern int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,

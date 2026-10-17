@@ -12,9 +12,7 @@
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>
 #include "../hdmi_internal.h"
-
-int sceKernelDelayThread(SceUInt32 usec);
-int sceKernelExitThread(int status);
+#include <threadmgr/threadmgr.h>
 
 #define HDMI_DBG_AUTH	0x00000020	/* "[hdmiAUTH] " */
 #define HDMI_DBG_INFO	0x40000000	/* "[HDMI    ] " */

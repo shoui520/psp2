@@ -21,8 +21,7 @@
 #include <touch_dummy/touch_dummy.h>
 #include "rtc_internal.h"
 #include <kernel/error.h>
-
-SceUInt64 sceKernelGetSystemTimeWide(void);
+#include <threadmgr/threadmgr.h>
 
 static int rtcSysEventHandler(int resume, int eventid, void *args, void *opt);
 static int rtcInitWork(void *argp);

@@ -12,6 +12,8 @@
 #include <sdif/sdif.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <syscon/syscon.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -20,7 +22,6 @@ typedef SceUInt64 SceRtcTick;
 int ksceKernelCopyFromUser(void *dst, const void *src, SceSize len);
 int ksceKernelCopyToUser(void *dst, const void *src, SceSize len);
 SceSSize ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize len);
-int ksceKernelRunWithStack(SceSize stackSize, int (*func)(void *), void *argp);
 
 /* objects */
 SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
@@ -37,8 +38,6 @@ int ksceSysrootIsSafeMode(void);
 int ksceSysrootIsUpdateMode(void);
 void sceKernelSysrootEnableAutoClockDown(void);
 void sceKernelSysrootDisableAutoClockDown(void);
-int ksceKernelSetPermission(int value);
-int sceKernelExitDeleteThread(int status);
 SceUID ksceKernelSearchModuleByName(const char *name);
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);	/* compiled SDK version */
 int k_sceEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize);

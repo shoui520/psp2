@@ -4,13 +4,13 @@
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 ScePsCode aimgrPscode;
 SceOpenPsId aimgrOpenPsId;
 SceUID aimgrMutex;
 
 int kscePmMgrGetProductMode(uint8_t *mode);
-int ksceKernelSetPermission(int permission);
 int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase);
 
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800F0C16

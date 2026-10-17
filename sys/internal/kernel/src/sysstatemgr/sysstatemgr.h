@@ -14,6 +14,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/qafmgr.h>
+#include <threadmgr/threadmgr.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))
 #define CONF_NOT_FOUND ((int)0xffff0001U)
@@ -23,8 +24,6 @@
 int sceKernelWaitProcessEnd(SceUID pid, int *status, void *timeout);
 int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
 int ksceKernelCreateProcess(const char *name, int type, const char *path, void *opt);
-int sceKernelDelayThread(SceUInt32 delay);
-SceUInt64 sceKernelGetSystemTimeWide(void);
 int ksceKernelInvokeInitCallback(int stage);
 int SceSysmemForKernel_16A54BFE(void);
 SceUID SceSysmemForKernel_0164D817(void);

@@ -10,6 +10,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include "tsmp.h"
+#include <threadmgr/threadmgr.h>
 
 #define SCE_ERROR_ERRNO_ENODATA			0x8001003d
 #define SCE_KERNEL_ERROR_INVALID_FLAGS		0x8002000a
@@ -34,8 +35,6 @@ void *__memcpy_chk(void *dst, const void *src, SceSize n, SceSize dstSize);
 #define tsmpMemcpyChk(dst, src, n)	memcpy(dst, src, n)
 #endif
 
-int sceKernelDelayThread(SceUInt32 usec);
-int sceKernelExitThread(int status);
 int ksceSblPostSsMgrActivate(const void *data);
 int ksceSblPostSsMgrGetExpireDate(SceUInt32 *date, int unk);
 
@@ -588,7 +587,6 @@ __attribute__((noinline)) static void tsmpSendError(SceUInt8 type, SceUInt8 code
 }
 
 /* ===== threads and start ===== */
-
 
 /* ===== requests from the host ===== */
 

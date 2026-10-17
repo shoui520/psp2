@@ -30,7 +30,6 @@ extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
 extern int SceProcessmgrForKernel_D5DF895D(void);
-extern int ksceKernelClearEvent(SceUID eventId, SceUInt32 keep);
 extern void _sceAppMgrNotifyAppMgrHandler(void);
 
 SceUID g_appmgrUpdateNotifySemaphore = -1;

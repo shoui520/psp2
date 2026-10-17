@@ -8,8 +8,7 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
-
-int sceKernelDelayThread(SceUInt32 usec);
+#include <threadmgr/threadmgr.h>
 
 /* The DDC event flag's bits */
 #define HDMI_DDC_EVENT_ABORT		0x01	/* hdmiDeviceDdcAbort */

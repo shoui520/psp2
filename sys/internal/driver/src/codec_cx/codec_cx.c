@@ -6,8 +6,7 @@
 #include <codec/codec.h>
 #include <sysmem/sysevent_ids.h>
 #include "registers.h"
-
-extern int sceKernelDelayThread(unsigned int delay);
+#include <threadmgr/threadmgr.h>
 
 static struct {
 	SceKernelFastMutex mutex;

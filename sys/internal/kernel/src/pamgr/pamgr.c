@@ -11,6 +11,7 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <kernel/error.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 int checkDebugPermission(void);
 int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
@@ -160,8 +161,6 @@ int __attribute__((noinline)) clearCounterTrace(void)
 	pfm->counterTraceFlags = 0;
 	return 0;
 }
-
-int ksceKernelSetPermission(int level);
 
 /* User virtual buffer adapter, translation precedes validation. */
 int configurePrimaryTraceForUser(

@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/cpu/cache.h>
 #include "../usb_serial.h"
 #include "../usb_device.h"
+#include <threadmgr/threadmgr.h>
 
 extern int bbmcInitializeFastMutex(struct ThreadmgrFastMutex *mutex,
 	const char *name, int attr, void *opt)
@@ -25,7 +26,6 @@ extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
 	__asm__("ksceKernelLockFastMutex");
 extern int bbmcUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 	__asm__("ksceKernelUnlockFastMutex");
-int sceKernelCancelAlarm(SceUID alarm);
 int bbmcSendSimpleMessage(BbmcControl *control, unsigned int message);
 int ConnectNetwork(struct NetDriver *driver, int argument);
 int bbmcCloseNetworkLink(struct NetDriver *driver, int argument);

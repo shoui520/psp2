@@ -5,6 +5,7 @@
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include "drm_crypto.h"
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 GcAuthPcactScratch *gcAuthPcactScratchAddress;
 SceConsoleId gcAuthPcactConsoleId;
@@ -36,7 +37,6 @@ extern const unsigned char gcAuthPsmAesIv[16];
 int ksceSha1Digest(const void *input, unsigned int size, void *digest);
 int GcAuthDrmEncrypt(unsigned char *data, size_t size, int keyId);
 int GcAuthGenerateRandom20(void *data);
-int ksceKernelSetPermission(int permission);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 			    size_t size, int keyId);
 int ksceAesInit1(SceAesFullContext *context, SceSize blockBits,

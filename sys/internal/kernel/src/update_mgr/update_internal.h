@@ -109,7 +109,6 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 			     const PupCachedHeader *pup, const SceMbr *mbr,
 			     uint8_t partition, uint64_t segmentId);
-int sceKernelExitDeleteThread(int status);
 
 int SpkgInfoUtilGetVersion(int packageType, int flags, unsigned int *version,
 			  int loadSm, int existingSmId);

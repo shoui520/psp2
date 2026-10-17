@@ -19,6 +19,7 @@
 #define sceDfMgrClose sceDfMgrClose_deci4p_h
 #include <deci4p_dfmgr/deci4p.h>
 #include <deci4p_drfp/deci4p_fs.h>
+#include <threadmgr/threadmgr.h>
 #undef sceDfMgrClose
 int sceDfMgrClose(SceUID handle);
 
@@ -112,7 +113,6 @@ typedef struct DrfpHeader {
 	SceUInt16 seq;
 	SceUInt16 reserved;
 } DrfpHeader;
-
 
 /* one Dread entry */
 typedef struct DrfpDirent {
@@ -406,4 +406,3 @@ int sceDeci4pDrfpFsInit(void);
 int sceDeci4pDrfpFsStart(void);
 
 /* imports without a declaration elsewhere */
-int sceKernelDelayThread(unsigned usec);

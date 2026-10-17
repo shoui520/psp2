@@ -10,6 +10,13 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysmem/uid_class.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <psp2kern/kernel/threadmgr/callback.h>
+#include <psp2kern/kernel/threadmgr/debugger.h>
+#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <psp2kern/kernel/threadmgr/semaphores.h>
+#include <threadmgr/threadmgr.h>
 
 /* SceSysclibForDriver */
 void *memset(void *dst, int c, SceSize len);
@@ -63,67 +70,28 @@ int ksceKernelLoadPreloadingModules(SceUID pid, void *param, SceUInt32 flags);
 int ksceKernelUnloadProcessModules(SceUID pid);
 
 /* SceThreadmgrForKernel */
-int sceKernelCpuScanThreadForProcessmgr(SceUID pid);
-int SceThreadmgrForKernel_15D6357C(SceUID thid, int mask);	/* sceKernelSuspendThread */
-void SceThreadmgrForKernel_16D1961A(void);			/* after a cpu affinity change */
 int sceKernelThreadMgrProcessDeleteBeforePUIDClose(void *process);
-int SceThreadmgrForKernel_490DAF14(SceUID thid);		/* sceKernelResumeThread */
-SceClass *SceThreadmgrForKernel_565BD2DA(void);			/* the thread class */
 int SceThreadmgrForKernel_59D1D5B0(SceClass *processClass);
 int sceKernelThreadMgrProcessDeleteAfterPUIDClose(void *process);
 int SceThreadmgrForKernel_7425185E(void *process);
 int SceThreadmgrForKernel_89C17825(void *process);
-int SceThreadmgrForKernel_8D53CA9B(int enable);
-int SceThreadmgrForKernel_9928DFBA(SceUID thid, int mask);	/* sceKernelStopThread */
 int sceKernelThreadMgrProcessCreate(void *process);
 int sceKernelGetDefaultCpuAffinityMask(void *budget);
 
 /* SceThreadmgrForDriver */
-int ksceKernelSetPermission(int value);
-SceUID ksceKernelSetProcessIdToTLS(SceUID pid);
-int ksceKernelGetThreadmgrUIDClass(SceUID uid);
-int ksceKernelDeleteMutex(SceUID mutexid);
-int ksceKernelWaitEventFlag(SceUID evfid, SceUInt32 bits, SceUInt32 wait, SceUInt32 *outBits,
-			    SceUInt32 *timeout);
-int sceKernelExitThread(int status);
-int ksceKernelDeleteSema(SceUID semaid);
-int ksceKernelLockMutex(SceUID mutexid, int lockCount, SceUInt32 *timeout);
-int sceKernelExitDeleteThread(int status);
-int ksceKernelUnlockMutex(SceUID mutexid, int unlockCount);
 int ksceKernelStartThread(SceUID thid, SceSize arglen, void *argp);
 int ksceKernelGetThreadInfo(SceUID thid, void *info);
-SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initVal, int maxVal, void *opt);
-int SceThreadmgrForDriver_332E127C(void);
 int SceThreadmgrForDriver_33E85E9E(void *info);
-int ksceKernelWaitSema(SceUID semaid, int signal, SceUInt32 *timeout);
 int ksceKernelWaitThreadEnd(SceUID thid, int *stat, SceUInt32 *timeout);
-SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, SceUInt32 bits, void *opt);
-int sceKernelCancelAlarm(SceUID alarm);
-SceUInt32 ksceKernelGetSystemTimeLow(void);
-int sceKernelDelayThread(SceUInt32 delay);
-int ksceKernelClearEventFlag(SceUID evfid, SceUInt32 bits);
-int ksceKernelPollSema(SceUID semaid, int signal);
 SceUID ksceKernelGetThreadId(void);
 int ksceKernelChangeThreadPriority(SceUID thid, int priority);
-int ksceKernelDeleteEventFlag(SceUID evfid);
-SceUID sceKernelGetProcessId(void);
-int ksceKernelIsThreadDebugSuspended(SceUID thid);
 int ksceKernelDeleteThread(SceUID thid);
-int ksceKernelNotifyCallback(SceUID cb, int arg);
-SceUID ksceKernelRegisterTimer(const char *name, SceUInt32 period,
-			       SceUInt32 (*handler)(SceUID timer, void *arg), void *arg);
 SceUID ksceKernelCreateThread(const char *name, int (*entry)(SceSize args, void *argp),
 			      int priority, SceSize stackSize, SceUInt32 attr, int cpuAffinity,
 			      void *opt);
 SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry, int priority,
 				      SceSize stackSize, SceUInt32 attr, int cpuAffinity,
 				      void *opt);		/* sceKernelCreateRemoteThread */
-int ksceKernelSignalSema(SceUID semaid, int signal);
-int ksceKernelSetEventFlag(SceUID evfid, SceUInt32 bits);
-int ksceKernelDebugResumeThread(SceUID thid, int status);
-SceInt64 sceKernelGetSystemTimeWide(void);
-int ksceKernelDebugSuspendThread(SceUID thid, int status);
-SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount, void *opt);
 
 /* SceSysmemForKernel / SceSysmemForDriver */
 int ksceKernelFreeMemBlock(SceUID uid);

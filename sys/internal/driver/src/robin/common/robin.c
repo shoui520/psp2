@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <string.h>
-int sceKernelDelayThread(unsigned int delay);
+#include <threadmgr/threadmgr.h>
 int ksceSblFwLoaderLock(const char *path, int flags);
 int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *loaded);
 int ksceSblFwLoaderUnlock(void);

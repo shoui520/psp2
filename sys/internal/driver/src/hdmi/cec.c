@@ -13,6 +13,7 @@
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>
 #include "hdmi_internal.h"
+#include <threadmgr/threadmgr.h>
 
 void *memcpy(void *dst, const void *src, SceSize len);
 int ksceSysrootIsSafeMode(void);
@@ -20,13 +21,8 @@ int ksceSysrootIsUpdateMode(void);
 int ksceSblAimgrIsDolce(void);
 int ksceSblAimgrIsGenuineDolce(void);
 int SceQafMgrForDriver_382C71E8(void);
-SceUID ksceKernelRegisterTimer(const char *name, SceUInt32 usec, int (*handler)(void *arg),
-			       void *arg);
-int sceKernelCancelAlarm(SceUID id);
-SceUInt64 sceKernelGetSystemTimeWide(void);
 void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
 				 const void *lr, const char *fmt, ...);
-
 
 /* CEC logical addresses */
 #define CEC_ADDR_TV			0x0

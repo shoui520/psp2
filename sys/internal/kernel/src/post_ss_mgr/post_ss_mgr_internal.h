@@ -17,13 +17,13 @@
 #include <sysmem/debug.h>
 #include <string.h>
 #include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
 
 int ksceSblAimgrIsToolRev4(void);
 int ksceSblAimgrIsPrototypeRev2(void);
 int ksceSblAimgrIsToolRev3(void);
 int ksceSblAimgrIsToolRev5(void);
 int ksceSblAimgrIsPrototypeRev7(void);
-int sceKernelDelayThread(SceUInt32 usec);
 
 #define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002	/* name unknown */
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016

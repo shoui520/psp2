@@ -12,6 +12,7 @@
 #include <lowio/pwm.h>
 #include <psp2kern/lowio/gpio.h>
 #include <syscon/syscon.h>
+#include <threadmgr/threadmgr.h>
 
 /* Names unknown: hardware operations identified by their import NIDs. */
 int SceUdcdForDriver_1A5A3851(void);
@@ -20,11 +21,8 @@ int SceUdcdForDriver_9E7F7EFE(void);
 int SceUdcdForDriver_D01CFD22(void);
 int SceUdcdForDriver_E9E75C49(int port);
 int ksceSysrootIsSafeMode(void);
-int sceKernelIsUserModeThread(void);
-int sceKernelGetProcessId(void);
 int ksceKernelSearchModuleByName(const char *name);
 int ksceKernelPowerTick(int type);
-SceUID ksceKernelRegisterTimer(const char *name, unsigned delay, int (*callback)(void *), void *arg);
 SceUID ksceKernelRegisterSysEventHandler(const char *name, int (*callback)(int, int, void *), void *arg);
 int ksceKernelUnregisterSysEventHandler(SceUID uid);
 SceUID ksceKernelRegisterProcEventHandler(const char *name, const void *handlers, unsigned flags);
