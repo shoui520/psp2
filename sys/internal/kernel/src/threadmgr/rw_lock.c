@@ -612,7 +612,7 @@ SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->rwLockClass, name,
-		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&rwLock);
+		&opt, (SceObjectBase **)&rwLock);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);

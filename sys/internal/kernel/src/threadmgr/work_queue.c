@@ -1065,7 +1065,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 		opt.heapKind = (thread->currentAttr & THREAD_ATTR_UNLIMITED_OBJECTS) != 0;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	uid = sceGUIDKernelCreateWithOpt(WORK_QUEUE_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(WORK_QUEUE_CLASS(), name, &opt,
 					  (SceObjectBase **)&queue);
 	queue->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
 	queue->uid = ret;
@@ -1150,7 +1150,7 @@ SceUID ksceKernelEnqueueWorkQueue(SceUID workQueueId, const char *name, uintptr_
 		creatorPid = THREADMGR_KERNEL_PID;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = sceGUIDKernelCreateWithOpt(WORK_TASK_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	ret = sceGUIDKernelCreateWithOpt(WORK_TASK_CLASS(), name, &opt,
 					  (SceObjectBase **)&task);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1311, "sceKernelScheduleWorkTask",

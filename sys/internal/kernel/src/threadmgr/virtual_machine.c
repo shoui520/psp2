@@ -584,7 +584,7 @@ int createException(SceProcessObject *process)
 	snprintf(name, sizeof(name), "excp: %s", processName);
 	opt = (UIDCreateOpt){ 0 };
 	process->exceptionId = sceGUIDKernelCreateWithOpt(EXCEPTION_CLASS(), name,
-		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&process->exception);
+		&opt, (SceObjectBase **)&process->exception);
 	if (process->exceptionId < 0) {
 		SCE_DBG_ASSERT_FAIL(393);
 		return ret;

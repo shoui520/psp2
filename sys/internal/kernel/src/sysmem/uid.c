@@ -2479,10 +2479,9 @@ SceInt32 SceSysmemForKernel_CCD47B97(SceUID entryHeapId, void *pInfo)
 	return ret;
 }
 
-SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name,
-				   SceGUIDKernelCreateOpt *createOpt, SceObjectBase **obj)
+SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, const UIDCreateOpt *opt,
+				   SceObjectBase **obj)
 {
-	const UIDCreateOpt *opt = (const UIDCreateOpt *)createOpt;
 	SceUID pid = SceSysrootForKernel_7385CADE();
 	SceObjectBase *object = NULL;
 	void *heap, *processHeap;

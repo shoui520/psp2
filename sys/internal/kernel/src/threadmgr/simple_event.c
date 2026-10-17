@@ -272,7 +272,7 @@ SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 			process->simpleEventPeak = process->simpleEventCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = sceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(SIMPLE_EVENT_CLASS(), name, &opt,
 					  (SceObjectBase **)&simple);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {

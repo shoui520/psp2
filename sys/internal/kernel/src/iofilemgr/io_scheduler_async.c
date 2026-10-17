@@ -83,7 +83,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 			opt.heapKind = 0;
 		opt.type = IO_ASYNC_EVENT_UID_TYPE;
 		uid = sceGUIDKernelCreateWithOpt(&g_ioAsyncEventClass, "SceIoAsyncEvent",
-						  (SceGUIDKernelCreateOpt *)&opt,
+						  &opt,
 						  (SceObjectBase **)&obj);
 		break;
 	}

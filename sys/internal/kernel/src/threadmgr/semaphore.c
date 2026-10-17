@@ -443,7 +443,7 @@ static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(cons
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->semaphoreClass,
-		name, (SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&sema);
+		name, &opt, (SceObjectBase **)&sema);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);

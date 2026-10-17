@@ -231,10 +231,10 @@ SceClass *SceSysmemForKernel_99D3BF76(void)
 }
 
 /* the translation context of pid's address space */
-int SceSysmemForDriver_2ECF7944(SceUID pid, SceKernelProcessContext **context)
+int SceSysmemForDriver_2ECF7944(SceUID pid, MMUContext **context)
 {
 	AddressSpaceObject *as;
-	SceKernelProcessContext *mmuContext;
+	MMUContext *mmuContext;
 	void *object;
 	int ret;
 
@@ -243,17 +243,15 @@ int SceSysmemForDriver_2ECF7944(SceUID pid, SceKernelProcessContext **context)
 		return ret;
 	as = object;
 	AddressSpaceRefer(as);
-	mmuContext = (SceKernelProcessContext *)&as->context->mmu;
+	mmuContext = &as->context->mmu;
 	AddressSpaceRelease(as);
 	*context = mmuContext;
 	return 0;
 }
 
-/* SceKernelProcessContext is the MMU's translation context */
-int SceSysmemForDriver_2D711589(const SceKernelProcessContext *context,
-				   SceKernelProcessContext *saved)
+int SceSysmemForDriver_2D711589(const MMUContext *context, MMUContext *saved)
 {
-	return MMUContextSwitchSync((const MMUContext *)context, (MMUContext *)saved);
+	return MMUContextSwitchSync(context, saved);
 }
 
 int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);

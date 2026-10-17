@@ -1108,7 +1108,7 @@ int module_bootstart(SceSize arglen, const void *argp)
 
 /* a kernel thread's register context in the kernel process, entering at its entry */
 static inline int initKernelThreadRegisters(struct ThreadCB *thread,
-					    SceKernelProcessContext *context, SceAllocOpt *opt)
+					    MMUContext *context, SceAllocOpt *opt)
 {
 	struct ThreadRegisterContext *regs;
 
@@ -1123,9 +1123,9 @@ static inline int initKernelThreadRegisters(struct ThreadCB *thread,
 	regs->cpsr = (thread->entry & 1) ? CPSR_SYS_THUMB : CPSR_SYS_ARM;
 	regs->sp = thread->initSp;
 	regs->lr = (uintptr_t)kernelThreadReturnEntry;
-	regs->ttbr1 = context->TTBR1;
+	regs->ttbr1 = context->ttbr1;
 	regs->kernelDacr = DACR_KERNEL;
-	regs->contextidr = (uint8_t)context->CONTEXTIDR | thread->threadId << 8;
+	regs->contextidr = (uint8_t)context->contextId | thread->threadId << 8;
 	return 0;
 }
 
@@ -1152,7 +1152,7 @@ int sceKernelThreadMgrStartAfterProcess(void)
 	struct ThreadMgrCpuCB *cpu = currentCpuState();
 	struct ThreadCB *thread;
 	SceProcessObject *process;
-	SceKernelProcessContext *context;
+	MMUContext *context;
 	SceAllocOpt opt;
 	void *addressSpace, *heap;
 	unsigned int cpuId;
@@ -1226,9 +1226,9 @@ int sceKernelThreadMgrStartAfterProcess(void)
 	}
 	initRegisterContext(thread->pRegisterContext);
 	thread->pRegisterContext->userDacr = 0;
-	thread->pRegisterContext->ttbr1 = context->TTBR1;
+	thread->pRegisterContext->ttbr1 = context->ttbr1;
 	thread->pRegisterContext->kernelDacr = DACR_KERNEL;
-	thread->pRegisterContext->contextidr = (uint8_t)context->CONTEXTIDR | thread->threadId << 8;
+	thread->pRegisterContext->contextidr = (uint8_t)context->contextId | thread->threadId << 8;
 	__asm__ volatile(
 		"dsb\n\t"
 		"mcr p15, 0, %0, c13, c0, 1\n\t"	/* CONTEXTIDR: none while TTBR changes */
@@ -1238,8 +1238,8 @@ int sceKernelThreadMgrStartAfterProcess(void)
 		"dsb\n\t"
 		"mcr p15, 0, %2, c13, c0, 1\n\t"
 		"mcr p15, 0, %3, c3, c0, 0"		/* DACR */
-		: : "r"(0), "r"(context->TTBR1),
-		    "r"((uint8_t)context->CONTEXTIDR | thread->threadId << 8), "r"(DACR_KERNEL)
+		: : "r"(0), "r"(context->ttbr1),
+		    "r"((uint8_t)context->contextId | thread->threadId << 8), "r"(DACR_KERNEL)
 		: "memory");
 	opt.size = sizeof(opt);
 	opt.align = REGISTER_CONTEXT_ALIGN;
@@ -6885,7 +6885,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceKernelModuleInfo info;
 	SceKernelThreadOptParam param;
-	SceKernelProcessContext *context;
+	MMUContext *context;
 	SceAllocOpt heapOpt;
 	ThreadmgrLwpCreateProbe lwpCreate;
 	ThreadmgrTraceHook trace;
@@ -7140,7 +7140,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	}
 	intr = SceCpuForDriver_D32ACE9E(&process->lock);
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->threadClass, name,
-					  (SceGUIDKernelCreateOpt *)&uidOpt,
+					  &uidOpt,
 					  (SceObjectBase **)&object);
 	ret = uid;
 	if (uid < 0)
@@ -7365,9 +7365,9 @@ contexts:
 	}
 	memset(thread->pRegisterContext, 0, sizeof(*thread->pRegisterContext));
 	regs = thread->pRegisterContext;
-	regs->ttbr1 = context->TTBR1;
+	regs->ttbr1 = context->ttbr1;
 	regs->kernelDacr = DACR_KERNEL;
-	regs->contextidr = (uint8_t)context->CONTEXTIDR | uid << 8;
+	regs->contextidr = (uint8_t)context->contextId | uid << 8;
 	if ((int)thread->currentAttr < 0) {
 		/* the syscall frame its first return to user mode leaves through */
 		regs->userDacr = DACR_USER;

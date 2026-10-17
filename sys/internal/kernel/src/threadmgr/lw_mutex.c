@@ -346,7 +346,7 @@ int _sceKernelCreateLwMutexForUser(ThreadmgrLwMutexWork *work, const char *name,
 	opt.ownerPid = 0;
 	opt.cls = NULL;
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->lwMutexClass,
-		"SceKernelLwMutexCache", (SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&lwMutex);
+		"SceKernelLwMutexCache", &opt, (SceObjectBase **)&lwMutex);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0, 2139, "uidLwMutex_AllocObject", "*** error: "
 			"uidLwMutex_AllocObject() -> sceGUIDKernelCreateWithAttr()=0x%08X\n", uid);
@@ -1175,7 +1175,7 @@ int uidLwMutex_CreateCache(SceProcessObject *process, int target)
 		opt.cls = NULL;
 		intr = SceCpuForDriver_821FC0EE();
 		uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->lwMutexClass,
-			"SceKernelLwMutexCache", (SceGUIDKernelCreateOpt *)&opt,
+			"SceKernelLwMutexCache", &opt,
 			(SceObjectBase **)&lwMutex);
 		if (uid < 0) {
 			sceKernelCpuResumeIntr(intr);

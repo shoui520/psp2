@@ -740,7 +740,7 @@ SceUID ksceKernelCreateCallback(const char *name, SceUInt32 attr, uintptr_t entr
 			process->callbackPeak = process->callbackCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = sceGUIDKernelCreateWithOpt(CALLBACK_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(CALLBACK_CLASS(), name, &opt,
 					  (SceObjectBase **)&callback);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 997, "sceKernelCreateCallback",

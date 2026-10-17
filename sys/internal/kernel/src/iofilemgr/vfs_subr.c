@@ -2033,7 +2033,7 @@ int vfs_create_file_object(SceUIDVfsFileObject **obj, const char *name)
 	else
 		opt.heapKind = 0;
 	return sceGUIDKernelCreateWithOpt(&g_vfsFileClass, name,
-		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)obj);
+		&opt, (SceObjectBase **)obj);
 }
 
 SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)

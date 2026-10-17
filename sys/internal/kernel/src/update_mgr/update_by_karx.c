@@ -6,6 +6,7 @@
 #include "update_internal.h"
 #include "spkg.h"
 #include <sysmem/sysroot.h>
+#include <sysmem/sysclib.h>
 
 SCE_DBGINFO_DEFINE(static, updateOpenErrorInfo, 160, "UpdateMgrdoUpdate");
 SCE_DBGINFO_DEFINE(static, updateStartedInfo, 141, "UpdateMgrdoUpdate");

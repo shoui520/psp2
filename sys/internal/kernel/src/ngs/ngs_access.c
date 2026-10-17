@@ -4,6 +4,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysclib.h>
 #include <intrmgr/syscall.h>
 
 #include "ngs_platform.h"

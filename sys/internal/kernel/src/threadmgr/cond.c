@@ -534,7 +534,7 @@ SceUID ksceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 	}
 	SceCpuForDriver_BF82DEB2(&mutex->lock);
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->condClass, name,
-		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&cond);
+		&opt, (SceObjectBase **)&cond);
 	if (uid < 0) {
 		sceKernelSpinlockLowUnlock(&mutex->lock);
 		sceGUIDReleaseObject(mutexId);

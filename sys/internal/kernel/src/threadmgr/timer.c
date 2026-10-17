@@ -1194,7 +1194,7 @@ SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
 			process->timerPeak = process->timerCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = sceGUIDKernelCreateWithOpt(TIMER_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(TIMER_CLASS(), name, &opt,
 					  (SceObjectBase **)&uidTimer);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {

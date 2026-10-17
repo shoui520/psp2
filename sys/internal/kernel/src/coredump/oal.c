@@ -51,6 +51,7 @@
 #include <sysmem/debugled.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/ctype.h>
 #include <acmgr/acmgr.h>
 
 extern void *memMgrLocalAlloc(SceSize size);

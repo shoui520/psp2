@@ -1,61 +1,15 @@
 /*
- * SceSysmem (os0:kd/sysmem.skprx) driver interface additions to vitasdk.
+ * SceSysmem (os0:kd/sysmem.skprx): its driver and kernel interface.
  */
 
 #pragma once
 
-/*
- * vitasdk's SceKernelAllocMemBlockKernelOpt names few fields: Sony's layouts below. vitasdk's
- * declarations of these names are moved aside (_vitasdk); a macro the includer has for one of
- * them (the ForTZS builds map them to their imports) is kept.
- */
-#if defined(_PSP2KERN_KERNEL_SYSMEM_H_) || defined(_PSP2KERN_KERNEL_SYSMEM_HEAP_H_)
-#error "include sysmem/sysmem.h before <psp2kern/kernel/sysmem.h>"
-#endif
-#pragma push_macro("SceKernelAllocMemBlockKernelOpt")
-#pragma push_macro("SceKernelAllocMemBlockOptKernel")
-#pragma push_macro("SceSysmemForDriver_C94850C9")
-#pragma push_macro("sceKernelAllocPartitionMemBlock")
-#pragma push_macro("SceKernelHeapCreateOpt")
-#pragma push_macro("SceSysmemForDriver_9328E0E8")
-#pragma push_macro("SceAllocOpt")
-#pragma push_macro("SceSysmemForDriver_49D4DD9B")
-#undef SceKernelAllocMemBlockKernelOpt
-#undef SceKernelAllocMemBlockOptKernel
-#undef SceSysmemForDriver_C94850C9
-#undef sceKernelAllocPartitionMemBlock
-#undef SceKernelHeapCreateOpt
-#undef SceSysmemForDriver_9328E0E8
-#undef SceAllocOpt
-#undef SceSysmemForDriver_49D4DD9B
-#define SceKernelAllocMemBlockKernelOpt		SceKernelAllocMemBlockKernelOpt_vitasdk
-#define SceKernelAllocMemBlockOptKernel		SceKernelAllocMemBlockOptKernel_vitasdk
-#define SceSysmemForDriver_C94850C9			ksceKernelAllocMemBlock_vitasdk
-#define sceKernelAllocPartitionMemBlock	ksceKernelAllocPartitionMemBlock_vitasdk
-#define SceKernelHeapCreateOpt			SceKernelHeapCreateOpt_vitasdk
-#define SceSysmemForDriver_9328E0E8			ksceKernelCreateHeap_vitasdk
-#define SceAllocOpt				SceAllocOpt_vitasdk
-#define SceSysmemForDriver_49D4DD9B	ksceKernelAllocHeapMemoryWithOption_vitasdk
-#define SYSMEM_INCLUDE_VITASDK	/* past cmake/compat/vitasdk's psp2kern/kernel/sysmem.h */
-#include <psp2kern/kernel/sysmem.h>
-#undef SYSMEM_INCLUDE_VITASDK
 #include <stddef.h>
-#undef SceKernelAllocMemBlockKernelOpt
-#undef SceKernelAllocMemBlockOptKernel
-#undef SceSysmemForDriver_C94850C9
-#undef sceKernelAllocPartitionMemBlock
-#undef SceKernelHeapCreateOpt
-#undef SceSysmemForDriver_9328E0E8
-#undef SceAllocOpt
-#undef SceSysmemForDriver_49D4DD9B
-#pragma pop_macro("SceKernelAllocMemBlockKernelOpt")
-#pragma pop_macro("SceKernelAllocMemBlockOptKernel")
-#pragma pop_macro("SceSysmemForDriver_C94850C9")
-#pragma pop_macro("sceKernelAllocPartitionMemBlock")
-#pragma pop_macro("SceKernelHeapCreateOpt")
-#pragma pop_macro("SceSysmemForDriver_9328E0E8")
-#pragma pop_macro("SceAllocOpt")
-#pragma pop_macro("SceSysmemForDriver_49D4DD9B")
+#include <stdint.h>
+#include <scetypes.h>
+#include <psp2kern/types.h>
+#include <sysmem/memblock.h>
+#include <sysmem/mmu.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,7 +114,7 @@ typedef struct SceKernelHeapCreateOpt {
 	};
 	SceSize maxSize;			/* 0x08: "pOpt->maxSize" */
 	SceUID memBlock;			/* 0x0c: the memblock to build the heap in */
-	SceUInt32 memtype;			/* 0x10: SCE_KERNEL_HEAP_ATTR_HAS_MEMORY_TYPE */
+	SceUInt32 memtype;			/* 0x10: HEAP_HAS_MEMTYPE */
 	SceUID pid;				/* 0x14 */
 	struct KernelHeap *heap;		/* 0x18 */
 } SceKernelHeapCreateOpt;
@@ -188,10 +142,7 @@ _Static_assert(sizeof(SceAllocOpt) == 0x14, "SceAllocOpt size");
 /* vitasdk: ksceKernelAllocHeapMemoryWithOption */
 void *SceSysmemForDriver_49D4DD9B(SceUID uid, SceSize len, SceAllocOpt *opt);
 
-#define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR	0x00000002
-
 #include <sysmem/uid_class.h>
-#include <psp2kern/kernel/sysmem/uid_guid.h>
 
 /* vitasdk: ksceGUIDKernelCreate */
 SceUID SceSysmemForDriver_56A13E90(SceClass *cls, const char *name, SceObjectBase **obj);
@@ -199,8 +150,6 @@ SceUID SceSysmemForDriver_56A13E90(SceClass *cls, const char *name, SceObjectBas
 /*
  * sceGUIDKernelCreateWithOpt's options (Sony: UIDCreateOpt, after
  * UIDCreateOptCheckForPUID); each flag makes sysmem read its field.
- * (vfs_subr.c's use of vitasdk's SceGUIDKernelCreateOpt is still to move
- * onto this one.)
  */
 #define UID_CREATE_OPT_OBJECT		0x00000001	/* the caller's memory holds the object */
 #define UID_CREATE_OPT_HEAP_GUID	0x00000002	/* from the heap of a GUID */
@@ -431,9 +380,9 @@ int SceSysmemForDriver_22CBE925(SceKernelMemoryRefPerm mode, void *addr, SceSize
 /* vitasdk: ksceKernelUserMap */
 SceUID SceSysmemForDriver_278BC201(const char *name, int permission, const void *user_buf, SceSize size, void **kernel_page, SceSize *kernel_size, SceUInt32 *kernel_offset);
 /* vitasdk: ksceKernelProcessSwitchContext */
-int SceSysmemForDriver_2D711589(const SceKernelProcessContext *context, SceKernelProcessContext *saved);
+int SceSysmemForDriver_2D711589(const MMUContext *context, MMUContext *saved);
 /* vitasdk: ksceKernelProcessGetContext */
-int SceSysmemForDriver_2ECF7944(SceUID pid, SceKernelProcessContext **context);
+int SceSysmemForDriver_2ECF7944(SceUID pid, MMUContext **context);
 /* vitasdk: ksceKernelVARangeToPARangeBySW */
 int SceSysmemForDriver_32257A24(const SceKernelVARange *range, SceKernelPARange *out);
 SceUID SceSysmemForDriver_45D22597(SceUID pid, SceUID puid);	/* vitasdk: kscePUIDtoGUID */
@@ -600,7 +549,8 @@ int SceSysmemForTZS_E1DEDFF4(SceUID uid, void **base);
 SceUID SceSysmemForKernel_89D33DF0(SceUID guid);	/* vitasdk: ksceGUIDOpenByGUID */
 int sceGUIDClose(SceUID guid);
 SceUID sceGUIDGetPID(SceUID guid);
-SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, SceGUIDKernelCreateOpt *createOpt, SceObjectBase **obj);
+SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, const UIDCreateOpt *opt,
+				   SceObjectBase **obj);
 int sceGUIDReleaseObject(SceUID guid);
 int sceGUIDSetPID(SceUID guid, SceUID pid);
 int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid);

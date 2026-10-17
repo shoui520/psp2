@@ -424,7 +424,7 @@ checked:
 	opt.cls = NULL;
 	intr = SceCpuForDriver_821FC0EE();
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->threadEventClass,
-		name, (SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&event);
+		name, &opt, (SceObjectBase **)&event);
 	ret = uid;
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 529, " error: sceGUIDKernelCreate(0x%08X)\n", uid);

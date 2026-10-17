@@ -2412,7 +2412,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 			process->msgPipePeak = process->msgPipeCount;
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
-	uid = sceGUIDKernelCreateWithOpt(MSG_PIPE_CLASS(), name, (SceGUIDKernelCreateOpt *)&opt,
+	uid = sceGUIDKernelCreateWithOpt(MSG_PIPE_CLASS(), name, &opt,
 					  (SceObjectBase **)&pipe);
 	if (uid < 0) {
 		ret = uid;

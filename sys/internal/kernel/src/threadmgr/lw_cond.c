@@ -284,7 +284,7 @@ int __sceKernelCreateLwCond(void *work, const char *name, SceUInt32 attr, SceUID
 	if (ret >= 0) {
 		SceCpuForDriver_BF82DEB2(&lwMutex->lock);
 		uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->lwCondClass,
-			name, (SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&cond);
+			name, &opt, (SceObjectBase **)&cond);
 		ret = uid;
 		if (uid >= 0) {
 			cond->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;

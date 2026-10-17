@@ -627,7 +627,7 @@ create:
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->mutexClass, name,
-		(SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&mutex);
+		&opt, (SceObjectBase **)&mutex);
 	if (uid < 0) {
 		if (userRo & USERRO_IN_SYSCALL)
 			goto unaccount;

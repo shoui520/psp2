@@ -506,7 +506,7 @@ SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t init
 		sceKernelSpinlockLowUnlock(&process->resourceLock);
 	}
 	uid = sceGUIDKernelCreateWithOpt(s_threadmgrRuntime.manager->eventFlagClass,
-		name, (SceGUIDKernelCreateOpt *)&opt, (SceObjectBase **)&evf);
+		name, &opt, (SceObjectBase **)&evf);
 	if (uid < 0) {
 		if (ThreadmgrInSyscall()) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
