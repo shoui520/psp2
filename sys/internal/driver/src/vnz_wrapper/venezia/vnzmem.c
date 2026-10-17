@@ -1,6 +1,4 @@
 /* Sony venezia/vnzmem.c: RPC communication-memory allocator. */
-#undef __FILE_NAME__
-#define __FILE_NAME__ "venezia/vnzmem.c"
 #include <sce/debug.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include "venezia_internal.h"
