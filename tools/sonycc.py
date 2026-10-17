@@ -85,7 +85,7 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 		cmd = host.linux_command([str(gcc or GCC48), '-m' + mode, '-mcpu=cortex-a9', '-mfloat-abi=softfp', '-mfpu=neon', opt, '-std=gnu11', '-fstack-protector-strong' if gcc is None else '-fstack-protector', '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks', '-fno-section-anchors', '-fno-shrink-wrap', *extra,
 		       # arm-none-eabi defaults to short enums; Sony's (and vitasdk's) ABI has int-sized enums
 		       '-fno-short-enums', '-ffreestanding', '-fno-builtin', '-w', name, *defines,
-		       f'-I{COMPAT / "gcc48"}', *includes, '-isystem', str(host.vitasdk_include()),
+		       *includes, '-isystem', str(host.vitasdk_include()),
 		       '-S' if stage == 'assembly' else '-c', str(src), '-o', str(out)], cwd=ROOT)
 	else:
 		incs = [f'-I{win(i[2:])}' if i.startswith('-I') else i for i in includes]

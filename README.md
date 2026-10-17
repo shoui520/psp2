@@ -34,8 +34,10 @@ come from the paths in their debug records, asserts and SDK libraries.
   `release/modules.tsv` gives the folder each module is built from and why it is there.
 * Headers: `sys/internal/include/<component>/` holds the interfaces several modules share,
   under the component that owns them (`<threadmgr/threadcb.h>`, `<sysmem/sysroot.h>`);
-  `sys/sdk/target/include/` the SDK headers we write, under Sony's SDK names (`<libhmac.h>`,
-  `<kernel/error.h>`); a header only one component uses sits in that component.
+  `sys/sdk/target/include/` the SDK headers we write, under Sony's SDK names (`<scetypes.h>`,
+  `<kernel/types.h>`, `<libhmac.h>`, `<kernel/error.h>`); a header only one component uses sits
+  in that component. The tree is moving off vitasdk's headers onto these, one exporter at a time;
+  `cmake/compat/vitasdk/` holds the shims for the vitasdk headers still in use.
 * `sys/sdk/target/src/`: SDK libraries modules link (`libsnc`, SNC's runtime).
 * `cmake/`, `tools/`, `contrib/` (pristine upstream code), `toolchains/` (the compilers'
   recipes and `toolchains/libgcc`, the GCC runtime routines LibKernel links).
