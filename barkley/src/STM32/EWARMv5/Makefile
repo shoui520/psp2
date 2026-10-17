@@ -9,7 +9,11 @@
 #
 # image/<NN>.mk selects an image: 00 (AMI304 and AK8975), 01 (AK8975).
 #   motionC.icf   IAR link configuration (flash, RAM, vector table first)
-#   source/       start-up and the C++ classes the debug messages name
+#
+# Sony's layout (barkley trunk, from the images' assert paths): this folder is the IAR
+# project, src/STM32/EWARMv5. The code (the start-up and the C++ classes the debug
+# messages name) is in ../motion/motion, its headers in ../motion/motion/include, which is
+# on the include path (the asserts name EWARMv5\..\motion\motion\include\MotionFrameUtil.h).
 #
 # Compiler: IAR Embedded Workbench for ARM, C++ (the reset path is IAR's __cmain:
 # __low_level_init, __iar_data_init3, __call_ctors, main); version not identified. A
@@ -22,7 +26,7 @@ IMAGE ?= 01
 include image/$(IMAGE).mk
 
 DEFINES := -DMOTION_IMAGE=$(MOTION_IMAGE)
-INCLUDES := -Iinclude -Isource
+INCLUDES := -I../motion/motion/include -I../motion/motion
 
 all:
 	@echo "motionC is a skeleton: no IAR toolchain yet" >&2; exit 1
