@@ -56,7 +56,11 @@ corrections() {
 	#   ldrsb r3, [r0, #1]!);
 	# * an add with carry into one of its low operands prints as the 16-bit adcs when the
 	#   flags are dead (thumb2_reorg, r201411): rtc SceRtcForDriver_A82AC5B3 adds a 64-bit
-	#   tick with adds r2, r2, r4; adcs r3, r5.
+	#   tick with adds r2, r2, r4; adcs r3, r5;
+	# * one DImode and/ior/xor insn each, with the core and the NEON alternatives (r197965,
+	#   r199527, r199792, r199814, PR 56315; this release has NEON-only insns that disfavour
+	#   core registers): Sony's code builds a 64-bit mask in core registers (acmgr
+	#   SceSblACMgrForDriver_2E992B02: movt r1, #0xffff; and.w r5, r0, r1), not with vmov.i64.
 	patch -p1 -s < $S/csl-backports.diff
 	sed -i 's/&& current_tune->prefer_ldrd_strd/\&\& 1/' $A/ldrdstrd.md
 	sed -i '/^(define_insn "\*thumb2_ldrd"$/,/^(include "ldmstm.md")$/s/&& current_tune->prefer_ldrd_strd/\&\& 1/' $A/arm.md

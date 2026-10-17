@@ -1,6 +1,6 @@
 diff -ruN a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
---- a/gcc/config/arm/arm-protos.h	2026-10-17 02:57:07
-+++ b/gcc/config/arm/arm-protos.h	2026-10-17 02:57:07
+--- a/gcc/config/arm/arm-protos.h	2026-10-17 05:12:01
++++ b/gcc/config/arm/arm-protos.h	2026-10-17 05:11:48
 @@ -117,6 +117,7 @@
  extern rtx arm_gen_store_multiple (int *, int, rtx, int, rtx, HOST_WIDE_INT *);
  extern bool offset_ok_for_ldrd_strd (HOST_WIDE_INT);
@@ -10,9 +10,21 @@ diff -ruN a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
  extern enum machine_mode arm_select_cc_mode (RTX_CODE, rtx, rtx);
  extern enum machine_mode arm_select_dominance_cc_mode (rtx, rtx,
 diff -ruN a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
---- a/gcc/config/arm/arm.c	2026-10-17 02:57:07
-+++ b/gcc/config/arm/arm.c	2026-10-17 02:57:07
-@@ -12670,6 +12670,274 @@
+--- a/gcc/config/arm/arm.c	2026-10-17 05:12:01
++++ b/gcc/config/arm/arm.c	2026-10-17 05:11:48
+@@ -2628,6 +2628,11 @@
+ 
+   switch (code)
+     {
++    case AND:
++    case IOR:
++    case XOR:
++      return (const_ok_for_op (hi_val, code) || hi_val == 0xFFFFFFFF)
++              && (const_ok_for_op (lo_val, code) || lo_val == 0xFFFFFFFF);
+     case PLUS:
+       return arm_not_operand (hi, SImode) && arm_add_operand (lo, SImode);
+ 
+@@ -12670,6 +12675,274 @@
    return true;
  }
  
@@ -287,7 +299,7 @@ diff -ruN a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
  
  /* Print a symbolic form of X to the debug file, F.  */
  static void
-@@ -13903,6 +14171,16 @@
+@@ -13903,6 +14176,16 @@
  				   && IN_RANGE (INTVAL (op1), -7, 7))
  			    action = CONV;
  			}
@@ -305,8 +317,8 @@ diff -ruN a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
  
  		    case MINUS:
 diff -ruN a/gcc/config/arm/arm.h b/gcc/config/arm/arm.h
---- a/gcc/config/arm/arm.h	2026-10-17 02:57:07
-+++ b/gcc/config/arm/arm.h	2026-10-17 02:57:07
+--- a/gcc/config/arm/arm.h	2026-10-17 05:12:01
++++ b/gcc/config/arm/arm.h	2026-10-17 05:11:48
 @@ -1643,7 +1643,7 @@
     frame.  */
  #define EXIT_IGNORE_STACK 1
@@ -317,21 +329,219 @@ diff -ruN a/gcc/config/arm/arm.h b/gcc/config/arm/arm.h
  /* Determine if the epilogue should be output as RTL.
     You should override this if you define FUNCTION_EXTRA_EPILOGUE.  */
 diff -ruN a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
---- a/gcc/config/arm/arm.md	2026-10-17 02:57:07
-+++ b/gcc/config/arm/arm.md	2026-10-17 02:57:07
-@@ -11647,6 +11647,9 @@
+--- a/gcc/config/arm/arm.md	2026-10-17 05:12:01
++++ b/gcc/config/arm/arm.md	2026-10-17 05:11:48
+@@ -2033,13 +2033,47 @@
+   ""
+ )
+ 
+-(define_insn "*anddi3_insn"
+-  [(set (match_operand:DI         0 "s_register_operand" "=&r,&r")
+-	(and:DI (match_operand:DI 1 "s_register_operand"  "%0,r")
+-		(match_operand:DI 2 "s_register_operand"   "r,r")))]
+-  "TARGET_32BIT && !TARGET_IWMMXT && !TARGET_NEON"
+-  "#"
+-  [(set_attr "length" "8")]
++(define_insn_and_split "*anddi3_insn"
++  [(set (match_operand:DI         0 "s_register_operand"     "=w,w ,&r,&r,&r,&r,?w,?w")
++        (and:DI (match_operand:DI 1 "s_register_operand"     "%w,0 ,0 ,r ,0 ,r ,w ,0")
++                (match_operand:DI 2 "arm_anddi_operand_neon" "w ,DL,r ,r ,De,De,w ,DL")))]
++  "TARGET_32BIT && !TARGET_IWMMXT"
++{
++  switch (which_alternative)
++    {
++    case 0: /* fall through */
++    case 6: return "vand\t%P0, %P1, %P2";
++    case 1: /* fall through */
++    case 7: return neon_output_logic_immediate ("vand", &operands[2],
++                    DImode, 1, VALID_NEON_QREG_MODE (DImode));
++    case 2:
++    case 3:
++    case 4:
++    case 5: /* fall through */
++      return "#";
++    default: gcc_unreachable ();
++    }
++}
++  "TARGET_32BIT && !TARGET_IWMMXT && reload_completed
++   && !(IS_VFP_REGNUM (REGNO (operands[0])))"
++  [(set (match_dup 3) (match_dup 4))
++   (set (match_dup 5) (match_dup 6))]
++  "
++  {
++    operands[3] = gen_lowpart (SImode, operands[0]);
++    operands[5] = gen_highpart (SImode, operands[0]);
++
++    operands[4] = simplify_gen_binary (AND, SImode,
++                                           gen_lowpart (SImode, operands[1]),
++                                           gen_lowpart (SImode, operands[2]));
++    operands[6] = simplify_gen_binary (AND, SImode,
++                                           gen_highpart (SImode, operands[1]),
++                                           gen_highpart_mode (SImode, DImode, operands[2]));
++
++  }"
++  [(set_attr "neon_type" "neon_int_1,neon_int_1,*,*,*,*,neon_int_1,neon_int_1")
++   (set_attr "arch" "neon_nota8,neon_nota8,*,*,*,*,neon_onlya8,neon_onlya8")
++   (set_attr "length" "*,*,8,8,8,8,*,*")]
+ )
+ 
+ (define_insn_and_split "*anddi_zesidi_di"
+@@ -2823,14 +2857,47 @@
+   ""
+ )
+ 
+-(define_insn "*iordi3_insn"
+-  [(set (match_operand:DI         0 "s_register_operand" "=&r,&r")
+-	(ior:DI (match_operand:DI 1 "s_register_operand"  "%0,r")
+-		(match_operand:DI 2 "s_register_operand"   "r,r")))]
+-  "TARGET_32BIT && !TARGET_IWMMXT && !TARGET_NEON"
+-  "#"
+-  [(set_attr "length" "8")
+-   (set_attr "predicable" "yes")]
++(define_insn_and_split "*iordi3_insn"
++  [(set (match_operand:DI         0 "s_register_operand"     "=w,w ,&r,&r,&r,&r,?w,?w")
++	(ior:DI (match_operand:DI 1 "s_register_operand"     "%w,0 ,0 ,r ,0 ,r ,w ,0")
++		(match_operand:DI 2 "arm_iordi_operand_neon" "w ,Dl,r ,r ,Df,Df,w ,Dl")))]
++  "TARGET_32BIT && !TARGET_IWMMXT"
++  {
++  switch (which_alternative)
++    {
++    case 0: /* fall through */
++    case 6: return "vorr\t%P0, %P1, %P2";
++    case 1: /* fall through */
++    case 7: return neon_output_logic_immediate ("vorr", &operands[2],
++		     DImode, 0, VALID_NEON_QREG_MODE (DImode));
++    case 2:
++    case 3:
++    case 4:
++    case 5:
++      return "#";
++    default: gcc_unreachable ();
++    }
++  }
++  "TARGET_32BIT && !TARGET_IWMMXT && reload_completed
++   && !(IS_VFP_REGNUM (REGNO (operands[0])))"
++  [(set (match_dup 3) (match_dup 4))
++   (set (match_dup 5) (match_dup 6))]
++  "
++  {
++    operands[3] = gen_lowpart (SImode, operands[0]);
++    operands[5] = gen_highpart (SImode, operands[0]);
++
++    operands[4] = simplify_gen_binary (IOR, SImode,
++                                           gen_lowpart (SImode, operands[1]),
++                                           gen_lowpart (SImode, operands[2]));
++    operands[6] = simplify_gen_binary (IOR, SImode,
++                                           gen_highpart (SImode, operands[1]),
++                                           gen_highpart_mode (SImode, DImode, operands[2]));
++
++  }"
++  [(set_attr "neon_type" "neon_int_1,neon_int_1,*,*,*,*,neon_int_1,neon_int_1")
++   (set_attr "length" "*,*,8,8,8,8,*,*")
++   (set_attr "arch" "neon_nota8,neon_nota8,*,*,*,*,neon_onlya8,neon_onlya8")]
+ )
+ 
+ (define_insn "*iordi_zesidi_di"
+@@ -2963,19 +3030,49 @@
+ (define_expand "xordi3"
+   [(set (match_operand:DI         0 "s_register_operand" "")
+ 	(xor:DI (match_operand:DI 1 "s_register_operand" "")
+-		(match_operand:DI 2 "s_register_operand" "")))]
++		(match_operand:DI 2 "arm_xordi_operand" "")))]
+   "TARGET_32BIT"
+   ""
+ )
+ 
+-(define_insn "*xordi3_insn"
+-  [(set (match_operand:DI         0 "s_register_operand" "=&r,&r")
+-	(xor:DI (match_operand:DI 1 "s_register_operand"  "%0,r")
+-		(match_operand:DI 2 "s_register_operand"   "r,r")))]
+-  "TARGET_32BIT && !TARGET_IWMMXT && !TARGET_NEON"
+-  "#"
+-  [(set_attr "length" "8")
+-   (set_attr "predicable" "yes")]
++(define_insn_and_split "*xordi3_insn"
++  [(set (match_operand:DI         0 "s_register_operand" "=w,&r,&r,&r,&r,?w")
++	(xor:DI (match_operand:DI 1 "s_register_operand" "w ,%0,r ,0 ,r ,w")
++		(match_operand:DI 2 "arm_xordi_operand"  "w ,r ,r ,Dg,Dg,w")))]
++  "TARGET_32BIT && !TARGET_IWMMXT"
++{
++  switch (which_alternative)
++    {
++    case 1:
++    case 2:
++    case 3:
++    case 4:  /* fall through */
++      return "#";
++    case 0: /* fall through */
++    case 5: return "veor\t%P0, %P1, %P2";
++    default: gcc_unreachable ();
++    }
++}
++  "TARGET_32BIT && !TARGET_IWMMXT && reload_completed
++   && !(IS_VFP_REGNUM (REGNO (operands[0])))"
++  [(set (match_dup 3) (match_dup 4))
++   (set (match_dup 5) (match_dup 6))]
++  "
++  {
++    operands[3] = gen_lowpart (SImode, operands[0]);
++    operands[5] = gen_highpart (SImode, operands[0]);
++
++    operands[4] = simplify_gen_binary (XOR, SImode,
++                                           gen_lowpart (SImode, operands[1]),
++                                           gen_lowpart (SImode, operands[2]));
++    operands[6] = simplify_gen_binary (XOR, SImode,
++                                           gen_highpart (SImode, operands[1]),
++                                           gen_highpart_mode (SImode, DImode, operands[2]));
++
++  }"
++  [(set_attr "length" "*,8,8,8,8,*")
++   (set_attr "neon_type" "neon_int_1,*,*,*,*,neon_int_1")
++   (set_attr "arch" "neon_nota8,*,*,*,*,neon_onlya8")]
+ )
+ 
+ (define_insn "*xordi_zesidi_di"
+@@ -11646,6 +11743,9 @@
+   [(set_attr "type" "store2")
     (set_attr "predicable" "yes")])
  
- 
++
 +;; Load the load/store double peephole optimizations.
 +(include "ldrdstrd.md")
-+
+ 
  ;; Load the load/store multiple patterns
  (include "ldmstm.md")
+diff -ruN a/gcc/config/arm/constraints.md b/gcc/config/arm/constraints.md
+--- a/gcc/config/arm/constraints.md	2026-10-17 05:12:01
++++ b/gcc/config/arm/constraints.md	2026-10-17 05:11:48
+@@ -248,6 +248,24 @@
+  (and (match_code "const_int")
+       (match_test "TARGET_32BIT && const_ok_for_dimode_op (ival, PLUS)")))
  
++(define_constraint "De"
++ "@internal
++  In ARM/Thumb-2 state a const_int that can be used by insn anddi."
++ (and (match_code "const_int")
++      (match_test "TARGET_32BIT && const_ok_for_dimode_op (ival, AND)")))
++
++(define_constraint "Df"
++ "@internal
++  In ARM/Thumb-2 state a const_int that can be used by insn iordi."
++ (and (match_code "const_int")
++      (match_test "TARGET_32BIT && const_ok_for_dimode_op (ival, IOR)")))
++
++(define_constraint "Dg"
++ "@internal
++  In ARM/Thumb-2 state a const_int that can be used by insn xordi."
++ (and (match_code "const_int")
++      (match_test "TARGET_32BIT && const_ok_for_dimode_op (ival, XOR)")))
++
+ (define_constraint "Di"
+  "@internal
+   In ARM/Thumb-2 state a const_int or const_double where both the high
 diff -ruN a/gcc/config/arm/ldrdstrd.md b/gcc/config/arm/ldrdstrd.md
 --- a/gcc/config/arm/ldrdstrd.md	1970-01-01 01:00:00
-+++ b/gcc/config/arm/ldrdstrd.md	2026-10-17 02:57:07
++++ b/gcc/config/arm/ldrdstrd.md	2026-10-17 05:11:48
 @@ -0,0 +1,260 @@
 +;; ARM ldrd/strd peephole optimizations.
 +;;
@@ -593,9 +803,145 @@ diff -ruN a/gcc/config/arm/ldrdstrd.md b/gcc/config/arm/ldrdstrd.md
 +;; TODO: Handle LDRD/STRD with writeback:
 +;; (a) memory operands can be POST_INC, POST_DEC, PRE_MODIFY, POST_MODIFY
 +;; (b) Patterns may be followed by an update of the base address.
+diff -ruN a/gcc/config/arm/neon.md b/gcc/config/arm/neon.md
+--- a/gcc/config/arm/neon.md	2026-10-17 05:12:01
++++ b/gcc/config/arm/neon.md	2026-10-17 05:11:48
+@@ -681,29 +681,6 @@
+   [(set_attr "neon_type" "neon_int_1")]
+ )
+ 
+-(define_insn "iordi3_neon"
+-  [(set (match_operand:DI 0 "s_register_operand" "=w,w,?&r,?&r,?w,?w")
+-        (ior:DI (match_operand:DI 1 "s_register_operand" "%w,0,0,r,w,0")
+-		(match_operand:DI 2 "neon_logic_op2" "w,Dl,r,r,w,Dl")))]
+-  "TARGET_NEON"
+-{
+-  switch (which_alternative)
+-    {
+-    case 0: /* fall through */
+-    case 4: return "vorr\t%P0, %P1, %P2";
+-    case 1: /* fall through */
+-    case 5: return neon_output_logic_immediate ("vorr", &operands[2],
+-		     DImode, 0, VALID_NEON_QREG_MODE (DImode));
+-    case 2: return "#";
+-    case 3: return "#";
+-    default: gcc_unreachable ();
+-    }
+-}
+-  [(set_attr "neon_type" "neon_int_1,neon_int_1,*,*,neon_int_1,neon_int_1")
+-   (set_attr "length" "*,*,8,8,*,*")
+-   (set_attr "arch" "nota8,nota8,*,*,onlya8,onlya8")]
+-)
+-
+ ;; The concrete forms of the Neon immediate-logic instructions are vbic and
+ ;; vorr. We support the pseudo-instruction vand instead, because that
+ ;; corresponds to the canonical form the middle-end expects to use for
+@@ -726,29 +703,6 @@
+   [(set_attr "neon_type" "neon_int_1")]
+ )
+ 
+-(define_insn "anddi3_neon"
+-  [(set (match_operand:DI 0 "s_register_operand" "=w,w,?&r,?&r,?w,?w")
+-        (and:DI (match_operand:DI 1 "s_register_operand" "%w,0,0,r,w,0")
+-		(match_operand:DI 2 "neon_inv_logic_op2" "w,DL,r,r,w,DL")))]
+-  "TARGET_NEON"
+-{
+-  switch (which_alternative)
+-    {
+-    case 0: /* fall through */
+-    case 4: return "vand\t%P0, %P1, %P2";
+-    case 1: /* fall through */
+-    case 5: return neon_output_logic_immediate ("vand", &operands[2],
+-    		     DImode, 1, VALID_NEON_QREG_MODE (DImode));
+-    case 2: return "#";
+-    case 3: return "#";
+-    default: gcc_unreachable ();
+-    }
+-}
+-  [(set_attr "neon_type" "neon_int_1,neon_int_1,*,*,neon_int_1,neon_int_1")
+-   (set_attr "length" "*,*,8,8,*,*")
+-   (set_attr "arch" "nota8,nota8,*,*,onlya8,onlya8")]
+-)
+-
+ (define_insn "orn<mode>3_neon"
+   [(set (match_operand:VDQ 0 "s_register_operand" "=w")
+ 	(ior:VDQ (not:VDQ (match_operand:VDQ 2 "s_register_operand" "w"))
+@@ -830,21 +784,6 @@
+   [(set_attr "neon_type" "neon_int_1")]
+ )
+ 
+-(define_insn "xordi3_neon"
+-  [(set (match_operand:DI 0 "s_register_operand" "=w,?&r,?&r,?w")
+-        (xor:DI (match_operand:DI 1 "s_register_operand" "%w,0,r,w")
+-	        (match_operand:DI 2 "s_register_operand" "w,r,r,w")))]
+-  "TARGET_NEON"
+-  "@
+-   veor\t%P0, %P1, %P2
+-   #
+-   #
+-   veor\t%P0, %P1, %P2"
+-  [(set_attr "neon_type" "neon_int_1,*,*,neon_int_1")
+-   (set_attr "length" "*,8,8,*")
+-   (set_attr "arch" "nota8,*,*,onlya8")]
+-)
+-
+ (define_insn "one_cmpl<mode>2"
+   [(set (match_operand:VDQ 0 "s_register_operand" "=w")
+         (not:VDQ (match_operand:VDQ 1 "s_register_operand" "w")))]
+@@ -5637,7 +5576,7 @@
+    (match_operand:SI 3 "immediate_operand" "")]
+   "TARGET_NEON"
+ {
+-  emit_insn (gen_and<mode>3<V_suf64> (operands[0], operands[1], operands[2]));
++  emit_insn (gen_and<mode>3 (operands[0], operands[1], operands[2]));
+   DONE;
+ })
+ 
+@@ -5648,7 +5587,7 @@
+    (match_operand:SI 3 "immediate_operand" "")]
+   "TARGET_NEON"
+ {
+-  emit_insn (gen_ior<mode>3<V_suf64> (operands[0], operands[1], operands[2]));
++  emit_insn (gen_ior<mode>3 (operands[0], operands[1], operands[2]));
+   DONE;
+ })
+ 
+@@ -5659,7 +5598,7 @@
+    (match_operand:SI 3 "immediate_operand" "")]
+   "TARGET_NEON"
+ {
+-  emit_insn (gen_xor<mode>3<V_suf64> (operands[0], operands[1], operands[2]));
++  emit_insn (gen_xor<mode>3 (operands[0], operands[1], operands[2]));
+   DONE;
+ })
+ 
+diff -ruN a/gcc/config/arm/predicates.md b/gcc/config/arm/predicates.md
+--- a/gcc/config/arm/predicates.md	2026-10-17 05:12:01
++++ b/gcc/config/arm/predicates.md	2026-10-17 05:11:48
+@@ -627,3 +627,20 @@
+ (define_predicate "mem_noofs_operand"
+   (and (match_code "mem")
+        (match_code "reg" "0")))
++
++(define_predicate "arm_anddi_operand_neon"
++  (ior (match_operand 0 "s_register_operand")
++       (and (match_code "const_int")
++	    (match_test "const_ok_for_dimode_op (INTVAL (op), AND)"))
++       (match_operand 0 "neon_inv_logic_op2")))
++
++(define_predicate "arm_iordi_operand_neon"
++  (ior (match_operand 0 "s_register_operand")
++       (and (match_code "const_int")
++	    (match_test "const_ok_for_dimode_op (INTVAL (op), IOR)"))
++       (match_operand 0 "neon_logic_op2")))
++
++(define_predicate "arm_xordi_operand"
++  (ior (match_operand 0 "s_register_operand")
++       (and (match_code "const_int")
++	    (match_test "const_ok_for_dimode_op (INTVAL (op), XOR)"))))
 diff -ruN a/gcc/config/arm/t-arm b/gcc/config/arm/t-arm
---- a/gcc/config/arm/t-arm	2026-10-17 02:57:07
-+++ b/gcc/config/arm/t-arm	2026-10-17 02:57:07
+--- a/gcc/config/arm/t-arm	2026-10-17 05:12:01
++++ b/gcc/config/arm/t-arm	2026-10-17 05:11:48
 @@ -51,6 +51,7 @@
  		$(srcdir)/config/arm/iterators.md \
  		$(srcdir)/config/arm/iwmmxt.md \
@@ -605,8 +951,8 @@ diff -ruN a/gcc/config/arm/t-arm b/gcc/config/arm/t-arm
  		$(srcdir)/config/arm/marvell-f-iwmmxt.md \
  		$(srcdir)/config/arm/neon.md \
 diff -ruN a/gcc/tree-ssa-loop-ivopts.c b/gcc/tree-ssa-loop-ivopts.c
---- a/gcc/tree-ssa-loop-ivopts.c	2026-10-17 02:57:07
-+++ b/gcc/tree-ssa-loop-ivopts.c	2026-10-17 02:57:07
+--- a/gcc/tree-ssa-loop-ivopts.c	2026-10-17 05:12:01
++++ b/gcc/tree-ssa-loop-ivopts.c	2026-10-17 05:11:48
 @@ -4827,22 +4827,36 @@
    for (i = 0; i < n_iv_cands (data); i++)
      {
