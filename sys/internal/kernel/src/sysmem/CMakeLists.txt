@@ -32,9 +32,8 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	memblock_obj.c
 	uid_class.c
 	vslot.c
-	sysmem_misc.c
+	sysmem.c
 	sysmem_heap.c
-	user_copy.c
 	memblock.c
 	partition.c
 	phymem.c
@@ -98,7 +97,7 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	${sysmem_des_key_data}
 	des_key.c
 	des_block.c
-	sysmem.c
+	kernel_utils_keys.c
 	xorshift128.c
 	aes_block.c
 	kernel_utils_crypto.c
@@ -120,7 +119,8 @@ psp2_module(os0_kd_sysmem KIND kernel SOURCES
 	compare.c
 	memset_chk.c
 	move.S
-	memory_move.c
+	memcmp_chk.c
+	memmove_chk.c
 	strlcat_chk.c
 	strlcpy_chk.c
 	sprintf_chk.c
