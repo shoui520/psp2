@@ -1,5 +1,5 @@
 /* Marvell command family; filename attested by Sony's prototype debug records. */
-#include "wlanbt_internal.h"
+#include "../../wlanbt/wlanbt_internal.h"
 #include <psp2common/net.h>
 #include <string.h>
 

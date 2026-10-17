@@ -7,7 +7,7 @@
 #include <threadmgr/threadmgr.h>
 #include <wlanbt/wlanbt.h>
 #include <wlanbt/wlanbt_protocol.h>
-#include "wlanbt_internal.h"
+#include "../../wlanbt/wlanbt_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <string.h>

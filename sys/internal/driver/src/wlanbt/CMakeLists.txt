@@ -17,9 +17,9 @@ psp2_module(os0_kd_bootimage_wlanbt KIND kernel SOURCES
 	wlan_util.c
 	wlan_bss.c
 	wlan_password.c
-	robin_common.c
-	wlan_dcm.c
-	wlan_tcm.c
-	wlan_mrvl.c
-	wlan_robin.c
+	../robin/common/robin.c
+	../robin/wlan/wlan_dcm.c
+	../robin/wlan/wlan_tcm.c
+	../robin/wlan/wlan_mrvl.c
+	../robin/wlan/wlan_robin.c
 )

@@ -1,6 +1,6 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../robin/wlan/wlan_robin.c"
-#include "wlanbt_internal.h"
+#include "../../wlanbt/wlanbt_internal.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>
