@@ -1,7 +1,9 @@
 # Module folders in Sony's source tree. rel: the module's firmware path without the
 # extension (its identity; agent data and target names key on it). folder: where its
 # source lives. evidence: record (debug records), string (paths in the binaries), sdk,
-# pattern (Sony's layout rule, no direct evidence), ours (no Sony name known).
+# pattern (Sony's layout rule, no direct evidence), name (no Sony path: the folder is named by
+# Sony's name for the program, its paf plugin, resource or module name, in the family its
+# other evidence ties it to), ours (no Sony name known).
 rel	folder	devpath	firmwares	evidence	detail
 os0/kd/acmgr	sys/internal/kernel/src/acmgr	os0:kd/acmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
 os0/kd/authmgr	sys/internal/kernel/src/authmgr	os0:kd/authmgr.skprx	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	core/manager -> kernel/src (PSP sys661/kernel/src)
@@ -155,64 +157,64 @@ slb2/kbl/SceSblSmsched	sys/internal/secure/sbl_smsched	slb2:kbl/SceSblSmsched	4.
 slb2/kbl/SceSysmem	sys/internal/kernel/src/sysmem/tzs	slb2:kbl/SceSysmem	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	dlmalloc/ memblock/ records as os0 sysmem
 slb2/nskbl	sys/internal/kernel/src/kernel_boot_loader/nskbl	slb2:nskbl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	sysmem dlmalloc/ memblock/ records; slb2 kernel_boot_loader
 slb2/skbl	sys/internal/kernel/src/kernel_boot_loader/skbl	slb2:skbl	4.00-DEBUGGER,3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	record	sysmem dlmalloc/ memblock/ records; slb2 kernel_boot_loader
-vs0/app/NPXS10000/eboot	vsh/app/near/eboot	vs0:app/NPXS10000/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/near (9 paths)
-vs0/app/NPXS10001/eboot	vsh/app/party/eboot	vs0:app/NPXS10001/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party (9 paths)
-vs0/app/NPXS10001/np_party_app	vsh/app/party/np_party_app	vs0:app/NPXS10001/np_party_app.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party (9 paths)
-vs0/app/NPXS10002/eboot	vsh/app/store/eboot	vs0:app/NPXS10002/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/store (111 paths)
-vs0/app/NPXS10003/eboot	vsh/app/NPXS10003/eboot	vs0:app/NPXS10003/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10004/eboot	vsh/app/photocam/eboot	vs0:app/NPXS10004/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/photocam (21 paths)
-vs0/app/NPXS10006/eboot	vsh/app/NPXS10006/eboot	vs0:app/NPXS10006/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10008/eboot	vsh/app/trophy/eboot	vs0:app/NPXS10008/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/trophy (57 paths)
-vs0/app/NPXS10009/eboot	vsh/app/musicbrowser/eboot	vs0:app/NPXS10009/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/musicbrowser (3 paths)
-vs0/app/NPXS10010/eboot	vsh/app/videoplayer/eboot	vs0:app/NPXS10010/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/videoplayer (99 paths)
-vs0/app/NPXS10012/eboot	vsh/app/remoteplay/eboot	vs0:app/NPXS10012/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/remoteplay (18 paths)
-vs0/app/NPXS10013/eboot	vsh/app/ps4link/eboot	vs0:app/NPXS10013/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
-vs0/app/NPXS10013/gaikai-player	vsh/app/ps4link/gaikai-player	vs0:app/NPXS10013/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
-vs0/app/NPXS10013/libSceSecondScreen	vsh/app/ps4link/libSceSecondScreen	vs0:app/NPXS10013/libSceSecondScreen.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths)
-vs0/app/NPXS10014/eboot	vsh/app/mail/eboot	vs0:app/NPXS10014/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/mail (177 paths)
+vs0/app/NPXS10000/eboot	vsh/app/near	vs0:app/NPXS10000/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/near/{core,near_common,ui} (SceNear; near_plugin)
+vs0/app/NPXS10001/eboot	vsh/app/party	vs0:app/NPXS10001/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/party/PartySdkManager (SceParty)
+vs0/app/NPXS10001/np_party_app	vsh/app/shell/src/np/ipc/npparty/party_app	vs0:app/NPXS10001/np_party_app.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_app/ipc_client + npparty/party_app_client (SceNpPartyAppUtil, the party app's IPC client)
+vs0/app/NPXS10002/eboot	vsh/app/store/browser	vs0:app/NPXS10002/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/store/browser/{plugin,ext} (SceStoreBrowser; store_browser_plugin)
+vs0/app/NPXS10003/eboot	vsh/app/webbrowser	vs0:app/NPXS10003/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	webbrowser_plugin, webbrowser_{action,config,core,home,menu}_plugin.rco (SceWebBrowser); no source path in any firmware
+vs0/app/NPXS10004/eboot	vsh/app/photocam	vs0:app/NPXS10004/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/photocam/{plugin,xcommon} (ScePhotoCam)
+vs0/app/NPXS10006/eboot	vsh/app/friend	vs0:app/NPXS10006/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	friend_plugin, friend_plugin.rco (SceFriendsApp; 0.990 SceFriend); only vsh/app/common/src paths
+vs0/app/NPXS10008/eboot	vsh/app/trophy	vs0:app/NPXS10008/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/trophy/src/trophy_{,local_,network_}plugin (SceTrophy)
+vs0/app/NPXS10009/eboot	vsh/app/musicbrowser	vs0:app/NPXS10009/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/musicbrowser/src (SceMusicBrowser; musicbrowser_plugin)
+vs0/app/NPXS10010/eboot	vsh/app/videoplayer	vs0:app/NPXS10010/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/videoplayer/{main,VideoCore,videoplayer_plugin,videobrowser,common} (SceVideoPlayer)
+vs0/app/NPXS10012/eboot	vsh/app/remoteplay	vs0:app/NPXS10012/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/remoteplay/{remoteplay_plugin,cg} (SceRemotePlay)
+vs0/app/NPXS10013/eboot	vsh/app/ps4link/remoteplay	vs0:app/NPXS10013/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link/remoteplay/{core,platform} (ScePS4Link; remoteplay_plugin)
+vs0/app/NPXS10013/gaikai-player	vsh/app/ps4link/remoteplay/Gaikai	vs0:app/NPXS10013/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link/remoteplay/Gaikai/{gaikai-utils,protobuf,tak-p} (gaikai_player)
+vs0/app/NPXS10013/libSceSecondScreen	vsh/app/ps4link/second_screen	vs0:app/NPXS10013/libSceSecondScreen.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	second_screen.rco (SceSecondScreen), in the ps4link app
+vs0/app/NPXS10014/eboot	vsh/app/mail	vs0:app/NPXS10014/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/mail/{mailclients,MiddleWare,mime}; main in mailclients/psn_mail_main (ScePsnMail)
 vs0/app/NPXS10015/eboot	vsh/app/settings/eboot	vs0:app/NPXS10015/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/settings (129 paths)
 vs0/app/NPXS10015/system_settings_core	vsh/app/settings/system_settings_core	vs0:app/NPXS10015/system_settings_core.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/settings (129 paths)
-vs0/app/NPXS10018/eboot	vsh/app/NPXS10018/eboot	vs0:app/NPXS10018/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10021/eboot	vsh/app/telephony/eboot	vs0:app/NPXS10021/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (48 paths)
-vs0/app/NPXS10021/tel_reg	vsh/app/telephony/tel_reg	vs0:app/NPXS10021/tel_reg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (48 paths)
-vs0/app/NPXS10023/eboot	vsh/app/NPXS10023/eboot	vs0:app/NPXS10023/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10024/eboot	vsh/app/NPXS10024/eboot	vs0:app/NPXS10024/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10025/eboot	vsh/app/NPXS10025/eboot	vs0:app/NPXS10025/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10026/eboot	vsh/app/host_collabo/eboot	vs0:app/NPXS10026/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/host_collabo (18 paths)
-vs0/app/NPXS10027/eboot	vsh/app/NPXS10027/eboot	vs0:app/NPXS10027/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10028/eboot	vsh/app/NPXS10028/eboot	vs0:app/NPXS10028/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10028/pcff	vsh/app/NPXS10028/pcff	vs0:app/NPXS10028/pcff.skprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10029/eboot	vsh/app/NPXS10029/eboot	vs0:app/NPXS10029/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10030/eboot	vsh/app/NPXS10030/eboot	vs0:app/NPXS10030/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10031/eboot	vsh/app/NPXS10031/eboot	vs0:app/NPXS10031/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10032/eboot	vsh/app/NPXS10032/eboot	vs0:app/NPXS10032/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10036/eboot	vsh/app/NPXS10036/eboot	vs0:app/NPXS10036/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10063/eboot	vsh/app/NPXS10063/eboot	vs0:app/NPXS10063/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10065/eboot	vsh/app/NPXS10065/eboot	vs0:app/NPXS10065/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10065/grief_report_dialog	vsh/app/NPXS10065/grief_report_dialog	vs0:app/NPXS10065/grief_report_dialog.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10068/eboot	vsh/app/NPXS10068/eboot	vs0:app/NPXS10068/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10072/eboot	vsh/app/email/eboot	vs0:app/NPXS10072/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/email (513 paths)
-vs0/app/NPXS10072/email_engine	vsh/app/email/email_engine	vs0:app/NPXS10072/email_engine.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/email (513 paths)
-vs0/app/NPXS10073/eboot	vsh/app/NPXS10073/eboot	vs0:app/NPXS10073/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10077/eboot	vsh/app/NPXS10077/eboot	vs0:app/NPXS10077/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10078/eboot	vsh/app/NPXS10078/eboot	vs0:app/NPXS10078/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10079/eboot	vsh/app/NPXS10079/eboot	vs0:app/NPXS10079/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10080/eboot	vsh/app/NPXS10080/eboot	vs0:app/NPXS10080/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10081/eboot	vsh/app/NPXS10081/eboot	vs0:app/NPXS10081/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10082/spawn	vsh/app/NPXS10082/spawn	vs0:app/NPXS10082/spawn.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10083/eboot	vsh/app/NPXS10083/eboot	vs0:app/NPXS10083/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10084/eboot	vsh/app/NPXS10084/eboot	vs0:app/NPXS10084/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10085/eboot	vsh/app/NPXS10085/eboot	vs0:app/NPXS10085/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10091/eboot	vsh/app/NPXS10091/eboot	vs0:app/NPXS10091/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10092/eboot	vsh/app/NPXS10092/eboot	vs0:app/NPXS10092/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10094/eboot	vsh/app/NPXS10094/eboot	vs0:app/NPXS10094/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10095/eboot	vsh/app/panorama/eboot	vs0:app/NPXS10095/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
-vs0/app/NPXS10098/eboot	vsh/app/ps4link/NPXS10098/eboot	vs0:app/NPXS10098/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths); same folder as vs0/app/NPXS10013/eboot
-vs0/app/NPXS10098/gaikai-player	vsh/app/ps4link/NPXS10098/gaikai-player	vs0:app/NPXS10098/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/ps4link (801 paths); same folder as vs0/app/NPXS10013/gaikai-player
-vs0/app/NPXS10100/eboot	vsh/app/NPXS10100/eboot	vs0:app/NPXS10100/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10101/eboot	vsh/app/NPXS10101/eboot	vs0:app/NPXS10101/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10103/ds4_pairing	vsh/app/NPXS10103/ds4_pairing	vs0:app/NPXS10103/ds4_pairing.self	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
-vs0/app/NPXS10104/eboot	vsh/app/NPXS10104/eboot	vs0:app/NPXS10104/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	pattern	no app folder in its strings; NPXS id
+vs0/app/NPXS10018/eboot	vsh/app/signup	vs0:app/NPXS10018/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	signup_plugin (SceSignup); Sony's vsh/app/signup/library (cg paths in signup, store, settings)
+vs0/app/NPXS10021/eboot	vsh/app/telephony/reg/src/tel_reg_main	vs0:app/NPXS10021/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	tel_reg_main.rco (SceTelRegMain): beside reg/src/tel_reg_plugin, as mail's psn_mail_main beside psn_mail_plugin
+vs0/app/NPXS10021/tel_reg	vsh/app/telephony/reg	vs0:app/NPXS10021/tel_reg.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	build folder: vsh/app/telephony/reg//../../../app/shell/... (SceTelReg; reg/src/tel_reg_plugin)
+vs0/app/NPXS10023/eboot	vsh/app/photo_export	vs0:app/NPXS10023/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	ScePhotoExport; no plugin, no source path
+vs0/app/NPXS10024/eboot	vsh/app/near/auto_location	vs0:app/NPXS10024/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceNearAutoLocation (near family: db/near.db)
+vs0/app/NPXS10025/eboot	vsh/app/near/auto_checkin	vs0:app/NPXS10025/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceNearAutoCheckin (near family: vsh/app/near/core/common/op_util.cpp)
+vs0/app/NPXS10026/eboot	vsh/app/host_collabo/content_manager	vs0:app/NPXS10026/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/host_collabo/content_manager/src/account_bind_plugin (SceContentManager)
+vs0/app/NPXS10027/eboot	vsh/app/game_manual	vs0:app/NPXS10027/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	game_manual_plugin (SceGameManual)
+vs0/app/NPXS10028/eboot	vsh/app/pspemu	vs0:app/NPXS10028/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	ScePspemu (0.990 compat_process)
+vs0/app/NPXS10028/pcff	vsh/app/pspemu/pcff	vs0:app/NPXS10028/pcff.skprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	pcff.skprx (SceSblPcffBin), the PSP emulator's firmware file
+vs0/app/NPXS10029/eboot	vsh/app/marlin_bg_mtp	vs0:app/NPXS10029/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceMarlinBgMtp (SceMtpMlnSvc)
+vs0/app/NPXS10030/eboot	vsh/app/signup/quick_signup	vs0:app/NPXS10030/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	name	quick_signup_plugin (SceQuickSignup); signup family (app/signup/library)
+vs0/app/NPXS10031/eboot	vsh/app/fake_package_installer	vs0:app/NPXS10031/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	fake_package_installer (module name); sample_plugin
+vs0/app/NPXS10032/eboot	vsh/app/near/util_service	vs0:app/NPXS10032/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceNearUtilService; near family: host0:app/near/data/db/near_util.db
+vs0/app/NPXS10036/eboot	vsh/app/av_media_service	vs0:app/NPXS10036/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceAvMediaService
+vs0/app/NPXS10063/eboot	vsh/app/mail/MiddleWare	vs0:app/NPXS10063/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceMsgMiddleWare: 0.990 SceMailMiddleWare's own paths are vsh/app/mail/MiddleWare; livearea of NPXS10014
+vs0/app/NPXS10065/eboot	vsh/app/grief_report_dialog/bg	vs0:app/NPXS10065/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	grief_report_dialog_bg_plugin (SceGriefReportDialogApp)
+vs0/app/NPXS10065/grief_report_dialog	vsh/app/grief_report_dialog	vs0:app/NPXS10065/grief_report_dialog.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	grief_report_dialog.suprx, grief_report_dialog_general_plugin (SceGriefReportDialog)
+vs0/app/NPXS10068/eboot	vsh/app/game_manual/checker	vs0:app/NPXS10068/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	name	checker_plugin, built as SceGameManual
+vs0/app/NPXS10072/eboot	vsh/app/email	vs0:app/NPXS10072/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	email_plugin (SceEmailApp); email family (vsh/app/email/engine)
+vs0/app/NPXS10072/email_engine	vsh/app/email/engine	vs0:app/NPXS10072/email_engine.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/email/engine/IbisMailEngine (SceEmailEngine)
+vs0/app/NPXS10073/eboot	vsh/app/email/bg	vs0:app/NPXS10073/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	email_bg_plugin.rco (SceEmailBg); email family
+vs0/app/NPXS10077/eboot	vsh/app/crash_report	vs0:app/NPXS10077/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	crash_report.rco (SceCrashReport)
+vs0/app/NPXS10078/eboot	vsh/app/comboplay	vs0:app/NPXS10078/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	comboplay_plugin (SceComboPlay)
+vs0/app/NPXS10079/eboot	vsh/app/dailychecker_bg	vs0:app/NPXS10079/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	dailychecker_bg.rco (SceDailyCheckerBg)
+vs0/app/NPXS10080/eboot	dtcpip	vs0:app/NPXS10080/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	C:/work/svn/psp2/dtcpip/trunk.365/{DTCPIP-MW,DTCPIP-SW,SWKeyManager} (swagner; 3.630 dummy_swagner): Sony's dtcpip repository
+vs0/app/NPXS10081/eboot	vsh/app/psm_manual	vs0:app/NPXS10081/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	psm_manual_plugin (ScePsmManual)
+vs0/app/NPXS10082/spawn	vsh/app/fake_package_installer/spawn	vs0:app/NPXS10082/spawn.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	spawn.self (fake_package_installer_spa)
+vs0/app/NPXS10083/eboot	third-party-libs-psp2/webcore/SceWebKitProcess	vs0:app/NPXS10083/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	SceWebKitProcess: the Manx WebKit process (loads SceWebKitModule, ScePsp2Compat), webcore beside them
+vs0/app/NPXS10084/eboot	third-party-libs-psp2/webcore/SceWebKitProcessMini	vs0:app/NPXS10084/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	SceWebKitProcessMini: the Manx WebKit process (loads SceWebKitModule, ScePsp2Compat), webcore beside them
+vs0/app/NPXS10085/eboot	vsh/app/videoplayer/video_streaming	vs0:app/NPXS10085/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceVideoStreaming with videoplayer_plugin.rco: a product of videoplayer
+vs0/app/NPXS10091/eboot	vsh/app/calendar	vs0:app/NPXS10091/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	calendar_plugin (SceCalendar)
+vs0/app/NPXS10092/eboot	vsh/app/calendar/bg	vs0:app/NPXS10092/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	calendar_bg_plugin.rco (SceCalendarBg); calendar family
+vs0/app/NPXS10094/eboot	vsh/app/kids_app	vs0:app/NPXS10094/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	kids_app_plugin (SceKidsApp)
+vs0/app/NPXS10095/eboot	vsh/app/panorama	vs0:app/NPXS10095/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama/plugin/panorama_plugin (ScePanorama)
+vs0/app/NPXS10098/eboot	vsh/app/ps4link/remoteplay	vs0:app/NPXS10098/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	byte-identical copy of vs0/app/NPXS10013/eboot (one Sony build)
+vs0/app/NPXS10098/gaikai-player	vsh/app/ps4link/remoteplay/Gaikai	vs0:app/NPXS10098/gaikai-player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	byte-identical copy of vs0/app/NPXS10013/gaikai-player (one Sony build)
+vs0/app/NPXS10100/eboot	vsh/app/host_collabo/service	vs0:app/NPXS10100/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceHostCollaboService; host_collabo family (vsh/app/host_collabo, vsh/app/common/src/host_collabo)
+vs0/app/NPXS10101/eboot	vsh/app/bgcopy_result_browser	vs0:app/NPXS10101/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	bgcopy_result_browser_plugin (SceBgCopyResultBrowser)
+vs0/app/NPXS10103/ds4_pairing	vsh/app/ds4_pairing	vs0:app/NPXS10103/ds4_pairing.self	3.650.011-TOOL,3.630.011-DEBUGGER	name	ds4_pairing_plugin (SceDs4Pairing)
+vs0/app/NPXS10104/eboot	vsh/app/settings/mini_settings	vs0:app/NPXS10104/eboot.bin	3.650.011-TOOL,3.630.011-DEBUGGER	name	SceMiniSettings with the settings plugins: a product of settings
 vs0/data/external/webcore/ScePsp2Compat	third-party-libs-psp2/webcore/ScePsp2Compat	vs0:data/external/webcore/ScePsp2Compat.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	third-party-libs-psp2.release_03.500.Release
 vs0/data/external/webcore/SceWebKitModule	third-party-libs-psp2/webcore/SceWebKitModule	vs0:data/external/webcore/SceWebKitModule.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
 vs0/data/external/webcore/jx_web_filtering	third-party-libs-psp2/webcore/jx_web_filtering	vs0:data/external/webcore/jx_web_filtering.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
@@ -243,7 +245,7 @@ vs0/sys/external/libSceNearDialogUtil	sys/internal/usermode/src/libSceNearDialog
 vs0/sys/external/libSceNearUtil	sys/internal/usermode/src/libSceNearUtil	vs0:sys/external/libSceNearUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libScePhotoExport	sys/internal/usermode/src/libScePhotoExport	vs0:sys/external/libScePhotoExport.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libScePromoterUtil	sys/internal/usermode/src/libScePromoterUtil	vs0:sys/external/libScePromoterUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/libSceScreenShot	sys/internal/usermode/src/libSceScreenShot	vs0:sys/external/libSceScreenShot.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/libSceScreenShot	vsh/app/shell/src/screenshot/client	vs0:sys/external/libSceScreenShot.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src/screenshot/client (0.990 SceScreenShot)
 vs0/sys/external/libSceShutterSound	sys/internal/usermode/src/libSceShutterSound	vs0:sys/external/libSceShutterSound.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libSceSqlite	vsh/app/common/src/sqlite_sdk	vs0:sys/external/libSceSqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/sqlite_sdk (45 paths)
 vs0/sys/external/libSceTelephonyUtil	sys/internal/usermode/src/libSceTelephonyUtil	vs0:sys/external/libSceTelephonyUtil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
@@ -297,7 +299,7 @@ vs0/sys/external/libhandwriting	sys/internal/usermode/src/libhandwriting	vs0:sys
 vs0/sys/external/libhttp	sys/internal/usermode/src/libhttp	vs0:sys/external/libhttp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libime	sys/internal/usermode/src/libime	vs0:sys/external/libime.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/libipmi_nongame	vsh/lowlayer/src/ipmi_nongame	vs0:sys/external/libipmi_nongame.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vsh/lowlayer/src/ipmi
-vs0/sys/external/liblocation	sys/internal/usermode/src/liblocation	vs0:sys/external/liblocation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/liblocation	vsh/app/shell/src/liblocation/src/location_client	vs0:sys/external/liblocation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src/liblocation/src/location_client/src (0.990 SceLibLocation)
 vs0/sys/external/liblocation_extension	sys/internal/usermode/src/liblocation_extension	vs0:sys/external/liblocation_extension.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/liblocation_factory	sys/internal/usermode/src/liblocation_factory	vs0:sys/external/liblocation_factory.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/liblocation_internal	sys/internal/usermode/src/liblocation_internal	vs0:sys/external/liblocation_internal.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
@@ -330,7 +332,7 @@ vs0/sys/external/libvoice	sys/internal/usermode/src/libvoice	vs0:sys/external/li
 vs0/sys/external/libvoiceqos	sys/internal/usermode/src/libvoiceqos	vs0:sys/external/libvoiceqos.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/livearea_util	sys/internal/usermode/src/livearea_util	vs0:sys/external/livearea_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/mail_api_for_local_libc	sys/internal/usermode/src/mail_api_for_local_libc	vs0:sys/external/mail_api_for_local_libc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/near_profile	sys/internal/usermode/src/near_profile	vs0:sys/external/near_profile.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/near_profile	vsh/app/near/profile	vs0:sys/external/near_profile.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	SceNearProfile; near family (vsh/app/near/near_common in 0.990)
 vs0/sys/external/notification_util	sys/internal/usermode/src/notification_util	vs0:sys/external/notification_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/np_activity	vsh/app/common/src/np/activity	vs0:sys/external/np_activity.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/np/activity (named in 5 binaries)
 vs0/sys/external/np_activity_sdk	vsh/app/common/src/np/np_activity_sdk	vs0:sys/external/np_activity_sdk.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
@@ -346,7 +348,7 @@ vs0/sys/external/np_message	vsh/app/common/src/np/np_message	vs0:sys/external/np
 vs0/sys/external/np_message_contacts	vsh/app/common/src/np/np_message_contacts	vs0:sys/external/np_message_contacts.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_message_dialog_impl	vsh/app/common/src/np/np_message_dialog_impl	vs0:sys/external/np_message_dialog_impl.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_message_padding	vsh/app/common/src/np/np_message_padding	vs0:sys/external/np_message_padding.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
-vs0/sys/external/np_party	vsh/app/common/src/np/np_party	vs0:sys/external/np_party.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
+vs0/sys/external/np_party	vsh/app/shell/src/np/ipc/npparty/party_game	vs0:sys/external/np_party.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	npparty/party_game/ipc_client + npparty/party_game_client (SceNpPartyGameUtil)
 vs0/sys/external/np_ranking	vsh/app/common/src/np/np_ranking	vs0:sys/external/np_ranking.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_signaling	vsh/app/common/src/np/np_signaling	vs0:sys/external/np_signaling.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/sys/external/np_sns_facebook	vsh/app/common/src/np/np_sns_facebook	vs0:sys/external/np_sns_facebook.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
@@ -359,12 +361,12 @@ vs0/sys/external/psmkdc	sys/internal/usermode/src/psmkdc	vs0:sys/external/psmkdc
 vs0/sys/external/pspnet_adhoc	sys/internal/usermode/src/pspnet_adhoc	vs0:sys/external/pspnet_adhoc.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/signin_ext	sys/internal/usermode/src/signin_ext	vs0:sys/external/signin_ext.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/sqlite	vsh/app/common/src/sqlite	vs0:sys/external/sqlite.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/sqlite/os_psp2.c (silk.elf, the same SQLite build, module SceSqliteVsh)
-vs0/sys/external/store_checkout_plugin	sys/internal/usermode/src/store_checkout_plugin	vs0:sys/external/store_checkout_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/trigger_util	sys/internal/usermode/src/trigger_util	vs0:sys/external/trigger_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/store_checkout_plugin	vsh/app/store/checkout	vs0:sys/external/store_checkout_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	name	store_checkout_plugin (SceStoreCheckoutPlugin): store family, as store_browser_plugin -> store/browser
+vs0/sys/external/trigger_util	vsh/app/shell/src/trigger_util	vs0:sys/external/trigger_util.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src/trigger_util (0.990 SceTriggerUtil)
 vs0/sys/external/web_ui_plugin	sys/internal/usermode/src/web_ui_plugin	vs0:sys/external/web_ui_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/vsh/common/app_settings	vsh/app/common/src/app_settings	vs0:vsh/common/app_settings.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/auth_plugin	vsh/app/common/src/auth_plugin	vs0:vsh/common/auth_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/av_content_handler	vsh/app/common/src/av_content_handler	vs0:vsh/common/av_content_handler.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/av_content_handler	vsh/app/common/src/host_collabo/av_content_handler	vs0:vsh/common/av_content_handler.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/host_collabo/av_content_handler (SceAvContentHandler)
 vs0/vsh/common/backup_restore	vsh/app/common/src/backup_restore	vs0:vsh/common/backup_restore.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/content_operation	vsh/app/common/src/content_operation	vs0:vsh/common/content_operation.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/dbrecovery_plugin	vsh/app/common/src/dbrecovery_plugin	vs0:vsh/common/dbrecovery_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
@@ -372,12 +374,12 @@ vs0/vsh/common/dbsetup	vsh/app/common/src/dbsetup	vs0:vsh/common/dbsetup.suprx	3
 vs0/vsh/common/libBEAVCorePlayer	vsh/app/common/src/libBEAVCorePlayer	vs0:vsh/common/libBEAVCorePlayer.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libFflMp4	vsh/app/common/src/libFflMp4	vs0:vsh/common/libFflMp4.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libSenvuabsFFsdk	vsh/app/common/src/libSenvuabsFFsdk	vs0:vsh/common/libSenvuabsFFsdk.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/libical	vsh/app/common/src/libical	vs0:vsh/common/libical.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/libicalss	vsh/app/common/src/libicalss	vs0:vsh/common/libicalss.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/libical	vsh/app/common/src/libical	vs0:vsh/common/libical.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/libical/libical/libical (SceLibical)
+vs0/vsh/common/libicalss	vsh/app/common/src/libical/libicalss	vs0:vsh/common/libicalss.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	SceLibicalss builds Sony's vsh/app/common/src/libical sources: in the libical component
 vs0/vsh/common/libmarlin	vsh/app/common/src/libmarlin	vs0:vsh/common/libmarlin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libmarlin_pb	vsh/app/common/src/libmarlin_pb	vs0:vsh/common/libmarlin_pb.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libmarlindownloader	vsh/app/common/src/libmarlindownloader	vs0:vsh/common/libmarlindownloader.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/libmtp	vsh/app/common/src/mtp	vs0:vsh/common/libmtp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/mtp (9 paths)
+vs0/vsh/common/libmtp	vsh/app/common/src/mtp/libmtp	vs0:vsh/common/libmtp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/mtp/libmtp (SceLibMtp)
 vs0/vsh/common/libmtphttp	vsh/app/common/src/libmtphttp	vs0:vsh/common/libmtphttp.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libmtphttp_wrapper	vsh/app/common/src/libmtphttp_wrapper	vs0:vsh/common/libmtphttp_wrapper.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/libvideoprofiler	vsh/app/common/src/libvideoprofiler	vs0:vsh/common/libvideoprofiler.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
@@ -394,22 +396,22 @@ vs0/vsh/common/mms/meta_gen	vsh/app/common/src/mms/meta_gen	vs0:vsh/common/mms/m
 vs0/vsh/common/mms/png_promoter	vsh/app/common/src/mms/png_promoter	vs0:vsh/common/mms/png_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/mms/tiff_promoter	vsh/app/common/src/mms/tiff_promoter	vs0:vsh/common/mms/tiff_promoter.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
 vs0/vsh/common/mtp_client	vsh/app/common/src/mtp_client	vs0:vsh/common/mtp_client.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/mtpr3	vsh/app/common/src/mtpr3	vs0:vsh/common/mtpr3.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
-vs0/vsh/common/np_grief_report	vsh/app/common/src/np_grief_report	vs0:vsh/common/np_grief_report.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/common -> vsh/app/common/src
+vs0/vsh/common/mtpr3	vsh/app/common/src/mtp/mtpr3	vs0:vsh/common/mtpr3.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	beside vsh/app/common/src/mtp/mtpr2 (safemode's paths)
+vs0/vsh/common/np_grief_report	vsh/app/common/src/np/np_grief_report	vs0:vsh/common/np_grief_report.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	np_* -> vsh/app/common/src/np
 vs0/vsh/game/gamecard_installer_plugin	vsh/app/game/gamecard_installer_plugin	vs0:vsh/game/gamecard_installer_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
 vs0/vsh/game/gamedata_plugin	vsh/app/game/gamedata_plugin	vs0:vsh/game/gamedata_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
 vs0/vsh/initialsetup/initialsetup	vsh/app/initialsetup	vs0:vsh/initialsetup/initialsetup.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<app> -> vsh/app/<app>
 vs0/vsh/online_storage/online_storage_plugin	vsh/app/online_storage/online_storage_plugin	vs0:vsh/online_storage/online_storage_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/auth_reset_plugin	vsh/app/shell/auth_reset_plugin	vs0:vsh/shell/auth_reset_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/idu_update_plugin	vsh/app/shell/idu_update_plugin	vs0:vsh/shell/idu_update_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/ime_plugin	vsh/app/shell/ime_plugin	vs0:vsh/shell/ime_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/impose_net_plugin	vsh/app/shell/impose_net_plugin	vs0:vsh/shell/impose_net_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/liblocation_permission	vsh/app/shell/liblocation_permission	vs0:vsh/shell/liblocation_permission.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/livespace_db	vsh/app/shell/livespace_db	vs0:vsh/shell/livespace_db.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0/vsh/shell/location_dialog_plugin	vsh/app/shell/location_dialog_plugin	vs0:vsh/shell/location_dialog_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/auth_reset_plugin	vsh/app/shell/src/auth_reset_plugin	vs0:vsh/shell/auth_reset_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	shell plugins in vsh/app/shell/src/<plugin> (ime_plugin, download_plugin, telephony_plugin)
+vs0/vsh/shell/idu_update_plugin	vsh/app/shell/src/idu_update_plugin	vs0:vsh/shell/idu_update_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	shell plugins in vsh/app/shell/src/<plugin> (ime_plugin, download_plugin, telephony_plugin)
+vs0/vsh/shell/ime_plugin	vsh/app/shell/src/ime_plugin	vs0:vsh/shell/ime_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src/ime_plugin/{framework,include} (SceImePlugin)
+vs0/vsh/shell/impose_net_plugin	vsh/app/shell/src/impose_net_plugin	vs0:vsh/shell/impose_net_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	shell plugins in vsh/app/shell/src/<plugin> (ime_plugin, download_plugin, telephony_plugin)
+vs0/vsh/shell/liblocation_permission	vsh/app/shell/src/liblocation/src/location_permission_client	vs0:vsh/shell/liblocation_permission.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src/liblocation/src/location_permission_client/src (SceLibLocationPermission)
+vs0/vsh/shell/livespace_db	vsh/app/shell/src/livespace_db	vs0:vsh/shell/livespace_db.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	shell components in vsh/app/shell/src
+vs0/vsh/shell/location_dialog_plugin	vsh/app/shell/src/location_dialog_plugin	vs0:vsh/shell/location_dialog_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	shell plugins in vsh/app/shell/src/<plugin> (ime_plugin, download_plugin, telephony_plugin)
 vs0/vsh/shell/shell	vsh/app/shell	vs0:vsh/shell/shell.self	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/shell/src
-vs0/vsh/shell/telephony/initial_check/tel_initial_check_plugin	vsh/app/telephony/tel_initial_check_plugin	vs0:vsh/shell/telephony/initial_check/tel_initial_check_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/telephony (36 paths)
-vs0_tarpatch/app/NPXS10095/stitch_core_prx	vsh/app/panorama/stitch_core_prx	vs0_tarpatch:app/NPXS10095/stitch_core_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
-vs0_tarpatch/app/NPXS10095/stitch_prx	vsh/app/panorama/stitch_prx	vs0_tarpatch:app/NPXS10095/stitch_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama (324 paths)
-vs0_tarpatch/vsh/shell/liblocation_dolce_provider	vsh/app/shell/liblocation_dolce_provider	vs0_tarpatch:vsh/shell/liblocation_dolce_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
-vs0_tarpatch/vsh/shell/liblocation_provider	vsh/app/shell/liblocation_provider	vs0_tarpatch:vsh/shell/liblocation_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:vsh/<app>/<plugin> -> vsh/app/<app>/<plugin>
+vs0/vsh/shell/telephony/initial_check/tel_initial_check_plugin	vsh/app/telephony/initial_check	vs0:vsh/shell/telephony/initial_check/tel_initial_check_plugin.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	build folder: vsh/app/telephony/initial_check//../../../app/shell/... (SceTelInitialCheck)
+vs0_tarpatch/app/NPXS10095/stitch_core_prx	vsh/app/panorama/stitch_core	vs0_tarpatch:app/NPXS10095/stitch_core_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	stitch_core_prx beside stitch_prx (vsh/app/panorama/stitch)
+vs0_tarpatch/app/NPXS10095/stitch_prx	vsh/app/panorama/stitch	vs0_tarpatch:app/NPXS10095/stitch_prx.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/panorama/stitch/{opencv,stitcher} (SceStitchAdapter)
+vs0_tarpatch/vsh/shell/liblocation_dolce_provider	vsh/app/shell/src/liblocation/src/location_dolce_provider	vs0_tarpatch:vsh/shell/liblocation_dolce_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	beside location_client, location_permission_client in vsh/app/shell/src/liblocation/src
+vs0_tarpatch/vsh/shell/liblocation_provider	vsh/app/shell/src/liblocation/src/location_provider	vs0_tarpatch:vsh/shell/liblocation_provider.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	beside location_client, location_permission_client in vsh/app/shell/src/liblocation/src
