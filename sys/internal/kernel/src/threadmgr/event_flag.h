@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include "private.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include "mutex.h"
 
 #define EVF_ATTR_LW			0x00000080

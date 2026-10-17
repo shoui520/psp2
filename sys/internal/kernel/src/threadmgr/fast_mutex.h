@@ -8,7 +8,7 @@
 #define THREADMGR_FAST_MUTEX_H
 
 #include "private.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include <threadmgr/fast_mutex.h>
 
 #define FAST_MUTEX_MAGIC		0xa35db473

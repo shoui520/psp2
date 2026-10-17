@@ -17,7 +17,7 @@
 #include <kernel/error.h>
 #include "display_internal.h"
 #include "display_imports.h"
-#include "../../../kernel/src/threadmgr/uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 
 static DisplaySgiState sgiState[2];	/* SGI 8, 9 */
 static SceSysTimerId vblankTimer;

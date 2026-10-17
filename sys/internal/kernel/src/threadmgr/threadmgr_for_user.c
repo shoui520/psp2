@@ -21,7 +21,7 @@
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include "event_flag.h"
 #include "timer.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 
 int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
 int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);

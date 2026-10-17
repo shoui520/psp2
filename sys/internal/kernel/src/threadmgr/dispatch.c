@@ -17,7 +17,7 @@
 #include "syscall_context.h"
 #include <intrmgr/intrmgr.h>
 #include "affinity.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include <psp2kern/kernel/cpu/atomic.h>
 
 /* what both context selectors share */

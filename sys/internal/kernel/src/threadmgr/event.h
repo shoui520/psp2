@@ -13,7 +13,7 @@
 #include <threadmgr/threadmgr_event.h>
 #include <threadmgr/event.h>
 #include "private.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include "mutex.h"
 
 #define EVENT_ATTR_AUTO_CLEAR		0x00000100	/* a wait that is satisfied clears its bits */

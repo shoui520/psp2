@@ -2,7 +2,7 @@
 #include <string.h>
 #include "private.h"
 #include <intrmgr/intrmgr.h>
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/cpu/atomic.h>

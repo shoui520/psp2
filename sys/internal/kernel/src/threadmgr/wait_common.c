@@ -10,7 +10,7 @@
 #include <sysmem/sysmem.h>
 #include "scheduler.h"
 #include "priority_change.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include "syscall_context.h"
 
 #define WAIT_TYPE_LW_OBJECT		0x40000

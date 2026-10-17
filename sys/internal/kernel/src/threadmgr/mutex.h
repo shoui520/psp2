@@ -10,7 +10,7 @@
 #include <psp2kern/types.h>
 #include <threadmgr/mutex.h>
 #include "private.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include "priority_change.h"
 
 #define MUTEX_ATTR_RECURSIVE		0x00000002

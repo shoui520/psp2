@@ -12,7 +12,7 @@
 #include "scheduler.h"
 #include "syscall_context.h"
 #include "timer.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 
 int sceKernelWaitSignalCBForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
 int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);

@@ -7,7 +7,7 @@
 #include "scheduler.h"
 #include "syscall_context.h"
 #include "timer.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include <string.h>
 #include <intrmgr/intrmgr.h>
 #include <sysmem/sysroot.h>

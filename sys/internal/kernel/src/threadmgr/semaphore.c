@@ -9,7 +9,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include "scheduler.h"
-#include "uid_waitable.h"
+#include <threadmgr/uid_waitable.h>
 #include "syscall_context.h"
 
 #define SEMA_ATTR_PRIORITY		0x00002000
