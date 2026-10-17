@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 int appmgrExtractSaveDataDeviceName(const char *path, char *device,
 				    SceSize capacity);
@@ -43,12 +44,6 @@ extern int ScePfsMgrForKernel_27FB7618(const char *name,
 #if FW_VERSION >= 0x04000000
 extern void *__memcpy_chk(void *destination, const void *source,
 			  size_t length, size_t destinationSize);
-extern char *__strncat_chk2(char *destination, const char *source,
-			    size_t destinationSize);
-extern char *__strncat_chk(char *destination, const char *source,
-			   size_t length, size_t destinationSize);
-extern char *__strncpy_chk(char *destination, const char *source,
-			   size_t length, size_t destinationSize);
 #endif
 
 extern int SceSblACMgrForDriver_0924896F(SceUID pid);
@@ -2113,6 +2108,3 @@ void appmgrFreeSaveDataDirectories(char **directories)
 		}
 	} while (directories != end);
 }
-
-
-

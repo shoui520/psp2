@@ -35,6 +35,7 @@
 #include <intrmgr/intrmgr.h>
 #include <intrmgr/intrmgr_tzs.h>
 #include "../intrmgr_state.h"
+#include <psp2kern/kernel/dipsw.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -49,8 +50,6 @@
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
-
-int ksceKernelCheckDipsw(unsigned int number);
 
 unsigned int SceCpuForTZS_44C423D3(void);		/* this core */
 

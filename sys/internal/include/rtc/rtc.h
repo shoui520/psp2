@@ -9,6 +9,8 @@
 #include <psp2kern/types.h>
 #include <psp2common/kernel/rtc.h>
 #include <syscon/syscon.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysroot.h>
 
 /* SceRtcForDriver: clocks and alarms */
 int sceRtcSynchronize(void);
@@ -91,6 +93,4 @@ SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
 				      int (*handler)(void *argp), void *argp);
 /* processmgr: the C library time functions for processes */
 int SceProcessmgrForDriver_4140D633(const void *functions);
-int SceQafMgrForDriver_4BC1883F(void);
 int ksceSblUtMgrHasStoreFlag(void);
-void sceKernelApiDeclareTypeUInt64(void);

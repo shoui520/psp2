@@ -1,11 +1,9 @@
 #include <psp2kern/kernel/ssmgr.h>
 #include "update_internal.h"
 #include "spkg_hardware.h"
-
-int ksceSblAimgrIsJapaneseFat(void);
-int ksceSblAimgrIsGenuineVITA(void);
-int ksceSblAimgrIsTool(void);
-int ksceKernelCheckDipsw(int index);
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sblaimgr.h>
 
 int SpkgInfoUtilGetHardwareIndex(int *index)
 {

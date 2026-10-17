@@ -2,8 +2,8 @@
 #include "wlanbt_internal.h"
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysmem.h>
 
-SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 void sceKernelApiDeclareTypeUInt32(void);
 
 int sceWlanSetConfiguration(int request)

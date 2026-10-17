@@ -2,8 +2,7 @@
 #include "magicgate_private.h"
 #include <psp2kern/kernel/ssmgr.h>
 #include <string.h>
-
-int timingsafe_memcmp(const void *first, const void *second, size_t size);
+#include <sysmem/sysclib.h>
 
 const uint32_t defaultMacIv[4] = { 0, 0, 0, 0 };
 
@@ -549,7 +548,6 @@ int SceMagicGateForDriver_05912BF5(void *output, const void *input,
 	return result;
 }
 
-
 int SceMagicGateForDriver_ACA0F529(int slot, const void *input, int sourceSlot)
 {
 	int result;
@@ -564,7 +562,6 @@ int SceMagicGateForDriver_ACA0F529(int slot, const void *input, int sourceSlot)
 	return result;
 }
 
-
 int SceMagicGateForDriver_2B026FFF(void *output, const void *input,
 				unsigned int size, int slot, const void *iv)
 {
@@ -573,7 +570,6 @@ int SceMagicGateForDriver_2B026FFF(void *output, const void *input,
 	return decryptRecordEcb(&slotKeys[slot], input, output, size);
 }
 
-
 int SceMagicGateForDriver_F2502A3B(void *output, const void *input,
 				unsigned int size, int slot, const void *iv)
 {
@@ -581,7 +577,6 @@ int SceMagicGateForDriver_F2502A3B(void *output, const void *input,
 		return encryptRecordCbc(&slotKeys[slot], input, output, size, iv);
 	return encryptRecordEcb(&slotKeys[slot], input, output, size);
 }
-
 
 int SceMagicGateForDriver_3270BEE6(void *output, int slot)
 {
@@ -599,7 +594,6 @@ int SceMagicGateForDriver_3270BEE6(void *output, int slot)
 	return result;
 }
 
-
 int SceMagicGateForDriver_A855C045(int slot, const void *input)
 {
 	MagicGateKey key __attribute__((aligned(16)));
@@ -615,4 +609,3 @@ int SceMagicGateForDriver_A855C045(int slot, const void *input)
 	}
 	return result;
 }
-

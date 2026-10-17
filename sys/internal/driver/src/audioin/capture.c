@@ -10,8 +10,8 @@
 #include <psp2kern/kernel/sysmem/data_transfers.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <syscon/syscon.h>
+#include <psp2kern/kernel/aimgr.h>
 
-extern int ksceSblAimgrIsGenuineDolce(void);
 extern int SceCodecForDriver_41CFFE48(int *gain, int *alternateGain);
 extern int initializeAudioInAecLibrary(void);
 extern int startAudioInAec(AudioInAecContext *context);

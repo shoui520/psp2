@@ -209,8 +209,6 @@ int busErrorIntrHandler(int code, void *arg)
 	rec = &sysrootSharedMemory()->busError;
 	FormatBusErrorInfo_ES3(NULL, 0, rec);
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
-	SceSysrootForKernel_B27B7530(fixedOcp->status[0][0], fixedOcp->status[0][1],
-				  fixedOcp->status[0][2]);
 	if (rec->siSize) {
 		si = (const void *)((const char *)rec + rec->hdrSize + rec->ocpSize);
 		bus = (const BusErrorSiBus *)(si + 1);
@@ -255,8 +253,6 @@ int busErrorIntrHandler(int code, void *arg)
 	rec = &sysrootSharedMemory()->busError;
 	/* This callback consumes the fixed OCP status words, not hdrSize. */
 	fixedOcp = (const BusErrorOcpInfo *)(rec + 1);
-	SceSysrootForKernel_B27B7530(fixedOcp->status[0][0], fixedOcp->status[0][1],
-				  fixedOcp->status[0][2]);
 	if (rec->siSize != 0) {
 		si = (const BusErrorSiInfo *)((char *)rec + rec->hdrSize + rec->ocpSize);
 		bus = (const BusErrorSiBus *)(si + 1);

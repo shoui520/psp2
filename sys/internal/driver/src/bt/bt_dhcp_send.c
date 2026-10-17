@@ -1,6 +1,7 @@
 /* DHCP reply construction; original source filename unavailable. */
 #include "bt_internal.h"
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 unsigned int BtInternetChecksum(unsigned int initialSum,
 				const uint16_t *words, int length);
@@ -10,9 +11,6 @@ unsigned int BtTransportChecksum(unsigned int protocol,
 				 const void *packet, unsigned int length);
 int BtSendBnepFrame(BtConnection *connection, const void *frame, int length,
 		    int userMode);
-#if FW_VERSION >= 0x04000000
-void *__memset_chk(void *destination, int value, size_t length, size_t capacity);
-#endif
 
 static inline uint8_t *BtWriteDhcpAddressOption(uint8_t *cursor, uint8_t code,
 					      const uint32_t *address)

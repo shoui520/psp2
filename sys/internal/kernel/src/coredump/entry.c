@@ -3,6 +3,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysroot.h>
 
 /* Private implementations follow in their original source files. */
 extern int coredumpMemoryInit(void);
@@ -19,7 +20,6 @@ extern int sceCoredumpTrigger(SceUID pid,
 	SceCoredumpTriggerParam *param);
 extern int SceCoredumpForDriver_340856F7(void);
 extern int SceCoredumpForDriver_EF20949F(void);
-extern void SceSysrootForDriver_400B9793(int (*callback)(void));
 extern void SceSysrootForDriver_9DCD0894(int (*callback)(void));
 
 SCE_DBGINFO_DEFINE(static, startMemoryInfo, 51, "sceCoredumpStart");

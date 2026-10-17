@@ -31,6 +31,8 @@
 #include "param_sfo.h"
 #include <psp2kern/kernel/dipsw.h>
 #include <psp2kern/pfsmgr.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysclib.h>
 
 struct AppmgrMapFile;
 
@@ -73,8 +75,6 @@ extern int SceSblACMgrForDriver_F5AE24AC(SceUID pid);
 extern int ksceSblACMgrIsAllowedExtendedMemory(SceUID pid);
 extern int kscePfsAcidDirSet(const char *name, const char *directory);
 extern int appmgrGetMountPointById(int mountId, char *mountPoint);
-extern char *__strncpy_chk(char *destination, const char *source,
-			   SceSize count, SceSize capacity);
 
 SceUID g_appmgrCoreHeap;
 SceUID g_appmgrMountHeap = -1;
@@ -1206,7 +1206,6 @@ out:
 }
 
 #if FW_VERSION >= 0x04000000
-extern int SceQafMgrForDriver_41E04800(void);
 
 int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerification,
 			       AppmgrProcessContent *content, SceUInt32 *maxSize)

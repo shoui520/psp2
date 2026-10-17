@@ -8,6 +8,9 @@
 #include "update_packet.h"
 #include "spkg_peripherals.h"
 #include "sbls.h"
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/utils.h>
+#include <sysmem/qafmgr.h>
 
 extern int spkgMbrLoaded;
 extern unsigned int spkgBlSwitchCount, spkgOsSwitchCount;
@@ -34,16 +37,9 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName, const char *destinationNam
 int SpkgInfoUtilSetDigest(int packageType, int flags, const void *digest,
 		SceSize size, int verify, int updateMode);
 int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
-int SceQafMgrForDriver_3CB55F98(void);
-int SceQafMgrForDriver_8C423C18(void);
 int SceSblPostSsMgrForDriver_9D1D8EE5(void);
 int ksceSblUtMgrHasComTestFlag(void);
 int ksceSblUtMgrHasStoreFlag(void);
-int ksceSblAimgrIsCEX(void);
-int ksceSblAimgrIsDEX(void);
-int ksceSblAimgrIsTool(void);
-int ksceSblAimgrIsTest(void);
-int ksceSha256Digest(const void *buffer, SceSize size, void *digest);
 
 int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 {

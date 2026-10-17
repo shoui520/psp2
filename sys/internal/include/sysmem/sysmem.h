@@ -352,3 +352,25 @@ _Static_assert(sizeof(MemBlockPhyInfo) == 0xb8, "MemBlockPhyInfo size");
 
 int ksceKernelMemBlockGetInfoEx(SceUID uid, MemBlockPhyInfo *info);
 int ksceKernelMemBlockType2Memtype(SceUInt32 type);
+
+int SceSysmemForDriver_A7C0D1FC(const void *va);
+SceUInt32 SceSysmemForDriver_CB0F3A33(SceUInt32 type);
+int ksceGUIDGetClass(SceUID guid, SceClass **cls);
+int ksceGUIDGetName(SceUID guid, const char **name);
+int ksceGUIDGetObject(SceUID guid, void *object);
+int ksceGUIDReferObjectWithSubclass(SceUID guid, SceClass *cls, SceObjectBase **object);
+int ksceGUIDSetName(SceUID guid, const char *name);
+void *ksceKernelAllocUncacheHeapMemoryWithOption(SceSize size, SceAllocOpt *opt);
+SceSSize ksceKernelCountFillValueFromUserProc(SceUID pid, const void *src, SceUInt32 value, SceSize size);
+int ksceKernelDecRefCountMemBlock(SceUID guid);
+int ksceKernelGetMemBlockInfo(SceUID uid, SceInt32 level, MemBlockPhyInfo *info);
+int ksceKernelGetMemBlockMappedBase(SceUID uid, void **base);
+/* name from the NID database: the kind of memory an address maps (3: mapped at its physical address) */
+int ksceKernelGetPhysicalMemoryType(const void *va);
+int ksceKernelIncRefCountMemBlock(SceUID guid);
+int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode, const void *addr, SceSize size);
+SceUInt32 ksceKernelMemBlockTypeGetPrivileges(SceUInt32 type);
+int ksceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa);
+int kscePUIDGetClass(SceUID pid, SceUID puid, SceClass **out);
+int kscePUIDGetObject(SceUID pid, SceUID puid, SceObjectBase **out);
+int sceKernelShrinkHeap(SceUID uid);

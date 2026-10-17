@@ -15,18 +15,18 @@
 #include <psp2kern/lowio/dsi.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/utils.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot_init.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,
 	const char *name, SceSize size, SceClassCallback create, SceClassCallback destroy);
 int sceKernelEventObjectInit(SceUID event, SceUInt32 attr, SceUInt64 userData,
 	SceUInt32 pattern);
-int ksceKernelProcModeVAtoPA(SceUID pid, SceUInt32 mode, const void *va, uintptr_t *pa);
 
 /* SceSysclibForDriver */
-int strncmp(const char *s1, const char *s2, SceSize n);
-void *memset(void *dst, int c, SceSize n);
-void *memcpy(void *dst, const void *src, SceSize n);
 unsigned int __aeabi_uidiv(unsigned int n, unsigned int d);
 
 /* SceSysrootForDriver / SceSysrootForKernel */
@@ -37,7 +37,6 @@ int ksceSysrootIsSafeMode(void);
 int ksceSysrootIsExternalBootMode(void);
 int ksceSysrootIsUpdateMode(void);
 int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleId, SceSize size);
-int sceKernelRegisterInitCallback(int (*callback)(void), int phase, void *argument, int *result);
 
 /* SceProcessmgrForDriver */
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *out);
@@ -49,11 +48,6 @@ int SceProcessmgrForDriver_E1A67C86(SceUID pid, SceUInt32 *flags);
 int ksceSblACMgrIsPspEmu(SceUID pid);
 int ksceSblACMgrIsGameProgram(SceUID pid);
 int ksceSblACMgrIsDevelopmentMode(void);
-int ksceSblAimgrIsDolce(void);
-int ksceSblAimgrIsGenuineDolce(void);
-
-/* SceKernelUtilsForDriver */
-int ksceGzipDecompress(void *dst, SceSize dstSize, const void *src, SceUInt32 *crc);
 
 /* SceDsiForDriver */
 

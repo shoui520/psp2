@@ -21,6 +21,7 @@
 #include "../venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
 SceKernelDmaOpChainParam g_veneziaHwdDmaChainParam = {
@@ -102,8 +103,6 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 }
 
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
-
-extern int snprintf(char *destination, unsigned int capacity, const char *format, ...);
 
 int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 	const char *name, unsigned int type, SceSize size, uintptr_t physicalAddress)

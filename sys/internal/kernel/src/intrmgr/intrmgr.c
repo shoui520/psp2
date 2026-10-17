@@ -3,6 +3,7 @@
 #include "intrmgr_readonly.h"
 #include <threadmgr/fast_mutex.h>
 #include <sysmem/compiler.h>
+#include <sysmem/sysmem.h>
 
 _Static_assert(sizeof(SceKernelIntrHandlerInfo) == 0x70, "interrupt query ABI");
 _Static_assert(sizeof(IntrIrqFrame) == 64, "IRQ frame ABI");
@@ -89,7 +90,6 @@ int ResumeController(void)
 #define INTR_SHARED_MEMORY_SIZE	0xa000
 
 void sceKernelSysrootSetSharedMemory(void *base);
-int ksceKernelDeleteHeap(SceUID heap);
 void enableInterrupts(void);
 
 /* name unknown: NSKBL's init callback (phase 5), the heap goes when the kernel takes over */

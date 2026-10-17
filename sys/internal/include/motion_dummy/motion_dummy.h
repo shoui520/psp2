@@ -3,6 +3,6 @@
 #include <psp2kern/types.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysclib.h>
 
 int ksceSblACMgrIsSystemProgram(SceUID pid);
-void *__memset_chk(void *dst, int value, unsigned size, unsigned dstSize);

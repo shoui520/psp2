@@ -3,10 +3,7 @@
 #include "registerdump_sce.h"
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-
-extern void *memset(void *destination, int value, unsigned size);
-extern void *memcpy(void *destination, const void *source, unsigned size);
-extern unsigned strnlen(const char *string, unsigned limit);
+#include <sysmem/sysclib.h>
 
 /* Kernel NID FE39AEAC is not the four-argument Annex K SDK routine.
  * Native Sysmem consumes destination/source/limit and returns destination.

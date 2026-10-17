@@ -7,6 +7,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/sysmem.h>
 #include "post_ss_mgr_internal.h"
+#include <sysmem/qafmgr.h>
 
 #define SCE_SBL_ERROR_SPFSO_NO_MEMORY		0x800f1b0c	/* names unknown */
 #define SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT	0x800f1b16
@@ -51,7 +52,6 @@ typedef struct SceSpfsoSegment {
 	SceUInt32 size;
 } SceSpfsoSegment;
 
-int ksceSblQafMgrIsAllowHost0Access(void);
 int ksceSblAuthMgrVerifySpfsoCtx(SceSblSpfsoCtx *ctx);
 
 int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)

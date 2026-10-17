@@ -20,8 +20,6 @@
 #include <fw.h>
 #include "usbd_internal.h"
 
-int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);
-
 /* one anchored block, in this order (0x81010000) */
 static SceUInt8 s_initialized;
 static SceUID s_eventThreadId;

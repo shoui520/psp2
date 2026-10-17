@@ -12,11 +12,11 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/qafmgr.h>
 
 int ksceSblSsGetNvsData(unsigned int offset, void *buffer, SceSize size);
 int ksceIdStorageLookup(unsigned int leafId, unsigned int offset,
 			void *buffer, unsigned int size);
-int SceQafMgrForDriver_52B4E164(void);
 int wlanBtInitializeRobin(void);
 int SceClockgenForDriver_7B28A724(void);
 int ksceClockgenWlanBtClkDisable(void);
@@ -632,4 +632,3 @@ done:
 	ksceKernelUnlockFastMutex(&gWlan.mutex);
 	return 0;
 }
-

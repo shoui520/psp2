@@ -5,6 +5,7 @@
 
 #include <psp2kern/types.h>
 #include <syscon/syscon.h>
+#include <sysmem/sysroot.h>
 
 int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 		void (*callback)(uint32_t, uint32_t, void *), void *arg,
@@ -12,9 +13,6 @@ int SceCtrlForDriver_FF9D4DD4(uint32_t mask,
 
 /* Notify the registered BD remote callbacks (SceCtrlForDriver NID 6E183B9B). */
 int ksceCtrlNotifyCallBacks(int notification);
-
-/* nonzero when the model has the capability (1: multiple controller ports) */
-int ksceKernelSysrootCheckModelCapability(unsigned int capability);
 
 /* name unknown: nonzero for a further privileged program class (ctrl's "privileged" test) */
 int SceSblACMgrForDriver_2E992B02(SceUID pid);

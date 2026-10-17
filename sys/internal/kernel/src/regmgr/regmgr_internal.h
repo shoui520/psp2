@@ -14,6 +14,7 @@
 #include "reg.h"
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/qafmgr.h>
 
 int regMgrLoadCache(void);
 
@@ -235,7 +236,6 @@ extern SceUInt32 g_regMgrErrEnable;
 
 #define SCE_REGMGR_ERROR_KEY_EXISTS	0x800d2728	/* names unknown */
 
-int SceQafMgrForDriver_0E588747(void);
 SceUInt32 ksceKernelGetProcessTimeLowCore(void);
 
 /* the registry files (reg library, names unknown) */

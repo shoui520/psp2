@@ -6,11 +6,11 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "hdmi_internal.h"
+#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/sysclib.h>
 
-int ksceSblAimgrIsDolce(void);
 void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
 				 const void *lr, const char *fmt, ...);
-void *memset(void *dst, int c, SceSize len);
 
 #define EDID_BLOCK_SIZE			128
 #define EDID_DESCRIPTOR_COUNT		4

@@ -5,6 +5,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/mmu.c"
@@ -49,7 +50,6 @@ _Static_assert(offsetof(GpuBudgetInfo, cdramPartition.size) == 0x5c,
  */
 extern int ksceKernelGetProcessInfo(unsigned pid, GpuProcessInfo *info);
 extern int sceKernelGetBudgetInfo(int uid, GpuBudgetInfo *info);
-extern void *memset(void *destination, int value, unsigned size);
 extern int CreateGpuHeap(unsigned base, unsigned size, unsigned lookupKey,
 			 unsigned attributes, GpuHeap **output);
 extern int DestroyGpuHeap(GpuHeap *heap);
@@ -597,4 +597,3 @@ int CheckGpuMmuMapping(GpuMmuContext *context, unsigned address,
 		return (int)0x804c0000;
 	return CheckGpuMmuRange(context, address, size, 7, flags | 1);
 }
-

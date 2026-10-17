@@ -7,13 +7,13 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include "event_flag.h"
+#include <sysmem/uid_class.h>
 
 int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);
 int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info);
 int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 				  uint32_t *outPattern);
 
-extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 

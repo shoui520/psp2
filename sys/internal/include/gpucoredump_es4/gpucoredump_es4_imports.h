@@ -10,6 +10,8 @@
 #include <gpu/gpu_es4_trace.h>
 #include <pamgr/pamgr_trace.h>
 #include <psp2kern/lowio/pervasive.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysmem.h>
 
 /* SceGpuEs4ForDriver */
 /* registers the PA-trace stop and the core-dump callbacks */
@@ -47,7 +49,4 @@ int kscePowerGetGpuClockFrequencyInternal(SceUInt32 *first, SceUInt32 *second);
 int ksceKernelGetModuleInfoByAddr(const void *address, void *info);
 int ksceRtcGetCurrentClockLocalTime(SceDateTime *time);
 int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);
-const char *ksceGUIDName(SceUID guid);
 int ksceIoIoctl(SceUID fd, int cmd, const void *in, SceSize inLength, void *out, SceSize outLength);
-/* SceSysclibForDriver: copies at most n characters, always terminated */
-char *strncpy_s(char *dst, const char *src, SceSize n);

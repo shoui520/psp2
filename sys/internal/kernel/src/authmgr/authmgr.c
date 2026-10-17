@@ -12,6 +12,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/debug.h>
+#include <psp2kern/kernel/sysroot.h>
 
 #define AM_EINVAL ((int)0x800f0516)
 #define AM_EHANDLE ((int)0x800f0509)
@@ -19,7 +20,6 @@
 #define AM_EPHYSICAL ((int)0x800f0528)
 #define AM_NO_REQUEST 0x0fffffff
 #define NOINLINE __attribute__((noinline))
-
 
 #if FW_DEBUG
 #define AUTH_DBG_PRINTF(function, line, format, ...) \
@@ -46,10 +46,6 @@ int ksceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
 int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
 	AuthCryHandler handler, void *argument);
 int ksceSblSmSchedProxyDisableCry2ArmInterrupt(SceUID id, int channel);
-void *ksceKernelAllocUncacheHeapMemoryWithOption(SceSize size, const void *option);
-void *ksceKernelSysrootGetKblParam(void);
-uint32_t SceSysrootForKernel_377895EB(void);
-int SceSysrootForDriver_D75D4F37(void *output);
 extern uint32_t __stack_chk_guard;
 
 /* Uncached wire packets: the first 0x40 bytes are the native command header. */

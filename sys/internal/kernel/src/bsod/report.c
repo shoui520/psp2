@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include "report_data.h"
 #include "exception_record.h"
+#include <sysmem/sysmem.h>
 
 extern void (*s_bsodPrinter)(const char *format, ...);
-int ksceGUIDGetName(int uid, const char **name);
 int ksceKernelGetModuleInfoMinByAddr(int pid, uint32_t address, int *uid,
 				    uint32_t *base, char *name);
 static void bsodFormatCpsr(uint32_t cpsr, char text[52])

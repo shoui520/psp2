@@ -196,7 +196,7 @@ void mount(MountRequest *request)
 	SceUID oldPid = 0;
 	SceUInt32 flags = request->flags;
 	int ret, id, i;
-	SceInt64 result;
+	SceUInt64 result;
 
 	if (request->command == 3) {
 		param = *request->mountParam;
@@ -288,7 +288,7 @@ void umount(MountRequest *request)
 	MountPoint *point = NULL, *child, *prev;
 	SceIoMountEvent *event;
 	SceUID oldPid = 0;
-	SceInt64 result;
+	SceUInt64 result;
 	int ret, i;
 
 	if (request->command == 4) {

@@ -12,14 +12,15 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <kernel/error.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysmem.h>
 
 int checkDebugPermission(void);
 int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
 int SceSblACMgrForKernel_49509A83(SceUID process);
 int sceKernelSetSyscallTraceFlag(SceUID process, SceUInt32 flag);
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
-int SceSysmemForDriver_A7C0D1FC(const void *address);
-int ksceKernelCheckDipsw(unsigned int number);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
 int startTrace(unsigned int channel);
@@ -1308,11 +1309,6 @@ int suspendTraceHardware(void)
 	pamgrState.savedPmuControl = control;
 	return 0;
 }
-
-int SceKernelSuspendForDriver_CE7A2207(unsigned int priority,
-				     int (*callback)(void), void *arg);
-int SceKernelSuspendForDriver_105C5752(unsigned int priority,
-				     int (*callback)(void), void *arg);
 
 int initializeTraceHardware(void)
 {

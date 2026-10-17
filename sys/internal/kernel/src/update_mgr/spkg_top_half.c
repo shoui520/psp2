@@ -2,8 +2,8 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include "spkg.h"
+#include <psp2kern/kernel/aimgr.h>
 
-int ksceSblAimgrIsCEX(void);
 int UpdateUtilLockPupHeader(void);
 int UpdateUtilUnlockPupHeader(void);
 int UpdateUtilCheckBuffer(SceSize size, void *buffer);

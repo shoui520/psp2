@@ -12,6 +12,7 @@
 #include <psp2kern/kernel/suspend.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysclib.h>
 
 /* SCE stores the services mutex UID in the native module's zeroed state. */
 SceUID gPVRSRVLock;
@@ -143,8 +144,6 @@ failure:
 extern void *sceKernelAllocRemoteProcessHeap(unsigned pid, unsigned size,
 					   const void *options);
 extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
-extern void *memcpy(void *destination, const void *source, unsigned size);
-extern void *memset(void *destination, int value, unsigned size);
 
 void *OSAllocMem(unsigned size)
 {
@@ -170,4 +169,3 @@ int OSProcHasPrivSrvInit(void)
 {
 	return 1;
 }
-

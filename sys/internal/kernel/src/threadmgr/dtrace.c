@@ -7,13 +7,13 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
 
 #define DTRACE_STATE_SIZE		0x28
 #define DTRACE_HEAP_SIZE		0x20000
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-extern void *memset(void *dst, int c, SceSize n);
 extern int ksceKernelGetThreadIdList(SceUID type, SceUID *ids, SceSize size, SceSize *count);
 extern SceUID ksceKernelCreateHeap(const char *name, SceSize size, SceKernelHeapCreateOpt *opt);
 void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), const void *arg,

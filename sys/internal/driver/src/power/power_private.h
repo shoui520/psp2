@@ -65,6 +65,9 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/sysmem.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -103,8 +106,6 @@ extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
 /* Voltage codes decrease as the required voltage increases. */
 
-extern int ksceKernelCheckDipsw(unsigned int index);
-
 /* Actual callbacks required by Power's startup registration sequence. */
 extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
 
@@ -123,14 +124,12 @@ extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
 /* name unknown: told the new power flags of a process */
 extern SceUID SceCtrlForDriver_FF9D4DD4(uint32_t, void (*)(uint32_t, uint32_t),
 					void *, int);
-extern const char *ksceGUIDName(SceUID);
 extern int SceCtrlForDriver_69E45836(void);
 extern int SceCtrlForDriver_C8CE3E43(unsigned int);
 extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
 extern int SceProcessmgrForDriver_879153D9(SceUID pid, uint32_t mask);
 extern int SceProcessmgrForDriver_FC2A424E(void *memory);
-extern int SceSysrootForDriver_89532E2F(void);
 extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
 extern int ksceDisplayGetDeviceType(int head, int unused);
 extern int ksceDisplayWaitVblankStart(void);
@@ -140,16 +139,11 @@ extern int ksceKernelPrintfAssertLevel(uint32_t level, int condition,
 extern int ksceKernelRegisterProcEventHandler(const char *, const void *, void *);
 extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
-extern int ksceSblAimgrIsDolce(void);
-extern int ksceSblAimgrIsGenuineDolce(void);
 extern int ksceSysrootIsExternalBootMode(void);
 extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
-/* ScePervasiveMisc (0xe3100000) */
-extern uintptr_t SceSysrootForDriver_0A52A59C(void);
-extern uintptr_t SceSysrootForDriver_10788257(void);
 extern void powerCpuResumeEntry(void);
 extern void powerRestoreCpuContext(void *context, int value)
 	__attribute__((noreturn));

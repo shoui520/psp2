@@ -124,7 +124,6 @@ int sdpart_release_mc(unsigned int port);
 int sdpart_release_xmc(unsigned int port);
 int sddev_suspend(SceSdstorSddev *device);
 int ksceSdifGetCID(SdifMmcContext *part, void *cid);
-int SceSysrootForDriver_F804F761(void);
 int sddev_remove(SceSdstorSddev *device);
 int sddev_power_off(SceSdstorSddev *device);
 int sdpart_resume_stat(unsigned int port);

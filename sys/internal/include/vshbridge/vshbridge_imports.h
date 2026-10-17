@@ -14,30 +14,19 @@
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
 
-/* user memory */
-int ksceKernelCopyFromUser(void *dst, const void *src, SceSize len);
-int ksceKernelCopyToUser(void *dst, const void *src, SceSize len);
-SceSSize ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize len);
-
-/* objects */
-SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
-int kscePUIDClose(SceUID pid, SceUID puid);
-
 /* sysroot, threads, modules */
-int SceSysrootForDriver_47724459(int unk);		/* the shell is ready */
 int SceSysrootForDriver_7AAC4EE7(const char *param, int value);	/* set the SDfCtl boot parameter */
-int SceSysrootForDriver_F804F761(void);			/* no Dolce SD slot */
-int ksceKernelSysrootCheckModelCapability(int bit);
 SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
 int ksceSysrootIsSafeMode(void);
 int ksceSysrootIsUpdateMode(void);
-void sceKernelSysrootEnableAutoClockDown(void);
-void sceKernelSysrootDisableAutoClockDown(void);
 SceUID ksceKernelSearchModuleByName(const char *name);
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);	/* compiled SDK version */
 int k_sceEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize);
@@ -50,29 +39,10 @@ int ksceSblACMgrHasCapability(SceUID pid, int capability);
 int ksceSblACMgrIsDevelopmentMode(void);
 int ksceSblACMgrIsPSMDevAssistant(void);
 int SceSblACMgrForDriver_F5AE24AC(SceUID pid);		/* may use SceDrmBridge */
-int ksceSblAimgrIsTest(void);
-int ksceSblAimgrIsTool(void);
-int ksceSblAimgrIsDEX(void);
-int ksceSblAimgrIsCEX(void);
-int ksceSblAimgrIsVITA(void);
-int ksceSblAimgrIsDolce(void);
-int ksceSblAimgrIsGenuineVITA(void);
-int ksceSblAimgrIsGenuineDolce(void);
 int ksceSblAimgrGetConsoleId(void *id);
 int ksceSblAimgrGetPscode(void *code);
 int ksceSblAimgrGetPscode2(void *code);
 int ksceSblAimgrGetVisibleId(void *id);
-int ksceSblAimgrGetSMI(void *smi);
-int ksceSblQafMgrIsAllowNearTest(void);
-int ksceSblQafMgrIsAllowSystemAppDebug(void);
-int ksceSblQafMgrIsAllowMarlinTest(void);
-int ksceSblQafMgrIsAllowLoadMagicGate(void);
-int ksceSblQafMgrIsAllowKeepCoreFile(void);
-int ksceSblQafMgrIsAllowDtcpIpReset(void);
-int ksceSblQafMgrIsAllowControlIduAutoUpdate(void);
-int ksceSblQafMgrIsAllowPSPEmuShowQAInfo(void);
-int ksceSblQafMgrIsAllowRemotePlayDebug(void);
-int SceQafMgrForDriver_4BC1883F(void);			/* QA flag (several tool features) */
 int ksceSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size);
 int ksceSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size);
 int ksceSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const SceSize *inSize,

@@ -9,6 +9,9 @@
 #include <npdrm/npdrm_package.h>
 #include <marlin_hci/rsa.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {
@@ -139,10 +142,6 @@ int ksceSblSsMgrExecuteDmac5HashCommand(const void *src, void *dst,
 	SceSize size, void *iv, int coherent, uint32_t command, uint32_t flags);
 
 int ksceSblUtMgrHasStoreFlag(void);
-int SceQafMgrForDriver_AE033133(void);
-
-int ksceKernelIsAccessibleRangeProc(SceUID pid, unsigned int mode,
-	const void *addr, SceSize size);
 
 int NpDrmRsaVerify2048(const MarlinRsaData *signature,
 	const MarlinRsaData *digest, const MarlinRsaExponentKey *key,
@@ -283,27 +282,6 @@ _Static_assert(sizeof(struct NpDrmPackageInstallStartedArgs) == 16,
 
 int NpDrmPackageInstallStarted(int kind, unsigned int total,
 	const char *msg, int len);
-
-int SceSysrootForDriver_70A60BBA(int kind, unsigned int total,
-	const char *msg, int len);
-
-int SceSysrootForDriver_79458ACB(int kind, unsigned int percent);
-
-int SceSysrootForDriver_D03741B8(unsigned int result, const char *msg, int len);
-
-int SceSysrootForDriver_56C4C949(int kind, unsigned int total,
-	const char *msg, int len);
-
-int SceSysrootForDriver_7998F5B5(int kind, unsigned int percent);
-int SceSysrootForDriver_0F59B369(unsigned int result, const char *msg, int len);
-int SceSysrootForDriver_97E2FB77(int kind, unsigned int total,
-	const char *msg, int len);
-int SceSysrootForDriver_F0C91CD3(int kind, unsigned int percent);
-int SceSysrootForDriver_E384DD93(unsigned int result, const char *msg, int len);
-int SceSysrootForDriver_E8EBF179(int kind, unsigned int total,
-	const char *msg, int len);
-int SceSysrootForDriver_1BA0C6C1(int kind, unsigned int percent);
-int SceSysrootForDriver_D04C7723(unsigned int result, const char *msg, int len);
 
 int NpDrmPackageInstallFinished(unsigned int result, const char *msg, int len);
 

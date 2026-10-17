@@ -2,9 +2,7 @@
 #include <sysmem/sysmem.h>
 #include "gpu-dump.h"
 #include <gpu/sgx_regs.h>
-
-extern void *memset(void *destination, int value, unsigned size);
-extern void *memcpy(void *destination, const void *source, unsigned size);
+#include <sysmem/sysclib.h>
 
 GpuDumpRegion gpuDumpRegion;
 

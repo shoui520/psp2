@@ -9,6 +9,7 @@
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"
+#include <sysmem/sysroot.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
@@ -18,7 +19,6 @@ extern int appmgrResolvePath(const char *path, SceUID pid, char *output,
 extern void _appListShowAppState(struct AppState *app);
 extern int dumpBgmState(void);
 extern void sceKernelApiDeclareTypeUInt32(void);
-extern void sceKernelApiDeclareTypeRaw(void);
 extern int sceAppMgrSendEventInternal(const SceAppMgrSystemEvent *event,
 				     SceUID pid);
 extern int _appListPushEvent(struct AppState *app,

@@ -15,6 +15,9 @@
 #include <sysmem/debug.h>
 #include <sysmem/qafmgr.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/debugled.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))
 #define CONF_NOT_FOUND ((int)0xffff0001U)
@@ -25,28 +28,14 @@ int sceKernelWaitProcessEnd(SceUID pid, int *status, void *timeout);
 int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
 int ksceKernelCreateProcess(const char *name, int type, const char *path, void *opt);
 int ksceKernelInvokeInitCallback(int stage);
-int SceSysmemForKernel_16A54BFE(void);
 SceUID SceSysmemForKernel_0164D817(void);
 int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);
-int sceKernelSetGPO(int value);
-unsigned ksceSysrootGetHardwareInfo(void);
-int ksceSblQafMgrIsAllowHost0Access(void);
-int ksceSblQafMgrIsAllowDecryptedBootConfigLoad(void);
 int ksceSblACMgrIsDevelopmentMode2(void);
-int SceSysrootForKernel_47724459(int stage);
 int sceKernelSysrootSetStatus(int flags);
 int SceSysrootForDriver_7C2C10E2(int kind, int value);
-int SceSysrootForKernel_ksceKernelSysrootAppMgrSpawnProcess(const char *name,
-	int type, const char *path, SceSize len, const void *args, void *opt, void *out);
-int SceSysrootForKernel_ksceSysrootIsBsodReboot(void);
-int SceSysrootForKernel_ksceSysrootIsUsbEnumWakeup(void);
-int SceSysrootForKernel_ksceSysrootIsSafeMode(void);
 int SceSysrootForKernel_ksceSysrootIsExternalBootMode(void);
-int SceSysrootForKernel_ksceSysrootIsUpdateMode(void);
 extern char SceKernelPsp2Config_A6483A7C[];
 extern char SceKernelPsp2Config_C1BA20DA[];
-
-int ksceSysrootIsManufacturingMode(void);
 
 /* Names unknown: the linked records store a path and its loaded UID. */
 typedef struct ConfLoaded {

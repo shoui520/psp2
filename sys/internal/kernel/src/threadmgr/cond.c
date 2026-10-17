@@ -12,6 +12,8 @@
 #include "scheduler.h"
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 #if FW_DEBUG
 /* Native data retains this record without an executable reference. */
@@ -71,24 +73,10 @@ typedef struct ThreadmgrCondInfo {
 	int numWaitThreads;			/* 0x30 */
 } ThreadmgrCondInfo;
 
-extern const char *ksceGUIDName(SceUID guid);
-extern int ksceGUIDGetName(SceUID guid, const char **name);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern int strncmp(const char *a, const char *b, SceSize n);
-extern void *memset(void *dst, int c, SceSize n);
-extern void *memcpy(void *dst, const void *src, SceSize n);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
-extern int ksceGUIDClose(SceUID guid);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 extern SceUID kscePUIDOpenByGUIDWithFlags(SceUID pid, SceUID guid, int flags);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
 extern int SceThreadmgrForDriver_20C228E4(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);

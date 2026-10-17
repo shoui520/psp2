@@ -9,6 +9,8 @@
 #include <sysmem/sysmem.h>
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 #define THREAD_EVENT_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define THREAD_EVENT_TARGET_ALL		0x00010025	/* every thread */
@@ -59,21 +61,8 @@ typedef struct ThreadmgrThreadEventInfo {
 	uint32_t arg;
 } ThreadmgrThreadEventInfo;
 
-
-extern const char *ksceGUIDName(SceUID guid);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern void *memset(void *dst, int c, SceSize n);
-extern void *memcpy(void *dst, const void *src, SceSize n);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceGUIDClose(SceUID guid);
-extern int ksceGUIDGetObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
 extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t access, uintptr_t addr,
 						    SceSize size);
 int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,

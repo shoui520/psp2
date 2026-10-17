@@ -41,6 +41,7 @@
 #include <lowio/uart_regs.h>
 #include <compat/grab_regs.h>
 #include "emc_regs.h"
+#include <psp2kern/kernel/dipsw.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */
 #if !FW_SINCE(0x04000000)
@@ -52,7 +53,6 @@
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
 	".set __stack_chk_guard, SceSysclibForTZS_BA505B15");
 
-int ksceKernelCheckDipsw(unsigned int number);
 int sceKernelVAtoPAForTZS(const void *va, uintptr_t *pa);
 int sceKernelCpuAtomicOrAndGet32(volatile int *addr, int value);
 void sceKernelDcacheCleanInvalidateRange(const void *addr, unsigned int size);

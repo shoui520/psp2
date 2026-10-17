@@ -50,9 +50,12 @@
 #include <psp2kern/registrymgr.h>
 #include "oal_internal.h"
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/utils.h>
+#include <sysmem/debugled.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 
 extern void *memMgrLocalAlloc(SceSize size);
-extern int ksceKernelVprintf(const char *fmt, va_list arg);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 extern int sceRegMgrGetKeyStr(const char *category, const char *name,
 	char *buf, SceSize size);
@@ -65,15 +68,10 @@ extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
 /* imports under the names of our NID db (tools/nids/kernel.yml) */
 extern int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-extern SceUInt32 sceKernelGetGPI(void);
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
 	CoredumpSimpleEventInfo *info);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls,
-	SceUInt32 level, SceUID *vector, SceSize num, SceSize *retNum);
-extern int ksceKernelGetMemBlockInfo(SceUID uid, SceInt32 level,
-	MemBlockPhyInfo *info);
 struct ThreadmgrSemaInfo;
 struct ThreadmgrEventFlagInfo;
 struct ThreadmgrLwMutexInfo;
@@ -108,18 +106,9 @@ extern int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level,
 	struct ThreadmgrEventInfo *infos, SceSize size, SceSize *count);
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
-extern int ksceAesInit1(SceAesFullContext *context, SceSize blockSize,
-	SceSize keySize, const void *key);
-extern int ksceAesDecrypt1(SceAesFullContext *context, const void *source,
-	void *destination);
-extern int ksceSha256Digest(const void *data, SceSize size, void *digest);
-extern char *__strncpy_chk(char *destination, const char *source,
-	size_t size, size_t destinationSize);
 extern int memMgrInit(void);
 extern int memMgrFinal(void);
 extern SceSize memMgrLocalGetFreeSize(void);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID uid);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern int coredumpGetCachedSemaphoreInfo(SceUID pid, SceUID semaId,
 	CoredumpSemaphoreInfo *info);
 extern int coredumpGetCachedEventFlagInfo(SceUID pid, SceUID eventFlagId,
@@ -141,8 +130,6 @@ extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
 extern int SceThreadmgrForDriver_D1FBDFA6(SceUID condId,
 	SceKernelCondInfo *info);
-extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level,
-	SceUID *vector, SceSize size, SceSize *retNum);
 extern int ksceKernelGetProcessStatus(SceUID pid, int *status);
 extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
 extern int SceProcessmgrForDriver_BA0A06A4(SceUInt32 visibilityLevel,
@@ -153,14 +140,8 @@ extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
 extern int SceSblACMgrForDriver_4CBD6156(SceUID pid);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblACMgrIsRootProgram(SceUID pid);
-extern int ksceSblAimgrIsCEX(void);
-extern int ksceSblAimgrIsTool(void);
-extern int ksceSblAimgrIsDEX(void);
-extern int ksceSblAimgrIsDolce(void);
 extern int ksceSblQafManagerGetQAFlags(void *flags);
 extern int ksceSblQafManagerGetQafName(char *name, SceSize size);
-extern uint64_t SceSysrootForKernel_E20F6FC8(void);
-extern SceSize SceSysmemForKernel_BC36755F(void);
 extern SceUID sceCoredumpCafContextCreate(void);
 extern int sceCoredumpCafContextDestroy(SceUID context);
 extern int ksceCoredumpCafCreateIv(void *iv, SceSize size);
@@ -176,8 +157,6 @@ extern int ksceCoredumpCafFinal(void);
 extern int ksceCoredumpCafSegmentTransform(SceUID context, const void *source,
 	void *destination, SceSize size);
 extern int ksceCoredumpCafSegmentFinal(SceUID context, void *digest, SceSize size);
-extern int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode,
-	const void *address, SceSize size);
 extern int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
 	CoredumpThreadInfo *info);
 
@@ -4089,8 +4068,6 @@ int oalGetDebugTailLog(char *buf, SceSize size)
 	return result;
 }
 
-extern int SceSysrootForDriver_591BB490(SceUID pid, char *buf, SceSize size);
-
 int oalGetDebugTailLogPid(SceUID pid, char *buf, SceSize size)
 {
 	int result;
@@ -4186,8 +4163,6 @@ int oalChangeThreadPriority(SceUID threadId, int priority)
 {
 	return ksceKernelChangeThreadPriority(threadId, priority);
 }
-
-extern int ksceEventLogGetInfo(void *buf, SceSize size, SceSize *readBlocks);
 
 int oalGetEventlog(void *buf, SceSize size, SceSize *readBlocks)
 {
@@ -4290,4 +4265,3 @@ int oalGetMemoryCardInfo(CoredumpMemoryCardInfo *out)
 	}
 	return 0;
 }
-

@@ -22,6 +22,8 @@
 #include "event_flag.h"
 #include "timer.h"
 #include <threadmgr/uid_waitable.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
 int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
@@ -63,11 +65,6 @@ int sendSignal(SceUID threadId);
 #define USER_ERROR_UNKNOWN_MSG_PIPE_ID	0xc0028221
 #define USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID	0xc0028261
 
-extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
-extern int kscePUIDGetClass(SceUID processId, SceUID uid, SceClass **cls);
-extern int kscePUIDClose(SceUID processId, SceUID uid);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int SceSysrootForDriver_CAE820B2(SceUID processId, SceUInt32 *version);
 extern void *ksceKernelGetTLSAddr(unsigned int index);
 int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
 int ksceKernelDeleteThread(SceUID threadId);
@@ -82,7 +79,6 @@ SceUID ksceKernelCreateCallback(const char *name, SceUInt32 attr, uintptr_t entr
 int ksceKernelDeleteCallback(SceUID callbackId);
 int ksceKernelNotifyCallback(SceUID callbackId, int arg);
 int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, ThreadmgrCallbackInfo *info);
-extern SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
 int ksceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId, uint32_t notifyId);
 int ksceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId);
 int ksceKernelUnregisterCallbackFromEventAll(SceUID eventId);
@@ -98,7 +94,6 @@ int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 		       uint64_t *outUserData);
 int sceKernelCancelEvent(SceUID eventId, int *numWaitThreads);
 extern void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, SceAllocOpt *opt);
-extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
 int SceThreadmgrForDriver_20C228E4(void);
 int ksceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
 int ksceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
@@ -111,9 +106,6 @@ int ksceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint3
 			    SceUInt32 *timeout);
 int ksceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
 			      SceUInt32 *timeout);
-extern SceUID SceSysmemForKernel_BDE00106(const char *name);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID uid);
-extern int ksceKernelStrncpyFromUser(char *dest, const char *source, unsigned int size);
 int ksceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout);
 int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *timeout);
 int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads);
@@ -152,9 +144,6 @@ int __sceKernelSignalLwCondAll(SceUID condId);
 int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId);
 SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr, const void *option);
 extern void sceKernelApiDeclareTypeUInt32(void);
-extern void sceKernelApiDeclareTypeUInt64(void);
-extern uint32_t SceSysrootForKernel_41636522(void);
-extern uint64_t SceSysrootForKernel_E20F6FC8(void);
 int SceThreadmgrForDriver_3F5E1D56(SceUID rwLockId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_CFA2FFAF(SceUID rwLockId, SceUInt32 *timeout);
 int ksceKernelTryLockReadRWLock(SceUID rwLockId);
@@ -2832,7 +2821,6 @@ int _sceKernelWaitCondCB(SceUID condId, SceUInt32 *timeout)
 		ret = err;
 	return ret;
 }
-
 
 /* _sceKernelWaitEvent: extra arguments (outUserData, timeout) */
 int _sceKernelWaitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,

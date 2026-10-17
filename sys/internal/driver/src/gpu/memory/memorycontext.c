@@ -6,12 +6,12 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/memorycontext.c"
 
 extern void *AllocProcessGpuMemory(unsigned size);
-extern void *memset(void *destination, int value, unsigned size);
 extern int DestroyGpuHeap(GpuHeap *heap);
 int FreeProcessGpuMemory(void *memory);
 int DestroyGpuMmuContext(GpuMmuContext *context);

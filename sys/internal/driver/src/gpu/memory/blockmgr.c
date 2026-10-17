@@ -4,17 +4,13 @@
 #include <sysmem/sysmem.h>
 
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/blockmgr.c"
 
 extern void *AllocProcessGpuMemory(unsigned size);
 extern int FreeProcessGpuMemory(void *address);
-extern void *memset(void *destination, int value, unsigned size);
-extern unsigned ksceKernelMemBlockTypeGetPrivileges(unsigned type);
-extern unsigned SceSysmemForDriver_CB0F3A33(unsigned type);
-extern int ksceKernelIncRefCountMemBlock(int uid);
-extern int ksceKernelDecRefCountMemBlock(int uid);
 extern int ksceSblACMgrIsGameProgram(int pid);
 extern GpuMemBlockHeap *kernelMemBlockHeap;
 

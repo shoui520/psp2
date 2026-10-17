@@ -7,11 +7,11 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
 
 #define THREAD_ID_LIST_ALL		0x00010021	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 
-extern void *memset(void *dst, int c, SceSize n);
 extern int ksceKernelGetThreadIdList(SceUID type, SceUID *ids, SceSize size, SceSize *count);
 
 /* allocates a thread's syslibtrace state if it has none (its lock held) */

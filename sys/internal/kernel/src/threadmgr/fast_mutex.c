@@ -12,6 +12,7 @@
 #include "fast_mutex.h"
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
 
 #define FAST_MUTEX_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define FAST_MUTEX_ATTR_MASK		0x0000a00e
@@ -35,19 +36,11 @@ typedef struct ThreadmgrFastMutexOptParam {
 	int ceilingPriority;
 } ThreadmgrFastMutexOptParam;
 
-extern const char *ksceGUIDName(SceUID guid);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern void *memset(void *dst, int c, SceSize n);
-extern void *memcpy(void *dst, const void *src, SceSize n);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 extern int ksceKernelSpinlockLowTrylockCpuSuspendIntr(SceKernelSpinlock *lock);
-extern int ksceGUIDClose(SceUID guid);
-extern SceUID ksceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **object);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
 extern int ksceKernelCpuId(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);

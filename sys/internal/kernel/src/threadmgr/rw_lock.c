@@ -11,6 +11,8 @@
 #include "scheduler.h"
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 #define RW_LOCK_ITEM_SIZE		0x80	/* the class's object allocation size */
 #define RW_LOCK_ATTR_RECURSIVE		0x00000002
@@ -90,23 +92,9 @@ typedef struct ThreadmgrRWLockInfo {
 	int numWriteWaitThreads;		/* 0x38 */
 } ThreadmgrRWLockInfo;
 
-extern const char *ksceGUIDName(SceUID guid);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern void *memset(void *dst, int c, SceSize n);
-extern void *memcpy(void *dst, const void *src, SceSize n);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
-extern int ksceGUIDClose(SceUID guid);
-extern int ksceGUIDGetObject(SceUID guid, void *object);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern int ksceKernelCpuId(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);

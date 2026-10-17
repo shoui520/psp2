@@ -18,7 +18,6 @@
 
 #include <psp2kern/kernel/proc_event.h>
 #include <threadmgr/threadmgr.h>
-int ksceKernelCopyToUser(void *dst, const void *src, unsigned size);
 int ksceUsbAudioGetDeviceIdList(unsigned *list, int size);
 int ksceUsbAudioRegisterCallback(int callback);
 int ksceUsbAudioUnregisterCallback(int callback);

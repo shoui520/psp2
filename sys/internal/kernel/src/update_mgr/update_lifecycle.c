@@ -5,8 +5,7 @@
 #include <syscon/syscon.h>
 #include <sysstatemgr/sysstatemgr.h>
 #include "update_internal.h"
-
-int SceQafMgrForDriver_3CB55F98(void);
+#include <sysmem/qafmgr.h>
 
 int module_start(SceSize arglen, const void *argp)
 {

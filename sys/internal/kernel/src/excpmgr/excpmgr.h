@@ -8,6 +8,8 @@
 #include <excpmgr/excpmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/suspend.h>
 
 #define EXCP_STACK_SIZE		0x1000
 
@@ -25,21 +27,13 @@ extern SceExcpmgrHandler initialUndefHandler, initialPabtHandler, initialDabtHan
 void excpResumeContext(SceExcpmgrContext *context) __attribute__((noreturn));
 
 /* Import names unknown: sysroot per-core state and debug services. */
-void *SceSysrootForKernel_06182D59(unsigned int cpu);
 int SceSysrootForKernel_0A12227B(SceUID pid, unsigned int value);
-int SceSysrootForKernel_1D84C4D4(SceUID pid, unsigned int pc, SceUID *uid,
-				unsigned int *base, char *name);
 int sceKernelSysrootPrintBacktrace(SceUID pid, const SceUID *uids, unsigned int count, unsigned int flags);
 int sceKernelSysrootBacktrace(unsigned int flags, SceUID *uids, unsigned int count,
 				 unsigned int *returned, unsigned int kind);
 void sceKernelSysrootReturnFromExcpToThread(SceExcpmgrContext *context, void *thread);
-int ksceKernelIsColdBoot(void);
 void SceDebugForKernel_CCABDD98(const SceKernelDebugInfo *info, SceExcpmgrContext *context,
 			     unsigned int reason, const char *message) __attribute__((noreturn));
-int SceKernelSuspendForDriver_CE7A2207(unsigned int slot, int (*handler)(void), void *arg);
-int SceKernelSuspendForDriver_105C5752(unsigned int slot, int (*handler)(void), void *arg);
-int SceQafMgrForDriver_382C71E8(void);
-int ksceGUIDGetName(SceUID uid, char **name);
 
 /* excpmgr.c */
 void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reason,

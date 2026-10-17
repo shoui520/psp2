@@ -18,12 +18,9 @@
 #include <string.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
-
-int ksceSblAimgrIsToolRev4(void);
-int ksceSblAimgrIsPrototypeRev2(void);
-int ksceSblAimgrIsToolRev3(void);
-int ksceSblAimgrIsToolRev5(void);
-int ksceSblAimgrIsPrototypeRev7(void);
+#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/sblaimgr.h>
+#include <sysmem/suspend.h>
 
 #define SCE_SBL_ERROR_UNSUPPORTED		0x800f0002	/* name unknown */
 #define SCE_SBL_ERROR_INVALID_ARGUMENT		0x800f0016
@@ -44,9 +41,6 @@ void *ksceSblSsMemset(void *dst, int c, SceSize len);
 int ksceSblACIsSystemProgram(SceUID pid);
 int ksceSblNvsReadData(SceUInt32 offset, void *buf, SceSize size);
 int ksceSblNvsWriteData(SceUInt32 offset, const void *buf, SceSize size);
-int SceKernelSuspendForDriver_4DF40893(int unk);
-int SceKernelSuspendForDriver_2BB92967(int unk);
-void *ksceKernelSysrootGetKblParam(void);
 
 /* a deferred placeholder stays a call, as the routine it stands for is */
 #define SCE_ERROR_ERRNO_ENOENT		0x80010002

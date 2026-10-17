@@ -14,15 +14,12 @@
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <threadmgr/threadmgr.h>
-
-/* SceSysclibForDriver */
-void *memset(void *dst, int c, SceSize len);
-void *memcpy(void *dst, const void *src, SceSize len);
-void *memchr(const void *s, int c, SceSize len);
-int strncmp(const char *a, const char *b, SceSize len);
-char *strncpy(char *dst, const char *src, SceSize len);
-SceSize strnlen(const char *s, SceSize len);
-int snprintf(char *dst, SceSize len, const char *fmt, ...);
+#include <psp2kern/kernel/dipsw.h>
+#include <psp2kern/kernel/utils.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -73,12 +70,6 @@ int ksceKernelCpuResumeIntr(int intr);
 int ksceKernelCpuId(void);
 int ksceKernelMMUVAtoPA(void *va, SceUIntPtr *pa);
 
-/* SceZlibForDriver / SceDeflateForDriver */
-int ksceDeflateDecompressPartial(void *dst, SceSize dstSize, const void *src,
-				 const void **next, void *param);
-int ksceZlibGetInfo(const void *src, SceUInt8 *cmf, SceUInt8 *flg, SceUInt32 *dictid,
-		    const void **data);
-
 /* SceThreadmgrForDriver / SceThreadmgrForKernel */
 SceUID ksceKernelCreateThread(const char *name, void *entry, int prio, SceSize stack,
 			      SceUInt32 attr, int cpu, void *opt);
@@ -89,18 +80,11 @@ SceUID ksceKernelGetThreadId(void);
 SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, void *entry, int prio,
 				      SceSize stack, SceUInt32 attr, int cpu, void *opt);
 
-/* SceKernelSuspendForDriver */
-int SceKernelSuspendForDriver_4DF40893(int a0);	/* lock power state */
-int SceKernelSuspendForDriver_2BB92967(int a0);	/* unlock power state */
-
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
 int ksceSblACMgrIsGameProgram2(SceUID pid);
 int ksceSblACMgrIsNonGameProgram2(SceUID pid);
 int ksceSblACMgrIsDevelopmentMode2(void);
 int ksceSblACMgrGetMediaType2(const char *path, void *type);
-int ksceSblQafMgrIsAllowHost0Access(void);
-int SceQafMgrForDriver_382C71E8(void);
-int SceQafMgrForDriver_B9770A13(void);
 int ksceSblAuthMgrCompareSwVersion(SceUInt32 version);
 int ksceSblAuthMgrOpen(int *ctx);
 int ksceSblAuthMgrClose(int ctx);
@@ -109,8 +93,6 @@ int ksceSblAuthMgrSetupAuthSegment(int ctx, int index);
 int ksceSblAuthMgrLoadBlock(int ctx, void *buf, SceSize size);
 
 /* SceSysrootForKernel / SceSysrootForDriver */
-void *ksceKernelSysrootGetModulePrivate(int index);
-int ksceKernelSysrootGetStatus(void);
 int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleid, SceSize len);
 SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
 int sceKernelApiDeclareTypeUInt32(void);		/* name per NID db */
@@ -121,20 +103,9 @@ int sceKernelApiDeclareTypeUInt32(void);		/* name per NID db */
 int ksceSysrootIsManufacturingMode(void);
 int ksceSysrootIsExternalBootMode(void);
 int ksceKernelSysrootDbgpSuspendProcessAndWaitResume(SceUID pid, SceUID modid, int event);
-int SceSysrootForKernel_73522F65(SceUID pid, SceUInt32 *flags);	/* debug flags; bit 0: debugger */
-int SceSysrootForKernel_6050A467(SceUID pid);			/* the debugger attached */
-int SceSysrootForKernel_CA497324(SceUID pid, SceUID modid, SceUInt64 time);	/* module loaded */
-int SceSysrootForKernel_C81B7E2B(SceUID pid, SceUID modid, SceUInt64 time);	/* module loaded, debugger */
-int SceSysrootForKernel_20D2A0DF(SceUID pid, SceUID modid, SceUInt64 time);	/* module unloaded */
-int SceSysrootForKernel_AA8D34EE(SceUID pid, SceUID modid, SceUInt64 time);	/* module unloaded */
 /* the instruction a software breakpoint replaced: 9CFF80F9 reads it (0: there is one), 38751FB7 replaces it */
 int SceSysrootForKernel_9CFF80F9(SceUID pid, SceUInt32 addr, void *orig);
-int SceSysrootForKernel_38751FB7(SceUID pid, SceUInt32 addr, SceUInt32 insn);
 int SceSysrootForKernel_B171CC2D(const void *callbacks);
-int SceSysrootForKernel_C67A1FA9(SceUID pid, SceUID modid, int percent, const char *path);
-int SceSysrootForDriver_1B3FA457(SceUID pid);		/* end of an entry call */
-int SceSysrootForDriver_9AF075D4(SceUID pid);		/* start of an entry call */
-int SceSysrootForDriver_CAE820B2(SceUID pid, SceUInt32 *sdkVersion);
 
 /* SceProcEventForDriver */
 SceUID ksceKernelRegisterProcEventHandler(const char *name, const void *handler, int a2);
@@ -165,11 +136,7 @@ int ksceKernelIsIntrAllowedInCurrentContext(void);
 int SceIntrmgrForDriver_C568F145(int code);
 int SceIntrmgrForKernel_71C5F42F(void *handler);
 
-/* SceDipswForDriver */
-int ksceKernelCheckDipsw(SceUInt32 bit);
-
 /* the stack protector */
 extern SceUInt32 __stack_chk_guard;
-void __stack_chk_fail(void);
 
 #endif

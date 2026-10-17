@@ -3,6 +3,7 @@
 #include "../../gpu_es4/srvkm/sync_sce.h"
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <sysmem/debug.h>
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/misc/waitmodobj.c"
@@ -36,7 +37,6 @@ int sceGpuModObjPoll(MODIFY_SYNC_OP_INFO *psModSyncOpInfo);
 int sceGpuWaitModObjSignal(int waitEventFlag,
 		MODIFY_SYNC_OP_INFO *psModSyncOpInfo);
 void *OSAllocMem(unsigned size);
-void *memset(void *destination, int value, unsigned size);
 
 void sceGpuWaitModObjPollAll(void)
 {
@@ -76,7 +76,6 @@ int sceGpuWaitModObjAdd(MODIFY_SYNC_OP_INFO *psModSyncOpInfo,
 	UnlockWaitModObjList();
 	return 0;
 }
-
 
 int OSFreeMem(void *memory);
 

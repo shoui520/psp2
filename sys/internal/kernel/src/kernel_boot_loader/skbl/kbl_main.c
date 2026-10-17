@@ -21,20 +21,19 @@
 #include <power/spad_regs.h>
 #include <sysmem/sysroot.h>
 #include "boot.h"
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/debugled.h>
+#include <sysmem/sysmem.h>
+#include <sysmem/uid_class.h>
 
 /* boot.c and monitor.S */
-int sceKernelSetGPO(SceUInt32 gpo);
 void jumpToNonSecure(uintptr_t entry) __attribute__((noreturn));
 
 /* the sysroot (sysroot.c) */
 int SetupCore0(SceKernelBootParam *param);
 int sceKernelSysrootSetStatus(unsigned int status);
-void sceKernelSysrootSetVbaseResetVector(uint32_t value);
 void sceKernelSysrootSetVbaseMonitorVector(uint32_t value);
 void sceKernelSysrootSetBootStatus(unsigned int status);
-int ksceKernelIsColdBoot(void);
-int SceSysrootForKernel_ksceSysrootIsSafeMode(void);
-int ksceKernelCheckDipsw(unsigned int bit);
 
 /* the rest of the TrustZone kernel */
 int KblMainGetBuildNumber(void);
@@ -45,8 +44,6 @@ int KblMMUInit(SceKernelBootParam *param);
 int SysmemModuleStart(SceKernelBootParam *param);
 int AimgrInit(void);
 const char *SysmemAllocName(const char *name);
-SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize align);
-int ksceKernelGetMemBlockVBase(SceUID uid, void **base);
 void KblCallWithStack(SceKernelBootParam *param, void (*func)(SceKernelBootParam *),
 		      void *stack);
 int sceKernelModulemgrStart(SceKernelBootParam *param);

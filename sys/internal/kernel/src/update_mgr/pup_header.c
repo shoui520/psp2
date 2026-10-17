@@ -8,8 +8,8 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 #include <threadmgr/threadmgr.h>
+#include <sysmem/qafmgr.h>
 
-int SceQafMgrForDriver_3CB55F98(void);
 int ksceSblUtMgrHasComTestFlag(void);
 int SceSblPostSsMgrForDriver_9D1D8EE5(void);
 int ksceSblUtMgrHasStoreFlag(void);
@@ -142,4 +142,3 @@ versionError:
 	result = (int)0x800f0237;
 	goto cleanup;
 }
-

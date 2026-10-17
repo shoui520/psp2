@@ -1,14 +1,5 @@
 #include "update_internal.h"
-
-int SceSysrootForDriver_9A486846(int kind, uint32_t total,
-	const char *message, int length);
-int SceSysrootForDriver_9EC02A41(int kind, uint32_t percent);
-int SceSysrootForDriver_217B2871(uint32_t result, const char *message, int length);
-int SceSysrootForDriver_631141E2(const char *name, SceSize length, uint32_t value);
-int SceSysrootForDriver_17DD213C(const char *name, SceSize nameLength,
-	const char *str, SceSize strLength);
-int SceSysrootForDriver_9E96D990(const char *name, SceSize nameLength,
-	const void *data, SceSize dataSize);
+#include <sysmem/sysroot.h>
 
 int DeciUtilInformUpdateStarted(int number1, int number2,
 	const char *str, SceSize length)

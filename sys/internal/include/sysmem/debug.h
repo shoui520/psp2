@@ -246,3 +246,8 @@ int SceDebugForKernel_3A21194E(int c);
 
 int ksceKernelEnableCrashDump(SceBool enable);
 int ksceKernelGetTtyInfo(char *buf, SceSize size);
+
+SceSSize ksceEventLogGetInfo(void *buffer, SceSize size, SceUInt32 *count);
+int ksceKernelDebugPutchar(int character);
+int ksceKernelPrintfLevel(int level, const char *format, ...);
+int ksceKernelVprintf(const char *format, va_list arguments);

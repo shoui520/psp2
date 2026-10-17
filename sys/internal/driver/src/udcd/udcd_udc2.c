@@ -17,6 +17,7 @@
 #include "udcd_internal.h"
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/suspend.h>
 
 /* controller commands (command register, with the endpoint in bits 4-7) */
 #define UDC2_COMMAND_SETUP_DONE		2
@@ -30,8 +31,6 @@
 #define UDC2_COMMAND_FIFO_CLEAR		0xe
 
 #define UDC2_COMMAND_TIMEOUT		1000	/* microseconds */
-
-extern int ksceKernelPowerTick(int type);
 
 /* the interrupts of a bus: the controller, its DMA, and VBUS */
 static inline int udcdControllerIntr(int bus)

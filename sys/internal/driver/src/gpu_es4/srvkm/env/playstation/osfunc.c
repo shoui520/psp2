@@ -11,14 +11,13 @@
 #include <stddef.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <psp2kern/kernel/cpu/atomic.h>
 
 IMG_BOOL PVRSRVSystemLISR(IMG_VOID *pvSysData);
 IMG_VOID PVRSRVMISR(IMG_VOID *pvSysData);
 /* Canonical processmgr_imports.h ABI; its unrelated interrupt declaration
  * conflicts with the SDK interrupt header used by this native port.
  */
-SceInt32 ksceKernelAtomicCompareAndSet32(volatile SceInt32 *store,
-		SceInt32 cmp, SceInt32 value);
 IMG_VOID *AllocProcessGpuMemory(unsigned size);
 int FreeProcessGpuMemory(IMG_VOID *address);
 

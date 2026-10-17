@@ -8,9 +8,7 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../../hdmi_internal.h"
-
-void *memset(void *dst, int c, SceSize len);
-int memcmp(const void *a, const void *b, SceSize len);
+#include <sysmem/sysclib.h>
 
 /* I2C bus and slave addresses */
 #define AD80244_BUS		1
@@ -872,4 +870,3 @@ int HdmiDeviceAD80244ReadBksvCount(HdmiDevice *device, SceUInt8 *count)
 	*count &= 0x7f;
 	return ret;
 }
-

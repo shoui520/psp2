@@ -17,14 +17,13 @@
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <threadmgr/threadmgr.h>
-
-/* SceSysclibForDriver */
-void *memset(void *dst, int c, SceSize len);
-void *memcpy(void *dst, const void *src, SceSize len);
-int strncmp(const char *a, const char *b, SceSize len);
-char *strncpy(char *dst, const char *src, SceSize len);
-SceSize strnlen(const char *s, SceSize len);
-int snprintf(char *dst, SceSize len, const char *fmt, ...);
+#include <psp2kern/kernel/cpu/atomic.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <psp2kern/kernel/proc_event.h>
+#include <psp2kern/kernel/suspend.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -37,8 +36,6 @@ int ksceKernelSpinlockLowLockCpuSuspendIntr(SceKernelSpinlock *lock);
 void ksceKernelSpinlockLowUnlockCpuResumeIntr(SceKernelSpinlock *lock, int intr);
 void ksceKernelSpinlockLowLock(SceKernelSpinlock *lock);
 void ksceKernelSpinlockLowUnlock(SceKernelSpinlock *lock);
-SceInt32 ksceKernelAtomicAddAndGet32(volatile SceInt32 *store, SceInt32 value);
-SceInt32 ksceKernelAtomicCompareAndSet32(volatile SceInt32 *store, SceInt32 cmp, SceInt32 value);
 
 /* SceSblACMgrForKernel */
 int ksceSblACMgrIsGameProgram2(SceUID pid);
@@ -116,26 +113,22 @@ const char *ksceGUIDName(SceUID guid);
 int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, const void *mode, const void *addr,
 					      SceSize size);
 int SceSysmemForKernel_0164D817(void);
-int SceSysmemForKernel_02DAD732(void);
 int sceKernelObjectHeapSetResourceLimitAll(void *objectHeap, int count, const void *limits);
 int SceSysmemForKernel_0B1B4ACA(void);
 int SceSysmemForKernel_133024A5(void *entryHeapObject);		/* sceUIDEntryHeapCloseAllPUID */
 int SceSysmemForKernel_2F526AB8(void *objectHeap);		/* sceKernelDeleteObjectHeap */
 int ksceKernelAddressSpaceFreeAllMemBlock(SceUID guid);
-SceClass *SceSysmemForKernel_368F1C36(SceUID guid);		/* the class of a UID */
 int sceKernelGrowPhyMemPartByPbase(void *partition, SceUIntPtr base, SceSize size);
 int SceSysmemForKernel_3753C584(void *partition);
 int sceKernelDeletePhyMemPart(void *partition);
 int ksceKernelFree(void *ptr);
 int ksceKernelDeleteAddressSpace(SceUID guid);
-int sceKernelSysmemModuleStartAfterProcessmgr(void);
 int SceSysmemForKernel_4E923101(void *partition);
 int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
 				SceSize *count);
 int SceSysmemForKernel_5B434019(void *partition, void *info);
 int CreatePhyMemPartByPbase(const char *name, SceUInt32 type, SceUIntPtr base,
 			  SceSize size, void **partition);
-int SceSysmemForKernel_5E772E19(SceUID addressSpace, SceUID pid);
 int SceSysmemForKernel_5EDDEEB5(SceUID budgetId, SceClass *cls, const char *name, void *budget,
 				SceSize size);
 int SceSysmemForKernel_62800A6B(void);
@@ -144,7 +137,6 @@ int SceSysmemForKernel_6D563733(void *info);
 int sceKernelGetPhyMemPartInfoForDebugger(void *partition, void *info);
 void *SceSysmemForKernel_791D6205(void);				/* the shared object heap */
 void *ksceKernelAlloc(SceSize size);
-SceUID SceSysmemForKernel_89BEF058(SceUID pid, SceUID heap);		/* create the UID entry heap */
 SceUID ksceKernelCreateAddressSpace(SceUID pid, const char *name, SceUInt32 type, void *opt);
 int sceKernelResetPhyMemPart(void *partition);
 int sceKernelCreateObjectHeap(SceUID pid, int kind, void *opt, void *objectHeap);
@@ -152,11 +144,8 @@ int SceSysmemForKernel_A2DFA383(const char *name, SceUInt32 type, SceSize size, 
 int sceKernelGetPhyMemPartInfoCore(void *partition, void *info);
 int SceSysmemForKernel_BF275C5A(SceUID guid, SceClass *cls, int unk, void *object);	/* sceGUIDSet */
 int SceSysmemForKernel_CAB15F74(SceUID pid);
-int sceKernelAddressSpaceSetName(SceUID addressSpace, const char *name);
 int SceSysmemForKernel_E8CC2166(SceUID pid, int level);
-int SceSysmemForKernel_F6D09BD9(SceUID entryHeap);			/* delete the UID entry heap */
 int SceSysmemForKernel_FA1A73DD(SceUID addressSpace, void *info);
-void *SceSysmemForKernel_FA6C098C(SceUID entryHeap);			/* the entry heap object */
 
 /* SceSysrootForDriver / SceSysrootForKernel */
 int SceSysrootForDriver_1D61C837(SceUID pid, SceUID spawnPid, SceUInt64 time);
@@ -189,7 +178,6 @@ int sceKernelSysrootBacktrace(SceUID pid, void *buf, SceSize len, void *out, int
 int SceSysrootForKernel_D29BCA77(const void *ops);		/* processmgr ops for sysroot */
 
 /* SceDebugForKernel (beyond sysmem/debug.h) */
-int ksceKernelCheckDipsw(SceUInt32 bit);
 int k_sceEventLogPut(SceUInt32 id, SceUInt32 kind, SceUInt32 unk, const void *data,
 		     SceSize size);
 
@@ -197,16 +185,5 @@ int k_sceEventLogPut(SceUInt32 id, SceUInt32 kind, SceUInt32 unk, const void *da
 int SceKernelUtilsForDriver_335AF34D(void *random);
 void ksceMt19937GlobalUninit(void *buf, SceSize len);	/* fills buf with random bytes */
 int SceKernelUtilsForDriver_B55C69B7(void *random);
-
-/* SceProcEventForDriver */
-int ksceKernelInvokeProcEventHandler(SceUID pid, int event, int type, void *param,
-				     SceUID *handler, int unk);
-
-/* SceKernelSuspendForDriver */
-int SceKernelSuspendForDriver_230495ED(SceUID pid);
-int SceKernelSuspendForDriver_254525F8(SceUID pid);
-int SceKernelSuspendForDriver_2BB92967(int unk);
-int SceKernelSuspendForDriver_4DF40893(int unk);
-int ksceKernelPowerTick(int type);
 
 #endif

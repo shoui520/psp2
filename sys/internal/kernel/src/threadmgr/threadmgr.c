@@ -22,6 +22,10 @@
 #include "affinity.h"
 #include <psp2kern/types.h>
 #include <psp2common/kernel/modulemgr.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
 int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
@@ -497,7 +501,6 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define THREAD_PERMISSION_KERNEL	0x80		/* PLACEHOLDER: name */
 #define STACK_FILL			0xff
 
-
 #define CACHE_OBJECT_SIZE		0x10
 #define WAITABLE_OBJECT_SIZE		0x28
 #define WAITABLE_CLASS_SIZE		0x38
@@ -553,17 +556,11 @@ typedef int (*ThreadmgrSuspendHandler)(int event, void *arg);
 extern void sceKernelSysrootCorelockUnlock(void);
 extern int sceKernelSysrootSetModulePrivate(unsigned int slot, void *value);
 extern int SceSysrootForKernel_26458702(const SysrootThreadmgrOps *ops);
-extern void *ksceKernelAllocHeapMemory(SceUID heap, SceSize size);
 extern void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, SceAllocOpt *opt);
-extern SceClass *ksceKernelGetUIDClass(void);
 extern int SceSysmemForKernel_BF275C5A(SceUID uid, SceClass *cls, const char *name,
 				       void *object);		/* a GUID of a fixed value */
-extern SceUID SceSysmemForKernel_40870E74(const char *name, SceSize size, SceSize alignment);
-extern int ksceKernelGetMemBlockMappedBase(SceUID uid, void **base);
-extern void *SceSysmemForKernel_FA6C098C(SceUID uid);
 extern SceUID SceSysrootForKernel_7334F1E8(SceUID pid);
 extern int ksceKernelSysrootGetPUIDEntryHeap(SceUID pid, void **heap);
-extern int ksceKernelCheckDipsw(unsigned int bit);
 extern int SceIntrmgrForKernel_9CB39268(void *handler);	/* before an interrupt handler */
 extern int SceIntrmgrForKernel_46F04D82(void *handler);
 extern int SceIntrmgrForKernel_764F140A(void *handler);	/* the next context after an interrupt */
@@ -573,10 +570,6 @@ extern int SceIntrmgrForKernel_BCD3BB05(void);
 extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
 					     uintptr_t vfp);
 extern int ksceExcpmgrRegisterHandler(int kind, int slot, void *handler);
-extern int SceKernelSuspendForDriver_CE7A2207(int order, ThreadmgrSuspendHandler handler,
-					      void *arg);	/* before a power suspend */
-extern int SceKernelSuspendForDriver_105C5752(int order, ThreadmgrSuspendHandler handler,
-					      void *arg);	/* after a resume */
 
 /* excp_handlers.S */
 void poisonVfpRegisters(void);
@@ -1506,10 +1499,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value)
 #define SCE_KERNEL_ERROR_WAIT_DELETE	0x80028006
 #define SCE_KERNEL_ERROR_WAIT_CANCEL	0x80028007
 #define SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID	0x80028022
-extern const char *ksceGUIDName(SceUID guid);
-extern int ksceGUIDClose(SceUID guid);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
-extern int ksceKernelFreeMemBlock(SceUID uid);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
 int callThreadEventHandlers(uint32_t mask);
@@ -1895,7 +1884,6 @@ retry:
 	}
 }
 
-
 /* SceUIDThreadClass: a new thread object, dormant, its lists empty */
 int uidThread_Constructor(struct ThreadmgrThreadObject *object)
 {
@@ -2064,7 +2052,6 @@ int uidThread_CancelWait(void *cls, void *uidObject, uint32_t a2)
 typedef void (*ThreadmgrPriorityEventHook)(unsigned int event, const uint32_t *values);
 typedef void (*ThreadmgrChangePriorityProbe)(const struct ThreadmgrSchedProbeDescriptor *probe,
 	SceUID threadId, SceUID processId, int oldPriority, int newPriority);
-extern int ksceGUIDReferObjectWithSubclass(SceUID uid, SceClass *cls, SceObjectBase **object);
 
 static inline void unlinkThread(struct ThreadCB *thread)
 {
@@ -2599,7 +2586,6 @@ int SceThreadmgrForDriver_2B60B793(SceUInt32 usec, SceUInt32 *remaining)
 #define SCHED_TRACE_OFF_CPU		2
 #define PRIORITY_NONE			0xfe
 
-
 /* the titles whose system-type processes may use any CPU */
 #if FW_DEBUG
 static inline int anyCpuTitle(SceProcessObject *process)
@@ -2740,10 +2726,6 @@ void issueChangeThreadPriorityAndCpuAffinityIntrRequest(unsigned int cpuId, SceU
 
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
-extern int ksceGUIDGetName(SceUID guid, const char **name);
-extern int ksceGUIDGetObject(SceUID guid, SceObjectBase **object);
-extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
-extern int snprintf(char *str, SceSize size, const char *format, ...);
 int stopThread(SceUID threadId, int priority, uint32_t request);
 int deleteThread(struct ThreadCB *thread);
 int startThread(SceUID threadId, SceSize argSize, const void *arg, int checkSource);
@@ -3135,7 +3117,6 @@ int sceKernelThreadMgrProcessDeleteAfterPUIDClose(SceProcessObject *process)
 #define DEBUG_SUSPEND_ACTION_IGNORE	2
 
 #define USER_TLS_STACK_RANGE		0x7f8
-
 
 extern int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern);
 extern uint64_t SceSysrootForKernel_E20F6FC8(void);
@@ -3967,9 +3948,6 @@ out:
 #define ACCESS_KERNEL			0x10	/* PLACEHOLDER: ksceKernelIsAccessibleRange: kernel memory */
 #define SDK_VERSION_DEFAULT_AFFINITY	0x02100000
 #define SCE_KERNEL_ERROR_ILLEGAL_ARGUMENT	0x80020005	/* PLACEHOLDER: name */
-extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize size);
-extern int ksceKernelCopyFromToUser(void *dst, const void *src, SceSize size);
-extern int ksceKernelIsAccessibleRange(SceUInt32 access, const void *addr, SceSize size);
 extern uintptr_t SceSysrootForKernel_5F2CE289(SceProcessObject *process);
 void __attribute__((noreturn)) threadEntry(void);
 SceUID sceKernelStartThreadForUser(SceUID threadId, SceSize argSize, const void *arg);
@@ -4461,7 +4439,6 @@ void exitDeleteThread(int delete, int intr, int status)
 #define CRITICAL_ERROR_ACTION_CONTINUE	0
 #define CRITICAL_ERROR_ACTION_SUSPEND	2
 
-
 /* what the debugger's handlers hear of a critical error */
 struct ThreadmgrCriticalErrorMessage {
 	SceUID processId;
@@ -4720,7 +4697,6 @@ exiting:
 
 extern void notifyThreadPriorityChange(struct ThreadCB *thread, int oldPriority,
 				       int newPriority);
-extern int ksceGUIDGetObject(SceUID uid, SceObjectBase **object);
 
 /* the SDK version the caller's process was built with */
 static inline uint32_t callerSdkVersion(void)
@@ -6310,17 +6286,6 @@ typedef struct ThreadmgrSystemInfo {
 _Static_assert(sizeof(ThreadmgrThreadInfo) == 0x80 && sizeof(ThreadmgrRunStatus) == 0x34 &&
 	       sizeof(ThreadmgrSystemInfo) == 0x48, "thread info layouts");
 
-extern int ksceKernelCountFillValueFromUserProc(SceUID pid, const void *addr, uint32_t value,
-						SceSize size);
-extern char *strncpy(char *dst, const char *src, SceSize n);
-extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector,
-				   SceSize num, SceSize *count);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-
 /* the calling process's SDK version (kernel callers count as the newest) */
 static inline void getCallerSdkVersion(SceUInt32 *version)
 {
@@ -6673,8 +6638,6 @@ int ksceKernelGetThreadIdList(SceUID pid, SceUID *ids, SceSize size, SceSize *co
 #define THREADMGR_UID_CLASS_UNK2374		0x43
 #define THREADMGR_UID_CLASS_WORK_TASK		0x44
 
-SceClass *SceSysmemForKernel_368F1C36(SceUID uid);
-
 /* ksceKernelGetThreadmgrUIDClass: the internal classes have no number */
 int ksceKernelGetThreadmgrUIDClass(SceUID uid)
 {
@@ -6833,8 +6796,6 @@ int SceThreadmgrForDriver_1096042E(SceUID uid)
 #define THREAD_HANDED_EXCP_DEFAULT	0x301
 #define THREAD_HANDED_EXCP_MASK		0x301
 
-
-
 /* priorities */
 #define PRIORITY_DEFAULT		0		/* the creator's */
 #define AFFINITY_CPU_COUNT		4
@@ -6900,11 +6861,8 @@ extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t mode, c
 						    SceSize size);
 extern int ksceSblACMgrIsRootProgram2(SceUID pid);
 extern int ksceSblACIsSystemProgram(SceUID pid);
-extern int ksceKernelMapMemBlock(SceUID uid);
 extern SceUID ksceKernelGetModuleIdByPid(SceUID pid);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
-extern int ksceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize size);
-extern SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
 extern int ksceMt19937GlobalUninit(void *buffer, SceSize size);	/* PLACEHOLDER: fills it with random bytes */
 
 static uint32_t s_procLwpCreateProbeId;

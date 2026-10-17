@@ -20,6 +20,7 @@
 #include "lw_mutex.h"
 #include "syscall_context.h"
 #include <psp2kern/kernel/dipsw.h>
+#include <sysmem/uid_class.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_UNK10000000		0x10000000	/* PLACEHOLDER: its stack is only measured with DIPSW 0xd8 */
@@ -94,7 +95,6 @@ typedef struct ThreadmgrDebugGetRequest {
 	SceKernelSpinlock *done;
 } ThreadmgrDebugGetRequest;
 
-
 _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, timeout) == 0xf4 &&
 	       offsetof(ThreadmgrThreadInfoForDebugger, waitDetail) == 0x108,
@@ -121,14 +121,8 @@ extern const char *ksceGUIDName(SceUID guid);
 extern int ksceGUIDGetName(SceUID guid, const char **name);
 extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
 				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
 extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector,
-				   SceSize num, SceSize *count);
 extern int ksceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize len);
-extern int ksceKernelCountFillValueFromUserProc(SceUID pid, const void *addr, uint32_t value,
-						SceSize size);
 extern int ksceKernelFreeHeapMemory(SceUID heap, void *entry);
 SceUID ksceKernelGetThreadId(void);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);

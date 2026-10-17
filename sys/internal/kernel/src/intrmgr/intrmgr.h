@@ -15,6 +15,7 @@
 #include <processmgr/process.h>
 #include <intrmgr/gic_regs.h>
 #include "intrmgr_state.h"
+#include <sysmem/suspend.h>
 
 #define INTR_CPU_STACK_SIZE 0x20000
 #define INTR_LEVEL_STACK_SIZE 0x2000
@@ -118,19 +119,12 @@ extern char intrEnterHook[], intrLeaveHook[], syscallEnterHook[], syscallLeaveHo
 extern SceUInt32 intrEnterBranch, intrLeaveBranch;
 extern SceUInt16 syscallEnterBranch, syscallLeaveBranch;
 
-
-
-int SceSysmemForKernel_B628B46B(const char *name, unsigned int flags, char **out);
-int SceSysmemForKernel_634D0D0C(char *name, unsigned int flags);
 void *SceSysrootForKernel_118657C6(void);
 int sceKernelSysrootSetModulePrivate(unsigned int slot, void *value);
 int sceKernelSysrootTrapThreadAfterSyscall(void *args, void *results, unsigned int flags);
 void *ksceKernelSysrootGetVbaseResetVector(void);
 int ksceExcpmgrRegisterHandler(int code, int flags, void *handler);
-int SceKernelSuspendForDriver_CE7A2207(unsigned int slot, void *handler, void *arg);
-int SceKernelSuspendForDriver_105C5752(unsigned int slot, void *handler, void *arg);
 
-const char *ksceGUIDName(SceUID uid);
 int callIntrEvent(unsigned int event, unsigned int size, void *data);
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state);
 void invalidFastMutexOwnerCfunc(void);

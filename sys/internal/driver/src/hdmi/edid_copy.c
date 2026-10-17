@@ -5,9 +5,7 @@
  */
 #include <psp2kern/types.h>
 #include "hdmi_internal.h"
-
-void *memset(void *dst, int c, SceSize len);
-void *memcpy(void *dst, const void *src, SceSize len);
+#include <sysmem/sysclib.h>
 
 #define SCE_HDMI_ERROR_NO_EDID		0x80370008
 #define SCE_HDMI_ERROR_LOCK		0x8037000c

@@ -14,6 +14,7 @@
 #include "scheduler.h"
 #include "event.h"
 #include "syscall_context.h"
+#include <sysmem/uid_class.h>
 
 #if FW_DEBUG
 /* Native data retains this record without an executable reference. */
@@ -50,15 +51,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceGUIDClose(SceUID guid);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
-extern int kscePUIDGetObject(SceUID pid, SceUID puid, SceObjectBase **object);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
 
 /* SceUIDSimpleEventObject (0x3c) */

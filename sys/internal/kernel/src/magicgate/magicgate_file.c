@@ -9,9 +9,8 @@
 #include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include <sysmem/suspend.h>
 
-int SceKernelSuspendForDriver_4DF40893(int kind);
-int SceKernelSuspendForDriver_2BB92967(int kind);
 int sceMsifGetMediaId(uint8_t *mediaId);
 
 /* These supplied keys still need their entries identified in the reference. */

@@ -5,6 +5,7 @@
 #include <sysmem/aes.h>
 #include <sysmem/qafmgr.h>
 #include <stdio.h>
+#include <psp2kern/kernel/utils.h>
 
 typedef struct DcmpPacket {
 	DcmpStatusHeader message;
@@ -104,10 +105,6 @@ static const uint8_t s_dcmpSystemErrorIv[16] = {
 	0x47, 0xfb, 0x05, 0x0e, 0xa6, 0xf5, 0xfe, 0xcb,
 	0xcc, 0x01, 0x9d, 0xe0, 0x90, 0x1f, 0xc1, 0x67,
 };
-int ksceAesInit2(SceAesCompactContext *context, SceSize blockSize,
-		 SceSize keySize, const void *key);
-int ksceAesEncrypt2(SceAesCompactContext *context, const void *source,
-		    void *destination);
 int ksceSysrootGetSessionId(void *session);
 
 #if FW_DEBUG

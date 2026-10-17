@@ -20,6 +20,7 @@
 #include <sysmem/sysevent_ids.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
+#include <sysmem/sysevent.h>
 
 #define SESSION_COUNT	64
 #define CHANNEL_COUNT	4
@@ -94,8 +95,6 @@ void ksceKernelFreeHeapMemory(SceUID uid, void *ptr);
 int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
 				  int (*handler)(int, void *), void *userCtx,
 				  int priority, int targetCpu, void *opt);
-int ksceKernelRegisterSysEventHandler(const char *name,
-				      int (*handler)(int, int, void *, void *), void *arg);
 
 static SceUID s_heap;
 static SceUID s_lastId;

@@ -72,7 +72,6 @@ int sdctrl_remove(unsigned int port);
 int sdctrl_insert(unsigned int port);
 int sdctrl_disable_mount(unsigned int port);
 int sdctrl_invalidate_partition(unsigned int port);
-SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 extern uint32_t sdstorOpenCount[5];
 
 #if FW_DEBUG

@@ -1,8 +1,7 @@
 #include "update_internal.h"
 #include "spkg_hardware.h"
 #include <psp2kern/kernel/sysclib.h>
-
-int ksceSblAimgrIsCEX(void);
+#include <psp2kern/kernel/aimgr.h>
 
 int SpkgInfoUtilGetApplicableVersion(int type, UpdateApplicableVersion *info)
 {

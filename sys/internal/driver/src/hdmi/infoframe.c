@@ -6,8 +6,7 @@
  */
 #include <psp2kern/types.h>
 #include "hdmi_internal.h"
-
-int ksceSblAimgrIsDolce(void);
+#include <psp2kern/kernel/aimgr.h>
 
 #define INFOFRAME_TYPE_AVI	0x82
 #define INFOFRAME_TYPE_SPD	0x83

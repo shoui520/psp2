@@ -2,8 +2,8 @@
 #include <psp2kern/kernel/sysroot.h>
 #include <syscon/syscon.h>
 #include "update_internal.h"
+#include <psp2kern/kernel/aimgr.h>
 
-int ksceSblAimgrIsGenuineDolce(void);
 int ksceMotionDevIsReady(void);
 int SceTouchForDriver_63DCF2FE(void);
 int SceDeci4pCpupForDriver_C0AB956B(unsigned int *protocol,

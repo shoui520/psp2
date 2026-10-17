@@ -1,8 +1,7 @@
 /* Descriptive file name: the original has no source-file debug records. */
 #include "magicgate_private.h"
 #include <string.h>
-
-int timingsafe_memcmp(const void *first, const void *second, size_t size);
+#include <sysmem/sysclib.h>
 
 #define INSTALL_NEXT_BLOCK(key, block, temporary) do { \
 	decryptRecordBlock((key), &(block)->bytes[0], &(temporary)); \

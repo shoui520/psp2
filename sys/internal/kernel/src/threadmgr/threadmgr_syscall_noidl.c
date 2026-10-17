@@ -9,6 +9,7 @@
 #include "private.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_NAME_SIZE		0x20
@@ -24,10 +25,6 @@ struct ThreadmgrCreateThreadExtArgs {
 	const void *callerAddr;			/* 0x14: where the user library was called from */
 };
 
-extern int SceSysrootForDriver_9AF075D4(SceUID pid);		/* start of an entry call */
-extern int SceSysrootForDriver_1B3FA457(SceUID pid);		/* end of an entry call */
-extern int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size);
-extern int ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize size);
 SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPriority,
 		    SceSize stackSize, uint32_t attr, uint32_t cpuAffinityMask,
 		    const SceKernelThreadOptParam *option, uint32_t flags, const void *callerAddr);

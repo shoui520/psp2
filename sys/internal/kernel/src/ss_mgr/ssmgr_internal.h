@@ -7,6 +7,8 @@
 #include <dmacmgr/dmac_regs.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <syscon/syscon.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysroot.h>
 
 typedef union SsMgrQaFlags {
 	uint32_t words[4];
@@ -46,9 +48,7 @@ extern uint8_t rngSeed[20] SS_MGR_BSS(rngSeed);
 extern SceUID rngMutex SS_MGR_BSS(rngMutex);
 extern uint8_t rngKey[20] SS_MGR_BSS(rngKey);
 
-/* Imports without a vitasdk declaration. */
-int ksceSysrootUtMgrHasNpTestFlag(void);
-
+/* qaf_mgr.c */
 int qafIsAllowNpTest(void);
 int qafLoadToken(uint8_t *token);
 
@@ -60,8 +60,6 @@ int qafLoadToken(uint8_t *token);
 int ksceSblACIsSystemProgram(int pid);
 int nvs_read_data(uint32_t offset, void *buffer, uint32_t size);
 int ksceSblQafManagerGetQAFlags(void *flags);
-int SceKernelSuspendForDriver_4DF40893(int unk);	/* power lock? (placeholder) */
-int SceKernelSuspendForDriver_2BB92967(int unk);	/* power unlock? (placeholder) */
 int qafValidateToken(void *token, int service);
 int qafSetToken(const void *token);
 int qafDeleteToken(void);

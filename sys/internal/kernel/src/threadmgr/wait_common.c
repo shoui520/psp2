@@ -12,6 +12,7 @@
 #include "priority_change.h"
 #include <threadmgr/uid_waitable.h>
 #include "syscall_context.h"
+#include <sysmem/sysroot.h>
 
 #define WAIT_TYPE_LW_OBJECT		0x40000
 typedef void (*ThreadmgrSchedProbeHandler)(const struct ThreadmgrSchedProbeDescriptor *probe,
@@ -19,9 +20,7 @@ typedef void (*ThreadmgrSchedProbeHandler)(const struct ThreadmgrSchedProbeDescr
 
 #define WAIT_FLAG_TIMED			0x01	/* waitType */
 
-extern int ksceGUIDReferObjectWithSubclass(SceUID uid, SceClass *cls, SceObjectBase **object);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
-extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 
@@ -132,7 +131,6 @@ typedef void (*ThreadmgrSchedSleepHandler)(const struct ThreadmgrSchedProbeDescr
 
 void cancelDelayTimer(SceUID uid, struct ThreadCB *thread);
 int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback);
-extern int SceSysrootForDriver_CAE820B2(SceUID pid, SceUInt32 *sdkVersion);
 
 /* the class a wait type's object belongs to */
 static inline SceClass *WaitTypeClass(uint32_t waitType)

@@ -5,6 +5,7 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <string.h>
 #include "pcact.h"
+#include <psp2kern/kernel/utils.h>
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -31,8 +32,6 @@ int kscePsmDrmRemoveActData(SceUInt64 *accountId);
 int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
 		const unsigned char *rtcSeconds, GcAuthPsmactChallenge *output,
 		GcAuthPsmactRandomRecord *random);
-int ksceHmacSha256Digest(const void *key, unsigned int keySize,
-		const void *data, unsigned int size, void *digest);
 int GcAuthAesDecrypt(unsigned char *data, size_t size,
 		const void *key, const unsigned char *iv);
 

@@ -15,6 +15,7 @@
 #include <psp2kern/lowio/i2c.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysroot.h>
 
 #if FW_VERSION >= 0x04000000
 #include "data-4.00-DEBUGGER.h"
@@ -26,7 +27,6 @@
 #include <sysmem/barrier.h>
 
 extern int ksceKernelSearchModuleByName(const char *name);
-extern unsigned ksceSysrootGetHardwareInfo(void);
 
 #define LCD_INVALID ((int)0x803f0c02)
 #define LCD_NO_PANEL ((int)0x803f0c03)

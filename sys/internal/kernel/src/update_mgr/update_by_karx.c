@@ -5,6 +5,7 @@
 #include <modulemgr/certified_file.h>
 #include "update_internal.h"
 #include "spkg.h"
+#include <sysmem/sysroot.h>
 
 SCE_DBGINFO_DEFINE(static, updateOpenErrorInfo, 160, "UpdateMgrdoUpdate");
 SCE_DBGINFO_DEFINE(static, updateStartedInfo, 141, "UpdateMgrdoUpdate");
@@ -15,8 +16,6 @@ SCE_DBGINFO_DEFINE(static, updatePupVerifiedInfo, 193, "UpdateMgrdoUpdate");
 SCE_DBGINFO_DEFINE(static, updateMbrStartedInfo, 201, "UpdateMgrdoUpdate");
 SCE_DBGINFO_DEFINE(static, updateSegmentInfo, 218, "UpdateMgrdoUpdate");
 SCE_DBGINFO_DEFINE(static, updateFinishedInfo, 404, "UpdateMgrdoUpdate");
-
-int SceSysrootForDriver_47724459(int value);
 
 int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 			     const PupCachedHeader *pup, const SceMbr *mbr,

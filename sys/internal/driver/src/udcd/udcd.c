@@ -9,10 +9,10 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <kernel/error.h>
+#include <psp2kern/kernel/suspend.h>
 
 struct udcdState udcdState = { 0 };
 
-extern int ksceKernelPowerTick(int type);
 void udcdUpdateStateEvent(int bus);
 
 /* Original name unknown. Signal PHY readiness for the controller IRQ. */

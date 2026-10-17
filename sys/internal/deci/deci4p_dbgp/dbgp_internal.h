@@ -8,6 +8,7 @@
 #include <net_ps/netps.h>
 #include <modulemgr/modulemgr_debugger.h>
 #include <sysmem/sysroot_dbgp.h>
+#include <sysmem/sysmem.h>
 
 typedef struct DbgpPrefix {
 	SceDeci4pHeader hdr;
@@ -416,10 +417,6 @@ int checkGetTargetAddrStopCause(DbgpProcCB *proc, const void *address,
 int checkGetTargetAddrStopCauseDabt(void);
 int isDbgpThreadPcBkpt(SceUID pid, const void *address, SceUInt32 cpsr);
 int swbkptHasAddress(const DbgpProcCB *proc, SceUID pid, const void *address);
-int ksceKernelCopyFromUserProc(SceUID pid, void *dst,
-			       const void *src, SceSize size);
-int ksceKernelIsAccessibleRangeProc(SceUID pid, SceUInt32 mode,
-				    const void *address, SceSize size);
 int processSuspendProcessByDBGP(SceUID pid, int *alreadySuspended);
 int processResumeProcessByDBGP(SceUID pid, int alreadySuspended);
 void processClearDebugInfo(SceUID pid);

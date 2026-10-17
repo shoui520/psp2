@@ -12,6 +12,7 @@
 #include <pamgr/coresight_regs.h>
 #include <sysmem/cp15.h>
 #include <pamgr/pamgr_trace.h>
+#include <sysmem/sysroot.h>
 
 typedef void (*PamgrTraceInterruptCallback)(uint32_t status, void *arg);
 typedef void (*PamgrSyscallEnterCallback)(ThreadSyscallFrame *frame);
@@ -286,6 +287,5 @@ _Static_assert(offsetof(ScePerfmonRegisters, traceControl) == 0x10bc,
 extern struct PamgrState pamgrState;
 
 void sceKernelApiDeclareTypeUInt32(void);
-void sceKernelApiDeclareTypeUInt64(void);
 
 #endif

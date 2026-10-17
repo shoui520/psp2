@@ -10,6 +10,7 @@
 #include <string.h>
 #include "appmgr_internal_util.h"
 #include "app_state_internal.h"
+#include <sysmem/sysroot.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 extern SceUID sceKernelSpawnProcessExt(const char *name, SceUInt32 type,
@@ -79,7 +80,6 @@ extern int sceKernelResumeProcess(SceUID pid);
 extern int appmgrUsesDefaultLibrary(void);
 extern int sceKernelStartProcessExt(SceUID pid, int waitDebugger, SceSize args,
 				  void *argp, SceUInt32 flags);
-extern int SceSysrootForDriver_421EFC96(SceUID pid);
 
 SceUID g_appmgrVideoCodecPid = -1;
 int (*g_appmgrProcTerminatedCallback)(struct AppState *app);

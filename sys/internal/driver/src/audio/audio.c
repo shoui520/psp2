@@ -21,9 +21,8 @@
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include "alc.h"
 #include "equalizer.h"
+#include <psp2kern/kernel/sysroot.h>
 
-
-int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleid, SceSize len);
 int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key,
 					    void **storage, int create);
 void *ksceKernelGetProcessLocalStorageAddr(int key);
@@ -106,7 +105,6 @@ int audioSetTitleCompatibility(SceUID pid, signed char enabled)
 	return result;
 }
 
-
 int audioShutdownHardware(void);
 int audioPrepareSuspend(void);
 int audioSetSuspended(void);
@@ -140,7 +138,6 @@ int audioSystemEventHandler(int phase, int event, void *args, void *opt)
 	}
 	return 0;
 }
-
 
 int audioCleanupProcess(SceUID pid, SceProcEventInvokeParam1 *param, int reason)
 {
@@ -1887,7 +1884,6 @@ int SceAudioForDriver_15FB30DF(unsigned int volume)
 		audioHardwareVolume = volume;
 	return result;
 }
-
 
 int audioModuleStart(SceSize arglen, const void *argp)
 {

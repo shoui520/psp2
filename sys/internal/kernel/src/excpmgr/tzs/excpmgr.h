@@ -28,6 +28,8 @@
 #include <psp2kern/kernel/cpu.h>
 #include <sysmem/debug.h>
 #include <excpmgr/excpmgr.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
 
 /* the compiler's stack-protector symbols are the ForTZS sysclib ones here */
 __asm__(".set __stack_chk_fail, SceSysclibForTZS_E5457B97\n\t"
@@ -56,12 +58,10 @@ unsigned int *SceSysrootForTZS_D4E6D8E8(void);		/* monitor vector page */
 unsigned int SceSysrootForTZS_317E7556(unsigned int cpu);	/* per-core block */
 const unsigned int *SceSysrootForTZS_A8B7DAF9(void);	/* kernel MMU state */
 int SceSysrootForTZS_EA572BD9(unsigned int slot, void *data);
-int ksceKernelIsColdBoot(void);
 unsigned int SceCpuForTZS_44C423D3(void);		/* this core */
 void SceCpuForTZS_A5965CBF(void);			/* after code was written */
 void SceCpuForTZS_17A88E69(void *start, SceSize size);	/* after the MVBAR page changed */
 void SceCpuForTZS_B421FAFD(void *start, SceSize size);
-void *memcpy(void *dst, const void *src, SceSize size);
 
 void sceKernelDefaultHandlerFiqCfunc(void);
 void sceKernelDefaultMonitorHandlerCfunc(void);

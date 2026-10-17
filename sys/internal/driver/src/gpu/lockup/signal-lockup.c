@@ -8,6 +8,7 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/acmgr.h>
+#include <sysmem/sysclib.h>
 
 int signalMutex = -1;
 int signalCond = -1;
@@ -268,9 +269,6 @@ int sceGpuUnregisterSalvage(int eventUid)
 	WriteThreadContext(context);
 	return ret;
 }
-
-extern void *memset(void *destination, int value, unsigned size);
-extern void *memcpy(void *destination, const void *source, unsigned size);
 
 int ksceGpuGetRegisterDump(void *destination, unsigned size)
 {

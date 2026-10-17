@@ -2,11 +2,7 @@
 #include "magicgate_private.h"
 #include <sysmem/aes.h>
 #include <sysmem/des.h>
-
-int ksceAesInit1(SceAesFullContext *context, SceSize blockSize,
-		 SceSize keySize, const void *key);
-int ksceAesEncrypt1(SceAesFullContext *context, const void *input, void *output);
-int ksceAesDecrypt1(SceAesFullContext *context, const void *input, void *output);
+#include <psp2kern/kernel/utils.h>
 
 /* The block's byte fields are numbered from the network-order least byte. */
 typedef union MagicGateDesBlock {

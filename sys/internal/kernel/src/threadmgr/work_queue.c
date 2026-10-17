@@ -16,6 +16,8 @@
 #include "scheduler.h"
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
+#include <sysmem/uid_class.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -210,12 +212,7 @@ extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelFreeHeapMemory(SceUID heap, void *entry);
 extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
 				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
 extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector,
-				   SceSize num, SceSize *count);
-extern int snprintf(char *str, SceSize size, const char *format, ...);
 SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int maxCount,
 			    const void *option);
 int ksceKernelDeleteSema(SceUID semaId);

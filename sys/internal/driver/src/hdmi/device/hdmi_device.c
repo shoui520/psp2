@@ -13,8 +13,7 @@
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
 #include <threadmgr/threadmgr.h>
-
-void *memcpy(void *dst, const void *src, SceSize len);
+#include <sysmem/sysclib.h>
 
 /* GPIO 0 port 13: the transmitter's interrupt line, sub interrupt 13 of 0xf9 */
 #define HDMI_INTR_CODE		0xf9
@@ -948,4 +947,3 @@ int HdmiDeviceHwSetEdidSegment(HdmiDevice *device, SceUInt32 segment)
 {
 	return HdmiDeviceAD80244SetEdidSegment(device, segment);
 }
-

@@ -27,6 +27,8 @@
 #include <systimer/timer_regs.h>
 #include "boot.h"
 #include <lowio/pervasive.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/debugled.h>
 
 /* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */
 #ifdef BOOT_NSKBL
@@ -34,8 +36,6 @@
 #else
 #define BOOT_GPO(code)		(0x80 | (code))
 #endif
-
-int sceKernelSetGPO(SceUInt32 gpo);
 
 #define PERVASIVE_RESET		((ScePervasiveResetRegisters *)PERVASIVE_RESET_BASE)
 #define SSX_REGISTER_TARGET(xbar) ((SceSsxRegisterTarget *)SSX_REGISTER_TARGET_BASE(xbar))
@@ -51,9 +51,6 @@ int ksceKernelPrintfWithInfo(SceUInt32 flags, const SceKernelDebugInfo *info,
 			     const char *fmt, ...);
 int ksceKernelPrintfLevel(int level, const char *format, ...);
 int InitializeDipsw(SceDipsw *dipsw);
-int ksceKernelCheckDipsw(unsigned int bit);
-void ksceKernelSetDipsw(unsigned int bit);
-void ksceKernelClearDipsw(unsigned int bit);
 int InitializeAssertLevel(void);
 int InitializeDebugBuffer(void);
 int KblGetBuildNumber(void);

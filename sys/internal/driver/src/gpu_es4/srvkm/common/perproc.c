@@ -5,6 +5,7 @@
 #include "../mapped_memory_sce.h"
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
+#include <sysmem/sysmem.h>
 
 HASH_TABLE *psHashTab;
 extern PVRSRV_HANDLE_BASE *gpsKernelHandleBase;
@@ -22,7 +23,6 @@ PVRSRV_ERROR PVRSRVPurgeHandles(PVRSRV_HANDLE_BASE *psBase);
 PVRSRV_ERROR PVRSRVResManDisconnect(struct ResourceContext *hResManContext,
 		IMG_BOOL bKernelContext);
 IMG_INT sceGpuWaitModObjRemoveAll(IMG_INT waitEventFlag);
-int kscePUIDClose(int pid, int puid);
 
 /* IMG FreePerProcessData; SCE omits generic diagnostics/assertions and adds
  * native backing-heap destruction before private mapping-list cleanup.

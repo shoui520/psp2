@@ -8,6 +8,8 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 int cancelTimerForUser(SceUID uid, uint32_t *count);
 int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
@@ -32,12 +34,7 @@ struct ThreadmgrTimerInfoCopyArgs {
 _Static_assert(sizeof(struct ThreadmgrTimerInfoCopyArgs) == 8,
 	       "timer info copy arguments size");
 
-extern void sceKernelApiDeclareTypeUInt64(void);
-extern int scePUIDGetAttr(SceUID processId, SceUID uid, uint32_t *attributes);
-extern int SceSysrootForDriver_CAE820B2(SceUID processId, SceUInt32 *version);
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
-extern int ksceGUIDClose(SceUID uid);
-extern SceUID kscePUIDOpenByGUID(SceUID pid, SceUID guid);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
 SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr, const void *option);

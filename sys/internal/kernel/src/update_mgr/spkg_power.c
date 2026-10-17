@@ -3,6 +3,8 @@
 #include <psp2kern/lowio/gpio.h>
 #include "update_internal.h"
 #include <syscon/syscon.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/dipsw.h>
 
 extern int updateSysconShutdownWorkaround;
 extern int updateSysconFirmwareUpdateStarted;
@@ -13,9 +15,6 @@ int SpkgUtilCpShutdown(int mode);
 int kscePowerRequestShutdown(int mode);
 int scePowerRequestColdReset(void);
 int scePowerRequestStandby(void);
-int ksceSblAimgrIsTool(void);
-int ksceSblAimgrIsTest(void);
-int ksceKernelCheckDipsw(int index);
 int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
 int ksceLedSetMode(int led, int mode, void *param) __attribute__((weak));
 

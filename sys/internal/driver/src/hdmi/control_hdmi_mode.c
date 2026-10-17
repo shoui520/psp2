@@ -13,11 +13,10 @@
 #include "hdmi_internal.h"
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
-
-void *memcpy(void *dst, const void *src, SceSize len);
-int ksceSblAimgrIsTool(void);
-int SceQafMgrForDriver_382C71E8(void);
-int ksceKernelCheckDipsw(SceUInt32 bit);
+#include <psp2kern/kernel/aimgr.h>
+#include <psp2kern/kernel/dipsw.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysclib.h>
 
 #define HDMI_CHIP_ID_SIZE	10
 #define HDMI_CHIP_ID_UNKNOWN	0xff	/* the init work has not run yet */

@@ -21,6 +21,7 @@
 #include "../venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
 int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
@@ -33,7 +34,6 @@ extern int waitVeneziaVipProcessReady(void);
 extern VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
 extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void **storage, int create);
 
-extern int snprintf(char *destination, unsigned int capacity, const char *format, ...);
 extern int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
 int g_veneziaVipProcessStorageKey = -1;
 int initializeVeneziaVipResources(void);

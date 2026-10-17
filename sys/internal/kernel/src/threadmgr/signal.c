@@ -33,7 +33,6 @@ int sceKernelWaitSignalForUser(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 int sceKernelCheckThreadUserStackSelf(void);
 int callCallbackAll(struct ThreadCB *thread);
 bool wakeupAndDistributeThread(struct ThreadCB *thread, uintptr_t waitable,

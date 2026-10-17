@@ -11,13 +11,10 @@
 #include "udcd_internal.h"
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
+#include <sysmem/sysmem.h>
 
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblACMgrIsMiniSettingsForQA(void);
-extern int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size);
-extern int ksceKernelCopyToUser(void *dst, const void *src, SceSize size);
-extern int ksceKernelStrncpyFromUser(char *dst, const char *src, SceSize size);
 extern int ksceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout);
 extern int ksceUdcdGetDeviceState(void);
 extern int ksceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information);

@@ -14,6 +14,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <ulobjmgr/ulobjmgr.h>
+#include <sysmem/sysroot.h>
 
 #ifndef SCE_KERNEL_ERROR_ILLEGAL_TYPE
 #define SCE_KERNEL_ERROR_ILLEGAL_TYPE		0x8002000C
@@ -241,9 +242,6 @@ _Static_assert(sizeof(UltQueue) == 0x94, "UltQueue");
 #define ULOBJ_INFO_RWLOCK			0x92
 #define ULOBJ_INFO_COND				0xa2
 
-
-
-
 /* ult_sync_obj.c */
 int getUltWaitThreadIds(SceUID pid, SceUIntPtr waitList, SceUInt32 mask, SceUIntPtr object,
 			SceUInt32 maxThreads, SceUInt32 maxIds, SceUInt32 *ids);
@@ -267,8 +265,3 @@ int sceUlobjMgrGetUltSyncObjId(SceUID pid, SceUInt32 *ids, SceUInt32 maxIds, Sce
 			       int type, UlobjProcCB *procCB);
 int getUltQueueInfoSize(SceUID pid, SceUIntPtr address);
 int getUltQueueInfo(SceUID pid, SceUIntPtr address, UlobjQueueInfo *info);
-
-/* imports without a declaration elsewhere (os0:kd/sysmem.skprx SceSysroot) */
-int SceSysrootForDriver_1160FCA1(SceUID pid, SceUInt32 *flag);
-int SceSysrootForDriver_6219CC14(void *dbgp, void *process, SceUInt32 set, SceUInt32 clear,
-				 SceUInt32 *flag);

@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include "post_ss_mgr_internal.h"
+#include <sysmem/qafmgr.h>
 
 #define SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT	0x800f0e16	/* names unknown */
 #define SCE_SBL_ERROR_FWLOADER_NOT_LOCKED	0x800f0e29
@@ -24,8 +25,6 @@
 /* sceSblFwLoaderSetPath to sceSblFwLoaderUnlock (names unknown) */
 #define FWLOADER_STATE_LOCKED	1
 #define FWLOADER_STATE_UNLOCKED	2
-
-int ksceSblQafMgrIsAllowHost0Access(void);
 
 /* 4.00 is built with _FORTIFY_SOURCE */
 #if FW_VERSION >= 0x04000000

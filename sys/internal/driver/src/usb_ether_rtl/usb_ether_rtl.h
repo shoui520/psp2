@@ -3,8 +3,8 @@
 
 #include <stddef.h>
 #include <usb_ether_smsc/usb_ether_smsc.h>
+#include <sysmem/sysroot.h>
 
-int ksceKernelSysrootCheckModelCapability(unsigned int capability);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 void *__memcpy_chk(void *destination, const void *source, size_t length,
 		   size_t destinationSize);

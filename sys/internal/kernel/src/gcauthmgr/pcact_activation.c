@@ -6,6 +6,7 @@
 #include "pcact.h"
 #include "drm_crypto.h"
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <psp2kern/kernel/utils.h>
 
 GcAuthPcactScratch *gcAuthPcactScratchAddress;
 SceConsoleId gcAuthPcactConsoleId;
@@ -34,16 +35,10 @@ extern unsigned int gcAuthPcactRtcRsaModulus[64];
 extern unsigned int gcAuthPcactRtcRsaExponent[64];
 extern const unsigned char gcAuthPsmAesIv[16];
 
-int ksceSha1Digest(const void *input, unsigned int size, void *digest);
 int GcAuthDrmEncrypt(unsigned char *data, size_t size, int keyId);
 int GcAuthGenerateRandom20(void *data);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 			    size_t size, int keyId);
-int ksceAesInit1(SceAesFullContext *context, SceSize blockBits,
-		SceSize keyBits, const void *key);
-int ksceAesEncrypt1(SceAesFullContext *context, const void *source, void *result);
-int ksceAesDecrypt1(SceAesFullContext *context, const void *source, void *result);
-int ksceSha256Digest(const void *input, unsigned int size, void *digest);
 int GcAuthRsaVerify2048(const MarlinRsaData *signature,
 		      const MarlinRsaData *digest,
 		      const MarlinRsaExponentKey *key, int algorithm);

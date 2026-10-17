@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/debug.h>
+#include <sysmem/sysclib.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"
@@ -12,7 +13,6 @@ extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
 extern int ksceKernelCreateHeap(const char *name, unsigned size,
 			       const void *options);
 extern void *OSAllocMem(unsigned size);
-extern void *memset(void *destination, int value, unsigned size);
 int InitKernelMemBlockHeap(void);
 
 unsigned remoteAllocProcess = (unsigned)-1;
@@ -78,4 +78,3 @@ int InitKernelMemBlockHeap(void)
 	memset(kernelMemBlockHeap, 0, sizeof(*kernelMemBlockHeap));
 	return 0;
 }
-

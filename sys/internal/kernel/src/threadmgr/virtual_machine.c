@@ -16,6 +16,7 @@
 #include "scheduler.h"
 #include "mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREAD_ATTR_VM			0x04000000	/* PLACEHOLDER: a VM's thread */
@@ -70,11 +71,7 @@ _Static_assert(sizeof(struct ThreadmgrException) == 0x38 &&
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern const char *ksceGUIDName(SceUID guid);
-extern int ksceGUIDGetName(SceUID guid, const char **name);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int snprintf(char *str, SceSize size, const char *format, ...);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,

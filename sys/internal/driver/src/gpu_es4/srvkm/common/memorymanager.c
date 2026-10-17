@@ -12,11 +12,9 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <sysmem/sysclib.h>
 
 int RemoveMemoryContextFromList(GpuMemoryContext *context, unsigned pid);
-int ksceKernelMemBlockTypeGetPrivileges(SceUInt32 type);
-int SceSysmemForDriver_CB0F3A33(SceUInt32 type);
-int ksceKernelIncRefCountMemBlock(SceUID guid);
 int InsertMappedMemoryLegacy(GpuMappedMemoryList *list, IMG_VOID *address,
 		IMG_SIZE_T size, IMG_UINT32 flags, GpuHeap *heap,
 		GpuMappedMemory **output);
@@ -57,8 +55,6 @@ PVRSRV_ERROR DestroyDeviceMemContextCallback(GpuMemoryContext *psContext,
 	return PVRSRV_OK;
 }
 
-int ksceKernelDecRefCountMemBlock(SceUID guid);
-
 /* The GPU map resource uses this address/process callback. Its two sysmem
  * imports identify the operation; no Sony name survives in debug records.
  */
@@ -76,7 +72,6 @@ PVRSRV_ERROR ReleaseDeviceMemBlockCallback(const IMG_VOID *address,
 
 IMG_VOID *AllocProcessGpuMemory(IMG_SIZE_T size);
 int FreeProcessGpuMemory(IMG_VOID *memory);
-IMG_VOID *memset(IMG_VOID *destination, int value, IMG_SIZE_T size);
 int sceGpuHeapAlloc(GpuHeap *heap, IMG_SIZE_T size, IMG_SIZE_T alignment,
 		IMG_UINT32 allocationType, IMG_UINT32 flags, IMG_SID blockGroupId,
 		GpuHeapAllocation *output, IMG_SIZE_T boundary);
@@ -1039,7 +1034,6 @@ int CheckMappedMemoryOverlap(GpuMappedMemoryList *list, IMG_VOID *address,
 	}
 	return 0;
 }
-
 
 int ClearMappedMemoryList(GpuMappedMemoryList *list)
 {

@@ -6,6 +6,7 @@
 #include <threadmgr/fast_mutex.h>
 #include <sdstor/sdstor.h>
 #include <sdstor/mbr.h>
+#include <sysmem/sysroot.h>
 
 typedef struct SceSdstorSddev SceSdstorSddev;
 typedef struct SceSdstorSdpart SceSdstorSdpart;
@@ -97,8 +98,6 @@ SceSdstorSddev *sddev_get_object(unsigned int port);
 int sddev_power_on(SceSdstorSddev *device);
 int sddev_close(SceSdstorSddev *device);
 int sddev_get_info(SceSdstorSddev *device, SceSdstorMediaInfo *info);
-int SceSysrootForDriver_F804F761(void);
-unsigned int ksceKernelSysrootCheckModelCapability(unsigned int capability);
 int sdpart_decode_name(const char *name, unsigned int length,
 		       SceSdstorSdinst *sdinst);
 unsigned int sdpart_partition_code_to_id(unsigned int code);

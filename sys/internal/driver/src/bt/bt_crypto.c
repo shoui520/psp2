@@ -1,11 +1,8 @@
 /* Bluetooth crypto adapters; the original source filename is unavailable. */
 #include <sysmem/aes.h>
 #include "bt_internal.h"
+#include <psp2kern/kernel/utils.h>
 
-int ksceAesInit1(SceAesFullContext *context, unsigned int blockBits,
-		 unsigned int keyBits, const void *key);
-int ksceAesEncrypt1(SceAesFullContext *context, const void *source,
-		    void *destination);
 int BtPack(uint8_t *destination, int remaining, const char *format, ...);
 extern const uint8_t gBtRandomKey[16];
 

@@ -49,3 +49,6 @@ int SceKernelSuspendForDriver_FE2118BD(int value);
 int SceKernelSuspendForDriver_0106C0F0(void);	/* suspend */
 int SceKernelSuspendForDriver_0A6CA124(void);	/* standby */
 int SceKernelSuspendForDriver_AEA9440D(void);	/* cold reset */
+
+int SceKernelSuspendForDriver_230495ED(SceUInt32 kind);
+int SceKernelSuspendForDriver_254525F8(SceUInt32 kind);

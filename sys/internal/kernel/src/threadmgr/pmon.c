@@ -23,10 +23,8 @@ void issuePMonThreadSetCounterIntrRequest(unsigned int cpuId, const void *reques
 void issuePMonThreadGetCounterIntrRequest(unsigned int cpuId, const void *request);
 void issueSimpleIntrRequestToOtherCpuAndWait(void);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
-extern int ksceGUIDGetObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-
 
 static inline int PmonCounterValid(uint32_t counter)
 {

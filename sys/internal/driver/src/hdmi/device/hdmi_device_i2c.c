@@ -8,8 +8,7 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
-
-void *memcpy(void *dst, const void *src, SceSize len);
+#include <sysmem/sysclib.h>
 
 #define HDMI_I2C_CHUNK		8	/* bytes the controller moves at once */
 #define HDMI_I2C_WRITE_MAX	256
@@ -95,4 +94,3 @@ int sceHdmiDeviceI2cWrite(int bus, SceUInt8 slave, SceUInt8 reg, const void *dat
 	SCE_DBG_PRINTF(0, 225, "[HDMI] sceI2cMasterTransmit ERR : %08x\n", ret);
 	return ret;
 }
-

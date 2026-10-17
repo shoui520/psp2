@@ -11,6 +11,7 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "oal_internal.h"
+#include <sysmem/sysmem.h>
 
 #define COREDUMP_CACHE_THREADS		192
 #define COREDUMP_CACHE_OBJECTS		192
@@ -42,7 +43,6 @@ extern void oalGetRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern void oalGetSimpleEventInfo(SceUID pid, SceUID eventId,
 	CoredumpSimpleEventInfo *info);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 
 typedef struct CoredumpCachedThread {
 	SceUID pid;

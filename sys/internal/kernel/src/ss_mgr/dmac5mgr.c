@@ -8,13 +8,12 @@
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <dmacmgr/dmac_regs.h>
+#include <sysmem/sysroot.h>
 
 SceDmac5KeyringRegisters *dmacKeyringRegisters;
 SceKernelFastMutex dmacKeyringMutex;
 SceSblDmac5KeyRing dmacKeyringStorage[32];
 
-void sceKernelSysrootDisableAutoClockDown(void);
-void sceKernelSysrootEnableAutoClockDown(void);
 int dmac5SetExternalKey(SceKernelDmaOpDirectParam *param,
 	const void *key, uint32_t command);
 int dmac5SetKeyRingIndex(SceKernelDmaOpDirectParam *param,

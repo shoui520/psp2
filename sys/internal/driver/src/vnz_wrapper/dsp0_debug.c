@@ -22,6 +22,7 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 #include <lowio/pervasive.h>
+#include <sysmem/sysclib.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -6369,7 +6370,6 @@ extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void 
 int initializeVeneziaVipResources(void);
 int startVeneziaVipDriver(int mode);
 
-extern int snprintf(char *destination, unsigned int capacity, const char *format, ...);
 int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
 
 extern int sceKernelCancelSema(SceUID uid, int count, int *waiters);

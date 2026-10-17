@@ -2,11 +2,9 @@
 #include <psp2/types.h>
 #include "adhoc.h"
 #include "drm_crypto.h"
+#include <psp2kern/kernel/utils.h>
 
 extern const unsigned char gcAuthAdhocCounterAesKey[16];
-int ksceAesInit1(SceAesFullContext *context, SceSize blockBits,
-		SceSize keyBits, const void *key);
-int ksceAesDecrypt1(SceAesFullContext *context, const void *source, void *result);
 
 int GcAuthAdhocGenerateCbcCounterStream(GcAuthAdhocCounterStream *stream,
 		unsigned int size, uint64_t *counter, const unsigned int *seed)

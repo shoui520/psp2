@@ -68,7 +68,6 @@ extern void SceIntrmgrForKernel_71E08D71(ThreadmgrVfpTrace *trace, const void *r
 extern int SceExcpmgrForKernel_B615A7DA(void);
 extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
-extern const char *ksceGUIDName(SceUID guid);
 extern int ksceKernelEnableIntr(int intrCode);
 extern void sceKernelSysrootCorelockLock(unsigned int cpu);
 extern void sceKernelSysrootCorelockUnlock(void);

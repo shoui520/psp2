@@ -10,6 +10,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include "syscall_context.h"
+#include <sysmem/sysroot.h>
 
 #define TLS_SLOT_FIRST			2
 #define TLS_SLOT_COUNT			8
@@ -19,7 +20,6 @@
 
 extern SceUID ksceKernelGetThreadId(void);
 extern void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, void *opt);
-extern int SceSysrootForKernel_7968F091(SceUID pid, void *memory);
 
 _Static_assert(sizeof(struct ThreadmgrTlsSlot) == 0x14, "TLS descriptor stride");
 

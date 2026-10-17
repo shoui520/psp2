@@ -4,9 +4,7 @@
 #include <psp2kern/kernel/dmac.h>
 #include <threadmgr/threadmgr.h>
 #include <lowio/pervasive.h>
-
-/* name from the NID database: the kind of memory an address maps (3: mapped at its physical address) */
-int ksceKernelGetPhysicalMemoryType(const void *address);
+#include <sysmem/sysmem.h>
 
 /* Original names unknown: SDIO function clock/reset setup. */
 

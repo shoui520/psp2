@@ -18,6 +18,7 @@
 #include "scheduler.h"
 #include "timer.h"
 #include "syscall_context.h"
+#include <sysmem/uid_class.h>
 
 #define TIMER_INTR			0x8d	/* the LT5's interrupt */
 #define TIMER_MIN_DELAY			200	/* microseconds */
@@ -53,32 +54,17 @@
 #define SCE_KERNEL_ERROR_NOT_SETTED	0x80028242	/* PLACEHOLDER: name; no event time */
 #define SCE_KERNEL_ERROR_TIMER_BUSY	0x80024501	/* PLACEHOLDER: name; from its own handler */
 
-
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
 extern uint64_t SceSysrootForKernel_E20F6FC8(void);
 extern void sceKernelSysrootCorelockLock(unsigned int cpu);
 extern void sceKernelSysrootCorelockUnlock(void);
 extern void SceSysrootForKernel_5B5EBFB1(volatile SceLongTimerRegisters *timer);
-extern int ksceGUIDClose(SceUID guid);
-extern SceUID ksceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **object);
 extern int SceSysmemForKernel_FF464A49(SceUID guid, void **entry);
 extern SceUID SceSysmemForKernel_03A2CAF0(void *entry);
-extern int SceSysmemForKernel_9C23DFF7(SceUID pid, SceUID puid, SceClass *cls,
-				       SceObjectBase **object);
-extern int UIDEntryReleaseObject(SceUID pid, SceUID puid);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int kscePUIDClose(SceUID pid, SceUID puid);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);
 extern int ksceKernelEnableIntr(int intr);
 extern int ksceKernelDisableIntr(int intr);
-extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);
 
 #define TIMER_LOCK()	(&s_threadmgrRuntime.manager->timerLock)
 #define PROCESS_CLASS()	(s_threadmgrRuntime.manager->processClass)

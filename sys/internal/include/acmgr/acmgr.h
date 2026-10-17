@@ -1,14 +1,10 @@
 /* Access-manager dependencies recovered from the module's call sites. */
 #pragma once
 #include <psp2kern/types.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysroot.h>
 
-int ksceKernelSysrootGetThreadAccessLevel(void);
-int ksceSysrootGetSelfAuthInfo(SceUID pid, void *authInfo);
-int SceSysrootForDriver_26AA237C(void);
-int SceSysrootForDriver_E2515A08(void);
 int SceSysrootForDriver_56D85EB0(SceUInt32 authIdLow, SceUInt32 authIdHigh);
-int SceQafMgrForDriver_694D1096(void);
-int ksceSblQafMgrIsAllowSystemAppDebug(void);
 
 /* Driver C90A9216 / kernel C98D82EE, recovered one-PID query. */
 int ksceSblACMgrIsPSMDevAssistant(SceUID pid);

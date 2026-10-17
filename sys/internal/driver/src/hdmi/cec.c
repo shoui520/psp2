@@ -14,13 +14,12 @@
 #include <dtrace/sce/dtrace.h>
 #include "hdmi_internal.h"
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/aimgr.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysclib.h>
 
-void *memcpy(void *dst, const void *src, SceSize len);
 int ksceSysrootIsSafeMode(void);
 int ksceSysrootIsUpdateMode(void);
-int ksceSblAimgrIsDolce(void);
-int ksceSblAimgrIsGenuineDolce(void);
-int SceQafMgrForDriver_382C71E8(void);
 void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool cond, const SceKernelDebugInfo *info,
 				 const void *lr, const char *fmt, ...);
 
@@ -1289,4 +1288,3 @@ static const SceDtraceProbe rxProbe = {
 
 static const SceDtraceProbe *const cecProbes[] __attribute__((used)) = { &txProbe, &rxProbe };
 #endif
-

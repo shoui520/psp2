@@ -14,6 +14,8 @@
 #include "scheduler.h"
 #include "event.h"
 #include "syscall_context.h"
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 #define THREAD_ATTR_CHECK_STACK		0x80000000
 #define WAIT_TYPE_DELAY			0x00000001	/* only the timed-wait flag */
@@ -25,20 +27,10 @@
 #define SCE_KERNEL_ERROR_NO_MEMORY	0x8002710b
 #define SCE_KERNEL_ERROR_ILLEGAL_MODE	0x80020010
 
-extern int ksceGUIDReferObjectWithSubclass(SceUID uid, SceClass *cls, SceObjectBase **object);
-extern int ksceGUIDGetClass(SceUID uid, SceClass **cls);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern SceClass *SceSysmemForKernel_368F1C36(SceUID guid);
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 extern void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, SceAllocOpt *opt);
-extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
 int uidRegisterCallbackClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 	SceClass *parent, SceSize size, SceClassCallback create, SceClassCallback destroy,
 	ThreadmgrCancelWaitMethod cancelWait, ThreadmgrRevalidateMethod revalidate, ThreadmgrReleaseMethod release);
@@ -1562,7 +1554,6 @@ int SceThreadmgrForDriver_995F32E1(int level, ThreadmgrEventInfo *infos, SceSize
 	ksceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
 	return ret;
 }
-
 
 /* SceThreadmgrForDriver_7D12344A: the same for a process's event PUIDs */
 int SceThreadmgrForDriver_7D12344A(SceUID pid, int level, ThreadmgrEventInfo *infos,

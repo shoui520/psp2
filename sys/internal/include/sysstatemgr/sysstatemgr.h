@@ -6,16 +6,15 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <sysmem/debugled.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 int ksceKernelInvokeInitCallback(int stage);
-int SceSysmemForKernel_16A54BFE(void);
 SceUID SceSysmemForKernel_0164D817(void);
 int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);
-int sceKernelSetGPO(int value);
-int ksceSblQafMgrIsAllowHost0Access(void);
-int ksceSblQafMgrIsAllowDecryptedBootConfigLoad(void);
 int ksceSblACMgrIsDevelopmentMode2(void);
-int SceSysrootForKernel_47724459(int stage);
 int sceKernelSysrootSetStatus(int flags);
 int SceSysrootForDriver_7C2C10E2(int kind, int value);
 int sceKernelWaitProcessEnd(SceUID pid, int *status, void *timeout);

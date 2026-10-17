@@ -8,6 +8,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysroot.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define THREADMGR_KERNEL_PID		0x10005
@@ -22,8 +23,6 @@
 
 typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, int kind,
 						 uintptr_t arg);
-
-extern int SceSysrootForKernel_1247A825(SceUID pid, uint32_t reason);
 
 /* SceThreadmgrForDriver_37F51E91: called from a kernel thread with the faulting process */
 int threadmgrGpuExceptionHandler(SceUID pid)

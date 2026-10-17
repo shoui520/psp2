@@ -1,8 +1,7 @@
 /* SceOled driver interface and dependency declarations missing from vitasdk. */
 #pragma once
 #include <stdint.h>
-
-unsigned ksceSysrootGetHardwareInfo(void);
+#include <sysmem/sysroot.h>
 
 int SceOledForDriver_2F0C4B67(unsigned char command,
 			  const unsigned char *data, unsigned length);

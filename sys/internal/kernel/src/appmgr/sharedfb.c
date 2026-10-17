@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/atomic.h>
+#include <sysmem/sysroot.h>
 
 struct SharedFbProcess {
 	SceUID pid;
@@ -69,7 +70,6 @@ struct SharedFbManager gSharedFbManager;
 
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
 extern int _sceAppMgrAbort(SceUID pid);
-extern int SceSysrootForDriver_1B3FA457(SceUID pid);
 extern int sceKernelKillProcess(SceUID pid, int status);
 
 int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags);

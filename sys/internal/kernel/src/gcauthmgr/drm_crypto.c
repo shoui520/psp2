@@ -3,11 +3,8 @@
 #include <string.h>
 #include <psp2kern/types.h>
 #include "drm_crypto.h"
+#include <psp2kern/kernel/utils.h>
 
-int ksceAesInit1(SceAesFullContext *context, SceSize blockBits,
-		SceSize keyBits, const void *key);
-int ksceAesEncrypt1(SceAesFullContext *context, const void *source, void *result);
-int ksceAesDecrypt1(SceAesFullContext *context, const void *source, void *result);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
 int ksceSblRngGenuineRandomNumber(void *output);

@@ -44,7 +44,6 @@ int ksceSdifInitializeSdDevice(unsigned int index, SdifContextPart **part);
 int sceMsifSwReset(void);
 int SceUsbMassForDriver_D989A9F6(SceUsbMassDevInfo *info)
 	__attribute__((weak));
-int SceSysrootForDriver_9BF782CA(uint32_t led, uint32_t mode, const void *option);
 int ksceSdifReadSectorMmc(SdifMmcContext *part, uint32_t sector,
 			void *buffer, uint32_t count);
 int ksceSdifWriteSectorMmc(SdifMmcContext *part, uint32_t sector,

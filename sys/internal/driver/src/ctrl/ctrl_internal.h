@@ -11,8 +11,8 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <ctrl/ctrl.h>
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/suspend.h>
 
-int ksceKernelPowerTick(int type);
 SceUInt32 ctrlAlarmCallback(void *arg);
 int ctrlSampleComplete(SceSysconPacket *packet, void *arg);
 

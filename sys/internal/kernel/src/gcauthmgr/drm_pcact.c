@@ -3,6 +3,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
+#include <psp2kern/kernel/utils.h>
 
 SceUID gcAuthPcactSemaphore;
 GcAuthPcactScratch gcAuthPcactScratch;
@@ -37,9 +38,6 @@ unsigned int GcAuthRsaSign2048(MarlinRsaData *output,
 		const MarlinRsaData *digest, const MarlinRsaPrivateKey *key,
 		int algorithm);
 int GcAuthDrmDecrypt(unsigned char *data, size_t size, int keyId);
-int ksceSha256Digest(const void *input, unsigned int size, void *digest);
-int ksceHmacSha256Digest(const void *key, unsigned int keySize,
-		const void *input, unsigned int inputSize, void *digest);
 int GcAuthAesDecrypt(unsigned char *data, size_t size, const void *key,
 		const unsigned char *iv);
 

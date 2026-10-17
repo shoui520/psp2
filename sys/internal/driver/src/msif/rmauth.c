@@ -3,9 +3,7 @@
 #include "rmauth.h"
 #include <psp2kern/kernel/sysroot.h>
 #include <string.h>
-
-int SceKernelSuspendForDriver_4DF40893(uint32_t flags);
-int SceKernelSuspendForDriver_2BB92967(uint32_t flags);
+#include <sysmem/suspend.h>
 
 struct MsifRmAuthRequest {
 	uint8_t mediaId[16];

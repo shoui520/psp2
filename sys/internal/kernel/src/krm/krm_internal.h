@@ -298,8 +298,6 @@ int KrmEccInitialize(KrmEccContext *ctx);
 int KrmEccImportPoint(const KrmEccPublicKey *publicKey, KrmEccPublicKey *point);
 int KrmEccValidatePoint(const KrmEccPublicKey *point, KrmEccContext *ctx);
 int ksceSblRngGenuineRandomNumber(void *block);
-int ksceKernelCopyFromUser(void *dst, const void *src, SceSize size);
-int ksceKernelCopyToUser(void *dst, const void *src, SceSize size);
 
 extern struct ThreadmgrFastMutex g_krmDriverMutex;
 extern SceUID g_krmDriverPid;
@@ -342,7 +340,6 @@ extern const char g_krmGenerateRandomError[48];
 extern const char g_krmEncryptAndSignStateName[24];
 extern const char g_krmGenerateKeyName[32];
 #endif
-
 
 extern KrmSha256Digest g_krmPrimaryWrappingKey;
 extern KrmSha256Digest g_krmAlternateWrappingKey;

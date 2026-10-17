@@ -9,12 +9,10 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/utils.h>
 #include "reg_internal.h"
+#include <sysmem/suspend.h>
 
 #define REG_COPY_SIZE	0x2800	/* the buffer a registry file is copied through */
 #define REG_ZERO_SIZE	0x4000	/* the zeroes new registry files are written with */
-
-int SceKernelSuspendForDriver_4DF40893(int type);	/* hold off suspend */
-int SceKernelSuspendForDriver_2BB92967(int type);	/* allow suspend again */
 
 SceUID g_regMutex;
 int g_regRegistryOpened;

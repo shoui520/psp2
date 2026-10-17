@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
+#include <sysmem/sysroot.h>
 
 typedef struct AppMgrDeviceInfo {
 	SceUID soundExclusivePid;
@@ -64,6 +65,3 @@ _Static_assert(offsetof(AppMgrDeviceInfo, renderingPids) == 40 &&
 	       "AppMgrDeviceInfo lists and owners");
 _Static_assert(sizeof(AppMgrAppList) == 248, "AppMgrAppList size");
 _Static_assert(offsetof(AppMgrAppList, device) == 64, "AppMgrAppList device");
-
-int SceSysrootForKernel_2A03DFA1(void *out);
-int SceSysrootForKernel_6D111FA7(int appId, void *out);

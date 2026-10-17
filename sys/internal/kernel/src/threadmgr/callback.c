@@ -18,6 +18,8 @@
 #include "scheduler.h"
 #include "event.h"
 #include "syscall_context.h"
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 #define THREAD_ATTR_UNLIMITED_OBJECTS	0x00004000	/* PLACEHOLDER: name */
 #define THREAD_ATTR_USER		0x80000000
@@ -58,7 +60,6 @@
 #define CALLBACK_FROM_CB(cb) \
 	((struct ThreadmgrCallback *)((uintptr_t)(cb) - offsetof(struct ThreadmgrCallback, cb)))
 
-
 _Static_assert(sizeof(ThreadmgrCallbackInfo) == 0x44, "SceKernelCallbackInfo size");
 
 /* SceUIDRegisterCallbackObject (0x30): an object callbacks can be registered on */
@@ -68,14 +69,12 @@ typedef struct ThreadmgrRegisterCallback {
 	ThreadmgrEventCallback *callbackPrev;
 } ThreadmgrRegisterCallback;
 
-
 extern void SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
 					 uintptr_t vfp) __attribute__((noreturn));
 extern int SceIntrmgrForKernel_71C5F42F(struct ThreadRegisterContext *context, uintptr_t vfp)
 	__attribute__((returns_twice));
 extern void SceIntrmgrForDriver_C568F145(uint32_t code);
 extern uintptr_t SceSysrootForKernel_AD74BEB3(SceProcessObject *process);
-extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
 extern int SceThreadmgrForDriver_D74F66BD(void);
 extern int ksceGUIDReferObjectWithSubclass(SceUID uid, SceClass *cls, SceObjectBase **object);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
@@ -86,10 +85,6 @@ extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
 extern SceUID kscePUIDOpenByGUIDWithFlags(SceUID pid, SceUID guid, int flags);
 extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
 				       SceSize *count);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
-extern int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector,
-				   SceSize num, SceSize *count);
 extern int ksceKernelIsEqualAccessibleRangeProcBySW(SceUID pid, uint32_t access, uintptr_t addr,
 						    SceSize size);
 extern int ksceKernelIsIntrAllowedInCurrentContext(void);

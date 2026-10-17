@@ -2,9 +2,7 @@
 #include "mgvideo_private.h"
 #include <processmgr/processmgr_imports.h>
 #include <usbstormg/usbstormg.h>
-
-/* Pinned SDK declaration; its full proc_event.h conflicts with unrelated APIs. */
-int ksceKernelUnregisterProcEventHandler(SceUID uid);
+#include <psp2kern/kernel/proc_event.h>
 
 int releaseProcessVideoContexts(int processId)
 {

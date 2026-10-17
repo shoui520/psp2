@@ -36,6 +36,10 @@ int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <threadmgr/event.h>
 #include <threadmgr/fast_mutex.h>
 #include <threadmgr/threadmgr.h>
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/sysroot_init.h>
+#include <sysmem/uid_class.h>
 
 /* Shared declarations describe caller buffers, mount/vnode/file objects,
  * scheduler requests and VFS/VOP callback tables. */
@@ -316,29 +320,12 @@ typedef struct IofilemgrSyncParam {
 #define IOFILEMGR_IOCTL_ACCESS_CHECK	0x800
 
 /* imports vitasdk does not declare */
-void *memset(void *dst, int c, SceSize len);
-char *strncat(char *dst, const char *src, size_t n);
-size_t strnlen(const char *s, size_t n);
-char *strchr(const char *s, int c);
 int ksceSblACMgrIsGameProgram2(SceUID pid);
 int ksceSblACMgrIsNonGameProgram2(SceUID pid);
 int ksceSblACMgrIsRootProgram2(SceUID pid);
 int ksceSblACIsSystemProgram(SceUID pid);
 int ksceSblACMgrGetProcessProgramAuthId2(SceUID pid, SceUInt64 *paid);
-int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector,
-				SceSize num, SceSize *ret_num);	/* PUIDGetUIDVectorByClass */
 SceInt64 sceKernelExtendKernelStackWide(SceSize size, SceInt64 (*func)(void *), void *arg);
-int SceSysmemForKernel_B591E49F(unsigned int type, SceSize size);	/* sceKernelObjectHeapSetSize */
-int SceSysrootForKernel_CBD377B7(int (*callback)(void));		/* set the iofilemgr start hook */
-int sceKernelRegisterInitCallback(int (*callback)(int, void *), int phase, int flags,
-				  void *argument);
-int sceKernelObjectHeapSetResourceLimit(SceUID pid, int heap, int type, SceUInt32 limit0,
-					SceUInt32 limit1);
-int SceSysrootForKernel_ksceSysrootIsSafeMode(void);
-int SceSysrootForKernel_ksceSysrootIsUpdateMode(void);
-SceClass *SceSysmemForKernel_368F1C36(SceUID guid);		/* the class of a UID */
-int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* whether cls is base or below */
-void *SceSysmemForKernel_FA6C098C(SceUID guid);			/* the object of a GUID */
 int sceKernelUIDInheritedEventClassInit(SceClass *cls, const char *name, SceSize itemSize,
 					SceClassCallback create, SceClassCallback destroy);
 int sceKernelEventObjectInit(SceUID uid, SceUInt32 attr, SceUInt32 pattern, int a3, int a4);
@@ -365,9 +352,6 @@ int sceIoDcloseInternal(SceUID fd);
 #define IO_USER_MAP_WRITE		2	/* the kernel writes the buffer: a read */
 #define IO_USER_MAP_FLAGS		1
 #define IO_USER_MAP_FLAGS_GAME		0x11
-
-/* sceKernelCheckOpenVMDomain: positive while the process holds the VM domain */
-int SceSysmemForKernel_4E6D8BC3(void);
 
 /* flock.c: advisory file locks, one reader-writer lock per file id of a mount */
 
@@ -607,7 +591,6 @@ _Static_assert(sizeof(BufferPool) == 0x20, "BufferPool");
 int vfs_fumount_vop_enodev(void *argp);
 int vfs_file_class_constructor(void *data);
 int vfs_file_class_destructor(void *data);
-int ksceKernelDebugPutchar(int character);
 SceVfsMount *vfs_alloc_mount(void);
 void vfs_init_mount(SceVfsMount *mnt, SceVfsVnode *vp, SceUID allocator, SceVfsInfo *vfsInf);
 int vfs_create_mnt_list_mtx(void);

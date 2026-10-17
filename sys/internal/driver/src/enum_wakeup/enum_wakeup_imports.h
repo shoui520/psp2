@@ -14,14 +14,14 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
+#include <psp2kern/kernel/suspend.h>
+#include <psp2kern/kernel/sysroot.h>
+#include <sysmem/qafmgr.h>
+#include <sysmem/suspend.h>
+#include <sysmem/sysclib.h>
 
-int snprintf(char *buf, SceSize size, const char *fmt, ...);
-int ksceKernelPowerTick(int type);
-SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
-int SceKernelSuspendForDriver_2BB92967(int unk);	/* power unlock? (placeholder) */
 int ksceKernelSearchModuleByName(const char *name);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-int SceQafMgrForDriver_52B4E164(void);		/* QA flag: stay on the screen */
 
 int ksceDisplayWaitVblankStart(void);
 int ksceDisplayWaitVblankStartCB(void);

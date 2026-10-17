@@ -17,6 +17,9 @@
 #include "timer.h"
 #include "fast_mutex.h"
 #include "syscall_context.h"
+#include <sysmem/sysclib.h>
+#include <sysmem/sysroot.h>
+#include <sysmem/uid_class.h>
 
 #define WAIT_TYPE_MSG_PIPE		0x00040000
 #define MSG_PIPE_WAIT_SEND		1	/* waitDirection: senders wait */
@@ -32,12 +35,8 @@
 
 extern void ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 	const SceKernelDebugInfo *info, const void *lr, const char *format, ...);
-extern int ksceGUIDGetObject(SceUID guid, SceObjectBase **object);
 extern int ksceKernelSpinlockLowTrylock(SceKernelSpinlock *lock);
 extern SceUID sceKernelGetProcessId(void);
-extern int ksceKernelCopyFromUserProc(SceUID pid, void *dst, const void *src, SceSize len);
-extern int ksceKernelCopyToUserProc(SceUID pid, void *dst, const void *src, SceSize len);
-extern int ksceKernelFreeMemBlock(SceUID uid);
 int ksceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
@@ -1414,9 +1413,7 @@ extern int ksceKernelWaitCond(SceUID condId, SceUInt32 *timeout);
 extern int ksceKernelSignalCond(SceUID condId);
 extern int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
 extern int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
-extern int ksceGUIDGetObjectWithClass(SceUID guid, SceClass *cls, SceObjectBase **object);
 extern void *ksceKernelAllocHeapMemory2(SceUID pid, SceSize size, void *opt);
-extern int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);
 extern int sceKernelCheckCallback(void);
 int sceKernelCheckThreadUserStackSelf(void);
 
@@ -1937,7 +1934,6 @@ extern SceUID ksceKernelCreateThread(const char *name, int (*entry)(SceSize, voi
 				     int priority, SceSize stackSize, SceUInt32 attr,
 				     int cpuAffinityMask, const void *option);
 extern int ksceKernelStartThread(SceUID threadId, SceSize argSize, void *argp);
-extern int snprintf(char *buf, SceSize size, const char *fmt, ...);
 
 /* once processes exist: the async machinery and its 8 threads */
 int startMsgPipeAfterProcess(void)
@@ -1987,11 +1983,6 @@ int startMsgPipeAfterProcess(void)
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 #define MSG_PIPE_FROM_PROCESS_LINK(link) \
 	((ThreadmgrMsgPipe *)((uintptr_t)(link) - offsetof(ThreadmgrMsgPipe, processLink)))
-
-extern int kscePUIDClose(SceUID pid, SceUID puid);
-extern SceUID kscePUIDtoGUID(SceUID pid, SceUID puid);
-extern int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level,
-				       SceUID *vector, SceSize num, SceSize *count);
 
 /*
  * A process exits: its queued async requests go, the async threads
@@ -2503,11 +2494,8 @@ SceUID ksceKernelCreateMsgPipe(const char *name, int memType, SceUInt32 attr, Sc
 #define MSG_PIPE_EVENT_DELETED		0x00000008
 #define MSG_PIPE_EVENT_OPENED		0x00000100
 
-extern int ksceGUIDClose(SceUID guid);
-extern int kscePUIDGetObject(SceUID pid, SceUID puid, SceObjectBase **object);
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attr);
 extern int SceSblACMgrForKernel_8241AB5C(SceUID pid, uint32_t value);
-extern SceUID SceSysmemForKernel_BDE00106(const char *name);
 
 /* a kernel caller closes the pipe, which sets MSG_PIPE_EVENT_DELETED */
 int ksceKernelDeleteMsgPipe(SceUID msgPipeId)
@@ -2745,9 +2733,6 @@ int SceThreadmgrForDriver_D0262C55(SceUID msgPipeId, void *buffer, SceSize size,
 #define SCE_KERNEL_ERROR_MSG_PIPE_FULL	0x80028222	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_MSG_PIPE_EMPTY	0x80028223	/* PLACEHOLDER: name */
 #define SDK_VERSION_TRY_EVENT		0x02100000	/* from here a try sets the pipe's event */
-
-extern int ksceKernelCopyFromUser(void *dst, const void *src, SceSize len);
-extern int ksceKernelCopyToUser(void *dst, const void *src, SceSize len);
 
 /*
  * Sends what can go now, never waiting: to waiting receivers, then into
@@ -3412,10 +3397,6 @@ int ksceKernelGetMsgPipeInfo(SceUID msgPipeId, ThreadmgrMsgPipeInfo *info)
 	ThreadmgrSetUserRoWord(saved);
 	return ret;
 }
-
-extern int ksceGUIDGetUIDVectorByClass(SceClass *cls, int level, SceUID *vector, SceSize num,
-				       SceSize *count);
-extern int scePUIDGetAttr(SceUID pid, SceUID puid, SceUInt32 *attr);
 
 /* SceThreadmgrForDriver_C7F5FFE0: the information of every msg pipe visible at level */
 int SceThreadmgrForDriver_C7F5FFE0(int level, ThreadmgrMsgPipeInfo *infos, SceSize size,
