@@ -3,14 +3,12 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/dmac.h>
 #include <threadmgr/threadmgr.h>
+#include <lowio/pervasive.h>
 
 /* name from the NID database: the kind of memory an address maps (3: mapped at its physical address) */
 int ksceKernelGetPhysicalMemoryType(const void *address);
 
 /* Original names unknown: SDIO function clock/reset setup. */
-int ScePervasiveForDriver_F345FB53(SceUInt32 function);
-int ScePervasiveForDriver_EDCA3961(SceUInt32 function);
-int ScePervasiveForDriver_D34E74C5(SceUInt32 function);
 
 int sceDbgSdioInit(void);
 int _sceDbgSdioModuleStart(SceSize args, void *argp);

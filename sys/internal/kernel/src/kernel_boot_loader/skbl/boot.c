@@ -26,6 +26,7 @@
 #include <buserror/ssx_firewall_regs.h>
 #include <systimer/timer_regs.h>
 #include "boot.h"
+#include <lowio/pervasive.h>
 
 /* the code each handler shows on the GPO LEDs: 0x8n in SKBL, 0xan in NSKBL */
 #ifdef BOOT_NSKBL
@@ -71,8 +72,6 @@ int DebugDeviceGateEnable(void);
 int DebugDeviceResetDisable(void);
 int DebugPaGateEnable(void);
 int DebugPaResetDisable(void);
-int ScePervasiveForDriver_D34E74C5(int mask);
-int ScePervasiveForDriver_EDCA3961(int mask);
 int ArmGateEnable(SceUInt32 mask);
 int ArmDebuggerGateEnable(void);
 int ArmDebuggerResetDisable(void);
@@ -111,7 +110,6 @@ extern const uint32_t bootDefaultDipsw[8];
 /* the build's revision and date (the file before memory_test.c) */
 extern const char bootRevision[], bootBuildDate[];
 extern const uint32_t monitorVectors[], setMonitorStack[];
-
 
 /* the vector page as the kernel's exception entry holds it */
 typedef struct BootVectorPage {
@@ -261,7 +259,6 @@ int SsxInit(void)
 	__asm__ volatile("dsb sy" : : : "memory");
 	return 0;
 }
-
 
 #else
 

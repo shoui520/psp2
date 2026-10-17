@@ -21,6 +21,7 @@
 #include "venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
+#include <lowio/pervasive.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -3069,9 +3070,6 @@ int lockVeneziaDebugChannel(unsigned int channel)
 	} while (value == 1);
 	return 0;
 }
-
-extern int ScePervasiveForDriver_E2D8F6C3(void);
-extern uint32_t ScePervasiveForDriver_31C0A98B(void);
 
 int clearVeneziaDebugReset(void)
 {
@@ -6864,9 +6862,6 @@ int programVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture, VeneziaVi
 	return 0;
 }
 
-extern uint32_t ScePervasiveForDriver_B1CFA18F(void);
-/* Original callers initialize no arguments; the owner preserves unspecified R2 to SMC. */
-extern uint32_t ScePervasiveForDriver_8CF567AD(void);
 extern int kscePowerSetVipClockFrequency(int frequency);
 const unsigned int g_veneziaVipClockFrequencies[7] = {
 	0xffffff, 41, 55, 83, 111, 166, 222,
@@ -6916,8 +6911,6 @@ __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state,
 	return 0;
 }
 
-extern uint32_t ScePervasiveForDriver_31C0A98B(void);
-extern uint32_t ScePervasiveForDriver_EBE9C84E(void);
 extern int stopVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
 
 /* name unknown: stop the capture clock and detach the active process callbacks. */

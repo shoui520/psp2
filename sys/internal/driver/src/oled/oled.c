@@ -10,17 +10,11 @@
 #include <oled/oled.h>
 #include "panel_data.h"
 #include <sysmem/barrier.h>
+#include <psp2kern/lowio/gpio.h>
+#include <psp2kern/lowio/pervasive.h>
 
 /* Internal names are unknown; no debug function records exist in this module. */
 extern int sceKernelDelayThread(unsigned usec);
-extern int kscePervasiveSpiResetDisable(int bus);
-extern int kscePervasiveSpiResetEnable(int bus);
-extern int kscePervasiveSpiClockEnable(int bus);
-extern int kscePervasiveSpiClockDisable(int bus);
-extern int ksceGpioSetPortMode(int bus, int port, int mode);
-extern int ksceGpioPortRead(int bus, int port);
-extern int ksceGpioPortSet(int bus, int port);
-extern int ksceGpioPortClear(int bus, int port);
 
 #define OLED_NOT_READY ((int)0x803f0a04)
 #define OLED_NO_PANEL ((int)0x803f0a03)

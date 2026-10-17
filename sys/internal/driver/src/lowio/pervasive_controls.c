@@ -1,14 +1,14 @@
 /* SceLowio pervasive controls. Unresolved exports retain their NID names. */
 #include "lowio_internal.h"
 
-uint32_t ScePervasiveForDriver_81A155F1(void)
+ScePervasiveMiscRegisters *ScePervasiveForDriver_81A155F1(void)
 {
-	return (uintptr_t)s_misc;
+	return s_misc;
 }
 
-uint32_t ScePervasiveForDriver_47708C03(void)
+ScePervasiveVidRegisters *ScePervasiveForDriver_47708C03(void)
 {
-	return (uintptr_t)s_video;
+	return s_video;
 }
 
 uint32_t ScePervasiveForDriver_04D145C7(void)

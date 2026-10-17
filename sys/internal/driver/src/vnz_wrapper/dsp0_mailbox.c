@@ -4,6 +4,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <lowio/mailbox_regs.h>
 #include "venezia_internal.h"
+#include <lowio/pervasive.h>
 
 /* name unknown: host-side Venezia mailbox interrupt state. */
 typedef struct VeneziaMailboxState {
@@ -44,8 +45,6 @@ int veneziaMailboxIntrHandler(int intrCode, void *userCtx)
 	}
 	return -1;
 }
-
-extern uint32_t ScePervasiveForDriver_04D145C7(void);
 
 /* name unknown: attach the sixteen Venezia mailbox interrupt channels. */
 int initVeneziaMailbox(void)

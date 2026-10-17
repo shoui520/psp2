@@ -8,6 +8,7 @@
 #include "../gpu_es4/srvkm/perproc_sce.h"
 #include "../gpu_es4/srvkm/power_sce.h"
 #include "../gpu_es4/srvkm/gpu-mmu.h"
+#include <psp2kern/lowio/pervasive.h>
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
 IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
@@ -43,5 +44,4 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 int ksceGpuMmuMapMemory(GpuMmuContext *context, SceUInt32 vaddr, void *base,
 			SceUInt32 size, SceUInt32 flags);
 int ksceGpuMmuUnmapMemory(GpuMmuContext *context, SceUInt32 vaddr, SceUInt32 size);
-unsigned kscePervasiveGetSoCRevision(void);
 int ksceKernelGetModuleInfoByAddr(const void *address, SceKernelModuleInfo *info);

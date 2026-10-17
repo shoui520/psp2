@@ -11,6 +11,7 @@
 #include "srcmix.h"
 #include "aclkgen.h"
 #include "audio_work.h"
+#include <lowio/pervasive.h>
 
 const uint32_t audioDmaCommands[3][3] = {
 	{ 0x1a80000, 0x1b00000, 0xc54000 },
@@ -31,11 +32,6 @@ int audioEnableI2sLocked(int port);
 int audioStartCaptureDma(struct AudioDmaState *state);
 int audioStartTransmitDma(struct AudioDmaState *state,
 	SceSrcMixRegisters *registers);
-uint32_t ScePervasiveForDriver_F861FEE4(unsigned int channel);
-uint32_t ScePervasiveForDriver_47F2C35C(unsigned int channel);
-uint32_t ScePervasiveForDriver_925D9D24(unsigned int mode);
-uint32_t ScePervasiveForDriver_2FB5F88F(unsigned int mode);
-uint32_t ScePervasiveForDriver_5BAFA0DC(unsigned int channel);
 int audioSetHardwareVolume(int channel, int left, int right);
 
 /* Programs must be rebuilt for the SrcMix processor before this module links. */

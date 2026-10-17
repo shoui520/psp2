@@ -7,12 +7,9 @@
 
 #include <psp2kern/types.h>
 #include <power/power.h>
+#include <lowio/pervasive.h>
 
 /* ScePervasiveForDriver: the USB blocks of a bus */
-int ScePervasiveForDriver_4F64DEF6(int bus);		/* clock gate off */
-int ScePervasiveForDriver_BB67EF58(int bus);		/* clock on */
-int ScePervasiveForDriver_A2EFD7AF(int bus, int delay);	/* reset assert */
-int ScePervasiveForDriver_13CC07C9(int bus, int delay);	/* reset release */
 
 /* ScePowerForDriver: USB charging */
 int kscePowerBatteryEnableUsbCharging(void);

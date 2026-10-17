@@ -11,6 +11,7 @@
 #include <psp2kern/kernel/sysmem/address_space.h>
 
 #include "audio_private.h"
+#include <lowio/pervasive.h>
 
 uint32_t ksceKernelGetProcessTimeLowCore(void);
 int ksceKernelUserUnmap(SceUID uid, const void *address, int flags);
@@ -26,10 +27,8 @@ int audioInitializeSpdif(void);
 int audioInitializeSrcMix(void);
 int audioPrepareSuspendHook(void);
 int audioSuspendI2s(void);
-int ScePervasiveForDriver_146108D4(int index);
 int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 			     int clockRate);
-
 
 uint32_t audioWaitForPlaybackDeadline(uint32_t deadline, uint32_t freq,
 				     uint32_t samples);

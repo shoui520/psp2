@@ -6,6 +6,9 @@
 #include <lowio/pervasive_regs.h>
 #include <lowio/uart_regs.h>
 #include <lowio/mailbox_regs.h>
+#include <lowio/pervasive.h>
+#include <lowio/dsi.h>
+#include <lowio/pwm.h>
 
 extern ScePervasiveMiscRegisters *s_misc;
 extern ScePervasiveVidRegisters *s_video;
@@ -36,8 +39,6 @@ uint32_t Smc110(uint32_t, uint32_t, uint32_t, uint32_t);
 int Smc111(volatile uint32_t *reg, int value);
 int Smc113(volatile uint32_t *reg, int value);
 uint32_t Smc114(uint32_t, uint32_t, uint32_t, uint32_t);
-
-int ScePervasiveForDriver_4AF7A01E(int port, unsigned int mask);
 
 /* module_start's stages, in its order */
 int LowioPervasiveInit(SceSize arglen, const void *argp);

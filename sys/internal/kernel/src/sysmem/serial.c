@@ -11,6 +11,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/uart_regs.h>
+#include <psp2kern/lowio/pervasive.h>
 
 /* what each build has */
 #if !defined(SYSMEM_TZS) && !defined(SYSMEM_NSKBL)
@@ -39,9 +40,6 @@ int ksceKernelCpuId(void);
 int ksceKernelCheckDipsw(unsigned int bit);
 int ksceUartInit(int port);
 int SceSysrootForDriver_AE7A8F1D(void);
-int kscePervasiveUartResetEnable(int port);
-int kscePervasiveUartResetDisable(int port);
-int kscePervasiveUartClockEnable(int port);
 
 UartDebugPort s_debugPorts[UART_DEBUG_PORTS] = {
 	{ 0, 0 }, { 0, 1 }, { 0, 6 },

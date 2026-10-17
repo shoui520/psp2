@@ -155,9 +155,6 @@ int ScePervasiveForDriver_7E813FC5(unsigned head, uint32_t *clock)
 	return 0;
 }
 
-uint32_t ScePervasiveForDriver_AD1E81EB(unsigned head, unsigned mask);
-uint32_t ScePervasiveForDriver_13CC07C9(unsigned head, unsigned mask);
-
 int ScePervasiveForDriver_4F64DEF6(unsigned head)
 {
 	uint32_t state;

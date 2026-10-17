@@ -11,6 +11,9 @@
 #include <sysmem/sysevent.h>
 #include <lowio/spi_regs.h>
 #include <lcd/lcd.h>
+#include <psp2kern/lowio/gpio.h>
+#include <psp2kern/lowio/i2c.h>
+#include <psp2kern/lowio/pervasive.h>
 
 #if FW_VERSION >= 0x04000000
 #include "data-4.00-DEBUGGER.h"
@@ -24,16 +27,6 @@
 extern int sceKernelDelayThread(unsigned usec);
 extern int ksceKernelSearchModuleByName(const char *name);
 extern unsigned ksceSysrootGetHardwareInfo(void);
-
-extern int kscePervasiveSpiResetDisable(int bus);
-extern int kscePervasiveSpiResetEnable(int bus);
-extern int kscePervasiveSpiClockEnable(int bus);
-extern int kscePervasiveSpiClockDisable(int bus);
-extern int ksceGpioSetPortMode(int bus, int port, int mode);
-extern int ksceGpioPortRead(int bus, int port);
-extern int ksceGpioPortSet(int bus, int port);
-extern int ksceGpioPortClear(int bus, int port);
-extern int ksceI2cTransferWrite(int bus, int address, const void *data, unsigned size);
 
 #define LCD_INVALID ((int)0x803f0c02)
 #define LCD_NO_PANEL ((int)0x803f0c03)

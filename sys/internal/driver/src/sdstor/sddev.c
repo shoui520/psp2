@@ -10,6 +10,7 @@
 #include <msif/msif.h>
 #include <umass/umass.h>
 #include <power/led.h>
+#include <lowio/pervasive.h>
 
 #if FW_DEBUG
 static const uint8_t sddevHardwarePorts[5] = { 0, 1, 255, 255, 3 };
@@ -36,8 +37,6 @@ static const LedModeParam sddevWriteEndLed = {
 
 static SceSdstorSddev sddevTables[5];
 
-uint32_t ScePervasiveForDriver_5E20D7D5(void);
-uint32_t ScePervasiveForDriver_E6728E30(void);
 int ksceSdifGetCardInsertState1(unsigned int index);
 int ksceSdifGetCardInsertState2(unsigned int index);
 int ksceSdifInitializeMmcDevice(unsigned int index, SdifMmcContext **part);

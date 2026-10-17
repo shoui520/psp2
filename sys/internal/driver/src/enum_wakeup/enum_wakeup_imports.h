@@ -9,6 +9,9 @@
 
 #include <psp2kern/types.h>
 #include <idstorage/idstorage.h>
+#include <lowio/pervasive.h>
+#include <psp2kern/lowio/gpio.h>
+#include <psp2kern/lowio/pervasive.h>
 
 int snprintf(char *buf, SceSize size, const char *fmt, ...);
 int sceKernelExitThread(int status);
@@ -62,23 +65,10 @@ int scePowerRequestStandby(void);
 int scePowerRequestColdReset(void);
 int kscePowerBatterySetUsbStatus(int status);
 
-int ScePervasiveForDriver_4F64DEF6(int unk);
 int ScePervasiveForDriver_E0711D42(void);
-int ScePervasiveForDriver_821AE6C7(int unk);
-int ScePervasiveForDriver_F861FEE4(int unk);
-int ScePervasiveForDriver_2FB5F88F(int unk);
-int ScePervasiveForDriver_B8AF1249(void);
-int ScePervasiveForDriver_51981FEE(void);
-int ScePervasiveForDriver_146108D4(int unk);
-int ScePervasiveForDriver_A3CF9844(int unk);
-int kscePervasiveDsiSetPixelClock(int port, int clock);
-int ScePervasiveForDriver_3D8A8712(int unk);
-int ScePervasiveForDriver_4E43299D(int unk);
 int SceClockgenForDriver_5130682D(void);
 int SceClockgenForDriver_F0A0242D(void);
 int SceClockgenForDriver_82F39378(void);
 int ksceClockgenWlanBtClkDisable(void);
-int ksceGpioSetPortMode(int bus, int port, int mode);
-int ksceGpioPortSet(int bus, int port);
 int SceUdcdForDriver_2D91F8C3(int chargeEnable);
 int ksceUdcdGetDeviceState(void);

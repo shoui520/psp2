@@ -541,7 +541,7 @@ int powerInitializeClockRuntime(void)
 
 	s_powerClockControl.hardwareInfo = ksceSysconGetHardwareInfo();
 
-	vid = (const ScePervasiveVidRegisters *)ScePervasiveForDriver_47708C03();
+	vid = ScePervasiveForDriver_47708C03();
 	s_powerClockControl.busVoltageTable[0] = vid->busVoltage[0];
 	s_powerClockControl.busVoltageTable[1] = vid->busVoltage[1];
 	s_powerClockControl.busVoltageTable[2] = vid->busVoltage[2];

@@ -10,6 +10,7 @@
 #include <psp2kern/types.h>
 #include <idstorage/idstorage.h>
 #include <sdif/sdif.h>
+#include <psp2kern/lowio/pervasive.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -203,7 +204,6 @@ int ksceSdifGetCardInsertState2(int card);
 int ksceMsifEnableSlowMode(void);
 struct SceMsInfo;
 int ksceMsifGetMsInfo(struct SceMsInfo *info);
-int kscePervasiveRemovableMemoryGetCardInsertState(void);
 
 /* NpDrm */
 int ksceNpDrmGetLegacyDocKey(void *a, void *b, void *c, void *d);

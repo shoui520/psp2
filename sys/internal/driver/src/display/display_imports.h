@@ -10,6 +10,10 @@
 #include <oled/oled.h>
 #include <lcd/lcd.h>
 #include <sysmem/sysmem.h>
+#include <lowio/dsi.h>
+#include <lowio/iftu.h>
+#include <psp2kern/lowio/dsi.h>
+#include <psp2kern/lowio/pervasive.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,
@@ -70,34 +74,10 @@ int ksceSblAimgrIsGenuineDolce(void);
 int ksceGzipDecompress(void *dst, SceSize dstSize, const void *src, SceUInt32 *crc);
 
 /* SceDsiForDriver */
-int ksceDsiSetLanesAndPixelSize(int bus, int lanes, int pixelSize);
-int ksceDsiSetVic(int bus, SceUInt32 vic);
-int ksceDsiGetPixelClock(int bus);
-int ksceDsiEnableHead(int bus);
-int ksceDsiDisableHead(int bus);
-int ksceDsiStartDisplay(int bus, int mode);
-int ksceDsiSendBlankingPacket(int bus);
-int ksceDsiGetVicResolution(SceUInt32 vic, SceUInt32 *width, SceUInt32 *height);
-int SceDsiForDriver_6F8029A1(int bus);
-int SceDsiForDriver_F2921E29(int bus, int enable);
 
 /* ScePervasiveForDriver */
-int kscePervasiveDsiSetPixelClock(int bus, int clock);
-int kscePervasiveDsiClockEnable(int bus, SceUInt32 mask);
-int kscePervasiveDsiClockDisable(int bus, SceUInt32 mask);
-int kscePervasiveDsiResetEnable(int bus, SceUInt32 mask);
-int kscePervasiveDsiResetDisable(int bus, SceUInt32 mask);
 
 /* SceIftuForDriver */
-int ksceIftuSetInputFrameBuffer(int plane, SceIftuPlaneState *state, int src, int sync);
-int ksceIftuSetOutputFormat(int plane, SceUInt32 width, SceUInt32 height, SceUInt32 format,
-			    int interlaced);
-int ksceIftuEnable(int plane);
-int ksceIftuDisable(int plane);
-int ksceIftuSetMergeSetting(int plane, SceUInt32 setting);
-int SceIftuForDriver_0FCBF457(int plane, const SceIftuCscParams *csc);
-int SceIftuForDriver_357EAE24(int plane, SceUInt32 alpha);
-int SceIftuForDriver_D64F4C6B(int plane, const SceIftuCscParams *csc);
 
 /* SceHdmiForDriver */
 int SceHdmiForDriver_08AFFB03(int enable);

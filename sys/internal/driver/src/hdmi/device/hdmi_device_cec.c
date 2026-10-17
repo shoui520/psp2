@@ -12,10 +12,9 @@
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
+#include <lowio/pervasive.h>
 
 int sceKernelDelayThread(SceUInt32 usec);
-int ScePervasiveForDriver_26B51075(void);	/* the CEC clock on */
-int ScePervasiveForDriver_D185D235(void);	/* the CEC clock off */
 
 /* The transmitter's register maps (I2C slave addresses) */
 #define CEC_SLAVE_MAIN		0x7a

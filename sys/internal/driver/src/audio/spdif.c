@@ -7,10 +7,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/dipsw.h>
 #include "audio_regs.h"
-
-
-uint32_t ScePervasiveForDriver_6B5DEDA2(void);
-uint32_t ScePervasiveForDriver_6A2FB697(void);
+#include <lowio/pervasive.h>
 
 int audioInitializeSpdif(void)
 {

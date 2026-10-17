@@ -60,12 +60,9 @@
 #include <psp2kern/kernel/sysmem/uid_puid.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-
-
-
-
-
-
+#include <lowio/pervasive.h>
+#include <psp2kern/lowio/gpio.h>
+#include <psp2kern/lowio/pervasive.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -95,41 +92,20 @@ struct PowerIdleState {
 
 extern struct PowerIdleState s_powerIdleTimers;
 
-
-
-
 /* imports */
 
-
-
 extern int sceKernelFreeRemoteProcessHeap(SceUID pid, void *address);
-
-
-
-
-
-
-
 
 /* The saved continuation returns through the original caller's LR and SP. */
 extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
-
 /* Voltage codes decrease as the required voltage increases. */
 extern int SceSysconForDriver_7F198FA2(unsigned int rail, unsigned int code);
 
-
-
-
-extern int ScePervasiveForDriver_E9D95643(unsigned int selector, unsigned int mode);
-
-
 extern int ksceKernelCheckDipsw(unsigned int index);
-
 
 extern int ksceKernelEnqueueWorkQueue(SceUID queue, const char *name,
 				     int (*callback)(void), void *argument);
-
 
 extern int sceKernelDelayThread(unsigned int delay);
 
@@ -137,7 +113,6 @@ extern int sceKernelDelayThread(unsigned int delay);
 extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
 
 /* LED callback and script engine; appended after the existing LED state. */
-extern int ksceGpioSetPortMode(uint32_t, uint32_t, uint32_t);
 
 /* Native Syscon bodies take no arguments and return a sign-extended byte. */
 extern int ksceSysconIsLowBatteryInhibitUpdateReboot(void);
@@ -169,7 +144,6 @@ extern int ksceSblACMgrIsGameProgram(SceUID pid);
 
 extern int sceKernelCancelAlarm(SceUID alarm);
 
-
 extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
 
 /* name unknown: told the new power flags of a process */
@@ -178,13 +152,7 @@ extern SceUID SceCtrlForDriver_FF9D4DD4(uint32_t, void (*)(uint32_t, uint32_t),
 extern const char *ksceGUIDName(SceUID);
 extern int SceCtrlForDriver_69E45836(void);
 extern int SceCtrlForDriver_C8CE3E43(unsigned int);
-extern int ScePervasiveForDriver_12D17D47(unsigned int selector);
-extern int ScePervasiveForDriver_15237AF8(unsigned int clock);
-extern int ScePervasiveForDriver_589D0291(unsigned int selector);
-extern int ScePervasiveForDriver_6AF0196F(unsigned int first, unsigned int second);
 extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
-extern int ScePervasiveForDriver_98D8914A(unsigned int selector);
-extern int ScePervasiveForDriver_A6832B33(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
 extern int SceProcessmgrForDriver_879153D9(SceUID pid, uint32_t mask);
 extern int SceProcessmgrForDriver_FC2A424E(void *memory);
@@ -221,14 +189,11 @@ extern int SceSysrootForDriver_89532E2F(void);
 extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
 extern int ksceDisplayGetDeviceType(int head, int unused);
 extern int ksceDisplayWaitVblankStart(void);
-extern int ksceGpioPortClear(uint32_t, uint32_t);
-extern int ksceGpioPortSet(uint32_t, uint32_t);
 extern int ksceKernelPrintfAssertLevel(uint32_t level, int condition,
 				     const SceKernelDebugInfo *info,
 				     const void *caller, const char *format, ...);
 extern int ksceKernelRegisterProcEventHandler(const char *, const void *, void *);
 extern int ksceKernelSysEventDispatch(int, int, const void *, SceUID *);
-extern int kscePervasiveUartResetEnable(unsigned int);
 extern int ksceSblACMgrIsSystemProgram(SceUID pid);
 extern int ksceSblAimgrIsDolce(void);
 extern int ksceSblAimgrIsGenuineDolce(void);
@@ -241,11 +206,9 @@ extern int ksceSysrootIsUsbEnumWakeup(void);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern SceUInt32 ksceKernelGetSystemTimeLow(void);
-extern uint32_t kscePervasiveGetSoCRevision(void);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 extern uint64_t sceKernelGetSystemTimeWide(void);
 /* ScePervasiveMisc (0xe3100000) */
-extern ScePervasiveMiscRegisters *ScePervasiveForDriver_81A155F1(void);
 extern uintptr_t SceSysrootForDriver_0A52A59C(void);
 extern uintptr_t SceSysrootForDriver_10788257(void);
 extern void powerCpuResumeEntry(void);
@@ -254,10 +217,6 @@ extern void powerRestoreCpuContext(void *context, int value)
 extern void powerSmcResumePrimary(void);
 extern void powerSmcResumeSecondary(int value);
 extern void powerSmcSuspendSecondary(void);
-
-
-
-
 
 /* Native switch modes and controller timing state. */
 /* s_powerSwitchState.eventFlag */
@@ -414,7 +373,6 @@ _Static_assert(offsetof(struct PowerClockControl, frequencies) == 0x84,
 _Static_assert(offsetof(struct PowerClockControl, lockBypass) == 0xec,
 	       "Power clock lock bypass offset");
 
-
 struct PowerBatteryState {
 	uint32_t status;
 	uint32_t remainCapacity;
@@ -508,7 +466,6 @@ struct PowerBatteryFakeStatus {
 	uint32_t fullCapacity;
 	uint32_t duration;
 };
-
 
 /* LED error codes (lowio's 0x803f01xx facility; names unknown) */
 #define SCE_LED_ERROR_INVALID_LED	0x803f0140
@@ -695,8 +652,6 @@ int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option);
 void powerNotifyCallback(uint32_t clearMask,
 							    uint32_t setMask,
 							    uint32_t events);
-
-
 
 int powerInitializeClockControl(void);
 

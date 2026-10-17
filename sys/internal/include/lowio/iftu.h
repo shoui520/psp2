@@ -89,6 +89,15 @@ VITASDK_BUILD_ASSERT_EQ(84, SceIftuPlaneState);
 int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	      SceIftuConvParams *params);
 
+int SceIftuForDriver_0FCBF457(unsigned int index, SceIftuCscParams *param);
+int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha);
+int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param);
+int ksceIftuDisable(unsigned int index);
+int ksceIftuEnable(unsigned int index);
+int ksceIftuSetInputFrameBuffer(unsigned int index, SceIftuPlaneState *state, int bilinear, int sync);
+int ksceIftuSetMergeSetting(unsigned int index, int setting);
+int ksceIftuSetOutputFormat(int index, unsigned int width, unsigned int height, unsigned int pixelFormat, unsigned int planeEnable);
+
 #ifdef __cplusplus
 }
 #endif

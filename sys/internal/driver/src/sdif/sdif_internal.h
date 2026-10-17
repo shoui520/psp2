@@ -8,6 +8,7 @@
 #include <sdif/sdif.h>
 #include "sdif_regs.h"
 #include <threadmgr/fast_mutex.h>
+#include <lowio/pervasive.h>
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;
@@ -53,7 +54,6 @@ typedef struct SdifAdmaDescriptor {
 	uint16_t length;
 	uint32_t address;
 } SdifAdmaDescriptor;
-
 
 typedef struct SdifGeneralState {
 	SceUID sysEventHandler;
@@ -167,13 +167,6 @@ int freeAdmaDescriptorArea(SdifCommand *command);
 int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex);
-int ScePervasiveForDriver_3D8A8712(int port);
-int ScePervasiveForDriver_4E43299D(int port);
-int ScePervasiveForDriver_043B33F5(int port, int value);
-int ScePervasiveForDriver_9F8E589C(int port, int value);
-int ScePervasiveForDriver_D326E15F(int port);
-int ScePervasiveForDriver_3CF7A012(int port);
-int ScePervasiveForDriver_453BD2EC(int port, int value);
 int ksceKernelIsSomeBootMode(void);
 SdifContextGlobal *ksceSdifGetSdContextGlobal(unsigned int index);
 int sceSdifReset(SdifContextGlobal *context, int flags);

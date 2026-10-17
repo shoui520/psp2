@@ -3,14 +3,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include "../venezia_internal.h"
+#include <lowio/pervasive.h>
 
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;
 
-extern unsigned int ScePervasiveForDriver_FB01A2DD(void);
-extern unsigned int ScePervasiveForDriver_A7E64C6F(void);
-extern unsigned int ScePervasiveForDriver_28731EC5(void);
-extern unsigned int ScePervasiveForDriver_2EEBE9AE(void);
 extern void SceCpuForDriver_E813EBB2(void);
 extern int ksceSblFwLoaderLock(const char *path, int flags);
 extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);

@@ -6,13 +6,11 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include "qmi_device.h"
+#include <lowio/pervasive.h>
 
 static SceUID g_qmiUartMemBlock;
 static volatile SceUartRegisters *g_qmiUartRegisters;
 static QmiUartPort g_qmiUartPort;
-
-SceUInt32 ScePervasiveForDriver_34537B12(void);
-SceUInt32 ScePervasiveForDriver_4B99558F(void);
 
 /* name unknown: service the port's receive and transmit interrupts. */
 int qmiUartInterrupt(unsigned int interrupt, QmiUartPort *port)

@@ -19,6 +19,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <string.h>
+#include <lowio/pervasive.h>
 
 int MsproalSleep(void);
 int msproal_init(void);
@@ -31,7 +32,6 @@ int msproal_start(struct MsproalHandle *handle);
 int msproal_check_media(uint8_t *mediaType);
 int msproal_mount(int busMode);
 int msproal_control_power_supply(uint32_t value, uint32_t preserveMask);
-int ScePervasiveForDriver_F9E7B023(void);
 int kscePowerTick(uint32_t mask);
 int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 	uint64_t interval, PowerIdleCallback callback, void *argument);
@@ -1353,5 +1353,4 @@ int SceMsifForDriver_F997286B(void)
 	}
 	return 0;
 }
-
 

@@ -10,13 +10,7 @@
 #include <psp2kern/kernel/cpu/spinlock.h>
 #include "audio_regs.h"
 #include "srcmix.h"
-
-
-uint32_t ScePervasiveForDriver_146108D4(unsigned int index);
-uint32_t ScePervasiveForDriver_A3CF9844(unsigned int index);
-uint32_t ScePervasiveForDriver_4235EB7D(unsigned int index);
-uint32_t ScePervasiveForDriver_EEE340ED(unsigned int index);
-uint32_t ScePervasiveForDriver_A1D2E440(unsigned int mode);
+#include <lowio/pervasive.h>
 
 int audioEnableI2s(int port);
 

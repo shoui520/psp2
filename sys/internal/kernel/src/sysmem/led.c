@@ -10,6 +10,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/gpio_regs.h>
+#include <psp2kern/lowio/pervasive.h>
 
 #define LED_GPO_SHIFT			16
 #define LED_GPO_BITS			0xff0000
@@ -17,7 +18,6 @@
 
 int ksceKernelCpuId(void);
 SceInt32 ksceKernelAtomicCompareAndSet32(SceInt32 *store, SceInt32 value, SceInt32 new_value);
-int kscePervasiveGpioClockEnable(void);
 
 /* the registers' physical address until LedModuleStart maps them */
 static volatile SceGpioRegisters *s_ledRegs = (void *)GPIO0_REG_BASE;

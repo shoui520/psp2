@@ -8,13 +8,9 @@
 #include <psp2kern/types.h>
 #include <hdmi/hdmi.h>
 #include <stdint.h>
+#include <lowio/pervasive.h>
 
 /* SceLowio (pervasive) */
-uintptr_t ScePervasiveForDriver_47708C03(void);			/* voltage table */
-int ScePervasiveForDriver_CA0ACFC5(unsigned int mask);
-int ScePervasiveForDriver_725B4F59(unsigned int selector);
-int ScePervasiveForDriver_2EEBE9AE(void);
-int ScePervasiveForDriver_03E1FAA6(void);
 int SceGrabForDriver_B22EE8BC(unsigned int mask, unsigned int enable);	/* SMC passthrough; power passes two words */
 
 /* SceSyscon */

@@ -6,6 +6,7 @@
 #include "../venezia_internal.h"
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
+#include <lowio/pervasive.h>
 
 VeneziaRpcState g_veneziaRpcState;
 
@@ -13,7 +14,6 @@ extern SceUID ksceKernelGetProcessId(void) __asm__("sceKernelGetProcessId");
 extern int _sceVeneziaRunInBackground(void);
 extern int _sceVeneziaStopInBackground(void);
 extern unsigned int getVeneziaClockLockCount(void);
-extern unsigned int ScePervasiveForDriver_725B4F59(int clock);
 #if FW_VERSION >= 0x04000000
 extern int veneziaClockSelector(int frequency);
 #else
@@ -266,7 +266,6 @@ extern int veneziaClockSelector(int frequency);
 #else
 extern int veneziaClockSelector(int frequency);
 #endif
-
 
 #if FW_VERSION >= 0x04000000
 extern int submitVeneziaRpc(unsigned int channel);
