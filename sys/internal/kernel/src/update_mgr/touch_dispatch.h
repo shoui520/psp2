@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <psp2kern/types.h>
 
 int SceSysconForDriver_48ED8981(void);
 int SceSysconForDriver_060E55C1(void);
