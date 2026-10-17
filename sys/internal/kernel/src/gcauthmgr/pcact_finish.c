@@ -4,6 +4,7 @@
 #include <sysmem/cpu.h>
 #include <psp2common/kernel/rtc.h>
 #include "pcact.h"
+#include <intrmgr/syscall.h>
 
 GcAuthPsmactActivationFile gcAuthPsmactActivationFile;
 
@@ -128,13 +129,13 @@ int GcAuthPcactBeginActivationWithStack(unsigned int mode,
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	request.mode = mode;
 	request.entropy = entropy;
 	request.output = output;
 	result = ksceKernelRunWithStack(8192,
 		(int (*)(void *))GcAuthPcactBeginActivation, &request);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -145,7 +146,7 @@ int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activ
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (activation != NULL) {
 		result = SceSysmemForDriver_BC996A7A(&gcAuthActivationWorkspace.pcact,
 			activation, sizeof(*activation));
@@ -158,7 +159,7 @@ int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activ
 	} else {
 		result = (int)0x808a0380;
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -169,13 +170,13 @@ int GcAuthPsmactBeginActivationWithStack(unsigned char mode,
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	request.mode = mode;
 	request.output = output;
 	request.random = random;
 	result = ksceKernelRunWithStack(8192,
 		(int (*)(void *))GcAuthPsmactBeginActivation, &request);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -187,12 +188,12 @@ int GcAuthPsmactApplyActivationWithStack(const GcAuthPsmactActivation *activatio
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	request.activation = activation;
 	request.random = random;
 	request.encryptedActivation = encryptedActivation;
 	result = ksceKernelRunWithStack(8192,
 		(int (*)(void *))GcAuthPsmactApplyActivation, &request);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }

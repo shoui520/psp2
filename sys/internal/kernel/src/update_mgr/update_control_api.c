@@ -2,6 +2,7 @@
 #include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
+#include <intrmgr/syscall.h>
 
 int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
 {
@@ -11,11 +12,11 @@ int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SpkgUtilGetUpdateMode(&mode);
 	if (result == 0)
 		result = SceSysmemForDriver_6D88EF8A(output, &mode, sizeof(mode));
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -26,9 +27,9 @@ int sceSblUsSetUpdateModeForUser(SceUpdateMode mode)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SpkgUtilSetUpdateMode(mode);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -38,8 +39,8 @@ int sceSblUsCheckSystemIntegrityForUser(void)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
-	EXIT_SYSCALL(state);
+	state = sceSyscallEnter();
+	sceSyscallLeave(state);
 	return 0;
 }
 
@@ -50,9 +51,9 @@ int sceSblUsPowerControlForUser(int operation, int flags)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SpkgUtilPowerControl(operation, flags);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -64,10 +65,10 @@ int sceSblUsGetApplicableVersionForUser(int type, UpdateApplicableVersion *outpu
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SpkgInfoUtilGetApplicableVersion(type, &info);
 	if (result == 0)
 		result = SceSysmemForDriver_6D88EF8A(output, &info, sizeof(info));
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }

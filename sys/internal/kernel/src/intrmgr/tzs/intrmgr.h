@@ -37,6 +37,7 @@
 #include "../intrmgr_state.h"
 #include <sysmem/dipsw.h>
 #include <sysmem/cpu.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
 
 /* Sony built the 3.6x secure kernel without its debug output */

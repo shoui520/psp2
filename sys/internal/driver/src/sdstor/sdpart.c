@@ -7,6 +7,7 @@
 #include <sdstor/mbr.h>
 #include <sdif/sdif.h>
 #include <stdlib.h>
+#include <sysmem/sysclib.h>
 
 #if FW_DEBUG
 static uint8_t sdpartXmcPort = 5;

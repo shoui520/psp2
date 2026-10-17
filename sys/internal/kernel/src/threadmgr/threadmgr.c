@@ -27,6 +27,7 @@
 #include <sysmem/uid_class.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/utils.h>
+#include <intrmgr/syscall.h>
 
 void issueChangeThreadPriorityIntrRequest(unsigned int cpuId, SceUID threadId, int priority);
 int sceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
@@ -1325,15 +1326,15 @@ int sceKernelIsUserModeThread(void)
 	SceUInt32 state;
 	int ret;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (!currentThreadContext()) {
-		EXIT_SYSCALL(state);
+		sceSyscallLeave(state);
 		return 0;
 	}
 	thread = currentThreadContext();
 	SCE_DBG_ASSERT_CHECK(thread != NULL, 7596);
 	ret = thread->currentAttr >> 31;
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return ret;
 }
 
@@ -1344,7 +1345,7 @@ int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes)
 	SceUInt32 state;
 	int intr, ret;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (attributes == NULL) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	} else if (currentThreadContext() == NULL) {
@@ -1357,7 +1358,7 @@ int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes)
 		sceKernelCpuResumeIntr(intr);
 		ret = 0;
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return ret;
 }
 
@@ -1367,16 +1368,16 @@ int ksceKernelGetThreadCurrentPriority(void)
 	SceUInt32 state;
 	int priority;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (!currentThreadContext()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 6389, "sceKernelGetThreadCurrentPriority",
 					   "*** error: illegal context\n");
-		EXIT_SYSCALL(state);
+		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
 	thread = currentThreadContext();
 	priority = thread->currentPriority;
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return priority;
 }
 

@@ -3,6 +3,7 @@
 #include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
+#include <intrmgr/syscall.h>
 
 int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *args,
 			 uint32_t *requestId)
@@ -15,7 +16,7 @@ int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
@@ -30,7 +31,7 @@ int sceSblUsUpdateSpackageForUser(int packageType, const SceKernelSpackageArgs *
 			}
 		}
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -45,7 +46,7 @@ int sceSblUsInspectSpackageForUser(int packageType, const SceKernelSpackageArgs 
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
@@ -60,7 +61,7 @@ int sceSblUsInspectSpackageForUser(int packageType, const SceKernelSpackageArgs 
 			}
 		}
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -75,7 +76,7 @@ int sceSblUsExtractSpackageForUser(int packageType, const SceKernelSpackageArgs 
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (!args || !requestId) {
 		result = (int)0x800f0216;
 	} else {
@@ -90,7 +91,7 @@ int sceSblUsExtractSpackageForUser(int packageType, const SceKernelSpackageArgs 
 			}
 		}
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -106,7 +107,7 @@ int sceSblUsGetExtractSpackageForUser(int nodeType, uint32_t requestId,
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 	if (result == 0) {
 		result = UpdateUtilGetNodeStatusLocked(nodeType, &status);
@@ -124,7 +125,7 @@ int sceSblUsGetExtractSpackageForUser(int nodeType, uint32_t requestId,
 			}
 		}
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -138,7 +139,7 @@ int sceSblUsAllocateBufferForUser(SceSize size, void **output)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = UpdateUtilAllocateBuffer(size, &kernelBuffer, sceKernelGetProcessId());
 	if (result == 0) {
 		buffer = kernelBuffer;
@@ -146,7 +147,7 @@ int sceSblUsAllocateBufferForUser(SceSize size, void **output)
 		if (result == 0)
 			result = SceSysmemForDriver_6D88EF8A(output, &userBuffer, sizeof(userBuffer));
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -159,13 +160,13 @@ int sceSblUsReleaseBufferForUser(void *userBuffer)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = UpdateUtilUA2KA(userBuffer, sceKernelGetProcessId(), &kernelBuffer);
 	if (result == 0) {
 		buffer = kernelBuffer;
 		result = UpdateUtilReleaseBuffer(buffer, sceKernelGetProcessId());
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -184,7 +185,7 @@ int sceSblUsGetStatusForUser(int nodeType, uint32_t requestId,
 		return (int)0x800f022c;
 	if (!args)
 		return (int)0x800f0216;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SceSysmemForDriver_BC996A7A(&request, args, sizeof(request));
 	if (result >= 0) {
 		result = SpkgUtilGetStatus(nodeType, requestId, &seq_no, &status,
@@ -203,7 +204,7 @@ int sceSblUsGetStatusForUser(int nodeType, uint32_t requestId,
 			}
 		}
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -215,7 +216,7 @@ int sceSblUsGetSpkgInfoForUser(int packageType, SceSblUsSpkgInfo *output)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	if (output) {
 		result = SpkgInfoUtilGetSpkgInfo(packageType, &info);
 		if (result == 0)
@@ -223,6 +224,6 @@ int sceSblUsGetSpkgInfoForUser(int packageType, SceSblUsSpkgInfo *output)
 	} else {
 		result = (int)0x800f0216;
 	}
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }

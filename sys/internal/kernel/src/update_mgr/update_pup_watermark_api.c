@@ -2,6 +2,7 @@
 #include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <acmgr/acmgr.h>
+#include <intrmgr/syscall.h>
 
 int sceSblUsVerifyPupWatermarkForUser(const char *path)
 {
@@ -11,12 +12,12 @@ int sceSblUsVerifyPupWatermarkForUser(const char *path)
 
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = SceSysmemForDriver_DB3EC244(buffer, path, sizeof(buffer));
 	if (result < 0 || result == 1024)
 		result = (int)0x800f0216;
 	else
 		result = sceSblUsVerifyPupWatermark(buffer);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }

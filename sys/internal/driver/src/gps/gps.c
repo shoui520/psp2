@@ -3,6 +3,7 @@
  */
 #include "gps_internal.h"
 #include <sysmem/sysevent_ids.h>
+#include <intrmgr/syscall.h>
 
 #define GPS_ERROR(code) ((int)(0x80390000U | (code)))
 GpsGlobals s_gps;
@@ -910,9 +911,9 @@ static int readInfo(void *info)
 
 #define SYSCALL_BODY(expression) \
 	unsigned saved; \
-	ENTER_SYSCALL(saved); \
+	saved = sceSyscallEnter(); \
 	int ret = (expression); \
-	EXIT_SYSCALL(saved); \
+	sceSyscallLeave(saved); \
 	return ret
 int _sceGpsOpen(int callback)
 {
@@ -937,7 +938,7 @@ int _sceGpsStop(void)
 int _sceGpsSelectDevice(unsigned device)
 {
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	int ret = permission();
 	if (!ret && !(ret = checkState(6))) {
 		gpsLock(1);
@@ -951,44 +952,44 @@ int _sceGpsSelectDevice(unsigned device)
 		}
 		gpsUnlock(1);
 	}
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	return ret;
 }
 
 int _sceGpsResumeCallback(void)
 {
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	int ret = permission();
 	if (!ret) {
 		gpsLock(1);
 		ret = resumeCallback();
 		gpsUnlock(1);
 	}
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	return ret;
 }
 
 int _sceGpsIsDevice(void)
 {
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	int ret = permission();
 	if (!ret) {
 		unsigned state = gpsState();
 		ret = s_gps.selected - 1U < 4 && state > 1 && s_gps.driver[s_gps.selected - 1].flags != 0;
 	}
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	return ret;
 }
 
 int _sceGpsGetState(unsigned *state)
 {
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	unsigned value = 0;
 	int ret = readState(state ? &value : NULL);
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	if (state) {
 		int copy = SceSysmemForDriver_6D88EF8A(state, &value, 4);
 		if (copy < 0)
@@ -1000,10 +1001,10 @@ int _sceGpsGetState(unsigned *state)
 int _sceGpsGetDeviceInfo(void *info)
 {
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	unsigned value[2] = {0, 0};
 	int ret = readInfo(info ? value : NULL);
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	if (info) {
 		int copy = SceSysmemForDriver_6D88EF8A(info, value, 8);
 		if (copy < 0)
@@ -1020,9 +1021,9 @@ int _sceGpsGetData(void *location, void *satellites)
 	if (satellites)
 		memset(satelliteValue, 0, sizeof(satelliteValue));
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	int ret = readLocation(location ? value : NULL, satellites ? satelliteValue : NULL);
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	if (location) {
 		int copy = SceSysmemForDriver_6D88EF8A(location, value, sizeof(value));
 		if (copy < 0)
@@ -1053,9 +1054,9 @@ int _sceGpsIoctl(unsigned command, void *data, unsigned size, const unsigned *ar
 	if (ret < 0)
 		return ret;
 	unsigned saved;
-	ENTER_SYSCALL(saved);
+	saved = sceSyscallEnter();
 	ret = requestIoctl(command, buffer, size);
-	EXIT_SYSCALL(saved);
+	sceSyscallLeave(saved);
 	int copy = SceSysmemForDriver_6D88EF8A(data, buffer, input[0]);
 	return copy < 0 ? copy : ret;
 }

@@ -1,5 +1,6 @@
 /* Adhoc session syscall exit. */
 #include <sysmem/cpu.h>
+#include <intrmgr/syscall.h>
 
 int GcAuthAdhocClearState(void);
 
@@ -8,8 +9,8 @@ int GcAuthAdhocClearStateForUser(void)
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	result = GcAuthAdhocClearState();
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }

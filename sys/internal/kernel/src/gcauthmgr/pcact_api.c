@@ -2,6 +2,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/cpu.h>
 #include "pcact.h"
+#include <intrmgr/syscall.h>
 
 int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *request);
 int GcAuthPcactGetAesDecryptKey(const GcAuthPcactKeyRequest *request);
@@ -73,11 +74,11 @@ int GcAuthPcactCreateRtcChallengeWithStack(SceSblGcAuthMgrSclkData1 *output)
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	request.output = output;
 	result = ksceKernelRunWithStack(8192,
 		(int (*)(void *))GcAuthPcactCreateRtcChallenge, &request);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 
@@ -96,11 +97,11 @@ int GcAuthPcactApplyRtcActivationWithStack(const SceSblGcAuthMgrSclkData2 *activ
 	unsigned int state;
 	int result;
 
-	ENTER_SYSCALL(state);
+	state = sceSyscallEnter();
 	request.activation = activation;
 	result = ksceKernelRunWithStack(8192,
 		(int (*)(void *))GcAuthPcactApplyRtcActivation, &request);
-	EXIT_SYSCALL(state);
+	sceSyscallLeave(state);
 	return result;
 }
 

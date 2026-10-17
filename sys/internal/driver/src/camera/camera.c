@@ -21,6 +21,7 @@
 #include <syscon/syscon.h>
 #include <psp2kern/lowio/gpio.h>
 #include <compat/compat_regs.h>
+#include <intrmgr/syscall.h>
 
 int cameraInitializeConfig(void);
 int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo);
@@ -2032,11 +2033,11 @@ int cameraSetAlternateFrameBuffers(unsigned int mode)
 	SceUID processId;
 	int result;
 
-	ENTER_SYSCALL(callerContext);
+	callerContext = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(callerContext);
+		sceSyscallLeave(callerContext);
 		return (int)0x802e000a;
 	}
 	if (mode > 1) {
@@ -2049,7 +2050,7 @@ int cameraSetAlternateFrameBuffers(unsigned int mode)
 		result = 0;
 	}
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(callerContext);
+	sceSyscallLeave(callerContext);
 	return result;
 }
 
@@ -2097,10 +2098,10 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 	SceUInt32 result;
 	int status;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	processId = cameraGetCallerProcessId();
@@ -2240,7 +2241,7 @@ badFramerate:
 	result = (int)0x802e0009;
 out:
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2253,11 +2254,11 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 	SceKernelIntrStatus intr;
 	int result, hasOtherProcess;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	result = devnum & ~1u;
@@ -2302,7 +2303,7 @@ int SceCameraForDriver_0E9B4B9E(int devnum)
 	result = 0;
 out:
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2317,11 +2318,11 @@ int SceCameraForDriver_5338BE86(int devnum)
 	void *(*frameBuffers)[3];
 	int result, started, hasStartedOther;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	process = cameraGetProcess(devnum, processId);
@@ -2455,10 +2456,10 @@ cleanup:
 	}
 out:
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 earlyError:
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
 	return result;
 }
@@ -2470,11 +2471,11 @@ int SceCameraForDriver_8C3354E5(int devnum)
 	CameraProcess *process;
 	int result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	result = cameraStopProcess(devnum, processId);
@@ -2500,7 +2501,7 @@ int SceCameraForDriver_8C3354E5(int devnum)
 		}
 	}
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2519,7 +2520,7 @@ int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
 	SceSize imageSize, chromaSize;
 	int intrStatus, result, sampleExposure, sampleColor, reverseFrame, delay, yuv420;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	processId = cameraGetCallerProcessId();
 	if ((devnum & ~1u) != 0 || read == NULL ||
 	    (unsigned int)read->dwMode > 1 ||
@@ -2813,7 +2814,7 @@ finishRead:
 unlock:
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
 out:
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2827,10 +2828,10 @@ int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flag
 	CameraDevice *device;
 	int intrStatus, result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	work.timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	if (attribute == 25 || (devnum & ~1u) != 0 || pValue == NULL) {
@@ -2851,7 +2852,7 @@ int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flag
 		}
 	}
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flags)
@@ -2864,10 +2865,10 @@ int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flag
 	CameraDevice *device;
 	int intrStatus, result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	work.timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &work.timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	if ((attribute != 13 && attribute != 25) || (devnum & ~1u) != 0 || pValue == NULL) {
@@ -2888,7 +2889,7 @@ int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flag
 		}
 	}
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2897,10 +2898,10 @@ int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value, int flags)
 	SceUInt32 context, timeout;
 	int result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	if (attribute == 25 || (attribute == 13 && value == 0xf000))
@@ -2908,7 +2909,7 @@ int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value, int flags)
 	else
 		result = sce_camera_set_attribute(devnum, attribute, value, flags);
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -2917,10 +2918,10 @@ int SceCameraForDriver_B312CE90(int devnum, int attribute, int value, int flags)
 	SceUInt32 context, timeout;
 	int result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	if (attribute == 13 || attribute == 25)
@@ -2928,7 +2929,7 @@ int SceCameraForDriver_B312CE90(int devnum, int attribute, int value, int flags)
 	else
 		result = (int)0x802e0000;
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -3131,7 +3132,7 @@ int SceCameraForDriver_22E70D83(int devnum)
 	SceUInt32 context;
 	int intrStatus, result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	intrStatus = SceCpuForDriver_D32ACE9E(&cameraDriver->spinlock);
 	if ((devnum & ~1u) != 0) {
 		result = (int)0x802e0000;
@@ -3145,7 +3146,7 @@ int SceCameraForDriver_22E70D83(int devnum)
 		result = (int)0x802e0002;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&cameraDriver->spinlock, intrStatus);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 
@@ -3176,10 +3177,10 @@ int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation)
 	const SceFVector3 *location;
 	int result;
 
-	ENTER_SYSCALL(context);
+	context = sceSyscallEnter();
 	timeout = 3000000;
 	if (ksceKernelLockMutex(cameraDriver->mutexId, 1, &timeout) < 0) {
-		EXIT_SYSCALL(context);
+		sceSyscallLeave(context);
 		return (int)0x802e000a;
 	}
 	result = 0;
@@ -3194,7 +3195,7 @@ int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation)
 		result = (int)0x802e0002;
 	}
 	ksceKernelUnlockMutex(cameraDriver->mutexId, 1);
-	EXIT_SYSCALL(context);
+	sceSyscallLeave(context);
 	return result;
 }
 

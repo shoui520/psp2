@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/cpu.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/cp15.h>
 #include <sysmem/debug.h>
 #include <excpmgr/excpmgr_cpu.h>
@@ -256,8 +257,8 @@ int SsxInit(void)
 #else
 
 /* the CPUs' boot steps and the kernel boot loader's, taken before .bss is cleared */
-static SceCorelockContext s_bootCorelock = { .lock = 1, .core_count = 4, .last_wait_core = 4 };
-static SceCorelockContext s_kblCorelock = { .lock = 1, .core_count = 4, .last_wait_core = 4 };
+static SceCorelockContext s_bootCorelock = { .lock = 1, .coresLeft = 4, .turn = 4 };
+static SceCorelockContext s_kblCorelock = { .lock = 1, .coresLeft = 4, .turn = 4 };
 
 /* reset.S: has the secure monitor unmap the secure kernel boot loader */
 void UnmapKbl(void);

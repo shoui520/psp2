@@ -2,6 +2,7 @@
 #include "lowio_internal.h"
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/sysmem.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysevent.h>
 #include <lowio/csi.h>
 #include "csi_regs.h"

@@ -1,18 +1,32 @@
 /*
- * SceCpuForKernel / SceCpuForDriver additions to vitasdk.
+ * SceCpu (sysmem): SceCpuForKernel and SceCpuForDriver, the CPU's atomics, caches, MMU queries,
+ * spinlocks and interrupt masking.
  */
 
 #pragma once
 
+#include <stddef.h>
+#include <stdint.h>
+#include <scetypes.h>
 #include <sysmem/spinlock.h>
-#include <psp2kern/kernel/cpu.h>
 #include <sysmem/cpu_id.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+struct CpuLongIrqHandlerRecord;
 struct ThreadmgrLwMutexWork;
+
+/*
+ * The four cores passing a section one at a time, in core order (corelock.c). No source names
+ * it: vitasdk's type name, the fields named by their use.
+ */
+typedef struct SceCorelockContext {
+	SceKernelSpinlock lock;		/* held from a core's Lock to its Unlock */
+	int16_t coresLeft;		/* 0x04: cores still to pass; 4 again when all have */
+	int16_t turn;			/* 0x06: the core whose turn it is (4: none yet) */
+} SceCorelockContext;
 
 /* written in assembly (cpu_spinlock.S, vmaccess.S): declared here from their importers */
 
