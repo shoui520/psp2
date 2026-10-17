@@ -6,15 +6,9 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <processmgr/processmgr.h>
+#include <magicgate/magicgate.h>
 
-int SceMagicGateForDriver_F2502A3B(void *output, const void *input,
-				unsigned int size, int slot, const void *iv);
-int SceMagicGateForDriver_2B026FFF(void *output, const void *input,
-				unsigned int size, int slot, const void *iv);
 void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);
-int SceMagicGateForDriver_0B01FE3F(const void *tag,
-		const struct MagicGateRecordHeader *record, unsigned int size, int slot);
-int SceMagicGateForDriver_0EBA5958(void *output, unsigned int capacity);
 
 int encryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 			  int slot, MgVideoCipherBlock *iv)
@@ -247,11 +241,6 @@ done:
 	return result;
 }
 
-int SceMagicGateForDriver_CFD943E0(void *output, const void *input,
-				void *iv, unsigned int size);
-int SceMagicGateForDriver_C9658A76(void *output, const void *input,
-				const void *iv, unsigned int size, int slot);
-
 int updateUserVideoRecord(void *argument)
 {
 	MgVideoRecordUpdateRequest *request = argument;
@@ -363,11 +352,6 @@ error:
 	TRANSLATE_MAGICGATE_RESULT(result);
 	return result;
 }
-
-int SceMagicGateForDriver_9CEF4965(void *output, const void *input,
-				void *iv, unsigned int size, const void *key);
-int SceMagicGateForDriver_05912BF5(void *output, const void *input,
-				const void *iv, unsigned int size, int slot);
 
 int openUserVideoKeyring(void *argument)
 {
@@ -508,9 +492,6 @@ error:
 	TRANSLATE_MAGICGATE_RESULT(result);
 	return result;
 }
-
-int SceMagicGateForDriver_6A240950(void *output, const void *input,
-				void *iv, unsigned int size, int slot);
 
 int unwrapVideoRecordHeader(int (**unwrapKey)(int, const void *, int),
 			    MgVideoCipherBlock *recordKey, uint64_t *recordTag,
@@ -774,8 +755,6 @@ error:
 	return result;
 }
 
-int SceMagicGateForDriver_A855C045(int slot, const void *input);
-
 int generateVideoRecordKey(uint64_t output[2], const MgVideoKeySystemId *keySystemId,
 			   unsigned int selector)
 {
@@ -812,8 +791,6 @@ error:
 	TRANSLATE_MAGICGATE_RESULT(result);
 	return result;
 }
-
-int SceMagicGateForDriver_ACA0F529(int slot, const void *input, int sourceSlot);
 
 typedef struct MgVideoCounterBlock {
 	uint64_t prefix;

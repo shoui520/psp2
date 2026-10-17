@@ -3,6 +3,7 @@
 #include "mgvideo_result.h"
 #include <processmgr/processmgr_imports.h>
 #include <psp2kern/kernel/sysclib.h>
+#include <magicgate/magicgate.h>
 
 unsigned int copyFileGroupToUser(void *destination, unsigned int size,
 				 const MagicGateFileGroup *group, int status)
@@ -128,8 +129,6 @@ error:
 	TRANSLATE_MAGICGATE_RESULT(result);
 	return result;
 }
-
-int SceMagicGateForDriver_8E87BA88(int handle, int group);
 
 int selectVideoFileGroup(int handle, const MagicGateFileIdentity *input)
 {

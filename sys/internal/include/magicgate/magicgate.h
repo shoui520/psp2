@@ -122,3 +122,46 @@ _Static_assert(offsetof(MagicGateBundledEkb2Record, ciphertext) == 96,
 	       "EKB2 ciphertext offset");
 _Static_assert(offsetof(MagicGateBundledEkb2Record, encodedTrailerMetadata) == 208,
 	       "EKB2 encoded trailer offset");
+
+int SceMagicGateForDriver_01FD0260(int slot, const void *input, int sourceSlot);
+int SceMagicGateForDriver_0201E54B(MagicGateDeviceIdentity *output);
+int SceMagicGateForDriver_05912BF5(void *output, const void *input, const void *iv,
+				   unsigned int size, int slot);
+int SceMagicGateForDriver_07BDCE2F(void *output, int slot, int sourceSlot);
+int SceMagicGateForDriver_0B01FE3F(const void *tag, const MagicGateRecordHeader *record,
+				   unsigned int size, int slot);
+int SceMagicGateForDriver_0EBA5958(void *output, unsigned int size);
+int SceMagicGateForDriver_144BFA76(int index);
+int SceMagicGateForDriver_2B026FFF(void *output, const void *input, unsigned int size, int slot,
+				   const void *iv);
+int SceMagicGateForDriver_2D5069DE(int slot, const MagicGateRecordHeader *record,
+				   unsigned int size);
+int SceMagicGateForDriver_30DF2E82(void);
+int SceMagicGateForDriver_3EDD73EB(int handle, int index);
+int SceMagicGateForDriver_46A28FAA(void);
+int SceMagicGateForDriver_4E8B4EB5(int slot, const void *input, int sourceSlot);
+int SceMagicGateForDriver_4F4B2DC9(void *output, const void *input, void *iv, unsigned int size,
+				   int slot);
+int SceMagicGateForDriver_6A240950(void *output, const void *input, void *iv, unsigned int size,
+				   int slot);
+int SceMagicGateForDriver_6D3B42E6(void);
+int SceMagicGateForDriver_758D7158(void *output, unsigned int size);
+int SceMagicGateForDriver_7B052A10(void);
+int SceMagicGateForDriver_8E2E577E(void);
+int SceMagicGateForDriver_8E87BA88(int handle, unsigned int group);
+int SceMagicGateForDriver_9CEF4965(void *output, const void *input, void *iv, unsigned int size,
+				   const void *key);
+int SceMagicGateForDriver_A855C045(int slot, const void *input);
+int SceMagicGateForDriver_ACA0F529(int slot, const void *input, int sourceSlot);
+int SceMagicGateForDriver_B0827B4F(void *output, const void *input, void *iv, unsigned int size,
+				   int slot);
+int SceMagicGateForDriver_C9658A76(void *output, const void *input, const void *iv,
+				   unsigned int size, int slot);
+int SceMagicGateForDriver_CA74A13D(void *output, unsigned int capacity,
+				   const MagicGateRecordHeader *record, unsigned int size,
+				   const MagicGateDeviceIdentity *challenge);
+int SceMagicGateForDriver_CFD943E0(void *output, const void *input, void *iv, unsigned int size);
+int SceMagicGateForDriver_D819D5C6(int handle, MagicGateFileInfo *info);
+int SceMagicGateForDriver_F2502A3B(void *output, const void *input, unsigned int size, int slot,
+				   const void *iv);
+int SceMagicGateForDriver_FEF11D84(int type);

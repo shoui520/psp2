@@ -5,8 +5,7 @@
 #include <processmgr/processmgr_imports.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "mgvideo_result.h"
-
-int SceMagicGateForDriver_3EDD73EB(int handle, int index);
+#include <magicgate/magicgate.h>
 
 int initializeVideoContext(MgVideoContext *context, uint64_t *challenge)
 {
@@ -53,11 +52,6 @@ extern const struct SceProcEventHandler videoProcessEventCallbacks;
 int ksceKernelRegisterProcEventHandler(const char *name,
 		const struct SceProcEventHandler *handler, int flags);
 int ksceKernelUnregisterProcEventHandler(SceUID handler);
-int SceMagicGateForDriver_2D5069DE(int slot, const MagicGateRecordHeader *record,
-				unsigned int size);
-int SceMagicGateForDriver_01FD0260(int slot, const void *input, int sourceSlot);
-int SceMagicGateForDriver_4E8B4EB5(int slot, const void *input, int sourceSlot);
-int SceMagicGateForDriver_07BDCE2F(void *output, int slot, int sourceSlot);
 void notifyContextFinalized(void);
 int readVideoEkb2Record(void *output, unsigned int capacity);
 
