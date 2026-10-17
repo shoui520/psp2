@@ -3,7 +3,7 @@
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 

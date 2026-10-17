@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 
 VeneziaState g_veneziaState = { .processStorageKey = -1 };
 

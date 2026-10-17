@@ -2,7 +2,7 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/sysmem.h>
 #include <psp2kern/kernel/cpu.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 #include <psp2kern/kernel/dmac.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/sysmem/data_transfers.h>

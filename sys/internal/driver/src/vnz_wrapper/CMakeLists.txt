@@ -13,4 +13,9 @@ psp2_module(os0_kd_bootimage_vnz_wrapper KIND kernel SOURCES
 	venezia/vapa.c
 	venezia/system.c
 	dsp0_debug.c
+	vip_fw_ver2/vip_process.c
+	vip/hwd0_vapa.c
+	codecengine/codecengine.c
+	codecengine/processor.c
+	codecengine/memory.c
 )

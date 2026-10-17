@@ -6,6 +6,10 @@
 #include <threadmgr/fast_mutex.h>
 #include <vnz_wrapper/venezia_rpc.h>
 #include <lowio/pervasive_regs.h>
+#include <lowio/mailbox_regs.h>
+#include <psp2kern/kernel/dmac.h>
+#include <sysmem/uid_class.h>
+#include <vnz_wrapper/venezia_debug.h>
 
 /* name unknown: per-process Venezia suspend and clock bookkeeping. */
 typedef struct VeneziaProcessStorage {
@@ -227,4 +231,374 @@ _Static_assert(sizeof(CodecEngineProcessStorage) == 100, "CodecEngine process st
 	unsigned int maximum;
 } VeneziaPerformanceResult;
 
+/* the VIP, debug-capture, HWD DMA and CodecEngine state the module's files share */
+/* PLACEHOLDER: live VIP module controls outside the mapped register and callback
+ * fields remain unidentified. The owner initializes the entire 0x20c allocation.
+ */
+typedef struct VeneziaVipProcessorRequest {
+	int captureIndex;
+	uint32_t command;
+	uint32_t resultFlags;
+} VeneziaVipProcessorRequest;
 
+
+typedef struct VeneziaDebugChannelRecord {
+	uint32_t header[2];
+	uint32_t flags;
+	struct {
+		uint32_t control[2];
+		uint32_t parameter;
+	} records[3];
+} VeneziaDebugChannelRecord;
+
+/* PLACEHOLDER: the remaining per-process capture controls are still unidentified.
+ * These are live state words, not unused padding. The complete owner allocation
+ * and all four capture records are represented here.
+ */
+typedef struct VeneziaDebugImageFormat {
+	uint32_t width;
+	uint32_t height;
+	uint32_t imageCount;
+} VeneziaDebugImageFormat;
+
+struct VeneziaDebugImageGeometry;
+
+typedef struct VeneziaVipCaptureParam {
+	uint32_t imageVirtualAddress;
+	SceSize imageSize;
+	uint32_t storageVirtualAddress;
+	SceSize storageSize;
+	const VeneziaDebugImageFormat *imageFormat;
+	const struct VeneziaDebugImageGeometry *geometry;
+} VeneziaVipCaptureParam;
+
+typedef struct VeneziaVipMemoryRegion {
+	uintptr_t physicalAddress;
+	uint32_t virtualAddress;
+	SceSize size;
+} VeneziaVipMemoryRegion;
+
+typedef struct VeneziaVipMemoryBlock {
+	SceUID uid;
+	VeneziaVipMemoryRegion region;
+} VeneziaVipMemoryBlock;
+
+typedef struct VeneziaVipSnapshotRegion {
+	uint32_t physicalAddress;
+	uint32_t virtualAddress;
+	SceSize size;
+	uint32_t copyAddress;
+} VeneziaVipSnapshotRegion;
+
+typedef struct VeneziaVipSnapshotStorage {
+	VeneziaVipMemoryRegion buffer;
+	uint32_t unidentifiedControl;
+	uint8_t memoryRegionCount;
+	uint8_t processorCount;
+	uint8_t reserved[2];
+	VeneziaVipSnapshotRegion regions[16];
+} VeneziaVipSnapshotStorage;
+
+typedef struct VeneziaVipMemoryLayout {
+	uint32_t control;
+	VeneziaVipMemoryRegion scratch;
+	VeneziaVipMemoryRegion buffer;
+	VeneziaVipMemoryRegion snapshot;
+} VeneziaVipMemoryLayout;
+
+typedef struct VeneziaVipCaptureImageHeader VeneziaVipCaptureImageHeader;
+
+struct VeneziaVipCommandContext;
+struct VeneziaVipCommandAuxiliaryRecord;
+
+typedef struct VeneziaDebugCallback {
+	SceUID pid;
+	SceUID uid;
+	uint32_t pendingEvents;
+	uint32_t eventMask;
+} VeneziaDebugCallback;
+
+typedef struct VeneziaDebugProcessCapture {
+	uint32_t flags;
+	uint32_t completedCount;
+	uint32_t bufferEnd;
+	uint32_t captureVirtualAddress;
+	uint32_t capturePhysicalAddress;
+	VeneziaVipCaptureParam captureParam;
+	VeneziaDebugImageFormat imageFormat;
+	union {
+		VeneziaDebugSnapshot *snapshot;
+		SceUID eventFlag;
+	};
+	VeneziaVipCaptureImageHeader *imageHeader;
+	uint32_t debugResultFlags;
+	uint32_t processorCompletionCounts[2];
+	uint32_t processorPendingCounts[2];
+	struct VeneziaVipCommandContext *commandContext;
+	VeneziaDebugCallback callbacks[6];
+	uint32_t unidentifiedCaptureState[2];
+	uint32_t recoveryFlags;
+	uint32_t processorContextState[2];
+	uint32_t pendingProcessorEvents[2];
+	uint32_t ringReadAddress;
+	uint32_t ringEndAddress;
+	uint32_t ringWriteAddress;
+	uint32_t ringCommitAddress;
+	uint32_t unidentifiedRingPendingCount;
+	uint32_t ringPendingAddress;
+	uint32_t unidentifiedRingResult;
+	SceSize ringSize;
+	uint32_t ringMode;
+	uint32_t queuedAuxiliaryCount;
+	const struct VeneziaVipCommandAuxiliaryRecord *auxiliaryRecord;
+	uint32_t unidentifiedCaptureCounter;
+	uint32_t unidentifiedCaptureStatus;
+	uint32_t unidentifiedBeforeCaptureMemory;
+	VeneziaVipMemoryRegion captureMemory;
+	VeneziaVipMemoryRegion scratchRegion;
+	VeneziaVipMemoryRegion bufferRegion;
+	VeneziaVipMemoryRegion snapshotRegion;
+	uintptr_t imagePhysicalAddress;
+	uint32_t imageVirtualAddress;
+	uint32_t unidentifiedImageControl;
+	SceSize imageSize;
+	uint32_t imageMappingMode;
+} VeneziaDebugProcessCapture;
+
+typedef struct VeneziaDebugEventCounter {
+	uint32_t count;
+	uint32_t unidentifiedControl;
+} VeneziaDebugEventCounter;
+
+
+typedef struct VeneziaDebugCallbackState {
+	VeneziaDebugEventCounter counters[13];
+	VeneziaDebugCallback callbacks[6];
+} VeneziaDebugCallbackState;
+
+typedef struct VeneziaVipProcessQueue {
+	uint8_t entries[4];
+	uint8_t count;
+	uint8_t writeIndex;
+	uint8_t reserved[2];
+} VeneziaVipProcessQueue;
+
+typedef struct VeneziaVipProcessStorage {
+	uint32_t state;
+	uint32_t count;
+	SceUID suspendSemaphore;
+	uint32_t mode;
+	int processors[4];
+	VeneziaDebugProcessCapture captures[4];
+	VeneziaVipMemoryLayout *memoryLayout;
+	VeneziaVipMemoryLayout captureMemory;
+	VeneziaDebugCallbackState callbackState;
+	VeneziaVipSnapshotStorage snapshotStorage;
+	VeneziaVipProcessQueue queues[2];
+	uint32_t pendingCounters[2];
+	uint32_t status[3];
+} VeneziaVipProcessStorage;
+
+typedef struct VeneziaVipState {
+	uint32_t magic;
+	SceUID eventFlag;
+	struct ThreadmgrFastMutex processMutex;
+	struct ThreadmgrFastMutex *processLock;
+	VeneziaKernelMemory physicalRanges[2];
+	VeneziaVipMemoryBlock codeMemory;
+	VeneziaVipMemoryRegion debuggerMemory;
+	SceUID resetBlock;
+	ScePervasiveResetRegisters *resetRegisters;
+	SceUID mailboxBlock;
+	ScePervasiveMailboxRegisters *mailboxRegisters;
+	SceUID tasBlock;
+	ScePervasiveTasRegisters *tasRegisters;
+	ScePervasive2Registers *bootRegisters;
+	VeneziaDebugCallbackState *callbackState;
+	struct ThreadmgrFastMutex apiWrapperMutex;
+	struct ThreadmgrFastMutex *apiWrapperLock;
+	struct ThreadmgrFastMutex standardBufferMutex;
+	struct ThreadmgrFastMutex *standardBufferLock;
+	struct ThreadmgrFastMutex commonProcessorMutex;
+	struct ThreadmgrFastMutex *commonProcessorLock;
+	uint32_t unidentifiedProcessorControls[2];
+	VeneziaVipProcessorRequest processorRequests[2];
+	uint32_t processorPendingCommands[2];
+	struct ThreadmgrFastMutex requestMutex;
+	struct ThreadmgrFastMutex *requestLock;
+	SceUID processorEvents[2];
+	SceUID processorThreads[2];
+	union {
+		struct {
+			SceUID auxiliaryEventFlag;
+			SceUID secondaryInterruptEvent;
+		};
+		SceUID captureInterruptEvents[2];
+	};
+	VeneziaVipProcessStorage *activeProcess;
+	int processorActiveCaptures[2];
+	uint32_t processorActiveEvents[2];
+	uint32_t processorActiveCommands[2];
+	uint32_t processorRecoveryEvents[2];
+} VeneziaVipState;
+
+typedef struct VeneziaDebugImageGeometry {
+	uint32_t width;
+	uint32_t height;
+	uint32_t imageCount;
+	uint32_t processorCount;
+} VeneziaDebugImageGeometry;
+
+/* name unknown: full 192-KiB command memory region supplied by VIP initialization.
+ * Unidentified protocol banks remain placeholders until their users are converted. */
+typedef struct VeneziaVipCommandQueueSlot {
+	uint32_t address;
+	uint8_t unidentifiedControl[3];
+	uint8_t busy;
+} VeneziaVipCommandQueueSlot;
+
+typedef struct VeneziaVipCommandQueue {
+	uint32_t base;
+	uint32_t physicalBase;
+	union {
+		uint8_t flags[4];
+		struct {
+			uint8_t accessBlocked;
+			uint8_t unidentifiedActivity[3];
+		};
+	};
+	SceSize size;
+	VeneziaVipCommandQueueSlot slots[4];
+} VeneziaVipCommandQueue;
+
+typedef struct VeneziaVipCommandContext {
+	uint32_t magic;
+	uint32_t physicalBase;
+	uint8_t processorMode[2];
+	uint8_t processorState[2];
+	uint32_t commandValues[2];
+	uint16_t payloadOffsets[2];
+	uint32_t bufferBase;
+	SceSize bufferOffset;
+	SceSize auxiliaryBufferOffset;
+	uint32_t captureParameter;
+	uint32_t captureAddress;
+	uint32_t captureOption;
+	uint32_t unidentifiedBeforeQueues;
+	int primarySlot;
+	VeneziaVipCommandQueue *queues;
+	int secondarySlot;
+	VeneziaVipCommandQueue *auxiliaryQueue;
+	VeneziaVipMemoryRegion captureMemory;
+	SceSize captureLength;
+	VeneziaVipCommandQueue *activeQueue;
+	uint8_t resultFlags;
+	uint8_t unidentifiedAfterFlags[3];
+	uint32_t contextValue;
+	uint8_t payload[];
+} VeneziaVipCommandContext;
+
+/* name unknown: auxiliary ring records carry an address in the main result buffer. */
+typedef struct VeneziaVipCommandAuxiliaryRecord {
+	uint32_t value;
+	uint16_t control;
+	uint16_t unidentifiedControl;
+	uint32_t resultAddress;
+	uint32_t unidentifiedTail;
+} VeneziaVipCommandAuxiliaryRecord;
+
+/* name unknown: result metadata preserves ten protocol words and image dimensions. */
+typedef union VeneziaVipCommandResultMetadata {
+	uint32_t words[12];
+	struct {
+		uint16_t operandLow, operandHigh;
+		uint16_t instructionLow, instructionHigh;
+		uint16_t unidentifiedInstruction[2];
+		uint16_t addressLow, addressHigh;
+		uint32_t unidentifiedBeforeContextControl[4];
+		uint32_t contextControl;
+		uint32_t unidentifiedAfterContextControl;
+		union {
+			uint32_t contextAddress;
+			struct {
+				uint16_t width;
+				uint16_t height;
+			};
+		};
+		uint32_t unidentifiedTail;
+	};
+} VeneziaVipCommandResultMetadata;
+
+/* name unknown: decoded auxiliary value and its otherwise unidentified control bit. */
+typedef struct VeneziaVipCommandAuxiliaryStatus {
+	uint32_t value;
+	uint32_t controlFlag;
+} VeneziaVipCommandAuxiliaryStatus;
+
+/* PLACEHOLDER: the first common-debug bank words and remaining page controls
+ * have unidentified meanings. The named tail is decoded by the capture owner. */
+typedef struct VeneziaVipCommonDebugData {
+	uint32_t unidentifiedRegisters[136];
+	uint32_t executionControl;
+	uint32_t executionStatus;
+	uint32_t pipelineControl;
+	uint32_t programCounter;
+	uint32_t stackPointer;
+	uint32_t unidentifiedTail;
+} VeneziaVipCommonDebugData;
+
+struct VeneziaVipCaptureImageHeader {
+	VeneziaVipCommandResultMetadata metadata;
+	VeneziaVipCommonDebugData commonDebugData;
+	uint32_t debugData[2][130];
+	VeneziaDebugChannelRecord channels[2];
+	uint32_t statusData[2][2];
+	uint32_t secondaryData[2][16];
+	uint32_t controlData[2][4];
+	VeneziaVipCommandAuxiliaryStatus auxiliaryStatus;
+	uint32_t captureBase;
+	uint32_t captureNext;
+	SceSize captureLength;
+	uint32_t unidentifiedTail[537];
+};
+
+/* name unknown: the complete eight-transfer blocking-copy request. */
+typedef struct VeneziaHwdDmaTransfer {
+	uint32_t unidentifiedTransferControl;
+	const void *source;
+	void *destination;
+	SceSize size;
+	uint32_t unidentifiedTransferFlags;
+} VeneziaHwdDmaTransfer;
+
+typedef struct VeneziaHwdDmaRequest {
+	unsigned int channel;
+	unsigned int count;
+	VeneziaHwdDmaTransfer transfers[8];
+} VeneziaHwdDmaRequest;
+
+typedef struct VeneziaHwdDmaState {
+	struct ThreadmgrFastMutex mutex;
+	struct ThreadmgrFastMutex *activeMutex;
+	SceKernelDmaOpId operations[1];
+} VeneziaHwdDmaState;
+
+/* name unknown: complete processor-count owner, adjacent to its mutex. */
+typedef struct CodecEngineProcessorState {
+	struct ThreadmgrFastMutex mutex;
+	unsigned int processorCount;
+} CodecEngineProcessorState;
+
+/* Full memory UID subclass; the base is Sysmem's canonical object header. */
+typedef struct CodecEngineMemory {
+	SceObjectBase object;
+	void *userBase;
+	void *kernelBase;
+	uintptr_t physicalBase;
+	SceSize size;
+	SceUID userMemBlock;
+	SceUID kernelMemBlock;
+	VeneziaHeapManager heapManager;
+} CodecEngineMemory;
+
+extern VeneziaVipState g_veneziaVipState;

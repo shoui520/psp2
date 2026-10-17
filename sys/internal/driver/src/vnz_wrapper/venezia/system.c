@@ -1,7 +1,7 @@
 /* Sony venezia/system.c: DSP execution-group and performance-monitor setup. */
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 
 /* Names unknown: DSP supplies eight busy/total counter pairs and ten results. */
 typedef struct VeneziaPerformanceCounter {

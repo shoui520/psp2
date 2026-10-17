@@ -2,7 +2,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;

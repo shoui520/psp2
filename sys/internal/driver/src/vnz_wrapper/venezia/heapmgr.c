@@ -1,7 +1,7 @@
 /* Sony venezia/heapmgr.c: communication-memory heap management. */
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
-#include "venezia_internal.h"
+#include "../venezia_internal.h"
 
 #if FW_DEBUG
 extern void _sceVeneziaHeapInit(void *base, VeneziaHeap *heap, SceSize size, SceSize regionSize);

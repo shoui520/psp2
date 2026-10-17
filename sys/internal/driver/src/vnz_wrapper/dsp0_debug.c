@@ -22,6 +22,17 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 
+int _closeUnmapMemBlock(SceUID puid);
+int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
+VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
+void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
+	SceSize size, SceSize alignment);
+int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void);
+int sceCodecEngineChangeNumWorkerCoresMaxForUser(void);
+int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address);
+int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size);
+int waitVeneziaVipProcessReady(void);
+
 /* Physical addresses handed to or checked for the Venezia: a mailbox word,
  * and the word after the lock in a TAS page */
 #define MAILBOX_PADDR(field) \
@@ -96,15 +107,6 @@ typedef struct VeneziaDebugRegisterBankRecord {
 	uint32_t validMask;
 	uint32_t selectors;
 } VeneziaDebugRegisterBankRecord;
-
-typedef struct VeneziaDebugChannelRecord {
-	uint32_t header[2];
-	uint32_t flags;
-	struct {
-		uint32_t control[2];
-		uint32_t parameter;
-	} records[3];
-} VeneziaDebugChannelRecord;
 
 typedef struct VeneziaDebugParameterRecord {
 	uint32_t header;
@@ -316,214 +318,11 @@ uint32_t readVeneziaDebugSelectedWord(unsigned int offset);
 uint32_t readVeneziaDebugSelectedBits(unsigned int offset, unsigned int shift,
 	uint32_t mask);
 void switchVeneziaDebugBank(void);
-#if FW_DEBUG
-#else
-#endif
 
 /* PLACEHOLDER: Sony's individual hardware control-field names are unknown.
  * The debugger returns thirteen control values for each of three records.
  */
 _Static_assert(sizeof(VeneziaDebugChannelState) == 64, "Venezia debugger channel state size");
-
-/* PLACEHOLDER: the remaining per-process capture controls are still unidentified.
- * These are live state words, not unused padding. The complete owner allocation
- * and all four capture records are represented here.
- */
-typedef struct VeneziaDebugImageFormat {
-	uint32_t width;
-	uint32_t height;
-	uint32_t imageCount;
-} VeneziaDebugImageFormat;
-
-struct VeneziaDebugImageGeometry;
-
-typedef struct VeneziaVipCaptureParam {
-	uint32_t imageVirtualAddress;
-	SceSize imageSize;
-	uint32_t storageVirtualAddress;
-	SceSize storageSize;
-	const VeneziaDebugImageFormat *imageFormat;
-	const struct VeneziaDebugImageGeometry *geometry;
-} VeneziaVipCaptureParam;
-
-typedef struct VeneziaVipMemoryRegion {
-	uintptr_t physicalAddress;
-	uint32_t virtualAddress;
-	SceSize size;
-} VeneziaVipMemoryRegion;
-
-typedef struct VeneziaVipMemoryBlock {
-	SceUID uid;
-	VeneziaVipMemoryRegion region;
-} VeneziaVipMemoryBlock;
-
-typedef struct VeneziaVipSnapshotRegion {
-	uint32_t physicalAddress;
-	uint32_t virtualAddress;
-	SceSize size;
-	uint32_t copyAddress;
-} VeneziaVipSnapshotRegion;
-
-typedef struct VeneziaVipSnapshotStorage {
-	VeneziaVipMemoryRegion buffer;
-	uint32_t unidentifiedControl;
-	uint8_t memoryRegionCount;
-	uint8_t processorCount;
-	uint8_t reserved[2];
-	VeneziaVipSnapshotRegion regions[16];
-} VeneziaVipSnapshotStorage;
-
-typedef struct VeneziaVipMemoryLayout {
-	uint32_t control;
-	VeneziaVipMemoryRegion scratch;
-	VeneziaVipMemoryRegion buffer;
-	VeneziaVipMemoryRegion snapshot;
-} VeneziaVipMemoryLayout;
-
-typedef struct VeneziaVipCaptureImageHeader VeneziaVipCaptureImageHeader;
-
-struct VeneziaVipCommandContext;
-struct VeneziaVipCommandAuxiliaryRecord;
-
-typedef struct VeneziaDebugCallback {
-	SceUID pid;
-	SceUID uid;
-	uint32_t pendingEvents;
-	uint32_t eventMask;
-} VeneziaDebugCallback;
-
-typedef struct VeneziaDebugProcessCapture {
-	uint32_t flags;
-	uint32_t completedCount;
-	uint32_t bufferEnd;
-	uint32_t captureVirtualAddress;
-	uint32_t capturePhysicalAddress;
-	VeneziaVipCaptureParam captureParam;
-	VeneziaDebugImageFormat imageFormat;
-	union {
-		VeneziaDebugSnapshot *snapshot;
-		SceUID eventFlag;
-	};
-	VeneziaVipCaptureImageHeader *imageHeader;
-	uint32_t debugResultFlags;
-	uint32_t processorCompletionCounts[2];
-	uint32_t processorPendingCounts[2];
-	struct VeneziaVipCommandContext *commandContext;
-	VeneziaDebugCallback callbacks[6];
-	uint32_t unidentifiedCaptureState[2];
-	uint32_t recoveryFlags;
-	uint32_t processorContextState[2];
-	uint32_t pendingProcessorEvents[2];
-	uint32_t ringReadAddress;
-	uint32_t ringEndAddress;
-	uint32_t ringWriteAddress;
-	uint32_t ringCommitAddress;
-	uint32_t unidentifiedRingPendingCount;
-	uint32_t ringPendingAddress;
-	uint32_t unidentifiedRingResult;
-	SceSize ringSize;
-	uint32_t ringMode;
-	uint32_t queuedAuxiliaryCount;
-	const struct VeneziaVipCommandAuxiliaryRecord *auxiliaryRecord;
-	uint32_t unidentifiedCaptureCounter;
-	uint32_t unidentifiedCaptureStatus;
-	uint32_t unidentifiedBeforeCaptureMemory;
-	VeneziaVipMemoryRegion captureMemory;
-	VeneziaVipMemoryRegion scratchRegion;
-	VeneziaVipMemoryRegion bufferRegion;
-	VeneziaVipMemoryRegion snapshotRegion;
-	uintptr_t imagePhysicalAddress;
-	uint32_t imageVirtualAddress;
-	uint32_t unidentifiedImageControl;
-	SceSize imageSize;
-	uint32_t imageMappingMode;
-} VeneziaDebugProcessCapture;
-
-typedef struct VeneziaDebugEventCounter {
-	uint32_t count;
-	uint32_t unidentifiedControl;
-} VeneziaDebugEventCounter;
-
-
-typedef struct VeneziaDebugCallbackState {
-	VeneziaDebugEventCounter counters[13];
-	VeneziaDebugCallback callbacks[6];
-} VeneziaDebugCallbackState;
-
-typedef struct VeneziaVipProcessQueue {
-	uint8_t entries[4];
-	uint8_t count;
-	uint8_t writeIndex;
-	uint8_t reserved[2];
-} VeneziaVipProcessQueue;
-
-typedef struct VeneziaVipProcessStorage {
-	uint32_t state;
-	uint32_t count;
-	SceUID suspendSemaphore;
-	uint32_t mode;
-	int processors[4];
-	VeneziaDebugProcessCapture captures[4];
-	VeneziaVipMemoryLayout *memoryLayout;
-	VeneziaVipMemoryLayout captureMemory;
-	VeneziaDebugCallbackState callbackState;
-	VeneziaVipSnapshotStorage snapshotStorage;
-	VeneziaVipProcessQueue queues[2];
-	uint32_t pendingCounters[2];
-	uint32_t status[3];
-} VeneziaVipProcessStorage;
-
-/* PLACEHOLDER: live VIP module controls outside the mapped register and callback
- * fields remain unidentified. The owner initializes the entire 0x20c allocation.
- */
-typedef struct VeneziaVipProcessorRequest {
-	int captureIndex;
-	uint32_t command;
-	uint32_t resultFlags;
-} VeneziaVipProcessorRequest;
-
-typedef struct VeneziaVipState {
-	uint32_t magic;
-	SceUID eventFlag;
-	struct ThreadmgrFastMutex processMutex;
-	struct ThreadmgrFastMutex *processLock;
-	VeneziaKernelMemory physicalRanges[2];
-	VeneziaVipMemoryBlock codeMemory;
-	VeneziaVipMemoryRegion debuggerMemory;
-	SceUID resetBlock;
-	ScePervasiveResetRegisters *resetRegisters;
-	SceUID mailboxBlock;
-	ScePervasiveMailboxRegisters *mailboxRegisters;
-	SceUID tasBlock;
-	ScePervasiveTasRegisters *tasRegisters;
-	ScePervasive2Registers *bootRegisters;
-	VeneziaDebugCallbackState *callbackState;
-	struct ThreadmgrFastMutex apiWrapperMutex;
-	struct ThreadmgrFastMutex *apiWrapperLock;
-	struct ThreadmgrFastMutex standardBufferMutex;
-	struct ThreadmgrFastMutex *standardBufferLock;
-	struct ThreadmgrFastMutex commonProcessorMutex;
-	struct ThreadmgrFastMutex *commonProcessorLock;
-	uint32_t unidentifiedProcessorControls[2];
-	VeneziaVipProcessorRequest processorRequests[2];
-	uint32_t processorPendingCommands[2];
-	struct ThreadmgrFastMutex requestMutex;
-	struct ThreadmgrFastMutex *requestLock;
-	SceUID processorEvents[2];
-	SceUID processorThreads[2];
-	union {
-		struct {
-			SceUID auxiliaryEventFlag;
-			SceUID secondaryInterruptEvent;
-		};
-		SceUID captureInterruptEvents[2];
-	};
-	VeneziaVipProcessStorage *activeProcess;
-	int processorActiveCaptures[2];
-	uint32_t processorActiveEvents[2];
-	uint32_t processorActiveCommands[2];
-	uint32_t processorRecoveryEvents[2];
-} VeneziaVipState;
 
 VeneziaVipState g_veneziaVipState;
 
@@ -1912,7 +1711,6 @@ out:
 	return ret;
 }
 
-
 /* name unknown: update the active trace ring's virtual cursor after range checks. */
 int setVeneziaDebugTraceCursor(unsigned int processor, uint32_t cursor)
 {
@@ -2597,7 +2395,6 @@ getContext:
 	return ret;
 }
 
-
 /* name unknown: copy the captured vector register pairs into host word planes. */
 __attribute__((noinline))
 int getVeneziaDebugVectorRegisters(unsigned int processor, unsigned int bank,
@@ -3018,7 +2815,6 @@ void switchVeneziaDebugBank(void)
 	g_veneziaDebugger.selectedBank ^= 1u;
 }
 
-
 /* name unknown: debugger callbacks for the Pervasive test-and-set and reset pages. */
 int unlockVeneziaDebugChannel(unsigned int channel)
 {
@@ -3213,10 +3009,6 @@ typedef struct VeneziaDebugStopInfo {
 int getVeneziaVipStopInfo(unsigned int processor, VeneziaDebugStopInfo *info);
 int clearVeneziaVipInterruptStatus(unsigned int processor, uint32_t *status);
 
-#if FW_VERSION >= 0x04000000
-#else
-#endif
-
 int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 {
 	VeneziaDebugCallbackState *callbacks = state->callbackState;
@@ -3262,8 +3054,6 @@ int veneziaDebugAuxiliaryInterruptHandler(int interrupt, VeneziaVipState *state)
 	__asm__ volatile("dmb sy" ::: "memory");
 	return -1;
 }
-
-
 
 int lockVeneziaDebugChannel(unsigned int channel)
 {
@@ -3326,24 +3116,10 @@ int writeVeneziaVipDebugMailbox(unsigned int processor, uint32_t value)
 	return 0;
 }
 
-typedef struct VeneziaDebugImageGeometry {
-	uint32_t width;
-	uint32_t height;
-	uint32_t imageCount;
-	uint32_t processorCount;
-} VeneziaDebugImageGeometry;
-
-#if FW_VERSION >= 0x04000000
 extern int getVeneziaVipCaptureSize(unsigned int processor, VeneziaVipState *state,
 	const VeneziaDebugImageFormat *geometry, uint32_t *size);
 __attribute__((noinline)) SceSize getVeneziaVipRingSize(SceSize size);
 __attribute__((noinline)) int prepareVeneziaVipCapture(VeneziaVipState *state, VeneziaVipProcessStorage *storage);
-#else
-extern int getVeneziaVipCaptureSize(unsigned int processor, VeneziaVipState *state,
-	const VeneziaDebugImageFormat *geometry, uint32_t *size);
-__attribute__((noinline)) SceSize getVeneziaVipRingSize(SceSize size);
-__attribute__((noinline)) int prepareVeneziaVipCapture(VeneziaVipState *state, VeneziaVipProcessStorage *storage);
-#endif
 
 int startVeneziaVipCapture(unsigned int processor, VeneziaVipProcessStorage *storage,
 	uint32_t *capacity, const VeneziaDebugImageFormat **geometry)
@@ -3497,18 +3273,10 @@ int unregisterVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state
 	ksceKernelSpinlockLowUnlockCpuResumeIntr(&g_veneziaDebugger.spinlock, saved);
 	return 0;
 }
-
-extern int waitVeneziaVipProcessReady(void);
-extern VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
 extern SceUID kscePUIDtoGUID(SceUID pid, SceUID uid);
 extern SceUID sceKernelGetProcessId(void);
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 __attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
-#else
-__attribute__((noinline)) int lockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
-__attribute__((noinline)) int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
-#endif
 
 /* name unknown: register a callback in the current process's debugger state. */
 int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t eventMask)
@@ -3556,13 +3324,8 @@ int registerVeneziaVipCallback(unsigned int processor, SceUID uid, uint32_t even
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int removeVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid);
-#else
-extern int removeVeneziaVipCallbacks(unsigned int processor, VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage, SceUID uid, SceUID pid);
-#endif
 
 /* name unknown: remove the current process's selected debugger callback. */
 int unregisterVeneziaVipCallback(unsigned int processor, SceUID uid)
@@ -3602,17 +3365,10 @@ unlock:
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int beginVeneziaVipCaptureConfiguration(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage);
 extern int endVeneziaVipCaptureConfiguration(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage);
-#else
-extern int beginVeneziaVipCaptureConfiguration(VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage);
-extern int endVeneziaVipCaptureConfiguration(VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage);
-#endif
 
 /* name unknown: query capture storage while no capture owns processor zero. */
 int getVeneziaVipCaptureRequirements(const VeneziaDebugImageFormat *geometry,
@@ -3644,15 +3400,9 @@ int getVeneziaVipCaptureRequirements(const VeneziaDebugImageFormat *geometry,
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int calculateVeneziaVipCaptureStorage(unsigned int processorCount,
 	unsigned int mode, const VeneziaDebugImageGeometry *geometry, SceSize *total,
 	SceSize *image, SceSize *buffer, SceSize *scratch);
-#else
-__attribute__((noinline)) int calculateVeneziaVipCaptureStorage(unsigned int processorCount,
-	unsigned int mode, const VeneziaDebugImageGeometry *geometry, SceSize *total,
-	SceSize *image, SceSize *buffer, SceSize *scratch);
-#endif
 
 /* name unknown: query total capture storage for a single processor. */
 int getVeneziaVipCaptureStorageSize(const VeneziaDebugImageGeometry *geometry,
@@ -3680,7 +3430,6 @@ int getVeneziaVipCaptureStorageSize(const VeneziaDebugImageGeometry *geometry,
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int isVeneziaVipImageInMainMemory(uint32_t address, SceSize size);
 extern int setVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
 	const VeneziaVipMemoryRegion *source, SceSize offset, SceSize size);
@@ -3688,16 +3437,6 @@ int distributeVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage,
 	unsigned int processorCount, VeneziaVipMemoryLayout *layout);
 __attribute__((noinline)) int setVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture,
 	const VeneziaVipCaptureParam *param);
-#else
-__attribute__((noinline)) int isVeneziaVipImageInMainMemory(uint32_t address, SceSize size);
-extern int setVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
-	const VeneziaVipMemoryRegion *source, SceSize offset, SceSize size);
-int distributeVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage,
-	unsigned int processorCount, VeneziaVipMemoryLayout *layout);
-__attribute__((noinline)) int setVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture,
-	const VeneziaVipCaptureParam *param);
-#endif
-
 
 /* name unknown: initialize processor-zero capture buffers and saved parameters. */
 int registerVeneziaVipCapture(unsigned int *processor, const VeneziaVipCaptureParam *param)
@@ -3778,15 +3517,9 @@ unlock:
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int stopVeneziaVipCapture(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage);
 int releaseVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage);
-#else
-extern int stopVeneziaVipCapture(unsigned int processor, VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage);
-int releaseVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage);
-#endif
 
 /* name unknown: detach a process's capture and clear its ownership flags. */
 int unregisterVeneziaVipCapture(unsigned int processor, int wait, SceUID pid)
@@ -3822,13 +3555,8 @@ int unregisterVeneziaVipCapture(unsigned int processor, int wait, SceUID pid)
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int dispatchVeneziaVipCaptureRemoval(unsigned int implementation,
 	unsigned int processor, int wait, SceUID pid);
-#else
-extern int dispatchVeneziaVipCaptureRemoval(unsigned int implementation,
-	unsigned int processor, int wait, SceUID pid);
-#endif
 
 /* name unknown: select the primary implementation's capture teardown. */
 int unregisterVeneziaVipCaptureForProcess(unsigned int processor, int wait, SceUID pid)
@@ -3881,15 +3609,9 @@ int rejectVeneziaVipProcessOperation(void)
 	return _sceVipGetVipProcessResource(0) ? -2141060863 : -2141060856;
 }
 
-#if FW_VERSION >= 0x04000000
 int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input);
 extern int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage, const VeneziaVipVideoInput *input);
-#else
-int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input);
-extern int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage, const VeneziaVipVideoInput *input);
-#endif
 
 /* name unknown: submit video input, wait for capture events, and collect snapshots. */
 int processVeneziaVipCapture(unsigned int processor, const VeneziaVipVideoInput *input,
@@ -4209,17 +3931,10 @@ static const VeneziaVipPesHeader g_veneziaVipPesHeader = {
 	.payloadPrefix = 0,
 };
 
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int encodeVeneziaVipPesTimestamps(VeneziaVipPesHeader *header,
 	const uint64_t *pts, const uint64_t *dts);
 extern int submitVeneziaVipInputBuffers(unsigned int processor, VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage, const VeneziaVipInputBufferList *buffers);
-#else
-__attribute__((noinline)) int encodeVeneziaVipPesTimestamps(VeneziaVipPesHeader *header,
-	const uint64_t *pts, const uint64_t *dts);
-extern int submitVeneziaVipInputBuffers(unsigned int processor, VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage, const VeneziaVipInputBufferList *buffers);
-#endif
 
 /* name unknown: submit a raw payload with its PES timestamps and collect snapshots. */
 int processVeneziaVipRawCapture(unsigned int processor, const VeneziaVipRawInput *input,
@@ -4817,13 +4532,8 @@ unlock:
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int stopVeneziaVipDebugger(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage);
-#else
-__attribute__((noinline)) int stopVeneziaVipDebugger(VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage);
-#endif
 
 /* name unknown: suspend the debugger and copy its exposed regions into capture storage. */
 int snapshotVeneziaVipDebugger(VeneziaVipProcessStorage *storage, unsigned int flags)
@@ -4905,13 +4615,8 @@ unlock:
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state,
 	VeneziaVipProcessStorage *storage);
-#else
-__attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state,
-	VeneziaVipProcessStorage *storage);
-#endif
 
 /* name unknown: restore captured debugger memory and wait for its running mode. */
 int restoreVeneziaVipDebugger(VeneziaVipProcessStorage *storage)
@@ -5120,19 +4825,11 @@ typedef struct VeneziaVipInputIterator {
 	const VeneziaVipInputBufferList *list;
 } VeneziaVipInputIterator;
 
-#if FW_VERSION >= 0x04000000
 extern int initializeVeneziaVipInputIterator(VeneziaVipInputIterator *iterator,
 	const VeneziaVipInputBufferList *list);
 extern SceSize getVeneziaVipInputRemaining(const VeneziaVipInputIterator *iterator);
 extern int copyVeneziaVipInput(uint32_t destination, SceSize size, SceSize *copied,
 	VeneziaVipInputIterator *iterator);
-#else
-extern int initializeVeneziaVipInputIterator(VeneziaVipInputIterator *iterator,
-	const VeneziaVipInputBufferList *list);
-extern SceSize getVeneziaVipInputRemaining(const VeneziaVipInputIterator *iterator);
-extern int copyVeneziaVipInput(uint32_t destination, SceSize size, SceSize *copied,
-	VeneziaVipInputIterator *iterator);
-#endif
 
 /* name unknown: copy input into the trace ring, splitting at its end address. */
 int copyVeneziaVipInputToTrace(unsigned int processor, VeneziaVipState *state,
@@ -5184,59 +4881,10 @@ int copyVeneziaVipInputToTrace(unsigned int processor, VeneziaVipState *state,
 	return copyRet;
 }
 
-/* name unknown: full 192-KiB command memory region supplied by VIP initialization.
- * Unidentified protocol banks remain placeholders until their users are converted. */
-typedef struct VeneziaVipCommandQueueSlot {
-	uint32_t address;
-	uint8_t unidentifiedControl[3];
-	uint8_t busy;
-} VeneziaVipCommandQueueSlot;
-
-typedef struct VeneziaVipCommandQueue {
-	uint32_t base;
-	uint32_t physicalBase;
-	union {
-		uint8_t flags[4];
-		struct {
-			uint8_t accessBlocked;
-			uint8_t unidentifiedActivity[3];
-		};
-	};
-	SceSize size;
-	VeneziaVipCommandQueueSlot slots[4];
-} VeneziaVipCommandQueue;
-
 typedef struct VeneziaVipCommandQueueStorage {
 	VeneziaVipCommandQueue queues[6];
 	uint32_t unidentifiedAfterQueues[304];
 } VeneziaVipCommandQueueStorage;
-
-typedef struct VeneziaVipCommandContext {
-	uint32_t magic;
-	uint32_t physicalBase;
-	uint8_t processorMode[2];
-	uint8_t processorState[2];
-	uint32_t commandValues[2];
-	uint16_t payloadOffsets[2];
-	uint32_t bufferBase;
-	SceSize bufferOffset;
-	SceSize auxiliaryBufferOffset;
-	uint32_t captureParameter;
-	uint32_t captureAddress;
-	uint32_t captureOption;
-	uint32_t unidentifiedBeforeQueues;
-	int primarySlot;
-	VeneziaVipCommandQueue *queues;
-	int secondarySlot;
-	VeneziaVipCommandQueue *auxiliaryQueue;
-	VeneziaVipMemoryRegion captureMemory;
-	SceSize captureLength;
-	VeneziaVipCommandQueue *activeQueue;
-	uint8_t resultFlags;
-	uint8_t unidentifiedAfterFlags[3];
-	uint32_t contextValue;
-	uint8_t payload[];
-} VeneziaVipCommandContext;
 
 typedef union VeneziaVipCommandBuffer {
 	uint32_t words[64];
@@ -6358,37 +6006,6 @@ int getVeneziaVipCommandAuxiliaryOffset(VeneziaVipCommandContext *context, SceSi
 	return 3;
 }
 
-/* name unknown: auxiliary ring records carry an address in the main result buffer. */
-typedef struct VeneziaVipCommandAuxiliaryRecord {
-	uint32_t value;
-	uint16_t control;
-	uint16_t unidentifiedControl;
-	uint32_t resultAddress;
-	uint32_t unidentifiedTail;
-} VeneziaVipCommandAuxiliaryRecord;
-
-/* name unknown: result metadata preserves ten protocol words and image dimensions. */
-typedef union VeneziaVipCommandResultMetadata {
-	uint32_t words[12];
-	struct {
-		uint16_t operandLow, operandHigh;
-		uint16_t instructionLow, instructionHigh;
-		uint16_t unidentifiedInstruction[2];
-		uint16_t addressLow, addressHigh;
-		uint32_t unidentifiedBeforeContextControl[4];
-		uint32_t contextControl;
-		uint32_t unidentifiedAfterContextControl;
-		union {
-			uint32_t contextAddress;
-			struct {
-				uint16_t width;
-				uint16_t height;
-			};
-		};
-		uint32_t unidentifiedTail;
-	};
-} VeneziaVipCommandResultMetadata;
-
 /* name unknown: full result record, including the metadata copied by its accessor. */
 typedef struct VeneziaVipCommandResultRecord {
 	uint32_t unidentifiedControl;
@@ -6489,43 +6106,9 @@ int getVeneziaVipCommandResultMetadata(VeneziaVipCommandContext *context,
 	return 0;
 }
 
-/* name unknown: decoded auxiliary value and its otherwise unidentified control bit. */
-typedef struct VeneziaVipCommandAuxiliaryStatus {
-	uint32_t value;
-	uint32_t controlFlag;
-} VeneziaVipCommandAuxiliaryStatus;
-
-/* PLACEHOLDER: the first common-debug bank words and remaining page controls
- * have unidentified meanings. The named tail is decoded by the capture owner. */
-typedef struct VeneziaVipCommonDebugData {
-	uint32_t unidentifiedRegisters[136];
-	uint32_t executionControl;
-	uint32_t executionStatus;
-	uint32_t pipelineControl;
-	uint32_t programCounter;
-	uint32_t stackPointer;
-	uint32_t unidentifiedTail;
-} VeneziaVipCommonDebugData;
-
-struct VeneziaVipCaptureImageHeader {
-	VeneziaVipCommandResultMetadata metadata;
-	VeneziaVipCommonDebugData commonDebugData;
-	uint32_t debugData[2][130];
-	VeneziaDebugChannelRecord channels[2];
-	uint32_t statusData[2][2];
-	uint32_t secondaryData[2][16];
-	uint32_t controlData[2][4];
-	VeneziaVipCommandAuxiliaryStatus auxiliaryStatus;
-	uint32_t captureBase;
-	uint32_t captureNext;
-	SceSize captureLength;
-	uint32_t unidentifiedTail[537];
-};
-
 _Static_assert(sizeof(VeneziaVipCaptureImageHeader) == 0x1000, "VIP capture image page");
 _Static_assert(offsetof(VeneziaVipCaptureImageHeader, captureBase) == 0x790,
 	"VIP capture image buffer control");
-
 
 /* name unknown: decode an auxiliary value only when its valid control bit is set. */
 __attribute__((noinline)) int getVeneziaVipCommandAuxiliaryStatus(const VeneziaVipCommandAuxiliaryRecord *record,
@@ -6805,205 +6388,22 @@ int copyVeneziaVipCommandCaptureOutput(VeneziaVipCommandContext *context,
 
 extern int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
 extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void **storage, int create);
-int g_veneziaVipProcessStorageKey = -1;
 int initializeVeneziaVipResources(void);
 int startVeneziaVipDriver(int mode);
-#if FW_VERSION >= 0x04000000
-
-
-#else
-
-
-#endif
-
-/* name unknown: allocate the VIP process-storage key and start its driver. */
-int initializeVeneziaVipProcesses(void)
-{
-	int ret;
-
-	ret = ksceKernelCreateProcessLocalStorage("SceVip", sizeof(VeneziaVipProcessStorage));
-	if (ret >= 0) {
-		g_veneziaVipProcessStorageKey = ret;
-		ret = initializeVeneziaVipResources();
-		if (ret >= 0)
-			ret = startVeneziaVipDriver(0);
-	}
-	return ret;
-}
 
 extern int snprintf(char *destination, unsigned int capacity, const char *format, ...);
-#if FW_VERSION >= 0x04000000
 int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
-#else
-int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
-#endif
-
-#undef __FILE_NAME__
-#define __FILE_NAME__ "vip_fw_ver2/vip_process.c"
-int _sceHwd0ProcessCreateEntry(SceUID pid)
-{
-	VeneziaVipProcessStorage *storage = NULL;
-	char name[32];
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
-		(void **)&storage, 1);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL,
-			SCE_DBGINFO_FUNC(98, "_sceHwd0ProcessCreateEntry"), __builtin_return_address(0));
-#endif
-		memset(storage, 0, sizeof(*storage));
-		snprintf(name, sizeof(name), "SceVipSuspend%08x", pid);
-		ret = ksceKernelCreateSema(name, 0x8000, 1, 1, NULL);
-		if (ret >= 0) {
-			storage->suspendSemaphore = ret;
-			ret = initializeVeneziaVipProcessStorage(storage);
-		}
-	}
-	return ret;
-}
 
 extern int sceKernelCancelSema(SceUID uid, int count, int *waiters);
 
-/* name unknown: cancel waiters and delete the process's VIP suspend semaphore. */
-int releaseVeneziaVipProcessStorage(SceUID pid)
-{
-	VeneziaVipProcessStorage *storage = NULL;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
-		(void **)&storage, 0);
-	if (ret >= 0) {
-		ret = 0;
-		if (storage && storage->suspendSemaphore >= 0) {
-			sceKernelCancelSema(storage->suspendSemaphore, -1, NULL);
-			ksceKernelDeleteSema(storage->suspendSemaphore);
-			storage->suspendSemaphore = -1;
-		}
-	}
-	return ret;
-}
-
 extern void *ksceKernelGetProcessLocalStorageAddr(int key);
 
-VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
-{
-	VeneziaVipProcessStorage *storage = NULL;
-
-	if (pid) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
-			(void **)&storage, 0) < 0)
-			storage = NULL;
-	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
-	}
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
-		__builtin_return_address(0));
-#endif
-	return storage;
-}
-
-/* name unknown: wait until this process's VIP suspend semaphore is available. */
-int waitVeneziaVipProcessReady(void)
-{
-	VeneziaVipProcessStorage *storage;
-	int ret, signal;
-
-	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
-		__builtin_return_address(0));
-#endif
-	if (!storage)
-		return -2141060856;
-	ret = ksceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
-	if (ret >= 0) {
-		signal = ksceKernelSignalSema(storage->suspendSemaphore, 1);
-		if (signal < 0)
-			ret = signal;
-	}
-	return ret;
-}
-
-#if FW_VERSION >= 0x04000000
 extern int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
-#else
-extern int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
-#endif
 
-int _sceHwd0StartProcessSuspend(SceUID pid)
-{
-	VeneziaVipProcessStorage *storage = NULL;
-	VeneziaVipProcessStorage *process;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
-		(void **)&storage, 0);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(225, "_sceHwd0StartProcessSuspend"),
-			__builtin_return_address(0));
-#endif
-		process = storage;
-		ret = ksceKernelWaitSema(storage->suspendSemaphore, 1, NULL);
-		if (ret >= 0) {
-			lockVeneziaVipProcess(g_veneziaVipState.processLock);
-			if (process->state & 0x100)
-				ret = dispatchVeneziaVipProcessSuspend(process, 3);
-		}
-	}
-	unlockVeneziaVipProcess(g_veneziaVipState.processLock);
-	return ret;
-}
-
-/* name unknown: this firmware reports every Hwd process suspended. */
-int isHwdProcessSuspended(SceUID pid)
-{
-	(void)pid;
-	return 1;
-}
-
-#if FW_VERSION >= 0x04000000
 extern int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
 extern int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
-#else
-extern int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
-extern int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
-#endif
 
-int _sceHwd0ProcessResume(SceUID pid)
-{
-	VeneziaVipProcessStorage *storage = NULL;
-	VeneziaVipProcessStorage *process;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
-		(void **)&storage, 0);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(281, "_sceHwd0ProcessResume"),
-			__builtin_return_address(0));
-#endif
-		process = storage;
-		lockVeneziaVipProcess(g_veneziaVipState.processLock);
-		if (process->state & 0x100)
-			ret = dispatchVeneziaVipProcessResume(process);
-		else
-			ret = dispatchVeneziaVipProcessReset(process);
-		unlockVeneziaVipProcess(g_veneziaVipState.processLock);
-		if (ret >= 0)
-			ret = ksceKernelSignalSema(process->suspendSemaphore, 1);
-	}
-	return ret;
-}
-
-#if FW_VERSION >= 0x04000000
 __attribute__((noinline)) int resumeVeneziaVipState(void);
-#else
-__attribute__((noinline)) int resumeVeneziaVipState(void);
-#endif
 
 /* name unknown: resume hook forwarded to the VIP state helper. */
 int resumeHwd(void)
@@ -7040,11 +6440,7 @@ int releaseVeneziaVipCaptureMemory(VeneziaVipProcessStorage *storage)
 	return 0;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int initializeVeneziaVipProcessQueue(VeneziaVipProcessQueue *queue);
-#else
-extern int initializeVeneziaVipProcessQueue(VeneziaVipProcessQueue *queue);
-#endif
 
 /* name unknown: reset a process's capture flags, mode, counters and queues. */
 int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage)
@@ -7070,17 +6466,10 @@ int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage)
 	return 0;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 	const char *name, unsigned int type, SceSize size, uintptr_t physicalAddress);
 extern int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
 	const VeneziaVipMemoryRegion *source, SceSize offset);
-#else
-extern int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
-	const char *name, unsigned int type, SceSize size, uintptr_t physicalAddress);
-extern int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination,
-	const VeneziaVipMemoryRegion *source, SceSize offset);
-#endif
 extern ScePervasive2Registers *getVeneziaBootRegisters(void);
 
 /* name unknown: allocate the driver code region and map its peripheral pages. */
@@ -7156,7 +6545,6 @@ extern int ksceSblFwLoaderLock(const char *path, int flags);
 extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
 extern int ksceSblFwLoaderUnlock(void);
 extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
-#if FW_VERSION >= 0x04000000
 extern int veneziaVipProcessorThread0(SceSize size, void *arg);
 extern int veneziaVipProcessorThread1(SceSize size, void *arg);
 extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int processor,
@@ -7164,15 +6552,6 @@ extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int 
 int initializeVeneziaHwdDma(void);
 extern int finishVeneziaVipStartup(VeneziaVipState *state);
 extern int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block);
-#else
-extern int veneziaVipProcessorThread0(SceSize size, void *arg);
-extern int veneziaVipProcessorThread1(SceSize size, void *arg);
-extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int processor,
-	uint32_t *resultFlags);
-int initializeVeneziaHwdDma(void);
-extern int finishVeneziaVipStartup(VeneziaVipState *state);
-extern int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block);
-#endif
 
 /* name unknown: start processor workers and load the VIP firmware. */
 int startVeneziaVipDriver(int mode)
@@ -7391,11 +6770,7 @@ __attribute__((noinline)) SceSize getVeneziaVipRingSize(SceSize size)
 	return 1566720;
 }
 
-#if FW_VERSION >= 0x04000000
 extern SceSize getVeneziaVipCaptureWorkSize(unsigned int mode);
-#else
-extern SceSize getVeneziaVipCaptureWorkSize(unsigned int mode);
-#endif
 
 /* name unknown: calculate complete capture storage from dimensions and processor count. */
 __attribute__((noinline)) int calculateVeneziaVipCaptureStorage(unsigned int processorCount,
@@ -7516,15 +6891,9 @@ extern int kscePowerSetVipClockFrequency(int frequency);
 const unsigned int g_veneziaVipClockFrequencies[7] = {
 	0xffffff, 41, 55, 83, 111, 166, 222,
 };
-#if FW_VERSION >= 0x04000000
 extern int prepareVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
 extern int configureVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
 extern int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-#else
-extern int prepareVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-extern int configureVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-extern int startVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-#endif
 
 /* name unknown: select the process callbacks and activate its capture memory mapping. */
 __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state, VeneziaVipProcessStorage *storage)
@@ -7569,11 +6938,7 @@ __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state,
 
 extern uint32_t ScePervasiveForDriver_31C0A98B(void);
 extern uint32_t ScePervasiveForDriver_EBE9C84E(void);
-#if FW_VERSION >= 0x04000000
 extern int stopVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-#else
-extern int stopVeneziaVipProcessorCapture(unsigned int count, VeneziaVipState *state);
-#endif
 
 /* name unknown: stop the capture clock and detach the active process callbacks. */
 __attribute__((noinline)) int stopVeneziaVipDebugger(VeneziaVipState *state, VeneziaVipProcessStorage *storage)
@@ -7630,11 +6995,7 @@ __attribute__((noinline)) int encodeVeneziaVipPesTimestamps(VeneziaVipPesHeader 
 	return 0;
 }
 
-#if FW_VERSION >= 0x04000000
 extern unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size);
-#else
-extern unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size);
-#endif
 
 /* name unknown: size the Annex B input after replacing length prefixes. */
 int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
@@ -8168,21 +7529,12 @@ out:
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int getVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, VeneziaVipCommandContext **context);
 extern int releaseVeneziaVipAuxiliaryRecordLocked(VeneziaVipState *state,
 	VeneziaVipCommandContext *context, const VeneziaVipCommandAuxiliaryRecord *record);
 extern int notifyVeneziaVipProcessor(VeneziaVipState *state, int processor,
 	unsigned int channel, uint32_t events);
-#else
-extern int getVeneziaVipCaptureContext(VeneziaDebugProcessCapture *capture,
-	VeneziaVipState *state, VeneziaVipCommandContext **context);
-extern int releaseVeneziaVipAuxiliaryRecordLocked(VeneziaVipState *state,
-	VeneziaVipCommandContext *context, const VeneziaVipCommandAuxiliaryRecord *record);
-extern int notifyVeneziaVipProcessor(VeneziaVipState *state, int processor,
-	unsigned int channel, uint32_t events);
-#endif
 
 /* name unknown: release every completed auxiliary result and wake its processor. */
 int releaseVeneziaVipCaptureResults(unsigned int processor, VeneziaVipProcessStorage *storage)
@@ -8462,21 +7814,12 @@ int collectVeneziaVipCaptureResults(unsigned int processor, VeneziaVipProcessSto
 	}
 }
 
-#if FW_VERSION >= 0x04000000
 extern int initializeVeneziaVipCommandsLocked(VeneziaVipState *state,
 	const VeneziaVipCommandCallbacks *callbacks, const VeneziaVipMemoryRegion *memory);
 extern int getVeneziaVipReportedValuesLocked(VeneziaVipState *state,
 	uint32_t *main, uint32_t *auxiliary);
 extern int calculateVeneziaVipTiledImageSizeLocked(VeneziaVipState *state,
 	unsigned int width, unsigned int height, unsigned int imageCount, SceSize *size);
-#else
-extern int initializeVeneziaVipCommandsLocked(VeneziaVipState *state,
-	const VeneziaVipCommandCallbacks *callbacks, const VeneziaVipMemoryRegion *memory);
-extern int getVeneziaVipReportedValuesLocked(VeneziaVipState *state,
-	uint32_t *main, uint32_t *auxiliary);
-extern int calculateVeneziaVipTiledImageSizeLocked(VeneziaVipState *state,
-	unsigned int width, unsigned int height, unsigned int imageCount, SceSize *size);
-#endif
 
 int finishVeneziaVipStartup(VeneziaVipState *state)
 {
@@ -8531,13 +7874,8 @@ int getVeneziaVipImageStorageSize(VeneziaVipState *state,
 	return ret;
 }
 
-#if FW_VERSION >= 0x04000000
 extern int getVeneziaVipCaptureCallbacks(VeneziaDebugProcessCapture *capture,
 	VeneziaVipState *state, VeneziaDebugCallback **callbacks);
-#else
-extern int getVeneziaVipCaptureCallbacks(VeneziaDebugProcessCapture *capture,
-	VeneziaVipState *state, VeneziaDebugCallback **callbacks);
-#endif
 
 static __attribute__((always_inline)) inline void clearVeneziaVipCaptureCallback(
 	VeneziaDebugCallback *callback, SceUID uid, SceUID pid)
@@ -13279,1667 +12617,36 @@ int SceCodecEngineWrapperForDriver_8FE370E6(unsigned int processor, SceUID uid)
 	return -2141060856;
 }
 
-/* name unknown: the complete eight-transfer blocking-copy request. */
-typedef struct VeneziaHwdDmaTransfer {
-	uint32_t unidentifiedTransferControl;
-	const void *source;
-	void *destination;
-	SceSize size;
-	uint32_t unidentifiedTransferFlags;
-} VeneziaHwdDmaTransfer;
-
-typedef struct VeneziaHwdDmaRequest {
-	unsigned int channel;
-	unsigned int count;
-	VeneziaHwdDmaTransfer transfers[8];
-} VeneziaHwdDmaRequest;
-
-typedef struct VeneziaHwdDmaState {
-	struct ThreadmgrFastMutex mutex;
-	struct ThreadmgrFastMutex *activeMutex;
-	SceKernelDmaOpId operations[1];
-} VeneziaHwdDmaState;
-VeneziaHwdDmaState g_veneziaHwdDmaState;
-SceKernelDmaOpChainParam g_veneziaHwdDmaChainParam = {
-	.size = sizeof(SceKernelDmaOpChainParam),
-	.coherencyMask = 0x3ffff,
-};
-
-static inline __attribute__((always_inline)) int isVeneziaHwdUncachedAddress(uintptr_t address)
-{
-	if ((unsigned int)(address - 0x18000000) < 0x08000000)
-		return ksceKernelIsUncacheAddressInTmpFsGame((void *)address);
-	return (unsigned int)(address - 0x20000000) < 0x20000000 ||
-		(unsigned int)(address - 0x60000000) < 0x21000000;
-}
-
-
-#undef __FILE_NAME__
-#define __FILE_NAME__ "vip/hwd0_vapa.c"
-int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
-{
-	SceKernelDmaOpTag tags[8];
-	unsigned int channel, count, index;
-	int ret;
-
-#if FW_DEBUG
-	ksceKernelAssert(request != NULL, SCE_DBGINFO_FUNC(282, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
-#endif
-	count = request->count;
-	channel = request->channel;
-#if FW_DEBUG
-	ksceKernelAssert(channel == 0, SCE_DBGINFO_FUNC(286, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
-	ksceKernelAssert(count <= 8, SCE_DBGINFO_FUNC(287, "_hwd0DmacMemcpyBlocking"), __builtin_return_address(0));
-#endif
-	if (!count)
-		return 0;
-	index = 0;
-	do {
-		const VeneziaHwdDmaTransfer *transfer = &request->transfers[index];
-		uintptr_t source = (uintptr_t)transfer->source;
-		uintptr_t destination = (uintptr_t)transfer->destination;
-		SceSize size = transfer->size;
-		SceKernelDmaOpTag *tag = &tags[index];
-		SceKernelDmaOpTag *previous = index ? &tags[index - 1] : NULL;
-		unsigned int command;
-
-		if (!size)
-			return (int)0x80010016;
-		if (source <= destination) {
-			if (destination < source + size)
-				return (int)0x80010016;
-		} else if (source <= destination + size) {
-			return (int)0x80010016;
-		}
-		command = isVeneziaHwdUncachedAddress(source) ? 0x2000 : 0x01002000;
-		if (!isVeneziaHwdUncachedAddress(destination))
-			command += 0x01ffe000;
-#if FW_DEBUG
-		ksceKernelAssert(index <= 7, SCE_DBGINFO_FUNC(363, "_dmacMemcpy"), __builtin_return_address(0));
-#endif
-		tag->src = transfer->source;
-		tag->dst = transfer->destination;
-		tag->len = size;
-		tag->cmd = command;
-		tag->blockSize = 0;
-		tag->pNext = SCE_KERNEL_DMAC_CHAIN_END;
-		if (previous)
-			previous->pNext = tag;
-		else
-			__builtin_prefetch(&tags[3].dst);
-		index++;
-	} while (index != count);
-	ksceKernelLockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[channel], tags,
-		&g_veneziaHwdDmaChainParam, 17);
-	if (ret >= 0) {
-		ret = ksceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[channel]);
-		if (ret >= 0)
-			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[channel], 2, 0, 0);
-	}
-	ksceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	return ret;
-}
-
-int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
-	const char *name, unsigned int type, SceSize size, uintptr_t physicalAddress)
-{
-	SceKernelAllocMemBlockKernelOpt opt;
-	SceUID uid;
-	int ret;
-
-	memset(&opt, 0, sizeof(opt));
-	opt.size = sizeof(opt);
-	if (physicalAddress) {
-		opt.paddr = physicalAddress;
-		opt.attr = 2;
-		uid = ksceKernelAllocMemBlock(name, type, size, &opt);
-	} else {
-		uid = ksceKernelAllocMemBlock(name, type, size, NULL);
-	}
-	if (uid < 0 || !block)
-		return uid;
-	block->uid = uid;
-	ksceKernelGetMemBlockBase(uid, (void **)&block->region.virtualAddress);
-	ret = ksceKernelVAtoPA((void *)block->region.virtualAddress,
-		&block->region.physicalAddress);
-	if (ret >= 0) {
-		ret = 0;
-		block->region.size = size;
-	}
-	return ret;
-}
-
-int releaseVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block)
-{
-	ksceKernelFreeMemBlock(block->uid);
-	block->uid = -1;
-	block->region.physicalAddress = 0;
-	block->region.virtualAddress = 0;
-	block->region.size = 0;
-	return 0;
-}
-
-__attribute__((noinline))
-int offsetVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination, const VeneziaVipMemoryRegion *source, SceSize offset)
-{
-	uintptr_t physicalAddress;
-	uint32_t virtualAddress;
-	SceSize size;
-
-	if (!source || !destination)
-		return -2141060862;
-	virtualAddress = source->virtualAddress;
-	size = source->size;
-	physicalAddress = source->physicalAddress + offset;
-	destination->physicalAddress = physicalAddress;
-	destination->virtualAddress = virtualAddress + offset;
-	destination->size = source->physicalAddress + size - physicalAddress;
-	return 0;
-}
-
-__attribute__((noinline))
-int setVeneziaVipMemoryRegion(VeneziaVipMemoryRegion *destination, const VeneziaVipMemoryRegion *source, SceSize offset, SceSize size)
-{
-	uintptr_t physicalAddress;
-	uint32_t virtualAddress;
-
-	if (!source || !destination)
-		return -2141060862;
-	physicalAddress = source->physicalAddress;
-	virtualAddress = source->virtualAddress;
-	destination->size = size;
-	destination->physicalAddress = physicalAddress + offset;
-	destination->virtualAddress = virtualAddress + offset;
-	return 0;
-}
-
-/* name unknown: initialize the one blocking-copy DMA channel. */
-int initializeVeneziaHwdDma(void)
-{
-	char name[32];
-	int ret;
-
-	g_veneziaHwdDmaState.activeMutex = NULL;
-	g_veneziaHwdDmaState.operations[0] = -1;
-	ret = ksceKernelInitializeFastMutex(&g_veneziaHwdDmaState.mutex,
-		"SceHwd0Dma", 2, 0);
-	if (ret >= 0) {
-		g_veneziaHwdDmaState.activeMutex = &g_veneziaHwdDmaState.mutex;
-		snprintf(name, sizeof(name), "SceHwd0DmacMemcpy%02u", 0);
-		ret = ksceKernelDmaOpAlloc(name);
-		if (ret >= 0) {
-			g_veneziaHwdDmaState.operations[0] = ret;
-			ret = ksceKernelDmaOpAssign(ret, 16, 0);
-		}
-	}
-	return ret;
-}
-
-__attribute__((noinline)) SceSize getVeneziaVipInputRemaining(const VeneziaVipInputIterator *iterator)
-{
-	return iterator->totalSize - iterator->position;
-}
-
-int initializeVeneziaVipInputIterator(VeneziaVipInputIterator *iterator, const VeneziaVipInputBufferList *list)
-{
-	unsigned int index;
-	SceSize total = 0;
-
-	iterator->list = list;
-	iterator->bufferIndex = 0;
-	iterator->bufferOffset = 0;
-	iterator->position = 0;
-	for (index = 0; index < list->count; index++)
-		total += list->buffers[index].size;
-	iterator->totalSize = total;
-	return 0;
-}
-
-int copyVeneziaVipInput(uint32_t destination, SceSize size, SceSize *copied, VeneziaVipInputIterator *iterator)
-{
-	VeneziaHwdDmaRequest request;
-	unsigned int count = 0;
-
-	*copied = 0;
-	request.channel = 0;
-	request.count = 0;
-	request.transfers[0] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[1] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[2] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[3] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[4] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[5] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[6] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	request.transfers[7] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-	while (*copied < size && iterator->bufferIndex < iterator->list->count) {
-		const VeneziaVipInputBuffer *buffer = &iterator->list->buffers[iterator->bufferIndex];
-		SceSize offset = iterator->bufferOffset;
-		SceSize length;
-		const void *source;
-
-		if (offset >= buffer->size)
-			return -1;
-		length = buffer->size - offset;
-		if (size - *copied < length)
-			length = size - *copied;
-		source = (const char *)buffer->data + offset;
-		if (count > 7) {
-			_hwd0DmacMemcpyBlocking(&request);
-			request.channel = 0;
-			request.transfers[0] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[1] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[2] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[3] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[4] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[5] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[6] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			request.transfers[7] = (VeneziaHwdDmaTransfer){ .unidentifiedTransferControl = 1 };
-			count = 0;
-		}
-		*copied += length;
-		request.transfers[count].destination = (void *)destination;
-		destination += length;
-		request.transfers[count].source = source;
-		request.transfers[count].size = length;
-		count++;
-		request.count = count;
-		iterator->bufferOffset += length;
-		iterator->position += length;
-		if (iterator->bufferOffset >= buffer->size) {
-			iterator->bufferOffset = 0;
-			iterator->bufferIndex++;
-		}
-	}
-	_hwd0DmacMemcpyBlocking(&request);
-	return 0;
-}
-
-unsigned int decodeVeneziaVipNalLength(const uint8_t *bytes, unsigned int size)
-{
-	switch (size) {
-	case 1:
-		return bytes[0];
-	case 2:
-		return bytes[1] | (bytes[0] << 8);
-	case 3:
-		return (bytes[1] << 8) | (bytes[0] << 16) | bytes[2];
-	case 4:
-		return __builtin_bswap32(*(const uint32_t *)bytes);
-	default:
-		return 0;
-	}
-}
-
-int SceCodecEngineWrapperForDriver_FAF590A6(void *destination,
-	const void *source, SceSize size)
-{
-#if FW_DEBUG
-	VeneziaHwdDmaRequest request __attribute__((aligned(8)));
-
-	request.transfers[0].destination = destination;
-	request.transfers[0].size = size;
-	request.count = 1;
-	request.transfers[0].unidentifiedTransferControl = 1;
-	request.transfers[0].source = source;
-	request.channel = 0;
-	request.transfers[0].unidentifiedTransferFlags = 0;
-	return _hwd0DmacMemcpyBlocking(&request);
-#else
-	SceKernelDmaOpTag tags[8];
-	uintptr_t sourceAddress = (uintptr_t)source;
-	uintptr_t destinationAddress = (uintptr_t)destination;
-	unsigned int command;
-	int ret;
-
-	if (!size)
-		return (int)0x80010016;
-	if (destinationAddress >= sourceAddress) {
-		if (destinationAddress < sourceAddress + size)
-			return (int)0x80010016;
-	} else if (sourceAddress <= destinationAddress + size) {
-		return (int)0x80010016;
-	}
-	command = isVeneziaHwdUncachedAddress(sourceAddress) ? 0x2000 : 0x01002000;
-	if (!isVeneziaHwdUncachedAddress(destinationAddress))
-		command += 0x01ffe000;
-	tags[0].src = source;
-	tags[0].dst = destination;
-	tags[0].blockSize = 0;
-	tags[0].pNext = SCE_KERNEL_DMAC_CHAIN_END;
-	tags[0].len = size;
-	tags[0].cmd = command;
-	ksceKernelLockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[0], tags,
-		&g_veneziaHwdDmaChainParam, 17);
-	if (ret >= 0) {
-		ret = ksceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[0]);
-		if (ret >= 0)
-			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[0], 2, 0, 0);
-	}
-	ksceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	return ret;
-#endif
-}
-
-int g_codecEngineProcessStorageKey;
-#if FW_VERSION >= 0x04000000
-extern int initializeCodecEngineProcessor(void);
 extern int initializeCodecEngineMemoryClass(void);
-#else
-extern int initializeCodecEngineProcessor(void);
-extern int initializeCodecEngineMemoryClass(void);
-#endif
 
-/* name unknown: allocate process storage and initialize the processor/memory owners. */
-int initCodecEngine(void)
-{
-	int ret;
-
-	g_codecEngineProcessStorageKey = -1;
-	ret = ksceKernelCreateProcessLocalStorage("SceCodecEngine", sizeof(CodecEngineProcessStorage));
-	if (ret < 0)
-		return ret;
-	g_codecEngineProcessStorageKey = ret;
-	ret = initializeCodecEngineProcessor();
-	if (ret < 0)
-		return ret;
-	ret = initializeCodecEngineMemoryClass();
-	return ret;
-}
-
-#undef __FILE_NAME__
-#define __FILE_NAME__ "codecengine/codecengine.c"
-int _sceCodecEngineProcessCreateEntry(SceUID pid, SceUInt32 type)
-{
-	CodecEngineProcessStorage *storage = NULL;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 1);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(100, "_sceCodecEngineProcessCreateEntry"), __builtin_return_address(0));
-#endif
-		memset(storage, 0, sizeof(*storage));
-		storage->unmapMemBlocks[0].puid = -1;
-		storage->unmapMemBlocks[0].guid = -1;
-		storage->unmapMemBlocks[1].puid = -1;
-		storage->unmapMemBlocks[1].guid = -1;
-		storage->unmapMemBlocks[2].puid = -1;
-		storage->unmapMemBlocks[2].guid = -1;
-		storage->unmapMemBlocks[3].puid = -1;
-		storage->unmapMemBlocks[3].guid = -1;
-		ret = ksceKernelInitializeFastMutex(&storage->mutex, "SceCodecEngine", 0x8000, 0);
-	}
-	return ret;
-}
-
-extern int _closeUnmapMemBlockAll(SceUID pid);
-int _sceCodecEngineProcessExitEntry(SceUID pid, SceUInt32 type)
-{
-	CodecEngineProcessStorage *storage = NULL;
-	int storageResult, ret, finalResult;
-
-	storageResult = ksceKernelGetProcessLocalStorageAddrForPid(pid,
-		g_codecEngineProcessStorageKey, (void **)&storage, 0);
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(139, "_sceCodecEngineProcessExitEntry"), __builtin_return_address(0));
-#endif
-	ret = _closeUnmapMemBlockAll(pid);
-	if (ret >= 0)
-		ret = storageResult & (storageResult >> 31);
-	finalResult = ksceKernelFinalizeFastMutex(&storage->mutex);
-	if (finalResult >= 0)
-		finalResult = ret;
-	else
-		finalResult &= finalResult >> 31;
-	return finalResult;
-}
-
-typedef int (*CodecEngineProcExitHandler)(SceUID pid, ProcEventParam *param, int flags);
-CodecEngineProcExitHandler g_codecEngineProcExitHandlers[4];
-CodecEngineProcExitHandler g_codecEngineProcKillHandlers[4];
-
-CodecEngineProcExitHandler * getProcExitHandlers(void)
-{
-	return g_codecEngineProcExitHandlers;
-}
-
-CodecEngineProcExitHandler * getProcKillHandlers(void)
-{
-	return g_codecEngineProcKillHandlers;
-}
-
-int sceCodecEngineRegisterProcExitHandler(CodecEngineProcExitHandler handler)
-{
-	unsigned int index = 0;
-
-#if FW_DEBUG
-	ksceKernelAssert(handler != NULL, SCE_DBGINFO_FUNC(172, "sceCodecEngineRegisterProcExitHandler"), __builtin_return_address(0));
-#endif
-	if (g_codecEngineProcExitHandlers[0]) {
-		if (g_codecEngineProcExitHandlers[1]) {
-			if (g_codecEngineProcExitHandlers[2]) {
-				if (g_codecEngineProcExitHandlers[3])
-					return -2141192185;
-				index = 3;
-			} else {
-				index = 2;
-			}
-		} else {
-			index = 1;
-		}
-	}
-	g_codecEngineProcExitHandlers[index] = handler;
-	return 0;
-}
-
-int sceCodecEngineRegisterProcKillHandler(CodecEngineProcExitHandler handler)
-{
-	unsigned int index = 0;
-
-#if FW_DEBUG
-	ksceKernelAssert(handler != NULL, SCE_DBGINFO_FUNC(196, "sceCodecEngineRegisterProcKillHandler"), __builtin_return_address(0));
-#endif
-	if (g_codecEngineProcKillHandlers[0]) {
-		if (g_codecEngineProcKillHandlers[1]) {
-			if (g_codecEngineProcKillHandlers[2]) {
-				if (g_codecEngineProcKillHandlers[3])
-					return -2141192185;
-				index = 3;
-			} else {
-				index = 2;
-			}
-		} else {
-			index = 1;
-		}
-	}
-	g_codecEngineProcKillHandlers[index] = handler;
-	return 0;
-}
-
-#if FW_VERSION >= 0x04000000
 extern int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
 extern int _sceCodecEngineProcessorProcessResume(SceUID pid);
-#else
-extern int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
-extern int _sceCodecEngineProcessorProcessResume(SceUID pid);
-#endif
 
-int _sceCodecEngineProcessSuspendPhase0(SceUID pid)
-{
-	CodecEngineProcessStorage *storage = NULL;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 0);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(228, "_sceCodecEngineProcessSuspendPhase0"), __builtin_return_address(0));
-#endif
-		ret = _sceCodecEngineProcessorProcessSuspend(pid);
-	}
-	return ret;
-}
-
-int _sceCodecEngineProcessResume(SceUID pid)
-{
-	CodecEngineProcessStorage *storage = NULL;
-	int ret;
-
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 0);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(253, "_sceCodecEngineProcessResume"), __builtin_return_address(0));
-#endif
-		ret = _sceCodecEngineProcessorProcessResume(pid);
-	}
-	return ret;
-}
-
-struct ThreadmgrFastMutex * _sceCodecEngineGetMutex(SceUID pid)
-{
-	CodecEngineProcessStorage *storage = NULL;
-
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 0) < 0)
-		return NULL;
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(279, "_sceCodecEngineGetMutex"), __builtin_return_address(0));
-#endif
-	return &storage->mutex;
-}
-
-CodecEngineUnmapMemBlockEntry * _sceCodecEngineGetUnmapMemBlockEntry(SceUID pid, SceUID guid)
-{
-	CodecEngineProcessStorage *storage = NULL;
-	unsigned int index = 0;
-
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 0) < 0)
-		return NULL;
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(301, "_sceCodecEngineGetUnmapMemBlockEntry"), __builtin_return_address(0));
-#endif
-	if (!guid)
-		return storage->unmapMemBlocks;
-	if (storage->unmapMemBlocks[0].guid != guid) {
-		if (storage->unmapMemBlocks[1].guid == guid)
-			index = 1;
-		else if (storage->unmapMemBlocks[2].guid == guid)
-			index = 2;
-		else if (storage->unmapMemBlocks[3].guid == guid)
-			index = 3;
-		else
-			return NULL;
-	}
-	return &storage->unmapMemBlocks[index];
-}
-
-unsigned int * _sceCodecEngineGetProcessor(SceUID pid)
-{
-	CodecEngineProcessStorage *storage = NULL;
-
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_codecEngineProcessStorageKey,
-		(void **)&storage, 0) < 0)
-		return NULL;
-#if FW_DEBUG
-	ksceKernelAssert(storage != NULL, SCE_DBGINFO_FUNC(336, "_sceCodecEngineGetProcessor"), __builtin_return_address(0));
-#endif
-	if (storage)
-		return &storage->processorCount;
-	return NULL;
-}
-
-/* name unknown: complete processor-count owner, adjacent to its mutex. */
-typedef struct CodecEngineProcessorState {
-	struct ThreadmgrFastMutex mutex;
-	unsigned int processorCount;
-} CodecEngineProcessorState;
-CodecEngineProcessorState g_codecEngineProcessorState;
-
-#undef __FILE_NAME__
-#define __FILE_NAME__ "codecengine/processor.c"
 extern int setVeneziaClockSelector(unsigned int selector);
-__attribute__((noinline)) int initializeCodecEngineProcessor(void)
-{
-	return ksceKernelInitializeFastMutex(&g_codecEngineProcessorState.mutex,
-		"SceCodecEngineProcessor", 0x8000, 0);
-}
 
-#undef __FILE_NAME__
-#define __FILE_NAME__ "codecengine/processor.c"
 extern int setVeneziaClockSelector(unsigned int selector);
-__attribute__((noinline)) int _sceCodecEngineProcessorProcessSuspend(SceUID pid)
-{
-	unsigned int *processor;
-	int ret;
-
-	ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
-	if (ret >= 0) {
-		processor = _sceCodecEngineGetProcessor(pid);
-#if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(70, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
-#endif
-		if (*processor) {
-#if FW_DEBUG
-			ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
-				SCE_DBGINFO_FUNC(76, "_sceCodecEngineProcessorProcessSuspend"), __builtin_return_address(0));
-#endif
-			if (g_codecEngineProcessorState.processorCount == *processor) {
-				ret = setVeneziaClockSelector(6);
-				if (ret < 0)
-					goto unlock;
-			}
-			g_codecEngineProcessorState.processorCount -= *processor;
-		}
-unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
-	}
-	return ret;
-}
-
-#undef __FILE_NAME__
-#define __FILE_NAME__ "codecengine/processor.c"
-extern int setVeneziaClockSelector(unsigned int selector);
-__attribute__((noinline)) int _sceCodecEngineProcessorProcessResume(SceUID pid)
-{
-	unsigned int *processor;
-	int ret;
-
-	ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
-	if (ret >= 0) {
-		processor = _sceCodecEngineGetProcessor(pid);
-#if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(112, "_sceCodecEngineProcessorProcessResume"), __builtin_return_address(0));
-#endif
-		if (*processor) {
-			if (g_codecEngineProcessorState.processorCount == 0) {
-				ret = setVeneziaClockSelector(7);
-				if (ret < 0)
-					goto unlock;
-			}
-			g_codecEngineProcessorState.processorCount += *processor;
-		}
-unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
-	}
-	return ret;
-}
 
 extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
 extern int _unlockProcessSuspendCore(void);
 
-int sceCodecEngineChangeNumWorkerCoresDefaultForUser(void)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	unsigned int *processor;
-	unsigned int count;
-	int ret;
-
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
-		if (ret < 0)
-			goto unlockProcess;
-		processor = _sceCodecEngineGetProcessor(0);
-#if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(161, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
-#endif
-		if (*processor) {
-#if FW_DEBUG
-			ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
-				SCE_DBGINFO_FUNC(167, "sceCodecEngineChangeNumWorkerCoresDefaultForUser"), __builtin_return_address(0));
-#endif
-			if (g_codecEngineProcessorState.processorCount == 1) {
-				ret = setVeneziaClockSelector(6);
-				if (ret < 0)
-					goto unlock;
-			}
-			count = *processor;
-			g_codecEngineProcessorState.processorCount--;
-			*processor = count - 1;
-		}
-unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
-unlockProcess:
-		_unlockProcessSuspendCore();
-	}
-	sceSyscallLeave(tls);
-	return ret;
-}
-
-int sceCodecEngineChangeNumWorkerCoresMaxForUser(void)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	unsigned int *processor;
-	unsigned int count;
-	int ret;
-
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret >= 0) {
-		ret = ksceKernelLockFastMutex(&g_codecEngineProcessorState.mutex);
-		if (ret < 0)
-			goto unlockProcess;
-		processor = _sceCodecEngineGetProcessor(0);
-#if FW_DEBUG
-		ksceKernelAssert(processor != NULL, SCE_DBGINFO_FUNC(218, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
-#endif
-#if FW_DEBUG
-		ksceKernelAssert(*processor <= g_codecEngineProcessorState.processorCount,
-			SCE_DBGINFO_FUNC(220, "sceCodecEngineChangeNumWorkerCoresMaxForUser"), __builtin_return_address(0));
-#endif
-		if (g_codecEngineProcessorState.processorCount == 0) {
-			ret = setVeneziaClockSelector(7);
-			if (ret < 0)
-				goto unlock;
-		}
-		count = *processor;
-		g_codecEngineProcessorState.processorCount++;
-		*processor = count + 1;
-unlock:
-		ksceKernelUnlockFastMutex(&g_codecEngineProcessorState.mutex);
-unlockProcess:
-		_unlockProcessSuspendCore();
-	}
-	sceSyscallLeave(tls);
-	return ret;
-}
-
-#undef SCE_DBGINFO_SOURCE
-#define SCE_DBGINFO_SOURCE "codecengine/memory.c"
-
-/* Full memory UID subclass; the base is Sysmem's canonical object header. */
-typedef struct CodecEngineMemory {
-	SceObjectBase object;
-	void *userBase;
-	void *kernelBase;
-	uintptr_t physicalBase;
-	SceSize size;
-	SceUID userMemBlock;
-	SceUID kernelMemBlock;
-	VeneziaHeapManager heapManager;
-} CodecEngineMemory;
 _Static_assert(sizeof(CodecEngineMemory) == 52, "CodecEngine memory object size");
-SceClass g_codecEngineMemoryClass;
-
-int _closeUnmapMemBlockCore(SceUID pid, CodecEngineUnmapMemBlockEntry *entry)
-{
-	CodecEngineMemory *memory = NULL;
-	int ret, error;
-
-	ret = ksceGUIDReferObjectWithClass(entry->guid, &g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-	if (ret < 0) {
-		if (!memory)
-			goto closeGuid;
-	} else {
-#if FW_DEBUG
-		ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(470, "_closeUnmapMemBlockCore"), __builtin_return_address(0));
-#endif
-		if (memory->kernelBase && memory->size)
-			memset(memory->kernelBase, 0, memory->size);
-		memory->size = 0;
-		ret = 0;
-		if (memory->userMemBlock >= 0) {
-			error = ksceKernelMapMemBlockWithFlag(memory->userMemBlock, 1);
-			ret = error & (error >> 31);
-			memory->userBase = NULL;
-			memory->userMemBlock = -1;
-		}
-		if (entry->puid >= 0) {
-			error = kscePUIDClose(pid, entry->puid);
-			entry->puid = -1;
-			if (error < 0)
-				ret = error;
-		}
-		if (memory->kernelMemBlock >= 0) {
-			error = ksceKernelFreeMemBlock(memory->kernelMemBlock);
-			ret &= ~(error >> 31);
-			if (error < 0)
-				ret = error;
-			memory->kernelMemBlock = -1;
-			memory->kernelBase = NULL;
-			memory->physicalBase = 0;
-		}
-	}
-	error = ksceGUIDReleaseObject(entry->guid);
-	ret &= ~(error >> 31);
-	if (error < 0)
-		ret = error;
-closeGuid:
-	if (entry->guid >= 0) {
-		error = ksceGUIDClose(entry->guid);
-		ret &= ~(error >> 31);
-		if (error < 0)
-			ret = error;
-		entry->guid = -1;
-	}
-	return ret;
-}
-
-int initializeCodecEngineMemoryClass(void)
-{
-	return ksceUIDClassInitClass(&g_codecEngineMemoryClass,
-		"SceUIDCodecEngineMemoryClass", ksceKernelGetUIDClass(),
-		sizeof(CodecEngineMemory), NULL, NULL);
-}
-
-/* name unknown: require exactly one physical range and a successful query. */
-int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size)
-{
-	SceKernelVARange range;
-	SceKernelPAVector vector;
-	int ret;
-
-	if (!base)
-		return 0;
-	range.addr = (uintptr_t)base;
-	range.size = size;
-	vector.size = sizeof(vector);
-	vector.ranges_size = 0;
-	vector.ranges = NULL;
-	ret = ksceKernelVARangeToPAVector(&range, &vector);
-	return ret >= 0 && vector.count == 1 && ret == 0;
-}
 
 extern int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1);
 extern int initVeneziaHeapManager(VeneziaHeapManager *manager, void *base, SceSize size);
 
-int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	CodecEngineMemory *memory = NULL;
-	CodecEngineUnmapMemBlockEntry *entry;
-	struct ThreadmgrFastMutex *mutex;
-	SceKernelVARange range;
-	union {
-		SceKernelPAVector vector;
-		uintptr_t physicalBase;
-	} query;
-	SceKernelAllocMemBlockKernelOpt opt;
-	MemBlockPhyInfo info;
-	SceUID guid, puid, userMemBlock, kernelMemBlock;
-	SceKernelMemBlockType type;
-	int ret, error;
-
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret < 0)
-		goto leave;
-	mutex = _sceCodecEngineGetMutex(0);
-	if (!mutex) {
-		ret = (int)0x80600000;
-		goto unlockProcess;
-	}
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		goto unlockProcess;
-	guid = ksceGUIDKernelCreate(&g_codecEngineMemoryClass, "SceCodecEngineMemory", (SceObjectBase **)&memory);
-	ret = guid;
-	if (guid < 0)
-		goto unlock;
-#if FW_DEBUG
-	ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(139, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-	memory->userMemBlock = -1;
-	memory->kernelMemBlock = -1;
-	entry = _sceCodecEngineGetUnmapMemBlockEntry(0, -1);
-	if (!entry) {
-		ret = (int)0x80600007;
-		goto close;
-	}
-	if (!base) {
-		ret = (int)0x80600000;
-		goto close;
-	}
-	if ((uintptr_t)base & 255) {
-		ret = (int)0x80600002;
-		goto close;
-	}
-	if (size & 255) {
-		ret = (int)0x80600001;
-		goto close;
-	}
-	range.addr = (uintptr_t)base;
-	range.size = size;
-	query.vector.ranges_size = 0;
-	query.vector.ranges = NULL;
-	query.vector.size = sizeof(query.vector);
-	ret = ksceKernelVARangeToPAVector(&range, &query.vector);
-	if (ret < 0)
-		goto close;
-	if (query.vector.count != 1) {
-		ret = (int)0x80600003;
-		goto close;
-	}
-	ret = ksceKernelIsAccessibleRange(48, base, size);
-	if (ret < 0)
-		goto close;
-	userMemBlock = ksceKernelFindMemBlockByAddr(base, size);
-	ret = userMemBlock;
-	if (userMemBlock < 0)
-		goto close;
-	info.ex.size = sizeof(info);
-	ret = ksceKernelMemBlockGetInfoEx(userMemBlock, &info);
-	if (ret < 0)
-		goto close;
-	if (ksceKernelMemBlockType2Memtype(info.ex.details.type) != 0x8000) {
-		ret = (int)0x80600008;
-		goto close;
-	}
-	if (size > info.ex.details.size) {
-		ret = (int)0x80600001;
-		goto close;
-	}
-	error = ksceKernelVAtoPA(base, &query.physicalBase);
-#if FW_DEBUG
-	ksceKernelAssert(error >= 0, SCE_DBGINFO_FUNC(208, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-	type = 0x60208006;
-	if (query.physicalBase >= 0x20000000 && query.physicalBase + size <= 0x30000000)
-		type = 0x40408006;
-	memset(&opt, 0, sizeof(opt));
-	opt.size = sizeof(opt);
-	opt.mirror_blockid = userMemBlock;
-	opt.attr = 0x1000040;
-	kernelMemBlock = ksceKernelAllocMemBlock(info.ex.details.name, type, 0, &opt);
-	ret = kernelMemBlock;
-	if (kernelMemBlock < 0)
-		goto close;
-	puid = kscePUIDOpenByGUID(0, guid);
-	ret = puid;
-	if (puid >= 0) {
-		info.ex.size = sizeof(info);
-		ret = ksceKernelMemBlockGetInfoEx(kernelMemBlock, &info);
-		if (ret >= 0) {
-			ret = ksceKernelUnmapMemBlock(userMemBlock);
-			if (ret >= 0) {
-				ret = callVeneziaRpcCommand500(query.physicalBase, size);
-				if (ret >= 0) {
-					ret = initVeneziaHeapManager(&memory->heapManager, (void *)info.ex.details.vbase, size);
-					if (ret >= 0) {
-						memory->userBase = base;
-						memory->kernelBase = (void *)info.ex.details.vbase;
-						error = ksceKernelVAtoPA(memory->kernelBase, &memory->physicalBase);
-#if FW_DEBUG
-						ksceKernelAssert(error >= 0, SCE_DBGINFO_FUNC(268, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
-						ksceKernelAssert(memory->physicalBase != 0, SCE_DBGINFO_FUNC(269, "sceCodecEngineOpenUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-						memory->size = size;
-						memory->userMemBlock = userMemBlock;
-						memory->kernelMemBlock = kernelMemBlock;
-						entry->guid = guid;
-						entry->puid = puid;
-						ret = puid;
-						goto unlock;
-					}
-				}
-				ksceKernelMapMemBlockWithFlag(userMemBlock, 1);
-			}
-		}
-		if (puid != -1)
-			kscePUIDClose(0, puid);
-	}
-	ksceKernelFreeMemBlock(kernelMemBlock);
-close:
-	ksceGUIDClose(guid);
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-unlockProcess:
-	_unlockProcessSuspendCore();
-leave:
-	sceSyscallLeave(tls);
-	return ret;
-}
-
 extern int isVeneziaHeapManagerRegistered(VeneziaHeapManager *manager);
-
-int _closeUnmapMemBlock(SceUID puid)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entry;
-	CodecEngineMemory *memory;
-	SceUID guid;
-	int ret, registered;
-
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret < 0)
-		goto leave;
-	mutex = _sceCodecEngineGetMutex(0);
-	if (!mutex) {
-		ret = (int)0x80600000;
-		goto unlockProcess;
-	}
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		goto unlockProcess;
-	memory = NULL;
-	guid = kscePUIDtoGUID(0, puid);
-	if (guid <= 0) {
-		ret = guid | 0x40000000;
-		if (guid < 0)
-			goto unlock;
-	} else {
-		entry = _sceCodecEngineGetUnmapMemBlockEntry(0, guid);
-		if (!entry) {
-			ret = (int)0x80600009;
-			goto unlock;
-		}
-#if FW_DEBUG
-		ksceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
-#endif
-		registered = ksceGUIDReferObjectWithClass(entry->guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		if (registered >= 0) {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
-#endif
-			registered = isVeneziaHeapManagerRegistered(&memory->heapManager);
-		}
-		if (memory) {
-			ret = ksceGUIDReleaseObject(entry->guid);
-			if (ret < 0)
-				goto unlock;
-		}
-		if (registered < 0) {
-			ret = registered;
-			goto unlock;
-		}
-	}
-	guid = kscePUIDtoGUID(0, puid);
-	if (guid <= 0) {
-		ret = guid | 0x40000000;
-		goto unlock;
-	}
-	entry = _sceCodecEngineGetUnmapMemBlockEntry(0, guid);
-	if (!entry) {
-		ret = (int)0x80600009;
-		goto unlock;
-	}
-#if FW_DEBUG
-	ksceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(382, "_closeUnmapMemBlock"), __builtin_return_address(0));
-#endif
-	ret = _closeUnmapMemBlockCore(0, entry);
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-unlockProcess:
-	_unlockProcessSuspendCore();
-leave:
-	sceSyscallLeave(tls);
-	return ret;
-}
 
 extern void sceKernelApiDeclareTypeUInt32(void);
 extern void *_sceVeneziaHeapManagerAllocMemory(VeneziaHeapManager *manager,
 	SceSize size, SceSize alignment);
 
-void *sceCodecEngineAllocMemoryFromUnmapMemBlockForUser(SceUID puid,
-	SceSize size, SceSize alignment)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineMemory *memory;
-	CodecEngineUnmapMemBlockEntry *entry;
-	uintptr_t result = size;
-	SceUID guid;
-	int ret;
-
-	sceKernelApiDeclareTypeUInt32();
-	if (!size)
-		goto finish;
-	if (alignment <= 255)
-		alignment = 256;
-	else if (alignment > 0x100000 || (alignment & (alignment - 1))) {
-		result = 0;
-		goto finish;
-	}
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret < 0) {
-		result = ret;
-		goto leave;
-	}
-	mutex = _sceCodecEngineGetMutex(0);
-	if (!mutex || ksceKernelLockFastMutex(mutex) < 0) {
-		result = 0;
-		goto unlockProcess;
-	}
-	memory = NULL;
-	guid = kscePUIDtoGUID(0, puid);
-	if (guid <= 0) {
-		result = 0;
-		goto unlock;
-	}
-	entry = _sceCodecEngineGetUnmapMemBlockEntry(0, guid);
-	if (!entry) {
-		result = 0;
-		goto unlock;
-	}
-#if FW_DEBUG
-	ksceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(595, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-	ret = ksceGUIDReferObjectWithClass(guid, &g_codecEngineMemoryClass,
-		(SceObjectBase **)&memory);
-	if (ret < 0) {
-		result = 0;
-	} else {
-#if FW_DEBUG
-		ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(604, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-		result = (uintptr_t)_sceVeneziaHeapManagerAllocMemory(
-			&memory->heapManager, (size + 255) & ~255U, alignment);
-		if (result) {
-#if FW_DEBUG
-			ksceKernelAssert(result >= (uintptr_t)memory->kernelBase &&
-				result < (uintptr_t)memory->kernelBase + memory->size,
-				SCE_DBGINFO_FUNC(616, "sceCodecEngineAllocMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-			result += (uintptr_t)memory->userBase - (uintptr_t)memory->kernelBase;
-		}
-	}
-	if (memory)
-		result &= ~(ksceGUIDReleaseObject(entry->guid) >> 31);
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-unlockProcess:
-	_unlockProcessSuspendCore();
-leave:
-	sceSyscallLeave(tls);
-finish:
-	return (void *)result;
-}
-
 extern int _procMemory(VeneziaHeapManager *manager, void *memory);
-
-int sceCodecEngineFreeMemoryFromUnmapMemBlockForUser(SceUID puid, void *address)
-{
-	SceUInt32 tls = sceSyscallEnter();
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entry;
-	CodecEngineMemory *memory;
-	SceUID guid;
-	int ret, error;
-
-	ret = SceCodecEngineWrapperForDriver_CB8703D8();
-	if (ret < 0)
-		goto leave;
-	mutex = _sceCodecEngineGetMutex(0);
-	if (!mutex) {
-		ret = (int)0x80600000;
-		goto unlockProcess;
-	}
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		goto unlockProcess;
-	memory = NULL;
-	guid = kscePUIDtoGUID(0, puid);
-	if (guid <= 0) {
-		ret = guid | 0x40000000;
-		goto unlock;
-	}
-	entry = _sceCodecEngineGetUnmapMemBlockEntry(0, guid);
-	if (!entry) {
-		ret = (int)0x80600009;
-		goto unlock;
-	}
-#if FW_DEBUG
-	ksceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(695, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-	ret = ksceGUIDReferObjectWithClass(guid, &g_codecEngineMemoryClass,
-		(SceObjectBase **)&memory);
-	if (ret >= 0) {
-#if FW_DEBUG
-		ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(703, "sceCodecEngineFreeMemoryFromUnmapMemBlockForUser"), __builtin_return_address(0));
-#endif
-		if ((uintptr_t)address < (uintptr_t)memory->userBase ||
-			(uintptr_t)address >= (uintptr_t)memory->userBase + memory->size) {
-			ret = (int)0x80600000;
-		} else {
-			ret = _procMemory(&memory->heapManager,
-				(void *)((uintptr_t)memory->kernelBase - (uintptr_t)memory->userBase + (uintptr_t)address));
-		}
-	}
-	if (memory) {
-		error = ksceGUIDReleaseObject(entry->guid);
-		ret &= ~(error >> 31);
-		if (error < 0)
-			ret = error;
-	}
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-unlockProcess:
-	_unlockProcessSuspendCore();
-leave:
-	sceSyscallLeave(tls);
-	return ret;
-}
 
 extern int registerVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
 	void *memory, SceSize size);
 
-int sceCodecEngineRegisterUnmapMemory(SceUID pid, void *address, SceSize size)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, registered;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(773, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		registered = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto checkResult;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(789, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(790, "sceCodecEngineRegisterUnmapMemory"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
-				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
-				ret = registerVeneziaHeapManagerMemory(&memory->heapManager,
-					(void *)((uintptr_t)memory->kernelBase - (uintptr_t)memory->userBase + (uintptr_t)address), size);
-				registered = ret >= 0;
-				if (!memory)
-					goto checkResult;
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-checkResult:
-		if (ret < 0 || registered)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
 extern int unregisterVeneziaHeapManagerMemory(VeneziaHeapManager *manager,
 	void *memory, SceSize size);
-
-int sceCodecEngineUnregisterUnmapMemory(SceUID pid, void *address, SceSize size)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, registered;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(865, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		registered = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto checkResult;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(881, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(882, "sceCodecEngineUnregisterUnmapMemory"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
-				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
-				ret = unregisterVeneziaHeapManagerMemory(&memory->heapManager,
-					(void *)((uintptr_t)memory->kernelBase - (uintptr_t)memory->userBase + (uintptr_t)address), size);
-				registered = ret >= 0;
-				if (!memory)
-					goto checkResult;
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-checkResult:
-		if (ret < 0 || registered)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int sceCodecEngineIsUnmapMemory(SceUID pid, const void *address, SceSize size)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	uintptr_t end = (uintptr_t)address + size;
-	unsigned int index;
-	int ret, error, contains;
-
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(952, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		contains = 0;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		if (ret >= 0) {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(968, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(969, "sceCodecEngineIsUnmapMemory"), __builtin_return_address(0));
-#endif
-			contains = (uintptr_t)memory->userBase <= (uintptr_t)address &&
-				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size &&
-				(uintptr_t)memory->userBase < end &&
-				(uintptr_t)memory->userBase + memory->size >= end;
-		}
-		if (memory) {
-			error = ksceGUIDReleaseObject(entries[index].guid);
-			if (error < 0) {
-				ret = error;
-				goto unlock;
-			}
-		}
-		if (ret < 0)
-			goto unlock;
-		if (contains) {
-			ret = 1;
-			goto unlock;
-		}
-	}
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int sceCodecEngineUnmapUserVAtoPA(SceUID pid, const void *address, uintptr_t *physicalAddress)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, contains;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1033, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		contains = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto unlock;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1049, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1050, "sceCodecEngineUnmapUserVAtoPA"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
-				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
-				contains = 1;
-				if (physicalAddress)
-					*physicalAddress = memory->physicalBase - (uintptr_t)memory->userBase + (uintptr_t)address;
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-		if (ret < 0 || contains)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int sceCodecEngineUnmapPAtoUserVA(SceUID pid, uintptr_t address, void **userAddress)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, contains;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1121, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		contains = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto unlock;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1137, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1138, "sceCodecEngineUnmapPAtoUserVA"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= memory->physicalBase &&
-				(uintptr_t)address < memory->physicalBase + memory->size) {
-				contains = 1;
-				if (userAddress)
-					*userAddress = (void *)((uintptr_t)memory->userBase - memory->physicalBase + address);
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-		if (ret < 0 || contains)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int sceCodecEngineUnmapUserVAtoKernelVA(SceUID pid, const void *address, void **kernelAddress)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, contains;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1209, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		contains = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto unlock;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1225, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1226, "sceCodecEngineUnmapUserVAtoKernelVA"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= (uintptr_t)memory->userBase &&
-				(uintptr_t)address < (uintptr_t)memory->userBase + memory->size) {
-				contains = 1;
-				if (kernelAddress)
-					*kernelAddress = (void *)((uintptr_t)memory->kernelBase - (uintptr_t)memory->userBase + (uintptr_t)address);
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-		if (ret < 0 || contains)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int sceCodecEngineUnmapKernelVAtoUserVA(SceUID pid, const void *address, void **userAddress)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries;
-	CodecEngineMemory *memory;
-	unsigned int index;
-	int ret, error, contains;
-
-	if (!address)
-		return (int)0x80600000;
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(1297, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		memory = NULL;
-		ret = ksceGUIDReferObjectWithClass(entries[index].guid,
-			&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-		contains = 0;
-		if (ret < 0) {
-			if (!memory)
-				goto unlock;
-		} else {
-#if FW_DEBUG
-			ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1313, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
-			ksceKernelAssert(memory->kernelMemBlock != -1, SCE_DBGINFO_FUNC(1314, "sceCodecEngineUnmapKernelVAtoUserVA"), __builtin_return_address(0));
-#endif
-			if ((uintptr_t)address >= (uintptr_t)memory->kernelBase &&
-				(uintptr_t)address < (uintptr_t)memory->kernelBase + memory->size) {
-				contains = 1;
-				if (userAddress)
-					*userAddress = (void *)((uintptr_t)memory->userBase - (uintptr_t)memory->kernelBase + (uintptr_t)address);
-			}
-		}
-		error = ksceGUIDReleaseObject(entries[index].guid);
-		if (error < 0) {
-			ret = error;
-			goto unlock;
-		}
-		if (ret < 0 || contains)
-			goto unlock;
-	}
-	ret = (int)0x80600000;
-unlock:
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
-
-int _closeUnmapMemBlockAll(SceUID pid)
-{
-	struct ThreadmgrFastMutex *mutex;
-	CodecEngineUnmapMemBlockEntry *entries, *entry;
-	CodecEngineMemory *memory;
-	SceUID puid, guid;
-	unsigned int index;
-	int ret, registered, error;
-
-	mutex = _sceCodecEngineGetMutex(pid);
-	if (!mutex)
-		return (int)0x80600000;
-	ret = ksceKernelLockFastMutex(mutex);
-	if (ret < 0)
-		return ret;
-	entries = _sceCodecEngineGetUnmapMemBlockEntry(pid, 0);
-#if FW_DEBUG
-	ksceKernelAssert(entries != NULL, SCE_DBGINFO_FUNC(423, "_closeUnmapMemBlockAll"), __builtin_return_address(0));
-#endif
-	for (index = 0; index < 4; index++) {
-		if (entries[index].guid == -1)
-			continue;
-		puid = entries[index].puid;
-		memory = NULL;
-		guid = kscePUIDtoGUID(pid, puid);
-		if (guid <= 0) {
-			if (guid < 0)
-				ret = guid | 0x40000000;
-		} else {
-			entry = _sceCodecEngineGetUnmapMemBlockEntry(pid, guid);
-			if (!entry) {
-				ret = (int)0x80600009;
-			} else {
-#if FW_DEBUG
-				ksceKernelAssert(puid == entry->puid, SCE_DBGINFO_FUNC(1382, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
-#endif
-				registered = ksceGUIDReferObjectWithClass(entry->guid,
-					&g_codecEngineMemoryClass, (SceObjectBase **)&memory);
-				if (registered >= 0) {
-#if FW_DEBUG
-					ksceKernelAssert(memory != NULL, SCE_DBGINFO_FUNC(1390, "_isUnmapMemoryRegistered"), __builtin_return_address(0));
-#endif
-					registered = isVeneziaHeapManagerRegistered(&memory->heapManager);
-				}
-				if (memory && (error = ksceGUIDReleaseObject(entry->guid)) < 0) {
-					ret = error;
-				} else {
-					ret &= ~(registered >> 31);
-					if (registered < 0)
-						ret = registered;
-				}
-			}
-		}
-		error = _closeUnmapMemBlockCore(pid, &entries[index]);
-		ret &= ~(error >> 31);
-		if (error < 0)
-			ret = error;
-	}
-	ret &= ret >> 31;
-	ksceKernelUnlockFastMutex(mutex);
-	return ret;
-}
 
 extern int _sceVeneziaRpcGetHistory(VeneziaRpcHistoryEntry *history);
 
