@@ -260,7 +260,7 @@ int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *mem
 
 /* the physical ranges behind [va, va + size) of the address space */
 int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange *range,
-				  MemBlockPAVector *vector, int *memoryType)
+				  SceKernelPAVector *vector, int *memoryType)
 {
 	SceKernelPARange *cur, *end;
 	uintptr_t va, pa, base;
@@ -277,14 +277,14 @@ int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange
 		cur = NULL;
 		end = NULL;
 	} else {
-		cur = vector->ranges;
+		cur = vector->pRanges;
 		if (cur == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		end = cur + vector->capacity;
 	}
 	va = range->addr;
 	size = range->size;
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
 	AddressSpaceRefer(as);
 	len = 0;
@@ -315,7 +315,7 @@ int AddressSpaceVARangeToPAVector(AddressSpaceObject *as, const SceKernelPARange
 		cur->addr = base;
 		cur->size = len;
 	}
-	vector->count = vector->total < vector->capacity ? vector->total : vector->capacity;
+	vector->nDataInVector = vector->total < vector->capacity ? vector->total : vector->capacity;
 out:
 	AddressSpaceRelease(as);
 	return ret;
@@ -1403,7 +1403,7 @@ int SceSysmemForKernel_1BAF8C0B(void *pAS, SceUInt32 mode, void *pVA, void **pPA
 
 /* name unknown: the physical ranges behind a range of the address space of a GUID */
 int SceSysmemForKernel_A541E0CF(SceUID guid, const SceKernelPARange *range,
-				MemBlockPAVector *vector)
+				SceKernelPAVector *vector)
 {
 	AddressSpaceObject *as;
 	int ret;

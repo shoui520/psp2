@@ -37,8 +37,8 @@ int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 		result = (int)0x800f020c;
 		goto freeData;
 	}
-	dataVector->ranges = NULL;
-	dataVector->ranges_size = 0;
+	dataVector->pRanges = NULL;
+	dataVector->capacity = 0;
 	if (sceSblSsInfraAllocatePARangeVector(buffer, size, heapId, dataVector)) {
 		result = (int)0x800f0205;
 		goto freeData;
@@ -48,10 +48,10 @@ int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 		result = (int)0x800f020c;
 		goto freeData;
 	}
-	dataCount = dataVector->count;
-	dataRanges = dataVector->ranges;
-	vectorVector->ranges = NULL;
-	vectorVector->ranges_size = 0;
+	dataCount = dataVector->total;
+	dataRanges = dataVector->pRanges;
+	vectorVector->pRanges = NULL;
+	vectorVector->capacity = 0;
 	if (sceSblSsInfraAllocatePARangeVector(dataRanges,
 			8 * dataCount, heapId, vectorVector)) {
 		result = (int)0x800f0205;
@@ -66,20 +66,20 @@ int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 	packet->vectorVector = *vectorVector;
 	packet->dataVector = *dataVector;
 	packet->headerDigest = *headerDigest;
-	if (vectorVector->count >= 482) {
+	if (vectorVector->total >= 482) {
 		result = (int)0x800f020c;
 		sceKernelFreeHeapMemory(heapId, packet);
 		goto freeVector;
 	}
 	packet->descriptorFormat = 1;
 #if FW_VERSION >= 0x04000000
-	__builtin___memcpy_chk(packet->descriptors, vectorVector->ranges,
-			8 * vectorVector->count, sizeof(packet->descriptors));
+	__builtin___memcpy_chk(packet->descriptors, vectorVector->pRanges,
+			8 * vectorVector->total, sizeof(packet->descriptors));
 #else
-	memcpy(packet->descriptors, vectorVector->ranges, 8 * vectorVector->count);
+	memcpy(packet->descriptors, vectorVector->pRanges, 8 * vectorVector->total);
 #endif
-	SceCpuForDriver_103872A5(dataVector->ranges,
-			(8 * dataVector->count + 63) & ~63);
+	SceCpuForDriver_103872A5(dataVector->pRanges,
+			(8 * dataVector->total + 63) & ~63);
 	*packetOut = packet;
 	*dataOut = dataVector;
 	*vectorOut = vectorVector;
@@ -87,13 +87,13 @@ int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 
 freeVector:
 	if (vectorVector) {
-		if (vectorVector->ranges)
+		if (vectorVector->pRanges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, vectorVector);
 		sceKernelFreeHeapMemory(heapId, vectorVector);
 	}
 freeData:
 	if (dataVector) {
-		if (dataVector->ranges)
+		if (dataVector->pRanges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, dataVector);
 		sceKernelFreeHeapMemory(heapId, dataVector);
 	}

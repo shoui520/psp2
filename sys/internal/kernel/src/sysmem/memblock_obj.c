@@ -287,7 +287,7 @@ int MemBlockGetPhyRange(MemBlockObject *block, uintptr_t range[2])
 }
 
 /* name unknown: the block's physical ranges into [cur, end), adjacent pieces merged */
-int MemBlockGetPhyRangeList(MemBlockObject *block, MemBlockPAVector *vector,
+int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
 			    SceKernelPARange *cur, SceKernelPARange *end)
 {
 	VirPage *vp;

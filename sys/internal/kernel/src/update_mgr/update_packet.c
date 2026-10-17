@@ -34,8 +34,8 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f020c;
 		goto freeData;
 	}
-	dataVector->ranges = NULL;
-	dataVector->ranges_size = 0;
+	dataVector->pRanges = NULL;
+	dataVector->capacity = 0;
 	if (sceSblSsInfraAllocatePARangeVector(buffer, size, heapId, dataVector)) {
 		result = (int)0x800f0205;
 		goto freeData;
@@ -45,10 +45,10 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f020c;
 		goto freeData;
 	}
-	vectorVector->ranges = NULL;
-	vectorVector->ranges_size = 0;
-	if (sceSblSsInfraAllocatePARangeVector(dataVector->ranges,
-			8 * dataVector->count, heapId, vectorVector)) {
+	vectorVector->pRanges = NULL;
+	vectorVector->capacity = 0;
+	if (sceSblSsInfraAllocatePARangeVector(dataVector->pRanges,
+			8 * dataVector->total, heapId, vectorVector)) {
 		result = (int)0x800f0205;
 		goto freeVector;
 	}
@@ -58,7 +58,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		goto freeVector;
 	}
 	memset(packet, 0, sizeof(*packet));
-	vectorCount = vectorVector->count;
+	vectorCount = vectorVector->total;
 	packet->vectorVector = *vectorVector;
 	packet->dataVector = *dataVector;
 	if (vectorCount >= 482) {
@@ -68,14 +68,14 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 	}
 	packet->descriptorFormat = 1;
 #if FW_VERSION >= 0x04000000
-	__builtin___memcpy_chk(packet->records.descriptors, vectorVector->ranges,
+	__builtin___memcpy_chk(packet->records.descriptors, vectorVector->pRanges,
 			8 * vectorCount, sizeof(packet->records));
 #else
-	memcpy(packet->records.descriptors, vectorVector->ranges,
+	memcpy(packet->records.descriptors, vectorVector->pRanges,
 			8 * vectorCount);
 #endif
-	SceCpuForDriver_103872A5(dataVector->ranges,
-			(8 * dataVector->count + 63) & ~63);
+	SceCpuForDriver_103872A5(dataVector->pRanges,
+			(8 * dataVector->total + 63) & ~63);
 	*packetOut = packet;
 	*dataOut = dataVector;
 	*vectorOut = vectorVector;
@@ -83,13 +83,13 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 
 freeVector:
 	if (vectorVector) {
-		if (vectorVector->ranges)
+		if (vectorVector->pRanges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, vectorVector);
 		sceKernelFreeHeapMemory(heapId, vectorVector);
 	}
 freeData:
 	if (dataVector) {
-		if (dataVector->ranges)
+		if (dataVector->pRanges)
 			SceSblSsMgrForDriver_C38D0CEA(heapId, dataVector);
 		sceKernelFreeHeapMemory(heapId, dataVector);
 	}

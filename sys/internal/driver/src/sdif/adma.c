@@ -106,10 +106,10 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 		range.addr = (uintptr_t)alignedBuffer;
 		range.size = aligned;
 		vector.size = sizeof(vector);
-		vector.ranges_size = 16;
-		vector.data_in_vector = 0;
-		vector.count = 0;
-		vector.ranges = command->physicalRanges;
+		vector.capacity = 16;
+		vector.nDataInVector = 0;
+		vector.total = 0;
+		vector.pRanges = command->physicalRanges;
 		result = sceKernelVARangeToPAVector(&range, &vector);
 		if (result < 0) {
 			SCE_DBG_PRINTF_FUNC(0, 80, "getPaRangeForAlignedData",
@@ -121,7 +121,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 				command->alignedLength);
 			return result;
 		}
-		count = vector.count;
+		count = vector.total;
 	}
 	entries = !!command->leadingLength;
 	if (command->trailingLength)
@@ -147,10 +147,10 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 				range.addr = cursor;
 				range.size = remaining;
 				vector.size = sizeof(vector);
-				vector.ranges_size = 1;
-				vector.data_in_vector = 0;
-				vector.count = 0;
-				vector.ranges = command->physicalRanges;
+				vector.capacity = 1;
+				vector.nDataInVector = 0;
+				vector.total = 0;
+				vector.pRanges = command->physicalRanges;
 				result = sceKernelVARangeToPAVector(&range, &vector);
 				if (result < 0) {
 					SCE_DBG_PRINTF_FUNC(0, 159, "getAdmaDescriptorEntryNum",
@@ -161,7 +161,7 @@ int setAdmaDescriptorsForAlignedData(SdifCommand *command)
 						"getAdmaDescriptorEntryNum", (void *)cursor, remaining);
 					return result;
 				}
-				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 164,
+				SCE_DBG_ASSERT_FUNC(vector.nDataInVector == 1, 164,
 					"getAdmaDescriptorEntryNum");
 				length = command->physicalRanges[0].size;
 				if (length > 65536) {
@@ -243,10 +243,10 @@ countedRange:
 				range.addr = cursor;
 				range.size = remaining;
 				vector.size = sizeof(vector);
-				vector.ranges_size = 1;
-				vector.data_in_vector = 0;
-				vector.count = 0;
-				vector.ranges = command->physicalRanges;
+				vector.capacity = 1;
+				vector.nDataInVector = 0;
+				vector.total = 0;
+				vector.pRanges = command->physicalRanges;
 				result = sceKernelVARangeToPAVector(&range, &vector);
 				if (result < 0) {
 					SCE_DBG_PRINTF_FUNC(0, 250, "setAdmaDescriptorsForAlignedData",
@@ -257,7 +257,7 @@ countedRange:
 						"setAdmaDescriptorsForAlignedData", (void *)cursor, remaining);
 					goto freeArea;
 				}
-				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 255,
+				SCE_DBG_ASSERT_FUNC(vector.nDataInVector == 1, 255,
 					"setAdmaDescriptorsForAlignedData");
 				SCE_DBG_ASSERT_FUNC(remaining >= command->physicalRanges[0].size,
 					256, "setAdmaDescriptorsForAlignedData");

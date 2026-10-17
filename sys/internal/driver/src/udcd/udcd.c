@@ -1050,15 +1050,15 @@ int udcdValidateRequests(SceUdcdDeviceRequest *request, int bus)
 				virtualRange.addr = (uintptr_t)request->data;
 				virtualRange.size = request->size;
 				vector.size = sizeof(vector);
-				vector.ranges_size = 1;
-				/* Native leaves data_in_vector uninitialized on entry. */
-				vector.count = 0;
-				vector.ranges = &physicalRange;
+				vector.capacity = 1;
+				/* the original leaves nDataInVector unset: sysmem writes it */
+				vector.total = 0;
+				vector.pRanges = &physicalRange;
 				if (sceKernelVARangeToPAVector(&virtualRange, &vector) < 0)
 					return 0x80243407;
-				if (vector.count > 1)
+				if (vector.total > 1)
 					return 0x80243404;
-				request->physicalAddress = (void *)(uintptr_t)vector.ranges->addr;
+				request->physicalAddress = (void *)(uintptr_t)vector.pRanges->addr;
 			} else {
 				if (SceSysmemForDriver_8D160E65(request->data, &physicalAddress) < 0)
 					return 0x80243407;

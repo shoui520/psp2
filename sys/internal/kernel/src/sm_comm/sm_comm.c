@@ -199,14 +199,14 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 		goto cleanup;
 	originalBase = base;
 	vector.size = sizeof(vector);
-	vector.ranges_size = SM_BUFFER_SIZE / sizeof(SceKernelPARange);
-	vector.ranges = base;
-	/* Sysmem defines data_in_vector/count on return; incoming words are untouched. */
+	vector.capacity = SM_BUFFER_SIZE / sizeof(SceKernelPARange);
+	vector.pRanges = base;
+	/* nDataInVector and total are unset: sysmem writes them */
 	ret = sceKernelVARangeToPAVector(range, &vector);
 	if (ret < 0)
 		goto cleanup;
-	if (vector.count * 8 > SM_BUFFER_SIZE ||
-	    (uintptr_t)originalBase + vector.count * 8 > (uintptr_t)base + SM_BUFFER_SIZE) {
+	if (vector.total * 8 > SM_BUFFER_SIZE ||
+	    (uintptr_t)originalBase + vector.total * 8 > (uintptr_t)base + SM_BUFFER_SIZE) {
 		ret = SM_ERROR_VECTOR;
 		goto cleanup;
 	}
@@ -216,7 +216,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	ret = SceSysmemForDriver_8D160E65(base, &vector.size);
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceSblSmSchedProxyInvoke(priority, vector.size, vector.count,
+	ret = ksceSblSmSchedProxyInvoke(priority, vector.size, vector.total,
 		(const uint32_t *)(uintptr_t)command, auth, id);
 	if (ret < 0)
 		goto cleanup;

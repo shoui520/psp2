@@ -169,16 +169,16 @@ static NOINLINE int authMgrSetupSrcPARanges(const void *address, uint32_t size)
 	int result;
 
 	vector.size = sizeof(vector);
-	vector.ranges_size = 16;
-	vector.ranges = s_state.sourceRanges;
+	vector.capacity = 16;
+	vector.pRanges = s_state.sourceRanges;
 	result = sceKernelVARangeToPAVector(&range, &vector);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1113, "ERROR: authMgrSetupSrcPARanges failed ! ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
 		SceCpuForDriver_103872A5(s_state.sourceRanges,
-			(vector.count * 8 + 0x1f) & ~0x1fU);
-		result = vector.count;
+			(vector.total * 8 + 0x1f) & ~0x1fU);
+		result = vector.total;
 	}
 	CheckStackGuard(guard);
 	return result;

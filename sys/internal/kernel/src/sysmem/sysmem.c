@@ -78,7 +78,7 @@ int VARangeToPARangeByHW(const SceKernelVARange *range, SceKernelPARange *out)
 }
 
 /* name unknown: the physical ranges a VA range lies in, by the MMU */
-int VARangeToPAVectorByHW(const SceKernelVARange *range, MemBlockPAVector *vector)
+int VARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	SceKernelPARange *cur, *end;
 	uintptr_t va, pa, start;
@@ -90,7 +90,7 @@ int VARangeToPAVectorByHW(const SceKernelVARange *range, MemBlockPAVector *vecto
 		cur = NULL;
 		end = NULL;
 	} else {
-		cur = vector->ranges;
+		cur = vector->pRanges;
 		if (cur == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		end = cur + vector->capacity;
@@ -98,7 +98,7 @@ int VARangeToPAVectorByHW(const SceKernelVARange *range, MemBlockPAVector *vecto
 	size = range->size;
 	length = 0;
 	va = range->addr;
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
 	if (size == 0) {
 		length = 0;
@@ -139,7 +139,7 @@ int VARangeToPAVectorByHW(const SceKernelVARange *range, MemBlockPAVector *vecto
 		cur->addr = start;
 		cur->size = length;
 	}
-	vector->count = count;
+	vector->nDataInVector = count;
 	return 0;
 }
 
@@ -187,7 +187,7 @@ int VARangeToPARangeBySW(const SceKernelVARange *range, SceKernelPARange *out)
 	return 0;
 }
 
-int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *vector)
+int VARangeToPAVectorBySWCore(const SceKernelVARange *range, SceKernelPAVector *vector)
 {
 	SceKernelPARange *cur, *end;
 	uintptr_t va, pa, start;
@@ -199,7 +199,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *v
 		cur = NULL;
 		end = NULL;
 	} else {
-		cur = vector->ranges;
+		cur = vector->pRanges;
 		if (cur == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		end = cur + vector->capacity;
@@ -207,7 +207,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *v
 	size = range->size;
 	length = 0;
 	va = range->addr;
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
 	start = 0;
 	while (size != 0) {
@@ -268,7 +268,7 @@ int VARangeToPAVectorBySWCore(const SceKernelVARange *range, MemBlockPAVector *v
 		cur->addr = start;
 		cur->size = length;
 	}
-	vector->count = count;
+	vector->nDataInVector = count;
 	return 0;
 }
 int SysrootGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void **addr, int create);
@@ -374,7 +374,7 @@ int sceKernelVARangeToPAVectorBySW(const SceKernelVARange *range, SceKernelPAVec
 	}
 	if (vector->size != sizeof(*vector))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	return VARangeToPAVectorBySWCore(range, (MemBlockPAVector *)vector);
+	return VARangeToPAVectorBySWCore(range, vector);
 }
 
 int SceSysmemForDriver_F4AD89D8(SceUID pid, SceUInt32 perm, const void *addr,
@@ -453,7 +453,7 @@ int sceKernelVARangeToPAVectorByHW(const SceKernelVARange *range, SceKernelPAVec
 	}
 	if (vector->size != sizeof(*vector))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	return VARangeToPAVectorByHW(range, (MemBlockPAVector *)vector);
+	return VARangeToPAVectorByHW(range, vector);
 }
 
 int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector *vector)
@@ -469,8 +469,8 @@ int sceKernelVARangeToPAVector(const SceKernelVARange *range, SceKernelPAVector 
 	if (vector->size != sizeof(*vector))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	if (range->size > SYSMEM_VA2PA_BY_HW_MAX)
-		return VARangeToPAVectorBySWCore(range, (MemBlockPAVector *)vector);
-	return VARangeToPAVectorByHW(range, (MemBlockPAVector *)vector);
+		return VARangeToPAVectorBySWCore(range, vector);
+	return VARangeToPAVectorByHW(range, vector);
 }
 
 /* what memory va's physical address is in */

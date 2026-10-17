@@ -53,7 +53,7 @@ int ScePamgrForDriver_ADDE4C07(SceUID thread, unsigned int counter,
 			     uint32_t *value)
 {
 	if ((counter >= ARM_PMON_COUNTERS && counter != ARM_PMON_CYCLE_COUNTER) ||
-	    thread == -1 || thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID)
+	    thread == -1 || thread == SCE_UID_THREAD_ID_PROCESS_ALL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	return SceThreadmgrForKernel_170F69D6(thread, counter, value);
 }
@@ -139,7 +139,7 @@ int sceKernelPerfArmPmonReset(SceUID thread)
 {
 	int result;
 
-	if (thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID || thread == -1) {
+	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
 		result = armPmonExecAllThread(ARM_PMON_OP_RESET, 0, 0);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 264,
@@ -163,7 +163,7 @@ int sceKernelPerfArmPmonSelectEvent(SceUID thread, unsigned int counter,
 	if (SceSysrootForKernel_403B509E() <= 0x1f &&
 	    (uint8_t)(event + 0x60) <= 5)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID || thread == -1) {
+	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
 		result = armPmonExecAllThread(ARM_PMON_OP_SET_EVENT, counter, event);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 310,
@@ -181,7 +181,7 @@ int sceKernelPerfArmPmonStart(SceUID thread)
 {
 	int result;
 
-	if (thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID || thread == -1) {
+	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
 		result = armPmonExecAllThread(ARM_PMON_OP_START, 0, 0);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 340,
@@ -200,7 +200,7 @@ int sceKernelPerfArmPmonStop(SceUID thread)
 {
 	int result;
 
-	if (thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID || thread == -1) {
+	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
 		result = armPmonExecAllThread(ARM_PMON_OP_STOP, 0, 0);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 368,
@@ -222,7 +222,7 @@ int sceKernelPerfArmPmonSetCounterValue(SceUID thread, unsigned int counter,
 
 	if (counter >= ARM_PMON_COUNTERS && counter != ARM_PMON_CYCLE_COUNTER)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	if (thread == SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID || thread == -1) {
+	if (thread == SCE_UID_THREAD_ID_PROCESS_ALL || thread == -1) {
 		result = armPmonExecAllThread(ARM_PMON_OP_SET_COUNTER, counter, value);
 		if (result != 0)
 			SCE_DBG_PRINTF(0, 416,
@@ -303,7 +303,7 @@ int sceKernelPerfArmPmonClose(void)
 /* Inlined user-thread translation; special selectors pass through. */
 static inline __attribute__((always_inline)) int translatePmonThread(SceUID *thread)
 {
-	if (*thread != 0 && *thread != SCE_KERNEL_THREAD_ID_PROCESS_ALL_ID && *thread != -1) {
+	if (*thread != 0 && *thread != SCE_UID_THREAD_ID_PROCESS_ALL && *thread != -1) {
 		*thread = SceSysmemForDriver_45D22597(0, *thread);
 		if (*thread < 0)
 			return *thread | 0x40000000;

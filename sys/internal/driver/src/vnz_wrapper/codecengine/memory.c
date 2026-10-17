@@ -105,10 +105,10 @@ int isVeneziaPhysicalRangeContiguous(const void *base, SceSize size)
 	range.addr = (uintptr_t)base;
 	range.size = size;
 	vector.size = sizeof(vector);
-	vector.ranges_size = 0;
-	vector.ranges = NULL;
+	vector.capacity = 0;
+	vector.pRanges = NULL;
 	ret = sceKernelVARangeToPAVector(&range, &vector);
-	return ret >= 0 && vector.count == 1 && ret == 0;
+	return ret >= 0 && vector.total == 1 && ret == 0;
 }
 
 extern int callVeneziaRpcCommand500(unsigned int argument0, unsigned int argument1);
@@ -170,13 +170,13 @@ int sceCodecEngineOpenUnmapMemBlockForUser(void *base, SceSize size)
 	}
 	range.addr = (uintptr_t)base;
 	range.size = size;
-	query.vector.ranges_size = 0;
-	query.vector.ranges = NULL;
+	query.vector.capacity = 0;
+	query.vector.pRanges = NULL;
 	query.vector.size = sizeof(query.vector);
 	ret = sceKernelVARangeToPAVector(&range, &query.vector);
 	if (ret < 0)
 		goto close;
-	if (query.vector.count != 1) {
+	if (query.vector.total != 1) {
 		ret = (int)0x80600003;
 		goto close;
 	}

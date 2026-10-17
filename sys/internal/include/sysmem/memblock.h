@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include <stdint.h>
 #include <scetypes.h>
 
 /*
@@ -131,6 +132,30 @@ typedef enum SceKernelMemoryRefPerm {
 	SCE_KERNEL_MEMORY_REF_PERM_KERN_W	= 0x20,
 	SCE_KERNEL_MEMORY_REF_PERM_KERN_X	= 0x40,
 } SceKernelMemoryRefPerm;
+
+/* a range of virtual addresses (sceKernelVARangeToPAVector's input) */
+typedef struct SceKernelVARange {
+	uint32_t addr;
+	SceSize size;
+} SceKernelVARange;
+
+/* a physically contiguous range */
+typedef struct SceKernelPARange {
+	uint32_t addr;
+	SceSize size;
+} SceKernelPARange;
+
+/*
+ * The physical ranges a virtual range or a memory block lies in. nDataInVector and pRanges are
+ * Sony's names (0.990 applier's and sysmem's messages).
+ */
+typedef struct SceKernelPAVector {
+	SceSize size;				/* sizeof(SceKernelPAVector) */
+	SceUInt32 capacity;			/* 0x04: elements of pRanges */
+	SceUInt32 nDataInVector;		/* 0x08: ranges written to pRanges */
+	SceUInt32 total;			/* 0x0c: ranges the memory lies in */
+	SceKernelPARange *pRanges;		/* 0x10 */
+} SceKernelPAVector;
 
 #ifdef __cplusplus
 }

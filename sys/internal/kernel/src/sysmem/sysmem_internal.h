@@ -101,15 +101,6 @@ typedef struct MemBlockBaseInfo {
 	struct MemBlockObject *block;		/* 0x0c */
 } MemBlockBaseInfo;
 
-/* a physical address vector (opt.paddr_list, the VA range queries) */
-typedef struct MemBlockPAVector {
-	SceSize size;
-	SceUInt32 capacity;			/* 0x04: of ranges */
-	SceUInt32 count;			/* 0x08: ranges filled in */
-	SceUInt32 total;			/* 0x0c: ranges there are */
-	SceKernelPARange *ranges;		/* 0x10 */
-} MemBlockPAVector;
-
 /* where an allocation landed (the start of SceKernelMemBlockInfo) */
 typedef struct MemBlockAllocResult {
 	SceSize size;			/* sizeof(MemBlockAllocResult) */

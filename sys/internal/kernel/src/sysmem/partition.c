@@ -1475,8 +1475,8 @@ static inline int MemBlockAllocVirPageFromPAVector(MemBlockObject *block,
 						   SceKernelAllocMemBlockCommand *command,
 						   Partition *partition)
 {
-	const MemBlockPAVector *list = (const MemBlockPAVector *)command->opt.paddr_list;
-	const SceKernelPARange *range = list->ranges;
+	const SceKernelPAVector *list = command->opt.paddr_list;
+	const SceKernelPARange *range = list->pRanges;
 	uintptr_t va = block->vbase;
 	VirPage *vp = NULL, *last = NULL;
 	SceUInt32 i;
@@ -1486,7 +1486,7 @@ static inline int MemBlockAllocVirPageFromPAVector(MemBlockObject *block,
 
 	if ((block->flags & MEMBLOCK_KIND_MASK) == MEMBLOCK_KIND_VPL)
 		last = MemBlockGetLastVirPage(block);
-	for (i = 0; i < list->count; i++, range++) {
+	for (i = 0; i < list->nDataInVector; i++, range++) {
 		size = range->size;
 		pbase = range->addr;
 		ret = PartitionAllocVirPageRaw(partition, &vp);
@@ -2589,17 +2589,17 @@ int PartitionGetMemBlockPARange(Partition *partition, MemBlockObject *block,
 }
 
 /* name unknown: the physical ranges a list block maps, as many as fit */
-int PartitionGetMemBlockPAVector(Partition *partition, MemBlockObject *block,
-				 MemBlockPAVector *vector)
+int PartitionGetSceKernelPAVector(Partition *partition, MemBlockObject *block,
+				 SceKernelPAVector *vector)
 {
 	SceKernelPARange *range;
 	VirPage *vp;
 	uintptr_t pbase;
 	SceSize size;
 
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
-	range = vector->ranges;
+	range = vector->pRanges;
 	for (vp = MemBlockGetVirPageRaw(block); vp != NULL; vp = vp->next) {
 		if (VirPageGetMapRange(vp, &pbase, &size) < 0)
 			break;
@@ -2609,7 +2609,7 @@ int PartitionGetMemBlockPAVector(Partition *partition, MemBlockObject *block,
 			range->addr = pbase;
 			range->size = size;
 			range++;
-			vector->count++;
+			vector->nDataInVector++;
 		}
 		vector->total++;
 	}

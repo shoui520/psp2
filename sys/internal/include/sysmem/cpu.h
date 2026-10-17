@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <sysmem/spinlock.h>
 #include <psp2kern/kernel/cpu.h>
 #include <sysmem/cpu_id.h>
 

@@ -458,7 +458,7 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 int AddressSpaceFindMemBlockCtlByAddr(struct AddressSpaceObject *as, uintptr_t va, SceSize size,
 				      MemBlockObject **block);
 int AddressSpaceVARangeToPAVector(struct AddressSpaceObject *as, const SceKernelPARange *range,
-				  MemBlockPAVector *vector, int *memoryType);
+				  SceKernelPAVector *vector, int *memoryType);
 void MemBlockIncLockRef(MemBlockObject *block);
 int MemBlockDecLockRef(MemBlockObject *block);
 int MMUVAtoPAWithMemoryType(uint32_t mode, uintptr_t va, uintptr_t *pa, int *memoryType);
@@ -630,7 +630,7 @@ int LockRangeForPID(SceUID pid, uintptr_t va, SceSize size)
  * (pid 0: through mode) or the address space of pid.
  */
 int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *range,
-			    MemBlockPAVector *vector, int *memoryType)
+			    SceKernelPAVector *vector, int *memoryType)
 {
 	SceKernelPARange *cur, *end;
 	uintptr_t va, pa, base;
@@ -645,13 +645,13 @@ int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *r
 			return ret;
 		return AddressSpaceVARangeToPAVector(as, range, vector, memoryType);
 	}
-	cur = vector->ranges;
+	cur = vector->pRanges;
 	if (cur == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	end = cur + vector->capacity;
 	size = range->size;
 	va = range->addr;
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
 	if (size == 0) {
 		len = 0;
@@ -693,7 +693,7 @@ int VARangeToPAVectorForPID(SceUID pid, uint32_t mode, const SceKernelPARange *r
 		cur->addr = base;
 		cur->size = len;
 	}
-	vector->count = count;
+	vector->nDataInVector = count;
 	return 0;
 }
 
@@ -1556,8 +1556,8 @@ int SceSysmemForDriver_F50BDC0C(SceUID guid)
 
 int PartitionGetMemBlockPARange(struct Partition *partition, MemBlockObject *block,
 				SceKernelPARange *range);
-int PartitionGetMemBlockPAVector(struct Partition *partition, MemBlockObject *block,
-				 MemBlockPAVector *vector);
+int PartitionGetSceKernelPAVector(struct Partition *partition, MemBlockObject *block,
+				 SceKernelPAVector *vector);
 
 int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range)
 {
@@ -1577,7 +1577,7 @@ int SceSysmemForDriver_98C15666(SceUID guid, SceKernelPARange *range)
 	return ret;
 }
 
-int SceSysmemForDriver_19A51AC7(SceUID guid, MemBlockPAVector *vector)
+int SceSysmemForDriver_19A51AC7(SceUID guid, SceKernelPAVector *vector)
 {
 	MemBlockObject *block;
 	int intr, ret;
@@ -1586,14 +1586,14 @@ int SceSysmemForDriver_19A51AC7(SceUID guid, MemBlockPAVector *vector)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (vector->size != sizeof(*vector))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	if (vector->capacity != 0 && vector->ranges == NULL)
+	if (vector->capacity != 0 && vector->pRanges == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_EC53D007(&block->lock);
-	ret = PartitionGetMemBlockPAVector(block->partition, block, vector);
+	ret = PartitionGetSceKernelPAVector(block->partition, block, vector);
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(&block->lock, intr);
 	sceGUIDReleaseObject(guid);
 	return ret;
@@ -1714,7 +1714,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 {
 	SceKernelAllocMemBlockKernelOpt opt;
 	SceKernelPARange range, ranges[USER_MAP_VECTOR], *first, *last;
-	MemBlockPAVector vector;
+	SceKernelPAVector vector;
 	MemBlockObject *block;
 	UserMapInfo *info;
 	SceUInt32 type, mode, head, extra, total, startPage, endPage;
@@ -1756,22 +1756,22 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	range.size = len;
 	vector.size = sizeof(vector);
 	vector.capacity = USER_MAP_VECTOR;
-	vector.count = 0;
+	vector.nDataInVector = 0;
 	vector.total = 0;
-	vector.ranges = ranges;
+	vector.pRanges = ranges;
 	ret = VARangeToPAVectorForPID(pid, mode, &range, &vector, &memoryType);
 	if (ret < 0)
 		goto unlock;
 	allocated = 0;
 	if (vector.total > USER_MAP_VECTOR) {
-		vector.ranges = SceSysmemForKernel_85571907(vector.total * sizeof(SceKernelPARange));
-		if (vector.ranges == NULL) {
+		vector.pRanges = SceSysmemForKernel_85571907(vector.total * sizeof(SceKernelPARange));
+		if (vector.pRanges == NULL) {
 			ret = SCE_KERNEL_ERROR_HEAPLIB_NOMEM;
 			goto unlock;
 		}
 		vector.size = sizeof(vector);
 		vector.capacity = vector.total;
-		vector.count = 0;
+		vector.nDataInVector = 0;
 		vector.total = 0;
 		ret = VARangeToPAVectorForPID(pid, mode, &range, &vector, &memoryType);
 		if (ret < 0) {
@@ -1784,7 +1784,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	type = UserMapType(type, flags, memoryType);
 	/* the ends grown to whole 64 KiB / 1 MiB pages where the run is that large */
 	head = va & 0xfff;
-	first = &vector.ranges[0];
+	first = &vector.pRanges[0];
 	if (first->size > 0x80000) {
 		extra = first->addr & 0xfffff;
 		first->size += extra;
@@ -1815,7 +1815,7 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 	info = NULL;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
-	opt.paddr_list = (void *)&vector;
+	opt.paddr_list = &vector;
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST | ALLOC_ATTR_NO_CLEAR;
 	guid = sceKernelAllocMemBlockWithInfoForKernel(name, type, len, &opt, NULL);
 	ret = guid;
@@ -1852,8 +1852,8 @@ SceUID UserMap(SceUID pid, const char *name, SceUInt32 perm, SceUInt32 flags, ui
 done:
 	if (allocated) {
 free_vector:
-		if (vector.ranges != NULL)
-			SceSysmemForKernel_4233C16D(vector.ranges);
+		if (vector.pRanges != NULL)
+			SceSysmemForKernel_4233C16D(vector.pRanges);
 	}
 	if (ret >= 0)
 		return ret;
@@ -1992,11 +1992,11 @@ int SceSysmemForDriver_64DBE472(SceUID guid, uintptr_t range[2])
 	return ret;
 }
 
-int MemBlockGetPhyRangeList(MemBlockObject *block, MemBlockPAVector *vector,
+int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
 			    SceKernelPARange *cur, SceKernelPARange *end);
 
 /* the physical ranges of a block, adjacent pieces merged */
-int sceKernelMemBlockToPAVector(SceUID guid, MemBlockPAVector *vector)
+int sceKernelMemBlockToPAVector(SceUID guid, SceKernelPAVector *vector)
 {
 	SceKernelPARange *cur, *end;
 	MemBlockObject *block;
@@ -2014,19 +2014,19 @@ int sceKernelMemBlockToPAVector(SceUID guid, MemBlockPAVector *vector)
 		cur = NULL;
 		end = NULL;
 	} else {
-		cur = vector->ranges;
+		cur = vector->pRanges;
 		if (cur == NULL)
 			return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		end = cur + vector->capacity;
 	}
-	vector->count = 0;
+	vector->nDataInVector = 0;
 	vector->total = 0;
 	ret = SceSysmemForDriver_00ED6C14(guid, SceSysmemForKernel_86681B64(),
 					   (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	MemBlockGetPhyRangeList(block, vector, cur, end);
-	vector->count = vector->capacity < vector->total ? vector->capacity : vector->total;
+	vector->nDataInVector = vector->capacity < vector->total ? vector->capacity : vector->total;
 	sceGUIDReleaseObject(guid);
 	return 0;
 }

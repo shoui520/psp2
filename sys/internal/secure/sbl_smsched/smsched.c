@@ -940,8 +940,8 @@ void reschedule(void)
 	range.addr = (uint32_t)context;
 	range.size = SMSCHED_CONTEXT_SIZE;
 	paVector.size = sizeof(paVector);
-	paVector.ranges_size = SMSCHED_CONTEXT_RANGES;
-	paVector.ranges = vector;
+	paVector.capacity = SMSCHED_CONTEXT_RANGES;
+	paVector.pRanges = vector;
 	if (sceKernelVARangeToPAVectorForTZS(&range, &paVector) < 0)
 		goto free;
 	SmschedFlushWord(&vector[0].addr);
@@ -952,7 +952,7 @@ void reschedule(void)
 	running->context = context;
 	running->vector = vector;
 	running->vectorPA = vectorPA;
-	running->vectorCount = paVector.count;
+	running->vectorCount = paVector.total;
 	ret = smsSecureKernelProxySuspendSecureModule(s_running->vectorPA, s_running->vectorCount,
 						      s_running->areaPA, s_running->mailboxPA);
 	if (ret < 0)

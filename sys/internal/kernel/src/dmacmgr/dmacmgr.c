@@ -271,12 +271,12 @@ static int CreateDmaTagChain(int dmacId, SceKernelPAVector *src, SceKernelPAVect
 	SceSize size, offset;
 	DmaTag *tag, *prev;
 
-	if (src->ranges_size == 0 || dst->ranges_size == 0)
+	if (src->capacity == 0 || dst->capacity == 0)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	srcRange = src->ranges;
-	dstRange = dst->ranges;
-	srcEnd = srcRange + src->ranges_size;
-	dstEnd = dstRange + dst->ranges_size;
+	srcRange = src->pRanges;
+	dstRange = dst->pRanges;
+	srcEnd = srcRange + src->capacity;
+	dstEnd = dstRange + dst->capacity;
 	srcBlockMask = param->blockSize & 0xffff;
 	if (srcBlockMask != 0)
 		srcBlockMask--;
@@ -649,19 +649,19 @@ int AllocPARanges(SceUInt32 addr, SceSize size, SceKernelPAVector *vector)
 		SCE_DBG_PRINTF(0xf, 917, "VA to PA failed. 0x%08x\n", res);
 		return res;
 	}
-	if (vector->count == 1)
+	if (vector->total == 1)
 		return 0;
-	ranges = SceSysmemForDriver_7B4CB60A(s_dmacMgr.rangeHeapId, vector->count * sizeof(*ranges));
+	ranges = SceSysmemForDriver_7B4CB60A(s_dmacMgr.rangeHeapId, vector->total * sizeof(*ranges));
 	if (ranges == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	vector->ranges = ranges;
-	vector->ranges_size = vector->count;
+	vector->pRanges = ranges;
+	vector->capacity = vector->total;
 	res = sceKernelVARangeToPAVector(&range, vector);
 	if (res < 0) {
 		SCE_DBG_PRINTF(0xf, 938, "VA to PA failed. 0x%08x\n", res);
 		return res;
 	}
-	SCE_DBG_ASSERT(vector->data_in_vector == vector->count, 942);
+	SCE_DBG_ASSERT(vector->nDataInVector == vector->total, 942);
 	return 0;
 }
 
@@ -709,19 +709,19 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		cmd = tail->tag.cmd;
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_SRC_ADDR:
-		dst.ranges_size = 1;
-		dst.ranges = &physRange;
+		dst.capacity = 1;
+		dst.pRanges = &physRange;
 		do {
-			src.ranges_size = 1;
-			src.ranges = &range;
+			src.capacity = 1;
+			src.pRanges = &range;
 			physRange.addr = (SceUInt32)param->dst;
 			physRange.size = param->len & DMAC_LEN_MASK;
 			res = AllocPARanges((SceUInt32)param->src, param->len, &src);
 			if (res < 0)
 				return res;
 			res = CreateDmaTagChain(op->dmacId, &src, &dst, param, &first, &last);
-			if (src.ranges_size > 1)
-				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.ranges);
+			if (src.capacity > 1)
+				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.pRanges);
 			if (res < 0)
 				return res;
 			if (head != NULL) {
@@ -737,19 +737,19 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		cmd = tail->tag.cmd;
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_DST_ADDR:
-		src.ranges_size = 1;
-		src.ranges = &physRange;
+		src.capacity = 1;
+		src.pRanges = &physRange;
 		do {
-			dst.ranges_size = 1;
-			dst.ranges = &range;
+			dst.capacity = 1;
+			dst.pRanges = &range;
 			physRange.addr = (SceUInt32)param->src;
 			physRange.size = param->len & DMAC_LEN_MASK;
 			res = AllocPARanges((SceUInt32)param->dst, param->len, &dst);
 			if (res < 0)
 				return res;
 			res = CreateDmaTagChain(op->dmacId, &src, &dst, param, &first, &last);
-			if (dst.ranges_size > 1)
-				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, dst.ranges);
+			if (dst.capacity > 1)
+				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, dst.pRanges);
 			if (res < 0)
 				return res;
 			if (head != NULL) {
@@ -766,23 +766,23 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 		break;
 	case SCE_KERNEL_DMA_OP_VIRTUAL_ADDR:
 		do {
-			src.ranges_size = 1;
-			src.ranges = &range;
+			src.capacity = 1;
+			src.pRanges = &range;
 			res = AllocPARanges((SceUInt32)param->src, param->len, &src);
 			if (res < 0)
 				return res;
-			dst.ranges_size = 1;
-			dst.ranges = &physRange;
+			dst.capacity = 1;
+			dst.pRanges = &physRange;
 			res = AllocPARanges((SceUInt32)param->dst, param->len, &dst);
 			if (res < 0) {
-				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.ranges);
+				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.pRanges);
 				return res;
 			}
 			res = CreateDmaTagChain(op->dmacId, &src, &dst, param, &first, &last);
-			if (src.ranges_size > 1)
-				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.ranges);
-			if (dst.ranges_size > 1)
-				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, dst.ranges);
+			if (src.capacity > 1)
+				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, src.pRanges);
+			if (dst.capacity > 1)
+				sceKernelFreeHeapMemory(s_dmacMgr.rangeHeapId, dst.pRanges);
 			if (res < 0)
 				return res;
 			if (head != NULL) {

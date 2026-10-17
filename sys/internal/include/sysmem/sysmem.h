@@ -39,7 +39,7 @@ typedef struct SceKernelAllocMemBlockKernelOpt {
 	SceUInt32 extraHigh;			/* 0x1c: HAS_EXTRA_HIGH */
 	SceUInt32 mirror_blockid;		/* 0x20: HAS_MIRROR_BLOCKID, the base block */
 	SceUID pid;				/* 0x24: HAS_PID */
-	SceKernelPaddrList *paddr_list;		/* 0x28: HAS_PADDR_LIST */
+	SceKernelPAVector *paddr_list;		/* 0x28: HAS_PADDR_LIST */
 	SceSize unitSize;			/* 0x2c: HAS_UNIT_SIZE */
 	SceUInt8 domain;			/* 0x30: HAS_DOMAIN, the MMU domain */
 	SceUInt8 padding[3];

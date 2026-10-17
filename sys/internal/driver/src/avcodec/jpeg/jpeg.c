@@ -139,11 +139,11 @@ int jpegLockDecodeBuffer(unsigned int *physicalAddress, const void *buffer,
 	range.addr = alignedAddress;
 	range.size = alignedSize;
 	vector.size = sizeof(vector);
-	vector.ranges_size = 1;
-	vector.data_in_vector = 0;
-	vector.count = 0;
-	vector.ranges = &physicalRange;
-	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
+	vector.capacity = 1;
+	vector.nDataInVector = 0;
+	vector.total = 0;
+	vector.pRanges = &physicalRange;
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.total > 1)
 		goto invalid;
 	address = physicalRange.addr;
 	if (address == 0)
@@ -195,12 +195,12 @@ int jpegLockEncodeBuffer(unsigned int *physicalAddress, const void *buffer,
 	range.size = alignedSize;
 	vector = (SceKernelPAVector){
 		.size = sizeof(vector),
-		.ranges_size = 1,
-		.data_in_vector = 0,
-		.count = 0,
-		.ranges = &physicalRange,
+		.capacity = 1,
+		.nDataInVector = 0,
+		.total = 0,
+		.pRanges = &physicalRange,
 	};
-	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1)
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.total > 1)
 		goto invalid;
 	address = physicalRange.addr;
 	if (address == 0)
@@ -570,11 +570,11 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	range.addr = jpegBase;
 	range.size = jpegSize;
 	vector.size = sizeof(vector);
-	vector.ranges_size = 1;
-	vector.data_in_vector = 0;
-	vector.count = 0;
-	vector.ranges = &physicalRange;
-	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.count > 1 ||
+	vector.capacity = 1;
+	vector.nDataInVector = 0;
+	vector.total = 0;
+	vector.pRanges = &physicalRange;
+	if (sceKernelVARangeToPAVector(&range, &vector) < 0 || vector.total > 1 ||
 	    physicalRange.addr == 0)
 		goto invalidPhysical;
 	if (physicalRange.addr < 0x20000000 || jpegSize + physicalRange.addr > 0x28000000) {

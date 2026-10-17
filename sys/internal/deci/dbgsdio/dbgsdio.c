@@ -685,24 +685,24 @@ int sceDbgSdioWrite(SceUInt32 index, const void *buffer, SceSize size)
 
 	/* DMA goes one physically contiguous range at a time */
 	vector.size = sizeof(vector);
-	vector.ranges_size = DBGSDIO_RANGES;
-	vector.data_in_vector = 0;
-	vector.count = 0;
-	vector.ranges = ranges;
+	vector.capacity = DBGSDIO_RANGES;
+	vector.nDataInVector = 0;
+	vector.total = 0;
+	vector.pRanges = ranges;
 	ret = sceKernelVARangeToPAVector(&range, &vector);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 1867, "%s.%d VARangeToPARange error:0x%x(%d)\n", __func__, 1867, ret, ret);
 		SCE_DBG_PRINTF(0, 1869, "%s. VARangeToPARange base:%p size:0x%x\n", __func__, buffer, size);
 		goto done;
 	}
-	SCE_DBG_ASSERT(vector.count <= vector.data_in_vector, 1874);
-	if (vector.data_in_vector < vector.count) {
+	SCE_DBG_ASSERT(vector.total <= vector.nDataInVector, 1874);
+	if (vector.nDataInVector < vector.total) {
 		SCE_PRINTF_WITH_INFO(0, 1878, "0x%x %d %d %d\n", DBGSDIO_ERROR_ARGUMENT, 1878,
-				     vector.data_in_vector, vector.count);
+				     vector.nDataInVector, vector.total);
 		ret = DBGSDIO_ERROR_ARGUMENT;
 		goto done;
 	}
-	for (i = 0; i < vector.data_in_vector; i++) {
+	for (i = 0; i < vector.nDataInVector; i++) {
 		ret = sendData(&s_sdio.channel[index], buffer, ranges[i].size);
 		if (ret < 0)
 			goto done;

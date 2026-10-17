@@ -306,13 +306,13 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 		virtualRange.size = alignedLength;
 		vector = (SceKernelPAVector) {
 			.size = sizeof(vector),
-			.ranges_size = 32,
-			.ranges = ranges,
+			.capacity = 32,
+			.pRanges = ranges,
 		};
 		result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 		if (result < 0)
 			return result;
-		rangeCount = vector.count;
+		rangeCount = vector.total;
 		if (rangeCount > 32)
 			ranges = NULL;
 	}
@@ -342,15 +342,15 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 				virtualRange.size = remaining;
 				vector = (SceKernelPAVector) {
 					.size = sizeof(vector),
-					.ranges_size = 1,
-					.ranges = &physicalRange,
+					.capacity = 1,
+					.pRanges = &physicalRange,
 				};
 				result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 				if (result < 0)
 					return result;
-				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 1149,
+				SCE_DBG_ASSERT_FUNC(vector.nDataInVector == 1, 1149,
 					"sceMsifGetDmaTableEntryNum");
-				if (vector.data_in_vector != 1) {
+				if (vector.nDataInVector != 1) {
 					SceDebugForDriver_02B04343(0, SCE_DBGINFO_FUNC(1152,
 						"sceMsifGetDmaTableEntryNum"),
 						"0x%x %d 0x%x 0x%x\n", 0x803d0008,
@@ -444,15 +444,15 @@ int sceMsifPrepareDmaTable(uint8_t *data, uint32_t length, int write)
 				virtualRange.size = remaining;
 				vector = (SceKernelPAVector) {
 					.size = sizeof(vector),
-					.ranges_size = 1,
-					.ranges = &physicalRange,
+					.capacity = 1,
+					.pRanges = &physicalRange,
 				};
 				result = sceKernelVARangeToPAVector(&virtualRange, &vector);
 				if (result < 0)
 					goto aligned_error;
-				SCE_DBG_ASSERT_FUNC(vector.data_in_vector == 1, 1302,
+				SCE_DBG_ASSERT_FUNC(vector.nDataInVector == 1, 1302,
 					"sceMsifWriteLinkListForAlignedData");
-				if (vector.data_in_vector != 1) {
+				if (vector.nDataInVector != 1) {
 					result = 0x803d0008;
 					SceDebugForDriver_02B04343(0, SCE_DBGINFO_FUNC(1305,
 						"sceMsifWriteLinkListForAlignedData"),

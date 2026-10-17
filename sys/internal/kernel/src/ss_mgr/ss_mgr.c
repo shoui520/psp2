@@ -134,26 +134,26 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 	int ret;
 
 	vector->size = sizeof(*vector);
-	vector->ranges_size = 0;
-	vector->ranges = NULL;
+	vector->capacity = 0;
+	vector->pRanges = NULL;
 
 	ret = sceKernelVARangeToPAVector(&range, vector);
 	if (ret < 0)
 		return ret;
 
 	ranges = SceSysmemForDriver_49D4DD9B(heap,
-			(vector->count * sizeof(*ranges) + 0x1f) & ~0x1f, &opt);
+			(vector->total * sizeof(*ranges) + 0x1f) & ~0x1f, &opt);
 	if (!ranges)
 		return SS_ERROR_NO_MEMORY;
 
-	vector->ranges = ranges;
-	vector->ranges_size = vector->count;
+	vector->pRanges = ranges;
+	vector->capacity = vector->total;
 
 	ret = sceKernelVARangeToPAVector(&range, vector);
 	if (ret < 0)
 		return ret;
 
-	if (vector->data_in_vector != vector->count) {
+	if (vector->nDataInVector != vector->total) {
 		SCE_DBG_ASSERT(0, 145);
 		return SS_ERROR_INVALID_ARGUMENT;
 	}
@@ -164,7 +164,7 @@ int sceSblSsInfraAllocatePARangeVector(void *addr, SceSize size, SceUID heap,
 SS_MGR_CORE(SceSblSsMgrForDriver_C38D0CEA)
 int SceSblSsMgrForDriver_C38D0CEA(SceUID heap, SceKernelPAVector *vector)
 {
-	if (sceKernelFreeHeapMemory(heap, vector->ranges) != 0)
+	if (sceKernelFreeHeapMemory(heap, vector->pRanges) != 0)
 		return SS_ERROR_INVALID_ARGUMENT;
 	return 0;
 }
