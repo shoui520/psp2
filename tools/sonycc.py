@@ -1,8 +1,9 @@
 """Compile one source with the compiler Sony used for its module.
 
-Sony built the firmware with two compilers: GCC 4.8, best reproduced by Linaro GCC
-4.8-2014.04 with the project's corrections (toolchains/build-strd-variant.sh; kernel,
-LibKernel, some libraries), and SNC 3.57 from the SDK (most user libraries and apps).
+Sony built the firmware with two compilers: GCC 4.8.3 20140320 (SCEI rev. 5.3.3), Sony's
+build of CodeSourcery's GCC, reproduced by that CodeSourcery release with the project's
+corrections (toolchains/build-csl.sh; kernel, LibKernel, some libraries), and SNC 3.57 from
+the SDK (most user libraries and apps).
 compile_one() runs either with Sony's flags; build_sony.py builds whole modules with it.
 
 How each compiler runs on this host (natively, in Lima, in WSL2, through Wine) and where
@@ -21,7 +22,7 @@ HERE = ROOT / 'tools'
 TOOLCHAINS = host.toolchains()
 # the project's GCC 4.8 (a Linux program); GCC48_TOOLCHAIN picks another build there,
 # GCC48_DRIVER=g++ the C++ driver
-GCC48 = TOOLCHAINS / os.environ.get('GCC48_TOOLCHAIN', 'linaro-4.8-2014.04-strong-strd') / \
+GCC48 = TOOLCHAINS / os.environ.get('GCC48_TOOLCHAIN', 'csl-4.8-2014.05-strong-strd') / \
 	'bin' / ('arm-none-eabi-' + os.environ.get('GCC48_DRIVER', 'gcc'))
 COMPAT = ROOT / 'cmake/compat'
 

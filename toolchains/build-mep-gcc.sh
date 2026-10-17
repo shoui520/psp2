@@ -25,7 +25,7 @@ P=${PREFIX:-$TC/mep-gcc-$NAME}
 B=$W/build-$NAME
 rm -rf $B && mkdir -p $B && cd $B
 # old GCC under a modern host compiler
-# (the flags build-cxx.sh uses for the ARM 4.8)
+# (the flags build-csl.sh uses for the ARM 4.8)
 export CC="gcc -std=gnu89 -fcommon -w" CXX="g++ -std=gnu++98 -fpermissive -w" MAKEINFO=true
 $SRC/configure --target=mep-elf --prefix=$P --with-as=$BU/bin/mep-elf-as --with-ld=$BU/bin/mep-elf-ld \
 	--enable-languages=c --disable-nls --disable-werror --disable-libssp --disable-multilib \

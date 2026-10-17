@@ -1,5 +1,5 @@
---- gcc-linaro-4.8-2014.04/gcc/cfgexpand.c	2014-02-06 12:55:27.000000000 +0000
-+++ gcc-linaro-4.8-2014.04-strong/gcc/cfgexpand.c	2026-10-09 02:02:42.178241022 +0100
+--- a/gcc/cfgexpand.c
++++ b/gcc/cfgexpand.c
 @@ -1514,6 +1514,28 @@
    return size;
  }
@@ -85,8 +85,8 @@
      create_stack_guard ();
  
    /* Assign rtl to each variable based on these partitions.  */
---- gcc-linaro-4.8-2014.04/gcc/common.opt	2014-02-08 12:14:11.000000000 +0000
-+++ gcc-linaro-4.8-2014.04-strong/gcc/common.opt	2026-10-09 02:02:42.197231711 +0100
+--- a/gcc/common.opt
++++ b/gcc/common.opt
 @@ -1905,8 +1905,12 @@
  Common Report Var(flag_stack_protect, 1)
  Use propolice as a stack protection method

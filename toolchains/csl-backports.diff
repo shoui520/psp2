@@ -1,0 +1,654 @@
+diff -ruN a/gcc/config/arm/arm-protos.h b/gcc/config/arm/arm-protos.h
+--- a/gcc/config/arm/arm-protos.h	2026-10-17 02:57:07
++++ b/gcc/config/arm/arm-protos.h	2026-10-17 02:57:07
+@@ -117,6 +117,7 @@
+ extern rtx arm_gen_store_multiple (int *, int, rtx, int, rtx, HOST_WIDE_INT *);
+ extern bool offset_ok_for_ldrd_strd (HOST_WIDE_INT);
+ extern bool operands_ok_ldrd_strd (rtx, rtx, rtx, HOST_WIDE_INT, bool, bool);
++extern bool gen_operands_ldrd_strd (rtx *, bool, bool, bool);
+ extern int arm_gen_movmemqi (rtx *);
+ extern enum machine_mode arm_select_cc_mode (RTX_CODE, rtx, rtx);
+ extern enum machine_mode arm_select_dominance_cc_mode (rtx, rtx,
+diff -ruN a/gcc/config/arm/arm.c b/gcc/config/arm/arm.c
+--- a/gcc/config/arm/arm.c	2026-10-17 02:57:07
++++ b/gcc/config/arm/arm.c	2026-10-17 02:57:07
+@@ -12670,6 +12670,274 @@
+   return true;
+ }
+ 
++/* Helper for gen_operands_ldrd_strd.  Returns true iff the memory
++   operand ADDR is an immediate offset from the base register and is
++   not volatile, in which case it sets BASE and OFFSET
++   accordingly.  */
++bool
++mem_ok_for_ldrd_strd (rtx addr, rtx *base, rtx *offset)
++{
++  /* TODO: Handle more general memory operand patterns, such as
++     PRE_DEC and PRE_INC.  */
++
++  /* Convert a subreg of mem into mem itself.  */
++  if (GET_CODE (addr) == SUBREG)
++    addr = alter_subreg (&addr, true);
++
++  gcc_assert (MEM_P (addr));
++
++  /* Don't modify volatile memory accesses.  */
++  if (MEM_VOLATILE_P (addr))
++    return false;
++
++  *offset = const0_rtx;
++
++  addr = XEXP (addr, 0);
++  if (REG_P (addr))
++    {
++      *base = addr;
++      return true;
++    }
++  else if (GET_CODE (addr) == PLUS || GET_CODE (addr) == MINUS)
++    {
++      *base = XEXP (addr, 0);
++      *offset = XEXP (addr, 1);
++      return (REG_P (*base) && CONST_INT_P (*offset));
++    }
++
++  return false;
++}
++
++#define SWAP_RTX(x,y) do { rtx tmp = x; x = y; y = tmp; } while (0)
++
++/* Called from a peephole2 to replace two word-size accesses with a
++   single LDRD/STRD instruction.  Returns true iff we can generate a
++   new instruction sequence.  That is, both accesses use the same base
++   register and the gap between constant offsets is 4.  This function
++   may reorder its operands to match ldrd/strd RTL templates.
++   OPERANDS are the operands found by the peephole matcher;
++   OPERANDS[0,1] are register operands, and OPERANDS[2,3] are the
++   corresponding memory operands.  LOAD indicaates whether the access
++   is load or store.  CONST_STORE indicates a store of constant
++   integer values held in OPERANDS[4,5] and assumes that the pattern
++   is of length 4 insn, for the purpose of checking dead registers.
++   COMMUTE indicates that register operands may be reordered.  */
++bool
++gen_operands_ldrd_strd (rtx *operands, bool load,
++                        bool const_store, bool commute)
++{
++  int nops = 2;
++  HOST_WIDE_INT offsets[2], offset;
++  rtx base = NULL_RTX;
++  rtx cur_base, cur_offset, tmp;
++  int i, gap;
++  HARD_REG_SET regset;
++
++  gcc_assert (!const_store || !load);
++  /* Check that the memory references are immediate offsets from the
++     same base register.  Extract the base register, the destination
++     registers, and the corresponding memory offsets.  */
++  for (i = 0; i < nops; i++)
++    {
++      if (!mem_ok_for_ldrd_strd (operands[nops+i], &cur_base, &cur_offset))
++        return false;
++
++      if (i == 0)
++        base = cur_base;
++      else if (REGNO (base) != REGNO (cur_base))
++        return false;
++
++      offsets[i] = INTVAL (cur_offset);
++      if (GET_CODE (operands[i]) == SUBREG)
++        {
++          tmp = SUBREG_REG (operands[i]);
++          gcc_assert (GET_MODE (operands[i]) == GET_MODE (tmp));
++          operands[i] = tmp;
++        }
++    }
++
++  /* Make sure there is no dependency between the individual loads.  */
++  if (load && REGNO (operands[0]) == REGNO (base))
++    return false; /* RAW */
++
++  if (load && REGNO (operands[0]) == REGNO (operands[1]))
++    return false; /* WAW */
++
++  /* If the same input register is used in both stores
++     when storing different constants, try to find a free register.
++     For example, the code
++        mov r0, 0
++        str r0, [r2]
++        mov r0, 1
++        str r0, [r2, #4]
++     can be transformed into
++        mov r1, 0
++        strd r1, r0, [r2]
++     in Thumb mode assuming that r1 is free.  */
++  if (const_store
++      && REGNO (operands[0]) == REGNO (operands[1])
++      && INTVAL (operands[4]) != INTVAL (operands[5]))
++    {
++    if (TARGET_THUMB2)
++      {
++        CLEAR_HARD_REG_SET (regset);
++        tmp = peep2_find_free_register (0, 4, "r", SImode, &regset);
++        if (tmp == NULL_RTX)
++          return false;
++
++        /* Use the new register in the first load to ensure that
++           if the original input register is not dead after peephole,
++           then it will have the correct constant value.  */
++        operands[0] = tmp;
++      }
++    else if (TARGET_ARM)
++      {
++        return false;
++        int regno = REGNO (operands[0]);
++        if (!peep2_reg_dead_p (4, operands[0]))
++          {
++            /* When the input register is even and is not dead after the
++               pattern, it has to hold the second constant but we cannot
++               form a legal STRD in ARM mode with this register as the second
++               register.  */
++            if (regno % 2 == 0)
++              return false;
++
++            /* Is regno-1 free? */
++            SET_HARD_REG_SET (regset);
++            CLEAR_HARD_REG_BIT(regset, regno - 1);
++            tmp = peep2_find_free_register (0, 4, "r", SImode, &regset);
++            if (tmp == NULL_RTX)
++              return false;
++
++            operands[0] = tmp;
++          }
++        else
++          {
++            /* Find a DImode register.  */
++            CLEAR_HARD_REG_SET (regset);
++            tmp = peep2_find_free_register (0, 4, "r", DImode, &regset);
++            if (tmp != NULL_RTX)
++              {
++                operands[0] = simplify_gen_subreg (SImode, tmp, DImode, 0);
++                operands[1] = simplify_gen_subreg (SImode, tmp, DImode, 4);
++              }
++            else
++              {
++                /* Can we use the input register to form a DI register?  */
++                SET_HARD_REG_SET (regset);
++                CLEAR_HARD_REG_BIT(regset,
++                                   regno % 2 == 0 ? regno + 1 : regno - 1);
++                tmp = peep2_find_free_register (0, 4, "r", SImode, &regset);
++                if (tmp == NULL_RTX)
++                  return false;
++                operands[regno % 2 == 1 ? 0 : 1] = tmp;
++              }
++          }
++
++        gcc_assert (operands[0] != NULL_RTX);
++        gcc_assert (operands[1] != NULL_RTX);
++        gcc_assert (REGNO (operands[0]) % 2 == 0);
++        gcc_assert (REGNO (operands[1]) == REGNO (operands[0]) + 1);
++      }
++    }
++
++  /* Make sure the instructions are ordered with lower memory access first.  */
++  if (offsets[0] > offsets[1])
++    {
++      gap = offsets[0] - offsets[1];
++      offset = offsets[1];
++
++      /* Swap the instructions such that lower memory is accessed first.  */
++      SWAP_RTX (operands[0], operands[1]);
++      SWAP_RTX (operands[2], operands[3]);
++      if (const_store)
++        SWAP_RTX (operands[4], operands[5]);
++    }
++  else
++    {
++      gap = offsets[1] - offsets[0];
++      offset = offsets[0];
++    }
++
++  /* Make sure accesses are to consecutive memory locations.  */
++  if (gap != 4)
++    return false;
++
++  /* Make sure we generate legal instructions.  */
++  if (operands_ok_ldrd_strd (operands[0], operands[1], base, offset,
++                             false, load))
++    return true;
++
++  /* In Thumb state, where registers are almost unconstrained, there
++     is little hope to fix it.  */
++  if (TARGET_THUMB2)
++    return false;
++
++  if (load && commute)
++    {
++      /* Try reordering registers.  */
++      SWAP_RTX (operands[0], operands[1]);
++      if (operands_ok_ldrd_strd (operands[0], operands[1], base, offset,
++                                 false, load))
++        return true;
++    }
++
++  if (const_store)
++    {
++      /* If input registers are dead after this pattern, they can be
++         reordered or replaced by other registers that are free in the
++         current pattern.  */
++      if (!peep2_reg_dead_p (4, operands[0])
++          || !peep2_reg_dead_p (4, operands[1]))
++        return false;
++
++      /* Try to reorder the input registers.  */
++      /* For example, the code
++           mov r0, 0
++           mov r1, 1
++           str r1, [r2]
++           str r0, [r2, #4]
++         can be transformed into
++           mov r1, 0
++           mov r0, 1
++           strd r0, [r2]
++      */
++      if (operands_ok_ldrd_strd (operands[1], operands[0], base, offset,
++                                  false, false))
++        {
++          SWAP_RTX (operands[0], operands[1]);
++          return true;
++        }
++
++      /* Try to find a free DI register.  */
++      CLEAR_HARD_REG_SET (regset);
++      add_to_hard_reg_set (&regset, SImode, REGNO (operands[0]));
++      add_to_hard_reg_set (&regset, SImode, REGNO (operands[1]));
++      while (true)
++        {
++          tmp = peep2_find_free_register (0, 4, "r", DImode, &regset);
++          if (tmp == NULL_RTX)
++            return false;
++
++          /* DREG must be an even-numbered register in DImode.
++             Split it into SI registers.  */
++          operands[0] = simplify_gen_subreg (SImode, tmp, DImode, 0);
++          operands[1] = simplify_gen_subreg (SImode, tmp, DImode, 4);
++          gcc_assert (operands[0] != NULL_RTX);
++          gcc_assert (operands[1] != NULL_RTX);
++          gcc_assert (REGNO (operands[0]) % 2 == 0);
++          gcc_assert (REGNO (operands[0]) + 1 == REGNO (operands[1]));
++
++          return (operands_ok_ldrd_strd (operands[0], operands[1],
++                                         base, offset,
++                                         false, load));
++        }
++    }
++
++  return false;
++}
++
+ 
+ /* Print a symbolic form of X to the debug file, F.  */
+ static void
+@@ -13903,6 +14171,16 @@
+ 				   && IN_RANGE (INTVAL (op1), -7, 7))
+ 			    action = CONV;
+ 			}
++		      /* ADCS <Rd>, <Rn>  */
++		      else if (GET_CODE (XEXP (src, 0)) == PLUS
++			      && rtx_equal_p (XEXP (XEXP (src, 0), 0), dst)
++			      && low_register_operand (XEXP (XEXP (src, 0), 1),
++						       SImode)
++			      && COMPARISON_P (op1)
++			      && cc_register (XEXP (op1, 0), VOIDmode)
++			      && maybe_get_arm_condition_code (op1) == ARM_CS
++			      && XEXP (op1, 1) == const0_rtx)
++		        action = CONV;
+ 		      break;
+ 
+ 		    case MINUS:
+diff -ruN a/gcc/config/arm/arm.h b/gcc/config/arm/arm.h
+--- a/gcc/config/arm/arm.h	2026-10-17 02:57:07
++++ b/gcc/config/arm/arm.h	2026-10-17 02:57:07
+@@ -1643,7 +1643,7 @@
+    frame.  */
+ #define EXIT_IGNORE_STACK 1
+ 
+-#define EPILOGUE_USES(REGNO) ((REGNO) == LR_REGNUM)
++#define EPILOGUE_USES(REGNO) (epilogue_completed && (REGNO) == LR_REGNUM)
+ 
+ /* Determine if the epilogue should be output as RTL.
+    You should override this if you define FUNCTION_EXTRA_EPILOGUE.  */
+diff -ruN a/gcc/config/arm/arm.md b/gcc/config/arm/arm.md
+--- a/gcc/config/arm/arm.md	2026-10-17 02:57:07
++++ b/gcc/config/arm/arm.md	2026-10-17 02:57:07
+@@ -11647,6 +11647,9 @@
+    (set_attr "predicable" "yes")])
+ 
+ 
++;; Load the load/store double peephole optimizations.
++(include "ldrdstrd.md")
++
+ ;; Load the load/store multiple patterns
+ (include "ldmstm.md")
+ 
+diff -ruN a/gcc/config/arm/ldrdstrd.md b/gcc/config/arm/ldrdstrd.md
+--- a/gcc/config/arm/ldrdstrd.md	1970-01-01 01:00:00
++++ b/gcc/config/arm/ldrdstrd.md	2026-10-17 02:57:07
+@@ -0,0 +1,260 @@
++;; ARM ldrd/strd peephole optimizations.
++;;
++;; Copyright (C) 2013 Free Software Foundation, Inc.
++;;
++;; Written by Greta Yorsh <greta.yorsh@arm.com>
++
++;; This file is part of GCC.
++;;
++;; GCC is free software; you can redistribute it and/or modify it
++;; under the terms of the GNU General Public License as published by
++;; the Free Software Foundation; either version 3, or (at your option)
++;; any later version.
++;;
++;; GCC is distributed in the hope that it will be useful, but
++;; WITHOUT ANY WARRANTY; without even the implied warranty of
++;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++;; General Public License for more details.
++;;
++;; You should have received a copy of the GNU General Public License
++;; along with GCC; see the file COPYING3.  If not see
++;; <http://www.gnu.org/licenses/>.
++
++;; The following peephole optimizations identify consecutive memory
++;; accesses, and try to rearrange the operands to enable generation of
++;; ldrd/strd.
++
++(define_peephole2 ; ldrd
++  [(set (match_operand:SI 0 "arm_general_register_operand" "")
++        (match_operand:SI 2 "memory_operand" ""))
++   (set (match_operand:SI 1 "arm_general_register_operand" "")
++        (match_operand:SI 3 "memory_operand" ""))]
++  "TARGET_LDRD
++     && current_tune->prefer_ldrd_strd
++     && !optimize_function_for_size_p (cfun)"
++  [(const_int 0)]
++{
++  if (!gen_operands_ldrd_strd (operands, true, false, false))
++    FAIL;
++  else if (TARGET_ARM)
++  {
++    /* In ARM state, the destination registers of LDRD/STRD must be
++       consecutive. We emit DImode access.  */
++    operands[0] = gen_rtx_REG (DImode, REGNO (operands[0]));
++    operands[2] = adjust_address (operands[2], DImode, 0);
++    /* Emit [(set (match_dup 0) (match_dup 2))] */
++    emit_insn (gen_rtx_SET (VOIDmode, operands[0], operands[2]));
++    DONE;
++  }
++  else if (TARGET_THUMB2)
++  {
++    /* Emit the pattern:
++       [(parallel [(set (match_dup 0) (match_dup 2))
++                   (set (match_dup 1) (match_dup 3))])] */
++    rtx t1 = gen_rtx_SET (VOIDmode, operands[0], operands[2]);
++    rtx t2 = gen_rtx_SET (VOIDmode, operands[1], operands[3]);
++    emit_insn (gen_rtx_PARALLEL (VOIDmode, gen_rtvec (2, t1, t2)));
++    DONE;
++  }
++})
++
++(define_peephole2 ; strd
++  [(set (match_operand:SI 2 "memory_operand" "")
++	(match_operand:SI 0 "arm_general_register_operand" ""))
++   (set (match_operand:SI 3 "memory_operand" "")
++	(match_operand:SI 1 "arm_general_register_operand" ""))]
++  "TARGET_LDRD
++     && current_tune->prefer_ldrd_strd
++     && !optimize_function_for_size_p (cfun)"
++  [(const_int 0)]
++{
++  if (!gen_operands_ldrd_strd (operands, false, false, false))
++    FAIL;
++  else if (TARGET_ARM)
++  {
++    /* In ARM state, the destination registers of LDRD/STRD must be
++       consecutive. We emit DImode access.  */
++    operands[0] = gen_rtx_REG (DImode, REGNO (operands[0]));
++    operands[2] = adjust_address (operands[2], DImode, 0);
++    /* Emit [(set (match_dup 2) (match_dup 0))]  */
++    emit_insn (gen_rtx_SET (VOIDmode, operands[2], operands[0]));
++    DONE;
++  }
++  else if (TARGET_THUMB2)
++  {
++    /* Emit the pattern:
++       [(parallel [(set (match_dup 2) (match_dup 0))
++                   (set (match_dup 3) (match_dup 1))])]  */
++    rtx t1 = gen_rtx_SET (VOIDmode, operands[2], operands[0]);
++    rtx t2 = gen_rtx_SET (VOIDmode, operands[3], operands[1]);
++    emit_insn (gen_rtx_PARALLEL (VOIDmode, gen_rtvec (2, t1, t2)));
++    DONE;
++  }
++})
++
++;; The following peepholes reorder registers to enable LDRD/STRD.
++(define_peephole2 ; strd of constants
++  [(set (match_operand:SI 0 "arm_general_register_operand" "")
++        (match_operand:SI 4 "const_int_operand" ""))
++   (set (match_operand:SI 2 "memory_operand" "")
++        (match_dup 0))
++   (set (match_operand:SI 1 "arm_general_register_operand" "")
++        (match_operand:SI 5 "const_int_operand" ""))
++   (set (match_operand:SI 3 "memory_operand" "")
++        (match_dup 1))]
++ "TARGET_LDRD
++  && current_tune->prefer_ldrd_strd
++  && !optimize_function_for_size_p (cfun)"
++  [(const_int 0)]
++{
++  if (!gen_operands_ldrd_strd (operands, false, true, false))
++    FAIL;
++  else if (TARGET_ARM)
++  {
++   rtx tmp = gen_rtx_REG (DImode, REGNO (operands[0]));
++   operands[2] = adjust_address (operands[2], DImode, 0);
++   /* Emit the pattern:
++      [(set (match_dup 0) (match_dup 4))
++      (set (match_dup 1) (match_dup 5))
++      (set (match_dup 2) tmp)]  */
++   emit_insn (gen_rtx_SET (VOIDmode, operands[0], operands[4]));
++   emit_insn (gen_rtx_SET (VOIDmode, operands[1], operands[5]));
++   emit_insn (gen_rtx_SET (VOIDmode, operands[2], tmp));
++   DONE;
++  }
++  else if (TARGET_THUMB2)
++  {
++    /* Emit the pattern:
++       [(set (match_dup 0) (match_dup 4))
++        (set (match_dup 1) (match_dup 5))
++        (parallel [(set (match_dup 2) (match_dup 0))
++                   (set (match_dup 3) (match_dup 1))])]  */
++    emit_insn (gen_rtx_SET (VOIDmode, operands[0], operands[4]));
++    emit_insn (gen_rtx_SET (VOIDmode, operands[1], operands[5]));
++    rtx t1 = gen_rtx_SET (VOIDmode, operands[2], operands[0]);
++    rtx t2 = gen_rtx_SET (VOIDmode, operands[3], operands[1]);
++    emit_insn (gen_rtx_PARALLEL (VOIDmode, gen_rtvec (2, t1, t2)));
++    DONE;
++  }
++})
++
++(define_peephole2 ; strd of constants
++  [(set (match_operand:SI 0 "arm_general_register_operand" "")
++        (match_operand:SI 4 "const_int_operand" ""))
++   (set (match_operand:SI 1 "arm_general_register_operand" "")
++        (match_operand:SI 5 "const_int_operand" ""))
++   (set (match_operand:SI 2 "memory_operand" "")
++        (match_dup 0))
++   (set (match_operand:SI 3 "memory_operand" "")
++        (match_dup 1))]
++ "TARGET_LDRD
++  && current_tune->prefer_ldrd_strd
++  && !optimize_function_for_size_p (cfun)"
++   [(const_int 0)]
++{
++  if (!gen_operands_ldrd_strd (operands, false, true, false))
++     FAIL;
++  else if (TARGET_ARM)
++  {
++   rtx tmp = gen_rtx_REG (DImode, REGNO (operands[0]));
++   operands[2] = adjust_address (operands[2], DImode, 0);
++   /* Emit the pattern
++      [(set (match_dup 0) (match_dup 4))
++       (set (match_dup 1) (match_dup 5))
++       (set (match_dup 2) tmp)]  */
++   emit_insn (gen_rtx_SET (VOIDmode, operands[0], operands[4]));
++   emit_insn (gen_rtx_SET (VOIDmode, operands[1], operands[5]));
++   emit_insn (gen_rtx_SET (VOIDmode, operands[2], tmp));
++   DONE;
++  }
++  else if (TARGET_THUMB2)
++  {
++    /*  Emit the pattern:
++        [(set (match_dup 0) (match_dup 4))
++         (set (match_dup 1) (match_dup 5))
++         (parallel [(set (match_dup 2) (match_dup 0))
++                    (set (match_dup 3) (match_dup 1))])]  */
++    emit_insn (gen_rtx_SET (VOIDmode, operands[0], operands[4]));
++    emit_insn (gen_rtx_SET (VOIDmode, operands[1], operands[5]));
++    rtx t1 = gen_rtx_SET (VOIDmode, operands[2], operands[0]);
++    rtx t2 = gen_rtx_SET (VOIDmode, operands[3], operands[1]);
++    emit_insn (gen_rtx_PARALLEL (VOIDmode, gen_rtvec (2, t1, t2)));
++    DONE;
++  }
++})
++
++;; The following two peephole optimizations are only relevant for ARM
++;; mode where LDRD/STRD require consecutive registers.
++
++(define_peephole2 ; swap the destination registers of two loads
++		  ; before a commutative operation.
++  [(set (match_operand:SI 0 "arm_general_register_operand" "")
++        (match_operand:SI 2 "memory_operand" ""))
++   (set (match_operand:SI 1 "arm_general_register_operand" "")
++        (match_operand:SI 3 "memory_operand" ""))
++   (set (match_operand:SI 4 "arm_general_register_operand" "")
++        (match_operator:SI 5 "commutative_binary_operator"
++			   [(match_operand 6 "arm_general_register_operand" "")
++			    (match_operand 7 "arm_general_register_operand" "") ]))]
++  "TARGET_LDRD && TARGET_ARM
++   && current_tune->prefer_ldrd_strd
++   && !optimize_function_for_size_p (cfun)
++   && (  ((rtx_equal_p(operands[0], operands[6])) && (rtx_equal_p(operands[1], operands[7])))
++        ||((rtx_equal_p(operands[0], operands[7])) && (rtx_equal_p(operands[1], operands[6]))))
++   && (peep2_reg_dead_p (3, operands[0]) || rtx_equal_p (operands[0], operands[4]))
++   && (peep2_reg_dead_p (3, operands[1]) || rtx_equal_p (operands[1], operands[4]))"
++  [(set (match_dup 0) (match_dup 2))
++   (set (match_dup 4) (match_op_dup 5 [(match_dup 6) (match_dup 7)]))]
++  {
++    if (!gen_operands_ldrd_strd (operands, true, false, true))
++     {
++        FAIL;
++     }
++    else
++     {
++        operands[0] = gen_rtx_REG (DImode, REGNO (operands[0]));
++        operands[2] = adjust_address (operands[2], DImode, 0);
++     }
++   }
++)
++
++(define_peephole2 ; swap the destination registers of two loads
++		  ; before a commutative operation that sets the flags.
++  [(set (match_operand:SI 0 "arm_general_register_operand" "")
++        (match_operand:SI 2 "memory_operand" ""))
++   (set (match_operand:SI 1 "arm_general_register_operand" "")
++        (match_operand:SI 3 "memory_operand" ""))
++   (parallel
++      [(set (match_operand:SI 4 "arm_general_register_operand" "")
++	    (match_operator:SI 5 "commutative_binary_operator"
++			       [(match_operand 6 "arm_general_register_operand" "")
++				(match_operand 7 "arm_general_register_operand" "") ]))
++       (clobber (reg:CC CC_REGNUM))])]
++  "TARGET_LDRD && TARGET_ARM
++   && current_tune->prefer_ldrd_strd
++   && !optimize_function_for_size_p (cfun)
++   && (  ((rtx_equal_p(operands[0], operands[6])) && (rtx_equal_p(operands[1], operands[7])))
++       ||((rtx_equal_p(operands[0], operands[7])) && (rtx_equal_p(operands[1], operands[6]))))
++   && (peep2_reg_dead_p (3, operands[0]) || rtx_equal_p (operands[0], operands[4]))
++   && (peep2_reg_dead_p (3, operands[1]) || rtx_equal_p (operands[1], operands[4]))"
++  [(set (match_dup 0) (match_dup 2))
++   (parallel
++      [(set (match_dup 4)
++	    (match_op_dup 5 [(match_dup 6) (match_dup 7)]))
++       (clobber (reg:CC CC_REGNUM))])]
++  {
++    if (!gen_operands_ldrd_strd (operands, true, false, true))
++     {
++        FAIL;
++     }
++    else
++     {
++        operands[0] = gen_rtx_REG (DImode, REGNO (operands[0]));
++        operands[2] = adjust_address (operands[2], DImode, 0);
++     }
++   }
++)
++
++;; TODO: Handle LDRD/STRD with writeback:
++;; (a) memory operands can be POST_INC, POST_DEC, PRE_MODIFY, POST_MODIFY
++;; (b) Patterns may be followed by an update of the base address.
+diff -ruN a/gcc/config/arm/t-arm b/gcc/config/arm/t-arm
+--- a/gcc/config/arm/t-arm	2026-10-17 02:57:07
++++ b/gcc/config/arm/t-arm	2026-10-17 02:57:07
+@@ -51,6 +51,7 @@
+ 		$(srcdir)/config/arm/iterators.md \
+ 		$(srcdir)/config/arm/iwmmxt.md \
+ 		$(srcdir)/config/arm/iwmmxt2.md \
++		$(srcdir)/config/arm/ldrdstrd.md \
+ 		$(srcdir)/config/arm/ldmstm.md \
+ 		$(srcdir)/config/arm/marvell-f-iwmmxt.md \
+ 		$(srcdir)/config/arm/neon.md \
+diff -ruN a/gcc/tree-ssa-loop-ivopts.c b/gcc/tree-ssa-loop-ivopts.c
+--- a/gcc/tree-ssa-loop-ivopts.c	2026-10-17 02:57:07
++++ b/gcc/tree-ssa-loop-ivopts.c	2026-10-17 02:57:07
+@@ -4827,22 +4827,36 @@
+   for (i = 0; i < n_iv_cands (data); i++)
+     {
+       struct iv_cand *cand = iv_cand (data, i);
+-      struct iv_use *closest = NULL;
++      struct iv_use *closest_before = NULL;
++      struct iv_use *closest_after = NULL;
+       if (cand->pos != IP_ORIGINAL)
+ 	continue;
++
+       for (j = 0; j < n_iv_uses (data); j++)
+ 	{
+ 	  struct iv_use *use = iv_use (data, j);
+ 	  unsigned uid = gimple_uid (use->stmt);
+-	  if (gimple_bb (use->stmt) != gimple_bb (cand->incremented_at)
+-	      || uid > gimple_uid (cand->incremented_at))
++
++	  if (gimple_bb (use->stmt) != gimple_bb (cand->incremented_at))
+ 	    continue;
+-	  if (closest == NULL || uid > gimple_uid (closest->stmt))
+-	    closest = use;
++
++	  if (uid < gimple_uid (cand->incremented_at)
++	      && (closest_before == NULL
++		  || uid > gimple_uid (closest_before->stmt)))
++	    closest_before = use;
++
++	  if (uid > gimple_uid (cand->incremented_at)
++	      && (closest_after == NULL
++		  || uid < gimple_uid (closest_after->stmt)))
++	    closest_after = use;
+ 	}
+-      if (closest == NULL || !autoinc_possible_for_pair (data, closest, cand))
+-	continue;
+-      cand->ainc_use = closest;
++
++      if (closest_before != NULL
++	  && autoinc_possible_for_pair (data, closest_before, cand))
++	cand->ainc_use = closest_before;
++      else if (closest_after != NULL
++	       && autoinc_possible_for_pair (data, closest_after, cand))
++	cand->ainc_use = closest_after;
+     }
+ }
+ 

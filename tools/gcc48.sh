@@ -1,6 +1,6 @@
 #!/bin/sh
 # The project's GCC 4.8 as a compiler command (Makefiles: CC := tools/gcc48.sh):
-# Linaro GCC 4.8-2014.04 with the project's corrections (toolchains/build-strd-variant.sh).
+# CodeSourcery's GCC 4.8.3 with the project's corrections toward Sony's (toolchains/build-csl.sh).
 # It is a Linux program; sonycc.py / host.py run it natively on Linux, in Lima on macOS
 # and in WSL2 on Windows. GCC48_DRIVER=g++ selects the C++ driver, GCC48_TOOLCHAIN
 # another build in PSP2_TOOLCHAINS.

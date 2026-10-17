@@ -1,6 +1,6 @@
 # Sourced by the recipes. They build Linux programs and run on Linux: natively, or from
 # macOS and Windows through the host runner, e.g.
-#   python3 tools/host.py linux -- bash toolchains/build-cxx.sh
+#   python3 tools/host.py linux -- bash toolchains/build-csl.sh
 # Sets R (the repository) and TC (where toolchains install: PSP2_TOOLCHAINS, default
 # toolchains/install, as tools/host.py).
 R=$(cd "$(dirname "$0")/.." && pwd)
