@@ -21,7 +21,7 @@
 #include <psp2/kernel/threadmgr.h>
 #include "../sqlite/vfs_time.h"
 #include <appmgr/appmgr_savedata.h>
-#include "contrib/sqlite-3.6.23.1/sqlite3.h"
+#include "sqlite3.h"
 
 /* SCE errno values (sceerror.h) */
 #define SCE_ERROR_ERRNO_EPERM		0x80010001

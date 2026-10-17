@@ -40,6 +40,8 @@ psp2_module(vs0_sys_external_sqlite KIND user SOURCES
 add_custom_target(vs0_sys_external_sqlite_core
 	DEPENDS "${sqlite_generated}/sqlite3.c")
 add_dependencies(vs0_sys_external_sqlite vs0_sys_external_sqlite_core)
-target_include_directories(vs0_sys_external_sqlite PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+# sqlite3.h by name, as Sony's os_psp2.c includes it
+target_include_directories(vs0_sys_external_sqlite PRIVATE "${CMAKE_CURRENT_BINARY_DIR}"
+	"${PSP2_SRC}/contrib/sqlite-3.7.6.3")
 set_source_files_properties("vfs_time.c" PROPERTIES
 	COMPILE_DEFINITIONS "memset=sce_paf_memset;memcpy=sce_paf_memcpy")

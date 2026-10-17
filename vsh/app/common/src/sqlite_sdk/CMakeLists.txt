@@ -18,4 +18,6 @@ psp2_module(vs0_sys_external_libSceSqlite KIND user SOURCES
 if(TARGET vs0_sys_external_libSceSqlite)
 	# the module supplies its own memset/strlen/printf/malloc/atoi
 	target_compile_options(vs0_sys_external_libSceSqlite PRIVATE -fno-builtin)
+	# sqlite3.h by name, as Sony's os_psp2.c includes it
+	target_include_directories(vs0_sys_external_libSceSqlite PRIVATE "${PSP2_SRC}/contrib/sqlite-3.6.23.1")
 endif()
