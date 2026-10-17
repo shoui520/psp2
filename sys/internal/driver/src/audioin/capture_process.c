@@ -25,7 +25,6 @@ extern void resetAudioInLegacyQueue(void);
 extern int readAudioInLegacyQueue(int16_t *samples, unsigned int count);
 extern void resampleAudioInCapture(unsigned int stream, const int16_t *input,
 		int16_t *output, unsigned int count, int channel);
-extern unsigned int ksceKernelGetProcessTimeLowCore(void);
 
 int audioInProcessKillHandler(SceUID pid, ProcEventParam *unusedParam,
 		int unusedArgument)

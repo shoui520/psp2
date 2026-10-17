@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
+#include <processmgr/processmgr.h>
 
 int regMgrLoadCache(void);
 
@@ -235,8 +236,6 @@ extern SceUInt32 g_regMgrErrEnable;
 #define REGMGR_VERSION_DIRTY	0x80000000
 
 #define SCE_REGMGR_ERROR_KEY_EXISTS	0x800d2728	/* names unknown */
-
-SceUInt32 ksceKernelGetProcessTimeLowCore(void);
 
 /* the registry files (reg library, names unknown) */
 int regInit(void);

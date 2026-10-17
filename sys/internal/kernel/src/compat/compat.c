@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <sysmem/suspend.h>
 #include <power/power.h>
+#include <processmgr/processmgr.h>
 
 struct CompatInterruptConfig {
 	int intrcode;
@@ -227,7 +228,6 @@ int SceGrabForDriver_072B8D93(int mode);
 int ksceSblFwLoaderLock(const char *path, int flags);
 int ksceSblFwLoaderLoad(int type, void *base, SceSize size, SceSize *loaded);
 int ksceSblFwLoaderUnlock(void);
-SceUInt64 ksceKernelGetProcessTimeWideCore(void);
 int sceDeci2pTermForCompat(void);
 int SceDeci2pForDriver_F6427E0F(void *regs, void *shm, SceSize size);
 int SceHpremoteForDriver_7E69EDA4(void);

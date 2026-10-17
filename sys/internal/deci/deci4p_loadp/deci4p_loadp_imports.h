@@ -22,9 +22,6 @@ int ksceAppMgrDestroyOtherAppByPid(SceUID pid);
 int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app control */
 
 /* SceProcessmgrForDriver */
-SceUID sceKernelSpawnProcessExt(const char *name, SceUInt32 attr, const char *path, SceSize argSize,
-				const void *args, const SceKernelProcessOpt *opt, int gxmDebug);
-int sceKernelKillProcess(SceUID pid, int status);
 
 /* SceSblACMgrForDriver */
 int SceSblACMgrForDriver_4CBD6156(SceUID pid);		/* the process may be debugged */

@@ -18,15 +18,15 @@
 #include <sysmem/debugled.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
+#include <processmgr/processmgr.h>
+#include <psp2kern/kernel/processmgr.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))
 #define CONF_NOT_FOUND ((int)0xffff0001U)
 #define CONF_MEMTYPE SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW
 
 /* Kernel-only imports not declared by the public SDK headers. */
-int sceKernelWaitProcessEnd(SceUID pid, int *status, void *timeout);
 int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
-int ksceKernelCreateProcess(const char *name, int type, const char *path, void *opt);
 int ksceKernelInvokeInitCallback(int stage);
 SceUID SceSysmemForKernel_0164D817(void);
 int sceKernelGetPhyMemPartInfoCore(SceUID part, void *info);

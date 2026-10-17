@@ -15,11 +15,10 @@
 #include <psp2kern/kernel/dipsw.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
+#include <processmgr/processmgr.h>
 
 int checkDebugPermission(void);
-int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
 int SceSblACMgrForKernel_49509A83(SceUID process);
-int sceKernelSetSyscallTraceFlag(SceUID process, SceUInt32 flag);
 void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);

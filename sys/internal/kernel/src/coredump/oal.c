@@ -132,8 +132,6 @@ extern int SceThreadmgrForDriver_D1FBDFA6(SceUID condId,
 	SceKernelCondInfo *info);
 extern int ksceKernelGetProcessStatus(SceUID pid, int *status);
 extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
-extern int SceProcessmgrForDriver_BA0A06A4(SceUInt32 visibilityLevel,
-	SceKernelProcessInfo *processes, SceSize size, SceUInt32 *count);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
 extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
@@ -4026,8 +4024,6 @@ SceUID oalCallCoredumpHandler(SceUID pid)
 {
 	return sceKernelCallCoredumpHandler(pid);
 }
-
-extern int SceProcessmgrForDriver_A1CF74FA(SceUID pid);
 
 int oalHasCoredumpHandler(SceUID pid)
 {

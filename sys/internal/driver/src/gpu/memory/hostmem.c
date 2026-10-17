@@ -3,12 +3,11 @@
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysclib.h>
+#include <processmgr/processmgr.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"
 
-extern void *sceKernelAllocRemoteProcessHeap(unsigned pid, unsigned size,
-					   const void *options);
 extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
 extern int ksceKernelCreateHeap(const char *name, unsigned size,
 			       const void *options);

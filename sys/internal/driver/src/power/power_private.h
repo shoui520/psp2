@@ -68,6 +68,7 @@
 #include <psp2kern/kernel/aimgr.h>
 #include <psp2kern/kernel/dipsw.h>
 #include <sysmem/sysmem.h>
+#include <processmgr/processmgr.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -128,8 +129,6 @@ extern int SceCtrlForDriver_69E45836(void);
 extern int SceCtrlForDriver_C8CE3E43(unsigned int);
 extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
-extern int SceProcessmgrForDriver_879153D9(SceUID pid, uint32_t mask);
-extern int SceProcessmgrForDriver_FC2A424E(void *memory);
 extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
 extern int ksceDisplayGetDeviceType(int head, int unused);
 extern int ksceDisplayWaitVblankStart(void);

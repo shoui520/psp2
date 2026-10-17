@@ -70,7 +70,6 @@ struct SharedFbManager gSharedFbManager;
 
 extern int _sceAppMgrIsExistAbortedAppOrDebugSuspendedApp(void);
 extern int _sceAppMgrAbort(SceUID pid);
-extern int sceKernelKillProcess(SceUID pid, int status);
 
 int sharedFbProcessCreate(SceUID pid, ProcEventCreateParam *param, int flags);
 int sharedFbProcessExit(SceUID pid, ProcEventParam *param, int flags);

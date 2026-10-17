@@ -18,6 +18,7 @@
 #define sceDfMgrClose sceDfMgrClose_deci4p_h
 #include <deci4p_dfmgr/deci4p.h>
 #include <threadmgr/threadmgr.h>
+#include <processmgr/processmgr.h>
 #undef sceDfMgrClose
 int sceDfMgrClose(SceUID handle);
 
@@ -344,7 +345,6 @@ int sceDfMgrInit(void);
 /* imports without a declaration elsewhere */
 int SceSysrootForDriver_C5EAF5F7(void (*handler)(int event));	/* power state notifications */
 int SceSysrootForDriver_579CC758(const void *callbacks);	/* update / install progress */
-int SceProcessmgrForDriver_C715591F(void);			/* a process refuses suspend */
 int SceDbgUsbForDriver_A6BFCC0A(SceUID evf);
 int SceDbgUsbForDriver_08CF16D1(void);
 int SceDbgUsbForDriver_40C65DB2(const void *buf, SceSize size);

@@ -21,6 +21,7 @@
 #include <appmgr/appmgr_rdrfp.h>
 #include <power/led.h>
 #include <power/power.h>
+#include <processmgr/processmgr.h>
 
 typedef SceUInt8 SceProductMode;
 typedef SceUInt64 SceRtcTick;
@@ -31,7 +32,6 @@ SceUInt32 ksceKernelSysrootGetSystemSwVersion(void);
 int ksceSysrootIsSafeMode(void);
 int ksceSysrootIsUpdateMode(void);
 SceUID ksceKernelSearchModuleByName(const char *name);
-int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);	/* compiled SDK version */
 int k_sceEventLogPut(int id, int index, int a3, const void *pBuf, SceSize bufSize);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 int SceUdcdForDriver_2D91F8C3(int enable);		/* USB charging */

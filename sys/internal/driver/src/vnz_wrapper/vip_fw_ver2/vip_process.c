@@ -22,6 +22,7 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
+#include <psp2kern/kernel/processmgr.h>
 
 int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);
 int dispatchVeneziaVipProcessResume(VeneziaVipProcessStorage *storage);
@@ -32,9 +33,7 @@ int unlockVeneziaVipProcess(struct ThreadmgrFastMutex *mutex);
 
 extern int waitVeneziaVipProcessReady(void);
 extern VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid);
-extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void **storage, int create);
 
-extern int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
 int g_veneziaVipProcessStorageKey = -1;
 int initializeVeneziaVipResources(void);
 int startVeneziaVipDriver(int mode);
@@ -98,8 +97,6 @@ int releaseVeneziaVipProcessStorage(SceUID pid)
 	}
 	return ret;
 }
-
-extern void *ksceKernelGetProcessLocalStorageAddr(int key);
 
 VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 {

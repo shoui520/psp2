@@ -23,6 +23,7 @@
 #include <string.h>
 #include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
+#include <psp2kern/kernel/processmgr.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -6365,16 +6366,12 @@ int copyVeneziaVipCommandCaptureOutput(VeneziaVipCommandContext *context,
 	return 0;
 }
 
-extern int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
-extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void **storage, int create);
 int initializeVeneziaVipResources(void);
 int startVeneziaVipDriver(int mode);
 
 int initializeVeneziaVipProcessStorage(VeneziaVipProcessStorage *storage);
 
 extern int sceKernelCancelSema(SceUID uid, int count, int *waiters);
-
-extern void *ksceKernelGetProcessLocalStorageAddr(int key);
 
 extern int dispatchVeneziaVipProcessSuspend(VeneziaVipProcessStorage *storage, int reason);
 

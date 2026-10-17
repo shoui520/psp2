@@ -20,6 +20,8 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <processmgr/processmgr.h>
+#include <psp2kern/kernel/processmgr.h>
 
 /* SceIofilemgrForDriver */
 SceUID ksceIoOpen(const char *path, int flags, int mode);
@@ -111,20 +113,9 @@ int SceSysrootForKernel_B171CC2D(const void *callbacks);
 SceUID ksceKernelRegisterProcEventHandler(const char *name, const void *handler, int a2);
 
 /* SceProcessmgrForKernel / SceProcessmgrForDriver */
-void *sceKernelAllocRemoteToolHeap(SceUID pid, SceSize size);
 void sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr);
-void *sceKernelAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
 void sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
-int ksceKernelGetProcessSelfAuthInfo(SceUID pid, void *info);
-void *ksceKernelGetProcessModuleInfo(SceUID pid);
-int sceKernelSetProcessLibdb(SceUID pid, void *libdb);
-void *ksceKernelGetUIDProcessClass(void);
-int sceKernelGetProcessType(SceUID pid);
 int SceProcessmgrForKernel_8B4086AF(SceUID pid);	/* reserve a module slot */
-int SceProcessmgrForKernel_BC110987(SceUID pid, int a1);
-int SceProcessmgrForKernel_F160B4D8(SceUID pid, int isLibrary);	/* release the slot */
-int SceProcessmgrForDriver_2CEB1C7A(SceUID pid, void *buf, SceSize len);	/* random bytes */
-int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
 
 /* SceDebugForKernel / SceExcpmgrForKernel / SceIntrmgr */
 int SceDebugForKernel_38F1A352(void *func);

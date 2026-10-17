@@ -5,13 +5,13 @@
 #include <usbstormg/usbstormg.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
+#include <processmgr/processmgr.h>
 
 int SceMagicGateForDriver_F2502A3B(void *output, const void *input,
 				unsigned int size, int slot, const void *iv);
 int SceMagicGateForDriver_2B026FFF(void *output, const void *input,
 				unsigned int size, int slot, const void *iv);
 void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);
-int SceProcessmgrForDriver_FC2A424E(void *ptr);
 int SceMagicGateForDriver_0B01FE3F(const void *tag,
 		const struct MagicGateRecordHeader *record, unsigned int size, int slot);
 int SceMagicGateForDriver_0EBA5958(void *output, unsigned int capacity);

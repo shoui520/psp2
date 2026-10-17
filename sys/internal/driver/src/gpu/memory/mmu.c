@@ -6,6 +6,7 @@
 #include <psp2kern/kernel/sysmem/address_space.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <sysmem/sysclib.h>
+#include <psp2kern/kernel/processmgr.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/mmu.c"
@@ -48,7 +49,6 @@ _Static_assert(offsetof(GpuBudgetInfo, cdramPartition.size) == 0x5c,
 /* Module-local declarations while the shared ABI inputs are frozen. Native
  * callers/callees consume two words for each query; no options argument.
  */
-extern int ksceKernelGetProcessInfo(unsigned pid, GpuProcessInfo *info);
 extern int sceKernelGetBudgetInfo(int uid, GpuBudgetInfo *info);
 extern int CreateGpuHeap(unsigned base, unsigned size, unsigned lookupKey,
 			 unsigned attributes, GpuHeap **output);

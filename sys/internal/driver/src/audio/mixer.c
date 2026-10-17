@@ -12,8 +12,8 @@
 
 #include "audio_private.h"
 #include <lowio/pervasive.h>
+#include <processmgr/processmgr.h>
 
-uint32_t ksceKernelGetProcessTimeLowCore(void);
 int ksceKernelUserUnmap(SceUID uid, const void *address, int flags);
 int audioSubmitDmaBuffer(uintptr_t sourceAddress, unsigned int wordCount,
 			 unsigned int bank, unsigned int stream);

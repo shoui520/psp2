@@ -13,9 +13,6 @@
 #include <sysmem/sysroot.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
-extern SceUID sceKernelSpawnProcessExt(const char *name, SceUInt32 type,
-		const char *path, SceSize args, void *argp,
-		const SceKernelProcessOpt *opt, SceUInt32 flags);
 extern void *__memcpy_chk(void *dst, const void *src, size_t size,
 			  size_t capacity);
 
@@ -33,7 +30,6 @@ extern int ksceKernelPrintfAssertLevel(SceUInt32 level, SceBool condition,
 				      const void *lr, const char *fmt, ...);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int sceKernelKillProcess(SceUID pid, int flags);
 extern void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId,
 		int exitReason, SceUID sourcePid, int sourceAppId,
 		int relaunchPending, const char *appName);
@@ -45,7 +41,6 @@ extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 		SceProcEventInvokeParam1 *param, int flags);
 extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 		SceProcEventInvokeParam1 *param, int flags);
-extern int SceProcessmgrForDriver_5E882B60(void (*callback)(SceUID, int));
 extern int SceAvcodecForDriver_C84AFFC4(void (*callback)(void));
 extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
@@ -64,8 +59,6 @@ extern int _paramQueueCancelAll(AppmgrParamQueue *queue);
 extern int _deviceSetRunStatus(int appId, int status);
 extern int _deviceSetProcessId(int appId, SceUID pid);
 extern int _destroyOtherApp(struct AppState *app);
-extern int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event,
-					      SceUInt32 *timeout);
 extern void _shellEventAppRunningStatusChangedQueuePush(void);
 extern void _shellEventDeactivateAppRequestQueuePush(int appId);
 extern void _shellEventActivateAppRequestQueuePush(int appId);
@@ -76,10 +69,7 @@ extern int _sceAppMgrDeactivateAppInternal(struct AppState *app, int, int, int);
 extern int _appmgrProcessKillProcess(struct AppState *app, int flags);
 extern int _appListPushEvent(struct AppState *app,
 			     const SceAppMgrSystemEvent *event);
-extern int sceKernelResumeProcess(SceUID pid);
 extern int appmgrUsesDefaultLibrary(void);
-extern int sceKernelStartProcessExt(SceUID pid, int waitDebugger, SceSize args,
-				  void *argp, SceUInt32 flags);
 
 SceUID g_appmgrVideoCodecPid = -1;
 int (*g_appmgrProcTerminatedCallback)(struct AppState *app);

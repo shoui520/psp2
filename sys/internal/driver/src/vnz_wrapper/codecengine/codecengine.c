@@ -21,13 +21,12 @@
 #include "../venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
+#include <psp2kern/kernel/processmgr.h>
 
 int _sceCodecEngineProcessorProcessResume(SceUID pid);
 int _sceCodecEngineProcessorProcessSuspend(SceUID pid);
 
-extern int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key, void **storage, int create);
 extern void (*SceSysrootForDriver_483EF108(void))(unsigned int, unsigned int, ...);
-extern int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
 extern int initializeCodecEngineProcessor(void);
 extern int initializeCodecEngineMemoryClass(void);
 int g_codecEngineProcessStorageKey;

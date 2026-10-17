@@ -76,3 +76,33 @@ typedef struct SceKernelProcessOpt {
 } SceKernelProcessOpt;
 
 _Static_assert(sizeof(SceKernelProcessOpt) == 0x40, "SceKernelProcessOpt size");
+
+int SceProcessmgrForDriver_2CEB1C7A(SceUID pid, SceUInt32 *buf, SceSize size);	/* random bytes */
+int SceProcessmgrForDriver_54D469E2(SceUInt32 *flag);
+int SceProcessmgrForDriver_5E882B60(void (*callback)(SceUID pid, int exitStatus));
+int SceProcessmgrForDriver_879153D9(SceUID pid, SceUInt32 kind);
+int SceProcessmgrForDriver_A1CF74FA(SceUID pid);
+int SceProcessmgrForDriver_BA0A06A4(int level, void *buf, SceSize size, SceSize *count);
+int SceProcessmgrForDriver_C715591F(void);	/* a process refuses suspend */
+int SceProcessmgrForDriver_E1A67C86(SceUID pid, SceUInt32 *value);
+int SceProcessmgrForDriver_FC2A424E(void *ptr);
+int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
+int SceProcessmgrForKernel_BC110987(SceUID pid, SceUInt32 event);
+int SceProcessmgrForKernel_D5DF895D(void);
+int SceProcessmgrForKernel_F160B4D8(SceUID pid, int kind);	/* release the slot */
+SceUInt32 ksceKernelGetProcessTimeLowCore(void);
+SceUInt64 ksceKernelGetProcessTimeWideCore(void);
+void *sceKernelAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
+void *sceKernelAllocRemoteToolHeap(SceUID pid, SceSize size);
+int sceKernelGetProcessType(SceUID pid);
+int sceKernelKillProcess(SceUID pid, int kind);
+int sceKernelResumeProcess(SceUID pid);
+int sceKernelSetPMUSERENR(SceUID pid, SceUInt32 value);
+int sceKernelSetProcessLibdb(SceUID pid, void *libdb);
+int sceKernelSetProcessStatus(SceUID pid, SceUInt32 status);
+int sceKernelSetSyscallTraceFlag(SceUID pid, SceUInt32 flag);
+SceUID sceKernelSpawnProcessExt(const char *name, SceUInt32 type, const char *path, SceSize args,
+				 void *argp, const SceKernelProcessOpt *opt, SceUInt32 flags);
+int sceKernelStartProcessExt(SceUID pid, int waitDebugger, SceSize args, void *argp, SceUInt32 flags);
+int sceKernelWaitProcessEnd(SceUID pid, int *exitStatus, SceUInt32 *timeout);
+int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *timeout);

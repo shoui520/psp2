@@ -11,6 +11,7 @@
 #include <psp2kern/kernel/pm_mgr.h>
 #include <psp2/appmgr.h>
 #include "app_state_internal.h"
+#include <processmgr/processmgr.h>
 
 extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
@@ -28,8 +29,6 @@ extern int _gcListenerThreadEntry(SceSize args, void *argp);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2Mutex;
 extern SceUID g_appmgrCore2MutexOwner;
-extern int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
-extern int SceProcessmgrForKernel_D5DF895D(void);
 extern void _sceAppMgrNotifyAppMgrHandler(void);
 
 SceUID g_appmgrUpdateNotifySemaphore = -1;

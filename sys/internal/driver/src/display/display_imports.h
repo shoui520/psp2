@@ -19,6 +19,7 @@
 #include <psp2kern/kernel/utils.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot_init.h>
+#include <processmgr/processmgr.h>
 
 struct ThreadmgrWaitableClass;
 int sceKernelUIDInheritedEventClassInit(struct ThreadmgrWaitableClass *cls,
@@ -39,8 +40,6 @@ int ksceSysrootIsUpdateMode(void);
 int ksceKernelSysrootGetProcessTitleId(SceUID pid, char *titleId, SceSize size);
 
 /* SceProcessmgrForDriver */
-int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *out);
-int SceProcessmgrForDriver_E1A67C86(SceUID pid, SceUInt32 *flags);
 
 /* SceThreadmgrForDriver */
 

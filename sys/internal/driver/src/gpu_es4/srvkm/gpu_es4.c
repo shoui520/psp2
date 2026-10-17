@@ -14,6 +14,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 #include <power/power.h>
+#include <processmgr/processmgr.h>
 
 /* SCE stores the services mutex UID in the native module's zeroed state. */
 SceUID gPVRSRVLock;
@@ -140,8 +141,6 @@ failure:
 /* These imports are private declarations while shared ABI inputs are frozen.
  * Native callers pass process/size/options and process/address respectively.
  */
-extern void *sceKernelAllocRemoteProcessHeap(unsigned pid, unsigned size,
-					   const void *options);
 extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
 
 void *OSAllocMem(unsigned size)

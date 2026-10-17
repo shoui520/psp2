@@ -9,6 +9,7 @@
 #include <modulemgr/modulemgr_debugger.h>
 #include <sysmem/sysroot_dbgp.h>
 #include <sysmem/sysmem.h>
+#include <processmgr/processmgr.h>
 
 typedef struct DbgpPrefix {
 	SceDeci4pHeader hdr;
@@ -369,7 +370,6 @@ int _createModuleLoadNotification(DbgpProcCB *proc, void *packet,
 /* process_info.c and process.c */
 int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 		       SceUInt32 reason);
-int sceKernelSetProcessStatus(SceUID pid, SceUInt32 status);
 int processInfoLoad(DbgpProcCB *proc, ProcessInfo *info);
 int processInfoCreateProcessNotification(DbgpProcCB *proc, void *packet,
 					 const ProcessInfo *info);

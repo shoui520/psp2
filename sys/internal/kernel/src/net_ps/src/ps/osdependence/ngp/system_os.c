@@ -19,9 +19,9 @@
 #include <sysmem/sysevent.h>
 #include "../../../../net_ps_internal.h"
 #include "../../../../net_ps_atomic.h"
+#include <processmgr/processmgr.h>
 
 void sceKernelApiDeclareTypeUInt32(void);
-int SceProcessmgrForDriver_D141C076(SceUID processId, SceUInt32 *sdkVersion);
 int ksceKernelIsGameBudget(void);
 int ksceKernelUnregisterThreadEventHandler(SceUID handlerId);
 int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
