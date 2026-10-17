@@ -139,10 +139,10 @@ modules:
           SceAudioInForDriver_313C969A: 0x313C969A
           SceAudioInForDriver_3D164387: 0x3D164387
           SceAudioInForDriver_3EC79053: 0x3EC79053
-          sceAudioInSelectInput: 0x44A497F8
           SceAudioInForDriver_9C7404BF: 0x9C7404BF
           SceAudioInForDriver_E4042F6F: 0xE4042F6F
           SceAudioInForDriver_FB46FA10: 0xFB46FA10
+          sceAudioInSelectInput: 0x44A497F8
   SceAvcodec:
     nid: 0x00000000
     libraries:
@@ -553,35 +553,6 @@ modules:
           ksceCoredumpCafSegmentTransform: 0xFB7AEBFE
           ksceCoredumpCreateDump: 0x0C10313F
           ksceCoredumpDeleteCrashReportCaf: 0xAD070837
-  SceCpuForTZS:
-    nid: 0x00000000
-    libraries:
-      SceCpuForTZS:
-        kernel: true
-        nid: 0xC516B23E
-        functions:
-          SceCpuForTZS_0A15B41C: 0x0A15B41C
-          SceCpuForTZS_17A88E69: 0x17A88E69
-          SceCpuForTZS_190D96D5: 0x190D96D5
-          SceCpuForTZS_2B6403F8: 0x2B6403F8
-          SceCpuForTZS_44C423D3: 0x44C423D3
-          SceCpuForTZS_4FED4BCE: 0x4FED4BCE
-          SceCpuForTZS_596784E9: 0x596784E9
-          SceCpuForTZS_71FD9AB5: 0x71FD9AB5
-          SceCpuForTZS_75D87321: 0x75D87321
-          SceCpuForTZS_7A5373EB: 0x7A5373EB
-          SceCpuForTZS_7CCE9480: 0x7CCE9480
-          SceCpuForTZS_9E4C0D0D: 0x9E4C0D0D
-          SceCpuForTZS_A5965CBF: 0xA5965CBF
-          SceCpuForTZS_ACF209F3: 0xACF209F3
-          SceCpuForTZS_B421FAFD: 0xB421FAFD
-          SceCpuForTZS_B8F00FBE: 0xB8F00FBE
-          SceCpuForTZS_C4137AED: 0xC4137AED
-          SceCpuForTZS_CD98416C: 0xCD98416C
-          SceCpuForTZS_CDD46655: 0xCDD46655
-          SceCpuForTZS_D4E7413D: 0xD4E7413D
-          SceCpuForTZS_D67A4356: 0xD67A4356
-          SceCpuForTZS_EFD6F289: 0xEFD6F289
   SceCtrl:
     nid: 0x00000000
     libraries:
@@ -589,7 +560,6 @@ modules:
         kernel: true
         nid: 0x7823A5D1
         functions:
-          _sceCtrlBdRemoconSendMergedNotify2: 0x02081494
           SceCtrlForDriver_4CCB2153: 0x4CCB2153
           SceCtrlForDriver_5B708A15: 0x5B708A15
           SceCtrlForDriver_69E45836: 0x69E45836
@@ -597,6 +567,7 @@ modules:
           SceCtrlForDriver_C8CE3E43: 0xC8CE3E43
           SceCtrlForDriver_DA07E970: 0xDA07E970
           SceCtrlForDriver_FF9D4DD4: 0xFF9D4DD4
+          _sceCtrlBdRemoconSendMergedNotify2: 0x02081494
           ksceCtrlChangePortAssign: 0x53381364
           ksceCtrlClearRapidFire: 0xED138A26
           ksceCtrlGetActiveControllerPort: 0xFA88D837
@@ -651,19 +622,6 @@ modules:
           SceDbgUsbForDriver_40C65DB2: 0x40C65DB2
           SceDbgUsbForDriver_A6BFCC0A: 0xA6BFCC0A
           _sceDbgUsbPullData: 0x83B67515
-  SceDebugForTZS:
-    nid: 0x00000000
-    libraries:
-      SceDebugForTZS:
-        kernel: true
-        nid: 0x028FFADB
-        functions:
-          SceDebugForTZS_0D799DAE: 0x0D799DAE
-          SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
-          SceDebugForTZS_563B623D: 0x563B623D
-          SceDebugForTZS_618F89E6: 0x618F89E6
-          SceDebugForTZS_D26EB4BB: 0xD26EB4BB
-          SceDebugForTZS_F851BA4F: 0xF851BA4F
   SceDeci4pCpup:
     nid: 0x00000000
     libraries:
@@ -773,14 +731,6 @@ modules:
           sceSDfMgrExSend: 0xDAFE03AD
           sceSDfMgrPoll: 0x152D98DF
           sceSDfMgrSendSpace: 0x4D974C08
-  SceDipswForTZS:
-    nid: 0x00000000
-    libraries:
-      SceDipswForTZS:
-        kernel: true
-        nid: 0x9DBF584C
-        functions:
-          SceDipswForTZS_ksceKernelCheckDipsw: 0xA98FC2FD
   SceDisplay:
     nid: 0x00000000
     libraries:
@@ -2186,8 +2136,8 @@ modules:
         kernel: true
         nid: 0xB2A5C920
         functions:
-          SceNetPsForDriver_1ABF937D: 0x1ABF937D
           SceNetKernelGateway: 0x3D4A1D74
+          SceNetPsForDriver_1ABF937D: 0x1ABF937D
           SceNetPsForDriver_83A12CCC: 0x83A12CCC
           SceNetPsForDriver_8C4346CA: 0x8C4346CA
           SceNetPsForDriver_C000CA8F: 0xC000CA8F
@@ -2382,14 +2332,6 @@ modules:
           kscePfsMount: 0xA772209C
           kscePfsMount2: 0x2D48AEA2
           kscePfsUnmount: 0x680BC384
-  ScePmMgrForTZS:
-    nid: 0x00000000
-    libraries:
-      ScePmMgrForTZS:
-        kernel: true
-        nid: 0x27F1AFD8
-        functions:
-          ScePmMgrForTZS_CF554E69: 0xCF554E69
   ScePower:
     nid: 0x00000000
     libraries:
@@ -3307,18 +3249,6 @@ modules:
           sceSyslibtraceSetTargetSyscallLib: 0xAB6A0C53
           sceSyslibtraceStartSyscallTrace: 0x5DEF9EDF
           sceSyslibtraceStopSyscallTrace: 0xDD47649F
-  SceSysclibForTZS:
-    nid: 0x00000000
-    libraries:
-      SceSysclibForTZS:
-        kernel: true
-        nid: 0xC839BB78
-        functions:
-          SceSysclibForTZS_956DB750: 0x956DB750
-          SceSysclibForTZS_BE3AF2EE: 0xBE3AF2EE
-          SceSysclibForTZS_E5457B97: 0xE5457B97
-        variables:
-          SceSysclibForTZS_BA505B15: 0xBA505B15
   SceSyscon:
     nid: 0x00000000
     libraries:
@@ -3490,8 +3420,6 @@ modules:
           SceSysconForDriver_A039B563: 0xA039B563
           SceSysconForDriver_A1F1B973: 0xA1F1B973
           SceSysconForDriver_A26586B2: 0xA26586B2
-          SceSysconForDriver_A2E85DB9: 0xA2E85DB9
-          ksceSysconCtrlWirelessPower2: 0xA2E85DB9
           SceSysconForDriver_A2FE9BF9: 0xA2FE9BF9
           SceSysconForDriver_A57B5433: 0xA57B5433
           SceSysconForDriver_A5AB19B1: 0xA5AB19B1
@@ -3536,8 +3464,6 @@ modules:
           SceSysconForDriver_CE346793: 0xCE346793
           SceSysconForDriver_CE48E8EB: 0xCE48E8EB
           SceSysconForDriver_CEE2B8F7: 0xCEE2B8F7
-          SceSysconForDriver_CF5B2F2F: 0xCF5B2F2F
-          ksceSysconGetWakeupFactor: 0xCF5B2F2F
           SceSysconForDriver_CFCEE733: 0xCFCEE733
           SceSysconForDriver_D01E64FC: 0xD01E64FC
           SceSysconForDriver_D2ADABCA: 0xD2ADABCA
@@ -3590,6 +3516,7 @@ modules:
           ksceSysconCtrlManualChargeMode: 0xC6A2C9EF
           ksceSysconCtrlRMRPower: 0x710A7CF0
           ksceSysconCtrlSdPower: 0xBE1ADE4F
+          ksceSysconCtrlWirelessPower2: 0xA2E85DB9
           ksceSysconEnableHibernateIO: 0x4946538A
           ksceSysconEndConfigstorageTransaction: 0xFCC3E8EE
           ksceSysconGetBaryonTimestamp: 0x4D588A0A
@@ -3607,6 +3534,7 @@ modules:
           ksceSysconGetTemperatureLog: 0x3B354824
           ksceSysconGetTouchpanelDeviceInfo: 0xF492E69E
           ksceSysconGetUsbDetStatus: 0xEF810687
+          ksceSysconGetWakeupFactor: 0xCF5B2F2F
           ksceSysconIduModeClear: 0x34574496
           ksceSysconIduModeSet: 0x956D07CB
           ksceSysconIsDownLoaderMode: 0x9ADD60D2
@@ -3793,6 +3721,34 @@ modules:
           ksceKernelMMUVAtoPA: 0x14E0B0C4
           ksceKernelMMUVAtoPAWithMode: 0x1BD23326
           ksceKernelPleFlushRequest: 0xA0A70166
+      SceCpuForTZS:
+        kernel: true
+        nid: 0xC516B23E
+        functions:
+          SceCpuForTZS_0A15B41C: 0x0A15B41C
+          SceCpuForTZS_17A88E69: 0x17A88E69
+          SceCpuForTZS_190D96D5: 0x190D96D5
+          SceCpuForTZS_2B6403F8: 0x2B6403F8
+          SceCpuForTZS_31E78A4B: 0x31E78A4B
+          SceCpuForTZS_44C423D3: 0x44C423D3
+          SceCpuForTZS_4FED4BCE: 0x4FED4BCE
+          SceCpuForTZS_596784E9: 0x596784E9
+          SceCpuForTZS_71FD9AB5: 0x71FD9AB5
+          SceCpuForTZS_7548CBCF: 0x7548CBCF
+          SceCpuForTZS_75D87321: 0x75D87321
+          SceCpuForTZS_7A5373EB: 0x7A5373EB
+          SceCpuForTZS_7CCE9480: 0x7CCE9480
+          SceCpuForTZS_9E4C0D0D: 0x9E4C0D0D
+          SceCpuForTZS_A5965CBF: 0xA5965CBF
+          SceCpuForTZS_ACF209F3: 0xACF209F3
+          SceCpuForTZS_B421FAFD: 0xB421FAFD
+          SceCpuForTZS_B8F00FBE: 0xB8F00FBE
+          SceCpuForTZS_C4137AED: 0xC4137AED
+          SceCpuForTZS_CD98416C: 0xCD98416C
+          SceCpuForTZS_CDD46655: 0xCDD46655
+          SceCpuForTZS_D4E7413D: 0xD4E7413D
+          SceCpuForTZS_D67A4356: 0xD67A4356
+          SceCpuForTZS_EFD6F289: 0xEFD6F289
       SceDebugForDriver:
         kernel: true
         nid: 0x88758561
@@ -3834,6 +3790,18 @@ modules:
           ksceKernelRegisterDebugPutcharHandler: 0x22546577
           ksceKernelRegisterKprintfHandler: 0x88AD6D0C
           ksceKernelSetAssertLevel: 0xA0CE3287
+      SceDebugForTZS:
+        kernel: true
+        nid: 0x028FFADB
+        functions:
+          SceDebugForTZS_0D799DAE: 0x0D799DAE
+          SceDebugForTZS_1655E0E3: 0x1655E0E3
+          SceDebugForTZS_2F9B8AA8: 0x2F9B8AA8
+          SceDebugForTZS_563B623D: 0x563B623D
+          SceDebugForTZS_618F89E6: 0x618F89E6
+          SceDebugForTZS_C70CBB58: 0xC70CBB58
+          SceDebugForTZS_D26EB4BB: 0xD26EB4BB
+          SceDebugForTZS_F851BA4F: 0xF851BA4F
       SceDebugLedForDriver:
         kernel: true
         nid: 0x7BC05EAD
@@ -3855,6 +3823,11 @@ modules:
           ksceKernelClearDipsw: 0xF1F3E9FE
           ksceKernelGetDipswInfo: 0xB2AD48BE
           ksceKernelSetDipsw: 0x82E45FBF
+      SceDipswForTZS:
+        kernel: true
+        nid: 0x9DBF584C
+        functions:
+          SceDipswForTZS_ksceKernelCheckDipsw: 0xA98FC2FD
       SceKernelSuspendForDriver:
         kernel: true
         nid: 0x7290B21C
@@ -3954,6 +3927,11 @@ modules:
         functions:
           kscePmMgrGetProductMode: 0x2AC815A2
           kscePmMgrIsExternalBootMode: 0xBD1F193B
+      ScePmMgrForTZS:
+        kernel: true
+        nid: 0x27F1AFD8
+        functions:
+          ScePmMgrForTZS_CF554E69: 0xCF554E69
       SceProcEventForDriver:
         kernel: true
         nid: 0x887F19D0
@@ -3990,6 +3968,11 @@ modules:
           ksceSblQafMgrIsAllowPSPEmuShowQAInfo: 0xB7B195B2
           ksceSblQafMgrIsAllowRemotePlayDebug: 0xBFD5E463
           ksceSblQafMgrIsAllowSystemAppDebug: 0xCAD47130
+      SceQafMgrForTZS:
+        kernel: true
+        nid: 0x637069DD
+        functions:
+          SceQafMgrForTZS_54D22D74: 0x54D22D74
       SceSblAIMgrForDriver:
         kernel: true
         nid: 0xFD00C69A
@@ -4011,6 +3994,11 @@ modules:
           ksceSblAimgrIsToolRev4: 0x37A79140
           ksceSblAimgrIsToolRev5: 0xE5E47FF7
           ksceSblAimgrIsVITA: 0x4273B97B
+      SceSblAIMgrForTZS:
+        kernel: true
+        nid: 0x60D19047
+        functions:
+          SceSblAIMgrForTZS_536B38F4: 0x536B38F4
       SceSysclibForDriver:
         kernel: true
         nid: 0x7EE45391
@@ -4068,6 +4056,16 @@ modules:
           vsnprintf: 0x3DDBE2E1
         variables:
           __stack_chk_guard: 0x99EEBD1F
+      SceSysclibForTZS:
+        kernel: true
+        nid: 0xC839BB78
+        functions:
+          SceSysclibForTZS_361850BB: 0x361850BB
+          SceSysclibForTZS_956DB750: 0x956DB750
+          SceSysclibForTZS_BE3AF2EE: 0xBE3AF2EE
+          SceSysclibForTZS_E5457B97: 0xE5457B97
+        variables:
+          SceSysclibForTZS_BA505B15: 0xBA505B15
       SceSysmemForDriver:
         kernel: true
         nid: 0x6F25E18A
@@ -4359,6 +4357,28 @@ modules:
           sceKernelSysmemModuleStartAfterProcessmgr: 0x4E74DA48
           scePUIDGetAttr: 0x96BD47D1
           sceUIDEntryHeapSetHook: 0x666C878F
+      SceSysmemForTZS:
+        kernel: true
+        nid: 0x08680060
+        functions:
+          SceSysmemForTZS_0028E26C: 0x0028E26C
+          SceSysmemForTZS_038EAEEE: 0x038EAEEE
+          SceSysmemForTZS_1DEADF6C: 0x1DEADF6C
+          SceSysmemForTZS_29DE887D: 0x29DE887D
+          SceSysmemForTZS_2F18E288: 0x2F18E288
+          SceSysmemForTZS_31273DC7: 0x31273DC7
+          SceSysmemForTZS_402EB970: 0x402EB970
+          SceSysmemForTZS_42AD34AB: 0x42AD34AB
+          SceSysmemForTZS_42FB5B12: 0x42FB5B12
+          SceSysmemForTZS_473871D8: 0x473871D8
+          SceSysmemForTZS_56A16D84: 0x56A16D84
+          SceSysmemForTZS_624454BC: 0x624454BC
+          SceSysmemForTZS_658EACE3: 0x658EACE3
+          SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
+          SceSysmemForTZS_9D43E416: 0x9D43E416
+          SceSysmemForTZS_E1DEDFF4: 0xE1DEDFF4
+          SceSysmemForTZS_EA712806: 0xEA712806
+          SceSysmemForTZS_F459D09D: 0xF459D09D
       SceSysrootForDriver:
         kernel: true
         nid: 0x2ED7F97A
@@ -4509,6 +4529,7 @@ modules:
           SceSysrootForDriver_F4340469: 0xF4340469
           SceSysrootForDriver_F804F761: 0xF804F761
           SceSysrootForDriver_FF2DD7AB: 0xFF2DD7AB
+          SceSysrootForDriver_ksceSysrootIsManufacturingMode: 0x55392965
           ksceKernelInvokeInitCallback: 0x93CD44CD
           ksceKernelIsSomeBootMode: 0x7B7F8171
           ksceKernelSysrootAppMgrSpawnProcess: 0x3ACACD22
@@ -4530,7 +4551,6 @@ modules:
           ksceSysrootIsUpdateMode: 0xB0E1FC67
           ksceSysrootIsUsbEnumWakeup: 0x79C9AE10
           ksceSysrootRegisterLicMgrGetLicenseStatus: 0x71DB83A2
-          SceSysrootForDriver_ksceSysrootIsManufacturingMode: 0x55392965
           ksceSysrootUseInternalStorage: 0x50FE3B4D
           ksceSysrootUtMgrHasNpTestFlag: 0xA43599E9
           ksceSysrootUtMgrSetNpTestFlag: 0xEE5D6CE9
@@ -4693,40 +4713,6 @@ modules:
           sceKernelSysrootSetVbaseResetVector: 0x0F2F2B4E
           sceKernelSysrootThreadMgrStartAfterProcess: 0x0EB5D7CD
           sceKernelSysrootTrapThreadAfterSyscall: 0x9139E22B
-      SceUartForKernel:
-        kernel: true
-        nid: 0x1CCD9BA3
-        functions:
-          ksceUartInit: 0x4C02AA05
-          ksceUartRead: 0x4E97D3AD
-          ksceUartReadAvailable: 0x16780BC3
-          ksceUartWrite: 0x430C48F1
-  SceSysmemForTZS:
-    nid: 0x00000000
-    libraries:
-      SceSysmemForTZS:
-        kernel: true
-        nid: 0x08680060
-        functions:
-          SceSysmemForTZS_0028E26C: 0x0028E26C
-          SceSysmemForTZS_038EAEEE: 0x038EAEEE
-          SceSysmemForTZS_1DEADF6C: 0x1DEADF6C
-          SceSysmemForTZS_2F18E288: 0x2F18E288
-          SceSysmemForTZS_31273DC7: 0x31273DC7
-          SceSysmemForTZS_402EB970: 0x402EB970
-          SceSysmemForTZS_42AD34AB: 0x42AD34AB
-          SceSysmemForTZS_42FB5B12: 0x42FB5B12
-          SceSysmemForTZS_473871D8: 0x473871D8
-          SceSysmemForTZS_56A16D84: 0x56A16D84
-          SceSysmemForTZS_624454BC: 0x624454BC
-          SceSysmemForTZS_658EACE3: 0x658EACE3
-          SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
-          SceSysmemForTZS_9D43E416: 0x9D43E416
-          SceSysmemForTZS_E1DEDFF4: 0xE1DEDFF4
-          SceSysmemForTZS_F459D09D: 0xF459D09D
-  SceSysrootForTZS:
-    nid: 0x00000000
-    libraries:
       SceSysrootForTZS:
         kernel: true
         nid: 0xFEFF641D
@@ -4735,15 +4721,33 @@ modules:
           SceSysrootForTZS_1C96096F: 0x1C96096F
           SceSysrootForTZS_2460ADFA: 0x2460ADFA
           SceSysrootForTZS_29C1049E: 0x29C1049E
+          SceSysrootForTZS_2F5FD9A8: 0x2F5FD9A8
           SceSysrootForTZS_317E7556: 0x317E7556
           SceSysrootForTZS_32546BDB: 0x32546BDB
           SceSysrootForTZS_45EEB2E0: 0x45EEB2E0
+          SceSysrootForTZS_7DA87A7F: 0x7DA87A7F
           SceSysrootForTZS_8E871C6D: 0x8E871C6D
           SceSysrootForTZS_A8B7DAF9: 0xA8B7DAF9
+          SceSysrootForTZS_C9DD8EB3: 0xC9DD8EB3
           SceSysrootForTZS_CC36643A: 0xCC36643A
           SceSysrootForTZS_D4E6D8E8: 0xD4E6D8E8
+          SceSysrootForTZS_D653194A: 0xD653194A
           SceSysrootForTZS_D6FBF445: 0xD6FBF445
+          SceSysrootForTZS_DB3DAB76: 0xDB3DAB76
           SceSysrootForTZS_EA572BD9: 0xEA572BD9
+      SceUartForKernel:
+        kernel: true
+        nid: 0x1CCD9BA3
+        functions:
+          ksceUartInit: 0x4C02AA05
+          ksceUartRead: 0x4E97D3AD
+          ksceUartReadAvailable: 0x16780BC3
+          ksceUartWrite: 0x430C48F1
+      SceUartForTZS:
+        kernel: true
+        nid: 0xA1D740D7
+        functions:
+          SceUartForTZS_3AFD5E71: 0x3AFD5E71
   SceSystimer:
     nid: 0x00000000
     libraries:
