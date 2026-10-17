@@ -6,9 +6,12 @@
 #   tools/mepbuild.sh sys/internal/secure/first_loader FW=20110616 O=<build directory>
 #
 # FW selects fw/<date>.mk: 20110616 (retail, PCH-1000), 20110117 (CEM-3000ND1).
-#   rom/       the vector table, reset (copies the program to 0x5c000), and the
+# Sony's file names (a prototype firmware's first_loader folder: boot.c, boot.s, boot.ld,
+# Makefile, beside second_loader):
+#   boot.s     the vector table, reset (copies the program to 0x5c000), and the
 #              copyright notice and build date in the last 0x80 bytes
-#   program/   the program run at 0x5c000 (skeleton)
+#   boot.c     the program run at 0x5c000 (skeleton)
+#   boot.ld    the ROM's layout
 #
 # Sony's Cmep compiler is not identified yet; the ROM part is assembly and builds with
 # binutils 2.27 for mep-elf. Until the program is written its copy length (reset's r3,
@@ -26,27 +29,24 @@ AS := $(BINUTILS)as
 LD := $(BINUTILS)ld
 OBJCOPY := $(BINUTILS)objcopy
 
-DEFS := -DFL_BUILD_DATE=$(FL_BUILD_DATE)
-CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -Iinclude $(DEFS)
-ASFLAGS := -mel -Iinclude $(DEFS)
+CFLAGS := -mel -O2 -std=gnu99 -Wall -ffreestanding -fno-builtin -DFL_BUILD_DATE=$(FL_BUILD_DATE)
+ASFLAGS := -mel -Wa,--defsym,FL_BUILD_DATE=$(FL_BUILD_DATE)
 
-ROM := rom/vectors.S rom/reset.S rom/signature.S
-PROGRAM := $(wildcard program/*.c program/*.S)
-OBJS := $(patsubst %,$(O)/$(FW)/%.o,$(basename $(ROM) $(PROGRAM)))
+OBJS := $(O)/$(FW)/boot.s.o $(O)/$(FW)/boot.c.o
 
 .PHONY: image clean
 image: $(O)/$(FW)/first_loader.bin
 
-$(O)/$(FW)/%.o: %.S $(wildcard include/*.h) fw/$(FW).mk
+$(O)/$(FW)/%.s.o: %.s fw/$(FW).mk
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
-$(O)/$(FW)/%.o: %.c $(wildcard include/*.h) fw/$(FW).mk
+$(O)/$(FW)/%.c.o: %.c fw/$(FW).mk
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(O)/$(FW)/first_loader.elf: $(OBJS) first_loader.ld
-	$(LD) -T first_loader.ld -o $@ $(OBJS)
+$(O)/$(FW)/first_loader.elf: $(OBJS) boot.ld
+	$(LD) -T boot.ld -o $@ $(OBJS)
 
 # the ROM image: 16 KiB from 0x40000, gaps zero
 $(O)/$(FW)/first_loader.bin: $(O)/$(FW)/first_loader.elf

@@ -10,4 +10,9 @@
  * routine, deferred) when they are reached.
  */
 
-#include "first_loader.h"
+#ifndef FL_BUILD_DATE
+#error "FL_BUILD_DATE (build, YYYYMMDD in hex) not set"
+#endif
+
+/* code that differs between the builds: FL_SINCE(0x20110616) */
+#define FL_SINCE(date)	(FL_BUILD_DATE >= (date))
