@@ -3,7 +3,7 @@ from pathlib import Path
 import shlex
 import re
 
-DEFAULT_F = ('-fstack-protector-strong', '-ffreestanding', '-fno-builtin',
+DEFAULT_F = ('-fstack-protector-strong', '-ffreestanding', '-fno-builtin', '-fno-short-enums',
              '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks',
              '-fno-section-anchors', '-fno-shrink-wrap')
 

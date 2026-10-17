@@ -120,6 +120,27 @@ def linux_command(argv, cwd=None):
 	raise HostError(f'unsupported host system: {sys.platform}')
 
 
+def linux_wrapper(program, path):
+	"""Write path: a command that runs the Linux program on this host from the current folder
+	(a build tool such as CMake takes one program per tool, without arguments). Returns the
+	path written (.cmd on Windows)."""
+	path = Path(path)
+	if SYSTEM == 'windows':
+		path = path.with_suffix('.cmd')
+		path.write_text(f'@"{sys.executable}" -I "{Path(__file__).resolve()}" linux -- '
+				f'"{program}" %*\r\n')
+		return path
+	if SYSTEM == 'linux':
+		run = f'exec "{program}" "$@"'
+	elif SYSTEM == 'macos':
+		run = f'exec limactl shell --workdir "$PWD" {_lima_instance()} -- "{program}" "$@"'
+	else:
+		raise HostError(f'unsupported host system: {sys.platform}')
+	path.write_text(f'#!/bin/sh\n{run}\n')
+	path.chmod(0o755)
+	return path
+
+
 # --- psp2snc.exe ----------------------------------------------------------------------
 
 def _wine():
