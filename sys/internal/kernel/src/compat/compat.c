@@ -965,6 +965,13 @@ int compatStop(void)
 	return result;
 }
 
+__attribute__((noinline)) int compatReleaseFrameBuffer(void)
+{
+	ksceGUIDReleaseObject(gCompatFrameBuffer);
+	gCompatFrameBuffer = 0;
+	return 0;
+}
+
 int compatWaitAndGetRequest(int mode, int id)
 {
 	struct CompatRequestQueue *queue;
@@ -2317,4 +2324,3 @@ int sceCompatReturnValueEx(SceUInt32 channel, const SceUInt32 *values,
 	sceSyscallLeave(syscall);
 	return (int)0x80010058;
 }
-

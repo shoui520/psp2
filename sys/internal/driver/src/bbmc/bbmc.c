@@ -28,6 +28,8 @@
 #include "bbmc_update_work.h"
 #include "bbmc_control.h"
 #include "bbmc_modem_configuration.h"
+#include <sysmem/sysmem.h>
+#include "bbmc_memory.h"
 
 static const BbmcSetupDescriptor bbmcSetupDescriptors[8];
 
@@ -68,7 +70,7 @@ int managerThread(SceSize argumentSize, void *arguments);
 extern int ScePowerForDriver_F535D928(SceUInt32 mask, int enabled);
 extern int SceSysconForDriver_4E88B4D9(void (*callback)(int, void *),
 	void *argument);
-extern BbmcControl *g_bbmcControl;
+BbmcControl *g_bbmcControl;
 static BbmcControl bbmcMainControl;
 int sceBbmcUnsubscribeFeatureForDriver(int subscriberId);
 int sceBbmcTurnOffForDriver(int subscriberId);
@@ -458,6 +460,12 @@ int SceBbmcForDriver_D98DB926(void)
 int SceBbmcForDriver_D16D0845(void)
 {
 	return bbmcReleaseGpio(NULL);
+}
+
+/* name unknown: returns the active manager control object. */
+__attribute__((noinline)) BbmcControl *bbmcGetControl(void)
+{
+	return g_bbmcControl;
 }
 
 int bbmcNotifyFeatureEvent(BbmcControl *control, SceUInt32 featureId,

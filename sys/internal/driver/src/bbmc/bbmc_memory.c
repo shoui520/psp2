@@ -2,15 +2,7 @@
 #include <sysmem/sysmem.h>
 #include "bbmc_memory.h"
 
-/* The complete control object is defined by its owner in the manager code. */
-BbmcControl *g_bbmcControl;
 SceUID g_bbmcHeap;
-
-/* name unknown: returns the active manager control object. */
-BbmcControl *bbmcGetControl(void)
-{
-	return g_bbmcControl;
-}
 
 /* name unknown: creates the heap used by the manager's allocation wrappers. */
 int bbmcCreateHeap(SceSize size)

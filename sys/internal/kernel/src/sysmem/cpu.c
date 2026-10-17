@@ -246,11 +246,6 @@ void ksceKernelSpinlockLowUnlock(volatile uint32_t *lock)
 }
 #endif
 
-uint32_t SceCpuForKernel_9818A20B(uint32_t value)
-{
-	return value | 0x4a;
-}
-
 int ksceKernelCpuBranchPredictorInvalidateAll(void)
 {
 	writeBpiall(0);
@@ -265,11 +260,6 @@ int ksceKernelCpuBranchPredictorInvalidateAllIS(void)
 	dsb();
 	isb();
 	return 0;
-}
-
-uint8_t ksceKernelCpuGetCONTEXTIDR(void)
-{
-	return readContextId();
 }
 
 void ksceKernelCpuUpdateSCTLR(void)

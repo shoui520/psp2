@@ -18,6 +18,8 @@
 #include "mmu.h"
 #include "cpu_irq.h"
 #include <sysmem/barrier.h>
+#include <sysmem/cpu_id.h>
+#include <threadmgr/threadcb.h>
 
 int ksceKernelCpuSuspendIntr(void);
 int ksceKernelCpuResumeIntr(int flags);
@@ -443,6 +445,11 @@ privWrite:
 	return SCE_KERNEL_ERROR_VA2PA_FAULT;
 }
 
+uint8_t ksceKernelCpuGetCONTEXTIDR(void)
+{
+	return readContextId();
+}
+
 /* name unknown: the current translation context */
 __attribute__((noinline))
 int MMUContextSave(MMUContext *context)
@@ -451,6 +458,11 @@ int MMUContextSave(MMUContext *context)
 	context->dacr = readDacr();
 	context->contextId = readContextId();
 	return 0;
+}
+
+uint32_t SceCpuForKernel_9818A20B(uint32_t value)
+{
+	return value | 0x4a;
 }
 
 /* name unknown: back to a saved translation context */

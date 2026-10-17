@@ -695,46 +695,6 @@ uint32_t sceKernelPaGetTraceBufferSize(unsigned int buffer)
 	return ScePamgrForDriver_019BD60F(buffer);
 }
 
-int ScePamgrForDriver_4AF0C972(void)
-{
-	pamgrState.pl310Registers->eventCounterControl |= 6;
-	return 0;
-}
-
-int ScePamgrForDriver_95E2A1C5(void)
-{
-	pamgrState.pl310Registers->eventCounterControl = 1;
-	return 0;
-}
-
-int ScePamgrForDriver_7F0EE7B3(void)
-{
-	pamgrState.pl310Registers->eventCounterControl = 0;
-	return 0;
-}
-
-int ScePamgrForDriver_3E7AABEA(unsigned int counter, uint32_t configuration)
-{
-	if (counter == 0)
-		pamgrState.pl310Registers->eventCounter0Config |= configuration & 0x3c;
-	else if (counter == 1)
-		pamgrState.pl310Registers->eventCounter1Config |= configuration & 0x3c;
-	else
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return 0;
-}
-
-int ScePamgrForDriver_B699F4B0(unsigned int counter, uint32_t *value)
-{
-	if (counter == 0)
-		*value = pamgrState.pl310Registers->eventCounter0Value;
-	else if (counter == 1)
-		*value = pamgrState.pl310Registers->eventCounter1Value;
-	else
-		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return 0;
-}
-
 /* Request the trace control state and wait for acknowledgement. */
 int __attribute__((noinline)) waitTraceControl(struct PamgrPtmRegisters *trace)
 {

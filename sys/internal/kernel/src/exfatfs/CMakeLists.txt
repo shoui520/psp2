@@ -9,7 +9,6 @@ psp2_module(os0_kd_exfatfs KIND kernel PARTIAL SOURCES
 	prxexport.c
 	uvexfatfs.c
 	exfatfs_utility.c
-	exfatfs_entry_time.c
 	uvexfat_util.c
 	uvfat_if.c
 	uvfat_util.c

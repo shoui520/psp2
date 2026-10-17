@@ -2790,6 +2790,16 @@ int SceSysconForDriver_1546A141(int first, int second)
 	return result < 0 ? result : 0;
 }
 
+__attribute__((noinline)) int ksceSysconGetHardwareInfo(void)
+{
+	return s_sysconControl.hardwareInfo;
+}
+
+__attribute__((noinline)) int ksceSysconGetBaryonVersion(void)
+{
+	return s_sysconControl.baryonVersion;
+}
+
 int ksceSysconGetHardwareInfo2(uint32_t *information)
 {
 	if (!(s_sysconControl.hardwareInfo & 0x20))

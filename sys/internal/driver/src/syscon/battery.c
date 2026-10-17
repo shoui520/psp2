@@ -163,11 +163,6 @@ int SceSysconForDriver_C50568E9(void)
 	return s_sysconControl.notificationState[SYSCON_STATE_N3_BIT3];
 }
 
-int ksceSysconGetHardwareInfo(void)
-{
-	return s_sysconControl.hardwareInfo;
-}
-
 int SceSysconForDriver_D7F5A797(void)
 {
 	return s_sysconControl.notificationState[SYSCON_STATE_LOW_BATTERY];
@@ -176,10 +171,5 @@ int SceSysconForDriver_D7F5A797(void)
 int SceSysconForDriver_EBE3262C(void)
 {
 	return s_sysconControl.statusFlags;
-}
-
-int ksceSysconGetBaryonVersion(void)
-{
-	return s_sysconControl.baryonVersion;
 }
 

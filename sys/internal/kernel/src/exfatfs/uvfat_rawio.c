@@ -1,6 +1,9 @@
+/* uvfat_rawio.c */
 #include <sysmem/debug.h>
 #include <string.h>
 #include "exfatfs_internal.h"
+#include <psp2kern/types.h>
+#include <psp2kern/kernel/threadmgr/misc.h>
 
 extern void *allocateFatBuffer(SceSize size);
 extern void freeFatBuffer(void *buffer, SceSize size);
@@ -17,6 +20,111 @@ extern void _exfatfs_notify_invalid_boot_signature(SceExfatfsDrive *drive);
 extern void _exfatfs_notify_invalid_sector_shift(SceExfatfsDrive *drive,
 	SceUInt32 sectorSize);
 extern void _exfatfs_notify_unsupported_sector_size(SceExfatfsDrive *drive);
+
+int hasCachedFreeClusterCount(SceExfatfsFileSystem *fileSystem)
+{
+	return fileSystem->freeClusterCountValid == 1;
+}
+
+void cacheFreeClusterCount(SceExfatfsFileSystem *fileSystem, SceUInt32 count)
+{
+	fileSystem->freeClusterCount = count;
+	fileSystem->freeClusterCountValid = 1;
+}
+
+void accountAllocatedCluster(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster)
+{
+	if (fileSystem->fileSystemType == 2)
+		fileSystem->bitmapFreeClusterCount--;
+	if (fileSystem->freeClusterCountValid == 1)
+		fileSystem->freeClusterCount--;
+	if (fileSystem->nextFreeCluster == cluster)
+		fileSystem->nextFreeCluster = cluster + 1;
+}
+
+void accountFreedCluster(SceExfatfsFileSystem *fileSystem, SceUInt32 cluster)
+{
+	if (fileSystem->fileSystemType == 2) {
+		fileSystem->bitmapFreeClusterCount++;
+		if (fileSystem->freeClusterCountValid != 1)
+			goto update_next_free_cluster;
+	} else if (fileSystem->freeClusterCountValid != 1) {
+		goto update_next_free_cluster;
+	}
+	fileSystem->freeClusterCount++;
+
+update_next_free_cluster:
+	if (fileSystem->nextFreeCluster > cluster)
+		fileSystem->nextFreeCluster = cluster;
+}
+
+SceUInt64 clusterToDeviceSector(SceUInt32 cluster,
+	SceExfatfsFileSystem *fileSystem)
+{
+	const SceExfatfsBootSector *boot = fileSystem->PBRBuf;
+	SceUInt32 clusterSectors, rootCluster;
+
+	if (fileSystem->fileSystemType != 2) {
+		if (fileSystem->FATBits == 32) {
+			rootCluster = fileSystem->firstClusterOfRoot - 2;
+			clusterSectors = boot->fat32.parameters.sectorsPerCluster;
+		} else {
+			clusterSectors = boot->fat32.parameters.sectorsPerCluster;
+			rootCluster = 0;
+		}
+	} else {
+		clusterSectors = fileSystem->clusterSectorCount;
+		rootCluster = fileSystem->firstClusterOfRoot - 2;
+	}
+	if (cluster > 1)
+		return (SceUInt64)(cluster - 2) * clusterSectors +
+			(SceUInt32)(fileSystem->rootDirectorySectors +
+				fileSystem->dataAreaStartSector);
+	return (SceUInt64)(rootCluster + cluster) * clusterSectors +
+		fileSystem->dataAreaStartSector;
+}
+
+int (*g_currentClockCallback)(SceDateTime *time, int timeZone);
+
+int getCurrentFatDateTime(SceExfatfsDateTime *dateTime)
+{
+	SceDateTime time;
+
+	if (g_currentClockCallback && !g_currentClockCallback(&time, 0)) {
+		SceUInt16 year = time.year;
+		SceUInt16 month = time.month;
+		SceUInt16 day = time.day;
+		SceUInt16 hour = time.hour;
+		SceUInt16 minute = time.minute;
+		SceUInt16 second = time.second;
+
+		dateTime->year = year;
+		dateTime->month = month;
+		dateTime->day = day;
+		dateTime->hour = hour;
+		dateTime->minute = minute;
+		dateTime->second = second;
+	} else {
+		dateTime->month = 1;
+		dateTime->year = 2000;
+		dateTime->day = 1;
+		dateTime->hour = 0;
+		dateTime->minute = 0;
+		dateTime->second = 0;
+	}
+	return 0;
+}
+
+int initializeFatDateTime(SceExfatfsDateTime *dateTime)
+{
+	dateTime->year = 2000;
+	dateTime->month = 1;
+	dateTime->day = 1;
+	dateTime->hour = 0;
+	dateTime->minute = 0;
+	dateTime->second = 0;
+	return 0;
+}
 
 unsigned int UVFAT_TimeToFATDate(SceExfatfsDateTime *dateTime)
 {
@@ -250,6 +358,254 @@ dataCluster:
 readBlock:
 	sector += (fileSystem->fileBufferSize >> fileSystem->BytePerSectorShift) * block;
 	return UVFAT_ReadDevice(fileSystem, sector, fileSystem->fileBufferSize, buffer);
+}
+
+unsigned int fatDateTimeToTime(SceExfatfsDateTime *dateTime)
+{
+	return (SceUInt16)((dateTime->minute << 5) |
+		(dateTime->hour << 11) | (dateTime->second >> 1));
+}
+
+extern int _sceFatfsWriteModeFromStat(SceExfatfsDrive *drive, int attribute);
+
+int copyFatEntryAttributeToStat(const SceExfatfsFatDirectoryEntry *entry,
+	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem)
+{
+	const SceExfatfsBootSector *boot;
+	SceUInt16 mode;
+	int attribute;
+
+	stat->st_attr = entry->attribute;
+	stat->st_mode = _sceFatfsWriteModeFromStat(fileSystem->drive, entry->attribute);
+	if (!(entry->attribute & 0x20))
+		stat->st_mode |= 0x40;
+	boot = fileSystem->PBRBuf;
+	stat->st_type = entry->attribute & 0x10 ? 6 : 0;
+	if ((signed char)entry->attribute < 0)
+		stat->st_mode |= 0x200;
+	if (strncmp((const char *)boot->fat16.fileSystemName, "UVFAT", 5)) {
+		attribute = entry->attribute;
+		stat->st_attr = attribute;
+		mode = _sceFatfsWriteModeFromStat(fileSystem->drive, attribute);
+		if (!(attribute & 0x20))
+			mode |= 0x40;
+		stat->st_mode = mode;
+		stat->st_dev = 0;
+		stat->st_type = attribute & 0x10 ? 6 : 0;
+		stat->st_uid = 0;
+	}
+	return 0;
+}
+
+int applyFatAttributeToStat(SceExfatfsDrive *drive, int attribute,
+	SceExfatfsStat *stat)
+{
+	SceUInt16 mode;
+
+	stat->st_attr = attribute;
+	mode = _sceFatfsWriteModeFromStat(drive, attribute);
+	if (!(attribute & 0x20))
+		mode |= 0x40;
+	stat->st_mode = mode;
+	stat->st_dev = 0;
+	stat->st_type = attribute & 0x10 ? 6 : 0;
+	stat->st_uid = 0;
+	return 0;
+}
+
+int copyExfatEntryAttributeToStat(const SceExfatfsFileDirectoryEntry *entry,
+	SceExfatfsStat *stat, SceExfatfsFileSystem *fileSystem)
+{
+	int attribute = entry->fileAttributes[0];
+	SceUInt16 mode;
+
+	stat->st_attr = attribute;
+	mode = _sceFatfsWriteModeFromStat(fileSystem->drive, attribute);
+	if (!(attribute & 0x20))
+		mode |= 0x40;
+	stat->st_mode = mode;
+	stat->st_dev = 0;
+	stat->st_type = attribute & 0x10 ? 6 : 0;
+	stat->st_uid = 0;
+	return 0;
+}
+
+int copyStatAttributeToFatEntry(const SceExfatfsStat *stat,
+	SceExfatfsFatDirectoryEntry *entry, SceExfatfsFileSystem *fileSystem)
+{
+	(void)fileSystem;
+	entry->attribute = stat->st_attr;
+	return 0;
+}
+
+SceExfatfsDateTime *decodeFatDateTime(SceExfatfsDateTime *dateTime,
+	unsigned int date, unsigned int time)
+{
+	dateTime->hour = time >> 11;
+	dateTime->year = (date >> 9) + 1980;
+	dateTime->month = (date >> 5) & 15;
+	dateTime->day = date & 31;
+	dateTime->minute = (time >> 5) & 63;
+	dateTime->second = (time & 31) * 2;
+	return dateTime;
+}
+
+int decodeExfatUtcOffset(unsigned int offset)
+{
+	int quarters, minutes;
+
+	if ((signed char)offset >= 0)
+		return 0;
+	quarters = offset & ~0x80U;
+	if (quarters > 63)
+		minutes = quarters * 15 - 1920;
+	else
+		minutes = quarters * 15;
+	return minutes;
+}
+
+/* Gregorian month lengths, January through December. */
+const SceUInt16 g_daysInLeapMonth[12] = {
+	31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+};
+
+const SceUInt16 g_daysInCommonMonth[12] = {
+	31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,
+};
+
+__attribute__((noinline)) void adjustFatDateTimeMinutes(SceExfatfsDateTime *dateTime, int minutes)
+{
+	const SceUInt16 *monthDays;
+	int originalDay, day, hour, minute, hours, year;
+	SceUInt16 month;
+
+	if (!minutes)
+		return;
+	originalDay = dateTime->day;
+	hour = dateTime->hour;
+	hours = minutes / 60;
+	minute = dateTime->minute + minutes % 60;
+	if (minute > 59) {
+		hour += 1 + hours;
+		dateTime->minute = minute - 60;
+	} else {
+		if (minute < 0) {
+			minute += 60;
+			hour--;
+		}
+		hour += hours;
+		dateTime->minute = minute;
+	}
+	if (hour > 23) {
+		hour -= 24;
+		day = (SceUInt16)(originalDay + 1);
+		dateTime->day = day;
+	} else if (hour < 0) {
+		hour += 24;
+		day = (SceUInt16)(originalDay - 1);
+		dateTime->day = day;
+	} else {
+		dateTime->hour = hour;
+		return;
+	}
+	dateTime->hour = hour;
+	if (originalDay == day)
+		return;
+	year = dateTime->year;
+	if ((year & 3) || ((SceUInt16)(year % 100U) == 0 &&
+		(SceUInt16)(year % 400U) != 0))
+		monthDays = g_daysInCommonMonth;
+	else
+		monthDays = g_daysInLeapMonth;
+	month = dateTime->month;
+	if (monthDays[month - 1] < day) {
+		month++;
+		dateTime->day = 1;
+		dateTime->month = month;
+	} else if (!day) {
+		month--;
+		dateTime->month = month;
+		dateTime->day = monthDays[month ? month - 1 : 11];
+	}
+	if (month > 12) {
+		dateTime->year = year + 1;
+		dateTime->month = 1;
+	} else if (!month) {
+		dateTime->year = year - 1;
+		dateTime->month = 12;
+	}
+}
+
+void decodeExfatEntryDateTimes(SceExfatfsStat *stat,
+	const SceExfatfsFileDirectoryEntry *entry)
+{
+	SceUInt32 stamp;
+	SceUInt16 date, time;
+	int offset, minutes;
+
+	stamp = ((SceUInt32)entry->modificationTime[2] << 16) |
+		((SceUInt32)entry->modificationTime[3] << 24) |
+		entry->modificationTime[0] | (entry->modificationTime[1] << 8);
+	date = stamp >> 16;
+	time = stamp;
+	offset = entry->modificationUtcOffset;
+	stat->mtime.month = (date >> 5) & 15;
+	stat->mtime.second = entry->modificationTenths / 100U + (time & 31) * 2;
+	stat->mtime.day = date & 31;
+	stat->mtime.year = (date >> 9) + 1980;
+	stat->mtime.hour = time >> 11;
+	stat->mtime.minute = (time >> 5) & 63;
+	minutes = 0;
+	if ((signed char)offset < 0) {
+		offset &= ~0x80;
+		if (offset > 63)
+			minutes = 1920 - 15 * offset;
+		else
+			minutes = -15 * offset;
+	}
+	adjustFatDateTimeMinutes(&stat->mtime, minutes);
+	stamp = ((SceUInt32)entry->creationTime[2] << 16) |
+		((SceUInt32)entry->creationTime[3] << 24) |
+		entry->creationTime[0] | (entry->creationTime[1] << 8);
+	date = stamp >> 16;
+	time = stamp;
+	offset = entry->creationUtcOffset;
+	stat->ctime.day = date & 31;
+	stat->ctime.month = (date >> 5) & 15;
+	stat->ctime.second = entry->creationTenths / 100U + (time & 31) * 2;
+	stat->ctime.year = (date >> 9) + 1980;
+	stat->ctime.hour = time >> 11;
+	stat->ctime.minute = (time >> 5) & 63;
+	minutes = 0;
+	if ((signed char)offset < 0) {
+		offset &= ~0x80;
+		if (offset > 63)
+			minutes = 1920 - 15 * offset;
+		else
+			minutes = -15 * offset;
+	}
+	adjustFatDateTimeMinutes(&stat->ctime, minutes);
+	stamp = ((SceUInt32)entry->accessTime[2] << 16) |
+		((SceUInt32)entry->accessTime[3] << 24) |
+		entry->accessTime[0] | (entry->accessTime[1] << 8);
+	date = stamp >> 16;
+	time = stamp;
+	offset = entry->accessUtcOffset;
+	stat->atime.hour = time >> 11;
+	stat->atime.month = (date >> 5) & 15;
+	stat->atime.day = date & 31;
+	stat->atime.year = (date >> 9) + 1980;
+	stat->atime.minute = (time >> 5) & 63;
+	stat->atime.second = (time & 31) * 2;
+	minutes = 0;
+	if ((signed char)offset < 0) {
+		offset &= ~0x80;
+		if (offset > 63)
+			minutes = 1920 - 15 * offset;
+		else
+			minutes = -15 * offset;
+	}
+	adjustFatDateTimeMinutes(&stat->atime, minutes);
 }
 
 int UVFAT_WriteDevice(SceExfatfsFileSystem *fileSystem, SceUInt64 sector,
