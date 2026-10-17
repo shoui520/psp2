@@ -4941,8 +4941,8 @@ typedef struct VeneziaVipCommandMemory {
 
 typedef struct VeneziaVipCommandState {
 	uint32_t magic;
-	/* unprototyped as in Sony's build: the stop request passes a third word */
-	uint32_t (*write)();
+	/* the stop request passes a third word (Sony's declaration is unprototyped) */
+	uint32_t (*write)(uint32_t address, uint32_t value, ...);
 	uint32_t (*read)(uint32_t address);
 	VeneziaVipCommandMemory *memory;
 	uint32_t physicalBase;
@@ -5102,7 +5102,7 @@ int clearVeneziaVipInterruptStatus(unsigned int processor, uint32_t *status)
 }
 
 typedef struct VeneziaVipCommandCallbacks {
-	uint32_t (*write)();
+	uint32_t (*write)(uint32_t address, uint32_t value, ...);
 	uint32_t (*read)(uint32_t address);
 } VeneziaVipCommandCallbacks;
 
@@ -5115,7 +5115,7 @@ int initializeVeneziaVipCommands(const VeneziaVipCommandCallbacks *callbacks,
 
 	VeneziaVipCommandMemory *virtualAddress;
 	uint32_t physicalAddress;
-	uint32_t (*write)();
+	uint32_t (*write)(uint32_t address, uint32_t value, ...);
 	uint32_t (*read)(uint32_t);
 
 	if (g_veneziaVipCommandState.magic == 5261654)
