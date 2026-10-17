@@ -13,7 +13,7 @@
 #undef ksceKernelUnlockFastMutex
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <idstorage/idstorage_imports.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/kernel/sysroot.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <string.h>
@@ -469,7 +469,7 @@ int dev_sdstor_vfs_open(SceVopOpenArgs *args)
 	SceSdstorPartitionEntry *entry;
 	SceSdstorSdpart *table;
 	SceSdstorPartitionAccess access;
-	struct SceIdStorageAccessAttr attr;
+	SceSblACMgrValue attr;
 	int result;
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 284, "called OPEN vp=%p %s\n",
@@ -498,7 +498,7 @@ int dev_sdstor_vfs_open(SceVopOpenArgs *args)
 	if (result < 0)
 		return result;
 	attr.type = 8;
-	attr.value = &access;
+	attr.value = (unsigned char *)&access;
 	attr.size = sizeof(access);
 	result = SceSblACMgrForDriver_BE5667C5(0, &attr, flags & 2 ? 3 : 1);
 	if (result < 0)
@@ -564,7 +564,7 @@ int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args)
 	SceSdstorSddev *device;
 	SceSdstorSdinst sdinst;
 	SceSdstorPartitionAccess access;
-	struct SceIdStorageAccessAttr attr;
+	SceSblACMgrValue attr;
 	SceUID callback;
 	int result, unlockResult, length;
 
@@ -580,7 +580,7 @@ int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args)
 	if (command == 6) {
 		erase = arg;
 		attr.type = 8;
-		attr.value = &access;
+		attr.value = (unsigned char *)&access;
 		attr.size = sizeof(access);
 		length = strnlen(erase->name, 20);
 		result = sdpart_decode_name(erase->name, length, &sdinst);
@@ -636,7 +636,7 @@ eraseAccess:
 		return 0x80010013;
 	length = strnlen(arg, argSize);
 	attr.type = 8;
-	attr.value = &access;
+	attr.value = (unsigned char *)&access;
 	attr.size = sizeof(access);
 	switch (command) {
 	case 1:

@@ -22,3 +22,4 @@ typedef struct SceSblACMgrValue {		/* name unknown */
 
 int SceSblACMgrForDriver_6210D745(SceUID pid, SceSblACMgrValue *value, SceUInt32 mode);
 int SceSblACMgrForDriver_3B356B98(SceSblACMgrValue *value, SceUInt32 *mode);
+int SceSblACMgrForDriver_BE5667C5(SceUID pid, SceSblACMgrValue *attr, SceUInt32 access);

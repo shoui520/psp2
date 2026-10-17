@@ -30,6 +30,8 @@ int sceKernelIsUserModeThread(void);
 
 /* name unknown: nonzero while the caller may already own a lock it waits on (thread-state query) */
 int SceThreadmgrForDriver_20C228E4(void);
+int SceThreadmgrForDriver_56C18B11(void);				/* the current thread's I/O flags */
+int SceThreadmgrForDriver_84EB1EA4(int value);			/* set them, returning the old */
 
 /* ARM performance monitor control of a thread (0: the caller) */
 int sceKernelPMonSetControlRegister(SceUID thid, SceUInt32 value);

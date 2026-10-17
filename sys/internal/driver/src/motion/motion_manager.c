@@ -8,7 +8,7 @@
 #include <string.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
-#include <idstorage/idstorage_imports.h>
+#include <sysmem/suspend.h>
 #include <idstorage/idstorage.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysevent.h>

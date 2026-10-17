@@ -10,7 +10,9 @@
 #include <psp2kern/kernel/sysmem/heap.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <idstorage/idstorage.h>
-#include <idstorage/idstorage_imports.h>
+#include <acmgr/acmgr.h>
+#include <sysmem/suspend.h>
+#include <threadmgr/threadmgr.h>
 #include <sdstor/mbr.h>
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>
@@ -62,7 +64,7 @@ static struct {
 	uint32_t owner;
 	uint16_t mode;
 } permission;
-static struct SceIdStorageAccessAttr accessAttr;
+static SceSblACMgrValue accessAttr;
 static const char entireDevice[] = "sdstor0:int-lp-act-entire";
 static const char idDevice[] = "sdstor0:int-lp-ign-idstor";
 static const char name[] = "SceIdStorage";
@@ -103,7 +105,7 @@ static int loadPermissions(void)
 	int fd, ret, i;
 
 	accessAttr.type = 8;
-	accessAttr.value = &permission;
+	accessAttr.value = (unsigned char *)&permission;
 	accessAttr.size = 6;
 	permission.owner = 0;
 	permission.mode = 0;

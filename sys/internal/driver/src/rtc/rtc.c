@@ -16,7 +16,7 @@
 #include <psp2kern/kernel/acmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
-#include <idstorage/idstorage_imports.h>
+#include <sysmem/suspend.h>
 #include <sysmem/sysevent.h>
 #include <touch_dummy/touch_dummy.h>
 #include "rtc_internal.h"
