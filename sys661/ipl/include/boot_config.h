@@ -4,7 +4,7 @@
 
 #include "ipl.h"
 #include "loadcore.h"
-#include "../../psp_ipl.h"
+#include "psp_ipl.h"
 
 /* The header and both record tables use offsets into one configuration image. */
 typedef struct PspBootConfigHeader {

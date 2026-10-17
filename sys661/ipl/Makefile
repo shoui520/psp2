@@ -1,4 +1,4 @@
-# ePSP IPL (Allegrex), the payload of os0:kd/pcbc.skprx.
+# ePSP IPL (Allegrex), the payload of os0:kd/pcbc.skprx (the driver: sys/internal/driver/src/pcbc).
 #
 #   make [O=<build dir>] [FW=<firmware>]
 #
@@ -30,6 +30,9 @@ SCRAMBLE_SEED_3.65-CEX := scramble_seed_365.inc
 LDFLAGS	:= -nostdlib -Wl,-T,ipl.ld -Wl,--gc-sections -Wl,-Map,$(O)/ipl.map
 
 SRCS	:= start.S halt.c data.S cache.S memlmd.c sysreg.c kl4e.c boot.c boot_services.c boot_handoff.S boot_main.c boot_config.c loadelf_boot.c libc.c
+# PSP's loadcore, from the sys661 tree beside this one, by the path Sony's build gives it
+# (the payload's records name ../../sys661/kernel/src/loadcore/loadelf_boot.c)
+vpath loadelf_boot.c ../../sys661/kernel/src/loadcore
 OBJS	:= $(addprefix $(O)/,$(addsuffix .o,$(basename $(SRCS))))
 
 all: $(O)/ipl.bin

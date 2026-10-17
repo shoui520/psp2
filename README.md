@@ -21,8 +21,9 @@ come from the paths in their debug records, asserts and SDK libraries.
   `vsh/lowlayer/src/`, `vsh/app/` (applications and plugins), `vsh/app/common/src/` (NP and
   other shared libraries).
 * `wp/` (Welcome Park, its own project in Sony's tree), `cp/` (devkit communication
-  processor), `barkley/` (motion controller), `third-party-libs-psp2/` (webcore), `ernie/`
-  (syscon; our folder name).
+  processor), `barkley/` (motion controller), `sys661/` (the PSP system tree: the ePSP boot
+  loader in os0:kd/pcbc's payload), `third-party-libs-psp2/` (webcore), `ernie/` (syscon; our
+  folder name).
 * `release/`: what each firmware contains. `release/<FW>.list` lists its modules;
   `release/modules.tsv` gives the folder each module is built from and why it is there.
 * Headers: `sys/internal/include/<component>/` holds the interfaces several modules share,
