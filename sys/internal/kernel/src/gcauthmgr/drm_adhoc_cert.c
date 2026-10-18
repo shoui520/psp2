@@ -2,11 +2,10 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "adhoc.h"
+#include <idstorage/idstorage.h>
 
 GcAuthAdhocCertificate gcAuthAdhocCertificate;
 
-int ksceIdStorageLookup(unsigned int leaf, unsigned int offset, void *output,
-		unsigned int size);
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
 
@@ -18,9 +17,9 @@ int GcAuthAdhocReadCertificate224(void)
 	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
-	if (ksceIdStorageLookup(0x44, 392,
+	if (sceIdStorageLookup(0x44, 392,
 		gcAuthAdhocCertificate.certificate224.serialized, 120) < 0 ||
-	    ksceIdStorageLookup(0x45, 0,
+	    sceIdStorageLookup(0x45, 0,
 		gcAuthAdhocCertificate.certificate224.serialized + 120, 112) < 0) {
 		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x808a010e;

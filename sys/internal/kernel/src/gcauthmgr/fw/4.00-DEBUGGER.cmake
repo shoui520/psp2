@@ -104,11 +104,11 @@ set(MODULE_IMPORT_FUNCS
 	SceRtcForDriver_42A0DFCB
 	SceRtcForDriver_7D431C87
 	SceRtcForDriver_9C8AF264
-	ksceIdStorageLookup
-	ksceSdifReadCmd56
-	ksceSdifInitializeMmcDevice
-	ksceSdifGetSdContextPartValidateMmc
-	ksceSdifWriteCmd56
+	sceIdStorageLookup
+	SceSdifForDriver_134E06C4
+	SceSdifForDriver_22C82E79
+	SceSdifForDriver_6A71987F
+	sceMmcSendGeneralCmdData
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

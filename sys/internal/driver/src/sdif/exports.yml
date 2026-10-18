@@ -16,17 +16,17 @@ SceSdif:
         - SceSdifForDriver_0C66E36F: 0x0C66E36F
         - sceSdifInit: 0x0EB0EF86
         - SceSdifForDriver_0F157F49: 0x0F157F49
-        - ksceSdifReadCmd56: 0x134E06C4
+        - SceSdifForDriver_134E06C4: 0x134E06C4
         - sceMmcWriteSectorInternal: 0x175543D2
         - SceSdifForDriver_180E7395: 0x180E7395
         - SceSdifForDriver_1847B18C: 0x1847B18C
-        - ksceSdifInitializeMmcDevice: 0x22C82E79
+        - SceSdifForDriver_22C82E79: 0x22C82E79
         - SceSdifForDriver_235AD556: 0x235AD556
-        - ksceSdifGetCID: 0x23A4EF01
+        - SceSdifForDriver_23A4EF01: 0x23A4EF01
         - sceSdifDisableSlowCardMode: 0x29A71E7F
         - SceSdifForDriver_3428884D: 0x3428884D
         - SceSdifForDriver_35BA9DF8: 0x35BA9DF8
-        - ksceSdifGetCardInsertState1: 0x36A2B01B
+        - SceSdifForDriver_36A2B01B: 0x36A2B01B
         - SceSdifForDriver_3B6AB29E: 0x3B6AB29E
         - SceSdifForDriver_3C4CDC8B: 0x3C4CDC8B
         - SceSdifForDriver_3DF7E207: 0x3DF7E207
@@ -37,8 +37,8 @@ SceSdif:
         - SceSdifForDriver_5BAC6E70: 0x5BAC6E70
         - SceSdifForDriver_5D65E66B: 0x5D65E66B
         - SceSdifForDriver_60642F49: 0x60642F49
-        - ksceSdifGetSdContextPartValidateMmc: 0x6A71987F
-        - ksceSdifGetSdContextPartValidateSdio: 0x6A8235FC
+        - SceSdifForDriver_6A71987F: 0x6A71987F
+        - SceSdifForDriver_6A8235FC: 0x6A8235FC
         - SceSdifForDriver_6CC8E28D: 0x6CC8E28D
         - sceMmcReadSector: 0x6F8D529B
         - SceSdifForDriver_733BC373: 0x733BC373
@@ -54,13 +54,13 @@ SceSdif:
         - sceMmcSendGeneralCmdData: 0xB0996641
         - SceSdifForDriver_B32776C7: 0xB32776C7
         - SceSdifForDriver_B83F7518: 0xB83F7518
-        - ksceSdifReadSectorSd: 0xB9593652
-        - ksceSdifGetSdContextPartValidateSd: 0xB9EA5B1E
+        - SceSdifForDriver_B9593652: 0xB9593652
+        - SceSdifForDriver_B9EA5B1E: 0xB9EA5B1E
         - SceSdifForDriver_BC45C83D: 0xBC45C83D
-        - ksceSdifInitializeSdDevice: 0xC1271539
+        - SceSdifForDriver_C1271539: 0xC1271539
         - SceSdifForDriver_D0F78D9B: 0xD0F78D9B
         - SceSdifForDriver_D3C1E2B6: 0xD3C1E2B6
-        - ksceSdifGetSdContextGlobal: 0xDC8F52F8
+        - SceSdifForDriver_DC8F52F8: 0xDC8F52F8
         - SceSdifForDriver_DECE963B: 0xDECE963B
         - sceSdWriteSectorInternal: 0xE0781171
         - SceSdifForDriver_E091BA2E: 0xE091BA2E
@@ -68,5 +68,5 @@ SceSdif:
         - SceSdifForDriver_E80293EF: 0xE80293EF
         - SceSdifForDriver_F1A24EDD: 0xF1A24EDD
         - sceSdifEnableSlowCardMode: 0xF37CF8E5
-        - ksceSdifGetCardInsertState2: 0xFD9E5CFA
+        - SceSdifForDriver_FD9E5CFA: 0xFD9E5CFA
         - SceSdifForDriver_FE6F3E7B: 0xFE6F3E7B

@@ -32,7 +32,7 @@ static inline int BtWaitControllerConfiguration(unsigned int ready)
 {
 	int remaining = 100;
 
-	while (!(ksceWlanBtGetConfiguration() & ready)) {
+	while (!(sceWlanBtGetConfiguration() & ready)) {
 		sceKernelDelayThread(100000);
 		if (--remaining == 0)
 			return (int)0x802f150e;
@@ -75,7 +75,7 @@ int BtCompleteControllerSleep(BtStack *stack)
 	if (stack->state == 80)
 		configuration = 18;
 	BtUnlockTransport(0);
-	result = ksceWlanBtSetConfiguration(configuration);
+	result = sceWlanBtSetConfiguration(configuration);
 	BtLockTransport();
 	mode = stack->mode;
 	stack->state = 28;
@@ -110,7 +110,7 @@ int BtPowerOffTransport(void)
 		return (int)0x802f150c;
 	gBtTransport.interruptEnabled = 0;
 	BtUnlockTransport(0);
-	result = ksceWlanBtSetConfiguration(10);
+	result = sceWlanBtSetConfiguration(10);
 	if (result >= 0)
 		result = BtWaitControllerConfiguration(8);
 	BtLockTransport();
@@ -123,7 +123,7 @@ int BtPowerOffTransport(void)
 	if (result < 0)
 		return result;
 	BtUnlockTransport(0);
-	result = ksceWlanBtSetConfiguration(11);
+	result = sceWlanBtSetConfiguration(11);
 	if (result >= 0)
 		result = BtWaitControllerConfiguration(16);
 	BtLockTransport();

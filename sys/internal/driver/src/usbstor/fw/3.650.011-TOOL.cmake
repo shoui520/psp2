@@ -69,16 +69,16 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
-	ksceIdStorageLookup
-	ksceUdcdUnregister
-	ksceUdcdReqSend
-	ksceUdcdStall
-	ksceUdcdReqCancelAll
-	ksceUdcdRegister
+	sceIdStorageLookup
+	SceUdcdForDriver_0DECE532
+	SceUdcdForDriver_1ED0E89E
+	SceUdcdForDriver_34079250
+	SceUdcdForDriver_38787672
+	SceUdcdForDriver_4E55244D
 	SceUdcdForDriver_78BF2A28
-	ksceUdcdClearFIFO
-	ksceUdcdReqRecv
-	ksceUdcdGetDeviceInfo
+	SceUdcdForDriver_9F53D64D
+	SceUdcdForDriver_C60A74B2
+	SceUdcdForDriver_FBEA3703
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

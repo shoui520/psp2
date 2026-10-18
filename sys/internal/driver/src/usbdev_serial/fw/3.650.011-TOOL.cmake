@@ -61,16 +61,16 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelPollEventFlag
 	SceThreadmgrForDriver_8A35F714
 	sceKernelSetEventFlag
-	ksceUdcdStopInternal
-	ksceUdcdReqRecvInternal
-	ksceUdcdReqSendInternal
-	ksceUdcdReqCancelAll
-	ksceUdcdGetDeviceStateInternal
-	ksceUdcdRegisterInternal
-	ksceUdcdUnregisterInternal
-	ksceUdcdStartInternal
-	ksceUdcdActivateInternal
-	ksceUdcdDeactivateInternal
+	SceUdcdForDriver_150FD3BB
+	SceUdcdForDriver_175E6179
+	SceUdcdForDriver_2E3E622A
+	SceUdcdForDriver_38787672
+	SceUdcdForDriver_409DD196
+	SceUdcdForDriver_64675918
+	SceUdcdForDriver_6CCD152E
+	SceUdcdForDriver_90F8BCAE
+	SceUdcdForDriver_9119247B
+	SceUdcdForDriver_FDC10F93
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

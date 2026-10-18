@@ -72,12 +72,12 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9
 	sceKernelRegisterProcEventHandler
-	ksceUsbdOpenPipe
-	ksceUsbdIsochronousTransfer
-	ksceUsbdControlTransfer
-	ksceUsbdRegisterCompositeLdd
-	ksceUsbd_7938DAC7
-	ksceUsbdScanStaticDescriptor
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_2249BF99
+	SceUsbdForDriver_2E05660F
+	sceUsbdRegisterCompositeLdd
+	SceUsbdForDriver_7938DAC7
+	SceUsbdForDriver_BC3EF82B
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

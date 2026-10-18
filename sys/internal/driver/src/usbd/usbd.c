@@ -445,7 +445,7 @@ static void usbdDetachChildren(UsbdDevice **children)
 	}
 }
 
-/* ksceUsbdHostStop, ksceUsbdResume: every device on the bus goes; called locked */
+/* sceUsbdHostStop, sceUsbdResume: every device on the bus goes; called locked */
 static int usbdDetachBus(unsigned int busIndex)
 {
 	UsbdDriver *driver;
@@ -1195,7 +1195,7 @@ static int usbdCallbackThread(SceSize args, void *argp)
 			if (isochDone != NULL)
 				isochDone(result, &isochStatus, arg);
 		} else {
-			ksceUsbdDoneCallback done = request->done;
+			SceUsbdDoneCallback done = request->done;
 			int result = request->result;
 			int count = request->count;
 			void *arg = request->arg;
@@ -1504,7 +1504,7 @@ int module_start(SceSize args, void *argp)
 	return _sceUsbdInit() < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
 }
 
-int ksceUsbdHostStart(int busIndex)
+int sceUsbdHostStart(int busIndex)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	int result;
@@ -1520,7 +1520,7 @@ int ksceUsbdHostStart(int busIndex)
 	return 0;
 }
 
-int ksceUsbdHostStop(int busIndex)
+int sceUsbdHostStop(int busIndex)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	int result;
@@ -1537,7 +1537,7 @@ int ksceUsbdHostStop(int busIndex)
 	return result < 0 ? result : 0;
 }
 
-int ksceUsbdSuspend(int busIndex)
+int SceUsbdForDriver_3EBF5FFE(int busIndex)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	int result;
@@ -1551,7 +1551,7 @@ int ksceUsbdSuspend(int busIndex)
 	return result < 0 ? result : 0;
 }
 
-int ksceUsbdResume(int busIndex)
+int sceUsbdResume(int busIndex)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	int result;
@@ -1574,7 +1574,7 @@ int ksceUsbdResume(int busIndex)
 }
 
 /* before the suspend: reset the DUALSHOCK 4s, so they do not keep the bus awake */
-int ksceUsbdSuspendPhase2(int busIndex, int flag)
+int sceUsbdSuspendPhase2(int busIndex, int flag)
 {
 	UsbdBus *bus = s_bus[busIndex];
 	UsbdDevice *device;
@@ -1654,7 +1654,7 @@ static __always_inline void usbdReleaseDriver(UsbdDriver *driver)
 	USBD_LIST_APPEND(s_freeDriverHead, s_freeDriverTail, driver);
 }
 
-int ksceUsbdRegisterDriver(const SceUsbdDriver *driver)
+int SceUsbdForDriver_1EC94F18(const SceUsbdDriver *driver)
 {
 	UsbdDriver *slot;
 	UsbdDevice *device;
@@ -1706,7 +1706,7 @@ out:
 	return result;
 }
 
-int ksceUsbdRegisterCompositeLdd(const SceUsbdCompositeDriver *driver)
+int sceUsbdRegisterCompositeLdd(const SceUsbdCompositeDriver *driver)
 {
 	SceUsbdInterfaceDescriptor *chosen;
 	UsbdDriver *slot;
@@ -1831,7 +1831,7 @@ static __always_inline int usbdUnregisterDriver(const char *name, unsigned int f
 	return 0;
 }
 
-int ksceUsbdUnregisterDriver(const SceUsbdDriver *driver)
+int SceUsbdForDriver_216F108D(const SceUsbdDriver *driver)
 {
 	int result;
 
@@ -1847,7 +1847,7 @@ int ksceUsbdUnregisterDriver(const SceUsbdDriver *driver)
 	return result;
 }
 
-int ksceUsbdUnregisterCompositeLdd(const SceUsbdCompositeDriver *driver)
+int SceUsbdForDriver_7934BB4A(const SceUsbdCompositeDriver *driver)
 {
 	int result;
 
@@ -1864,7 +1864,7 @@ int ksceUsbdUnregisterCompositeLdd(const SceUsbdCompositeDriver *driver)
 	return result;
 }
 
-SceUID ksceUsbdOpenPipe(int deviceId, SceUsbdEndpointDescriptor *endpoint)
+SceUID SceUsbdForDriver_1CDBFF9F(int deviceId, SceUsbdEndpointDescriptor *endpoint)
 {
 	const SceUInt8 *ep = (const SceUInt8 *)endpoint;
 	const SceUInt8 *configuration, *next, *interface, *p;
@@ -1954,7 +1954,7 @@ static __always_inline int usbdClosePipe(UsbdPipe *pipe)
 	return device->hcd->closePipe(pipe);
 }
 
-int ksceUsbdClosePipe(SceUID pipeId)
+int SceUsbdForDriver_F304DC5C(SceUID pipeId)
 {
 	UsbdPipe *pipe;
 	int result;
@@ -1970,7 +1970,7 @@ int ksceUsbdClosePipe(SceUID pipeId)
 	return result;
 }
 
-void *ksceUsbdScanStaticDescriptor(SceUID deviceId, void *start, SceUsbdDescriptorType type)
+void *SceUsbdForDriver_BC3EF82B(SceUID deviceId, void *start, SceUsbdDescriptorType type)
 {
 	SceUInt8 *p = start, *end, *found = NULL;
 	UsbdDevice *device;
@@ -2007,7 +2007,7 @@ out:
 
 /* fill and submit one of the API's requests */
 static __always_inline int usbdSubmitRequest(UsbdPipe *pipe, UsbdRequest *request, SceSize length,
-				    void *buffer, ksceUsbdDoneCallback done)
+				    void *buffer, SceUsbdDoneCallback done)
 {
 	request->length = length;
 	request->buffer = buffer;
@@ -2018,8 +2018,8 @@ static __always_inline int usbdSubmitRequest(UsbdPipe *pipe, UsbdRequest *reques
 	return pipe->device->hcd->submitRequest(pipe, request);
 }
 
-int ksceUsbdControlTransfer(SceUID pipeId, const SceUsbdDeviceRequest *req,
-			    unsigned char *buffer, ksceUsbdDoneCallback cb, void *user_data)
+int SceUsbdForDriver_2E05660F(SceUID pipeId, const SceUsbdDeviceRequest *req,
+			    unsigned char *buffer, SceUsbdDoneCallback cb, void *user_data)
 {
 	SceUsbdDeviceRequest *setup;
 	UsbdRequest *request;
@@ -2073,7 +2073,7 @@ out:
 }
 
 static __always_inline int usbdTransfer(SceUID pipeId, unsigned int type, unsigned char *buffer,
-			unsigned int length, ksceUsbdDoneCallback cb, void *user_data,
+			unsigned int length, SceUsbdDoneCallback cb, void *user_data,
 			int syncCache)
 {
 	UsbdRequest *request;
@@ -2107,8 +2107,8 @@ out:
 	return result;
 }
 
-int ksceUsbdBulkTransfer(SceUID pipeId, unsigned char *buffer, unsigned int length,
-			 ksceUsbdDoneCallback cb, void *user_data)
+int SceUsbdForDriver_235C094A(SceUID pipeId, unsigned char *buffer, unsigned int length,
+			 SceUsbdDoneCallback cb, void *user_data)
 {
 	if (!s_initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
@@ -2116,8 +2116,8 @@ int ksceUsbdBulkTransfer(SceUID pipeId, unsigned char *buffer, unsigned int leng
 			    user_data, 1);
 }
 
-int ksceUsbdBulkTransfer2(int pipeId, unsigned char *buffer, unsigned int length,
-			  ksceUsbdDoneCallback cb, void *user_data)
+int SceUsbdForDriver_470D5289(int pipeId, unsigned char *buffer, unsigned int length,
+			  SceUsbdDoneCallback cb, void *user_data)
 {
 	if (!s_initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
@@ -2125,8 +2125,8 @@ int ksceUsbdBulkTransfer2(int pipeId, unsigned char *buffer, unsigned int length
 			    user_data, 0);
 }
 
-int ksceUsbdInterruptTransfer(SceUID pipeId, unsigned char *buffer, SceSize length,
-			      ksceUsbdDoneCallback cb, void *user_data)
+int SceUsbdForDriver_A0BF85B8(SceUID pipeId, unsigned char *buffer, SceSize length,
+			      SceUsbdDoneCallback cb, void *user_data)
 {
 	if (!s_initialized)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
@@ -2144,10 +2144,10 @@ static __always_inline SceSize usbdIsochLength(const UsbdIsochRequest *transfer)
 	return length;
 }
 
-int ksceUsbdIsochronousTransfer(SceUID pipeId, ksceUsbdIsochTransfer *transfer,
-				ksceUsbdIsochDoneCallback cb, void *user_data)
+int SceUsbdForDriver_2249BF99(SceUID pipeId, UsbdIsochRequest *transfer,
+				SceUsbdIsochDoneCallback cb, void *user_data)
 {
-	UsbdIsochRequest *isoch = (UsbdIsochRequest *)transfer;
+	UsbdIsochRequest *isoch = transfer;
 	UsbdRequest *request;
 	UsbdPipe *pipe;
 	SceSize length = 0;
@@ -2201,7 +2201,7 @@ out:
 	return result;
 }
 
-int ksceUsbdGetDeviceSpeed(int deviceId, SceUInt32 *speed)
+int SceUsbdForDriver_C3BECF5F(int deviceId, SceUInt32 *speed)
 {
 	UsbdDevice *device;
 	int result;
@@ -2233,7 +2233,7 @@ out:
 	return result;
 }
 
-int ksceUsbdGetDeviceLocation(SceUID deviceId, SceUInt32 *location)
+int SceUsbdForDriver_0E73D253(SceUID deviceId, SceUInt32 *location)
 {
 	UsbdDevice *device;
 	int result;
@@ -2254,7 +2254,7 @@ int ksceUsbdGetDeviceLocation(SceUID deviceId, SceUInt32 *location)
 }
 
 /* the controller's frame number */
-int ksceUsbd_05073925(SceUID deviceId, int *frame, int *mask)
+int SceUsbdForDriver_05073925(SceUID deviceId, int *frame, int *mask)
 {
 	UsbdDevice *device;
 	int result;
@@ -2274,7 +2274,7 @@ int ksceUsbd_05073925(SceUID deviceId, int *frame, int *mask)
 }
 
 /* restart the pipe's isochronous schedule at the next frame */
-int ksceUsbd_7938DAC7(SceUID pipeId)
+int SceUsbdForDriver_7938DAC7(SceUID pipeId)
 {
 	int (*resetFrame)(UsbdPipe *);
 	UsbdPipe *pipe;
@@ -2552,7 +2552,7 @@ SceUID sceUsbdRegisterLdd(SceUID uid, const char *name)
 	return usbdRegisterLdd(uid, name, 0);
 }
 
-SceUID sceUsbdRegisterCompositeLdd(SceUID uid, const char *name)
+SceUID sceUsbdRegisterCompositeLddForUser(SceUID uid, const char *name)
 {
 	return usbdRegisterLdd(uid, name, USBD_DRIVER_COMPOSITE);
 }

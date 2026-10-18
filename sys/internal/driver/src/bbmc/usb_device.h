@@ -2,7 +2,7 @@
 #define BBMC_USB_DEVICE_H
 
 #include <stddef.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 
 typedef struct BbmcUsbDeviceRequestSlot {
 	SceUdcdDeviceRequest request;

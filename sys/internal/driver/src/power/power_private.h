@@ -71,6 +71,7 @@
 #include <processmgr/processmgr.h>
 #include <display/display.h>
 #include <sysmem/procevent.h>
+#include <touch/touch.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
 struct PowerIdleTimer {
@@ -110,7 +111,6 @@ extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
 extern int __aeabi_idiv(int numerator, int denominator);
 
-extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 extern void powerCpuResumeEntry(void);

@@ -501,12 +501,12 @@ int module_start(SceSize argc, const void *args)
 	return SCE_KERNEL_START_SUCCESS;
 }
 
-int ksceMotionDevIsReady(void)
+int SceMotionDevForDriver_10AAC8EA(void)
 {
 	return 1;
 }
 
-int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
+int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
 {
 	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
@@ -515,7 +515,7 @@ int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 	return 0;
 }
 
-int ksceMotionDevGetCalibrationHeader(SceUInt32 blockId, uint8_t *header)
+int SceMotionDevForDriver_3B23DF55(SceUInt32 blockId, uint8_t *header)
 {
 	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	int i;
@@ -526,7 +526,7 @@ int ksceMotionDevGetCalibrationHeader(SceUInt32 blockId, uint8_t *header)
 	return 0;
 }
 
-int ksceMotionDevGetCalibrationData(SceUInt32 blockId, void *data, SceUInt32 count)
+int SceMotionDevForDriver_F0251700(SceUInt32 blockId, void *data, SceUInt32 count)
 {
 	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
@@ -535,7 +535,7 @@ int ksceMotionDevGetCalibrationData(SceUInt32 blockId, void *data, SceUInt32 cou
 	return 0;
 }
 
-int ksceMotionDevRead(SceMotionDevData *data, int count, SceUInt32 *info)
+int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, SceUInt32 *info)
 {
 	int intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 
@@ -545,7 +545,7 @@ int ksceMotionDevRead(SceMotionDevData *data, int count, SceUInt32 *info)
 	return count;
 }
 
-int ksceMotionDevSetSamplingMode(SceUInt32 mode)
+int SceMotionDevForDriver_DBAF611A(SceUInt32 mode)
 {
 	return 0;
 }
@@ -570,7 +570,7 @@ int motionRead(SceMotionDevData *data, int count, SceUInt32 *info)
 	return 0;
 }
 
-int ksceMotionDevSamplingStart(void)
+int SceMotionDevForDriver_C02C85AB(void)
 {
 	return 0;
 }
@@ -590,7 +590,7 @@ int motionReadForMagnCalib(SceMotionDevData *data, int count)
 	return count;
 }
 
-int ksceMotionDevSamplingStop(void)
+int SceMotionDevForDriver_FD0B0785(void)
 {
 	return 0;
 }
@@ -747,7 +747,7 @@ int motionGetMeasMode(void *info)
 	return 0;
 }
 
-int ksceMotionDevNoiseFilterIsAvailable(void)
+int SceMotionDevForDriver_11A17A96(void)
 {
 	return 0;
 }
@@ -836,12 +836,12 @@ int SceMotionDevForDriver_031AF7A1(void)
 	return 0;
 }
 
-int ksceMotionDevGetEvaInfo(void)
+int SceMotionDevForDriver_5B53AC26(void)
 {
 	return 0;
 }
 
-int ksceMotionDevRegisterVirtualMotionDriver(const MotionVirtualDriver *driver)
+int SceMotionDevForDriver_7FD06731(const MotionVirtualDriver *driver)
 {
 	if (driver == NULL)
 		return MOTION_ERROR_INVALID_ARG;

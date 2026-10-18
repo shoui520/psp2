@@ -429,15 +429,15 @@ set(MODULE_IMPORT_FUNCS
 	SceGpioForDriver_F6310435
 	SceLedForDriver_EA24BE03
 	SceMotionDevForDriver_09918DAE
-	ksceMotionDevIsReady
-	ksceMotionDevGetDeviceInfo
+	SceMotionDevForDriver_10AAC8EA
+	SceMotionDevForDriver_3E4BCBC0
 	SceMotionDevForDriver_A75976EE
 	SceMotionDevForDriver_FD1C528D
 	SceTouchForDriver_423F26D3
 	SceTouchForDriver_4E6C4558
 	SceTouchForDriver_63DCF2FE
 	SceTouchForDriver_DDCF5145
-	ksceTouchGetDeviceInfo
+	SceTouchForDriver_FD2E0278
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

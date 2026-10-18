@@ -89,11 +89,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_2E992B02
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_991FDC15
-	ksceBtHidGetReportDescriptor
-	ksceBtRegisterCallback
-	ksceBtReadEvent
-	ksceBtGetRegisteredInfo
-	ksceBtHidTransfer
+	SceBtForDriver_06CB4ABA
+	SceBtForDriver_120AC1F7
+	SceBtForDriver_5ABB9A9D
+	SceBtForDriver_F86D25E2
+	SceBtForDriver_F9DCEC77
 	scePowerRegisterCallback
 )
 set(MODULE_IMPORT_VARS

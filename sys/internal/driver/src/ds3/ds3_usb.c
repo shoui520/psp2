@@ -21,7 +21,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/usbserv.h>
+#include <usbserv/usbserv.h>
 #include <psp2kern/registrymgr.h>
 #include <display/display.h>
 #include <string.h>
@@ -66,9 +66,9 @@ int ds3UsbDetach(int deviceId)
 		ds3RemoveTrackedAddress(address);
 	}
 	ds3ReleaseDevice(2, deviceId, 0);
-	ksceUsbdClosePipe(device->controlPipe);
-	ksceUsbdClosePipe(device->inputPipe);
-	ksceUsbdClosePipe(device->outputPipe);
+	SceUsbdForDriver_F304DC5C(device->controlPipe);
+	SceUsbdForDriver_F304DC5C(device->inputPipe);
+	SceUsbdForDriver_F304DC5C(device->outputPipe);
 	memset(device, 0, sizeof(*device));
 	device->deviceId = DS3_USB_DEVICE_UNUSED;
 	return 0;
@@ -83,7 +83,7 @@ int ds3UsbProbe(int deviceId)
 	uint8_t versionLow, versionHigh;
 	int index;
 
-	descriptor = ksceUsbdScanStaticDescriptor(deviceId, NULL,
+	descriptor = SceUsbdForDriver_BC3EF82B(deviceId, NULL,
 		SCE_USBD_DESCRIPTOR_DEVICE);
 	if (descriptor == NULL || descriptor->idVendor != 0x054c)
 		return -1;
@@ -143,7 +143,7 @@ int ds3UsbAttach(int deviceId)
 	else
 		return -1;
 	device = &ds3Usb.devices[index];
-	while ((descriptor = ksceUsbdScanStaticDescriptor(deviceId,
+	while ((descriptor = SceUsbdForDriver_BC3EF82B(deviceId,
 		descriptor, 0)) != NULL) {
 		if (descriptor->bLength > 1 && descriptor->bDescriptorType ==
 			SCE_USBD_DESCRIPTOR_CONFIGURATION && configuration == NULL)
@@ -153,7 +153,7 @@ int ds3UsbAttach(int deviceId)
 		return -1;
 	cursor = configuration;
 	do {
-		interface = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		if (interface == NULL)
 			return -1;
@@ -161,7 +161,7 @@ int ds3UsbAttach(int deviceId)
 	} while (interface->bInterfaceClass != SCE_USBD_CLASS_HID);
 	for (endpointIndex = 0; endpointIndex < interface->bNumEndpoints;
 		endpointIndex++) {
-		endpoint = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		endpoint = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_ENDPOINT);
 		if (endpoint == NULL)
 			return -1;
@@ -172,7 +172,7 @@ int ds3UsbAttach(int deviceId)
 		if ((int8_t)endpoint->bEndpointAddress < 0) {
 			if (device->inputPipe >= 0)
 				continue;
-			device->inputPipe = ksceUsbdOpenPipe(deviceId, endpoint);
+			device->inputPipe = SceUsbdForDriver_1CDBFF9F(deviceId, endpoint);
 			if (device->inputPipe < 0)
 				return -1;
 			packetSize = endpoint->wMaxPacketSize;
@@ -180,14 +180,14 @@ int ds3UsbAttach(int deviceId)
 				packetSize = 64;
 			device->inputPacketSize = packetSize;
 		} else if (device->outputPipe < 0) {
-			device->outputPipe = ksceUsbdOpenPipe(deviceId, endpoint);
+			device->outputPipe = SceUsbdForDriver_1CDBFF9F(deviceId, endpoint);
 			if (device->outputPipe < 0)
 				return -1;
 		}
 	}
 	if (device->inputPipe < 0)
 		return -1;
-	device->controlPipe = ksceUsbdOpenPipe(deviceId, NULL);
+	device->controlPipe = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 	if (device->controlPipe < 0)
 		return -1;
 	if (ds3AllocateDevice(1, deviceId, 0) < 0)
@@ -202,7 +202,7 @@ int ds3UsbAttach(int deviceId)
 	request.wLength = 0;
 	request.wValue = configuration->bConfigurationValue;
 	request.bRequest = SCE_USBD_REQUEST_SET_CONFIGURATION;
-	result = ksceUsbdControlTransfer(device->controlPipe, &request,
+	result = SceUsbdForDriver_2E05660F(device->controlPipe, &request,
 		NULL, ds3UsbSetupComplete, controller);
 	if (result != 0) {
 		ds3ReleaseDevice(2, deviceId, 0);
@@ -247,7 +247,7 @@ int ds3UsbSetHostAddress(Ds3Device *controller)
 	report[5] = ds3Usb.localAddress[3];
 	report[6] = ds3Usb.localAddress[4];
 	report[7] = ds3Usb.localAddress[5];
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -278,7 +278,7 @@ int ds3UsbGetFeatureReport(Ds3Device *controller, uint16_t reportId,
 	request.wLength = length;
 	request.bmRequestType = 0xa1;
 	request.bRequest = 1; /* HID GET_REPORT. */
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -391,7 +391,7 @@ int ds3UsbSetLeds(Ds3Device *controller, const Ds3LedState *state)
 	report[13] = state->patterns[3].offTime;
 	report[14] = state->patterns[3].onTime;
 	ds3UpdateUsbOutputState(controller, report);
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -426,7 +426,7 @@ void ds3UsbAdvanceSetup(Ds3Device *controller, int transferred)
 	case 30:
 		address = controller->deviceAddress;
 		memset(&scratch.info, 0, sizeof(scratch.info));
-		if (ksceBtGetRegisteredInfo(address, &scratch.info, 1) != 1) {
+		if (SceBtForDriver_F86D25E2(address, &scratch.info, 1) != 1) {
 			request.bmRequestType = 8;
 			request.bRequest = 5;
 			if (ds3IsSafeMode() == 0 && SceSysrootForDriver_B0E1FC67() == 0 &&
@@ -487,7 +487,7 @@ void ds3UsbAdvanceSetup(Ds3Device *controller, int transferred)
 		bluetooth = ds3FindBtDevice(address);
 		if (bluetooth != NULL)
 			bluetooth->bluetoothState = 4;
-		ksceBtStartDisconnect((uint32_t)address, address >> 32);
+		SceBtForDriver_50710281((uint32_t)address, address >> 32);
 		ds3DetachBluetoothTransport(controller->deviceAddress);
 		controller->setupStage = 34;
 		deviceId = controller->usbDeviceId;
@@ -531,7 +531,7 @@ sendFeature:
 	request.wLength = 4;
 	report[0] = 0x42;
 	report[1] = command;
-	ksceUsbdControlTransfer(usb->controlPipe, &request, report,
+	SceUsbdForDriver_2E05660F(usb->controlPipe, &request, report,
 		ds3UsbSetupComplete, controller);
 	return;
 startInput:
@@ -557,7 +557,7 @@ startInput:
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
-	ksceUsbdInterruptTransfer(usb->inputPipe, input, usb->inputPacketSize,
+	SceUsbdForDriver_A0BF85B8(usb->inputPipe, input, usb->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }
 
@@ -628,7 +628,7 @@ void ds3UsbSetupComplete(int result, int transferred, void *argument)
 			request.wIndex = usb->interfaceNumber;
 			request.wLength = 0;
 			request.bRequest = 11;
-			ksceUsbdControlTransfer(usb->controlPipe, &request, NULL,
+			SceUsbdForDriver_2E05660F(usb->controlPipe, &request, NULL,
 				ds3UsbInputComplete, controller);
 			return;
 		case 1:
@@ -887,7 +887,7 @@ getFeature:
 	request.bRequest = 1;
 	request.wValue = value;
 	request.wLength = length;
-	ksceUsbdControlTransfer(usb->controlPipe, &request, report,
+	SceUsbdForDriver_2E05660F(usb->controlPipe, &request, report,
 		ds3UsbSetupComplete, controller);
 	return;
 sendCalibrationCommand:
@@ -985,7 +985,7 @@ setFeature:
 	request.wValue = value;
 	request.wLength = length;
 transfer:
-	ksceUsbdControlTransfer(usb->controlPipe, &request, report,
+	SceUsbdForDriver_2E05660F(usb->controlPipe, &request, report,
 		ds3UsbSetupComplete, controller);
 	return;
 startInput:
@@ -1012,7 +1012,7 @@ startInput:
 	input = controller->inputRequests[controller->inputIndex]->buffer;
 	controller->inputIndex ^= 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, interruptState);
-	ksceUsbdInterruptTransfer(usb->inputPipe, input, usb->inputPacketSize,
+	SceUsbdForDriver_A0BF85B8(usb->inputPipe, input, usb->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }
 
@@ -1052,7 +1052,7 @@ int ds3UsbSetActuators(Ds3Device *controller, const Ds3ActuatorState *state)
 	report[2] = smallMotor;
 	report[4] = state->largeMotor;
 	ds3UpdateUsbOutputState(controller, report);
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -1091,7 +1091,7 @@ int ds3UsbSetAuxiliaryMotor(Ds3Device *controller)
 		report[6] = controller->actuatorState.auxiliaryMotor;
 	}
 	ds3UpdateUsbOutputState(controller, report);
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -1133,7 +1133,7 @@ int ds3UsbSetLightbar(Ds3Device *controller, const Ds3LedState *state)
 	controller->ledState.lightbarColor[0] = red;
 	controller->ledState.lightbarColor[1] = report[7];
 	controller->ledState.lightbarColor[2] = report[8];
-	return ksceUsbdInterruptTransfer(device->outputPipe, report, 32,
+	return SceUsbdForDriver_A0BF85B8(device->outputPipe, report, 32,
 		ds3UsbSetupComplete, controller);
 }
 
@@ -1174,7 +1174,7 @@ int ds3UsbSetDs4Actuators(Ds3Device *controller, const Ds3ActuatorState *state)
 	report[8] = controller->ledState.lightbarColor[2];
 	controller->actuatorState.smallMotor = smallMotor;
 	controller->actuatorState.smallMotor = report[5];
-	return ksceUsbdInterruptTransfer(device->outputPipe, report, 32,
+	return SceUsbdForDriver_A0BF85B8(device->outputPipe, report, 32,
 		ds3UsbSetupComplete, controller);
 }
 
@@ -1206,7 +1206,7 @@ int ds3UsbSetDs3Control(Ds3Device *controller, uint8_t control)
 	report[1] = control;
 	request.bmRequestType = 0x21;
 	report[0] = 0x42;
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -1238,7 +1238,7 @@ int ds3UsbSetDs4Control(Ds3Device *controller, uint8_t control)
 	report[1] = control;
 	request.bmRequestType = 0x21;
 	report[0] = 0x14;
-	return ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+	return SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 		&request, report, ds3UsbSetupComplete, controller);
 }
 
@@ -1313,7 +1313,7 @@ void ds3UsbInputComplete(int result, int transferred, void *argument)
 		request.wLength = 4;
 		report[0] = 0x42;
 		report[1] = 11;
-		ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+		SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 			&request, report, ds3UsbSetupComplete, controller);
 		return;
 
@@ -1376,7 +1376,7 @@ ds4Battery:
 	input = controller->inputRequests[index]->buffer;
 	controller->inputIndex = index ^ 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ds3Usb.inputLock, intr);
-	ksceUsbdInterruptTransfer(device->inputPipe, input, device->inputPacketSize,
+	SceUsbdForDriver_A0BF85B8(device->inputPipe, input, device->inputPacketSize,
 		ds3UsbInputComplete, controller);
 }
 
@@ -1418,7 +1418,7 @@ int ds3UsbPollBattery(void)
 		request.wLength = 12;
 		request.bmRequestType = 0xa1;
 		request.bRequest = 1; /* HID GET_REPORT. */
-		ksceUsbdControlTransfer(ds3Usb.devices[index].controlPipe,
+		SceUsbdForDriver_2E05660F(ds3Usb.devices[index].controlPipe,
 			&request, report, ds3UsbSetupComplete, controller);
 	}
 	return 0;
@@ -1435,8 +1435,8 @@ int ds3UsbRegister(void)
 	ds3Usb.devices[2].deviceId = DS3_USB_DEVICE_UNUSED;
 	ds3Usb.devices[3].deviceId = DS3_USB_DEVICE_UNUSED;
 	ds3Usb.inputLock = 0;
-	result = ksceUsbServAccessoryActivate();
+	result = SceUsbServForDriver_AA6D4409();
 	if (result < 0)
 		return result;
-	return ksceUsbdRegisterDriver(&ds3UsbDriver);
+	return SceUsbdForDriver_1EC94F18(&ds3UsbDriver);
 }

@@ -273,7 +273,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_8BAB45F8
 	ScePervasiveForDriver_A7CE7DCC
 	ScePervasiveForDriver_EFD084D8
-	ksceIdStorageReadLeaf
+	SceIdStorageForDriver_EB00C509
 	SceGpioForDriver_372022A4
 	SceGpioForDriver_D454A584
 	SceGpioForDriver_F6310435
@@ -295,26 +295,26 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_5210A6FE
 	ScePowerForDriver_B24263F0
 	ScePowerForDriver_F535D928
-	ksceUsbdGetDeviceLocation
-	ksceUsbdOpenPipe
-	ksceUsbdBulkTransfer
-	ksceUsbdControlTransfer
-	ksceUsbdRegisterCompositeLdd
-	ksceUsbdUnregisterCompositeLdd
-	ksceUsbdInterruptTransfer
-	ksceUsbdScanStaticDescriptor
-	ksceUsbdGetDeviceSpeed
-	ksceUsbdClosePipe
-	ksceUdcdStopInternal
-	ksceUdcdReqRecvInternal
-	ksceUdcdReqSendInternal
-	ksceUdcdActivate
-	ksceUdcdRegisterInternal
-	ksceUdcdUnregisterInternal
-	ksceUdcdStartInternal
-	ksceUdcdActivateInternal
-	ksceUdcdDeactivateInternal
-	ksceUsbServMacSelect
+	SceUsbdForDriver_0E73D253
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_235C094A
+	SceUsbdForDriver_2E05660F
+	sceUsbdRegisterCompositeLdd
+	SceUsbdForDriver_7934BB4A
+	SceUsbdForDriver_A0BF85B8
+	SceUsbdForDriver_BC3EF82B
+	SceUsbdForDriver_C3BECF5F
+	SceUsbdForDriver_F304DC5C
+	SceUdcdForDriver_150FD3BB
+	SceUdcdForDriver_175E6179
+	SceUdcdForDriver_2E3E622A
+	sceUdcdActivate
+	SceUdcdForDriver_64675918
+	SceUdcdForDriver_6CCD152E
+	SceUdcdForDriver_90F8BCAE
+	SceUdcdForDriver_9119247B
+	SceUdcdForDriver_FDC10F93
+	SceUsbServForDriver_7AD36284
 	SceNetPsForDriver_1ABF937D
 	SceNetPsForDriver_F5788FF8
 	SceGpsForDriver_54DBA451

@@ -5,17 +5,11 @@
 #include <camera/camera.h>
 
 int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo);
-int SceCameraForDriver_0E9B4B9E(int devnum);
-int SceCameraForDriver_5338BE86(int devnum);
-int SceCameraForDriver_8C3354E5(int devnum);
 int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *pRead);
-int SceCameraForDriver_22E70D83(int devnum);
 int SceCameraForDriver_EE3D4B1C(int devnum, SceFVector3 *pLocation);
-int SceCameraForDriver_C2E71BE8(int devnum, int attribute, int *pValue, int flags);
 int SceCameraForDriver_D56A12BD(int devnum, int attribute, int value);
 /* Name unknown; same user wrapper family as SceCameraDummy. */
 int cameraSetAlternateFrameBuffers(unsigned int mode);
-int SceCameraForDriver_FE3C170C(int devnum, int attribute, int *pValue, int flags);
 int SceCameraForDriver_B312CE90(int devnum, int attribute, int value);
 
 int sceCameraOpen(int devnum, SceCameraInfo *pInfo)

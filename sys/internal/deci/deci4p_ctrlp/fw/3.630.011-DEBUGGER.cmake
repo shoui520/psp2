@@ -63,10 +63,10 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_A248CDAE
 	SceCtrlForDriver_ED138A26
 	SceCtrlForDriver_F11D0D30
-	ksceTouchSetCtrlpCallback
-	ksceTouchGetPanelInfo
+	sceTouchSetCtrlpCallback
+	SceTouchForDriver_937DB4C0
 	SceBtForDriver_10D68FAE
-	ksceBtDeleteRegisteredInfo
+	SceBtForDriver_E6F659E0
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

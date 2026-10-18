@@ -1600,7 +1600,7 @@ int compatIdStorageLookup(short leaf, unsigned int offset, void *buffer,
 	storageLeaf = leaf - 256;
 	if (storageLeaf > 63)
 		return (int)0x80000100;
-	return ksceIdStorageLookup(storageLeaf, offset, buffer, size);
+	return sceIdStorageLookup(storageLeaf, offset, buffer, size);
 }
 
 int compatDatRead(int index, unsigned int offset, void *buffer,

@@ -4148,7 +4148,7 @@ int oalGetVitaCardInfo(CoredumpVitaCardInfo *out)
 	out->recordSize[1] = 0;
 	out->recordType[0] = 1;
 	out->recordType[1] = 0;
-	context = ksceSdifGetSdContextPartValidateMmc(1);
+	context = SceSdifForDriver_6A71987F(1);
 	if (context != NULL) {
 		SceUInt32 cid0, cid1, cid2, cid3;
 
@@ -4187,7 +4187,7 @@ int oalGetMemoryCardInfo(CoredumpMemoryCardInfo *out)
 	out->recordSize[1] = 0;
 	out->recordType[0] = 1;
 	out->recordType[1] = 0;
-	if (ksceMsifGetMsInfo(&info) == 0) {
+	if (SceMsifForDriver_D0307849(&info) == 0) {
 		out->present[0] = 1;
 		out->present[1] = 0;
 		out->present[2] = 0;

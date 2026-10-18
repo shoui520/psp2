@@ -316,7 +316,7 @@ static int attach(int usbVersion, void *userData)
 	unsigned int intr;
 	int ret;
 
-	ksceUdcdGetDeviceInfo(&info);
+	SceUdcdForDriver_FBEA3703(&info);
 	if (usbVersion == 2) {
 		s_mtp.speed = 2;
 		s_mtp.packetSize = 512;
@@ -325,9 +325,9 @@ static int attach(int usbVersion, void *userData)
 		s_mtp.packetSize = 64;
 	}
 	initializeRequests();
-	ksceUdcdClearFIFO(&s_mtp.endpoints[1]);
-	ksceUdcdClearFIFO(&s_mtp.endpoints[2]);
-	ksceUdcdClearFIFO(&s_mtp.endpoints[3]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[1]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[2]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[3]);
 	intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
 	s_mtp.status = MTP_STATUS_CONNECTED;
 	s_mtp.phase = MTP_PHASE_IDLE;
@@ -373,9 +373,9 @@ static void completeCancel(SceUdcdDeviceRequest *req)
 		s_mtp.cancelPending = 1;
 	s_mtp.busFlags |= MTP_BUS_CANCEL;
 	s_mtp.status |= MTP_STATUS_CANCELLED;
-	ksceUdcdClearFIFO(&s_mtp.endpoints[1]);
-	ksceUdcdClearFIFO(&s_mtp.endpoints[3]);
-	ksceUdcdClearFIFO(&s_mtp.endpoints[2]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[1]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[3]);
+	SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[2]);
 	s_mtp.transferFlags &= ~MTP_TRANSFER_RECEIVING;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 }
@@ -418,7 +418,7 @@ static int _sceUsbMtpInitTask(void *args)
 	int ret;
 
 	memset(s_mtp.serialNumber, 0, sizeof(s_mtp.serialNumber));
-	ret = ksceIdStorageLookup(0x112, 0, s_mtp.serialNumber, 64);
+	ret = sceIdStorageLookup(0x112, 0, s_mtp.serialNumber, 64);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2425, "[%s%-28s] Err(%4d) sceIdStorageLookup(), ret=%08x\n",
 			       "usbmtp:", __func__, 2425, ret);
@@ -498,8 +498,8 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	if (ret != (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 		return MTP_WAIT_ERROR;
 	timeout = MTP_WAIT_TIMEOUT;
-	ksceUdcdClearFIFO(endpoint);
-	if (ksceUdcdReqCancelAll(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
+	SceUdcdForDriver_9F53D64D(endpoint);
+	if (SceUdcdForDriver_38787672(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
 		sceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 					NULL, &timeout);
 	return MTP_TIMEOUT;
@@ -521,7 +521,7 @@ static int sendBulk(void *buffer, unsigned int size)
 	req->isControlRequest = 0;
 	start = (uintptr_t)buffer & ~(MTP_CACHE_LINE - 1);
 	SceCpuForDriver_103872A5((void *)start, (uintptr_t)MTP_ALIGN((uint8_t *)buffer + size) - start);
-	ret = ksceUdcdReqSend(req);
+	ret = SceUdcdForDriver_1ED0E89E(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[1], MTP_EVENT_SENT, MTP_EVENT_SEND_FAILED, 0);
@@ -557,7 +557,7 @@ static int receiveBulk(void *buffer, unsigned int size)
 		return MTP_CANCELLED;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
-	ret = ksceUdcdReqRecv(req);
+	ret = SceUdcdForDriver_C60A74B2(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[2], MTP_EVENT_RECEIVED, MTP_EVENT_RECV_FAILED, 0);
@@ -584,7 +584,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		*(MtpOsStringDescriptor *)s_mtp.controlBuffer = s_mtp.osString;
 		control->size = length < sizeof(s_mtp.osString) ? length : sizeof(s_mtp.osString);
 		SceCpuForDriver_103872A5(control->data, 128);
-		return ksceUdcdReqSend(control);
+		return SceUdcdForDriver_1ED0E89E(control);
 	case 0x40:	/* vendor: the extended compatible ID */
 		if (req->bRequest != 1 || req->wIndex != 4)
 			break;
@@ -592,7 +592,7 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 		*(MtpCompatibleIdDescriptor *)s_mtp.controlBuffer = s_mtp.compatibleId;
 		control->size = length < sizeof(s_mtp.compatibleId) ? length : sizeof(s_mtp.compatibleId);
 		SceCpuForDriver_103872A5(control->data, 128);
-		return ksceUdcdReqSend(control);
+		return SceUdcdForDriver_1ED0E89E(control);
 	case 0x20:	/* class */
 		if (recipient != 1)
 			break;
@@ -603,12 +603,12 @@ static int processRequest(int recipient, int arg, SceUdcdEP0DeviceRequest *req, 
 			s_mtp.cancel.request.size = length;
 			SceCpuForDriver_02796361(s_mtp.cancel.request.data,
 							(length + MTP_CACHE_LINE - 1) & ~(MTP_CACHE_LINE - 1));
-			return ksceUdcdReqRecv(&s_mtp.cancel.request);
+			return SceUdcdForDriver_C60A74B2(&s_mtp.cancel.request);
 		case MTP_REQUEST_DEVICE_RESET:
-			ksceUdcdReqCancelAll(&s_mtp.endpoints[1]);
-			ksceUdcdReqCancelAll(&s_mtp.endpoints[2]);
-			ksceUdcdClearFIFO(&s_mtp.endpoints[1]);
-			ksceUdcdClearFIFO(&s_mtp.endpoints[2]);
+			SceUdcdForDriver_38787672(&s_mtp.endpoints[1]);
+			SceUdcdForDriver_38787672(&s_mtp.endpoints[2]);
+			SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[1]);
+			SceUdcdForDriver_9F53D64D(&s_mtp.endpoints[2]);
 			s_mtp.busFlags |= MTP_BUS_RESET;
 			s_mtp.status |= MTP_STATUS_CANCELLED;
 			return 0;
@@ -651,7 +651,7 @@ cancelled:
 			memcpy(s_mtp.controlBuffer, &status, status.wLength);
 			control->size = status.wLength < length ? status.wLength : length;
 			SceCpuForDriver_103872A5(control->data, 128);
-			return ksceUdcdReqSend(control);
+			return SceUdcdForDriver_1ED0E89E(control);
 		}
 		break;
 	}
@@ -783,7 +783,7 @@ int sceUsbMtpSendData(MtpIfTransfer *transfer)
 				goto error;
 			}
 			req->size = 0;
-			ret = ksceUdcdReqSend(req);
+			ret = SceUdcdForDriver_1ED0E89E(req);
 			if (ret < 0)
 				goto error;
 			ret = WaitTransfer(req, &s_mtp.endpoints[1], MTP_EVENT_SENT,
@@ -958,7 +958,7 @@ error:
 		if (s_mtp.received || s_mtp.remaining) {
 			if (s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) {
 				s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
-				ksceUdcdStall(&s_mtp.endpoints[2]);
+				SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 			}
 			s_mtp.deferredResponse = s_mtp.deferredCancel = -1;
 		}
@@ -1082,7 +1082,7 @@ int SceUsbMtpForDriver_576A266F(void *command, MtpIfTransfer *transfer)
 		} else {
 			intr = SceCpuForDriver_D32ACE9E(&s_mtp.lock);
 			s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
-			ksceUdcdStall(&s_mtp.endpoints[2]);
+			SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_mtp.lock, intr);
 		}
 	}
@@ -1171,7 +1171,7 @@ int SceUsbMtpForDriver_5FA86BA4(void *event)
 	req->data = out;
 	req->size = n;
 	SceCpuForDriver_103872A5(out, (n + 63) & ~63U);
-	int ret = ksceUdcdReqSend(req);
+	int ret = SceUdcdForDriver_1ED0E89E(req);
 	if (ret < 0)
 		return ret;
 	ret = WaitTransfer(req, &s_mtp.endpoints[3], MTP_EVENT_NOTIFIED, MTP_EVENT_NOTIFY_FAILED, 1);
@@ -1203,11 +1203,11 @@ int SceUsbMtpForDriver_151947D2(void)
 		return MTP_UNAVAILABLE;
 	if (s_mtp.transferFlags & MTP_TRANSFER_SENDING) {
 		s_mtp.transferFlags |= MTP_TRANSFER_IN_STALLED;
-		ksceUdcdStall(&s_mtp.endpoints[1]);
+		SceUdcdForDriver_34079250(&s_mtp.endpoints[1]);
 	}
 	if (s_mtp.transferFlags & MTP_TRANSFER_RECEIVING) {
 		s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
-		ksceUdcdStall(&s_mtp.endpoints[2]);
+		SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 	}
 	return 0;
 }
@@ -1241,7 +1241,7 @@ int SceUsbMtpForDriver_E64513A9(int phase)
 		if (s_mtp.cancelled == (unsigned)-1) {
 			if ((s_mtp.received || s_mtp.remaining) && s_mtp.remaining != -1) {
 				s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
-				ksceUdcdStall(&s_mtp.endpoints[2]);
+				SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 				s_mtp.deferredResponse = -1;
 				s_mtp.cancelled = s_mtp.transaction;
 			}
@@ -1252,7 +1252,7 @@ int SceUsbMtpForDriver_E64513A9(int phase)
 	}
 	if (s_mtp.deferredCancel != (unsigned)-1 && !phase) {
 		s_mtp.transferFlags |= MTP_TRANSFER_OUT_STALLED;
-		ksceUdcdStall(&s_mtp.endpoints[2]);
+		SceUdcdForDriver_34079250(&s_mtp.endpoints[2]);
 		s_mtp.deferredResponse = -1;
 		s_mtp.deferredCancel = -1;
 	}
@@ -1269,7 +1269,7 @@ int sceUsbMtpStart(void)
 				    NULL, NULL) < 0)
 		return MTP_TIMEOUT;
 	const char *driver = "USBDeviceControllerDriver";
-	int ret = ksceUdcdStart(driver, 0, 0);
+	int ret = sceUdcdStart(driver, 0, 0);
 	if (ret < 0 && ret != (int)0x80243002) {
 		SCE_DBG_PRINTF(0, 2312,
 			"[%s%-28s] Err(%4d) sceUdcdStart() failed. name=%s (0x%x)\n",
@@ -1277,18 +1277,18 @@ int sceUsbMtpStart(void)
 		return MTP_PROTOCOL;
 	}
 	driver = "USB_MTP_Driver";
-	ret = ksceUdcdStart(driver, 0, 0);
+	ret = sceUdcdStart(driver, 0, 0);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2318,
 			"[%s%-28s] Err(%4d) sceUdcdStart() failed. name=%s (0x%x)\n",
 			"usbmtp:", __func__, 2318, driver, ret);
 		return MTP_PROTOCOL;
 	}
-	ret = ksceUdcdActivate(s_mtp.product);
+	ret = sceUdcdActivate(s_mtp.product);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2324, "[%s%-28s] Err(%4d) sceUdcdActivate() failed (0x%x)\n",
 			"usbmtp:", __func__, 2324, ret);
-		ksceUdcdStop(driver, 0, 0);
+		SceUdcdForDriver_1494293B(driver, 0, 0);
 		return MTP_UNAVAILABLE;
 	}
 	return 0;
@@ -1298,10 +1298,10 @@ int SceUsbMtpForDriver_08CD359F(void)
 {
 	if (!s_mtp.ready)
 		return MTP_UNAVAILABLE;
-	ksceUdcdDeactivate();
-	if (ksceUdcdStop("USB_MTP_Driver", 0, 0) < 0)
+	SceUdcdForDriver_8AE87657();
+	if (SceUdcdForDriver_1494293B("USB_MTP_Driver", 0, 0) < 0)
 		return MTP_PROTOCOL;
-	ksceUdcdStop("USBDeviceControllerDriver", 0, 0);
+	SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, 0);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_SEND_FAILED);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_RECV_FAILED);
 	sceKernelSetEventFlag(s_mtp.event, MTP_EVENT_NOTIFY_FAILED);
@@ -1369,7 +1369,7 @@ int _sceUsbMtpModuleStart(unsigned arglen, const char *argp)
 		}
 	}
 	s_mtp.lock = 0;
-	if (ksceUdcdRegister(&s_mtp.driver) < 0) {
+	if (SceUdcdForDriver_4E55244D(&s_mtp.driver) < 0) {
 		SCE_DBG_PRINTF(0, 2594, "[%s%-28s] Err(%4d) cannot register protocol driver\n",
 			"usbmtp:", __func__, 2594);
 		sceKernelDeleteEventFlag(s_mtp.event);

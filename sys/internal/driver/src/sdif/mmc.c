@@ -569,7 +569,7 @@ retry:
 	}
 }
 
-int ksceSdifReadCmd56(SdifMmcContext *part, void *buffer, int length)
+int SceSdifForDriver_134E06C4(SdifMmcContext *part, void *buffer, int length)
 {
 	SdifContextGlobal *context;
 	SdifCommand *command;
@@ -756,7 +756,7 @@ int sdifStartMmcInitialization(unsigned int index, SdifMmcContext **part)
 
 	if (part)
 		*part = NULL;
-	context = ksceSdifGetSdContextGlobal(index);
+	context = SceSdifForDriver_DC8F52F8(index);
 	if (!context)
 		return 0x80320013;
 	if (sceSdifReset(context, 2) < 0)
@@ -845,7 +845,7 @@ int sdifCompleteMmcInitialization(unsigned int index)
 	uint64_t generalSize[4], nextAddress, userStart;
 	int result, retries;
 
-	context = ksceSdifGetSdContextGlobal(index);
+	context = SceSdifForDriver_DC8F52F8(index);
 	if (!context)
 		return 0x80320013;
 	if (index == 0)
@@ -1161,7 +1161,7 @@ complete:
 	return 0;
 }
 
-int ksceSdifInitializeMmcDevice(unsigned int index, SdifMmcContext **part)
+int SceSdifForDriver_22C82E79(unsigned int index, SdifMmcContext **part)
 {
 	SdifMmcContext *mmc = NULL;
 	int result;
@@ -1179,9 +1179,9 @@ int ksceSdifInitializeMmcDevice(unsigned int index, SdifMmcContext **part)
 	return 0;
 }
 
-SdifMmcContext *ksceSdifGetSdContextPartValidateMmc(unsigned int index)
+SdifMmcContext *SceSdifForDriver_6A71987F(unsigned int index)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 
 	if (!context)
 		return NULL;
@@ -1190,16 +1190,16 @@ SdifMmcContext *ksceSdifGetSdContextPartValidateMmc(unsigned int index)
 	return NULL;
 }
 
-int ksceSdifGetCardInsertState1(unsigned int index)
+int SceSdifForDriver_36A2B01B(unsigned int index)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 
 	if (!context)
 		return 0x80320013;
 	return sdifIsCardInserted(context) > 0;
 }
 
-int ksceSdifGetCID(SdifMmcContext *part, void *cid)
+int SceSdifForDriver_23A4EF01(SdifMmcContext *part, void *cid)
 {
 	if (!part || !cid)
 		return 0x8032000e;

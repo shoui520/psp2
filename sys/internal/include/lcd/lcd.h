@@ -3,14 +3,14 @@
 
 #include <stdint.h>
 
-int ksceLcdWaitReady(void);
-int ksceLcdGetDDB(uint16_t *id, uint16_t *revision);
-int ksceLcdDisplayOn(void);
-int ksceLcdDisplayOff(void);
-int ksceLcdSetBrightness(unsigned value);
-unsigned ksceLcdGetBrightness(void);
-int ksceLcdSetDisplayColorSpaceMode(unsigned mode);
-unsigned ksceLcdGetDisplayColorSpaceMode(void);
+int SceLcdForDriver_0C7E03D8(void);
+int SceLcdForDriver_E03E120B(uint16_t *id, uint16_t *revision);
+int SceLcdForDriver_5F4124AB(void);
+int SceLcdForDriver_1A0A7519(void);
+int SceLcdForDriver_581D3A87(unsigned value);
+unsigned SceLcdForDriver_3A6D6AC3(void);
+int SceLcdForDriver_D40968FB(unsigned mode);
+unsigned SceLcdForDriver_17F66722(void);
 
 /* Unknown Sony names are preserved as library/NID identifiers. */
 int SceLcdForDriver_04E9269A(const unsigned char *sequence);

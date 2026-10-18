@@ -35,35 +35,12 @@ static const LedModeParam sddevWriteEndLed = {
 
 static SceSdstorSddev sddevTables[5];
 
-int ksceSdifGetCardInsertState1(unsigned int index);
-int ksceSdifGetCardInsertState2(unsigned int index);
-int ksceSdifInitializeMmcDevice(unsigned int index, SdifMmcContext **part);
-int ksceSdifInitializeSdDevice(unsigned int index, SdifContextPart **part);
-int sceMsifSwReset(void);
 int SceUsbMassForDriver_D989A9F6(SceUsbMassDevInfo *info)
 	__attribute__((weak));
-int ksceSdifReadSectorMmc(SdifMmcContext *part, uint32_t sector,
-			void *buffer, uint32_t count);
-int ksceSdifWriteSectorMmc(SdifMmcContext *part, uint32_t sector,
-			 const void *buffer, uint32_t count);
-int ksceSdifReadSectorSd(SdifContextPart *part, uint32_t sector,
-		       void *buffer, uint32_t count);
-int ksceSdifWriteSectorSd(SdifContextPart *part, uint32_t sector,
-			const void *buffer, uint32_t count);
-int ksceMsifReadSector(uint32_t sector, void *buffer, unsigned int count);
-int ksceMsifWriteSector(uint32_t sector, void *buffer, unsigned int count);
 int SceUsbMassForDriver_B80D1DF8(uint32_t sector, void *buffer, uint32_t count)
 	__attribute__((weak));
 int SceUsbMassForDriver_081CA197(uint32_t sector, void *buffer, uint32_t count)
 	__attribute__((weak));
-int SceSdifForDriver_6CC8E28D(unsigned int index);
-int SceMsifForDriver_F997286B(void);
-int sendWriteProtectStatus(SdifMmcContext *part, unsigned int sector,
-			   unsigned int count, int *writeProtected);
-int SceSdifForDriver_E091BA2E(SdifContextPart *part, uint32_t sector,
-			    uint32_t count, int *writeProtected);
-int sceMsifFormat(int mode);
-int SceSdifForDriver_35BA9DF8(unsigned int index, SceUID callback);
 
 int sddev_power_off(SceSdstorSddev *device)
 {
@@ -196,13 +173,13 @@ int sddev_power_on(SceSdstorSddev *device)
 	hport = device->hport;
 	SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 	if (hport == 1) {
-		if (ksceSdifGetCardInsertState1(device->hport) != 1)
+		if (SceSdifForDriver_36A2B01B(device->hport) != 1)
 			goto noDevice;
 	} else if (device->mediaType == 2) {
 		if (!ScePervasiveForDriver_551EEE82())
 			goto noDevice;
 	} else if (device->mediaType == 1) {
-		if (ksceSdifGetCardInsertState2(device->hport) != 1)
+		if (SceSdifForDriver_FD9E5CFA(device->hport) != 1)
 			goto noDevice;
 	}
 	SCE_DBG_ASSERT(device != NULL, 414);
@@ -244,7 +221,7 @@ int sddev_power_on(SceSdstorSddev *device)
 		SdifMmcContext *mmc = NULL;
 
 		for (count = 0; count != 2; ++count) {
-			result = ksceSdifInitializeMmcDevice(device->hport, &mmc);
+			result = SceSdifForDriver_22C82E79(device->hport, &mmc);
 			if (result == 0) {
 				device->mediaType = 0;
 				device->stat = 1;
@@ -274,7 +251,7 @@ int sddev_power_on(SceSdstorSddev *device)
 		SdifMmcContext *mmc = NULL;
 
 		for (count = 0; count != 2; ++count) {
-			result = ksceSdifInitializeMmcDevice(device->hport, &mmc);
+			result = SceSdifForDriver_22C82E79(device->hport, &mmc);
 			if (result == 0) {
 				device->mediaType = 0;
 				device->stat = 1;
@@ -300,7 +277,7 @@ int sddev_power_on(SceSdstorSddev *device)
 		for (count = 0; count != 2; ++count) {
 			result = sceMsifSwReset();
 			if (result == 0) {
-				result = ksceMsifGetMsInfo(&msInfo);
+				result = SceMsifForDriver_D0307849(&msInfo);
 				if (result == 0) {
 					device->stat = 1;
 					device->mediaType = 2;
@@ -332,7 +309,7 @@ int sddev_power_on(SceSdstorSddev *device)
 initializeSd:
 		sd = NULL;
 		for (count = 0; count != 2; ++count) {
-			result = ksceSdifInitializeSdDevice(device->hport, &sd);
+			result = SceSdifForDriver_C1271539(device->hport, &sd);
 			if (result == 0) {
 				device->mediaType = 1;
 				device->stat = 1;
@@ -603,7 +580,7 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
 			SceSysrootForDriver_9BF782CA(1, 2, &sddevActivityLed);
-		result = ksceSdifReadSectorMmc(device->sdif_ctx, sector, buffer, count);
+		result = sceMmcReadSector(device->sdif_ctx, sector, buffer, count);
 		hport = device->hport;
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
@@ -614,11 +591,11 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
 			SceSysrootForDriver_9BF782CA(1, 2, &sddevActivityLed);
-		result = ksceSdifReadSectorSd(device->sdif_ctx, sector, buffer, count);
+		result = SceSdifForDriver_B9593652(device->sdif_ctx, sector, buffer, count);
 		if (result == (int)0x80320022) {
 			part = NULL;
 			for (attempt = 0; attempt < 2; attempt++) {
-				initResult = ksceSdifInitializeSdDevice(device->hport, &part);
+				initResult = SceSdifForDriver_C1271539(device->hport, &part);
 				if (initResult == (int)0x8032001a)
 					break;
 				if (initResult != (int)0x80320013)
@@ -635,7 +612,7 @@ int sddev_read(SceSdstorSddev *device, void *buffer, uint32_t sector,
 		break;
 	case 2:
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevActivityLed);
-		result = ksceMsifReadSector(sector, buffer, count);
+		result = SceMsifForDriver_58654AA3(sector, buffer, count);
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevReadEndLed);
 		break;
 	case 3:
@@ -674,7 +651,7 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
 			SceSysrootForDriver_9BF782CA(1, 2, &sddevActivityLed);
-		result = ksceSdifWriteSectorMmc(device->sdif_ctx, sector, buffer, count);
+		result = sceMmcWriteSectorInternal(device->sdif_ctx, sector, buffer, count);
 		hport = device->hport;
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
@@ -685,11 +662,11 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 		if (hport == 1)
 			SceSysrootForDriver_9BF782CA(1, 2, &sddevActivityLed);
-		result = ksceSdifWriteSectorSd(device->sdif_ctx, sector, buffer, count);
+		result = sceSdWriteSectorInternal(device->sdif_ctx, sector, buffer, count);
 		if (result == (int)0x80320022) {
 			part = NULL;
 			for (attempt = 0; attempt < 2; attempt++) {
-				initResult = ksceSdifInitializeSdDevice(device->hport, &part);
+				initResult = SceSdifForDriver_C1271539(device->hport, &part);
 				if (initResult == (int)0x8032001a)
 					break;
 				if (initResult != (int)0x80320013)
@@ -706,7 +683,7 @@ int sddev_write(SceSdstorSddev *device, const void *buffer, uint32_t sector,
 		break;
 	case 2:
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevActivityLed);
-		result = ksceMsifWriteSector(sector, (void *)buffer, count);
+		result = sceMsifWriteSector(sector, (void *)buffer, count);
 		SceSysrootForDriver_9BF782CA(3, 2, &sddevWriteEndLed);
 		break;
 	case 3:

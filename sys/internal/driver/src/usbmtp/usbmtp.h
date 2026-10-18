@@ -4,7 +4,6 @@
  */
 #pragma once
 #include <stdint.h>
-#include <psp2kern/udcd.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
@@ -14,8 +13,7 @@
 #include <sysmem/sysmem.h>
 #include <usbstor/usbstor.h>
 #include <mtpif/mtpif.h>
-
-int SceUdcdForDriver_28BFEC45(void);
+#include <udcd/udcd.h>
 
 /* the generic MTP container on the bulk pipes */
 typedef struct MtpContainer {

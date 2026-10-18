@@ -382,7 +382,7 @@ int SceSdifForDriver_E5E5F42E(void)
 	return 0;
 }
 
-SdifContextGlobal *ksceSdifGetSdContextGlobal(unsigned int index)
+SdifContextGlobal *SceSdifForDriver_DC8F52F8(unsigned int index)
 {
 	if (index > 2)
 		return NULL;

@@ -31,7 +31,7 @@ int oledInit(void) /* name unknown */
 	oled.curBrightness = 0;
 	oled.colorSpace = 0;
 	oled.curColorSpace = 0;
-	imported = (void *)ksceOledGetDDB;
+	imported = (void *)SceOledForDriver_C9D5987C;
 	if (imported == NULL)
 		return -1;
 	oled.present = 1;
@@ -56,10 +56,10 @@ void oledVblank(void)
 		return;
 	if (oled.isOn != oled.wantOn) {
 		if (oled.wantOn == 0) {
-			if (ksceOledDisplayOff() < 0)
+			if (SceOledForDriver_BC84602E() < 0)
 				goto set;
 		} else {
-			if (ksceOledDisplayOn() < 0)
+			if (SceOledForDriver_4C7836C7() < 0)
 				goto set;
 			oled.curBrightness = -1;
 		}
@@ -68,9 +68,9 @@ void oledVblank(void)
 set:
 	if (!bootLogoShown && oled.isOn == 1) {
 		if (oled.curColorSpace != oled.colorSpace
-		    && ksceOledSetDisplayColorSpaceMode(oled.colorSpace) >= 0)
+		    && SceOledForDriver_DABBD9D3(oled.colorSpace) >= 0)
 			oled.curColorSpace = oled.colorSpace;
-		if (oled.curBrightness != oled.brightness && ksceOledSetBrightness(oled.brightness) >= 0)
+		if (oled.curBrightness != oled.brightness && SceOledForDriver_F9624C47(oled.brightness) >= 0)
 			oled.curBrightness = oled.brightness;
 	}
 	SceOledForDriver_E30604CC();

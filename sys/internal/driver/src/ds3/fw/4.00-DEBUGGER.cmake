@@ -121,25 +121,25 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_E0489831
 	sceKernelRegisterProcEventHandler
 	SceBtForDriver_10D68FAE
-	ksceBtRegisterCallback
-	ksceBtStartDisconnect
-	ksceBtReadEvent
-	ksceBtGetStatusForTest
-	ksceBtGetRegisteredInfo
-	ksceBtHidTransfer
-	ksceUsbdOpenPipe
-	ksceUsbdRegisterDriver
-	ksceUsbdControlTransfer
-	ksceUsbdInterruptTransfer
-	ksceUsbdScanStaticDescriptor
-	ksceUsbdClosePipe
-	ksceUsbServAccessoryActivate
+	SceBtForDriver_120AC1F7
+	SceBtForDriver_50710281
+	SceBtForDriver_5ABB9A9D
+	SceBtForDriver_83781649
+	SceBtForDriver_F86D25E2
+	SceBtForDriver_F9DCEC77
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_1EC94F18
+	SceUsbdForDriver_2E05660F
+	SceUsbdForDriver_A0BF85B8
+	SceUsbdForDriver_BC3EF82B
+	SceUsbdForDriver_F304DC5C
+	SceUsbServForDriver_AA6D4409
 	_sceCtrlBdRemoconSendMergedNotify2
 	SceCtrlForDriver_18823EEA
 	SceCtrlForDriver_6E183B9B
 	SceCtrlForDriver_AA36F578
-	ksceMotionDevRegisterVirtualMotionDriver
-	ksceTouchRegisterVirtualTouchDriver
+	SceMotionDevForDriver_7FD06731
+	SceTouchForDriver_03C3AC7C
 	ScePowerForDriver_394DE492
 	sceRegMgrGetKeyInt
 	ksceRegMgrSystemParamGetInt

@@ -2,6 +2,7 @@
 
 #include <psp2/types.h>
 #include <motion/motion_command.h>
+#include <motion/motion_dev.h>
 
 typedef struct MotionUtilEventContext {
 	SceUID eventFlagId;
@@ -35,8 +36,6 @@ _Static_assert(__builtin_offsetof(MotionUtilFirmwareHeader, dataSize) == 5,
 	"motion firmware size position");
 
 extern const unsigned int motionFlashChunkSizes[2];
-int SceMotionDevForDriver_FD1C528D(void);
-int SceMotionDevForDriver_A75976EE(void);
 
 void MotionUtilCommandComplete(int result,
 	const struct MotionSensorResponse *request,

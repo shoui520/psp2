@@ -6,8 +6,9 @@
 #pragma once
 #include <stdint.h>
 #include <idstorage/idstorage.h>
+#include <udcd/udcd.h>
 
-/* the driver's start argument (ksceUdcdStart "USBStor_Driver"): a SCSI peripheral device type */
+/* the driver's start argument (sceUdcdStart "USBStor_Driver"): a SCSI peripheral device type */
 #define USBSTOR_TYPE_DISK		0x00	/* product "Type A" */
 #define USBSTOR_TYPE_CDROM		0x05	/* product "Type C" */
 
@@ -110,4 +111,3 @@ int SceUsbstorForDriver_ADB2AAF2(const char *product, const char *revision, unsi
 unsigned SceUsbstorForDriver_77B7E69E(void);				/* nonzero: a function is busy */
 
 /* Private UDCD device-information operation; original name unknown. */
-int SceUdcdForDriver_78BF2A28(void *info);

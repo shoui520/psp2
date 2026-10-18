@@ -20,13 +20,16 @@
 #include <power/led.h>
 #include <power/power.h>
 #include <modulemgr/modulemgr.h>
+#include <clockgen/clockgen.h>
+#include <motion/motion_dev.h>
+#include <udcd/udcd.h>
 
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 
 /* display brightness: the OLED or the LCD driver, whichever is present */
-int ksceOledSetBrightness(int brightness) __attribute__((weak));
+int SceOledForDriver_F9624C47(int brightness) __attribute__((weak));
 int SceOledForDriver_3C990F53(void) __attribute__((weak));	/* display on? */
-int ksceLcdSetBrightness(int brightness) __attribute__((weak));
+int SceLcdForDriver_581D3A87(int brightness) __attribute__((weak));
 int SceLcdForDriver_8C965153(void) __attribute__((weak));	/* display on? */
 
 typedef struct EwCtrlData {
@@ -36,14 +39,6 @@ typedef struct EwCtrlData {
 	SceUInt8 reserved[16];
 } EwCtrlData;
 
-int ksceMotionDevIsReady(void);
-int SceMotionDevForDriver_031AF7A1(void);	/* stop the motion device */
 int SceHpremoteForDriver_7735C403(void);	/* headphone remote off */
 
 int ScePervasiveForDriver_E0711D42(void);
-int SceClockgenForDriver_5130682D(void);
-int SceClockgenForDriver_F0A0242D(void);
-int SceClockgenForDriver_82F39378(void);
-int ksceClockgenWlanBtClkDisable(void);
-int SceUdcdForDriver_2D91F8C3(int chargeEnable);
-int ksceUdcdGetDeviceState(void);

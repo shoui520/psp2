@@ -313,29 +313,29 @@ set(MODULE_IMPORT_FUNCS
 	ScePwmForDriver_22C17D24
 	ScePwmForDriver_514773B1
 	SceI2cForDriver_CA94A759
-	ksceOledWaitReady
-	ksceOledDisplayOn
+	SceOledForDriver_0CC6BCB4
+	SceOledForDriver_4C7836C7
 	SceOledForDriver_9F4ABDDC
-	ksceOledDisplayOff
+	SceOledForDriver_BC84602E
 	SceOledForDriver_BF5C5624
-	ksceOledGetDDB
-	ksceOledSetDisplayColorSpaceMode
+	SceOledForDriver_C9D5987C
+	SceOledForDriver_DABBD9D3
 	SceOledForDriver_DDB1412B
 	SceOledForDriver_E30604CC
 	SceOledForDriver_ED2D6F19
-	ksceOledSetBrightness
-	ksceLcdWaitReady
-	ksceLcdDisplayOff
+	SceOledForDriver_F9624C47
+	SceLcdForDriver_0C7E03D8
+	SceLcdForDriver_1A0A7519
 	SceLcdForDriver_1D73D7F3
 	SceLcdForDriver_3E7C2CCA
 	SceLcdForDriver_4735059C
 	SceLcdForDriver_4CC1E8C1
-	ksceLcdSetBrightness
+	SceLcdForDriver_581D3A87
 	SceLcdForDriver_59CCDC97
-	ksceLcdDisplayOn
+	SceLcdForDriver_5F4124AB
 	SceLcdForDriver_6A08623C
-	ksceLcdSetDisplayColorSpaceMode
-	ksceLcdGetDDB
+	SceLcdForDriver_D40968FB
+	SceLcdForDriver_E03E120B
 	SceHdmiForDriver_08AFFB03
 	SceHdmiForDriver_5A212BB3
 	SceHdmiForDriver_7AD0F6C9

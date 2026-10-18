@@ -252,13 +252,13 @@ int SceLcdForDriver_6A08623C(void)
 {
 	return SceGpioForDriver_129DF5AC(0, 0) == 0;
 }
-int ksceLcdWaitReady(void)
+int SceLcdForDriver_0C7E03D8(void)
 {
 	while (!lcd.ready)
 		waitTime(1000);
 	return 0;
 }
-int ksceLcdGetDDB(uint16_t *id, uint16_t *revision)
+int SceLcdForDriver_E03E120B(uint16_t *id, uint16_t *revision)
 {
 	if (!lcd.ready)
 		return LCD_NOT_READY;
@@ -459,7 +459,7 @@ static int enqueueBrightness(void) /* name unknown */
 				      backlightWork, 0);
 	return ret < 0 ? ret : 0;
 }
-int ksceLcdDisplayOn(void)
+int SceLcdForDriver_5F4124AB(void)
 {
 	int ret;
 	if (displayEnabled)
@@ -470,7 +470,7 @@ int ksceLcdDisplayOn(void)
 		displayEnabled = 1;
 	return ret;
 }
-int ksceLcdDisplayOff(void)
+int SceLcdForDriver_1A0A7519(void)
 {
 	int ret;
 	if (!displayEnabled)
@@ -485,7 +485,7 @@ int SceLcdForDriver_9F1DB5CD(void)
 {
 	return queueSequence(standby);
 }
-int ksceLcdSetBrightness(unsigned value)
+int SceLcdForDriver_581D3A87(unsigned value)
 {
 	unsigned target;
 	int ret;
@@ -502,7 +502,7 @@ int ksceLcdSetBrightness(unsigned value)
 	} else {
 		target = value == 1 ? 25 : brightnessTable[((value - 2) * 16) / 65534];
 		if (!displayEnabled) {
-			ret = ksceLcdDisplayOn();
+			ret = SceLcdForDriver_5F4124AB();
 			if (ret)
 				return ret;
 		}
@@ -511,7 +511,7 @@ int ksceLcdSetBrightness(unsigned value)
 	backlightTarget = target;
 	return enqueueBrightness();
 }
-unsigned ksceLcdGetBrightness(void)
+unsigned SceLcdForDriver_3A6D6AC3(void)
 {
 	return brightness;
 }
@@ -536,7 +536,7 @@ unsigned SceLcdForDriver_4C277FEC(void)
 {
 	return panelMode;
 }
-int ksceLcdSetDisplayColorSpaceMode(unsigned mode)
+int SceLcdForDriver_D40968FB(unsigned mode)
 {
 	int ret;
 	if (mode > 1)
@@ -553,7 +553,7 @@ int ksceLcdSetDisplayColorSpaceMode(unsigned mode)
 	}
 	return ret;
 }
-unsigned ksceLcdGetDisplayColorSpaceMode(void)
+unsigned SceLcdForDriver_17F66722(void)
 {
 	return colorMode;
 }
@@ -572,7 +572,7 @@ int SceLcdForDriver_3E7C2CCA(void)
 	if (ret)
 		return ret;
 	SceLcdForDriver_4735059C(0);
-	ksceLcdGetDDB(0, &revision);
+	SceLcdForDriver_E03E120B(0, &revision);
 	if (!revision)
 		revision = 50;
 	scriptRevision = revision;

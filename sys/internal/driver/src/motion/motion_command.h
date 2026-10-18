@@ -33,7 +33,6 @@ typedef struct MotionSensorPacket {
 
 /* Decoded calibration-file header and the bounded syscon read buffer. */
 
-
 typedef struct MotionCalibrationBuffer {
 	uint32_t size;
 	uint32_t received;
@@ -45,8 +44,6 @@ typedef struct MotionCalibrationWireRecord {
 	uint8_t attributes[3];
 	uint8_t parameterBytes[4][4];
 } MotionCalibrationWireRecord;
-
-
 
 typedef struct MotionWorkerContext {
 	int thread;
@@ -122,7 +119,6 @@ int motionSpiSuspend(void);
 int motionSpiResume(void);
 int motionSpiDeactivate(void);
 int motionSpiActivate(void);
-int SceMotionDevForDriver_77BA3A04(void);
 
 int motionPowerOff(void);
 int motionCommandInitialize(void);

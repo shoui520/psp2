@@ -3,8 +3,8 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <stdint.h>
-#include <psp2kern/udcd.h>
-#include <psp2kern/usbserv.h>
+#include <udcd/udcd.h>
+#include <usbserv/usbserv.h>
 #include "usb_serial.h"
 #include "usb_extif.h"
 
@@ -128,21 +128,21 @@ int sceBbmcUsbExtIfStart(int mode)
 		ret = (int)0x80330002;
 		goto fail;
 	}
-	if (ksceUdcdDeactivateInternal(2) < 0) {
+	if (SceUdcdForDriver_FDC10F93(2) < 0) {
 		g_usbExtIf->restoreMtp = 0;
 	} else {
 		g_usbExtIf->restoreMtp = 1;
-		ret = ksceUdcdStopInternal("USB_MTP_Driver", 0, NULL, 2);
+		ret = SceUdcdForDriver_150FD3BB("USB_MTP_Driver", 0, NULL, 2);
 		if (ret < 0)
 			goto fail;
 	}
-	ret = ksceUsbServMacSelect(2, 1);
+	ret = SceUsbServForDriver_7AD36284(2, 1);
 	failed = (unsigned int)ret >> 31;
 	if (ret == (int)0x80248001)
 		failed = 0;
 	if (failed != 0)
 		goto fail;
-	ret = ksceUdcdStartInternal("USBDeviceControllerDriver", 0, NULL, 2);
+	ret = SceUdcdForDriver_90F8BCAE("USBDeviceControllerDriver", 0, NULL, 2);
 	if (ret < 0) {
 		if (ret != (int)0x80243002)
 			goto fail;
@@ -152,17 +152,17 @@ int sceBbmcUsbExtIfStart(int mode)
 		controllerStarted = 1;
 		g_usbExtIf->controllerStarted = 1;
 	}
-	ret = ksceUdcdStartInternal("SceUsbQcomSer", 0, NULL, 2);
+	ret = SceUdcdForDriver_90F8BCAE("SceUsbQcomSer", 0, NULL, 2);
 	if (ret >= 0) {
-		ret = ksceUdcdActivateInternal(1430, 0, 2);
+		ret = SceUdcdForDriver_9119247B(1430, 0, 2);
 		if (ret >= 0) {
 			g_usbExtIf->mode = 0;
 			goto out;
 		}
-		ksceUdcdStopInternal("SceUsbQcomSer", 0, NULL, 2);
+		SceUdcdForDriver_150FD3BB("SceUsbQcomSer", 0, NULL, 2);
 	}
 	if (controllerStarted != 0)
-		ksceUdcdStopInternal("SceUsbQcomSer", 0, NULL, 2);
+		SceUdcdForDriver_150FD3BB("SceUsbQcomSer", 0, NULL, 2);
 	goto fail;
 out:
 	sceKernelSpinlockLowUnlock(&g_usbExtIf->lock);
@@ -195,15 +195,15 @@ int sceBbmcUsbExtIfStop(void)
 			g_usbExtIf->atChannel = 0;
 		}
 	} else {
-		ksceUdcdDeactivateInternal(2);
-		ksceUdcdStopInternal("SceUsbQcomSer", 0, NULL, 2);
+		SceUdcdForDriver_FDC10F93(2);
+		SceUdcdForDriver_150FD3BB("SceUsbQcomSer", 0, NULL, 2);
 		if (g_usbExtIf->controllerStarted != 0) {
-			ksceUdcdStopInternal("USBDeviceControllerDriver", 0, NULL, 2);
+			SceUdcdForDriver_150FD3BB("USBDeviceControllerDriver", 0, NULL, 2);
 			g_usbExtIf->controllerStarted = 0;
 		}
 		if (g_usbExtIf->restoreMtp != 0) {
-			ksceUdcdStartInternal("USB_MTP_Driver", 0, NULL, 2);
-			ksceUdcdActivate(1252);
+			SceUdcdForDriver_90F8BCAE("USB_MTP_Driver", 0, NULL, 2);
+			sceUdcdActivate(1252);
 			g_usbExtIf->restoreMtp = 0;
 		}
 	}

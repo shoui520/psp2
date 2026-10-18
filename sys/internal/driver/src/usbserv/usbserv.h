@@ -1,8 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include <psp2kern/usbserv.h>
-#include <psp2kern/usbd.h>
-#include <psp2kern/udcd.h>
+#include <usbd/usbd.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -18,12 +16,7 @@
 #include <sysmem/procevent.h>
 #include <sysmem/sysroot.h>
 #include <modulemgr/modulemgr.h>
+#include <udcd/udcd.h>
+#include <usbserv/usbserv.h>
 
 /* Names unknown: hardware operations identified by their import NIDs. */
-int SceUdcdForDriver_1A5A3851(void);
-int SceUdcdForDriver_2A234CAF(int port);
-int SceUdcdForDriver_9E7F7EFE(void);
-int SceUdcdForDriver_D01CFD22(void);
-int SceUdcdForDriver_E9E75C49(int port);
-int sceUsbServAccessoryActivate(void);
-int sceUsbServAccessoryDeactivate(void);

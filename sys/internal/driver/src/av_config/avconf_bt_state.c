@@ -13,7 +13,7 @@ void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 	SceBtRegisteredInfo info;
 	int state;
 
-	if (ksceBtGetRegisteredInfo(address, &info, 1) != 1)
+	if (SceBtForDriver_F86D25E2(address, &info, 1) != 1)
 		return;
 	info.profiles &= 0x20000008;
 	if (info.profiles == 0)
@@ -36,7 +36,7 @@ void avConfigReadBtDevice(AvConfigBtAudioState *bt, SceUInt64 address)
 	bt->pending.profiles = info.profiles;
 	bt->pending.flags = info.flags;
 	if (info.profiles & 4)
-		bt->pending.sampleRate = ksceBtFreqAudio(address);
+		bt->pending.sampleRate = SceBtForDriver_DA20DCC8(address);
 	bt->deviceChanged = 1;
 }
 
@@ -48,7 +48,7 @@ int avConfigReadBtEvents(AvConfigState *state)
 	int lockState;
 	int volume;
 
-	while (ksceBtReadEvent(&event, 1) > 0) {
+	while (SceBtForDriver_5ABB9A9D(&event, 1) > 0) {
 		address = ((SceUInt64)event.mac1 << 32) | event.mac0;
 		if (event.id == 5) {
 			if (event.status == 0) {
@@ -116,7 +116,7 @@ int avConfigReadBtEvents(AvConfigState *state)
 			if (event.id != 13 || address == bt->active.address)
 				continue;
 		}
-		volume = ksceBtAvrcpReadVolume(address);
+		volume = SceBtForDriver_C9C70056(address);
 		if (volume >= 0)
 			avConfigUpdateBtVolume(bt->volumeNotification, volume);
 		avConfigReadBtDevice(bt, ((SceUInt64)event.mac1 << 32) | event.mac0);
@@ -160,9 +160,9 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 	SceUInt64 address;
 	int state;
 
-	if (ksceBtGetConnectingInfo(bt->pending.address) == 5)
+	if (SceBtForDriver_E9936446(bt->pending.address) == 5)
 		return 0;
-	if (ksceBtStartAudio(bt->pending.address, bt->pending.profile) < 0) {
+	if (SceBtForDriver_8D47CABD(bt->pending.address, bt->pending.profile) < 0) {
 		state = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.connectedDevices &= ~0x810u;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, state);
@@ -212,8 +212,8 @@ int avConfigStartBtAudio(AvConfigBtAudioState *bt)
 
 int avConfigStopBtAudio(AvConfigBtAudioState *bt)
 {
-	if (ksceBtStopAudio(bt->active.address, bt->active.profile) < 0)
-		ksceBtStartDisconnect((SceUInt32)bt->active.address,
+	if (SceBtForDriver_CAE5A9F3(bt->active.address, bt->active.profile) < 0)
+		SceBtForDriver_50710281((SceUInt32)bt->active.address,
 				      (SceUInt32)(bt->active.address >> 32));
 	bt->completionFlags = 0;
 	bt->operation = 2;
@@ -226,7 +226,7 @@ int avConfigStopBtAudio(AvConfigBtAudioState *bt)
 
 int avConfigSendBtVolume(SceUInt64 address, unsigned int volume)
 {
-	ksceBtAvrcpSendVolume(address, (SceUInt8)volume);
+	SceBtForDriver_7689DA3D(address, (SceUInt8)volume);
 	return 0;
 }
 
@@ -236,7 +236,7 @@ int avConfigSendBtButton(AvConfigBtAudioState *bt, unsigned int button)
 	int retries = 101;
 
 	bt->buttonCompleted = 0;
-	ksceBtAvrcpSendButton(address, (SceUInt8)button);
+	SceBtForDriver_EC5F8519(address, (SceUInt8)button);
 	do {
 		if (bt->buttonCompleted != 0)
 			break;

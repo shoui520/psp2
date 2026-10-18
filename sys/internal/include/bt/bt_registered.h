@@ -44,5 +44,5 @@ _Static_assert(offsetof(SceBtRegisteredInfo, reserved) == 160,
 	       "registered unused tail");
 
 /* The same batch-output ABI is used by SysrootBtOps. */
-int ksceBtGetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount);
+int SceBtForDriver_F86D25E2(uint64_t deviceAddress, void *buffer, int maxCount);
 

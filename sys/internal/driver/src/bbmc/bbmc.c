@@ -14,7 +14,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/idstorage.h>
+#include <idstorage/idstorage.h>
 #include <sysmem/procevent.h>
 #include <arm_neon.h>
 #include <stdarg.h>
@@ -530,7 +530,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 	control->countedBytes.values[2] = 72;
 	control->sysconPowerInverted = 1;
 	control->powerAvailable = 1;
-	if (ksceIdStorageReadLeaf(0x113, &modemConfiguration) < 0 ||
+	if (SceIdStorageForDriver_EB00C509(0x113, &modemConfiguration) < 0 ||
 	    modemConfiguration.configurationMode - 1 > 11)
 		control->configurationMode = 1;
 	else

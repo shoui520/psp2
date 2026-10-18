@@ -97,21 +97,21 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
-	ksceUsbdOpenPipe
-	ksceUsbdRegisterDriver
-	ksceUsbdUnregisterDriver
-	ksceUsbdControlTransfer
-	ksceUsbdBulkTransfer2
-	ksceUsbdScanStaticDescriptor
-	ksceUsbdGetDeviceSpeed
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_1EC94F18
+	SceUsbdForDriver_216F108D
+	SceUsbdForDriver_2E05660F
+	SceUsbdForDriver_470D5289
+	SceUsbdForDriver_BC3EF82B
+	SceUsbdForDriver_C3BECF5F
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
 	SceSysconForDriver_3274A925
 	SceSysconForDriver_40FF3898
 	SceSysconForDriver_9ADD60D2
 	SceSysconForDriver_CBD6D8BC
-	ksceUsbServMacSelect
-	ksceIdStorageLookup
+	SceUsbServForDriver_7AD36284
+	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

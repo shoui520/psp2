@@ -347,22 +347,22 @@ set(MODULE_IMPORT_FUNCS
 	ScePmMgrForDriver_2AC815A2
 	SceSblGcAuthMgrMlnpsnlForDriver_296ABD68
 	SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5
-	ksceIdStorageCreateLeaf
-	ksceIdStorageWriteLeaf
-	ksceIdStorageDeleteLeaf
-	ksceIdStorageIsReadOnly
-	ksceIdStorageGetFreeLeaves
-	ksceIdStorageFlush
-	ksceIdStorageRestart
-	ksceIdStorageUpdate
-	ksceIdStorageLookup
-	ksceIdStorageFormat
-	ksceIdStorageCreateAtomicLeaves
-	ksceIdStorageIsDirty
-	ksceIdStorageReadLeaf
-	ksceIdStorageGetLeafSize
-	ksceIdStorageUnformat
-	ksceIdStorageIsFormatted
+	SceIdStorageForDriver_08A471A6
+	SceIdStorageForDriver_1FA4D135
+	SceIdStorageForDriver_2C97AB36
+	SceIdStorageForDriver_2D633688
+	SceIdStorageForDriver_37833CB8
+	SceIdStorageForDriver_3AD32523
+	SceIdStorageForDriver_60B647A5
+	SceIdStorageForDriver_683AAC10
+	sceIdStorageLookup
+	SceIdStorageForDriver_958089DB
+	SceIdStorageForDriver_99ACCB71
+	SceIdStorageForDriver_B9069BAD
+	SceIdStorageForDriver_EB00C509
+	SceIdStorageForDriver_EB830733
+	SceIdStorageForDriver_F4BCB3EE
+	SceIdStorageForDriver_FEFA40C2
 	SceSysconForDriver_34574496
 	SceSysconForDriver_3843D657
 	SceSysconForDriver_3B354824
@@ -419,7 +419,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_E170883E
 	SceCtrlForDriver_ED8F0129
 	SceCtrlForDriver_FA88D837
-	ksceMotionDevNoiseFilterIsAvailable
+	SceMotionDevForDriver_11A17A96
 	SceLedForDriver_EA24BE03
 	scePowerRequestColdReset
 	ScePowerForDriver_08951418
@@ -429,13 +429,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_9F26222A
 	ScePowerForDriver_C1853BA7
 	ScePowerForDriver_CF8F0529
-	ksceSdifGetCardInsertState1
-	ksceSdifGetSdContextPartValidateSd
-	SceSdifForDriver_F37CF8E5
-	ksceSdifGetCardInsertState2
-	ksceMsifEnableSlowMode
-	ksceMsifGetMsInfo
-	ksceTouchSetTouchEmulationData
+	SceSdifForDriver_36A2B01B
+	SceSdifForDriver_B9EA5B1E
+	sceSdifEnableSlowCardMode
+	SceSdifForDriver_FD9E5CFA
+	sceMsifEnableSlowCardMode
+	SceMsifForDriver_D0307849
+	SceTouchForDriver_A32529B8
 	ScePervasiveForDriver_551EEE82
 	ksceCoredumpCafSegmentInit
 	ksceCoredumpCreateDump

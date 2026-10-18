@@ -2,7 +2,7 @@
 #define BBMC_QMI_USB_H
 
 #include "qmi_backend.h"
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 
 typedef struct QmiUsbStateSubscriber {
 	int (*callback)(int state, void *context);

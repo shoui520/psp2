@@ -22,6 +22,7 @@
 #include "alc.h"
 #include "equalizer.h"
 #include <sysmem/sysroot.h>
+#include <clockgen/clockgen.h>
 
 /* This caller preserves the three arguments of the original call interface. */
 int SceCodecForDriver_CCDE1B04(int mode);
@@ -40,7 +41,6 @@ int audioDispatchDmaBuffer(uintptr_t sourceAddress, int channel,
 int audioProcessDirectPort(AudioDirectPort *port, int16_t *output,
 			   const int16_t *input, unsigned int sampleCount);
 int audioSetHardwareVolume(int channel, int left, int right);
-int SceClockgenForDriver_820D3516(int frequency);
 int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason);
 int audioProcessExitCallback(SceUID pid, ProcEventParam *param, int reason);
 int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason);

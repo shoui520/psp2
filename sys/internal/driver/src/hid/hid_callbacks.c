@@ -180,7 +180,7 @@ void hidNotifyConsumerRead(void)
 	hidCallbacksInitialized = 1; \
 } while (0)
 
-int ksceHidMouseRegisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_141CA100(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -258,7 +258,7 @@ unlock:
 	return result;
 }
 
-int ksceHidMouseUnregisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_9AFBB275(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -313,7 +313,7 @@ int sceHidMouseUnregisterEnumHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidMouseRegisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_41690428(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -391,7 +391,7 @@ unlock:
 	return result;
 }
 
-int ksceHidMouseUnregisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_63776265(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -446,7 +446,7 @@ int sceHidMouseUnregisterReadHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidKeyboardRegisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_21A23FCD(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -524,7 +524,7 @@ unlock:
 	return result;
 }
 
-int ksceHidKeyboardUnregisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_69DEE02F(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -581,7 +581,7 @@ int sceHidKeyboardUnregisterEnumHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidKeyboardRegisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_B0B22694(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -659,7 +659,7 @@ unlock:
 	return result;
 }
 
-int ksceHidKeyboardUnregisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_050351F2(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -714,7 +714,7 @@ int sceHidKeyboardUnregisterReadHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidConsumerControlRegisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_7F444D9C(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -792,7 +792,7 @@ unlock:
 	return result;
 }
 
-int ksceHidConsumerControlUnregisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_6FFC9302(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -847,7 +847,7 @@ int sceHidConsumerControlUnregisterEnumHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidConsumerControlRegisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_710B353C(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -925,7 +925,7 @@ unlock:
 	return result;
 }
 
-int ksceHidConsumerControlUnregisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_3EC4E469(SceUID callbackId)
 {
 	int result = hidLock();
 	ListNode *link, *previous;
@@ -980,7 +980,7 @@ int sceHidConsumerControlUnregisterReadHintCallback(SceUID callbackId)
 	return result;
 }
 
-int ksceHidControllerRegisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_8DE66028(SceUID callbackId)
 {
 	return (int)0x803B0004;
 }
@@ -990,7 +990,7 @@ int sceHidControllerRegisterEnumHintCallback(SceUID callbackId)
 	return (int)0x803B0004;
 }
 
-int ksceHidControllerUnregisterEnumHintCallback(SceUID callbackId)
+int SceHidForDriver_FC1C743A(SceUID callbackId)
 {
 	return (int)0x803B0004;
 }
@@ -1000,7 +1000,7 @@ int sceHidControllerUnregisterEnumHintCallback(SceUID callbackId)
 	return (int)0x803B0004;
 }
 
-int ksceHidControllerRegisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_D658B068(SceUID callbackId)
 {
 	return (int)0x803B0004;
 }
@@ -1010,7 +1010,7 @@ int sceHidControllerRegisterReadHintCallback(SceUID callbackId)
 	return (int)0x803B0004;
 }
 
-int ksceHidControllerUnregisterReadHintCallback(SceUID callbackId)
+int SceHidForDriver_42B43C21(SceUID callbackId)
 {
 	return (int)0x803B0004;
 }

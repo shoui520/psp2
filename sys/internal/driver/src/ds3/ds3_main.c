@@ -21,7 +21,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/usbserv.h>
+#include <usbserv/usbserv.h>
 #include <psp2kern/registrymgr.h>
 #include <display/display.h>
 #include <string.h>
@@ -1066,7 +1066,7 @@ int ds3IsSupportedBluetoothDevice(uint64_t address, uint16_t *productId)
 	uint16_t product;
 
 	memset(&info, 0, sizeof(info));
-	if (ksceBtGetRegisteredInfo(address, &info, 1) < 0)
+	if (SceBtForDriver_F86D25E2(address, &info, 1) < 0)
 		return 0;
 	product = info.pid;
 	*productId = product;
@@ -1408,7 +1408,7 @@ int ds3BluetoothEnableReports(Ds3Device *controller)
 	((uint8_t *)controller->outputRequests[index]->buffer)[3] = 0;
 	if (controller->outputPending != 1)
 		return 0;
-	result = ksceBtHidTransfer((uint32_t)controller->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)controller->deviceAddress,
 		controller->deviceAddress >> 32, controller->outputRequests[index]);
 	return result < 0 ? result : 0;
 }
@@ -1450,7 +1450,7 @@ int ds3BluetoothSetDs4Actuators(Ds3Device *controller,
 	controller->outputRequests[index]->argument = 0;
 	if (controller->outputPending != 1)
 		return 0;
-	result = ksceBtHidTransfer((uint32_t)controller->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)controller->deviceAddress,
 		controller->deviceAddress >> 32, controller->outputRequests[index]);
 	return result < 0 ? result : 0;
 }
@@ -1493,7 +1493,7 @@ int ds3BluetoothSetDs4Lightbar(Ds3Device *controller, const Ds3LedState *leds)
 	controller->outputRequests[index]->argument = 0;
 	if (controller->outputPending != 1)
 		return 0;
-	result = ksceBtHidTransfer((uint32_t)controller->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)controller->deviceAddress,
 		controller->deviceAddress >> 32, controller->outputRequests[index]);
 	return result < 0 ? result : 0;
 }
@@ -1522,7 +1522,7 @@ int ds3BluetoothSendControl(Ds3Device *controller, uint8_t control)
 	((uint8_t *)controller->outputRequests[index]->buffer)[5] = 3;
 	((uint8_t *)controller->outputRequests[index]->buffer)[6] = 1;
 	((uint8_t *)controller->outputRequests[index]->buffer)[7] = control;
-	result = ksceBtHidTransfer((uint32_t)controller->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)controller->deviceAddress,
 		controller->deviceAddress >> 32, controller->outputRequests[index]);
 	return result < 0 ? result : 0;
 }
@@ -1674,7 +1674,7 @@ int ds3BluetoothSetDs3Actuators(Ds3Device *controller,
 	controller->outputRequests[index]->argument = 0;
 	if (controller->outputPending != 1)
 		return 0;
-	result = ksceBtHidTransfer((uint32_t)controller->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)controller->deviceAddress,
 		controller->deviceAddress >> 32, controller->outputRequests[index]);
 	return result < 0 ? result : 0;
 }
@@ -1914,14 +1914,14 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 		ds3State.bluetoothCallback = result;
 		if (result < 0)
 			return result;
-		result = ksceBtRegisterCallback(result, 0x7fffffff);
+		result = SceBtForDriver_120AC1F7(result, 0x7fffffff);
 		if (result < 0)
 			return result;
 		if (!ds3State.safeMode && !SceSysrootForDriver_B0E1FC67()) {
-			ksceBtGetStatusForTest(0, &localAddress, sizeof(localAddress));
+			SceBtForDriver_83781649(0, &localAddress, sizeof(localAddress));
 			sceKernelDelayThread(100000);
 			for (retries = 100; localAddress == 0 && retries != 0; retries--) {
-				ksceBtGetStatusForTest(0, &localAddress, sizeof(localAddress));
+				SceBtForDriver_83781649(0, &localAddress, sizeof(localAddress));
 				sceKernelDelayThread(100000);
 			}
 		}
@@ -2029,7 +2029,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 							device->outputRequests[output]->length = 49;
 							device->outputRequests[output]->argument = 0;
 							if (device->outputPending == 1)
-								ksceBtHidTransfer((uint32_t)device->deviceAddress,
+								SceBtForDriver_F9DCEC77((uint32_t)device->deviceAddress,
 									device->deviceAddress >> 32, device->outputRequests[output]);
 						} else if (device->idProduct == 0x05c4)
 							ds3BluetoothSetDs4Lightbar(device, &device->ledState);
@@ -2084,7 +2084,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 					} else if (device->bluetoothState == 2) {
 						address = device->deviceAddress;
 						device->bluetoothState = 4;
-						ksceBtStartDisconnect((uint32_t)address, address >> 32);
+						SceBtForDriver_50710281((uint32_t)address, address >> 32);
 					}
 				} else if (pending & 16) {
 					device->pendingWork = pending & ~16u;
@@ -2155,7 +2155,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 						device->outputRequests[output]->reportId = 0;
 						device->outputRequests[output]->length = 49;
 						device->outputRequests[output]->argument = 0;
-						ksceBtHidTransfer((uint32_t)device->deviceAddress,
+						SceBtForDriver_F9DCEC77((uint32_t)device->deviceAddress,
 							device->deviceAddress >> 32, device->outputRequests[output]);
 					}
 				}
@@ -2181,7 +2181,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 				} else if (device->usbState <= 2) {
 					if (device->bluetoothState == 2) {
 						device->bluetoothState = 4;
-						ksceBtStartDisconnect((uint32_t)device->deviceAddress,
+						SceBtForDriver_50710281((uint32_t)device->deviceAddress,
 							device->deviceAddress >> 32);
 					}
 				} else {
@@ -2200,7 +2200,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 				device = &ds3State.devices[index];
 				if (device->bluetoothState == 2) {
 					device->bluetoothState = 4;
-					ksceBtStartDisconnect((uint32_t)device->deviceAddress,
+					SceBtForDriver_50710281((uint32_t)device->deviceAddress,
 						device->deviceAddress >> 32);
 					sceKernelDelayThread(150000);
 				}
@@ -2259,7 +2259,7 @@ checkTimeouts:
 				} else if (ds3State.idleTimeout < now - device->lastActivityTime) {
 					address = device->deviceAddress;
 					device->bluetoothState = 4;
-					ksceBtStartDisconnect((uint32_t)address, address >> 32);
+					SceBtForDriver_50710281((uint32_t)address, address >> 32);
 				}
 			}
 		}
@@ -2313,7 +2313,7 @@ int _sceDs3BtCb(int notifyId, int notifyCount, int notifyArg, void *userData)
 #endif
 readEvents:
 	do {
-		count = ksceBtReadEvent(events, 2);
+		count = SceBtForDriver_5ABB9A9D(events, 2);
 	} while (count == (int)0x802f0c04);
 	if (count <= 0)
 		goto unlock;
@@ -2328,7 +2328,7 @@ readEvents:
 			if (result < 0)
 				goto rejectConnection;
 			memset(&registeredInfo, 0, sizeof(registeredInfo));
-			if (ksceBtGetRegisteredInfo(address, &registeredInfo, 1) < 0 ||
+			if (SceBtForDriver_F86D25E2(address, &registeredInfo, 1) < 0 ||
 				registeredInfo.vid != 0x054c ||
 				(registeredInfo.pid != 0x0268 && registeredInfo.pid != 0x042f &&
 				 registeredInfo.pid != 0x05c4)) {
@@ -2408,7 +2408,7 @@ readEvents:
 			}
 			if (device->idProduct == 0x05c4) {
 				if (ds3State.ds4UsbEnabled != 0)
-					ksceBtStartDisconnect(address, address >> 32);
+					SceBtForDriver_50710281(address, address >> 32);
 				device->setupStage = 0;
 				reportId = 6;
 				reportLength = 53;
@@ -2422,7 +2422,7 @@ rejectConnection:
 			if (result != -101) {
 				if (result == -100)
 					SceCtrlForDriver_6E183B9B((int)0x80340101);
-				ksceBtStartDisconnect(event->mac0, event->mac1);
+				SceBtForDriver_50710281(event->mac0, event->mac1);
 			}
 			break;
 		case 6:
@@ -2488,7 +2488,7 @@ rejectConnection:
 				break;
 			device->outputPending--;
 			if (device->outputPending != 0) {
-				result = ksceBtHidTransfer(device->deviceAddress,
+				result = SceBtForDriver_F9DCEC77(device->deviceAddress,
 					device->deviceAddress >> 32,
 					device->outputRequests[device->outputIndex]);
 				break;
@@ -2543,7 +2543,7 @@ rejectConnection:
 					device->deviceSubtype = report[1];
 					device->deviceType = report[2];
 					if ((unsigned int)device->deviceType - 1 <= 1) {
-						ksceBtStartDisconnect(device->deviceAddress,
+						SceBtForDriver_50710281(device->deviceAddress,
 							device->deviceAddress >> 32);
 						device->setupStage = 0;
 						break;
@@ -2602,7 +2602,7 @@ rejectConnection:
 					request->reportId = 0;
 					request->argument = 0;
 					request->length = 49;
-					ksceBtHidTransfer(device->deviceAddress,
+					SceBtForDriver_F9DCEC77(device->deviceAddress,
 						device->deviceAddress >> 32, request);
 					break;
 				case 7:
@@ -2687,7 +2687,7 @@ featureRequest:
 			request->length = reportLength;
 			request->argument = 0;
 			if (device->outputPending == 1)
-				ksceBtHidTransfer(device->deviceAddress,
+				SceBtForDriver_F9DCEC77(device->deviceAddress,
 					device->deviceAddress >> 32, request);
 			break;
 inputRequest:
@@ -2707,7 +2707,7 @@ inputRequest:
 			request->reportId = 0;
 			request->argument = 0;
 			request->length = 80;
-			ksceBtHidTransfer(device->deviceAddress,
+			SceBtForDriver_F9DCEC77(device->deviceAddress,
 				device->deviceAddress >> 32, request);
 			break;
 		}
@@ -3046,8 +3046,8 @@ int module_start(SceSize args, void *argp)
 	if (result < 0)
 		return result;
 	SceCtrlForDriver_18823EEA(&ds3ControllerDriver);
-	ksceTouchRegisterVirtualTouchDriver(&ds3TouchDriver);
-	ksceMotionDevRegisterVirtualMotionDriver(&ds3MotionDriver);
+	SceTouchForDriver_03C3AC7C(&ds3TouchDriver);
+	SceMotionDevForDriver_7FD06731(&ds3MotionDriver);
 	sceKernelRegisterSysEventHandler("SceDs3", ds3SysEventHandler, NULL);
 	ds3State.processColors[0].pid = -1;
 	ds3State.processColors[1].pid = -1;

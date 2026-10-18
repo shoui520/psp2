@@ -1517,7 +1517,7 @@ int cameraDriverThread(SceSize args, void *argp)
 	memset(&work.location, 0, sizeof(work.location));
 	driver = cameraDriver;
 	for (devnum = 0; devnum != 2; devnum++) {
-		if (ksceIdStorageLookup(0x114, 16 * devnum, &work.location, 16) < 0) {
+		if (sceIdStorageLookup(0x114, 16 * devnum, &work.location, 16) < 0) {
 			hardwareInfo = SceSysconForDriver_CBD6D8BC();
 			if (devnum) {
 				work.location.type = 1;
@@ -3149,7 +3149,7 @@ int SceCameraForDriver_22E70D83(int devnum)
 	return result;
 }
 
-int ksceCameraIsActive(SceUID processId, int *devices)
+int SceCameraForDriver_EB1CC2CA(SceUID processId, int *devices)
 {
 	int intrStatus, active;
 

@@ -88,7 +88,7 @@ int BtRecvAudio(BtStack *stack, uint64_t deviceAddress, void *buffer,
 uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
 			unsigned int argument, uint64_t deviceAddress);
 
-int ksceBtGetConnectingInfo(uint64_t deviceAddress)
+int SceBtForDriver_E9936446(uint64_t deviceAddress)
 {
 	BtConnection *connection;
 	int result;
@@ -115,7 +115,7 @@ int ksceBtGetConnectingInfo(uint64_t deviceAddress)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtGetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount)
+int SceBtForDriver_F86D25E2(uint64_t deviceAddress, void *buffer, int maxCount)
 {
 	return GetRegisteredInfo(deviceAddress, buffer, maxCount, 0);
 }
@@ -167,7 +167,7 @@ static inline int BtSetConfiguration(int configuration)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSetConfiguration(int configuration)
+int SceBtForDriver_EBDCC992(int configuration)
 {
 	return BtSetConfiguration(configuration);
 }
@@ -198,7 +198,7 @@ static inline int BtGetConfiguration(void)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtGetConfiguration(void)
+int SceBtForDriver_94C66A3B(void)
 {
 	return BtGetConfiguration();
 }
@@ -212,7 +212,7 @@ int sceBtGetConfiguration(void)
 	return result;
 }
 
-int ksceBtGetLastError(void)
+int SceBtForDriver_AD31A43E(void)
 {
 	if (SceIntrmgrForDriver_182EE3E3())
 		return (int)0x802f1901;
@@ -221,7 +221,7 @@ int ksceBtGetLastError(void)
 
 int sceBtGetLastError(void)
 {
-	return ksceBtGetLastError();
+	return SceBtForDriver_AD31A43E();
 }
 
 int sceBtGetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount)
@@ -233,7 +233,7 @@ int sceBtGetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount)
 	return result;
 }
 
-int ksceBtDeleteRegisteredInfo(uint64_t deviceAddress)
+int SceBtForDriver_E6F659E0(uint64_t deviceAddress)
 {
 	int result;
 
@@ -324,7 +324,7 @@ static inline int BtStartInquiry(void)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtStartInquiry(void)
+int SceBtForDriver_9DC7E7E5(void)
 {
 	return BtStartInquiry();
 }
@@ -370,7 +370,7 @@ static inline int BtStopInquiry(void)
 	return BtUnlockTransport(0);
 }
 
-int ksceBtStopInquiry(void)
+int SceBtForDriver_6A1D9598(void)
 {
 	return BtStopInquiry();
 }
@@ -384,7 +384,7 @@ int sceBtStopInquiry(void)
 	return result;
 }
 
-int ksceBtGetDeviceName(uint64_t deviceAddress, char *buffer)
+int SceBtForDriver_633F784C(uint64_t deviceAddress, char *buffer)
 {
 	const char *name;
 	int result;
@@ -426,7 +426,7 @@ out:
 	return result;
 }
 
-int ksceBtGetVidPid(uint64_t deviceAddress, void *buffer)
+int SceBtForDriver_780A5557(uint64_t deviceAddress, void *buffer)
 {
 	int result;
 
@@ -483,7 +483,7 @@ static inline int BtReplyPinCode(unsigned int mac0, unsigned int mac1,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtReplyPinCode(unsigned int mac0, unsigned int mac1,
+int SceBtForDriver_BB69A62A(unsigned int mac0, unsigned int mac1,
 		       unsigned char *code, SceSize length)
 {
 	return BtReplyPinCode(mac0, mac1, code, length, 0);
@@ -525,7 +525,7 @@ static inline int BtReplyUserConfirmation(unsigned int mac0, unsigned int mac1,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtReplyUserConfirmation(unsigned int mac0, unsigned int mac1, int accepted)
+int SceBtForDriver_B5FA291C(unsigned int mac0, unsigned int mac1, int accepted)
 {
 	return BtReplyUserConfirmation(mac0, mac1, accepted);
 }
@@ -564,7 +564,7 @@ static inline int BtSetInquiryScan(int enabled)
 	return BtUnlockTransport(0);
 }
 
-int ksceBtSetInquiryScan(int enabled)
+int SceBtForDriver_4F5A852E(int enabled)
 {
 	return BtSetInquiryScan(enabled);
 }
@@ -634,7 +634,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtStartConnect(unsigned int mac0, unsigned int mac1)
+int SceBtForDriver_6059113A(unsigned int mac0, unsigned int mac1)
 {
 	return BtStartConnect((uint64_t)mac1 << 32 | mac0);
 }
@@ -690,7 +690,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtRegisterCallback(SceUID callback, uint64_t eventMask)
+int SceBtForDriver_120AC1F7(SceUID callback, uint64_t eventMask)
 {
 	return BtRegisterCallback(callback, eventMask, -1);
 }
@@ -738,7 +738,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtUnregisterCallback(SceUID callback)
+int SceBtForDriver_BF72E1BE(SceUID callback)
 {
 	(void)callback;
 	return BtUnregisterCallback();
@@ -812,7 +812,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtReadEvent(SceBtEvent *events, int maxCount)
+int SceBtForDriver_5ABB9A9D(SceBtEvent *events, int maxCount)
 {
 	return BtReadEvent(events, maxCount, 0);
 }
@@ -844,7 +844,7 @@ static inline int BtCopyAvrcpTitle(const void *title, unsigned int length,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtAvrcpSetTitle(const void *title, unsigned int length)
+int SceBtForDriver_91EF55AD(const void *title, unsigned int length)
 {
 	return BtCopyAvrcpTitle(title, length, 0);
 }
@@ -887,7 +887,7 @@ static inline int BtApplyAvrcpPlayStatus(int status)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtAvrcpSetPlayStatus(int status)
+int SceBtForDriver_C5E7349C(int status)
 {
 	return BtApplyAvrcpPlayStatus(status);
 }
@@ -921,7 +921,7 @@ static inline int BtAvrcpSendButton(uint64_t deviceAddress, int button)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtAvrcpSendButton(uint64_t deviceAddress, int button)
+int SceBtForDriver_EC5F8519(uint64_t deviceAddress, int button)
 {
 	return BtAvrcpSendButton(deviceAddress, button);
 }
@@ -955,7 +955,7 @@ static inline int BtAvrcpSendVolume(uint64_t deviceAddress, int volume)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtAvrcpSendVolume(uint64_t deviceAddress, int volume)
+int SceBtForDriver_7689DA3D(uint64_t deviceAddress, int volume)
 {
 	return BtAvrcpSendVolume(deviceAddress, volume);
 }
@@ -989,7 +989,7 @@ static inline int BtAvrcpReadVolume(uint64_t deviceAddress)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtAvrcpReadVolume(uint64_t deviceAddress)
+int SceBtForDriver_C9C70056(uint64_t deviceAddress)
 {
 	return BtAvrcpReadVolume(deviceAddress);
 }
@@ -1003,7 +1003,7 @@ int sceBtAvrcpReadVolume(uint64_t deviceAddress)
 	return result;
 }
 
-int ksceBtHidGetReportDescriptor(uint64_t deviceAddress, void *buffer,
+int SceBtForDriver_06CB4ABA(uint64_t deviceAddress, void *buffer,
 			       unsigned int capacity)
 {
 	int result;
@@ -1017,7 +1017,7 @@ int ksceBtHidGetReportDescriptor(uint64_t deviceAddress, void *buffer,
 		deviceAddress, buffer, capacity));
 }
 
-int ksceBtHidTransfer(uint32_t mac0, uint32_t mac1, SceBtHidRequest *request)
+int SceBtForDriver_F9DCEC77(uint32_t mac0, uint32_t mac1, SceBtHidRequest *request)
 {
 	int result;
 
@@ -1187,7 +1187,7 @@ static inline int BtStartAudioApi(uint64_t deviceAddress, int profile)
 	return BtUnlockTransport(BtStartAudio(&gBtStack, deviceAddress, profile));
 }
 
-int ksceBtStartAudio(uint64_t deviceAddress, int profile)
+int SceBtForDriver_8D47CABD(uint64_t deviceAddress, int profile)
 {
 	return BtStartAudioApi(deviceAddress, profile);
 }
@@ -1215,7 +1215,7 @@ static inline int BtStopAudioApi(uint64_t deviceAddress, int profile)
 	return BtUnlockTransport(BtStopAudio(&gBtStack, deviceAddress, profile));
 }
 
-int ksceBtStopAudio(uint64_t deviceAddress, int profile)
+int SceBtForDriver_CAE5A9F3(uint64_t deviceAddress, int profile)
 {
 	return BtStopAudioApi(deviceAddress, profile);
 }
@@ -1245,7 +1245,7 @@ static inline int BtSendAudioApi(uint64_t deviceAddress, void *buffer,
 					   buffer, size, userMode));
 }
 
-int ksceBtSendAudio(uint64_t deviceAddress, void *buffer, SceSize size)
+int SceBtForDriver_47F19727(uint64_t deviceAddress, void *buffer, SceSize size)
 {
 	return BtSendAudioApi(deviceAddress, buffer, size, 0);
 }
@@ -1275,7 +1275,7 @@ static inline int BtRecvAudioApi(uint64_t deviceAddress, void *buffer,
 					   buffer, size, userMode));
 }
 
-int ksceBtRecvAudio(uint64_t deviceAddress, void *buffer, SceSize size)
+int SceBtForDriver_CD7C0492(uint64_t deviceAddress, void *buffer, SceSize size)
 {
 	return BtRecvAudioApi(deviceAddress, buffer, size, 0);
 }
@@ -1307,7 +1307,7 @@ static inline int BtAudioFrequencyApi(uint64_t deviceAddress)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtFreqAudio(uint64_t deviceAddress)
+int SceBtForDriver_DA20DCC8(uint64_t deviceAddress)
 {
 	return BtAudioFrequencyApi(deviceAddress);
 }
@@ -1321,7 +1321,7 @@ int sceBtFreqAudio(uint64_t deviceAddress)
 	return result;
 }
 
-int ksceBtSetContentProtection(int protection)
+int SceBtForDriver_08632086(int protection)
 {
 	if ((unsigned int)protection - 1 > 1)
 		gBtStack.contentProtection = 0;
@@ -1365,7 +1365,7 @@ static inline int BtPushImageApi(uint64_t deviceAddress, const void *path,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtPushBip(uint64_t deviceAddress, const void *path, unsigned int length)
+int SceBtForDriver_7FF77792(uint64_t deviceAddress, const void *path, unsigned int length)
 {
 	return BtPushImageApi(deviceAddress, path, length, 0);
 }
@@ -1401,7 +1401,7 @@ static inline int BtReceiveImageApi(const void *path, unsigned int length,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtRecvBip(const void *path, unsigned int length)
+int SceBtForDriver_E8E95977(const void *path, unsigned int length)
 {
 	return BtReceiveImageApi(path, length, 0);
 }
@@ -1416,7 +1416,7 @@ int sceBtRecvBip(const void *path, unsigned int length)
 }
 
 /* These originals consume no arguments and reject the unavailable operation. */
-int ksceBtPushOpp(void)
+int SceBtForDriver_21C788E2(void)
 {
 	return (int)0x802f1008;
 }
@@ -1429,7 +1429,7 @@ int sceBtPushOpp(void)
 	return (int)0x802f1008;
 }
 
-int ksceBtRecvOpp(void)
+int SceBtForDriver_8008AA2C(void)
 {
 	return (int)0x802f1008;
 }
@@ -1468,7 +1468,7 @@ static inline int BtSendSerialApi(uint64_t deviceAddress, const void *data,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSendSpp(uint64_t deviceAddress, const void *data, unsigned int length)
+int SceBtForDriver_92241DFB(uint64_t deviceAddress, const void *data, unsigned int length)
 {
 	return BtSendSerialApi(deviceAddress, data, length, 0);
 }
@@ -1507,7 +1507,7 @@ static inline int BtReceiveSerialApi(uint64_t deviceAddress, void *data,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtRecvSpp(uint64_t deviceAddress, void *data, int length)
+int SceBtForDriver_C09D9E7C(uint64_t deviceAddress, void *data, int length)
 {
 	return BtReceiveSerialApi(deviceAddress, data, length, 0);
 }
@@ -1521,7 +1521,7 @@ int sceBtRecvSpp(uint64_t deviceAddress, void *data, int length)
 	return result;
 }
 
-int ksceBtHfpRequest(void)
+int SceBtForDriver_6E49D11D(void)
 {
 	return (int)0x802f1301;
 }
@@ -1534,7 +1534,7 @@ int sceBtHfpRequest(void)
 	return (int)0x802f1301;
 }
 
-int ksceBtHfpGetCurrentPhoneNumber(void)
+int SceBtForDriver_7BC66D6D(void)
 {
 	return (int)0x802f1301;
 }
@@ -1592,7 +1592,7 @@ static inline int BtGetLinkInfoApi(uint64_t deviceAddress, void *buffer,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtGetInfoForTest(uint64_t deviceAddress, void *buffer)
+int SceBtForDriver_2C9DD7BB(uint64_t deviceAddress, void *buffer)
 {
 	return BtGetLinkInfoApi(deviceAddress, buffer, 0);
 }
@@ -1635,7 +1635,7 @@ static inline int BtSendEchoApi(uint64_t deviceAddress, const void *data,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSendL2capEchoRequestForTest(uint64_t deviceAddress, const void *data,
+int SceBtForDriver_E3A66814(uint64_t deviceAddress, const void *data,
 				   unsigned int length)
 {
 	return BtSendEchoApi(deviceAddress, data, length, 0);
@@ -1675,7 +1675,7 @@ static inline int BtSetEchoBufferApi(uint64_t deviceAddress, uint8_t *buffer,
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSetL2capEchoResponseBufferForTest(uint64_t deviceAddress,
+int SceBtForDriver_0B7D8E0E(uint64_t deviceAddress,
 					 uint8_t *buffer, int capacity)
 {
 	return BtSetEchoBufferApi(deviceAddress, buffer, capacity, -1);
@@ -1714,7 +1714,7 @@ static inline int BtSetTestInquiryApi(const void *resultBuffer, int userMode)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSetInquiryResultForTest(const void *resultBuffer)
+int SceBtForDriver_1C26F878(const void *resultBuffer)
 {
 	return BtSetTestInquiryApi(resultBuffer, 0);
 }
@@ -1780,7 +1780,7 @@ static inline int BtRegisterHidVuApi(SceUID callback, int vendorId, int productI
 	return BtUnlockTransport(result);
 }
 
-int ksceBtHidVuRegisterCallback(SceUID callback, int vendorId, int productId)
+int SceBtForDriver_AB57F8C1(SceUID callback, int vendorId, int productId)
 {
 	return BtRegisterHidVuApi(callback, vendorId, productId, -1);
 }
@@ -1819,7 +1819,7 @@ static inline int BtUnregisterHidVuApi(void)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtHidVuUnregisterCallback(void)
+int SceBtForDriver_1AB31C7D(void)
 {
 	return BtUnregisterHidVuApi();
 }
@@ -1863,7 +1863,7 @@ static inline int BtReadHidVuEventsApi(void *buffer, int maxCount, int userMode)
 	return BtUnlockTransport(result);
 }
 
-int ksceBtHidVuReadEvent(void *buffer, int maxCount)
+int SceBtForDriver_3333A878(void *buffer, int maxCount)
 {
 	return BtReadHidVuEventsApi(buffer, maxCount, 0);
 }
@@ -1877,7 +1877,7 @@ int sceBtHidVuReadEvent(void *buffer, int maxCount)
 	return result;
 }
 
-int ksceBtHidVuGetReportInput(uint64_t deviceAddress, uint8_t reportId)
+int SceBtForDriver_3BBC1EE1(uint64_t deviceAddress, uint8_t reportId)
 {
 	return BtRequestHidVuReport(&gBtStack, deviceAddress, 'I', reportId,
 				  NULL, 0, 0);
@@ -1893,7 +1893,7 @@ int sceBtHidVuGetReportInput(uint64_t deviceAddress, uint8_t reportId)
 	return result;
 }
 
-int ksceBtHidVuGetReportFeature(uint64_t deviceAddress, uint8_t reportId)
+int SceBtForDriver_CA9B885C(uint64_t deviceAddress, uint8_t reportId)
 {
 	return BtRequestHidVuReport(&gBtStack, deviceAddress, 'K', reportId,
 				  NULL, 0, 0);
@@ -1909,7 +1909,7 @@ int sceBtHidVuGetReportFeature(uint64_t deviceAddress, uint8_t reportId)
 	return result;
 }
 
-int ksceBtHidVuSetReportOutput(uint64_t deviceAddress, const void *data, int length)
+int SceBtForDriver_AB2032A3(uint64_t deviceAddress, const void *data, int length)
 {
 	return BtRequestHidVuReport(&gBtStack, deviceAddress, 'R', 0,
 				  data, length, 0);
@@ -1925,7 +1925,7 @@ int sceBtHidVuSetReportOutput(uint64_t deviceAddress, const void *data, int leng
 	return result;
 }
 
-int ksceBtHidVuSetReportFeature(uint64_t deviceAddress, const void *data, int length)
+int SceBtForDriver_014A1D28(uint64_t deviceAddress, const void *data, int length)
 {
 	return BtRequestHidVuReport(&gBtStack, deviceAddress, 'S', 0,
 				  data, length, 0);
@@ -1941,7 +1941,7 @@ int sceBtHidVuSetReportFeature(uint64_t deviceAddress, const void *data, int len
 	return result;
 }
 
-int ksceBtHidVuSetInterruptOutput(uint64_t deviceAddress, const void *data, int length)
+int SceBtForDriver_D2449052(uint64_t deviceAddress, const void *data, int length)
 {
 	return BtRequestHidVuReport(&gBtStack, deviceAddress, 0xa2, 0,
 				  data, length, 0);
@@ -2040,7 +2040,7 @@ invalid:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtGetStatusForTest(int selector, void *buffer, int size)
+int SceBtForDriver_83781649(int selector, void *buffer, int size)
 {
 	if (selector == 7)
 		return gBtStack.state;
@@ -2207,7 +2207,7 @@ disabled:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtSetStatusForTest(int selector, void *buffer, int size)
+int SceBtForDriver_9C195411(int selector, void *buffer, int size)
 {
 	return BtSetTestStatusApi(selector, buffer, size, 0);
 }

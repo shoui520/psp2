@@ -28,7 +28,7 @@ _Static_assert(offsetof(SceBtHidRequest, buffer) == 12, "SceBtHidRequest.buffer"
 _Static_assert(offsetof(SceBtHidRequest, length) == 16, "SceBtHidRequest.length");
 _Static_assert(offsetof(SceBtHidRequest, argument) == 20, "SceBtHidRequest.argument");
 
-int ksceBtRegisterCallback(SceUID callback, uint64_t eventMask);
-int ksceBtHidTransfer(uint32_t mac0, uint32_t mac1, SceBtHidRequest *request);
-int ksceBtHidGetReportDescriptor(uint64_t deviceAddress, void *buffer,
+int SceBtForDriver_120AC1F7(SceUID callback, uint64_t eventMask);
+int SceBtForDriver_F9DCEC77(uint32_t mac0, uint32_t mac1, SceBtHidRequest *request);
+int SceBtForDriver_06CB4ABA(uint64_t deviceAddress, void *buffer,
 			       unsigned int size);

@@ -268,7 +268,7 @@ int SceClockgenForDriver_7B28A724(void)
 	return changeBit(CLOCKGEN_WLANBT_CLK, 1);
 }
 
-int ksceClockgenWlanBtClkDisable(void)
+int SceClockgenForDriver_B6F0A532(void)
 {
 	if (clockgen.registers[0] != CLOCKGEN_REV2_VENDOR_F)
 		return 0;

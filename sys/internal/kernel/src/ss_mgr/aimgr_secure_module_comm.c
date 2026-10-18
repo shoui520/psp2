@@ -1,6 +1,6 @@
 #include "ssmgr_internal.h"
 #include <acmgr/acmgr.h>
-#include <psp2kern/idstorage.h>
+#include <idstorage/idstorage.h>
 #include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <rtc/rtc.h>
@@ -90,7 +90,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 	int ret, callRet;
 
 	if (pscode) {
-		if (ksceIdStorageReadLeaf(68, leaf.words)) {
+		if (SceIdStorageForDriver_EB00C509(68, leaf.words)) {
 			ret = 0x800f0c05;
 		} else {
 			ret = invoke_aimgr_secure_module();
@@ -168,7 +168,7 @@ int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 	request.mode = parameters[0];
 	__builtin_memcpy(request.parameters, parameters + 2,
 			 sizeof(request.parameters));
-	if (ksceIdStorageReadLeaf(68, request.passPhrase))
+	if (SceIdStorageForDriver_EB00C509(68, request.passPhrase))
 		return 0x800f0c05;
 	getCurrentSecureTick = SceRtcForDriver_401C0954;
 	if (!getCurrentSecureTick)

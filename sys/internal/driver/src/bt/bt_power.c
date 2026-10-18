@@ -263,13 +263,13 @@ static inline int BtApplyConfigurationCore(BtStack *stack)
 	if (!(mode & 4))
 		return 1;
 	BtUnlockTransport(0);
-	result = ksceWlanBtSetConfiguration(10);
+	result = sceWlanBtSetConfiguration(10);
 	if (result < 0) {
 		BtLockTransport();
 		goto failed;
 	}
 	retries = 100;
-	while (!(ksceWlanBtGetConfiguration() & 8)) {
+	while (!(sceWlanBtGetConfiguration() & 8)) {
 		BtDelayThread(100000);
 		if (--retries == 0) {
 			BtLockTransport();
@@ -277,7 +277,7 @@ static inline int BtApplyConfigurationCore(BtStack *stack)
 			goto failed;
 		}
 	}
-	result = ksceWlanBtSetConfiguration(16);
+	result = sceWlanBtSetConfiguration(16);
 	BtLockTransport();
 	if (result < 0)
 		goto failed;
@@ -370,13 +370,13 @@ uintptr_t BtCompleteConfiguration(BtStack *stack)
 	if (!(mode & 4))
 		goto notify;
 	BtUnlockTransport(0);
-	started = ksceWlanBtSetConfiguration(10);
+	started = sceWlanBtSetConfiguration(10);
 	if (started < 0) {
 		BtLockTransport();
 		goto failed;
 	}
 	retries = 100;
-	while (!(ksceWlanBtGetConfiguration() & 8)) {
+	while (!(sceWlanBtGetConfiguration() & 8)) {
 		BtDelayThread(100000);
 		if (--retries == 0) {
 			BtLockTransport();
@@ -384,7 +384,7 @@ uintptr_t BtCompleteConfiguration(BtStack *stack)
 			goto failed;
 		}
 	}
-	started = ksceWlanBtSetConfiguration(16);
+	started = sceWlanBtSetConfiguration(16);
 	result = BtLockTransport();
 	if (started >= 0) {
 		if (started == 0)

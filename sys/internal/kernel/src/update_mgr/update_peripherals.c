@@ -3,9 +3,9 @@
 #include <syscon/syscon.h>
 #include "update_internal.h"
 #include <sysmem/sblaimgr.h>
+#include <touch/touch.h>
+#include <motion/motion_dev.h>
 
-int ksceMotionDevIsReady(void);
-int SceTouchForDriver_63DCF2FE(void);
 int SceDeci4pCpupForDriver_C0AB956B(unsigned int *protocol,
 				 unsigned int *board, unsigned int *version)
 	__attribute__((weak));
@@ -57,8 +57,8 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	}
 	if (!SceSblAIMgrForDriver_C6E83F34() && updateMotionPollCount > 0) {
 		do {
-			if (ksceMotionDevIsReady()) {
-				if (ksceMotionDevGetDeviceInfo(&updateMotionDeviceInfo) == 0 &&
+			if (SceMotionDevForDriver_10AAC8EA()) {
+				if (SceMotionDevForDriver_3E4BCBC0(&updateMotionDeviceInfo) == 0 &&
 				    updateUseMotionService) {
 					updateMotionFirmwareVersion = updateMotionDeviceInfo.firmwareVersion;
 					updateMotionConnected = 1;
@@ -109,8 +109,8 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 			}
 		}
 		__builtin_memset(updateTouchDeviceInfo, 0, sizeof(updateTouchDeviceInfo));
-		ksceTouchGetDeviceInfo(0, &touchInfo[0]);
-		ksceTouchGetDeviceInfo(1, &touchInfo[1]);
+		SceTouchForDriver_FD2E0278(0, &touchInfo[0]);
+		SceTouchForDriver_FD2E0278(1, &touchInfo[1]);
 		__builtin_memcpy(updateTouchDeviceInfo, touchInfo,
 				 sizeof(updateTouchDeviceInfo));
 	}

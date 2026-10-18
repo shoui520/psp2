@@ -107,7 +107,7 @@ int mtpReadSerial(MtpDeviceStrings *out)
 
 	if (out == NULL)
 		return MTP_ERROR_INVALID_ARGUMENT;
-	ret = ksceIdStorageLookup(0x112, 0, ewg.serial, sizeof(ewg.serial));
+	ret = sceIdStorageLookup(0x112, 0, ewg.serial, sizeof(ewg.serial));
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < 0x20; i++)

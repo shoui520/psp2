@@ -4,6 +4,7 @@
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include <sysmem/utils.h>
+#include <idstorage/idstorage.h>
 
 SceUID gcAuthPcactSemaphore;
 GcAuthPcactScratch gcAuthPcactScratch;
@@ -25,8 +26,6 @@ extern unsigned char gcAuthPsmHmacKey[32];
 
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-int ksceIdStorageLookup(unsigned int leaf, unsigned int offset, void *output,
-		unsigned int size);
 int GcAuthGenerateRandom20(unsigned char *data);
 int GcAuthAesEncrypt(unsigned char *data, size_t size, const void *key,
 		const unsigned char *iv);
@@ -120,8 +119,8 @@ int GcAuthPcactReadCertificate(GcAuthPcactCertificate *certificate)
 	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
-	if (ksceIdStorageLookup(0x46, 64, certificate, 232) < 0 ||
-	    ksceIdStorageLookup(0x47, 0, certificate + 1, 0) < 0) {
+	if (sceIdStorageLookup(0x46, 64, certificate, 232) < 0 ||
+	    sceIdStorageLookup(0x47, 0, certificate + 1, 0) < 0) {
 		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x808a080b;
 	}

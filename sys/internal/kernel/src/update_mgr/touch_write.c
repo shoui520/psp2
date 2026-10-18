@@ -153,7 +153,7 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 		}
 		__builtin_memcpy(updateSysconTouchDeviceInfo, sysconInfo, sizeof(sysconInfo));
 		memset(deviceInfo, 0, sizeof(deviceInfo));
-		result = ksceTouchGetDeviceInfo(port, &deviceInfo[port]);
+		result = SceTouchForDriver_FD2E0278(port, &deviceInfo[port]);
 		if (!result)
 			updateTouchDeviceInfo[port] = deviceInfo[port];
 		goto leaveUpdate;
@@ -241,7 +241,7 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 	}
 	__builtin_memcpy(updateSysconTouchDeviceInfo, sysconInfo, sizeof(sysconInfo));
 	memset(work.deviceInfo, 0, sizeof(work.deviceInfo));
-	result = ksceTouchGetDeviceInfo(port, &work.deviceInfo[port]);
+	result = SceTouchForDriver_FD2E0278(port, &work.deviceInfo[port]);
 	if (!result)
 		updateTouchDeviceInfo[port] = work.deviceInfo[port];
 	goto leaveUpdate;

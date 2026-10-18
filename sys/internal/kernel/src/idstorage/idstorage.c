@@ -142,7 +142,7 @@ static void clearCache(void)
 		storage.cache[i].state = 0;
 }
 
-int ksceIdStorageIsDirty(void)
+int SceIdStorageForDriver_B9069BAD(void)
 {
 	int i;
 
@@ -154,7 +154,7 @@ int ksceIdStorageIsDirty(void)
 	return 0;
 }
 
-int ksceIdStorageFlush(void)
+int SceIdStorageForDriver_3AD32523(void)
 {
 	int ret;
 
@@ -163,7 +163,7 @@ int ksceIdStorageFlush(void)
 	ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 	if (ret < 0)
 		return ret;
-	if (ksceIdStorageIsDirty()) {
+	if (SceIdStorageForDriver_B9069BAD()) {
 		ret = commitStorage();
 		if (ret < 0) {
 			sceKernelUnlockMutex(storage.mutex, 1);
@@ -179,7 +179,7 @@ int ksceIdStorageFlush(void)
 static int storageSysEvent(int resume, int event, void *args, void *opt)
 {
 	if (!resume && event == SYSEVENT_SUSPEND_PREPARE(0))
-		ksceIdStorageFlush();
+		SceIdStorageForDriver_3AD32523();
 	return 0;
 }
 
@@ -265,7 +265,7 @@ int module_start(SceSize args, void *argp)
 	return ret < 0 ? ret : 0;
 }
 
-int ksceIdStorageRestart(int flush)
+int SceIdStorageForDriver_60B647A5(int flush)
 {
 	SceProductMode mode = 0;
 	int ret = ScePmMgrForDriver_2AC815A2(&mode);
@@ -275,7 +275,7 @@ int ksceIdStorageRestart(int flush)
 	if (!mode)
 		return ID_INVALID_ARGUMENT;
 	if (flush)
-		ksceIdStorageFlush();
+		SceIdStorageForDriver_3AD32523();
 	sceKernelDeleteMutex(storage.mutex);
 	SceSysmemForDriver_009E1C61(storage.memblock);
 	if (storage.index)
@@ -286,17 +286,17 @@ int ksceIdStorageRestart(int flush)
 	return ret < 0 ? ret : 0;
 }
 
-int ksceIdStorageGetLeafSize(void)
+int SceIdStorageForDriver_EB830733(void)
 {
 	return LEAF_SIZE;
 }
 
-int ksceIdStorageIsFormatted(void)
+int SceIdStorageForDriver_FEFA40C2(void)
 {
 	return storage.formatted;
 }
 
-int ksceIdStorageIsReadOnly(void)
+int SceIdStorageForDriver_2D633688(void)
 {
 	return storage.readOnly;
 }
@@ -330,7 +330,7 @@ static int cacheSlot(uint32_t leaf, int *slot)
 			return i;
 		}
 	}
-	ret = ksceIdStorageFlush();
+	ret = SceIdStorageForDriver_3AD32523();
 	if (ret < 0) {
 		*slot = -1;
 		return ret;
@@ -428,12 +428,12 @@ unlock:
 	return ret;
 }
 
-int ksceIdStorageReadLeaf(SceSize leaf, void *buffer)
+int SceIdStorageForDriver_EB00C509(SceSize leaf, void *buffer)
 {
 	return readLeaf(leaf, buffer, 1);
 }
 
-int ksceIdStorageWriteLeaf(SceSize leaf, const void *buffer)
+int SceIdStorageForDriver_1FA4D135(SceSize leaf, const void *buffer)
 {
 	SceProductMode mode = 0;
 	int ret = ScePmMgrForDriver_2AC815A2(&mode);
@@ -443,7 +443,7 @@ int ksceIdStorageWriteLeaf(SceSize leaf, const void *buffer)
 	return mode ? writeLeaf(leaf, buffer, 1) : ID_INVALID_ARGUMENT;
 }
 
-int ksceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt32 size)
+int sceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt32 size)
 {
 	uint8_t data[LEAF_SIZE];
 	int ret;
@@ -464,7 +464,7 @@ int ksceIdStorageLookup(SceUInt32 leaf, SceUInt32 offset, void *buffer, SceUInt3
 	return ret < 0 ? ret : 0;
 }
 
-int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint32_t size)
+int SceIdStorageForDriver_683AAC10(uint32_t leaf, uint32_t offset, const void *buffer, uint32_t size)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
@@ -498,7 +498,7 @@ int ksceIdStorageUpdate(uint32_t leaf, uint32_t offset, const void *buffer, uint
 	return ret < 0 ? ret : 0;
 }
 
-int ksceIdStorageFormat(void)
+int SceIdStorageForDriver_958089DB(void)
 {
 	SceProductMode mode = 0;
 	int ret = ScePmMgrForDriver_2AC815A2(&mode);
@@ -529,7 +529,7 @@ int ksceIdStorageFormat(void)
 	return ret;
 }
 
-int ksceIdStorageUnformat(void)
+int SceIdStorageForDriver_F4BCB3EE(void)
 {
 	uint8_t data[LEAF_SIZE];
 	SceProductMode mode = 0;
@@ -553,7 +553,7 @@ int ksceIdStorageUnformat(void)
 	return 0;
 }
 
-int ksceIdStorageGetFreeLeaves(void)
+int SceIdStorageForDriver_37833CB8(void)
 {
 	SceKernelIntrStatus intr;
 	int ret, i;
@@ -573,7 +573,7 @@ int ksceIdStorageGetFreeLeaves(void)
 	return ret;
 }
 
-int ksceIdStorageEnumId(void)
+int SceIdStorageForDriver_31E08AFB(void)
 {
 	int ret = sceKernelLockMutex(storage.mutex, 1, NULL);
 
@@ -595,7 +595,7 @@ static int blockFree(int block)
 	return count;
 }
 
-int ksceIdStorageCreateLeaf(uint32_t leaf)
+int SceIdStorageForDriver_08A471A6(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
@@ -659,7 +659,7 @@ done:
 	return ret;
 }
 
-int ksceIdStorageCreateAtomicLeaves(const uint16_t *leaves, int count)
+int SceIdStorageForDriver_99ACCB71(const uint16_t *leaves, int count)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;
@@ -715,7 +715,7 @@ done:
 	return ret;
 }
 
-int ksceIdStorageDeleteLeaf(uint32_t leaf)
+int SceIdStorageForDriver_2C97AB36(uint32_t leaf)
 {
 	SceProductMode mode = 0;
 	SceKernelIntrStatus intr;

@@ -37,7 +37,7 @@ int hidBluetoothThread(SceSize args, void *argp)
 					 hidBluetoothCallback, NULL);
 	if (result < 0)
 		goto callbackError;
-	result = ksceBtRegisterCallback(result, UINT64_C(0x1c60));
+	result = SceBtForDriver_120AC1F7(result, UINT64_C(0x1c60));
 	if (result < 0)
 		goto registerError;
 	result = sceKernelCreateCallback("SceBtHidDisp", 0,
@@ -142,7 +142,7 @@ int hidBluetoothCallback(int notifyId, int notifyCount, int notifyArg,
 #define HID_EVENT_ADDRESS() \
 	(address.words[0] = event.mac0, address.words[1] = event.mac1, address.value)
 	for (;;) {
-		result = ksceBtReadEvent(&event, 1);
+		result = SceBtForDriver_5ABB9A9D(&event, 1);
 		/* SCE_BT_ERROR_CB_OVERFLOW in the SDK. */
 		if (result == (int)0x802f0c04)
 			continue;

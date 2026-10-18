@@ -47,7 +47,7 @@ void hidConnectBluetoothDevice(uint64_t address)
 	int slot = -1, index, current, depth = 0, descriptorLength;
 
 	memset(&info, 0, sizeof(info));
-	registeredCount = ksceBtGetRegisteredInfo(address, &info, 1);
+	registeredCount = SceBtForDriver_F86D25E2(address, &info, 1);
 	deviceId = info.vid | ((unsigned int)info.pid << 16);
 	if ((registeredCount == 1 && (info.profiles & 0x40) == 0) ||
 	    deviceId == 0x0268054c || deviceId == 0x03290e6f)
@@ -85,7 +85,7 @@ void hidConnectBluetoothDevice(uint64_t address)
 	memcpy(device->name, info.name, 120);
 	device->name[120] = '\0';
 	descriptor = device->descriptor;
-	descriptorLength = ksceBtHidGetReportDescriptor(address, descriptor, 512);
+	descriptorLength = SceBtForDriver_06CB4ABA(address, descriptor, 512);
 	device->descriptorLength = descriptorLength;
 	if (descriptorLength <= 0)
 		goto free_device;
@@ -308,7 +308,7 @@ finish_descriptor:
 			device->readRequests[index] = request;
 			request->length = 58;
 			request->argument = (uint32_t)request;
-			ksceBtHidTransfer((uint32_t)device->deviceAddress,
+			SceBtForDriver_F9DCEC77((uint32_t)device->deviceAddress,
 					   (uint32_t)(device->deviceAddress >> 32), request);
 		}
 	}
@@ -495,7 +495,7 @@ queue:
 submit:
 	request->length = 58;
 	memset(buffer, 0, 58);
-	ksceBtHidTransfer((uint32_t)address, (uint32_t)(address >> 32), request);
+	SceBtForDriver_F9DCEC77((uint32_t)address, (uint32_t)(address >> 32), request);
 }
 
 int hidCompleteBluetoothWrite(uint64_t address, int status,
@@ -532,7 +532,7 @@ found:
 	request = device->pendingWriteRequest;
 	device->writeRequest = NULL;
 	if (request != NULL) {
-		result = ksceBtHidTransfer((uint32_t)address, (uint32_t)(address >> 32),
+		result = SceBtForDriver_F9DCEC77((uint32_t)address, (uint32_t)(address >> 32),
 					  request);
 		if (result != 0) {
 			request = device->pendingWriteRequest;
@@ -594,7 +594,7 @@ uintptr_t hidWriteBluetoothReport(HidDevice *device, int reportId,
 		device->pendingWriteRequest = request;
 		return result;
 	}
-	result = ksceBtHidTransfer((uint32_t)device->deviceAddress,
+	result = SceBtForDriver_F9DCEC77((uint32_t)device->deviceAddress,
 				 (uint32_t)(device->deviceAddress >> 32), request);
 	if (result == 0) {
 		device->writeRequest = request;

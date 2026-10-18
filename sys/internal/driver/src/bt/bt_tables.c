@@ -42,8 +42,8 @@ const char gBtDeviceAddressHciFormat[] = "6";
 
 const SysrootBtOps gBtSysrootOps = {
 	.size = sizeof(SysrootBtOps),
-	.getRegisteredInfo = ksceBtGetRegisteredInfo,
-	.getConnectingInfo = ksceBtGetConnectingInfo
+	.getRegisteredInfo = SceBtForDriver_F86D25E2,
+	.getConnectingInfo = SceBtForDriver_E9936446
 };
 
 const char gBtControllerEmptyFormat[] = "";

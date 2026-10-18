@@ -185,7 +185,7 @@ set(MODULE_IMPORT_FUNCS
 	SceProcEventForDriver_3DED57CC
 	sceDeci2pTermForCompat
 	SceDeci2pForDriver_F6427E0F
-	ksceIdStorageLookup
+	sceIdStorageLookup
 	SceDisplayForDriver_289D82FE
 	SceDisplayForDriver_332C5410
 	SceDisplayForDriver_8D79D187

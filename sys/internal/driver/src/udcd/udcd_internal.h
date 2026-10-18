@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "udcd_status.h"
 #include <lowio/pervasive_regs.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 #include <sysmem/cpu.h>
 #include <sysmem/procevent.h>
 
@@ -78,7 +78,7 @@ _Static_assert(sizeof(struct udcdConfigurationAllocation) == 0x28,
 	       "configuration allocation header");
 
 /*
- * ksceUdcdGetDeviceInfo's record. The SDK reserves 64 bytes; the driver
+ * SceUdcdForDriver_FBEA3703's record. The SDK reserves 64 bytes; the driver
  * fills only this pair.
  */
 struct udcdDeviceInformation {
@@ -98,7 +98,7 @@ struct udcdBusState {
 	unsigned int activationState;		/* SCE_UDCD_STATUS_DEACTIVATED... */
 	unsigned int cableState;		/* SCE_UDCD_STATUS_CABLE_* */
 	unsigned int connectionState;		/* SCE_UDCD_STATUS_CONNECTION_* */
-	unsigned int waitError;				/* returned by ksceUdcdWaitState */
+	unsigned int waitError;				/* returned by SceUdcdForDriver_D03017C0 */
 	unsigned int reserved;
 	unsigned int interfaceCount;
 	unsigned int endpointCount;		/* endpoint 0 included */
@@ -131,7 +131,7 @@ struct udcdBusState {
 	unsigned int activationEnabled;
 	unsigned int systemSuspended;
 	unsigned int requestBlocked;
-	unsigned int busPowered;		/* ksceUdcdActivateInternal bus_powered */
+	unsigned int busPowered;		/* SceUdcdForDriver_9119247B bus_powered */
 	unsigned int chargingEnabled;
 	unsigned int driverSetting;		/* SceUdcdForDriver_B1454F11, never read */
 	unsigned int hardwareInfo;		/* SceSysconForDriver_CBD6D8BC */

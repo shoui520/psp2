@@ -5,8 +5,6 @@
 #include <string.h>
 #include <motion/motion_dev.h>
 
-int SceMotionDevForDriver_77BA3A04(void);
-
 #define FILTER_STRICT	0x1	/* accept one quiet window */
 #define FILTER_RELAXED	0x2	/* accept four of six fairly quiet windows */
 

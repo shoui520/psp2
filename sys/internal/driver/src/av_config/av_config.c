@@ -335,7 +335,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 	(void)argp;
 	avConfigState.hasVideoHardware = (SceSysconForDriver_CBD6D8BC() & 0x80) != 0;
 	avConfigHasCodec = SceSblAIMgrForDriver_71608CA3() == 0;
-	if (ksceIdStorageLookup(0x118, 0, &idStorageValue, 1) == 0 &&
+	if (sceIdStorageLookup(0x118, 0, &idStorageValue, 1) == 0 &&
 	    idStorageValue == 1) {
 		for (retries = 5; retries != 0; --retries) {
 			if (sceRegMgrGetKeyInt(avConfigMasterVolumeCategory,
@@ -353,7 +353,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 	} else {
 		avConfigState.avlsTimerEnabled = 0;
 	}
-	if (ksceIdStorageLookup(0x11b, 0, &idStorageValue, 1) >= 0 &&
+	if (sceIdStorageLookup(0x11b, 0, &idStorageValue, 1) >= 0 &&
 	    idStorageValue == 1)
 		avConfigState.settings.shutterVolume = 26;
 	else
@@ -377,7 +377,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 		SceAudioForDriver_15FB30DF(avConfigMasterVolumeGain[volume]);
 	SceHpremoteForDriver_D22913DB(avConfigHpremoteCallback, NULL);
 	result = sceKernelCreateCallback("SceAVConfigBt", 0, avConfigBtCallback, NULL);
-	ksceBtRegisterCallback(result, 0x100be060ULL);
+	SceBtForDriver_120AC1F7(result, 0x100be060ULL);
 	if (avConfigHdmiAvailable == 1) {
 		SceHdmiForDriver_0F12364A(1, avConfigHdmiConnected);
 		SceHdmiForDriver_0F12364A(0, avConfigHdmiDisconnected);

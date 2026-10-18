@@ -51,23 +51,23 @@ SceMotionDev:
         - SceMotionDevForDriver_031AF7A1: 0x031AF7A1
         - SceMotionDevForDriver_0808D77D: 0x0808D77D
         - SceMotionDevForDriver_09918DAE: 0x09918DAE
-        - ksceMotionDevIsReady: 0x10AAC8EA
-        - ksceMotionDevNoiseFilterIsAvailable: 0x11A17A96
+        - SceMotionDevForDriver_10AAC8EA: 0x10AAC8EA
+        - SceMotionDevForDriver_11A17A96: 0x11A17A96
         - SceMotionDevForDriver_22CD6DCA: 0x22CD6DCA
-        - ksceMotionDevRead: 0x3A3407B5
-        - ksceMotionDevGetCalibrationHeader: 0x3B23DF55
+        - SceMotionDevForDriver_3A3407B5: 0x3A3407B5
+        - SceMotionDevForDriver_3B23DF55: 0x3B23DF55
         - SceMotionDevForDriver_3CD0CE14: 0x3CD0CE14
-        - ksceMotionDevGetDeviceInfo: 0x3E4BCBC0
-        - ksceMotionDevGetEvaInfo: 0x5B53AC26
+        - SceMotionDevForDriver_3E4BCBC0: 0x3E4BCBC0
+        - SceMotionDevForDriver_5B53AC26: 0x5B53AC26
         - SceMotionDevForDriver_77BA3A04: 0x77BA3A04
-        - ksceMotionDevRegisterVirtualMotionDriver: 0x7FD06731
+        - SceMotionDevForDriver_7FD06731: 0x7FD06731
         - SceMotionDevForDriver_85E3C678: 0x85E3C678
         - SceMotionDevForDriver_A75976EE: 0xA75976EE
-        - ksceMotionDevSamplingStart: 0xC02C85AB
+        - SceMotionDevForDriver_C02C85AB: 0xC02C85AB
         - SceMotionDevForDriver_D7DA3DA7: 0xD7DA3DA7
         - SceMotionDevForDriver_DB89D1BF: 0xDB89D1BF
-        - ksceMotionDevSetSamplingMode: 0xDBAF611A
-        - ksceMotionDevGetCalibrationData: 0xF0251700
-        - ksceMotionDevSamplingStop: 0xFD0B0785
+        - SceMotionDevForDriver_DBAF611A: 0xDBAF611A
+        - SceMotionDevForDriver_F0251700: 0xF0251700
+        - SceMotionDevForDriver_FD0B0785: 0xFD0B0785
         - SceMotionDevForDriver_FD1C528D: 0xFD1C528D
         - SceMotionDevForDriver_FE6ECA41: 0xFE6ECA41

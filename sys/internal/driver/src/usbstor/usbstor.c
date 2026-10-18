@@ -18,11 +18,11 @@
  */
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/cpu.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/idstorage.h>
+#include <idstorage/idstorage.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/sysmem.h>
@@ -361,7 +361,7 @@ static int attachStorage(int version, void *ctx)
 	initializeRequests();
 	s.status = STATUS_READY | STATUS_STARTED;
 	sceKernelSetEventFlag(s.eventFlag, EVF_ATTACH);
-	return ksceUdcdGetDeviceInfo(&info);
+	return SceUdcdForDriver_FBEA3703(&info);
 }
 
 static void detachStorage(void *ctx)
@@ -392,10 +392,10 @@ static int processRequest(int recipient, int number, SceUdcdEP0DeviceRequest *re
 		    req->bRequest == USBMS_REQ_RESET) {
 			s.flags |= FLAG_RESET;
 			notifyFunctions(USBSTOR_EVENT_RESET);
-			ksceUdcdReqCancelAll(&s.endpoints[1]);
-			ksceUdcdReqCancelAll(&s.endpoints[2]);
-			ksceUdcdClearFIFO(&s.endpoints[1]);
-			ksceUdcdClearFIFO(&s.endpoints[2]);
+			SceUdcdForDriver_38787672(&s.endpoints[1]);
+			SceUdcdForDriver_38787672(&s.endpoints[2]);
+			SceUdcdForDriver_9F53D64D(&s.endpoints[1]);
+			SceUdcdForDriver_9F53D64D(&s.endpoints[2]);
 			sceKernelSetEventFlag(s.eventFlag, EVF_RESET);
 			return 0;
 		}
@@ -403,7 +403,7 @@ static int processRequest(int recipient, int number, SceUdcdEP0DeviceRequest *re
 					   USB_CTRLTYPE_REC_INTERFACE) &&
 		    req->bRequest == USBMS_REQ_GET_MAX_LUN) {
 			*s.controlBuffer = s.maxUnit;
-			ksceUdcdReqSend(&s.control.request);
+			SceUdcdForDriver_1ED0E89E(&s.control.request);
 			return 0;
 		}
 	}
@@ -464,10 +464,10 @@ static void completeCsw(SceUdcdDeviceRequest *req)
 static void cancelEndpoint(int ep, unsigned cancelled)
 {
 	unsigned timeout = TRANSFER_TIMEOUT;
-	if (ksceUdcdReqCancelAll(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
+	if (SceUdcdForDriver_38787672(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
 	    sceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
 				    &timeout) >= 0)
-		ksceUdcdClearFIFO(&s.endpoints[ep]);
+		SceUdcdForDriver_9F53D64D(&s.endpoints[ep]);
 }
 
 static int flushSend(unsigned timeout)
@@ -479,7 +479,7 @@ static int flushSend(unsigned timeout)
 		return STOR_ERROR_DUPLICATE;
 	if (s.flags & FLAG_RESET)
 		return STOR_ERROR_CANCEL;
-	result = ksceUdcdReqSend(&s.send.request);
+	result = SceUdcdForDriver_1ED0E89E(&s.send.request);
 	if (result < 0)
 		return result;
 	result = sceKernelWaitEventFlag(s.eventFlag, EVF_IN_CANCELLED | EVF_SENT,
@@ -576,7 +576,7 @@ int SceUsbstorForDriver_F1A690DC(void *buffer, unsigned size, unsigned timeout)
 		return STOR_ERROR_DUPLICATE;
 	if (s.flags & FLAG_RESET)
 		return STOR_ERROR_CANCEL;
-	result = ksceUdcdReqRecv(&s.receive.request);
+	result = SceUdcdForDriver_C60A74B2(&s.receive.request);
 	if (result < 0)
 		return result;
 	result = sceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED | EVF_RECEIVED,
@@ -866,7 +866,7 @@ static int storageThread(SceSize size, void *args)
 	if (initializeDescriptors() < 0)
 		return 0;
 	memset(s.identity, 0, sizeof(s.identity));
-	if (ksceIdStorageLookup(IDSTORAGE_LEAF_USB, 0, s.identity, 64) < 0) {
+	if (sceIdStorageLookup(IDSTORAGE_LEAF_USB, 0, s.identity, 64) < 0) {
 		for (int i = 0; i < 32; i++) {
 			s.identity[i * 2] = 0;
 			s.identity[i * 2 + 1] = '0';
@@ -886,7 +886,7 @@ sendCsw:
 	if (!(s.status & STATUS_IN_STALLED)) {
 		if (s.cswRequest.request.returnCode > REQUEST_IDLE)
 			cancelEndpoint(1, EVF_IN_CANCELLED);
-		if (ksceUdcdReqSend(&s.cswRequest.request) < 0) {
+		if (SceUdcdForDriver_1ED0E89E(&s.cswRequest.request) < 0) {
 			state = 1;
 			goto receive;
 		}
@@ -959,7 +959,7 @@ events:
 	if (s.cbwRequest.request.transmitted != USBMS_CBW_SIZE ||
 	    s.cbw->dCBWSignature != USBMS_CBW_SIGNATURE) {
 		s.status |= STATUS_IN_STALLED;
-		ksceUdcdStall(&s.endpoints[1]);
+		SceUdcdForDriver_34079250(&s.endpoints[1]);
 		s.status |= STATUS_BAD_CBW;
 		state = 1;
 		goto receive;
@@ -1049,7 +1049,7 @@ events:
 				s.csw->dCSWDataResidue = remaining;
 				s.csw->bCSWStatus = USBMS_CSW_FAILED;
 				s.status |= STATUS_IN_STALLED;
-				ksceUdcdStall(&s.endpoints[1]);
+				SceUdcdForDriver_34079250(&s.endpoints[1]);
 				state = 2;
 				goto sendCsw;
 			}
@@ -1122,10 +1122,10 @@ buildCsw:
 			    USBMS_CSW_PHASE_ERROR;
 	if (commandResult != USBSTOR_COMMAND_DONE && commandResult != USBSTOR_COMMAND_FAILED) {
 		s.status |= STATUS_IN_STALLED;
-		ksceUdcdStall(&s.endpoints[1]);
+		SceUdcdForDriver_34079250(&s.endpoints[1]);
 	}
 	if (stallOut)
-		ksceUdcdStall(&s.endpoints[2]);
+		SceUdcdForDriver_34079250(&s.endpoints[2]);
 	state = 2;
 	goto sendCsw;
 abortCommand:
@@ -1139,14 +1139,14 @@ receive:
 		s.cbwRequest.request.returnCode = state;
 	else {
 		timeout = TRANSFER_TIMEOUT;
-		result = ksceUdcdReqCancelAll(&s.endpoints[2]);
+		result = SceUdcdForDriver_38787672(&s.endpoints[2]);
 		if (result != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
 		    sceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED,
 					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    NULL, &timeout) >= 0)
-			ksceUdcdClearFIFO(&s.endpoints[2]);
+			SceUdcdForDriver_9F53D64D(&s.endpoints[2]);
 	}
-	if (ksceUdcdReqRecv(&s.cbwRequest.request) < 0 || (s.status & STATUS_OUT_STALLED))
+	if (SceUdcdForDriver_C60A74B2(&s.cbwRequest.request) < 0 || (s.status & STATUS_OUT_STALLED))
 		goto waitTimed;
 	goto waitNormal;
 wake:
@@ -1189,7 +1189,7 @@ int module_start(SceSize size, void *args)
 		sceKernelDeleteThread(s.thread);
 		return SCE_KERNEL_START_FAILED;
 	}
-	if (ksceUdcdRegister(&s.driver) < 0) {
+	if (SceUdcdForDriver_4E55244D(&s.driver) < 0) {
 		sceKernelDeleteThread(s.thread);
 		return SCE_KERNEL_START_FAILED;
 	}
@@ -1203,5 +1203,5 @@ int module_stop(SceSize size, void *args)
 	sceKernelDeleteEventFlag(s.eventFlag);
 	SceSysmemForDriver_009E1C61(s.memblock);
 	s.status = (s.status & ~(STATUS_READY | STATUS_STARTED)) | STATUS_STOPPED;
-	return ksceUdcdUnregister(&s.driver) < 0 ? SCE_KERNEL_STOP_FAIL : SCE_KERNEL_STOP_SUCCESS;
+	return SceUdcdForDriver_0DECE532(&s.driver) < 0 ? SCE_KERNEL_STOP_FAIL : SCE_KERNEL_STOP_SUCCESS;
 }

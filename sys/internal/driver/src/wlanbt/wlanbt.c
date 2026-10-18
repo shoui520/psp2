@@ -2,7 +2,6 @@
 #include "wlanbt_internal.h"
 #include <skeleton.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/idstorage.h>
 #include <sysmem/debug.h>
 #include <wlanbt/wlanbt.h>
 #include <sysmem/pmmgr.h>
@@ -14,13 +13,11 @@
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
+#include <idstorage/idstorage.h>
+#include <clockgen/clockgen.h>
 
 int ksceSblSsGetNvsData(unsigned int offset, void *buffer, SceSize size);
-int ksceIdStorageLookup(unsigned int leafId, unsigned int offset,
-			void *buffer, unsigned int size);
 int wlanBtInitializeRobin(void);
-int SceClockgenForDriver_7B28A724(void);
-int ksceClockgenWlanBtClkDisable(void);
 int wlanBtResumeRobin(unsigned int *wakeSources);
 int wlanBtStartRobin(void);
 int wlanBtStopRobin(void);
@@ -42,12 +39,12 @@ int wlanBtPrepareWakeWait(void)
 	int result;
 
 	ScePowerForDriver_F535D928(4, 1);
-	SceSdifForDriver_DECE963B(ksceSdifGetSdContextPartValidateSdio(2), 4, 1,
+	SceSdifForDriver_DECE963B(SceSdifForDriver_6A8235FC(2), 4, 1,
 				 &gWlanBtConfig.interruptEnable);
 	interruptEnable = gWlanBtConfig.interruptEnable & ~1;
-	SceSdifForDriver_5D65E66B(ksceSdifGetSdContextPartValidateSdio(2), 4, 1,
+	SceSdifForDriver_5D65E66B(SceSdifForDriver_6A8235FC(2), 4, 1,
 				 &interruptEnable);
-	result = SceSdifForDriver_AB0222F2(ksceSdifGetSdContextPartValidateSdio(2));
+	result = SceSdifForDriver_AB0222F2(SceSdifForDriver_6A8235FC(2));
 	gWlanBtConfig.configuration &= ~0x100u;
 	return result;
 }
@@ -142,7 +139,7 @@ void wlanBtPowerDownDevice(void)
 
 	SceSysconForDriver_40FF3898(16, 0);
 	SceSysconForDriver_A2E85DB9(0);
-	result = ksceClockgenWlanBtClkDisable();
+	result = SceClockgenForDriver_B6F0A532();
 	sceKernelDelayThread(500000);
 	SCE_DBG_ASSERT(result >= 0, 372);
 }
@@ -165,7 +162,7 @@ void wlanBtCompleteWakeWait(void)
 		return;
 	}
 	interruptEnable = gWlanBtConfig.interruptEnable;
-	SceSdifForDriver_5D65E66B(ksceSdifGetSdContextPartValidateSdio(2), 4, 1,
+	SceSdifForDriver_5D65E66B(SceSdifForDriver_6A8235FC(2), 4, 1,
 				 &interruptEnable);
 	wakeupFactor = 0;
 	SceSysconForDriver_CF5B2F2F(&wakeupFactor);
@@ -195,7 +192,7 @@ void wlanBtCompleteWakeWait(void)
 
 		SceSysconForDriver_40FF3898(16, 0);
 		SceSysconForDriver_A2E85DB9(0);
-		result = ksceClockgenWlanBtClkDisable();
+		result = SceClockgenForDriver_B6F0A532();
 		sceKernelDelayThread(500000);
 		SCE_DBG_ASSERT_FUNC(result >= 0, 372, "wlanBtPowerDownDevice");
 		gWlanBtConfig.configuration = 0;
@@ -210,7 +207,7 @@ int wlanBtNotifyMonitor(unsigned int event, unsigned int argument,
 	return 0;
 }
 
-unsigned int ksceWlanBtGetConfiguration(void)
+unsigned int sceWlanBtGetConfiguration(void)
 {
 	unsigned int configuration;
 	int result;
@@ -223,7 +220,7 @@ unsigned int ksceWlanBtGetConfiguration(void)
 	return configuration;
 }
 
-int ksceWlanBtSetConfiguration(int request)
+int sceWlanBtSetConfiguration(int request)
 {
 	unsigned int configuration;
 	int result;
@@ -414,13 +411,13 @@ done:
 	return result;
 }
 
-int ksceWlanBtAttachMonitor(SceWlanBtMonitorCallback *monitor)
+int SceWlanBtForDriver_C5AA6F43(SceWlanBtMonitorCallback *monitor)
 {
 	gWlanBtConfig.monitor = monitor;
 	return 0;
 }
 
-int ksceWlanBtDetachMonitor(SceWlanBtMonitorCallback *monitor)
+int sceWlanBtDetachMonitor(SceWlanBtMonitorCallback *monitor)
 {
 	SCE_DBG_ASSERT_FUNC(gWlanBtConfig.monitor == monitor, 630,
 			    "sceWlanBtDetachMonitor");
@@ -558,7 +555,7 @@ int wlanBtInitializeRobin(void)
 
 	productMode = 0;
 	memset(&gWlan, 0, sizeof(gWlan));
-	if (ksceIdStorageLookup(0x110, 0, &gWlan.region, sizeof(gWlan.region)) < 0) {
+	if (sceIdStorageLookup(0x110, 0, &gWlan.region, sizeof(gWlan.region)) < 0) {
 		gWlan.region.channelMask = 0x7ff;
 		gWlan.region.flags = 0;
 	} else

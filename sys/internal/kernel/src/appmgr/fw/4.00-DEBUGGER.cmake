@@ -572,7 +572,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDisplayForDriver_D4C812E5
 	SceTouchForDriver_3F3FBF69
 	SceCameraForDriver_E81EADE1
-	ksceCameraIsActive
+	SceCameraForDriver_EB1CC2CA
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	ksceRegMgrSystemParamGetInt

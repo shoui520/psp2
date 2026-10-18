@@ -10,7 +10,6 @@
 int ksceSblFwLoaderLock(const char *path, int flags);
 int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *loaded);
 int ksceSblFwLoaderUnlock(void);
-int SceSdifForDriver_E80293EF(SdifSdioFunction *function);
 int robinResetWlanForResume(void);
 int robinDeauthenticateForResume(void);
 int robinWlanNeedsDeauthentication(void);

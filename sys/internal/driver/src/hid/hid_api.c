@@ -5,7 +5,7 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 
-int ksceHidMouseEnumerate(SceUID *handle, int count)
+int SceHidForDriver_A26B1E1C(SceUID *handle, int count)
 {
 	int result, copied, index;
 	HidCollection *collection;
@@ -62,7 +62,7 @@ int sceHidMouseEnumerate(SceUID *handle, int count)
 	if (collection != NULL && collection->id == handle) \
 		goto found;
 
-int ksceHidMouseRead(SceUID handle, SceHidMouseReport *reports, int nReports)
+int SceHidForDriver_F655462B(SceUID handle, SceHidMouseReport *reports, int nReports)
 {
 	HidCollection *collection;
 	int result;
@@ -141,7 +141,7 @@ leave:
 
 #undef FIND_MOUSE_COLLECTION
 
-int ksceHidKeyboardEnumerate(SceUID *handle, int count)
+int sceHidKeyboardEnumerate(SceUID *handle, int count)
 {
 	int result, copied, index;
 	HidCollection *collection;
@@ -164,7 +164,7 @@ int ksceHidKeyboardEnumerate(SceUID *handle, int count)
 	return result;
 }
 
-int sceHidKeyboardEnumerate(SceUID *handle, int count)
+int sceHidKeyboardEnumerateForUser(SceUID *handle, int count)
 {
 	SceUID handles[8];
 	HidCollection *collection;
@@ -198,7 +198,7 @@ int sceHidKeyboardEnumerate(SceUID *handle, int count)
 	if (collection != NULL && collection->id == handle) \
 		goto found;
 
-int ksceHidKeyboardRead(SceUID handle, SceHidKeyboardReport *reports, int nReports)
+int SceHidForDriver_4BC07107(SceUID handle, SceHidKeyboardReport *reports, int nReports)
 {
 	HidCollection *collection;
 	int result;
@@ -351,7 +351,7 @@ leave:
 	if (collection != NULL && collection->id == handle) \
 		goto found;
 
-int ksceHidKeyboardPeek(SceUID handle, SceHidKeyboardReport *reports, int nReports)
+int SceHidForDriver_1BE424FE(SceUID handle, SceHidKeyboardReport *reports, int nReports)
 {
 	HidCollection *collection;
 	int result, copied;
@@ -435,7 +435,7 @@ leave:
 	if (collection != NULL && collection->id == handle) \
 		goto found;
 
-int ksceHidKeyboardClear(SceUID handle)
+int sceHidKeyboardClear(SceUID handle)
 {
 	HidCollection *collection;
 	int result;
@@ -461,7 +461,7 @@ found:
 	return result;
 }
 
-int sceHidKeyboardClear(SceUInt32 handle)
+int sceHidKeyboardClearForUser(SceUInt32 handle)
 {
 	HidCollection *collection;
 	unsigned int syscall;
@@ -530,7 +530,7 @@ int SceHidForDriver_EB323EC6(SceUID *pid)
 	return 0;
 }
 
-int ksceHidKeyboardSetIntercept(unsigned int enable)
+int SceHidForDriver_754E48DF(unsigned int enable)
 {
 	HidKeyboardIntercept intercept = {0};
 	SceUID pid;
@@ -591,7 +591,7 @@ leave:
 	return result;
 }
 
-int ksceHidKeyboardGetIntercept(int *enable)
+int SceHidForDriver_18DE9BB0(int *enable)
 {
 	HidKeyboardIntercept intercept;
 	SceUID pid;
@@ -637,7 +637,7 @@ leave:
 	return result;
 }
 
-int ksceHidConsumerControlEnumerate(SceUID *handle, int count)
+int SceHidForDriver_A60E34F7(SceUID *handle, int count)
 {
 	int result, copied, index;
 	HidCollection *collection;
@@ -694,7 +694,7 @@ int sceHidConsumerControlEnumerate(SceUID *handle, int count)
 	if (collection != NULL && collection->id == handle) \
 		goto found;
 
-int ksceHidConsumerControlRead(SceUID handle, SceHidConsumerControlReport *reports,
+int SceHidForDriver_88F3ECF1(SceUID handle, SceHidConsumerControlReport *reports,
 			       int nReports)
 {
 	HidCollection *collection;

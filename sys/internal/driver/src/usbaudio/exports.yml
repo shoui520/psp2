@@ -11,11 +11,11 @@ SceUsbAudio:
       version: 1
       nid: 0x066BBE8B
       functions:
-        - ksceUsbAudioUnregisterCallback: 0x23A07D29
-        - ksceUsbAudioInput: 0x863B0617
-        - ksceUsbAudioGetDeviceIdList: 0x96EC3E18
-        - ksceUsbAudioRegisterCallback: 0x974DBE03
-        - ksceUsbAudioInput2: 0xEFB4E3E4
+        - SceUsbAudioForDriver_23A07D29: 0x23A07D29
+        - SceUsbAudioForDriver_863B0617: 0x863B0617
+        - SceUsbAudioForDriver_96EC3E18: 0x96EC3E18
+        - SceUsbAudioForDriver_974DBE03: 0x974DBE03
+        - SceUsbAudioForDriver_EFB4E3E4: 0xEFB4E3E4
     SceUsbAudioIn:
       syscall: true
       version: 1

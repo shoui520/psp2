@@ -373,8 +373,8 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_EA1D3A34
 	SceCtrlForDriver_FA88D837
 	SceCtrlForDriver_FF9D4DD4
-	ksceTouchSetEnableFlag
-	ksceIdStorageLookup
+	SceTouchForDriver_328E38B0
+	sceIdStorageLookup
 	sceHdmiCecRegisterEventCallback
 )
 set(MODULE_IMPORT_VARS

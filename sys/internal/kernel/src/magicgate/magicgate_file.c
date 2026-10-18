@@ -8,8 +8,7 @@
 #include <threadmgr/threadmgr.h>
 #include <string.h>
 #include <sysmem/suspend.h>
-
-int sceMsifGetMediaId(uint8_t *mediaId);
+#include <msif/msif.h>
 
 /* These supplied keys still need their entries identified in the reference. */
 extern const MagicGateKey fileIdentityKey;

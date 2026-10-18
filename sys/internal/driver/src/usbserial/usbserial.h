@@ -1,7 +1,7 @@
 /* Private USB serial layouts and recovered interface declarations. */
 #pragma once
 #include <stdint.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>

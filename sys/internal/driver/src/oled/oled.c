@@ -275,13 +275,13 @@ int SceOledForDriver_9F4ABDDC(void)
 {
 	return SceGpioForDriver_129DF5AC(0, 0) == 0;
 }
-int ksceOledWaitReady(void)
+int SceOledForDriver_0CC6BCB4(void)
 {
 	while (!oled.ready)
 		waitTime(1000);
 	return 0;
 }
-int ksceOledGetDDB(uint16_t *id, uint16_t *revision)
+int SceOledForDriver_C9D5987C(uint16_t *id, uint16_t *revision)
 {
 	if (!oled.ready)
 		return OLED_NOT_READY;
@@ -299,11 +299,11 @@ int SceOledForDriver_3C990F53(void)
 	int ret = SceOledForDriver_3E6AE8A2(10, value, 1);
 	return ret < 0 ? ret : ((value[0] >> 2) & 1);
 }
-int ksceOledDisplayOn(void)
+int SceOledForDriver_4C7836C7(void)
 {
 	return queueSequence(PANEL_DATA(0x81001a60));
 }
-int ksceOledDisplayOff(void)
+int SceOledForDriver_BC84602E(void)
 {
 	int ret = queueSequence(PANEL_DATA(0x81001a70));
 	if (!ret)
@@ -330,7 +330,7 @@ int SceOledForDriver_DDB1412B(void)
 	sequence = PANEL_DATA(0x81001dd0);
 	delayFrames = 0;
 	flushSequence();
-	ksceOledGetDDB(0, &revision);
+	SceOledForDriver_C9D5987C(0, &revision);
 	panelType = revision;
 	colorSupported = 1;
 	if (panelType == 4) {
@@ -351,7 +351,7 @@ int SceOledForDriver_DDB1412B(void)
 	return ret;
 }
 
-int ksceOledSetBrightness(unsigned value)
+int SceOledForDriver_F9624C47(unsigned value)
 {
 	unsigned char *p = brightnessSequence;
 	unsigned index, i;
@@ -408,11 +408,11 @@ int ksceOledSetBrightness(unsigned value)
 		flushSequence();
 	return 0;
 }
-unsigned ksceOledGetBrightness(void)
+unsigned SceOledForDriver_43EF811A(void)
 {
 	return brightness;
 }
-int ksceOledSetDisplayColorSpaceMode(unsigned mode)
+int SceOledForDriver_DABBD9D3(unsigned mode)
 {
 	int ret;
 	if (mode > 1)
@@ -433,7 +433,7 @@ int ksceOledSetDisplayColorSpaceMode(unsigned mode)
 		flushSequence();
 	return ret;
 }
-unsigned ksceOledGetDisplayColorSpaceMode(void)
+unsigned SceOledForDriver_4F8A1D4A(void)
 {
 	return colorMode;
 }

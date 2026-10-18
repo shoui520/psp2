@@ -171,7 +171,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSdifForDriver_3428884D
 	SceSdifForDriver_3C4CDC8B
 	SceSdifForDriver_5D65E66B
-	ksceSdifGetSdContextPartValidateSdio
+	SceSdifForDriver_6A8235FC
 	SceSdifForDriver_733BC373
 	SceSdifForDriver_855C95E1
 	SceSdifForDriver_AABAA0F0
@@ -191,11 +191,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_C0F215B7
 	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_CF5B2F2F
-	ksceUsbServEtherEnable
-	ksceUsbServEtherDisable
+	sceUsbServEtherEnable
+	sceUsbServEtherDisable
 	SceClockgenForDriver_7B28A724
-	ksceClockgenWlanBtClkDisable
-	ksceIdStorageLookup
+	SceClockgenForDriver_B6F0A532
+	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

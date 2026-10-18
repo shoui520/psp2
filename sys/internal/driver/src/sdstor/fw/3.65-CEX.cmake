@@ -166,25 +166,25 @@ set(MODULE_IMPORT_FUNCS
 	sceSysconCtrlRMRPower
 	sceSysconCtrlSdPower
 	SceSysconForDriver_F99BC858
-	ksceSdifWriteSectorMmc
-	ksceSdifInitializeMmcDevice
-	ksceSdifGetCID
+	sceMmcWriteSectorInternal
+	SceSdifForDriver_22C82E79
+	SceSdifForDriver_23A4EF01
 	SceSdifForDriver_35BA9DF8
-	ksceSdifGetCardInsertState1
+	SceSdifForDriver_36A2B01B
 	SceSdifForDriver_6CC8E28D
-	ksceSdifReadSectorMmc
+	sceMmcReadSector
 	sendWriteProtectStatus
-	ksceSdifReadSectorSd
-	ksceSdifGetSdContextPartValidateSd
-	ksceSdifInitializeSdDevice
-	ksceSdifWriteSectorSd
+	SceSdifForDriver_B9593652
+	SceSdifForDriver_B9EA5B1E
+	SceSdifForDriver_C1271539
+	sceSdWriteSectorInternal
 	SceSdifForDriver_E091BA2E
-	ksceSdifGetCardInsertState2
-	ksceMsifWriteSector
+	SceSdifForDriver_FD9E5CFA
+	sceMsifWriteSector
 	sceMsifSwReset
-	ksceMsifReadSector
+	SceMsifForDriver_58654AA3
 	sceMsifFormat
-	ksceMsifGetMsInfo
+	SceMsifForDriver_D0307849
 	SceMsifForDriver_F997286B
 	SceUsbMassForDriver_081CA197
 	SceUsbMassForDriver_3C821E99

@@ -43,32 +43,32 @@ SceTouchDummy:
       version: 1
       nid: 0xA4A7DAFC
       functions:
-        - ksceTouchRegisterVirtualTouchDriver: 0x03C3AC7C
+        - SceTouchForDriver_03C3AC7C: 0x03C3AC7C
         - SceTouchForDriver_062A11A2: 0x062A11A2
-        - ksceTouchSetRegionAttr: 0x10A998DE
-        - ksceTouchSetSamplingState: 0x1247257A
-        - ksceTouchGetSamplingState: 0x174D0333
-        - ksceTouchSetEnableFlag: 0x328E38B0
+        - SceTouchForDriver_10A998DE: 0x10A998DE
+        - SceTouchForDriver_1247257A: 0x1247257A
+        - SceTouchForDriver_174D0333: 0x174D0333
+        - SceTouchForDriver_328E38B0: 0x328E38B0
         - SceTouchForDriver_384F6C68: 0x384F6C68
         - SceTouchForDriver_3F3FBF69: 0x3F3FBF69
         - SceTouchForDriver_423F26D3: 0x423F26D3
-        - ksceTouchGetProcessInfo: 0x4DF3A37C
+        - SceTouchForDriver_4DF3A37C: 0x4DF3A37C
         - SceTouchForDriver_4E6C4558: 0x4E6C4558
-        - ksceTouchSetCtrlpCallback: 0x628D9324
+        - sceTouchSetCtrlpCallback: 0x628D9324
         - SceTouchForDriver_63DCF2FE: 0x63DCF2FE
-        - ksceTouchRead: 0x70C8AACE
-        - ksceTouchSetRegion: 0x7985B164
+        - SceTouchForDriver_70C8AACE: 0x70C8AACE
+        - SceTouchForDriver_7985B164: 0x7985B164
         - SceTouchForDriver_845E2115: 0x845E2115
-        - ksceTouchGetPanelInfo: 0x937DB4C0
-        - ksceTouchReadRegion: 0x9A91F624
-        - ksceTouchPeekRegion: 0x9B3F7207
+        - SceTouchForDriver_937DB4C0: 0x937DB4C0
+        - SceTouchForDriver_9A91F624: 0x9A91F624
+        - SceTouchForDriver_9B3F7207: 0x9B3F7207
         - SceTouchForDriver_9C8CCB66: 0x9C8CCB66
-        - ksceTouchSetTouchEmulationData: 0xA32529B8
-        - ksceTouchPeek: 0xBAD1960B
-        - ksceTouchActivateRegion: 0xC7F0DAA0
-        - ksceTouchDisableTouchForce: 0xCDE79889
+        - SceTouchForDriver_A32529B8: 0xA32529B8
+        - SceTouchForDriver_BAD1960B: 0xBAD1960B
+        - SceTouchForDriver_C7F0DAA0: 0xC7F0DAA0
+        - SceTouchForDriver_CDE79889: 0xCDE79889
         - SceTouchForDriver_DDCF5145: 0xDDCF5145
         - SceTouchForDriver_E1C5D95F: 0xE1C5D95F
-        - ksceTouchEnableTouchForce: 0xE41B4BF8
-        - ksceTouchEnableIdleTimerCancelSetting: 0xEBF4C86A
-        - ksceTouchGetDeviceInfo: 0xFD2E0278
+        - SceTouchForDriver_E41B4BF8: 0xE41B4BF8
+        - SceTouchForDriver_EBF4C86A: 0xEBF4C86A
+        - SceTouchForDriver_FD2E0278: 0xFD2E0278

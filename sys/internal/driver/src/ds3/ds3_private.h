@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 #include <bt/bt_hid.h>
 #include <threadmgr/fast_mutex_object.h>
 

@@ -13,13 +13,10 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
+#include <udcd/udcd.h>
 
-extern int ksceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout);
-extern int ksceUdcdGetDeviceState(void);
-extern int ksceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information);
-extern int ksceUdcdGetDrvState(const char *name);
-extern int SceUdcdForDriver_EBB1E86B(void);
-extern int SceUdcdForDriver_2D91F8C3(unsigned int enabled);
+extern int SceUdcdForDriver_D03017C0(SceUdcdWaitParam *parameter, unsigned int timeout);
+extern int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information);
 
 #define UDCD_ERROR_BUSY			SCE_UDCD_ERROR_WAIT_TIMEOUT
 
@@ -181,7 +178,7 @@ int sceUdcdWaitState(const SceUdcdWaitParam *parameter, unsigned int timeout)
 			goto invalid;
 		kparameter.driverName = name;
 	}
-	result = ksceUdcdWaitState(&kparameter, timeout);
+	result = SceUdcdForDriver_D03017C0(&kparameter, timeout);
 out:
 	sceSyscallLeave(t);
 	return result;
@@ -219,7 +216,7 @@ int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
 	if (state == NULL) {
 		result = UDCD_ERROR_INVALID_ARGUMENT;
 	} else {
-		value = ksceUdcdGetDeviceState();
+		value = SceUdcdForDriver_E054B5E4();
 		kstate.controller = value & 0x3000;
 		kstate.activation = value & 0x700;
 		kstate.cable = value & 0x30;
@@ -246,7 +243,7 @@ int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *info)
 	if (info == NULL) {
 		result = UDCD_ERROR_INVALID_ARGUMENT;
 	} else {
-		result = ksceUdcdGetDeviceInfo(&kinfo);
+		result = SceUdcdForDriver_FBEA3703(&kinfo);
 		if (result >= 0) {
 			result = SceSysmemForDriver_6D88EF8A(info, &kinfo, sizeof(kinfo));
 			if (result > 0)
@@ -287,7 +284,7 @@ int sceUdcdGetDrvState(const char *driverName)
 	if (result >= 0) {
 		if (result == sizeof(name))
 			goto invalid;
-		result = ksceUdcdGetDrvState(name);
+		result = SceUdcdForDriver_C0CA5DDB(name);
 	}
 	sceSyscallLeave(t);
 	return result;

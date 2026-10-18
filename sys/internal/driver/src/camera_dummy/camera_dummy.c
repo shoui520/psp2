@@ -128,7 +128,7 @@ int SceCameraForDriver_22E70D83(int dev)				/* is active */
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }
 
-int ksceCameraIsActive(int dev)
+int SceCameraForDriver_EB1CC2CA(int dev)
 {
 	return SCE_CAMERA_ERROR_NOT_MOUNTED;
 }

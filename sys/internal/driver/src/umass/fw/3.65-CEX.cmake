@@ -82,14 +82,14 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E
 	SceCpuForDriver_E36F3A46
-	ksceUsbdOpenPipe
-	ksceUsbdRegisterDriver
-	ksceUsbdBulkTransfer
-	ksceUsbdControlTransfer
-	ksceUsbdScanStaticDescriptor
-	ksceUsbdClosePipe
-	ksceUsbServAccessoryDeactivate
-	ksceUsbServAccessoryActivate
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_1EC94F18
+	SceUsbdForDriver_235C094A
+	SceUsbdForDriver_2E05660F
+	SceUsbdForDriver_BC3EF82B
+	SceUsbdForDriver_F304DC5C
+	SceUsbServForDriver_853CB8E4
+	SceUsbServForDriver_AA6D4409
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

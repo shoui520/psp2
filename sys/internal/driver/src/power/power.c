@@ -60,7 +60,7 @@ int powerStartupWorker(void)
 	s_powerCallbackControl.sysconStatus[2] = SceSysconForDriver_03C50DC3();
 	s_powerCallbackControl.sysconStatus[3] = SceSysconForDriver_27758A64();
 	s_powerCallbackControl.thermalAlert = SceSysconForDriver_50CAE242();
-	ret = ksceIdStorageLookup(0x117, 0, storage, sizeof(storage));
+	ret = sceIdStorageLookup(0x117, 0, storage, sizeof(storage));
 	if (ret >= 0) {
 		command[0] = storage[0];
 		command[1] = storage[1];

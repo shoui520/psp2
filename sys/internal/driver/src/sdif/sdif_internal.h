@@ -166,7 +166,6 @@ int sceSdifAdmaKick(SdifCommand *command, uint16_t commandFlags);
 SdifCommand *sdifCommandQueuePop(SdifCommandQueue *queue);
 void _sceSdifCmdQueueDump(SdifCommandQueue *queue);
 int freeAdmaDescriptorArea(SdifCommand *command);
-SdifContextGlobal *ksceSdifGetSdContextGlobal(unsigned int index);
 int sceSdifReset(SdifContextGlobal *context, int flags);
 int sdifPowerOn(SdifContextGlobal *context, uint8_t powerControl);
 int sdifIsCardInserted(SdifContextGlobal *context);
@@ -209,5 +208,4 @@ int sdifSendCheckedSyncCommand(SdifContextGlobal *context, SdifCommand *command,
 			       SdifCommand *secondary, int retries);
 int sdifLockPort(SdifContextGlobal *context);
 int sdifUnlockPort(SdifContextGlobal *context);
-int SceSdifForDriver_53518827(SdifContextGlobal *context, uint32_t *status);
 int sdifSetBlockLength(SdifContextGlobal *context, uint32_t blockLength);

@@ -159,7 +159,7 @@ set(MODULE_IMPORT_FUNCS
 	scePowerRegisterCallback
 	ScePowerForDriver_C743E392
 	ScePowerForDriver_FE35B73D
-	ksceIdStorageLookup
+	sceIdStorageLookup
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

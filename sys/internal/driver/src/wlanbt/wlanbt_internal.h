@@ -9,6 +9,7 @@
 #include <net_ps/netdrv.h>
 
 #include <wlanbt/wlanbt.h>
+#include <sdif/sdif.h>
 struct SdifSdioContext;
 
 typedef struct WlanInformationElement {
@@ -746,12 +747,6 @@ _Static_assert(offsetof(SceWlanBtRobin, firmwareSize) == 28,
 _Static_assert(offsetof(SceWlanBtRobin, firmwareLoaded) == 32,
 	       "Robin firmware load state");
 
-struct SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index);
-int SceSdifForDriver_DECE963B(struct SdifSdioContext *sdio, uint32_t offset,
-			    uint32_t size, uint8_t *buffer);
-int SceSdifForDriver_5D65E66B(struct SdifSdioContext *sdio, uint32_t offset,
-			    uint32_t size, uint8_t *buffer);
-int SceSdifForDriver_AB0222F2(struct SdifSdioContext *sdio);
 unsigned int wlanGetConfiguration(void);
 int wlanSetConfiguration(int request);
 int wlanRegisterCallback(SceUID callbackId);

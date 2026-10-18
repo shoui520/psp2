@@ -33,7 +33,7 @@ static int transfer(struct RtlAdapter *a, SceUsbdDeviceRequest *request, void *d
 	unsigned int bits;
 	int ret;
 
-	ret = ksceUsbdControlTransfer(a->controlPipe, request, data, rtlControlDone, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, request, data, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitEventFlag(a->controlEvent, 3,

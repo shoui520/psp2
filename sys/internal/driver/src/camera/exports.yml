@@ -32,7 +32,7 @@ SceCamera:
         - SceCameraForDriver_DFBBA264: 0xDFBBA264
         - SceCameraForDriver_E487870A: 0xE487870A
         - SceCameraForDriver_E81EADE1: 0xE81EADE1
-        - ksceCameraIsActive: 0xEB1CC2CA
+        - SceCameraForDriver_EB1CC2CA: 0xEB1CC2CA
         - SceCameraForDriver_EE3D4B1C: 0xEE3D4B1C
         - SceCameraForDriver_F7A0C99F: 0xF7A0C99F
         - SceCameraForDriver_FE3C170C: 0xFE3C170C

@@ -1,6 +1,6 @@
 /* Baseband network driver callbacks. */
 #include <string.h>
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <net_ps/ethernet.h>
@@ -10,7 +10,7 @@
 #include "../bbmc_control.h"
 #include "../bbmc_message.h"
 #include <sysmem/sysmem.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 #include "../usb_serial.h"
 #include "../usb_device.h"
 #include <threadmgr/threadmgr.h>
@@ -206,8 +206,8 @@ int bbmcPacketReceiveCompleted(int result, int count, void *context)
 				driver->rxDrops++;
 			}
 		}
-		return ksceUsbdBulkTransfer(control->receivePipe, receive->data,
-			receive->length, (ksceUsbdDoneCallback)bbmcPacketReceiveCompleted,
+		return SceUsbdForDriver_235C094A(control->receivePipe, receive->data,
+			receive->length, (SceUsbdDoneCallback)bbmcPacketReceiveCompleted,
 			receive);
 	}
 	return result;
@@ -318,8 +318,8 @@ static inline __attribute__((always_inline)) int PrepareTxPacket(
 	driver->releaseTx(driver, packet);
 	transmit->owner = control;
 	transmit->length = length;
-	result = ksceUsbdBulkTransfer(control->transmitPipe, data, length,
-		(ksceUsbdDoneCallback)bbmcPacketTransmitCompleted, transmit);
+	result = SceUsbdForDriver_235C094A(control->transmitPipe, data, length,
+		(SceUsbdDoneCallback)bbmcPacketTransmitCompleted, transmit);
 	if (result < 0) {
 		driver->txDrops++;
 		return result;
@@ -327,8 +327,8 @@ static inline __attribute__((always_inline)) int PrepareTxPacket(
 	driver->txBytes += packetLength;
 	driver->txPackets++;
 	if (transmit->length % control->maxPacketSize == 0)
-		ksceUsbdBulkTransfer(control->transmitPipe, NULL, 0,
-			(ksceUsbdDoneCallback)bbmcPacketTransmitCompleted, NULL);
+		SceUsbdForDriver_235C094A(control->transmitPipe, NULL, 0,
+			(SceUsbdDoneCallback)bbmcPacketTransmitCompleted, NULL);
 	return 0;
 
 consumed:
@@ -576,11 +576,11 @@ int bbmcFinalizeUsbPacketInterface(void)
 	int i;
 
 	if (control->receivePipe != 0) {
-		ksceUsbdClosePipe(control->receivePipe);
+		SceUsbdForDriver_F304DC5C(control->receivePipe);
 		control->receivePipe = 0;
 	}
 	if (control->transmitPipe != 0) {
-		ksceUsbdClosePipe(control->transmitPipe);
+		SceUsbdForDriver_F304DC5C(control->transmitPipe);
 		control->transmitPipe = 0;
 	}
 	bbmcFinalizeFastMutex(&control->transmitMutex);

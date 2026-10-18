@@ -485,7 +485,7 @@ int robinWlanCompleteWakeOffConfiguration(SceWlanBtRobinWlanContext *context,
 			else
 				gWlanWakeOffStage = 3;
 		} else if (!context->wakeOwnerProcess) {
-			gWlanWakeOffStage = (ksceWlanBtGetConfiguration() & 0x100) ? 9 : 8;
+			gWlanWakeOffStage = (sceWlanBtGetConfiguration() & 0x100) ? 9 : 8;
 		} else {
 			gWlanWakeOffStage = 3;
 		}
@@ -1010,7 +1010,7 @@ int robinWlanBeginWakeOffConfiguration(SceWlanBtRobinWlanContext *context)
 		else
 			gWlanWakeOffStage = 3;
 	} else if (!context->wakeOwnerProcess) {
-		gWlanWakeOffStage = (ksceWlanBtGetConfiguration() & 0x100) ? 9 : 8;
+		gWlanWakeOffStage = (sceWlanBtGetConfiguration() & 0x100) ? 9 : 8;
 	} else {
 		gWlanWakeOffStage = 3;
 	}

@@ -588,13 +588,13 @@ static void rxDone(int result, int count, void *context)
 /* name unknown */
 int rtlSendBuffer(struct RtlAdapter *a, void *data, unsigned int length)
 {
-	return ksceUsbdBulkTransfer2(a->txPipe, data, length, txDone, a);
+	return SceUsbdForDriver_470D5289(a->txPipe, data, length, txDone, a);
 }
 
 /* name unknown */
 int rtlReceiveBuffer(struct RtlAdapter *a, void *data, unsigned int length)
 {
-	return ksceUsbdBulkTransfer2(a->rxPipe, data, length, rxDone, a);
+	return SceUsbdForDriver_470D5289(a->rxPipe, data, length, rxDone, a);
 }
 
 /* name unknown */
@@ -620,14 +620,14 @@ static int probe(int device)
 	SceUsbdInterfaceDescriptor *interface;
 	void *previous;
 
-	descriptor = ksceUsbdScanStaticDescriptor(device, NULL, 1);
+	descriptor = SceUsbdForDriver_BC3EF82B(device, NULL, 1);
 	if (!descriptor)
 		return -1;
 	if (!((descriptor->idVendor == 0x0bda && descriptor->idProduct == 0x8152) ||
 	      (descriptor->idVendor == 0x054c && descriptor->idProduct == 0x08a5)))
 		return -1;
 	previous = descriptor;
-	while ((interface = ksceUsbdScanStaticDescriptor(device, previous, 4))) {
+	while ((interface = SceUsbdForDriver_BC3EF82B(device, previous, 4))) {
 		if (interface->bInterfaceClass == 255)
 			return 0;
 		previous = interface;
@@ -650,27 +650,27 @@ static int attach(int device)
 	ret = sceKernelClearEventFlag(a->controlEvent, 0);
 	if (ret < 0)
 		return ret;
-	previous = ksceUsbdScanStaticDescriptor(device, NULL, 1);
+	previous = SceUsbdForDriver_BC3EF82B(device, NULL, 1);
 	if (!previous)
 		return -1;
-	a->controlPipe = ksceUsbdOpenPipe(device, NULL);
+	a->controlPipe = SceUsbdForDriver_1CDBFF9F(device, NULL);
 	if (a->controlPipe < 0)
 		return -1;
-	while ((interface = ksceUsbdScanStaticDescriptor(device, previous, 4))) {
+	while ((interface = SceUsbdForDriver_BC3EF82B(device, previous, 4))) {
 		previous = interface;
 		if (interface->bInterfaceClass != 255 || !interface->bNumEndpoints)
 			continue;
 		for (unsigned int i = 0; i < interface->bNumEndpoints; i++) {
-			endpoint = ksceUsbdScanStaticDescriptor(device, previous, 5);
+			endpoint = SceUsbdForDriver_BC3EF82B(device, previous, 5);
 			previous = endpoint;
 			/* The original assumes the descriptor exists. */
 			if ((endpoint->bEndpointAddress & 31) == 1) {
-				a->rxPipe = ksceUsbdOpenPipe(device, endpoint);
+				a->rxPipe = SceUsbdForDriver_1CDBFF9F(device, endpoint);
 				if (a->rxPipe < 0)
 					return -1;
 				a->rxMaxPacket = endpoint->wMaxPacketSize;
 			} else if ((endpoint->bEndpointAddress & 31) == 2) {
-				a->txPipe = ksceUsbdOpenPipe(device, endpoint);
+				a->txPipe = SceUsbdForDriver_1CDBFF9F(device, endpoint);
 				if (a->txPipe < 0)
 					return -1;
 				a->txMaxPacket = endpoint->wMaxPacketSize;
@@ -681,7 +681,7 @@ static int attach(int device)
 	if (a->controlPipe < 0 || a->rxPipe < 0 || a->txPipe < 0)
 		return -1;
 	request = (SceUsbdDeviceRequest){ 0, 9, 1, 0, 0 };
-	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
@@ -690,7 +690,7 @@ static int attach(int device)
 	if (ret < 0)
 		return ret;
 	request = (SceUsbdDeviceRequest){ 1, 11, 0, 0, 0 };
-	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitEventFlag(a->controlEvent, 3,
@@ -759,6 +759,6 @@ int module_start(SceSize length, void *arg)
 	usbDriver.probe = probe;
 	usbDriver.attach = attach;
 	usbDriver.detach = detach;
-	ret = ksceUsbdRegisterDriver(&usbDriver);
+	ret = SceUsbdForDriver_1EC94F18(&usbDriver);
 	return ret < 0 ? ret : 0;
 }

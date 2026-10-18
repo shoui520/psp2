@@ -162,7 +162,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_EBE3262C
 	SceSysconForDriver_FF86F4C5
 	SceRtcForDriver_401C0954
-	ksceIdStorageReadLeaf
+	SceIdStorageForDriver_EB00C509
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -211,16 +211,16 @@ set(MODULE_IMPORT_FUNCS
 	SceGpioForDriver_D454A584
 	SceClockgenForDriver_5130682D
 	SceClockgenForDriver_82F39378
-	ksceClockgenWlanBtClkDisable
+	SceClockgenForDriver_B6F0A532
 	SceClockgenForDriver_F0A0242D
-	ksceIdStorageLookup
+	sceIdStorageLookup
 	SceSysconForDriver_3FDD29D6
 	SceSysconForDriver_A2FE9BF9
 	SceSysconForDriver_CF5B2F2F
 	SceSysconForDriver_E26488B9
 	SceOledForDriver_3C990F53
-	ksceOledSetBrightness
-	ksceLcdSetBrightness
+	SceOledForDriver_F9624C47
+	SceLcdForDriver_581D3A87
 	SceLcdForDriver_8C965153
 	SceDisplayForDriver_16466675
 	SceDisplayForDriver_43347565
@@ -230,7 +230,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_9B96A1AA
 	SceCtrlForDriver_FF9D4DD4
 	SceMotionDevForDriver_031AF7A1
-	ksceMotionDevIsReady
+	SceMotionDevForDriver_10AAC8EA
 	SceHpremoteForDriver_7735C403
 	SceLedForDriver_EA24BE03
 	scePowerRequestColdReset
@@ -246,7 +246,7 @@ set(MODULE_IMPORT_FUNCS
 	scePowerCancelRequest
 	ScePowerForDriver_E4E3C316
 	SceUdcdForDriver_2D91F8C3
-	ksceUdcdGetDeviceState
+	SceUdcdForDriver_E054B5E4
 	SceMtpIfForDriver_05408B5B
 	SceMtpIfForDriver_117F7519
 	SceMtpIfForDriver_16D7DBCC

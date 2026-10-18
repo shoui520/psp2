@@ -82,7 +82,7 @@ int qmiAttachUsbTransport(int deviceId)
 	if (id != deviceId)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(id, descriptor, 4);
+		interface = SceUsbdForDriver_BC3EF82B(id, descriptor, 4);
 		descriptor = interface;
 		if (!interface)
 			return -1;
@@ -90,7 +90,7 @@ int qmiAttachUsbTransport(int deviceId)
 			break;
 	}
 	for (i = 0; i < interface->bNumEndpoints; ++i) {
-		endpoint = ksceUsbdScanStaticDescriptor(id, descriptor, 5);
+		endpoint = SceUsbdForDriver_BC3EF82B(id, descriptor, 5);
 		descriptor = endpoint;
 		if (!endpoint)
 			return -1;
@@ -103,14 +103,14 @@ int qmiAttachUsbTransport(int deviceId)
 				g_qmiUsbTransport->bulkIn = endpoint;
 		}
 	}
-	pipe = ksceUsbdOpenPipe(id, NULL);
+	pipe = SceUsbdForDriver_1CDBFF9F(id, NULL);
 	if (pipe < 0)
 		return -1;
 	g_qmiUsbTransport->controlPipe = pipe;
-	pipe = ksceUsbdOpenPipe(id, interruptEndpoint);
+	pipe = SceUsbdForDriver_1CDBFF9F(id, interruptEndpoint);
 	control = g_qmiUsbTransport;
 	if (pipe < 0) {
-		ksceUsbdClosePipe(g_qmiUsbTransport->controlPipe);
+		SceUsbdForDriver_F304DC5C(g_qmiUsbTransport->controlPipe);
 		return -1;
 	}
 	control->interruptPipe = pipe;
@@ -143,11 +143,11 @@ int qmiProbeUsbTransport(int deviceId, SceUsbdInterfaceDescriptor **interface)
 	void *start = NULL;
 
 	if (g_qmiUsbTransport &&
-	    ksceUsbdGetDeviceLocation(deviceId, &location) >= 0 && location == 1) {
-		device = ksceUsbdScanStaticDescriptor(deviceId, NULL, 1);
+	    SceUsbdForDriver_0E73D253(deviceId, &location) >= 0 && location == 1) {
+		device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, 1);
 		if (device && device->idVendor == 0x5c6 && device->idProduct == 0x9005) {
 			for (;;) {
-				descriptor = ksceUsbdScanStaticDescriptor(deviceId, start, 4);
+				descriptor = SceUsbdForDriver_BC3EF82B(deviceId, start, 4);
 				start = descriptor;
 				if (!descriptor)
 					break;
@@ -179,7 +179,7 @@ int qmiInitializeUsbTransport(void)
 	g_qmiUsbTransportStorage.subscribers[1].callback = NULL;
 	g_qmiUsbTransportStorage.subscribers[1].context = NULL;
 	g_qmiUsbTransport = &g_qmiUsbTransportStorage;
-	result = ksceUsbdRegisterCompositeLdd(&g_qmiUsbDriver);
+	result = sceUsbdRegisterCompositeLdd(&g_qmiUsbDriver);
 	if (result < 0)
 		g_qmiUsbTransport = NULL;
 	return result;
@@ -192,14 +192,14 @@ int qmiFinalizeUsbTransport(void)
 	if (!g_qmiUsbTransport)
 		return 0x80330003;
 	if (g_qmiUsbTransport->interruptPipe) {
-		ksceUsbdClosePipe(g_qmiUsbTransport->interruptPipe);
+		SceUsbdForDriver_F304DC5C(g_qmiUsbTransport->interruptPipe);
 		g_qmiUsbTransport->interruptPipe = 0;
 	}
 	if (g_qmiUsbTransport->controlPipe) {
-		ksceUsbdClosePipe(g_qmiUsbTransport->controlPipe);
+		SceUsbdForDriver_F304DC5C(g_qmiUsbTransport->controlPipe);
 		g_qmiUsbTransport->controlPipe = 0;
 	}
-	result = ksceUsbdUnregisterCompositeLdd(&g_qmiUsbDriver);
+	result = SceUsbdForDriver_7934BB4A(&g_qmiUsbDriver);
 	bbmcFinalizeFastMutex(&g_qmiUsbTransport->mutex);
 	sceKernelDeleteEventFlag(g_qmiUsbTransport->event);
 	g_qmiUsbTransport = NULL;
@@ -287,7 +287,7 @@ int qmiSubmitUsbControlIn(QmiUsbRequest *request)
 	setup.bmRequestType = 0xa1;
 	setup.wValue = 0;
 	setup.wIndex = 2;
-	return ksceUsbdControlTransfer(pipe, &setup, data,
+	return SceUsbdForDriver_2E05660F(pipe, &setup, data,
 				       qmiUsbTransferCompleted, request);
 }
 
@@ -309,7 +309,7 @@ int qmiSubmitUsbControlOut(QmiUsbRequest *request)
 	setup.bmRequestType = 0x21;
 	setup.bRequest = 0;
 	setup.wValue = 0;
-	return ksceUsbdControlTransfer(pipe, &setup, data,
+	return SceUsbdForDriver_2E05660F(pipe, &setup, data,
 				       qmiUsbTransferCompleted, request);
 }
 
@@ -325,7 +325,7 @@ int qmiSubmitUsbInterrupt(QmiUsbRequest *request)
 	data = request->data;
 	length = request->length;
 	request->transferType = 0;
-	return ksceUsbdInterruptTransfer(pipe, data, length,
+	return SceUsbdForDriver_A0BF85B8(pipe, data, length,
 					 qmiUsbTransferCompleted, request);
 }
 
@@ -334,7 +334,7 @@ int qmiOpenUsbBulkIn(void)
 	if (!g_qmiUsbTransport)
 		return 0x80330003;
 	if (g_qmiUsbTransport->deviceId)
-		return ksceUsbdOpenPipe(g_qmiUsbTransport->deviceId,
+		return SceUsbdForDriver_1CDBFF9F(g_qmiUsbTransport->deviceId,
 					g_qmiUsbTransport->bulkIn);
 	return 0x80330006;
 }
@@ -344,7 +344,7 @@ int qmiOpenUsbBulkOut(void)
 	if (!g_qmiUsbTransport)
 		return 0x80330003;
 	if (g_qmiUsbTransport->deviceId)
-		return ksceUsbdOpenPipe(g_qmiUsbTransport->deviceId,
+		return SceUsbdForDriver_1CDBFF9F(g_qmiUsbTransport->deviceId,
 					g_qmiUsbTransport->bulkOut);
 	return 0x80330006;
 }
@@ -354,7 +354,7 @@ int qmiCloseUsbPipe(int pipe)
 	if (!g_qmiUsbTransport)
 		return 0x80330003;
 	if (g_qmiUsbTransport->deviceId)
-		return ksceUsbdClosePipe(pipe);
+		return SceUsbdForDriver_F304DC5C(pipe);
 	return 0x80330006;
 }
 
@@ -363,6 +363,6 @@ int qmiGetUsbDeviceSpeed(SceUInt32 *speed)
 	if (!g_qmiUsbTransport)
 		return 0x80330003;
 	if (g_qmiUsbTransport->deviceId)
-		return ksceUsbdGetDeviceSpeed(g_qmiUsbTransport->deviceId, speed);
+		return SceUsbdForDriver_C3BECF5F(g_qmiUsbTransport->deviceId, speed);
 	return 0x80330006;
 }

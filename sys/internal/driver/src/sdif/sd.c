@@ -17,7 +17,7 @@ static const uint32_t sdClockUnits[8] = {
 	10000, 100000, 1000000, 10000000, 0, 0, 0, 0,
 };
 
-int ksceSdifInitializeSdDevice(unsigned int index, SdifContextPart **part)
+int SceSdifForDriver_C1271539(unsigned int index, SdifContextPart **part)
 {
 	SdifContextGlobal *context, *commandContext;
 	SdifContextPart *sd;
@@ -31,7 +31,7 @@ int ksceSdifInitializeSdDevice(unsigned int index, SdifContextPart **part)
 
 	if (part)
 		*part = NULL;
-	context = ksceSdifGetSdContextGlobal(index);
+	context = SceSdifForDriver_DC8F52F8(index);
 	if (!context)
 		return 0x80320013;
 	if (sceSdifReset(context, 2) < 0)
@@ -322,9 +322,9 @@ freeError:
 	return result;
 }
 
-SdifContextPart *ksceSdifGetSdContextPartValidateSd(unsigned int index)
+SdifContextPart *SceSdifForDriver_B9EA5B1E(unsigned int index)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 
 	if (!context)
 		return NULL;
@@ -335,7 +335,7 @@ SdifContextPart *ksceSdifGetSdContextPartValidateSd(unsigned int index)
 
 int SceSdifForDriver_35BA9DF8(unsigned int index, SceUID callback)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 	SdifContextPart *sd;
 	SdifSdCardParameters *parameters;
 	SdifCommand *command;
@@ -432,9 +432,9 @@ int SceSdifForDriver_35BA9DF8(unsigned int index, SceUID callback)
 	return result;
 }
 
-int ksceSdifGetCardInsertState2(unsigned int index)
+int SceSdifForDriver_FD9E5CFA(unsigned int index)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 
 	if (context)
 		return sdifIsCardInserted(context) > 0;
@@ -450,7 +450,7 @@ int SceSdifForDriver_AF702FE7(SdifContextPart *sd, uint32_t blockLength)
 	return result;
 }
 
-int ksceSdifReadSectorSd(SdifContextPart *sd, uint32_t sector,
+int SceSdifForDriver_B9593652(SdifContextPart *sd, uint32_t sector,
 			void *buffer, uint32_t count)
 {
 	SdifContextGlobal *context;

@@ -28,8 +28,6 @@ int wlanBtNotifyMonitor(unsigned int event, unsigned int argument,
 void robinWlanTcmEventReceive(SceWlanBtRobinWlanContext *context, const void *event);
 int robinWlanNotifyWorker(unsigned int flags);
 
-int SceSdifForDriver_E80293EF(SdifSdioFunction *function);
-
 void robinWlanReceiveMessages(SceWlanBtRobinWlanDcm *dcm);
 int robinWlanTransmitPackets(SceWlanBtRobinWlanDcm *dcm);
 
@@ -585,12 +583,12 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 
 int robinWlanPowerOn(void)
 {
-	int result = ksceWlanBtSetConfiguration(3);
+	int result = sceWlanBtSetConfiguration(3);
 	unsigned int retries;
 
 	if (result >= 0) {
 		retries = 100;
-		while (!(ksceWlanBtGetConfiguration() & 2)) {
+		while (!(sceWlanBtGetConfiguration() & 2)) {
 			sceKernelDelayThread(100000);
 			if (!--retries)
 				return result;
@@ -602,12 +600,12 @@ int robinWlanPowerOn(void)
 
 int robinWlanPowerOff(void)
 {
-	int result = ksceWlanBtSetConfiguration(4);
+	int result = sceWlanBtSetConfiguration(4);
 	unsigned int retries;
 
 	if (result >= 0) {
 		retries = 100;
-		while (ksceWlanBtGetConfiguration() & 2) {
+		while (sceWlanBtGetConfiguration() & 2) {
 			sceKernelDelayThread(100000);
 			if (!--retries)
 				return result;
@@ -619,12 +617,12 @@ int robinWlanPowerOff(void)
 
 int robinWlanRestart(void)
 {
-	int result = ksceWlanBtSetConfiguration(7);
+	int result = sceWlanBtSetConfiguration(7);
 	unsigned int retries;
 
 	if (result >= 0) {
 		for (retries = 1000; retries; --retries) {
-			if (ksceWlanBtGetConfiguration() & 8)
+			if (sceWlanBtGetConfiguration() & 8)
 				return 0;
 			sceKernelDelayThread(10000);
 		}
@@ -635,12 +633,12 @@ int robinWlanRestart(void)
 
 int robinWlanRequestStandby(void)
 {
-	int result = ksceWlanBtSetConfiguration(8);
+	int result = sceWlanBtSetConfiguration(8);
 	unsigned int retries;
 
 	if (result >= 0) {
 		for (retries = 1000; retries; --retries) {
-			if (ksceWlanBtGetConfiguration() & 0x20)
+			if (sceWlanBtGetConfiguration() & 0x20)
 				return 0;
 			sceKernelDelayThread(10000);
 		}
@@ -724,7 +722,7 @@ int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm)
 	unsigned int lowPort, middlePort;
 	int result;
 
-	dcm->sdioContext = ksceSdifGetSdContextPartValidateSdio(2);
+	dcm->sdioContext = SceSdifForDriver_6A8235FC(2);
 	if (!dcm->sdioContext)
 		return 0x80418007;
 	identifier.manufacturerId = 0x2df;

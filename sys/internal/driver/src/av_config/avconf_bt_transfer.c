@@ -48,7 +48,7 @@ int avConfigBtReceiveThread(SceSize arglen, void *argp)
 			size = 480;
 			interval = 15000;
 		}
-		received = ksceBtRecvAudio(avConfigBtReceiveAddress,
+		received = SceBtForDriver_CD7C0492(avConfigBtReceiveAddress,
 					 avConfigBtReceiveSamples, size);
 		deadline = (SceUInt64)sceKernelGetSystemTimeWide() + interval;
 		for (;;) {
@@ -61,7 +61,7 @@ int avConfigBtReceiveThread(SceSize arglen, void *argp)
 			if (now < deadline)
 				sceKernelDelayThread((unsigned int)(deadline - now));
 			deadline += interval;
-			received = ksceBtRecvAudio(avConfigBtReceiveAddress,
+			received = SceBtForDriver_CD7C0492(avConfigBtReceiveAddress,
 						 avConfigBtReceiveSamples, size);
 		}
 	}
@@ -99,7 +99,7 @@ int avConfigBtSendThread(SceSize arglen, void *argp)
 			previous = buffer;
 			buffer = avConfigBtSendSamples[bank];
 			SceAudioForDriver_81EB0AE5(0, previous, words);
-			ksceBtSendAudio(avConfigBtSendAddress, buffer, size);
+			SceBtForDriver_47F19727(avConfigBtSendAddress, buffer, size);
 			sceKernelPollEventFlag(avConfigBtSendEvent, 2, 5, &bits);
 		} while (bits != 2);
 		SceAudioForDriver_134C96C1(48000);

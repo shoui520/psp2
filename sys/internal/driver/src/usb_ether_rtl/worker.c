@@ -133,10 +133,10 @@ static void suspendAdapter(struct RtlAdapter *a)
 				SceDebugForDriver_391B74B7("Set Low Power Mode : NG (ret=0x%08x)\n", ret);
 			} else {
 				SceDebugForDriver_391B74B7("Set Low Power Mode : OK\n");
-				ksceUsbServDisableEtherSuspend();
+				SceUsbServForDriver_6D738018();
 			}
 		} else {
-			ksceUsbServDisableEtherSuspend();
+			SceUsbServForDriver_6D738018();
 		}
 	}
 	__atomic_fetch_and(&a->flags, ~12U, __ATOMIC_SEQ_CST);

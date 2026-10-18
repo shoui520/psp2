@@ -16,7 +16,7 @@ struct touchDeviceInfo {
 
 _Static_assert(sizeof(struct touchDeviceInfo) == 12, "touch device info size");
 
-int ksceTouchGetDeviceInfo(unsigned port, struct touchDeviceInfo *out);
+int SceTouchForDriver_FD2E0278(unsigned port, struct touchDeviceInfo *out);
 
 /* Sony's SDK touch.h types, as the kernel touch drivers keep them */
 #define SCE_TOUCH_PORT_FRONT	0
@@ -63,7 +63,7 @@ typedef struct TouchVirtualDriver {
 _Static_assert(sizeof(TouchVirtualSampleRequest) == 24, "virtual touch sample request");
 _Static_assert(sizeof(TouchVirtualDriver) == 4, "virtual touch driver");
 
-int ksceTouchRegisterVirtualTouchDriver(const TouchVirtualDriver *driver);
+int SceTouchForDriver_03C3AC7C(const TouchVirtualDriver *driver);
 
 /* Front-to-back process order used for touch-region ownership. */
 typedef struct TouchProcessPriorities {
@@ -77,3 +77,47 @@ _Static_assert(offsetof(TouchProcessPriorities, processIds) == 4, "touch priorit
 
 int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities);
 
+
+int SceTouchForDriver_10A998DE(unsigned port, unsigned region, unsigned attr);
+int SceTouchForDriver_1247257A(unsigned port, unsigned state);
+int SceTouchForDriver_174D0333(unsigned port, unsigned *state);
+int SceTouchForDriver_328E38B0(unsigned port, int enable);
+int SceTouchForDriver_384F6C68(unsigned port, unsigned timeout);
+int SceTouchForDriver_423F26D3(void);
+int SceTouchForDriver_63DCF2FE(void);
+int SceTouchForDriver_70C8AACE(unsigned port, SceTouchData *out, unsigned count);
+int SceTouchForDriver_7985B164(unsigned port, unsigned region, const short *rect, unsigned attr);
+int SceTouchForDriver_937DB4C0(unsigned port, SceTouchPanelInfo *out);
+int SceTouchForDriver_9A91F624(unsigned port, SceTouchData *out, unsigned count, unsigned regions);
+int SceTouchForDriver_9B3F7207(unsigned port, SceTouchData *out, unsigned count, unsigned regions);
+int SceTouchForDriver_A32529B8(const SceTouchData *front, const SceTouchData *back);
+int SceTouchForDriver_BAD1960B(unsigned port, SceTouchData *out, unsigned count);
+int SceTouchForDriver_C7F0DAA0(unsigned port, unsigned region, unsigned enable);
+int SceTouchForDriver_CDE79889(unsigned port);
+int SceTouchForDriver_DDCF5145(void);
+int SceTouchForDriver_E1C5D95F(unsigned port, unsigned region);
+int SceTouchForDriver_E41B4BF8(unsigned port);
+int SceTouchForDriver_EBF4C86A(unsigned port, int enable);
+int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable);
+int sceTouchClearRegion(unsigned port, unsigned region);
+int sceTouchDisableTouchForce(unsigned port);
+int sceTouchDisableTouchForceExt(unsigned port);
+int sceTouchEnableIdleTimerCancelSetting(unsigned port, int enable);
+int sceTouchEnableTouchForce(unsigned port);
+int sceTouchEnableTouchForceExt(unsigned port);
+int sceTouchGetDeviceInfo(unsigned port, void *out);
+int sceTouchGetPixelDensity(void *front, void *back);
+int sceTouchGetPixelDensity2(void *frontX, void *frontY, void *backX, void *backY);
+int sceTouchGetSamplingStateExt(unsigned port, void *out);
+int sceTouchPeek2(unsigned device, unsigned port, void *out, unsigned count);
+int sceTouchPeekRegion(unsigned port, void *out, unsigned count, unsigned regions);
+int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned regions);
+int sceTouchRead2(unsigned device, unsigned port, void *out, unsigned count);
+int sceTouchReadRegion(unsigned port, void *out, unsigned count, unsigned regions);
+int sceTouchReadRegionExt(unsigned port, void *out, unsigned count, unsigned regions);
+int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *));
+int sceTouchSetProcessPrivilege(unsigned privilege);
+int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned attr);
+int sceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr);
+int sceTouchSetSamplingState(unsigned port, unsigned state);
+int sceTouchSetSamplingStateExt(unsigned port, unsigned state);

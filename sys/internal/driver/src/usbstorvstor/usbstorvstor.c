@@ -1,7 +1,7 @@
 /* SceUsbstorVStorDriver: file-backed USB storage. Private names unknown. */
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2kern/udcd.h>
+#include <udcd/udcd.h>
 #include <acmgr/acmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
@@ -770,7 +770,7 @@ static int startStorage(int type)
 		0x93, 0x9a, 0x8d, 0xd1, 0x96, 0x92, 0x98,
 	};
 
-	if (ksceUdcdGetDeviceStateInternal(2) & 0x2000)
+	if (SceUdcdForDriver_409DD196(2) & 0x2000)
 		return VSTOR_ERROR_ACTIVE;
 	unsigned prefix;
 	if (type == USBSTOR_TYPE_DISK) {
@@ -797,13 +797,13 @@ static int startStorage(int type)
 			return VSTOR_ERROR_LOCATION;
 	}
 	s.type = type;
-	result = ksceUdcdStart("USBDeviceControllerDriver", 0, NULL);
+	result = sceUdcdStart("USBDeviceControllerDriver", 0, NULL);
 	if (result < 0)
 		return result;
-	result = ksceUdcdStart("USBStor_Driver", s.type, NULL);
+	result = sceUdcdStart("USBStor_Driver", s.type, NULL);
 	if (result < 0)
 		return result;
-	result = ksceUdcdActivate(product);
+	result = sceUdcdActivate(product);
 	return result < 0 ? result : 0;
 }
 
@@ -917,14 +917,14 @@ int sceUsbstorVStorStop(void)
 
 	if (authorized()) {
 		s.type = USBSTOR_TYPE_NONE;
-		if (ksceUdcdGetDrvState("USBStor_Driver") != 2) {
+		if (SceUdcdForDriver_C0CA5DDB("USBStor_Driver") != 2) {
 			result = VSTOR_ERROR_INACTIVE;
 		} else {
-			result = ksceUdcdDeactivate();
+			result = SceUdcdForDriver_8AE87657();
 			if (result >= 0) {
-				result = ksceUdcdStop("USBStor_Driver", 0, NULL);
+				result = SceUdcdForDriver_1494293B("USBStor_Driver", 0, NULL);
 				if (result >= 0) {
-					result = ksceUdcdStop("USBDeviceControllerDriver", 0, NULL);
+					result = SceUdcdForDriver_1494293B("USBDeviceControllerDriver", 0, NULL);
 					if (result >= 0)
 						result = 0;
 				}

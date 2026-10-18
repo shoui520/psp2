@@ -175,19 +175,19 @@ set(MODULE_IMPORT_FUNCS
 	SceDisplayForDriver_AF5EE5BE
 	SceDisplayForDriver_B3C6D647
 	SceDisplayForDriver_EB390A76
-	ksceBtRegisterCallback
-	ksceBtSendAudio
-	ksceBtStartDisconnect
-	ksceBtReadEvent
-	ksceBtAvrcpSendVolume
-	ksceBtStartAudio
-	ksceBtAvrcpReadVolume
-	ksceBtStopAudio
-	ksceBtRecvAudio
-	ksceBtFreqAudio
-	ksceBtGetConnectingInfo
-	ksceBtAvrcpSendButton
-	ksceBtGetRegisteredInfo
+	SceBtForDriver_120AC1F7
+	SceBtForDriver_47F19727
+	SceBtForDriver_50710281
+	SceBtForDriver_5ABB9A9D
+	SceBtForDriver_7689DA3D
+	SceBtForDriver_8D47CABD
+	SceBtForDriver_C9C70056
+	SceBtForDriver_CAE5A9F3
+	SceBtForDriver_CD7C0492
+	SceBtForDriver_DA20DCC8
+	SceBtForDriver_E9936446
+	SceBtForDriver_EC5F8519
+	SceBtForDriver_F86D25E2
 	SceHdmiForDriver_08AFFB03
 	SceHdmiForDriver_0F12364A
 	SceHdmiForDriver_291F000B
@@ -214,7 +214,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_9F26222A
 	ScePowerForDriver_D8759B55
 	SceSysconForDriver_CBD6D8BC
-	ksceIdStorageLookup
+	sceIdStorageLookup
 	SceCompatForDriver_6EBD9E01
 )
 set(MODULE_IMPORT_VARS

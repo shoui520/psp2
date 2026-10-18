@@ -103,17 +103,17 @@ set(MODULE_IMPORT_FUNCS
 	SceGpioForDriver_372022A4
 	SceGpioForDriver_D454A584
 	SceGpioForDriver_F6310435
-	ksceUsbdOpenPipe
-	ksceUsbdRegisterDriver
-	ksceUsbdUnregisterDriver
-	ksceUsbdControlTransfer
-	ksceUsbdBulkTransfer2
-	ksceUsbdScanStaticDescriptor
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_1EC94F18
+	SceUsbdForDriver_216F108D
+	SceUsbdForDriver_2E05660F
+	SceUsbdForDriver_470D5289
+	SceUsbdForDriver_BC3EF82B
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
 	SceSysconForDriver_CBD6D8BC
 	sceRegMgrGetKeyInt
-	ksceUsbServDisableEtherSuspend
+	SceUsbServForDriver_6D738018
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -1,6 +1,6 @@
 #include "hid_internal.h"
 
-int ksceHidControllerEnumerate(SceUID *handles, int maxCount)
+int SceHidForDriver_480D225F(SceUID *handles, int maxCount)
 {
 	return (int)0x803B0004;
 }
@@ -10,7 +10,7 @@ int sceHidControllerEnumerate(SceUID *handles, int maxCount)
 	return (int)0x803B0004;
 }
 
-int ksceHidControllerRead(SceUID handle, void *reports, int count)
+int SceHidForDriver_F7470359(SceUID handle, void *reports, int count)
 {
 	return (int)0x803B0004;
 }

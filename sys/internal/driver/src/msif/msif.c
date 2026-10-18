@@ -862,7 +862,7 @@ unlock:
 	return result;
 }
 
-int ksceMsifGetMsInfo(SceMsInfo *info)
+int SceMsifForDriver_D0307849(SceMsInfo *info)
 {
 	struct MsproalMediaInformation information;
 	struct MsproalHandle *handle;
@@ -954,7 +954,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 	return 0;
 }
 
-int ksceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
+int SceMsifForDriver_58654AA3(uint32_t sector, uint8_t *data, unsigned int count)
 {
 	int result;
 
@@ -970,7 +970,7 @@ int ksceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 	return result;
 }
 
-int ksceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
+int sceMsifWriteSector(uint32_t sector, uint8_t *data, unsigned int count)
 {
 	struct MsproalMediaInformation information;
 	uint64_t startTime;
@@ -1305,7 +1305,7 @@ unlock:
 	return result;
 }
 
-int ksceMsifEnableSlowMode(void)
+int sceMsifEnableSlowCardMode(void)
 {
 #if FW_DEBUG
 	SceDebugForDriver_D9703808(1, 0,
@@ -1316,7 +1316,7 @@ int ksceMsifEnableSlowMode(void)
 	return 0;
 }
 
-int ksceMsifDisableSlowMode(void)
+int sceMsifDisableSlowCardMode(void)
 {
 #if FW_DEBUG
 	SceDebugForDriver_D9703808(1, 0,
@@ -1327,7 +1327,7 @@ int ksceMsifDisableSlowMode(void)
 	return 0;
 }
 
-int ksceMsifGetSlowModeState(void)
+int SceMsifForDriver_491E25B5(void)
 {
 	return gMsifContext.slowCardMode;
 }

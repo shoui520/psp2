@@ -6,7 +6,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 #include <psp2/usbaudioin.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
@@ -18,12 +18,8 @@
 
 #include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
-int ksceUsbAudioGetDeviceIdList(unsigned *list, int size);
-int ksceUsbAudioRegisterCallback(int callback);
-int ksceUsbAudioUnregisterCallback(int callback);
-int ksceUsbAudioInput(unsigned device, void *buffer, unsigned size);
-int ksceUsbAudioInput2(unsigned device, void *buffer, unsigned size);
-int SceUsbAudioIn_198A7C33(SceUInt32 device, SceUInt32 *volume);
+#include <usbaudio/usbaudio.h>
+#include <usbaudio/usbaudioin.h>
 
 /* USB Audio Class 1.0 */
 #define UAC_SUBCLASS_AUDIOCONTROL	0x01

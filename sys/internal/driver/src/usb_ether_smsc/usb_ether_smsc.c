@@ -11,9 +11,9 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/usbd.h>
-#include <psp2kern/usbserv.h>
-#include <psp2kern/idstorage.h>
+#include <usbd/usbd.h>
+#include <usbserv/usbserv.h>
+#include <idstorage/idstorage.h>
 #include <psp2common/net.h>
 #include <stddef.h>
 #include <string.h>
@@ -221,7 +221,7 @@ static int readRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, un
 	s_readRequest.wIndex = reg;
 	s_readRequest.wLength = sizeof(s_readValue);
 	s_readValue = 0;
-	ret = ksceUsbdControlTransfer(a->controlPipe, &s_readRequest, (unsigned char *)&s_readValue, onControlTransferCompletion, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &s_readRequest, (unsigned char *)&s_readValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
 		ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
@@ -247,7 +247,7 @@ static int writeRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, u
 	s_writeRequest.wIndex = reg;
 	s_writeRequest.wLength = sizeof(s_writeValue);
 	s_writeValue = value;
-	ret = ksceUsbdControlTransfer(a->controlPipe, &s_writeRequest, (unsigned char *)&s_writeValue, onControlTransferCompletion, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &s_writeRequest, (unsigned char *)&s_writeValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
 		ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
 				      SCE_KERNEL_EVF_WAITMODE_OR |
@@ -277,11 +277,11 @@ static void usbEtherSmscOnRxTransferCompletion(int result, int count, void *arg)
 }
 static int sendBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
 {
-	return ksceUsbdBulkTransfer2(a->txPipe, data, length, usbEtherSmscOnTxTransferCompletion, a);
+	return SceUsbdForDriver_470D5289(a->txPipe, data, length, usbEtherSmscOnTxTransferCompletion, a);
 }
 static int receiveBuffer(struct SceUsbEtherSmscContext *a, void *data, unsigned int length)
 {
-	return ksceUsbdBulkTransfer2(a->rxPipe, data, length, usbEtherSmscOnRxTransferCompletion, a);
+	return SceUsbdForDriver_470D5289(a->rxPipe, data, length, usbEtherSmscOnRxTransferCompletion, a);
 }
 
 static int connected(struct SceUsbEtherSmscContext *a)
@@ -309,7 +309,7 @@ static int probeDevice(int device)
 	SceUsbdInterfaceDescriptor *iface;
 	void *scan;
 
-	desc = ksceUsbdScanStaticDescriptor(device, NULL, 1);
+	desc = SceUsbdForDriver_BC3EF82B(device, NULL, 1);
 	if (!desc)
 		return -1;
 	if (desc->idVendor == SMSC_VENDOR) {
@@ -321,7 +321,7 @@ static int probeDevice(int device)
 	}
 	s_probed = 1;
 	scan = desc;
-	while ((iface = ksceUsbdScanStaticDescriptor(device, scan, 4))) {
+	while ((iface = SceUsbdForDriver_BC3EF82B(device, scan, 4))) {
 		if (iface->bInterfaceClass == 0xff)
 			return 0;
 		scan = iface;
@@ -343,24 +343,24 @@ static int onAttach(int device)
 	ret = sceKernelClearEventFlag(a->controlEvent, 0);
 	if (ret < 0)
 		return ret;
-	scan = ksceUsbdScanStaticDescriptor(device, NULL, 1);
+	scan = SceUsbdForDriver_BC3EF82B(device, NULL, 1);
 	if (!scan)
 		return -1;
-	while ((iface = ksceUsbdScanStaticDescriptor(device, scan, 4))) {
-		a->controlPipe = ksceUsbdOpenPipe(device, NULL);
+	while ((iface = SceUsbdForDriver_BC3EF82B(device, scan, 4))) {
+		a->controlPipe = SceUsbdForDriver_1CDBFF9F(device, NULL);
 		if (a->controlPipe < 0)
 			return -1;
 		scan = iface;
 		endpoint = (void *)iface;
 		for (i = 0; i < iface->bNumEndpoints; i++) {
-			endpoint = ksceUsbdScanStaticDescriptor(device, endpoint, 5);
+			endpoint = SceUsbdForDriver_BC3EF82B(device, endpoint, 5);
 			if ((endpoint->bEndpointAddress & 0x1f) == 1) {
-				a->rxPipe = ksceUsbdOpenPipe(device, endpoint);
+				a->rxPipe = SceUsbdForDriver_1CDBFF9F(device, endpoint);
 				if (a->rxPipe < 0)
 					return -1;
 				a->rxMaxPacket = endpoint->wMaxPacketSize;
 			} else if ((endpoint->bEndpointAddress & 0x1f) == 2) {
-				a->txPipe = ksceUsbdOpenPipe(device, endpoint);
+				a->txPipe = SceUsbdForDriver_1CDBFF9F(device, endpoint);
 				if (a->txPipe < 0)
 					return -1;
 				a->txMaxPacket = endpoint->wMaxPacketSize;
@@ -374,7 +374,7 @@ static int onAttach(int device)
 	request.wValue = 1;
 	request.wIndex = 0;
 	request.wLength = 0;
-	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
@@ -385,7 +385,7 @@ static int onAttach(int device)
 	request.bmRequestType = 1;
 	request.bRequest = 0xb;
 	request.wValue = 0;
-	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
+	ret = SceUsbdForDriver_2E05660F(a->controlPipe, &request, NULL, onControlTransferCompletion, a);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
@@ -393,7 +393,7 @@ static int onAttach(int device)
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceUsbdGetDeviceSpeed(device, &speed);
+	ret = SceUsbdForDriver_C3BECF5F(device, &speed);
 	if (ret < 0)
 		return ret;
 	a->bufferSize = speed == 1 ? 0x1ec0 : 0x4a00;
@@ -422,12 +422,12 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 	}
 	hardware = SceSysconForDriver_CBD6D8BC();
 	if ((hardware & 0xff0000) != 0x100000)
-		return ksceUsbdRegisterDriver(&s_driver);
-	ret = ksceUsbServMacSelect(2, 0);
+		return SceUsbdForDriver_1EC94F18(&s_driver);
+	ret = SceUsbServForDriver_7AD36284(2, 0);
 	if (ret < 0 && ret != (int)0x80248001)
 		return ret;
 	s_probed = 0;
-	ret = ksceUsbdRegisterDriver(&s_driver);
+	ret = SceUsbdForDriver_1EC94F18(&s_driver);
 	if (ret < 0)
 		return ret;
 	for (n = 0; n < 50; n++) {
@@ -435,8 +435,8 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 			return 0;
 		sceKernelDelayThread(10000);
 	}
-	ksceUsbdUnregisterDriver(&s_driver);
-	ret = ksceUsbServMacSelect(2, 1);
+	SceUsbdForDriver_216F108D(&s_driver);
+	ret = SceUsbServForDriver_7AD36284(2, 1);
 	return ret < 0 ? ret : SMSC_ERROR_NO_DEVICE;
 }
 
@@ -894,7 +894,7 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 	if (ret < 0)
 		return ret;
 	if (SceSblAIMgrForDriver_C6E83F34()) {
-		ret = ksceIdStorageLookup(0x119, 0, mac, 6);
+		ret = sceIdStorageLookup(0x119, 0, mac, 6);
 		if (ret < 0)
 			return ret;
 	} else {

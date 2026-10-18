@@ -164,13 +164,13 @@ void ewInitDisplay(void)
 	memcpy(ewg.ew.icon, &p[i + 5], 90 * 70 * 3);
 
 	ewg.ew.blank = 0;
-	if (ksceOledSetBrightness) {
+	if (SceOledForDriver_F9624C47) {
 		ewg.ew.haveBrightness = 1;
-		ewg.ew.setBrightness = ksceOledSetBrightness;
+		ewg.ew.setBrightness = SceOledForDriver_F9624C47;
 		ewg.ew.displayOn = SceOledForDriver_3C990F53;
-	} else if (ksceLcdSetBrightness) {
+	} else if (SceLcdForDriver_581D3A87) {
 		ewg.ew.haveBrightness = 1;
-		ewg.ew.setBrightness = ksceLcdSetBrightness;
+		ewg.ew.setBrightness = SceLcdForDriver_581D3A87;
 		ewg.ew.displayOn = SceLcdForDriver_8C965153;
 	} else {
 		ewg.ew.haveBrightness = 1;
@@ -281,7 +281,7 @@ clocks:
 		SceSysconForDriver_3FDD29D6(1, 0);
 		SceHpremoteForDriver_7735C403();
 		SceClockgenForDriver_F0A0242D();
-		ksceClockgenWlanBtClkDisable();
+		SceClockgenForDriver_B6F0A532();
 		SceClockgenForDriver_82F39378();
 		ScePowerForDriver_C743E392(0);
 		SceGpioForDriver_372022A4(0, 10, 0);
@@ -392,7 +392,7 @@ clocks:
 				if (ewg.ew.mode != EW_MODE_DISPLAY) {
 motion:
 					if (ewg.ew.motionFlags != 1 && !(ewg.ew.motionFlags & 1)
-					    && ksceMotionDevIsReady()) {
+					    && SceMotionDevForDriver_10AAC8EA()) {
 						SceMotionDevForDriver_031AF7A1();
 						ewg.ew.motionFlags |= 1;
 					}
@@ -401,7 +401,7 @@ motion:
 
 			/* charging state */
 			SceSysconForDriver_A2FE9BF9(&charger);
-			if ((ksceUdcdGetDeviceState() & 2) && (charger & 0xf00) != 0x200) {
+			if ((SceUdcdForDriver_E054B5E4() & 2) && (charger & 0xf00) != 0x200) {
 				if (!ewg.ew.connected) {
 					if (ewg.ew.timer > 0) {
 						sceKernelCancelAlarm(ewg.ew.timer);

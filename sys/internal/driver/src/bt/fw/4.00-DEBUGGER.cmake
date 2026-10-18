@@ -157,7 +157,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSdifForDriver_0C66E36F
 	SceSdifForDriver_3428884D
 	SceSdifForDriver_3C4CDC8B
-	ksceSdifGetSdContextPartValidateSdio
+	SceSdifForDriver_6A8235FC
 	SceSdifForDriver_733BC373
 	SceSdifForDriver_D0F78D9B
 	SceSdifForDriver_E80293EF
@@ -167,8 +167,8 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeyBin
 	sceRegMgrSetKeyInt
-	ksceWlanBtGetConfiguration
-	ksceWlanBtSetConfiguration
+	sceWlanBtGetConfiguration
+	sceWlanBtSetConfiguration
 	SceSysconForDriver_CBD6D8BC
 )
 set(MODULE_IMPORT_VARS

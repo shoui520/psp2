@@ -11,13 +11,13 @@ SceUsbServ:
       version: 1
       nid: 0xA75BBDF2
       functions:
-        - ksceUsbServEtherEnable: 0x30AE5F66
-        - ksceUsbServDisableEtherSuspend: 0x6D738018
-        - ksceUsbServMacSelect: 0x7AD36284
-        - ksceUsbServAccessoryDeactivate: 0x853CB8E4
-        - ksceUsbServAccessoryActivate: 0xAA6D4409
-        - ksceUsbServEtherDisable: 0xD787B191
-        - ksceUsbServMacGet: 0xF0553A69
+        - sceUsbServEtherEnable: 0x30AE5F66
+        - SceUsbServForDriver_6D738018: 0x6D738018
+        - SceUsbServForDriver_7AD36284: 0x7AD36284
+        - SceUsbServForDriver_853CB8E4: 0x853CB8E4
+        - SceUsbServForDriver_AA6D4409: 0xAA6D4409
+        - sceUsbServEtherDisable: 0xD787B191
+        - SceUsbServForDriver_F0553A69: 0xF0553A69
     SceUsbServ:
       syscall: true
       version: 1

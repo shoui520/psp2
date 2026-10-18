@@ -125,7 +125,7 @@ static __always_inline void hubSubmitRequest(Hub *hub)
 		return;
 	USBD_LIST_REMOVE(hub->requestHead, hub->requestTail, request);
 	hub->request = request;
-	ksceUsbdControlTransfer(hub->controlPipe, &request->setup,
+	SceUsbdForDriver_2E05660F(hub->controlPipe, &request->setup,
 				request->setup.wLength != 0 ? (unsigned char *)hub->portStatusBuffer : NULL,
 				hubControlDone, hub);
 }
@@ -184,7 +184,7 @@ static void hubSetConfigurationDone(int result, int count, void *arg)
 	setup.wValue = HUB_DESCRIPTOR_TYPE << 8;
 	setup.wIndex = 0;
 	setup.wLength = 32;
-	ksceUsbdControlTransfer(hub->controlPipe, &setup, (unsigned char *)hub->descriptor,
+	SceUsbdForDriver_2E05660F(hub->controlPipe, &setup, (unsigned char *)hub->descriptor,
 				hubGetDescriptorDone, hub);
 }
 
@@ -192,7 +192,7 @@ static int hubProbe(int deviceId)
 {
 	SceUsbdDeviceDescriptor *device;
 
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL || device->bDeviceClass != SCE_USBD_CLASS_HUB)
 		return -1;
 	if (device->bNumConfigurations != 1)
@@ -228,23 +228,23 @@ static int hubAttach(int deviceId)
 	USBD_LIST_APPEND(s_hubHead, s_hubTail, hub);
 
 	/* one interface with one interrupt IN endpoint */
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL)
 		goto fail;
 	hub->protocol = device->bDeviceProtocol;
-	configuration = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION);
+	configuration = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION);
 	if (configuration == NULL || configuration->bNumInterfaces != 1)
 		goto fail;
-	interface = ksceUsbdScanStaticDescriptor(deviceId, configuration, SCE_USBD_DESCRIPTOR_INTERFACE);
+	interface = SceUsbdForDriver_BC3EF82B(deviceId, configuration, SCE_USBD_DESCRIPTOR_INTERFACE);
 	if (interface == NULL || interface->bNumEndpoints != 1)
 		goto fail;
-	endpoint = ksceUsbdScanStaticDescriptor(deviceId, interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
+	endpoint = SceUsbdForDriver_BC3EF82B(deviceId, interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
 	if (endpoint == NULL || !(endpoint->bEndpointAddress & SCE_USBD_ENDPOINT_DIRECTION_IN) ||
 	    (endpoint->bmAttributes & SCE_USBD_ENDPOINT_TRANSFER_TYPE_BITS) !=
 	    SCE_USBD_ENDPOINT_TRANSFER_TYPE_INTERRUPT)
 		goto fail;
 
-	pipe = ksceUsbdOpenPipe(deviceId, endpoint);
+	pipe = SceUsbdForDriver_1CDBFF9F(deviceId, endpoint);
 	if (pipe < 0)
 		goto fail;
 	hub->interruptPipe = pipe;
@@ -252,7 +252,7 @@ static int hubAttach(int deviceId)
 	if (length > HUB_BUFFER_SIZE)
 		length = HUB_BUFFER_SIZE;
 	hub->interruptLength = length;
-	pipe = ksceUsbdOpenPipe(deviceId, NULL);
+	pipe = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 	if (pipe < 0)
 		goto closeInterrupt;
 	hub->controlPipe = pipe;
@@ -262,12 +262,12 @@ static int hubAttach(int deviceId)
 	setup.wValue = configuration->bConfigurationValue;
 	setup.wIndex = 0;
 	setup.wLength = 0;
-	if (ksceUsbdControlTransfer(hub->controlPipe, &setup, NULL, hubSetConfigurationDone, hub) >= 0)
+	if (SceUsbdForDriver_2E05660F(hub->controlPipe, &setup, NULL, hubSetConfigurationDone, hub) >= 0)
 		return 0;
 
-	ksceUsbdClosePipe(hub->controlPipe);
+	SceUsbdForDriver_F304DC5C(hub->controlPipe);
 closeInterrupt:
-	ksceUsbdClosePipe(hub->interruptPipe);
+	SceUsbdForDriver_F304DC5C(hub->interruptPipe);
 fail:
 	USBD_LIST_REMOVE(s_hubHead, s_hubTail, hub);
 	USBD_LIST_APPEND(s_hubFreeHead, s_hubFreeTail, hub);
@@ -317,7 +317,7 @@ static __always_inline void hubWaitStatusChange(Hub *hub)
 	if (hub->interruptPending)
 		return;
 	hub->interruptPending = 1;
-	ksceUsbdInterruptTransfer(hub->interruptPipe, hub->statusChange, hub->interruptLength,
+	SceUsbdForDriver_A0BF85B8(hub->interruptPipe, hub->statusChange, hub->interruptLength,
 				  hubStatusChange, hub);
 }
 
@@ -452,7 +452,7 @@ int hubInit(void)
 		hub->portStatusBuffer = pool->portStatus[i];
 		USBD_LIST_APPEND(s_hubFreeHead, s_hubFreeTail, hub);
 	}
-	result = ksceUsbdRegisterDriver(&s_hubDriver);
+	result = SceUsbdForDriver_1EC94F18(&s_hubDriver);
 	if (result < 0) {
 		usbdFree(pool);
 		return result;

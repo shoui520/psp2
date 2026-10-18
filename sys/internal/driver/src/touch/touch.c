@@ -1746,27 +1746,27 @@ static inline int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 	return ret;
 }
 
-int ksceTouchRead(unsigned port, SceTouchData *out, unsigned count)
+int SceTouchForDriver_70C8AACE(unsigned port, SceTouchData *out, unsigned count)
 {
 	return readPhysical(port, out, count, 1, 0, 0);
 }
 
-int ksceTouchPeek(unsigned port, SceTouchData *out, unsigned count)
+int SceTouchForDriver_BAD1960B(unsigned port, SceTouchData *out, unsigned count)
 {
 	return readPhysical(port, out, count, 1, 0, 1);
 }
 
-int ksceTouchReadRegion(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
+int SceTouchForDriver_9A91F624(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
 {
 	return readPhysical(port, out, count, regions, 0, 0);
 }
 
-int ksceTouchPeekRegion(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
+int SceTouchForDriver_9B3F7207(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
 {
 	return readPhysical(port, out, count, regions, 0, 1);
 }
 
-/* name unknown: ksceTouchReadRegion of the Ext sampling */
+/* name unknown: SceTouchForDriver_9A91F624 of the Ext sampling */
 static int readRegionExt(unsigned port, SceTouchData *out, unsigned count, unsigned regions)
 {
 	return readPhysical(port, out, count, regions, 1, 0);
@@ -1819,7 +1819,7 @@ static int setSampling(unsigned port, unsigned state, unsigned kind) /* name unk
 	return ret;
 }
 
-int ksceTouchSetSamplingState(unsigned port, unsigned state)
+int SceTouchForDriver_1247257A(unsigned port, unsigned state)
 {
 	return setSampling(port, state, 0);
 }
@@ -1849,7 +1849,7 @@ static int getSampling(unsigned port, unsigned *state, unsigned kind) /* name un
 	return ret;
 }
 
-int ksceTouchGetSamplingState(unsigned port, unsigned *state)
+int SceTouchForDriver_174D0333(unsigned port, unsigned *state)
 {
 	return getSampling(port, state, 0);
 }
@@ -1879,7 +1879,7 @@ static int setForce(unsigned port, unsigned enable, unsigned kind) /* name unkno
 	return ret;
 }
 
-int ksceTouchEnableTouchForce(unsigned port)
+int SceTouchForDriver_E41B4BF8(unsigned port)
 {
 	return setForce(port, 1, 0);
 }
@@ -1890,7 +1890,7 @@ static int enableTouchForceExt(unsigned port)
 	return setForce(port, 1, 1);
 }
 
-int ksceTouchDisableTouchForce(unsigned port)
+int SceTouchForDriver_CDE79889(unsigned port)
 {
 	return setForce(port, 0, 0);
 }
@@ -1901,7 +1901,7 @@ static int disableTouchForceExt(unsigned port)
 	return setForce(port, 0, 1);
 }
 
-int ksceTouchSetEnableFlag(unsigned port, int enable)
+int SceTouchForDriver_328E38B0(unsigned port, int enable)
 {
 	struct touchTracking *tracking;
 	unsigned intr;
@@ -1928,7 +1928,7 @@ static int validRegion(unsigned port, const short *rect, int positive) /* name u
 		rect[1] + rect[3] - 1 <= panel->maxAaY;
 }
 
-int ksceTouchSetRegion(unsigned port, unsigned region, const short *rect, unsigned attr)
+int SceTouchForDriver_7985B164(unsigned port, unsigned region, const short *rect, unsigned attr)
 {
 	struct touchProcess *process;
 	struct touchRegion *dest;
@@ -1975,7 +1975,7 @@ int SceTouchForDriver_E1C5D95F(unsigned port, unsigned region)
 	return ret;
 }
 
-int ksceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr)
+int SceTouchForDriver_10A998DE(unsigned port, unsigned region, unsigned attr)
 {
 	struct touchProcess *process;
 	unsigned intr;
@@ -1994,7 +1994,7 @@ int ksceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr)
 	return ret;
 }
 
-int ksceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
+int SceTouchForDriver_C7F0DAA0(unsigned port, unsigned region, unsigned enable)
 {
 	struct touchProcess *process;
 	struct touchRegion *dest;
@@ -2037,7 +2037,7 @@ int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 	return 0;
 }
 
-int ksceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *))
+int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *))
 {
 	unsigned intr;
 
@@ -2049,7 +2049,7 @@ int ksceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *))
 	return 0;
 }
 
-int ksceTouchRegisterVirtualTouchDriver(const TouchVirtualDriver *driver)
+int SceTouchForDriver_03C3AC7C(const TouchVirtualDriver *driver)
 {
 	return 0;
 }
@@ -2061,7 +2061,7 @@ void SceTouchForDriver_845E2115(unsigned enable)
 	setFilterEnable(enable);
 }
 
-int ksceTouchGetPanelInfo(unsigned port, SceTouchPanelInfo *out)
+int SceTouchForDriver_937DB4C0(unsigned port, SceTouchPanelInfo *out)
 {
 	if (port >= TOUCH_PORTS || !out)
 		return TOUCH_ERROR(1);
@@ -2118,7 +2118,7 @@ struct touchProcessInfo {
 
 _Static_assert(sizeof(struct touchProcessInfo) == 0x884, "process info layout");
 
-int ksceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
+int SceTouchForDriver_4DF3A37C(unsigned port, struct touchProcessInfo *out)
 {
 	struct touchProcess *process;
 	unsigned intr, i;
@@ -2140,7 +2140,7 @@ int ksceTouchGetProcessInfo(unsigned port, struct touchProcessInfo *out)
 	return 0;
 }
 
-int ksceTouchEnableIdleTimerCancelSetting(unsigned port, int enable)
+int SceTouchForDriver_EBF4C86A(unsigned port, int enable)
 {
 	if (port >= TOUCH_PORTS)
 		return TOUCH_ERROR(1);
@@ -2188,7 +2188,7 @@ int SceTouchForDriver_384F6C68(unsigned port, unsigned timeout)
 	return 0;
 }
 
-int ksceTouchGetDeviceInfo(unsigned port, struct touchDeviceInfo *out)
+int SceTouchForDriver_FD2E0278(unsigned port, struct touchDeviceInfo *out)
 {
 	struct touchDeviceInfo *info;
 	unsigned char *clear;
@@ -2216,7 +2216,7 @@ int SceTouchForDriver_63DCF2FE(void)
 	return touch.state != 0;
 }
 
-int ksceTouchSetTouchEmulationData(const SceTouchData *front, const SceTouchData *back)
+int SceTouchForDriver_A32529B8(const SceTouchData *front, const SceTouchData *back)
 {
 	return 0;
 }
@@ -2349,9 +2349,9 @@ static inline int kernelRead(unsigned port, SceTouchData *buffer, unsigned count
 		return peek ? peekRegionExt(port, buffer, count, regions) :
 			      readRegionExt(port, buffer, count, regions);
 	if (regions)
-		return peek ? ksceTouchPeekRegion(port, buffer, count, regions) :
-			      ksceTouchReadRegion(port, buffer, count, regions);
-	return peek ? ksceTouchPeek(port, buffer, count) : ksceTouchRead(port, buffer, count);
+		return peek ? SceTouchForDriver_9B3F7207(port, buffer, count, regions) :
+			      SceTouchForDriver_9A91F624(port, buffer, count, regions);
+	return peek ? SceTouchForDriver_BAD1960B(port, buffer, count) : SceTouchForDriver_70C8AACE(port, buffer, count);
 }
 
 /* regions 0: the plain read (all regions) */
@@ -2419,7 +2419,7 @@ int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned reg
 int sceTouchSetSamplingState(unsigned port, unsigned state)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = ksceTouchSetSamplingState(port, state);
+	int ret = SceTouchForDriver_1247257A(port, state);
 
 	sceSyscallLeave(t);
 	return ret;
@@ -2442,7 +2442,7 @@ static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unkn
 	if (!out)
 		return TOUCH_ERROR(1);
 	t = sceSyscallEnter();
-	ret = kind ? getSamplingExt(port, &value) : ksceTouchGetSamplingState(port, &value);
+	ret = kind ? getSamplingExt(port, &value) : SceTouchForDriver_174D0333(port, &value);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(out, &value, 4);
 	sceSyscallLeave(t);
@@ -2462,7 +2462,7 @@ int sceTouchGetSamplingStateExt(unsigned port, void *out)
 int sceTouchEnableTouchForce(unsigned port)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = ksceTouchEnableTouchForce(port);
+	int ret = SceTouchForDriver_E41B4BF8(port);
 
 	sceSyscallLeave(t);
 	return ret;
@@ -2480,7 +2480,7 @@ int sceTouchEnableTouchForceExt(unsigned port)
 int sceTouchDisableTouchForce(unsigned port)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = ksceTouchDisableTouchForce(port);
+	int ret = SceTouchForDriver_CDE79889(port);
 
 	sceSyscallLeave(t);
 	return ret;
@@ -2504,7 +2504,7 @@ int sceTouchGetPanelInfo(unsigned port, void *out)
 	if (!out)
 		return TOUCH_ERROR(1);
 	t = sceSyscallEnter();
-	ret = ksceTouchGetPanelInfo(port, &info);
+	ret = SceTouchForDriver_937DB4C0(port, &info);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(out, &info, sizeof(info));
 	sceSyscallLeave(t);
@@ -2560,7 +2560,7 @@ int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned
 	t = sceSyscallEnter();
 	ret = SceSysmemForDriver_BC996A7A(copy, rect, 8);
 	if (!ret)
-		ret = ksceTouchSetRegion(port, region, copy, attr);
+		ret = SceTouchForDriver_7985B164(port, region, copy, attr);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -2577,7 +2577,7 @@ int sceTouchClearRegion(unsigned port, unsigned region)
 int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = ksceTouchActivateRegion(port, region, enable);
+	int ret = SceTouchForDriver_C7F0DAA0(port, region, enable);
 
 	sceSyscallLeave(t);
 	return ret;
@@ -2586,7 +2586,7 @@ int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable)
 int sceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr)
 {
 	unsigned t = sceSyscallEnter();
-	int ret = ksceTouchSetRegionAttr(port, region, attr);
+	int ret = SceTouchForDriver_10A998DE(port, region, attr);
 
 	sceSyscallLeave(t);
 	return ret;
@@ -2610,7 +2610,7 @@ int sceTouchGetProcessInfo(unsigned port, void *out)
 	int ret = TOUCH_ERROR(1);
 
 	if (out) {
-		ret = ksceTouchGetProcessInfo(port, &info);
+		ret = SceTouchForDriver_4DF3A37C(port, &info);
 		if (ret >= 0)
 			ret = SceSysmemForDriver_6D88EF8A(out, &info, sizeof(info));
 	}
@@ -2624,7 +2624,7 @@ int sceTouchEnableIdleTimerCancelSetting(unsigned port, int enable)
 	int ret = TOUCH_ERROR(2);
 
 	if (sceSblACMgrIsSystemProgram(0))
-		ret = ksceTouchEnableIdleTimerCancelSetting(port, enable);
+		ret = SceTouchForDriver_EBF4C86A(port, enable);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -2636,7 +2636,7 @@ int sceTouchGetDeviceInfo(unsigned port, void *out)
 	int ret = TOUCH_ERROR(2);
 
 	if (sceSblACMgrIsSystemProgram(0)) {
-		ret = ksceTouchGetDeviceInfo(port, &info);
+		ret = SceTouchForDriver_FD2E0278(port, &info);
 		if (ret >= 0)
 			ret = SceSysmemForDriver_6D88EF8A(out, &info, sizeof(info));
 	}

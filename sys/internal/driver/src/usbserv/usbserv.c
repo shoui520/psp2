@@ -57,7 +57,7 @@ static int used(void)
 static int usbEnabled(unsigned port, unsigned mode)
 {
 	for (unsigned i = 0; i < 2000; i++)
-		if (!ksceUdcdWaitBusInitialized(500, port))
+		if (!SceUdcdForDriver_1C684884(500, port))
 			return 1;
 	SceDebugForDriver_02B04343(6, SCE_DBGINFO_FUNC(207, "usbEnabled"),
 		"timeout: USB PHY ready(ch=%d sel=%d)\n", port, mode);
@@ -76,7 +76,7 @@ static int usb0_mac_select(unsigned mode, unsigned action)
 	int ret = 0;
 	if (mode) {
 		if (!s_serv.mode[0]) {
-			ret = ksceUsbdHostStop(0);
+			ret = sceUsbdHostStop(0);
 			if (ret < 0)
 				DEBUG(6, 333, "usb0_mac_select", "# ERROR # sceUsbdHostStop() ret=%08x\n", ret);
 		}
@@ -89,11 +89,11 @@ static int usb0_mac_select(unsigned mode, unsigned action)
 		return SERV_ERROR(FATAL);
 	s_serv.mode[0] = 0;
 	if (action == 2) {
-		ret = ksceUsbdResume(0);
+		ret = sceUsbdResume(0);
 		if (ret < 0)
 			DEBUG(6, 357, "usb0_mac_select", "# ERROR # sceUsbdResume() ret=%08x\n", ret);
 	} else {
-		ret = ksceUsbdHostStart(0);
+		ret = sceUsbdHostStart(0);
 		if (ret < 0)
 			DEBUG(6, 362, "usb0_mac_select", "# ERROR # sceUsbdHostStart() ret=%08x\n", ret);
 	}
@@ -104,7 +104,7 @@ static int usb1_mac_select(unsigned mode, unsigned action)
 	int ret;
 	if (mode) {
 		if (!s_serv.mode[1]) {
-			ret = ksceUsbdHostStop(1);
+			ret = sceUsbdHostStop(1);
 			if (ret < 0)
 				DEBUG(6, 388, "usb1_mac_select", "# ERROR # sceUsbdHostStop() ret=%08x\n", ret);
 		}
@@ -126,7 +126,7 @@ static int usb1_mac_select(unsigned mode, unsigned action)
 	if (!usbEnabled(1, 0))
 		return SERV_ERROR(FATAL);
 	s_serv.mode[1] = 0;
-	return action == 2 ? ksceUsbdResume(1) : ksceUsbdHostStart(1);
+	return action == 2 ? sceUsbdResume(1) : sceUsbdHostStart(1);
 }
 static int port2Host(void)
 {
@@ -160,7 +160,7 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 		s_serv.mode[2] = 0;
 		if ((SceSysconForDriver_CBD6D8BC() & 0xfd0000) == 0x800000)
 			ScePervasiveForDriver_29E65AE1(2, 0, 0);
-		return action == 2 ? ksceUsbdResume(2) : ksceUsbdHostStart(2);
+		return action == 2 ? sceUsbdResume(2) : sceUsbdHostStart(2);
 	}
 	/* Genuine Dolce is excluded from the physical connector policy here. */
 	if (!SceSblAIMgrForDriver_C6E83F34()) {
@@ -180,7 +180,7 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 		}
 	}
 	if (!s_serv.mode[2]) {
-		ret = ksceUsbdHostStop(2);
+		ret = sceUsbdHostStop(2);
 		if (ret < 0)
 			DEBUG(6, 462, "usb2_mac_select", "# ERROR # sceUsbdHostStop() ret=%08x\n", ret);
 	}
@@ -196,7 +196,7 @@ static int usb2_mac_select(unsigned mode, unsigned action)
 		DEBUG(6, 478, "usb2_mac_select", "# ERROR # sceUdcdInit() ret=%08x\n", ret);
 	return ret;
 }
-int ksceUsbServMacSelect(SceUInt port, SceBool mode)
+int SceUsbServForDriver_7AD36284(SceUInt port, SceBool mode)
 {
 	if ((unsigned)mode > 1 || port > 2)
 		return SERV_ERROR(INVALID_PARAM);
@@ -206,7 +206,7 @@ int ksceUsbServMacSelect(SceUInt port, SceBool mode)
 		return usb0_mac_select(mode, 1);
 	return port == 1 ? usb1_mac_select(mode, 1) : usb2_mac_select(mode, 1);
 }
-SceBool ksceUsbServMacGet(SceUInt port)
+SceBool SceUsbServForDriver_F0553A69(SceUInt port)
 {
 	return port < 3 ? s_serv.mode[port] : SERV_ERROR(INVALID_PARAM);
 }
@@ -239,11 +239,11 @@ static inline __attribute__((always_inline)) int accessoryActivate(void)
 	unlock();
 	return ret;
 }
-int ksceUsbServAccessoryActivate(void)
+int SceUsbServForDriver_AA6D4409(void)
 {
 	return accessoryActivate();
 }
-int ksceUsbServAccessoryDeactivate(void)
+int SceUsbServForDriver_853CB8E4(void)
 {
 	lock();
 	int ret = 0;
@@ -282,12 +282,12 @@ int sceUsbServAccessoryDeactivate(void)
 {
 	unsigned domain = sceSyscallEnter();
 	lock();
-	int ret = ksceUsbServAccessoryDeactivate();
+	int ret = SceUsbServForDriver_853CB8E4();
 	unlock();
 	sceSyscallLeave(domain);
 	return ret;
 }
-int ksceUsbServEtherEnable(void)
+int sceUsbServEtherEnable(void)
 {
 	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		DEBUG(15, 1224, "sceUsbServEtherEnable", "Not supported\n");
@@ -305,7 +305,7 @@ int ksceUsbServEtherEnable(void)
 	unlock();
 	return 0;
 }
-int ksceUsbServEtherDisable(void)
+int sceUsbServEtherDisable(void)
 {
 	if (!SceSblAIMgrForDriver_C6E83F34()) {
 		DEBUG(15, 1253, "sceUsbServEtherDisable", "Not supported\n");
@@ -323,7 +323,7 @@ int ksceUsbServEtherDisable(void)
 	unlock();
 	return 0;
 }
-int ksceUsbServDisableEtherSuspend(void)
+int SceUsbServForDriver_6D738018(void)
 {
 	if (!SceSblAIMgrForDriver_C6E83F34())
 		return SERV_ERROR(UNAVAILABLE);
@@ -333,13 +333,13 @@ int ksceUsbServDisableEtherSuspend(void)
 
 static int is_ds(unsigned id)
 {
-	uint16_t *dev = ksceUsbdScanStaticDescriptor(id, NULL, 1);
+	uint16_t *dev = SceUsbdForDriver_BC3EF82B(id, NULL, 1);
 	if (!dev) { ERROR(1389, "is_ds"); return 0; }
 	return dev[4] == 0x54c && (dev[5] == 0x42f || dev[5] == 0x268 || dev[5] == 0x5c4);
 }
 static unsigned is_supported_device(unsigned id)
 {
-	uint8_t *dev = ksceUsbdScanStaticDescriptor(id, NULL, 1);
+	uint8_t *dev = SceUsbdForDriver_BC3EF82B(id, NULL, 1);
 	if (!dev) { ERROR(1413, "is_supported_device"); return 0; }
 	if (is_ds(id))
 		return 0;
@@ -349,10 +349,10 @@ static unsigned is_supported_device(unsigned id)
 	int audio = 0, hid = 0;
 	uint8_t *configuration = dev;
 	for (unsigned i = 0; i < dev[17]; i++) {
-		configuration = ksceUsbdScanStaticDescriptor(id, configuration, 2);
+		configuration = SceUsbdForDriver_BC3EF82B(id, configuration, 2);
 		if (!configuration) { ERROR(1431, "is_supported_device"); return 0; }
 		uint8_t *interface = configuration;
-		while ((interface = ksceUsbdScanStaticDescriptor(id, interface, 4))) {
+		while ((interface = SceUsbdForDriver_BC3EF82B(id, interface, 4))) {
 			unsigned type = interface[5];
 			if (type == 1)
 				audio = 1;
@@ -400,12 +400,12 @@ static int usb_attach(int id)
 		return -1;
 	if (s_timer < 1)
 		s_timer = SceThreadmgrForDriver_C58DF384("SceUsbservTickTimer", 0, tickTimer, NULL);
-	uint8_t *configuration = ksceUsbdScanStaticDescriptor(id, NULL, 2);
+	uint8_t *configuration = SceUsbdForDriver_BC3EF82B(id, NULL, 2);
 	if (!configuration) { ERROR(1494, "usb_attach"); return -1; }
-	int pipe = ksceUsbdOpenPipe(id, NULL);
+	int pipe = SceUsbdForDriver_1CDBFF9F(id, NULL);
 	if (pipe < 0) { ERROR(1499, "usb_attach"); return -1; }
 	SceUsbdDeviceRequest request = { 0, 9, configuration[5], 0, 0 };
-	if (ksceUsbdControlTransfer(pipe, &request, NULL, completeCharge, NULL)) {
+	if (SceUsbdForDriver_2E05660F(pipe, &request, NULL, completeCharge, NULL)) {
 		ERROR(1505, "usb_attach"); return -1;
 	}
 	s_serv.attached++;
@@ -444,7 +444,7 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
 		if (event == SYSEVENT_SUSPEND_PREPARE(0)) {
 			int ret = SceUdcdForDriver_9E7F7EFE();
 			if (SceSblAIMgrForDriver_71608CA3() && !s_serv.mode[0]) {
-				ret = ksceUsbdSuspendPhase2(0, 1);
+				ret = sceUsbdSuspendPhase2(0, 1);
 				if (ret)
 					SceDebugForDriver_02B04343(6, SCE_DBGINFO_FUNC(728, "_sceUsbServSysEventHandler"),
 						"Fail: sceUsbdSuspendPhase2(%08x)\n", ret);
@@ -458,7 +458,7 @@ static int _sceUsbServSysEventHandler(int phase, int event, void *arg)
 			SceUdcdForDriver_D01CFD22();
 			for (unsigned i = 0; i < 3; i++) {
 				if (!s_serv.mode[i])
-					ksceUsbdSuspend(i);
+					SceUsbdForDriver_3EBF5FFE(i);
 				ScePervasiveForDriver_4F64DEF6(i);
 				s_serv.mode[i] = 1;
 			}
@@ -668,7 +668,7 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		goto deleteThread;
 	}
 	if (SceSblAIMgrForDriver_71608CA3())
-		ksceUsbdRegisterDriver(&driver);
+		SceUsbdForDriver_1EC94F18(&driver);
 	return 0;
 deleteThread:
 	sceKernelDeleteThread(s_serv.thread);

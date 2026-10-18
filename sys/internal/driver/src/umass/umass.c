@@ -2,8 +2,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sysmem/barrier.h>
-#include <psp2kern/usbd.h>
-#include <psp2kern/usbserv.h>
+#include <usbd/usbd.h>
+#include <usbserv/usbserv.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -229,13 +229,13 @@ static int _sceUsbMassProbe(int deviceId)
 
 	if (attached)
 		return -1;
-	desc = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	desc = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (!desc)
 		return -1;
 	special = desc->idVendor == 0x54c && desc->idProduct == 0x2d2;
 	if (desc->bNumConfigurations != 1)
 		return -1;
-	interface = ksceUsbdScanStaticDescriptor(deviceId, desc, SCE_USBD_DESCRIPTOR_INTERFACE);
+	interface = SceUsbdForDriver_BC3EF82B(deviceId, desc, SCE_USBD_DESCRIPTOR_INTERFACE);
 	if (!interface || interface->bInterfaceClass != SCE_USBD_CLASS_STORAGE ||
 	    interface->bInterfaceProtocol != 0x50)
 		return -1;
@@ -249,9 +249,9 @@ static int _sceUsbMassProbe(int deviceId)
 		}
 		logError("_sceUsbMassProbe", "3 endpoints\n");
 	}
-	endpoint = ksceUsbdScanStaticDescriptor(deviceId, interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
+	endpoint = SceUsbdForDriver_BC3EF82B(deviceId, interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
 	while (endpoint)
-		endpoint = ksceUsbdScanStaticDescriptor(deviceId, endpoint, SCE_USBD_DESCRIPTOR_ENDPOINT);
+		endpoint = SceUsbdForDriver_BC3EF82B(deviceId, endpoint, SCE_USBD_DESCRIPTOR_ENDPOINT);
 	return 0;
 }
 
@@ -264,7 +264,7 @@ static int clearHalt(UsbMassDevice *dev, SceUsbdEndpointDescriptor *endpoint, in
 		.wValue = 0, .wIndex = endpoint->bEndpointAddress, .wLength = 0,
 	};
 	unsigned int bits;
-	int ret = ksceUsbdControlTransfer(dev->controlPipe, &req, NULL, transferDone, dev);
+	int ret = SceUsbdForDriver_2E05660F(dev->controlPipe, &req, NULL, transferDone, dev);
 
 	if (ret >= 0) {
 		if (inspect)
@@ -287,7 +287,7 @@ static int resetDevice(UsbMassDevice *dev)
 	};
 	int ret, inRet;
 
-	ksceUsbdControlTransfer(dev->controlPipe, &req, NULL, transferDone, dev);
+	SceUsbdForDriver_2E05660F(dev->controlPipe, &req, NULL, transferDone, dev);
 	ret = waitTransfer(dev, 5);
 	if (ret == UMASS_ERROR(1))
 		return ret;
@@ -303,7 +303,7 @@ static int _sceUsbMassDoCBW(UsbMassDevice *dev, UsbMassCbw *cbw, SceUInt8 *buffe
 	int input = cbw->flags & UMASS_CBW_DATA_IN;
 
 	for (;;) {
-		ret = ksceUsbdBulkTransfer(dev->outPipe, (unsigned char *)cbw,
+		ret = SceUsbdForDriver_235C094A(dev->outPipe, (unsigned char *)cbw,
 					 UMASS_CBW_SIZE, transferDone, dev);
 		if (ret >= 0)
 			ret = waitTransfer(dev, 3);
@@ -328,13 +328,13 @@ static int _sceUsbMassDoCBW(UsbMassDevice *dev, UsbMassCbw *cbw, SceUInt8 *buffe
 	while (length) {
 		chunk = length > UMASS_TRANSFER_MAX ? UMASS_TRANSFER_MAX : length;
 		if (input) {
-			ret = ksceUsbdBulkTransfer(dev->inPipe, dev->buffer, chunk, dataDone, dev);
+			ret = SceUsbdForDriver_235C094A(dev->inPipe, dev->buffer, chunk, dataDone, dev);
 		} else {
 			if (dev->buffer != buffer)
 				memcpy(dev->buffer, buffer, chunk);
 			dmb();
 			dsb();
-			ret = ksceUsbdBulkTransfer(dev->outPipe, dev->buffer, chunk, dataDone, dev);
+			ret = SceUsbdForDriver_235C094A(dev->outPipe, dev->buffer, chunk, dataDone, dev);
 		}
 		if (ret >= 0) {
 			ret = waitTransfer(dev, 3);
@@ -415,7 +415,7 @@ static int _sceUsbMassDoCSW(UsbMassDevice *dev, UsbMassCbw *cbw, UsbMassCsw *csw
 	for (int i = 0; i < UMASS_CSW_SIZE; i++)
 		((volatile SceUInt8 *)csw)[i] = 0;
 	for (;;) {
-		ret = ksceUsbdBulkTransfer(dev->inPipe, (unsigned char *)csw,
+		ret = SceUsbdForDriver_235C094A(dev->inPipe, (unsigned char *)csw,
 					 UMASS_CSW_SIZE, transferDone, dev);
 		if (ret >= 0)
 			ret = waitTransfer(dev, 3);
@@ -555,40 +555,40 @@ static int _sceUsbMassAttach(int deviceId)
 		return -1;
 	}
 	dev->deviceId = deviceId;
-	dev->interface = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_INTERFACE);
-	endpoint = ksceUsbdScanStaticDescriptor(deviceId, dev->interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
+	dev->interface = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_INTERFACE);
+	endpoint = SceUsbdForDriver_BC3EF82B(deviceId, dev->interface, SCE_USBD_DESCRIPTOR_ENDPOINT);
 	while (endpoint) {
 		if (inPipe > 0 && outPipe > 0)
 			break;
 		if (endpoint->bEndpointAddress & 0x80) {
 			dev->inEndpoint = endpoint;
-			inPipe = ksceUsbdOpenPipe(deviceId, endpoint);
+			inPipe = SceUsbdForDriver_1CDBFF9F(deviceId, endpoint);
 			if (inPipe < 0)
 				goto fail;
 			dev->inPipe = inPipe;
 		} else {
 			dev->outEndpoint = endpoint;
-			outPipe = ksceUsbdOpenPipe(deviceId, endpoint);
+			outPipe = SceUsbdForDriver_1CDBFF9F(deviceId, endpoint);
 			if (outPipe < 0)
 				goto fail;
 			dev->outPipe = outPipe;
 		}
-		endpoint = ksceUsbdScanStaticDescriptor(deviceId, endpoint, SCE_USBD_DESCRIPTOR_ENDPOINT);
+		endpoint = SceUsbdForDriver_BC3EF82B(deviceId, endpoint, SCE_USBD_DESCRIPTOR_ENDPOINT);
 	}
-	dev->controlPipe = ksceUsbdOpenPipe(deviceId, NULL);
+	dev->controlPipe = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 	if (dev->controlPipe < 0)
 		goto fail;
 	dev->eventFlag = eventFlag;
 	dev->buffer = ioBuffer;
 	sceKernelClearEventFlag(eventFlag, 0);
 	dev->mutex = mutex;
-	config = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION);
+	config = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION);
 	req.bmRequestType = 0;
 	req.bRequest = SCE_USBD_REQUEST_SET_CONFIGURATION;
 	req.wValue = config->bConfigurationValue;
 	req.wIndex = 0;
 	req.wLength = 0;
-	ret = ksceUsbdControlTransfer(dev->controlPipe, &req, NULL, transferDone, dev);
+	ret = SceUsbdForDriver_2E05660F(dev->controlPipe, &req, NULL, transferDone, dev);
 	if (ret >= 0)
 		ret = waitTransfer(dev, 5);
 	if (ret < 0)
@@ -599,7 +599,7 @@ static int _sceUsbMassAttach(int deviceId)
 	req.wValue = 0;
 	req.wIndex = dev->interface->bInterfaceNumber;
 	req.wLength = 1;
-	ksceUsbdControlTransfer(dev->controlPipe, &req, &dev->maxLun, transferDone, dev);
+	SceUsbdForDriver_2E05660F(dev->controlPipe, &req, &dev->maxLun, transferDone, dev);
 	ret = waitTransfer(dev, 5);
 	if (ret >= 0) {
 		dev->lun = dev->maxLun;
@@ -632,7 +632,7 @@ static int _sceUsbMassAttach(int deviceId)
 			}
 connected:
 			attached = dev;
-			desc = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+			desc = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 			SceDebugForDriver_391B74B7("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
 				SceThreadmgrForDriver_47F6DE49(), desc->idVendor, desc->idProduct);
 			SceCpuForDriver_2A40BB93(&pending, 1);
@@ -646,15 +646,15 @@ connected:
 	logError("_sceUsbMassAttach", "Device did not become ready\n");
 fail:
 	if (dev->controlPipe >= 0) {
-		ksceUsbdClosePipe(dev->controlPipe);
+		SceUsbdForDriver_F304DC5C(dev->controlPipe);
 		dev->controlPipe = -1;
 	}
 	if (dev->outPipe >= 0) {
-		ksceUsbdClosePipe(dev->outPipe);
+		SceUsbdForDriver_F304DC5C(dev->outPipe);
 		dev->outPipe = -1;
 	}
 	if (dev->inPipe >= 0) {
-		ksceUsbdClosePipe(dev->inPipe);
+		SceUsbdForDriver_F304DC5C(dev->inPipe);
 		dev->inPipe = -1;
 	}
 	return -1;
@@ -832,15 +832,15 @@ int module_start(SceSize args, void *argp)
 					 (SceKernelAllocMemBlockKernelOpt *)options);
 	if (memblock >= 0) {
 		ret = SceSysmemForDriver_A841EDDA(memblock, (void **)&ioBuffer);
-		if (ret >= 0 && ksceUsbServAccessoryActivate() >= 0) {
-			ret = ksceUsbdRegisterDriver(&driver);
+		if (ret >= 0 && SceUsbServForDriver_AA6D4409() >= 0) {
+			ret = SceUsbdForDriver_1EC94F18(&driver);
 			if (ret >= 0) {
 				intrLock = 0;
 				SceCpuForDriver_2A40BB93(&enabled, 1);
 				SceCpuForDriver_2A40BB93(&enabled, 2);
 				return 0;
 			}
-			ksceUsbServAccessoryDeactivate();
+			SceUsbServForDriver_853CB8E4();
 		}
 		SceSysmemForDriver_009E1C61(memblock);
 	}

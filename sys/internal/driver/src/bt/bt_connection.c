@@ -291,7 +291,7 @@ unlock:
 	return BtUnlockTransport(result);
 }
 
-int ksceBtStartDisconnect(unsigned int mac0, unsigned int mac1)
+int SceBtForDriver_50710281(unsigned int mac0, unsigned int mac1)
 {
 	return BtStartDisconnect((uint64_t)mac1 << 32 | mac0);
 }

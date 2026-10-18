@@ -7,7 +7,11 @@
 #include <threadmgr/threadmgr.h>
 
 /* SceCtrl and SceTouch hand every sample to SceDeci4pCtrlp before the program sees it */
-int ksceTouchSetCtrlpCallback(int (*callback)(SceUInt32 panel, SceTouchData *sample));
-int ksceTouchGetPanelInfo(SceUInt32 panel, SceTouchPanelInfo *info);
+int sceTouchSetCtrlpCallback(int (*callback)(SceUInt32 panel, SceTouchData *sample));
+int SceTouchForDriver_937DB4C0(SceUInt32 panel, SceTouchPanelInfo *info);
+
+/* SceBt deletes a registered device; the caller passes its address as two words */
+int SceBtForDriver_E6F659E0(SceUInt32 mac0, SceUInt32 mac1);
+#define SCE_BT_ERROR_REG_DELETE_CONNECTING	((int)0x802F0109)
 
 #endif

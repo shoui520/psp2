@@ -1163,9 +1163,9 @@ int SceSdifForDriver_5D65E66B(SdifSdioContext *sdio, uint32_t offset,
 	}
 }
 
-SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index)
+SdifSdioContext *SceSdifForDriver_6A8235FC(unsigned int index)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 
 	if (!context)
 		return NULL;
@@ -1320,7 +1320,7 @@ int SceSdifForDriver_BC45C83D(SdifSdioContext *sdio, unsigned int mode)
 
 int SceSdifForDriver_AABAA0F0(unsigned int index, SdifSdioContext **part)
 {
-	SdifContextGlobal *context = ksceSdifGetSdContextGlobal(index);
+	SdifContextGlobal *context = SceSdifForDriver_DC8F52F8(index);
 	SdifContextGlobal *commandContext;
 	SdifSdioContext *sdio;
 	SdifSdioFunction *function;

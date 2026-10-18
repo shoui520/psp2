@@ -9,8 +9,8 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sblaimgr.h>
 #include <lowio/gpio.h>
-#include <psp2kern/usbd.h>
-#include <psp2kern/usbserv.h>
+#include <usbd/usbd.h>
+#include <usbserv/usbserv.h>
 #include <psp2common/net.h>
 #include <stddef.h>
 #include <string.h>

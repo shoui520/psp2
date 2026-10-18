@@ -110,7 +110,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceSblACMgrIsSystemProgram
-	ksceIdStorageLookup
+	sceIdStorageLookup
 	ScePervasiveForDriver_132E514A
 	ScePervasiveForDriver_7B16F900
 	ScePervasiveForDriver_A85BF98A

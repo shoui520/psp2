@@ -423,8 +423,8 @@ set(MODULE_IMPORT_FUNCS
 	SceUlobjMgrForDriver_FFC8C811
 	SceDisplayForDriver_3BC165EF
 	SceDisplayForDriver_C8E554C5
-	ksceSdifGetSdContextPartValidateMmc
-	ksceMsifGetMsInfo
+	SceSdifForDriver_6A71987F
+	SceMsifForDriver_D0307849
 	sceKernelGetGPI
 	ksceGpuGetRegisterDump
 	SceGpuEs4ForDriver_18C90B42

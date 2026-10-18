@@ -32,7 +32,7 @@ int lcdInit(void) /* name unknown */
 	lcd.mode = 0;
 	lcd.colorSpace = 0;
 	lcd.curColorSpace = 0;
-	imported = (void *)ksceLcdGetDDB;
+	imported = (void *)SceLcdForDriver_E03E120B;
 	if (imported == NULL)
 		return -1;
 	lcd.present = 1;
@@ -58,17 +58,17 @@ void lcdVblank(void)
 		return;
 	if (lcd.isOn != lcd.wantOn) {
 		if (lcd.wantOn == 0)
-			ret = ksceLcdDisplayOff();
+			ret = SceLcdForDriver_1A0A7519();
 		else
-			ret = ksceLcdDisplayOn();
+			ret = SceLcdForDriver_5F4124AB();
 		if (ret >= 0)
 			lcd.isOn = lcd.wantOn;
 	}
 	if (!bootLogoShown && lcd.isOn != 0) {
 		if (lcd.curColorSpace != lcd.colorSpace
-		    && ksceLcdSetDisplayColorSpaceMode(lcd.colorSpace) >= 0)
+		    && SceLcdForDriver_D40968FB(lcd.colorSpace) >= 0)
 			lcd.curColorSpace = lcd.colorSpace;
-		if (lcd.curBrightness != lcd.brightness && ksceLcdSetBrightness(lcd.brightness) >= 0)
+		if (lcd.curBrightness != lcd.brightness && SceLcdForDriver_581D3A87(lcd.brightness) >= 0)
 			lcd.curBrightness = lcd.brightness;
 	}
 	SceLcdForDriver_59CCDC97();

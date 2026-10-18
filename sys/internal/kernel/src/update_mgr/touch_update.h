@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <touch/touch.h>
 
 int TouchUtilReadHexByte(const int8_t *buffer, uint64_t *position);
 int UpdateUtilStringToInt(const int8_t *text, int unused, int base);
@@ -16,8 +17,6 @@ typedef struct TouchUtilLegacyFirmwareRecord {
 _Static_assert(sizeof(TouchUtilLegacyFirmwareRecord) == 2,
 	"legacy touch firmware record header size");
 
-int SceTouchForDriver_DDCF5145(void);
-int SceTouchForDriver_423F26D3(void);
 int SceTouchForDriver_4E6C4558(unsigned int panels);
 
 typedef struct TouchUtilLegacyConfigRecord {

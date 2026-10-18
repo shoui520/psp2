@@ -91,12 +91,12 @@ set(MODULE_IMPORT_FUNCS
 	SceUsbstorForDriver_D3C7EE70
 	SceUsbstorForDriver_EAC08C24
 	SceUsbstorForDriver_F1A690DC
-	ksceUdcdStop
-	ksceUdcdGetDeviceStateInternal
-	ksceUdcdActivate
-	ksceUdcdDeactivate
-	ksceUdcdStart
-	ksceUdcdGetDrvState
+	SceUdcdForDriver_1494293B
+	SceUdcdForDriver_409DD196
+	sceUdcdActivate
+	SceUdcdForDriver_8AE87657
+	sceUdcdStart
+	SceUdcdForDriver_C0CA5DDB
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

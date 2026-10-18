@@ -737,7 +737,7 @@ int motionInitializeManager(void *arg)
 	SceSysconForDriver_55DF1C9B();
 	motion.baryonVersion = SceSysconForDriver_FF86F4C5();
 	location = (DeviceLocation){0};
-	result = ksceIdStorageLookup(0x114, 32, &location, sizeof(location));
+	result = sceIdStorageLookup(0x114, 32, &location, sizeof(location));
 	if (result < 0) {
 		location.type = 16;
 		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
@@ -779,7 +779,7 @@ int motionInitializeManager(void *arg)
 		}
 	}
 	location = (DeviceLocation){0};
-	result = ksceIdStorageLookup(0x114, 48, &location, sizeof(location));
+	result = sceIdStorageLookup(0x114, 48, &location, sizeof(location));
 	if (result < 0) {
 		location.type = 17;
 		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
@@ -821,7 +821,7 @@ int motionInitializeManager(void *arg)
 		}
 	}
 	location.type = 0;
-	motion.allowGyroControl = ksceIdStorageLookup(0x114, 256,
+	motion.allowGyroControl = sceIdStorageLookup(0x114, 256,
 		&location.type, sizeof(location.type)) < 0 || location.type != 0;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	if (motion.processes[0].pid == -1)
@@ -1467,7 +1467,7 @@ int module_start(SceSize arglen, const void *argp)
 	return 0;
 }
 
-int ksceMotionDevIsReady(void)
+int SceMotionDevForDriver_10AAC8EA(void)
 {
 	if ((unsigned int)motion.state - 1 <= 1)
 		return 1;
@@ -1476,7 +1476,7 @@ int ksceMotionDevIsReady(void)
 	return (int)0x80360006;
 }
 
-int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
+int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info)
 {
 	int intr;
 
@@ -1498,7 +1498,7 @@ int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 	return 0;
 }
 
-int ksceMotionDevGetCalibrationHeader(unsigned int block, SceMotionDevCalibrationHeader *header)
+int SceMotionDevForDriver_3B23DF55(unsigned int block, SceMotionDevCalibrationHeader *header)
 {
 	int intr;
 
@@ -1520,7 +1520,7 @@ int ksceMotionDevGetCalibrationHeader(unsigned int block, SceMotionDevCalibratio
 	return (int)0x80360004;
 }
 
-int ksceMotionDevGetCalibrationData(unsigned int block, SceMotionDevCalibrationData *data,
+int SceMotionDevForDriver_F0251700(unsigned int block, SceMotionDevCalibrationData *data,
 	unsigned int count)
 {
 	unsigned int i, available;
@@ -1548,7 +1548,7 @@ int ksceMotionDevGetCalibrationData(unsigned int block, SceMotionDevCalibrationD
 	return (int)0x80360004;
 }
 
-int ksceMotionDevRead(SceMotionDevData *data, int count, unsigned int *info)
+int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, unsigned int *info)
 {
 	SceUID pid = sceKernelGetProcessId();
 
@@ -1567,7 +1567,7 @@ int motionReadForMagnCalib(SceMotionDevData *data, int count)
 	return motionReadSamples(data, count, NULL, 0x10005, 1);
 }
 
-int ksceMotionDevSetSamplingMode(unsigned int mode)
+int SceMotionDevForDriver_DBAF611A(unsigned int mode)
 {
 	int intr;
 
@@ -1589,7 +1589,7 @@ int ksceMotionDevSetSamplingMode(unsigned int mode)
 	return motionControlDevice((uint8_t)mode, motionClearBusy, NULL);
 }
 
-int ksceMotionDevSamplingStart(void)
+int SceMotionDevForDriver_C02C85AB(void)
 {
 	MotionDeviceReader *process;
 	SceUID pid;
@@ -1674,7 +1674,7 @@ int ksceMotionDevSamplingStart(void)
 	return 0;
 }
 
-int ksceMotionDevSamplingStop(void)
+int SceMotionDevForDriver_FD0B0785(void)
 {
 	SceUID pid = sceKernelGetProcessId();
 	int intr, i;
@@ -1969,7 +1969,7 @@ uint32_t motionGetMeasMode(uint8_t *mode)
 	return result;
 }
 
-int ksceMotionDevNoiseFilterIsAvailable(void)
+int SceMotionDevForDriver_11A17A96(void)
 {
 	return (unsigned int)motion.deviceInfo.firmwareVersion - 0x1010 < 0x1f0;
 }
@@ -2204,7 +2204,7 @@ int SceMotionDevForDriver_031AF7A1(void)
 	return (int)0x80360003;
 }
 
-int ksceMotionDevGetEvaInfo(void *statistics)
+int SceMotionDevForDriver_5B53AC26(void *statistics)
 {
 	int intr, result;
 
@@ -2216,7 +2216,7 @@ int ksceMotionDevGetEvaInfo(void *statistics)
 	return result;
 }
 
-int ksceMotionDevRegisterVirtualMotionDriver(const struct MotionVirtualDriver *driver)
+int SceMotionDevForDriver_7FD06731(const struct MotionVirtualDriver *driver)
 {
 	return 0;
 }

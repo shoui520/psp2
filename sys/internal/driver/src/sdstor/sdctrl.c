@@ -110,7 +110,6 @@ int sdpart_remove(unsigned int port);
 int sdpart_release_mc(unsigned int port);
 int sdpart_release_xmc(unsigned int port);
 int sddev_suspend(SceSdstorSddev *device);
-int ksceSdifGetCID(SdifMmcContext *part, void *cid);
 int sddev_remove(SceSdstorSddev *device);
 int sddev_power_off(SceSdstorSddev *device);
 int sdpart_resume_stat(unsigned int port);
@@ -494,7 +493,7 @@ int sdintr_suspend_usd(SceSdstorIntr *interrupt)
 		cid[2] = 0;
 		cid[3] = 0;
 		SCE_DBG_ASSERT_FUNC(1, 2220, "sdintr_get_sd_cid");
-		ksceSdifGetCID(device->sdif_ctx, cid);
+		SceSdifForDriver_23A4EF01(device->sdif_ctx, cid);
 		if (!cid[0] && !cid[1] && !cid[2] && !cid[3])
 			memset(cid, 250, sizeof(cid));
 		interrupt->cid[0] = cid[0];
@@ -764,7 +763,7 @@ int sdintr_resume_usd(SceSdstorIntr *interrupt)
 		}
 	}
 	SCE_DBG_ASSERT_FUNC(1, 2220, "sdintr_get_sd_cid");
-	result = ksceSdifGetCID(device->sdif_ctx, cardCid);
+	result = SceSdifForDriver_23A4EF01(device->sdif_ctx, cardCid);
 	if (!cardCid[0] && !cardCid[1] && !cardCid[2] && !cardCid[3])
 		memset(cardCid, 0xfa, sizeof(cardCid));
 	__builtin_memcpy(cid, cardCid, sizeof(cid));

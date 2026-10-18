@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <psp2/touch.h>
-#include <psp2kern/bt.h>
 #include <ctrl/ctrl.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
@@ -236,7 +235,7 @@ typedef struct CtrlpBtRegister {
 	char name[];				/* nameLength bytes and a NUL */
 } CtrlpBtRegister;
 
-/* the address as ksceBtDeleteRegisteredInfo takes it */
+/* the address as SceBtForDriver_E6F659E0 takes it */
 typedef struct CtrlpBtDelete {
 	SceUInt32 mac0;
 	SceUInt16 mac1;
@@ -1032,7 +1031,7 @@ static inline int btDelete(const CtrlpBtDelete *del, SceUInt32 length)
 
 	if (length < 8)
 		return CTRLP_RESULT_INVALID;
-	ret = ksceBtDeleteRegisteredInfo(del->mac0, del->mac1);
+	ret = SceBtForDriver_E6F659E0(del->mac0, del->mac1);
 	if (ret == 0)
 		return CTRLP_RESULT_OK;
 	if (ret == SCE_BT_ERROR_REG_DELETE_CONNECTING)
@@ -1488,8 +1487,8 @@ int module_start(SceSize args, void *argp)
 	state.sendSize = sizeof(sendBuffer);
 	state.sendBuffer = (CtrlpPacket *)sendBuffer;
 	state.recordThreshold = 32;
-	ksceTouchGetPanelInfo(SCE_TOUCH_PORT_FRONT, &state.panelInfo[SCE_TOUCH_PORT_FRONT]);
-	ksceTouchGetPanelInfo(SCE_TOUCH_PORT_BACK, &state.panelInfo[SCE_TOUCH_PORT_BACK]);
+	SceTouchForDriver_937DB4C0(SCE_TOUCH_PORT_FRONT, &state.panelInfo[SCE_TOUCH_PORT_FRONT]);
+	SceTouchForDriver_937DB4C0(SCE_TOUCH_PORT_BACK, &state.panelInfo[SCE_TOUCH_PORT_BACK]);
 	state.buttonMask = 0x31ffff;
 	state.dolce = SceSblAIMgrForDriver_71608CA3() != 0;
 
@@ -1498,7 +1497,7 @@ int module_start(SceSize args, void *argp)
 		error(1428, "sceCtrlSetCtrlpCallback error %d\n", ret);
 		return ret < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;
 	}
-	ret = ksceTouchSetCtrlpCallback(touchCallback);
+	ret = sceTouchSetCtrlpCallback(touchCallback);
 	if (ret != 0) {
 		error(1433, "sceTouchSetCtrlpCallback error %d\n", ret);
 		return ret < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;

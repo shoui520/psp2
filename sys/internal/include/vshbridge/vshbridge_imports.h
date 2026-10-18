@@ -31,10 +31,13 @@
 #include <sysmem/pmmgr.h>
 #include <sysmem/debug.h>
 #include <ctrl/ctrl.h>
+#include <msif/msif.h>
+#include <touch/touch.h>
+#include <motion/motion_dev.h>
+#include <udcd/udcd.h>
 
 /* sysroot, threads, modules */
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-int SceUdcdForDriver_2D91F8C3(int enable);		/* USB charging */
 
 /* SblACMgr, Aimgr, QafMgr, Ss, PostSsMgr, UtMgr, PmMgr */
 int ksceSblAimgrGetConsoleId(void *id);
@@ -60,36 +63,14 @@ int SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5(void *a, void *b, void *c, void *d)
 int SceSblGcAuthMgrMlnpsnlForDriver_296ABD68(void *a, void *b, void *c);	/* Mlnpsnl auth 2 */
 
 /* IdStorage */
-int ksceIdStorageGetLeafSize(void);
-int ksceIdStorageIsFormatted(void);
-int ksceIdStorageIsReadOnly(void);
-int ksceIdStorageIsDirty(void);
-int ksceIdStorageFormat(void);
-int ksceIdStorageUnformat(void);
-int ksceIdStorageReadLeaf(SceSize leaf, void *buf);
-int ksceIdStorageWriteLeaf(SceSize leaf, const void *buf);
-int ksceIdStorageCreateLeaf(SceSize leaf);
-int ksceIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num);
-int ksceIdStorageDeleteLeaf(SceSize leaf);
-int ksceIdStorageGetFreeLeaves(void);
-int ksceIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSize len);
-int ksceIdStorageFlush(void);
-int ksceIdStorageRestart(int unk);
 
 /* Motion, Touch, Hdmi */
-int ksceMotionDevNoiseFilterIsAvailable(void);
-int ksceTouchSetTouchEmulationData(const void *front, const void *back);
 int sceHdmiCecEnableCec(void);
 int SceHdmiForDriver_291F000B(void);			/* disable CEC */
 int SceHdmiForDriver_6D2D10D8(void);			/* CEC forced polling message */
 
 /* Io, Sdif, Msif */
-int SceSdifForDriver_F37CF8E5(void);			/* SD slow mode */
-int ksceSdifGetCardInsertState1(int card);
-int ksceSdifGetCardInsertState2(int card);
-int ksceMsifEnableSlowMode(void);
 struct SceMsInfo;
-int ksceMsifGetMsInfo(struct SceMsInfo *info);
 
 /* NpDrm */
 int ksceNpDrmGetLegacyDocKey(void *a, void *b, void *c, void *d);

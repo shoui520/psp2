@@ -475,9 +475,9 @@ int sdpart_parse_extpar(unsigned int port, SceSdstorSdpart *table,
 		}
 	} else {
 #if FW_DEBUG
-		context = ksceSdifGetSdContextPartValidateSd(device->hport);
+		context = SceSdifForDriver_B9EA5B1E(device->hport);
 #else
-		context = ksceSdifGetSdContextPartValidateSd(*hport);
+		context = SceSdifForDriver_B9EA5B1E(*hport);
 #endif
 		if (!context) {
 			SCE_DBG_PRINTF_LEVEL(2, 6, 745, "Card not found\n");
@@ -523,7 +523,7 @@ int sdpart_write_sd_mbr(unsigned int port)
 		SCE_DBG_PRINTF(6, 1255, "no sddev\n");
 		return 0x80010013;
 	}
-	context = ksceSdifGetSdContextPartValidateSd(device->hport);
+	context = SceSdifForDriver_B9EA5B1E(device->hport);
 	if (!context) {
 		SCE_DBG_PRINTF(6, 1261, "no card\n");
 		return 0x80010013;

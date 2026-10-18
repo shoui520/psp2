@@ -113,15 +113,15 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	}
 	if (enabled) {
 		SceCtrlForDriver_12C13A72(0, 0x0400ffff);
-		ksceTouchSetEnableFlag(0, 1);
-		ksceTouchSetEnableFlag(1, 1);
+		SceTouchForDriver_328E38B0(0, 1);
+		SceTouchForDriver_328E38B0(1, 1);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_OFF, 0, POWER_CALLBACKARG_DISPLAY_ON);
 		ScePowerForDriver_EFD3C963(0);
 	} else {
 		SceCtrlForDriver_12C13A72(0x0400ffff, 0);
-		ksceTouchSetEnableFlag(0, 0);
-		ksceTouchSetEnableFlag(1, 0);
+		SceTouchForDriver_328E38B0(0, 0);
+		SceTouchForDriver_328E38B0(1, 0);
 		ScePowerForDriver_660D5AB4(1);
 		ScePowerForDriver_660D5AB4(2);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);

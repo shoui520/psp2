@@ -1,8 +1,6 @@
 #include "hid_internal.h"
 #include <sysmem/debug.h>
-
-int ksceHidKeyboardEnumerate(SceUID *handles, int count);
-int ksceHidKeyboardClear(SceUID handle);
+#include <hid/hid.h>
 
 int processResumeStart(SceUID pid, int eventType,
 		       ProcEventParam *param, int arg)
@@ -77,14 +75,14 @@ int processResumeStart(SceUID pid, int eventType,
 			}
 		}
 		__builtin_memset(handles, 0, sizeof(handles));
-		result = ksceHidKeyboardEnumerate(handles, 8);
+		result = sceHidKeyboardEnumerate(handles, 8);
 		count = result;
 		if (result < 0) {
 			SCE_DBG_PRINTF(0, 454,
 				"sceHidKeyboardEnumerate failed 0x%08x\n", result);
 		} else if (count > 0) {
 			for (index = 0; index != count; index++) {
-				result = ksceHidKeyboardClear(handles[index]);
+				result = sceHidKeyboardClear(handles[index]);
 				if (result < 0)
 					SCE_DBG_PRINTF(0, 462,
 						"sceHidKeyboardClear failed 0x%08x\n",

@@ -132,7 +132,7 @@ int udcdPollBusInitialized(unsigned int delay, int bus)
 	return registers->usbPhyReady & mask ? 0 : UDCD_ERROR_TIMEOUT;
 }
 
-int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
+int SceUdcdForDriver_1C684884(unsigned int timeout, int bus)
 {
 	struct udcdBusState *state;
 	SceKernelIntrStatus status;
@@ -153,7 +153,7 @@ int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
 	return result == SCE_KERNEL_ERROR_WAIT_TIMEOUT ? UDCD_ERROR_TIMEOUT : result;
 }
 
-int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
+int SceUdcdForDriver_7AD0C8D1(SceUdcdWaitParam *parameter, unsigned int timeout,
 			    int bus)
 {
 	struct udcdBusState *state;
@@ -172,7 +172,7 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 	remaining = timeout ? &timeout : NULL;
 	for (;;) {
 		while (parameter->driverName &&
-		       ksceUdcdGetDrvStateInternal(parameter->driverName, bus) != 2) {
+		       SceUdcdForDriver_512F77BC(parameter->driverName, bus) != 2) {
 			result = sceKernelWaitEventFlag(state->stateEvent, 0x80004000,
 						       SCE_KERNEL_EVF_WAITMODE_OR |
 						       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
@@ -206,9 +206,9 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 	}
 }
 
-int ksceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout)
+int SceUdcdForDriver_D03017C0(SceUdcdWaitParam *parameter, unsigned int timeout)
 {
-	return ksceUdcdWaitStateInternal(parameter, timeout, 2);
+	return SceUdcdForDriver_7AD0C8D1(parameter, timeout, 2);
 }
 
 /* Original name unknown. Keep USB activity awake while its alarm is enabled. */
@@ -289,7 +289,7 @@ int SceUdcdForDriver_DB7EF7AB(int bus)
 	return 0;
 }
 
-int ksceUdcdGetDeviceState(void)
+int SceUdcdForDriver_E054B5E4(void)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 
@@ -298,7 +298,7 @@ int ksceUdcdGetDeviceState(void)
 	return state->activationState | state->controllerState | state->cableState | state->connectionState;
 }
 
-int ksceUdcdGetDeviceStateInternal(int bus)
+int SceUdcdForDriver_409DD196(int bus)
 {
 	struct udcdBusState *state;
 
@@ -330,7 +330,7 @@ void SceUdcdForDriver_B1454F11(const unsigned int *value)
 		udcdState.buses[2].driverSetting = *value;
 }
 
-int ksceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information)
+int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information)
 {
 	struct udcdDeviceInformation *record = (struct udcdDeviceInformation *)information;
 
@@ -341,7 +341,7 @@ int ksceUdcdGetDeviceInfo(SceUdcdDeviceInfo *information)
 	return 0;
 }
 
-int ksceUdcdGetDeviceInfoInternal(SceUdcdDeviceInfo *information, int bus)
+int SceUdcdForDriver_45EB0177(SceUdcdDeviceInfo *information, int bus)
 {
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -462,7 +462,7 @@ unlock:
 	return result;
 }
 
-int ksceUdcdDeactivateInternal(int bus)
+int SceUdcdForDriver_FDC10F93(int bus)
 {
 	struct udcdBusState *state;
 	SceKernelIntrStatus status;
@@ -477,7 +477,7 @@ int ksceUdcdDeactivateInternal(int bus)
 	return enabled ? udcdDeactivateBus(bus) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
-int ksceUdcdDeactivate(void)
+int SceUdcdForDriver_8AE87657(void)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
@@ -1677,7 +1677,7 @@ int udcdCancelEndpointRequests(int number, SceKernelIntrStatus *status, int bus)
 	return udcdDrainEndpointRequests(number, status, bus);
 }
 
-int ksceUdcdReqCancelAll(SceUdcdEndpoint *endpoint)
+int SceUdcdForDriver_38787672(SceUdcdEndpoint *endpoint)
 {
 	struct udcdBusState *state = &udcdState.buses[2];
 	SceKernelIntrStatus status;
@@ -1780,24 +1780,24 @@ int SceUdcdForDriver_03781649(SceUdcdDeviceRequest *request, int bus)
 	return result;
 }
 
-int ksceUdcdReqSend(SceUdcdDeviceRequest *request)
+int SceUdcdForDriver_1ED0E89E(SceUdcdDeviceRequest *request)
 {
 	return udcdSubmitDriverRequest(request, 2, 0);
 }
 
-int ksceUdcdReqSendInternal(SceUdcdDeviceRequest *request, int bus)
+int SceUdcdForDriver_2E3E622A(SceUdcdDeviceRequest *request, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	return udcdSubmitDriverRequest(request, bus, 0);
 }
 
-int ksceUdcdReqRecv(SceUdcdDeviceRequest *request)
+int SceUdcdForDriver_C60A74B2(SceUdcdDeviceRequest *request)
 {
 	return udcdSubmitDriverRequest(request, 2, 1);
 }
 
-int ksceUdcdReqRecvInternal(SceUdcdDeviceRequest *request, int bus)
+int SceUdcdForDriver_175E6179(SceUdcdDeviceRequest *request, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2010,7 +2010,7 @@ static inline __attribute__((always_inline)) int udcdActivateBusImpl(
 	if (result < 0)
 		goto cleanup;
 	udcdNotifyStateChange(bus);
-	if (bus == 2 && ksceUdcdGetDrvState("USB_MTP_Driver") == 2)
+	if (bus == 2 && SceUdcdForDriver_C0CA5DDB("USB_MTP_Driver") == 2)
 		udcdState.buses[2].mtpProcess = -1;
 	result = 0;
 	goto unlock;
@@ -2054,12 +2054,12 @@ static inline __attribute__((always_inline)) int udcdActivateIfEnabled(
 	return enabled ? udcdActivateBusImpl(productId, policy, bus) : SCE_UDCD_ERROR_DRIVER_IN_PROGRESS;
 }
 
-int ksceUdcdActivate(unsigned int productId)
+int sceUdcdActivate(unsigned int productId)
 {
 	return udcdActivateIfEnabled(productId, 1, 2);
 }
 
-int ksceUdcdActivateInternal(unsigned int productId, unsigned int policy, int bus)
+int SceUdcdForDriver_9119247B(unsigned int productId, unsigned int policy, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2177,7 +2177,7 @@ int udcdStartDriver(const char *name, unsigned int args, void *argp, int bus)
 	return udcdStartDriverImpl(name, args, argp, bus);
 }
 
-int ksceUdcdStart(const char *name, int args, void *argp)
+int sceUdcdStart(const char *name, int args, void *argp)
 {
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2186,7 +2186,7 @@ int ksceUdcdStart(const char *name, int args, void *argp)
 	return udcdStartDriverImpl(name, args, argp, 2);
 }
 
-int ksceUdcdStartInternal(const char *name, int args, void *argp, int bus)
+int SceUdcdForDriver_90F8BCAE(const char *name, int args, void *argp, int bus)
 {
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2269,7 +2269,7 @@ int udcdStopDriver(const char *name, unsigned int args, void *argp, int bus)
 	return udcdStopDriverImpl(name, args, argp, bus);
 }
 
-int ksceUdcdStop(const char *name, int args, void *argp)
+int SceUdcdForDriver_1494293B(const char *name, int args, void *argp)
 {
 	if (!udcdIsDriverBus(2))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2278,7 +2278,7 @@ int ksceUdcdStop(const char *name, int args, void *argp)
 	return udcdStopDriverImpl(name, args, argp, 2);
 }
 
-int ksceUdcdStopInternal(const char *name, int args, void *argp, int bus)
+int SceUdcdForDriver_150FD3BB(const char *name, int args, void *argp, int bus)
 {
 	if (!udcdIsDriverBus(bus))
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
@@ -2287,7 +2287,7 @@ int ksceUdcdStopInternal(const char *name, int args, void *argp, int bus)
 	return udcdStopDriverImpl(name, args, argp, bus);
 }
 
-int ksceUdcdStopCurrentInternal(int bus)
+int SceUdcdForDriver_0F3595AE(int bus)
 {
 	struct udcdBusState *state;
 	int result;
@@ -2307,7 +2307,7 @@ int ksceUdcdStopCurrentInternal(int bus)
 	return result >= 0 || result == (int)SCE_UDCD_ERROR_INVALID_ARGUMENT ? 0 : result;
 }
 
-int ksceUdcdStartCurrentInternal(int unused, int bus)
+int SceUdcdForDriver_360E95B9(int unused, int bus)
 {
 	SceUdcdDriver *driver;
 	int result;
@@ -2351,14 +2351,14 @@ int udcdProcessEvent(SceUID process, int event, ProcEventParam *param, int flags
 		return udcdState.processEventResult;
 	if (event != 0x200 && event != 0x201)
 		return 0;
-	if (process == state->mtpProcess && ksceUdcdGetDrvState("USB_MTP_Driver") == 1 &&
-	    ksceUdcdGetDrvState("USBStor_Driver") != 2) {
+	if (process == state->mtpProcess && SceUdcdForDriver_C0CA5DDB("USB_MTP_Driver") == 1 &&
+	    SceUdcdForDriver_C0CA5DDB("USBStor_Driver") != 2) {
 		if (event == 0x200) {
 			status = SceCpuForDriver_D32ACE9E(&state->lock);
 			state->activationEnabled = 0;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		} else {
-			result = ksceUdcdStopCurrentInternal(2);
+			result = SceUdcdForDriver_0F3595AE(2);
 			if (result < 0) {
 				udcdState.processEventResult = result;
 				return 0;
@@ -2407,26 +2407,26 @@ static inline __attribute__((always_inline)) int udcdChangeEndpointState(
 	return result;
 }
 
-int ksceUdcdClearFIFOInternal(SceUdcdEndpoint *endpoint, int bus)
+int SceUdcdForDriver_A35F3BAF(SceUdcdEndpoint *endpoint, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	return udcdChangeEndpointState(endpoint, bus, 0);
 }
 
-int ksceUdcdStallInternal(SceUdcdEndpoint *endpoint, int bus)
+int SceUdcdForDriver_9B44DF29(SceUdcdEndpoint *endpoint, int bus)
 {
 	if (bus != 1 && bus != 2)
 		return SCE_UDCD_ERROR_ARGUMENT_EXCEEDED_LIMIT;
 	return udcdChangeEndpointState(endpoint, bus, 1);
 }
 
-int ksceUdcdClearFIFO(SceUdcdEndpoint *endpoint)
+int SceUdcdForDriver_9F53D64D(SceUdcdEndpoint *endpoint)
 {
 	return udcdChangeEndpointState(endpoint, 2, 0);
 }
 
-int ksceUdcdStall(SceUdcdEndpoint *endpoint)
+int SceUdcdForDriver_34079250(SceUdcdEndpoint *endpoint)
 {
 	return udcdChangeEndpointState(endpoint, 2, 1);
 }
@@ -2452,7 +2452,7 @@ int SceUdcdForDriver_B1C2EA5A(SceUdcdEndpoint *endpoint, int bus)
 	return result;
 }
 
-int ksceUdcdRegisterInternal(SceUdcdDriver *driver, int bus)
+int SceUdcdForDriver_64675918(SceUdcdDriver *driver, int bus)
 {
 	SceUdcdDriver *head, *current;
 	const char *name;
@@ -2490,12 +2490,12 @@ int ksceUdcdRegisterInternal(SceUdcdDriver *driver, int bus)
 	return 0;
 }
 
-int ksceUdcdRegister(SceUdcdDriver *driver)
+int SceUdcdForDriver_4E55244D(SceUdcdDriver *driver)
 {
-	return ksceUdcdRegisterInternal(driver, 2);
+	return SceUdcdForDriver_64675918(driver, 2);
 }
 
-int ksceUdcdUnregisterInternal(SceUdcdDriver *driver, int bus)
+int SceUdcdForDriver_6CCD152E(SceUdcdDriver *driver, int bus)
 {
 	SceUdcdDriver *current, *previous = NULL;
 	const char *name;
@@ -2525,9 +2525,9 @@ int ksceUdcdUnregisterInternal(SceUdcdDriver *driver, int bus)
 	return UDCD_ERROR_DRIVER_NOT_REGISTERED;
 }
 
-int ksceUdcdUnregister(SceUdcdDriver *driver)
+int SceUdcdForDriver_0DECE532(SceUdcdDriver *driver)
 {
-	return ksceUdcdUnregisterInternal(driver, 2);
+	return SceUdcdForDriver_6CCD152E(driver, 2);
 }
 
 static inline __attribute__((always_inline)) int udcdGetDriverState(
@@ -2548,12 +2548,12 @@ static inline __attribute__((always_inline)) int udcdGetDriverState(
 	return -1;
 }
 
-int ksceUdcdGetDrvState(const char *name)
+int SceUdcdForDriver_C0CA5DDB(const char *name)
 {
 	return udcdGetDriverState(name, 2);
 }
 
-int ksceUdcdGetDrvStateInternal(const char *name, int bus)
+int SceUdcdForDriver_512F77BC(const char *name, int bus)
 {
 	return udcdGetDriverState(name, bus);
 }

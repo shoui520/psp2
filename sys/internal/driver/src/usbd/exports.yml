@@ -13,7 +13,7 @@ SceUsbd:
       functions:
         - sceUsbdUnregisterCallback: 0x0585EA80
         - sceUsbdReceiveEvent: 0x16FEE05D
-        - sceUsbdRegisterCompositeLdd: 0x2A7C0263
+        - sceUsbdRegisterCompositeLddForUser: 0x2A7C0263
         - sceUsbdGetDeviceList: 0x2DE0239E
         - sceUsbdUnregisterLdd: 0x473692CC
         - sceUsbdOpenDefaultPipe: 0x4A26DDCC
@@ -39,24 +39,24 @@ SceUsbd:
       version: 1
       nid: 0xA0EBCA41
       functions:
-        - ksceUsbd_05073925: 0x05073925
-        - ksceUsbdGetDeviceLocation: 0x0E73D253
-        - ksceUsbdOpenPipe: 0x1CDBFF9F
-        - ksceUsbdRegisterDriver: 0x1EC94F18
-        - ksceUsbdResume: 0x206634F9
-        - ksceUsbdUnregisterDriver: 0x216F108D
-        - ksceUsbdIsochronousTransfer: 0x2249BF99
-        - ksceUsbdBulkTransfer: 0x235C094A
-        - ksceUsbdControlTransfer: 0x2E05660F
-        - ksceUsbdHostStop: 0x3C3396BB
-        - ksceUsbdSuspend: 0x3EBF5FFE
-        - ksceUsbdBulkTransfer2: 0x470D5289
-        - ksceUsbdHostStart: 0x5E301E18
-        - ksceUsbdRegisterCompositeLdd: 0x6E53D7F4
-        - ksceUsbdUnregisterCompositeLdd: 0x7934BB4A
-        - ksceUsbd_7938DAC7: 0x7938DAC7
-        - ksceUsbdInterruptTransfer: 0xA0BF85B8
-        - ksceUsbdScanStaticDescriptor: 0xBC3EF82B
-        - ksceUsbdGetDeviceSpeed: 0xC3BECF5F
-        - ksceUsbdSuspendPhase2: 0xD7AA730D
-        - ksceUsbdClosePipe: 0xF304DC5C
+        - SceUsbdForDriver_05073925: 0x05073925
+        - SceUsbdForDriver_0E73D253: 0x0E73D253
+        - SceUsbdForDriver_1CDBFF9F: 0x1CDBFF9F
+        - SceUsbdForDriver_1EC94F18: 0x1EC94F18
+        - sceUsbdResume: 0x206634F9
+        - SceUsbdForDriver_216F108D: 0x216F108D
+        - SceUsbdForDriver_2249BF99: 0x2249BF99
+        - SceUsbdForDriver_235C094A: 0x235C094A
+        - SceUsbdForDriver_2E05660F: 0x2E05660F
+        - sceUsbdHostStop: 0x3C3396BB
+        - SceUsbdForDriver_3EBF5FFE: 0x3EBF5FFE
+        - SceUsbdForDriver_470D5289: 0x470D5289
+        - sceUsbdHostStart: 0x5E301E18
+        - sceUsbdRegisterCompositeLdd: 0x6E53D7F4
+        - SceUsbdForDriver_7934BB4A: 0x7934BB4A
+        - SceUsbdForDriver_7938DAC7: 0x7938DAC7
+        - SceUsbdForDriver_A0BF85B8: 0xA0BF85B8
+        - SceUsbdForDriver_BC3EF82B: 0xBC3EF82B
+        - SceUsbdForDriver_C3BECF5F: 0xC3BECF5F
+        - sceUsbdSuspendPhase2: 0xD7AA730D
+        - SceUsbdForDriver_F304DC5C: 0xF304DC5C

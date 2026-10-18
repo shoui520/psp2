@@ -42,7 +42,7 @@ typedef struct SceMotionDevDeviceInfo {
 _Static_assert(sizeof(MotionMagnDeviceInfo) == 12, "magnetometer device info size");
 _Static_assert(sizeof(SceMotionDevDeviceInfo) == 44, "motion device info size");
 
-int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info);
+int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info);
 
 #define MOTION_DATA_ENTRIES	6
 #define MOTION_DATA_OTHER_OWNER	0x40
@@ -223,4 +223,39 @@ _Static_assert(sizeof(SceMotionDevDs3CalibData) == 24, "DS3 calibration layout")
 _Static_assert(sizeof(MotionDriverSample) == 24, "virtual motion sample layout");
 _Static_assert(sizeof(MotionVirtualDriver) == 24, "virtual motion driver layout");
 
-int ksceMotionDevRegisterVirtualMotionDriver(const MotionVirtualDriver *driver);
+int SceMotionDevForDriver_7FD06731(const MotionVirtualDriver *driver);
+
+int SceMotionDevForDriver_031AF7A1(void);
+int SceMotionDevForDriver_10AAC8EA(void);
+int SceMotionDevForDriver_11A17A96(void);
+int SceMotionDevForDriver_22CD6DCA(SceUID owner);
+int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, unsigned int *info);
+int SceMotionDevForDriver_3CD0CE14(SceUID *owner);
+int SceMotionDevForDriver_77BA3A04(void);
+int SceMotionDevForDriver_85E3C678(void);
+int SceMotionDevForDriver_A75976EE(void);
+int SceMotionDevForDriver_C02C85AB(void);
+int SceMotionDevForDriver_D7DA3DA7(void);
+int SceMotionDevForDriver_DBAF611A(unsigned int mode);
+int SceMotionDevForDriver_FD0B0785(void);
+int SceMotionDevForDriver_FD1C528D(void);
+
+/* SceMotionDev: the user syscalls */
+struct MotionDs3Report;
+
+int sceMotionDevGetControllerType(int port, uint8_t *type);
+int sceMotionDevGetCurrentMagnStabilityLevel(SceUInt32 *level);
+int sceMotionDevGetDs3CalibData(int port, SceMotionDevDs3CalibData *data);
+int sceMotionDevGetEvaInfo(void *info);
+int sceMotionDevGetMeasMode(void *info);
+int sceMotionDevIsReady(void);
+int sceMotionDevMagnSamplingStart(void);
+int sceMotionDevMagnSamplingStop(void);
+int sceMotionDevRead3(int port, struct MotionDs3Report *report, int count, SceUInt32 *info);
+int sceMotionDevSamplingStart(void);
+int sceMotionDevSamplingStart2(int port);
+int sceMotionDevSamplingStop(void);
+int sceMotionDevSamplingStop2(int port);
+int sceMotionDevSetGyroFeedBack(int port, int feedback);
+int sceMotionDevSetSamplingMode(unsigned int mode);
+int sceMotionDevUpdateMagnStabilityLevel(SceUInt32 level);

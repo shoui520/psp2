@@ -4,8 +4,8 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/udcd.h>
-#include <psp2kern/usbserv.h>
+#include <udcd/udcd.h>
+#include <usbserv/usbserv.h>
 #include <sysmem/debug.h>
 #include <sysmem/barrier.h>
 
@@ -190,7 +190,7 @@ static int __attribute__((noreturn)) _sceDbgUsbReadQueueWorker(SceSize size, voi
 			buffer->request.transmitted = 0;
 			buffer->request.returnCode = 1;
 			buffer->request.next = NULL;
-			ret = ksceUdcdReqRecvInternal(&buffer->request, 1);
+			ret = SceUdcdForDriver_175E6179(&buffer->request, 1);
 			if (ret >= 0)
 				continue;
 		}
@@ -327,7 +327,7 @@ int SceDbgUsbForDriver_40C65DB2(const void *data, unsigned int size)
 	s_write.request.next = NULL;
 	sceKernelClearEventFlag(s_status, ~0x1000u);
 	sceKernelSetEventFlag(s_status, 0x100);
-	ret = ksceUdcdReqSendInternal(&s_write.request, 1);
+	ret = SceUdcdForDriver_2E3E622A(&s_write.request, 1);
 	if (ret >= 0) {
 		ret = sceKernelWaitEventFlag(s_status, 0x1000, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 					      NULL);
@@ -454,19 +454,19 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 		goto readThreadFail;
 	}
 	sceKernelStartThread(s_readThread, 0, NULL);
-	if (ksceUsbServMacSelect(1, 1) < 0)
+	if (SceUsbServForDriver_7AD36284(1, 1) < 0)
 		return 2;
-	if (ksceUdcdRegisterInternal(&s_driver, 1) < 0)
+	if (SceUdcdForDriver_64675918(&s_driver, 1) < 0)
 		return 2;
-	if (ksceUdcdStartInternal("USBDeviceControllerDriver", 0, NULL, 1) >= 0) {
-		if (ksceUdcdStartInternal("USB_DbgUsb_Driver", 0, NULL, 1) >= 0) {
-			if (ksceUdcdActivateInternal(0x4cd, 0, 1) >= 0)
+	if (SceUdcdForDriver_90F8BCAE("USBDeviceControllerDriver", 0, NULL, 1) >= 0) {
+		if (SceUdcdForDriver_90F8BCAE("USB_DbgUsb_Driver", 0, NULL, 1) >= 0) {
+			if (SceUdcdForDriver_9119247B(0x4cd, 0, 1) >= 0)
 				return 0;
-			ksceUdcdStopInternal("USB_DbgUsb_Driver", 0, NULL, 1);
+			SceUdcdForDriver_150FD3BB("USB_DbgUsb_Driver", 0, NULL, 1);
 		}
-		ksceUdcdStopInternal("USBDeviceControllerDriver", 0, NULL, 1);
+		SceUdcdForDriver_150FD3BB("USBDeviceControllerDriver", 0, NULL, 1);
 	}
-	ksceUdcdUnregisterInternal(&s_driver, 1);
+	SceUdcdForDriver_6CCD152E(&s_driver, 1);
 	return 2;
 readThreadFail:
 	sceKernelDeleteThread(s_statusThread);

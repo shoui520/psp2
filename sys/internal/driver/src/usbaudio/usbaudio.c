@@ -80,15 +80,15 @@ static int attachAudio(int id);
 static int detachAudio(int id);
 static void completeSetup(int result, int length, void *arg);
 static void completeInterface(int result, int length, void *arg);
-static void completeInput(int result, ksceUsbdIsochTransfer *packet, void *arg);
-static void completeCapture(int result, ksceUsbdIsochTransfer *packet, void *arg);
-static void completeOutput(int result, ksceUsbdIsochTransfer *packet, void *arg);
+static void completeInput(int result, UsbdIsochRequest *packet, void *arg);
+static void completeCapture(int result, UsbdIsochRequest *packet, void *arg);
+static void completeOutput(int result, UsbdIsochRequest *packet, void *arg);
 static void parseDescriptors(unsigned id, AudioPort *port);
 
 static int cleanupProcess(int process)
 {
 	unsigned ids[127];
-	int n = ksceUsbAudioGetDeviceIdList(ids, 127);
+	int n = SceUsbAudioForDriver_96EC3E18(ids, 127);
 	int ret = 0;
 	for (int i = 0; i < n; i++) {
 		AudioPort *port = findPort(ids[i]);
@@ -162,7 +162,7 @@ int module_start(unsigned arglen, const void *argp)
 	s_audio.opened = 0;
 	if (initializeAudio())
 		return 2;
-	int ret = ksceUsbdRegisterCompositeLdd(&driver);
+	int ret = sceUsbdRegisterCompositeLdd(&driver);
 	if (ret) {
 		SceDebugForDriver_391B74B7("USBAUDIO: sceUsbdRegisterCompositeLdd() failed! => 0x%x", ret);
 		SceDebugForDriver_391B74B7("\n");
@@ -171,7 +171,7 @@ int module_start(unsigned arglen, const void *argp)
 	return sceKernelRegisterProcEventHandler("SceUsbAudio", &events, 0) < 0 ? 2 : 0;
 }
 
-int ksceUsbAudioRegisterCallback(int callback)
+int SceUsbAudioForDriver_974DBE03(int callback)
 {
 	int ret = lockAudio();
 	if (ret)
@@ -201,7 +201,7 @@ out:
 	unlockAudio();
 	return ret;
 }
-int ksceUsbAudioUnregisterCallback(int callback)
+int SceUsbAudioForDriver_23A07D29(int callback)
 {
 	int ret = lockAudio();
 	if (ret)
@@ -219,7 +219,7 @@ int ksceUsbAudioUnregisterCallback(int callback)
 	unlockAudio();
 	return ret;
 }
-int ksceUsbAudioGetDeviceIdList(unsigned *list, int size)
+int SceUsbAudioForDriver_96EC3E18(unsigned *list, int size)
 {
 	if (!list)
 		return AUDIO_ERROR(INVALID_ARGUMENT);
@@ -270,7 +270,7 @@ static int volumeRequest(unsigned id, unsigned request, unsigned value, int *out
 			.wLength = 2,
 		};
 		dev->controlResult = 0;
-		ret = ksceUsbdControlTransfer(dev->port.controlPipe, &req, buffer, completeVolume, dev);
+		ret = SceUsbdForDriver_2E05660F(dev->port.controlPipe, &req, buffer, completeVolume, dev);
 		unsigned timeout = 1000000;
 		int wait = sceKernelWaitEventFlag(dev->event, 1,
 						   SCE_KERNEL_EVF_WAITMODE_OR |
@@ -339,7 +339,7 @@ SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, SceUsbAudioInDeviceInfo
 	else if (!findPort(id))
 		ret = AUDIO_ERROR(DEVICE_NOT_FOUND);
 	else {
-		uint8_t *desc = (void *)ksceUsbdScanStaticDescriptor(id, 0, 1);
+		uint8_t *desc = (void *)SceUsbdForDriver_BC3EF82B(id, 0, 1);
 		if (!desc)
 			ret = AUDIO_ERROR(DEVICE_NOT_FOUND);
 		else {
@@ -360,7 +360,7 @@ SceInt32 sceUsbAudioInGetDeviceIdList(SceUsbAudioInDeviceListItem *list, SceUInt
 	if (!count || !list || (int)size < 1)
 		ret = AUDIO_ERROR(INVALID_ARGUMENT);
 	else {
-		int n = ksceUsbAudioGetDeviceIdList(ids, 127);
+		int n = SceUsbAudioForDriver_96EC3E18(ids, 127);
 		int copied = n < (int)size ? n : size;
 		ret = SceSysmemForDriver_6D88EF8A(list, ids, copied * 4);
 		if (!ret)
@@ -370,11 +370,11 @@ SceInt32 sceUsbAudioInGetDeviceIdList(SceUsbAudioInDeviceListItem *list, SceUInt
 	return ret;
 }
 
-static int submitIso(int pipe, AudioIso *request, ksceUsbdIsochDoneCallback callback, void *arg)
+static int submitIso(int pipe, AudioIso *request, SceUsbdIsochDoneCallback callback, void *arg)
 {
-	return ksceUsbdIsochronousTransfer(pipe, (void *)request, callback, arg);
+	return SceUsbdForDriver_2249BF99(pipe, (void *)request, callback, arg);
 }
-static void completeInput(int result, ksceUsbdIsochTransfer *packet, void *arg)
+static void completeInput(int result, UsbdIsochRequest *packet, void *arg)
 {
 	AudioDma *dma = arg;
 	if (!dma || !dma->stream)
@@ -456,7 +456,7 @@ SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
 		stream->ring[i].size = stream->frameBytes * stream->frames * 16;
 		stream->ring[i].used = 0;
 	}
-	ksceUsbd_7938DAC7(port->inputPipe);
+	SceUsbdForDriver_7938DAC7(port->inputPipe);
 	stream->active = 0;
 	for (unsigned i = 0; i < 3; i++) {
 		if (submitIso(port->inputPipe, &stream->dma[i]->request, completeInput, stream->dma[i]) < 0) {
@@ -552,7 +552,7 @@ SceInt32 sceUsbAudioInInput(SceUInt32 id, void *buffer)
 	return ret;
 }
 
-static void completeCapture(int result, ksceUsbdIsochTransfer *packet, void *arg)
+static void completeCapture(int result, UsbdIsochRequest *packet, void *arg)
 {
 	if (lockAudio())
 		return;
@@ -573,7 +573,7 @@ static void completeCapture(int result, ksceUsbdIsochTransfer *packet, void *arg
 	}
 	unlockAudio();
 }
-static void completeOutput(int result, ksceUsbdIsochTransfer *packet, void *arg)
+static void completeOutput(int result, UsbdIsochRequest *packet, void *arg)
 {
 	if (lockAudio())
 		return;
@@ -620,7 +620,7 @@ static void queuePacket(AudioQueue *queue, AudioPacket *packet)
 		queue->write = (queue->write + 1) % 2;
 	}
 }
-int ksceUsbAudioInput(unsigned id, void *buffer, unsigned size)
+int SceUsbAudioForDriver_863B0617(unsigned id, void *buffer, unsigned size)
 {
 	unsigned packets = size / 192;
 	if (size != packets * 192 || packets - 1 > 7 || !buffer)
@@ -653,7 +653,7 @@ int ksceUsbAudioInput(unsigned id, void *buffer, unsigned size)
 	unlockAudio();
 	return ret;
 }
-int ksceUsbAudioInput2(unsigned id, void *buffer, unsigned size)
+int SceUsbAudioForDriver_EFB4E3E4(unsigned id, void *buffer, unsigned size)
 {
 	unsigned packets = size / 192;
 	if (size != packets * 192 || packets - 1 > 7 || !buffer)
@@ -725,7 +725,7 @@ int ksceUsbAudioInput2(unsigned id, void *buffer, unsigned size)
 /* the next descriptor of a type after previous (type 0: any) */
 static void *scan(unsigned id, const void *previous, int type)
 {
-	return ksceUsbdScanStaticDescriptor(id, (void *)previous, type);
+	return SceUsbdForDriver_BC3EF82B(id, (void *)previous, type);
 }
 static int interfaceMatches(const SceUsbdInterfaceDescriptor *interface, unsigned subclass)
 {
@@ -1055,7 +1055,7 @@ static int requestInterface(AudioDevice *dev, const SceUsbdInterfaceDescriptor *
 		.wValue = interface->bAlternateSetting,
 		.wIndex = interface->bInterfaceNumber,
 	};
-	int ret = ksceUsbdControlTransfer(dev->port.controlPipe, &req, NULL, completeInterface,
+	int ret = SceUsbdForDriver_2E05660F(dev->port.controlPipe, &req, NULL, completeInterface,
 		(void *)dev->id);
 	if (!ret)
 		dev->state = state;
@@ -1078,7 +1078,7 @@ static void requestString(AudioDevice *dev, unsigned index, unsigned state)
 		.wIndex = USB_LANGID_EN_US,
 		.wLength = USB_STRING_MAX,
 	};
-	if (!ksceUsbdControlTransfer(dev->port.controlPipe, &req, controlBuffer(dev), completeSetup,
+	if (!SceUsbdForDriver_2E05660F(dev->port.controlPipe, &req, controlBuffer(dev), completeSetup,
 	    (void *)dev->id))
 		dev->state = state;
 }
@@ -1145,7 +1145,7 @@ static void completeInterface(int result, int length, void *arg)
 				.wIndex = dev->port.inputEndpoint->bEndpointAddress,
 				.wLength = 3,
 			};
-			if (!ksceUsbdControlTransfer(dev->port.controlPipe, &req, buffer,
+			if (!SceUsbdForDriver_2E05660F(dev->port.controlPipe, &req, buffer,
 			    completeSetup, (void *)dev->id))
 				dev->state = DEVICE_SAMPLING_RATE;
 		} else if (dev && dev->state == DEVICE_OUTPUT_INTERFACE) {
@@ -1197,15 +1197,15 @@ static int addDevice(unsigned id)
 		if (dev->port.outputQueue)
 			memset(dev->port.outputQueue, 0, offsetof(AudioQueue, completed));
 	}
-	dev->port.controlPipe = ksceUsbdOpenPipe(id, NULL);
+	dev->port.controlPipe = SceUsbdForDriver_1CDBFF9F(id, NULL);
 	if (dev->port.controlPipe >= 0) {
 		if (dev->port.inputEndpoint) {
-			dev->port.inputPipe = ksceUsbdOpenPipe(id, dev->port.inputEndpoint);
+			dev->port.inputPipe = SceUsbdForDriver_1CDBFF9F(id, dev->port.inputEndpoint);
 			if (dev->port.inputPipe < 0)
 				goto setup;
 		}
 		if (dev->port.outputEndpoint)
-			dev->port.outputPipe = ksceUsbdOpenPipe(id, dev->port.outputEndpoint);
+			dev->port.outputPipe = SceUsbdForDriver_1CDBFF9F(id, dev->port.outputEndpoint);
 	}
  setup:
 	if (!dev->state) {

@@ -2,7 +2,7 @@
 #define BBMC_USB_SERIAL_H
 
 #include <stddef.h>
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 
 typedef struct BbmcUsbSerialPipe BbmcUsbSerialPipe;
 typedef struct BbmcUsbSerialChannel BbmcUsbSerialChannel;

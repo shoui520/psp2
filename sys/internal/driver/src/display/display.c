@@ -684,12 +684,12 @@ static int initWork(void *arg) /* name unknown */
 	/* the panel drivers are optional: call them only when they were loaded */
 	imported = NULL;
 	(void)imported;
-	imported = (void *)ksceOledWaitReady;
+	imported = (void *)SceOledForDriver_0CC6BCB4;
 	if (imported != NULL)
-		ksceOledWaitReady();
-	imported = (void *)ksceLcdWaitReady;
+		SceOledForDriver_0CC6BCB4();
+	imported = (void *)SceLcdForDriver_0C7E03D8;
 	if (imported != NULL)
-		ksceLcdWaitReady();
+		SceLcdForDriver_0C7E03D8();
 
 	if (hdmiOnly == 0) {
 		if (SceDsiForDriver_B3A70C05(0, &width, &height) >= 0)

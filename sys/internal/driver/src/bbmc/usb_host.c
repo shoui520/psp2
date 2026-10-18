@@ -66,7 +66,7 @@ int bbmcAttachUsbSerialInterface(int deviceId, unsigned int index)
 	if (matchedDevice != deviceId)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(matchedDevice, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(matchedDevice, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		cursor = interface;
 		if (interface == NULL)
@@ -81,7 +81,7 @@ int bbmcAttachUsbSerialInterface(int deviceId, unsigned int index)
 			SceUsbdEndpointDescriptor *endpoint;
 			unsigned int type;
 
-			endpoint = ksceUsbdScanStaticDescriptor(matchedDevice, cursor,
+			endpoint = SceUsbdForDriver_BC3EF82B(matchedDevice, cursor,
 				SCE_USBD_DESCRIPTOR_ENDPOINT);
 			cursor = endpoint;
 			if (endpoint == NULL)
@@ -253,7 +253,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 				BbmcUsbSerialRequest *request;
 
 				SceCpuForDriver_BF82DEB2(&pipe->lock);
-				ksceUsbdClosePipe(pipe->pipeId);
+				SceUsbdForDriver_F304DC5C(pipe->pipeId);
 				pipe->pipeId = 0;
 				request = pipe->head;
 				while (request != NULL) {
@@ -271,7 +271,7 @@ int bbmcCloseUsbSerialInterface(unsigned int index, int channelId)
 		} while (pipe != &channel->pipes[3]);
 		channel->kind = 0;
 		if (g_usbSerialHost->controlPipe.pipeId > 0) {
-			ksceUsbdClosePipe(g_usbSerialHost->controlPipe.pipeId);
+			SceUsbdForDriver_F304DC5C(g_usbSerialHost->controlPipe.pipeId);
 			g_usbSerialHost->controlPipe.pipeId = 0;
 		}
 	}
@@ -290,13 +290,13 @@ int bbmcProbeUsbQdl(int deviceId, SceUsbdInterfaceDescriptor **descriptor)
 	void *cursor = NULL;
 	SceUInt32 location;
 
-	if (ksceUsbdGetDeviceLocation(deviceId, &location) < 0 || location != 1)
+	if (SceUsbdForDriver_0E73D253(deviceId, &location) < 0 || location != 1)
 		return -1;
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL || device->idVendor != 0x05c6 || device->idProduct != 0x920c)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		cursor = interface;
 		if (interface == NULL)
@@ -444,13 +444,13 @@ int bbmcProbeUsbQcom(int deviceId, SceUsbdInterfaceDescriptor **descriptor)
 	void *cursor = NULL;
 	SceUInt32 location;
 
-	if (ksceUsbdGetDeviceLocation(deviceId, &location) < 0 || location != 1)
+	if (SceUsbdForDriver_0E73D253(deviceId, &location) < 0 || location != 1)
 		return -1;
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL || device->idVendor != 0x05c6 || device->idProduct != 0x9005)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		cursor = interface;
 		if (interface == NULL)
@@ -470,13 +470,13 @@ int bbmcProbeUsbQedl(int deviceId, SceUsbdInterfaceDescriptor **descriptor)
 	void *cursor = NULL;
 	SceUInt32 location;
 
-	if (ksceUsbdGetDeviceLocation(deviceId, &location) < 0 || location != 1)
+	if (SceUsbdForDriver_0E73D253(deviceId, &location) < 0 || location != 1)
 		return -1;
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL || device->idVendor != 0x05c6 || device->idProduct != 0x9008)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		cursor = interface;
 		if (interface == NULL)
@@ -496,13 +496,13 @@ int bbmcProbeUsbQmodem(int deviceId, SceUsbdInterfaceDescriptor **descriptor)
 	void *cursor = NULL;
 	SceUInt32 location;
 
-	if (ksceUsbdGetDeviceLocation(deviceId, &location) < 0 || location != 1)
+	if (SceUsbdForDriver_0E73D253(deviceId, &location) < 0 || location != 1)
 		return -1;
-	device = ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
+	device = SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_DEVICE);
 	if (device == NULL || device->idVendor != 0x05c6 || device->idProduct != 0x9005)
 		return -1;
 	for (;;) {
-		interface = ksceUsbdScanStaticDescriptor(deviceId, cursor,
+		interface = SceUsbdForDriver_BC3EF82B(deviceId, cursor,
 			SCE_USBD_DESCRIPTOR_INTERFACE);
 		cursor = interface;
 		if (interface == NULL)
@@ -677,19 +677,19 @@ int bbmcInitializeUsbSerialHost(void)
 		goto fail;
 	g_usbSerialHostStorage.event = event;
 	g_usbSerialHost = &g_usbSerialHostStorage;
-	if (ksceUsbdRegisterCompositeLdd(&g_usbSerialQcomDriver) < 0)
+	if (sceUsbdRegisterCompositeLdd(&g_usbSerialQcomDriver) < 0)
 		goto fail;
-	if (ksceUsbdRegisterCompositeLdd(&g_usbSerialQmodemDriver) < 0)
+	if (sceUsbdRegisterCompositeLdd(&g_usbSerialQmodemDriver) < 0)
 		goto unregisterQcom;
-	if (ksceUsbdRegisterCompositeLdd(&g_usbSerialQdlDriver) < 0)
+	if (sceUsbdRegisterCompositeLdd(&g_usbSerialQdlDriver) < 0)
 		goto unregisterQmodem;
-	if (ksceUsbdRegisterCompositeLdd(&g_usbSerialQedlDriver) >= 0)
+	if (sceUsbdRegisterCompositeLdd(&g_usbSerialQedlDriver) >= 0)
 		return 0;
-	ksceUsbdUnregisterCompositeLdd(&g_usbSerialQdlDriver);
+	SceUsbdForDriver_7934BB4A(&g_usbSerialQdlDriver);
 unregisterQmodem:
-	ksceUsbdUnregisterCompositeLdd(&g_usbSerialQmodemDriver);
+	SceUsbdForDriver_7934BB4A(&g_usbSerialQmodemDriver);
 unregisterQcom:
-	ksceUsbdUnregisterCompositeLdd(&g_usbSerialQcomDriver);
+	SceUsbdForDriver_7934BB4A(&g_usbSerialQcomDriver);
 fail:
 	if (g_usbSerialHostStorage.event > 0) {
 		sceKernelDeleteEventFlag(g_usbSerialHostStorage.event);
@@ -703,10 +703,10 @@ int bbmcFinalizeUsbSerialHost(void)
 {
 	if (g_usbSerialHost != NULL) {
 		sceKernelSetEventFlag(g_usbSerialHost->event, ~0u);
-		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQedlDriver);
-		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQdlDriver);
-		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQmodemDriver);
-		ksceUsbdUnregisterCompositeLdd(&g_usbSerialQcomDriver);
+		SceUsbdForDriver_7934BB4A(&g_usbSerialQedlDriver);
+		SceUsbdForDriver_7934BB4A(&g_usbSerialQdlDriver);
+		SceUsbdForDriver_7934BB4A(&g_usbSerialQmodemDriver);
+		SceUsbdForDriver_7934BB4A(&g_usbSerialQcomDriver);
 		sceKernelDeleteEventFlag(g_usbSerialHost->event);
 		g_usbSerialHost = NULL;
 	}
@@ -822,30 +822,30 @@ int bbmcOpenUsbSerialQcom(int *channelId)
 		ret = (int)0x80332205;
 		goto reset;
 	}
-	if (ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
+	if (SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
 		ret = (int)0x80332205;
 		goto reset;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId == 0) {
-		ret = ksceUsbdOpenPipe(deviceId, NULL);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 		if (ret < 0)
 			goto fail;
 		g_usbSerialHost->controlPipe.pipeId = ret;
 	}
 	if (host->endpoints[0].interruptEndpoint != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, host->endpoints[0].interruptEndpoint);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, host->endpoints[0].interruptEndpoint);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[0].pipeId = ret;
 	}
 	if (endpoints->bulkIn != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkIn);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkIn);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[1].pipeId = ret;
 	}
 	if (endpoints->bulkOut != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkOut);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkOut);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[2].pipeId = ret;
@@ -855,19 +855,19 @@ int bbmcOpenUsbSerialQcom(int *channelId)
 	goto out;
 fail:
 	if (channel->pipes[0].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[0].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[0].pipeId);
 		channel->pipes[0].pipeId = 0;
 	}
 	if (channel->pipes[1].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[1].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[1].pipeId);
 		channel->pipes[1].pipeId = 0;
 	}
 	if (channel->pipes[2].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[2].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[2].pipeId);
 		channel->pipes[2].pipeId = 0;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId > 0) {
-		ksceUsbdClosePipe(g_usbSerialHost->controlPipe.pipeId);
+		SceUsbdForDriver_F304DC5C(g_usbSerialHost->controlPipe.pipeId);
 		g_usbSerialHost->controlPipe.pipeId = 0;
 	}
 reset:
@@ -914,30 +914,30 @@ int bbmcOpenUsbSerialAt(int *channelId)
 		ret = (int)0x80332205;
 		goto reset;
 	}
-	if (ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
+	if (SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
 		ret = (int)0x80332205;
 		goto reset;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId == 0) {
-		ret = ksceUsbdOpenPipe(deviceId, NULL);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 		if (ret < 0)
 			goto fail;
 		g_usbSerialHost->controlPipe.pipeId = ret;
 	}
 	if (host->endpoints[1].interruptEndpoint != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, host->endpoints[1].interruptEndpoint);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, host->endpoints[1].interruptEndpoint);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[0].pipeId = ret;
 	}
 	if (endpoints->bulkIn != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkIn);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkIn);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[1].pipeId = ret;
 	}
 	if (endpoints->bulkOut != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkOut);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkOut);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[2].pipeId = ret;
@@ -947,19 +947,19 @@ int bbmcOpenUsbSerialAt(int *channelId)
 	goto out;
 fail:
 	if (channel->pipes[0].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[0].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[0].pipeId);
 		channel->pipes[0].pipeId = 0;
 	}
 	if (channel->pipes[1].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[1].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[1].pipeId);
 		channel->pipes[1].pipeId = 0;
 	}
 	if (channel->pipes[2].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[2].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[2].pipeId);
 		channel->pipes[2].pipeId = 0;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId > 0) {
-		ksceUsbdClosePipe(g_usbSerialHost->controlPipe.pipeId);
+		SceUsbdForDriver_F304DC5C(g_usbSerialHost->controlPipe.pipeId);
 		g_usbSerialHost->controlPipe.pipeId = 0;
 	}
 reset:
@@ -1006,30 +1006,30 @@ int bbmcOpenUsbSerialQedl(int *channelId)
 		ret = (int)0x80332205;
 		goto reset;
 	}
-	if (ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
+	if (SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
 		ret = (int)0x80332205;
 		goto reset;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId == 0) {
-		ret = ksceUsbdOpenPipe(deviceId, NULL);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 		if (ret < 0)
 			goto fail;
 		g_usbSerialHost->controlPipe.pipeId = ret;
 	}
 	if (host->endpoints[2].interruptEndpoint != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, host->endpoints[2].interruptEndpoint);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, host->endpoints[2].interruptEndpoint);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[0].pipeId = ret;
 	}
 	if (endpoints->bulkIn != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkIn);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkIn);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[1].pipeId = ret;
 	}
 	if (endpoints->bulkOut != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkOut);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkOut);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[2].pipeId = ret;
@@ -1039,19 +1039,19 @@ int bbmcOpenUsbSerialQedl(int *channelId)
 	goto out;
 fail:
 	if (channel->pipes[0].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[0].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[0].pipeId);
 		channel->pipes[0].pipeId = 0;
 	}
 	if (channel->pipes[1].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[1].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[1].pipeId);
 		channel->pipes[1].pipeId = 0;
 	}
 	if (channel->pipes[2].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[2].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[2].pipeId);
 		channel->pipes[2].pipeId = 0;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId > 0) {
-		ksceUsbdClosePipe(g_usbSerialHost->controlPipe.pipeId);
+		SceUsbdForDriver_F304DC5C(g_usbSerialHost->controlPipe.pipeId);
 		g_usbSerialHost->controlPipe.pipeId = 0;
 	}
 reset:
@@ -1098,30 +1098,30 @@ int bbmcOpenUsbSerialQdl(int *channelId)
 		ret = (int)0x80332205;
 		goto reset;
 	}
-	if (ksceUsbdScanStaticDescriptor(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
+	if (SceUsbdForDriver_BC3EF82B(deviceId, NULL, SCE_USBD_DESCRIPTOR_CONFIGURATION) == NULL) {
 		ret = (int)0x80332205;
 		goto reset;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId == 0) {
-		ret = ksceUsbdOpenPipe(deviceId, NULL);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, NULL);
 		if (ret < 0)
 			goto fail;
 		g_usbSerialHost->controlPipe.pipeId = ret;
 	}
 	if (host->endpoints[3].interruptEndpoint != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, host->endpoints[3].interruptEndpoint);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, host->endpoints[3].interruptEndpoint);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[0].pipeId = ret;
 	}
 	if (endpoints->bulkIn != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkIn);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkIn);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[1].pipeId = ret;
 	}
 	if (endpoints->bulkOut != NULL) {
-		ret = ksceUsbdOpenPipe(deviceId, endpoints->bulkOut);
+		ret = SceUsbdForDriver_1CDBFF9F(deviceId, endpoints->bulkOut);
 		if (ret < 0)
 			goto fail;
 		channel->pipes[2].pipeId = ret;
@@ -1131,19 +1131,19 @@ int bbmcOpenUsbSerialQdl(int *channelId)
 	goto out;
 fail:
 	if (channel->pipes[0].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[0].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[0].pipeId);
 		channel->pipes[0].pipeId = 0;
 	}
 	if (channel->pipes[1].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[1].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[1].pipeId);
 		channel->pipes[1].pipeId = 0;
 	}
 	if (channel->pipes[2].pipeId > 0) {
-		ksceUsbdClosePipe(channel->pipes[2].pipeId);
+		SceUsbdForDriver_F304DC5C(channel->pipes[2].pipeId);
 		channel->pipes[2].pipeId = 0;
 	}
 	if (g_usbSerialHost->controlPipe.pipeId > 0) {
-		ksceUsbdClosePipe(g_usbSerialHost->controlPipe.pipeId);
+		SceUsbdForDriver_F304DC5C(g_usbSerialHost->controlPipe.pipeId);
 		g_usbSerialHost->controlPipe.pipeId = 0;
 	}
 reset:
@@ -1162,7 +1162,7 @@ int bbmcControlUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 {
 	BbmcUsbSerialHost *host;
 	BbmcUsbSerialRequest *head, *current;
-	__typeof__(&ksceUsbdBulkTransfer) bulkTransfer = NULL;
+	__typeof__(&SceUsbdForDriver_235C094A) bulkTransfer = NULL;
 	int ret;
 
 	if (request == NULL)
@@ -1190,7 +1190,7 @@ int bbmcControlUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 				   request->arguments.bulk.length,
 				   bbmcUsbSerialControlCompleted, request);
 	else
-		ret = ksceUsbdControlTransfer(host->controlPipe.pipeId,
+		ret = SceUsbdForDriver_2E05660F(host->controlPipe.pipeId,
 					     &request->arguments.control,
 					     request->controlData,
 					     bbmcUsbSerialControlCompleted, request);
@@ -1255,12 +1255,12 @@ int bbmcWriteUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	}
 	sceKernelSpinlockLowUnlock(&channel->pipes[2].lock);
 	if (request->transferType != 0)
-		ret = ksceUsbdBulkTransfer(channel->pipes[2].pipeId,
+		ret = SceUsbdForDriver_235C094A(channel->pipes[2].pipeId,
 				   request->arguments.bulk.data,
 				   request->arguments.bulk.length,
 				   bbmcUsbSerialOutCompleted, request);
 	else
-		ret = ksceUsbdControlTransfer(channel->pipes[2].pipeId,
+		ret = SceUsbdForDriver_2E05660F(channel->pipes[2].pipeId,
 					     &request->arguments.control,
 					     request->controlData,
 					     bbmcUsbSerialOutCompleted, request);
@@ -1325,12 +1325,12 @@ int bbmcReadUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	}
 	sceKernelSpinlockLowUnlock(&channel->pipes[1].lock);
 	if (request->transferType != 0)
-		ret = ksceUsbdBulkTransfer(channel->pipes[1].pipeId,
+		ret = SceUsbdForDriver_235C094A(channel->pipes[1].pipeId,
 				   request->arguments.bulk.data,
 				   request->arguments.bulk.length,
 				   bbmcUsbSerialInCompleted, request);
 	else
-		ret = ksceUsbdControlTransfer(channel->pipes[1].pipeId,
+		ret = SceUsbdForDriver_2E05660F(channel->pipes[1].pipeId,
 					     &request->arguments.control,
 					     request->controlData,
 					     bbmcUsbSerialInCompleted, request);
@@ -1395,12 +1395,12 @@ int bbmcInterruptUsbSerial(int channelId, BbmcUsbSerialRequest *request)
 	}
 	sceKernelSpinlockLowUnlock(&channel->pipes[0].lock);
 	if (request->transferType != 0)
-		ret = ksceUsbdInterruptTransfer(channel->pipes[0].pipeId,
+		ret = SceUsbdForDriver_A0BF85B8(channel->pipes[0].pipeId,
 				   request->arguments.bulk.data,
 				   request->arguments.bulk.length,
 				   bbmcUsbSerialInterruptCompleted, request);
 	else
-		ret = ksceUsbdControlTransfer(channel->pipes[0].pipeId,
+		ret = SceUsbdForDriver_2E05660F(channel->pipes[0].pipeId,
 					     &request->arguments.control,
 					     request->controlData,
 					     bbmcUsbSerialInterruptCompleted, request);

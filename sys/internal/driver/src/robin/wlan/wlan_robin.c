@@ -13,6 +13,7 @@
 #include <sysmem/suspend.h>
 #include <syscon/syscon.h>
 #include <string.h>
+#include <usbserv/usbserv.h>
 
 #if FW_DEBUG
 static int gSuspendConfigurationQueued;
@@ -53,10 +54,8 @@ uint32_t *wlanEnableInformationElement(uint32_t *mask, unsigned int id);
 int wlanBssHasPrivacy(const WlanBssDesc *descriptor);
 int wlanBssHasWpa(const WlanBssDesc *descriptor);
 int wlanBssHasRsn(const WlanBssDesc *descriptor);
-int ksceUsbServEtherDisable(void);
 int robinWlanBeginWakeOnConfiguration(SceWlanBtRobinWlanContext *context);
 int robinWlanBeginHostSleepReset(SceWlanBtRobinWlanContext *context);
-int ksceUsbServEtherEnable(void);
 int robinWlanTcmStartBackgroundScan(SceWlanBtRobinWlanTcm *tcm,
 				  const WlanBackgroundScanConfig *configuration,
 				  unsigned int capacity);
@@ -384,7 +383,7 @@ int robinWlanRetryWakeOnConfiguration(SceWlanBtRobinWlanContext *context)
 	uint64_t started, elapsed;
 	int attempt = 0, result;
 
-	ksceUsbServEtherDisable();
+	sceUsbServEtherDisable();
 	started = sceKernelGetSystemTimeWide();
 	do {
 		result = _infraScanJoin(&context->tcm, &context->connection,
@@ -514,27 +513,27 @@ int robinWlanDriverControl(struct NetDriver *driver, unsigned int command,
 		if (result < 0)
 			context->connectionSize = 0;
 		else if (SceSblAIMgrForDriver_71608CA3())
-			ksceUsbServEtherDisable();
+			sceUsbServEtherDisable();
 		break;
 	case 0x50110002:
 		result = robinWlanTcmDisconnect(tcm);
 		if (result >= 0)
-			ksceUsbServEtherEnable();
+			sceUsbServEtherEnable();
 		break;
 	case 0x50120001:
 		result = robinWlanTcmJoinAdhoc(tcm, (void *)argument, capacity);
 		if (result >= 0)
-			ksceUsbServEtherDisable();
+			sceUsbServEtherDisable();
 		break;
 	case 0x50120002:
 		result = robinWlanTcmStopAdhoc(tcm);
 		if (result >= 0)
-			ksceUsbServEtherEnable();
+			sceUsbServEtherEnable();
 		break;
 	case 0x50120003:
 		result = robinWlanTcmStartAdhoc(tcm, (void *)argument, capacity);
 		if (result >= 0)
-			ksceUsbServEtherDisable();
+			sceUsbServEtherDisable();
 		break;
 	case 0x50120004: {
 		WlanConnectionConfig *configuration = (void *)argument;
@@ -704,7 +703,7 @@ nextCandidate:
 adhocSuccess:
 		memcpy(&output->bss, selected, sizeof(output->bss));
 		tcm->context->driver.free(&tcm->context->driver, scan);
-		ksceUsbServEtherDisable();
+		sceUsbServEtherDisable();
 		break;
 invalidAdhoc:
 		result = 0x80418001;
@@ -1163,7 +1162,7 @@ stopEvent:
 			if (result < 0)
 				goto failed;
 			__atomic_fetch_and(&context->status, ~2, __ATOMIC_RELEASE);
-			ksceUsbServEtherEnable();
+			sceUsbServEtherEnable();
 			result = robinWlanCompleteConfiguration(context, 2);
 			if (result < 0)
 				goto failed;
@@ -1205,7 +1204,7 @@ stopEvent:
 				result = robinWlanShutdownDcm(&context->dcm, 1);
 				if (result < 0)
 					goto failed;
-				result = ksceWlanBtSetConfiguration(13);
+				result = sceWlanBtSetConfiguration(13);
 				if (result < 0)
 					goto failed;
 				__atomic_fetch_or(&context->status, 0x120, __ATOMIC_RELEASE);
@@ -1229,7 +1228,7 @@ stopEvent:
 				if (result < 0)
 					goto failed;
 				__atomic_fetch_and(&context->status, ~2, __ATOMIC_RELEASE);
-				result = ksceWlanBtSetConfiguration(14);
+				result = sceWlanBtSetConfiguration(14);
 				if (result < 0)
 					goto failed;
 				__atomic_fetch_and(&context->status, ~0x100, __ATOMIC_RELEASE);
@@ -1275,7 +1274,7 @@ stopEvent:
 			result = robinWlanStartDcm(&context->dcm);
 			if (result < 0)
 				goto failed;
-			if ((ksceWlanBtGetConfiguration() & 0x100) || wlanBtGetWlanWakeSource() ||
+			if ((sceWlanBtGetConfiguration() & 0x100) || wlanBtGetWlanWakeSource() ||
 			    wlanBtGetBluetoothWakeSource()) {
 				result = robinWlanRequestCardWake(&context->dcm);
 				if (result < 0)
@@ -1283,7 +1282,7 @@ stopEvent:
 				__atomic_fetch_and(&context->status, ~0x10, __ATOMIC_RELEASE);
 			}
 			gWlanContext.currentStateMarker = 0x85000000;
-			if (!(ksceWlanBtGetConfiguration() & 0x100)) {
+			if (!(sceWlanBtGetConfiguration() & 0x100)) {
 				result = robinWlanBeginWakeOffConfiguration(context);
 				if (result < 0)
 					goto failed;
@@ -1449,7 +1448,7 @@ wakeResult:
 		if (events & 0x2000000) {
 			if (context->status & 2)
 				robinWlanShutdownDcm(&context->dcm, 0);
-			ksceWlanBtSetConfiguration(17);
+			sceWlanBtSetConfiguration(17);
 			__atomic_fetch_and(&context->status, 0xffc0ec25, __ATOMIC_RELEASE);
 			__atomic_fetch_and(&gWlanContext.status, ~0xc00, __ATOMIC_RELEASE);
 			memset(&gWlanContext.bss, 0,

@@ -12,7 +12,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <psp2kern/usbd.h>
+#include <usbd/usbd.h>
 #include <sysmem/procevent.h>
 
 /* Sony's helpers are inline functions; GCC would outline the bigger ones */
@@ -68,7 +68,7 @@
 #define USBD_RESPONSE_TIMEOUT		3000000	/* usbdWaitDeviceResponse */
 
 /* UsbdDriver.flags */
-#define USBD_DRIVER_KERNEL		0x1	/* ksceUsbdRegisterDriver; else a user LDD */
+#define USBD_DRIVER_KERNEL		0x1	/* SceUsbdForDriver_1EC94F18; else a user LDD */
 #define USBD_DRIVER_COMPOSITE		0x4	/* attaches to one interface */
 
 /* UsbdEvent.type: the event thread's and the callback thread's queues */
@@ -98,18 +98,6 @@ typedef struct UsbdRequest UsbdRequest;
 typedef struct UsbdDriver UsbdDriver;
 typedef struct UsbdClient UsbdClient;
 
-/* the packet list sceUsbdIsochTransferData and ksceUsbdIsochronousTransfer take */
-typedef struct UsbdIsochPacket {
-	SceUInt16 length;
-	SceUInt16 status;
-} UsbdIsochPacket;
-
-typedef struct UsbdIsochRequest {
-	void *buffer;
-	int numPackets;			/* 1..8 */
-	UsbdIsochPacket packets[8];
-} UsbdIsochRequest;
-
 /* a transfer; the 64 of them are found by id from the user API */
 struct UsbdRequest {
 	UsbdRequest *next;
@@ -128,10 +116,10 @@ struct UsbdRequest {
 	UsbdPipe *pipe;
 	UsbdClient *client;		/* the user API's requests */
 	SceUsbdDeviceRequest *setup;
-	int syncCache;			/* the controller cleans and invalidates the buffer; 0: ksceUsbdBulkTransfer2 */
+	int syncCache;			/* the controller cleans and invalidates the buffer; 0: SceUsbdForDriver_470D5289 */
 	UsbdIsochRequest isochRequest;
 	UsbdIsochRequest isochStatus;
-	ksceUsbdDoneCallback done;
+	SceUsbdDoneCallback done;
 	void (*isochDone)(int result, UsbdIsochRequest *status, void *arg);
 	void (*complete)(UsbdRequest *request);
 };
@@ -240,7 +228,7 @@ struct UsbdHcd {
 
 struct UsbdBus {
 	SceUInt8 index;
-	SceUInt8 suspended;		/* between ksceUsbdSuspendPhase2 and ksceUsbdResume */
+	SceUInt8 suspended;		/* between sceUsbdSuspendPhase2 and sceUsbdResume */
 	SceUInt8 padding[2];
 	SceUInt8 *enumerationBuffer;	/* uncached: the descriptors a device sends */
 	SceUInt8 *enumerationCursor;

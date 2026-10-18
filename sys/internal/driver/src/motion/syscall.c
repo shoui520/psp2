@@ -3,21 +3,17 @@
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/syscall.h>
+#include <motion/motion_dev.h>
 
 struct SceMotionDevDs3CalibData;
 
-int ksceMotionDevIsReady(void);
-int ksceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info);
-int ksceMotionDevGetEvaInfo(void *statistics);
-int ksceMotionDevGetCalibrationHeader(unsigned int block,
+int SceMotionDevForDriver_5B53AC26(void *statistics);
+int SceMotionDevForDriver_3B23DF55(unsigned int block,
 	SceMotionDevCalibrationHeader *header);
-int ksceMotionDevGetCalibrationData(unsigned int block,
+int SceMotionDevForDriver_F0251700(unsigned int block,
 	SceMotionDevCalibrationData *data, unsigned int count);
 int motionRead(SceMotionDevData *data, int count, unsigned int *info);
 int motionReadForMagnCalib(SceMotionDevData *data, int count);
-int ksceMotionDevSetSamplingMode(unsigned int mode);
-int ksceMotionDevSamplingStart(void);
-int ksceMotionDevSamplingStop(void);
 int motionMagnSamplingStart(void);
 int motionMagnSamplingStop(void);
 int motionUpdateMagnCalibData(const SceMotionDevMagnCalibData *data, uint32_t *tag);
@@ -37,7 +33,7 @@ int sceMotionDevIsReady(void)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	result = ksceMotionDevIsReady();
+	result = SceMotionDevForDriver_10AAC8EA();
 	sceSyscallLeave(state);
 	return result;
 }
@@ -51,7 +47,7 @@ int sceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 	if (info == NULL)
 		return (int)0x80360001;
 	state = sceSyscallEnter();
-	result = ksceMotionDevGetDeviceInfo(&buffer);
+	result = SceMotionDevForDriver_3E4BCBC0(&buffer);
 	if (result >= 0)
 		result = SceSysmemForDriver_6D88EF8A(info, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
@@ -67,7 +63,7 @@ int sceMotionDevGetEvaInfo(void *info)
 	if (info == NULL)
 		return (int)0x80360001;
 	state = sceSyscallEnter();
-	result = ksceMotionDevGetEvaInfo(&buffer);
+	result = SceMotionDevForDriver_5B53AC26(&buffer);
 	if (result >= 0)
 		result = SceSysmemForDriver_6D88EF8A(info, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
@@ -84,7 +80,7 @@ int sceMotionDevGetCalibrationHeader(unsigned int block,
 	if (header == NULL)
 		return (int)0x80360001;
 	state = sceSyscallEnter();
-	result = ksceMotionDevGetCalibrationHeader(block, &buffer);
+	result = SceMotionDevForDriver_3B23DF55(block, &buffer);
 	if (result >= 0)
 		result = SceSysmemForDriver_6D88EF8A(header, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
@@ -108,7 +104,7 @@ int sceMotionDevGetCalibrationData(unsigned int block,
 		sceSyscallLeave(state);
 		return (int)0x80360005;
 	}
-	result = ksceMotionDevGetCalibrationData(block, buffer, count);
+	result = SceMotionDevForDriver_F0251700(block, buffer, count);
 	if (result > 0) {
 		if (count < (unsigned int)result)
 			result = count;
@@ -175,7 +171,7 @@ int sceMotionDevSetSamplingMode(unsigned int mode)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	result = ksceMotionDevSetSamplingMode(mode);
+	result = SceMotionDevForDriver_DBAF611A(mode);
 	sceSyscallLeave(state);
 	return result;
 }
@@ -185,7 +181,7 @@ int sceMotionDevSamplingStart(void)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	result = ksceMotionDevSamplingStart();
+	result = SceMotionDevForDriver_C02C85AB();
 	sceSyscallLeave(state);
 	return result;
 }
@@ -200,7 +196,7 @@ int sceMotionDevSamplingStop(void)
 	SceUInt32 state = sceSyscallEnter();
 	int result;
 
-	result = ksceMotionDevSamplingStop();
+	result = SceMotionDevForDriver_FD0B0785();
 	sceSyscallLeave(state);
 	return result;
 }

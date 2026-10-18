@@ -124,17 +124,17 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_A2EFD7AF
 	ScePervasiveForDriver_AD1E81EB
 	ScePervasiveForDriver_BB67EF58
-	ksceUsbdOpenPipe
-	ksceUsbdRegisterDriver
-	ksceUsbdResume
-	ksceUsbdControlTransfer
-	ksceUsbdHostStop
-	ksceUsbdSuspend
-	ksceUsbdHostStart
-	ksceUsbdScanStaticDescriptor
-	ksceUsbdSuspendPhase2
+	SceUsbdForDriver_1CDBFF9F
+	SceUsbdForDriver_1EC94F18
+	sceUsbdResume
+	SceUsbdForDriver_2E05660F
+	sceUsbdHostStop
+	SceUsbdForDriver_3EBF5FFE
+	sceUsbdHostStart
+	SceUsbdForDriver_BC3EF82B
+	sceUsbdSuspendPhase2
 	SceUdcdForDriver_1A5A3851
-	ksceUdcdWaitBusInitialized
+	SceUdcdForDriver_1C684884
 	SceUdcdForDriver_2A234CAF
 	SceUdcdForDriver_9E7F7EFE
 	SceUdcdForDriver_D01CFD22

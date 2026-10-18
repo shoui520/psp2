@@ -6,9 +6,8 @@
 #include <wlanbt/wlanbt.h>
 #include <sysmem/atomic.h>
 #include "bt_transport.h"
+#include <sdif/sdif.h>
 
-SdifSdioContext *ksceSdifGetSdContextPartValidateSdio(unsigned int index);
-int SceSdifForDriver_E80293EF(SdifSdioFunction *function);
 int BtReadLe16(const uint8_t *source);
 int BtReadLe24(const uint8_t *source);
 void BtPollTransport(void *argument);
@@ -25,7 +24,7 @@ int BtSetupSdioTransport(void)
 	unsigned int mode;
 	int oldSubInterrupt, result;
 
-	gBtTransport.sdio = ksceSdifGetSdContextPartValidateSdio(2);
+	gBtTransport.sdio = SceSdifForDriver_6A8235FC(2);
 	if (gBtTransport.sdio == NULL)
 		return 0x802f1505;
 	identifier.manufacturerId = 0x2df;
@@ -144,7 +143,7 @@ int BtStartTransport(void)
 	}
 	attempts = 100;
 	for (;;) {
-		result = ksceWlanBtSetConfiguration(5);
+		result = sceWlanBtSetConfiguration(5);
 		if (result != (int)0x80418007)
 			break;
 		sceKernelDelayThread(10000);
@@ -155,7 +154,7 @@ int BtStartTransport(void)
 		goto failed;
 	attempts = 100;
 	for (;;) {
-		configuration = ksceWlanBtGetConfiguration();
+		configuration = sceWlanBtGetConfiguration();
 		if (configuration > 0 && (configuration & 4) != 0)
 			break;
 		sceKernelDelayThread(100000);

@@ -21,7 +21,7 @@ SceClockgen:
         - SceClockgenForDriver_820D3516: 0x820D3516
         - SceClockgenForDriver_82F39378: 0x82F39378
         - SceClockgenForDriver_A2CA8B65: 0xA2CA8B65
-        - ksceClockgenWlanBtClkDisable: 0xB6F0A532
+        - SceClockgenForDriver_B6F0A532: 0xB6F0A532
         - SceClockgenForDriver_CF63B11D: 0xCF63B11D
         - SceClockgenForDriver_EFE8A68C: 0xEFE8A68C
         - SceClockgenForDriver_F0A0242D: 0xF0A0242D

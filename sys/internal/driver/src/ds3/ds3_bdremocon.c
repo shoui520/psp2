@@ -21,7 +21,7 @@
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/usbserv.h>
+#include <usbserv/usbserv.h>
 #include <psp2kern/registrymgr.h>
 #include <display/display.h>
 #include <string.h>
@@ -47,7 +47,7 @@ int ds3BdRemoconThread(SceSize args, void *argp)
 	ds3BdRemocon.callback = callback;
 	if (callback < 0)
 		return callback;
-	result = ksceBtRegisterCallback(callback, 0x460);
+	result = SceBtForDriver_120AC1F7(callback, 0x460);
 	if (result < 0)
 		return result;
 	sceKernelRegisterSysEventHandler("SceBdRemocon", ds3BdRemoconSysEvent, NULL);
@@ -81,7 +81,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 
 	do {
 		do {
-			count = ksceBtReadEvent(events, 2);
+			count = SceBtForDriver_5ABB9A9D(events, 2);
 		} while (count == (int)0x802f0c04);
 		if (count <= 0)
 			break;
@@ -98,7 +98,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				SceCtrlForDriver_AA36F578(0);
 			} else if (event->id == 5) {
 				memset(&info, 0, sizeof(info));
-				result = ksceBtGetRegisteredInfo(address, &info, 1);
+				result = SceBtForDriver_F86D25E2(address, &info, 1);
 				if (result >= 0) {
 					if (info.vid != 0x054c || info.pid != 0x0306)
 						continue;
@@ -117,7 +117,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				request->reportId = 0;
 				request->length = 64;
 				request->argument = 0;
-				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				SceBtForDriver_F9DCEC77((uint32_t)address, address >> 32, request);
 				index = ds3BdRemocon.inputIndex ^ 1;
 				ds3BdRemocon.inputIndex = index;
 				request = &ds3BdRemocon.inputRequests[index];
@@ -127,7 +127,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				request->reportId = 0;
 				request->length = 64;
 				request->argument = 0;
-				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				SceBtForDriver_F9DCEC77((uint32_t)address, address >> 32, request);
 				ds3BdRemocon.inputIndex ^= 1;
 			} else if (event->id == 10) {
 				if (ds3BdRemocon.deviceAddress != address)
@@ -186,7 +186,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				request->length = 64;
 				request->argument = 0;
 				request->buffer = ds3BdRemocon.inputReports[index];
-				ksceBtHidTransfer((uint32_t)address, address >> 32, request);
+				SceBtForDriver_F9DCEC77((uint32_t)address, address >> 32, request);
 				ds3BdRemocon.inputIndex ^= 1;
 			}
 		}
@@ -226,6 +226,6 @@ int ds3DisconnectTrackedDevice(void)
 	uint64_t address = ds3BdRemocon.deviceAddress;
 
 	if (address != 0)
-		ksceBtStartDisconnect((uint32_t)address, address >> 32);
+		SceBtForDriver_50710281((uint32_t)address, address >> 32);
 	return 0;
 }
