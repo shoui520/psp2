@@ -1327,7 +1327,7 @@ static int CreateKernelProcessCommon(SceProcessObject *process, SceUID pid)
 		cls = &g_processClass;
 	else
 		cls = SceSysmemForDriver_85336A1C();
-	ret = SceSysmemForKernel_BF275C5A(pid, cls, 0, process);
+	ret = SceSysmemForKernel_BF275C5A(pid, cls, 0, (SceObjectBase *)process);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 9527, "sceGUIDSet failed 0x%08x\n", ret);
 		return ret;
@@ -1818,7 +1818,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		uidOpt.flags = UID_CREATE_OPT_OBJECT | UID_CREATE_OPT_ATTR;
 		uidOpt.object = (SceObjectBase *)process;
 		uidOpt.attr = 0x8000000;
-		pid = sceGUIDKernelCreateWithOpt(&g_processClass, name, &uidOpt, &process);
+		pid = sceGUIDKernelCreateWithOpt(&g_processClass, name, &uidOpt, (SceObjectBase **)&process);
 		if (pid < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3451, "Create Process UID failed 0x%08x\n", pid);
 			PPMFreeSlot(slot);
@@ -2693,7 +2693,7 @@ static int KillProcessCommon(SceUID pid, int kind)
 		uidOpt.object = (SceObjectBase *)spawn;
 		uidOpt.attr = 0x8000000;
 		spawnPid = sceGUIDKernelCreateWithOpt(&g_processClass, "SceKernelProcessExitSpawnTemp",
-						       &uidOpt, &spawn);
+						       &uidOpt, (SceObjectBase **)&spawn);
 		if (spawnPid < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 5240, "Create Process UID failed 0x%08x\n", spawnPid);
 			PPMFreeSlot(slot);
@@ -6296,7 +6296,7 @@ static inline __attribute__((always_inline)) void PPMInit(void)
 				     g_ppmBlock[0]);
 		return;
 	}
-	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[0], &g_ppm.base0) < 0)
+	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[0], (void **)&g_ppm.base0) < 0)
 		g_ppm.base0 = 0;
 	g_ppmBlock[1] = SceSysmemForDriver_C94850C9("SceKernelPPM1", 0x1020d006, 0x10000, NULL);
 	if (g_ppmBlock[1] < 0) {
@@ -6304,7 +6304,7 @@ static inline __attribute__((always_inline)) void PPMInit(void)
 				     g_ppmBlock[1]);
 		return;
 	}
-	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[1], &g_ppm.base1) < 0)
+	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[1], (void **)&g_ppm.base1) < 0)
 		g_ppm.base1 = 0;
 }
 

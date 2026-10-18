@@ -63,7 +63,8 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 	SceUID *threads;
 	SceSize bytes;
 	unsigned int i;
-	int count, result;
+	SceSize count;
+	int result;
 
 	result = sceKernelGetThreadIdList(process, NULL, 0, NULL);
 	if (result < 0) {
@@ -81,7 +82,7 @@ int armPmonExecAllThread(unsigned int operation, unsigned int counter,
 			"[Error] sceKernelGetThreadIdList (ret = 0x%08x)\n", result);
 		goto freeThreads;
 	}
-	for (i = 0; i < (uint32_t)count; i++) {
+	for (i = 0; i < count; i++) {
 		switch (operation) {
 		case ARM_PMON_OP_RESET:
 			result = armPmonResetAllCounters(threads[i]);

@@ -63,7 +63,7 @@
 typedef struct ThreadmgrWorkQueue {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	void *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitNode *next;		/* 0x10: the threads waiting for it to drain */
 	struct ThreadmgrWaitNode *prev;
@@ -113,7 +113,7 @@ typedef struct ThreadmgrWorkTaskCB {
 typedef struct ThreadmgrWorkTask {
 	SceUID ownerPid;
 	void *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitNode *next;		/* 0x10: the threads waiting for it */
 	struct ThreadmgrWaitNode *prev;
@@ -946,7 +946,7 @@ int createGlobalWorkQueue(void)
 	if (queue == NULL)
 		SCE_PANIC(285);
 	if (SceSysmemForKernel_BF275C5A(GLOBAL_WORK_QUEUE_UID, WORK_QUEUE_CLASS(),
-					"SceKernelGlobalWorkQueue", queue) < 0)
+					"SceKernelGlobalWorkQueue", (SceObjectBase *)queue) < 0)
 		SCE_PANIC(292);
 	uidWorkQueue_Constructor(queue);
 	uidWaitableConstructor(queue);

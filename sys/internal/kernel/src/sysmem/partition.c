@@ -116,7 +116,7 @@ int PartitionAllocVirPageRaw(Partition *partition, VirPage **vp)
 	ret = FixedHeapAllocObjectExt(partition->tiny.context->virPageHeap, &object);
 	if (ret >= 0) {
 		VirPageInit(object);
-		SceCpuForKernel_9DA58A9E(&partition->virPageCount);
+		SceCpuForKernel_9DA58A9E((uint32_t *)&partition->virPageCount);
 		*vp = object;
 	}
 	return ret;
@@ -884,7 +884,7 @@ static inline int TinyPartitionAllocMemBlockByAddrRaw(Partition *partition,
 				SCE_DBG_ASSERT_FAIL(3421);
 			}
 		}
-		SceCpuForKernel_9DA58A9E(&tiny->blockCount);
+		SceCpuForKernel_9DA58A9E((uint32_t *)&tiny->blockCount);
 		TinyPartitionDecFreeSizeR1(tiny, block->size);
 		MemBlockUnlinkFreeRaw(block);
 		command->block = block;
@@ -1026,7 +1026,7 @@ found:
 	}
 	SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
 	ret = 0;
-	SceCpuForKernel_0E04BD2E((SceInt32 *)&tiny->blockCount);
+	SceCpuForKernel_0E04BD2E((uint32_t *)&tiny->blockCount);
 out:
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&tiny->lock, intr);
 	return ret;
@@ -1202,7 +1202,7 @@ restart:
 	*out = NULL;
 	return SCE_KERNEL_ERROR_PARTITION_NO_VIRTUAL_ADDRESS;
 taken:
-	SceCpuForKernel_9DA58A9E(&tiny->blockCount);
+	SceCpuForKernel_9DA58A9E((uint32_t *)&tiny->blockCount);
 	TinyPartitionDecFreeSizeR1(tiny, cur->size);
 	*out = cur;
 	return 0;
@@ -2198,7 +2198,7 @@ int PartitionL2CAllocL2PageTableRaw(Partition *partition, uintptr_t va, SceUInt3
 			l2pt->firstBlock = (MemBlockObject *)AS_L2_SLOT_PTR(*slot);
 		*slot = ((uintptr_t)l2pt & ~3u) | AS_L2_SLOT_TABLE;
 		l2pt->partition = partition;
-		SceCpuForKernel_9DA58A9E(&partition->l2Count);
+		SceCpuForKernel_9DA58A9E((uint32_t *)&partition->l2Count);
 	}
 	if (MemBlockL2PageTableFreeCount(block) > 0) {
 		intr = SceCpuForDriver_4C38CE4D(&partition->l2BlockLock);
@@ -2253,7 +2253,7 @@ int PartitionGetPhyMemPart(Partition *partition, SceUInt32 code, void **phyMemPa
 /* name unknown: a virtual page of the partition given back */
 void PartitionVirPageRelease(Partition *partition)
 {
-	SceCpuForKernel_0E04BD2E((SceInt32 *)&partition->virPageCount);
+	SceCpuForKernel_0E04BD2E((uint32_t *)&partition->virPageCount);
 }
 
 #define PARTITION_ATTR_1		0x01	/* PLACEHOLDER: not supported here */
@@ -2454,7 +2454,7 @@ void PartitionFindAndTryRemoveL2PageTable(Partition *partition, uintptr_t va, Sc
 		l2Intr = SceCpuForDriver_4C38CE4D(&partition->l2Lock);
 		partition->tiny.context->l2Tables[l2pt->vbase >> 20] = 0;
 		sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&partition->l2Lock, l2Intr);
-		SceCpuForKernel_0E04BD2E((SceInt32 *)&partition->l2Count);
+		SceCpuForKernel_0E04BD2E((uint32_t *)&partition->l2Count);
 		ret = PartitionAsCommonFreeL2PageTable(partition, context, l2pt, 1);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 6469, "PartitionCheckFreeL2PageTable failed 0x%08x\n",
@@ -2843,7 +2843,7 @@ full:
 		cur->prev = cur;
 		FreeMemBlockObject(heap, cur);
 		SceCpuForDriver_5F6A8743((SceInt32 *)&tiny->freeSize, size);
-		SceCpuForKernel_0E04BD2E((SceInt32 *)&tiny->blockCount);
+		SceCpuForKernel_0E04BD2E((uint32_t *)&tiny->blockCount);
 		cur = next;
 	} while (cur != head);
 empty:
@@ -3030,7 +3030,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	if (uid == -1) {
 		uid = SceSysmemForKernel_6DB44A42(s_partitionClass, name, partition);
 	} else {
-		ret = SceSysmemForKernel_BF275C5A(uid, s_partitionClass, NULL, partition);
+		ret = SceSysmemForKernel_BF275C5A(uid, s_partitionClass, NULL, (SceObjectBase *)partition);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 7456, "sceGUIDSet failed 0x%08x\n", ret);
 	}
@@ -3268,6 +3268,6 @@ int CreateTinyPartitionRaw(void)
 		return ret;
 	}
 	s_tinyPartitionUserShared = tiny;
-	SceSysmemForKernel_BF275C5A(SCE_KERNEL_PARTITION_USER_SHARED_ID, s_partitionClass, NULL, tiny);
+	SceSysmemForKernel_BF275C5A(SCE_KERNEL_PARTITION_USER_SHARED_ID, s_partitionClass, NULL, (SceObjectBase *)tiny);
 	return 0;
 }

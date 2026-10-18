@@ -300,7 +300,7 @@ struct ThreadmgrWaitNode;
 struct ThreadmgrThreadObject {
 	SceUID ownerPid;			/* the object base */
 	void *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitNode *waitNext;	/* 0x10: the threads waiting on this thread */
 	struct ThreadmgrWaitNode *waitPrev;

@@ -38,7 +38,7 @@ static inline void LedWriteGPO(SceUInt32 gpo)
 }
 
 /* name unknown: suspend and resume handlers */
-static int LedSuspend(void *args)
+static int LedSuspend(int value, void *args)
 {
 	return 0;
 }
@@ -50,7 +50,7 @@ int sceKernelSetGPO(SceUInt32 gpo)
 	return 0;
 }
 
-static int LedResume(void *args)
+static int LedResume(int value, void *args)
 {
 	return sceKernelSetGPO(s_gpo);
 }

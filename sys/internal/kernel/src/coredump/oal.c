@@ -233,7 +233,7 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 	if (threadIds == NULL)
 		return 0;
 	if (sceKernelGetThreadIdList(pid, threadIds, threadBytes,
-		(int *)&copiedCount) < 0 || copiedCount == 0)
+		&copiedCount) < 0 || copiedCount == 0)
 		goto freeAllocation;
 	for (i = 0; i < copiedCount; ++i) {
 		uint32_t reason;
@@ -429,7 +429,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	}
 	memset(threadIds, 0, threadBytes);
 	if (sceKernelGetThreadIdList(coredumpRun.pid, threadIds, threadBytes,
-		(int *)&copiedCount) >= 0) {
+		&copiedCount) >= 0) {
 		for (i = 0; i < copiedCount; ++i) {
 			if (threadIds[i] != 0) {
 				SceUID uid = SceThreadmgrForDriver_F311808F(threadIds[i]);
@@ -1506,7 +1506,7 @@ void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity)
 {
 	SceUID *cursor, threadId;
 	unsigned int index;
-	int count;
+	SceSize count;
 
 	SCE_DBG_ASSERT(ids != NULL, 2178);
 	if (capacity == 0)
@@ -1527,9 +1527,9 @@ void oalGetThreadIdList(SceUID pid, SceUID *ids, unsigned int capacity)
 			}
 			cursor[-1] = threadId;
 			index++;
-		} while (index < (unsigned int)count);
+		} while (index < count);
 	}
-	if (capacity > (unsigned int)count)
+	if (capacity > count)
 		memset(ids + count, 0, (capacity - count) * sizeof(*ids));
 }
 

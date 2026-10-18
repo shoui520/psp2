@@ -276,7 +276,7 @@ int sdfctlSetStatus(SceUInt32 mask, int on)
 }
 
 /* name unknown: resume handler */
-static int sdfctlResume(void *args)
+static int sdfctlResume(int value, void *args)
 {
 	char pkt[24];
 	int cpu;
@@ -295,7 +295,7 @@ static int sdfctlResume(void *args)
 }
 
 /* name unknown: suspend handler */
-static int sdfctlSuspend(void *args)
+static int sdfctlSuspend(int value, void *args)
 {
 	char pkt[24];
 	int cpu;

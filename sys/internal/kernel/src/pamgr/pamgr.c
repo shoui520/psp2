@@ -1181,7 +1181,7 @@ int configureArmTrace(const volatile struct PamgrArmTraceConfig *config)
 	return 0;
 }
 
-int resumeTraceHardware(void)
+int resumeTraceHardware(int value, void *args)
 {
 	ScePerfmonRegisters *pfm;
 	int primary, secondary;
@@ -1243,7 +1243,7 @@ int resumeTraceHardware(void)
 	return 0;
 }
 
-int suspendTraceHardware(void)
+int suspendTraceHardware(int value, void *args)
 {
 	ScePerfmonRegisters *pfm;
 	uint32_t high, low, started, control;

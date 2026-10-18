@@ -21,7 +21,7 @@ typedef struct ThreadmgrEventCallback {
 typedef struct ThreadmgrEvent {
 	SceUID ownerPid;
 	SceClass *cls;
-	void *uidEntry;
+	struct UIDEntry *uidEntry;
 	void *cacheNext;
 	struct ThreadmgrWaitNode *next;
 	struct ThreadmgrWaitNode *prev;

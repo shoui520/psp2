@@ -41,11 +41,6 @@ typedef int (*SysrootSetBootParameter)(const char *key, SceUInt32 value);
 typedef int (*SysrootSendTargetStatus)(SceUInt32 status, SceUInt32 value);
 typedef int (*SysrootTtyGetLogRaw)(SceUID pid, void *buffer, int size);
 
-/* 16 bytes sysroot copies whole (a session ID, the debug flags) */
-struct SysrootWordBlock128 {
-	uint32_t words[4];
-} __attribute__((may_alias));
-
 /* sysmem's own, opaque to the modules that pass them */
 struct SceKblParam;
 struct SysrootDebugNotifiers;
@@ -257,7 +252,7 @@ int SceSysrootForDriver_3ACACD22(const char *name, int type, const char *path, S
 void SceSysrootForDriver_42FC9FFF(void);
 uint32_t SceSysrootForDriver_44EA3197(void);
 /* vitasdk: ksceSysrootGetHardwareFlags */
-int SceSysrootForDriver_46E72428(struct SysrootWordBlock128 *flags);
+int SceSysrootForDriver_46E72428(void *flags);
 void SceSysrootForDriver_47F19DD3(uint32_t notifier);
 uint32_t SceSysrootForDriver_483EF108(void);
 uint32_t SceSysrootForDriver_49843C16(void);
@@ -371,7 +366,7 @@ void SceSysrootForKernel_7B7ED1E9(void);
 uint32_t SceSysrootForKernel_7B7F8171(void);	/* vitasdk: ksceKernelIsSomeBootMode */
 int SceSysrootForKernel_7FC7A163(void);	/* vitasdk: ksceKernelSysrootIsUserModeThread */
 /* vitasdk: ksceSysrootGetSessionId */
-void *SceSysrootForKernel_84783B71(struct SysrootWordBlock128 *sessionId);
+void *SceSysrootForKernel_84783B71(void *sessionId);
 int SceSysrootForKernel_8498E23F(SceUID pid, int exitStatus, SceUInt64 time);
 int SceSysrootForKernel_84C0BE05(SceUID pid);
 void SceSysrootForKernel_8747D415(SysrootBusErrorHandler callback);

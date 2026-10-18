@@ -206,7 +206,7 @@ static inline void NameHeapControlRelease(NameHeapControl *control, NameEntry **
 		SceSysmemForKernel_4233C16D(entry);
 	else
 		SceSysmemForKernel_93344755(control->entryHeap, entry);
-	SceCpuForKernel_0E04BD2E((SceInt32 *)&control->count);
+	SceCpuForKernel_0E04BD2E((uint32_t *)&control->count);
 }
 
 static inline int NameHeapControlDelete(NameHeapControl *control, const char *name,

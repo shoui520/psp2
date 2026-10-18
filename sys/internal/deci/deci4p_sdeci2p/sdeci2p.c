@@ -620,7 +620,7 @@ static void controlCompat(int id)
 		SDECI2P_PRINTF(0xf, 1915, "unknown control ID (%d)\n", id);
 }
 
-static int suspendHandler(void *args)
+static int suspendHandler(int value, void *args)
 {
 	int ret;
 

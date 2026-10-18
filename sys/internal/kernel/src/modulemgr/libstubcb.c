@@ -278,7 +278,7 @@ int LibStubCBCreateUID(LibStubCB *stub, SceUInt16 index)
 	SceLibStubObject *obj;
 	SceUID uid;
 
-	uid = sceGUIDKernelCreateWithOpt(g_stubClass, stub->imports->libname, NULL, (void **)&obj);
+	uid = sceGUIDKernelCreateWithOpt(g_stubClass, stub->imports->libname, NULL, (SceObjectBase **)&obj);
 	if (uid < 0)
 		return uid;
 	stub->guid = uid;

@@ -54,7 +54,7 @@ __asm__(
 );
 
 /* name unknown: suspend handler */
-static int busErrorSuspend(void *args)
+static int busErrorSuspend(int value, void *args)
 {
 	return 0;
 }
@@ -71,7 +71,7 @@ SceSize SceBusErrorForKernel_EBB1F135(void *buf, SceSize size)
 }
 
 /* name unknown: resume handler */
-static int busErrorResume(void *args)
+static int busErrorResume(int value, void *args)
 {
 	if (sceKernelCpuId() == 0)
 		sceKernelEnableIntr(BUSERROR_INTR);

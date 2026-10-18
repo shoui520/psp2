@@ -71,14 +71,14 @@ static const SceSDfMgrProtocol s_protocol[STTYP_CPUS] = {
 static SttypPort s_port[STTYP_CPUS];
 
 /* name unknown: suspend handler */
-static int SttypSuspend(void *args)
+static int SttypSuspend(int value, void *args)
 {
 	s_port[SceCpuId()].suspended = 1;
 	return 0;
 }
 
 /* name unknown: resume handler */
-static int SttypResume(void *args)
+static int SttypResume(int value, void *args)
 {
 	s_port[SceCpuId()].suspended = 0;
 	return 0;

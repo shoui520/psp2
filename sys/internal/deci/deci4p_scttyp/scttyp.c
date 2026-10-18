@@ -50,7 +50,7 @@ _Static_assert(sizeof(ScttypPort) == 0x13c, "ScttypPort layout");
 
 static ScttypPort s_port;
 
-static int resumeHandler(void *args)
+static int resumeHandler(int value, void *args)
 {
 	int ret;
 
@@ -75,7 +75,7 @@ static int resumeHandler(void *args)
 	return 0;
 }
 
-static int suspendHandler(void *args)
+static int suspendHandler(int value, void *args)
 {
 	int ret;
 

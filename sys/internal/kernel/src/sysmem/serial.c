@@ -66,7 +66,7 @@ static inline void SerialWaitTxReady(volatile SceUartRegisters *regs)
 
 #if SERIAL_SUSPEND
 /* name unknown: the resume handler */
-static int SerialResume(void *args)
+static int SerialResume(int value, void *args)
 {
 	return 0;
 }
@@ -81,7 +81,7 @@ __attribute__((noinline)) void SerialFlush(unsigned int port)
 
 #if SERIAL_SUSPEND
 /* name unknown: the suspend handler, the debug ports drained first */
-static int SerialSuspend(void *args)
+static int SerialSuspend(int value, void *args)
 {
 	unsigned int i;
 

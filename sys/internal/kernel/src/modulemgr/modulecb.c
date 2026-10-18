@@ -34,7 +34,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 			return ret;
 	}
 
-	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, &obj);
+	uid = sceGUIDKernelCreateWithOpt(g_moduleClass, "SceModuleMgrNewModule", optp, (SceObjectBase **)&obj);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 78, "UIDcreate failed 0x%08x\n", uid);
 		if (pid != KERNEL_PID)

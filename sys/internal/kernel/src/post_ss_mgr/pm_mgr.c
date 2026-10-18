@@ -36,7 +36,7 @@ static inline SceUInt32 pmMgrGetBaryonVersion(void)	/* name unknown */
 static inline SceUInt32 pmMgrGetSysconRevision(void)	/* name unknown */
 {
 	if (g_pmSysconRevision == 0)
-		SceSysconForDriver_D2F456DC(&g_pmSysconRevision);
+		SceSysconForDriver_D2F456DC((uint8_t *)&g_pmSysconRevision);
 	return g_pmSysconRevision;
 }
 

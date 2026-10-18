@@ -678,14 +678,14 @@ static int stopCpuIntrHandler(int code, void *arg)
 }
 
 /* a power suspend and resume */
-static int threadmgrSuspendHandler(int event, void *arg)
+static int threadmgrSuspendHandler(int value, void *args)
 {
 	suspendCpuTimer();
 	suspendThreadmgrVfpException();
 	return 0;
 }
 
-static int threadmgrResumeHandler(int event, void *arg)
+static int threadmgrResumeHandler(int value, void *args)
 {
 	resumeThreadmgrVfpException();
 	resumeCpuTimer();
@@ -837,7 +837,7 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 		SCE_PANIC(506);
 	if (SceSysmemForKernel_BF275C5A(CLEANER_THREAD_ID,
 					s_threadmgrRuntime.manager->threadClass,
-					"SceKernelCleanerThread", object) < 0)
+					"SceKernelCleanerThread", (SceObjectBase *)object) < 0)
 		SCE_PANIC(515);
 	uidCacheConstructor(object);
 	uidWaitableConstructor(object);
@@ -979,7 +979,7 @@ per_cpu:
 		SCE_PANIC(728);
 	ret = SceSysmemForKernel_BF275C5A(IDLE_THREAD_ID(cpuId),
 					  s_threadmgrRuntime.manager->threadClass,
-					  s_idleThreadNames[cpuId], object);
+					  s_idleThreadNames[cpuId], (SceObjectBase *)object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 737, "ret = %08X\n", ret);
 		SCE_PANIC(738);

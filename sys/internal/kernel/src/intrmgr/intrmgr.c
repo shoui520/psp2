@@ -38,7 +38,7 @@ static inline __attribute__((always_inline)) void PatchCode(void *address, const
 }
 
 /* names unknown: suspend/resume registration callbacks. */
-int SuspendController(void)
+int SuspendController(int value, void *args)
 {
 	return 0;
 }
@@ -62,7 +62,7 @@ void ResetController(void)
 		g_intrDistributor->control = 1;
 }
 
-int ResumeController(void)
+int ResumeController(int value, void *args)
 {
 	unsigned int paddr;
 

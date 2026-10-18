@@ -30,6 +30,11 @@
 #include <kernel_boot_loader/kernel_boot_param.h>
 #endif
 
+/* 16 bytes sysroot copies whole (a session ID, the debug flags) */
+struct SysrootWordBlock128 {
+	uint32_t words[4];
+} __attribute__((may_alias));
+
 struct SysrootInitCallbackSlot {
 	SysrootInitCallback callback;
 	void *argument;
@@ -529,32 +534,34 @@ int SceSysrootForKernel_F10AB792(uint32_t index, struct SysrootSelfInfo *info)
 	return 0;
 }
 
-void *SceSysrootForKernel_84783B71(struct SysrootWordBlock128 *sessionId)
+void *SceSysrootForKernel_84783B71(void *sessionId)
 {
 	/* Native KBL byte arrays are word-aligned and read completely before stores. */
 	const struct SysrootWordBlock128 *source =
 		(const void *)s_sysrootState->kblParam->session_id;
+	struct SysrootWordBlock128 *out = sessionId;
 	uint32_t word0 = source->words[0], word1 = source->words[1];
 	uint32_t word2 = source->words[2], word3 = source->words[3];
 
-	sessionId->words[0] = word0;
-	sessionId->words[1] = word1;
-	sessionId->words[2] = word2;
-	sessionId->words[3] = word3;
+	out->words[0] = word0;
+	out->words[1] = word1;
+	out->words[2] = word2;
+	out->words[3] = word3;
 	return sessionId;
 }
 
-int SceSysrootForDriver_46E72428(struct SysrootWordBlock128 *flags)
+int SceSysrootForDriver_46E72428(void *flags)
 {
 	const struct SysrootWordBlock128 *source =
 		(const void *)s_sysrootState->kblParam->hardware_flags;
+	struct SysrootWordBlock128 *out = flags;
 	uint32_t word0 = source->words[0], word1 = source->words[1];
 	uint32_t word2 = source->words[2], word3 = source->words[3];
 
-	flags->words[0] = word0;
-	flags->words[1] = word1;
-	flags->words[2] = word2;
-	flags->words[3] = word3;
+	out->words[0] = word0;
+	out->words[1] = word1;
+	out->words[2] = word2;
+	out->words[3] = word3;
 	return 0;
 }
 

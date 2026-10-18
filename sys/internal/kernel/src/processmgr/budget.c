@@ -452,7 +452,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 			    const ProcessBudgetOpt *opt, ProcessBudget **out)
 {
 	ProcessBudget *budget, *other;
-	void *mainPart = NULL, *cdialogPart = NULL, *phyContPart = NULL, *cdramPart = NULL;
+	PhyMemPart *mainPart = NULL, *cdialogPart = NULL, *phyContPart = NULL, *cdramPart = NULL;
 	char partName[0x20];
 	SceSize mainSize;
 	SceUID mutex;

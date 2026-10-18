@@ -44,7 +44,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 	if (runMode == 0x9a54) {
 		uint32_t version;
 
-		if (!SceSysconForDriver_D2F456DC(&version))
+		if (!SceSysconForDriver_D2F456DC((uint8_t *)&version))
 			updateSysconDownloaderVersion = version;
 		result = SceSysconForDriver_B487C2FB(0x9a54);
 		if (result)

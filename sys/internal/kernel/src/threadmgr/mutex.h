@@ -39,7 +39,7 @@ typedef struct ThreadmgrMutexCore {
 typedef struct ThreadmgrMutex {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitQueue *next;	/* 0x10: the waiters (ThreadmgrWaitQueue from here) */
 	struct ThreadmgrWaitQueue *prev;
@@ -54,7 +54,7 @@ typedef struct ThreadmgrMutex {
 typedef struct ThreadmgrCond {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitQueue *next;	/* 0x10: the waiters (ThreadmgrWaitQueue from here) */
 	struct ThreadmgrWaitQueue *prev;

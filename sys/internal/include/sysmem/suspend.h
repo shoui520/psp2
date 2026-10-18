@@ -11,8 +11,8 @@ int SceKernelSuspendForDriver_4DF40893(int argument);
 int SceKernelSuspendForDriver_2BB92967(int argument);
 
 /* names unknown (NID): register a handler for suspend / resume event idx */
-SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(void *args), void *args);
-SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(void *args), void *args);
+SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(int value, void *args), void *args);
+SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(int value, void *args), void *args);
 
 /*
  * The power service's side of SceKernelSuspendForDriver: power registers it

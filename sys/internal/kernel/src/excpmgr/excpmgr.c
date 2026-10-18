@@ -76,13 +76,13 @@ static const char *const waypointNames[] = {
 #endif
 
 /* name unknown: suspend callback, nothing to save */
-static int excpSuspend(void)
+static int excpSuspend(int value, void *args)
 {
 	return 0;
 }
 
 /* name unknown: resume callback, re-arm the trace area of this core */
-static int excpResume(void)
+static int excpResume(int value, void *args)
 {
 	ExcpTraceArea *trace = ((const ExcpVectorBank *)readVbar())->trace;
 
@@ -188,7 +188,7 @@ void _sceKernelPanicHandlerCommon(SceExcpmgrContext *context, unsigned int reaso
 {
 #if FW_DEBUG
 	ThreadCB *thread = context->thread;
-	char *processName, *threadName;
+	const char *processName, *threadName;
 	SceUID id;
 
 	if (thread != NULL) {
@@ -516,7 +516,7 @@ void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 	ThreadCB *thread = context->thread;
 	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count;
-	char *threadName, *processName;
+	const char *threadName, *processName;
 	SceUID pid, tid;
 	int res;
 
@@ -569,7 +569,7 @@ void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 	ThreadCB *thread = context->thread;
 	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count;
-	char *threadName, *processName;
+	const char *threadName, *processName;
 	SceUID pid, tid;
 	int res;
 
@@ -626,7 +626,7 @@ void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 	ThreadCB *thread = context->thread;
 	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count, dacr;
-	char *threadName, *processName;
+	const char *threadName, *processName;
 	SceUID pid, tid;
 	int res;
 

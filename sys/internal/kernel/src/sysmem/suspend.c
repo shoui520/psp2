@@ -14,7 +14,7 @@
 #define SUSPEND_HANDLERS		32
 
 typedef struct SuspendHandler {
-	int (*handler)(int arg0, void *args);
+	int (*handler)(int value, void *args);
 	SceUInt32 reserved;
 	void *args;
 } SuspendHandler;
@@ -235,28 +235,28 @@ int SceKernelSuspendForDriver_6A503956(SceUInt32 argument)
 }
 
 /* a suspend handler in slot idx */
-SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(void *args), void *args)
+SceUID SceKernelSuspendForDriver_CE7A2207(SceUInt32 idx, int (*handler)(int value, void *args), void *args)
 {
 	int state;
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
 	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
-	s_suspendHandlers[idx].handler = (int (*)(int, void *))handler;
+	s_suspendHandlers[idx].handler = handler;
 	s_suspendHandlers[idx].args = args;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
 	return 0;
 }
 
 /* a resume handler in slot idx */
-SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(void *args), void *args)
+SceUID SceKernelSuspendForDriver_105C5752(SceUInt32 idx, int (*handler)(int value, void *args), void *args)
 {
 	int state;
 
 	if (idx >= SUSPEND_HANDLERS)
 		return -1;
 	state = SceCpuForDriver_D32ACE9E(&s_handlerLock);
-	s_resumeHandlers[idx].handler = (int (*)(int, void *))handler;
+	s_resumeHandlers[idx].handler = handler;
 	s_resumeHandlers[idx].args = args;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_handlerLock, state);
 	return 0;

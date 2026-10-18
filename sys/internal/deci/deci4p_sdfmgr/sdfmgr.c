@@ -144,7 +144,7 @@ void __attribute__((noinline)) sdfMgrDisconnect(void)
 }
 
 /* Names inferred from the registered suspend/resume callbacks. */
-int sdfMgrSuspend(void)
+int sdfMgrSuspend(int value, void *args)
 {
 	SdfMgrTransport *transport = s_sdfMgrState.cpu[sdfMgrCoreIndex()].transport;
 
@@ -200,7 +200,7 @@ void sdfMgrConnect(void)
 	}
 }
 
-int sdfMgrResume(void)
+int sdfMgrResume(int value, void *args)
 {
 	SdfMgrCpuState *cpu;
 	SdfMgrTransport *transport;
@@ -619,8 +619,8 @@ int tsmpInit(SdfMgrProtocolState *protocol);
 int sdioInit(void);
 void dcmpSendStatusSystemError(uint32_t type, SceSize size, const void *source);
 int _threadKicker(void);
-int sdfMgrSuspend(void);
-int sdfMgrResume(void);
+int sdfMgrSuspend(int value, void *args);
+int sdfMgrResume(int value, void *args);
 
 static const struct {
 	uint32_t physical;
@@ -750,8 +750,8 @@ int module_bootstart(SceSize args, void *argp)
 	result = SceDeci4pSDfMgrForKernel_B22B42FB(sdfMgrHandleControlInterrupt);
 	BOOT_CHECK(result, 366, 0xda2c4ab9, 367, 0x7cebaae2,
 		   "RegisterBreakHook failed (0x%08x)\n");
-	SceKernelSuspendForDriver_CE7A2207(25, (int (*)(void *))sdfMgrSuspend, NULL);
-	SceKernelSuspendForDriver_105C5752(24, (int (*)(void *))sdfMgrResume, NULL);
+	SceKernelSuspendForDriver_CE7A2207(25, sdfMgrSuspend, NULL);
+	SceKernelSuspendForDriver_105C5752(24, sdfMgrResume, NULL);
 	sdfMgrUpdateCpuFlags(1, 1);
 	dcmpSendStatusPower(15, 1, 0);
 	if (!sceKernelCpuId())

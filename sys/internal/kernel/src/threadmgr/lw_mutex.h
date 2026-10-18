@@ -25,7 +25,7 @@ typedef struct ThreadmgrLwCondWork {
 typedef struct ThreadmgrLwMutex {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitQueue *next;	/* 0x10: the waiters (ThreadmgrWaitQueue from here) */
 	struct ThreadmgrWaitQueue *prev;
@@ -47,7 +47,7 @@ _Static_assert(sizeof(ThreadmgrLwMutex) == 0x60, "SceUIDLwMutexObject size");
 typedef struct ThreadmgrLwCond {
 	SceUID ownerPid;			/* 0x00: the object base's first word */
 	SceClass *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitQueue *next;	/* 0x10: the waiters (ThreadmgrWaitQueue from here) */
 	struct ThreadmgrWaitQueue *prev;

@@ -226,7 +226,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 				db->addr2mod = NULL;
 				goto fail;
 			}
-			SceSysmemForDriver_A841EDDA(tbl->tableBlock, &tbl->table);
+			SceSysmemForDriver_A841EDDA(tbl->tableBlock, (void **)&tbl->table);
 
 			memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
@@ -246,7 +246,7 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 									0x10f0d006, 0, &opt);
 			if (tbl->exidxKernelBlock < 0)
 				goto fail;
-			SceSysmemForDriver_A841EDDA(tbl->exidxKernelBlock, &tbl->exidx);
+			SceSysmemForDriver_A841EDDA(tbl->exidxKernelBlock, (void **)&tbl->exidx);
 			if (SceSysmemForDriver_58D21746(tbl->exidxBlock) < 0)
 				goto fail;
 		}
@@ -280,7 +280,7 @@ int LibraryDBInitializeAddr2ModuleTableForKernel(LibraryDB *db)
 			SCE_DBG_ASSERT_LEVEL(0, 0, 384);
 			return g_kernelAddr2Mod.tableBlock;
 		}
-		SceSysmemForDriver_A841EDDA(g_kernelAddr2Mod.tableBlock, &g_kernelAddr2Mod.table);
+		SceSysmemForDriver_A841EDDA(g_kernelAddr2Mod.tableBlock, (void **)&g_kernelAddr2Mod.table);
 		for (cb = db->modules; cb != NULL; cb = cb->next)
 			Addr2ModRegister(&g_kernelAddr2Mod, cb);
 	}
@@ -531,7 +531,7 @@ int LibraryDBRegisterLib(SceUID pid, LibEntCB *ent)
 		optp = &opt;
 		usePuid = 1;
 	}
-	uid = sceGUIDKernelCreateWithOpt(g_libraryClass, ent->exports->libname, optp, &obj);
+	uid = sceGUIDKernelCreateWithOpt(g_libraryClass, ent->exports->libname, optp, (SceObjectBase **)&obj);
 	if (uid < 0)
 		goto clear;
 	ent->guid = uid;

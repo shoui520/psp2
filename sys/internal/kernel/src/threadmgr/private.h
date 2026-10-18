@@ -86,7 +86,7 @@ struct ThreadmgrFastMutex;
 struct ThreadmgrException {
 	SceUID ownerPid;
 	void *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	struct ThreadmgrWaitNode *next;		/* 0x10: its waiter */
 	struct ThreadmgrWaitNode *prev;

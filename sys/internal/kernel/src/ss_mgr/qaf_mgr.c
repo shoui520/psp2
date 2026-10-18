@@ -492,7 +492,7 @@ __attribute__((noinline)) int sceSblQafManagerCheckFlag(void)
 		qafBaryonVersion = baryonVersion;
 	}
 	if (qafSysconVersion == 0)
-		SceSysconForDriver_D2F456DC(&qafSysconVersion);
+		SceSysconForDriver_D2F456DC((uint8_t *)&qafSysconVersion);
 	sysconVersion = qafSysconVersion;
 	if (!((qafGetCachedSysconFlag() != 0 &&
 	       (sysconVersion & 0xffffff) >= 0x3600) ||
@@ -524,7 +524,7 @@ static inline __attribute__((always_inline)) int qafSupportsNvsFlag(void)
 		qafBaryonVersion = baryonVersion;
 	}
 	if (qafSysconVersion == 0)
-		SceSysconForDriver_D2F456DC(&qafSysconVersion);
+		SceSysconForDriver_D2F456DC((uint8_t *)&qafSysconVersion);
 	sysconVersion = qafSysconVersion;
 	return (qafGetCachedSysconFlag() != 0 &&
 		__builtin_expect((sysconVersion & 0xffffff) >= 0x3600, 0)) ||

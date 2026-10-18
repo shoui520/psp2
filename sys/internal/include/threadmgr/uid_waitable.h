@@ -46,7 +46,7 @@ struct ThreadmgrWaitQueue {
 struct ThreadmgrWaitableObject {
 	SceUID ownerPid;			/* the object base */
 	SceClass *cls;
-	void *uidEntry;				/* 0x08: the GUID entry */
+	struct UIDEntry *uidEntry;		/* 0x08: the GUID entry */
 	void *cacheNext;			/* 0x0c: the next cached object; &uidEntry while in use */
 	uintptr_t next;				/* 0x10: the waiters */
 	uintptr_t prev;

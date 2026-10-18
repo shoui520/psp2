@@ -108,7 +108,7 @@ static int SetupCis(void)
 }
 
 /* name unknown: suspend handler */
-static int SDbgSdioSuspend(void *args)
+static int SDbgSdioSuspend(int value, void *args)
 {
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0)
@@ -118,7 +118,7 @@ static int SDbgSdioSuspend(void *args)
 }
 
 /* name unknown: resume handler */
-static int SDbgSdioResume(void *args)
+static int SDbgSdioResume(int value, void *args)
 {
 	if (sceKernelCpuId() == 0)
 		SetupCis();
