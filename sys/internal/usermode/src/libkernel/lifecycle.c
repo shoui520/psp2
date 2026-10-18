@@ -1,6 +1,9 @@
 #include "libkernel_backends.h"
-#include <psp2/types.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <scetypes.h>
+#include <kernel/modulemgr.h>
+#include <modulemgr/module_info.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 #include "lifecycle.h"
 #include "backtrace.h"
 #include <kernel/error.h>
@@ -46,23 +49,14 @@ extern uint32_t sceLibSspStackChkGuard __attribute__((alias("__stack_chk_guard")
  */
 int ksceKernelExitThread(int status);
 
-static inline int sceKernelExitThread(int status)
-{
-	return ksceKernelExitThread(status);
-}
-extern int sceKernelExitDeleteThread(int status);
-extern SceUID sceKernelGetThreadId(void);
-extern void *sceKernelGetTLSAddr(unsigned int index);
 extern const struct ProcessParamHeader *sceKernelGetProcessParam(void);
 extern int sceKernelGetModuleList(SceUInt8 type, SceUID *ids, SceSize *count);
-extern int sceKernelGetModuleInfo(SceUID id, SceKernelModuleInfo *info);
-extern void *sceClibMemset(void *destination, int value, SceSize size);
 extern uint32_t sceKernelAtomicCompareAndSet32(uint32_t *value,
 					     uint32_t expected, uint32_t replacement);
 
 void ExitThreadEntry(int status)
 {
-	sceKernelExitThread(status);
+	ksceKernelExitThread(status);
 	__breakpoint(BKPT_ABORT);
 }
 
@@ -109,7 +103,7 @@ int module_start(SceSize size, void *argument)
 		libkernelState.processSdkVersion = 0;
 	else
 		libkernelState.processSdkVersion = parameter->sdkVersion;
-	sceKernelExitThread(0);
+	ksceKernelExitThread(0);
 	for (;;)
 		;
 }
@@ -156,7 +150,7 @@ void sceKernelCallModuleExit(int type)
 int sceKernelExitProcess(int status)
 {
 	if (sceKernelAtomicCompareAndSet32(&libkernelState.exitStarted, 0, 1)) {
-		sceKernelExitThread(status);
+		ksceKernelExitThread(status);
 		return 0;
 	}
 	sceKernelCallModuleExit(0x80);

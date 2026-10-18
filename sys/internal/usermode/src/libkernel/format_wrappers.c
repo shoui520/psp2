@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 #include "format.h"
 
 extern int sceKernelGetStdout(void);

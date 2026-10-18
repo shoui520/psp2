@@ -741,13 +741,13 @@ int LibraryDBGetModuleInfoById(SceUID pid, SceUID modid, SceKernelModuleInfo *in
 	case MODULE_STATUS_LOADED:
 	case MODULE_STATUS_STARTING:
 	case MODULE_STATUS_START_SUSPENDED:
-		info->state = 2;
+		info->state = SCE_KERNEL_MODULE_STATE_LOADED;
 		break;
 	case MODULE_STATUS_STARTED:
-		info->state = 6;
+		info->state = SCE_KERNEL_MODULE_STATE_STARTED;
 		break;
 	default:
-		info->state = 9;
+		info->state = SCE_KERNEL_MODULE_STATE_STOPPED;
 		break;
 	}
 	info->start_entry = cb->moduleStart;

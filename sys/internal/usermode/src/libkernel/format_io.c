@@ -1,4 +1,4 @@
-#include <psp2/types.h>
+#include <scetypes.h>
 #include "format.h"
 
 extern int sceIoWrite(SceUID descriptor, const void *data, SceSize size);

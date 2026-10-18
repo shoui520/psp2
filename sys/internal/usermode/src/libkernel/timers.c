@@ -1,26 +1,6 @@
 /* Timer APIs forward clock pointers and marshal the info size request. */
 #include "libkernel_backends.h"
-#include <psp2/types.h>
-
-typedef struct SceKernelTimerOptParam {
-	SceSize size;
-} SceKernelTimerOptParam;
-
-typedef struct SceKernelTimerInfo {
-	SceSize size;
-	SceUID timerId;
-	char name[32];
-	SceUInt32 attributes;
-	SceInt32 active;
-	SceKernelSysClock baseTime;
-	SceKernelSysClock currentTime;
-	SceKernelSysClock schedule;
-	SceKernelSysClock interval;
-	SceInt32 type;
-	SceInt32 repeat;
-	SceUInt32 numWaitThreads;
-	SceInt32 reserved;
-} SceKernelTimerInfo;
+#include <scetypes.h>
 
 struct TimerInfoRequest {
 	SceSize size;

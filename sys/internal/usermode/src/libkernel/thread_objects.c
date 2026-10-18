@@ -1,11 +1,11 @@
 /* Public thread-object APIs marshal user arguments to their syscall ABI. */
 
 #include "libkernel_backends.h"
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 
 struct SemaCreateOptions {
 	int maximumCount;
-	SceKernelSemaOptParam *option;
+	const SceKernelSemaOptParam *option;
 };
 
 struct ObjectInfoRequest {
@@ -22,7 +22,7 @@ struct EventFlagWaitOptions {
 
 SceUID sceKernelCreateSema(const char *name, SceUInt attributes,
 			 int initialCount, int maximumCount,
-			 SceKernelSemaOptParam *option)
+			 const SceKernelSemaOptParam *option)
 {
 	struct SemaCreateOptions options = { maximumCount, option };
 
@@ -48,7 +48,7 @@ int sceKernelWaitSemaCB(SceUID id, int count, SceUInt *timeout)
 	return _sceKernelWaitSemaCB(id, count, timeout);
 }
 
-int sceKernelCancelSema(SceUID id, int count, int *waiting)
+int sceKernelCancelSema(SceUID id, int count, SceUInt32 *waiting)
 {
 	return _sceKernelCancelSema(id, count, waiting);
 }
@@ -61,7 +61,7 @@ int sceKernelGetSemaInfo(SceUID id, SceKernelSemaInfo *info)
 }
 
 SceUID sceKernelCreateMutex(const char *name, SceUInt attributes,
-			  int initialCount, SceKernelMutexOptParam *option)
+			  int initialCount, const SceKernelMutexOptParam *option)
 {
 	return _sceKernelCreateMutex(name, attributes, initialCount, option);
 }
@@ -76,7 +76,7 @@ int sceKernelLockMutexCB(SceUID id, int count, unsigned int *timeout)
 	return _sceKernelLockMutexCB(id, count, timeout);
 }
 
-int sceKernelCancelMutex(SceUID id, int count, int *waiting)
+int sceKernelCancelMutex(SceUID id, int count, SceUInt32 *waiting)
 {
 	return _sceKernelCancelMutex(id, count, waiting);
 }
@@ -88,8 +88,8 @@ int sceKernelGetMutexInfo(SceUID id, SceKernelMutexInfo *info)
 	return _sceKernelGetMutexInfo(id, info, &request);
 }
 
-SceUID sceKernelCreateEventFlag(const char *name, int attributes, int pattern,
-			      SceKernelEventFlagOptParam *option)
+SceUID sceKernelCreateEventFlag(const char *name, SceUInt32 attributes, SceUInt32 pattern,
+			      const SceKernelEventFlagOptParam *option)
 {
 	return _sceKernelCreateEventFlag(name, attributes, pattern, option);
 }

@@ -1,30 +1,6 @@
 /* Event APIs and their compact syscall parameter records. */
 #include "libkernel_backends.h"
-#include <psp2/types.h>
-
-typedef struct SceKernelWaitEvent {
-	SceUID eventId;
-	SceUInt32 eventPattern;
-} SceKernelWaitEvent;
-
-typedef struct SceKernelResultEvent {
-	SceUID eventId;
-	SceInt32 result;
-	SceUInt32 resultPattern;
-	SceInt32 reserved;
-	SceUInt64 userData;
-} SceKernelResultEvent;
-
-typedef struct SceKernelEventInfo {
-	SceSize size;
-	SceUID eventId;
-	char name[32];
-	SceUInt32 attributes;
-	SceUInt32 eventPattern;
-	SceUInt64 userData;
-	SceUInt32 numWaitThreads;
-	SceInt32 reserved;
-} SceKernelEventInfo;
+#include <scetypes.h>
 
 struct EventWaitOptions {
 	SceUInt64 *userData;

@@ -1,5 +1,5 @@
 #include "libkernel_backends.h"
-#include <psp2/kernel/processmgr.h>
+#include <kernel/processmgr.h>
 #include "lifecycle.h"
 #include <kernel/error.h>
 
@@ -42,6 +42,6 @@ int sceKernelGetProcessTime(SceKernelSysClock *clock)
 		low = timer->countLo;
 		nextHigh = timer->countHi;
 	} while (high != nextHigh);
-	*clock = (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
+	clock->quad = (((uint64_t)high << 32) | low) - libkernelState.processTimeBase.clock;
 	return 0;
 }

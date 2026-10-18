@@ -7,6 +7,7 @@
 
 #include <scetypes.h>
 #include <kernel/modulemgr.h>
+#include <modulemgr/module_info.h>
 #include <modulemgr/modulemgr_control.h>
 
 #ifdef __cplusplus
@@ -14,39 +15,6 @@ extern "C" {
 #endif
 
 typedef struct ProcessImageInfo ProcessImageInfo;	/* processmgr/process.h */
-
-/* a loaded segment of a module (SceKernelModuleInfo.segments) */
-typedef struct SceKernelSegmentInfo {
-	SceSize size;			/* 0x18 */
-	SceUInt perms;
-	void *vaddr;
-	SceSize memsz;
-	SceSize filesz;
-	SceUInt reserved;
-} SceKernelSegmentInfo;
-
-/* a module's information (SceModulemgrForKernel_DAA90093, the sceKernelGetModuleInfo syscall) */
-typedef struct SceKernelModuleInfo {
-	SceSize size;			/* 0x1b8 */
-	SceUID modid;
-	SceUInt16 modattr;
-	SceUInt8 modver[2];
-	char module_name[28];
-	SceUInt reserved;
-	void *start_entry;
-	void *stop_entry;
-	void *exit_entry;
-	void *exidx_top;
-	void *exidx_btm;
-	void *extab_top;
-	void *extab_btm;
-	void *tlsInit;
-	SceSize tlsInitSize;
-	SceSize tlsAreaSize;
-	char path[256];
-	SceKernelSegmentInfo segments[4];
-	SceUInt state;			/* 2 loaded, 6 started, 9 stopped */
-} SceKernelModuleInfo;
 
 /* sceKernelGetSystemSwVersion's output */
 typedef struct SceKernelSystemSwVersion {
@@ -57,8 +25,6 @@ typedef struct SceKernelSystemSwVersion {
 } SceKernelSystemSwVersion;
 
 #ifndef __cplusplus
-_Static_assert(sizeof(SceKernelSegmentInfo) == 0x18, "SceKernelSegmentInfo size");
-_Static_assert(sizeof(SceKernelModuleInfo) == 0x1b8, "SceKernelModuleInfo size");
 _Static_assert(sizeof(SceKernelSystemSwVersion) == 0x28, "SceKernelSystemSwVersion size");
 #endif
 
@@ -158,8 +124,6 @@ int sceKernelUnregisterLibrary(const void *libent);
 SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *uopt);
 int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *uopt);
 SceUInt32 sceKernelGetAllowedSdkVersionOnSystem(void);
-SceUID sceKernelGetModuleIdByAddr(const void *addr);
-int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo);
 int sceKernelInhibitLoadingModule(SceUInt32 flags);
 int sceKernelIsCalledFromSysModule(const void *addr);
 

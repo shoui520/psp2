@@ -10,9 +10,19 @@ libkernel_prepare_heap(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/dlmalloc-2.8.3/malloc.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/heap_sce.patch"
 	"${libkernel_heap_source}")
+# sceClibStrlcpy: sysmem's adapted FreeBSD strlcpy; sceClibStrtoll: FreeBSD's strtoll with
+# LibKernel's character table and thread-local errno
+set(libkernel_strlcpy_source "${CMAKE_CURRENT_BINARY_DIR}/strlcpy-sce.c")
+libkernel_prepare_heap(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/bsd-string-1998/strlcpy.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../kernel/src/sysmem/strlcpy_sce.patch"
+	"${libkernel_strlcpy_source}")
+set(libkernel_strtoll_source "${CMAKE_CURRENT_BINARY_DIR}/strtoll-sce.c")
+libkernel_prepare_heap(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/bsd-stdlib-7.0.0/strtoll.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/strtoll_sce.patch"
+	"${libkernel_strtoll_source}")
 
-# vitasdk's user headers and newlib until this module is on the tree's SDK headers
-set(MODULE_VITASDK_LIBC ON)
 psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	"${libkernel_unwind_source}"
 	"${libkernel_heap_source}"
@@ -72,8 +82,8 @@ psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	../../../kernel/src/sysmem/move.S
 	../../../kernel/src/sysmem/ctype.c
 	../../../kernel/src/sysmem/strings.c
-	../../../kernel/src/sysmem/bsd_strings.c
-	../../../kernel/src/sysmem/bsd_strtoll.c
+	"${libkernel_strlcpy_source}"
+	"${libkernel_strtoll_source}"
 	../../../kernel/src/sysmem/search.c
 	../../../kernel/src/sysmem/checked_strings.c
 	../../../../../contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
@@ -176,10 +186,10 @@ set_property(SOURCE ../../../kernel/src/sysmem/strings.c PROPERTY
 	SYSCLIB_WANT_STRLEN
 	SYSCLIB_WANT_STRLCAT strlcat=sceClibStrlcat)
 
-set_source_files_properties(../../../kernel/src/sysmem/bsd_strings.c PROPERTIES
+set_source_files_properties("${libkernel_strlcpy_source}" PROPERTIES
 	COMPILE_DEFINITIONS "strlcpy=sceClibStrlcpy")
 
-set_source_files_properties(../../../kernel/src/sysmem/bsd_strtoll.c PROPERTIES
+set_source_files_properties("${libkernel_strtoll_source}" PROPERTIES
 	COMPILE_OPTIONS "-fsigned-char"
 	COMPILE_DEFINITIONS "strtoll=sceClibStrtoll")
 

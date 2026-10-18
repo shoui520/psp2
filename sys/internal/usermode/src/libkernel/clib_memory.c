@@ -1,6 +1,7 @@
 /* LibKernel public entry points for the shared Sysclib memory engines. */
 #include <stddef.h>
-#include <psp2/kernel/clib.h>
+#include <stdint.h>
+#include <libkernel/libkernel.h>
 #include <sysmem/compiler.h>
 
 extern void *SetMemoryCore(void *destination, int value, size_t size);

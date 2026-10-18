@@ -1,14 +1,11 @@
 #include <stddef.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 
 #include "backtrace.h"
 #include "lifecycle.h"
 #include <kernel/error.h>
 
-extern SceUID sceKernelGetProcessId(void);
-extern int sceKernelGetModuleInfoByAddr(const void *address,
-		SceKernelModuleInfo *info);
-extern int sceClibPrintf(const char *format, ...);
 
 _Static_assert(offsetof(SceKernelModuleInfo, module_name) == 12,
 		"backtrace module name");

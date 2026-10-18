@@ -1,5 +1,5 @@
 #include "libkernel_backends.h"
-#include <psp2/types.h>
+#include <scetypes.h>
 
 struct AdhocBB160Context;
 

@@ -1,5 +1,5 @@
 #include "libkernel_backends.h"
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 
 struct ThreadEventHandlerOptions {
 	SceKernelThreadEventHandler handler;
@@ -7,7 +7,7 @@ struct ThreadEventHandlerOptions {
 };
 
 
-int sceKernelStartThread(SceUID id, SceSize size, void *argument)
+int sceKernelStartThread(SceUID id, SceSize size, const void *argument)
 {
 	return _sceKernelStartThread(id, size, argument);
 }

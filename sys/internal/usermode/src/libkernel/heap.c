@@ -1,4 +1,4 @@
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 
 struct HeapChunkHeader {
 	SceSize previousSize;

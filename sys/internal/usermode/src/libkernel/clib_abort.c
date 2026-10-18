@@ -1,5 +1,5 @@
-#include <psp2/kernel/clib.h>
-#include <psp2/kernel/processmgr.h>
+#include <libkernel/libkernel.h>
+#include <kernel/processmgr.h>
 #include <sysmem/compiler.h>
 
 void sceClibAbort(void)

@@ -1,7 +1,7 @@
 #ifndef LIBKERNEL_BACKTRACE_H
 #define LIBKERNEL_BACKTRACE_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 
 typedef struct SceKernelCallFrame {
 	SceUIntVAddr sp;

@@ -9,7 +9,6 @@ _Static_assert(sizeof(struct LwMutexState) == sizeof(SceKernelLwMutexWork),
 _Static_assert(offsetof(struct LwMutexState, count) == 8, "lock count field");
 _Static_assert(offsetof(struct LwMutexState, uid) == 16, "mutex uid field");
 
-extern int sceKernelGetLwMutexInfoById(SceUID id, SceKernelLwMutexInfo *info);
 
 static inline __attribute__((always_inline))
 int TryLockLwMutex(struct LwMutexState *state, int count, uint32_t threadId)

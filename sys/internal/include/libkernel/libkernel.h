@@ -11,6 +11,9 @@
 #include <stdarg.h>
 #include <scetypes.h>
 #include <kernel/libkernel.h>
+#include <kernel/threadmgr.h>
+#include <kernel/modulemgr.h>
+#include <modulemgr/module_info.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,6 +81,18 @@ SceBool sceClibMspaceIsHeapEmpty(void *mspace);
 
 /* the calling thread's TLS word at index */
 void *sceKernelGetTLSAddr(SceUInt32 index);
+
+/* the module holding address */
+int sceKernelGetModuleInfoByAddr(const void *address, SceKernelModuleInfo *info);
+SceUID sceKernelOpenModule(const char *path, SceSize size, void *argument, SceUInt flags,
+			   const SceKernelLoadModuleOpt *option, int *status);
+int sceKernelCloseModule(SceUID id, SceSize size, void *argument, SceUInt flags,
+			 const SceKernelUnloadModuleOpt *option, int *status);
+
+/* sceKernelCreateMsgPipe with the caller's address, which the kernel records */
+SceUID sceKernelCreateMsgPipeWithLR(const char *name, SceUInt32 type, SceUInt32 attributes,
+				    SceSize size, const SceKernelMsgPipeOptParam *option,
+				    void *caller);
 
 #ifdef __cplusplus
 }

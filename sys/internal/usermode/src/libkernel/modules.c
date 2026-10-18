@@ -1,5 +1,7 @@
 #include "libkernel_backends.h"
-#include <psp2common/kernel/modulemgr.h>
+#include <kernel/modulemgr.h>
+#include <modulemgr/module_info.h>
+#include <libkernel/libkernel.h>
 
 struct ModuleCallOptions {
 	SceUInt flags;
@@ -7,47 +9,44 @@ struct ModuleCallOptions {
 	int *status;
 };
 
-extern SceUID sceKernelGetModuleIdByAddr(const void *address);
-extern int sceKernelGetModuleInfo(SceUID id, SceKernelModuleInfo *info);
-
 SceUID sceKernelLoadModule(const char *path, SceUInt flags,
-		const SceKernelLMOption *option)
+		const SceKernelLoadModuleOpt *option)
 {
 	return _sceKernelLoadModule(path, flags, option);
 }
 
 int sceKernelUnloadModule(SceUID id, SceUInt flags,
-		const SceKernelULMOption *option)
+		const SceKernelUnloadModuleOpt *option)
 {
 	return _sceKernelUnloadModule(id, flags, option);
 }
 
-int sceKernelStartModule(SceUID id, SceSize size, void *argument,
-		SceUInt flags, const void *option, int *status)
+int sceKernelStartModule(SceUID id, SceSize size, const void *argument,
+		SceUInt flags, const SceKernelStartModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 
 	return _sceKernelStartModule(id, size, argument, &options);
 }
 
-int sceKernelStopModule(SceUID id, SceSize size, void *argument,
-		SceUInt flags, const void *option, int *status)
+int sceKernelStopModule(SceUID id, SceSize size, const void *argument,
+		SceUInt flags, const SceKernelStopModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 
 	return _sceKernelStopModule(id, size, argument, &options);
 }
 
-SceUID sceKernelLoadStartModule(const char *path, SceSize size, void *argument,
-		SceUInt flags, const SceKernelLMOption *option, int *status)
+SceUID sceKernelLoadStartModule(const char *path, SceSize size, const void *argument,
+		SceUInt flags, const SceKernelLoadModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 
 	return _sceKernelLoadStartModule(path, size, argument, &options);
 }
 
-int sceKernelStopUnloadModule(SceUID id, SceSize size, void *argument,
-		SceUInt flags, const SceKernelULMOption *option, int *status)
+int sceKernelStopUnloadModule(SceUID id, SceSize size, const void *argument,
+		SceUInt flags, const SceKernelUnloadModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 
@@ -55,7 +54,7 @@ int sceKernelStopUnloadModule(SceUID id, SceSize size, void *argument,
 }
 
 SceUID sceKernelOpenModule(const char *path, SceSize size, void *argument,
-		SceUInt flags, const SceKernelLMOption *option, int *status)
+		SceUInt flags, const SceKernelLoadModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 
@@ -63,7 +62,7 @@ SceUID sceKernelOpenModule(const char *path, SceSize size, void *argument,
 }
 
 int sceKernelCloseModule(SceUID id, SceSize size, void *argument,
-		SceUInt flags, const SceKernelULMOption *option, int *status)
+		SceUInt flags, const SceKernelUnloadModuleOpt *option, int *status)
 {
 	struct ModuleCallOptions options = { flags, option, status };
 

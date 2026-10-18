@@ -1,6 +1,6 @@
 /* Sony's run-status API takes one pointer; vitasdk's public prototype differs. */
 #include "libkernel_backends.h"
-#include <psp2common/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 
 struct ThreadStatusRequest {
 	SceSize size;

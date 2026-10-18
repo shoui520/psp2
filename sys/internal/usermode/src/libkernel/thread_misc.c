@@ -1,5 +1,5 @@
 #include "libkernel_backends.h"
-#include <psp2/types.h>
+#include <scetypes.h>
 
 /* These wrappers inspect only the size prefix of the opaque caller records. */
 struct ThreadSizedRecord {
@@ -81,7 +81,7 @@ int sceKernelWaitExceptionCB(SceUID id, struct ThreadSizedRecord *info,
 }
 
 SceUID sceKernelCreateSimpleEvent(const char *name, SceUInt attributes,
-		SceUInt pattern, const struct SceKernelSimpleEventOptParam *option)
+		SceUInt pattern, const SceKernelSimpleEventOptParam *option)
 {
 	return _sceKernelCreateSimpleEvent(name, attributes, pattern, option);
 }

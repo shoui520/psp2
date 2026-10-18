@@ -1,14 +1,13 @@
 #include "heap_state.h"
+#include <kernel/sysmem.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 #include <kernel/error.h>
 
 struct MspaceBackingBlock {
 	SceUInt32 encodedId;
 };
 
-extern int sceKernelDeleteLwMutex(SceKernelLwMutexWork *work);
-extern void *sceKernelGetTLSAddr(int slot);
-extern int sceKernelFreeMemBlock(SceUID id);
-extern SceUID sceKernelFindMemBlockByAddr(const void *address, SceSize size);
 extern void abort(void) __attribute__((noreturn));
 
 /* SCE: allocator-owned segments carry a TLS-obfuscated kernel memblock ID. */

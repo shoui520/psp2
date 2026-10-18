@@ -1,4 +1,5 @@
-#include "msgpipe.h"
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 
 SceUID sceKernelCreateMsgPipe(const char *name, SceUInt32 type,
 		SceUInt32 attributes, SceSize size, const SceKernelMsgPipeOptParam *option)

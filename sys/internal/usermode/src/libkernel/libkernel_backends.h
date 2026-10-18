@@ -1,12 +1,12 @@
 #ifndef SCE_LIBKERNEL_BACKENDS_H
 #define SCE_LIBKERNEL_BACKENDS_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include <systimer/timer_regs.h>
-#include <psp2common/kernel/threadmgr.h>
-#include <psp2common/kernel/modulemgr.h>
-#include <psp2common/kernel/iofilemgr.h>
-#include <psp2/kernel/openpsid.h>
+#include <kernel/threadmgr.h>
+#include <kernel/modulemgr.h>
+#include <kernel/iofilemgr.h>
+#include <kernel/openpsid.h>
 
 /* Native syscall boundaries. Request layouts remain with their producers. */
 struct AdhocAuthExchangeRequest;
@@ -52,7 +52,6 @@ struct PackageVerifyRequest;
 struct PcActivationChallengeRequest;
 struct PsmActivationRequest;
 struct RandomNumberRequest;
-struct SceKernelSimpleEventOptParam;
 struct SecureClockRequest;
 struct SemaCreateOptions;
 struct ThreadContextRequest;
@@ -62,17 +61,6 @@ struct ThreadStatusRequest;
 struct TimerInfoRequest;
 
 typedef struct SceKernelCallFrame SceKernelCallFrame;
-typedef struct SceKernelEventInfo SceKernelEventInfo;
-typedef struct SceKernelLwCondInfo SceKernelLwCondInfo;
-typedef struct SceKernelLwMutexInfo SceKernelLwMutexInfo;
-typedef struct SceKernelMsgPipeInfo SceKernelMsgPipeInfo;
-typedef struct SceKernelMsgPipeVector SceKernelMsgPipeVector;
-typedef struct SceKernelRWLockInfo SceKernelRWLockInfo;
-typedef struct SceKernelRWLockOptParam SceKernelRWLockOptParam;
-typedef struct SceKernelSystemInfo SceKernelSystemInfo;
-typedef struct SceKernelTimerInfo SceKernelTimerInfo;
-typedef struct SceKernelTimerOptParam SceKernelTimerOptParam;
-typedef struct SceKernelWaitEvent SceKernelWaitEvent;
 
 extern int _sceSblGcAuthMgrAdhocBB160UniCastEncrypt(
 		struct AdhocBB160Context *context, void *data, SceSize size,
@@ -242,16 +230,16 @@ extern int _sceKernelGetLwCondInfo(SceKernelLwCondWork *work, SceKernelLwCondInf
 extern int _sceKernelGetLwCondInfoById(SceUID id, SceKernelLwCondInfo *info,
 		const struct LwInfoRequest *request);
 extern SceUID _sceKernelLoadModule(const char *path, SceUInt flags,
-		const SceKernelLMOption *option);
+		const SceKernelLoadModuleOpt *option);
 extern int _sceKernelUnloadModule(SceUID id, SceUInt flags,
-		const SceKernelULMOption *option);
-extern int _sceKernelStartModule(SceUID id, SceSize size, void *argument,
+		const SceKernelUnloadModuleOpt *option);
+extern int _sceKernelStartModule(SceUID id, SceSize size, const void *argument,
 		const struct ModuleCallOptions *options);
-extern int _sceKernelStopModule(SceUID id, SceSize size, void *argument,
+extern int _sceKernelStopModule(SceUID id, SceSize size, const void *argument,
 		const struct ModuleCallOptions *options);
 extern SceUID _sceKernelLoadStartModule(const char *path, SceSize size,
-		void *argument, const struct ModuleCallOptions *options);
-extern int _sceKernelStopUnloadModule(SceUID id, SceSize size, void *argument,
+		const void *argument, const struct ModuleCallOptions *options);
+extern int _sceKernelStopUnloadModule(SceUID id, SceSize size, const void *argument,
 		const struct ModuleCallOptions *options);
 extern SceUID _sceKernelOpenModule(const char *path, SceSize size,
 		void *argument, const struct ModuleCallOptions *options);
@@ -318,7 +306,7 @@ extern int _sceKernelWaitException(SceUID id, void *info, SceUInt *timeout,
 extern int _sceKernelWaitExceptionCB(SceUID id, void *info, SceUInt *timeout,
 		const struct ThreadRecordRequest *request);
 extern SceUID _sceKernelCreateSimpleEvent(const char *name, SceUInt attributes,
-		SceUInt pattern, const struct SceKernelSimpleEventOptParam *option);
+		SceUInt pattern, const SceKernelSimpleEventOptParam *option);
 extern int _sceKernelWaitSignal(SceUInt64 value, SceUInt *timeout);
 extern int _sceKernelWaitSignalCB(SceUInt64 value, SceUInt *timeout);
 extern int _sceKernelGetThreadInfo(SceUID id, SceKernelThreadInfo *info,
@@ -344,18 +332,18 @@ extern SceUID _sceKernelCreateSema_16XX(const char *name, SceUInt attributes,
 				     int initialCount, const struct SemaCreateOptions *options);
 extern int _sceKernelWaitSema(SceUID id, int count, SceUInt *timeout);
 extern int _sceKernelWaitSemaCB(SceUID id, int count, SceUInt *timeout);
-extern int _sceKernelCancelSema(SceUID id, int count, int *waiting);
+extern int _sceKernelCancelSema(SceUID id, int count, SceUInt32 *waiting);
 extern int _sceKernelGetSemaInfo(SceUID id, SceKernelSemaInfo *info,
 			       const struct ObjectInfoRequest *request);
 extern SceUID _sceKernelCreateMutex(const char *name, SceUInt attributes,
-				 int initialCount, SceKernelMutexOptParam *option);
+				 int initialCount, const SceKernelMutexOptParam *option);
 extern int _sceKernelLockMutex(SceUID id, int count, unsigned int *timeout);
 extern int _sceKernelLockMutexCB(SceUID id, int count, unsigned int *timeout);
-extern int _sceKernelCancelMutex(SceUID id, int count, int *waiting);
+extern int _sceKernelCancelMutex(SceUID id, int count, SceUInt32 *waiting);
 extern int _sceKernelGetMutexInfo(SceUID id, SceKernelMutexInfo *info,
 				const struct ObjectInfoRequest *request);
-extern SceUID _sceKernelCreateEventFlag(const char *name, int attributes,
-				     int pattern, SceKernelEventFlagOptParam *option);
+extern SceUID _sceKernelCreateEventFlag(const char *name, SceUInt32 attributes,
+				     SceUInt32 pattern, const SceKernelEventFlagOptParam *option);
 extern int _sceKernelWaitEventFlag(SceUID id, unsigned int bits, unsigned int mode,
 				 const struct EventFlagWaitOptions *options);
 extern int _sceKernelWaitEventFlagCB(SceUID id, unsigned int bits, unsigned int mode,
@@ -373,7 +361,7 @@ extern int _sceKernelGetCondInfo(SceUID id, SceKernelCondInfo *info,
 			       const struct ObjectInfoRequest *request);
 extern int _sceKernelGetThreadRunStatus(SceKernelThreadRunStatus *status,
 				      const struct ThreadStatusRequest *request);
-extern int _sceKernelStartThread(SceUID id, SceSize size, void *argument);
+extern int _sceKernelStartThread(SceUID id, SceSize size, const void *argument);
 extern int _sceKernelWaitThreadEnd(SceUID id, int *status, SceUInt *timeout);
 extern int _sceKernelWaitThreadEndCB(SceUID id, int *status, SceUInt *timeout);
 extern SceUID _sceKernelRegisterThreadEventHandler(const char *name, SceUID id,

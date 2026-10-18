@@ -4,7 +4,7 @@
 #include <sysmem/cp15.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2/types.h>
+#include <scetypes.h>
 
 union KernelThreadSlots {
 	struct {

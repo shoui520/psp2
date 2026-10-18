@@ -32,7 +32,7 @@ SceUID sceKernelGetThreadId(void)
 	return currentThreadStorage()->kernel.thread.threadId;
 }
 
-int sceKernelCheckThreadStack(void)
+SceSize sceKernelCheckThreadStack(void)
 {
 	register intptr_t stack __asm__("sp");
 	struct ThreadLocalStorage *storage = currentThreadStorage();
@@ -43,7 +43,7 @@ int sceKernelCheckThreadStack(void)
 	return stack - (intptr_t)storage->kernel.thread.stackBottom;
 }
 
-uint32_t sceKernelGetCurrentThreadVfpException(void)
+SceInt32 sceKernelGetCurrentThreadVfpException(void)
 {
 	return currentThreadStorage()->kernel.thread.vfpException;
 }

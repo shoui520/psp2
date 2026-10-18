@@ -1,4 +1,7 @@
 /* SCE: host allocation is replaced by the native kernel memblock boundary. */
+#include <stddef.h>
+#define LACKS_SYS_TYPES_H 1
+#define LACKS_SYS_PARAM_H 1
 #define MSPACES 1
 #define ONLY_MSPACES 1
 #define HAVE_MORECORE 0

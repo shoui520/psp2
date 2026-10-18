@@ -1,5 +1,6 @@
 #include "libkernel_backends.h"
-#include "msgpipe.h"
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 
 struct MsgPipeCreateOptions {
 	SceSize size;

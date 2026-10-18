@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <psp2/kernel/clib.h>
+#include <libkernel/libkernel.h>
 
 /* The native table folds ASCII capitals; every other byte maps to itself. */
 #define IDENTITY16(base) \

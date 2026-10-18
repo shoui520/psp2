@@ -1,4 +1,4 @@
-#include <psp2/types.h>
+#include <scetypes.h>
 
 struct ThreadSizedRecord;
 

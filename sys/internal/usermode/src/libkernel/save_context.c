@@ -1,5 +1,5 @@
 #include "libkernel_backends.h"
-#include <psp2/types.h>
+#include <scetypes.h>
 
 /* The opaque context records are copied and interpreted by GcAuthMgr. */
 struct MsSaveBBMacContext;

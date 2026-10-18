@@ -2,7 +2,8 @@
 #define LIBKERNEL_HEAP_STATE_H
 
 #include <stddef.h>
-#include <psp2common/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
+#include <libkernel/libkernel.h>
 
 struct MspaceSegment {
 	void *base;
@@ -45,13 +46,6 @@ struct MspaceStateView {
 	SceKernelLwMutexWork mutex;
 	struct MspaceSegment segment;
 } __attribute__((may_alias));
-
-struct MspaceStats {
-	SceSize capacity;
-	SceSize footprint;
-	SceSize peakInUse;
-	SceSize currentInUse;
-};
 
 _Static_assert(offsetof(struct MspaceStateView, top) == 0x18, "heap top offset");
 _Static_assert(offsetof(struct MspaceStateView, footprint) == 0x1ac,

@@ -1,4 +1,4 @@
-#include <psp2/kernel/threadmgr.h>
+#include <kernel/threadmgr.h>
 
 struct ThreadCreateOptions {
 	SceSize size;
