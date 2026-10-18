@@ -6,7 +6,7 @@
 extern SceNetPsPacketService gNetPsPacketService;
 int sceNetPsStartBandwidthTimer(struct ifnet *interface);
 extern int gNetPsSoftTick;
-SceNetPsTimeval *sceNetPsGetTime(SceNetPsTimeval *value);
+struct timeval *sceNetPsGetTime(struct timeval *value);
 void callout_reset(struct callout *timer, int ticks,
 		   void (*callback)(void *), void *argument);
 void sceNetPsDelayTimer(void *argument);
@@ -176,7 +176,7 @@ int sceNetPsCheckPacketDelay(unsigned int *releaseTime, unsigned int *flags,
 			    unsigned char *firstPacket, struct ifnet *interface)
 {
 	struct SceNetPsDriverContext *context = interface->if_softc;
-	SceNetPsTimeval now;
+	struct timeval now;
 	unsigned int deadline;
 
 	if (!*firstPacket) {
@@ -209,7 +209,7 @@ int sceNetPsProcessDelayedPackets(struct ifnet *interface)
 {
 	struct SceNetPsDriverContext *context = interface->if_softc;
 	struct NetDriverPacket *packet;
-	SceNetPsTimeval now;
+	struct timeval now;
 	unsigned char firstPacket = 1;
 	int delayed = 1;
 
@@ -417,7 +417,7 @@ invalid:
 int sceNetPsFilterTxMbuf(struct SceNetPsDriverContext *context,
 			struct mbuf *mbuf, unsigned int *duplicates)
 {
-	SceNetPsTimeval now;
+	struct timeval now;
 	int length = mbuf->m_pkthdr.len;
 	unsigned int flags, deadline;
 
@@ -481,7 +481,7 @@ drop:
 int sceNetPsSetTxEmulation(struct SceNetPsDriverContext *context,
 			  struct mbuf *mbuf, struct NetDriverPacket *packet)
 {
-	SceNetPsTimeval now;
+	struct timeval now;
 	unsigned int releaseTime;
 	int jitter;
 

@@ -58,11 +58,8 @@ typedef struct SceNetPsSleepCount {
 	unsigned int count;
 } SceNetPsSleepCount;
 
-/* NetBSD's original ARM timeval predates the SDK's 64-bit time_t. */
-typedef struct SceNetPsTimeval {
-	int tv_sec;
-	int tv_usec;
-} SceNetPsTimeval;
+/* NetBSD's (sys/time.h) */
+struct timeval;
 
 typedef struct SceNetPsThreadParam {
 	void (*entry)(void *arg);
@@ -123,8 +120,8 @@ int sceNetPsWakeupNormal(const void *waitChannel);
 int sceNetPsWakeupCanceled(const void *waitChannel);
 int sceNetPsWakeupInterrupted(const void *waitChannel);
 int sceNetPsWakeupAddressChanged(const void *waitChannel);
-SceNetPsTimeval *sceNetPsGetTime(SceNetPsTimeval *value);
-int ppsratecheck(SceNetPsTimeval *lasttime, int *curpps, int maxpps);
+struct timeval *sceNetPsGetTime(struct timeval *value);
+int ppsratecheck(struct timeval *lasttime, int *curpps, int maxpps);
 int sceNetPsScheduleProtocols(void);
 int sceNetPsScheduleReceive(void);
 int sceNetPsNormalizeTimeout(int timeout);

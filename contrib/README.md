@@ -21,7 +21,7 @@ upstream. When a build needs another file, add it from the same release.
 | dlmalloc-2.8.4 | Doug Lea's malloc 2.8.4 | `malloc.c` | sysmem |
 | gcc-4.8-2014.05 | Sourcery CodeBench Lite 2014.05-28 GCC, the base of Sony's GCC | the ARM runtime files libkernel reads | libkernel (through `toolchains/libgcc`) |
 | img-sgx-ddk-1.7.862890 | Imagination SGX DDK for Linux 1.7 | the full import (not trimmed yet) | gpu_es4, gpuinit_es4, gpucoredump_es4 (through the shared SGX headers) |
-| netbsd-2.1, netbsd-3.0 | NetBSD `syssrc` 2.1 and 3.0 | the network stack files net_ps uses | net_ps |
+| netbsd-2.1, netbsd-3.0 | NetBSD `syssrc` 2.1 and 3.0 | the network stack files and the system headers net_ps reads | net_ps, net_ps_dev, wlanbt (through `net_ps/include`) |
 | rt2860-7bc30c23 | Linux staging rt2860 `cmm_wpa.c` | the file | bootimage wlanbt |
 | sfmt-1.3.3 | SFMT 1.3.3 | the MEXP=19937 build | sysmem |
 | sqlite-3.6.23.1 | SQLite 3.6.23.1 amalgamation | `sqlite3.c`, `sqlite3.h` | libSceSqlite |

@@ -10,7 +10,7 @@
 #include "netps_resource.h"
 #include "netps_driver.h"
 #include "netps_dump.h"
-#include "contrib/netbsd-3.0/sys/sys/callout.h"
+#include <sys/callout.h>
 
 /* Sony's private names are unavailable; layouts follow complete owners. */
 typedef struct SceNetPsGatewayState {

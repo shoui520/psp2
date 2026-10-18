@@ -1,6 +1,7 @@
 /* Password derivation family; the original records no source filename. */
 #include <stdint.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include <sysmem/utils.h>
 

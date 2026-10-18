@@ -128,8 +128,8 @@ extern int tick;
 extern int ticks;
 extern int netisr;
 extern int gNetPsSoftTick;
-extern volatile SceNetPsTimeval gNetPsTime;
-extern volatile SceNetPsTimeval mono_time;
+extern volatile struct timeval gNetPsTime;
+extern volatile struct timeval mono_time;
 extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 

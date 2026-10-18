@@ -5,7 +5,6 @@
 #include <rtc/rtc.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/procevent.h>
-#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
@@ -14,6 +13,8 @@
 #include <sysmem/sysevent.h>
 #include "../../../../net_ps_internal.h"
 #include "../../../../net_ps_atomic.h"
+/* after NetBSD's libkern.h, whose static toupper and tolower sysclib.h then declares */
+#include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
 

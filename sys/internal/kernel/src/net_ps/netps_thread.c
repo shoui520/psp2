@@ -20,8 +20,8 @@ extern int tick;
 extern int ticks;
 extern int netisr;
 extern int gNetPsSoftTick;
-extern volatile SceNetPsTimeval gNetPsTime;
-extern volatile SceNetPsTimeval mono_time;
+extern volatile struct timeval gNetPsTime;
+extern volatile struct timeval mono_time;
 extern int gNetPsStartTime;
 extern int gNetPsInitialized;
 
@@ -473,7 +473,7 @@ int sceNetPsWakeupAddressChanged(const void *waitChannel)
 }
 
 /* Name unknown; copy the network stack's current wall clock. */
-SceNetPsTimeval *sceNetPsGetTime(SceNetPsTimeval *value)
+struct timeval *sceNetPsGetTime(struct timeval *value)
 {
 	value->tv_sec = gNetPsTime.tv_sec;
 	value->tv_usec = gNetPsTime.tv_usec;
@@ -481,7 +481,7 @@ SceNetPsTimeval *sceNetPsGetTime(SceNetPsTimeval *value)
 }
 
 /* SCE replacement: NetBSD's packet-rate limiter always permits the packet. */
-int ppsratecheck(SceNetPsTimeval *lasttime, int *curpps, int maxpps)
+int ppsratecheck(struct timeval *lasttime, int *curpps, int maxpps)
 {
 	return 1;
 }

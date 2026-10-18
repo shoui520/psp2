@@ -2,9 +2,9 @@
 # Originals have no SSP imports or guards, including if_clone_list's 16-byte
 # stack buffer and Sleep/StartStack's address-taken locals in both TOOL builds.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
-# newlib's C library and socket headers until net_ps builds from NetBSD's own (LAYOUT_PLAN
-# section 12)
-set(MODULE_VITASDK_LIBC ON)
+# NetBSD's network stack, built as kernel code on NetBSD's own headers (include/: the psp2 port's
+# machine/ and Sony's changes, the rest from contrib)
+add_compile_definitions(_KERNEL)
 psp2_module(os0_kd_bootimage_net_ps KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	netps_allocator_adapters.c
 	netps_thread.c
