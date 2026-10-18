@@ -36,8 +36,11 @@ come from the paths in their debug records, asserts and SDK libraries.
   under the component that owns them (`<threadmgr/threadcb.h>`, `<sysmem/sysroot.h>`);
   `sys/sdk/target/include/` the SDK headers we write, under Sony's SDK names (`<scetypes.h>`,
   `<kernel/types.h>`, `<libhmac.h>`, `<kernel/error.h>`); a header only one component uses sits
-  in that component. The tree is moving off vitasdk's headers onto these, one exporter at a time;
-  `cmake/compat/vitasdk/` holds the shims for the vitasdk headers still in use.
+  in that component. Kernel code reads no vitasdk header: its C library headers are the SDK's
+  (`<string.h>`, `<stdint.h>`, ...) in `sys/sdk/target/include` (net_ps and wlanbt still take
+  newlib's socket headers until they build from NetBSD's own). User-mode code still reads
+  vitasdk's user headers until the user-mode SDK headers are written; `cmake/compat/vitasdk/`
+  holds the shims that complete them.
 * `sys/sdk/target/src/`: SDK libraries modules link (`libsnc`, SNC's runtime).
 * `cmake/`, `tools/`, `contrib/` (pristine upstream code), `toolchains/` (the compilers'
   recipes and `toolchains/libgcc`, the GCC runtime routines LibKernel links).

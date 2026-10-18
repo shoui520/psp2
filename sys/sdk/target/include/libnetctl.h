@@ -10,8 +10,14 @@
 #include <psp2/types.h>
 #include <psp2/net/netctl.h>
 #include <psp2/rtc.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/mutex.h>
+#include <threadmgr/lw_mutex.h>
+#include <threadmgr/threadmgr_callback.h>
+#include <threadmgr/threadmgr_event.h>
+#include <threadmgr/threadmgr_timer.h>
+#include <threadmgr/fast_mutex_object.h>
+#include <threadmgr/threadmgr_debugger.h>
 #include <modulemgr/modulemgr.h>
 #include <regmgr/regmgr.h>
 

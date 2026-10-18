@@ -59,7 +59,7 @@ def __getattr__(name):
 
 def snc_command(opt, args):
 	sdk = host.sdk()
-	includes = [COMPAT / 'snc', ROOT / 'sys/internal/include', ROOT / 'sys/sdk/target/include',
+	includes = [ROOT / 'sys/internal/include', ROOT / 'sys/sdk/target/include',
 		    ROOT / 'cmake/include', COMPAT / 'vitasdk', ROOT,
 		    sdk / 'target/include', sdk / 'target/include_common', host.vitasdk_include()]
 	return host.windows_command([sdk / 'host_tools/build/bin/psp2snc.exe', *SNC_DEFINES, opt,
