@@ -138,7 +138,7 @@ inline int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *opt
 	return ScePowerForDriver_38415146(0);
 }
 
-static int powerLedInitWorker(void)
+static int powerLedInitWorker(void *arg)
 {
 	LedModeParam param = { .size = sizeof(param), .sysconIndex = 9 };
 	uint32_t capable;

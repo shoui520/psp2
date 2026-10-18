@@ -13,7 +13,7 @@ void powerDisplayIdleDimOrReset(uint32_t timerId, uint32_t elapsed,
 
 /* Display words are shared by brightness and idle gating; names are unresolved. */
 struct PowerDisplayState s_powerDisplayState;
-int powerDisplayLedWorker(void)
+int powerDisplayLedWorker(void *arg)
 {
 	uint32_t reason = s_powerDisplayState.ledReason;
 

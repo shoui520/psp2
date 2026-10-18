@@ -1103,7 +1103,8 @@ int SceThreadmgrForDriver_48C06CD6(SceUID workQueueId, SceUInt32 *timeout)
 }
 
 /* sceKernelScheduleWorkTask: queues entry(arg) as a task named name; returns the task's UID */
-SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, uintptr_t entry, void *arg)
+SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*entry)(void *arg),
+				  void *arg)
 {
 	UIDCreateOpt opt;
 	struct ThreadCB *thread =
@@ -1150,7 +1151,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, uintptr_t
 	task->ownerPid = ThreadmgrInSyscall() ? thread->processId : THREADMGR_KERNEL_PID;
 	task->cb.user = user;
 	task->cb.guid = ret;
-	task->cb.entry = entry;
+	task->cb.entry = (uintptr_t)entry;
 	task->cb.creatorPid = creatorPid;
 	task->cb.queueId = workQueueId;
 	task->cb.arg = arg;

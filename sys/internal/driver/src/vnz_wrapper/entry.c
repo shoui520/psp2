@@ -158,7 +158,7 @@ unsigned int codecEngineSystemEventHandler(int phase, unsigned int event)
 }
 
 /* name unknown: boot thread entry. */
-int codecEngineStartPhase2(void)
+int codecEngineStartPhase2(void *arg)
 {
 	int ret = ScePervasiveForDriver_D58E3A30();
 

@@ -950,7 +950,8 @@ int sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32
 int sceKernelPollSema(SceUID semaId, int needCount);
 int sceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId);
 int sceKernelResumeThreadForVM(SceUID threadId);
-SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, uintptr_t entry, void *arg);
+SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*entry)(void *arg),
+				  void *arg);
 int sceKernelSendSignal(SceUID threadId);
 int sceKernelSetDTraceThreadCBEnable(int enable);
 int sceKernelSetEventFlag(SceUID evfId, uint32_t pattern);

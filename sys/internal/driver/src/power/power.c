@@ -45,7 +45,7 @@ const SceKernelProcEventHandler s_powerProcessEventHandlers = {
 	.suspend = powerProcessSuspendNotification,
 	.resume = powerProcessResumeNotification,
 };
-int powerStartupWorker(void)
+int powerStartupWorker(void *arg)
 {
 	uint8_t storage[4], command[2];
 	int ret;

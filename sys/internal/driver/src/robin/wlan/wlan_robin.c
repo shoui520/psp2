@@ -1117,7 +1117,7 @@ int _workerEntry(SceSize args, void *argument)
 				gWlanContext.pendingStateMarker = 0x80000a00;
 				if ((flags & 4) && context->connectionSize) {
 					sceKernelScheduleWorkTask(65571, "SceWlanBtRobinWlanWakeConfig",
-						(uintptr_t)robinWlanRetryWakeOnConfiguration,
+						(int (*)(void *))robinWlanRetryWakeOnConfiguration,
 						context);
 					goto stopEvent;
 				}
