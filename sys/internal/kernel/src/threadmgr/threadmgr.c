@@ -15,7 +15,6 @@
 #include <kernel/error.h>
 #include "event.h"
 #include "fast_mutex.h"
-#include <psp2common/kernel/threadmgr.h>
 #include "event_flag.h"
 #include "mutex.h"
 #include "affinity.h"

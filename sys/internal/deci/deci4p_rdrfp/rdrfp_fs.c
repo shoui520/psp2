@@ -3,7 +3,6 @@
  * requests, and tells the host when a device is mounted or unmounted.
  */
 #include <psp2kern/io/devctl.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/threadmgr.h>

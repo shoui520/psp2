@@ -1,13 +1,11 @@
 #include "pamgr_internal.h"
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 
 int sceKernelPerfArmPmonOpen(void);
 int sceKernelPerfArmPmonClose(void);

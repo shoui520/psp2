@@ -1,6 +1,6 @@
 /* Cell location and network scan requests. */
 #include <string.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_modem_status.h"
 
 #define QMI_HALFWORD(bytes) ((bytes)[0] | ((bytes)[1] << 8))

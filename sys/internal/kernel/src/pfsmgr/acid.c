@@ -5,7 +5,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_ACID_NAME_SIZE	0x21	/* name unknown: "0x%xACD" */

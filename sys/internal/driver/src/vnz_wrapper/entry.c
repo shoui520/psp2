@@ -4,7 +4,7 @@
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
 
 extern const SceKernelProcEventHandler codecEngineProcessEvents; /* name unknown */
 

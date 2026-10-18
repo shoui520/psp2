@@ -6,7 +6,7 @@
 
 #include <string.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "dfmgr_internal.h"
 #include <kernel/error.h>
 

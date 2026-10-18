@@ -5,8 +5,6 @@
 #include <audioin/audioin.h>
 #include <bt/bt_audio.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <string.h>
 
 SceUID avConfigBtSendThreadId = 0;

@@ -1,5 +1,5 @@
 /* Adhoc 224-bit initial key exchange. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "adhoc.h"
 
 extern SceUID gcAuthAdhocSemaphore;

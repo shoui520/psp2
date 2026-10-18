@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <motion/motion_dev.h>
 #include <touch/touch.h>
 #include <sdstor/mbr.h>

@@ -9,10 +9,6 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/utils.h>

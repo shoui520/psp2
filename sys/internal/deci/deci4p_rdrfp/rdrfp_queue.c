@@ -2,7 +2,7 @@
  * SceDeci4pRDrfp request queues (Sony's rdrfp_queue.c): a list guarded by a
  * mutex, with an event flag set whenever something is queued.
  */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "rdrfp.h"
 
 int rdrfpInitQueue(RdrfpQueue *queue)

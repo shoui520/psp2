@@ -1,6 +1,5 @@
 /* Register transfers for the directly attached motion sensor. */
 #include "motion_command.h"
-#include <psp2kern/kernel/threadmgr.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
 #include <clockgen/clockgen.h>

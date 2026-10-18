@@ -21,5 +21,20 @@ struct ThreadmgrFastMutex {
 	uint8_t reserved[0x18];
 };
 
+#ifndef __cplusplus
 _Static_assert(sizeof(struct ThreadmgrFastMutex) == 0x40,
 	       "fast-mutex work area size");
+#endif
+
+/*
+ * The work area as its callers declare it (vitasdk's name, nothing of Sony's names it): opaque,
+ * the size of struct ThreadmgrFastMutex.
+ */
+typedef struct SceKernelFastMutex {
+	SceUInt8 data[0x40];
+} SceKernelFastMutex;
+
+#ifndef __cplusplus
+_Static_assert(sizeof(SceKernelFastMutex) == sizeof(struct ThreadmgrFastMutex),
+	       "SceKernelFastMutex size");
+#endif

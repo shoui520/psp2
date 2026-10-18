@@ -5,7 +5,6 @@
 #include <lowio/spi_regs.h>
 #include <sysmem/barrier.h>
 #include <lowio/pervasive.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 
 typedef struct MotionSpiContext {

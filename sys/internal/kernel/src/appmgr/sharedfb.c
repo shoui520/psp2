@@ -5,7 +5,7 @@
 #include <intrmgr/syscall.h>
 #include <appmgr/sharedfb.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>

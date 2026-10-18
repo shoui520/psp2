@@ -3,7 +3,7 @@
  * Waiting readers are let in before waiting writers.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "fios2_internal.h"
 
 void sceFiosKernelRwlockInit(SceFiosKernelRwlock *lock)

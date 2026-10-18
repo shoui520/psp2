@@ -10,7 +10,7 @@
 #include "sgx543_v1.164defs.h"
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 
 /* Pristine sgx_mkif_km.h register-bank selection for SGX MP. */

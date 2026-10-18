@@ -1,5 +1,5 @@
 /* Descriptive file name: the original has no source-file debug records. */
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 #include "magicgate_private.h"
 
 MagicGateDriver magicGateDriver;

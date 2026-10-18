@@ -15,7 +15,6 @@
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/suspend.h>
 
 /* controller commands (command register, with the endpoint in bits 4-7) */

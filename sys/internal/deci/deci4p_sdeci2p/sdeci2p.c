@@ -17,7 +17,6 @@
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/barrier.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

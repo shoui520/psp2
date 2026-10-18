@@ -1,7 +1,6 @@
 /* SceBbmc: timer queue owner (Sony's bbmc_timer.c). */
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/debug.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <threadmgr/threadmgr.h>

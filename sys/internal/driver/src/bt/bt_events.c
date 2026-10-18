@@ -1,7 +1,7 @@
 /* Bluetooth event delivery; original source filename unavailable. */
 #include <string.h>
 #include <arm_neon.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
+#include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
 BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,

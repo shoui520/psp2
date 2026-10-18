@@ -7,7 +7,8 @@
 #include <string.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <lowio/iftu.h>
 #include <lowio/iftu_regs.h>
 #include <sysmem/sysevent.h>

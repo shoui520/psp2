@@ -1,5 +1,5 @@
 /* Received packet and control-client completion notifications. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_backend.h"
 
 /* name unknown: turn the packet category and control reply into an event. */

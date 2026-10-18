@@ -2,7 +2,7 @@
 #include "lockup-history.h"
 #include "registerdump_sce.h"
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 
 /* Kernel NID FE39AEAC is not the four-argument Annex K SDK routine.

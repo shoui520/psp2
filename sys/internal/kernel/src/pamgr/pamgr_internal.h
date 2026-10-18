@@ -5,7 +5,8 @@
 #include <stdint.h>
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <intrmgr/intrmgr_syscall.h>
 #include <sysmem/pl310_regs.h>
 #include <pamgr/perfmon_regs.h>

@@ -5,7 +5,7 @@
  */
 
 #include <string.h>
-#include <psp2common/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "private.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>

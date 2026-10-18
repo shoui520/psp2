@@ -2,7 +2,7 @@
  * Link 0: DECI4P over the DevKit SDIO channel of SceDbgSdio (Sony's sdio.c).
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <dbgsdio/dbgsdio.h>
 #include "dfmgr_internal.h"

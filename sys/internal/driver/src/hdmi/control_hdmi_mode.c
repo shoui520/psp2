@@ -4,7 +4,8 @@
  * id and the CEC power. Internal names are ours unless a comment says otherwise.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <lowio/gpio.h>
 #include <lowio/i2c.h>
 #include <fw.h>
@@ -12,7 +13,6 @@
 #include <sysmem/sysevent.h>
 #include "hdmi_internal.h"
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/qafmgr.h>

@@ -7,7 +7,6 @@
  */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <lowio/gpio.h>
 #include <fw.h>
 #include <sysmem/debug.h>

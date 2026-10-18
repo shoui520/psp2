@@ -2,7 +2,6 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2common/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
 
 typedef struct CameraSensorRegister {

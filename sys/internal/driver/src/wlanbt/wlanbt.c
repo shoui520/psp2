@@ -8,8 +8,6 @@
 #include <sysmem/procevent.h>
 #include <syscon/syscon.h>
 #include <power/power.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>

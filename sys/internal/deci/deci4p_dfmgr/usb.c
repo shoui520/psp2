@@ -2,7 +2,7 @@
  * Link 1: DECI4P over the DevKit USB port of SceDbgUsb (Sony's usb.c).
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include "dfmgr_internal.h"
 

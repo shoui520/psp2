@@ -3,15 +3,13 @@
  */
 
 #include <skeleton.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <npdrm/npdrm.h>
 #include <npdrm/psmdrm.h>
 #include <gcauthmgr/sblgcauthmgrdrmbb.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
 #include <rtc/rtc.h>
 #include <string.h>
 #include <stdio.h>

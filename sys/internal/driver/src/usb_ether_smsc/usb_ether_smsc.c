@@ -4,8 +4,8 @@
  * Function names marked 0.990 come from the prototype's strings; register
  * names are the LAN9500 datasheet's.
  */
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/cpu.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>

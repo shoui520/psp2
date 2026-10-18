@@ -8,8 +8,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
+#include <threadmgr/threadmgr.h>
 #include <stddef.h>
 
 int avConfigSetEventFlag(unsigned int bits)

@@ -1,5 +1,5 @@
 /* Pcact activation control and transport. */
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
 #include "pcact.h"

@@ -13,10 +13,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysroot.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/semaphores.h>
+#include <threadmgr/fast_mutex_object.h>
 #include "dbgp_internal.h"
 
 DbgpCB g_dbgp;

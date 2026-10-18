@@ -4,7 +4,8 @@
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <dbgsdio/dbgsdio.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>

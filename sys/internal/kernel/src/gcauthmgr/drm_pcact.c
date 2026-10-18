@@ -1,6 +1,5 @@
 /* Descriptive source name: the original module has no debug records. */
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include <sysmem/utils.h>

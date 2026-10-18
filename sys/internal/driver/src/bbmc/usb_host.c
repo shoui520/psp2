@@ -1,6 +1,6 @@
 /* Composite USB host channels used by the modem serial bridge. */
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "usb_serial.h"
 

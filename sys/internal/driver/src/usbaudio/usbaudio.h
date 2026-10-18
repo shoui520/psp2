@@ -9,10 +9,7 @@
 #include <usbd/usbd.h>
 #include <psp2/usbaudioin.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 

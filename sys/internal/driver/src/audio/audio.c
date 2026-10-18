@@ -9,8 +9,6 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/uid_class.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>
 #include <psp2/audioout.h>

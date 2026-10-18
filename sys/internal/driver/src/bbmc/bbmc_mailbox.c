@@ -1,7 +1,7 @@
 /* SceBbmc's single semaphore-backed intrusive message queue. */
 #include <stddef.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "bbmc_queue.h"
 
 /* name unknown: all five words are initialized and used by the queue owner. */

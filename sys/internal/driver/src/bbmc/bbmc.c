@@ -11,8 +11,6 @@
 #include <syscon/syscon.h>
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <modulemgr/modulemgr.h>
 #include <idstorage/idstorage.h>
 #include <sysmem/procevent.h>

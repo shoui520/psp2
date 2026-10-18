@@ -12,7 +12,7 @@
 #include <string.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>

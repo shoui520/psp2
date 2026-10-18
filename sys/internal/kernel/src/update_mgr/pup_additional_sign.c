@@ -1,7 +1,5 @@
 #include <sysmem/cpu.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <threadmgr/threadmgr.h>

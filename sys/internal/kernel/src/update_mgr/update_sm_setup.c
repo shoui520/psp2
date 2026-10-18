@@ -1,6 +1,6 @@
 #include <sm_comm/sm_comm.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "update_internal.h"
 

@@ -1,7 +1,7 @@
 /* SCE GPU modification-object wait registry. */
 #include <sysmem/cpu.h>
 #include "../../gpu_es4/srvkm/sync_sce.h"
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysclib.h>
 

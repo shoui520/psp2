@@ -3,7 +3,7 @@
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"

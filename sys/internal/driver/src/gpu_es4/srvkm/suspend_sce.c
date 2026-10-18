@@ -1,5 +1,4 @@
 /* SCE suspend event helpers; no native source-file record survives. */
-#include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <threadmgr/threadmgr.h>
 
 /* Existing import name, NID EA211225; absent from vitasdk's NID table. */

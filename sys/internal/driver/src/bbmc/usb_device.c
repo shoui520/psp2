@@ -1,6 +1,6 @@
 #include <sysmem/sysmem.h>
 #include <udcd/udcd.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 
 #include "usb_serial.h"

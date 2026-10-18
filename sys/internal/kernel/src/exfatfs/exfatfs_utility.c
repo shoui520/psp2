@@ -1,6 +1,6 @@
 /* Utility routines whose Sony source-file records are absent. */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "exfatfs_internal.h"
 

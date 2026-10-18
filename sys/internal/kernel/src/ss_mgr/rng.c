@@ -1,6 +1,6 @@
 #include "ssmgr_internal.h"
 #include <dmacmgr/dmacmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/utils.h>
 #include <sysmem/sysmem.h>

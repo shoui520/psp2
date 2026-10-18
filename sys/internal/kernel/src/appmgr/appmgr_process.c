@@ -6,7 +6,6 @@
 #include <appmgr.h>
 #include <power/power.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "appmgr_internal_util.h"
 #include "app_state_internal.h"

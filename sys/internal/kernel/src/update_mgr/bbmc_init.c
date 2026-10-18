@@ -1,7 +1,5 @@
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include "bbmc_update.h"
 
 int SceBbmcForDriver_580A3C06(BbmcSubscribeFeatureIdParam *param);

@@ -3,7 +3,8 @@
 #include "videocodec_internal.h"
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/cpu.h>
 #include <string.h>
 

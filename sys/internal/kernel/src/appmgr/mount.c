@@ -2,7 +2,6 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sblaimgr.h>

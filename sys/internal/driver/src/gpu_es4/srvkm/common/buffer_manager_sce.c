@@ -8,7 +8,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 
 PVRSRV_DEVICE_NODE *SetGpuDeviceNode(PVRSRV_DEVICE_NODE *psDeviceNode);
 int sceGpuInitMemoryContexts(void);

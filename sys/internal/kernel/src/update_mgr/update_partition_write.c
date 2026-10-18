@@ -1,7 +1,7 @@
 #include <sysmem/sysmem.h>
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include "update_objects.h"
 
 int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,

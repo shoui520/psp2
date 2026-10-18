@@ -2,7 +2,7 @@
 
 #include <psp2kern/types.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
 #include <regmgr/regmgr.h>

@@ -1,5 +1,6 @@
 #pragma once
 #include "gps.h"
+#include <threadmgr/fast_mutex_object.h>
 
 /* Private names/layouts unknown: offsets confirmed against the originals. */
 typedef struct GpsContext {

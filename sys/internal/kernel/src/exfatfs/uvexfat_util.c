@@ -1,5 +1,6 @@
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 

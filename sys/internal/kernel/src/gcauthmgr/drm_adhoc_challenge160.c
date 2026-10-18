@@ -1,5 +1,5 @@
 /* Answer a peer challenge with a generated 160-bit key pair. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
 #include "adhoc.h"
 

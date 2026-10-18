@@ -4,7 +4,6 @@
  * each EDID block read. Internal names are ours unless a comment says otherwise.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"

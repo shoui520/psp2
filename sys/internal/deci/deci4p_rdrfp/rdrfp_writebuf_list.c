@@ -4,7 +4,6 @@
  * request; buffers left waiting are flushed by a 3 s timer, the second time
  * it finds them.
  */
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"

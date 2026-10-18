@@ -1,7 +1,7 @@
 /* Descriptive source name: the original module has no debug records. */
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "drm_bb.h"
 
 SceUID gcAuthDrmBbSemaphore;

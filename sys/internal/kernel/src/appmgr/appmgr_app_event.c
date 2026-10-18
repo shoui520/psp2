@@ -4,7 +4,7 @@
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <appmgr.h>
 #include <string.h>
 #include "app_state_internal.h"

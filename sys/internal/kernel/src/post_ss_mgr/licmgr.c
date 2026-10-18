@@ -10,7 +10,7 @@
 #include <kernel_boot_loader/kbl_param.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 #include <acmgr/acmgr.h>

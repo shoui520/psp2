@@ -9,7 +9,7 @@
 #include <sysmem/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <kernel/error.h>
 #include <sysmem/sysevent.h>
 #include "dfmgr_internal.h"

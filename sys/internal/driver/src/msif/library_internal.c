@@ -1,7 +1,6 @@
 /* Standalone library helpers; source-file names absent from debug records. */
 #include "library.h"
 #include "msif_context.h"
-#include <psp2kern/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
 
 void *MsproalInitializeErrorLog(struct MsproalHandle *handle,

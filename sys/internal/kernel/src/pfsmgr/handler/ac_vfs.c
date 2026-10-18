@@ -6,7 +6,7 @@
  */
 
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include "../pfsmgr_internal.h"
 

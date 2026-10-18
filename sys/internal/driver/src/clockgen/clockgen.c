@@ -8,7 +8,7 @@
  * the others are guessed and kept as NIDs.
  */
 
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
 #include <lowio/i2c.h>
 #include <sysmem/sysevent_ids.h>

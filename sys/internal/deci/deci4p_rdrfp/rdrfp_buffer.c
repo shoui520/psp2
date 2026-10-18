@@ -4,7 +4,7 @@
  * for read replies and write buffers collecting written data.
  */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
 #include "rdrfp.h"

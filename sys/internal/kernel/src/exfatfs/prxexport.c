@@ -2,7 +2,7 @@
 #include <sysmem/sysroot.h>
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <iofilemgr/vfs.h>
 

@@ -1,7 +1,7 @@
 /* SceCoredump asynchronous trigger requests. */
 
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

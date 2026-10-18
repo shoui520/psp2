@@ -3,7 +3,7 @@
  */
 #include "sgxinit_sce.h"
 #include <gpu/sgxmkif_sce.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 IMG_UINT32 OSClockus(IMG_VOID);

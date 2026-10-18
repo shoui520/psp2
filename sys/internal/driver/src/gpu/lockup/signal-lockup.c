@@ -1,6 +1,5 @@
 /* Signal counters, lockup notifications and salvage registration. */
 #include <stdint.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include "../../gpu_es4/srvkm/gpu-dump.h"

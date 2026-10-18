@@ -1,4 +1,5 @@
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include "update_objects.h"
 
 int UpdateUtilKA2UA(const void *kernelBuffer, SceUID pid, void **userBuffer)

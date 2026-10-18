@@ -8,7 +8,7 @@
 #include <string.h>
 #include <sysmem/debug.h>
 #include <gpu/sgxmkif_sce.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <lowio/pervasive.h>

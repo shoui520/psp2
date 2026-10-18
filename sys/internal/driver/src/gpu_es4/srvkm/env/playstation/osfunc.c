@@ -2,7 +2,7 @@
  * Pristine IMG Linux implementation remains in the vendor directory.
  */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/debug.h>
 #include "../../system_sce.h"

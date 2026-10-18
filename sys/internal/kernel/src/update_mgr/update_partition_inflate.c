@@ -1,5 +1,5 @@
 #include <post_ss_mgr/zlib.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include "update_objects.h"
 
 int SceZlibForDriver_inflateInitNocheck_(SceZlibStream *stream, const char *version, int size);

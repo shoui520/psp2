@@ -11,13 +11,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
+#include <threadmgr/threadmgr.h>
 #include <threadmgr/arm_thread_context.h>
 #include <excpmgr/arm_psr_text.h>
 #include <modulemgr/modulemgr_control.h>
 #include <pamgr/coresight_regs.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <modulemgr/modulemgr.h>
 
 SdfMgrState s_sdfMgrState;
@@ -771,7 +769,7 @@ typedef int (*SdfMgrExceptionHook)(SceExcpmgrContext *context,
 int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 			      uint32_t address, uint32_t cpsr)
 {
-	SceKernelThreadContextInfo thread;
+	ThreadCBInfo thread;
 	char status[64];
 	SdfMgrCpuState *cpu;
 	SdfMgrExceptionHook hook;
@@ -784,7 +782,7 @@ int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 	sdfMgrFormatCpsr(status, cpsr);
 	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
-	    thread.process_id == SCE_KERNEL_PROCESS_ID)
+	    thread.processId == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
 	hook = (SdfMgrExceptionHook)cpu->indexedHooks[0];
 	if (hook)
@@ -797,7 +795,7 @@ int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 			  uint32_t address, uint32_t cpsr)
 {
-	SceKernelThreadContextInfo thread;
+	ThreadCBInfo thread;
 	char status[64];
 	SdfMgrCpuState *cpu;
 	SdfMgrExceptionHook hook;
@@ -810,7 +808,7 @@ int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 	sdfMgrFormatCpsr(status, cpsr);
 	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
-	    thread.process_id == SCE_KERNEL_PROCESS_ID)
+	    thread.processId == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
 	hook = (SdfMgrExceptionHook)cpu->indexedHooks[1];
 	if (hook)
@@ -823,7 +821,7 @@ int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 int sdfMgrUndefinedHandler(SceExcpmgrContext *context,
 			   uint32_t address, uint32_t cpsr)
 {
-	SceKernelThreadContextInfo thread;
+	ThreadCBInfo thread;
 	char status[64];
 	SdfMgrCpuState *cpu;
 	SdfMgrExceptionHook hook;
@@ -832,7 +830,7 @@ int sdfMgrUndefinedHandler(SceExcpmgrContext *context,
 	SceThreadmgrForKernel_6C1F092F(&thread);
 	sdfMgrFormatCpsr(status, cpsr);
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
-	if (thread.process_id == SCE_KERNEL_PROCESS_ID)
+	if (thread.processId == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
 	hook = (SdfMgrExceptionHook)cpu->indexedHooks[2];
 	if (hook)

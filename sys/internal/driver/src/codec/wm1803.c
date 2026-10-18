@@ -1,6 +1,5 @@
 /* WM1803 codec implementation. Internal names without debug records are unknown. */
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/suspend.h>
 #include <lowio/i2c.h>
 #include <syscon/syscon.h>

@@ -1,6 +1,6 @@
 /* Control-channel request progression and completion. */
 #include "qmi_backend.h"
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 
 extern int qmiSignalBackend(unsigned int kind, unsigned int channel,
 	unsigned int eventOffset);

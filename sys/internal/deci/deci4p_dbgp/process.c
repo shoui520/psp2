@@ -3,7 +3,7 @@
 #include <sysmem/debug.h>
 #include <processmgr/process.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
+#include <threadmgr/threadmgr.h>
 #include "dbgp_internal.h"
 
 int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,

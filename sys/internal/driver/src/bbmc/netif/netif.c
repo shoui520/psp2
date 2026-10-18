@@ -2,7 +2,6 @@
 #include <string.h>
 #include <usbd/usbd.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <net_ps/ethernet.h>
 #include <sysmem/debug.h>
 #include "../bbmc_netif.h"

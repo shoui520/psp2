@@ -4,7 +4,7 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/suspend.h>

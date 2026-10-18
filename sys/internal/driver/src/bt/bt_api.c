@@ -12,8 +12,6 @@
 #include <bt/bt_pairing.h>
 #include <bt/bt_audio.h>
 #include <bt/bt_test.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/sysmem.h>
 #include "bt_internal.h"
 

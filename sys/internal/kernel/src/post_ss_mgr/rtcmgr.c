@@ -4,7 +4,7 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include "post_ss_mgr_internal.h"
 

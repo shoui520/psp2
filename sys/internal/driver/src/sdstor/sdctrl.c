@@ -7,8 +7,7 @@
 #include <sdstor/mbr.h>
 #include <sdif/sdif.h>
 #include <sysmem/sysevent.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/cpu.h>
 #include <stdio.h>

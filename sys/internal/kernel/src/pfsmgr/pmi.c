@@ -3,7 +3,7 @@
  * authority IDs approved for each.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>

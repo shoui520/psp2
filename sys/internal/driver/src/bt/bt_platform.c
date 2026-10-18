@@ -5,7 +5,6 @@
 #include <sysmem/procevent.h>
 #include <sysmem/pmmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <iofilemgr/iofilemgr.h>
 #include "bt_internal.h"
 #include <sysmem/sysroot.h>

@@ -1,5 +1,5 @@
 /* USB external-interface transfers and completion. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <stdint.h>

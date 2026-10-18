@@ -6,8 +6,6 @@
 #include <arm_neon.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <sysmem/sysmem.h>
 
 #include "audio_private.h"

@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <oled/oled.h>
 #include <lowio/pervasive.h>
 

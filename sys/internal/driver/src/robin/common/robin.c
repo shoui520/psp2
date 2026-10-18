@@ -4,7 +4,6 @@
 #include <sdif/sdif.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
 #include <post_ss_mgr/sblfwloader.h>

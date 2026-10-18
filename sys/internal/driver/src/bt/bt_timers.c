@@ -1,5 +1,5 @@
 /* Bluetooth delta timers; original source filename unavailable. */
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include "bt_internal.h"
 
 int BtLockTransport(void);

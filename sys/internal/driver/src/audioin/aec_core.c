@@ -1,7 +1,8 @@
 /* AEC context and workspace management; original source filename unavailable. */
 #include "audioin_internal.h"
 #include <psp2/audioin.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 
 extern int SceCodecEngineWrapperForDriver_CB8703D8(void);
 extern int _unlockProcessSuspendCore(void);

@@ -1,6 +1,6 @@
 /* Device information and default WDS profile responses. */
 #include <string.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_information.h"
 #include <sysmem/sysclib.h>
 

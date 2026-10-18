@@ -1,7 +1,5 @@
 /* Bluetooth SDIO initialization; original source filename unavailable. */
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <threadmgr/threadmgr.h>
 #include <wlanbt/wlanbt.h>
 #include <sysmem/atomic.h>

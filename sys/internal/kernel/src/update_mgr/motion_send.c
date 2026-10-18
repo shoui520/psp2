@@ -1,6 +1,6 @@
 #include "update_internal.h"
 #include "motion_update.h"
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 
 int MotionUtilSendCommand(void)
 {

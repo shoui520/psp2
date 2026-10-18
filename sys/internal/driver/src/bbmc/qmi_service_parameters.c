@@ -1,6 +1,6 @@
 /* QMI client initialization and service event subscriptions. */
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_backend.h"
 
 extern int bbcmdSetRequestedMask(unsigned int channel, unsigned int mask);

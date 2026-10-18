@@ -1,9 +1,6 @@
 /* Hardware motion lifecycle and asynchronous device completions. */
 #include "motion_manager.h"
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/procevent.h>
 #include <string.h>
 #include <processmgr/processmgr.h>

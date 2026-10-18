@@ -1,5 +1,5 @@
 /* Descriptive source boundary for the original Pcact stack wrappers. */
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include "pcact.h"
 #include <gcauthmgr/sblgcauthmgrmlnpsnl.h>

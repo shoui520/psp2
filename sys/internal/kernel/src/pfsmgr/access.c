@@ -3,7 +3,7 @@
  * flags per mode, and the access check every operation begins with.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/cpu.h>
 #include <acmgr/acmgr.h>

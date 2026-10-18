@@ -1,6 +1,6 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
 #include "mgvideo_private.h"
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 
 void notifyContextFinalized(void)
 {

@@ -5,11 +5,10 @@
 #include <sysmem/sysmem.h>
 #include <string.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <avcdec.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 
 VideocodecResident videocodecResident = {
 	.processLocalStorageId = -1,

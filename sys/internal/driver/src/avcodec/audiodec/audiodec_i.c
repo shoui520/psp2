@@ -1,7 +1,7 @@
 /* SceAudiodec internal library management (Sony audiodec/audiodec_i.c). */
 #include "audiodec_internal.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 /* ATRAC9 configuration header: sample-rate index, channel layout, frame bytes,

@@ -3,7 +3,7 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_BUFFER_MEMBLOCK_TYPE	0x1020d006	/* name unknown */

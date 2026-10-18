@@ -9,7 +9,6 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <lowio/gpio.h>
 #include <lowio/pervasive.h>
 #include <sysmem/barrier.h>

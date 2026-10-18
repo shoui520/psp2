@@ -1,9 +1,6 @@
 #pragma once
 #include <stdint.h>
 #include <usbd/usbd.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
 #include <lowio/pervasive.h>

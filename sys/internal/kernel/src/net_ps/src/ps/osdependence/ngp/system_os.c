@@ -6,9 +6,6 @@
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>

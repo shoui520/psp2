@@ -1,5 +1,5 @@
 /* QMI transport protocol control. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include "qmi_device.h"

@@ -3,8 +3,6 @@
  */
 #include <stdint.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>

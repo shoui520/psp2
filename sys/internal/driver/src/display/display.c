@@ -13,8 +13,8 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/suspend.h>
 #include <dmacmgr/dmacmgr.h>

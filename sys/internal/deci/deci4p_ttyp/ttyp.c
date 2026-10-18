@@ -9,8 +9,6 @@
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <pamgr/pamgr.h>
@@ -705,7 +703,7 @@ out:
 /* send buf to the host in packets, stopping when it goes away */
 TTYP_INLINE void consput(TtypChannel *ch, const signed char *buf, SceSize size, const SceUID *pid)
 {
-	SceKernelThreadContextInfo info;
+	ThreadCBInfo info;
 	TtypResource *r;
 	SceUInt64 time;
 	SceSize left = size, n;
@@ -726,8 +724,8 @@ TTYP_INLINE void consput(TtypChannel *ch, const signed char *buf, SceSize size, 
 		} else {
 			r->hdr.port = TTYP_PORT_PROCESS;
 			SceThreadmgrForKernel_6C1F092F(&info);
-			r->hdr.pid = info.process_id;
-			r->hdr.tid = SceThreadmgrForDriver_F311808F(info.thread_id);
+			r->hdr.pid = info.processId;
+			r->hdr.tid = SceThreadmgrForDriver_F311808F(info.threadId);
 		}
 		time = 0;
 		if (ScePamgrForDriver_FE9BFD27 != NULL)

@@ -2,7 +2,7 @@
 #include "sdif_internal.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 int setAdmaDescriptorsForAlignedData(SdifCommand *command)

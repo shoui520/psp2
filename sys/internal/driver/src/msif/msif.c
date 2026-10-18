@@ -16,7 +16,7 @@
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <string.h>
 #include <lowio/pervasive.h>
 #include <power/power.h>

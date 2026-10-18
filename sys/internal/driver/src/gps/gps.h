@@ -4,12 +4,7 @@
 #include <stddef.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include <gps/gps.h>

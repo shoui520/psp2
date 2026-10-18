@@ -3,7 +3,7 @@
  * unknown.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <stddef.h>
 #include "reg_internal.h"
 

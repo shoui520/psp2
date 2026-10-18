@@ -29,14 +29,7 @@
 #include <ulobjmgr/ulobjmgr.h>
 #include <modulemgr/modulemgr_control.h>
 #include <modulemgr/modulemgr_debugger.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/cond.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/semaphores.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/msg_pipe.h>
+#include <threadmgr/lw_mutex.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/gpu_es4.h>

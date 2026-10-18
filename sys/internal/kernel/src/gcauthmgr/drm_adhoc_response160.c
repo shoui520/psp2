@@ -1,5 +1,5 @@
 /* Verify the 160-bit Adhoc response and return the final packet. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "adhoc.h"
 
 extern SceUID gcAuthAdhocSemaphore;

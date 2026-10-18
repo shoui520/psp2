@@ -4,11 +4,9 @@
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/audioin.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <syscon/syscon.h>
 #include <sysmem/sblaimgr.h>
 

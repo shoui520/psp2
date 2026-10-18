@@ -1,6 +1,6 @@
 #include <sysmem/sysroot.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <syscon/syscon.h>
 #include <sysstatemgr/sysstatemgr.h>
 #include "update_internal.h"

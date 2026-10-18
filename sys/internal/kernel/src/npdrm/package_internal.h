@@ -7,7 +7,7 @@
 #include <sysmem/aes.h>
 #include <npdrm/npdrm_package.h>
 #include <marlin_hci/rsa.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>

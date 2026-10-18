@@ -12,7 +12,6 @@
 #include <string.h>
 #include <sysmem/debug.h>
 #include "reg.h"
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
 #include <processmgr/processmgr.h>

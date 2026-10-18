@@ -3,7 +3,7 @@
 #include <iofilemgr/vfs.h>
 #include <stddef.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
 #include <acmgr/acmgr.h>
 

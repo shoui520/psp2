@@ -1,7 +1,7 @@
 #include "update_internal.h"
 #include "spkg_peripherals.h"
 #include "motion_update.h"
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 int UpdateUtilUpdateNodeStatus(unsigned int nodeType,

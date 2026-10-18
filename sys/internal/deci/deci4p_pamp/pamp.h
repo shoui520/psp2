@@ -2,8 +2,8 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <pamgr/pamgr.h>
 #include <processmgr/processmgr.h>

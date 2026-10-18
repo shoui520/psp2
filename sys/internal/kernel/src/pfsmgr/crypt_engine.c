@@ -4,7 +4,7 @@
  * waits for them.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 #define SCE_PFS_ERROR_NO_JOB	0x80140f09	/* name unknown */

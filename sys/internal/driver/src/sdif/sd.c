@@ -2,7 +2,7 @@
 #include "sdif_internal.h"
 #include <sysmem/debug.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
+#include <threadmgr/threadmgr.h>
 
 SdifContextPart gSdContexts[3];
 

@@ -2,14 +2,11 @@
 
 #include <skeleton.h>
 #include "av_config_internal.h"
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
 #include <threadmgr/threadmgr.h>
 #include <regmgr/regmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <power/power.h>
 #include <codec/codec.h>
 #include <intrmgr/syscall.h>

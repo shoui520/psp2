@@ -1,7 +1,7 @@
 /* Sony env/playstation/mutex.c: SCE native mutex/remote-allocation port.
  * Pristine IMG Linux mutex implementation remains in the vendor directory.
  */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <stddef.h>
 #include "../../sce_ddk_port.h"

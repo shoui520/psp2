@@ -9,8 +9,6 @@
 #include <threadmgr/threadmgr.h>
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <udcd/udcd.h>

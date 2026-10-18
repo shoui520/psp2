@@ -15,7 +15,7 @@
 #include <psp2/camera.h>
 #include <camera/camera.h>
 #include <lowio/iftu.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/procevent.h>
 #include <syscon/syscon.h>
 #include <lowio/gpio.h>

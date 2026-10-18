@@ -17,10 +17,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/procevent.h>
 #include <sysmem/sysroot.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <usbserv/usbserv.h>
 #include <display/display.h>
 #include <string.h>

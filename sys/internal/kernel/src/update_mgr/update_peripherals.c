@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
 #include <syscon/syscon.h>
 #include "update_internal.h"

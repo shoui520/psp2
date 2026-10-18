@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_MAP			0x4420	/* name unknown */

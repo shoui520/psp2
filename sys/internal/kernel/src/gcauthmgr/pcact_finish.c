@@ -1,6 +1,6 @@
 /* Activation verification and completion. */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include <rtc.h>
 #include "pcact.h"

@@ -1,7 +1,7 @@
 /* Save-data slot user-memory copies; original source filename unavailable. */
 
 #include <appmgr/appmgr_savedata.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
 

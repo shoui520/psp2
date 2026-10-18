@@ -13,8 +13,7 @@
 #include <post_ss_mgr/sblpostssmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/debug.h>
 #include <string.h>
 #include <syscon/syscon.h>

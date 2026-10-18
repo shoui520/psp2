@@ -10,7 +10,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
 

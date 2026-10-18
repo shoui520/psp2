@@ -8,7 +8,8 @@
 #include <sm_comm/sm_comm.h>
 #include <sysmem/suspend.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>

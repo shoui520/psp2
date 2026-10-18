@@ -1,6 +1,5 @@
 /* Bluetooth SDIO transport; the original source filename is unavailable. */
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include <sysmem/atomic.h>
 #include "bt_transport.h"

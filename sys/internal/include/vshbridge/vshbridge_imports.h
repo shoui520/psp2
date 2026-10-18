@@ -10,7 +10,6 @@
 #include <sdif/sdif.h>
 #include <lowio/pervasive.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/qafmgr.h>

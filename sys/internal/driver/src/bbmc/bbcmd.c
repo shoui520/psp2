@@ -1,6 +1,6 @@
 /* SceBbmc command subsystem's unconditional failure entry points. */
 #include <string.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <threadmgr/fast_mutex_object.h>
 #include "bbcmd.h"

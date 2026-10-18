@@ -4,7 +4,7 @@
 #include "../gpu-blockheap.h"
 #include "../mapped_memory_sce.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 
 HASH_TABLE *psHashTab;

@@ -2,7 +2,7 @@
 
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 extern SceUID g_appmgrCoreHeap;

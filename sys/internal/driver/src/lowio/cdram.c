@@ -1,6 +1,5 @@
 /* SceCdram asynchronous secure-monitor initialization. */
 #include "lowio_internal.h"
-#include <psp2kern/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <touch_dummy/touch_dummy.h>
 

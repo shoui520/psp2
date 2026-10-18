@@ -3,7 +3,8 @@
  * resource recovery, process local storage and the process queries
  */
 
-#include <psp2common/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include "processmgr_internal.h"
 #include <modulemgr/modulemgr_patch.h>
 #include <processmgr/processmgr.h>

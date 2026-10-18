@@ -1,6 +1,5 @@
 /* Descriptive filename; these callbacks have no source-file debug records. */
 #include "hid_internal.h"
-#include <psp2kern/kernel/threadmgr/callback.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>

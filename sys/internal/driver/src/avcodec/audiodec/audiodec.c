@@ -6,8 +6,8 @@
 #include <sysmem/cpu.h>
 #include <intrmgr/syscall.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <string.h>
 #include <stdint.h>
 

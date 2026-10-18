@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include "bbmc_update.h"
 
 int UpdateUtilLockCom(void);

@@ -6,8 +6,6 @@
 #include <stddef.h>
 #include <sysmem/cpu.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <ctrl/ctrl.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>

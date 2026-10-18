@@ -14,7 +14,6 @@
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

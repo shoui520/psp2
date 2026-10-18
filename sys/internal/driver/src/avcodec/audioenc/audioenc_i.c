@@ -2,7 +2,7 @@
 #include "audioenc_internal.h"
 #include "../audiodec/audiodec_internal.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 SCE_DBGINFO_DEFINE(static, initLibraryContext, 117, "_audioencInternalInitLibrary");

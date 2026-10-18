@@ -9,7 +9,7 @@
 #include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <regmgr/regmgr.h>
 #include <stdio.h>

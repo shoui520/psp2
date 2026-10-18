@@ -2,7 +2,6 @@
 
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;

@@ -1,5 +1,5 @@
 /* Authenticate the peer certificate and complete the 160-bit Adhoc exchange. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "adhoc.h"
 
 extern SceUID gcAuthAdhocSemaphore;

@@ -5,7 +5,6 @@
 #include <threadmgr/threadmgr.h>
 #include <appmgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_shell_event.h"

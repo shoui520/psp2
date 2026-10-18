@@ -9,6 +9,46 @@
 #include <psp2kern/types.h>
 #include <threadmgr/threadcb.h>
 
+/*
+ * A thread's user and kernel registers, as coredump and deci4p_dbgp read them through
+ * SceThreadmgrForDriver_5022689D (vitasdk's names; each set is a ThreadmgrDebugRegisters)
+ */
+typedef struct SceArmCpuRegisters {
+	uint32_t r0;
+	uint32_t r1;
+	uint32_t r2;
+	uint32_t r3;
+	uint32_t r4;
+	uint32_t r5;
+	uint32_t r6;
+	uint32_t r7;
+	uint32_t r8;
+	uint32_t r9;
+	uint32_t r10;
+	uint32_t r11;
+	uint32_t r12;
+	uint32_t sp;
+	uint32_t lr;
+	uint32_t pc;
+	uint32_t cpsr;
+	uint32_t fpscr;
+} SceArmCpuRegisters;
+
+typedef struct SceThreadCpuRegisters {
+	union {
+		struct {
+			SceArmCpuRegisters user;
+			SceArmCpuRegisters kernel;
+		};
+		SceArmCpuRegisters entry[2];
+	};
+} SceThreadCpuRegisters;
+
+#ifndef __cplusplus
+_Static_assert(sizeof(SceArmCpuRegisters) == 0x48, "SceArmCpuRegisters size");
+_Static_assert(sizeof(SceThreadCpuRegisters) == 0x90, "SceThreadCpuRegisters size");
+#endif
+
 /* the thread information for the debugger (0x128) */
 typedef struct ThreadmgrThreadInfoForDebugger {
 	SceSize size;

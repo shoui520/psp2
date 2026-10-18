@@ -5,7 +5,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <elf.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include <stdio.h>
 

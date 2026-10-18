@@ -18,8 +18,7 @@
 #include <smsc_proxy/tzs_bridge.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysevent_ids.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysevent.h>
 #include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>

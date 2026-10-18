@@ -1,5 +1,5 @@
 /* Authentication message assembly. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
 #include "adhoc.h"
 

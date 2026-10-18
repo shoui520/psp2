@@ -1,9 +1,6 @@
 /* Completion callbacks for the sensor command state machine. */
 #include "motion_command.h"
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <lowio/gpio.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>

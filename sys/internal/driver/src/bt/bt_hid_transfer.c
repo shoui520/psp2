@@ -1,6 +1,6 @@
 /* HID transfer queues; original source filename unavailable. */
 #include "bt_internal.h"
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 BtConnection *BtFindConnection(BtStack *stack, unsigned char selector,

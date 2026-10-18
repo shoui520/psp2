@@ -2,7 +2,7 @@
 #include <psp2kern/types.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
+#include <threadmgr/threadmgr.h>
 
 extern const SceKernelProcEventHandler codecEngineProcessEvents;
 extern int codecEngineStartPhase2(void);
@@ -17,7 +17,7 @@ int module_start(SceSize arglen, const void *argp)
 	if (initCodecEngine() < 0)
 		return 2;
 	if (sceKernelScheduleWorkTask(0x10023, "SceCodecEngineBoot",
-		(SceKernelWorkQueueWorkFunction)codecEngineStartPhase2, NULL) < 0)
+		(uintptr_t)codecEngineStartPhase2, NULL) < 0)
 		return 2;
 	if (sceKernelRegisterSysEventHandler("SceVenezia",
 		(SceKernelSysEventHandler)codecEngineSystemEventHandler, NULL) < 0)

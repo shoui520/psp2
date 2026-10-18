@@ -5,7 +5,6 @@
 #include <sysmem/dipsw.h>
 #include <rtc/rtc.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

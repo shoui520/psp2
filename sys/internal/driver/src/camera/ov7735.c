@@ -1,7 +1,7 @@
 /* OV7735 sensor register access and control. */
 
 #include "camera_config.h"
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <lowio/i2c.h>
 #include <lowio/gpio.h>
 #include <string.h>

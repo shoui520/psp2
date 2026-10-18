@@ -9,8 +9,6 @@
  */
 
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr/callback.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/dipsw.h>
 #include <syscon/syscon.h>
 #include <acmgr/acmgr.h>

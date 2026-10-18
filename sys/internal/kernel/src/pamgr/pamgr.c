@@ -8,9 +8,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/sysroot_pamgr.h>
 #include <syslibtrace/syslibtrace.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>

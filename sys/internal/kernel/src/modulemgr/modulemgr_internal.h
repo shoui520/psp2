@@ -11,7 +11,7 @@
 #define MODULEMGR_INTERNAL_H
 
 #include <psp2kern/types.h>
-#include <psp2common/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/process.h>
 #include <modulemgr/modulemgr_patch.h>

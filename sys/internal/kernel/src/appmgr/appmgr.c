@@ -7,7 +7,6 @@
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/pmmgr.h>
 #include <string.h>
 #include "app_state_internal.h"

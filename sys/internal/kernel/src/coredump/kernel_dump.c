@@ -7,7 +7,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <coredump/coredump.h>
 
 extern int oalMutexInit(SceUID *mutexId);

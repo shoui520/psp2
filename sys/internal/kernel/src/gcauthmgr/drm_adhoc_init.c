@@ -1,5 +1,5 @@
 /* Adhoc BB semaphore lifecycle. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <stdint.h>
 
 uint64_t gcAuthAdhocCounter;

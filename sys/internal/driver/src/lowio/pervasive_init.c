@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/dipsw.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysevent.h>

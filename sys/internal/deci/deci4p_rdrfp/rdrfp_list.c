@@ -2,7 +2,7 @@
  * SceDeci4pRDrfp lists (Sony's rdrfp_list.c): elements on the heap pointing
  * at their data, guarded by a mutex.
  */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 #include "rdrfp.h"
 

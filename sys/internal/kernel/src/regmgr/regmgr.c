@@ -10,7 +10,7 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debugled.h>
 #include <ss_mgr/ss_mgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include "regmgr_internal.h"
 

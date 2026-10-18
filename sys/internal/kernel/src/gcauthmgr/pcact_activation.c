@@ -1,11 +1,10 @@
 /* Descriptive source boundary preserves the original out-of-line helper calls. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <ss_mgr/ss_mgr.h>
 #include <rtc/rtc.h>
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include "drm_crypto.h"
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/utils.h>
 
 GcAuthPcactScratch *gcAuthPcactScratchAddress;

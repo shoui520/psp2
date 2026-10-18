@@ -7,7 +7,6 @@
 #include <sysmem/pmmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <idstorage/idstorage.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/suspend.h>

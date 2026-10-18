@@ -8,7 +8,7 @@
 #include <acmgr/acmgr.h>
 #include <sm_comm/sm_comm.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "post_ss_mgr_internal.h"
 
 #define PM_JIG_CHUNK		0xc	/* name unknown: bytes per jig packet */

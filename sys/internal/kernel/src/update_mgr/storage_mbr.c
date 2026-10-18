@@ -1,5 +1,5 @@
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include "update_internal.h"
 
 int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,

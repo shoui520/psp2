@@ -4,9 +4,8 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/pmmgr.h>
 #include <kernel_boot_loader/kbl_param.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 
 ScePsCode aimgrPscode;
 SceKernelOpenPsId aimgrOpenPsId;

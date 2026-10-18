@@ -4,7 +4,7 @@
 #include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/cp15.h>
 #include <threadmgr/threadmgr_debugger.h>

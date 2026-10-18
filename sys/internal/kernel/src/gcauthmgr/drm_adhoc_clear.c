@@ -1,6 +1,6 @@
 /* Adhoc session clearing. */
 #include <stdint.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 
 extern SceUID gcAuthAdhocSemaphore;
 extern uint64_t gcAuthAdhocCounter;

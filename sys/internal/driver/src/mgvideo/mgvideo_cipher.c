@@ -4,7 +4,7 @@
 #include <processmgr/processmgr_imports.h>
 #include <usbstormg/usbstormg.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <processmgr/processmgr.h>
 #include <magicgate/magicgate.h>
 

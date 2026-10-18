@@ -1,6 +1,5 @@
 /* Timer helpers; source-file name absent from debug records. */
 #include "library.h"
-#include <psp2kern/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
 
 int64_t MsproalTimerStart(int milliseconds)

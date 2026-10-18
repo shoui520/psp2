@@ -6,7 +6,7 @@
  */
 
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_DB_TYPE		3	/* name unknown */

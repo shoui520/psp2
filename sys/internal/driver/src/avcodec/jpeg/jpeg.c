@@ -4,7 +4,8 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <string.h>
 #include <intrmgr/syscall.h>
 #include <lowio/iftu.h>

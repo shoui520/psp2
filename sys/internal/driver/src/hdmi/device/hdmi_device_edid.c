@@ -6,7 +6,7 @@
  * otherwise.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"

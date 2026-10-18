@@ -8,7 +8,7 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
 #include <lowio/iftu.h>
 #include <display.h>
 #include <dtrace/sce/dtrace.h>

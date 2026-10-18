@@ -1,6 +1,6 @@
 #include "ssmgr_internal.h"
 #include "dmac5mgr.h"
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <authmgr/sblauthmgr.h>
 #include <sysmem/cpu.h>

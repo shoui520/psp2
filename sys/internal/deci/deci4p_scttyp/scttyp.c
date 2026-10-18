@@ -10,7 +10,6 @@
 
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/uart.h>
 #include <lowio/pervasive.h>
 #include <sysmem/cpu.h>

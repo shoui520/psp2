@@ -3,7 +3,6 @@
 #include <threadmgr/threadmgr.h>
 #include <lowio/gpio.h>
 #include <lowio/i2c.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <motion/motion_dev.h>
 #include "magnetometer.h"
 

@@ -4,7 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2common/net.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <sysmem/procevent.h>
 #include <net_ps/netdrv.h>
 

@@ -7,7 +7,6 @@
  * says otherwise.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <dtrace/sce/dtrace.h>

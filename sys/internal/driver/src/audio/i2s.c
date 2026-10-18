@@ -6,7 +6,7 @@
 #include <string.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include "audio_regs.h"
 #include "srcmix.h"

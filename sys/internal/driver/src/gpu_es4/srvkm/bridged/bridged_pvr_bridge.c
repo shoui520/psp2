@@ -12,7 +12,7 @@
 #include "../bridge_sce.h"
 #include <sysmem/debug.h>
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 
 /* IMG shared-heap classification table, zero-initialized in both TOOL originals. */
 static IMG_BOOL abSharedDeviceMemHeap[32];

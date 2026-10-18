@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/threadmgr/mutex.h>
+#include <threadmgr/threadmgr.h>
 
 #include "key.h"
 #include "storage.h"

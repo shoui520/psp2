@@ -3,7 +3,7 @@
 #include <string.h>
 #include "exfatfs_internal.h"
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 
 extern void *allocateFatBuffer(SceSize size);
 extern void freeFatBuffer(void *buffer, SceSize size);

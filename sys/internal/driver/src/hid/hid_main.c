@@ -2,7 +2,6 @@
 #include <bt/bt_hid.h>
 #include <sysmem/debug.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/suspend.h>
 #include <power/power.h>
 #include <threadmgr/threadmgr.h>

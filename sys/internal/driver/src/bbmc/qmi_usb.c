@@ -1,6 +1,6 @@
 /* QMI USB transport request completion. */
 #include "qmi_usb.h"
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 
 extern int bbmcLockFastMutex(struct ThreadmgrFastMutex *mutex)
 	__asm__("lockFastMutex");

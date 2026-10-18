@@ -1,8 +1,6 @@
 /* Descriptive file name: the original has no source-file debug records. */
 #include "magicgate_private.h"
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
 #include <ss_mgr/ss_mgr.h>
 #include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>

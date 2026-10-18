@@ -1,6 +1,6 @@
 /* WDS network activation, configuration reports and cancellation. */
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_network_operations.h"
 #include "bbmc_memory.h"
 

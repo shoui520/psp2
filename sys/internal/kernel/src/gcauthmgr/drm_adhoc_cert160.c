@@ -1,6 +1,5 @@
 /* Adhoc 160-bit device certificate. */
-#include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include "adhoc.h"
 #include <idstorage/idstorage.h>
 

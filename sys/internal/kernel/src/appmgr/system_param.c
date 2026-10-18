@@ -1,6 +1,5 @@
 /* Registry-backed system parameters exposed by the application manager. */
 
-#include <psp2kern/kernel/threadmgr/mutex.h>
 #include <regmgr/regmgr.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>

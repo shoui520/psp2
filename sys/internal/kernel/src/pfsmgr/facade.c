@@ -5,7 +5,7 @@
  * finds in a thread-local slot.
  */
 
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
 

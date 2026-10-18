@@ -1,7 +1,6 @@
 /* TCM method family; filename corroborated by prototype names-only records. */
 #include "../../wlanbt/wlanbt_internal.h"
 #include <string.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <threadmgr/threadmgr.h>
 #include <wlanbt/wlanbt.h>
 #if FW_DEBUG

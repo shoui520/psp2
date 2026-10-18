@@ -6,7 +6,7 @@
  */
 
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
 #include "reg_internal.h"
 #include <sysmem/suspend.h>

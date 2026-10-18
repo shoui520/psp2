@@ -3,7 +3,6 @@
  * runs one host command on the file system thread and answers it in the
  * request's own packet; reads answer with a series of data packets.
  */
-#include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include <deci4p_drfp/deci4p_fs.h>
 #include <threadmgr/threadmgr.h>

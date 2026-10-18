@@ -5,7 +5,8 @@
 #include <psp2kern/types.h>
 #include <ss_mgr/ss_mgr.h>
 #include <dmacmgr/dmac_regs.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
+#include <threadmgr/threadmgr.h>
+#include <threadmgr/fast_mutex_object.h>
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysroot.h>

@@ -9,9 +9,7 @@
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
+#include <threadmgr/fast_mutex_object.h>
 
 extern const SceKernelProcEventHandler g_audioInProcEventHandler;
 

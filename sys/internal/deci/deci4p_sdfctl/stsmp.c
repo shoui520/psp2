@@ -7,7 +7,7 @@
 
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <sysmem/sysevent.h>

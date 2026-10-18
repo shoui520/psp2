@@ -1,5 +1,5 @@
 /* QMI client completion and instance lifetime. */
-#include <psp2kern/kernel/threadmgr.h>
+#include <threadmgr/threadmgr.h>
 #include "qmi_backend.h"
 
 /* name unknown: publish the result, notify the client, and finish release. */

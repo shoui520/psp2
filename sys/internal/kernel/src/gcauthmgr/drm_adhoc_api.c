@@ -1,5 +1,5 @@
 /* Adhoc exchange wrappers on a dedicated kernel stack. */
-#include <psp2kern/kernel/threadmgr/misc.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include "adhoc.h"
 #include <intrmgr/syscall.h>

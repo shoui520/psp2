@@ -7,9 +7,6 @@
 #include <wlanbt/wlanbt.h>
 #include <regmgr/regmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/threadmgr/workqueues.h>
-#include <psp2kern/kernel/threadmgr/thread.h>
 #include <sysmem/suspend.h>
 #include <syscon/syscon.h>
 #include <string.h>
@@ -1120,7 +1117,7 @@ int _workerEntry(SceSize args, void *argument)
 				gWlanContext.pendingStateMarker = 0x80000a00;
 				if ((flags & 4) && context->connectionSize) {
 					sceKernelScheduleWorkTask(65571, "SceWlanBtRobinWlanWakeConfig",
-						(SceKernelWorkQueueWorkFunction)robinWlanRetryWakeOnConfiguration,
+						(uintptr_t)robinWlanRetryWakeOnConfiguration,
 						context);
 					goto stopEvent;
 				}

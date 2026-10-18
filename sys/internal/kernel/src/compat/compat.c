@@ -4,9 +4,6 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <ss_mgr/ss_mgr.h>
-#include <psp2kern/kernel/threadmgr/semaphores.h>
-#include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/procevent.h>

@@ -6,7 +6,7 @@
 #include <psp2kern/types.h>
 #include <coredump/coredump.h>
 #include <ss_mgr/ss_mgr.h>
-#include <psp2kern/kernel/threadmgr/debugger.h>
+#include <threadmgr/threadmgr.h>
 #include <threadmgr/threadmgr_debugger.h>
 #include <threadmgr/lw_mutex.h>
 #include <sdif/sdif.h>
