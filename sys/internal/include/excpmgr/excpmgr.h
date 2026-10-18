@@ -160,7 +160,7 @@ int sceKernelRegisterExceptionHandler(unsigned int code, unsigned int priority,
 				      SceExcpmgrHandler *handler);
 int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler);
 int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handler);
-SceExcpmgrData *SceExcpmgrForKernel_96C2869C(void);
+SceExcpmgrData *SceExcpmgrForKernel_96C2869C(void);	/* vitasdk: ksceExcpmgrGetData */
 void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context);
 void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context);
 void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context);
