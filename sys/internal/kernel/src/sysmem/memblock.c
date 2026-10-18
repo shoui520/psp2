@@ -412,21 +412,11 @@ int UIDReleaseObjectForPID(SceUID pid, SceUID uid)
 
 #define MEMBLOCK_INFO_BY_RANGE		2	/* [va, va + size) must lie in the block */
 
-/* a block as user code sees it (SceKernelMemBlockInfo) */
-typedef struct MemBlockUserInfo {
-	SceSize size;			/* sizeof(MemBlockUserInfo) */
-	uintptr_t mappedBase;
-	SceSize mappedSize;
-	SceUInt32 memoryType;
-	SceUInt32 access;
-	SceUInt32 type;
-} MemBlockUserInfo;
-
 /* the user info of the caller's block holding va */
 int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
-				  MemBlockUserInfo *userInfo)
+				  SceKernelMemBlockInfo *userInfo)
 {
-	MemBlockUserInfo info;
+	SceKernelMemBlockInfo info;
 	MemBlockObject *block;
 	uintptr_t vbase;
 	SceUInt32 type, code;
@@ -447,7 +437,7 @@ int GetMemBlockInfoByRangeForUser(SceUInt32 mode, uintptr_t va, SceSize size,
 	if (ret < 0)
 		return ret;
 	vbase = block->vbase;
-	info.mappedBase = vbase + MemBlockGetHeadFreeSize(block);
+	info.mappedBase = (void *)(vbase + MemBlockGetHeadFreeSize(block));
 	info.mappedSize = MemBlockGetMapSize(block);
 	SCE_DBG_ASSERT_CHECK(info.mappedSize != 0, 5080);
 	code = block->code;
@@ -1206,7 +1196,7 @@ int GUIDFindByName(const char *name);
 SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);
 int SceSysmemForDriver_B81CF0A3(SceUID guid, void **vbase);
 
-/* the user allocation options (SceKernelAllocMemBlockOpt), up to 0x40 bytes */
+/* the user allocation options: SceKernelAllocMemBlockOpt as the kernel reads it, up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
 	SceSize size;			/* 0x14, 0x38, 0x3c or 0x40 */
 	SceUInt32 attr;
@@ -2234,8 +2224,8 @@ static inline int MemBlockAuthDenied(SceUInt32 authLow, SceUInt32 authHigh)
 	       (authHigh == 0x28000000 && authLow == 0x15);
 }
 
-SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
-				     const MemBlockUserOpt *opt)
+SceUID sceKernelAllocMemBlock(const char *name, SceKernelMemBlockType type, SceSize size,
+			      const SceKernelAllocMemBlockOpt *opt)
 {
 	SceSelfAuthInfo auth;
 	SceUInt32 attr, restype;
@@ -2285,7 +2275,7 @@ SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
 			ret = SCE_KERNEL_ERROR_ILLEGAL_MEMBLOCK_SIZE;
 			break;
 		}
-		ret = AllocMemBlockForUser(name, type, size, attr, opt);
+		ret = AllocMemBlockForUser(name, type, size, attr, (const MemBlockUserOpt *)opt);
 		if (ret >= 0)
 			return ret;
 		SCE_DBG_PRINTF_FUNC(0xb, 3854, "sceKernelAllocMemBlockForUser",
@@ -2822,7 +2812,7 @@ none:
 }
 
 /* the caller's PUID of the block holding [addr, addr + size) */
-SceUID sceKernelFindMemBlockByAddr(const void *addr, SceSize size)
+SceUID sceKernelFindMemBlockByAddr(void *addr, SceSize size)
 {
 	MemBlockObject *block;
 	SceUID guid;
@@ -2841,7 +2831,7 @@ SceUID sceKernelFindMemBlockByAddr(const void *addr, SceSize size)
 	return PUIDFindByGUID(0, guid);
 }
 
-int sceKernelGetMemBlockInfoByAddr(const void *addr, MemBlockUserInfo *info)
+int sceKernelGetMemBlockInfoByAddr(void *addr, SceKernelMemBlockInfo *info)
 {
 	int ret;
 
@@ -2851,7 +2841,7 @@ int sceKernelGetMemBlockInfoByAddr(const void *addr, MemBlockUserInfo *info)
 	return GetMemBlockInfoByRangeForUser(1, (uintptr_t)addr, 0, info);
 }
 
-int sceKernelGetMemBlockInfoByRange(const void *addr, SceSize size, MemBlockUserInfo *info)
+int sceKernelGetMemBlockInfoByRange(void *addr, SceSize size, SceKernelMemBlockInfo *info)
 {
 	int ret;
 

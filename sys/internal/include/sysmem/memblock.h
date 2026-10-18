@@ -1,17 +1,12 @@
 /*
- * SceSysmem memory block types and allocation attributes (the SDK's kernel/sysmem/memblock.h
- * holds the user types; the kernel's are sysmem's own).
+ * SceSysmem memory block types and allocation attributes: the kernel's, beside the user ones of
+ * the SDK's kernel/sysmem/memblock.h.
  */
 #pragma once
 
 #include <stdint.h>
 #include <scetypes.h>
-
-/*
- * The SDK's kernel/types.h type, repeated (the same typedef): user units that include this
- * header still take vitasdk's SceKernelSysClock, which clashes with Sony's.
- */
-typedef SceUInt32 SceKernelMemBlockType;
+#include <kernel/sysmem/memblock.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,9 +24,6 @@ extern "C" {
 #define SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW		0x20108006U
 #define SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_CDRAM_RW		0x40408006U
 #define SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW			0x6020d006U
-#define SCE_KERNEL_MEMBLOCK_TYPE_USER_RW			0x0c20d060U
-#define SCE_KERNEL_MEMBLOCK_TYPE_USER_RW_UNCACHE		0x0c208060U
-#define SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW			0x09408060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_SHARED_MAIN_RW		0x0320d060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_SHARED_MAIN_R		0x0320d040U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_SHARED_MAIN_RX		0x0320d050U
@@ -52,12 +44,10 @@ extern "C" {
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RX			0x0c20d050U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW			0x0c20d060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_R		0x0c80d040U
-#define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_RW		0x0c80d060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_GAME_RW		0x0c50d060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_TOOL_RW		0x0cf0d060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_TOOL_RX		0x0cf0d050U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_TOOL_NC_RW		0x0cf08060U
-#define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_NC_RW	0x0d808060U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_PHYCONT_NC_R		0x0d808040U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_CDIALOG_R			0x0e20d040U
 #define SCE_KERNEL_MEMBLOCK_TYPE_USER_CDIALOG_RX		0x0e20d050U
@@ -113,13 +103,11 @@ extern "C" {
 #define SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_R			0x20100804U
 #define SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_KMP_GAME_RW		0xc050d006U
 
-/* SceKernelAllocMemBlockKernelOpt attr bits (HAS_ALIGNMENT and PHYCONT: the SDK's names) */
+/* SceKernelAllocMemBlockKernelOpt attr bits (HAS_ALIGNMENT and PHYCONT: kernel/sysmem/memblock.h) */
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR		0x00000002U
-#define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT		0x00000004U
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID	0x00000040U
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID			0x00000080U
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR_LIST		0x00001000U
-#define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT			0x00200000U
 #define SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_ALLOW_PARTIAL_OP		0x04000000U
 
 /* the access sceKernelLockRangeWithMode checks (memblock.c gives a type's access in these bits) */

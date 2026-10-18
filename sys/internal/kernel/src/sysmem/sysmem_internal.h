@@ -573,14 +573,6 @@ typedef struct AddressSpaceSubbudgetInfo {
 	SceSize freeSize;
 } AddressSpaceSubbudgetInfo;
 
-/* the free memory of the user, CDRAM and contiguous partitions (sceKernelGetFreeMemorySize) */
-typedef struct AddressSpaceFreeMemorySize {
-	SceSize size;
-	SceSize user;
-	SceSize cdram;
-	SceSize phycont;
-} AddressSpaceFreeMemorySize;
-
 _Static_assert(sizeof(AddressSpaceObject) == 0x170, "AddressSpaceObject size");
 
 int AddressSpaceObjectCreate(void *object);

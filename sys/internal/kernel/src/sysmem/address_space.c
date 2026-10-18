@@ -713,7 +713,7 @@ out:
 	return ret;
 }
 
-int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, AddressSpaceFreeMemorySize *out)
+int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySizeInfo *out)
 {
 	SceKernelPhyMemPartInfoCore info;
 	void *part;
@@ -721,24 +721,24 @@ int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, AddressSpaceFreeMemory
 	AddressSpaceRefer(as);
 	part = as->phyMemPart[AS_PHYMEMPART_SHELL];
 	if (part == NULL) {
-		out->user = 0;
+		out->sizeMain = 0;
 	} else {
 		PhyMemPartGetInfoCore(part, &info);
-		out->user = (info.freeSize & ~0xfffff) - 0x200000;
+		out->sizeMain = (info.freeSize & ~0xfffff) - 0x200000;
 	}
 	part = as->phyMemPart[AS_PHYMEMPART_CDRAM];
 	if (part == NULL) {
-		out->cdram = 0;
+		out->sizeCdram = 0;
 	} else {
 		PhyMemPartGetInfoCore(part, &info);
-		out->cdram = info.freeSize & ~0xfffff;
+		out->sizeCdram = info.freeSize & ~0xfffff;
 	}
 	part = as->phyMemPart[AS_PHYMEMPART_PHYCONT];
 	if (part == NULL) {
-		out->phycont = 0;
+		out->sizePhycont = 0;
 	} else {
 		PhyMemPartGetInfoCore(part, &info);
-		out->phycont = info.freeSize & ~0xfffff;
+		out->sizePhycont = info.freeSize & ~0xfffff;
 	}
 	AddressSpaceRelease(as);
 	return 0;

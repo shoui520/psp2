@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <sysmem/mmu.h>
+#include <kernel/sysmem/memblock.h>
 
 /* a memblock type code: access in bits 7:0, memory type in 15:8 (henkaku wiki "memtype bit value") */
 #define MEMBLOCK_CODE_ACCESS(type)		((type) & 0xff)
@@ -11,9 +12,7 @@
 #define MEMBLOCK_CODE_MEMORY_TYPE(type)		((type) & MEMBLOCK_CODE_MEMORY_TYPE_MASK)
 #define MEMBLOCK_CODE_GLOBAL			0x10000		/* no nG bit */
 
-/* access, Sony's SDK memblock.h; user mode's are the same shifted by 4 */
-#define SCE_KERNEL_MEMORY_ACCESS_R		0x04
-#define SCE_KERNEL_MEMORY_ACCESS_W		0x02
+/* access: R and W are the SDK's (kernel/sysmem/memblock.h), X ours; user mode's are the same shifted by 4 */
 #define SCE_KERNEL_MEMORY_ACCESS_X		0x01
 #define MEMBLOCK_ACCESS_KERNEL_R		SCE_KERNEL_MEMORY_ACCESS_R
 #define MEMBLOCK_ACCESS_KERNEL_RX		(SCE_KERNEL_MEMORY_ACCESS_R | SCE_KERNEL_MEMORY_ACCESS_X)

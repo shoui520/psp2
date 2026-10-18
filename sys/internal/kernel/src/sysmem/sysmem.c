@@ -40,7 +40,7 @@ int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va,
 int AddressSpaceGetMemoryType(AddressSpaceObject *as, uintptr_t va);
 int AddressSpaceGetSubbudgetInfo(AddressSpaceObject *as, SceUInt32 subbudget,
 				 AddressSpaceSubbudgetInfo *out);
-int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, AddressSpaceFreeMemorySize *out);
+int AddressSpaceGetFreeMemorySize(AddressSpaceObject *as, SceKernelFreeMemorySizeInfo *out);
 int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObject **baseBlock,
 			       void **baseInfo);
 int AddressSpaceKernelReady(void);
@@ -522,9 +522,9 @@ int sceKernelGetSubbudgetInfo(SceUInt32 subbudget, AddressSpaceSubbudgetInfo *us
 	return SceSysmemForDriver_6D88EF8A(userInfo, &info, sizeof(info));
 }
 
-int sceKernelGetFreeMemorySize(AddressSpaceFreeMemorySize *userInfo)
+int sceKernelGetFreeMemorySize(SceKernelFreeMemorySizeInfo *userInfo)
 {
-	AddressSpaceFreeMemorySize info;
+	SceKernelFreeMemorySizeInfo info;
 	int ret;
 
 	ret = SceSysmemForDriver_BC996A7A(&info, userInfo, sizeof(info));

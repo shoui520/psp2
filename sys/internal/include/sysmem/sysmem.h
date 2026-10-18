@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <kernel/types.h>
+#include <kernel/sysmem.h>
 #include <sysmem/memblock.h>
 #include <sysmem/mmu.h>
 
@@ -568,15 +569,12 @@ SceUID sceKernelCreateAddressSpace(SceUID pid, const char *name, SceUInt32 type,
 int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, ObjectHeap **out);
 int sceKernelDeleteHeap(SceUID uid);
 int sceKernelDeletePhyMemPart(PhyMemPart *part);
-SceUID sceKernelFindMemBlockByAddr(const void *addr, SceSize size);
 int sceKernelFreeHeapMemory(SceUID uid, void *ptr);
-int sceKernelFreeMemBlock(SceUID puid);
 int sceKernelFreeMemBlockForVM(SceUID puid);
 int sceKernelGetFixedHeapInfoByPointer(void *fixedHeap, void *fixedHeapInfo);
 int sceKernelGetHeapInfo(SceUID uid, SceUInt32 level, void *pInfo);
 int sceKernelGetHeapInfoByPtr(void *object, void *pInfo);
 int sceKernelGetMemBlockAllocMapSize(SceUID uid, SceSize *size);
-int sceKernelGetMemBlockBase(SceUID puid, void **userBase);
 SceUID sceKernelGetMemBlockProcess(SceUID guid);
 int sceKernelGetModel(void);
 int sceKernelGetModelForCDialog(void);
