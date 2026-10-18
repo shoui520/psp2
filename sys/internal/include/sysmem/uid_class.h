@@ -51,13 +51,6 @@ int SceSysmemForDriver_61317102(SceClass *cls, const char *name, void *uidclass,
 /* vitasdk: ksceKernelFindClassByName */
 int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls);
 
-#define ksceKernelCreateClass(cls, name, uidclass, itemsize, create, destroy) \
-	SceSysmemForDriver_61317102(cls, name, uidclass, itemsize, create, destroy)
-#define ksceKernelGetUidClass() SceSysmemForDriver_85336A1C()
-#define ksceKernelGetUidDLinkClass() SceSysmemForKernel_E4193EB6()
-#define ksceKernelGetUidHeapClass() SceSysmemForKernel_7C878E94()
-#define ksceKernelGetUidMemBlockClass() SceSysmemForKernel_86681B64()
-
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);
 int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);
