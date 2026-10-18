@@ -1,5 +1,5 @@
 /*
- * Imports of SceCtrl (os0:kd/bootimage/ctrl) absent from the vitasdk headers.
+ * SceCtrl (os0:kd/bootimage/ctrl): its exports and the records they take.
  */
 #pragma once
 
@@ -29,7 +29,34 @@ typedef struct SceHdmiBdRemoconState {
 /* name unknown: registers the BD remote control callback (weak import in SceCtrl) */
 int SceHdmiForDriver_05174BC2(int (*callback)(const SceHdmiBdRemoconState *state));
 
-#include <psp2common/ctrl.h>
+#include <ctrl.h>
+
+/* a button beyond the SDK's (the PS button is SCE_CTRL_INTERCEPTED); vitasdk's name, no Sony name found */
+#define SCE_CTRL_POWER		0x40000000	/* the power button */
+
+/* a port's controller (vitasdk's names, no Sony name found) */
+#define SCE_CTRL_TYPE_UNPAIRED	0
+#define SCE_CTRL_TYPE_PHY	1	/* the built-in pad */
+#define SCE_CTRL_TYPE_VIRT	2	/* the PS TV's virtual controller */
+#define SCE_CTRL_TYPE_DS3	4
+#define SCE_CTRL_TYPE_DS4	8
+
+/* the controller types of the ports (vitasdk's name) */
+typedef struct SceCtrlPortInfo {
+	SceUInt8 port[5];		/* SCE_CTRL_TYPE_* */
+	SceUInt8 reserved[11];
+} SceCtrlPortInfo;
+
+_Static_assert(sizeof(SceCtrlPortInfo) == 0x10, "SceCtrlPortInfo");
+
+/* a vibration: the motors' strengths (vitasdk's name) */
+typedef struct SceCtrlActuator {
+	SceUInt8 small;
+	SceUInt8 large;
+	SceUInt8 reserved[6];
+} SceCtrlActuator;
+
+_Static_assert(sizeof(SceCtrlActuator) == 8, "SceCtrlActuator");
 
 #include <ctrl/ctrl_sample.h>
 
@@ -121,17 +148,17 @@ int sceCtrlGetSamplingMode(int *mode);
 int sceCtrlGetSamplingModeExt(int *mode);
 int sceCtrlIsMultiControllerSupported(void);
 int sceCtrlPeekBufferNegative(int port, SceCtrlData *samples, int count);
-int sceCtrlPeekBufferNegative2(int port, SceCtrlData *samples, int count);
+int sceCtrlPeekBufferNegative2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlPeekBufferPositive(int port, SceCtrlData *samples, int count);
-int sceCtrlPeekBufferPositive2(int port, SceCtrlData *samples, int count);
+int sceCtrlPeekBufferPositive2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlPeekBufferPositiveExt(int port, SceCtrlData *samples, int count);
-int sceCtrlPeekBufferPositiveExt2(int port, SceCtrlData *samples, int count);
+int sceCtrlPeekBufferPositiveExt2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlReadBufferNegative(int port, SceCtrlData *samples, int count);
-int sceCtrlReadBufferNegative2(int port, SceCtrlData *samples, int count);
+int sceCtrlReadBufferNegative2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlReadBufferPositive(int port, SceCtrlData *samples, int count);
-int sceCtrlReadBufferPositive2(int port, SceCtrlData *samples, int count);
+int sceCtrlReadBufferPositive2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlReadBufferPositiveExt(int port, SceCtrlData *samples, int count);
-int sceCtrlReadBufferPositiveExt2(int port, SceCtrlData *samples, int count);
+int sceCtrlReadBufferPositiveExt2(int port, SceCtrlData2 *samples, int count);
 int sceCtrlRegisterBdRMCCallback(SceUID callback);
 int sceCtrlResetLightBar(int port);
 int sceCtrlSetActuator(int port, const SceCtrlActuator *state);

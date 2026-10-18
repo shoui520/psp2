@@ -130,10 +130,10 @@ typedef struct CtrlpCtrlData {
 	SceUInt8 ly;
 	SceUInt8 rx;
 	SceUInt8 ry;
-	SceUInt8 up;
-	SceUInt8 right;
-	SceUInt8 down;
-	SceUInt8 left;
+	SceUInt8 wideLx;
+	SceUInt8 wideLy;
+	SceUInt8 wideRx;
+	SceUInt8 wideRy;
 } CtrlpCtrlData;
 
 typedef struct CtrlpTouchReport {
@@ -514,7 +514,7 @@ static inline __attribute__((always_inline)) void resetSaved(void)
 		CtrlpCtrlData *data = &saved[port].ctrl;
 
 		data->lx = data->ly = data->rx = data->ry = 0x80;
-		data->up = data->right = data->down = data->left = 0x80;
+		data->wideLx = data->wideLy = data->wideRx = data->wideRy = 0x80;
 	}
 }
 
@@ -588,8 +588,8 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 	    SceCtrlForDriver_06577FE8(emulate->port, 0,
 			emulate->data.lx, emulate->data.ly,
 			emulate->data.rx, emulate->data.ry,
-			emulate->data.up, emulate->data.right,
-			emulate->data.down, emulate->data.left,
+			emulate->data.wideLx, emulate->data.wideLy,
+			emulate->data.wideRx, emulate->data.wideRy,
 			CTRLP_EMULATION_TIME) < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state.lock, intr);
 		return CTRLP_RESULT_INVALID;
@@ -655,10 +655,10 @@ static inline void playController(struct ctrlNativeSample *sample, const CtrlpCt
 	sample->sample.ly = data->ly;
 	sample->sample.rx = data->rx;
 	sample->sample.ry = data->ry;
-	sample->sample.up = data->up;
-	sample->sample.right = data->right;
-	sample->sample.down = data->down;
-	sample->sample.left = data->left;
+	sample->sample.wideLx = data->wideLx;
+	sample->sample.wideLy = data->wideLy;
+	sample->sample.wideRx = data->wideRx;
+	sample->sample.wideRy = data->wideRy;
 	for (int i = 0; i < 4; i++)
 		sample->reserved[i] = 0;
 }
@@ -671,10 +671,10 @@ static inline void saveController(CtrlpCtrlData *data, const struct ctrlNativeSa
 	data->ly = sample->sample.ly;
 	data->rx = sample->sample.rx;
 	data->ry = sample->sample.ry;
-	data->up = sample->sample.up;
-	data->right = sample->sample.right;
-	data->down = sample->sample.down;
-	data->left = sample->sample.left;
+	data->wideLx = sample->sample.wideLx;
+	data->wideLy = sample->sample.wideLy;
+	data->wideRx = sample->sample.wideRx;
+	data->wideRy = sample->sample.wideRy;
 }
 
 /* SceCtrl's ctrlp callback: records a sample, or replaces it with the recording */

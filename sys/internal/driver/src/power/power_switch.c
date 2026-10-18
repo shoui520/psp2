@@ -534,7 +534,7 @@ int powerSwitchWorker(SceSize args, void *argp)
 			woke = 0;
 			buttons = 0;
 		} else {
-			pressed = buttons & (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON);
+			pressed = buttons & (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED);
 			held = 0;
 			if (ScePowerForDriver_394DE492()) {
 				woke = 0;
@@ -545,13 +545,13 @@ int powerSwitchWorker(SceSize args, void *argp)
 			} else {
 				continue;
 			}
-			if (pressed == (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON))
+			if (pressed == (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED))
 				goto powerAndPs;
 		}
 
 buttonsDown:
-		if ((buttons & (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) ==
-		    (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) {
+		if ((buttons & (SCE_CTRL_INTERCEPTED | SCE_CTRL_START)) ==
+		    (SCE_CTRL_INTERCEPTED | SCE_CTRL_START)) {
 			held = 1;
 			powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_START_PRESS);
 			continue;
@@ -568,8 +568,8 @@ buttonsDown:
 				break;
 			buttons = s_powerSwitchState.controllerButtons;
 			modes = s_powerSwitchState.primaryMode | s_powerSwitchState.secondaryMode;
-			if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON)) ==
-			    (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON))
+			if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED)) ==
+			    (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED))
 				goto powerAndPs;
 			if (!woke && !(buttons & SCE_CTRL_POWER)) {
 				/* a short press */
@@ -623,7 +623,7 @@ buttonsDown:
 					held = 1;
 				continue;
 			}
-		} else if (buttons & SCE_CTRL_PSBUTTON) {
+		} else if (buttons & SCE_CTRL_INTERCEPTED) {
 			timeout = s_powerSwitchState.psButtonPushTime;
 			ret = sceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 						      POWER_SWITCH_EVENT_EXIT |
@@ -634,16 +634,16 @@ buttonsDown:
 			if (pattern & POWER_SWITCH_EVENT_EXIT)
 				break;
 			buttons = s_powerSwitchState.controllerButtons;
-			if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON)) ==
-			    (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON))
+			if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED)) ==
+			    (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED))
 				goto powerAndPs;
-			if ((buttons & (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) ==
-			    (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) {
+			if ((buttons & (SCE_CTRL_INTERCEPTED | SCE_CTRL_START)) ==
+			    (SCE_CTRL_INTERCEPTED | SCE_CTRL_START)) {
 				held = 1;
 				powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_START_PRESS);
 				continue;
 			}
-			if (!woke && !(buttons & SCE_CTRL_PSBUTTON)) {
+			if (!woke && !(buttons & SCE_CTRL_INTERCEPTED)) {
 				/* a short press */
 				if (SceSysrootForDriver_89532E2F() != 1)
 					powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_PRESS);
@@ -748,8 +748,8 @@ request:
 		if (!(buttons & SCE_CTRL_POWER))
 			continue;
 		woke = 1;
-		if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON)) !=
-		    (SCE_CTRL_POWER | SCE_CTRL_PSBUTTON))
+		if ((buttons & (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED)) !=
+		    (SCE_CTRL_POWER | SCE_CTRL_INTERCEPTED))
 			goto buttonsDown;
 powerAndPs:
 		held = 1;

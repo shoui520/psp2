@@ -2724,7 +2724,7 @@ int ds3ReadButtons(int port, struct ctrlNativeSample *output)
 {
 	uint8_t report[80];
 	Ds3Device *device;
-	SceCtrlData *sample = &output->sample;
+	struct ctrlNativeData *sample = &output->sample;
 	unsigned int interruptState;
 	uint32_t previousButtons;
 	int centered[4], analog[4], wide[4];
@@ -2798,13 +2798,13 @@ int ds3ReadButtons(int port, struct ctrlNativeSample *output)
 			leftX = report[6];
 		}
 		output->extended[2] = report[8];
-		sample->down = report[8];
+		sample->wideRx = report[8];
 		output->extended[0] = leftX;
-		sample->up = leftX;
+		sample->wideLx = leftX;
 		output->extended[1] = report[7];
-		sample->right = report[7];
+		sample->wideLy = report[7];
 		output->extended[3] = report[9];
-		sample->left = report[9];
+		sample->wideRy = report[9];
 		sample->buttons |= report[2] | (report[3] << 8) | ((report[4] & 1) << 16);
 		centered[0] = leftX - 128;
 		centered[1] = report[7] - 128;
@@ -2821,11 +2821,11 @@ int ds3ReadButtons(int port, struct ctrlNativeSample *output)
 		sample->rx = analog[2];
 		sample->ry = analog[3];
 		sample->ly = analog[1];
-		sample->triangle = report[18];
-		sample->circle = report[19];
-		sample->lt = sample->rt = sample->l1 = sample->r1 = 0;
-		sample->cross = sample->square = 0;
-		memset(sample->reserved, 0, sizeof(sample->reserved));
+		sample->l2 = report[18];
+		sample->r2 = report[19];
+		sample->up = sample->right = sample->down = sample->left = 0;
+		sample->l1 = sample->r1 = 0;
+		sample->triangle = sample->circle = sample->cross = sample->square = 0;
 		previousButtons = device->previousButtons;
 		device->buttons = sample->buttons;
 		device->previousButtons = sample->buttons;
@@ -2961,20 +2961,20 @@ ds4Buttons:
 	sample->ly = analog[1];
 	sample->rx = analog[2];
 	sample->ry = analog[3];
-	sample->right = wide[1];
+	sample->wideLy = wide[1];
 	sample->lx = analog[0];
-	sample->down = wide[2];
-	sample->circle = report[9];
-	sample->left = wide[3];
-	sample->up = wide[0];
+	sample->wideRx = wide[2];
+	sample->r2 = report[9];
+	sample->wideRy = wide[3];
+	sample->wideLx = wide[0];
 	output->extended[2] = report[3];
 	output->extended[3] = report[4];
 	output->extended[0] = report[1];
 	output->extended[1] = report[2];
-	sample->triangle = report[8];
-	sample->lt = sample->rt = sample->l1 = sample->r1 = 0;
-	sample->cross = sample->square = 0;
-	memset(sample->reserved, 0, sizeof(sample->reserved));
+	sample->l2 = report[8];
+	sample->up = sample->right = sample->down = sample->left = 0;
+	sample->l1 = sample->r1 = 0;
+	sample->triangle = sample->circle = sample->cross = sample->square = 0;
 	if (device->transport == 3) {
 		previousButtons = device->previousButtons;
 		device->buttons = sample->buttons;

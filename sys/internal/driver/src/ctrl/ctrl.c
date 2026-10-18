@@ -30,7 +30,7 @@ int _sceCtrlBdRMCForceReleaseCallback(SceUID pid);
 
 /* Name unknown: the native buffer entries inline this sample conversion. */
 static inline __attribute__((always_inline)) void ctrlCopyBufferSample(
-		SceCtrlData *out, const struct ctrlNativeSample *in,
+		SceCtrlData2 *out, const struct ctrlNativeSample *in,
 		const struct ctrlProcessStorage *process, int mode, int negative,
 		int extended, int version2)
 {
@@ -71,10 +71,10 @@ static inline __attribute__((always_inline)) void ctrlCopyBufferSample(
 		out->rx = 0x80;
 		out->ry = 0x80;
 	} else if (mode == 2) {
-		out->lx = in->sample.up;
-		out->ly = in->sample.right;
-		out->rx = in->sample.down;
-		out->ry = in->sample.left;
+		out->lx = in->sample.wideLx;
+		out->ly = in->sample.wideLy;
+		out->rx = in->sample.wideRx;
+		out->ry = in->sample.wideRy;
 	} else if (mode == 3) {
 		out->lx = in->extended[0];
 		out->ly = in->extended[1];
@@ -87,30 +87,30 @@ static inline __attribute__((always_inline)) void ctrlCopyBufferSample(
 		out->ry = in->sample.ry;
 	}
 	if (version2) {
-		out->up = in->sample.lt;
-		out->right = in->sample.rt;
-		out->down = in->sample.l1;
-		out->left = in->sample.r1;
-		out->lt = in->sample.triangle;
-		out->rt = in->sample.circle;
-		out->l1 = in->sample.cross;
-		out->r1 = in->sample.square;
-		out->triangle = in->sample.reserved[0];
-		out->circle = in->sample.reserved[1];
-		out->cross = in->sample.reserved[2];
-		out->square = in->sample.reserved[3];
-		out->reserved[0] = 0;
-		out->reserved[1] = 0;
-		out->reserved[2] = 0;
-		out->reserved[3] = 0;
+		out->up = in->sample.up;
+		out->right = in->sample.right;
+		out->down = in->sample.down;
+		out->left = in->sample.left;
+		out->l2 = in->sample.l2;
+		out->r2 = in->sample.r2;
+		out->l1 = in->sample.l1;
+		out->r1 = in->sample.r1;
+		out->triangle = in->sample.triangle;
+		out->circle = in->sample.circle;
+		out->cross = in->sample.cross;
+		out->square = in->sample.square;
+		out->rsrv[0] = 0;
+		out->rsrv[1] = 0;
+		out->rsrv[2] = 0;
+		out->rsrv[3] = 0;
 	} else {
-		memset(&out->up, 0, sizeof(*out) - offsetof(SceCtrlData, up));
+		memset(&out->up, 0, sizeof(*out) - offsetof(SceCtrlData2, up));
 	}
 }
 
 /* Name unknown: shared inline shape of the positive/negative peek entries. */
 static inline __attribute__((always_inline)) int ctrlPeekBuffer(
-		int port, SceCtrlData *samples, int count, int negative,
+		int port, SceCtrlData2 *samples, int count, int negative,
 		int extended, int version2)
 {
 	struct ctrlProcessStorage *process = NULL;
@@ -165,17 +165,17 @@ out:
 
 int SceCtrlForDriver_EA1D3A34(int port, SceCtrlData *samples, int count)
 {
-	return ctrlPeekBuffer(port, samples, count, 0, 0, 0);
+	return ctrlPeekBuffer(port, (SceCtrlData2 *)samples, count, 0, 0, 0);
 }
 
 int SceCtrlForDriver_19895843(int port, SceCtrlData *samples, int count)
 {
-	return ctrlPeekBuffer(port, samples, count, 1, 0, 0);
+	return ctrlPeekBuffer(port, (SceCtrlData2 *)samples, count, 1, 0, 0);
 }
 
 /* Name unknown: both native read entries inline the same wait/copy sequence. */
 static inline __attribute__((always_inline)) int ctrlReadBuffer(
-		int port, SceCtrlData *samples, int count, int negative,
+		int port, SceCtrlData2 *samples, int count, int negative,
 		int extended, int version2)
 {
 	struct ctrlProcessStorage *process, *lookup = NULL;
@@ -259,57 +259,57 @@ out:
 
 int SceCtrlForDriver_9B96A1AA(int port, SceCtrlData *samples, int count)
 {
-	return ctrlReadBuffer(port, samples, count, 0, 0, 0);
+	return ctrlReadBuffer(port, (SceCtrlData2 *)samples, count, 0, 0, 0);
 }
 
 int SceCtrlForDriver_8D4E0DD1(int port, SceCtrlData *samples, int count)
 {
-	return ctrlReadBuffer(port, samples, count, 1, 0, 0);
+	return ctrlReadBuffer(port, (SceCtrlData2 *)samples, count, 1, 0, 0);
 }
 
-int ctrlPeekBufferPositiveExt(int port, SceCtrlData *samples, int count)
+int ctrlPeekBufferPositiveExt(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlPeekBuffer(port, samples, count, 0, 1, 0);
 }
 
-int ctrlReadBufferPositiveExt(int port, SceCtrlData *samples, int count)
+int ctrlReadBufferPositiveExt(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlReadBuffer(port, samples, count, 0, 1, 0);
 }
 
-int ctrlPeekBufferPositive2(int port, SceCtrlData *samples, int count)
+int ctrlPeekBufferPositive2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlPeekBuffer(port, samples, count, 0, 0, 1);
 }
 
-int ctrlPeekBufferNegative2(int port, SceCtrlData *samples, int count)
+int ctrlPeekBufferNegative2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlPeekBuffer(port, samples, count, 1, 0, 1);
 }
 
-int ctrlReadBufferPositive2(int port, SceCtrlData *samples, int count)
+int ctrlReadBufferPositive2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlReadBuffer(port, samples, count, 0, 0, 1);
 }
 
-int ctrlReadBufferNegative2(int port, SceCtrlData *samples, int count)
+int ctrlReadBufferNegative2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlReadBuffer(port, samples, count, 1, 0, 1);
 }
 
-int ctrlPeekBufferPositiveExt2(int port, SceCtrlData *samples, int count)
+int ctrlPeekBufferPositiveExt2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlPeekBuffer(port, samples, count, 0, 1, 1);
 }
 
-int ctrlReadBufferPositiveExt2(int port, SceCtrlData *samples, int count)
+int ctrlReadBufferPositiveExt2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlReadBuffer(port, samples, count, 0, 1, 1);
 }
 
 /* Name unknown: the syscall entries inline this locked staging-buffer copy. */
 static inline __attribute__((always_inline)) int ctrlUserBuffer(
-		int port, SceCtrlData *samples, int count, int read, int negative,
+		int port, void *samples, int count, int read, int negative,
 		int extended, int version2)
 {
 	struct ctrlUserBuffer *buffer = &ctrlStorage.userBuffers[read ? 0 : 1];
@@ -347,17 +347,17 @@ static inline __attribute__((always_inline)) int ctrlUserBuffer(
 		}
 	} else if (read) {
 		if (negative)
-			result = SceCtrlForDriver_8D4E0DD1(port, buffer->samples, count);
+			result = SceCtrlForDriver_8D4E0DD1(port, (SceCtrlData *)buffer->samples, count);
 		else
-			result = SceCtrlForDriver_9B96A1AA(port, buffer->samples, count);
+			result = SceCtrlForDriver_9B96A1AA(port, (SceCtrlData *)buffer->samples, count);
 	} else if (negative) {
-		result = SceCtrlForDriver_19895843(port, buffer->samples, count);
+		result = SceCtrlForDriver_19895843(port, (SceCtrlData *)buffer->samples, count);
 	} else {
-		result = SceCtrlForDriver_EA1D3A34(port, buffer->samples, count);
+		result = SceCtrlForDriver_EA1D3A34(port, (SceCtrlData *)buffer->samples, count);
 	}
 	if (result > 0) {
 		copied = SceSysmemForDriver_6D88EF8A(samples, buffer->samples,
-					    result * sizeof(*samples));
+					    result * sizeof(buffer->samples[0]));
 		if (copied < 0) {
 			sceKernelUnlockMutex(buffer->mutex, 1);
 			result = copied;
@@ -402,32 +402,32 @@ int sceCtrlReadBufferPositiveExt(int port, SceCtrlData *samples, int count)
 	return ctrlUserBuffer(port, samples, count, 1, 0, 1, 0);
 }
 
-int sceCtrlPeekBufferPositive2(int port, SceCtrlData *samples, int count)
+int sceCtrlPeekBufferPositive2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 0, 0, 0, 1);
 }
 
-int sceCtrlPeekBufferNegative2(int port, SceCtrlData *samples, int count)
+int sceCtrlPeekBufferNegative2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 0, 1, 0, 1);
 }
 
-int sceCtrlReadBufferPositive2(int port, SceCtrlData *samples, int count)
+int sceCtrlReadBufferPositive2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 1, 0, 0, 1);
 }
 
-int sceCtrlReadBufferNegative2(int port, SceCtrlData *samples, int count)
+int sceCtrlReadBufferNegative2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 1, 1, 0, 1);
 }
 
-int sceCtrlPeekBufferPositiveExt2(int port, SceCtrlData *samples, int count)
+int sceCtrlPeekBufferPositiveExt2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 0, 0, 1, 1);
 }
 
-int sceCtrlReadBufferPositiveExt2(int port, SceCtrlData *samples, int count)
+int sceCtrlReadBufferPositiveExt2(int port, SceCtrlData2 *samples, int count)
 {
 	return ctrlUserBuffer(port, samples, count, 1, 0, 1, 1);
 }
@@ -459,10 +459,10 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 		sample->sample.ly = 0x80;
 		sample->sample.rx = 0x80;
 		sample->sample.ry = 0x80;
-		sample->sample.up = 0x80;
-		sample->sample.right = 0x80;
-		sample->sample.down = 0x80;
-		sample->sample.left = 0x80;
+		sample->sample.wideLx = 0x80;
+		sample->sample.wideLy = 0x80;
+		sample->sample.wideRx = 0x80;
+		sample->sample.wideRy = 0x80;
 		sample->extended[0] = 0x80;
 		sample->extended[1] = 0x80;
 		sample->extended[2] = 0x80;
@@ -493,20 +493,20 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 			sample->sample.rx = packet->rx[10];
 			sample->sample.ry = packet->rx[11];
 			if (command == 0x104) {
-				sample->sample.up = packet->rx[12];
-				sample->sample.right = packet->rx[13];
-				sample->sample.down = packet->rx[14];
-				sample->sample.left = packet->rx[15];
+				sample->sample.wideLx = packet->rx[12];
+				sample->sample.wideLy = packet->rx[13];
+				sample->sample.wideRx = packet->rx[14];
+				sample->sample.wideRy = packet->rx[15];
 			} else {
-				sample->sample.up = sample->sample.lx;
-				sample->sample.right = sample->sample.ly;
-				sample->sample.down = sample->sample.rx;
-				sample->sample.left = sample->sample.ry;
+				sample->sample.wideLx = sample->sample.lx;
+				sample->sample.wideLy = sample->sample.ly;
+				sample->sample.wideRx = sample->sample.rx;
+				sample->sample.wideRy = sample->sample.ry;
 			}
-			sample->extended[0] = sample->sample.up;
-			sample->extended[1] = sample->sample.right;
-			sample->extended[2] = sample->sample.down;
-			sample->extended[3] = sample->sample.left;
+			sample->extended[0] = sample->sample.wideLx;
+			sample->extended[1] = sample->sample.wideLy;
+			sample->extended[2] = sample->sample.wideRx;
+			sample->extended[3] = sample->sample.wideRy;
 		}
 	} else {
 		sample->sample.buttons = ctrlStorage.cachedButtons[0];
@@ -514,20 +514,20 @@ int ctrlSampleComplete(SceSysconPacket *packet, void *arg)
 		sample->sample.ly = ctrlStorage.cachedLy;
 		sample->sample.rx = ctrlStorage.cachedRx;
 		sample->sample.ry = ctrlStorage.cachedRy;
-		sample->sample.up = ctrlStorage.cachedUp;
-		sample->sample.right = ctrlStorage.cachedRight;
-		sample->sample.down = ctrlStorage.cachedDown;
-		sample->sample.left = ctrlStorage.cachedLeft;
+		sample->sample.wideLx = ctrlStorage.cachedUp;
+		sample->sample.wideLy = ctrlStorage.cachedRight;
+		sample->sample.wideRx = ctrlStorage.cachedDown;
+		sample->sample.wideRy = ctrlStorage.cachedLeft;
 	}
 	ctrlStorage.cachedButtons[0] = sample->sample.buttons;
 	ctrlStorage.cachedLx = sample->sample.lx;
 	ctrlStorage.cachedLy = sample->sample.ly;
 	ctrlStorage.cachedRx = sample->sample.rx;
 	ctrlStorage.cachedRy = sample->sample.ry;
-	ctrlStorage.cachedUp = sample->sample.up;
-	ctrlStorage.cachedRight = sample->sample.right;
-	ctrlStorage.cachedDown = sample->sample.down;
-	ctrlStorage.cachedLeft = sample->sample.left;
+	ctrlStorage.cachedUp = sample->sample.wideLx;
+	ctrlStorage.cachedRight = sample->sample.wideLy;
+	ctrlStorage.cachedDown = sample->sample.wideRx;
+	ctrlStorage.cachedLeft = sample->sample.wideRy;
 	source = SceSysrootForDriver_8AA268D6(1) ? 1 : 0;
 	for (port = source ? 4 : 0; port >= 0; port--) {
 		if (port)
@@ -598,23 +598,23 @@ static inline __attribute__((always_inline)) void ctrlRemapSample(
 		buttons |= target;
 		if (target == 0x100) {
 			if (source == 0x100)
-				triangle = sample->sample.triangle;
+				triangle = sample->sample.l2;
 			else if (source == 0x200)
-				triangle = sample->sample.circle;
+				triangle = sample->sample.r2;
 			else
 				triangle = 0xff;
 		} else if (target == 0x200) {
 			if (source == 0x200)
-				circle = sample->sample.circle;
+				circle = sample->sample.r2;
 			else if (source == 0x100)
-				circle = sample->sample.triangle;
+				circle = sample->sample.l2;
 			else
 				circle = 0xff;
 		}
 	}
 	sample->sample.buttons = buttons;
-	sample->sample.triangle = triangle;
-	sample->sample.circle = circle;
+	sample->sample.l2 = triangle;
+	sample->sample.r2 = circle;
 	if (!ctrlStorage.remapping.swapAnalogSticks)
 		return;
 	temporary = sample->sample.lx;
@@ -623,12 +623,12 @@ static inline __attribute__((always_inline)) void ctrlRemapSample(
 	temporary = sample->sample.ly;
 	sample->sample.ly = sample->sample.ry;
 	sample->sample.ry = temporary;
-	temporary = sample->sample.up;
-	sample->sample.up = sample->sample.down;
-	sample->sample.down = temporary;
-	temporary = sample->sample.right;
-	sample->sample.right = sample->sample.left;
-	sample->sample.left = temporary;
+	temporary = sample->sample.wideLx;
+	sample->sample.wideLx = sample->sample.wideRx;
+	sample->sample.wideRx = temporary;
+	temporary = sample->sample.wideLy;
+	sample->sample.wideLy = sample->sample.wideRy;
+	sample->sample.wideRy = temporary;
 	temporary = sample->extended[0];
 	sample->extended[0] = sample->extended[2];
 	sample->extended[2] = temporary;
@@ -691,10 +691,10 @@ static inline __attribute__((always_inline)) void ctrlStoreAxes(
 	sample->sample.ly = axes->left.y;
 	sample->sample.rx = axes->right.x;
 	sample->sample.ry = axes->right.y;
-	sample->sample.up = axes->pressureLeft.x;
-	sample->sample.right = axes->pressureLeft.y;
-	sample->sample.down = axes->pressureRight.x;
-	sample->sample.left = axes->pressureRight.y;
+	sample->sample.wideLx = axes->pressureLeft.x;
+	sample->sample.wideLy = axes->pressureLeft.y;
+	sample->sample.wideRx = axes->pressureRight.x;
+	sample->sample.wideRy = axes->pressureRight.y;
 }
 
 static inline __attribute__((always_inline)) void ctrlNeutralAxes(
@@ -704,10 +704,10 @@ static inline __attribute__((always_inline)) void ctrlNeutralAxes(
 	sample->sample.ly = 0x80;
 	sample->sample.rx = 0x80;
 	sample->sample.ry = 0x80;
-	sample->sample.up = 0x80;
-	sample->sample.right = 0x80;
-	sample->sample.down = 0x80;
-	sample->sample.left = 0x80;
+	sample->sample.wideLx = 0x80;
+	sample->sample.wideLy = 0x80;
+	sample->sample.wideRx = 0x80;
+	sample->sample.wideRy = 0x80;
 	sample->extended[0] = 0x80;
 	sample->extended[1] = 0x80;
 	sample->extended[2] = 0x80;
@@ -738,10 +738,10 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 		sample->sample.ly = ctrlStorage.accumulatedAxes[1].analog;
 		sample->sample.rx = ctrlStorage.accumulatedAxes[2].analog;
 		sample->sample.ry = ctrlStorage.accumulatedAxes[3].analog;
-		sample->sample.up = ctrlStorage.accumulatedAxes[0].pressure;
-		sample->sample.right = ctrlStorage.accumulatedAxes[1].pressure;
-		sample->sample.down = ctrlStorage.accumulatedAxes[2].pressure;
-		sample->sample.left = ctrlStorage.accumulatedAxes[3].pressure;
+		sample->sample.wideLx = ctrlStorage.accumulatedAxes[0].pressure;
+		sample->sample.wideLy = ctrlStorage.accumulatedAxes[1].pressure;
+		sample->sample.wideRx = ctrlStorage.accumulatedAxes[2].pressure;
+		sample->sample.wideRy = ctrlStorage.accumulatedAxes[3].pressure;
 		for (i = 0; i < 4; i++) {
 			sample->extended[i] = ctrlStorage.accumulatedAxes[i].extended;
 			ctrlStorage.accumulatedAxes[i].analog = 0x80;
@@ -761,10 +761,10 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 			ctrlStorage.accumulatedAxes[1].analog = sample->sample.ly;
 			ctrlStorage.accumulatedAxes[2].analog = sample->sample.rx;
 			ctrlStorage.accumulatedAxes[3].analog = sample->sample.ry;
-			ctrlStorage.accumulatedAxes[0].pressure = sample->sample.up;
-			ctrlStorage.accumulatedAxes[1].pressure = sample->sample.right;
-			ctrlStorage.accumulatedAxes[2].pressure = sample->sample.down;
-			ctrlStorage.accumulatedAxes[3].pressure = sample->sample.left;
+			ctrlStorage.accumulatedAxes[0].pressure = sample->sample.wideLx;
+			ctrlStorage.accumulatedAxes[1].pressure = sample->sample.wideLy;
+			ctrlStorage.accumulatedAxes[2].pressure = sample->sample.wideRx;
+			ctrlStorage.accumulatedAxes[3].pressure = sample->sample.wideRy;
 			for (i = 0; i < 4; i++)
 				ctrlStorage.accumulatedAxes[i].extended = sample->extended[i];
 			ctrlStorage.accumulatedButtons |= sample->sample.buttons;
@@ -794,10 +794,10 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 	baseline.left.y = ctrlSaturateAxis(leftY + sample->sample.ly);
 	baseline.right.x = ctrlSaturateAxis(rightX + sample->sample.rx);
 	baseline.right.y = ctrlSaturateAxis(rightY + sample->sample.ry);
-	baseline.pressureLeft.x = ctrlSaturateAxis(pressureLeftX + sample->sample.up);
-	baseline.pressureLeft.y = ctrlSaturateAxis(pressureLeftY + sample->sample.right);
-	baseline.pressureRight.x = ctrlSaturateAxis(pressureRightX + sample->sample.down);
-	baseline.pressureRight.y = ctrlSaturateAxis(pressureRightY + sample->sample.left);
+	baseline.pressureLeft.x = ctrlSaturateAxis(pressureLeftX + sample->sample.wideLx);
+	baseline.pressureLeft.y = ctrlSaturateAxis(pressureLeftY + sample->sample.wideLy);
+	baseline.pressureRight.x = ctrlSaturateAxis(pressureRightX + sample->sample.wideRx);
+	baseline.pressureRight.y = ctrlSaturateAxis(pressureRightY + sample->sample.wideRy);
 	checked = baseline;
 	if (!port && !source && ctrlStorage.analogStickCheckTarget) {
 		if (ctrlStorage.analogStickCheckTarget != 2) {
@@ -927,16 +927,16 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 			continue;
 		ring = process->ports[port].ring;
 		out = &ring->samples[ring->writeIndex];
-		out->sample.lt = sample->sample.lt;
-		out->sample.rt = sample->sample.rt;
+		out->sample.up = sample->sample.up;
+		out->sample.right = sample->sample.right;
+		out->sample.down = sample->sample.down;
+		out->sample.left = sample->sample.left;
+		out->sample.l2 = sample->sample.l2;
+		out->sample.r2 = sample->sample.r2;
 		out->sample.l1 = sample->sample.l1;
 		out->sample.r1 = sample->sample.r1;
-		out->sample.triangle = sample->sample.triangle;
-		out->sample.circle = sample->sample.circle;
-		out->sample.cross = sample->sample.cross;
-		out->sample.square = sample->sample.square;
 		for (index = 0; index < 4; index++) {
-			out->sample.reserved[index] = sample->sample.reserved[index];
+			out->sample.pressure[8 + index] = sample->sample.pressure[8 + index];
 			out->extended[index] = sample->extended[index];
 		}
 		if (process->privileged) {
@@ -1018,7 +1018,7 @@ int ctrlIsMultiControllerSupported(void)
 	return SceSysrootForDriver_8AA268D6(1);
 }
 
-int ctrlGetWirelessControllerInfo(struct ctrlWirelessControllerInfo *info)
+int ctrlGetWirelessControllerInfo(SceCtrlWirelessControllerInfo *info)
 {
 	SceCtrlPortInfo ports;
 	unsigned int index;
@@ -1028,11 +1028,11 @@ int ctrlGetWirelessControllerInfo(struct ctrlWirelessControllerInfo *info)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	memset(info, 0, sizeof(*info));
 	for (index = 1; index < 5; index++) {
-		info->wireless[index - 1] = 0;
+		info->connected[index - 1] = 0;
 		if (ctrlStorage.virtualDriver) {
 			result = ctrlStorage.virtualDriver->getControllerPortInfo(&ports);
 			if (ports.port[index] == 4 || ports.port[index] == 8)
-				info->wireless[index - 1] = 1;
+				info->connected[index - 1] = 1;
 		}
 	}
 	return result;
@@ -1312,11 +1312,11 @@ int SceCtrlForDriver_A248CDAE(int port, int index, const SceCtrlRapidFireRule *r
 
 	if (port || (unsigned int)index > 15 || !rule)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	if ((rule->Delay | rule->Make | rule->Break) - 1U > 0x3e)
+	if ((rule->uiDelay | rule->uiMake | rule->uiBreak) - 1U > 0x3e)
 		return SCE_CTRL_ERROR_INVALID_ARG;
-	mask = rule->Mask;
-	trigger = rule->Trigger;
-	target = rule->Target;
+	mask = rule->uiMask;
+	trigger = rule->uiTrigger;
+	target = rule->uiTarget;
 	if (!SceSysrootForDriver_8AA268D6(1)) {
 		if (mask & 0x100)
 			mask = (mask & ~0x100) | 0x400;
@@ -1337,12 +1337,12 @@ int SceCtrlForDriver_A248CDAE(int port, int index, const SceCtrlRapidFireRule *r
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	pid = sceKernelGetProcessId();
 	entry = &ctrlStorage.rapidFire[0][index];
-	entry->make = rule->Make;
-	breakCount = rule->Break;
+	entry->make = rule->uiMake;
+	breakCount = rule->uiBreak;
 	entry->owner = pid;
 	entry->mask = mask;
 	entry->breakCount = breakCount;
-	delay = rule->Delay;
+	delay = rule->uiDelay;
 	entry->trigger = trigger;
 	entry->target = target;
 	entry->counter = 0;
@@ -1533,14 +1533,14 @@ int ctrlPublishCachedSample(void)
 	sample.sample.ly = ctrlStorage.cachedLy;
 	sample.sample.rx = ctrlStorage.cachedRx;
 	sample.sample.ry = ctrlStorage.cachedRy;
-	sample.sample.up = ctrlStorage.cachedUp;
-	sample.sample.right = ctrlStorage.cachedRight;
-	sample.sample.down = ctrlStorage.cachedDown;
-	sample.sample.left = ctrlStorage.cachedLeft;
-	sample.extended[0] = sample.sample.up;
-	sample.extended[1] = sample.sample.right;
-	sample.extended[2] = sample.sample.down;
-	sample.extended[3] = sample.sample.left;
+	sample.sample.wideLx = ctrlStorage.cachedUp;
+	sample.sample.wideLy = ctrlStorage.cachedRight;
+	sample.sample.wideRx = ctrlStorage.cachedDown;
+	sample.sample.wideRy = ctrlStorage.cachedLeft;
+	sample.extended[0] = sample.sample.wideLx;
+	sample.extended[1] = sample.sample.wideLy;
+	sample.extended[2] = sample.sample.wideRx;
+	sample.extended[3] = sample.sample.wideRy;
 	ctrlPublishSample(0, &sample, 0);
 	for (port = 0;
 	     port < (SceSysrootForDriver_8AA268D6(1) ? 5U : 1U);
@@ -2713,9 +2713,9 @@ int sceCtrlGetProcessStatus(SceUID pid, int *status)
 	return result;
 }
 
-int sceCtrlGetWirelessControllerInfo(struct ctrlWirelessControllerInfo *info)
+int sceCtrlGetWirelessControllerInfo(SceCtrlWirelessControllerInfo *info)
 {
-	struct ctrlWirelessControllerInfo local;
+	SceCtrlWirelessControllerInfo local;
 	uint32_t context;
 	int result;
 

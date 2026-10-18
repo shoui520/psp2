@@ -4,7 +4,6 @@
 #ifndef __ASSEMBLER__
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2common/ctrl.h>
 #include <sysmem/cpu.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
@@ -64,15 +63,11 @@ struct ctrlEmulation {
 struct ctrlUserBuffer {
 	SceUID mutex;
 	uint32_t reserved;
-	SceCtrlData samples[64];
+	SceCtrlData2 samples[64];
 };
 
 struct ctrlNativeSample;
 
-struct ctrlWirelessControllerInfo {
-	uint8_t wireless[4];
-	uint8_t reserved[12];
-};
 
 struct ctrlButtonRemappingInfo {
 	uint8_t buttons[14];
@@ -209,6 +204,7 @@ struct ctrlProcessStorage {
 };
 
 _Static_assert(sizeof(SceCtrlData) == 0x20, "SDK sample ABI");
+_Static_assert(sizeof(SceCtrlData2) == 0x20, "SDK sample ABI");
 _Static_assert(sizeof(struct ctrlNativeSample) == 0x28, "native sample ABI");
 _Static_assert(sizeof(struct ctrlSampleRing) == 0xa10, "native ring ABI");
 _Static_assert(offsetof(struct ctrlProcessStorage, ports) == 0x30,
