@@ -379,7 +379,7 @@ int checkIllegalThreadStatusResumeThread(SceUID pid, SceUID thid)
 int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 					 int *isBreakpoint)
 {
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	SceUInt8 bytes[4];
 	SceUInt32 opcode;
 	SceUID guid;
@@ -393,16 +393,16 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 	}
 	if (status == 0 || (status & 1) != 0)
 		return 0x20060;
-	result = SceThreadmgrForDriver_5022689D(guid, &registers);
+	result = SceThreadmgrForDriver_5022689D(guid, registers);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 845, "0x%08x\n", result);
 		return result;
 	}
-	if ((registers.entry[0].cpsr & 0x1f) != 0x10)
+	if ((registers[0].cpsr & 0x1f) != 0x10)
 		return 0;
-	if ((registers.entry[0].cpsr & 0x20) != 0) {
+	if ((registers[0].cpsr & 0x20) != 0) {
 		result = sceKernelCopyFromUserProc(pid, bytes,
-				(const void *)registers.entry[0].pc, 2);
+				(const void *)registers[0].pc, 2);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 865, "0x%08x\n", result);
 			return result;
@@ -412,7 +412,7 @@ int checkIllegalThreadStatusResumeProcess(SceUID pid, SceUID thid,
 			*isBreakpoint = 1;
 	} else {
 		result = sceKernelCopyFromUserProc(pid, bytes,
-				(const void *)registers.entry[0].pc, 4);
+				(const void *)registers[0].pc, 4);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO(15, 885, "0x%08x\n", result);
 			return result;

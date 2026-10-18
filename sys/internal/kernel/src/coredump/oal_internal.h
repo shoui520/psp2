@@ -397,7 +397,7 @@ typedef struct CoredumpThreadInfo {
 typedef struct CoredumpThreadRegInfo {
 	uint8_t formatSize[4];
 	SceUID threadId;
-	SceArmCpuRegisters registers;
+	ThreadmgrDebugRegisters registers;
 	uintptr_t tls;
 	uint32_t vfp[64];
 	uint32_t fpexc;

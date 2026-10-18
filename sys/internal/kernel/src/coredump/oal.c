@@ -208,7 +208,7 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 	CoredumpCdnPcAndLrInfo *location)
 {
 	ThreadmgrThreadInfoForDebugger threadInfo;
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	CoredumpStopReason stopReason;
 	SceUID *threadIds;
 	void *allocation;
@@ -246,13 +246,13 @@ int _getCdnPcAndLrInfo(SceUID pid, const CoredumpThreadStopEvent *stopEvent,
 		__builtin_memcpy(&reason, &stopReason.reason, sizeof(reason));
 		if (reason == 0)
 			continue;
-		if (SceThreadmgrForDriver_5022689D(threadId, &registers) == 0) {
-			if ((registers.entry[0].cpsr & 0x1f) == 0x10) {
-				location->pc = registers.entry[0].pc;
-				location->lr = registers.entry[0].lr;
+		if (SceThreadmgrForDriver_5022689D(threadId, registers) == 0) {
+			if ((registers[0].cpsr & 0x1f) == 0x10) {
+				location->pc = registers[0].pc;
+				location->lr = registers[0].lr;
 			} else {
-				location->pc = registers.entry[1].pc;
-				location->lr = registers.entry[1].lr;
+				location->pc = registers[1].pc;
+				location->lr = registers[1].lr;
 			}
 			found = 1;
 			break;
@@ -1104,7 +1104,7 @@ int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 int oalGetThreadTlsStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 	SceSize *stackSize)
 {
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	uintptr_t stackTop, stackBottom, sp;
 	const void *topAddress, *bottomAddress;
 	SceUID guid;
@@ -1129,10 +1129,10 @@ int oalGetThreadTlsStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
 	*stackSize = ((stackTop + 4095) >> 12 << 12) - *stackBase;
 	accessible = SceSysmemForDriver_9F6E45E3(pid, 16,
 		(const void *)*stackBase, *stackSize);
-	result = SceThreadmgrForDriver_5022689D(guid, &registers);
+	result = SceThreadmgrForDriver_5022689D(guid, registers);
 	if (result == 0) {
-		sp = (registers.entry[0].cpsr & 0x1f) == 0x10 ?
-			registers.entry[0].sp : registers.entry[1].sp;
+		sp = (registers[0].cpsr & 0x1f) == 0x10 ?
+			registers[0].sp : registers[1].sp;
 		if (stackBottom <= sp && stackTop >= sp && accessible == 0 &&
 			stackTop > stackBottom)
 			return result;
@@ -1589,7 +1589,7 @@ void oalFormatThreadInfo(CoredumpThreadInfo *info,
 void oalGetThreadInfo(SceUID pid, SceUID threadId,
 	const CoredumpThreadStopEvent *stopEvent, CoredumpThreadInfo *info)
 {
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	CoredumpThreadSnapshot snapshot;
 	SceUID guid;
 	uint32_t status;
@@ -1607,16 +1607,16 @@ void oalGetThreadInfo(SceUID pid, SceUID threadId,
 	if (guid < 0)
 		return;
 	_getThreadStopReason(guid, stopEvent, &info->stopReason);
-	if (SceThreadmgrForDriver_5022689D(guid, &registers) != 0)
+	if (SceThreadmgrForDriver_5022689D(guid, registers) != 0)
 		return;
-	if ((registers.entry[0].cpsr & 0x1f) != 0x10) {
+	if ((registers[0].cpsr & 0x1f) != 0x10) {
 		status = info->status;
-		pc = registers.entry[1].pc;
+		pc = registers[1].pc;
 		status |= 0x80000000;
 		info->pc = pc;
 		info->status = status;
 	} else {
-		info->pc = registers.entry[0].pc;
+		info->pc = registers[0].pc;
 	}
 }
 
@@ -1641,7 +1641,7 @@ int oalGetStackInfo(SceUID pid, SceUID threadId, CoredumpStackInfo *info)
 int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 	CoredumpThreadRegInfo *info)
 {
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	uint64_t vfp[32];
 	CoredumpThreadSnapshot snapshot;
 	ThreadRegisterContext *context;
@@ -1660,17 +1660,17 @@ int oalGetThreadRegInfo(SceUID pid, SceUID threadId,
 	info->formatSize[2] = 0;
 	info->formatSize[3] = 0;
 	guid = SceSysmemForDriver_45D22597(pid, threadId);
-	if (SceThreadmgrForDriver_5022689D(guid, &registers) == 0) {
-		if ((registers.entry[0].cpsr & 0x1f) == 0x10) {
-			__builtin_memcpy(&info->registers, &registers.entry[0],
-				offsetof(SceArmCpuRegisters, cpsr));
-			info->registers.cpsr = registers.entry[0].cpsr;
+	if (SceThreadmgrForDriver_5022689D(guid, registers) == 0) {
+		if ((registers[0].cpsr & 0x1f) == 0x10) {
+			__builtin_memcpy(&info->registers, &registers[0],
+				offsetof(ThreadmgrDebugRegisters, cpsr));
+			info->registers.cpsr = registers[0].cpsr;
 		} else {
-			__builtin_memcpy(&info->registers, &registers.entry[1],
-				offsetof(SceArmCpuRegisters, cpsr));
-			info->registers.cpsr = registers.entry[1].cpsr;
+			__builtin_memcpy(&info->registers, &registers[1],
+				offsetof(ThreadmgrDebugRegisters, cpsr));
+			info->registers.cpsr = registers[1].cpsr;
 		}
-		info->registers.fpscr = registers.entry[0].fpscr;
+		info->registers.fpscr = registers[0].fpscr;
 	}
 	result = SceThreadmgrForDriver_5CDE387A(guid, vfp);
 	if (result == 0) {
@@ -3954,7 +3954,7 @@ int oalHasCoredumpHandler(SceUID pid)
 int oalIsCoredumpHandlerAtSyscall(SceUID pid, SceUID threadId)
 {
 	CoredumpThreadSnapshot snapshot;
-	SceThreadCpuRegisters registers;
+	ThreadmgrDebugRegisters registers[2];
 	uint32_t instruction;
 
 	if (SceThreadmgrForDriver_A0B1AB21(threadId) <= 0)
@@ -3962,13 +3962,13 @@ int oalIsCoredumpHandlerAtSyscall(SceUID pid, SceUID threadId)
 	snapshot.info.size = sizeof(snapshot.info);
 	if (SceThreadmgrForDriver_DD8D9429(threadId, 0, &snapshot.info) != 0)
 		return 0;
-	if (SceThreadmgrForDriver_5022689D(threadId, &registers) != 0)
+	if (SceThreadmgrForDriver_5022689D(threadId, registers) != 0)
 		return 0;
-	if ((registers.entry[0].cpsr & 0x3f) != 0x10)
+	if ((registers[0].cpsr & 0x3f) != 0x10)
 		return 0;
 	instruction = 0;
 	if (sceKernelCopyFromUserProc(pid, &instruction,
-		(const void *)registers.entry[0].pc, sizeof(instruction)) < 0)
+		(const void *)registers[0].pc, sizeof(instruction)) < 0)
 		return 0;
 	return instruction == 0xe12cd070;
 }

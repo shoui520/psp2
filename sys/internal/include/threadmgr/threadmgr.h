@@ -110,7 +110,10 @@ typedef int64_t (*ThreadmgrStackFunction)(void *arg);
 /* an alarm's handler: returns the delay to the next call, 0 to end */
 typedef SceUInt32 (*ThreadmgrAlarmHandler)(void *arg);
 
-/* a thread's registers as the debugger sees them (0x48, SceThreadmgrForDriver_5022689D) */
+/*
+ * a thread's registers as the debugger sees them (0x48); SceThreadmgrForDriver_5022689D fills
+ * two: where the thread was switched out, then its syscall's user frame
+ */
 typedef struct ThreadmgrDebugRegisters {
 	uint32_t r[13];				/* 0x00 */
 	uint32_t sp;				/* 0x34 */
