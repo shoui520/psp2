@@ -278,12 +278,12 @@ static __attribute__((noinline)) int psp2OpenShared(psp2File *pFile, const char 
 			};
 			memset(&param, 0, sizeof(param));
 			param.size = sizeof(param);
-			param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+			param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 			param.slotParam = NULL;
 			param.items = &item;
 			param.itemNum = 1;
 			strlcpy(param.mountPoint.data, PSP2_SAVEDATA_MOUNT, 15);
-			param.unk44 = 1;
+			param.flags = 1;
 			rc = sceAppMgrSaveDataDataSave(&param);
 			if (rc < 0)
 				PSP2_ERROR(753, "sceAppMgrSaveDataDataSave(%s) returned %#x.\n",
@@ -412,7 +412,7 @@ static int psp2Close(sqlite3_file *id)
 			};
 			memset(&param, 0, sizeof(param));
 			param.size = sizeof(param);
-			param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+			param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 			param.slotParam = NULL;
 			param.items = &item;
 			param.itemNum = 1;
@@ -468,12 +468,12 @@ static int psp2Write(sqlite3_file *id, const void *pBuf, int amt,
 	};
 	memset(&param, 0, sizeof(param));
 	param.size = sizeof(param);
-	param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+	param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 	param.slotParam = NULL;
 	param.items = &item;
 	param.itemNum = 1;
 	strlcpy(param.mountPoint.data, PSP2_SAVEDATA_MOUNT, 15);
-	param.unk44 = 1;
+	param.flags = 1;
 	ret = sceAppMgrSaveDataDataSave(&param);
 	if (ret < 0)
 		PSP2_ERROR(996, "sceAppMgrSaveDataDataSave(%s) returned %#x.\n",
@@ -499,12 +499,12 @@ static int psp2Truncate(sqlite3_file *id, sqlite3_int64 nByte)
 	};
 	memset(&param, 0, sizeof(param));
 	param.size = sizeof(param);
-	param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+	param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 	param.slotParam = NULL;
 	param.items = &item;
 	param.itemNum = 1;
 	strlcpy(param.mountPoint.data, PSP2_SAVEDATA_MOUNT, 15);
-	param.unk44 = 1;
+	param.flags = 1;
 	ret = sceAppMgrSaveDataDataSave(&param);
 	if (ret < 0)
 		PSP2_ERROR(1033, "sceAppMgrSaveDataDataSave(%s) returned %#x.\n",
@@ -529,12 +529,12 @@ static int psp2Sync(sqlite3_file *id, int flags)
 	};
 	memset(&param, 0, sizeof(param));
 	param.size = sizeof(param);
-	param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+	param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 	param.slotParam = NULL;
 	param.items = &item;
 	param.itemNum = 1;
 	strlcpy(param.mountPoint.data, PSP2_SAVEDATA_MOUNT, 15);
-	param.unk44 = 0;
+	param.flags = 0;
 	ret = sceAppMgrSaveDataDataSave(&param);
 	if (ret < 0)
 		PSP2_ERROR(1069, "sceAppMgrSaveDataDataSave(%s) returned %#x.\n",
@@ -756,7 +756,7 @@ static int psp2Delete(sqlite3_vfs *pVfs, const char *zPath, int dirSync)
 	};
 	memset(&param, 0, sizeof(param));
 	param.size = sizeof(param);
-	param.slotId = SCE_APPMGR_SAVEDATA_SLOT_NONE;
+	param.slotId = SCE_APPUTIL_SAVEDATA_SLOT_ID_INVALID;
 	param.slotParam = NULL;
 	param.items = &item;
 	param.itemNum = 1;

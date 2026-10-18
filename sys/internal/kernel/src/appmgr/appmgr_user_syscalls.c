@@ -1,6 +1,6 @@
 /* User-memory copies for application queries and system events. */
 
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
 #include "appmgr_shell_event.h"

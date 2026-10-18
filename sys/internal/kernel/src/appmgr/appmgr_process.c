@@ -3,7 +3,7 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include <power/power.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/threadmgr.h>

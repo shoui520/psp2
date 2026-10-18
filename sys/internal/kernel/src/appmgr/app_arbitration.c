@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/pmmgr.h>
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include "app_state_internal.h"
 #include <processmgr/processmgr.h>
 #include <appmgr/appmgr.h>

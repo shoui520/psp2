@@ -3,7 +3,7 @@
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
@@ -794,7 +794,7 @@ int sceAppMgrSendLiveBoardMode(int mode)
 		return 0x80802002;
 	}
 	callerPid = sceKernelGetProcessId();
-	__builtin_memcpy(event.reserved, &callerPid, sizeof(callerPid));
+	__builtin_memcpy(event.data.reserved, &callerPid, sizeof(callerPid));
 	result = sceAppMgrSendEventInternal(&event, shellPid);
 	callerPid = sceKernelGetProcessId();
 	_shellEventLiveareaModeChangedQueuePush(callerPid, app->appId, mode);

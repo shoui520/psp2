@@ -1,7 +1,7 @@
 #include "appmgr_savedata_slot.h"
 #include "appmgr_event.h"
 
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -45,13 +45,13 @@ extern int appmgrGetFakeSdSlotBroken(void);
 #if FW_VERSION >= 0x04000000
 #endif
 
-extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataFile *file,
+extern int appmgrValidateSaveDataFile(const SceAppUtilSaveDataDataSaveItem *file,
 				     const char *path);
 extern int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB);
 extern void appmgrNotifySaveDataSpaceError(int error, SceUInt32 requiredKiB);
 extern void appmgrFreeSaveDataDirectories(char **directories);
 extern int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB);
-extern int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
+extern int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataDataSaveItem *userFile,
 					  char **directories,
 					  SceUInt64 *requiredBytes,
 					  SceUInt64 allocationUnit,
@@ -63,7 +63,7 @@ extern int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
 				      SceOff *freeBytes);
 extern int appmgrGetSaveDataParentPath(const char *path, char *parentPath);
 extern int appmgrCreateSaveDataDirectories(const char *path, SceMode mode);
-extern int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operation,
+extern int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 		const char *const *directories, const SceOff *originalSizes,
 		const int *createdFiles, SceUInt64 allocationUnit,
 		int slotCreated, SceUInt32 *requiredSizeKiB);
@@ -276,7 +276,7 @@ int SceAppMgrForDriver_2277F736(void *parameters)
 		result = (int)0x80800001;
 		goto leave;
 	}
-	mountPoint = param->mountPoint;
+	mountPoint = (const char *)param->mountPoint.data;
 	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
 	if (result < 0)
 		goto leave;
@@ -401,7 +401,7 @@ leave:
 
 int SceAppMgrForDriver_E6F389B8(void *parameters)
 {
-	const AppmgrSaveDataSlotKernelParam *slot = parameters;
+	const SceAppMgrSaveDataSlot *slot = parameters;
 	SceAppMgrAppInfoCache *info;
 	SceIoStat stat;
 	char path[64];
@@ -417,7 +417,7 @@ int SceAppMgrForDriver_E6F389B8(void *parameters)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	mountPoint = slot->mountPoint;
+	mountPoint = (const char *)slot->mountPoint.data;
 	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
 	if (result < 0)
 		goto leaveSyscall;
@@ -439,7 +439,7 @@ int SceAppMgrForDriver_E6F389B8(void *parameters)
 	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 0);
 	if (result != 0)
 		goto restorePermission;
-	result = appmgrWriteSaveDataSlot(slot->slotId, &slot->param, -1,
+	result = appmgrWriteSaveDataSlot(slot->slotId, &slot->slotParam, -1,
 					mountPoint);
 	if (result != 0)
 		goto restorePermission;
@@ -528,7 +528,7 @@ leaveSyscall:
 
 int SceAppMgrForDriver_7E247E47(void *parameters)
 {
-	const AppmgrSaveDataSlotKernelParam *slot = parameters;
+	const SceAppMgrSaveDataSlot *slot = parameters;
 	SceAppMgrAppInfoCache *info;
 	SceIoStat stat;
 	char path[64];
@@ -544,7 +544,7 @@ int SceAppMgrForDriver_7E247E47(void *parameters)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	mountPoint = slot->mountPoint;
+	mountPoint = (const char *)slot->mountPoint.data;
 	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
 	if (result < 0)
 		goto leaveSyscall;
@@ -566,7 +566,7 @@ int SceAppMgrForDriver_7E247E47(void *parameters)
 	result = appmgrCheckSaveDataSlot(slot->slotId, mountPoint, 1);
 	if (result != 0)
 		goto restorePermission;
-	result = appmgrOverwriteSaveDataSlot(slot->slotId, &slot->param, -1,
+	result = appmgrOverwriteSaveDataSlot(slot->slotId, &slot->slotParam, -1,
 					    mountPoint);
 	if (result != 0)
 		goto restorePermission;
@@ -608,7 +608,7 @@ int SceAppMgrForDriver_9ADB00FA(void *parameters)
 		result = (int)0x80800001;
 		goto leaveSyscall;
 	}
-	mountPoint = slot->mountPoint;
+	mountPoint = (const char *)slot->mountPoint.data;
 	result = appmgrValidateSaveDataMountPoint(mountPoint, 1);
 	if (result < 0)
 		goto leaveSyscall;
@@ -836,9 +836,9 @@ unlockPower:
 	return result;
 }
 
-int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalApplication)
+int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplication)
 {
-	SceAppUtilSaveDataFile file;
+	SceAppUtilSaveDataDataSaveItem file;
 	SceAppMgrAppInfoCache *info;
 	SceAllocOpt option;
 	SceIoStat stat;
@@ -948,9 +948,9 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	quotaExceeded = 0;
 	allFilesEmpty = 1;
 	memset(directories, 0, sizeof(directories));
-	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+	for (index = 0; index < 5 && operation->itemNum > index; index++) {
 		requiredBytes = 0;
-		result = appmgrCalculateSaveDataFileSpace(operation->files + index,
+		result = appmgrCalculateSaveDataFileSpace(operation->items + index,
 			directories, &requiredBytes, 32768, mountPoint);
 		if (result != 0)
 			goto freeDirectories;
@@ -1049,10 +1049,10 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 		}
 		changed = 1;
 	}
-	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+	for (index = 0; index < 5 && operation->itemNum > index; index++) {
 		createdFiles[index] = 0;
 		memset(&file, 0, sizeof(file));
-		result = SceSysmemForDriver_BC996A7A(&file, operation->files + index, sizeof(file));
+		result = SceSysmemForDriver_BC996A7A(&file, operation->items + index, sizeof(file));
 		if (result != 0)
 			goto freeDirectories;
 		option.size = sizeof(option);
@@ -1063,7 +1063,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			goto freeDirectories;
 		}
 		memset(filePath, 0, 200);
-		result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
+		result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
 		if (result < 0)
 			goto freeFirstFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1190,9 +1190,9 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			writtenBytes += allocationUnit;
 		}
 	}
-	for (index = 0; index < 5 && operation->fileNum > index; index++) {
+	for (index = 0; index < 5 && operation->itemNum > index; index++) {
 		memset(&file, 0, sizeof(file));
-		result = SceSysmemForDriver_BC996A7A(&file, operation->files + index, sizeof(file));
+		result = SceSysmemForDriver_BC996A7A(&file, operation->items + index, sizeof(file));
 		if (result != 0)
 			goto restorePermission;
 		option.size = sizeof(option);
@@ -1203,7 +1203,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			goto restorePermission;
 		}
 		memset(filePath, 0, 200);
-		result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
+		result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
 		if (result < 0)
 			goto freeSecondFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1582,13 +1582,13 @@ int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
 	return result;
 }
 
-int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
+int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataDataSaveItem *userFile,
 				     char **directories,
 				     SceUInt64 *requiredBytes,
 				     SceUInt64 allocationUnit,
 				     const char *mountPoint)
 {
-	SceAppUtilSaveDataFile file;
+	SceAppUtilSaveDataDataSaveItem file;
 	SceIoStat stat;
 	SceAllocOpt option;
 	char path[210];
@@ -1620,7 +1620,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataFile *userFile,
 	if (!filePath)
 		return (int)0x80801006;
 	memset(filePath, 0, 200);
-	result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
+	result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
 	if (result < 0)
 		goto freeFilePath;
 	snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
@@ -1948,7 +1948,7 @@ int appmgrSetSaveDataSlotStatus(unsigned int slotId, int status,
 	return (int)0x80801089;
 }
 
-int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operation,
+int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 				    const char *const *directories,
 				    const SceOff *originalSizes,
 				    const int *createdFiles,
@@ -1956,7 +1956,7 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 				    SceUInt32 *requiredSizeKiB)
 {
 	SceIoStat stat;
-	SceAppUtilSaveDataFile file;
+	SceAppUtilSaveDataDataSaveItem file;
 	SceAllocOpt option;
 	SceOff totalSize;
 	char path[210];
@@ -1968,11 +1968,11 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 
 	memset(&stat, 0, sizeof(stat));
 	index = 0;
-	if (operation->fileNum) {
+	if (operation->itemNum) {
 		do {
 			memset(&file, 0, sizeof(file));
 			result = SceSysmemForDriver_BC996A7A(&file,
-					operation->files + index, sizeof(file));
+					operation->items + index, sizeof(file));
 			if (result != 0)
 				return result;
 			option.mmapKind = 0;
@@ -1985,7 +1985,7 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 			if (!filePath)
 				return (int)0x80801006;
 			memset(filePath, 0, 200);
-			result = SceSysmemForDriver_DB3EC244(filePath, file.filePath, 199);
+			result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
 			if (result < 0) {
 				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 				return result;
@@ -2012,7 +2012,7 @@ int appmgrRollbackSaveDataOperation(const AppmgrSaveDataOperationParam *operatio
 				*requiredSizeKiB += totalSize / 1024;
 			}
 			index++;
-		} while (operation->fileNum > index);
+		} while (operation->itemNum > index);
 	}
 	for (index = 0; index < 20; index++) {
 		if (directories[index]) {

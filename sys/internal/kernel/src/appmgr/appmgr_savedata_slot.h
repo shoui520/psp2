@@ -2,7 +2,7 @@
 #define APPMGR_SAVEDATA_SLOT_H
 
 #include <psp2kern/types.h>
-#include <psp2/appmgr.h>
+#include <appmgr/appmgr_savedata.h>
 #include <stddef.h>
 
 typedef struct AppmgrSaveDataSlotInitParam {
@@ -10,7 +10,7 @@ typedef struct AppmgrSaveDataSlotInitParam {
 	SceUInt32 slotCount;
 	SceUInt32 flags;
 	SceUInt8 unused[32];
-	char mountPoint[16];
+	SceAppUtilMountPoint mountPoint;
 } AppmgrSaveDataSlotInitParam;
 
 typedef struct AppmgrSaveDataSlotFileHeader {
@@ -38,55 +38,12 @@ typedef struct AppmgrSaveDataSlotFileInfo {
 	SceUInt8 occupied[512];
 } AppmgrSaveDataSlotFileInfo;
 
-typedef struct SceAppMgrSaveDataSlotParam {
-	SceInt32 status;
-	char title[64];
-	char subTitle[128];
-	char detail[512];
-	char iconPath[64];
-	SceInt32 userParam;
-	SceUInt32 sizeKiB;
-	SceDateTime modifiedTime;
-	SceUInt8 reserved[228];
-} SceAppMgrSaveDataSlotParam;
-
-typedef struct AppmgrSaveDataSlotKernelParam {
-	SceSize size;
-	SceUInt32 slotId;
-	SceAppMgrSaveDataSlotParam param;
-	char mountPoint[16];
-} AppmgrSaveDataSlotKernelParam;
-
 typedef struct AppmgrSaveDataSlotStatusParam {
 	SceSize size;
 	SceUInt32 slotId;
 	SceInt32 status;
-	char mountPoint[16];
+	SceAppUtilMountPoint mountPoint;
 } AppmgrSaveDataSlotStatusParam;
-
-typedef struct AppmgrSaveDataOperationParam {
-	SceSize size;
-	SceUInt32 slotId;
-	SceAppMgrSaveDataSlotParam *slotParam;
-	SceUInt8 unused[32];
-	SceAppUtilSaveDataFile *files;
-	SceUInt32 fileNum;
-	SceAppUtilSaveDataMountPoint mountPoint;
-	SceUInt32 flags;
-	SceUInt32 requiredSizeKiB;
-} AppmgrSaveDataOperationParam;
-
-_Static_assert(sizeof(AppmgrSaveDataOperationParam) == 76,
-	       "native save-data operation arguments");
-_Static_assert(offsetof(AppmgrSaveDataOperationParam, slotId) == 4 &&
-	       offsetof(AppmgrSaveDataOperationParam, slotParam) == 8 &&
-	       offsetof(AppmgrSaveDataOperationParam, unused) == 12 &&
-	       offsetof(AppmgrSaveDataOperationParam, files) == 44 &&
-	       offsetof(AppmgrSaveDataOperationParam, fileNum) == 48 &&
-	       offsetof(AppmgrSaveDataOperationParam, mountPoint) == 52 &&
-	       offsetof(AppmgrSaveDataOperationParam, flags) == 68 &&
-	       offsetof(AppmgrSaveDataOperationParam, requiredSizeKiB) == 72,
-	       "native save-data operation member offsets");
 
 _Static_assert(sizeof(AppmgrSaveDataSlotStatusParam) == 28,
 	       "save-data slot status arguments");
@@ -155,31 +112,6 @@ _Static_assert(offsetof(SceAppMgrAppInfoCache, totalWrittenKiB) == 744,
 	       "total write counter");
 _Static_assert(offsetof(SceAppMgrAppInfoCache, unused) == 748,
 	       "unused application information cache range");
-
-_Static_assert(sizeof(SceAppMgrSaveDataSlotParam) == 1024,
-	       "native save-data slot parameters");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, title) == 4,
-	       "save-data slot title");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, subTitle) == 68,
-	       "save-data slot subtitle");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, detail) == 196,
-	       "save-data slot detail");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, iconPath) == 708,
-	       "save-data slot icon path");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, userParam) == 772,
-	       "save-data slot user parameter");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, sizeKiB) == 776,
-	       "save-data slot size");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, modifiedTime) == 780,
-	       "save-data slot modification time");
-_Static_assert(offsetof(SceAppMgrSaveDataSlotParam, reserved) == 796,
-	       "save-data slot reserved range");
-_Static_assert(sizeof(AppmgrSaveDataSlotKernelParam) == 1048,
-	       "kernel save-data slot arguments");
-_Static_assert(offsetof(AppmgrSaveDataSlotKernelParam, param) == 8,
-	       "kernel save-data slot parameters");
-_Static_assert(offsetof(AppmgrSaveDataSlotKernelParam, mountPoint) == 1032,
-	       "kernel save-data slot mount point");
 
 _Static_assert(sizeof(AppmgrSaveDataSlotFileInfo) == 552,
 	       "save-data slot file information");

@@ -11,6 +11,7 @@
 #include "appmgr_device.h"
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
+#include <appmgr/appmgr_savedata.h>
 
 extern int appmgrSystemParamGetIntSyscall(int parameter, int *value);
 extern int appmgrSystemParamGetStringSyscall(int parameter, char *value, SceSize size);
@@ -127,7 +128,7 @@ STUB_FUNC(int, sceAppMgrCloudDataDstCreateMount, (const void *a, void *b))
 STUB_FUNC(int, SceAppMgrForDriver_B53FB98E, (const char *path, void *a))
 STUB_FUNC(int, SceAppMgrForDriver_C4EF95BB, (const void *item))
 STUB(SceAppMgrForDriver_CE356B2D)
-STUB(SceAppMgrForDriver_D137D486)
+STUB_FUNC(int, SceAppMgrForDriver_D137D486, (SceAppMgrSaveDataSlot *slot))
 STUB_FUNC(int, SceAppMgrForDriver_D2541B4A, (SceUInt32 request, void *bootParam))
 STUB(sceAppMgrSaveSafeMemory)
 STUB_FUNC(int, sceAppMgrKillAppForDebugger, (SceUID pid))

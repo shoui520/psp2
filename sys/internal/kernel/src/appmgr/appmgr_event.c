@@ -6,7 +6,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include "app_state_internal.h"
 #include "appmgr_internal_util.h"
 #include "appmgr_event.h"
@@ -242,7 +242,7 @@ int _sendParam(const char *name, const AppmgrParamQueueEntry *entry,
 			sourceProcessId = app->launchSourceProcessId;
 			memset(&event, 0, sizeof(event));
 			event.systemEvent = 0x20000004;
-			memcpy(event.reserved, &sourceProcessId, sizeof(sourceProcessId));
+			memcpy(event.data.reserved, &sourceProcessId, sizeof(sourceProcessId));
 			result = _appListPushEvent(app, &event);
 			if (result != 0) {
 #if FW_DEBUG

@@ -1,9 +1,18 @@
 /* Application query and event syscall dispatch. */
 
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
 
+extern int sceAppMgrGetNameById(SceUID pid, char *appName);
+extern int sceAppMgrGetIdByName(SceUID *pid, const char *appName);
+extern SceUID sceAppMgrGetProcessIdByAppIdForShell(SceInt32 appId);
+extern SceInt32 sceAppMgrGetAppInfo(const char *appName, SceAppMgrAppState *output);
+extern int sceAppMgrReceiveSystemEvent(SceAppMgrSystemEvent *event);
+extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
+extern SceInt32 _sceAppMgrGetAppState(SceAppMgrAppState *appState,
+				      SceUInt32 sizeofSceAppMgrAppState, SceUInt32 buildVersion);
+extern int sceAppMgrGetRunningAppIdListForShell(SceInt32 *appIds, int count);
 extern int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
 extern int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
 

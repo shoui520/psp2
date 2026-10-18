@@ -3,6 +3,11 @@
 #include <psp2kern/types.h>
 #include <stdint.h>
 
+/* SceAppMgr's error codes beyond the SDK's (appmgr.h): the henkaku wiki's and vitasdk's names */
+#define SCE_APPMGR_ERROR_INVALID_PARAM_SFO	0x80800015
+#define SCE_APPMGR_ERROR_PARAM			0x80802002
+#define SCE_APPMGR_ERROR_NOEXEC			0x8080201F	/* the caller may not do this */
+
 int _sceAppMgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, const void *userArguments);
 int _sceAppMgrAppParamGetInt(int pid, int param, int *value);
 int _sceAppMgrGetAppMgrState(void *appMgrState);

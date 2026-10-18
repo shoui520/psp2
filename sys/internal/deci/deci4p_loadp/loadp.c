@@ -24,11 +24,6 @@
 #include <kernel/error.h>
 #include <alloca.h>
 
-/* SceAppMgr (henkaku wiki SceAppMgr, vitasdk psp2/appmgr.h) */
-#define SCE_APPMGR_ERROR_INVALID_PARAM_SFO	0x80800015
-#define SCE_APPMGR_ERROR_PARAM			0x80802002
-#define SCE_APPMGR_ERROR_NOEXEC			0x8080201f
-
 #define LOADP_DIPSW				0xc2
 #define LOADP_DIPSW_NO_AUTO_ENABLE		0xc3
 

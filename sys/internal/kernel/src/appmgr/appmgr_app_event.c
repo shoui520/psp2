@@ -5,7 +5,7 @@
 #include <intrmgr/syscall.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2/appmgr.h>
+#include <appmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_app_event.h"
@@ -15,6 +15,7 @@ extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern int dumpBgmState(void);
 extern struct AppState *appmgrFindCurrentApp(struct AppState *apps);
+extern int sceAppMgrAppParamGetString(int pid, int param, char *string, SceSize length);
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo appEventMutexPanicInfo = {

@@ -1,11 +1,9 @@
 /* Save-data slot syscall dispatch; original source filename unavailable. */
 
-#include <psp2/appmgr.h>
+#include <appmgr/appmgr_savedata.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include <appmgr/appmgr.h>
 
-extern int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *slot);
-extern int SceAppMgrForDriver_D137D486(SceAppMgrSaveDataSlot *slot);
 extern int appmgrSaveDataSlotFileGetParam(unsigned int slotId, void *param);
 
 int appmgrSaveDataSlotInitSyscall(void *slot)
