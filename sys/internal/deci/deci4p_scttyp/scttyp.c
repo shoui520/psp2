@@ -12,7 +12,7 @@
 #include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/uart.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -57,9 +57,9 @@ static int resumeHandler(void *args)
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == SCTTYP_CPU) {
-		kscePervasiveUartResetEnable(SCTTYP_UART);
-		kscePervasiveUartClockEnable(SCTTYP_UART);
-		kscePervasiveUartResetDisable(SCTTYP_UART);
+		ScePervasiveForDriver_788B6C61(SCTTYP_UART);
+		ScePervasiveForDriver_EFD084D8(SCTTYP_UART);
+		ScePervasiveForDriver_A7CE7DCC(SCTTYP_UART);
 		ret = SceUartForKernel_4C02AA05(SCTTYP_UART);
 		if (ret < 0) {
 			/* (returns with the core lock held) */
@@ -247,9 +247,9 @@ static int initThread(SceSize args, void *argp)
 		sceKernelExitThread(SCE_KERNEL_ERROR_INVALID_ARGUMENT);
 	}
 
-	kscePervasiveUartResetEnable(SCTTYP_UART);
-	kscePervasiveUartClockEnable(SCTTYP_UART);
-	kscePervasiveUartResetDisable(SCTTYP_UART);
+	ScePervasiveForDriver_788B6C61(SCTTYP_UART);
+	ScePervasiveForDriver_EFD084D8(SCTTYP_UART);
+	ScePervasiveForDriver_A7CE7DCC(SCTTYP_UART);
 	ret = SceUartForKernel_4C02AA05(SCTTYP_UART);
 	if (ret < 0) {
 		SCTTYP_PRINTF(254, "UartChStart() failed (0x%08X)\n", ret);

@@ -15,7 +15,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <acmgr/acmgr.h>
 #include <processmgr/processmgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2common/fios2.h>
 #include <sysmem/compiler.h>

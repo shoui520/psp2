@@ -11,16 +11,15 @@
  */
 
 #include <elf.h>
-#include <psp2kern/display.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <coredump/coredump.h>
 #include <sysmem/debug.h>
 #include <display/display.h>
@@ -190,7 +189,7 @@ static void *crashdumpAddNote(SceUInt32 type, const void *data, SceSize size)
 /* name unknown: physical base of the reserved window, by SoC revision */
 static inline SceUInt32 crashdumpPhysBase(void)
 {
-	SceUInt32 rev = kscePervasiveGetSoCRevision();
+	SceUInt32 rev = ScePervasiveForDriver_714EEFB7();
 
 	if ((rev & 0x1ff00) == 0)
 		return (int)rev < 0 ? 0x58000000 : 0x60000000;
@@ -426,7 +425,7 @@ static inline void crashdumpMarkScreen(void)
 	SceUInt32 x, y, *px;
 
 	fb.size = sizeof(fb);
-	if (ksceDisplayGetFrameBufInternal(ksceDisplayGetPrimaryHead(), 0, &fb, 1) < 0)
+	if (SceDisplayForDriver_19F94C63(SceDisplayForDriver_C8E554C5(), 0, &fb, 1) < 0)
 		return;
 	for (y = 0; y < fb.height; y++) {
 		px = (SceUInt32 *)fb.base + y * fb.pitch;
@@ -460,7 +459,7 @@ int module_start(SceSize args, void *argp)
 	    memcmp(rec, s_magic, sizeof(s_magic)) != 0 || rec->version != CRASHDUMP_RECORD_VER)
 		goto out;
 
-	if (ksceRtcGetCurrentClockLocalTime(&t) < 0)
+	if (sceRtcGetCurrentClockLocalTime(&t) < 0)
 		memset(&t, 0, sizeof(t));
 	if (!SceSblAIMgrForDriver_274663A0()) {
 		if (!SceSblAIMgrForDriver_F4B98F66() && !SceQafMgrForDriver_382C71E8()) {

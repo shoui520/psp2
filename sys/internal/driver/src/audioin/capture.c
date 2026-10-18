@@ -177,7 +177,7 @@ int __attribute__((noreturn)) audioInCaptureThread(SceSize unusedSize,
 								SceCpuForDriver_BC248C30(&g_audioInRequestFlags, 0x10000);
 							}
 							configureAudioInCaptureBuffers();
-							ksceSysconGetHardwareInfo2(hardwareInfo);
+							SceSysconForDriver_965C68C3(hardwareInfo);
 							configureAudioInAec(&g_audioInAecContext,
 								(hardwareInfo[0] & 4) ? g_audioInInternalAecControl :
 								g_audioInAlternateAecControl);

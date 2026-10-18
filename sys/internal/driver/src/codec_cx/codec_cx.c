@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/lowio/i2c.h>
+#include <lowio/i2c.h>
 #include <codec/codec.h>
 #include <sysmem/sysevent_ids.h>
 #include "registers.h"
@@ -34,7 +34,7 @@ static int writeScript(const short *script)
 			if (script[0] != script[-2] + 1)
 				break;
 		} while (count != 16);
-		ret = ksceI2cTransferWrite(0, 0x66, buffer, count + 2);
+		ret = SceI2cForDriver_CA94A759(0, 0x66, buffer, count + 2);
 	} while (ret >= 0 && script[0] != -1);
 	return ret;
 }
@@ -46,7 +46,7 @@ int SceCodecForDriver_23BF8884(unsigned int reg, unsigned int value)
 	buffer[0] = reg >> 8;
 	buffer[1] = reg;
 	buffer[2] = value;
-	return ksceI2cTransferWrite(0, 0x66, buffer, 3);
+	return SceI2cForDriver_CA94A759(0, 0x66, buffer, 3);
 }
 
 int SceCodecForDriver_4FA36937(unsigned int reg)
@@ -56,7 +56,7 @@ int SceCodecForDriver_4FA36937(unsigned int reg)
 
 	command[0] = reg >> 8;
 	command[1] = reg;
-	ret = ksceI2cTransferWriteRead(0, 0x66, command, 2, 0x66, &value, 1);
+	ret = SceI2cForDriver_0A40B7BF(0, 0x66, command, 2, 0x66, &value, 1);
 	return ret < 0 ? ret : value;
 }
 

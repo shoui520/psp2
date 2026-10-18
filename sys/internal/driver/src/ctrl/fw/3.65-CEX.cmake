@@ -125,9 +125,9 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_E0489831
 	sceKernelRegisterProcEventHandler
 	SceSysconForDriver_901D6CD4
-	ksceSysconCmdExecAsync
-	ksceSysconGetBaryonVersion
-	ksceDisplayWaitVblankStart
+	SceSysconForDriver_C2224E82
+	SceSysconForDriver_FF86F4C5
+	SceDisplayForDriver_984C27E7
 	SceHdmiForDriver_05174BC2
 	sceKernelGetProcessSelfAuthInfo
 )

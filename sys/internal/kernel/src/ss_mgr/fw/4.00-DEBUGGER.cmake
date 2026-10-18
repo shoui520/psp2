@@ -143,12 +143,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
 	sceKernelCreateMutex
-	ksceKernelDmaOpSetupDirect
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpFree
-	ksceKernelDmaOpAssign
+	_DmaOpSetupDirect
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpFree
+	sceKernelDmaOpAssign
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
 	ksceSblAuthMgrSetDmac5Key
@@ -164,15 +164,15 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	ScePmMgrForDriver_2AC815A2
-	ksceSysconNvsWriteData
+	SceSysconForDriver_10C9657A
 	SceSysconForDriver_63683B9B
-	ksceSysconNvsSetRunMode
-	ksceSysconNvsReadData
+	SceSysconForDriver_81A6060D
+	SceSysconForDriver_ACAFA2B8
 	SceSysconForDriver_D2F456DC
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
-	ksceSysconGetBaryonVersion
-	ksceRtcGetCurrentSecureTick
+	SceSysconForDriver_FF86F4C5
+	SceRtcForDriver_401C0954
 	ksceIdStorageReadLeaf
 )
 set(MODULE_IMPORT_VARS

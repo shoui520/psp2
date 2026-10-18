@@ -240,8 +240,8 @@ _Static_assert(sizeof(struct SysconControl) == 0x27c,
 extern struct SysconControl s_sysconControl;
 
 /* battery.c */
-int ksceSysconGetBaryonVersion(void);
-int ksceSysconGetHardwareInfo(void);
-int ksceSysconIsDownLoaderMode(void);
+int SceSysconForDriver_FF86F4C5(void);
+int SceSysconForDriver_CBD6D8BC(void);
+int SceSysconForDriver_9ADD60D2(void);
 
 #endif

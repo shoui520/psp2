@@ -730,7 +730,7 @@ int module_start(SceSize length, void *arg)
 
 	(void)length;
 	(void)arg;
-	hardware = ksceSysconGetHardwareInfo();
+	hardware = SceSysconForDriver_CBD6D8BC();
 	if (SceSblAIMgrForDriver_D78B04A2() && SceSblAIMgrForDriver_4273B97B() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));

@@ -141,13 +141,13 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler
-	ksceI2cTransferWriteRead
-	ksceI2cTransferWrite
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
-	ksceIftuCsc
-	ksceSysconGetHardwareInfo
+	SceI2cForDriver_0A40B7BF
+	SceI2cForDriver_CA94A759
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
+	SceIftuForDriver_67E37EFC
+	SceSysconForDriver_CBD6D8BC
 	SceCsiForDriver_10545393
 	SceCsiForDriver_2AFEA1B0
 	SceCsiForDriver_4AE39F26
@@ -157,7 +157,7 @@ set(MODULE_IMPORT_FUNCS
 	SceClockgenForDriver_06663ECA
 	SceClockgenForDriver_82F39378
 	scePowerRegisterCallback
-	kscePowerSetCameraBusClockFrequency
+	ScePowerForDriver_C743E392
 	ScePowerForDriver_FE35B73D
 	ksceIdStorageLookup
 )

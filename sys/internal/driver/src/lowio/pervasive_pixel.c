@@ -72,7 +72,7 @@ static void PixelClockDelay(void)
 	}
 }
 
-int kscePervasiveDsiSetPixelClock(unsigned head, uint32_t clock)
+int ScePervasiveForDriver_91C80C41(unsigned head, uint32_t clock)
 {
 	volatile ScePervasivePixelClockRegisters *regs;
 	const PixelClockSetting *setting, *current;

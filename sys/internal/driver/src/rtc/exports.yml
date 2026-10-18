@@ -12,35 +12,35 @@ SceRtc:
       nid: 0x0351D827
       functions:
         - SceRtcForDriver_09AF419B: 0x09AF419B
-        - ksceRtcGetAccumulativeTime: 0x0A86FB04
+        - SceRtcForDriver_0A86FB04: 0x0A86FB04
         - SceRtcForDriver_0CB72FAF: 0x0CB72FAF
         - SceRtcForDriver_0E7091D6: 0x0E7091D6
         - SceRtcForDriver_0EBB3F12: 0x0EBB3F12
         - SceRtcForDriver_0F800878: 0x0F800878
         - SceRtcForDriver_0F9E02EF: 0x0F9E02EF
-        - ksceRtcSetCurrentNetworkTick: 0x162E486E
+        - SceRtcForDriver_162E486E: 0x162E486E
         - SceRtcForDriver_1DD4C5B6: 0x1DD4C5B6
-        - ksceRtcFormatRFC2822LocalTime: 0x1F7FC209
+        - SceRtcForDriver_1F7FC209: 0x1F7FC209
         - SceRtcForDriver_24209FBF: 0x24209FBF
         - SceRtcForDriver_32E50C36: 0x32E50C36
-        - ksceRtcFormatRFC3339LocalTime: 0x35925318
-        - ksceRtcGetLastReincarnatedTick: 0x3D614A9A
-        - ksceRtcGetCurrentAdNetworkTick: 0x3E3C09A0
-        - ksceRtcGetCurrentSecureTick: 0x401C0954
-        - ksceRtcGetCurrentRetainedNetworkTick: 0x40B4BCFF
-        - ksceRtcConvertTickToDateTime: 0x42A0DFCB
-        - ksceRtcConvertDateTimeToUnixTime: 0x497B5DC9
-        - ksceRtcRegisterCallback: 0x5220870D
+        - SceRtcForDriver_35925318: 0x35925318
+        - SceRtcForDriver_3D614A9A: 0x3D614A9A
+        - SceRtcForDriver_3E3C09A0: 0x3E3C09A0
+        - SceRtcForDriver_401C0954: 0x401C0954
+        - SceRtcForDriver_40B4BCFF: 0x40B4BCFF
+        - SceRtcForDriver_42A0DFCB: 0x42A0DFCB
+        - SceRtcForDriver_497B5DC9: 0x497B5DC9
+        - SceRtcForDriver_5220870D: 0x5220870D
         - SceRtcForDriver_6965E5DF: 0x6965E5DF
         - SceRtcForDriver_6F96FAA5: 0x6F96FAA5
         - sceRtcSetCurrentTick: 0x70A78CD2
-        - ksceRtcSetCurrentSecureTick: 0x7D431C87
-        - ksceRtcGetCurrentClockLocalTime: 0x7DC0DF93
-        - ksceRtcSetSecureAlarmTick: 0x8333790D
+        - SceRtcForDriver_7D431C87: 0x7D431C87
+        - sceRtcGetCurrentClockLocalTime: 0x7DC0DF93
+        - SceRtcForDriver_8333790D: 0x8333790D
         - SceRtcForDriver_85F3026C: 0x85F3026C
-        - ksceRtcGetLastAdjustedTick: 0x8A987573
+        - SceRtcForDriver_8A987573: 0x8A987573
         - SceRtcForDriver_9097EF0D: 0x9097EF0D
-        - ksceRtcUnregisterCallback: 0x9546C68B
+        - SceRtcForDriver_9546C68B: 0x9546C68B
         - SceRtcForDriver_9C8AF264: 0x9C8AF264
         - SceRtcForDriver_A0D7899A: 0xA0D7899A
         - SceRtcForDriver_A1F41AE2: 0xA1F41AE2
@@ -48,33 +48,33 @@ SceRtc:
         - SceRtcForDriver_A7236656: 0xA7236656
         - SceRtcForDriver_A82AC5B3: 0xA82AC5B3
         - SceRtcForDriver_A8CDB6BD: 0xA8CDB6BD
-        - ksceRtcGetCurrentClock: 0xA930CD1A
-        - ksceRtcSetCurrentDebugNetworkTick: 0xAAB6053F
+        - SceRtcForDriver_A930CD1A: 0xA930CD1A
+        - SceRtcForDriver_AAB6053F: 0xAAB6053F
         - SceRtcForDriver_ABA035B7: 0xABA035B7
-        - ksceRtcSetConf: 0xACFE5A9F
-        - ksceRtcConvertLocalTimeToUtc: 0xAD2F3544
+        - SceRtcForDriver_ACFE5A9F: 0xACFE5A9F
+        - SceRtcForDriver_AD2F3544: 0xAD2F3544
         - SceRtcForDriver_ADF63D7C: 0xADF63D7C
         - SceRtcForDriver_BA14600F: 0xBA14600F
-        - ksceRtcFormatRFC2822: 0xBA3415F8
-        - ksceRtcGetSecureAlarmTick: 0xBD53731C
-        - ksceRtcGetCurrentDebugNetworkTick: 0xC141632A
+        - SceRtcForDriver_BA3415F8: 0xBA3415F8
+        - SceRtcForDriver_BD53731C: 0xBD53731C
+        - SceRtcForDriver_C141632A: 0xC141632A
         - SceRtcForDriver_C2DC38D9: 0xC2DC38D9
-        - ksceRtcConvertUtcToLocal: 0xC6E03DD4
-        - ksceRtcGetAlarmTick: 0xC838275A
-        - ksceRtcIsAlarmed: 0xCD295F0C
+        - SceRtcForDriver_C6E03DD4: 0xC6E03DD4
+        - SceRtcForDriver_C838275A: 0xC838275A
+        - SceRtcForDriver_CD295F0C: 0xCD295F0C
         - SceRtcForDriver_CE51C2A1: 0xCE51C2A1
-        - ksceRtcRegisterSecureAlarmCallback: 0xCF84DFC0
-        - ksceRtcFormatRFC3339: 0xD32AC698
+        - SceRtcForDriver_CF84DFC0: 0xCF84DFC0
+        - SceRtcForDriver_D32AC698: 0xD32AC698
         - sceRtcSetAlarmTick: 0xD610C646
         - SceRtcForDriver_DE9F4515: 0xDE9F4515
-        - ksceRtcGetCurrentTick: 0xDEC408D4
-        - ksceRtcIsSecureAlarmed: 0xE39F2ABE
+        - SceRtcForDriver_DEC408D4: 0xDEC408D4
+        - SceRtcForDriver_E39F2ABE: 0xE39F2ABE
         - SceRtcForDriver_EB27F94E: 0xEB27F94E
-        - ksceRtcUnregisterSecureAlarmCallback: 0xEDDC2325
+        - SceRtcForDriver_EDDC2325: 0xEDDC2325
         - SceRtcForDriver_F139E359: 0xF139E359
-        - ksceRtcGetCurrentNetworkTick: 0xF1517B38
+        - SceRtcForDriver_F1517B38: 0xF1517B38
         - SceRtcForDriver_F4E23829: 0xF4E23829
-        - ksceRtcGetCurrentGpsTick: 0xF69B610F
+        - SceRtcForDriver_F69B610F: 0xF69B610F
         - SceRtcForDriver_FFD7A04F: 0xFFD7A04F
     SceRtc:
       syscall: true

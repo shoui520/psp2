@@ -6,7 +6,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <string.h>
 
 static struct MsproalErrorRecord gMsproalErrorRecords[16];
@@ -45,7 +45,7 @@ int MsproalUserSetBusClock(int busMode)
 		clock = 5;
 	else
 		clock = 6;
-	return kscePervasiveMsifSetClock(clock);
+	return ScePervasiveForDriver_64ABE589(clock);
 }
 
 void MsproalUserCompleteTransfer(struct MsproalHandle *handle)

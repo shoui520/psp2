@@ -414,13 +414,13 @@ static int initializeUsb(struct SceUsbEtherSmscContext *a)
 	s_driver.probe = probeDevice;
 	s_driver.attach = onAttach;
 	s_driver.detach = detachDevice;
-	if (ksceSysconIsDownLoaderMode())
+	if (SceSysconForDriver_9ADD60D2())
 		return SMSC_ERROR_NOT_READY;
 	if (SceSblAIMgrForDriver_71608CA3()) {
-		ksceSysconCtrlDolceUsbPower(1);
-		ksceSysconCtrlDeviceReset(0x20, 1);
+		SceSysconForDriver_3274A925(1);
+		SceSysconForDriver_40FF3898(0x20, 1);
 	}
-	hardware = ksceSysconGetHardwareInfo();
+	hardware = SceSysconForDriver_CBD6D8BC();
 	if ((hardware & 0xff0000) != 0x100000)
 		return ksceUsbdRegisterDriver(&s_driver);
 	ret = ksceUsbServMacSelect(2, 0);
@@ -1317,7 +1317,7 @@ int module_start(unsigned int arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	hardware = ksceSysconGetHardwareInfo();
+	hardware = SceSysconForDriver_CBD6D8BC();
 	if (SceSblAIMgrForDriver_D78B04A2() && !(hardware & 0x80))
 		return 0;
 	memset(a, 0, sizeof(*a));

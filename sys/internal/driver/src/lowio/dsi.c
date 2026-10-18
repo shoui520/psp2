@@ -8,6 +8,7 @@
 #include <sysmem/sysclib.h>
 #include "dsi_regs.h"
 #include <sysmem/sysevent.h>
+#include <lowio/pervasive.h>
 
 #define DSI_ERROR_HEAD		((int)0x803f0600)
 #define DSI_ERROR_VIC		((int)0x803f0601)
@@ -35,9 +36,6 @@
 #define DSI_SETUP_COMMAND	0x83003c23
 #define DSI_SETUP_COMMAND_3LANE	0x83003c25
 
-uint32_t kscePervasiveGetSoCRevision(void);
-uint32_t ScePervasiveForDriver_350BF570(unsigned head);
-uint32_t ScePervasiveForDriver_F1908D3C(unsigned head);
 uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 
 typedef struct DsiContext {
@@ -374,7 +372,7 @@ static __attribute__((noinline)) int DsiInit(void)
 	sceKernelRegisterSysEventHandler("SceDsi", DsiSysEvent, NULL);
 	s_dsi[0].continuousClock = 0;
 	s_dsi[1].continuousClock = 1;
-	ret = kscePervasiveGetSoCRevision();
+	ret = ScePervasiveForDriver_714EEFB7();
 	s_dsi[0].output = 0;
 	s_dsi[1].lanes = 3;
 	s_dsiPhyOledCurrent = (ret & 0x1ff00) > 0xff ? s_dsiPhyOled : s_dsiPhyOledEs;
@@ -423,7 +421,7 @@ int SceDsiForDriver_F2921E29(unsigned head, unsigned output)
 	return 0;
 }
 
-int ksceDsiSetLanesAndPixelSize(unsigned head, unsigned lanes, unsigned pixelSize)
+int SceDsiForDriver_78E6E3CF(unsigned head, unsigned lanes, unsigned pixelSize)
 {
 	if (head > 1)
 		return DSI_ERROR_HEAD;
@@ -439,7 +437,7 @@ int ksceDsiSetLanesAndPixelSize(unsigned head, unsigned lanes, unsigned pixelSiz
 	return 0;
 }
 
-int ksceDsiGetVicResolution(unsigned vic, int *width, int *height)
+int SceDsiForDriver_B3A70C05(unsigned vic, int *width, int *height)
 {
 	const DsiVicMode *mode = DsiFindVic(vic);
 	int w;
@@ -463,7 +461,7 @@ int ksceDsiGetVicResolution(unsigned vic, int *width, int *height)
 	return 0;
 }
 
-int ksceDsiSetVic(unsigned head, unsigned vic)
+int SceDsiForDriver_97BFEA76(unsigned head, unsigned vic)
 {
 	const DsiVicMode *mode;
 
@@ -477,7 +475,7 @@ int ksceDsiSetVic(unsigned head, unsigned vic)
 	return 0;
 }
 
-int ksceDsiGetPixelClock(unsigned head)
+int SceDsiForDriver_4DF9E924(unsigned head)
 {
 	const DsiVicMode *mode;
 
@@ -754,7 +752,7 @@ static inline __attribute__((always_inline)) unsigned DsiInterlacedProgram(
 	return p - program;
 }
 
-int ksceDsiEnableHead(unsigned head)
+int SceDsiForDriver_5BE5AA9B(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -777,7 +775,7 @@ int ksceDsiEnableHead(unsigned head)
 	mode = ctx->mode;
 	regs->interruptEnable = 0;
 	regs->videoProgramEnable = 1;
-	if ((kscePervasiveGetSoCRevision() & 0x1ff00) > 0xff) {
+	if ((ScePervasiveForDriver_714EEFB7() & 0x1ff00) > 0xff) {
 		regs->laneConfig[0] = (regs->laneConfig[0] & ~3U) | 2;
 		regs->laneConfig[1] = (regs->laneConfig[1] & ~3U) | 2;
 		regs->laneConfig[2] = (regs->laneConfig[2] & ~3U) | 2;
@@ -822,7 +820,7 @@ int ksceDsiEnableHead(unsigned head)
 	return 0;
 }
 
-int ksceDsiDisableHead(unsigned head)
+int SceDsiForDriver_114D1413(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -858,7 +856,7 @@ int ksceDsiDisableHead(unsigned head)
 
 static const uint32_t s_dsiStartModes[4] = {2, 2, 3, 4};
 
-int ksceDsiStartDisplay(unsigned head, unsigned start)
+int SceDsiForDriver_C2E85919(unsigned head, unsigned start)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -980,7 +978,7 @@ int ksceDsiStartDisplay(unsigned head, unsigned start)
 	return 0;
 }
 
-int ksceDsiSendBlankingPacket(unsigned head)
+int SceDsiForDriver_7640F607(unsigned head)
 {
 	DsiContext *ctx;
 	volatile SceDsiRegisters *regs;
@@ -1029,10 +1027,10 @@ static int DsiSysEvent(int resume, int eventId, void *args, void *opt)
 	(void)args;
 	(void)opt;
 	if (resume == 0 && eventId == 0x4004) {
-		ksceDsiSendBlankingPacket(0);
-		ksceDsiSendBlankingPacket(1);
-		ksceDsiDisableHead(0);
-		ksceDsiDisableHead(1);
+		SceDsiForDriver_7640F607(0);
+		SceDsiForDriver_7640F607(1);
+		SceDsiForDriver_114D1413(0);
+		SceDsiForDriver_114D1413(1);
 	}
 	return 0;
 }
@@ -1046,7 +1044,7 @@ int SceDsiForDriver_6F8029A1(unsigned head)
 	return (s_dsi[head].registers->position >> 16 & 0x1fff) - 1;
 }
 
-int ksceDsiGenericShortWrite(unsigned head, int parameter0, int parameter1)
+int SceDsiForDriver_89C00D2F(unsigned head, int parameter0, int parameter1)
 {
 	uint32_t packet;
 
@@ -1059,7 +1057,7 @@ int ksceDsiGenericShortWrite(unsigned head, int parameter0, int parameter1)
 	return DsiShortWrite(head, packet);
 }
 
-int ksceDsiDcsShortWrite(unsigned head, int command, int parameter)
+int SceDsiForDriver_BA6BC89F(unsigned head, int command, int parameter)
 {
 	uint32_t packet;
 
@@ -1070,7 +1068,7 @@ int ksceDsiDcsShortWrite(unsigned head, int command, int parameter)
 	return DsiShortWrite(head, packet);
 }
 
-int ksceDsiGenericReadRequest(unsigned head, int parameter, void *data, unsigned size)
+int SceDsiForDriver_98120684(unsigned head, int parameter, void *data, unsigned size)
 {
 	uint32_t packet;
 
@@ -1081,7 +1079,7 @@ int ksceDsiGenericReadRequest(unsigned head, int parameter, void *data, unsigned
 	return DsiRead(head, packet, data, size);
 }
 
-int ksceDsiDcsRead(unsigned head, int command, void *data, unsigned size)
+int SceDsiForDriver_3FB0DF1F(unsigned head, int command, void *data, unsigned size)
 {
 	return DsiRead(head, (command << 8 & 0xffff) | 0x06, data, size);
 }

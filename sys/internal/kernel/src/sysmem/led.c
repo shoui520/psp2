@@ -10,7 +10,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/gpio_regs.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 
 #define LED_GPO_SHIFT			16
 #define LED_GPO_BITS			0xff0000
@@ -109,7 +109,7 @@ void sceDebugLedInvokeHandle0(int a1, int a2, int a3, int a4)
 /* the LED outputs on, before anything is mapped */
 int LedModuleStart(void)
 {
-	kscePervasiveGpioClockEnable();
+	ScePervasiveForDriver_2F195C97();
 	s_ledRegs->portMode |= LED_GPO_BITS;
 	s_ledRegs->enable = LED_GPO_BITS;
 	s_ledHandle1 = NULL;

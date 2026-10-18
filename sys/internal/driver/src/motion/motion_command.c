@@ -4,7 +4,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
 
@@ -128,7 +128,7 @@ int motionCommandWorker(SceSize args, void *argp)
 			uint32_t delay = motionWorker.delay;
 
 			if (motionCommand.resetRequired != 0) {
-				if (ksceGpioPortRead(0, 28) != 0 &&
+				if (SceGpioForDriver_129DF5AC(0, 28) != 0 &&
 					SceMotionDevForDriver_77BA3A04() == 0)
 					sceKernelDelayThread(16000);
 				if (SceMotionDevForDriver_77BA3A04() != 0) {
@@ -136,15 +136,15 @@ int motionCommandWorker(SceSize args, void *argp)
 					motionSpiTransfer(&scratch.request, response);
 					sceKernelDelayThread(2000);
 				} else {
-					if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
+					if (SceSysconForDriver_40FF3898(2, 0) >= 0) {
 						sceKernelDelayThread(2000);
-						ksceSysconCtrlDeviceReset(2, 1);
+						SceSysconForDriver_40FF3898(2, 1);
 						motionCommand.resetRequired = 0;
 					}
 					sceKernelDelayThread(80000);
 				}
 				motionCommand.resetRequired = 0;
-				ksceGpioPortRead(0, 28);
+				SceGpioForDriver_129DF5AC(0, 28);
 			}
 			result = motionSpiTransfer(request, response);
 			motionWorker.transferMode = 0;
@@ -160,12 +160,12 @@ int motionCommandWorker(SceSize args, void *argp)
 			continue;
 		}
 		case 2:
-			result = ksceSysconCtrlDeviceReset(2, 0);
+			result = SceSysconForDriver_40FF3898(2, 0);
 			if (result >= 0) {
 				motionSpiDeactivate();
 				result = motionSpiSuspend();
 				if (result >= 0) {
-					ksceGpioPortClear(0, 27);
+					SceGpioForDriver_F6310435(0, 27);
 					result = SceSysconForDriver_063425AE(0);
 					if (result >= 0) {
 						result = 0;
@@ -178,18 +178,18 @@ int motionCommandWorker(SceSize args, void *argp)
 			int activeLow = motionWorker.input.activeLow;
 
 			SceSysconForDriver_063425AE(1);
-			ksceGpioSetPortMode(0, 27, 0);
-			ksceGpioSetPortMode(0, 28, 1);
+			SceGpioForDriver_372022A4(0, 27, 0);
+			SceGpioForDriver_372022A4(0, 28, 1);
 			if (activeLow != 0)
-				ksceGpioPortClear(0, 27);
+				SceGpioForDriver_F6310435(0, 27);
 			else
-				ksceGpioPortSet(0, 27);
+				SceGpioForDriver_D454A584(0, 27);
 			result = motionSpiResume();
 			if (result >= 0) {
 				motionSpiActivate();
-				if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
+				if (SceSysconForDriver_40FF3898(2, 0) >= 0) {
 					sceKernelDelayThread(2000);
-					ksceSysconCtrlDeviceReset(2, 1);
+					SceSysconForDriver_40FF3898(2, 1);
 					motionCommand.resetRequired = 0;
 				}
 				sceKernelDelayThread(80000);
@@ -663,12 +663,12 @@ int motionPowerOff(void)
 {
 	int result;
 
-	result = ksceSysconCtrlDeviceReset(2, 0);
+	result = SceSysconForDriver_40FF3898(2, 0);
 	if (result >= 0) {
 		motionSpiDeactivate();
 		result = motionSpiSuspend();
 		if (result >= 0) {
-			ksceGpioPortClear(0, 27);
+			SceGpioForDriver_F6310435(0, 27);
 			result = SceSysconForDriver_063425AE(0);
 			if (result >= 0) {
 				motionCommand.resetRequired = 0;
@@ -684,18 +684,18 @@ int motionPowerOn(int activeLow)
 	int result;
 
 	SceSysconForDriver_063425AE(1);
-	ksceGpioSetPortMode(0, 27, 0);
-	ksceGpioSetPortMode(0, 28, 1);
+	SceGpioForDriver_372022A4(0, 27, 0);
+	SceGpioForDriver_372022A4(0, 28, 1);
 	if (activeLow != 0)
-		ksceGpioPortClear(0, 27);
+		SceGpioForDriver_F6310435(0, 27);
 	else
-		ksceGpioPortSet(0, 27);
+		SceGpioForDriver_D454A584(0, 27);
 	result = motionSpiResume();
 	if (result >= 0) {
 		motionSpiActivate();
-		if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
+		if (SceSysconForDriver_40FF3898(2, 0) >= 0) {
 			sceKernelDelayThread(2000);
-			ksceSysconCtrlDeviceReset(2, 1);
+			SceSysconForDriver_40FF3898(2, 1);
 			motionCommand.resetRequired = 0;
 		}
 		sceKernelDelayThread(80000);
@@ -713,16 +713,16 @@ int motionCommandInitialize(void)
 	result = SceSysconForDriver_063425AE(1);
 	if (result < 0)
 		return result;
-	ksceGpioSetPortMode(0, 27, 0);
-	ksceGpioSetPortMode(0, 28, 1);
+	SceGpioForDriver_372022A4(0, 27, 0);
+	SceGpioForDriver_372022A4(0, 28, 1);
 	result = motionSpiInitialize(6, 500, 59, 0);
 	if (result < 0)
 		return result;
-	ksceGpioPortSet(0, 27);
+	SceGpioForDriver_D454A584(0, 27);
 	motionSpiActivate();
-	if (ksceSysconCtrlDeviceReset(2, 0) >= 0) {
+	if (SceSysconForDriver_40FF3898(2, 0) >= 0) {
 		sceKernelDelayThread(2000);
-		ksceSysconCtrlDeviceReset(2, 1);
+		SceSysconForDriver_40FF3898(2, 1);
 		motionCommand.resetRequired = 0;
 	}
 	motionWorker.thread = 0;
@@ -775,8 +775,8 @@ int motionQueuePowerOn(int activeLow,
 int motionSetActivePolarity(int activeLow)
 {
 	if (activeLow != 0)
-		return ksceGpioPortClear(0, 27);
-	return ksceGpioPortSet(0, 27);
+		return SceGpioForDriver_F6310435(0, 27);
+	return SceGpioForDriver_D454A584(0, 27);
 }
 
 int motionReleaseReset(int pulse)
@@ -784,12 +784,12 @@ int motionReleaseReset(int pulse)
 	int result;
 
 	if (pulse != 0) {
-		result = ksceSysconCtrlDeviceReset(2, 0);
+		result = SceSysconForDriver_40FF3898(2, 0);
 		if (result < 0)
 			return result;
 		sceKernelDelayThread(2000);
 	}
-	result = ksceSysconCtrlDeviceReset(2, 1);
+	result = SceSysconForDriver_40FF3898(2, 1);
 	motionCommand.resetRequired = 0;
 	return result;
 }

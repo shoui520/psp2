@@ -298,15 +298,15 @@ set(MODULE_IMPORT_FUNCS
 	SceIntrmgrForDriver_182EE3E3
 	sceKernelRegisterIntrHookHandler
 	sceKernelReleaseIntrHookHandler
-	ksceKernelSysTimerSetClockSource
-	ksceKernelSysTimerSetCount
-	ksceKernelSysTimerStartCount
-	ksceKernelSysTimerFree
-	ksceKernelSysTimerGetCount
-	ksceKernelSysTimerSetInterval
-	ksceKernelSysTimerStopCount
-	ksceKernelSysTimerSetHandler
-	ksceKernelSysTimerAlloc
+	SceSystimerForDriver_0450933B
+	SceSystimerForDriver_1B14DFD6
+	SceSystimerForDriver_59EBD22D
+	SceSystimerForDriver_8358611F
+	SceSystimerForDriver_963F7C0D
+	SceSystimerForDriver_A73351C1
+	SceSystimerForDriver_BF8D42B0
+	SceSystimerForDriver_CCCD1EE3
+	SceSystimerForDriver_E2B9D8E9
 	sceKernelSetDTraceThreadCBEnable
 	SceThreadmgrForKernel_19440C83
 	SceThreadmgrForKernel_565BD2DA

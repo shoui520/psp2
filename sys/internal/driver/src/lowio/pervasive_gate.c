@@ -158,14 +158,14 @@ int ScePervasiveForDriver_4B223AF5(int port)
 	return GateDisableDevice(&csi[port]);
 }
 
-int kscePervasiveDsiClockEnable(int port, unsigned int mask)
+int ScePervasiveForDriver_BC42C72F(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_gate->dsi;
 
 	return GateEnable(&dsi[port], mask);
 }
 
-int kscePervasiveDsiClockDisable(int port, unsigned int mask)
+int ScePervasiveForDriver_25AE181E(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_gate->dsi;
 
@@ -220,12 +220,12 @@ int ScePervasiveForDriver_4E43299D(int port)
 	return GateDisableDevice(&sdif[port]);
 }
 
-int kscePervasiveMsifClockEnable(void)
+int ScePervasiveForDriver_7704C013(void)
 {
 	return GateEnableDevice(&s_gate->msif);
 }
 
-int kscePervasiveMsifClockDisable(void)
+int ScePervasiveForDriver_2A9778CD(void)
 {
 	return GateDisableDevice(&s_gate->msif);
 }
@@ -268,24 +268,24 @@ int ScePervasiveForDriver_51981FEE(void)
 	return GateDisableDevice(&s_gate->spdif);
 }
 
-int kscePervasiveGpioClockEnable(void)
+int ScePervasiveForDriver_2F195C97(void)
 {
 	return GateEnableDevice(&s_gate->gpio);
 }
 
-int kscePervasiveGpioClockDisable(void)
+int ScePervasiveForDriver_EB176898(void)
 {
 	return GateDisableDevice(&s_gate->gpio);
 }
 
-int kscePervasiveSpiClockEnable(int port)
+int ScePervasiveForDriver_DFD96BFC(int port)
 {
 	volatile uint32_t *spi = s_gate->spi;
 
 	return GateEnableDevice(&spi[port]);
 }
 
-int kscePervasiveSpiClockDisable(int port)
+int ScePervasiveForDriver_A85BF98A(int port)
 {
 	volatile uint32_t *spi = s_gate->spi;
 
@@ -306,14 +306,14 @@ int ScePervasiveForDriver_3F3E1AEA(int port)
 	return GateDisableDevice(&i2c[port]);
 }
 
-int kscePervasiveUartClockEnable(int port)
+int ScePervasiveForDriver_EFD084D8(int port)
 {
 	volatile uint32_t *uart = s_gate->uart;
 
 	return GateEnableDevice(&uart[port]);
 }
 
-int kscePervasiveUartClockDisable(int port)
+int ScePervasiveForDriver_18DD8043(int port)
 {
 	volatile uint32_t *uart = s_gate->uart;
 

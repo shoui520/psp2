@@ -345,22 +345,22 @@ set(MODULE_IMPORT_FUNCS
 	SceZlibForDriver_B03E109B
 	SceZlibForDriver_D4A85178
 	SceSysconForDriver_0396BA09
-	ksceSysconCtrlLED
+	SceSysconForDriver_04EC7579
 	SceSysconForDriver_060E55C1
 	SceSysconForDriver_10327C64
-	ksceSysconNvsWriteData
+	SceSysconForDriver_10C9657A
 	SceSysconForDriver_16A466E7
 	SceSysconForDriver_1C5D466C
 	SceSysconForDriver_23558805
 	SceSysconForDriver_25144105
 	SceSysconForDriver_2A61ACE1
 	SceSysconForDriver_2BCE7F5A
-	ksceSysconBatteryStartBLMode
+	SceSysconForDriver_2CEF078E
 	SceSysconForDriver_31B8F7BE
 	SceSysconForDriver_356B9696
 	SceSysconForDriver_3B06F619
 	SceSysconForDriver_41942B50
-	ksceSysconBatteryReadBLCommand
+	SceSysconForDriver_448DAFF1
 	SceSysconForDriver_48ED8981
 	SceSysconForDriver_4D03754A
 	SceSysconForDriver_4DFA12FB
@@ -370,16 +370,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_63683B9B
 	SceSysconForDriver_6450D6BE
 	SceSysconForDriver_68366D29
-	ksceSysconGetBatteryVersion
-	ksceSysconUpdaterExecProgramming
+	SceSysconForDriver_68E0031E
+	SceSysconForDriver_69AD76E4
 	SceSysconForDriver_6D408E30
 	SceSysconForDriver_734544E4
-	ksceSysconBatteryExecBLCommand
+	SceSysconForDriver_74B2AB55
 	SceSysconForDriver_7EC67149
-	ksceSysconNvsSetRunMode
+	SceSysconForDriver_81A6060D
 	SceSysconForDriver_830A9347
 	SceSysconForDriver_856DFC0E
-	ksceSysconBatterySWReset
+	SceSysconForDriver_87DA378D
 	SceSysconForDriver_8874EF45
 	SceSysconForDriver_8B0B4A97
 	SceSysconForDriver_8EBA8A26
@@ -388,46 +388,46 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_998ECD6D
 	SceSysconForDriver_9A28BEEF
 	SceSysconForDriver_9A4304F2
-	ksceSysconUpdaterSetSegment
+	SceSysconForDriver_9B00BC7F
 	SceSysconForDriver_9B6B8BB9
 	SceSysconForDriver_9C840439
-	ksceSysconNvsReadData
+	SceSysconForDriver_ACAFA2B8
 	SceSysconForDriver_AE127A96
 	SceSysconForDriver_B3960346
-	ksceSysconUpdaterSetRunMode
+	SceSysconForDriver_B487C2FB
 	SceSysconForDriver_B63AF451
 	SceSysconForDriver_B9835A63
 	SceSysconForDriver_BC1D93D7
 	SceSysconForDriver_C2955814
 	SceSysconForDriver_C4A61241
-	ksceSysconUpdaterExecFinalize
+	SceSysconForDriver_C7747A63
 	SceSysconForDriver_CA203A5F
 	SceSysconForDriver_CBA836FF
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_CD6A6BC7
 	SceSysconForDriver_CE48E8EB
 	SceSysconForDriver_CEE2B8F7
-	ksceSysconUpdaterCalcChecksum
+	SceSysconForDriver_D27C3D80
 	SceSysconForDriver_D2F456DC
 	SceSysconForDriver_D632D197
 	SceSysconForDriver_D9B11C0A
 	SceSysconForDriver_DFB024C4
 	SceSysconForDriver_E38045F5
-	ksceSysconBatteryStopBLMode
-	ksceSysconBatterySetBLCommand
+	SceSysconForDriver_E4AE7852
+	SceSysconForDriver_E4F29744
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
 	SceSysconForDriver_F162D3D6
-	ksceSysconGetTouchpanelDeviceInfo
+	SceSysconForDriver_F492E69E
 	SceSysconForDriver_FB37D7AD
-	ksceSysconGetBaryonVersion
+	SceSysconForDriver_FF86F4C5
 	scePowerRequestColdReset
 	scePowerRequestStandby
-	kscePowerRequestShutdown
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
-	ksceLedSetMode
+	ScePowerForDriver_8921A7A0
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
+	SceLedForDriver_EA24BE03
 	SceMotionDevForDriver_09918DAE
 	ksceMotionDevIsReady
 	ksceMotionDevGetDeviceInfo

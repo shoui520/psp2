@@ -9,8 +9,8 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/systimer.h>
-#include <psp2kern/lowio/iftu.h>
+#include <systimer/systimer.h>
+#include <lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
@@ -253,11 +253,11 @@ static inline __attribute__((always_inline)) void startVblankTimer(void) /* name
 {
 	SceSysTimerId timer;
 
-	timer = ksceKernelSysTimerAlloc(2);
-	if (timer < 0 || ksceKernelSysTimerSetHandler(timer, vblankTimerHandler, 0xf, NULL) < 0
-	    || ksceKernelSysTimerSetClockSource(timer, 0x10, 0) < 0
-	    || ksceKernelSysTimerSetInterval(timer, 0x6df92) < 0
-	    || ksceKernelSysTimerStartCount(timer) < 0)
+	timer = SceSystimerForDriver_E2B9D8E9(2);
+	if (timer < 0 || SceSystimerForDriver_CCCD1EE3(timer, vblankTimerHandler, 0xf, NULL) < 0
+	    || SceSystimerForDriver_0450933B(timer, 0x10, 0) < 0
+	    || SceSystimerForDriver_A73351C1(timer, 0x6df92) < 0
+	    || SceSystimerForDriver_59EBD22D(timer) < 0)
 		return;
 	vblankTimer = timer;
 }
@@ -311,7 +311,7 @@ int vblankInit(void) /* name unknown */
 
 int vblankTimerStop(void) /* name unknown */
 {
-	ksceKernelSysTimerFree(vblankTimer);
+	SceSystimerForDriver_8358611F(vblankTimer);
 	vblankTimer = -1;
 	return 0;
 }
@@ -327,7 +327,7 @@ int vblankResume(void) /* name unknown */
 	return 0;
 }
 
-int ksceDisplayGetVcountInternal(int head)
+int SceDisplayForDriver_8B5DA27B(int head)
 {
 	DisplayProcessLocal *pls;
 	SceUInt32 vcount;
@@ -383,32 +383,32 @@ int sceDisplayGetVcountInternal(SceUInt32 head)
 	return ret;
 }
 
-int ksceDisplayWaitVblankStartInternal(int head)
+int SceDisplayForDriver_B80CA224(int head)
 {
 	return waitVblank(head, 1, 0);
 }
 
-int ksceDisplayWaitVblankStartCBInternal(int head)
+int SceDisplayForDriver_8F3C0E19(int head)
 {
 	return waitVblank(head, 1, 1);
 }
 
-int ksceDisplayWaitVblankStartMultiInternal(int head, unsigned int vcount)
+int SceDisplayForDriver_32287576(int head, unsigned int vcount)
 {
 	return waitVblank(head, vcount, 0);
 }
 
-int ksceDisplayWaitVblankStartMultiCBInternal(int head, unsigned int vcount)
+int SceDisplayForDriver_61421AAF(int head, unsigned int vcount)
 {
 	return waitVblank(head, vcount, 1);
 }
 
-int ksceDisplayWaitVblankStart(void)
+int SceDisplayForDriver_984C27E7(void)
 {
 	return waitVblank(primaryHead, 1, 0);
 }
 
-int ksceDisplayWaitVblankStartCB(void)
+int SceDisplayForDriver_46F186C3(void)
 {
 	return waitVblank(primaryHead, 1, 1);
 }
@@ -423,12 +423,12 @@ int sceDisplayWaitVblankStartCB(void)
 	return waitVblank(primaryHead, 1, 1);
 }
 
-int ksceDisplayWaitVblankStartMulti(unsigned int vcount)
+int SceDisplayForDriver_40F1469C(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 0);
 }
 
-int ksceDisplayWaitVblankStartMultiCB(unsigned int vcount)
+int SceDisplayForDriver_77ED8B3A(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 1);
 }
@@ -443,32 +443,32 @@ int sceDisplayWaitVblankStartMultiCB(SceUInt32 vcount)
 	return waitVblank(primaryHead, vcount, 1);
 }
 
-int ksceDisplayWaitSetFrameBufInternal(SceUInt32 head, SceUInt32 plane)
+int SceDisplayForDriver_12A77662(SceUInt32 head, SceUInt32 plane)
 {
 	return waitVblank(head, 1, (plane & 1) << 2 | 2);
 }
 
-int ksceDisplayWaitSetFrameBufCBInternal(SceUInt32 head, SceUInt32 plane)
+int SceDisplayForDriver_35466D63(SceUInt32 head, SceUInt32 plane)
 {
 	return waitVblank(head, 1, (plane & 1) << 2 | 3);
 }
 
-int ksceDisplayWaitSetFrameBufMultiInternal(SceUInt32 head, SceUInt32 plane, SceUInt32 vcount)
+int SceDisplayForDriver_F83C95B1(SceUInt32 head, SceUInt32 plane, SceUInt32 vcount)
 {
 	return waitVblank(head, vcount, (plane & 1) << 2 | 2);
 }
 
-int ksceDisplayWaitSetFrameBufMultiCBInternal(SceUInt32 head, SceUInt32 plane, SceUInt32 vcount)
+int SceDisplayForDriver_6DC8F0F5(SceUInt32 head, SceUInt32 plane, SceUInt32 vcount)
 {
 	return waitVblank(head, vcount, (plane & 1) << 2 | 3);
 }
 
-int ksceDisplayWaitSetFrameBuf(void)
+int SceDisplayForDriver_1C0C9C4A(void)
 {
 	return waitVblank(primaryHead, 1, 2);
 }
 
-int ksceDisplayWaitSetFrameBufCB(void)
+int SceDisplayForDriver_9D7F203C(void)
 {
 	return waitVblank(primaryHead, 1, 3);
 }
@@ -483,12 +483,12 @@ int sceDisplayWaitSetFrameBufCB(void)
 	return waitVblank(primaryHead, 1, 3);
 }
 
-int ksceDisplayWaitSetFrameBufMulti(unsigned int vcount)
+int SceDisplayForDriver_E6D27E0A(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 2);
 }
 
-int ksceDisplayWaitSetFrameBufMultiCB(unsigned int vcount)
+int SceDisplayForDriver_863EACBE(unsigned int vcount)
 {
 	return waitVblank(primaryHead, vcount, 3);
 }
@@ -503,14 +503,14 @@ int sceDisplayWaitSetFrameBufMultiCB(SceUInt32 vcount)
 	return waitVblank(primaryHead, vcount, 3);
 }
 
-int ksceDisplayRegisterVblankStartCallbackInternal(int head, SceUID uid)
+int SceDisplayForDriver_4AE2A2B1(int head, SceUID uid)
 {
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	return sceKernelRegisterCallbackToEventForDriver(heads[head].vblankEvent, uid, heads[head].vblankEvent);
 }
 
-int ksceDisplayRegisterVblankStartCallback(SceUID uid)
+int SceDisplayForDriver_7FB0BD28(SceUID uid)
 {
 	SceUInt32 head = primaryHead;
 
@@ -535,14 +535,14 @@ int sceDisplayRegisterVblankStartCallback(SceUID uid)
 	return ret;
 }
 
-int ksceDisplayUnregisterVblankStartCallbackInternal(int head, SceUID uid)
+int SceDisplayForDriver_B027433E(int head, SceUID uid)
 {
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	return sceKernelUnregisterCallbackFromEvent(heads[head].vblankEvent, uid);
 }
 
-int ksceDisplayUnregisterVblankStartCallback(SceUID uid)
+int SceDisplayForDriver_4B27191F(SceUID uid)
 {
 	SceUInt32 head = primaryHead;
 

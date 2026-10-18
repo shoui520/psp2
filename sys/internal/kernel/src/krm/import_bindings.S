@@ -207,11 +207,11 @@ SceDebugForDriver_FD753E7A:
 .size SceDebugForDriver_FD753E7A, .-SceDebugForDriver_FD753E7A
 .section .vitalink.fstubs.SceRtcForDriver, "ax", %progbits
 .balign 4
-.global ksceRtcGetCurrentNetworkTick
-.type ksceRtcGetCurrentNetworkTick, %function
-ksceRtcGetCurrentNetworkTick:
+.global SceRtcForDriver_F1517B38
+.type SceRtcForDriver_F1517B38, %function
+SceRtcForDriver_F1517B38:
 	.word 0x10, 0x351d827, 0xf1517b38, 0xe320f000
-.size ksceRtcGetCurrentNetworkTick, .-ksceRtcGetCurrentNetworkTick
+.size SceRtcForDriver_F1517B38, .-SceRtcForDriver_F1517B38
 #else
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -397,10 +397,10 @@ ksceSblRngGenuineRandomNumber:
 .size ksceSblRngGenuineRandomNumber, .-ksceSblRngGenuineRandomNumber
 .section .vitalink.fstubs.SceRtcForDriver, "ax", %progbits
 .balign 4
-.global ksceRtcGetCurrentNetworkTick
-.type ksceRtcGetCurrentNetworkTick, %function
-ksceRtcGetCurrentNetworkTick:
+.global SceRtcForDriver_F1517B38
+.type SceRtcForDriver_F1517B38, %function
+SceRtcForDriver_F1517B38:
 	.word 0x10, 0x351d827, 0xf1517b38, 0xe320f000
-.size ksceRtcGetCurrentNetworkTick, .-ksceRtcGetCurrentNetworkTick
+.size SceRtcForDriver_F1517B38, .-SceRtcForDriver_F1517B38
 #endif
 .section .note.GNU-stack, "", %progbits

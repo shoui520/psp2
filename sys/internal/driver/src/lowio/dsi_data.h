@@ -1,7 +1,7 @@
 /* DSI video modes, the PHY timing of each link rate, and the VIC table the
  * SceDsiForDriver exports look modes up in. Modes are named after their
  * resolution and field rate (rates rounded: 60 is 59.94); the PHY timings
- * after the pixel clock (kscePervasiveDsiSetPixelClock units) they serve. */
+ * after the pixel clock (ScePervasiveForDriver_91C80C41 units) they serve. */
 #pragma once
 #include <stddef.h>
 #include <stdint.h>

@@ -403,9 +403,9 @@ set(MODULE_IMPORT_FUNCS
 	SceZlibForDriver_20A122F8
 	SceZlibForDriver_5492B3F2
 	SceZlibForDriver_5B718E55
-	ksceRtcConvertTickToDateTime
-	ksceRtcConvertDateTimeToUnixTime
-	ksceRtcGetCurrentTick
+	SceRtcForDriver_42A0DFCB
+	SceRtcForDriver_497B5DC9
+	SceRtcForDriver_DEC408D4
 	sceRegMgrGetKeyInt
 	sceRegMgrGetKeyStr
 	SceKernelUtilsForDriver_236A9097
@@ -431,8 +431,8 @@ set(MODULE_IMPORT_FUNCS
 	SceUlobjMgrForDriver_ADAAA961
 	sceUlobjMgrGetIdForFiber
 	SceUlobjMgrForDriver_FFC8C811
-	ksceDisplayGetProcFrameBufInternal
-	ksceDisplayGetPrimaryHead
+	SceDisplayForDriver_3BC165EF
+	SceDisplayForDriver_C8E554C5
 	ksceSdifGetSdContextPartValidateMmc
 	ksceMsifGetMsInfo
 	sceKernelGetGPI

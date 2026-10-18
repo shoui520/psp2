@@ -1673,7 +1673,7 @@ int _debugDumpStatus(int resume, int eventId, void *arguments, void *registeredC
 	uint64_t now;
 	int result = 0, wol;
 
-	if (!(context->status & 1) || ksceSysconIsDownLoaderMode() || !wlanBtIsAvailable())
+	if (!(context->status & 1) || SceSysconForDriver_9ADD60D2() || !wlanBtIsAvailable())
 		return 0;
 	if (!resume) {
 		switch (eventId) {

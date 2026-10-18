@@ -46,7 +46,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 
 		if (!SceSysconForDriver_D2F456DC(&version))
 			updateSysconDownloaderVersion = version;
-		result = ksceSysconUpdaterSetRunMode(0x9a54);
+		result = SceSysconForDriver_B487C2FB(0x9a54);
 		if (result)
 			return result;
 		if ((updateSysconDownloaderVersion & 0xffffff) >= 0x3600) {
@@ -57,7 +57,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			updateUseSysconSnvs = 0;
 		}
 	} else {
-		result = ksceSysconUpdaterSetRunMode(runMode);
+		result = SceSysconForDriver_B487C2FB(runMode);
 		if (result)
 			return result;
 	}
@@ -78,7 +78,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			cursor += sizeof(SysconUpdateSignaturePacket);
 			if (result)
 				return result;
-			result = ksceSysconUpdaterSetRunMode(runMode);
+			result = SceSysconForDriver_B487C2FB(runMode);
 			if (result)
 				return result;
 			break;
@@ -92,10 +92,10 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			unsigned int offset = 0;
 			int (*send)(const void *, unsigned int, unsigned int);
 
-			result = ksceSysconUpdaterCalcChecksum(data, segmentSize, &checksum);
+			result = SceSysconForDriver_D27C3D80(data, segmentSize, &checksum);
 			if (result)
 				return result;
-			result = ksceSysconUpdaterSetSegment((unsigned char)segmentNumber);
+			result = SceSysconForDriver_9B00BC7F((unsigned char)segmentNumber);
 			if (result)
 				return result;
 			if (updateSysconLargeChunks) {
@@ -115,7 +115,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 				offset = (unsigned short)(offset + chunkSize);
 				data += chunkSize;
 			}
-			result = ksceSysconUpdaterExecProgramming(checksum);
+			result = SceSysconForDriver_69AD76E4(checksum);
 			if (result)
 				return result;
 			remaining -= sizeof(SysconUpdateSegmentHeader);
@@ -124,7 +124,7 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 			break;
 		}
 		case 0x20:
-			result = ksceSysconUpdaterExecFinalize(packet->checksum.digest, 20);
+			result = SceSysconForDriver_C7747A63(packet->checksum.digest, 20);
 			remaining -= sizeof(SysconUpdateChecksumPacket);
 			cursor += sizeof(SysconUpdateChecksumPacket);
 			if (result)
@@ -141,6 +141,6 @@ int SysconUtilWriteFirmware(int kind, const void *buffer, uint64_t size,
 		}
 	}
 	if ((unsigned int)(kind - 2) <= 1)
-		return ksceSysconUpdaterSetRunMode(0x72ba);
+		return SceSysconForDriver_B487C2FB(0x72ba);
 	return 0;
 }

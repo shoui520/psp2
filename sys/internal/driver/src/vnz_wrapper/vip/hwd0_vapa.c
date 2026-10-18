@@ -15,7 +15,7 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "../venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
@@ -89,12 +89,12 @@ int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request)
 		index++;
 	} while (index != count);
 	lockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[channel], tags,
+	ret = sceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[channel], tags,
 		&g_veneziaHwdDmaChainParam, 17);
 	if (ret >= 0) {
-		ret = ksceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[channel]);
+		ret = sceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[channel]);
 		if (ret >= 0)
-			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[channel], 2, 0, 0);
+			sceKernelDmaOpSync(g_veneziaHwdDmaState.operations[channel], 2, 0, 0);
 	}
 	sceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	return ret;
@@ -186,10 +186,10 @@ int initializeVeneziaHwdDma(void)
 	if (ret >= 0) {
 		g_veneziaHwdDmaState.activeMutex = &g_veneziaHwdDmaState.mutex;
 		snprintf(name, sizeof(name), "SceHwd0DmacMemcpy%02u", 0);
-		ret = ksceKernelDmaOpAlloc(name);
+		ret = sceKernelDmaOpAlloc(name);
 		if (ret >= 0) {
 			g_veneziaHwdDmaState.operations[0] = ret;
-			ret = ksceKernelDmaOpAssign(ret, 16, 0);
+			ret = sceKernelDmaOpAssign(ret, 16, 0);
 		}
 	}
 	return ret;
@@ -329,12 +329,12 @@ int SceCodecEngineWrapperForDriver_FAF590A6(void *destination,
 	tags[0].len = size;
 	tags[0].cmd = command;
 	lockFastMutex(g_veneziaHwdDmaState.activeMutex);
-	ret = ksceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[0], tags,
+	ret = sceKernelDmaOpSetupChain(g_veneziaHwdDmaState.operations[0], tags,
 		&g_veneziaHwdDmaChainParam, 17);
 	if (ret >= 0) {
-		ret = ksceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[0]);
+		ret = sceKernelDmaOpEnQueue(g_veneziaHwdDmaState.operations[0]);
 		if (ret >= 0)
-			ksceKernelDmaOpSync(g_veneziaHwdDmaState.operations[0], 2, 0, 0);
+			sceKernelDmaOpSync(g_veneziaHwdDmaState.operations[0], 2, 0, 0);
 	}
 	sceKernelUnlockFastMutex(g_veneziaHwdDmaState.activeMutex);
 	return ret;

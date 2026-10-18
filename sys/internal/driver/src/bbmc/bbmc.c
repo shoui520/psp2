@@ -509,7 +509,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 	(void)argumentSize;
 	(void)arguments;
 	if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") >= 0 ||
-	    (ksceSysconGetHardwareInfo() & 2) == 0 ||
+	    (SceSysconForDriver_CBD6D8BC() & 2) == 0 ||
 	    g_bbmcControl != NULL || bbmcInitializeGpio() < 0)
 		return 1;
 	if (bbmcInitializeUsbSerialHost() < 0)
@@ -3517,7 +3517,7 @@ int bbmcSendSysconCommand(BbmcControl *control,
 	for (i = 0; i < byteCount; i++)
 		packet->request.data[i + 2] = va_arg(args, int);
 	va_end(args);
-	return ksceSysconCmdExecAsync(packet, 0, callback, control);
+	return SceSysconForDriver_C2224E82(packet, 0, callback, control);
 }
 
 int bbmcSendSizedSysconCommand(BbmcControl *control,
@@ -3539,7 +3539,7 @@ int bbmcSendSizedSysconCommand(BbmcControl *control,
 	for (i = 0; i < byteCount; i++)
 		packet->request.data[i + 2] = va_arg(args, int);
 	va_end(args);
-	return ksceSysconCmdExecAsync(packet, 0, callback, control);
+	return SceSysconForDriver_C2224E82(packet, 0, callback, control);
 }
 
 int bbmcSendSysconByteCommand(BbmcControl *control,
@@ -3551,12 +3551,12 @@ int bbmcSendSysconByteCommand(BbmcControl *control,
 	packet->request.command[1] = 0x0a;
 	packet->request.data[0] = value;
 	packet->request.length = 2;
-	return ksceSysconCmdExecAsync(packet, 0, callback, control);
+	return SceSysconForDriver_C2224E82(packet, 0, callback, control);
 }
 
 int bbmcGetBaryonVersion(void)
 {
-	return ksceSysconGetBaryonVersion();
+	return SceSysconForDriver_FF86F4C5();
 }
 
 int bbmcCancelSysconCommand(SceSysconPacket *packet, int *pending)
@@ -3567,7 +3567,7 @@ int bbmcCancelSysconCommand(SceSysconPacket *packet, int *pending)
 		return (int)0x80330002;
 	ret = SceSysconForDriver_C9DB5BFF(packet);
 	if (ret != 0)
-		return ksceSysconCmdSync(packet, 0);
+		return sceSysconCmdSync(packet, 0);
 	*pending = 0;
 	return ret;
 }

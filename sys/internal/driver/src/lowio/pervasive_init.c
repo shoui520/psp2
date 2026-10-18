@@ -7,12 +7,12 @@
 #include <sysmem/dipsw.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysevent.h>
+#include <lowio/pervasive.h>
 
 extern uint32_t s_hardwareInfo[5];
 int LowioPixelClockInit(void);
 int PervasiveMiscInit(void);
 void LowioIdleEntry(void);
-uint32_t ScePervasiveForDriver_6AF0196F(unsigned first, unsigned second);
 
 static SceKernelFastMutex s_pervasiveMutex;
 static SceUID s_pervasiveUids[16];

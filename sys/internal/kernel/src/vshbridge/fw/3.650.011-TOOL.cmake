@@ -363,72 +363,72 @@ set(MODULE_IMPORT_FUNCS
 	ksceIdStorageGetLeafSize
 	ksceIdStorageUnformat
 	ksceIdStorageIsFormatted
-	ksceSysconIduModeClear
-	ksceSysconClearTemperatureLog
-	ksceSysconGetTemperatureLog
-	ksceSysconGetManufacturesStatus
-	ksceSysconLogReadData
-	ksceSysconEnableHibernateIO
-	ksceSysconLogStart
-	ksceSysconGetManualChargeMode
-	ksceSysconShowModeSet
-	ksceSysconGetLogInfo
-	ksceSysconCommitConfigstorageTransaction
-	ksceSysconLoadConfigstorageScript
-	ksceSysconShowModeClear
-	ksceSysconIduModeSet
-	ksceSysconGetHardwareInfo2
-	ksceSysconGetBatteryCalibData
-	ksceSysconIsDownLoaderMode
-	ksceSysconLogStartWaiting
-	ksceSysconBeginConfigstorageTransaction
-	ksceSysconCtrlManualChargeMode
-	ksceSysconGetHardwareInfo
-	ksceSysconVerifyConfigstorageScript
-	ksceSysconGetUsbDetStatus
-	ksceSysconEndConfigstorageTransaction
-	ksceRtcSetCurrentNetworkTick
-	ksceRtcGetCurrentSecureTick
-	ksceRtcRegisterCallback
-	ksceRtcSetCurrentTick
-	ksceRtcSetCurrentSecureTick
-	ksceRtcSetSecureAlarmTick
-	ksceRtcUnregisterCallback
-	ksceRtcSetCurrentDebugNetworkTick
-	ksceRtcSetConf
-	ksceRtcGetSecureAlarmTick
-	ksceRtcGetAlarmTick
-	ksceRtcIsAlarmed
-	ksceRtcRegisterSecureAlarmCallback
-	ksceRtcSetAlarmTick
-	ksceRtcIsSecureAlarmed
-	ksceRtcUnregisterSecureAlarmCallback
-	ksceDisplaySetInvertColors
-	ksceDisplayGetActualViewportConf
-	ksceDisplayRegisterFrameBufCallback
-	ksceDisplaySetViewportConf
+	SceSysconForDriver_34574496
+	SceSysconForDriver_3843D657
+	SceSysconForDriver_3B354824
+	SceSysconForDriver_3E09A1F4
+	SceSysconForDriver_487D97F3
+	SceSysconForDriver_4946538A
+	SceSysconForDriver_4E55CF5E
+	SceSysconForDriver_4FEC564C
+	SceSysconForDriver_6D65B70F
+	SceSysconForDriver_701535FC
+	SceSysconForDriver_7B9B3617
+	SceSysconForDriver_89C5CFD6
+	SceSysconForDriver_8D7724C0
+	SceSysconForDriver_956D07CB
+	SceSysconForDriver_965C68C3
+	SceSysconForDriver_9ADC9936
+	SceSysconForDriver_9ADD60D2
+	SceSysconForDriver_9C0B1E61
+	SceSysconForDriver_A4968B8C
+	SceSysconForDriver_C6A2C9EF
+	SceSysconForDriver_CBD6D8BC
+	SceSysconForDriver_CC6F90A8
+	SceSysconForDriver_EF810687
+	SceSysconForDriver_FCC3E8EE
+	SceRtcForDriver_162E486E
+	SceRtcForDriver_401C0954
+	SceRtcForDriver_5220870D
+	sceRtcSetCurrentTick
+	SceRtcForDriver_7D431C87
+	SceRtcForDriver_8333790D
+	SceRtcForDriver_9546C68B
+	SceRtcForDriver_AAB6053F
+	SceRtcForDriver_ACFE5A9F
+	SceRtcForDriver_BD53731C
+	SceRtcForDriver_C838275A
+	SceRtcForDriver_CD295F0C
+	SceRtcForDriver_CF84DFC0
+	sceRtcSetAlarmTick
+	SceRtcForDriver_E39F2ABE
+	SceRtcForDriver_EDDC2325
+	SceDisplayForDriver_19140ACD
+	SceDisplayForDriver_40ACFE51
+	SceDisplayForDriver_6E22990E
+	SceDisplayForDriver_EE5EB52D
 	SceHdmiForDriver_291F000B
 	SceHdmiForDriver_6D2D10D8
 	sceHdmiCecEnableCec
-	ksceCtrlSetIdleCancelKey
-	ksceCtrlSetIdleCancelThreshold
-	ksceCtrlSetVibrationSetting
-	ksceCtrlChangePortAssign
-	ksceCtrlIsBdRemoconConnected
-	ksceCtrlUnregisterNotifyCallBack
-	ksceCtrlRegisterNotifyCallBack
-	ksceCtrlSetTurnOffInterval
-	ksceCtrlGetActiveControllerPort
+	SceCtrlForDriver_0A679512
+	SceCtrlForDriver_345E74FD
+	SceCtrlForDriver_4D8FE670
+	SceCtrlForDriver_53381364
+	SceCtrlForDriver_5B849B22
+	SceCtrlForDriver_9DAB51C4
+	SceCtrlForDriver_E170883E
+	SceCtrlForDriver_ED8F0129
+	SceCtrlForDriver_FA88D837
 	ksceMotionDevNoiseFilterIsAvailable
-	ksceLedSetMode
+	SceLedForDriver_EA24BE03
 	scePowerRequestColdReset
-	kscePowerRequestHibernate
-	kscePowerSetBatteryFakeStatus
-	kscePowerSetStandbyButtonPushTime
-	kscePowerRequestShutdown
-	kscePowerGetWakeupFactor
-	kscePowerSetPowerSwMode
-	kscePowerSetPsButtonPushTime
+	ScePowerForDriver_08951418
+	ScePowerForDriver_0C6973B8
+	ScePowerForDriver_675A84ED
+	ScePowerForDriver_8921A7A0
+	ScePowerForDriver_9F26222A
+	ScePowerForDriver_C1853BA7
+	ScePowerForDriver_CF8F0529
 	ksceSdifGetCardInsertState1
 	ksceSdifGetSdContextPartValidateSd
 	SceSdifForDriver_F37CF8E5
@@ -436,7 +436,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceMsifEnableSlowMode
 	ksceMsifGetMsInfo
 	ksceTouchSetTouchEmulationData
-	kscePervasiveRemovableMemoryGetCardInsertState
+	ScePervasiveForDriver_551EEE82
 	ksceCoredumpCafSegmentInit
 	ksceCoredumpCreateDump
 	ksceCoredumpCafContextCreate

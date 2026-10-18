@@ -7,7 +7,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
@@ -449,7 +449,7 @@ int ksceAppMgrSaveDataSlotCreate(void *parameters)
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -512,7 +512,7 @@ int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -576,7 +576,7 @@ int ksceAppMgrSaveDataSlotSetParam(void *parameters)
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -639,7 +639,7 @@ int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
-		if (ksceRtcGetCurrentClock(&stat.st_mtime, 0) >= 0 &&
+		if (SceRtcForDriver_A930CD1A(&stat.st_mtime, 0) >= 0 &&
 		    appmgrResolvePath(mountPoint, 0, path, sizeof(path)) >= 0)
 			sceIoChstat(path, &stat, 32);
 	}
@@ -1039,7 +1039,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->saveDataFlags |= 2;
-			if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+			if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
 			    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 				sceIoChstat(mountPath, &clockStat, 32);
 		}
@@ -1102,7 +1102,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 						g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 						info = storage;
 						info->saveDataFlags |= 2;
-						if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+						if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
 						    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 							sceIoChstat(mountPath, &clockStat, 32);
 					}
@@ -1173,7 +1173,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 					info = storage;
 					info->saveDataFlags |= 2;
-					if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+					if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
 					    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 						sceIoChstat(mountPath, &clockStat, 32);
 				}
@@ -1254,7 +1254,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 							g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 							info = storage;
 							info->saveDataFlags |= 2;
-							if (ksceRtcGetCurrentClock(&clockStat.st_mtime, 0) >= 0 &&
+							if (SceRtcForDriver_A930CD1A(&clockStat.st_mtime, 0) >= 0 &&
 							    appmgrResolvePath(mountPoint, 0, mountPath, sizeof(mountPath)) >= 0)
 								sceIoChstat(mountPath, &clockStat, 32);
 						}

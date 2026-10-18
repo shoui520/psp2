@@ -846,7 +846,7 @@ int _concatenateChain(DmaOp *op, SceKernelDmaOpFlag flag, const SceKernelDmaOpTa
 	return 0;
 }
 
-SceKernelDmaOpId ksceKernelDmaOpAlloc(const char *name)
+SceKernelDmaOpId sceKernelDmaOpAlloc(const char *name)
 {
 	SceKernelDmaOpId opid;
 	DmaOp *op;
@@ -879,7 +879,7 @@ SceKernelDmaOpId ksceKernelDmaOpAlloc(const char *name)
 	return opid;
 }
 
-int ksceKernelDmaOpFree(SceKernelDmaOpId opid)
+int sceKernelDmaOpFree(SceKernelDmaOpId opid)
 {
 	DmaOp *op = getDmaOp(opid);
 	SceKernelIntrStatus intr;
@@ -928,7 +928,7 @@ int ksceKernelDmaOpFree(SceKernelDmaOpId opid)
 	return 0;
 }
 
-int ksceKernelDmaOpAssign(SceKernelDmaOpId opid, SceKernelDmacId dmacId, SceUInt32 channel)
+int sceKernelDmaOpAssign(SceKernelDmaOpId opid, SceKernelDmacId dmacId, SceUInt32 channel)
 {
 	DmaOp *op = getDmaOp(opid);
 	DmaController *dmac;
@@ -988,7 +988,7 @@ invalid:
 	return 0;
 }
 
-int ksceKernelDmaOpSetCallback(SceKernelDmaOpId opid, DmaOpCallback callback, void *pUserData)
+int sceKernelDmaOpSetCallback(SceKernelDmaOpId opid, DmaOpCallback callback, void *pUserData)
 {
 	DmaOp *op;
 	SceKernelIntrStatus intr;
@@ -1021,7 +1021,7 @@ int ksceKernelDmaOpSetCallback(SceKernelDmaOpId opid, DmaOpCallback callback, vo
 	return 0;
 }
 
-int ksceKernelDmaOpSetupChain(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
+int sceKernelDmaOpSetupChain(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 			      SceKernelDmaOpChainParam *pParam, SceKernelDmaOpFlag flag)
 {
 	DmaOp *op = getDmaOp(opid);
@@ -1079,7 +1079,7 @@ invalidSize:
 	return 0;
 }
 
-int ksceKernelDmaOpSetupDirect(SceKernelDmaOpId opid, SceKernelDmaOpDirectParam *pParam,
+int _DmaOpSetupDirect(SceKernelDmaOpId opid, SceKernelDmaOpDirectParam *pParam,
 			       SceKernelDmaOpFlag flag)
 {
 	SceKernelDmaOpTag tag;
@@ -1105,7 +1105,7 @@ int ksceKernelDmaOpSetupDirect(SceKernelDmaOpId opid, SceKernelDmaOpDirectParam 
 	tag.cmd = pParam->cmd;
 	tag.blockSize = pParam->blockSize;
 	tag.pNext = SCE_KERNEL_DMAC_CHAIN_END;
-	res = ksceKernelDmaOpSetupChain(opid, &tag, NULL, flag);
+	res = sceKernelDmaOpSetupChain(opid, &tag, NULL, flag);
 	if (res < 0)
 		return res;
 	if (op->dmacId == SCE_KERNEL_DMAC_ID_DMAC5)
@@ -1138,7 +1138,7 @@ static inline void enqueueDmaOp(DmaController *dmac, DmaOp *op)
 	dmac->tail = op;
 }
 
-int ksceKernelDmaOpConcatenate(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
+int sceKernelDmaOpConcatenate(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 			       SceKernelDmaOpFlag flag)
 {
 	DmaOp *op = getDmaOp(opid);
@@ -1186,7 +1186,7 @@ int ksceKernelDmaOpConcatenate(SceKernelDmaOpId opid, SceKernelDmaOpTag *pTag,
 	return res;
 }
 
-int ksceKernelDmaOpEnQueue(SceKernelDmaOpId opid)
+int sceKernelDmaOpEnQueue(SceKernelDmaOpId opid)
 {
 	DmaOp *op = getDmaOp(opid);
 	DmaController *dmac;
@@ -1287,13 +1287,13 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 		tag.src = src;
 		tag.dst = dst;
 		tag.len = n;
-		res = ksceKernelDmaOpAssign(opid, dmacId, 0);
+		res = sceKernelDmaOpAssign(opid, dmacId, 0);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 461, "dmacMemcpySub",
 					    "Assign dmac operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelDmaOpSetupChain(opid, &tag,
+		res = sceKernelDmaOpSetupChain(opid, &tag,
 						(SceKernelDmaOpChainParam *)&s_memcpyParam,
 						SCE_KERNEL_DMA_OP_VIRTUAL_ADDR);
 		if (res < 0) {
@@ -1301,7 +1301,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 					    "Setup chain failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelDmaOpEnQueue(opid);
+		res = sceKernelDmaOpEnQueue(opid);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 473, "dmacMemcpySub",
 					    "Enqueue operation failed. 0x%08x\n", res);
@@ -1327,7 +1327,7 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 	return res;
 }
 
-int ksceDmacMemcpy(void *dst, const void *src, SceSize size)
+int sceKernelDmacMemcpy(void *dst, const void *src, SceSize size)
 {
 	DmaOp op;
 	SceUID evfId;
@@ -1369,19 +1369,19 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 		n = size > DMAC_LEN_MASK - 1 ? DMAC_LEN_MASK : size;
 		tag->dst = dst;
 		tag->len = n;
-		res = ksceKernelDmaOpAssign(opid, dmacId, 0);
+		res = sceKernelDmaOpAssign(opid, dmacId, 0);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 576, "dmacMemsetSub",
 					    "Assign dmac operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelDmaOpSetupChain(opid, tag, param, SCE_KERNEL_DMA_OP_VIRTUAL_DST_ADDR);
+		res = sceKernelDmaOpSetupChain(opid, tag, param, SCE_KERNEL_DMA_OP_VIRTUAL_DST_ADDR);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 582, "dmacMemsetSub",
 					    "Setup chain failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelDmaOpEnQueue(opid);
+		res = sceKernelDmaOpEnQueue(opid);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 588, "dmacMemsetSub",
 					    "Enqueue operation failed. 0x%08x\n", res);
@@ -1406,7 +1406,7 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 	return res;
 }
 
-int ksceDmacMemset(void *dst, int c, SceSize size)
+int sceKernelDmacMemset(void *dst, int c, SceSize size)
 {
 	SceKernelDmaOpChainParam param;
 	DmaOp op;
@@ -1442,7 +1442,7 @@ int ksceDmacMemset(void *dst, int c, SceSize size)
 	return dmacMemsetSub(&op, &param, &tag, dmacId, dst, size);
 }
 
-int ksceKernelDmaOpDeQueue(SceKernelDmaOpId opid)
+int sceKernelDmaOpDeQueue(SceKernelDmaOpId opid)
 {
 	DmaOp *op = getDmaOp(opid);
 	SceKernelIntrStatus intr;
@@ -1476,7 +1476,7 @@ int SceDmacmgrForDriver_893FCB80(void)
 	return SCE_KERNEL_ERROR_NOT_IMPLEMENTED;
 }
 
-int ksceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
+int sceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 			SceUInt32 timeout, const SceKernelDmaOpTag **ppErrorTag)
 {
 	DmaOp *op = getDmaOp(opid);
@@ -1544,7 +1544,7 @@ int ksceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 	return 0;
 }
 
-int ksceKernelDmaOpQuit(SceKernelDmaOpId opid)
+int sceKernelDmaOpQuit(SceKernelDmaOpId opid)
 {
 	DmaOp *op = getDmaOp(opid);
 	SceKernelIntrStatus intr;
@@ -1846,7 +1846,7 @@ int sceDmacMemset(void *dst, int c, SceSize size)
 	writeTpidruro(context << 16);
 	res = sceKernelLockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 	if (res >= 0) {
-		res = ksceDmacMemset(dst, c, size);
+		res = sceKernelDmacMemset(dst, c, size);
 		SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 	}
 	writeTpidruro(context);
@@ -1864,7 +1864,7 @@ int sceDmacMemcpy(void *dst, const void *src, SceSize size)
 	if (res >= 0) {
 		res = sceKernelLockRangeWithMode(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 		if (res >= 0) {
-			res = ksceDmacMemcpy(dst, src, size);
+			res = sceKernelDmacMemcpy(dst, src, size);
 			SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_W, dst, size);
 		}
 		SceSysmemForDriver_22CBE925(SCE_KERNEL_MEMORY_REF_PERM_KERN_R, (void *)src, size);

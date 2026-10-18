@@ -10,8 +10,7 @@
 #include <psp2kern/types.h>
 #include <idstorage/idstorage.h>
 #include <lowio/pervasive.h>
-#include <psp2kern/lowio/gpio.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/gpio.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
@@ -20,7 +19,6 @@
 #include <sysmem/sysclib.h>
 #include <power/led.h>
 #include <power/power.h>
-#include <psp2kern/display.h>
 #include <modulemgr/modulemgr.h>
 
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
@@ -38,7 +36,6 @@ typedef struct EwCtrlData {
 	SceUInt8 reserved[16];
 } EwCtrlData;
 
-int ksceCtrlReadBufferPositive(int port, EwCtrlData *data, int count);
 int ksceMotionDevIsReady(void);
 int SceMotionDevForDriver_031AF7A1(void);	/* stop the motion device */
 int SceHpremoteForDriver_7735C403(void);	/* headphone remote off */

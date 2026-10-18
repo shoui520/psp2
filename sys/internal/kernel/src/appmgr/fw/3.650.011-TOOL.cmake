@@ -540,22 +540,22 @@ set(MODULE_IMPORT_FUNCS
 	kscePfsMount
 	kscePfsAcidDirSet
 	kscePfsApprove
-	ksceSysconGetHardwareInfo
-	kscePowerSetProcessIdleCallback
+	SceSysconForDriver_CBD6D8BC
+	ScePowerForDriver_0856FD0A
 	scePowerRequestStandby
 	SceAudioForDriver_3440C1CA
 	SceAudioForDriver_629261CD
 	SceAudioForDriver_DB1C4A83
 	SceAudioForDriver_E87902DF
 	SceAudioForDriver_F07D34C2
-	ksceDisplaySetFrameBuf
-	ksceDisplayGetProcFrameBufInternal
-	ksceDisplaySetMergeConf
-	ksceDisplayCaptureFrameBufDMACInternal
-	ksceDisplaySetOwner
+	SceDisplayForDriver_289D82FE
+	SceDisplayForDriver_3BC165EF
+	SceDisplayForDriver_6B198052
+	SceDisplayForDriver_707EEE2E
+	SceDisplayForDriver_B54962A1
 	SceDisplayForDriver_BC76296A
-	ksceDisplayGetPrimaryHead
-	ksceDisplayCaptureFrameBufIFTUInternal
+	SceDisplayForDriver_C8E554C5
+	SceDisplayForDriver_D4C812E5
 	SceTouchForDriver_3F3FBF69
 	SceCameraForDriver_E81EADE1
 	ksceCameraIsActive
@@ -573,10 +573,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceFiosKernelOverlayResolveSync
 	ksceFiosKernelOverlayAddForProcess
 	ksceFiosKernelOverlayRemoveForProcess
-	ksceRtcGetCurrentSecureTick
-	ksceRtcGetCurrentClockLocalTime
-	ksceRtcGetCurrentClock
-	ksceRtcFormatRFC3339
+	SceRtcForDriver_401C0954
+	sceRtcGetCurrentClockLocalTime
+	SceRtcForDriver_A930CD1A
+	SceRtcForDriver_D32AC698
 	SceCtrlForDriver_5B708A15
 	SceCtrlForDriver_B26C2231
 	SceMotionDevForDriver_22CD6DCA

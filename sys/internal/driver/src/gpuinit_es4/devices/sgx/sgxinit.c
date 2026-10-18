@@ -571,7 +571,7 @@ PVRSRV_ERROR SGXInitialisePart2KM(PVRSRV_PER_PROCESS_DATA *process,
 	patchUSEImmediate(&program[0x1058 / 4], init->hKernelClearClipWAPSGRgnHdrMemInfo->sDevVAddr.uiAddr);
 
 	corePDSExec = init->hKernelProgramMemInfo[3]->sDevVAddr.uiAddr & 0xfffffff0;
-	revision = kscePervasiveGetSoCRevision();
+	revision = ScePervasiveForDriver_714EEFB7();
 	if ((revision & 0x1ffff) < 0x20)
 		SceDebugForDriver_391B74B7("[%s]:Invalid SoC revision (%X.%01X)\n", moduleInfo.module_name,
 				 (revision & 0x1ffff) >> 4, revision & 15);

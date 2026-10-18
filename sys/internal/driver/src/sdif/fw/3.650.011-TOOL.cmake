@@ -113,10 +113,10 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_3D8A8712
 	ScePervasiveForDriver_453BD2EC
 	ScePervasiveForDriver_4E43299D
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	ScePervasiveForDriver_9F8E589C
 	ScePervasiveForDriver_D326E15F
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	ksceSblSmSchedProxyExecuteF00DCommand
 )
 set(MODULE_IMPORT_VARS

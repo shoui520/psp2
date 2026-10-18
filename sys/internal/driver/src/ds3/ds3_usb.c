@@ -23,7 +23,7 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/usbserv.h>
 #include <psp2kern/registrymgr.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <string.h>
 
 static const uint8_t ds3EmptyBluetoothAddress[6] = {0};
@@ -99,7 +99,7 @@ int ds3UsbProbe(int deviceId)
 	else if (ds3Usb.devices[3].deviceId == DS3_USB_DEVICE_UNUSED)
 		index = 3;
 	else {
-		ksceCtrlNotifyCallBacks((int)0x80340101);
+		SceCtrlForDriver_6E183B9B((int)0x80340101);
 		return -1;
 	}
 	device = &ds3Usb.devices[index];
@@ -1287,7 +1287,7 @@ void ds3UsbInputComplete(int result, int transferred, void *argument)
 			goto ds3Battery;
 		}
 		if (result == -100) {
-			ksceCtrlNotifyCallBacks((int)0x80340101);
+			SceCtrlForDriver_6E183B9B((int)0x80340101);
 			controller->usbState = 4;
 		}
 		deviceId = controller->usbDeviceId;
@@ -1331,7 +1331,7 @@ ds3Battery:
 					controller->deviceAddress);
 				if (result < 0) {
 					if (result == -100) {
-						ksceCtrlNotifyCallBacks((int)0x80340101);
+						SceCtrlForDriver_6E183B9B((int)0x80340101);
 						controller->usbState = 4;
 					}
 					return;

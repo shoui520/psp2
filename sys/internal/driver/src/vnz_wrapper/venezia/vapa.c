@@ -3,7 +3,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/cpu.h>
 #include "../venezia_internal.h"
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 
 extern void *getVeneziaImageBase(void);
@@ -276,11 +276,11 @@ int initVeneziaRpcDma(void)
 	memset(g_veneziaDmaOperations, -1, sizeof(g_veneziaDmaOperations));
 	for (channel = 0; channel < 9; channel++) {
 		snprintf(name, sizeof(name), "SceVeneziaDmacMemcpy%02u", channel);
-		ret = ksceKernelDmaOpAlloc(name);
+		ret = sceKernelDmaOpAlloc(name);
 		if (ret < 0)
 			break;
 		g_veneziaDmaOperations[channel] = ret;
-		ret = ksceKernelDmaOpAssign(ret, 16, 0);
+		ret = sceKernelDmaOpAssign(ret, 16, 0);
 		if (ret < 0)
 			break;
 	}
@@ -399,12 +399,12 @@ nextTransfer:
 	} while (i != count);
 	if (!tagCount)
 		return 0;
-	ret = ksceKernelDmaOpSetupChain(g_veneziaDmaOperations[channel], tags,
+	ret = sceKernelDmaOpSetupChain(g_veneziaDmaOperations[channel], tags,
 		&g_veneziaDmaChainParam, packing ? SCE_KERNEL_DMA_OP_VIRTUAL_SRC_ADDR : SCE_KERNEL_DMA_OP_VIRTUAL_DST_ADDR);
 	if (ret >= 0) {
-		ret = ksceKernelDmaOpEnQueue(g_veneziaDmaOperations[channel]);
+		ret = sceKernelDmaOpEnQueue(g_veneziaDmaOperations[channel]);
 		if (ret >= 0)
-			ksceKernelDmaOpSync(g_veneziaDmaOperations[channel],
+			sceKernelDmaOpSync(g_veneziaDmaOperations[channel],
 				SCE_KERNEL_DMA_OP_SYNC_WAIT, 0, 0);
 	}
 	return ret;

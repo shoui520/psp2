@@ -203,27 +203,27 @@ int sceDbgSdioInit(void)
 	if (ret < 0)
 		goto freeBlock;
 
-	tx = ksceKernelDmaOpAlloc("SceDbgSdioTx");
+	tx = sceKernelDmaOpAlloc("SceDbgSdioTx");
 	if (tx < 0) {
 		SCE_DBG_PRINTF(0, 295, "%s. DmaOpAlloc error:0x%x\n", __func__, tx);
 		ret = tx;
 		goto freeMutex;
 	}
-	ret = ksceKernelDmaOpAssign(tx, SCE_KERNEL_DMAC_ID_DMAC6, 0);
+	ret = sceKernelDmaOpAssign(tx, SCE_KERNEL_DMAC_ID_DMAC6, 0);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 302, "%s. DmaOpAssign error:0x%x\n", __func__, ret);
 		goto freeTx;
 	}
-	rx = ksceKernelDmaOpAlloc("SceDbgSdioRx");
+	rx = sceKernelDmaOpAlloc("SceDbgSdioRx");
 	if (rx < 0) {
 		SCE_DBG_PRINTF(0, 310, "%s. DmaOpAlloc error:0x%x\n", __func__, rx);
 		ret = rx;
 		goto freeTx;
 	}
-	ret = ksceKernelDmaOpAssign(rx, SCE_KERNEL_DMAC_ID_DMAC6, 1);
+	ret = sceKernelDmaOpAssign(rx, SCE_KERNEL_DMAC_ID_DMAC6, 1);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 318, "%s. DmaOpAssign error:0x%x\n", __func__, ret);
-		ksceKernelDmaOpFree(rx);
+		sceKernelDmaOpFree(rx);
 		goto freeTx;
 	}
 
@@ -250,7 +250,7 @@ int sceDbgSdioInit(void)
 	return 0;
 
 freeTx:
-	ksceKernelDmaOpFree(tx);
+	sceKernelDmaOpFree(tx);
 freeMutex:
 	sceKernelFinalizeFastMutex(&s_sdio.mutex);
 freeBlock:
@@ -343,20 +343,20 @@ static int executeDma(SceKernelDmaOpId op, SceKernelDmaOpTag *chain, SceUInt32 c
 	SceKernelDmaOpChainParam param = { sizeof(param), coherency, 0 };
 	int ret;
 
-	ret = ksceKernelDmaOpSetupChain(op, chain, &param, flag);
+	ret = sceKernelDmaOpSetupChain(op, chain, &param, flag);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 989, "%s. DmaOpSetupChain error:0x%x\n", __func__, ret);
 		return ret;
 	}
-	ret = ksceKernelDmaOpEnQueue(op);
+	ret = sceKernelDmaOpEnQueue(op);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 995, "%s. DmaOpEnQueue error:0x%x\n", __func__, ret);
 		return ret;
 	}
-	ret = ksceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, NULL, NULL);
+	ret = sceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, NULL, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 1002, "%s. DmaOpSync error:0x%x\n", __func__, ret);
-		ksceKernelDmaOpDeQueue(op);
+		sceKernelDmaOpDeQueue(op);
 	}
 	return ret;
 }

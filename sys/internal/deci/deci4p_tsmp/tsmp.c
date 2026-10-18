@@ -3,7 +3,7 @@
  */
 #include <psp2kern/types.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
@@ -1114,13 +1114,13 @@ TSMP_INLINE int tsmpSyncCurrentTick(void)
 	tsmpSetBufStatus(&tsmp.send, TSMP_BUF_FILLED, 1);
 	tsmpSetHeader((TsmpHeader *)tsmp.send.base, 6, 0xa, 0, 0);
 	tsmpSetBufStatus(&tsmp.send, TSMP_BUF_HEADER, 1);
-	ret = ksceRtcGetCurrentClockLocalTime(&time);
+	ret = sceRtcGetCurrentClockLocalTime(&time);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3075, "0x%08X\n", ret);
 		tsmpFreeSendBuf();
 		return ret;
 	}
-	ret = ksceRtcConvertDateTimeToUnixTime(&time, &unixTime);
+	ret = SceRtcForDriver_497B5DC9(&time, &unixTime);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3083, "0x%08X\n", ret);
 		tsmpFreeSendBuf();

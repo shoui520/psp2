@@ -7,7 +7,7 @@
 /* Hardware-info registers cached by initialization; the final four names unknown. */
 uint32_t s_hardwareInfo[5];
 
-uint32_t kscePervasiveGetSoCRevision(void)
+uint32_t ScePervasiveForDriver_714EEFB7(void)
 {
 	return s_hardwareInfo[0];
 }
@@ -131,7 +131,7 @@ uint32_t ScePervasiveForDriver_9E81E057(void)
 	return previous != 0;
 }
 
-uint32_t kscePervasiveUartSetBaudrate(unsigned port, unsigned baud)
+uint32_t ScePervasiveForDriver_8BAB45F8(unsigned port, unsigned baud)
 {
 	unsigned i;
 

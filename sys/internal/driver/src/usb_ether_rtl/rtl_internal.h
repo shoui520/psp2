@@ -8,7 +8,7 @@
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include <psp2kern/usbd.h>
 #include <psp2kern/usbserv.h>
 #include <psp2common/net.h>

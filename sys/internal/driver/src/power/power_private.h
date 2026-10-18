@@ -40,7 +40,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <lowio/pervasive_regs.h>
-#include <psp2kern/ctrl.h>
+#include <ctrl/ctrl.h>
 #include <psp2common/power.h>
 #include <kernel/error.h>
 #include <stddef.h>
@@ -57,15 +57,14 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <lowio/pervasive.h>
-#include <psp2kern/lowio/gpio.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/gpio.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <sysmem/procevent.h>
 
 /* Native idle table has an eight-byte header followed by eight 32-byte rows. */
@@ -104,23 +103,19 @@ extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 /* Voltage codes decrease as the required voltage increases. */
 
 /* Actual callbacks required by Power's startup registration sequence. */
-extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
+extern int SceCtrlForDriver_03777131(int clearMask, int setMask);
 
 /* LED callback and script engine; appended after the existing LED state. */
 
 extern int __aeabi_idiv(int numerator, int denominator);
 
-extern int ksceCtrlGetActiveControllerPort(void);
+extern int SceCtrlForDriver_FA88D837(void);
 
-/* name unknown: told the new power flags of a process */
-extern SceUID SceCtrlForDriver_FF9D4DD4(uint32_t, void (*)(uint32_t, uint32_t),
-					void *, int);
 extern int SceCtrlForDriver_69E45836(void);
-extern int SceCtrlForDriver_C8CE3E43(unsigned int);
 extern int ScePervasiveForDriver_7D02215D(unsigned int selector);
 extern int ScePervasiveForDriver_C0F7CC39(unsigned int selector);
-extern int ksceCtrlUpdateMaskForAll(int clearMask, int setMask);
-extern int ksceDisplayGetDeviceType(int head, int unused);
+extern int SceCtrlForDriver_12C13A72(int clearMask, int setMask);
+extern int SceDisplayForDriver_8D9A1CCE(int head, int unused);
 extern int ksceTouchSetEnableFlag(uint32_t port, uint32_t enabled);
 extern uint32_t __aeabi_uidiv(uint32_t numerator, uint32_t denominator);
 extern uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
@@ -161,7 +156,7 @@ extern void powerSmcSuspendSecondary(void);
 #define POWER_REQUEST_SHUTDOWN		5
 #define POWER_REQUEST_HIBERNATE		6
 
-/* kscePowerSetPowerSwMode: what the power button does */
+/* ScePowerForDriver_C1853BA7: what the power button does */
 #define POWER_SW_MODE_HOLD_STANDBY	0x1	/* held for the push time: standby */
 #define POWER_SW_MODE_PRESS_SUSPEND	0x2
 #define POWER_SW_MODE_PRESS_DISPLAY_OFF	0x4
@@ -384,7 +379,7 @@ struct PowerBatteryFakeStatus {
 #define SCE_LED_ERROR_INVALID_LED	0x803f0140
 #define SCE_LED_ERROR_INVALID_MODE	0x803f0141
 
-/* ksceLedSetMode's modes */
+/* SceLedForDriver_EA24BE03's modes */
 #define SCE_LED_MODE_OFF	0
 #define SCE_LED_MODE_ON		1	/* Syscon pattern index */
 #define SCE_LED_MODE_BLINK	2
@@ -503,14 +498,14 @@ extern struct PowerProcessState *volatile s_powerProcessList;
 
 /* across units */
 
-uint32_t kscePowerGetPowerSwMode(void);
+uint32_t ScePowerForDriver_165CE085(void);
 
 int scePowerRequestSuspend(void);
 int ScePowerForDriver_660D5AB4(uint32_t timerId);
 
 int ScePowerForDriver_991BDEAF(uint32_t timerId, uint32_t mask);
 
-int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
+int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
 			     uint64_t interval, PowerIdleCallback callback,
 			     void *argument);
 uint32_t powerIsIdleTimer(uint32_t timerId);
@@ -518,9 +513,9 @@ uint32_t powerIsIdleTimer(uint32_t timerId);
 SceUInt32 ScePowerForDriver_394DE492(void);
 int powerTickInternalPredicate(void);
 
-int kscePowerTick(uint32_t mask);
+int ScePowerForDriver_EFD3C963(uint32_t mask);
 
-int kscePowerSetDisplayMaxBrightness(uint32_t limit);
+int ScePowerForDriver_77027B6B(uint32_t limit);
 int ScePowerForDriver_38415146(uint32_t value);
 
 int powerPermitChargeTimer(void *argp);
@@ -533,21 +528,13 @@ int powerSetBusRailClockRaw(unsigned int lane, int frequency,
 
 void powerUnlockClockControl(void);
 
-int kscePowerSetBusClockFrequency(int frequency);
-
-int kscePowerSetGpuXbarClockFrequency(int frequency);
-
-int kscePowerSetArmClockFrequency(int frequency);
-
-int kscePowerSetGpuClockFrequencyInternal(int first, int second);
+int ScePowerForDriver_264C24FC(int first, int second);
 
 void powerNotifyWirelessLimit(int enabled);
 
 void powerNotifyProcessFlags(SceUID pid, uint32_t flags);
 
 int scePowerBatteryUpdateInfo(void);
-
-int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option);
 
 void powerNotifyCallback(uint32_t clearMask,
 							    uint32_t setMask,

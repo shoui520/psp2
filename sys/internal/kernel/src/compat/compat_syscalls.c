@@ -390,7 +390,7 @@ int sceCompatGetCurrentSecureTick(SceRtcTick *tick)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = ksceRtcGetCurrentSecureTick(&localTick);
+		result = SceRtcForDriver_401C0954(&localTick);
 		if (result >= 0)
 			result = SceSysmemForDriver_6D88EF8A(tick, &localTick,
 				sizeof(localTick));

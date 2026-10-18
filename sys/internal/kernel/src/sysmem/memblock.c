@@ -13,6 +13,7 @@
 #pragma pop_macro("__FILE_NAME__")
 #include "memblock/status_module.h"
 #include <sysmem/sysclib.h>
+#include <dmacmgr/dmacmgr.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "memblock.c"
@@ -1203,7 +1204,6 @@ SceUID PUID2GUIDWithRefer(SceUID pid, SceUID puid, SceClass *cls);
 int GUIDFindByName(const char *name);
 SceUID SceSysmemForDriver_BF209859(SceUID pid, SceUID guid);
 int SceSysmemForDriver_B81CF0A3(SceUID guid, void **vbase);
-int ksceDmacMemset(void *dst, int c, SceSize size);
 
 /* the user allocation options (SceKernelAllocMemBlockOpt), up to 0x40 bytes */
 typedef struct MemBlockUserOpt {
@@ -1463,7 +1463,7 @@ clear:
 		tpidruro = readTpidruro();
 		writeTpidruro(tpidruro << 16);
 		SceSysmemForDriver_B81CF0A3(guid, &vbase);
-		ksceDmacMemset(vbase, 0, size);
+		sceKernelDmacMemset(vbase, 0, size);
 		writeTpidruro(tpidruro);
 	}
 	puid = SceSysmemForDriver_BF209859(0, guid);

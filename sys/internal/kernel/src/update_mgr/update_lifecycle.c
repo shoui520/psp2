@@ -16,8 +16,8 @@ int module_start(SceSize arglen, const void *argp)
 
 	if (UpdateUtilInit() != 0 || StorageUtilInit() != 0)
 		goto finish;
-	updateSysconHardwareInfo = ksceSysconGetHardwareInfo();
-	updateSysconFirmwareVersion = ksceSysconGetBaryonVersion();
+	updateSysconHardwareInfo = SceSysconForDriver_CBD6D8BC();
+	updateSysconFirmwareVersion = SceSysconForDriver_FF86F4C5();
 	SceSysconForDriver_D2F456DC((unsigned char *)&updateSysconDownloaderVersion);
 	if (updateSysconFirmwareVersion > 0x400ff) {
 		updateUseSysconNvsService = 1;

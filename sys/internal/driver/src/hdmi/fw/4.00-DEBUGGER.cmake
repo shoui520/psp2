@@ -133,16 +133,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67
 	SceDipswForDriver_A98FC2FD
-	ksceI2cTransferWriteRead
-	ksceI2cReset
-	ksceI2cTransferWrite
-	ksceGpioPortRead
-	ksceGpioSetPortMode
-	ksceGpioSetIntrMode
-	ksceGpioPortSet
-	ksceGpioPortClear
-	ksceSysconCtrlHdmiCecPower
-	ksceSysconGetHardwareInfo
+	SceI2cForDriver_0A40B7BF
+	SceI2cForDriver_76D277AB
+	SceI2cForDriver_CA94A759
+	SceGpioForDriver_129DF5AC
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_BBEA1DDC
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
+	SceSysconForDriver_62155962
+	SceSysconForDriver_CBD6D8BC
 	ScePervasiveForDriver_26B51075
 	ScePervasiveForDriver_D185D235
 )

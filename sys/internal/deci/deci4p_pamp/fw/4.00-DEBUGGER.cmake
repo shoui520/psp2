@@ -165,12 +165,12 @@ set(MODULE_IMPORT_FUNCS
 	SceZlibForDriver_25F28DA7
 	SceZlibForDriver_5492B3F2
 	SceZlibForDriver_5B718E55
-	ksceKernelDmaOpSetupDirect
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpFree
-	ksceKernelDmaOpAssign
+	_DmaOpSetupDirect
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpFree
+	sceKernelDmaOpAssign
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

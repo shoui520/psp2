@@ -11,17 +11,17 @@ SceSystimer:
       version: 1
       nid: 0xA47EB09A
       functions:
-        - ksceKernelSysTimerSetClockSource: 0x0450933B
-        - ksceKernelSysTimerSetCount: 0x1B14DFD6
-        - ksceKernelSysTimerStartCount: 0x59EBD22D
-        - ksceKernelSysTimerResetCount: 0x7DEBA6A5
-        - ksceKernelSysTimerFree: 0x8358611F
+        - SceSystimerForDriver_0450933B: 0x0450933B
+        - SceSystimerForDriver_1B14DFD6: 0x1B14DFD6
+        - SceSystimerForDriver_59EBD22D: 0x59EBD22D
+        - SceSystimerForDriver_7DEBA6A5: 0x7DEBA6A5
+        - SceSystimerForDriver_8358611F: 0x8358611F
         - SceSystimerForDriver_85AAE0DD: 0x85AAE0DD
         - SceSystimerForDriver_904DF737: 0x904DF737
-        - ksceKernelSysTimerGetCount: 0x963F7C0D
-        - ksceKernelSysTimerSetInterval: 0xA73351C1
-        - ksceKernelSysTimerStopCount: 0xBF8D42B0
+        - SceSystimerForDriver_963F7C0D: 0x963F7C0D
+        - SceSystimerForDriver_A73351C1: 0xA73351C1
+        - SceSystimerForDriver_BF8D42B0: 0xBF8D42B0
         - SceSystimerForDriver_C34D7940: 0xC34D7940
-        - ksceKernelSysTimerSetHandler: 0xCCCD1EE3
-        - ksceKernelSysTimerAlloc: 0xE2B9D8E9
+        - SceSystimerForDriver_CCCD1EE3: 0xCCCD1EE3
+        - SceSystimerForDriver_E2B9D8E9: 0xE2B9D8E9
         - SceSystimerForDriver_FD5F1742: 0xFD5F1742

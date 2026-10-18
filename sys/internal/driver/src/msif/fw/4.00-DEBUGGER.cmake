@@ -151,17 +151,17 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblDmac5DesEcbEncWithKeyslot
 	ksceSblDmac5Rnd
 	ksceSblSsDecryptWithPortability
-	kscePervasiveMsifClockDisable
-	kscePervasiveRemovableMemoryGetCardInsertState
-	kscePervasiveMsifSetClock
-	kscePervasiveGetSoCRevision
-	kscePervasiveMsifClockEnable
-	kscePervasiveMsifResetEnable
-	kscePervasiveMsifResetDisable
+	ScePervasiveForDriver_2A9778CD
+	ScePervasiveForDriver_551EEE82
+	ScePervasiveForDriver_64ABE589
+	ScePervasiveForDriver_714EEFB7
+	ScePervasiveForDriver_7704C013
+	ScePervasiveForDriver_A3569FF1
+	ScePervasiveForDriver_CB0F15CD
 	ScePervasiveForDriver_F9E7B023
-	kscePowerSetIdleCallback
-	kscePowerTick
-	ksceSysconGetHardwareInfo
+	ScePowerForDriver_1BA2FCAE
+	ScePowerForDriver_EFD3C963
+	SceSysconForDriver_CBD6D8BC
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

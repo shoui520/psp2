@@ -91,8 +91,8 @@ static int lowPower(struct RtlAdapter *a)
 	unsigned char byte;
 	int ret;
 
-	ksceGpioSetPortMode(1, 2, 0);
-	ksceGpioPortSet(1, 2);
+	SceGpioForDriver_372022A4(1, 2, 0);
+	SceGpioForDriver_D454A584(1, 2);
 	lockFastMutex(&a->mutex);
 	ret = rtlWriteUsb16(a, 0xe436, 4000);
 	if (ret < 0)
@@ -215,8 +215,8 @@ static int initializeHardware(struct RtlAdapter *a)
 	};
 
 	if (SceSblAIMgrForDriver_C6E83F34() && !SceSysrootForDriver_8AA268D6(0xc)) {
-		ksceGpioSetPortMode(1, 2, 0);
-		ksceGpioPortClear(1, 2);
+		SceGpioForDriver_372022A4(1, 2, 0);
+		SceGpioForDriver_F6310435(1, 2);
 	}
 	for (unsigned int reg = 0xfc28; reg <= 0xfc34; reg += 4) {
 		ret = rtlWritePla(a, reg, 0xff, 4, &value);

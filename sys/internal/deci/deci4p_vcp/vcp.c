@@ -13,7 +13,6 @@
  */
 
 #include <sysmem/cp15.h>
-#include <psp2kern/display.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
@@ -278,10 +277,10 @@ static void VcpCaptureFrame(const VcpRequest *req)
 	else if ((pid = req->pid) <= 0)
 		pid = -1;
 
-	if (ksceDisplayWaitVblankStartInternal(head) < 0)
+	if (SceDisplayForDriver_B80CA224(head) < 0)
 		goto no_frame;
 	info->size = sizeof(*info);
-	ret = ksceDisplayGetProcFrameBufInternal(pid, head, index, info);
+	ret = SceDisplayForDriver_3BC165EF(pid, head, index, info);
 	if (ret < 0)
 		goto failed;
 	if (info->paddr == 0 || fb->pitch == 0 || fb->width == 0 || fb->height == 0)
@@ -303,7 +302,7 @@ static void VcpCaptureFrame(const VcpRequest *req)
 		fb->width = 960;
 		fb->height = 544;
 	}
-	ret = ksceDisplayCaptureFrameBufDMACInternal(pid, head, index, fb);
+	ret = SceDisplayForDriver_707EEE2E(pid, head, index, fb);
 	if (ret < 0)
 		goto failed;
 	if (fb->pitch == 0 || fb->width == 0 || fb->height == 0)

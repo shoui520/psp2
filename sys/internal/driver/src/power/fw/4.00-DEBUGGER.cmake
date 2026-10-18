@@ -297,9 +297,9 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_47708C03
 	ScePervasiveForDriver_589D0291
 	ScePervasiveForDriver_6AF0196F
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	ScePervasiveForDriver_725B4F59
-	kscePervasiveUartResetEnable
+	ScePervasiveForDriver_788B6C61
 	ScePervasiveForDriver_7D02215D
 	ScePervasiveForDriver_81A155F1
 	ScePervasiveForDriver_98D8914A
@@ -307,43 +307,43 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_C0F7CC39
 	ScePervasiveForDriver_CA0ACFC5
 	ScePervasiveForDriver_E9D95643
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 	SceGrabForDriver_B22EE8BC
 	SceSysconForDriver_03C50DC3
 	SceSysconForDriver_03F11220
-	ksceSysconCtrlLED
+	SceSysconForDriver_04EC7579
 	SceSysconForDriver_0826BA07
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_129EA022
 	SceSysconForDriver_14B99945
-	ksceSysconIsLowBatteryInhibitUpdateReboot
-	ksceSysconIsLowBatteryInhibitUpdateDownload
+	SceSysconForDriver_1A0C140F
+	SceSysconForDriver_1E3130EE
 	SceSysconForDriver_26F9D729
 	SceSysconForDriver_27758A64
 	SceSysconForDriver_2A4B0437
 	SceSysconForDriver_2D471528
-	ksceSysconSetAlarmCallback
+	SceSysconForDriver_32418370
 	SceSysconForDriver_373ECF8A
-	ksceSysconSetLowBatteryCallback
+	SceSysconForDriver_3F0DB7C0
 	SceSysconForDriver_4278E614
 	SceSysconForDriver_4A184B7C
 	SceSysconForDriver_4E0EB57B
 	SceSysconForDriver_50CAE242
-	ksceSysconWaitInitialized
+	SceSysconForDriver_55DF1C9B
 	SceSysconForDriver_596B17B7
 	SceSysconForDriver_59DC5938
 	SceSysconForDriver_6F586D1A
-	ksceSysconCtrlDolceLED
-	ksceSysconSetThermalAlertCallback
+	SceSysconForDriver_727F985A
+	SceSysconForDriver_773B8126
 	SceSysconForDriver_7F198FA2
 	SceSysconForDriver_80D6E061
-	ksceSysconSetPowerMode
+	sceSysconSetPowerMode
 	SceSysconForDriver_901D6CD4
 	SceSysconForDriver_9070F139
 	SceSysconForDriver_91D3B7A3
-	ksceSysconIsDownLoaderMode
+	SceSysconForDriver_9ADD60D2
 	SceSysconForDriver_9CA6EB70
 	SceSysconForDriver_9DA2A5AB
 	SceSysconForDriver_9F8340FF
@@ -351,27 +351,27 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_ACEE1C70
 	SceSysconForDriver_AD0A8275
 	SceSysconForDriver_B841C141
-	ksceSysconCmdExecAsync
+	SceSysconForDriver_C2224E82
 	SceSysconForDriver_C562AF3A
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_CD73079D
 	SceSysconForDriver_CF5B2F2F
 	SceSysconForDriver_D7BEFF8B
 	SceSysconForDriver_D7F5A797
-	ksceSysconSendCommand
+	SceSysconForDriver_E26488B9
 	SceSysconForDriver_F93CF833
-	ksceSysconGetBaryonVersion
-	ksceDisplayGetDeviceType
-	ksceDisplayWaitVblankStart
-	ksceDisplaySetBrightness
-	ksceDisplayGetPrimaryHead
-	ksceCtrlUpdateMaskForNonShell
-	ksceCtrlUpdateMaskForAll
+	SceSysconForDriver_FF86F4C5
+	SceDisplayForDriver_8D9A1CCE
+	SceDisplayForDriver_984C27E7
+	SceDisplayForDriver_9E3C6DC6
+	SceDisplayForDriver_C8E554C5
+	SceCtrlForDriver_03777131
+	SceCtrlForDriver_12C13A72
 	SceCtrlForDriver_4CCB2153
 	SceCtrlForDriver_69E45836
 	SceCtrlForDriver_C8CE3E43
-	ksceCtrlPeekBufferPositive
-	ksceCtrlGetActiveControllerPort
+	SceCtrlForDriver_EA1D3A34
+	SceCtrlForDriver_FA88D837
 	SceCtrlForDriver_FF9D4DD4
 	ksceTouchSetEnableFlag
 	ksceIdStorageLookup

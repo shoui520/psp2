@@ -158,14 +158,14 @@ int ScePervasiveForDriver_D3B59C33(int port)
 	return ResetDisableDevice(&csi[port]);
 }
 
-int kscePervasiveDsiResetEnable(int port, unsigned int mask)
+int ScePervasiveForDriver_E3FC1C8D(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_reset->dsi;
 
 	return ResetEnableMask(&dsi[port], mask);
 }
 
-int kscePervasiveDsiResetDisable(int port, unsigned int mask)
+int ScePervasiveForDriver_FFB43AC2(int port, unsigned int mask)
 {
 	volatile uint32_t *dsi = s_reset->dsi;
 
@@ -220,12 +220,12 @@ int ScePervasiveForDriver_D326E15F(int port)
 	return ResetDisableDevice(&sdif[port]);
 }
 
-int kscePervasiveMsifResetEnable(void)
+int ScePervasiveForDriver_A3569FF1(void)
 {
 	return ResetEnableDevice(&s_reset->msif);
 }
 
-int kscePervasiveMsifResetDisable(void)
+int ScePervasiveForDriver_CB0F15CD(void)
 {
 	return ResetDisableDevice(&s_reset->msif);
 }
@@ -268,24 +268,24 @@ int ScePervasiveForDriver_6A2FB697(void)
 	return ResetDisableDevice(&s_reset->spdif);
 }
 
-int kscePervasiveGpioResetEnable(void)
+int ScePervasiveForDriver_731A097D(void)
 {
 	return ResetEnableDevice(&s_reset->gpio);
 }
 
-int kscePervasiveGpioResetDisable(void)
+int ScePervasiveForDriver_78C34032(void)
 {
 	return ResetDisableDevice(&s_reset->gpio);
 }
 
-int kscePervasiveSpiResetEnable(int port)
+int ScePervasiveForDriver_7B16F900(int port)
 {
 	volatile uint32_t *spi = s_reset->spi;
 
 	return ResetEnableDevice(&spi[port]);
 }
 
-int kscePervasiveSpiResetDisable(int port)
+int ScePervasiveForDriver_E4B145AE(int port)
 {
 	volatile uint32_t *spi = s_reset->spi;
 
@@ -306,14 +306,14 @@ int ScePervasiveForDriver_86BEA9A4(int port)
 	return ResetDisableDevice(&i2c[port]);
 }
 
-int kscePervasiveUartResetEnable(int port)
+int ScePervasiveForDriver_788B6C61(int port)
 {
 	volatile uint32_t *uart = s_reset->uart;
 
 	return ResetEnableDevice(&uart[port]);
 }
 
-int kscePervasiveUartResetDisable(int port)
+int ScePervasiveForDriver_A7CE7DCC(int port)
 {
 	volatile uint32_t *uart = s_reset->uart;
 

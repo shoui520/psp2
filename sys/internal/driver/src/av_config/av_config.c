@@ -12,7 +12,6 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <power/power.h>
 #include <codec/codec.h>
-#include <psp2kern/power.h>
 #include <intrmgr/syscall.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sysmem.h>
@@ -178,7 +177,7 @@ void avConfigCtrlButtonCallback(uint32_t buttons, uint32_t previous, void *argum
 void avConfigHdmiEventCallback(int event)
 {
 	if (event & 2) {
-		if ((kscePowerGetWakeupFactor() & 0x7f) != 28)
+		if ((ScePowerForDriver_9F26222A() & 0x7f) != 28)
 			sceHdmiCecCmdOneTouchPlay(0);
 	}
 }
@@ -205,10 +204,10 @@ int _sceAVConfigResumePhase1Main(int resume, int eventId, void *args, void *opt)
 				avConfigRefreshAudioDevices();
 				avConfigGetSettings(&avConfigState.settings);
 				brightness = avConfigState.settings.brightness;
-				maximum = kscePowerGetDisplayMaxBrightness();
+				maximum = ScePowerForDriver_D8759B55();
 				if (maximum >= brightness)
 					maximum = brightness;
-				kscePowerSetDisplayBrightness(maximum);
+				ScePowerForDriver_43D5CE1D(maximum);
 				sceKernelSetEventFlag(avConfigState.eventFlag, 16);
 				avConfigResumeActive = resume;
 				avConfigEnableAudioDevices(resume);
@@ -334,7 +333,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	avConfigState.hasVideoHardware = (ksceSysconGetHardwareInfo() & 0x80) != 0;
+	avConfigState.hasVideoHardware = (SceSysconForDriver_CBD6D8BC() & 0x80) != 0;
 	avConfigHasCodec = SceSblAIMgrForDriver_71608CA3() == 0;
 	if (ksceIdStorageLookup(0x118, 0, &idStorageValue, 1) == 0 &&
 	    idStorageValue == 1) {
@@ -363,10 +362,10 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 					avConfigState.settings.shutterVolume);
 	avConfigGetSettings(&avConfigState.settings);
 	volume = avConfigState.settings.brightness;
-	bits = kscePowerGetDisplayMaxBrightness();
+	bits = ScePowerForDriver_D8759B55();
 	if (bits < volume)
 		volume = bits;
-	kscePowerSetDisplayBrightness(volume);
+	ScePowerForDriver_43D5CE1D(volume);
 	avConfigSetEventFlag(16);
 	avConfigResumeActive = 1;
 	avConfigEnableAudioDevices(1);
@@ -514,15 +513,15 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 			goto iterationComplete;
 		}
 		if (bits & 0x10000000) {
-			ksceDisplaySetBrightness(0, 0);
+			SceDisplayForDriver_9E3C6DC6(0, 0);
 			goto iterationComplete;
 		}
 		if (bits & 0x20000000) {
-			ksceDisplaySetBrightness(0, 2);
+			SceDisplayForDriver_9E3C6DC6(0, 2);
 			goto iterationComplete;
 		}
 		if (bits & 0x40000000) {
-			ksceDisplaySetBrightness(0, 0);
+			SceDisplayForDriver_9E3C6DC6(0, 0);
 			goto iterationComplete;
 		}
 		initializeHdmi = avConfigInitializeHdmiOutput;
@@ -970,13 +969,13 @@ int sceAVConfigSetDisplayBrightness(unsigned int brightness)
 	int result;
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		maximum = kscePowerGetDisplayMaxBrightness();
+		maximum = ScePowerForDriver_D8759B55();
 		if (maximum < brightness)
 			brightness = maximum;
 		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		avConfigConfiguration.settings.brightness = brightness;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-		kscePowerSetDisplayBrightness(brightness);
+		ScePowerForDriver_43D5CE1D(brightness);
 		result = 0;
 	} else {
 		result = (int)0x80010058;
@@ -992,7 +991,7 @@ int sceAVConfigGetDisplayMaxBrightness(unsigned int *brightness)
 	int result;
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		maximum = kscePowerGetDisplayMaxBrightness();
+		maximum = ScePowerForDriver_D8759B55();
 		if (SceSysmemForDriver_6D88EF8A(brightness, &maximum, sizeof(maximum)) != 0)
 			result = (int)0x803a0102;
 		else
@@ -1031,10 +1030,10 @@ int sceAVConfigSetAutoSuspend2(unsigned int interval)
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		timeout = (SceUInt64)interval * 1000000;
-		kscePowerSetIdleTimer(0, timeout);
+		ScePowerForDriver_6BC26FC7(0, timeout);
 		if (SceSblAIMgrForDriver_71608CA3() == 0)
-			kscePowerSetIdleTimer(1, timeout);
-		kscePowerSetIdleTimer(2, timeout);
+			ScePowerForDriver_6BC26FC7(1, timeout);
+		ScePowerForDriver_6BC26FC7(2, timeout);
 		result = 0;
 	} else {
 		result = (int)0x80010058;
@@ -1073,10 +1072,10 @@ int sceAVConfigClearAutoSuspend2(void)
 		dimmingTime = 60000000;
 	}
 	SceKernelSuspendForDriver_E0489831(0);
-	kscePowerSetIdleTimer(0, suspendTime);
+	ScePowerForDriver_6BC26FC7(0, suspendTime);
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
-		kscePowerSetIdleTimer(1, dimmingTime);
-	kscePowerSetIdleTimer(2, (SceUInt64)interval * 1000000);
+		ScePowerForDriver_6BC26FC7(1, dimmingTime);
+	ScePowerForDriver_6BC26FC7(2, (SceUInt64)interval * 1000000);
 	result = 0;
 out:
 	sceSyscallLeave(syscall);
@@ -1109,10 +1108,10 @@ int sceAVConfigSetAutoSuspend(unsigned int interval)
 		dimmingTime = 60000000;
 	}
 	SceKernelSuspendForDriver_E0489831(0);
-	kscePowerSetIdleTimer(0, suspendTime);
+	ScePowerForDriver_6BC26FC7(0, suspendTime);
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
-		kscePowerSetIdleTimer(1, dimmingTime);
-	kscePowerSetIdleTimer(2, (SceUInt64)interval * 1000000);
+		ScePowerForDriver_6BC26FC7(1, dimmingTime);
+	ScePowerForDriver_6BC26FC7(2, (SceUInt64)interval * 1000000);
 	result = 0;
 out:
 	sceSyscallLeave(syscall);
@@ -1130,7 +1129,7 @@ int sceAVConfigSetAutoDisplayDimming(unsigned int interval)
 			intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 			avConfigConfiguration.settings.dimmingInterval = interval;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-			kscePowerSetIdleTimer(1, (SceUInt64)interval * 1000000);
+			ScePowerForDriver_6BC26FC7(1, (SceUInt64)interval * 1000000);
 			result = 0;
 		} else {
 			result = (int)0x803a0109;
@@ -1156,10 +1155,10 @@ int sceAVConfigSetDisplayColorSpaceMode(int mode)
 			avConfigConfiguration.settings.colorSpaceMode = mode;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 			if (mode != 1) {
-				result = ksceDisplaySetColorSpaceMode(0, 0);
+				result = SceDisplayForDriver_8D79D187(0, 0);
 				SceCompatForDriver_6EBD9E01(0);
 			} else {
-				result = ksceDisplaySetColorSpaceMode(0, 2);
+				result = SceDisplayForDriver_8D79D187(0, 2);
 				SceCompatForDriver_6EBD9E01(2);
 			}
 		}
@@ -1833,7 +1832,7 @@ void avConfigInitializeConfiguration(int enableAvls, int shutterVolume)
 		}
 	}
 	if (SceSblAIMgrForDriver_71608CA3() != 0) {
-		brightness = kscePowerGetDisplayMaxBrightness();
+		brightness = ScePowerForDriver_D8759B55();
 	} else {
 		retries = 5;
 		while (sceRegMgrGetKeyInt(avConfigDisplayCategory,

@@ -18,9 +18,9 @@
 #define sceRtcGetWin32FileTime		SceRtcForDriver_1DD4C5B6
 #define sceRtcSetTime64_t		SceRtcForDriver_F4E23829
 #define sceRtcSetTime_t			SceRtcForDriver_DE9F4515
-#define sceRtcGetTime64_t		ksceRtcConvertDateTimeToUnixTime
+#define sceRtcGetTime64_t		SceRtcForDriver_497B5DC9
 #define sceRtcGetTime_t			SceRtcForDriver_FFD7A04F
-#define sceRtcSetTick			ksceRtcConvertTickToDateTime
+#define sceRtcSetTick			SceRtcForDriver_42A0DFCB
 #define sceRtcGetTick			SceRtcForDriver_F139E359
 #define sceRtcTickAddTicks		SceRtcForDriver_A82AC5B3
 #define sceRtcTickAddMicroseconds	SceRtcForDriver_CE51C2A1

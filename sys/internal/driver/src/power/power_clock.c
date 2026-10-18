@@ -96,7 +96,7 @@ int powerInitializeClockControl(void)
 	return 0;
 }
 
-int kscePowerSetBusClockFrequency(int frequency)
+int scePowerSetBusClockFrequency(int frequency)
 {
 	uint32_t demand = s_powerClockControl.busVoltageTable[2];
 	unsigned int selector;
@@ -126,12 +126,12 @@ int kscePowerSetBusClockFrequency(int frequency)
 	return powerSetBusRailClockRaw(0, frequency, selector, demand);
 }
 
-uint32_t kscePowerGetBusClockFrequency(void)
+uint32_t scePowerGetBusClockFrequency(void)
 {
 	return s_powerClockControl.frequencies.busClockFrequency;
 }
 
-int kscePowerSetDmac5ClockFrequency(int frequency)
+int ScePowerForDriver_A902CDDF(int frequency)
 {
 	uint32_t demand = s_powerClockControl.busVoltageTable[2];
 	unsigned int selector;
@@ -159,12 +159,12 @@ int kscePowerSetDmac5ClockFrequency(int frequency)
 	return powerSetBusRailClockRaw(1, frequency, selector, demand);
 }
 
-uint32_t kscePowerGetDmac5ClockFrequency(void)
+uint32_t ScePowerForDriver_F1E14EA9(void)
 {
 	return s_powerClockControl.frequencies.dmac5ClockFrequency;
 }
 
-int kscePowerSetCameraBusClockFrequency(int frequency)
+int ScePowerForDriver_C743E392(int frequency)
 {
 	uint32_t demand = s_powerClockControl.busVoltageTable[2];
 	unsigned int selector;
@@ -195,13 +195,13 @@ int kscePowerSetCameraBusClockFrequency(int frequency)
 	return powerSetBusRailClockRaw(2, frequency, selector, demand);
 }
 
-uint32_t kscePowerGetCameraBusClockFrequency(void)
+uint32_t ScePowerForDriver_668F01D4(void)
 {
 	return s_powerClockControl.frequencies.cameraBusClockFrequency;
 }
 
 /* The system clock keeps the requested frequency; only two selectors exist. */
-int kscePowerSetSysClockFrequency(int frequency)
+int ScePowerForDriver_0E333BEC(int frequency)
 {
 	uint32_t demand;
 	unsigned int selector;
@@ -220,7 +220,7 @@ int kscePowerSetSysClockFrequency(int frequency)
 	return powerSetBusRailClockRaw(3, frequency, selector, demand);
 }
 
-uint32_t kscePowerGetSysClockFrequency(void)
+uint32_t ScePowerForDriver_C63DACD5(void)
 {
 	return s_powerClockControl.frequencies.sysClockFrequency;
 }
@@ -266,7 +266,7 @@ static inline __attribute__((always_inline)) void lowerClockVoltage(unsigned int
 		s_powerClockControl.railVoltage[rail - 1] = demand;
 }
 
-int kscePowerSetArmClockFrequency(int frequency)
+int scePowerSetArmClockFrequency(int frequency)
 {
 	const unsigned char voltageIndex[16] = {
 		0, 5, 0, 5, 5, 4, 3, 2, 1, 0, 2, 0, 4, 2, 1, 0
@@ -301,7 +301,7 @@ int kscePowerSetArmClockFrequency(int frequency)
 	return 0;
 }
 
-uint32_t kscePowerGetArmClockFrequency(void)
+uint32_t scePowerGetArmClockFrequency(void)
 {
 	return s_powerClockControl.frequencies.armClockFrequency;
 }
@@ -362,22 +362,22 @@ static inline __attribute__((always_inline)) int setMediaClock(unsigned int lane
 	return 0;
 }
 
-int kscePowerSetVeneziaClockFrequency(int frequency)
+int ScePowerForDriver_621BD8FD(int frequency)
 {
 	return setMediaClock(0, frequency);
 }
 
-uint32_t kscePowerGetVeneziaClockFrequency(void)
+uint32_t ScePowerForDriver_64641E6A(void)
 {
 	return s_powerClockControl.frequencies.veneziaClockFrequency;
 }
 
-int kscePowerSetVipClockFrequency(int frequency)
+int ScePowerForDriver_E5573571(int frequency)
 {
 	return setMediaClock(1, frequency);
 }
 
-uint32_t kscePowerGetVipClockFrequency(void)
+uint32_t ScePowerForDriver_0E58FCDF(void)
 {
 	return s_powerClockControl.frequencies.vipClockFrequency;
 }
@@ -411,7 +411,7 @@ static inline __attribute__((always_inline)) int setXbarClock(int frequency, int
 	if (ret < 0)
 		return ret;
 	if (compat || !s_powerClockControl.frequencies.compatClockFrequency) {
-		ksceDisplayWaitVblankStart();
+		SceDisplayForDriver_984C27E7();
 		ScePervasiveForDriver_7D02215D(selector);
 	}
 	minimum = demand;
@@ -432,22 +432,22 @@ static inline __attribute__((always_inline)) int setXbarClock(int frequency, int
 	return 0;
 }
 
-int kscePowerSetGpuXbarClockFrequency(int frequency)
+int scePowerSetGpuXbarClockFrequency(int frequency)
 {
 	return setXbarClock(frequency, 0);
 }
 
-uint32_t kscePowerGetGpuXbarClockFrequency(void)
+uint32_t scePowerGetGpuXbarClockFrequency(void)
 {
 	return s_powerClockControl.frequencies.gpuXbarClockFrequency;
 }
 
-int kscePowerSetCompatClockFrequency(int frequency)
+int ScePowerForDriver_FFC84E69(int frequency)
 {
 	return setXbarClock(frequency, 1);
 }
 
-uint32_t kscePowerGetCompatClockFrequency(void)
+uint32_t ScePowerForDriver_CBCC11CC(void)
 {
 	return s_powerClockControl.frequencies.compatClockFrequency;
 }
@@ -464,7 +464,7 @@ int ScePowerForDriver_711C68DF(void (*before)(uint32_t, uint32_t, int, void *),
 	return 0;
 }
 
-int kscePowerSetGpuClockFrequencyInternal(int first, int second)
+int ScePowerForDriver_264C24FC(int first, int second)
 {
 	const unsigned int rates[] = { 41, 55, 83, 111, 166, 222 };
 	static const unsigned int selectors[] = { 0, 1, 2, 3, 5, 7 };
@@ -539,7 +539,7 @@ int powerInitializeClockRuntime(void)
 	uint32_t mediaVoltage;
 	uint32_t gpuFrequency;
 
-	s_powerClockControl.hardwareInfo = ksceSysconGetHardwareInfo();
+	s_powerClockControl.hardwareInfo = SceSysconForDriver_CBD6D8BC();
 
 	vid = ScePervasiveForDriver_47708C03();
 	s_powerClockControl.busVoltageTable[0] = vid->busVoltage[0];
@@ -559,7 +559,7 @@ int powerInitializeClockRuntime(void)
 	s_powerClockControl.gpuVoltageTable[0] = vid->gpuVoltage[0];
 
 	/* Later SoC revisions carry their own second GPU voltage. */
-	revision = kscePervasiveGetSoCRevision();
+	revision = ScePervasiveForDriver_714EEFB7();
 	if ((revision & 0x1ff00) != 0 || (revision & 0xff) > 0x41) {
 		s_powerClockControl.gpuVoltageTable[1] = vid->gpuVoltage[1];
 		if (s_powerClockControl.gpuVoltageTable[1] == 0)
@@ -604,15 +604,15 @@ int powerInitializeClockRuntime(void)
 	powerSetBusRailClockRaw(1, 166, 4, s_powerClockControl.busVoltageTable[0]);
 	powerSetBusRailClockRaw(2, 0, 0, s_powerClockControl.busVoltageTable[2]);
 	powerSetBusRailClockRaw(3, 190, 1, s_powerClockControl.busVoltageTable[2]);
-	kscePowerSetArmClockFrequency(333);
+	scePowerSetArmClockFrequency(333);
 
 	if (SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec))
 		gpuFrequency = 166;
 	else
 		gpuFrequency = 111;
-	kscePowerSetGpuXbarClockFrequency(gpuFrequency);
-	kscePowerSetGpuClockFrequencyInternal(gpuFrequency, gpuFrequency);
-	kscePowerSetCompatClockFrequency(0);
+	scePowerSetGpuXbarClockFrequency(gpuFrequency);
+	ScePowerForDriver_264C24FC(gpuFrequency, gpuFrequency);
+	ScePowerForDriver_FFC84E69(0);
 
 	if (!s_powerClockControl.lockBypass)
 		sceKernelUnlockMutex(s_powerClockControl.mutex, 1);
@@ -637,21 +637,21 @@ void powerRestoreClockRuntime(void)
 	SceSysconForDriver_7F198FA2(4, 0x8a - gpuVoltage);
 	s_powerClockControl.railVoltage[3] = gpuVoltage;
 
-	kscePowerSetBusClockFrequency(s_powerClockControl.frequencies.busClockFrequency);
-	kscePowerSetDmac5ClockFrequency(s_powerClockControl.frequencies.dmac5ClockFrequency);
-	kscePowerSetCameraBusClockFrequency(s_powerClockControl.frequencies.cameraBusClockFrequency);
-	kscePowerSetSysClockFrequency(s_powerClockControl.frequencies.sysClockFrequency);
-	kscePowerSetArmClockFrequency(s_powerClockControl.frequencies.armClockFrequency);
-	kscePowerSetVeneziaClockFrequency(s_powerClockControl.frequencies.veneziaClockFrequency);
-	kscePowerSetVipClockFrequency(s_powerClockControl.frequencies.vipClockFrequency);
-	kscePowerSetGpuXbarClockFrequency(s_powerClockControl.frequencies.gpuXbarClockFrequency);
-	kscePowerSetGpuClockFrequencyInternal(s_powerClockControl.frequencies.gpuClockFrequency[0],
+	scePowerSetBusClockFrequency(s_powerClockControl.frequencies.busClockFrequency);
+	ScePowerForDriver_A902CDDF(s_powerClockControl.frequencies.dmac5ClockFrequency);
+	ScePowerForDriver_C743E392(s_powerClockControl.frequencies.cameraBusClockFrequency);
+	ScePowerForDriver_0E333BEC(s_powerClockControl.frequencies.sysClockFrequency);
+	scePowerSetArmClockFrequency(s_powerClockControl.frequencies.armClockFrequency);
+	ScePowerForDriver_621BD8FD(s_powerClockControl.frequencies.veneziaClockFrequency);
+	ScePowerForDriver_E5573571(s_powerClockControl.frequencies.vipClockFrequency);
+	scePowerSetGpuXbarClockFrequency(s_powerClockControl.frequencies.gpuXbarClockFrequency);
+	ScePowerForDriver_264C24FC(s_powerClockControl.frequencies.gpuClockFrequency[0],
 					      s_powerClockControl.frequencies.gpuClockFrequency[1]);
-	kscePowerSetCompatClockFrequency(0);
+	ScePowerForDriver_FFC84E69(0);
 	s_powerClockControl.lockBypass = 0;
 }
 
-int kscePowerGetGpuClockFrequencyInternal(uint32_t *first, uint32_t *second)
+int scePowerGetGpuClockFrequencyInternal(uint32_t *first, uint32_t *second)
 {
 	if (first)
 		*first = s_powerClockControl.frequencies.gpuClockFrequency[0];

@@ -2,7 +2,7 @@
 #include <psp2/registrymgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -175,7 +175,7 @@ int sceNetPsGetCurrentTick(SceUInt64 *tick)
 	SceRtcTick current;
 	int result;
 
-	result = ksceRtcGetCurrentTick(&current);
+	result = SceRtcForDriver_DEC408D4(&current);
 	*tick = current.tick;
 	return result;
 }

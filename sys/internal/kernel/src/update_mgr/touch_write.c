@@ -146,7 +146,7 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 			failure = 0x0a00100b;
 			goto commandFailure;
 		}
-		result = ksceSysconGetTouchpanelDeviceInfo(sysconInfo);
+		result = SceSysconForDriver_F492E69E(sysconInfo);
 		if (result) {
 			failure = 0x0a00100c;
 			goto deviceFailure;
@@ -234,7 +234,7 @@ int TouchUtilWriteFirmware(uint64_t hardwareInfo, const void *buffer,
 		failure = 0x0a00100b;
 		goto commandFailure;
 	}
-	result = ksceSysconGetTouchpanelDeviceInfo(sysconInfo);
+	result = SceSysconForDriver_F492E69E(sysconInfo);
 	if (result) {
 		failure = 0x0a00100c;
 		goto deviceFailure;

@@ -2,7 +2,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/lowio/i2c.h>
+#include <lowio/i2c.h>
 #include <syscon/syscon.h>
 #include <sysmem/sblaimgr.h>
 #include <string.h>
@@ -45,7 +45,7 @@ int wm1803ReadRegister(unsigned int reg)
 
 	command[0] = reg >> 8;
 	command[1] = reg;
-	ret = ksceI2cTransferWriteRead(0, 0x34, command, 2, 0x34, value, 2);
+	ret = SceI2cForDriver_0A40B7BF(0, 0x34, command, 2, 0x34, value, 2);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 292, "Error: wm1803ReadRegister(R%02d) 0x%08x\n", reg, ret);
 		return ret;
@@ -91,7 +91,7 @@ int wm1803WriteRegister(int reg, unsigned int value)
 	if (reg == 0x57)
 		s_codec.busy--;
 	for (retry = 0; retry < 3; retry++) {
-		ret = ksceI2cTransferWrite(0, 0x34, buffer, 4);
+		ret = SceI2cForDriver_CA94A759(0, 0x34, buffer, 4);
 		if (ret >= 0 || retry == 2)
 			break;
 		sceKernelDelayThread(1000);
@@ -240,7 +240,7 @@ static int initializeCodec(int first)
 				}
 				data += chunk;
 			}
-			ret = ksceI2cTransferWrite(0, 0x34, buffer, (chunk + 1) * 2);
+			ret = SceI2cForDriver_CA94A759(0, 0x34, buffer, (chunk + 1) * 2);
 			if (ret < 0)
 				return ret;
 			count -= chunk;
@@ -270,8 +270,8 @@ static int startCodec(void)
 		return 2;
 	s_codec.revision = (ret >> 12) & 0xf;
 	s_codec.version = (ret >> 9) & 7;
-	s_codec.hardware = (ksceSysconGetHardwareInfo() >> 3) & 1;
-	ret = ksceSysconGetHardwareInfo2(info);
+	s_codec.hardware = (SceSysconForDriver_CBD6D8BC() >> 3) & 1;
+	ret = SceSysconForDriver_965C68C3(info);
 	s_codec.hardware2 = ret == 0 && (info[0] & 4) ? 0x20 : 0;
 	s_curves[0] = s_curve0;
 	s_curves[1] = s_codec.hardware2 == 0x20 ? s_curveDolce : s_curve1;

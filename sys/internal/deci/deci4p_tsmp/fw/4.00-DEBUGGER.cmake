@@ -112,8 +112,8 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblPostSsMgrActivate
 	ksceSblPostSsMgrGetExpireDate
 	SceDipswForDriver_A98FC2FD
-	ksceRtcConvertDateTimeToUnixTime
-	ksceRtcGetCurrentClockLocalTime
+	SceRtcForDriver_497B5DC9
+	sceRtcGetCurrentClockLocalTime
 	SceRegMgrForDebugger_46AC0CCB
 	SceRegMgrForDebugger_53970232
 	SceRegMgrForDebugger_810D2F09

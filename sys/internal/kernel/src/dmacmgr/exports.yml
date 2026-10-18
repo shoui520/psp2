@@ -11,21 +11,21 @@ SceKernelDmacMgr:
       version: 1
       nid: 0xEB4E3738
       functions:
-        - ksceDmacMemcpy: 0x00896B11
-        - ksceKernelDmaOpSetupDirect: 0x01A599E0
-        - ksceKernelDmaOpQuit: 0x03052D0D
-        - ksceKernelDmaOpSetupChain: 0x167079FC
-        - ksceKernelDmaOpSync: 0x397A917C
-        - ksceDmacMemset: 0x4BAC049B
-        - ksceKernelDmaOpEnQueue: 0x543F54CF
-        - ksceKernelDmaOpDeQueue: 0x7433F70F
-        - ksceKernelDmaOpAlloc: 0x7CD5088A
+        - sceKernelDmacMemcpy: 0x00896B11
+        - _DmaOpSetupDirect: 0x01A599E0
+        - sceKernelDmaOpQuit: 0x03052D0D
+        - sceKernelDmaOpSetupChain: 0x167079FC
+        - sceKernelDmaOpSync: 0x397A917C
+        - sceKernelDmacMemset: 0x4BAC049B
+        - sceKernelDmaOpEnQueue: 0x543F54CF
+        - sceKernelDmaOpDeQueue: 0x7433F70F
+        - sceKernelDmaOpAlloc: 0x7CD5088A
         - SceDmacmgrForDriver_893FCB80: 0x893FCB80
-        - ksceKernelDmaOpConcatenate: 0xA4454DEA
-        - ksceKernelDmaOpFree: 0xADFF1186
+        - sceKernelDmaOpConcatenate: 0xA4454DEA
+        - sceKernelDmaOpFree: 0xADFF1186
         - SceDmacmgrForDriver_BCBB5E85: 0xBCBB5E85
-        - ksceKernelDmaOpSetCallback: 0xCF627CFD
-        - ksceKernelDmaOpAssign: 0xFCE4171A
+        - sceKernelDmaOpSetCallback: 0xCF627CFD
+        - sceKernelDmaOpAssign: 0xFCE4171A
     SceDmacmgr:
       syscall: true
       version: 1

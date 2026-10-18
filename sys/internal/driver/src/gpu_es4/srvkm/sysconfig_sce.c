@@ -91,7 +91,7 @@ PVRSRV_ERROR SysInitialise(IMG_VOID)
 	eError = OSInitEnvData((IMG_VOID **)&gpuDumpRegion.state.system->pvEnvSpecificData);
 	if (eError != PVRSRV_OK)
 		goto failure;
-	kscePowerGetGpuClockFrequencyInternal(&ui32CoreClockMHz, NULL);
+	scePowerGetGpuClockFrequencyInternal(&ui32CoreClockMHz, NULL);
 	psTimingInfo = &gpuDumpRegion.state.platform.sTimingInfo;
 	psTimingInfo->ui32uKernelFreq = 1000;
 	psTimingInfo->ui32CoreClockSpeed = 1000000 * ui32CoreClockMHz;

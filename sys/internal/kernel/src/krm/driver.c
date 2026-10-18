@@ -749,7 +749,7 @@ int KrmDriverGetNetworkTick(uint64_t *tick)
 
 	if (!tick)
 		return (int)0x80a00000;
-	if (ksceRtcGetCurrentNetworkTick(&localTick) < 0)
+	if (SceRtcForDriver_F1517B38(&localTick) < 0)
 		return (int)0x80a00009;
 	*tick = localTick.tick;
 	return 0;

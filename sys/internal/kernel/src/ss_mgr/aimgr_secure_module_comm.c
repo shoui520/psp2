@@ -3,7 +3,7 @@
 #include <psp2kern/idstorage.h>
 #include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 
 SceUID aimgrSmId;
 
@@ -170,10 +170,10 @@ int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 			 sizeof(request.parameters));
 	if (ksceIdStorageReadLeaf(68, request.passPhrase))
 		return 0x800f0c05;
-	getCurrentSecureTick = ksceRtcGetCurrentSecureTick;
+	getCurrentSecureTick = SceRtcForDriver_401C0954;
 	if (!getCurrentSecureTick)
 		return 0x800f0c29;
-	ret = ksceRtcGetCurrentSecureTick(&tick);
+	ret = SceRtcForDriver_401C0954(&tick);
 	if (ret)
 		return ret;
 	request.timestamp = (tick.tick + UINT64_C(0xff23400100d44000)) / 1000000;

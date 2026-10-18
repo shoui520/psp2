@@ -130,17 +130,17 @@ set(MODULE_IMPORT_FUNCS
 	ksceUsbdClosePipe
 	ksceUsbServAccessoryActivate
 	_sceCtrlBdRemoconSendMergedNotify2
-	ksceCtrlRegisterVirtualControllerDriver
-	ksceCtrlNotifyCallBacks
-	ksceCtrlSetBdRemoconConnected
+	SceCtrlForDriver_18823EEA
+	SceCtrlForDriver_6E183B9B
+	SceCtrlForDriver_AA36F578
 	ksceMotionDevRegisterVirtualMotionDriver
 	ksceTouchRegisterVirtualTouchDriver
 	ScePowerForDriver_394DE492
 	sceRegMgrGetKeyInt
 	ksceRegMgrSystemParamGetInt
-	ksceSysconGetHardwareInfo
-	ksceDisplayGetVcountInternal
-	ksceDisplayWaitVblankStart
+	SceSysconForDriver_CBD6D8BC
+	SceDisplayForDriver_8B5DA27B
+	SceDisplayForDriver_984C27E7
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

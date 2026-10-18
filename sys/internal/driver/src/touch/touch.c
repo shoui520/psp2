@@ -220,7 +220,7 @@ static int resetAlarm(void *argp)
 	s_resetPacket.request.command[0] = 0x90;
 	s_resetPacket.request.command[1] = 3;
 	s_resetPacket.request.length = 1;
-	if (ksceSysconCmdExecAsync(&s_resetPacket, 0, resetDone, NULL) < 0) {
+	if (SceSysconForDriver_C2224E82(&s_resetPacket, 0, resetDone, NULL) < 0) {
 		touch.state = TOUCH_STATE_RUNNING;
 		touch.activeMask = 0x40000000;
 	}
@@ -303,7 +303,7 @@ static int configDone(SceSysconPacket *packet, void *argp)
 		if (!resend)
 			return 0;
 	}
-	if (ksceSysconCmdExecAsync(&cmd->packet, 0, configDone, cmd) < 0)
+	if (SceSysconForDriver_C2224E82(&cmd->packet, 0, configDone, cmd) < 0)
 		cmd->pending = 0;
 	return 0;
 }
@@ -356,7 +356,7 @@ static int readDeviceInfoOld(void)
 	int retries = 3, ret;
 
 	for (;;) {
-		ret = ksceSysconGetTouchpanelDeviceInfo(info);
+		ret = SceSysconForDriver_F492E69E(info);
 		if (ret < 0)
 			return ret;
 		if ((info[1] && info[3]) || retries == 1)
@@ -395,7 +395,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 			if (!touch.activeMask && !touch.ports[0].forceMode && !touch.ports[1].forceMode &&
 			    !touch.sample.pending && !touch.config.pending &&
 			    touch.state != TOUCH_STATE_IDLE) {
-				ksceSysconCtrlDeviceReset(12, 0);
+				SceSysconForDriver_40FF3898(12, 0);
 				touch.state = TOUCH_STATE_IDLE;
 			}
 			return 0;
@@ -421,7 +421,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 			return 0;
 		}
 		if (event == 0x100000) {
-			ksceSysconCtrlDeviceReset(12, resume);
+			SceSysconForDriver_40FF3898(12, resume);
 			touch.state = resume;
 			SceThreadmgrForDriver_C58DF384("SceTouchAlarm1", 100000, resetAlarm, NULL);
 			return 0;
@@ -561,7 +561,7 @@ static int vblankHandler(void *subintrArg, void *registerArg, unsigned char prio
 			touch.sample.packet.request.command[1] = 3;
 			touch.sample.retries = 0;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-			ret = ksceSysconCmdExecAsync(&touch.sample.packet, SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX, sampleDone, &touch.sample);
+			ret = SceSysconForDriver_C2224E82(&touch.sample.packet, SCE_SYSCON_PACKET_FLAG_EXTERNAL_RX, sampleDone, &touch.sample);
 			if (ret < 0)
 				touch.sample.pending = 0;
 		} else {
@@ -569,7 +569,7 @@ static int vblankHandler(void *subintrArg, void *registerArg, unsigned char prio
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
 		}
 	}
-	if (config && ksceSysconCmdExecAsync(&touch.config.packet, 0, configDone, &touch.config) < 0)
+	if (config && SceSysconForDriver_C2224E82(&touch.config.packet, 0, configDone, &touch.config) < 0)
 		touch.config.pending = 0;
 	if (alarm) {
 		touch.timer = SceThreadmgrForDriver_C58DF384("SceTouchAlarm0", 1000, sampleAlarm, NULL);
@@ -1135,12 +1135,12 @@ static int initialize(void *argp)
 	SceTouchPanelInfo *front = &touch.ports[0].panel, *back = &touch.ports[1].panel;
 	unsigned hw;
 
-	ksceSysconWaitInitialized();
-	touch.baryonVersion = ksceSysconGetBaryonVersion();
-	if (ksceSysconCtrlDeviceReset(12, 0) < 0)
+	SceSysconForDriver_55DF1C9B();
+	touch.baryonVersion = SceSysconForDriver_FF86F4C5();
+	if (SceSysconForDriver_40FF3898(12, 0) < 0)
 		return 1;
 	sceKernelDelayThread(1000);
-	if (ksceSysconCtrlDeviceReset(12, 1) < 0)
+	if (SceSysconForDriver_40FF3898(12, 1) < 0)
 		return 1;
 	sceKernelDelayThread(100000);
 	if (touch.baryonVersion > TOUCH_BARYON_INFO2)
@@ -1178,7 +1178,7 @@ static int initialize(void *argp)
 	back->minAaY = 108;
 	back->maxAaY = 889;
 
-	hw = ksceSysconGetHardwareInfo() & 0xff0000;
+	hw = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 	if (hw == 0x300000 || hw == 0x310000) {
 		touch.ports[0].densityX = 22.0f;
 		touch.ports[0].densityY = 22.0f;
@@ -1192,7 +1192,7 @@ static int initialize(void *argp)
 					  17.54f : 24.23f;
 	}
 	initializeFilter();
-	if (ksceSysconGetHardwareInfo() & 0x10000)
+	if (SceSysconForDriver_CBD6D8BC() & 0x10000)
 		setForceFilterMode(0);
 	else
 		setForceFilterMode(1);
@@ -2294,10 +2294,10 @@ int SceTouchForDriver_4E6C4558(unsigned panels)
 		return TOUCH_ERROR_BUSY;
 	SceKernelSuspendForDriver_4DF40893(0);
 	devices = (panels & 1 ? 8 : 0) | (panels & 2 ? 4 : 0);
-	ret = ksceSysconCtrlDeviceReset(devices, 0);
+	ret = SceSysconForDriver_40FF3898(devices, 0);
 	if (ret >= 0) {
 		sceKernelDelayThread(1000);
-		ret = ksceSysconCtrlDeviceReset(devices, 1);
+		ret = SceSysconForDriver_40FF3898(devices, 1);
 		if (ret >= 0) {
 			sceKernelDelayThread(100000);
 			SceKernelSuspendForDriver_2BB92967(0);

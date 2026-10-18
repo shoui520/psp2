@@ -31,7 +31,7 @@ static inline __attribute__((always_inline)) void updateGpuWirelessLimits(void)
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	unlimited = powerGpuLimitOverride() || maximum < 166 || !(flags & 3);
-	kscePowerSetDisplayMaxBrightness(unlimited ? 0x10000 : 0xc4ec);
+	ScePowerForDriver_77027B6B(unlimited ? 0x10000 : 0xc4ec);
 	powerNotifyWirelessLimit(unlimited);
 	powerUnlockClockControl();
 }
@@ -87,12 +87,12 @@ void powerRecomputeClockFrequencies(void)
 		flags |= process->wirelessFlags;
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
-	kscePowerSetBusClockFrequency(bus);
-	kscePowerSetArmClockFrequency(arm);
-	kscePowerSetGpuXbarClockFrequency(xbar);
-	kscePowerSetGpuClockFrequencyInternal(gpu, gpu);
+	scePowerSetBusClockFrequency(bus);
+	scePowerSetArmClockFrequency(arm);
+	scePowerSetGpuXbarClockFrequency(xbar);
+	ScePowerForDriver_264C24FC(gpu, gpu);
 	unlimited = powerGpuLimitOverride() || gpu < 166 || !(flags & 3);
-	kscePowerSetDisplayMaxBrightness(unlimited ? 0x10000 : 0xc4ec);
+	ScePowerForDriver_77027B6B(unlimited ? 0x10000 : 0xc4ec);
 	powerNotifyWirelessLimit(unlimited);
 	if (powerGpuLimitOverride())
 		flags &= ~0x30U;
@@ -180,7 +180,7 @@ void powerCreateProcessState(SceUID pid)
 	    SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 0) >= 0) {
 		state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 55;
-		if (ksceDisplayGetDeviceType(1, 0))
+		if (SceDisplayForDriver_8D9A1CCE(1, 0))
 			state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 222;
 		state->clockFrequency[POWER_PROCESS_CLOCK_ARM] = 41;
 		state->clockFrequency[POWER_PROCESS_CLOCK_GPU] = 41;
@@ -278,11 +278,11 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (lane == POWER_PROCESS_CLOCK_BUS)
-		result = kscePowerSetBusClockFrequency(maximum);
+		result = scePowerSetBusClockFrequency(maximum);
 	else if (lane == POWER_PROCESS_CLOCK_ARM)
-		result = kscePowerSetArmClockFrequency(maximum);
+		result = scePowerSetArmClockFrequency(maximum);
 	else
-		result = kscePowerSetGpuXbarClockFrequency(maximum);
+		result = scePowerSetGpuXbarClockFrequency(maximum);
 	powerUnlockClockControl();
 out:
 	if (syscall)
@@ -290,12 +290,12 @@ out:
 	return result;
 }
 
-int kscePowerSetBusClockFrequencyProc(SceUID pid, int frequency)
+int ScePowerForDriver_20A33D58(SceUID pid, int frequency)
 {
 	return setProcessClockFrequency(pid, frequency, POWER_PROCESS_CLOCK_BUS, 0);
 }
 
-int scePowerSetBusClockFrequency(int frequency)
+int scePowerSetBusClockFrequencyForUser(int frequency)
 {
 	return setProcessClockFrequency(0, frequency, POWER_PROCESS_CLOCK_BUS, 1);
 }
@@ -319,57 +319,57 @@ int getProcessClockFrequency(SceUID pid, enum PowerProcessClock clock, int sysca
 	return result;
 }
 
-int kscePowerGetBusClockFrequencyProc(SceUID pid)
+int ScePowerForDriver_2777A517(SceUID pid)
 {
 	return getProcessClockFrequency(pid,
 			POWER_PROCESS_CLOCK_BUS, 0);
 }
 
-int scePowerGetBusClockFrequency(void)
+int scePowerGetBusClockFrequencyForUser(void)
 {
 	return getProcessClockFrequency(0,
 			POWER_PROCESS_CLOCK_BUS, 1);
 }
 
-int kscePowerSetArmClockFrequencyProc(SceUID pid, int frequency)
+int ScePowerForDriver_86CB5218(SceUID pid, int frequency)
 {
 	return setProcessClockFrequency(pid, frequency, POWER_PROCESS_CLOCK_ARM, 0);
 }
 
-int scePowerSetArmClockFrequency(int frequency)
+int scePowerSetArmClockFrequencyForUser(int frequency)
 {
 	return setProcessClockFrequency(0, frequency, POWER_PROCESS_CLOCK_ARM, 1);
 }
 
-int kscePowerGetArmClockFrequencyProc(SceUID pid)
+int ScePowerForDriver_2E9000F7(SceUID pid)
 {
 	return getProcessClockFrequency(pid,
 			POWER_PROCESS_CLOCK_ARM, 0);
 }
 
-int scePowerGetArmClockFrequency(void)
+int scePowerGetArmClockFrequencyForUser(void)
 {
 	return getProcessClockFrequency(0,
 			POWER_PROCESS_CLOCK_ARM, 1);
 }
 
-int kscePowerSetGpuXbarClockFrequencyProc(SceUID pid, int frequency)
+int ScePowerForDriver_8D18F728(SceUID pid, int frequency)
 {
 	return setProcessClockFrequency(pid, frequency, POWER_PROCESS_CLOCK_GPU_XBAR, 0);
 }
 
-int scePowerSetGpuXbarClockFrequency(int frequency)
+int scePowerSetGpuXbarClockFrequencyForUser(int frequency)
 {
 	return setProcessClockFrequency(0, frequency, POWER_PROCESS_CLOCK_GPU_XBAR, 1);
 }
 
-int kscePowerGetGpuXbarClockFrequencyProc(SceUID pid)
+int ScePowerForDriver_62C5406C(SceUID pid)
 {
 	return getProcessClockFrequency(pid,
 			POWER_PROCESS_CLOCK_GPU_XBAR, 0);
 }
 
-int scePowerGetGpuXbarClockFrequency(void)
+int scePowerGetGpuXbarClockFrequencyForUser(void)
 {
 	return getProcessClockFrequency(0,
 			POWER_PROCESS_CLOCK_GPU_XBAR, 1);
@@ -394,13 +394,13 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 		if (!process->clockExcluded && process->clockFrequency[POWER_PROCESS_CLOCK_GPU] > maximum)
 			maximum = process->clockFrequency[POWER_PROCESS_CLOCK_GPU];
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
-	result = kscePowerSetGpuClockFrequencyInternal(maximum, maximum);
+	result = ScePowerForDriver_264C24FC(maximum, maximum);
 	updateGpuWirelessLimits();
 	powerUnlockClockControl();
 	return result;
 }
 
-int kscePowerSetGpuClockFrequencyProc(SceUID pid, int frequency)
+int ScePowerForDriver_B104EFE2(SceUID pid, int frequency)
 {
 	return setProcessGpuFrequency(pid, frequency);
 }
@@ -418,7 +418,7 @@ int scePowerSetGpuClockFrequency(int frequency)
 	return result;
 }
 
-int kscePowerGetGpuClockFrequencyProc(SceUID pid)
+int ScePowerForDriver_642E0AF2(SceUID pid)
 {
 	return getProcessClockFrequency(pid,
 			POWER_PROCESS_CLOCK_GPU, 0);
@@ -558,27 +558,27 @@ int scePowerSetConfigurationMode(uint32_t mode)
 
 	switch (mode) {
 	case 0x80:
-		result = scePowerSetArmClockFrequency(333);
+		result = scePowerSetArmClockFrequencyForUser(333);
 		if (result < 0)
 			break;
 		result = scePowerSetGpuClockFrequency(111);
 		if (result < 0)
 			break;
-		result = scePowerSetGpuXbarClockFrequency(111);
+		result = scePowerSetGpuXbarClockFrequencyForUser(111);
 		if (result < 0)
 			break;
 		powerSetProcessConfigurationFlags(0x30, 0);
 		result = powerSetConfigurationWireless(3, 1);
 		break;
 	case 0x1080:
-		result = scePowerSetArmClockFrequency(333);
+		result = scePowerSetArmClockFrequencyForUser(333);
 		if (result < 0)
 			break;
 		powerSetProcessConfigurationFlags(0x30, 0);
 		result = powerSetConfigurationWireless(3, 1);
 		if (result < 0)
 			break;
-		result = scePowerSetGpuXbarClockFrequency(166);
+		result = scePowerSetGpuXbarClockFrequencyForUser(166);
 		if (result < 0)
 			break;
 		result = scePowerSetGpuClockFrequency(111);
@@ -588,15 +588,15 @@ int scePowerSetConfigurationMode(uint32_t mode)
 		if (result < 0)
 			break;
 		powerSetProcessConfigurationFlags(0x30, 1);
-		result = scePowerSetArmClockFrequency(333);
+		result = scePowerSetArmClockFrequencyForUser(333);
 		if (result < 0)
 			break;
-		result = scePowerSetGpuXbarClockFrequency(166);
+		result = scePowerSetGpuXbarClockFrequencyForUser(166);
 		if (result >= 0)
 			result = scePowerSetGpuClockFrequency(166);
 		break;
 	case 0x10880:
-		result = scePowerSetArmClockFrequency(333);
+		result = scePowerSetArmClockFrequencyForUser(333);
 		if (result < 0)
 			break;
 		powerSetProcessConfigurationFlags(0x30, 0);
@@ -628,11 +628,11 @@ int scePowerSetConfigurationMode(uint32_t mode)
 setHighClocks:
 		if (result < 0)
 			break;
-		result = scePowerSetArmClockFrequency(444);
+		result = scePowerSetArmClockFrequencyForUser(444);
 		if (result < 0)
 			break;
 setMediaClocks:
-		result = scePowerSetGpuXbarClockFrequency(166);
+		result = scePowerSetGpuXbarClockFrequencyForUser(166);
 		if (result >= 0)
 			result = scePowerSetGpuClockFrequency(166);
 		break;

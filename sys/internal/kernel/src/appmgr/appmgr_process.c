@@ -4,7 +4,7 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/appmgr.h>
-#include <psp2kern/power.h>
+#include <power/power.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
@@ -417,7 +417,7 @@ int _sceAppMgrProcTerminatedHandler(SceUID pid)
 	if (pid == shellPid) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 372, "_sceAppMgrProcTerminatedHandler",
 			"Shell is terminated! Reset.\n");
-		result = kscePowerRequestStandby();
+		result = scePowerRequestStandby();
 		if (result != 0) {
 #if FW_DEBUG
 			sceAppMgrDump();

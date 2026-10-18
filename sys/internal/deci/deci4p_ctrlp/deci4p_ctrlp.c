@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <psp2/touch.h>
 #include <psp2kern/bt.h>
-#include <psp2kern/ctrl.h>
+#include <ctrl/ctrl.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -412,7 +412,7 @@ static inline SceUInt32 controllerType(SceUInt32 port)
 static inline void getPortInfo(void)
 {
 	__builtin_memset(&state.portInfo, 0, sizeof(state.portInfo));
-	ksceCtrlGetControllerPortInfo(&state.portInfo);
+	SceCtrlForDriver_F11D0D30(&state.portInfo);
 }
 
 /* the highest port with a controller */
@@ -585,8 +585,8 @@ int emulateController(CtrlpEmulate *emulate, SceUInt32 version)
 		port = emulate->port;
 	}
 	buttons &= state.buttonMask;
-	if (ksceCtrlSetButtonEmulation(port, 0, buttons, buttons, CTRLP_EMULATION_TIME) < 0 ||
-	    ksceCtrlSetAnalogEmulation(emulate->port, 0,
+	if (SceCtrlForDriver_1E750326(port, 0, buttons, buttons, CTRLP_EMULATION_TIME) < 0 ||
+	    SceCtrlForDriver_06577FE8(emulate->port, 0,
 			emulate->data.lx, emulate->data.ly,
 			emulate->data.rx, emulate->data.ry,
 			emulate->data.up, emulate->data.right,
@@ -621,7 +621,7 @@ static int stopPlayback(void)
 	for (int port = 0; port < CTRLP_PORT_NUM; port++) {
 #define CLEAR_RAPID_FIRE(index) \
 		if (state.rapidFire[port] & (1u << (index))) \
-			ksceCtrlClearRapidFire(port, (index))
+			SceCtrlForDriver_ED138A26(port, (index))
 		CLEAR_RAPID_FIRE(0);
 		CLEAR_RAPID_FIRE(1);
 		CLEAR_RAPID_FIRE(2);
@@ -679,7 +679,7 @@ static inline void saveController(CtrlpCtrlData *data, const struct ctrlNativeSa
 }
 
 /* SceCtrl's ctrlp callback: records a sample, or replaces it with the recording */
-static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample)
+static int controllerCallback(SceUInt32 port, struct ctrlNativeSample *sample, int mode)
 {
 	CtrlpRecord *record;
 	SceUInt32 intr, count, frame;
@@ -939,7 +939,7 @@ static inline int setRapidFire(const CtrlpSetRapidFire *set, SceUInt32 length)
 
 	intr = SceCpuForDriver_D32ACE9E(&state.lock);
 	rule = set->rule;
-	if (ksceCtrlSetRapidFire(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
+	if (SceCtrlForDriver_A248CDAE(state.version ? set->portType.port : 0, set->index, &rule) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
 		state.rapidFire[set->port] |= 1 << set->index;
@@ -961,7 +961,7 @@ static inline int clearRapidFire(const CtrlpClearRapidFire *clear, SceUInt32 len
 		return CTRLP_RESULT_INVALID;
 
 	intr = SceCpuForDriver_D32ACE9E(&state.lock);
-	if (ksceCtrlClearRapidFire(state.version ? clear->portType.port : 0, clear->index) < 0) {
+	if (SceCtrlForDriver_ED138A26(state.version ? clear->portType.port : 0, clear->index) < 0) {
 		result = CTRLP_RESULT_INVALID;
 	} else {
 		state.rapidFire[clear->port] &= ~(1 << clear->index);
@@ -1045,7 +1045,7 @@ static inline int getControllerPortInfo(CtrlpPortInfoResult *out)
 	SceCtrlPortInfo info;
 
 	out->count = CTRLP_PORT_NUM;
-	if (ksceCtrlGetControllerPortInfo(&info) != 0)
+	if (SceCtrlForDriver_F11D0D30(&info) != 0)
 		return CTRLP_RESULT_FAILED;
 	for (int port = 0; port < CTRLP_PORT_NUM; port++) {
 		CtrlpPortType *entry = &out->port[port];
@@ -1493,7 +1493,7 @@ int module_start(SceSize args, void *argp)
 	state.buttonMask = 0x31ffff;
 	state.dolce = SceSblAIMgrForDriver_71608CA3() != 0;
 
-	ret = ksceCtrlSetCtrlpCallback(controllerCallback);
+	ret = sceCtrlSetCtrlpCallback(controllerCallback);
 	if (ret != 0) {
 		error(1428, "sceCtrlSetCtrlpCallback error %d\n", ret);
 		return ret < 0 ? SCE_KERNEL_START_FAILED : SCE_KERNEL_START_SUCCESS;

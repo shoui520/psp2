@@ -397,9 +397,9 @@ int parseVideoPlaybackInfo(int dialect, int mode, MgVideoPlaybackQueryWorkspace 
 	if (result < 0)
 		return result;
 	if (evaluateVideoPolicyList(records[1], &videoPlaybackPolicies) < 0)
-		result = ksceRtcGetCurrentSecureTick(&output->period.currentTick);
+		result = SceRtcForDriver_401C0954(&output->period.currentTick);
 	else
-		result = ksceRtcGetCurrentTick(&output->period.currentTick);
+		result = SceRtcForDriver_DEC408D4(&output->period.currentTick);
 	if (result < 0)
 		output->period.currentTick.tick = 0;
 	result = getVideoPlaybackParameters(records[2], &period, &start, &end, &avOut);
@@ -787,7 +787,7 @@ int addVideoPeriod(MgVideoEncodedTime *time, unsigned int hours)
 	if (decodeVideoTime(&workspace.tick, time) >= 0) {
 		result = SceRtcForDriver_32E50C36(&workspace.tick, &workspace.tick, hours);
 		if (result >= 0) {
-			result = ksceRtcConvertTickToDateTime(&workspace.date, &workspace.tick);
+			result = SceRtcForDriver_42A0DFCB(&workspace.date, &workspace.tick);
 			if (result >= 0) {
 				encodeVideoTime(time, &workspace.date);
 				result = 0;
@@ -805,11 +805,11 @@ int getCurrentVideoTime(MgVideoEncodedTime *output, int secure)
 	int result;
 
 	if (secure)
-		result = ksceRtcGetCurrentSecureTick(&workspace.tick);
+		result = SceRtcForDriver_401C0954(&workspace.tick);
 	else
-		result = ksceRtcGetCurrentTick(&workspace.tick);
+		result = SceRtcForDriver_DEC408D4(&workspace.tick);
 	if (result >= 0) {
-		result = ksceRtcConvertTickToDateTime(&workspace.date, &workspace.tick);
+		result = SceRtcForDriver_42A0DFCB(&workspace.date, &workspace.tick);
 		if (result >= 0) {
 			encodeVideoTime(output, &workspace.date);
 			result = 0;

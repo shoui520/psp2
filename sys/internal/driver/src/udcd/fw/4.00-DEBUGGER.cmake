@@ -95,19 +95,19 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0xE0489831
 )
 set(MODULE_IMPORT_FUNCS
-	ksceGpioPortRead
-	ksceGpioSetPortMode
-	ksceGpioSetIntrMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	SceGpioForDriver_129DF5AC
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_BBEA1DDC
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 	SceSysconForDriver_59DC5938
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	ScePowerForDriver_394DE492
-	kscePowerBatteryEnableUsbCharging
+	ScePowerForDriver_733F973B
 	ScePowerForDriver_8C0D2051
-	kscePowerBatteryDisableUsbCharging
-	kscePowerBatteryStopUsbCharging
-	kscePowerBatterySetUsbStatus
+	ScePowerForDriver_90285886
+	ScePowerForDriver_ACC857A4
+	ScePowerForDriver_E4E3C316
 	ScePowerForDriver_F535D928
 	ScePervasiveForDriver_13CC07C9
 	ScePervasiveForDriver_4F64DEF6

@@ -23,7 +23,7 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/usbserv.h>
 #include <psp2kern/registrymgr.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <string.h>
 
 
@@ -64,7 +64,7 @@ int ds3BdRemoconSysEvent(int resume, int eventId, void *args, void *opt)
 		_sceCtrlBdRemoconSendMergedNotify2(0, 255, 0);
 		ds3BdRemocon.inputReady = 0;
 		ds3BdRemocon.deviceAddress = 0;
-		ksceCtrlSetBdRemoconConnected(0);
+		SceCtrlForDriver_AA36F578(0);
 	}
 	return 0;
 }
@@ -95,7 +95,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				_sceCtrlBdRemoconSendMergedNotify2(0, 255, 0);
 				ds3BdRemocon.inputReady = 0;
 				ds3BdRemocon.deviceAddress = 0;
-				ksceCtrlSetBdRemoconConnected(0);
+				SceCtrlForDriver_AA36F578(0);
 			} else if (event->id == 5) {
 				memset(&info, 0, sizeof(info));
 				result = ksceBtGetRegisteredInfo(address, &info, 1);
@@ -103,7 +103,7 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 					if (info.vid != 0x054c || info.pid != 0x0306)
 						continue;
 					ds3BdRemocon.deviceAddress = address;
-					ksceCtrlSetBdRemoconConnected(1);
+					SceCtrlForDriver_AA36F578(1);
 				}
 				SceKernelSuspendForDriver_E0489831(0);
 				ds3BdRemocon.state = 0;
@@ -168,12 +168,12 @@ int ds3BdRemoconCallback(int notifyId, int notifyCount, int notifyArg, void *use
 				if (ds3BdRemocon.buttons != buttons ||
 				    ds3BdRemocon.state != state ||
 				    ds3BdRemocon.connected != connected) {
-					if (ksceDisplayGetVcountInternal(1) == ds3BdRemocon.lastVcount) {
-						ksceDisplayWaitVblankStart();
-						ksceDisplayWaitVblankStart();
+					if (SceDisplayForDriver_8B5DA27B(1) == ds3BdRemocon.lastVcount) {
+						SceDisplayForDriver_984C27E7();
+						SceDisplayForDriver_984C27E7();
 					}
 					_sceCtrlBdRemoconSendMergedNotify2(buttons, state, connected);
-					ds3BdRemocon.lastVcount = ksceDisplayGetVcountInternal(1);
+					ds3BdRemocon.lastVcount = SceDisplayForDriver_8B5DA27B(1);
 				}
 				ds3BdRemocon.state = state;
 				ds3BdRemocon.connected = connected;

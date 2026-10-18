@@ -3,9 +3,9 @@
  */
 
 #include "power_private.h"
+#include <power/power.h>
 
 /* exported, and inlined in this unit as in the original */
-int scePowerGetBatteryLifePercent(void);
 
 static inline __attribute__((always_inline)) void notifyBatteryWorker(void);
 
@@ -126,7 +126,7 @@ int powerBatteryWorker(SceSize argumentSize, void *argument)
 			result = SceSysconForDriver_A2FE9BF9(&value);
 			if (result < 0)
 				break;
-			if ((ksceSysconGetHardwareInfo() & 0xff0000) == 0x310000)
+			if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) == 0x310000)
 				value &= ~0x40U;
 			s_powerBatteryBase.hardwareStatus = value;
 			if (!(value & 0x40)) {
@@ -147,7 +147,7 @@ int powerBatteryWorker(SceSize argumentSize, void *argument)
 				goto invalidate;
 			s_powerBatteryBase.state.remainCapacity = value;
 			s_powerBatteryBase.scanStep =
-				(uint32_t)ksceSysconGetBaryonVersion() < 0x01040105 ? 5 : 4;
+				(uint32_t)SceSysconForDriver_FF86F4C5() < 0x01040105 ? 5 : 4;
 			break;
 		case 4:
 			result = SceSysconForDriver_26F9D729(&value, &other);
@@ -309,7 +309,7 @@ int scePowerBatteryUpdateInfo(void)
 	return 0;
 }
 
-int kscePowerBatteryForbidCharging(void)
+int ScePowerForDriver_166922EC(void)
 {
 	SceKernelIntrStatus intrState;
 
@@ -328,7 +328,7 @@ int kscePowerBatteryForbidCharging(void)
 	return 0;
 }
 
-int kscePowerBatteryPermitCharging(void)
+int ScePowerForDriver_DD3D4DAC(void)
 {
 	SceKernelIntrStatus intrState;
 
@@ -347,7 +347,7 @@ int kscePowerBatteryPermitCharging(void)
 	return 0;
 }
 
-int kscePowerBatterySetUsbStatus(uint32_t status)
+int ScePowerForDriver_E4E3C316(uint32_t status)
 {
 	volatile struct PowerBatteryState *state = &s_powerBatteryBase.state;
 	SceKernelIntrStatus intrState;
@@ -365,7 +365,7 @@ int kscePowerBatterySetUsbStatus(uint32_t status)
 		state->usbStatusPacket.tx[0] = 0x9a;
 		state->usbStatusPacket.tx[1] = 8;
 		state->usbStatusPacket.tx[2] = 3;
-		result = ksceSysconCmdExecAsync(&state->usbStatusPacket,
+		result = SceSysconForDriver_C2224E82(&state->usbStatusPacket,
 				1, powerChargingCommandComplete,
 				&state->usbStatusPending);
 		if (result >= 0)
@@ -377,7 +377,7 @@ int kscePowerBatterySetUsbStatus(uint32_t status)
 	return result;
 }
 
-uint32_t kscePowerBatteryEnableUsbCharging(void)
+uint32_t ScePowerForDriver_733F973B(void)
 {
 	SceKernelIntrStatus intrState;
 	uint32_t previous;
@@ -397,7 +397,7 @@ uint32_t kscePowerBatteryEnableUsbCharging(void)
 	return previous;
 }
 
-int kscePowerBatteryDisableUsbCharging(void)
+int ScePowerForDriver_90285886(void)
 {
 	SceKernelIntrStatus intrState;
 
@@ -414,7 +414,7 @@ int kscePowerBatteryDisableUsbCharging(void)
 	return 0;
 }
 
-int kscePowerBatteryStopUsbCharging(void)
+int ScePowerForDriver_ACC857A4(void)
 {
 	volatile struct PowerBatteryState *state = &s_powerBatteryBase.state;
 	SceKernelIntrStatus intrState;
@@ -429,7 +429,7 @@ int kscePowerBatteryStopUsbCharging(void)
 			state->usbStopPacket.tx[2] = 1;
 			state->usbStopPacket.tx[0] = 4;
 			state->usbStopPacket.tx[1] = 8;
-			result = ksceSysconCmdExecAsync(&state->usbStopPacket,
+			result = SceSysconForDriver_C2224E82(&state->usbStopPacket,
 					1, powerChargingCommandComplete,
 					&state->usbStopPending);
 			if (result >= 0)
@@ -601,7 +601,7 @@ int ScePowerForDriver_627A89C6(void)
 int scePowerIsLowBatteryInhibitUpdateReboot(void)
 {
 	uint32_t context = sceSyscallEnter();
-	int result = ksceSysconIsLowBatteryInhibitUpdateReboot();
+	int result = SceSysconForDriver_1A0C140F();
 
 	sceSyscallLeave(context);
 	return result;
@@ -610,7 +610,7 @@ int scePowerIsLowBatteryInhibitUpdateReboot(void)
 int scePowerIsLowBatteryInhibitUpdateDownload(void)
 {
 	uint32_t context = sceSyscallEnter();
-	int result = ksceSysconIsLowBatteryInhibitUpdateDownload();
+	int result = SceSysconForDriver_1E3130EE();
 
 	sceSyscallLeave(context);
 	return result;
@@ -780,7 +780,7 @@ int scePowerGetBatteryRemainLevel(void)
 	uint32_t context, status, version;
 	int level, low;
 
-	version = ksceSysconGetBaryonVersion();
+	version = SceSysconForDriver_FF86F4C5();
 	if (version > 0x01040104) {
 		status = s_powerBatteryBase.state.status;
 		if (status == 0)
@@ -808,7 +808,7 @@ int scePowerGetBatteryRemainLevel(void)
 
 int scePowerGetBatteryRemainMaxLevel(void)
 {
-	uint32_t version = ksceSysconGetBaryonVersion();
+	uint32_t version = SceSysconForDriver_FF86F4C5();
 
 	if (version > 0x01040104)
 		return s_powerBatteryBase.state.remainMaxLevel;
@@ -882,7 +882,7 @@ int scePowerGetCaseTemp(void)
 	return s_powerBatteryBase.state.temperature;
 }
 
-int kscePowerSetBatteryFakeStatus(const volatile struct PowerBatteryFakeStatus *status)
+int ScePowerForDriver_0C6973B8(const volatile struct PowerBatteryFakeStatus *status)
 {
 	int remaining;
 	uint32_t size, capacity, full, duration;

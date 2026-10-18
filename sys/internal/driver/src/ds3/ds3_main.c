@@ -23,7 +23,7 @@
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <psp2kern/usbserv.h>
 #include <psp2kern/registrymgr.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <string.h>
 
 
@@ -1935,7 +1935,7 @@ int _sceDs3WorkerThread(SceSize args, void *argp)
 	if (ds3State.safeMode || SceSysrootForDriver_B0E1FC67() ||
 		memcmp(ds3State.localAddress, ds3UnassignedLocalAddress, 6) == 0)
 		ds3State.ds4UsbEnabled = 1;
-	if ((ksceSysconGetHardwareInfo() & 0x40) &&
+	if ((SceSysconForDriver_CBD6D8BC() & 0x40) &&
 		sceRegMgrGetKeyInt("/CONFIG/SYSTEM", "dualshock4_usb", &ds4Usb) == 0 && ds4Usb)
 		ds3State.ds4UsbEnabled = 1;
 	ds3UsbRegister();
@@ -2421,7 +2421,7 @@ unlockRegistration:
 rejectConnection:
 			if (result != -101) {
 				if (result == -100)
-					ksceCtrlNotifyCallBacks((int)0x80340101);
+					SceCtrlForDriver_6E183B9B((int)0x80340101);
 				ksceBtStartDisconnect(event->mac0, event->mac1);
 			}
 			break;
@@ -3045,7 +3045,7 @@ int module_start(SceSize args, void *argp)
 	result = sceKernelStartThread(result, 0, NULL);
 	if (result < 0)
 		return result;
-	ksceCtrlRegisterVirtualControllerDriver(&ds3ControllerDriver);
+	SceCtrlForDriver_18823EEA(&ds3ControllerDriver);
 	ksceTouchRegisterVirtualTouchDriver(&ds3TouchDriver);
 	ksceMotionDevRegisterVirtualMotionDriver(&ds3MotionDriver);
 	sceKernelRegisterSysEventHandler("SceDs3", ds3SysEventHandler, NULL);

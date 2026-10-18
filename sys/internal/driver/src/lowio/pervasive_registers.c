@@ -84,7 +84,7 @@ uint32_t ScePervasiveForDriver_D185D235(void)
 	return WriteClock(&s_baseClock->cecClockOut, 0);
 }
 
-uint32_t kscePervasiveMsifSetClock(unsigned value)
+uint32_t ScePervasiveForDriver_64ABE589(unsigned value)
 {
 	if ((value & ~4U) >= 3)
 		return PERVASIVE_ERROR;
@@ -282,7 +282,7 @@ uint32_t ScePervasiveForDriver_E3A735B9(unsigned port)
 	return 0;
 }
 
-uint32_t kscePervasiveRemovableMemoryGetCardInsertState(void)
+uint32_t ScePervasiveForDriver_551EEE82(void)
 {
 	return s_pervasive2->memoryCardInsert & 1;
 }

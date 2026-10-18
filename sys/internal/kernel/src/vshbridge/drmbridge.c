@@ -19,7 +19,7 @@ int drmBridgeGetCurrentSecureTick(SceRtcTick *tick)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	ret = ksceRtcGetCurrentSecureTick(tick);
+	ret = SceRtcForDriver_401C0954(tick);
 	sceSyscallLeave(t);
 	return ret;
 }

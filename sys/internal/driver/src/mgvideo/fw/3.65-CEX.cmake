@@ -145,9 +145,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	SceRtcForDriver_32E50C36
-	ksceRtcGetCurrentSecureTick
-	ksceRtcConvertTickToDateTime
-	ksceRtcGetCurrentTick
+	SceRtcForDriver_401C0954
+	SceRtcForDriver_42A0DFCB
+	SceRtcForDriver_DEC408D4
 	SceRtcForDriver_F139E359
 	memset
 	memcpy

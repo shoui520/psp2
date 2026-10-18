@@ -33,6 +33,9 @@
 #include <sysmem/sysclib.h>
 #include <iofilemgr/iofilemgr.h>
 
+/* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
+int ksceSblUtMgrHasStoreFlag(void);
+
 struct AppmgrMapFile;
 
 typedef struct AppmgrProcessMountCleanup {
@@ -502,7 +505,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	if (info->licStartTime == 0) {
 		startTime[0] = '-';
 		startTime[1] = 0;
-	} else if (ksceRtcFormatRFC3339(startTime, (SceRtcTick *)&info->licStartTime,
+	} else if (SceRtcForDriver_D32AC698(startTime, (SceRtcTick *)&info->licStartTime,
 				     540) >= 0) {
 		startTime[10] = ' ';
 		startTime[19] = ' ';
@@ -514,7 +517,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	if (info->licExpTime == 0) {
 		expiryTime[0] = '-';
 		expiryTime[1] = 0;
-	} else if (ksceRtcFormatRFC3339(expiryTime, (SceRtcTick *)&info->licExpTime,
+	} else if (SceRtcForDriver_D32AC698(expiryTime, (SceRtcTick *)&info->licExpTime,
 				     540) >= 0) {
 		expiryTime[19] = ' ';
 		expiryTime[20] = 'J';
@@ -528,7 +531,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 		if (info->licStartTime == 0) {
 			startTime[0] = '-';
 			startTime[1] = 0;
-		} else if (ksceRtcFormatRFC3339(startTime,
+		} else if (SceRtcForDriver_D32AC698(startTime,
 				(SceRtcTick *)&info->licStartTime, 540) >= 0) {
 			startTime[10] = ' ';
 			startTime[19] = ' ';
@@ -540,7 +543,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 		if (info->licExpTime == 0) {
 			expiryTime[0] = '-';
 			expiryTime[1] = 0;
-		} else if (ksceRtcFormatRFC3339(expiryTime,
+		} else if (SceRtcForDriver_D32AC698(expiryTime,
 				(SceRtcTick *)&info->licExpTime, 540) >= 0) {
 			expiryTime[19] = ' ';
 			expiryTime[20] = 'J';
@@ -2258,7 +2261,7 @@ formatted:
 		if (info->licStartTime == 0) {
 			startTime[0] = '-';
 			startTime[1] = 0;
-		} else if (ksceRtcFormatRFC3339(startTime,
+		} else if (SceRtcForDriver_D32AC698(startTime,
 				(SceRtcTick *)&info->licStartTime, 540) >= 0) {
 			startTime[10] = ' ';
 			__builtin_memcpy(startTime + 19, " JST", 5);
@@ -2266,7 +2269,7 @@ formatted:
 		if (info->licExpTime == 0) {
 			expiryTime[0] = '-';
 			expiryTime[1] = 0;
-		} else if (ksceRtcFormatRFC3339(expiryTime,
+		} else if (SceRtcForDriver_D32AC698(expiryTime,
 				(SceRtcTick *)&info->licExpTime, 540) >= 0) {
 			__builtin_memcpy(expiryTime + 19, " JST", 5);
 		}
@@ -2351,7 +2354,7 @@ int appmgrCheckRifGD(const char *path, AppmgrLicenseInfo *info)
 	titleId[9] = 0;
 	result = appmgrReadApplicationLicense(path, titleId, info);
 	if (result >= 0) {
-		result = ksceRtcGetCurrentSecureTick(&currentTick);
+		result = SceRtcForDriver_401C0954(&currentTick);
 		if (result < 0) {
 			if ((info->flags & 2) == 0 &&
 			    info->licExpTime == 0x7fffffffffffffffULL)

@@ -179,11 +179,11 @@ set(MODULE_IMPORT_FUNCS
 	ScePowerForDriver_F535D928
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeyInt
-	ksceSysconCtrlDeviceReset
-	ksceSysconIsDownLoaderMode
+	SceSysconForDriver_40FF3898
+	SceSysconForDriver_9ADD60D2
 	SceSysconForDriver_A2E85DB9
 	SceSysconForDriver_C0F215B7
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_CF5B2F2F
 	ksceUsbServEtherEnable
 	ksceUsbServEtherDisable

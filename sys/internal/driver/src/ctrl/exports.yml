@@ -12,44 +12,44 @@ SceCtrl:
       nid: 0x7823A5D1
       functions:
         - _sceCtrlBdRemoconSendMergedNotify2: 0x02081494
-        - ksceCtrlUpdateMaskForNonShell: 0x03777131
-        - ksceCtrlSetAnalogEmulation: 0x06577FE8
-        - ksceCtrlSetButtonIntercept: 0x06AA5E1A
-        - ksceCtrlSetIdleCancelKey: 0x0A679512
-        - ksceCtrlUpdateMaskForAll: 0x12C13A72
-        - ksceCtrlGetSamplingMode: 0x145B13BC
-        - ksceCtrlRegisterVirtualControllerDriver: 0x18823EEA
-        - ksceCtrlPeekBufferNegative: 0x19895843
-        - ksceCtrlSetButtonEmulation: 0x1E750326
-        - ksceCtrlGetIdleCancelKey: 0x30801AE9
-        - ksceCtrlSetIdleCancelThreshold: 0x345E74FD
-        - ksceCtrlGetMaskForAll: 0x46ABDDE8
+        - SceCtrlForDriver_03777131: 0x03777131
+        - SceCtrlForDriver_06577FE8: 0x06577FE8
+        - SceCtrlForDriver_06AA5E1A: 0x06AA5E1A
+        - SceCtrlForDriver_0A679512: 0x0A679512
+        - SceCtrlForDriver_12C13A72: 0x12C13A72
+        - SceCtrlForDriver_145B13BC: 0x145B13BC
+        - SceCtrlForDriver_18823EEA: 0x18823EEA
+        - SceCtrlForDriver_19895843: 0x19895843
+        - SceCtrlForDriver_1E750326: 0x1E750326
+        - SceCtrlForDriver_30801AE9: 0x30801AE9
+        - SceCtrlForDriver_345E74FD: 0x345E74FD
+        - SceCtrlForDriver_46ABDDE8: 0x46ABDDE8
         - SceCtrlForDriver_4CCB2153: 0x4CCB2153
-        - ksceCtrlSetVibrationSetting: 0x4D8FE670
-        - ksceCtrlChangePortAssign: 0x53381364
+        - SceCtrlForDriver_4D8FE670: 0x4D8FE670
+        - SceCtrlForDriver_53381364: 0x53381364
         - SceCtrlForDriver_5B708A15: 0x5B708A15
-        - ksceCtrlIsBdRemoconConnected: 0x5B849B22
+        - SceCtrlForDriver_5B849B22: 0x5B849B22
         - SceCtrlForDriver_69E45836: 0x69E45836
-        - ksceCtrlGetButtonIntercept: 0x6BEB1CD7
-        - ksceCtrlNotifyCallBacks: 0x6E183B9B
-        - ksceCtrlSetCtrlpCallback: 0x7AD9467E
-        - ksceCtrlSetSamplingMode: 0x80F5E418
-        - ksceCtrlReadBufferNegative: 0x8D4E0DD1
-        - ksceCtrlReadBufferPositive: 0x9B96A1AA
-        - ksceCtrlUnregisterNotifyCallBack: 0x9DAB51C4
-        - ksceCtrlSetRapidFire: 0xA248CDAE
-        - ksceCtrlSetBdRemoconConnected: 0xAA36F578
-        - ksceCtrlGetMaskForNonShell: 0xB25BD8FD
+        - SceCtrlForDriver_6BEB1CD7: 0x6BEB1CD7
+        - SceCtrlForDriver_6E183B9B: 0x6E183B9B
+        - sceCtrlSetCtrlpCallback: 0x7AD9467E
+        - SceCtrlForDriver_80F5E418: 0x80F5E418
+        - SceCtrlForDriver_8D4E0DD1: 0x8D4E0DD1
+        - SceCtrlForDriver_9B96A1AA: 0x9B96A1AA
+        - SceCtrlForDriver_9DAB51C4: 0x9DAB51C4
+        - SceCtrlForDriver_A248CDAE: 0xA248CDAE
+        - SceCtrlForDriver_AA36F578: 0xAA36F578
+        - SceCtrlForDriver_B25BD8FD: 0xB25BD8FD
         - SceCtrlForDriver_B26C2231: 0xB26C2231
-        - ksceCtrlGetIdleCancelThreshold: 0xB9402CEF
+        - SceCtrlForDriver_B9402CEF: 0xB9402CEF
         - SceCtrlForDriver_C8CE3E43: 0xC8CE3E43
         - SceCtrlForDriver_DA07E970: 0xDA07E970
-        - ksceCtrlRegisterNotifyCallBack: 0xE170883E
-        - ksceCtrlPeekBufferPositive: 0xEA1D3A34
-        - ksceCtrlClearRapidFire: 0xED138A26
-        - ksceCtrlSetTurnOffInterval: 0xED8F0129
-        - ksceCtrlGetControllerPortInfo: 0xF11D0D30
-        - ksceCtrlGetActiveControllerPort: 0xFA88D837
+        - SceCtrlForDriver_E170883E: 0xE170883E
+        - SceCtrlForDriver_EA1D3A34: 0xEA1D3A34
+        - SceCtrlForDriver_ED138A26: 0xED138A26
+        - SceCtrlForDriver_ED8F0129: 0xED8F0129
+        - SceCtrlForDriver_F11D0D30: 0xF11D0D30
+        - SceCtrlForDriver_FA88D837: 0xFA88D837
         - SceCtrlForDriver_FF9D4DD4: 0xFF9D4DD4
     SceCtrl:
       syscall: true

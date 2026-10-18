@@ -3,9 +3,9 @@
  */
 
 #include "power_private.h"
+#include <power/power.h>
 
 /* exported, and inlined in this unit as in the original */
-int kscePowerSetIdleTimer(uint32_t timerId, uint64_t interval);
 
 struct PowerIdleState s_powerIdleTimers;
 
@@ -135,7 +135,7 @@ static inline __attribute__((always_inline)) void powerTickProcess(void)
 	state->lastIdleTick = s_powerIdleTimers.tickSnapshot;
 }
 
-int kscePowerTick(uint32_t mask)
+int ScePowerForDriver_EFD3C963(uint32_t mask)
 {
 	volatile struct PowerIdleTimer *timer;
 	uint32_t selected = mask;
@@ -189,7 +189,7 @@ int powerTickProcessForPid(SceUID pid, uint32_t mask)
 	return 0;
 }
 
-int kscePowerGetIdleTimer(uint32_t timerId, uint64_t *elapsedOut,
+int ScePowerForDriver_EDC13FE5(uint32_t timerId, uint64_t *elapsedOut,
 			 uint64_t *remainingOut)
 {
 	volatile struct PowerIdleTimer *timer;
@@ -207,7 +207,7 @@ int kscePowerGetIdleTimer(uint32_t timerId, uint64_t *elapsedOut,
 	return 0;
 }
 
-inline __attribute__((always_inline)) int kscePowerSetIdleTimer(uint32_t timerId, uint64_t interval)
+inline __attribute__((always_inline)) int ScePowerForDriver_6BC26FC7(uint32_t timerId, uint64_t interval)
 {
 	volatile struct PowerIdleTimer *timer;
 	uint32_t mask;
@@ -268,7 +268,7 @@ uint32_t powerIsIdleTimer(uint32_t timerId)
 	return timer->idleState != 0;
 }
 
-int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
+int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
 			     uint64_t interval, PowerIdleCallback callback,
 			     void *argument)
 {
@@ -297,7 +297,7 @@ int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
 	return 0;
 }
 
-int kscePowerSetProcessIdleCallback(PowerProcessIdleCallback callback, void *argument)
+int ScePowerForDriver_0856FD0A(PowerProcessIdleCallback callback, void *argument)
 {
 	s_powerIdleTimers.processCallback.callback = callback;
 	s_powerIdleTimers.processCallback.argument = argument;
@@ -313,7 +313,7 @@ int ScePowerForDriver_FB5C3C75(SceUID pid, uint32_t unused,
 
 	(void)unused;
 	if (pid == SCE_KERNEL_ALL_PROCESS_ID)
-		return kscePowerSetIdleTimer(0, interval);
+		return ScePowerForDriver_6BC26FC7(0, interval);
 	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)

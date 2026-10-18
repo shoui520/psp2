@@ -17,88 +17,88 @@
 #define RTC_VENEER	static __attribute__((noinline))
 RTC_VENEER int rtcSysGetCurrentTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentTick(tick);
+	return SceRtcForDriver_DEC408D4(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentNetworkTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentNetworkTick(tick);
+	return SceRtcForDriver_F1517B38(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentDebugNetworkTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentDebugNetworkTick(tick);
+	return SceRtcForDriver_C141632A(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentRetainedNetworkTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentRetainedNetworkTick(tick);
+	return SceRtcForDriver_40B4BCFF(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentAdNetworkTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentAdNetworkTick(tick);
+	return SceRtcForDriver_3E3C09A0(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentGpsTick(SceRtcTick *tick)
 {
-	return ksceRtcGetCurrentGpsTick(tick);
+	return SceRtcForDriver_F69B610F(tick);
 }
 
 SceUInt64 sceRtcGetAccumulativeTime(void)
 {
 	sceKernelApiDeclareTypeUInt64();
-	return ksceRtcGetAccumulativeTime();
+	return SceRtcForDriver_0A86FB04();
 }
 
 RTC_VENEER int rtcSysGetLastReincarnatedTick(SceRtcTick *tick)
 {
-	return ksceRtcGetLastReincarnatedTick(tick);
+	return SceRtcForDriver_3D614A9A(tick);
 }
 
 RTC_VENEER int rtcSysGetLastAdjustedTick(SceRtcTick *tick)
 {
-	return ksceRtcGetLastAdjustedTick(tick);
+	return SceRtcForDriver_8A987573(tick);
 }
 
 RTC_VENEER int rtcSysGetCurrentClock(SceDateTime *time, int timezone)
 {
-	return ksceRtcGetCurrentClock(time, timezone);
+	return SceRtcForDriver_A930CD1A(time, timezone);
 }
 
 RTC_VENEER int rtcSysGetCurrentClockLocalTime(SceDateTime *time)
 {
-	return ksceRtcGetCurrentClockLocalTime(time);
+	return sceRtcGetCurrentClockLocalTime(time);
 }
 
 RTC_VENEER int rtcSysConvertUtcToLocalTime(const SceRtcTick *utc, SceRtcTick *local)
 {
-	return ksceRtcConvertUtcToLocal(utc, local);
+	return SceRtcForDriver_C6E03DD4(utc, local);
 }
 
 RTC_VENEER int rtcSysConvertLocalTimeToUtc(const SceRtcTick *local, SceRtcTick *utc)
 {
-	return ksceRtcConvertLocalTimeToUtc(local, utc);
+	return SceRtcForDriver_AD2F3544(local, utc);
 }
 
 RTC_VENEER int rtcSysFormatRFC2822LocalTime(char *buf, const SceRtcTick *tick)
 {
-	return ksceRtcFormatRFC2822LocalTime(buf, tick);
+	return SceRtcForDriver_1F7FC209(buf, tick);
 }
 
 RTC_VENEER int rtcSysFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
 {
-	return ksceRtcFormatRFC2822(buf, tick, offset);
+	return SceRtcForDriver_BA3415F8(buf, tick, offset);
 }
 
 RTC_VENEER int rtcSysFormatRFC3339LocalTime(char *buf, const SceRtcTick *tick)
 {
-	return ksceRtcFormatRFC3339LocalTime(buf, tick);
+	return SceRtcForDriver_35925318(buf, tick);
 }
 
 RTC_VENEER int rtcSysFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
 {
-	return ksceRtcFormatRFC3339(buf, tick, offset);
+	return SceRtcForDriver_D32AC698(buf, tick, offset);
 }
 
 /* name unknown: a kernel result unless copying out failed */

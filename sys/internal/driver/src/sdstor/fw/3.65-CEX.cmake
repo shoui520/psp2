@@ -160,11 +160,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_8AA268D6
 	SceSysrootForDriver_9BF782CA
 	SceSysrootForDriver_F804F761
-	kscePervasiveRemovableMemoryGetCardInsertState
+	ScePervasiveForDriver_551EEE82
 	ScePervasiveForDriver_5E20D7D5
 	ScePervasiveForDriver_E6728E30
-	ksceSysconCtrlRMRPower
-	ksceSysconCtrlSdPower
+	sceSysconCtrlRMRPower
+	sceSysconCtrlSdPower
 	SceSysconForDriver_F99BC858
 	ksceSdifWriteSectorMmc
 	ksceSdifInitializeMmcDevice

@@ -9,8 +9,8 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/systimer.h>
-#include <psp2kern/lowio/iftu.h>
+#include <systimer/systimer.h>
+#include <lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
@@ -27,7 +27,7 @@
 static __attribute__((noinline)) int syscallSetFrameBufInternal(SceUInt32 head, SceUInt32 plane,
 		const SceDisplayFrameBuf *pParam, SceUInt32 sync) /* name unknown */
 {
-	int ret = ksceDisplaySetFrameBufInternal(head, plane, pParam, sync);
+	int ret = SceDisplayForDriver_16466675(head, plane, pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -37,7 +37,7 @@ static __attribute__((noinline)) int syscallSetFrameBufInternal(SceUInt32 head, 
 static __attribute__((noinline)) int syscallGetFrameBufInternal(SceUInt32 head, SceUInt32 plane,
 		SceDisplayFrameBuf *pParam, SceUInt32 sync) /* name unknown */
 {
-	int ret = ksceDisplayGetFrameBufInternal(head, plane, pParam, sync);
+	int ret = SceDisplayForDriver_19F94C63(head, plane, pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -47,7 +47,7 @@ static __attribute__((noinline)) int syscallGetFrameBufInternal(SceUInt32 head, 
 static __attribute__((noinline)) int syscallSetFrameBuf(const SceDisplayFrameBuf *pParam,
 							SceUInt32 sync) /* name unknown */
 {
-	int ret = ksceDisplaySetFrameBuf(pParam, sync);
+	int ret = SceDisplayForDriver_289D82FE(pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -57,7 +57,7 @@ static __attribute__((noinline)) int syscallSetFrameBuf(const SceDisplayFrameBuf
 static __attribute__((noinline)) int syscallGetFrameBuf(SceDisplayFrameBuf *pParam,
 							SceUInt32 sync) /* name unknown */
 {
-	int ret = ksceDisplayGetFrameBuf(pParam, sync);
+	int ret = SceDisplayForDriver_EEDA2E54(pParam, sync);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -67,7 +67,7 @@ static __attribute__((noinline)) int syscallGetFrameBuf(SceDisplayFrameBuf *pPar
 static __attribute__((noinline)) int syscallGetResolutionInfoInternal(SceUInt32 head,
 		SceDisplayResolutionInfo *info) /* name unknown */
 {
-	int ret = ksceDisplayGetResolutionInfoInternal(head, info);
+	int ret = SceDisplayForDriver_B3C6D647(head, info);
 
 	if (ret < 0)
 		ret |= 0x40000000;
@@ -77,7 +77,7 @@ static __attribute__((noinline)) int syscallGetResolutionInfoInternal(SceUInt32 
 static __attribute__((noinline)) int syscallGetMaximumFrameBufResolution(int *width,
 		int *height) /* name unknown */
 {
-	int ret = ksceDisplayGetMaximumFrameBufResolution(width, height);
+	int ret = SceDisplayForDriver_5AFE6CD3(width, height);
 
 	if (ret < 0)
 		ret |= 0x40000000;

@@ -5,7 +5,6 @@
 #include <lowio/spi_regs.h>
 #include <sysmem/barrier.h>
 #include <lowio/pervasive.h>
-#include <psp2kern/lowio/pervasive.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 
@@ -54,8 +53,8 @@ int motionSpiInitialize(int clockDivider, uint16_t delay,
 	motionSpi.clockDivider = clockDivider;
 	motionSpi.receiveThreshold = receiveThreshold;
 	motionSpi.mode = mode;
-	kscePervasiveSpiResetDisable(1);
-	kscePervasiveSpiClockEnable(1);
+	ScePervasiveForDriver_E4B145AE(1);
+	ScePervasiveForDriver_DFD96BFC(1);
 	registers = motionSpi.registers;
 	registers->control = 0x30001;
 	registers->intControl = motionSpi.clockDivider;
@@ -63,7 +62,7 @@ int motionSpiInitialize(int clockDivider, uint16_t delay,
 	registers->mode = 0;
 	registers->intStatus = 0xf01;
 	dsb();
-	kscePervasiveSpiClockDisable(1);
+	ScePervasiveForDriver_A85BF98A(1);
 	return 0;
 }
 
@@ -82,7 +81,7 @@ int motionSpiTransfer(const MotionSensorPacket *request,
 	int started = 0;
 
 	response->size = 0;
-	kscePervasiveSpiClockEnable(1);
+	ScePervasiveForDriver_DFD96BFC(1);
 	size = request->size;
 	if (size == 0)
 		goto out;
@@ -166,13 +165,13 @@ received:
 	while ((registers->enable & 1) != 0)
 		;
 out:
-	kscePervasiveSpiClockDisable(1);
+	ScePervasiveForDriver_A85BF98A(1);
 	return sent == request->size ? 0 : (int)0x803600ff;
 }
 
 int motionSpiSuspend(void)
 {
-	kscePervasiveSpiResetEnable(1);
+	ScePervasiveForDriver_7B16F900(1);
 	return 0;
 }
 
@@ -180,8 +179,8 @@ int motionSpiResume(void)
 {
 	volatile SceSpiRegisters *registers;
 
-	kscePervasiveSpiResetDisable(1);
-	kscePervasiveSpiClockEnable(1);
+	ScePervasiveForDriver_E4B145AE(1);
+	ScePervasiveForDriver_DFD96BFC(1);
 	registers = motionSpi.registers;
 	registers->control = 0x30001;
 	registers->intControl = motionSpi.clockDivider;
@@ -189,7 +188,7 @@ int motionSpiResume(void)
 	registers->mode = 0;
 	registers->intStatus = 0xf01;
 	dsb();
-	kscePervasiveSpiClockDisable(1);
+	ScePervasiveForDriver_A85BF98A(1);
 	return 0;
 }
 

@@ -242,7 +242,7 @@ int ksceJpegEncoderCsc(SceJpegEncoderContext context, void *pYCbCr,
 	destination.paddr0 = outputPhysical;
 	destination.paddr1 = lumaSize + outputPhysical;
 	destination.paddr2 = chromaSize + lumaSize + outputPhysical;
-	ret = ksceIftuCsc(&destination, &source, &conversion);
+	ret = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
 	SceSysmemForDriver_22CBE925(32, (void *)((unsigned int)pYCbCr & ~255U),
 		((unsigned int)pYCbCr + 255 - ((unsigned int)pYCbCr & ~255U) + outputSize) & ~255U);
 unlockInput:

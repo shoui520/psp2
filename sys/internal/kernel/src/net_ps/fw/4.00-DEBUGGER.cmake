@@ -174,7 +174,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_D7207203
 	SceSysrootForDriver_ECADF8C3
 	sceRegMgrGetKeyInt
-	ksceRtcGetCurrentTick
+	SceRtcForDriver_DEC408D4
 )
 set(MODULE_IMPORT_VARS
 )

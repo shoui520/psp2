@@ -1,7 +1,7 @@
 /* SceDbgSdio and dependency declarations absent from the SDK headers. */
 #pragma once
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <lowio/pervasive.h>
 #include <sysmem/sysmem.h>

@@ -3,7 +3,7 @@
 #include "../../gpu_es4/srvkm/gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
 #include <processmgr/process.h>
@@ -209,7 +209,7 @@ int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 	unsigned can4M, can1M, can256K, can64K;
 	int ret;
 
-	revision = kscePervasiveGetSoCRevision();
+	revision = ScePervasiveForDriver_714EEFB7();
 	if (!(revision & 0x1ff00) && (unsigned char)revision <= 0x32)
 		return 0;
 	ret = SceSysmemForDriver_8D160E65((void *)address, &previous);

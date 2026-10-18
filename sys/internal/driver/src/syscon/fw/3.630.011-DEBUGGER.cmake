@@ -98,14 +98,14 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSysEventHandler
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
-	kscePervasiveSpiClockEnable
-	kscePervasiveSpiResetDisable
-	ksceGpioQueryIntr
-	ksceGpioAcquireIntr
-	ksceGpioSetPortMode
-	ksceGpioSetIntrMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	ScePervasiveForDriver_DFD96BFC
+	ScePervasiveForDriver_E4B145AE
+	SceGpioForDriver_010DC295
+	SceGpioForDriver_35AAD77A
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_BBEA1DDC
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

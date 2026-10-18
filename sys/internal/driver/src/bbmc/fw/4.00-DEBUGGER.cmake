@@ -272,32 +272,32 @@ set(MODULE_IMPORT_FUNCS
 	SceSblPostSsMgrForDriver_128FB35A
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	kscePervasiveUartClockDisable
+	ScePervasiveForDriver_18DD8043
 	ScePervasiveForDriver_34537B12
 	ScePervasiveForDriver_4B99558F
-	kscePervasiveUartResetEnable
-	kscePervasiveUartSetBaudrate
-	kscePervasiveUartResetDisable
-	kscePervasiveUartClockEnable
+	ScePervasiveForDriver_788B6C61
+	ScePervasiveForDriver_8BAB45F8
+	ScePervasiveForDriver_A7CE7DCC
+	ScePervasiveForDriver_EFD084D8
 	ksceIdStorageReadLeaf
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 	SceSysconForDriver_03C50DC3
 	SceSysconForDriver_4E88B4D9
 	SceSysconForDriver_50CAE242
 	SceSysconForDriver_63B14156
-	ksceSysconCmdSync
+	sceSysconCmdSync
 	SceSysconForDriver_7BAFE083
 	SceSysconForDriver_85E5DEBF
 	SceSysconForDriver_99A254A9
-	ksceSysconCmdExecAsync
+	SceSysconForDriver_C2224E82
 	SceSysconForDriver_C9DB5BFF
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	SceSysconForDriver_D7F5A797
 	SceSysconForDriver_DD16ABD9
-	ksceSysconGetBaryonVersion
-	kscePowerRequestResume
+	SceSysconForDriver_FF86F4C5
+	ScePowerForDriver_02DB1035
 	ScePowerForDriver_5210A6FE
 	ScePowerForDriver_B24263F0
 	ScePowerForDriver_F535D928

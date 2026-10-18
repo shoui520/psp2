@@ -9,8 +9,8 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/systimer.h>
-#include <psp2kern/lowio/iftu.h>
+#include <systimer/systimer.h>
+#include <lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>

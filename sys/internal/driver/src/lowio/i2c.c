@@ -8,6 +8,7 @@
 #include <sysmem/sysevent.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <oled/oled.h>
+#include <lowio/pervasive.h>
 
 #define I2C_ERROR_BUS ((int)0x803f0300)
 #define I2C_ERROR_SIZE ((int)0x803f0302)
@@ -46,7 +47,7 @@ typedef struct I2cContext {
 _Static_assert(sizeof(I2cContext) == 0x40, "I2cContext layout");
 static I2cContext s_i2c[2];
 
-int ksceI2cSetDebugHandlers(unsigned bus, I2cDebugHandlers *handlers)
+int SceI2cForDriver_A2C7CE62(unsigned bus, I2cDebugHandlers *handlers)
 {
 	if (bus >= 2)
 		return I2C_ERROR_BUS;
@@ -62,7 +63,7 @@ int SceI2cForDriver_E449AC6E(unsigned bus, uint32_t noLock)
 	return 0;
 }
 
-int ksceI2cInit(unsigned bus)
+int SceI2cForDriver_9CF8F3D6(unsigned bus)
 {
 	SceI2cRegisters *base;
 
@@ -96,7 +97,7 @@ int SceI2cForDriver_30CF9469(unsigned bus, uint32_t first, uint32_t second)
 	return 0;
 }
 
-int ksceI2cReset(int enable)
+int SceI2cForDriver_76D277AB(int enable)
 {
 	if (enable == 0)
 		return sceKernelClearEventFlag(s_i2c[1].event, 0x7fffffff);
@@ -161,7 +162,7 @@ static int I2cStopError(uint32_t status)
 	return I2cError(status, 0);
 }
 
-int ksceI2cTransferWrite(unsigned bus, unsigned address,
+int SceI2cForDriver_CA94A759(unsigned bus, unsigned address,
 	const uint8_t *buffer, unsigned size)
 {
 	I2cContext *ctx;
@@ -211,7 +212,7 @@ int ksceI2cTransferWrite(unsigned bus, unsigned address,
 	return ret;
 }
 
-int ksceI2cTransferRead(unsigned bus, unsigned address,
+int SceI2cForDriver_D1D0A9A4(unsigned bus, unsigned address,
 	uint8_t *buffer, unsigned size)
 {
 	I2cContext *ctx;
@@ -261,7 +262,7 @@ int ksceI2cTransferRead(unsigned bus, unsigned address,
 	return ret;
 }
 
-int ksceI2cTransferWriteRead(unsigned bus, unsigned writeAddress,
+int SceI2cForDriver_0A40B7BF(unsigned bus, unsigned writeAddress,
 	const uint8_t *writeBuffer, unsigned writeSize, unsigned readAddress,
 	uint8_t *readBuffer, unsigned readSize)
 {
@@ -342,10 +343,6 @@ out:
 	return ret;
 }
 
-uint32_t ScePervasiveForDriver_86BEA9A4(unsigned bus);
-int ScePervasiveForDriver_C37CFDFC(int port);
-int ScePervasiveForDriver_3F3E1AEA(int port);
-
 static int I2cIntrHandler(int intrCode, void *arg)
 {
 	I2cContext *ctx = arg;
@@ -381,7 +378,7 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 			for (bus = 0; bus < 2; bus++) {
 				ScePervasiveForDriver_86BEA9A4(bus);
 				ScePervasiveForDriver_C37CFDFC(bus);
-				ksceI2cInit(bus);
+				SceI2cForDriver_9CF8F3D6(bus);
 				I2cHardwareTiming(&s_i2c[bus]);
 				s_i2c[bus].base->interruptEnable = 0x01000000;
 				sceKernelEnableIntr(s_i2c[bus].intrCode);
@@ -443,7 +440,7 @@ static __attribute__((noinline)) int I2cInit(void)
 		ctx = &s_i2c[bus];
 		ScePervasiveForDriver_86BEA9A4(bus);
 		ScePervasiveForDriver_C37CFDFC(bus);
-		ksceI2cInit(bus);
+		SceI2cForDriver_9CF8F3D6(bus);
 		ctx->timing[0] = 0x8c;
 		ctx->timing[1] = 0x46;
 		I2cHardwareTiming(ctx);

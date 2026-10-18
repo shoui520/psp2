@@ -10,7 +10,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sblaimgr.h>
 #include <syscon/syscon.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <smsc_proxy/smsc_proxy.h>
 #include <string.h>
 
@@ -413,7 +413,7 @@ int _sceSdifReset(SdifContextGlobal *context, int flags)
 	int retries;
 
 	if (flags & 1) {
-		revision = kscePervasiveGetSoCRevision() & 0x1ff00;
+		revision = ScePervasiveForDriver_714EEFB7() & 0x1ff00;
 		index = port->index;
 		if (revision == 0) {
 			if (SceSblAIMgrForDriver_C6E83F34()) {
@@ -428,7 +428,7 @@ int _sceSdifReset(SdifContextGlobal *context, int flags)
 				goto resetPort;
 			ScePervasiveForDriver_9F8E589C(index, 512);
 		} else if (revision == 0x100) {
-			if (((uint32_t)ksceSysconGetHardwareInfo() & 0xff0000) < 0x800000) {
+			if (((uint32_t)SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
 				if (index != 0) {
 					if (index - 1 <= 1)
 						ScePervasiveForDriver_043B33F5(index, 2);

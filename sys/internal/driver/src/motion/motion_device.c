@@ -6,7 +6,7 @@ static uint32_t motionHardwareType;
 
 int motionInitializeDevice(void)
 {
-	motionHardwareType = ksceSysconGetHardwareInfo() & 0xff0000;
+	motionHardwareType = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 	if (motionHardwareType == 0x820000)
 		return motionInitializeDirect();
 	return motionCommandInitialize();

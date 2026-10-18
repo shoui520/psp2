@@ -11,7 +11,7 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
@@ -800,7 +800,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 	psMiscInfoData->ui32MiscInfoFlags = 0;
 	switch (psMiscInfo->eRequest) {
 	case SGX_MISC_INFO_REQUEST_CLOCKSPEED:
-		kscePowerGetGpuClockFrequencyInternal(&ui32ClockSpeed, NULL);
+		scePowerGetGpuClockFrequencyInternal(&ui32ClockSpeed, NULL);
 		psMiscInfo->uData.ui32SGXClockSpeed = ui32ClockSpeed * 1000000;
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_SGXREV:
@@ -808,7 +808,7 @@ PVRSRV_ERROR SGXGetMiscInfoKM(PVRSRV_SGXDEV_INFO *psDevInfo,
 		if (eError != PVRSRV_OK)
 			return eError;
 		psSGXFeatures = &((PVRSRV_SGX_MISCINFO_INFO *)psMemInfo->pvLinAddrKM)->sSGXFeatures;
-		psSGXFeatures->socRevision = kscePervasiveGetSoCRevision() & 0x1ffffU;
+		psSGXFeatures->socRevision = ScePervasiveForDriver_714EEFB7() & 0x1ffffU;
 		psMiscInfo->uData.sSGXFeatures = *psSGXFeatures;
 		return PVRSRV_OK;
 	case SGX_MISC_INFO_REQUEST_DRIVER_SGXREV:

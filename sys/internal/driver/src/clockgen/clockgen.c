@@ -10,7 +10,7 @@
 
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/lowio/i2c.h>
+#include <lowio/i2c.h>
 #include <sysmem/sysevent_ids.h>
 
 #define CLOCKGEN_I2C_BUS	0
@@ -60,7 +60,7 @@ static inline int writeRegister(unsigned char reg, unsigned char value)
 
 	buffer[0] = reg;
 	buffer[1] = value;
-	return ksceI2cTransferWrite(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, buffer, sizeof(buffer));
+	return SceI2cForDriver_CA94A759(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, buffer, sizeof(buffer));
 }
 
 /* name unknown: the PLL settings revision 4 needs for each spread */
@@ -133,7 +133,7 @@ int SceClockgenForDriver_0BA41732(void)
 	if (clockgen.singleRead) {
 		for (i = 0; i < CLOCKGEN_REGISTERS; i++) {
 			command = CLOCKGEN_REG(i);
-			ret = ksceI2cTransferWriteRead(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
+			ret = SceI2cForDriver_0A40B7BF(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
 						       CLOCKGEN_I2C_ADDR, response, 1);
 			if (ret < 0)
 				return ret;
@@ -142,7 +142,7 @@ int SceClockgenForDriver_0BA41732(void)
 		}
 	} else {
 		command = 0;
-		ret = ksceI2cTransferWriteRead(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
+		ret = SceI2cForDriver_0A40B7BF(CLOCKGEN_I2C_BUS, CLOCKGEN_I2C_ADDR, &command, 1,
 					       CLOCKGEN_I2C_ADDR, response, sizeof(response));
 		if (ret < 0)
 			return ret;

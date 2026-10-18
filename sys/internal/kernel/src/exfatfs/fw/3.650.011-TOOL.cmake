@@ -141,8 +141,8 @@ set(MODULE_IMPORT_FUNCS
 	sceIoRead
 	sceIoClose
 	SceRtcForDriver_09AF419B
-	ksceRtcGetCurrentClockLocalTime
-	ksceRtcGetCurrentClock
+	sceRtcGetCurrentClockLocalTime
+	SceRtcForDriver_A930CD1A
 	sceSblACMgrGetFSAttributeByThreadAccessLevel
 	SceSblACMgrForDriver_3B356B98
 	sceSblACMgrSetFSAttributeByAttributeWithMountPoint

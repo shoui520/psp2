@@ -1,6 +1,6 @@
 /*
  * Syscon's scratch pad: 0x100 bytes that survive suspend, read and written
- * with ksceSysconReadCommand/ksceSysconSendCommand (commands 0x90/0x91,
+ * with SceSysconForDriver_299B1CE7/SceSysconForDriver_E26488B9 (commands 0x90/0x91,
  * sceSysconReadScratchPad/WriteScratchPad) at an offset into this layout.
  * Layout after the henkaku wiki (Ernie, "Syscon Scratch Pad").
  */

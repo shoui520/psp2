@@ -389,9 +389,9 @@ static inline __attribute__((always_inline)) void udcdApplyUsbCharging(int bus)
 		}
 	}
 	if (enabled)
-		kscePowerBatteryEnableUsbCharging();
+		ScePowerForDriver_733F973B();
 	else
-		kscePowerBatteryDisableUsbCharging();
+		ScePowerForDriver_90285886();
 	ScePowerForDriver_F535D928(0x8000, enabled);
 }
 

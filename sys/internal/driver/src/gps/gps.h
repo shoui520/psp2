@@ -17,13 +17,12 @@
 #include <sysmem/sysevent.h>
 #include <sysmem/pmmgr.h>
 #include <acmgr/acmgr.h>
+#include <rtc/rtc.h>
 /* Official SDK name, not yet present in the shared error header. */
 #ifndef SCE_KERNEL_ERROR_NO_MEMORY
 #define SCE_KERNEL_ERROR_NO_MEMORY 0x8002710b
 #endif
 int SceSblPostSsMgrForDriver_128FB35A(void);
-int SceRtcForDriver_F139E359(const void *date, void *tick);
-int SceRtcForDriver_A7236656(const void *tick);
 
 int SceGpsForDriver_092AD9BF(unsigned device, const char *sentence, unsigned size);
 int _sceGpsOpen(int callback);

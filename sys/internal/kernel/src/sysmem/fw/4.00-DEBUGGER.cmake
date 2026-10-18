@@ -11,7 +11,7 @@ set(MODULE_IMPORT_NIDS
 	0xEB4E3738:F:0x4BAC049B
 )
 set(MODULE_IMPORT_FUNCS
-	ksceDmacMemset
+	sceKernelDmacMemset
 )
 set(MODULE_IMPORT_VARS
 )

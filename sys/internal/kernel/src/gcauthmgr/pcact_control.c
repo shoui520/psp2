@@ -1,11 +1,11 @@
 /* Pcact activation control and transport. */
 #include <psp2kern/npdrm.h>
-#include <psp2kern/kernel/rtc.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
 #include "pcact.h"
 #include <sysmem/utils.h>
+#include <rtc/rtc.h>
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -17,8 +17,6 @@ GcAuthActivationRandom gcAuthActivationRandom;
 GcAuthPcactChallengeInput gcAuthPcactActivationInput;
 
 int ksceNpDrmRemoveActData(SceUInt64 *accountId);
-int SceRtcForDriver_9C8AF264(SceRtcTick *destination,
-		const SceRtcTick *source, SceUInt64 seconds);
 int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
 		const GcAuthPcactChallengeInput *input,
 		const unsigned char *rtcSeconds, GcAuthPcactEncryptedChallenge *output,
@@ -52,7 +50,7 @@ int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request)
 		return permission;
 	if (entropy == NULL || output == NULL)
 		goto invalid;
-	result = ksceRtcGetCurrentSecureTick(&gcAuthActivationCurrentTick);
+	result = SceRtcForDriver_401C0954(&gcAuthActivationCurrentTick);
 	if (result < 0)
 		goto finish;
 	switch (mode) {
@@ -194,7 +192,7 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 		return permission;
 	if (output == NULL || random == NULL)
 		goto invalid;
-	if (ksceRtcGetCurrentSecureTick(&tick) < 0)
+	if (SceRtcForDriver_401C0954(&tick) < 0)
 		goto clockError;
 	switch (mode) {
 	case 1:

@@ -168,13 +168,13 @@ set(MODULE_IMPORT_FUNCS
 	SceHpremoteForDriver_2229EF51
 	SceHpremoteForDriver_71B5FB67
 	SceHpremoteForDriver_D22913DB
-	ksceDisplayDisableHead
-	ksceDisplayEnableHead
-	ksceDisplaySetColorSpaceMode
-	ksceDisplaySetBrightness
-	ksceDisplaySetOutputMode
-	ksceDisplayGetResolutionInfoInternal
-	ksceDisplaySetScaleConf
+	SceDisplayForDriver_43347565
+	SceDisplayForDriver_496032D6
+	SceDisplayForDriver_8D79D187
+	SceDisplayForDriver_9E3C6DC6
+	SceDisplayForDriver_AF5EE5BE
+	SceDisplayForDriver_B3C6D647
+	SceDisplayForDriver_EB390A76
 	ksceBtRegisterCallback
 	ksceBtSendAudio
 	ksceBtStartDisconnect
@@ -208,12 +208,12 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyInt
 	scePowerRegisterCallback
 	ScePowerForDriver_394DE492
-	kscePowerSetDisplayBrightness
-	kscePowerSetIdleTimer
+	ScePowerForDriver_43D5CE1D
+	ScePowerForDriver_6BC26FC7
 	scePowerIsPowerOnline
-	kscePowerGetWakeupFactor
-	kscePowerGetDisplayMaxBrightness
-	ksceSysconGetHardwareInfo
+	ScePowerForDriver_9F26222A
+	ScePowerForDriver_D8759B55
+	SceSysconForDriver_CBD6D8BC
 	ksceIdStorageLookup
 	SceCompatForDriver_6EBD9E01
 )

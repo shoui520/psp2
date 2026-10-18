@@ -36,8 +36,8 @@ int audioI2sInterruptHandler(int intrCode, void *userCtx)
 			struct AudioDmaTransfer *transfer =
 				&audioDmaStates[2].transfers[port == 0 ? 1 : 0];
 
-			if (ksceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0)
-				ksceKernelDmaOpQuit(transfer->opId);
+			if (sceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0)
+				sceKernelDmaOpQuit(transfer->opId);
 		}
 		audioI2sEnabledMask &= ~(1U << port);
 		ScePervasiveForDriver_146108D4(audioI2sClockIndex[port]);

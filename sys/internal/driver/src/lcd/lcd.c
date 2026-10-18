@@ -10,9 +10,9 @@
 #include <sysmem/sysevent.h>
 #include <lowio/spi_regs.h>
 #include <lcd/lcd.h>
-#include <psp2kern/lowio/gpio.h>
-#include <psp2kern/lowio/i2c.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/gpio.h>
+#include <lowio/i2c.h>
+#include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
 #include <modulemgr/modulemgr.h>
@@ -71,7 +71,7 @@ static void waitTime(unsigned usec) /* name unknown */
 static void spiBegin(void) /* name unknown */
 {
 	if (!lcd.spiDepth) {
-		kscePervasiveSpiClockEnable(2);
+		ScePervasiveForDriver_DFD96BFC(2);
 		while (lcd.spi->receiveCount)
 			(void)lcd.spi->receive;
 		lcd.spi->control = 0x30001;
@@ -121,7 +121,7 @@ static void spiEnd(void) /* name unknown */
 	lcd.spi->control = 0x30001;
 	(void)lcd.spi->control;
 	dsb();
-	kscePervasiveSpiClockDisable(2);
+	ScePervasiveForDriver_A85BF98A(2);
 }
 
 static void spiRead(unsigned char *data, unsigned length, unsigned skip) /* name unknown */
@@ -203,10 +203,10 @@ static int initWork(void *arg) /* name unknown */
 {
 	unsigned char id[12];
 	unsigned intr, i;
-	int port = ksceGpioPortRead(0, 0);
+	int port = SceGpioForDriver_129DF5AC(0, 0);
 	if (!port) {
-		ksceGpioPortSet(0, 0);
-		ksceGpioPortSet(1, 7);
+		SceGpioForDriver_D454A584(0, 0);
+		SceGpioForDriver_D454A584(1, 7);
 		sceKernelDelayThread(20000);
 	}
 	intr = SceCpuForDriver_821FC0EE();
@@ -223,14 +223,14 @@ static int initWork(void *arg) /* name unknown */
 		lcd.panelRevision = id[2] | (id[3] << 8);
 	}
 	if (!port) {
-		ksceGpioPortClear(0, 0);
-		ksceGpioPortClear(1, 7);
+		SceGpioForDriver_F6310435(0, 0);
+		SceGpioForDriver_F6310435(1, 7);
 	}
 	if (id[4] == 0xff && !lcd.panelId) {
 		lcd.ready = 1;
 	} else {
-		kscePervasiveSpiClockDisable(2);
-		kscePervasiveSpiResetEnable(2);
+		ScePervasiveForDriver_A85BF98A(2);
+		ScePervasiveForDriver_7B16F900(2);
 		lcd.ready = 2;
 	}
 	return 1;
@@ -238,19 +238,19 @@ static int initWork(void *arg) /* name unknown */
 
 int SceLcdForDriver_949D45E4(void)
 {
-	ksceGpioPortClear(0, 0);
-	ksceGpioPortClear(1, 7);
+	SceGpioForDriver_F6310435(0, 0);
+	SceGpioForDriver_F6310435(1, 7);
 	return 0;
 }
 int SceLcdForDriver_C0A2A6EA(void)
 {
-	ksceGpioPortSet(0, 0);
-	ksceGpioPortSet(1, 7);
+	SceGpioForDriver_D454A584(0, 0);
+	SceGpioForDriver_D454A584(1, 7);
 	return 0;
 }
 int SceLcdForDriver_6A08623C(void)
 {
-	return ksceGpioPortRead(0, 0) == 0;
+	return SceGpioForDriver_129DF5AC(0, 0) == 0;
 }
 int ksceLcdWaitReady(void)
 {
@@ -402,27 +402,27 @@ static int backlightWork(void *arg) /* name unknown */
 		if (!target) {
 			data[0] = 5;
 			data[1] = 0;
-			ksceI2cTransferWrite(1, 200, data, 2);
+			SceI2cForDriver_CA94A759(1, 200, data, 2);
 			if (current > 0) {
 				data[0] = 14;
-				ksceI2cTransferWrite(1, 200, data, 2);
+				SceI2cForDriver_CA94A759(1, 200, data, 2);
 			}
 		} else {
 			if (!current) {
 				data[0] = 14;
 				data[1] = 1;
-				ksceI2cTransferWrite(1, 200, data, 2);
+				SceI2cForDriver_CA94A759(1, 200, data, 2);
 			}
 			while (target - current > 64) {
 				current += 64;
 				data[0] = 5;
 				data[1] = current;
-				ksceI2cTransferWrite(1, 200, data, 2);
+				SceI2cForDriver_CA94A759(1, 200, data, 2);
 				waitTime(16000);
 			}
 			data[0] = 5;
 			data[1] = target;
-			ksceI2cTransferWrite(1, 200, data, 2);
+			SceI2cForDriver_CA94A759(1, 200, data, 2);
 		}
 		backlightCurrent = target;
 		sceKernelSpinlockLowUnlock(&backlightLock);
@@ -441,7 +441,7 @@ static int resetBacklightWork(void *arg) /* name unknown */
 	while (p[0] != 0xff) {
 		data[0] = p[0];
 		data[1] = p[1];
-		if (ksceI2cTransferWrite(1, 200, data, 2) < 0)
+		if (SceI2cForDriver_CA94A759(1, 200, data, 2) < 0)
 			break;
 		p += 2;
 	}
@@ -580,17 +580,17 @@ int SceLcdForDriver_3E7C2CCA(void)
 }
 static inline void setupSpi(volatile SceSpiRegisters *regs) /* name unknown */
 {
-	kscePervasiveSpiResetDisable(2);
-	kscePervasiveSpiClockEnable(2);
+	ScePervasiveForDriver_E4B145AE(2);
+	ScePervasiveForDriver_DFD96BFC(2);
 	regs->control = 0x30001;
 	regs->dmaControl = 15;
 	regs->intControl = 4;
 	regs->mode = 0;
 	(void)regs->mode;
 	dsb();
-	kscePervasiveSpiClockDisable(2);
-	ksceGpioSetPortMode(0, 0, 0);
-	ksceGpioSetPortMode(1, 7, 0);
+	ScePervasiveForDriver_A85BF98A(2);
+	SceGpioForDriver_372022A4(0, 0, 0);
+	SceGpioForDriver_372022A4(1, 7, 0);
 }
 static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown */
 {
@@ -598,11 +598,11 @@ static int sysEvent(int resume, int event, void *arg, void *opt) /* name unknown
 		if (event == SYSEVENT_SUSPEND_IDLE_QUERY)
 			return SceLcdForDriver_4735059C(1) ? -1 : 0;
 		if (event == SYSEVENT_SUSPEND_DEVICE(3)) {
-			kscePervasiveSpiClockDisable(2);
-			kscePervasiveSpiResetEnable(2);
+			ScePervasiveForDriver_A85BF98A(2);
+			ScePervasiveForDriver_7B16F900(2);
 			/* SceLcdForDriver_949D45E4, inlined in Sony's build */
-			ksceGpioPortClear(0, 0);
-			ksceGpioPortClear(1, 7);
+			SceGpioForDriver_F6310435(0, 0);
+			SceGpioForDriver_F6310435(1, 7);
 		}
 	} else if (resume == 1 && event == SYSEVENT_RESUME_DEVICE(3)) {
 		setupSpi(lcd.spi);

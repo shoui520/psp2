@@ -5,8 +5,8 @@
  */
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/lowio/gpio.h>
-#include <psp2kern/lowio/i2c.h>
+#include <lowio/gpio.h>
+#include <lowio/i2c.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysevent.h>
@@ -60,15 +60,15 @@ static int _sceHdmiSysEventHandler(int resume, int eventid, void *args, void *op
 	cecPowered = 0;
 	if (eventid != SYSEVENT_RESUME_START)
 		return 0;
-	ret = ksceGpioSetPortMode(0, 15, 0);
+	ret = SceGpioForDriver_372022A4(0, 15, 0);
 	if (ret < 0) {
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(96);
 #endif
 		return ret;
 	}
-	ksceGpioPortClear(0, 15);
-	ret = ksceI2cReset(0);
+	SceGpioForDriver_F6310435(0, 15);
+	ret = SceI2cForDriver_76D277AB(0);
 	if (ret < 0) {
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(108);
@@ -82,7 +82,7 @@ static int _sceHdmiSysEventHandler(int resume, int eventid, void *args, void *op
 #endif
 		return ret;
 	}
-	ret = ksceI2cReset(1);
+	ret = SceI2cForDriver_76D277AB(1);
 	if (ret < 0) {
 #if FW_SINCE(0x04000000)
 		SCE_DBG_ASSERT_FAIL(120);
@@ -96,17 +96,17 @@ static int initWork(void *arg)
 {
 	SceUInt8 length;
 
-	if (ksceI2cReset(0) >= 0) {
+	if (SceI2cForDriver_76D277AB(0) >= 0) {
 		if (cecPowered == 0) {
-			ksceSysconCtrlHdmiCecPower(1);
+			SceSysconForDriver_62155962(1);
 			cecPowered = 1;
 		}
-		if (ksceGpioSetPortMode(0, 15, 0) >= 0) {
-			if ((ksceSysconGetHardwareInfo() & 0xffff00) < 0x102400)
-				ksceGpioPortSet(0, 15);
+		if (SceGpioForDriver_372022A4(0, 15, 0) >= 0) {
+			if ((SceSysconForDriver_CBD6D8BC() & 0xffff00) < 0x102400)
+				SceGpioForDriver_D454A584(0, 15);
 			else
-				ksceGpioPortClear(0, 15);
-			if (_sceHdmiDeviceModuleStart() >= 0 && ksceI2cReset(1) >= 0 &&
+				SceGpioForDriver_F6310435(0, 15);
+			if (_sceHdmiDeviceModuleStart() >= 0 && SceI2cForDriver_76D277AB(1) >= 0 &&
 			    sceHdmiDeviceGetChipId(chipId, &length) >= 0) {
 				hdmiResetVicTiming();
 				hdmiInfoFrameInitialize();
@@ -121,7 +121,7 @@ static int initWork(void *arg)
 			}
 		}
 		if (cecPowered != 0) {
-			ksceSysconCtrlHdmiCecPower(0);
+			SceSysconForDriver_62155962(0);
 			cecPowered = 0;
 		}
 	}
@@ -135,7 +135,7 @@ int controlHdmiModuleStart(void)
 	int i;
 
 	cecPowered = 0;
-	model = ksceSysconGetHardwareInfo() & 0xff0000;
+	model = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 	switch (model) {
 	case 0x100000:
 	case 0x310000:
@@ -209,7 +209,7 @@ int controlHdmiCecPowerOn(void)
 
 	if (cecPowered != 0)
 		return 0;
-	ret = ksceSysconCtrlHdmiCecPower(1);
+	ret = SceSysconForDriver_62155962(1);
 	cecPowered = 1;
 	return ret;
 }

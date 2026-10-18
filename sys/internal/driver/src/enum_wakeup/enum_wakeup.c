@@ -40,7 +40,7 @@ int ewPowerOffThread(SceSize args, void *argp)
 	(void)argp;
 
 	ewg.ew.spinlock = 0;
-	ksceSysconSendCommand(SYSCON_SCRATCH_PAD(resumeContextPA), &command, sizeof(command));
+	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &command, sizeof(command));
 	intr = SceCpuForDriver_D32ACE9E(&ewg.ew.spinlock);
 	ewg.ew.powerMask = EW_BUTTON_POWER;
 	ewg.ew.powerCallback = SceCtrlForDriver_FF9D4DD4(EW_BUTTON_POWER, ewPowerButton, 0, &state);
@@ -55,7 +55,7 @@ int ewPowerOffThread(SceSize args, void *argp)
 					SCE_KERNEL_EVF_WAITMODE_OR |
 					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (bits & EW_EVENT_UNPLUGGED) {
-			kscePowerBatterySetUsbStatus(5);
+			ScePowerForDriver_E4E3C316(5);
 			goto standby;
 		}
 		if (bits & (EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_SHUTDOWN))
@@ -116,7 +116,7 @@ void ewInitDisplay(void)
 	const SceUInt8 *p = ewIconPpm;
 	int i, j, ret;
 
-	ret = ksceDisplaySetOutputMode(0, 0, 0);
+	ret = SceDisplayForDriver_AF5EE5BE(0, 0, 0);
 	if (ret < 0)
 		goto fail;
 	memset(&opt, 0, sizeof(opt));
@@ -138,7 +138,7 @@ void ewInitDisplay(void)
 	fb.pixelformat = 0;
 	fb.width = EW_SCREEN_WIDTH;
 	fb.height = EW_SCREEN_HEIGHT;
-	ksceDisplaySetFrameBufInternal(0, 0, &fb, 1);
+	SceDisplayForDriver_16466675(0, 0, &fb, 1);
 	ewConsoleInit();
 
 	ewg.ew.iconBlock = SceSysmemForDriver_C94850C9("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
@@ -197,7 +197,7 @@ static inline __attribute__((always_inline)) SceUInt32 ewReadButtons(void)
 	SceUInt32 pressed = 0;
 	int i, n;
 
-	n = ksceCtrlReadBufferPositive(0, ewg.ctrl, 8);
+	n = SceCtrlForDriver_9B96A1AA(0, ewg.ctrl, 8);
 	ewg.buttons.pressed = 0;
 	ewg.buttons.released = 0;
 	for (i = 0; i < n; i++) {
@@ -227,10 +227,10 @@ int ewMainThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	ksceLedSetMode(2, 0, NULL);
+	SceLedForDriver_EA24BE03(2, 0, NULL);
 	sceRegMgrGetKeyInt("/CONFIG/USB", "usb_charge_enable", &chargeEnable);
 	SceUdcdForDriver_2D91F8C3(chargeEnable);
-	kscePowerSetPowerSwMode2(0);
+	ScePowerForDriver_0CD21B1F(0);
 	if (SceQafMgrForDriver_52B4E164() != 0) {
 		ewReadButtons();
 		held = ewg.buttons.current;
@@ -256,14 +256,14 @@ display_only:
 		mtpInit();
 		mtpStart(1, ewFillDeviceStrings);
 		if (ewg.ew.mode == EW_MODE_MTP) {
-			ksceDisplayDisableHead(0);
-			ksceDisplayDisableHead(1);
+			SceDisplayForDriver_43347565(0);
+			SceDisplayForDriver_43347565(1);
 			goto clocks;
 		}
 	}
 	ewInitDisplay();
-	ksceDisplayDisableHead(1);
-	if (ksceDisplayWaitVblankStart() < 0)
+	SceDisplayForDriver_43347565(1);
+	if (SceDisplayForDriver_984C27E7() < 0)
 		sceKernelExitThread(0);
 
 clocks:
@@ -272,7 +272,7 @@ clocks:
 		__builtin_memcpy(ewg.ew.clocks, ewClocks, sizeof(ewg.ew.clocks));
 		scePowerSetArmClockFrequency(ewg.ew.clocks[0]);
 		scePowerSetBusClockFrequency(ewg.ew.clocks[1]);
-		kscePowerSetGpuClockFrequencyInternal(ewg.ew.clocks[2], ewg.ew.clocks[2]);
+		ScePowerForDriver_264C24FC(ewg.ew.clocks[2], ewg.ew.clocks[2]);
 		scePowerSetGpuXbarClockFrequency(ewg.ew.clocks[3]);
 		ScePervasiveForDriver_4F64DEF6(0);
 		if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") < 0)
@@ -283,11 +283,11 @@ clocks:
 		SceClockgenForDriver_F0A0242D();
 		ksceClockgenWlanBtClkDisable();
 		SceClockgenForDriver_82F39378();
-		kscePowerSetCameraBusClockFrequency(0);
-		ksceGpioSetPortMode(0, 10, 0);
-		ksceGpioPortSet(0, 10);
-		ksceGpioSetPortMode(0, 11, 0);
-		ksceGpioPortSet(0, 11);
+		ScePowerForDriver_C743E392(0);
+		SceGpioForDriver_372022A4(0, 10, 0);
+		SceGpioForDriver_D454A584(0, 10);
+		SceGpioForDriver_372022A4(0, 11, 0);
+		SceGpioForDriver_D454A584(0, 11);
 		for (i = 0; i < 3; i++) {
 			ScePervasiveForDriver_821AE6C7(i);
 			ScePervasiveForDriver_F861FEE4(i);
@@ -299,7 +299,7 @@ clocks:
 		ScePervasiveForDriver_A3CF9844(7);
 		ScePervasiveForDriver_146108D4(1);
 		ScePervasiveForDriver_A3CF9844(1);
-		kscePervasiveDsiSetPixelClock(1, 0);
+		ScePervasiveForDriver_91C80C41(1, 0);
 		ScePervasiveForDriver_3D8A8712(2);
 		ScePervasiveForDriver_4E43299D(2);
 		ewg.ew.motionFlags = 0;
@@ -319,7 +319,7 @@ clocks:
 		} else {
 			SceKernelSuspendForDriver_E0489831(0);
 			ewg.ew.setBrightness(ewg.ew.brightness);
-			if (ksceDisplayWaitVblankStartCB() < 0)
+			if (SceDisplayForDriver_46F186C3() < 0)
 				sceKernelExitThread(0);
 			count++;
 			fb = ewg.ew.fb[count & 1];
@@ -353,7 +353,7 @@ clocks:
 			frame.pixelformat = 0;
 			frame.width = EW_SCREEN_WIDTH;
 			frame.height = EW_SCREEN_HEIGHT;
-			ksceDisplaySetFrameBufInternal(0, 0, &frame, 1);
+			SceDisplayForDriver_16466675(0, 0, &frame, 1);
 			if (ewg.ew.mode == EW_MODE_DISPLAY)
 				continue;
 		}
@@ -366,7 +366,7 @@ clocks:
 					   the d-pad sets the brightness */
 					if (pressed & EW_BUTTON_SELECT) {
 						led ^= 1;
-						ksceLedSetMode(2, led, NULL);
+						SceLedForDriver_EA24BE03(2, led, NULL);
 						if (ewg.ew.mode == EW_MODE_MTP)
 							goto motion;
 						if (ewg.ew.displayOn() || !ewg.ew.blank)

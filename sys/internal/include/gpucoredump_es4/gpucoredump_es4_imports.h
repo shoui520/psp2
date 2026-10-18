@@ -9,12 +9,13 @@
 #include <psp2kern/types.h>
 #include <gpu/gpu_es4_trace.h>
 #include <pamgr/pamgr_trace.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <power/power.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
+#include <rtc/rtc.h>
 
 /* SceGpuEs4ForDriver */
 /* registers the PA-trace stop and the core-dump callbacks */
@@ -48,5 +49,4 @@ SceSize ScePamgrForDriver_019BD60F(int unit);			/* bytes traced */
 /* SceKernelUtilsForDriver: the DES of the dump file's segments */
 #include <sysmem/des.h>
 
-int ksceRtcGetCurrentClockLocalTime(SceDateTime *time);
 int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);

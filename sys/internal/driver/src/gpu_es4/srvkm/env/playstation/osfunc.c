@@ -340,7 +340,7 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData,
 	psTimerCBData->pfnTimerFunc = pfnTimerFunc;
 	psTimerCBData->pvData = pvData;
 	psTimerCBData->bActive = IMG_FALSE;
-	psTimerCBData->sTimer = ksceKernelSysTimerAlloc(SCE_SYSTIMER_TYPE_WORD);
+	psTimerCBData->sTimer = SceSystimerForDriver_E2B9D8E9(SCE_SYSTIMER_TYPE_WORD);
 	if (psTimerCBData->sTimer < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &dbg_OSAddTimer_L1663,
@@ -349,13 +349,13 @@ IMG_HANDLE OSAddTimer(PFN_TIMER_FUNC pfnTimerFunc, IMG_VOID *pvData,
 		FreeProcessGpuMemory(psTimerCBData);
 		return NULL;
 	}
-	ksceKernelSysTimerSetClockSource(psTimerCBData->sTimer, 3, 0);
+	SceSystimerForDriver_0450933B(psTimerCBData->sTimer, 3, 0);
 	/* SCE computes a word timer interval at 48 MHz before widening. */
-	ksceKernelSysTimerSetInterval(psTimerCBData->sTimer,
+	SceSystimerForDriver_A73351C1(psTimerCBData->sTimer,
 			(IMG_UINT64)(ui32MsTimeout * 48000));
-	ksceKernelSysTimerSetHandler(psTimerCBData->sTimer,
+	SceSystimerForDriver_CCCD1EE3(psTimerCBData->sTimer,
 			(SceSysTimerCallback)OSTimerCallbackWrapper, 15, psTimerCBData);
-	ksceKernelSysTimerResetCount(psTimerCBData->sTimer);
+	SceSystimerForDriver_7DEBA6A5(psTimerCBData->sTimer);
 	return psTimerCBData;
 }
 
@@ -363,7 +363,7 @@ PVRSRV_ERROR OSRemoveTimer(IMG_HANDLE hTimer)
 {
 	TIMER_CALLBACK_DATA *psTimerCBData = hTimer;
 
-	ksceKernelSysTimerFree(psTimerCBData->sTimer);
+	SceSystimerForDriver_8358611F(psTimerCBData->sTimer);
 	FreeProcessGpuMemory(psTimerCBData);
 	return PVRSRV_OK;
 }
@@ -373,8 +373,8 @@ PVRSRV_ERROR OSEnableTimer(IMG_HANDLE hTimer)
 	TIMER_CALLBACK_DATA *psTimerCBData = hTimer;
 
 	psTimerCBData->bActive = IMG_TRUE;
-	ksceKernelSysTimerResetCount(psTimerCBData->sTimer);
-	ksceKernelSysTimerStartCount(psTimerCBData->sTimer);
+	SceSystimerForDriver_7DEBA6A5(psTimerCBData->sTimer);
+	SceSystimerForDriver_59EBD22D(psTimerCBData->sTimer);
 	return PVRSRV_OK;
 }
 
@@ -383,7 +383,7 @@ PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer)
 	TIMER_CALLBACK_DATA *psTimerCBData = hTimer;
 
 	psTimerCBData->bActive = IMG_FALSE;
-	ksceKernelSysTimerStopCount(psTimerCBData->sTimer);
+	SceSystimerForDriver_BF8D42B0(psTimerCBData->sTimer);
 	return PVRSRV_OK;
 }
 

@@ -71,7 +71,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_35A35322
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9

@@ -7,7 +7,7 @@
 #include <fw.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
@@ -74,8 +74,8 @@ SceUInt32 udcdCookieAlarm(void *argp)
 	int cookie = 0;
 
 	status = SceCpuForDriver_D32ACE9E(&state->lock);
-	if (ksceGpioPortRead(0, 5) == 0)
-		cookie = ksceGpioPortRead(0, 0xc);
+	if (SceGpioForDriver_129DF5AC(0, 5) == 0)
+		cookie = SceGpioForDriver_129DF5AC(0, 0xc);
 	controller->cookieTimer = -1;
 	if (ScePowerForDriver_394DE492() != 0)
 		SceKernelSuspendForDriver_E0489831(0);
@@ -83,8 +83,8 @@ SceUInt32 udcdCookieAlarm(void *argp)
 		state->activationState = SCE_UDCD_STATUS_IS_CHARGING;
 		udcdUpdateStateEvent(2);
 		if (controller->board == 1)
-			ksceGpioPortClear(0, 0x18);
-		ksceGpioPortClear(1, 3);
+			SceGpioForDriver_F6310435(0, 0x18);
+		SceGpioForDriver_F6310435(1, 3);
 		ScePervasiveForDriver_4F64DEF6(2);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
@@ -263,9 +263,9 @@ void udcdControllerDisconnect(int bus, SceKernelIntrStatus *status)
 		if ((int)controller->cookieTimer > 0)
 			sceKernelCancelAlarm(controller->cookieTimer);
 		if (controller->board == 1)
-			ksceGpioPortClear(0, 0x18);
-		kscePowerBatterySetUsbStatus(0);
-		ksceGpioPortClear(1, 3);
+			SceGpioForDriver_F6310435(0, 0x18);
+		ScePowerForDriver_E4E3C316(0);
+		SceGpioForDriver_F6310435(1, 3);
 	}
 	ScePervasiveForDriver_4F64DEF6(bus);
 	if (ScePowerForDriver_394DE492() != 0)
@@ -346,10 +346,10 @@ int udcdStopController(int bus, SceKernelIntrStatus *status)
 		udcdCancelEndpointRequests(number, status, bus);
 	}
 	if (controller->board != 0) {
-		kscePowerBatterySetUsbStatus(0);
+		ScePowerForDriver_E4E3C316(0);
 		if (state->controllerResumed != 1)
 			goto release;
-		ksceGpioPortClear(1, 3);
+		SceGpioForDriver_F6310435(1, 3);
 	}
 	if (state->controllerResumed == 1)
 		ScePervasiveForDriver_4F64DEF6(bus);
@@ -547,7 +547,7 @@ int udcdDetectCookie(int wake)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 		return -1;
 	}
-	if (ksceGpioPortRead(0, 5) == 0) {
+	if (SceGpioForDriver_129DF5AC(0, 5) == 0) {
 		if (!(udcdState.registers->usbVbus & 4)) {
 			state->suspendState = UDCD_BUS_RESUMED;
 			state->usbVersion = -1;
@@ -571,7 +571,7 @@ int udcdDetectCookie(int wake)
 			registers->interruptMask = 0xfffffffe;
 			registers->interruptEnable = 1;
 			registers->eventEnable = 0x380000;
-			ksceGpioPortSet(1, 3);
+			SceGpioForDriver_D454A584(1, 3);
 			controller->registers->interrupt = controller->config | 0x10;
 			udcdUpdateUsbCharging(2);
 			state->connectionState = SCE_UDCD_STATUS_CONNECTION_NEW;
@@ -588,8 +588,8 @@ int udcdDetectCookie(int wake)
 			controller->cookieTimer = SceThreadmgrForDriver_C58DF384("SceUdcdAlarmCookieDetect", 500000,
 									  udcdCookieAlarm, NULL);
 			if (controller->board == 1)
-				ksceGpioPortSet(0, 0x18);
-			kscePowerBatterySetUsbStatus(2);
+				SceGpioForDriver_D454A584(0, 0x18);
+			ScePowerForDriver_E4E3C316(2);
 			sceKernelEnableIntr(0x9b);
 			sceKernelEnableIntr(0x9c);
 		}
@@ -651,7 +651,7 @@ void udcdVbusConnected(int bus, SceKernelIntrStatus *status)
 		}
 		if (ScePowerForDriver_394DE492() != 0)
 			SceKernelSuspendForDriver_E0489831(0);
-	} else if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && ksceGpioPortRead(0, 5) == 0) {
+	} else if (state->cableState == SCE_UDCD_STATUS_CABLE_DISCONNECTED && SceGpioForDriver_129DF5AC(0, 5) == 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 		udcdDetectCookie(0);
 		*status = SceCpuForDriver_D32ACE9E(&state->lock);
@@ -730,7 +730,7 @@ int udcdResumeController(int bus)
 		if (controller->board == 0) {
 			if ((udcdState.registers->usbVbus >> bus) & 1)
 				udcdVbusConnected(bus, &status);
-		} else if (ksceGpioPortRead(0, 5) == 0) {
+		} else if (SceGpioForDriver_129DF5AC(0, 5) == 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
 			udcdDetectCookie(0);
 			status = SceCpuForDriver_D32ACE9E(&state->lock);
@@ -1112,12 +1112,12 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 			}
 			udcdPollBusInitialized(200, bus);
 			if (controller->board != 0) {
-				ksceGpioSetPortMode(0, 5, 1);
-				ksceGpioSetPortMode(0, 0xc, 1);
-				ksceGpioSetIntrMode(0, 5, 1);
+				SceGpioForDriver_372022A4(0, 5, 1);
+				SceGpioForDriver_372022A4(0, 0xc, 1);
+				SceGpioForDriver_BBEA1DDC(0, 5, 1);
 				if (controller->board == 1) {
-					ksceGpioSetPortMode(0, 0x18, 0);
-					ksceGpioPortClear(0, 0x18);
+					SceGpioForDriver_372022A4(0, 0x18, 0);
+					SceGpioForDriver_F6310435(0, 0x18);
 				}
 			}
 			phy = udcdState.registers;
@@ -1129,7 +1129,7 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 				if ((phy->usbVbus >> bus) & 1)
 					udcdVbusConnected(bus, status);
 			} else {
-				if (ksceGpioPortRead(0, 5) == 0) {
+				if (SceGpioForDriver_129DF5AC(0, 5) == 0) {
 					sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, *status);
 					udcdDetectCookie(0);
 					*status = SceCpuForDriver_D32ACE9E(&state->lock);
@@ -1314,7 +1314,7 @@ setup:
 		case 9:		/* SET_CONFIGURATION */
 			if (state->connectionState != SCE_UDCD_STATUS_CONNECTION_NEW && control->wValue == 1) {
 				if (controller->board != 0)
-					kscePowerBatterySetUsbStatus(3);
+					ScePowerForDriver_E4E3C316(3);
 				state->connectionState = SCE_UDCD_STATUS_CONNECTION_ESTABLISHED;
 				udcdUpdateStateEvent(bus);
 				udcdAttachDrivers(&status, bus);
@@ -1338,12 +1338,12 @@ setup:
 	if (events & 0x10000) {
 		/* bus reset */
 		if (controller->board == 1)
-			ksceGpioPortSet(0, 0x18);
+			SceGpioForDriver_D454A584(0, 0x18);
 		controller->registers->events = 0x10000;
 		if (state->connectionState == SCE_UDCD_STATUS_CONNECTION_ESTABLISHED) {
 			udcdDetachDrivers(&status, bus);
 			if (controller->board != 0)
-				kscePowerBatterySetUsbStatus(2);
+				ScePowerForDriver_E4E3C316(2);
 		}
 		for (number = 0; number != 8; number++)
 			udcdCancelEndpointRequests(number, &status, bus);
@@ -1358,7 +1358,7 @@ setup:
 		controller->registers->events = 0x20000;
 		if (state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 			if (controller->board == 1)
-				ksceGpioPortClear(0, 0x18);
+				SceGpioForDriver_F6310435(0, 0x18);
 			if (state->usbVersion == (unsigned int)-1) {
 				registers = controller->registers;
 				state->activationState = SCE_UDCD_STATUS_ACTIVATED;
@@ -1394,11 +1394,11 @@ setup:
 							udcdAbortEndpoint(number, bus);
 					udcdAttachDrivers(&status, bus);
 					if (controller->board != 0)
-						kscePowerBatterySetUsbStatus(3);
+						ScePowerForDriver_E4E3C316(3);
 					state->activationState = SCE_UDCD_STATUS_ACTIVATED;
 					udcdUpdateStateEvent(bus);
 				} else if (controller->board != 0) {
-					kscePowerBatterySetUsbStatus(2);
+					ScePowerForDriver_E4E3C316(2);
 				}
 			}
 		} else if (state->connectionState != SCE_UDCD_STATUS_CONNECTION_SUSPENDED) {
@@ -1408,8 +1408,8 @@ setup:
 			udcdUpdateStateEvent(bus);
 			state->suspendState = UDCD_BUS_SUSPENDED;
 			if (controller->board != 0) {
-				kscePowerBatteryStopUsbCharging();
-				kscePowerBatterySetUsbStatus(4);
+				ScePowerForDriver_ACC857A4();
+				ScePowerForDriver_E4E3C316(4);
 			}
 			controller->registers->powerControl = 2;
 			if (controller->savedConnectionState == 2)
@@ -1460,7 +1460,7 @@ int udcdSuspendCharging(void)
 	if (udcdState.controllers[2].board != 0 && state->controllerState == UDCD_CONTROLLER_STARTED && state->cableState == SCE_UDCD_STATUS_CABLE_CONNECTED) {
 		if (state->connectionState != SCE_UDCD_STATUS_CONNECTION_ESTABLISHED)
 			SceSysconForDriver_59DC5938(5);
-		kscePowerBatterySetUsbStatus(4);
+		ScePowerForDriver_E4E3C316(4);
 	}
 	return 0;
 }
@@ -1540,7 +1540,7 @@ int udcdInitializeControllers(void)
 		state = &udcdState.buses[bus];
 		controller = &udcdState.controllers[bus];
 		operations = &udcdState.operations[bus];
-		state->hardwareInfo = ksceSysconGetHardwareInfo();
+		state->hardwareInfo = SceSysconForDriver_CBD6D8BC();
 		operations->resume = udcdResumeController;
 		operations->suspend = udcdSuspendController;
 		operations->initializeQueues = udcdInitializeControllerQueues;

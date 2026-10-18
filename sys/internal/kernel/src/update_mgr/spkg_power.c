@@ -1,6 +1,5 @@
-#include <psp2kern/power.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include "update_internal.h"
 #include <syscon/syscon.h>
 #include <sysmem/sblaimgr.h>
@@ -14,12 +13,12 @@ int UpdateUtilUnlockPupHeader(void);
 int SpkgUtilCpReboot(void);
 int SpkgUtilCpShutdown(int mode);
 int SceDeci4pCpupForDriver_BBB991CD(uint32_t commandId);
-int ksceLedSetMode(int led, int mode, void *param) __attribute__((weak));
+int SceLedForDriver_EA24BE03(int led, int mode, void *param) __attribute__((weak));
 
 int SpkgUtilPowerControl(int operation, int flags)
 {
 	int result;
-	int (*ledControl)(int kind, int enabled, void *argument) = ksceLedSetMode;
+	int (*ledControl)(int kind, int enabled, void *argument) = SceLedForDriver_EA24BE03;
 
 	UpdateUtilLockPupHeader();
 	switch (operation) {
@@ -37,7 +36,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (!updateUseSysconPowerControl)
 			break;
 		if (updateSysconFirmwareUpdateStarted && !updateSysconShutdownWorkaround)
-			kscePowerRequestShutdown(1);
+			ScePowerForDriver_8921A7A0(1);
 		else
 			scePowerRequestColdReset();
 		break;
@@ -55,7 +54,7 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (!updateUseSysconPowerControl)
 			break;
 		if (updateSysconFirmwareUpdateStarted && !updateSysconShutdownWorkaround)
-			kscePowerRequestShutdown(0);
+			ScePowerForDriver_8921A7A0(0);
 		else
 			scePowerRequestStandby();
 		break;
@@ -77,8 +76,8 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (ledControl) {
 			result = ledControl(2, 1, 0);
 		} else {
-			ksceSysconCtrlLED(64, 1);
-			ksceGpioPortSet(0, 7);
+			SceSysconForDriver_04EC7579(64, 1);
+			SceGpioForDriver_D454A584(0, 7);
 			result = 0;
 		}
 		break;
@@ -86,13 +85,13 @@ int SpkgUtilPowerControl(int operation, int flags)
 		if (ledControl) {
 			result = ledControl(2, 0, 0);
 		} else {
-			ksceSysconCtrlLED(64, 0);
-			ksceGpioPortClear(0, 7);
+			SceSysconForDriver_04EC7579(64, 0);
+			SceGpioForDriver_F6310435(0, 7);
 			result = 0;
 		}
 		break;
 	case 6:
-		result = ksceGpioSetPortMode(0, 7, 0);
+		result = SceGpioForDriver_372022A4(0, 7, 0);
 		break;
 	case 7:
 		result = SceKernelSuspendForDriver_E0489831(flags);

@@ -140,7 +140,7 @@ struct SysrootState {
 	int (*utMgrGetTrilithiumBuffer)(void *buffer);
 	int (*utMgrHasNpTestFlag)(void);
 	int (*getSystemSwVersion)(void);
-	SysrootLedSetMode ledSetMode;		/* 0x39c: power's ksceLedSetMode */
+	SysrootLedSetMode ledSetMode;		/* 0x39c: power's SceLedForDriver_EA24BE03 */
 	const struct SysrootSelfImage *selfImages;
 	int (*getNidName)(uint32_t nid, const char **name);
 	SysrootSysStateEvent sysStateEvent;	/* 0x3a8: deci4p_(s)dfmgr's, sysstatemgr reports boot */

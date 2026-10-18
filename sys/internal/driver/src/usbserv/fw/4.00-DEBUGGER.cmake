@@ -139,19 +139,19 @@ set(MODULE_IMPORT_FUNCS
 	SceUdcdForDriver_9E7F7EFE
 	SceUdcdForDriver_D01CFD22
 	SceUdcdForDriver_E9E75C49
-	ksceSysconGetMultiCnInfo
-	ksceSysconCtrlDolceUsbPower
+	SceSysconForDriver_1503D6A0
+	SceSysconForDriver_3274A925
 	SceSysconForDriver_4A42712F
 	SceSysconForDriver_67A4CB9F
-	ksceSysconCtrlAccPower
+	SceSysconForDriver_8D1D97E8
 	SceSysconForDriver_A26586B2
-	ksceSysconCtrlDevKitUsbPower
+	SceSysconForDriver_B1F88B11
 	SceSysconForDriver_B9EA2FA8
-	ksceSysconGetHardwareInfo
-	ksceSysconGetMicroUsbInfo
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	SceSysconForDriver_CBD6D8BC
+	SceSysconForDriver_D6F6D472
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

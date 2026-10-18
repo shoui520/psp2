@@ -16,7 +16,7 @@ int SceSysconForDriver_142D5E82(void)
 	return s_sysconControl.notificationState[SYSCON_STATE_HEADPHONE];
 }
 
-int ksceSysconIsLowBatteryInhibitUpdateReboot(void)
+int SceSysconForDriver_1A0C140F(void)
 {
 	return s_sysconControl.notificationState[SYSCON_STATE_LOW_BATTERY_INHIBIT_UPDATE_REBOOT];
 }
@@ -26,7 +26,7 @@ int SceSysconForDriver_1E08A40F(void)
 	return s_sysconControl.command885State;
 }
 
-int ksceSysconIsLowBatteryInhibitUpdateDownload(void)
+int SceSysconForDriver_1E3130EE(void)
 {
 	return s_sysconControl.notificationState[SYSCON_STATE_LOW_BATTERY_INHIBIT_UPDATE_DOWNLOAD];
 }
@@ -96,7 +96,7 @@ int SceSysconForDriver_9A4F4B7C(void)
 	return s_sysconControl.notificationState[SYSCON_STATE_N1_BIT2];
 }
 
-int ksceSysconIsDownLoaderMode(void)
+int SceSysconForDriver_9ADD60D2(void)
 {
 	return (s_sysconControl.statusFlags >> 6) & 1;
 }

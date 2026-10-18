@@ -19,7 +19,7 @@ int TouchUtilCheckFirmwareType(uint64_t hardwareInfo, unsigned int kind)
 
 	if (updateSysconDownloader || !updateUseTouchService || kind > 1)
 		return (int)0x800f0202;
-	currentPlatform = ksceSysconGetHardwareInfo();
+	currentPlatform = SceSysconForDriver_CBD6D8BC();
 	if (platform && (currentPlatform & 0xffffff00) != platform)
 		return (int)0x800f0202;
 	port = (uint32_t)hardwareInfo & 15;

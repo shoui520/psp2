@@ -29,7 +29,7 @@ static SceUInt8 g_pmInitialized;	/* name unknown */
 static inline SceUInt32 pmMgrGetBaryonVersion(void)	/* name unknown */
 {
 	if (g_pmBaryonVersion == 0)
-		g_pmBaryonVersion = ksceSysconGetBaryonVersion();
+		g_pmBaryonVersion = SceSysconForDriver_FF86F4C5();
 	return g_pmBaryonVersion;
 }
 
@@ -198,7 +198,7 @@ int sceSblPmMgrInit(void)
 		if (pmMgrIsProductModeKeyHeld(wakeup, (const SceUInt8 *)&hold) &&
 		    ksceSblPostSsMgrExecutePmSmF00dCommand(1) == 0) {
 			SCE_PRINTF_WITH_INFO(0, 582, "SET A68A.\n");
-			ret = ksceSysconSetPowerMode(0, 0);
+			ret = sceSysconSetPowerMode(0, 0);
 			if (ret != 0)
 				SCE_DBG_PRINTF(0, 586, "sceSysconSetPowerMode() failure = 0x%x\n", ret);
 			for (;;)

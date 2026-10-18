@@ -17,7 +17,6 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/lowio/pervasive.h>
 #include <string.h>
 #include <lowio/pervasive.h>
 #include <power/power.h>
@@ -34,7 +33,7 @@ int msproal_start(struct MsproalHandle *handle);
 int msproal_check_media(uint8_t *mediaType);
 int msproal_mount(int busMode);
 int msproal_control_power_supply(uint32_t value, uint32_t preserveMask);
-int kscePowerSetIdleCallback(uint32_t timerId, uint32_t tickFlags,
+int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
 	uint64_t interval, PowerIdleCallback callback, void *argument);
 
 _Static_assert(sizeof(SceMsInfo) == 64, "MSIF media-information result");
@@ -175,7 +174,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 	} else {
 		/* The loader resolves this address through the import reference list. */
 		int (*volatile idleCallback)(uint32_t, uint32_t, uint64_t,
-			PowerIdleCallback, void *) = kscePowerSetIdleCallback;
+			PowerIdleCallback, void *) = ScePowerForDriver_1BA2FCAE;
 
 		if (idleCallback == NULL) {
 #if FW_DEBUG
@@ -183,7 +182,7 @@ int sceMsifInitCallback(uint32_t kind, void *argument)
 				"Can't set msif Idle Callback. link not resolved\n");
 #endif
 		} else {
-			result = kscePowerSetIdleCallback(4, 0x200, 1000000,
+			result = ScePowerForDriver_1BA2FCAE(4, 0x200, 1000000,
 				sceMsifIdleCallback, NULL);
 			if (result >= 0)
 				gMsifContext.mediaAccessTickEnabled = 1;
@@ -209,18 +208,18 @@ int MsifSysEventHandler(int phase, int event)
 			gMsifContext.savedMediaAccessTickEnabled = enabled;
 			sceKernelDisableIntr(60);
 			sceKernelDisableIntr(61);
-			kscePervasiveMsifResetEnable();
-			kscePervasiveMsifClockDisable();
+			ScePervasiveForDriver_A3569FF1();
+			ScePervasiveForDriver_2A9778CD();
 		}
 		break;
 	case 1:
 		if (event != 0x1000c)
 			break;
 		gMsifContext.started = 0;
-		kscePervasiveMsifResetEnable();
-		kscePervasiveMsifSetClock(4);
-		kscePervasiveMsifResetDisable();
-		kscePervasiveMsifClockEnable();
+		ScePervasiveForDriver_A3569FF1();
+		ScePervasiveForDriver_64ABE589(4);
+		ScePervasiveForDriver_CB0F15CD();
+		ScePervasiveForDriver_7704C013();
 		sceKernelEnableIntr(61);
 		sceKernelEnableIntr(60);
 		gMsifContext.mediaAccessTickEnabled =
@@ -639,7 +638,7 @@ int sceMsifReadSector(uint32_t sector, uint8_t *data, unsigned int count)
 	}
 tick:
 	if (gMsifContext.mediaAccessTickEnabled) {
-		int tickResult = kscePowerTick(16);
+		int tickResult = ScePowerForDriver_EFD3C963(16);
 
 #if FW_DEBUG
 		if (tickResult < 0)
@@ -750,10 +749,10 @@ int module_start(SceSize args, const void *argp)
 	result = sceKernelRegisterInitCallback(sceMsifInitCallback, 8, NULL, NULL);
 	if (result < 0)
 		goto delete_sleep_thread;
-	kscePervasiveMsifResetEnable();
-	kscePervasiveMsifSetClock(4);
-	kscePervasiveMsifResetDisable();
-	kscePervasiveMsifClockEnable();
+	ScePervasiveForDriver_A3569FF1();
+	ScePervasiveForDriver_64ABE589(4);
+	ScePervasiveForDriver_CB0F15CD();
+	ScePervasiveForDriver_7704C013();
 	SCE_DBG_ASSERT_FUNC(1, 297, "sceMsifInit");
 	sceKernelEnableIntr(61);
 	sceKernelEnableIntr(60);
@@ -808,7 +807,7 @@ int sceMsifSwReset(void)
 		}
 	}
 	gMsifContext.started = 1;
-	revision = kscePervasiveGetSoCRevision() & 0x1ff00;
+	revision = ScePervasiveForDriver_714EEFB7() & 0x1ff00;
 	if (!revision) {
 		if (SceSblAIMgrForDriver_C6E83F34())
 			result = msproal_control_power_supply(0, 0xffff80ff);
@@ -817,7 +816,7 @@ int sceMsifSwReset(void)
 	} else if (revision == 0x100) {
 		uint32_t value;
 
-		if ((ksceSysconGetHardwareInfo() & 0xff0000U) < 0x800000)
+		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000U) < 0x800000)
 			value = 0x35000c;
 		else
 			value = 0x7000a;
@@ -945,7 +944,7 @@ int ksceMsifGetMsInfo(SceMsInfo *info)
 		(uint16_t)(handle->systemInformation.assemblyDate[4] +
 			(handle->systemInformation.assemblyDate[3] << 8)) <= 0x616;
 	if (gMsifContext.mediaAccessTickEnabled) {
-		result = kscePowerTick(16);
+		result = ScePowerForDriver_EFD3C963(16);
 #if FW_DEBUG
 		if (result < 0)
 			SceDebugForDriver_D9703808(1, 0,
@@ -1102,7 +1101,7 @@ expected_delay:
 	}
 tick:
 	if (gMsifContext.mediaAccessTickEnabled) {
-		int tickResult = kscePowerTick(16);
+		int tickResult = ScePowerForDriver_EFD3C963(16);
 
 #if FW_DEBUG
 		if (tickResult < 0)
@@ -1193,7 +1192,7 @@ int sceMsifZerofillSector(uint32_t sector, unsigned int count)
 		currentSector += sectors;
 	} while (remaining);
 	if (gMsifContext.mediaAccessTickEnabled) {
-		int tickResult = kscePowerTick(16);
+		int tickResult = ScePowerForDriver_EFD3C963(16);
 
 #if FW_DEBUG
 		if (tickResult < 0)
@@ -1230,7 +1229,7 @@ int sceMsifFormat(int mode)
 			"0x%x %d\n", result, 2068);
 	}
 	if (gMsifContext.mediaAccessTickEnabled) {
-		int tickResult = kscePowerTick(16);
+		int tickResult = ScePowerForDriver_EFD3C963(16);
 
 #if FW_DEBUG
 		if (tickResult < 0)
@@ -1286,7 +1285,7 @@ int sceMsifGetMediaId(uint8_t *mediaId)
 		goto unlock;
 	}
 	if (gMsifContext.mediaAccessTickEnabled) {
-		int tickResult = kscePowerTick(16);
+		int tickResult = ScePowerForDriver_EFD3C963(16);
 
 #if FW_DEBUG
 		if (tickResult < 0)
@@ -1343,7 +1342,7 @@ uint64_t SceMsifForDriver_855E1E38(void)
 int SceMsifForDriver_F997286B(void)
 {
 	sceKernelDelayThread(25000);
-	if (!kscePervasiveRemovableMemoryGetCardInsertState() ||
+	if (!ScePervasiveForDriver_551EEE82() ||
 		lockFastMutex((SceKernelFastMutex *)&gMsifContext.mutex) < 0 ||
 		sceMsifReadSector(0, gMsifContext.dummyReadBuffer, 1)) {
 		MsproalUserCancelTransfer(gMsifContext.handle);

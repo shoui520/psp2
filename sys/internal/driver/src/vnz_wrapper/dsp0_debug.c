@@ -15,7 +15,7 @@
 #include <intrmgr/intrmgr.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "venezia_internal.h"
 #include <vnz_wrapper/venezia_debug.h>
@@ -25,6 +25,7 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
+#include <power/power.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -6853,7 +6854,6 @@ int programVeneziaVipCaptureImage(VeneziaDebugProcessCapture *capture, VeneziaVi
 	return 0;
 }
 
-extern int kscePowerSetVipClockFrequency(int frequency);
 const unsigned int g_veneziaVipClockFrequencies[7] = {
 	0xffffff, 41, 55, 83, 111, 166, 222,
 };
@@ -6897,7 +6897,7 @@ __attribute__((noinline)) int activateVeneziaVipDebugger(VeneziaVipState *state,
 		}
 	}
 	__asm__ volatile("dmb sy" ::: "memory");
-	kscePowerSetVipClockFrequency(g_veneziaVipClockFrequencies[storage->mode]);
+	ScePowerForDriver_E5573571(g_veneziaVipClockFrequencies[storage->mode]);
 	startVeneziaVipProcessorCapture(storage->count, state);
 	return 0;
 }
@@ -6909,7 +6909,7 @@ __attribute__((noinline)) int stopVeneziaVipDebugger(VeneziaVipState *state, Ven
 {
 	ScePervasiveForDriver_31C0A98B();
 	ScePervasiveForDriver_EBE9C84E();
-	kscePowerSetVipClockFrequency(0);
+	ScePowerForDriver_E5573571(0);
 	if (state->callbackState) {
 		stopVeneziaVipProcessorCapture(storage->count, state);
 		state->activeProcess = NULL;

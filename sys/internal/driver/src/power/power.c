@@ -4,11 +4,11 @@
  */
 
 #include "power_private.h"
+#include <power/power.h>
 
 static inline __attribute__((always_inline)) int powerCreateProcessStorage(void);
 
 /* exported, and inlined in this unit as in the original */
-int kscePowerUnregisterCallback(SceUID callback);
 
 int powerProcessSuspendNotification(SceUID pid, int phase, ProcEventParam *param, int args);
 
@@ -49,7 +49,7 @@ int powerStartupWorker(void)
 	uint8_t storage[4], command[2];
 	int ret;
 
-	ksceSysconWaitInitialized();
+	SceSysconForDriver_55DF1C9B();
 	powerInitializeClockRuntime();
 	s_powerCallbackControl.sysconStatus[0] = SceSysconForDriver_27758A64();
 	if (s_powerCallbackControl.sysconStatus[0] == 1)
@@ -255,11 +255,10 @@ void powerThermalCallback(int enable, void *argp)
 
 int powerInitializeDefaultIdleTimer(void)
 {
-	kscePowerSetIdleCallback(0, 0, 0,
+	ScePowerForDriver_1BA2FCAE(0, 0, 0,
 				powerDefaultIdleCallback, NULL);
 	return 0;
 }
-
 
 int powerInitializeModule(void)
 {
@@ -278,14 +277,14 @@ int powerInitializeModule(void)
 	powerInitializeIdleControl();
 	powerInitializeDisplayControl();
 	powerInitializeDefaultIdleTimer();
-	ksceSysconSetAlarmCallback(powerOnlineCallback, NULL);
+	SceSysconForDriver_32418370(powerOnlineCallback, NULL);
 	SceSysconForDriver_80D6E061(powerLowBatteryCallback, NULL);
-	ksceSysconSetLowBatteryCallback(powerLowBatterySuspendCallback,
+	SceSysconForDriver_3F0DB7C0(powerLowBatterySuspendCallback,
 					&s_powerCallbackControl.sysconStatus[1]);
 	SceSysconForDriver_2D471528(powerLowBatterySuspendCallback,
 				    &s_powerCallbackControl.sysconStatus[2]);
 	SceSysconForDriver_129EA022(powerUsbPowerCallback, NULL);
-	ksceSysconSetThermalAlertCallback(powerThermalCallback, NULL);
+	SceSysconForDriver_773B8126(powerThermalCallback, NULL);
 	sceKernelRegisterSysEventHandler("ScePower", powerSysEventHandler, NULL);
 	sceKernelRegisterProcEventHandler("ScePower", &s_powerProcessEventHandlers, 0);
 	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "ScePowerInit", powerStartupWorker, NULL);
@@ -300,13 +299,13 @@ int module_start(SceSize args, void *argument)
 	return 0;
 }
 
-int kscePowerSetCallbackState(uint32_t state)
+int ScePowerForDriver_A6FF5997(uint32_t state)
 {
 	s_powerCallbackControl.notificationMask = state;
 	return 0;
 }
 
-int kscePowerRegisterCallback(SceUID callback)
+int scePowerRegisterCallback(SceUID callback)
 {
 	struct PowerCallbackRecord *record, *current;
 	SceKernelIntrStatus intrState;
@@ -349,19 +348,19 @@ fail:
 	return result;
 }
 
-int scePowerRegisterCallback(SceUID callback)
+int scePowerRegisterCallbackForUser(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
 	SceUID global = SceSysmemForDriver_45D22597(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
-		result = kscePowerRegisterCallback(global);
+		result = scePowerRegisterCallback(global);
 	sceSyscallLeave(context);
 	return result;
 }
 
-inline __attribute__((always_inline)) int kscePowerUnregisterCallback(SceUID callback)
+inline __attribute__((always_inline)) int scePowerUnregisterCallback(SceUID callback)
 {
 	struct PowerCallbackRecord *record, *previous = NULL;
 	SceKernelIntrStatus intrState;
@@ -387,14 +386,14 @@ inline __attribute__((always_inline)) int kscePowerUnregisterCallback(SceUID cal
 	return 0;
 }
 
-int scePowerUnregisterCallback(SceUID callback)
+int scePowerUnregisterCallbackForUser(SceUID callback)
 {
 	uint32_t context = sceSyscallEnter();
 	SceUID global = SceSysmemForDriver_45D22597(0, callback);
 	int result = (int)0xc00280a1;
 
 	if (global >= 0)
-		result = kscePowerUnregisterCallback(global);
+		result = scePowerUnregisterCallback(global);
 	sceSyscallLeave(context);
 	return result;
 }
@@ -512,13 +511,13 @@ void powerNotifyProcessFlags(SceUID pid, uint32_t flags)
 
 /* Native module-global WLAN byte; startup and broader state aliases unresolved. */
 
-int kscePowerWlanActivate(void)
+int ScePowerForDriver_6D2CA84B(void)
 {
 	s_powerCallbackControl.wlanActive = 1;
 	return 0;
 }
 
-int kscePowerWlanDeactivate(void)
+int ScePowerForDriver_23BB0A60(void)
 {
 	s_powerCallbackControl.wlanActive = 0;
 	return 0;

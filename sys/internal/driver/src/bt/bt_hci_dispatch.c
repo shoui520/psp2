@@ -595,7 +595,7 @@ readBufferSize:
 				break;
 			}
 			productCode = SceSblAIMgrForDriver_14345161();
-			hardwareInfo = ksceSysconGetHardwareInfo() & 0xfd0000;
+			hardwareInfo = SceSysconForDriver_CBD6D8BC() & 0xfd0000;
 			if (hardwareInfo == 0x800000)
 				vendorSetting = 0xfff8;
 			else if (hardwareInfo == 0x700000)

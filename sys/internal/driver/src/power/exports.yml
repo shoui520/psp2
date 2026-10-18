@@ -13,8 +13,8 @@ ScePower:
       functions:
         - scePowerGetBatteryCycleCount: 0x008A54B9
         - scePowerRequestColdReset: 0x0442D852
-        - scePowerRegisterCallback: 0x04B7766E
-        - scePowerGetGpuXbarClockFrequency: 0x0A750DEE
+        - scePowerRegisterCallbackForUser: 0x04B7766E
+        - scePowerGetGpuXbarClockFrequencyForUser: 0x0A750DEE
         - scePowerIsBatteryExist: 0x0AFD0D8B
         - scePowerRequestDisplayOff: 0x160EB506
         - scePowerGetGpuClockFrequency: 0x1B04A1D6
@@ -26,12 +26,12 @@ ScePower:
         - scePowerRequestStandby: 0x2B7C7CF4
         - scePowerSetConfigurationMode: 0x3CE187B6
         - scePowerRequestDisplayOn: 0x3EA75C88
-        - scePowerGetBusClockFrequency: 0x478FE6F5
+        - scePowerGetBusClockFrequencyForUser: 0x478FE6F5
         - scePowerGetBatteryVolt: 0x483CE86B
         - scePowerSetUsingWireless: 0x4D695C1F
         - scePowerGetCaseTemp: 0x525592E4
         - scePowerSetGpuClockFrequency: 0x717DB06C
-        - scePowerSetArmClockFrequency: 0x74DB5AE5
+        - scePowerSetArmClockFrequencyForUser: 0x74DB5AE5
         - scePowerIsSuspendRequired: 0x78A1A796
         - scePowerIsRequest: 0x7FA406DD
         - scePowerGetBatteryElec: 0x862AE1A6
@@ -39,17 +39,17 @@ ScePower:
         - scePowerGetBatteryLifeTime: 0x8EFB3FA2
         - scePowerGetBatteryRemainCapacity: 0x94F5A53F
         - scePowerIsLowBatteryInhibitUpdateReboot: 0x9AA05A48
-        - scePowerSetGpuXbarClockFrequency: 0xA7739DBE
+        - scePowerSetGpuXbarClockFrequencyForUser: 0xA7739DBE
         - scePowerGetBatterySOH: 0xA88A2B65
-        - scePowerGetArmClockFrequency: 0xABC6F88F
+        - scePowerGetArmClockFrequencyForUser: 0xABC6F88F
         - scePowerRequestSuspend: 0xAC32C9CC
         - scePowerSetIdleTimerCount: 0xB11EF149
         - scePowerGetBatteryChargingStatus: 0xB4432BC8
-        - scePowerSetBusClockFrequency: 0xB8D7B3FB
+        - scePowerSetBusClockFrequencyForUser: 0xB8D7B3FB
         - scePowerIsLowBattery: 0xD3075926
         - scePowerGetUsingWireless: 0xD541FF03
         - scePowerCancelRequest: 0xDB62C9CF
-        - scePowerUnregisterCallback: 0xDFA8BAF8
+        - scePowerUnregisterCallbackForUser: 0xDFA8BAF8
         - scePowerIsLowBatteryInhibitUpdateDownload: 0xE3E45636
         - scePowerGetBatteryRemainLevel: 0xEA3E3715
         - scePowerGetBatteryFullCapacity: 0xFD18A0FF
@@ -58,118 +58,118 @@ ScePower:
       version: 1
       nid: 0x1590166F
       functions:
-        - kscePowerGetResumeCount: 0x0074EF9B
+        - ScePowerForDriver_0074EF9B: 0x0074EF9B
         - scePowerGetBatteryCycleCount: 0x008A54B9
-        - kscePowerRequestResume: 0x02DB1035
+        - ScePowerForDriver_02DB1035: 0x02DB1035
         - scePowerRequestColdReset: 0x0442D852
-        - kscePowerRegisterCallback: 0x04B7766E
+        - scePowerRegisterCallback: 0x04B7766E
         - ScePowerForDriver_06AF03DB: 0x06AF03DB
-        - kscePowerSetProcessIdleCallback: 0x0856FD0A
-        - kscePowerRequestHibernate: 0x08951418
-        - kscePowerGetGpuXbarClockFrequency: 0x0A750DEE
+        - ScePowerForDriver_0856FD0A: 0x0856FD0A
+        - ScePowerForDriver_08951418: 0x08951418
+        - scePowerGetGpuXbarClockFrequency: 0x0A750DEE
         - scePowerIsBatteryExist: 0x0AFD0D8B
-        - kscePowerSetBatteryFakeStatus: 0x0C6973B8
-        - kscePowerSetPowerSwMode2: 0x0CD21B1F
+        - ScePowerForDriver_0C6973B8: 0x0C6973B8
+        - ScePowerForDriver_0CD21B1F: 0x0CD21B1F
         - ScePowerForDriver_0D56C601: 0x0D56C601
         - ScePowerForDriver_0D80B917: 0x0D80B917
-        - kscePowerSetSysClockFrequency: 0x0E333BEC
-        - kscePowerGetVipClockFrequency: 0x0E58FCDF
+        - ScePowerForDriver_0E333BEC: 0x0E333BEC
+        - ScePowerForDriver_0E58FCDF: 0x0E58FCDF
         - scePowerRequestDisplayOff: 0x160EB506
-        - kscePowerGetPowerSwMode: 0x165CE085
-        - kscePowerBatteryForbidCharging: 0x166922EC
-        - kscePowerSetIdleCallback: 0x1BA2FCAE
+        - ScePowerForDriver_165CE085: 0x165CE085
+        - ScePowerForDriver_166922EC: 0x166922EC
+        - ScePowerForDriver_1BA2FCAE: 0x1BA2FCAE
         - scePowerGetBatteryRemainMaxLevel: 0x1DB00F10
         - scePowerIsBatteryCharging: 0x1E490401
         - scePowerGetBatteryLifePercent: 0x2085D15D
-        - kscePowerSetBusClockFrequencyProc: 0x20A33D58
-        - kscePowerWlanDeactivate: 0x23BB0A60
-        - kscePowerSetGpuClockFrequencyInternal: 0x264C24FC
-        - kscePowerGetBusClockFrequencyProc: 0x2777A517
+        - ScePowerForDriver_20A33D58: 0x20A33D58
+        - ScePowerForDriver_23BB0A60: 0x23BB0A60
+        - ScePowerForDriver_264C24FC: 0x264C24FC
+        - ScePowerForDriver_2777A517: 0x2777A517
         - ScePowerForDriver_2784A6BD: 0x2784A6BD
         - scePowerBatteryUpdateInfo: 0x27F3292C
-        - kscePowerRequestSoftReset: 0x2875994B
+        - ScePowerForDriver_2875994B: 0x2875994B
         - scePowerGetBatteryTemp: 0x28E12023
         - ScePowerForDriver_2B51FE2F: 0x2B51FE2F
         - scePowerRequestStandby: 0x2B7C7CF4
-        - kscePowerGetArmClockFrequencyProc: 0x2E9000F7
+        - ScePowerForDriver_2E9000F7: 0x2E9000F7
         - ScePowerForDriver_38415146: 0x38415146
         - ScePowerForDriver_394DE492: 0x394DE492
-        - kscePowerEncodeUBattery: 0x3951AF53
+        - ScePowerForDriver_3951AF53: 0x3951AF53
         - scePowerRequestDisplayOn: 0x3EA75C88
         - ScePowerForDriver_4159E0D9: 0x4159E0D9
-        - kscePowerSetDisplayBrightness: 0x43D5CE1D
-        - kscePowerGetGpuClockFrequencyInternal: 0x475BCC82
-        - kscePowerGetBusClockFrequency: 0x478FE6F5
+        - ScePowerForDriver_43D5CE1D: 0x43D5CE1D
+        - scePowerGetGpuClockFrequencyInternal: 0x475BCC82
+        - scePowerGetBusClockFrequency: 0x478FE6F5
         - scePowerGetBatteryVolt: 0x483CE86B
         - ScePowerForDriver_4A69163A: 0x4A69163A
         - ScePowerForDriver_5210A6FE: 0x5210A6FE
         - scePowerGetCaseTemp: 0x525592E4
-        - kscePowerSetVeneziaClockFrequency: 0x621BD8FD
+        - ScePowerForDriver_621BD8FD: 0x621BD8FD
         - ScePowerForDriver_627A89C6: 0x627A89C6
-        - kscePowerGetGpuXbarClockFrequencyProc: 0x62C5406C
-        - kscePowerGetGpuClockFrequencyProc: 0x642E0AF2
-        - kscePowerGetVeneziaClockFrequency: 0x64641E6A
+        - ScePowerForDriver_62C5406C: 0x62C5406C
+        - ScePowerForDriver_642E0AF2: 0x642E0AF2
+        - ScePowerForDriver_64641E6A: 0x64641E6A
         - ScePowerForDriver_660D5AB4: 0x660D5AB4
         - ScePowerForDriver_661D670D: 0x661D670D
-        - kscePowerGetCameraBusClockFrequency: 0x668F01D4
-        - kscePowerSetStandbyButtonPushTime: 0x675A84ED
-        - kscePowerSetIdleTimer: 0x6BC26FC7
-        - kscePowerWlanActivate: 0x6D2CA84B
+        - ScePowerForDriver_668F01D4: 0x668F01D4
+        - ScePowerForDriver_675A84ED: 0x675A84ED
+        - ScePowerForDriver_6BC26FC7: 0x6BC26FC7
+        - ScePowerForDriver_6D2CA84B: 0x6D2CA84B
         - ScePowerForDriver_711C68DF: 0x711C68DF
-        - kscePowerBatteryEnableUsbCharging: 0x733F973B
-        - kscePowerSetArmClockFrequency: 0x74DB5AE5
-        - kscePowerSetDisplayMaxBrightness: 0x77027B6B
+        - ScePowerForDriver_733F973B: 0x733F973B
+        - scePowerSetArmClockFrequency: 0x74DB5AE5
+        - ScePowerForDriver_77027B6B: 0x77027B6B
         - scePowerIsSuspendRequired: 0x78A1A796
         - scePowerIsRequest: 0x7FA406DD
         - scePowerGetBatteryElec: 0x862AE1A6
-        - kscePowerSetArmClockFrequencyProc: 0x86CB5218
+        - ScePowerForDriver_86CB5218: 0x86CB5218
         - scePowerIsPowerOnline: 0x87440F5E
-        - kscePowerRequestShutdown: 0x8921A7A0
+        - ScePowerForDriver_8921A7A0: 0x8921A7A0
         - ScePowerForDriver_8C0D2051: 0x8C0D2051
-        - kscePowerSetGpuXbarClockFrequencyProc: 0x8D18F728
+        - ScePowerForDriver_8D18F728: 0x8D18F728
         - scePowerGetBatteryLifeTime: 0x8EFB3FA2
-        - kscePowerBatteryDisableUsbCharging: 0x90285886
+        - ScePowerForDriver_90285886: 0x90285886
         - scePowerGetBatteryRemainCapacity: 0x94F5A53F
         - ScePowerForDriver_991BDEAF: 0x991BDEAF
-        - kscePowerGetWakeupFactor: 0x9F26222A
-        - kscePowerSetCallbackState: 0xA6FF5997
-        - kscePowerSetGpuXbarClockFrequency: 0xA7739DBE
+        - ScePowerForDriver_9F26222A: 0x9F26222A
+        - ScePowerForDriver_A6FF5997: 0xA6FF5997
+        - scePowerSetGpuXbarClockFrequency: 0xA7739DBE
         - scePowerGetBatterySOH: 0xA88A2B65
-        - kscePowerSetDmac5ClockFrequency: 0xA902CDDF
-        - kscePowerGetArmClockFrequency: 0xABC6F88F
+        - ScePowerForDriver_A902CDDF: 0xA902CDDF
+        - scePowerGetArmClockFrequency: 0xABC6F88F
         - scePowerRequestSuspend: 0xAC32C9CC
-        - kscePowerBatteryStopUsbCharging: 0xACC857A4
-        - kscePowerSetGpuClockFrequencyProc: 0xB104EFE2
+        - ScePowerForDriver_ACC857A4: 0xACC857A4
+        - ScePowerForDriver_B104EFE2: 0xB104EFE2
         - ScePowerForDriver_B24263F0: 0xB24263F0
         - scePowerGetBatteryChargingStatus: 0xB4432BC8
-        - kscePowerSetBusClockFrequency: 0xB8D7B3FB
-        - kscePowerSetPowerSwMode: 0xC1853BA7
+        - scePowerSetBusClockFrequency: 0xB8D7B3FB
+        - ScePowerForDriver_C1853BA7: 0xC1853BA7
         - ScePowerForDriver_C62B6164: 0xC62B6164
-        - kscePowerGetSysClockFrequency: 0xC63DACD5
+        - ScePowerForDriver_C63DACD5: 0xC63DACD5
         - ScePowerForDriver_C715F4F0: 0xC715F4F0
-        - kscePowerSetCameraBusClockFrequency: 0xC743E392
-        - kscePowerGetCompatClockFrequency: 0xCBCC11CC
-        - kscePowerSetPsButtonPushTime: 0xCF8F0529
+        - ScePowerForDriver_C743E392: 0xC743E392
+        - ScePowerForDriver_CBCC11CC: 0xCBCC11CC
+        - ScePowerForDriver_CF8F0529: 0xCF8F0529
         - scePowerIsLowBattery: 0xD3075926
         - ScePowerForDriver_D516D446: 0xD516D446
-        - kscePowerGetDisplayMaxBrightness: 0xD8759B55
+        - ScePowerForDriver_D8759B55: 0xD8759B55
         - scePowerCancelRequest: 0xDB62C9CF
-        - kscePowerBatteryPermitCharging: 0xDD3D4DAC
-        - kscePowerUnregisterCallback: 0xDFA8BAF8
-        - kscePowerBatterySetUsbStatus: 0xE4E3C316
-        - kscePowerSetVipClockFrequency: 0xE5573571
+        - ScePowerForDriver_DD3D4DAC: 0xDD3D4DAC
+        - scePowerUnregisterCallback: 0xDFA8BAF8
+        - ScePowerForDriver_E4E3C316: 0xE4E3C316
+        - ScePowerForDriver_E5573571: 0xE5573571
         - scePowerGetBatteryRemainLevel: 0xEA3E3715
-        - kscePowerGetIdleTimer: 0xEDC13FE5
-        - kscePowerTick: 0xEFD3C963
-        - kscePowerGetDmac5ClockFrequency: 0xF1E14EA9
+        - ScePowerForDriver_EDC13FE5: 0xEDC13FE5
+        - ScePowerForDriver_EFD3C963: 0xEFD3C963
+        - ScePowerForDriver_F1E14EA9: 0xF1E14EA9
         - ScePowerForDriver_F535D928: 0xF535D928
         - ScePowerForDriver_FB5C3C75: 0xFB5C3C75
         - scePowerGetBatteryFullCapacity: 0xFD18A0FF
         - ScePowerForDriver_FE35B73D: 0xFE35B73D
-        - kscePowerSetCompatClockFrequency: 0xFFC84E69
+        - ScePowerForDriver_FFC84E69: 0xFFC84E69
     SceLedForDriver:
       syscall: false
       version: 1
       nid: 0x282C1323
       functions:
-        - ksceLedSetMode: 0xEA24BE03
+        - SceLedForDriver_EA24BE03: 0xEA24BE03

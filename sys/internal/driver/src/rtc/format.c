@@ -23,7 +23,7 @@ static inline char rtcDigit(unsigned int value)
 	return value % 10 + '0';
 }
 
-int ksceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
+int SceRtcForDriver_BA3415F8(char *buf, const SceRtcTick *tick, int offset)
 {
 	SceRtcTick local;
 	SceDateTime time;
@@ -34,7 +34,7 @@ int ksceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
 	if (buf == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
 	if (tick == NULL)
-		ksceRtcGetCurrentTick(&local);
+		SceRtcForDriver_DEC408D4(&local);
 	else
 		local = *tick;
 	if ((unsigned int)(offset + 1439) > 2878)
@@ -42,7 +42,7 @@ int ksceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
 	SceRtcForDriver_0F9E02EF(&local, &local, offset);
 	if ((SceInt64)local.tick < 0)
 		return SCE_RTC_ERROR_INVALID_VALUE;
-	ksceRtcConvertTickToDateTime(&time, &local);
+	SceRtcForDriver_42A0DFCB(&time, &local);
 	wday = SceRtcForDriver_0F800878(time.year, time.month, time.day);
 	name = &s_rtcDayAbbr[wday * 3];
 	buf[0] = name[0];
@@ -87,14 +87,14 @@ int ksceRtcFormatRFC2822(char *buf, const SceRtcTick *tick, int offset)
 	return 0;
 }
 
-int ksceRtcFormatRFC2822LocalTime(char *buf, const SceRtcTick *tick)
+int SceRtcForDriver_1F7FC209(char *buf, const SceRtcTick *tick)
 {
 	if (buf == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
-	return ksceRtcFormatRFC2822(buf, tick, g_rtc.timezone + g_rtc.daylightSaving);
+	return SceRtcForDriver_BA3415F8(buf, tick, g_rtc.timezone + g_rtc.daylightSaving);
 }
 
-int ksceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
+int SceRtcForDriver_D32AC698(char *buf, const SceRtcTick *tick, int offset)
 {
 	SceRtcTick local;
 	SceDateTime time;
@@ -103,7 +103,7 @@ int ksceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
 	if (buf == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
 	if (tick == NULL)
-		ksceRtcGetCurrentTick(&local);
+		SceRtcForDriver_DEC408D4(&local);
 	else
 		local = *tick;
 	if ((unsigned int)(offset + 1439) > 2878)
@@ -111,7 +111,7 @@ int ksceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
 	SceRtcForDriver_0F9E02EF(&local, &local, offset);
 	if ((SceInt64)local.tick < 0)
 		return SCE_RTC_ERROR_INVALID_VALUE;
-	ksceRtcConvertTickToDateTime(&time, &local);
+	SceRtcForDriver_42A0DFCB(&time, &local);
 	buf[0] = rtcDigit(time.year / 1000);
 	buf[1] = rtcDigit(time.year / 100);
 	buf[2] = rtcDigit(time.year / 10);
@@ -155,9 +155,9 @@ int ksceRtcFormatRFC3339(char *buf, const SceRtcTick *tick, int offset)
 	return 0;
 }
 
-int ksceRtcFormatRFC3339LocalTime(char *buf, const SceRtcTick *tick)
+int SceRtcForDriver_35925318(char *buf, const SceRtcTick *tick)
 {
 	if (buf == NULL)
 		return SCE_RTC_ERROR_INVALID_POINTER;
-	return ksceRtcFormatRFC3339(buf, tick, g_rtc.timezone + g_rtc.daylightSaving);
+	return SceRtcForDriver_D32AC698(buf, tick, g_rtc.timezone + g_rtc.daylightSaving);
 }

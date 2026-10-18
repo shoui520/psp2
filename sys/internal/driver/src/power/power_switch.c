@@ -6,14 +6,13 @@
 #include <sysmem/cp15.h>
 #include "power_private.h"
 #include <syscon/syscon_scratchpad.h>
+#include <power/power.h>
 
 /* the CPU state each core saves before suspend */
 static uint8_t s_powerCpuContext[4][0x1000] __attribute__((aligned(8)));
 /* optional hooks around the system events of a transition (never set here) */
 static void (*s_powerBeforeSysEvent)(int, int, int);
 static void (*s_powerAfterSysEvent)(int, int, int, SceUID);
-
-int kscePowerRequestShutdown(uint32_t argument);
 
 int powerAcquireProcessSwitchLock(uint32_t kind);
 
@@ -22,10 +21,6 @@ int powerAcquireSystemSwitchLock(uint32_t kind);
 int powerReleaseProcessSwitchLock(uint32_t kind);
 
 int powerReleaseSystemSwitchLock(uint32_t kind);
-
-int scePowerRequestStandby(void);
-
-int scePowerRequestColdReset(void);
 
 static inline __attribute__((always_inline)) int powerDispatchSwitchEvent(int phase, int event, int sleepMode,
 				    const void *argument, SceUID *busy);
@@ -48,10 +43,10 @@ static const SuspendPowerCallbacks s_powerSuspendCallbacks = {
 	.requestStandby = scePowerRequestStandby,
 	.requestSuspend = scePowerRequestSuspend,
 	.requestColdReset = scePowerRequestColdReset,
-	.requestShutdown = kscePowerRequestShutdown,
-	.powerTick = kscePowerTick,
+	.requestShutdown = ScePowerForDriver_8921A7A0,
+	.powerTick = ScePowerForDriver_EFD3C963,
 	.tickProcess = powerTickProcessForPid,
-	.setIdleCallback = kscePowerSetIdleCallback,
+	.setIdleCallback = ScePowerForDriver_1BA2FCAE,
 	.expireIdleTimer = ScePowerForDriver_660D5AB4,
 	.addIdleTimerMask = ScePowerForDriver_991BDEAF,
 };
@@ -115,7 +110,7 @@ int scePowerRequestSuspend(void)
 	return result;
 }
 
-int kscePowerRequestShutdown(uint32_t argument)
+int ScePowerForDriver_8921A7A0(uint32_t argument)
 {
 	uint32_t context = sceSyscallEnter();
 	SceUID eventFlag = s_powerSwitchState.eventFlag;
@@ -260,7 +255,7 @@ int powerSwitchTransition(uint32_t mode)
 	suspend.monitorState = &monitor;
 	resume.resumeInformation = NULL;
 	SceSysmemForDriver_8D160E65(&monitor, &address);
-	ksceSysconSendCommand(SYSCON_SCRATCH_PAD(resumeContextPA), &address, 4);
+	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &address, 4);
 	switch (request) {
 	case POWER_REQUEST_STANDBY:
 	case POWER_REQUEST_SHUTDOWN:
@@ -300,10 +295,10 @@ int powerSwitchTransition(uint32_t mode)
 			led.blink.onTicks = powerOff ? 0x19 : 9;
 			led.blink.offTicks = led.blink.onTicks;
 			led.blink.repeatCount = -1;
-			ksceLedSetMode(2, SCE_LED_MODE_BLINK, &led);
-			ksceSysconCtrlLED(0x40, s_powerSwitchState.ledPolicy);
+			SceLedForDriver_EA24BE03(2, SCE_LED_MODE_BLINK, &led);
+			SceSysconForDriver_04EC7579(0x40, s_powerSwitchState.ledPolicy);
 		} else if (s_powerSwitchState.ledPolicy == 2) {
-			ksceSysconCtrlDolceLED(powerOff ? 1 : 2);
+			SceSysconForDriver_727F985A(powerOff ? 1 : 2);
 		}
 		break;
 	}
@@ -328,9 +323,9 @@ int powerSwitchTransition(uint32_t mode)
 			     s_powerSwitchState.powerOffDelay <
 				     (unsigned int)(idleLoops / 100))) {
 				if (s_powerSwitchState.ledPolicy == 1)
-					ksceLedSetMode(2, SCE_LED_MODE_ON, NULL);
+					SceLedForDriver_EA24BE03(2, SCE_LED_MODE_ON, NULL);
 				else if (s_powerSwitchState.ledPolicy == 2)
-					ksceSysconCtrlDolceLED(0);
+					SceSysconForDriver_727F985A(0);
 				if (s_powerSwitchState.powerOffDelay)
 					SceSysconForDriver_373ECF8A(5);
 				idleLoops = -1;
@@ -387,7 +382,7 @@ int powerSwitchTransition(uint32_t mode)
 	suspend.started = sceKernelGetSystemTimeWide();
 	powerDispatchSwitchEvent(0, SYSEVENT_SUSPEND_COMMIT, suspend.sleepMode, &suspend, NULL);
 	if (s_powerSwitchState.ledPolicy == 1)
-		ksceLedSetMode(2, SCE_LED_MODE_ON, NULL);
+		SceLedForDriver_EA24BE03(2, SCE_LED_MODE_ON, NULL);
 	for (i = SYSEVENT_SUSPEND_DEVICE(15); i >= SYSEVENT_SUSPEND_DEVICE(0); i--)
 		powerDispatchSwitchEvent(0, i, suspend.sleepMode, &suspend,
 					 NULL);
@@ -399,21 +394,21 @@ int powerSwitchTransition(uint32_t mode)
 		;
 	s_powerSwitchState.interruptState = 0x100;
 	for (i = 0; i < 6; i++)
-		kscePervasiveUartResetEnable(i);
+		ScePervasiveForDriver_788B6C61(i);
 	ScePervasiveForDriver_81A155F1()->suspendControl = 0x80000000;
 	dmb();
-	ksceGpioPortClear(0, 0);
-	ksceGpioPortClear(0, 15);
+	SceGpioForDriver_F6310435(0, 0);
+	SceGpioForDriver_F6310435(0, 15);
 	if (suspend.sleepMode == POWER_SLEEP_SUSPEND)
-		ksceGpioPortSet(0, 7);
-	ksceGpioPortClear(1, 3);
+		SceGpioForDriver_D454A584(0, 7);
+	SceGpioForDriver_F6310435(1, 3);
 	powerReadMonitorRegisters(&monitor);
 	action = mode & 0xf00;
 	s_powerSwitchState.suspendInProgress = 0;
 	if (action == 0x300 || action == 0x200) {
 		if (!powerSaveCpuContext(
 			    s_powerCpuContext[sceKernelCpuId()])) {
-			ksceSysconSetPowerMode(
+			sceSysconSetPowerMode(
 				action == 0x300 || s_powerSwitchState
 							   .resumeRequested
 					? 0x11
@@ -423,12 +418,12 @@ int powerSwitchTransition(uint32_t mode)
 				;
 		}
 	} else if (action == 0x100) {
-		ksceSysconSetPowerMode(0, s_powerSwitchState.powerModeArgument);
+		sceSysconSetPowerMode(0, s_powerSwitchState.powerModeArgument);
 		for (;;)
 			;
 	} else if (action == 0x500) {
-		i = ksceSysconIsDownLoaderMode();
-		ksceSysconSetPowerMode(
+		i = SceSysconForDriver_9ADD60D2();
+		sceSysconSetPowerMode(
 			i ? (s_powerSwitchState.shutdownArgument ? 4 : 3)
 			  : (s_powerSwitchState.shutdownArgument ? 0x10 : 0),
 			0);
@@ -450,7 +445,7 @@ int powerSwitchTransition(uint32_t mode)
 	resume.resumeInformation = &s_powerResumeInformation;
 	for (i = SYSEVENT_RESUME_DEVICE(0); i <= SYSEVENT_RESUME_DEVICE(15); i++)
 		powerDispatchSwitchEvent(1, i, 0, &resume, NULL);
-	ksceLedSetMode(2, SCE_LED_MODE_OFF, NULL);
+	SceLedForDriver_EA24BE03(2, SCE_LED_MODE_OFF, NULL);
 	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, 0xfffff102);
 	powerNotifyCallback(SCE_POWER_CB_SYSTEM_SUSPEND, SCE_POWER_CB_SYSTEM_RESUMING, 0);
 	/* some wakeup factors resume with the display off */
@@ -468,10 +463,10 @@ int powerSwitchTransition(uint32_t mode)
 	}
 	if (displayOff) {
 		powerSwitchDisplay(0, 0);
-		kscePowerTick(1);
+		ScePowerForDriver_EFD3C963(1);
 	} else {
 		powerSwitchDisplay(1, 0);
-		kscePowerTick(0);
+		ScePowerForDriver_EFD3C963(0);
 	}
 	SceSysconForDriver_901D6CD4(0);
 	SceCtrlForDriver_C8CE3E43(1);
@@ -480,7 +475,7 @@ int powerSwitchTransition(uint32_t mode)
 	s_powerSwitchState.interruptState = 0;
 	dsb();
 	powerDispatchSwitchEvent(1, SYSEVENT_RESUME_START, 0, &resume, NULL);
-	ksceSysconSendCommand(SYSCON_SCRATCH_PAD(resumeContextPA), &zero, 4);
+	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &zero, 4);
 	if (s_powerSwitchState.powerOffDelay)
 		SceSysconForDriver_373ECF8A(s_powerSwitchState.powerOffDelay);
 	diagnostics = 0;
@@ -517,8 +512,8 @@ int powerSwitchWorker(SceSize args, void *argp)
 	uint32_t buttons, pressed, modes;
 	int held, woke, ret;
 
-	ksceSysconSendCommand(SYSCON_SCRATCH_PAD(resumeContextPA), &timeout, 4);
-	if (ksceCtrlPeekBufferPositive(0, &ctrl, 1) >= 0)
+	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &timeout, 4);
+	if (SceCtrlForDriver_EA1D3A34(0, &ctrl, 1) >= 0)
 		s_powerSwitchState.controllerButtons = ctrl.buttons;
 	held = (s_powerSwitchState.controllerButtons & s_powerSwitchState.controllerMask) != 0;
 
@@ -746,7 +741,7 @@ request:
 		sceKernelSetEventFlag(s_powerSwitchState.eventFlag, POWER_SWITCH_EVENT_IDLE);
 
 		/* woken by the power button: it may still be down */
-		if (ksceCtrlPeekBufferPositive(0, &ctrl, 1) < 0)
+		if (SceCtrlForDriver_EA1D3A34(0, &ctrl, 1) < 0)
 			continue;
 		buttons = ctrl.buttons;
 		s_powerSwitchState.controllerButtons = buttons;
@@ -788,14 +783,14 @@ int powerSwitchInitPhase7(uint32_t kind, void *argument)
 	return 0;
 }
 
-void powerControllerCallback(uint32_t buttons, uint32_t previous)
+void powerControllerCallback(uint32_t buttons, uint32_t previous, void *arg)
 {
 	s_powerSwitchState.controllerButtons = buttons;
 	if ((buttons ^ previous) & 0x10000) {
 		if (!(buttons & 0x10000))
-			ksceCtrlUpdateMaskForNonShell(0, 8);
+			SceCtrlForDriver_03777131(0, 8);
 		else if (!(buttons & 8))
-			ksceCtrlUpdateMaskForNonShell(8, 0);
+			SceCtrlForDriver_03777131(8, 0);
 	}
 	sceKernelSetEventFlag(s_powerSwitchState.eventFlag, 1);
 	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, ~1U);
@@ -849,7 +844,7 @@ int powerInitializeSwitchControl(void)
 	sceKernelStartThread(s_powerSwitchState.mainThread, 0, NULL);
 	s_powerSwitchState.controllerMask = 0x40010008;
 	s_powerSwitchState.controllerCallback = SceCtrlForDriver_FF9D4DD4(
-		0x40010008, powerControllerCallback, NULL, 0);
+		0x40010008, powerControllerCallback, NULL, NULL);
 	sceHdmiCecRegisterEventCallback(1, powerHdmiCecCallback);
 	SceSysconForDriver_9F8340FF(powerSysconWakeupCallback, NULL);
 	powerAcquireSystemSwitchLock(0);
@@ -869,7 +864,7 @@ int powerInitializeSwitchHardware(void)
 
 	SceSysconForDriver_CF5B2F2F(&s_powerSwitchState.wakeupFactor);
 	s_powerSwitchState.powerOffDelay = 0x14;
-	hardware = ksceSysconGetHardwareInfo() & 0xff0000;
+	hardware = SceSysconForDriver_CBD6D8BC() & 0xff0000;
 	if (hardware == 0x310000 || hardware == 0x410000 ||
 	    hardware == 0x100000)
 		s_powerSwitchState.powerOffDelay = 0;
@@ -886,7 +881,7 @@ int powerInitializeSwitchHardware(void)
 }
 
 /* Native display handler specialized for off with no LED work request. */
-int kscePowerSetPowerSwMode2(uint32_t mode)
+int ScePowerForDriver_0CD21B1F(uint32_t mode)
 {
 	if (mode & ~7U)
 		return SCE_POWER_ERROR_INVALID_VALUE;
@@ -896,7 +891,7 @@ int kscePowerSetPowerSwMode2(uint32_t mode)
 	return 0;
 }
 
-int kscePowerSetPowerSwMode(uint32_t mode)
+int ScePowerForDriver_C1853BA7(uint32_t mode)
 {
 	uint32_t context;
 
@@ -910,7 +905,7 @@ int kscePowerSetPowerSwMode(uint32_t mode)
 	return 0;
 }
 
-uint32_t kscePowerGetPowerSwMode(void)
+uint32_t ScePowerForDriver_165CE085(void)
 {
 	uint32_t mode = s_powerSwitchState.secondaryMode;
 	uint32_t otherMode = s_powerSwitchState.primaryMode;
@@ -918,13 +913,13 @@ uint32_t kscePowerGetPowerSwMode(void)
 	return mode | otherMode;
 }
 
-int kscePowerSetStandbyButtonPushTime(uint32_t time)
+int ScePowerForDriver_675A84ED(uint32_t time)
 {
 	s_powerSwitchState.standbyButtonPushTime = time;
 	return 0;
 }
 
-int kscePowerSetPsButtonPushTime(uint32_t time)
+int ScePowerForDriver_CF8F0529(uint32_t time)
 {
 	s_powerSwitchState.psButtonPushTime = time;
 	return 0;
@@ -1010,7 +1005,7 @@ int scePowerRequestDisplayOn(void)
 	return 0;
 }
 
-int kscePowerRequestSoftReset(void)
+int ScePowerForDriver_2875994B(void)
 {
 	uint32_t context = sceSyscallEnter();
 
@@ -1019,7 +1014,7 @@ int kscePowerRequestSoftReset(void)
 	return 0;
 }
 
-int kscePowerRequestHibernate(void)
+int ScePowerForDriver_08951418(void)
 {
 	uint32_t context = sceSyscallEnter();
 
@@ -1028,13 +1023,13 @@ int kscePowerRequestHibernate(void)
 	return 0;
 }
 
-int kscePowerRequestResume(void)
+int ScePowerForDriver_02DB1035(void)
 {
 	s_powerSwitchState.resumeRequested = 1;
 	return 0;
 }
 
-int kscePowerEncodeUBattery(void)
+int ScePowerForDriver_3951AF53(void)
 {
 	uint32_t pattern;
 	int result;
@@ -1057,7 +1052,7 @@ int kscePowerEncodeUBattery(void)
 	return result < 0 ? result : 0;
 }
 
-uint32_t kscePowerGetResumeCount(void)
+uint32_t ScePowerForDriver_0074EF9B(void)
 {
 	return s_powerSwitchState.resumeCount;
 }
@@ -1078,7 +1073,7 @@ int ScePowerForDriver_D516D446(uint32_t *state)
 	return 0;
 }
 
-uint32_t kscePowerGetWakeupFactor(void)
+uint32_t ScePowerForDriver_9F26222A(void)
 {
 	return s_powerSwitchState.wakeupFactor;
 }

@@ -84,7 +84,7 @@ int _sceVeneziaStartEntryPhase2(void)
 {
 	int ret;
 
-	kscePowerSetVeneziaClockFrequency(166);
+	ScePowerForDriver_621BD8FD(166);
 	ret = bootVeneziaPhase2();
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 118, "_sceVeneziaStartEntryPhase2",
@@ -368,7 +368,7 @@ int _sceVeneziaSystemResumePhase0(void)
 			 SCE_DBGINFO_FUNC(576, "_sceVeneziaSystemResumePhase0"),
 			 __builtin_return_address(0));
 #endif
-	ScePervasiveForDriver_725B4F59(veneziaClockSelector(kscePowerGetVeneziaClockFrequency()));
+	ScePervasiveForDriver_725B4F59(veneziaClockSelector(ScePowerForDriver_64641E6A()));
 	ret = veneziaResume();
 	if (ret < 0)
 		goto out;

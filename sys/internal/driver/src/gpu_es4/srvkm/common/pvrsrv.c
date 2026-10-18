@@ -5,8 +5,7 @@
 #include <gpu/gpu_es4_trace.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/lowio/pervasive.h>
-#include <psp2kern/power.h>
+#include <lowio/pervasive.h>
 #include "sgx543_v1.164defs.h"
 #include <string.h>
 #include <stdarg.h>
@@ -470,15 +469,15 @@ int SceGpuEs4ForDriver_990338F6(GpuTraceInfo *info)
 	if (info == NULL)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	if (SceSblAIMgrForDriver_274663A0() && SceSblACMgrForDriver_E87D1777()) {
-		info->socRevision = kscePervasiveGetSoCRevision() & 0x1ffffU;
-		kscePowerGetGpuClockFrequencyInternal(&first, &second);
+		info->socRevision = ScePervasiveForDriver_714EEFB7() & 0x1ffffU;
+		scePowerGetGpuClockFrequencyInternal(&first, &second);
 		info->gpuClockFrequency[0] = first * 1000000U;
 		info->gpuClockFrequency[1] = second * 1000000U;
-		info->gpuXbarClockFrequency = kscePowerGetGpuXbarClockFrequency() * 1000000U;
-		info->armClockFrequency = kscePowerGetArmClockFrequency() * 1000000U;
+		info->gpuXbarClockFrequency = scePowerGetGpuXbarClockFrequency() * 1000000U;
+		info->armClockFrequency = scePowerGetArmClockFrequency() * 1000000U;
 		info->timebaseFrequency = SceSysrootForDriver_BFD8F2A2() * 1000000U;
-		info->sysClockFrequency = kscePowerGetSysClockFrequency() * 1000000U;
-		info->busClockFrequency = kscePowerGetBusClockFrequency() * 1000000U;
+		info->sysClockFrequency = ScePowerForDriver_C63DACD5() * 1000000U;
+		info->busClockFrequency = scePowerGetBusClockFrequency() * 1000000U;
 		if (info->gpuClockFrequency[0] == 166000000U)
 			info->gpuClockFrequency[0] = 166500000U;
 		if (info->gpuClockFrequency[1] == 166000000U)

@@ -734,13 +734,13 @@ int motionInitializeManager(void *arg)
 	int intr, i, result;
 
 	(void)arg;
-	ksceSysconWaitInitialized();
-	motion.baryonVersion = ksceSysconGetBaryonVersion();
+	SceSysconForDriver_55DF1C9B();
+	motion.baryonVersion = SceSysconForDriver_FF86F4C5();
 	location = (DeviceLocation){0};
 	result = ksceIdStorageLookup(0x114, 32, &location, sizeof(location));
 	if (result < 0) {
 		location.type = 16;
-		if ((ksceSysconGetHardwareInfo() & 0xff0000) < 0x800000) {
+		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
 			location.x = -32;
 			location.y = 12;
 		} else {
@@ -782,7 +782,7 @@ int motionInitializeManager(void *arg)
 	result = ksceIdStorageLookup(0x114, 48, &location, sizeof(location));
 	if (result < 0) {
 		location.type = 17;
-		if ((ksceSysconGetHardwareInfo() & 0xff0000) < 0x800000) {
+		if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) < 0x800000) {
 			location.x = -33;
 			location.y = 6;
 		} else {

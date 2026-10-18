@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <psp2common/types.h>
 
-/* ksceLedSetMode's option for every mode but SCE_LED_MODE_SCRIPT. */
+/* SceLedForDriver_EA24BE03's option for every mode but SCE_LED_MODE_SCRIPT. */
 typedef struct LedModeParam {
 	SceSize size;
 	union {
@@ -30,4 +30,4 @@ _Static_assert(offsetof(LedModeParam, blink.endState) == 16, "LED final state");
 
 #endif
 
-int ksceLedSetMode(uint32_t led, uint32_t mode, const void *option);
+int SceLedForDriver_EA24BE03(uint32_t led, uint32_t mode, const void *option);

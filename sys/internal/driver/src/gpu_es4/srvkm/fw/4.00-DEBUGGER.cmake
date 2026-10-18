@@ -215,27 +215,27 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_D32ACE9E
 	sceKernelSpinlockLowUnlock
 	SceCpuForDriver_E813EBB2
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	ScePervasiveForDriver_84EAB5BC
 	ScePervasiveForDriver_E8656ADF
-	ksceKernelSysTimerSetClockSource
-	ksceKernelSysTimerStartCount
-	ksceKernelSysTimerResetCount
-	ksceKernelSysTimerFree
-	ksceKernelSysTimerSetInterval
-	ksceKernelSysTimerStopCount
-	ksceKernelSysTimerSetHandler
-	ksceKernelSysTimerAlloc
+	SceSystimerForDriver_0450933B
+	SceSystimerForDriver_59EBD22D
+	SceSystimerForDriver_7DEBA6A5
+	SceSystimerForDriver_8358611F
+	SceSystimerForDriver_A73351C1
+	SceSystimerForDriver_BF8D42B0
+	SceSystimerForDriver_CCCD1EE3
+	SceSystimerForDriver_E2B9D8E9
 	ScePowerForDriver_06AF03DB
 	scePowerGetGpuXbarClockFrequency
-	kscePowerGetGpuClockFrequencyInternal
+	scePowerGetGpuClockFrequencyInternal
 	scePowerGetBusClockFrequency
-	kscePowerGetGpuClockFrequencyProc
+	ScePowerForDriver_642E0AF2
 	ScePowerForDriver_711C68DF
 	scePowerGetArmClockFrequency
-	kscePowerSetGpuClockFrequencyProc
-	kscePowerGetSysClockFrequency
-	ksceRtcGetCurrentClockLocalTime
+	ScePowerForDriver_B104EFE2
+	ScePowerForDriver_C63DACD5
+	sceRtcGetCurrentClockLocalTime
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	sceKernelRegisterSysEventHandler

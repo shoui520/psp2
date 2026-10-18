@@ -163,12 +163,12 @@ int ScePervasiveForDriver_D326E15F(int port)
 }
 #endif
 
-int kscePervasiveUartResetEnable(int port)
+int ScePervasiveForDriver_788B6C61(int port)
 {
 	return ResetEnableDevice(&PERVASIVE_RESET->uart[port]);
 }
 
-int kscePervasiveUartResetDisable(int port)
+int ScePervasiveForDriver_A7CE7DCC(int port)
 {
 	return ResetDisableDevice(&PERVASIVE_RESET->uart[port]);
 }
@@ -365,12 +365,12 @@ int ScePervasiveForDriver_3CF7A012(int port)
 }
 #endif
 
-int kscePervasiveGpioClockEnable(void)
+int ScePervasiveForDriver_2F195C97(void)
 {
 	return GateEnableDevice(&PERVASIVE_GATE->gpio);
 }
 
-int kscePervasiveUartClockEnable(int port)
+int ScePervasiveForDriver_EFD084D8(int port)
 {
 	return GateEnableDevice(&PERVASIVE_GATE->uart[port]);
 }

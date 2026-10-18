@@ -1,7 +1,6 @@
 /* SceCompat implementation. */
 
 #include <compat/compat.h>
-#include <psp2/power.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -216,7 +215,7 @@ SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrTranslationInfo, 751, "mapMainDDR");
 SCE_DBGINFO_DEFINE(static, gCompatMapMainDdrBankInfo, 753, "mapMainDDR");
 #endif
 
-int ksceDisplayGetDeviceType(SceUInt32 head, SceUInt32 *type);
+int SceDisplayForDriver_8D9A1CCE(SceUInt32 head, SceUInt32 *type);
 int SceGrabForDriver_F13C63DD(void);
 int SceGrabForDriver_379130B2(void);
 int SceGrabForDriver_E9C25A28(SceUInt32 bank, uintptr_t paddr);
@@ -234,10 +233,10 @@ int compatLcdcIntrHandler(int intrcode, void *context)
 	int head;
 	int hcount;
 
-	head = ksceDisplayGetPrimaryHead();
+	head = SceDisplayForDriver_C8E554C5();
 	if (head == 1) {
 		info.size = sizeof(info);
-		if (ksceDisplayGetResolutionInfoInternal(head, &info) < 0) {
+		if (SceDisplayForDriver_B3C6D647(head, &info) < 0) {
 #if FW_DEBUG
 			info.vic = 0xffff;
 #endif
@@ -390,11 +389,11 @@ int compatEnterRunningState(void)
 	if (!SceThreadmgrForDriver_E54FD746(0x4000, compatCheckRif, NULL) &&
 		!SceSblAIMgrForDriver_F4B98F66())
 		return (int)0x8001000d;
-	if (ksceDisplayGetPrimaryHead() == 1) {
+	if (SceDisplayForDriver_C8E554C5() == 1) {
 		SceDisplayResolutionInfo info;
 
 		info.size = sizeof(info);
-		while (ksceDisplayGetResolutionInfoInternal(1, &info) < 0)
+		while (SceDisplayForDriver_B3C6D647(1, &info) < 0)
 			sceKernelDelayThread(1000);
 	}
 	result = SceGrabForDriver_379130B2();
@@ -502,7 +501,7 @@ int compatProcessKillHandler(SceUID pid, ProcEventParam *param,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
@@ -555,7 +554,7 @@ int compatProcessExitHandler(SceUID pid, ProcEventParam *param,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		gCompatMainDdr = NULL;
@@ -817,7 +816,7 @@ int compatInitEx(int mode)
 #endif
 	if (status < 0)
 		return status;
-	result = kscePowerSetCompatClockFrequency(333);
+	result = ScePowerForDriver_FFC84E69(333);
 	if (result < 0)
 		return result;
 	gCompatMode = mode;
@@ -827,12 +826,12 @@ int compatInitEx(int mode)
 		if (result >= 0)
 			return 0;
 		SceGrabForDriver_F13C63DD();
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		SCE_DBG_PRINTF(1, 931,
 			"sceCompatSecLoadSCBootCode failed (0x%08x)\n", result);
 		return result;
 	}
-	kscePowerSetCompatClockFrequency(0);
+	ScePowerForDriver_FFC84E69(0);
 	return result;
 }
 
@@ -884,7 +883,7 @@ int compatCheckPocketStationRif(void)
 			&flags, &startTime,
 			&expirationTime) ||
 		(expirationTime != 0x7fffffffffffffffULL &&
-			(ksceRtcGetCurrentSecureTick(&tick) ||
+			(SceRtcForDriver_401C0954(&tick) ||
 			 startTime >= tick.tick || tick.tick >= expirationTime))) {
 		sceIoClose(fd);
 		result = 0;
@@ -925,7 +924,7 @@ int compatStart(void)
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		return result;
@@ -954,7 +953,7 @@ int compatStop(void)
 	gCompatPreviousState = gCompatState;
 	gCompatRequestsEnabled = 0;
 	gCompatState = 1;
-	kscePowerSetCompatClockFrequency(0);
+	ScePowerForDriver_FFC84E69(0);
 	sceKernelUnlockMutex(gCompatMutex, 1);
 	memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	return result;
@@ -1444,7 +1443,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
-		result = ksceDisplaySetFrameBuf(NULL, 1);
+		result = SceDisplayForDriver_289D82FE(NULL, 1);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		if (result != 0)
 			goto color;
@@ -1509,12 +1508,12 @@ int compatProcessStopHandler(SceUID pid, int event,
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 	}
 color:
-	ksceDisplaySetColorSpaceMode(0, gCompatColorSpaceMode);
+	SceDisplayForDriver_8D79D187(0, gCompatColorSpaceMode);
 	return 0;
 hardwareFailed:
 	sceKernelUnlockMutex(gCompatMutex, 1);
@@ -1542,10 +1541,10 @@ int compatSetDisplayConfig(int resolution, int colorSpaceMode)
 	param.frameBuf.pitch = 512;
 	param.frameBuf.width = 480;
 	param.frameBuf.height = 272;
-	result = ksceDisplaySetFrameBuf(&param.frameBuf, 1);
+	result = SceDisplayForDriver_289D82FE(&param.frameBuf, 1);
 	if (result < 0)
 		return result;
-	return ksceDisplaySetColorSpaceMode(0, colorSpaceMode);
+	return SceDisplayForDriver_8D79D187(0, colorSpaceMode);
 }
 
 int sceCompatGetPrimaryHead(void)
@@ -1555,7 +1554,7 @@ int sceCompatGetPrimaryHead(void)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = ksceDisplayGetPrimaryHead();
+		result = SceDisplayForDriver_C8E554C5();
 		sceSyscallLeave(syscall);
 		return result;
 	}
@@ -1856,7 +1855,7 @@ int compatSuspendResume(int mode)
 #else
 	mapMainDDR();
 #endif
-	if ((result = kscePowerSetCompatClockFrequency(333)) != 0 ||
+	if ((result = ScePowerForDriver_FFC84E69(333)) != 0 ||
 		(result = SceGrabForDriver_072B8D93(gCompatMode)) != 0 ||
 		(result = compatSecureInitialize(cookie)) != 0 ||
 		(result = compatEnterRunningState()) != 0) {
@@ -1876,7 +1875,7 @@ cleanup:
 		gCompatPreviousState = gCompatState;
 		gCompatRequestsEnabled = 0;
 		gCompatState = 1;
-		kscePowerSetCompatClockFrequency(0);
+		ScePowerForDriver_FFC84E69(0);
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
 		goto out;
@@ -1975,10 +1974,10 @@ int compatLCDCSync(void)
 	int head;
 	int hcount;
 
-	head = ksceDisplayGetPrimaryHead();
+	head = SceDisplayForDriver_C8E554C5();
 	if (head == 1) {
 		info.size = sizeof(info);
-		if (ksceDisplayGetResolutionInfoInternal(head, &info) < 0) {
+		if (SceDisplayForDriver_B3C6D647(head, &info) < 0) {
 #if FW_DEBUG
 			info.vic = 0xffff;
 #endif
@@ -2038,7 +2037,7 @@ int compatGetUpdateState(void)
 
 	if (gCompatRtcDeadline.tick == 0)
 		goto expired;
-	result = ksceRtcGetCurrentTick(&current);
+	result = SceRtcForDriver_DEC408D4(&current);
 	if (result != 0) {
 		result = 0;
 		goto out;
@@ -2056,7 +2055,7 @@ int compatSetUpdateState(int state)
 	SceRtcTick current;
 	int result;
 
-	result = ksceRtcGetCurrentTick(&current);
+	result = SceRtcForDriver_DEC408D4(&current);
 	if (result == 0)
 		result = SceRtcForDriver_0CB72FAF(&gCompatRtcDeadline, &current, 1);
 	return result;
@@ -2097,11 +2096,11 @@ int compatAvailableColorSpaceSetting(void)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		head = ksceDisplayGetPrimaryHead();
+		head = SceDisplayForDriver_C8E554C5();
 		sceSyscallLeave(syscall);
 		result = 0;
 		if (head >= 0 &&
-			ksceDisplayGetDeviceType(head, &type) == 1) {
+			SceDisplayForDriver_8D9A1CCE(head, &type) == 1) {
 			type &= 3;
 			result = type == 3;
 		}

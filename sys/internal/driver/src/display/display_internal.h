@@ -9,7 +9,7 @@
 #include <psp2kern/types.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
-#include <psp2kern/lowio/iftu.h>
+#include <lowio/iftu.h>
 #include <psp2common/display.h>
 #include <dtrace/sce/dtrace.h>
 #include <display/display.h>
@@ -21,25 +21,25 @@
 typedef struct DisplayPlane {
 	SceUID owner;			/* 0x00: process shown on the plane, -1: none */
 	SceUIntPtr paddr;		/* 0x04: frame buffer last sent to the IFTU */
-	SceUInt32 scaleFlags;		/* 0x08: ksceDisplaySetScaleConf flags */
-	float scale;			/* 0x0c: ksceDisplaySetScaleConf scale */
+	SceUInt32 scaleFlags;		/* 0x08: SceDisplayForDriver_EB390A76 flags */
+	float scale;			/* 0x0c: SceDisplayForDriver_EB390A76 scale */
 	SceUInt32 viewport[4];		/* 0x10: x, y, width, height (16.16 of the frame) */
 } DisplayPlane;
 
 typedef struct DisplayHead {
 	SceKernelSpinlock lock;		/* 0x00 */
 	int dsiEnabled;			/* 0x04: DSI and IFTU output running */
-	int enabled;			/* 0x08: ksceDisplayEnableHead */
+	int enabled;			/* 0x08: SceDisplayForDriver_496032D6 */
 	SceUInt32 vcount;		/* 0x0c: vblanks counted */
 	SceUID vblankEvent;		/* 0x10: SceUIDVblankEventClass object of the head */
 	void *vblankEventObject;	/* 0x14 */
 	SceUInt32 eventBits;		/* 0x18: pattern pulsed on a vblank or a new frame buffer */
 	int dsiBus;			/* 0x1c: DSI controller driving the head */
 	int iftuPlane[DISPLAY_PLANE_COUNT];	/* 0x20: IFTU plane, -1: none */
-	SceUInt32 vic;			/* 0x28: output mode (ksceDsiSetVic) */
+	SceUInt32 vic;			/* 0x28: output mode (SceDsiForDriver_97BFEA76) */
 	SceUInt32 width;		/* 0x2c: output resolution */
 	SceUInt32 height;		/* 0x30 */
-	SceUInt32 outputFlags;		/* 0x34: ksceDisplaySetOutputMode flags */
+	SceUInt32 outputFlags;		/* 0x34: SceDisplayForDriver_AF5EE5BE flags */
 	SceUInt32 outputFormat;		/* 0x38: IFTU output format */
 	SceUInt32 pixelSize;		/* 0x3c: DSI bits per pixel */
 	float refreshRate;		/* 0x40 */
@@ -82,7 +82,7 @@ typedef struct DisplayProcessLocal {
 	SceUInt32 reserved2[8];		/* 0x1b8 */
 } DisplayProcessLocal;
 
-/* ksceDisplaySetViewportConf / ksceDisplayGetActualViewportConf (0x14 bytes). */
+/* SceDisplayForDriver_EE5EB52D / SceDisplayForDriver_40ACFE51 (0x14 bytes). */
 typedef struct SceDisplayViewportConf {
 	SceSize size;			/* 0x00: sizeof(SceDisplayViewportConf) */
 	SceUInt32 x;			/* 0x04: in a 960x544 frame */
@@ -150,8 +150,6 @@ extern int primaryHead;
 extern int startupHead;
 extern int bootLogoShown;
 extern int plsKey;
-int ksceDisplayEnableHead(SceUInt32 head);
-int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha);
 int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 			 const SceDisplayFrameBuf *pParam, const SceDisplayFrameBuf *convDst);
 

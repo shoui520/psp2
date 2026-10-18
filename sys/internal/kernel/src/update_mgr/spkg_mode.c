@@ -19,7 +19,7 @@ int SpkgUtilGetUpdateMode(SceUpdateMode *mode)
 		return 0;
 	}
 	value = 0;
-	result = ksceSysconNvsReadData(1184, &value, 1);
+	result = SceSysconForDriver_ACAFA2B8(1184, &value, 1);
 	if (result) {
 		SceKernelSuspendForDriver_2BB92967(0);
 		return (int)0x800f0205;
@@ -44,11 +44,11 @@ int SpkgUtilSetUpdateMode(SceUpdateMode mode)
 	tries = 5;
 	for (;;) {
 		value = 0;
-		if (!ksceSysconNvsReadData(1184, &value, 1)) {
+		if (!SceSysconForDriver_ACAFA2B8(1184, &value, 1)) {
 			value = mode;
-			if (!ksceSysconNvsWriteData(1184, &value, 1)) {
+			if (!SceSysconForDriver_10C9657A(1184, &value, 1)) {
 				readback = 0;
-				result = ksceSysconNvsReadData(1184, &readback, 1);
+				result = SceSysconForDriver_ACAFA2B8(1184, &readback, 1);
 				if (!result && !timingsafe_memcmp(&value, &readback, 1))
 					break;
 			}

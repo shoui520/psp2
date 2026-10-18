@@ -184,7 +184,7 @@ retryText:
 				failure = 0x0a00200b;
 				goto commandFailure;
 			}
-			result = ksceSysconGetTouchpanelDeviceInfo(sysconInfo);
+			result = SceSysconForDriver_F492E69E(sysconInfo);
 			if (result) {
 				failure = 0x0a00200c;
 				goto deviceFailure;

@@ -81,15 +81,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_426A4E8C
 	SceQafMgrForDriver_4BC1883F
 	ksceSblUtMgrHasStoreFlag
-	ksceSysconReadCommand
+	SceSysconForDriver_299B1CE7
 	SceSysconForDriver_3168F3AF
 	SceSysconForDriver_51164951
-	ksceSysconWaitInitialized
+	SceSysconForDriver_55DF1C9B
 	SceSysconForDriver_8351526D
 	SceSysconForDriver_86BAAF7D
 	SceSysconForDriver_9B6A6F64
 	SceSysconForDriver_D7BEFF8B
-	ksceSysconSendCommand
+	SceSysconForDriver_E26488B9
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

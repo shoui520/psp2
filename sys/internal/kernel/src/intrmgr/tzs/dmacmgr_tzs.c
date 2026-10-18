@@ -8,13 +8,11 @@
 
 #include "intrmgr.h"
 #include <dmacmgr/dmac_regs.h>
+#include <lowio/pervasive.h>
 
 #define DMAC_COUNT	7
 
 #if defined(INTRMGR_SKBL)
-int ScePervasiveForDriver_FF4B3CA6(int port);		/* DMAC reset on */
-int ScePervasiveForDriver_AC475961(int port);		/* DMAC reset off */
-int ScePervasiveForDriver_A10583FF(int port);		/* DMAC clock on */
 
 static void *mapDmac(const char *name, SceUInt32 pa)
 {

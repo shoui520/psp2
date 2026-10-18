@@ -45,7 +45,7 @@ int __attribute__((noinline, noclone)) dmac5InitReservedKeyContext(Dmac5Context 
 		context->dataCoherency = coherent;
 	context->ivCoherency = 0x1ff01ff;
 	context->command = command;
-	operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 	if (operation < 0)
 		return (int)0x800f1528;
 	context->operation = operation;
@@ -132,14 +132,14 @@ keyError:
 		}
 	}
 	param.cmd |= command;
-	ret = ksceKernelDmaOpAssign(operation, 19, 0);
+	ret = sceKernelDmaOpAssign(operation, 19, 0);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 580,
 			"   ERROR: assign dmac operation failed. 0x%08x\n", ret);
 		SceKernelSuspendForDriver_2BB92967(0);
 		return ret;
 	}
-	ret = ksceKernelDmaOpSetupDirect(operation, &param,
+	ret = _DmaOpSetupDirect(operation, &param,
 		(command & 7) == 3 ? 1 : 17);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 604,
@@ -148,7 +148,7 @@ keyError:
 		SceKernelSuspendForDriver_2BB92967(0);
 		return ret;
 	}
-	ret = ksceKernelDmaOpEnQueue(operation);
+	ret = sceKernelDmaOpEnQueue(operation);
 	if (ret < 0) {
 #if FW_DEBUG
 		errorInfo = SCE_DBGINFO(615);
@@ -156,7 +156,7 @@ keyError:
 #endif
 	} else {
 		sceKernelSysrootDisableAutoClockDown();
-		ret = ksceKernelDmaOpSync(operation, 2, 0, 0);
+		ret = sceKernelDmaOpSync(operation, 2, 0, 0);
 		sceKernelSysrootEnableAutoClockDown();
 #if FW_DEBUG
 		if (ret < 0) {
@@ -231,7 +231,7 @@ int __attribute__((noinline, noclone)) _sceSblDmac5FreeOp(Dmac5Context *context)
 {
 	unsigned int keyRingIndex;
 
-	ksceKernelDmaOpFree(context->operation);
+	sceKernelDmaOpFree(context->operation);
 	keyRingIndex = context->keyRingIndex;
 	if (keyRingIndex - 12 <= 11)
 		dmac5ReleaseNpKey(keyRingIndex);
@@ -266,7 +266,7 @@ initError:
 		context.dataCoherency = 0x3ffff;
 	context.ivCoherency = 0x1ff01ff;
 	context.command = contextCommand;
-	operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 	if (operation < 0) {
 		ret = (int)0x800f1528;
 		goto initError;
@@ -297,7 +297,7 @@ int sceSblDmac5EncDecWithReservedKey(const void *src, void *dst, SceSize size,
 
 int dmac5AllocOperation(void)
 {
-	SceKernelDmaOpId operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	SceKernelDmaOpId operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 
 	if (operation < 0)
 		return (int)0x800f1528;
@@ -313,13 +313,13 @@ int ksceSblDmac5Rnd(void *dst, SceSize size, int coherent)
 
 	if (size > sizeof(buffer))
 		return (int)0x800f1516;
-	operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 	if (operation < 0)
 		return (int)0x800f1528;
 	dataCoherency = (uint32_t)-(coherent != 0) >> 14;
 	ret = _sceSblDmac5DirectCrypt(operation, buffer, buffer, NULL,
 		sizeof(buffer), 0, 4, dataCoherency, 0, NULL);
-	ksceKernelDmaOpFree(operation);
+	sceKernelDmaOpFree(operation);
 	if (__builtin_expect(ret != 0, 1))
 		return ret;
 	memcpy(dst, buffer, size);
@@ -472,7 +472,7 @@ initError:
 		context.dataCoherency = 0x3ffff;
 	context.ivCoherency = 0x1ff01ff;
 	context.command = contextCommand;
-	operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 	if (operation < 0) {
 		ret = (int)0x800f1528;
 		goto initError;
@@ -570,7 +570,7 @@ int ksceSblSsMgrExecuteDmac5HashCommand(const void *src, void *dst, SceSize size
 		context.dataCoherency = 0x3ffff;
 	context.command = command;
 	context.ivCoherency = 0x1ff01ff;
-	operation = ksceKernelDmaOpAlloc("SceSblDmac5Common");
+	operation = sceKernelDmaOpAlloc("SceSblDmac5Common");
 	if (operation < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 1418, "sceSblDmac5HashTransform",
 			"ctx init error (0x%08x)\n",
@@ -595,7 +595,7 @@ ivError:
 		ret = dmac5HashCrypt(&context, src, dst, size, flags, NULL);
 	}
 freeOperation:
-	ksceKernelDmaOpFree(context.operation);
+	sceKernelDmaOpFree(context.operation);
 	return ret;
 }
 

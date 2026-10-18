@@ -109,15 +109,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_030D447F
 	SceSysconForDriver_142D5E82
 	SceSysconForDriver_1546A141
-	ksceSysconCtrlDeviceReset
-	ksceSysconWaitInitialized
+	SceSysconForDriver_40FF3898
+	SceSysconForDriver_55DF1C9B
 	SceSysconForDriver_9B6B8BB9
 	SceSysconForDriver_9DA2A5AB
-	ksceSysconCmdExecAsync
+	SceSysconForDriver_C2224E82
 	SceSysconForDriver_C4A61241
-	ksceSysconGetHardwareInfo
-	ksceSysconGetTouchpanelDeviceInfo
-	ksceSysconGetBaryonVersion
+	SceSysconForDriver_CBD6D8BC
+	SceSysconForDriver_F492E69E
+	SceSysconForDriver_FF86F4C5
 	SceSysrootForKernel_EC3124A3
 )
 set(MODULE_IMPORT_VARS

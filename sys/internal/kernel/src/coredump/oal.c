@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <arm_neon.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -1029,9 +1029,9 @@ unsigned int oalGetUnixTime(void)
 	SceDateTime dateTime;
 	SceUInt32 unixTime[2];
 
-	ksceRtcGetCurrentTick(&tick);
-	ksceRtcConvertTickToDateTime(&dateTime, &tick);
-	ksceRtcConvertDateTimeToUnixTime(&dateTime, (SceUInt64 *)unixTime);
+	SceRtcForDriver_DEC408D4(&tick);
+	SceRtcForDriver_42A0DFCB(&dateTime, &tick);
+	SceRtcForDriver_497B5DC9(&dateTime, (SceUInt64 *)unixTime);
 	if (unixTime[1] != 0)
 		return (unsigned int)-1;
 	return unixTime[0];
@@ -4038,8 +4038,8 @@ int oalGetFrameBufferInfo(SceUID pid, unsigned int index,
 	SCE_DBG_ASSERT(pixelformat != NULL, 6527);
 	SCE_DBG_ASSERT(index <= 1, 6528);
 	info.size = sizeof(info);
-	result = ksceDisplayGetProcFrameBufInternal(pid,
-		ksceDisplayGetPrimaryHead(), index, &info);
+	result = SceDisplayForDriver_3BC165EF(pid,
+		SceDisplayForDriver_C8E554C5(), index, &info);
 	if (result == 0) {
 		*vblankcount = info.vblankcount;
 		*width = info.framebuf.width;
@@ -4057,8 +4057,8 @@ int oalGetFrameBuffer(SceUID pid, int index, void **base, unsigned int *pitch)
 	SCE_DBG_ASSERT(pitch != NULL, 6556);
 	SCE_DBG_ASSERT(base != NULL, 6557);
 	info.size = sizeof(info);
-	result = ksceDisplayGetProcFrameBufInternal(pid,
-		ksceDisplayGetPrimaryHead(), index, &info);
+	result = SceDisplayForDriver_3BC165EF(pid,
+		SceDisplayForDriver_C8E554C5(), index, &info);
 	if (result == 0) {
 		*base = info.framebuf.base;
 		*pitch = info.framebuf.pitch;
@@ -4074,8 +4074,8 @@ int oalGetFrameBufferDetails(SceUID pid, int index,
 	int result;
 
 	info.size = sizeof(info);
-	result = ksceDisplayGetProcFrameBufInternal(pid,
-		ksceDisplayGetPrimaryHead(), index, &info);
+	result = SceDisplayForDriver_3BC165EF(pid,
+		SceDisplayForDriver_C8E554C5(), index, &info);
 	if (result == 0) {
 		*vblankcount = info.vblankcount;
 		*width = info.framebuf.width;
@@ -4085,8 +4085,8 @@ int oalGetFrameBufferDetails(SceUID pid, int index,
 	if (result < 0)
 		return result;
 	info.size = sizeof(info);
-	result = ksceDisplayGetProcFrameBufInternal(pid,
-		ksceDisplayGetPrimaryHead(), index, &info);
+	result = SceDisplayForDriver_3BC165EF(pid,
+		SceDisplayForDriver_C8E554C5(), index, &info);
 	if (result == 0) {
 		*base = info.framebuf.base;
 		*pitch = info.framebuf.pitch;

@@ -106,10 +106,10 @@ int avConfigInitializeHdmiOutput(void)
 	if (avConfigConfiguration.settings.hdcpState == 1)
 		avConfigConfiguration.settings.hdcpState = 2;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-	ksceDisplaySetOutputMode(1, vic, fullRange);
-	ksceDisplaySetScaleConf(scale, 1, 0, flags);
-	ksceDisplaySetScaleConf(scale, 1, 1, flags);
-	ksceDisplayEnableHead(1);
+	SceDisplayForDriver_AF5EE5BE(1, vic, fullRange);
+	SceDisplayForDriver_EB390A76(scale, 1, 0, flags);
+	SceDisplayForDriver_EB390A76(scale, 1, 1, flags);
+	SceDisplayForDriver_496032D6(1);
 	audio.source = 1;
 	audio.coding = 1;
 	audio.channelCount = 2;
@@ -127,7 +127,7 @@ int avConfigInitializeHdmiOutput(void)
 
 int avConfigHdmiDisableHead(void)
 {
-	return ksceDisplayDisableHead(1);
+	return SceDisplayForDriver_43347565(1);
 }
 
 int avConfigHdmiWaitHdcp(int *state)
@@ -347,7 +347,7 @@ selectRange:
 		return (int)0x803a0101;
 	}
 	resolution.size = sizeof(resolution);
-	result = ksceDisplayGetResolutionInfoInternal(1, &resolution);
+	result = SceDisplayForDriver_B3C6D647(1, &resolution);
 	if (result != (int)0x80290009) {
 		if (result < 0) {
 			SCE_DBG_ASSERT_CHECK_LR(0, 578, lr);
@@ -366,7 +366,7 @@ selectRange:
 			break;
 		}
 		if ((unsigned int)outputVic != resolution.vic || resolution.mode != fullRange) {
-			result = ksceDisplayDisableHead(1);
+			result = SceDisplayForDriver_43347565(1);
 			if (result < 0)
 				goto error;
 		}
@@ -383,10 +383,10 @@ selectRange:
 		outputVic = -1;
 		break;
 	}
-	result = ksceDisplaySetOutputMode(1, outputVic, fullRange);
+	result = SceDisplayForDriver_AF5EE5BE(1, outputVic, fullRange);
 	if (result < 0)
 		goto error;
-	result = ksceDisplayEnableHead(1);
+	result = SceDisplayForDriver_496032D6(1);
 	if (result < 0)
 		goto error;
 	audio.sampleRate = 3;
@@ -465,9 +465,9 @@ int avConfigSetHdmiScalingRatio(const AvConfigScalingRatio *ratio)
 	if (ratio->size > sizeof(*ratio))
 		return (int)0x803a0101;
 	scale = (float)ratio->ratio / 1000000000.0f;
-	result = ksceDisplaySetScaleConf(scale, 1, 0, 1);
+	result = SceDisplayForDriver_EB390A76(scale, 1, 0, 1);
 	if (result >= 0)
-		return ksceDisplaySetScaleConf(scale, 1, 1, 1);
+		return SceDisplayForDriver_EB390A76(scale, 1, 1, 1);
 	return result;
 }
 

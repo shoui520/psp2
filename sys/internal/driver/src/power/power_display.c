@@ -17,13 +17,13 @@ int powerDisplayLedWorker(void)
 	uint32_t reason = s_powerDisplayState.ledReason;
 
 	if (reason == 1) {
-		ksceSysconCtrlDolceLED(0);
+		SceSysconForDriver_727F985A(0);
 	} else if (reason == 2) {
-		ksceSysconCtrlDolceLED(2);
+		SceSysconForDriver_727F985A(2);
 		sceKernelDelayThread(900000);
 		if (s_powerDisplayState.ledReason == 2) {
 			s_powerDisplayState.ledReason = 1;
-			ksceSysconCtrlDolceLED(0);
+			SceSysconForDriver_727F985A(0);
 		}
 	}
 	return 0;
@@ -45,9 +45,9 @@ int powerInitializeDisplayControl(void)
 		s_powerDisplayState.controllerIdleGate = 1;
 		s_powerDisplayState.ledWorkEnabled = 1;
 	}
-	kscePowerSetIdleCallback(1, 0x400, 45000000,
+	ScePowerForDriver_1BA2FCAE(1, 0x400, 45000000,
 				powerDisplayIdleDimOrReset, NULL);
-	kscePowerSetIdleCallback(2, 0x400, 60000000,
+	ScePowerForDriver_1BA2FCAE(2, 0x400, 60000000,
 				powerDisplayIdleExpired, NULL);
 	return 0;
 }
@@ -77,7 +77,7 @@ void powerRefreshDisplayBrightness(void)
 				continue;
 			brightness = powerGetDisplayHeadBrightness(head);
 			s_powerDisplayState.brightness[head] = brightness;
-			ksceDisplaySetBrightness(head, brightness);
+			SceDisplayForDriver_9E3C6DC6(head, brightness);
 		}
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
@@ -105,21 +105,21 @@ uint32_t powerSwitchDisplay(uint32_t enabled, uint32_t reason)
 	}
 	s_powerDisplayState.displayEnabled = enabled;
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && ksceDisplayGetPrimaryHead() != 1)
+		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
 			continue;
 		brightness = enabled ? powerGetDisplayHeadBrightness(head) : 0;
 		s_powerDisplayState.brightness[head] = brightness;
-		ksceDisplaySetBrightness(head, brightness);
+		SceDisplayForDriver_9E3C6DC6(head, brightness);
 	}
 	if (enabled) {
-		ksceCtrlUpdateMaskForAll(0, 0x0400ffff);
+		SceCtrlForDriver_12C13A72(0, 0x0400ffff);
 		ksceTouchSetEnableFlag(0, 1);
 		ksceTouchSetEnableFlag(1, 1);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 		powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_OFF, 0, POWER_CALLBACKARG_DISPLAY_ON);
-		kscePowerTick(0);
+		ScePowerForDriver_EFD3C963(0);
 	} else {
-		ksceCtrlUpdateMaskForAll(0x0400ffff, 0);
+		SceCtrlForDriver_12C13A72(0x0400ffff, 0);
 		ksceTouchSetEnableFlag(0, 0);
 		ksceTouchSetEnableFlag(1, 0);
 		ScePowerForDriver_660D5AB4(1);
@@ -149,19 +149,19 @@ void powerDisplayIdleExpired(uint32_t timerId, uint32_t elapsed,
 	if (!elapsed)
 		return;
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && ksceDisplayGetPrimaryHead() != 1)
+		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
 			continue;
 		if (!s_powerDisplayState.brightness[head])
 			continue;
 		s_powerDisplayState.brightness[head] = 0;
-		ksceDisplaySetBrightness(head, 0);
-		if (ksceDisplayGetPrimaryHead() == head)
+		SceDisplayForDriver_9E3C6DC6(head, 0);
+		if (SceDisplayForDriver_C8E554C5() == head)
 			primaryAffected = 1;
 	}
 	if (!primaryAffected)
 		return;
 	if ((s_powerDisplayState.controllerIdleGate &&
-	     !ksceCtrlGetActiveControllerPort()) || (kscePowerGetPowerSwMode() & 4))
+	     !SceCtrlForDriver_FA88D837()) || (ScePowerForDriver_165CE085() & 4))
 		powerSwitchDisplay(0, 2);
 	powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_ON, POWER_CALLBACKARG_DISPLAY_OFF, 0);
 }
@@ -178,31 +178,31 @@ void powerDisplayIdleDimOrReset(uint32_t timerId, uint32_t elapsed,
 	(void)elapsedHigh;
 	if (elapsed) {
 		for (head = 0; head < 3; head++) {
-			if (head == 1 && ksceDisplayGetPrimaryHead() != 1)
+			if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
 				continue;
 			if (s_powerDisplayState.brightness[head]) {
 				s_powerDisplayState.brightness[head] = 1;
-				ksceDisplaySetBrightness(head, 1);
+				SceDisplayForDriver_9E3C6DC6(head, 1);
 			}
 		}
 		return;
 	}
 	if (!s_powerDisplayState.displayEnabled) {
 		if ((s_powerDisplayState.controllerIdleGate &&
-		     !ksceCtrlGetActiveControllerPort()) ||
-		    (kscePowerGetPowerSwMode() & 4))
+		     !SceCtrlForDriver_FA88D837()) ||
+		    (ScePowerForDriver_165CE085() & 4))
 			return;
 		powerSwitchDisplay(1, 1);
 	}
 	for (head = 0; head < 3; head++) {
-		if (head == 1 && ksceDisplayGetPrimaryHead() != 1)
+		if (head == 1 && SceDisplayForDriver_C8E554C5() != 1)
 			continue;
 		brightness = powerGetDisplayHeadBrightness(head);
 		if (!s_powerDisplayState.brightness[head] &&
-		    ksceDisplayGetPrimaryHead() == head)
+		    SceDisplayForDriver_C8E554C5() == head)
 			primaryRestored = 1;
 		s_powerDisplayState.brightness[head] = brightness;
-		ksceDisplaySetBrightness(head, brightness);
+		SceDisplayForDriver_9E3C6DC6(head, brightness);
 	}
 	if (primaryRestored)
 		powerNotifyCallback(POWER_CALLBACKARG_DISPLAY_OFF, 0, POWER_CALLBACKARG_DISPLAY_ON);
@@ -211,12 +211,12 @@ void powerDisplayIdleDimOrReset(uint32_t timerId, uint32_t elapsed,
 /* Sony's internal name is unknown. */
 int powerTickInternalPredicate(void)
 {
-	if (s_powerDisplayState.controllerIdleGate && !ksceCtrlGetActiveControllerPort())
+	if (s_powerDisplayState.controllerIdleGate && !SceCtrlForDriver_FA88D837())
 		return 0;
-	return !(kscePowerGetPowerSwMode() & 4);
+	return !(ScePowerForDriver_165CE085() & 4);
 }
 
-int kscePowerSetDisplayBrightness(uint32_t brightness)
+int ScePowerForDriver_43D5CE1D(uint32_t brightness)
 {
 	uint32_t limit;
 	unsigned int head;
@@ -226,7 +226,7 @@ int kscePowerSetDisplayBrightness(uint32_t brightness)
 	s_powerDisplayState.requestedBrightness = brightness;
 	for (head = 0; head < 3; head++) {
 		if (head == 1) {
-			if (ksceDisplayGetPrimaryHead() != 1)
+			if (SceDisplayForDriver_C8E554C5() != 1)
 				continue;
 			limit = brightness;
 		} else {
@@ -237,12 +237,12 @@ int kscePowerSetDisplayBrightness(uint32_t brightness)
 		}
 		s_powerDisplayState.brightness[head] = limit;
 		if (s_powerDisplayState.displayEnabled)
-			ksceDisplaySetBrightness(head, limit);
+			SceDisplayForDriver_9E3C6DC6(head, limit);
 	}
 	return 0;
 }
 
-uint32_t kscePowerGetDisplayMaxBrightness(void)
+uint32_t ScePowerForDriver_D8759B55(void)
 {
 	uint32_t first, second;
 	int status;
@@ -255,7 +255,7 @@ uint32_t kscePowerGetDisplayMaxBrightness(void)
 	return status ? first : second;
 }
 
-int kscePowerSetDisplayMaxBrightness(uint32_t limit)
+int ScePowerForDriver_77027B6B(uint32_t limit)
 {
 	uint32_t requested, maximum, previous;
 	unsigned int head;
@@ -279,7 +279,7 @@ int kscePowerSetDisplayMaxBrightness(uint32_t limit)
 			continue;
 		s_powerDisplayState.brightness[head] = maximum;
 		if (s_powerDisplayState.displayEnabled)
-			ksceDisplaySetBrightness(head, maximum);
+			SceDisplayForDriver_9E3C6DC6(head, maximum);
 	}
 	return 0;
 }

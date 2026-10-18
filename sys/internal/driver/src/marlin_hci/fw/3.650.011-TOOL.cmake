@@ -74,7 +74,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_D909FA2C
 	SceKernelUtilsForDriver_E4390FFA
 	SceKernelUtilsForDriver_F12B6451
-	ksceRtcGetCurrentTick
+	SceRtcForDriver_DEC408D4
 	sceKernelDeleteMutex
 	sceKernelLockMutex
 	sceKernelUnlockMutex

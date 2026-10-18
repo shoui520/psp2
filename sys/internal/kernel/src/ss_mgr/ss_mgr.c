@@ -201,7 +201,7 @@ int ksceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 	SceKernelSuspendForDriver_4DF40893(0);
 	while (remaining) {
 		length = remaining < SS_NVS_CHUNK ? remaining : SS_NVS_CHUNK;
-		ret = ksceSysconNvsReadData(offset, chunk, length);
+		ret = SceSysconForDriver_ACAFA2B8(offset, chunk, length);
 		if (ret) {
 			SceKernelSuspendForDriver_2BB92967(0);
 			return ret;
@@ -241,7 +241,7 @@ int ksceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 	while (remaining) {
 		length = remaining < SS_NVS_CHUNK ? remaining : SS_NVS_CHUNK;
 		ssMemcpyChk(chunk, buffer, length);
-		ret = ksceSysconNvsWriteData(offset, chunk, length);
+		ret = SceSysconForDriver_10C9657A(offset, chunk, length);
 		if (ret) {
 			SceKernelSuspendForDriver_2BB92967(0);
 			return ret;

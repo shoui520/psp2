@@ -13,7 +13,7 @@
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <iofilemgr/iofilemgr.h>
@@ -299,7 +299,7 @@ static int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec)
 	e->rec.swVersionExtra = fw.versionExtra;
 	if (s_defaultFormatSet & 1)
 		e->rec.format = s_defaultFormat;
-	ksceRtcGetCurrentTick((SceRtcTick *)&e->tick);
+	SceRtcForDriver_DEC408D4((SceRtcTick *)&e->tick);
 	ErrorFormatCode(table, e->code, e->rec.code);
 
 	if (s_history.seq == 0)

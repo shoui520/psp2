@@ -69,11 +69,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_F4B98F66
 	SceQafMgrForDriver_382C71E8
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	SceSysconForDriver_CF5B2F2F
-	ksceRtcGetCurrentClockLocalTime
-	ksceDisplayGetFrameBufInternal
-	ksceDisplayGetPrimaryHead
+	sceRtcGetCurrentClockLocalTime
+	SceDisplayForDriver_19F94C63
+	SceDisplayForDriver_C8E554C5
 	SceCoredumpForDriver_10863B61
 	SceCoredumpForDriver_12392973
 	SceCoredumpForDriver_13EF8516

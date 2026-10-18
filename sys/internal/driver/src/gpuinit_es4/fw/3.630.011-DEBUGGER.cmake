@@ -67,7 +67,7 @@ set(MODULE_IMPORT_FUNCS
 	PVRSRVEnumerateDevicesKM
 	ksceGpuMmuMapMemory
 	SceDebugForDriver_391B74B7
-	kscePervasiveGetSoCRevision
+	ScePervasiveForDriver_714EEFB7
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9

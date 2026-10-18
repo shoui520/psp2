@@ -183,17 +183,17 @@ set(MODULE_IMPORT_FUNCS
 	sceDeci2pTermForCompat
 	SceDeci2pForDriver_F6427E0F
 	ksceIdStorageLookup
-	ksceDisplaySetFrameBuf
+	SceDisplayForDriver_289D82FE
 	SceDisplayForDriver_332C5410
-	ksceDisplaySetColorSpaceMode
-	ksceDisplayGetDeviceType
-	ksceDisplayGetResolutionInfoInternal
-	ksceDisplayGetPrimaryHead
+	SceDisplayForDriver_8D79D187
+	SceDisplayForDriver_8D9A1CCE
+	SceDisplayForDriver_B3C6D647
+	SceDisplayForDriver_C8E554C5
 	SceHpremoteForDriver_7E69EDA4
 	scePowerGetBatteryLifePercent
 	scePowerIsSuspendRequired
 	scePowerGetBatteryLifeTime
-	kscePowerSetCompatClockFrequency
+	ScePowerForDriver_FFC84E69
 	ksceNpDrmReadActData
 	ksceNpDrmGetRifPspKey
 	ksceNpDrmGetRifInfo
@@ -202,8 +202,8 @@ set(MODULE_IMPORT_FUNCS
 	SceGrabForDriver_E9C25A28
 	SceGrabForDriver_F13C63DD
 	SceRtcForDriver_0CB72FAF
-	ksceRtcGetCurrentSecureTick
-	ksceRtcGetCurrentTick
+	SceRtcForDriver_401C0954
+	SceRtcForDriver_DEC408D4
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

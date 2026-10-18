@@ -46,11 +46,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	ScePervasiveForDriver_925D9D24
-	ksceI2cTransferWriteRead
-	ksceI2cTransferWrite
+	SceI2cForDriver_0A40B7BF
+	SceI2cForDriver_CA94A759
 	SceClockgenForDriver_5130682D
-	ksceSysconGetHardwareInfo2
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_965C68C3
+	SceSysconForDriver_CBD6D8BC
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -100,9 +100,9 @@ set(MODULE_IMPORT_FUNCS
 	kscePsmDrmRemoveActData
 	kscePsmDrmGetActInfo
 	kscePsmDrmWriteActData
-	ksceRtcGetCurrentSecureTick
-	ksceRtcConvertTickToDateTime
-	ksceRtcSetCurrentSecureTick
+	SceRtcForDriver_401C0954
+	SceRtcForDriver_42A0DFCB
+	SceRtcForDriver_7D431C87
 	SceRtcForDriver_9C8AF264
 	ksceIdStorageLookup
 	ksceSdifReadCmd56

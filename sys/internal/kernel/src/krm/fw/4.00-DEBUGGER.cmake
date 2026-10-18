@@ -78,7 +78,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	ksceRtcGetCurrentNetworkTick
+	SceRtcForDriver_F1517B38
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

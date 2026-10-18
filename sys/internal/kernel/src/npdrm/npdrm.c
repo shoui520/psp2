@@ -1054,7 +1054,7 @@ int ksceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license,
 		}
 	}
 	if (expirationTime == 0x7fffffffffffffffULL &&
-		(ksceRtcGetCurrentSecureTick(&value.currentTime) ||
+		(SceRtcForDriver_401C0954(&value.currentTime) ||
 		value.currentTime.tick < startTime)) {
 		license->flags |= 0x0100000000000000ULL;
 		result = NpDrmVerifyRifSignature(license, 1);

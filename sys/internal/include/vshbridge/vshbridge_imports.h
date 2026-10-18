@@ -10,7 +10,7 @@
 #include <psp2kern/types.h>
 #include <idstorage/idstorage.h>
 #include <sdif/sdif.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
@@ -24,11 +24,12 @@
 #include <processmgr/processmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/display.h>
+#include <display/display.h>
 #include <acmgr/acmgr.h>
 
 #include <sysmem/pmmgr.h>
 #include <sysmem/debug.h>
+#include <ctrl/ctrl.h>
 typedef SceUInt64 SceRtcTick;
 
 /* sysroot, threads, modules */
@@ -76,38 +77,29 @@ int ksceIdStorageFlush(void);
 int ksceIdStorageRestart(int unk);
 
 /* Syscon, LED, power */
-int kscePowerSetBatteryFakeStatus(const void *status);
+int ScePowerForDriver_0C6973B8(const void *status);
 
 /* Rtc */
-int ksceRtcSetConf(void *a, void *b, void *c, void *d);
-int ksceRtcSetCurrentTick(const SceRtcTick *tick);
-int ksceRtcSetCurrentSecureTick(const SceRtcTick *tick);
-int ksceRtcGetCurrentSecureTick(SceRtcTick *tick);
-int ksceRtcSetCurrentNetworkTick(const SceRtcTick *tick);
-int ksceRtcSetCurrentDebugNetworkTick(const SceRtcTick *tick);
-int ksceRtcSetAlarmTick(const SceRtcTick *tick, int unk);
-int ksceRtcGetAlarmTick(SceRtcTick *tick, int *unk);
-int ksceRtcIsAlarmed(void);
-int ksceRtcRegisterCallback(SceUID cb);
-int ksceRtcUnregisterCallback(SceUID cb);
-int ksceRtcSetSecureAlarmTick(const SceRtcTick *tick);
-int ksceRtcGetSecureAlarmTick(SceRtcTick *tick);
-int ksceRtcIsSecureAlarmed(void);
-int ksceRtcRegisterSecureAlarmCallback(SceUID cb);
-int ksceRtcUnregisterSecureAlarmCallback(SceUID cb);
+int SceRtcForDriver_ACFE5A9F(void *a, void *b, void *c, void *d);
+int sceRtcSetCurrentTick(const SceRtcTick *tick);
+int SceRtcForDriver_7D431C87(const SceRtcTick *tick);
+int SceRtcForDriver_401C0954(SceRtcTick *tick);
+int SceRtcForDriver_162E486E(const SceRtcTick *tick);
+int SceRtcForDriver_AAB6053F(const SceRtcTick *tick);
+int sceRtcSetAlarmTick(const SceRtcTick *tick, int unk);
+int SceRtcForDriver_C838275A(SceRtcTick *tick, int *unk);
+int SceRtcForDriver_CD295F0C(void);
+int SceRtcForDriver_5220870D(SceUID cb);
+int SceRtcForDriver_9546C68B(SceUID cb);
+int SceRtcForDriver_8333790D(const SceRtcTick *tick);
+int SceRtcForDriver_BD53731C(SceRtcTick *tick);
+int SceRtcForDriver_E39F2ABE(void);
+int SceRtcForDriver_CF84DFC0(SceUID cb);
+int SceRtcForDriver_EDDC2325(SceUID cb);
 
 /* Display, Ctrl, Motion, Touch, Hdmi */
-int ksceDisplaySetViewportConf(int head, const void *conf, int unk);
-int ksceDisplayGetActualViewportConf(int head, void *conf, int unk);
-int ksceCtrlSetIdleCancelKey(int a, int b, int c, int d);
-int ksceCtrlSetIdleCancelThreshold(int a, int b);
-int ksceCtrlSetVibrationSetting(int setting);
-int ksceCtrlSetTurnOffInterval(int interval);
-int ksceCtrlGetActiveControllerPort(void);
-int ksceCtrlIsBdRemoconConnected(void);
-int ksceCtrlChangePortAssign(int a, int b);
-int ksceCtrlRegisterNotifyCallBack(SceUID cb);
-int ksceCtrlUnregisterNotifyCallBack(SceUID cb);
+int SceDisplayForDriver_EE5EB52D(int head, const void *conf, int unk);
+int SceDisplayForDriver_40ACFE51(int head, void *conf, int unk);
 int ksceMotionDevNoiseFilterIsAvailable(void);
 int ksceTouchSetTouchEmulationData(const void *front, const void *back);
 int sceHdmiCecEnableCec(void);

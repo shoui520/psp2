@@ -4,7 +4,7 @@
  * the remaining internal names describe their observed responsibilities.
  */
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
@@ -47,10 +47,10 @@ static int pampDmacMemcpy(void *dst, const void *src, SceUInt32 size)
 	if ((SceUInt32)((SceUIntPtr)dst - (SceUIntPtr)src) < size ||
 	    (SceUInt32)((SceUIntPtr)src - (SceUIntPtr)dst) < size)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	op = ksceKernelDmaOpAlloc("pampDmacMemcpy");
+	op = sceKernelDmaOpAlloc("pampDmacMemcpy");
 	if (op < 0)
 		return op;
-	ret = ksceKernelDmaOpAssign(op, SCE_KERNEL_DMAC_ID_DMAC01, 0);
+	ret = sceKernelDmaOpAssign(op, SCE_KERNEL_DMAC_ID_DMAC01, 0);
 	if (ret >= 0) {
 		param.src = src;
 		param.dst = dst;
@@ -58,17 +58,17 @@ static int pampDmacMemcpy(void *dst, const void *src, SceUInt32 size)
 		param.cmd = SCE_KERNEL_DMAC_CMD_COHERENT_DST | 0x3000 | SCE_KERNEL_DMAC_CMD_OP_COPY;
 		param.blockSize = 0;
 		param.coherencyMask = SCE_KERNEL_DMAC_COHERENCY_MSK_SRC_DST_MASK;
-		ret = ksceKernelDmaOpSetupDirect(op, &param, SCE_KERNEL_DMA_OP_VIRTUAL_ADDR);
+		ret = _DmaOpSetupDirect(op, &param, SCE_KERNEL_DMA_OP_VIRTUAL_ADDR);
 		if (ret >= 0)
-			ret = ksceKernelDmaOpEnQueue(op);
+			ret = sceKernelDmaOpEnQueue(op);
 		if (ret >= 0)
-			ret = ksceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, 0, NULL);
+			ret = sceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, 0, NULL);
 		if (ret >= 0) {
-			ret = ksceKernelDmaOpFree(op);
+			ret = sceKernelDmaOpFree(op);
 			return ret < 0 ? ret : (int)size;
 		}
 	}
-	ksceKernelDmaOpFree(op);
+	sceKernelDmaOpFree(op);
 	return ret;
 }
 

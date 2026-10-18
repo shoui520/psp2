@@ -71,7 +71,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSsDecryptWithPortability
 	ksceSblAimgrGetOpenPsId
 	ksceSblRngGenuineRandomNumber
-	ksceRtcGetCurrentNetworkTick
+	SceRtcForDriver_F1517B38
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

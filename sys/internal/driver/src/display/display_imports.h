@@ -6,14 +6,12 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/lowio/iftu.h>
 #include <oled/oled.h>
 #include <lcd/lcd.h>
 #include <sysmem/sysmem.h>
 #include <lowio/dsi.h>
 #include <lowio/iftu.h>
-#include <psp2kern/lowio/dsi.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/utils.h>

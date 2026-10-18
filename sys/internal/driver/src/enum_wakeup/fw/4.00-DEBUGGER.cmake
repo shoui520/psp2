@@ -204,13 +204,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_4F64DEF6
 	ScePervasiveForDriver_51981FEE
 	ScePervasiveForDriver_821AE6C7
-	kscePervasiveDsiSetPixelClock
+	ScePervasiveForDriver_91C80C41
 	ScePervasiveForDriver_A3CF9844
 	ScePervasiveForDriver_B8AF1249
 	ScePervasiveForDriver_E0711D42
 	ScePervasiveForDriver_F861FEE4
-	ksceGpioSetPortMode
-	ksceGpioPortSet
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
 	SceClockgenForDriver_5130682D
 	SceClockgenForDriver_82F39378
 	ksceClockgenWlanBtClkDisable
@@ -219,34 +219,34 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_3FDD29D6
 	SceSysconForDriver_A2FE9BF9
 	SceSysconForDriver_CF5B2F2F
-	ksceSysconSendCommand
+	SceSysconForDriver_E26488B9
 	SceOledForDriver_3C990F53
 	ksceOledSetBrightness
 	ksceLcdSetBrightness
 	SceLcdForDriver_8C965153
-	ksceDisplaySetFrameBufInternal
-	ksceDisplayDisableHead
-	ksceDisplayWaitVblankStartCB
-	ksceDisplayWaitVblankStart
-	ksceDisplaySetOutputMode
-	ksceCtrlReadBufferPositive
+	SceDisplayForDriver_16466675
+	SceDisplayForDriver_43347565
+	SceDisplayForDriver_46F186C3
+	SceDisplayForDriver_984C27E7
+	SceDisplayForDriver_AF5EE5BE
+	SceCtrlForDriver_9B96A1AA
 	SceCtrlForDriver_FF9D4DD4
 	SceMotionDevForDriver_031AF7A1
 	ksceMotionDevIsReady
 	SceHpremoteForDriver_7735C403
-	ksceLedSetMode
+	SceLedForDriver_EA24BE03
 	scePowerRequestColdReset
 	scePowerIsBatteryExist
-	kscePowerSetPowerSwMode2
+	ScePowerForDriver_0CD21B1F
 	scePowerGetBatteryLifePercent
-	kscePowerSetGpuClockFrequencyInternal
+	ScePowerForDriver_264C24FC
 	scePowerRequestStandby
 	scePowerSetArmClockFrequency
 	scePowerSetGpuXbarClockFrequency
 	scePowerSetBusClockFrequency
-	kscePowerSetCameraBusClockFrequency
+	ScePowerForDriver_C743E392
 	scePowerCancelRequest
-	kscePowerBatterySetUsbStatus
+	ScePowerForDriver_E4E3C316
 	SceUdcdForDriver_2D91F8C3
 	ksceUdcdGetDeviceState
 	SceMtpIfForDriver_05408B5B

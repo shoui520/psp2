@@ -1,16 +1,7 @@
 /* SceSdstor interrupt and control handling (Sony source: sdctrl.c). */
 #include <sysmem/sysroot.h>
 #include "sdstor_internal.h"
-/* VFS carries SDK opaque mutex declarations; keep our complete owner ABI. */
-#define sceKernelInitializeFastMutex ksceKernelInitializeFastMutex_vitasdk
-#define sceKernelFinalizeFastMutex ksceKernelFinalizeFastMutex_vitasdk
-#define lockFastMutex ksceKernelLockFastMutex_vitasdk
-#define sceKernelUnlockFastMutex ksceKernelUnlockFastMutex_vitasdk
 #include <iofilemgr/vfs.h>
-#undef sceKernelInitializeFastMutex
-#undef sceKernelFinalizeFastMutex
-#undef lockFastMutex
-#undef sceKernelUnlockFastMutex
 #include <intrmgr/intrmgr.h>
 #include <sysmem/debug.h>
 #include <sdstor/mbr.h>

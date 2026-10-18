@@ -2740,7 +2740,7 @@ int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha)
 	g_appmgrDisplayMergeSetting = setting;
 	g_appmgrDisplayMergeAlpha = alpha;
 #endif
-	mergeResult = ksceDisplaySetMergeConf(0, setting, alpha);
+	mergeResult = SceDisplayForDriver_6B198052(0, setting, alpha);
 	if (mergeResult < 0) {
 		g_appmgrMainMutexOwner = -1;
 		result = sceKernelUnlockMutex(g_appmgrMainMutex, 1);
@@ -2757,7 +2757,7 @@ int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha)
 		}
 		return mergeResult;
 	}
-	mergeResult = ksceDisplaySetMergeConf(1, g_appmgrDisplayMergeSetting,
+	mergeResult = SceDisplayForDriver_6B198052(1, g_appmgrDisplayMergeSetting,
 		g_appmgrDisplayMergeAlpha);
 	g_appmgrMainMutexOwner = -1;
 	if (mergeResult < 0) {

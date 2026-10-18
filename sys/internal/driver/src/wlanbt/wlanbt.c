@@ -69,7 +69,7 @@ int module_start(SceSize arglen, const void *argp)
 	result = ksceSblSsGetNvsData(1, &availability, 1);
 	if (result < 0)
 		return result;
-	if ((ksceSysconGetHardwareInfo() & 0xff0000u) < 0x400000) {
+	if ((SceSysconForDriver_CBD6D8BC() & 0xff0000u) < 0x400000) {
 		if (availability != 0) {
 			if (availability == 1) {
 				gWlanBtConfig.available = 0;
@@ -125,10 +125,10 @@ void wlanBtPowerOnDevice(void)
 			sceKernelDelayThread(5000);
 			result = SceSysconForDriver_A2E85DB9(1);
 			if (result >= 0) {
-				result = ksceSysconCtrlDeviceReset(16, 0);
+				result = SceSysconForDriver_40FF3898(16, 0);
 				if (result >= 0) {
 					sceKernelDelayThread(10000);
-					result = ksceSysconCtrlDeviceReset(16, 1);
+					result = SceSysconForDriver_40FF3898(16, 1);
 					if (result >= 0)
 						sceKernelDelayThread(10000);
 				}
@@ -142,7 +142,7 @@ void wlanBtPowerDownDevice(void)
 {
 	int result;
 
-	ksceSysconCtrlDeviceReset(16, 0);
+	SceSysconForDriver_40FF3898(16, 0);
 	SceSysconForDriver_A2E85DB9(0);
 	result = ksceClockgenWlanBtClkDisable();
 	sceKernelDelayThread(500000);
@@ -195,7 +195,7 @@ void wlanBtCompleteWakeWait(void)
 	} else {
 		int result;
 
-		ksceSysconCtrlDeviceReset(16, 0);
+		SceSysconForDriver_40FF3898(16, 0);
 		SceSysconForDriver_A2E85DB9(0);
 		result = ksceClockgenWlanBtClkDisable();
 		sceKernelDelayThread(500000);
@@ -233,7 +233,7 @@ int ksceWlanBtSetConfiguration(int request)
 
 	lockResult = lockFastMutex(&gWlanBtConfig.mutex);
 	SCE_DBG_ASSERT_FUNC(lockResult == 0, 446, "sceWlanBtSetConfiguration");
-	if (ksceSysconIsDownLoaderMode()) {
+	if (SceSysconForDriver_9ADD60D2()) {
 		result = 0x80418004;
 		goto done;
 	}

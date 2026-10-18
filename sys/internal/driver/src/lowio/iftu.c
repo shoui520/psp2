@@ -11,6 +11,7 @@
 #include <lowio/iftu.h>
 #include <lowio/iftu_regs.h>
 #include <sysmem/sysevent.h>
+#include <lowio/pervasive.h>
 
 #define IFTU_PLANE_COUNT	4	/* IFTU0 A/B, IFTU1 A/B */
 #define IFTU_CONVERTER		4	/* IFTU2 */
@@ -25,7 +26,7 @@ enum IftuState {
 
 #define IFTU_PENDING_FILTER	0x40000000
 
-/* What a display plane scans out to (ksceIftuSetOutputFormat). */
+/* What a display plane scans out to (SceIftuForDriver_E6EE2C6B). */
 typedef struct IftuOutput {
 	uint32_t width;
 	uint32_t height;
@@ -63,10 +64,6 @@ _Static_assert(sizeof(IftuPlane) == 0x214, "IFTU plane context");
 
 static IftuPlane s_iftuPlanes[5];
 static SceKernelFastMutex s_iftuFastMutex;
-
-int ScePervasiveForDriver_07F2A738(void);
-int ScePervasiveForDriver_E92E28FF(void);
-int ScePervasiveForDriver_5AFE0AF0(void);
 
 static inline void IftuLoadCsc2(volatile SceIftuRegisters *regs,
 	const SceIftuCscParams *csc)
@@ -300,7 +297,7 @@ int SceIftuForDriver_D64F4C6B(unsigned int index, SceIftuCscParams *param)
 	return 0;
 }
 
-int ksceIftuSetOutputFormat(int index, unsigned int width,
+int SceIftuForDriver_E6EE2C6B(int index, unsigned int width,
 	unsigned int height, unsigned int pixelFormat, unsigned int planeEnable)
 {
 	IftuPlane *plane;
@@ -366,7 +363,7 @@ static inline __attribute__((always_inline)) int IftuValidSourceFormat(uint32_t 
 	return 0;
 }
 
-int ksceIftuSetInputFrameBuffer(unsigned int index, SceIftuPlaneState *state,
+int SceIftuForDriver_7CE0C4DA(unsigned int index, SceIftuPlaneState *state,
 	int bilinear, int sync)
 {
 	IftuPlane *plane;
@@ -469,7 +466,7 @@ int SceIftuForDriver_357EAE24(unsigned int index, unsigned int alpha)
 	return 0;
 }
 
-int ksceIftuSetMergeSetting(unsigned int index, int setting)
+int SceIftuForDriver_AF19FD85(unsigned int index, int setting)
 {
 	IftuPlane *plane;
 	volatile SceIftucRegisters *control;
@@ -494,7 +491,7 @@ int ksceIftuSetMergeSetting(unsigned int index, int setting)
 	return 0;
 }
 
-int ksceIftuEnable(unsigned int index)
+int SceIftuForDriver_0D7C02F7(unsigned int index)
 {
 	IftuPlane *plane;
 	volatile SceIftuRegisters *regs;
@@ -573,7 +570,7 @@ int ksceIftuEnable(unsigned int index)
 	return 0;
 }
 
-int ksceIftuDisable(unsigned int index)
+int SceIftuForDriver_C11F30B3(unsigned int index)
 {
 	IftuPlane *plane;
 	uint32_t intr;
@@ -588,7 +585,7 @@ int ksceIftuDisable(unsigned int index)
 	return 0;
 }
 
-int ksceIftuCsc(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
+int SceIftuForDriver_67E37EFC(SceIftuFrameBuf *dst, SceIftuPlaneState *src,
 	SceIftuConvParams *params)
 {
 	IftuPlane *converter = &s_iftuPlanes[IFTU_CONVERTER];

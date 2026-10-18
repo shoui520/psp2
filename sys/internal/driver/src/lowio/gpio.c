@@ -6,6 +6,7 @@
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
+#include <lowio/pervasive.h>
 
 #define GPIO_ERROR_BANK ((int)0x803f0100)
 #define GPIO_ERROR_PORT ((int)0x803f0101)
@@ -27,7 +28,7 @@ typedef struct GpioContext {
 _Static_assert(sizeof(GpioContext) == 0x4c, "GPIO context layout");
 static GpioContext s_gpio[2];
 
-int ksceGpioPortRead(unsigned bank, unsigned port)
+int SceGpioForDriver_129DF5AC(unsigned bank, unsigned port)
 {
 	GpioContext *ctx;
 	uint32_t value;
@@ -42,7 +43,7 @@ int ksceGpioPortRead(unsigned bank, unsigned port)
 	return value >> port & 1;
 }
 
-int ksceGpioPortSet(unsigned bank, unsigned port)
+int SceGpioForDriver_D454A584(unsigned bank, unsigned port)
 {
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
@@ -54,7 +55,7 @@ int ksceGpioPortSet(unsigned bank, unsigned port)
 	return 0;
 }
 
-int ksceGpioPortClear(unsigned bank, unsigned port)
+int SceGpioForDriver_F6310435(unsigned bank, unsigned port)
 {
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
@@ -66,7 +67,7 @@ int ksceGpioPortClear(unsigned bank, unsigned port)
 	return 0;
 }
 
-int ksceGpioPortReset(unsigned bank, unsigned port)
+int SceGpioForDriver_A1B5A462(unsigned bank, unsigned port)
 {
 	GpioContext *ctx;
 	volatile SceGpioRegisters *base;
@@ -89,7 +90,7 @@ int ksceGpioPortReset(unsigned bank, unsigned port)
 	return previous >> port & 1;
 }
 
-int ksceGpioSetPortMode(unsigned bank, unsigned port, unsigned mode)
+int SceGpioForDriver_372022A4(unsigned bank, unsigned port, unsigned mode)
 {
 	GpioContext *ctx;
 	volatile SceGpioRegisters *base;
@@ -113,7 +114,7 @@ int ksceGpioSetPortMode(unsigned bank, unsigned port, unsigned mode)
 	return (previous & bit) == 0;
 }
 
-int ksceGpioGetPortMode(unsigned bank, unsigned port)
+int SceGpioForDriver_C4CB78E2(unsigned bank, unsigned port)
 {
 	if (bank >= 2)
 		return GPIO_ERROR_BANK;
@@ -122,7 +123,7 @@ int ksceGpioGetPortMode(unsigned bank, unsigned port)
 	return (s_gpio[bank].portMode & (1U << port)) == 0;
 }
 
-int ksceGpioSetIntrMode(unsigned bank, unsigned port, unsigned mode)
+int SceGpioForDriver_BBEA1DDC(unsigned bank, unsigned port, unsigned mode)
 {
 	GpioContext *ctx;
 	volatile SceGpioRegisters *base;
@@ -158,7 +159,7 @@ int ksceGpioSetIntrMode(unsigned bank, unsigned port, unsigned mode)
 	return 0;
 }
 
-int ksceGpioGetIntrMode(unsigned bank, unsigned port)
+int SceGpioForDriver_E97A3B31(unsigned bank, unsigned port)
 {
 	GpioContext *ctx;
 	uint32_t mode;
@@ -175,7 +176,7 @@ int ksceGpioGetIntrMode(unsigned bank, unsigned port)
 	return mode & 3;
 }
 
-int ksceGpioQueryIntr(unsigned bank, unsigned port)
+int SceGpioForDriver_010DC295(unsigned bank, unsigned port)
 {
 	GpioContext *ctx;
 	uint32_t pending;
@@ -193,7 +194,7 @@ int ksceGpioQueryIntr(unsigned bank, unsigned port)
 	return (pending & (1U << port)) != 0;
 }
 
-int ksceGpioAcquireIntr(unsigned bank, unsigned port)
+int SceGpioForDriver_35AAD77A(unsigned bank, unsigned port)
 {
 	GpioContext *ctx;
 	volatile SceGpioRegisters *base;
@@ -224,8 +225,6 @@ int ksceGpioAcquireIntr(unsigned bank, unsigned port)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, state);
 	return ret;
 }
-
-int kscePervasiveGpioClockEnable(void);
 
 /* The GPIO block and gate an interrupt code belongs to; -1 for other codes. */
 static inline int GpioIntrContext(int intrCode, GpioContext **ctx, unsigned *gate)
@@ -408,7 +407,7 @@ static int GpioSysEvent(int resume, int event, void *args, void *opt)
 	if (resume != 1)
 		return 0;
 	if (event == 0x10002) {
-		kscePervasiveGpioClockEnable();
+		ScePervasiveForDriver_2F195C97();
 		for (bank = 0; bank < 2; bank++) {
 			ctx = &s_gpio[bank];
 			ctx->portMode = ctx->base->portMode;
@@ -497,7 +496,7 @@ static __attribute__((noinline)) int GpioInit(void)
 				intr->targetCpu, &s_gpioIntrOpt);
 		}
 	}
-	kscePervasiveGpioClockEnable();
+	ScePervasiveForDriver_2F195C97();
 	for (bank = 0; bank < 2; bank++) {
 		ctx = &s_gpio[bank];
 		ctx->excludedPorts = 0;

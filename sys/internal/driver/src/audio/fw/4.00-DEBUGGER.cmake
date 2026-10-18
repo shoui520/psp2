@@ -138,14 +138,14 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterSysEventHandler
-	ksceKernelDmaOpQuit
-	ksceKernelDmaOpSetupChain
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpConcatenate
-	ksceKernelDmaOpSetCallback
-	ksceKernelDmaOpAssign
+	sceKernelDmaOpQuit
+	sceKernelDmaOpSetupChain
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpConcatenate
+	sceKernelDmaOpSetCallback
+	sceKernelDmaOpAssign
 	sceKernelRegisterProcEventHandler
 	SceSblACMgrForDriver_6C5AB07F
 	sceSblACMgrIsSystemProgram

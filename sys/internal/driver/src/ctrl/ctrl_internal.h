@@ -144,7 +144,7 @@ struct ctrlStorage {
 	uint32_t accumulatedButtons;
 	struct ctrlAccumulatedAxis accumulatedAxes[4];
 	uint32_t otherPortButtons;
-	void (*ctrlpCallback)(int port, struct ctrlNativeSample *sample, int mode);
+	int (*ctrlpCallback)(SceUInt32 port, struct ctrlNativeSample *sample, int mode);
 	const SceCtrlVirtualControllerDriver *virtualDriver;
 	uint32_t hdmiRemoconAvailable;
 	int32_t bdRemoconCallbacks[16];

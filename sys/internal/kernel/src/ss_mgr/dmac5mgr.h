@@ -1,7 +1,7 @@
 /* DMAC5 operation state shared by the manager and its keyring helpers. */
 #pragma once
 #include <stdint.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 
 /* Name unknown: the first 40 bytes hold an IV or incremental hash state. */
 typedef struct Dmac5Context {

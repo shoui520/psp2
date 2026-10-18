@@ -10,7 +10,7 @@
 #include <sysmem/debug.h>
 #include <lowio/pervasive.h>
 #include <lowio/pwm.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include <syscon/syscon.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>

@@ -165,12 +165,12 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
-	ksceKernelDmaOpSetupChain
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpFree
-	ksceKernelDmaOpAssign
+	sceKernelDmaOpSetupChain
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpFree
+	sceKernelDmaOpAssign
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_00ED6C14
 	SceSysmemForDriver_04059C4B
@@ -216,9 +216,9 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_E2D8F6C3
 	ScePervasiveForDriver_EBE9C84E
 	ScePervasiveForDriver_FB01A2DD
-	kscePowerSetVeneziaClockFrequency
-	kscePowerGetVeneziaClockFrequency
-	kscePowerSetVipClockFrequency
+	ScePowerForDriver_621BD8FD
+	ScePowerForDriver_64641E6A
+	ScePowerForDriver_E5573571
 	SceSysrootForDriver_483EF108
 	SceSysrootForDriver_49843C16
 	sceKernelApiDeclareTypeUInt32

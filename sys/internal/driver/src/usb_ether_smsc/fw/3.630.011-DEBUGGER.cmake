@@ -106,10 +106,10 @@ set(MODULE_IMPORT_FUNCS
 	ksceUsbdGetDeviceSpeed
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
-	ksceSysconCtrlDolceUsbPower
-	ksceSysconCtrlDeviceReset
-	ksceSysconIsDownLoaderMode
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_3274A925
+	SceSysconForDriver_40FF3898
+	SceSysconForDriver_9ADD60D2
+	SceSysconForDriver_CBD6D8BC
 	ksceUsbServMacSelect
 	ksceIdStorageLookup
 )

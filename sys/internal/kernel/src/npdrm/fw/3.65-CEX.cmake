@@ -192,7 +192,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblAimgrGetConsoleId
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
-	ksceRtcGetCurrentSecureTick
+	SceRtcForDriver_401C0954
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

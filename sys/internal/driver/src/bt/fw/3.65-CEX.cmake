@@ -165,7 +165,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyInt
 	ksceWlanBtGetConfiguration
 	ksceWlanBtSetConfiguration
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

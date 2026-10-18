@@ -95,13 +95,13 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_D34E74C5
 	ScePervasiveForDriver_EDCA3961
 	ScePervasiveForDriver_F345FB53
-	ksceKernelDmaOpSetupChain
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpDeQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpFree
-	ksceKernelDmaOpAssign
+	sceKernelDmaOpSetupChain
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpDeQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpFree
+	sceKernelDmaOpAssign
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

@@ -34,11 +34,11 @@ int PVRSRVOpen(void)
 	if (PVRSRVProcessConnect(OSGetCurrentProcessIDKM(), 0) != PVRSRV_OK) {
 		result = -1;
 	} else {
-		result = kscePowerGetGpuClockFrequencyProc(0);
+		result = ScePowerForDriver_642E0AF2(0);
 		if (result != 0)
 			result = 0;
 		else
-			kscePowerSetGpuClockFrequencyProc(0, 111);
+			ScePowerForDriver_B104EFE2(0, 111);
 	}
 	LinuxUnLockMutex(&gPVRSRVLock);
 	sceSyscallLeave(context);

@@ -17,10 +17,10 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/dmac.h>
-#include <psp2kern/kernel/systimer.h>
+#include <dmacmgr/dmacmgr.h>
+#include <systimer/systimer.h>
 #include <display/display.h>
-#include <psp2kern/lowio/iftu.h>
+#include <lowio/iftu.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
@@ -279,7 +279,7 @@ set:
 	if (h->iftuPlane[plane] == -1) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	} else {
-		ret = ksceIftuSetInputFrameBuffer(h->iftuPlane[plane], &state,
+		ret = SceIftuForDriver_7CE0C4DA(h->iftuPlane[plane], &state,
 						  (flags >> 20) & 1, sync);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 		if (ret < 0)
@@ -408,25 +408,25 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 	if (heads[head].dsiEnabled)
 		return 0;
 	if (bus == 1) {
-		ret = ksceDsiSetLanesAndPixelSize(1, 3, heads[head].pixelSize);
+		ret = SceDsiForDriver_78E6E3CF(1, 3, heads[head].pixelSize);
 		if (ret < 0)
 			return ret;
-		ret = ksceDsiSetVic(1, heads[head].vic);
+		ret = SceDsiForDriver_97BFEA76(1, heads[head].vic);
 	} else {
-		ret = ksceDsiSetVic(bus, heads[head].vic);
+		ret = SceDsiForDriver_97BFEA76(bus, heads[head].vic);
 	}
 	if (ret < 0)
 		return ret;
-	ret = kscePervasiveDsiSetPixelClock(bus, ksceDsiGetPixelClock(bus));
+	ret = ScePervasiveForDriver_91C80C41(bus, SceDsiForDriver_4DF9E924(bus));
 	if (ret < 0)
 		return ret;
-	ret = kscePervasiveDsiClockEnable(bus, 0xf);
+	ret = ScePervasiveForDriver_BC42C72F(bus, 0xf);
 	if (ret < 0)
 		return ret;
-	ret = kscePervasiveDsiResetDisable(bus, 7);
+	ret = ScePervasiveForDriver_FFB43AC2(bus, 7);
 	if (ret < 0)
 		return ret;
-	ret = ksceDsiEnableHead(bus);
+	ret = SceDsiForDriver_5BE5AA9B(bus);
 	if (ret < 0)
 		return ret;
 
@@ -434,15 +434,15 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 	for (i = 0; i < DISPLAY_PLANE_COUNT; i++) {
 		int plane = h->iftuPlane[i];
 
-		ret = ksceIftuSetOutputFormat(plane, h->width, h->height, h->outputFormat, h->interlaced);
+		ret = SceIftuForDriver_E6EE2C6B(plane, h->width, h->height, h->outputFormat, h->interlaced);
 		if (ret < 0)
 			return ret;
 		setPlaneCsc(h, plane);
 	}
-	ret = ksceIftuEnable(h->iftuPlane[0]);
+	ret = SceIftuForDriver_0D7C02F7(h->iftuPlane[0]);
 	if (ret < 0)
 		return ret;
-	ret = ksceIftuEnable(h->iftuPlane[1]);
+	ret = SceIftuForDriver_0D7C02F7(h->iftuPlane[1]);
 	if (ret < 0)
 		return ret;
 
@@ -458,13 +458,13 @@ static int _sceDisplayStartDsiIftu(SceUInt32 head) /* Sony's name (0.990 message
 		if (startupHead == 1) {
 			if (heads[1].dsiBus != 1)
 				goto wait;
-			ret = ksceDsiStartDisplay(1, 2);
+			ret = SceDsiForDriver_C2E85919(1, 2);
 		} else if (startupHead == 2) {
-			ret = ksceDsiStartDisplay(bus, 3);
+			ret = SceDsiForDriver_C2E85919(bus, 3);
 		} else {
 wait:
-			ksceDisplayWaitVblankStart();
-			ret = ksceDsiStartDisplay(1, 0);
+			SceDisplayForDriver_984C27E7();
+			ret = SceDsiForDriver_C2E85919(1, 0);
 		}
 	} else {
 		if (!hdmiPresent)
@@ -472,16 +472,16 @@ wait:
 start:
 		if (startupHead == 0) {
 			if (heads[0].dsiBus == 0) {
-				ret = ksceDsiStartDisplay(bus, 1);
+				ret = SceDsiForDriver_C2E85919(bus, 1);
 			} else {
 waitStart:
-				ksceDisplayWaitVblankStart();
-				ret = ksceDsiStartDisplay(bus, 0);
+				SceDisplayForDriver_984C27E7();
+				ret = SceDsiForDriver_C2E85919(bus, 0);
 			}
 		} else {
 			if (startupHead != 2)
 				goto waitStart;
-			ret = ksceDsiStartDisplay(bus, 3);
+			ret = SceDsiForDriver_C2E85919(bus, 3);
 		}
 	}
 	if (ret < 0)
@@ -517,7 +517,7 @@ static inline __attribute__((always_inline)) int clearPlane(SceUInt32 head, SceU
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	} else {
 		memset(&state, 0, sizeof(state));
-		ksceIftuSetInputFrameBuffer(iftu, &state, -1, 1);
+		SceIftuForDriver_7CE0C4DA(iftu, &state, -1, 1);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	}
 	return 0;
@@ -580,20 +580,20 @@ static int disableHead(SceUInt32 head) /* name unknown */
 			if (ret < 0)
 				return ret;
 			while (oledBusy())
-				ksceDisplayWaitVblankStartInternal(head);
+				SceDisplayForDriver_B80CA224(head);
 		}
 		if (lcdPresent) {
 			ret = lcdSetPower(0);
 			if (ret < 0)
 				return ret;
 			while (lcdBusy())
-				ksceDisplayWaitVblankStartInternal(head);
+				SceDisplayForDriver_B80CA224(head);
 		}
 	}
-	ret = ksceIftuDisable(h->iftuPlane[0]);
+	ret = SceIftuForDriver_C11F30B3(h->iftuPlane[0]);
 	if (ret < 0)
 		return ret;
-	ret = ksceIftuDisable(h->iftuPlane[1]);
+	ret = SceIftuForDriver_C11F30B3(h->iftuPlane[1]);
 	if (ret < 0)
 		return ret;
 	if (startupHead != head) {
@@ -601,13 +601,13 @@ static int disableHead(SceUInt32 head) /* name unknown */
 		if (h->dsiEnabled) {
 			for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++)
 				clearPlane(head, plane);
-			ret = ksceDsiSendBlankingPacket(bus);
+			ret = SceDsiForDriver_7640F607(bus);
 			if (ret >= 0) {
 				sceKernelDelayThread(42000);
-				ret = ksceDsiDisableHead(bus);
-				if (ret >= 0 && (ret = kscePervasiveDsiClockDisable(bus, 0xf)) >= 0
-				    && (ret = kscePervasiveDsiResetEnable(bus, 7)) >= 0) {
-					kscePervasiveDsiSetPixelClock(bus, 0);
+				ret = SceDsiForDriver_114D1413(bus);
+				if (ret >= 0 && (ret = ScePervasiveForDriver_25AE181E(bus, 0xf)) >= 0
+				    && (ret = ScePervasiveForDriver_E3FC1C8D(bus, 7)) >= 0) {
+					ScePervasiveForDriver_91C80C41(bus, 0);
 					h->dsiEnabled = 0;
 				}
 			}
@@ -646,7 +646,7 @@ static int enableHead(SceUInt32 head) /* name unknown */
 		owner = h->plane[plane].owner;
 		if (owner != -1) {
 			h->plane[plane].owner = -1;
-			ksceDisplaySetOwner(head, plane, owner);
+			SceDisplayForDriver_B54962A1(head, plane, owner);
 		}
 	}
 	h->enabled = 1;
@@ -692,18 +692,18 @@ static int initWork(void *arg) /* name unknown */
 		ksceLcdWaitReady();
 
 	if (hdmiOnly == 0) {
-		if (ksceDsiGetVicResolution(0, &width, &height) >= 0)
+		if (SceDsiForDriver_B3A70C05(0, &width, &height) >= 0)
 			setHeadMode(&heads[0], 0, width, height, 0, 0);
 	} else {
-		if (ksceDsiGetVicResolution(0x8900, &width, &height) >= 0)
+		if (SceDsiForDriver_B3A70C05(0x8900, &width, &height) >= 0)
 			setHeadMode(&heads[0], 0x8900, width, height, 0, 0);
 	}
 	if (hdmiOnly != 1) {
 		if (SceSysrootForDriver_834439A7() == 0) {
-			if (ksceDsiGetVicResolution(0x8600, &width, &height) >= 0)
+			if (SceDsiForDriver_B3A70C05(0x8600, &width, &height) >= 0)
 				setHeadMode(&heads[1], 0x8600, width, height, 1, 0);
 		} else {
-			if (ksceDsiGetVicResolution(0x8300, &width, &height) >= 0)
+			if (SceDsiForDriver_B3A70C05(0x8300, &width, &height) >= 0)
 				setHeadMode(&heads[1], 0x8300, width, height, 1, 0);
 		}
 		heads[1].gain = 0x10000;
@@ -729,7 +729,7 @@ static int initWork(void *arg) /* name unknown */
 		if (lockFastMutex(&mutex) >= 0) {
 			SceKernelIntrStatus intr = SceCpuForDriver_D32ACE9E(&heads[1].lock);
 
-			if (ksceIftuSetMergeSetting(3, 4) >= 0) {
+			if (SceIftuForDriver_AF19FD85(3, 4) >= 0) {
 				heads[1].mergeSetting = 4;
 				SceIftuForDriver_357EAE24(2, 0);
 				SceIftuForDriver_357EAE24(3, 0xff);
@@ -821,7 +821,7 @@ static int sysEventHandler(int resume, int eventid, void *args, void *opt) /* na
 				if (heads[head].enabled) {
 					heads[head].enabled = 0;
 					if (head != 1)
-						ksceDisplayEnableHead(head);
+						SceDisplayForDriver_496032D6(head);
 				}
 			}
 			break;
@@ -927,12 +927,12 @@ int module_start(SceSize args, void *argp)
 }
 
 /* Exported to SceDisplayForDriver and as syscall 0x7178FADA. */
-int ksceDisplayGetPrimaryHead(void)
+int SceDisplayForDriver_C8E554C5(void)
 {
 	return primaryHead;
 }
 
-int ksceDisplayGetDeviceType(SceUInt32 head, SceUInt32 *type)
+int SceDisplayForDriver_8D9A1CCE(SceUInt32 head, SceUInt32 *type)
 {
 	SceUInt32 device, kind;
 
@@ -965,7 +965,7 @@ int ksceDisplayGetDeviceType(SceUInt32 head, SceUInt32 *type)
 	return device;
 }
 
-int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
+int SceDisplayForDriver_AF5EE5BE(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 {
 	SceUInt32 width, height, format, pixelSize;
 	SceKernelIntrStatus intr;
@@ -990,7 +990,7 @@ int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 		default:
 			return SCE_DISPLAY_ERROR_INVALID_PIXELFORMAT;
 		}
-		ret = ksceDsiGetVicResolution(vic, &width, &height);
+		ret = SceDsiForDriver_B3A70C05(vic, &width, &height);
 		if (ret < 0)
 			return ret;
 		interlaced = 0;
@@ -1036,7 +1036,7 @@ int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 		default:
 			return SCE_DISPLAY_ERROR_INVALID_PIXELFORMAT;
 		}
-		ret = ksceDsiGetVicResolution(vic, &width, &height);
+		ret = SceDsiForDriver_B3A70C05(vic, &width, &height);
 		if (ret < 0)
 			return ret;
 		interlaced = (vic & ~0x80) == 0x8500;
@@ -1061,7 +1061,7 @@ int ksceDisplaySetOutputMode(SceUInt32 head, SceUInt32 vic, SceUInt32 mode)
 	return 0;
 }
 
-int ksceDisplayGetOutputMode(SceUInt32 head, SceUInt32 *vic, SceUInt32 *mode)
+int SceDisplayForDriver_D2CED235(SceUInt32 head, SceUInt32 *vic, SceUInt32 *mode)
 {
 	DisplayHead *h;
 	SceKernelIntrStatus intr;
@@ -1078,7 +1078,7 @@ int ksceDisplayGetOutputMode(SceUInt32 head, SceUInt32 *vic, SceUInt32 *mode)
 	return 0;
 }
 
-int ksceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInfo *info)
+int SceDisplayForDriver_B3C6D647(SceUInt32 head, SceDisplayResolutionInfo *info)
 {
 	DisplayHead *h;
 	SceKernelIntrStatus intr;
@@ -1103,7 +1103,7 @@ int ksceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInf
 	return 0;
 }
 
-int ksceDisplayEnableHead(SceUInt32 head)
+int SceDisplayForDriver_496032D6(SceUInt32 head)
 {
 	int ret;
 
@@ -1118,7 +1118,7 @@ int ksceDisplayEnableHead(SceUInt32 head)
 	return ret;
 }
 
-int ksceDisplayDisableHead(SceUInt32 head)
+int SceDisplayForDriver_43347565(SceUInt32 head)
 {
 	int ret;
 
@@ -1257,7 +1257,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		flags = shift == 1 ? 2 : 0;
 	setIftuFrameBufAddr(&state, pitch, width, height, x, y, cropWidth, cropHeight, paddr, flags);
 	if (heads[head].plane[0].owner == sceKernelGetProcessId() && convDst == NULL) {
-		ret = ksceIftuSetInputFrameBuffer(heads[head].iftuPlane[0], &state, (resolution >> 20) & 1, 1);
+		ret = SceIftuForDriver_7CE0C4DA(heads[head].iftuPlane[0], &state, (resolution >> 20) & 1, 1);
 		if (ret < 0)
 			goto unlock;
 		vcount = heads[head].vcount;
@@ -1312,7 +1312,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		dst.paddr0 = dstPaddr;
 		memset(&conv, 0, sizeof(conv));
 		conv.filterMode = (resolution >> 20) & 1;
-		ret = ksceIftuCsc(&dst, &state, &conv);
+		ret = SceIftuForDriver_67E37EFC(&dst, &state, &conv);
 		SceCpuForDriver_02796361(convDst->base, size);
 		SceSysmemForDriver_22CBE925(0x30, convDst->base, size);
 		sceKernelUnlockFastMutex(&mutex);
@@ -1359,12 +1359,12 @@ static inline __attribute__((always_inline)) int blankPlane(DisplayHead *h, SceU
 		return 0;
 	}
 	memset(&state, 0, sizeof(state));
-	ret = ksceIftuSetInputFrameBuffer(iftu, &state, -1, 1);
+	ret = SceIftuForDriver_7CE0C4DA(iftu, &state, -1, 1);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	return ret;
 }
 
-int ksceDisplaySetOwner(int head, int plane, SceUID pid)
+int SceDisplayForDriver_B54962A1(int head, int plane, SceUID pid)
 {
 	DisplayHead *h;
 	DisplayProcessLocal *pls;
@@ -1410,7 +1410,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 					    rec->frameBuf.height, rec->cropX, rec->cropY,
 					    rec->cropWidth + 1, rec->cropHeight + 1, rec->paddr,
 					    rec->iftuPixelformat == 0x10 ? 4 : 6);
-			ksceIftuSetInputFrameBuffer(h->iftuPlane[plane], &state, (rec->flags >> 20) & 1, 1);
+			SceIftuForDriver_7CE0C4DA(h->iftuPlane[plane], &state, (rec->flags >> 20) & 1, 1);
 		}
 	}
 	sceKernelUnlockFastMutex(&mutex);
@@ -1424,7 +1424,7 @@ int SceDisplayForDriver_BC76296A(int enable)
 	return 0;
 }
 
-int __attribute__((pcs("aapcs-vfp"))) ksceDisplaySetScaleConf(float scale, SceUInt32 head,
+int __attribute__((pcs("aapcs-vfp"))) SceDisplayForDriver_EB390A76(float scale, SceUInt32 head,
 							      SceUInt32 plane, SceUInt32 flags)
 {
 	DisplayHead *h;
@@ -1451,7 +1451,7 @@ int __attribute__((pcs("aapcs-vfp"))) ksceDisplaySetScaleConf(float scale, SceUI
 	return 0;
 }
 
-int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
+int SceDisplayForDriver_6B198052(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
 {
 	DisplayHead *h;
 	SceKernelIntrStatus intr;
@@ -1467,7 +1467,7 @@ int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
 	h = &heads[head];
 	plane = head * 2 + 1;
 	intr = SceCpuForDriver_D32ACE9E(&h->lock);
-	ret = ksceIftuSetMergeSetting(plane, setting);
+	ret = SceIftuForDriver_AF19FD85(plane, setting);
 	if (ret < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 		sceKernelUnlockFastMutex(&mutex);
@@ -1481,7 +1481,7 @@ int ksceDisplaySetMergeConf(SceUInt32 head, SceUInt32 setting, SceUInt32 alpha)
 	return 0;
 }
 
-int ksceDisplaySetBrightness(SceUInt32 head, SceUInt32 brightness)
+int SceDisplayForDriver_9E3C6DC6(SceUInt32 head, SceUInt32 brightness)
 {
 	int i, ret;
 
@@ -1521,7 +1521,7 @@ int SceDisplayForDriver_3D95D478(SceUInt32 head, int mode)
 	return lcdSetMode(mode);
 }
 
-int ksceDisplaySetInvertColors(int head, int enable)
+int SceDisplayForDriver_19140ACD(int head, int enable)
 {
 	int i;
 
@@ -1539,7 +1539,7 @@ int ksceDisplaySetInvertColors(int head, int enable)
 	return 0;
 }
 
-int ksceDisplaySetColorSpaceMode(SceUInt32 head, int mode)
+int SceDisplayForDriver_8D79D187(SceUInt32 head, int mode)
 {
 	int ret;
 
@@ -1553,7 +1553,7 @@ int ksceDisplaySetColorSpaceMode(SceUInt32 head, int mode)
 	return ret;
 }
 
-int ksceDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplayViewportConf *conf)
+int SceDisplayForDriver_EE5EB52D(SceUInt32 head, SceUInt32 plane, const SceDisplayViewportConf *conf)
 {
 	DisplayHead *h;
 	DisplayProcessLocal *pls;
@@ -1608,7 +1608,7 @@ int ksceDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplay
 	return 0;
 }
 
-int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplayViewportConf *conf)
+int SceDisplayForDriver_40ACFE51(SceUInt32 head, SceUInt32 plane, SceDisplayViewportConf *conf)
 {
 	DisplayHead *h;
 	DisplayProcessLocal *pls;
@@ -1666,7 +1666,7 @@ int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplay
 	return 0;
 }
 
-int ksceDisplayGetRefreshRateInternal(SceUInt32 head, float *rate, int *interlaced)
+int SceDisplayForDriver_7911958E(SceUInt32 head, float *rate, int *interlaced)
 {
 	DisplayHead *h;
 	SceKernelIntrStatus intr;
@@ -1714,7 +1714,7 @@ int SceDisplayForDriver_332C5410(int head)
 	return SCE_DISPLAY_ERROR_INVALID_HEAD;
 }
 
-int ksceDisplayGetMaximumFrameBufResolution(int *width, int *height)
+int SceDisplayForDriver_5AFE6CD3(int *width, int *height)
 {
 	DisplayProcessLocal *pls;
 	SceUInt32 flags;
@@ -1767,7 +1767,7 @@ static inline __attribute__((always_inline)) int highResolutionAllowed(void) /* 
 }
 
 __attribute__((noinline))
-int ksceDisplaySetFrameBufInternal(int head, int plane, const SceDisplayFrameBuf *pParam,
+int SceDisplayForDriver_16466675(int head, int plane, const SceDisplayFrameBuf *pParam,
 				   int sync)
 {
 	DisplayHead *h;
@@ -2001,7 +2001,7 @@ unlock:
 	return ret;
 }
 
-int ksceDisplayGetFrameBufInternal(int head, int plane, SceDisplayFrameBuf *pParam, int sync)
+int SceDisplayForDriver_19F94C63(int head, int plane, SceDisplayFrameBuf *pParam, int sync)
 {
 	DisplayProcessLocal *pls;
 	SceSize size;
@@ -2041,7 +2041,7 @@ static inline __attribute__((always_inline)) SceUInt32 sceSyscallResume(void) /*
 	return t;
 }
 
-int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
+int SceDisplayForDriver_289D82FE(const SceDisplayFrameBuf *pParam, int sync)
 {
 	SceUInt32 t, u;
 	int ret;
@@ -2053,7 +2053,7 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 		return ret;
 	}
 	u = sceSyscallResume();
-	ret = ksceDisplaySetFrameBufInternal(0, 0, pParam, sync);
+	ret = SceDisplayForDriver_16466675(0, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
@@ -2061,7 +2061,7 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 		return ret;
 	}
 	u = sceSyscallResume();
-	ret = ksceDisplaySetFrameBufInternal(1, 0, pParam, sync);
+	ret = SceDisplayForDriver_16466675(1, 0, pParam, sync);
 	sceSyscallLeave(u);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
@@ -2073,7 +2073,7 @@ int ksceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, int sync)
 	return 0;
 }
 
-int ksceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
+int SceDisplayForDriver_EEDA2E54(SceDisplayFrameBuf *pParam, int sync)
 {
 	SceUInt32 head = primaryHead;
 	DisplayProcessLocal *pls;
@@ -2105,7 +2105,7 @@ int ksceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
 	return 0;
 }
 
-int ksceDisplayGetProcFrameBufInternal(SceUID pid, int head, int plane,
+int SceDisplayForDriver_3BC165EF(SceUID pid, int head, int plane,
 				       SceDisplayFrameBufInfo *info)
 {
 	DisplayProcessLocal *pls;
@@ -2159,7 +2159,7 @@ static inline __attribute__((always_inline)) int waitProcessFrame(DisplayProcess
 
 	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
-		return ksceDisplayWaitVblankStartInternal(head);
+		return SceDisplayForDriver_B80CA224(head);
 	return ret;
 }
 
@@ -2290,7 +2290,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	}
 	src.sampleX = 0;
 	src.sampleY = 0;
-	ret = ksceIftuCsc(&dst, &src, NULL);
+	ret = SceIftuForDriver_67E37EFC(&dst, &src, NULL);
 	if (ret < 0)
 		goto release;
 	sceGUIDReleaseObject(pid);
@@ -2305,13 +2305,13 @@ unlockRange:
 	return ret;
 }
 
-int ksceDisplayCaptureFrameBufIFTUInternal(SceUID pid, SceUInt32 head, SceUInt32 plane,
+int SceDisplayForDriver_D4C812E5(SceUID pid, SceUInt32 head, SceUInt32 plane,
 					   SceDisplayFrameBuf *fb)
 {
 	return captureFrameBufIftu(pid, head, plane, fb);
 }
 
-int ksceDisplayCaptureFrameBufIFTU(SceUID pid, SceDisplayFrameBuf *fb)
+int SceDisplayForDriver_B0CED8BC(SceUID pid, SceDisplayFrameBuf *fb)
 {
 	return captureFrameBufIftu(pid, primaryHead, 0, fb);
 }
@@ -2358,12 +2358,12 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	ret = framebufPaddr(base, size, 0x20000000, &paddr);
 	if (ret < 0)
 		goto unlockRange;
-	op = ksceKernelDmaOpAlloc("SceDisplay");
+	op = sceKernelDmaOpAlloc("SceDisplay");
 	if (op < 0) {
 		ret = op;
 		goto unlockRange;
 	}
-	ret = ksceKernelDmaOpAssign(op, SCE_KERNEL_DMAC_ID_DMAC23, 0);
+	ret = sceKernelDmaOpAssign(op, SCE_KERNEL_DMAC_ID_DMAC23, 0);
 	if (ret < 0)
 		goto free;
 	SceCpuForDriver_02796361(fb->base, size);
@@ -2380,7 +2380,7 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	timeout = 64000;
 	ret = SceThreadmgrForDriver_C529EA32(pls->frameEvent, heads[head].eventBits, NULL, NULL, &timeout);
 	if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
-		ret = ksceDisplayWaitVblankStartInternal(head);
+		ret = SceDisplayForDriver_B80CA224(head);
 	if (ret < 0)
 		goto release;
 	ret = lockFastMutex(&mutex);
@@ -2433,20 +2433,20 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	tags[1].cmd = 0;
 	tags[1].blockSize = 0;
 	tags[1].pNext = tag - 1;
-	ret = ksceKernelDmaOpSetupChain(op, tags, NULL, SCE_KERNEL_DMA_OP_COMPLETE_CHAIN);
-	if (ret >= 0 && (ret = ksceKernelDmaOpEnQueue(op)) >= 0
-	    && (ret = ksceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, NULL, NULL)) >= 0)
+	ret = sceKernelDmaOpSetupChain(op, tags, NULL, SCE_KERNEL_DMA_OP_COMPLETE_CHAIN);
+	if (ret >= 0 && (ret = sceKernelDmaOpEnQueue(op)) >= 0
+	    && (ret = sceKernelDmaOpSync(op, SCE_KERNEL_DMA_OP_SYNC_WAIT, NULL, NULL)) >= 0)
 		SceCpuForDriver_02796361(fb->base, size);
 	sceGUIDReleaseObject(pid);
 	SceSysmemForDriver_22CBE925(mode, fb->base, size);
-	ksceKernelDmaOpFree(op);
+	sceKernelDmaOpFree(op);
 	return ret;
 
 release:
 	sceGUIDReleaseObject(pid);
 free:
 	SceSysmemForDriver_22CBE925(mode, fb->base, size);
-	ksceKernelDmaOpFree(op);
+	sceKernelDmaOpFree(op);
 	return ret;
 
 unlockRange:
@@ -2454,18 +2454,18 @@ unlockRange:
 	return ret;
 }
 
-int ksceDisplayCaptureFrameBufDMACInternal(SceUID pid, int head, int plane,
+int SceDisplayForDriver_707EEE2E(SceUID pid, int head, int plane,
 					   SceDisplayFrameBuf *fb)
 {
 	return captureFrameBufDmac(pid, head, plane, fb);
 }
 
-int ksceDisplayCaptureFrameBufDMAC(SceUID pid, SceDisplayFrameBuf *fb)
+int SceDisplayForDriver_F116D0B4(SceUID pid, SceDisplayFrameBuf *fb)
 {
 	return captureFrameBufDmac(pid, primaryHead, 0, fb);
 }
 
-int ksceDisplayRegisterFrameBufCallbackInternal(int head, SceUID uid)
+int SceDisplayForDriver_FA7CE579(int head, SceUID uid)
 {
 	int ret;
 
@@ -2480,7 +2480,7 @@ int ksceDisplayRegisterFrameBufCallbackInternal(int head, SceUID uid)
 	return 0;
 }
 
-int ksceDisplayRegisterFrameBufCallback(SceUID uid)
+int SceDisplayForDriver_6E22990E(SceUID uid)
 {
 	SceUInt32 head = primaryHead;
 	int ret;

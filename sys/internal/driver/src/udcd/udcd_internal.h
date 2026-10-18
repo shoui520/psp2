@@ -134,7 +134,7 @@ struct udcdBusState {
 	unsigned int busPowered;		/* ksceUdcdActivateInternal bus_powered */
 	unsigned int chargingEnabled;
 	unsigned int driverSetting;		/* SceUdcdForDriver_B1454F11, never read */
-	unsigned int hardwareInfo;		/* ksceSysconGetHardwareInfo */
+	unsigned int hardwareInfo;		/* SceSysconForDriver_CBD6D8BC */
 	SceUID mtpProcess;
 	SceUID procEventHandler;
 	SceUID alarmTickTimer;

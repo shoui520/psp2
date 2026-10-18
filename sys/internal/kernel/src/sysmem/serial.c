@@ -11,7 +11,7 @@
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/uart_regs.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 
 /* what each build has */
 #if !defined(SYSMEM_TZS) && !defined(SYSMEM_NSKBL)
@@ -304,9 +304,9 @@ int SceUartForKernel_4C02AA05(int port)
 	SceUInt32 flowControl, fifoConfig, irqMask, baud;
 
 #ifdef SYSMEM_NSKBL
-	kscePervasiveUartResetEnable(port);
-	kscePervasiveUartClockEnable(port);
-	kscePervasiveUartResetDisable(port);
+	ScePervasiveForDriver_788B6C61(port);
+	ScePervasiveForDriver_EFD084D8(port);
+	ScePervasiveForDriver_A7CE7DCC(port);
 #endif
 	if (port == 1) {
 		irqMask = 0x77e;

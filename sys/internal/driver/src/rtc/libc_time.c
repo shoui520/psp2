@@ -43,7 +43,7 @@ static unsigned int rtcLibcClock(void)
 {
 	SceRtcTick tick;
 
-	ksceRtcGetCurrentTick(&tick);
+	SceRtcForDriver_DEC408D4(&tick);
 	return tick.tick;
 }
 
@@ -159,7 +159,7 @@ found:
 	time.month = tm->mon + 1;
 	time.day = tm->mday;
 	SceRtcForDriver_F139E359(&time, &tick);
-	ksceRtcConvertTickToDateTime(&time, &tick);
+	SceRtcForDriver_42A0DFCB(&time, &tick);
 	tm->mon = time.month - 1;
 	tm->year = time.year;
 	tm->hour = time.hour;
@@ -200,13 +200,13 @@ static int rtcLibcLocaltime(const unsigned int *t, RtcLibcTm *tm)
 	SceRtcTick tick;
 
 	if (t == NULL) {
-		ksceRtcGetCurrentTick(&tick);
+		SceRtcForDriver_DEC408D4(&tick);
 	} else {
 		SceRtcForDriver_DE9F4515(&time, *t);
 		SceRtcForDriver_F139E359(&time, &tick);
 	}
 	SceRtcForDriver_0F9E02EF(&tick, &tick, offset);
-	ksceRtcConvertTickToDateTime(&time, &tick);
+	SceRtcForDriver_42A0DFCB(&time, &tick);
 	if (tm != NULL)
 		rtcFillTm(tm, &time);
 	return 0;
@@ -218,8 +218,8 @@ static int rtcLibcGettimeofday(SceKernelTimeval *tv, RtcLibcTimezone *tz)
 	SceRtcTick tick;
 	unsigned int sec;
 
-	ksceRtcGetCurrentTick(&tick);
-	ksceRtcConvertTickToDateTime(&time, &tick);
+	SceRtcForDriver_DEC408D4(&tick);
+	SceRtcForDriver_42A0DFCB(&time, &tick);
 	SceRtcForDriver_FFD7A04F(&time, &sec);
 	if (tv != NULL) {
 		tv->sec = sec;
@@ -238,8 +238,8 @@ static unsigned int rtcLibcTime(unsigned int *t)
 	SceRtcTick tick;
 	unsigned int sec;
 
-	ksceRtcGetCurrentTick(&tick);
-	ksceRtcConvertTickToDateTime(&time, &tick);
+	SceRtcForDriver_DEC408D4(&tick);
+	SceRtcForDriver_42A0DFCB(&time, &tick);
 	SceRtcForDriver_FFD7A04F(&time, &sec);
 	if (t != NULL)
 		*t = sec;
@@ -252,13 +252,13 @@ static int rtcLibcGmtime(const unsigned int *t, RtcLibcTm *tm)
 	SceRtcTick tick;
 
 	if (t == NULL) {
-		ksceRtcGetCurrentTick(&tick);
+		SceRtcForDriver_DEC408D4(&tick);
 	} else {
 		SceRtcForDriver_DE9F4515(&time, *t);
 		SceRtcForDriver_F139E359(&time, &tick);
 	}
 	SceRtcForDriver_0F9E02EF(&tick, &tick, 0);
-	ksceRtcConvertTickToDateTime(&time, &tick);
+	SceRtcForDriver_42A0DFCB(&time, &tick);
 	if (tm != NULL)
 		rtcFillTm(tm, &time);
 	return 0;
@@ -272,8 +272,8 @@ static const RtcLibcTimeFunctions s_rtcLibcTime = {
 	.gmtime = rtcLibcGmtime,
 	.localtime = rtcLibcLocaltime,
 	.mktime = rtcLibcMktime,
-	.getCurrentTick = ksceRtcGetCurrentTick,
-	.getCurrentSecureTick = ksceRtcGetCurrentSecureTick,
+	.getCurrentTick = SceRtcForDriver_DEC408D4,
+	.getCurrentSecureTick = SceRtcForDriver_401C0954,
 };
 
 /* name unknown */

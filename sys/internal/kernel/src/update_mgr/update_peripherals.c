@@ -22,7 +22,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	int (*useCpup)(unsigned int *, unsigned int *, unsigned int *);
 	int result;
 
-	if (updateUseSysconNvsService && ksceSysconNvsSetRunMode(0) == 0) {
+	if (updateUseSysconNvsService && SceSysconForDriver_81A6060D(0) == 0) {
 		if (updateUseSysconSnvs)
 			result = SpkgInfoUtilGetSNVSFlagStatus(&status, &flags, 1, -1);
 		else
@@ -74,7 +74,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 	firmware = 0;
 	information.dataFlashVersion = 0;
 	if (!SceSblAIMgrForDriver_C6E83F34()) {
-		if (ksceSysconGetBatteryVersion(&hardware, &firmware,
+		if (SceSysconForDriver_68E0031E(&hardware, &firmware,
 					      &information.dataFlashVersion) != 0) {
 			updateUseBatteryService = 0;
 		} else {
@@ -94,7 +94,7 @@ int sceSblUpdateMgrInitPeripheralsPhase2(SceSize arglen, void *argp)
 			if (--updateTouchPollCount <= 0)
 				goto finish;
 		}
-		if (ksceSysconGetTouchpanelDeviceInfo(information.touchDeviceInfo) != 0) {
+		if (SceSysconForDriver_F492E69E(information.touchDeviceInfo) != 0) {
 			updateUseTouchService = 0;
 		} else {
 			__builtin_memcpy(updateSysconTouchDeviceInfo,

@@ -7,7 +7,7 @@
 #include "../gpu_es4/srvkm/perproc_sce.h"
 #include "../gpu_es4/srvkm/power_sce.h"
 #include "../gpu_es4/srvkm/gpu-mmu.h"
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <modulemgr/modulemgr.h>
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);

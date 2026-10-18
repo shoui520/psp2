@@ -76,15 +76,15 @@ int SceAudioForDriver_37517CC9(uintptr_t destination, unsigned int wordCount)
 	transfer->tags[0].blockSize = 128;
 	audioEnableI2sLocked(0);
 	if (running == 1 &&
-	    ksceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0 &&
-	    ksceKernelDmaOpConcatenate(transfer->opId, transfer->tags, 16) >= 0) {
+	    sceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0 &&
+	    sceKernelDmaOpConcatenate(transfer->opId, transfer->tags, 16) >= 0) {
 		transfer->state = 2;
 	} else {
-		result = ksceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
+		result = sceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
 			(SceKernelDmaOpChainParam *)&audioDmaChainParam, 16);
 		if (result < 0)
 			goto unlock;
-		result = ksceKernelDmaOpEnQueue(transfer->opId);
+		result = sceKernelDmaOpEnQueue(transfer->opId);
 		if (result < 0)
 			goto unlock;
 		transfer->state = 1;
@@ -138,7 +138,7 @@ int audioStartCaptureDma(struct AudioDmaState *state)
 	unsigned int flags;
 	int result;
 
-	if (audioSuspended || ksceKernelDmaOpSync(state->captureOpId, 1, 0, 0) > 0)
+	if (audioSuspended || sceKernelDmaOpSync(state->captureOpId, 1, 0, 0) > 0)
 		return 0;
 	registers = state->registers;
 	registers->captureControl = 0;
@@ -146,17 +146,17 @@ int audioStartCaptureDma(struct AudioDmaState *state)
 	__asm__ volatile("dsb sy" ::: "memory");
 	tags = state->captureTags;
 	flags = audioBuildCaptureDmaTags(state);
-	result = ksceKernelDmaOpSetupChain(state->captureOpId,
+	result = sceKernelDmaOpSetupChain(state->captureOpId,
 		tags + ((flags & 0x10000) ? 2 : 0),
 		(SceKernelDmaOpChainParam *)&audioDmaChainParam, flags & ~0x10000U);
 	if (result < 0)
 		return result;
 	flags = audioBuildCaptureDmaTags(state);
-	result = ksceKernelDmaOpConcatenate(state->captureOpId,
+	result = sceKernelDmaOpConcatenate(state->captureOpId,
 		tags + ((flags & 0x10000) ? 2 : 0), flags & ~0x10000U);
 	if (result < 0)
 		return result;
-	result = ksceKernelDmaOpEnQueue(state->captureOpId);
+	result = sceKernelDmaOpEnQueue(state->captureOpId);
 	if (result >= 0) {
 		registers->captureControl = 0x10001;
 		state->captureState = 1;
@@ -300,7 +300,7 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->previousCaptureFrames = 0;
 		}
 		intr = SceCpuForDriver_821FC0EE();
-		if (ksceKernelDmaOpSync(opId, 1, 0, 0) <= 0) {
+		if (sceKernelDmaOpSync(opId, 1, 0, 0) <= 0) {
 			state->captureState = 0;
 			if (state == &audioDmaStates[2]) {
 				SceSrcMixRegisters *registers = state->registers;
@@ -330,15 +330,15 @@ int audioCaptureDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->transfers[1].opId : 0;
 	}
 	if (state->sourceMode != 2 &&
-	    ksceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0 &&
-	    (!otherOp || ksceKernelDmaOpSync(otherOp, 1, 0, 0) <= 0)) {
+	    sceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0 &&
+	    (!otherOp || sceKernelDmaOpSync(otherOp, 1, 0, 0) <= 0)) {
 		state->captureState = 0;
 		goto notify;
 	}
 concatenate:
 	flags = audioBuildCaptureDmaTags(state);
 	tags = state->captureTags;
-	if (ksceKernelDmaOpConcatenate(state->captureOpId,
+	if (sceKernelDmaOpConcatenate(state->captureOpId,
 	    tags + ((flags & 0x10000) ? 2 : 0), flags & ~0x10000U) < 0)
 		state->captureState = 0;
 notify:
@@ -361,7 +361,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 	(void)completed;
 	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = (status & 1) ||
-		ksceKernelDmaOpSync(opId, 1, 0, 0) > 0;
+		sceKernelDmaOpSync(opId, 1, 0, 0) > 0;
 	state->transfers[stream].state = running;
 	sceKernelSetEventFlag(state->eventFlag, stream + 1);
 	if (state == &audioDmaStates[2] && (running & (stream ^ 1)) &&
@@ -411,7 +411,7 @@ int audioDmaTransferCallback(SceKernelDmaOpId opId, unsigned int status,
 		transfer->tags[1].len = lastLength;
 		transfer->tags[0].cmd = command;
 		transfer->tags[1].cmd = command;
-		if (ksceKernelDmaOpConcatenate(transfer->opId,
+		if (sceKernelDmaOpConcatenate(transfer->opId,
 		    audioDmaStates[2].transfers[0].tags, concatenateMode) < 0)
 			audioDmaStates[2].transfers[0].state = 0;
 	}
@@ -448,14 +448,14 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 			state->previousCaptureFrames = 0;
 		}
 		intr = SceCpuForDriver_821FC0EE();
-		if (ksceKernelDmaOpSync(opId, 1, 0, 0) <= 0)
+		if (sceKernelDmaOpSync(opId, 1, 0, 0) <= 0)
 			goto stop;
 	} else {
 		intr = SceCpuForDriver_821FC0EE();
 	}
 	if (audioDmaStates[1].sourceMode == audioDmaStates[0].sourceMode ||
 	    (audioDmaStates[0].sourceMode != 2 &&
-	     ksceKernelDmaOpSync(transfer->opId, 1, 0, 0) <= 0))
+	     sceKernelDmaOpSync(transfer->opId, 1, 0, 0) <= 0))
 		goto stop;
 	bytes = 4 * state->captureFrames;
 	command = transfer->command;
@@ -497,7 +497,7 @@ int audioAuxiliaryDmaCallback(SceKernelDmaOpId opId, unsigned int status,
 	transfer->tags[1].cmd = lastCommand;
 	transfer->tags[1].blockSize = 16;
 	transfer->tags[0].blockSize = 16;
-	if (ksceKernelDmaOpConcatenate(transfer->opId, transfer->tags,
+	if (sceKernelDmaOpConcatenate(transfer->opId, transfer->tags,
 	    concatenateMode) >= 0)
 		goto notify;
 stop:
@@ -523,7 +523,7 @@ int audioStartTransmitDma(struct AudioDmaState *state,
 
 	if (ScePervasiveForDriver_47F2C35C(2) == 0)
 		registers->captureControl = 0x10001;
-	if (ksceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0)
+	if (sceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0)
 		return 0;
 	registers->transmitControl = 0;
 	(void)registers->status;
@@ -565,7 +565,7 @@ int audioStartTransmitDma(struct AudioDmaState *state,
 	transfer->tags[1].len = lastLength;
 	transfer->tags[0].cmd = command;
 	transfer->tags[1].cmd = command;
-	result = ksceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
+	result = sceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
 		(SceKernelDmaOpChainParam *)&audioDmaChainParam, mode);
 	if (result < 0)
 		return result;
@@ -606,10 +606,10 @@ int audioStartTransmitDma(struct AudioDmaState *state,
 	transfer->tags[0].blockSize = blockSize;
 	transfer->tags[0].cmd = command;
 	transfer->tags[1].cmd = command;
-	result = ksceKernelDmaOpConcatenate(transfer->opId, transfer->tags, mode);
+	result = sceKernelDmaOpConcatenate(transfer->opId, transfer->tags, mode);
 	if (result < 0)
 		return result;
-	result = ksceKernelDmaOpEnQueue(transfer->opId);
+	result = sceKernelDmaOpEnQueue(transfer->opId);
 	if (result >= 0) {
 		registers->transmitControl = 0x10001;
 		transfer->state = 1;
@@ -660,7 +660,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 	if (state->sourceMode != 2)
 		goto notReady;
 	if (audioDmaStates[1].sourceMode != 2 && !audioSuspended &&
-	    ksceKernelDmaOpSync(audioDmaStates[1].transfers[1].opId, 1, 0, 0) <= 0) {
+	    sceKernelDmaOpSync(audioDmaStates[1].transfers[1].opId, 1, 0, 0) <= 0) {
 		struct AudioDmaTransfer *transfer = &audioDmaStates[1].transfers[1];
 		SceSrcMixRegisters *registers = state->registers;
 
@@ -711,7 +711,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 			transfer->tags[1].cmd = lastCommand;
 			transfer->tags[1].blockSize = 16;
 			transfer->tags[0].blockSize = 16;
-			if (ksceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
+			if (sceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
 			    (SceKernelDmaOpChainParam *)&audioDmaChainParam, flags) < 0)
 				goto queue;
 		}
@@ -759,10 +759,10 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 			transfer->tags[1].cmd = lastCommand;
 			transfer->tags[1].blockSize = 16;
 			transfer->tags[0].blockSize = 16;
-			if (ksceKernelDmaOpConcatenate(transfer->opId, transfer->tags, flags) < 0)
+			if (sceKernelDmaOpConcatenate(transfer->opId, transfer->tags, flags) < 0)
 				goto queue;
 		}
-		if (ksceKernelDmaOpEnQueue(transfer->opId) < 0)
+		if (sceKernelDmaOpEnQueue(transfer->opId) < 0)
 			goto queue;
 		registers->auxiliaryTransmitControl = 0x10001;
 		transfer->state = 1;
@@ -812,7 +812,7 @@ int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount)
 		return (int)0x80260006;
 	if (state->transmitSourceMode != 2)
 		return -2;
-	if (ksceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0)
+	if (sceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0)
 		audioStartTransmitDma(state, state->registers);
 	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	while (state->pendingTransmitBuffer) {
@@ -867,17 +867,17 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 	transfer->tags[1].len = 0x50000010;
 	transfer->tags[1].cmd = command;
 	if (running == 1 &&
-	    ksceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0 &&
-	    ksceKernelDmaOpConcatenate(transfer->opId, transfer->tags, 0) >= 0) {
+	    sceKernelDmaOpSync(transfer->opId, 1, 0, 0) > 0 &&
+	    sceKernelDmaOpConcatenate(transfer->opId, transfer->tags, 0) >= 0) {
 		audioStartCaptureDma(state);
 		submittedState = 2;
 	} else {
 		audioStartCaptureDma(state);
-		result = ksceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
+		result = sceKernelDmaOpSetupChain(transfer->opId, transfer->tags,
 			(SceKernelDmaOpChainParam *)&audioDmaChainParam, 0);
 		if (result < 0)
 			goto unlock;
-		result = ksceKernelDmaOpEnQueue(transfer->opId);
+		result = sceKernelDmaOpEnQueue(transfer->opId);
 		if (result < 0)
 			goto unlock;
 		submittedState = 1;
@@ -930,8 +930,8 @@ int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount)
 	state->captureTags[1].cmd = state->captureCommand | 0x2000;
 	if (audioEnableI2sLocked(audioDmaCommandMode) == 0 && running != 0) {
 		if (running == 1 &&
-		    ksceKernelDmaOpSync(state->captureOpId, 1, 0, 0) > 0 &&
-		    ksceKernelDmaOpConcatenate(state->captureOpId,
+		    sceKernelDmaOpSync(state->captureOpId, 1, 0, 0) > 0 &&
+		    sceKernelDmaOpConcatenate(state->captureOpId,
 			state->captureTags, 16) >= 0) {
 			state->captureState = 2;
 			goto submitted;
@@ -941,11 +941,11 @@ int audioSubmitSingleDmaBuffer(uintptr_t destination, unsigned int wordCount)
 		if (result < 0)
 			goto unlock;
 	}
-	result = ksceKernelDmaOpSetupChain(state->captureOpId, state->captureTags,
+	result = sceKernelDmaOpSetupChain(state->captureOpId, state->captureTags,
 		(SceKernelDmaOpChainParam *)&audioDmaChainParam, 16);
 	if (result < 0)
 		goto unlock;
-	result = ksceKernelDmaOpEnQueue(state->captureOpId);
+	result = sceKernelDmaOpEnQueue(state->captureOpId);
 	if (result < 0)
 		goto unlock;
 	state->captureState = 1;
@@ -1246,7 +1246,7 @@ int audioInitializeSrcMix(void)
 						audioDmaCommands[channel][operation];
 				}
 				snprintf(name, sizeof(name), "SceSrcMix%d%d", channel, operation);
-				opId = ksceKernelDmaOpAlloc(name);
+				opId = sceKernelDmaOpAlloc(name);
 				if (opId < 0)
 					return opId;
 				if (operation == 2)
@@ -1263,10 +1263,10 @@ int audioInitializeSrcMix(void)
 					callback = audioDmaTransferCallback;
 					userData = (void *)((uintptr_t)state + operation);
 				}
-				result = ksceKernelDmaOpSetCallback(opId, callback, userData);
+				result = sceKernelDmaOpSetCallback(opId, callback, userData);
 				if (result < 0)
 					return result;
-				result = ksceKernelDmaOpAssign(opId, 18, 3 * channel + operation);
+				result = sceKernelDmaOpAssign(opId, 18, 3 * channel + operation);
 				if (result < 0)
 					return result;
 				tags[0].pNext = &tags[1];

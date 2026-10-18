@@ -117,7 +117,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIofilemgrForDriver_DF57A75F
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
-	ksceRtcConvertDateTimeToUnixTime
+	SceRtcForDriver_497B5DC9
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

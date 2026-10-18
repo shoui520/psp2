@@ -434,7 +434,7 @@ __attribute__((noinline)) int nvs_read_data(uint32_t offset, void *buffer,
 	uint32_t done;
 	int chunk, ret;
 
-	ret = ksceSysconNvsSetRunMode(0);
+	ret = SceSysconForDriver_81A6060D(0);
 	if (ret)
 		return SSMGR_ERROR_NVS;
 	done = 0;
@@ -443,7 +443,7 @@ __attribute__((noinline)) int nvs_read_data(uint32_t offset, void *buffer,
 			chunk = size;
 		else
 			chunk = 8;
-		ret = ksceSysconNvsReadData(offset + done,
+		ret = SceSysconForDriver_ACAFA2B8(offset + done,
 			(uint8_t *)buffer + done, chunk);
 		if (ret)
 			break;
@@ -459,7 +459,7 @@ __attribute__((noinline)) int nvs_write_data(uint32_t offset,
 	uint32_t done;
 	int chunk, ret;
 
-	ret = ksceSysconNvsSetRunMode(0);
+	ret = SceSysconForDriver_81A6060D(0);
 	if (ret)
 		return SSMGR_ERROR_NVS;
 	done = 0;
@@ -468,7 +468,7 @@ __attribute__((noinline)) int nvs_write_data(uint32_t offset,
 			chunk = size;
 		else
 			chunk = 8;
-		ret = ksceSysconNvsWriteData(offset + done,
+		ret = SceSysconForDriver_10C9657A(offset + done,
 			(const uint8_t *)buffer + done, chunk);
 		if (ret)
 			break;
@@ -488,7 +488,7 @@ __attribute__((noinline)) int sceSblQafManagerCheckFlag(void)
 	int ret, result, stopResult;
 
 	if (__builtin_expect(baryonVersion == 0, 1)) {
-		baryonVersion = ksceSysconGetBaryonVersion();
+		baryonVersion = SceSysconForDriver_FF86F4C5();
 		qafBaryonVersion = baryonVersion;
 	}
 	if (qafSysconVersion == 0)
@@ -520,7 +520,7 @@ static inline __attribute__((always_inline)) int qafSupportsNvsFlag(void)
 	uint32_t sysconVersion;
 
 	if (__builtin_expect(baryonVersion == 0, 1)) {
-		baryonVersion = ksceSysconGetBaryonVersion();
+		baryonVersion = SceSysconForDriver_FF86F4C5();
 		qafBaryonVersion = baryonVersion;
 	}
 	if (qafSysconVersion == 0)

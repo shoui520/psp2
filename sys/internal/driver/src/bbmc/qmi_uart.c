@@ -4,7 +4,6 @@
 #include <intrmgr/intrmgr.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/lowio/pervasive.h>
 #include "qmi_device.h"
 #include <lowio/pervasive.h>
 
@@ -228,8 +227,8 @@ int qmiFinalizeUart(void)
 		int index = g_qmiUartPort.index;
 
 		g_qmiUartPort.registers->enable = 0;
-		kscePervasiveUartClockDisable(index);
-		kscePervasiveUartResetEnable(g_qmiUartPort.index);
+		ScePervasiveForDriver_18DD8043(index);
+		ScePervasiveForDriver_788B6C61(g_qmiUartPort.index);
 		g_qmiUartPort.registers = NULL;
 		g_qmiUartPort.enabled = 0;
 		g_qmiUartPort.index = 255;
@@ -268,15 +267,15 @@ int qmiOpenUart(unsigned int index, QmiUartPort **port,
 	g_qmiUartPort.keepTransmitControlCleared =
 		keepTransmitControlCleared;
 	ScePervasiveForDriver_34537B12();
-	kscePervasiveUartResetDisable(g_qmiUartPort.index);
-	kscePervasiveUartClockEnable(g_qmiUartPort.index);
+	ScePervasiveForDriver_A7CE7DCC(g_qmiUartPort.index);
+	ScePervasiveForDriver_EFD084D8(g_qmiUartPort.index);
 	baudRate = config->baudRate;
 	index = g_qmiUartPort.index;
 	registers->control = 1;
-	result = kscePervasiveUartSetBaudrate(index, baudRate);
+	result = ScePervasiveForDriver_8BAB45F8(index, baudRate);
 	if (result < 0) {
-		kscePervasiveUartClockDisable(g_qmiUartPort.index);
-		kscePervasiveUartResetEnable(g_qmiUartPort.index);
+		ScePervasiveForDriver_18DD8043(g_qmiUartPort.index);
+		ScePervasiveForDriver_788B6C61(g_qmiUartPort.index);
 		return result;
 	}
 	parity = config->parity;
@@ -353,8 +352,8 @@ int qmiCloseUart(QmiUartPort *port)
 			sceKernelDisableIntr(port->interruptNumber);
 		port->interruptNumber = 0;
 		port->registers->enable = 0;
-		kscePervasiveUartClockDisable(port->index);
-		kscePervasiveUartResetEnable(port->index);
+		ScePervasiveForDriver_18DD8043(port->index);
+		ScePervasiveForDriver_788B6C61(port->index);
 		ScePervasiveForDriver_4B99558F();
 		port->registers = NULL;
 		port->enabled = 0;

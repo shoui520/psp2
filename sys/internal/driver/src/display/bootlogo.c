@@ -9,8 +9,8 @@
 #include <psp2kern/kernel/processmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/systimer.h>
-#include <psp2kern/lowio/iftu.h>
+#include <systimer/systimer.h>
+#include <lowio/iftu.h>
 #include <display/display.h>
 #include <intrmgr/syscall.h>
 #include <kernel/error.h>
@@ -52,12 +52,12 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	frameBuf.pixelformat = 0;
 	frameBuf.width = 960;
 	frameBuf.height = 544;
-	ret = ksceDisplaySetFrameBufInternal(head, 0, &frameBuf, 1);
+	ret = SceDisplayForDriver_16466675(head, 0, &frameBuf, 1);
 	if (ret < 0)
 		return ret;
 	for (alpha = 0; alpha != 0x102; alpha += 3) {
-		ksceDisplaySetMergeConf(head, 4, alpha);
-		ksceDisplayWaitVblankStart();
+		SceDisplayForDriver_6B198052(head, 4, alpha);
+		SceDisplayForDriver_984C27E7();
 	}
 	return 0;
 }
@@ -68,8 +68,8 @@ void freeBootLogo(SceUInt32 head) /* name unknown */
 
 	block = SceCpuForDriver_10EB35EB(&bootLogoBlock, 0);
 	if (block > 0) {
-		ksceDisplaySetFrameBufInternal(head, 0, NULL, 1);
-		ksceDisplaySetOwner(head, 0, -1);
+		SceDisplayForDriver_16466675(head, 0, NULL, 1);
+		SceDisplayForDriver_B54962A1(head, 0, -1);
 		SceSysmemForDriver_009E1C61(block);
 	}
 }

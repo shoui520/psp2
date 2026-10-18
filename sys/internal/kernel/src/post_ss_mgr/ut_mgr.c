@@ -5,7 +5,7 @@
  */
 
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
@@ -147,7 +147,7 @@ int utMgrGetCurrentTime(SceUInt32 *now)	/* name unknown */
 	SceRtcTick tick;
 	int ret;
 
-	ret = ksceRtcGetCurrentSecureTick(&tick);
+	ret = SceRtcForDriver_401C0954(&tick);
 	if (ret == 0)
 		*now = (tick.tick - RTC_TICK_UNIX_EPOCH) / 1000000;
 	return ret;

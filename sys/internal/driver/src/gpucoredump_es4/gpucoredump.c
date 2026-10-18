@@ -249,9 +249,9 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 		gpuCoreDumpRenderState[3] = render->renderState[3];
 	}
 
-	soc = kscePervasiveGetSoCRevision();
+	soc = ScePervasiveForDriver_714EEFB7();
 	memset(&time, 0, sizeof(time));
-	ksceRtcGetCurrentClockLocalTime(&time);
+	sceRtcGetCurrentClockLocalTime(&time);
 	gpuCoreDumpLogOpen(&log, SCE_KERNEL_ALL_PROCESS_ID);
 	gpuCoreDumpHeader.version = 0x20002;
 	gpuCoreDumpHeader.sdkVersion = SCE_PSP2_SDK_VERSION;
@@ -354,7 +354,7 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 	clock.magic = GPU_COREDUMP_PMON_CLOCK_MAGIC;
 	clock.size = sizeof(clock);
 	clock.sdkVersion = SCE_PSP2_SDK_VERSION;
-	kscePowerGetGpuClockFrequencyInternal(&mhz, 0);
+	scePowerGetGpuClockFrequencyInternal(&mhz, 0);
 	clock.hz = mhz * 1000000;
 	if (sceIoWrite(fd, &clock, sizeof(clock)) != sizeof(clock))
 		goto error;

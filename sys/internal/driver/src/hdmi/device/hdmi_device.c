@@ -8,7 +8,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/kernel/intrmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/lowio/gpio.h>
+#include <lowio/gpio.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include "../hdmi_internal.h"
@@ -350,11 +350,11 @@ int _sceHdmiDeviceModuleStart(void)
 	intrWork.thread = ret;
 	if (sceKernelStartThread(ret, 0, NULL) < 0)
 		goto error;
-	if (ksceGpioSetPortMode(0, HDMI_INTR_GPIO_PORT, 1) < 0)
+	if (SceGpioForDriver_372022A4(0, HDMI_INTR_GPIO_PORT, 1) < 0)
 		goto error;
-	if (ksceGpioPortRead(0, HDMI_INTR_GPIO_PORT) < 0)
+	if (SceGpioForDriver_129DF5AC(0, HDMI_INTR_GPIO_PORT) < 0)
 		goto error;
-	if (ksceGpioSetIntrMode(0, HDMI_INTR_GPIO_PORT, 0) < 0)
+	if (SceGpioForDriver_BBEA1DDC(0, HDMI_INTR_GPIO_PORT, 0) < 0)
 		goto error;
 	if (sceKernelRegisterSubIntrHandler(HDMI_INTR_CODE, HDMI_INTR_SUBCODE, "SceHdmiIntr",
 					     intrHandler, NULL) < 0)
@@ -425,12 +425,12 @@ int _sceHdmiDeviceResume(void)
 		SCE_DBG_ASSERT_FAIL(541);
 		return ret;
 	}
-	ret = ksceGpioSetPortMode(0, HDMI_INTR_GPIO_PORT, 1);
+	ret = SceGpioForDriver_372022A4(0, HDMI_INTR_GPIO_PORT, 1);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(549);
 		return ret;
 	}
-	ret = ksceGpioSetIntrMode(0, HDMI_INTR_GPIO_PORT, 0);
+	ret = SceGpioForDriver_BBEA1DDC(0, HDMI_INTR_GPIO_PORT, 0);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(556);
 		return ret;

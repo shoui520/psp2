@@ -143,7 +143,7 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uldivmod
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceIftuCsc
+	SceIftuForDriver_67E37EFC
 	sceCodecEngineDsp0AllocCommunicationMemories
 	sceCodecEngineDsp0ConvertPhysicalToVirtual
 	_unlockProcessSuspendCore

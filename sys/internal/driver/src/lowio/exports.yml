@@ -26,17 +26,17 @@ SceLowio:
         - ScePervasiveForDriver_146108D4: 0x146108D4
         - ScePervasiveForDriver_15237AF8: 0x15237AF8
         - ScePervasiveForDriver_17109C28: 0x17109C28
-        - kscePervasiveUartClockDisable: 0x18DD8043
+        - ScePervasiveForDriver_18DD8043: 0x18DD8043
         - ScePervasiveForDriver_243D0E78: 0x243D0E78
-        - kscePervasiveDsiClockDisable: 0x25AE181E
+        - ScePervasiveForDriver_25AE181E: 0x25AE181E
         - ScePervasiveForDriver_26B51075: 0x26B51075
         - ScePervasiveForDriver_270BE98A: 0x270BE98A
         - ScePervasiveForDriver_28731EC5: 0x28731EC5
         - ScePervasiveForDriver_29E65AE1: 0x29E65AE1
         - ScePervasiveForDriver_2A563E35: 0x2A563E35
-        - kscePervasiveMsifClockDisable: 0x2A9778CD
+        - ScePervasiveForDriver_2A9778CD: 0x2A9778CD
         - ScePervasiveForDriver_2EEBE9AE: 0x2EEBE9AE
-        - kscePervasiveGpioClockEnable: 0x2F195C97
+        - ScePervasiveForDriver_2F195C97: 0x2F195C97
         - ScePervasiveForDriver_2FB5F88F: 0x2FB5F88F
         - ScePervasiveForDriver_31C0A98B: 0x31C0A98B
         - ScePervasiveForDriver_34537B12: 0x34537B12
@@ -64,14 +64,14 @@ SceLowio:
         - ScePervasiveForDriver_4E43299D: 0x4E43299D
         - ScePervasiveForDriver_4F64DEF6: 0x4F64DEF6
         - ScePervasiveForDriver_51981FEE: 0x51981FEE
-        - kscePervasiveRemovableMemoryGetCardInsertState: 0x551EEE82
+        - ScePervasiveForDriver_551EEE82: 0x551EEE82
         - ScePervasiveForDriver_589D0291: 0x589D0291
         - ScePervasiveForDriver_59B7CA34: 0x59B7CA34
         - ScePervasiveForDriver_5AFE0AF0: 0x5AFE0AF0
         - ScePervasiveForDriver_5B4EF352: 0x5B4EF352
         - ScePervasiveForDriver_5BAFA0DC: 0x5BAFA0DC
         - ScePervasiveForDriver_5E20D7D5: 0x5E20D7D5
-        - kscePervasiveMsifSetClock: 0x64ABE589
+        - ScePervasiveForDriver_64ABE589: 0x64ABE589
         - ScePervasiveForDriver_66BF2885: 0x66BF2885
         - ScePervasiveForDriver_6A2FB697: 0x6A2FB697
         - ScePervasiveForDriver_6AF0196F: 0x6AF0196F
@@ -79,15 +79,15 @@ SceLowio:
         - ScePervasiveForDriver_6B5DEDA2: 0x6B5DEDA2
         - ScePervasiveForDriver_6E11EB97: 0x6E11EB97
         - ScePervasiveForDriver_701D5355: 0x701D5355
-        - kscePervasiveGetSoCRevision: 0x714EEFB7
+        - ScePervasiveForDriver_714EEFB7: 0x714EEFB7
         - ScePervasiveForDriver_725B4F59: 0x725B4F59
-        - kscePervasiveGpioResetEnable: 0x731A097D
-        - kscePervasiveMsifClockEnable: 0x7704C013
-        - kscePervasiveUartResetEnable: 0x788B6C61
-        - kscePervasiveGpioResetDisable: 0x78C34032
+        - ScePervasiveForDriver_731A097D: 0x731A097D
+        - ScePervasiveForDriver_7704C013: 0x7704C013
+        - ScePervasiveForDriver_788B6C61: 0x788B6C61
+        - ScePervasiveForDriver_78C34032: 0x78C34032
         - ScePervasiveForDriver_7AE2F8E8: 0x7AE2F8E8
         - ScePervasiveForDriver_7B0F388B: 0x7B0F388B
-        - kscePervasiveSpiResetEnable: 0x7B16F900
+        - ScePervasiveForDriver_7B16F900: 0x7B16F900
         - ScePervasiveForDriver_7C285361: 0x7C285361
         - ScePervasiveForDriver_7D02215D: 0x7D02215D
         - ScePervasiveForDriver_7E813FC5: 0x7E813FC5
@@ -98,10 +98,10 @@ SceLowio:
         - ScePervasiveForDriver_86BEA9A4: 0x86BEA9A4
         - ScePervasiveForDriver_8847825F: 0x8847825F
         - ScePervasiveForDriver_8A85E36B: 0x8A85E36B
-        - kscePervasiveUartSetBaudrate: 0x8BAB45F8
+        - ScePervasiveForDriver_8BAB45F8: 0x8BAB45F8
         - ScePervasiveForDriver_8CF567AD: 0x8CF567AD
         - ScePervasiveForDriver_8EE3AEDF: 0x8EE3AEDF
-        - kscePervasiveDsiSetPixelClock: 0x91C80C41
+        - ScePervasiveForDriver_91C80C41: 0x91C80C41
         - ScePervasiveForDriver_925D9D24: 0x925D9D24
         - ScePervasiveForDriver_98D8914A: 0x98D8914A
         - ScePervasiveForDriver_9BB7B932: 0x9BB7B932
@@ -110,13 +110,13 @@ SceLowio:
         - ScePervasiveForDriver_A10583FF: 0xA10583FF
         - ScePervasiveForDriver_A1D2E440: 0xA1D2E440
         - ScePervasiveForDriver_A2EFD7AF: 0xA2EFD7AF
-        - kscePervasiveMsifResetEnable: 0xA3569FF1
+        - ScePervasiveForDriver_A3569FF1: 0xA3569FF1
         - ScePervasiveForDriver_A3CF9844: 0xA3CF9844
         - ScePervasiveForDriver_A6832B33: 0xA6832B33
         - ScePervasiveForDriver_A7855D3A: 0xA7855D3A
-        - kscePervasiveUartResetDisable: 0xA7CE7DCC
+        - ScePervasiveForDriver_A7CE7DCC: 0xA7CE7DCC
         - ScePervasiveForDriver_A7E64C6F: 0xA7E64C6F
-        - kscePervasiveSpiClockDisable: 0xA85BF98A
+        - ScePervasiveForDriver_A85BF98A: 0xA85BF98A
         - ScePervasiveForDriver_A96642E3: 0xA96642E3
         - ScePervasiveForDriver_AC475961: 0xAC475961
         - ScePervasiveForDriver_AD1E81EB: 0xAD1E81EB
@@ -127,35 +127,35 @@ SceLowio:
         - ScePervasiveForDriver_B8AF1249: 0xB8AF1249
         - ScePervasiveForDriver_B9904983: 0xB9904983
         - ScePervasiveForDriver_BB67EF58: 0xBB67EF58
-        - kscePervasiveDsiClockEnable: 0xBC42C72F
+        - ScePervasiveForDriver_BC42C72F: 0xBC42C72F
         - ScePervasiveForDriver_BD868E6E: 0xBD868E6E
         - ScePervasiveForDriver_C0C842FE: 0xC0C842FE
         - ScePervasiveForDriver_C0F7CC39: 0xC0F7CC39
         - ScePervasiveForDriver_C37CFDFC: 0xC37CFDFC
         - ScePervasiveForDriver_CA0ACFC5: 0xCA0ACFC5
-        - kscePervasiveMsifResetDisable: 0xCB0F15CD
+        - ScePervasiveForDriver_CB0F15CD: 0xCB0F15CD
         - ScePervasiveForDriver_D185D235: 0xD185D235
         - ScePervasiveForDriver_D326E15F: 0xD326E15F
         - ScePervasiveForDriver_D34E74C5: 0xD34E74C5
         - ScePervasiveForDriver_D3B59C33: 0xD3B59C33
         - ScePervasiveForDriver_D58E3A30: 0xD58E3A30
-        - kscePervasiveSpiClockEnable: 0xDFD96BFC
+        - ScePervasiveForDriver_DFD96BFC: 0xDFD96BFC
         - ScePervasiveForDriver_E0711D42: 0xE0711D42
         - ScePervasiveForDriver_E2D8F6C3: 0xE2D8F6C3
         - ScePervasiveForDriver_E3A735B9: 0xE3A735B9
-        - kscePervasiveDsiResetEnable: 0xE3FC1C8D
+        - ScePervasiveForDriver_E3FC1C8D: 0xE3FC1C8D
         - ScePervasiveForDriver_E40BED0F: 0xE40BED0F
-        - kscePervasiveSpiResetDisable: 0xE4B145AE
+        - ScePervasiveForDriver_E4B145AE: 0xE4B145AE
         - ScePervasiveForDriver_E6728E30: 0xE6728E30
         - ScePervasiveForDriver_E8656ADF: 0xE8656ADF
         - ScePervasiveForDriver_E92E28FF: 0xE92E28FF
         - ScePervasiveForDriver_E9D95643: 0xE9D95643
-        - kscePervasiveGpioClockDisable: 0xEB176898
+        - ScePervasiveForDriver_EB176898: 0xEB176898
         - ScePervasiveForDriver_EBE9C84E: 0xEBE9C84E
         - ScePervasiveForDriver_ECA675E0: 0xECA675E0
         - ScePervasiveForDriver_EDCA3961: 0xEDCA3961
         - ScePervasiveForDriver_EEE340ED: 0xEEE340ED
-        - kscePervasiveUartClockEnable: 0xEFD084D8
+        - ScePervasiveForDriver_EFD084D8: 0xEFD084D8
         - ScePervasiveForDriver_F1908D3C: 0xF1908D3C
         - ScePervasiveForDriver_F345FB53: 0xF345FB53
         - ScePervasiveForDriver_F58EF3A5: 0xF58EF3A5
@@ -166,22 +166,22 @@ SceLowio:
         - ScePervasiveForDriver_FBE5AA2F: 0xFBE5AA2F
         - ScePervasiveForDriver_FDD445C3: 0xFDD445C3
         - ScePervasiveForDriver_FF4B3CA6: 0xFF4B3CA6
-        - kscePervasiveDsiResetDisable: 0xFFB43AC2
+        - ScePervasiveForDriver_FFB43AC2: 0xFFB43AC2
     SceGpioForDriver:
       syscall: false
       version: 1
       nid: 0xF0EF5743
       functions:
-        - ksceGpioQueryIntr: 0x010DC295
-        - ksceGpioPortRead: 0x129DF5AC
-        - ksceGpioAcquireIntr: 0x35AAD77A
-        - ksceGpioSetPortMode: 0x372022A4
-        - ksceGpioPortReset: 0xA1B5A462
-        - ksceGpioSetIntrMode: 0xBBEA1DDC
-        - ksceGpioGetPortMode: 0xC4CB78E2
-        - ksceGpioPortSet: 0xD454A584
-        - ksceGpioGetIntrMode: 0xE97A3B31
-        - ksceGpioPortClear: 0xF6310435
+        - SceGpioForDriver_010DC295: 0x010DC295
+        - SceGpioForDriver_129DF5AC: 0x129DF5AC
+        - SceGpioForDriver_35AAD77A: 0x35AAD77A
+        - SceGpioForDriver_372022A4: 0x372022A4
+        - SceGpioForDriver_A1B5A462: 0xA1B5A462
+        - SceGpioForDriver_BBEA1DDC: 0xBBEA1DDC
+        - SceGpioForDriver_C4CB78E2: 0xC4CB78E2
+        - SceGpioForDriver_D454A584: 0xD454A584
+        - SceGpioForDriver_E97A3B31: 0xE97A3B31
+        - SceGpioForDriver_F6310435: 0xF6310435
     ScePwmForDriver:
       syscall: false
       version: 1
@@ -197,13 +197,13 @@ SceLowio:
       version: 1
       nid: 0xE14BEF6E
       functions:
-        - ksceI2cTransferWriteRead: 0x0A40B7BF
+        - SceI2cForDriver_0A40B7BF: 0x0A40B7BF
         - SceI2cForDriver_30CF9469: 0x30CF9469
-        - ksceI2cReset: 0x76D277AB
-        - ksceI2cInit: 0x9CF8F3D6
-        - ksceI2cSetDebugHandlers: 0xA2C7CE62
-        - ksceI2cTransferWrite: 0xCA94A759
-        - ksceI2cTransferRead: 0xD1D0A9A4
+        - SceI2cForDriver_76D277AB: 0x76D277AB
+        - SceI2cForDriver_9CF8F3D6: 0x9CF8F3D6
+        - SceI2cForDriver_A2C7CE62: 0xA2C7CE62
+        - SceI2cForDriver_CA94A759: 0xCA94A759
+        - SceI2cForDriver_D1D0A9A4: 0xD1D0A9A4
         - SceI2cForDriver_E449AC6E: 0xE449AC6E
     SceGrabForDriver:
       syscall: false
@@ -231,35 +231,35 @@ SceLowio:
       version: 1
       nid: 0xEC897883
       functions:
-        - ksceDsiDisableHead: 0x114D1413
-        - ksceDsiDcsRead: 0x3FB0DF1F
-        - ksceDsiGetPixelClock: 0x4DF9E924
-        - ksceDsiEnableHead: 0x5BE5AA9B
+        - SceDsiForDriver_114D1413: 0x114D1413
+        - SceDsiForDriver_3FB0DF1F: 0x3FB0DF1F
+        - SceDsiForDriver_4DF9E924: 0x4DF9E924
+        - SceDsiForDriver_5BE5AA9B: 0x5BE5AA9B
         - SceDsiForDriver_6F8029A1: 0x6F8029A1
-        - ksceDsiSendBlankingPacket: 0x7640F607
-        - ksceDsiSetLanesAndPixelSize: 0x78E6E3CF
+        - SceDsiForDriver_7640F607: 0x7640F607
+        - SceDsiForDriver_78E6E3CF: 0x78E6E3CF
         - SceDsiForDriver_8610B795: 0x8610B795
-        - ksceDsiGenericShortWrite: 0x89C00D2F
-        - ksceDsiSetVic: 0x97BFEA76
-        - ksceDsiGenericReadRequest: 0x98120684
-        - ksceDsiGetVicResolution: 0xB3A70C05
-        - ksceDsiDcsShortWrite: 0xBA6BC89F
-        - ksceDsiStartDisplay: 0xC2E85919
+        - SceDsiForDriver_89C00D2F: 0x89C00D2F
+        - SceDsiForDriver_97BFEA76: 0x97BFEA76
+        - SceDsiForDriver_98120684: 0x98120684
+        - SceDsiForDriver_B3A70C05: 0xB3A70C05
+        - SceDsiForDriver_BA6BC89F: 0xBA6BC89F
+        - SceDsiForDriver_C2E85919: 0xC2E85919
         - SceDsiForDriver_F2921E29: 0xF2921E29
     SceIftuForDriver:
       syscall: false
       version: 1
       nid: 0xCAFCFE50
       functions:
-        - ksceIftuEnable: 0x0D7C02F7
+        - SceIftuForDriver_0D7C02F7: 0x0D7C02F7
         - SceIftuForDriver_0FCBF457: 0x0FCBF457
         - SceIftuForDriver_357EAE24: 0x357EAE24
-        - ksceIftuCsc: 0x67E37EFC
-        - ksceIftuSetInputFrameBuffer: 0x7CE0C4DA
-        - ksceIftuSetMergeSetting: 0xAF19FD85
-        - ksceIftuDisable: 0xC11F30B3
+        - SceIftuForDriver_67E37EFC: 0x67E37EFC
+        - SceIftuForDriver_7CE0C4DA: 0x7CE0C4DA
+        - SceIftuForDriver_AF19FD85: 0xAF19FD85
+        - SceIftuForDriver_C11F30B3: 0xC11F30B3
         - SceIftuForDriver_D64F4C6B: 0xD64F4C6B
-        - ksceIftuSetOutputFormat: 0xE6EE2C6B
+        - SceIftuForDriver_E6EE2C6B: 0xE6EE2C6B
     SceCsiForDriver:
       syscall: false
       version: 1

@@ -10,6 +10,9 @@
 #include <rtc/rtc.h>
 #include <syscon/syscon_scratchpad.h>
 
+/* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
+int ksceSblUtMgrHasStoreFlag(void);
+
 #define RTC_AUX_CLOCKS		8
 
 /* the auxiliary clocks (index into RtcState.aux) */
@@ -38,7 +41,7 @@ typedef struct RtcAuxClock {
 } RtcAuxClock;
 
 typedef struct RtcState {
-	SceUInt32 dateFormat;		/* ksceRtcSetConf: 0..2 */
+	SceUInt32 dateFormat;		/* SceRtcForDriver_ACFE5A9F: 0..2 */
 	SceUInt32 timeFormat;		/* 0: 12 hours, 1: 24 hours */
 	SceInt32 daylightSaving;	/* minutes */
 	SceInt32 timezone;		/* minutes */

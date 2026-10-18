@@ -1682,7 +1682,7 @@ GpuTimerDestroy:
 	push {r4, lr}
 	mov r4, r0
 	ldr r0, [r0, #8]
-	bl ksceKernelSysTimerFree
+	bl SceSystimerForDriver_8358611F
 	mov r0, r4
 	bl FreeProcessGpuMemory
 	movs r0, #0

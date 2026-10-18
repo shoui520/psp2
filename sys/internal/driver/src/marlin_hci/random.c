@@ -21,7 +21,7 @@ int MarlinRandomCreate(SceMt19937Context **context)
 		result = 2;
 		goto out;
 	}
-	ksceRtcGetCurrentTick(&tick);
+	SceRtcForDriver_DEC408D4(&tick);
 	seed = (unsigned int)tick.tick;
 	SceKernelUtilsForDriver_4C9A5730(memory, seed);
 	*context = memory;

@@ -96,7 +96,7 @@ set(MODULE_IMPORT_FUNCS
 	SceAudioForDriver_75915003
 	SceCodecForDriver_41CFFE48
 	SceCodecForDriver_C1DB7BAF
-	ksceSysconGetHardwareInfo2
+	SceSysconForDriver_965C68C3
 	sceCodecEngineDsp0AllocCommunicationMemories
 	sceCodecEngineDsp0ConvertPhysicalToVirtual
 	_unlockProcessSuspendCore

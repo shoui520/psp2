@@ -98,9 +98,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelGetSystemTimeWide
 	sceKernelRegisterSysEventHandler
-	ksceGpioSetPortMode
-	ksceGpioPortSet
-	ksceGpioPortClear
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_D454A584
+	SceGpioForDriver_F6310435
 	ksceUsbdOpenPipe
 	ksceUsbdRegisterDriver
 	ksceUsbdUnregisterDriver
@@ -109,7 +109,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceUsbdScanStaticDescriptor
 	SceNetPsForDriver_1ABF937D
 	ScePowerForDriver_B24263F0
-	ksceSysconGetHardwareInfo
+	SceSysconForDriver_CBD6D8BC
 	sceRegMgrGetKeyInt
 	ksceUsbServDisableEtherSuspend
 )

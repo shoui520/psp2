@@ -1,7 +1,7 @@
 /* Descriptive source boundary preserves the original out-of-line helper calls. */
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
-#include <psp2kern/kernel/rtc.h>
+#include <rtc/rtc.h>
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
 #include "drm_crypto.h"
@@ -552,11 +552,11 @@ int GcAuthPcactApplyRtcActivation(const GcAuthPcactRtcActivationRequest *request
 		((unsigned long long)gcAuthPcactScratch.rtcDecoded.seconds[6] << 48) |
 		((unsigned long long)gcAuthPcactScratch.rtcDecoded.seconds[7] << 56);
 	tick.tick = seconds * 1000 + 62135596800000000ULL;
-	if (ksceRtcSetCurrentSecureTick(&tick) != 0) {
+	if (SceRtcForDriver_7D431C87(&tick) != 0) {
 		result = (int)0x808a0603;
 	} else {
-		ksceRtcGetCurrentSecureTick(&currentTick);
-		ksceRtcConvertTickToDateTime(&dateTime, &currentTick);
+		SceRtcForDriver_401C0954(&currentTick);
+		SceRtcForDriver_42A0DFCB(&dateTime, &currentTick);
 	}
 finish:
 	cursor = (unsigned char *)&gcAuthPcactScratch;

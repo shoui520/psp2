@@ -710,7 +710,7 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	destination.paddr0 = destinationPhysical;
 	destination.paddr1 = 0;
 	destination.paddr2 = 0;
-	ret = ksceIftuCsc(&destination, &source, &conversion);
+	ret = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
 	if ((process->option & 1) && ret >= 0)
 		SceCpuForDriver_02796361((void *)((unsigned int)pRGBA & ~255U),
 			(rgbaSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);
@@ -949,7 +949,7 @@ int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr,
 	destination.paddr0 = destinationPhysical;
 	destination.paddr1 = 0;
 	destination.paddr2 = 0;
-	ret = ksceIftuCsc(&destination, &source, &conversion);
+	ret = SceIftuForDriver_67E37EFC(&destination, &source, &conversion);
 	if ((process->option & 1) && ret >= 0)
 		SceCpuForDriver_02796361((void *)((unsigned int)pRGBA & ~255U),
 			(outputSize + 255 + ((unsigned int)pRGBA & 255)) & ~255U);

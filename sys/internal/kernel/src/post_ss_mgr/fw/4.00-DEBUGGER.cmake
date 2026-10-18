@@ -246,23 +246,23 @@ set(MODULE_IMPORT_FUNCS
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_29CF4335
 	SceSysconForDriver_3C80B529
-	ksceSysconJigOpenPort
-	ksceSysconJigClosePort
+	SceSysconForDriver_44A173F5
+	SceSysconForDriver_483FAE05
 	SceSysconForDriver_4BC63A40
 	SceSysconForDriver_63683B9B
 	SceSysconForDriver_7BFBA09E
-	ksceSysconSetPowerMode
-	ksceSysconSetMultiCnPort
-	ksceSysconCtrlAccPower
+	sceSysconSetPowerMode
+	SceSysconForDriver_8AAB6308
+	SceSysconForDriver_8D1D97E8
 	SceSysconForDriver_933D813F
-	ksceSysconGetHardwareInfo
-	ksceSysconJigSetConfig
+	SceSysconForDriver_CBD6D8BC
+	SceSysconForDriver_D24BF916
 	SceSysconForDriver_D2F456DC
-	ksceSysconCtrlHostOutputViaDongle
+	SceSysconForDriver_DECCB2B4
 	SceSysconForDriver_EBDF88B9
 	SceSysconForDriver_EBE3262C
-	ksceSysconGetBaryonVersion
-	ksceRtcGetCurrentSecureTick
+	SceSysconForDriver_FF86F4C5
+	SceRtcForDriver_401C0954
 	SceRtcForDriver_A0D7899A
 	SceQafMgrForDriver_082A4FC2
 	SceDeci4pCpupForDriver_2015C7CB

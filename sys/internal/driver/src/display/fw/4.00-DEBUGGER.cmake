@@ -233,12 +233,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSubIntrHandler
 	sceKernelCallSubIntrHandler
 	sceKernelReleaseIntrHandler
-	ksceKernelSysTimerSetClockSource
-	ksceKernelSysTimerStartCount
-	ksceKernelSysTimerFree
-	ksceKernelSysTimerSetInterval
-	ksceKernelSysTimerSetHandler
-	ksceKernelSysTimerAlloc
+	SceSystimerForDriver_0450933B
+	SceSystimerForDriver_59EBD22D
+	SceSystimerForDriver_8358611F
+	SceSystimerForDriver_A73351C1
+	SceSystimerForDriver_CCCD1EE3
+	SceSystimerForDriver_E2B9D8E9
 	sceKernelGetThreadmgrUIDClass
 	sceKernelFinalizeFastMutex
 	SceThreadmgrForDriver_20C228E4
@@ -264,12 +264,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelUIDInheritedEventClassInit
 	sceKernelScheduleWorkTask
-	ksceKernelDmaOpSetupChain
-	ksceKernelDmaOpSync
-	ksceKernelDmaOpEnQueue
-	ksceKernelDmaOpAlloc
-	ksceKernelDmaOpFree
-	ksceKernelDmaOpAssign
+	sceKernelDmaOpSetupChain
+	sceKernelDmaOpSync
+	sceKernelDmaOpEnQueue
+	sceKernelDmaOpAlloc
+	sceKernelDmaOpFree
+	sceKernelDmaOpAssign
 	SceProcessmgrForDriver_3801D7D6
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
@@ -283,36 +283,36 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_C6E83F34
 	SceKernelUtilsForDriver_367EE3DF
-	kscePervasiveDsiClockDisable
-	kscePervasiveDsiSetPixelClock
-	kscePervasiveDsiClockEnable
-	kscePervasiveDsiResetEnable
-	kscePervasiveDsiResetDisable
-	ksceDsiDisableHead
-	ksceDsiGetPixelClock
-	ksceDsiEnableHead
+	ScePervasiveForDriver_25AE181E
+	ScePervasiveForDriver_91C80C41
+	ScePervasiveForDriver_BC42C72F
+	ScePervasiveForDriver_E3FC1C8D
+	ScePervasiveForDriver_FFB43AC2
+	SceDsiForDriver_114D1413
+	SceDsiForDriver_4DF9E924
+	SceDsiForDriver_5BE5AA9B
 	SceDsiForDriver_6F8029A1
-	ksceDsiSendBlankingPacket
-	ksceDsiSetLanesAndPixelSize
-	ksceDsiSetVic
-	ksceDsiGetVicResolution
-	ksceDsiStartDisplay
+	SceDsiForDriver_7640F607
+	SceDsiForDriver_78E6E3CF
+	SceDsiForDriver_97BFEA76
+	SceDsiForDriver_B3A70C05
+	SceDsiForDriver_C2E85919
 	SceDsiForDriver_F2921E29
-	ksceIftuEnable
+	SceIftuForDriver_0D7C02F7
 	SceIftuForDriver_0FCBF457
 	SceIftuForDriver_357EAE24
-	ksceIftuCsc
-	ksceIftuSetInputFrameBuffer
-	ksceIftuSetMergeSetting
-	ksceIftuDisable
+	SceIftuForDriver_67E37EFC
+	SceIftuForDriver_7CE0C4DA
+	SceIftuForDriver_AF19FD85
+	SceIftuForDriver_C11F30B3
 	SceIftuForDriver_D64F4C6B
-	ksceIftuSetOutputFormat
-	ksceGpioSetPortMode
-	ksceGpioPortClear
+	SceIftuForDriver_E6EE2C6B
+	SceGpioForDriver_372022A4
+	SceGpioForDriver_F6310435
 	ScePwmForDriver_13161CCC
 	ScePwmForDriver_22C17D24
 	ScePwmForDriver_514773B1
-	ksceI2cTransferWrite
+	SceI2cForDriver_CA94A759
 	ksceOledWaitReady
 	ksceOledDisplayOn
 	SceOledForDriver_9F4ABDDC

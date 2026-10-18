@@ -152,7 +152,7 @@ int InitTimerInfo(TimerInfo *info)
 	return 0;
 }
 
-SceSysTimerId ksceKernelSysTimerAlloc(int type)
+SceSysTimerId SceSystimerForDriver_E2B9D8E9(int type)
 {
 	TimerInfo *table, *info;
 	unsigned int i, count;
@@ -192,7 +192,7 @@ SceSysTimerId ksceKernelSysTimerAlloc(int type)
 	return info->id;
 }
 
-int ksceKernelSysTimerFree(SceSysTimerId id)
+int SceSystimerForDriver_8358611F(SceSysTimerId id)
 {
 	TimerInfo *info;
 	int state;
@@ -232,7 +232,7 @@ int ksceKernelSysTimerFree(SceSysTimerId id)
 	return 0;
 }
 
-int ksceKernelSysTimerSetClockSource(SceSysTimerId id, SceUInt32 source, SceUInt32 prescale)
+int SceSystimerForDriver_0450933B(SceSysTimerId id, SceUInt32 source, SceUInt32 prescale)
 {
 	TimerInfo *info;
 	SceUInt32 sel;
@@ -267,7 +267,7 @@ int ksceKernelSysTimerSetClockSource(SceSysTimerId id, SceUInt32 source, SceUInt
 	return 0;
 }
 
-int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
+int SceSystimerForDriver_A73351C1(SceSysTimerId id, SceUInt64 interval)
 {
 	TimerInfo *info;
 	int state;
@@ -296,7 +296,7 @@ int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
 	return 0;
 }
 
-int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
+int SceSystimerForDriver_CCCD1EE3(SceSysTimerId id, SceSysTimerCallback handler,
 				 SceUInt32 targetCpu, void *arg)
 {
 	TimerInfo *info;
@@ -341,7 +341,7 @@ int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
 	return 0;
 }
 
-int ksceKernelSysTimerStartCount(SceSysTimerId id)
+int SceSystimerForDriver_59EBD22D(SceSysTimerId id)
 {
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
@@ -373,7 +373,7 @@ int ksceKernelSysTimerStartCount(SceSysTimerId id)
 	return 0;
 }
 
-int ksceKernelSysTimerStopCount(SceSysTimerId id)
+int SceSystimerForDriver_BF8D42B0(SceSysTimerId id)
 {
 	TimerInfo *info = GetTimerInfo(id);
 	int state;
@@ -394,7 +394,7 @@ int ksceKernelSysTimerStopCount(SceSysTimerId id)
 	return 0;
 }
 
-int ksceKernelSysTimerResetCount(SceSysTimerId id)
+int SceSystimerForDriver_7DEBA6A5(SceSysTimerId id)
 {
 	TimerInfo *info;
 	int state;
@@ -443,7 +443,7 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 	return 0;
 }
 
-int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
+int SceSystimerForDriver_1B14DFD6(SceSysTimerId id, SceUInt64 count)
 {
 	TimerInfo *info;
 	int state;
@@ -489,7 +489,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 	return 0;
 }
 
-int ksceKernelSysTimerGetCount(SceSysTimerId id, SceUInt64 *count)
+int SceSystimerForDriver_963F7C0D(SceSysTimerId id, SceUInt64 *count)
 {
 	TimerInfo *info = GetTimerInfo(id);
 	volatile SceLongTimerRegisters *reg;

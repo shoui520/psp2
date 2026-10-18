@@ -123,10 +123,10 @@ int avConfigSetSuspendInterval(unsigned int interval)
 		dimmingTime = 60000000;
 	}
 	SceKernelSuspendForDriver_E0489831(0);
-	kscePowerSetIdleTimer(0, suspendTime);
+	ScePowerForDriver_6BC26FC7(0, suspendTime);
 	if (SceSblAIMgrForDriver_71608CA3() == 0)
-		kscePowerSetIdleTimer(1, dimmingTime);
-	kscePowerSetIdleTimer(2, (SceUInt64)interval * 1000000);
+		ScePowerForDriver_6BC26FC7(1, dimmingTime);
+	ScePowerForDriver_6BC26FC7(2, (SceUInt64)interval * 1000000);
 	return 0;
 }
 
@@ -139,7 +139,7 @@ int avConfigSetDimmingInterval(unsigned int interval)
 	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	avConfigConfiguration.settings.dimmingInterval = interval;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-	kscePowerSetIdleTimer(1, (SceUInt64)interval * 1000000);
+	ScePowerForDriver_6BC26FC7(1, (SceUInt64)interval * 1000000);
 	return 0;
 }
 
@@ -154,10 +154,10 @@ int avConfigSetDisplayColorSpaceMode(int mode)
 	avConfigConfiguration.settings.colorSpaceMode = mode;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
 	if (mode == 1) {
-		result = ksceDisplaySetColorSpaceMode(0, 2);
+		result = SceDisplayForDriver_8D79D187(0, 2);
 		SceCompatForDriver_6EBD9E01(2);
 	} else {
-		result = ksceDisplaySetColorSpaceMode(0, 0);
+		result = SceDisplayForDriver_8D79D187(0, 0);
 		SceCompatForDriver_6EBD9E01(0);
 	}
 	return result;

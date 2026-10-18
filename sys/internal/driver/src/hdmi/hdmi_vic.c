@@ -3,7 +3,7 @@
  * needs. Internal names are unknown unless a comment says otherwise.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/lowio/i2c.h>
+#include <lowio/i2c.h>
 #include "hdmi_internal.h"
 
 /* I2C addresses of the transmitter's register maps (bus 1). */
@@ -16,7 +16,7 @@ static inline void writeReg(SceUInt32 addr, SceUInt8 reg, SceUInt8 value)
 
 	buf[0] = reg;
 	buf[1] = value;
-	ksceI2cTransferWrite(1, addr, buf, 2);
+	SceI2cForDriver_CA94A759(1, addr, buf, 2);
 }
 
 /* Program the transmitter's timing generator for a video identification code. */

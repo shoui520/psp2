@@ -7,7 +7,7 @@
 #include <vnz_wrapper/venezia_rpc.h>
 #include <lowio/pervasive_regs.h>
 #include <lowio/mailbox_regs.h>
-#include <psp2kern/kernel/dmac.h>
+#include <dmacmgr/dmacmgr.h>
 #include <sysmem/uid_class.h>
 #include <vnz_wrapper/venezia_debug.h>
 #include <threadmgr/threadmgr.h>

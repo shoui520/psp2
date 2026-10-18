@@ -57,12 +57,12 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pDfMgrForDebugger_6D26CC56
 	sceDfMgrReqSend
 	sceDfMgrSend
-	ksceCtrlSetAnalogEmulation
-	ksceCtrlSetButtonEmulation
-	ksceCtrlSetCtrlpCallback
-	ksceCtrlSetRapidFire
-	ksceCtrlClearRapidFire
-	ksceCtrlGetControllerPortInfo
+	SceCtrlForDriver_06577FE8
+	SceCtrlForDriver_1E750326
+	sceCtrlSetCtrlpCallback
+	SceCtrlForDriver_A248CDAE
+	SceCtrlForDriver_ED138A26
+	SceCtrlForDriver_F11D0D30
 	ksceTouchSetCtrlpCallback
 	ksceTouchGetPanelInfo
 	SceBtForDriver_10D68FAE

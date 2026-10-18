@@ -4,7 +4,6 @@
 #include <sysmem/debug.h>
 #include <syscon/syscon.h>
 #include <psp2kern/kernel/gcauthmgr/gc_auth.h>
-#include <psp2kern/lowio/pervasive.h>
 #include <sdif/sdif.h>
 #include <msif/msif.h>
 #include <umass/umass.h>
@@ -76,7 +75,7 @@ int sddev_power_off(SceSdstorSddev *device)
 	SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 	if (hport == 1) {
 		ScePervasiveForDriver_5E20D7D5();
-		result = ksceSysconCtrlSdPower(0);
+		result = sceSysconCtrlSdPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 497, "sddev_power_off_gc",
 				"sceSysconCtrlSdPower(0) returns 0x%08x\n", result);
@@ -91,7 +90,7 @@ int sddev_power_off(SceSdstorSddev *device)
 	if (hport == 3)
 		result = 0;
 	if (device->mediaType == 2) {
-		result = ksceSysconCtrlRMRPower(0);
+		result = sceSysconCtrlRMRPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 529, "sddev_power_off_rm",
 				"sceSysconCtrlRMRPower(0) returns 0x%08x\n", result);
@@ -200,7 +199,7 @@ int sddev_power_on(SceSdstorSddev *device)
 		if (ksceSdifGetCardInsertState1(device->hport) != 1)
 			goto noDevice;
 	} else if (device->mediaType == 2) {
-		if (!kscePervasiveRemovableMemoryGetCardInsertState())
+		if (!ScePervasiveForDriver_551EEE82())
 			goto noDevice;
 	} else if (device->mediaType == 1) {
 		if (ksceSdifGetCardInsertState2(device->hport) != 1)
@@ -211,7 +210,7 @@ int sddev_power_on(SceSdstorSddev *device)
 	SCE_DBG_ASSERT_FUNC(1, 588, "sddev_get_hport");
 	powerResult = 0;
 	if (hport == 1) {
-		powerResult = ksceSysconCtrlSdPower(1);
+		powerResult = sceSysconCtrlSdPower(1);
 		if (powerResult < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 477, "sddev_power_on_gc",
 				"sceSysconCtrlSdPower(1) returns 0x%08x\n", powerResult);
@@ -227,7 +226,7 @@ int sddev_power_on(SceSdstorSddev *device)
 	if (hport == 3)
 		powerResult = 0;
 	if (device->mediaType == 2) {
-		powerResult = ksceSysconCtrlRMRPower(1);
+		powerResult = sceSysconCtrlRMRPower(1);
 		if (powerResult < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 513, "sddev_power_on_rm",
 				"sceSysconCtrlRMRPower(1) returns 0x%08x\n", powerResult);
@@ -433,7 +432,7 @@ int sddev_remove(SceSdstorSddev *device)
 	result = 0;
 	if (hport == 1) {
 		ScePervasiveForDriver_5E20D7D5();
-		result = ksceSysconCtrlSdPower(0);
+		result = sceSysconCtrlSdPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 497, "sddev_power_off_gc",
 				"sceSysconCtrlSdPower(0) returns 0x%08x\n", result);
@@ -448,7 +447,7 @@ int sddev_remove(SceSdstorSddev *device)
 	if (hport == 3)
 		result = 0;
 	if (device->mediaType == 2) {
-		result = ksceSysconCtrlRMRPower(0);
+		result = sceSysconCtrlRMRPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 529, "sddev_power_off_rm",
 				"sceSysconCtrlRMRPower(0) returns 0x%08x\n", result);
@@ -513,7 +512,7 @@ int sddev_suspend(SceSdstorSddev *device)
 	result = 0;
 	if (hport == 1) {
 		ScePervasiveForDriver_5E20D7D5();
-		result = ksceSysconCtrlSdPower(0);
+		result = sceSysconCtrlSdPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 497, "sddev_power_off_gc",
 				"sceSysconCtrlSdPower(0) returns 0x%08x\n", result);
@@ -528,7 +527,7 @@ int sddev_suspend(SceSdstorSddev *device)
 	if (hport == 3)
 		result = 0;
 	if (device->mediaType == 2) {
-		result = ksceSysconCtrlRMRPower(0);
+		result = sceSysconCtrlRMRPower(0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 529, "sddev_power_off_rm",
 				"sceSysconCtrlRMRPower(0) returns 0x%08x\n", result);

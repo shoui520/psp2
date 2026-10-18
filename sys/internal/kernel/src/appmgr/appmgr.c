@@ -32,7 +32,7 @@ extern int _sceAppMgrAbortHandlerInitialize(void);
 extern int _appmgrProcessInitialize(int (*callback)(struct AppState *app));
 extern int _appArbitrationOnProcessUnloaded(struct AppState *app);
 extern void initializeAppMgrDevice(void);
-extern int kscePowerSetProcessIdleCallback(
+extern int ScePowerForDriver_0856FD0A(
 		int (*callback)(SceUID, unsigned int, void *), void *argument);
 extern int _appmgrQueueInit(void);
 extern int appmgrInitializeDebugSettings(void);
@@ -229,7 +229,7 @@ int sceAppMgrInit(void)
 	INIT_RESULT(result, 291);
 	initializeAppMgrDevice();
 	/* The provider's opaque registration type has an ignored int result. */
-	result = kscePowerSetProcessIdleCallback(
+	result = ScePowerForDriver_0856FD0A(
 		(int (*)(SceUID, unsigned int, void *))appmgrProcessIdleCallback, NULL);
 #if FW_DEBUG
 	INIT_RESULT(result, 296);

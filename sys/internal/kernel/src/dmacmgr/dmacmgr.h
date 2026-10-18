@@ -9,11 +9,8 @@
 
 #include <psp2kern/types.h>
 
-/* vitasdk's prototype takes the timeout by address. */
-#define ksceKernelDmaOpSync		ksceKernelDmaOpSync_vitasdk
 #include <dmacmgr/dmacmgr.h>
 #include <dmacmgr/dmac_regs.h>
-#undef ksceKernelDmaOpSync
 
 /* ===== operations ===== */
 

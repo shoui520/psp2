@@ -66,7 +66,7 @@ static int pollInputs(void *arg, void *ctx, unsigned char priority) /* name unkn
 		remote.multiInput = multi;
 		remote.changed = 1;
 	}
-	ksceSysconGetMultiCnInfo(&info);
+	SceSysconForDriver_1503D6A0(&info);
 	remote.multiType = (info & 0xff00) == 0x300;
 	if (remote.changed) {
 		remote.changed = 0;
@@ -316,10 +316,10 @@ int module_start(SceSize args, void *argp)
 	remote.status[0] = remote.input == 1;
 	remote.status[1] = remote.status[2] = remote.input == 1 ? -1 : 0;
 	remote.changed = 1;
-	info = ksceSysconGetHardwareInfo();
+	info = SceSysconForDriver_CBD6D8BC();
 	if ((info & 0xff0000) < 0x800000) {
 		remote.hardwareFlags = 3;
-	} else if ((ksceSysconGetHardwareInfo() & 0xff0000) >= 0x820000) {
+	} else if ((SceSysconForDriver_CBD6D8BC() & 0xff0000) >= 0x820000) {
 		remote.hardwareFlags = 5;
 	}
 	remote.codecInput = SceSysconForDriver_C3504ADE();
@@ -328,7 +328,7 @@ int module_start(SceSize args, void *argp)
 	remote.rawMultiInput = remote.multiInput;
 	remote.multiHistory = remote.multiInput ? ~0u : 0;
 	if (remote.multiInput) {
-		ksceSysconGetMultiCnInfo(&info);
+		SceSysconForDriver_1503D6A0(&info);
 		remote.multiType = (info & 0xff00) == 0x300;
 	}
 	SceSysconForDriver_63352A39(inputChanged, NULL);

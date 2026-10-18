@@ -4,7 +4,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/barrier.h>
 #include <rtc/rtc.h>
-#include <psp2kern/lowio/pervasive.h>
+#include <lowio/pervasive.h>
 #include <string.h>
 #include "sgx543_v1.164defs.h"
 #include <gpu/sgx_regs.h>
@@ -291,7 +291,7 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 	if (flags & ~7U)
 		return (int)0x804c0000;
 	dump->version = 0x10003;
-	result = ksceRtcGetCurrentClockLocalTime(&dump->localTime);
+	result = sceRtcGetCurrentClockLocalTime(&dump->localTime);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 414,
 				"sceRtcGetCurrentClockLocalTime() returned 0x%08x\n", result);
@@ -319,8 +319,8 @@ int sceGpuRegisterDumpCollect(SceGpuRegisterDump *dump, unsigned size,
 				result);
 		return (int)0x804c000c;
 	}
-	dump->socRevision = kscePervasiveGetSoCRevision() & 0x1ffff;
-	result = kscePowerGetGpuClockFrequencyInternal(&dump->gpuClockFirst,
+	dump->socRevision = ScePervasiveForDriver_714EEFB7() & 0x1ffff;
+	result = scePowerGetGpuClockFrequencyInternal(&dump->gpuClockFirst,
 			&dump->gpuClockSecond);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 463,
