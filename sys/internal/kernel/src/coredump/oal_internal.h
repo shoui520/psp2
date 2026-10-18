@@ -4,9 +4,8 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <psp2kern/coredump.h>
 #include <coredump/coredump.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
 #include <threadmgr/threadmgr_debugger.h>
 #include <threadmgr/lw_mutex.h>
@@ -325,7 +324,7 @@ typedef struct CoredumpSystemInfo {
 	uint32_t reservedVersion;
 	uint8_t kernelVersion[4];
 	uint32_t reservedId;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	uint8_t hardwareType[4];
 	uint32_t dipswInfo;
 	union {
@@ -337,7 +336,7 @@ typedef struct CoredumpSystemInfo {
 		uint16_t isDolce;
 	};
 	uint8_t reservedHardware[2];
-	SceOpenPsId encryptedOpenPsId;
+	SceKernelOpenPsId encryptedOpenPsId;
 	uint32_t timestampLow;
 	uint32_t timestampHigh;
 	uint32_t qaEnabled;

@@ -3,7 +3,7 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <rtc/rtc.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -184,7 +184,7 @@ unsigned int sceNetPsGetRandom(void)
 {
 	unsigned int value;
 
-	ksceSblRngPseudoRandomNumber(&value, sizeof(value));
+	_set_key_seed(&value, sizeof(value));
 	return value;
 }
 

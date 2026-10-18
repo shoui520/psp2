@@ -15,7 +15,6 @@
 #include <modulemgr/modulemgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/fios2.h>
 #include <sysmem/debug.h>
 #include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
@@ -1260,7 +1259,15 @@ SceUID sceIoPwriteAsyncForUser(SceUID fd, const void *data, SceSize size, SceOff
 /* SceSblACMgr */
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *type);
 
-/* SceFios2Kernel: the overlay's directory calls (names unknown) */
+/*
+ * SceFios2Kernel. iofilemgr keeps a directory handle as an int (its dummy files carry it),
+ * so it declares the calls it makes itself rather than take fios2/fios2.h's
+ * SceFiosKernelDH pointers.
+ */
+int SceFios2KernelForDriver_0F456345(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
+				     SceSize maxPath);
+
+/* the overlay's directory calls (names unknown) */
 int SceFios2KernelForDriver_3B329E86(int *handle, const char *dirname, int a2, int a3);
 int SceFios2KernelForDriver_28E28A58(int handle, SceIoDirent *dir);
 int SceFios2KernelForDriver_DD7627EC(int handle);

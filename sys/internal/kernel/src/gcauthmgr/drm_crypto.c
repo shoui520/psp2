@@ -4,10 +4,10 @@
 #include <psp2kern/types.h>
 #include "drm_crypto.h"
 #include <sysmem/utils.h>
+#include <ss_mgr/ss_mgr.h>
 
 int GcAuthExecuteKirkCommand(void *output, const void *input, int command,
 		size_t size, int keyId);
-int ksceSblRngGenuineRandomNumber(void *output);
 
 int GcAuthAesCbc(unsigned char *data, size_t size, const void *key,
 		const unsigned char *iv, int decrypt)
@@ -229,7 +229,7 @@ int GcAuthGenerateRandom20(unsigned char *data)
 	unsigned int *output;
 	int result;
 
-	result = ksceSblRngGenuineRandomNumber(random);
+	result = SceSblSsMgrForDriver_AC57F4F0(random);
 	if (result != 0)
 		return (int)0x808a0005;
 	output = (unsigned int *)data;

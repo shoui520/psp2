@@ -19,7 +19,7 @@ int g_ioFiosPathEnabled __attribute__((section(".data"))) = 0;
 /* the size of a path the overlay resolves */
 #define IO_FIOS_PATH_SIZE	0x400
 
-/* ksceFiosKernelOverlayResolveSync: resolve for reading or for writing (names unknown) */
+/* SceFios2KernelForDriver_0F456345: resolve for reading or for writing (names unknown) */
 #define IO_FIOS_RESOLVE_READ	0
 #define IO_FIOS_RESOLVE_WRITE	1
 
@@ -188,7 +188,7 @@ int sceIoRemoveForUser(const char *file)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -212,7 +212,7 @@ int sceIoRenameForUser(const char *oldname, const char *newname)
 	resolvedOld = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolvedOld == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, oldname, resolvedOld,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, oldname, resolvedOld,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0) {
 		ret = ioFiosError(ret);
@@ -222,7 +222,7 @@ int sceIoRenameForUser(const char *oldname, const char *newname)
 			sceKernelFreeHeapMemory(g_ioVfsHeapUid, resolvedOld);
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		}
-		ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, newname,
+		ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, newname,
 						       resolvedNew, IO_FIOS_PATH_SIZE);
 		if (ret < 0)
 			ret = ioFiosError(ret);
@@ -248,7 +248,7 @@ int sceIoMkdirForUser(const char *dir, SceMode mode)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, dir, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, dir, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -272,7 +272,7 @@ int sceIoRmdirForUser(const char *path)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, path, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, path, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -342,7 +342,7 @@ int sceIoGetstatForUser(const char *file, SceIoStat *stat)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_READ, file, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_READ, file, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -366,7 +366,7 @@ int sceIoChstatForUser(const char *file, const SceIoStat *stat, int bits)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -390,7 +390,7 @@ int sceIoSyncForUser(const char *device, unsigned int flag)
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, device, resolved,
+	ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, device, resolved,
 					       IO_FIOS_PATH_SIZE);
 	if (ret < 0)
 		ret = ioFiosError(ret);
@@ -646,7 +646,7 @@ SceUID sceIoOpenAsyncForUser(const char *file, int flags, SceMode mode, void *as
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		fd = ksceFiosKernelOverlayResolveSync(pid, resolveMode, file, resolved,
+		fd = SceFios2KernelForDriver_0F456345(pid, resolveMode, file, resolved,
 						      IO_FIOS_PATH_SIZE);
 		if (fd < 0) {
 			fd = ioFiosError(fd);
@@ -743,7 +743,7 @@ SceUID sceIoRemoveAsyncForUser(const char *file, void *asyncParam)
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		fd = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+		fd = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 						      IO_FIOS_PATH_SIZE);
 		if (fd < 0) {
 			fd = ioFiosError(fd);
@@ -874,7 +874,7 @@ SceUID sceIoMkdirAsyncForUser(const char *file, SceMode mode, void *asyncParam)
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		fd = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+		fd = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 						      IO_FIOS_PATH_SIZE);
 		if (fd < 0) {
 			fd = ioFiosError(fd);
@@ -904,7 +904,7 @@ SceUID sceIoRmdirAsyncForUser(const char *file, void *asyncParam)
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		fd = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+		fd = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 						      IO_FIOS_PATH_SIZE);
 		if (fd < 0) {
 			fd = ioFiosError(fd);
@@ -935,7 +935,7 @@ SceUID sceIoRenameAsyncForUser(const char *oldname, const char *newname, void *a
 		resolvedOld = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolvedOld == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, oldname, resolvedOld,
+		ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, oldname, resolvedOld,
 						       IO_FIOS_PATH_SIZE);
 		if (ret < 0) {
 			ret = ioFiosError(ret);
@@ -945,7 +945,7 @@ SceUID sceIoRenameAsyncForUser(const char *oldname, const char *newname, void *a
 				sceKernelFreeHeapMemory(g_ioVfsHeapUid, resolvedOld);
 				return SCE_KERNEL_ERROR_NO_MEMORY;
 			}
-			ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, newname,
+			ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, newname,
 							       resolvedNew, IO_FIOS_PATH_SIZE);
 			if (ret < 0)
 				ret = ioFiosError(ret);
@@ -980,7 +980,7 @@ SceUID sceIoChstatAsyncForUser(const char *file, SceIoStat *stat, int bits,
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		ret = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
+		ret = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_WRITE, file, resolved,
 						       IO_FIOS_PATH_SIZE);
 		if (ret < 0) {
 			ret = ioFiosError(ret);
@@ -1021,7 +1021,7 @@ SceUID sceIoGetstatAsyncForUser(const char *file, SceIoStat *stat, void *asyncPa
 		resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, IO_FIOS_PATH_SIZE);
 		if (resolved == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		fd = ksceFiosKernelOverlayResolveSync(pid, IO_FIOS_RESOLVE_READ, file, resolved,
+		fd = SceFios2KernelForDriver_0F456345(pid, IO_FIOS_RESOLVE_READ, file, resolved,
 						      IO_FIOS_PATH_SIZE);
 		if (fd < 0) {
 			fd = ioFiosError(fd);

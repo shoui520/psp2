@@ -6,14 +6,15 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2common/npdrm.h>
-#include <psp2kern/kernel/gcauthmgr/drm_bb.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <npdrm/npdrm.h>
+#include <gcauthmgr/sblgcauthmgrdrmbb.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <rtc/rtc.h>
 #include <string.h>
 #include <stdio.h>
+#include <authmgr/sblauthmgr.h>
 
 struct NpDrmActivationKeyMaterial {
 	unsigned char activationKey[16];
@@ -87,7 +88,7 @@ struct NpDrmActivationKeyMaterial gNpDrmActivationKeyMaterial;
 int gNpDrmIsDevelopment;
 struct NpDrmActivationCache gNpDrmActivationCache;
 union PsmDrmWorkingData gPsmDrmWorkingData;
-SceOpenPsId gNpDrmOpenPsId;
+SceKernelOpenPsId gNpDrmOpenPsId;
 int gNpDrmActivationValid;
 int gPsmDrmActivationValid;
 struct PsmDrmAesMaterial gPsmDrmAesMaterial;
@@ -126,11 +127,8 @@ int NpDrmEbootSigVerify(const char *ebootPath, const void *signature,
 	unsigned int signatureSize, void *buffer, unsigned int bufferSize);
 int NpDrmPspEbootSigGenerate(const char *ebootPath, const void *sha256,
 	void *signature, void *buffer, unsigned int bufferSize);
-int ksceSblAuthMgrGetEKc(void *buffer, SceSize size, int flag);
 extern const struct NpDrmActivationKeyMaterial gNpDrmEncryptedActivationKeyMaterial;
 int SceSblGcAuthMgrDrmBBForDriver_812B2B5C(int type, unsigned int *value);
-int ksceSblAuthMgrDecBindData(void *key, int keySize, void *seed,
-	int seedSize, int revision);
 
 static int SceNpDrmInit(void *arg)
 {
@@ -275,7 +273,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 			return (int)0x80870009;
 	}
 	if (gameCard) {
-		if (ksceSblGcAuthMgrDrmBBCheckCartHash(rif.cmd56_handshake_part) < 0)
+		if (SceSblGcAuthMgrDrmBBForDriver_22FD5D23(rif.cmd56_handshake_part) < 0)
 			return (int)0x8087000a;
 		cartIndex = __builtin_bswap32(rif.debug_upgradable);
 		if (cartIndex) {
@@ -289,7 +287,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 		}
 	}
 	if (keyFlags & 0x20000) {
-		ret = ksceSblGcAuthMgrDrmBBGetCartSecret(cartSecret);
+		ret = SceSblGcAuthMgrDrmBBForDriver_BB70DDC0(cartSecret);
 		if (ret < 0)
 			return ret;
 	}
@@ -362,7 +360,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 			gNpDrmActivationKeyMaterial.bindingSeed, 16);
 		__builtin_memcpy(gNpDrmActivationCache.data.secondary_key_table[5],
 			&gNpDrmActivationKeyMaterial.bindingSeed[16], 16);
-		ret = ksceSblAuthMgrDecBindData(
+		ret = SceSblAuthMgrForDriver_41DAEA12(
 			gNpDrmActivationCache.data.secondary_key_table, 16,
 			gNpDrmActivationCache.data.secondary_key_table[4], 144, 0);
 		if (ret < 0)
@@ -374,7 +372,7 @@ int NpDrmGetRifKey(const SceNpDrmLicense *license, void *klicense,
 		__builtin_memcpy(gNpDrmActivationCache.data.secondary_key_table[5],
 			gNpDrmActivationCache.data.primary_key_table[1], 16);
 	}
-	ret = ksceSblAuthMgrDecBindData(gNpDrmActivationCache.data.secondary_key_table,
+	ret = SceSblAuthMgrForDriver_41DAEA12(gNpDrmActivationCache.data.secondary_key_table,
 		16, gNpDrmActivationCache.data.secondary_key_table[4], 144, 0);
 	if (ret < 0)
 		goto clear;
@@ -553,10 +551,10 @@ int NpDrmInitializeActivation(void)
 	SceConsoleId consoleId;
 	int ret;
 
-	ret = ksceSblAimgrGetConsoleId(&consoleId);
+	ret = SceSblSsMgrForDriver_FC6CDD68(&consoleId);
 	if (ret < 0)
 		return ret;
-	ret = ksceSblAimgrGetOpenPsId(&gNpDrmOpenPsId);
+	ret = SceSblSsMgrForDriver_A5B5D269(&gNpDrmOpenPsId);
 	if (ret < 0)
 		return ret;
 	gNpDrmIsDevelopment = SceSblAIMgrForDriver_274663A0() || SceSblAIMgrForDriver_F4B98F66();
@@ -565,7 +563,7 @@ int NpDrmInitializeActivation(void)
 		return ret;
 	memcpy(&gNpDrmActivationKeyMaterial, &gNpDrmEncryptedActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial));
-	ret = ksceSblAuthMgrGetEKc(&gNpDrmActivationKeyMaterial,
+	ret = SceSblAuthMgrForDriver_868B9E9A(&gNpDrmActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial), 0);
 	NpDrmAesEncrypt(&gNpDrmActivationKeyMaterial,
 		sizeof(gNpDrmActivationKeyMaterial.activationKey), &consoleId, NULL);
@@ -589,7 +587,7 @@ int NpDrmDeleteMutex(void)
 	return 0;
 }
 
-int ksceNpDrmUpdateAccountId(SceUInt64 accountId)
+int SceNpDrmForDriver_116FC0D6(SceUInt64 accountId)
 {
 	int ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 
@@ -602,7 +600,7 @@ int ksceNpDrmUpdateAccountId(SceUInt64 accountId)
 	return ret;
 }
 
-int ksceNpDrmUpdateDebugSettings(void)
+int SceNpDrmForDriver_A91C7443(void)
 {
 	int ret = sceKernelLockMutex(gNpDrmMutex, 1, NULL);
 
@@ -615,7 +613,7 @@ int ksceNpDrmUpdateDebugSettings(void)
 	return ret;
 }
 
-int ksceNpDrmGetRifNameForInstall(char *name,
+int SceNpDrmForDriver_17573133(char *name,
 	const SceNpDrmLicense *license, unsigned int isFixed)
 {
 	SceUInt64 accountId;
@@ -648,7 +646,7 @@ int ksceNpDrmGetRifNameForInstall(char *name,
 			return (int)0x80870009;
 	}
 	if (gameCard) {
-		if (ksceSblGcAuthMgrDrmBBCheckCartHash(license->cmd56_handshake_part) < 0)
+		if (SceSblGcAuthMgrDrmBBForDriver_22FD5D23(license->cmd56_handshake_part) < 0)
 			return (int)0x8087000a;
 		cartIndex = __builtin_bswap32(license->debug_upgradable);
 		if (cartIndex) {
@@ -673,7 +671,7 @@ int ksceNpDrmGetRifNameForInstall(char *name,
 	return 0;
 }
 
-int ksceNpDrmGetRifName(char *name, SceUInt64 accountId)
+int SceNpDrmForDriver_DF62F3B8(char *name, SceUInt64 accountId)
 {
 	if (!accountId) {
 		NpDrmGetAccountId(&accountId);
@@ -685,12 +683,12 @@ int ksceNpDrmGetRifName(char *name, SceUInt64 accountId)
 	return NpDrmFormatRifName(name, 48, accountId, 0);
 }
 
-int ksceNpDrmGetFixedRifName(char *name, SceUInt64 accountId)
+int SceNpDrmForDriver_5D73448C(char *name, SceUInt64 accountId)
 {
 	return NpDrmFormatRifName(name, 48, accountId, 1);
 }
 
-int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
+int SceNpDrmForDriver_742EBAF4(const struct NpDrmActivationCache *activation,
 	const void *key)
 {
 	SceIoStat stat;
@@ -772,7 +770,7 @@ clear:
 	return result;
 }
 
-int ksceNpDrmRemoveActData(SceUInt64 *accountId)
+int SceNpDrmForDriver_8B85A509(SceUInt64 *accountId)
 {
 	SceIoStat stat;
 	int permission;
@@ -801,7 +799,7 @@ int ksceNpDrmRemoveActData(SceUInt64 *accountId)
 	return result;
 }
 
-int ksceNpDrmUpdateActData(void)
+int SceNpDrmForDriver_077926F5(void)
 {
 	SceIoStat stat;
 	SceUInt64 accountId;
@@ -863,7 +861,7 @@ clear:
 	return result;
 }
 
-int ksceNpDrmReadActData(SceNpDrmActivationData *activation)
+int SceNpDrmForDriver_D91C3BCE(SceNpDrmActivationData *activation)
 {
 	SceIoStat stat;
 	SceUInt64 accountId;
@@ -919,7 +917,7 @@ clear:
 	return result;
 }
 
-int ksceNpDrmVerifyRifFull(SceNpDrmLicense *license)
+int SceNpDrmForDriver_FF63672D(SceNpDrmLicense *license)
 {
 	unsigned char klicense[16];
 	unsigned int value;
@@ -951,7 +949,7 @@ int ksceNpDrmVerifyRifFull(SceNpDrmLicense *license)
 			return (int)0x80870009;
 	}
 	if (gameCard) {
-		if (ksceSblGcAuthMgrDrmBBCheckCartHash(license->cmd56_handshake_part) < 0)
+		if (SceSblGcAuthMgrDrmBBForDriver_22FD5D23(license->cmd56_handshake_part) < 0)
 			return (int)0x8087000a;
 		cartIndex = __builtin_bswap32(license->debug_upgradable);
 		if (cartIndex) {
@@ -977,14 +975,14 @@ int ksceNpDrmVerifyRifFull(SceNpDrmLicense *license)
 	return 0;
 }
 
-int ksceNpDrmGetRifPspKey(const SceNpDrmLicense *license, void *klicense,
+int SceNpDrmForDriver_DACB71F4(const SceNpDrmLicense *license, void *klicense,
 	int *flags, SceUInt64 *startTime, SceUInt64 *expirationTime)
 {
 	return NpDrmGetRifKey(license, klicense, flags, NULL, startTime,
 		expirationTime, 0);
 }
 
-int ksceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license,
+int SceNpDrmForDriver_C070FE89(SceNpDrmLicense *license,
 	unsigned int provisional)
 {
 	union {
@@ -1041,7 +1039,7 @@ int ksceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license,
 			return (int)0x80870009;
 	}
 	if (drmType & 0x400) {
-		if (ksceSblGcAuthMgrDrmBBCheckCartHash(license->cmd56_handshake_part) < 0)
+		if (SceSblGcAuthMgrDrmBBForDriver_22FD5D23(license->cmd56_handshake_part) < 0)
 			return (int)0x8087000a;
 		cartIndex = __builtin_bswap32(license->debug_upgradable);
 		if (cartIndex) {
@@ -1067,14 +1065,14 @@ int ksceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license,
 	return 0;
 }
 
-int ksceNpDrmGetRifVitaKey(const SceNpDrmLicense *license, void *klicense,
+int SceNpDrmForDriver_723322B5(const SceNpDrmLicense *license, void *klicense,
 	int *flags, int *skuFlags, SceUInt64 *startTime, SceUInt64 *expirationTime)
 {
 	return NpDrmGetRifKey(license, klicense, flags,
 		(unsigned int *)skuFlags, startTime, expirationTime, 1);
 }
 
-int ksceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int licenseSize,
+int SceNpDrmForDriver_DB406EAE(const SceNpDrmLicense *license, unsigned int licenseSize,
 	int checkSign, char *contentId, SceUInt64 *accountId, int *licenseVersion,
 	int *drmType, int *flags, unsigned int *skuFlags, SceUInt64 *startTime,
 	SceUInt64 *expirationTime, SceUInt64 *flags2)
@@ -1179,7 +1177,7 @@ int ksceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int licenseSize
 		}
 	}
 	if (gameCard) {
-		if (ksceSblGcAuthMgrDrmBBCheckCartHash(license->cmd56_handshake_part) < 0) {
+		if (SceSblGcAuthMgrDrmBBForDriver_22FD5D23(license->cmd56_handshake_part) < 0) {
 			result = (int)0x8087000a;
 			goto finishValidation;
 		}
@@ -1345,7 +1343,7 @@ retryRemoval:
 	return result < 0 ? result : 0;
 }
 
-int ksceNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256,
+int SceNpDrmForDriver_90B1A6D3(const char *ebootPath, const void *sha256,
 	void *signature, int swVersion)
 {
 	int result;
@@ -1362,7 +1360,7 @@ int ksceNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256,
 	return result;
 }
 
-int ksceNpDrmEbootSigGenPs1(const char *ebootPath, const void *sha256,
+int SceNpDrmForDriver_6D9223E1(const char *ebootPath, const void *sha256,
 	void *signature, int swVersion)
 {
 	int result;
@@ -1379,7 +1377,7 @@ int ksceNpDrmEbootSigGenPs1(const char *ebootPath, const void *sha256,
 	return result;
 }
 
-int ksceNpDrmEbootSigGenMultiDisc(const char *ebootPath, const void *discInfo,
+int SceNpDrmForDriver_39A7A666(const char *ebootPath, const void *discInfo,
 	void *signature, int swVersion)
 {
 	int result;
@@ -1396,7 +1394,7 @@ int ksceNpDrmEbootSigGenMultiDisc(const char *ebootPath, const void *discInfo,
 	return result;
 }
 
-int ksceNpDrmEbootSigConvert(const char *ebootPath, const void *signature,
+int SceNpDrmForDriver_A29B75F9(const char *ebootPath, const void *signature,
 	void *newSignature)
 {
 	int result;
@@ -1413,7 +1411,7 @@ int ksceNpDrmEbootSigConvert(const char *ebootPath, const void *signature,
 	return result;
 }
 
-int ksceNpDrmEbootSigVerify(const char *ebootPath, const void *signature)
+int SceNpDrmForDriver_7A319692(const char *ebootPath, const void *signature)
 {
 	int result;
 	int signatureResult;
@@ -1428,7 +1426,7 @@ int ksceNpDrmEbootSigVerify(const char *ebootPath, const void *signature)
 	return result;
 }
 
-int ksceNpDrmPspEbootSigGen(const char *ebootPath, const void *sha256,
+int SceNpDrmForDriver_EF387FC4(const char *ebootPath, const void *sha256,
 	void *signature)
 {
 	int result;
@@ -1444,14 +1442,15 @@ int ksceNpDrmPspEbootSigGen(const char *ebootPath, const void *sha256,
 	return result;
 }
 
-STUB(ksceNpDrmGetLegacyDocKey)
-STUB(ksceNpDrmCheckActData)
-STUB(ksceNpDrmPspEbootVerify)
-STUB(ksceNpDrmIsLooseAccountBind)
-STUB(ksceNpDrmVerifyRif)
-STUB(kscePsmDrmRemoveActData)
-STUB(kscePsmDrmReadActData)
-STUB(kscePsmDrmGetRifKey)
-STUB(kscePsmDrmGetRifInfo)
-STUB(kscePsmDrmGetActInfo)
-STUB(kscePsmDrmWriteActData)
+STUB(SceNpDrmForDriver_4E321BDE)
+STUB_FUNC(int, SceNpDrmForDriver_9265B350, (int *actType, int *versionFlag, SceUInt64 *accountId,
+	  SceUInt64 *startTime, SceUInt64 *expirationTime))
+STUB(SceNpDrmForDriver_B6CA3A2C)
+STUB(SceNpDrmForDriver_FC84CA1A)
+STUB(SceNpDrmForDriver_FE7B17B6)
+STUB(ScePsmDrmForDriver_4CD5375C)
+STUB(ScePsmDrmForDriver_791198CE)
+STUB(ScePsmDrmForDriver_8C8CFD01)
+STUB(ScePsmDrmForDriver_984F9017)
+STUB(ScePsmDrmForDriver_B09003A7)
+STUB(ScePsmDrmForDriver_CB73E9D3)

@@ -2,11 +2,11 @@
 #pragma once
 
 #include <stddef.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 
 typedef struct AppmgrSavedataParams {
 	SceUInt32 creationMarker;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt32 accountIndex;
 	SceUInt32 consoleType;
 	SceUInt32 cexUseCount;

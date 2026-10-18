@@ -1,6 +1,7 @@
 /* Dispatch for application and user-directory path queries. */
 
 #include <psp2kern/types.h>
+#include <appmgr/appmgr.h>
 
 extern int appmgrConvertVs0UserDrivePath(const char *path, char *output,
 	SceSize size);
@@ -9,7 +10,6 @@ extern int appmgrGetUserDirPathById(int userId, int partitionId, char *path,
 	unsigned int capacity);
 extern int sceAppMgrGetRawPathOfApp0ByAppIdForShell(int appId, char *path);
 extern int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path);
-extern int sceAppMgrDump(void);
 
 int appmgrConvertVs0UserDrivePathSyscall(const char *path, char *output,
 	SceSize size)

@@ -162,9 +162,9 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_EFFF2975
 	SceProcessmgrForDriver_61B9B6FA
 	SceProcessmgrForDriver_B1C3EFCA
-	SceZlibForDriver_25F28DA7
-	SceZlibForDriver_5492B3F2
-	SceZlibForDriver_5B718E55
+	deflateInit_
+	deflateEnd
+	deflate
 	_DmaOpSetupDirect
 	sceKernelDmaOpSync
 	sceKernelDmaOpEnQueue

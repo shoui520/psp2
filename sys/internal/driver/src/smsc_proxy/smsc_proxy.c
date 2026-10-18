@@ -339,7 +339,7 @@ int module_start(SceSize args, void *argp)
 	return ret;
 }
 
-int ksceSblSmSchedProxyInitialize(void)
+int SceSblSmSchedProxyForKernel_A488D604(void)
 {
 	if (sceKernelCpuId() != 0)
 		return 0;
@@ -364,7 +364,7 @@ static int Terminate(void)
 	return ret;
 }
 
-int ksceSblSmSchedProxyUninitialize(void)
+int SceSblSmSchedProxyForKernel_33A3A1E2(void)
 {
 	if (sceKernelCpuId() != 0)
 		return 0;
@@ -582,7 +582,7 @@ int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status)
 	return ret;
 }
 
-int ksceSblSmSchedProxyChangeF00DStatus(SceUID id)
+int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	Session *s;
@@ -613,7 +613,7 @@ int SceSblSmSchedProxyForKernel_1DFC8624(void)
 	return SCE_SBL_ERROR_NOT_SUPPORTED;
 }
 
-int ksceSblSmSchedCallFunc(SceUID id, int channel, SceUInt32 value)
+int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	int ret = SessionCall(SMC_CALL_FUNC, id, channel, value);
@@ -622,7 +622,7 @@ int ksceSblSmSchedCallFunc(SceUID id, int channel, SceUInt32 value)
 	return ret;
 }
 
-int ksceSblSmSchedProxyGetCommandF00DRegister(SceUID id, int channel, SceUInt32 *value)
+int SceSblSmSchedProxyForKernel_F70C04EC(SceUID id, int channel, SceUInt32 *value)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	int ret = accessMailbox(SMC_GET_F00D_REGISTER, id, channel, value);
@@ -640,7 +640,7 @@ int SceSblSmSchedProxyForKernel_3CE17233(SceUID id, int channel, SceUInt32 value
 	return ret;
 }
 
-int ksceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value)
+int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	int ret = SessionCall(SMC_WRITE_CRY2ARM, id, channel, value);
@@ -649,7 +649,7 @@ int ksceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value)
 	return ret;
 }
 
-int ksceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value)
+int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	int ret = accessMailbox(SMC_READ_CRY2ARM, id, channel, value);
@@ -658,7 +658,7 @@ int ksceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value)
 	return ret;
 }
 
-int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
+int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg)
 {
 	SceUInt32 tls = sceSyscallEnter();
@@ -705,7 +705,7 @@ out:
 	return ret;
 }
 
-int ksceSblSmSchedProxyDisableCry2ArmInterrupt(SceUID id, int channel)
+int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	Session *s;
@@ -736,7 +736,7 @@ out:
 	return ret;
 }
 
-int ksceSblSmSchedProxyExecuteF00DCommand(SceUInt32 a, SceUInt32 b, SceUInt32 c, SceUInt32 d)
+int SceSblSmSchedProxyForKernel_7894B6F0(SceUInt32 a, SceUInt32 b, SceUInt32 c, SceUInt32 d)
 {
 	SceUInt32 tls = sceSyscallEnter();
 	int ret;

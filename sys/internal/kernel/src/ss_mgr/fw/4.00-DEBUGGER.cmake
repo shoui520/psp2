@@ -151,15 +151,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDmaOpAssign
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
-	ksceSblAuthMgrSetDmac5Key
-	ksceSblSmCommStartSmFromData
-	ksceSblSmCommStopSm
-	ksceSblSmCommStartSmFromFile
-	ksceSblSmCommCallFunc
+	SceSblAuthMgrForKernel_122ACDEA
+	SceSblSmCommForKernel_039C73B1
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_7863A0CC
+	SceSblSmCommForKernel_DB9FC204
 	sceKernelGetProcessSelfAuthInfo
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_3B638885
-	ksceSblSmSchedProxyExecuteF00DCommand
+	SceSblSmSchedProxyForKernel_7894B6F0
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893

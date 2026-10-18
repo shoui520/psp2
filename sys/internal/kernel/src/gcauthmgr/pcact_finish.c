@@ -11,7 +11,7 @@ GcAuthPsmactActivationFile gcAuthPsmactActivationFile;
 int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activation,
 		const GcAuthPsmactRandomRecord *random, GcAuthPsmactDerivedKeys *output);
 int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys);
-int kscePsmDrmWriteActData(void *activation, const char *aesKey);
+int ScePsmDrmForDriver_CB73E9D3(void *activation, const char *aesKey);
 extern SceRtcTick gcAuthActivationRetryDeadline;
 int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request);
 int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request);
@@ -75,7 +75,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 		for (index = 0; index != sizeof(gcAuthPsmactActivationFile); ++index)
 			gcAuthPsmactActivationFile.serialized[index] =
 				gcAuthActivationWorkspace.encryptedPsmact.ciphertext[index];
-		result = kscePsmDrmWriteActData(&gcAuthPsmactActivationFile, NULL);
+		result = ScePsmDrmForDriver_CB73E9D3(&gcAuthPsmactActivationFile, NULL);
 		result &= result >> 31;
 		break;
 	case 4:

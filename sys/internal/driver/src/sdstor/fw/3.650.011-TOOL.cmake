@@ -150,9 +150,9 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	SceIofilemgrForDriver_D070BC48
 	vfsGetNewVnode
-	ksceSblRngPseudoRandomNumber
+	_set_key_seed
 	SceSblACMgrForDriver_BE5667C5
-	ksceSblGcAuthMgrGcAuthCartAuthentication
+	SceSblGcAuthMgrGcAuthForDriver_68781760
 	sceKernelRegisterSysEventHandler
 	SceSysrootForDriver_4373AC96
 	SceSysrootForDriver_50FE3B4D

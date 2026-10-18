@@ -1,5 +1,5 @@
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -67,7 +67,7 @@ int PupUtilVerifyPupSegmentMain(SceSize arglen, PupVerifyThreadArgs *args)
 		if (result)
 			goto cleanup;
 	}
-	result = ksceSblSmCommCallFunc(pupSmId, 0x20002, &serviceResult,
+	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0x20002, &serviceResult,
 		packet, sizeof(*packet));
 	if (!result)
 		result = serviceResult;

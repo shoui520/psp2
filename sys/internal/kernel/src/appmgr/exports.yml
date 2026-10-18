@@ -12,81 +12,81 @@ SceAppMgr:
       nid: 0xDCE180F8
       functions:
         - SceAppMgrForDriver_0813AFCA: 0x0813AFCA
-        - ksceAppMgrDrmClose: 0x088670A6
-        - ksceAppMgrCheckPfsMounted: 0x0B1BEEE0
-        - ksceAppMgrCloudDataSetMcId: 0x0B94BB90
+        - SceAppMgrForDriver_088670A6: 0x088670A6
+        - SceAppMgrForDriver_0B1BEEE0: 0x0B1BEEE0
+        - SceAppMgrForDriver_0B94BB90: 0x0B94BB90
         - sceAppMgrKillAppByNameForDebugger: 0x0C5D65F1
-        - ksceAppMgrCloudDataGetMcId: 0x1286AF64
-        - ksceAppMgrAppParamGetInt: 0x12CE29F7
-        - ksceAppMgrFakeSaveDataCreateMount: 0x12FC3FA8
-        - ksceAppMgrMmsMount: 0x13D54107
+        - SceAppMgrForDriver_1286AF64: 0x1286AF64
+        - SceAppMgrForDriver_12CE29F7: 0x12CE29F7
+        - sceAppMgrFakeSaveDataCreateMount: 0x12FC3FA8
+        - SceAppMgrForDriver_13D54107: 0x13D54107
         - SceAppMgrForDriver_1574E1A4: 0x1574E1A4
-        - ksceAppMgrCheckContentInstallPeriod: 0x193784A9
+        - SceAppMgrForDriver_193784A9: 0x193784A9
         - sceAppMgrLaunchAppByNameForDebugger: 0x1B6C2FED
-        - ksceAppMgrAppUmount: 0x1DE3B7C4
+        - SceAppMgrForDriver_1DE3B7C4: 0x1DE3B7C4
         - sceAppMgrGetPidByNameForDebugger: 0x21BE167A
-        - ksceAppMgrSaveDataSlotInit: 0x2277F736
+        - SceAppMgrForDriver_2277F736: 0x2277F736
         - sceAppMgrSuspendAppForDebugger: 0x29421DCD
-        - ksceAppMgrSaveDataUmount: 0x2B080268
-        - ksceAppMgrCloudDataSetupKey: 0x2FAA6ABD
+        - SceAppMgrForDriver_2B080268: 0x2B080268
+        - SceAppMgrForDriver_2FAA6ABD: 0x2FAA6ABD
         - sceAppMgrGetShellPidForDriver: 0x2FEACA9F
         - SceAppMgrForDriver_30947DF4: 0x30947DF4
         - sceAppMgrSpawnProcessForDriver: 0x324DD34E
-        - ksceAppMgrWorkDirMount: 0x3A0A9B82
+        - SceAppMgrForDriver_3A0A9B82: 0x3A0A9B82
         - SceAppMgrForDriver_3B4F305B: 0x3B4F305B
-        - ksceAppMgrPhotoMount: 0x43A35729
-        - ksceAppMgrAcInstGetAcdirParam: 0x474AABDF
+        - SceAppMgrForDriver_43A35729: 0x43A35729
+        - sceAppMgrAcInstGetAcdirParam: 0x474AABDF
         - sceAppMgrGetAppIdByNameForDebugger: 0x4FA62A46
         - sceAppMgrLaunchAppForTest2: 0x504023C8
-        - ksceAppMgrCloudDataVerifyHeader: 0x55D48190
-        - ksceAppMgrBgdlSetQueueStatus: 0x5B1BE482
-        - ksceAppMgrAppDataMountById: 0x5E311F71
-        - ksceAppMgrLocalBackupGetOfflineId: 0x61B13981
-        - ksceAppMgrLocalBackupVerifyOfflineHeader: 0x62E98C42
-        - ksceAppMgrSaveDataNotifyBackupFinished: 0x6989B258
-        - ksceAppMgrCloudDataSrcMount: 0x6D4D6FFE
-        - ksceAppMgrDebugSettingNotifyUpdate: 0x7554330F
-        - ksceAppMgrSaveDataSlotSetParam: 0x7E247E47
-        - ksceAppMgrUpdateRifInfo: 0x894BDCB8
+        - SceAppMgrForDriver_55D48190: 0x55D48190
+        - SceAppMgrForDriver_5B1BE482: 0x5B1BE482
+        - SceAppMgrForDriver_5E311F71: 0x5E311F71
+        - SceAppMgrForDriver_61B13981: 0x61B13981
+        - SceAppMgrForDriver_62E98C42: 0x62E98C42
+        - sceAppMgrSaveDataNotifyBackupFinished: 0x6989B258
+        - sceAppMgrCloudDataSrcMount: 0x6D4D6FFE
+        - SceAppMgrForDriver_7554330F: 0x7554330F
+        - SceAppMgrForDriver_7E247E47: 0x7E247E47
+        - sceAppMgrUpdateRifInfo: 0x894BDCB8
         - SceAppMgrForDriver_99AA37C1: 0x99AA37C1
-        - ksceAppMgrSaveDataSlotSetStatus: 0x9ADB00FA
-        - ksceAppMgrSaveDataLocalBackupTargetGetList: 0x9B3F7D66
-        - ksceAppMgrUmount: 0xA714BB35
-        - ksceAppMgrIsExclusiveProcessRunning: 0xA888C2DC
-        - ksceAppMgrSystemParamDateTimeSetConf: 0xA9AA3A68
+        - SceAppMgrForDriver_9ADB00FA: 0x9ADB00FA
+        - SceAppMgrForDriver_9B3F7D66: 0x9B3F7D66
+        - SceAppMgrForDriver_A714BB35: 0xA714BB35
+        - sceAppMgrIsExclusiveProcessRunning: 0xA888C2DC
+        - SceAppMgrForDriver_A9AA3A68: 0xA9AA3A68
         - sceAppMgrGetSystemDataFile: 0xAEC49533
-        - ksceAppMgrLaunchAppByPath: 0xB0A37065
-        - ksceAppMgrAppDataMount: 0xB1D3C287
-        - ksceAppMgrCloudDataDstCreateMount: 0xB3816B42
-        - ksceAppMgrRegisterPath: 0xB53FB98E
-        - ksceAppMgrSaveDataSlotDelete: 0xB544F2A0
+        - sceAppMgrLaunchAppForDebugger: 0xB0A37065
+        - SceAppMgrForDriver_B1D3C287: 0xB1D3C287
+        - sceAppMgrCloudDataDstCreateMount: 0xB3816B42
+        - SceAppMgrForDriver_B53FB98E: 0xB53FB98E
+        - SceAppMgrForDriver_B544F2A0: 0xB544F2A0
         - sceAppMgrSpawnProcessExtForDriver: 0xC4924946
-        - ksceAppMgrSaveDataLocalBackupTargetRemoveItem: 0xC4EF95BB
-        - ksceAppMgrGameDataMount: 0xCE356B2D
-        - ksceAppMgrSaveDataSlotGetParam: 0xD137D486
-        - ksceAppMgrGetBootParam: 0xD2541B4A
+        - SceAppMgrForDriver_C4EF95BB: 0xC4EF95BB
+        - SceAppMgrForDriver_CE356B2D: 0xCE356B2D
+        - SceAppMgrForDriver_D137D486: 0xD137D486
+        - SceAppMgrForDriver_D2541B4A: 0xD2541B4A
         - sceAppMgrSaveSafeMemory: 0xD366AA44
-        - ksceAppMgrKillProcess: 0xD80566DB
+        - sceAppMgrKillAppForDebugger: 0xD80566DB
         - SceAppMgrForDriver_DC13160A: 0xDC13160A
         - SceAppMgrForDriver_DCADB9FE: 0xDCADB9FE
         - SceAppMgrForDriver_DD5BEEE3: 0xDD5BEEE3
-        - ksceAppMgrSaveDataGetQuota: 0xE104C37E
-        - ksceAppMgrSaveDataSlotCreate: 0xE6F389B8
-        - ksceAppMgrGetPfsProcessStatus: 0xE72D2A4A
-        - ksceAppMgrSaveDataMount: 0xE73C9516
+        - SceAppMgrForDriver_E104C37E: 0xE104C37E
+        - SceAppMgrForDriver_E6F389B8: 0xE6F389B8
+        - sceAppMgrGetPfsProcessStatus: 0xE72D2A4A
+        - SceAppMgrForDriver_E73C9516: 0xE73C9516
         - SceAppMgrForDriver_E8DB7942: 0xE8DB7942
-        - ksceAppMgrTrophyMount: 0xE977A833
-        - ksceAppMgrDrmOpen: 0xEA75D157
+        - SceAppMgrForDriver_E977A833: 0xE977A833
+        - SceAppMgrForDriver_EA75D157: 0xEA75D157
         - SceAppMgrForDriver_EBFE1BE2: 0xEBFE1BE2
-        - ksceAppMgrCloudDataClearMcId: 0xEC408FEF
-        - ksceAppMgrSaveDataSlotGetStatus: 0xEC9D5A35
-        - ksceAppMgrCloudDataCreateHeader: 0xED87F191
+        - SceAppMgrForDriver_EC408FEF: 0xEC408FEF
+        - SceAppMgrForDriver_EC9D5A35: 0xEC9D5A35
+        - SceAppMgrForDriver_ED87F191: 0xED87F191
         - sceAppMgrResumeAppByNameForDebugger: 0xEE6047CA
-        - ksceAppMgrAppMount: 0xEF0C9533
+        - SceAppMgrForDriver_EF0C9533: 0xEF0C9533
         - sceAppMgrSuspendAppByNameForDebugger: 0xF3B1D42E
         - sceAppMgrResumeAppForDebugger: 0xF9A61E94
         - sceAppMgrLoadSafeMemory: 0xFAF3DAAA
-        - ksceAppMgrDestroyOtherAppByPid: 0xFC89D33D
+        - sceAppMgrDestroyAppForTest: 0xFC89D33D
     SceAppMgr:
       syscall: true
       version: 1

@@ -2079,7 +2079,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		goto unload;
 	}
 	if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) &&
-	    (ret = ksceSblAuthMgrCompareSwVersion(obj->cb.sdkVersion)) < 0) {
+	    (ret = SceSblAuthMgrForKernel_ABAB8466(obj->cb.sdkVersion)) < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3171, "unknown SDK version (%08x)\n",
 				     obj->cb.sdkVersion);
 		goto unload;

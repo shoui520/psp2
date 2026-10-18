@@ -342,7 +342,7 @@ int regMgrWrapRegSetKey(int handle, const char *category, const char *name, cons
 				SceDebugLedForDriver_51C5325A(*(const int *)buf);
 				continue;
 			}
-			err = ksceSblSsSetNvsData(key->areaNo, buf, areaSize);
+			err = sceSblSsSetNvsData(key->areaNo, buf, areaSize);
 			if (err != 0) {
 				ret = err;
 				goto out;
@@ -395,7 +395,7 @@ int regMgrWrapGetNVSData(const char *category, const char *name, void *buf, SceS
 			return SCE_REGMGR_ERROR_NVS_SIZE;
 		if (key->gpi)
 			continue;
-		err = ksceSblSsGetNvsData(areaNo, buf, areaSize);
+		err = sceSblSsGetNvsData(areaNo, buf, areaSize);
 		if (err != 0)
 			return err;
 	}

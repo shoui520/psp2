@@ -6,11 +6,11 @@
 #include "post_ss_mgr_internal.h"
 
 /* PLACEHOLDER: cryptographic routine, deferred: decrypts the sealed
- * key encryption key and secret with ksceSblSsDecryptWithPortability */
+ * key encryption key and secret with SceSblSsMgrForDriver_934DB6B5 */
 POST_SS_DEFERRED int getSealedKeySecret(void *encKey, void *secret)
 {
-	ksceSblSsMemset(encKey, 0, 0x10);
-	ksceSblSsMemset(secret, 0, 0x10);
+	SceSblSsMgrForDriver_CD98CC92(encKey, 0, 0x10);
+	SceSblSsMgrForDriver_CD98CC92(secret, 0, 0x10);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 
@@ -19,7 +19,7 @@ POST_SS_DEFERRED int sceSblSsGenerateSealedKey(void *sealedKey)
 {
 	if (sealedKey == NULL)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
-	ksceSblSsMemset(sealedKey, 0, 0x50);
+	SceSblSsMgrForDriver_CD98CC92(sealedKey, 0, 0x50);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
 

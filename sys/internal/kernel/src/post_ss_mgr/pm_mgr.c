@@ -5,7 +5,7 @@
  */
 
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/kbl/kbl.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
@@ -53,7 +53,7 @@ static inline int pmMgrHasSmMode(void)	/* name unknown */
 	return 0;
 }
 
-int ksceSblPostSsMgrExecutePmSmF00dCommand8(SceUInt8 *mode)
+int SceSblPostSsMgrForDriver_4663C195(SceUInt8 *mode)
 {
 	if (mode == NULL)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
@@ -110,11 +110,11 @@ int sceSblPmMgrSetProductModeCommon(int mode, int useSm)
 			ret = pmSmSetMode(&state, data, mode);
 	} else {
 		/* the NVS keeps the mode in its first 0x20 bytes */
-		ret = ksceSblNvsReadData(0, data, sizeof(data));
+		ret = nvs_read_data(0, data, sizeof(data));
 		if (ret == 0) {
 			ret = pmMgrSetNvsMode(mode, data);
 			if (ret == 0)
-				ret = ksceSblNvsWriteData(0, data, sizeof(data));
+				ret = nvs_write_data(0, data, sizeof(data));
 		}
 	}
 	stop = stop_pm_secure_module();
@@ -122,7 +122,7 @@ int sceSblPmMgrSetProductModeCommon(int mode, int useSm)
 	return stop != 0 ? stop : ret;
 }
 
-int ksceSblPostSsMgrExecutePmSmF00dCommand(int on)
+int SceSblPostSsMgrForDriver_ADF92824(int on)
 {
 	int mode;
 
@@ -136,7 +136,7 @@ int ksceSblPostSsMgrExecutePmSmF00dCommand(int on)
 	return sceSblPmMgrSetProductModeCommon(mode, 0);
 }
 
-int _ksceSblPostSsMgrExecutePmSmF00dCommand(SceUInt32 flags)
+int SceSblPostSsMgrForDriver_FE92A318(SceUInt32 flags)
 {
 	if (flags != 0)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
@@ -196,7 +196,7 @@ int sceSblPmMgrInit(void)
 	if (wakeup == 0x20 || wakeup == 0xb) {
 		hold = kbl->hold_ctrl;
 		if (pmMgrIsProductModeKeyHeld(wakeup, (const SceUInt8 *)&hold) &&
-		    ksceSblPostSsMgrExecutePmSmF00dCommand(1) == 0) {
+		    SceSblPostSsMgrForDriver_ADF92824(1) == 0) {
 			SCE_PRINTF_WITH_INFO(0, 582, "SET A68A.\n");
 			ret = sceSysconSetPowerMode(0, 0);
 			if (ret != 0)
@@ -217,9 +217,9 @@ int sceSblPmMgrSetProductModeOffForUser(void)
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
-	ret = ksceSblPostSsMgrExecutePmSmF00dCommand(0);
+	ret = SceSblPostSsMgrForDriver_ADF92824(0);
 	if (ret == 0)
-		ret = _ksceSblPostSsMgrExecutePmSmF00dCommand(0);
+		ret = SceSblPostSsMgrForDriver_FE92A318(0);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -258,7 +258,7 @@ int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
-	ret = ksceSblPostSsMgrExecutePmSmF00dCommand8(&value);
+	ret = SceSblPostSsMgrForDriver_4663C195(&value);
 	if (ret == 0)
 		ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
 	sceSyscallLeave(state);

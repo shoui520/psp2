@@ -2,10 +2,10 @@
 #include "dmac5mgr.h"
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <psp2kern/kernel/sysclib.h>
-#include <psp2kern/kernel/authmgr.h>
+#include <authmgr/sblauthmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
-#include <psp2/dmac5.h>
+#include <ss_mgr/ss_mgr.h>
 #include <intrmgr/syscall.h>
 
 int __attribute__((noinline, noclone)) decKeyRingKeyUseCount(unsigned int keyRingIndex)
@@ -181,7 +181,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return (int)0x800f1510;
 			}
-			ret = ksceSblAuthMgrSetDmac5Key(key, keyBits >> 3, oldest, keyId);
+			ret = SceSblAuthMgrForKernel_122ACDEA(key, keyBits >> 3, oldest, keyId);
 			if (ret != 0) {
 				sceKernelUnlockFastMutex(&dmacKeyringMutex);
 				return ret;
@@ -197,7 +197,7 @@ int setNewKeyRingKey(const void *key, unsigned int keyBits,
 			return 0;
 		}
 	}
-	ret = ksceSblAuthMgrSetDmac5Key(key, keyBits >> 3, index, keyId);
+	ret = SceSblAuthMgrForKernel_122ACDEA(key, keyBits >> 3, index, keyId);
 	if (ret != 0) {
 		sceKernelUnlockFastMutex(&dmacKeyringMutex);
 		return ret;
@@ -280,28 +280,28 @@ int __attribute__((noinline, noclone)) sceSblDmac5EncDecNP(
 	return ret;
 }
 
-int ksceSblDmac5AesCbcEncNP(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_711C057A(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, iv,
 		keyId, coherent, 9);
 }
 
-int ksceSblDmac5AesCbcDecNP(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_1901CB5E(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, iv,
 		keyId, coherent, 10);
 }
 
-int ksceSblDmac5AesEcbEncNP(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_0F7D28AF(const void *src, void *dst, int size,
 	const void *key, int keyBits, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, NULL,
 		keyId, coherent, 1);
 }
 
-int ksceSblDmac5AesEcbDecNP(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_197ACF6F(const void *src, void *dst, int size,
 	const void *key, int keyBits, int keyId, int coherent)
 {
 	return sceSblDmac5EncDecNP(src, dst, size, key, keyBits, NULL,
@@ -341,14 +341,14 @@ int __attribute__((noinline, noclone)) sceSblDmac5HmacTransformNP(
 	return ret;
 }
 
-int ksceSblDmac5Sha1HmacNP(const void *src, void *dst, SceSize size,
+int SceSblSsMgrForDriver_92E37656(const void *src, void *dst, SceSize size,
 	const void *key, void *iv, int keyId, int coherent, uint32_t flags)
 {
 	return sceSblDmac5HmacTransformNP(src, dst, size, key, 256, iv,
 		keyId, coherent, 0x23, flags);
 }
 
-int ksceSblDmac5AesCmacNP(const void *src, void *dst, SceSize size,
+int SceSblSsMgrForDriver_83B058F5(const void *src, void *dst, SceSize size,
 	const void *key, unsigned int keyBits, void *iv, int keyId,
 	int coherent, uint32_t flags)
 {

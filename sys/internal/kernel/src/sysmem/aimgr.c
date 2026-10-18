@@ -4,8 +4,8 @@
  * fields are big-endian.
  */
 
-#include <psp2kern/kernel/kbl/kbl.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <kernel_boot_loader/kbl_param.h>
+#include <ss_mgr/ss_mgr.h>
 
 /* name unknown */
 #define AIMGR_ERROR_INVALID_ARGUMENT	0x800f0c16

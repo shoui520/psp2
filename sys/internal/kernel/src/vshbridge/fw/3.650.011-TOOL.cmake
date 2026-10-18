@@ -308,23 +308,23 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_C98D82EE
 	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_F5AE24AC
-	ksceSblAimgrGetVisibleId
-	ksceSblSsEncryptWithPortability
-	ksceSblSsSetNvsData
-	ksceSblSsDecryptWithPortability
-	ksceSblAimgrGetPscode2
-	ksceSblSsCreatePassPhrase
-	ksceSblAimgrGetPscode
-	ksceSblAimgrGetConsoleId
-	ksceSblSsGetNvsData
+	SceSblSsMgrForDriver_04843835
+	SceSblSsMgrForDriver_21EC51F6
+	sceSblSsSetNvsData
+	SceSblSsMgrForDriver_934DB6B5
+	SceSblSsMgrForDriver_9A9676D0
+	SceSblSsMgrForDriver_B8B298FD
+	SceSblSsMgrForDriver_E0DC2587
+	SceSblSsMgrForDriver_FC6CDD68
+	sceSblSsGetNvsData
 	SceSblPostSsMgrForDriver_2646DE64
-	ksceSblPostSsMgrVerifySpfsoCtx
-	ksceSblUtMgrHasComTestFlag
-	ksceSblUtMgrHasStoreFlag
-	ksceSblUtMgrHasNpTestFlag
-	ksceSblPostSsMgrReleaseSpfsoCtx
-	ksceSblPostSsMgrInitializeSpfsoCtx
-	_ksceSblPostSsMgrExecutePmSmF00dCommand
+	SceSblPostSsMgrForDriver_686B9461
+	SceSblPostSsMgrForDriver_7ACCAA50
+	SceSblPostSsMgrForDriver_9D2E2D39
+	SceSblPostSsMgrForDriver_9FD835B0
+	SceSblPostSsMgrForDriver_AD3B0078
+	SceSblPostSsMgrForDriver_BDF18922
+	SceSblPostSsMgrForDriver_FE92A318
 	SceQafMgrForDriver_10283EB8
 	SceQafMgrForDriver_36E5312E
 	SceQafMgrForDriver_4BC1883F
@@ -345,8 +345,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
 	ScePmMgrForDriver_2AC815A2
-	SceSblGcAuthMgrMlnpsnlForDriver_296ABD68
-	SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5
+	sceSblGcAuthMgrMlnpsnlAuth2ForDriver
+	sceSblGcAuthMgrMlnpsnlAuth1ForDriver
 	SceIdStorageForDriver_08A471A6
 	SceIdStorageForDriver_1FA4D135
 	SceIdStorageForDriver_2C97AB36
@@ -437,56 +437,56 @@ set(MODULE_IMPORT_FUNCS
 	SceMsifForDriver_D0307849
 	SceTouchForDriver_A32529B8
 	ScePervasiveForDriver_551EEE82
-	ksceCoredumpCafSegmentInit
-	ksceCoredumpCreateDump
-	ksceCoredumpCafContextCreate
-	ksceCoredumpCafHeaderFinal
-	ksceCoredumpCafHeaderInit
-	ksceCoredumpCafInit
-	ksceCoredumpCafContextDestroy
-	ksceCoredumpDeleteCrashReportCaf
-	ksceCoredumpCafHeaderTransform
-	ksceCoredumpCafFinal
-	ksceCoredumpCafSegmentFinal
-	ksceCoredumpCafCreateIv
-	ksceCoredumpCafSegmentTransform
+	SceCoredumpForDriver_07185515
+	SceCoredumpForDriver_0C10313F
+	sceCoredumpCafContextCreate
+	SceCoredumpForDriver_65AA4991
+	SceCoredumpForDriver_7C8120C5
+	SceCoredumpForDriver_9336009B
+	sceCoredumpCafContextDestroy
+	SceCoredumpForDriver_AD070837
+	SceCoredumpForDriver_AE2C2793
+	SceCoredumpForDriver_C90F61AF
+	SceCoredumpForDriver_DF17420A
+	SceCoredumpForDriver_E1BCBE8F
+	SceCoredumpForDriver_FB7AEBFE
 	sceRegMgrGetKeyInt
 	SceUdcdForDriver_2D91F8C3
-	ksceNpDrmUpdateAccountId
-	ksceNpDrmEbootSigGenMultiDisc
-	ksceNpDrmGetLegacyDocKey
-	ksceNpDrmEbootSigGenPs1
-	ksceNpDrmEbootSigVerify
-	ksceNpDrmEbootSigGenPsp
-	ksceNpDrmEbootSigConvert
-	ksceNpDrmUpdateDebugSettings
-	ksceNpDrmPspEbootVerify
-	ksceNpDrmPspEbootSigGen
-	ksceNpDrmIsLooseAccountBind
-	ksceAppMgrCheckPfsMounted
-	ksceAppMgrCloudDataSetMcId
-	ksceAppMgrCloudDataGetMcId
-	ksceAppMgrFakeSaveDataCreateMount
-	ksceAppMgrCheckContentInstallPeriod
-	ksceAppMgrCloudDataSetupKey
-	ksceAppMgrAcInstGetAcdirParam
-	ksceAppMgrCloudDataVerifyHeader
-	ksceAppMgrBgdlSetQueueStatus
-	ksceAppMgrLocalBackupGetOfflineId
-	ksceAppMgrLocalBackupVerifyOfflineHeader
-	ksceAppMgrSaveDataNotifyBackupFinished
-	ksceAppMgrCloudDataSrcMount
-	ksceAppMgrDebugSettingNotifyUpdate
-	ksceAppMgrUpdateRifInfo
-	ksceAppMgrSaveDataLocalBackupTargetGetList
-	ksceAppMgrIsExclusiveProcessRunning
-	ksceAppMgrSystemParamDateTimeSetConf
-	ksceAppMgrCloudDataDstCreateMount
-	ksceAppMgrRegisterPath
-	ksceAppMgrSaveDataLocalBackupTargetRemoveItem
-	ksceAppMgrGetPfsProcessStatus
-	ksceAppMgrCloudDataClearMcId
-	ksceAppMgrCloudDataCreateHeader
+	SceNpDrmForDriver_116FC0D6
+	SceNpDrmForDriver_39A7A666
+	SceNpDrmForDriver_4E321BDE
+	SceNpDrmForDriver_6D9223E1
+	SceNpDrmForDriver_7A319692
+	SceNpDrmForDriver_90B1A6D3
+	SceNpDrmForDriver_A29B75F9
+	SceNpDrmForDriver_A91C7443
+	SceNpDrmForDriver_B6CA3A2C
+	SceNpDrmForDriver_EF387FC4
+	SceNpDrmForDriver_FC84CA1A
+	SceAppMgrForDriver_0B1BEEE0
+	SceAppMgrForDriver_0B94BB90
+	SceAppMgrForDriver_1286AF64
+	sceAppMgrFakeSaveDataCreateMount
+	SceAppMgrForDriver_193784A9
+	SceAppMgrForDriver_2FAA6ABD
+	sceAppMgrAcInstGetAcdirParam
+	SceAppMgrForDriver_55D48190
+	SceAppMgrForDriver_5B1BE482
+	SceAppMgrForDriver_61B13981
+	SceAppMgrForDriver_62E98C42
+	sceAppMgrSaveDataNotifyBackupFinished
+	sceAppMgrCloudDataSrcMount
+	SceAppMgrForDriver_7554330F
+	sceAppMgrUpdateRifInfo
+	SceAppMgrForDriver_9B3F7D66
+	sceAppMgrIsExclusiveProcessRunning
+	SceAppMgrForDriver_A9AA3A68
+	sceAppMgrCloudDataDstCreateMount
+	SceAppMgrForDriver_B53FB98E
+	SceAppMgrForDriver_C4EF95BB
+	sceAppMgrGetPfsProcessStatus
+	SceAppMgrForDriver_EC408FEF
+	SceAppMgrForDriver_ED87F191
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

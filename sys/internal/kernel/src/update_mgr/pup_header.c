@@ -1,7 +1,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
@@ -9,10 +9,8 @@
 #include "update_internal.h"
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 
-int ksceSblUtMgrHasComTestFlag(void);
-int SceSblPostSsMgrForDriver_9D1D8EE5(void);
-int ksceSblUtMgrHasStoreFlag(void);
 int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
 
 static const char pupMagic[8] = "SCEUF";
@@ -80,7 +78,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		if (result)
 			goto cleanup;
 	}
-	result = ksceSblSmCommCallFunc(pupSmId, 0x10002, &serviceResult, packet, 4032);
+	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0x10002, &serviceResult, packet, 4032);
 	if (result)
 		goto cleanup;
 	result = serviceResult;
@@ -88,8 +86,8 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		goto cleanup;
 	if (timingsafe_memcmp(pupFileBuffer, &pupFileHeader, sizeof(PupHeader)) ||
 	    ((pupFileHeader.m_attribute[0] & 1) &&
-	     !SceQafMgrForDriver_3CB55F98() && !ksceSblUtMgrHasComTestFlag() &&
-	     !SceSblPostSsMgrForDriver_9D1D8EE5() && !ksceSblUtMgrHasStoreFlag())) {
+	     !SceQafMgrForDriver_3CB55F98() && !SceSblPostSsMgrForDriver_7ACCAA50() &&
+	     !SceSblPostSsMgrForDriver_9D1D8EE5() && !SceSblPostSsMgrForDriver_9D2E2D39())) {
 		result = (int)0x800f0227;
 		goto cleanup;
 	}

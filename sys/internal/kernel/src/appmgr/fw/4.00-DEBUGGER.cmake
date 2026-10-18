@@ -475,9 +475,9 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	ksceSblRngPseudoRandomNumber
-	ksceSblAimgrGetOpenPsId
-	ksceSblSsGetNvsData
+	_set_key_seed
+	SceSblSsMgrForDriver_A5B5D269
+	sceSblSsGetNvsData
 	SceSblAIMgrForDriver_71608CA3
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
@@ -507,18 +507,18 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_E79C7A8D
 	SceSblACMgrForDriver_E87D1777
 	SceSblACMgrForDriver_F5AE24AC
-	ksceSblRSA2048CreateSignature
-	ksceSblPostSsMgrEncryptSealedkey
+	SceSblPostSsMgrForDriver_07BAD056
+	sceSblSsGenerateSealedKey
 	SceSblPostSsMgrForDriver_1923D80D
 	SceSblPostSsMgrForDriver_2BF04B8E
 	sceSblSsDecryptSealedKey
-	ksceSblRSA2048VerifySignature
+	SceSblPostSsMgrForDriver_3DB69911
 	SceSblPostSsMgrForDriver_739C981E
-	ksceSblUtMgrHasStoreFlag
+	SceSblPostSsMgrForDriver_9D2E2D39
 	SceSblPostSsMgrForDriver_C6684F7E
 	SceSblPostSsMgrForDriver_C93C0A0D
-	ksceSblPostSsMgrVerifyKeystone
-	ksceSblPostSsMgrVerifyKeystoneWithPasscode
+	SceSblPostSsMgrForDriver_DDA6FA6D
+	SceSblPostSsMgrForDriver_F86F1452
 	SceSblGcAuthMgrMsSaveBBForDriver_3C185A67
 	SceSblGcAuthMgrMsSaveBBForDriver_4A249828
 	SceSblGcAuthMgrMsSaveBBForDriver_79A9BE44
@@ -543,17 +543,17 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_DC18FCEF
 	sceKernelResumeProcess
 	sceKernelKillProcess
-	kscePfsAcidDirUnmount
+	ScePfsMgrForKernel_00C8AF80
 	ScePfsMgrForKernel_27FB7618
-	kscePfsDisapprove
-	kscePfsAcidDirMount
-	kscePfsUnmount
+	ScePfsMgrForKernel_2D67D8CA
+	ScePfsMgrForKernel_4A4A8243
+	ScePfsMgrForKernel_680BC384
 	ScePfsMgrForKernel_7E4B76E6
 	ScePfsMgrForKernel_806D2EA1
-	kscePfsAcidDirApprove
-	kscePfsMount
-	kscePfsAcidDirSet
-	kscePfsApprove
+	ScePfsMgrForKernel_8CDA249A
+	ScePfsMgrForKernel_A772209C
+	ScePfsMgrForKernel_B0CC0A1A
+	ScePfsMgrForKernel_D8D0FEE5
 	SceSysconForDriver_CBD6D8BC
 	ScePowerForDriver_0856FD0A
 	scePowerRequestStandby
@@ -575,18 +575,18 @@ set(MODULE_IMPORT_FUNCS
 	SceCameraForDriver_EB1CC2CA
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRegMgrSetKeyBin
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sceRegMgrSetKeyInt
 	SceCoredumpForDriver_097AA37D
-	SceCoredumpForDriver_340856F7
-	SceCoredumpForDriver_A7D214A7
+	sceKernelCoredumpCancelForDriver
+	sceCoredumpTrigger
 	SceAVConfigForDriver_2A2E9042
 	SceAVConfigForDriver_91792D6F
-	ksceFiosKernelOverlayResolveSync
-	ksceFiosKernelOverlayAddForProcess
-	ksceFiosKernelOverlayRemoveForProcess
+	SceFios2KernelForDriver_0F456345
+	SceFios2KernelForDriver_17E65A1C
+	SceFios2KernelForDriver_23247EFB
 	SceRtcForDriver_401C0954
 	sceRtcGetCurrentClockLocalTime
 	SceRtcForDriver_A930CD1A
@@ -594,11 +594,11 @@ set(MODULE_IMPORT_FUNCS
 	SceCtrlForDriver_5B708A15
 	SceCtrlForDriver_B26C2231
 	SceMotionDevForDriver_22CD6DCA
-	ksceNpDrmPackageSetGameExist
-	ksceNpDrmGetFixedRifName
-	ksceNpDrmGetRifVitaKey
-	ksceNpDrmGetRifInfo
-	ksceNpDrmGetRifName
+	SceNpDrmForDriver_3BFD2850
+	SceNpDrmForDriver_5D73448C
+	SceNpDrmForDriver_723322B5
+	SceNpDrmForDriver_DB406EAE
+	SceNpDrmForDriver_DF62F3B8
 	SceHidForDriver_0B7D27CF
 	SceAudioInForDriver_197CAA1B
 	SceAudioInForDriver_3EC79053

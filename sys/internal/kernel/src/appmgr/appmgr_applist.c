@@ -5,13 +5,13 @@
 #include <psp2kern/kernel/threadmgr.h>
 #include <string.h>
 #include "app_state_internal.h"
+#include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutexOwner;
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrCore2MutexOwner;
 extern int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void);
 extern SceUID g_appmgrShellPid;
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern void _appListClearAppState(struct AppState *app);
 extern void appmgrClearPendingAppEvents(struct AppState *app);

@@ -17,3 +17,7 @@
 
 #define STUB_VAR(name) \
 	int name;
+
+/* a placeholder with the export's prototype, for an export a shared header declares */
+#define STUB_FUNC(ret, name, params) \
+	ret name params { return (ret)SKELETON_ERROR; }

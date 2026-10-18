@@ -11,7 +11,7 @@ SceSblSsSmComm:
       version: 1
       nid: 0xCD3C89B6
       functions:
-        - ksceSblSmCommStartSmFromData: 0x039C73B1
-        - ksceSblSmCommStopSm: 0x0631F8ED
-        - ksceSblSmCommStartSmFromFile: 0x7863A0CC
-        - ksceSblSmCommCallFunc: 0xDB9FC204
+        - SceSblSmCommForKernel_039C73B1: 0x039C73B1
+        - SceSblSmCommForKernel_0631F8ED: 0x0631F8ED
+        - SceSblSmCommForKernel_7863A0CC: 0x7863A0CC
+        - SceSblSmCommForKernel_DB9FC204: 0xDB9FC204

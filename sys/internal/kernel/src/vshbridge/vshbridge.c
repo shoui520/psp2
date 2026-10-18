@@ -915,22 +915,22 @@ SceUInt32 vshSblAimgrIsGenuineDolce(void)
 
 SceUInt32 vshSblAimgrGetConsoleId(void *id)
 {
-	VSH_BRIDGE(ksceSblAimgrGetConsoleId(id));
+	VSH_BRIDGE(SceSblSsMgrForDriver_FC6CDD68(id));
 }
 
 SceUInt32 vshSblAimgrGetPscode(void *code)
 {
-	VSH_BRIDGE(ksceSblAimgrGetPscode(code));
+	VSH_BRIDGE(SceSblSsMgrForDriver_E0DC2587(code));
 }
 
 SceUInt32 vshSblAimgrGetPscode2(void *code)
 {
-	VSH_BRIDGE(ksceSblAimgrGetPscode2(code));
+	VSH_BRIDGE(SceSblSsMgrForDriver_9A9676D0(code));
 }
 
 SceUInt32 vshSblAimgrGetVisibleId(void *id)
 {
-	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_NOT_PRODUCT_MODE, ksceSblAimgrGetVisibleId(id));
+	VSH_BRIDGE_PRODUCT_MODE(SCE_SBL_ERROR_NOT_PRODUCT_MODE, SceSblSsMgrForDriver_04843835(id));
 }
 
 SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
@@ -942,7 +942,7 @@ SceUInt32 vshSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	ret = ksceSblSsGetNvsData(offset, buf, size);
+	ret = sceSblSsGetNvsData(offset, buf, size);
 	sceSyscallLeave(t);
 	return ret == 0 ? 0 : ret;
 }
@@ -956,7 +956,7 @@ SceUInt32 vshSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	ret = ksceSblSsSetNvsData(offset, buf, size);
+	ret = sceSblSsSetNvsData(offset, buf, size);
 	sceSyscallLeave(t);
 	return ret == 0 ? 0 : ret;
 }
@@ -977,7 +977,7 @@ SceUInt32 vshSblSsEncryptWithPortability(SceUInt32 mode, const void *iv, const S
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 	*outSize = *inSize;
-	ret = ksceSblSsEncryptWithPortability(mode, iv, inSize, outSize);
+	ret = SceSblSsMgrForDriver_21EC51F6(mode, iv, inSize, outSize);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -997,7 +997,7 @@ SceUInt32 vshSblSsDecryptWithPortability(SceUInt32 mode, const void *iv, const S
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
 	*outSize = *inSize;
-	ret = ksceSblSsDecryptWithPortability(mode, iv, inSize, outSize);
+	ret = SceSblSsMgrForDriver_934DB6B5(mode, iv, inSize, outSize);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1085,22 +1085,22 @@ SceUInt32 vshSblQafMgrIsAllowRemotePlayDebug(void)
 
 SceUInt32 vshSblPmMgrSetSdModeOff(void)
 {
-	VSH_BRIDGE(_ksceSblPostSsMgrExecutePmSmF00dCommand(0));
+	VSH_BRIDGE(SceSblPostSsMgrForDriver_FE92A318(0));
 }
 
 SceUInt32 vshSblUtMgrHasComTestFlag(void)
 {
-	VSH_BRIDGE(ksceSblUtMgrHasComTestFlag() != 0);
+	VSH_BRIDGE(SceSblPostSsMgrForDriver_7ACCAA50() != 0);
 }
 
 SceUInt32 vshSblUtMgrHasStoreFlag(void)
 {
-	VSH_BRIDGE(ksceSblUtMgrHasStoreFlag() != 0);
+	VSH_BRIDGE(SceSblPostSsMgrForDriver_9D2E2D39() != 0);
 }
 
 SceUInt32 vshSblUtMgrHasNpTestFlag(void)
 {
-	VSH_BRIDGE(ksceSblUtMgrHasNpTestFlag() != 0);
+	VSH_BRIDGE(SceSblPostSsMgrForDriver_9FD835B0() != 0);
 }
 
 /* returns whatever the development mode check left in r0 (Sony's code) */
@@ -1122,12 +1122,12 @@ SceUInt32 vshSblACMgrHasCapability(SceUID pid, int capability)
 
 SceUInt32 vshSblGcAuthMgrMlnpsnlAuth1(void *a, void *b, void *c, void *d)
 {
-	VSH_BRIDGE(SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5(a, b, c, d));
+	VSH_BRIDGE(sceSblGcAuthMgrMlnpsnlAuth1ForDriver(a, b, c, d));
 }
 
 SceUInt32 vshSblGcAuthMgrMlnpsnlAuth2(void *a, void *b, void *c)
 {
-	VSH_BRIDGE(SceSblGcAuthMgrMlnpsnlForDriver_296ABD68(a, b, c));
+	VSH_BRIDGE(sceSblGcAuthMgrMlnpsnlAuth2ForDriver(a, b, c));
 }
 
 /* ===== start ===== */
@@ -1388,57 +1388,57 @@ SceUInt32 vshHdmiDisableCec(void)
 
 SceUInt32 vshNpDrmGetLegacyDocKey(void *a, void *b, void *c, void *d)
 {
-	VSH_BRIDGE(ksceNpDrmGetLegacyDocKey(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_4E321BDE(a, b, c, d));
 }
 
 SceUInt32 vshNpDrmEbootSigGenPsp(void *a, void *b, void *c, void *d)
 {
-	VSH_BRIDGE(ksceNpDrmEbootSigGenPsp(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_90B1A6D3(a, b, c, d));
 }
 
 SceUInt32 vshNpDrmEbootSigGenPs1(void *a, void *b, void *c, void *d)
 {
-	VSH_BRIDGE(ksceNpDrmEbootSigGenPs1(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_6D9223E1(a, b, c, d));
 }
 
 SceUInt32 vshNpDrmEbootSigGenMultiDisc(void *a, void *b, void *c, void *d)
 {
-	VSH_BRIDGE(ksceNpDrmEbootSigGenMultiDisc(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_39A7A666(a, b, c, d));
 }
 
 SceUInt32 vshNpDrmEbootSigConvert(const char *path, const void *oldSignature, void *newSignature)
 {
-	VSH_BRIDGE(ksceNpDrmEbootSigConvert(path, oldSignature, newSignature));
+	VSH_BRIDGE(SceNpDrmForDriver_A29B75F9(path, oldSignature, newSignature));
 }
 
 SceUInt32 vshNpDrmEbootSigVerify(void *a, void *b)
 {
-	VSH_BRIDGE(ksceNpDrmEbootSigVerify(a, b));
+	VSH_BRIDGE(SceNpDrmForDriver_7A319692(a, b));
 }
 
 SceUInt32 vshNpDrmPspEbootSigGen(void *a, void *b, void *c)
 {
-	VSH_BRIDGE(ksceNpDrmPspEbootSigGen(a, b, c));
+	VSH_BRIDGE(SceNpDrmForDriver_EF387FC4(a, b, c));
 }
 
 SceUInt32 vshNpDrmPspEbootVerify(void *a, void *b)
 {
-	VSH_BRIDGE(ksceNpDrmPspEbootVerify(a, b));
+	VSH_BRIDGE(SceNpDrmForDriver_B6CA3A2C(a, b));
 }
 
 SceUInt32 vshNpDrmIsLooseAccountBind(void)
 {
-	VSH_BRIDGE(ksceNpDrmIsLooseAccountBind());
+	VSH_BRIDGE(SceNpDrmForDriver_FC84CA1A());
 }
 
 SceUInt32 vshNpDrmUpdateDebugSettings(void)
 {
-	VSH_BRIDGE(ksceNpDrmUpdateDebugSettings());
+	VSH_BRIDGE(SceNpDrmForDriver_A91C7443());
 }
 
 SceUInt32 vshNpDrmUpdateAccountId(void *a, void *b)
 {
-	VSH_BRIDGE(ksceNpDrmUpdateAccountId(a, b));
+	VSH_BRIDGE(SceNpDrmForDriver_116FC0D6(a, b));
 }
 
 SceUID vshKernelSearchModuleByName(const char *name)
@@ -1462,14 +1462,14 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret2 = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ret = ksceSblPostSsMgrInitializeSpfsoCtx(path, ctx);
-		if (ret >= 0 && (ret = ksceSblPostSsMgrVerifySpfsoCtx(ctx, &data, &dataSize)) >= 0) {
+		ret = SceSblPostSsMgrForDriver_BDF18922(path, ctx);
+		if (ret >= 0 && (ret = SceSblPostSsMgrForDriver_686B9461(ctx, &data, &dataSize)) >= 0) {
 			if (dataSize == 0 || dataSize > size)
 				ret = SCE_SBL_ERROR_SPFSO_TOO_LARGE;
 			else
 				ret = SceSysmemForDriver_6D88EF8A(buf, data, dataSize);
 		}
-		ret2 = ksceSblPostSsMgrReleaseSpfsoCtx(ctx);
+		ret2 = SceSblPostSsMgrForDriver_AD3B0078(ctx);
 		if (ret2 >= 0)
 			ret2 = ret;
 	}
@@ -1487,134 +1487,134 @@ SceUInt32 vshSDfCtlSetBootParameter(const char *param, int unused, int value)
 
 SceUInt32 vshAppMgrSystemParamDateTimeSetConf(const void *conf)
 {
-	VSH_BRIDGE(ksceAppMgrSystemParamDateTimeSetConf(conf));
+	VSH_BRIDGE(SceAppMgrForDriver_A9AA3A68(conf));
 }
 
 SceUInt32 vshAppMgrBgdlSetQueueStatus(const void *status)
 {
-	VSH_BRIDGE(ksceAppMgrBgdlSetQueueStatus(status));
+	VSH_BRIDGE(SceAppMgrForDriver_5B1BE482(status));
 }
 
 SceUInt32 vshAppMgrDebugSettingNotifyUpdate(int setting)
 {
-	VSH_BRIDGE(ksceAppMgrDebugSettingNotifyUpdate(setting));
+	VSH_BRIDGE(SceAppMgrForDriver_7554330F(setting));
 }
 
 SceUInt32 vshAppMgrCheckContentInstallPeriod(void *a)
 {
-	VSH_BRIDGE(ksceAppMgrCheckContentInstallPeriod(a));
+	VSH_BRIDGE(SceAppMgrForDriver_193784A9(a));
 }
 
 SceUInt32 vshAppMgrUpdateRifInfo(const void *info)
 {
-	VSH_BRIDGE(ksceAppMgrUpdateRifInfo(info));
+	VSH_BRIDGE(sceAppMgrUpdateRifInfo(info));
 }
 
 SceUInt32 vshAppMgrRegisterPath(const char *path, void *a)
 {
-	VSH_BRIDGE(ksceAppMgrRegisterPath(path, a));
+	VSH_BRIDGE(SceAppMgrForDriver_B53FB98E(path, a));
 }
 
 SceUInt32 vshAppMgrCheckPfsMounted(const char *path)
 {
-	VSH_BRIDGE(ksceAppMgrCheckPfsMounted(path));
+	VSH_BRIDGE(SceAppMgrForDriver_0B1BEEE0(path));
 }
 
 SceUInt32 vshAppMgrCloudDataCreateHeader(const void *a, int b, const void *c, void *d)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataCreateHeader(a, b, c, d));
+	VSH_BRIDGE(SceAppMgrForDriver_ED87F191(a, b, c, d));
 }
 
 SceUInt32 vshAppMgrCloudDataVerifyHeader(const void *header)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataVerifyHeader(header));
+	VSH_BRIDGE(SceAppMgrForDriver_55D48190(header));
 }
 
 SceUInt32 vshAppMgrCloudDataSetupKey(void *key)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataSetupKey(key));
+	VSH_BRIDGE(SceAppMgrForDriver_2FAA6ABD(key));
 }
 
 SceUInt32 vshAppMgrCloudDataSrcMount(int a, const void *b, void *c)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataSrcMount(a, b, c));
+	VSH_BRIDGE(sceAppMgrCloudDataSrcMount(a, b, c));
 }
 
 SceUInt32 vshAppMgrCloudDataDstCreateMount(const void *a, void *b)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataDstCreateMount(a, b));
+	VSH_BRIDGE(sceAppMgrCloudDataDstCreateMount(a, b));
 }
 
 SceUInt32 vshAppMgrFakeSaveDataCreateMount(const char *path, void *b)
 {
-	VSH_BRIDGE(ksceAppMgrFakeSaveDataCreateMount(path, b));
+	VSH_BRIDGE(sceAppMgrFakeSaveDataCreateMount(path, b));
 }
 
 SceUInt32 vshAppMgrCloudDataSetMcId(int a, const void *id)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataSetMcId(a, id));
+	VSH_BRIDGE(SceAppMgrForDriver_0B94BB90(a, id));
 }
 
 SceUInt32 vshAppMgrCloudDataGetMcId(int a, void *id)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataGetMcId(a, id));
+	VSH_BRIDGE(SceAppMgrForDriver_1286AF64(a, id));
 }
 
 SceUInt32 vshAppMgrCloudDataClearMcId(int a)
 {
-	VSH_BRIDGE(ksceAppMgrCloudDataClearMcId(a));
+	VSH_BRIDGE(SceAppMgrForDriver_EC408FEF(a));
 }
 
 SceUInt32 vshAppMgrGetPfsProcessStatus(void)
 {
-	VSH_BRIDGE(ksceAppMgrGetPfsProcessStatus());
+	VSH_BRIDGE(sceAppMgrGetPfsProcessStatus());
 }
 
 SceUInt32 vshAppMgrIsExclusiveProcessRunning(const void *a)
 {
-	VSH_BRIDGE(ksceAppMgrIsExclusiveProcessRunning(a));
+	VSH_BRIDGE(sceAppMgrIsExclusiveProcessRunning(a));
 }
 
 SceUInt32 vshAppMgrAcInstGetAcdirParam(const void *a, const void *b, void *c)
 {
-	VSH_BRIDGE(ksceAppMgrAcInstGetAcdirParam(a, b, c));
+	VSH_BRIDGE(sceAppMgrAcInstGetAcdirParam(a, b, c));
 }
 
 SceUInt32 vshAppMgrSaveDataLocalBackupTargetGetList(void *list)
 {
-	VSH_BRIDGE(ksceAppMgrSaveDataLocalBackupTargetGetList(list));
+	VSH_BRIDGE(SceAppMgrForDriver_9B3F7D66(list));
 }
 
 SceUInt32 vshAppMgrSaveDataLocalBackupTargetRemoveItem(const void *item)
 {
-	VSH_BRIDGE(ksceAppMgrSaveDataLocalBackupTargetRemoveItem(item));
+	VSH_BRIDGE(SceAppMgrForDriver_C4EF95BB(item));
 }
 
 SceUInt32 vshAppMgrLocalBackupGetOfflineId(void *id, void *b)
 {
-	VSH_BRIDGE(ksceAppMgrLocalBackupGetOfflineId(id, b));
+	VSH_BRIDGE(SceAppMgrForDriver_61B13981(id, b));
 }
 
 SceUInt32 vshAppMgrLocalBackupVerifyOfflineHeader(const void *header)
 {
-	VSH_BRIDGE(ksceAppMgrLocalBackupVerifyOfflineHeader(header));
+	VSH_BRIDGE(SceAppMgrForDriver_62E98C42(header));
 }
 
 SceUInt32 vshAppMgrSaveDataNotifyBackupFinished(const void *a)
 {
-	VSH_BRIDGE(ksceAppMgrSaveDataNotifyBackupFinished(a));
+	VSH_BRIDGE(sceAppMgrSaveDataNotifyBackupFinished(a));
 }
 
 /* ===== coredump ===== */
 
 SceUInt32 vshCoredumpCafInit(void)
 {
-	VSH_BRIDGE(ksceCoredumpCafInit());
+	VSH_BRIDGE(SceCoredumpForDriver_9336009B());
 }
 
 SceUInt32 vshCoredumpCafFinal(void)
 {
-	VSH_BRIDGE(ksceCoredumpCafFinal());
+	VSH_BRIDGE(SceCoredumpForDriver_C90F61AF());
 }
 
 SceUInt32 vshCoredumpCafContextCreate(void)
@@ -1623,14 +1623,14 @@ SceUInt32 vshCoredumpCafContextCreate(void)
 	SceUID uid, puid = SCE_ERROR_ERRNO_ENOSYS;
 
 	if (sceSblACMgrIsSystemProgram(0)) {
-		uid = ksceCoredumpCafContextCreate();
+		uid = sceCoredumpCafContextCreate();
 		if (uid < 0) {
 			sceSyscallLeave(t);
 			return uid;
 		}
 		puid = SceSysmemForDriver_BF209859(0, uid);
 		if (puid < 0)
-			ksceCoredumpCafContextDestroy(uid);
+			sceCoredumpCafContextDestroy(uid);
 	}
 	sceSyscallLeave(t);
 	return puid;
@@ -1638,52 +1638,52 @@ SceUInt32 vshCoredumpCafContextCreate(void)
 
 SceUInt32 vshCoredumpCafContextDestroy(SceUID ctx)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafContextDestroy(uid));
+	VSH_BRIDGE_UID(ctx, sceCoredumpCafContextDestroy(uid));
 }
 
 SceUInt32 vshCoredumpCafHeaderInit(SceUID ctx, SceUInt32 algorithm)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafHeaderInit(uid, algorithm));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_7C8120C5(uid, algorithm));
 }
 
 SceUInt32 vshCoredumpCafHeaderTransform(SceUID ctx, const void *data, SceSize size)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafHeaderTransform(uid, data, size));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_AE2C2793(uid, data, size));
 }
 
 SceUInt32 vshCoredumpCafHeaderFinal(SceUID ctx, void *digest, SceSize size)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafHeaderFinal(uid, digest, size));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_65AA4991(uid, digest, size));
 }
 
 SceUInt32 vshCoredumpCafCreateIv(void *iv, SceSize size)
 {
-	VSH_BRIDGE(ksceCoredumpCafCreateIv(iv, size));
+	VSH_BRIDGE(SceCoredumpForDriver_E1BCBE8F(iv, size));
 }
 
 SceUInt32 vshCoredumpCafSegmentInit(SceUID ctx, void *a, void *b, void *c, void *d, void *e)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafSegmentInit(uid, a, b, c, d, e));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_07185515(uid, a, b, c, d, e));
 }
 
 SceUInt32 vshCoredumpCafSegmentTransform(SceUID ctx, void *a, void *b, void *c)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafSegmentTransform(uid, a, b, c));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_FB7AEBFE(uid, a, b, c));
 }
 
 SceUInt32 vshCoredumpCafSegmentFinal(SceUID ctx, void *a, void *b)
 {
-	VSH_BRIDGE_UID(ctx, ksceCoredumpCafSegmentFinal(uid, a, b));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_DF17420A(uid, a, b));
 }
 
 SceUInt32 vshCoredumpDeleteCrashReportCaf(void)
 {
-	VSH_BRIDGE(ksceCoredumpDeleteCrashReportCaf());
+	VSH_BRIDGE(SceCoredumpForDriver_AD070837());
 }
 
 SceUInt32 vshCoredumpCreateDump(int a, const void *b, int c, const void *d, int e, int f, void *g, int h)
 {
-	return ksceCoredumpCreateDump(a, b, c, d, e, f, g, h);
+	return SceCoredumpForDriver_0C10313F(a, b, c, d, e, f, g, h);
 }
 
 SceUInt32 vshEventLogPut(SceUInt16 type, SceUInt16 subtype, SceUInt32 arg, const void *pBuf, SceSize bufSize)
@@ -1767,7 +1767,7 @@ SceUInt32 vshSblSsCreatePassPhrase(void *a, void *b)
 		sceSyscallLeave(t);
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = ksceSblSsCreatePassPhrase(a, b);
+	ret = SceSblSsMgrForDriver_B8B298FD(a, b);
 	sceSyscallLeave(t);
 	return ret;
 }

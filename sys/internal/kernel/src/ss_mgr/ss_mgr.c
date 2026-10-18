@@ -10,8 +10,8 @@
 #include <sysmem/debug.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
+#include <smsc_proxy/smsc_proxy.h>
 
-int ksceSblSmSchedProxyExecuteF00DCommand(int command, int a1, int a2, int a3);
 const SceSelfAuthInfo ssPortabilityAuthInfo = {
 	.program_authority_id = UINT64_C(0x2808000000000001),
 	.capability = {
@@ -25,7 +25,7 @@ const SceSelfAuthInfo ssPortabilityAuthInfo = {
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
 	}
 };
-void *ksceSblSsMemset(void *dst, int c, SceSize size) __attribute__((noinline));
+void *SceSblSsMgrForDriver_CD98CC92(void *dst, int c, SceSize size) __attribute__((noinline));
 
 /* Portability service request, shared by its input and output. Name unknown. */
 typedef struct SsPortabilityRequest {
@@ -84,7 +84,7 @@ static int SsMgrSysEventHandler(int resume, int eventid, void *args, void *opt)
 	switch (resume) {
 	case 0:
 		if (eventid == 0x200)
-			return ksceSblSmSchedProxyExecuteF00DCommand(4, 0, 0, 0);
+			return SceSblSmSchedProxyForKernel_7894B6F0(4, 0, 0, 0);
 		return resume;
 	case 1:
 		if (eventid == 0x100000)
@@ -169,8 +169,8 @@ int SceSblSsMgrForDriver_C38D0CEA(SceUID heap, SceKernelPAVector *vector)
 	return 0;
 }
 
-SS_MGR_CORE(ksceSblSsGetNvsData)
-int ksceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
+SS_MGR_CORE(sceSblSsGetNvsData)
+int sceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 {
 	uint8_t chunk[SS_NVS_CHUNK];
 	uint32_t offset, remaining, length;
@@ -215,8 +215,8 @@ int ksceSblSsGetNvsData(uint32_t area, void *buffer, SceSize size)
 	return 0;
 }
 
-SS_MGR_CORE(ksceSblSsSetNvsData)
-int ksceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
+SS_MGR_CORE(sceSblSsSetNvsData)
+int sceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 {
 	uint8_t chunk[SS_NVS_CHUNK];
 	uint32_t offset, remaining, length;
@@ -254,8 +254,8 @@ int ksceSblSsSetNvsData(uint32_t area, const void *buffer, SceSize size)
 	return 0;
 }
 
-SS_MGR_CORE(ksceSblSsEncryptWithPortability)
-int ksceSblSsEncryptWithPortability(SceUInt32 key_type, void *iv,
+SS_MGR_CORE(SceSblSsMgrForDriver_21EC51F6)
+int SceSblSsMgrForDriver_21EC51F6(SceUInt32 key_type, void *iv,
 				  ScePortabilityData *src, ScePortabilityData *dst)
 {
 	SceSize msgSize;
@@ -282,8 +282,8 @@ copy:
 	return ret;
 }
 
-SS_MGR_CORE(ksceSblSsDecryptWithPortability)
-int ksceSblSsDecryptWithPortability(SceUInt32 key_type, void *iv,
+SS_MGR_CORE(SceSblSsMgrForDriver_934DB6B5)
+int SceSblSsMgrForDriver_934DB6B5(SceUInt32 key_type, void *iv,
 				  ScePortabilityData *src, ScePortabilityData *dst)
 {
 	SceSblSmCommId id;
@@ -317,7 +317,7 @@ secure:
 	{
 		struct SysrootSelfInfo selfInfo;
 
-		ksceSblSsMemset(&selfInfo, 0, sizeof(selfInfo));
+		SceSblSsMgrForDriver_CD98CC92(&selfInfo, 0, sizeof(selfInfo));
 		selfInfo.size = sizeof(selfInfo);
 		ret = SceSysrootForKernel_F10AB792(SCE_KERNEL_SYSROOT_SELF_INDEX_ENCDEC_W_PORTABILITY_SM,
 					   &selfInfo);
@@ -325,16 +325,16 @@ secure:
 			ret = SS_ERROR_INVALID_ARGUMENT;
 			goto stop;
 		}
-		ksceSblSsMemset(&auth, 0, sizeof(auth));
+		SceSblSsMgrForDriver_CD98CC92(&auth, 0, sizeof(auth));
 		memcpy(&auth.request, &ssPortabilityAuthInfo, sizeof(auth.request));
 		auth.media_type = 2;
 		auth.self_type = (auth.self_type & ~15U) | 2;
-		ret = ksceSblSmCommStartSmFromData(0, selfInfo.selfData, selfInfo.selfSize,
+		ret = SceSblSmCommForKernel_039C73B1(0, selfInfo.selfData, selfInfo.selfSize,
 						0, &auth, &id);
 	}
 	if (ret != 0)
 		goto stop;
-	ret = ksceSblSmCommCallFunc(id, 0x2000a, &serviceResult, &request, sizeof(request));
+	ret = SceSblSmCommForKernel_DB9FC204(id, 0x2000a, &serviceResult, &request, sizeof(request));
 	if (ret != 0)
 		goto stop;
 	ret = serviceResult;
@@ -344,14 +344,14 @@ stop:
 	if (id != -1) {
 		SceSblSmCommPair stopResult = { -1, -1 };
 
-		ksceSblSmCommStopSm(id, &stopResult);
+		SceSblSmCommForKernel_0631F8ED(id, &stopResult);
 	}
 	return ret;
 }
 
 /* Not memset: callers clear key material, which a builtin could drop. */
-SS_MGR_CORE(ksceSblSsMemset)
-void *ksceSblSsMemset(void *dst, int c, SceSize size)
+SS_MGR_CORE(SceSblSsMgrForDriver_CD98CC92)
+void *SceSblSsMgrForDriver_CD98CC92(void *dst, int c, SceSize size)
 {
 	uint8_t *p = dst;
 	uint8_t *end = p + size;

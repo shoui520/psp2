@@ -75,7 +75,7 @@ int sceCoredumpCafContextDestroy(SceUID context)
 	return result;
 }
 
-int ksceCoredumpDeleteCrashReportCaf(void)
+int SceCoredumpForDriver_AD070837(void)
 {
 	return sceIoRemove("ux0:data/crash_report.caf");
 }

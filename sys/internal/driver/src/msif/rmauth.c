@@ -44,7 +44,7 @@ int invoke_rm_auth_secure_module(void)
 		&selfInfo) < 0)
 		return 0x800f0016;
 	auth.self_type = (auth.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromData(0, selfInfo.selfData,
+	return SceSblSmCommForKernel_039C73B1(0, selfInfo.selfData,
 		selfInfo.selfSize, 0, &auth, &gMsifSmId);
 }
 
@@ -64,10 +64,10 @@ int call_get_key_master_gen_no(uint32_t *generation)
 	if (callResult) {
 		result = callResult;
 	} else {
-		if (ksceSblSmCommCallFunc(gMsifSmId, 1, &serviceResult, &request,
+		if (SceSblSmCommForKernel_DB9FC204(gMsifSmId, 1, &serviceResult, &request,
 			sizeof(request)))
 			serviceResult = 0x800f1928;
-		callResult = ksceSblSmCommStopSm(gMsifSmId, &stopResult);
+		callResult = SceSblSmCommForKernel_0631F8ED(gMsifSmId, &stopResult);
 		if (callResult) {
 			result = callResult;
 		} else {
@@ -94,10 +94,10 @@ int call_set_ind_key(const uint8_t *mediaId)
 	result = invoke_rm_auth_secure_module();
 	if (result)
 		goto unlock;
-	if (ksceSblSmCommCallFunc(gMsifSmId, 2, &serviceResult, &request,
+	if (SceSblSmCommForKernel_DB9FC204(gMsifSmId, 2, &serviceResult, &request,
 		sizeof(request)))
 		serviceResult = 0x800f1928;
-	result = ksceSblSmCommStopSm(gMsifSmId, &stopResult);
+	result = SceSblSmCommForKernel_0631F8ED(gMsifSmId, &stopResult);
 	if (!result)
 		result = serviceResult;
 unlock:

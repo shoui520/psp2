@@ -724,7 +724,7 @@ int SceRtcForDriver_40B4BCFF(SceRtcTick *tick)
 
 int SceRtcForDriver_3E3C09A0(SceRtcTick *tick)
 {
-	if ((SceQafMgrForDriver_4BC1883F() || ksceSblUtMgrHasStoreFlag()) &&
+	if ((SceQafMgrForDriver_4BC1883F() || SceSblPostSsMgrForDriver_9D2E2D39()) &&
 	    SceRtcForDriver_C141632A(tick) == 0)
 		return 0;
 	return SceRtcForDriver_40B4BCFF(tick);

@@ -9,7 +9,7 @@
 #include <sysmem/sysevent.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/cpu.h>
 #include <stdio.h>
 #include <string.h>
@@ -955,7 +955,7 @@ int sdintr_thr_entry(SceSize args, void *argp)
 						goto suspendGcWithoutIdentity;
 					memset(&gameCardMediaSector, 0, sizeof(gameCardMediaSector));
 					do {
-						if (ksceSblRngPseudoRandomNumber(interrupt->cid, 16))
+						if (_set_key_seed(interrupt->cid, 16))
 							goto suspendGcWithoutIdentity;
 					} while (!interrupt->cid[0] && !interrupt->cid[1] &&
 						 !interrupt->cid[2] && !interrupt->cid[3]);
@@ -1007,7 +1007,7 @@ suspendGcWithoutIdentity:
 						goto suspendRmWithoutIdentity;
 					memset(&memoryCardMediaSector, 0, sizeof(memoryCardMediaSector));
 					do {
-						if (ksceSblRngPseudoRandomNumber(interrupt->cid, 16))
+						if (_set_key_seed(interrupt->cid, 16))
 							goto suspendRmWithoutIdentity;
 					} while (!interrupt->cid[0] && !interrupt->cid[1] &&
 						 !interrupt->cid[2] && !interrupt->cid[3]);

@@ -3,8 +3,8 @@
 int KrmDriverCryptUserData(const KrmCryptRequest *request, int encrypt)
 {
 	KrmCryptRequest local __attribute__((aligned(8)));
-	SceOpenPsId keyId;
-	SceOpenPsId iv;
+	SceKernelOpenPsId keyId;
+	SceKernelOpenPsId iv;
 	void *localIv;
 	int ret;
 
@@ -206,7 +206,7 @@ denied:
 
 int SceKrm_E0AEAE3B(const KrmSignedState *state)
 {
-	SceOpenPsId iv;
+	SceKernelOpenPsId iv;
 	uint64_t tick;
 	SceUID pid;
 	SceUID currentPid;
@@ -249,7 +249,7 @@ int SceKrm_E0AEAE3B(const KrmSignedState *state)
 					__builtin_memcpy(&iv, g_krmStateIv, sizeof(iv));
 					ret = KrmAesCbcDecrypt((const void *)&g_krmEncryptedState.state,
 						(void *)&g_krmSignedState.state, sizeof(KrmState), 256,
-						g_krmStateKey.bytes, iv.open_psid);
+						g_krmStateKey.bytes, iv.id);
 					__builtin_memset(&iv, 0, sizeof(iv));
 					if (ret == 0) {
 						ret = KrmDriverGetNetworkTick(&tick);
@@ -289,7 +289,7 @@ denied:
 
 int EncryptAndSignState(KrmSignedState *state)
 {
-	SceOpenPsId iv;
+	SceKernelOpenPsId iv;
 	unsigned int syscall = sceSyscallEnter();
 	int ret;
 	int error;
@@ -324,7 +324,7 @@ int EncryptAndSignState(KrmSignedState *state)
 	__builtin_memcpy(&iv, g_krmStateIv, sizeof(iv));
 	ret = KrmAesCbcEncrypt((const void *)&g_krmEncryptedState.state,
 		(void *)&g_krmEncryptedState.state, sizeof(KrmState), 256,
-		g_krmStateKey.bytes, iv.open_psid);
+		g_krmStateKey.bytes, iv.id);
 	__builtin_memset(&iv, 0, sizeof(iv));
 	if (__builtin_expect(ret == 0, 0)) {
 		ret = KrmDriverSignMessage(&g_krmEncryptedState.signature,
@@ -353,7 +353,7 @@ leave:
 
 int SceKrm_10202EB4(const void *keyId)
 {
-	SceOpenPsId localId;
+	SceKernelOpenPsId localId;
 	SceUID pid;
 	SceUID currentPid;
 	unsigned int syscall = sceSyscallEnter();
@@ -420,7 +420,7 @@ denied:
 
 int SceKrm_98EEB7F3(void *keyId)
 {
-	SceOpenPsId localId;
+	SceKernelOpenPsId localId;
 	SceUID pid;
 	SceUID currentPid;
 	unsigned int syscall = sceSyscallEnter();
@@ -478,7 +478,7 @@ denied:
 int SceKrm_350C8251(const void *wrappingKeyId, const KrmKey *key)
 {
 	KrmKey localKey;
-	SceOpenPsId localId;
+	SceKernelOpenPsId localId;
 	unsigned int syscall = sceSyscallEnter();
 	int ret;
 
@@ -522,8 +522,8 @@ leave:
 int SceKrm_2528D613(const void *wrappingKeyId, const void *keyId, KrmKey *key)
 {
 	KrmKey localKey;
-	SceOpenPsId localWrappingId;
-	SceOpenPsId localId;
+	SceKernelOpenPsId localWrappingId;
+	SceKernelOpenPsId localId;
 	unsigned int syscall = sceSyscallEnter();
 	int ret;
 
@@ -631,7 +631,7 @@ denied:
 
 int SceKrm_18DE25C6(const void *keyId)
 {
-	SceOpenPsId local;
+	SceKernelOpenPsId local;
 	SceUID pid;
 	SceUID currentPid;
 	unsigned int syscall = sceSyscallEnter();
@@ -787,7 +787,7 @@ denied:
 int SceKrm_A9201DA3(const KrmSignatureRequest *request)
 {
 	KrmSignatureRequest local;
-	SceOpenPsId keyId;
+	SceKernelOpenPsId keyId;
 	KrmEccSignature signature;
 	SceUID pid;
 	SceUID currentPid;
@@ -875,7 +875,7 @@ denied:
 int SceKrm_F0B626E7(const KrmSignatureRequest *request)
 {
 	KrmSignatureRequest local;
-	SceOpenPsId keyId;
+	SceKernelOpenPsId keyId;
 	KrmEccSignature signature;
 	SceUID pid;
 	SceUID currentPid;
@@ -959,7 +959,7 @@ denied:
 int SceKrm_41547BE1(const void *keyId, KrmKey *key)
 {
 	KrmKey local;
-	SceOpenPsId localId;
+	SceKernelOpenPsId localId;
 	unsigned int syscall = sceSyscallEnter();
 	int ret;
 

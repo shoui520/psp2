@@ -1777,7 +1777,7 @@ int _sceAvcencEncode(const AvcencControl *pCtrl, const AvcencCscFrame *pFrame,
 	if (pArrayAu != NULL)
 		goto copyAu;
 submit:
-	return ksceAvcencEncode(ctrl, frame, pArrayAu);
+	return SceAvcodecForDriver_A0E63278(ctrl, frame, pArrayAu);
 
 copyFrame:
 	frame = __builtin_alloca(sizeof(*frame));
@@ -1792,7 +1792,7 @@ copyAu:
 	copied = SceSysmemForDriver_BC996A7A(arrayAu, pArrayAu, sizeof(*arrayAu));
 	if (copied < 0)
 		return copied;
-	ret = ksceAvcencEncode(ctrl, frame, arrayAu);
+	ret = SceAvcodecForDriver_A0E63278(ctrl, frame, arrayAu);
 	copied = SceSysmemForDriver_6D88EF8A(pArrayAu, arrayAu, sizeof(*arrayAu));
 	return copied < 0 ? copied : ret;
 }
@@ -1821,12 +1821,12 @@ int _sceAvcencEncodeStop(const AvcencControl *pCtrl, AvcencArrayAu *pArrayAu)
 	copied = SceSysmemForDriver_BC996A7A(arrayAu, pArrayAu, sizeof(*arrayAu));
 	if (copied < 0)
 		return copied;
-	ret = ksceAvcencEncodeStop(ctrl, arrayAu);
+	ret = SceAvcodecForDriver_DE515BFF(ctrl, arrayAu);
 	copied = SceSysmemForDriver_6D88EF8A(pArrayAu, arrayAu, sizeof(*arrayAu));
 	return copied < 0 ? copied : ret;
 
 submit:
-	return ksceAvcencEncodeStop(ctrl, pArrayAu);
+	return SceAvcodecForDriver_DE515BFF(ctrl, pArrayAu);
 }
 
 int _sceAvcencEncodeFlush(const AvcencControl *pCtrl)

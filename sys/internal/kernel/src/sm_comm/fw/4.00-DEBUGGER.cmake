@@ -75,12 +75,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	ksceSblSmSchedProxyWriteCry2Arm
-	ksceSblSmSchedProxyInvoke
-	ksceSblSmSchedCallFunc
-	ksceSblSmSchedProxyEnableCry2ArmInterrupt
-	ksceSblSmSchedProxyReadCry2Arm
-	ksceSblSmSchedProxyWait
+	sceSblSmSchedProxyWriteCry2Arm
+	sceSblSmSchedProxyInvoke
+	SceSblSmSchedProxyForKernel_723B382F
+	SceSblSmSchedProxyForKernel_8B84AC2A
+	sceSblSmSchedProxyReadCry2Arm
+	sceSblSmSchedProxyWait
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 )

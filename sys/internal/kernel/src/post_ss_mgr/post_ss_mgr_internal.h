@@ -9,7 +9,7 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
@@ -37,10 +37,6 @@
 #define SCE_SBL_ERROR_PM_SM			0x800f0a28	/* name unknown */
 #define SCE_SBL_ERROR_PM_UNSUPPORTED		0x800f0a25	/* name unknown */
 #define SCE_KERNEL_ERROR_NOT_ALLOWED		0x80010058	/* name unknown */
-
-void *ksceSblSsMemset(void *dst, int c, SceSize len);
-int ksceSblNvsReadData(SceUInt32 offset, void *buf, SceSize size);
-int ksceSblNvsWriteData(SceUInt32 offset, const void *buf, SceSize size);
 
 /* a deferred placeholder stays a call, as the routine it stands for is */
 #define SCE_ERROR_ERRNO_ENOENT		0x80010002
@@ -104,9 +100,9 @@ int pmMgrGetSmProductMode(SceUInt8 *mode);	/* name unknown */
 extern SceUInt8 g_pmProductMode;		/* name unknown */
 int sceSblPmMgrInit(void);
 int sceSblPmMgrSetProductModeCommon(int mode, int useSm);
-int ksceSblPostSsMgrExecutePmSmF00dCommand(int on);
-int _ksceSblPostSsMgrExecutePmSmF00dCommand(SceUInt32 flags);
-int ksceSblPostSsMgrExecutePmSmF00dCommand8(SceUInt8 *mode);
+int SceSblPostSsMgrForDriver_ADF92824(int on);
+int SceSblPostSsMgrForDriver_FE92A318(SceUInt32 flags);
+int SceSblPostSsMgrForDriver_4663C195(SceUInt8 *mode);
 int sceSblPmMgrAuthEtoI(void);
 
 /* pm_syscon_jig.c */

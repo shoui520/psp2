@@ -3,7 +3,7 @@
 #include <compat/compat.h>
 #include <stddef.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/npdrm.h>
+#include <npdrm/npdrm.h>
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
 #include <rtc/rtc.h>

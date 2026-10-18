@@ -10,11 +10,11 @@
 #include <psp2kern/kernel/sysclib.h>
 #include "appmgr_device.h"
 #include <display/display.h>
+#include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern int _sceAppMgrReleaseSoundOutExclusive(void);
 extern void updateAudioArbitration2NoLock(void);

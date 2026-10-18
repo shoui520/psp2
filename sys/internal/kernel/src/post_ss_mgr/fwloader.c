@@ -149,7 +149,7 @@ fail:
 	return SCE_SBL_ERROR_FWLOADER_INVALID_ARGUMENT;
 }
 
-int ksceSblFwLoaderUnlock(void)
+int sceSblFwLoaderClose(void)
 {
 	if (g_fwLoaderState != FWLOADER_STATE_LOCKED)
 		return SCE_SBL_ERROR_FWLOADER_NOT_LOCKED;

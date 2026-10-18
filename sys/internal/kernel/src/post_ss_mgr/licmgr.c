@@ -7,7 +7,7 @@
 
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/kbl/kbl.h>
+#include <kernel_boot_loader/kbl_param.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -16,6 +16,8 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/sysroot.h>
 #include <rtc/rtc.h>
+#include <post_ss_mgr/sblpostssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 
 #define SCE_SBL_ERROR_LIC_KBL			0x800f1028	/* names unknown */
 #define SCE_SBL_ERROR_LIC_NOT_FOUND		0x800f1302
@@ -74,7 +76,7 @@ typedef struct SceActData {
 	SceUInt32 issueNo;
 	SceUInt32 startDate;
 	SceUInt32 endDate;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt8 reserved[0x1c];
 	SceUInt8 key[0x40];
 } SceActData;
@@ -86,15 +88,12 @@ typedef struct SceActSig {
 
 /* the activation key: the OpenPsId and a byte-wise sum of its words (names unknown) */
 typedef struct SceActivationKey {
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt8 sum[4];
 } SceActivationKey;
 
-int ksceSblQafManagerGetQAFlags(void *flags);
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 
-int ksceSblPostSsMgrActivate(const char *path);
-int ksceSblPostSsMgrGetExpireDate(SceUInt32 *date, int fromNvs);
 int licMgrHexDecode(const char *hex, void *data, SceSize size);
 int licMgrGetHeaderValue(const char *header, SceSize size, SceUInt32 *value, const char *key);
 int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path);
@@ -113,7 +112,7 @@ SceUInt32 g_licMgrEndDate;		/* name unknown */
 int g_licMgrCodeFileExact;		/* name unknown: the last code has no newline */
 static SceSblSmCommId g_actSmId;	/* name unknown */
 
-int ksceSblLicMgrGetLicenseStatus(void)
+int SceSblPostSsMgrForDriver_15F37282(void)
 {
 	return g_licMgrLicenseStatus;
 }
@@ -175,7 +174,7 @@ int licMgrHasQaFlags(void)	/* name unknown */
 	SceUInt8 any;
 	int i;
 
-	if (ksceSblQafManagerGetQAFlags(flags) != 0)
+	if (SceSblSsMgrForKernel_83D254FF(flags) != 0)
 		return 0;
 	any = 0;
 	for (i = 0; i < sizeof(flags); i++)
@@ -188,7 +187,7 @@ int licMgrReadNvs(SceActNvsData *nvs)	/* name unknown */
 	int ret;
 
 	memset(nvs, 0, sizeof(*nvs));
-	ret = ksceSblNvsReadData(ACT_NVS_OFFSET, nvs, sizeof(*nvs));
+	ret = nvs_read_data(ACT_NVS_OFFSET, nvs, sizeof(*nvs));
 	if (ret != 0)
 		return ret;
 	if (memcmp(nvs, g_actMagic, sizeof(nvs->magic)) != 0)
@@ -218,7 +217,7 @@ int licMgrLoad(void)	/* name unknown */
 	ret = licMgrGetCurrentTime(&now);
 	memset(&nvs, 0, sizeof(nvs));
 	SceKernelSuspendForDriver_4DF40893(0);
-	ksceSblNvsReadData(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
+	nvs_read_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	SceKernelSuspendForDriver_2BB92967(0);
 	memset(&act, 0, sizeof(act));
 	licMgrReadFile(ACT_DAT_PATH, &act, sizeof(act));
@@ -238,7 +237,7 @@ int licMgrHasQaFlags(void)	/* name unknown */
 	SceUInt8 any;
 	int i;
 
-	if (ksceSblQafManagerGetQAFlags(flags) != 0)
+	if (SceSblSsMgrForKernel_83D254FF(flags) != 0)
 		return 0;
 	any = 0;
 	for (i = 0; i < sizeof(flags); i++)
@@ -251,7 +250,7 @@ int licMgrReadNvs(SceActNvsData *nvs)	/* name unknown */
 	int ret;
 
 	memset(nvs, 0, sizeof(*nvs));
-	ret = ksceSblNvsReadData(ACT_NVS_OFFSET, nvs, sizeof(*nvs));
+	ret = nvs_read_data(ACT_NVS_OFFSET, nvs, sizeof(*nvs));
 	if (ret != 0)
 		return ret;
 	if (memcmp(nvs, g_actMagic, sizeof(nvs->magic)) != 0)
@@ -291,7 +290,7 @@ int licMgrClearActivationData(void)	/* name unknown */
 	memset(&act, 0xff, sizeof(act));
 	memset(&sig, 0xff, sizeof(sig));
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = ksceSblNvsWriteData(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
+	ret = nvs_write_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	if (ret == 0 && (ret = licMgrWriteFile(ACT_DAT_PATH, &act, sizeof(act))) == 0)
 		ret = licMgrWriteFile(ACT_SIG_PATH, &sig, sizeof(sig));
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -302,7 +301,7 @@ int licMgrClearActivationData(void)	/* name unknown */
 int licMgrActivate(const char *path)	/* name unknown */
 {
 	SceActNvsData nvs;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceActData act, oldAct;
 	SceActSig sig, oldSig;
 	SceUInt32 now = 0;
@@ -334,7 +333,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 		return ret;
 	if (memcmp(&act, g_actMagic, sizeof(act.magic)) != 0)
 		return SCE_SBL_ERROR_LIC_INVALID_FILE;
-	ret = ksceSblAimgrGetOpenPsId(&openPsId);
+	ret = SceSblSsMgrForDriver_A5B5D269(&openPsId);
 	if (ret != 0)
 		return ret;
 	if (memcmp(&act.openPsId, &openPsId, sizeof(openPsId)) != 0)
@@ -342,7 +341,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 
 	memset(&nvs, 0, sizeof(nvs));
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = ksceSblNvsReadData(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
+	ret = nvs_read_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	SceKernelSuspendForDriver_2BB92967(0);
 	if (ret != 0)
 		return ret;
@@ -356,7 +355,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 	if (ret != 0)
 		return ret;
 	SceKernelSuspendForDriver_4DF40893(0);
-	ret = ksceSblNvsWriteData(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
+	ret = nvs_write_data(ACT_NVS_OFFSET, &nvs, sizeof(nvs));
 	if (ret == 0 && (ret = licMgrWriteFile(ACT_DAT_PATH, &act, sizeof(act))) == 0)
 		ret = licMgrWriteFile(ACT_SIG_PATH, &sig, sizeof(sig));
 	SceKernelSuspendForDriver_2BB92967(0);
@@ -364,7 +363,7 @@ int licMgrActivate(const char *path)	/* name unknown */
 }
 
 /* the end of the activation in seconds from now, or (fromNvs == 0) as loaded */
-int ksceSblPostSsMgrGetExpireDate(SceUInt32 *date, int fromNvs)
+int SceSblPostSsMgrForDriver_4FF2682F(SceUInt32 *date, int fromNvs)
 {
 	SceActNvsData nvs;
 	SceUInt32 now = 0, end;
@@ -417,7 +416,7 @@ int sceSblLicMgrInit(void)
 	int ret;
 
 	ret = licMgrLoad();
-	SceSysrootForKernel_71DB83A2(ksceSblLicMgrGetLicenseStatus);
+	SceSysrootForKernel_71DB83A2(SceSblPostSsMgrForDriver_15F37282);
 	return ret;
 }
 
@@ -453,7 +452,7 @@ int licMgrFindCodeFile(const char *dir, char *path, SceSize size)	/* name unknow
 	return 0;
 }
 
-int ksceSblPostSsMgrActivate(const char *path)
+int SceSblPostSsMgrForDriver_0298382B(const char *path)
 {
 	if (SceSblAIMgrForDriver_274663A0()) {
 		if (SceSblAIMgrForDriver_37A79140() && !SceSblAIMgrForDriver_F4B98F66())
@@ -481,19 +480,19 @@ int licMgrActivateFromFs(void)
 	memset(path, 0, sizeof(path));
 	ret = licMgrFindCodeFile(ACT_FS_DIR, path, sizeof(path));
 	if (ret == 0) {
-		ret = ksceSblPostSsMgrActivate(path);
+		ret = SceSblPostSsMgrForDriver_0298382B(path);
 		if (ret == SCE_SBL_ERROR_LIC_NOT_FOUND)
 			ret = SCE_SBL_ERROR_LIC_OTHER_CONSOLE;
 	}
 	return ret;
 }
 
-int ksceSblLicMgrGetActivationKey(SceActivationKey *key)
+int SceSblPostSsMgrForDriver_F7F1015B(SceActivationKey *key)
 {
 	SceUInt8 sum[4];
 	int ret, i, j;
 
-	ret = ksceSblAimgrGetOpenPsId(&key->openPsId);
+	ret = SceSblSsMgrForDriver_A5B5D269(&key->openPsId);
 	if (ret != 0)
 		return ret;
 	*(SceUInt32 *)sum = 0;
@@ -533,7 +532,7 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 	if (key == NULL)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
-	ret = ksceSblLicMgrGetActivationKey(&value);
+	ret = SceSblPostSsMgrForDriver_F7F1015B(&value);
 	if (ret == 0)
 		ret = SceSysmemForDriver_6D88EF8A(key, &value, sizeof(value));
 	sceSyscallLeave(state);
@@ -575,7 +574,7 @@ int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit)
 		}
 		now = 0x4e9fb874;	/* 2011-11-01 */
 	}
-	ret = ksceSblPostSsMgrGetExpireDate(&left, 0);
+	ret = SceSblPostSsMgrForDriver_4FF2682F(&left, 0);
 	left = now < left ? left - now : 0;
 	if (ret == SCE_SBL_ERROR_LIC_NO_DATA) {
 		if (licMgrHasQaFlags()) {
@@ -606,7 +605,7 @@ int sceSblLicMgrGetExpireDateForUser(SceUInt32 *date, int fromNvs)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_LIC_NOT_ACTIVATED;
 	}
-	ret = ksceSblPostSsMgrGetExpireDate(&value, fromNvs);
+	ret = SceSblPostSsMgrForDriver_4FF2682F(&value, fromNvs);
 	if (ret == 0)
 		ret = SceSysmemForDriver_6D88EF8A(date, &value, sizeof(value));
 	sceSyscallLeave(state);
@@ -631,7 +630,7 @@ int sceSblLicMgrActivateDevkitForUser(const char *path)
 			sceSyscallLeave(state);
 			return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 		}
-		ret = ksceSblPostSsMgrActivate(kpath);
+		ret = SceSblPostSsMgrForDriver_0298382B(kpath);
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -825,7 +824,7 @@ static inline __attribute__((always_inline)) int licMgrParseCode(SceActData *act
 /* find this console's code in an activation code file */
 int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 {
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt32 value, codeSize = 0, extraSize = 0;
 	SceUInt32 left, chunk, found, i;
 	SceSize headerSize, bufSize, len;
@@ -837,7 +836,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 
 	g_licMgrCodeFileExact = 0;
 	g_licMgrNewlineSize = 1;
-	ret = ksceSblAimgrGetOpenPsId(&openPsId);
+	ret = SceSblSsMgrForDriver_A5B5D269(&openPsId);
 	if (ret != 0)
 		return ret;
 	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
@@ -991,7 +990,7 @@ int invoke_act_secure_module(const char *path)	/* name unknown */
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromFile(0, path, 0, &info, &g_actSmId);
+	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_actSmId);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: act_sm service 4,

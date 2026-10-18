@@ -319,7 +319,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePfsFacadeForKernel_7F9F4E49
 	ScePfsFacadeForKernel_BD5B21F6
 	ScePfsFacadeForKernel_CB622FFE
-	ksceFiosKernelOverlayResolveSync
+	SceFios2KernelForDriver_0F456345
 	SceFios2KernelForDriver_2649408B
 	SceFios2KernelForDriver_28E28A58
 	SceFios2KernelForDriver_35E7E75C

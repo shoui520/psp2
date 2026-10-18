@@ -36,6 +36,6 @@ typedef struct SceZlibStream {
 	SceUInt32 reserved;
 } SceZlibStream;
 
-int SceZlibForDriver_25F28DA7(SceZlibStream *strm, int level, const char *version, int size);	/* deflateInit_ */
-int SceZlibForDriver_5B718E55(SceZlibStream *strm, int flush);					/* deflate */
-int SceZlibForDriver_5492B3F2(SceZlibStream *strm);						/* deflateEnd */
+int deflateInit_(SceZlibStream *strm, int level, const char *version, int size);	/* deflateInit_ */
+int deflate(SceZlibStream *strm, int flush);					/* deflate */
+int deflateEnd(SceZlibStream *strm);						/* deflateEnd */

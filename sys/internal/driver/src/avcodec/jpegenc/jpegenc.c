@@ -4,7 +4,7 @@
 #include <scejpegenc.h>
 #include "jpegenc_internal.h"
 #include "../jpeg/jpeg_internal.h"
-#include <psp2kern/jpegenc.h>
+#include <avcodec/avcodec.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
@@ -75,7 +75,7 @@ int jpegEncoderProcessExitEntry(SceUID pid, SceUInt32 type)
 	return 0;
 }
 
-int ksceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr)
+int SceAvcodecForDriver_468949D7(SceJpegEncoderContext context, const void *pYCbCr)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	JpegEncoderState *state = context;
@@ -158,9 +158,9 @@ invalidPointer:
 	return SCE_JPEGENC_ERROR_INVALID_POINTER;
 }
 
-int ksceJpegEncoderCsc(SceJpegEncoderContext context, void *pYCbCr,
+int SceAvcodecForDriver_B77B5BFC(SceJpegEncoderContext context, void *pYCbCr,
 		      const void *pRGBA, int iFrameWidth,
-		      SceJpegEncoderPixelFormat inputPixelFormat)
+		      int inputPixelFormat)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	JpegEncoderState *state = context;
@@ -253,7 +253,7 @@ finish:
 	return ret;
 }
 
-int ksceJpegEncoderGetContextSize(void)
+int SceAvcodecForDriver_4DB66E3A(void)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 
@@ -261,8 +261,8 @@ int ksceJpegEncoderGetContextSize(void)
 	return sizeof(JpegEncoderState);
 }
 
-int ksceJpegEncoderInit(SceJpegEncoderContext context, int iFrameWidth,
-		       int iFrameHeight, SceJpegEncoderPixelFormat pixelFormat,
+int SceAvcodecForDriver_1BE9F5A4(SceJpegEncoderContext context, int iFrameWidth,
+		       int iFrameHeight, int pixelFormat,
 		       void *pJpeg, SceSize oJpegbufSize)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -359,7 +359,7 @@ finish:
 	return ret;
 }
 
-int ksceJpegEncoderEnd(SceJpegEncoderContext context)
+int SceAvcodecForDriver_86AD5A4F(SceJpegEncoderContext context)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	int ret;
@@ -372,7 +372,7 @@ int ksceJpegEncoderEnd(SceJpegEncoderContext context)
 	return ret;
 }
 
-int ksceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
+int SceAvcodecForDriver_2C8271BA(SceJpegEncoderContext context, void *pJpeg,
 				 SceSize oJpegbufSize)
 {
 	JpegEncoderControl *control = context;
@@ -391,7 +391,7 @@ int ksceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
 	return ret;
 }
 
-int ksceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compratio)
+int SceAvcodecForDriver_91B27CF3(SceJpegEncoderContext context, int compratio)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	JpegEncoderControl *control = context;
@@ -410,7 +410,7 @@ int ksceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compra
 	return ret;
 }
 
-int ksceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
+int SceAvcodecForDriver_D0647B74(SceJpegEncoderContext context,
 				int iFrameWidth, int iFrameHeight)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -432,7 +432,7 @@ int ksceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
 	return ret;
 }
 
-int ksceJpegEncoderSetHeaderMode(SceJpegEncoderContext context, int headerMode)
+int SceAvcodecForDriver_58835DCB(SceJpegEncoderContext context, int headerMode)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	JpegEncoderControl *control = context;

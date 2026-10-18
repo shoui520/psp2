@@ -6,12 +6,12 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
+#include <ss_mgr/ss_mgr.h>
 
 uint8_t rngSeed[20];
 SceUID rngMutex;
 uint8_t rngKey[20];
 
-int ksceSblDmac5Rnd(void *result, SceSize size, int coherent);
 int SsRngGenerateBlock(uint8_t *result, uint8_t *key, const uint8_t *seed);
 const uint8_t rngKeyHmacKey[20] = {
 	0xa6, 0xd4, 0x9a, 0xe3, 0x65, 0x41, 0x29, 0x69, 0x65, 0xb5,
@@ -22,12 +22,12 @@ const uint8_t rngSeedHmacKey[20] = {
 	0xd6, 0x0b, 0x3b, 0xaa, 0xa2, 0x97, 0x8a, 0x23, 0xcb, 0xa2
 };
 
-int ksceSblRngGenuineRandomNumber(void *result)
+int SceSblSsMgrForDriver_AC57F4F0(void *result)
 {
-	return ksceSblDmac5Rnd(result, 64, 1);
+	return sceSblDmac5Rnd(result, 64, 1);
 }
 
-int ksceSblRngPseudoRandomNumber(void *result, SceSize size)
+int _set_key_seed(void *result, SceSize size)
 {
 	uint8_t key[20], seed[20], block[20];
 	uint8_t *output = result;
@@ -60,7 +60,7 @@ int sceSblRngInit(void)
 	mutex = sceKernelCreateMutex("SceSblRng", 0x2000, 0, NULL);
 	rngMutex = mutex;
 	SCE_DBG_ASSERT_CHECK(mutex >= 0, 134);
-	ret = ksceSblDmac5Rnd(random, sizeof(random), 1);
+	ret = sceSblDmac5Rnd(random, sizeof(random), 1);
 	if (ret) {
 		SCE_DBG_PRINTF(0, 141, "%s(%d) %s: sceSblDmac5Rnd() r=0x%x.\n",
 			       "rng.c", 141, "sceSblRngInit", ret);
@@ -84,7 +84,7 @@ static int __attribute__((noinline, noclone)) rngGetRandomNumberForUser(
 	if (!result || size > 64)
 		ret = 0x80010016;
 	else
-		ret = ksceSblRngPseudoRandomNumber(result, size);
+		ret = _set_key_seed(result, size);
 	sceSyscallLeave(syscallFrame);
 	return ret;
 }

@@ -395,7 +395,7 @@ int triggerGetNextRequestId(void)
 	return requestId;
 }
 
-int ksceCoredumpCreateDump(SceUID pid, const char *titleid, int titleidLength,
+int SceCoredumpForDriver_0C10313F(SceUID pid, const char *titleid, int titleidLength,
 	const char *appName, int appNameLength, int appVersion,
 	char *path, SceSize pathSize)
 {

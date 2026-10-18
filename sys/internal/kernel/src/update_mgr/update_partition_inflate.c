@@ -2,9 +2,9 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_objects.h"
 
-int SceZlibForDriver_B03E109B(SceZlibStream *stream, const char *version, int size);
-int SceZlibForDriver_D4A85178(SceZlibStream *stream, int flush);
-int SceZlibForDriver_9030BAE4(SceZlibStream *stream);
+int SceZlibForDriver_inflateInitNocheck_(SceZlibStream *stream, const char *version, int size);
+int inflate(SceZlibStream *stream, int flush);
+int SceZlibForDriver_inflateEnd(SceZlibStream *stream);
 void *UpdateUtilHeapAllocate(SceUID heapId, SceSize count, SceSize size);
 int UpdateUtilHeapFree(SceUID heapId, void *buffer);
 int UpdateUtilUpdateNodeStatus(unsigned int nodeType,
@@ -35,7 +35,7 @@ int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 	stream.opaque = (void *)(uintptr_t)heapId;
 	stream.zalloc = (SceZlibAlloc)UpdateUtilHeapAllocate;
 	stream.zfree = (SceZlibFree)UpdateUtilHeapFree;
-	if (SceZlibForDriver_B03E109B(&stream, SCE_ZLIB_VERSION, sizeof(stream))) {
+	if (SceZlibForDriver_inflateInitNocheck_(&stream, SCE_ZLIB_VERSION, sizeof(stream))) {
 		result = (int)0x800f0216;
 		goto finish;
 	}
@@ -46,7 +46,7 @@ int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 	stream.avail_out = 0x40000;
 	remaining = size;
 	for (;;) {
-		inflateResult = SceZlibForDriver_D4A85178(&stream, Z_NO_FLUSH);
+		inflateResult = inflate(&stream, Z_NO_FLUSH);
 		if (inflateResult > Z_STREAM_END) {
 			result = (int)0x800f0205;
 			goto finish;
@@ -78,7 +78,7 @@ int UpdateUtilInflateWritePartition(const void *input, uint64_t size,
 		}
 	}
 finish:
-	SceZlibForDriver_9030BAE4(&stream);
+	SceZlibForDriver_inflateEnd(&stream);
 	if (buffer)
 		UpdateUtilReleaseBuffer(buffer, pid);
 	sceKernelSetThreadAccessLevel(permission);

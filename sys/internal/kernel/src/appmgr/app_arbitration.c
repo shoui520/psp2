@@ -12,8 +12,8 @@
 #include <psp2/appmgr.h>
 #include "app_state_internal.h"
 #include <processmgr/processmgr.h>
+#include <appmgr/appmgr.h>
 
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutexOwner;
 extern int appmgrGetAppRunState(const struct AppState *app);

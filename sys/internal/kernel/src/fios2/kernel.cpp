@@ -23,7 +23,7 @@ static inline SceFiosKernelThreadState *fiosThreadState(int create)	/* name unkn
 		sceKernelGetThreadId(), create);
 }
 
-int ksceFiosKernelOverlayAdd(SceFiosOverlay *overlay, SceFiosOverlayID *outId)
+int SceFios2KernelForDriver_2607EE4C(SceFiosOverlay *overlay, SceFiosOverlayID *outId)
 {
 	SceUID pid = overlay != NULL ? overlay->pid : SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
@@ -37,7 +37,7 @@ int ksceFiosKernelOverlayAdd(SceFiosOverlay *overlay, SceFiosOverlayID *outId)
 	return ret;
 }
 
-int ksceFiosKernelOverlayAddForProcess(SceUID pid, SceFiosOverlay *overlay, SceFiosOverlayID *outId)
+int SceFios2KernelForDriver_17E65A1C(SceUID pid, SceFiosOverlay *overlay, SceFiosOverlayID *outId)
 {
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
@@ -50,7 +50,7 @@ int ksceFiosKernelOverlayAddForProcess(SceUID pid, SceFiosOverlay *overlay, SceF
 	return ret;
 }
 
-int ksceFiosKernelOverlayRemove(SceFiosOverlayID id)
+int SceFios2KernelForDriver_2368FEB5(SceFiosOverlayID id)
 {
 	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
@@ -61,7 +61,7 @@ int ksceFiosKernelOverlayRemove(SceFiosOverlayID id)
 	return ret;
 }
 
-int ksceFiosKernelOverlayRemoveForProcess(SceUID pid, SceFiosOverlayID id)
+int SceFios2KernelForDriver_23247EFB(SceUID pid, SceFiosOverlayID id)
 {
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
@@ -71,7 +71,7 @@ int ksceFiosKernelOverlayRemoveForProcess(SceUID pid, SceFiosOverlayID id)
 	return ret;
 }
 
-int ksceFiosKernelOverlayGetInfo(SceFiosOverlayID id, SceFiosOverlay *outOverlay)
+int SceFios2KernelForDriver_725E6817(SceFiosOverlayID id, SceFiosOverlay *outOverlay)
 {
 	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
@@ -85,7 +85,7 @@ int ksceFiosKernelOverlayGetInfo(SceFiosOverlayID id, SceFiosOverlay *outOverlay
 	return ret;
 }
 
-int ksceFiosKernelOverlayGetInfoForProcess(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *outOverlay)
+int SceFios2KernelForDriver_F1762BC2(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *outOverlay)
 {
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
@@ -98,7 +98,7 @@ int ksceFiosKernelOverlayGetInfoForProcess(SceUID pid, SceFiosOverlayID id, SceF
 	return ret;
 }
 
-int ksceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *overlay)
+int SceFios2KernelForDriver_7F8B960C(SceFiosOverlayID id, SceFiosOverlay *overlay)
 {
 	SceUID pid = SceThreadmgrForDriver_FA54D49A();
 	SceUInt32 state = sceSyscallEnter();
@@ -112,7 +112,7 @@ int ksceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *overlay)
 	return ret;
 }
 
-int ksceFiosKernelOverlayModifyForProcess(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *overlay)
+int SceFios2KernelForDriver_853EA82A(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *overlay)
 {
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
@@ -125,7 +125,7 @@ int ksceFiosKernelOverlayModifyForProcess(SceUID pid, SceFiosOverlayID id, SceFi
 	return ret;
 }
 
-int ksceFiosKernelOverlayGetList(SceUID pid, unsigned int minOrder, unsigned int maxOrder,
+int SceFios2KernelForDriver_FF42AAF0(SceUID pid, unsigned int minOrder, unsigned int maxOrder,
 				 SceFiosOverlayID *outIds, SceSize maxIds, SceSize *outCount)
 {
 	SceUInt32 state = sceSyscallEnter();
@@ -136,9 +136,9 @@ int ksceFiosKernelOverlayGetList(SceUID pid, unsigned int minOrder, unsigned int
 	return ret;
 }
 
-int ksceFiosKernelOverlayThreadIsDisabled(void);
+int SceFios2KernelForDriver_E71192C5(void);
 
-int ksceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
+int SceFios2KernelForDriver_0F456345(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
 				     SceSize maxPath)
 {
 	SceFiosKernelResolveParam param;
@@ -146,7 +146,7 @@ int ksceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *in
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	param.minOrder = ksceFiosKernelOverlayThreadIsDisabled() ? 0x80 : 0;
+	param.minOrder = SceFios2KernelForDriver_E71192C5() ? 0x80 : 0;
 	args.param = &param;
 	param.maxPath = maxPath;
 	param.maxOrder = 0xff;
@@ -163,7 +163,7 @@ int ksceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *in
 	return ret;
 }
 
-int ksceFiosKernelOverlayResolveWithRangeSync(SceUID pid, int resolveFlag, const char *inPath,
+int SceFios2KernelForDriver_D3D968FC(SceUID pid, int resolveFlag, const char *inPath,
 					      char *outPath, SceSize maxPath, uint8_t minOrder,
 					      uint8_t maxOrder)
 {
@@ -172,7 +172,7 @@ int ksceFiosKernelOverlayResolveWithRangeSync(SceUID pid, int resolveFlag, const
 	SceUInt32 state = sceSyscallEnter();
 	int ret;
 
-	if (ksceFiosKernelOverlayThreadIsDisabled())
+	if (SceFios2KernelForDriver_E71192C5())
 		minOrder = 0x80;
 	args.param = &param;
 	param.maxPath = maxPath;
@@ -369,7 +369,7 @@ int SceFios2KernelForDriver_990F46A5(SceFiosKernelDH *dh, int flag)
 	return ret;
 }
 
-int ksceFiosKernelOverlayThreadSetDisabled(int disabled)
+int SceFios2KernelForDriver_03727E5E(int disabled)
 {
 	SceFiosKernelThreadState *thread;
 	SceUInt32 state = sceSyscallEnter();
@@ -386,7 +386,7 @@ int ksceFiosKernelOverlayThreadSetDisabled(int disabled)
 	return ret;
 }
 
-int ksceFiosKernelOverlayThreadIsDisabled(void)
+int SceFios2KernelForDriver_E71192C5(void)
 {
 	SceFiosKernelThreadState *thread;
 	SceUInt32 state = sceSyscallEnter();
@@ -401,7 +401,7 @@ int ksceFiosKernelOverlayThreadIsDisabled(void)
 }
 
 /* a host0..host9 path is served best by the host scheduler */
-int ksceFiosKernelOverlayGetRecommendedScheduler(int avail, const char *path)
+int SceFios2KernelForDriver_241BF0D6(int avail, const char *path)
 {
 	SceUInt32 state = sceSyscallEnter();
 	int ret;

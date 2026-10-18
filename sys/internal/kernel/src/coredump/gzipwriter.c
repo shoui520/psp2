@@ -5,7 +5,7 @@
 
 extern void *memMgrAlloc(SceSize size);
 extern int memMgrFreeForWriter(void *allocation);
-extern int SceZlibForDriver_20A122F8(SceZlibStream *stream, int level,
+extern int deflateInit2Padded_(SceZlibStream *stream, int level,
 	int method, int windowBits, int memLevel, int strategy,
 	const char *version, int streamSize);
 
@@ -42,7 +42,7 @@ static int _writeDataToDest(Writer *base, const void *data, SceSize size,
 	while (writer->stream.avail_in != 0) {
 		writer->stream.next_out = writer->outputBuffer;
 		writer->stream.avail_out = writer->outputBufferSize;
-		result = SceZlibForDriver_5B718E55(&writer->stream, 0);
+		result = deflate(&writer->stream, 0);
 		if (result != 0)
 			return result;
 		result = writerWrite(destination, writer->outputBuffer,
@@ -108,7 +108,7 @@ int gzipWriterInit(GzipWriter *writer, Writer *destination,
 	writer->stream.avail_out = 0;
 	writer->stream.zalloc = zAlloc;
 	writer->stream.zfree = zFree;
-	result = SceZlibForDriver_20A122F8(&writer->stream, 1, 8, 24, 1, 0,
+	result = deflateInit2Padded_(&writer->stream, 1, 8, 24, 1, 0,
 		"1.2.5", sizeof(writer->stream));
 	if (result != 0) {
 		memMgrFreeForWriter(writer->outputBuffer);
@@ -131,7 +131,7 @@ int gzipWriterFinal(GzipWriter *writer)
 	for (;;) {
 		writer->stream.next_out = writer->outputBuffer;
 		writer->stream.avail_out = writer->outputBufferSize;
-		status = SceZlibForDriver_5B718E55(&writer->stream, 4);
+		status = deflate(&writer->stream, 4);
 		if ((unsigned int)status > 1) {
 			result = (int)0x80010005;
 			break;
@@ -143,7 +143,7 @@ int gzipWriterFinal(GzipWriter *writer)
 	}
 	bufferedSize = writer->writer.bufferedSize;
 	writer->writer.bufferedSize = 0;
-	SceZlibForDriver_5492B3F2(&writer->stream);
+	deflateEnd(&writer->stream);
 	memMgrFreeForWriter(writer->outputBuffer);
 	finalResult = writerFinal(&writer->writer);
 	if (finalResult != 0)

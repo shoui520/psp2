@@ -255,23 +255,23 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCond
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
-	ksceSblDmac5AesEcbEncNP
-	ksceSblDmac5AesCbcDec
-	ksceSblDmac5AesCbcDecNP
+	SceSblSsMgrForDriver_0F7D28AF
+	SceSblSsMgrForDriver_121FA69F
+	SceSblSsMgrForDriver_1901CB5E
 	SceSblSsMgrForDriver_1B14658D
-	ksceSblDmac5Sha1HmacTransform
-	ksceSblDmac5AesCbcEncNP
-	ksceSblDmac5AesEcbDec
-	ksceSblDmac5AesCmacNP
-	ksceSblDmac5AesEcbEnc
-	ksceSblDmac5AesCbcEnc
-	ksceSblDmac5Sha1
+	SceSblSsMgrForDriver_6704D985
+	SceSblSsMgrForDriver_711C057A
+	SceSblSsMgrForDriver_7C978BE7
+	SceSblSsMgrForDriver_83B058F5
+	SceSblSsMgrForDriver_C517770D
+	SceSblSsMgrForDriver_E6E1AD15
+	SceSblSsMgrForDriver_EB3AF9B5
 	SceSblACMgrForDriver_3B356B98
 	SceSblACMgrForDriver_6210D745
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_E87D1777
 	SceSblAIMgrForDriver_D78B04A2
-	ksceSblRSA2048VerifySignature
+	SceSblPostSsMgrForDriver_3DB69911
 	sceKernelGetProcessSelfAuthInfo
 	sceKernelRegisterSysEventHandler
 	SceSysrootForKernel_20009397

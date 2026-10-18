@@ -23,8 +23,7 @@
 #include <clockgen/clockgen.h>
 #include <motion/motion_dev.h>
 #include <udcd/udcd.h>
-
-int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
+#include <regmgr/regmgr.h>
 
 /* display brightness: the OLED or the LCD driver, whichever is present */
 /* vitasdk: ksceOledSetBrightness */

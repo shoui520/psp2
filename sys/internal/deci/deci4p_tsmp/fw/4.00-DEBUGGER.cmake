@@ -109,8 +109,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
-	ksceSblPostSsMgrActivate
-	ksceSblPostSsMgrGetExpireDate
+	SceSblPostSsMgrForDriver_0298382B
+	SceSblPostSsMgrForDriver_4FF2682F
 	SceDipswForDriver_A98FC2FD
 	SceRtcForDriver_497B5DC9
 	sceRtcGetCurrentClockLocalTime

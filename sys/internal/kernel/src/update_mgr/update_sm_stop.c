@@ -6,5 +6,5 @@ int UpdateUtilStopSmWithResult(int *smId, SceSblSmCommPair *result)
 		return (int)0x800f0216;
 	result->result = -1;
 	result->additionalResult = -1;
-	return ksceSblSmCommStopSm(*smId, result);
+	return SceSblSmCommForKernel_0631F8ED(*smId, result);
 }

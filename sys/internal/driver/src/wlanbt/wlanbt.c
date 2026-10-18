@@ -15,8 +15,8 @@
 #include <sysmem/qafmgr.h>
 #include <idstorage/idstorage.h>
 #include <clockgen/clockgen.h>
+#include <ss_mgr/ss_mgr.h>
 
-int ksceSblSsGetNvsData(unsigned int offset, void *buffer, SceSize size);
 int wlanBtInitializeRobin(void);
 int wlanBtResumeRobin(unsigned int *wakeSources);
 int wlanBtStartRobin(void);
@@ -61,7 +61,7 @@ int module_start(SceSize arglen, const void *argp)
 	if (sceKernelInitializeFastMutex(&gWlanBtConfig.mutex,
 					"SceWlanBtRobinConfig", 0x2000, NULL) < 0)
 		return 2;
-	result = ksceSblSsGetNvsData(1, &availability, 1);
+	result = sceSblSsGetNvsData(1, &availability, 1);
 	if (result < 0)
 		return result;
 	if ((SceSysconForDriver_CBD6D8BC() & 0xff0000u) < 0x400000) {

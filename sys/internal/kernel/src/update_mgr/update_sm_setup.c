@@ -55,7 +55,7 @@ int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 	if (result < 0)
 		goto restorePermission;
 	auth.self_type = (auth.self_type & ~15) | 2;
-	result = ksceSblSmCommStartSmFromFile(0, sm_path, commandId, &auth, smId);
+	result = SceSblSmCommForKernel_7863A0CC(0, sm_path, commandId, &auth, smId);
 restorePermission:
 	sceKernelSetThreadAccessLevel(permission);
 	return result;

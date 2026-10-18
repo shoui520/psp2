@@ -13,7 +13,7 @@ POST_SS_DEFERRED int postSsMgrCheckKeystone(const ScePostSsKeystone *keystone)
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred */
-POST_SS_DEFERRED int ksceSblPostSsMgrDebugEncryptKeystone(const void *src, ScePostSsKeystone *keystone)
+POST_SS_DEFERRED int SceSblPostSsMgrForDriver_42474C8B(const void *src, ScePostSsKeystone *keystone)
 {
 	if (keystone == NULL || src == NULL)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
@@ -21,7 +21,7 @@ POST_SS_DEFERRED int ksceSblPostSsMgrDebugEncryptKeystone(const void *src, ScePo
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred */
-POST_SS_DEFERRED int ksceSblPostSsMgrDebugDecryptKeystone(const ScePostSsKeystone *keystone, void *dst)
+POST_SS_DEFERRED int SceSblPostSsMgrForDriver_CC5AA5A5(const ScePostSsKeystone *keystone, void *dst)
 {
 	if (dst == NULL || keystone == NULL)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
@@ -29,7 +29,7 @@ POST_SS_DEFERRED int ksceSblPostSsMgrDebugDecryptKeystone(const ScePostSsKeyston
 }
 
 /* the keystone of type, checked */
-int ksceSblPostSsMgrVerifyKeystone(const ScePostSsKeystone *keystone, SceUInt16 type)
+int SceSblPostSsMgrForDriver_DDA6FA6D(const ScePostSsKeystone *keystone, SceUInt16 type)
 {
 	if (keystone == NULL)
 		return SCE_SBL_ERROR_INVALID_ARGUMENT;
@@ -40,7 +40,7 @@ int ksceSblPostSsMgrVerifyKeystone(const ScePostSsKeystone *keystone, SceUInt16 
 
 /* PLACEHOLDER: cryptographic routine, deferred: checks the passcode's
  * HMAC against the keystone */
-POST_SS_DEFERRED int ksceSblPostSsMgrVerifyKeystoneWithPasscode(const ScePostSsKeystone *keystone,
+POST_SS_DEFERRED int SceSblPostSsMgrForDriver_F86F1452(const ScePostSsKeystone *keystone,
 					       const void *passcode)
 {
 	if (passcode == NULL || keystone == NULL)

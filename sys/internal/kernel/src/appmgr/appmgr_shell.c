@@ -3,12 +3,12 @@
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr.h>
+#include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
 extern int g_appmgrPowerSaveMode;
 extern int g_appmgrPowerSaveSuspendBackgroundApps;
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern int _updatePowerTickStateForNonSuspendableApp(void);
 extern void _deviceRefreshAudioPort(SceUID pid);

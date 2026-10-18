@@ -22,7 +22,6 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <usbserv/usbserv.h>
-#include <psp2kern/registrymgr.h>
 #include <display/display.h>
 #include <string.h>
 
@@ -203,7 +202,7 @@ int ds3InitializeBdRemocon(void)
 	memset(&ds3BdRemocon, 0, sizeof(ds3BdRemocon));
 	option.size = sizeof(option);
 	option.attr = 0;
-	if (ksceRegMgrSystemParamGetInt(0x00229142, &buttonAssign) >= 0) {
+	if (sceRegMgrSystemParamGetInt(0x00229142, &buttonAssign) >= 0) {
 		if (buttonAssign == 0)
 			ds3BdRemocon.buttonAssign = 0;
 		else if (buttonAssign == 1)

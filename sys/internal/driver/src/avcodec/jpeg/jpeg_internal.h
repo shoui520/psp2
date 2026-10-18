@@ -3,6 +3,7 @@
 #include <vnz_wrapper/venezia_rpc.h>
 #include "../jpeg.h"
 #include <threadmgr/fast_mutex_object.h>
+#include <avcodec/avcodec.h>
 
 /* Complete host-side output-information query transferred through RPC. */
 typedef struct JpegQueryCommand {
@@ -71,13 +72,6 @@ typedef struct JpegCscCommand {
 
 _Static_assert(sizeof(JpegCscCommand) == 44, "JPEG color conversion command ABI");
 
-int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder);
-int SceAvcodecForDriver_04080710(void);
-int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
-			      void *pRGBA, SceSize osize, int decodeMode,
-			      void *pTempBuffer, SceSize tempBufferSize,
-			      void *pCoefBuffer, SceSize coefBufferSize);
-
 /* Complete trailing-argument packet copied by the public syscall wrapper. */
 typedef struct JpegDecodeArguments {
 	SceSize osize;
@@ -101,10 +95,6 @@ typedef struct JpegYCbCrDecodeArguments {
 
 _Static_assert(sizeof(JpegYCbCrDecodeArguments) == 24, "JPEG syscall YCbCr arguments ABI");
 
-int SceAvcodecForDriver_2A0AF392(const unsigned char *pJpeg, SceSize isize,
-			      unsigned char *pYCbCr, SceSize osize, int decodeMode,
-			      void *pCoefBuffer, SceSize coefBufferSize);
-
 typedef struct JpegCscArguments {
 	int iFrameWidth;
 	int colorOption;
@@ -113,9 +103,6 @@ typedef struct JpegCscArguments {
 } JpegCscArguments;
 
 _Static_assert(sizeof(JpegCscArguments) == 16, "JPEG syscall CSC arguments ABI");
-
-int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr,
-			      int xysize, int iFrameWidth, int colorOption, int sampling);
 
 typedef struct JpegOutputInfoArguments {
 	int decodeMode;

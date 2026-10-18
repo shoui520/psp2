@@ -451,7 +451,7 @@ static void pdVcpGetCompPictCmd(const VcpRequest *req)
 	z.zalloc = VcpZAlloc;
 	z.zfree = VcpZFree;
 	z.opaque = &s_vcp;
-	init = SceZlibForDriver_25F28DA7(&z, 1, SCE_ZLIB_VERSION, sizeof(z));
+	init = deflateInit_(&z, 1, SCE_ZLIB_VERSION, sizeof(z));
 	if (init != Z_OK) {
 		VcpDeflateError(req);
 		return;
@@ -475,7 +475,7 @@ static void pdVcpGetCompPictCmd(const VcpRequest *req)
 						flush = Z_NO_FLUSH;
 				}
 			}
-			ret = SceZlibForDriver_5B718E55(&z, flush);
+			ret = deflate(&z, flush);
 			if ((unsigned int)ret > Z_STREAM_END) {
 				VcpDeflateError(req);
 				return;
@@ -493,7 +493,7 @@ static void pdVcpGetCompPictCmd(const VcpRequest *req)
 		z.avail_out = VCP_ZBUF_SIZE;
 	} while (ret != Z_STREAM_END);
 
-	SceZlibForDriver_5492B3F2(&z);
+	deflateEnd(&z);
 }
 
 static int VcpThread(SceSize args, void *argp)

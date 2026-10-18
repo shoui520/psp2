@@ -16,6 +16,8 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/qafmgr.h>
 #include <processmgr/processmgr.h>
+#include <regmgr/regmgr.h>
+#include <ss_mgr/ss_mgr.h>
 
 int regMgrLoadCache(void);
 
@@ -254,9 +256,6 @@ int regCreateKey(int handle, const char *name, int type, int size);
 int regSetKey(int handle, const char *name, const void *buf, SceSize size);
 int regGetKey(int handle, const char *name, void *buf, SceSize size);
 
-int ksceSblSsGetNvsData(SceUInt32 offset, void *buf, SceSize size);
-int ksceSblSsSetNvsData(SceUInt32 offset, const void *buf, SceSize size);
-
 /* regmgr_wrapreg.c */
 extern int g_regMgrRegistryHandle;
 extern int g_regMgrLastError;
@@ -297,33 +296,10 @@ void regMgrConvertLanguage(int version, int newVersion);
 #define REGMGR_STATUS_SYSCALL	0x00000001	/* called by a system call (name unknown) */
 
 /* the kernel APIs */
-int sceRegMgrIsBlueScreen(int error);
-int sceRegMgrGetRegVersion(void);
-int sceRegMgrResetRegistryLv(const char *category, int level);
-int sceRegMgrSetKeyInt(const char *category, const char *name, int value);
-int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-int sceRegMgrSetKeyStr(const char *category, const char *name, const char *buf, SceSize size);
-int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);
-int sceRegMgrSetKeyBin(const char *category, const char *name, const void *buf, SceSize size);
-int sceRegMgrGetKeyBin(const char *category, const char *name, void *buf, SceSize size);
 int sceRegMgrGetKeysInfo(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrSetKeys(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrGetKeys(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrGetInitVals(const char *category, RegMgrKeyInfo *info, int count);
-int sceRegMgrRegisterCallback(SceUID cbid);
-int sceRegMgrAddRegistryCallback(SceUID cbid, const char *path);
-int sceRegMgrStartCallback(SceUID cbid);
-int sceRegMgrStopCallback(SceUID cbid);
-int sceRegMgrUnregisterCallback(SceUID cbid);
-int sceRegMgrRegisterDrvErrCallback(SceUID cbid);
-int sceRegMgrUnregisterDrvErrCallback(SceUID cbid);
-int sceRegMgrDbBackup(const char *path, int level);
-int sceRegMgrDbRestore(const char *path);
-int sceRegMgrSrvGetRegion(void);
-int sceRegMgrSrvGetRegionStr(char *buf, SceSize size);
-int sceRegMgrSrvCnvRegionStr(int region, char *buf, SceSize size);
-int sceRegMgrSrvCnvRegionInt(const char *name);
-int sceRegMgrSrvCnvRegionPsCode(int region);
 
 /* regmgr.c */
 int regMgrComApiPrologue(int *lock);

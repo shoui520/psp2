@@ -11,6 +11,7 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/utils.h>
 #include <sysmem/qafmgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 
 extern int spkgMbrLoaded;
 extern unsigned int spkgBlSwitchCount, spkgOsSwitchCount;
@@ -37,9 +38,6 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName, const char *destinationNam
 int SpkgInfoUtilSetDigest(int packageType, int flags, const void *digest,
 		SceSize size, int verify, int updateMode);
 int SceSblSsMgrForKernel_516ECC08(unsigned char *flag);
-int SceSblPostSsMgrForDriver_9D1D8EE5(void);
-int ksceSblUtMgrHasComTestFlag(void);
-int ksceSblUtMgrHasStoreFlag(void);
 
 int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 {
@@ -145,13 +143,13 @@ int sceSblUsUpdateSpackageBH(SceSize arglen, SpkgThreadArgs *args)
 		result = UpdateUtilSetupSm(1, &smId, 0);
 		if (result)
 			goto releasePacket;
-		result = ksceSblSmCommCallFunc(smId, 0xe0002,
+		result = SceSblSmCommForKernel_DB9FC204(smId, 0xe0002,
 				&serviceResult, packet, sizeof(*packet));
 	} else {
 		result = UpdateUtilSetupSm(0, &smId, 0);
 		if (result)
 			goto releasePacket;
-		result = ksceSblSmCommCallFunc(smId, 0x40002,
+		result = SceSblSmCommForKernel_DB9FC204(smId, 0x40002,
 				&serviceResult, packet, sizeof(*packet));
 	}
 	if (result)
@@ -353,8 +351,8 @@ releasePacket:
 	if (SpkgInfoUtilIsBelowMinimumVersion(args->packageType, info.updateVersion, version))
 		goto invalidVersion;
 	if ((info.requirements & 1) && !SceQafMgrForDriver_3CB55F98() &&
-	    !ksceSblUtMgrHasComTestFlag() && !SceSblPostSsMgrForDriver_9D1D8EE5() &&
-	    !ksceSblUtMgrHasStoreFlag())
+	    !SceSblPostSsMgrForDriver_7ACCAA50() && !SceSblPostSsMgrForDriver_9D1D8EE5() &&
+	    !SceSblPostSsMgrForDriver_9D2E2D39())
 		goto invalidRequirements;
 	compressed = info.finalSize != info.decryptedSize;
 	if (compressed && ((unsigned int)(args->packageType - 1) > 27 ||

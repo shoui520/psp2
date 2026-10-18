@@ -21,12 +21,12 @@ int appmgrInitializeDebugSettings(void)
 	int showDebugInfo = 0;
 	int result;
 
-	if (ksceRegMgrSystemParamGetInt(0x00146e23, &value) >= 0)
+	if (sceRegMgrSystemParamGetInt(0x00146e23, &value) >= 0)
 		showDebugInfo = value;
 	g_appmgrShowDebugInfo = showDebugInfo;
 	result = sceRegMgrGetKeyInt("/CONFIG/SHELL", "trc_check_notify", &value);
 	g_appmgrTrcCheckNotify = result >= 0 ? value : 0;
-	result = ksceRegMgrSystemParamGetInt(0x00229142, &value);
+	result = sceRegMgrSystemParamGetInt(0x00229142, &value);
 	if (result < 0) {
 		g_appmgrButtonAssign = 1;
 		return 0;
@@ -89,7 +89,7 @@ int appmgrGetDebugUpgradable(void)
 	return value < 0 ? 0 : value;
 }
 
-int ksceAppMgrDebugSettingNotifyUpdate(int setting)
+int SceAppMgrForDriver_7554330F(int setting)
 {
 	SceUInt32 value = 0;
 	SceUInt32 syscallState = sceSyscallEnter();
@@ -116,7 +116,7 @@ int ksceAppMgrDebugSettingNotifyUpdate(int setting)
 			result = 0;
 			break;
 		case 2:
-			if (ksceRegMgrSystemParamGetInt(0x00229142, (int *)&value) < 0 || value != 0)
+			if (sceRegMgrSystemParamGetInt(0x00229142, (int *)&value) < 0 || value != 0)
 				g_appmgrButtonAssign = 1;
 			else
 				g_appmgrButtonAssign = 0;
@@ -132,7 +132,7 @@ int ksceAppMgrDebugSettingNotifyUpdate(int setting)
 			result = 0;
 			break;
 		case 4:
-			if (ksceRegMgrSystemParamGetInt(0x00146e23, (int *)&value) == 0)
+			if (sceRegMgrSystemParamGetInt(0x00146e23, (int *)&value) == 0)
 				g_appmgrShowDebugInfo = value;
 			if (g_appmgrDebugSettingCallback)
 				g_appmgrDebugSettingCallback(4, g_appmgrShowDebugInfo,
@@ -159,7 +159,7 @@ int appmgrSetDebugSettingCallback(AppmgrDebugSettingCallback callback, void *con
 int appmgrGetFakeSdSlotBroken(void)
 {
 	SceUInt32 value = 0;
-	int result = ksceRegMgrSystemParamGetInt(0x00424500, (int *)&value);
+	int result = sceRegMgrSystemParamGetInt(0x00424500, (int *)&value);
 
 	if (result < 0)
 		return result;

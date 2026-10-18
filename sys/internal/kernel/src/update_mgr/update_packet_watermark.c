@@ -4,10 +4,7 @@
 #include "update_internal.h"
 #include "update_objects.h"
 #include "update_packet.h"
-
-int sceSblSsInfraAllocatePARangeVector(void *buffer, SceSize size,
-		SceUID heapId, SceKernelPAVector *vector);
-int SceSblSsMgrForDriver_C38D0CEA(SceUID heapId, SceKernelPAVector *vector);
+#include <ss_mgr/ss_mgr.h>
 
 int UpdateUtilCreatePacketPayloadPupWM(UpdateDigestPacketPayload **packetOut,
 		SceKernelPAVector **dataOut, SceKernelPAVector **vectorOut,

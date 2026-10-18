@@ -5,7 +5,7 @@
 
 int KrmDriverDeriveStateKeys(void)
 {
-	SceOpenPsId id;
+	SceKernelOpenPsId id;
 	unsigned int count;
 	int ret;
 

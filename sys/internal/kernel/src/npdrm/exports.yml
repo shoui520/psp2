@@ -11,32 +11,32 @@ SceNpDrm:
       version: 1
       nid: 0xD84DC44A
       functions:
-        - ksceNpDrmUpdateActData: 0x077926F5
-        - ksceNpDrmUpdateAccountId: 0x116FC0D6
-        - ksceNpDrmGetRifNameForInstall: 0x17573133
-        - ksceNpDrmEbootSigGenMultiDisc: 0x39A7A666
-        - ksceNpDrmPackageSetGameExist: 0x3BFD2850
-        - ksceNpDrmGetLegacyDocKey: 0x4E321BDE
-        - ksceNpDrmGetFixedRifName: 0x5D73448C
-        - ksceNpDrmEbootSigGenPs1: 0x6D9223E1
-        - ksceNpDrmGetRifVitaKey: 0x723322B5
-        - ksceNpDrmWriteActData: 0x742EBAF4
-        - ksceNpDrmEbootSigVerify: 0x7A319692
-        - ksceNpDrmRemoveActData: 0x8B85A509
-        - ksceNpDrmEbootSigGenPsp: 0x90B1A6D3
-        - ksceNpDrmCheckActData: 0x9265B350
-        - ksceNpDrmEbootSigConvert: 0xA29B75F9
-        - ksceNpDrmUpdateDebugSettings: 0xA91C7443
-        - ksceNpDrmPspEbootVerify: 0xB6CA3A2C
-        - ksceNpDrmPresetRifProvisionalFlag: 0xC070FE89
-        - ksceNpDrmReadActData: 0xD91C3BCE
-        - ksceNpDrmGetRifPspKey: 0xDACB71F4
-        - ksceNpDrmGetRifInfo: 0xDB406EAE
-        - ksceNpDrmGetRifName: 0xDF62F3B8
-        - ksceNpDrmPspEbootSigGen: 0xEF387FC4
-        - ksceNpDrmIsLooseAccountBind: 0xFC84CA1A
-        - ksceNpDrmVerifyRif: 0xFE7B17B6
-        - ksceNpDrmVerifyRifFull: 0xFF63672D
+        - SceNpDrmForDriver_077926F5: 0x077926F5
+        - SceNpDrmForDriver_116FC0D6: 0x116FC0D6
+        - SceNpDrmForDriver_17573133: 0x17573133
+        - SceNpDrmForDriver_39A7A666: 0x39A7A666
+        - SceNpDrmForDriver_3BFD2850: 0x3BFD2850
+        - SceNpDrmForDriver_4E321BDE: 0x4E321BDE
+        - SceNpDrmForDriver_5D73448C: 0x5D73448C
+        - SceNpDrmForDriver_6D9223E1: 0x6D9223E1
+        - SceNpDrmForDriver_723322B5: 0x723322B5
+        - SceNpDrmForDriver_742EBAF4: 0x742EBAF4
+        - SceNpDrmForDriver_7A319692: 0x7A319692
+        - SceNpDrmForDriver_8B85A509: 0x8B85A509
+        - SceNpDrmForDriver_90B1A6D3: 0x90B1A6D3
+        - SceNpDrmForDriver_9265B350: 0x9265B350
+        - SceNpDrmForDriver_A29B75F9: 0xA29B75F9
+        - SceNpDrmForDriver_A91C7443: 0xA91C7443
+        - SceNpDrmForDriver_B6CA3A2C: 0xB6CA3A2C
+        - SceNpDrmForDriver_C070FE89: 0xC070FE89
+        - SceNpDrmForDriver_D91C3BCE: 0xD91C3BCE
+        - SceNpDrmForDriver_DACB71F4: 0xDACB71F4
+        - SceNpDrmForDriver_DB406EAE: 0xDB406EAE
+        - SceNpDrmForDriver_DF62F3B8: 0xDF62F3B8
+        - SceNpDrmForDriver_EF387FC4: 0xEF387FC4
+        - SceNpDrmForDriver_FC84CA1A: 0xFC84CA1A
+        - SceNpDrmForDriver_FE7B17B6: 0xFE7B17B6
+        - SceNpDrmForDriver_FF63672D: 0xFF63672D
     SceNpDrm:
       syscall: true
       version: 1
@@ -55,12 +55,12 @@ SceNpDrm:
       version: 1
       nid: 0x9F4924F2
       functions:
-        - kscePsmDrmRemoveActData: 0x4CD5375C
-        - kscePsmDrmReadActData: 0x791198CE
-        - kscePsmDrmGetRifKey: 0x8C8CFD01
-        - kscePsmDrmGetRifInfo: 0x984F9017
-        - kscePsmDrmGetActInfo: 0xB09003A7
-        - kscePsmDrmWriteActData: 0xCB73E9D3
+        - ScePsmDrmForDriver_4CD5375C: 0x4CD5375C
+        - ScePsmDrmForDriver_791198CE: 0x791198CE
+        - ScePsmDrmForDriver_8C8CFD01: 0x8C8CFD01
+        - ScePsmDrmForDriver_984F9017: 0x984F9017
+        - ScePsmDrmForDriver_B09003A7: 0xB09003A7
+        - ScePsmDrmForDriver_CB73E9D3: 0xCB73E9D3
     ScePsmDrm:
       syscall: true
       version: 1

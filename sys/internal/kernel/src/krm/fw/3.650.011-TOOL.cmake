@@ -68,9 +68,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
-	ksceSblSsDecryptWithPortability
-	ksceSblAimgrGetOpenPsId
-	ksceSblRngGenuineRandomNumber
+	SceSblSsMgrForDriver_934DB6B5
+	SceSblSsMgrForDriver_A5B5D269
+	SceSblSsMgrForDriver_AC57F4F0
 	SceRtcForDriver_F1517B38
 )
 set(MODULE_IMPORT_VARS

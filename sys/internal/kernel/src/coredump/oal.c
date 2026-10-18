@@ -37,11 +37,10 @@
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/msg_pipe.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/gpu_es4.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/registrymgr.h>
 #include "oal_internal.h"
 #include <threadmgr/threadmgr.h>
 #include <sysmem/utils.h>
@@ -50,18 +49,15 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/ctype.h>
 #include <acmgr/acmgr.h>
+#include <regmgr/regmgr.h>
 
 extern void *memMgrLocalAlloc(SceSize size);
-extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
-extern int sceRegMgrGetKeyStr(const char *category, const char *name,
-	char *buf, SceSize size);
 extern unsigned int SceGpuEs4ForDriver_F001AE90(void);
 extern unsigned int SceGpuEs4ForDriver_395F7689(void);
 extern unsigned int SceGpuEs4ForDriver_18C90B42(void);
 extern unsigned int SceGpuEs4ForDriver_8A3929D2(void *destination,
 	unsigned int size);
 /* imports under the names of our NID db (tools/nids/kernel.yml) */
-extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
@@ -90,23 +86,19 @@ extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	CoredumpTimerInfo *info);
 extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
-extern int ksceSblQafManagerGetQAFlags(void *flags);
-extern int ksceSblQafManagerGetQafName(char *name, SceSize size);
-extern SceUID sceCoredumpCafContextCreate(void);
-extern int sceCoredumpCafContextDestroy(SceUID context);
-extern int ksceCoredumpCafCreateIv(void *iv, SceSize size);
-extern int ksceCoredumpCafHeaderInit(SceUID context, SceUInt32 algorithm);
-extern int ksceCoredumpCafHeaderTransform(SceUID context, const void *data,
+extern int SceCoredumpForDriver_E1BCBE8F(void *iv, SceSize size);
+extern int SceCoredumpForDriver_7C8120C5(SceUID context, SceUInt32 algorithm);
+extern int SceCoredumpForDriver_AE2C2793(SceUID context, const void *data,
 				       SceSize size);
-extern int ksceCoredumpCafHeaderFinal(SceUID context, void *digest, SceSize size);
-extern int ksceCoredumpCafSegmentInit(SceUID context, SceUInt32 hashKeySelector,
+extern int SceCoredumpForDriver_65AA4991(SceUID context, void *digest, SceSize size);
+extern int SceCoredumpForDriver_07185515(SceUID context, SceUInt32 hashKeySelector,
 		SceUInt32 cipherMode, SceUInt32 cipherKeySelector,
 		const void *iv, SceSize size);
-extern int ksceCoredumpCafInit(void);
-extern int ksceCoredumpCafFinal(void);
-extern int ksceCoredumpCafSegmentTransform(SceUID context, const void *source,
+extern int SceCoredumpForDriver_9336009B(void);
+extern int SceCoredumpForDriver_C90F61AF(void);
+extern int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source,
 	void *destination, SceSize size);
-extern int ksceCoredumpCafSegmentFinal(SceUID context, void *digest, SceSize size);
+extern int SceCoredumpForDriver_DF17420A(SceUID context, void *digest, SceSize size);
 extern int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
 	CoredumpThreadInfo *info);
 
@@ -348,7 +340,7 @@ int decryptBuildVerInfo(void *data, unsigned int size)
 		.msg_size = sizeof(work.output.msg),
 		.msg = { 0 },
 	};
-	result = ksceSblSsDecryptWithPortability(1, iv, &input, &work.output);
+	result = SceSblSsMgrForDriver_934DB6B5(1, iv, &input, &work.output);
 	if (result < 0)
 		return result;
 	if (result == 0)
@@ -1223,7 +1215,7 @@ void oalGetCorefileInfo(SceUID pid, CoredumpCorefileInfo *info)
 
 void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 {
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	CoredumpCafSectionHash sectionHash;
 	uint8_t qaFlags[16];
 	CoredumpCafIv iv;
@@ -1271,7 +1263,7 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	info->isDolceBytes[0] = 0xff;
 	info->isDolceBytes[1] = 0xff;
 	info->isDolce = SceSblAIMgrForDriver_71608CA3() != 0;
-	if (ksceSblAimgrGetOpenPsId(&openPsId) != 0)
+	if (SceSblSsMgrForDriver_A5B5D269(&openPsId) != 0)
 		return;
 	titleSize = coredumpRun.trigger.titleid_len;
 	currentPid = coredumpRun.pid;
@@ -1293,18 +1285,18 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 		return;
 	iv = openPsIdIv;
 	SCE_DBG_ASSERT_FUNC(1, 5831, "oalCafSegmentInit");
-	if (ksceCoredumpCafSegmentInit(context, 1, 1, 2, &iv, sizeof(iv)) != 0)
+	if (SceCoredumpForDriver_07185515(context, 1, 1, 2, &iv, sizeof(iv)) != 0)
 		return;
 	SCE_DBG_ASSERT_FUNC(1, 5890, "oalCafSegmentTransform");
 	SCE_DBG_ASSERT_FUNC(1, 5891, "oalCafSegmentTransform");
-	if (ksceCoredumpCafSegmentTransform(context, &openPsId,
+	if (SceCoredumpForDriver_FB7AEBFE(context, &openPsId,
 		&info->encryptedOpenPsId, sizeof(openPsId)) != 0) {
 		memset(&info->encryptedOpenPsId, 0, sizeof(info->encryptedOpenPsId));
 		return;
 	}
 	SCE_DBG_ASSERT_FUNC(1, 5902, "oalCafSegmentFinal");
 	sectionHash = (CoredumpCafSectionHash){ 0 };
-	if (ksceCoredumpCafSegmentFinal(context, sectionHash.digest,
+	if (SceCoredumpForDriver_DF17420A(context, sectionHash.digest,
 		sizeof(sectionHash.digest)) != 0)
 		return;
 	timestamp = SceSysrootForKernel_E20F6FC8();
@@ -1312,7 +1304,7 @@ void oalGetSystemInfo(SceUID pid, CoredumpSystemInfo *info)
 	info->timestampHigh = timestamp >> 32;
 	memset(qaFlags, 0, sizeof(qaFlags));
 	qaEnabled = 0;
-	if (ksceSblQafManagerGetQAFlags(qaFlags) == 0) {
+	if (SceSblSsMgrForKernel_83D254FF(qaFlags) == 0) {
 		zero = vdupq_n_u8(0);
 		flags = vld1q_u8(qaFlags);
 		flags = vorrq_u8(vextq_u8(flags, zero, 8), flags);
@@ -1350,10 +1342,10 @@ void oalGetHwInfo(SceUID pid, CoredumpHwInfo *info)
 	info->productCode = SceSblAIMgrForDriver_14345161();
 	info->productSubCode = SceSblAIMgrForDriver_B33CEC8F();
 	__builtin_memset(qaFlags, 0, sizeof(qaFlags));
-	if (ksceSblQafManagerGetQAFlags(qaFlags) == 0)
+	if (SceSblSsMgrForKernel_83D254FF(qaFlags) == 0)
 		__builtin_memcpy(info->qaFlags, qaFlags, sizeof(qaFlags));
 	__builtin_memset(qafName, 0, sizeof(qafName));
-	ksceSblQafManagerGetQafName(qafName, sizeof(qafName));
+	SceSblSsMgrForKernel_E2DD0378(qafName, sizeof(qafName));
 	__builtin_memcpy(info->qafName, qafName, sizeof(qafName));
 }
 
@@ -3619,12 +3611,12 @@ SceUInt32 oalGetGpuRecoveryCount(void)
 
 int oalCafInit(void)
 {
-	return ksceCoredumpCafInit();
+	return SceCoredumpForDriver_9336009B();
 }
 
 int oalCafFinal(void)
 {
-	return ksceCoredumpCafFinal();
+	return SceCoredumpForDriver_C90F61AF();
 }
 
 SceUID oalCafContextCreate(void)
@@ -3640,7 +3632,7 @@ int oalCafContextDestroy(SceUID context)
 int oalCafCreateIV(void *iv)
 {
 	SCE_DBG_ASSERT(iv != NULL, 5767);
-	return ksceCoredumpCafCreateIv(iv, 16);
+	return SceCoredumpForDriver_E1BCBE8F(iv, 16);
 }
 
 int oalCafHeaderInit(SceUID context, int type)
@@ -3649,7 +3641,7 @@ int oalCafHeaderInit(SceUID context, int type)
 	case 1:
 	case 2:
 	case 5:
-		return ksceCoredumpCafHeaderInit(context, 1);
+		return SceCoredumpForDriver_7C8120C5(context, 1);
 	default:
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -3658,14 +3650,14 @@ int oalCafHeaderInit(SceUID context, int type)
 int oalCafHeaderTransform(SceUID context, const void *data, SceSize size)
 {
 	SCE_DBG_ASSERT(data != NULL, 5805);
-	return ksceCoredumpCafHeaderTransform(context, data, size);
+	return SceCoredumpForDriver_AE2C2793(context, data, size);
 }
 
 int oalCafHeaderFinal(SceUID context, void *digest)
 {
 	SCE_DBG_ASSERT(digest != NULL, 5817);
 	memset(digest, 0, 32);
-	return ksceCoredumpCafHeaderFinal(context, digest, 32);
+	return SceCoredumpForDriver_65AA4991(context, digest, 32);
 }
 
 int oalCafSegmentInit(SceUID context, int type, const void *iv)
@@ -3688,7 +3680,7 @@ int oalCafSegmentInit(SceUID context, int type, const void *iv)
 	default:
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	return ksceCoredumpCafSegmentInit(context, 1, 1, keySelector, iv, 16);
+	return SceCoredumpForDriver_07185515(context, 1, 1, keySelector, iv, 16);
 }
 
 int oalCafSegmentTransform(SceUID context, const void *source,
@@ -3696,14 +3688,14 @@ int oalCafSegmentTransform(SceUID context, const void *source,
 {
 	SCE_DBG_ASSERT(source != NULL, 5890);
 	SCE_DBG_ASSERT(destination != NULL, 5891);
-	return ksceCoredumpCafSegmentTransform(context, source, destination, size);
+	return SceCoredumpForDriver_FB7AEBFE(context, source, destination, size);
 }
 
 int oalCafSegmentFinal(SceUID context, CoredumpCafSectionHash *hash)
 {
 	SCE_DBG_ASSERT(hash != NULL, 5902);
 	memset(hash, 0, sizeof(*hash));
-	return ksceCoredumpCafSegmentFinal(context, hash->digest,
+	return SceCoredumpForDriver_DF17420A(context, hash->digest,
 		sizeof(hash->digest));
 }
 

@@ -328,7 +328,7 @@ next:
 	} else if (entries == 0) {
 		/* a directory only an overlay destination names is there */
 		for (i = 0; i < *table.count; i++)
-			if (strncmp(table.overlays[i].dst, normal, SCE_FIOS2_OVERLAY_PATH_SIZE) == 0)
+			if (strncmp(table.overlays[i].dst, normal, SCE_FIOS_OVERLAY_POINT_MAX) == 0)
 				goto size;
 		if (fd == (SceUID)SCE_ERROR_ERRNO_ENOTDIR)
 			ret = SCE_FIOS_ERROR_NOT_A_DIRECTORY;

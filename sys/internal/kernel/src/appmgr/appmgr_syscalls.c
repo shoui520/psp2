@@ -3,26 +3,15 @@
 #include "appmgr_device.h"
 #include "appmgr_event.h"
 #include "mount.h"
+#include <appmgr/appmgr.h>
 
-extern int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha);
 extern int appmgrAcquireSoundOutExclusive3(int priority, SceUInt32 displayEnabled,
 		SceUInt32 displayMode, int displayBlanked, SceUInt32 unsupportedOptions);
 extern int appmgrReleaseSoundOutExclusive2(void);
 extern int appmgrReleaseSoundOutExclusive(void);
-extern int sceAppMgrEnablePrioritizingSystemChat(int enabled);
-extern int sceAppMgrAcquireBgmPortForMusicPlayer(void);
-extern int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
 extern int appmgrReleaseSoundOutExclusive3(void);
-extern int sceAppMgrSetBgmSubPriority(int enabled, int priority);
-extern int sceAppMgrDeclareSystemChatApp(void);
-extern int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
-extern int sceAppMgrAcquireBgmPortWithPriority(int priority);
 extern int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
-extern int sceAppMgrReleaseBtrm(void);
-extern int sceAppMgrAcquireBgmPort(void);
 extern int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
-extern int sceAppMgrAcquireBtrm(void);
-extern int sceAppMgrReleaseBgmPort(void);
 extern int sceAppMgrSetBgmProxyApp(const char *appName);
 extern int appmgrSystemParamGetInt(int parameter, int *value);
 extern int appmgrSystemParamDateTimeGetConf(void *conf);

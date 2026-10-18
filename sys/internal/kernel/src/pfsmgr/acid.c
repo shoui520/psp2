@@ -213,7 +213,7 @@ int pfsAcidDirUmount(ScePfsPmi *pmi, SceVfsVnode *vp)
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: checks the RSA-2048
- * signature over files.db's header (SHA-256 of the header, ksceSblRSA2048VerifySignature);
+ * signature over files.db's header (SHA-256 of the header, SceSblPostSsMgrForDriver_3DB69911);
  * 0 when it holds, 0x8014091b when not */
 int pfsDbTableVerify(ScePfsDbTable *table)
 {

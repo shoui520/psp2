@@ -33,7 +33,7 @@ POST_SS_DEFERRED int rsaCreateSignature(void *signature, const void *hash, const
 	return -1;
 }
 
-int ksceSblRSA2048CreateSignature(void *signature, const void *hash, const void *key, int type)
+int SceSblPostSsMgrForDriver_07BAD056(void *signature, const void *hash, const void *key, int type)
 {
 	return rsaCreateSignature(signature, hash, key, RSA2048_WORDS, RSA2048_BYTES, type);
 }
@@ -52,7 +52,7 @@ POST_SS_DEFERRED int rsaVerifySignature(const void *signature, const void *hash,
 	return -1;
 }
 
-int ksceSblRSA2048VerifySignature(const void *signature, const void *hash, const void *key,
+int SceSblPostSsMgrForDriver_3DB69911(const void *signature, const void *hash, const void *key,
 				  int type)
 {
 	return rsaVerifySignature(signature, hash, key, RSA2048_WORDS, RSA2048_BYTES, type);

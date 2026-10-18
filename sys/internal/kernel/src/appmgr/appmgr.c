@@ -15,6 +15,8 @@
 #include "appmgr_shell_event.h"
 #include <sysmem/sysroot.h>
 #include <power/power.h>
+#include <appmgr/appmgr.h>
+#include <appmgr/appmgr_rdrfp.h>
 
 extern int _sceAppMgrSystemResume(void);
 extern int _sceAppMgrSystemSuspend(void);
@@ -38,12 +40,8 @@ extern int appmgrInitializeDebugSettings(void);
 extern int appmgrRegisterMountDebugSettingCallback(void);
 extern int appmgrInitializeSaveDataSlotCache(void);
 extern int appmgrMountShellExternalDirectories(SceUID pid);
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern void appmgrRegisterDebuggerCallbacks(void);
-extern SceUID sceAppMgrGetShellPidForDriver(void);
-extern SceUID sceAppMgrSpawnProcessForDriver(const char *name, int type,
-		const char *path, SceSize length, const void *args, void *opt, void *out);
 extern int appmgrMapPath(const char *path, SceUID pid, char *mapped, SceSize size);
 
 int g_appmgrPowerSaveMode;

@@ -14,6 +14,8 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
+#include <post_ss_mgr/sblpostssmgr.h>
+#include <regmgr/regmgr.h>
 
 #define SCE_ERROR_ERRNO_ENODATA			0x8001003d
 #define SCE_KERNEL_ERROR_INVALID_FLAGS		0x8002000a
@@ -34,21 +36,12 @@
 #define tsmpMemcpyChk(dst, src, n)	memcpy(dst, src, n)
 #endif
 
-int ksceSblPostSsMgrActivate(const void *data);
-int ksceSblPostSsMgrGetExpireDate(SceUInt32 *date, int unk);
-
 /* SceSysrootForDriver: the software information hooks other modules call */
 
 /* SceRegMgrForDebugger (names unknown) */
-int SceRegMgrForDebugger_8E798E47(void);	/* registry differs from the host's? */
-int SceRegMgrForDebugger_B9A0BB77(void);	/* setting UI file differs? */
-int SceRegMgrForDebugger_C588D3E7(void);	/* event log differs? */
 int SceRegMgrForDebugger_53970232(int (*callback)(const TsmpNotification *entry),
 				  TsmpNotification *entry);	/* enumerate the registry */
-int SceRegMgrForDebugger_46AC0CCB(int command, void *request);
 int SceRegMgrForDebugger_810D2F09(const TsmpRegRequest *request);	/* set a key */
-int SceRegMgrForDebugger_D668ABD2(SceSize *size);	/* setting UI file size */
-int SceRegMgrForDebugger_8AE5757E(SceSize *size);	/* event log size */
 
 static TsmpState tsmp;
 
@@ -839,7 +832,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		goto bad_size;
 	}
 
-	if (body[0] >= 2 && (ret = ksceSblPostSsMgrActivate(&body[1])) < 0) {
+	if (body[0] >= 2 && (ret = SceSblPostSsMgrForDriver_0298382B(&body[1])) < 0) {
 		if (ret == (int)0x800f1302)
 			result = TSMP_RESULT_ACT_EXPIRED;
 		else if (ret == (int)0x800f1324 || ret == (int)0x800f1327)
@@ -851,7 +844,7 @@ TSMP_INLINE int tsmpUpdateActivation(const TsmpHeader *pkt, SceSize size)
 		else
 			result = TSMP_RESULT_FAILED;
 	} else {
-		ret = ksceSblPostSsMgrGetExpireDate(&expire, 1);
+		ret = SceSblPostSsMgrForDriver_4FF2682F(&expire, 1);
 		result = TSMP_RESULT_OK;
 		if (ret < 0) {
 			expire = 0;

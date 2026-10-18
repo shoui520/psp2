@@ -3,8 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <psp2/dmac5.h>
-#include <psp2common/npdrm.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/aes.h>
 #include <npdrm/npdrm_package.h>
 #include <marlin_hci/rsa.h>
@@ -13,6 +12,8 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <acmgr/acmgr.h>
+#include <npdrm/npdrm.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
 struct NpDrmPackageExtendedHeader {
@@ -136,14 +137,6 @@ int NpDrmPackageAesEncrypt(SceAesCompactContext *context,
 int NpDrmPackageAesCtr(const void *input, void *output, unsigned int size,
 	const void *key, unsigned int keyBits, void *counter);
 
-int ksceSblDmac5AesCtrEnc(const void *src, void *dst, int size,
-	const void *key, int keyBits, void *iv, int coherent);
-
-int ksceSblSsMgrExecuteDmac5HashCommand(const void *src, void *dst,
-	SceSize size, void *iv, int coherent, uint32_t command, uint32_t flags);
-
-int ksceSblUtMgrHasStoreFlag(void);
-
 int NpDrmRsaVerify2048(const MarlinRsaData *signature,
 	const MarlinRsaData *digest, const MarlinRsaExponentKey *key,
 	int algorithm);
@@ -169,7 +162,6 @@ _Static_assert(sizeof(struct NpDrmCheckActDataArgs) == 16,
 int NpDrmCheckActData(int *actType, int *versionFlag, uint64_t *accountId,
 	uint64_t *startTime, uint64_t *expirationTime);
 int NpDrmRemoveActData(uint64_t *accountId);
-int ksceNpDrmRemoveActData(uint64_t *accountId);
 
 _Static_assert(sizeof(struct NpDrmPackageUnwrappedKey) == 144,
 	"package unwrapped key ABI");
@@ -208,9 +200,6 @@ int NpDrmGetFixedRifName(char *name, uint64_t aid);
 int NpDrmGetRifNameForInstall(char *rif_name,
 	const SceNpDrmLicense *license, unsigned int is_fixed);
 
-int ksceNpDrmGetRifNameForInstall(char *rif_name,
-	const SceNpDrmLicense *license, unsigned int is_fixed);
-
 typedef struct SceNpDrmCheckDrmResetOpt {
 	uint64_t account_id;
 	int *pReset;
@@ -229,9 +218,6 @@ int NpDrmCheckDrmResetForDriver(const void *in_addr, unsigned int size,
 
 int NpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license);
 
-int ksceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license,
-	unsigned int enable);
-
 int PsmDrmRemoveActData(uint64_t *accountId);
 
 int PsmDrmGetActInfo(int *actType, int *versionFlag, uint64_t *accountId,
@@ -242,15 +228,15 @@ int PsmDrmGetRifName(char *name);
 int PsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license);
 int PsmDrmGetRifKey(const ScePsmDrmLicense *license, ScePsmDrmKeySet *keydata,
 	int *flags, SceRtcTick *startTime, SceRtcTick *expirationTime);
-int kscePsmDrmRemoveActData(uint64_t *accountId);
-int kscePsmDrmGetActInfo(int *actType, int *versionFlag, uint64_t *accountId,
+int ScePsmDrmForDriver_4CD5375C(uint64_t *accountId);
+int ScePsmDrmForDriver_B09003A7(int *actType, int *versionFlag, uint64_t *accountId,
 	uint64_t *startTime, uint64_t *expirationTime);
-int kscePsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId,
+int ScePsmDrmForDriver_984F9017(const ScePsmDrmLicense *license, char *contentId,
 	uint64_t *accountId, uint64_t *startTime, uint64_t *expirationTime);
 int PsmDrmGetRifNameForDriver(char *name);
 int PsmDrmGetRifNameForInstallForDriver(char *name,
 	const ScePsmDrmLicense *license);
-int kscePsmDrmGetRifKey(const ScePsmDrmLicense *license,
+int ScePsmDrmForDriver_8C8CFD01(const ScePsmDrmLicense *license,
 	ScePsmDrmKeySet *keydata, int *flags, SceRtcTick *startTime,
 	SceRtcTick *expirationTime);
 int NpDrmPackageCheckForUser(const void *buffer, unsigned int size,

@@ -33,7 +33,7 @@ int SysconUtilHandshakeStep(unsigned int phase, int smId,
 	}
 	if (input)
 		request.input = *input;
-	result = ksceSblSmCommCallFunc(smId, 0xd0002, &serviceResult,
+	result = SceSblSmCommForKernel_DB9FC204(smId, 0xd0002, &serviceResult,
 			&request, sizeof(request));
 	if (result)
 		return result;
@@ -51,7 +51,7 @@ int SysconUtilHandshakeStep(unsigned int phase, int smId,
 	if (phase == 1) {
 		request.mode = 2;
 		request.input = request.output;
-		result = ksceSblSmCommCallFunc(smId, 0xd0002, &serviceResult,
+		result = SceSblSmCommForKernel_DB9FC204(smId, 0xd0002, &serviceResult,
 				&request, sizeof(request));
 		if (!result)
 			result = serviceResult;

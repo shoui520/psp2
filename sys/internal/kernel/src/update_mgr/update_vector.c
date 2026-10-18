@@ -1,6 +1,5 @@
 #include "update_internal.h"
-
-int SceSblSsMgrForDriver_C38D0CEA(SceUID heapId, SceKernelPAVector *vector);
+#include <ss_mgr/ss_mgr.h>
 
 int UpdateUtilFreePARangeVector(SceUID heapId, SceKernelPAVector *vector)
 {

@@ -1,6 +1,6 @@
 /* Descriptive source boundary preserves the original out-of-line helper calls. */
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <rtc/rtc.h>
 #include <marlin_hci/rsa.h>
 #include "pcact.h"
@@ -182,7 +182,7 @@ int GcAuthPcactCreateChallenge(const GcAuthPcactChallengeRequest *request)
 	cursor = (unsigned char *)random;
 	for (index = 0; index != sizeof(*random); index++)
 		cursor[index] = 0;
-	if (ksceSblAimgrGetConsoleId(&gcAuthPcactConsoleId) < 0) {
+	if (SceSblSsMgrForDriver_FC6CDD68(&gcAuthPcactConsoleId) < 0) {
 		result = (int)0x808a0300;
 		goto finish;
 	}

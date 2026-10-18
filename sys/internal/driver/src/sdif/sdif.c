@@ -462,7 +462,7 @@ resetEmmc:
 						"Skip sdif port[%d] reset\n", 0);
 			} else {
 				ScePervasiveForDriver_3D8A8712(0);
-				ksceSblSmSchedProxyExecuteF00DCommand(3, 0, 0, 0);
+				SceSblSmSchedProxyForKernel_7894B6F0(3, 0, 0, 0);
 			}
 		}
 		ScePervasiveForDriver_D326E15F(index);

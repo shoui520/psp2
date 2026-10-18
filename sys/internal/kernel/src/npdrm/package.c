@@ -2,7 +2,7 @@
 #include "package_internal.h"
 #include <string.h>
 #include <sysmem/utils.h>
-#include <psp2kern/npdrm.h>
+#include <npdrm/npdrm.h>
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sysmem.h>
@@ -1129,7 +1129,7 @@ int _sceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license)
 __attribute__((noinline)) int NpDrmRemoveActData(uint64_t *accountId)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmRemoveActData(accountId);
+	int ret = SceNpDrmForDriver_8B85A509(accountId);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1139,7 +1139,7 @@ __attribute__((noinline)) int NpDrmCheckActData(int *actType, int *versionFlag,
 	uint64_t *accountId, uint64_t *startTime, uint64_t *expirationTime)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmCheckActData(actType, versionFlag, accountId,
+	int ret = SceNpDrmForDriver_9265B350(actType, versionFlag, accountId,
 		startTime, expirationTime);
 
 	sceSyscallLeave(syscall);
@@ -1149,7 +1149,7 @@ __attribute__((noinline)) int NpDrmCheckActData(int *actType, int *versionFlag,
 __attribute__((noinline)) int NpDrmGetRifName(char *name, uint64_t aid)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmGetRifName(name, aid);
+	int ret = SceNpDrmForDriver_DF62F3B8(name, aid);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1158,7 +1158,7 @@ __attribute__((noinline)) int NpDrmGetRifName(char *name, uint64_t aid)
 __attribute__((noinline)) int NpDrmGetFixedRifName(char *name, uint64_t aid)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmGetFixedRifName(name, aid);
+	int ret = SceNpDrmForDriver_5D73448C(name, aid);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1168,7 +1168,7 @@ __attribute__((noinline)) int NpDrmGetRifNameForInstall(char *rif_name,
 	const SceNpDrmLicense *license, unsigned int is_fixed)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmGetRifNameForInstall(rif_name, license, is_fixed);
+	int ret = SceNpDrmForDriver_17573133(rif_name, license, is_fixed);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1181,7 +1181,7 @@ __attribute__((noinline)) int NpDrmGetRifInfo(const SceNpDrmLicense *license,
 	uint64_t *flags2)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmGetRifInfo(license, license_size, check_sign, content_id,
+	int ret = SceNpDrmForDriver_DB406EAE(license, license_size, check_sign, content_id,
 		account_id, license_version, license_flags, flags, sku_flags,
 		lic_start_time, lic_exp_time, flags2);
 
@@ -1202,7 +1202,7 @@ __attribute__((noinline)) int NpDrmCheckDrmReset(const void *in_addr,
 __attribute__((noinline)) int NpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = ksceNpDrmPresetRifProvisionalFlag(license, 1);
+	int ret = SceNpDrmForDriver_C070FE89(license, 1);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1358,7 +1358,7 @@ int scePsmDrmGetRifKey(const ScePsmDrmLicense *license_buf,
 __attribute__((noinline)) int PsmDrmRemoveActData(uint64_t *accountId)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = kscePsmDrmRemoveActData(accountId);
+	int ret = ScePsmDrmForDriver_4CD5375C(accountId);
 
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1368,7 +1368,7 @@ __attribute__((noinline)) int PsmDrmGetActInfo(int *actType, int *versionFlag,
 	uint64_t *accountId, uint64_t *startTime, uint64_t *expirationTime)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = kscePsmDrmGetActInfo(actType, versionFlag, accountId,
+	int ret = ScePsmDrmForDriver_B09003A7(actType, versionFlag, accountId,
 		startTime, expirationTime);
 
 	sceSyscallLeave(syscall);
@@ -1380,7 +1380,7 @@ __attribute__((noinline)) int PsmDrmGetRifInfo(const ScePsmDrmLicense *license,
 	uint64_t *expirationTime)
 {
 	unsigned int syscall = sceSyscallEnter();
-	int ret = kscePsmDrmGetRifInfo(license, contentId, accountId,
+	int ret = ScePsmDrmForDriver_984F9017(license, contentId, accountId,
 		startTime, expirationTime);
 
 	sceSyscallLeave(syscall);
@@ -1417,7 +1417,7 @@ __attribute__((noinline)) int PsmDrmGetRifKey(const ScePsmDrmLicense *license,
 		sceSyscallLeave(syscall);
 		return 0x80010058;
 	}
-	ret = kscePsmDrmGetRifKey(license, keydata, flags, startTime,
+	ret = ScePsmDrmForDriver_8C8CFD01(license, keydata, flags, startTime,
 		expirationTime);
 	sceSyscallLeave(syscall);
 	return ret;
@@ -1561,7 +1561,7 @@ __attribute__((noinline)) int NpDrmPackageAesCtr(const void *input,
 	void *output, unsigned int size, const void *key, unsigned int keyBits,
 	void *counter)
 {
-	return ksceSblDmac5AesCtrEnc(input, output, size, key, keyBits, counter, 1);
+	return SceSblSsMgrForDriver_82B5DCEF(input, output, size, key, keyBits, counter, 1);
 }
 
 __attribute__((noinline)) int NpDrmPackageHashTransform(const void *input,
@@ -1575,7 +1575,7 @@ __attribute__((noinline)) int NpDrmPackageHashTransform(const void *input,
 		mode = digest ? 0 : 0x400;
 	else
 		mode = digest ? 0x800 : 0xc00;
-	return ksceSblSsMgrExecuteDmac5HashCommand(input, digest, size, context,
+	return sceSblDmac5HashTransform(input, digest, size, context,
 		1, command, mode);
 }
 
@@ -1584,7 +1584,7 @@ __attribute__((noinline)) int NpDrmPackageIsHardwareAllowed(unsigned int retail)
 	if (retail) {
 		if (SceSblAIMgrForDriver_D78B04A2())
 			return 1;
-		if (ksceSblUtMgrHasStoreFlag())
+		if (SceSblPostSsMgrForDriver_9D2E2D39())
 			return 1;
 		return SceQafMgrForDriver_AE033133() != 0;
 	}
@@ -1742,7 +1742,7 @@ out:
 	return ret;
 }
 
-int ksceNpDrmPackageSetGameExist(int value)
+int SceNpDrmForDriver_3BFD2850(int value)
 {
 	gNpDrmPackageGameExist = value;
 	return 0;

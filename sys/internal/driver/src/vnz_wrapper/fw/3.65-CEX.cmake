@@ -189,9 +189,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_C94850C9
 	sceKernelVARangeToPAVector
 	SceSysmemForDriver_FFCD9B60
-	ksceSblFwLoaderLoad
-	ksceSblFwLoaderLock
-	ksceSblFwLoaderUnlock
+	sceSblFwLoaderLoad
+	sceSblFwLoaderSetPath
+	sceSblFwLoaderClose
 	memset
 	memcpy
 	__aeabi_uidivmod

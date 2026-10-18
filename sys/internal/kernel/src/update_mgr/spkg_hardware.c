@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include "update_internal.h"
 #include "spkg_hardware.h"
 #include <sysmem/dipsw.h>
@@ -13,7 +13,7 @@ int SpkgInfoUtilGetHardwareIndex(int *index)
 
 	if (!index)
 		return (int)0x800f0216;
-	result = ksceSblAimgrGetPscode(&pscode);
+	result = SceSblSsMgrForDriver_E0DC2587(&pscode);
 	if (result)
 		return result;
 	if (SceSblAIMgrForDriver_6D5A3FC9()) {

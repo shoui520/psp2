@@ -1,6 +1,6 @@
 /* Descriptive file name: the original has no source-file debug records. */
 #include "magicgate_private.h"
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
 
@@ -82,7 +82,7 @@ int SceMagicGateForDriver_12CE769D(uint64_t *challenge)
 	result = SceMagicGateForDriver_A49B9D70();
 	if (result >= 0) {
 		getSavedChallenge(challenge);
-		result = ksceSblRngPseudoRandomNumber(&random, 8);
+		result = _set_key_seed(&random, 8);
 		if (result >= 0) {
 			if (random)
 				*challenge = random ^ *challenge;
@@ -104,7 +104,7 @@ int SceMagicGateForDriver_E0888D78(uint64_t *random, uint64_t *challenge)
 
 	result = SceMagicGateForDriver_A49B9D70();
 	if (result >= 0) {
-		result = ksceSblRngPseudoRandomNumber(random, 8);
+		result = _set_key_seed(random, 8);
 		if (result >= 0) {
 			if (*random) {
 				result = 0;

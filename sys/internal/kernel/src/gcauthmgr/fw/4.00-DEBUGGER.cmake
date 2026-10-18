@@ -89,17 +89,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	SceThreadmgrForDriver_E54FD746
 	sceKernelGetSystemTimeWide
-	ksceSblSmCommStartSmFromData
-	ksceSblSmCommStopSm
-	ksceSblSmCommCallFunc
-	ksceSblRngGenuineRandomNumber
-	ksceSblAimgrGetConsoleId
-	ksceNpDrmWriteActData
-	ksceNpDrmRemoveActData
-	ksceNpDrmReadActData
-	kscePsmDrmRemoveActData
-	kscePsmDrmGetActInfo
-	kscePsmDrmWriteActData
+	SceSblSmCommForKernel_039C73B1
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_DB9FC204
+	SceSblSsMgrForDriver_AC57F4F0
+	SceSblSsMgrForDriver_FC6CDD68
+	SceNpDrmForDriver_742EBAF4
+	SceNpDrmForDriver_8B85A509
+	SceNpDrmForDriver_D91C3BCE
+	ScePsmDrmForDriver_4CD5375C
+	ScePsmDrmForDriver_B09003A7
+	ScePsmDrmForDriver_CB73E9D3
 	SceRtcForDriver_401C0954
 	SceRtcForDriver_42A0DFCB
 	SceRtcForDriver_7D431C87

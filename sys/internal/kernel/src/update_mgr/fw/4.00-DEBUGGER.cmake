@@ -341,9 +341,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForKernel_sceSblACMgrIsKernelProgram
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
-	SceZlibForDriver_9030BAE4
-	SceZlibForDriver_B03E109B
-	SceZlibForDriver_D4A85178
+	SceZlibForDriver_inflateEnd
+	SceZlibForDriver_inflateInitNocheck_
+	inflate
 	SceSysconForDriver_0396BA09
 	SceSysconForDriver_04EC7579
 	SceSysconForDriver_060E55C1
@@ -471,13 +471,13 @@ set(MODULE_IMPORT_FUNCS
 	SceSblSsMgrForKernel_516ECC08
 	SceSblSsMgrForDriver_C38D0CEA
 	sceSblSsInfraAllocatePARangeVector
-	ksceSblAimgrGetPscode
-	ksceSblUtMgrHasComTestFlag
+	SceSblSsMgrForDriver_E0DC2587
+	SceSblPostSsMgrForDriver_7ACCAA50
 	SceSblPostSsMgrForDriver_9D1D8EE5
-	ksceSblUtMgrHasStoreFlag
-	ksceSblSmCommStopSm
-	ksceSblSmCommStartSmFromFile
-	ksceSblSmCommCallFunc
+	SceSblPostSsMgrForDriver_9D2E2D39
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_7863A0CC
+	SceSblSmCommForKernel_DB9FC204
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

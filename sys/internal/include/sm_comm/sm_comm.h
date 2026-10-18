@@ -15,10 +15,10 @@ _Static_assert(sizeof(SceSblSmCommPair) == 8, "secure-module stop result size");
 
 typedef int SceSblSmCommId;
 
-int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
+int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
 	SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id);
-int ksceSblSmCommStartSmFromData(SceUInt32 priority, const void *data,
+int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
 	SceUInt32 size, SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id);
-int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
+int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
 	SceUInt32 *serviceResult, void *data, SceSize size);
-int ksceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result);
+int SceSblSmCommForKernel_0631F8ED(SceSblSmCommId id, SceSblSmCommPair *result);

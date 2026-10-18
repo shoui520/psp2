@@ -1,11 +1,11 @@
 /* Pcact activation control and transport. */
-#include <psp2kern/npdrm.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
 #include "pcact.h"
 #include <sysmem/utils.h>
 #include <rtc/rtc.h>
+#include <npdrm/npdrm.h>
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -16,17 +16,15 @@ GcAuthActivationWorkspace gcAuthActivationWorkspace;
 GcAuthActivationRandom gcAuthActivationRandom;
 GcAuthPcactChallengeInput gcAuthPcactActivationInput;
 
-int ksceNpDrmRemoveActData(SceUInt64 *accountId);
 int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
 		const GcAuthPcactChallengeInput *input,
 		const unsigned char *rtcSeconds, GcAuthPcactEncryptedChallenge *output,
 		GcAuthPcactRandomRecord *random);
 int GcAuthPcactGetAesDecryptKeyWithStack(const GcAuthPcactActivationBlock *activation,
 		const GcAuthPcactRandomRecord *random, unsigned char *outputKey);
-int ksceNpDrmWriteActData(void *activation, const char *aesKey);
-int kscePsmDrmGetActInfo(int *actType, int *versionFlag, SceUInt64 *accountId,
+int ScePsmDrmForDriver_B09003A7(int *actType, int *versionFlag, SceUInt64 *accountId,
 		SceUInt64 *startTime, SceUInt64 *endTime);
-int kscePsmDrmRemoveActData(SceUInt64 *accountId);
+int ScePsmDrmForDriver_4CD5375C(SceUInt64 *accountId);
 int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
 		const unsigned char *rtcSeconds, GcAuthPsmactChallenge *output,
 		GcAuthPsmactRandomRecord *random);
@@ -97,11 +95,11 @@ challenge:
 		goto finish;
 	case 1:
 		gcAuthPcactActivationMode = 1;
-		if (ksceNpDrmReadActData(&gcAuthNpDrmActivation) >= 0) {
+		if (SceNpDrmForDriver_D91C3BCE(&gcAuthNpDrmActivation) >= 0) {
 			result = (int)0x808a0383;
 			goto finish;
 		}
-		ksceNpDrmRemoveActData(NULL);
+		SceNpDrmForDriver_8B85A509(NULL);
 		gcAuthPcactActivationInput = (GcAuthPcactChallengeInput){ 0 };
 		gcAuthPcactActivationInput.format = 16;
 		destination = gcAuthPcactActivationInput.entropyWords;
@@ -159,7 +157,7 @@ int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request)
 	result = GcAuthPcactGetAesDecryptKeyWithStack(&activation->key,
 		&gcAuthActivationRandom.pcact, (unsigned char *)aesKey);
 	if (result >= 0)
-		result = ksceNpDrmWriteActData(&activation->npDrm,
+		result = SceNpDrmForDriver_742EBAF4(&activation->npDrm,
 			(const char *)aesKey);
 	memset(&activation->npDrm, 0, sizeof(activation->npDrm));
 	memset(&gcAuthActivationRandom, 0, sizeof(gcAuthActivationRandom));
@@ -207,13 +205,13 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 		}
 		break;
 	case 3:
-		if (kscePsmDrmGetActInfo(&actType, &versionFlag, &accountId,
+		if (ScePsmDrmForDriver_B09003A7(&actType, &versionFlag, &accountId,
 			&startTime, &endTime) >= 0) {
 			result = (int)0x808a0800;
-			kscePsmDrmRemoveActData(NULL);
+			ScePsmDrmForDriver_4CD5375C(NULL);
 			goto finishPsm;
 		}
-		kscePsmDrmRemoveActData(NULL);
+		ScePsmDrmForDriver_4CD5375C(NULL);
 		break;
 	default:
 		goto invalid;

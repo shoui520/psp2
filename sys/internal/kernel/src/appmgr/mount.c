@@ -3,11 +3,11 @@
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/npdrm.h>
-#include <psp2kern/fios2.h>
+#include <npdrm/npdrm.h>
+#include <fios2/fios2.h>
 #include <acmgr/acmgr.h>
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr_rdrfp.h>
@@ -28,13 +28,13 @@
 #include "savedata_params_internal.h"
 #include "param_sfo.h"
 #include <sysmem/dipsw.h>
-#include <psp2kern/pfsmgr.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysclib.h>
 #include <iofilemgr/iofilemgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
+#include <pfsmgr/pfsmgr.h>
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
-int ksceSblUtMgrHasStoreFlag(void);
 
 struct AppmgrMapFile;
 
@@ -71,7 +71,6 @@ int appmgrCloneTemporaryMounts(SceUID pid, const char *titleId,
 			       ScePfsRndDriveId *outDriveId);
 
 extern int sceSblSsDecryptSealedKey(const void *sealedKey, void *key);
-extern int kscePfsAcidDirSet(const char *name, const char *directory);
 extern int appmgrGetMountPointById(int mountId, char *mountPoint);
 
 SceUID g_appmgrCoreHeap;
@@ -132,7 +131,7 @@ int appmgrAddInvalidOverlay(SceUID pid, const char *driveId,
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
 	permission = sceKernelSetThreadAccessLevel(128);
-	result = ksceFiosKernelOverlayAddForProcess(pid, &overlay, overlayId);
+	result = SceFios2KernelForDriver_17E65A1C(pid, &overlay, overlayId);
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
@@ -199,7 +198,7 @@ int appmgrAddVirtualMountOverlay(SceUID pid, AppmgrVirtualMount *mount)
 	overlay.dst[291] = '\0';
 	overlay.pid = pid;
 	permission = sceKernelSetThreadAccessLevel(128);
-	result = ksceFiosKernelOverlayAddForProcess(pid, &overlay, &mount->overlayId);
+	result = SceFios2KernelForDriver_17E65A1C(pid, &overlay, &mount->overlayId);
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
@@ -374,7 +373,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 		    (mount->mountId == 1005 &&
 		     authInfo.program_authority_id == 0x2800000000000039ULL))
 			return 0;
-		result = kscePfsDisapprove(&mount->mountPoint,
+		result = ScePfsMgrForKernel_2D67D8CA(&mount->mountPoint,
 					  authInfo.program_authority_id);
 		return result == (int)0x80010002 || result >= 0 ? 0 : result;
 	}
@@ -386,7 +385,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 			goto restore;
 	} else if (mount->mountPoint.drive_id[0] != 0) {
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = kscePfsUnmount(&mount->mountPoint);
+		result = ScePfsMgrForKernel_680BC384(&mount->mountPoint);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result != (int)0x80010013 && result != 0)
 			goto restore;
@@ -492,7 +491,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	sceIoClose(fd);
 	if (length != 512)
 		goto out;
-	result = ksceNpDrmGetRifInfo(license, 512, 1, info->contentId,
+	result = SceNpDrmForDriver_DB406EAE(license, 512, 1, info->contentId,
 		&info->accountId, &info->licenseVersion, &info->licenseFlags,
 		&info->flags, &info->skuFlags, (SceInt64 *)&info->licStartTime,
 		(SceInt64 *)&info->licExpTime, &info->flags2);
@@ -525,7 +524,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 		expiryTime[22] = 'T';
 		expiryTime[23] = 0;
 	}
-	result = ksceNpDrmGetRifVitaKey(license, info->klicense,
+	result = SceNpDrmForDriver_723322B5(license, info->klicense,
 		&info->flags, &info->skuFlags, &info->licStartTime, &info->licExpTime);
 	if (result >= 0) {
 		if (info->licStartTime == 0) {
@@ -625,7 +624,7 @@ int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone)
 	snprintf(keyPath, sizeof(keyPath), "%ssce_sys/%s", driveId, "keystone");
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	result = ksceFiosKernelOverlayResolveSync(pid, 0, keyPath, resolvedPath, 292);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, keyPath, resolvedPath, 292);
 	if (result == 0) {
 		fd = sceIoOpen(resolvedPath, 1, 0);
 		result = fd;
@@ -716,7 +715,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 		status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (status < 0)
 			goto authError;
-		status = kscePfsApprove(&pfsMount->mountPoint,
+		status = ScePfsMgrForKernel_D8D0FEE5(&pfsMount->mountPoint,
 				       authInfo.program_authority_id);
 		if (status != (int)0x80010011 && status < 0)
 			goto authError;
@@ -851,7 +850,7 @@ int appmgrReadSaveDataMetadata(const char *path, AppmgrProcessContent *content,
 	SceSize length = 0, capacity = 0;
 	int fakeOwner = 0;
 	SceAllocOpt opt;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt64 currentAccountId, savedAccountId;
 	AppmgrSavedataParams *params;
 	char *sfoPath, *directory, *backslash, *colon;
@@ -939,7 +938,7 @@ readParams:
 				 &currentAccountId, sizeof(currentAccountId));
 	if (result < 0)
 		goto restorePermission;
-	result = ksceSblAimgrGetOpenPsId(&openPsId);
+	result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
 	if (result < 0)
 		goto restorePermission;
 	if (sceRegMgrGetKeyInt("/CONFIG/NP2", "current_account2", &accountIndex) < 0 ||
@@ -1056,7 +1055,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 	void *data = NULL;
 	SceSize length = 0, capacity = 0;
 	SceAllocOpt opt;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt64 currentAccountId;
 	AppmgrSavedataParams *params;
 	char *sfoPath;
@@ -1101,7 +1100,7 @@ int appmgrUpdateSaveDataParams(const char *path, const char *titleId,
 				 &currentAccountId, sizeof(currentAccountId));
 	if (result < 0)
 		goto restorePermission;
-	result = ksceSblAimgrGetOpenPsId(&openPsId);
+	result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
 	if (result < 0)
 		goto restorePermission;
 	result = sceRegMgrGetKeyInt("/CONFIG/NP2", "current_account2", &accountIndex);
@@ -1227,7 +1226,7 @@ int appmgrValidateSaveDataMount(SceUID pid, const char *path, int skipVerificati
 		goto contentParams;
 	if (!SceSblAIMgrForDriver_D78B04A2()) {
 		if (SceSblAIMgrForDriver_F4B98F66()) {
-			if (ksceSblUtMgrHasStoreFlag())
+			if (SceSblPostSsMgrForDriver_9D2E2D39())
 				goto contentParams;
 		} else {
 			SceSblACMgrForDriver_E87D1777();
@@ -1443,7 +1442,7 @@ int appmgrResolveLaunchPath(const char *path, char *output, SceSize size)
 	return result;
 }
 
-int ksceAppMgrCheckPfsMounted(const char *path)
+int SceAppMgrForDriver_0B1BEEE0(const char *path)
 {
 	SceUID directory;
 	int result;
@@ -1591,7 +1590,7 @@ int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint)
 	result = (int)0x80800002;
 	if (mount == NULL)
 		goto unlock;
-	result = kscePfsUnmount(&mount->mountPoint);
+	result = ScePfsMgrForKernel_680BC384(&mount->mountPoint);
 	if (result < 0 && result != (int)0x80010013)
 		goto unlock;
 	cursor = g_appmgrPfsMounts;
@@ -1652,11 +1651,11 @@ int appmgrSetPfsAcidDirectory(const char *path, const char *directory)
 	}
 	pid = sceKernelGetProcessId();
 	permission = sceKernelSetThreadAccessLevel(128);
-	result = ksceFiosKernelOverlayResolveSync(pid, 0, path, resolvedPath, 292);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, 292);
 	sceKernelSetThreadAccessLevel(permission);
 	if (result >= 0) {
 		resolvedPath[15] = 0;
-		result = kscePfsAcidDirSet(resolvedPath, directory);
+		result = ScePfsMgrForKernel_B0CC0A1A(resolvedPath, directory);
 	}
 	sceKernelFreeHeapMemory(g_appmgrMountHeap, resolvedPath);
 unlock:
@@ -1765,7 +1764,7 @@ cleanup:
 			    (pfsMount->mountId == 1005 &&
 			     authInfo.program_authority_id == 0x2800000000000039ULL))
 				goto freeVirtualMount;
-			kscePfsDisapprove(&pfsMount->mountPoint,
+			ScePfsMgrForKernel_2D67D8CA(&pfsMount->mountPoint,
 					  authInfo.program_authority_id);
 			goto freeVirtualMount;
 		}
@@ -1777,7 +1776,7 @@ cleanup:
 				goto restoreAuthority;
 		} else if (pfsMount->mountPoint.drive_id[0] != 0) {
 			permission = sceKernelSetThreadAccessLevel(128);
-			status = kscePfsUnmount(&pfsMount->mountPoint);
+			status = ScePfsMgrForKernel_680BC384(&pfsMount->mountPoint);
 			sceKernelSetThreadAccessLevel(permission);
 			if (status != (int)0x80010013 && status != 0)
 				goto restoreAuthority;
@@ -1869,7 +1868,7 @@ int appmgrUnmountDrive(SceUID pid, struct AppmgrMountHolder *holder,
 		if (pid == 0)
 			targetPid = sceKernelGetProcessId();
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = ksceFiosKernelOverlayRemoveForProcess(targetPid, overlayId);
+		result = SceFios2KernelForDriver_23247EFB(targetPid, overlayId);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result != 0)
 			return result;
@@ -1921,7 +1920,7 @@ int appmgrCleanupProcessMount(struct AppmgrMountHolder *holder,
 	return result;
 }
 
-int appmgrGetAccountIdentity(SceUInt64 *accountId, SceOpenPsId *openPsId,
+int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
 			    SceUInt32 *currentAccount)
 {
 	int permission, result = 0;
@@ -1933,7 +1932,7 @@ int appmgrGetAccountIdentity(SceUInt64 *accountId, SceOpenPsId *openPsId,
 			goto out;
 	}
 	if (openPsId != NULL) {
-		result = ksceSblAimgrGetOpenPsId(openPsId);
+		result = SceSblSsMgrForDriver_A5B5D269(openPsId);
 		if (result < 0)
 			goto out;
 	}
@@ -1965,7 +1964,7 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 	AppmgrSavedataParams *params;
 	SceAllocOpt opt;
 	SceIoStat stat;
-	SceOpenPsId openPsId;
+	SceKernelOpenPsId openPsId;
 	SceUInt64 accountId;
 	SceUInt32 accountIndex, attribute;
 	char emptyTitle, emptyDetail;
@@ -2076,7 +2075,7 @@ buildSfo:
 	accountPermission = sceKernelSetThreadAccessLevel(64);
 	result = sceRegMgrGetKeyBin("/CONFIG/NP", "account_id", &accountId, 8);
 	if (result >= 0)
-		result = ksceSblAimgrGetOpenPsId(&openPsId);
+		result = SceSblSsMgrForDriver_A5B5D269(&openPsId);
 	if (result < 0) {
 		sceKernelSetThreadAccessLevel(accountPermission);
 		goto freePath;
@@ -2216,11 +2215,11 @@ int appmgrReadDirectoryLicense(const char *directory, AppmgrLicenseInfo *info)
 	if (cardPath != 0) {
 		for (attempt = 0; attempt != 2; ++attempt) {
 			if (attempt == 1) {
-				result = ksceNpDrmGetFixedRifName(rifName, 0);
+				result = SceNpDrmForDriver_5D73448C(rifName, 0);
 				if (result < 0)
 					goto out;
 			} else {
-				result = ksceNpDrmGetRifName(rifName, 0);
+				result = SceNpDrmForDriver_DF62F3B8(rifName, 0);
 				if (result < 0) {
 					if (result != (int)0x8087000c)
 						goto out;
@@ -2236,11 +2235,11 @@ int appmgrReadDirectoryLicense(const char *directory, AppmgrLicenseInfo *info)
 	} else {
 		for (attempt = 0; attempt != 2; ++attempt) {
 			if (attempt == 1) {
-				result = ksceNpDrmGetFixedRifName(rifName, 0);
+				result = SceNpDrmForDriver_5D73448C(rifName, 0);
 				if (result < 0)
 					goto out;
 			} else {
-				result = ksceNpDrmGetFixedRifName(rifName, 1);
+				result = SceNpDrmForDriver_5D73448C(rifName, 1);
 				if (result < 0) {
 					if (result != (int)0x8087000c)
 						goto out;
@@ -2425,7 +2424,7 @@ int appmgrResolveLaunchDirectory(const char *path,
 	memset(resolved, 0, 292);
 	pid = sceKernelGetProcessId();
 	permission = sceKernelSetThreadAccessLevel(128);
-	result = ksceFiosKernelOverlayResolveSync(pid, 0, directory, resolved, 292);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, directory, resolved, 292);
 	sceKernelSetThreadAccessLevel(permission);
 	if (result < 0)
 		goto free_path;
@@ -2596,7 +2595,7 @@ int appmgrResolvePath(const char *path, SceUID pid, char *output, SceSize size)
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
 	permission = sceKernelSetThreadAccessLevel(128);
-	result = ksceFiosKernelOverlayResolveSync(pid, 0, path, output, size);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, output, size);
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
@@ -2611,7 +2610,7 @@ int sceAppMgrGetRawPath(char *path, char *resolvedPath, int capacity)
 
 	if (size >= 292)
 		size = 292;
-	result = ksceFiosKernelOverlayResolveSync(pid, 0, path, resolvedPath, size);
+	result = SceFios2KernelForDriver_0F456345(pid, 0, path, resolvedPath, size);
 	sceKernelSetThreadAccessLevel(permission);
 	sceSyscallLeave(syscall);
 	return result;

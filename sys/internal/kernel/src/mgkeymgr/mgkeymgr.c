@@ -60,7 +60,7 @@ static int NOINLINE StartSecureModule(void)
 	if (ret < 0)
 		return ret;
 	auth.self_type = (auth.self_type & ~0xfU) | 2;
-	return ksceSblSmCommStartSmFromFile(0, "os0:sm/mgkm_sm.self", 0,
+	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/mgkm_sm.self", 0,
 		&auth, &s_smId);
 }
 
@@ -75,10 +75,10 @@ static int NOINLINE call_set_key_command(unsigned command)
 	ret = StartSecureModule();
 	if (ret != 0)
 		return ret;
-	ret = ksceSblSmCommCallFunc(s_smId, command, &result, data, sizeof(data));
+	ret = SceSblSmCommForKernel_DB9FC204(s_smId, command, &result, data, sizeof(data));
 	if (ret != 0)
 		result = MG_ERROR_OPERATION;
-	ret = ksceSblSmCommStopSm(s_smId, &stopResult);
+	ret = SceSblSmCommForKernel_0631F8ED(s_smId, &stopResult);
 	return ret != 0 ? MG_ERROR_OPERATION : (int)result;
 }
 
@@ -95,10 +95,10 @@ static int NOINLINE AesTransform(const void *input, void *output,
 		return MG_ERROR_ARGUMENT;
 	staged = __memcpy_chk(plain, input, size, sizeof(plain));
 	if (encrypt)
-		ret = ksceSblDmac5AesEcbEncWithKeyslot(staged, cipher, size,
+		ret = SceSblSsMgrForDriver_01BE0374(staged, cipher, size,
 			slot, 0x80, 1);
 	else
-		ret = ksceSblDmac5AesEcbDecWithKeyslot(staged, cipher, size,
+		ret = SceSblSsMgrForDriver_8B4700CB(staged, cipher, size,
 			slot, 0x80, 1);
 	if (ret != 0)
 		return MG_ERROR_OPERATION;
@@ -121,10 +121,10 @@ static int NOINLINE DesTransform(const uint32_t *input, uint32_t *output,
 	plain[2] = input[2];
 	plain[3] = input[3];
 	if (encrypt)
-		ret = ksceSblDmac5DesEcbEncWithKeyslot(plain, cipher, 16,
+		ret = SceSblSsMgrForDriver_37DD5CBF(plain, cipher, 16,
 			slot, 0xc0, 1);
 	else
-		ret = ksceSblDmac5DesEcbDecWithKeyslot(plain, cipher, 16,
+		ret = SceSblSsMgrForDriver_8EAFB18A(plain, cipher, 16,
 			slot, 0xc0, 1);
 	if (ret != 0)
 		return MG_ERROR_OPERATION;

@@ -9,7 +9,7 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debugled.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include "regmgr_internal.h"
@@ -2465,11 +2465,11 @@ static const SceUInt8 g_regMgrPsIdMap[4][32] = {
  * (name unknown) */
 int regMgrMakePsIdToken(SceUInt8 *token)
 {
-	SceOpenPsId psid;
+	SceKernelOpenPsId psid;
 	SceUInt32 time;
 	int ret, i;
 
-	ret = ksceSblAimgrGetOpenPsId(&psid);
+	ret = SceSblSsMgrForDriver_A5B5D269(&psid);
 	if (ret != 0)
 		return ret;
 	time = SceProcessmgrForDriver_02179E12();
@@ -2477,7 +2477,7 @@ int regMgrMakePsIdToken(SceUInt8 *token)
 		if (i == 8)
 			token[i] = time & 3;
 		else if (g_regMgrPsIdMap[time & 3][i] != 0)
-			token[i] = psid.open_psid[g_regMgrPsIdMap[time & 3][i] - 1];
+			token[i] = psid.id[g_regMgrPsIdMap[time & 3][i] - 1];
 		else
 			token[i] = time * i * i;
 	}
@@ -2487,15 +2487,15 @@ int regMgrMakePsIdToken(SceUInt8 *token)
 /* whether a token is of this console's OpenPsId (name unknown) */
 int regMgrCheckPsIdToken(const SceUInt8 *token)
 {
-	SceOpenPsId psid;
+	SceKernelOpenPsId psid;
 	int ret, i;
 
-	ret = ksceSblAimgrGetOpenPsId(&psid);
+	ret = SceSblSsMgrForDriver_A5B5D269(&psid);
 	if (ret != 0)
 		return ret;
 	for (i = 0; i < 32; i++) {
 		if (g_regMgrPsIdMap[token[8]][i] != 0 &&
-		    psid.open_psid[g_regMgrPsIdMap[token[8]][i] - 1] != token[i])
+		    psid.id[g_regMgrPsIdMap[token[8]][i] - 1] != token[i])
 			return 0;
 	}
 	return 1;

@@ -2,7 +2,7 @@
 #pragma once
 
 #include "mount.h"
-#include <psp2common/fios2.h>
+#include <fios2/fios2.h>
 
 typedef struct AppmgrVirtualMount {
 	AppmgrPfsMount *pfsMount;

@@ -16,7 +16,7 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <stdint.h>
 
 /* SceKblParam.poweroff_factor */
@@ -40,7 +40,7 @@ typedef struct SceKblParam {		/* 0x200 bytes since 3.60 */
 	SceKernelPARange dram;
 	uint32_t reserved2;
 	uint32_t boot_type_indicator_1;
-	SceOpenPsId openpsid;
+	SceKernelOpenPsId openpsid;
 	SceKernelPARange secure_kernel;
 	SceKernelPARange context_auth_sm;
 	SceKernelPARange kprx_auth_sm;

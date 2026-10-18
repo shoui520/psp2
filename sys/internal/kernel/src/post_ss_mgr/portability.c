@@ -196,14 +196,14 @@ static const SceUInt8 g_keySetBKeyOffsets[2] = { 0x20, 0x30 };
 int postSsCopyKey(void *dst, SceSize size, const void *src, SceSize srcSize);	/* name unknown */
 
 /* PLACEHOLDER: cryptographic routine, deferred: decrypts the two copies
- * of a key set with ksceSblSsDecryptWithPortability and keeps the copy that checks */
+ * of a key set with SceSblSsMgrForDriver_934DB6B5 and keeps the copy that checks */
 POST_SS_DEFERRED int postSsMgrDecryptKeySet(const void *const *encA, const void *ivA, const void *const *encB,
 			   const void *ivB, SceSize count, void *outA, void *outB, void **keys)
 {
 	/* as when neither copy checks */
-	ksceSblSsMemset(outA, 0xff, count * POST_SS_KEY_SIZE);
+	SceSblSsMgrForDriver_CD98CC92(outA, 0xff, count * POST_SS_KEY_SIZE);
 	SceCpuForDriver_103872A5(outA, count * POST_SS_KEY_SIZE);
-	ksceSblSsMemset(outB, 0xff, count * POST_SS_KEY_SIZE);
+	SceSblSsMgrForDriver_CD98CC92(outB, 0xff, count * POST_SS_KEY_SIZE);
 	SceCpuForDriver_103872A5(outB, count * POST_SS_KEY_SIZE);
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
@@ -257,13 +257,13 @@ int SceSblPostSsMgrForDriver_4100B9E9(void)
 	ret = lockFastMutex(&g_postSsMgrKeysMutex);
 	if (ret < 0)
 		return ret;
-	ksceSblSsMemset(g_keySetA0, 0xff, sizeof(g_keySetA0));
-	ksceSblSsMemset(g_keySetA1, 0xff, sizeof(g_keySetA1));
+	SceSblSsMgrForDriver_CD98CC92(g_keySetA0, 0xff, sizeof(g_keySetA0));
+	SceSblSsMgrForDriver_CD98CC92(g_keySetA1, 0xff, sizeof(g_keySetA1));
 	g_keySetA = NULL;
 	SceCpuForDriver_103872A5(g_keySetA0, sizeof(g_keySetA0));
 	SceCpuForDriver_103872A5(g_keySetA1, sizeof(g_keySetA1));
-	ksceSblSsMemset(g_keySetB0, 0xff, sizeof(g_keySetB0));
-	ksceSblSsMemset(g_keySetB1, 0xff, sizeof(g_keySetB1));
+	SceSblSsMgrForDriver_CD98CC92(g_keySetB0, 0xff, sizeof(g_keySetB0));
+	SceSblSsMgrForDriver_CD98CC92(g_keySetB1, 0xff, sizeof(g_keySetB1));
 	g_keySetB = NULL;
 	SceCpuForDriver_103872A5(g_keySetB0, sizeof(g_keySetB0));
 	SceCpuForDriver_103872A5(g_keySetB1, sizeof(g_keySetB1));
@@ -340,9 +340,9 @@ POST_SS_DEFERRED int postSsMgrLoadCloudKeys(void)
 	if (g_cloudKeys != NULL && g_cloudKeyTable != NULL)
 		return 0;
 	/* as when neither copy checks */
-	ksceSblSsMemset(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
+	SceSblSsMgrForDriver_CD98CC92(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
 	SceCpuForDriver_103872A5(g_cloudKeys0, sizeof(g_cloudKeys0));
-	ksceSblSsMemset(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
+	SceSblSsMgrForDriver_CD98CC92(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
 	SceCpuForDriver_103872A5(g_cloudKeys1, sizeof(g_cloudKeys1));
 	return SCE_SBL_ERROR_KEYS_UNAVAILABLE;
 }
@@ -399,8 +399,8 @@ int SceSblPostSsMgrForDriver_2BF04B8E(void)
 	if (ret < 0)
 		return ret;
 	if (g_cloudKeys != NULL) {
-		ksceSblSsMemset(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
-		ksceSblSsMemset(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
+		SceSblSsMgrForDriver_CD98CC92(g_cloudKeys0, 0xff, sizeof(g_cloudKeys0));
+		SceSblSsMgrForDriver_CD98CC92(g_cloudKeys1, 0xff, sizeof(g_cloudKeys1));
 		g_cloudKeys = NULL;
 		SceCpuForDriver_103872A5(g_cloudKeys0, sizeof(g_cloudKeys0));
 		SceCpuForDriver_103872A5(g_cloudKeys1, sizeof(g_cloudKeys1));

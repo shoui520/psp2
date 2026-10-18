@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
+#include <appmgr/appmgr.h>
 
 typedef struct AppmgrShellEvent {
 	int event;
@@ -133,4 +134,3 @@ void _shellEventOnAppUnloadedQueuePush(SceUID pid, int appId, int exitReason,
 
 int sceAppMgrCheckAppLaunchLimitToAvoidQueueOverflow(void);
 int sceAppMgrReceiveShellEvent(AppmgrShellEvent *event);
-int sceAppMgrReceiveShellEventNum(void);

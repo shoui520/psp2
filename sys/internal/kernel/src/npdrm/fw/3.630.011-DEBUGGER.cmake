@@ -149,23 +149,23 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_D78B04A2
 	SceSblAIMgrForDriver_F4B98F66
-	ksceSblAuthMgrDecBindData
-	ksceSblAuthMgrGetEKc
+	SceSblAuthMgrForDriver_41DAEA12
+	SceSblAuthMgrForDriver_868B9E9A
 	sceKernelUserUnmap
 	SceSysmemForDriver_278BC201
 	SceSysmemForDriver_6D88EF8A
 	SceSysmemForDriver_9F6E45E3
 	SceSysmemForDriver_BC996A7A
 	SceSblGcAuthMgrDrmBBForDriver_050DC6DF
-	ksceSblGcAuthMgrDrmBBCheckCartHash
+	SceSblGcAuthMgrDrmBBForDriver_22FD5D23
 	SceSblGcAuthMgrDrmBBForDriver_4B506BE7
 	SceSblGcAuthMgrDrmBBForDriver_4C5DE1AA
 	SceSblGcAuthMgrDrmBBForDriver_4FE89ADB
 	SceSblGcAuthMgrDrmBBForDriver_812B2B5C
-	ksceSblGcAuthMgrDrmBBGetCartSecret
+	SceSblGcAuthMgrDrmBBForDriver_BB70DDC0
 	SceSblGcAuthMgrPsmactForDriver_39222A58
 	SceSblGcAuthMgrPkgForDriver_E459A9A8
-	ksceSblUtMgrHasStoreFlag
+	SceSblPostSsMgrForDriver_9D2E2D39
 	sceKernelSetThreadAccessLevel
 	sceKernelDeleteMutex
 	sceKernelLockMutex
@@ -186,10 +186,10 @@ set(MODULE_IMPORT_FUNCS
 	sceIoSync
 	sceIoRead
 	sceIoClose
-	ksceSblDmac5AesCtrEnc
-	ksceSblSsMgrExecuteDmac5HashCommand
-	ksceSblAimgrGetOpenPsId
-	ksceSblAimgrGetConsoleId
+	SceSblSsMgrForDriver_82B5DCEF
+	sceSblDmac5HashTransform
+	SceSblSsMgrForDriver_A5B5D269
+	SceSblSsMgrForDriver_FC6CDD68
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	SceRtcForDriver_401C0954

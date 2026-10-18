@@ -26,6 +26,7 @@
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
 #include <power/power.h>
+#include <post_ss_mgr/sblfwloader.h>
 
 int _closeUnmapMemBlock(SceUID puid);
 int _hwd0DmacMemcpyBlocking(const VeneziaHwdDmaRequest *request);
@@ -6512,9 +6513,6 @@ int initializeVeneziaVipResources(void)
 	return 0;
 }
 
-extern int ksceSblFwLoaderLock(const char *path, int flags);
-extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
-extern int ksceSblFwLoaderUnlock(void);
 extern int veneziaVipProcessorThread0(SceSize size, void *arg);
 extern int veneziaVipProcessorThread1(SceSize size, void *arg);
 extern int waitVeneziaVipProcessorResponse(VeneziaVipState *state, unsigned int processor,
@@ -6593,13 +6591,13 @@ int startVeneziaVipDriver(int mode)
 	waitVeneziaVipProcessorResponse(state, 1, 0);
 	loadResult = 0;
 	firmwareBase = (void *)state->debuggerMemory.virtualAddress;
-	if (ksceSblFwLoaderLock("os0:kd/vipimg.skprx", 0) < 0)
+	if (sceSblFwLoaderSetPath("os0:kd/vipimg.skprx", 0) < 0)
 		goto failed;
-	if (ksceSblFwLoaderLoad(1, firmwareBase, 0xbf000, &loadResult) < 0) {
-		ksceSblFwLoaderUnlock();
+	if (sceSblFwLoaderLoad(1, firmwareBase, 0xbf000, &loadResult) < 0) {
+		sceSblFwLoaderClose();
 		goto failed;
 	}
-	if (ksceSblFwLoaderUnlock() < 0)
+	if (sceSblFwLoaderClose() < 0)
 		goto failed;
 	memset((uint8_t *)firmwareBase + 0xbf000, 0, 0x10000);
 	if (initializeVeneziaHwdDma() < 0)

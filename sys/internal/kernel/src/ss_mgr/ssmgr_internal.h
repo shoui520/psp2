@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <dmacmgr/dmac_regs.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <syscon/syscon.h>
@@ -42,7 +42,7 @@ extern volatile int qafSysconFlagInitialized SS_MGR_BSS(qafSysconFlagInitialized
 extern uint32_t qafBaryonVersion SS_MGR_BSS(qafBaryonVersion);
 extern SceUID qafSmId SS_MGR_BSS(qafSmId);
 extern ScePsCode aimgrPscode SS_MGR_BSS(aimgrPscode);
-extern SceOpenPsId aimgrOpenPsId SS_MGR_BSS(aimgrOpenPsId);
+extern SceKernelOpenPsId aimgrOpenPsId SS_MGR_BSS(aimgrOpenPsId);
 extern SceUID aimgrMutex SS_MGR_BSS(aimgrMutex);
 extern SceUID aimgrSmId SS_MGR_BSS(aimgrSmId);
 extern uint8_t rngSeed[20] SS_MGR_BSS(rngSeed);
@@ -58,13 +58,10 @@ int qafLoadToken(uint8_t *token);
 #define SSMGR_ERROR_NO_QAF		0x800F0726
 #define SSMGR_ERROR_NVS			0x800F0705
 
-int nvs_read_data(uint32_t offset, void *buffer, uint32_t size);
-int ksceSblQafManagerGetQAFlags(void *flags);
 int qafValidateToken(void *token, int service);
 int qafSetToken(const void *token);
 int qafDeleteToken(void);
 int qafGetToken(uint8_t *token);
-int nvs_write_data(uint32_t offset, const void *buffer, uint32_t size);
 
 /* Aimgr secure-processor queries. */
 int aimgrReadPscode2(ScePsCode *pscode);

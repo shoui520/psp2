@@ -6,12 +6,12 @@
 
 #include <skeleton.h>
 
-STUB(ksceCoredumpCafSegmentInit)
-STUB(ksceCoredumpCafHeaderFinal)
-STUB(ksceCoredumpCafHeaderInit)
-STUB(ksceCoredumpCafInit)
-STUB(ksceCoredumpCafHeaderTransform)
-STUB(ksceCoredumpCafFinal)
-STUB(ksceCoredumpCafSegmentFinal)
-STUB(ksceCoredumpCafCreateIv)
-STUB(ksceCoredumpCafSegmentTransform)
+STUB(SceCoredumpForDriver_07185515)
+STUB(SceCoredumpForDriver_65AA4991)
+STUB(SceCoredumpForDriver_7C8120C5)
+STUB(SceCoredumpForDriver_9336009B)
+STUB(SceCoredumpForDriver_AE2C2793)
+STUB(SceCoredumpForDriver_C90F61AF)
+STUB(SceCoredumpForDriver_DF17420A)
+STUB(SceCoredumpForDriver_E1BCBE8F)
+STUB(SceCoredumpForDriver_FB7AEBFE)

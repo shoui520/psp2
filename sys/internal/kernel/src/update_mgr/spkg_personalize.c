@@ -53,7 +53,7 @@ int SpkgUtilDoPersonalizeSLSK(const char *sourceName,
 	result = UpdateUtilSetupSm(0, &slskSmId, 0);
 	if (result)
 		goto cleanup;
-	result = ksceSblSmCommCallFunc(slskSmId, 0x50002, &serviceResult,
+	result = SceSblSmCommForKernel_DB9FC204(slskSmId, 0x50002, &serviceResult,
 			packet, sizeof(*packet));
 	if (result)
 		goto cleanup;

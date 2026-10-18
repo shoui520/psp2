@@ -16,6 +16,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
 #include <rtc/rtc.h>
+#include <regmgr/regmgr.h>
 
 /* SceGpuEs4ForDriver */
 /* registers the PA-trace stop and the core-dump callbacks */
@@ -49,4 +50,3 @@ SceSize ScePamgrForDriver_019BD60F(int unit);			/* bytes traced */
 /* SceKernelUtilsForDriver: the DES of the dump file's segments */
 #include <sysmem/des.h>
 
-int sceRegMgrGetKeyStr(const char *category, const char *name, char *buf, SceSize size);

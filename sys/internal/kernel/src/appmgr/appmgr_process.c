@@ -12,6 +12,9 @@
 #include "app_state_internal.h"
 #include <sysmem/sysroot.h>
 #include <sysmem/sysclib.h>
+#include <appmgr/appmgr.h>
+#include <npdrm/npdrm.h>
+#include <avcodec/avcodec.h>
 
 extern int appmgrUsesGxmDebugger(SceUID pid);
 
@@ -22,7 +25,6 @@ extern int _suspendAppForDebugger(struct AppState *app,
 extern int _resumeAppForDebugger(struct AppState *app,
 				struct AppmgrWaitObject **waitObject);
 extern int _appListUnlockApp(struct AppState *app);
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
@@ -37,10 +39,8 @@ extern int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 		ProcEventParam *param, int flags);
 extern int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 		ProcEventParam *param, int flags);
-extern int SceAvcodecForDriver_C84AFFC4(void (*callback)(void));
 extern int appmgrSaveSafeMemoryForProcess(SceUID pid);
 extern int appmgrUpdateSaveDataOnSuspend(SceUID pid, AppmgrProcessContent *content);
-extern int ksceNpDrmPackageSetGameExist(int exists);
 extern int appmgrPrepareSafeMemoryForProcess(SceUID pid);
 extern int _appListPushEvent(struct AppState *app, const SceAppMgrSystemEvent *event);
 extern void _deviceRefreshAudioPort(SceUID pid);
@@ -466,7 +466,7 @@ int _sceAppMgrProcSuspendHandler(SceUID pid, int eventType,
 			return 0;
 		appmgrUpdateSaveDataOnSuspend(pid, &app->process.content);
 		if ((app->process.content.contentFlags & 0x30) != 0) {
-			result = ksceNpDrmPackageSetGameExist(0);
+			result = SceNpDrmForDriver_3BFD2850(0);
 #if FW_DEBUG
 			PROCESS_SUSPEND_RESULT(result, 216);
 #else
@@ -646,7 +646,7 @@ int _sceAppMgrProcResumeHandler(SceUID pid, int eventType,
 		g_appmgrMainMutexOwner = sceKernelGetThreadId();
 #endif
 		if ((app->process.content.contentFlags & 0x30) != 0) {
-			result = ksceNpDrmPackageSetGameExist(1);
+			result = SceNpDrmForDriver_3BFD2850(1);
 #if FW_DEBUG
 			PROCESS_RESUME_RESULT(result, 271);
 #else
@@ -1185,7 +1185,7 @@ int _appmgrProcessStartProcess(struct AppState *app)
 	PROCESS_EXIT_ASSERT(owner != sceKernelGetThreadId(), 622,
 		"_appmgrProcessStartProcess");
 	if ((app->process.content.contentFlags & 0x30) != 0) {
-		result = ksceNpDrmPackageSetGameExist(1);
+		result = SceNpDrmForDriver_3BFD2850(1);
 #if FW_DEBUG
 		PROCESS_START_RESULT(result, 628);
 #else

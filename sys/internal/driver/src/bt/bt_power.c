@@ -1,5 +1,4 @@
 /* Power events; original source filename unavailable. */
-#include <psp2kern/registrymgr.h>
 #include <sysmem/debug.h>
 #include <regmgr/regmgr.h>
 #include <sysmem/sysevent.h>

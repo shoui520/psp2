@@ -862,9 +862,9 @@ ScePfsFacadeForKernel_CB622FFE:
 .word 0x10, 0xc26dc7bd, 0xcb622ffe, 0xe320f000
 .section .vitalink.fstubs.SceFios2KernelForDriver, "ax", %progbits
 .balign 4
-.global ksceFiosKernelOverlayResolveSync
-.type ksceFiosKernelOverlayResolveSync, %function
-ksceFiosKernelOverlayResolveSync:
+.global SceFios2KernelForDriver_0F456345
+.type SceFios2KernelForDriver_0F456345, %function
+SceFios2KernelForDriver_0F456345:
 .word 0x10, 0x54d6b9eb, 0xf456345, 0xe320f000
 .section .vitalink.fstubs.SceFios2KernelForDriver, "ax", %progbits
 .balign 4
@@ -1733,9 +1733,9 @@ ScePfsFacadeForKernel_CB622FFE:
 .word 0x10, 0xc26dc7bd, 0xcb622ffe, 0xe320f000
 .section .vitalink.fstubs.SceFios2KernelForDriver, "ax", %progbits
 .balign 4
-.global ksceFiosKernelOverlayResolveSync
-.type ksceFiosKernelOverlayResolveSync, %function
-ksceFiosKernelOverlayResolveSync:
+.global SceFios2KernelForDriver_0F456345
+.type SceFios2KernelForDriver_0F456345, %function
+SceFios2KernelForDriver_0F456345:
 .word 0x10, 0x54d6b9eb, 0xf456345, 0xe320f000
 .section .vitalink.fstubs.SceFios2KernelForDriver, "ax", %progbits
 .balign 4

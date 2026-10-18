@@ -41,7 +41,7 @@ int appmgrInitializeBgdlQueueStorage(void)
 	return result;
 }
 
-int ksceAppMgrBgdlSetQueueStatus(const void *status)
+int SceAppMgrForDriver_5B1BE482(const void *status)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);

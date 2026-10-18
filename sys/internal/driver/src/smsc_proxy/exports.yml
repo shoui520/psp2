@@ -11,19 +11,19 @@ SceSblSmschedProxy:
       version: 1
       nid: 0x15F25C84
       functions:
-        - ksceSblSmSchedProxyWriteCry2Arm: 0x15B0E4DF
+        - sceSblSmSchedProxyWriteCry2Arm: 0x15B0E4DF
         - sceSblSmSchedProxyInvoke: 0x1916509B
         - SceSblSmSchedProxyForKernel_1DFC8624: 0x1DFC8624
         - sceSblSmSchedProxyGetStatus: 0x27EB92F1
-        - ksceSblSmSchedProxyUninitialize: 0x33A3A1E2
+        - SceSblSmSchedProxyForKernel_33A3A1E2: 0x33A3A1E2
         - SceSblSmSchedProxyForKernel_3CE17233: 0x3CE17233
-        - ksceSblSmSchedCallFunc: 0x723B382F
-        - ksceSblSmSchedProxyExecuteF00DCommand: 0x7894B6F0
-        - ksceSblSmSchedProxyDisableCry2ArmInterrupt: 0x85EDA5FC
-        - ksceSblSmSchedProxyEnableCry2ArmInterrupt: 0x8B84AC2A
-        - ksceSblSmSchedProxyReadCry2Arm: 0x973A4A7D
+        - SceSblSmSchedProxyForKernel_723B382F: 0x723B382F
+        - SceSblSmSchedProxyForKernel_7894B6F0: 0x7894B6F0
+        - SceSblSmSchedProxyForKernel_85EDA5FC: 0x85EDA5FC
+        - SceSblSmSchedProxyForKernel_8B84AC2A: 0x8B84AC2A
+        - sceSblSmSchedProxyReadCry2Arm: 0x973A4A7D
         - SceSblSmSchedProxyForKernel_984EC9D1: 0x984EC9D1
-        - ksceSblSmSchedProxyInitialize: 0xA488D604
-        - ksceSblSmSchedProxyChangeF00DStatus: 0xDE4EAC3C
+        - SceSblSmSchedProxyForKernel_A488D604: 0xA488D604
+        - SceSblSmSchedProxyForKernel_DE4EAC3C: 0xDE4EAC3C
         - sceSblSmSchedProxyWait: 0xF35EFC1A
-        - ksceSblSmSchedProxyGetCommandF00DRegister: 0xF70C04EC
+        - SceSblSmSchedProxyForKernel_F70C04EC: 0xF70C04EC

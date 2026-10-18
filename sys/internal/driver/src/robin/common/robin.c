@@ -7,9 +7,7 @@
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <string.h>
 #include <threadmgr/threadmgr.h>
-int ksceSblFwLoaderLock(const char *path, int flags);
-int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *loaded);
-int ksceSblFwLoaderUnlock(void);
+#include <post_ss_mgr/sblfwloader.h>
 int robinResetWlanForResume(void);
 int robinDeauthenticateForResume(void);
 int robinWlanNeedsDeauthentication(void);
@@ -312,16 +310,16 @@ int wlanBtStartRobin(void)
 			break;
 		}
 		if (!gRobin.firmwareLoaded) {
-			result = ksceSblFwLoaderLock("os0:kd/wlanbt_robin_img_ax.skprx", 0);
+			result = sceSblFwLoaderSetPath("os0:kd/wlanbt_robin_img_ax.skprx", 0);
 			if (result < 0)
 				goto releaseFunctions;
-			result = ksceSblFwLoaderLoad(1, gRobin.firmwareBuffer, 0x80000,
+			result = sceSblFwLoaderLoad(1, gRobin.firmwareBuffer, 0x80000,
 						     &gRobin.firmwareSize);
 			if (result < 0) {
-				ksceSblFwLoaderUnlock();
+				sceSblFwLoaderClose();
 				goto releaseFunctions;
 			}
-			result = ksceSblFwLoaderUnlock();
+			result = sceSblFwLoaderClose();
 			if (result < 0)
 				goto releaseFunctions;
 			gRobin.firmwareLoaded = 1;
@@ -419,16 +417,16 @@ int wlanBtResumeRobin(unsigned int *wakeSources)
 		break;
 	}
 	if (!gRobin.firmwareLoaded) {
-		result = ksceSblFwLoaderLock("os0:kd/wlanbt_robin_img_ax.skprx", 0);
+		result = sceSblFwLoaderSetPath("os0:kd/wlanbt_robin_img_ax.skprx", 0);
 		if (result < 0)
 			goto checkWakeSources;
-		result = ksceSblFwLoaderLoad(1, gRobin.firmwareBuffer, 0x80000,
+		result = sceSblFwLoaderLoad(1, gRobin.firmwareBuffer, 0x80000,
 					     &gRobin.firmwareSize);
 		if (result < 0) {
-			ksceSblFwLoaderUnlock();
+			sceSblFwLoaderClose();
 			goto checkWakeSources;
 		}
-		result = ksceSblFwLoaderUnlock();
+		result = sceSblFwLoaderClose();
 		if (result < 0)
 			goto checkWakeSources;
 		gRobin.firmwareLoaded = 1;

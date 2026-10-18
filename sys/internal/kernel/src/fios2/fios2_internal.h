@@ -17,7 +17,7 @@
 #include <processmgr/processmgr.h>
 #include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2common/fios2.h>
+#include <fios2/fios2.h>
 #include <sysmem/compiler.h>
 #include <sysmem/sysclib.h>
 
@@ -194,32 +194,7 @@ int sceFiosKernelDHOpenInternal(SceUID pid, SceFiosKernelDH **outDH, const char 
 int sceFiosKernelDHClose(SceFiosKernelDH *dh);
 int sceFiosKernelDHFree(SceUID pid, SceFiosKernelDH *dh);
 
-/* kernel.cpp: SceFios2KernelForDriver */
-int ksceFiosKernelOverlayAdd(SceFiosOverlay *overlay, SceFiosOverlayID *outId);
-int ksceFiosKernelOverlayAddForProcess(SceUID pid, SceFiosOverlay *overlay, SceFiosOverlayID *outId);
-int ksceFiosKernelOverlayRemove(SceFiosOverlayID id);
-int ksceFiosKernelOverlayRemoveForProcess(SceUID pid, SceFiosOverlayID id);
-int ksceFiosKernelOverlayGetInfo(SceFiosOverlayID id, SceFiosOverlay *outOverlay);
-int ksceFiosKernelOverlayGetInfoForProcess(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *outOverlay);
-int ksceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *overlay);
-int ksceFiosKernelOverlayModifyForProcess(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *overlay);
-int ksceFiosKernelOverlayGetList(SceUID pid, unsigned int minOrder, unsigned int maxOrder,
-				 SceFiosOverlayID *outIds, SceSize maxIds, SceSize *outCount);
-int ksceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
-				     SceSize maxPath);
-int ksceFiosKernelOverlayResolveWithRangeSync(SceUID pid, int resolveFlag, const char *inPath,
-					      char *outPath, SceSize maxPath, uint8_t minOrder,
-					      uint8_t maxOrder);
-int ksceFiosKernelOverlayThreadSetDisabled(int disabled);
-int ksceFiosKernelOverlayThreadIsDisabled(void);
-int ksceFiosKernelOverlayGetRecommendedScheduler(int avail, const char *path);
-int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, unsigned int minOrder,
-				     unsigned int maxOrder);
-int SceFios2KernelForDriver_28E28A58(SceFiosKernelDH *dh, SceIoDirent *dirent);
-int SceFios2KernelForDriver_DD7627EC(SceFiosKernelDH *dh);
-int SceFios2KernelForDriver_2649408B(SceFiosKernelDH *dh, SceIoStat *stat);
-int SceFios2KernelForDriver_35E7E75C(SceFiosKernelDH *dh, SceIoStat *stat, int bits);
-int SceFios2KernelForDriver_990F46A5(SceFiosKernelDH *dh, int flag);
+/* kernel.cpp: SceFios2KernelForDriver, declared in fios2/fios2.h */
 
 /* api.cpp: what the syscalls call */
 int sceFiosKernelOverlayAdd(SceFiosOverlay *overlay, SceFiosOverlayID *outId);

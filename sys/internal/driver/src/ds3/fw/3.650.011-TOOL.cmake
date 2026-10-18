@@ -137,7 +137,7 @@ set(MODULE_IMPORT_FUNCS
 	SceTouchForDriver_03C3AC7C
 	ScePowerForDriver_394DE492
 	sceRegMgrGetKeyInt
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	SceSysconForDriver_CBD6D8BC
 	SceDisplayForDriver_8B5DA27B
 	SceDisplayForDriver_984C27E7

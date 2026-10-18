@@ -293,12 +293,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
 	SceDipswForDriver_A98FC2FD
-	ksceSblAuthMgrClose
-	ksceSblAuthMgrSetupAuthSegment
-	ksceSblAuthMgrOpen
-	ksceSblAuthMgrCompareSwVersion
-	ksceSblAuthMgrLoadBlock
-	ksceSblAuthMgrAuthHeader
+	sceSblAuthMgrClose
+	SceSblAuthMgrForKernel_89CCDA2C
+	sceSblAuthMgrOpen
+	SceSblAuthMgrForKernel_ABAB8466
+	SceSblAuthMgrForKernel_BC422443
+	sceSblAuthMgrAuthHeader
 	SceSblACMgrForKernel_sceSblACMgrIsGameProgram
 	SceSblACMgrForKernel_3F99279F
 	SceSblACMgrForKernel_BBA13D9C

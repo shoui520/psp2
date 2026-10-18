@@ -149,14 +149,14 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	ScePmMgrForDriver_2AC815A2
 	SceQafMgrForDriver_52B4E164
-	ksceSblSsGetNvsData
+	sceSblSsGetNvsData
 	SceSblAIMgrForDriver_3B638885
 	SceSblAIMgrForDriver_71608CA3
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	ksceSblFwLoaderLoad
-	ksceSblFwLoaderLock
-	ksceSblFwLoaderUnlock
+	sceSblFwLoaderLoad
+	sceSblFwLoaderSetPath
+	sceSblFwLoaderClose
 	SceKernelUtilsForDriver_29A28957
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler

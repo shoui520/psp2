@@ -97,9 +97,9 @@ static int fiosOverlayCopyIn(const SceFiosOverlay *in, SceFiosOverlay *out)
 
 	if (in->type > SCE_FIOS_OVERLAY_TYPE_WRITABLE)
 		return SCE_FIOS_ERROR_BAD_OVERLAY;
-	dstLen = fiosStrnlen(in->dst, SCE_FIOS2_OVERLAY_PATH_SIZE);
-	if (fiosStrnlen(in->src, SCE_FIOS2_OVERLAY_PATH_SIZE) >= SCE_FIOS2_OVERLAY_PATH_SIZE ||
-	    dstLen >= SCE_FIOS2_OVERLAY_PATH_SIZE)
+	dstLen = fiosStrnlen(in->dst, SCE_FIOS_OVERLAY_POINT_MAX);
+	if (fiosStrnlen(in->src, SCE_FIOS_OVERLAY_POINT_MAX) >= SCE_FIOS_OVERLAY_POINT_MAX ||
+	    dstLen >= SCE_FIOS_OVERLAY_POINT_MAX)
 		return SCE_FIOS_ERROR_PATH_TOO_LONG;
 
 	memset(out, 0, sizeof(*out));
@@ -107,12 +107,12 @@ static int fiosOverlayCopyIn(const SceFiosOverlay *in, SceFiosOverlay *out)
 	out->pid = in->pid;
 	out->order = in->order;
 	out->dst_len = sceFiosKernelPathNormalizeDefault(out->dst, in->dst,
-							 SCE_FIOS2_OVERLAY_PATH_SIZE);
+							 SCE_FIOS_OVERLAY_POINT_MAX);
 	out->src_len = sceFiosKernelPathNormalizeDefault(out->src, in->src,
-							 SCE_FIOS2_OVERLAY_PATH_SIZE);
-	if (out->dst_len >= SCE_FIOS2_OVERLAY_PATH_SIZE)
+							 SCE_FIOS_OVERLAY_POINT_MAX);
+	if (out->dst_len >= SCE_FIOS_OVERLAY_POINT_MAX)
 		return SCE_FIOS_ERROR_BAD_PATH;
-	if (out->src_len >= SCE_FIOS2_OVERLAY_PATH_SIZE)
+	if (out->src_len >= SCE_FIOS_OVERLAY_POINT_MAX)
 		return SCE_FIOS_ERROR_BAD_PATH;
 	return 0;
 }

@@ -191,7 +191,7 @@ int SelfReaderClose(SelfReader *reader)
 		reader->heap = NULL;
 	}
 	if (reader->type == 2) {
-		ksceSblAuthMgrClose(reader->authContext);
+		sceSblAuthMgrClose(reader->authContext);
 		SelfDecrypterUnlock();
 	}
 	return 0;
@@ -270,7 +270,7 @@ void *selfDecrypterRefill(SelfInflateStream *stream)
 	slot = &g_slot[g_stream.slot];
 	size = slot->size;
 	if (slot->state < 2) {
-		ret = ksceSblAuthMgrLoadBlock(g_reader->authContext, slot->buf, size);
+		ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext, slot->buf, size);
 		if (ret < 0)
 			return NULL;
 		slot->state = 2;
@@ -299,16 +299,16 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 			reader = g_reader;
 			index = g_segmentIndex;
 			if (!reader->authenticated) {
-				ret = ksceSblAuthMgrOpen(&reader->authContext);
+				ret = sceSblAuthMgrOpen(&reader->authContext);
 				if (ret < 0)
 					goto complete;
-				ret = ksceSblAuthMgrAuthHeader(reader->authContext,
+				ret = sceSblAuthMgrAuthHeader(reader->authContext,
 						reader->header, reader->headerSize, reader->auth);
 				if (ret < 0)
 					goto complete;
 				reader->authenticated = 1;
 			}
-			ret = ksceSblAuthMgrSetupAuthSegment(reader->authContext, index);
+			ret = SceSblAuthMgrForKernel_89CCDA2C(reader->authContext, index);
 			if (ret >= 0)
 				g_compression = ret;
 		} else {
@@ -316,7 +316,7 @@ int selfDecrypter_thread_entry(SceSize args, void *argp)
 			if (ret < 0)
 				goto complete;
 			if (slot->state < 2) {
-				ret = ksceSblAuthMgrLoadBlock(g_reader->authContext, slot->buf, size);
+				ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext, slot->buf, size);
 				slot->state = 2;
 				if (ret < 0)
 					goto complete;
@@ -446,7 +446,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 #endif
 			g_slot[next].state = 1;
 			if (g_slot[previous].state == 2) {
-				ret = ksceSblAuthMgrLoadBlock(g_reader->authContext,
+				ret = SceSblAuthMgrForKernel_BC422443(g_reader->authContext,
 						g_slot[next].buf, chunk);
 				if (ret < 0)
 					goto drain;

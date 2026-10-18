@@ -199,9 +199,9 @@ set(MODULE_IMPORT_FUNCS
 	sceAppMgrGetPidByNameForDebugger
 	SceAppMgrForDriver_3B4F305B
 	sceAppMgrLaunchAppForTest2
-	ksceAppMgrLaunchAppByPath
-	ksceAppMgrKillProcess
-	ksceAppMgrDestroyOtherAppByPid
+	sceAppMgrLaunchAppForDebugger
+	sceAppMgrKillAppForDebugger
+	sceAppMgrDestroyAppForTest
 	sceRegMgrGetKeyInt
 	sceDfMgrClose
 	sceDfMgrOpen

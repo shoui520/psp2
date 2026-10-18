@@ -24,7 +24,7 @@
 #define PFS_DEVCTL_GET_4413		0x4413	/* name unknown */
 #define PFS_DEVCTL_4414			0x4414	/* name unknown */
 
-#define PFS_MODE_CHECK_APPROVED		0x28	/* kscePfsMount: only check an existing mount */
+#define PFS_MODE_CHECK_APPROVED		0x28	/* ScePfsMgrForKernel_A772209C: only check an existing mount */
 
 SceVfsInfo g_pfsRedirectVfsInfo = {
 	.vfs_ops	= &g_pfsRedirectVfsOps,
@@ -117,7 +117,7 @@ static int pfsSysEventHandler(int resume, int eventid, void *args, void *opt)	/*
 	return 0;
 }
 
-int kscePfsMount2(const char *path, const char *name, const void *klicensee, SceUInt16 mode)
+int ScePfsMgrForKernel_2D48AEA2(const char *path, const char *name, const void *klicensee, SceUInt16 mode)
 {
 	SceVfsMountParam param;
 	SceVfsUmountParam umountParam;
@@ -196,7 +196,7 @@ out:
 	return ret;
 }
 
-int kscePfsUnmount(const char *name)
+int ScePfsMgrForKernel_680BC384(const char *name)
 {
 	SceVfsUmountParam umountParam;
 	ScePfsPmi *pmi, *mounted;
@@ -246,7 +246,7 @@ out:
 	return ret;
 }
 
-int kscePfsApprove(const char *name, SceUInt64 authId)
+int ScePfsMgrForKernel_D8D0FEE5(const char *name, SceUInt64 authId)
 {
 	ScePfsPmi *pmi;
 	int ret;
@@ -270,7 +270,7 @@ int kscePfsApprove(const char *name, SceUInt64 authId)
 	return ret;
 }
 
-int kscePfsDisapprove(const char *name, SceUInt64 authId)
+int ScePfsMgrForKernel_2D67D8CA(const char *name, SceUInt64 authId)
 {
 	ScePfsPmi *pmi;
 	int ret;
@@ -291,16 +291,16 @@ int kscePfsDisapprove(const char *name, SceUInt64 authId)
 }
 
 /* mounts and approves; mode 0x28 only checks an approved mount and returns its mode */
-int kscePfsMount(const char *path, const char *name, SceUInt64 authId, const void *klicensee,
+int ScePfsMgrForKernel_A772209C(const char *path, const char *name, SceUInt64 authId, const void *klicensee,
 		 SceUInt16 mode)
 {
 	ScePfsPmi *pmi;
 	int ret;
 
 	if (mode != PFS_MODE_CHECK_APPROVED) {
-		ret = kscePfsMount2(path, name, klicensee, mode);
+		ret = ScePfsMgrForKernel_2D48AEA2(path, name, klicensee, mode);
 		if (ret == 0)
-			ret = kscePfsApprove(name, authId);
+			ret = ScePfsMgrForKernel_D8D0FEE5(name, authId);
 		return ret;
 	}
 
@@ -342,7 +342,7 @@ static inline int pfsAcidDirIoctl(const char *name, const char *dir, unsigned in
 	return sceIoDclose(fd);
 }
 
-int kscePfsAcidDirSet(const char *name, const char *dir)
+int ScePfsMgrForKernel_B0CC0A1A(const char *name, const char *dir)
 {
 	if (dir == NULL || name == NULL || strnlen(name, PFS_MOUNT_NAME_MAX) - 1 > PFS_MOUNT_NAME_MAX - 2 ||
 	    strnlen(dir, PFS_PATH_MAX) - 1 > PFS_PATH_MAX - 2)
@@ -350,7 +350,7 @@ int kscePfsAcidDirSet(const char *name, const char *dir)
 	return pfsAcidDirIoctl(name, dir, PFS_IOCTL_ACID_DIR_SET, NULL, 0);
 }
 
-int kscePfsAcidDirMount(const char *name, const char *dir, const void *klicensee)
+int ScePfsMgrForKernel_4A4A8243(const char *name, const char *dir, const void *klicensee)
 {
 	if (dir == NULL || name == NULL || strnlen(name, PFS_MOUNT_NAME_MAX) - 1 > PFS_MOUNT_NAME_MAX - 2 ||
 	    strnlen(dir, PFS_PATH_MAX) - 1 > PFS_PATH_MAX - 2)
@@ -358,7 +358,7 @@ int kscePfsAcidDirMount(const char *name, const char *dir, const void *klicensee
 	return pfsAcidDirIoctl(name, dir, PFS_IOCTL_ACID_DIR_MOUNT, klicensee, 0x10);
 }
 
-int kscePfsAcidDirApprove(const char *name, const char *dir)
+int ScePfsMgrForKernel_8CDA249A(const char *name, const char *dir)
 {
 	if (dir == NULL || name == NULL || strnlen(name, PFS_MOUNT_NAME_MAX) - 1 > PFS_MOUNT_NAME_MAX - 2 ||
 	    strnlen(dir, PFS_PATH_MAX) - 1 > PFS_PATH_MAX - 2)
@@ -366,7 +366,7 @@ int kscePfsAcidDirApprove(const char *name, const char *dir)
 	return pfsAcidDirIoctl(name, dir, PFS_IOCTL_ACID_DIR_APPROVE, NULL, 0);
 }
 
-int kscePfsAcidDirUnmount(const char *name, const char *dir)
+int ScePfsMgrForKernel_00C8AF80(const char *name, const char *dir)
 {
 	if (dir == NULL || name == NULL || strnlen(name, PFS_MOUNT_NAME_MAX) - 1 > PFS_MOUNT_NAME_MAX - 2 ||
 	    strnlen(dir, PFS_PATH_MAX) - 1 > PFS_PATH_MAX - 2)

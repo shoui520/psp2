@@ -12,3 +12,10 @@ typedef struct SceSharedFbCreate {
 _Static_assert(sizeof(SceSharedFbCreate) == 24, "SharedFb creation parameter ABI");
 
 SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param);
+
+int sceSharedFbDelete(SceUID fbId);
+int sceSharedFbGetRenderingInfo(SceUID processId);
+int sceSharedFbGetShellRenderPort(void);
+int sceSharedFbUpdateProcess(void);
+int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info, unsigned int *processCount);
+int sceSharedFbUpdateProcessEnd(void);

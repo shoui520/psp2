@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <threadmgr/threadmgr.h>
+#include <appmgr/appmgr.h>
 
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern int appmgrDebugConsoleInitialize(void);
 extern int handleAbortedApp(SceSize args, void *argp);

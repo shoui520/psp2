@@ -13,7 +13,7 @@ SceSblGcAuthMgr:
       nid: 0x1926B182
       functions:
         - SceSblGcAuthMgrDrmBBForDriver_050DC6DF: 0x050DC6DF
-        - ksceSblGcAuthMgrDrmBBCheckCartHash: 0x22FD5D23
+        - SceSblGcAuthMgrDrmBBForDriver_22FD5D23: 0x22FD5D23
         - SceSblGcAuthMgrDrmBBForDriver_30A0B441: 0x30A0B441
         - SceSblGcAuthMgrDrmBBForDriver_3C25F9FA: 0x3C25F9FA
         - SceSblGcAuthMgrDrmBBForDriver_48D7784E: 0x48D7784E
@@ -28,8 +28,8 @@ SceSblGcAuthMgr:
         - SceSblGcAuthMgrDrmBBForDriver_7F98E4E2: 0x7F98E4E2
         - SceSblGcAuthMgrDrmBBForDriver_812B2B5C: 0x812B2B5C
         - SceSblGcAuthMgrDrmBBForDriver_B13577E2: 0xB13577E2
-        - ksceSblGcAuthMgrDrmBBClearCartSecret: 0xBB451E83
-        - ksceSblGcAuthMgrDrmBBGetCartSecret: 0xBB70DDC0
+        - SceSblGcAuthMgrDrmBBForDriver_BB451E83: 0xBB451E83
+        - SceSblGcAuthMgrDrmBBForDriver_BB70DDC0: 0xBB70DDC0
         - SceSblGcAuthMgrDrmBBForDriver_C0F37F18: 0xC0F37F18
         - SceSblGcAuthMgrDrmBBForDriver_E950BE32: 0xE950BE32
     SceSblGcAuthMgrGcAuthForDriver:
@@ -37,7 +37,7 @@ SceSblGcAuthMgr:
       version: 1
       nid: 0xC6627F5E
       functions:
-        - ksceSblGcAuthMgrGcAuthCartAuthentication: 0x68781760
+        - SceSblGcAuthMgrGcAuthForDriver_68781760: 0x68781760
     SceSblGcAuthMgrMlnpsnlForDriver:
       syscall: false
       version: 1

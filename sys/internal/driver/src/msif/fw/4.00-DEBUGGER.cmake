@@ -144,13 +144,13 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_D8678061
 	SceKernelUtilsForDriver_F12B6451
 	SceSblAIMgrForDriver_C6E83F34
-	ksceSblSmCommStartSmFromData
-	ksceSblSmCommStopSm
-	ksceSblSmCommCallFunc
+	SceSblSmCommForKernel_039C73B1
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_DB9FC204
 	SceSysrootForKernel_F10AB792
-	ksceSblDmac5DesEcbEncWithKeyslot
-	ksceSblDmac5Rnd
-	ksceSblSsDecryptWithPortability
+	SceSblSsMgrForDriver_37DD5CBF
+	sceSblDmac5Rnd
+	SceSblSsMgrForDriver_934DB6B5
 	ScePervasiveForDriver_2A9778CD
 	ScePervasiveForDriver_551EEE82
 	ScePervasiveForDriver_64ABE589

@@ -1,6 +1,7 @@
 /* SceIofilemgr's scheduler worker (Sony's sched_scheduler.c). */
 #include "iofilemgr_internal.h"
 #include <threadmgr/threadmgr.h>
+#include <pfsmgr/pfsfacade.h>
 
 static inline __attribute__((always_inline)) SceUID getDataIoFd(IoRequest *req)
 {
@@ -29,8 +30,6 @@ SceOff getFilePosition(IoRequest *req)
 /* Names unknown: the optional PFS stat hooks; initialized to zero. */
 int g_ioPfsChstatEnabled __attribute__((section(".data"))) = 0;
 int g_ioPfsChstatByFdEnabled __attribute__((section(".data"))) = 0;
-int ScePfsFacadeForKernel_7F9F4E49(IofilemgrChstatParam *param);
-int ScePfsFacadeForKernel_04352D52(IofilemgrChstatByFdParam *param);
 
 void sceIoSchedulerExecuteIoCommand(IoRequest *req)
 {

@@ -6,6 +6,7 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <avcdec.h>
 #include <stddef.h>
+#include <avcodec/avcodec.h>
 
 struct M4vdecPicture;
 
@@ -169,7 +170,6 @@ typedef struct AvcencEncoderParameter {
 _Static_assert(sizeof(AvcencEncoderParameter) == 24,
 	       "AVC encoder parameter ABI");
 
-
 _Static_assert(sizeof(AvcencCscFrame) == 48, "AVC encoder CSC frame ABI");
 _Static_assert(offsetof(AvcencCscFrame, pPicture) == 36,
 	       "AVC encoder CSC picture addresses ABI");
@@ -200,9 +200,9 @@ _Static_assert(sizeof(AvcencArrayAu) == 12, "AVC encoder output array ABI");
 _Static_assert(offsetof(AvcencArrayAu, pAu) == 8,
 	       "AVC encoder output addresses ABI");
 
-int ksceAvcencEncodeStop(const AvcencControl *pCtrl,
+int SceAvcodecForDriver_DE515BFF(const AvcencControl *pCtrl,
 		       AvcencArrayAu *pArrayAu);
-int ksceAvcencEncode(const AvcencControl *pCtrl,
+int SceAvcodecForDriver_A0E63278(const AvcencControl *pCtrl,
 		    const AvcencCscFrame *pFrame, AvcencArrayAu *pArrayAu);
 
 _Static_assert(sizeof(AvcencNalUnit) == 12, "AVC encoder NAL descriptor ABI");
@@ -212,7 +212,6 @@ _Static_assert(offsetof(AvcencControl, headers) == 28,
 
 int videocodecTermLibraryForProcess(unsigned int codecType, unsigned int flags,
 				  SceUID pid);
-int SceAvcodecForDriver_2641888C(unsigned int codecType);
 int SceAvcodecForDriver_27211864(SceAvcdecCtrl *pCtrl);
 int SceAvcodecForDriver_D9FCDF3E(SceAvcdecCtrl *pCtrl, SceUID cbid);
 int SceAvcodecForDriver_13C530E4(SceAvcdecCtrl *pCtrl);
@@ -291,7 +290,6 @@ int SceAvcodecForDriver_90F394E6(SceAvcdecCtrl *pCtrl, SceUID cbid,
 			       unsigned int eventMask);
 int SceAvcodecForDriver_E7E14DE4(SceAvcdecCtrl *pCtrl, SceUID cbid,
 			       unsigned int eventMask);
-int SceAvcodecForDriver_58F1E353(unsigned int codecType);
 int SceAvcodecForDriver_A2085B6B(unsigned int codecType, unsigned int size);
 int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset);
 int SceAvcodecForDriver_2895CB6D(AvcencControl *pCtrl);

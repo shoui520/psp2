@@ -2,7 +2,7 @@
 
 #include <sysmem/debug.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2common/fios2.h>
+#include <fios2/fios2.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>

@@ -123,7 +123,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_9F8E589C
 	ScePervasiveForDriver_D326E15F
 	SceSysconForDriver_CBD6D8BC
-	ksceSblSmSchedProxyExecuteF00DCommand
+	SceSblSmSchedProxyForKernel_7894B6F0
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

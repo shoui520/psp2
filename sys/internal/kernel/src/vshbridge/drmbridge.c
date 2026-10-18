@@ -50,10 +50,10 @@ int drmBridgeB81B597A(void)
 
 int drmBridgeMlnpsnlAuth1(void *a, void *b, void *out1, void *out2)
 {
-	DRM_BRIDGE(SceSblGcAuthMgrMlnpsnlForDriver_DABC01F5(a, b, out1, out2));
+	DRM_BRIDGE(sceSblGcAuthMgrMlnpsnlAuth1ForDriver(a, b, out1, out2));
 }
 
 int drmBridgeMlnpsnlAuth2(void *a, void *b, void *out)
 {
-	DRM_BRIDGE(SceSblGcAuthMgrMlnpsnlForDriver_296ABD68(a, b, out));
+	DRM_BRIDGE(sceSblGcAuthMgrMlnpsnlAuth2ForDriver(a, b, out));
 }

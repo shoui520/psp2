@@ -319,11 +319,11 @@ set(MODULE_IMPORT_FUNCS
 	SceIofilemgrForDriver_DF57A75F
 	sceIoRead
 	sceIoClose
-	ksceSblRngPseudoRandomNumber
-	ksceSblSsDecryptWithPortability
-	ksceSblAimgrGetOpenPsId
-	ksceSblQafManagerGetQAFlags
-	ksceSblQafManagerGetQafName
+	_set_key_seed
+	SceSblSsMgrForDriver_934DB6B5
+	SceSblSsMgrForDriver_A5B5D269
+	SceSblSsMgrForKernel_83D254FF
+	SceSblSsMgrForKernel_E2DD0378
 	SceSblPostSsMgrForDriver_2C463AF1
 	SceSblPostSsMgrForDriver_4100B9E9
 	SceSblPostSsMgrForDriver_C977601E
@@ -400,9 +400,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_F4B98F66
 	SceDipswForDriver_A98FC2FD
 	SceDipswForDriver_B2AD48BE
-	SceZlibForDriver_20A122F8
-	SceZlibForDriver_5492B3F2
-	SceZlibForDriver_5B718E55
+	deflateInit2Padded_
+	deflateEnd
+	deflate
 	SceRtcForDriver_42A0DFCB
 	SceRtcForDriver_497B5DC9
 	SceRtcForDriver_DEC408D4

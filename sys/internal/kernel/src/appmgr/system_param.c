@@ -8,7 +8,6 @@
 #include <string.h>
 #include <acmgr/acmgr.h>
 
-extern int ksceRegMgrSystemParamGetStr(int id, char *buffer, SceSize size);
 extern SceUID g_appmgrAppMutex;
 
 /* The configuration is stored and transferred as a complete opaque value. */
@@ -34,7 +33,7 @@ int appmgrSystemParamDateTimeGetConf(void *conf)
 	return result;
 }
 
-int ksceAppMgrSystemParamDateTimeSetConf(const void *conf)
+int SceAppMgrForDriver_A9AA3A68(const void *conf)
 {
 	SceUInt32 syscallState = sceSyscallEnter();
 	int result = sceKernelLockMutex(g_appmgrAppMutex, 1, NULL);
@@ -63,22 +62,22 @@ int appmgrSystemParamGetInt(int parameter, int *value)
 	*value = 0;
 	switch (parameter) {
 	case 2:
-		result = ksceRegMgrSystemParamGetInt(0x008e3939, value);
+		result = sceRegMgrSystemParamGetInt(0x008e3939, value);
 		break;
 	case 4:
-		result = ksceRegMgrSystemParamGetInt(0x00971fa1, value);
+		result = sceRegMgrSystemParamGetInt(0x00971fa1, value);
 		break;
 	case 5:
-		result = ksceRegMgrSystemParamGetInt(0x002fdfb4, value);
+		result = sceRegMgrSystemParamGetInt(0x002fdfb4, value);
 		break;
 	case 7:
-		result = ksceRegMgrSystemParamGetInt(0x00023fc2, value);
+		result = sceRegMgrSystemParamGetInt(0x00023fc2, value);
 		break;
 	case 8:
-		result = ksceRegMgrSystemParamGetInt(0x00611dc9, value);
+		result = sceRegMgrSystemParamGetInt(0x00611dc9, value);
 		break;
 	case 9:
-		result = ksceRegMgrSystemParamGetInt(0x008a2ad7, value);
+		result = sceRegMgrSystemParamGetInt(0x008a2ad7, value);
 		break;
 	default:
 		result = (int)0x80800001;
@@ -108,7 +107,7 @@ int appmgrSystemParamGetString(int parameter, char *value, SceSize size)
 			goto out;
 		}
 		memset(value, 0, 17);
-		result = ksceRegMgrSystemParamGetStr(0x00033818, value, 17);
+		result = sceRegMgrSystemParamGetStr(0x00033818, value, 17);
 	} else if (parameter == 6) {
 		if (!SceSblACMgrForDriver_0924896F(0)) {
 			result = (int)0x80800009;
@@ -119,12 +118,12 @@ int appmgrSystemParamGetString(int parameter, char *value, SceSize size)
 			goto out;
 		}
 		memset(value, 0, 256);
-		result = ksceRegMgrSystemParamGetStr(0x00988b81, value, 256);
+		result = sceRegMgrSystemParamGetStr(0x00988b81, value, 256);
 	} else if (parameter == 1 && size > 2) {
 		value[0] = 0;
 		value[1] = 0;
 		value[2] = 0;
-		result = ksceRegMgrSystemParamGetStr(0x008f94f9, value, 3);
+		result = sceRegMgrSystemParamGetStr(0x008f94f9, value, 3);
 	} else {
 		result = (int)0x80800001;
 	}

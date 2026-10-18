@@ -165,25 +165,25 @@ sceKernelUnlockFastMutex:
 .size sceKernelUnlockFastMutex, .-sceKernelUnlockFastMutex
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblSsDecryptWithPortability
-.type ksceSblSsDecryptWithPortability, %function
-ksceSblSsDecryptWithPortability:
+.global SceSblSsMgrForDriver_934DB6B5
+.type SceSblSsMgrForDriver_934DB6B5, %function
+SceSblSsMgrForDriver_934DB6B5:
 	.word 0x10, 0x61e9428d, 0x934db6b5, 0xe320f000
-.size ksceSblSsDecryptWithPortability, .-ksceSblSsDecryptWithPortability
+.size SceSblSsMgrForDriver_934DB6B5, .-SceSblSsMgrForDriver_934DB6B5
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblAimgrGetOpenPsId
-.type ksceSblAimgrGetOpenPsId, %function
-ksceSblAimgrGetOpenPsId:
+.global SceSblSsMgrForDriver_A5B5D269
+.type SceSblSsMgrForDriver_A5B5D269, %function
+SceSblSsMgrForDriver_A5B5D269:
 	.word 0x10, 0x61e9428d, 0xa5b5d269, 0xe320f000
-.size ksceSblAimgrGetOpenPsId, .-ksceSblAimgrGetOpenPsId
+.size SceSblSsMgrForDriver_A5B5D269, .-SceSblSsMgrForDriver_A5B5D269
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblRngGenuineRandomNumber
-.type ksceSblRngGenuineRandomNumber, %function
-ksceSblRngGenuineRandomNumber:
+.global SceSblSsMgrForDriver_AC57F4F0
+.type SceSblSsMgrForDriver_AC57F4F0, %function
+SceSblSsMgrForDriver_AC57F4F0:
 	.word 0x10, 0x61e9428d, 0xac57f4f0, 0xe320f000
-.size ksceSblRngGenuineRandomNumber, .-ksceSblRngGenuineRandomNumber
+.size SceSblSsMgrForDriver_AC57F4F0, .-SceSblSsMgrForDriver_AC57F4F0
 .section .vitalink.fstubs.SceDebugForDriver, "ax", %progbits
 .balign 4
 .global SceDebugForDriver_374B7868
@@ -376,25 +376,25 @@ sceKernelUnlockFastMutex:
 .size sceKernelUnlockFastMutex, .-sceKernelUnlockFastMutex
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblSsDecryptWithPortability
-.type ksceSblSsDecryptWithPortability, %function
-ksceSblSsDecryptWithPortability:
+.global SceSblSsMgrForDriver_934DB6B5
+.type SceSblSsMgrForDriver_934DB6B5, %function
+SceSblSsMgrForDriver_934DB6B5:
 	.word 0x10, 0x61e9428d, 0x934db6b5, 0xe320f000
-.size ksceSblSsDecryptWithPortability, .-ksceSblSsDecryptWithPortability
+.size SceSblSsMgrForDriver_934DB6B5, .-SceSblSsMgrForDriver_934DB6B5
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblAimgrGetOpenPsId
-.type ksceSblAimgrGetOpenPsId, %function
-ksceSblAimgrGetOpenPsId:
+.global SceSblSsMgrForDriver_A5B5D269
+.type SceSblSsMgrForDriver_A5B5D269, %function
+SceSblSsMgrForDriver_A5B5D269:
 	.word 0x10, 0x61e9428d, 0xa5b5d269, 0xe320f000
-.size ksceSblAimgrGetOpenPsId, .-ksceSblAimgrGetOpenPsId
+.size SceSblSsMgrForDriver_A5B5D269, .-SceSblSsMgrForDriver_A5B5D269
 .section .vitalink.fstubs.SceSblSsMgrForDriver, "ax", %progbits
 .balign 4
-.global ksceSblRngGenuineRandomNumber
-.type ksceSblRngGenuineRandomNumber, %function
-ksceSblRngGenuineRandomNumber:
+.global SceSblSsMgrForDriver_AC57F4F0
+.type SceSblSsMgrForDriver_AC57F4F0, %function
+SceSblSsMgrForDriver_AC57F4F0:
 	.word 0x10, 0x61e9428d, 0xac57f4f0, 0xe320f000
-.size ksceSblRngGenuineRandomNumber, .-ksceSblRngGenuineRandomNumber
+.size SceSblSsMgrForDriver_AC57F4F0, .-SceSblSsMgrForDriver_AC57F4F0
 .section .vitalink.fstubs.SceRtcForDriver, "ax", %progbits
 .balign 4
 .global SceRtcForDriver_F1517B38

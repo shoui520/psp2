@@ -9,7 +9,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 
 ScePsCode aimgrPscode;
-SceOpenPsId aimgrOpenPsId;
+SceKernelOpenPsId aimgrOpenPsId;
 SceUID aimgrMutex;
 
 int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase);
@@ -34,14 +34,14 @@ int aimgrInit(void)
 		aimgrOpenPsId = parameters->openpsid;
 	} else {
 		aimgrPscode = (ScePsCode){ 0 };
-		aimgrOpenPsId = (SceOpenPsId){ { 0 } };
+		aimgrOpenPsId = (SceKernelOpenPsId){ { 0 } };
 	}
 	mutex = sceKernelCreateMutex("SceSblAimgrSm", 0, 0, NULL);
 	aimgrMutex = mutex;
 	return mutex >> 31;
 }
 
-int ksceSblAimgrGetPscode(ScePsCode *pscode)
+int SceSblSsMgrForDriver_E0DC2587(ScePsCode *pscode)
 {
 	if (!pscode)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
@@ -54,7 +54,7 @@ int ksceSblAimgrGetPscode(ScePsCode *pscode)
 	return 0;
 }
 
-int ksceSblAimgrGetPscode2(ScePsCode *pscode)
+int SceSblSsMgrForDriver_9A9676D0(ScePsCode *pscode)
 {
 	uint8_t productMode = 0;
 	ScePsCode value;
@@ -96,7 +96,7 @@ int ksceSblAimgrGetPscode2(ScePsCode *pscode)
 	return 0;
 }
 
-int ksceSblAimgrGetConsoleId(SceConsoleId *consoleId)
+int SceSblSsMgrForDriver_FC6CDD68(SceConsoleId *consoleId)
 {
 	int ret;
 
@@ -114,7 +114,7 @@ int ksceSblAimgrGetConsoleId(SceConsoleId *consoleId)
 	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 
-int ksceSblAimgrGetOpenPsId(SceOpenPsId *openPsId)
+int SceSblSsMgrForDriver_A5B5D269(SceKernelOpenPsId *openPsId)
 {
 	if (!openPsId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
@@ -123,7 +123,7 @@ int ksceSblAimgrGetOpenPsId(SceOpenPsId *openPsId)
 	return 0;
 }
 
-int ksceSblAimgrGetVisibleId(void *visibleId)
+int SceSblSsMgrForDriver_04843835(void *visibleId)
 {
 	int ret;
 
@@ -141,7 +141,7 @@ int ksceSblAimgrGetVisibleId(void *visibleId)
 	return sceKernelUnlockMutex(aimgrMutex, 1);
 }
 
-int ksceSblSsCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
+int SceSblSsMgrForDriver_B8B298FD(const uint32_t *parameters, void *passPhrase)
 {
 	int ret;
 

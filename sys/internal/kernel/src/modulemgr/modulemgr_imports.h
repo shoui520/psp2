@@ -29,15 +29,10 @@
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>
 #include <excpmgr/excpmgr.h>
+#include <authmgr/sblauthmgr.h>
 
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);
-int ksceSblAuthMgrCompareSwVersion(SceUInt32 version);
-int ksceSblAuthMgrOpen(int *ctx);
-int ksceSblAuthMgrClose(int ctx);
-int ksceSblAuthMgrAuthHeader(int ctx, const void *header, SceSize size, void *info);
-int ksceSblAuthMgrSetupAuthSegment(int ctx, int index);
-int ksceSblAuthMgrLoadBlock(int ctx, void *buf, SceSize size);
 
 /* SceProcessmgrForKernel / SceProcessmgrForDriver */
 

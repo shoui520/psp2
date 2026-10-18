@@ -10,7 +10,7 @@
 #include <sysmem/aes.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/utils.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/procevent.h>
 #include <rtc/rtc.h>
 #include <sysmem/sysmem.h>
@@ -223,13 +223,13 @@ typedef union KrmStateKey {
 	unsigned char bytes[32];
 	struct {
 		char label[16];
-		SceOpenPsId id;
+		SceKernelOpenPsId id;
 	} seed;
 } KrmStateKey;
 
 extern uint32_t g_krmStateIv[4];
 extern KrmStateKey g_krmStateKey;
-int KrmDriverGetOpenPsId(SceOpenPsId *id);
+int KrmDriverGetOpenPsId(SceKernelOpenPsId *id);
 int KrmDriverSha256(void *digest, const void *src, SceSize size);
 int KrmDriverIsAccessible(const void *addr, SceSize size, unsigned int flags);
 int KrmDriverCopyFromUser(void *dst, const void *src, SceSize size);
@@ -245,10 +245,10 @@ typedef struct KrmSha256Digest {
 } KrmSha256Digest;
 
 extern KrmEccPrivateKey g_krmProvisionedPrimaryKey __attribute__((aligned(8)));
-extern SceOpenPsId g_krmProvisionedPrimaryKeyIv __attribute__((aligned(8)));
-extern SceOpenPsId g_krmProvisionedPrimaryDigestIv __attribute__((aligned(8)));
-extern SceOpenPsId g_krmProvisionedAlternateKeyIv __attribute__((aligned(8)));
-extern SceOpenPsId g_krmProvisionedAlternateDigestIv __attribute__((aligned(8)));
+extern SceKernelOpenPsId g_krmProvisionedPrimaryKeyIv __attribute__((aligned(8)));
+extern SceKernelOpenPsId g_krmProvisionedPrimaryDigestIv __attribute__((aligned(8)));
+extern SceKernelOpenPsId g_krmProvisionedAlternateKeyIv __attribute__((aligned(8)));
+extern SceKernelOpenPsId g_krmProvisionedAlternateDigestIv __attribute__((aligned(8)));
 extern KrmSha256Digest g_krmProvisionedPrimaryDigest __attribute__((aligned(8)));
 extern KrmSha256Digest g_krmProvisionedAlternateDigest __attribute__((aligned(8)));
 extern KrmEccPrivateKey g_krmProvisionedAlternateKey __attribute__((aligned(8)));
@@ -295,7 +295,6 @@ int KrmEccVerifyDigest(const void *digest, const KrmEccPublicKey *publicKey,
 int KrmEccInitialize(KrmEccContext *ctx);
 int KrmEccImportPoint(const KrmEccPublicKey *publicKey, KrmEccPublicKey *point);
 int KrmEccValidatePoint(const KrmEccPublicKey *point, KrmEccContext *ctx);
-int ksceSblRngGenuineRandomNumber(void *block);
 
 extern struct ThreadmgrFastMutex g_krmDriverMutex;
 extern SceUID g_krmDriverPid;

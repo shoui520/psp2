@@ -2,9 +2,9 @@
 
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
+#include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 
 SceUID g_appmgrCore2Mutex = -1;

@@ -3,7 +3,7 @@
  */
 #include <sysmem/sysroot.h>
 #include <appmgr/appmgr_launch.h>
-#include <psp2kern/appmgr.h>
+#include <appmgr/appmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
@@ -11,7 +11,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/registrymgr.h>
+#include <regmgr/regmgr.h>
 #include <stdio.h>
 #include <string.h>
 #include "deci4p_loadp_imports.h"
@@ -1076,7 +1076,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 			SceDebugForDriver_02B04343(0xf, SCE_DBGINFO_FUNC(3948, "pdLoadpProcSpawnCmd"),
 						 "0x%08x\n", ret);
 		if (loadpAppResult != 0) {
-			ret = ksceAppMgrKillProcess(pid);
+			ret = sceAppMgrKillAppForDebugger(pid);
 #if FW_DEBUG
 			if (ret < 0)
 				SceDebugForDriver_D9703808(1, 0xf,
@@ -1235,14 +1235,14 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 			goto free_args;
 		}
 		/* appmgr passes the parameter on to process creation as is */
-		pid = ksceAppMgrLaunchAppByPath(path, argBuf, size, appFlags,
+		pid = sceAppMgrLaunchAppForDebugger(path, argBuf, size, appFlags,
 						(const SceAppMgrLaunchParam *)&param, (void *)launchParam);
 		if (pid < 0) {
 			result = pdLoadpKernelErrToLoadpErr(pid);
 			goto free_args;
 		}
 		if (debug && !SceSblACMgrForDriver_4CBD6156(pid)) {
-			ret = ksceAppMgrKillProcess(pid);
+			ret = sceAppMgrKillAppForDebugger(pid);
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xf, 3802, "sceAppMgrKillAppForDebugger failed 0x%08x\n", ret);
 			result = LOADP_RESULT_DENIED;
@@ -1313,7 +1313,7 @@ static inline __attribute__((always_inline)) void loadpKillCmd(void)
 		result = LOADP_RESULT_DENIED;
 		goto reply;
 	}
-	ret = ksceAppMgrKillProcess(pid);
+	ret = sceAppMgrKillAppForDebugger(pid);
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
 		goto reply;
@@ -1811,7 +1811,7 @@ reply:
 	}										\
 	memset(info, 0, LOADP_LAUNCH_INFO_SIZE);					\
 	info->size = LOADP_LAUNCH_INFO_SIZE;					\
-	pid = ksceAppMgrLaunchAppByPath(_self, _args, _argsSize, 0,			\
+	pid = sceAppMgrLaunchAppForDebugger(_self, _args, _argsSize, 0,			\
 					(const SceAppMgrLaunchParam *)&param, info);	\
 	if (pid < 0) {									\
 		result = pdLoadpKernelErrToLoadpErr(pid);					\
@@ -1821,7 +1821,7 @@ reply:
 	if (ret < 0)									\
 		SCE_PRINTF_WITH_INFO(0xf, _lWait, "0x%08x\n", ret);			\
 	if (loadpAppResult != 0) {							\
-		ret = ksceAppMgrKillProcess(pid);					\
+		ret = sceAppMgrKillAppForDebugger(pid);					\
 		if (ret < 0)								\
 			SCE_DBG_PRINTF(0xf, _lKill,					\
 				       "sceAppMgrKillAppForDebugger failed 0x%08x\n", ret);	\
@@ -2330,7 +2330,7 @@ __attribute__((noinline)) int destroyOtherApp(SceUID pid)
 	int ret;
 
 	if (SceSblACMgrForDriver_AD717E7A(0)) {
-		ret = ksceAppMgrDestroyOtherAppByPid(pid);
+		ret = sceAppMgrDestroyAppForTest(pid);
 		sceSyscallLeave(t);
 		return ret;
 	}

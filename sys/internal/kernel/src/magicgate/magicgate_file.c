@@ -3,7 +3,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <rtc/rtc.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
@@ -542,7 +542,7 @@ createDirectory:
 	result = sceMsifGetMediaId((uint8_t *)&workspace.identity);
 	if (result < 0)
 		goto failed;
-	result = ksceSblAimgrGetOpenPsId((SceOpenPsId *)&workspace.info);
+	result = SceSblSsMgrForDriver_A5B5D269((SceKernelOpenPsId *)&workspace.info);
 	if (result < 0)
 		goto failed;
 	result = encryptRecordEcb(&workspace.identityKey, &workspace.info,

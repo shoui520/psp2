@@ -141,9 +141,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_E87D1777
 	SceSblAIMgrForDriver_14345161
 	SceSblAIMgrForDriver_71608CA3
-	ksceSblSsSetNvsData
-	ksceSblAimgrGetOpenPsId
-	ksceSblSsGetNvsData
+	sceSblSsSetNvsData
+	SceSblSsMgrForDriver_A5B5D269
+	sceSblSsGetNvsData
 	SceDebugLedForDriver_51C5325A
 )
 set(MODULE_IMPORT_VARS

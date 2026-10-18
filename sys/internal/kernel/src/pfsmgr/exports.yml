@@ -11,19 +11,19 @@ ScePfsMgr:
       version: 1
       nid: 0xA067B56F
       functions:
-        - kscePfsAcidDirUnmount: 0x00C8AF80
+        - ScePfsMgrForKernel_00C8AF80: 0x00C8AF80
         - ScePfsMgrForKernel_27FB7618: 0x27FB7618
-        - kscePfsMount2: 0x2D48AEA2
-        - kscePfsDisapprove: 0x2D67D8CA
-        - kscePfsAcidDirMount: 0x4A4A8243
+        - ScePfsMgrForKernel_2D48AEA2: 0x2D48AEA2
+        - ScePfsMgrForKernel_2D67D8CA: 0x2D67D8CA
+        - ScePfsMgrForKernel_4A4A8243: 0x4A4A8243
         - ScePfsMgrForKernel_4C148288: 0x4C148288
-        - kscePfsUnmount: 0x680BC384
+        - ScePfsMgrForKernel_680BC384: 0x680BC384
         - ScePfsMgrForKernel_7E4B76E6: 0x7E4B76E6
         - ScePfsMgrForKernel_806D2EA1: 0x806D2EA1
-        - kscePfsAcidDirApprove: 0x8CDA249A
-        - kscePfsMount: 0xA772209C
-        - kscePfsAcidDirSet: 0xB0CC0A1A
-        - kscePfsApprove: 0xD8D0FEE5
+        - ScePfsMgrForKernel_8CDA249A: 0x8CDA249A
+        - ScePfsMgrForKernel_A772209C: 0xA772209C
+        - ScePfsMgrForKernel_B0CC0A1A: 0xB0CC0A1A
+        - ScePfsMgrForKernel_D8D0FEE5: 0xD8D0FEE5
         - ScePfsMgrForKernel_E9D672AB: 0xE9D672AB
     ScePfsFacadeForKernel:
       syscall: false

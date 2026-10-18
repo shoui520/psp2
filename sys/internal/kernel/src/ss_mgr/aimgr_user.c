@@ -7,7 +7,7 @@
 
 /* kept out of line in every build */
 __attribute__((noinline))
-static int aimgrGetOpenPsIdForUser(SceOpenPsId *openPsId)
+static int aimgrGetOpenPsIdForUser(SceKernelOpenPsId *openPsId)
 {
 	SceUInt32 syscallFrame;
 	int ret;
@@ -16,21 +16,21 @@ static int aimgrGetOpenPsIdForUser(SceOpenPsId *openPsId)
 		return AIMGR_ERROR_INVALID_ARGUMENT;
 
 	syscallFrame = sceSyscallEnter();
-	ret = ksceSblAimgrGetOpenPsId(openPsId);
+	ret = SceSblSsMgrForDriver_A5B5D269(openPsId);
 	sceSyscallLeave(syscallFrame);
 	return ret;
 }
 
-int _sceKernelGetOpenPsId(SceOpenPsId *openPsId)
+int _sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId)
 {
-	SceOpenPsId *kernelCopy;
+	SceKernelOpenPsId *kernelCopy;
 	int ret, copyRet;
 
 	if (!openPsId)
 		return aimgrGetOpenPsIdForUser(NULL);
 
 	kernelCopy = __builtin_alloca(sizeof(*kernelCopy));
-	*kernelCopy = (SceOpenPsId){ { 0 } };
+	*kernelCopy = (SceKernelOpenPsId){ { 0 } };
 	ret = aimgrGetOpenPsIdForUser(kernelCopy);
 	copyRet = SceSysmemForDriver_6D88EF8A(openPsId, kernelCopy, sizeof(*kernelCopy));
 	if (copyRet < 0)

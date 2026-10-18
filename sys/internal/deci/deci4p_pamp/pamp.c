@@ -311,7 +311,7 @@ static inline __attribute__((always_inline)) int pampCompress(PampContext *ctx, 
 			ctx->traceOffset += size;
 			ctx->traceRemaining -= size;
 		}
-		ret = SceZlibForDriver_5B718E55(&ctx->zstream,
+		ret = deflate(&ctx->zstream,
 				ctx->traceRemaining ? Z_NO_FLUSH : Z_FINISH);
 		if ((unsigned)ret > 1) {
 			if (initial)
@@ -327,7 +327,7 @@ static inline __attribute__((always_inline)) int pampCompress(PampContext *ctx, 
 	packet->length = produced + 4;
 	if (ctx->zfinished) {
 		packet->chunk.more = 0;
-		SceZlibForDriver_5492B3F2(&ctx->zstream);
+		deflateEnd(&ctx->zstream);
 	} else {
 		packet->chunk.more = 1;
 	}
@@ -615,7 +615,7 @@ static int pampStreamTrace(PampContext *ctx, PampPacket *packet)
 		ctx->zstream.zfree = pampZfree;
 		ctx->zstream.opaque = (void *)ctx->heap;
 		ctx->zstream.next_in = NULL;
-		SceZlibForDriver_25F28DA7(&ctx->zstream, 1, SCE_ZLIB_VERSION, sizeof(ctx->zstream));
+		deflateInit_(&ctx->zstream, 1, SCE_ZLIB_VERSION, sizeof(ctx->zstream));
 		ctx->zfinished = 0;
 		ret = pampCompress(ctx, packet, 1);
 		if (ret)

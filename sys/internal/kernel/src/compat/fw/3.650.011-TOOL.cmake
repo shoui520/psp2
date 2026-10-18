@@ -159,17 +159,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterIntrHandler
 	sceKernelEnableIntr
 	sceKernelReleaseIntrHandler
-	ksceSblFwLoaderLoad
-	ksceSblFwLoaderLock
-	ksceSblFwLoaderUnlock
-	ksceSblSmCommStopSm
-	ksceSblSmCommStartSmFromFile
-	ksceSblSmCommCallFunc
+	sceSblFwLoaderLoad
+	sceSblFwLoaderSetPath
+	sceSblFwLoaderClose
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_7863A0CC
+	SceSblSmCommForKernel_DB9FC204
 	SceSblAIMgrForDriver_F4B98F66
 	sceSblACMgrGetMediaType
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_FD00C72A
-	ksceSblRngPseudoRandomNumber
+	_set_key_seed
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
@@ -197,9 +197,9 @@ set(MODULE_IMPORT_FUNCS
 	scePowerIsSuspendRequired
 	scePowerGetBatteryLifeTime
 	ScePowerForDriver_FFC84E69
-	ksceNpDrmReadActData
-	ksceNpDrmGetRifPspKey
-	ksceNpDrmGetRifInfo
+	SceNpDrmForDriver_D91C3BCE
+	SceNpDrmForDriver_DACB71F4
+	SceNpDrmForDriver_DB406EAE
 	SceGrabForDriver_072B8D93
 	SceGrabForDriver_379130B2
 	SceGrabForDriver_E9C25A28

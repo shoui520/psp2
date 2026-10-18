@@ -5,13 +5,12 @@
 #include <mgkeymgr/mgkeymgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/utils.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <arm_neon.h>
 #include <string.h>
 
 int MsproalGetSystemInformation(struct MsproalSystemInformation *information);
 int MsproalGetMediaInformation(struct MsproalMediaInformation *information);
-int ksceSblDmac5Rnd(void *result, unsigned int size, int coherent);
 
 static const ScePortabilityData gMsifParameterPrimary = {
 	.msg_size = 32,
@@ -67,10 +66,10 @@ int get_ecdsa_param(struct MsifEcdsaPoint *publicKey, struct MsifEcdsaCurve *cur
 	if (gMsifParametersInitialized)
 		goto publish;
 	portability = (ScePortabilityData){ .msg_size = 32 };
-	if (ksceSblSsDecryptWithPortability(4, (void *)gMsifParameterIv,
+	if (SceSblSsMgrForDriver_934DB6B5(4, (void *)gMsifParameterIv,
 		(ScePortabilityData *)&gMsifParameterPrimary, &portability) ||
 		(memcmp(portability.msg, gMsifParameterIv, 16) &&
-		 ksceSblSsDecryptWithPortability(4, (void *)gMsifParameterIv,
+		 SceSblSsMgrForDriver_934DB6B5(4, (void *)gMsifParameterIv,
 			(ScePortabilityData *)&gMsifParameterFallback, &portability))) {
 		__builtin_memset(&portability, 0, sizeof(portability));
 		return -204;
@@ -136,7 +135,7 @@ int MsifComputeMediaMac(uint64_t *mac, const uint64_t *data, unsigned int length
 	uint64_t encrypted, bigEndian, chain = 0;
 	int result;
 
-	result = ksceSblDmac5DesEcbEncWithKeyslot(&block, &encrypted, 8,
+	result = SceSblSsMgrForDriver_37DD5CBF(&block, &encrypted, 8,
 		28, 192, 1);
 	if (result < 0)
 		return result;
@@ -176,7 +175,7 @@ int MsifComputeMediaMac(uint64_t *mac, const uint64_t *data, unsigned int length
 
 		__builtin_prefetch(data + 6);
 		block.value = value ^ chain;
-		result = ksceSblDmac5DesEcbEncWithKeyslot(&block, &encrypted, 8,
+		result = SceSblSsMgrForDriver_37DD5CBF(&block, &encrypted, 8,
 			28, 192, 1);
 		if (result < 0)
 			return result;
@@ -192,7 +191,7 @@ int MsifComputeMediaMac(uint64_t *mac, const uint64_t *data, unsigned int length
 			memset(block.bytes + length + 1, 0, 7 - length);
 		block.value ^= chain ^ secondSubkey.value;
 	}
-	result = ksceSblDmac5DesEcbEncWithKeyslot(&block, &encrypted, 8,
+	result = SceSblSsMgrForDriver_37DD5CBF(&block, &encrypted, 8,
 		28, 192, 1);
 	if (result < 0)
 		return result;
@@ -222,7 +221,7 @@ int MsifAuthenticateMedia(struct MsproalHandle *handle, uint8_t *mediaId)
 	result = call_get_key_master_gen_no(&generation);
 	if (result < 0)
 		return result;
-	result = ksceSblDmac5Rnd(&hostChallenge, sizeof(hostChallenge), 1);
+	result = sceSblDmac5Rnd(&hostChallenge, sizeof(hostChallenge), 1);
 	if (result < 0)
 		return result;
 	message.hostChallenge = hostChallenge;

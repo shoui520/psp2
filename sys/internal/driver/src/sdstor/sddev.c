@@ -3,7 +3,7 @@
 #include "sdstor_internal.h"
 #include <sysmem/debug.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/gcauthmgr/gc_auth.h>
+#include <gcauthmgr/sblgcauthmgrgcauth.h>
 #include <sdif/sdif.h>
 #include <msif/msif.h>
 #include <umass/umass.h>
@@ -231,7 +231,7 @@ int sddev_power_on(SceSdstorSddev *device)
 						mmc->parameters.capacity / mmc->blockLength;
 				device->mediaInfo.eraseBlockCount = mmc->activeEraseGroupSize;
 				device->sdif_ctx = mmc;
-				result = ksceSblGcAuthMgrGcAuthCartAuthentication(1);
+				result = SceSblGcAuthMgrGcAuthForDriver_68781760(1);
 				goto initialized;
 			}
 			if (result == (int)0x8032001a)

@@ -15,7 +15,7 @@ SceRegistryMgr:
         - sceRegMgrGetKeyInt: 0x16DDF3DC
         - sceRegMgrIsBlueScreen: 0x282027B7
         - sceRegMgrResetRegistryLv: 0x2B5F3E20
-        - ksceRegMgrSystemParamGetInt: 0x347C1BDB
+        - sceRegMgrSystemParamGetInt: 0x347C1BDB
         - sceRegMgrSetKeys: 0x34E550DA
         - sceRegMgrGetInitVals: 0x3A9DE7C5
         - sceRegMgrSetKeyStr: 0x41D320C5
@@ -24,9 +24,9 @@ SceRegistryMgr:
         - sceRegMgrGetKeys: 0x5B161504
         - sceRegMgrStopCallback: 0x6A8E2FB4
         - sceRegMgrGetRegVersion: 0x74A0FB10
-        - ksceRegMgrSystemParamGetBin: 0x7FFE2CDF
+        - sceRegMgrSystemParamGetBin: 0x7FFE2CDF
         - sceRegMgrRegisterCallback: 0x82A4464D
-        - ksceRegMgrSystemParamGetStr: 0x877ADB3F
+        - sceRegMgrSystemParamGetStr: 0x877ADB3F
         - sceRegMgrAddRegistryCallback: 0xA86F0A71
         - sceRegMgrDbRestore: 0xA87D2562
         - sceRegMgrDbBackup: 0xB68B5422
@@ -89,9 +89,9 @@ SceRegistryMgr:
       nid: 0x0B351269
       functions:
         - sceRegMgrSystemIsBlueScreen: 0x169A0D1D
-        - sceRegMgrSystemParamGetInt: 0x347C1BDB
-        - sceRegMgrSystemParamGetBin: 0x7FFE2CDF
-        - sceRegMgrSystemParamGetStr: 0x877ADB3F
+        - sceRegMgrSystemParamGetIntForUser: 0x347C1BDB
+        - sceRegMgrSystemParamGetBinForUser: 0x7FFE2CDF
+        - sceRegMgrSystemParamGetStrForUser: 0x877ADB3F
         - sceRegMgrSystemParamSetInt: 0xC8F73311
         - sceRegMgrSystemParamSetStr: 0xCB3246E3
         - sceRegMgrSystemParamSetBin: 0xD5A73557

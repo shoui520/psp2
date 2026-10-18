@@ -18,18 +18,18 @@ SceAvcodec:
         - SceAvcodecForDriver_12DAE04A: 0x12DAE04A
         - SceAvcodecForDriver_13C530E4: 0x13C530E4
         - SceAvcodecForDriver_16B501C9: 0x16B501C9
-        - ksceAvcencGetNalUnit: 0x1A584DB7
-        - ksceJpegEncoderInit: 0x1BE9F5A4
+        - SceAvcodecForDriver_1A584DB7: 0x1A584DB7
+        - SceAvcodecForDriver_1BE9F5A4: 0x1BE9F5A4
         - SceAvcodecForDriver_20892154: 0x20892154
         - SceAvcodecForDriver_20C83C00: 0x20C83C00
-        - ksceAvcencEncodeFlush: 0x229AB2CF
+        - SceAvcodecForDriver_229AB2CF: 0x229AB2CF
         - SceAvcodecForDriver_22D7B653: 0x22D7B653
         - SceAvcodecForDriver_2641888C: 0x2641888C
         - SceAvcodecForDriver_27211864: 0x27211864
-        - ksceAvcencDeleteEncoder: 0x2895CB6D
+        - SceAvcodecForDriver_2895CB6D: 0x2895CB6D
         - SceAvcodecForDriver_2A0AF392: 0x2A0AF392
         - SceAvcodecForDriver_2C7A9841: 0x2C7A9841
-        - ksceJpegEncoderSetOutputAddr: 0x2C8271BA
+        - SceAvcodecForDriver_2C8271BA: 0x2C8271BA
         - SceAvcodecForDriver_301CCA25: 0x301CCA25
         - SceAvcodecForDriver_32DEE3C5: 0x32DEE3C5
         - SceAvcodecForDriver_361238E2: 0x361238E2
@@ -38,70 +38,70 @@ SceAvcodec:
         - SceAvcodecForDriver_427914D5: 0x427914D5
         - SceAvcodecForDriver_43985AA8: 0x43985AA8
         - SceAvcodecForDriver_43A9CD35: 0x43A9CD35
-        - ksceJpegEncoderEncode: 0x468949D7
+        - SceAvcodecForDriver_468949D7: 0x468949D7
         - SceAvcodecForDriver_47D8E150: 0x47D8E150
         - SceAvcodecForDriver_48247A20: 0x48247A20
         - SceAvcodecForDriver_48DECA56: 0x48DECA56
         - SceAvcodecForDriver_4AE6B437: 0x4AE6B437
-        - ksceJpegEncoderGetContextSize: 0x4DB66E3A
+        - SceAvcodecForDriver_4DB66E3A: 0x4DB66E3A
         - SceAvcodecForDriver_4DD3826D: 0x4DD3826D
-        - ksceAvcencCsc: 0x4F11F915
+        - SceAvcodecForDriver_4F11F915: 0x4F11F915
         - SceAvcodecForDriver_536C8296: 0x536C8296
-        - ksceJpegEncoderSetHeaderMode: 0x58835DCB
+        - SceAvcodecForDriver_58835DCB: 0x58835DCB
         - SceAvcodecForDriver_58F1E353: 0x58F1E353
-        - ksceAvcencQueryEncoderMemSize: 0x5C3434FB
+        - SceAvcodecForDriver_5C3434FB: 0x5C3434FB
         - SceAvcodecForDriver_663B3195: 0x663B3195
         - SceAvcodecForDriver_6DC39EDC: 0x6DC39EDC
         - SceAvcodecForDriver_6E250A5F: 0x6E250A5F
         - SceAvcodecForDriver_6F1CF77F: 0x6F1CF77F
-        - ksceAvcencCreateEncoderInternal: 0x71C37694
+        - SceAvcodecForDriver_71C37694: 0x71C37694
         - SceAvcodecForDriver_73401748: 0x73401748
-        - ksceAvcencQueryEncoderMemSizeBasic: 0x7385FB51
+        - SceAvcodecForDriver_7385FB51: 0x7385FB51
         - SceAvcodecForDriver_77529FD2: 0x77529FD2
         - SceAvcodecForDriver_78BA8E98: 0x78BA8E98
-        - ksceAvcencSetAvailablePreset: 0x7DC13C29
+        - SceAvcodecForDriver_7DC13C29: 0x7DC13C29
         - SceAvcodecForDriver_7E8CC4E5: 0x7E8CC4E5
         - SceAvcodecForDriver_80F63723: 0x80F63723
         - SceAvcodecForDriver_823E187E: 0x823E187E
         - SceAvcodecForDriver_864FC454: 0x864FC454
         - SceAvcodecForDriver_866B49BF: 0x866B49BF
-        - ksceJpegEncoderEnd: 0x86AD5A4F
+        - SceAvcodecForDriver_86AD5A4F: 0x86AD5A4F
         - SceAvcodecForDriver_86B1ACC5: 0x86B1ACC5
         - SceAvcodecForDriver_90F394E6: 0x90F394E6
-        - ksceJpegEncoderSetCompressionRatio: 0x91B27CF3
+        - SceAvcodecForDriver_91B27CF3: 0x91B27CF3
         - SceAvcodecForDriver_91E94B76: 0x91E94B76
         - SceAvcodecForDriver_95E8AFCA: 0x95E8AFCA
-        - ksceAvcencEncode: 0xA0E63278
+        - SceAvcodecForDriver_A0E63278: 0xA0E63278
         - SceAvcodecForDriver_A2085B6B: 0xA2085B6B
         - SceAvcodecForDriver_A6CAE217: 0xA6CAE217
-        - ksceAvcencCreateEncoder: 0xB2A51EB0
+        - SceAvcodecForDriver_B2A51EB0: 0xB2A51EB0
         - SceAvcodecForDriver_B6882013: 0xB6882013
-        - ksceJpegEncoderCsc: 0xB77B5BFC
+        - SceAvcodecForDriver_B77B5BFC: 0xB77B5BFC
         - SceAvcodecForDriver_B8A9632A: 0xB8A9632A
         - SceAvcodecForDriver_BC244D21: 0xBC244D21
         - SceAvcodecForDriver_BC55D10F: 0xBC55D10F
         - SceAvcodecForDriver_BCB769EB: 0xBCB769EB
-        - ksceAvcencQueryEncoderMemSizeInternal: 0xBF3835E2
+        - SceAvcodecForDriver_BF3835E2: 0xBF3835E2
         - SceAvcodecForDriver_C114C499: 0xC114C499
         - SceAvcodecForDriver_C363B31A: 0xC363B31A
         - SceAvcodecForDriver_C518A109: 0xC518A109
         - SceAvcodecForDriver_C5C10C8B: 0xC5C10C8B
-        - ksceAvcencCreateEncoderBasic: 0xC5E720E2
+        - SceAvcodecForDriver_C5E720E2: 0xC5E720E2
         - SceAvcodecForDriver_C8366BB8: 0xC8366BB8
         - SceAvcodecForDriver_C84AFFC4: 0xC84AFFC4
         - SceAvcodecForDriver_C93DA0C7: 0xC93DA0C7
         - SceAvcodecForDriver_C99242F5: 0xC99242F5
         - SceAvcodecForDriver_C9EF7057: 0xC9EF7057
         - SceAvcodecForDriver_CD7FE8D0: 0xCD7FE8D0
-        - ksceJpegEncoderSetValidRegion: 0xD0647B74
+        - SceAvcodecForDriver_D0647B74: 0xD0647B74
         - SceAvcodecForDriver_D2ACCE22: 0xD2ACCE22
         - SceAvcodecForDriver_D46B8463: 0xD46B8463
         - SceAvcodecForDriver_D5A34236: 0xD5A34236
         - SceAvcodecForDriver_D7CD7F82: 0xD7CD7F82
         - SceAvcodecForDriver_D9FCDF3E: 0xD9FCDF3E
-        - ksceAvcencEncodeStop: 0xDE515BFF
+        - SceAvcodecForDriver_DE515BFF: 0xDE515BFF
         - SceAvcodecForDriver_DFC0AAC6: 0xDFC0AAC6
-        - ksceAvcencSetEncoderParameter: 0xE0232BFE
+        - SceAvcodecForDriver_E0232BFE: 0xE0232BFE
         - SceAvcodecForDriver_E355CAAE: 0xE355CAAE
         - SceAvcodecForDriver_E4F668C5: 0xE4F668C5
         - SceAvcodecForDriver_E782E735: 0xE782E735

@@ -10,6 +10,7 @@
 #include <string.h>
 #include "appmgr_device.h"
 #include "appmgr_event.h"
+#include <appmgr/appmgr.h>
 
 extern int appmgrSystemParamGetIntSyscall(int parameter, int *value);
 extern int appmgrSystemParamGetStringSyscall(int parameter, char *value, SceSize size);
@@ -86,70 +87,70 @@ int _sceAppMgrGetVs0UserDataDrive(char *mountPoint)
 		  appmgrGetVs0UserDataDriveSyscall((char *)k));
 }
 
-STUB(ksceAppMgrDrmClose)
-STUB(ksceAppMgrCloudDataSetMcId)
+STUB(SceAppMgrForDriver_088670A6)
+STUB(SceAppMgrForDriver_0B94BB90)
 STUB(sceAppMgrKillAppByNameForDebugger)
-STUB(ksceAppMgrCloudDataGetMcId)
-STUB(ksceAppMgrAppParamGetInt)
-STUB(ksceAppMgrFakeSaveDataCreateMount)
-STUB(ksceAppMgrMmsMount)
+STUB(SceAppMgrForDriver_1286AF64)
+STUB(SceAppMgrForDriver_12CE29F7)
+STUB(sceAppMgrFakeSaveDataCreateMount)
+STUB(SceAppMgrForDriver_13D54107)
 STUB(SceAppMgrForDriver_1574E1A4)
-STUB(ksceAppMgrCheckContentInstallPeriod)
+STUB(SceAppMgrForDriver_193784A9)
 STUB(sceAppMgrLaunchAppByNameForDebugger)
-STUB(ksceAppMgrAppUmount)
+STUB(SceAppMgrForDriver_1DE3B7C4)
 STUB(sceAppMgrGetPidByNameForDebugger)
-STUB(ksceAppMgrSaveDataUmount)
-STUB(ksceAppMgrCloudDataSetupKey)
+STUB(SceAppMgrForDriver_2B080268)
+STUB(SceAppMgrForDriver_2FAA6ABD)
 STUB(SceAppMgrForDriver_30947DF4)
-STUB(ksceAppMgrWorkDirMount)
+STUB(SceAppMgrForDriver_3A0A9B82)
 STUB(SceAppMgrForDriver_3B4F305B)
-STUB(ksceAppMgrPhotoMount)
-STUB(ksceAppMgrAcInstGetAcdirParam)
+STUB(SceAppMgrForDriver_43A35729)
+STUB(sceAppMgrAcInstGetAcdirParam)
 STUB(sceAppMgrGetAppIdByNameForDebugger)
 STUB(sceAppMgrLaunchAppForTest2)
-STUB(ksceAppMgrCloudDataVerifyHeader)
-STUB(ksceAppMgrAppDataMountById)
-STUB(ksceAppMgrLocalBackupGetOfflineId)
-STUB(ksceAppMgrLocalBackupVerifyOfflineHeader)
-STUB(ksceAppMgrSaveDataNotifyBackupFinished)
-STUB(ksceAppMgrCloudDataSrcMount)
-STUB(ksceAppMgrUpdateRifInfo)
+STUB(SceAppMgrForDriver_55D48190)
+STUB(SceAppMgrForDriver_5E311F71)
+STUB(SceAppMgrForDriver_61B13981)
+STUB(SceAppMgrForDriver_62E98C42)
+STUB(sceAppMgrSaveDataNotifyBackupFinished)
+STUB(sceAppMgrCloudDataSrcMount)
+STUB(sceAppMgrUpdateRifInfo)
 STUB(SceAppMgrForDriver_99AA37C1)
-STUB(ksceAppMgrSaveDataLocalBackupTargetGetList)
-STUB(ksceAppMgrUmount)
-STUB(ksceAppMgrIsExclusiveProcessRunning)
+STUB(SceAppMgrForDriver_9B3F7D66)
+STUB(SceAppMgrForDriver_A714BB35)
+STUB(sceAppMgrIsExclusiveProcessRunning)
 STUB(sceAppMgrGetSystemDataFile)
-STUB(ksceAppMgrLaunchAppByPath)
-STUB(ksceAppMgrAppDataMount)
-STUB(ksceAppMgrCloudDataDstCreateMount)
-STUB(ksceAppMgrRegisterPath)
-STUB(ksceAppMgrSaveDataLocalBackupTargetRemoveItem)
-STUB(ksceAppMgrGameDataMount)
-STUB(ksceAppMgrSaveDataSlotGetParam)
-STUB(ksceAppMgrGetBootParam)
+STUB_FUNC(SceUID, sceAppMgrLaunchAppForDebugger, (const char *path, const char *args, SceSize argSize,
+	  unsigned int flags, const SceAppMgrLaunchParam *param, void *opt))
+STUB(SceAppMgrForDriver_B1D3C287)
+STUB(sceAppMgrCloudDataDstCreateMount)
+STUB(SceAppMgrForDriver_B53FB98E)
+STUB(SceAppMgrForDriver_C4EF95BB)
+STUB(SceAppMgrForDriver_CE356B2D)
+STUB(SceAppMgrForDriver_D137D486)
+STUB(SceAppMgrForDriver_D2541B4A)
 STUB(sceAppMgrSaveSafeMemory)
-STUB(ksceAppMgrKillProcess)
+STUB_FUNC(int, sceAppMgrKillAppForDebugger, (SceUID pid))
 STUB(SceAppMgrForDriver_DC13160A)
 STUB(SceAppMgrForDriver_DCADB9FE)
 STUB(SceAppMgrForDriver_DD5BEEE3)
-STUB(ksceAppMgrSaveDataGetQuota)
-STUB(ksceAppMgrGetPfsProcessStatus)
-STUB(ksceAppMgrSaveDataMount)
-STUB(ksceAppMgrTrophyMount)
-STUB(ksceAppMgrDrmOpen)
+STUB(SceAppMgrForDriver_E104C37E)
+STUB(sceAppMgrGetPfsProcessStatus)
+STUB(SceAppMgrForDriver_E73C9516)
+STUB(SceAppMgrForDriver_E977A833)
+STUB(SceAppMgrForDriver_EA75D157)
 STUB(SceAppMgrForDriver_EBFE1BE2)
-STUB(ksceAppMgrCloudDataClearMcId)
-STUB(ksceAppMgrSaveDataSlotGetStatus)
-STUB(ksceAppMgrCloudDataCreateHeader)
-STUB(ksceAppMgrAppMount)
+STUB(SceAppMgrForDriver_EC408FEF)
+STUB(SceAppMgrForDriver_EC9D5A35)
+STUB(SceAppMgrForDriver_ED87F191)
+STUB(SceAppMgrForDriver_EF0C9533)
 STUB(sceAppMgrLoadSafeMemory)
-STUB(ksceAppMgrDestroyOtherAppByPid)
+STUB(sceAppMgrDestroyAppForTest)
 STUB(_sceAppMgrGetCoredumpStateForShell)
 STUB(_sceAppMgrInitSafeMemoryById)
 STUB(_sceAppMgrAddContMount)
 extern int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha);
 
-extern int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha);
 STUB(_sceAppMgrUmountByPid)
 STUB(_sceAppMgrWorkDirMount)
 STUB(sceAppMgrQuitApp)
@@ -176,7 +177,6 @@ STUB(_sceAppMgrLaunchVideoStreamingApp)
 STUB(_sceAppMgrGetPidListForShell)
 extern int appmgrReleaseSoundOutExclusive2(void);
 
-extern int sceAppMgrReleaseSoundOutExclusive2(void);
 STUB(_sceAppMgrAppUmount)
 STUB(sceAppMgrEnableCoredumpForTest)
 STUB(_sceAppMgrLoopBackMount)
@@ -184,18 +184,15 @@ STUB(sceAppMgrIsOtherAppPresent)
 STUB(_sceAppMgrLaunchAppByUri)
 extern int appmgrReleaseSoundOutExclusive(void);
 
-extern int sceAppMgrReleaseSoundOutExclusive(void);
 STUB(_sceAppMgrTrophyMountById)
 extern int sceAppMgrEnablePrioritizingSystemChat(int enabled);
 
-extern int appmgrEnablePrioritizingSystemChatSyscall(int enabled);
 STUB(sceAppMgrDestroyOtherApp)
 STUB(_sceAppMgrSaveDataDataRemove2)
 STUB(sceAppMgrActivateApp)
 STUB(sceAppMgrGrowMemory3)
 extern int sceAppMgrAcquireBgmPortForMusicPlayer(void);
 
-extern int appmgrAcquireBgmPortForMusicPlayerSyscall(void);
 STUB(_sceAppMgrGameDataMount)
 STUB(_sceAppMgrGetPfsDrive)
 STUB(_sceAppMgrLaunchAppByUri2)
@@ -213,24 +210,20 @@ STUB(_sceAppMgrWorkDirMountById)
 STUB(_sceAppMgrAppParamSetString)
 extern int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
 
-extern int appmgrEnableDuckingOnSystemChatSyscall(int enabled, SceUInt32 volume);
 STUB(sceAppMgrSuspendBgAppByShell)
 STUB(sceAppMgrReturnLiveAreaOperationResultForShell)
 STUB(sceAppMgrIsNonGameProgram)
 extern int appmgrReleaseSoundOutExclusive3(void);
 
-extern int sceAppMgrReleaseSoundOutExclusive3(void);
 STUB(sceAppMgrResumeBgAppByShell)
 STUB(_sceAppMgrGetSaveDataInfo)
 STUB(_sceAppMgrAcidDirSet)
 extern int sceAppMgrSetBgmSubPriority(int enabled, int priority);
 
-extern int appmgrSetBgmSubPrioritySyscall(int enabled, int priority);
 STUB(sceAppMgrSetRecommendedScreenOrientationActivated)
 STUB(_sceAppMgrPspSaveDataGetParams)
 extern int sceAppMgrDeclareSystemChatApp(void);
 
-extern int appmgrDeclareSystemChatAppSyscall(void);
 STUB(sceAppMgrIsDevelopmentMode)
 STUB(sceAppMgrGrowMemory)
 STUB(_sceAppMgrSaveDataSlotFileOpen)
@@ -238,7 +231,6 @@ STUB(sceAppMgrExitToLiveboardForGameApp)
 STUB(_sceAppMgrLaunchAppByPath4)
 extern int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
 
-extern int appmgrSetBgmSubPriorityForSystemChatSyscall(int enabled);
 STUB(_sceAppMgrAppDataMountById)
 STUB(sceAppMgrGetExtraAppParam)
 STUB(_sceAppMgrSaveDataMount)
@@ -249,24 +241,17 @@ STUB(_sceAppMgrPspSaveDataRootMount)
 STUB(_sceAppMgrDrmOpen)
 extern int sceAppMgrAcquireBgmPortWithPriority(int priority);
 
-extern int appmgrAcquireBgmPortWithPrioritySyscall(int priority);
 extern int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
 
-extern int sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
-extern int sceAppMgrReleaseBtrm(void);
-
-extern int appmgrReleaseBtrmSyscall(void);
 STUB(sceAppMgrSetInfobarState)
 STUB(_sceAppMgrLaunchAppByName2)
 STUB(sceAppMgrSetAppProtectionModeOnMemoryShortage)
 extern int sceAppMgrAcquireBgmPort(void);
 
-extern int appmgrAcquireBgmPortSyscall(void);
 STUB(_sceAppMgrPhotoUmount)
 STUB(_sceAppMgrSaveDataDataSave)
 extern int appmgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
 
-extern int sceAppMgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
 STUB(_sceAppMgrDeclareShellProcess2)
 STUB(sceAppMgrIsPidShellAndCrashed)
 STUB(_sceAppMgrCaptureFrameBufDMACByAppId)
@@ -281,7 +266,6 @@ STUB(_sceAppMgrSendParam)
 STUB(sceAppMgrSetInfobarStateForCommonDialog)
 extern int sceAppMgrAcquireBtrm(void);
 
-extern int appmgrAcquireBtrmSyscall(void);
 STUB(_sceAppMgrThemeDataMount)
 STUB(sceAppMgrRestoreBgmSettingForShell)
 STUB(_sceAppMgrLaunchAppByName)
@@ -307,7 +291,6 @@ STUB(_sceAppMgrSaveDataGetQuota)
 STUB(_sceAppMgrCaptureFrameBufIFTUByAppId)
 extern int sceAppMgrReleaseBgmPort(void);
 
-extern int appmgrReleaseBgmPortSyscall(void);
 extern int appmgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
 
 int _sceAppMgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait)

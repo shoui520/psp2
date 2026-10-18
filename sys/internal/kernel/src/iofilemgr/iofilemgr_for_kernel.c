@@ -29,7 +29,7 @@ SceUID SceIofilemgrForDriver_C3D34965(SceUID pid, const char *path, int flags, S
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 
-	ret = ksceFiosKernelOverlayResolveSync(pid, forWrite, path, resolved, 0x400);
+	ret = SceFios2KernelForDriver_0F456345(pid, forWrite, path, resolved, 0x400);
 	if (ret < 0)
 		goto error;
 	fd = sceIoOpen(resolved, flags, mode);

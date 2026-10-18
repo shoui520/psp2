@@ -996,7 +996,7 @@ int sceRegMgrSystemParamSetInt(int id, int value)
 	return regMgrSysParamSet(id, value, NULL, 0, REGMGR_TYPE_INT);
 }
 
-int sceRegMgrSystemParamGetInt(int id, int *value)
+int sceRegMgrSystemParamGetIntForUser(int id, int *value)
 {
 	return regMgrSysParamGetInt(id, value, 0);
 }
@@ -1006,7 +1006,7 @@ int sceRegMgrSystemParamSetStr(int id, const char *buf, SceSize size)
 	return regMgrSysParamSet(id, 0, buf, size, REGMGR_TYPE_STR);
 }
 
-int sceRegMgrSystemParamGetStr(int id, char *buf, SceSize size)
+int sceRegMgrSystemParamGetStrForUser(int id, char *buf, SceSize size)
 {
 	return regMgrSysParamGetStr(id, buf, size, 0);
 }
@@ -1016,7 +1016,7 @@ int sceRegMgrSystemParamSetBin(int id, const void *buf, SceSize size)
 	return regMgrSysParamSet(id, 0, buf, size, REGMGR_TYPE_BIN);
 }
 
-int sceRegMgrSystemParamGetBin(int id, void *buf, SceSize size)
+int sceRegMgrSystemParamGetBinForUser(int id, void *buf, SceSize size)
 {
 	return regMgrSysParamGetBin(id, buf, size, 0);
 }
@@ -1038,17 +1038,17 @@ int sceRegMgrSystemIsBlueScreen(int error)
 	return ret;
 }
 
-int ksceRegMgrSystemParamGetInt(int id, int *value)
+int sceRegMgrSystemParamGetInt(int id, int *value)
 {
 	return regMgrSysParamGetInt(id, value, REGMGR_COPY_KERNEL);
 }
 
-int ksceRegMgrSystemParamGetStr(int id, char *buf, SceSize size)
+int sceRegMgrSystemParamGetStr(int id, char *buf, SceSize size)
 {
 	return regMgrSysParamGetStr(id, buf, size, REGMGR_COPY_KERNEL);
 }
 
-int ksceRegMgrSystemParamGetBin(int id, void *buf, SceSize size)
+int sceRegMgrSystemParamGetBin(int id, void *buf, SceSize size)
 {
 	return regMgrSysParamGetBin(id, buf, size, REGMGR_COPY_KERNEL);
 }

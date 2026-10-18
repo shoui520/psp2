@@ -3,7 +3,7 @@
  * query is one bit of SceKblParam.qa_flags.
  */
 
-#include <psp2kern/kernel/kbl/kbl.h>
+#include <kernel_boot_loader/kbl_param.h>
 
 SceKblParam *SceSysrootForKernel_9DB56D1F(void);
 

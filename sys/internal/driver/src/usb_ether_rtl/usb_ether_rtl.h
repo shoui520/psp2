@@ -5,7 +5,6 @@
 #include <usb_ether_smsc/usb_ether_smsc.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/sysclib.h>
-
-int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
+#include <regmgr/regmgr.h>
 
 #endif

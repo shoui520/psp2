@@ -22,7 +22,18 @@ int SceAppMgrForDriver_1574E1A4(int type, const char *path, const SceAppMgrRdrfp
 int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
 int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */
 
-int ksceAppMgrBgdlSetQueueStatus(const void *status);
-int ksceAppMgrCheckPfsMounted(const char *path);
-int ksceAppMgrDebugSettingNotifyUpdate(int setting);
-int ksceAppMgrSystemParamDateTimeSetConf(const void *conf);
+int SceAppMgrForDriver_5B1BE482(const void *status);
+int SceAppMgrForDriver_0B1BEEE0(const char *path);
+int SceAppMgrForDriver_7554330F(int setting);
+int SceAppMgrForDriver_A9AA3A68(const void *conf);
+
+int SceAppMgrForDriver_2277F736(void *parameters);
+int SceAppMgrForDriver_7E247E47(void *parameters);
+int SceAppMgrForDriver_9ADB00FA(void *parameters);
+int SceAppMgrForDriver_E6F389B8(void *parameters);
+SceUID sceAppMgrGetShellPidForDriver(void);
+int sceAppMgrResumeAppByNameForDebugger(const char *appName);
+int sceAppMgrResumeAppForDebugger(SceUID pid);
+SceUID sceAppMgrSpawnProcessForDriver(const char *name, int type, const char *path, SceSize args, const void *argp, void *option, void *out);
+int sceAppMgrSuspendAppByNameForDebugger(const char *appName);
+int sceAppMgrSuspendAppForDebugger(SceUID pid);

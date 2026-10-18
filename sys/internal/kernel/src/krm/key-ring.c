@@ -43,10 +43,10 @@ clear:
 	g_krmProvisionedPrimaryDigest = (KrmSha256Digest){0};
 	g_krmProvisionedAlternateKey = (KrmEccPrivateKey){0};
 	g_krmProvisionedAlternateDigest = (KrmSha256Digest){0};
-	g_krmProvisionedPrimaryKeyIv = (SceOpenPsId){0};
-	g_krmProvisionedPrimaryDigestIv = (SceOpenPsId){0};
-	g_krmProvisionedAlternateKeyIv = (SceOpenPsId){0};
-	g_krmProvisionedAlternateDigestIv = (SceOpenPsId){0};
+	g_krmProvisionedPrimaryKeyIv = (SceKernelOpenPsId){0};
+	g_krmProvisionedPrimaryDigestIv = (SceKernelOpenPsId){0};
+	g_krmProvisionedAlternateKeyIv = (SceKernelOpenPsId){0};
+	g_krmProvisionedAlternateDigestIv = (SceKernelOpenPsId){0};
 	return KrmInitializeWrappingKey();
 }
 
@@ -118,7 +118,7 @@ int KrmGetDefaultKey(KrmState *state, void *keyId)
 int KrmImportKey(KrmState *state, const void *wrappingKeyId, const KrmKey *key)
 {
 	KrmKey local;
-	SceOpenPsId iv;
+	SceKernelOpenPsId iv;
 	KrmKey *wrappingKey;
 	const unsigned char *id = wrappingKeyId;
 	SceSize srcSize;
@@ -197,7 +197,7 @@ int KrmImportKey(KrmState *state, const void *wrappingKeyId, const KrmKey *key)
 		dstSize = srcSize;
 	}
 	__builtin_memset(&iv, 0, sizeof(iv));
-	ret = KrmDriverDecrypt(wrappingKey, iv.open_psid, &local.material,
+	ret = KrmDriverDecrypt(wrappingKey, iv.id, &local.material,
 			       srcSize, &local.material, dstSize);
 	if (ret >= 0) {
 store:
@@ -211,7 +211,7 @@ int KrmExportKey(KrmState *state, const void *wrappingKeyId,
 		 const void *keyId, KrmKey *key)
 {
 	KrmKey local;
-	SceOpenPsId iv;
+	SceKernelOpenPsId iv;
 	KrmKey *selected;
 	KrmKey *wrappingKey;
 	unsigned char *ivBytes;
@@ -286,7 +286,7 @@ int KrmExportKey(KrmState *state, const void *wrappingKeyId,
 		goto clear;
 	if (wrappingKey->info.algorithm != 1) {
 		__builtin_memset(&iv, 0, sizeof(iv));
-		ivBytes = iv.open_psid;
+		ivBytes = iv.id;
 		srcSize = 4 * local.info.keyWords;
 		dstSize = srcSize;
 	} else {

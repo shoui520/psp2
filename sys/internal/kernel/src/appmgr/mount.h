@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include <psp2kern/types.h>
-#include <psp2kern/pfsmgr.h>
+#include <pfsmgr/pfsmgr.h>
 
 typedef struct AppmgrPfsMount {
 	int mountId;

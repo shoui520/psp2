@@ -34,19 +34,19 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9
-	ksceSblSmCommStopSm
-	ksceSblSmCommStartSmFromFile
-	ksceSblSmCommCallFunc
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_7863A0CC
+	SceSblSmCommForKernel_DB9FC204
 	memset
 	memcpy
 	__memcpy_chk
 	__stack_chk_fail
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceSblDmac5AesEcbEncWithKeyslot
-	ksceSblDmac5DesEcbEncWithKeyslot
-	ksceSblDmac5AesEcbDecWithKeyslot
-	ksceSblDmac5DesEcbDecWithKeyslot
+	SceSblSsMgrForDriver_01BE0374
+	SceSblSsMgrForDriver_37DD5CBF
+	SceSblSsMgrForDriver_8B4700CB
+	SceSblSsMgrForDriver_8EAFB18A
 	sceSblACMgrGetMediaType
 )
 set(MODULE_IMPORT_VARS

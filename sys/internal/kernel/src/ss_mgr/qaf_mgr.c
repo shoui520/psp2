@@ -35,8 +35,8 @@ __attribute__((noinline))
 #else
 __attribute__((always_inline))
 #endif
-SS_MGR_QAF(ksceSblQafManagerGetQAFlags)
-int ksceSblQafManagerGetQAFlags(void *flags)
+SS_MGR_QAF(SceSblSsMgrForKernel_83D254FF)
+int SceSblSsMgrForKernel_83D254FF(void *flags)
 {
 	if (!flags)
 		return (int)0x800f0716;
@@ -46,8 +46,8 @@ int ksceSblQafManagerGetQAFlags(void *flags)
 	return 0;
 }
 
-SS_MGR_QAF(ksceSblQafManagerGetQafName)
-int ksceSblQafManagerGetQafName(char *name, SceSize size)
+SS_MGR_QAF(SceSblSsMgrForKernel_E2DD0378)
+int SceSblSsMgrForKernel_E2DD0378(char *name, SceSize size)
 {
 	uint8_t locked = 0xff;
 	uint64_t head[0x80 / sizeof(uint64_t)];
@@ -59,7 +59,7 @@ int ksceSblQafManagerGetQafName(char *name, SceSize size)
 		return SSMGR_ERROR_INVALID_ARGUMENT;
 	if (size >= QAF_NAME_SIZE)
 		size = QAF_NAME_SIZE;
-	if (ksceSblQafManagerGetQAFlags(flags.words))
+	if (SceSblSsMgrForKernel_83D254FF(flags.words))
 		return SSMGR_ERROR_NO_QAF;
 
 	any = 0;
@@ -142,7 +142,7 @@ int sceSblQafManagerGetQafNameForUser(char *name, SceSize size)
 
 	if (__builtin_expect(
 		(ret = SceSysmemForDriver_BC996A7A(buffer, name, size)) != 0 ||
-		(ret = ksceSblQafManagerGetQafName(buffer, size)) != 0 ||
+		(ret = SceSblSsMgrForKernel_E2DD0378(buffer, size)) != 0 ||
 		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, size)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
@@ -191,7 +191,7 @@ int sceSblQafMgrGetQafName(char *name, SceSize size)
 	if (__builtin_expect(
 		(ret = qafLoadToken((uint8_t *)token)) != 0 ||
 		(ret = SceSysmemForDriver_BC996A7A(buffer, name, QAF_NAME_SIZE)) != 0 ||
-		(ret = ksceSblQafManagerGetQafName(buffer, QAF_NAME_SIZE)) != 0 ||
+		(ret = SceSblSsMgrForKernel_E2DD0378(buffer, QAF_NAME_SIZE)) != 0 ||
 		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, QAF_NAME_SIZE)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
@@ -583,7 +583,7 @@ int qafLoadSecureModule(const char *path)
 	command[1] = 0;
 	command[2] = 0;
 	command[3] = 0;
-	return ksceSblSmCommStartSmFromFile(0, path,
+	return SceSblSmCommForKernel_7863A0CC(0, path,
 		(uint32_t)(uintptr_t)command, &auth, &qafSmId);
 }
 
@@ -591,7 +591,7 @@ int qafStopSecureModule(void)
 {
 	SceSblSmCommPair result;
 
-	return ksceSblSmCommStopSm(qafSmId, &result);
+	return SceSblSmCommForKernel_0631F8ED(qafSmId, &result);
 }
 
 int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
@@ -602,7 +602,7 @@ int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
 
 	request.command = 0;
 	request.reserved = 0;
-	ret = ksceSblSmCommCallFunc(qafSmId, 1, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1, &serviceResult,
 		&request, sizeof(request));
 	if (ret == 0) {
 		ret = serviceResult;
@@ -611,7 +611,7 @@ int qafReadNvsFlags(uint32_t *data, uint32_t *flags)
 				request.response, sizeof(request.response));
 			if (ret == 0) {
 				request.command = 1;
-				ret = ksceSblSmCommCallFunc(qafSmId, 1,
+				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0) {
 					ret = serviceResult;
@@ -636,7 +636,7 @@ int qafWriteNvsFlags(const uint32_t *data, const uint32_t *flags)
 	request.flags = *flags;
 	request.command = 2;
 	request.reserved = 0;
-	ret = ksceSblSmCommCallFunc(qafSmId, 1, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1, &serviceResult,
 		&request, sizeof(request));
 	if (ret == 0) {
 		ret = serviceResult;
@@ -645,7 +645,7 @@ int qafWriteNvsFlags(const uint32_t *data, const uint32_t *flags)
 				sizeof(request.challenge), request.response, 16);
 			if (ret == 0) {
 				request.command = 3;
-				ret = ksceSblSmCommCallFunc(qafSmId, 1,
+				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 1,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0)
 					ret = serviceResult;
@@ -665,7 +665,7 @@ __attribute__((noinline)) int qafInvokeTokenService(void *token, unsigned int se
 	if (service - 12 > 1)
 		return (int)0x800f0716;
 	memcpy(buffer, token, sizeof(buffer));
-	ret = ksceSblSmCommCallFunc(qafSmId, service,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, service,
 		&serviceResult, buffer, sizeof(buffer));
 	if (ret == 0) {
 		if (service == 13)
@@ -685,7 +685,7 @@ int qafReadSecureNvs(unsigned int slot, QafNvsVersionRecord *record)
 		return (int)0x800f0716;
 	request.command = 0;
 	request.slot = slot;
-	ret = ksceSblSmCommCallFunc(qafSmId, 2, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2, &serviceResult,
 		&request, sizeof(request));
 	if (__builtin_expect(ret != 0, 0))
 		return ret;
@@ -697,7 +697,7 @@ int qafReadSecureNvs(unsigned int slot, QafNvsVersionRecord *record)
 	if (ret != 0)
 		return ret;
 	request.command = 1;
-	ret = ksceSblSmCommCallFunc(qafSmId, 2,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2,
 		&serviceResult, &request, sizeof(request));
 	if (ret != 0)
 		return ret;
@@ -718,7 +718,7 @@ int qafWriteSecureNvs(unsigned int slot, const QafNvsVersionRecord *record)
 	__builtin_memcpy(&request.record, record, sizeof(*record));
 	request.slot = slot;
 	request.command = 2;
-	ret = ksceSblSmCommCallFunc(qafSmId, 2, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2, &serviceResult,
 		&request, sizeof(request));
 	if (__builtin_expect(ret == 0, 1)) {
 		ret = serviceResult;
@@ -727,7 +727,7 @@ int qafWriteSecureNvs(unsigned int slot, const QafNvsVersionRecord *record)
 				sizeof(request.challenge), request.response, 16);
 			if (ret == 0) {
 				request.command = 3;
-				ret = ksceSblSmCommCallFunc(qafSmId, 2,
+				ret = SceSblSmCommForKernel_DB9FC204(qafSmId, 2,
 					&serviceResult, &request, sizeof(request));
 				if (ret == 0)
 					ret = serviceResult;

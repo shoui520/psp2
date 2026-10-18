@@ -9,10 +9,10 @@
 #include <string.h>
 #include "app_state_internal.h"
 #include "appmgr_app_event.h"
+#include <appmgr/appmgr.h>
 
 extern SceUID g_appmgrMainMutex;
 extern SceUID g_appmgrMainMutexOwner;
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern struct AppState *appmgrFindCurrentApp(struct AppState *apps);
 

@@ -96,7 +96,7 @@ void *sceNetPsGatewayAllocate(struct SceNetKernelGateway *interface,
 }
 
 extern SceNetPsGatewayState *gNetPsGatewayInterfaceSlot;
-int ksceNetSendto(int socket, const void *buffer, unsigned int length, int flags,
+int SceNetPsForDriver_AB746734(int socket, const void *buffer, unsigned int length, int flags,
 		 const SceNetSockaddr *address, unsigned int addressLength);
 
 /* SCE: release the jumbo lock before the socket send may block. */
@@ -122,7 +122,7 @@ int sceNetPsGatewaySend(struct SceNetKernelGateway *interface, const void *data,
 	address.sin_family = 2;
 	address.sin_len = sizeof(address);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
-	return ksceNetSendto(socket, data, length, 0,
+	return SceNetPsForDriver_AB746734(socket, data, length, 0,
 			     (const SceNetSockaddr *)&address, sizeof(address));
 failed:
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
@@ -146,10 +146,10 @@ int sceNetPsNotifyGatewayDns(const SceNetPsDnsConfig *config)
 
 extern SceNetPsMutex gNetPsDevSendMutex;
 extern SceNetPsMutex gNetPsDevRecvMutex;
-int ksceNetSocket(const char *name, int domain, int type, int protocol);
-int ksceNetSetsockopt(int socket, int level, int option, const void *value,
+int SceNetPsForDriver_EB95B024(const char *name, int domain, int type, int protocol);
+int SceNetPsForDriver_4BF5FAB4(int socket, int level, int option, const void *value,
 		     unsigned int length);
-int ksceNetClose(int socket);
+int SceNetPsForDriver_21F4428D(int socket);
 
 /* Reviewed export name: Sony's gateway socket string and prototype candidate. */
 int SceNetKernelGateway(struct SceNetKernelGateway *interface)
@@ -160,18 +160,18 @@ int SceNetKernelGateway(struct SceNetKernelGateway *interface)
 
 	if (!interface || !interface->receive || !interface->notify)
 		return 0x80418101;
-	socket = ksceNetSocket("SceNetKernelGateway", 2, 3, 0);
+	socket = SceNetPsForDriver_EB95B024("SceNetKernelGateway", 2, 3, 0);
 	if (socket < 0)
 		return 0x80418105;
 	value = 1;
-	if (ksceNetSetsockopt(socket, 0, 2, &value, sizeof(value)) < 0)
+	if (SceNetPsForDriver_4BF5FAB4(socket, 0, 2, &value, sizeof(value)) < 0)
 		goto socketFailed;
 	value = 1;
-	if (ksceNetSetsockopt(socket, 0xffff, 0x1002,
+	if (SceNetPsForDriver_4BF5FAB4(socket, 0xffff, 0x1002,
 			      &value, sizeof(value)) < 0)
 		goto socketFailed;
 	value = 1;
-	if (ksceNetSetsockopt(socket, 0, 25, &value, sizeof(value)) < 0)
+	if (SceNetPsForDriver_4BF5FAB4(socket, 0, 25, &value, sizeof(value)) < 0)
 		goto socketFailed;
 	sce_psnet_bnet_mutex_lock(&gNetPsJumboMutex, NULL);
 	sce_psnet_bnet_mutex_lock(&gNetPsDevSendMutex, NULL);
@@ -200,7 +200,7 @@ int SceNetKernelGateway(struct SceNetKernelGateway *interface)
 socketFailed:
 	result = 0x80418106;
 closeSocket:
-	ksceNetClose(socket);
+	SceNetPsForDriver_21F4428D(socket);
 	return result;
 }
 
@@ -227,7 +227,7 @@ int sceNetPsUnregisterGateway(struct SceNetKernelGateway *interface)
 	sce_psnet_bnet_mutex_unlock(&gNetPsDevSendMutex);
 	sce_psnet_bnet_mutex_unlock(&gNetPsJumboMutex);
 	if (socket >= 0)
-		ksceNetClose(socket);
+		SceNetPsForDriver_21F4428D(socket);
 	return 0;
 failed:
 	sce_psnet_bnet_mutex_unlock(&gNetPsDevRecvMutex);

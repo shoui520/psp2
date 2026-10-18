@@ -202,13 +202,13 @@ KrmSha256Digest g_krmProvisionedAlternateDigest KRM_PROVISIONED = { .words = { 0
 		0xb4da22eb, 0xa220fbaa, 0xc57ef1b0, 0x9109aad8 } };
 KrmSha256Digest g_krmProvisionedPrimaryDigest KRM_PROVISIONED = { .words = { 0x83924566, 0x846e1574, 0xa3871e92, 0x58f1a79a, 
 		0x75e7bb30, 0x224257c9, 0xe1986549, 0x019b373e } };
-SceOpenPsId g_krmProvisionedAlternateDigestIv KRM_PROVISIONED = { .open_psid = { 0x7c, 0xd2, 0x95, 0x87, 0xbe, 0xb5, 0xc3, 0x26, 
+SceKernelOpenPsId g_krmProvisionedAlternateDigestIv KRM_PROVISIONED = { .id = { 0x7c, 0xd2, 0x95, 0x87, 0xbe, 0xb5, 0xc3, 0x26, 
 		0xa6, 0x7f, 0x80, 0x44, 0x39, 0x2f, 0x5e, 0xac } };
-SceOpenPsId g_krmProvisionedAlternateKeyIv KRM_PROVISIONED = { .open_psid = { 0x8c, 0x11, 0xb5, 0x35, 0x4c, 0x9b, 0x73, 0xf4, 
+SceKernelOpenPsId g_krmProvisionedAlternateKeyIv KRM_PROVISIONED = { .id = { 0x8c, 0x11, 0xb5, 0x35, 0x4c, 0x9b, 0x73, 0xf4, 
 		0x30, 0x34, 0xea, 0xcf, 0x78, 0x72, 0x7b, 0x15 } };
-SceOpenPsId g_krmProvisionedPrimaryDigestIv KRM_PROVISIONED = { .open_psid = { 0x9b, 0x6f, 0x4f, 0x60, 0x2d, 0x3c, 0x7d, 0x74, 
+SceKernelOpenPsId g_krmProvisionedPrimaryDigestIv KRM_PROVISIONED = { .id = { 0x9b, 0x6f, 0x4f, 0x60, 0x2d, 0x3c, 0x7d, 0x74, 
 		0xab, 0x95, 0xc3, 0x60, 0xd2, 0x16, 0x91, 0xf2 } };
-SceOpenPsId g_krmProvisionedPrimaryKeyIv KRM_PROVISIONED = { .open_psid = { 0x6f, 0xc6, 0xea, 0x04, 0x60, 0xfe, 0xe1, 0xd2, 
+SceKernelOpenPsId g_krmProvisionedPrimaryKeyIv KRM_PROVISIONED = { .id = { 0x6f, 0xc6, 0xea, 0x04, 0x60, 0xfe, 0xe1, 0xd2, 
 		0x30, 0xca, 0x47, 0x05, 0xed, 0xf7, 0x9f, 0x91 } };
 KrmEccPrivateKey g_krmProvisionedPrimaryKey KRM_PROVISIONED = { .scalar = { 0xf5b21708, 0x61adf4c7, 0xb4552304, 0x719fad33, 
 		0xaa42f8ee, 0x2a56b6b0, 0x21ad5d03, 0x857fdb7a } };
@@ -246,21 +246,21 @@ KrmSha256Digest g_krmPrimaryWrappingDigest KRM_PROVISIONED = { .words = { 0x82a0
 unsigned int g_krmAlternateWrappingKeyIv[4] KRM_PROVISIONED = { 0x63f7b47f, 0xdac4641d, 0x8c42dccf, 0x8d453b73 };
 unsigned int g_krmPrimaryWrappingKeyIv[4] KRM_PROVISIONED = { 0x68b6bcdf, 0x57356cf9, 0xdba27c51, 0x45b193c3 };
 unsigned int g_krmAlternateWrappingDigestIv[4] KRM_PROVISIONED = { 0xdbecf7fe, 0x31a0a82e, 0x5fbf32f1, 0x5b571d9a };
-SceOpenPsId g_krmProvisionedPrimaryKeyIv KRM_PROVISIONED = { .open_psid = { 0x6f, 0xc6, 0xea, 0x04, 0x60, 0xfe, 0xe1, 0xd2, 
+SceKernelOpenPsId g_krmProvisionedPrimaryKeyIv KRM_PROVISIONED = { .id = { 0x6f, 0xc6, 0xea, 0x04, 0x60, 0xfe, 0xe1, 0xd2, 
 		0x30, 0xca, 0x47, 0x05, 0xed, 0xf7, 0x9f, 0x91 } };
 KrmEccPrivateKey g_krmProvisionedAlternateKey KRM_PROVISIONED = { .scalar = { 0xeb935f8e, 0xb1fcea6e, 0x356a0bac, 0xa443a0ae, 
 		0x94fedec7, 0x87577e39, 0xdb247093, 0x7fb4a232 } };
 KrmEccPrivateKey g_krmProvisionedPrimaryKey KRM_PROVISIONED = { .scalar = { 0xf5b21708, 0x61adf4c7, 0xb4552304, 0x719fad33, 
 		0xaa42f8ee, 0x2a56b6b0, 0x21ad5d03, 0x857fdb7a } };
-SceOpenPsId g_krmProvisionedPrimaryDigestIv KRM_PROVISIONED = { .open_psid = { 0x9b, 0x6f, 0x4f, 0x60, 0x2d, 0x3c, 0x7d, 0x74, 
+SceKernelOpenPsId g_krmProvisionedPrimaryDigestIv KRM_PROVISIONED = { .id = { 0x9b, 0x6f, 0x4f, 0x60, 0x2d, 0x3c, 0x7d, 0x74, 
 		0xab, 0x95, 0xc3, 0x60, 0xd2, 0x16, 0x91, 0xf2 } };
-SceOpenPsId g_krmProvisionedAlternateDigestIv KRM_PROVISIONED = { .open_psid = { 0x7c, 0xd2, 0x95, 0x87, 0xbe, 0xb5, 0xc3, 0x26, 
+SceKernelOpenPsId g_krmProvisionedAlternateDigestIv KRM_PROVISIONED = { .id = { 0x7c, 0xd2, 0x95, 0x87, 0xbe, 0xb5, 0xc3, 0x26, 
 		0xa6, 0x7f, 0x80, 0x44, 0x39, 0x2f, 0x5e, 0xac } };
 KrmSha256Digest g_krmProvisionedAlternateDigest KRM_PROVISIONED = { .words = { 0x4220cb2a, 0x14a30437, 0x2d356eaa, 0xe786de66, 
 		0xb4da22eb, 0xa220fbaa, 0xc57ef1b0, 0x9109aad8 } };
 KrmSha256Digest g_krmProvisionedPrimaryDigest KRM_PROVISIONED = { .words = { 0x83924566, 0x846e1574, 0xa3871e92, 0x58f1a79a, 
 		0x75e7bb30, 0x224257c9, 0xe1986549, 0x019b373e } };
-SceOpenPsId g_krmProvisionedAlternateKeyIv KRM_PROVISIONED = { .open_psid = { 0x8c, 0x11, 0xb5, 0x35, 0x4c, 0x9b, 0x73, 0xf4, 
+SceKernelOpenPsId g_krmProvisionedAlternateKeyIv KRM_PROVISIONED = { .id = { 0x8c, 0x11, 0xb5, 0x35, 0x4c, 0x9b, 0x73, 0xf4, 
 		0x30, 0x34, 0xea, 0xcf, 0x78, 0x72, 0x7b, 0x15 } };
 #endif
 #undef KRM_PROVISIONED
@@ -659,7 +659,7 @@ int KrmDriverGetRandomBytes(unsigned char *dst, unsigned int size)
 
 	while (size) {
 		count = size < sizeof(block) ? size : sizeof(block);
-		ret = ksceSblRngGenuineRandomNumber(block);
+		ret = SceSblSsMgrForDriver_AC57F4F0(block);
 		if (ret < 0)
 			break;
 		memcpy(dst, block, count);
@@ -709,14 +709,14 @@ unsigned int KrmDriverGetVersion(void)
 #endif
 }
 
-int KrmDriverGetOpenPsId(SceOpenPsId *id)
+int KrmDriverGetOpenPsId(SceKernelOpenPsId *id)
 {
-	SceOpenPsId localId;
+	SceKernelOpenPsId localId;
 	int ret;
 
 	if (!id)
 		return (int)0x80a00000;
-	ret = ksceSblAimgrGetOpenPsId(&localId);
+	ret = SceSblSsMgrForDriver_A5B5D269(&localId);
 	if (ret == 0)
 		*id = localId;
 	return ret;
@@ -724,7 +724,7 @@ int KrmDriverGetOpenPsId(SceOpenPsId *id)
 
 int KrmDriverDecryptPortable(const void *iv, const void *src, void *dst)
 {
-	SceOpenPsId localIv;
+	SceKernelOpenPsId localIv;
 	ScePortabilityData input;
 	ScePortabilityData output;
 	int ret;
@@ -734,7 +734,7 @@ int KrmDriverDecryptPortable(const void *iv, const void *src, void *dst)
 	__builtin_memcpy(input.msg, src, sizeof(input.msg));
 	output.msg_size = sizeof(output.msg);
 	__builtin_memset(output.msg, 0, sizeof(output.msg));
-	ret = ksceSblSsDecryptWithPortability(11, &localIv, &input, &output);
+	ret = SceSblSsMgrForDriver_934DB6B5(11, &localIv, &input, &output);
 	if (ret == 0)
 		__builtin_memcpy(dst, output.msg, sizeof(output.msg));
 	__builtin_memset(&localIv, 0, sizeof(localIv));

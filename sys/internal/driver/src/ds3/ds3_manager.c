@@ -22,7 +22,6 @@
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <usbserv/usbserv.h>
-#include <psp2kern/registrymgr.h>
 #include <display/display.h>
 #include <string.h>
 

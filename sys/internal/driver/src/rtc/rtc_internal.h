@@ -9,9 +9,9 @@
 #include <excpmgr/excpmgr_cpu.h>
 #include <rtc/rtc.h>
 #include <syscon/syscon_scratchpad.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 
 /* SceSblPostSsMgr (ut_mgr.c): declared here until its exporter's header declares it */
-int ksceSblUtMgrHasStoreFlag(void);
 
 #define RTC_AUX_CLOCKS		8
 

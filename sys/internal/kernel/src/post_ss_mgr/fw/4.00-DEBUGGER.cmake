@@ -208,9 +208,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_BBA13D9C
 	SceSblACMgrForKernel_sceSblACMgrGetMediaType
-	ksceSblSmCommStopSm
-	ksceSblSmCommStartSmFromFile
-	ksceSblSmCommCallFunc
+	SceSblSmCommForKernel_0631F8ED
+	SceSblSmCommForKernel_7863A0CC
+	SceSblSmCommForKernel_DB9FC204
 	memset
 	strncmp
 	strstr
@@ -236,13 +236,13 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_FF5784B9
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceSblQafManagerGetQAFlags
-	ksceSblNvsReadData
-	ksceSblNvsWriteData
-	ksceSblRngPseudoRandomNumber
-	ksceSblSsDecryptWithPortability
-	ksceSblAimgrGetOpenPsId
-	ksceSblSsMemset
+	SceSblSsMgrForKernel_83D254FF
+	nvs_read_data
+	nvs_write_data
+	_set_key_seed
+	SceSblSsMgrForDriver_934DB6B5
+	SceSblSsMgrForDriver_A5B5D269
+	SceSblSsMgrForDriver_CD98CC92
 	SceSysconForDriver_0D0B6D25
 	SceSysconForDriver_29CF4335
 	SceSysconForDriver_3C80B529
@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pCpupForDriver_8139AD4E
 	SceDeci4pCpupForDriver_C0AB956B
 	SceDeci4pCpupForDriver_DAC4F630
-	ksceSblAuthMgrVerifySpfsoCtx
+	sceSblAuthMgrVerifySpsfo
 	sceKernelLoadPtLoadSegForFwloader
 	SceDipswForDriver_A98FC2FD
 )

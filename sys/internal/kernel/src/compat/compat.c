@@ -3,7 +3,7 @@
 #include <compat/compat.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/ssmgr.h>
+#include <ss_mgr/ss_mgr.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -23,13 +23,14 @@
 #include <compat/compat_regs.h>
 #include <iofilemgr/iofilemgr.h>
 #include <psp2kern/io/devctl.h>
-#include <psp2kern/npdrm.h>
+#include <npdrm/npdrm.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sysmem/suspend.h>
 #include <power/power.h>
 #include <processmgr/processmgr.h>
+#include <post_ss_mgr/sblfwloader.h>
 
 struct CompatInterruptConfig {
 	int intrcode;
@@ -220,9 +221,6 @@ int SceGrabForDriver_F13C63DD(void);
 int SceGrabForDriver_379130B2(void);
 int SceGrabForDriver_E9C25A28(SceUInt32 bank, uintptr_t paddr);
 int SceGrabForDriver_072B8D93(int mode);
-int ksceSblFwLoaderLock(const char *path, int flags);
-int ksceSblFwLoaderLoad(int type, void *base, SceSize size, SceSize *loaded);
-int ksceSblFwLoaderUnlock(void);
 int sceDeci2pTermForCompat(void);
 int SceDeci2pForDriver_F6427E0F(void *regs, void *shm, SceSize size);
 int SceHpremoteForDriver_7E69EDA4(void);
@@ -358,7 +356,7 @@ int compatCheckRif(void *args)
 	size = sceIoLseek(fd, 0, SCE_SEEK_END);
 	result = (SceUInt64)(size - 1) < sizeof(license) &&
 		sceIoPread(fd, &license, size, 0) == (int)size &&
-		ksceNpDrmGetRifPspKey((const SceNpDrmLicense *)license, klicense,
+		SceNpDrmForDriver_DACB71F4((const SceNpDrmLicense *)license, klicense,
 			&flags, &startTime,
 			&expirationTime) == 0;
 	sceIoClose(fd);
@@ -383,7 +381,7 @@ int compatEnterRunningState(void)
 		SceDeci2pForDriver_F6427E0F(mailbox,
 			(char *)mainDdr + 0x3d80000, 0x40000);
 	memset(&gCompatActivationData, 0, sizeof(gCompatActivationData));
-	result = ksceNpDrmReadActData(&gCompatActivationData);
+	result = SceNpDrmForDriver_D91C3BCE(&gCompatActivationData);
 	if (result < 0 && !SceSblAIMgrForDriver_F4B98F66())
 		return result;
 	if (!SceThreadmgrForDriver_E54FD746(0x4000, compatCheckRif, NULL) &&
@@ -784,22 +782,22 @@ int compatInitEx(int mode)
 #else
 	mapMainDDR();
 #endif
-	result = ksceSblFwLoaderLock(gCompatPspFirmwarePath, 0);
+	result = sceSblFwLoaderSetPath(gCompatPspFirmwarePath, 0);
 	if (result < 0)
 		return result;
-	status = ksceSblFwLoaderLoad(1, (char *)gCompatMainDdr + 0x3000000,
+	status = sceSblFwLoaderLoad(1, (char *)gCompatMainDdr + 0x3000000,
 		0x2000000, &loaded);
-	ksceSblFwLoaderUnlock();
+	sceSblFwLoaderClose();
 	if (status < 0)
 		return status;
 	SceCpuForDriver_9CB9F0CE((char *)gCompatMainDdr + 0x3000000,
 		loaded);
-	result = ksceSblFwLoaderLock(gCompatBootFirmwarePath, 0);
+	result = sceSblFwLoaderSetPath(gCompatBootFirmwarePath, 0);
 	if (result < 0)
 		return result;
-	status = ksceSblFwLoaderLoad(1, (char *)gCompatMainDdr + 0x600000,
+	status = sceSblFwLoaderLoad(1, (char *)gCompatMainDdr + 0x600000,
 		0xa00000, &loaded);
-	ksceSblFwLoaderUnlock();
+	sceSblFwLoaderClose();
 	SceCpuForDriver_9CB9F0CE((char *)gCompatMainDdr + 0x600000,
 		loaded);
 #if FW_VERSION >= 0x03650000
@@ -879,7 +877,7 @@ int compatCheckPocketStationRif(void)
 	size = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if ((SceUInt64)(size - 1) >= sizeof(license) ||
 		sceIoPread(fd, &license, size, 0) != (int)size ||
-		ksceNpDrmGetRifPspKey((const SceNpDrmLicense *)license, klicense,
+		SceNpDrmForDriver_DACB71F4((const SceNpDrmLicense *)license, klicense,
 			&flags, &startTime,
 			&expirationTime) ||
 		(expirationTime != 0x7fffffffffffffffULL &&
@@ -890,7 +888,7 @@ int compatCheckPocketStationRif(void)
 		goto out;
 	}
 	sceIoClose(fd);
-	result = ksceNpDrmGetRifInfo((const SceNpDrmLicense *)license,
+	result = SceNpDrmForDriver_DB406EAE((const SceNpDrmLicense *)license,
 		sizeof(license), 0, contentId,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) >= 0 &&
 		strncmp(contentId, gCompatPocketStationContentId,
@@ -1268,7 +1266,7 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 #if FW_VERSION >= 0x03650000
 	unsigned int bootRandom;
 
-	result = ksceSblRngPseudoRandomNumber(&bootRandom, sizeof(bootRandom));
+	result = _set_key_seed(&bootRandom, sizeof(bootRandom));
 	if (result < 0)
 		return result;
 #endif
@@ -2140,7 +2138,7 @@ int compatStartSecureModule(void)
 		&auth.media_type);
 	if (result == 0) {
 		auth.self_type = (auth.self_type & ~0xfU) | 2;
-		result = ksceSblSmCommStartSmFromFile(0, gCompatSecureModulePath,
+		result = SceSblSmCommForKernel_7863A0CC(0, gCompatSecureModulePath,
 			0, &auth, &gCompatSecureModuleId);
 	}
 	return result;
@@ -2157,12 +2155,12 @@ int compatSecureInitialize(SceUInt32 argument)
 	if (result == 0) {
 		command.arguments[0] = argument;
 		command.arguments[1] = 0;
-		result = ksceSblSmCommCallFunc(gCompatSecureModuleId, 0x10006,
+		result = SceSblSmCommForKernel_DB9FC204(gCompatSecureModuleId, 0x10006,
 			&serviceResult, &command, sizeof(command));
 		if (result == 0) {
 			result = serviceResult;
 			if (result == 0)
-				result = ksceSblSmCommStopSm(gCompatSecureModuleId,
+				result = SceSblSmCommForKernel_0631F8ED(gCompatSecureModuleId,
 					&command.stopResult);
 		}
 	}
@@ -2181,12 +2179,12 @@ int compatSecureResume(void)
 	if (result == 0) {
 		command.arguments[0] = 0;
 		command.arguments[1] = 0;
-		result = ksceSblSmCommCallFunc(gCompatSecureModuleId, 0x30006,
+		result = SceSblSmCommForKernel_DB9FC204(gCompatSecureModuleId, 0x30006,
 			&serviceResult, &command, sizeof(command));
 		if (result == 0) {
 			result = serviceResult;
 			if (result == 0)
-				result = ksceSblSmCommStopSm(gCompatSecureModuleId,
+				result = SceSblSmCommForKernel_0631F8ED(gCompatSecureModuleId,
 					&command.stopResult);
 		}
 	}

@@ -35,16 +35,16 @@
 
 /* Module-local ABI declarations while shared dependency headers are frozen. */
 typedef void (*AuthCryHandler)(SceUID, int, void *, uint32_t, uint32_t);
-int ksceSblSmSchedProxyInvoke(uint32_t, uint32_t, uint32_t,
+int sceSblSmSchedProxyInvoke(uint32_t, uint32_t, uint32_t,
 	const uint32_t *, const SceAuthInfo *, SceUID *);
-int ksceSblSmSchedProxyWait(SceUID id, uint32_t *result);
-int ksceSblSmSchedProxyGetStatus(SceUID id, uint32_t *result);
-int ksceSblSmSchedCallFunc(SceUID id, int channel, uint32_t value);
-int ksceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
-int ksceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
-int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
+int sceSblSmSchedProxyWait(SceUID id, uint32_t *result);
+int sceSblSmSchedProxyGetStatus(SceUID id, uint32_t *result);
+int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
+int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
+int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
+int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
 	AuthCryHandler handler, void *argument);
-int ksceSblSmSchedProxyDisableCry2ArmInterrupt(SceUID id, int channel);
+int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel);
 extern uint32_t __stack_chk_guard;
 
 /* Uncached wire packets: the first 0x40 bytes are the native command header. */
@@ -201,11 +201,11 @@ static NOINLINE void authMgrIntrHandler(SceUID id, int channel,
 		SCE_DBG_PRINTF(0xb, 1024, "ERROR: invalid mailbox id [0x%08x]\n", channel);
 		AUTH_PANIC(1023, 1024);
 	}
-	result = ksceSblSmSchedProxyReadCry2Arm(id, 1, &value);
+	result = sceSblSmSchedProxyReadCry2Arm(id, 1, &value);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0xb, 1052, "ERRORR: sceSblSmSchedProxyReadCry2Arm ret = 0x%08x\n", result);
 	} else {
-		result = ksceSblSmSchedProxyWriteCry2Arm(id, 1, value);
+		result = sceSblSmSchedProxyWriteCry2Arm(id, 1, value);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0xb, 1047, "ERROR: sceSblSmSchedProxyWriteCry2Arm ret = 0x%08x\n", result);
 		} else {
@@ -233,7 +233,7 @@ static NOINLINE int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
 		SCE_DBG_PRINTF(0xb, 1250, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
 	} else {
-		result = ksceSblSmSchedCallFunc(id, 1, physicalAddress | 1);
+		result = SceSblSmSchedProxyForKernel_723B382F(id, 1, physicalAddress | 1);
 	}
 	CheckStackGuard(guard);
 	return result;
@@ -250,7 +250,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 	result = lockFastMutex(&s_state.sendMutex);
 	if (result < 0)
 		return result;
-	result = ksceSblSmSchedProxyEnableCry2ArmInterrupt(s_state.requestId, 1,
+	result = SceSblSmSchedProxyForKernel_8B84AC2A(s_state.requestId, 1,
 		authMgrIntrHandler, NULL);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1562, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
@@ -269,7 +269,7 @@ static NOINLINE int authMgrSendPacketCore(struct AuthPacket *packet,
 			}
 		}
 	}
-	releaseResult = ksceSblSmSchedProxyDisableCry2ArmInterrupt(s_state.requestId, 1);
+	releaseResult = SceSblSmSchedProxyForKernel_85EDA5FC(s_state.requestId, 1);
 	if (releaseResult != 0) {
 		SCE_DBG_PRINTF(0xb, 1599, "ERROR: ReleaseHandler ret = 0x%08x\n", releaseResult);
 		result = releaseResult;
@@ -289,14 +289,14 @@ static NOINLINE int authMgrStopSM(SceUID id)
 	packet->command = UINT32_MAX;
 	result = authMgrSendRequest(id, packet);
 	if (result == 0) {
-		result = ksceSblSmSchedProxyWait(id, status);
+		result = sceSblSmSchedProxyWait(id, status);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0xb, 1207, "ERROR: sceSblSmSchedProxyWait ret = 0x%08x\n", result);
 		} else if (status[1] != 3) {
 			SCE_DBG_PRINTF(0xb, 1155, "warning: SM status is not exit [0x%08x]\n", status[1]);
 		}
 	} else if (result == (int)0x800f0429) {
-		result = ksceSblSmSchedProxyGetStatus(id, status);
+		result = sceSblSmSchedProxyGetStatus(id, status);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0xb, 1197, "ERROR: sceSblSmSchedProxyGetStatus ret = 0x%08x\n", result);
 		} else if (status[1] != 10 && status[1] != 3) {
@@ -332,11 +332,11 @@ static NOINLINE int authMgrInvokeSM(void)
 	words[20] = 0;
 	words[21] = UINT32_MAX;
 	auth.media_type = (*(uint32_t *)(void *)(bootParameters + 0x6c) & 0x40) ? 1 : 10;
-	result = ksceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, (SceUID *)&s_state.requestId);
+	result = sceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, (SceUID *)&s_state.requestId);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", result);
 	} else {
-		result = ksceSblSmSchedProxyEnableCry2ArmInterrupt(s_state.requestId, 0,
+		result = SceSblSmSchedProxyForKernel_8B84AC2A(s_state.requestId, 0,
 			(AuthCryHandler)authMgrIntrHandlerforInvoke, NULL);
 		if (result != 0) {
 			SCE_DBG_PRINTF(0xb, 920, "ERROR: authMgrSetupIntrHandler ret = 0x%08x\n", result);
@@ -345,7 +345,7 @@ static NOINLINE int authMgrInvokeSM(void)
 			if (result != 0) {
 				SCE_DBG_PRINTF(0xb, 933, "ERROR: Invoke SM ret = 0x%08x\n", result);
 			} else {
-				result = ksceSblSmSchedProxyDisableCry2ArmInterrupt(s_state.requestId, 0);
+				result = SceSblSmSchedProxyForKernel_85EDA5FC(s_state.requestId, 0);
 				if (result != 0)
 					SCE_DBG_PRINTF(0xb, 942, "ERROR: authMgrReleaseHandler err = 0x%08x\n", result);
 			}
@@ -445,7 +445,7 @@ int module_start(SceSize args, const void *argument)
 	memset(s_state.cachedSpsfoAuth, 0, sizeof(s_state.cachedSpsfoAuth));
 	return 0;
 }
-int ksceSblAuthMgrOpen(int *handle)
+int sceSblAuthMgrOpen(int *handle)
 {
 	int result, operationResult, signalResult;
 
@@ -489,7 +489,7 @@ int ksceSblAuthMgrOpen(int *handle)
 	SceKernelSuspendForDriver_2BB92967(0);
 	return result;
 }
-int ksceSblAuthMgrClose(int handle)
+int sceSblAuthMgrClose(int handle)
 {
 	int result, stopResult, signalResult;
 
@@ -510,7 +510,7 @@ int ksceSblAuthMgrClose(int handle)
 	SceKernelSuspendForDriver_2BB92967(0);
 	return signalResult < 0 ? signalResult : result;
 }
-int ksceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceAuthInfo *auth)
+int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceAuthInfo *auth)
 {
 	uint32_t guard = __stack_chk_guard;
 	struct AuthPacket *packet = s_state.arena;
@@ -563,7 +563,7 @@ out:
 	CheckStackGuard(guard);
 	return result;
 }
-int ksceSblAuthMgrSetupAuthSegment(int handle, uint32_t segmentIndex)
+int SceSblAuthMgrForKernel_89CCDA2C(int handle, uint32_t segmentIndex)
 {
 	struct AuthPacket *packet = s_state.arena;
 	int result;
@@ -575,7 +575,7 @@ int ksceSblAuthMgrSetupAuthSegment(int handle, uint32_t segmentIndex)
 	result = authMgrSendPacketCore(packet, 0x50, 2);
 	return result < 0 ? result : (int)PacketWords(packet)[0x44 / 4];
 }
-int ksceSblAuthMgrLoadBlock(int handle, void *buffer, uint32_t size)
+int SceSblAuthMgrForKernel_BC422443(int handle, void *buffer, uint32_t size)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -600,7 +600,7 @@ int ksceSblAuthMgrLoadBlock(int handle, void *buffer, uint32_t size)
 	SceCpuForDriver_02796361(buffer, RoundCacheSize(size));
 	return 0;
 }
-int ksceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
+int SceSblAuthMgrForDriver_868B9E9A(void *buffer, uint32_t size, uint32_t type)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -629,7 +629,7 @@ int ksceSblAuthMgrGetEKc(void *buffer, uint32_t size, uint32_t type)
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : result;
 }
-int ksceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyId)
+int SceSblAuthMgrForKernel_122ACDEA(const void *key, uint32_t size, int slot, int keyId)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -652,7 +652,7 @@ int ksceSblAuthMgrSetDmac5Key(const void *key, uint32_t size, int slot, int keyI
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
-int ksceSblAuthMgrClearDmac5Key(int slot, int value)
+int SceSblAuthMgrForKernel_F2BB723E(int slot, int value)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -672,7 +672,7 @@ int ksceSblAuthMgrClearDmac5Key(int slot, int value)
 	unlockResult = sceKernelUnlockFastMutex(&s_state.npdrmMutex);
 	return unlockResult < 0 ? unlockResult : ErrorOnly(result);
 }
-int ksceSblAuthMgrDecBindData(void *input, uint32_t inputSize,
+int SceSblAuthMgrForDriver_41DAEA12(void *input, uint32_t inputSize,
 	void *output, uint32_t outputSize, int flags)
 {
 	uint32_t guard = __stack_chk_guard;
@@ -731,7 +731,7 @@ struct SpsfoContext {
 	void *buffer;
 	uint32_t size;
 };
-int ksceSblAuthMgrVerifySpfsoCtx(struct SpsfoContext *context)
+int sceSblAuthMgrVerifySpsfo(struct SpsfoContext *context)
 {
 	struct AuthPacket *packet;
 	uint32_t *words;
@@ -783,7 +783,7 @@ signal:
 	signalResult = sceKernelSignalSema(s_state.selfSemaphore, 1);
 	return signalResult < 0 ? signalResult : result;
 }
-int ksceSblAuthMgrCompareSwVersion(uint32_t version)
+int SceSblAuthMgrForKernel_ABAB8466(uint32_t version)
 {
 	return version == UINT32_MAX || (version & 0xfffff000) <= (FW_SDK_VERSION & 0xfffff000) ? 0 : (int)0x800f0537;
 }

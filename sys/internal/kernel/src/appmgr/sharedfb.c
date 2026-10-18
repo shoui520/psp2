@@ -9,7 +9,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/registrymgr.h>
+#include <regmgr/regmgr.h>
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/atomic.h>
@@ -648,7 +648,7 @@ int sceSharedFbUpdateProcess(void)
 		}
 		SCE_DBG_PRINTF(0, 1772, "[SceSharedFb] Timeout pid=%#x\n", processId);
 		if (SceSblACMgrForDriver_E87D1777() &&
-		    (ksceRegMgrGetKeyInt("/DEVENV/TOOL", "enable_sharedfb_timeout",
+		    (sceRegMgrGetKeyInt("/DEVENV/TOOL", "enable_sharedfb_timeout",
 					 &enabled) || !enabled)) {
 			timeoutPtr = NULL;
 			continue;

@@ -8,6 +8,7 @@
 #include <sysmem/sysmem.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
+#include <authmgr/sblauthmgr.h>
 
 #define SCE_SBL_ERROR_SPFSO_NO_MEMORY		0x800f1b0c	/* names unknown */
 #define SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT	0x800f1b16
@@ -52,9 +53,7 @@ typedef struct SceSpfsoSegment {
 	SceUInt32 size;
 } SceSpfsoSegment;
 
-int ksceSblAuthMgrVerifySpfsoCtx(SceSblSpfsoCtx *ctx);
-
-int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)
+int SceSblPostSsMgrForDriver_BDF18922(const char *path, SceSblSpfsoCtx *ctx)
 {
 	SceSize size, done;
 	SceOff end;
@@ -107,7 +106,7 @@ io_error:
 	return SCE_ERROR_ERRNO_EIO;
 }
 
-int ksceSblPostSsMgrReleaseSpfsoCtx(SceSblSpfsoCtx *ctx)
+int SceSblPostSsMgrForDriver_AD3B0078(SceSblSpfsoCtx *ctx)
 {
 	if (ctx == NULL)
 		return SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
@@ -117,7 +116,7 @@ int ksceSblPostSsMgrReleaseSpfsoCtx(SceSblSpfsoCtx *ctx)
 }
 
 /* check the context and give its payload */
-int ksceSblPostSsMgrVerifySpfsoCtx(SceSblSpfsoCtx *ctx, void **data, SceSize *size)
+int SceSblPostSsMgrForDriver_686B9461(SceSblSpfsoCtx *ctx, void **data, SceSize *size)
 {
 	const SceSpfsoHeader *header;
 	const SceSpfsoSegment *segment;
@@ -139,7 +138,7 @@ int ksceSblPostSsMgrVerifySpfsoCtx(SceSblSpfsoCtx *ctx, void **data, SceSize *si
 	    segment->headerSize != SPFSO_SEGMENT_HEADER ||
 	    segment->size != header->fileSize - SPFSO_SEGMENT_HEADER - header->headerSize)
 		return SCE_SBL_ERROR_SPFSO_INVALID_FORMAT;
-	ret = ksceSblAuthMgrVerifySpfsoCtx(ctx);
+	ret = sceSblAuthMgrVerifySpsfo(ctx);
 	if (ret != 0)
 		return ret;
 	*data = (char *)ctx->base + (SceSize)header->headerSize + SPFSO_SEGMENT_HEADER;

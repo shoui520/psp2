@@ -136,7 +136,7 @@ SceUInt8 SceSblPostSsMgrForDriver_9B49C249(void)
 	return g_utMgr9B49C249Flag;
 }
 
-SceUInt8 ksceSblUtMgrHasNpTestFlag(void)
+SceUInt8 SceSblPostSsMgrForDriver_9FD835B0(void)
 {
 	return g_utMgrNpTestFlag;
 }
@@ -154,7 +154,7 @@ int utMgrGetCurrentTime(SceUInt32 *now)	/* name unknown */
 }
 
 #if FW_VERSION >= 0x04000000
-int ksceSblUtMgrGetTrilithiumBuffer(void *buffer)
+int SceSblPostSsMgrForDriver_ABDD68CD(void *buffer)
 {
 	if (!g_utMgrTrilithiumBufferValid)
 		return SCE_SBL_ERROR_UT_NOT_FOUND;
@@ -191,7 +191,7 @@ int utMgrFindRecord(const void *records, SceSize size, SceUInt32 type, void *rec
 }
 
 #if FW_VERSION < 0x04000000
-int ksceSblUtMgrGetTrilithiumBuffer(void *buffer)
+int SceSblPostSsMgrForDriver_ABDD68CD(void *buffer)
 {
 	if (!g_utMgrTrilithiumBufferValid)
 		return SCE_SBL_ERROR_UT_NOT_FOUND;
@@ -385,8 +385,8 @@ int sceSblUtMgrInit(void)
 	SceSysrootForDriver_E25D2FD5(SceSblPostSsMgrForDriver_22599675);
 	SceSysrootForDriver_A12C9950(SceSblPostSsMgrForDriver_D8A2D465);
 	SceSysrootForDriver_E2E88E3E(SceSblPostSsMgrForDriver_9B49C249);
-	SceSysrootForDriver_35875119(ksceSblUtMgrGetTrilithiumBuffer);
-	SceSysrootForDriver_EE5D6CE9(ksceSblUtMgrHasNpTestFlag);
+	SceSysrootForDriver_35875119(SceSblPostSsMgrForDriver_ABDD68CD);
+	SceSysrootForDriver_EE5D6CE9(SceSblPostSsMgrForDriver_9FD835B0);
 	if (utMgrGetCurrentTime(&now) != 0)
 		now = 0xffffffff;
 	size = 0;
@@ -410,7 +410,7 @@ int sceSblUtMgrInit(void)
 }
 
 /* seal a utoken and keep it */
-int ksceSblUtMgrExecuteUtokenSmCommand1(void *utoken, SceSize size)
+int SceSblPostSsMgrForDriver_C2E58CE3(void *utoken, SceSize size)
 {
 	SceUInt32 now = 0;
 	int ret;
@@ -446,7 +446,7 @@ int utMgrReadUtoken(void *utoken, SceSize size)	/* name unknown */
 	return ret;
 }
 
-int ksceSblUtMgrResetUtokenFile(void)
+int SceSblPostSsMgrForDriver_1FF699DD(void)
 {
 	void *utoken;
 	int ret;
@@ -464,12 +464,12 @@ int ksceSblUtMgrResetUtokenFile(void)
 	return ret;
 }
 
-SceUInt8 ksceSblUtMgrHasComTestFlag(void)
+SceUInt8 SceSblPostSsMgrForDriver_7ACCAA50(void)
 {
 	return g_utMgrComTestFlag;
 }
 
-SceUInt8 ksceSblUtMgrHasStoreFlag(void)
+SceUInt8 SceSblPostSsMgrForDriver_9D2E2D39(void)
 {
 	return g_utMgrStoreFlag;
 }
@@ -520,7 +520,7 @@ int sceSblUtMgrUpdateUtoken(const void *utoken, SceSize size)
 	}
 	ret = SceSysmemForDriver_BC996A7A(kutoken, utoken, UT_SIZE);
 	if (ret == 0)
-		ret = ksceSblUtMgrExecuteUtokenSmCommand1(kutoken, UT_SIZE);
+		ret = SceSblPostSsMgrForDriver_C2E58CE3(kutoken, UT_SIZE);
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
 	sceSyscallLeave(state);
 	return ret;
@@ -562,7 +562,7 @@ int sceSblUtMgrResetUtokenFile(void)
 		sceSyscallLeave(state);
 		return SCE_KERNEL_ERROR_NOT_ALLOWED;
 	}
-	ret = ksceSblUtMgrResetUtokenFile();
+	ret = SceSblPostSsMgrForDriver_1FF699DD();
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -642,7 +642,7 @@ int utSmStart(const char *path)	/* name unknown */
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromFile(0, path, 0, &info, &g_utSmId);
+	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_utSmId);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: utoken_sm services 1

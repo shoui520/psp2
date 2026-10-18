@@ -33,7 +33,7 @@ int invoke_aimgr_secure_module(void)
 	if (ret)
 		return ret;
 	authInfo.self_type = (authInfo.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromFile(0, "os0:sm/aimgr_sm.self", 0,
+	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/aimgr_sm.self", 0,
 		&authInfo, &aimgrSmId);
 }
 
@@ -42,7 +42,7 @@ int stop_aimgr_secure_module(void)
 	SceSblSmCommPair result;
 	int ret;
 
-	ret = ksceSblSmCommStopSm(aimgrSmId, &result);
+	ret = SceSblSmCommForKernel_0631F8ED(aimgrSmId, &result);
 	if (!ret)
 		ret = result.result;
 	return ret;
@@ -62,7 +62,7 @@ int aimgrReadConsoleId(SceConsoleId *consoleId)
 	ret = invoke_aimgr_secure_module();
 	if (ret)
 		goto error;
-	callRet = ksceSblSmCommCallFunc(aimgrSmId, 1, &serviceResult,
+	callRet = SceSblSmCommForKernel_DB9FC204(aimgrSmId, 1, &serviceResult,
 				  &value, sizeof(value));
 	ret = stop_aimgr_secure_module();
 	if (ret)
@@ -95,7 +95,7 @@ int aimgrReadPscode2(ScePsCode *pscode)
 		} else {
 			ret = invoke_aimgr_secure_module();
 			if (ret == 0) {
-				callRet = ksceSblSmCommCallFunc(aimgrSmId, 4,
+				callRet = SceSblSmCommForKernel_DB9FC204(aimgrSmId, 4,
 					&serviceResult, leaf.words, sizeof(leaf));
 				ret = stop_aimgr_secure_module();
 				if (ret == 0) {
@@ -126,7 +126,7 @@ int aimgrReadVisibleId(void *visibleId)
 	ret = invoke_aimgr_secure_module();
 	if (ret)
 		return ret;
-	ret = ksceSblSmCommCallFunc(aimgrSmId, 3, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(aimgrSmId, 3, &serviceResult,
 				  value, sizeof(value));
 	stopRet = stop_aimgr_secure_module();
 	if (stopRet)
@@ -180,7 +180,7 @@ int aimgrCreatePassPhrase(const uint32_t *parameters, void *passPhrase)
 	ret = invoke_aimgr_secure_module();
 	if (ret)
 		return ret;
-	ret = ksceSblSmCommCallFunc(aimgrSmId, 5, &serviceResult,
+	ret = SceSblSmCommForKernel_DB9FC204(aimgrSmId, 5, &serviceResult,
 				  &request, sizeof(request));
 	if (ret)
 		return ret;

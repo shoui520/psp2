@@ -11,26 +11,26 @@ SceFios2Kernel:
       version: 1
       nid: 0x54D6B9EB
       functions:
-        - ksceFiosKernelOverlayThreadSetDisabled: 0x03727E5E
-        - ksceFiosKernelOverlayResolveSync: 0x0F456345
-        - ksceFiosKernelOverlayAddForProcess: 0x17E65A1C
-        - ksceFiosKernelOverlayRemoveForProcess: 0x23247EFB
-        - ksceFiosKernelOverlayRemove: 0x2368FEB5
-        - ksceFiosKernelOverlayGetRecommendedScheduler: 0x241BF0D6
-        - ksceFiosKernelOverlayAdd: 0x2607EE4C
+        - SceFios2KernelForDriver_03727E5E: 0x03727E5E
+        - SceFios2KernelForDriver_0F456345: 0x0F456345
+        - SceFios2KernelForDriver_17E65A1C: 0x17E65A1C
+        - SceFios2KernelForDriver_23247EFB: 0x23247EFB
+        - SceFios2KernelForDriver_2368FEB5: 0x2368FEB5
+        - SceFios2KernelForDriver_241BF0D6: 0x241BF0D6
+        - SceFios2KernelForDriver_2607EE4C: 0x2607EE4C
         - SceFios2KernelForDriver_2649408B: 0x2649408B
         - SceFios2KernelForDriver_28E28A58: 0x28E28A58
         - SceFios2KernelForDriver_35E7E75C: 0x35E7E75C
         - SceFios2KernelForDriver_3B329E86: 0x3B329E86
-        - ksceFiosKernelOverlayGetInfo: 0x725E6817
-        - ksceFiosKernelOverlayModify: 0x7F8B960C
-        - ksceFiosKernelOverlayModifyForProcess: 0x853EA82A
+        - SceFios2KernelForDriver_725E6817: 0x725E6817
+        - SceFios2KernelForDriver_7F8B960C: 0x7F8B960C
+        - SceFios2KernelForDriver_853EA82A: 0x853EA82A
         - SceFios2KernelForDriver_990F46A5: 0x990F46A5
-        - ksceFiosKernelOverlayResolveWithRangeSync: 0xD3D968FC
+        - SceFios2KernelForDriver_D3D968FC: 0xD3D968FC
         - SceFios2KernelForDriver_DD7627EC: 0xDD7627EC
-        - ksceFiosKernelOverlayThreadIsDisabled: 0xE71192C5
-        - ksceFiosKernelOverlayGetInfoForProcess: 0xF1762BC2
-        - ksceFiosKernelOverlayGetList: 0xFF42AAF0
+        - SceFios2KernelForDriver_E71192C5: 0xE71192C5
+        - SceFios2KernelForDriver_F1762BC2: 0xF1762BC2
+        - SceFios2KernelForDriver_FF42AAF0: 0xFF42AAF0
     SceFios2Kernel:
       syscall: true
       version: 1

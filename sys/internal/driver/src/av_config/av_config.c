@@ -391,7 +391,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 						   "hdmi_resolution_mode", 3);
 			avConfigHdmiAudioMode = 1;
 			registryValue = 0;
-			if (ksceRegMgrSystemParamGetInt(2265410, &registryValue) >= 0 &&
+			if (sceRegMgrSystemParamGetInt(2265410, &registryValue) >= 0 &&
 			    (unsigned int)registryValue < 2)
 				SceHdmiForDriver_47894820(registryValue);
 			avConfigPowerCallback = sceKernelCreateCallback("SceAVConfigDisplay",

@@ -36,13 +36,13 @@
  */
 typedef void (*SmCry2ArmHandler)(SceUID id, int channel, void *argument,
 	uint32_t status, uint32_t result);
-int ksceSblSmSchedProxyInvoke(uint32_t priority, uint32_t physicalVector,
+int sceSblSmSchedProxyInvoke(uint32_t priority, uint32_t physicalVector,
 	uint32_t count, const uint32_t *commandInput, const SceAuthInfo *auth, SceUID *id);
-int ksceSblSmSchedProxyWait(SceUID id, void *result);
-int ksceSblSmSchedCallFunc(SceUID id, int channel, uint32_t value);
-int ksceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
-int ksceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
-int ksceSblSmSchedProxyEnableCry2ArmInterrupt(SceUID id, int channel,
+int sceSblSmSchedProxyWait(SceUID id, void *result);
+int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
+int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
+int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, uint32_t *value);
+int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
 	SmCry2ArmHandler handler, void *argument);
 
 struct SmSession {
@@ -142,9 +142,9 @@ static void NOINLINE sceSblSmCommIntHandler(SceUID id, int channel, void *argume
 			eventBits = 0x10;
 		}
 	} else if (channel == 1) {
-		if (ksceSblSmSchedProxyReadCry2Arm(id, 1, &value) < 0 || !(value & 1))
+		if (sceSblSmSchedProxyReadCry2Arm(id, 1, &value) < 0 || !(value & 1))
 			goto out;
-		if (ksceSblSmSchedProxyWriteCry2Arm(id, 1, value) < 0 || index < 0)
+		if (sceSblSmSchedProxyWriteCry2Arm(id, 1, value) < 0 || index < 0)
 			goto out;
 		eventBits = 0x10;
 		switch (value & ~1U) {
@@ -216,7 +216,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	ret = SceSysmemForDriver_8D160E65(base, &vector.size);
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceSblSmSchedProxyInvoke(priority, vector.size, vector.total,
+	ret = sceSblSmSchedProxyInvoke(priority, vector.size, vector.total,
 		(const uint32_t *)(uintptr_t)command, auth, id);
 	if (ret < 0)
 		goto cleanup;
@@ -224,10 +224,10 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	s_sessions[index].result = 0;
 	s_sessions[index].memBlock = memBlock;
 	s_sessions[index].eventFlag = eventFlag;
-	ret = ksceSblSmSchedProxyEnableCry2ArmInterrupt(*id, 0, sceSblSmCommIntHandler, NULL);
+	ret = SceSblSmSchedProxyForKernel_8B84AC2A(*id, 0, sceSblSmCommIntHandler, NULL);
 	if (ret < 0)
 		goto cleanup;
-	ret = ksceSblSmSchedProxyEnableCry2ArmInterrupt(*id, 1, sceSblSmCommIntHandler, NULL);
+	ret = SceSblSmSchedProxyForKernel_8B84AC2A(*id, 1, sceSblSmCommIntHandler, NULL);
 	if (ret < 0)
 		goto cleanup;
 	vector.size = 1;
@@ -245,7 +245,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	ret = s_sessions[index].result;
 cleanup:
 	if (*id != -1) {
-		ksceSblSmSchedProxyWait(*id, &vector);
+		sceSblSmSchedProxyWait(*id, &vector);
 		*id = -1;
 	}
 	if (memBlock >= 0)
@@ -274,7 +274,7 @@ int module_start(SceSize arglen, void *argp)
 	return ret;
 }
 
-int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
+int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
 	SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
@@ -339,7 +339,7 @@ out:
 	return ret;
 }
 
-int ksceSblSmCommStartSmFromData(SceUInt32 priority, const void *data,
+int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
 	SceUInt32 size, SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
@@ -383,7 +383,7 @@ out:
 	return ret;
 }
 
-int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
+int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
 	SceUInt32 *serviceResult, void *data, SceSize size)
 {
 	uint32_t context = EnterApi();
@@ -419,7 +419,7 @@ int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 	buffer[2] = 0;
 	buffer[3] = 0;
 	PublishWord(buffer + 3);
-	ret = ksceSblSmSchedCallFunc(id, 1, physicalAddress | 1);
+	ret = SceSblSmSchedProxyForKernel_723B382F(id, 1, physicalAddress | 1);
 	if (ret < 0)
 		goto out;
 	if (service == UINT32_MAX) {
@@ -443,13 +443,13 @@ out:
 	return ret;
 }
 
-int ksceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
+int SceSblSmCommForKernel_0631F8ED(SceSblSmCommId id, SceSblSmCommPair *result)
 {
 	uint32_t context = EnterApi();
 	struct SmSession *session;
 	int index, ret, waitRet;
 
-	ret = ksceSblSmCommCallFunc(id, UINT32_MAX, NULL, NULL, 0);
+	ret = SceSblSmCommForKernel_DB9FC204(id, UINT32_MAX, NULL, NULL, 0);
 	if (ret == 0 || ret == SM_ERROR_STOPPED) {
 		index = FindSessionSlot(id);
 		/* Native cleanup does not reject an unmatched (-1) slot here. */
@@ -458,7 +458,7 @@ int ksceSblSmCommStopSm(SceSblSmCommId id, SceSblSmCommPair *result)
 		sceKernelDeleteEventFlag(session->eventFlag);
 		ReleaseSessionSlot(index);
 		ret = sceKernelSignalSema(s_semaphore, 1);
-		waitRet = ksceSblSmSchedProxyWait(id, result);
+		waitRet = sceSblSmSchedProxyWait(id, result);
 		if (waitRet != 0 && ret == 0)
 			ret = waitRet;
 	}

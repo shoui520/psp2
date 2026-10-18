@@ -3,8 +3,8 @@
 #include <sysmem/debug.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include "appmgr_internal_util.h"
+#include <appmgr/appmgr.h>
 
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 
 struct AppmgrWaitObject g_appmgrWaitObjects[7];

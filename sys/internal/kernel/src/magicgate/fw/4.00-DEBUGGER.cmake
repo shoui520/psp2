@@ -92,8 +92,8 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_D8678061
 	SceKernelUtilsForDriver_F12B6451
 	SceDebugForDriver_391B74B7
-	ksceSblRngPseudoRandomNumber
-	ksceSblAimgrGetOpenPsId
+	_set_key_seed
+	SceSblSsMgrForDriver_A5B5D269
 	SceSblMgKeyMgrForDriver_1263FB04
 	SceSblMgKeyMgrForDriver_DF3B808D
 	sceMsifGetMediaId

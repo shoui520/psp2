@@ -2,14 +2,12 @@
 
 #include <psp2/appmgr.h>
 #include "appmgr_event.h"
+#include <appmgr/appmgr.h>
 
-extern int ksceAppMgrAppParamGetInt(int pid, int param, int *value);
-extern int ksceAppMgrGetBootParam(SceUInt32 request, void *bootParam);
-extern int sceAppMgrGetAppIdByAppId(int appId);
+extern int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);
+extern int SceAppMgrForDriver_D2541B4A(SceUInt32 request, void *bootParam);
 extern int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
 extern int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
-extern int sceAppMgrSendLiveBoardMode(int mode);
-extern int sceAppMgrNotifyLiveBoardModeForShell(int appId, int mode);
 
 extern int sceAppMgrSetNetworkDisconnectionWarningDialogState(SceBool enable,
 							   const void *optParam);
@@ -32,12 +30,12 @@ extern int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 
 int appmgrGetBootParamSyscall(SceUInt32 request, void *bootParam)
 {
-	return ksceAppMgrGetBootParam(request, bootParam);
+	return SceAppMgrForDriver_D2541B4A(request, bootParam);
 }
 
 int appmgrAppParamGetIntSyscall(int pid, int param, int *value)
 {
-	return ksceAppMgrAppParamGetInt(pid, param, value);
+	return SceAppMgrForDriver_12CE29F7(pid, param, value);
 }
 
 int appmgrAppParamGetStringSyscall(int pid, int param, char *string, SceSize length)
@@ -179,7 +177,6 @@ int appmgrGetRecommendedScreenOrientationSyscall(int *orientation)
 {
 	return sceAppMgrGetRecommendedScreenOrientation(orientation);
 }
-
 
 int appmgrGetRunningAppIdListForShellSyscall(SceInt32 *appIds, int count)
 {

@@ -2,7 +2,7 @@
 #include "ssmgr_internal.h"
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
-#include <psp2/dmac5.h>
+#include <ss_mgr/ss_mgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -304,7 +304,7 @@ int dmac5AllocOperation(void)
 	return operation;
 }
 
-int ksceSblDmac5Rnd(void *dst, SceSize size, int coherent)
+int sceSblDmac5Rnd(void *dst, SceSize size, int coherent)
 {
 	uint8_t buffer[64] __attribute__((aligned(64)));
 	SceKernelDmaOpId operation;
@@ -365,84 +365,84 @@ int dmac5HashCrypt(Dmac5Context *context, const void *src, void *dst,
 	return ret;
 }
 
-int ksceSblDmac5AesCbcEnc(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_E6E1AD15(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		iv, coherent, 9);
 }
 
-int ksceSblDmac5AesCbcDec(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_121FA69F(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		iv, coherent, 10);
 }
 
-int ksceSblDmac5AesCtrEnc(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_82B5DCEF(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		iv, coherent, 33);
 }
 
-int ksceSblDmac5AesCtrDec(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_7D46768C(const void *src, void *dst, int size,
 	const void *key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		iv, coherent, 34);
 }
 
-int ksceSblDmac5AesEcbEnc(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_C517770D(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		NULL, coherent, 1);
 }
 
-int ksceSblDmac5AesEcbDec(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_7C978BE7(const void *src, void *dst, int size,
 	const void *key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecInternal(src, dst, size, key, keyBits,
 		NULL, coherent, 2);
 }
 
-int ksceSblDmac5AesEcbEncWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_01BE0374(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
 		NULL, coherent, 1);
 }
 
-int ksceSblDmac5AesEcbDecWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_8B4700CB(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
 		NULL, coherent, 2);
 }
 
-int ksceSblDmac5DesEcbEncWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_37DD5CBF(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
 		NULL, coherent, 65);
 }
 
-int ksceSblDmac5DesEcbDecWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_8EAFB18A(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
 		NULL, coherent, 66);
 }
 
-int ksceSblDmac5DesCbcEncWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_05B38698(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
 		iv, coherent, 73);
 }
 
-int ksceSblDmac5DesCbcDecWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_926BCCF0(const void *src, void *dst, int size,
 	unsigned int key, int keyBits, void *iv, int coherent)
 {
 	return sceSblDmac5EncDecWithReservedKey(src, dst, size, key, keyBits,
@@ -498,14 +498,14 @@ initError:
 	return ret;
 }
 
-int ksceSblDmac5Sha1HmacTransform(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_6704D985(const void *src, void *dst, int size,
 	const void *key, void *iv, int coherent, uint32_t flags)
 {
 	return sceSblDmac5HmacTransform(src, dst, size, key, 256,
 		iv, coherent, 0x23, flags);
 }
 
-int ksceSblDmac5Sha256Hmac(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_79F38554(const void *src, void *dst, int size,
 	const void *key, void *iv, int coherent, uint32_t flags)
 {
 	return sceSblDmac5HmacTransform(src, dst, size, key, 256,
@@ -550,7 +550,7 @@ int sceSblDmac5HmacTransformWithReservedKey(const void *src, void *dst,
 	return ret;
 }
 
-int ksceSblDmac5AesCmacWithKeyslot(const void *src, void *dst, int size,
+int SceSblSsMgrForDriver_EA6ACB6D(const void *src, void *dst, int size,
 	unsigned int key, unsigned int keyBits, void *iv, int coherent,
 	uint32_t flags)
 {
@@ -558,7 +558,7 @@ int ksceSblDmac5AesCmacWithKeyslot(const void *src, void *dst, int size,
 		keyBits, iv, coherent, 0x3b, flags);
 }
 
-int ksceSblSsMgrExecuteDmac5HashCommand(const void *src, void *dst, SceSize size,
+int sceSblDmac5HashTransform(const void *src, void *dst, SceSize size,
 	void *iv, int coherent, uint32_t command, uint32_t flags)
 {
 	Dmac5Context context __attribute__((aligned(64)));
@@ -599,10 +599,10 @@ freeOperation:
 	return ret;
 }
 
-int ksceSblDmac5Sha1(const void *src, void *dst, int size, void *iv,
+int SceSblSsMgrForDriver_EB3AF9B5(const void *src, void *dst, int size, void *iv,
 	int coherent, uint32_t flags)
 {
-	return ksceSblSsMgrExecuteDmac5HashCommand(src, dst, size, iv,
+	return sceSblDmac5HashTransform(src, dst, size, iv,
 		coherent, 3, flags);
 }
 
@@ -679,7 +679,7 @@ int sceSblDmac5EncDec(SceSblDmac5EncDecParam *param, SceUInt32 command)
 	return ret;
 }
 
-int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
+int sceSblDmac5HashTransformForUser(SceSblDmac5HashTransformParam *param,
 	SceUInt32 command, SceUInt32 extra)
 {
 	uint8_t digest[32] __attribute__((aligned(32)));
@@ -736,7 +736,7 @@ int sceSblDmac5HashTransform(SceSblDmac5HashTransformParam *param,
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	ret = ksceSblSsMgrExecuteDmac5HashCommand(src, digest, size,
+	ret = sceSblDmac5HashTransform(src, digest, size,
 		context, 1, command, extra);
 	dmac5UnlockUserBuffers(src, size, dst, digestSize);
 	if (ret == 0) {

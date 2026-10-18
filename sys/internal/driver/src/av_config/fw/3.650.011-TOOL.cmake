@@ -204,7 +204,7 @@ set(MODULE_IMPORT_FUNCS
 	SceHdmiForDriver_EA486A37
 	sceHdmiCecEnableCec
 	sceRegMgrGetKeyInt
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRegMgrSetKeyInt
 	scePowerRegisterCallback
 	ScePowerForDriver_394DE492

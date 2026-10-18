@@ -80,7 +80,7 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_4DF40893
 	SceSblACMgrForDriver_426A4E8C
 	SceQafMgrForDriver_4BC1883F
-	ksceSblUtMgrHasStoreFlag
+	SceSblPostSsMgrForDriver_9D2E2D39
 	SceSysconForDriver_299B1CE7
 	SceSysconForDriver_3168F3AF
 	SceSysconForDriver_51164951

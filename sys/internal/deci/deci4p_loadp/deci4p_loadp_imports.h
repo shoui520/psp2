@@ -12,6 +12,7 @@
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysroot.h>
 #include <acmgr/acmgr.h>
+#include <regmgr/regmgr.h>
 
 /* SceAppMgrForDriver, debugger interface */
 int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
@@ -19,7 +20,7 @@ int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
 int sceAppMgrKillAppByNameForDebugger(const char *titleId);
 int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags, const char *args,
 			       int option1, int option2, int option0, const void *data);
-int ksceAppMgrDestroyOtherAppByPid(SceUID pid);
+int sceAppMgrDestroyAppForTest(SceUID pid);
 int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app control */
 
 /* SceProcessmgrForDriver */
@@ -27,4 +28,3 @@ int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app cont
 /* SceSblACMgrForDriver */
 
 /* named imports vitasdk declares only under other names */
-int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);

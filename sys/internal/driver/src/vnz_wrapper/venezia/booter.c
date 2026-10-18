@@ -6,13 +6,10 @@
 #include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
+#include <post_ss_mgr/sblfwloader.h>
 
 VeneziaKernelMemory g_veneziaKernelMemory;
 VeneziaBootMemory g_veneziaBootMemory;
-
-extern int ksceSblFwLoaderLock(const char *path, int flags);
-extern int ksceSblFwLoaderLoad(int type, void *base, SceSize size, unsigned int *result);
-extern int ksceSblFwLoaderUnlock(void);
 
 #if FW_VERSION >= 0x04000000
 extern unsigned int getVeneziaRpcBootState(void) __asm__("getRpcBootState"); /* name unknown */
@@ -120,17 +117,17 @@ int _sceVeneziaBootPhase2(void)
 	regs->bootPhysicalBase = alignedBase;
 	regs->interruptControl = 0xffff0000;
 	regs->bootControl = 1;
-	ret = ksceSblFwLoaderLock("os0:kd/vnzimg.skprx", 0);
+	ret = sceSblFwLoaderSetPath("os0:kd/vnzimg.skprx", 0);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 234, "_sceVeneziaBootPhase2",
 					  "Warning: sceSblFwLoaderOpen failed (0x%08x)\n", ret);
 		goto out;
 	}
-	ret = ksceSblFwLoaderLoad(1, g_veneziaBootMemory.imageBase,
+	ret = sceSblFwLoaderLoad(1, g_veneziaBootMemory.imageBase,
 				g_veneziaBootMemory.imageSize, &loaded);
 	if (ret < 0)
 		goto loadFailed;
-	ret = ksceSblFwLoaderUnlock();
+	ret = sceSblFwLoaderClose();
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 245, "_sceVeneziaBootPhase2",
 					  "Warning: sceSblFwLoaderClose failed (0x%08x)\n", ret);
@@ -148,7 +145,7 @@ out:
 loadFailed:
 	SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 239, "_sceVeneziaBootPhase2",
 				  "Warning: sceSblFwLoaderLoad failed (0x%08x)\n", ret);
-	ksceSblFwLoaderUnlock();
+	sceSblFwLoaderClose();
 	goto out;
 }
 

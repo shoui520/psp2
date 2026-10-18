@@ -11,27 +11,27 @@ SceCoredump:
       version: 1
       nid: 0xA351714A
       functions:
-        - ksceCoredumpCafSegmentInit: 0x07185515
+        - SceCoredumpForDriver_07185515: 0x07185515
         - SceCoredumpForDriver_097AA37D: 0x097AA37D
-        - ksceCoredumpCreateDump: 0x0C10313F
+        - SceCoredumpForDriver_0C10313F: 0x0C10313F
         - SceCoredumpForDriver_10863B61: 0x10863B61
         - SceCoredumpForDriver_12392973: 0x12392973
         - SceCoredumpForDriver_13EF8516: 0x13EF8516
         - sceCoredumpCafContextCreate: 0x2964AD0A
         - sceKernelCoredumpCancelForDriver: 0x340856F7
-        - ksceCoredumpCafHeaderFinal: 0x65AA4991
-        - ksceCoredumpCafHeaderInit: 0x7C8120C5
-        - ksceCoredumpCafInit: 0x9336009B
+        - SceCoredumpForDriver_65AA4991: 0x65AA4991
+        - SceCoredumpForDriver_7C8120C5: 0x7C8120C5
+        - SceCoredumpForDriver_9336009B: 0x9336009B
         - sceCoredumpCafContextDestroy: 0x95402BF3
         - sceCoredumpTrigger: 0xA7D214A7
-        - ksceCoredumpDeleteCrashReportCaf: 0xAD070837
-        - ksceCoredumpCafHeaderTransform: 0xAE2C2793
-        - ksceCoredumpCafFinal: 0xC90F61AF
+        - SceCoredumpForDriver_AD070837: 0xAD070837
+        - SceCoredumpForDriver_AE2C2793: 0xAE2C2793
+        - SceCoredumpForDriver_C90F61AF: 0xC90F61AF
         - SceCoredumpForDriver_D064F6DC: 0xD064F6DC
-        - ksceCoredumpCafSegmentFinal: 0xDF17420A
-        - ksceCoredumpCafCreateIv: 0xE1BCBE8F
+        - SceCoredumpForDriver_DF17420A: 0xDF17420A
+        - SceCoredumpForDriver_E1BCBE8F: 0xE1BCBE8F
         - SceCoredumpForDriver_EF20949F: 0xEF20949F
-        - ksceCoredumpCafSegmentTransform: 0xFB7AEBFE
+        - SceCoredumpForDriver_FB7AEBFE: 0xFB7AEBFE
     SceCoredump:
       syscall: true
       version: 1

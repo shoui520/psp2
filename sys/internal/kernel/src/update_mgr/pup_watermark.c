@@ -1,5 +1,5 @@
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sm_comm.h>
+#include <sm_comm/sm_comm.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/sysmem.h>
@@ -71,7 +71,7 @@ verify:
 		if (result)
 			goto cleanup;
 	}
-	result = ksceSblSmCommCallFunc(pupSmId, 0x30002, &serviceResult, packet, 4032);
+	result = SceSblSmCommForKernel_DB9FC204(pupSmId, 0x30002, &serviceResult, packet, 4032);
 	if (!result)
 		result = serviceResult;
 cleanup:

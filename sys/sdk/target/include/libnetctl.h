@@ -13,6 +13,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <modulemgr/modulemgr.h>
+#include <regmgr/regmgr.h>
 
 #define SCE_NET_CTL_ERROR_NOT_INITIALIZED		0x80412101
 #define SCE_NET_CTL_ERROR_NOT_TERMINATED		0x80412102
@@ -51,8 +52,6 @@ extern int SceShellSvc_1FAB9A1E(int eventId);
 extern int SceShellSvc_7CBF442B(int eventId);
 extern int SceShellSvc_D943CE15(int eventId, void (*handler)(int eventId), void *arg);
 extern int SceShellSvc_FB03FBC9(int eventId);
-extern int sceRegMgrUtilityGetBin(SceUInt32 id, void *buf, SceSize size);
-extern int sceRegMgrUtilityGetStr(SceUInt32 id, char *buf, SceSize size);
 extern int sceAppMgrGetSystemDataFile(int id, void *buf, SceSize size);
 extern int SceNetInternal_0DFC23D6(SceUID pid, int a1, int a2);
 extern int SceNetInternal_333F9CB3(int sock, unsigned int request, void *arg);

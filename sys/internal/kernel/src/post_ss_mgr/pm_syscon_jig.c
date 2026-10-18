@@ -170,7 +170,7 @@ POST_SS_DEFERRED int pm_auth2_common(int type)
 POST_SS_DEFERRED int pmSmAuthGetChallenge(void *challenge, int type)	/* name unknown */
 {
 	(void)type;
-	ksceSblSsMemset(challenge, 0, 0x28);
+	SceSblSsMgrForDriver_CD98CC92(challenge, 0, 0x28);
 	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 }
 
@@ -179,7 +179,7 @@ POST_SS_DEFERRED int pmSmAuthGetChallenge(void *challenge, int type)	/* name unk
 POST_SS_DEFERRED int pmSmAuthExchange4(void *data, int type)	/* name unknown */
 {
 	(void)type;
-	ksceSblSsMemset(data, 0, 0x28);
+	SceSblSsMgrForDriver_CD98CC92(data, 0, 0x28);
 	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 }
 
@@ -197,7 +197,7 @@ POST_SS_DEFERRED int pmSmAuthVerify5(const void *data, int type)	/* name unknown
 POST_SS_DEFERRED int pmSmAuthExchange6(void *data, int type)	/* name unknown */
 {
 	(void)type;
-	ksceSblSsMemset(data, 0, 0x28);
+	SceSblSsMgrForDriver_CD98CC92(data, 0, 0x28);
 	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 }
 
@@ -219,7 +219,7 @@ int pmMgrSetNvsMode(int mode, void *nvs)
 
 	command.nvs = *(const ScePmNvsArea *)nvs;
 	command.mode = mode;
-	ret = ksceSblSmCommCallFunc(g_pmSmId, PM_SM_SET_NVS_MODE, &result, &command,
+	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SET_NVS_MODE, &result, &command,
 				    sizeof(command));
 	ret = ret == 0 ? (int)result : SCE_SBL_ERROR_PM_SM;
 	*(ScePmNvsArea *)nvs = command.nvs;
@@ -237,14 +237,14 @@ int invoke_pm_secure_module(const char *path)
 	if (ret < 0)
 		return ret;
 	info.self_type = (info.self_type & ~0xf) | 2;
-	return ksceSblSmCommStartSmFromFile(0, path, 0, &info, &g_pmSmId);
+	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_pmSmId);
 }
 
 int stop_pm_secure_module(void)
 {
 	SceSblSmCommPair result;
 
-	return ksceSblSmCommStopSm(g_pmSmId, &result);
+	return SceSblSmCommForKernel_0631F8ED(g_pmSmId, &result);
 }
 
 /* PLACEHOLDER: cryptographic routine, deferred: pm_sm service 9 of
@@ -252,7 +252,7 @@ int stop_pm_secure_module(void)
 POST_SS_DEFERRED int pmSmAuthGetCertificate(void *certificate, int type)	/* name unknown */
 {
 	(void)type;
-	ksceSblSsMemset(certificate, 0, 0x104);
+	SceSblSsMgrForDriver_CD98CC92(certificate, 0, 0x104);
 	return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 }
 
@@ -274,13 +274,13 @@ int pmSmGetMode(SceUInt32 *state, SceUInt32 *data)
 
 	command.step = PM_SM_GET_MODE_REQUEST;
 	command.reserved = 0;
-	ret = ksceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 				    sizeof(command));
 	if (ret == 0 && (ret = result) == 0 &&
 	    (ret = SceSysconForDriver_EBDF88B9(command.request, 0x10, command.response,
 					       0x30)) == 0) {
 		command.step = PM_SM_GET_MODE_RESPONSE;
-		ret = ksceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+		ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 					    sizeof(command));
 		if (ret == 0 && (ret = result) == 0) {
 			*state = command.state;
@@ -301,13 +301,13 @@ int pmSmSetMode(SceUInt32 *state, SceUInt32 *data, int mode)
 	command.data = *data;
 	command.reserved = 0;
 	command.step = mode;
-	ret = ksceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+	ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 				    sizeof(command));
 	if (ret == 0 && (ret = result) == 0 &&
 	    (ret = SceSysconForDriver_63683B9B(command.request, 0x30, command.response,
 					       0x10)) == 0) {
 		command.step = PM_SM_SET_MODE_RESPONSE;
-		ret = ksceSblSmCommCallFunc(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
+		ret = SceSblSmCommForKernel_DB9FC204(g_pmSmId, PM_SM_SYSCON_MODE, &result, &command,
 					    sizeof(command));
 		if (ret == 0)
 			ret = result;

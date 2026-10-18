@@ -18,6 +18,7 @@
 #include <sysmem/sysclib.h>
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
+#include <pfsmgr/pfsmgr.h>
 
 int appmgrExtractSaveDataDeviceName(const char *path, char *device,
 				    SceSize capacity);
@@ -41,8 +42,6 @@ extern int appmgrValidateSaveDataMountPoint(const char *mountPoint,
 extern int appmgrCheckSaveDataSlot(unsigned int slotId, const char *mountPoint,
 				  int status);
 extern int appmgrGetFakeSdSlotBroken(void);
-extern int ScePfsMgrForKernel_27FB7618(const char *name,
-				    SceUInt32 *quota, SceUInt32 *usage);
 #if FW_VERSION >= 0x04000000
 #endif
 
@@ -255,7 +254,7 @@ unlockPower:
 	return result;
 }
 
-int ksceAppMgrSaveDataSlotInit(void *parameters)
+int SceAppMgrForDriver_2277F736(void *parameters)
 {
 	AppmgrSaveDataSlotInitParam *param = parameters;
 	AppmgrSaveDataSlotFileHeader *header;
@@ -400,7 +399,7 @@ leave:
 	return result;
 }
 
-int ksceAppMgrSaveDataSlotCreate(void *parameters)
+int SceAppMgrForDriver_E6F389B8(void *parameters)
 {
 	const AppmgrSaveDataSlotKernelParam *slot = parameters;
 	SceAppMgrAppInfoCache *info;
@@ -464,7 +463,7 @@ leaveSyscall:
 	return result;
 }
 
-int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
+int SceAppMgrForDriver_B544F2A0(SceAppMgrSaveDataSlotDelete *parameters)
 {
 	const SceAppMgrSaveDataSlotDelete *slot = parameters;
 	SceAppMgrAppInfoCache *info;
@@ -527,7 +526,7 @@ leaveSyscall:
 	return result;
 }
 
-int ksceAppMgrSaveDataSlotSetParam(void *parameters)
+int SceAppMgrForDriver_7E247E47(void *parameters)
 {
 	const AppmgrSaveDataSlotKernelParam *slot = parameters;
 	SceAppMgrAppInfoCache *info;
@@ -591,7 +590,7 @@ leaveSyscall:
 	return result;
 }
 
-int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
+int SceAppMgrForDriver_9ADB00FA(void *parameters)
 {
 	const AppmgrSaveDataSlotStatusParam *slot = parameters;
 	SceAppMgrAppInfoCache *info;
@@ -931,7 +930,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	}
 	value = SceSblAIMgrForDriver_D78B04A2();
 	if (!value) {
-		if (ksceRegMgrSystemParamGetInt(0x154A2C, &value) == 0 && value == 1)
+		if (sceRegMgrSystemParamGetInt(0x154A2C, &value) == 0 && value == 1)
 			freeBytes = 0;
 		value = SceSblAIMgrForDriver_D78B04A2();
 	}
@@ -942,7 +941,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 		missingFilesystemKiB = 0;
 	}
 	if (!value &&
-	    ksceRegMgrSystemParamGetInt(0x25CE9A, &value) == 0 && value == 1)
+	    sceRegMgrSystemParamGetInt(0x25CE9A, &value) == 0 && value == 1)
 		quotaBytes = 0;
 	quotaRemaining = quotaBytes;
 	totalRequiredBytes = 0;

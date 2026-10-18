@@ -9,7 +9,7 @@
 #include "audioenc/audioenc_internal.h"
 #include "jpeg/jpeg_internal.h"
 #include "jpegenc/jpegenc_internal.h"
-#include <psp2kern/jpegenc.h>
+#include <avcodec/avcodec.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
 
@@ -19,13 +19,13 @@ STUB(SceAvcodecForDriver_0CC84413)
 STUB(SceAvcodecForDriver_12DAE04A)
 STUB(SceAvcodecForDriver_13C530E4)
 STUB(SceAvcodecForDriver_16B501C9)
-STUB(ksceAvcencGetNalUnit)
+STUB(SceAvcodecForDriver_1A584DB7)
 STUB(SceAvcodecForDriver_20892154)
 STUB(SceAvcodecForDriver_20C83C00)
-STUB(ksceAvcencEncodeFlush)
+STUB(SceAvcodecForDriver_229AB2CF)
 STUB(SceAvcodecForDriver_22D7B653)
 STUB(SceAvcodecForDriver_27211864)
-STUB(ksceAvcencDeleteEncoder)
+STUB(SceAvcodecForDriver_2895CB6D)
 STUB(SceAvcodecForDriver_2C7A9841)
 STUB(SceAvcodecForDriver_32DEE3C5)
 STUB(SceAvcodecForDriver_3CB7661A)
@@ -37,37 +37,37 @@ STUB(SceAvcodecForDriver_47D8E150)
 STUB(SceAvcodecForDriver_48DECA56)
 STUB(SceAvcodecForDriver_4AE6B437)
 STUB(SceAvcodecForDriver_4DD3826D)
-STUB(ksceAvcencCsc)
+STUB(SceAvcodecForDriver_4F11F915)
 STUB(SceAvcodecForDriver_536C8296)
-STUB(ksceAvcencQueryEncoderMemSize)
+STUB(SceAvcodecForDriver_5C3434FB)
 STUB(SceAvcodecForDriver_6DC39EDC)
 STUB(SceAvcodecForDriver_6E250A5F)
-STUB(ksceAvcencCreateEncoderInternal)
+STUB(SceAvcodecForDriver_71C37694)
 STUB(SceAvcodecForDriver_73401748)
-STUB(ksceAvcencQueryEncoderMemSizeBasic)
+STUB(SceAvcodecForDriver_7385FB51)
 STUB(SceAvcodecForDriver_77529FD2)
 STUB(SceAvcodecForDriver_78BA8E98)
-STUB(ksceAvcencSetAvailablePreset)
+STUB(SceAvcodecForDriver_7DC13C29)
 STUB(SceAvcodecForDriver_823E187E)
 STUB(SceAvcodecForDriver_866B49BF)
 STUB(SceAvcodecForDriver_86B1ACC5)
 STUB(SceAvcodecForDriver_90F394E6)
 STUB(SceAvcodecForDriver_91E94B76)
 STUB(SceAvcodecForDriver_95E8AFCA)
-STUB(ksceAvcencEncode)
+STUB(SceAvcodecForDriver_A0E63278)
 STUB(SceAvcodecForDriver_A2085B6B)
 STUB(SceAvcodecForDriver_A6CAE217)
-STUB(ksceAvcencCreateEncoder)
+STUB(SceAvcodecForDriver_B2A51EB0)
 STUB(SceAvcodecForDriver_B8A9632A)
 STUB(SceAvcodecForDriver_BC244D21)
 STUB(SceAvcodecForDriver_BC55D10F)
 STUB(SceAvcodecForDriver_BCB769EB)
-STUB(ksceAvcencQueryEncoderMemSizeInternal)
+STUB(SceAvcodecForDriver_BF3835E2)
 STUB(SceAvcodecForDriver_C114C499)
 STUB(SceAvcodecForDriver_C363B31A)
 STUB(SceAvcodecForDriver_C518A109)
 STUB(SceAvcodecForDriver_C5C10C8B)
-STUB(ksceAvcencCreateEncoderBasic)
+STUB(SceAvcodecForDriver_C5E720E2)
 STUB(SceAvcodecForDriver_C8366BB8)
 STUB(SceAvcodecForDriver_C93DA0C7)
 STUB(SceAvcodecForDriver_C99242F5)
@@ -78,9 +78,9 @@ STUB(SceAvcodecForDriver_D46B8463)
 STUB(SceAvcodecForDriver_D5A34236)
 STUB(SceAvcodecForDriver_D7CD7F82)
 STUB(SceAvcodecForDriver_D9FCDF3E)
-STUB(ksceAvcencEncodeStop)
+STUB(SceAvcodecForDriver_DE515BFF)
 STUB(SceAvcodecForDriver_DFC0AAC6)
-STUB(ksceAvcencSetEncoderParameter)
+STUB(SceAvcodecForDriver_E0232BFE)
 STUB(SceAvcodecForDriver_E355CAAE)
 STUB(SceAvcodecForDriver_E4F668C5)
 STUB(SceAvcodecForDriver_E782E735)
@@ -456,7 +456,7 @@ int _sceJpegCsc(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 
 int _sceJpegEncoderGetContextSize(void)
 {
-	return ksceJpegEncoderGetContextSize();
+	return SceAvcodecForDriver_4DB66E3A();
 }
 
 int _sceJpegEncoderInit(SceJpegEncoderContext context, int iFrameWidth,
@@ -470,13 +470,13 @@ int _sceJpegEncoderInit(SceJpegEncoderContext context, int iFrameWidth,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderInit(NULL, iFrameWidth, iFrameHeight,
+		return SceAvcodecForDriver_1BE9F5A4(NULL, iFrameWidth, iFrameHeight,
 			arguments.pixelFormat, arguments.pJpeg, arguments.oJpegbufSize);
 	if (arguments.contextSize > sizeof(*state))
 		return 0x8002710b;
 	state = __builtin_alloca(sizeof(*state));
 	memset(state, 0, sizeof(*state));
-	ret = ksceJpegEncoderInit(state, iFrameWidth, iFrameHeight,
+	ret = SceAvcodecForDriver_1BE9F5A4(state, iFrameWidth, iFrameHeight,
 		arguments.pixelFormat, arguments.pJpeg, arguments.oJpegbufSize);
 	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
@@ -493,7 +493,7 @@ int _sceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderEncode(NULL, pYCbCr);
+		return SceAvcodecForDriver_468949D7(NULL, pYCbCr);
 	if (arguments.contextSize > sizeof(*state))
 		return 0x8002710b;
 	state = __builtin_alloca(sizeof(*state));
@@ -501,7 +501,7 @@ int _sceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr,
 	ret = SceSysmemForDriver_BC996A7A(state, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderEncode(state, pYCbCr);
+	ret = SceAvcodecForDriver_468949D7(state, pYCbCr);
 	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -517,7 +517,7 @@ int _sceJpegEncoderEnd(SceJpegEncoderContext context,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderEnd(NULL);
+		return SceAvcodecForDriver_86AD5A4F(NULL);
 	if (arguments.contextSize > sizeof(*state))
 		return 0x8002710b;
 	state = __builtin_alloca(sizeof(*state));
@@ -525,7 +525,7 @@ int _sceJpegEncoderEnd(SceJpegEncoderContext context,
 	ret = SceSysmemForDriver_BC996A7A(state, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderEnd(state);
+	ret = SceAvcodecForDriver_86AD5A4F(state);
 	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -542,7 +542,7 @@ int _sceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderSetValidRegion(NULL, iFrameWidth, iFrameHeight);
+		return SceAvcodecForDriver_D0647B74(NULL, iFrameWidth, iFrameHeight);
 	if (arguments.contextSize > sizeof(*control))
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
@@ -550,7 +550,7 @@ int _sceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
 	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderSetValidRegion(control, iFrameWidth, iFrameHeight);
+	ret = SceAvcodecForDriver_D0647B74(control, iFrameWidth, iFrameHeight);
 	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -566,7 +566,7 @@ int _sceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compra
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderSetCompressionRatio(NULL, compratio);
+		return SceAvcodecForDriver_91B27CF3(NULL, compratio);
 	if (arguments.contextSize > sizeof(*control))
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
@@ -574,7 +574,7 @@ int _sceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compra
 	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderSetCompressionRatio(control, compratio);
+	ret = SceAvcodecForDriver_91B27CF3(control, compratio);
 	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -590,7 +590,7 @@ int _sceJpegEncoderSetHeaderMode(SceJpegEncoderContext context, int headerMode,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderSetHeaderMode(NULL, headerMode);
+		return SceAvcodecForDriver_58835DCB(NULL, headerMode);
 	if (arguments.contextSize > sizeof(*control))
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
@@ -598,7 +598,7 @@ int _sceJpegEncoderSetHeaderMode(SceJpegEncoderContext context, int headerMode,
 	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderSetHeaderMode(control, headerMode);
+	ret = SceAvcodecForDriver_58835DCB(control, headerMode);
 	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -615,7 +615,7 @@ int _sceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
-		return ksceJpegEncoderSetOutputAddr(NULL, pJpeg, oJpegbufSize);
+		return SceAvcodecForDriver_2C8271BA(NULL, pJpeg, oJpegbufSize);
 	if (arguments.contextSize > sizeof(*control))
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
@@ -623,7 +623,7 @@ int _sceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
 	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
-	ret = ksceJpegEncoderSetOutputAddr(control, pJpeg, oJpegbufSize);
+	ret = SceAvcodecForDriver_2C8271BA(control, pJpeg, oJpegbufSize);
 	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
@@ -646,7 +646,7 @@ int _sceJpegEncoderCsc(SceJpegEncoderContext context, void *pYCbCr,
 		if (ret < 0)
 			return ret;
 	}
-	return ksceJpegEncoderCsc(control, pYCbCr, pRGBA,
+	return SceAvcodecForDriver_B77B5BFC(control, pYCbCr, pRGBA,
 		arguments.iFrameWidth, arguments.inputPixelFormat);
 }
 

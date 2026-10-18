@@ -10,8 +10,8 @@
 #include "app_state_internal.h"
 #include "appmgr_internal_util.h"
 #include "appmgr_event.h"
+#include <appmgr/appmgr.h>
 
-extern int sceAppMgrDump(void);
 extern int dumpBgmState(void);
 extern int appmgrIsTrcCheckNotifyEnabled(void);
 extern SceUID g_appmgrMainMutex;
