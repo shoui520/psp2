@@ -482,7 +482,7 @@ uint32_t powerIsIdleTimer(uint32_t timerId);
 
 int powerTickInternalPredicate(void);
 
-int powerPermitChargeTimer(void *argp);
+SceUInt32 powerPermitChargeTimer(void *argp);
 
 int powerChargingCommandComplete(SceSysconPacket *packet, void *argp);
 

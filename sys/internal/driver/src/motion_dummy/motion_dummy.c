@@ -49,7 +49,7 @@ static inline int findProcess(SceUID pid)
 }
 
 static inline void registerTimer(void);
-static int sampleTimer(void *argp);
+static SceUInt32 sampleTimer(void *argp);
 
 /* fetch the calibration of the controller now on @port */
 static int updateCalibration(int port)
@@ -200,7 +200,7 @@ int motionReadPort(int port, SceMotionDevData *data, int count, SceUInt32 *info)
 }
 
 /* the timer handler: one sample of every sampling port; returns the next period */
-static int sampleTimer(void *argp)
+static SceUInt32 sampleTimer(void *argp)
 {
 	SceMotionDevData *sample = NULL;
 	SceUID *owner;

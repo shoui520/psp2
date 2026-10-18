@@ -612,7 +612,7 @@ static int sampleVirtual(TouchVirtualSampleCallback driver) /* name unknown */
 	return 0;
 }
 
-static int samplingTimer(void *args) /* name unknown */
+static SceUInt32 samplingTimer(void *args) /* name unknown */
 {
 	struct touchProcess *process;
 	struct touchSample *samples[2] = { &storage.front, &storage.back }, *dest;
@@ -681,7 +681,7 @@ static int samplingTimer(void *args) /* name unknown */
 	return 0;
 }
 
-static int noOpAlarm(void *args) /* name unknown */
+static SceUInt32 noOpAlarm(void *args) /* name unknown */
 {
 	return 0;
 }

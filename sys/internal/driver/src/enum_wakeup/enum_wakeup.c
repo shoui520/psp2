@@ -88,7 +88,7 @@ standby:
 }
 
 /* the alarm: give up waiting */
-int ewTimer(void)
+SceUInt32 ewTimer(void *arg)
 {
 	sceKernelSetEventFlag(ewg.ew.evf, ewg.ew.mode == EW_MODE_DISPLAY ? EW_EVENT_DISPLAY_TIMER : EW_EVENT_TIMER);
 	return 0;

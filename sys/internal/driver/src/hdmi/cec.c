@@ -475,7 +475,7 @@ static int cecRecvAbort(const CecMessage *msg)
 }
 
 /* No key for CEC_PASS_THROUGH_USEC: the key is released. */
-static int passThroughTimerHandler(void *arg)
+static SceUInt32 passThroughTimerHandler(void *arg)
 {
 	CecKey key;
 
@@ -558,7 +558,7 @@ int cecDevCallbackStandbyDone(void)
 	return 0;
 }
 
-static int oneTouchPlayAlarmHandler(void *arg)
+static SceUInt32 oneTouchPlayAlarmHandler(void *arg)
 {
 	work.oneTouchPlayAlarm = 0;
 	_clearStatus(CEC_STATUS_ONE_TOUCH_PENDING);

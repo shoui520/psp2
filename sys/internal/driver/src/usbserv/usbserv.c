@@ -367,7 +367,7 @@ static unsigned is_supported_device(unsigned id)
 	}
 	return !audio && hid ? 3 : 0;
 }
-static int tickTimer(void *arg)
+static SceUInt32 tickTimer(void *arg)
 {
 	s_timer = -1;
 	if (s_serv.attached > 0) {

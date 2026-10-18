@@ -190,7 +190,7 @@ static struct touchFilter s_filter;
 static const float s_forceMax = 255.0f;
 
 static int sampleDone(SceSysconPacket *packet, void *argp);
-static int sampleAlarm(void *argp);
+static SceUInt32 sampleAlarm(void *argp);
 
 static int lookupProcess(int pid, void **out, int create) /* name unknown */
 {
@@ -214,7 +214,7 @@ static int resetDone(SceSysconPacket *packet, void *argp)
 }
 
 /* name unknown: SceTouchAlarm1, queued on resume */
-static int resetAlarm(void *argp)
+static SceUInt32 resetAlarm(void *argp)
 {
 	s_resetPacket.request.command[0] = 0x90;
 	s_resetPacket.request.command[1] = 3;
@@ -1075,7 +1075,7 @@ static inline void endFrame(void)
 }
 
 /* name unknown: SceTouchAlarm0, an empty frame while no panel reports */
-static int sampleAlarm(void *argp)
+static SceUInt32 sampleAlarm(void *argp)
 {
 	unsigned intr = SceCpuForDriver_D32ACE9E(&touch.lock);
 

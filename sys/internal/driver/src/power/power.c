@@ -141,7 +141,7 @@ int powerProcessCreateCallback(SceUID pid, ProcEventCreateParam *param, int args
 	return 0;
 }
 
-int powerSuspendTimerCallback(void *argument)
+SceUInt32 powerSuspendTimerCallback(void *argument)
 {
 	scePowerRequestSuspend();
 	return 0;

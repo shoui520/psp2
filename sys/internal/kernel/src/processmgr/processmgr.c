@@ -734,9 +734,8 @@ static int sceKernelProcessResourceRecovery(SceSize args, void *argp)
 }
 
 /* the 10 second timer the event thread arms while a process terminates */
-static SceUInt32 ProcessEventTimeupHandler(SceUID timer, void *arg)
+static SceUInt32 ProcessEventTimeupHandler(void *arg)
 {
-	(void)timer;
 	(void)arg;
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 671,
 		"process terminate processing has timed out(%d sec). priority change %d => %d\n",

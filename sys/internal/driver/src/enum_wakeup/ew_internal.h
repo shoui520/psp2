@@ -190,7 +190,7 @@ int mtpXferInit(MtpContext *ctx, MtpXfer **out);
 /* enum_wakeup.c */
 void ewPowerButton(uint32_t state, uint32_t previous, void *argument);
 int ewPowerOffThread(SceSize args, void *argp);
-int ewTimer(void);
+SceUInt32 ewTimer(void *arg);
 int ewNoDisplay(void);
 void ewInitDisplay(void);
 int ewMainThread(SceSize args, void *argp);

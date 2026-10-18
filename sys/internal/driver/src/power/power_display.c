@@ -304,7 +304,7 @@ int powerChargingCommandComplete(SceSysconPacket *packet, void *argp)
 	return 0;
 }
 
-int powerPermitChargeTimer(void *argp)
+SceUInt32 powerPermitChargeTimer(void *argp)
 {
 	(void)argp;
 	s_powerBatteryBase.chargingAlarm = -1;
