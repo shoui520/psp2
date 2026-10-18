@@ -1,7 +1,8 @@
-/* SceTouch (os0:kd/bootimage/touch) imports absent from the public kernel headers. */
+/* SceTouch (os0:kd/bootimage/touch, touch_dummy): the driver's exports beside the SDK's (touch.h). */
 #pragma once
 #include <stddef.h>
 #include <scetypes.h>
+#include <touch.h>
 #include <syscon/syscon.h>
 #include <sysmem/suspend.h>
 #include <threadmgr/threadmgr.h>
@@ -19,34 +20,6 @@ _Static_assert(sizeof(struct touchDeviceInfo) == 12, "touch device info size");
 /* vitasdk: ksceTouchGetDeviceInfo */
 int SceTouchForDriver_FD2E0278(unsigned port, struct touchDeviceInfo *out);
 
-/* Sony's SDK touch.h types, as the kernel touch drivers keep them */
-#define SCE_TOUCH_PORT_FRONT	0
-#define SCE_TOUCH_PORT_BACK	1
-#define SCE_TOUCH_PORT_MAX_NUM	2
-#define SCE_TOUCH_MAX_REPORT	8
-
-typedef struct SceTouchPanelInfo {
-	SceInt16 minAaX, minAaY, maxAaX, maxAaY;	/* active area */
-	SceInt16 minDispX, minDispY, maxDispX, maxDispY;	/* display area */
-	SceUInt8 minForce, maxForce;
-	SceUInt8 rsv[30];
-} SceTouchPanelInfo;
-
-typedef struct SceTouchReport {
-	SceUInt8 id;
-	SceUInt8 force;
-	SceInt16 x, y;
-	SceInt8 rsv[8];
-	SceUInt16 info;
-} SceTouchReport;
-
-typedef struct SceTouchData {
-	/* the drivers' buffers keep it 4-byte aligned */
-	SceUInt64 timeStamp __attribute__((packed, aligned(4)));
-	SceUInt32 status;
-	SceUInt32 reportNum;
-	SceTouchReport report[SCE_TOUCH_MAX_REPORT];
-} SceTouchData;
 
 typedef struct TouchVirtualSampleRequest {
 	SceUInt8 sampleCount;
@@ -116,10 +89,8 @@ int SceTouchForDriver_E41B4BF8(unsigned port);	/* vitasdk: ksceTouchEnableTouchF
 int SceTouchForDriver_EBF4C86A(unsigned port, int enable);
 int sceTouchActivateRegion(unsigned port, unsigned region, unsigned enable);
 int sceTouchClearRegion(unsigned port, unsigned region);
-int sceTouchDisableTouchForce(unsigned port);
 int sceTouchDisableTouchForceExt(unsigned port);
 int sceTouchEnableIdleTimerCancelSetting(unsigned port, int enable);
-int sceTouchEnableTouchForce(unsigned port);
 int sceTouchEnableTouchForceExt(unsigned port);
 int sceTouchGetDeviceInfo(unsigned port, void *out);
 int sceTouchGetPixelDensity(void *front, void *back);
@@ -135,5 +106,4 @@ int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *));
 int sceTouchSetProcessPrivilege(unsigned privilege);
 int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned attr);
 int sceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr);
-int sceTouchSetSamplingState(unsigned port, unsigned state);
 int sceTouchSetSamplingStateExt(unsigned port, unsigned state);

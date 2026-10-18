@@ -11,7 +11,7 @@
  */
 #include <stdint.h>
 #include <stddef.h>
-#include <psp2/touch.h>
+#include <touch.h>
 #include <ctrl/ctrl.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
@@ -558,7 +558,7 @@ static void applyTouch(SceTouchData *sample, const CtrlpTouchData *data, SceUInt
 		}
 		report->y = limit;
 		for (int j = 0; j < 8; j++)
-			report->reserved[j] = 0;
+			report->rsv[j] = 0;
 	}
 }
 

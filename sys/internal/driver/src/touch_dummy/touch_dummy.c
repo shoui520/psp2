@@ -39,7 +39,6 @@ struct touchProcessPort {
 	unsigned eventBit, reserved;
 	struct touchRegion regions[8];
 	struct touchRing ring;
-	unsigned padding;
 };
 struct touchProcess {
 	int pid;
@@ -137,7 +136,7 @@ _Static_assert(offsetof(__typeof__(storage), back) == 0x560, "back buffer layout
 _Static_assert(offsetof(__typeof__(storage), virtualSamples) == 0x4e40, "virtual buffers layout");
 _Static_assert(sizeof(SceTouchData) == 0x90, "touch data layout");
 _Static_assert(sizeof(struct touchSample) == 0xd0, "sample layout");
-_Static_assert(sizeof(struct touchRing) == 0x340c, "ring layout");
+_Static_assert(sizeof(struct touchRing) == 0x3410, "ring layout");
 _Static_assert(sizeof(struct touchProcessPort) == 0x3498, "process port layout");
 _Static_assert(sizeof(struct touchProcess) == 0x6950, "process layout");
 _Static_assert(sizeof(struct touchPort) == 0xf4, "port layout");
@@ -1354,12 +1353,12 @@ static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
 	return ret;
 }
 
-int sceTouchRead(unsigned port, void *out, unsigned count)
+int sceTouchRead(SceUInt32 port, SceTouchData *out, SceUInt32 count)
 {
 	return userRead(port, out, count, 1, 0, 0);
 }
 
-int sceTouchPeek(unsigned port, void *out, unsigned count)
+int sceTouchPeek(SceUInt32 port, SceTouchData *out, SceUInt32 count)
 {
 	return userRead(port, out, count, 1, 0, 1);
 }
@@ -1384,7 +1383,7 @@ int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned reg
 	return userRead(port, out, count, regions, 1, 1);
 }
 
-int sceTouchSetSamplingState(unsigned port, unsigned state)
+int sceTouchSetSamplingState(SceUInt32 port, SceUInt32 state)
 {
 	unsigned t = sceSyscallEnter();
 	int ret = setSampling(port, state, 0);
@@ -1417,7 +1416,7 @@ static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unkn
 	return ret;
 }
 
-int sceTouchGetSamplingState(unsigned port, void *out)
+int sceTouchGetSamplingState(SceUInt32 port, SceUInt32 *out)
 {
 	return userGetSampling(port, out, 0);
 }
@@ -1436,7 +1435,7 @@ static int userSetForce(unsigned port, unsigned enable, unsigned kind) /* name u
 	return ret;
 }
 
-int sceTouchEnableTouchForce(unsigned port)
+int sceTouchEnableTouchForce(SceUInt32 port)
 {
 	return userSetForce(port, 1, 0);
 }
@@ -1446,7 +1445,7 @@ int sceTouchEnableTouchForceExt(unsigned port)
 	return userSetForce(port, 1, 1);
 }
 
-int sceTouchDisableTouchForce(unsigned port)
+int sceTouchDisableTouchForce(SceUInt32 port)
 {
 	return userSetForce(port, 0, 0);
 }
@@ -1456,7 +1455,7 @@ int sceTouchDisableTouchForceExt(unsigned port)
 	return userSetForce(port, 0, 1);
 }
 
-int sceTouchGetPanelInfo(unsigned port, void *out)
+int sceTouchGetPanelInfo(SceUInt32 port, SceTouchPanelInfo *out)
 {
 	SceTouchPanelInfo info;
 	unsigned t;

@@ -1,7 +1,7 @@
 #ifndef SCE_DECI4P_CTRLP_H
 #define SCE_DECI4P_CTRLP_H
 #include <scetypes.h>
-#include <psp2/touch.h>
+#include <touch.h>
 #include <ctrl/ctrl.h>
 #include <bt/bt_pairing.h>
 #include <threadmgr/threadmgr.h>

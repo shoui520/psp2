@@ -981,7 +981,7 @@ static int initializeTracking(struct touchTracking *tracking);
 static int updateTracking(struct touchTracking *tracking, SceTouchData *sample);
 
 /* name unknown: a raise / lower request of a panel's force sensing */
-static void checkForceChange(unsigned port, const struct touchSample *sample)
+static __attribute__((noclone)) void checkForceChange(unsigned port, const struct touchSample *sample)
 {
 	struct touchPort *p = &touch.ports[port];
 
@@ -2385,12 +2385,12 @@ static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
 	return ret;
 }
 
-int sceTouchRead(unsigned port, void *out, unsigned count)
+int sceTouchRead(SceUInt32 port, SceTouchData *out, SceUInt32 count)
 {
 	return userRead(port, out, count, 0, 0, 0);
 }
 
-int sceTouchPeek(unsigned port, void *out, unsigned count)
+int sceTouchPeek(SceUInt32 port, SceTouchData *out, SceUInt32 count)
 {
 	return userRead(port, out, count, 0, 0, 1);
 }
@@ -2415,7 +2415,7 @@ int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned reg
 	return userRead(port, out, count, regions, 1, 1);
 }
 
-int sceTouchSetSamplingState(unsigned port, unsigned state)
+int sceTouchSetSamplingState(SceUInt32 port, SceUInt32 state)
 {
 	unsigned t = sceSyscallEnter();
 	int ret = SceTouchForDriver_1247257A(port, state);
@@ -2448,7 +2448,7 @@ static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unkn
 	return ret;
 }
 
-int sceTouchGetSamplingState(unsigned port, void *out)
+int sceTouchGetSamplingState(SceUInt32 port, SceUInt32 *out)
 {
 	return userGetSampling(port, out, 0);
 }
@@ -2458,7 +2458,7 @@ int sceTouchGetSamplingStateExt(unsigned port, void *out)
 	return userGetSampling(port, out, 1);
 }
 
-int sceTouchEnableTouchForce(unsigned port)
+int sceTouchEnableTouchForce(SceUInt32 port)
 {
 	unsigned t = sceSyscallEnter();
 	int ret = SceTouchForDriver_E41B4BF8(port);
@@ -2476,7 +2476,7 @@ int sceTouchEnableTouchForceExt(unsigned port)
 	return ret;
 }
 
-int sceTouchDisableTouchForce(unsigned port)
+int sceTouchDisableTouchForce(SceUInt32 port)
 {
 	unsigned t = sceSyscallEnter();
 	int ret = SceTouchForDriver_CDE79889(port);
@@ -2494,7 +2494,7 @@ int sceTouchDisableTouchForceExt(unsigned port)
 	return ret;
 }
 
-int sceTouchGetPanelInfo(unsigned port, void *out)
+int sceTouchGetPanelInfo(SceUInt32 port, SceTouchPanelInfo *out)
 {
 	SceTouchPanelInfo info;
 	unsigned t;
