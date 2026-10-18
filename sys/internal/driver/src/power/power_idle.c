@@ -283,7 +283,7 @@ int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags,
 	if (callback && timer->callback) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock,
 						      context);
-		return SCE_POWER_ERROR_ALREADY_REGISTERED;
+		return SCE_POWER_ERROR_ALREADY_REGISTERD;
 	}
 	timer->tickFlags = tickFlags;
 	timer->lastTick = sceKernelGetSystemTimeWide();

@@ -302,7 +302,7 @@ int powerSwitchTransition(uint32_t mode)
 		}
 		break;
 	}
-	powerNotifyCallback(0, SCE_POWER_CB_SYSTEM_SUSPEND, 0);
+	powerNotifyCallback(0, POWER_CALLBACKARG_SYSTEM_SUSPEND, 0);
 	s_powerSwitchState.suspendInProgress = 1;
 	for (i = SYSEVENT_SUSPEND_PREPARE(15); i >= SYSEVENT_SUSPEND_PREPARE(0); i--)
 		powerDispatchSwitchEvent(0, i, suspend.sleepMode, &suspend,
@@ -447,7 +447,7 @@ int powerSwitchTransition(uint32_t mode)
 		powerDispatchSwitchEvent(1, i, 0, &resume, NULL);
 	SceLedForDriver_EA24BE03(2, SCE_LED_MODE_OFF, NULL);
 	sceKernelClearEventFlag(s_powerSwitchState.eventFlag, 0xfffff102);
-	powerNotifyCallback(SCE_POWER_CB_SYSTEM_SUSPEND, SCE_POWER_CB_SYSTEM_RESUMING, 0);
+	powerNotifyCallback(POWER_CALLBACKARG_SYSTEM_SUSPEND, POWER_CALLBACKARG_SYSTEM_RESUMING, 0);
 	/* some wakeup factors resume with the display off */
 	switch (s_powerSwitchState.wakeupFactor & 0x7f) {
 	case 1:
@@ -495,7 +495,7 @@ int powerSwitchTransition(uint32_t mode)
 		sceKernelDelayThread(5000);
 	}
 	powerDispatchSwitchEvent(1, SYSEVENT_RESUME_COMPLETE, 0, &resume, NULL);
-	powerNotifyCallback(SCE_POWER_CB_SYSTEM_RESUMING, 0, SCE_POWER_CB_SYSTEM_RESUME);
+	powerNotifyCallback(POWER_CALLBACKARG_SYSTEM_RESUMING, 0, POWER_CALLBACKARG_SYSTEM_RESUME);
 	return 0;
 }
 
@@ -553,7 +553,7 @@ buttonsDown:
 		if ((buttons & (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) ==
 		    (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) {
 			held = 1;
-			powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_PS_START_PRESS);
+			powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_START_PRESS);
 			continue;
 		}
 		if (buttons & SCE_CTRL_POWER) {
@@ -575,7 +575,7 @@ buttonsDown:
 				/* a short press */
 				if (modes & POWER_SW_MODE_PRESS_DISPLAY_OFF) {
 					powerSwitchDisplay(0, 2);
-					powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_POWER_PRESS);
+					powerNotifyCallback(0, 0, POWER_CALLBACKARG_POWER_PRESS);
 					continue;
 				}
 				if (modes & POWER_SW_MODE_PRESS_SUSPEND) {
@@ -583,7 +583,7 @@ buttonsDown:
 				} else if (modes & POWER_SW_MODE_PRESS_STANDBY) {
 					s_powerSwitchState.buttonRequest = POWER_REQUEST_STANDBY;
 				} else {
-					powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_POWER_PRESS);
+					powerNotifyCallback(0, 0, POWER_CALLBACKARG_POWER_PRESS);
 					continue;
 				}
 			} else if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
@@ -592,7 +592,7 @@ buttonsDown:
 					s_powerSwitchState.buttonRequest = POWER_REQUEST_STANDBY;
 					goto request;
 				}
-				powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_POWER_HOLD);
+				powerNotifyCallback(0, 0, POWER_CALLBACKARG_POWER_HOLD);
 				/* still held four seconds after the press: standby */
 				if (s_powerSwitchState.standbyButtonPushTime < 4000000)
 					timeout = 4000000 - s_powerSwitchState.standbyButtonPushTime;
@@ -640,18 +640,18 @@ buttonsDown:
 			if ((buttons & (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) ==
 			    (SCE_CTRL_PSBUTTON | SCE_CTRL_START)) {
 				held = 1;
-				powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_PS_START_PRESS);
+				powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_START_PRESS);
 				continue;
 			}
 			if (!woke && !(buttons & SCE_CTRL_PSBUTTON)) {
 				/* a short press */
 				if (SceSysrootForDriver_89532E2F() != 1)
-					powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_PS_PRESS);
+					powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_PRESS);
 				continue;
 			}
 			if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
 				held = 1;
-				powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_PS_HOLD);
+				powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_HOLD);
 				continue;
 			}
 		} else if (pattern & POWER_SWITCH_EVENT_HDMI_CEC) {
@@ -661,7 +661,7 @@ buttonsDown:
 			modes = s_powerSwitchState.primaryMode | s_powerSwitchState.secondaryMode;
 			if (modes & POWER_SW_MODE_PRESS_DISPLAY_OFF) {
 				powerSwitchDisplay(0, 2);
-				powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_POWER_PRESS);
+				powerNotifyCallback(0, 0, POWER_CALLBACKARG_POWER_PRESS);
 				continue;
 			}
 			if (modes & POWER_SW_MODE_PRESS_SUSPEND)
@@ -669,7 +669,7 @@ buttonsDown:
 			else if (modes & POWER_SW_MODE_PRESS_STANDBY)
 				s_powerSwitchState.buttonRequest = POWER_REQUEST_STANDBY;
 			else
-				powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_POWER_PRESS);
+				powerNotifyCallback(0, 0, POWER_CALLBACKARG_POWER_PRESS);
 		}
 
 request:
@@ -753,7 +753,7 @@ request:
 			goto buttonsDown;
 powerAndPs:
 		held = 1;
-		powerNotifyCallback(0, 0, SCE_POWER_CB_BUTTON_PS_POWER_PRESS);
+		powerNotifyCallback(0, 0, POWER_CALLBACKARG_PS_POWER_PRESS);
 	}
 	return 0;
 }

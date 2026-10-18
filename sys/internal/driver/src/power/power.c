@@ -329,7 +329,7 @@ int scePowerRegisterCallback(SceUID callback)
 	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
 	for (current = s_powerCallbackControl.head; current; current = current->next) {
 		if (current->callback == callback) {
-			result = SCE_POWER_ERROR_ALREADY_REGISTERED;
+			result = SCE_POWER_ERROR_ALREADY_REGISTERD;
 			goto fail;
 		}
 	}
@@ -375,7 +375,7 @@ inline __attribute__((always_inline)) int scePowerUnregisterCallback(SceUID call
 	}
 	if (!record) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
-		return SCE_POWER_ERROR_CALLBACK_NOT_REGISTERED;
+		return SCE_POWER_ERROR_CALLBACK_NOT_REGISTERD;
 	}
 	if (previous)
 		previous->next = record->next;

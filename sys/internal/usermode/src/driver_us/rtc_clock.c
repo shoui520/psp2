@@ -3,7 +3,7 @@
  * SceRtc. The format calls hand the kernel an unused argument block.
  */
 
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 #include "driver_user.h"
 
 int _sceRtcGetCurrentTick(SceRtcTick *tick);

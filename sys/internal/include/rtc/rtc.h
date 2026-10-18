@@ -7,7 +7,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 #include <syscon/syscon.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysroot.h>

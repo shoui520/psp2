@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 
 #define RTC_TICKS_PER_DAY	86400000000ULL
 #define RTC_TICK_UNIX_EPOCH	62135596800000000ULL	/* 1970-01-01 */

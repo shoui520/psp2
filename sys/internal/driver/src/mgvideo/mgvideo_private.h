@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <magicgate/magicgate.h>
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 
 struct MgVideoContext;
 int loadVideoKeyring(struct MgVideoContext *context);

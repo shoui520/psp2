@@ -4,7 +4,7 @@
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/suspend.h>
-#include <psp2/power.h>
+#include <power/power.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
 #include "hid_internal.h"

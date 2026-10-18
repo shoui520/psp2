@@ -5,7 +5,7 @@
 #ifndef _RTC_USER_H
 #define _RTC_USER_H
 
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 
 /*
  * The run-time division helper, called by name where a newer compiler

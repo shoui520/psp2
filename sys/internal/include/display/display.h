@@ -5,8 +5,21 @@
 
 #pragma once
 
-#include <psp2kern/display.h>
+#include <psp2kern/types.h>
+#include <display.h>
 #include <stddef.h>
+
+/* name unknown: a plane's frame buffer and who owns it (SceDisplayForDriver_3BC165EF) */
+typedef struct SceDisplayFrameBufInfo {
+	SceSize size;			/* 0x00: sizeof(SceDisplayFrameBufInfo) */
+	SceUID pid;			/* 0x04: the owner */
+	SceUInt32 vblankcount;		/* 0x08: vblanks shown */
+	uintptr_t paddr;		/* 0x0c: the base's physical address */
+	SceDisplayFrameBuf framebuf;	/* 0x10 */
+	SceUInt32 resolution;		/* 0x28 */
+} SceDisplayFrameBufInfo;
+
+_Static_assert(sizeof(SceDisplayFrameBufInfo) == 0x2c, "SceDisplayFrameBufInfo");
 
 /* SceDisplayForDriver_EE5EB52D / SceDisplayForDriver_40ACFE51 (0x14 bytes). */
 typedef struct SceDisplayViewportConf {

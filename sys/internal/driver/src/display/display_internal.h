@@ -10,7 +10,7 @@
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <lowio/iftu.h>
-#include <psp2common/display.h>
+#include <display.h>
 #include <dtrace/sce/dtrace.h>
 #include <display/display.h>
 

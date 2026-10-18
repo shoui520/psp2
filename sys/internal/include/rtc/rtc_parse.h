@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include <psp2common/kernel/rtc.h>
+#include <rtc.h>
 
 #define IS_DIGIT(c)	((unsigned int)((c) - '0') < 10)
 #define UPPER(c)	((c) & 0xdf)
