@@ -68,6 +68,7 @@ _Static_assert(sizeof(ThreadmgrThreadInfoForDebugger) == 0x128, "debugger thread
 
 int SceThreadmgrForDriver_555CA6BB(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
+/* vitasdk: ksceKernelGetThreadInfoForDebugger */
 int SceThreadmgrForDriver_DD8D9429(SceUID threadId, uint32_t flags,
 				   ThreadmgrThreadInfoForDebugger *info);
 

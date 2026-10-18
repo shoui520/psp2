@@ -565,6 +565,7 @@ int sceKernelStartTimer(SceUID timer);
 int sceKernelStopTimer(SceUID timer);
 int SceThreadmgrForDriver_91A8F38B(SceUID timer);	/* delete timer */
 /* calls handler(arg) delay microseconds from now, in interrupt context */
+/* vitasdk: ksceKernelRegisterTimer */
 SceUID SceThreadmgrForDriver_C58DF384(const char *name, SceUInt32 delay,
 				      ThreadmgrAlarmHandler handler, void *arg);
 /* the same, with a 64-bit delay */
@@ -573,6 +574,7 @@ SceUID SceThreadmgrForDriver_10517330(const char *name, const SceUInt64 *delay,
 
 int sceKernelDelayThread(SceUInt32 usec);
 SceInt64 sceKernelGetSystemTimeWide(void);
+/* vitasdk: ksceKernelWaitEvent */
 int SceThreadmgrForDriver_C529EA32(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 				   uint64_t *outUserData, SceUInt32 *timeout);
 
@@ -601,6 +603,7 @@ int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
 int sceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
 					  uint32_t arg);
 int sceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
+/* vitasdk: ksceKernelWaitEventCB */
 int SceThreadmgrForDriver_360C655C(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 				   uint64_t *outUserData, SceUInt32 *timeout);
 int sceKernelCancelAlarm(SceUID alarmId);
@@ -614,9 +617,10 @@ int sceKernelGetThreadExitStatus(SceUID uid, int *status);
 int sceKernelSetSyslibtraceThreadCBEnable(int enable);
 
 void SceThreadmgrForDriver_032E8F73(SceKernelSpinlock *lock);
-SceUID SceThreadmgrForDriver_0486F239(SceUID pid);
+SceUID SceThreadmgrForDriver_0486F239(SceUID pid);	/* vitasdk: ksceKernelSetProcessIdToTLS */
+/* vitasdk: ksceKernelChangeThreadSuspendStatus */
 int SceThreadmgrForDriver_04C6764B(SceUID threadId, uint32_t reason);
-int SceThreadmgrForDriver_0892D8DF(SceUID callbackId);
+int SceThreadmgrForDriver_0892D8DF(SceUID callbackId);	/* vitasdk: ksceKernelGetCallbackCount */
 int SceThreadmgrForDriver_09346D1A(SceUID pid, int level, SceKernelLwCondInfo *infos, SceSize size,
 				   SceSize *count);
 int SceThreadmgrForDriver_0A4AD37A(SceKernelSpinlock *lock);
@@ -626,6 +630,7 @@ int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level, SceKernelEventFlagInfo
 int SceThreadmgrForDriver_12FC0FAB(SceUID workTaskId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_1378F6EF(unsigned int index, uint32_t value);
 int SceThreadmgrForDriver_154F2C2A(SceUID workQueueId, SceUInt32 *timeout);
+/* vitasdk: ksceKernelGetMsgPipeInfo */
 int SceThreadmgrForDriver_207E0E18(SceUID msgPipeId, SceKernelMsgPipeInfo *info);
 int SceThreadmgrForDriver_2B60B793(SceUInt32 usec, SceUInt32 *remaining);
 int SceThreadmgrForDriver_2E95B628(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
@@ -642,25 +647,30 @@ int SceThreadmgrForDriver_419E6736(SceUInt64 *time);
 int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level, SceKernelSemaInfo *infos, SceSize size,
 				   SceSize *count);
 int SceThreadmgrForDriver_47F26712(unsigned int group, unsigned int index);
-SceUInt32 SceThreadmgrForDriver_47F6DE49(void);
+SceUInt32 SceThreadmgrForDriver_47F6DE49(void);	/* vitasdk: ksceKernelGetSystemTimeLow */
 int SceThreadmgrForDriver_48C06CD6(SceUID workQueueId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_49A0B679(SceUID threadId, const uint32_t *vfp, uint32_t mask);
 int SceThreadmgrForDriver_4DE77569(int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelGetThreadCpuRegisters */
 int SceThreadmgrForDriver_5022689D(SceUID threadId, ThreadmgrDebugRegisters *regs);
 int SceThreadmgrForDriver_54566860(SceUID rwLockId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_5870C73A(int level, SceKernelEventFlagInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelGetVfpRegisterForDebugger */
 int SceThreadmgrForDriver_5CDE387A(SceUID threadId, uint32_t *vfp);
 int SceThreadmgrForDriver_5D8F88B1(int level, ThreadmgrThreadEventInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelGetEventFlagInfo */
 int SceThreadmgrForDriver_612277C9(SceUID evfId, SceKernelEventFlagInfo *info);
 int SceThreadmgrForDriver_64E89DE9(SceUID threadId, const ThreadmgrDebugRegisters *regs,
 				   uint32_t mask);
 int SceThreadmgrForDriver_6657429E(SceUID uid, ThreadmgrThreadEventInfo *info);
+/* vitasdk: ksceKernelGetThreadTLSAddr */
 void *SceThreadmgrForDriver_66EEA46A(SceUID uid, unsigned int index);
 int SceThreadmgrForDriver_67022B18(int level, SceKernelCondInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelSendMsgPipeVector */
 int SceThreadmgrForDriver_67DD3BAD(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
 				   int count, uint32_t mode, SceSize *result, SceUInt32 *timeout);
 int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, SceSize size,
@@ -669,24 +679,30 @@ int SceThreadmgrForDriver_738FF63D(int level, SceKernelLwCondInfo *infos, SceSiz
 				   SceSize *count);
 int SceThreadmgrForDriver_767CA30C(int level, SceKernelCallbackInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelGetThreadStackFreeSize */
 int SceThreadmgrForDriver_7B278A0B(SceUID threadId);
 int SceThreadmgrForDriver_7D12344A(SceUID pid, int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count);
 int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output);
+/* vitasdk: ksceKernelSetTimerTimeWide */
 SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time);
 int SceThreadmgrForDriver_85F4DC8C(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result);
 uint32_t SceThreadmgrForDriver_86DAE59B(void);
 SceUID SceThreadmgrForDriver_88206D29(const char *name);
+/* vitasdk: ksceKernelWaitEventFlagCB */
 int SceThreadmgrForDriver_8A35F714(SceUID evfId, uint32_t pattern, uint32_t mode,
 				   uint32_t *outPattern, SceUInt32 *timeout);
 int SceThreadmgrForDriver_8C48E53B(const SceKernelWaitEvent *events, uint32_t count, uint32_t mode,
 				   SceKernelResultEvent *results, SceUInt32 *timeout);
 int SceThreadmgrForDriver_995F32E1(int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelWaitThreadEndCB */
 int SceThreadmgrForDriver_9EF4F62C(SceUID threadId, int *status, SceUInt32 *timeout);
+/* vitasdk: ksceKernelIsThreadDebugSuspended */
 int SceThreadmgrForDriver_A0B1AB21(SceUID threadId);
 int SceThreadmgrForDriver_A64B00F6(SceUID rwLockId, SceUInt32 *timeout);
+/* vitasdk: ksceKernelGetTimerBaseWide */
 SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId);
 SceKernelIntrStatus SceThreadmgrForDriver_A90B1E01(SceKernelSpinlock *lock);
 int SceThreadmgrForDriver_AB977C72(SceUInt32 *attributes);
@@ -695,7 +711,8 @@ int SceThreadmgrForDriver_B247EC4B(SceUID workTaskId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_B6DA4669(int level, SceKernelMutexInfo *infos, SceSize size,
 				   SceSize *count);
 void SceThreadmgrForDriver_C03799E2(SceKernelSpinlock *lock);
-int SceThreadmgrForDriver_C040EC1C(SceUID callbackId);
+int SceThreadmgrForDriver_C040EC1C(SceUID callbackId);	/* vitasdk: ksceKernelCancelCallback */
+/* vitasdk: ksceKernelGetTimerTimeWide */
 SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId);
 int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSize size,
 				   SceSize *count);
@@ -711,38 +728,43 @@ SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, SceKernelThr
 				      int initPriority, SceSize stackSize, uint32_t attr,
 				      uint32_t cpuAffinityMask,
 				      const SceKernelThreadOptParam *option);
+/* vitasdk: ksceKernelGetSemaInfo */
 int SceThreadmgrForDriver_C99DCF0D(SceUID semaId, SceKernelSemaInfo *info);
 int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *infos, SceSize size,
 				   SceSize *count);
 int SceThreadmgrForDriver_CFA2FFAF(SceUID rwLockId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_D0262C55(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result, SceUInt32 *timeout);
+/* vitasdk: ksceKernelLockMutexCB_089 */
 int SceThreadmgrForDriver_D06F2886(SceUID mutexId, int count, SceUInt32 *timeout);
 int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info);
 int SceThreadmgrForDriver_D26BFF26(SceUID threadId);
 SceSize SceThreadmgrForDriver_D74F66BD(void);
+/* vitasdk: ksceKernelReceiveMsgPipeVector */
 int SceThreadmgrForDriver_DA1F256B(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
 				   int count, uint32_t mode, SceSize *result, SceUInt32 *timeout);
+/* vitasdk: ksceKernelReceiveMsgPipeVectorCB */
 int SceThreadmgrForDriver_DA5C9AC6(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
 				   int count, uint32_t mode, SceSize *result, SceUInt32 *timeout);
 int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count);
 int SceThreadmgrForDriver_E2B57231(int level, SceKernelRWLockInfo *infos, SceSize size,
 				   SceSize *count);
+/* vitasdk: ksceKernelRunWithStack */
 int64_t SceThreadmgrForDriver_E54FD746(SceSize size, ThreadmgrStackFunction function, void *arg);
 int SceThreadmgrForDriver_E6D80698(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result, SceUInt32 *timeout);
-void *SceThreadmgrForDriver_E938FB20(unsigned int index);
+void *SceThreadmgrForDriver_E938FB20(unsigned int index);	/* vitasdk: ksceKernelGetTLSAddr */
 int SceThreadmgrForDriver_E9A99C50(SceUInt32 usec, SceUInt32 *remaining);
 int SceThreadmgrForDriver_E9E50096(SceUID pid, int level, SceKernelMsgPipeInfo *infos, SceSize size,
 				   SceSize *count);
-SceUID SceThreadmgrForDriver_F311808F(SceUID threadId);
+SceUID SceThreadmgrForDriver_F311808F(SceUID threadId);	/* vitasdk: ksceKernelGetUserThreadId */
 int SceThreadmgrForDriver_F5074173(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result, SceUInt32 *timeout);
 int SceThreadmgrForDriver_F55E4D86(SceUID semaId, int needCount, SceUInt32 *timeout);
 SceKernelIntrStatus SceThreadmgrForDriver_F8A6013B(SceKernelSpinlock *lock);
 void SceThreadmgrForDriver_F96FE0D5(SceKernelSpinlock *lock, SceKernelIntrStatus state);
-SceUID SceThreadmgrForDriver_FA54D49A(void);
+SceUID SceThreadmgrForDriver_FA54D49A(void);	/* vitasdk: ksceKernelGetProcessIdFromTLS */
 int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo *infos,
 				   SceSize size, SceSize *count);
 int SceThreadmgrForKernel_0788C9BC(unsigned int cpuId, void (*fn)(void *), void *arg, SceSize size);
@@ -756,6 +778,7 @@ int SceThreadmgrForKernel_5075AE5E(SceUID threadId, const ThreadmgrDebugRegister
 				   uint32_t mask, int mode);
 int SceThreadmgrForKernel_60798313(uint32_t *value);
 int SceThreadmgrForKernel_614BF2BE(SceUID threadId, SceUInt32 *timeout);
+/* vitasdk: ksceKernelGetThreadContextInfo */
 int SceThreadmgrForKernel_6C1F092F(ThreadCBInfo *info);
 int SceThreadmgrForKernel_6DC1BE7A(void);
 int SceThreadmgrForKernel_800ACB9D(SceUID threadId, int priority);

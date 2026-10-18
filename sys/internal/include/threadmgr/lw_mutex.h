@@ -26,6 +26,7 @@ _Static_assert(sizeof(ThreadmgrLwMutexWork) == 0x20, "lw mutex work size");
 
 int sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *info);
 int sceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info);
+/* vitasdk: ksceKernelGetLwCondInfo */
 int SceThreadmgrForDriver_C2AFFBD0(SceUID condId, SceKernelLwCondInfo *info);
 
 #ifdef __cplusplus
