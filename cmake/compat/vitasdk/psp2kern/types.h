@@ -1,9 +1,8 @@
 /*
  * vitasdk's psp2kern/types.h, for the files and vitasdk headers that still include it: sysmem's
  * types (the address ranges and the PA vector, the fixed GUIDs, the lock words) come from
- * sysmem's headers, and vitasdk's definitions of them are renamed aside. Only the SBL types
- * (SceSelfAuthInfo, SceAuthInfo, SceSharedSecret) are still vitasdk's, until their owner's
- * headers replace them.
+ * sysmem's headers, the SELF authentication records from authmgr's, and vitasdk's definitions
+ * of them are renamed aside.
  */
 #pragma once
 
@@ -59,7 +58,13 @@
 #define SCE_KERNEL_PROCESS_BUDGET_KERNEL_ID			SCE_KERNEL_PROCESS_BUDGET_KERNEL_ID_vitasdk
 #define SCE_KERNEL_PROCESS_BUDGET_SHELL_ID			SCE_KERNEL_PROCESS_BUDGET_SHELL_ID_vitasdk
 #define SCE_KERNEL_PROCESS_BUDGET_FULL_GAME_ID			SCE_KERNEL_PROCESS_BUDGET_FULL_GAME_ID_vitasdk
+#define SceSharedSecret						SceSharedSecret_vitasdk
+#define SceSelfAuthInfo						SceSelfAuthInfo_vitasdk
+#define SceAuthInfo						SceAuthInfo_vitasdk
 #include_next <psp2kern/types.h>
+#undef SceSharedSecret
+#undef SceSelfAuthInfo
+#undef SceAuthInfo
 #undef SceKernelAddrPair
 #undef SceKernelVARange
 #undef SceKernelPARange
@@ -116,3 +121,4 @@
 #include <sysmem/memblock.h>
 #include <sysmem/spinlock.h>
 #include <sysmem/uid_guid.h>
+#include <authmgr/sblauthmgr.h>

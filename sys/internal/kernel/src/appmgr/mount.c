@@ -334,7 +334,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 	result = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 	if (result < 0)
 		return result;
-	authorityId = authInfo.program_authority_id;
+	authorityId = authInfo.programAuthorityId;
 	for (index = 0; index != 16; ++index) {
 		entry = mount->programAuthorityIds[index];
 		if (!removed && entry == authorityId) {
@@ -366,14 +366,14 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 		result = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (result < 0)
 			return result;
-		if (authInfo.program_authority_id == 0x2800000000000001ULL ||
-		    authInfo.program_authority_id == 0x2800000000000010ULL ||
-		    authInfo.program_authority_id == 0x280000000000002dULL ||
+		if (authInfo.programAuthorityId == 0x2800000000000001ULL ||
+		    authInfo.programAuthorityId == 0x2800000000000010ULL ||
+		    authInfo.programAuthorityId == 0x280000000000002dULL ||
 		    (mount->mountId == 1005 &&
-		     authInfo.program_authority_id == 0x2800000000000039ULL))
+		     authInfo.programAuthorityId == 0x2800000000000039ULL))
 			return 0;
 		result = ScePfsMgrForKernel_2D67D8CA(&mount->mountPoint,
-					  authInfo.program_authority_id);
+					  authInfo.programAuthorityId);
 		return result == (int)0x80010002 || result >= 0 ? 0 : result;
 	}
 	if (mount->mountId == 600) {
@@ -715,7 +715,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 		if (status < 0)
 			goto authError;
 		status = ScePfsMgrForKernel_D8D0FEE5(&pfsMount->mountPoint,
-				       authInfo.program_authority_id);
+				       authInfo.programAuthorityId);
 		if (status != (int)0x80010011 && status < 0)
 			goto authError;
 	}
@@ -748,7 +748,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 	result = (int)0x8080001e;
 	goto freeMount;
 addAuthority:
-	pfsMount->programAuthorityIds[index] = authInfo.program_authority_id;
+	pfsMount->programAuthorityIds[index] = authInfo.programAuthorityId;
 	if (outMount != NULL)
 		*outMount = mount;
 	return result;
@@ -1572,7 +1572,7 @@ int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint)
 	if (result < 0)
 		goto out;
 	if (sceKernelGetProcessSelfAuthInfo(0, &work.authInfo) < 0 ||
-	    work.authInfo.program_authority_id != 0x2808000000000001ULL) {
+	    work.authInfo.programAuthorityId != 0x2808000000000001ULL) {
 		result = (int)0x80800009;
 		goto unlock;
 	}
@@ -1635,7 +1635,7 @@ int appmgrSetPfsAcidDirectory(const char *path, const char *directory)
 	result = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
 	if (result < 0)
 		goto unlock;
-	if (authInfo.program_authority_id != 0x2800000000000001ULL) {
+	if (authInfo.programAuthorityId != 0x2800000000000001ULL) {
 		result = (int)0x80800009;
 		goto unlock;
 	}
@@ -1723,7 +1723,7 @@ cleanup:
 		status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (status < 0)
 			goto freeVirtualMount;
-		authorityId = authInfo.program_authority_id;
+		authorityId = authInfo.programAuthorityId;
 		removed = 0;
 		references = 0;
 		for (index = 0; index != 16; ++index) {
@@ -1757,14 +1757,14 @@ cleanup:
 			status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 			if (status < 0)
 				goto freeVirtualMount;
-			if (authInfo.program_authority_id == 0x2800000000000001ULL ||
-			    authInfo.program_authority_id == 0x2800000000000010ULL ||
-			    authInfo.program_authority_id == 0x280000000000002dULL ||
+			if (authInfo.programAuthorityId == 0x2800000000000001ULL ||
+			    authInfo.programAuthorityId == 0x2800000000000010ULL ||
+			    authInfo.programAuthorityId == 0x280000000000002dULL ||
 			    (pfsMount->mountId == 1005 &&
-			     authInfo.program_authority_id == 0x2800000000000039ULL))
+			     authInfo.programAuthorityId == 0x2800000000000039ULL))
 				goto freeVirtualMount;
 			ScePfsMgrForKernel_2D67D8CA(&pfsMount->mountPoint,
-					  authInfo.program_authority_id);
+					  authInfo.programAuthorityId);
 			goto freeVirtualMount;
 		}
 		if (pfsMount->mountId == 600) {

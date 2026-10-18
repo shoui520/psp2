@@ -98,7 +98,7 @@ int SelfReaderCheckElfHeader(const void *ehdr, SceSize size)
 	return e->e_phoff <= sizeof(*e) ? 0 : SCE_KERNEL_ERROR_ILLEGAL_ELF_HEADER;
 }
 
-int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, ModuleAuthInfo *auth)
+int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth)
 {
 	const SceSelfImageHeader *self;
 	const Elf32Ehdr *ehdr;

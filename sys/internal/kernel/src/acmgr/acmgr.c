@@ -252,7 +252,7 @@ int SceSblACMgrForDriver_5F9AF49C(SceUID pid, const SceChar8 *path)
 
 	if (SceSysrootForKernel_4F0A4066(pid, &info) != 0 || path == NULL)
 		return 0;
-	group = info.program_authority_id & 0xfff0000000000000ULL;
+	group = info.programAuthorityId & 0xfff0000000000000ULL;
 	if (group == 0x2100000000000000ULL || group == 0x2f00000000000000ULL)
 		restricted = (info.attribute[16] >> 6) & 1;
 	else if (info.attribute[16] & 0x40)
@@ -445,7 +445,7 @@ int sceSblACMgrGetPaid(SceUID pid, SceUInt64 *paid)
 
 	if (paid == NULL || SceSysrootForKernel_4F0A4066(pid, &info) != 0)
 		return ACMGR_ERROR_INVALID_ARGUMENT;
-	*paid = info.program_authority_id;
+	*paid = info.programAuthorityId;
 	return 0;
 }
 

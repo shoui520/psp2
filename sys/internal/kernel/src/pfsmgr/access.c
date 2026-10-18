@@ -165,13 +165,13 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 		if (sceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
-			approved = pfsPmiIsApproved(owner, authInfo.program_authority_id);
+			approved = pfsPmiIsApproved(owner, authInfo.programAuthorityId);
 		flags = pmi->parent->flags;
 	} else {
 		if (sceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
-			approved = pfsPmiIsApproved(pmi, authInfo.program_authority_id);
+			approved = pfsPmiIsApproved(pmi, authInfo.programAuthorityId);
 		flags = pmi->flags;
 	}
 	if (flags & PFS_PMI_NOT_APPROVED)

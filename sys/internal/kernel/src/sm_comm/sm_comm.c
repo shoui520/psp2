@@ -38,7 +38,7 @@
 typedef void (*SmCry2ArmHandler)(SceUID id, int channel, void *argument,
 	uint32_t status, uint32_t result);
 int sceSblSmSchedProxyInvoke(uint32_t priority, uint32_t physicalVector,
-	uint32_t count, const uint32_t *commandInput, const SceAuthInfo *auth, SceUID *id);
+	uint32_t count, const uint32_t *commandInput, const SelfAuthRequest *auth, SceUID *id);
 int sceSblSmSchedProxyWait(SceUID id, void *result);
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
 int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, uint32_t value);
@@ -177,7 +177,7 @@ out:
 
 static int NOINLINE StartSession(int index, uint32_t priority,
 	const SceKernelVARange *range, uint32_t command,
-	const SceAuthInfo *auth, SceUID *id)
+	const SelfAuthRequest *auth, SceUID *id)
 {
 	SceKernelPAVector vector;
 	void *base = NULL;
@@ -276,7 +276,7 @@ int module_start(SceSize arglen, void *argp)
 }
 
 int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
-	SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
+	SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
 	SceKernelVARange range;
@@ -341,7 +341,7 @@ out:
 }
 
 int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
-	SceUInt32 size, SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id)
+	SceUInt32 size, SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id)
 {
 	uint32_t context = EnterApi();
 	SceKernelVARange range;

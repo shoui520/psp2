@@ -155,7 +155,7 @@ int setFatfsAttributeByAttributeWithMountPoint(const SceSelfAuthInfo *info, SceS
 	}
 	if (value != 0xf)
 		return ACMGR_ERROR_INVALID_ARGUMENT;
-	paid = info->program_authority_id;
+	paid = info->programAuthorityId;
 	if (paid == 0x280000000000001eULL || paid == 0x220000101cc73883ULL ||
 	    paid == 0x2800000000000010ULL || paid == 0x2800000000000031ULL ||
 	    (info->capability[16] & 0x20))

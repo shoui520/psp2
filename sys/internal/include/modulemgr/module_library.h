@@ -1,7 +1,10 @@
 #ifndef SCE_MODULE_LIBRARY_H
 #define SCE_MODULE_LIBRARY_H
 
-#include <psp2/types.h>
+#include <scetypes.h>
+
+/* a library's or a function's NID */
+typedef SceUInt32 SceNID;
 
 /* sceKernelGetLibraryInfoByNID: parallel function and variable export tables. */
 typedef struct SceKernelLibraryInfo {

@@ -11,6 +11,7 @@
 #define MODULEMGR_INTERNAL_H
 
 #include <psp2kern/types.h>
+#include <authmgr/sblauthmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/process.h>
@@ -368,7 +369,7 @@ typedef struct SelfReader {
 	void *segmentInfo;		/* SELF segment info table */
 	void *heap;			/* allocation holding header */
 	int authContext;
-	struct ModuleAuthInfo *auth;
+	SelfAuthRequest *auth;
 	SceUID fd;
 	SceUID pid;
 	SceUInt32 reserved;
@@ -392,27 +393,6 @@ typedef struct Elf32Phdr {
 #define ET_SCE_FIXEDEXEC	0xfe04
 
 
-/* SceSelfAuthInfo, with the shared secret (vitasdk's SceSharedSecret) spelt out */
-typedef struct SelfAuthInfo {
-	SceUInt64 programAuthorityId;
-	SceUInt64 padding;
-	SceUInt8 capability[0x20];
-	SceUInt8 attribute[0x20];
-	SceUInt8 sharedSecret0[0x10];
-	SceUInt32 klicensee[4];		/* copied between caller and module */
-	SceUInt8 sharedSecret2[0x10];
-	SceUInt32 sharedSecret3[4];
-} SelfAuthInfo;
-
-/* the 0x130-byte authentication info handed to the SELF reader */
-typedef struct ModuleAuthInfo {
-	SceUInt32 reserved0;
-	SceUInt32 flags;
-	SelfAuthInfo caller;
-	SelfAuthInfo module;		/* filled by the SELF reader */
-	SceUInt32 mediaType;
-	SceUInt32 reserved1;
-} ModuleAuthInfo;
 
 /* bootimage_fs.c */
 typedef struct BootimageEntry {
@@ -534,7 +514,7 @@ extern SceUInt32 g_relocForms;
 
 /* loadelf.c */
 SceUInt32 Loadelf_GetAddrBias(LoadelfContext *ctx, const void *addr);
-int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, ModuleAuthInfo *auth, SceUInt32 flags);
+int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags);
 int LoadelfFreeImage(SceModuleCB *cb);
 int LoadelfMapImage(LoadelfContext *ctx);
 
@@ -681,7 +661,7 @@ int sceLoadcoreIoReadFrom(void *buf, SceSize size, SceOff offset);
 
 /* self_decrypter.c */
 int SelfReaderCheckElfHeader(const void *ehdr, SceSize size);
-int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, ModuleAuthInfo *auth);
+int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, SelfAuthRequest *auth);
 int SelfReaderClose(SelfReader *reader);
 int SelfReaderGetType(SelfReader *reader);
 SceUInt16 SelfReaderGetPhnum(SelfReader *reader);

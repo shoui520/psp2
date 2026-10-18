@@ -123,7 +123,7 @@ const char gCompatPspFirmwarePath[] = "vs0:app/NPXS10028/pcff.skprx";
 const char gCompatBootFirmwarePath[] = "os0:kd/pcbc.skprx";
 const char gCompatSecureModulePath[] = "os0:sm/compat_sm.self";
 const SceSelfAuthInfo gCompatSecureModuleAuth = {
-	.program_authority_id = 0x2808000000000001ULL,
+	.programAuthorityId = 0x2808000000000001ULL,
 	.capability = {
 		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff,
@@ -2126,15 +2126,15 @@ int compatIsPocketStationTitle(const signed char *titleId)
 
 int compatStartSecureModule(void)
 {
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	int result;
 
 	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.request, &gCompatSecureModuleAuth, sizeof(auth.request));
+	memcpy(&auth.caller, &gCompatSecureModuleAuth, sizeof(auth.caller));
 	result = sceSblACMgrGetMediaType(gCompatSecureModulePath,
-		&auth.media_type);
+		&auth.mediaType);
 	if (result == 0) {
-		auth.self_type = (auth.self_type & ~0xfU) | 2;
+		auth.selfType = (auth.selfType & ~0xfU) | 2;
 		result = SceSblSmCommForKernel_7863A0CC(0, gCompatSecureModulePath,
 			0, &auth, &gCompatSecureModuleId);
 	}

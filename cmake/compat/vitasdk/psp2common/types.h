@@ -25,7 +25,7 @@
 #endif
 
 typedef int		SceMode;
-typedef unsigned int	SceNID;
+typedef unsigned int	SceNID;		/* modulemgr/module_library.h's, for vitasdk's user headers */
 typedef SceUInt64	SceKernelSysClock;
 
 #define SCE_KERNEL_THREAD_ID_SELF	0

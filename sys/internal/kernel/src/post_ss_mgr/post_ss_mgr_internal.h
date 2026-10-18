@@ -48,7 +48,7 @@
 
 /* the self authentication the module's secure modules (pm_sm, act_sm, utoken_sm) run with */
 #define POST_SS_SM_AUTH_INFO	{								\
-	.program_authority_id = 0x2808000000000001ULL,			\
+	.programAuthorityId = 0x2808000000000001ULL,			\
 	.capability = {							\
 		0x80, 0x00, 0x00, 0x00, 0xc0, 0x00, 0xf0, 0x00,		\
 		0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,		\

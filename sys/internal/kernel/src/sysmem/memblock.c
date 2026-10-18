@@ -2256,8 +2256,8 @@ SceUID sceKernelAllocMemBlock(const char *name, SceUInt32 type, SceSize size,
 	switch (type) {
 	case SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_GAME_RW:
 		ret = SceSysrootForKernel_4F0A4066(0, &auth);
-		if (ret >= 0 && MemBlockAuthDenied((SceUInt32)auth.program_authority_id,
-						(SceUInt32)(auth.program_authority_id >> 32))) {
+		if (ret >= 0 && MemBlockAuthDenied((SceUInt32)auth.programAuthorityId,
+						(SceUInt32)(auth.programAuthorityId >> 32))) {
 			ret = SCE_KERNEL_ERROR_MEMBLOCK_TYPE_FOR_UPDATER_OR_SAFEMODE;
 			break;
 		}

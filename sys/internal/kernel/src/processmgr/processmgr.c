@@ -1340,7 +1340,7 @@ static int CreateKernelProcessCommon(SceProcessObject *process, SceUID pid)
 
 /* the self authentication of the kernel process and of the dummy processes */
 static const SceSelfAuthInfo g_kernelAuthInfo = {
-	.program_authority_id = 0x2808000000000001ULL,
+	.programAuthorityId = 0x2808000000000001ULL,
 	.capability = {
 		0x80, 0x00, 0x00, 0x00, 0xc0, 0x00, 0xf0, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1354,7 +1354,7 @@ static const SceSelfAuthInfo g_kernelAuthInfo = {
 };
 
 static const SceSelfAuthInfo g_shellDummyAuthInfo = {
-	.program_authority_id = 0x2f00000000000001ULL,
+	.programAuthorityId = 0x2f00000000000001ULL,
 	.capability = {
 		0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1368,7 +1368,7 @@ static const SceSelfAuthInfo g_shellDummyAuthInfo = {
 };
 
 static const SceSelfAuthInfo g_npdrmDummyAuthInfo = {
-	.program_authority_id = 0x2800000000000001ULL,
+	.programAuthorityId = 0x2800000000000001ULL,
 	.capability = {
 		0x40, 0x00, 0x00, 0x00, 0xc0, 0x00, 0xf0, 0x00,
 		0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
@@ -1828,11 +1828,11 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		process->slot = slot;
 		process->pid = pid;
 		if (klicensee == NULL)
-			memset(process->authInfo.secret.klicensee, 0, 0x10);
+			memset(process->authInfo.klicensee, 0, 0x10);
 		else
-			memcpy(process->authInfo.secret.klicensee, klicensee, 0x10);
+			memcpy(process->authInfo.klicensee, klicensee, 0x10);
 		process->parentPid = parentPid;
-		process->authInfo.secret.shared_secret_3_0 = 0x10;
+		process->authInfo.sharedSecret3[0] = 0x10;
 	}
 	SceKernelUtilsForDriver_875B2A1C(process->random, sizeof(process->random));
 	type &= 0x7fffffff;

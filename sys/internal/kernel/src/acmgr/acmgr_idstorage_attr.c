@@ -43,7 +43,7 @@ int checkIdStorageAttribute(const SceSelfAuthInfo *info, const SceSblACMgrValue 
 	level = SceSysrootForKernel_20009397();
 	if (attr->size != 6)
 		return ACMGR_ERROR_ACCESS_DENIED;
-	paid = info->program_authority_id;
+	paid = info->programAuthorityId;
 	if (level == 0x80 || (paid & 0xfff8000000000000ULL) == 0x2808000000000000ULL)
 		permission = 0xf;
 	else if ((paid & ~0xfULL) == 0x2800800000000000ULL ||

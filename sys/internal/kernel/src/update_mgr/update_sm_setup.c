@@ -18,7 +18,7 @@ static const UpdateUtilSmPath updateSmPaths[] = {
 };
 
 static const SceSelfAuthInfo updateSmAuthInfo = {
-	.program_authority_id = 0x2808000000000001ULL,
+	.programAuthorityId = 0x2808000000000001ULL,
 	.capability = {
 		[0] = 0x80, [4] = 0xc0, [6] = 0xf0,
 		[12] = 0xff, [13] = 0xff, [14] = 0xff, [15] = 0xff
@@ -33,7 +33,7 @@ static const SceSelfAuthInfo updateSmAuthInfo = {
 int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 {
 	SceIoStat stat;
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	const char *sm_path;
 	int result, permission;
 
@@ -50,11 +50,11 @@ int UpdateUtilSetupSm(unsigned int type, int *smId, int commandId)
 		goto restorePermission;
 	}
 	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.request, &updateSmAuthInfo, sizeof(auth.request));
-	result = SceSblACMgrForKernel_sceSblACMgrGetMediaType(sm_path, &auth.media_type);
+	memcpy(&auth.caller, &updateSmAuthInfo, sizeof(auth.caller));
+	result = SceSblACMgrForKernel_sceSblACMgrGetMediaType(sm_path, &auth.mediaType);
 	if (result < 0)
 		goto restorePermission;
-	auth.self_type = (auth.self_type & ~15) | 2;
+	auth.selfType = (auth.selfType & ~15) | 2;
 	result = SceSblSmCommForKernel_7863A0CC(0, sm_path, commandId, &auth, smId);
 restorePermission:
 	sceKernelSetThreadAccessLevel(permission);

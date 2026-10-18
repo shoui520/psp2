@@ -2,6 +2,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <modulemgr/module_library.h>
 #include <modulemgr/modulemgr_control.h>
 
 typedef struct SceKernelSegmentInfoForDebugger {

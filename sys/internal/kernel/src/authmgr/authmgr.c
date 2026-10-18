@@ -37,7 +37,7 @@
 /* Module-local ABI declarations while shared dependency headers are frozen. */
 typedef void (*AuthCryHandler)(SceUID, int, void *, uint32_t, uint32_t);
 int sceSblSmSchedProxyInvoke(uint32_t, uint32_t, uint32_t,
-	const uint32_t *, const SceAuthInfo *, SceUID *);
+	const uint32_t *, const SelfAuthRequest *, SceUID *);
 int sceSblSmSchedProxyWait(SceUID id, uint32_t *result);
 int sceSblSmSchedProxyGetStatus(SceUID id, uint32_t *result);
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, uint32_t value);
@@ -313,13 +313,13 @@ static NOINLINE int authMgrInvokeSM(void)
 {
 	uint32_t guard = __stack_chk_guard;
 	uint8_t *bootParameters = SceSysrootForKernel_9DB56D1F();
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	uint32_t *words = (uint32_t *)(void *)&auth;
 	int result;
 
 	memset(&auth, 0, sizeof(auth));
-	memset(&auth.request, 0, sizeof(auth.request));
-	auth.self_type = 0x1002;
+	memset(&auth.caller, 0, sizeof(auth.caller));
+	auth.selfType = 0x1002;
 	words[2] = 1;
 	words[3] = 0x28080000;
 	words[6] = 0x80;
@@ -332,7 +332,7 @@ static NOINLINE int authMgrInvokeSM(void)
 	words[17] = 0x80;
 	words[20] = 0;
 	words[21] = UINT32_MAX;
-	auth.media_type = (*(uint32_t *)(void *)(bootParameters + 0x6c) & 0x40) ? 1 : 10;
+	auth.mediaType = (*(uint32_t *)(void *)(bootParameters + 0x6c) & 0x40) ? 1 : 10;
 	result = sceSblSmSchedProxyInvoke(0, 0, 0, NULL, &auth, (SceUID *)&s_state.requestId);
 	if (result != 0) {
 		SCE_DBG_PRINTF(0xb, 909, "ERROR: sceSblSmSchedProxyInvoke ret = 0x%08x\n", result);
@@ -511,7 +511,7 @@ int sceSblAuthMgrClose(int handle)
 	SceKernelSuspendForDriver_2BB92967(0);
 	return signalResult < 0 ? signalResult : result;
 }
-int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceAuthInfo *auth)
+int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SelfAuthRequest *auth)
 {
 	uint32_t guard = __stack_chk_guard;
 	struct AuthPacket *packet = s_state.arena;
@@ -533,9 +533,9 @@ int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceAu
 		if (result >= 0) {
 			mode = SceSysrootForKernel_377895EB();
 			if (mode == 1 || mode == 2 || mode == UINT32_MAX)
-				auth->self_type = (auth->self_type & 0xfffff0ff) | 0x100;
-			*(uint64_t *)(void *)auth->response.padding =
-				auth->media_type - 13 < 2 ?
+				auth->selfType = (auth->selfType & 0xfffff0ff) | 0x100;
+			*(uint64_t *)(void *)auth->module.padding =
+				auth->mediaType - 13 < 2 ?
 				(uint64_t)*(uint32_t *)(void *)(s_state.cachedSpsfoAuth + 0xc) << 16 : 0;
 			memcpy(packet->payload, auth, sizeof(*auth));
 			words[0x170 / 4] = result;
@@ -543,14 +543,14 @@ int sceSblAuthMgrAuthHeader(int handle, const void *header, uint32_t size, SceAu
 			SceCpuForDriver_103872A5((void *)header, size);
 			result = authMgrSendPacketCore(packet, 0x190, 1);
 			if (result >= 0) {
-				memcpy(&auth->response, (uint8_t *)packet + 0xd8, sizeof(auth->response));
-				if ((auth->response.program_authority_id >> 32 & 0xfff00000) == 0x2f000000) {
+				memcpy(&auth->module, (uint8_t *)packet + 0xd8, sizeof(auth->module));
+				if ((auth->module.programAuthorityId >> 32 & 0xfff00000) == 0x2f000000) {
 					result = SceSysrootForDriver_D75D4F37(fselfAuth);
 					if (result == 0) {
 						/* Native overwrite preserves response.padding (license bits). */
-						auth->response.program_authority_id = (uint64_t)fselfAuth[0] | (uint64_t)fselfAuth[1] << 32;
+						auth->module.programAuthorityId = (uint64_t)fselfAuth[0] | (uint64_t)fselfAuth[1] << 32;
 						for (unsigned i = 0; i < 20; i++)
-							((uint32_t *)(void *)auth->response.capability)[i] = fselfAuth[i + 2];
+							((uint32_t *)(void *)auth->module.capability)[i] = fselfAuth[i + 2];
 					} else if (result < 0 && result != (int)0x800f1a02) {
 						AUTH_DBG_PRINTF("sceSblAuthMgrAuthHeader", 659, "[ERROR] overwrite fself authinfo\n");
 						goto out;

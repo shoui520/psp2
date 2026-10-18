@@ -8,7 +8,7 @@
 SceUID aimgrSmId;
 
 const SceSelfAuthInfo aimgrSmAuthInfo = {
-	.program_authority_id = UINT64_C(0x2808000000000001),
+	.programAuthorityId = UINT64_C(0x2808000000000001),
 	.capability = {
 		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
@@ -24,15 +24,15 @@ int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *med
 
 int invoke_aimgr_secure_module(void)
 {
-	SceAuthInfo authInfo;
+	SelfAuthRequest authInfo;
 	int ret;
 
 	memset(&authInfo, 0, sizeof(authInfo));
-	memcpy(&authInfo.request, &aimgrSmAuthInfo, sizeof(aimgrSmAuthInfo));
-	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType("os0:sm/aimgr_sm.self", &authInfo.media_type);
+	memcpy(&authInfo.caller, &aimgrSmAuthInfo, sizeof(aimgrSmAuthInfo));
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType("os0:sm/aimgr_sm.self", &authInfo.mediaType);
 	if (ret)
 		return ret;
-	authInfo.self_type = (authInfo.self_type & ~0xf) | 2;
+	authInfo.selfType = (authInfo.selfType & ~0xf) | 2;
 	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/aimgr_sm.self", 0,
 		&authInfo, &aimgrSmId);
 }

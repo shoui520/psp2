@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
+#include <modulemgr/module_library.h>
 #include <coredump/coredump.h>
 #include <ss_mgr/ss_mgr.h>
 #include <threadmgr/threadmgr.h>

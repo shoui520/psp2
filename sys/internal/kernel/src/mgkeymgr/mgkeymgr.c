@@ -51,15 +51,15 @@ static int NOINLINE MapKeyRegisters(void)
 /* name unknown: start mgkm_sm with the original authorization request. */
 static int NOINLINE StartSecureModule(void)
 {
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	int ret;
 
 	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.request, s_request, sizeof(s_request));
-	ret = sceSblACMgrGetMediaType("os0:sm/mgkm_sm.self", &auth.media_type);
+	memcpy(&auth.caller, s_request, sizeof(s_request));
+	ret = sceSblACMgrGetMediaType("os0:sm/mgkm_sm.self", &auth.mediaType);
 	if (ret < 0)
 		return ret;
-	auth.self_type = (auth.self_type & ~0xfU) | 2;
+	auth.selfType = (auth.selfType & ~0xfU) | 2;
 	return SceSblSmCommForKernel_7863A0CC(0, "os0:sm/mgkm_sm.self", 0,
 		&auth, &s_smId);
 }

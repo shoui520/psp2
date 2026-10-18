@@ -724,7 +724,7 @@ int sceKernelCheckModelCapability(unsigned int capability)
 #if !SYSMEM_NSKBL
 /* PLACEHOLDER: unnamed capability/attribute bits in the boot-process template. */
 static const SceSelfAuthInfo s_fallbackSelfAuthInfo = {
-	.program_authority_id = UINT64_C(0x2808000000000001),
+	.programAuthorityId = UINT64_C(0x2808000000000001),
 	.capability = {
 		[0] = 0x80, [4] = 0xc0, [6] = 0xf0,
 		[12] = 0xff, [13] = 0xff, [14] = 0xff, [15] = 0xff,

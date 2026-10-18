@@ -135,8 +135,8 @@ static inline void set_module_flags(SceModuleCB *cb, SceUInt32 flags)
 	cb->flags |= mflags;
 }
 
-static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SelfAuthInfo *auth,
-				       SceUInt32 flags, ModuleAuthInfo *info)
+static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SceSelfAuthInfo *auth,
+				       SceUInt32 flags, SelfAuthRequest *info)
 {
 	SceUID pid = cb->pid;
 	int ret;
@@ -150,7 +150,7 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SelfAu
 	info->module.sharedSecret3[0] = 0x10;
 	if ((flags & LOAD_FLAG_PROCESS_IMAGE) != 0) {
 		info->module.klicensee[0] = auth->klicensee[0];
-		info->flags |= 0x10000;
+		info->selfType |= 0x10000;
 		info->module.klicensee[1] = auth->klicensee[1];
 		info->module.klicensee[2] = auth->klicensee[2];
 		info->module.klicensee[3] = auth->klicensee[3];
@@ -166,17 +166,17 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SelfAu
 		return ret;
 	}
 	if (pid != KERNEL_PID)
-		info->flags |= 1;
+		info->selfType |= 1;
 	return 0;
 }
 
-int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SelfAuthInfo *auth,
+int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSelfAuthInfo *auth,
 			SceUInt32 flags)
 {
 	SceModuleCB *cb = &obj->cb;
 	SceUID pid = cb->pid;
 	LoadelfContext ctx;
-	ModuleAuthInfo info;
+	SelfAuthRequest info;
 	void *copy;
 	SceSize size;
 	SceUID puid;
@@ -2004,7 +2004,7 @@ static inline int ModulemgrImportProcParam(SceModuleCB *cb, const SceProcessPara
 }
 
 SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
-				 SelfAuthInfo *auth, ProcessImageInfo *info, const ModulemgrTitlePatch *patch)
+				 SceSelfAuthInfo *auth, ProcessImageInfo *info, const ModulemgrTitlePatch *patch)
 {
 	SceModuleObject *obj;
 	LibraryDB *db;

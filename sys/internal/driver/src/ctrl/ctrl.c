@@ -1700,9 +1700,9 @@ int ctrlCreateProcess(SceUID pid)
 	process->privileged = SceSblACMgrForDriver_991FDC15(pid) ||
 		sceSblACMgrIsKernelProgram(pid) || SceSblACMgrForDriver_2E992B02(pid);
 	sceKernelGetProcessSelfAuthInfo(pid, &auth);
-	process->specialAuthority = auth.program_authority_id == 0x2800000000000013ULL ||
-		(uint64_t)(auth.program_authority_id - 0x2800000000007009ULL) < 2 ||
-		(uint64_t)(auth.program_authority_id - 0x220000101cd2000cULL) < 2;
+	process->specialAuthority = auth.programAuthorityId == 0x2800000000000013ULL ||
+		(uint64_t)(auth.programAuthorityId - 0x2800000000007009ULL) < 2 ||
+		(uint64_t)(auth.programAuthorityId - 0x220000101cd2000cULL) < 2;
 	process->systemProgram = sceSblACMgrIsSystemProgram(pid) != 0;
 	process->samplingMode = 0;
 	process->samplingModeExt = 0;

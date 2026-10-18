@@ -228,15 +228,15 @@ int pmMgrSetNvsMode(int mode, void *nvs)
 
 int invoke_pm_secure_module(const char *path)
 {
-	SceAuthInfo info;
+	SelfAuthRequest info;
 	int ret;
 
 	memset(&info, 0, sizeof(info));
-	memcpy(&info.request, &g_pmSmAuthInfo, sizeof(info.request));
-	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &info.media_type);
+	memcpy(&info.caller, &g_pmSmAuthInfo, sizeof(info.caller));
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &info.mediaType);
 	if (ret < 0)
 		return ret;
-	info.self_type = (info.self_type & ~0xf) | 2;
+	info.selfType = (info.selfType & ~0xf) | 2;
 	return SceSblSmCommForKernel_7863A0CC(0, path, 0, &info, &g_pmSmId);
 }
 

@@ -553,7 +553,7 @@ __attribute__((noinline)) int sceSblQafManagerSetQaFlagVersion(unsigned int vers
 }
 
 const SceSelfAuthInfo qafSmAuthInfo = {
-	.program_authority_id = UINT64_C(0x2808000000000001),
+	.programAuthorityId = UINT64_C(0x2808000000000001),
 	.capability = {
 		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
@@ -570,15 +570,15 @@ int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, uint32_t *med
 int qafLoadSecureModule(const char *path)
 {
 	uint32_t command[4];
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	int ret;
 
 	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.request, &qafSmAuthInfo, sizeof(auth.request));
-	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.media_type);
+	memcpy(&auth.caller, &qafSmAuthInfo, sizeof(auth.caller));
+	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.mediaType);
 	if (ret < 0)
 		return ret;
-	auth.self_type = (auth.self_type & ~0xfU) | 2;
+	auth.selfType = (auth.selfType & ~0xfU) | 2;
 	command[0] = 0xff;
 	command[1] = 0;
 	command[2] = 0;

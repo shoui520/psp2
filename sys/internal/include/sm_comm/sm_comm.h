@@ -17,10 +17,10 @@ typedef int SceSblSmCommId;
 
 /* vitasdk: ksceSblSmCommStartSmFromFile */
 int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
-	SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id);
+	SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id);
 /* vitasdk: ksceSblSmCommStartSmFromData */
 int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
-	SceUInt32 size, SceUInt32 command, SceAuthInfo *auth, SceSblSmCommId *id);
+	SceUInt32 size, SceUInt32 command, SelfAuthRequest *auth, SceSblSmCommId *id);
 int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
 	SceUInt32 *serviceResult, void *data, SceSize size);	/* vitasdk: ksceSblSmCommCallFunc */
 /* vitasdk: ksceSblSmCommStopSm */

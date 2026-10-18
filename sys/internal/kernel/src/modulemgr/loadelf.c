@@ -288,7 +288,7 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 	return SceSysmemForDriver_C94850C9("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
 }
 
-int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, ModuleAuthInfo *auth, SceUInt32 flags)
+int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
 {
 	SceModuleCB *cb = ctx->cb;
 	LoadelfTiming timing, *t;
@@ -542,7 +542,7 @@ int LoadelfMapImage(LoadelfContext *ctx)
 int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, SceSize size,
 				      int flags, SceSize *out)
 {
-	ModuleAuthInfo auth;
+	SelfAuthRequest auth;
 	SelfReader reader;
 	Elf32Phdr *ph;
 	SceUID fd;
@@ -558,7 +558,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.mediaType);
 	if (ret < 0)
 		return ret;
-	auth.flags = flags;
+	auth.selfType = flags;
 
 	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)

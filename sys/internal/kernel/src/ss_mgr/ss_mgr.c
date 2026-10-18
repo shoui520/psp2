@@ -13,7 +13,7 @@
 #include <smsc_proxy/smsc_proxy.h>
 
 const SceSelfAuthInfo ssPortabilityAuthInfo = {
-	.program_authority_id = UINT64_C(0x2808000000000001),
+	.programAuthorityId = UINT64_C(0x2808000000000001),
 	.capability = {
 		0x80, 0, 0, 0, 0xc0, 0, 0xf0, 0,
 		0, 0, 0, 0, 0xff, 0xff, 0xff, 0xff
@@ -117,10 +117,10 @@ int module_start(SceSize args, void *argp)
 SS_MGR_CORE(ssCheckProcessAuthInfo)
 int ssCheckProcessAuthInfo(void)
 {
-	SceAuthInfo authInfo;
+	SelfAuthRequest authInfo;
 	int ret;
 
-	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &authInfo.request);
+	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &authInfo.caller);
 	return ret & (ret >> 31);
 }
 
@@ -289,7 +289,7 @@ int SceSblSsMgrForDriver_934DB6B5(SceUInt32 key_type, void *iv,
 	SceSblSmCommId id;
 	SceUInt32 serviceResult;
 	SsPortabilityRequest request;
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	int ret;
 
 	if (!iv || !dst)
@@ -300,7 +300,7 @@ int SceSblSsMgrForDriver_934DB6B5(SceUInt32 key_type, void *iv,
 		return 0x800f1716;
 	if (dst->msg_size != src->msg_size || dst->msg_size > 32 || (dst->msg_size & 15))
 		return 0x800f1716;
-	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.request);
+	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.caller);
 	if (ret < 0)
 		return ret;
 	if (__builtin_expect(key_type - 1 <= 19, 0))
@@ -326,9 +326,9 @@ secure:
 			goto stop;
 		}
 		SceSblSsMgrForDriver_CD98CC92(&auth, 0, sizeof(auth));
-		memcpy(&auth.request, &ssPortabilityAuthInfo, sizeof(auth.request));
-		auth.media_type = 2;
-		auth.self_type = (auth.self_type & ~15U) | 2;
+		memcpy(&auth.caller, &ssPortabilityAuthInfo, sizeof(auth.caller));
+		auth.mediaType = 2;
+		auth.selfType = (auth.selfType & ~15U) | 2;
 		ret = SceSblSmCommForKernel_039C73B1(0, selfInfo.selfData, selfInfo.selfSize,
 						0, &auth, &id);
 	}

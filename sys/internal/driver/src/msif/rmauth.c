@@ -15,7 +15,7 @@ _Static_assert(sizeof(struct MsifRmAuthRequest) == 32,
 	"removable-media secure request size");
 
 const SceSelfAuthInfo gMsifSmAuthInfo = {
-	.program_authority_id = 0x2808000000000001ULL,
+	.programAuthorityId = 0x2808000000000001ULL,
 	.capability = {
 		[0] = 0x80, [4] = 0xc0, [6] = 0xf0,
 		[12] = 0xff, [13] = 0xff, [14] = 0xff, [15] = 0xff,
@@ -31,19 +31,19 @@ SceSblSmCommId gMsifSmId;
 
 int invoke_rm_auth_secure_module(void)
 {
-	SceAuthInfo auth;
+	SelfAuthRequest auth;
 	struct SysrootSelfInfo selfInfo;
 
 	memset(&auth, 0, sizeof(auth));
-	memcpy(&auth.request, &gMsifSmAuthInfo, sizeof(auth.request));
+	memcpy(&auth.caller, &gMsifSmAuthInfo, sizeof(auth.caller));
 	selfInfo.selfData = NULL;
-	auth.media_type = 2;
+	auth.mediaType = 2;
 	selfInfo.selfSize = 0;
 	selfInfo.size = sizeof(selfInfo);
 	if (SceSysrootForKernel_F10AB792(SCE_KERNEL_SYSROOT_SELF_INDEX_RMAUTH_SM,
 		&selfInfo) < 0)
 		return 0x800f0016;
-	auth.self_type = (auth.self_type & ~0xf) | 2;
+	auth.selfType = (auth.selfType & ~0xf) | 2;
 	return SceSblSmCommForKernel_039C73B1(0, selfInfo.selfData,
 		selfInfo.selfSize, 0, &auth, &gMsifSmId);
 }

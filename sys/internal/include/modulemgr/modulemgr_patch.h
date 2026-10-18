@@ -6,6 +6,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <modulemgr/module_library.h>
 
 typedef struct ModulemgrNidPatch {
 	SceNID from;
