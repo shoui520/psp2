@@ -3,7 +3,7 @@
 #include <sysmem/cp15.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/audioin.h>
+#include <audioin.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>

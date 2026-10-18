@@ -3,7 +3,7 @@
 #include <sysmem/cp15.h>
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/audioin.h>
+#include <audioin.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
@@ -496,8 +496,8 @@ delivered:
 	}
 }
 
-int sceAudioInOpenPort(SceAudioInPortType portType, int grain, int freq,
-		SceAudioInParam param)
+int sceAudioInOpenPort(int portType, int grain, int freq,
+		int param)
 {
 	unsigned int userState = readTpidruro();
 	unsigned int rawFlags, combinedFlags, stereoFlags;
@@ -548,7 +548,7 @@ int sceAudioInOpenPort(SceAudioInPortType portType, int grain, int freq,
 		flags = combinedFlags;
 	}
 	if (param != SCE_AUDIO_IN_PARAM_FORMAT_S16_MONO) {
-		result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAM;
+		result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAMETER;
 		goto done;
 	}
 	pid = sceKernelGetProcessId();
@@ -717,7 +717,7 @@ int sceAudioInOpenPortForDiag(unsigned int portType, unsigned int grain,
 		goto invalidPort;
 	}
 	if (param != SCE_AUDIO_IN_PARAM_FORMAT_S16_MONO) {
-		result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAM;
+		result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAMETER;
 		goto done;
 	}
 	pid = sceKernelGetProcessId();

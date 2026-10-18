@@ -4,7 +4,7 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2/audioin.h>
+#include <audioin.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/procevent.h>
 #include <sysmem/sysclib.h>
@@ -209,7 +209,7 @@ done:
 	return result;
 }
 
-int sceAudioInGetAdopt(SceAudioInPortType portType)
+int sceAudioInGetAdopt(int portType)
 {
 	unsigned int userState = readTpidruro();
 	int pid, result;
@@ -247,7 +247,7 @@ int sceAudioInGetStatus(int select)
 		if (sdkVersion >= 0x1800000)
 			result = SCE_AUDIO_IN_ERROR_INVALID_PARAMETER;
 		else
-			result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAM;
+			result = SCE_AUDIO_IN_ERROR_INVALID_PORT_PARAMETER;
 	}
 	writeTpidruro(userState);
 	return result;

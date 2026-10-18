@@ -1,6 +1,6 @@
 /* AEC context and workspace management; original source filename unavailable. */
 #include "audioin_internal.h"
-#include <psp2/audioin.h>
+#include <audioin.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 
