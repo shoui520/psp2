@@ -3,8 +3,7 @@
  * path, and the tool definition files.
  */
 
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include "regmgr_internal.h"
 
 #define SCE_REGMGR_ERROR_RELEASE_CHECK_MODE	0x800d001e	/* names unknown */
@@ -46,11 +45,11 @@ int regMgrDbgReadToolDef(int eventLog, RegMgrToolDefReader *reader)
 	if (reader == NULL || reader->size != sizeof(*reader) || reader->func == NULL ||
 	    reader->buf == NULL || reader->bufSize == 0)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
-	fd = ksceIoOpen(regMgrGetToolDefPath(eventLog), SCE_O_RDONLY, 0);
+	fd = sceIoOpen(regMgrGetToolDefPath(eventLog), SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return SCE_REGMGR_ERROR_FILE;
 	for (;;) {
-		n = ksceIoRead(fd, reader->buf, reader->bufSize);
+		n = sceIoRead(fd, reader->buf, reader->bufSize);
 		if (n <= 0)
 			break;
 		reader->readSize = n;
@@ -72,7 +71,7 @@ int regMgrDbgReadToolDef(int eventLog, RegMgrToolDefReader *reader)
 		regMgrSetStatus(REGMGR_STATUS_NOTIFY);
 	}
 out:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return ret;
 }
 
@@ -209,7 +208,7 @@ static inline __attribute__((always_inline)) int regMgrDbgGetToolDefSize(int eve
 				ret = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 			} else {
 				memset(&stat, 0, sizeof(stat));
-				if (ksceIoGetstat(regMgrGetToolDefPath(eventLog), &stat) < 0)
+				if (sceIoGetstat(regMgrGetToolDefPath(eventLog), &stat) < 0)
 					ret = SCE_REGMGR_ERROR_FILE;
 				else
 					*uisize = stat.st_size;
@@ -258,21 +257,21 @@ static inline __attribute__((always_inline)) int regMgrDbgCopyToolDef(const RegM
 		return SCE_REGMGR_ERROR_BAD_KEYS_INFO;
 	if (copy->path == NULL || copy->mode == 0 || memcmp(copy->path, "host0:", 6) != 0)
 		return SCE_REGMGR_ERROR_INVALID_ARGUMENT;
-	dst = ksceIoOpen(copy->path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0664);
+	dst = sceIoOpen(copy->path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0664);
 	if (dst < 0)
 		return SCE_REGMGR_ERROR_FILE;
-	src = ksceIoOpen(regMgrGetToolDefPath(0), SCE_O_RDONLY, 0);
+	src = sceIoOpen(regMgrGetToolDefPath(0), SCE_O_RDONLY, 0);
 	if (src < 0) {
-		ksceIoClose(dst);
+		sceIoClose(dst);
 		return SCE_REGMGR_ERROR_FILE;
 	}
 	do {
-		n = ksceIoRead(src, g_regMgrDbgBuf, sizeof(g_regMgrDbgBuf));
+		n = sceIoRead(src, g_regMgrDbgBuf, sizeof(g_regMgrDbgBuf));
 		if (n <= 0) {
 			written = n == 0 ? 0 : SCE_REGMGR_ERROR_FILE;
 			goto out;
 		}
-		written = ksceIoWrite(dst, g_regMgrDbgBuf, n);
+		written = sceIoWrite(dst, g_regMgrDbgBuf, n);
 		if (written <= 0) {
 			if (written != 0) {
 				written = SCE_REGMGR_ERROR_FILE;
@@ -283,8 +282,8 @@ static inline __attribute__((always_inline)) int regMgrDbgCopyToolDef(const RegM
 	} while (n == written);
 	written = SCE_REGMGR_ERROR_INVALID_ARGUMENT;
 out:
-	ksceIoClose(dst);
-	ksceIoClose(src);
+	sceIoClose(dst);
+	sceIoClose(src);
 	return written;
 }
 

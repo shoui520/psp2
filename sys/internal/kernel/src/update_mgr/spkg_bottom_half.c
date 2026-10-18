@@ -2,7 +2,7 @@
 #include <sm_comm/sm_comm.h>
 #include <modulemgr/certified_file.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include "update_internal.h"
 #include "update_packet.h"
@@ -241,7 +241,7 @@ releasePacket:
 		fd = StorageUtileGetPartitionFd(partition, 1);
 		if (fd < 0)
 			goto unsupported;
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		break;
 	case 25:
 		if (!updateUseSysconUpdateService)

@@ -3,7 +3,7 @@
  * directories the host sees above the titles' data, e.g. "Memory Card/game
  * titles/<title>/app0", each a name with a list of children.
  */
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <stdio.h>
 #include <string.h>
 #include "rdrfp.h"
@@ -157,7 +157,7 @@ int rdrfpUpdateVDEntryOfSavedata(RdrfpVDEntry *title, const char *path)
 	int ret;
 
 	memset(&stat, 0, sizeof(stat));
-	ret = ksceIoGetstat(path, &stat);
+	ret = sceIoGetstat(path, &stat);
 	if (entry == NULL) {
 		if (ret == (int)SCE_ERROR_ERRNO_ENOENT)
 			return 0;

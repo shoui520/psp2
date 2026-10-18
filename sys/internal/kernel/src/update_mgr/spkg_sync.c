@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <threadmgr/threadmgr.h>
@@ -22,11 +22,11 @@ int SpkgUtilUpdateSpackageSync(SceUID fd, const SceMbr *mbr, int nodeType,
 	result = UpdateUtilAllocateBuffer(segment->size, &buffer, sceKernelGetProcessId());
 	if (result)
 		goto release;
-	if (ksceIoLseek(fd, segment->offset, 0) < 0) {
+	if (sceIoLseek(fd, segment->offset, 0) < 0) {
 		result = (int)0x800f0205;
 		goto release;
 	}
-	size = ksceIoRead(fd, buffer, segment->size);
+	size = sceIoRead(fd, buffer, segment->size);
 	if ((uint32_t)size != (uint32_t)segment->size) {
 		result = (int)0x800f0205;
 		goto release;

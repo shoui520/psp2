@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/pmmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
@@ -85,13 +85,13 @@ static int enterIo(void)
 static int transfer(SceUID fd, SceOff offset, void *buffer, SceSize size, int write)
 {
 	int flags = enterIo();
-	SceOff position = ksceIoLseek(fd, offset, 0);
+	SceOff position = sceIoLseek(fd, offset, 0);
 	int ret = (int)position;
 
 	if (position >= 0) {
-		ret = write ? ksceIoWrite(fd, buffer, size) : ksceIoRead(fd, buffer, size);
+		ret = write ? sceIoWrite(fd, buffer, size) : sceIoRead(fd, buffer, size);
 		if (write && ret >= 0 && device)
-			ksceIoSync(device, 0);
+			sceIoSync(device, 0);
 	}
 	SceThreadmgrForDriver_84EB1EA4(flags);
 	return ret;
@@ -108,10 +108,10 @@ static int loadPermissions(void)
 	accessAttr.size = 6;
 	permission.owner = 0;
 	permission.mode = 0;
-	fd = ksceIoOpen(entireDevice, IO_DEVICE_OPEN | SCE_O_RDONLY, 0);
+	fd = sceIoOpen(entireDevice, IO_DEVICE_OPEN | SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	ret = ksceIoRead(fd, &mbr, sizeof(mbr));
+	ret = sceIoRead(fd, &mbr, sizeof(mbr));
 	if (ret < 0)
 		goto close;
 	if (memcmp(mbr.magic, SCE_MBR_MAGIC, sizeof(mbr.magic))) {
@@ -127,7 +127,7 @@ static int loadPermissions(void)
 		}
 	}
 close:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return ret;
 }
 
@@ -200,13 +200,13 @@ static int initializeStorage(void)
 	if (heap < 0)
 		return ID_NO_SPACE;
 	storage.offset = 0;
-	fd = ksceIoOpen(idDevice, IO_DEVICE_OPEN | SCE_O_RDWR, 0);
+	fd = sceIoOpen(idDevice, IO_DEVICE_OPEN | SCE_O_RDWR, 0);
 	if (fd >= 0 && useEntire) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		fd = -1;
 	}
 	if (fd < 0) {
-		fd = ksceIoOpen(entireDevice, IO_DEVICE_OPEN | SCE_O_RDWR, 0);
+		fd = sceIoOpen(entireDevice, IO_DEVICE_OPEN | SCE_O_RDWR, 0);
 		if (fd < 0)
 			return fd;
 		device = entireDevice;
@@ -216,7 +216,7 @@ static int initializeStorage(void)
 	} else {
 		device = idDevice;
 		storage.fd = fd;
-		bytes = ksceIoLseek(fd, 0, 2);
+		bytes = sceIoLseek(fd, 0, 2);
 		if (bytes < 1)
 			return (int)bytes;
 	}

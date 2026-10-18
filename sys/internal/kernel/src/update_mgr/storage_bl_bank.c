@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -29,7 +29,7 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 		result = (int)0x800f0205;
 		goto cleanup;
 	}
-	if (ksceIoRead(fd, header, 4096) != 4096) {
+	if (sceIoRead(fd, header, 4096) != 4096) {
 		updateLastResult = 0x8010003;
 		result = (int)0x800f0205;
 		goto cleanup;
@@ -74,7 +74,7 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 	result = 0;
 cleanup:
 	sceKernelFreeHeapMemory(heapId, header);
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }

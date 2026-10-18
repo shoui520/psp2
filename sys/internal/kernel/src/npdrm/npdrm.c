@@ -5,8 +5,7 @@
 #include <skeleton.h>
 #include <psp2kern/kernel/threadmgr/workqueues.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2common/npdrm.h>
 #include <psp2kern/kernel/gcauthmgr/drm_bb.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -169,20 +168,20 @@ int NpDrmRemoveActivationFile(SceUInt64 *accountId)
 		gNpDrmActivationValid = 0;
 	}
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
+	fd = sceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
 	if (fd >= 0) {
-		if (accountId && ksceIoPread(fd, &gNpDrmActivationCache.data,
+		if (accountId && sceIoPread(fd, &gNpDrmActivationCache.data,
 			sizeof(gNpDrmActivationCache.data), 0) ==
 			sizeof(gNpDrmActivationCache.data))
 			*accountId = gNpDrmActivationCache.data.account_id;
 		NpDrmClearMemory(&gNpDrmActivationCache,
 			sizeof(gNpDrmActivationCache));
-		ksceIoPwrite(fd, &gNpDrmActivationCache.data,
+		sceIoPwrite(fd, &gNpDrmActivationCache.data,
 			sizeof(gNpDrmActivationCache.data), 0);
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	}
-	ret = ksceIoRemove("tm0:/npdrm/act.dat");
-	ksceIoSync("tm0:", 0);
+	ret = sceIoRemove("tm0:/npdrm/act.dat");
+	sceIoSync("tm0:", 0);
 	if (ret == (int)0x80010002)
 		ret = 0;
 	NpDrmClearMemory(&gNpDrmActivationCache, sizeof(gNpDrmActivationCache));
@@ -411,22 +410,22 @@ int NpDrmLoadActivationFile(void)
 	gNpDrmActivationValid = 0;
 	permission = sceKernelSetThreadAccessLevel(0x80);
 	statPermission = sceKernelSetThreadAccessLevel(0x80);
-	ret = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	ret = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(statPermission);
 	if (ret) {
 		ret = (int)0x80870006;
 		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
+	fd = sceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
 	if (fd < 0) {
 		ret = fd;
 		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	size = ksceIoRead(fd, &gNpDrmActivationCache.data,
+	size = sceIoRead(fd, &gNpDrmActivationCache.data,
 		sizeof(gNpDrmActivationCache.data));
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	if (size != sizeof(gNpDrmActivationCache.data)) {
 		sceKernelSetThreadAccessLevel(permission);
 		ret = size < 0 ? size : (int)0x80870002;
@@ -480,21 +479,21 @@ int PsmDrmLoadActivationFile(void)
 	gPsmDrmActivationValid = 0;
 	permission = sceKernelSetThreadAccessLevel(0x80);
 	statPermission = sceKernelSetThreadAccessLevel(0x80);
-	ret = ksceIoGetstat("tm0:/psmdrm/act.dat", &stat);
+	ret = sceIoGetstat("tm0:/psmdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(statPermission);
 	if (ret) {
 		ret = (int)0x80870006;
 		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	fd = ksceIoOpen("tm0:/psmdrm/act.dat", 0x04000001, 0);
+	fd = sceIoOpen("tm0:/psmdrm/act.dat", 0x04000001, 0);
 	if (fd < 0) {
 		ret = fd;
 		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	size = ksceIoRead(fd, &gPsmDrmWorkingData, sizeof(gPsmDrmWorkingData));
-	ksceIoClose(fd);
+	size = sceIoRead(fd, &gPsmDrmWorkingData, sizeof(gPsmDrmWorkingData));
+	sceIoClose(fd);
 	if (size != sizeof(gPsmDrmWorkingData)) {
 		sceKernelSetThreadAccessLevel(permission);
 		ret = size < 0 ? size : (int)0x80870002;
@@ -732,30 +731,30 @@ int ksceNpDrmWriteActData(const struct NpDrmActivationCache *activation,
 		goto clear;
 	}
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	if (ksceIoGetstat("tm0:/npdrm", &stat) < 0)
-		ksceIoMkdir("tm0:/npdrm", 6);
-	result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000602, 6);
+	if (sceIoGetstat("tm0:/npdrm", &stat) < 0)
+		sceIoMkdir("tm0:/npdrm", 6);
+	result = sceIoOpen("tm0:/npdrm/act.dat", 0x04000602, 6);
 	if (result < 0) {
 		sceKernelSetThreadAccessLevel(permission);
 		goto clear;
 	}
-	written = ksceIoWrite(result, &gNpDrmActivationCache.data,
+	written = sceIoWrite(result, &gNpDrmActivationCache.data,
 		sizeof(gNpDrmActivationCache.data));
-	ksceIoClose(result);
+	sceIoClose(result);
 	if (written < (int)sizeof(gNpDrmActivationCache.data)) {
 		gNpDrmActivationValid = 0;
 		cleanupPermission = sceKernelSetThreadAccessLevel(0x80);
-		result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
+		result = sceIoOpen("tm0:/npdrm/act.dat", 0x04000003, 6);
 		if (result >= 0) {
 			NpDrmClearMemory(&gNpDrmActivationCache,
 				sizeof(gNpDrmActivationCache));
-			ksceIoPwrite(result, &gNpDrmActivationCache.data,
+			sceIoPwrite(result, &gNpDrmActivationCache.data,
 				sizeof(gNpDrmActivationCache.data), 0);
-			ksceIoClose(result);
+			sceIoClose(result);
 		}
-		ksceIoRemove("tm0:/npdrm/act.dat");
+		sceIoRemove("tm0:/npdrm/act.dat");
 		result = written < 0 ? written : (int)0x80870002;
-		ksceIoSync("tm0:", 0);
+		sceIoSync("tm0:", 0);
 		NpDrmClearMemory(&gNpDrmActivationCache,
 			sizeof(gNpDrmActivationCache));
 		sceKernelSetThreadAccessLevel(cleanupPermission);
@@ -784,7 +783,7 @@ int ksceNpDrmRemoveActData(SceUInt64 *accountId)
 	if (ret < 0)
 		return ret;
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		if (accountId)
@@ -817,18 +816,18 @@ int ksceNpDrmUpdateActData(void)
 	gNpDrmActivationValid = 0;
 	permission = sceKernelSetThreadAccessLevel(0x80);
 	statPermission = sceKernelSetThreadAccessLevel(0x80);
-	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(statPermission);
 	if (result) {
 		result = (int)0x80870006;
 		goto restore;
 	}
-	result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
+	result = sceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
 	if (result < 0)
 		goto restore;
-	readSize = ksceIoRead(result, &gNpDrmActivationCache.data,
+	readSize = sceIoRead(result, &gNpDrmActivationCache.data,
 		sizeof(gNpDrmActivationCache.data));
-	ksceIoClose(result);
+	sceIoClose(result);
 	if (readSize != sizeof(gNpDrmActivationCache.data)) {
 		result = readSize < 0 ? readSize : (int)0x80870002;
 		goto restore;
@@ -880,17 +879,17 @@ int ksceNpDrmReadActData(SceNpDrmActivationData *activation)
 		return result;
 	permission = sceKernelSetThreadAccessLevel(0x80);
 	statPermission = sceKernelSetThreadAccessLevel(0x80);
-	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(statPermission);
 	if (result) {
 		result = (int)0x80870006;
 		goto restore;
 	}
-	result = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
+	result = sceIoOpen("tm0:/npdrm/act.dat", 0x04000001, 0);
 	if (result < 0)
 		goto restore;
-	readSize = ksceIoRead(result, activation, sizeof(*activation));
-	ksceIoClose(result);
+	readSize = sceIoRead(result, activation, sizeof(*activation));
+	sceIoClose(result);
 	if (readSize != sizeof(*activation)) {
 		result = readSize < 0 ? readSize : (int)0x80870002;
 		goto restore;
@@ -1257,19 +1256,19 @@ int NpDrmCheckDrmResetForDriver(const void *in_addr, unsigned int size,
 		else if (gNpDrmActivationValid)
 			goto activationLoaded;
 		permission = sceKernelSetThreadAccessLevel(0x80);
-		result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+		result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 		sceKernelSetThreadAccessLevel(permission);
 		if (!result) {
 			readPermission = sceKernelSetThreadAccessLevel(0x80);
 			permission = sceKernelSetThreadAccessLevel(0x80);
-			result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+			result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 			sceKernelSetThreadAccessLevel(permission);
 			if (!result) {
-				fd = ksceIoOpen("tm0:/npdrm/act.dat", 0x04000001, result);
+				fd = sceIoOpen("tm0:/npdrm/act.dat", 0x04000001, result);
 				if (fd >= 0) {
-					readSize = ksceIoRead(fd, &gNpDrmActivationCache,
+					readSize = sceIoRead(fd, &gNpDrmActivationCache,
 						sizeof(gNpDrmActivationCache));
-					ksceIoClose(fd);
+					sceIoClose(fd);
 					if (readSize == sizeof(gNpDrmActivationCache)) {
 						sceKernelSetThreadAccessLevel(readPermission);
 						goto activationLoaded;
@@ -1285,7 +1284,7 @@ activationLoaded:
 	activationAccountId = gNpDrmActivationCache.data.account_id;
 	if (!gNpDrmActivationValid) {
 		permission = sceKernelSetThreadAccessLevel(0x80);
-		result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+		result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 		sceKernelSetThreadAccessLevel(permission);
 		if (!result && gNpDrmActivationCache.data.account_id) {
 			NpDrmGetAccountId(&currentAccountId);
@@ -1310,7 +1309,7 @@ activationLoaded:
 	if (sceKernelLockMutex(gNpDrmMutex, 1, NULL) < 0)
 		goto retryRemoval;
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		activationAccountId = 0;
@@ -1330,7 +1329,7 @@ retryRemoval:
 	if (result < 0)
 		return result;
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	result = ksceIoGetstat("tm0:/npdrm/act.dat", &stat);
+	result = sceIoGetstat("tm0:/npdrm/act.dat", &stat);
 	sceKernelSetThreadAccessLevel(permission);
 	if (result) {
 		activationAccountId = 0;

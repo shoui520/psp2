@@ -1,7 +1,7 @@
 /* Mapping-file parsing and overlay configuration. */
 
 #include <sysmem/debug.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2common/fios2.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -241,7 +241,7 @@ int appmgrMapFileOpen(const char *path, AppmgrMapFile *mapFile)
 
 	memset(mapFile, 0, sizeof(*mapFile));
 	mapFileParseError[0] = '\0';
-	file = ksceIoOpen(path, 1, 6);
+	file = sceIoOpen(path, 1, 6);
 	mapFile->file = file;
 	if (file < 0) {
 		snprintf(mapFileParseError, sizeof(mapFileParseError),
@@ -261,7 +261,7 @@ int appmgrMapFileClose(AppmgrMapFile *mapFile)
 
 	if (file <= 0)
 		return 0;
-	return ksceIoClose(file);
+	return sceIoClose(file);
 }
 
 int appmgrMapFileRead(const char *launchPath, AppmgrMapFile *mapFile)
@@ -292,7 +292,7 @@ int appmgrMapFileRead(const char *launchPath, AppmgrMapFile *mapFile)
 		count = 0;
 		character = 0;
 		do {
-			result = ksceIoRead(file, &character, 1);
+			result = sceIoRead(file, &character, 1);
 			if (result != 1)
 				break;
 			if (character == '\n')

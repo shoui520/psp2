@@ -5,16 +5,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sysmem/sysmem.h>
-/* These SDK prototypes split the original's reserved 64-bit arguments. */
-#define ksceIoMount vitaSdkIoMount
-#define ksceIoUmount vitaSdkIoUmount
-#include <psp2kern/kernel/iofilemgr.h>
-#undef ksceIoMount
-#undef ksceIoUmount
-int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64_t reserved);
-int ksceIoUmount(int id, int flags, uint64_t reserved);
-#include <psp2kern/io/dirent.h>
-#include <psp2kern/io/stat.h>
 #include <sysmem/cpu.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/processmgr.h>
@@ -334,7 +324,6 @@ int iofilemgrInitDummyTty(int unused0, void *unused1);
 int sceIoLseek32(SceUID fd, int offset, int whence);
 
 /* iofilemgr_for_kernel.c */
-SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode);
 SceUID sceIoDopenInternal(const char *dirname);
 int sceIoDreadInternal(SceUID fd, SceIoDirent *dir);
 int sceIoDcloseInternal(SceUID fd);
@@ -472,7 +461,7 @@ typedef struct VfsPathElem {
 	SceSize len;
 } VfsPathElem;
 
-/* what vfs_lookup gives ksceVopLookup: the path, then the undecoded element */
+/* what vfs_lookup gives sceVopLookup: the path, then the undecoded element */
 typedef struct VfsLookupPath {
 	SceVfsPath path;
 	const char *elem;
@@ -504,7 +493,7 @@ struct Ncache {
 };
 _Static_assert(sizeof(struct Ncache) == 0x20, "Ncache");
 
-int ksceVfsOpDecodePathElem(SceVfsMount *mnt, const char *path, const char **path2,
+int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
 			    const char **path3, char *buf, SceSize n, SceSize *decodeLen);
 
 /* vfs.c */
@@ -738,7 +727,7 @@ typedef struct IoErrorEvent {
 	int mntId;
 	SceUID pid;				/* the creator, whose memory userInfo is */
 	SceUInt32 pattern;			/* the event bits it waits for */
-	int isSet;				/* set until ksceIoClearErrorEvent */
+	int isSet;				/* set until SceIofilemgrForDriver_40B933C7 */
 	IoErrorEventInfo *userInfo;		/* where the error is written */
 	SceUInt32 reserved;			/* not yet traced */
 } IoErrorEvent;
@@ -747,7 +736,6 @@ _Static_assert(sizeof(IoErrorEvent) == 0x50, "IoErrorEvent");
 extern SceClass g_ioErrorEventClass;	/* "SceUIDIoErrorEventClass" (name unknown) */
 
 int ioerror_initialize(void);					/* name unknown */
-int ksceIoDeleteErrorEvent(SceUID uid);
 
 /* vfs_buff.c, sched / misc still in frames.S */
 int vfsBuffFree(struct BuffCache *bc, int flags, SceVfsVnode *vp, SceVfsFile *fdList);
@@ -802,7 +790,7 @@ int vfsBuffIoSet(struct BuffCache *bc, SceOff pos, SceSize size, const void *buf
 #define VFS_VFSOP_HOOK_SYNC		0x63
 #define VFS_VFSOP_HOOK_DECODE_PATH_ELEM	0x65
 
-/* the buffer cache ksceVopOpen gives a vnode */
+/* the buffer cache sceVopOpen gives a vnode */
 #define VFS_BUFF_DEFAULT_DATA_CACHE_SIZE	0x2000
 #define VFS_BUFF_DEFAULT_WAY_NUM		2
 #define VFS_BUFF_DEFAULT_LINE_SIZE		0x200
@@ -895,7 +883,7 @@ int vfsCleanup(SceUID fd);
 int sceVfsOpMount(SceVfsMount *mnt, SceVfsPath *devPath);
 int sceVfsOpUmount(SceVfsMount *mnt, int flags);
 int sceVfsOpInit(SceVfsInfo *vfsInf);
-int ksceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,
+int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,
 		    SceSize inlen, void *outdata, SceSize outlen);
 int sceVfsOpSetRoot(SceVfsMount *mnt, int unused, SceVfsVnode *vp);
 int sceVfsOpFini(SceVfsInfo *vfsInf);
@@ -1296,12 +1284,12 @@ int sceIoSetThreadDefaultPriorityInternal(SceInt32 priority, int fromKernel);
 SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel);
 int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel);
 SceInt32 sceIoGetPriorityInternal(SceUID fd, int fromKernel);
-int ksceIoFlock(SceUID fd, int op);
-int ksceIoCancel(SceUID uid);
+int SceIofilemgrForDriver_16336A0D(SceUID fd, int op);
+int sceIoCancel(SceUID uid);
 int sceIoComplete(SceUID uid);
-int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
+int sceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
 		void *outdata, SceSize outlen);
-int ksceIoSyncByFd2(SceUID fd, int flag);
+int SceIofilemgrForDriver_43170575(SceUID fd, int flag);
 int SceIofilemgrForDriver_338DCD68(SceUID fd, int *error);
 
 /* iofilemgr.c: the per-process fd counts */
@@ -1398,30 +1386,30 @@ typedef struct IoAsyncParam {
 	int completionStatus;			/* name unknown: zero on completion */
 } IoAsyncParam;
 
-int ksceIoDevctlAsync(const char *dev, unsigned int cmd, const void *indata, SceSize inlen,
+int SceIofilemgrForDriver_A9302946(const char *dev, unsigned int cmd, const void *indata, SceSize inlen,
 		      void *outdata, SceSize outlen, IoAsyncParam *asyncParam);
-int ksceIoChstatByFdAsync(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
-int ksceIoGetstatByFdAsync(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam);
-int ksceIoSyncByFdAsync(SceUID fd, int flag, IoAsyncParam *asyncParam);
-int ksceIoCloseAsync(SceUID fd, IoAsyncParam *asyncParam);
-int ksceIoIoctlAsync(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
+int SceIofilemgrForDriver_EC974400(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
+int SceIofilemgrForDriver_0FEE1238(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam);
+int SceIofilemgrForDriver_041209CF(SceUID fd, int flag, IoAsyncParam *asyncParam);
+int SceIofilemgrForDriver_11C57CC6(SceUID fd, IoAsyncParam *asyncParam);
+int SceIofilemgrForDriver_B761E91B(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
 		     void *outdata, SceSize outlen, IoAsyncParam *asyncParam);
-SceUID ksceIoOpenAsync(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam);
-SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncParam);
-SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam *asyncParam);
-SceUID ksceIoLseekAsync(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyncParam);
-SceUID ksceIoRemoveAsync(const char *file, IoAsyncParam *asyncParam);
-SceUID ksceIoDopenAsync(const char *dirname, IoAsyncParam *asyncParam);
-SceUID ksceIoMkdirAsync(const char *dir, SceMode mode, IoAsyncParam *asyncParam);
-SceUID ksceIoRmdirAsync(const char *dirname, IoAsyncParam *asyncParam);
-SceUID ksceIoRenameAsync(const char *oldname, const char *newname, IoAsyncParam *asyncParam);
-SceUID ksceIoChstatAsync(const char *file, SceIoStat *stat, unsigned int bits,
+SceUID SceIofilemgrForDriver_451001DE(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_69047C81(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_A1BD13D0(SceUID fd, const void *data, SceSize size, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_541BAABD(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_F9D6507D(const char *file, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_72F06BDE(const char *dirname, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_27003443(const char *dir, SceMode mode, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_F5B0B36C(const char *dirname, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_AACBC47A(const char *oldname, const char *newname, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_7EC442BF(const char *file, SceIoStat *stat, unsigned int bits,
 			 IoAsyncParam *asyncParam);
-SceUID ksceIoGetstatAsync(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam);
-SceUID ksceIoSyncAsync(const char *device, unsigned int flag, IoAsyncParam *asyncParam);
-SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
+SceUID SceIofilemgrForDriver_94A5304A(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_4F9EA8B0(const char *device, unsigned int flag, IoAsyncParam *asyncParam);
+SceUID SceIofilemgrForDriver_64A46A2C(SceUID fd, void *data, SceSize size, SceOff offset,
 			IoAsyncParam *asyncParam);
-SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offset,
+SceUID SceIofilemgrForDriver_202CDDE3(SceUID fd, const void *data, SceSize size, SceOff offset,
 			 IoAsyncParam *asyncParam);
 
 /* io_scheduler_async.c */

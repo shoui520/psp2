@@ -51,7 +51,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSpinlockLowUnlock
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B74B7
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode

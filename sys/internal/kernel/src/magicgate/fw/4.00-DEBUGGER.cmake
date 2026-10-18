@@ -72,17 +72,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelIsUserModeThread
 	SceThreadmgrForDriver_E54FD746
 	sceKernelCreateMutex
-	ksceIoRemove
-	ksceIoDclose
-	ksceIoWrite
-	ksceIoGetstatByFd
-	ksceIoDopen
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoMkdir
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoDclose
+	sceIoWrite
+	SceIofilemgrForDriver_462F059B
+	sceIoDopen
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoMkdir
+	sceIoRead
+	sceIoClose
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	SceKernelUtilsForDriver_801D0ED4

@@ -156,47 +156,47 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_92AEDFBC
 	SceKernelUtilsForDriver_A773A6A8
 	SceKernelUtilsForDriver_EDA97D6D
-	ksceVopDopen
-	ksceVopFchstat
+	sceVopDopen
+	sceVopFchstat
 	vfsPread
-	ksceVopCleanup
+	sceVopCleanup
 	SceIofilemgrForDriver_12F8D58E
-	ksceVopDclose
+	sceVopDclose
 	SceIofilemgrForDriver_15C17487
-	ksceIoIoctl
-	ksceIoDevctl
-	ksceVopChstat
-	ksceIoDclose
-	ksceVopRmdir
-	ksceVopFgetstat
+	sceIoIoctl
+	sceIoDevctl
+	sceVopChstat
+	sceIoDclose
+	sceVopRmdir
+	sceVopFgetstat
 	vfsFreeVnode
-	ksceVopMkdir
-	ksceVopIoctl
+	sceVopMkdir
+	sceVopIoctl
 	SceIofilemgrForDriver_3675ECB9
-	ksceVopRename
-	ksceVopClose
-	ksceIoDopen
-	ksceVopGetstat
-	ksceVopRead
+	sceVopRename
+	sceVopClose
+	sceIoDopen
+	sceVopGetstat
+	sceVopRead
 	vfsUnlockVnode
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsChstatByFd
-	ksceVopOpen
-	ksceVopDread
+	sceVopOpen
+	sceVopDread
 	vfsWrite
-	ksceVopInactive
-	ksceVopWrite
-	ksceVfsDeleteVfs
-	ksceVopSync
-	ksceVopCreate
-	ksceVopPwrite
-	ksceVopLookup
+	sceVopInactive
+	sceVopWrite
+	sceVfsDeleteVfs
+	sceVopSync
+	sceVopCreate
+	sceVopPwrite
+	sceVopLookup
 	vfsBuffCacheCtl
 	vfsGetVnodeName
 	vfsLockVnode
-	ksceVopPread
-	ksceVfsOpDevctl
-	ksceVopLseek
+	sceVopPread
+	sceVfsOpDevctl
+	sceVopLseek
 	vfsAllocateFile
 	vfsChstat
 	vfsIoctl
@@ -205,10 +205,10 @@ set(MODULE_IMPORT_FUNCS
 	vfsUmountForPFS
 	vfsGetNewVnode
 	vfsBuffCacheFree
-	ksceVopRemove
+	sceVopRemove
 	vfsPwrite
-	ksceVopWhiteout
-	ksceVfsOpDecodePathElem
+	sceVopWhiteout
+	SceIofilemgrForDriver_F7DAC0F5
 	vfsMountForPFS
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_A841EDDA

@@ -6,7 +6,7 @@
 #include <sysmem/pmmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include "bt_internal.h"
 #include <sysmem/sysroot.h>
 
@@ -102,25 +102,25 @@ SceUID BtOpenFile(const char *path, int mode)
 		else
 			mode = 0;
 	}
-	return ksceIoOpen(path, mode, 0666);
+	return sceIoOpen(path, mode, 0666);
 }
 
 int BtCloseFile(SceUID file)
 {
-	return ksceIoClose(file);
+	return sceIoClose(file);
 }
 
 int BtReadFile(SceUID file, void *destination, SceSize length)
 {
-	return ksceIoRead(file, destination, length);
+	return sceIoRead(file, destination, length);
 }
 
 int BtWriteFile(SceUID file, const void *source, SceSize length)
 {
-	return ksceIoWrite(file, source, length);
+	return sceIoWrite(file, source, length);
 }
 
 int BtSeekFile(SceUID file, int offset, int whence)
 {
-	return (int)ksceIoLseek(file, (SceOff)offset, whence);
+	return (int)sceIoLseek(file, (SceOff)offset, whence);
 }

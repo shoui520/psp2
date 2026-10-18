@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <string.h>
 #include "update_internal.h"
@@ -28,7 +28,7 @@ int UpdateUtilIoRead(SceUID fd, int64_t offset, uint64_t size, void *buffer)
 		allocated = 0;
 		readOffset = offset;
 	}
-	if (ksceIoLseek(fd, readOffset, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(fd, readOffset, SCE_SEEK_SET) < 0) {
 		result = (int)0x800f0205;
 		goto release;
 	}
@@ -36,7 +36,7 @@ int UpdateUtilIoRead(SceUID fd, int64_t offset, uint64_t size, void *buffer)
 	position = 0;
 	while (remaining) {
 		chunk = remaining > 0x40000 ? 0x40000 : remaining;
-		if (ksceIoRead(fd, readBase + position, chunk) != chunk) {
+		if (sceIoRead(fd, readBase + position, chunk) != chunk) {
 			result = (int)0x800f0205;
 			goto release;
 		}

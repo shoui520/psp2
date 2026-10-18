@@ -258,13 +258,13 @@ set(MODULE_IMPORT_NIDS
 	0xCD3C89B6:F:0xDB9FC204
 )
 set(MODULE_IMPORT_FUNCS
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoSync
-	ksceIoRead
-	ksceIoClose
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoSync
+	sceIoRead
+	sceIoClose
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B

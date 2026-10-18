@@ -137,11 +137,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	ScePmMgrForDriver_2AC815A2
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler

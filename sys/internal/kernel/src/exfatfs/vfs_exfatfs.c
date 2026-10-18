@@ -71,7 +71,7 @@ int _close_device_file(SceExfatfsDeviceFileInfo *info, int force)
 			"_close_device_file", info->device_file, info->mount_misc->assign_name,
 			info->device_fd, info->device_vnode);
 	}
-	result = ksceVopClose(info->device_vnode, info->device_file);
+	result = sceVopClose(info->device_vnode, info->device_file);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 908, "%s: sceVopClose failed[%#x]\n",
 			"_close_device_file", result);
@@ -342,7 +342,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 	if (drive->deviceInfo.device_fd != -1) {
 		int locked = vfsLockVnode(drive->deviceInfo.device_vnode);
 
-		ksceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
+		sceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
 		if (vfsFreeFile(drive->deviceInfo.device_vnode, drive->deviceInfo.device_fd) >= 0)
 			--drive->deviceInfo.device_vnode->core.ref_count;
 		drive->deviceInfo.device_file = NULL;
@@ -2284,7 +2284,7 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 		openFlags = 1;
 	} else {
 		if (deviceVnode->core.type & 0x2000) {
-			result = ksceVfsOpDevctl(deviceVnode->core.mnt, path->name, 1,
+			result = sceVfsOpDevctl(deviceVnode->core.mnt, path->name, 1,
 				path->name, path->name_length + 1, &partitionInfo, sizeof(partitionInfo));
 			if (result < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1013, "_open_device_file",
@@ -2306,7 +2306,7 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 		openFlags = 3;
 	}
 	drive->deviceInfo.device_file->flags = openFlags;
-	result = ksceVopOpen(deviceVnode, path, openFlags, drive->deviceInfo.device_file);
+	result = sceVopOpen(deviceVnode, path, openFlags, drive->deviceInfo.device_file);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1042, "_open_device_file",
 			"%s: vop_open for (%s) failed[%#x]\n", "_open_device_file",
@@ -2371,7 +2371,7 @@ opened:
 			if (drive->deviceInfo.device_fd != -1) {
 				int locked = vfsLockVnode(drive->deviceInfo.device_vnode);
 
-				ksceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
+				sceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
 				if (vfsFreeFile(drive->deviceInfo.device_vnode, drive->deviceInfo.device_fd) >= 0)
 					--drive->deviceInfo.device_vnode->core.ref_count;
 				drive->deviceInfo.device_file = NULL;
@@ -2792,7 +2792,7 @@ int _register_exfatfs_vops(SceVfsInfo *info)
 
 	info->vfs_ops = &g_exfatfsVfsOpTable;
 	info->default_vops = &g_exfatfsVopTable;
-	result = ksceVfsAddVfs(info);
+	result = sceVfsAddVfs(info);
 	if (result == (int)0x80010011) {
 		result = 0;
 		SCE_DBG_PRINTF_LEVEL(1, 0, 716, "%s: already registered, vfsName(%s), type(%d)\n",

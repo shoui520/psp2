@@ -437,31 +437,31 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	SceThreadmgrForDriver_F55E4D86
 	sceKernelCreateMutex
-	ksceIoRemove
-	ksceIoDevctl
-	ksceIoDclose
-	ksceIoRmdir
-	ksceIoUmount
-	ksceIoDread
-	ksceIoWrite
-	ksceIoPread
-	ksceIoCreateMountEvent
-	ksceIoSyncByFd2
-	ksceIoGetstatByFd
-	ksceIoDopen
-	ksceIoPwrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoChstat
-	ksceIoMkdir
-	ksceIoSetPathMappingFunction
-	ksceIoMount
-	ksceIoRename
-	ksceIoSync
-	ksceIoChstatByFd
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoDevctl
+	sceIoDclose
+	sceIoRmdir
+	SceIofilemgrForDriver_20574100
+	sceIoDread
+	sceIoWrite
+	sceIoPread
+	sceIoCreateMountEvent
+	SceIofilemgrForDriver_43170575
+	SceIofilemgrForDriver_462F059B
+	sceIoDopen
+	sceIoPwrite
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoChstat
+	sceIoMkdir
+	SceIofilemgrForDriver_CFAECF18
+	SceIofilemgrForDriver_D070BC48
+	sceIoRename
+	sceIoSync
+	SceIofilemgrForDriver_DF57A75F
+	sceIoRead
+	sceIoClose
 	sceKernelAllocRemoteProcessHeap
 	sceKernelGetProcessInfo
 	SceProcessmgrForDriver_3801D7D6

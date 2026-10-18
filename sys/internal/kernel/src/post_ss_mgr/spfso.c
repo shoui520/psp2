@@ -3,7 +3,7 @@
  * read into a memory block and checked by SceSblAuthMgr.
  */
 
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/sysmem.h>
 #include "post_ss_mgr_internal.h"
@@ -73,14 +73,14 @@ int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)
 	    strnlen(path, SPFSO_PATH_MAX) >= SPFSO_PATH_MAX)
 		return SCE_SBL_ERROR_SPFSO_INVALID_ARGUMENT;
 
-	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return SCE_ERROR_ERRNO_ENOENT;
-	end = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	end = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if (end < 0)
 		goto io_error;
 	if (end > SPFSO_SIZE_MAX) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		return SCE_SBL_ERROR_SPFSO_INVALID_FORMAT;
 	}
 	size = end;
@@ -88,22 +88,22 @@ int ksceSblPostSsMgrInitializeSpfsoCtx(const char *path, SceSblSpfsoCtx *ctx)
 				      (size + 0xfff) & ~0xfff, NULL);
 	ctx->uid = uid;
 	if (uid < 0 || SceSysmemForDriver_A841EDDA(uid, &ctx->base) != 0) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		return SCE_SBL_ERROR_SPFSO_NO_MEMORY;
 	}
 	ctx->size = size;
-	if (ksceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
+	if (sceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
 		goto io_error;
 	for (done = 0; done < ctx->size; done += n) {
-		n = ksceIoRead(fd, (char *)ctx->base + done, ctx->size - done);
+		n = sceIoRead(fd, (char *)ctx->base + done, ctx->size - done);
 		if (n <= 0)
 			goto io_error;
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return 0;
 
 io_error:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return SCE_ERROR_ERRNO_EIO;
 }
 

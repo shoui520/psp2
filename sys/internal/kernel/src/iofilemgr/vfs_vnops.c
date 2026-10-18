@@ -796,7 +796,7 @@ uncached:
 	return uncached_data_read(bc, pos, nbyte, buf, vp, file, pread, rsz);
 }
 
-int ksceVopLookup(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, SceUInt32 flags)
+int sceVopLookup(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, SceUInt32 flags)
 {
 	SceVopLookupArgs args;
 	int (*op)(SceVopLookupArgs *argp);
@@ -824,7 +824,7 @@ int ksceVopLookup(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, SceUInt
 	return ret;
 }
 
-int ksceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
+int sceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 {
 	int ret, err;
 
@@ -888,7 +888,7 @@ int ksceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 	return ret;
 }
 
-int ksceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int flags, int mode)
+int sceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int flags, int mode)
 {
 	SceVopCreateArgs args;
 	int (*op)(SceVopCreateArgs *argp);
@@ -922,7 +922,7 @@ int ksceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int fla
 	return ret;
 }
 
-int ksceVopClose(SceVfsVnode *vp, SceVfsFile *file)
+int sceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 {
 	SceVopTable *ops;
 	struct BuffCache *bc;
@@ -1018,7 +1018,7 @@ fail:
 	return err;
 }
 
-int ksceVopRead(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, SceSize *result)
+int sceVopRead(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, SceSize *result)
 {
 	struct BuffCache *bc = vp->core.bc;
 	SceVopReadArgs args;
@@ -1104,7 +1104,7 @@ out:
 	return ret;
 }
 
-int ksceVopWrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nbyte,
+int sceVopWrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nbyte,
 		 SceSize *result)
 {
 	SceVfsMount *mnt = vp->core.mnt;
@@ -1211,7 +1211,7 @@ out:
 	return ret;
 }
 
-int ksceVopPread(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, SceOff offset,
+int sceVopPread(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, SceOff offset,
 		 SceSize *result)
 {
 	SceVopPreadArgs args;
@@ -1270,7 +1270,7 @@ inval:
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int ksceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nbyte,
+int sceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nbyte,
 		  SceOff offset, SceSize *result)
 {
 	struct BuffCache *bc = vp->core.bc;
@@ -1365,7 +1365,7 @@ inval:
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-SceOff ksceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
+SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 {
 	SceVopLseekArgs args;
 	SceOff (*op)(SceVopLseekArgs *argp);
@@ -1418,7 +1418,7 @@ SceOff ksceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence
 	return pos;
 }
 
-int ksceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
+int sceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
 {
 	SceVfsMount *mnt = dvp->core.mnt;
 	SceVopMkdirArgs args;
@@ -1452,7 +1452,7 @@ int ksceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode
 	return ret;
 }
 
-int ksceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 flags)
+int sceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 flags)
 {
 	SceVfsMount *mnt = dvp->core.mnt;
 	SceVopRmdirArgs args;
@@ -1484,7 +1484,7 @@ int ksceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 
 	return ret;
 }
 
-int ksceVopInactive(SceVfsVnode *vp)
+int sceVopInactive(SceVfsVnode *vp)
 {
 	SceVopTable *ops = vp->core.ops;
 	SceVopInactiveArgs args;
@@ -1503,7 +1503,7 @@ int ksceVopInactive(SceVfsVnode *vp)
 	return ret;
 }
 
-int ksceVopGetstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat)
+int sceVopGetstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat)
 {
 	SceVopTable *ops = vp->core.ops;
 	SceVopGetstatArgs args;
@@ -1535,7 +1535,7 @@ int ksceVopGetstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat)
 	return ret;
 }
 
-int ksceVopRemove(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 flags)
+int sceVopRemove(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 flags)
 {
 	SceVopRemoveArgs args;
 	SceVfsMount *mnt;
@@ -1578,7 +1578,7 @@ perm:
 	return SCE_ERROR_ERRNO_EPERM;
 }
 
-int ksceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceVfsVnode *ndvp,
+int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceVfsVnode *ndvp,
 		  SceVfsVnode **nvpp, SceVfsPath *new_path)
 {
 	SceVfsMount *mnt = odvp->core.mnt;
@@ -1619,7 +1619,7 @@ int ksceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, Sce
 	return ret;
 }
 
-int ksceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
+int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 {
 	SceVopDopenAgrs args;
 	int (*op)(SceVopDopenAgrs *argp);
@@ -1646,7 +1646,7 @@ int ksceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 	return ret;
 }
 
-int ksceVopDread(SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir)
+int sceVopDread(SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir)
 {
 	SceVopDreadArgs args;
 	int (*op)(SceVopDreadArgs *argp);
@@ -1681,7 +1681,7 @@ int ksceVopDread(SceVfsVnode *vp, SceVfsFile *file, SceIoDirent *dir)
 	return ret;
 }
 
-int ksceVopDclose(SceVfsVnode *vp, SceVfsFile *file)
+int sceVopDclose(SceVfsVnode *vp, SceVfsFile *file)
 {
 	SceVopDcloseArgs args;
 	int (*op)(SceVopDcloseArgs *argp);
@@ -1711,7 +1711,7 @@ int ksceVopDclose(SceVfsVnode *vp, SceVfsFile *file)
 	return ret;
 }
 
-int ksceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
+int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 {
 	SceVopTable *ops = vp->core.ops;
 	struct BuffCache *bc = vp->core.bc;
@@ -1803,7 +1803,7 @@ out:
 	return ret;
 }
 
-int ksceVopIoctl(SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in_data, SceSize in_len,
+int sceVopIoctl(SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in_data, SceSize in_len,
 		 void *out_data, SceSize out_len)
 {
 	SceVopTable *ops = vp->core.ops;
@@ -1829,7 +1829,7 @@ int ksceVopIoctl(SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in_data
 	return ret;
 }
 
-int ksceVopLink(SceVfsVnode *fvp, SceVfsVnode *tvp)
+int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp)
 {
 	SceVopLinkArgs args;
 	int (*op)(SceVopLinkArgs *argp) = fvp->core.ops->vop_link;
@@ -1841,7 +1841,7 @@ int ksceVopLink(SceVfsVnode *fvp, SceVfsVnode *tvp)
 	return op(&args);
 }
 
-int ksceVopUnlink(SceVfsVnode *fvp, SceVfsVnode *tvp)
+int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp)
 {
 	SceVopUnlinkArgs args;
 	int (*op)(SceVopUnlinkArgs *argp) = fvp->core.ops->vop_unlink;
@@ -1853,7 +1853,7 @@ int ksceVopUnlink(SceVfsVnode *fvp, SceVfsVnode *tvp)
 	return op(&args);
 }
 
-int ksceVopSync(SceVfsVnode *vp, SceVfsFile *file, int flags)
+int sceVopSync(SceVfsVnode *vp, SceVfsFile *file, int flags)
 {
 	SceVopTable *ops = vp->core.ops;
 	SceVopSyncArgs args;
@@ -1891,7 +1891,7 @@ int ksceVopSync(SceVfsVnode *vp, SceVfsFile *file, int flags)
 	return ret;
 }
 
-int ksceVopFgetstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat)
+int sceVopFgetstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat)
 {
 	SceVopTable *ops = vp->core.ops;
 	SceVopFgetstatArgs args;
@@ -1921,7 +1921,7 @@ int ksceVopFgetstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat)
 	return ret;
 }
 
-int ksceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
+int sceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
 {
 	SceVopTable *ops = vp->core.ops;
 	struct BuffCache *bc = vp->core.bc;
@@ -2015,7 +2015,7 @@ fail:
 	return err;
 }
 
-int ksceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
+int sceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
 		    SceVfsPath *new_path, SceUInt32 a4, SceUInt32 a5)
 {
 	SceVopTable *ops = vp->core.ops;
@@ -2044,7 +2044,7 @@ int ksceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
 	return ret;
 }
 
-int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
+int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 {
 	SceVopCleanupArgs args;
 	struct BuffCache *bc;
@@ -2110,7 +2110,7 @@ int ksceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3
 	return ret;
 }
 
-int ksceVopZerofill(SceVfsVnode *vp, SceUInt64 forwardedValue1, SceUInt64 forwardedValue2,
+int sceVopZerofill(SceVfsVnode *vp, SceUInt64 forwardedValue1, SceUInt64 forwardedValue2,
 		   SceUInt64 forwardedValue3)
 {
 	SceVopZerofillArgs args;
@@ -2191,7 +2191,7 @@ int sceVfsOpFini(SceVfsInfo *vfsInf)
 	return op(&args);
 }
 
-int ksceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,
+int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,
 		    SceSize inlen, void *outdata, SceSize outlen)
 {
 	SceVfsOpDevctlArg args;
@@ -2256,7 +2256,7 @@ int sceVfsOpSync(SceVfsMount *mnt, int flags)
 	return ret;
 }
 
-int ksceVfsOpDecodePathElem(SceVfsMount *mnt, const char *path, const char **path2,
+int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
 			    const char **path3, char *buf, SceSize buf_len, SceSize *decode_len)
 {
 	const SceVfsOpTable *ops = vfs_mnt_ops(mnt);

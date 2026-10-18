@@ -89,9 +89,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterExceptionHandler
 	sceKernelDisableIntr
 	SceThreadmgrForDriver_FA54D49A
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsUmount
-	ksceVfsDeleteVfs
+	sceVfsDeleteVfs
 	vfsMount
 	SceModulemgrForKernel_5564A860
 	SceDebugForDriver_02B04343

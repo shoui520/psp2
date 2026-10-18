@@ -292,11 +292,11 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 		ret = SM_ERROR_SLOTS;
 		goto out;
 	}
-	fd = ksceIoOpen(path, 1, 0);
+	fd = sceIoOpen(path, 1, 0);
 	ret = fd;
 	if (fd < 0)
 		goto release;
-	fileSize = ksceIoLseek(fd, 0, 2);
+	fileSize = sceIoLseek(fd, 0, 2);
 	if (fileSize < 0) {
 		ret = (uint32_t)fileSize;
 		goto close;
@@ -305,7 +305,7 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 		ret = SM_ERROR_REQUEST;
 		goto close;
 	}
-	position = ksceIoLseek(fd, 0, 0);
+	position = sceIoLseek(fd, 0, 0);
 	if (position < 0) {
 		ret = (uint32_t)position;
 		goto close;
@@ -318,7 +318,7 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 	}
 	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
 	if (ret == 0) {
-		ret = ksceIoRead(fd, base, fileSize);
+		ret = sceIoRead(fd, base, fileSize);
 		if ((uint32_t)ret == (uint32_t)fileSize) {
 			range.addr = (uintptr_t)base;
 			range.size = fileSize;
@@ -329,7 +329,7 @@ int ksceSblSmCommStartSmFromFile(SceUInt32 priority, const char *path,
 	}
 	SceSysmemForDriver_009E1C61(memBlock);
 close:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	if (ret == 0)
 		goto out;
 release:

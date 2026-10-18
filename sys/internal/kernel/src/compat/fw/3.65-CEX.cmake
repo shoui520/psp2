@@ -173,13 +173,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	ksceIoRemove
-	ksceIoDevctl
-	ksceIoPread
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoDevctl
+	sceIoPread
+	sceIoLseek
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	SceProcessmgrForDriver_82D94BE9
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC

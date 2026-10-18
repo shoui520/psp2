@@ -2,7 +2,7 @@
 
 #include "fat_format_internal.h"
 #include <exfatfs/fat_boot.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <string.h>
 
@@ -132,7 +132,7 @@ int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 	if (_start_lba(context, regionIndex) != currentLba)
 		byteOffset += (_start_lba(context, regionIndex) - context->currentLba) *
 			context->bytesPerSector;
-	seekResult = ksceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
+	seekResult = sceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
 	if (seekResult < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoLseek failed[%#llx]\n",
@@ -151,7 +151,7 @@ int zero_fill(AppmgrFatFormatContext *context, unsigned int bufferOffset,
 	if (length != 0) {
 		written = 0;
 		for (;;) {
-			result = ksceIoWrite(context->file, buffer,
+			result = sceIoWrite(context->file, buffer,
 				fillSize < length ? fillSize : length);
 			written += result;
 			if (result < 0) {

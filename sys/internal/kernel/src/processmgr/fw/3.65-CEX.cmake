@@ -241,8 +241,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelLoadProcessImage
 	sceKernelLoadPreloadingModules
 	SceModulemgrForKernel_E71530D7
-	ksceIoOpen
-	ksceIoClose
+	sceIoOpen
+	sceIoClose
 	sceKernelCpuScanThreadForProcessmgr
 	SceThreadmgrForKernel_15D6357C
 	SceThreadmgrForKernel_16D1961A

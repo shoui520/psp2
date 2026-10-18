@@ -250,13 +250,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCancelEventFlag
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	ksceIoRemove
-	ksceIoWrite
-	ksceIoGetstatByFd
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoWrite
+	SceIofilemgrForDriver_462F059B
+	sceIoLseek
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
 	SceModulemgrForDriver_BBE1771C

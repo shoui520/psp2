@@ -142,13 +142,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	ksceIoUmount
+	SceIofilemgrForDriver_20574100
 	sceIoSetMountEvent
 	vfsNotifyDeviceStatus
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsRmdev
 	vfsLockVnode
-	ksceIoMount
+	SceIofilemgrForDriver_D070BC48
 	vfsGetNewVnode
 	ksceSblRngPseudoRandomNumber
 	SceSblACMgrForDriver_BE5667C5

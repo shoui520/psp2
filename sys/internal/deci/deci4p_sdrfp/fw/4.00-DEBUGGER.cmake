@@ -60,7 +60,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode

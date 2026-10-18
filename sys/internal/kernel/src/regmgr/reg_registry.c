@@ -5,7 +5,7 @@
  * All names unknown unless noted.
  */
 
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/utils.h>
 #include "reg_internal.h"

@@ -755,19 +755,19 @@ static void CloseStdio(SceProcessObject *process)
 	if (process->stdioPuid[0] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[0]);
 	if (process->stdioFd[0] != -1)
-		ksceIoClose(process->stdioFd[0]);
+		sceIoClose(process->stdioFd[0]);
 	if (process->stdioPuid[1] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[1]);
 	if (process->stdioFd[1] != -1)
-		ksceIoClose(process->stdioFd[1]);
+		sceIoClose(process->stdioFd[1]);
 	if (process->stdioPuid[2] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[2]);
 	if (process->stdioFd[2] != -1)
-		ksceIoClose(process->stdioFd[2]);
+		sceIoClose(process->stdioFd[2]);
 	if (process->stdioPuid[3] != -1)
 		SceSysmemForDriver_84A4AF5E(process->pid, process->stdioPuid[3]);
 	if (process->stdioFd[3] != -1)
-		ksceIoClose(process->stdioFd[3]);
+		sceIoClose(process->stdioFd[3]);
 	SceThreadmgrForDriver_0486F239(pid);
 	sceKernelSetThreadAccessLevel(permission);
 }
@@ -1731,12 +1731,12 @@ static inline __attribute__((always_inline)) int OpenStdioFile(SceProcessObject 
 {
 	SceUID fd, puid;
 
-	fd = ksceIoOpen(path, 3, 0);
+	fd = sceIoOpen(path, 3, 0);
 	if (fd < 0)
 		return fd;
 	puid = SceSysmemForDriver_BF209859(process->pid, fd);
 	if (puid < 0) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		return puid;
 	}
 	process->stdioFd[index] = fd;

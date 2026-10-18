@@ -157,7 +157,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAIMgrForDriver_4273B97B
 	SceSblAIMgrForDriver_71608CA3
 	sceSblACMgrIsSystemProgram
-	ksceIoRemove
+	sceIoRemove
 	SceCtrlForDriver_FF9D4DD4
 	SceCodecForDriver_762BF716
 	SceCodecForDriver_8932F886

@@ -299,7 +299,7 @@ int _sceAppMgrModuleStart(SceSize arglen, const void *argp)
 	SceSysrootForDriver_9A8871F1(sceAppMgrSpawnProcessForDriver);
 	appmgrRegisterDebuggerCallbacks();
 	SceSysrootForDriver_E9B4221F(sceAppMgrGetShellPidForDriver);
-	ksceIoSetPathMappingFunction(appmgrMapPath);
+	SceIofilemgrForDriver_CFAECF18(appmgrMapPath);
 	sceKernelRegisterSysEventHandler("SceAppMgr", appmgrSysEventHandler, NULL);
 	g_appmgrDebugNotifier = SceSysrootForDriver_525B24C5();
 	return 0;

@@ -3,7 +3,7 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/vfs.h>
+#include <iofilemgr/vfs.h>
 #include <sysmem/debug.h>
 #include "ttyp.h"
 
@@ -275,7 +275,7 @@ int TtypFsInitVfs(void)
 	s_vfsInfo.default_vops = &s_vops;
 	s_vfsInfo.vfs_name_len = sizeof(TTYP_FS_NAME);
 	s_vfsInfo.vfs_data = NULL;
-	ret = ksceVfsAddVfs(&s_vfsInfo);
+	ret = sceVfsAddVfs(&s_vfsInfo);
 	if (ret < 0) {
 		TTYP_PRINTF(112, "sceVfsAddVfs failed (0x%08X)\n", ret);
 		return ret;

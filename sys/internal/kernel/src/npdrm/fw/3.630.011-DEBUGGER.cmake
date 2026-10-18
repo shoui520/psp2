@@ -176,16 +176,16 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_091F7247
 	sceSblACMgrIsSystemProgram
 	sceSblACMgrGetPaid
-	ksceIoRemove
-	ksceIoWrite
-	ksceIoPread
-	ksceIoPwrite
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoMkdir
-	ksceIoSync
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoWrite
+	sceIoPread
+	sceIoPwrite
+	sceIoOpen
+	sceIoGetstat
+	sceIoMkdir
+	sceIoSync
+	sceIoRead
+	sceIoClose
 	ksceSblDmac5AesCtrEnc
 	ksceSblSsMgrExecuteDmac5HashCommand
 	ksceSblAimgrGetOpenPsId

@@ -1,6 +1,6 @@
 /* Crash-screen host filesystem: preserves the native VFS/VOP slot order. */
 #include "bsod_internal.h"
-#include <psp2kern/vfs.h>
+#include <iofilemgr/vfs.h>
 #include <stddef.h>
 #include <kernel/error.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
@@ -188,13 +188,13 @@ int _sceKernelBsodDummyFsInit(void)
 		SceDebugForDriver_D9703808(1, 0xf, &unmountInfo,
 			"vfsUmount failed (0x%08X)\n", result);
 #endif
-	ksceVfsDeleteVfs("deci4p_drfp_dev_fs", NULL);
+	sceVfsDeleteVfs("deci4p_drfp_dev_fs", NULL);
 	s_bsodDummyInfo.type = 0x10;
 	s_bsodDummyInfo.vfs_ops = (SceVfsOpTable *)&s_bsodVfsOps;
 	s_bsodDummyInfo.default_vops = (SceVopTable *)&s_bsodVops;
 	s_bsodDummyInfo.vfs_name = "bsod_dummy_host_fs";
 	s_bsodDummyInfo.vfs_name_len = 0x13;
-	result = ksceVfsAddVfs(&s_bsodDummyInfo);
+	result = sceVfsAddVfs(&s_bsodDummyInfo);
 	if (result < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0xf, &addInfo,

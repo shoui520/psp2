@@ -1,7 +1,7 @@
 /* System-data files and their PlayReady information and payload. */
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>
@@ -128,15 +128,15 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 	result = appmgrDecodeString(encodedPlayReadyFile, path, sizeof(path));
 	if (result < 0)
 		goto unlock;
-	if (ksceIoGetstat(path, &stat) < 0) {
+	if (sceIoGetstat(path, &stat) < 0) {
 		result = (int)0x808010f3;
 		goto unlock;
 	}
-	fd = ksceIoOpen(path, 1, 0);
+	fd = sceIoOpen(path, 1, 0);
 	result = fd;
 	if (fd < 0)
 		goto unlock;
-	if (ksceIoRead(fd, &header, sizeof(header)) != sizeof(header)) {
+	if (sceIoRead(fd, &header, sizeof(header)) != sizeof(header)) {
 		result = (int)0x808010f1;
 		goto closeFile;
 	}
@@ -147,7 +147,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 		goto closeFile;
 	}
 	if (location == 1) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		if (header.information == 0) {
 			result = (int)0x808010f3;
 		} else {
@@ -170,7 +170,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 		goto closeFile;
 	payload = (unsigned char *)kernelPage + kernelOffset;
 	memset(payload, 0, 16384);
-	result = ksceIoRead(fd, payload, header.payloadSize);
+	result = sceIoRead(fd, payload, header.payloadSize);
 	if (header.payloadSize == (SceUInt32)result) {
 		result = header.payloadSize;
 		sceKernelUserUnmap(mapping, userData, 16384);
@@ -180,7 +180,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 		result = (int)0x808010f0;
 	}
 closeFile:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 unlock:
 	sceKernelUnlockMutex(g_appmgrSaveDataMutex, 1);
 leave:
@@ -236,18 +236,18 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 	result = appmgrDecodeString(encodedPlayReadyDirectory, path, sizeof(path));
 	if (result < 0)
 		goto unlock;
-	ksceIoMkdir(path, 6);
+	sceIoMkdir(path, 6);
 	result = appmgrDecodeString(encodedPlayReadyFile, path, sizeof(path));
 	if (result < 0)
 		goto unlock;
-	result = ksceIoGetstat(path, &stat);
+	result = sceIoGetstat(path, &stat);
 	if (result == 0) {
-		fd = ksceIoOpen(path, 1, 0);
+		fd = sceIoOpen(path, 1, 0);
 		result = fd;
 		if (fd < 0)
 			goto unlock;
-		transferred = ksceIoRead(fd, &header, sizeof(header));
-		ksceIoClose(fd);
+		transferred = sceIoRead(fd, &header, sizeof(header));
+		sceIoClose(fd);
 		if (transferred != sizeof(header)) {
 			result = (int)0x808010f1;
 			goto unlock;
@@ -259,17 +259,17 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 		header.magic[2] = 'P';
 		header.magic[3] = 'R';
 		header.version = 1;
-		fd = ksceIoOpen(path, 0x603, 6);
+		fd = sceIoOpen(path, 0x603, 6);
 		result = fd;
 		if (fd < 0)
 			goto unlock;
-		if (ksceIoWrite(fd, &header, sizeof(header)) != sizeof(header)) {
+		if (sceIoWrite(fd, &header, sizeof(header)) != sizeof(header)) {
 			result = (int)0x808010f4;
-			ksceIoClose(fd);
+			sceIoClose(fd);
 			goto unlock;
 		}
-		result = ksceIoGetstatByFd(fd, &stat);
-		ksceIoClose(fd);
+		result = SceIofilemgrForDriver_462F059B(fd, &stat);
+		sceIoClose(fd);
 		if (result < 0)
 			goto unlock;
 	} else if (result < 0) {
@@ -293,25 +293,25 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 		goto unlockAndFree;
 	if (location == 1) {
 		header.information = *(const SceUInt64 *)information;
-		transferred = ksceIoWrite(fd, &header, sizeof(header));
-		ksceIoClose(fd);
+		transferred = sceIoWrite(fd, &header, sizeof(header));
+		sceIoClose(fd);
 		if (transferred != sizeof(header)) {
 			result = (int)0x808010f4;
 			goto unlockAndFree;
 		}
 	} else {
 		header.payloadSize = dataSize;
-		if (ksceIoWrite(fd, &header, sizeof(header)) != sizeof(header)) {
+		if (sceIoWrite(fd, &header, sizeof(header)) != sizeof(header)) {
 			result = (int)0x808010f4;
-			ksceIoClose(fd);
+			sceIoClose(fd);
 			goto unlockAndFree;
 		}
 		if (dataSize == 0) {
-			ksceIoClose(fd);
+			sceIoClose(fd);
 		} else {
 			result = SceSysmemForDriver_9C78064C(48, userData, dataSize);
 			if (result < 0) {
-				ksceIoClose(fd);
+				sceIoClose(fd);
 				goto unlockAndFree;
 			}
 			mapping = SceSysmemForDriver_278BC201("SceAppMgrSetSystemData", 1,
@@ -319,12 +319,12 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 					&kernelSize, &kernelOffset);
 			result = mapping;
 			if (mapping < 0) {
-				ksceIoClose(fd);
+				sceIoClose(fd);
 				goto unlockAndFree;
 			}
-			transferred = ksceIoWrite(fd,
+			transferred = sceIoWrite(fd,
 					(char *)kernelPage + kernelOffset, dataSize);
-			ksceIoClose(fd);
+			sceIoClose(fd);
 			sceKernelUserUnmap(mapping, userData, dataSize);
 			if ((SceUInt32)transferred != dataSize) {
 				result = (int)0x808010f4;
@@ -419,11 +419,11 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 
 	if (controlInfo == NULL || path == NULL)
 		return (int)0x80800001;
-	fd = ksceIoOpen(path, 1, 0);
+	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
 	memset(&header, 0, sizeof(header));
-	result = ksceIoRead(fd, &header, sizeof(header));
+	result = sceIoRead(fd, &header, sizeof(header));
 	if (result < 0)
 		goto closeFile;
 	if (result != sizeof(header)) {
@@ -452,13 +452,13 @@ int appmgrReadSelfControlInfo(const char *path, void *controlInfo)
 		result = (int)0x80801006;
 		goto closeFile;
 	}
-	seekResult = ksceIoLseek(fd, header.controlInfoOffset, 0);
+	seekResult = sceIoLseek(fd, header.controlInfoOffset, 0);
 	if (seekResult < 0) {
 		result = seekResult;
 		if (result < 0)
 			goto freeRecords;
 	} else {
-		result = ksceIoRead(fd, records, size);
+		result = sceIoRead(fd, records, size);
 		if (result < 0)
 			goto freeRecords;
 		if ((SceUInt64)(SceInt64)result != size) {
@@ -497,7 +497,7 @@ freeRecords:
 	if (cleanupResult < 0)
 		return cleanupResult;
 closeFile:
-	cleanupResult = ksceIoClose(fd);
+	cleanupResult = sceIoClose(fd);
 	return cleanupResult < 0 ? cleanupResult : result;
 }
 
@@ -516,13 +516,13 @@ SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 	if (temporaryPath == NULL)
 		return (int)0x80801006;
 	snprintf(temporaryPath, 292, "%s%s", path, "_");
-	destination = ksceIoOpen(temporaryPath, 0x603, 6);
+	destination = sceIoOpen(temporaryPath, 0x603, 6);
 	result = destination;
 	if (destination < 0)
 		goto freePath;
 	if (copyBuffer == NULL)
 		goto reopen;
-	source = ksceIoOpen(path, 1, 0);
+	source = sceIoOpen(path, 1, 0);
 	result = source;
 	if (source == (int)0x80010002) {
 		result = 0;
@@ -534,16 +534,16 @@ SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 		result = (int)0x80800001;
 		goto copyFailed;
 	}
-	result = ksceIoGetstatByFd(source, &stat);
+	result = SceIofilemgrForDriver_462F059B(source, &stat);
 	if (result < 0)
 		goto copyFailed;
 	copied = 0;
 	while (copied < stat.st_size) {
-		received = ksceIoRead(source, copyBuffer, capacity);
+		received = sceIoRead(source, copyBuffer, capacity);
 		result = received;
 		if (received < 0)
 			goto copyFailed;
-		written = ksceIoWrite(destination, copyBuffer, received);
+		written = sceIoWrite(destination, copyBuffer, received);
 		result = written;
 		if (written < 0)
 			goto copyFailed;
@@ -557,25 +557,25 @@ SceUID appmgrOpenTemporaryCopy(const char *path, int flags, void *copyBuffer,
 		result = (int)0x808000a4;
 		goto copyFailed;
 	}
-	ksceIoClose(source);
+	sceIoClose(source);
 reopen:
-	ksceIoClose(destination);
-	destination = ksceIoOpen(temporaryPath, flags, 6);
+	sceIoClose(destination);
+	destination = sceIoOpen(temporaryPath, flags, 6);
 	result = destination < 0 ? destination : 0;
 freePath:
 	appmgrFreeSaveDataHeapMemory(temporaryPath);
 	if (result == 0)
 		return destination;
 	if (destination >= 0)
-		ksceIoClose(destination);
+		sceIoClose(destination);
 	return result;
 copyFailed:
 	appmgrFreeSaveDataHeapMemory(temporaryPath);
-	ksceIoClose(source);
+	sceIoClose(source);
 	if (result == 0)
 		return destination;
 	if (destination >= 0)
-		ksceIoClose(destination);
+		sceIoClose(destination);
 	return result;
 }
 
@@ -588,22 +588,22 @@ int appmgrReplaceFile(const char *temporaryPath, const char *path)
 	if (temporaryPath == NULL || strnlen(temporaryPath, 292) >= 292 ||
 	    path == NULL || strnlen(path, 291) > 290)
 		return (int)0x80800001;
-	result = ksceIoGetstat(temporaryPath, &stat);
+	result = sceIoGetstat(temporaryPath, &stat);
 	if (result < 0)
 		return result;
 	backupPath = appmgrAllocSaveDataHeapMemory(292);
 	if (backupPath == NULL)
 		return (int)0x80801006;
 	snprintf(backupPath, 292, "%s%s", path, "__");
-	result = ksceIoRemove(backupPath);
+	result = sceIoRemove(backupPath);
 	if (result == 0 || result == (int)0x80010002) {
-		result = ksceIoRename(path, backupPath);
+		result = sceIoRename(path, backupPath);
 		if (result == 0 || result == (int)0x80010002) {
-			result = ksceIoRename(temporaryPath, path);
+			result = sceIoRename(temporaryPath, path);
 			if (result < 0)
-				ksceIoRename(backupPath, path);
+				sceIoRename(backupPath, path);
 			else
-				result = ksceIoRemove(backupPath);
+				result = sceIoRemove(backupPath);
 		}
 	}
 	appmgrFreeSaveDataHeapMemory(backupPath);

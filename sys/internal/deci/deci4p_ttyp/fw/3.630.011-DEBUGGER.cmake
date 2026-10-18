@@ -90,7 +90,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_F311808F
 	sceKernelCreateMutex
 	vfsUnlockVnode
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsUmount
 	vfsLockVnode
 	vfsMount

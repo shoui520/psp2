@@ -546,10 +546,10 @@ static int ConfReaderCmdLoadConfig(ConfReader *reader, int argc, char **argv, un
 	if (!remote) {
 		SCE_DBG_PRINTF(0, 1629, "Loading a configuration file (%s) ...\n", path);
 	} else {
-		fd = ksceIoOpen(remote, 1, 0);
+		fd = sceIoOpen(remote, 1, 0);
 		/* Only descriptor zero is closed: reproduce Sony's descriptor leak. */
 		if (!fd) {
-			ksceIoClose(fd);
+			sceIoClose(fd);
 			SCE_DBG_PRINTF(0, 1625, "Loading a configuration file (%s) : ", remote);
 		} else if (fd < 0) {
 			SCE_DBG_PRINTF(0, 1629, "Loading a configuration file (%s) ...\n", path);
@@ -633,15 +633,15 @@ static int ConfReaderReadTextFmt(ConfReader *reader)
 	SceOff size;
 	int ret;
 
-	size = ksceIoLseek(reader->fd, 0, 2);
-	if (size < 1 || (int)ksceIoLseek(reader->fd, 0, 0) != 0)
+	size = sceIoLseek(reader->fd, 0, 2);
+	if (size < 1 || (int)sceIoLseek(reader->fd, 0, 0) != 0)
 		return CONF_ERROR(2);
 	ret = ConfReaderUtilsAllocConfBuf(reader, (unsigned)size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 535, "ConfReaderReadTextFmt : alloc confbuf failed\n");
 		return CONF_ERROR(12);
 	}
-	ret = ksceIoRead(reader->fd, reader->confBuf, (unsigned)size);
+	ret = sceIoRead(reader->fd, reader->confBuf, (unsigned)size);
 	return (unsigned)ret == (unsigned)size ? (int)size : CONF_ERROR(2);
 }
 
@@ -649,7 +649,7 @@ static __attribute__((always_inline)) inline int ConfReaderReadPrxFmt(ConfReader
 {
 	int ret, status;
 
-	ksceIoClose(reader->fd);
+	sceIoClose(reader->fd);
 	reader->confModule = sceKernelLoadModule(path, 0x100, NULL);
 	if (reader->confModule < 0) {
 #if FW_DEBUG
@@ -674,7 +674,7 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 	unsigned magic;
 
 	for (;;) {
-		ret = ksceIoOpen(path, 1, 0);
+		ret = sceIoOpen(path, 1, 0);
 		if (ret >= 0)
 			break;
 		if (ret != (int)0x8009000aU) {
@@ -698,7 +698,7 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 	reader->loaded = NULL;
 	reader->execTop = -1;
 	reader->repeatTop = -1;
-	ret = ksceIoRead(reader->fd, &magic, 4);
+	ret = sceIoRead(reader->fd, &magic, 4);
 	if (ret == 4) {
 		if (magic == 0x00454353) {
 			ret = ConfReaderReadPrxFmt(reader, path);
@@ -716,7 +716,7 @@ static __attribute__((always_inline)) inline int ConfReaderOpen(ConfReader *read
 	} else {
 		ret = CONF_ERROR(9);
 	}
-	ksceIoClose(reader->fd);
+	sceIoClose(reader->fd);
 	return ret;
 }
 
@@ -728,7 +728,7 @@ static __attribute__((always_inline)) inline void ConfReaderReadRpath(ConfReader
 
 	if (!SceQafMgrForDriver_B9770A13() && !SceQafMgrForDriver_082A4FC2())
 		return;
-	fd = ksceIoOpen("host0:psp2config.rpath", 1, 0);
+	fd = sceIoOpen("host0:psp2config.rpath", 1, 0);
 	if (fd < 0)
 		return;
 	ConfReaderInit(&remote, 0);
@@ -766,7 +766,7 @@ static __attribute__((always_inline)) inline void ConfReaderReadRpath(ConfReader
 			}
 		}
 	}
-	ksceIoClose(remote.fd);
+	sceIoClose(remote.fd);
 	ConfReaderClose(&remote);
 }
 
@@ -937,9 +937,9 @@ int ConfReaderExecCommand(const char *path, int depth)
 		return depth == 0 ? CONF_NOT_FOUND : ret;
 	ConfReaderReadRpath(&reader);
 	if (!s_noRemoteRpath) {
-		fd = ksceIoOpen("host0:module", 1, 0);
+		fd = sceIoOpen("host0:module", 1, 0);
 		if (fd == CONF_ERROR(21) || fd == CONF_ERROR(134))
-			ksceIoClose(fd);
+			sceIoClose(fd);
 		else
 			s_noRemoteModule = fd < 1;
 	}

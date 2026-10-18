@@ -12,8 +12,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/io/dirent.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 
@@ -178,7 +177,7 @@ typedef struct RdrfpDevice {
 	const char *path;
 	SceUInt32 reserved;
 	const char *name;			/* as the host shows it */
-	SceUInt32 mountPoint;			/* ksceIoCreateMountEvent */
+	SceUInt32 mountPoint;			/* sceIoCreateMountEvent */
 	SceUInt32 type;
 } RdrfpDevice;
 

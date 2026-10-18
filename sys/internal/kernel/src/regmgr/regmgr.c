@@ -5,7 +5,7 @@
  */
 
 #include <sysmem/sysroot.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debugled.h>
@@ -906,7 +906,7 @@ int regMgrLoadDb(void)
 	s_rgMnBinCrt = 0;
 	s_rgMnKeyCnt = 0;
 
-	fd = ksceIoOpen(REGMGR_DB_PATH, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(REGMGR_DB_PATH, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return SCE_REGMGR_ERROR_NO_FILE;
 	mask = 0;
@@ -915,7 +915,7 @@ int regMgrLoadDb(void)
 	section = REGMGR_SECTION_SKIP;
 	g_regMgrReadPos = 0;
 	for (;;) {
-		n = ksceIoRead(fd, &g_regMgrReadBuf[readOff], readSize);
+		n = sceIoRead(fd, &g_regMgrReadBuf[readOff], readSize);
 		if (n <= 0)
 			break;
 		end = readOff + n;
@@ -980,7 +980,7 @@ next:
 	}
 	ret = n != 0 ? SCE_REGMGR_ERROR_NO_FILE : 0;
 out:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return ret;
 }
 
@@ -2006,11 +2006,11 @@ int regMgrCheckToolDefSerial(SceUInt32 eventLog)
 		name = "ev_serial";
 		serial = &g_regMgrEvSerial;
 	}
-	fd = ksceIoOpen(defs[i], SCE_O_RDONLY, 0);
+	fd = sceIoOpen(defs[i], SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return 1;
-	n = ksceIoRead(fd, g_regMgrWord, sizeof(g_regMgrWord));
-	ksceIoClose(fd);
+	n = sceIoRead(fd, g_regMgrWord, sizeof(g_regMgrWord));
+	sceIoClose(fd);
 	if (n <= 0)
 		return 1;
 	p = g_regMgrWord;

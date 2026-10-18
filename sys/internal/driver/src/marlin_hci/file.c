@@ -2,7 +2,7 @@
 #include "buffer.h"
 #include "file.h"
 #include <stdint.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <kernel/error.h>
 
 unsigned int MarlinStringLength(const char *string);
@@ -30,7 +30,7 @@ int MarlinFileRemove(void *allocator, const char *path)
 	} else {
 		MarlinCopyMemory(devicePath, path, length + 1);
 	}
-	status = ksceIoRemove(devicePath);
+	status = sceIoRemove(devicePath);
 	if (status != 0)
 		result = status == SCE_ERROR_ERRNO_ENOENT ?
 			0x11060002 : 0x11060001;
@@ -77,21 +77,21 @@ int MarlinFileOpen(void *allocator, const char *path, int mode,
 	switch (mode) {
 	case 1:
 	case 9:
-		descriptor = ksceIoOpen(devicePath, SCE_O_RDONLY, 0666);
+		descriptor = sceIoOpen(devicePath, SCE_O_RDONLY, 0666);
 		break;
 	case 2:
 	case 10:
-		descriptor = ksceIoOpen(devicePath,
+		descriptor = sceIoOpen(devicePath,
 				       SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC,
 				       0777);
 		break;
 	case 3:
 	case 11:
-		descriptor = ksceIoOpen(devicePath, SCE_O_RDWR, 0777);
+		descriptor = sceIoOpen(devicePath, SCE_O_RDWR, 0777);
 		break;
 	case 4:
 	case 12:
-		descriptor = ksceIoOpen(devicePath,
+		descriptor = sceIoOpen(devicePath,
 				       SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND,
 				       0777);
 		break;
@@ -132,7 +132,7 @@ int MarlinFileClose(void *allocator, MarlinFileContext *file)
 		result = 4;
 		goto out;
 	}
-	ksceIoClose(context->descriptor);
+	sceIoClose(context->descriptor);
 	MarlinFreeMemory(allocator, file);
 	result = 0;
 out:
@@ -161,8 +161,8 @@ int MarlinFileRead(void *allocator, MarlinFileContext *file,
 	}
 	block = context->position / 8192;
 	if (context->cachedBlock != block) {
-		ksceIoLseek(descriptor, (long long)(block * 8192), SCE_SEEK_SET);
-		count = ksceIoRead(descriptor, context->buffer, 8192);
+		sceIoLseek(descriptor, (long long)(block * 8192), SCE_SEEK_SET);
+		count = sceIoRead(descriptor, context->buffer, 8192);
 		if (count < 0) {
 			result = 0x11060003;
 			goto out;
@@ -186,11 +186,11 @@ int MarlinFileRead(void *allocator, MarlinFileContext *file,
 		total = count;
 		size -= count;
 		context->position += count;
-		if (ksceIoLseek(descriptor, 0, SCE_SEEK_END) > context->position) {
-			ksceIoLseek(descriptor, context->position, SCE_SEEK_SET);
+		if (sceIoLseek(descriptor, 0, SCE_SEEK_END) > context->position) {
+			sceIoLseek(descriptor, context->position, SCE_SEEK_SET);
 			count = 1;
 			while (size > 8192) {
-				count = ksceIoRead(descriptor,
+				count = sceIoRead(descriptor,
 					(unsigned char *)data + total, 8192);
 				if (count < 0) {
 					result = 0x11060003;
@@ -203,7 +203,7 @@ int MarlinFileRead(void *allocator, MarlinFileContext *file,
 				context->position += count;
 			}
 			if (count != 0 && size != 0) {
-				count = ksceIoRead(descriptor, context->buffer, 8192);
+				count = sceIoRead(descriptor, context->buffer, 8192);
 				if (count < 0) {
 					result = 0x11060003;
 					goto out;
@@ -247,7 +247,7 @@ int MarlinFileWrite(void *allocator, MarlinFileContext *file,
 	}
 	context->cachedBlock = -1;
 	context->cachedSize = 0;
-	written = ksceIoWrite(descriptor, data, size);
+	written = sceIoWrite(descriptor, data, size);
 	if (written < size)
 		result = 0x11060004;
 	else
@@ -273,17 +273,17 @@ int MarlinFileGetSize(void *allocator, MarlinFileContext *file,
 		result = 4;
 		goto out;
 	}
-	position = ksceIoLseek(descriptor, 0, SCE_SEEK_CUR);
+	position = sceIoLseek(descriptor, 0, SCE_SEEK_CUR);
 	if (position < 0) {
 		result = 0x11060006;
 		goto out;
 	}
-	length = ksceIoLseek(descriptor, 0, SCE_SEEK_END);
+	length = sceIoLseek(descriptor, 0, SCE_SEEK_END);
 	if (length < 0) {
 		result = 0x11060005;
 		goto out;
 	}
-	if (ksceIoLseek(descriptor, position, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(descriptor, position, SCE_SEEK_SET) < 0) {
 		result = 0x11060005;
 		goto out;
 	}

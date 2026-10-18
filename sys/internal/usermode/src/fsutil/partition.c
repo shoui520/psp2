@@ -3,8 +3,7 @@
 #include <sysmem/debug.h>
 #include <sdstor/mbr.h>
 #include <sdstor/sdstor.h>
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/devctl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -250,7 +249,7 @@ int _fs_util_get_device_info(const char *blockDeviceName, void *buffer,
 				return (int)0x80010016;
 		}
 	}
-	return ksceIoDevctl("sdstor0:", 1, (void *)device, length, buffer, 16);
+	return sceIoDevctl("sdstor0:", 1, (void *)device, length, buffer, 16);
 unsupported:
 	SCE_DBG_PRINTF_LEVEL(1, 0, 175,
 		"%s: unsupported block_device_name(%s)\n", __func__, blockDeviceName);
@@ -284,7 +283,7 @@ int _fs_util_device_format(const char *blockDeviceName)
 				return (int)0x80010016;
 		}
 	}
-	return ksceIoDevctl("sdstor0:", 2, (void *)device, length, NULL, 0);
+	return sceIoDevctl("sdstor0:", 2, (void *)device, length, NULL, 0);
 unsupported:
 	SCE_DBG_PRINTF_LEVEL(1, 0, 196,
 		"%s: unsupported block_device_name(%s)\n", __func__, blockDeviceName);
@@ -419,11 +418,11 @@ int _fs_util_prepare_rm_mbr(const char *blockDeviceName, SceUID file,
 				return (int)0x80010016;
 		}
 	}
-	result = ksceIoDevctl("sdstor0:", 1, (void *)device, length, &info, sizeof(info));
+	result = sceIoDevctl("sdstor0:", 1, (void *)device, length, &info, sizeof(info));
 	if (result != 0)
 		return result;
 	scratch = bufferSize >= 1024 ? buffer + 1 : buffer;
-	result = ksceIoPread(file, scratch, sizeof(*scratch), 0);
+	result = sceIoPread(file, scratch, sizeof(*scratch), 0);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 783,
 			"%s: sceIoPread failed[%#x]\n", __func__, result);
@@ -581,7 +580,7 @@ int _fs_util_prepare_mbr(const char *blockDeviceName, unsigned char systemId,
 			}
 		}
 	}
-	result = ksceIoDevctl("sdstor0:", 1, (void *)device, length, &info, sizeof(info));
+	result = sceIoDevctl("sdstor0:", 1, (void *)device, length, &info, sizeof(info));
 device_info_result:
 	if (result != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 908,

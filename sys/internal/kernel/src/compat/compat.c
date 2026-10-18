@@ -1,6 +1,5 @@
 /* SceCompat implementation. */
 
-#include <psp2/compat.h>
 #include <compat/compat.h>
 #include <psp2/power.h>
 #include <acmgr/acmgr.h>
@@ -23,7 +22,7 @@
 #include <sysmem/sysroot.h>
 #include <sm_comm/sm_comm.h>
 #include <compat/compat_regs.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/io/devctl.h>
 #include <psp2kern/npdrm.h>
 #include <string.h>
@@ -354,16 +353,16 @@ int compatCheckRif(void *args)
 
 	(void)args;
 	memset(&license, 0, sizeof(license));
-	fd = ksceIoOpen(gCompatRifPath, 1, 0);
+	fd = sceIoOpen(gCompatRifPath, 1, 0);
 	if (fd <= 0)
 		return 0;
-	size = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	size = sceIoLseek(fd, 0, SCE_SEEK_END);
 	result = (SceUInt64)(size - 1) < sizeof(license) &&
-		ksceIoPread(fd, &license, size, 0) == (int)size &&
+		sceIoPread(fd, &license, size, 0) == (int)size &&
 		ksceNpDrmGetRifPspKey((const SceNpDrmLicense *)license, klicense,
 			&flags, &startTime,
 			&expirationTime) == 0;
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return result;
 }
 
@@ -873,25 +872,25 @@ int compatCheckPocketStationRif(void)
 	int result;
 
 	memset(&license, 0, sizeof(license));
-	fd = ksceIoOpen(gCompatPocketStationRifPath, 1, 0);
+	fd = sceIoOpen(gCompatPocketStationRifPath, 1, 0);
 	if (fd <= 0) {
 		result = 0;
 		goto out;
 	}
-	size = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	size = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if ((SceUInt64)(size - 1) >= sizeof(license) ||
-		ksceIoPread(fd, &license, size, 0) != (int)size ||
+		sceIoPread(fd, &license, size, 0) != (int)size ||
 		ksceNpDrmGetRifPspKey((const SceNpDrmLicense *)license, klicense,
 			&flags, &startTime,
 			&expirationTime) ||
 		(expirationTime != 0x7fffffffffffffffULL &&
 			(ksceRtcGetCurrentSecureTick(&tick) ||
 			 startTime >= tick.tick || tick.tick >= expirationTime))) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		result = 0;
 		goto out;
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	result = ksceNpDrmGetRifInfo((const SceNpDrmLicense *)license,
 		sizeof(license), 0, contentId,
 		NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) >= 0 &&
@@ -1961,7 +1960,7 @@ int compatGetDevInf(SceIoDevInfo *info)
 {
 	if (sceKernelGetProcessId() != gCompatProcessId)
 		return (int)0x8002f001;
-	return ksceIoDevctl(gCompatDevice, 0x3001, NULL, 0, info,
+	return sceIoDevctl(gCompatDevice, 0x3001, NULL, 0, info,
 		sizeof(*info));
 }
 
@@ -2070,16 +2069,16 @@ int compatGetTitleListForVsh(char *buffer, unsigned int size)
 
 	if (size != 100)
 		return (int)0x8002000b;
-	fd = ksceIoOpen(gCompatTitleListPath, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(gCompatTitleListPath, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	result = ksceIoRead(fd, buffer, size);
-	ksceIoClose(fd);
+	result = sceIoRead(fd, buffer, size);
+	sceIoClose(fd);
 	if (result != 100)
 		return (int)0x80010005;
 	if (strnlen(buffer, 100) != 95)
 		return (int)0x80010002;
-	ksceIoRemove(gCompatTitleListPath);
+	sceIoRemove(gCompatTitleListPath);
 	return 0;
 }
 

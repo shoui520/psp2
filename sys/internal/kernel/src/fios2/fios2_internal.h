@@ -12,8 +12,7 @@
 #define FIOS2_INTERNAL_H
 
 #include <psp2kern/types.h>
-#include <psp2kern/io/stat.h>
-#include <psp2kern/io/dirent.h>
+#include <iofilemgr/iofilemgr.h>
 #include <acmgr/acmgr.h>
 #include <processmgr/processmgr.h>
 #include <psp2kern/kernel/rtc.h>

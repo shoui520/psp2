@@ -1,7 +1,9 @@
 /* SceCompat shared SRAM: host, guest boot, and IPL storage phases. */
 #pragma once
 
+#define sceIoIoctl	sceIoIoctl_vitasdk	/* vitasdk's user prototype; the kernel's is iofilemgr's */
 #include <psp2/compat.h>
+#undef sceIoIoctl
 #include <stddef.h>
 #include <stdint.h>
 

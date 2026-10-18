@@ -11,153 +11,153 @@ SceIofilemgr:
       version: 1
       nid: 0x40FD29C7
       functions:
-        - ksceVopDopen: 0x00C9C2DD
-        - ksceIoDreadForVshbridge: 0x03051B02
+        - sceVopDopen: 0x00C9C2DD
+        - sceIoDreadForVshbridge: 0x03051B02
         - SceIofilemgrForDriver_03F6A684: 0x03F6A684
-        - ksceIoSyncByFdAsync: 0x041209CF
-        - ksceVopFchstat: 0x082AFD7F
+        - SceIofilemgrForDriver_041209CF: 0x041209CF
+        - sceVopFchstat: 0x082AFD7F
         - vfsPread: 0x0B54F9E0
-        - ksceIoGetPUIDFdListForDebugger: 0x0D493274
-        - ksceIoRemove: 0x0D7BB3E1
-        - ksceVopUnlink: 0x0D8A806E
+        - sceIoGetPUIDFdListForDebugger: 0x0D493274
+        - sceIoRemove: 0x0D7BB3E1
+        - SceIofilemgrForDriver_0D8A806E: 0x0D8A806E
         - vfsOpen: 0x0E518FA9
-        - ksceVopCleanup: 0x0F7E1718
-        - ksceIoGetstatByFdAsync: 0x0FEE1238
-        - ksceIoCloseAsync: 0x11C57CC6
+        - sceVopCleanup: 0x0F7E1718
+        - SceIofilemgrForDriver_0FEE1238: 0x0FEE1238
+        - SceIofilemgrForDriver_11C57CC6: 0x11C57CC6
         - SceIofilemgrForDriver_12F8D58E: 0x12F8D58E
-        - ksceVopDclose: 0x1350F5C7
+        - sceVopDclose: 0x1350F5C7
         - SceIofilemgrForDriver_15C17487: 0x15C17487
-        - ksceIoIoctl: 0x161CD33F
-        - ksceIoFlock: 0x16336A0D
-        - ksceIoDevctl: 0x16882FC4
-        - ksceVopChstat: 0x1974FA92
-        - ksceIoDclose: 0x19C81DD6
+        - sceIoIoctl: 0x161CD33F
+        - SceIofilemgrForDriver_16336A0D: 0x16336A0D
+        - sceIoDevctl: 0x16882FC4
+        - sceVopChstat: 0x1974FA92
+        - sceIoDclose: 0x19C81DD6
         - vfsClose: 0x1AE14011
-        - ksceIoRmdir: 0x1CC9C634
-        - ksceVopRmdir: 0x1D551105
-        - ksceVopFgetstat: 0x1DBCBB01
-        - ksceIoChstatForVshbridge: 0x1F98BD50
-        - ksceIoPwriteAsync: 0x202CDDE3
-        - ksceIoUmount: 0x20574100
-        - ksceIoDread: 0x20CF5FC7
+        - sceIoRmdir: 0x1CC9C634
+        - sceVopRmdir: 0x1D551105
+        - sceVopFgetstat: 0x1DBCBB01
+        - sceIoChstatForVshbridge: 0x1F98BD50
+        - SceIofilemgrForDriver_202CDDE3: 0x202CDDE3
+        - SceIofilemgrForDriver_20574100: 0x20574100
+        - sceIoDread: 0x20CF5FC7
         - vfsFreeVnode: 0x21D57633
-        - ksceIoWrite: 0x21EE91F0
-        - ksceIoMkdirAsync: 0x27003443
-        - ksceIoPread: 0x2A17515D
-        - ksceIoCreateMountEvent: 0x2DFA192F
+        - sceIoWrite: 0x21EE91F0
+        - SceIofilemgrForDriver_27003443: 0x27003443
+        - sceIoPread: 0x2A17515D
+        - sceIoCreateMountEvent: 0x2DFA192F
         - SceIofilemgrForDriver_2EFDFA12: 0x2EFDFA12
-        - ksceVopMkdir: 0x2F3F8C70
-        - ksceVopIoctl: 0x333C904D
+        - sceVopMkdir: 0x2F3F8C70
+        - sceVopIoctl: 0x333C904D
         - SceIofilemgrForDriver_338DCD68: 0x338DCD68
         - SceIofilemgrForDriver_3675ECB9: 0x3675ECB9
-        - ksceVopRename: 0x36A794C7
+        - sceVopRename: 0x36A794C7
         - sceIoSetMountEvent: 0x39ABDB9E
         - SceIofilemgrForDriver_3A79FAC9: 0x3A79FAC9
-        - ksceIoCreateErrorEvent: 0x3C0343DB
-        - ksceIoSetThreadDefaultPriorityForSystem: 0x3F0FF9D5
-        - ksceVopClose: 0x40944C2E
-        - ksceIoClearErrorEvent: 0x40B933C7
-        - ksceIoSyncByFd2: 0x43170575
-        - ksceIoDeleteMountEvent: 0x43DB0AE4
-        - ksceIoGetRemoteKPLSData: 0x44EDCE57
-        - ksceIoOpenAsync: 0x451001DE
-        - ksceIoGetstatByFd: 0x462F059B
-        - ksceIoDopen: 0x463B25CC
-        - ksceIoSyncAsync: 0x4F9EA8B0
-        - ksceVopGetstat: 0x50A63ACF
-        - ksceIoLseekAsync: 0x541BAABD
-        - ksceVopRead: 0x570388A5
-        - ksceIoDreadAsync: 0x5982B0E3
+        - sceIoCreateErrorEvent: 0x3C0343DB
+        - SceIofilemgrForDriver_3F0FF9D5: 0x3F0FF9D5
+        - sceVopClose: 0x40944C2E
+        - SceIofilemgrForDriver_40B933C7: 0x40B933C7
+        - SceIofilemgrForDriver_43170575: 0x43170575
+        - sceIoDeleteMountEvent: 0x43DB0AE4
+        - SceIofilemgrForDriver_44EDCE57: 0x44EDCE57
+        - SceIofilemgrForDriver_451001DE: 0x451001DE
+        - SceIofilemgrForDriver_462F059B: 0x462F059B
+        - sceIoDopen: 0x463B25CC
+        - SceIofilemgrForDriver_4F9EA8B0: 0x4F9EA8B0
+        - sceVopGetstat: 0x50A63ACF
+        - SceIofilemgrForDriver_541BAABD: 0x541BAABD
+        - sceVopRead: 0x570388A5
+        - SceIofilemgrForDriver_5982B0E3: 0x5982B0E3
         - vfsNotifyDeviceStatus: 0x5B7E5AB8
-        - ksceIoPwrite: 0x5F1512C8
+        - sceIoPwrite: 0x5F1512C8
         - vfsUnlockVnode: 0x6048F245
-        - ksceIoLseek: 0x62090481
-        - ksceIoPreadAsync: 0x64A46A2C
-        - ksceVfsAddVfs: 0x673D2FCD
-        - ksceIoReadAsync: 0x69047C81
+        - sceIoLseek: 0x62090481
+        - SceIofilemgrForDriver_64A46A2C: 0x64A46A2C
+        - sceVfsAddVfs: 0x673D2FCD
+        - SceIofilemgrForDriver_69047C81: 0x69047C81
         - vfsRmdev: 0x69A7E076
         - vfsLockMnt: 0x6B3CA9F7
         - SceIofilemgrForDriver_6BEEDDB4: 0x6BEEDDB4
-        - ksceIoGetThreadDefaultPriorityForSystem: 0x6D0FEDB6
-        - ksceIoCancel: 0x6D59658D
-        - ksceIoDopenAsync: 0x72F06BDE
+        - SceIofilemgrForDriver_6D0FEDB6: 0x6D0FEDB6
+        - sceIoCancel: 0x6D59658D
+        - SceIofilemgrForDriver_72F06BDE: 0x72F06BDE
         - vfsChstatByFd: 0x7517FE29
-        - ksceIoOpen: 0x75192972
-        - ksceIoGetstat: 0x75C96D25
-        - ksceVopOpen: 0x76B79BEC
-        - ksceVopDread: 0x77584C8F
-        - ksceIoChstat: 0x7D42B8DC
-        - ksceIoChstatAsync: 0x7EC442BF
-        - ksceIoMkdir: 0x7F710B25
+        - sceIoOpen: 0x75192972
+        - sceIoGetstat: 0x75C96D25
+        - sceVopOpen: 0x76B79BEC
+        - sceVopDread: 0x77584C8F
+        - sceIoChstat: 0x7D42B8DC
+        - SceIofilemgrForDriver_7EC442BF: 0x7EC442BF
+        - sceIoMkdir: 0x7F710B25
         - vfsRead: 0x809892C1
         - vfsWrite: 0x8598ADC3
         - sceIoComplete: 0x8F0DE34D
-        - ksceVopInactive: 0x8FB94521
-        - ksceVopLink: 0x942AA61F
-        - ksceIoGetstatAsync: 0x94A5304A
-        - ksceVopWrite: 0x9A68378D
-        - ksceIoGetMediaType: 0x9C220246
+        - sceVopInactive: 0x8FB94521
+        - SceIofilemgrForDriver_942AA61F: 0x942AA61F
+        - SceIofilemgrForDriver_94A5304A: 0x94A5304A
+        - sceVopWrite: 0x9A68378D
+        - SceIofilemgrForDriver_9C220246: 0x9C220246
         - vfsUmount: 0x9C7E7B76
-        - ksceVfsDeleteVfs: 0x9CBFA725
-        - ksceVopSync: 0x9CD96406
-        - ksceVopCreate: 0x9E347C7D
+        - sceVfsDeleteVfs: 0x9CBFA725
+        - sceVopSync: 0x9CD96406
+        - sceVopCreate: 0x9E347C7D
         - SceIofilemgrForDriver_9FCDCE62: 0x9FCDCE62
-        - ksceIoWriteAsync: 0xA1BD13D0
-        - ksceIoGetFileInfo: 0xA1EF2648
+        - SceIofilemgrForDriver_A1BD13D0: 0xA1BD13D0
+        - SceIofilemgrForDriver_A1EF2648: 0xA1EF2648
         - SceIofilemgrForDriver_A39A9CA7: 0xA39A9CA7
-        - ksceVopPwrite: 0xA53C040D
-        - ksceVopLookup: 0xA5A6A55C
+        - sceVopPwrite: 0xA53C040D
+        - sceVopLookup: 0xA5A6A55C
         - vfsBuffCacheCtl: 0xA7020B0D
-        - ksceIoDevctlAsync: 0xA9302946
+        - SceIofilemgrForDriver_A9302946: 0xA9302946
         - vfsGetVnodeName: 0xAA253B68
         - vfsLockVnode: 0xAA45010B
-        - ksceIoRenameAsync: 0xAACBC47A
-        - ksceVopPread: 0xABBC80E3
-        - ksceIoSetProcessDefaultPriorityForSystem: 0xABE65071
+        - SceIofilemgrForDriver_AACBC47A: 0xAACBC47A
+        - sceVopPread: 0xABBC80E3
+        - SceIofilemgrForDriver_ABE65071: 0xABE65071
         - SceIofilemgrForDriver_AC0E9AAA: 0xAC0E9AAA
-        - ksceVfsOpDevctl: 0xB07B307D
-        - ksceVopLseek: 0xB2B13818
+        - sceVfsOpDevctl: 0xB07B307D
+        - sceVopLseek: 0xB2B13818
         - SceIofilemgrForDriver_B499287E: 0xB499287E
         - vfsMount: 0xB62DE9A6
-        - ksceIoIoctlAsync: 0xB761E91B
+        - SceIofilemgrForDriver_B761E91B: 0xB761E91B
         - vfsGetMntInfo: 0xB987450D
         - vfsAllocateFile: 0xBBAC1751
         - vfsChstat: 0xBCE4865B
-        - ksceIoDcloseAsync: 0xC08F199F
+        - SceIofilemgrForDriver_C08F199F: 0xC08F199F
         - vfsIoctl: 0xC1DD4317
         - vfsGetMntList: 0xC20C621C
         - vfsIsOwnerVnode: 0xC3AE93A2
-        - ksceIoOpenForPid: 0xC3D34965
+        - SceIofilemgrForDriver_C3D34965: 0xC3D34965
         - vfsIsLockedMnt: 0xC468B5EF
-        - ksceIoDeleteErrorEvent: 0xC6158F8D
+        - SceIofilemgrForDriver_C6158F8D: 0xC6158F8D
         - SceIofilemgrForDriver_C722DF35: 0xC722DF35
         - vfsFreeFile: 0xC85E33A2
         - SceIofilemgrForDriver_CCE94599: 0xCCE94599
         - vfsAllocateFileDummy: 0xCDF3EF52
-        - ksceIoGetProcessDefaultPriorityForSystem: 0xCE397158
-        - ksceIoSetPathMappingFunction: 0xCFAECF18
-        - ksceIoMount: 0xD070BC48
+        - SceIofilemgrForDriver_CE397158: 0xCE397158
+        - SceIofilemgrForDriver_CFAECF18: 0xCFAECF18
+        - SceIofilemgrForDriver_D070BC48: 0xD070BC48
         - vfsUmountForPFS: 0xD220539D
         - vfsGetNewVnode: 0xD60B5C63
-        - ksceIoGetstatForVshbridge: 0xD6503624
+        - sceIoGetstatForVshbridge: 0xD6503624
         - vfsBuffCacheFree: 0xD6AB5E4B
-        - ksceIoRename: 0xDC0C4997
-        - ksceVopRemove: 0xDC1E7EE4
+        - sceIoRename: 0xDC0C4997
+        - sceVopRemove: 0xDC1E7EE4
         - vfsUnlockMnt: 0xDC2D8BCE
-        - ksceIoGetGUIDFdListForDebugger: 0xDCF75F6D
+        - sceIoGetGUIDFdListForDebugger: 0xDCF75F6D
         - sceIoSetErrorEvent: 0xDD46CD63
-        - ksceIoSync: 0xDDF78594
-        - ksceIoChstatByFd: 0xDF57A75F
-        - ksceIoRead: 0xE17EFC03
+        - sceIoSync: 0xDDF78594
+        - SceIofilemgrForDriver_DF57A75F: 0xDF57A75F
+        - sceIoRead: 0xE17EFC03
         - vfsPwrite: 0xE5DEA6B7
-        - ksceIoChstatByFdAsync: 0xEC974400
-        - ksceVopZerofill: 0xEEAE8B51
+        - SceIofilemgrForDriver_EC974400: 0xEC974400
+        - sceVopZerofill: 0xEEAE8B51
         - SceIofilemgrForDriver_F4F8C59A: 0xF4F8C59A
-        - ksceVopWhiteout: 0xF53399BC
-        - ksceIoRmdirAsync: 0xF5B0B36C
-        - ksceVfsOpDecodePathElem: 0xF7DAC0F5
-        - ksceIoClose: 0xF99DD8A3
-        - ksceIoRemoveAsync: 0xF9D6507D
+        - sceVopWhiteout: 0xF53399BC
+        - SceIofilemgrForDriver_F5B0B36C: 0xF5B0B36C
+        - SceIofilemgrForDriver_F7DAC0F5: 0xF7DAC0F5
+        - sceIoClose: 0xF99DD8A3
+        - SceIofilemgrForDriver_F9D6507D: 0xF9D6507D
         - vfsMountForPFS: 0xFEEE44A9
     SceIofilemgr:
       syscall: true

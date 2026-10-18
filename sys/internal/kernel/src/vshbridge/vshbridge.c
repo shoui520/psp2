@@ -1155,12 +1155,13 @@ int module_start(SceSize args, void *argp)
 SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 		     SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(ksceIoMount(id, path, permission, data, reservedLow, reservedHigh));
+	VSH_BRIDGE(SceIofilemgrForDriver_D070BC48(id, path, permission, data,
+						  (SceUInt64)reservedHigh << 32 | reservedLow));
 }
 
 SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh)
 {
-	VSH_BRIDGE(ksceIoUmount(id, force, reservedLow, reservedHigh));
+	VSH_BRIDGE(SceIofilemgrForDriver_20574100(id, force, (SceUInt64)reservedHigh << 32 | reservedLow));
 }
 
 /* a kernel event, handed to the caller as a PUID */
@@ -1173,29 +1174,29 @@ SceUInt32 vshIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	uid = ksceIoCreateMountEvent(mountPoint, events);
+	uid = sceIoCreateMountEvent(mountPoint, events);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return uid;
 	}
 	puid = SceSysmemForDriver_BF209859(0, uid);
 	if (puid < 0)
-		ksceIoDeleteMountEvent(uid);
+		sceIoDeleteMountEvent(uid);
 	sceSyscallLeave(t);
 	return puid;
 }
 
 SceUInt32 vshIoDeleteMountEvent(SceUID event)
 {
-	VSH_BRIDGE_UID(event, ksceIoDeleteMountEvent(uid));
+	VSH_BRIDGE_UID(event, sceIoDeleteMountEvent(uid));
 }
 
 SceUInt32 vshIoFlock(SceUID fd, int flags)
 {
-	VSH_BRIDGE_UID(fd, ksceIoFlock(uid, flags));
+	VSH_BRIDGE_UID(fd, SceIofilemgrForDriver_16336A0D(uid, flags));
 }
 
-SceUInt32 vshIoCreateErrorEvent(int a, int b, int c)
+SceUInt32 vshIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *info)
 {
 	SceUInt32 t = sceSyscallEnter();
 	SceUID uid, puid;
@@ -1204,21 +1205,21 @@ SceUInt32 vshIoCreateErrorEvent(int a, int b, int c)
 		sceSyscallLeave(t);
 		return SCE_ERROR_ERRNO_ENOSYS;
 	}
-	uid = ksceIoCreateErrorEvent(a, b, c);
+	uid = sceIoCreateErrorEvent(mntId, pattern, info);
 	if (uid < 0) {
 		sceSyscallLeave(t);
 		return uid;
 	}
 	puid = SceSysmemForDriver_BF209859(0, uid);
 	if (puid < 0)
-		ksceIoDeleteErrorEvent(uid);
+		SceIofilemgrForDriver_C6158F8D(uid);
 	sceSyscallLeave(t);
 	return puid;
 }
 
 SceUInt32 vshIoClearErrorEvent(SceUID event)
 {
-	VSH_BRIDGE_UID(event, ksceIoClearErrorEvent(uid));
+	VSH_BRIDGE_UID(event, SceIofilemgrForDriver_40B933C7(uid));
 }
 
 SceUInt32 vshIoDeleteErrorEvent(SceUID event)
@@ -1236,7 +1237,7 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 		sceSyscallLeave(t);
 		return uid | 0x40000000;
 	}
-	ret = ksceIoDeleteErrorEvent(uid);
+	ret = SceIofilemgrForDriver_C6158F8D(uid);
 	if (ret != 0) {
 		sceSyscallLeave(t);
 		return ret;
@@ -1248,17 +1249,17 @@ SceUInt32 vshIoDeleteErrorEvent(SceUID event)
 
 SceUInt32 vshIoGetstat(const char *path, void *stat)
 {
-	VSH_BRIDGE(ksceIoGetstatForVshbridge(path, stat));
+	VSH_BRIDGE(sceIoGetstatForVshbridge(path, stat));
 }
 
 SceUInt32 vshIoChstat(const char *path, const void *stat, int bits)
 {
-	VSH_BRIDGE(ksceIoChstatForVshbridge(path, stat, bits));
+	VSH_BRIDGE(sceIoChstatForVshbridge(path, stat, bits));
 }
 
 SceUInt32 vshIoDread(SceUID fd, void *dirent)
 {
-	VSH_BRIDGE_UID(fd, ksceIoDreadForVshbridge(uid, dirent));
+	VSH_BRIDGE_UID(fd, sceIoDreadForVshbridge(uid, dirent));
 }
 
 SceUInt32 vshMemoryCardEnableSlowMode(void)
@@ -1333,12 +1334,12 @@ out:
 
 SceUInt32 vshIoSetProcessDefaultPriorityForSystem(int priority)
 {
-	VSH_BRIDGE(ksceIoSetProcessDefaultPriorityForSystem(priority));
+	VSH_BRIDGE(SceIofilemgrForDriver_ABE65071(priority));
 }
 
 SceUInt32 vshIoGetProcessDefaultPriorityForSystem(void)
 {
-	VSH_BRIDGE(ksceIoGetProcessDefaultPriorityForSystem());
+	VSH_BRIDGE(SceIofilemgrForDriver_CE397158());
 }
 
 /* ===== hdmi ===== */

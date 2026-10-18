@@ -25,11 +25,11 @@ int mtpCacheLoad(const char *path, SceSize size)
 		SceSysmemForDriver_A841EDDA(e->block, &e->base);
 		strncpy(e->path, path, strnlen(path, 0xff));
 	}
-	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	ret = ksceIoRead(fd, e->base, size);
-	ksceIoClose(fd);
+	ret = sceIoRead(fd, e->base, size);
+	sceIoClose(fd);
 	e->size = ret;
 	return ret;
 }

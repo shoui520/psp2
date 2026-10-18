@@ -83,10 +83,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_E655852F
 	kscePowerGetGpuClockFrequencyInternal
 	kscePervasiveGetSoCRevision
-	ksceIoIoctl
-	ksceIoWrite
-	ksceIoOpen
-	ksceIoClose
+	sceIoIoctl
+	sceIoWrite
+	sceIoOpen
+	sceIoClose
 	ksceRtcGetCurrentClockLocalTime
 	ScePamgrForDriver_019BD60F
 	ScePamgrForDriver_02ACD81C

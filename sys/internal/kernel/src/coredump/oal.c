@@ -41,8 +41,6 @@
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/gpu_es4.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/iofilemgr.h>
-#include <psp2kern/io/fcntl.h>
 #include <psp2kern/registrymgr.h>
 #include "oal_internal.h"
 #include <threadmgr/threadmgr.h>
@@ -538,14 +536,14 @@ int _getBuildVerInfo(void)
 	SCE_DBG_ASSERT(1, 1437);
 #endif
 	memset(&buildVerInfo, 0, sizeof(buildVerInfo));
-	fd = ksceIoOpen("vs0:vsh/etc/index.dat", 1, 0);
+	fd = sceIoOpen("vs0:vsh/etc/index.dat", 1, 0);
 	if (fd < 0)
 		goto finish;
 	buffer = memMgrLocalAlloc(0x2000);
 	if (buffer == NULL)
 		goto closeFile;
 	for (;;) {
-		bytes = ksceIoRead(fd, buffer + size, 0x2000 - size);
+		bytes = sceIoRead(fd, buffer + size, 0x2000 - size);
 		if (bytes <= 0)
 			break;
 		size += bytes;
@@ -637,7 +635,7 @@ int _getBuildVerInfo(void)
 freeBuffer:
 	memMgrLocalFree(buffer);
 closeFile:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 finish:
 	memMgrFinal();
 	result = sceRegMgrGetKeyInt("/CONFIG/COREDUMP", "always_encrypt_dump",
@@ -1045,7 +1043,7 @@ int oalFileOpen(const char *path, SceUID *fd)
 
 	SCE_DBG_ASSERT(path != NULL, 972);
 	SCE_DBG_ASSERT(fd != NULL, 973);
-	result = ksceIoOpen(path, 0x4603, 0606);
+	result = sceIoOpen(path, 0x4603, 0606);
 	if (result >= 0) {
 		*fd = result;
 		return 0;
@@ -1059,7 +1057,7 @@ int oalFileReopen(const char *path, SceUID *fd)
 
 	SCE_DBG_ASSERT(path != NULL, 991);
 	SCE_DBG_ASSERT(fd != NULL, 992);
-	result = ksceIoOpen(path, 0x4001, 0606);
+	result = sceIoOpen(path, 0x4001, 0606);
 	if (result >= 0) {
 		*fd = result;
 		return 0;
@@ -1074,42 +1072,42 @@ int oalFileSetIoCacheSize(SceUID fd, SceSize cacheSize)
 		.mask = 8,
 	};
 
-	return ksceIoIoctl(fd, 0x1001, &argument, sizeof(argument), NULL, 0);
+	return sceIoIoctl(fd, 0x1001, &argument, sizeof(argument), NULL, 0);
 }
 
 int oalFileClose(SceUID fd)
 {
-	return ksceIoClose(fd);
+	return sceIoClose(fd);
 }
 
 int oalFileRemove(const char *path)
 {
 	SCE_DBG_ASSERT(path != NULL, 1043);
-	return ksceIoRemove(path);
+	return sceIoRemove(path);
 }
 
 int oalFileRename(const char *oldPath, const char *newPath)
 {
 	SCE_DBG_ASSERT(oldPath != NULL, 1054);
 	SCE_DBG_ASSERT(newPath != NULL, 1055);
-	return ksceIoRename(oldPath, newPath);
+	return sceIoRename(oldPath, newPath);
 }
 
 int oalFileRead(SceUID fd, void *buffer, SceSize size)
 {
 	SCE_DBG_ASSERT(buffer != NULL, 1066);
-	return ksceIoRead(fd, buffer, size);
+	return sceIoRead(fd, buffer, size);
 }
 
 int oalFileWrite(SceUID fd, const void *buffer, SceSize size)
 {
 	SCE_DBG_ASSERT(buffer != NULL, 1077);
-	return ksceIoWrite(fd, buffer, size);
+	return sceIoWrite(fd, buffer, size);
 }
 
 SceOff oalFileSeek(SceUID fd, SceOff offset, int whence)
 {
-	return ksceIoLseek(fd, offset, whence);
+	return sceIoLseek(fd, offset, whence);
 }
 
 int oalGetThreadStack(SceUID pid, SceUID threadId, uintptr_t *stackBase,
@@ -2089,14 +2087,14 @@ int oalEachFileInfo(SceUID pid,
 	int index, result;
 
 	SCE_DBG_ASSERT(callback != NULL && fds != NULL, 3102);
-	if (ksceIoGetPUIDFdListForDebugger(5, fds, capacity, &count) < 0 ||
+	if (sceIoGetPUIDFdListForDebugger(5, fds, capacity, &count) < 0 ||
 		(int)count <= 0)
 		return 0;
 	index = 0;
 	do {
 		if (fds->pid == pid) {
 			memset(&file, 0, sizeof(file));
-			if (ksceIoGetFileInfo(fds->fd, pid, &file) >= 0) {
+			if (SceIofilemgrForDriver_A1EF2648(fds->fd, pid, &file) >= 0) {
 				fd = fds->fd;
 				memset(&info, 0, sizeof(info));
 				info.fd = fd;

@@ -6,8 +6,7 @@
  * mount point. Every file system call runs under a process ID and permission
  * set for the host, elevated for a title's sce_sys files.
  */
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <stdio.h>
@@ -248,11 +247,11 @@ static int rdrfpUpdateVDTreeOfApp(void)
 	SceUID fd;
 	int ret;
 
-	fd = ksceIoDopen("ux0:app");
+	fd = sceIoDopen("ux0:app");
 	if (fd < 0)
 		return fd;
 	memset(&dirent, 0, sizeof(dirent));
-	while ((ret = ksceIoDread(fd, &dirent)) > 0) {
+	while ((ret = sceIoDread(fd, &dirent)) > 0) {
 		title = rdrfpFindVDEntry(rdrfpRoots[0].titles, dirent.d_name);
 		if (title == NULL) {
 			title = rdrfpAddVDEntry(rdrfpRoots[0].titles, dirent.d_name);
@@ -269,7 +268,7 @@ failed:
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 495,
 				     "sceIoDread failed (0x%x), or creating title entry failed\n", ret);
 	}
-	ksceIoDclose(fd);
+	sceIoDclose(fd);
 	return ret;
 }
 
@@ -289,16 +288,16 @@ static int rdrfpUpdateVDTreeOfSavedata(int which)
 	} else {
 		__builtin_strcpy(dir, "grw0:savedata");
 	}
-	fd = ksceIoDopen(dir);
+	fd = sceIoDopen(dir);
 	if (fd < 0)
 		return fd;
 	path = rdrfpAlloc(RDRFP_PATH_BUF);
 	if (path == NULL) {
-		ksceIoDclose(fd);
+		sceIoDclose(fd);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
 	memset(&dirent, 0, sizeof(dirent));
-	while ((ret = ksceIoDread(fd, &dirent)) > 0) {
+	while ((ret = sceIoDread(fd, &dirent)) > 0) {
 		title = rdrfpFindVDEntry(rdrfpRoots[which].titles, dirent.d_name);
 		if (title == NULL) {
 			title = rdrfpAddVDEntry(rdrfpRoots[which].titles, dirent.d_name);
@@ -317,7 +316,7 @@ failed:
 				     "sceIoDread failed (0x%x), or creating title entry failed\n", ret);
 	}
 	rdrfpFree(path);
-	ksceIoDclose(fd);
+	sceIoDclose(fd);
 	return ret;
 }
 
@@ -545,13 +544,13 @@ int rdrfpGetstat(const char *path, SceSize len, SceIoStat *stat)
 	}
 	if (elevated) {
 		beginIo(&ctx, 1);
-		ret = ksceIoGetstat(p, stat);
+		ret = sceIoGetstat(p, stat);
 		endIo(&ctx);
 		if (ret == 0)
 			fixStatMode(stat);
 	} else {
 		beginIo(&ctx, 0);
-		ret = ksceIoGetstat(p, stat);
+		ret = sceIoGetstat(p, stat);
 		endIo(&ctx);
 	}
 out:
@@ -578,12 +577,12 @@ int rdrfpGetstatByFd(SceUInt32 fd, SceIoStat *stat)
 	}
 	if (!rdrfpFdIsElevated(f)) {
 		beginIo(&ctx, 0);
-		ret = ksceIoGetstatByFd(f->uid, stat);
+		ret = SceIofilemgrForDriver_462F059B(f->uid, stat);
 		endIo(&ctx);
 		return ret;
 	}
 	beginIo(&ctx, 1);
-	ret = ksceIoGetstatByFd(f->uid, stat);
+	ret = SceIofilemgrForDriver_462F059B(f->uid, stat);
 	endIo(&ctx);
 	if (ret != 0)
 		return ret;
@@ -613,7 +612,7 @@ int rdrfpChstat(const char *path, SceSize len, SceIoStat *stat, int bits)
 				beginIo(&ctx, elevated);
 				if (elevated)
 					fixChstatMode(stat);
-				ret = ksceIoChstat(p, stat, bits);
+				ret = sceIoChstat(p, stat, bits);
 				endIo(&ctx);
 			} else if (bits & SCE_CST_SIZE) {
 				ret = SCE_ERROR_ERRNO_EISDIR;
@@ -641,7 +640,7 @@ int rdrfpChstatByFd(SceUInt32 fd, SceIoStat *stat, int bits)
 	beginIo(&ctx, elevated);
 	if (elevated)
 		fixChstatMode(stat);
-	ret = ksceIoChstatByFd(f->uid, stat, bits);
+	ret = SceIofilemgrForDriver_DF57A75F(f->uid, stat, bits);
 	endIo(&ctx);
 	return ret;
 }
@@ -669,7 +668,7 @@ int rdrfpOpen(const char *path, SceSize len, int flags, SceIoMode mode, RdrfpFd 
 				p = realPath ? realPath : buf;
 				elevated = checkSavedataSceSysAccess(p) != 0;
 				beginIo(&ctx, elevated);
-				uid = ksceIoOpen(p, flags, mode);
+				uid = sceIoOpen(p, flags, mode);
 				endIo(&ctx);
 				ret = uid;
 				if (uid >= 0) {
@@ -702,7 +701,7 @@ int rdrfpClose(SceUInt32 fd)
 		return SCE_ERROR_ERRNO_EBADF;
 	beginIo(&ctx, 0);
 	if (f->entry == NULL)
-		ret = ksceIoClose(f->uid);
+		ret = sceIoClose(f->uid);
 	else
 		ret = rdrfpVDEntryDclose(f->entry);
 	endIo(&ctx);
@@ -724,7 +723,7 @@ int rdrfpRead(SceUInt32 fd, void *buf, SceSize size, SceOff offset)
 	if (f->entry)
 		return SCE_ERROR_ERRNO_EISDIR;
 	beginIo(&ctx, rdrfpFdIsElevated(f));
-	ret = ksceIoPread(f->uid, buf, size, offset);
+	ret = sceIoPread(f->uid, buf, size, offset);
 	endIo(&ctx);
 	return ret;
 }
@@ -741,7 +740,7 @@ int rdrfpWrite(SceUInt32 fd, const void *buf, SceSize size, SceOff offset)
 	if (f->entry)
 		return SCE_ERROR_ERRNO_EISDIR;
 	beginIo(&ctx, rdrfpFdIsElevated(f));
-	ret = ksceIoPwrite(f->uid, buf, size, offset);
+	ret = sceIoPwrite(f->uid, buf, size, offset);
 	endIo(&ctx);
 	return ret;
 }
@@ -778,7 +777,7 @@ int rdrfpDopen(const char *path, SceSize len, RdrfpFd **fd)
 			sceSysDir = checkSavedataSceSysAccess(realPath);
 		}
 		beginIo(&ctx, savedataDir || sceSysDir);
-		uid = ksceIoDopen(p);
+		uid = sceIoDopen(p);
 		endIo(&ctx);
 		if (uid < 0) {
 			ret = uid;
@@ -819,7 +818,7 @@ int rdrfpDclose(SceUInt32 fd)
 		return SCE_ERROR_ERRNO_EBADF;
 	beginIo(&ctx, 0);
 	if (f->entry == NULL)
-		ret = ksceIoDclose(f->uid);
+		ret = sceIoDclose(f->uid);
 	else
 		ret = rdrfpVDEntryDclose(f->entry);
 	endIo(&ctx);
@@ -849,7 +848,7 @@ int rdrfpDread(SceUInt32 fd, SceIoDirent *dirent)
 	}
 	for (;;) {
 		memset(dirent, 0, sizeof(*dirent));
-		ret = ksceIoDread(f->uid, dirent);
+		ret = sceIoDread(f->uid, dirent);
 		if (ret <= 0)
 			break;
 		if (rdrfpFdIsRootDir(f) &&
@@ -901,7 +900,7 @@ int rdrfpRmdir(const char *path, SceSize len)
 					elevated = checkSavedataSceSysAccess(realPath);
 				}
 				beginIo(&ctx, elevated);
-				ret = ksceIoRmdir(p);
+				ret = sceIoRmdir(p);
 				endIo(&ctx);
 			}
 		}
@@ -938,7 +937,7 @@ int rdrfpRemove(const char *path, SceSize len)
 					elevated = checkSavedataSceSysAccess(realPath);
 				}
 				beginIo(&ctx, elevated);
-				ret = ksceIoRemove(p);
+				ret = sceIoRemove(p);
 				endIo(&ctx);
 			}
 		}
@@ -1000,7 +999,7 @@ int rdrfpMkdir(const char *path, SceSize len, SceIoMode mode)
 					}
 					elevated = checkSavedataSceSysAccess(p);
 					beginIo(&ctx, elevated);
-					ret = ksceIoMkdir(p, mode);
+					ret = sceIoMkdir(p, mode);
 					endIo(&ctx);
 				}
 			}
@@ -1063,7 +1062,7 @@ int rdrfpRename(const char *oldPath, SceSize oldLen, const char *newPath, SceSiz
 				snprintf(tmp, RDRFP_PATH_BUF, "%s/%s", newReal, last + 1);
 				to = tmp;
 			}
-			ret = ksceIoRename(from, to);
+			ret = sceIoRename(from, to);
 			endIo(&ctx);
 			goto out;
 		}

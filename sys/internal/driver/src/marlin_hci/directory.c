@@ -2,7 +2,7 @@
 #include "buffer.h"
 #include "path.h"
 #include <kernel/error.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 
 unsigned int MarlinStringLength(const char *string);
 char *MarlinDuplicateString(void *allocator, const char *string);
@@ -29,11 +29,11 @@ int MarlinEnsureDirectory(const char *path)
 	} else {
 		MarlinCopyMemory(devicePath, path, length + 1);
 	}
-	if (ksceIoGetstat(devicePath, &status) == 0) {
+	if (sceIoGetstat(devicePath, &status) == 0) {
 		if ((((int)status.st_mode >> 12) & 1) == 0)
 			return -1;
 	} else {
-		index = ksceIoMkdir(devicePath, 0606);
+		index = sceIoMkdir(devicePath, 0606);
 		if (index < 0)
 			return -1;
 	}
@@ -156,7 +156,7 @@ int MarlinGetPathInfo(void *allocator, const char *path, MarlinPathInfo *info)
 		result = 3;
 		goto out;
 	}
-	status = ksceIoGetstat(path, &stat);
+	status = sceIoGetstat(path, &stat);
 	if (status < 0) {
 		if (status == SCE_ERROR_ERRNO_ENOENT ||
 		    status == SCE_ERROR_ERRNO_ENOTDIR)

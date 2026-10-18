@@ -4,8 +4,7 @@
  * (NP, communication, store, Trilithium) for this console.
  */
 
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/sysmem.h>
@@ -331,15 +330,15 @@ int utMgrWriteFile(const void *utoken)	/* name unknown */
 	SceUID fd;
 	int ret;
 
-	ret = ksceIoMkdir(UT_DIR, 0606);
+	ret = sceIoMkdir(UT_DIR, 0606);
 	if (ret != SCE_ERROR_ERRNO_EEXIST && ret < 0)
 		return ret;
-	fd = ksceIoOpen(UT_PATH, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 0606);
+	fd = sceIoOpen(UT_PATH, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 0606);
 	if (fd < 0)
 		return fd;
-	ret = ksceIoWrite(fd, utoken, UT_SIZE) == UT_SIZE ? 0 : SCE_ERROR_ERRNO_EIO;
+	ret = sceIoWrite(fd, utoken, UT_SIZE) == UT_SIZE ? 0 : SCE_ERROR_ERRNO_EIO;
 	if (fd != 0)
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	return ret;
 }
 
@@ -356,23 +355,23 @@ int utMgrReadFile(void *utoken, SceSize *size)	/* name unknown */
 	SceUID fd;
 	int ret;
 
-	fd = ksceIoOpen(UT_PATH, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(UT_PATH, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return SCE_ERROR_ERRNO_ENOENT;
-	end = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	end = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if (end < 0) {
 		ret = SCE_ERROR_ERRNO_EIO;
 	} else if (end != UT_SIZE) {
 		ret = SCE_SBL_ERROR_UT_BROKEN;
-	} else if (ksceIoLseek(fd, 0, SCE_SEEK_SET) < 0 ||
-		   ksceIoRead(fd, utoken, UT_SIZE) != UT_SIZE) {
+	} else if (sceIoLseek(fd, 0, SCE_SEEK_SET) < 0 ||
+		   sceIoRead(fd, utoken, UT_SIZE) != UT_SIZE) {
 		ret = SCE_ERROR_ERRNO_EIO;
 	} else {
 		*size = UT_SIZE;
 		ret = 0;
 	}
 	if (fd != 0)
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	return ret;
 }
 
@@ -458,7 +457,7 @@ int ksceSblUtMgrResetUtokenFile(void)
 	memset(utoken, 0, UT_SIZE);
 	ret = utMgrWriteFile(utoken);
 	if (ret == 0) {
-		ret = ksceIoRemove(UT_PATH);
+		ret = sceIoRemove(UT_PATH);
 		ret = ret < 0 ? ret : 0;
 	}
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, utoken);

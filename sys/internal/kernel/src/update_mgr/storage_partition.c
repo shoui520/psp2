@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include "update_internal.h"
 
 int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,
@@ -11,6 +11,6 @@ SceUID StorageUtileGetPartitionFd(uint32_t partition, uint8_t active)
 
 	result = StorageUtilGetPartitionPath(partition, active, path, sizeof(path));
 	if (!result)
-		result = ksceIoOpen(path, 0x4000003, 0);
+		result = sceIoOpen(path, 0x4000003, 0);
 	return result;
 }

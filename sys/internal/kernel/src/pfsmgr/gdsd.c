@@ -34,7 +34,7 @@ int pfsGdsdDevctl(ScePfsPmi *pmi, SceVfsMount *mnt, const char *dev, unsigned in
 			pfsAccessEnd(perm);
 			return SCE_ERROR_ERRNO_EINVAL;
 		}
-		ret = ksceVfsOpDevctl(lower, dev, cmd, arg, argLen, buf, bufLen);
+		ret = sceVfsOpDevctl(lower, dev, cmd, arg, argLen, buf, bufLen);
 		/* report at most 4 GiB */
 		if (ret >= 0 && cmd == PFS_DEVCTL_FREE_SPACE && *(SceUInt64 *)buf >> 32 != 0)
 			*(SceUInt64 *)buf = 0xffffffff;
@@ -95,7 +95,7 @@ int pfsGdsdDecodePathElem(ScePfsPmi *pmi, SceVfsMount *mnt, const char *path, co
 	ret = pfsAccessBegin(pmi, PFS_OP_DECODE_PATH_ELEM, 0, &perm);
 	if (ret != 0)
 		return ret;
-	ret = ksceVfsOpDecodePathElem(lower, path, path2, path3, buf, bufLen, decodeLen);
+	ret = SceIofilemgrForDriver_F7DAC0F5(lower, path, path2, path3, buf, bufLen, decodeLen);
 	pfsAccessEnd(perm);
 	return ret;
 }
@@ -137,7 +137,7 @@ int pfsGdsdSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp)
 	path.path = NULL;
 	memset(&stat, 0, sizeof(stat));
 	vfsLockVnode(lower);
-	ret = ksceVopGetstat(lower, &path, &stat);
+	ret = sceVopGetstat(lower, &path, &stat);
 	vfsUnlockVnode(lower);
 	if (ret < 0)
 		vp->core.size = PFS_ATTR_DIR;
@@ -362,7 +362,7 @@ int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, con
 		} else {
 			lower = vd->lowerVp;
 			vfsLockVnode(lower);
-			ret = ksceVopIoctl(lower, fi->lower.file, cmd, in, inLen, out, outLen);
+			ret = sceVopIoctl(lower, fi->lower.file, cmd, in, inLen, out, outLen);
 			vfsUnlockVnode(lower);
 		}
 	}
@@ -545,7 +545,7 @@ int pfsGdsdGetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat 
 			goto out;
 	}
 	vfsLockVnode(lower);
-	ret = ksceVopGetstat(lower, path, stat);
+	ret = sceVopGetstat(lower, path, stat);
 	vfsUnlockVnode(lower);
 	if (ret >= 0 && !pfsIsRoot(vp) && pfsAttrToMode(attr, &mode) == 0) {
 		stat->st_attr = attr;
@@ -582,7 +582,7 @@ int pfsGdsdFgetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat
 			return SCE_ERROR_ERRNO_EBADFD;
 		}
 		vfsLockVnode(lower);
-		ret = ksceVopFgetstat(lower, fi->lower.file, stat);
+		ret = sceVopFgetstat(lower, fi->lower.file, stat);
 		vfsUnlockVnode(lower);
 		if (ret >= 0 && !pfsIsRoot(vp)) {
 			stat->st_attr = (SceUInt16)vp->core.acl_data[0];
@@ -662,7 +662,7 @@ int pfsGdsdChstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *
 		bit &= ~(SCE_CST_MODE | SCE_CST_SIZE);
 	}
 	vfsLockVnode(lower);
-	ret = ksceVopChstat(lower, path, stat, bit);
+	ret = sceVopChstat(lower, path, stat, bit);
 	vfsUnlockVnode(lower);
 out:
 	pfsAccessEnd(perm);
@@ -734,7 +734,7 @@ int pfsGdsdFchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat 
 		bit &= ~(SCE_CST_MODE | SCE_CST_SIZE);
 	}
 	vfsLockVnode(lower);
-	ret = ksceVopFchstat(lower, fi->lower.file, stat, bit);
+	ret = sceVopFchstat(lower, fi->lower.file, stat, bit);
 	vfsUnlockVnode(lower);
 out:
 	pfsAccessEnd(perm);

@@ -62,10 +62,10 @@ set(MODULE_IMPORT_FUNCS
 	SceDipswForDriver_A98FC2FD
 	SceCpuForDriver_364E68A4
 	SceDebugForDriver_391B74B7
-	ksceIoRemove
-	ksceIoWrite
-	ksceIoOpen
-	ksceIoClose
+	sceIoRemove
+	sceIoWrite
+	sceIoOpen
+	sceIoClose
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_F4B98F66
 	SceQafMgrForDriver_382C71E8

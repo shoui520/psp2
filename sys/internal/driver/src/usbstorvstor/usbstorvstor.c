@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <psp2kern/udcd.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -192,7 +192,7 @@ static int transferThread(SceSize size, void *args)
 						 s.transferSize, TRANSFER_TIMEOUT);
 				sceKernelSetEventFlag(s.eventFlag, EVF_SENT);
 			} else if (bits & EVF_WRITE) {
-				s.transferResult = ksceIoWrite(s.fd, s.transfer, s.transferSize);
+				s.transferResult = sceIoWrite(s.fd, s.transfer, s.transferSize);
 				sceKernelSetEventFlag(s.eventFlag, EVF_WRITTEN);
 			}
 		}
@@ -203,7 +203,7 @@ static int closeImage(void)
 {
 	sceKernelSetEventFlag(s.eventFlag, EVF_CLOSE);
 	if (s.fd >= 0)
-		ksceIoClose(s.fd);
+		sceIoClose(s.fd);
 	s.fd = -1;
 	s.blocks = 0;
 	if (s.dataBlock >= 0) {
@@ -268,27 +268,27 @@ static int openImage(void)
 	result = VSTOR_ERROR_PATH;
 	if (s.type == USBSTOR_TYPE_DISK) {
 		permission = sceKernelSetThreadAccessLevel(0x40);
-		s.fd = ksceIoOpen(s.path, SCE_O_RDWR, SCE_S_IWSYS | SCE_S_IRSYS);
-		length = ksceIoLseek(s.fd, 0, SCE_SEEK_SET);
-		if (length >= 0 && ksceIoRead(s.fd, image.sector, sizeof(image.sector)) >= 0 &&
+		s.fd = sceIoOpen(s.path, SCE_O_RDWR, SCE_S_IWSYS | SCE_S_IRSYS);
+		length = sceIoLseek(s.fd, 0, SCE_SEEK_SET);
+		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.sector)) >= 0 &&
 		    be16(image.fat.signature) == FAT_SIGNATURE && image.fat.totalSectors &&
 		    image.fat.bytesPerSector == 512) {
 			s.blocks = image.fat.totalSectors;
 			s.blockSize = image.fat.bytesPerSector;
-			length = ksceIoLseek(s.fd, 0, SCE_SEEK_END);
+			length = sceIoLseek(s.fd, 0, SCE_SEEK_END);
 			if (length >= 0)
 				result = 0;
 		}
 		sceKernelSetThreadAccessLevel(permission);
 	} else if (s.type == USBSTOR_TYPE_CDROM) {
-		s.fd = ksceIoOpen(s.path, SCE_O_RDONLY, SCE_S_IRSYS);
-		length = ksceIoLseek(s.fd, ISO_VD_OFFSET, SCE_SEEK_SET);
-		if (length >= 0 && ksceIoRead(s.fd, image.sector, sizeof(image.iso)) >= 0 &&
+		s.fd = sceIoOpen(s.path, SCE_O_RDONLY, SCE_S_IRSYS);
+		length = sceIoLseek(s.fd, ISO_VD_OFFSET, SCE_SEEK_SET);
+		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.iso)) >= 0 &&
 		    image.iso.type == ISO_VD_PRIMARY && strncmp(image.iso.identifier, "CD001", 5) == 0) {
 			s.blockSize = image.iso.logicalBlockSize;
 			s.blocks = 0x2e7;		/* fixed by the original */
 			if (s.blockSize == 2048) {
-				length = ksceIoLseek(s.fd, 0, SCE_SEEK_END);
+				length = sceIoLseek(s.fd, 0, SCE_SEEK_END);
 				if (length >= 0)
 					result = 0;
 			}
@@ -341,7 +341,7 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 	if (!count)
 		return USBSTOR_COMMAND_DONE;
 	s.driver.busy = 1;
-	if (ksceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0) {
 		setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_NO_SEEK_COMPLETE);
 		goto done;
 	}
@@ -350,7 +350,7 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 		n = count < limit ? count : limit;
 		bytes = n * s.blockSize;
 		result = write ? SceUsbstorForDriver_F1A690DC(s.buffers[index], bytes, TRANSFER_TIMEOUT) :
-				 ksceIoRead(s.fd, s.buffers[index], bytes);
+				 sceIoRead(s.fd, s.buffers[index], bytes);
 		if (result < 0) {
 			if (s.pending && sceKernelWaitEventFlag(s.eventFlag, completion,
 								 SCE_KERNEL_EVF_WAITMODE_OR |
@@ -591,7 +591,7 @@ static int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int writ
 	if (!count)
 		return USBSTOR_COMMAND_DONE;
 	s.driver.busy = 1;
-	if (ksceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0) {
 		setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_NO_SEEK_COMPLETE);
 		goto done;
 	}
@@ -603,16 +603,16 @@ static int verifyBlocks(const uint8_t *cdb, struct UsbstorSense *sense, int writ
 				goto done;
 		}
 		if (write) {
-			if (ksceIoWrite(s.fd, s.buffers[0], bytes) < 0) {
+			if (sceIoWrite(s.fd, s.buffers[0], bytes) < 0) {
 				setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_WRITE_FAULT);
 				goto done;
 			}
-			if (ksceIoLseek(s.fd, -(int64_t)(int)bytes, SCE_SEEK_CUR) < 0) {
+			if (sceIoLseek(s.fd, -(int64_t)(int)bytes, SCE_SEEK_CUR) < 0) {
 				setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_NO_SEEK_COMPLETE);
 				goto done;
 			}
 		}
-		if (ksceIoRead(s.fd, s.buffers[1], bytes) < 0) {
+		if (sceIoRead(s.fd, s.buffers[1], bytes) < 0) {
 			setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_UNRECOVERED_READ_ERROR);
 			goto done;
 		}
@@ -742,7 +742,7 @@ static int command(int unit, const uint8_t *cdb, struct UsbstorSense *sense)
 			return setSense(sense, SCSI_KEY_HARDWARE_ERROR, SCSI_ASC_INTERNAL_FAILURE);
 		if (block >= s.blocks)
 			return setSense(sense, SCSI_KEY_ILLEGAL_REQUEST, SCSI_ASC_LBA_OUT_OF_RANGE);
-		return ksceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0 ?
+		return sceIoLseek(s.fd, (uint64_t)block * s.blockSize, SCE_SEEK_SET) < 0 ?
 			setSense(sense, SCSI_KEY_MEDIUM_ERROR, SCSI_ASC_NO_SEEK_COMPLETE) : 0;
 	case SCSI_WRITE_AND_VERIFY_10:
 		if (s.type != USBSTOR_TYPE_DISK)

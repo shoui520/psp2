@@ -101,15 +101,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67
 	SceProcessmgrForDriver_02179E12
-	ksceIoRemove
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoMkdir
-	ksceIoRename
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoMkdir
+	sceIoRename
+	sceIoRead
+	sceIoClose
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_6D88EF8A

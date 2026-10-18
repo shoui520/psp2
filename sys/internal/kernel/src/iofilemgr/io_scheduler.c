@@ -98,7 +98,7 @@ invalid:
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int ksceIoSetProcessDefaultPriorityForSystem(SceInt32 priority)
+int SceIofilemgrForDriver_ABE65071(SceInt32 priority)
 {
 	return sceIoSetProcessDefaultPriorityInternal(priority, 1);
 }
@@ -143,7 +143,7 @@ SceInt32 sceIoGetProcessDefaultPriorityInternal(int fromKernel)
 	return priority;
 }
 
-SceInt32 ksceIoGetProcessDefaultPriorityForSystem(void)
+SceInt32 SceIofilemgrForDriver_CE397158(void)
 {
 	return sceIoGetProcessDefaultPriorityInternal(1);
 }
@@ -196,7 +196,7 @@ invalid:
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int ksceIoSetThreadDefaultPriorityForSystem(SceInt32 priority)
+int SceIofilemgrForDriver_3F0FF9D5(SceInt32 priority)
 {
 	return sceIoSetThreadDefaultPriorityInternal(priority, 1);
 }
@@ -245,7 +245,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 	return priority;
 }
 
-SceInt32 ksceIoGetThreadDefaultPriorityForSystem(void)
+SceInt32 SceIofilemgrForDriver_6D0FEDB6(void)
 {
 	return sceIoGetThreadDefaultPriorityInternal(1);
 }
@@ -950,7 +950,7 @@ int sceIoSchedulerDread(SceUID fd, SceIoDirent *dir, const IofilemgrSchedInfo *i
 	return ret;
 }
 
-/* name unknown: sceIoSchedulerDread for ksceIoDreadForVshbridge */
+/* name unknown: sceIoSchedulerDread for sceIoDreadForVshbridge */
 int sceIoSchedulerDreadForVsh(SceUID fd, SceIoDirent *dir, const IofilemgrSchedInfo *info)
 {
 	IoRequest *req;
@@ -1070,7 +1070,7 @@ int sceIoSchedulerChstatByFd(SceUID fd, SceIoStat *stat, int bits,
 	return ret;
 }
 
-/* name unknown: sceIoSchedulerChstat for ksceIoChstatForVshbridge */
+/* name unknown: sceIoSchedulerChstat for sceIoChstatForVshbridge */
 int sceIoSchedulerChstatForVsh(const char *file, SceIoStat *stat, int bits, int mntOpt)
 {
 	IoRequest *req;
@@ -1090,7 +1090,7 @@ int sceIoSchedulerChstatForVsh(const char *file, SceIoStat *stat, int bits, int 
 	return ret;
 }
 
-/* name unknown: sceIoSchedulerGetstat for ksceIoGetstatForVshbridge */
+/* name unknown: sceIoSchedulerGetstat for sceIoGetstatForVshbridge */
 int sceIoSchedulerGetstatForVsh(const char *file, SceIoStat *stat, int mntOpt)
 {
 	IoRequest *req;

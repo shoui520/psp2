@@ -3,13 +3,13 @@
  * onto the kernel's IO manager.
  */
 
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include "fios2_internal.h"
 
 int sceFiosKernelPlatformGetstat(const char *path, SceIoStat *stat)
 {
-	return ksceIoGetstat(path, stat);
+	return sceIoGetstat(path, stat);
 }
 
 void *sceFiosKernelPlatformOpen(void)
@@ -23,7 +23,7 @@ void sceFiosKernelPlatformClose(void *platform)
 
 int sceFiosKernelPlatformDopen(SceUID *fd, const char *path, void *platform)
 {
-	SceUID ret = ksceIoDopen(path);
+	SceUID ret = sceIoDopen(path);
 
 	if (ret >= 0) {
 		*fd = ret;
@@ -39,7 +39,7 @@ int sceFiosKernelPlatformDread(SceUID fd, SceIoDirent *dirent, void *platform)
 
 	memset(dirent, 0, sizeof(*dirent));
 	do {
-		ret = ksceIoDread(fd, dirent);
+		ret = sceIoDread(fd, dirent);
 		if (ret <= 0)
 			return ret;
 	} while (*(short *)dirent->d_name == '.' ||
@@ -49,7 +49,7 @@ int sceFiosKernelPlatformDread(SceUID fd, SceIoDirent *dirent, void *platform)
 
 int sceFiosKernelPlatformDclose(SceUID fd)
 {
-	return ksceIoDclose(fd);
+	return sceIoDclose(fd);
 }
 
 /* nanoseconds since the Unix epoch, 0 when time cannot be converted */

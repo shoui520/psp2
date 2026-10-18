@@ -5,9 +5,7 @@
  * and kept in tm0:activate (act.dat, actsig.dat) and in the NVS.
  */
 
-#include <psp2kern/io/dirent.h>
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/kernel/kbl/kbl.h>
 #include <psp2kern/kernel/rtc.h>
@@ -161,12 +159,12 @@ int licMgrReadFile(const char *path, void *data, SceSize size)	/* name unknown *
 {
 	SceUID fd;
 
-	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		return fd;
-	if (ksceIoRead(fd, data, size) != size)
+	if (sceIoRead(fd, data, size) != size)
 		return SCE_ERROR_ERRNO_EIO;
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return 0;
 }
 
@@ -271,15 +269,15 @@ int licMgrWriteFile(const char *path, const void *data, SceSize size)	/* name un
 	SceUID fd;
 	int ret;
 
-	ret = ksceIoMkdir(ACT_DIR, 0606);
+	ret = sceIoMkdir(ACT_DIR, 0606);
 	if (ret != SCE_ERROR_ERRNO_EEXIST && ret < 0)
 		return ret;
-	fd = ksceIoOpen(path, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 0606);
+	fd = sceIoOpen(path, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 0606);
 	if (fd < 0)
 		return fd;
-	ret = ksceIoWrite(fd, data, size) == size ? 0 : SCE_ERROR_ERRNO_EIO;
+	ret = sceIoWrite(fd, data, size) == size ? 0 : SCE_ERROR_ERRNO_EIO;
 	if (fd != 0)
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	return ret;
 }
 
@@ -432,20 +430,20 @@ int licMgrFindCodeFile(const char *dir, char *path, SceSize size)	/* name unknow
 	SceSize len;
 	char *afv, *dot;
 
-	dfd = ksceIoDopen(dir);
+	dfd = sceIoDopen(dir);
 	if (dfd < 0)
 		return SCE_SBL_ERROR_LIC_NOT_FOUND;
 	do {
 		do {
-			if (ksceIoDread(dfd, &dirent) <= 0) {
-				ksceIoDclose(dfd);
+			if (sceIoDread(dfd, &dirent) <= 0) {
+				sceIoDclose(dfd);
 				return SCE_SBL_ERROR_LIC_NOT_FOUND;
 			}
 		} while (strnlen(dirent.d_name, sizeof(dirent.d_name)) >= sizeof(dirent.d_name));
 		afv = strstr(dirent.d_name, ".afv");
 		dot = strrchr(dirent.d_name, '.');
 	} while (afv == NULL || dot == NULL || afv != dot);
-	ksceIoDclose(dfd);
+	sceIoDclose(dfd);
 
 	len = strnlen(dirent.d_name, sizeof(dirent.d_name));
 	if (len >= size || len + strnlen(dir, size) >= size)
@@ -764,7 +762,7 @@ SceSSize licMgrReadAll(SceUID fd, void *data, SceSize size)	/* name unknown */
 	int n;
 
 	for (done = 0; done < size; ) {
-		n = ksceIoRead(fd, (char *)data + done, size - done);
+		n = sceIoRead(fd, (char *)data + done, size - done);
 		done += n;
 		if (n <= 0 && n != SCE_ERROR_ERRNO_EAGAIN)
 			return SCE_ERROR_ERRNO_EIO;
@@ -843,12 +841,12 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 	ret = ksceSblAimgrGetOpenPsId(&openPsId);
 	if (ret != 0)
 		return ret;
-	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 		goto out;
 	}
-	size = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	size = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if (size < 0 || size >= ACT_FILE_SIZE_MAX) {
 		ret = SCE_ERROR_ERRNO_EIO;
 		goto out;
@@ -857,7 +855,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 		ret = SCE_SBL_ERROR_LIC_INVALID_FILE;
 		goto out;
 	}
-	if (ksceIoLseek(fd, 0, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(fd, 0, SCE_SEEK_SET) < 0) {
 		ret = SCE_ERROR_ERRNO_EIO;
 		goto out;
 	}
@@ -911,7 +909,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, buf);
 
 	/* the codes, ACT_CODES_PER_READ at a time */
-	if (ksceIoLseek(fd, headerSize, SCE_SEEK_SET) < 0) {
+	if (sceIoLseek(fd, headerSize, SCE_SEEK_SET) < 0) {
 		ret = SCE_ERROR_ERRNO_EIO;
 		goto out;
 	}
@@ -955,7 +953,7 @@ extra:
 	ret = 0;
 	if (extraSize != 0) {
 		len = value * codeSize + headerSize;
-		if (ksceIoLseek(fd, extraSize * (found - 1) + len, SCE_SEEK_SET) < 0) {
+		if (sceIoLseek(fd, extraSize * (found - 1) + len, SCE_SEEK_SET) < 0) {
 			ret = SCE_ERROR_ERRNO_EIO;
 		} else {
 			extraSize -= g_licMgrNewlineSize;
@@ -971,7 +969,7 @@ free:
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, buf);
 out:
 	if (fd > 0)
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	return ret;
 
 bad_header:

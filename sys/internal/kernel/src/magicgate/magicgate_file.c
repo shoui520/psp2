@@ -1,8 +1,6 @@
 /* Descriptive file name: the original has no source-file debug records. */
 #include "magicgate_private.h"
-#include <psp2kern/io/dirent.h>
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/mutex.h>
 #include <psp2kern/kernel/ssmgr.h>
@@ -50,17 +48,17 @@ int recoverFileGroups(void)
 			magicGateFilePath[24] = group % 100 % 10 + '0';
 			magicGateFilePath[25] = index / 10 + '0';
 			magicGateFilePath[26] = index % 10 + '0';
-			fd = ksceIoOpen(magicGateFilePath, 0x04000001, 0);
+			fd = sceIoOpen(magicGateFilePath, 0x04000001, 0);
 			if (fd < 0) {
 				if (fd != (int)0x80010002)
 					goto nextGroup;
 			} else {
-				if (ksceIoRead(fd, &magicGateFileService.record,
+				if (sceIoRead(fd, &magicGateFileService.record,
 					       sizeof(magicGateFileService.record)) < 0)
 					goto nextGroup;
-				if (ksceIoGetstatByFd(fd, &stat) < 0)
+				if (SceIofilemgrForDriver_462F059B(fd, &stat) < 0)
 					memset(&stat, 0, sizeof(stat));
-				ksceIoClose(fd);
+				sceIoClose(fd);
 				memset(iv, group, sizeof(iv));
 				if (decryptRecordCbc(&magicGateFileService.key,
 						     &magicGateFileService.record,
@@ -135,7 +133,7 @@ int deleteFileGroup(int group)
 	magicGateFilePath[24] = fileGroup % 100 % 10 + '0'; \
 	magicGateFilePath[25] = (recordIndex) / 10 + '0'; \
 	magicGateFilePath[26] = (recordIndex) % 10 + '0'; \
-	ksceIoRemove(magicGateFilePath); \
+	sceIoRemove(magicGateFilePath); \
 } while (0)
 	do {
 		REMOVE_RECORD(index);
@@ -184,18 +182,18 @@ int readFileRecord(MagicGateFileRequest *request)
 	magicGateFilePath[26] = fileIndex % 10 + '0';
 	magicGateFilePath[23] = fileGroup % 100 / 10 + '0';
 	magicGateFilePath[24] = fileGroup % 100 % 10 + '0';
-	fd = ksceIoOpen(magicGateFilePath, 0x04000001, 0);
+	fd = sceIoOpen(magicGateFilePath, 0x04000001, 0);
 	if (fd < 0) {
 		result = fd;
 		if (result == (int)0x80010002)
 			goto emptyRecord;
 		goto ioError;
 	}
-	result = ksceIoRead(fd, &magicGateFileService.record,
+	result = sceIoRead(fd, &magicGateFileService.record,
 			    sizeof(magicGateFileService.record));
 	if (result < 0)
 		goto ioError;
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	if (result != sizeof(magicGateFileService.record)) {
 emptyRecord:
 		record->index = 0;
@@ -274,12 +272,12 @@ int writeFileRecord(MagicGateFileRequest *request)
 	magicGateFilePath[26] = fileIndex % 10 + '0';
 	magicGateFilePath[23] = fileGroup % 100 / 10 + '0';
 	magicGateFilePath[24] = fileGroup % 100 % 10 + '0';
-	fd = ksceIoOpen(magicGateFilePath, 0x04000203, 6);
+	fd = sceIoOpen(magicGateFilePath, 0x04000203, 6);
 	if (fd < 0) {
 		result = fd;
 		goto ioError;
 	}
-	result = ksceIoRead(fd, &magicGateFileService.record,
+	result = sceIoRead(fd, &magicGateFileService.record,
 			    sizeof(magicGateFileService.record));
 	if (result < 0)
 		goto ioErrorClose;
@@ -323,19 +321,19 @@ int writeFileRecord(MagicGateFileRequest *request)
 				  sizeof(magicGateFileService.record), iv[1]);
 	if (result < 0)
 		goto close;
-	position = ksceIoLseek(fd, 0, 0);
+	position = sceIoLseek(fd, 0, 0);
 	if (position < 0) {
 		result = (int)position;
 		if (!result)
 			goto close;
 		goto ioErrorClose;
 	}
-	result = ksceIoWrite(fd, &magicGateFileService.record,
+	result = sceIoWrite(fd, &magicGateFileService.record,
 			     sizeof(magicGateFileService.record));
 	if (result < 0)
 		goto ioErrorClose;
 	if (result == sizeof(magicGateFileService.record)) {
-		if (ksceIoGetstatByFd(fd, &stat) >= 0 &&
+		if (SceIofilemgrForDriver_462F059B(fd, &stat) >= 0 &&
 		    SceRtcForDriver_F139E359(&stat.st_mtime, &tick) >= 0)
 			magicGateFileService.groups[group].modificationTick = tick.tick;
 		result = 0;
@@ -351,7 +349,7 @@ ioErrorClose:
 	else
 		result &= result >> 31;
 close:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	goto unlock;
 ioError:
 	if (result == (int)0x80010009)
@@ -407,7 +405,7 @@ int SceMagicGateForDriver_3EDD73EB(int handle, int index)
 	magicGateFilePath[24] = group % 100 % 10 + '0'; \
 	magicGateFilePath[25] = fileIndex / 10 + '0'; \
 	magicGateFilePath[26] = fileIndex % 10 + '0'; \
-	ksceIoRemove(magicGateFilePath); \
+	sceIoRemove(magicGateFilePath); \
 } while (0)
 	for (group = 0; group != 4; ++group) {
 		first = index;
@@ -518,26 +516,26 @@ int SceMagicGateForDriver_30DF2E82(void)
 		magicGateFileService.mutex = result;
 	}
 	SceMagicGateForDriver_492EE950();
-	result = ksceIoDopen("tm0:");
+	result = sceIoDopen("tm0:");
 	if (result < 0) {
 		if (result == (int)0x80010002)
 			result = 0x80505001;
 		goto failed;
 	}
-	ksceIoDclose(result);
-	result = ksceIoGetstat("tm0:/drm/magicgate", &stat);
+	sceIoDclose(result);
+	result = sceIoGetstat("tm0:/drm/magicgate", &stat);
 	if (result < 0) {
 		if (result != (int)0x80010002)
 			goto ioFailed;
 		goto createDirectory;
 	}
 	if ((stat.st_mode & 0xf000) != 0x1000) {
-		result = ksceIoRemove("tm0:/drm/magicgate");
+		result = sceIoRemove("tm0:/drm/magicgate");
 		if (result < 0)
 			goto ioFailed;
 createDirectory:
-		ksceIoMkdir("tm0:/drm", 6);
-		result = ksceIoMkdir("tm0:/drm/magicgate", 6);
+		sceIoMkdir("tm0:/drm", 6);
+		result = sceIoMkdir("tm0:/drm/magicgate", 6);
 		if (result < 0)
 			goto ioFailed;
 	}

@@ -1,7 +1,6 @@
 /* Parameter-file loading, serialization and parsed-context ownership. */
 
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include "param_sfo.h"
 
@@ -95,14 +94,14 @@ int appmgrLoadSfoFile(const char *path, AppmgrSfoFile *file)
 
 	__builtin_memset(file, 0, sizeof(*file));
 	file->buffer = NULL;
-	result = ksceIoGetstat(path, &stat);
+	result = sceIoGetstat(path, &stat);
 	if (result < 0)
 		goto fail;
 	if (stat.st_size > 0x8000) {
 		result = (int)0x80800032;
 		goto fail;
 	}
-	fd = ksceIoOpen(path, 0x10001, 0);
+	fd = sceIoOpen(path, 0x10001, 0);
 	if (fd < 0) {
 		result = fd;
 		goto fail;
@@ -112,7 +111,7 @@ int appmgrLoadSfoFile(const char *path, AppmgrSfoFile *file)
 		result = (int)0x80800032;
 		goto fail;
 	}
-	result = ksceIoRead(fd, file->buffer, stat.st_size);
+	result = sceIoRead(fd, file->buffer, stat.st_size);
 	if (result < 0)
 		goto fail;
 	if ((SceOff)result != stat.st_size) {
@@ -120,7 +119,7 @@ int appmgrLoadSfoFile(const char *path, AppmgrSfoFile *file)
 		goto fail;
 	}
 	length = result;
-	result = ksceIoClose(fd);
+	result = sceIoClose(fd);
 	if (result != 0)
 		goto fail;
 	file->size = length;
@@ -131,7 +130,7 @@ fail:
 		file->buffer = NULL;
 	}
 	if (fd > 0)
-		ksceIoClose(fd);
+		sceIoClose(fd);
 	return result;
 }
 

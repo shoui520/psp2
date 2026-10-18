@@ -290,7 +290,7 @@ int pfsCoreUpdateSize(ScePfsPmi *pmi, SceVfsVnode *vp)
 	path.path = NULL;
 	memset(&stat, 0, sizeof(stat));
 	vfsLockVnode(lowerVp);
-	ret = ksceVopGetstat(lowerVp, &path, &stat);
+	ret = sceVopGetstat(lowerVp, &path, &stat);
 	vfsUnlockVnode(lowerVp);
 	if (ret < 0 || vp->core.size == (SceUInt64)stat.st_size)
 		return ret;
@@ -379,7 +379,7 @@ int pfsCoreMount(ScePfsPmi *pmi, ScePfsNode *root)
 	ScePfsNode node, dir;
 	int ret, createdSceDir, createdDb;
 
-	ret = ksceVfsOpDevctl(root->vp->core.mnt, root->vp->core.mnt->mnt_data->assign_name,
+	ret = sceVfsOpDevctl(root->vp->core.mnt, root->vp->core.mnt->mnt_data->assign_name,
 			      0x3001, NULL, 0, devInfo, sizeof(devInfo));
 	if (ret == 0)
 		pmi->clusterSize = devInfo[4];
@@ -1353,7 +1353,7 @@ int pfsCoreDopen(ScePfsFi *fi, ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path
 	if (fd < 0)
 		return fd;
 	vfsLockVnode(lowerVp);
-	ret = ksceVopDopen(lowerVp, path, file);
+	ret = sceVopDopen(lowerVp, path, file);
 	vfsUnlockVnode(lowerVp);
 	if (ret != 0) {
 		vfsLockVnode(lowerVp);
@@ -1380,7 +1380,7 @@ int pfsCoreDread(ScePfsFi *fi, ScePfsPmi *pmi, SceIoDirent *dir, int a3)
 	do {
 		for (;;) {
 			vfsLockVnode(fi->lower.vp);
-			count = ksceVopDread(fi->lower.vp, fi->lower.file, dir);
+			count = sceVopDread(fi->lower.vp, fi->lower.file, dir);
 			vfsUnlockVnode(fi->lower.vp);
 			if (count <= 0)
 				return count;
@@ -1413,11 +1413,11 @@ int pfsCoreDclose(ScePfsFi *fi, ScePfsPmi *pmi)
 
 	if (pmi->flags & PFS_PMI_NOT_MOUNTED) {
 		vfsLockVnode(fi->lower.vp);
-		ksceVopDclose(fi->lower.vp, fi->lower.file);
+		sceVopDclose(fi->lower.vp, fi->lower.file);
 		vfsUnlockVnode(fi->lower.vp);
 	} else {
 		vfsLockVnode(fi->lower.vp);
-		ret = ksceVopDclose(fi->lower.vp, fi->lower.file);
+		ret = sceVopDclose(fi->lower.vp, fi->lower.file);
 		vfsUnlockVnode(fi->lower.vp);
 		if (ret != 0)
 			return ret;
@@ -1489,7 +1489,7 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 	pfsVnodeDiskSize(pmi, dvp, &oldDisk);
 	vfsLockVnode(lowerDvp);
 	vfsLockVnode(lowerVp);
-	ret = ksceVopWhiteout(lowerDvp, lowerVp, oldPath, newPath, a4, a5);
+	ret = sceVopWhiteout(lowerDvp, lowerVp, oldPath, newPath, a4, a5);
 	vfsUnlockVnode(lowerVp);
 	vfsUnlockVnode(lowerDvp);
 	if (ret != 0)
@@ -1514,7 +1514,7 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 				icvNew.name_length = strnlen(newName, sizeof(newName) - 1);
 				vfsLockVnode(pmi->icvDirVp);
 				vfsLockVnode(vd->icvVp);
-				ret = ksceVopWhiteout(pmi->icvDirVp, vd->icvVp, &icvOld, &icvNew, a4,
+				ret = sceVopWhiteout(pmi->icvDirVp, vd->icvVp, &icvOld, &icvNew, a4,
 						      a5);
 				vfsUnlockVnode(vd->icvVp);
 				vfsUnlockVnode(pmi->icvDirVp);

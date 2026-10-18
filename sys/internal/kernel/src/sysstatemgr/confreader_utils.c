@@ -173,7 +173,7 @@ static int ConfNever(void)
 static int ConfHasUd0(void)
 {
 	SceIoStat stat;
-	return ksceIoGetstat("ud0:", &stat) == 0;
+	return sceIoGetstat("ud0:", &stat) == 0;
 }
 static int ConfDevelopment(void)
 {

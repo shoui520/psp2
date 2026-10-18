@@ -142,7 +142,7 @@ static inline int _exfatfs_cleanup_device_file_buffer(SceExfatfsDrive *drive)
 {
 	SceVfsVnode *vp = drive->deviceInfo.device_vnode;
 	SceVfsFile *file = drive->deviceInfo.device_file;
-	int result = ksceVopSync(vp, file, 2);
+	int result = sceVopSync(vp, file, 2);
 
 	if (result) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 135,
@@ -151,7 +151,7 @@ static inline int _exfatfs_cleanup_device_file_buffer(SceExfatfsDrive *drive)
 			drive->deviceInfo.mount_misc->assign_name, vp, file, result);
 		vp = drive->deviceInfo.device_vnode;
 		file = drive->deviceInfo.device_file;
-		result = ksceVopCleanup(vp, file, 0, 0);
+		result = sceVopCleanup(vp, file, 0, 0);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 115, "_exfatfs_force_invalidate_device_file_buffer",
 				"%s: drive[%p], assignName(%s), vp[%p], file[%p], sceVopCleanup failed[%#x]\n",
@@ -179,18 +179,18 @@ static inline int _exfatfs_write_device_file(SceExfatfsDrive *drive, const void 
 
 	SCE_DBG_ASSERT(vp->core.ops != 0, 268);
 	if (vp->core.ops->vop_pwrite) {
-		result = ksceVopPwrite(vp, file, buffer, size, offset, writeSize);
+		result = sceVopPwrite(vp, file, buffer, size, offset, writeSize);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 308, "%s: vop_pwrite failed[%#x]\n",
 				"_exfatfs_write_device_file", result);
 	} else if (vp->core.ops->vop_lseek && vp->core.ops->vop_write) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 312, "%s: use vop_lseek and vop_write\n", "_exfatfs_write_device_file");
-		newoff = ksceVopLseek(vp, file, offset, 0);
+		newoff = sceVopLseek(vp, file, offset, 0);
 		result = newoff;
 		if (newoff < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 325, "%s: vop_lseek failed[%#llx]\n", "_exfatfs_write_device_file", newoff);
 		} else if (newoff == offset) {
-			result = ksceVopWrite(vp, file, buffer, size, writeSize);
+			result = sceVopWrite(vp, file, buffer, size, writeSize);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 342, "%s: vop_write failed[%#x]\n", "_exfatfs_write_device_file", result);
 		} else {
@@ -220,17 +220,17 @@ static inline int _exfatfs_read_device_file(SceExfatfsDrive *drive, void *buffer
 
 	SCE_DBG_ASSERT(vp->core.ops != 0, 178);
 	if (vp->core.ops->vop_pread) {
-		result = ksceVopPread(vp, file, buffer, size, offset, readSize);
+		result = sceVopPread(vp, file, buffer, size, offset, readSize);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 218, "%s: vop_pread failed[%#x]\n", "_exfatfs_read_device_file", result);
 	} else if (vp->core.ops->vop_lseek && vp->core.ops->vop_read) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 222, "%s: use vop_lseek and vop_read\n", "_exfatfs_read_device_file");
-		newoff = ksceVopLseek(vp, file, offset, 0);
+		newoff = sceVopLseek(vp, file, offset, 0);
 		result = newoff;
 		if (newoff < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 235, "%s: vop_lseek failed[%#llx]\n", "_exfatfs_read_device_file", newoff);
 		} else if (newoff == offset) {
-			result = ksceVopRead(vp, file, buffer, size, readSize);
+			result = sceVopRead(vp, file, buffer, size, readSize);
 			if (result < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 253, "%s: vop_read failed[%#x]\n", "_exfatfs_read_device_file", result);
 		} else {

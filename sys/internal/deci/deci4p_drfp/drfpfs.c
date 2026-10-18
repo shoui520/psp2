@@ -5,7 +5,7 @@
 
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/vfs.h>
+#include <iofilemgr/vfs.h>
 #include <kernel/error.h>
 #include <deci4p_drfp/deci4p_fs.h>
 #include "drfp_internal.h"
@@ -731,7 +731,7 @@ int sceDeci4pDrfpFsInit(void)
 	ret = vfsUmount((SceVfsUmountParam *)&s_drfpUmountParam);
 	if (ret < 0)
 		DRFP_PRINTF(0xf, 144, "vfsUmount failed (0x%08X)\n", ret);
-	ret = ksceVfsDeleteVfs(DRFP_FS_NAME, NULL);
+	ret = sceVfsDeleteVfs(DRFP_FS_NAME, NULL);
 	if (ret < 0)
 		DRFP_PRINTF(0xf, 150, "vfsDeleteVfs failed (0x%08X)\n", ret);
 	return 0;
@@ -741,7 +741,7 @@ int sceDeci4pDrfpFsStart(void)
 {
 	int ret;
 
-	ret = ksceVfsAddVfs(&s_drfpVfsInfo);
+	ret = sceVfsAddVfs(&s_drfpVfsInfo);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 163, "sceVfsAddVfs failed (0x%08X)\n", ret);
 		return ret;

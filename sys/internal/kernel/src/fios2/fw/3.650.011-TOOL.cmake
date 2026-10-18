@@ -108,13 +108,13 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_FC2A424E
-	ksceIoDclose
-	ksceIoDread
-	ksceIoSyncByFd2
-	ksceIoGetstatByFd
-	ksceIoDopen
-	ksceIoGetstat
-	ksceIoChstatByFd
+	sceIoDclose
+	sceIoDread
+	SceIofilemgrForDriver_43170575
+	SceIofilemgrForDriver_462F059B
+	sceIoDopen
+	sceIoGetstat
+	SceIofilemgrForDriver_DF57A75F
 	sceSblACMgrIsKernelProgram
 	sceSblACMgrIsSystemProgram
 	ksceRtcConvertDateTimeToUnixTime

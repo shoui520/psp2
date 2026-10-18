@@ -14,7 +14,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 
 typedef struct SceSdstorVnodeData {
@@ -825,7 +825,7 @@ int sdstor_vfs_initialize(void)
 	sdstorVfsInfo.type = 16;
 	sdstorVfsInfo.default_vops = &sdstorVnodeOps;
 	sdstorVfsInfo.vfs_data = NULL;
-	result = ksceVfsAddVfs(&sdstorVfsInfo);
+	result = sceVfsAddVfs(&sdstorVfsInfo);
 	if (result) {
 		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 125, "0x%08x\n", result);
@@ -835,7 +835,7 @@ int sdstor_vfs_initialize(void)
 		}
 		return result;
 	}
-	result = ksceIoMount(1, NULL, 0, 0, 0, 0);
+	result = SceIofilemgrForDriver_D070BC48(1, NULL, 0, NULL, 0);
 	if (result) {
 		error = sceKernelDeleteHeap(sdstorVfsHeapId);
 		SCE_DBG_PRINTF_LEVEL(1, 15, 136, "0x%08x\n", result);

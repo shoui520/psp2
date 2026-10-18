@@ -367,7 +367,7 @@ int enter_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, int
 		buf = vfs_path_buff_alloc();
 		if (buf == NULL)
 			return SCE_ERROR_ERRNO_ENOMEM;
-		ret = ksceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
+		ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
 					      VFS_PATH_BUFF_SIZE, &len);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -482,7 +482,7 @@ int vfs_lookup(SceVfsVnode *dvp, const VfsPathElem *elem, const char *path, SceU
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = ksceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
+	ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
 				      VFS_PATH_BUFF_SIZE, &len);
 	if (ret < 0) {
 		if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -544,7 +544,7 @@ lookup:
 	lpath.path.name_length = name.len;
 	lpath.path.path = path;
 	lpath.elem = elem->name;
-	ret = ksceVopLookup(dvp, vpp, &lpath.path, flags & 0xfffff);
+	ret = sceVopLookup(dvp, vpp, &lpath.path, flags & 0xfffff);
 	if (ret == 0) {
 		SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(*vpp) == 1, 1318);
 		ret = enter_ncache(dvp, *vpp, &name, NCACHE_STATE_VALID, 0);
@@ -667,7 +667,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 	buf = vfs_path_buff_alloc();
 	if (buf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = ksceVfsOpDecodePathElem(dvp->core.mnt, elem->name, &path2, &path3, buf,
+	ret = SceIofilemgrForDriver_F7DAC0F5(dvp->core.mnt, elem->name, &path2, &path3, buf,
 				      VFS_PATH_BUFF_SIZE, &len);
 	if (ret < 0) {
 		if (ret != SCE_ERROR_ERRNO_EUNSUP) {
@@ -1414,7 +1414,7 @@ static int vfs_mount_fsroot(SceVfsMountParam *param, SceVfsInfo *vfsInf)
 			if (mret == 0 && (err = sceVfsOpSetRoot(mnt, 0, rvp)) >= 0) {
 				ret = err;
 				if ((param->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) == 0) {
-					err = ksceVfsOpDevctl(mnt, misc->assign_name, 0x3802, NULL, 0, NULL, 0);
+					err = sceVfsOpDevctl(mnt, misc->assign_name, 0x3802, NULL, 0, NULL, 0);
 					ret = mret;
 					if (err != SCE_ERROR_ERRNO_ENOSPC && err < 0)
 						goto devctl_failed;
@@ -1434,7 +1434,7 @@ devctl_failed:
 					SCE_DBG_PRINTF_FUNC(0xf, 2200, "vfs_mount_fsroot",
 							    "Umount failed %d 0x%x\n", mret, mret);
 				vfsUnlockMnt(mnt);
-				ksceVopInactive(rvp);
+				sceVopInactive(rvp);
 			}
 			vfs_lock_mnt_list();
 			vfs_remove_mnt_list(mnt);
@@ -1666,7 +1666,7 @@ static int vfs_mount_stackfs(SceVfsMountParam *param, SceVfsInfo *vfsInf)
 			if (mret == 0 && (err = sceVfsOpSetRoot(mnt, 0, rvp)) >= 0) {
 				ret = err;
 				if ((param->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) == 0) {
-					err = ksceVfsOpDevctl(mnt, param->misc->assign_name, 0x3802, NULL,
+					err = sceVfsOpDevctl(mnt, param->misc->assign_name, 0x3802, NULL,
 							      0, NULL, 0);
 					ret = mret;
 					if (err != SCE_ERROR_ERRNO_ENOSPC && err < 0)
@@ -1686,7 +1686,7 @@ devctl_failed:
 				if (mret < 0)
 					SCE_DBG_PRINTF(0xf, 2788, "Umount failed %d 0x%x\n", mret, mret);
 				vfsUnlockMnt(mnt);
-				ksceVopInactive(rvp);
+				sceVopInactive(rvp);
 			}
 			vfs_lock_mnt_list();
 			vfs_remove_mnt_list(mnt);
@@ -1948,12 +1948,12 @@ int vfsRead(IofilemgrReadParam *param)
 	if (vp->core.link_to == NULL) {
 		ret = vfs_check_vnode_read_access(vp);
 		if (ret == 0)
-			ret = ksceVopRead(vp, file, data, size, (SceSize *)&result);
+			ret = sceVopRead(vp, file, data, size, (SceSize *)&result);
 	} else {
 		vfsLockVnode(vp->core.link_to);
 		ret = vfs_check_vnode_read_access(vp->core.link_to);
 		if (ret == 0)
-			ret = ksceVopRead(vp->core.link_to, file, data, size, (SceSize *)&result);
+			ret = sceVopRead(vp->core.link_to, file, data, size, (SceSize *)&result);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	if (ret < 0)
@@ -2002,10 +2002,10 @@ int vfsWrite(IofilemgrWriteParam *param)
 	ret = vfs_check_vnode_write_access(vp->core.link_to);
 	if (ret == 0) {
 		if ((flags & SCE_O_APPEND) != 0)
-			ret = ksceVopPwrite(vp->core.link_to, file, data, size,
+			ret = sceVopPwrite(vp->core.link_to, file, data, size,
 					    vp->core.link_to->core.size, (SceSize *)&result);
 		else
-			ret = ksceVopWrite(vp->core.link_to, file, data, size,
+			ret = sceVopWrite(vp->core.link_to, file, data, size,
 					   (SceSize *)&result);
 	}
 	vfsUnlockVnode(vp->core.link_to);
@@ -2021,10 +2021,10 @@ direct:
 	ret = vfs_check_vnode_write_access(vp);
 	if (ret == 0) {
 		if ((flags & SCE_O_APPEND) != 0)
-			ret = ksceVopPwrite(vp, file, data, size, vp->core.size,
+			ret = sceVopPwrite(vp, file, data, size, vp->core.size,
 					    (SceSize *)&result);
 		else
-			ret = ksceVopWrite(vp, file, data, size, (SceSize *)&result);
+			ret = sceVopWrite(vp, file, data, size, (SceSize *)&result);
 	}
 	goto out;
 }
@@ -2062,12 +2062,12 @@ int vfsPread(IofilemgrPreadParam *param)
 	if (vp->core.link_to == NULL) {
 		ret = vfs_check_vnode_read_access(vp);
 		if (ret == 0)
-			ret = ksceVopPread(vp, file, data, size, offset, (SceSize *)&result);
+			ret = sceVopPread(vp, file, data, size, offset, (SceSize *)&result);
 	} else {
 		vfsLockVnode(vp->core.link_to);
 		ret = vfs_check_vnode_read_access(vp->core.link_to);
 		if (ret == 0)
-			ret = ksceVopPread(vp->core.link_to, file, data, size, offset,
+			ret = sceVopPread(vp->core.link_to, file, data, size, offset,
 					   (SceSize *)&result);
 		vfsUnlockVnode(vp->core.link_to);
 	}
@@ -2112,12 +2112,12 @@ int vfsPwrite(IofilemgrPwriteParam *param)
 	if (vp->core.link_to == NULL) {
 		ret = vfs_check_vnode_write_access(vp);
 		if (ret == 0)
-			ret = ksceVopPwrite(vp, file, data, size, offset, (SceSize *)&result);
+			ret = sceVopPwrite(vp, file, data, size, offset, (SceSize *)&result);
 	} else {
 		vfsLockVnode(vp->core.link_to);
 		ret = vfs_check_vnode_write_access(vp->core.link_to);
 		if (ret == 0)
-			ret = ksceVopPwrite(vp->core.link_to, file, data, size, offset,
+			ret = sceVopPwrite(vp->core.link_to, file, data, size, offset,
 					    (SceSize *)&result);
 		vfsUnlockVnode(vp->core.link_to);
 	}
@@ -2152,10 +2152,10 @@ SceOff vfsLseek(IofilemgrLseekParam *param)
 	vp = file->vp;
 	vfsLockVnode(vp);
 	if (vp->core.link_to == NULL) {
-		pos = ksceVopLseek(vp, file, offset, whence);
+		pos = sceVopLseek(vp, file, offset, whence);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		pos = ksceVopLseek(vp->core.link_to, file, offset, whence);
+		pos = sceVopLseek(vp->core.link_to, file, offset, whence);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	vfsUnlockVnode(vp);
@@ -2198,10 +2198,10 @@ int vfsClose(IofilemgrCloseParam *param)
 	}
 	mnt = vp->core.mnt;
 	if (vp->core.link_to == NULL) {
-		ret = ksceVopClose(vp, file);
+		ret = sceVopClose(vp, file);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		ret = ksceVopClose(vp->core.link_to, file);
+		ret = sceVopClose(vp->core.link_to, file);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	if (ret != 0) {
@@ -2273,7 +2273,7 @@ remove:
 		path.name = nc->name;
 		path.name_length = nc->nameLength;
 		path.path = NULL;
-		ret = ksceVopRemove(dvp, vp, &path, 0);
+		ret = sceVopRemove(dvp, vp, &path, 0);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xf, 3969, "sceVopRemove() ret = %d 0x%x\n", ret, ret);
 		ret = clear_ncache(vp->core.ncache, 0);
@@ -2281,7 +2281,7 @@ remove:
 			SCE_DBG_PRINTF(0xf, 3976, "clear_ncache() ret = %d 0x%x\n", ret, ret);
 		if (dvp != NULL)
 			vfsUnlockVnode(dvp);
-		ret = ksceVopInactive(vp);
+		ret = sceVopInactive(vp);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF(0xf, 3986, "inactive failed ... %d 0x%x\n", ret, ret);
@@ -2299,7 +2299,7 @@ remove:
 			vp->core.link_to->core.ref_count--;
 			vfsUnlockVnode(vp->core.link_to);
 		}
-		ret = ksceVopInactive(vp);
+		ret = sceVopInactive(vp);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF(0xf, 4042, "inactive failed ... %d 0x%x\n", ret, ret);
@@ -2373,7 +2373,7 @@ int vfsRmdir(IofilemgrRmdirParam *param)
 	path.name = lastElem->name;
 	path.name_length = lastElem->len;
 	path.path = buf;
-	ret = ksceVopRmdir(dvp, vp, &path, 0);
+	ret = sceVopRmdir(dvp, vp, &path, 0);
 	if (ret < 0)
 		goto release_vp;
 	vp->core.state = SCE_VNODE_STATE_INACTIVE;
@@ -2381,7 +2381,7 @@ int vfsRmdir(IofilemgrRmdirParam *param)
 		SCE_DBG_PRINTF(0xf, 4311, "name cache cleanup failed ... %p\n", vp);
 	if (vp->core.ref_count != 1)
 		goto release_vp;
-	err = ksceVopInactive(vp);
+	err = sceVopInactive(vp);
 	if (err < 0) {
 		if (err != SCE_ERROR_ERRNO_EUNSUP)
 			SCE_DBG_PRINTF(0xf, 4325, "inactive failed ... %d 0x%x\n", err, err);
@@ -2428,7 +2428,7 @@ int vfsGetstat(IofilemgrGetstatParam *param)
 			path.name = lastElem->name;
 			path.name_length = lastElem->len;
 			path.path = buf;
-			ret = ksceVopGetstat(vp, &path, stat);
+			ret = sceVopGetstat(vp, &path, stat);
 			if (ret == 0) {
 				if (raw == 0)
 					stat->st_attr = 0;
@@ -2480,7 +2480,7 @@ int vfsChstat(IofilemgrChstatParam *param)
 	path.name = lastElem->name;
 	path.name_length = lastElem->len;
 	path.path = buf;
-	ret = ksceVopChstat(vp, &path, stat, bits);
+	ret = sceVopChstat(vp, &path, stat, bits);
 release:
 	vfs_decrement_vp_mnt_ref_inline(vp);
 out:
@@ -2568,7 +2568,7 @@ check_linked:
 	path.path.name = lastElem->name;
 	path.path.name_length = lastElem->len;
 	path.path.path = buf;
-	ret = ksceVopRemove(dvp, vp, &path.path, 0);
+	ret = sceVopRemove(dvp, vp, &path.path, 0);
 	if (ret < 0)
 		goto release_vp;
 	vp->core.state = SCE_VNODE_STATE_INACTIVE;
@@ -2578,7 +2578,7 @@ check_linked:
 	vfs_unlock_ncache();
 	if (vp->core.ref_count != 1)
 		goto release_vp;
-	ret = ksceVopInactive(vp);
+	ret = sceVopInactive(vp);
 	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
 		SCE_DBG_PRINTF(0xf, 4628, "inactive failed ... %d 0x%x\n", ret, ret);
 	vfsLockMnt(vp->core.mnt);
@@ -2589,7 +2589,7 @@ check_linked:
 	goto release_dvp;
 
 whiteout:
-	ret = ksceVopSync(vp, vp->core.fd_list, 0);
+	ret = sceVopSync(vp, vp->core.fd_list, 0);
 	if (ret < 0)
 		goto unlock_fd;
 	path.path.name = lastElem->name;
@@ -2611,9 +2611,9 @@ whiteout:
 		tmp[++i + 7] = '~';
 		tmpPath.name_length = strnlen(tmp, VFS_PATH_BUFF_SIZE);
 		nvp = NULL;
-		ret = ksceVopWhiteout(dvp, vp, &path.path, &tmpPath, 0, 0);
+		ret = sceVopWhiteout(dvp, vp, &path.path, &tmpPath, 0, 0);
 		if (ret == SCE_ERROR_ERRNO_EUNSUP)
-			ret = ksceVopRename(dvp, vp, &path.path, NULL, &nvp, &tmpPath);
+			ret = sceVopRename(dvp, vp, &path.path, NULL, &nvp, &tmpPath);
 	} while (i < 0x3f8 && ret == SCE_ERROR_ERRNO_EEXIST);
 	if (ret < 0) {
 		if (ret == SCE_ERROR_ERRNO_EEXIST)
@@ -2677,7 +2677,7 @@ whiteout:
 	}
 	if (vp->core.ref_count != 1)
 		goto release_vp;
-	ret = ksceVopInactive(vp);
+	ret = sceVopInactive(vp);
 	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 4864, "inactive failed ... %d 0x%x\n", ret, ret);
 	vfsLockMnt(vp->core.mnt);
@@ -2765,7 +2765,7 @@ umount:
 		goto release_vp;
 	}
 	if ((rvp->core.type & SCE_VNODE_TYPE_DEV) != 0) {
-		ret = ksceVopSync(rvp, rvp->core.fd_list, 0);
+		ret = sceVopSync(rvp, rvp->core.fd_list, 0);
 		vfsUnlockMnt(mnt);
 		goto release_vp;
 	}
@@ -2801,10 +2801,10 @@ umount:
 				}
 				if (vp->core.mnt == mnt && vp->core.state < 0x1000) {
 					if (vp->core.link_to == NULL) {
-						err = ksceVopSync(vp, vp->core.fd_list, 1);
+						err = sceVopSync(vp, vp->core.fd_list, 1);
 					} else {
 						vfsLockVnode(vp->core.link_to);
-						err = ksceVopSync(vp->core.link_to,
+						err = sceVopSync(vp->core.link_to,
 								  vp->core.link_to->core.fd_list, 1);
 						vfsUnlockVnode(vp->core.link_to);
 					}
@@ -2882,7 +2882,7 @@ next:
 				     mnt, rvp->core.ref_count);
 		goto release_vp;
 	}
-	ret = ksceVopInactive(rvp);
+	ret = sceVopInactive(rvp);
 	if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 5807, "inactive failed ... %d 0x%x\n", ret, ret);
 	vfsFreeVnode(rvp);
@@ -2953,7 +2953,7 @@ SceUID vfsDopen(IofilemgrDopenParam *param)
 	path.path = buf;
 	path.name = elem[num - 1].name;
 	path.name_length = elem[num - 1].len;
-	ret = ksceVopDopen(vp, &path, file);
+	ret = sceVopDopen(vp, &path, file);
 	if (ret < 0) {
 		vfs_finalize_file(vp, file);
 		vfs_close_file(vp, fd);
@@ -3009,7 +3009,7 @@ int vfsDread(IofilemgrDreadParam *param)
 		}
 		vfsUnlockFd(file);
 	}
-	ret = ksceVopDread(vp, file, dir);
+	ret = sceVopDread(vp, file, dir);
 	if (raw == 0 && ret > 0)
 		dir->d_stat.st_attr = 0;
 	vfsUnlockVnode(vp);
@@ -3051,7 +3051,7 @@ int vfsDclose(IofilemgrDcloseParam *param)
 		vfsUnlockFd(file);
 	}
 	mnt = vp->core.mnt;
-	ret = ksceVopDclose(vp, file);
+	ret = sceVopDclose(vp, file);
 	if (ret == 0) {
 		file->state = SCE_VFS_FILE_STATE_CLOSED;
 		err = vfs_finalize_file(vp, file);
@@ -3065,7 +3065,7 @@ int vfsDclose(IofilemgrDcloseParam *param)
 			SCE_DBG_PRINTF(0xf, 6148, "free file failed ... 0x%x %d %p\n", fd, fd, vp);
 		refs = --vp->core.ref_count;
 		if ((vp->core.state & SCE_VNODE_STATE_INACTIVE) != 0 && refs == 0) {
-			err = ksceVopInactive(vp);
+			err = sceVopInactive(vp);
 			if (err < 0) {
 				if (err != SCE_ERROR_ERRNO_EUNSUP)
 					SCE_DBG_PRINTF(0xf, 6160, "inactive failed ... %d 0x%x\n", err, err);
@@ -3124,10 +3124,10 @@ int vfsSync(IofilemgrSyncParam *param)
 				vfsLockVnode(cur);
 				if (cur->core.mnt == mnt && cur != vp && cur->core.state < 0x1000) {
 					if (cur->core.link_to == NULL) {
-						err = ksceVopSync(cur, cur->core.fd_list, 1);
+						err = sceVopSync(cur, cur->core.fd_list, 1);
 					} else {
 						vfsLockVnode(cur->core.link_to);
-						err = ksceVopSync(cur->core.link_to,
+						err = sceVopSync(cur->core.link_to,
 								  cur->core.link_to->core.fd_list, 1);
 						vfsUnlockVnode(cur->core.link_to);
 					}
@@ -3148,10 +3148,10 @@ int vfsSync(IofilemgrSyncParam *param)
 		if (ret == 0)
 			vfs_clear_mnt_sync_request(vp->core.mnt);
 	} else if (vp->core.link_to == NULL) {
-		ret = ksceVopSync(vp, vp->core.fd_list, 0);
+		ret = sceVopSync(vp, vp->core.fd_list, 0);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		ret = ksceVopSync(vp->core.link_to, vp->core.link_to->core.fd_list, 0);
+		ret = sceVopSync(vp->core.link_to, vp->core.link_to->core.fd_list, 0);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	vfs_decrement_vp_mnt_ref_inline(vp);
@@ -3196,7 +3196,7 @@ int vfsDevctl(IofilemgrDevctlParam *param)
 			goto release;
 		}
 	}
-	ret = ksceVfsOpDevctl(vp->core.mnt, dev, cmd, indata, inlen, outdata, outlen);
+	ret = sceVfsOpDevctl(vp->core.mnt, dev, cmd, indata, inlen, outdata, outlen);
 release:
 	vfs_decrement_vp_mnt_ref_inline(vp);
 out:
@@ -3229,10 +3229,10 @@ int vfsSyncByFd(IofilemgrSyncByFdParam *param)
 	vp = file->vp;
 	vfsLockVnode(vp);
 	if (vp->core.link_to == NULL) {
-		ret = ksceVopSync(vp, file, 2);
+		ret = sceVopSync(vp, file, 2);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		ret = ksceVopSync(vp->core.link_to, file, 2);
+		ret = sceVopSync(vp->core.link_to, file, 2);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	vfsUnlockVnode(vp);
@@ -3293,7 +3293,7 @@ int vfs_reclaim_vnode(SceVfsMount *mnt, SceVfsVnode **vpp)
 				SCE_DBG_ASSERT(0, 6777);
 			}
 			clear_ncache(vp->core.ncache, 0);
-			ksceVopInactive(vp);
+			sceVopInactive(vp);
 			vp->core.state = SCE_VNODE_STATE_RECLAIMED;
 			vfsUnlockVnode(vp);
 			vfsUnlockVnode(dvp);
@@ -3420,10 +3420,10 @@ int vfsGetstatByFd(IofilemgrGetstatByFdParam *param)
 	vp = file->vp;
 	vfsLockVnode(vp);
 	if (vp->core.link_to == NULL) {
-		ret = ksceVopFgetstat(vp, file, stat);
+		ret = sceVopFgetstat(vp, file, stat);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		ret = ksceVopFgetstat(vp->core.link_to, file, stat);
+		ret = sceVopFgetstat(vp->core.link_to, file, stat);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	if (ret == SCE_ERROR_ERRNO_EUNSUP) {
@@ -3446,10 +3446,10 @@ int vfsGetstatByFd(IofilemgrGetstatByFdParam *param)
 		path.path.path = NULL;
 		path.elem = NULL;
 		if (vp->core.link_to == NULL) {
-			ret = ksceVopGetstat(vp, &path.path, stat);
+			ret = sceVopGetstat(vp, &path.path, stat);
 		} else {
 			vfsLockVnode(vp->core.link_to);
-			ret = ksceVopGetstat(vp->core.link_to, &path.path, stat);
+			ret = sceVopGetstat(vp->core.link_to, &path.path, stat);
 			vfsUnlockVnode(vp->core.link_to);
 		}
 	}
@@ -3509,10 +3509,10 @@ int vfsChstatByFd(IofilemgrChstatByFdParam *param)
 			goto out;
 	}
 	if (vp->core.link_to == NULL) {
-		ret = ksceVopFchstat(vp, file, stat, bits);
+		ret = sceVopFchstat(vp, file, stat, bits);
 	} else {
 		vfsLockVnode(vp->core.link_to);
-		ret = ksceVopFchstat(vp->core.link_to, file, stat, bits);
+		ret = sceVopFchstat(vp->core.link_to, file, stat, bits);
 		vfsUnlockVnode(vp->core.link_to);
 	}
 	if (ret == SCE_ERROR_ERRNO_EUNSUP) {
@@ -3528,10 +3528,10 @@ int vfsChstatByFd(IofilemgrChstatByFdParam *param)
 			path.name_length = len;
 			path.path = NULL;
 			if (vp->core.link_to == NULL) {
-				ret = ksceVopChstat(vp, &path, stat, bits);
+				ret = sceVopChstat(vp, &path, stat, bits);
 			} else {
 				vfsLockVnode(vp->core.link_to);
-				ret = ksceVopChstat(vp->core.link_to, &path, stat, bits);
+				ret = sceVopChstat(vp->core.link_to, &path, stat, bits);
 				vfsUnlockVnode(vp->core.link_to);
 			}
 		}
@@ -3586,14 +3586,14 @@ int vfsRmdev(IofilemgrRmdevParam *param)
 		SCE_DBG_PRINTF(0xf, 7396, "devfile %s is linked to %p\n", dev, vp->core.link_to);
 		SCE_DBG_ASSERT(0, 7397);
 	}
-	ret = ksceVopSync(vp, vp->core.fd_list, 0);
+	ret = sceVopSync(vp, vp->core.fd_list, 0);
 	if (ret < 0)
 		goto release_vp;
 	lastElem = &elem[last];
 	path.name = lastElem->name;
 	path.name_length = lastElem->len;
 	path.path = buf;
-	ret = ksceVopRemove(dvp, vp, &path, 0);
+	ret = sceVopRemove(dvp, vp, &path, 0);
 	if (ret < 0)
 		goto release_vp;
 	vp->core.state = SCE_VNODE_STATE_INACTIVE;
@@ -3609,7 +3609,7 @@ int vfsRmdev(IofilemgrRmdevParam *param)
 		vp->core.bc = NULL;
 	}
 	if (vp->core.ref_count == 1) {
-		ret = ksceVopInactive(vp);
+		ret = sceVopInactive(vp);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF_LEVEL(2, 0xf, 7448, "inactive failed ... %d 0x%x\n", ret, ret);
@@ -3864,10 +3864,10 @@ int vfsIoctl(IofilemgrIoctlParam *param)
 		vp = file->vp;
 		vfsLockVnode(vp);
 		if (vp->core.link_to == NULL) {
-			ret = ksceVopIoctl(vp, file, cmd, indata, inlen, outdata, outlen);
+			ret = sceVopIoctl(vp, file, cmd, indata, inlen, outdata, outlen);
 		} else {
 			vfsLockVnode(vp->core.link_to);
-			ret = ksceVopIoctl(vp->core.link_to, file, cmd, indata, inlen, outdata, outlen);
+			ret = sceVopIoctl(vp->core.link_to, file, cmd, indata, inlen, outdata, outlen);
 			vfsUnlockVnode(vp->core.link_to);
 		}
 		vfsUnlockVnode(vp);
@@ -4120,14 +4120,14 @@ int vfs_check_and_sync_on_host(SceVfsVnode *vp, SceVfsPath *path)
 	SceIoStat stat;
 	int ret, err;
 
-	ret = ksceVopGetstat(vp, path, &stat);
+	ret = sceVopGetstat(vp, path, &stat);
 	if (ret != SCE_ERROR_ERRNO_ENOENT)
 		return ret;
 	if (vp->core.ncache != NULL && (err = clear_ncache(vp->core.ncache, 0)) < 0)
 		SCE_DBG_PRINTF(0xf, 8114, "name cache cleanup failed vp=%p retval=%d\n", vp, err);
 	vp->core.state = SCE_VNODE_STATE_INACTIVE;
 	if (vp->core.ref_count == 1) {
-		err = ksceVopInactive(vp);
+		err = sceVopInactive(vp);
 		if (err < 0) {
 			if (err != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF(0xf, 8125, "inactive failed ... %d 0x%x\n", err, err);
@@ -4243,7 +4243,7 @@ SceUID vfsOpen(IofilemgrOpenParam *param)
 						 filename, flags, mode, mode);
 				goto release_dvp;
 			}
-			ret = ksceVopCreate(dvp, &vp, &path, flags, mode);
+			ret = sceVopCreate(dvp, &vp, &path, flags, mode);
 			if (ret < 0)
 				goto release_dvp;
 			SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 3243);
@@ -4296,7 +4296,7 @@ check_host:
 	}
 	if ((flags & SCE_O_TRUNC) != 0) {
 		stat.st_size = 0;
-		ret = ksceVopChstat(vp, &path, &stat, SCE_CST_SIZE);
+		ret = sceVopChstat(vp, &path, &stat, SCE_CST_SIZE);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 3268, "truncate failed %d 0x%x\n", ret, ret);
 			goto release_vp;
@@ -4309,12 +4309,12 @@ open:
 		goto fail;
 	vfs_initialize_file(vp, file);
 	file->flags = flags & (SCE_O_NOBUF | SCE_O_APPEND | SCE_O_RDWR);
-	ret = ksceVopOpen(vp, &path, flags, file);
+	ret = sceVopOpen(vp, &path, flags, file);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 3290, "open failed %d 0x%x\n", ret, ret);
 	} else if (vp->core.ncache == NULL && (ret = enter_ncache(dvp, vp, name, 1, 1)) < 0) {
 		SCE_DBG_PRINTF(0xf, 3299, "enter failed %d 0x%x\n", ret, ret);
-		err = ksceVopClose(vp, file);
+		err = sceVopClose(vp, file);
 		if (err < 0)
 			SCE_DBG_PRINTF(0xf, 3302, "Close failed %d 0x%x\n", err, err);
 	} else {
@@ -4409,7 +4409,7 @@ int vfsMkdir(IofilemgrMkdirParam *param)
 			path.name = name->name;
 			path.name_length = name->len;
 			path.path = buf;
-			ret = ksceVopMkdir(dvp, &vp, &path, mode);
+			ret = sceVopMkdir(dvp, &vp, &path, mode);
 			if (ret >= 0) {
 				SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 4188);
 				ret = enter_ncache(dvp, vp, name, 1, 1);
@@ -4503,7 +4503,7 @@ int vfsRename(IofilemgrRenameParam *param)
 				arg.newName = newname;
 				arg.newNameLength = len;
 				resolved.name = nbuf;
-				ret = ksceVfsOpDevctl(odvp->core.mnt, odvp->core.mnt->mnt_data->assign_name,
+				ret = sceVfsOpDevctl(odvp->core.mnt, odvp->core.mnt->mnt_data->assign_name,
 						      VFS_DEVCTL_HOST_RENAME_PATH, &arg, sizeof(arg),
 						      &resolved, sizeof(resolved));
 				if (ret < 0) {
@@ -4621,7 +4621,7 @@ rename:
 				vfsLockVnode(ovp);
 				if (ret >= 0) {
 					if ((int)ovp->core.fd_num <= 0 ||
-					    (ret = ksceVopSync(ovp, ovp->core.fd_list, 0)) >= 0)
+					    (ret = sceVopSync(ovp, ovp->core.fd_list, 0)) >= 0)
 						goto do_rename;
 					vfs_lock_ncache();
 					if (ovp->core.ncache != NULL)
@@ -4650,7 +4650,7 @@ do_rename:
 	npath.path.name_length = nname->len;
 	npath.path.path = nbuf;
 	npath.elem = NULL;
-	ret = ksceVopRename(odvp, ovp, &opath.path, ndvp, &nvp, &npath.path);
+	ret = sceVopRename(odvp, ovp, &opath.path, ndvp, &nvp, &npath.path);
 	if (ret < 0) {
 		vfs_lock_ncache();
 		if (ovp->core.ncache != NULL)
@@ -4695,7 +4695,7 @@ do_rename:
 	}
 	ovp->core.ncache = NULL;
 	if (ovp->core.ref_count == 1) {
-		ret = ksceVopInactive(ovp);
+		ret = sceVopInactive(ovp);
 		if (ret < 0) {
 			if (ret != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF(0xf, 5401, "inactive failed ... %d 0x%x\n", ret, ret);
@@ -4946,7 +4946,7 @@ int vfsCleanup(SceUID fd)
 	if (ret == 0) {
 		vp = file->vp;
 		vfsLockVnode(vp);
-		ret = ksceVopCleanup(vp, file, 0, 0);
+		ret = sceVopCleanup(vp, file, 0, 0);
 		vfsUnlockVnode(vp);
 	}
 	vfsUnlockFd(file);

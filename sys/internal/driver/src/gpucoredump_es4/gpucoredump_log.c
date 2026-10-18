@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include "gpucoredump.h"
@@ -23,9 +23,9 @@ void gpuCoreDumpLogOpen(GpuCoreDumpLog *log, SceUID pid)
 	log->end = NULL;
 	attach[0] = pid;
 	attach[1] = 0;
-	log->fd = ksceIoOpen("tty0:", SCE_O_RDWR, 0606);
+	log->fd = sceIoOpen("tty0:", SCE_O_RDWR, 0606);
 	if (log->fd >= 0 && pid != 0)
-		ksceIoIoctl(log->fd, 0x6400, attach, sizeof(attach), NULL, 0);
+		sceIoIoctl(log->fd, 0x6400, attach, sizeof(attach), NULL, 0);
 }
 
 void gpuCoreDumpLogBuffer(GpuCoreDumpLog *log, char *buf, char *end)
@@ -41,9 +41,9 @@ void gpuCoreDumpLogClose(GpuCoreDumpLog *log)
 	if (log->cur != NULL)
 		return;
 	if (log->pid != 0)
-		ksceIoIoctl(log->fd, 0x6401, NULL, 0, NULL, 0);
+		sceIoIoctl(log->fd, 0x6401, NULL, 0, NULL, 0);
 	if (log->fd != -1) {
-		ksceIoClose(log->fd);
+		sceIoClose(log->fd);
 		log->fd = -1;
 	}
 }
@@ -67,7 +67,7 @@ void gpuCoreDumpLogPrintf(GpuCoreDumpLog *log, const char *fmt, ...)
 	} else if (log->fd >= 0) {
 		len = vsnprintf(line, sizeof(line), fmt, ap);
 		line[sizeof(line) - 1] = '\0';
-		ksceIoWrite(log->fd, line, len);
+		sceIoWrite(log->fd, line, len);
 	}
 	va_end(ap);
 }

@@ -130,24 +130,24 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
-	ksceIoRemove
-	ksceIoDevctl
-	ksceIoDclose
-	ksceIoRmdir
-	ksceIoDread
-	ksceIoPread
-	ksceIoCreateMountEvent
-	ksceIoDeleteMountEvent
-	ksceIoGetstatByFd
-	ksceIoDopen
-	ksceIoPwrite
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoChstat
-	ksceIoMkdir
-	ksceIoRename
-	ksceIoChstatByFd
-	ksceIoClose
+	sceIoRemove
+	sceIoDevctl
+	sceIoDclose
+	sceIoRmdir
+	sceIoDread
+	sceIoPread
+	sceIoCreateMountEvent
+	sceIoDeleteMountEvent
+	SceIofilemgrForDriver_462F059B
+	sceIoDopen
+	sceIoPwrite
+	sceIoOpen
+	sceIoGetstat
+	sceIoChstat
+	sceIoMkdir
+	sceIoRename
+	SceIofilemgrForDriver_DF57A75F
+	sceIoClose
 	SceDipswForDriver_A98FC2FD
 	sceDfMgrClose
 	sceDfMgrOpen

@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include "gpucoredump.h"
 #include <gpucoredump_es4/gpucoredump_es4_imports.h>
@@ -15,7 +15,7 @@
 
 static void gpuCoreDumpFlush(GpuCoreDumpWriter *w)
 {
-	if (ksceIoWrite(w->fd, w->buf, w->length) != (int)w->length)
+	if (sceIoWrite(w->fd, w->buf, w->length) != (int)w->length)
 		w->error = 1;
 	w->length = 0;
 }
@@ -140,5 +140,5 @@ int gpuCoreDumpWriteSegments(SceUID fd, const GpuCoreDumpSegment *seg, int count
 	w.fd = -1;
 	if (w.error)
 		return -1;
-	return ksceIoClose(fd);
+	return sceIoClose(fd);
 }

@@ -87,9 +87,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelClearEventFlag
 	sceKernelSignalSema
 	sceKernelSetEventFlag
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsUmount
-	ksceVfsDeleteVfs
+	sceVfsDeleteVfs
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode

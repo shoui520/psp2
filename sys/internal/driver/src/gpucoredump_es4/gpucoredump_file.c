@@ -4,7 +4,7 @@
  */
 
 #include <psp2kern/types.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <stdio.h>
 #include <string.h>
 #include "gpucoredump.h"
@@ -60,7 +60,7 @@ SceUID gpuCoreDumpOpen(const char *device, const char *dir, const char *sub, con
 	if (len >= GPU_COREDUMP_PATH_MAX)
 		return -1;
 	path[GPU_COREDUMP_PATH_MAX - 1] = '\0';
-	return ksceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0606);
+	return sceIoOpen(path, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0606);
 }
 
 int gpuCoreDumpSave(const char *device, const char *dir, const char *sub, const SceDateTime *time,
@@ -81,7 +81,7 @@ int gpuCoreDumpWriteTrace(SceUID fd, const SceUInt8 *data, SceSize size, GpuCore
 	int len;
 
 	while (size != 0) {
-		len = ksceIoWrite(fd, data, size < GPU_COREDUMP_TRACE_CHUNK ? size : GPU_COREDUMP_TRACE_CHUNK);
+		len = sceIoWrite(fd, data, size < GPU_COREDUMP_TRACE_CHUNK ? size : GPU_COREDUMP_TRACE_CHUNK);
 		if (len < 0)
 			return 0;
 		gpuCoreDumpLogPrintf(log, ".");

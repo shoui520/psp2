@@ -1,5 +1,5 @@
 #include <sysmem/sysroot.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
 #include <syscon/syscon.h>
 #include <sysstatemgr/sysstatemgr.h>
@@ -43,7 +43,7 @@ checkDownloader:
 			updateUseSysconSnvs = 1;
 	}
 	if (SceQafMgrForDriver_3CB55F98() &&
-	    ksceIoGetstat("host0:PSP2UPDAT.PUP", &stat) == 0) {
+	    sceIoGetstat("host0:PSP2UPDAT.PUP", &stat) == 0) {
 		hostUpdate = 1;
 		updateInitializeAsync = 0;
 	}

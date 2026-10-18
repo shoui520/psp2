@@ -79,11 +79,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceSblACMgrIsSystemProgram
 	SceSblACMgrForDriver_D0E11C89
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	SceUsbstorForDriver_73F2FF9D
 	SceUsbstorForDriver_ADB2AAF2
 	SceUsbstorForDriver_B6689597

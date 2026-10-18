@@ -31,7 +31,7 @@ static inline int pfsDbTableRecordKey(ScePfsDbRecordKey *rkey, ScePfsDbKey *key)
 	SceSize len;
 	int ret;
 
-	ret = ksceVfsOpDecodePathElem(key->mnt, key->name, &path2, &path3, name, sizeof(name),
+	ret = SceIofilemgrForDriver_F7DAC0F5(key->mnt, key->name, &path2, &path3, name, sizeof(name),
 				      &len);
 	if (ret != 0)
 		return ret;

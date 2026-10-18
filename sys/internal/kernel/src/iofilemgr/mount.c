@@ -975,7 +975,7 @@ int mnt_start(void)
 	return ret;
 }
 
-int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64_t reserved)
+int SceIofilemgrForDriver_D070BC48(int id, const char *path, unsigned int flags, void *data, uint64_t reserved)
 {
 	MountRequest request;
 	int ret;
@@ -1005,7 +1005,7 @@ int ksceIoMount(int id, const char *path, unsigned int flags, void *data, uint64
 	return request.result;
 }
 
-int ksceIoUmount(int id, int flags, uint64_t reserved)
+int SceIofilemgrForDriver_20574100(int id, int flags, uint64_t reserved)
 {
 	MountRequest request;
 	int ret;
@@ -1031,7 +1031,7 @@ int ksceIoUmount(int id, int flags, uint64_t reserved)
 	return request.result;
 }
 
-SceUID ksceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
+SceUID sceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 {
 	MountPoint *point;
 	SceVfsMountData *mountData;
@@ -1104,7 +1104,7 @@ SceUID ksceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 	return uid;
 }
 
-int ksceIoDeleteMountEvent(SceUID uid)
+int sceIoDeleteMountEvent(SceUID uid)
 {
 	SceIoMountEvent *event, *prev, *next;
 	MountPoint *point;
@@ -1183,7 +1183,7 @@ int mount_event_process_finalize(SceUID pid)
 					guid, guid, puids[i]);
 				continue;
 			}
-			ret = ksceIoDeleteMountEvent(guid);
+			ret = sceIoDeleteMountEvent(guid);
 			if (ret == 0) {
 				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
 			} else {

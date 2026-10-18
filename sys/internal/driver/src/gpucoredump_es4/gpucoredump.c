@@ -7,7 +7,7 @@
 
 #include <fw.h>
 #include <psp2kern/types.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/dipsw.h>
 #include <string.h>
@@ -173,11 +173,11 @@ static int gpuCoreDumpWriteTag(SceUID fd, SceUInt32 tag, const void *data, SceSi
 	hdr.tag = tag;
 	hdr.flags = 0x80;
 	hdr.size = size + sizeof(hdr);
-	if (ksceIoWrite(fd, &hdr, sizeof(hdr)) != sizeof(hdr))
+	if (sceIoWrite(fd, &hdr, sizeof(hdr)) != sizeof(hdr))
 		return -1;
 	if (data == NULL || size == 0)
 		return 0;
-	return ksceIoWrite(fd, data, size) == (int)size ? 0 : -1;
+	return sceIoWrite(fd, data, size) == (int)size ? 0 : -1;
 }
 
 /* a core register as captured */
@@ -349,14 +349,14 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 	ret = fd;
 	if (fd < 0)
 		goto failed;
-	if (ksceIoWrite(fd, &pmon, sizeof(pmon)) != sizeof(pmon))
+	if (sceIoWrite(fd, &pmon, sizeof(pmon)) != sizeof(pmon))
 		goto error;
 	clock.magic = GPU_COREDUMP_PMON_CLOCK_MAGIC;
 	clock.size = sizeof(clock);
 	clock.sdkVersion = SCE_PSP2_SDK_VERSION;
 	kscePowerGetGpuClockFrequencyInternal(&mhz, 0);
 	clock.hz = mhz * 1000000;
-	if (ksceIoWrite(fd, &clock, sizeof(clock)) != sizeof(clock))
+	if (sceIoWrite(fd, &clock, sizeof(clock)) != sizeof(clock))
 		goto error;
 
 	used = ScePamgrForDriver_019BD60F(0);
@@ -411,7 +411,7 @@ void gpuCoreDumpCapture(PVRSRV_SGXDEV_INFO *devInfo, int dumpTrace)
 	}
 	gpuCoreDumpWriteTag(fd, GPU_COREDUMP_TAG_COUNTERS, &saved, sizeof(saved));
 	gpuCoreDumpWriteTag(fd, GPU_COREDUMP_TAG_END, NULL, 0);
-	ret = ksceIoClose(fd);
+	ret = sceIoClose(fd);
 	if (ret == 0) {
 		gpuCoreDumpLogPrintf(&log, "%s: GPU Trace .pmon file written to %s\n",
 				     gpuCoreDumpModuleInfo.module_name, path);

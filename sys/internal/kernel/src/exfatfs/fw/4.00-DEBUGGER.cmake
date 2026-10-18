@@ -123,30 +123,30 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
 	SceThreadmgrForDriver_FA54D49A
-	ksceVopCleanup
-	ksceIoDevctl
-	ksceIoUmount
+	sceVopCleanup
+	sceIoDevctl
+	SceIofilemgrForDriver_20574100
 	vfsFreeVnode
-	ksceVopClose
-	ksceVopRead
+	sceVopClose
+	sceVopRead
 	vfsUnlockVnode
-	ksceVfsAddVfs
-	ksceIoOpen
-	ksceVopOpen
-	ksceVopWrite
-	ksceVopSync
-	ksceVopPwrite
+	sceVfsAddVfs
+	sceIoOpen
+	sceVopOpen
+	sceVopWrite
+	sceVopSync
+	sceVopPwrite
 	vfsLockVnode
-	ksceVopPread
-	ksceVfsOpDevctl
-	ksceVopLseek
+	sceVopPread
+	sceVfsOpDevctl
+	sceVopLseek
 	vfsAllocateFile
 	vfsFreeFile
-	ksceIoMount
+	SceIofilemgrForDriver_D070BC48
 	vfsGetNewVnode
 	sceIoSetErrorEvent
-	ksceIoRead
-	ksceIoClose
+	sceIoRead
+	sceIoClose
 	SceRtcForDriver_09AF419B
 	ksceRtcGetCurrentClockLocalTime
 	ksceRtcGetCurrentClock

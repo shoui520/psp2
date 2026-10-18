@@ -1,5 +1,5 @@
 #include <sysmem/sysmem.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_objects.h"
@@ -41,7 +41,7 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 		result = (int)0x800f0205;
 		goto restorePermission;
 	}
-	fileSize = ksceIoLseek(fd, 0, SCE_SEEK_END);
+	fileSize = sceIoLseek(fd, 0, SCE_SEEK_END);
 	if (fileSize < 0) {
 		updateLastResult = partition | 0x0d010003;
 		result = (int)0x800f0205;
@@ -70,23 +70,23 @@ int UpdateUtilWritePartition(const void *buffer, uint64_t size, uint64_t offset,
 			chunk = remaining;
 			rounded = (chunk + 511) >> 9;
 		}
-		if (ksceIoLseek(fd, offset, SCE_SEEK_SET) < 0) {
+		if (sceIoLseek(fd, offset, SCE_SEEK_SET) < 0) {
 			error = partition | 3;
 			goto ioError;
 		}
 		rounded <<= 9;
-		written = ksceIoWrite(fd, cursor, rounded);
+		written = sceIoWrite(fd, cursor, rounded);
 		if (written != rounded) {
 			error = partition | 5;
 			goto ioError;
 		}
-		ksceIoSync(path, 0);
+		sceIoSync(path, 0);
 		memset(readBuffer, 255, 0x40000);
-		if (ksceIoLseek(fd, offset, SCE_SEEK_SET) < 0) {
+		if (sceIoLseek(fd, offset, SCE_SEEK_SET) < 0) {
 			error = partition | 3;
 			goto ioError;
 		}
-		if (ksceIoRead(fd, readBuffer, written) != written) {
+		if (sceIoRead(fd, readBuffer, written) != written) {
 			error = partition | 4;
 			goto ioError;
 		}
@@ -116,7 +116,7 @@ ioError:
 free:
 	sceKernelFreeHeapMemory(heapId, readBuffer);
 close:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 restorePermission:
 	sceKernelSetThreadAccessLevel(permission);
 	return result;

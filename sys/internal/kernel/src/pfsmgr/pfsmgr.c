@@ -9,9 +9,8 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/suspend.h>
 #include <sysmem/utils.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/io/devctl.h>
-#include <psp2kern/io/dirent.h>
 #include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"
 
@@ -332,15 +331,15 @@ static inline int pfsAcidDirIoctl(const char *name, const char *dir, unsigned in
 	ret = snprintf(path, sizeof(path) - 1, "%s0:%s", name, dir);
 	if (ret < 0)
 		return ret;
-	fd = ksceIoDopen(path);
+	fd = sceIoDopen(path);
 	if (fd < 0)
 		return fd;
-	ret = ksceIoIoctl(fd, cmd, in, inSize, NULL, 0);
+	ret = sceIoIoctl(fd, cmd, in, inSize, NULL, 0);
 	if (ret != 0) {
-		ksceIoDclose(fd);
+		sceIoDclose(fd);
 		return ret;
 	}
-	return ksceIoDclose(fd);
+	return sceIoDclose(fd);
 }
 
 int kscePfsAcidDirSet(const char *name, const char *dir)
@@ -382,7 +381,7 @@ int ScePfsMgrForKernel_7E4B76E6(const char *name, void *out)
 	if (!pfsNameIsValid(name))
 		return SCE_ERROR_ERRNO_EINVAL;
 	snprintf(device, 0x21, "%s0:", name);
-	return ksceIoDevctl(device, PFS_DEVCTL_GET_4413, NULL, 0, out, 0x404);
+	return sceIoDevctl(device, PFS_DEVCTL_GET_4413, NULL, 0, out, 0x404);
 }
 
 int ScePfsMgrForKernel_27FB7618(const char *name, SceUInt32 *out1, SceUInt32 *out2)
@@ -394,7 +393,7 @@ int ScePfsMgrForKernel_27FB7618(const char *name, SceUInt32 *out1, SceUInt32 *ou
 	if (!pfsNameIsValid(name))
 		return SCE_ERROR_ERRNO_EINVAL;
 	snprintf(device, 0x21, "%s0:", name);
-	ret = ksceIoDevctl(device, PFS_DEVCTL_GET_SIZE, NULL, 0, result, sizeof(result));
+	ret = sceIoDevctl(device, PFS_DEVCTL_GET_SIZE, NULL, 0, result, sizeof(result));
 	if (ret >= 0) {
 		*out1 = result[0];
 		*out2 = result[1];
@@ -411,7 +410,7 @@ int ScePfsMgrForKernel_806D2EA1(const char *name, SceUInt32 value)
 		return SCE_ERROR_ERRNO_EINVAL;
 	snprintf(device, 0x21, "%s0:", name);
 	in = value;
-	return ksceIoDevctl(device, PFS_DEVCTL_SET_4411, &in, sizeof(in), NULL, 0);
+	return sceIoDevctl(device, PFS_DEVCTL_SET_4411, &in, sizeof(in), NULL, 0);
 }
 
 int ScePfsMgrForKernel_E9D672AB(const char *name)
@@ -421,7 +420,7 @@ int ScePfsMgrForKernel_E9D672AB(const char *name)
 	if (!pfsNameIsValid(name))
 		return SCE_ERROR_ERRNO_EINVAL;
 	snprintf(device, 0x21, "%s0:", name);
-	return ksceIoDevctl(device, PFS_DEVCTL_4414, NULL, 0, NULL, 0);
+	return sceIoDevctl(device, PFS_DEVCTL_4414, NULL, 0, NULL, 0);
 }
 
 int module_start(SceSize args, void *argp)
@@ -456,19 +455,19 @@ int module_start(SceSize args, void *argp)
 	g_pfsPmiListMutex = ret;
 	if (ret < 0)
 		goto lru;
-	ret = ksceVfsAddVfs(&g_pfsRedirectVfsInfo);
+	ret = sceVfsAddVfs(&g_pfsRedirectVfsInfo);
 	if (ret != 0)
 		goto mutex;
-	ret = ksceVfsAddVfs(&g_pfsGdsdVfsInfo);
+	ret = sceVfsAddVfs(&g_pfsGdsdVfsInfo);
 	if (ret != 0)
 		goto redirect;
-	ret = ksceVfsAddVfs(&g_pfsAcVfsInfo);
+	ret = sceVfsAddVfs(&g_pfsAcVfsInfo);
 	if (ret == 0)
 		return 0;
 
-	ksceVfsDeleteVfs(g_pfsGdsdVfsInfo.vfs_name, NULL);
+	sceVfsDeleteVfs(g_pfsGdsdVfsInfo.vfs_name, NULL);
 redirect:
-	ksceVfsDeleteVfs(g_pfsRedirectVfsInfo.vfs_name, NULL);
+	sceVfsDeleteVfs(g_pfsRedirectVfsInfo.vfs_name, NULL);
 mutex:
 	sceKernelDeleteMutex(g_pfsPmiListMutex);
 lru:

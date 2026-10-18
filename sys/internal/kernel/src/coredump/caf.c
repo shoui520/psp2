@@ -8,7 +8,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/uid_class.h>
 #include <string.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 
 /* a CAF transform's state behind a UID */
 typedef struct CafContextObject {
@@ -77,5 +77,5 @@ int sceCoredumpCafContextDestroy(SceUID context)
 
 int ksceCoredumpDeleteCrashReportCaf(void)
 {
-	return ksceIoRemove("ux0:data/crash_report.caf");
+	return sceIoRemove("ux0:data/crash_report.caf");
 }

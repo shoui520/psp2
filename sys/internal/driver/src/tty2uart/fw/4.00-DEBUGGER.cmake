@@ -68,7 +68,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockMutex
 	sceKernelGetProcessId
 	sceKernelCreateMutex
-	ksceVfsAddVfs
+	sceVfsAddVfs
 	vfsUmount
 	vfsLockVnode
 	vfsMount

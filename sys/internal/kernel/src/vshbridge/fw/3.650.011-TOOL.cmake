@@ -288,19 +288,19 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetThreadAccessLevel
 	sceKernelExitDeleteThread
 	SceThreadmgrForDriver_E54FD746
-	ksceIoDreadForVshbridge
-	ksceIoFlock
-	ksceIoChstatForVshbridge
-	ksceIoUmount
-	ksceIoCreateMountEvent
-	ksceIoCreateErrorEvent
-	ksceIoClearErrorEvent
-	ksceIoDeleteMountEvent
-	ksceIoSetProcessDefaultPriorityForSystem
-	ksceIoDeleteErrorEvent
-	ksceIoGetProcessDefaultPriorityForSystem
-	ksceIoMount
-	ksceIoGetstatForVshbridge
+	sceIoDreadForVshbridge
+	SceIofilemgrForDriver_16336A0D
+	sceIoChstatForVshbridge
+	SceIofilemgrForDriver_20574100
+	sceIoCreateMountEvent
+	sceIoCreateErrorEvent
+	SceIofilemgrForDriver_40B933C7
+	sceIoDeleteMountEvent
+	SceIofilemgrForDriver_ABE65071
+	SceIofilemgrForDriver_C6158F8D
+	SceIofilemgrForDriver_CE397158
+	SceIofilemgrForDriver_D070BC48
+	sceIoGetstatForVshbridge
 	SceModulemgrForDriver_BBE1771C
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram

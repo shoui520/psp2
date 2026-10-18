@@ -3,8 +3,7 @@
  * registry files under vd0:. All names unknown.
  */
 
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include "reg_internal.h"
 
 #define REG_PATH_SIZE	0x108	/* "vd0:" and a registry file path */
@@ -31,10 +30,10 @@ int regPlatformInit(void)
 /* create the registry folder when it is missing */
 void regMakeDirectory(void)
 {
-	if (ksceIoGetstat("vd0:/registry", &g_regDirStat) >= 0)
+	if (sceIoGetstat("vd0:/registry", &g_regDirStat) >= 0)
 		return;
 
-	ksceIoMkdir("vd0:/registry", 6);
+	sceIoMkdir("vd0:/registry", 6);
 }
 
 /* open a registry file for writing, created when missing */
@@ -48,7 +47,7 @@ SceUID regFileCreate(const char *path)
 		return REG_ERROR_NO_MEMORY_HEAP;
 
 	snprintf(fullPath, REG_PATH_SIZE, "vd0:%s", path);
-	fd = ksceIoOpen(fullPath, SCE_O_RDWR | SCE_O_CREAT | REG_O_FLAGS, 6);
+	fd = sceIoOpen(fullPath, SCE_O_RDWR | SCE_O_CREAT | REG_O_FLAGS, 6);
 	memset(fullPath, 0, REG_PATH_SIZE);
 	regMemFree(fullPath);
 
@@ -58,7 +57,7 @@ SceUID regFileCreate(const char *path)
 /* open a file by its full path for writing, created when missing */
 SceUID regFileCreateFullPath(const char *path)
 {
-	return ksceIoOpen(path, SCE_O_RDWR | SCE_O_CREAT | REG_O_FLAGS, 6);
+	return sceIoOpen(path, SCE_O_RDWR | SCE_O_CREAT | REG_O_FLAGS, 6);
 }
 
 /* open a registry file for reading and writing */
@@ -72,7 +71,7 @@ SceUID regFileOpen(const char *path)
 		return REG_ERROR_NO_MEMORY_HEAP;
 
 	snprintf(fullPath, REG_PATH_SIZE, "vd0:%s", path);
-	fd = ksceIoOpen(fullPath, SCE_O_RDWR | REG_O_FLAGS, 0);
+	fd = sceIoOpen(fullPath, SCE_O_RDWR | REG_O_FLAGS, 0);
 	memset(fullPath, 0, REG_PATH_SIZE);
 	regMemFree(fullPath);
 
@@ -82,13 +81,13 @@ SceUID regFileOpen(const char *path)
 /* open a file by its full path for reading and writing */
 SceUID regFileOpenFullPath(const char *path)
 {
-	return ksceIoOpen(path, SCE_O_RDWR | REG_O_FLAGS, 0);
+	return sceIoOpen(path, SCE_O_RDWR | REG_O_FLAGS, 0);
 }
 
 /* close a registry file: -1 on failure */
 int regFileClose(SceUID fd)
 {
-	return ksceIoClose(fd) >> 31;
+	return sceIoClose(fd) >> 31;
 }
 
 /* remove a registry file */
@@ -102,7 +101,7 @@ int regFileRemove(const char *path)
 		return REG_ERROR_NO_MEMORY;
 
 	snprintf(fullPath, REG_PATH_SIZE, "vd0:%s", path);
-	ret = ksceIoRemove(fullPath);
+	ret = sceIoRemove(fullPath);
 	memset(fullPath, 0, REG_PATH_SIZE);
 	regMemFree(fullPath);
 
@@ -123,7 +122,7 @@ int regFileRename(const char *oldPath, const char *newPath)
 	} else {
 		snprintf(oldFullPath, REG_PATH_SIZE, "vd0:%s", oldPath);
 		snprintf(newFullPath, REG_PATH_SIZE, "vd0:%s", newPath);
-		ret = ksceIoRename(oldFullPath, newFullPath) < 0 ? REG_ERROR_RENAME : 0;
+		ret = sceIoRename(oldFullPath, newFullPath) < 0 ? REG_ERROR_RENAME : 0;
 	}
 
 	if (oldFullPath != NULL) {
@@ -143,7 +142,7 @@ int regFileWrite(const void *data, int size, int num, SceUID fd, int *written)
 {
 	int ret;
 
-	ret = ksceIoWrite(fd, data, size * num);
+	ret = sceIoWrite(fd, data, size * num);
 	*written = ret;
 
 	return ret < size * num ? REG_ERROR_WRITE : 0;
@@ -154,7 +153,7 @@ int regFileRead(void *data, int size, int num, SceUID fd, int *read)
 {
 	int ret;
 
-	ret = ksceIoRead(fd, data, size * num);
+	ret = sceIoRead(fd, data, size * num);
 	*read = ret;
 	if (ret >= size * num)
 		return 0;
@@ -165,7 +164,7 @@ int regFileRead(void *data, int size, int num, SceUID fd, int *read)
 /* seek in a registry file */
 int regFileSeek(SceUID fd, int offset, int whence)
 {
-	return ksceIoLseek(fd, offset, whence) < 0 ? REG_ERROR_SEEK : 0;
+	return sceIoLseek(fd, offset, whence) < 0 ? REG_ERROR_SEEK : 0;
 }
 
 /* the size of a registry file */
@@ -180,7 +179,7 @@ int regFileGetSize(const char *path, SceUInt32 *size)
 		return REG_ERROR_NO_MEMORY;
 
 	snprintf(fullPath, REG_PATH_SIZE, "vd0:%s", path);
-	ret = ksceIoGetstat(fullPath, &stat);
+	ret = sceIoGetstat(fullPath, &stat);
 	memset(fullPath, 0, REG_PATH_SIZE);
 	regMemFree(fullPath);
 	if (ret < 0)

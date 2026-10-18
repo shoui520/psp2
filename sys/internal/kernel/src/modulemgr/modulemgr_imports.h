@@ -25,7 +25,6 @@
 #include <acmgr/acmgr.h>
 #include <intrmgr/intrmgr.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/io/fcntl.h>
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>

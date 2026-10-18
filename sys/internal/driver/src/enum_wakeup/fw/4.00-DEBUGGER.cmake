@@ -192,9 +192,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	SceQafMgrForDriver_52B4E164
 	SceModulemgrForDriver_BBE1771C
 	ScePervasiveForDriver_146108D4

@@ -976,7 +976,7 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 				vfsUnlockVnode(vp);
 				return SCE_ERROR_ERRNO_EBUSY;
 			}
-			ret = ksceVopInactive(vp);
+			ret = sceVopInactive(vp);
 			if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP)
 				SCE_DBG_PRINTF(0xf, 326, "inactive failed ... %d 0x%x\n", ret, ret);
 			vfsFreeVnode(vp);
@@ -997,7 +997,7 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 	return 0;
 }
 
-int ksceVfsAddVfs(SceVfsInfo *vfsInf)
+int sceVfsAddVfs(SceVfsInfo *vfsInf)
 {
 	SceVfsInfo *cur;
 	const char *name;
@@ -1023,7 +1023,7 @@ out:
 	return ret;
 }
 
-int ksceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf)
+int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf)
 {
 	SceVfsInfo *inf, *prev, *cur;
 	int ret;
@@ -1550,10 +1550,10 @@ int vfs_sync(SceVfsMount *mnt)
 			}
 			link = vp->core.link_to;
 			if (link == NULL) {
-				ret = ksceVopSync(vp, vp->core.fd_list, 1);
+				ret = sceVopSync(vp, vp->core.fd_list, 1);
 			} else {
 				vfsLockVnode(link);
-				ret = ksceVopSync(vp->core.link_to, vp->core.link_to->core.fd_list, 1);
+				ret = sceVopSync(vp->core.link_to, vp->core.link_to->core.fd_list, 1);
 				vfsUnlockVnode(vp->core.link_to);
 			}
 			if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP) {

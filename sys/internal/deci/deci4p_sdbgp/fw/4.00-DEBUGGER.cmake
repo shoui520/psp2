@@ -422,16 +422,16 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetStubNidTableForDebugger
 	SceModulemgrForKernel_DAA90093
 	sceKernelGetStubList
-	ksceIoGetPUIDFdListForDebugger
-	ksceIoWrite
-	ksceIoGetRemoteKPLSData
-	ksceIoOpen
-	ksceIoGetFileInfo
+	sceIoGetPUIDFdListForDebugger
+	sceIoWrite
+	SceIofilemgrForDriver_44EDCE57
+	sceIoOpen
+	SceIofilemgrForDriver_A1EF2648
 	vfsGetMntInfo
 	vfsGetMntList
-	ksceIoGetGUIDFdListForDebugger
+	sceIoGetGUIDFdListForDebugger
 	SceIofilemgrForDriver_F4F8C59A
-	ksceIoClose
+	sceIoClose
 	SceThreadmgrForDriver_04C6764B
 	sceKernelGetLwMutexInfoAllProc
 	SceThreadmgrForDriver_09346D1A

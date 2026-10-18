@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
@@ -53,12 +53,12 @@ int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 	if (!buffer)
 		return (int)0x800f020c;
 	remaining = segment->size;
-	if (ksceIoLseek(fd, segment->offset, SCE_SEEK_SET) < 0)
+	if (sceIoLseek(fd, segment->offset, SCE_SEEK_SET) < 0)
 		goto readError;
 	cursor = buffer;
 	while (remaining > 0) {
 		chunk = remaining > 0x40000 ? 0x40000 : remaining;
-		count = ksceIoRead(fd, cursor, chunk);
+		count = sceIoRead(fd, cursor, chunk);
 		cursor += count;
 		if (count < 0 || count != chunk)
 			goto readError;
@@ -88,7 +88,7 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 	SceDebugForDriver_02B04343(0, &updateStartedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, 0, 0);
 	memset(&pup, 0, sizeof(pup));
-	fd = ksceIoOpen(path, 0x04000001, 0);
+	fd = sceIoOpen(path, 0x04000001, 0);
 	if (fd < 0) {
 		if (fd == (int)0x80010002)
 			SceDebugForDriver_02B04343(0, &updateFileMissingInfo,
@@ -152,13 +152,13 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 		}
 		certifiedHeader = (cf_header){0};
 		memset(&packageInfo, 0, sizeof(packageInfo));
-		if (ksceIoLseek(fd, segment->offset, SCE_SEEK_SET) < 0 ||
-		    ksceIoRead(fd, &certifiedHeader, sizeof(certifiedHeader)) != sizeof(certifiedHeader))
+		if (sceIoLseek(fd, segment->offset, SCE_SEEK_SET) < 0 ||
+		    sceIoRead(fd, &certifiedHeader, sizeof(certifiedHeader)) != sizeof(certifiedHeader))
 			goto readError;
 		if ((certifiedHeader.magic & 0x00ffffff) != 0x00454353)
 			goto formatError;
-		if (ksceIoLseek(fd, segment->offset + certifiedHeader.file_offset, SCE_SEEK_SET) < 0 ||
-		    ksceIoRead(fd, &packageInfo, sizeof(packageInfo)) != sizeof(packageInfo))
+		if (sceIoLseek(fd, segment->offset + certifiedHeader.file_offset, SCE_SEEK_SET) < 0 ||
+		    sceIoRead(fd, &packageInfo, sizeof(packageInfo)) != sizeof(packageInfo))
 			goto readError;
 		if (packageInfo.version != 4)
 			goto formatError;
@@ -187,7 +187,7 @@ int UpdateMgrdoUpdate(SceUID heapId, const char *path)
 finished:
 	SceDebugForDriver_02B04343(0, &updateFinishedInfo,
 		"[I] 0x%08x : 0x%08x : 0x%04x : 0x%08x\n", 11, 0, stage, result);
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	if (pup.allocation)
 		sceKernelFreeHeapMemory(heapId, pup.allocation);
 	PupUtilPupFreeCachedHeader();

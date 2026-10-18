@@ -10,7 +10,6 @@
  * records); the ones below are descriptive.
  */
 
-#include <psp2kern/io/fcntl.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -210,32 +209,32 @@ static int ErrorTableLoad(ErrorTable *table)
 	SceUID fd;
 	int size;
 
-	fd = ksceIoOpen(TABLE_PATH, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(TABLE_PATH, SCE_O_RDONLY, 0);
 	if (fd < 0)
 		goto fail;
-	if (ksceIoRead(fd, table, 8) != 8)
+	if (sceIoRead(fd, table, 8) != 8)
 		goto close;
 	if (table->groupNum > TABLE_GROUPS_MAX) {
 		SceDebugForDriver_391B74B7("[SceError] facility_group_num = %d\n", table->groupNum);
 		goto close;
 	}
 	size = table->groupNum * sizeof(ErrorGroup);
-	if (ksceIoRead(fd, table->groups, size) != size)
+	if (sceIoRead(fd, table->groups, size) != size)
 		goto close;
-	if (ksceIoRead(fd, &table->base, 4) != 4)
+	if (sceIoRead(fd, &table->base, 4) != 4)
 		goto close;
 	if (table->codeNum > TABLE_CODES_MAX) {
 		SceDebugForDriver_391B74B7("[SceError] error_table_num = %d\n", table->codeNum);
 		goto close;
 	}
 	size = table->codeNum * sizeof(SceUInt32);
-	if (ksceIoRead(fd, table->codes, size) != size)
+	if (sceIoRead(fd, table->codes, size) != size)
 		goto close;
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return 0;
 
 close:
-	ksceIoClose(fd);
+	sceIoClose(fd);
 fail:
 	memset(table, 0, sizeof(*table));
 	return 0;
@@ -350,7 +349,7 @@ static int ErrorHistoryClear(int reserved)
 		return SCE_ERROR_ERRNO_EINVAL;
 	memset(&s_history, 0, sizeof(s_history));
 	s_history.version = 1;
-	ksceIoRemove(HISTORY_PATH);
+	sceIoRemove(HISTORY_PATH);
 	return 0;
 }
 
@@ -360,10 +359,10 @@ static int ErrorHistoryLoad(void)
 
 	memset(&s_history, 0, sizeof(s_history));
 	s_history.version = 1;
-	fd = ksceIoOpen(HISTORY_PATH, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(HISTORY_PATH, SCE_O_RDONLY, 0);
 	if (fd >= 0) {
-		ksceIoRead(fd, &s_history, sizeof(s_history));
-		ksceIoClose(fd);
+		sceIoRead(fd, &s_history, sizeof(s_history));
+		sceIoClose(fd);
 	}
 	return 0;
 }
@@ -372,18 +371,18 @@ static int ErrorHistorySave(void)
 {
 	SceUID fd;
 
-	ksceIoMkdir("vd0:history", 6);
-	fd = ksceIoOpen(HISTORY_PATH, SCE_O_WRONLY | SCE_O_CREAT, 6);
+	sceIoMkdir("vd0:history", 6);
+	fd = sceIoOpen(HISTORY_PATH, SCE_O_WRONLY | SCE_O_CREAT, 6);
 	if (fd < 0)
 		return 0;
-	if (ksceIoWrite(fd, &s_history, sizeof(s_history)) == sizeof(s_history)) {
-		ksceIoClose(fd);
-		fd = ksceIoOpen(HISTORY_BACKUP, SCE_O_WRONLY | SCE_O_CREAT, 6);
+	if (sceIoWrite(fd, &s_history, sizeof(s_history)) == sizeof(s_history)) {
+		sceIoClose(fd);
+		fd = sceIoOpen(HISTORY_BACKUP, SCE_O_WRONLY | SCE_O_CREAT, 6);
 		if (fd < 0)
 			return 0;
-		ksceIoWrite(fd, &s_history, sizeof(s_history));
+		sceIoWrite(fd, &s_history, sizeof(s_history));
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	return 0;
 }
 

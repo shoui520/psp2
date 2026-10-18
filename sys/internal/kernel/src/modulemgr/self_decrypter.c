@@ -120,7 +120,7 @@ int SelfReaderOpen(SelfReader *reader, SceUID pid, SceUID fd, ModuleAuthInfo *au
 		if (reader->heap == NULL)
 			return SCE_KERNEL_ERROR_MODULEMGR_NOMEM_SELF;
 		reader->header = (void *)(((SceUInt32)reader->heap + 0x3f) & ~0x3f);
-		ret = ksceIoRead(fd, reader->header, 0x1000);
+		ret = sceIoRead(fd, reader->header, 0x1000);
 		if (ret < 0)
 			goto fail;
 		p = reader->header;
@@ -406,7 +406,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			return SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		length = segment->length;
 		offset = segment->offset <= 0x7fffffff ? segment->offset : -0x80000000LL;
-		position = ksceIoLseek(reader->fd, offset, SCE_SEEK_SET);
+		position = sceIoLseek(reader->fd, offset, SCE_SEEK_SET);
 		if (position != offset)
 			return position < 0 ? (int)position : SCE_KERNEL_ERROR_MODULEMGR_NOEXEC;
 		g_segmentIndex = index;
@@ -431,7 +431,7 @@ int SelfReaderLoadSegment(SelfReader *reader, int index, void *dst, LoadelfTimin
 			if (timing != NULL)
 				readStart = SceThreadmgrForDriver_47F6DE49();
 #endif
-			bytesRead = ksceIoRead(reader->fd, g_slot[next].buf, chunk);
+			bytesRead = sceIoRead(reader->fd, g_slot[next].buf, chunk);
 			if ((SceSize)bytesRead != chunk) {
 				/* The original preserves negative errors and treats a
 				 * short or oversized nonnegative read as an execution error. */

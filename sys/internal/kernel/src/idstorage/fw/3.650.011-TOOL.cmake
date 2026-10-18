@@ -69,12 +69,12 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_84EB1EA4
 	sceKernelGetProcessId
 	sceKernelCreateMutex
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoSync
-	ksceIoRead
-	ksceIoClose
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoSync
+	sceIoRead
+	sceIoClose
 	SceSblACMgrForDriver_BE5667C5
 	ScePmMgrForDriver_2AC815A2
 	sceKernelRegisterSysEventHandler

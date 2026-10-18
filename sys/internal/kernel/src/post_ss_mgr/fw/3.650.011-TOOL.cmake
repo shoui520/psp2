@@ -153,16 +153,16 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_83EFA1CC
 	SceKernelUtilsForDriver_E39CD272
 	SceKernelUtilsForDriver_EDA97D6D
-	ksceIoRemove
-	ksceIoDclose
-	ksceIoDread
-	ksceIoWrite
-	ksceIoDopen
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoMkdir
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoDclose
+	sceIoDread
+	sceIoWrite
+	sceIoDopen
+	sceIoLseek
+	sceIoOpen
+	sceIoMkdir
+	sceIoRead
+	sceIoClose
 	SceCpuForDriver_103872A5
 	SceCpuForDriver_364E68A4
 	SceDebugForDriver_02B04343

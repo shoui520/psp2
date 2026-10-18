@@ -17,7 +17,7 @@
 #include <string.h>
 #include <iofilemgr/vfs.h>
 
-int ksceVfsOpDecodePathElem(SceVfsMount *mnt, const char *path, const char **path2,
+int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
 	const char **path3, char *buf, SceSize size, SceSize *decodeLen);
 
 #include <kernel/error.h>

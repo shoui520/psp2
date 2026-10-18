@@ -14,7 +14,7 @@ int g_ioFiosDcloseEnabled __attribute__((section(".data"))) = 0;
 /* the flags that may create or change the file: the overlay resolves them for writing */
 #define IO_OPEN_WRITE_FLAGS	(SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC)
 
-SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode)
+SceUID SceIofilemgrForDriver_C3D34965(SceUID pid, const char *path, int flags, SceMode mode)
 {
 	char *resolved;
 	int forWrite;
@@ -22,7 +22,7 @@ SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode)
 	int ret;
 
 	if (g_ioFiosOpenEnabled == 0)
-		return ksceIoOpen(path, flags, mode);
+		return sceIoOpen(path, flags, mode);
 
 	forWrite = (flags & IO_OPEN_WRITE_FLAGS) != 0;
 	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x400);
@@ -32,7 +32,7 @@ SceUID ksceIoOpenForPid(SceUID pid, const char *path, int flags, SceMode mode)
 	ret = ksceFiosKernelOverlayResolveSync(pid, forWrite, path, resolved, 0x400);
 	if (ret < 0)
 		goto error;
-	fd = ksceIoOpen(resolved, flags, mode);
+	fd = sceIoOpen(resolved, flags, mode);
 	sceKernelFreeHeapMemory(g_ioVfsHeapUid, resolved);
 	return fd;
 
@@ -42,7 +42,7 @@ error:
 }
 
 /* a path's media type, through the process's path mapping; unknown media is 8 */
-int ksceIoGetMediaType(SceUID pid, const char *path, int unused, SceUInt32 *type)
+int SceIofilemgrForDriver_9C220246(SceUID pid, const char *path, int unused, SceUInt32 *type)
 {
 	IoPathMappingFunction map;
 	char *mapped;
@@ -141,7 +141,7 @@ out:
 plain:
 	fd = check_limit_and_increment_user_fd_count(pid, thid);
 	if (fd >= 0) {
-		fd = ksceIoDopen(dirname);
+		fd = sceIoDopen(dirname);
 		if (fd < 0)
 			decrement_user_fd_count(pid, thid, 0);
 	}
@@ -157,7 +157,7 @@ int sceIoDreadInternal(SceUID fd, SceIoDirent *dir)
 
 	handle = SceIofilemgrForDriver_338DCD68(fd, &ret);
 	if (handle == 0)
-		return ksceIoDread(fd, dir);
+		return sceIoDread(fd, dir);
 
 	ret = getFileSchedParam(fd, &param, 0);
 	if (ret < 0)
@@ -194,10 +194,10 @@ int sceIoDcloseInternal(SceUID fd)
 				ret = SceIofilemgrForDriver_3A79FAC9(fd);
 			}
 		} else {
-			ret = ksceIoDclose(fd);
+			ret = sceIoDclose(fd);
 		}
 	} else {
-		ret = ksceIoDclose(fd);
+		ret = sceIoDclose(fd);
 	}
 	if (ret == 0) {
 		pid = SceThreadmgrForDriver_FA54D49A();

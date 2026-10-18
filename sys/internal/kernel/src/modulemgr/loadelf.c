@@ -560,7 +560,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 		return ret;
 	auth.flags = flags;
 
-	fd = ksceIoOpen(path, 1, 0);
+	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
 	ret = SelfReaderOpen(&reader, KERNEL_PID, fd, &auth);
@@ -580,7 +580,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 		}
 		SelfReaderClose(&reader);
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	SCE_DBG_PRINTF_LEVEL(2, 0, 1098,
 		"sceKernelLoadPtLoadSegForFwloader : path=%s, idx=%d, dst=%p, size=0x%08x, filesz=0x%08x\n",
 		path, index, dst, size, *out);
@@ -596,7 +596,7 @@ int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId, S
 	if (path == NULL || authId == NULL || version == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
-	fd = ksceIoOpen(path, 1, 0);
+	fd = sceIoOpen(path, 1, 0);
 	if (fd < 0)
 		return fd;
 	ret = SelfReaderOpen(&reader, KERNEL_PID, fd, NULL);
@@ -606,7 +606,7 @@ int sceKernelGetProgramIdentificationInfo(const char *path, SceUInt64 *authId, S
 		SelfReaderClose(&reader);
 		ret = 0;
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	if (ret != 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1141, "getProgramIdentificationInfo failed. 0x%08x\n", ret);
 	return ret;

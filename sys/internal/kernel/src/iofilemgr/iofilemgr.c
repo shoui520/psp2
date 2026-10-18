@@ -213,7 +213,7 @@ void SceIofilemgrForDriver_F4F8C59A(void *arg)
 	g_vfsVopHook = (VfsVopHook)arg;
 }
 
-int ksceIoClose(SceUID fd)
+int sceIoClose(SceUID fd)
 {
 	IofilemgrSchedInfo info __attribute__((aligned(8)));
 	IofilemgrCloseParam param;
@@ -242,7 +242,7 @@ int ksceIoClose(SceUID fd)
 	return ret;
 }
 
-SceUID ksceIoOpen(const char *path, int flags, SceMode mode)
+SceUID sceIoOpen(const char *path, int flags, SceMode mode)
 {
 	IofilemgrOpenParam param __attribute__((aligned(8)));
 	SceUInt32 tls;
@@ -270,7 +270,7 @@ SceUID ksceIoOpen(const char *path, int flags, SceMode mode)
 	return ret;
 }
 
-int ksceIoRead(SceUID fd, void *data, SceSize size)
+int sceIoRead(SceUID fd, void *data, SceSize size)
 {
 	IofilemgrSchedInfo info;
 	SceUInt32 tls;
@@ -299,7 +299,7 @@ int ksceIoRead(SceUID fd, void *data, SceSize size)
 	return ret;
 }
 
-int ksceIoWrite(SceUID fd, const void *data, SceSize size)
+int sceIoWrite(SceUID fd, const void *data, SceSize size)
 {
 	IofilemgrSchedInfo info;
 	SceUInt32 tls;
@@ -327,7 +327,7 @@ int ksceIoWrite(SceUID fd, const void *data, SceSize size)
 	return ret;
 }
 
-SceOff ksceIoLseek(SceUID fd, SceOff offset, int whence)
+SceOff sceIoLseek(SceUID fd, SceOff offset, int whence)
 {
 	IofilemgrLseekParam param;
 	IofilemgrSchedInfo info;
@@ -383,7 +383,7 @@ int sceIoLseek32(SceUID fd, int offset, int whence)
 	return ret;
 }
 
-int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, void *outdata,
+int sceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, void *outdata,
 		SceSize outlen)
 {
 	IofilemgrIoctlParam param;
@@ -506,7 +506,7 @@ int ksceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen, 
 	return ret;
 }
 
-SceUID ksceIoDopen(const char *dirname)
+SceUID sceIoDopen(const char *dirname)
 {
 	IofilemgrDopenParam param;
 	SceUInt32 tls;
@@ -532,7 +532,7 @@ SceUID ksceIoDopen(const char *dirname)
 	return ret;
 }
 
-int ksceIoDread(SceUID fd, SceIoDirent *dir)
+int sceIoDread(SceUID fd, SceIoDirent *dir)
 {
 	IofilemgrSchedInfo info;
 	SceUInt32 tls;
@@ -560,7 +560,7 @@ int ksceIoDread(SceUID fd, SceIoDirent *dir)
 	return ret;
 }
 
-int ksceIoDclose(SceUID fd)
+int sceIoDclose(SceUID fd)
 {
 	SceUInt32 tls;
 	IofilemgrDcloseParam param;
@@ -586,7 +586,7 @@ int ksceIoDclose(SceUID fd)
 	return ret;
 }
 
-int ksceIoRemove(const char *file)
+int sceIoRemove(const char *file)
 {
 	IofilemgrRemoveParam param;
 	SceUInt32 tls;
@@ -613,7 +613,7 @@ int ksceIoRemove(const char *file)
 	return ret;
 }
 
-int ksceIoMkdir(const char *dir, SceMode mode)
+int sceIoMkdir(const char *dir, SceMode mode)
 {
 	IofilemgrMkdirParam param;
 	SceUInt32 tls;
@@ -640,7 +640,7 @@ int ksceIoMkdir(const char *dir, SceMode mode)
 	return ret;
 }
 
-int ksceIoRmdir(const char *path)
+int sceIoRmdir(const char *path)
 {
 	IofilemgrRmdirParam param;
 	SceUInt32 tls;
@@ -666,7 +666,7 @@ int ksceIoRmdir(const char *path)
 	return ret;
 }
 
-int ksceIoGetstat(const char *file, SceIoStat *stat)
+int sceIoGetstat(const char *file, SceIoStat *stat)
 {
 	IofilemgrGetstatParam param;
 	SceUInt32 tls;
@@ -694,7 +694,7 @@ int ksceIoGetstat(const char *file, SceIoStat *stat)
 	return ret;
 }
 
-int ksceIoChstat(const char *file, SceIoStat *stat, int bits)
+int sceIoChstat(const char *file, SceIoStat *stat, int bits)
 {
 	IofilemgrChstatParam param;
 	SceUInt32 tls;
@@ -723,7 +723,7 @@ int ksceIoChstat(const char *file, SceIoStat *stat, int bits)
 	return ret;
 }
 
-int ksceIoRename(const char *oldname, const char *newname)
+int sceIoRename(const char *oldname, const char *newname)
 {
 	IofilemgrRenameParam param;
 	SceUInt32 tls;
@@ -750,7 +750,7 @@ int ksceIoRename(const char *oldname, const char *newname)
 	return ret;
 }
 
-int ksceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata,
+int sceIoDevctl(const char *dev, unsigned int cmd, void *indata, int inlen, void *outdata,
 		 int outlen)
 {
 	IofilemgrDevctlParam param;
@@ -863,7 +863,7 @@ error:
 	return ret;
 }
 
-int ksceIoSync(const char *device, unsigned int flag)
+int sceIoSync(const char *device, unsigned int flag)
 {
 	IofilemgrSyncParam param;
 	SceUInt32 tls;
@@ -890,7 +890,7 @@ int ksceIoSync(const char *device, unsigned int flag)
 	return ret;
 }
 
-int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_size,
+int sceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_size,
 				   SceSize *res_size)
 {
 	SceUID *vector;
@@ -927,7 +927,7 @@ int ksceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	return num;
 }
 
-int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_size,
+int sceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_size,
 				   SceSize *res_size)
 {
 	SceUID pidlist[IOFILEMGR_PROCESS_MAX];
@@ -1000,7 +1000,7 @@ int ksceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_
 	return total;
 }
 
-int ksceIoGetFileInfo(SceUID fd, SceUID pid, SceIofileInfo *info)
+int SceIofilemgrForDriver_A1EF2648(SceUID fd, SceUID pid, SceIofileInfo *info)
 {
 	if (pid != SCE_KERNEL_PROCESS_ID)
 		fd = SceSysmemForDriver_45D22597(pid, fd);
@@ -1079,7 +1079,7 @@ int IofilemgrModuleStart(SceSize args, void *argp)
 }
 int module_start(SceSize args, void *argp) __attribute__((alias("IofilemgrModuleStart")));
 
-int ksceIoPread(SceUID fd, void *data, SceSize size, SceOff offset)
+int sceIoPread(SceUID fd, void *data, SceSize size, SceOff offset)
 {
 	IofilemgrSchedInfo info;
 	IofilemgrPreadParam param;
@@ -1108,7 +1108,7 @@ int ksceIoPread(SceUID fd, void *data, SceSize size, SceOff offset)
 	return ret;
 }
 
-int ksceIoPwrite(SceUID fd, const void *data, SceSize size, SceOff offset)
+int sceIoPwrite(SceUID fd, const void *data, SceSize size, SceOff offset)
 {
 	IofilemgrSchedInfo info;
 	IofilemgrPwriteParam param;
@@ -1137,7 +1137,7 @@ int ksceIoPwrite(SceUID fd, const void *data, SceSize size, SceOff offset)
 	return ret;
 }
 
-int ksceIoGetstatByFd(SceUID fd, SceIoStat *stat)
+int SceIofilemgrForDriver_462F059B(SceUID fd, SceIoStat *stat)
 {
 	IofilemgrGetstatByFdParam param;
 	IofilemgrSchedInfo info;
@@ -1160,7 +1160,7 @@ int ksceIoGetstatByFd(SceUID fd, SceIoStat *stat)
 	return ret;
 }
 
-int ksceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits)
+int SceIofilemgrForDriver_DF57A75F(SceUID fd, SceIoStat *stat, int bits)
 {
 	IofilemgrChstatByFdParam param;
 	IofilemgrSchedInfo info;
@@ -1184,7 +1184,7 @@ int ksceIoChstatByFd(SceUID fd, SceIoStat *stat, int bits)
 	return ret;
 }
 
-int ksceIoSyncByFd2(SceUID fd, int flag)
+int SceIofilemgrForDriver_43170575(SceUID fd, int flag)
 {
 	IofilemgrSyncByFdParam param;
 	IofilemgrSchedInfo info;
@@ -1207,7 +1207,7 @@ int ksceIoSyncByFd2(SceUID fd, int flag)
 	return ret;
 }
 
-int ksceIoFlock(SceUID fd, int op)
+int SceIofilemgrForDriver_16336A0D(SceUID fd, int op)
 {
 	IofilemgrFlockParam param;
 	int ret;
@@ -1221,7 +1221,7 @@ int ksceIoFlock(SceUID fd, int op)
 	return ret;
 }
 
-int ksceIoGetstatForVshbridge(const char *file, SceIoStat *stat)
+int sceIoGetstatForVshbridge(const char *file, SceIoStat *stat)
 {
 	IofilemgrGetstatParam param;
 	SceUInt32 tls;
@@ -1249,7 +1249,7 @@ int ksceIoGetstatForVshbridge(const char *file, SceIoStat *stat)
 	return ret;
 }
 
-int ksceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits)
+int sceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits)
 {
 	IofilemgrChstatParam param;
 	SceUInt32 tls;
@@ -1278,7 +1278,7 @@ int ksceIoChstatForVshbridge(const char *file, SceIoStat *stat, int bits)
 	return ret;
 }
 
-int ksceIoDreadForVshbridge(SceUID fd, SceIoDirent *dir)
+int sceIoDreadForVshbridge(SceUID fd, SceIoDirent *dir)
 {
 	IofilemgrSchedInfo info;
 	SceUInt32 tls;
@@ -1487,7 +1487,7 @@ int check_limit_user_fd_count(SceUID pid, SceUID thid)
 	return SCE_ERROR_ERRNO_EMFILE;
 }
 
-int ksceIoSetPathMappingFunction(IoPathMappingFunction func)
+int SceIofilemgrForDriver_CFAECF18(IoPathMappingFunction func)
 {
 	if (g_ioPathMappingFunction != NULL && func != NULL)
 		return SCE_ERROR_ERRNO_EBUSY;
@@ -1550,7 +1550,7 @@ int vfsGetMntInfo(SceVfsMount *mnt, VfsMountInfo *info)
 	return vfs_get_mount_info(mnt, info);
 }
 
-int ksceIoGetRemoteKPLSData(SceUID pid, void *dst)
+int SceIofilemgrForDriver_44EDCE57(SceUID pid, void *dst)
 {
 	IofilemgrRemoteKplsData *data = dst;
 	IofilemgrKpls *kpls;

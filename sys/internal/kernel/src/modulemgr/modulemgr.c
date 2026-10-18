@@ -160,7 +160,7 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SelfAu
 		info->module.klicensee[2] = info->caller.klicensee[2];
 		info->module.klicensee[3] = info->caller.klicensee[3];
 	}
-	ret = ksceIoGetMediaType((flags & 0x1004) != 0 ? pid : KERNEL_PID, path, 1, &info->mediaType);
+	ret = SceIofilemgrForDriver_9C220246((flags & 0x1004) != 0 ? pid : KERNEL_PID, path, 1, &info->mediaType);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1049, "GetMediaType failed (0x%08x)\n", ret);
 		return ret;
@@ -824,11 +824,11 @@ inhibited:
 
 	SceKernelSuspendForDriver_4DF40893(0);
 	if ((flags & LOAD_FLAG_1000) != 0)
-		fd = ksceIoOpenForPid(pid, path, SCE_O_RDONLY, 0);
+		fd = SceIofilemgrForDriver_C3D34965(pid, path, SCE_O_RDONLY, 0);
 	else if ((flags & LOAD_FLAG_NO_AUTH) != 0)
 		fd = BootimageOpen(path);
 	else
-		fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+		fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0) {
 		if ((fd & 0xfffeffff) == 0x8008000a)
 			g_hostIoFailed = 1;
@@ -843,7 +843,7 @@ inhibited:
 			if ((flags & LOAD_FLAG_NO_AUTH) != 0)
 				sceLoadcoreIoClose(fd);
 			else
-				ksceIoClose(fd);
+				sceIoClose(fd);
 		}
 		SceKernelSuspendForDriver_2BB92967(0);
 		goto out;
@@ -855,7 +855,7 @@ inhibited:
 		if ((flags & LOAD_FLAG_NO_AUTH) != 0)
 			sceLoadcoreIoClose(fd);
 		else
-			ksceIoClose(fd);
+			sceIoClose(fd);
 	}
 
 loaded:
@@ -2017,7 +2017,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	perm = sceKernelSetThreadAccessLevel(0x80);
 	old = SceThreadmgrForDriver_0486F239(KERNEL_PID);
 	SceKernelSuspendForDriver_4DF40893(0);
-	fd = ksceIoOpen(path, SCE_O_RDONLY, 0);
+	fd = sceIoOpen(path, SCE_O_RDONLY, 0);
 	if (fd < 0) {
 		SceKernelSuspendForDriver_2BB92967(0);
 		SceThreadmgrForDriver_0486F239(old);
@@ -2026,7 +2026,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	}
 	db = LibraryDBInitializeAddr2ModuleTable(pid);
 	if (db == NULL) {
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		SceKernelSuspendForDriver_2BB92967(0);
 		SceThreadmgrForDriver_0486F239(old);
 		sceKernelSetThreadAccessLevel(perm);
@@ -2036,7 +2036,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	ret = ModuleObjNew(pid, flags | LOAD_FLAG_PROCESS_IMAGE, &obj);
 	if (ret < 0) {
 		LibraryDBDelete(pid);
-		ksceIoClose(fd);
+		sceIoClose(fd);
 		SceKernelSuspendForDriver_2BB92967(0);
 		SceThreadmgrForDriver_0486F239(old);
 		sceKernelSetThreadAccessLevel(perm);
@@ -2045,7 +2045,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	t0 = SceThreadmgrForDriver_47F6DE49();
 	ret = ModulemgrLoadModule(obj, path, fd, auth, flags | LOAD_FLAG_PROCESS_IMAGE);
 	t1 = SceThreadmgrForDriver_47F6DE49();
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	SceKernelSuspendForDriver_2BB92967(0);
 	SceThreadmgrForDriver_0486F239(old);
 	sceKernelSetThreadAccessLevel(perm);

@@ -62,7 +62,7 @@ int getDeviceInfo(int dev, SceOff *total, SceOff *free)
 
 	if (dev >= RDRFP_DEVICES)
 		return SCE_ERROR_ERRNO_ENODEV;
-	ret = ksceIoDevctl(rdrfpDevices[dev].path, 0x3001, NULL, 0, &info, sizeof(info));
+	ret = sceIoDevctl(rdrfpDevices[dev].path, 0x3001, NULL, 0, &info, sizeof(info));
 	if (ret < 0) {
 		if (ret != (int)SCE_ERROR_ERRNO_ENODEV)
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 375, "sceIoDevctl ret = 0x%08x\n", ret);
@@ -160,7 +160,7 @@ static int rdrfpFSThreadEntryPoint(SceSize args, void *argp)
 					     rdrfpMountCallbacks[i]);
 			return rdrfpMountCallbacks[i];
 		}
-		rdrfpMountEvents[i] = ksceIoCreateMountEvent(rdrfpDevices[i].mountPoint,
+		rdrfpMountEvents[i] = sceIoCreateMountEvent(rdrfpDevices[i].mountPoint,
 							     RDRFP_MOUNT_EVENT_MOUNTED | RDRFP_MOUNT_EVENT_UNMOUNTED);
 		if (rdrfpMountEvents[i] < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 146, "CreateMountEvent(%d) failed (0x%08x)\n", i,
@@ -184,7 +184,7 @@ static int rdrfpFSThreadEntryPoint(SceSize args, void *argp)
 
 	rdrfpUnregisterWritebufTimer();
 	for (i = 0; i < RDRFP_DEVICES; i++) {
-		ksceIoDeleteMountEvent(rdrfpMountEvents[i]);
+		sceIoDeleteMountEvent(rdrfpMountEvents[i]);
 		sceKernelDeleteCallback(rdrfpMountCallbacks[i]);
 	}
 	return 0;

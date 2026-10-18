@@ -6,7 +6,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include "enum_wakeup.h"
 #include <stddef.h>

@@ -4813,7 +4813,7 @@ int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags)
 		mount = drive->deviceInfo.mount_misc;
 #endif
 		vfsLockVnode(deviceVnode);
-		result = ksceVopSync(deviceVnode, deviceFile, flags);
+		result = sceVopSync(deviceVnode, deviceFile, flags);
 		vfsUnlockVnode(deviceVnode);
 		if (result >= 0)
 			goto finish;

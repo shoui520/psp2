@@ -162,7 +162,7 @@ int DummyTtyStart(void)
 	g_dummyTtyVfsInfo.type = SCE_VFS_TYPE_DEVFS;
 	g_dummyTtyVfsInfo.default_vops = &g_dummyTtyVops;
 	g_dummyTtyVfsInfo.vfs_name_len = sizeof("dummy_ttyp_dev_fs");
-	ret = ksceVfsAddVfs(&g_dummyTtyVfsInfo);
+	ret = sceVfsAddVfs(&g_dummyTtyVfsInfo);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 246, "sceVfsAddVfs failed (0x%08X)\n", ret);
 		return ret;

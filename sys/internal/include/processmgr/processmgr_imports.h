@@ -25,7 +25,7 @@
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/utils.h>

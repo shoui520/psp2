@@ -193,12 +193,12 @@ set(MODULE_IMPORT_NIDS
 	0x9DF04041:F:0xC568F145
 )
 set(MODULE_IMPORT_FUNCS
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetMediaType
-	ksceIoOpenForPid
-	ksceIoRead
-	ksceIoClose
+	sceIoLseek
+	sceIoOpen
+	SceIofilemgrForDriver_9C220246
+	SceIofilemgrForDriver_C3D34965
+	sceIoRead
+	sceIoClose
 	SceIntrmgrForKernel_71C5F42F
 	sceKernelAllocSystemCallTable
 	sceKernelUserUnmap

@@ -115,11 +115,6 @@ int SceHdmiForDriver_291F000B(void);			/* disable CEC */
 int SceHdmiForDriver_6D2D10D8(void);			/* CEC forced polling message */
 
 /* Io, Sdif, Msif */
-/* iofilemgr: ksceIoMount(id, path, flags, data, SceUInt64 reserved) */
-int ksceIoMount(int id, const char *path, int permission, void *data, SceUInt32 reservedLow,
-		SceUInt32 reservedHigh);
-int ksceIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh);
-SceUID ksceIoCreateErrorEvent(int a, int b, int c);
 int SceSdifForDriver_F37CF8E5(void);			/* SD slow mode */
 int ksceSdifGetCardInsertState1(int card);
 int ksceSdifGetCardInsertState2(int card);

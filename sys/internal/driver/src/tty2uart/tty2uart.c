@@ -17,7 +17,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/uart.h>
-#include <psp2kern/vfs.h>
+#include <iofilemgr/vfs.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <sysmem/sysroot.h>
@@ -536,7 +536,7 @@ static int tty2uartFsInit(void)
 	s_vfsInfo.default_vops = &s_vops;
 	s_vfsInfo.vfs_name_len = sizeof(TTY2_FS_NAME);
 	s_vfsInfo.vfs_data = NULL;
-	ret = ksceVfsAddVfs(&s_vfsInfo);
+	ret = sceVfsAddVfs(&s_vfsInfo);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 634, "sceVfsAddVfs failed (0x%08X)\n", ret);
 		return ret;

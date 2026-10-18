@@ -7,6 +7,7 @@
 #include <psp2kern/types.h>
 #include <kernel/error.h>
 #include <modulemgr/modulemgr.h>
+#include <iofilemgr/iofilemgr.h>
 
 /* the caller is not a system program (errno 0x58) */
 
@@ -151,7 +152,7 @@ SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reserv
 SceUInt32 vshIoCreateMountEvent(SceUInt32 mountPoint, SceUInt32 events);
 SceUInt32 vshIoDeleteMountEvent(SceUID event);
 SceUInt32 vshIoFlock(SceUID fd, int flags);
-SceUInt32 vshIoCreateErrorEvent(int a, int b, int c);
+SceUInt32 vshIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *info);
 SceUInt32 vshIoClearErrorEvent(SceUID event);
 SceUInt32 vshIoDeleteErrorEvent(SceUID event);
 SceUInt32 vshIoGetstat(const char *path, void *stat);

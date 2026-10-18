@@ -10,7 +10,7 @@
 #include <intrmgr/syscall.h>
 #include "fios2_internal.h"
 
-extern "C" int ksceIoSyncByFd2(SceUID fd, int flag);	/* name unknown */
+extern "C" int SceIofilemgrForDriver_43170575(SceUID fd, int flag);	/* name unknown */
 
 /* the calling thread's state, NULL when it has none (and create is 0) */
 static inline SceFiosKernelThreadState *fiosThreadState(int create)	/* name unknown */
@@ -325,7 +325,7 @@ int SceFios2KernelForDriver_2649408B(SceFiosKernelDH *dh, SceIoStat *stat)
 		ret = SCE_FIOS_ERROR_BAD_PTR;
 	} else if (dh == NULL || dh->magic != SCE_FIOS_KERNEL_DH_MAGIC) {
 		ret = SCE_FIOS_ERROR_BAD_DH;
-	} else if (dh->fd != -1 && ksceIoGetstatByFd(dh->fd, stat) == 0) {
+	} else if (dh->fd != -1 && SceIofilemgrForDriver_462F059B(dh->fd, stat) == 0) {
 		ret = 0;
 	} else {
 		/* only overlays name it */
@@ -349,7 +349,7 @@ int SceFios2KernelForDriver_35E7E75C(SceFiosKernelDH *dh, SceIoStat *stat, int b
 	else if (dh->fd == -1)
 		ret = SCE_FIOS_ERROR_READ_ONLY;
 	else
-		ret = ksceIoChstatByFd(dh->fd, stat, bits);
+		ret = SceIofilemgrForDriver_DF57A75F(dh->fd, stat, bits);
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -364,7 +364,7 @@ int SceFios2KernelForDriver_990F46A5(SceFiosKernelDH *dh, int flag)
 	else if (dh->fd == -1)
 		ret = SCE_FIOS_ERROR_READ_ONLY;
 	else
-		ret = ksceIoSyncByFd2(dh->fd, flag);
+		ret = SceIofilemgrForDriver_43170575(dh->fd, flag);
 	sceSyscallLeave(state);
 	return ret;
 }

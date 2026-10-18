@@ -2,7 +2,6 @@
 
 #include <psp2kern/types.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <psp2kern/kernel/processmgr.h>
@@ -276,7 +275,7 @@ int appmgrCheckSaveDataFreeSpace(const char *path, SceUInt64 requiredBytes)
 	result = (int)0x80800001;
 	goto out;
 queryDevice:
-	result = ksceIoDevctl(device, 0x3001, NULL, 0, &info, sizeof(info));
+	result = sceIoDevctl(device, 0x3001, NULL, 0, &info, sizeof(info));
 	if (result < 0) {
 		if (result == (int)0x80010030)
 			result = 0;
@@ -378,7 +377,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 	}
 	if (mount->mountId == 600) {
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = ksceIoUmount(0x10000, flags, 0, 0);
+		result = SceIofilemgrForDriver_20574100(0x10000, flags, 0);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result < 0)
 			goto restore;
@@ -478,7 +477,7 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 		return result;
 	}
 	SceKernelSuspendForDriver_4DF40893(0);
-	fd = ksceIoOpen(path, 0x10001, 0);
+	fd = sceIoOpen(path, 0x10001, 0);
 	if (fd == (int)0x80010002) {
 		result = (int)0x80800004;
 		goto out;
@@ -486,8 +485,8 @@ int appmgrReadRif(const char *path, AppmgrLicenseInfo *info)
 	result = (int)0x80800010;
 	if (fd < 0)
 		goto out;
-	length = ksceIoRead(fd, license, 512);
-	ksceIoClose(fd);
+	length = sceIoRead(fd, license, 512);
+	sceIoClose(fd);
 	if (length != 512)
 		goto out;
 	result = ksceNpDrmGetRifInfo(license, 512, 1, info->contentId,
@@ -576,15 +575,15 @@ int appmgrCheckPackageLicenseFlag(const char *appPath, int *hasLicense)
 		goto out;
 	}
 	snprintf(path, 292, "%s/%s/%s", appPath, "sce_sys", "package/head.bin");
-	fd = ksceIoOpen(path, 0x10001, 0);
+	fd = sceIoOpen(path, 0x10001, 0);
 	if (fd < 0) {
 		snprintf(path, 292, "%s/%s/%s", appPath, "sce_sys", "clearsign");
-		fd = ksceIoOpen(path, 0x10001, 0);
+		fd = sceIoOpen(path, 0x10001, 0);
 	}
 	result = fd;
 	if (fd >= 0) {
-		result = ksceIoRead(fd, headerBytes, sizeof(headerBytes));
-		ksceIoClose(fd);
+		result = sceIoRead(fd, headerBytes, sizeof(headerBytes));
+		sceIoClose(fd);
 		if (result >= 0) {
 			if (result == sizeof(headerBytes)) {
 				result = 0;
@@ -625,11 +624,11 @@ int appmgrReadKeystone(SceUID pid, const char *driveId, void *keystone)
 		pid = sceKernelGetProcessId();
 	result = ksceFiosKernelOverlayResolveSync(pid, 0, keyPath, resolvedPath, 292);
 	if (result == 0) {
-		fd = ksceIoOpen(resolvedPath, 1, 0);
+		fd = sceIoOpen(resolvedPath, 1, 0);
 		result = fd;
 		if (fd >= 0) {
-			count = ksceIoRead(fd, keystone, 96);
-			ksceIoClose(fd);
+			count = sceIoRead(fd, keystone, 96);
+			sceIoClose(fd);
 			result = count == 96 ? 0 : (int)0x80800005;
 		}
 	}
@@ -814,10 +813,10 @@ int appmgrReadSealedKey(const char *appPath, void *key)
 	path = SceSysmemForDriver_49D4DD9B(g_appmgrMountHeap, 292, &opt);
 	if (path != NULL) {
 		snprintf(path, 292, "%s/sce_sys/%s", appPath, "sealedkey");
-		result = ksceIoOpen(path, 0x10001, 4);
+		result = sceIoOpen(path, 0x10001, 4);
 		if (result >= 0) {
-			length = ksceIoRead(result, sealedKey, sizeof(sealedKey));
-			ksceIoClose(result);
+			length = sceIoRead(result, sealedKey, sizeof(sealedKey));
+			sceIoClose(result);
 			if (length < 0) {
 				result = length;
 			} else if (length != sizeof(sealedKey)) {
@@ -1168,20 +1167,20 @@ writeFile:
 	}
 	memset(sfoPath, 0, 292);
 	snprintf(sfoPath, 292, "%s/%s/%s", path, "sce_sys", "param.sfo");
-	fd = ksceIoOpen(sfoPath, 1027, 1048582);
+	fd = sceIoOpen(sfoPath, 1027, 1048582);
 	result = fd;
 	if (fd >= 0) {
-		count = ksceIoWrite(fd, file.buffer, file.size);
+		count = sceIoWrite(fd, file.buffer, file.size);
 		if (count >= 0 && (SceSize)count == file.size) {
-			result = ksceIoClose(fd);
+			result = sceIoClose(fd);
 			if (result >= 0) {
-				result = ksceIoSync(sfoPath, 0);
+				result = sceIoSync(sfoPath, 0);
 				if (result < 0)
 					result = 0;
 			}
 		} else {
 			result = count;
-			ksceIoClose(fd);
+			sceIoClose(fd);
 		}
 	}
 	goto freePath;
@@ -1452,17 +1451,17 @@ int ksceAppMgrCheckPfsMounted(const char *path)
 	if (path == NULL || strncmp(path, "ux0:", 4) != 0 ||
 	    strnlen(path, 292) >= 292)
 		return (int)0x80800001;
-	result = ksceIoDopen(path);
+	result = sceIoDopen(path);
 	if (result >= 0) {
 		directory = result;
 #if FW_VERSION < 0x04000000
-		result = ksceIoIoctl(directory, 0x1803, NULL, 0, &mounted, sizeof(mounted));
+		result = sceIoIoctl(directory, 0x1803, NULL, 0, &mounted, sizeof(mounted));
 		if (result == 0)
 			result = mounted;
 #else
 		result = 0;
 #endif
-		ksceIoDclose(directory);
+		sceIoDclose(directory);
 	}
 	return result;
 }
@@ -1769,7 +1768,7 @@ cleanup:
 		}
 		if (pfsMount->mountId == 600) {
 			permission = sceKernelSetThreadAccessLevel(128);
-			status = ksceIoUmount(0x10000, 1, 0, 0);
+			status = SceIofilemgrForDriver_20574100(0x10000, 1, 0);
 			sceKernelSetThreadAccessLevel(permission);
 			if (status < 0)
 				goto restoreAuthority;
@@ -1992,7 +1991,7 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 	    strncmp(metadataPath, "ux0:data", 8) != 0 &&
 	    strncmp(metadataPath, "ux0:\\data", 9) != 0 &&
 	    strncmp(metadataPath, "ux0:/data", 9) != 0) {
-		result = ksceIoMkdir(metadataPath, 6);
+		result = sceIoMkdir(metadataPath, 6);
 		if (result != (int)0x80010011 && result != 0)
 			goto freePath;
 		if (mountId == 1006) {
@@ -2001,32 +2000,32 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 		}
 	} else {
 		if (mountId == 1006) {
-			result = ksceIoMkdir(metadataPath, 390);
+			result = sceIoMkdir(metadataPath, 390);
 			if (result != 0 && result != (int)0x80010011)
 				goto freePath;
 			mode = 1048966;
 			goto buildSfo;
 		}
-		result = ksceIoMkdir(metadataPath, 6);
+		result = sceIoMkdir(metadataPath, 6);
 		if (result != 0 && result != (int)0x80010011)
 			goto freePath;
 	}
 	if (sealedKey != NULL) {
 		snprintf(metadataPath, 292, "%s/sce_sys/sealedkey", path);
-		fd = ksceIoOpen(metadataPath, 1539, 1048582);
+		fd = sceIoOpen(metadataPath, 1539, 1048582);
 		result = fd;
 		if (fd < 0)
 			goto freePath;
-		count = ksceIoWrite(fd, sealedKey, 80);
+		count = sceIoWrite(fd, sealedKey, 80);
 		if (count != 80)
 			goto closeError;
-		count = ksceIoChstatByFd(fd, &stat, 1);
+		count = SceIofilemgrForDriver_DF57A75F(fd, &stat, 1);
 		if (count < 0)
 			goto closeError;
-		count = ksceIoSyncByFd2(fd, 0);
+		count = SceIofilemgrForDriver_43170575(fd, 0);
 		if (count < 0)
 			goto closeError;
-		result = ksceIoClose(fd);
+		result = sceIoClose(fd);
 		if (result < 0)
 			goto freePath;
 	}
@@ -2036,20 +2035,20 @@ int appmgrCreateSaveDataMetadata(SceUID pid, const char *path,
 			goto freePath;
 		}
 		snprintf(metadataPath, 292, "%s/sce_sys/keystone", path);
-		fd = ksceIoOpen(metadataPath, 1539, 6);
+		fd = sceIoOpen(metadataPath, 1539, 6);
 		result = fd;
 		if (fd < 0)
 			goto freePath;
-		count = ksceIoWrite(fd, keystone, 96);
+		count = sceIoWrite(fd, keystone, 96);
 		if (count != 96)
 			goto closeError;
-		count = ksceIoChstatByFd(fd, &stat, 1);
+		count = SceIofilemgrForDriver_DF57A75F(fd, &stat, 1);
 		if (count < 0)
 			goto closeError;
-		count = ksceIoSyncByFd2(fd, 0);
+		count = SceIofilemgrForDriver_43170575(fd, 0);
 		if (count < 0)
 			goto closeError;
-		result = ksceIoClose(fd);
+		result = sceIoClose(fd);
 		if (result < 0)
 			goto freePath;
 	}
@@ -2114,14 +2113,14 @@ buildSfo:
 	result = appmgrBuildSavedataSfo(&file, &input);
 	if (result >= 0) {
 		snprintf(metadataPath, 292, "%s/sce_sys/param.sfo", path);
-		fd = ksceIoOpen(metadataPath, 1539, mode);
+		fd = sceIoOpen(metadataPath, 1539, mode);
 		result = fd;
 		if (fd >= 0) {
-			count = ksceIoWrite(fd, file.buffer, file.size);
+			count = sceIoWrite(fd, file.buffer, file.size);
 			if (count >= 0 && (SceSize)count == file.size) {
-				count = ksceIoSyncByFd2(fd, 0);
+				count = SceIofilemgrForDriver_43170575(fd, 0);
 				if (count >= 0) {
-					result = ksceIoClose(fd);
+					result = sceIoClose(fd);
 					if (result >= 0) {
 						sceKernelFreeHeapMemory(g_appmgrMountHeap, params);
 						result = appmgrCreateSaveDataSlotFile(pid, path, 256);
@@ -2129,11 +2128,11 @@ buildSfo:
 					}
 				} else {
 					result = count;
-					ksceIoClose(fd);
+					sceIoClose(fd);
 				}
 			} else {
 				result = count;
-				ksceIoClose(fd);
+				sceIoClose(fd);
 			}
 		}
 	}
@@ -2141,7 +2140,7 @@ buildSfo:
 	goto freePath;
 closeError:
 	result = count;
-	ksceIoClose(fd);
+	sceIoClose(fd);
 freePath:
 	sceKernelFreeHeapMemory(g_appmgrMountHeap, metadataPath);
 out:
@@ -2164,7 +2163,7 @@ int appmgrCreateDirectories(const char *path, int create)
 	else
 		mode = 390;
 	memset(g_appmgrDirectoryPath, 0, sizeof(g_appmgrDirectoryPath));
-	result = ksceIoGetstat(path, &stat);
+	result = sceIoGetstat(path, &stat);
 	if (create == 0 || result == 0)
 		return result;
 	for (;;) {
@@ -2193,7 +2192,7 @@ int appmgrCreateDirectories(const char *path, int create)
 		if (path[end] == 0)
 			cursor = end;
 		permission = sceKernelSetThreadAccessLevel(128);
-		result = ksceIoMkdir(g_appmgrDirectoryPath, mode);
+		result = sceIoMkdir(g_appmgrDirectoryPath, mode);
 		sceKernelSetThreadAccessLevel(permission);
 		if (result != (int)0x80010011 && result != 0)
 			return result;

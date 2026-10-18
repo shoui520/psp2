@@ -217,8 +217,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetLibraryExportInfoForDebugger
 	sceKernelGetLibraryInfoForDebugger
 	SceModulemgrForKernel_DAA90093
-	ksceIoGetPUIDFdListForDebugger
-	ksceIoGetFileInfo
+	sceIoGetPUIDFdListForDebugger
+	SceIofilemgrForDriver_A1EF2648
 	SceThreadmgrForDriver_04C6764B
 	sceKernelGetLwMutexInfoAllProc
 	SceThreadmgrForDriver_09346D1A

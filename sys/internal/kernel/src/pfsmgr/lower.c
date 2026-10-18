@@ -84,7 +84,7 @@ int pfsPmiDiskSize(ScePfsPmi *pmi, SceUInt64 *diskSize)
 	path.name_length = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(vp);
-	ret = ksceVopGetstat(vp, &path, &stat);
+	ret = sceVopGetstat(vp, &path, &stat);
 	vfsUnlockVnode(vp);
 	if (ret < 0)
 		return ret;
@@ -100,7 +100,7 @@ int pfsPmiDiskSize(ScePfsPmi *pmi, SceUInt64 *diskSize)
 	path.name_length = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(vp);
-	ret = ksceVopGetstat(vp, &path, &stat);
+	ret = sceVopGetstat(vp, &path, &stat);
 	vfsUnlockVnode(vp);
 	if (ret < 0)
 		return ret;
@@ -113,7 +113,7 @@ int pfsNodeInactive(ScePfsNode *node)
 	int ret;
 
 	vfsLockVnode(node->vp);
-	ret = ksceVopInactive(node->vp);
+	ret = sceVopInactive(node->vp);
 	if (ret == 0) {
 		ret = vfsFreeVnode(node->vp);
 		if (ret == 0)
@@ -126,7 +126,7 @@ int pfsNodeInactive(ScePfsNode *node)
 int pfsNodeRelease(ScePfsNode *node)
 {
 	vfsLockVnode(node->vp);
-	ksceVopInactive(node->vp);
+	sceVopInactive(node->vp);
 	if (vfsFreeVnode(node->vp) != 0)
 		vfsUnlockVnode(node->vp);
 	return 0;
@@ -141,7 +141,7 @@ int pfsNodeLookup(ScePfsNode *node)
 	SceVfsPath path;
 	int ret;
 
-	ret = ksceVfsOpDecodePathElem(node->vp->core.mnt, node->name, &path2, &path3, name,
+	ret = SceIofilemgrForDriver_F7DAC0F5(node->vp->core.mnt, node->name, &path2, &path3, name,
 				      sizeof(name), &decodeLen);
 	if (ret != 0)
 		return ret;
@@ -151,7 +151,7 @@ int pfsNodeLookup(ScePfsNode *node)
 	path.name_length = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(node->vp);
-	ret = ksceVopLookup(node->vp, &vp, &path, PFS_LOOKUP_FLAGS);
+	ret = sceVopLookup(node->vp, &vp, &path, PFS_LOOKUP_FLAGS);
 	vfsUnlockVnode(node->vp);
 	if (ret == 0) {
 		vfsUnlockVnode(vp);
@@ -170,7 +170,7 @@ int pfsNodeCreate(ScePfsNode *node, int mode)
 	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(dvp);
-	ret = ksceVopCreate(dvp, &vp, &path, SCE_O_RDWR | SCE_O_CREAT | SCE_O_EXCL, mode);
+	ret = sceVopCreate(dvp, &vp, &path, SCE_O_RDWR | SCE_O_CREAT | SCE_O_EXCL, mode);
 	vfsUnlockVnode(dvp);
 	if (ret >= 0) {
 		vfsUnlockVnode(vp);
@@ -196,7 +196,7 @@ int pfsLowerOpen(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int fl
 	if (ret < 0)
 		return ret;
 	vfsLockVnode(lf->vp);
-	ret = ksceVopOpen(lf->vp, &path, flags, lf->file);
+	ret = sceVopOpen(lf->vp, &path, flags, lf->file);
 	vfsUnlockVnode(lf->vp);
 	if (ret < 0) {
 		vfsLockVnode(lf->vp);
@@ -211,7 +211,7 @@ int pfsLowerClose(ScePfsLowerFile *lf)
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopClose(lf->vp, lf->file);
+	ret = sceVopClose(lf->vp, lf->file);
 	vfsUnlockVnode(lf->vp);
 	if (ret < 0)
 		return ret;
@@ -227,14 +227,14 @@ int pfsLowerCloseForce(ScePfsLowerFile *lf)
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopClose(lf->vp, lf->file);
+	ret = sceVopClose(lf->vp, lf->file);
 	vfsUnlockVnode(lf->vp);
 	if (ret < 0) {
 		vfsLockVnode(lf->vp);
 		vfsBuffCacheFree(lf->vp, lf->file, 1, 0);
 		vfsUnlockVnode(lf->vp);
 		vfsLockVnode(lf->vp);
-		ksceVopClose(lf->vp, lf->file);
+		sceVopClose(lf->vp, lf->file);
 		vfsUnlockVnode(lf->vp);
 	}
 	vfsLockVnode(lf->vp);
@@ -246,9 +246,9 @@ int pfsLowerCloseForce(ScePfsLowerFile *lf)
 int pfsLowerCloseLocked(ScePfsLowerFile *lf)
 {
 	vfsLockVnode(lf->vp);
-	if (ksceVopClose(lf->vp, lf->file) < 0) {
-		ksceVopCleanup(lf->vp, lf->file, 0, 0);
-		ksceVopClose(lf->vp, lf->file);
+	if (sceVopClose(lf->vp, lf->file) < 0) {
+		sceVopCleanup(lf->vp, lf->file, 0, 0);
+		sceVopClose(lf->vp, lf->file);
 	}
 	vfsFreeFile(lf->vp, lf->fd);
 	vfsUnlockVnode(lf->vp);
@@ -260,7 +260,7 @@ int pfsLowerCleanup(ScePfsLowerFile *lf, SceUInt32 a2, SceUInt32 a3)
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopCleanup(lf->vp, lf->file, a2, a3);
+	ret = sceVopCleanup(lf->vp, lf->file, a2, a3);
 	vfsUnlockVnode(lf->vp);
 	return ret;
 }
@@ -271,7 +271,7 @@ int pfsLowerPread(ScePfsLowerFile *lf, void *buf, SceSize nbyte, SceOff offset, 
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopPread(lf->vp, lf->file, buf, nbyte, offset, &result);
+	ret = sceVopPread(lf->vp, lf->file, buf, nbyte, offset, &result);
 	vfsUnlockVnode(lf->vp);
 	if (ret >= 0) {
 		ret = 0;
@@ -287,7 +287,7 @@ int pfsLowerPwrite(ScePfsLowerFile *lf, const void *buf, SceSize nbyte, SceOff o
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopPwrite(lf->vp, lf->file, buf, nbyte, offset, &result);
+	ret = sceVopPwrite(lf->vp, lf->file, buf, nbyte, offset, &result);
 	vfsUnlockVnode(lf->vp);
 	if (ret >= 0) {
 		ret = 0;
@@ -309,7 +309,7 @@ int pfsLowerGetSize(ScePfsLowerFile *lf, SceUInt64 *size)
 	path.name_length = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(lf->vp);
-	ret = ksceVopGetstat(lf->vp, &path, &stat);
+	ret = sceVopGetstat(lf->vp, &path, &stat);
 	vfsUnlockVnode(lf->vp);
 	if (ret >= 0)
 		*size = stat.st_size;
@@ -330,7 +330,7 @@ int pfsLowerSetSize(ScePfsLowerFile *lf, SceUInt64 size)
 	path.path = NULL;
 	stat.st_size = size;
 	vfsLockVnode(lf->vp);
-	ret = ksceVopChstat(lf->vp, &path, &stat, SCE_CST_SIZE);
+	ret = sceVopChstat(lf->vp, &path, &stat, SCE_CST_SIZE);
 	vfsUnlockVnode(lf->vp);
 	return ret;
 }
@@ -347,12 +347,12 @@ int pfsNodeRemove(ScePfsNode *dir, ScePfsNode *node)
 	path.path = NULL;
 	if (dvp == NULL) {
 		vfsLockVnode(node->vp);
-		ret = ksceVopRemove(NULL, node->vp, &path, 0);
+		ret = sceVopRemove(NULL, node->vp, &path, 0);
 		vfsUnlockVnode(node->vp);
 	} else {
 		vfsLockVnode(dvp);
 		vfsLockVnode(node->vp);
-		ret = ksceVopRemove(dvp, node->vp, &path, 0);
+		ret = sceVopRemove(dvp, node->vp, &path, 0);
 		vfsUnlockVnode(node->vp);
 		vfsUnlockVnode(dvp);
 	}
@@ -369,7 +369,7 @@ int pfsNodeMkdir(ScePfsNode *node, int mode)
 	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(node->vp);
-	ret = ksceVopMkdir(node->vp, &vp, &path, mode);
+	ret = sceVopMkdir(node->vp, &vp, &path, mode);
 	vfsUnlockVnode(node->vp);
 	if (ret == 0) {
 		vfsUnlockVnode(vp);
@@ -389,7 +389,7 @@ int pfsNodeRmdir(ScePfsNode *dir, ScePfsNode *node)
 	path.path = NULL;
 	vfsLockVnode(dvp);
 	vfsLockVnode(node->vp);
-	ret = ksceVopRmdir(dvp, node->vp, &path, 0);
+	ret = sceVopRmdir(dvp, node->vp, &path, 0);
 	vfsUnlockVnode(node->vp);
 	vfsUnlockVnode(dvp);
 	return ret;
@@ -411,14 +411,14 @@ int pfsNodeRename(ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode)
 	if (ndvp == odvp) {
 		vfsLockVnode(ndvp);
 		vfsLockVnode(ovp);
-		ret = ksceVopRename(ndvp, ovp, &oldPath, ndvp, &nvp, &newPath);
+		ret = sceVopRename(ndvp, ovp, &oldPath, ndvp, &nvp, &newPath);
 		vfsUnlockVnode(ovp);
 		vfsUnlockVnode(ndvp);
 	} else {
 		vfsLockVnode(odvp);
 		vfsLockVnode(ovp);
 		vfsLockVnode(ndvp);
-		ret = ksceVopRename(odvp, ovp, &oldPath, ndvp, &nvp, &newPath);
+		ret = sceVopRename(odvp, ovp, &oldPath, ndvp, &nvp, &newPath);
 		vfsUnlockVnode(ndvp);
 		vfsUnlockVnode(ovp);
 		vfsUnlockVnode(odvp);
@@ -435,7 +435,7 @@ int pfsLowerSync(ScePfsLowerFile *lf)
 	int ret;
 
 	vfsLockVnode(lf->vp);
-	ret = ksceVopSync(lf->vp, lf->file, 2);
+	ret = sceVopSync(lf->vp, lf->file, 2);
 	vfsUnlockVnode(lf->vp);
 	return ret;
 }

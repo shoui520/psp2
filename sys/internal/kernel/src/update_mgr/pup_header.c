@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
 #include <psp2kern/kernel/sm_comm.h>
@@ -48,7 +48,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		result = (int)0x800f0216;
 		goto cleanup;
 	}
-	if (ksceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
+	if (sceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
 		goto readError;
 	result = UpdateUtilIoRead(fd, 0, sizeof(pupFileHeader), &pupFileHeader);
 	if (result)
@@ -68,7 +68,7 @@ int PupUtilVerifyPupHeaderAsync(SceSize arglen, PupVerifyThreadArgs *args)
 		&vectorVector, (void **)&pupFileBuffer, pupFileBufferSize);
 	if (result)
 		goto cleanup;
-	if (ksceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
+	if (sceIoLseek(fd, 0, SCE_SEEK_SET) < 0)
 		goto readError;
 	result = UpdateUtilIoRead(fd, 0, pupFileBufferSize, pupFileBuffer);
 	if (result)

@@ -12,8 +12,7 @@
 
 #include <elf.h>
 #include <psp2kern/display.h>
-#include <psp2kern/io/fcntl.h>
-#include <psp2kern/io/stat.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
@@ -123,12 +122,12 @@ static int coredumpOpen(const char *name, SceSize size)
 
 static int fileRemove(const char *name)
 {
-	return ksceIoRemove(name);
+	return sceIoRemove(name);
 }
 
 static int fileClose(void)
 {
-	int ret = ksceIoClose(s_fd);
+	int ret = sceIoClose(s_fd);
 
 	if (ret < 0)
 		return ret;
@@ -138,12 +137,12 @@ static int fileClose(void)
 
 static int fileWrite(const void *buf, SceSize size)
 {
-	return ksceIoWrite(s_fd, buf, size);
+	return sceIoWrite(s_fd, buf, size);
 }
 
 static int fileOpen(const char *name, SceSize size)
 {
-	SceUID ret = ksceIoOpen(name, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0666);
+	SceUID ret = sceIoOpen(name, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0666);
 
 	if (ret < 0)
 		return ret;
@@ -479,13 +478,13 @@ int module_start(SceSize args, void *argp)
 		snprintf(logName, sizeof(logName), "host0:./psp2crashdump_%04d%02d%02d_%02d%02d%02d.log",
 			 t.year, t.month, t.day, t.hour, t.minute, t.second);
 		if (rec->logSize > 1) {
-			fd = ksceIoOpen(logName, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0666);
+			fd = sceIoOpen(logName, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0666);
 			if (fd >= 0) {
-				if (ksceIoWrite(fd, (char *)rec + rec->logOffset, rec->logSize - 1) < 0) {
-					ksceIoClose(fd);
-					ksceIoRemove(logName);
+				if (sceIoWrite(fd, (char *)rec + rec->logOffset, rec->logSize - 1) < 0) {
+					sceIoClose(fd);
+					sceIoRemove(logName);
 				} else {
-					ksceIoClose(fd);
+					sceIoClose(fd);
 				}
 			}
 		}

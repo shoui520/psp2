@@ -301,17 +301,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelProcessDebugResume
 	sceKernelProcessDebugSuspend
 	sceKernelGetBudgetInfoForDebugger
-	ksceIoGetPUIDFdListForDebugger
-	ksceIoRemove
-	ksceIoIoctl
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetFileInfo
-	ksceIoRename
-	ksceIoChstatByFd
-	ksceIoRead
-	ksceIoClose
+	sceIoGetPUIDFdListForDebugger
+	sceIoRemove
+	sceIoIoctl
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	SceIofilemgrForDriver_A1EF2648
+	sceIoRename
+	SceIofilemgrForDriver_DF57A75F
+	sceIoRead
+	sceIoClose
 	ksceSblRngPseudoRandomNumber
 	ksceSblSsDecryptWithPortability
 	ksceSblAimgrGetOpenPsId

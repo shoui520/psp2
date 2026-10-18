@@ -50,10 +50,10 @@ set(MODULE_IMPORT_NIDS
 	0x7290B21C:F:0x4DF40893
 )
 set(MODULE_IMPORT_FUNCS
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoRead
-	ksceIoClose
+	sceIoLseek
+	sceIoOpen
+	sceIoRead
+	sceIoClose
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_8D160E65
 	SceSysmemForDriver_A841EDDA

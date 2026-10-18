@@ -31,7 +31,7 @@
 #include <bt/bt_hid.h>
 #include <ctrl/ctrl.h>
 #include <sysmem/sysroot.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -387,7 +387,7 @@ int _sceAVConfigThread(SceSize arglen, void *argp)
 		if (SceSblAIMgrForDriver_71608CA3() != 0) {
 			if (SceSysrootForDriver_834439A7() == 0 &&
 			    SceSysrootForDriver_B0E1FC67() == 0 &&
-			    ksceIoRemove("ur0:safemode/force_480p") == 0)
+			    sceIoRemove("ur0:safemode/force_480p") == 0)
 				sceRegMgrSetKeyInt(avConfigDisplayCategory,
 						   "hdmi_resolution_mode", 3);
 			avConfigHdmiAudioMode = 1;

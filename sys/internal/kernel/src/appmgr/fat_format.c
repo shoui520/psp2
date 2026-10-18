@@ -6,7 +6,7 @@
 #include <sdstor/mbr.h>
 #include <sdstor/sdstor.h>
 #include <sysmem/debug.h>
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include <stddef.h>
 
@@ -800,7 +800,7 @@ int device_fd_write(AppmgrFatFormatContext *context, const void *buffer,
 	AppmgrFatFormatNotification notification;
 	AppmgrFatFormatArguments *arguments;
 
-	seekResult = ksceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
+	seekResult = sceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
 	if (seekResult < 0) {
 		SceDebugForDriver_1A3F2AA4(1,
 			"%s: sceIoLseek for setup failed[%#llx]\n",
@@ -811,7 +811,7 @@ int device_fd_write(AppmgrFatFormatContext *context, const void *buffer,
 		error = result;
 		goto write_error;
 	}
-	result = ksceIoWrite(context->file, buffer, size);
+	result = sceIoWrite(context->file, buffer, size);
 	if (result < 0) {
 		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoWrite failed[%#x]\n",
 			__func__, result);
@@ -1442,9 +1442,9 @@ static inline int device_fd_write(AppmgrFatFormatContext *context,
 	AppmgrFatFormatNotification notification;
 	int result, error;
 
-	position = ksceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
+	position = sceIoLseek(context->file, byteOffset, SCE_SEEK_SET);
 	if (position >= 0)
-		result = ksceIoWrite(context->file, buffer, size);
+		result = sceIoWrite(context->file, buffer, size);
 	else
 		result = position;
 	if (result < 0) {
@@ -2067,7 +2067,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 #endif
 		arguments->writtenDataSize = 0;
 	}
-	file = ksceIoOpen(arguments->deviceName, 0x04000003, 0);
+	file = sceIoOpen(arguments->deviceName, 0x04000003, 0);
 	if (file < 0) {
 		result = file;
 #if FW_DEBUG
@@ -2076,8 +2076,8 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 #endif
 		goto failed;
 	}
-	endPosition = ksceIoLseek(file, 0, SCE_SEEK_END);
-	startPosition = ksceIoLseek(file, 0, SCE_SEEK_SET);
+	endPosition = sceIoLseek(file, 0, SCE_SEEK_END);
+	startPosition = sceIoLseek(file, 0, SCE_SEEK_SET);
 	context->file = file;
 	deviceSize = endPosition - startPosition;
 	result = _fs_util_get_device_info(arguments->deviceName, &info, sizeof(info));
@@ -2230,7 +2230,7 @@ int _check_arguments(AppmgrFatFormatArguments *arguments,
 	}
 	return result;
 close_failed:
-	closeResult = ksceIoClose(context->file);
+	closeResult = sceIoClose(context->file);
 	if (closeResult >= 0)
 		context->file = -1;
 #if FW_DEBUG
@@ -2735,7 +2735,7 @@ static inline int initialize_FAT(AppmgrFatFormatContext *context)
 	SceOff seekResult;
 	int result = 0;
 
-	seekResult = ksceIoLseek(context->file,
+	seekResult = sceIoLseek(context->file,
 		appmgrFatDeviceOffset(context, (uint64_t)context->bytesPerSector *
 			context->reservedSectors), SCE_SEEK_SET);
 	if (seekResult < 0) {
@@ -2763,7 +2763,7 @@ static inline int initialize_FAT(AppmgrFatFormatContext *context)
 		chunk = remaining;
 		if (bufferSize < chunk)
 			chunk = bufferSize;
-		result = ksceIoWrite(context->file, buffer, chunk);
+		result = sceIoWrite(context->file, buffer, chunk);
 		result = appmgrFatNotifyWrite(context, result);
 		if (result < 0)
 			return result;
@@ -2778,7 +2778,7 @@ static inline int initialize_FAT(AppmgrFatFormatContext *context)
 			chunk = remaining;
 			if (bufferSize < chunk)
 				chunk = bufferSize;
-			result = ksceIoWrite(context->file, buffer, chunk);
+			result = sceIoWrite(context->file, buffer, chunk);
 			result = appmgrFatNotifyWrite(context, result);
 			if (result < 0)
 				return result;
@@ -3416,7 +3416,7 @@ partition_failed:
 cleanup:
 	if (context.arguments->phase != 7)
 		context.arguments->phase = 6;
-	partitionResult = ksceIoClose(context.file);
+	partitionResult = sceIoClose(context.file);
 	if (partitionResult < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_1A3F2AA4(1, "%s: sceIoClose failed[%#x]\n",

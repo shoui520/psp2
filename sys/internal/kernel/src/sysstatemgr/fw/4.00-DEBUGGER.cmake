@@ -110,11 +110,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFinalizeKbl
 	sceKernelUmountBootimageFS
 	sceKernelRegisterModulesAfterBoot
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoRead
-	ksceIoClose
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoRead
+	sceIoClose
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_7B4CB60A

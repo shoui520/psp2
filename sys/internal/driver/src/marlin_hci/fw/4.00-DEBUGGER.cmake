@@ -92,14 +92,14 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidivmod
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceIoRemove
-	ksceIoWrite
-	ksceIoLseek
-	ksceIoOpen
-	ksceIoGetstat
-	ksceIoMkdir
-	ksceIoRead
-	ksceIoClose
+	sceIoRemove
+	sceIoWrite
+	sceIoLseek
+	sceIoOpen
+	sceIoGetstat
+	sceIoMkdir
+	sceIoRead
+	sceIoClose
 	SceSblACMgrForDriver_F5AE24AC
 )
 set(MODULE_IMPORT_VARS

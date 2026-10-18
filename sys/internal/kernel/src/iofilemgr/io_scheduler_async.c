@@ -140,7 +140,7 @@ int sceIoAsyncFreePath(const char *path)
 	return sceKernelFreeHeapMemory(g_ioSchedHeap, (void *)path);
 }
 
-SceUID ksceIoOpenAsync(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_451001DE(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -181,7 +181,7 @@ out:
 	return ret;
 }
 
-int ksceIoCloseAsync(SceUID fd, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_11C57CC6(SceUID fd, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -213,7 +213,7 @@ int ksceIoCloseAsync(SceUID fd, IoAsyncParam *asyncParam)
 	return ret;
 }
 
-SceUID ksceIoReadAsync(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_69047C81(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	void *kernelPage;
@@ -286,7 +286,7 @@ out:
 	return uid;
 }
 
-SceUID ksceIoWriteAsync(SceUID fd, const void *data, SceSize size, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_A1BD13D0(SceUID fd, const void *data, SceSize size, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	void *kernelPage;
@@ -353,7 +353,7 @@ out:
 	return uid;
 }
 
-SceUID ksceIoLseekAsync(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_541BAABD(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -381,7 +381,7 @@ SceUID ksceIoLseekAsync(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyn
 	return ret;
 }
 
-SceUID ksceIoRemoveAsync(const char *file, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_F9D6507D(const char *file, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -422,7 +422,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoDopenAsync(const char *dirname, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_72F06BDE(const char *dirname, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -463,7 +463,7 @@ out:
 	return ret;
 }
 
-int ksceIoDcloseAsync(SceUID fd, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_C08F199F(SceUID fd, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -495,7 +495,7 @@ int ksceIoDcloseAsync(SceUID fd, IoAsyncParam *asyncParam)
 	return ret;
 }
 
-int ksceIoDreadAsync(SceUID fd, SceIoDirent *dir, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_5982B0E3(SceUID fd, SceIoDirent *dir, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -523,7 +523,7 @@ int ksceIoDreadAsync(SceUID fd, SceIoDirent *dir, IoAsyncParam *asyncParam)
 	return ret;
 }
 
-SceUID ksceIoMkdirAsync(const char *dir, SceMode mode, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_27003443(const char *dir, SceMode mode, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -564,7 +564,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoRmdirAsync(const char *dirname, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_F5B0B36C(const char *dirname, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -605,7 +605,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoRenameAsync(const char *oldname, const char *newname, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_AACBC47A(const char *oldname, const char *newname, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	char *oldPath, *newPath;
@@ -653,7 +653,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoChstatAsync(const char *file, SceIoStat *stat, unsigned int bits,
+SceUID SceIofilemgrForDriver_7EC442BF(const char *file, SceIoStat *stat, unsigned int bits,
 			 IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
@@ -695,7 +695,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoGetstatAsync(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_94A5304A(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -736,7 +736,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoSyncAsync(const char *device, unsigned int flag, IoAsyncParam *asyncParam)
+SceUID SceIofilemgrForDriver_4F9EA8B0(const char *device, unsigned int flag, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	SceUInt32 tls;
@@ -777,7 +777,7 @@ out:
 	return ret;
 }
 
-SceUID ksceIoPreadAsync(SceUID fd, void *data, SceSize size, SceOff offset,
+SceUID SceIofilemgrForDriver_64A46A2C(SceUID fd, void *data, SceSize size, SceOff offset,
 			IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
@@ -845,7 +845,7 @@ out:
 	return uid;
 }
 
-SceUID ksceIoPwriteAsync(SceUID fd, const void *data, SceSize size, SceOff offset,
+SceUID SceIofilemgrForDriver_202CDDE3(SceUID fd, const void *data, SceSize size, SceOff offset,
 			 IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
@@ -913,7 +913,7 @@ out:
 	return uid;
 }
 
-int ksceIoChstatByFdAsync(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_EC974400(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -943,7 +943,7 @@ int ksceIoChstatByFdAsync(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *as
 	return ret;
 }
 
-int ksceIoGetstatByFdAsync(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_0FEE1238(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -972,7 +972,7 @@ int ksceIoGetstatByFdAsync(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam)
 	return ret;
 }
 
-int ksceIoSyncByFdAsync(SceUID fd, int flag, IoAsyncParam *asyncParam)
+int SceIofilemgrForDriver_041209CF(SceUID fd, int flag, IoAsyncParam *asyncParam)
 {
 	IoAsyncEvent *event = NULL;
 	IofilemgrSchedInfo info;
@@ -1000,7 +1000,7 @@ int ksceIoSyncByFdAsync(SceUID fd, int flag, IoAsyncParam *asyncParam)
 	return ret;
 }
 
-int ksceIoCancel(SceUID uid)
+int sceIoCancel(SceUID uid)
 {
 	IoAsyncEvent *event = NULL;
 	IoScheduler *sched;
@@ -1086,13 +1086,13 @@ void sceIoAsyncProcessFinalize(SceUID pid)
 	sceIoSchedDispatcherFreeAllAsyncEvents(&g_schedDispatcher, pid);
 }
 
-int ksceIoIoctlAsync(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
+int SceIofilemgrForDriver_B761E91B(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
 		     void *outdata, SceSize outlen, IoAsyncParam *asyncParam)
 {
 	return SCE_KERNEL_ERROR_UNSUP;
 }
 
-int ksceIoDevctlAsync(const char *dev, unsigned int cmd, const void *indata, SceSize inlen,
+int SceIofilemgrForDriver_A9302946(const char *dev, unsigned int cmd, const void *indata, SceSize inlen,
 		      void *outdata, SceSize outlen, IoAsyncParam *asyncParam)
 {
 	return SCE_KERNEL_ERROR_UNSUP;

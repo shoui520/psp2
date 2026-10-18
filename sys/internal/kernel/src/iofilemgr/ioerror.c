@@ -45,7 +45,7 @@ int ioerror_initialize(void)
 						   ioErrorEventClassCreate, ioErrorEventClassDestroy);
 }
 
-SceUID ksceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *userInfo)
+SceUID sceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *userInfo)
 {
 	IoErrorEvent *event = NULL;
 	IoErrorEventInfo info;
@@ -99,7 +99,7 @@ SceUID ksceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *us
 	return SCE_ERROR_ERRNO_EINVAL;
 }
 
-int ksceIoClearErrorEvent(SceUID uid)
+int SceIofilemgrForDriver_40B933C7(SceUID uid)
 {
 	IoErrorEvent *event;
 	int ret;
@@ -112,7 +112,7 @@ int ksceIoClearErrorEvent(SceUID uid)
 	return ret;
 }
 
-int ksceIoDeleteErrorEvent(SceUID uid)
+int SceIofilemgrForDriver_C6158F8D(SceUID uid)
 {
 	SceUID handle;
 
@@ -216,7 +216,7 @@ int ioerror_process_finalize(SceUID pid)
 						     guid, guid, puids[i]);
 				continue;
 			}
-			ret = ksceIoDeleteErrorEvent(guid);
+			ret = SceIofilemgrForDriver_C6158F8D(guid);
 			if (ret == 0) {
 				SceSysmemForDriver_84A4AF5E(pid, puids[i]);
 			} else {

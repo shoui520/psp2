@@ -490,9 +490,9 @@ void initProcessStateUpdaterThread(void)
 		SceDebugForDriver_391B5B74(&processStateUpdaterStartPanicInfo, __builtin_return_address(0));
 #endif
 	}
-	g_appmgrGro0MountEvent = ksceIoCreateMountEvent(0x900, 0x202);
-	g_appmgrGrw0MountEvent = ksceIoCreateMountEvent(0xa00, 0x202);
-	g_appmgrUx0MountEvent = ksceIoCreateMountEvent(0x800, 2);
+	g_appmgrGro0MountEvent = sceIoCreateMountEvent(0x900, 0x202);
+	g_appmgrGrw0MountEvent = sceIoCreateMountEvent(0xa00, 0x202);
+	g_appmgrUx0MountEvent = sceIoCreateMountEvent(0x800, 2);
 	g_appmgrGcListenerThread = sceKernelCreateThread("SceAppMgrGcListener",
 		_gcListenerThreadEntry, 96, 4096, 0, 0x80000, NULL);
 	if (g_appmgrGcListenerThread <= 0) {

@@ -1,4 +1,4 @@
-#include <psp2kern/io/fcntl.h>
+#include <iofilemgr/iofilemgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include "update_internal.h"
 
@@ -23,13 +23,13 @@ int StorageUtilReadMbr(SceMbr *mbr)
 		updateLastResult = 0x80100ff;
 		return fd;
 	}
-	if (ksceIoRead(fd, mbr, sizeof(*mbr)) == sizeof(*mbr)) {
+	if (sceIoRead(fd, mbr, sizeof(*mbr)) == sizeof(*mbr)) {
 		result = 0;
 	} else {
 		result = (int)0x800f0205;
 		updateLastResult = 0x80100ff;
 	}
-	ksceIoClose(fd);
+	sceIoClose(fd);
 	sceKernelSetThreadAccessLevel(permission);
 	return result;
 }
@@ -53,7 +53,7 @@ int StorageUtilWriteMbr(const SceMbr *mbr)
 		updateLastResult = 0x80100ff;
 		return fd;
 	}
-	if (ksceIoWrite(fd, mbr, sizeof(*mbr)) != sizeof(*mbr)) {
+	if (sceIoWrite(fd, mbr, sizeof(*mbr)) != sizeof(*mbr)) {
 		updateLastResult = 0x80100ff;
 		return (int)0x800f0205;
 	}
@@ -62,8 +62,8 @@ int StorageUtilWriteMbr(const SceMbr *mbr)
 		updateLastResult = 0x80100ff;
 		return result;
 	}
-	ksceIoSync(path, 0);
-	ksceIoClose(fd);
+	sceIoSync(path, 0);
+	sceIoClose(fd);
 	sceKernelSetThreadAccessLevel(permission);
 	return 0;
 }
