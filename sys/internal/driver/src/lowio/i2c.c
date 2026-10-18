@@ -411,17 +411,17 @@ static __attribute__((noinline)) int I2cInit(void)
 		opt.attr = 2;
 		if (bus) {
 			opt.paddr = I2C_REG_BASE(1);
-			ret = SceSysmemForDriver_C94850C9("SceI2c1Reg", 0x20100806,
+			ret = sceKernelAllocMemBlockForKernel("SceI2c1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
 			opt.paddr = I2C_REG_BASE(0);
-			ret = SceSysmemForDriver_C94850C9("SceI2c0Reg", 0x20100806,
+			ret = sceKernelAllocMemBlockForKernel("SceI2c0Reg", 0x20100806,
 				0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		s_i2c[bus].uid = ret;
-		SceSysmemForDriver_A841EDDA(ret, &base);
+		sceKernelGetMemBlockBase(ret, &base);
 		s_i2c[bus].base = base;
 	}
 	s_i2c[0].mutex = sceKernelCreateMutex("SceI2c0", 0, 0, NULL);

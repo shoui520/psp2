@@ -61,7 +61,7 @@ IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 				__func__, ret);
 		return 0;
 	}
-	uid = SceSysmemForDriver_C94850C9("SceGpuKernelDevMem", 0x10208006,
+	uid = sceKernelAllocMemBlockForKernel("SceGpuKernelDevMem", 0x10208006,
 			0x80000, 0);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0, 53,
@@ -84,7 +84,7 @@ IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 				__func__, ret);
 		return 0;
 	}
-	storage = SceProcessmgrForDriver_3801D7D6("SceGpu", 16);
+	storage = sceKernelRegisterKPLS("SceGpu", 16);
 	if (storage < 0) {
 		SCE_DBG_PRINTF(0, 72,
 				"%s: Failed to register kernel process memory with error %08x.\n",

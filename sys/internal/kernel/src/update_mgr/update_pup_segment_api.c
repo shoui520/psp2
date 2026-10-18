@@ -13,7 +13,7 @@ int sceSblUsVerifyPupSegmentForUser(const char *path, uint64_t segment_index)
 	if (!SceSblACMgrForKernel_sceSblACMgrIsSystemProgram(0))
 		return (int)0x800f022c;
 	state = sceSyscallEnter();
-	result = SceSysmemForDriver_DB3EC244(buffer, path, sizeof(buffer));
+	result = sceKernelStrncpyFromUser(buffer, path, sizeof(buffer));
 	if (result < 0 || result == 1024)
 		result = (int)0x800f0216;
 	else

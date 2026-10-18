@@ -118,7 +118,7 @@ int motionReadPort(int port, SceMotionDevData *data, int count, SceUInt32 *info)
 		return MOTION_ERROR_INVALID_ARG;
 	zero = 0;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
-	if (info != NULL && SceSysmemForDriver_6D88EF8A(info, &zero, sizeof(zero)) < 0) {
+	if (info != NULL && sceKernelCopyToUser(info, &zero, sizeof(zero)) < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}
@@ -191,7 +191,7 @@ int motionReadPort(int port, SceMotionDevData *data, int count, SceUInt32 *info)
 	}
 	motionRingConsume(ring, reader);
 	if (n > 0) {
-		ret = SceSysmemForDriver_6D88EF8A(data, readBuffer, n * sizeof(*readBuffer));
+		ret = sceKernelCopyToUser(data, readBuffer, n * sizeof(*readBuffer));
 		if (ret < 0)
 			n = ret;
 	}
@@ -427,7 +427,7 @@ int motionRead3(int port, MotionDs3Report *report, int count, SceUInt32 *info)
 		return MOTION_ERROR_INVALID_ARG;
 	zero = 0;
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
-	if (info != NULL && SceSysmemForDriver_6D88EF8A(info, &zero, sizeof(zero)) < 0) {
+	if (info != NULL && sceKernelCopyToUser(info, &zero, sizeof(zero)) < 0) {
 		ret = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 	} else if (motion.state != MOTION_STATE_SAMPLING) {
@@ -443,7 +443,7 @@ int motionRead3(int port, MotionDs3Report *report, int count, SceUInt32 *info)
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			ret = 0;
 		} else {
-			ret = SceSysmemForDriver_6D88EF8A(report, &motion.controllers[port - 1].ds3Report,
+			ret = sceKernelCopyToUser(report, &motion.controllers[port - 1].ds3Report,
 						   sizeof(*report));
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			if (ret >= 0)
@@ -559,9 +559,9 @@ int motionRead(SceMotionDevData *data, int count, SceUInt32 *info)
 
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	memset(readBuffer, 0, size);
-	if (SceSysmemForDriver_6D88EF8A(data, readBuffer, size) >= 0) {
+	if (sceKernelCopyToUser(data, readBuffer, size) >= 0) {
 		zero = 0;
-		if (SceSysmemForDriver_6D88EF8A(info, &zero, sizeof(zero)) >= 0) {
+		if (sceKernelCopyToUser(info, &zero, sizeof(zero)) >= 0) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 			return count;
 		}
@@ -582,7 +582,7 @@ int motionReadForMagnCalib(SceMotionDevData *data, int count)
 
 	intr = SceCpuForDriver_D32ACE9E(&motion.lock);
 	memset(readBuffer, 0, size);
-	if (SceSysmemForDriver_6D88EF8A(data, readBuffer, size) < 0) {
+	if (sceKernelCopyToUser(data, readBuffer, size) < 0) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&motion.lock, intr);
 		return 0;
 	}

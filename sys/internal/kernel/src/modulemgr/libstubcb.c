@@ -318,10 +318,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 	info->varent = (void **)(copy + nfunc * 8 + nvar * 4);
 	local = (stub->cb->flags & MODULE_FLAG_SHARED_MASK) == 0;
 	if (nfunc != 0) {
-		ret = SceSysmemForDriver_BC996A7A(copy, stub->imports->funcnid, nfunc * 4);
+		ret = sceKernelCopyFromUser(copy, stub->imports->funcnid, nfunc * 4);
 		if (ret < 0)
 			return ret;
-		ret = SceSysmemForDriver_BC996A7A(info->funcent, stub->imports->funcent, nfunc * 4);
+		ret = sceKernelCopyFromUser(info->funcent, stub->imports->funcent, nfunc * 4);
 		if (ret < 0)
 			return ret;
 		if (local) {
@@ -332,10 +332,10 @@ int LibStubGetNidTable(LibStubCB *stub, LibStubNidTable *info)
 		}
 	}
 	if (nvar != 0) {
-		ret = SceSysmemForDriver_BC996A7A(info->varnid, stub->imports->varnid, nvar * 4);
+		ret = sceKernelCopyFromUser(info->varnid, stub->imports->varnid, nvar * 4);
 		if (ret < 0)
 			return ret;
-		ret = SceSysmemForDriver_BC996A7A(info->varent, stub->imports->varent, nvar * 4);
+		ret = sceKernelCopyFromUser(info->varent, stub->imports->varent, nvar * 4);
 		if (ret < 0)
 			return ret;
 		if (local) {
@@ -445,9 +445,9 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 		return ret;
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
+	if (guid < 0 || (ret = sceGUIDReferObjectWithClass(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
 		goto out;
-	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
+	ret = sceGUIDReferObjectWithClass(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
 	if (ret >= 0) {
 		if (sobj->index < mobj->cb.libStubCount) {
 			stub = &mobj->cb.libStubCB[sobj->index];
@@ -499,9 +499,9 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
+	if (guid < 0 || (ret = sceGUIDReferObjectWithClass(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
 		return ret;
-	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
+	ret = sceGUIDReferObjectWithClass(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
 	if (ret < 0)
 		goto release;
 	if (sobj->index >= mobj->cb.libStubCount) {

@@ -368,7 +368,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pSDfMgrForKernel_8A3B06F2
 	SceDeci4pSDfMgrForKernel_98AEC60E
 	sceSDfMgrContinueSystem
-	SceDeci4pSDfMgrForKernel_A55F5F0D
+	sceSDfMgrOpen
 	sceSDfMgrExReqSend
 	SceDeci4pSDfMgrForKernel_BFB482D8
 	SceDeci4pSDfMgrForKernel_C38EA67A
@@ -513,31 +513,31 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelInitialHandlerDebugPabtCfunc
 	SceSysmemForDriver_009E1C61
 	sceGUIDClose
-	SceSysmemForDriver_0FC24464
+	sceGUIDGetObject
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_9C78064C
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelIsAccessibleRange
 	SceSysmemForDriver_9F6E45E3
 	SceSysmemForDriver_A73CFFEF
-	SceSysmemForDriver_A78755EB
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
+	sceGUIDGetName
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
 	sceKernelVerifyHeap
-	SceSysmemForDriver_C94850C9
-	SceSysmemForDriver_DB3EC244
+	sceKernelAllocMemBlockForKernel
+	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F
 	SceSysmemForKernel_01194C2E
 	SceSysmemForKernel_0164D817
 	SceSysmemForKernel_021053DD
 	sceKernelGetPhyMemPartInfoByID
-	SceSysmemForKernel_08C05493
+	scePUIDGetUIDVectorByClass
 	SceSysmemForKernel_0B1B4ACA
 	SceSysmemForKernel_0B5A3E93
 	SceSysmemForKernel_100B4029
@@ -556,7 +556,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCopyToUserProcTextDomainForDBGP
 	SceSysmemForKernel_456ECB54
 	SceSysmemForKernel_48D2E408
-	SceSysmemForKernel_52137FA3
+	sceGUIDGetUIDVectorByClass
 	SceSysmemForKernel_5C0FC6BE
 	SceSysmemForKernel_5FD15C6E
 	SceSysmemForKernel_62800A6B

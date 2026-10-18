@@ -66,11 +66,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelRegisterProcEventHandler
 	SceUsbdForDriver_1CDBFF9F
 	SceUsbdForDriver_2249BF99

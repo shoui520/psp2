@@ -49,7 +49,7 @@ int sceMotionDevGetDeviceInfo(SceMotionDevDeviceInfo *info)
 	state = sceSyscallEnter();
 	result = SceMotionDevForDriver_3E4BCBC0(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(info, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(info, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -65,7 +65,7 @@ int sceMotionDevGetEvaInfo(void *info)
 	state = sceSyscallEnter();
 	result = SceMotionDevForDriver_5B53AC26(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(info, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(info, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -82,7 +82,7 @@ int sceMotionDevGetCalibrationHeader(unsigned int block,
 	state = sceSyscallEnter();
 	result = SceMotionDevForDriver_3B23DF55(block, &buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(header, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(header, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -108,7 +108,7 @@ int sceMotionDevGetCalibrationData(unsigned int block,
 	if (result > 0) {
 		if (count < (unsigned int)result)
 			result = count;
-		copy = SceSysmemForDriver_6D88EF8A(data, buffer, result * sizeof(*buffer));
+		copy = sceKernelCopyToUser(data, buffer, result * sizeof(*buffer));
 		if (copy != 0)
 			result = copy;
 	}
@@ -242,11 +242,11 @@ int sceMotionDevUpdateMagnCalibData(const SceMotionDevMagnCalibData *data,
 		sceSyscallLeave(state);
 		return (int)0x80360001;
 	}
-	result = SceSysmemForDriver_BC996A7A(&buffer, data, sizeof(buffer));
+	result = sceKernelCopyFromUser(&buffer, data, sizeof(buffer));
 	if (result >= 0) {
 		result = motionUpdateMagnCalibData(&buffer, &value);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(tag, &value, sizeof(value));
+			result = sceKernelCopyToUser(tag, &value, sizeof(value));
 	}
 	sceSyscallLeave(state);
 	return result;
@@ -264,7 +264,7 @@ int sceMotionDevGetCurrentMagnCalibData(SceMotionDevMagnCalibData *data)
 	}
 	result = motionGetCurrentMagnCalibData(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(data, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -281,7 +281,7 @@ int sceMotionDevGetFactoryMagnCalibData(SceMotionDevMagnCalibData *data)
 	}
 	result = motionGetFactoryMagnCalibData(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(data, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -311,7 +311,7 @@ int sceMotionDevGetCurrentMagnStabilityLevel(SceUInt32 *level)
 		return (int)0x80360001;
 	}
 	result = motionGetCurrentMagnStabilityLevel(&value);
-	copy = SceSysmemForDriver_6D88EF8A(level, &value, sizeof(value));
+	copy = sceKernelCopyToUser(level, &value, sizeof(value));
 	sceSyscallLeave(state);
 	if (copy >= 0)
 		return result;
@@ -330,7 +330,7 @@ int sceMotionDevGetGyroCalibData(SceMotionDevGyroCalibData *data)
 	}
 	result = motionGetGyroCalibData(&buffer);
 	if (result == 0)
-		result = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(data, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -352,7 +352,7 @@ int sceMotionDevGetAccCalibData(SceMotionDevAccCalibData *data)
 	}
 	result = motionGetAccCalibData(&buffer);
 	if (result == 0)
-		result = SceSysmemForDriver_6D88EF8A(data, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(data, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -374,7 +374,7 @@ int sceMotionDevGetGyroBias(SceMotionDevGyroBiasData *bias)
 	}
 	result = motionGetGyroBias(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(bias, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(bias, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -396,7 +396,7 @@ int sceMotionDevGetDeviceLocation(SceMotionDevDeviceLocation *location)
 	}
 	result = motionGetDeviceLocation(&buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(location, &buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(location, &buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -417,7 +417,7 @@ int sceMotionDevGetMeasMode(void *info)
 	}
 	result = motionGetMeasMode(buffer);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(info, buffer, sizeof(buffer));
+		result = sceKernelCopyToUser(info, buffer, sizeof(buffer));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -439,7 +439,7 @@ int sceMotionDevGetControllerType(int port, uint8_t *type)
 	}
 	result = motionGetControllerType(port, &value);
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(type, &value, sizeof(value));
+		result = sceKernelCopyToUser(type, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return result;
 }

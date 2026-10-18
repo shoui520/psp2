@@ -42,9 +42,9 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[0], &physicalAddress[0]);
+	result = sceKernelVAtoPA(audioMixerBuffers[0], &physicalAddress[0]);
 	SCE_DBG_ASSERT(result >= 0, 253);
-	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[1], &physicalAddress[1]);
+	result = sceKernelVAtoPA(audioMixerBuffers[1], &physicalAddress[1]);
 	SCE_DBG_ASSERT(result >= 0, 255);
 	audioMixerDeadline = SceProcessmgrForDriver_02179E12();
 	while (sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL) >= 0) {

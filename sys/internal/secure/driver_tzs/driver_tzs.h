@@ -11,8 +11,8 @@
 #pragma once
 
 /* ForTZS imports: names unknown, the os0 function each one stands for */
-#define SceSysmemForDriver_C94850C9			SceSysmemForTZS_402EB970
-#define SceSysmemForDriver_A841EDDA		SceSysmemForTZS_E1DEDFF4
+#define sceKernelAllocMemBlockForKernel			SceSysmemForTZS_402EB970
+#define sceKernelGetMemBlockBase		SceSysmemForTZS_E1DEDFF4
 #define SceSysmemForDriver_009E1C61			SceSysmemForTZS_658EACE3
 #define SceDipswForDriver_A98FC2FD			SceDipswForTZS_A98FC2FD
 #define SceCpuForDriver_D32ACE9E	SceCpuForTZS_D67A4356

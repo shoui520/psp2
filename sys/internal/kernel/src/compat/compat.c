@@ -401,7 +401,7 @@ int compatEnterRunningState(void)
 		SceKernelVARange va;
 		SceKernelPARange pa;
 
-		result = SceSysmemForDriver_A841EDDA(gCompatFrameBuffer,
+		result = sceKernelGetMemBlockBase(gCompatFrameBuffer,
 			(void **)&va.addr);
 		if (result < 0)
 			return result;
@@ -454,13 +454,13 @@ int mapMainDDR(void)
 	uintptr_t paddr;
 	int result;
 
-	SceSysmemForDriver_8D160E65(gCompatMainDdr, &paddr);
+	sceKernelVAtoPA(gCompatMainDdr, &paddr);
 	SceGrabForDriver_E9C25A28(0, paddr | 1);
-	SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000, &paddr);
+	sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000, &paddr);
 	SceGrabForDriver_E9C25A28(1, paddr | 1);
-	SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000, &paddr);
+	sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000, &paddr);
 	SceGrabForDriver_E9C25A28(2, paddr | 1);
-	SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x3000000, &paddr);
+	sceKernelVAtoPA((char *)gCompatMainDdr + 0x3000000, &paddr);
 	SceGrabForDriver_E9C25A28(3, paddr | 1);
 	result = gCompatMemoryBlocks[2][1];
 	if (result > 0) {
@@ -596,13 +596,13 @@ int module_start(SceSize arglen, const void *argp)
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
 	allocOpt.paddr = COMPAT_LCDDMA_BASE;
-	memblock = SceSysmemForDriver_C94850C9("SceCompatLCDDMA", 0x20100806,
+	memblock = sceKernelAllocMemBlockForKernel("SceCompatLCDDMA", 0x20100806,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
 		gCompatLcdDmaMemBlock = memblock;
 		goto cleanup;
 	}
-	if (SceSysmemForDriver_A841EDDA(memblock, (void **)&gCompatLcdDma)) {
+	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatLcdDma)) {
 		result = SceSysmemForDriver_009E1C61(memblock);
 		gCompatLcdDmaMemBlock = result;
 		if (result < 0)
@@ -614,13 +614,13 @@ int module_start(SceSize arglen, const void *argp)
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
 	allocOpt.paddr = COMPAT_MAILBOX_BASE;
-	memblock = SceSysmemForDriver_C94850C9("SceCompatMailbox", 0x20100206,
+	memblock = sceKernelAllocMemBlockForKernel("SceCompatMailbox", 0x20100206,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
 		gCompatMailboxMemBlock = memblock;
 		goto cleanup;
 	}
-	if (SceSysmemForDriver_A841EDDA(memblock, (void **)&gCompatMailbox)) {
+	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatMailbox)) {
 		result = SceSysmemForDriver_009E1C61(memblock);
 		gCompatMailboxMemBlock = result;
 		if (result < 0)
@@ -632,13 +632,13 @@ int module_start(SceSize arglen, const void *argp)
 	allocOpt.size = sizeof(allocOpt);
 	allocOpt.attr = 2;
 	allocOpt.paddr = COMPAT_SHARED_SRAM_BASE;
-	memblock = SceSysmemForDriver_C94850C9("SceCompatSharedSram", 0x20100806,
+	memblock = sceKernelAllocMemBlockForKernel("SceCompatSharedSram", 0x20100806,
 		0x1000, &allocOpt);
 	if (memblock < 0) {
 		gCompatSharedSramMemBlock = memblock;
 		goto cleanup;
 	}
-	if (SceSysmemForDriver_A841EDDA(memblock, (void **)&gCompatSharedSram)) {
+	if (sceKernelGetMemBlockBase(memblock, (void **)&gCompatSharedSram)) {
 		gCompatSharedSramMemBlock = SceSysmemForDriver_009E1C61(memblock);
 		if (gCompatSharedSramMemBlock < 0)
 			goto cleanup;
@@ -744,27 +744,27 @@ int compatInitEx(int mode)
 	{
 		uintptr_t paddr;
 
-		result = SceSysmemForDriver_8D160E65(gCompatMainDdr, &paddr);
+		result = sceKernelVAtoPA(gCompatMainDdr, &paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(0, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(1, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(2, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x3000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x3000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
@@ -1285,7 +1285,7 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		opt.size = sizeof(opt);
 		opt.attr = 0x400084;
 		opt.alignment = 0x1000000;
-		result = SceSysmemForDriver_C94850C9(gCompatCachedName, 0x09404060,
+		result = sceKernelAllocMemBlockForKernel(gCompatCachedName, 0x09404060,
 			size, &opt);
 		if (result < 0)
 			goto failed;
@@ -1295,7 +1295,7 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		opt.attr = 0x10000c0;
 		opt.alignment = 0x1000000;
 		opt.mirror_blockid = result;
-		result = SceSysmemForDriver_C94850C9(gCompatUncachedName, 0x0c208060,
+		result = sceKernelAllocMemBlockForKernel(gCompatUncachedName, 0x0c208060,
 			size, &opt);
 		if (result < 0)
 			goto failed;
@@ -1305,25 +1305,25 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		opt.attr = 0x10000c0;
 		opt.alignment = 0x1000000;
 		opt.mirror_blockid = gCompatMemoryBlocks[0][i];
-		result = SceSysmemForDriver_C94850C9(gCompatCdramName, 0x40404006,
+		result = sceKernelAllocMemBlockForKernel(gCompatCdramName, 0x40404006,
 			size, &opt);
 		if (result < 0)
 			goto failed;
 		gCompatMemoryBlocks[2][i] = result;
 	}
-	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[0][0],
+	sceKernelGetMemBlockBase(gCompatMemoryBlocks[0][0],
 		&cdram->cachedCdram);
-	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[0][2],
+	sceKernelGetMemBlockBase(gCompatMemoryBlocks[0][2],
 		&cdram->uncachedCdram);
 	if ((uintptr_t)cdram->uncachedCdram !=
 		(uintptr_t)cdram->cachedCdram + 0x3000000) {
 		result = (int)0x80010078;
 		goto failed;
 	}
-	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[1][0],
+	sceKernelGetMemBlockBase(gCompatMemoryBlocks[1][0],
 		&cdram->uncachedCdram);
 	gCompatCacheRangeBase = (uintptr_t)cdram->cachedCdram;
-	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[2][0], &gCompatMainDdr);
+	sceKernelGetMemBlockBase(gCompatMemoryBlocks[2][0], &gCompatMainDdr);
 	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[0][1]);
 	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[1][1]);
 	return 0;
@@ -1526,7 +1526,7 @@ int compatSetDisplayConfig(int resolution, int colorSpaceMode)
 
 	if (gCompatFrameBuffer <= 0)
 		return (int)0x80027205;
-	result = SceSysmemForDriver_A841EDDA(gCompatFrameBuffer, &base);
+	result = sceKernelGetMemBlockBase(gCompatFrameBuffer, &base);
 	if (result < 0)
 		return result;
 	param.resolution = resolution ? 0x100000 : 0;
@@ -1574,7 +1574,7 @@ int compatFrameBufferInit(SceUID frameBuffer)
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		return guid;
 	}
-	result = SceSysmemForDriver_0F5C84B7(guid, NULL);
+	result = sceGUIDReferObject(guid, NULL);
 	if (result < 0) {
 		sceKernelUnlockMutex(gCompatMutex, 1);
 		return result;
@@ -1815,27 +1815,27 @@ int compatSuspendResume(int mode)
 		uintptr_t paddr;
 		unsigned int bank = gCompatState;
 
-		result = SceSysmemForDriver_8D160E65(gCompatMainDdr, &paddr);
+		result = sceKernelVAtoPA(gCompatMainDdr, &paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(0, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(bank, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x1000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x1000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
 		result = SceGrabForDriver_E9C25A28(2, paddr | 1);
 		SceDebugForDriver_35A35322(result == 0, &gCompatMapMainDdrBankInfo,
 			__builtin_return_address(0));
-		result = SceSysmemForDriver_8D160E65((char *)gCompatMainDdr + 0x3000000,
+		result = sceKernelVAtoPA((char *)gCompatMainDdr + 0x3000000,
 			&paddr);
 		SceDebugForDriver_35A35322(result >= 0, &gCompatMapMainDdrTranslationInfo,
 			__builtin_return_address(0));
@@ -2303,7 +2303,7 @@ int sceCompatReturnValueEx(SceUInt32 channel, const SceUInt32 *values,
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = SceSysmemForDriver_BC996A7A(localValues, values,
+		result = sceKernelCopyFromUser(localValues, values,
 			sizeof(localValues));
 		if (result >= 0)
 			result = compatReturnValueEx(channel, localValues, value);

@@ -129,7 +129,7 @@ int sceSblFwLoaderSetPath(const char *path, int flags)
 	if (g_fwLoaderPathSize + g_fwLoaderOverridePathSize > FWLOADER_BUF_SIZE)
 		goto fail;
 
-	buf = SceSysmemForDriver_7B4CB60A(FWLOADER_HEAP, FWLOADER_BUF_SIZE);
+	buf = sceKernelAllocHeapMemory(FWLOADER_HEAP, FWLOADER_BUF_SIZE);
 	g_fwLoaderBuf = buf;
 	if (prefix != NULL) {
 		g_fwLoaderOverridePath = buf;

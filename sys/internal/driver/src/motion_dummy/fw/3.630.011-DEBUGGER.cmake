@@ -39,9 +39,9 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCreateHeap
+	sceKernelCopyFromUser
 	sceKernelDeleteHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E

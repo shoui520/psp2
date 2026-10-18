@@ -608,11 +608,11 @@ static int allocUnits(unsigned int count)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.unitMemblock = SceSysmemForDriver_C94850C9("SceUsbPspcmUnit", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	s.unitMemblock = sceKernelAllocMemBlockForKernel("SceUsbPspcmUnit", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 						 (count * PCM_UNIT_SIZE + 0xfff) & ~0xfffu, &options);
 	if (s.unitMemblock < 0)
 		return s.unitMemblock;
-	ret = SceSysmemForDriver_A841EDDA(s.unitMemblock, (void **)&units);
+	ret = sceKernelGetMemBlockBase(s.unitMemblock, (void **)&units);
 	if (ret < 0) {
 		SceSysmemForDriver_009E1C61(s.unitMemblock);
 		return ret;
@@ -640,11 +640,11 @@ static int startCommunication(int size, void *args, void *context)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.memblock = SceSysmemForDriver_C94850C9("SceUsbPspcm", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	s.memblock = sceKernelAllocMemBlockForKernel("SceUsbPspcm", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 					     0x1000, &options);
 	if (s.memblock < 0)
 		return -1;
-	if (SceSysmemForDriver_A841EDDA(s.memblock, (void **)&memory) < 0)
+	if (sceKernelGetMemBlockBase(s.memblock, (void **)&memory) < 0)
 		goto failBlock;
 	s.headerBuffer = (PcmHeader *)memory->header;
 	s.controlBuffer = memory->control;
@@ -1617,7 +1617,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		if (!channel->user)
 			memcpy(channel->sendBuffer, data, length);
 		else {
-			ret = SceSysmemForDriver_BC996A7A(channel->sendBuffer, data, length);
+			ret = sceKernelCopyFromUser(channel->sendBuffer, data, length);
 			if (ret < 0)
 				goto done;
 		}
@@ -1674,7 +1674,7 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		if (!channel->user)
 			memcpy(channel->sendBuffer, channel->write, length);
 		else {
-			ret = SceSysmemForDriver_BC996A7A(channel->sendBuffer, channel->write, length);
+			ret = sceKernelCopyFromUser(channel->sendBuffer, channel->write, length);
 			if (ret < 0)
 				goto done;
 		}
@@ -1708,7 +1708,7 @@ done:
 static int copyRead(struct Channel *channel, void *target, const void *data, unsigned size)
 {
 	if (channel->user)
-		return SceSysmemForDriver_6D88EF8A(target, data, size);
+		return sceKernelCopyToUser(target, data, size);
 	memcpy(target, data, size);
 	return 0;
 }
@@ -1953,7 +1953,7 @@ int sceUsbPspcmSetTitle(const char *title, unsigned size)
 			ret = (int)0x8024300a;
 			goto done;
 		}
-		ret = SceSysmemForDriver_DB3EC244(s.title, title, size);
+		ret = sceKernelStrncpyFromUser(s.title, title, size);
 		if (ret >= 0) {
 			if (ret != 64) {
 				s.titleLength = ret + 1;
@@ -2060,15 +2060,15 @@ int sceUsbPspcmDevctl(unsigned command, const void *input, void *output, unsigne
 		ret = PCM_ERROR_ARGUMENT;
 		if (!input)
 			goto done;
-		ret = SceSysmemForDriver_BC996A7A(local, input, size);
+		ret = sceKernelCopyFromUser(local, input, size);
 		if (ret < 0)
 			goto done;
 		if (command == 0x3435005) {
-			ret = SceSysmemForDriver_BC996A7A(duplicate, input, 12);
+			ret = sceKernelCopyFromUser(duplicate, input, 12);
 			if (ret < 0)
 				goto done;
 			if (duplicate[2]) {
-				ret = SceSysmemForDriver_BC996A7A(&timeout, (void *)(uintptr_t)duplicate[2], 4);
+				ret = sceKernelCopyFromUser(&timeout, (void *)(uintptr_t)duplicate[2], 4);
 				if (ret < 0)
 					goto done;
 				local[2] = (uintptr_t)&timeout;
@@ -2082,7 +2082,7 @@ int sceUsbPspcmDevctl(unsigned command, const void *input, void *output, unsigne
 		goto done;
 	ret = devctl(command, local, size, &result, outputSize);
 	if (ret >= 0 && outputSize)
-		ret = SceSysmemForDriver_6D88EF8A(output, &result, outputSize);
+		ret = sceKernelCopyToUser(output, &result, outputSize);
 done:
 	sceSyscallLeave(syscall);
 	return ret;
@@ -2110,7 +2110,7 @@ int sceUsbPspcmIoctlWaitData(unsigned unit, const unsigned *timeout)
 	if (allowed()) {
 		ret = PCM_ERROR_NOT_READY;
 		if (checkReady()) {
-			ret = SceSysmemForDriver_BC996A7A(&time, timeout, 4);
+			ret = sceKernelCopyFromUser(&time, timeout, 4);
 			if (ret >= 0)
 				ret = ioctlWait(unit, &time);
 		}

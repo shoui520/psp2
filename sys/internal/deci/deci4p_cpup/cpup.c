@@ -143,9 +143,9 @@ static __attribute__((noinline)) int CpupInit(void)
 	if (s_cpupMutex < 0)
 		return s_cpupMutex;
 
-	s_cpupMemBlock = SceSysmemForDriver_C94850C9("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+	s_cpupMemBlock = sceKernelAllocMemBlockForKernel("SceDeci4pCpup", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 						  CPUP_BUF_SIZE, NULL);
-	SceSysmemForDriver_A841EDDA(s_cpupMemBlock, (void **)&s_cpupBuffer);
+	sceKernelGetMemBlockBase(s_cpupMemBlock, (void **)&s_cpupBuffer);
 
 	s_cpupRequestSemaphore = sceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_TH_PRIO, 1,
 						      1, NULL);

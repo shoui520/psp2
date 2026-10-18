@@ -328,24 +328,24 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_0F5C84B7
+	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_278BC201
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
+	sceKernelCreateHeap
+	sceKernelIsAccessibleRange
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_CED1547B
 	sceKernelDeleteHeap
-	SceSysmemForDriver_DB3EC244
+	sceKernelStrncpyFromUser
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_1A3F2AA4
 	SceDebugForDriver_35A35322
@@ -464,7 +464,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoClose
 	sceKernelAllocRemoteProcessHeap
 	sceKernelGetProcessInfo
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	sceKernelGetBudgetInfo
 	SceProcessmgrForDriver_5E882B60
 	sceKernelGetProcessStatus

@@ -25,7 +25,7 @@ int sceSblUsSetSwInfoIntForUser(const char *name, SceSize nameLength,
 		return (int)0x800f0216;
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
-	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
+	result = sceKernelCopyFromUser(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;
@@ -54,13 +54,13 @@ int sceSblUsSetSwInfoStrForUser(const char *name, SceSize nameLength,
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
 	memset(valueBuffer, 0, sizeof(valueBuffer));
-	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
+	result = sceKernelCopyFromUser(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;
 	}
 	nameBuffer.text[31] = 0;
-	result = SceSysmemForDriver_BC996A7A(valueBuffer, value, valueLength);
+	result = sceKernelCopyFromUser(valueBuffer, value, valueLength);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;
@@ -91,13 +91,13 @@ int sceSblUsSetSwInfoBinForUser(const char *name, SceSize nameLength,
 	}
 	nameBuffer = (union UpdateSwInfoName){0};
 	memset(valueBuffer, 0, sizeof(valueBuffer));
-	result = SceSysmemForDriver_BC996A7A(nameBuffer.text, name, nameLength);
+	result = sceKernelCopyFromUser(nameBuffer.text, name, nameLength);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;
 	}
 	nameBuffer.text[31] = 0;
-	result = SceSysmemForDriver_BC996A7A(valueBuffer, value, valueLength);
+	result = sceKernelCopyFromUser(valueBuffer, value, valueLength);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;

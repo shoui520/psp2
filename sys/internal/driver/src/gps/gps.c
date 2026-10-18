@@ -139,7 +139,7 @@ static int notify(unsigned event, unsigned result)
 			s_gps.active->callbackPending = 1;
 		}
 	} else {
-		GpsNotice *notice = SceSysmemForDriver_7B4CB60A(s_gps.active->heap, sizeof(*notice));
+		GpsNotice *notice = sceKernelAllocHeapMemory(s_gps.active->heap, sizeof(*notice));
 		if (notice) {
 			unsigned priority = 0;
 			switch (event) {
@@ -256,7 +256,7 @@ static int stagePending(unsigned command, const void *data, unsigned size)
 	int ret = GPS_ERROR(11);
 	if (!s_gps.pending) {
 		ret = GPS_ERROR(35);
-		s_gps.request.data = size ? SceSysmemForDriver_7B4CB60A(s_gps.active->heap, size) : NULL;
+		s_gps.request.data = size ? sceKernelAllocHeapMemory(s_gps.active->heap, size) : NULL;
 		if (s_gps.request.data) {
 			memcpy(s_gps.request.data, data, size);
 			s_gps.request.command = command;
@@ -666,7 +666,7 @@ int module_start(SceSize arglen, void *argp)
 	context->dataMutex = sceKernelCreateMutex("SceGpsData", 2, 0, NULL);
 	if (context->dataMutex < 0)
 		goto api;
-	ret = SceSysmemForDriver_9328E0E8("SceGps", 0x2000, NULL);
+	ret = sceKernelCreateHeap("SceGps", 0x2000, NULL);
 	if (ret < 0)
 		goto mutex;
 	context->heap = ret;
@@ -993,7 +993,7 @@ int _sceGpsGetState(unsigned *state)
 	int ret = readState(state ? &value : NULL);
 	sceSyscallLeave(saved);
 	if (state) {
-		int copy = SceSysmemForDriver_6D88EF8A(state, &value, 4);
+		int copy = sceKernelCopyToUser(state, &value, 4);
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1008,7 +1008,7 @@ int _sceGpsGetDeviceInfo(void *info)
 	int ret = readInfo(info ? value : NULL);
 	sceSyscallLeave(saved);
 	if (info) {
-		int copy = SceSysmemForDriver_6D88EF8A(info, value, 8);
+		int copy = sceKernelCopyToUser(info, value, 8);
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1027,12 +1027,12 @@ int _sceGpsGetData(void *location, void *satellites)
 	int ret = readLocation(location ? value : NULL, satellites ? satelliteValue : NULL);
 	sceSyscallLeave(saved);
 	if (location) {
-		int copy = SceSysmemForDriver_6D88EF8A(location, value, sizeof(value));
+		int copy = sceKernelCopyToUser(location, value, sizeof(value));
 		if (copy < 0)
 			return copy;
 	}
 	if (satellites) {
-		int copy = SceSysmemForDriver_6D88EF8A(satellites, satelliteValue, sizeof(satelliteValue));
+		int copy = sceKernelCopyToUser(satellites, satelliteValue, sizeof(satelliteValue));
 		if (copy < 0)
 			ret = copy;
 	}
@@ -1042,7 +1042,7 @@ int _sceGpsGetData(void *location, void *satellites)
 int _sceGpsIoctl(unsigned command, void *data, unsigned size, const unsigned *args)
 {
 	unsigned input[2];
-	int ret = SceSysmemForDriver_BC996A7A(input, args, 8);
+	int ret = sceKernelCopyFromUser(input, args, 8);
 	if (ret < 0)
 		return ret;
 	if (!data) {
@@ -1052,13 +1052,13 @@ int _sceGpsIoctl(unsigned command, void *data, unsigned size, const unsigned *ar
 		return (int)SCE_KERNEL_ERROR_NO_MEMORY;
 	uint8_t buffer[0x640];
 	memset(buffer, 0, sizeof(buffer));
-	ret = SceSysmemForDriver_BC996A7A(buffer, data, input[0]);
+	ret = sceKernelCopyFromUser(buffer, data, input[0]);
 	if (ret < 0)
 		return ret;
 	unsigned saved;
 	saved = sceSyscallEnter();
 	ret = requestIoctl(command, buffer, size);
 	sceSyscallLeave(saved);
-	int copy = SceSysmemForDriver_6D88EF8A(data, buffer, input[0]);
+	int copy = sceKernelCopyToUser(data, buffer, input[0]);
 	return copy < 0 ? copy : ret;
 }

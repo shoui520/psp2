@@ -139,13 +139,13 @@ int sceSDbgSdioInit(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = SDBG_SDIO_PADDR;
-	uid = SceSysmemForDriver_C94850C9("SceSDbgSdio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceSDbgSdio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      SDIO_WINDOW_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_ASSERT(0, 277);
 		return uid;
 	}
-	SceSysmemForDriver_A841EDDA(uid, (void **)&shm);
+	sceKernelGetMemBlockBase(uid, (void **)&shm);
 
 	s_sdbgSdio.index = 0;
 	s_sdbgSdio.memblock = uid;

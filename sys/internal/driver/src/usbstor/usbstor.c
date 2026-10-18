@@ -789,11 +789,11 @@ static int initializeDescriptors(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.memblock = SceSysmemForDriver_C94850C9("SceUsbstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+	s.memblock = sceKernelAllocMemBlockForKernel("SceUsbstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					     4096, &opt);
 	if (s.memblock < 0)
 		return STOR_ERROR_MEMORY;
-	if (SceSysmemForDriver_A841EDDA(s.memblock, &base) < 0) {
+	if (sceKernelGetMemBlockBase(s.memblock, &base) < 0) {
 		SceSysmemForDriver_009E1C61(s.memblock);
 		return STOR_ERROR_MEMORY;
 	}

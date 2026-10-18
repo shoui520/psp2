@@ -562,7 +562,7 @@ static inline __attribute__((always_inline)) int powerCreateProcessStorage(void)
 {
 	int key;
 
-	key = SceProcessmgrForDriver_3801D7D6("ScePower", 0x40);
+	key = sceKernelRegisterKPLS("ScePower", 0x40);
 	if (key >= 0)
 		s_processStorageKey = key;
 	return key;

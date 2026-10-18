@@ -212,8 +212,8 @@ set(MODULE_IMPORT_FUNCS
 	SceIofilemgrForDriver_F7DAC0F5
 	vfsMountForPFS
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_103872A5
 	SceCpuForDriver_364E68A4
 	SceCpuForDriver_5F6A8743

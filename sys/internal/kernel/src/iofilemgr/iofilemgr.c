@@ -63,7 +63,7 @@ int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, int
 		if (ret < 0)
 			return ret;
 		if (kpls->phase != IOFILEMGR_KPLS_PHASE_SUSPENDED) {
-			num = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, NULL, 0, NULL);
+			num = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, 7, NULL, 0, NULL);
 			if (num > 0)
 				vfs_process_suspend(pid, num);
 		}
@@ -126,7 +126,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unuse
 
 	key = g_iofilemgrKplsKey;
 	if (key == -1) {
-		ret = SceProcessmgrForDriver_3801D7D6("SceIofilemgr", sizeof(IofilemgrKpls));
+		ret = sceKernelRegisterKPLS("SceIofilemgr", sizeof(IofilemgrKpls));
 		g_iofilemgrKplsKey = ret;
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1551, "sceKernelRegisterKPLS() failed err=%d 0x%x\n",
@@ -898,7 +898,7 @@ int sceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 	int ret;
 	int i;
 
-	ret = SceSysmemForKernel_52137FA3(&g_vfsFileClass, vis_level, NULL, 0, &num);
+	ret = sceGUIDGetUIDVectorByClass(&g_vfsFileClass, vis_level, NULL, 0, &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1291, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
@@ -907,10 +907,10 @@ int sceIoGetGUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 	}
 	if (dst == NULL)
 		return ret;
-	vector = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, ret * sizeof(SceUID));
+	vector = sceKernelAllocHeapMemory(g_ioVfsHeapUid, ret * sizeof(SceUID));
 	if (vector == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
-	ret = SceSysmemForKernel_52137FA3(&g_vfsFileClass, vis_level, vector, ret, &num);
+	ret = sceGUIDGetUIDVectorByClass(&g_vfsFileClass, vis_level, vector, ret, &num);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1317, "sceIoGetGUIDFdListForDebugger",
 					  "sceGUIDGetUIDVectorByClass failed ... 0x%x %d\n",
@@ -944,7 +944,7 @@ int sceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 		pid = g_iofilemgrPid[i];
 		pidlist[i] = pid;
 		if (pid != -1) {
-			ret = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, vis_level, NULL, 0, &num);
+			ret = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, vis_level, NULL, 0, &num);
 			if (ret >= 0) {
 				fdnum[i] = ret;
 				total += ret;
@@ -962,7 +962,7 @@ int sceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 	}
 	if (dst == NULL)
 		return total;
-	readbuf = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, total * sizeof(SceUID));
+	readbuf = sceKernelAllocHeapMemory(g_ioVfsHeapUid, total * sizeof(SceUID));
 	if (readbuf == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	total = 0;
@@ -972,7 +972,7 @@ int sceIoGetPUIDFdListForDebugger(int vis_level, SceIoFdInfo *dst, SceSize max_s
 			continue;
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1398, "sceIoGetPUIDFdListForDebugger",
 					  "i=%d pidlist[%d]=0x%x\n", i, i, pid);
-		ret = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, vis_level, &readbuf[total],
+		ret = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, vis_level, &readbuf[total],
 						  fdnum[i], &num);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1407, "sceIoGetPUIDFdListForDebugger",
@@ -1015,7 +1015,7 @@ static inline int init_iofm(void)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_ioVfsHeapUid = SceSysmemForDriver_9328E0E8("SceIofile", 0x10000, &opt);
+	g_ioVfsHeapUid = sceKernelCreateHeap("SceIofile", 0x10000, &opt);
 	if (g_ioVfsHeapUid < 0) {
 		SCE_DBG_PRINTF(6, 155, "sceKernelCreateHeap failed: 0x%08x\n", g_ioVfsHeapUid);
 		SCE_DBG_ASSERT_FAIL(156);
@@ -1335,7 +1335,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			old = new = kpls->dialogFdCount;
 			if (kpls->dialogFdMax <= old) {
 #if FW_DEBUG
-			ret = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, fdlist,
+			ret = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, 7, fdlist,
 							  IOFILEMGR_FD_DUMP_MAX, &num);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0xf, 2275,
@@ -1389,7 +1389,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 			old = new = kpls->fdCount;
 			if (kpls->fdMax <= old) {
 #if FW_DEBUG
-			ret = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, fdlist,
+			ret = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, 7, fdlist,
 							  IOFILEMGR_FD_DUMP_MAX, &num);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0xf, 2347,
@@ -1710,11 +1710,11 @@ int _sceIoDread(SceUID fd, SceIoDirent *dir)
 		return sceIoDreadForUser(fd, NULL);
 	kdir = __builtin_alloca(sizeof(*kdir));
 	__builtin_memset(kdir, 0, sizeof(*kdir));
-	ret = SceSysmemForDriver_BC996A7A(kdir, dir, sizeof(*kdir));
+	ret = sceKernelCopyFromUser(kdir, dir, sizeof(*kdir));
 	if (ret < 0)
 		return ret;
 	ret = sceIoDreadForUser(fd, kdir);
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(dir, kdir, sizeof(*kdir)));
+	return copyResult(ret, sceKernelCopyToUser(dir, kdir, sizeof(*kdir)));
 }
 
 int _sceIoGetstat(const char *file, SceIoStat *stat, const SyscallUnusedArgs *uargs)
@@ -1730,7 +1730,7 @@ int _sceIoGetstat(const char *file, SceIoStat *stat, const SyscallUnusedArgs *ua
 
 		__builtin_memset(kstat, 0, sizeof(*kstat));
 		ret = sceIoGetstatForUser(kfile, kstat);
-		return copyResult(ret, SceSysmemForDriver_6D88EF8A(stat, kstat, sizeof(*kstat)));
+		return copyResult(ret, sceKernelCopyToUser(stat, kstat, sizeof(*kstat)));
 	}
 	return sceIoGetstatForUser(kfile, NULL);
 }

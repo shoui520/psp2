@@ -756,7 +756,7 @@ int AddressSpaceIdFreeMemBlock(SceUID guid, MemBlockBaseInfo *info, MemBlockObje
 	int i, intr, ret;
 
 	SCE_DBG_PRINTF(0xb, 2879, "(%p)\n", info);
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	AddressSpaceRefer(as);
@@ -826,8 +826,8 @@ int L1PageTableMapDirect(L1PageTable *l1pt, SceUInt32 type, SceUInt32 domain, ui
 void AllocMemBlockCommandInit(SceKernelAllocMemBlockCommand *command, const char *name,
 			      SceSize size);
 int MemBlockCode2TypeInfo(SceUInt32 code, const MemBlockTypeInfo **info);
-int SceSysmemForDriver_A841EDDA(SceUID guid, void **base);
-int SceSysmemForDriver_B81CF0A3(SceUID guid, void **vbase);
+int sceKernelGetMemBlockBase(SceUID guid, void **base);
+int sceKernelGetMemBlockVBase(SceUID guid, void **vbase);
 SceUInt32 SceSysrootForKernel_41636522(void);			/* a random number */
 
 #define ADDRESS_SPACE_MAGIC		0x4d95aeec
@@ -880,7 +880,7 @@ static inline int AddressSpaceAllocAsCommonRaw(AddressSpaceObject *as, uint32_t 
 		ret = SCE_KERNEL_ERROR_SYSMEM_ADDRESS_SPACE_ERROR;
 		goto free_context;
 	}
-	ret = SceSysmemForDriver_8D160E65(l1Table, &pa);
+	ret = sceKernelVAtoPA(l1Table, &pa);
 	if (ret < 0)
 		goto free_l1pt;
 	sceKernelMMUL1Init(l1Table);
@@ -997,7 +997,7 @@ static inline int AddressSpaceAddDefaultUserIOPARaw(AddressSpaceObject *as)
 	as->userIOPA = ret;
 	if (ret < 0)
 		return ret;
-	ret = SceSysmemForDriver_B81CF0A3(ret, &va);
+	ret = sceKernelGetMemBlockVBase(ret, &va);
 	if ((uintptr_t)va != USER_IOPA_VBASE)
 		SCE_DBG_ASSERT_FAIL(1260);
 	return ret;
@@ -1054,7 +1054,7 @@ static inline __attribute__((always_inline)) int AddressSpaceCreatePartitionForU
 	command.addressSpace = as;
 	ret = AddressSpaceAllocMemBlockByCommand(as, &command);
 	as->userIOTimer = ret;
-	if (ret < 0 || SceSysmemForDriver_A841EDDA(ret, &base) < 0)
+	if (ret < 0 || sceKernelGetMemBlockBase(ret, &base) < 0)
 		goto fail;
 	as->userIOTimerBase = (uintptr_t)base;
 	return 0;
@@ -1128,7 +1128,7 @@ int sceKernelAddressSpaceFreeAllMemBlock(SceUID guid)
 	SceUInt32 i, j;
 	int intr, ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		goto out;	/* Sony's code releases the object it did not get */
 	AddressSpaceRefer(as);
@@ -1201,7 +1201,7 @@ int SceSysmemForKernel_4A2E421D(SceUID guid)
 	AddressSpaceObject *as;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	if (as->type != ADDRESS_SPACE_TYPE_USER)
@@ -1217,7 +1217,7 @@ int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
 	AddressSpaceObject *as;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	AddressSpaceRefer(as);
@@ -1226,7 +1226,7 @@ int SceSysmemForKernel_5E772E19(SceUID guid, SceUID pid)
 	return 0;
 }
 
-int SceSysmemForDriver_4CFA4100(SceUID guid, const char *name);
+int sceGUIDSetName(SceUID guid, const char *name);
 
 /* the GUID names of the user partitions, prefixed */
 static const struct {
@@ -1251,11 +1251,11 @@ int sceKernelAddressSpaceSetName(SceUID guid, const char *name)
 	SceUID uid;
 	int i, ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	snprintf(buf, sizeof(buf), "padsp: %s", name);
-	ret = SceSysmemForDriver_4CFA4100(guid, buf);
+	ret = sceGUIDSetName(guid, buf);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xb, 3238, "sceGUIDSetName(0x%08x, [%s]) failed 0x%08x\n", guid, buf,
 			       ret);
@@ -1265,7 +1265,7 @@ int sceKernelAddressSpaceSetName(SceUID guid, const char *name)
 		if (uid == -1)
 			continue;
 		snprintf(buf, sizeof(buf), "%s%s", s_partitionNames[i].prefix, name);
-		ret = SceSysmemForDriver_4CFA4100(uid, buf);
+		ret = sceGUIDSetName(uid, buf);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 3248, "sceGUIDSetName(0x%08x, [%s]) failed 0x%08x\n", uid,
 				       buf, ret);
@@ -1280,7 +1280,7 @@ int SceSysmemForKernel_7DF07D60(SceUID guid, SceUInt32 index, void *pPhyMemPart)
 	void *object;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &object);
+	ret = sceGUIDGetObject(guid, &object);
 	if (ret < 0)
 		return ret;
 	as = object;
@@ -1298,7 +1298,7 @@ int SceSysmemForKernel_A7C91D62(SceUID guid, AddressSpaceContext **context)
 
 	if (context == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	AddressSpaceRefer(as);
 	if (ret < 0)
 		return ret;
@@ -1313,7 +1313,7 @@ int SceSysmemForKernel_20D01AFA(SceUID guid)
 	AddressSpaceObject *as;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	return AddressSpaceSwitchContext(as);
@@ -1332,7 +1332,7 @@ int SceSysmemForKernel_73C38695(SceUID uid, int asid, int domain, void *addr, Sc
 
 	if (((uintptr_t)addr & 0xfffff) || (size & 0xfffff))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_0FC24464(uid, &object);
+	ret = sceGUIDGetObject(uid, &object);
 	if (ret < 0)
 		return ret;
 	as = object;
@@ -1357,7 +1357,7 @@ int AddressSpaceIsEqualAccessibleBySW(SceUID guid, SceUInt32 perm, uintptr_t va,
 	void *object;
 	int i, ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &object);
+	ret = sceGUIDGetObject(guid, &object);
 	if (ret < 0)
 		return ret;
 	as = object;
@@ -1396,7 +1396,7 @@ int SceSysmemForKernel_1BAF8C0B(void *pAS, SceUInt32 mode, void *pVA, void **pPA
 
 	if (pPA == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_0FC24464((SceUID)pAS, &as);
+	ret = sceGUIDGetObject((SceUID)pAS, &as);
 	if (ret < 0)
 		return ret;
 	return AddressSpaceVAtoPAWithMode(as, mode, (uintptr_t)pVA, (uintptr_t *)pPA);
@@ -1409,19 +1409,19 @@ int SceSysmemForKernel_A541E0CF(SceUID guid, const SceKernelPARange *range,
 	AddressSpaceObject *as;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	return AddressSpaceVARangeToPAVector(as, range, vector, NULL);
 }
 
 /* name unknown: where the user I/O timer page is */
-int SceSysmemForKernel_FA1A73DD(SceUID guid, uintptr_t *base)
+int sceKernelAddressSpaceGetTimerVbase(SceUID guid, uintptr_t *base)
 {
 	AddressSpaceObject *as;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	AddressSpaceRefer(as);
@@ -1442,7 +1442,7 @@ int SceSysmemForKernel_C3EF4055(SceUID guid, AddressSpaceInfo *info)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	ret = SceSysmemForDriver_0FC24464(guid, &as);
+	ret = sceGUIDGetObject(guid, &as);
 	if (ret < 0)
 		return ret;
 	AddressSpaceRefer(as);
@@ -1502,7 +1502,7 @@ int SceSysmemForDriver_A7C0D1FC(const void *va)
 	uintptr_t pa;
 	int ret;
 
-	ret = SceSysmemForDriver_8D160E65(va, &pa);
+	ret = sceKernelVAtoPA(va, &pa);
 	if (ret < 0)
 		return ret;
 	if (pa < s_userIOPABase || pa - s_userIOPABase >= s_userIOPASize)
@@ -1539,7 +1539,7 @@ int AsidUserStart(const UIDManager *manager)
 	cls->create_cb = AddressSpaceObjectCreate;
 	cls->destroy_cb = AddressSpaceObjectDestroy;
 	cls->name = "SceUIDAddressSpaceClass";
-	ret = SceSysmemForDriver_0FC24464(SCE_KERNEL_ADDRESS_SPACE_ID, &kernel);
+	ret = sceGUIDGetObject(SCE_KERNEL_ADDRESS_SPACE_ID, &kernel);
 	if (ret < 0)
 		return ret;
 	heap = s_addressSpaceGlobals->asidHeap;

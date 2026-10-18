@@ -15,7 +15,7 @@ SceUID g_ioSchedHeap;
 
 /* 4.00 builds this file with _FORTIFY_SOURCE; Sony's heap declaration gives the size it checks */
 #if FW_VERSION >= 0x04000000
-void *SceSysmemForDriver_7B4CB60A(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
+void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))
 #endif
 
@@ -391,7 +391,7 @@ int sceIoSchedulerRemove(const char *file, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_REMOVE), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -451,7 +451,7 @@ int getPathMntOpt(const char *path, int full)
 		colon = strchr(path + 1, '/');
 		if (colon == NULL)
 			return 0;
-		dir = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, 0x400);
+		dir = sceKernelAllocHeapMemory(g_ioSchedHeap, 0x400);
 		if (dir == NULL)
 			return SCE_ERROR_ERRNO_ENOMEM;
 		len = colon - path;
@@ -471,7 +471,7 @@ int sceIoSchedulerMkdir(const char *dir, SceMode mode, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_MKDIR), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -495,7 +495,7 @@ int sceIoSchedulerRmdir(const char *path, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_RMDIR), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -519,7 +519,7 @@ int sceIoSchedulerRename(const char *oldname, const char *newname, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_RENAME), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -545,7 +545,7 @@ int sceIoSchedulerDevctl(const char *dev, unsigned int cmd, const void *indata, 
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForDevctl(req, mntOpt, getThreadIoPriority(), 0, 0,
@@ -564,7 +564,7 @@ int sceIoSchedulerSync(const char *device, unsigned int flag, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_SYNC), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -588,7 +588,7 @@ SceUID sceIoSchedulerOpen(const char *path, int flags, SceMode mode, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_OPEN), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -613,7 +613,7 @@ int sceIoSchedulerClose(SceUID fd, const IofilemgrSchedInfo *info)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_CLOSE), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -639,7 +639,7 @@ int sceIoSchedulerIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		if (g_vfsVopHook == NULL)
 			return SCE_ERROR_ERRNO_ENOMEM;
@@ -666,7 +666,7 @@ SceOff sceIoSchedulerLseek(SceUID fd, SceOff offset, int whence, const Iofilemgr
 	IoRequest *req;
 	SceOff ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_LSEEK), 3, NULL, 0,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -692,7 +692,7 @@ int sceIoSchedulerLseek32(SceUID fd, int offset, int whence, const IofilemgrSche
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForLseek32(req, info->mntOpt, info->priority, 0, 0,
@@ -717,13 +717,13 @@ int sceIoSchedulerRead(SceUID fd, void *data, SceSize size, const IofilemgrSched
 				  SCE_ERROR_ERRNO_EFAULT);
 		return SCE_ERROR_ERRNO_EFAULT;
 	}
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_READ), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
 	if (chunks == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 	} else {
@@ -755,13 +755,13 @@ int sceIoSchedulerWrite(SceUID fd, const void *data, SceSize size,
 				  SCE_ERROR_ERRNO_EFAULT);
 		return SCE_ERROR_ERRNO_EFAULT;
 	}
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_WRITE), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
 	if (chunks == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 	} else {
@@ -793,13 +793,13 @@ int sceIoSchedulerPread(SceUID fd, void *data, SceSize size, SceOff offset,
 				  SCE_ERROR_ERRNO_EFAULT);
 		return SCE_ERROR_ERRNO_EFAULT;
 	}
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_PREAD), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
 	if (chunks == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 	} else {
@@ -831,13 +831,13 @@ int sceIoSchedulerPwrite(SceUID fd, const void *data, SceSize size, SceOff offse
 				  SCE_ERROR_ERRNO_EFAULT);
 		return SCE_ERROR_ERRNO_EFAULT;
 	}
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_PWRITE), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_SCHED_CHUNK_BUFF_SIZE);
 	if (chunks == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOMEM;
 	} else {
@@ -862,7 +862,7 @@ int sceIoSchedulerSyncByFd(SceUID fd, int flag, const IofilemgrSchedInfo *info)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForSyncByFd(req, info->mntOpt, info->priority, 0, 0,
@@ -881,7 +881,7 @@ SceUID sceIoSchedulerDopen(const char *dirname, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_DOPEN), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -905,7 +905,7 @@ int sceIoSchedulerDclose(SceUID fd, const IofilemgrSchedInfo *info)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_DCLOSE), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -930,7 +930,7 @@ int sceIoSchedulerDread(SceUID fd, SceIoDirent *dir, const IofilemgrSchedInfo *i
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_DREAD), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -956,7 +956,7 @@ int sceIoSchedulerDreadForVsh(SceUID fd, SceIoDirent *dir, const IofilemgrSchedI
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForDreadForVsh(req, info->mntOpt, info->priority, 0,
@@ -975,7 +975,7 @@ int sceIoSchedulerChstat(const char *file, SceIoStat *stat, int bits, int mntOpt
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_CHSTAT), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -1000,7 +1000,7 @@ int sceIoSchedulerGetstat(const char *file, SceIoStat *stat, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_GETSTAT), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -1024,7 +1024,7 @@ int sceIoSchedulerGetstatByFd(SceUID fd, SceIoStat *stat, const IofilemgrSchedIn
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_FGETSTAT), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -1050,7 +1050,7 @@ int sceIoSchedulerChstatByFd(SceUID fd, SceIoStat *stat, int bits,
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL) {
 		VFS_VOP_HOOK_CALL(IO_SCHED_HOOK_EXIT(VFS_VOP_HOOK_FCHSTAT), 2, NULL,
 				  SCE_ERROR_ERRNO_ENOMEM);
@@ -1076,7 +1076,7 @@ int sceIoSchedulerChstatForVsh(const char *file, SceIoStat *stat, int bits, int 
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForChstatForVsh(req, mntOpt, getThreadIoPriority(), 0,
@@ -1096,7 +1096,7 @@ int sceIoSchedulerGetstatForVsh(const char *file, SceIoStat *stat, int mntOpt)
 	IoRequest *req;
 	int ret;
 
-	req = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*req));
 	if (req == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 	ret = sceIoRequestCreateIoRequestForGetstatForVsh(req, mntOpt, getThreadIoPriority(), 0,
@@ -1116,7 +1116,7 @@ int sceIoSchedulerInitialize(void)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_ioSchedHeap = SceSysmemForDriver_9328E0E8("SceIoScheduler", 0x10000, &opt);
+	g_ioSchedHeap = sceKernelCreateHeap("SceIoScheduler", 0x10000, &opt);
 	return g_ioSchedHeap < 0 ? g_ioSchedHeap : 0;
 }
 

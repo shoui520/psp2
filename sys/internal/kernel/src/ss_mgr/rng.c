@@ -102,7 +102,7 @@ int _sceKernelGetRandomNumber(void *result, SceSize size,
 	uint8_t *buffer;
 	int ret, copyRet;
 
-	ret = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	ret = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (ret < 0)
 		return ret;
 	if (!result)
@@ -112,7 +112,7 @@ int _sceKernelGetRandomNumber(void *result, SceSize size,
 	buffer = __builtin_alloca(64);
 	memset(buffer, 0, 64);
 	ret = rngGetRandomNumberForUser(buffer, size);
-	copyRet = SceSysmemForDriver_6D88EF8A(result, buffer, param.size);
+	copyRet = sceKernelCopyToUser(result, buffer, param.size);
 	if (copyRet < 0)
 		return copyRet;
 	return ret;

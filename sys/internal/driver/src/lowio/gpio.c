@@ -476,17 +476,17 @@ static __attribute__((noinline)) int GpioInit(void)
 		opt.attr = 2;
 		if (bank) {
 			opt.paddr = GPIO1_REG_BASE;
-			ret = SceSysmemForDriver_C94850C9("SceGpio1Reg", 0x20100806,
+			ret = sceKernelAllocMemBlockForKernel("SceGpio1Reg", 0x20100806,
 				0x1000, &opt);
 		} else {
 			opt.paddr = GPIO0_REG_BASE;
-			ret = SceSysmemForDriver_C94850C9("SceGpio0Reg", 0x20100806,
+			ret = sceKernelAllocMemBlockForKernel("SceGpio0Reg", 0x20100806,
 				0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		ctx->uid = ret;
-		SceSysmemForDriver_A841EDDA(ret, &base);
+		sceKernelGetMemBlockBase(ret, &base);
 		ctx->base = base;
 		intr = s_gpioIntrs[bank];
 		for (gate = 0; gate < 5; gate++, intr++) {

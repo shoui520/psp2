@@ -365,10 +365,10 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 		result = (int)0x80200007;
 		goto done;
 	}
-	result = SceSysmemForDriver_BC996A7A(&create, param, sizeof(create));
+	result = sceKernelCopyFromUser(&create, param, sizeof(create));
 	if (result)
 		goto done;
-	memBlock = SceSysmemForDriver_C94850C9("SceSharedFb",
+	memBlock = sceKernelAllocMemBlockForKernel("SceSharedFb",
 					SCE_KERNEL_MEMBLOCK_TYPE_USER_CDRAM_RW,
 					create.AllocMemSize, NULL);
 	if (memBlock < 0) {
@@ -376,7 +376,7 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 		goto done;
 	}
 	base = NULL;
-	result = SceSysmemForDriver_A841EDDA(memBlock, &base);
+	result = sceKernelGetMemBlockBase(memBlock, &base);
 	if (result)
 		goto freeMemBlock;
 	processId = sceKernelGetProcessId();
@@ -546,7 +546,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		goto unlock;
 	}
 	port = &gSharedFbManager.ports[portIndex];
-	result = SceSysmemForDriver_BC996A7A(port->info.update, info, 64);
+	result = sceKernelCopyFromUser(port->info.update, info, 64);
 	if (result)
 		goto unlock;
 	firstPid = port->requestedPids[0];
@@ -586,7 +586,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		    SHARED_FB_PROCESS_MATCHES(port, processId, 15))
 			++count;
 	}
-	result = SceSysmemForDriver_6D88EF8A(processCount, &count, sizeof(count));
+	result = sceKernelCopyToUser(processCount, &count, sizeof(count));
 	if (!result)
 		gSharedFbManager.currentPort = port;
 unlock:

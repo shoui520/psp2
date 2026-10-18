@@ -161,7 +161,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
 	sceKernelRegisterSysEventHandler
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
@@ -172,26 +172,26 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDmaOpFree
 	sceKernelDmaOpAssign
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_00ED6C14
+	sceGUIDReferObjectWithClass
 	SceSysmemForDriver_04059C4B
 	sceGUIDClose
 	sceGUIDReleaseObject
 	SceSysmemForDriver_20C811FA
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_56A13E90
-	SceSysmemForDriver_61317102
-	SceSysmemForDriver_6D88EF8A
+	sceGUIDKernelCreate
+	sceUIDClassInitClass
+	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E
 	SceSysmemForDriver_85336A1C
 	sceKernelGetPhyMemInfo
 	SceSysmemForDriver_8A1742F6
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
+	sceKernelVAtoPA
+	sceKernelIsAccessibleRange
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
 	SceSysmemForDriver_FFCD9B60
 	sceSblFwLoaderLoad

@@ -251,12 +251,12 @@ static __attribute__((noinline)) int GrabInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_grabDevices[i].paddr;
-		ret = SceSysmemForDriver_C94850C9(s_grabDevices[i].name, 0x20100806,
+		ret = sceKernelAllocMemBlockForKernel(s_grabDevices[i].name, 0x20100806,
 			s_grabDevices[i].size, &opt);
 		if (ret < 0)
 			goto error;
 		s_grab.uid[i] = ret;
-		SceSysmemForDriver_A841EDDA(ret, &base);
+		sceKernelGetMemBlockBase(ret, &base);
 		*s_grabDevices[i].base = base;
 	}
 	sceKernelRegisterMonitorCallHandler(GRAB_MONCALL_STOP,

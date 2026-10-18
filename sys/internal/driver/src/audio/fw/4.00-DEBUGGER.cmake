@@ -99,13 +99,13 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
-	SceSysmemForDriver_0F5C84B7
+	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_278BC201
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelIsUncacheAddressInTmpFsGame
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE
@@ -133,7 +133,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	SceProcessmgrForDriver_02179E12
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840

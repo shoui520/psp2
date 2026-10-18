@@ -112,8 +112,8 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
 	sceKernelDeleteHeap
 	SceCpuForDriver_3627F4E0
 	SceCpuForDriver_BDF6F8E4

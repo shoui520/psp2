@@ -103,7 +103,7 @@ RTC_VENEER int rtcSysFormatRFC3339(char *buf, const SceRtcTick *tick, int offset
 /* name unknown: a kernel result unless copying out failed */
 static inline int rtcCopyOut(void *dst, const void *src, SceSize size, int ret)
 {
-	int copy = SceSysmemForDriver_6D88EF8A(dst, src, size);
+	int copy = sceKernelCopyToUser(dst, src, size);
 
 	return copy < 0 ? copy : ret;
 }
@@ -165,7 +165,7 @@ int name(const SceRtcTick *src, SceRtcTick *dst)			\
 									\
 	if (src != NULL) {						\
 		ksrc = __builtin_alloca(sizeof(*ksrc));			\
-		ret = SceSysmemForDriver_BC996A7A(ksrc, src, sizeof(*ksrc));	\
+		ret = sceKernelCopyFromUser(ksrc, src, sizeof(*ksrc));	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -202,7 +202,7 @@ int name(char *buf, const SceRtcTick *tick, const void *reserved)		\
 	SceUInt32 block[2];						\
 	int ret;							\
 									\
-	ret = SceSysmemForDriver_BC996A7A(block, reserved, sizeof(block));	\
+	ret = sceKernelCopyFromUser(block, reserved, sizeof(block));	\
 	if (ret < 0)							\
 		return ret;						\
 	if (buf != NULL) {						\
@@ -211,7 +211,7 @@ int name(char *buf, const SceRtcTick *tick, const void *reserved)		\
 	}								\
 	if (tick != NULL) {						\
 		ktick = __builtin_alloca(sizeof(*ktick));		\
-		ret = SceSysmemForDriver_BC996A7A(ktick, tick, sizeof(*ktick)); \
+		ret = sceKernelCopyFromUser(ktick, tick, sizeof(*ktick)); \
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -229,7 +229,7 @@ int name(char *buf, const SceRtcTick *tick, int offset, const void *reserved) \
 	SceUInt32 block[2];						\
 	int ret;							\
 									\
-	ret = SceSysmemForDriver_BC996A7A(block, reserved, sizeof(block));	\
+	ret = sceKernelCopyFromUser(block, reserved, sizeof(block));	\
 	if (ret < 0)							\
 		return ret;						\
 	if (buf != NULL) {						\
@@ -238,7 +238,7 @@ int name(char *buf, const SceRtcTick *tick, int offset, const void *reserved) \
 	}								\
 	if (tick != NULL) {						\
 		ktick = __builtin_alloca(sizeof(*ktick));		\
-		ret = SceSysmemForDriver_BC996A7A(ktick, tick, sizeof(*ktick)); \
+		ret = sceKernelCopyFromUser(ktick, tick, sizeof(*ktick)); \
 		if (ret < 0)						\
 			return ret;					\
 	}								\

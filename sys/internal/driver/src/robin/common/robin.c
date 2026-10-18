@@ -250,12 +250,12 @@ int robinInitialize(void)
 	gRobin = (SceWlanBtRobin){0};
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
-	result = SceSysmemForDriver_C94850C9("SceWlanBtRobin",
+	result = sceKernelAllocMemBlockForKernel("SceWlanBtRobin",
 					SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 					0x80000, &options);
 	if (result >= 0) {
 		gRobin.firmwareMemBlock = result;
-		result = SceSysmemForDriver_A841EDDA(result, &gRobin.firmwareBuffer);
+		result = sceKernelGetMemBlockBase(result, &gRobin.firmwareBuffer);
 		if (result >= 0) {
 			sceKernelScheduleWorkTask(0x10023, "SceWlanBtRobinInit",
 						 robinInitializeWork, NULL);

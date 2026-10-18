@@ -9,7 +9,7 @@
 #include <sysmem/debug.h>
 #include <deci4p_dfmgr/deci4p.h>
 
-/* protocol registration (SceDeci4pSDfMgrForKernel_A55F5F0D) */
+/* protocol registration (sceSDfMgrOpen) */
 typedef struct SceSDfMgrProtocol {
 	SceSize size;				/* sizeof(SceSDfMgrProtocol) */
 	SceUInt32 protocol;
@@ -34,7 +34,7 @@ int sceSDfMgrPoll(void);
 int _threadSignal(int handle);
 
 /* names unknown (NID) */
-int SceDeci4pSDfMgrForKernel_A55F5F0D(SceSDfMgrHandler handler, const SceSDfMgrProtocol *protocol,
+int sceSDfMgrOpen(SceSDfMgrHandler handler, const SceSDfMgrProtocol *protocol,
 				       void *ctx);					/* open */
 void SceDeci4pSDfMgrForKernel_8A3B06F2(void *dst, int c, SceSize size);			/* memset */
 SceSize SceDeci4pSDfMgrForKernel_68903C1D(const SceDeci4pHeader *hdr);			/* get size */

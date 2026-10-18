@@ -2347,7 +2347,7 @@ int sceUsbdInit(SceUID *uid)
 		goto out;
 	client->semaId = result;
 	USBD_LIST_APPEND(s_clientHead, s_clientTail, client);
-	result = SceSysmemForDriver_6D88EF8A(uid, &client->pid, sizeof(client->pid));
+	result = sceKernelCopyToUser(uid, &client->pid, sizeof(client->pid));
 out:
 	usbdUnlock();
 	sceSyscallLeave(state);
@@ -2432,7 +2432,7 @@ int sceUsbdGetDeviceList(SceUID uid, SceSize num, UsbdDeviceInfo *info)
 	}
 	if (count < num)
 		num = count;
-	result = SceSysmemForDriver_6D88EF8A(info, list, num * sizeof(*list));
+	result = sceKernelCopyToUser(info, list, num * sizeof(*list));
 	if (result >= 0)
 		result = num;
 	usbdFree(list);
@@ -2472,7 +2472,7 @@ int sceUsbdGetDescriptor(SceUID uid, unsigned int deviceId, void *descriptor, Sc
 	    (device = usbdFindDevice(deviceId)) == NULL || device->descriptor == NULL)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 	else
-		result = SceSysmemForDriver_6D88EF8A(descriptor, device->descriptor, size);
+		result = sceKernelCopyToUser(descriptor, device->descriptor, size);
 	usbdUnlock();
 	sceSyscallLeave(state);
 	return result < 0 ? result : (int)size;
@@ -2486,7 +2486,7 @@ static __always_inline int usbdCopyName(char **name, const char *userName)
 
 	if (buffer == NULL)
 		return SCE_USBD_ERROR_NO_MEMORY;
-	result = SceSysmemForDriver_DB3EC244(buffer, userName, 255);
+	result = sceKernelStrncpyFromUser(buffer, userName, 255);
 	if (result < 0) {
 		usbdFree(buffer);
 		return result;
@@ -2629,7 +2629,7 @@ SceUID sceUsbdOpenPipe(SceUID uid, const UsbdPipeParam *userParam)
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (!usbdIsDeviceId(param.deviceId) || (device = usbdGetDevice(param.deviceId)) == NULL) {
@@ -2752,7 +2752,7 @@ int sceUsbdReceiveEvent(SceUID uid, UsbdClientEvent *userEvent)
 	}
 	USBD_LIST_REMOVE(client->eventHead, client->eventTail, event);
 	if (event->type != USBD_CLIENT_EVENT_WAKEUP) {
-		result = SceSysmemForDriver_6D88EF8A(userEvent, event, sizeof(*event));
+		result = sceKernelCopyToUser(userEvent, event, sizeof(*event));
 		usbdFree(event);
 	}
 out:
@@ -2813,7 +2813,7 @@ int sceUsbdAttachCompositeLdd(SceUID uid, const UsbdAttachCompositeParam *userPa
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}
-	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.driverId >= USBD_DRIVER_COUNT || param.bus >= USBD_BUS_COUNT ||
@@ -2865,7 +2865,7 @@ static __always_inline int usbdStageTransfer(UsbdPipe *pipe, void *poolBuffer,
 
 	if (pipe->direction != SCE_USBD_ENDPOINT_DIRECTION_OUT)
 		return 0;
-	result = SceSysmemForDriver_BC996A7A(poolBuffer, buffer, length);
+	result = sceKernelCopyFromUser(poolBuffer, buffer, length);
 	if (result < 0)
 		usbdFreeBuffer(poolBuffer);
 	return result;
@@ -2911,11 +2911,11 @@ SceUID sceUsbdTransferData(SceUID uid, const UsbdTransferParam *userParam)
 	client = usbdFindClient(uid);
 	if (client == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.setup != NULL && param.setupSize == sizeof(setup)) {
-		result = SceSysmemForDriver_BC996A7A(&setup, param.setup, sizeof(setup));
+		result = sceKernelCopyFromUser(&setup, param.setup, sizeof(setup));
 		if (result < 0)
 			goto out;
 	}
@@ -3003,7 +3003,7 @@ int sceUsbdIsochTransferData(SceUID uid, SceUID pipeId, const UsbdIsochRequest *
 	client = usbdFindClient(uid);
 	if (client == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_BC996A7A(&transfer, userTransfer, sizeof(transfer));
+	result = sceKernelCopyFromUser(&transfer, userTransfer, sizeof(transfer));
 	if (result < 0)
 		goto out;
 	if (!usbdIsPipeId(pipeId) || (pipe = usbdGetPipe(pipeId)) == NULL ||
@@ -3052,7 +3052,7 @@ int sceUsbdGetTransferStatus(SceUID uid, const UsbdTransferStatusParam *userPara
 	usbdLock();
 	if (usbdFindClient(uid) == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
@@ -3060,9 +3060,9 @@ int sceUsbdGetTransferStatus(SceUID uid, const UsbdTransferStatusParam *userPara
 	result = request->result;
 	count = request->count;
 	usbdFreeRequest(request);
-	result = SceSysmemForDriver_6D88EF8A(param.result, &result, sizeof(result));
+	result = sceKernelCopyToUser(param.result, &result, sizeof(result));
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(param.count, &count, sizeof(count));
+		result = sceKernelCopyToUser(param.count, &count, sizeof(count));
 	goto out;
 invalid:
 	result = SCE_USBD_ERROR_INVALID_PARAM;
@@ -3084,7 +3084,7 @@ int sceUsbdGetIsochTransferStatus(SceUID uid, const UsbdTransferStatusParam *use
 	usbdLock();
 	if (usbdFindClient(uid) == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	result = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (result < 0)
 		goto out;
 	if (param.requestId >= USBD_REQUEST_COUNT || (request = s_request[param.requestId]) == NULL)
@@ -3092,9 +3092,9 @@ int sceUsbdGetIsochTransferStatus(SceUID uid, const UsbdTransferStatusParam *use
 	requestResult = request->result;
 	status = request->isochStatus;
 	usbdFreeRequest(request);
-	result = SceSysmemForDriver_6D88EF8A(param.result, &status, sizeof(status));
+	result = sceKernelCopyToUser(param.result, &status, sizeof(status));
 	if (result >= 0)
-		result = SceSysmemForDriver_6D88EF8A(param.count, &requestResult, sizeof(requestResult));
+		result = sceKernelCopyToUser(param.count, &requestResult, sizeof(requestResult));
 	goto out;
 invalid:
 	result = SCE_USBD_ERROR_INVALID_PARAM;
@@ -3119,7 +3119,7 @@ int sceUsbdGetDeviceAddress(SceUID uid, SceUID deviceId, SceUsbdDeviceAddress *a
 		result = SCE_USBD_ERROR_DEVICE_NOT_FOUND;
 	} else {
 		address = device->route.packed;
-		result = SceSysmemForDriver_6D88EF8A(addr, &address, sizeof(address));
+		result = sceKernelCopyToUser(addr, &address, sizeof(address));
 	}
 	usbdUnlock();
 	sceSyscallLeave(state);
@@ -3148,7 +3148,7 @@ int sceUsbdGetDeviceSpeed(SceUID uid, SceUID deviceId, unsigned int *speed)
 	case SCE_USBD_DEVICE_SPEED_FS:
 	case SCE_USBD_DEVICE_SPEED_HS:
 		value = device->speed;
-		result = SceSysmemForDriver_6D88EF8A(speed, &value, sizeof(value));
+		result = sceKernelCopyToUser(speed, &value, sizeof(value));
 		break;
 	default:
 		result = SCE_USBD_ERROR_FATAL;

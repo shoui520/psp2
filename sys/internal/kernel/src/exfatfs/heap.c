@@ -29,7 +29,7 @@ int sceFatfsInitializeHeap(int reuseHeap)
 #endif
 			return 0x80010011;
 		}
-		heapId = SceSysmemForDriver_9328E0E8("SceExfatfsCommon", 0x7f000, &opt);
+		heapId = sceKernelCreateHeap("SceExfatfsCommon", 0x7f000, &opt);
 		g_commonHeapId = heapId;
 	}
 #if FW_VERSION >= 0x04000000
@@ -76,7 +76,7 @@ void *allocateHeapBuffer(struct SceExfatfsDrive *unusedDrive)
 	(void)unusedDrive;
 	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
 	if (g_heapBlockCacheCount <= 0)
-		buffer = SceSysmemForDriver_7B4CB60A(g_commonHeapId, 0x800);
+		buffer = sceKernelAllocHeapMemory(g_commonHeapId, 0x800);
 	else
 		buffer = g_heapBlockCache[--g_heapBlockCacheCount];
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
@@ -105,7 +105,7 @@ void *allocateCommonHeapMemory(int unused, SceSize size)
 	void *memory;
 
 	intrState = SceCpuForDriver_D32ACE9E(&g_heapLock);
-	memory = SceSysmemForDriver_7B4CB60A(g_commonHeapId, size);
+	memory = sceKernelAllocHeapMemory(g_commonHeapId, size);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_heapLock, intrState);
 	return memory;
 }

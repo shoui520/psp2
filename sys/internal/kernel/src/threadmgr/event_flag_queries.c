@@ -24,7 +24,7 @@ int _sceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint3
 	value = __builtin_alloca(sizeof(*value));
 	*value = 0;
 	ret = sceKernelPollEventFlagForUser(evfId, pattern, mode, value);
-	copied = SceSysmemForDriver_6D88EF8A(outPattern, value, sizeof(*value));
+	copied = sceKernelCopyToUser(outPattern, value, sizeof(*value));
 	return copied < 0 ? copied : ret;
 }
 
@@ -37,7 +37,7 @@ int _sceKernelCancelEventFlag(SceUID evfId, uint32_t pattern, int *numWaitThread
 	value = __builtin_alloca(sizeof(*value));
 	*value = 0;
 	ret = sceKernelCancelEventFlagForUser(evfId, pattern, value);
-	copied = SceSysmemForDriver_6D88EF8A(numWaitThreads, value, sizeof(*value));
+	copied = sceKernelCopyToUser(numWaitThreads, value, sizeof(*value));
 	return copied < 0 ? copied : ret;
 }
 
@@ -48,7 +48,7 @@ int _sceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info, const
 	uint32_t extra[2];
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(extra, args, sizeof(extra));
+	ret = sceKernelCopyFromUser(extra, args, sizeof(extra));
 	if (ret < 0)
 		return ret;
 	if (info == NULL)
@@ -57,10 +57,10 @@ int _sceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info, const
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	local = __builtin_alloca(sizeof(*local));
 	*local = (SceKernelEventFlagInfo){ 0 };
-	ret = SceSysmemForDriver_BC996A7A(local, info, extra[0]);
+	ret = sceKernelCopyFromUser(local, info, extra[0]);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetEventFlagInfoForUser(evfId, local);
-	copied = SceSysmemForDriver_6D88EF8A(info, local, extra[0]);
+	copied = sceKernelCopyToUser(info, local, extra[0]);
 	return copied < 0 ? copied : ret;
 }

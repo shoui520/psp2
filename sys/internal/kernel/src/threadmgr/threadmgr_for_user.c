@@ -103,7 +103,7 @@ int closeMsgPipeForUser(SceUID uid, uint32_t pattern)
 
 	intr = SceCpuForDriver_821FC0EE();
 	guid = SceSysmemForDriver_45D22597(0, uid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid,
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->msgPipeClass, (SceObjectBase **)&event) < 0) {
 		ret = USER_ERROR_UNKNOWN_MSG_PIPE_ID;
 		goto resume;
@@ -158,7 +158,7 @@ int closeSimpleEventForUser(SceUID uid, uint32_t pattern)
 
 	intr = SceCpuForDriver_821FC0EE();
 	guid = SceSysmemForDriver_45D22597(0, uid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid,
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->simpleEventClass,
 		(SceObjectBase **)&event) < 0) {
 		ret = USER_ERROR_UNKNOWN_SIMPLE_EVENT_ID;
@@ -365,7 +365,7 @@ int sceKernelChangeThreadVfpExceptionForUser(uint32_t clear, uint32_t set)
 	SCE_DBG_ASSERT_CHECK_FUNC(thread != NULL, 410, "sceKernelChangeThreadVfpExceptionForUser");
 	tls = SceThreadmgrForDriver_E938FB20(TLS_SLOT_VFP_EXCEPTION);
 	SCE_DBG_ASSERT_CHECK_FUNC(tls != NULL, 413, "sceKernelChangeThreadVfpExceptionForUser");
-	err = SceSysmemForDriver_6D88EF8A(tls, &thread->vfpException, sizeof(thread->vfpException));
+	err = sceKernelCopyToUser(tls, &thread->vfpException, sizeof(thread->vfpException));
 	if (err < 0) {
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 417, "sceKernelChangeThreadVfpExceptionForUser");
 		ret = err;
@@ -669,15 +669,15 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 	if (mode & ~WME_MODE_MASK)
 		return SCE_KERNEL_ERROR_ILLEGAL_MODE;
 	if (SceThreadmgrForDriver_20C228E4() == 0) {
-		events = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*events), NULL);
+		events = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*events), NULL);
 		if (events == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		ret = SceSysmemForDriver_BC996A7A(events, userEvents, count * sizeof(*events));
+		ret = sceKernelCopyFromUser(events, userEvents, count * sizeof(*events));
 		if (ret < 0) {
 			done = 0;
 			goto freeEvents;
 		}
-		ids = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*ids), NULL);
+		ids = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*ids), NULL);
 		if (ids == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			done = 0;
@@ -696,7 +696,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 		}
 		results = NULL;
 		if (userResults != NULL) {
-			results = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*results), NULL);
+			results = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*results), NULL);
 			if (results == NULL) {
 				ret = SCE_KERNEL_ERROR_NO_MEMORY;
 				done = 0;
@@ -708,7 +708,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 		opt.align = 4;
 		opt.mmapBase = 0;
 		opt.mmapSize = 0;
-		wme = SceSysrootForKernel_D351EBC8(pid, WME_SIZE(count), &opt);
+		wme = sceKernelSysrootAllocRemoteProcessHeap(pid, WME_SIZE(count), &opt);
 		if (wme == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			done = 0;
@@ -740,7 +740,7 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 		results = wme->results;
 	}
 	if (userTimeout != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&timeout, userTimeout, sizeof(timeout));
+		ret = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
 		if (ret < 0) {
 			ret |= SYSCALL_ERROR_BIT;
 			done = 0;
@@ -767,12 +767,12 @@ int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, Sce
 				}
 			}
 		}
-		err = SceSysmemForDriver_6D88EF8A(userResults, results, count * sizeof(*results));
+		err = sceKernelCopyToUser(userResults, results, count * sizeof(*results));
 		if (err < 0)
 			ret = err | SYSCALL_ERROR_BIT;
 	}
 	if (userTimeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userTimeout, timeoutPtr, sizeof(timeout));
+		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
 		if (err < 0)
 			ret = err | SYSCALL_ERROR_BIT;
 	}
@@ -817,15 +817,15 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 	if (mode & ~WME_MODE_MASK)
 		return SCE_KERNEL_ERROR_ILLEGAL_MODE;
 	if (SceThreadmgrForDriver_20C228E4() == 0) {
-		events = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*events), NULL);
+		events = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*events), NULL);
 		if (events == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		ret = SceSysmemForDriver_BC996A7A(events, userEvents, count * sizeof(*events));
+		ret = sceKernelCopyFromUser(events, userEvents, count * sizeof(*events));
 		if (ret < 0) {
 			done = 0;
 			goto freeEvents;
 		}
-		ids = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*ids), NULL);
+		ids = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*ids), NULL);
 		if (ids == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			done = 0;
@@ -844,7 +844,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 		}
 		results = NULL;
 		if (userResults != NULL) {
-			results = SceSysrootForKernel_D351EBC8(pid, count * sizeof(*results), NULL);
+			results = sceKernelSysrootAllocRemoteProcessHeap(pid, count * sizeof(*results), NULL);
 			if (results == NULL) {
 				ret = SCE_KERNEL_ERROR_NO_MEMORY;
 				done = 0;
@@ -856,7 +856,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 		opt.align = 4;
 		opt.mmapBase = 0;
 		opt.mmapSize = 0;
-		wme = SceSysrootForKernel_D351EBC8(pid, WME_SIZE(count), &opt);
+		wme = sceKernelSysrootAllocRemoteProcessHeap(pid, WME_SIZE(count), &opt);
 		if (wme == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_MEMORY;
 			done = 0;
@@ -888,7 +888,7 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 		results = wme->results;
 	}
 	if (userTimeout != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&timeout, userTimeout, sizeof(timeout));
+		ret = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
 		if (ret < 0) {
 			ret |= SYSCALL_ERROR_BIT;
 			done = 0;
@@ -915,12 +915,12 @@ int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, S
 				}
 			}
 		}
-		err = SceSysmemForDriver_6D88EF8A(userResults, results, count * sizeof(*results));
+		err = sceKernelCopyToUser(userResults, results, count * sizeof(*results));
 		if (err < 0)
 			ret = err | SYSCALL_ERROR_BIT;
 	}
 	if (userTimeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userTimeout, timeoutPtr, sizeof(timeout));
+		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
 		if (err < 0)
 			ret = err | SYSCALL_ERROR_BIT;
 	}
@@ -1153,7 +1153,7 @@ SceUID sceKernelCreateCondForUser(const char *userName, SceUInt32 attr, SceUID m
 
 	if (userName == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
+	ret = sceKernelStrncpyFromUser(name, userName, sizeof(name));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2298,
 			" k: error: sceKernelCreateCondForUser() -> sceKernelStrncpyFromUser()=0x%08X\n",
@@ -1400,7 +1400,7 @@ int sceKernelCreateLwCondForUser(ThreadmgrLwCondWork *work, const char *userName
 		return USER_ERROR_ILLEGAL_ADDR;
 	if (userName == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
-	ret = SceSysmemForDriver_DB3EC244(name, userName, sizeof(name));
+	ret = sceKernelStrncpyFromUser(name, userName, sizeof(name));
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2995,
 			" k: error: sceKernelCreateLwCondForUser() -> sceKernelStrncpyFromUser()=0x%08X\n",
@@ -1585,7 +1585,7 @@ int _sceKernelGetSystemTime(SceKernelSysClock *userClock)
 	clock = __builtin_alloca(sizeof(*clock));
 	*clock = (SceKernelSysClock){ .quad = 0 };
 	ret = sceKernelGetSystemTimeForUser(clock);
-	err = SceSysmemForDriver_6D88EF8A(userClock, clock, sizeof(*clock));
+	err = sceKernelCopyToUser(userClock, clock, sizeof(*clock));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -1764,11 +1764,11 @@ int _sceKernelLockLwMutexSyscall(void *work, int count, SceUInt32 *userTimeout, 
 
 	if (userTimeout == NULL)
 		return _sceKernelLockLwMutex(work, count, NULL, callbacks);
-	ret = SceSysmemForDriver_BC996A7A(&timeout, userTimeout, sizeof(timeout));
+	ret = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
 	if (ret < 0)
 		return ret;
 	ret = _sceKernelLockLwMutex(work, count, &timeout, callbacks);
-	err = SceSysmemForDriver_6D88EF8A(userTimeout, &timeout, sizeof(timeout));
+	err = sceKernelCopyToUser(userTimeout, &timeout, sizeof(timeout));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -1794,7 +1794,7 @@ int _sceKernelWaitThreadEnd(SceUID threadId, int *userStatus, SceUInt32 *userTim
 		err = 0;
 		timeoutPtr = NULL;
 	} else {
-		err = SceSysmemForDriver_BC996A7A(&timeout, userTimeout, sizeof(timeout));
+		err = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
 		if (err < 0)
 			return err;
 		timeoutPtr = &timeout;
@@ -1807,9 +1807,9 @@ int _sceKernelWaitThreadEnd(SceUID threadId, int *userStatus, SceUInt32 *userTim
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	ret = sceKernelWaitThreadEnd(guid, statusPtr, timeoutPtr);
 	if (ret >= 0 && userStatus != NULL)
-		err = SceSysmemForDriver_6D88EF8A(userStatus, statusPtr, sizeof(status));
+		err = sceKernelCopyToUser(userStatus, statusPtr, sizeof(status));
 	if (userTimeout != NULL)
-		err = SceSysmemForDriver_6D88EF8A(userTimeout, timeoutPtr, sizeof(timeout));
+		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -1829,7 +1829,7 @@ int _sceKernelWaitThreadEndCB(SceUID threadId, int *userStatus, SceUInt32 *userT
 		err = 0;
 		timeoutPtr = NULL;
 	} else {
-		err = SceSysmemForDriver_BC996A7A(&timeout, userTimeout, sizeof(timeout));
+		err = sceKernelCopyFromUser(&timeout, userTimeout, sizeof(timeout));
 		if (err < 0)
 			return err;
 		timeoutPtr = &timeout;
@@ -1842,9 +1842,9 @@ int _sceKernelWaitThreadEndCB(SceUID threadId, int *userStatus, SceUInt32 *userT
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	ret = SceThreadmgrForDriver_9EF4F62C(guid, statusPtr, timeoutPtr);
 	if (ret >= 0 && userStatus != NULL)
-		err = SceSysmemForDriver_6D88EF8A(userStatus, statusPtr, sizeof(status));
+		err = sceKernelCopyToUser(userStatus, statusPtr, sizeof(status));
 	if (userTimeout != NULL)
-		err = SceSysmemForDriver_6D88EF8A(userTimeout, timeoutPtr, sizeof(timeout));
+		err = sceKernelCopyToUser(userTimeout, timeoutPtr, sizeof(timeout));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -1868,7 +1868,7 @@ int _sceKernelGetThreadExitStatus(SceUID threadId, int *userStatus)
 	}
 	ret = sceKernelGetThreadExitStatus(guid, statusPtr);
 	if (ret >= 0 && userStatus != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userStatus, statusPtr, sizeof(status));
+		err = sceKernelCopyToUser(userStatus, statusPtr, sizeof(status));
 		if (err < 0)
 			ret = err;
 	}
@@ -2046,7 +2046,7 @@ int _sceKernelGetThreadInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallIn
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2055,11 +2055,11 @@ int _sceKernelGetThreadInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallIn
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x80);
 	memset(info, 0, 0x80);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetThreadInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2072,7 +2072,7 @@ int _sceKernelGetThreadRunStatus(void *userInfo, const ThreadmgrSyscallInfoArgs 
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2081,11 +2081,11 @@ int _sceKernelGetThreadRunStatus(void *userInfo, const ThreadmgrSyscallInfoArgs 
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x34);
 	memset(info, 0, 0x34);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetThreadRunStatusForUser(info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2098,7 +2098,7 @@ int _sceKernelGetSystemInfo(void *userInfo, const ThreadmgrSyscallInfoArgs *user
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2107,11 +2107,11 @@ int _sceKernelGetSystemInfo(void *userInfo, const ThreadmgrSyscallInfoArgs *user
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x48);
 	memset(info, 0, 0x48);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetSystemInfoForUser(info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2124,7 +2124,7 @@ int _sceKernelGetCallbackInfo(SceUID uid, void *userInfo, const ThreadmgrSyscall
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2133,11 +2133,11 @@ int _sceKernelGetCallbackInfo(SceUID uid, void *userInfo, const ThreadmgrSyscall
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x44);
 	memset(info, 0, 0x44);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetCallbackInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2154,7 +2154,7 @@ int _sceKernelCancelEvent(SceUID eventId, int *numWaitThreads)
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
 	ret = sceKernelCancelEventForUser(eventId, buf);
-	err = SceSysmemForDriver_6D88EF8A(numWaitThreads, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(numWaitThreads, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2171,7 +2171,7 @@ int _sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern)
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
 	ret = sceKernelGetEventPatternForUser(eventId, buf);
-	err = SceSysmemForDriver_6D88EF8A(pattern, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(pattern, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2184,7 +2184,7 @@ int _sceKernelGetEventInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInf
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2193,11 +2193,11 @@ int _sceKernelGetEventInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInf
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x40);
 	memset(info, 0, 0x40);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetEventInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2213,11 +2213,11 @@ int _sceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout)
 		return sceKernelWaitSemaForUser(semaId, needCount, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitSemaForUser(semaId, needCount, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2233,11 +2233,11 @@ int _sceKernelWaitSemaCB(SceUID semaId, int needCount, SceUInt32 *timeout)
 		return sceKernelWaitSemaCBForUser(semaId, needCount, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitSemaCBForUser(semaId, needCount, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2254,7 +2254,7 @@ int _sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
 	ret = sceKernelCancelSemaForUser(semaId, setCount, buf);
-	err = SceSysmemForDriver_6D88EF8A(numWaitThreads, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(numWaitThreads, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2267,7 +2267,7 @@ int _sceKernelGetSemaInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInfo
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2276,11 +2276,11 @@ int _sceKernelGetSemaInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInfo
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x3c);
 	memset(info, 0, 0x3c);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetSemaInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2296,11 +2296,11 @@ int _sceKernelLockMutex(SceUID mutexId, int count, SceUInt32 *timeout)
 		return sceKernelLockMutexForUser(mutexId, count, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockMutexForUser(mutexId, count, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2316,11 +2316,11 @@ int _sceKernelLockMutexCB(SceUID mutexId, int count, SceUInt32 *timeout)
 		return sceKernelLockMutexCB(mutexId, count, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockMutexCB(mutexId, count, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2337,7 +2337,7 @@ int _sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
 	ret = sceKernelCancelMutexForUser(mutexId, newCount, buf);
-	err = SceSysmemForDriver_6D88EF8A(numWaitThreads, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(numWaitThreads, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2350,7 +2350,7 @@ int _sceKernelGetMutexInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInf
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2359,11 +2359,11 @@ int _sceKernelGetMutexInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInf
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x40);
 	memset(info, 0, 0x40);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetMutexInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2379,11 +2379,11 @@ int _sceKernelWaitCond(SceUID condId, SceUInt32 *timeout)
 		return sceKernelWaitCondForUser(condId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitCondForUser(condId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2396,7 +2396,7 @@ int _sceKernelGetCondInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInfo
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2405,11 +2405,11 @@ int _sceKernelGetCondInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallInfo
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x34);
 	memset(info, 0, 0x34);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetCondInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2433,12 +2433,12 @@ int _sceKernelCancelMsgPipe(SceUID msgPipeId, int *numSendWaitThreads, int *numR
 	}
 	ret = sceKernelCancelMsgPipeForUser(msgPipeId, kNumSendWaitThreads, kNumReceiveWaitThreads);
 	if (numSendWaitThreads != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(numSendWaitThreads, kNumSendWaitThreads, sizeof(*kNumSendWaitThreads));
+		err = sceKernelCopyToUser(numSendWaitThreads, kNumSendWaitThreads, sizeof(*kNumSendWaitThreads));
 		if (err < 0)
 			return err;
 	}
 	if (numReceiveWaitThreads != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(numReceiveWaitThreads, kNumReceiveWaitThreads, sizeof(*kNumReceiveWaitThreads));
+		err = sceKernelCopyToUser(numReceiveWaitThreads, kNumReceiveWaitThreads, sizeof(*kNumReceiveWaitThreads));
 		if (err < 0)
 			ret = err;
 	}
@@ -2452,7 +2452,7 @@ int _sceKernelGetMsgPipeInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallI
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2461,11 +2461,11 @@ int _sceKernelGetMsgPipeInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallI
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x3c);
 	memset(info, 0, 0x3c);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetMsgPipeInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2478,7 +2478,7 @@ int _sceKernelGetLwMutexInfoById(SceUID uid, void *userInfo, const ThreadmgrSysc
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2487,11 +2487,11 @@ int _sceKernelGetLwMutexInfoById(SceUID uid, void *userInfo, const ThreadmgrSysc
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x40);
 	memset(info, 0, 0x40);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetLwMutexInfoByIdForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2504,7 +2504,7 @@ int _sceKernelGetLwCondInfoById(SceUID uid, void *userInfo, const ThreadmgrSysca
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2513,11 +2513,11 @@ int _sceKernelGetLwCondInfoById(SceUID uid, void *userInfo, const ThreadmgrSysca
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x38);
 	memset(info, 0, 0x38);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetLwCondInfoByIdForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2533,11 +2533,11 @@ int _sceKernelLockReadRWLock(SceUID rwLockId, SceUInt32 *timeout)
 		return sceKernelLockReadRWLockForUser(rwLockId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockReadRWLockForUser(rwLockId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2553,11 +2553,11 @@ int _sceKernelLockReadRWLockCB(SceUID rwLockId, SceUInt32 *timeout)
 		return sceKernelLockReadRWLockCBForUser(rwLockId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockReadRWLockCBForUser(rwLockId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2573,11 +2573,11 @@ int _sceKernelLockWriteRWLock(SceUID rwLockId, SceUInt32 *timeout)
 		return sceKernelLockWriteRWLockForUser(rwLockId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockWriteRWLockForUser(rwLockId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2593,11 +2593,11 @@ int _sceKernelLockWriteRWLockCB(SceUID rwLockId, SceUInt32 *timeout)
 		return sceKernelLockWriteRWLockCBForUser(rwLockId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelLockWriteRWLockCBForUser(rwLockId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2621,12 +2621,12 @@ int _sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWri
 	}
 	ret = sceKernelCancelRWLockForUser(rwLockId, kNumReadWaitThreads, kNumWriteWaitThreads, type);
 	if (numReadWaitThreads != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(numReadWaitThreads, kNumReadWaitThreads, sizeof(*kNumReadWaitThreads));
+		err = sceKernelCopyToUser(numReadWaitThreads, kNumReadWaitThreads, sizeof(*kNumReadWaitThreads));
 		if (err < 0)
 			return err;
 	}
 	if (numWriteWaitThreads != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(numWriteWaitThreads, kNumWriteWaitThreads, sizeof(*kNumWriteWaitThreads));
+		err = sceKernelCopyToUser(numWriteWaitThreads, kNumWriteWaitThreads, sizeof(*kNumWriteWaitThreads));
 		if (err < 0)
 			ret = err;
 	}
@@ -2640,7 +2640,7 @@ int _sceKernelGetRWLockInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallIn
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2649,11 +2649,11 @@ int _sceKernelGetRWLockInfo(SceUID uid, void *userInfo, const ThreadmgrSyscallIn
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x3c);
 	memset(info, 0, 0x3c);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetRWLockInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2666,7 +2666,7 @@ int _sceKernelGetThreadEventInfo(SceUID uid, void *userInfo, const ThreadmgrSysc
 	void *info;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (userInfo == NULL)
@@ -2675,11 +2675,11 @@ int _sceKernelGetThreadEventInfo(SceUID uid, void *userInfo, const ThreadmgrSysc
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(0x40);
 	memset(info, 0, 0x40);
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+	ret = sceKernelCopyFromUser(info, userInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetThreadEventInfoForUser(uid, info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+	err = sceKernelCopyToUser(userInfo, info, args.size);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2696,7 +2696,7 @@ int _sceKernelPMonThreadGetCounter(SceUID threadId, uint32_t counter, uint32_t *
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
 	ret = sceKernelPMonThreadGetCounterForUser(threadId, counter, buf);
-	err = SceSysmemForDriver_6D88EF8A(value, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(value, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2712,11 +2712,11 @@ int _sceKernelWaitCondCB(SceUID condId, SceUInt32 *timeout)
 		return sceKernelWaitCondCBForUser(condId, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitCondCBForUser(condId, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2732,7 +2732,7 @@ int _sceKernelWaitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 	uint32_t *kPattern;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	outUserData = (uint64_t *)args.arg[0];
@@ -2752,23 +2752,23 @@ int _sceKernelWaitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = sceKernelWaitEventForUser(eventId, pattern, kPattern, kUserData, kTimeout);
 	if (outPattern != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outPattern, kPattern, sizeof(*kPattern));
+		err = sceKernelCopyToUser(outPattern, kPattern, sizeof(*kPattern));
 		if (err < 0)
 			return err;
 	}
 	if (outUserData != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outUserData, kUserData, sizeof(*kUserData));
+		err = sceKernelCopyToUser(outUserData, kUserData, sizeof(*kUserData));
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -2785,7 +2785,7 @@ int _sceKernelWaitEventCB(SceUID eventId, uint32_t pattern, uint32_t *outPattern
 	uint32_t *kPattern;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	outUserData = (uint64_t *)args.arg[0];
@@ -2805,23 +2805,23 @@ int _sceKernelWaitEventCB(SceUID eventId, uint32_t pattern, uint32_t *outPattern
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = sceKernelWaitEventCBForUser(eventId, pattern, kPattern, kUserData, kTimeout);
 	if (outPattern != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outPattern, kPattern, sizeof(*kPattern));
+		err = sceKernelCopyToUser(outPattern, kPattern, sizeof(*kPattern));
 		if (err < 0)
 			return err;
 	}
 	if (outUserData != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outUserData, kUserData, sizeof(*kUserData));
+		err = sceKernelCopyToUser(outUserData, kUserData, sizeof(*kUserData));
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -2849,12 +2849,12 @@ int _sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 	}
 	ret = sceKernelPollEventForUser(eventId, pattern, kPattern, kUserData);
 	if (outPattern != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outPattern, kPattern, sizeof(*kPattern));
+		err = sceKernelCopyToUser(outPattern, kPattern, sizeof(*kPattern));
 		if (err < 0)
 			return err;
 	}
 	if (outUserData != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outUserData, kUserData, sizeof(*kUserData));
+		err = sceKernelCopyToUser(outUserData, kUserData, sizeof(*kUserData));
 		if (err < 0)
 			ret = err;
 	}
@@ -2868,7 +2868,7 @@ int _sceKernelWaitMultipleEvents(const SceKernelWaitEvent *events, SceUInt32 cou
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelWaitMultipleEventsForUser(events, count, mode,
@@ -2882,7 +2882,7 @@ int _sceKernelWaitMultipleEventsCB(const SceKernelWaitEvent *events, SceUInt32 c
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelWaitMultipleEventsCBForUser(events, count, mode,
@@ -2896,7 +2896,7 @@ int _sceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern,
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelPulseEventWithNotifyCallbackForUser(eventId, pattern,
@@ -2911,7 +2911,7 @@ int _sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern,
 	int *numWaitThreads, *kNum;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	numWaitThreads = (int *)args.arg[2];
@@ -2922,7 +2922,7 @@ int _sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern,
 	*kNum = 0;
 	ret = sceKernelCancelEventWithSetPatternForUser(eventId, setPattern,
 		(uint64_t)args.arg[1] << 32 | args.arg[0], kNum);
-	err = SceSysmemForDriver_6D88EF8A(numWaitThreads, kNum, sizeof(*kNum));
+	err = sceKernelCopyToUser(numWaitThreads, kNum, sizeof(*kNum));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -2938,7 +2938,7 @@ SceUID _sceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t init
 	kOption = (uint32_t *)option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -2954,7 +2954,7 @@ int _sceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode,
 	SceUInt32 *timeout, *kTimeout;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	outPattern = (uint32_t *)args.arg[0];
@@ -2968,18 +2968,18 @@ int _sceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode,
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = sceKernelWaitEventFlagForUser(evfId, pattern, mode, kPattern, kTimeout);
 	if (outPattern != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outPattern, kPattern, sizeof(*kPattern));
+		err = sceKernelCopyToUser(outPattern, kPattern, sizeof(*kPattern));
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -2995,7 +2995,7 @@ int _sceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode,
 	SceUInt32 *timeout, *kTimeout;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	outPattern = (uint32_t *)args.arg[0];
@@ -3009,18 +3009,18 @@ int _sceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode,
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = sceKernelWaitEventFlagCBForUser(evfId, pattern, mode, kPattern, kTimeout);
 	if (outPattern != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(outPattern, kPattern, sizeof(*kPattern));
+		err = sceKernelCopyToUser(outPattern, kPattern, sizeof(*kPattern));
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -3035,14 +3035,14 @@ SceUID _sceKernelCreateSema(const char *name, SceUInt32 attr, int initCount,
 	uint32_t *option, *kOption;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	option = (uint32_t *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3057,14 +3057,14 @@ SceUID _sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount
 	uint32_t *option, *kOption;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	option = (uint32_t *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3081,7 +3081,7 @@ SceUID _sceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
 	kOption = (uint64_t *)option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3098,7 +3098,7 @@ SceUID _sceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
 	kOption = (uint32_t *)option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3113,14 +3113,14 @@ SceUID _sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 at
 	void *option, *kOption;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	option = (void *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(MSG_PIPE_OPT_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, MSG_PIPE_OPT_SIZE);
+		ret = sceKernelCopyFromUser(kOption, option, MSG_PIPE_OPT_SIZE);
 		if (ret < 0)
 			return ret;
 	}
@@ -3135,7 +3135,7 @@ int _sceKernelSendMsgPipeVector(SceUID msgPipeId, const void *vector, int count,
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelSendMsgPipeVectorForUser(msgPipeId, vector, count, args.arg[0],
@@ -3148,7 +3148,7 @@ int _sceKernelSendMsgPipeVectorCB(SceUID msgPipeId, const void *vector, int coun
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelSendMsgPipeVectorCBForUser(msgPipeId, vector, count, args.arg[0],
@@ -3161,7 +3161,7 @@ int _sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const void *vector, int cou
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelTrySendMsgPipeVectorForUser(msgPipeId, vector, count, args.arg[0],
@@ -3174,7 +3174,7 @@ int _sceKernelReceiveMsgPipeVector(SceUID msgPipeId, const void *vector, int cou
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelReceiveMsgPipeVectorForUser(msgPipeId, vector, count, args.arg[0],
@@ -3187,7 +3187,7 @@ int _sceKernelReceiveMsgPipeVectorCB(SceUID msgPipeId, const void *vector, int c
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelReceiveMsgPipeVectorCBForUser(msgPipeId, vector, count, args.arg[0],
@@ -3200,7 +3200,7 @@ int _sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const void *vector, int 
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelTryReceiveMsgPipeVectorForUser(msgPipeId, vector, count, args.arg[0],
@@ -3215,14 +3215,14 @@ int __sceKernelCreateLwMutex(void *work, const char *name, SceUInt32 attr,
 	uint32_t *option, *kOption;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	option = (uint32_t *)args.arg[1];
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3244,14 +3244,14 @@ int _sceKernelCreateLwCond(ThreadmgrLwCondWork *work, const char *name,
 	uint32_t *option, *kOption;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	lwMutex = (void *)args.arg[0];
 	kLwMutex = lwMutex;
 	if (lwMutex != NULL) {
 		kLwMutex = __builtin_alloca(LW_MUTEX_WORK_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(kLwMutex, lwMutex, LW_MUTEX_WORK_SIZE);
+		ret = sceKernelCopyFromUser(kLwMutex, lwMutex, LW_MUTEX_WORK_SIZE);
 		if (ret < 0)
 			return ret;
 	}
@@ -3259,7 +3259,7 @@ int _sceKernelCreateLwCond(ThreadmgrLwCondWork *work, const char *name,
 	kOption = option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3275,11 +3275,11 @@ int _sceKernelDeleteLwCond(ThreadmgrLwCondWork *work)
 	if (work == NULL)
 		return sceKernelDeleteLwCondForUser(NULL);
 	kWork = __builtin_alloca(sizeof(*kWork));
-	ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+	ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelDeleteLwCondForUser(kWork);
-	err = SceSysmemForDriver_6D88EF8A(work, kWork, sizeof(*kWork));
+	err = sceKernelCopyToUser(work, kWork, sizeof(*kWork));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -3295,7 +3295,7 @@ int _sceKernelWaitLwCond(const ThreadmgrLwCondWork *work, SceUInt32 *timeout)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3303,11 +3303,11 @@ int _sceKernelWaitLwCond(const ThreadmgrLwCondWork *work, SceUInt32 *timeout)
 		return sceKernelWaitLwCondForUser(kWork, NULL);
 	kTimeout = __builtin_alloca(sizeof(*kTimeout));
 	*kTimeout = 0;
-	ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+	ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitLwCondForUser(kWork, kTimeout);
-	err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+	err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -3323,7 +3323,7 @@ int _sceKernelWaitLwCondCB(const ThreadmgrLwCondWork *work, SceUInt32 *timeout)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3331,11 +3331,11 @@ int _sceKernelWaitLwCondCB(const ThreadmgrLwCondWork *work, SceUInt32 *timeout)
 		return sceKernelWaitLwCondCBForUser(kWork, NULL);
 	kTimeout = __builtin_alloca(sizeof(*kTimeout));
 	*kTimeout = 0;
-	ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+	ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitLwCondCBForUser(kWork, kTimeout);
-	err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+	err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -3350,7 +3350,7 @@ int _sceKernelSignalLwCond(const ThreadmgrLwCondWork *work)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3366,7 +3366,7 @@ int _sceKernelSignalLwCondAll(const ThreadmgrLwCondWork *work)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3382,7 +3382,7 @@ int _sceKernelSignalLwCondTo(const ThreadmgrLwCondWork *work, SceUID threadId)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3399,7 +3399,7 @@ int _sceKernelGetLwCondInfo(const ThreadmgrLwCondWork *work, void *userInfo)
 	kWork = (ThreadmgrLwCondWork *)work;
 	if (work != NULL) {
 		kWork = __builtin_alloca(sizeof(*kWork));
-		ret = SceSysmemForDriver_BC996A7A(kWork, work, sizeof(*kWork));
+		ret = sceKernelCopyFromUser(kWork, work, sizeof(*kWork));
 		if (ret < 0)
 			return ret;
 	}
@@ -3408,11 +3408,11 @@ int _sceKernelGetLwCondInfo(const ThreadmgrLwCondWork *work, void *userInfo)
 	info = __builtin_alloca(LW_COND_INFO_SIZE);
 	for (i = 0; i < LW_COND_INFO_SIZE / 4; i++)
 		info[i] = 0;
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, LW_COND_INFO_SIZE);
+	ret = sceKernelCopyFromUser(info, userInfo, LW_COND_INFO_SIZE);
 	if (ret < 0)
 		return ret;
 	ret = sceKernelGetLwCondInfoForUser(kWork, (SceKernelLwCondInfo *)info);
-	err = SceSysmemForDriver_6D88EF8A(userInfo, info, LW_COND_INFO_SIZE);
+	err = sceKernelCopyToUser(userInfo, info, LW_COND_INFO_SIZE);
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -3427,7 +3427,7 @@ SceUID _sceKernelCreateRWLock(const char *name, SceUInt32 attr, const void *opti
 	kOption = (uint32_t *)option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3444,7 +3444,7 @@ SceUID _sceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t in
 	kOption = (uint32_t *)option;
 	if (option != NULL) {
 		kOption = __builtin_alloca(sizeof(*kOption));
-		ret = SceSysmemForDriver_BC996A7A(kOption, option, sizeof(*kOption));
+		ret = sceKernelCopyFromUser(kOption, option, sizeof(*kOption));
 		if (ret < 0)
 			return ret;
 	}
@@ -3458,7 +3458,7 @@ SceUID _sceKernelRegisterThreadEventHandler(const char *name, SceUID target, uin
 	ThreadmgrSyscallArgs args;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	return sceKernelRegisterThreadEventHandlerForUser(name, target, mask, args.arg[0],
@@ -3473,7 +3473,7 @@ int _sceKernelSetThreadContextForVM(SceUID threadId, const void *userCpu, const 
 	void *cpu, *vfp;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	cpu = NULL;
@@ -3481,7 +3481,7 @@ int _sceKernelSetThreadContextForVM(SceUID threadId, const void *userCpu, const 
 		if (args.arg[0] > VM_CPU_CONTEXT_SIZE)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		cpu = __builtin_alloca(VM_CPU_CONTEXT_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(cpu, userCpu, args.arg[0]);
+		ret = sceKernelCopyFromUser(cpu, userCpu, args.arg[0]);
 		if (ret < 0)
 			return ret;
 	}
@@ -3490,7 +3490,7 @@ int _sceKernelSetThreadContextForVM(SceUID threadId, const void *userCpu, const 
 		if (args.arg[1] > VM_VFP_CONTEXT_SIZE)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		vfp = __builtin_alloca(VM_VFP_CONTEXT_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(vfp, userVfp, args.arg[1]);
+		ret = sceKernelCopyFromUser(vfp, userVfp, args.arg[1]);
 		if (ret < 0)
 			return ret;
 	}
@@ -3505,7 +3505,7 @@ int _sceKernelGetThreadContextForVM(SceUID threadId, void *userCpu, void *userVf
 	void *cpu, *vfp;
 	int ret, err;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	cpu = NULL;
@@ -3514,7 +3514,7 @@ int _sceKernelGetThreadContextForVM(SceUID threadId, void *userCpu, void *userVf
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		cpu = __builtin_alloca(VM_CPU_CONTEXT_SIZE);
 		memset(cpu, 0, VM_CPU_CONTEXT_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(cpu, userCpu, args.arg[0]);
+		ret = sceKernelCopyFromUser(cpu, userCpu, args.arg[0]);
 		if (ret < 0)
 			return ret;
 	}
@@ -3524,18 +3524,18 @@ int _sceKernelGetThreadContextForVM(SceUID threadId, void *userCpu, void *userVf
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		vfp = __builtin_alloca(VM_VFP_CONTEXT_SIZE);
 		memset(vfp, 0, VM_VFP_CONTEXT_SIZE);
-		ret = SceSysmemForDriver_BC996A7A(vfp, userVfp, args.arg[1]);
+		ret = sceKernelCopyFromUser(vfp, userVfp, args.arg[1]);
 		if (ret < 0)
 			return ret;
 	}
 	ret = getThreadContextForVMForUser(threadId, cpu, vfp);
 	if (userCpu != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userCpu, cpu, args.arg[0]);
+		err = sceKernelCopyToUser(userCpu, cpu, args.arg[0]);
 		if (err < 0)
 			return err;
 	}
 	if (userVfp != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userVfp, vfp, args.arg[1]);
+		err = sceKernelCopyToUser(userVfp, vfp, args.arg[1]);
 		if (err < 0)
 			ret = err;
 	}
@@ -3551,7 +3551,7 @@ int _sceKernelWaitException(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 	uint32_t *info;
 	int ret, err, i;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	info = NULL;
@@ -3561,7 +3561,7 @@ int _sceKernelWaitException(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 		info = __builtin_alloca(EXCEPTION_INFO_SIZE);
 		for (i = 0; i < EXCEPTION_INFO_SIZE / 4; i++)
 			info[i] = 0;
-		ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+		ret = sceKernelCopyFromUser(info, userInfo, args.size);
 		if (ret < 0)
 			return ret;
 	}
@@ -3569,18 +3569,18 @@ int _sceKernelWaitException(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = waitExceptionForUser(mask, info, kTimeout);
 	if (userInfo != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+		err = sceKernelCopyToUser(userInfo, info, args.size);
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -3596,7 +3596,7 @@ int _sceKernelWaitExceptionCB(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 	uint32_t *info;
 	int ret, err, i;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, userArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, userArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	info = NULL;
@@ -3606,7 +3606,7 @@ int _sceKernelWaitExceptionCB(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 		info = __builtin_alloca(EXCEPTION_INFO_SIZE);
 		for (i = 0; i < EXCEPTION_INFO_SIZE / 4; i++)
 			info[i] = 0;
-		ret = SceSysmemForDriver_BC996A7A(info, userInfo, args.size);
+		ret = sceKernelCopyFromUser(info, userInfo, args.size);
 		if (ret < 0)
 			return ret;
 	}
@@ -3614,18 +3614,18 @@ int _sceKernelWaitExceptionCB(uint32_t mask, void *userInfo, SceUInt32 *timeout,
 	if (timeout != NULL) {
 		kTimeout = __builtin_alloca(sizeof(*kTimeout));
 		*kTimeout = 0;
-		ret = SceSysmemForDriver_BC996A7A(kTimeout, timeout, sizeof(*kTimeout));
+		ret = sceKernelCopyFromUser(kTimeout, timeout, sizeof(*kTimeout));
 		if (ret < 0)
 			return ret;
 	}
 	ret = waitExceptionCBForUser(mask, info, kTimeout);
 	if (userInfo != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(userInfo, info, args.size);
+		err = sceKernelCopyToUser(userInfo, info, args.size);
 		if (err < 0)
 			return err;
 	}
 	if (timeout != NULL) {
-		err = SceSysmemForDriver_6D88EF8A(timeout, kTimeout, sizeof(*kTimeout));
+		err = sceKernelCopyToUser(timeout, kTimeout, sizeof(*kTimeout));
 		if (err < 0)
 			ret = err;
 	}
@@ -3780,7 +3780,7 @@ int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes)
 		SCE_DBG_PRINTF(0, 118, " k: error: copyinUIDNameWithAttr() pName_us=NULL\n");
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	}
-	result = SceSysmemForDriver_DB3EC244(name, userName, UID_NAME_SIZE);
+	result = sceKernelStrncpyFromUser(name, userName, UID_NAME_SIZE);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0, 123, " k: error: copyinUIDNameWithAttr() -> "
 			       "sceKernelStrncpyFromUser()=0x%08X\n", result);
@@ -3959,7 +3959,7 @@ int sceKernelCloseTimer(SceUID uid)
 	int result = 0xc0028241u;
 
 	guid = SceSysmemForDriver_45D22597(0, uid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid,
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid,
 		s_threadmgrRuntime.manager->timerClass, (SceObjectBase **)&object) < 0)
 		goto resume;
 	if (scePUIDGetAttr(0, uid, &attributes) < 0)
@@ -4061,7 +4061,7 @@ int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
 	SceUInt32 version;
 	int result, guid;
 
-	result = SceSysmemForDriver_BC996A7A(&value, userValue, sizeof(value));
+	result = sceKernelCopyFromUser(&value, userValue, sizeof(value));
 	if (result < 0)
 		return result;
 	guid = SceSysmemForDriver_45D22597(0, uid);
@@ -4069,7 +4069,7 @@ int setTimerTimeForUser(SceUID uid, uint64_t *userValue)
 		return 0xc0028241u;
 	result = sceKernelSetTimerTime(guid, &value);
 	if (result >= 0 && SceSysrootForDriver_CAE820B2(0, &version) >= 0 && version >= 0x02000000)
-		return SceSysmemForDriver_6D88EF8A(userValue, &value, sizeof(value));
+		return sceKernelCopyToUser(userValue, &value, sizeof(value));
 	return result;
 }
 

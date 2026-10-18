@@ -1071,7 +1071,7 @@ SceUID sceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 			break;
 	}
 	name[sizeof(name) - 1] = '\0';
-	uid = SceSysmemForDriver_56A13E90(&g_mountEventClass, name, (SceObjectBase **)&event);
+	uid = sceGUIDKernelCreate(&g_mountEventClass, name, (SceObjectBase **)&event);
 	if (uid < 0)
 		return uid;
 	ret = sceKernelEventObjectInit(uid, 0x100, 0, 0, 0);
@@ -1167,7 +1167,7 @@ int mount_event_process_finalize(SceUID pid)
 	int ret, i;
 
 	do {
-		ret = SceSysmemForKernel_08C05493(pid, &g_mountEventClass, 7, puids, 64, &num);
+		ret = scePUIDGetUIDVectorByClass(pid, &g_mountEventClass, 7, puids, 64, &num);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1742,
 				"scePUIDGetUIDVectorByClass failed 0x%x %d\n", ret, ret);

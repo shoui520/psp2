@@ -578,7 +578,7 @@ int _sceKernelPaGetGpuSampledData(uint32_t *values)
 	if (values == NULL)
 		return getGpuSampledDataForUser(NULL);
 	result = getGpuSampledDataForUser(local);
-	copied = SceSysmemForDriver_6D88EF8A(values, local, sizeof(local));
+	copied = sceKernelCopyToUser(values, local, sizeof(local));
 	return copied < 0 ? copied : result;
 }
 
@@ -589,7 +589,7 @@ int _sceKernelPaSetupTraceBufferByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
+		result = sceKernelCopyFromUser(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -604,7 +604,7 @@ int _sceKernelPaAddCounterTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
+		result = sceKernelCopyFromUser(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -619,7 +619,7 @@ int _sceKernelPaAddArmTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
+		result = sceKernelCopyFromUser(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;
@@ -633,7 +633,7 @@ int _sceKernelPaAddBusTraceByKey(uint32_t registration, const uint32_t *filter)
 	int result;
 
 	if (filter != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&local, filter, sizeof(local));
+		result = sceKernelCopyFromUser(&local, filter, sizeof(local));
 		if (result < 0)
 			return result;
 		filter = &local;
@@ -648,7 +648,7 @@ int _sceKernelPaAddGpuTraceByKey(uint32_t registration,
 	int result;
 
 	if (config != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&local, config, sizeof(local));
+		result = sceKernelCopyFromUser(&local, config, sizeof(local));
 		if (result < 0)
 			return result;
 		config = &local;

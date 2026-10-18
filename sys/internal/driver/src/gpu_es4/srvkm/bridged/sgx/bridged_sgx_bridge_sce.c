@@ -1058,7 +1058,7 @@ int SGXDoKickInternal(PVRSRV_BRIDGE_IN_DOKICK *psBridgeIn,
 			return 0;
 	}
 	if (psBridgeIn->sKickTA.renderSync.pahRenderSurfSyncInfo) {
-		if (SceSysmemForDriver_BC996A7A(&hRenderSync,
+		if (sceKernelCopyFromUser(&hRenderSync,
 				psBridgeIn->sKickTA.renderSync.pahRenderSurfSyncInfo,
 				sizeof(hRenderSync)) < 0) {
 			psBridgeOut->eError = PVRSRV_ERROR_INVALID_PARAMS;

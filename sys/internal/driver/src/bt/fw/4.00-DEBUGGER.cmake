@@ -101,8 +101,8 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_45D22597
 	sceKernelCopyToUserProc
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
 	SceDebugForDriver_391B74B7
 	memset
 	strncmp

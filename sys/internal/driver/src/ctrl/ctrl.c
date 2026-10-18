@@ -356,7 +356,7 @@ static inline __attribute__((always_inline)) int ctrlUserBuffer(
 		result = SceCtrlForDriver_EA1D3A34(port, (SceCtrlData *)buffer->samples, count);
 	}
 	if (result > 0) {
-		copied = SceSysmemForDriver_6D88EF8A(samples, buffer->samples,
+		copied = sceKernelCopyToUser(samples, buffer->samples,
 					    result * sizeof(buffer->samples[0]));
 		if (copied < 0) {
 			sceKernelUnlockMutex(buffer->mutex, 1);
@@ -1691,7 +1691,7 @@ int ctrlCreateProcess(SceUID pid)
 		}
 		process->ports[port].eventBit = eventBit;
 		ctrlStorage.ports[port].blocked &= ~eventBit;
-		ring = SceSysmemForDriver_7B4CB60A(ctrlStorage.sampleHeap, sizeof(*ring));
+		ring = sceKernelAllocHeapMemory(ctrlStorage.sampleHeap, sizeof(*ring));
 		process->ports[port].ring = ring;
 		ring->writeIndex = 0;
 		ring->readIndex = 0;
@@ -2105,12 +2105,12 @@ int ctrlInitialize(void)
 	ctrlStorage.processCount = 0;
 	memset(ctrlStorage.processes, 0xff, sizeof(ctrlStorage.processes));
 	ctrlStorage.lock = 0;
-	result = SceProcessmgrForDriver_3801D7D6("SceCtrl", sizeof(struct ctrlProcessStorage));
+	result = sceKernelRegisterKPLS("SceCtrl", sizeof(struct ctrlProcessStorage));
 	ctrlStorage.processStorageKey = result;
 	if (result < 0)
 		return result;
 	heapSize = SceSysrootForDriver_8AA268D6(1) ? 0x32500 : 0xa100;
-	ctrlStorage.sampleHeap = SceSysmemForDriver_9328E0E8("SceCtrlHeap", heapSize, NULL);
+	ctrlStorage.sampleHeap = sceKernelCreateHeap("SceCtrlHeap", heapSize, NULL);
 	ctrlCreateProcess(SCE_KERNEL_PROCESS_ID);
 	if (SceHdmiForDriver_05174BC2) {
 		result = SceHdmiForDriver_05174BC2(_sceCtrlBdRemoconSendMergedNotify);
@@ -2451,7 +2451,7 @@ int sceCtrlGetSamplingMode(int *mode)
 	if (mode) {
 		result = SceCtrlForDriver_145B13BC(&value);
 		if (!result)
-			result = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
+			result = sceKernelCopyToUser(mode, &value, sizeof(value));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2466,7 +2466,7 @@ int sceCtrlGetSamplingModeExt(int *mode)
 	if (mode) {
 		result = ctrlGetSamplingModeExt(&value);
 		if (!result)
-			result = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
+			result = sceKernelCopyToUser(mode, &value, sizeof(value));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2585,7 +2585,7 @@ int sceCtrlGetAnalogStickCheckTarget(uint32_t *target)
 	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckTarget(&local);
 		if (!result)
-			result = SceSysmemForDriver_6D88EF8A(target, &local, sizeof(local));
+			result = sceKernelCopyToUser(target, &local, sizeof(local));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2613,7 +2613,7 @@ int sceCtrlGetAnalogStickCheckMode(uint32_t *mode)
 	if (sceSblACMgrIsSystemProgram(sceKernelGetProcessId())) {
 		result = ctrlGetAnalogStickCheckMode(&local);
 		if (!result)
-			result = SceSysmemForDriver_6D88EF8A(mode, &local, sizeof(local));
+			result = sceKernelCopyToUser(mode, &local, sizeof(local));
 	}
 	sceSyscallLeave(context);
 	return result;
@@ -2628,7 +2628,7 @@ int sceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 	if (!rule)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	result = SceSysmemForDriver_BC996A7A(&local, rule, sizeof(local));
+	result = sceKernelCopyFromUser(&local, rule, sizeof(local));
 	if (!result)
 		result = SceCtrlForDriver_A248CDAE(port, index, &local);
 	sceSyscallLeave(context);
@@ -2645,7 +2645,7 @@ int sceCtrlGetButtonIntercept(int *intercept)
 	context = sceSyscallEnter();
 	result = SceCtrlForDriver_6BEB1CD7(&local);
 	if (!result)
-		result = SceSysmemForDriver_6D88EF8A(intercept, &local, sizeof(local));
+		result = sceKernelCopyToUser(intercept, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2659,7 +2659,7 @@ int sceCtrlSetActuator(int port, const SceCtrlActuator *state)
 	if (!state)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	context = sceSyscallEnter();
-	result = SceSysmemForDriver_BC996A7A(&local, state, sizeof(local));
+	result = sceKernelCopyFromUser(&local, state, sizeof(local));
 	if (!result)
 		result = ctrlSetActuator(port, &local);
 	sceSyscallLeave(context);
@@ -2677,7 +2677,7 @@ int sceCtrlGetBatteryInfo(int port, uint8_t *battery)
 	context = sceSyscallEnter();
 	result = ctrlGetBatteryInfo(port, &local);
 	if (!result)
-		result = SceSysmemForDriver_6D88EF8A(battery, &local, sizeof(local));
+		result = sceKernelCopyToUser(battery, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2693,7 +2693,7 @@ int sceCtrlGetControllerPortInfo(SceCtrlPortInfo *info)
 	context = sceSyscallEnter();
 	result = SceCtrlForDriver_F11D0D30(&local);
 	if (!result)
-		result = SceSysmemForDriver_6D88EF8A(info, &local, sizeof(local));
+		result = sceKernelCopyToUser(info, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2708,7 +2708,7 @@ int sceCtrlGetProcessStatus(SceUID pid, int *status)
 	context = sceSyscallEnter();
 	result = ctrlGetProcessStatus(pid, &local);
 	if (!result)
-		result = SceSysmemForDriver_6D88EF8A(status, &local, sizeof(local));
+		result = sceKernelCopyToUser(status, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2724,7 +2724,7 @@ int sceCtrlGetWirelessControllerInfo(SceCtrlWirelessControllerInfo *info)
 	context = sceSyscallEnter();
 	result = ctrlGetWirelessControllerInfo(&local);
 	if (!result)
-		result = SceSysmemForDriver_6D88EF8A(info, &local, sizeof(local));
+		result = sceKernelCopyToUser(info, &local, sizeof(local));
 	sceSyscallLeave(context);
 	return result;
 }
@@ -2736,7 +2736,7 @@ int sceCtrlSetButtonRemappingInfo(const struct ctrlButtonRemappingInfo *info)
 	int result;
 
 	if (info) {
-		result = SceSysmemForDriver_BC996A7A(&local, info, sizeof(local));
+		result = sceKernelCopyFromUser(&local, info, sizeof(local));
 		if (result)
 			goto out;
 		info = &local;

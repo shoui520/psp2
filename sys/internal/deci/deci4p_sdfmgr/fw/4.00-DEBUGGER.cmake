@@ -96,8 +96,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterExceptionHandler
 	SceExcpmgrForKernel_96C2869C
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSysrootForKernel_2D6B2A79
 	SceSysrootForKernel_55392965
 	SceSysrootForKernel_84783B71

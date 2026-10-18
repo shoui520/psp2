@@ -352,15 +352,15 @@ static __attribute__((noinline)) int DsiInit(void)
 		opt.attr = 2;
 		if (i) {
 			opt.paddr = DSI_REG_BASE(1);
-			ret = SceSysmemForDriver_C94850C9("SceDsi1Reg", 0x20100806, 0x1000, &opt);
+			ret = sceKernelAllocMemBlockForKernel("SceDsi1Reg", 0x20100806, 0x1000, &opt);
 		} else {
 			opt.paddr = DSI_REG_BASE(0);
-			ret = SceSysmemForDriver_C94850C9("SceDsi0Reg", 0x20100806, 0x1000, &opt);
+			ret = sceKernelAllocMemBlockForKernel("SceDsi0Reg", 0x20100806, 0x1000, &opt);
 		}
 		if (ret < 0)
 			return ret;
 		s_dsi[i].uid = ret;
-		SceSysmemForDriver_A841EDDA(ret, &base);
+		sceKernelGetMemBlockBase(ret, &base);
 		s_dsi[i].registers = base;
 	}
 	s_dsi[0].intrCode = DSI_INTR_HEAD0;

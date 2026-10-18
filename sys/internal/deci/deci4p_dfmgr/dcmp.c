@@ -331,14 +331,14 @@ int dcmpInit(DfMgrProtocolCB *pd, SceUInt32 linkIndex, DfMgrLinkCB *link)
 	pd->flags = 0;
 	dcmp->lock = 0;
 
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pDfMgrDcmp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, 0x15000, NULL);
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pDfMgrDcmp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, 0x15000, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 200, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(201);
 		return ret;
 	}
 	dcmp->memBlock = ret;
-	ret = SceSysmemForDriver_A841EDDA(dcmp->memBlock, (void **)&base);
+	ret = sceKernelGetMemBlockBase(dcmp->memBlock, (void **)&base);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(15, 209, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(210);

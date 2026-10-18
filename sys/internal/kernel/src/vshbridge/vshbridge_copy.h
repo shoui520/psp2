@@ -37,14 +37,14 @@ typedef struct VshMlnpsnlAuth2Args {
 	SceUInt8 *pa = NULL, *pb = NULL, *out1 = NULL, *out2 = NULL;	\
 	int ret, ret2;							\
 									\
-	ret = SceSysmemForDriver_BC996A7A(&args, uargs, sizeof(args));	\
+	ret = sceKernelCopyFromUser(&args, uargs, sizeof(args));	\
 	if (ret < 0)							\
 		return ret;						\
 	if (a != NULL) {						\
 		if (args.aSize > 0x20)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		pa = __builtin_alloca(0x20);				\
-		ret = SceSysmemForDriver_BC996A7A(pa, a, args.aSize);	\
+		ret = sceKernelCopyFromUser(pa, a, args.aSize);	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -52,7 +52,7 @@ typedef struct VshMlnpsnlAuth2Args {
 		if (args.bSize > 8)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		pb = __builtin_alloca(8);				\
-		ret = SceSysmemForDriver_BC996A7A(pb, b, args.bSize);	\
+		ret = sceKernelCopyFromUser(pb, b, args.bSize);	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -70,13 +70,13 @@ typedef struct VshMlnpsnlAuth2Args {
 	}								\
 	ret = _impl(pa, pb, out1, out2);				\
 	if (out != NULL) {						\
-		ret2 = SceSysmemForDriver_6D88EF8A(out, out1, args.out1Size);	\
+		ret2 = sceKernelCopyToUser(out, out1, args.out1Size);	\
 		if (ret2 < 0)						\
 			return ret2;					\
 	}								\
 	if (args.out2 == NULL)						\
 		return ret;						\
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(args.out2, out2, args.out2Size));	\
+	return copyResult(ret, sceKernelCopyToUser(args.out2, out2, args.out2Size));	\
 } while (0)
 
 /* the body of an Auth2 export: (a, b, out, uargs) to _impl(a, b, out) */
@@ -85,14 +85,14 @@ typedef struct VshMlnpsnlAuth2Args {
 	SceUInt8 *pa = NULL, *pb = NULL, *kout;				\
 	int ret;							\
 									\
-	ret = SceSysmemForDriver_BC996A7A(&args, uargs, sizeof(args));	\
+	ret = sceKernelCopyFromUser(&args, uargs, sizeof(args));	\
 	if (ret < 0)							\
 		return ret;						\
 	if (a != NULL) {						\
 		if (args.aSize > 0x50)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		pa = __builtin_alloca(0x50);				\
-		ret = SceSysmemForDriver_BC996A7A(pa, a, args.aSize);	\
+		ret = sceKernelCopyFromUser(pa, a, args.aSize);	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -100,7 +100,7 @@ typedef struct VshMlnpsnlAuth2Args {
 		if (args.bSize > 0x40)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
 		pb = __builtin_alloca(0x40);				\
-		ret = SceSysmemForDriver_BC996A7A(pb, b, args.bSize);	\
+		ret = sceKernelCopyFromUser(pb, b, args.bSize);	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
@@ -111,5 +111,5 @@ typedef struct VshMlnpsnlAuth2Args {
 	kout = __builtin_alloca(0x10);					\
 	__builtin_memset(kout, 0, 0x10);				\
 	ret = _impl(pa, pb, kout);					\
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(out, kout, args.outSize));	\
+	return copyResult(ret, sceKernelCopyToUser(out, kout, args.outSize));	\
 } while (0)

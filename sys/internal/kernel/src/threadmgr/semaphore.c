@@ -107,7 +107,7 @@ static int uidSemaphore_Destructor(void *object)
 	wake = wakeupWaitObjectAll((uintptr_t)&sema->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&sema->lock);
 	pid = sema->ownerPid;
-	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
+	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
@@ -138,7 +138,7 @@ int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(semaId,
+	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
 	if (ret < 0) {
 		ret = SEMA_ERROR_UNKNOWN_ID();
@@ -229,7 +229,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	ret = SceSysmemForDriver_00ED6C14(semaId,
+	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
 	if (ret < 0) {
 		if (!(ThreadmgrUserRoWord() & USERRO_IN_SYSCALL)) {
@@ -330,17 +330,17 @@ int semaphoreProcessExit(SceProcessObject *process)
 	SceSize got = 0;
 	int num, i, intr, ret;
 
-	num = SceSysmemForKernel_08C05493(process->pid,
+	num = scePUIDGetUIDVectorByClass(process->pid,
 		s_threadmgrRuntime.manager->semaphoreClass, PUID_VECTOR_LEVEL, NULL, 0,
 		NULL);
 	if (num < 0)
 		return 0;
 	vector = NULL;
 	while (num != 0) {
-		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 344);
-		num = SceSysmemForKernel_08C05493(process->pid,
+		num = scePUIDGetUIDVectorByClass(process->pid,
 			s_threadmgrRuntime.manager->semaphoreClass, 5, vector, num, &got);
 		if ((int)got >= num)
 			break;
@@ -573,7 +573,7 @@ int sceKernelPollSema(SceUID semaId, int needCount)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(semaId,
+	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -637,7 +637,7 @@ int sceKernelSignalSema(SceUID semaId, int signalCount)
 		}
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(semaId,
+	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -719,7 +719,7 @@ int sceKernelCancelSema(SceUID semaId, int setCount, int *numWaitThreads)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(semaId,
+	ret = sceGUIDReferObjectWithClass(semaId,
 		s_threadmgrRuntime.manager->semaphoreClass, (SceObjectBase **)&sema);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -792,13 +792,13 @@ int SceThreadmgrForDriver_C6741986(int level, SceKernelSemaInfo *infos, SceSize 
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->semaphoreClass,
+	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->semaphoreClass,
 					  level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(
+		total = sceGUIDGetUIDVectorByClass(
 			s_threadmgrRuntime.manager->semaphoreClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
@@ -837,13 +837,13 @@ int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level, SceKernelSemaInfo *inf
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid,
+	num = scePUIDGetUIDVectorByClass(pid,
 		s_threadmgrRuntime.manager->semaphoreClass, level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid,
+		total = scePUIDGetUIDVectorByClass(pid,
 			s_threadmgrRuntime.manager->semaphoreClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
@@ -880,7 +880,7 @@ void startSemaphore(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = SceSysmemForDriver_7B4CB60A(manager->heapId, 0x38);
+	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(301);
 	ret = uidExtendedClassInit(cls, "SceUIDSemaphoreClass",

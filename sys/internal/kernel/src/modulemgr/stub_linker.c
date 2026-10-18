@@ -59,7 +59,7 @@ typedef struct StubLinkerInsn {
 int StubLinkerCopyIn(SceUID pid, void *dst, const void *src, SceSize len)
 {
 	if (pid != KERNEL_PID)
-		return SceSysmemForDriver_BC996A7A(dst, src, len);
+		return sceKernelCopyFromUser(dst, src, len);
 	memcpy(dst, src, len);
 	return 0;
 }

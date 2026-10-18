@@ -372,11 +372,11 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 		opt.size = sizeof(opt);
 		opt.attr = 0x200004;
 		opt.alignment = 0x1000;
-		s_read[i].memblock = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+		s_read[i].memblock = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 							 BUFFER_SIZE, &opt);
 		if (s_read[i].memblock < 0)
 			goto readFail;
-		if (SceSysmemForDriver_A841EDDA(s_read[i].memblock,
+		if (sceKernelGetMemBlockBase(s_read[i].memblock,
 					    &s_read[i].data) < 0) {
 			SceSysmemForDriver_009E1C61(s_read[i].memblock);
 			s_read[i].memblock = 0;
@@ -390,11 +390,11 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = 0x200004;
 	opt.alignment = 0x1000;
-	s_write.memblock = SceSysmemForDriver_C94850C9("SceDbgUsbWrite", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+	s_write.memblock = sceKernelAllocMemBlockForKernel("SceDbgUsbWrite", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 						 BUFFER_SIZE, &opt);
 	if (s_write.memblock < 0)
 		goto writeFail;
-	if (SceSysmemForDriver_A841EDDA(s_write.memblock, &s_write.data) < 0) {
+	if (sceKernelGetMemBlockBase(s_write.memblock, &s_write.data) < 0) {
 		SceSysmemForDriver_009E1C61(s_write.memblock);
 		s_write.memblock = 0;
 		goto writeFail;

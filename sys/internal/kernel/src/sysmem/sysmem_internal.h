@@ -632,7 +632,7 @@ SceUID SceSysmemForKernel_6DB44A42(SceClass *cls, const char *name, void *object
 int SceSysmemForKernel_7F7D5C4A(SceClass *cls, SceClass *base);	/* wiki: sceUIDClassIsSubclassForKernel (guessed) */
 void *SceSysmemForKernel_0164D817(void);				/* sceKernelGetPhyPartKernel */
 void *SceSysmemForKernel_FA6C098C(SceUID uid);				/* sceUIDtoObject */
-int SceSysmemForDriver_0FC24464(SceUID guid, void *object);	/* vitasdk: ksceGUIDGetObject */
+int sceGUIDGetObject(SceUID guid, void *object);	/* vitasdk: ksceGUIDGetObject */
 void *SceSysmemForKernel_85571907(SceSize size);	/* vitasdk: ksceKernelAlloc */
 int SceSysmemForKernel_4233C16D(void *ptr);	/* vitasdk: ksceKernelFree */
 

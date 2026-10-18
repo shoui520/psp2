@@ -81,7 +81,7 @@ int sceKernelProcessEventInit(void)
 
 	s_procEventList[0] = (ProcEventLink *)s_procEventList;
 	s_procEventList[1] = (ProcEventLink *)s_procEventList;
-	ret = SceSysmemForDriver_61317102(&s_procEventClass, "SceUIDProcEventClass",
+	ret = sceUIDClassInitClass(&s_procEventClass, "SceUIDProcEventClass",
 				    SceSysmemForDriver_85336A1C(), sizeof(ProcEventObject), ProcEventCreate,
 				    ProcEventDestroy);
 	if (ret < 0) {
@@ -102,7 +102,7 @@ SceUID sceKernelRegisterProcEventHandler(const char *name,
 	if (handler->size != sizeof(*handler))
 		SCE_DBG_PRINTF_FUNC(0xb, 124, "sceKernelRegisterProcEventHandler",
 				    "[%s], invalid structure size %d\n", name, handler->size);
-	uid = SceSysmemForDriver_56A13E90(&s_procEventClass, name, (SceObjectBase **)&object);
+	uid = sceGUIDKernelCreate(&s_procEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 136, "sceKernelRegisterProcEventHandler",
 				    "Create Process event handler UID failed 0x%08x\n", uid);

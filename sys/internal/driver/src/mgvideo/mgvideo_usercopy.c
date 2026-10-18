@@ -3,10 +3,10 @@
 
 int copyVideoDataFromUser(void *destination, const void *source, SceSize size)
 {
-	return SceSysmemForDriver_BC996A7A(destination, source, size);
+	return sceKernelCopyFromUser(destination, source, size);
 }
 
 int copyVideoDataToUser(void *destination, const void *source, SceSize size)
 {
-	return SceSysmemForDriver_6D88EF8A(destination, source, size);
+	return sceKernelCopyToUser(destination, source, size);
 }

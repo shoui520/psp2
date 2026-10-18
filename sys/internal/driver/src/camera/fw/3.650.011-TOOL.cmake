@@ -99,14 +99,14 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_D32ACE9E
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_22CBE925
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_A8525B06
+	sceKernelCopyToUser
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
+	sceKernelUnlockRangeProc
 	SceSysmemForDriver_AE36C775
 	sceKernelLockRangeWithMode
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_F3BBE2E1
 	memset
 	__aeabi_idiv
@@ -135,7 +135,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076

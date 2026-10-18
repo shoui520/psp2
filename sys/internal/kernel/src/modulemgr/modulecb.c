@@ -148,7 +148,7 @@ int ModuleCBCopyInfo(LoadelfContext *ctx)
 	cb->version[0] = info.version[0];
 	cb->version[1] = info.version[1];
 	info.name[26] = '\0';
-	ret = SceSysmemForDriver_4CFA4100(cb->modid, info.name);
+	ret = sceGUIDSetName(cb->modid, info.name);
 	if (ret < 0)
 		return ret;
 	cb->name = SceSysmemForDriver_E655852F(cb->modid);

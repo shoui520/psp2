@@ -47,11 +47,11 @@ int _sceKernelWaitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
 		return sceKernelWaitSignalForUser(arg0, arg1, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitSignalForUser(arg0, arg1, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;
@@ -67,11 +67,11 @@ int _sceKernelWaitSignalCB(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout)
 		return sceKernelWaitSignalCBForUser(arg0, arg1, NULL);
 	buf = __builtin_alloca(sizeof(*buf));
 	*buf = 0;
-	ret = SceSysmemForDriver_BC996A7A(buf, timeout, sizeof(*buf));
+	ret = sceKernelCopyFromUser(buf, timeout, sizeof(*buf));
 	if (ret < 0)
 		return ret;
 	ret = sceKernelWaitSignalCBForUser(arg0, arg1, buf);
-	err = SceSysmemForDriver_6D88EF8A(timeout, buf, sizeof(*buf));
+	err = sceKernelCopyToUser(timeout, buf, sizeof(*buf));
 	if (err < 0)
 		ret = err;
 	return ret;

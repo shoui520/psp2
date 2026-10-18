@@ -20,7 +20,7 @@ SceAppMgr:
         - SceAppMgrForDriver_12CE29F7: 0x12CE29F7
         - sceAppMgrFakeSaveDataCreateMount: 0x12FC3FA8
         - SceAppMgrForDriver_13D54107: 0x13D54107
-        - SceAppMgrForDriver_1574E1A4: 0x1574E1A4
+        - sceAppMgrRdrfpMount: 0x1574E1A4
         - SceAppMgrForDriver_193784A9: 0x193784A9
         - sceAppMgrLaunchAppByNameForDebugger: 0x1B6C2FED
         - SceAppMgrForDriver_1DE3B7C4: 0x1DE3B7C4
@@ -74,7 +74,7 @@ SceAppMgr:
         - SceAppMgrForDriver_E6F389B8: 0xE6F389B8
         - sceAppMgrGetPfsProcessStatus: 0xE72D2A4A
         - SceAppMgrForDriver_E73C9516: 0xE73C9516
-        - SceAppMgrForDriver_E8DB7942: 0xE8DB7942
+        - sceAppMgrRdrfpUmount: 0xE8DB7942
         - SceAppMgrForDriver_E977A833: 0xE977A833
         - SceAppMgrForDriver_EA75D157: 0xEA75D157
         - SceAppMgrForDriver_EBFE1BE2: 0xEBFE1BE2

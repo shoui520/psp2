@@ -57,11 +57,11 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_CE7A2207
 	sceKernelRegisterExceptionHandler
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocHeapMemory
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_E655852F
 	SceSysmemForKernel_634D0D0C
 	sceKernelAllocPartitionMemBlock

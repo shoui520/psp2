@@ -59,7 +59,7 @@ SceProcessmgr:
         - SceProcessmgrForDriver_2CEB1C7A: 0x2CEB1C7A
         - sceKernelIsCDialogAvailable: 0x2F6020B7
         - SceProcessmgrForDriver_33B3D026: 0x33B3D026
-        - SceProcessmgrForDriver_3801D7D6: 0x3801D7D6
+        - sceKernelRegisterKPLS: 0x3801D7D6
         - SceProcessmgrForDriver_3B33FFBA: 0x3B33FFBA
         - SceProcessmgrForDriver_4140D633: 0x4140D633
         - sceKernelGetBudgetInfo: 0x46221964

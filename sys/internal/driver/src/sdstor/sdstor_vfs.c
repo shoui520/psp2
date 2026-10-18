@@ -372,7 +372,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 577, "called LOOCK UP dvp=%p %s\n",
 			     parent, name);
-	data = SceSysmemForDriver_7B4CB60A(heap, sizeof(*data));
+	data = sceKernelAllocHeapMemory(heap, sizeof(*data));
 	if (!data)
 		return 0x8001000c;
 	__builtin_memset(data, 0, sizeof(*data));
@@ -806,7 +806,7 @@ int sdstor_vfs_initialize(void)
 
 	opt.size = sizeof(opt);
 	opt.flags = HEAP_AUTO_EXTEND;
-	sdstorVfsHeapId = SceSysmemForDriver_9328E0E8("SceSdStorVfs", 0x2000, &opt);
+	sdstorVfsHeapId = sceKernelCreateHeap("SceSdStorVfs", 0x2000, &opt);
 	if (sdstorVfsHeapId < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 15, 111, "0x%08x\n", sdstorVfsHeapId);
 		return sdstorVfsHeapId;

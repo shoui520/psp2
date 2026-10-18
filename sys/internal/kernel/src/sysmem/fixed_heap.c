@@ -974,7 +974,7 @@ static inline __attribute__((always_inline)) void FixedHeapSetGUID(SceUID guid, 
 	if (ret < 0)
 		SCE_DBG_PRINTF_FUNC(0xb, 2642, "FixedHeapSetUID",
 				    "GUIDSetCNOA(guid 0x%08x, %p) failed 0x%08x\n", guid, heap, ret);
-	ret = SceSysmemForDriver_0FC24464(guid, &object);
+	ret = sceGUIDGetObject(guid, &object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 2647, "FixedHeapSetUID",
 				    "sceGUIDGetObject failed 0x%08x\n",
@@ -1082,7 +1082,7 @@ int sceKernelFixedHeapSetHook(SceUID uid, FixedHeapObjectHook *hook)
 	FixedHeap *heap;
 	int state;
 
-	if (SceSysmemForKernel_0E43E113(uid, &s_fixedHeapClass->heapClass.cls, &object) < 0) {
+	if (sceGUIDGetObjectWithClass(uid, &s_fixedHeapClass->heapClass.cls, &object) < 0) {
 		SCE_DBG_PRINTF(0xb, 3112, "There is no 0x%08x\n", uid);
 		return SCE_KERNEL_ERROR_INVALID_UID;
 	}

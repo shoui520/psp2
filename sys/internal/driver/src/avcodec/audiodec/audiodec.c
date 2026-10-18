@@ -161,7 +161,7 @@ int audiodecLockDecodeBuffers(SceAudiodecCtrl *ctrl,
 	if (ret < 0)
 		return ret;
 	(*decoderWork)[index].inputEsSize = ctrl->inputEsSize;
-	ret = SceSysmemForDriver_9C78064C(0x10, ctrl->pEs, ctrl->inputEsSize);
+	ret = sceKernelIsAccessibleRange(0x10, ctrl->pEs, ctrl->inputEsSize);
 	if (ret < 0)
 		return ret;
 	if (!ctrl->pPcm || ((uintptr_t)ctrl->pPcm & 1))
@@ -172,7 +172,7 @@ int audiodecLockDecodeBuffers(SceAudiodecCtrl *ctrl,
 	if (ret < 0)
 		return ret;
 	(*decoderWork)[index].outputPcmSize = ctrl->outputPcmSize;
-	return SceSysmemForDriver_9C78064C(0x30, ctrl->pPcm, ctrl->outputPcmSize);
+	return sceKernelIsAccessibleRange(0x30, ctrl->pPcm, ctrl->outputPcmSize);
 }
 
 int audiodecValidateDecoder(const SceAudiodecCtrl *ctrl, SceUInt32 codecType,
@@ -290,7 +290,7 @@ int _copyOutSceAudiodecCtrl(SceAudiodecCtrl *userCtrl,
 	SceDebugForDriver_35A35322(info != NULL, &copyOutInfoSource, caller);
 	SceDebugForDriver_35A35322(hasUserInfo, &copyOutInfoDestination, caller);
 #endif
-	ret = SceSysmemForDriver_6D88EF8A(userInfo, info, info->size);
+	ret = sceKernelCopyToUser(userInfo, info, info->size);
 	if (ret < 0)
 		return ret;
 	ctrl->pInfo = userInfo;
@@ -298,7 +298,7 @@ int _copyOutSceAudiodecCtrl(SceAudiodecCtrl *userCtrl,
 	SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
 	SceDebugForDriver_35A35322(userCtrl != NULL, &copyOutInfoDestination, caller);
 #endif
-	return SceSysmemForDriver_6D88EF8A(userCtrl, ctrl, ctrl->size);
+	return sceKernelCopyToUser(userCtrl, ctrl, ctrl->size);
 }
 
 int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
@@ -321,7 +321,7 @@ int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3))
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
-	ret = SceSysmemForDriver_BC996A7A(ctrl, userCtrl, sizeof(*ctrl));
+	ret = sceKernelCopyFromUser(ctrl, userCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	if (ctrl->size != sizeof(*ctrl))
@@ -365,7 +365,7 @@ int _copyInSceAudiodecCtrl(SceAudiodecCtrl *ctrl,
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3))
 		return SCE_AUDIODEC_ERROR_INVALID_PTR;
-	ret = SceSysmemForDriver_BC996A7A(info, userInfo, maxSize);
+	ret = sceKernelCopyFromUser(info, userInfo, maxSize);
 	if (ret < 0)
 		return ret;
 	invalidSize = maxSize < info->size;
@@ -413,7 +413,7 @@ int initializeAudiodec(void)
 	ret = _audiodecInternalInitLibrary(&audiodecResident.manager, &param, 1);
 	if (ret < 0)
 		return ret;
-	ret = SceProcessmgrForDriver_3801D7D6("SceAudiodec", 7952);
+	ret = sceKernelRegisterKPLS("SceAudiodec", 7952);
 	if (ret >= 0)
 		audiodecResident.processStorage = ret;
 	return ret;
@@ -624,7 +624,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(&param, userParam, sizeof(param));
+	ret = sceKernelCopyFromUser(&param, userParam, sizeof(param));
 	if (ret < 0)
 		goto unlock;
 	if (param.size != sizeof(param)) {
@@ -662,7 +662,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 		SceDebugForDriver_35A35322(1, &copyOutInfoSource, caller);
 		SceDebugForDriver_35A35322(1, &copyOutInfoDestination, caller);
 #endif
-		ret = SceSysmemForDriver_6D88EF8A(userParam, &param, param.size);
+		ret = sceKernelCopyToUser(userParam, &param, param.size);
 	}
 unlock:
 	_unlockProcessSuspendCore();
@@ -756,7 +756,7 @@ int sceAudiodecGetContextSizeForUser(const SceAudiodecCtrl *userCtrl,
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
+	ret = sceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -798,7 +798,7 @@ int sceAudiodecGetContextSizeForUser(const SceAudiodecCtrl *userCtrl,
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
+	ret = sceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -1111,7 +1111,7 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
+	ret = sceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -1153,7 +1153,7 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
+	ret = sceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -1369,7 +1369,7 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
+	ret = sceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl)) {
@@ -1411,7 +1411,7 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 		ret = SCE_AUDIODEC_ERROR_INVALID_PTR;
 		goto unlock;
 	}
-	ret = SceSysmemForDriver_BC996A7A(kernelInfo, userInfo, maxSize);
+	ret = sceKernelCopyFromUser(kernelInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < kernelInfo->size;
@@ -2270,7 +2270,7 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 	ret = SCE_AUDIODEC_ERROR_INVALID_NSTREAMS;
 	if (nStreams - 1 > 6)
 		goto leave;
-	ret = SceSysmemForDriver_BC996A7A(ctrlPtrs, userCtrls, sizeof(*ctrlPtrs) * nStreams);
+	ret = sceKernelCopyFromUser(ctrlPtrs, userCtrls, sizeof(*ctrlPtrs) * nStreams);
 	if (ret < 0)
 		goto leave;
 	ret = _lockProcessSuspendCore();
@@ -2611,7 +2611,7 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 #endif
 	if (!userCtrl || ((uintptr_t)userCtrl & 3))
 		{ ret = SCE_AUDIODEC_ERROR_INVALID_PTR; goto unlock; }
-	ret = SceSysmemForDriver_BC996A7A(&ctrl, userCtrl, sizeof(ctrl));
+	ret = sceKernelCopyFromUser(&ctrl, userCtrl, sizeof(ctrl));
 	if (ret < 0)
 		goto unlock;
 	if (ctrl.size != sizeof(ctrl))
@@ -2651,7 +2651,7 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 #endif
 	if (!userInfo || ((uintptr_t)userInfo & 3))
 		{ ret = SCE_AUDIODEC_ERROR_INVALID_PTR; goto unlock; }
-	ret = SceSysmemForDriver_BC996A7A(copyInfo, userInfo, maxSize);
+	ret = sceKernelCopyFromUser(copyInfo, userInfo, maxSize);
 	if (ret < 0)
 		goto unlock;
 	invalidSize = maxSize < copyInfo->size;

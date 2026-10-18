@@ -46,7 +46,7 @@ int _sceKernelBsodIftuInit(int dolce)
 		options.size = sizeof(options);
 		options.attr = 2;
 		options.paddr = map->paddr;
-		uid = SceSysmemForDriver_C94850C9(map->name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+		uid = sceKernelAllocMemBlockForKernel(map->name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					    map->size, &options);
 		if (uid < 0) {
 #if FW_DEBUG
@@ -56,7 +56,7 @@ int _sceKernelBsodIftuInit(int dolce)
 #endif
 			return uid;
 		}
-		SceSysmemForDriver_A841EDDA(uid, &base);
+		sceKernelGetMemBlockBase(uid, &base);
 		*map->base = base;
 	}
 	return 0;

@@ -27,12 +27,12 @@ int dtrace_bookmark_init(void)
 	opt.size = sizeof(opt);
 	opt.paddr = PERFMON_REG_BASE;
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	uid = SceSysmemForDriver_C94850C9("SceDeci4pDtracepPaReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceDeci4pDtracepPaReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      2 * PERFMON_PAGE_SIZE, &opt);
 	if (uid < 0)
 		return uid;
 	s_bookmark.uid = uid;
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_bookmark.regs = base;
 	return 0;
 }

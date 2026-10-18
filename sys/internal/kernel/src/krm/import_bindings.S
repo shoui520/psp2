@@ -4,25 +4,25 @@
 #if FW_VERSION >= 0x04000000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_6D88EF8A
-.type SceSysmemForDriver_6D88EF8A, %function
-SceSysmemForDriver_6D88EF8A:
+.global sceKernelCopyToUser
+.type sceKernelCopyToUser, %function
+sceKernelCopyToUser:
 	.word 0x10, 0x6f25e18a, 0x6d88ef8a, 0xe320f000
-.size SceSysmemForDriver_6D88EF8A, .-SceSysmemForDriver_6D88EF8A
+.size sceKernelCopyToUser, .-sceKernelCopyToUser
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_9C78064C
-.type SceSysmemForDriver_9C78064C, %function
-SceSysmemForDriver_9C78064C:
+.global sceKernelIsAccessibleRange
+.type sceKernelIsAccessibleRange, %function
+sceKernelIsAccessibleRange:
 	.word 0x10, 0x6f25e18a, 0x9c78064c, 0xe320f000
-.size SceSysmemForDriver_9C78064C, .-SceSysmemForDriver_9C78064C
+.size sceKernelIsAccessibleRange, .-sceKernelIsAccessibleRange
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_BC996A7A
-.type SceSysmemForDriver_BC996A7A, %function
-SceSysmemForDriver_BC996A7A:
+.global sceKernelCopyFromUser
+.type sceKernelCopyFromUser, %function
+sceKernelCopyFromUser:
 	.word 0x10, 0x6f25e18a, 0xbc996a7a, 0xe320f000
-.size SceSysmemForDriver_BC996A7A, .-SceSysmemForDriver_BC996A7A
+.size sceKernelCopyFromUser, .-sceKernelCopyFromUser
 .section .vitalink.fstubs.SceSysclibForDriver, "ax", %progbits
 .balign 4
 .global memset
@@ -215,25 +215,25 @@ SceRtcForDriver_F1517B38:
 #else
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_6D88EF8A
-.type SceSysmemForDriver_6D88EF8A, %function
-SceSysmemForDriver_6D88EF8A:
+.global sceKernelCopyToUser
+.type sceKernelCopyToUser, %function
+sceKernelCopyToUser:
 	.word 0x10, 0x6f25e18a, 0x6d88ef8a, 0xe320f000
-.size SceSysmemForDriver_6D88EF8A, .-SceSysmemForDriver_6D88EF8A
+.size sceKernelCopyToUser, .-sceKernelCopyToUser
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_9C78064C
-.type SceSysmemForDriver_9C78064C, %function
-SceSysmemForDriver_9C78064C:
+.global sceKernelIsAccessibleRange
+.type sceKernelIsAccessibleRange, %function
+sceKernelIsAccessibleRange:
 	.word 0x10, 0x6f25e18a, 0x9c78064c, 0xe320f000
-.size SceSysmemForDriver_9C78064C, .-SceSysmemForDriver_9C78064C
+.size sceKernelIsAccessibleRange, .-sceKernelIsAccessibleRange
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_BC996A7A
-.type SceSysmemForDriver_BC996A7A, %function
-SceSysmemForDriver_BC996A7A:
+.global sceKernelCopyFromUser
+.type sceKernelCopyFromUser, %function
+sceKernelCopyFromUser:
 	.word 0x10, 0x6f25e18a, 0xbc996a7a, 0xe320f000
-.size SceSysmemForDriver_BC996A7A, .-SceSysmemForDriver_BC996A7A
+.size sceKernelCopyFromUser, .-sceKernelCopyFromUser
 .section .vitalink.fstubs.SceSysclibForDriver, "ax", %progbits
 .balign 4
 .global memset

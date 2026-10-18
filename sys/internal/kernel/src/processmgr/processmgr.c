@@ -233,7 +233,7 @@ static void PPMFreeSlot(SceUInt32 slot)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ppmLock, intr);
 }
 
-int SceProcessmgrForDriver_3801D7D6(const char *name, SceSize size)
+int sceKernelRegisterKPLS(const char *name, SceSize size)
 {
 	int intr, i;
 
@@ -475,7 +475,7 @@ static int ProcessThreadSuspend(SceUID thid, SceUInt32 state)
 
 	switch (state) {
 	case PROCESS_STATE_SUSPENDED:
-		ret = SceThreadmgrForKernel_15D6357C(thid, 0xf);
+		ret = sceKernelSuspendThread(thid, 0xf);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 779, "sceKernelSuspendThread failed 0x%08x\n", ret);
 			return ret;
@@ -523,7 +523,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->callbackLock, intr);
 
 	if (process->entryHeap != -1) {
-		ret = SceSysmemForKernel_133024A5(process->entryHeap);
+		ret = sceUIDEntryHeapCloseAllPUID(process->entryHeap);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2817, "sceUIDEntryHeapCloseAllPUID failed. 0x%08x\n", ret);
 			SCE_DBG_ASSERT_FAIL(2818);
@@ -585,7 +585,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 		}
 	}
 	if (process->objectHeap[1] != NULL && process->type != PROCESS_TYPE_MINI_APP) {
-		ret = SceSysmemForKernel_2F526AB8(process->objectHeap[1]);
+		ret = sceKernelDeleteObjectHeap(process->objectHeap[1]);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2894, "sceKernelDeleteObjectHeap failed 0x%08x\n", ret);
 			return ret;
@@ -634,7 +634,7 @@ static int ProcessResourceRecovery(SceProcessObject *process, int destroyed)
 	if (process->msgPipeLock.next != NULL)
 		sceKernelFinalizeFastMutex((SceKernelFastMutex *)&process->msgPipeLock);
 	if (process->objectHeap[0] != NULL && process->type != PROCESS_TYPE_MINI_APP) {
-		ret = SceSysmemForKernel_2F526AB8(process->objectHeap[0]);
+		ret = sceKernelDeleteObjectHeap(process->objectHeap[0]);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 2959, "sceKernelDeleteObjectHeap failed 0x%08x\n", ret);
 			return ret;
@@ -836,7 +836,7 @@ static int UIDtoProcess(SceUID pid, SceProcessObject **process)
 		}
 		cls = &g_processClass;
 	}
-	if (SceSysmemForKernel_0E43E113(pid, cls, process) < 0)
+	if (sceGUIDGetObjectWithClass(pid, cls, process) < 0)
 		return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
 	return *process != NULL ? 0 : SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
 }
@@ -898,7 +898,7 @@ static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
 		if (cb == NULL || cb->processId != pid) {
 			cls = &g_processClass;
 refer_class:
-			if (SceSysmemForDriver_00ED6C14(pid, cls, (SceObjectBase **)process) < 0)
+			if (sceGUIDReferObjectWithClass(pid, cls, (SceObjectBase **)process) < 0)
 				return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
 			return 0;
 		}
@@ -906,7 +906,7 @@ refer_class:
 	p = cb->process;
 	*process = p;
 refer:
-	if (SceSysmemForDriver_00ED6C14(p->pid, &g_processClass, NULL) < 0)
+	if (sceGUIDReferObjectWithClass(p->pid, &g_processClass, NULL) < 0)
 		return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
 	return 0;
 }
@@ -952,7 +952,7 @@ int SceProcessmgrForDriver_AF80F39C(SceUID pid, SceUInt32 key, void **addr, int 
 			if (storage != NULL) {
 				ret = 0;
 			} else {
-				storage = SceSysmemForDriver_7B4CB60A(process->kplsHeap, size);
+				storage = sceKernelAllocHeapMemory(process->kplsHeap, size);
 				if (storage == NULL) {
 					ret = SCE_KERNEL_ERROR_NO_FREE_HEAP;
 				} else {
@@ -1201,7 +1201,7 @@ static int ProcessTerminationCallbackCore(SceUID pid, SceUID cb, int unregister)
 	}
 	if (unregister == 0) {
 		intr = SceCpuForDriver_D32ACE9E(&process->callbackLock);
-		callback = SceSysmemForDriver_7B4CB60A(process->uniqueHeap, sizeof(*callback));
+		callback = sceKernelAllocHeapMemory(process->uniqueHeap, sizeof(*callback));
 		if (callback == NULL) {
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&process->callbackLock, intr);
 			sceGUIDReleaseObject(process->pid);
@@ -1319,7 +1319,7 @@ static int CreateKernelProcessCommon(SceProcessObject *process, SceUID pid)
 
 	process->type = PROCESS_TYPE_KERNEL;
 	process->addressSpace = KERNEL_ADDRESS_SPACE;
-	ret = SceSysmemForDriver_0FC24464(KERNEL_ADDRESS_SPACE, &process->addressSpaceCB);
+	ret = sceGUIDGetObject(KERNEL_ADDRESS_SPACE, &process->addressSpaceCB);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 9512, "sceGUIDGetObject(0x%08x) failed\n",
 				     process->addressSpace);
@@ -1327,7 +1327,7 @@ static int CreateKernelProcessCommon(SceProcessObject *process, SceUID pid)
 		cls = &g_processClass;
 	else
 		cls = SceSysmemForDriver_85336A1C();
-	ret = SceSysmemForKernel_BF275C5A(pid, cls, 0, (SceObjectBase *)process);
+	ret = sceGUIDSet(pid, cls, 0, (SceObjectBase *)process);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 9527, "sceGUIDSet failed 0x%08x\n", ret);
 		return ret;
@@ -1388,13 +1388,13 @@ static inline __attribute__((always_inline)) SceProcessObject *_CreateProcessRaw
 	ProcessConstructor(process);
 	opt.size = sizeof(opt);
 	opt.attr = HEAP_AUTO_EXTEND;
-	process->uniqueHeap = SceSysmemForDriver_9328E0E8("unique: SceKernelProcess", 0x9000, &opt);
+	process->uniqueHeap = sceKernelCreateHeap("unique: SceKernelProcess", 0x9000, &opt);
 	if (process->uniqueHeap < 0) {
 		SCE_DBG_ASSERT_FAIL(3085);
 		return NULL;
 	}
 	opt.attr = HEAP_AUTO_EXTEND;
-	process->kplsHeap = SceSysmemForDriver_9328E0E8("kpls: SceKernelProcess", 0x7000, &opt);
+	process->kplsHeap = sceKernelCreateHeap("kpls: SceKernelProcess", 0x7000, &opt);
 	if (process->kplsHeap < 0) {
 		sceKernelDeleteHeap(process->uniqueHeap);
 		SCE_DBG_ASSERT_FAIL(3097);
@@ -1476,7 +1476,7 @@ static int ProcessThreadResume(SceUID thid, SceUInt32 state)
 	int ret;
 
 	if (state == PROCESS_STATE_SUSPENDED) {
-		ret = SceThreadmgrForKernel_490DAF14(thid);
+		ret = sceKernelResumeThread(thid);
 		if (ret < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 804, "sceKernelResumeThread(0x%08x) failed 0x%08x\n",
 					     thid, ret);
@@ -1675,7 +1675,7 @@ static inline __attribute__((always_inline)) int AllocAddressSpace(SceProcessObj
 		goto failed;
 	}
 	process->addressSpace = addressSpace;
-	ret = SceSysmemForDriver_0FC24464(addressSpace, &process->addressSpaceCB);
+	ret = sceGUIDGetObject(addressSpace, &process->addressSpaceCB);
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3168, "sceGUIDGetObject failed 0x%08x\n", ret);
 	return ret;
@@ -1803,7 +1803,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		pid = process->pid;
 		memcpy(&process->authInfo, &g_exitSpawn.authInfo, sizeof(process->authInfo));
 		process->parentPid = g_exitSpawn.pid;
-		SceSysmemForDriver_4CFA4100(pid, name);
+		sceGUIDSetName(pid, name);
 		memset(&g_exitSpawn, 0, sizeof(g_exitSpawn));
 	} else {
 		slot = PPMAllocSlot();
@@ -1950,7 +1950,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	opt.pid = pid;
 	opt.heap = process->uniqueHeapCB;
 	snprintf(heapName, sizeof(heapName), "unique: %s", name);
-	heap = SceSysmemForDriver_9328E0E8(heapName, uniqueHeapSize, &opt);
+	heap = sceKernelCreateHeap(heapName, uniqueHeapSize, &opt);
 	if (heap < 0) {
 		ret = heap;
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3626, "Create Heap failed 0x%08x\n", ret);
@@ -1959,7 +1959,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	process->uniqueHeap = heap;
 
 	snprintf(heapName, sizeof(heapName), "kpls: %s", name);
-	ret = SceSysmemForDriver_C94850C9(heapName, 0x1020d006, 0x40000, NULL);
+	ret = sceKernelAllocMemBlockForKernel(heapName, 0x1020d006, 0x40000, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3639, "allocate kpls block failed. 0x%08x\n", ret);
 		goto failed;
@@ -1972,7 +1972,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	opt.size = sizeof(opt);
 	opt.attr = HEAP_HAS_MEMBLOCK;
 	opt.memBlock = ret;
-	ret = SceSysmemForDriver_9328E0E8(heapName, 0x40000, &opt);
+	ret = sceKernelCreateHeap(heapName, 0x40000, &opt);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 3654, "Create Heap failed 0x%08x\n", ret);
 		goto failed;
@@ -1988,7 +1988,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		opt.pid = pid;
 		opt.heap = process->cdialogHeapCB;
 		snprintf(heapName, sizeof(heapName), "CDialog: %s", name);
-		cdialogHeap = SceSysmemForDriver_9328E0E8(heapName, 0x1000, &opt);
+		cdialogHeap = sceKernelCreateHeap(heapName, 0x1000, &opt);
 		if (cdialogHeap < 0) {
 			ret = cdialogHeap;
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3678, "Create Heap failed 0x%08x\n", ret);
@@ -2017,7 +2017,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 
 	if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 #if FW_VERSION >= 0x04000000
-		process->toolMemory = SceSysmemForDriver_7B4CB60A(TOOL_HEAP, 0x80);
+		process->toolMemory = sceKernelAllocHeapMemory(TOOL_HEAP, 0x80);
 		if (process->toolMemory == NULL) {
 			ret = SCE_KERNEL_ERROR_NO_FREE_HEAP;
 			goto failed;
@@ -2033,7 +2033,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		opt.pid = pid;
 		opt.heap = process->toolMemory;
 		snprintf(heapName, sizeof(heapName), "tool: %s", name);
-		ret = SceSysmemForDriver_9328E0E8(heapName, toolHeapSize, &opt);
+		ret = sceKernelCreateHeap(heapName, toolHeapSize, &opt);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 3730, "Create Heap failed 0x%08x\n", ret);
 			goto failed;
@@ -2043,13 +2043,13 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 
 	if (budget->type != PROCESS_TYPE_MINI_APP) {
 		if (process->objectHeap[0] != NULL) {
-			ret = SceSysmemForKernel_660DC18A(process->objectHeap[0], pid, heap);
+			ret = sceKernelObjectHeapStart(process->objectHeap[0], pid, heap);
 			if (ret < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 3742, "sceKernelObjectHeapStart failed 0x%08x\n",
 						     ret);
 		}
 		if (process->objectHeap[1] != NULL) {
-			ret = SceSysmemForKernel_660DC18A(process->objectHeap[1], pid, cdialogHeap);
+			ret = sceKernelObjectHeapStart(process->objectHeap[1], pid, cdialogHeap);
 			if (ret < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 3751, "sceKernelObjectHeapStart failed 0x%08x\n",
 						     ret);
@@ -2110,7 +2110,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	SceKernelUtilsForDriver_875B2A1C(&process->stackGuard, sizeof(process->stackGuard));
 
 	if (SceDipswForDriver_A98FC2FD(0xe4) != 0) {
-		regs = SceSysmemForDriver_7B4CB60A(process->toolHeap > 0 ? process->toolHeap
+		regs = sceKernelAllocHeapMemory(process->toolHeap > 0 ? process->toolHeap
 								       : process->uniqueHeap,
 						 sizeof(*regs));
 		if (regs == NULL)
@@ -2182,7 +2182,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		SceModulemgrForKernel_E71530D7(process->pid);
 		goto failed;
 	}
-	ret = SceThreadmgrForDriver_C8E57BB4(process->pid, threadName, SceModulemgrForKernel_7B302C5D(ret),
+	ret = sceKernelCreateRemoteThread(process->pid, threadName, SceModulemgrForKernel_7B302C5D(ret),
 					     priority, stackSize, threadAttr | 0x80000000, cpu,
 					     (void *)optParam);
 	sceKernelSetThreadAccessLevel(permission);
@@ -2217,15 +2217,15 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		processName = SceSysmemForDriver_E655852F(process->pid);
 	} else {
 		processName = process->image.processName;
-		SceSysmemForDriver_4CFA4100(process->pid, processName);
+		sceGUIDSetName(process->pid, processName);
 	}
 	snprintf(heapName, sizeof(heapName), "plock: %s", processName);
-	SceSysmemForDriver_4CFA4100(process->lockSema, heapName);
+	sceGUIDSetName(process->lockSema, heapName);
 	snprintf(heapName, sizeof(heapName), "pevent: %s", processName);
-	SceSysmemForDriver_4CFA4100(process->eventFlag, heapName);
-	SceSysmemForDriver_4CFA4100(process->eventSema, heapName);
+	sceGUIDSetName(process->eventFlag, heapName);
+	sceGUIDSetName(process->eventSema, heapName);
 	snprintf(heapName, sizeof(heapName), "pident: %s", processName);
-	SceSysmemForDriver_4CFA4100(process->entryHeap, heapName);
+	sceGUIDSetName(process->entryHeap, heapName);
 	sceKernelAddressSpaceSetName(process->addressSpace, processName);
 	ret = OpenStdio(process);
 	if (ret < 0) {
@@ -2460,7 +2460,7 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 		if (ret < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1068, "sceKernelGetThreadIdVector failed. 0x%08x\n", ret);
 		for (i = 0; i < count; i++) {
-			ret = SceThreadmgrForKernel_15D6357C(g_threadIdVector.id[i], 0xf);
+			ret = sceKernelSuspendThread(g_threadIdVector.id[i], 0xf);
 			if (!ThreadGone(ret) && ret < 0)
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 1079,
 					"sceKernelSuspendThread failed 0x%08x, tid 0x%08x\n", ret,
@@ -2570,7 +2570,7 @@ static int _KillProcess(SceProcessObject *process, SceUInt32 state, SceUInt32 ki
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1874, "sceKernelGetThreadIdVector failed. 0x%08x\n", ret);
 	for (i = 0; i < count; i++) {
-		ret = SceThreadmgrForKernel_9928DFBA(g_threadIdVector.id[i], 0xf);
+		ret = sceKernelStopThread(g_threadIdVector.id[i], 0xf);
 		if (ret != (int)SCE_KERNEL_ERROR_DORMANT) {
 			if (ThreadGone(ret))
 				continue;
@@ -2756,7 +2756,7 @@ static inline __attribute__((always_inline)) void WaitThreadGroup(SceUID *thid, 
 			id = thid[i];
 			if (id == -1)
 				continue;
-			if (SceSysmemForDriver_00ED6C14(id, g_threadClass, (SceObjectBase **)&thread) < 0) {
+			if (sceGUIDReferObjectWithClass(id, g_threadClass, (SceObjectBase **)&thread) < 0) {
 				thid[i] = -1;
 				remaining--;
 				continue;
@@ -2856,7 +2856,7 @@ static inline __attribute__((always_inline)) void _ResumeProcess(SceProcessObjec
 	SceThreadmgrForKernel_89C17825(process);
 	process->threadsStopped = 0;
 	count = process->unlimitedThreadCount + process->threadCount;
-	thid = SceSysmemForDriver_7B4CB60A(process->uniqueHeap, count * 3 * sizeof(*thid));
+	thid = sceKernelAllocHeapMemory(process->uniqueHeap, count * 3 * sizeof(*thid));
 	if (thid == NULL) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1518, "sceKernelAllocHeapMemory failed %p\n", NULL);
 		return;
@@ -2951,7 +2951,7 @@ static inline __attribute__((always_inline)) void _ExitProcess(SceProcessObject 
 	if (ret < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1733, "sceKernelGetThreadIdVector failed. 0x%08x\n", ret);
 	for (i = 0; i < count; i++) {
-		ret = SceThreadmgrForKernel_9928DFBA(g_threadIdVector.id[i], 0xf);
+		ret = sceKernelStopThread(g_threadIdVector.id[i], 0xf);
 		if (ret != (int)SCE_KERNEL_ERROR_DORMANT) {
 			if (ThreadGone(ret))
 				continue;
@@ -3263,7 +3263,7 @@ force_suspend:
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 2381, "sceKernelGetThreadIdVector failed. 0x%08x\n",
 						     ret);
 			for (i = 0; i < count; i++) {
-				ret = SceThreadmgrForKernel_15D6357C(g_threadIdVector.id[i], 0xf);
+				ret = sceKernelSuspendThread(g_threadIdVector.id[i], 0xf);
 				if (!ThreadGone(ret) && ret < 0) {
 					SCE_DBG_PRINTF_LEVEL(1, 0xb, 2394,
 						"sceKernelSuspendThread failed 0x%08x, tid 0x%08x\n", ret,
@@ -3306,7 +3306,7 @@ force_kill:
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 2264, "sceKernelGetThreadIdVector failed. 0x%08x\n",
 						     ret);
 			for (i = 0; i < count; i++) {
-				ret = SceThreadmgrForKernel_9928DFBA(g_threadIdVector.id[i], 0xf);
+				ret = sceKernelStopThread(g_threadIdVector.id[i], 0xf);
 				if (!ThreadGone(ret) && ret < 0) {
 					SCE_DBG_PRINTF_LEVEL(1, 0xb, 2277,
 						"sceKernelStopThread failed 0x%08x, tid 0x%08x\n", ret,
@@ -4005,7 +4005,7 @@ int sceKernelExitProcess(int status)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
 	process = GetCurrentProcess();
-	ret = SceSysmemForDriver_0F5C84B7(process->pid, NULL);
+	ret = sceGUIDReferObject(process->pid, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 5032, "sceGUIDReferObject failed 0x%08x\n", ret);
 		SCE_PANIC(5033);
@@ -4286,7 +4286,7 @@ static int ProcessGetList(int level, void *buf, SceSize size, SceSize *count, in
 	for (node = g_processList.next; node != &g_processList; node = node->next) {
 		pid = PROCESS_FROM_NODE(node)->pid;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_processListLock, intr);
-		if (SceSysmemForDriver_00ED6C14(pid, &g_processClass, NULL) >= 0) {
+		if (sceGUIDReferObjectWithClass(pid, &g_processClass, NULL) >= 0) {
 			if (SceSysmemForKernel_4E923101(pid) <= level && i < max) {
 				if (kind == 0) {
 					if (PROCESS_FROM_NODE(node)->pid == KERNEL_PID)
@@ -5241,7 +5241,7 @@ int sceKernelGetRemoteProcessTime(SceUID pid, SceUInt64 *time)
 	state = ProcessSyscallEnter();
 	ret = SceProcessmgrForDriver_C074EB31(pid, &value);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
+		ret = sceKernelCopyToUser(time, &value, sizeof(value));
 	ProcessSyscallLeave(state);
 	return ret;
 }
@@ -5270,7 +5270,7 @@ int sceKernelGetProcessTimeCore(SceUInt64 *time)
 	state = ProcessSyscallEnter();
 	ret = SceProcessmgrForDriver_EC283166(&value);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
+		ret = sceKernelCopyToUser(time, &value, sizeof(value));
 	ProcessSyscallLeave(state);
 	return ret;
 }
@@ -5333,7 +5333,7 @@ int SceProcessmgrForDriver_5BDA978F(SceUID pid, SceUInt64 *time)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, (SceObjectBase **)&process);
+	ret = sceGUIDReferObjectWithClass(pid, &g_processClass, (SceObjectBase **)&process);
 	if (ret < 0)
 		return ret;
 	*time = process->time;
@@ -5351,7 +5351,7 @@ int SceProcessmgrForDriver_8CB01675(SceUID pid, SceUInt64 *out, SceUInt64 time)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, (SceObjectBase **)&process);
+	ret = sceGUIDReferObjectWithClass(pid, &g_processClass, (SceObjectBase **)&process);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_D32ACE9E(&process->timeLock);
@@ -5551,7 +5551,7 @@ int _sceKernelRegisterLibkernelAddressesForUser(const LibkernelAddresses *uaddr)
 	int ret;
 
 	state = ProcessSyscallEnter();
-	ret = SceSysmemForDriver_BC996A7A(&addr, uaddr, sizeof(addr));
+	ret = sceKernelCopyFromUser(&addr, uaddr, sizeof(addr));
 	if (ret < 0) {
 		ProcessSyscallLeave(state);
 		return ret;
@@ -5570,7 +5570,7 @@ int _sceKernelRegisterLibkernelAddressesForUser(const LibkernelAddresses *uaddr)
 	if (process->libkernelAddr[3] == NULL)
 		process->libkernelAddr[3] = addr.addr[3];
 	if (process->libkernelAddr[4] == NULL && (process->libkernelAddr[4] = addr.addr[4]) != NULL
-	    && (ret = SceSysmemForDriver_6D88EF8A(addr.addr[4], &process->time, sizeof(process->time))) < 0) {
+	    && (ret = sceKernelCopyToUser(addr.addr[4], &process->time, sizeof(process->time))) < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 8862, "sceKernelCopyToUser failed 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(8863);
 	} else if (process->libkernelAddr[5] == NULL) {
@@ -5589,14 +5589,14 @@ int _sceKernelGetTimer5RegForUser(void *uaddr)
 
 	state = ProcessSyscallEnter();
 	process = GetCurrentProcess();
-	ret = SceSysmemForKernel_FA1A73DD(process->addressSpace, &base);
+	ret = sceKernelAddressSpaceGetTimerVbase(process->addressSpace, &base);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 8890, "sceKernelAddressSpaceGetTimerVbase failed 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(8891);
 		ProcessSyscallLeave(state);
 		return ret;
 	}
-	ret = SceSysmemForDriver_6D88EF8A(uaddr, &base, sizeof(base));
+	ret = sceKernelCopyToUser(uaddr, &base, sizeof(base));
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 8898, "sceKernelCopyToUser failed 0x%08x\n", ret);
 		ProcessSyscallLeave(state);
@@ -5744,7 +5744,7 @@ SceKernelTime sceKernelLibcTime(SceKernelTime *ut)
 	state = ProcessSyscallEnter();
 	sceKernelApiDeclareTypeUInt32();
 	t = SceProcessmgrForKernel_B0E076D6(&t);
-	if (ut != NULL && SceSysmemForDriver_6D88EF8A(ut, &t, sizeof(t)) < 0)
+	if (ut != NULL && sceKernelCopyToUser(ut, &t, sizeof(t)) < 0)
 		t = (SceKernelTime)-1;
 	ProcessSyscallLeave(state);
 	return t;
@@ -5759,9 +5759,9 @@ int sceKernelLibcGettimeofday(ProcessTimeval *utv, ProcessTimezone *utz)
 
 	state = ProcessSyscallEnter();
 	ret = SceProcessmgrForKernel_014F5113(&tv, &tz);
-	if (ret == 0 && (utv == NULL || (ret = SceSysmemForDriver_6D88EF8A(utv, &tv, sizeof(tv))) >= 0)
+	if (ret == 0 && (utv == NULL || (ret = sceKernelCopyToUser(utv, &tv, sizeof(tv))) >= 0)
 	    && utz != NULL)
-		ret = SceSysmemForDriver_6D88EF8A(utz, &tz, sizeof(tz));
+		ret = sceKernelCopyToUser(utz, &tz, sizeof(tz));
 	ProcessSyscallLeave(state);
 	return ret;
 }
@@ -5777,14 +5777,14 @@ int sceKernelLibcGmtime_r(const SceKernelTime *ut, ProcessTm *utm)
 	state = ProcessSyscallEnter();
 	pt = NULL;
 	if (ut != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&t, ut, sizeof(t));
+		ret = sceKernelCopyFromUser(&t, ut, sizeof(t));
 		pt = &t;
 		if (ret < 0)
 			goto out;
 	}
 	ret = ProcessmgrLibcGmtime_r(pt, &tm);
 	if (ret >= 0 && utm != NULL)
-		ret = SceSysmemForDriver_6D88EF8A(utm, &tm, sizeof(tm));
+		ret = sceKernelCopyToUser(utm, &tm, sizeof(tm));
 out:
 	ProcessSyscallLeave(state);
 	return ret;
@@ -5801,14 +5801,14 @@ int sceKernelLibcLocaltime_r(const SceKernelTime *ut, ProcessTm *utm)
 	state = ProcessSyscallEnter();
 	pt = NULL;
 	if (ut != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&t, ut, sizeof(t));
+		ret = sceKernelCopyFromUser(&t, ut, sizeof(t));
 		pt = &t;
 		if (ret < 0)
 			goto out;
 	}
 	ret = ProcessmgrLibcLocaltime_r(pt, &tm);
 	if (ret >= 0 && utm != NULL)
-		ret = SceSysmemForDriver_6D88EF8A(utm, &tm, sizeof(tm));
+		ret = sceKernelCopyToUser(utm, &tm, sizeof(tm));
 out:
 	ProcessSyscallLeave(state);
 	return ret;
@@ -5825,12 +5825,12 @@ int sceKernelLibcMktime(ProcessTm *utm, SceKernelTime *ut, SceUInt64 *uwide)
 	state = ProcessSyscallEnter();
 	if (utm == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_BC996A7A(&tm, utm, sizeof(tm));
+	ret = sceKernelCopyFromUser(&tm, utm, sizeof(tm));
 	if (ret >= 0 && (ret = ProcessmgrLibcMktime(&tm, &t, &wide)) >= 0
-	    && (ret = SceSysmemForDriver_6D88EF8A(utm, &tm, sizeof(tm))) >= 0
-	    && (ut == NULL || (ret = SceSysmemForDriver_6D88EF8A(ut, &t, sizeof(t))) >= 0)
+	    && (ret = sceKernelCopyToUser(utm, &tm, sizeof(tm))) >= 0
+	    && (ut == NULL || (ret = sceKernelCopyToUser(ut, &t, sizeof(t))) >= 0)
 	    && uwide != NULL)
-		ret = SceSysmemForDriver_6D88EF8A(uwide, &wide, sizeof(wide));
+		ret = sceKernelCopyToUser(uwide, &wide, sizeof(wide));
 	ProcessSyscallLeave(state);
 	return ret;
 }
@@ -5896,7 +5896,7 @@ int sceKernelCDialogSessionClose(void)
 
 	state = ProcessSyscallEnter();
 	process = GetCurrentProcess();
-	ret = SceSysmemForDriver_0F5C84B7(process->pid, NULL);
+	ret = sceGUIDReferObject(process->pid, NULL);
 	if (ret < 0)
 		return ret;
 	if (process->cdialogHeap == -1) {
@@ -5964,7 +5964,7 @@ int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg
 
 	process = GetCurrentProcess();
 	state = ProcessSyscallEnter();
-	ret = SceSysmemForDriver_F4AD89D8(process->pid, 0x50, handler, 4);
+	ret = sceKernelIsEqualAccessibleRangeProcBySW(process->pid, 0x50, handler, 4);
 	if (ret != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 9979, "error: sceKernelIsEqualAccessibleRangeProcBySW()=0x%08X\n",
 				     ret);
@@ -5975,7 +5975,7 @@ int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto out;
 	}
-	if (arg != NULL && (ret = SceSysmemForDriver_9C78064C(0x10, arg, 4)) != 0) {
+	if (arg != NULL && (ret = sceKernelIsAccessibleRange(0x10, arg, 4)) != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 9996, "error: sceKernelIsAccessibleRange()=0x%08X\n", ret);
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto out;
@@ -5986,7 +5986,7 @@ int sceKernelRegisterCoredumpHandler(void *handler, SceSize stackSize, void *arg
 	opt.attr = ALLOC_ATTR_NO_CLEAR | ALLOC_ATTR_NO_MAP | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID |
 		   ALLOC_ATTR_HAS_EXTRA_LOW;
 	opt.alignment = 0x1000;
-	block = SceSysmemForDriver_C94850C9("uStack: SceKernelCoredumpHandle", 0xc20d060, stackSize + 0x1000,
+	block = sceKernelAllocMemBlockForKernel("uStack: SceKernelCoredumpHandle", 0xc20d060, stackSize + 0x1000,
 					&opt);
 	if (block < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 10014, "error: sceKernelAllocMemBlockForKernel()=0x%08X\n\n",
@@ -6078,7 +6078,7 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 	opt.handedExceptions = 0;
 	opt.size = sizeof(opt);
 	opt.attr = 8;			/* uStackMemid is given */
-	thid = SceThreadmgrForDriver_C8E57BB4(pid, "SceKernelCoredumpHandler", process->libkernelAddr[3],
+	thid = sceKernelCreateRemoteThread(pid, "SceKernelCoredumpHandler", process->libkernelAddr[3],
 					      0x40, process->coredumpStackSize, 0x800000, 0, &opt);
 	if (thid < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 10146,
@@ -6088,7 +6088,7 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 		ret = thid;
 		goto release;
 	}
-	ret = SceSysmemForKernel_0E43E113(thid, g_threadClass, &thread);
+	ret = sceGUIDGetObjectWithClass(thid, g_threadClass, &thread);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(10151);
 		sceKernelDeleteThread(ret);
@@ -6275,7 +6275,7 @@ static const struct {
 	sceKernelInhibitProcEvent,
 	sceKernelPermitProcEvent,
 	sceKernelGetObjectHeap,
-	SceProcessmgrForDriver_3801D7D6,
+	sceKernelRegisterKPLS,
 	SceProcessmgrForDriver_EE694840,
 	SceProcessmgrForDriver_AF80F39C,
 	sceKernelProcessDebugSuspend,
@@ -6290,21 +6290,21 @@ static inline __attribute__((always_inline)) void PPMInit(void)
 {
 	g_ppmLock = 0;
 	g_ppmUsed = 0;
-	g_ppmBlock[0] = SceSysmemForDriver_C94850C9("SceKernelPPM0", 0x1020d004, 0x40000, NULL);
+	g_ppmBlock[0] = sceKernelAllocMemBlockForKernel("SceKernelPPM0", 0x1020d004, 0x40000, NULL);
 	if (g_ppmBlock[0] < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 426, "sceKernelAllocMemBlockForKernel failed 0x%08x\n",
 				     g_ppmBlock[0]);
 		return;
 	}
-	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[0], (void **)&g_ppm.base0) < 0)
+	if (sceKernelGetMemBlockBase(g_ppmBlock[0], (void **)&g_ppm.base0) < 0)
 		g_ppm.base0 = 0;
-	g_ppmBlock[1] = SceSysmemForDriver_C94850C9("SceKernelPPM1", 0x1020d006, 0x10000, NULL);
+	g_ppmBlock[1] = sceKernelAllocMemBlockForKernel("SceKernelPPM1", 0x1020d006, 0x10000, NULL);
 	if (g_ppmBlock[1] < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 439, "sceKernelAllocMemBlockForKernel failed 0x%08x\n",
 				     g_ppmBlock[1]);
 		return;
 	}
-	if (SceSysmemForDriver_A841EDDA(g_ppmBlock[1], (void **)&g_ppm.base1) < 0)
+	if (sceKernelGetMemBlockBase(g_ppmBlock[1], (void **)&g_ppm.base1) < 0)
 		g_ppm.base1 = 0;
 }
 
@@ -6323,7 +6323,7 @@ static inline __attribute__((always_inline)) int ProcessmgrModuleStart(void)
 		return ret;
 	}
 	SCE_DBG_ASSERT_CHECK(1, 9699);
-	ret = SceSysmemForDriver_61317102(&g_processClass, "SceUIDProcessClass", SceSysmemForDriver_85336A1C(),
+	ret = sceUIDClassInitClass(&g_processClass, "SceUIDProcessClass", SceSysmemForDriver_85336A1C(),
 				    sizeof(SceProcessObject), (SceClassCallback)ProcessConstructor,
 				    (SceClassCallback)Destructor);
 	if (ret < 0) {

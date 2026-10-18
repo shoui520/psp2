@@ -39,11 +39,11 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo)
 	SceUID uid;
 	int res;
 
-	uid = SceSysmemForDriver_C94850C9("SceGpuBifReset",
+	uid = sceKernelAllocMemBlockForKernel("SceGpuBifReset",
 			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x3000, NULL);
 	if (uid < 0)
 		return PVRSRV_ERROR_OUT_OF_MEMORY;
-	res = SceSysmemForDriver_A841EDDA(uid, (IMG_VOID **)&pui32BIFResetPD);
+	res = sceKernelGetMemBlockBase(uid, (IMG_VOID **)&pui32BIFResetPD);
 	if (res < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &dbg_MMU_BIFResetPDAlloc_L25,
@@ -52,18 +52,18 @@ PVRSRV_ERROR MMU_BIFResetPDAlloc(PVRSRV_SGXDEV_INFO *psDevInfo)
 #endif
 		goto fail;
 	}
-	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD, &psDevInfo->sBIFResetPDDevPAddr.uiAddr);
+	res = sceKernelVAtoPA(pui32BIFResetPD, &psDevInfo->sBIFResetPDDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(32);
 		goto fail;
 	}
-	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD + 1024,
+	res = sceKernelVAtoPA(pui32BIFResetPD + 1024,
 			&psDevInfo->sBIFResetPTDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(38);
 		goto fail;
 	}
-	res = SceSysmemForDriver_8D160E65(pui32BIFResetPD + 2048,
+	res = sceKernelVAtoPA(pui32BIFResetPD + 2048,
 			&psDevInfo->sBIFResetPageDevPAddr.uiAddr);
 	if (res < 0) {
 		BIF_PHYS_ERROR(44);

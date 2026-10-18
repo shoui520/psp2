@@ -272,7 +272,7 @@ int ModulemgrLoadModule(SceModuleObject *obj, const char *path, SceUID fd, SceSe
 	}
 
 	for (i = 0; i < cb->nSegments; i++) {
-		ret = SceSysmemForDriver_4CFA4100(cb->segment[i].memblk, cb->name);
+		ret = sceGUIDSetName(cb->segment[i].memblk, cb->name);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1276, "ModulemgrRenameUID failed (0x%08x)\n", ret);
 			goto fail;
@@ -361,7 +361,7 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 	if (cb->pid != KERNEL_PID && (ModulemgrGetTPIDRURO() & 0x10000) == 0)
 		goto raise;
 	for (;;) {
-		thid = SceThreadmgrForDriver_C8E57BB4(pid, name, entry, prio, stack, attr, cpu, optp);
+		thid = sceKernelCreateRemoteThread(pid, name, entry, prio, stack, attr, cpu, optp);
 		if (thid >= 0) {
 			if (!userArgs)
 				ret = sceKernelStartThread(thid, args, argp);
@@ -596,7 +596,7 @@ int ModulemgrProcEventHandler(int event, int phase, void *param, void *common)
 /* name unknown */
 int ModulemgrReferProcessObject(SceUID pid)
 {
-	return SceSysmemForDriver_00ED6C14(pid, SceProcessmgrForKernel_98AE4BC8(), NULL);
+	return sceGUIDReferObjectWithClass(pid, SceProcessmgrForKernel_98AE4BC8(), NULL);
 }
 
 /* name unknown */
@@ -614,7 +614,7 @@ SceModuleObject *ModulemgrReferModule(SceUID modid)
 {
 	SceModuleObject *obj;
 
-	if (SceSysmemForDriver_00ED6C14(modid, g_moduleClass, (SceObjectBase **)&obj) < 0)
+	if (sceGUIDReferObjectWithClass(modid, g_moduleClass, (SceObjectBase **)&obj) < 0)
 		obj = NULL;
 	return obj;
 }

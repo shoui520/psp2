@@ -28,7 +28,7 @@ unsigned int copyFileGroupToUser(void *destination, unsigned int size,
 		copied = sizeof(info);
 	else
 		copied = size;
-	SceSysmemForDriver_6D88EF8A(destination, &info, copied);
+	sceKernelCopyToUser(destination, &info, copied);
 	return size - copied;
 }
 
@@ -149,7 +149,7 @@ int selectVideoFileGroup(int handle, const MagicGateFileIdentity *input)
 		return (int)0x8050c011;
 	if (!input)
 		return (int)0x8050c002;
-	SceSysmemForDriver_BC996A7A(&identity, input, sizeof(identity));
+	sceKernelCopyFromUser(&identity, input, sizeof(identity));
 	result = SceMagicGateForDriver_E62B8A67(context->fileHandle, &group, -1);
 	if (result < 0)
 		goto error;

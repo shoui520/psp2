@@ -59,11 +59,11 @@ void sceKernelL2CacheRemap(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PL310_REG_BASE;
-	block = SceSysmemForDriver_C94850C9("SceL2CacheReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	block = sceKernelAllocMemBlockForKernel("SceL2CacheReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 					0x1000, &opt);
 	if (block < 0)
 		SCE_PANIC(350);
-	SceSysmemForDriver_A841EDDA(block, &base);
+	sceKernelGetMemBlockBase(block, &base);
 	s_cpuL2RegisterBase = base;
 }
 #endif

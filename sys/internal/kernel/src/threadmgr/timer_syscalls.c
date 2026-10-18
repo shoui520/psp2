@@ -44,7 +44,7 @@ int _sceKernelCancelTimer(SceUID uid, uint32_t *count)
 	if (!count)
 		return cancelTimerForUser(uid, NULL);
 	result = cancelTimerForUser(uid, &completed);
-	copied = SceSysmemForDriver_6D88EF8A(count, &completed, 4);
+	copied = sceKernelCopyToUser(count, &completed, 4);
 	return copied < 0 ? copied : result;
 }
 
@@ -54,7 +54,7 @@ int _sceKernelCreateTimer(const char *name, uint32_t attributes, const uint32_t 
 	int result;
 
 	if (options) {
-		result = SceSysmemForDriver_BC996A7A(&copied, options, 4);
+		result = sceKernelCopyFromUser(&copied, options, 4);
 		if (result < 0)
 			return result;
 		options = &copied;
@@ -69,7 +69,7 @@ int _sceKernelSetTimerEvent(SceUID uid, uint32_t type, const uint64_t *interval,
 
 	if (!interval)
 		return setTimerEventForUser(uid, type, NULL, repeat);
-	result = SceSysmemForDriver_BC996A7A(&value, interval, 8);
+	result = sceKernelCopyFromUser(&value, interval, 8);
 	return result < 0 ? result : setTimerEventForUser(uid, type, &value, repeat);
 }
 
@@ -81,7 +81,7 @@ int _sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *output)
 	if (!output)
 		return getTimerEventRemainingTimeForUser(uid, NULL);
 	result = getTimerEventRemainingTimeForUser(uid, &value);
-	copied = SceSysmemForDriver_6D88EF8A(output, &value, 8);
+	copied = sceKernelCopyToUser(output, &value, 8);
 	return copied < 0 ? copied : result;
 }
 
@@ -91,7 +91,7 @@ int _sceKernelGetTimerInfo(SceUID uid, uint32_t *output, const uint32_t *options
 	SceKernelTimerInfo info;
 	int result, copied;
 
-	result = SceSysmemForDriver_BC996A7A(&args, options, sizeof(args));
+	result = sceKernelCopyFromUser(&args, options, sizeof(args));
 	if (result < 0)
 		return result;
 	if (!output)
@@ -99,11 +99,11 @@ int _sceKernelGetTimerInfo(SceUID uid, uint32_t *output, const uint32_t *options
 	if (args.size > sizeof(info))
 		return 0x8002710bu;
 	memset(&info, 0, sizeof(info));
-	result = SceSysmemForDriver_BC996A7A(&info, output, args.size);
+	result = sceKernelCopyFromUser(&info, output, args.size);
 	if (result < 0)
 		return result;
 	result = getTimerInfoForUser(uid, &info);
-	copied = SceSysmemForDriver_6D88EF8A(output, &info, args.size);
+	copied = sceKernelCopyToUser(output, &info, args.size);
 	return copied < 0 ? copied : result;
 }
 
@@ -115,7 +115,7 @@ int _sceKernelGetTimerBase(SceUID uid, uint64_t *userValue)
 	if (!userValue)
 		return getTimerBaseForUser(uid, NULL);
 	result = getTimerBaseForUser(uid, &value);
-	copied = SceSysmemForDriver_6D88EF8A(userValue, &value, sizeof(value));
+	copied = sceKernelCopyToUser(userValue, &value, sizeof(value));
 	return copied < 0 ? copied : result;
 }
 
@@ -127,7 +127,7 @@ int _sceKernelGetTimerTime(SceUID uid, uint64_t *userValue)
 	if (!userValue)
 		return getTimerTimeForUser(uid, NULL);
 	result = getTimerTimeForUser(uid, &value);
-	copied = SceSysmemForDriver_6D88EF8A(userValue, &value, sizeof(value));
+	copied = sceKernelCopyToUser(userValue, &value, sizeof(value));
 	return copied < 0 ? copied : result;
 }
 

@@ -205,7 +205,7 @@ static inline SceUID crashdumpMap(SceUInt32 phys)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = phys & 0xfff00000;
-	return SceSysmemForDriver_C94850C9("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, 2 * CRASHDUMP_WINDOW, &opt);
+	return sceKernelAllocMemBlockForKernel("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, 2 * CRASHDUMP_WINDOW, &opt);
 }
 
 /* name unknown */
@@ -223,10 +223,10 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 	int ret, ret2;
 	void *p;
 
-	uid = SceSysmemForDriver_C94850C9("SceCrashDumpBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, CRASHDUMP_BUF_SIZE, NULL);
+	uid = sceKernelAllocMemBlockForKernel("SceCrashDumpBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, CRASHDUMP_BUF_SIZE, NULL);
 	if (uid < 0)
 		return uid;
-	ret = SceSysmemForDriver_A841EDDA(uid, (void **)&buf);
+	ret = sceKernelGetMemBlockBase(uid, (void **)&buf);
 	if (ret < 0)
 		goto free;
 
@@ -360,7 +360,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 				ret = block;
 				goto fail;
 			}
-			ret = SceSysmemForDriver_A841EDDA(block, (void **)&map);
+			ret = sceKernelGetMemBlockBase(block, (void **)&map);
 			if (ret < 0) {
 				SceSysmemForDriver_009E1C61(block);
 				goto fail;
@@ -388,7 +388,7 @@ static int crashdumpWriteCore(const CrashdumpOps *ops, CrashdumpRecord *rec, con
 			block = crashdumpMap(phys);
 			if (block < 0)
 				return block;	/* (nothing closed or freed) */
-			ret = SceSysmemForDriver_A841EDDA(block, (void **)&map);
+			ret = sceKernelGetMemBlockBase(block, (void **)&map);
 			if (ret < 0) {
 				SceSysmemForDriver_009E1C61(block);
 				goto fail;
@@ -451,11 +451,11 @@ int module_start(SceSize args, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = crashdumpPhysBase();
-	uid = SceSysmemForDriver_C94850C9("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, CRASHDUMP_RECORD_SIZE, &opt);
+	uid = sceKernelAllocMemBlockForKernel("SceCrashDump", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW, CRASHDUMP_RECORD_SIZE, &opt);
 	if (uid < 0)
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	if (SceSysmemForDriver_A841EDDA(uid, (void **)&rec) < 0 ||
+	if (sceKernelGetMemBlockBase(uid, (void **)&rec) < 0 ||
 	    memcmp(rec, s_magic, sizeof(s_magic)) != 0 || rec->version != CRASHDUMP_RECORD_VER)
 		goto out;
 

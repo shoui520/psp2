@@ -93,10 +93,10 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_821FC0EE

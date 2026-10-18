@@ -18,7 +18,7 @@ SceKernelThreadMgr:
         - sceKernelLockMutex: 0x1059CCDD
         - SceThreadmgrForKernel_10853CCD: 0x10853CCD
         - sceKernelSetThreadMgrTestMode: 0x1394E856
-        - SceThreadmgrForKernel_15D6357C: 0x15D6357C
+        - sceKernelSuspendThread: 0x15D6357C
         - SceThreadmgrForKernel_16D1961A: 0x16D1961A
         - SceThreadmgrForKernel_170F69D6: 0x170F69D6
         - SceThreadmgrForKernel_19440C83: 0x19440C83
@@ -28,7 +28,7 @@ SceKernelThreadMgr:
         - sceKernelSignalSema: 0x21B25367
         - SceThreadmgrForKernel_392599F1: 0x392599F1
         - SceThreadmgrForKernel_444CE648: 0x444CE648
-        - SceThreadmgrForKernel_490DAF14: 0x490DAF14
+        - sceKernelResumeThread: 0x490DAF14
         - SceThreadmgrForDriver_E54FD746: 0x4BAA5F3B
         - sceKernelSetSyslibtraceThreadCBEnable: 0x4F2B45DC
         - SceThreadmgrForKernel_5075AE5E: 0x5075AE5E
@@ -51,7 +51,7 @@ SceKernelThreadMgr:
         - SceThreadmgrForKernel_8D53CA9B: 0x8D53CA9B
         - sceKernelSetThreadAccessLevel: 0x9461FC73
         - SceThreadmgrForKernel_9605DF7D: 0x9605DF7D
-        - SceThreadmgrForKernel_9928DFBA: 0x9928DFBA
+        - sceKernelStopThread: 0x9928DFBA
         - SceThreadmgrForKernel_A3975A5A: 0xA3975A5A
         - SceThreadmgrForKernel_A4D270F9: 0xA4D270F9
         - sceKernelDeleteSema: 0xA5ACE750
@@ -269,7 +269,7 @@ SceKernelThreadMgr:
         - sceKernelCreateThread: 0xC6674E7D
         - SceThreadmgrForDriver_C6741986: 0xC6741986
         - SceThreadmgrForDriver_C7F5FFE0: 0xC7F5FFE0
-        - SceThreadmgrForDriver_C8E57BB4: 0xC8E57BB4
+        - sceKernelCreateRemoteThread: 0xC8E57BB4
         - SceThreadmgrForDriver_C99DCF0D: 0xC99DCF0D
         - SceThreadmgrForDriver_CA704239: 0xCA704239
         - sceKernelGetTimerTime: 0xCB795E13

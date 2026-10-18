@@ -70,7 +70,7 @@ extern "C" int sceFiosKernelInit(SceSize args, void *argp)
 	SceKernelProcEventHandler handler;
 	int ret;
 
-	g_fiosPlsKey = SceProcessmgrForDriver_3801D7D6("SceFios",
+	g_fiosPlsKey = sceKernelRegisterKPLS("SceFios",
 							  sizeof(SceFiosKernelProcessStorage));
 	if (g_fiosPlsKey < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 78, "%d\n", g_fiosPlsKey);

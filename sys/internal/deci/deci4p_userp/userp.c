@@ -133,13 +133,13 @@ static int UserpCheckHostParam(UserpStrBuf *strbuf, const void *uparam, void *uo
 	char *p, c;
 	char *workDir = NULL;
 
-	if (uout == NULL || SceSysmemForDriver_9C78064C(0x20, uout, 0x20) < 0)
+	if (uout == NULL || sceKernelIsAccessibleRange(0x20, uout, 0x20) < 0)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
-	if (SceSysmemForDriver_BC996A7A(param, uparam, sizeof(*param)) < 0)
+	if (sceKernelCopyFromUser(param, uparam, sizeof(*param)) < 0)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 
 	if (param->pathName != NULL) {
-		if (SceSysmemForDriver_DB3EC244(strbuf->pathName, param->pathName, sizeof(strbuf->pathName)) < 0)
+		if (sceKernelStrncpyFromUser(strbuf->pathName, param->pathName, sizeof(strbuf->pathName)) < 0)
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		if (strbuf->pathName[sizeof(strbuf->pathName) - 1] != '\0')
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_PARAM;
@@ -154,7 +154,7 @@ static int UserpCheckHostParam(UserpStrBuf *strbuf, const void *uparam, void *uo
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_PARAM;
 	}
 	if (param->cmdLine != NULL) {
-		if (SceSysmemForDriver_DB3EC244(strbuf->cmdLine, param->cmdLine, sizeof(strbuf->cmdLine)) < 0)
+		if (sceKernelStrncpyFromUser(strbuf->cmdLine, param->cmdLine, sizeof(strbuf->cmdLine)) < 0)
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		if (strbuf->cmdLine[sizeof(strbuf->cmdLine) - 1] != '\0')
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_PARAM;
@@ -162,7 +162,7 @@ static int UserpCheckHostParam(UserpStrBuf *strbuf, const void *uparam, void *uo
 	}
 	if (param->workDir != NULL) {
 		workDir = strbuf->workDir;
-		if (SceSysmemForDriver_DB3EC244(workDir, param->workDir, sizeof(strbuf->workDir)) < 0)
+		if (sceKernelStrncpyFromUser(workDir, param->workDir, sizeof(strbuf->workDir)) < 0)
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		if (strbuf->workDir[sizeof(strbuf->workDir) - 1] != '\0')
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_PARAM;
@@ -370,7 +370,7 @@ static int UserpCloseProcess(SceUID pid)
 	for (i = 0; i < USERP_CHANNELS; i++) {
 		if (s_channel[i] == -1)
 			continue;
-		if (SceSysmemForDriver_00ED6C14(s_channel[i], s_class, (SceObjectBase **)&obj) < 0) {
+		if (sceGUIDReferObjectWithClass(s_channel[i], s_class, (SceObjectBase **)&obj) < 0) {
 			sceKernelUnlockMutex(s_mutex, 1);
 			return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 		}
@@ -443,15 +443,15 @@ int module_start(SceSize args, void *argp)
 		goto unregister;
 	s_mutex = uid;
 	memset(s_channel, -1, sizeof(s_channel));
-	s_class = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, 0x2c);
+	s_class = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, 0x2c);
 	if (s_class == NULL)
 		goto delete;
-	className = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, 0x20);
+	className = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, 0x20);
 	s_className = className;
 	if (className != NULL) {
 		strncpy(className, "SceUIDDeci4pUserpClass", 0x20);
 		parentClass = SceSysmemForDriver_85336A1C();
-		if (SceSysmemForDriver_61317102(s_class, className, parentClass,
+		if (sceUIDClassInitClass(s_class, className, parentClass,
 					  sizeof(UserpObject), NULL, NULL) >= 0)
 			return 0;
 	}
@@ -491,21 +491,21 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 		goto unlock;
 	}
 
-	if (SceSysmemForDriver_BC996A7A(kname, name, sizeof(kname) - 1) < 0) {
+	if (sceKernelCopyFromUser(kname, name, sizeof(kname) - 1) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		goto unlock;
 	}
 	kname[sizeof(kname) - 1] = '\0';
-	mb = SceSysmemForDriver_C94850C9(kname, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, USERP_STATE_SIZE, NULL);
+	mb = sceKernelAllocMemBlockForKernel(kname, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, USERP_STATE_SIZE, NULL);
 	if (mb < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_NO_MEMORY;
 		goto unlock;
 	}
-	if (SceSysmemForDriver_A841EDDA(mb, (void **)&st) < 0) {
+	if (sceKernelGetMemBlockBase(mb, (void **)&st) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 		goto unlock;
 	}
-	guid = SceSysmemForDriver_56A13E90(s_class, "SceKernelDeci4pUserpObject", (SceObjectBase **)&obj);
+	guid = sceGUIDKernelCreate(s_class, "SceKernelDeci4pUserpObject", (SceObjectBase **)&obj);
 	if (guid < 0) {
 		SceSysmemForDriver_009E1C61(mb);
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
@@ -534,14 +534,14 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 
 	if (ringSize < 0x10810)
 		ringSize += 0x10;
-	uid = SceSysmemForDriver_C94850C9("SceKernelDeci4pUserpRingBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceKernelDeci4pUserpRingBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 				      (ringSize + 0xfff) & ~0xfff, NULL);
 	if (uid < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_NO_MEMORY;
 		goto fail;
 	}
 	st->ringBlock = uid;
-	if (SceSysmemForDriver_A841EDDA(uid, (void **)&st->ring) < 0) {
+	if (sceKernelGetMemBlockBase(uid, (void **)&st->ring) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 		goto fail;
 	}
@@ -614,7 +614,7 @@ int sceKernelDeci4pClose(SceUID puid)
 			s_channel[i] = -1;
 	sceKernelUnlockMutex(s_mutex, 1);
 
-	if (SceSysmemForDriver_00ED6C14(guid, s_class, (SceObjectBase **)&obj) < 0)
+	if (sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0)
 		goto bad;
 	st = obj->state;
 	ret = sceKernelLockMutex(st->writeMutex, 1, NULL);
@@ -650,7 +650,7 @@ int sceKernelDeci4pRegisterCallback(SceUID puid, SceUID cbPuid)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_CBID;
 	}
 	guid = SceSysmemForDriver_45D22597(0, puid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, s_class, (SceObjectBase **)&obj) < 0) {
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
@@ -704,7 +704,7 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_RESERVED;
 	SYSCALL_ENTER(tid);
 	guid = SceSysmemForDriver_45D22597(0, puid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, s_class, (SceObjectBase **)&obj) < 0) {
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
@@ -770,14 +770,14 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 	if (used >= len) {
 		if (st->ringSize < st->readPos + len) {
 			n = st->ringSize - st->readPos;
-			count = SceSysmemForDriver_6D88EF8A(buf, st->ring + st->readPos, n);
+			count = sceKernelCopyToUser(buf, st->ring + st->readPos, n);
 			if (count == 0) {
-				count = SceSysmemForDriver_6D88EF8A((SceUInt8 *)buf + n, st->ring, len - n);
+				count = sceKernelCopyToUser((SceUInt8 *)buf + n, st->ring, len - n);
 				if (count == 0)
 					count = len;
 			}
 		} else {
-			count = SceSysmemForDriver_6D88EF8A(buf, st->ring + st->readPos, len);
+			count = sceKernelCopyToUser(buf, st->ring + st->readPos, len);
 			if (count >= 0)
 				count = len;
 		}
@@ -841,7 +841,7 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_RESERVED;
 	SYSCALL_ENTER(tid);
 	guid = SceSysmemForDriver_45D22597(0, puid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, s_class, (SceObjectBase **)&obj) < 0) {
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid, s_class, (SceObjectBase **)&obj) < 0) {
 		SYSCALL_LEAVE(tid);
 		return SCE_KERNEL_ERROR_DECI4P_ILLEGAL_SID;
 	}
@@ -870,7 +870,7 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 	st->pkt.sizeHi = len >> 16;
 	st->pkt.version = SCE_DECI4P_VERSION;
 	st->pkt.src = SCE_DECI4P_PORT_TARGET;
-	if (SceSysmemForDriver_BC996A7A(st->pkt.data, buf, size) < 0) {
+	if (sceKernelCopyFromUser(st->pkt.data, buf, size) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 		goto out;
 	}
@@ -950,15 +950,15 @@ int sceKernelDeci4pCreateHostProcess(const void *uparam, void *uout, SceUID cbPu
 	cb = SceSysmemForDriver_45D22597(0, cbPuid);
 	if (cb < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_CBID;
-	} else if (ustatus == NULL || SceSysmemForDriver_9C78064C(0x20, ustatus, 0x20) < 0) {
+	} else if (ustatus == NULL || sceKernelIsAccessibleRange(0x20, ustatus, 0x20) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 	} else {
-		mb = SceSysmemForDriver_C94850C9("SceKernelDeci4pUserpStrBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+		mb = sceKernelAllocMemBlockForKernel("SceKernelDeci4pUserpStrBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 					     USERP_STRBUF_SIZE, NULL);
 		if (mb < 0) {
 			ret = SCE_KERNEL_ERROR_DECI4P_NO_MEMORY;
 		} else {
-			if (SceSysmemForDriver_A841EDDA(mb, (void **)&strbuf) < 0) {
+			if (sceKernelGetMemBlockBase(mb, (void **)&strbuf) < 0) {
 				ret = SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 			} else {
 				ret = UserpCheckHostParam(strbuf, uparam, uout, &param, out);
@@ -966,7 +966,7 @@ int sceKernelDeci4pCreateHostProcess(const void *uparam, void *uout, SceUID cbPu
 					ret = SceSysrootForDriver_06436EF0(param.flags, param.pathName, param.cmdLine,
 									   param.workDir, &out[0], &out[1],
 									   cb, ustatus, 1);
-					c = SceSysmemForDriver_6D88EF8A(uout, out, sizeof(out));
+					c = sceKernelCopyToUser(uout, out, sizeof(out));
 					if (c < 0)
 						ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 				}
@@ -990,15 +990,15 @@ int sceKernelDeci4pCreateHostProcessAndWait(const void *uparam, void *uout, int 
 	int ret;
 
 	SYSCALL_ENTER(tid);
-	if (ustatus == NULL || SceSysmemForDriver_9C78064C(0x20, ustatus, 4) < 0) {
+	if (ustatus == NULL || sceKernelIsAccessibleRange(0x20, ustatus, 4) < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 	} else {
-		mb = SceSysmemForDriver_C94850C9("SceKernelDeci4pUserpStrBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
+		mb = sceKernelAllocMemBlockForKernel("SceKernelDeci4pUserpStrBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 					     USERP_STRBUF_SIZE, NULL);
 		if (mb < 0) {
 			ret = SCE_KERNEL_ERROR_DECI4P_NO_MEMORY;
 		} else {
-			if (SceSysmemForDriver_A841EDDA(mb, (void **)&strbuf) < 0) {
+			if (sceKernelGetMemBlockBase(mb, (void **)&strbuf) < 0) {
 				ret = SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 			} else {
 				ret = UserpCheckHostParam(strbuf, uparam, uout, &param, out);
@@ -1006,8 +1006,8 @@ int sceKernelDeci4pCreateHostProcessAndWait(const void *uparam, void *uout, int 
 					ret = SceSysrootForDriver_06436EF0(param.flags, param.pathName, param.cmdLine,
 									   param.workDir, &out[0], &out[1],
 									   -1, &status, 0);
-					if (SceSysmemForDriver_6D88EF8A(uout, out, sizeof(out)) < 0 ||
-					    SceSysmemForDriver_6D88EF8A(ustatus, &status, sizeof(status)) < 0)
+					if (sceKernelCopyToUser(uout, out, sizeof(out)) < 0 ||
+					    sceKernelCopyToUser(ustatus, &status, sizeof(status)) < 0)
 						ret = SCE_KERNEL_ERROR_DECI4P_ILLEGAL_ADDR;
 				}
 			}

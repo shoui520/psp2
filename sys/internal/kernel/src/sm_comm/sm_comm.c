@@ -190,12 +190,12 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	ret = eventFlag;
 	if (ret < 0)
 		goto cleanup;
-	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm7EB92BED", SM_MEMBLOCK_TYPE,
+	memBlock = sceKernelAllocMemBlockForKernel("SceSblSmComm7EB92BED", SM_MEMBLOCK_TYPE,
 		SM_BUFFER_SIZE, NULL);
 	ret = memBlock;
 	if (ret < 0)
 		goto cleanup;
-	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
+	ret = sceKernelGetMemBlockBase(memBlock, &base);
 	if (ret < 0)
 		goto cleanup;
 	originalBase = base;
@@ -214,7 +214,7 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 	*(volatile uint32_t *)base = *(volatile uint32_t *)base;
 	PublishWord(base);
 	vector.size = 0;
-	ret = SceSysmemForDriver_8D160E65(base, &vector.size);
+	ret = sceKernelVAtoPA(base, &vector.size);
 	if (ret < 0)
 		goto cleanup;
 	ret = sceSblSmSchedProxyInvoke(priority, vector.size, vector.total,
@@ -311,13 +311,13 @@ int SceSblSmCommForKernel_7863A0CC(SceUInt32 priority, const char *path,
 		ret = (uint32_t)position;
 		goto close;
 	}
-	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
+	memBlock = sceKernelAllocMemBlockForKernel("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
 		((uint32_t)fileSize + 0xfff) & ~0xfffU, NULL);
 	if (memBlock < 0) {
 		ret = SM_ERROR_BUFFER;
 		goto close;
 	}
-	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
+	ret = sceKernelGetMemBlockBase(memBlock, &base);
 	if (ret == 0) {
 		ret = sceIoRead(fd, base, fileSize);
 		if ((uint32_t)ret == (uint32_t)fileSize) {
@@ -361,13 +361,13 @@ int SceSblSmCommForKernel_039C73B1(SceUInt32 priority, const void *data,
 		ret = SM_ERROR_REQUEST;
 		goto release;
 	}
-	memBlock = SceSysmemForDriver_C94850C9("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
+	memBlock = sceKernelAllocMemBlockForKernel("SceSblSmComm8D26C678", SM_MEMBLOCK_TYPE,
 		(size + 0xfff) & ~0xfffU, NULL);
 	if (memBlock < 0) {
 		ret = SM_ERROR_BUFFER;
 		goto release;
 	}
-	ret = SceSysmemForDriver_A841EDDA(memBlock, &base);
+	ret = sceKernelGetMemBlockBase(memBlock, &base);
 	if (ret == 0) {
 		memcpy(base, data, size);
 		range.addr = (uintptr_t)base;
@@ -403,14 +403,14 @@ int SceSblSmCommForKernel_DB9FC204(SceSblSmCommId id, SceUInt32 service,
 		ret = SM_ERROR_BUFFER;
 		goto out;
 	}
-	ret = SceSysmemForDriver_A841EDDA(s_sessions[index].memBlock, (void **)&buffer);
+	ret = sceKernelGetMemBlockBase(s_sessions[index].memBlock, (void **)&buffer);
 	if (ret < 0)
 		goto out;
 	if ((uintptr_t)buffer & 3) {
 		ret = SM_ERROR_ALIGNMENT;
 		goto out;
 	}
-	ret = SceSysmemForDriver_8D160E65(buffer, &physicalAddress);
+	ret = sceKernelVAtoPA(buffer, &physicalAddress);
 	if (ret < 0)
 		goto out;
 	if (size != 0)

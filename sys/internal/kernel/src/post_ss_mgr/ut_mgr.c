@@ -518,7 +518,7 @@ int sceSblUtMgrUpdateUtoken(const void *utoken, SceSize size)
 		sceSyscallLeave(state);
 		return SCE_SBL_ERROR_UT_NO_MEMORY;
 	}
-	ret = SceSysmemForDriver_BC996A7A(kutoken, utoken, UT_SIZE);
+	ret = sceKernelCopyFromUser(kutoken, utoken, UT_SIZE);
 	if (ret == 0)
 		ret = SceSblPostSsMgrForDriver_C2E58CE3(kutoken, UT_SIZE);
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
@@ -547,7 +547,7 @@ int sceSblUtMgrReadUtoken(void *utoken, SceSize size)
 	}
 	ret = utMgrReadUtoken(kutoken, UT_SIZE);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(utoken, kutoken, UT_SIZE);
+		ret = sceKernelCopyToUser(utoken, kutoken, UT_SIZE);
 	sceKernelFreeHeapMemory(g_postSsMgrHeap, kutoken);
 	sceSyscallLeave(state);
 	return ret;
@@ -602,7 +602,7 @@ int sceSblUtMgrGetCurrentSecureTick(SceUInt32 *left)
 		sceSyscallLeave(state);
 		return ret;
 	}
-	ret = SceSysmemForDriver_6D88EF8A(left, &value, sizeof(value));
+	ret = sceKernelCopyToUser(left, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -626,7 +626,7 @@ int sceSblUtMgrIsTrilithiumFlagEnabled(char *flag, SceSize size)
 	}
 	if (size > sizeof(g_utMgrTrilithiumFlag))
 		size = sizeof(g_utMgrTrilithiumFlag);
-	ret = SceSysmemForDriver_6D88EF8A(flag, g_utMgrTrilithiumFlag, size);
+	ret = sceKernelCopyToUser(flag, g_utMgrTrilithiumFlag, size);
 	sceSyscallLeave(state);
 	return ret;
 }

@@ -32,7 +32,7 @@ SceDeci4pSDfMgr:
         - sceSDfMgrExClose: 0x90E8D453
         - SceDeci4pSDfMgrForKernel_98AEC60E: 0x98AEC60E
         - sceSDfMgrContinueSystem: 0x9A653F19
-        - SceDeci4pSDfMgrForKernel_A55F5F0D: 0xA55F5F0D
+        - sceSDfMgrOpen: 0xA55F5F0D
         - _threadSignal: 0xA963E333
         - SceDeci4pSDfMgrForKernel_B050A0D5: 0xB050A0D5
         - SceDeci4pSDfMgrForKernel_B22B42FB: 0xB22B42FB

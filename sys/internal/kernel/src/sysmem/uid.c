@@ -64,7 +64,7 @@ static int UIDDLinkDestroy(void *object)
 int SceSysmemForKernel_7CDB7655(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 				SceClassCallback create, SceClassCallback destroy)
 {
-	return SceSysmemForDriver_61317102(cls, name, uidclass, itemsize, create, destroy);
+	return sceUIDClassInitClass(cls, name, uidclass, itemsize, create, destroy);
 }
 
 /* name unknown */
@@ -658,7 +658,7 @@ int IsSafe(const void *address)
 		SCE_DBG_PRINTF(0xb, 176, "Invalid vbase=%p\n", address);
 		return 0;
 	}
-	return SceSysmemForDriver_8D160E65(address, &pa) >= 0;
+	return sceKernelVAtoPA(address, &pa) >= 0;
 }
 
 /* name unknown: vector add, an entry's info */
@@ -2116,7 +2116,7 @@ int SceSysmemForKernel_6D26B066(SceClass *pClass, const char *name, SceUInt32 at
 			  ((type << UID_ENTRY_ATTR_TYPE_SHIFT) & UID_ENTRY_ATTR_TYPE_MASK), ppEntry);
 }
 
-SceUID SceSysmemForDriver_56A13E90(SceClass *cls, const char *name, SceObjectBase **obj)
+SceUID sceGUIDKernelCreate(SceClass *cls, const char *name, SceObjectBase **obj)
 {
 	return SceSysmemForKernel_6D26B066(cls, name, UID_ENTRY_ATTR_LEVEL_DEFAULT, obj);
 }
@@ -2138,7 +2138,7 @@ int GUIDUnregisterChecked(SceUID guid)
 }
 
 /* sceGUIDSet */
-int SceSysmemForKernel_BF275C5A(SceUID guid, SceClass *cls, const char *name,
+int sceGUIDSet(SceUID guid, SceClass *cls, const char *name,
 				SceObjectBase *object)
 {
 	if (!UIDIsGUID(guid))
@@ -2350,14 +2350,14 @@ int sceGUIDClose(SceUID guid)
 	return GUIDClose(guid);
 }
 
-int SceSysmemForKernel_0E43E113(SceUID uid, SceClass *pClass, SceObjectBase **obj)
+int sceGUIDGetObjectWithClass(SceUID uid, SceClass *pClass, SceObjectBase **obj)
 {
 	if (!UIDIsGUID(uid))
 		return UID_ERROR_INVALID_UID;
 	return GUIDGetObjectWithClass(uid, pClass, obj);
 }
 
-int SceSysmemForDriver_0FC24464(SceUID guid, void *object)
+int sceGUIDGetObject(SceUID guid, void *object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2376,7 +2376,7 @@ SceUID SceSysmemForKernel_89BEF058(SceUID pid, SceUID heapGuid)
 	ret = SysrootPIDtoAddressSpaceCB(pid, &addressSpace);
 	if (ret < 0)
 		return ret;
-	ret = SceSysmemForDriver_0FC24464(heapGuid, &heap);
+	ret = sceGUIDGetObject(heapGuid, &heap);
 	if (ret < 0)
 		return ret;
 	entryHeap = HeapAllocLocked(heap, sizeof(*entryHeap));
@@ -2403,14 +2403,14 @@ SceUID SceSysmemForKernel_89BEF058(SceUID pid, SceUID heapGuid)
 }
 
 /* sceUIDEntryHeapCloseAllPUID */
-int SceSysmemForKernel_133024A5(SceUID guid)
+int sceUIDEntryHeapCloseAllPUID(SceUID guid)
 {
 	UIDEntryHeap *heap = NULL;
 	UIDEntryHeap *entryHeap;
 	UIDEntryHeap *walk;
 	int state, ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &heap);
+	ret = sceGUIDGetObject(guid, &heap);
 	if (ret < 0)
 		return ret;
 	entryHeap = heap;
@@ -2428,7 +2428,7 @@ int SceSysmemForKernel_F6D09BD9(SceUID guid)
 	void *kernelHeap;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(guid, &heap);
+	ret = sceGUIDGetObject(guid, &heap);
 	if (ret < 0)
 		return ret;
 	ret = GUIDUnregister(guid);
@@ -2460,7 +2460,7 @@ SceInt32 SceSysmemForKernel_CCD47B97(SceUID entryHeapId, void *pInfo)
 	if (entryHeapId == SCE_KERNEL_GUID_ENTRY_HEAP_ID) {
 		heap = GUID_ENTRY_HEAP();
 	} else {
-		ret = SceSysmemForDriver_0FC24464(entryHeapId, &heap);
+		ret = sceGUIDGetObject(entryHeapId, &heap);
 		if (ret < 0)
 			return ret;
 	}
@@ -2505,7 +2505,7 @@ SceUID sceGUIDKernelCreateWithOpt(SceClass *sce_class, const char *name, const U
 		heap = NULL;
 		object = opt->object;
 	} else if (flags & UID_CREATE_OPT_HEAP_GUID) {
-		if (SceSysmemForDriver_0FC24464(opt->heapGuid, &heap) < 0)
+		if (sceGUIDGetObject(opt->heapGuid, &heap) < 0)
 			heap = NULL;
 		flags = opt->flags;
 	} else if (flags & UID_CREATE_OPT_PROCESS_HEAP) {
@@ -2549,7 +2549,7 @@ SceUID SceSysmemForDriver_89A44858(SceClass *cls, const char *name, SceUID heapG
 	attr = ((cls->defaultObjectType << UID_ENTRY_ATTR_TYPE_SHIFT) & UID_ENTRY_ATTR_TYPE_MASK) |
 	       UID_ENTRY_ATTR_LEVEL_DEFAULT;
 	pid = SceSysrootForKernel_7385CADE();
-	return GUIDCreate(cls, name, pid, SceSysmemForDriver_0FC24464(heapGuid, &heap) < 0 ? NULL : heap, NULL,
+	return GUIDCreate(cls, name, pid, sceGUIDGetObject(heapGuid, &heap) < 0 ? NULL : heap, NULL,
 			  attr, obj);
 }
 
@@ -2590,7 +2590,7 @@ void *SceSysmemForKernel_FA6C098C(SceUID uid)
 {
 	void *object;
 
-	if (SceSysmemForDriver_0FC24464(uid, &object) < 0)
+	if (sceGUIDGetObject(uid, &object) < 0)
 		object = NULL;
 	return object;
 }
@@ -2641,7 +2641,7 @@ int SceSysmemForKernel_E8CC2166(SceUID guid, SceUInt32 level)
 	return ret;
 }
 
-int SceSysmemForDriver_A78755EB(SceUID guid, const char **name)
+int sceGUIDGetName(SceUID guid, const char **name)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2704,7 +2704,7 @@ int sceGUIDSetPID(SceUID guid, SceUID pid)
 	return ret;
 }
 
-int SceSysmemForDriver_4CFA4100(SceUID guid, const char *name)
+int sceGUIDSetName(SceUID guid, const char *name)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2738,14 +2738,14 @@ int GUIDApplyWithClass(SceUID guid, SceClass *cls, int (*func)(SceObjectBase *ob
 	return ret;
 }
 
-int SceSysmemForDriver_0F5C84B7(SceUID guid, SceObjectBase **object)
+int sceGUIDReferObject(SceUID guid, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
 	return GUIDReferObjectClassCheckCommon(guid, 0, NULL, 7, 0, object);
 }
 
-int SceSysmemForDriver_00ED6C14(SceUID guid, SceClass *sce_class, SceObjectBase **object)
+int sceGUIDReferObjectWithClass(SceUID guid, SceClass *sce_class, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2760,7 +2760,7 @@ int GUIDReferObjectWithClassExclusive(SceUID guid, SceClass *cls, SceObjectBase 
 	return GUIDReferObjectClassCheckCommon(guid, 1, cls, 7, 1, object);
 }
 
-int SceSysmemForDriver_F6DB54BA(SceUID guid, SceUInt32 level, SceObjectBase **object)
+int sceGUIDReferObjectWithLevel(SceUID guid, SceUInt32 level, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2769,7 +2769,7 @@ int SceSysmemForDriver_F6DB54BA(SceUID guid, SceUInt32 level, SceObjectBase **ob
 	return GUIDReferObjectClassCheckCommon(guid, 0, NULL, level, 0, object);
 }
 
-int SceSysmemForDriver_77066FD1(SceUID guid, SceClass *pClass, SceUInt32 level,
+int sceGUIDReferObjectWithClassLevel(SceUID guid, SceClass *pClass, SceUInt32 level,
 				      SceObjectBase **entry)
 {
 	if (!UIDIsGUID(guid))
@@ -2779,7 +2779,7 @@ int SceSysmemForDriver_77066FD1(SceUID guid, SceClass *pClass, SceUInt32 level,
 	return GUIDReferObjectClassCheckCommon(guid, 1, pClass, level, 0, entry);
 }
 
-int SceSysmemForDriver_72A98D17(SceUID guid, SceClass *cls, SceObjectBase **object)
+int sceGUIDReferObjectWithSubclass(SceUID guid, SceClass *cls, SceObjectBase **object)
 {
 	if (!UIDIsGUID(guid))
 		return UID_ERROR_INVALID_UID;
@@ -2860,7 +2860,7 @@ out:
 	return ret;
 }
 
-int SceSysmemForKernel_52137FA3(SceClass *cls, int vis_level, SceUID *vector, SceSize num,
+int sceGUIDGetUIDVectorByClass(SceClass *cls, int vis_level, SceUID *vector, SceSize num,
 				SceSize *ret_num)
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
@@ -2998,7 +2998,7 @@ int sceGUIDGetEntryInfoClass(SceClass *cls, SceUInt32 level, SceUInt32 reserved,
 }
 
 /* sceGUIDGetEntry */
-int SceSysmemForKernel_FF464A49(SceUID guid, UIDEntry **out)
+int sceGUIDGetEntry(SceUID guid, UIDEntry **out)
 {
 	UIDEntryHeap *heap = GUID_ENTRY_HEAP();
 	int state, ret;
@@ -3490,7 +3490,7 @@ int SceSysmemForKernel_857701D4(SceUID pid, SceUID puid, SceKernelPUIDInfo *info
 }
 
 /* PUIDGetUIDVectorByClass */
-int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector,
+int scePUIDGetUIDVectorByClass(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector,
 				SceSize num, SceSize *ret_num)
 {
 	UIDEntryHeap *heap;
@@ -3576,7 +3576,7 @@ int sceUIDEntryHeapSetHook(SceUID guid, FixedHeapObjectHook *hook)
 	UIDEntryHeap *heap;
 	int ret;
 
-	ret = SceSysmemForKernel_0E43E113(guid, &s_entryHeapClass->heapClass.cls,
+	ret = sceGUIDGetObjectWithClass(guid, &s_entryHeapClass->heapClass.cls,
 					 (SceObjectBase **)&heap);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 8460, "sceGUIDGetObjectWithClass(0x%08x) failed 0x%08x\n", guid,

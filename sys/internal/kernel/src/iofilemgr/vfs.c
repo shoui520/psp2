@@ -680,7 +680,7 @@ int restore_ncache(SceVfsVnode *dvp, SceVfsVnode *vp, const VfsPathElem *elem, S
 		name.name = buf;
 		name.len = len;
 	}
-	newName = SceSysmemForDriver_7B4CB60A(heap, name.len + 1);
+	newName = sceKernelAllocHeapMemory(heap, name.len + 1);
 	if (newName == NULL) {
 		vfs_path_buff_free(buf);
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -1865,7 +1865,7 @@ int vfsInitialize(void)
 		return ret;
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_vfsNcacheHeap = SceSysmemForDriver_9328E0E8("SceIoVfsHeap", 0x1f000, &opt);
+	g_vfsNcacheHeap = sceKernelCreateHeap("SceIoVfsHeap", 0x1f000, &opt);
 	if (g_vfsNcacheHeap < 0) {
 		SCE_DBG_PRINTF(0xf, 566, "create heap failed ... %d\n", g_vfsNcacheHeap);
 		return g_vfsNcacheHeap;
@@ -3984,7 +3984,7 @@ int vfs_system_event_handler(int resume, int eventid, void *args, void *opt)
 			g_vfsSuspended++;
 			pid = SceSysrootForDriver_05093E7B();
 			if (pid >= 0) {
-				num = SceSysmemForKernel_08C05493(pid, &g_vfsFileClass, 7, NULL, 0,
+				num = scePUIDGetUIDVectorByClass(pid, &g_vfsFileClass, 7, NULL, 0,
 								  NULL);
 				if (num < 0) {
 					SCE_DBG_PRINTF(0xf, 7803,

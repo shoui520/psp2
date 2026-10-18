@@ -220,7 +220,7 @@ int GcAuthPsmactBeginActivation(const GcAuthPsmactBeginActivationRequest *reques
 		&gcAuthActivationWorkspace.challenge, &gcAuthActivationRandom.psmact);
 	if (result != 0)
 		goto finishPsm;
-	copyResult = SceSysmemForDriver_6D88EF8A(output,
+	copyResult = sceKernelCopyToUser(output,
 		&gcAuthActivationWorkspace.challenge, sizeof(*output));
 	if (copyResult < 0) {
 		result = copyResult;

@@ -20,11 +20,11 @@ int audioInitializeSpdif(void)
 		option.size = sizeof(option);
 		option.paddr = SPDIF_REG_BASE;
 		option.attr = 2;
-		result = SceSysmemForDriver_C94850C9("SceSpdifReg", 0x20100806,
+		result = sceKernelAllocMemBlockForKernel("SceSpdifReg", 0x20100806,
 			SPDIF_REG_SIZE, &option);
 		if (result < 0)
 			return result;
-		SceSysmemForDriver_A841EDDA(result, (void **)&audioSpdifRegisters);
+		sceKernelGetMemBlockBase(result, (void **)&audioSpdifRegisters);
 		registers = audioSpdifRegisters;
 	}
 	ScePervasiveForDriver_6B5DEDA2();

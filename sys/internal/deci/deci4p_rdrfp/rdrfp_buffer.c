@@ -49,13 +49,13 @@ int rdrfpInitBufferTable(void)
 		table->evf = ret;
 		for (i = 0; i < table->count; i++) {
 			snprintf(name, sizeof(name), "SceDeci4pRDrfpMemBlock%s%d", rdrfpBufferNames[type], i);
-			ret = SceSysmemForDriver_C94850C9(name, 0x10f0d006, table->size, NULL);
+			ret = sceKernelAllocMemBlockForKernel(name, 0x10f0d006, table->size, NULL);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 103, "AllocMemBlockForKernel failed (0x%08X)\n", ret);
 				goto failed;
 			}
 			table->buffers[i].block = ret;
-			ret = SceSysmemForDriver_A841EDDA(ret, &table->buffers[i].base);
+			ret = sceKernelGetMemBlockBase(ret, &table->buffers[i].base);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 113, "GetMemBlockBase failed (0x%08X)\n", ret);
 				goto failed;

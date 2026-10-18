@@ -21,17 +21,17 @@ int sceCameraOpen(int devnum, SceCameraInfo *pInfo)
 	if ((devnum & ~1u) != 0 || pInfo == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
 	info = __builtin_alloca(sizeof(*info));
-	result = SceSysmemForDriver_BC996A7A(info, pInfo, sizeof(info->sizeThis));
+	result = sceKernelCopyFromUser(info, pInfo, sizeof(info->sizeThis));
 	if (result < 0)
 		return result;
 	size = info->sizeThis;
 	if (size - 0x28 > 8)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(info, pInfo, size);
+	result = sceKernelCopyFromUser(info, pInfo, size);
 	if (result < 0)
 		return result;
 	driverResult = SceCameraForDriver_E487870A(devnum, info);
-	result = SceSysmemForDriver_6D88EF8A(pInfo, info, size);
+	result = sceKernelCopyToUser(pInfo, info, size);
 	return result < 0 ? result : driverResult;
 }
 
@@ -66,17 +66,17 @@ int sceCameraRead(int devnum, SceCameraRead *pRead)
 		return SCE_CAMERA_ERROR_PARAM;
 	/* The kernel accepts the extended 0x48-byte read parameter. */
 	read = __builtin_alloca(0x48);
-	result = SceSysmemForDriver_BC996A7A(read, pRead, sizeof(read->sizeThis));
+	result = sceKernelCopyFromUser(read, pRead, sizeof(read->sizeThis));
 	if (result < 0)
 		return result;
 	size = read->sizeThis;
 	if (size - 0x18 > 0x30)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(read, pRead, size);
+	result = sceKernelCopyFromUser(read, pRead, size);
 	if (result < 0)
 		return result;
 	driverResult = SceCameraForDriver_2D12FDF3(devnum, read);
-	result = SceSysmemForDriver_6D88EF8A(pRead, read, size);
+	result = sceKernelCopyToUser(pRead, read, size);
 	return result < 0 ? result : driverResult;
 }
 
@@ -94,13 +94,13 @@ int sceCameraGetDeviceLocation(int devnum, SceFVector3 *pLocation)
 
 	if ((devnum & ~1u) != 0 || pLocation == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&location, pLocation, sizeof(location));
+	result = sceKernelCopyFromUser(&location, pLocation, sizeof(location));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_EE3D4B1C(devnum, &location);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLocation, &location, sizeof(location));
+	result = sceKernelCopyToUser(pLocation, &location, sizeof(location));
 	return result < 0 ? result : 0;
 }
 
@@ -110,13 +110,13 @@ int sceCameraGetSaturation(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0a, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -133,14 +133,14 @@ int sceCameraGetBrightness(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0b, &level, 0);
 	if (result < 0)
 		return result;
 	level = (unsigned char)level;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -157,14 +157,14 @@ int sceCameraGetContrast(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0c, &level, 0);
 	if (result < 0)
 		return result;
 	level = (unsigned char)level;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -181,13 +181,13 @@ int sceCameraGetSharpness(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0d, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -204,13 +204,13 @@ int sceCameraGetReverse(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0e, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -227,13 +227,13 @@ int sceCameraGetEffect(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x0f, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -250,13 +250,13 @@ int sceCameraGetEV(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x10, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -273,13 +273,13 @@ int sceCameraGetZoom(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x11, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -296,13 +296,13 @@ int sceCameraGetAntiFlicker(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x12, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -319,13 +319,13 @@ int sceCameraGetISO(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x14, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -356,13 +356,13 @@ int sceCameraGetWhiteBalance(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x16, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -379,13 +379,13 @@ int sceCameraGetBacklight(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x17, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -402,13 +402,13 @@ int sceCameraGetNightmode(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x18, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -430,13 +430,13 @@ int sceCameraGetNoiseReduction(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_FE3C170C(devnum, 0x19, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -453,13 +453,13 @@ int sceCameraGetSharpnessOff(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_FE3C170C(devnum, 0x0d, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 
@@ -476,13 +476,13 @@ int sceCameraGetAutoControlHold(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x1a, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -499,13 +499,13 @@ int sceCameraGetExposureCeiling(int devnum, int *pMode)
 
 	if ((devnum & ~1u) != 0 || pMode == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&mode, pMode, sizeof(mode));
+	result = sceKernelCopyFromUser(&mode, pMode, sizeof(mode));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x1b, &mode, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pMode, &mode, sizeof(mode));
+	result = sceKernelCopyToUser(pMode, &mode, sizeof(mode));
 	return result < 0 ? result : 0;
 }
 
@@ -522,13 +522,13 @@ int sceCameraGetImageQuality(int devnum, int *pLevel)
 
 	if ((devnum & ~1u) != 0 || pLevel == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
-	result = SceSysmemForDriver_BC996A7A(&level, pLevel, sizeof(level));
+	result = sceKernelCopyFromUser(&level, pLevel, sizeof(level));
 	if (result < 0)
 		return result;
 	result = SceCameraForDriver_C2E71BE8(devnum, 0x1c, &level, 0);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_6D88EF8A(pLevel, &level, sizeof(level));
+	result = sceKernelCopyToUser(pLevel, &level, sizeof(level));
 	return result < 0 ? result : 0;
 }
 

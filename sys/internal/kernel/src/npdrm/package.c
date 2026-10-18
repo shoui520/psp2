@@ -914,28 +914,28 @@ __attribute__((noinline)) int NpDrmPackageSetAesWorkspace(void *workspace,
 	result = _call(kernelActType, kernelVersionFlag, kernelAccountId, \
 		kernelStartTime, kernelExpirationTime); \
 	if (actType) { \
-		ret = SceSysmemForDriver_6D88EF8A(actType, kernelActType, sizeof(*actType)); \
+		ret = sceKernelCopyToUser(actType, kernelActType, sizeof(*actType)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (versionFlag) { \
-		ret = SceSysmemForDriver_6D88EF8A(versionFlag, kernelVersionFlag, sizeof(*versionFlag)); \
+		ret = sceKernelCopyToUser(versionFlag, kernelVersionFlag, sizeof(*versionFlag)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (accountId) { \
-		ret = SceSysmemForDriver_6D88EF8A(accountId, kernelAccountId, sizeof(*accountId)); \
+		ret = sceKernelCopyToUser(accountId, kernelAccountId, sizeof(*accountId)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (args.startTime) { \
-		ret = SceSysmemForDriver_6D88EF8A(args.startTime, kernelStartTime, \
+		ret = sceKernelCopyToUser(args.startTime, kernelStartTime, \
 			sizeof(*args.startTime)); \
 		if (ret < 0) \
 			return ret; \
 	} \
 	if (args.expirationTime) \
-		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.expirationTime, \
+		return copyResult(result, sceKernelCopyToUser(args.expirationTime, \
 			kernelExpirationTime, sizeof(*args.expirationTime))); \
 	return result; \
 
@@ -1012,47 +1012,47 @@ int _sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int license_siz
 		kernel.license_flags, kernel.flags, kernel.sku_flags,
 		kernel.lic_start_time, kernel.lic_exp_time, kernel.flags2);
 	if (args.content_id) {
-		ret = SceSysmemForDriver_6D88EF8A(args.content_id, kernel.content_id, 48);
+		ret = sceKernelCopyToUser(args.content_id, kernel.content_id, 48);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.account_id) {
-		ret = SceSysmemForDriver_6D88EF8A(args.account_id, kernel.account_id, 8);
+		ret = sceKernelCopyToUser(args.account_id, kernel.account_id, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.license_version) {
-		ret = SceSysmemForDriver_6D88EF8A(args.license_version, kernel.license_version, 4);
+		ret = sceKernelCopyToUser(args.license_version, kernel.license_version, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.license_flags) {
-		ret = SceSysmemForDriver_6D88EF8A(args.license_flags, kernel.license_flags, 4);
+		ret = sceKernelCopyToUser(args.license_flags, kernel.license_flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.flags) {
-		ret = SceSysmemForDriver_6D88EF8A(args.flags, kernel.flags, 4);
+		ret = sceKernelCopyToUser(args.flags, kernel.flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.sku_flags) {
-		ret = SceSysmemForDriver_6D88EF8A(args.sku_flags, kernel.sku_flags, 4);
+		ret = sceKernelCopyToUser(args.sku_flags, kernel.sku_flags, 4);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.lic_start_time) {
-		ret = SceSysmemForDriver_6D88EF8A(args.lic_start_time, kernel.lic_start_time, 8);
+		ret = sceKernelCopyToUser(args.lic_start_time, kernel.lic_start_time, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.lic_exp_time) {
-		ret = SceSysmemForDriver_6D88EF8A(args.lic_exp_time, kernel.lic_exp_time, 8);
+		ret = sceKernelCopyToUser(args.lic_exp_time, kernel.lic_exp_time, 8);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.flags2)
-		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.flags2,
+		return copyResult(result, sceKernelCopyToUser(args.flags2,
 			kernel.flags2, 8));
 	return result;
 }
@@ -1087,7 +1087,7 @@ int _sceNpDrmGetRifNameForInstall(char *rif_name,
 	BLOCK_IN(kernelLicense, license, sizeof(*kernelLicense));
 	ret = NpDrmGetRifNameForInstall(kernelName, kernelLicense, is_fixed);
 	if (rif_name)
-		return copyResult(ret, SceSysmemForDriver_6D88EF8A(rif_name, kernelName, 48));
+		return copyResult(ret, sceKernelCopyToUser(rif_name, kernelName, 48));
 	return ret;
 }
 
@@ -1118,11 +1118,11 @@ int _sceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license)
 		return NpDrmPresetRifProvisionalFlag(NULL);
 	kernelLicense = __builtin_alloca(sizeof(*kernelLicense));
 	memset(kernelLicense, 0, sizeof(*kernelLicense));
-	ret = SceSysmemForDriver_BC996A7A(kernelLicense, license, sizeof(*kernelLicense));
+	ret = sceKernelCopyFromUser(kernelLicense, license, sizeof(*kernelLicense));
 	if (ret < 0)
 		return ret;
 	ret = NpDrmPresetRifProvisionalFlag(kernelLicense);
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(license, kernelLicense,
+	return copyResult(ret, sceKernelCopyToUser(license, kernelLicense,
 		sizeof(*kernelLicense)));
 }
 
@@ -1255,23 +1255,23 @@ int scePsmDrmGetRifInfo(const ScePsmDrmLicense *license, char *contentId,
 	result = PsmDrmGetRifInfo(kernelLicense, kernelContentId, kernelAccountId,
 		kernelStartTime, kernelExpirationTime);
 	if (contentId) {
-		ret = SceSysmemForDriver_6D88EF8A(contentId, kernelContentId, 48);
+		ret = sceKernelCopyToUser(contentId, kernelContentId, 48);
 		if (ret < 0)
 			return ret;
 	}
 	if (accountId) {
-		ret = SceSysmemForDriver_6D88EF8A(accountId, kernelAccountId, sizeof(*accountId));
+		ret = sceKernelCopyToUser(accountId, kernelAccountId, sizeof(*accountId));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.startTime) {
-		ret = SceSysmemForDriver_6D88EF8A(args.startTime, kernelStartTime,
+		ret = sceKernelCopyToUser(args.startTime, kernelStartTime,
 			sizeof(*args.startTime));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.expirationTime)
-		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.expirationTime,
+		return copyResult(result, sceKernelCopyToUser(args.expirationTime,
 			kernelExpirationTime, sizeof(*args.expirationTime)));
 	return result;
 }
@@ -1297,7 +1297,7 @@ int scePsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license)
 	BLOCK_IN(kernelLicense, license, sizeof(*kernelLicense));
 	ret = PsmDrmGetRifNameForInstall(kernelName, kernelLicense);
 	if (name)
-		return copyResult(ret, SceSysmemForDriver_6D88EF8A(name, kernelName, 48));
+		return copyResult(ret, sceKernelCopyToUser(name, kernelName, 48));
 	return ret;
 }
 
@@ -1334,23 +1334,23 @@ int scePsmDrmGetRifKey(const ScePsmDrmLicense *license_buf,
 	result = PsmDrmGetRifKey(kernelLicense, kernelKeydata, kernelFlags,
 		kernelStartTime, kernelExpirationTime);
 	if (keydata) {
-		ret = SceSysmemForDriver_6D88EF8A(keydata, kernelKeydata, sizeof(*keydata));
+		ret = sceKernelCopyToUser(keydata, kernelKeydata, sizeof(*keydata));
 		if (ret < 0)
 			return ret;
 	}
 	if (flags) {
-		ret = SceSysmemForDriver_6D88EF8A(flags, kernelFlags, sizeof(*flags));
+		ret = sceKernelCopyToUser(flags, kernelFlags, sizeof(*flags));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.start_date) {
-		ret = SceSysmemForDriver_6D88EF8A(args.start_date, kernelStartTime,
+		ret = sceKernelCopyToUser(args.start_date, kernelStartTime,
 			sizeof(*args.start_date));
 		if (ret < 0)
 			return ret;
 	}
 	if (args.end_date)
-		return copyResult(result, SceSysmemForDriver_6D88EF8A(args.end_date,
+		return copyResult(result, sceKernelCopyToUser(args.end_date,
 			kernelExpirationTime, sizeof(*args.end_date)));
 	return result;
 }
@@ -1452,13 +1452,13 @@ int _sceNpDrmPackageTransform(void *buffer, unsigned int size,
 	if (context) {
 		kernelContext = __builtin_alloca(sizeof(*kernelContext));
 		*kernelContext = (SceSblDmac5HashTransformContext){ 0 };
-		ret = SceSysmemForDriver_BC996A7A(kernelContext, context,
+		ret = sceKernelCopyFromUser(kernelContext, context,
 			sizeof(*kernelContext));
 		if (ret < 0)
 			return ret;
 		result = NpDrmPackageTransformForUser(buffer, size, kernelContext,
 			flags);
-		return copyResult(result, SceSysmemForDriver_6D88EF8A(context,
+		return copyResult(result, sceKernelCopyToUser(context,
 			kernelContext, sizeof(*kernelContext)));
 	}
 	return NpDrmPackageTransformForUser(buffer, size, NULL, flags);

@@ -771,7 +771,7 @@ static int initializePhysical(void *args) /* name unknown */
 	touch.state = 2;
 	touch.sysHandler = sceKernelRegisterSysEventHandler("SceTouch", systemEvent, NULL);
 	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, 0);
-	touch.plsId = SceProcessmgrForDriver_3801D7D6("SceTouch", sizeof(struct touchProcess));
+	touch.plsId = sceKernelRegisterKPLS("SceTouch", sizeof(struct touchProcess));
 	if (touch.plsId >= 0) {
 		createPhysicalProcess(0x10005);
 		createVirtualProcess(0x10005);
@@ -815,7 +815,7 @@ int module_start(unsigned arglen, void *argp)
 			break;
 	}
 	pad.lock = 0;
-	pad.plsId = SceProcessmgrForDriver_3801D7D6("SceTouchPad", sizeof(struct virtualProcess));
+	pad.plsId = sceKernelRegisterKPLS("SceTouchPad", sizeof(struct virtualProcess));
 	if (pad.plsId < 0)
 		return 2;
 	storage.readMutex = -1;
@@ -1337,7 +1337,7 @@ static int userRead(unsigned port, void *out, unsigned count, unsigned regions,
 		if (ret >= 0) {
 			ret = readPhysical(port, buffer, count, regions, kind, peek);
 			if (ret > 0) {
-				copied = SceSysmemForDriver_6D88EF8A(out, buffer, ret * 0x90);
+				copied = sceKernelCopyToUser(out, buffer, ret * 0x90);
 				if (copied < 0) {
 					sceKernelUnlockMutex(mutex, 1);
 					sceSyscallLeave(t);
@@ -1411,7 +1411,7 @@ static int userGetSampling(unsigned port, void *out, unsigned kind) /* name unkn
 	t = sceSyscallEnter();
 	ret = getSampling(port, &value, kind);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_6D88EF8A(out, &value, 4);
+		ret = sceKernelCopyToUser(out, &value, 4);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1466,7 +1466,7 @@ int sceTouchGetPanelInfo(SceUInt32 port, SceTouchPanelInfo *out)
 	t = sceSyscallEnter();
 	ret = SceTouchForDriver_937DB4C0(port, &info);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_6D88EF8A(out, &info, 0x30);
+		ret = sceKernelCopyToUser(out, &info, 0x30);
 	sceSyscallLeave(t);
 	return ret;
 }
@@ -1480,9 +1480,9 @@ int sceTouchGetPixelDensity(void *front, void *back)
 	if (front && back) {
 		ret = getPixelDensity(&values[0], &values[1]);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(front, &values[0], 4);
+			ret = sceKernelCopyToUser(front, &values[0], 4);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(back, &values[1], 4);
+			ret = sceKernelCopyToUser(back, &values[1], 4);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1497,13 +1497,13 @@ int sceTouchGetPixelDensity2(void *frontX, void *frontY, void *backX, void *back
 	if (frontX && frontY && backX && backY) {
 		ret = getPixelDensity2(&values[0], &values[1], &values[2], &values[3]);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(frontX, &values[0], 4);
+			ret = sceKernelCopyToUser(frontX, &values[0], 4);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(frontY, &values[1], 4);
+			ret = sceKernelCopyToUser(frontY, &values[1], 4);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(backX, &values[2], 4);
+			ret = sceKernelCopyToUser(backX, &values[2], 4);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(backY, &values[3], 4);
+			ret = sceKernelCopyToUser(backY, &values[3], 4);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1518,7 +1518,7 @@ int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned
 	if (!rect)
 		return TOUCH_ERROR(1);
 	t = sceSyscallEnter();
-	ret = SceSysmemForDriver_BC996A7A(copy, rect, 8);
+	ret = sceKernelCopyFromUser(copy, rect, 8);
 	if (!ret)
 		ret = SceTouchForDriver_7985B164(port, region, copy, attr);
 	sceSyscallLeave(t);
@@ -1573,7 +1573,7 @@ int sceTouchGetProcessInfo(unsigned port, void *out, unsigned unk)
 	if (out) {
 		ret = SceTouchForDriver_4DF3A37C(port, info, unk);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(out, info, sizeof(info));
+			ret = sceKernelCopyToUser(out, info, sizeof(info));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1599,7 +1599,7 @@ int sceTouchGetDeviceInfo(unsigned port, void *out)
 	if (sceSblACMgrIsSystemProgram(0)) {
 		ret = SceTouchForDriver_FD2E0278(port, &info);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(out, &info, 12);
+			ret = sceKernelCopyToUser(out, &info, 12);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1655,7 +1655,7 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 		}
 		if (!peek && available)
 			ring->reader = ring->writeIndex;
-		copied = SceSysmemForDriver_6D88EF8A(out, storage.virtualBuffer, count * 0x90);
+		copied = sceKernelCopyToUser(out, storage.virtualBuffer, count * 0x90);
 		if (copied > 0)
 			SceDebugForDriver_391B74B7("error!\n");
 		if (process->state == 4)

@@ -1325,7 +1325,7 @@ int ds3AllocateRequests(Ds3Device *controller)
 	int index;
 
 	for (index = 0; index < 2; index++) {
-		request = SceSysmemForDriver_7B4CB60A(ds3State.heap, sizeof(*request));
+		request = sceKernelAllocHeapMemory(ds3State.heap, sizeof(*request));
 		if (request != NULL)
 			memset(request, 0, sizeof(*request));
 		controller->inputRequests[index] = request;
@@ -1336,7 +1336,7 @@ int ds3AllocateRequests(Ds3Device *controller)
 			memset(buffer, 0, 64);
 		request->buffer = buffer;
 	}
-	request = SceSysmemForDriver_7B4CB60A(ds3State.heap, sizeof(*request));
+	request = sceKernelAllocHeapMemory(ds3State.heap, sizeof(*request));
 	if (request != NULL)
 		memset(request, 0, sizeof(*request));
 	controller->outputRequests[0] = request;
@@ -1356,21 +1356,21 @@ int ds3AllocateBluetoothRequests(Ds3Device *controller)
 	int index;
 
 	for (index = 0; index < 2; index++) {
-		request = SceSysmemForDriver_7B4CB60A(ds3State.heap, sizeof(*request));
+		request = sceKernelAllocHeapMemory(ds3State.heap, sizeof(*request));
 		if (request != NULL)
 			memset(request, 0, sizeof(*request));
 		controller->inputRequests[index] = request;
-		buffer = SceSysmemForDriver_7B4CB60A(ds3State.heap, 80);
+		buffer = sceKernelAllocHeapMemory(ds3State.heap, 80);
 		if (buffer != NULL)
 			memset(buffer, 0, 80);
 		request->buffer = buffer;
 	}
 	for (index = 0; index < 2; index++) {
-		request = SceSysmemForDriver_7B4CB60A(ds3State.heap, sizeof(*request));
+		request = sceKernelAllocHeapMemory(ds3State.heap, sizeof(*request));
 		if (request != NULL)
 			memset(request, 0, sizeof(*request));
 		controller->outputRequests[index] = request;
-		buffer = SceSysmemForDriver_7B4CB60A(ds3State.heap, 80);
+		buffer = sceKernelAllocHeapMemory(ds3State.heap, 80);
 		if (buffer != NULL)
 			memset(buffer, 0, 80);
 		request->buffer = buffer;
@@ -3031,7 +3031,7 @@ int module_start(SceSize args, void *argp)
 	ds3State.workEvent = result;
 	if (result < 0)
 		return result;
-	ds3State.heap = SceSysmemForDriver_9328E0E8("SceDs3", 0x1000, &heapOptions);
+	ds3State.heap = sceKernelCreateHeap("SceDs3", 0x1000, &heapOptions);
 	result = sceKernelCreateThread("SceDs3Worker", _sceDs3WorkerThread,
 		60, 0x2000, 0x10000000, 0x80000,
 		(const SceKernelThreadOptParam *)&threadOptions);

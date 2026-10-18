@@ -190,64 +190,64 @@ set(MODULE_IMPORT_FUNCS
 	SceIntrmgrForKernel_BCD3BB05
 	SceIntrmgrForKernel_E3B670BF
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_00ED6C14
+	sceGUIDReferObjectWithClass
 	sceGUIDClose
 	SceSysmemForDriver_0B1FD5C3
-	SceSysmemForDriver_0F5C84B7
-	SceSysmemForDriver_0FC24464
+	sceGUIDReferObject
+	sceGUIDGetObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_1BD44DD5
 	SceSysmemForDriver_2ECF7944
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_56A13E90
+	sceGUIDKernelCreate
 	SceSysmemForDriver_58D21746
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_61317102
+	sceUIDClassInitClass
 	sceKernelCopyToUserProc
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_72A98D17
-	SceSysmemForDriver_77066FD1
-	SceSysmemForDriver_7B4CB60A
+	sceKernelCopyToUser
+	sceGUIDReferObjectWithSubclass
+	sceGUIDReferObjectWithClassLevel
+	sceKernelAllocHeapMemory
 	sceKernelCountFillValueFromUserProc
 	SceSysmemForDriver_84A4AF5E
 	SceSysmemForDriver_85336A1C
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A78755EB
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_B81CF0A3
-	SceSysmemForDriver_BC996A7A
+	sceKernelCreateHeap
+	sceKernelIsAccessibleRange
+	sceGUIDGetName
+	sceKernelGetMemBlockBase
+	sceKernelGetMemBlockVBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
 	GUIDGetClass
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_CED1547B
 	GUIDOpenByName
-	SceSysmemForDriver_DB3EC244
+	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F
 	SceSysmemForDriver_E9728A12
-	SceSysmemForDriver_F4AD89D8
+	sceKernelIsEqualAccessibleRangeProcBySW
 	SceSysmemForDriver_FE6D7FAE
 	SceSysmemForKernel_03A2CAF0
-	SceSysmemForKernel_08C05493
-	SceSysmemForKernel_0E43E113
+	scePUIDGetUIDVectorByClass
+	sceGUIDGetObjectWithClass
 	SceSysmemForKernel_188C8742
 	SceSysmemForKernel_1FF2749A
 	SceSysmemForKernel_201E970B
 	SceSysmemForKernel_368F1C36
 	SceSysmemForKernel_40870E74
-	SceSysmemForKernel_52137FA3
+	sceGUIDGetUIDVectorByClass
 	sceKernelAllocPartitionMemBlock
 	scePUIDGetAttr
 	SceSysmemForKernel_9C23DFF7
 	SceSysmemForKernel_BDE00106
-	SceSysmemForKernel_BF275C5A
+	sceGUIDSet
 	PUIDGetPUIDVectorByGUID
 	UIDEntryReleaseObject
 	SceSysmemForKernel_FA6C098C
 	sceGUIDKernelCreateWithOpt
-	SceSysmemForKernel_FF464A49
+	sceGUIDGetEntry
 	SceSysrootForKernel_1247A825
 	SceSysrootForKernel_1D8DB3A5
 	SceSysrootForKernel_26458702
@@ -263,7 +263,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_AD74BEB3
 	sceKernelSysrootCorelockUnlock
 	sceKernelSysrootBacktrace
-	SceSysrootForKernel_D351EBC8
+	sceKernelSysrootAllocRemoteProcessHeap
 	SceSysrootForKernel_E20F6FC8
 	SceSysrootForDriver_1B3FA457
 	sceKernelApiDeclareTypeUInt64

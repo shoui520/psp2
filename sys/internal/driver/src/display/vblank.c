@@ -283,7 +283,7 @@ int vblankInit(void) /* name unknown */
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < 2; i++) {
-		ret = SceSysmemForDriver_56A13E90(&vblankEventClass.base, vblankEventNames[i],
+		ret = sceGUIDKernelCreate(&vblankEventClass.base, vblankEventNames[i],
 					   (SceObjectBase **)&heads[i].vblankEventObject);
 		if (ret < 0)
 			return ret;

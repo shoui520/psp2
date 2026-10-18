@@ -17,7 +17,7 @@ int StorageUtilSwitchBLBank(SceUID heapId, SceMbr *mbr)
 	permission = sceKernelSetThreadAccessLevel(128);
 	if (permission < 0)
 		return permission;
-	header = SceSysmemForDriver_7B4CB60A(heapId, 4096);
+	header = sceKernelAllocHeapMemory(heapId, 4096);
 	if (!header) {
 		sceKernelSetThreadAccessLevel(permission);
 		return (int)0x800f020c;

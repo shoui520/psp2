@@ -3472,7 +3472,7 @@ int registerVeneziaVipCapture(unsigned int *processor, const VeneziaVipCapturePa
 		ret = -2141060863;
 		goto unlock;
 	}
-	if (SceSysmemForDriver_8D160E65((const void *)param->storageVirtualAddress,
+	if (sceKernelVAtoPA((const void *)param->storageVirtualAddress,
 		&region.physicalAddress) < 0)
 		goto invalid;
 	region.virtualAddress = param->storageVirtualAddress;
@@ -4579,7 +4579,7 @@ int snapshotVeneziaVipDebugger(VeneziaVipProcessStorage *storage, unsigned int f
 				g_veneziaDebugger.log(10, 4, processor, ret, debuggerState, size);
 			if (ret != 0)
 				goto failed;
-			ret = SceSysmemForDriver_8D160E65(debuggerState, &physical);
+			ret = sceKernelVAtoPA(debuggerState, &physical);
 			if (ret < 0 || processor == 16 - index)
 				goto failed;
 			region = &snapshot->regions[index + processor];
@@ -6474,31 +6474,31 @@ int initializeVeneziaVipResources(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_RESET_BASE;
-	block = SceSysmemForDriver_C94850C9("ScePervasiveResetReg", 0x20100206, 0x1000, &opt);
+	block = sceKernelAllocMemBlockForKernel("ScePervasiveResetReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	state->resetBlock = block;
-	SceSysmemForDriver_A841EDDA(block, &base);
+	sceKernelGetMemBlockBase(block, &base);
 	state->resetRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_MAILBOX_BASE;
-	block = SceSysmemForDriver_C94850C9("ScePervasiveMailboxReg", 0x20100206, 0x1000, &opt);
+	block = sceKernelAllocMemBlockForKernel("ScePervasiveMailboxReg", 0x20100206, 0x1000, &opt);
 	if (block < 0)
 		return block;
 	state->mailboxBlock = block;
-	SceSysmemForDriver_A841EDDA(block, &base);
+	sceKernelGetMemBlockBase(block, &base);
 	state->mailboxRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERVASIVE_TAS_BASE(0);
-	block = SceSysmemForDriver_C94850C9("ScePervasiveTasReg", 0x20100206, 0x8000, &opt);
+	block = sceKernelAllocMemBlockForKernel("ScePervasiveTasReg", 0x20100206, 0x8000, &opt);
 	if (block < 0)
 		return block;
 	state->tasBlock = block;
-	SceSysmemForDriver_A841EDDA(block, &base);
+	sceKernelGetMemBlockBase(block, &base);
 	state->tasRegisters = base;
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
@@ -6798,7 +6798,7 @@ __attribute__((noinline)) int setVeneziaVipCaptureImage(VeneziaDebugProcessCaptu
 
 	capture->imageVirtualAddress = param->imageVirtualAddress;
 	capture->imageSize = param->imageSize;
-	ret = SceSysmemForDriver_8D160E65((const void *)param->imageVirtualAddress,
+	ret = sceKernelVAtoPA((const void *)param->imageVirtualAddress,
 		&capture->imagePhysicalAddress);
 	return ret < 0 ? -2141060862 : ret;
 }
@@ -6813,7 +6813,7 @@ __attribute__((noinline)) int resumeVeneziaVipState(void)
 __attribute__((noinline)) int isVeneziaVipImageInMainMemory(uint32_t address, SceSize size)
 {
 	uintptr_t physical;
-	int ret = SceSysmemForDriver_8D160E65((const void *)address, &physical);
+	int ret = sceKernelVAtoPA((const void *)address, &physical);
 
 	if (ret >= 0)
 		ret = physical >= 0x20000000 && physical + size <= 0x30000000;
@@ -6967,7 +6967,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 	if (lengthSize > input->payload.size)
 		goto invalid;
 	peekSize = lengthSize + 1;
-	if (SceSysmemForDriver_BC996A7A(bytes, input->payload.data, peekSize) < 0)
+	if (sceKernelCopyFromUser(bytes, input->payload.data, peekSize) < 0)
 		goto invalid;
 	firstSize = decodeVeneziaVipNalLength(bytes, lengthSize);
 	if (firstSize + lengthSize > input->payload.size)
@@ -6975,7 +6975,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 	type = bytes[lengthSize] & 0x1f;
 	if (type == 9) {
 		if (lengthSize > input->payload.size ||
-		    SceSysmemForDriver_BC996A7A(bytes, input->payload.data, lengthSize) < 0)
+		    sceKernelCopyFromUser(bytes, input->payload.data, lengthSize) < 0)
 			goto invalid;
 		offset = decodeVeneziaVipNalLength(bytes, lengthSize) + lengthSize;
 		if (offset >= input->payload.size)
@@ -6991,7 +6991,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		total += input->additionalData[1].size + 4;
 	required = offset + lengthSize;
 	if (required > input->payload.size ||
-	    SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + offset, peekSize) < 0)
+	    sceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + offset, peekSize) < 0)
 		goto invalid;
 	for (;;) {
 		nalSize = decodeVeneziaVipNalLength(bytes, lengthSize);
@@ -7000,7 +7000,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		type = bytes[lengthSize] & 0x1f;
 		total += nalSize + ((unsigned int)(type - 7) <= 1 ? 4 : 3);
 		if (required > input->payload.size ||
-		    SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + offset, lengthSize) < 0)
+		    sceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + offset, lengthSize) < 0)
 			return total;
 		nalSize = decodeVeneziaVipNalLength(bytes, lengthSize);
 		nextOffset = nalSize + lengthSize + offset;
@@ -7010,7 +7010,7 @@ int calculateVeneziaVipVideoInputSize(const VeneziaVipVideoInput *input)
 		if (required > input->payload.size)
 			goto invalid;
 		offset = nextOffset;
-		if (SceSysmemForDriver_BC996A7A(bytes, (const uint8_t *)input->payload.data + nextOffset, peekSize) < 0)
+		if (sceKernelCopyFromUser(bytes, (const uint8_t *)input->payload.data + nextOffset, peekSize) < 0)
 			goto invalid;
 	}
 invalid:
@@ -7084,7 +7084,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		return ret;
 	firstPayload = input->payload.data;
 	if (lengthSize > input->payload.size ||
-	    SceSysmemForDriver_BC996A7A(work.peek, firstPayload, lengthSize + 1) < 0)
+	    sceKernelCopyFromUser(work.peek, firstPayload, lengthSize + 1) < 0)
 		goto invalid;
 	firstSize = decodeVeneziaVipNalLength(work.peek, lengthSize);
 	type = work.peek[lengthSize] & 0x1f;
@@ -7098,7 +7098,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		if (ret < 0)
 			return ret;
 		if (lengthSize > input->payload.size ||
-		    SceSysmemForDriver_BC996A7A(work.peek, input->payload.data, lengthSize) < 0)
+		    sceKernelCopyFromUser(work.peek, input->payload.data, lengthSize) < 0)
 			goto invalid;
 		offset = decodeVeneziaVipNalLength(work.peek, lengthSize) + lengthSize;
 		if (offset >= input->payload.size)
@@ -7137,7 +7137,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 	if (required > input->payload.size)
 		goto invalid;
 	for (;;) {
-		if (SceSysmemForDriver_BC996A7A(work.peek, address, lengthSize + 1) < 0)
+		if (sceKernelCopyFromUser(work.peek, address, lengthSize + 1) < 0)
 			goto invalid;
 		nalSize = decodeVeneziaVipNalLength(work.peek, lengthSize);
 		nalData = address + lengthSize;
@@ -7153,7 +7153,7 @@ int submitVeneziaVipVideoInput(unsigned int processor, VeneziaVipState *state,
 		if (ret < 0)
 			return ret;
 		if (required > input->payload.size ||
-		    SceSysmemForDriver_BC996A7A(work.peek,
+		    sceKernelCopyFromUser(work.peek,
 			(const uint8_t *)input->payload.data + offset, lengthSize) < 0)
 			break;
 		offset += decodeVeneziaVipNalLength(work.peek, lengthSize) + lengthSize;
@@ -8097,7 +8097,7 @@ int registerVeneziaVipMultiCapture(unsigned int *processor,
 			ret = -2141060863;
 			goto unlock;
 		}
-		if (SceSysmemForDriver_8D160E65((const void *)param->storageVirtualAddress,
+		if (sceKernelVAtoPA((const void *)param->storageVirtualAddress,
 			&region.physicalAddress) < 0)
 			goto invalid;
 		region.virtualAddress = param->storageVirtualAddress;
@@ -12751,7 +12751,7 @@ int _sceCodecEnginePmonGetProcessorLoad(CodecEngineProcessorLoad *load,
 	CodecEngineProcessorLoad *result;
 	int ret, error;
 
-	ret = SceSysmemForDriver_BC996A7A(&request, descriptor, sizeof(request));
+	ret = sceKernelCopyFromUser(&request, descriptor, sizeof(request));
 	if (ret < 0)
 		return ret;
 	if (!load)
@@ -12761,11 +12761,11 @@ int _sceCodecEnginePmonGetProcessorLoad(CodecEngineProcessorLoad *load,
 	result = __builtin_alloca(sizeof(*result));
 	result->size = 0;
 	result->average = 0;
-	ret = SceSysmemForDriver_BC996A7A(result, load, request.size);
+	ret = sceKernelCopyFromUser(result, load, request.size);
 	if (ret < 0)
 		return ret;
 	ret = getCodecEngineAverageProcessorLoad(result);
-	error = SceSysmemForDriver_6D88EF8A(load, result, request.size);
+	error = sceKernelCopyToUser(load, result, request.size);
 	if (error < 0)
 		ret = error;
 	return ret;
@@ -12796,7 +12796,7 @@ int _sceCodecEngineGetProcessorLoad(void *load)
 	result = __builtin_alloca(40);
 	__builtin_memset(result, 0, 40);
 	ret = getCodecEngineProcessorLoad(result);
-	error = SceSysmemForDriver_6D88EF8A(load, result, 40);
+	error = sceKernelCopyToUser(load, result, 40);
 	if (error < 0)
 		ret = error;
 	return ret;
@@ -12812,7 +12812,7 @@ int _sceCodecEngineGetMemoryState(void *state)
 	result = __builtin_alloca(24);
 	__builtin_memset(result, 0, 24);
 	ret = getCodecEngineMemoryState(result);
-	error = SceSysmemForDriver_6D88EF8A(state, result, 24);
+	error = sceKernelCopyToUser(state, result, 24);
 	if (error < 0)
 		ret = error;
 	return ret;

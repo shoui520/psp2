@@ -66,7 +66,7 @@ struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind)
 		manager = loadIntrRequestManager();
 		request = manager->freeIntrRequests;
 		if (!request) {
-			request = SceSysmemForDriver_7B4CB60A(manager->heapId, sizeof(*request));
+			request = sceKernelAllocHeapMemory(manager->heapId, sizeof(*request));
 			if (!request) {
 				SCE_DBG_PRINTF(0xb, 867,
 					      "*** fatal error: can not alloc intr request.\n");
@@ -212,7 +212,7 @@ void issueDTraceAsyncXCallIntrRequest(unsigned int cpuId, void (*fn)(void *), co
 	if (arg == NULL || size == 0) {
 		copy = NULL;
 	} else {
-		copy = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, size);
+		copy = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, size);
 		if (copy == NULL) {
 			SCE_DBG_PRINTF(0xb, 782,
 				" fatal error: can not alloc intr request argument.\n");

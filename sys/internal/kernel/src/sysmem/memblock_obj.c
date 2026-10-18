@@ -69,7 +69,7 @@ void *GetMemBlockPartition(MemBlockObject *block)
 	return partition;
 }
 
-int SceSysmemForDriver_B81CF0A3(SceUID uid, void **base)
+int sceKernelGetMemBlockVBase(SceUID uid, void **base)
 {
 	GUIDApplyArgs args;
 
@@ -315,7 +315,7 @@ int MemBlockGetPhyRangeList(MemBlockObject *block, SceKernelPAVector *vector,
 /* name unknown: the block an allocation mirrors */
 int MemBlockGetMirrorBlock(const SceKernelAllocMemBlockKernelOpt *opt, MemBlockObject **block)
 {
-	return SceSysmemForKernel_0E43E113(opt->mirror_blockid, s_memBlockClass,
+	return sceGUIDGetObjectWithClass(opt->mirror_blockid, s_memBlockClass,
 					  (SceObjectBase **)block);
 }
 
@@ -770,7 +770,7 @@ int MemBlockSetBaseInfo(SceUID uid, void *info)
 
 	if (info == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_00ED6C14(uid, s_memBlockClass, (SceObjectBase **)&block);
+	ret = sceGUIDReferObjectWithClass(uid, s_memBlockClass, (SceObjectBase **)&block);
 	if (ret < 0)
 		return ret;
 	flags = SceCpuForDriver_4C38CE4D(&block->lock);
@@ -848,7 +848,7 @@ int SceSysmemForDriver_0B1FD5C3(SceUID uid, void **base)
 	return GUIDApplyWithClass(uid, s_memBlockClass, MemBlockGetMappedBaseCB, &args);
 }
 
-int SceSysmemForDriver_A841EDDA(SceUID uid, void **base)
+int sceKernelGetMemBlockBase(SceUID uid, void **base)
 {
 	return SceSysmemForDriver_0B1FD5C3(uid, base);
 }

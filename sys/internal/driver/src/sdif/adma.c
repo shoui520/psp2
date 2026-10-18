@@ -197,7 +197,7 @@ countedRange:
 			memset(&option, 0, sizeof(option));
 			option.attr = 0x200000;
 			option.size = sizeof(option);
-			result = SceSysmemForDriver_C94850C9("SceSdif", 0x1020d006, allocation, &option);
+			result = sceKernelAllocMemBlockForKernel("SceSdif", 0x1020d006, allocation, &option);
 			if (result < 0) {
 				SCE_DBG_PRINTF_FUNC(0, 417, "allocateAdmaDescriptorArea",
 					"%s %d Ex ADMA desc area is too large:%d\n",
@@ -205,7 +205,7 @@ countedRange:
 				return result;
 			}
 			command->descriptorMemblock = result;
-			SceSysmemForDriver_A841EDDA(result, (void **)&command->descriptors);
+			sceKernelGetMemBlockBase(result, (void **)&command->descriptors);
 		} else {
 			command->descriptors = command->context->port.descriptorBuffer;
 		}
@@ -299,7 +299,7 @@ countedRange:
 		command->descriptorPhysicalAddress = command->defaultDescriptorPhysicalAddress;
 		return 0;
 	}
-	result = SceSysmemForDriver_8D160E65(command->descriptors, &command->descriptorPhysicalAddress);
+	result = sceKernelVAtoPA(command->descriptors, &command->descriptorPhysicalAddress);
 	if (result >= 0)
 		return 0;
 	SCE_DBG_PRINTF_FUNC(0, 590, "prepareAdmaDescriptorTable",
@@ -407,7 +407,7 @@ void sceSdifDumpAdmaInfo(SdifCommand *command)
 			descriptor.fields = command->descriptors[index];
 			SCE_DBG_PRINTF(0, 839, "descriptor[%d]:0x%llx\n", index, descriptor.value);
 		}
-		result = SceSysmemForDriver_8D160E65(command->descriptors, &physicalAddress);
+		result = sceKernelVAtoPA(command->descriptors, &physicalAddress);
 		if (result < 0)
 			SCE_DBG_PRINTF(0, 845, "VA to PA error:0x%x  VA:%p PA:0x%x\n",
 				result, command->descriptors, physicalAddress);
@@ -419,7 +419,7 @@ void sceSdifDumpAdmaInfo(SdifCommand *command)
 			command->descriptors, command->descriptorPhysicalAddress);
 	}
 	SCE_DBG_PRINTF(0, 859, "alignedAddr         :0x%x\n", command->alignedBuffer);
-	result = SceSysmemForDriver_8D160E65(command->alignedBuffer, &physicalAddress);
+	result = sceKernelVAtoPA(command->alignedBuffer, &physicalAddress);
 	if (result < 0)
 		SCE_DBG_PRINTF(0, 863, "VA to PA error:0x%x  VA:0x%x PA:0x%x\n",
 			result, command->alignedBuffer, physicalAddress);

@@ -52,9 +52,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	SceCpuForDriver_821FC0EE
 	sceKernelCpuResumeIntr

@@ -35,9 +35,9 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceSysmemForDriver_009E1C61
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyToUser
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_BF82DEB2
 	SceCpuForDriver_D32ACE9E

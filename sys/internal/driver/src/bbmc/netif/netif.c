@@ -685,13 +685,13 @@ int bbmcStartUsbSerialDevice(int argumentSize, void *arguments, void *context)
 	__builtin_memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = SceSysmemForDriver_C94850C9("SceUsbQcomSer", 0x1020d006,
+	result = sceKernelAllocMemBlockForKernel("SceUsbQcomSer", 0x1020d006,
 				       8192, &option);
 	device = g_usbSerialDevice;
 	if (result < 0)
 		goto failed;
 	device->memoryBlock = result;
-	result = SceSysmemForDriver_A841EDDA(result, &base);
+	result = sceKernelGetMemBlockBase(result, &base);
 	if (result < 0)
 		goto reload;
 	buffer = (unsigned char *)(((SceUIntPtr)base + 63) & ~63u);

@@ -10,6 +10,6 @@ int motionCreateHeap(void)
 	__builtin_memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 
-	motionHeap = SceSysmemForDriver_9328E0E8("SceMotionDev", 2048, &opt);
+	motionHeap = sceKernelCreateHeap("SceMotionDev", 2048, &opt);
 	return motionHeap;
 }

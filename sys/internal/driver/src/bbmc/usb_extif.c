@@ -266,7 +266,7 @@ finished:
 	if (completion.semaphore > 0)
 		sceKernelDeleteSema(completion.semaphore);
 	if (ret > 0) {
-		int copied = SceSysmemForDriver_6D88EF8A(data, buffer, ret);
+		int copied = sceKernelCopyToUser(data, buffer, ret);
 
 		if (copied < 0)
 			return copied;
@@ -285,7 +285,7 @@ int sceBbmcUsbExtIfWrite(unsigned int channel, const void *data, SceSize length)
 		return (int)0x80330002;
 	allocation = __builtin_alloca(length + 64);
 	buffer = (void *)(((uintptr_t)allocation + 64) & ~(uintptr_t)63);
-	ret = SceSysmemForDriver_BC996A7A(buffer, data, length);
+	ret = sceKernelCopyFromUser(buffer, data, length);
 	if (ret < 0)
 		return ret;
 	const char *names[2] = {

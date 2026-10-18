@@ -123,10 +123,10 @@ int audioInitializeI2s(void)
 			option.attr = 2;
 			option.paddr = audioI2sPhysicalAddress[port];
 			snprintf(name, sizeof(name), "SceI2s%dReg", port);
-			result = SceSysmemForDriver_C94850C9(name, 0x20100806, 4096, &option);
+			result = sceKernelAllocMemBlockForKernel(name, 0x20100806, 4096, &option);
 			if (result < 0)
 				return result;
-			SceSysmemForDriver_A841EDDA(result, (void **)&audioI2sRegisters[port]);
+			sceKernelGetMemBlockBase(result, (void **)&audioI2sRegisters[port]);
 			if (audioI2sInterrupt[port]) {
 				snprintf(name, sizeof(name), "SceI2s%d", port);
 				sceKernelRegisterIntrHandler(audioI2sInterrupt[port], name, 0,

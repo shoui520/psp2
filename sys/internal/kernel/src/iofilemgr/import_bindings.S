@@ -310,9 +310,9 @@ SceSysmemForDriver_009E1C61:
 .word 0x10, 0x6f25e18a, 0x9e1c61, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_00ED6C14
-.type SceSysmemForDriver_00ED6C14, %function
-SceSysmemForDriver_00ED6C14:
+.global sceGUIDReferObjectWithClass
+.type sceGUIDReferObjectWithClass, %function
+sceGUIDReferObjectWithClass:
 .word 0x10, 0x6f25e18a, 0xed6c14, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -340,9 +340,9 @@ SceSysmemForDriver_45D22597:
 .word 0x10, 0x6f25e18a, 0x45d22597, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_56A13E90
-.type SceSysmemForDriver_56A13E90, %function
-SceSysmemForDriver_56A13E90:
+.global sceGUIDKernelCreate
+.type sceGUIDKernelCreate, %function
+sceGUIDKernelCreate:
 .word 0x10, 0x6f25e18a, 0x56a13e90, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -352,9 +352,9 @@ sceKernelCopyFromUserProc:
 .word 0x10, 0x6f25e18a, 0x605275f8, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_61317102
-.type SceSysmemForDriver_61317102, %function
-SceSysmemForDriver_61317102:
+.global sceUIDClassInitClass
+.type sceUIDClassInitClass, %function
+sceUIDClassInitClass:
 .word 0x10, 0x6f25e18a, 0x61317102, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -364,15 +364,15 @@ sceKernelCopyToUserProc:
 .word 0x10, 0x6f25e18a, 0x6b825479, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_6D88EF8A
-.type SceSysmemForDriver_6D88EF8A, %function
-SceSysmemForDriver_6D88EF8A:
+.global sceKernelCopyToUser
+.type sceKernelCopyToUser, %function
+sceKernelCopyToUser:
 .word 0x10, 0x6f25e18a, 0x6d88ef8a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_7B4CB60A
-.type SceSysmemForDriver_7B4CB60A, %function
-SceSysmemForDriver_7B4CB60A:
+.global sceKernelAllocHeapMemory
+.type sceKernelAllocHeapMemory, %function
+sceKernelAllocHeapMemory:
 .word 0x10, 0x6f25e18a, 0x7b4cb60a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -394,21 +394,21 @@ SceSysmemForDriver_85336A1C:
 .word 0x10, 0x6f25e18a, 0x85336a1c, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_9328E0E8
-.type SceSysmemForDriver_9328E0E8, %function
-SceSysmemForDriver_9328E0E8:
+.global sceKernelCreateHeap
+.type sceKernelCreateHeap, %function
+sceKernelCreateHeap:
 .word 0x10, 0x6f25e18a, 0x9328e0e8, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_A841EDDA
-.type SceSysmemForDriver_A841EDDA, %function
-SceSysmemForDriver_A841EDDA:
+.global sceKernelGetMemBlockBase
+.type sceKernelGetMemBlockBase, %function
+sceKernelGetMemBlockBase:
 .word 0x10, 0x6f25e18a, 0xa841edda, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_BC996A7A
-.type SceSysmemForDriver_BC996A7A, %function
-SceSysmemForDriver_BC996A7A:
+.global sceKernelCopyFromUser
+.type sceKernelCopyFromUser, %function
+sceKernelCopyFromUser:
 .word 0x10, 0x6f25e18a, 0xbc996a7a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -418,9 +418,9 @@ SceSysmemForDriver_BF209859:
 .word 0x10, 0x6f25e18a, 0xbf209859, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_C94850C9
-.type SceSysmemForDriver_C94850C9, %function
-SceSysmemForDriver_C94850C9:
+.global sceKernelAllocMemBlockForKernel
+.type sceKernelAllocMemBlockForKernel, %function
+sceKernelAllocMemBlockForKernel:
 .word 0x10, 0x6f25e18a, 0xc94850c9, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -430,15 +430,15 @@ sceKernelDeleteHeap:
 .word 0x10, 0x6f25e18a, 0xd6437637, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_DB3EC244
-.type SceSysmemForDriver_DB3EC244, %function
-SceSysmemForDriver_DB3EC244:
+.global sceKernelStrncpyFromUser
+.type sceKernelStrncpyFromUser, %function
+sceKernelStrncpyFromUser:
 .word 0x10, 0x6f25e18a, 0xdb3ec244, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_08C05493
-.type SceSysmemForKernel_08C05493, %function
-SceSysmemForKernel_08C05493:
+.global scePUIDGetUIDVectorByClass
+.type scePUIDGetUIDVectorByClass, %function
+scePUIDGetUIDVectorByClass:
 .word 0x10, 0x2451f0f, 0x8c05493, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
@@ -454,9 +454,9 @@ SceSysmemForKernel_4E6D8BC3:
 .word 0x10, 0x2451f0f, 0x4e6d8bc3, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_52137FA3
-.type SceSysmemForKernel_52137FA3, %function
-SceSysmemForKernel_52137FA3:
+.global sceGUIDGetUIDVectorByClass
+.type sceGUIDGetUIDVectorByClass, %function
+sceGUIDGetUIDVectorByClass:
 .word 0x10, 0x2451f0f, 0x52137fa3, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
@@ -664,9 +664,9 @@ strnlen:
 .word 0x10, 0x7ee45391, 0xcd4bd884, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global SceProcessmgrForDriver_3801D7D6
-.type SceProcessmgrForDriver_3801D7D6, %function
-SceProcessmgrForDriver_3801D7D6:
+.global sceKernelRegisterKPLS
+.type sceKernelRegisterKPLS, %function
+sceKernelRegisterKPLS:
 .word 0x10, 0x746ec971, 0x3801d7d6, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
@@ -784,9 +784,9 @@ SceSysrootForKernel_CBD377B7:
 .word 0x10, 0x3691da45, 0xcbd377b7, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
-.global SceSysrootForKernel_D351EBC8
-.type SceSysrootForKernel_D351EBC8, %function
-SceSysrootForKernel_D351EBC8:
+.global sceKernelSysrootAllocRemoteProcessHeap
+.type sceKernelSysrootAllocRemoteProcessHeap, %function
+sceKernelSysrootAllocRemoteProcessHeap:
 .word 0x10, 0x3691da45, 0xd351ebc8, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4
@@ -1211,9 +1211,9 @@ SceSysmemForDriver_009E1C61:
 .word 0x10, 0x6f25e18a, 0x9e1c61, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_00ED6C14
-.type SceSysmemForDriver_00ED6C14, %function
-SceSysmemForDriver_00ED6C14:
+.global sceGUIDReferObjectWithClass
+.type sceGUIDReferObjectWithClass, %function
+sceGUIDReferObjectWithClass:
 .word 0x10, 0x6f25e18a, 0xed6c14, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1241,9 +1241,9 @@ SceSysmemForDriver_45D22597:
 .word 0x10, 0x6f25e18a, 0x45d22597, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_56A13E90
-.type SceSysmemForDriver_56A13E90, %function
-SceSysmemForDriver_56A13E90:
+.global sceGUIDKernelCreate
+.type sceGUIDKernelCreate, %function
+sceGUIDKernelCreate:
 .word 0x10, 0x6f25e18a, 0x56a13e90, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1253,9 +1253,9 @@ sceKernelCopyFromUserProc:
 .word 0x10, 0x6f25e18a, 0x605275f8, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_61317102
-.type SceSysmemForDriver_61317102, %function
-SceSysmemForDriver_61317102:
+.global sceUIDClassInitClass
+.type sceUIDClassInitClass, %function
+sceUIDClassInitClass:
 .word 0x10, 0x6f25e18a, 0x61317102, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1265,15 +1265,15 @@ sceKernelCopyToUserProc:
 .word 0x10, 0x6f25e18a, 0x6b825479, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_6D88EF8A
-.type SceSysmemForDriver_6D88EF8A, %function
-SceSysmemForDriver_6D88EF8A:
+.global sceKernelCopyToUser
+.type sceKernelCopyToUser, %function
+sceKernelCopyToUser:
 .word 0x10, 0x6f25e18a, 0x6d88ef8a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_7B4CB60A
-.type SceSysmemForDriver_7B4CB60A, %function
-SceSysmemForDriver_7B4CB60A:
+.global sceKernelAllocHeapMemory
+.type sceKernelAllocHeapMemory, %function
+sceKernelAllocHeapMemory:
 .word 0x10, 0x6f25e18a, 0x7b4cb60a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1295,21 +1295,21 @@ SceSysmemForDriver_85336A1C:
 .word 0x10, 0x6f25e18a, 0x85336a1c, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_9328E0E8
-.type SceSysmemForDriver_9328E0E8, %function
-SceSysmemForDriver_9328E0E8:
+.global sceKernelCreateHeap
+.type sceKernelCreateHeap, %function
+sceKernelCreateHeap:
 .word 0x10, 0x6f25e18a, 0x9328e0e8, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_A841EDDA
-.type SceSysmemForDriver_A841EDDA, %function
-SceSysmemForDriver_A841EDDA:
+.global sceKernelGetMemBlockBase
+.type sceKernelGetMemBlockBase, %function
+sceKernelGetMemBlockBase:
 .word 0x10, 0x6f25e18a, 0xa841edda, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_BC996A7A
-.type SceSysmemForDriver_BC996A7A, %function
-SceSysmemForDriver_BC996A7A:
+.global sceKernelCopyFromUser
+.type sceKernelCopyFromUser, %function
+sceKernelCopyFromUser:
 .word 0x10, 0x6f25e18a, 0xbc996a7a, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1319,9 +1319,9 @@ SceSysmemForDriver_BF209859:
 .word 0x10, 0x6f25e18a, 0xbf209859, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_C94850C9
-.type SceSysmemForDriver_C94850C9, %function
-SceSysmemForDriver_C94850C9:
+.global sceKernelAllocMemBlockForKernel
+.type sceKernelAllocMemBlockForKernel, %function
+sceKernelAllocMemBlockForKernel:
 .word 0x10, 0x6f25e18a, 0xc94850c9, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
@@ -1331,15 +1331,15 @@ sceKernelDeleteHeap:
 .word 0x10, 0x6f25e18a, 0xd6437637, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForDriver, "ax", %progbits
 .balign 4
-.global SceSysmemForDriver_DB3EC244
-.type SceSysmemForDriver_DB3EC244, %function
-SceSysmemForDriver_DB3EC244:
+.global sceKernelStrncpyFromUser
+.type sceKernelStrncpyFromUser, %function
+sceKernelStrncpyFromUser:
 .word 0x10, 0x6f25e18a, 0xdb3ec244, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_08C05493
-.type SceSysmemForKernel_08C05493, %function
-SceSysmemForKernel_08C05493:
+.global scePUIDGetUIDVectorByClass
+.type scePUIDGetUIDVectorByClass, %function
+scePUIDGetUIDVectorByClass:
 .word 0x10, 0x2451f0f, 0x8c05493, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
@@ -1355,9 +1355,9 @@ SceSysmemForKernel_4E6D8BC3:
 .word 0x10, 0x2451f0f, 0x4e6d8bc3, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
-.global SceSysmemForKernel_52137FA3
-.type SceSysmemForKernel_52137FA3, %function
-SceSysmemForKernel_52137FA3:
+.global sceGUIDGetUIDVectorByClass
+.type sceGUIDGetUIDVectorByClass, %function
+sceGUIDGetUIDVectorByClass:
 .word 0x10, 0x2451f0f, 0x52137fa3, 0xe320f000
 .section .vitalink.fstubs.SceSysmemForKernel, "ax", %progbits
 .balign 4
@@ -1535,9 +1535,9 @@ strnlen:
 .word 0x10, 0x7ee45391, 0xcd4bd884, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global SceProcessmgrForDriver_3801D7D6
-.type SceProcessmgrForDriver_3801D7D6, %function
-SceProcessmgrForDriver_3801D7D6:
+.global sceKernelRegisterKPLS
+.type sceKernelRegisterKPLS, %function
+sceKernelRegisterKPLS:
 .word 0x10, 0x746ec971, 0x3801d7d6, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
@@ -1655,9 +1655,9 @@ SceSysrootForKernel_CBD377B7:
 .word 0x10, 0x3691da45, 0xcbd377b7, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForKernel, "ax", %progbits
 .balign 4
-.global SceSysrootForKernel_D351EBC8
-.type SceSysrootForKernel_D351EBC8, %function
-SceSysrootForKernel_D351EBC8:
+.global sceKernelSysrootAllocRemoteProcessHeap
+.type sceKernelSysrootAllocRemoteProcessHeap, %function
+sceKernelSysrootAllocRemoteProcessHeap:
 .word 0x10, 0x3691da45, 0xd351ebc8, 0xe320f000
 .section .vitalink.fstubs.SceSysrootForDriver, "ax", %progbits
 .balign 4

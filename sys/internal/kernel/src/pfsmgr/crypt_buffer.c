@@ -90,12 +90,12 @@ int pfsCryptBufferInit(void)
 		memset(&opt, 0, sizeof(opt));
 		opt.alignment = 0x1000;
 		opt.size = sizeof(opt);
-		ret = SceSysmemForDriver_C94850C9(g_pfsCryptBufNames[i], 0x1020d006,
+		ret = sceKernelAllocMemBlockForKernel(g_pfsCryptBufNames[i], 0x1020d006,
 					      PFS_CRYPT_BUF_BLOCKS * PFS_CRYPT_BUF_BLOCK_SIZE, &opt);
 		if (ret < 0)
 			goto fail;
 		pool->block = ret;
-		ret = SceSysmemForDriver_A841EDDA(ret, &pool->base);
+		ret = sceKernelGetMemBlockBase(ret, &pool->base);
 		if (ret != 0)
 			goto fail;
 
@@ -103,11 +103,11 @@ int pfsCryptBufferInit(void)
 		opt.size = sizeof(opt);
 		opt.attr = 0x1000040;
 		opt.mirror_blockid = pool->block;
-		ret = SceSysmemForDriver_C94850C9(g_pfsCryptBufSharedNames[i], 0x10208006, 0, &opt);
+		ret = sceKernelAllocMemBlockForKernel(g_pfsCryptBufSharedNames[i], 0x10208006, 0, &opt);
 		if (ret < 0)
 			goto fail;
 		pool->sharedBlock = ret;
-		ret = SceSysmemForDriver_A841EDDA(ret, &pool->sharedBase);
+		ret = sceKernelGetMemBlockBase(ret, &pool->sharedBase);
 		if (ret != 0)
 			goto fail;
 

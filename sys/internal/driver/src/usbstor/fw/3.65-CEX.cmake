@@ -50,8 +50,8 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_821FC0EE
 	sceKernelCpuResumeIntr
 	memset

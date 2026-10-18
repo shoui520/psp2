@@ -3030,7 +3030,7 @@ SceUID sceKernelCreatePartition(const char *name, SceUInt8 domain, uintptr_t vba
 	if (uid == -1) {
 		uid = SceSysmemForKernel_6DB44A42(s_partitionClass, name, partition);
 	} else {
-		ret = SceSysmemForKernel_BF275C5A(uid, s_partitionClass, NULL, (SceObjectBase *)partition);
+		ret = sceGUIDSet(uid, s_partitionClass, NULL, (SceObjectBase *)partition);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 7456, "sceGUIDSet failed 0x%08x\n", ret);
 	}
@@ -3087,7 +3087,7 @@ SceUID sceKernelAllocPartitionMemBlock(SceUID partUid, const char *name, SceUInt
 					  "Invalid argument:name=[%s],size=0x%08x\n", name, size);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	}
-	ret = SceSysmemForDriver_0FC24464(partUid, &partition);
+	ret = sceGUIDGetObject(partUid, &partition);
 	if (ret < 0)
 		return ret;
 	ret = MemBlockType2Code(type, &code);
@@ -3268,6 +3268,6 @@ int CreateTinyPartitionRaw(void)
 		return ret;
 	}
 	s_tinyPartitionUserShared = tiny;
-	SceSysmemForKernel_BF275C5A(SCE_KERNEL_PARTITION_USER_SHARED_ID, s_partitionClass, NULL, (SceObjectBase *)tiny);
+	sceGUIDSet(SCE_KERNEL_PARTITION_USER_SHARED_ID, s_partitionClass, NULL, (SceObjectBase *)tiny);
 	return 0;
 }

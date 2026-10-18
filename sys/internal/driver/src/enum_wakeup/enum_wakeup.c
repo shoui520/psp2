@@ -122,10 +122,10 @@ void ewInitDisplay(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;		/* physically contiguous */
-	ewg.ew.fbBlock = SceSysmemForDriver_C94850C9("FrameBuffer", EW_MEMTYPE_FB, 2 * EW_FB_SIZE, &opt);
+	ewg.ew.fbBlock = sceKernelAllocMemBlockForKernel("FrameBuffer", EW_MEMTYPE_FB, 2 * EW_FB_SIZE, &opt);
 	if (ewg.ew.fbBlock < 0)
 		goto fail;
-	SceSysmemForDriver_A841EDDA(ewg.ew.fbBlock, &ewg.ew.fb[0]);
+	sceKernelGetMemBlockBase(ewg.ew.fbBlock, &ewg.ew.fb[0]);
 	ewDrawSetTarget(ewg.ew.fb[0], EW_SCREEN_WIDTH, EW_SCREEN_HEIGHT, 0);
 	ewDrawClear(0xff000000);
 	ewg.ew.fb[1] = (char *)ewg.ew.fb[0] + EW_FB_SIZE;
@@ -141,10 +141,10 @@ void ewInitDisplay(void)
 	SceDisplayForDriver_16466675(0, 0, &fb, 1);
 	ewConsoleInit();
 
-	ewg.ew.iconBlock = SceSysmemForDriver_C94850C9("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
+	ewg.ew.iconBlock = sceKernelAllocMemBlockForKernel("TextureBuffer", EW_MEMTYPE_FB, 0x17f000, NULL);
 	if (ewg.ew.iconBlock < 0)
 		sceKernelExitThread(0);
-	SceSysmemForDriver_A841EDDA(ewg.ew.iconBlock, &ewg.ew.icon);
+	sceKernelGetMemBlockBase(ewg.ew.iconBlock, &ewg.ew.icon);
 
 	/* the icon is a PPM: "P6\n# comment\n90 70\n255\n" then RGB */
 	i = 3;

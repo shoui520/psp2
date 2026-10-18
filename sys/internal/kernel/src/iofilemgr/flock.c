@@ -59,10 +59,10 @@ static struct Flock *alloc_lock_entry(void)
 	struct Flock *flock;
 	FlockLock *lock;
 
-	flock = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, sizeof(*flock));
+	flock = sceKernelAllocHeapMemory(g_ioVfsHeapUid, sizeof(*flock));
 	if (flock == NULL)
 		return NULL;
-	lock = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, sizeof(*lock));
+	lock = sceKernelAllocHeapMemory(g_ioVfsHeapUid, sizeof(*lock));
 	if (lock == NULL) {
 		sceKernelFreeHeapMemory(g_ioVfsHeapUid, flock);
 		return NULL;

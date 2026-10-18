@@ -109,12 +109,12 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
+	sceKernelCopyToUser
+	sceKernelVAtoPA
 	SceSysmemForDriver_A7C0D1FC
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForKernel_4233C16D
 	SceSysmemForKernel_85571907
 	SceSysrootForKernel_403B509E

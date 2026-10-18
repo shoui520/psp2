@@ -714,12 +714,12 @@ int module_bootstart(SceSize args, void *argp)
 			options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 			for (i = 0; i < 4; i++) {
 				options.paddr = debugMappings[i].physical;
-				result = SceSysmemForDriver_C94850C9(debugMappings[i].name,
+				result = sceKernelAllocMemBlockForKernel(debugMappings[i].name,
 								 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &options);
 				if (result < 0)
 					return result;
 				s_sdfMgrState.global.debugMemblocks[i] = result;
-				SceSysmemForDriver_A841EDDA(result,
+				sceKernelGetMemBlockBase(result,
 					(void **)&s_sdfMgrState.global.debugRegisters[i]);
 			}
 		}
@@ -1507,7 +1507,7 @@ int sceSDfMgrExOpen(SceSDfMgrHandler handler, const SceSDfMgrProtocol *registrat
 	return (int)handle;
 }
 
-int SceDeci4pSDfMgrForKernel_A55F5F0D(SceSDfMgrHandler handler,
+int sceSDfMgrOpen(SceSDfMgrHandler handler,
 				  const SceSDfMgrProtocol *registration, void *context)
 {
 	unsigned state = SceCpuForDriver_821FC0EE();

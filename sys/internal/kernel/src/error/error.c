@@ -183,14 +183,14 @@ static int __attribute__((noipa)) ErrorTableInit(ErrorTable *table)
 	opt.memtype = 0;
 	opt.pid = 0;
 	opt.heap = NULL;
-	table->heap = SceSysmemForDriver_9328E0E8("SceErrorTable", TABLE_HEAP_SIZE, &opt);
+	table->heap = sceKernelCreateHeap("SceErrorTable", TABLE_HEAP_SIZE, &opt);
 	if (table->heap < 0)
 		goto fail;
-	table->groups = SceSysmemForDriver_7B4CB60A(table->heap, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
+	table->groups = sceKernelAllocHeapMemory(table->heap, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
 	if (table->groups == NULL)
 		goto delete;
 	memset(table->groups, 0, TABLE_GROUPS_MAX * sizeof(ErrorGroup));
-	table->codes = SceSysmemForDriver_7B4CB60A(table->heap, TABLE_HEAP_SIZE);
+	table->codes = sceKernelAllocHeapMemory(table->heap, TABLE_HEAP_SIZE);
 	if (table->codes == NULL) {
 		sceKernelFreeHeapMemory(table->heap, table->groups);
 		goto delete;
@@ -560,7 +560,7 @@ int _sceErrorGetExternalString(char *buf, SceUInt32 code)
 	kbuf[2] = 0;
 	kbuf[3] = 0;
 	res = ERROR_SYSCALL(ErrorGetExternalString((char *)kbuf, code));
-	ret = SceSysmemForDriver_6D88EF8A(buf, kbuf, sizeof(kbuf));
+	ret = sceKernelCopyToUser(buf, kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
 
@@ -571,7 +571,7 @@ int _sceErrorHistoryPostError(const void *rec)
 	int ret;
 
 	if (rec != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&krec, rec, sizeof(krec));
+		ret = sceKernelCopyFromUser(&krec, rec, sizeof(krec));
 		if (ret < 0)
 			return ret;
 		p = &krec;
@@ -586,7 +586,7 @@ int _sceErrorHistorySetDefaultFormat(const void *format)
 	int ret;
 
 	if (format != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(kformat, format, sizeof(kformat));
+		ret = sceKernelCopyFromUser(kformat, format, sizeof(kformat));
 		if (ret < 0)
 			return ret;
 		p = kformat;
@@ -603,7 +603,7 @@ int _sceErrorHistoryGetError(SceUInt32 index, void *buf)
 		return ERROR_SYSCALL(ErrorGetLocked(index, NULL));
 	memset(&kbuf, 0, sizeof(kbuf));
 	res = ERROR_SYSCALL(ErrorGetLocked(index, &kbuf));
-	ret = SceSysmemForDriver_6D88EF8A(buf, &kbuf, sizeof(kbuf));
+	ret = sceKernelCopyToUser(buf, &kbuf, sizeof(kbuf));
 	return ret < 0 ? ret : res;
 }
 
@@ -614,7 +614,7 @@ int _sceErrorHistoryUpdateSequenceInfo(const void *info, int reserved)
 	int ret;
 
 	if (info != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&kinfo, info, sizeof(kinfo));
+		ret = sceKernelCopyFromUser(&kinfo, info, sizeof(kinfo));
 		if (ret < 0)
 			return ret;
 		p = &kinfo;

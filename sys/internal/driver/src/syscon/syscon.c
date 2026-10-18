@@ -866,13 +866,13 @@ static __attribute__((noinline)) int sysconInitialize(void)
 	options.size = sizeof(options);
 	options.paddr = SPI_REG_BASE(0);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	result = SceSysmemForDriver_C94850C9("SceSpi0Reg",
+	result = sceKernelAllocMemBlockForKernel("SceSpi0Reg",
 					 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					 0x1000, &options);
 	if (result < 0)
 		return result;
 	s_sysconControl.spiMemblock = result;
-	SceSysmemForDriver_A841EDDA(result, (void **)&s_sysconControl.spiRegisters);
+	sceKernelGetMemBlockBase(result, (void **)&s_sysconControl.spiRegisters);
 	sceKernelRegisterSubIntrHandler(0xf8, 4, "SceSysconCmdclr",
 				       _sceSysconGpioIntr, NULL);
 	sceKernelEnableSubIntr(0xf8, 4);

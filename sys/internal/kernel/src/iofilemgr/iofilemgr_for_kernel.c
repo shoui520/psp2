@@ -25,7 +25,7 @@ SceUID SceIofilemgrForDriver_C3D34965(SceUID pid, const char *path, int flags, S
 		return sceIoOpen(path, flags, mode);
 
 	forWrite = (flags & IO_OPEN_WRITE_FLAGS) != 0;
-	resolved = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x400);
+	resolved = sceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x400);
 	if (resolved == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 
@@ -51,7 +51,7 @@ int SceIofilemgrForDriver_9C220246(SceUID pid, const char *path, int unused, Sce
 	if (g_ioPathMappingFunction == NULL || pid == SCE_KERNEL_PROCESS_ID) {
 		ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, type);
 	} else {
-		mapped = SceSysmemForDriver_7B4CB60A(g_ioVfsHeapUid, 0x400);
+		mapped = sceKernelAllocHeapMemory(g_ioVfsHeapUid, 0x400);
 		if (mapped == NULL)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		map = g_ioPathMappingFunction;

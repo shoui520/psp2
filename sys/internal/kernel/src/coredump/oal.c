@@ -671,7 +671,7 @@ int oalMemBlockInit(SceUID *blockId, SceSize size)
 	SceUID result;
 
 	SCE_DBG_ASSERT(blockId != NULL, 317);
-	result = SceSysmemForDriver_C94850C9("SceCoredumpMemBlk",
+	result = sceKernelAllocMemBlockForKernel("SceCoredumpMemBlk",
 		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, size, NULL);
 	if (result >= 0) {
 		*blockId = result;
@@ -685,7 +685,7 @@ int oalMemBlockInitForDevTool(SceUID *blockId, SceSize size)
 	SceUID result;
 
 	SCE_DBG_ASSERT(blockId != NULL, 335);
-	result = SceSysmemForDriver_C94850C9("SceCoredumpMemBlk",
+	result = sceKernelAllocMemBlockForKernel("SceCoredumpMemBlk",
 		SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, size, NULL);
 	if (result >= 0) {
 		*blockId = result;
@@ -712,7 +712,7 @@ int oalHeapInit(SceUID blockId, SceUID *heapId, SceSize maxSize)
 	option.memtype = 0;
 	option.pid = 0;
 	option.heap = NULL;
-	result = SceSysmemForDriver_9328E0E8("SceCoredumpHeap", 0x1000, &option);
+	result = sceKernelCreateHeap("SceCoredumpHeap", 0x1000, &option);
 	if (result >= 0) {
 		*heapId = result;
 		return 0;
@@ -745,7 +745,7 @@ SceSize oalHeapGetFreeSize(SceUID heapId)
 
 void *oalHeapAlloc(SceUID heapId, SceSize size)
 {
-	return SceSysmemForDriver_7B4CB60A(heapId, size);
+	return sceKernelAllocHeapMemory(heapId, size);
 }
 
 int oalHeapFree(SceUID heapId, void *allocation)
@@ -1930,7 +1930,7 @@ int oalGetNumOfMemBlocks(SceUID pid)
 {
 	int count;
 
-	count = SceSysmemForKernel_08C05493(pid, SceSysmemForKernel_86681B64(),
+	count = scePUIDGetUIDVectorByClass(pid, SceSysmemForKernel_86681B64(),
 		5, NULL, 0, NULL);
 	if (count < 0)
 		count = 0;
@@ -1947,7 +1947,7 @@ void oalGetMemBlockIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	cls = SceSysmemForKernel_86681B64();
 	memset(ids, 0, capacity * sizeof(*ids));
-	SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+	scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 void oalGetMemBlockInfo(SceUID pid, SceUID uid, CoredumpMemBlockInfo *info)
@@ -2159,7 +2159,7 @@ static inline void _getSemaphoreIdList(SceUID pid, SceUID *ids, SceSize capacity
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDSemaphoreClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getEventFlagIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2172,7 +2172,7 @@ static inline void _getEventFlagIdList(SceUID pid, SceUID *ids, SceSize capacity
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDEventFlagClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getMutexIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2185,7 +2185,7 @@ static inline void _getMutexIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDMutexClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getLwMutexIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2198,7 +2198,7 @@ static inline void _getLwMutexIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDLwMutexClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getCondIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2211,7 +2211,7 @@ static inline void _getCondIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDCondClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getLwCondIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2224,7 +2224,7 @@ static inline void _getLwCondIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDLwCondClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getMsgPipeIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2237,7 +2237,7 @@ static inline void _getMsgPipeIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDMsgPipeClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getCallbackIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2250,7 +2250,7 @@ static inline void _getCallbackIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDCallbackClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getTimerIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2263,7 +2263,7 @@ static inline void _getTimerIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDTimerClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getRWLockIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2276,7 +2276,7 @@ static inline void _getRWLockIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDRWLockClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 static inline void _getSimpleEventIdList(SceUID pid, SceUID *ids, SceSize capacity)
@@ -2289,7 +2289,7 @@ static inline void _getSimpleEventIdList(SceUID pid, SceUID *ids, SceSize capaci
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	if (SceSysmemForKernel_7D87F706("SceUIDSimpleEventClass", &cls) >= 0)
-		SceSysmemForKernel_08C05493(pid, cls, 5, ids, capacity, &count);
+		scePUIDGetUIDVectorByClass(pid, cls, 5, ids, capacity, &count);
 }
 
 void oalGetSyncObjIdList(int type, SceUID pid, SceUID *ids, SceSize capacity)
@@ -4068,7 +4068,7 @@ int oalGetFrameBufferDetails(SceUID pid, int index,
 
 int oalReferObject(SceUID guid)
 {
-	return SceSysmemForDriver_0F5C84B7(guid, NULL);
+	return sceGUIDReferObject(guid, NULL);
 }
 
 int oalReleaseObject(SceUID guid)

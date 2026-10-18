@@ -84,14 +84,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_24A99FFF
 	SceSysmemForDriver_59A4402F
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_75C70DE0
+	sceKernelCopyToUser
+	sceKernelUnlockRange
 	SceSysmemForDriver_8A1742F6
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A841EDDA
+	sceKernelIsAccessibleRange
+	sceKernelGetMemBlockBase
 	SceSysmemForDriver_AE36C775
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
 	memset
 	strncmp
@@ -103,7 +103,7 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_AF80F39C
 	sceKernelRegisterProcEventHandler
 	_unlockProcessSuspendCore

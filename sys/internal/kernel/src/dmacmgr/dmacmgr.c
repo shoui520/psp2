@@ -155,7 +155,7 @@ DmaTag *AllocateDmaTagData(void)
 		SCE_DBG_PRINTF(6, 378, "allocate tag failed.\n");
 		return NULL;
 	}
-	SceSysmemForDriver_8D160E65(&tag->tag, &tag->pa);
+	sceKernelVAtoPA(&tag->tag, &tag->pa);
 	tag->cached = 0;
 	tag->pa |= 1;
 	return tag;
@@ -622,14 +622,14 @@ void *mapDmac(const char *name, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	memBlockId = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					   DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 2285, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(2286);
 		return NULL;
 	}
-	SceSysmemForDriver_A841EDDA(memBlockId, &base);
+	sceKernelGetMemBlockBase(memBlockId, &base);
 	return base;
 }
 
@@ -650,7 +650,7 @@ int AllocPARanges(SceUInt32 addr, SceSize size, SceKernelPAVector *vector)
 	}
 	if (vector->total == 1)
 		return 0;
-	ranges = SceSysmemForDriver_7B4CB60A(s_dmacMgr.rangeHeapId, vector->total * sizeof(*ranges));
+	ranges = sceKernelAllocHeapMemory(s_dmacMgr.rangeHeapId, vector->total * sizeof(*ranges));
 	if (ranges == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	vector->pRanges = ranges;
@@ -1690,7 +1690,7 @@ static inline void InitializeTagCache(void)
 	DmaTag *tag;
 
 	for (tag = s_tagCache; tag != &s_tagCache[64]; tag++) {
-		int res = SceSysmemForDriver_8D160E65(&tag->tag, &tag->pa);
+		int res = sceKernelVAtoPA(&tag->tag, &tag->pa);
 
 		tag->pa |= 1;
 		if (res < 0)
@@ -1727,7 +1727,7 @@ int module_start(SceSize args, void *argp)
 
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.flags = HEAP_AUTO_EXTEND;
-	res = SceSysmemForDriver_9328E0E8("SceKernelDmacMgr", 0x400, &heapOpt);
+	res = sceKernelCreateHeap("SceKernelDmacMgr", 0x400, &heapOpt);
 	if (res < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 2134, "StartDmacmgr", "Create Heap failed. 0x%08x\n", res);
 		goto out;

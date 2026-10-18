@@ -195,14 +195,14 @@ int AllocateGpuPageDirectory(GpuMmuContext *context)
 	options.size = sizeof(options);
 	options.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 	options.pid = sceKernelGetProcessId();
-	uid = SceSysmemForDriver_C94850C9("SceGpuPageDirectory",
+	uid = sceKernelAllocMemBlockForKernel("SceGpuPageDirectory",
 				    SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 				    0x1000, 0);
 	if (uid < 0)
 		return uid;
-	ret = SceSysmemForDriver_A841EDDA(uid, &base);
+	ret = sceKernelGetMemBlockBase(uid, &base);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_8D160E65(base, &physical);
+		ret = sceKernelVAtoPA(base, &physical);
 	if (ret < 0) {
 		SceSysmemForDriver_009E1C61(uid);
 		return ret;

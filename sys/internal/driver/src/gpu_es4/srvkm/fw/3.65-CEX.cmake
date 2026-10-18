@@ -174,17 +174,17 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_58D21746
 	SceSysmemForDriver_6A0792A3
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E
 	SceSysmemForDriver_857F1D5A
 	SceSysmemForDriver_8A1742F6
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelIsAccessibleRange
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_CB0F3A33
 	SceSysmemForDriver_E655852F
 	SceSysmemForDriver_EAF3849B
@@ -196,7 +196,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelReleaseIntrHandler
 	sceKernelAllocRemoteProcessHeap
 	sceKernelGetProcessInfo
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	sceKernelGetBudgetInfo
 	SceProcessmgrForDriver_82D94BE9
 	sceKernelFreeRemoteProcessHeap

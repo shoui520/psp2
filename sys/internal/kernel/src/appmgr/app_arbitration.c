@@ -141,7 +141,7 @@ int copyArgv(char *destination, const char *const *userArgv)
 	if (userArgv == NULL)
 		return 0;
 	for (;;) {
-		result = SceSysmemForDriver_BC996A7A(&argument, userArgv, sizeof(argument));
+		result = sceKernelCopyFromUser(&argument, userArgv, sizeof(argument));
 		if (result != 0)
 			return result;
 		if (argument == NULL) {
@@ -152,7 +152,7 @@ int copyArgv(char *destination, const char *const *userArgv)
 			}
 			return total;
 		}
-		result = SceSysmemForDriver_DB3EC244(cursor, argument, 1024 - total);
+		result = sceKernelStrncpyFromUser(cursor, argument, 1024 - total);
 		if (result == 1024 - total)
 			return (int)0x8001005bU;
 		if (result < 0)

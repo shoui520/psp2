@@ -166,7 +166,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
 	threadId = cpu->runningThreadId;
-	if (SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
+	if (sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
 					 (SceObjectBase **)&object) < 0) {
 		SCE_DBG_ASSERT_FAIL(168);
 		SCE_PRINTF_WITH_INFO(0, 169,

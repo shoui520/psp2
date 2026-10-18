@@ -56,14 +56,14 @@ static inline void GlobalTimerStart(SceUInt64 count)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERIPH_REG_BASE;
-	uid = SceSysmemForDriver_C94850C9("ScePeriphReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = sceKernelAllocMemBlockForKernel("ScePeriphReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      PERIPH_REG_SIZE, &opt);
 	if (uid < 0) {
 		GLOBAL_TIMER_ERROR("failed to allocate global timer memory block", uid, 48);
 		return;
 	}
 	s_globalTimer.uid = uid;
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_globalTimer.base = base;
 	timer = (GlobalTimer *)((char *)base + GLOBAL_TIMER_OFFSET);
 	s_globalTimer.timer = timer;

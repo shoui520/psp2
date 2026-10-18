@@ -234,7 +234,7 @@ set(MODULE_IMPORT_NIDS
 	0x54802381:F:0xF001AE90
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForKernel_08C05493
+	scePUIDGetUIDVectorByClass
 	sceKernelGetHeapInfo
 	SceSysmemForKernel_7D87F706
 	SceSysmemForKernel_86681B64
@@ -267,22 +267,22 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceSysmemForDriver_009E1C61
 	sceGUIDClose
-	SceSysmemForDriver_0F5C84B7
-	SceSysmemForDriver_0FC24464
+	sceGUIDReferObject
+	sceGUIDGetObject
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_56A13E90
+	sceGUIDKernelCreate
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_61317102
-	SceSysmemForDriver_7B4CB60A
+	sceUIDClassInitClass
+	sceKernelAllocHeapMemory
 	SceSysmemForDriver_85336A1C
-	SceSysmemForDriver_9328E0E8
+	sceKernelCreateHeap
 	SceSysmemForDriver_9F6E45E3
 	SceSysmemForDriver_A73CFFEF
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	SceSysrootForKernel_2A03DFA1
 	SceSysrootForKernel_6D111FA7

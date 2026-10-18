@@ -45,11 +45,11 @@ int allocVeneziaImage(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = PERVASIVE2_BASE;
-	ret = SceSysmemForDriver_C94850C9("ScePervasive2Reg", 0x20100806, 0x1000, &opt);
+	ret = sceKernelAllocMemBlockForKernel("ScePervasive2Reg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		goto out;
 	g_veneziaBootMemory.registerBlock = ret;
-	SceSysmemForDriver_A841EDDA(ret, &result.base);
+	sceKernelGetMemBlockBase(ret, &result.base);
 	g_veneziaBootMemory.registerBase = result.base;
 	result.info.size = sizeof(result.info);
 	result.info.base = 0;
@@ -67,11 +67,11 @@ int allocVeneziaImage(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = g_veneziaBootMemory.imagePhysicalBase;
-	ret = SceSysmemForDriver_C94850C9("SceVeneziaImage", 0x20108006,
+	ret = sceKernelAllocMemBlockForKernel("SceVeneziaImage", 0x20108006,
 				    g_veneziaBootMemory.imageSize, &opt);
 	if (ret >= 0) {
 		g_veneziaBootMemory.imageBlock = ret;
-		SceSysmemForDriver_A841EDDA(ret, &result.base);
+		sceKernelGetMemBlockBase(ret, &result.base);
 		g_veneziaBootMemory.imageBase = result.base;
 	}
 out:

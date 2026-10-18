@@ -67,11 +67,11 @@ int LowioPwmInit(SceSize arglen, const void *argp)
 	opt.size = 0x58;
 	opt.attr = 2;
 	opt.paddr = PWM_REG_BASE;
-	ret = SceSysmemForDriver_C94850C9("ScePwmReg", 0x20100806, 0x1000, &opt);
+	ret = sceKernelAllocMemBlockForKernel("ScePwmReg", 0x20100806, 0x1000, &opt);
 	if (ret < 0)
 		return 2;
 	s_pwm.uid = ret;
-	SceSysmemForDriver_A841EDDA(ret, (void **)&s_pwm.registers);
+	sceKernelGetMemBlockBase(ret, (void **)&s_pwm.registers);
 	PwmRestoreState();
 	sceKernelRegisterSysEventHandler("ScePwm", PwmSysEvent, NULL);
 	return 0;

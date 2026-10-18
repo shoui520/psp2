@@ -140,7 +140,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 2068);
 	intr = SceCpuForDriver_821FC0EE();
 	pid = callback->ownerPid;
-	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
+	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
@@ -168,12 +168,12 @@ int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		ret = CallbackUnknownIdError();
 		goto resume;
 	}
-	if (SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+	if (sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 					 (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto release;
@@ -349,7 +349,7 @@ int callCallbackEntry(struct ThreadCB *thread, int user, uintptr_t entry,
 		opt.size = sizeof(opt);
 		opt.attr = EXT_STACK_MEMBLOCK_ATTR;
 		opt.extraLow = EXT_STACK_GUARD;
-		blockId = SceSysmemForDriver_C94850C9("SceExt", type, stackSize + opt.extraLow, &opt);
+		blockId = sceKernelAllocMemBlockForKernel("SceExt", type, stackSize + opt.extraLow, &opt);
 		if (blockId < 0) {
 			SCE_DBG_PRINTF(0, 410,
 				" k: error: sceKernelAllocMemBlockForKernel(%s, 0x%08X, 0x%08X)=0x%08X\n",
@@ -415,7 +415,7 @@ restore:
 		*vfpException = thread->vfpException;
 		__asm__ volatile("dsb sy" : : : "memory");
 		if (user) {
-			ret = SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
+			ret = sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
 						   &thread->vfpException, sizeof(uint32_t));
 			SCE_DBG_ASSERT_CHECK(ret == 0, 486);
 		}
@@ -474,7 +474,7 @@ restore:
 		regs->lr = (uint32_t)SceSysrootForKernel_AD74BEB3(thread->process);
 		thread->pRegisterContext->tpidruro = thread->tls;
 		thread->vfpException = 0;
-		ret = SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
+		ret = sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
 					   &thread->vfpException, sizeof(uint32_t));
 		SCE_DBG_ASSERT_CHECK(ret == 0, 584);
 	}
@@ -577,17 +577,17 @@ int callbackProcessExit(SceProcessObject *process)
 	SceSize got = 0;
 	int num, i, intr, ret;
 
-	num = SceSysmemForKernel_08C05493(process->pid, CALLBACK_CLASS(), 0x50000, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(process->pid, CALLBACK_CLASS(), 0x50000, NULL, 0, NULL);
 	if (num < 0)
 		return 0;
 	if (num == 0) {
 		vector = NULL;
 	} else {
 		do {
-			vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+			vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 							   num * sizeof(SceUID));
 			SCE_DBG_ASSERT_CHECK(vector != NULL, 788);
-			num = SceSysmemForKernel_08C05493(process->pid, CALLBACK_CLASS(), 5, vector,
+			num = scePUIDGetUIDVectorByClass(process->pid, CALLBACK_CLASS(), 5, vector,
 							  num, &got);
 			if ((int)got >= num)
 				break;
@@ -602,14 +602,14 @@ int callbackProcessExit(SceProcessObject *process)
 				       process->pid, vector[i], guid);
 			SCE_PANIC(811);
 		}
-		ret = SceSysmemForDriver_00ED6C14(guid, CALLBACK_CLASS(),
+		ret = sceGUIDReferObjectWithClass(guid, CALLBACK_CLASS(),
 						   (SceObjectBase **)&callback);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 816, "()->sceGUIDReferObjectWithClass(0x%08X)=0x%08X\n",
 				       guid, ret);
 			SCE_PANIC(817);
 		}
-		ret = SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+		ret = sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 						   (SceObjectBase **)&object);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 822,
@@ -686,7 +686,7 @@ SceUID sceKernelCreateCallback(const char *name, SceUInt32 attr, SceKernelCallba
 		goto restore;
 	}
 	access = user ? 0x50 : 5;
-	ret = SceSysmemForDriver_F4AD89D8(thread->process->pid,
+	ret = sceKernelIsEqualAccessibleRangeProcBySW(thread->process->pid,
 						       access, (const void *)entry, 4);
 	if (ret != 0) {
 		SCE_DBG_PRINTF_FUNC(0, 928, "sceKernelCreateCallback",
@@ -803,12 +803,12 @@ int sceKernelDeleteCallback(SceUID callbackId)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		ret = CallbackUnknownIdError();
 		goto resume;
 	}
-	if (SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+	if (sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 					 (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 		goto release;
@@ -863,12 +863,12 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		ret = CallbackUnknownIdError();
 		goto resume;
 	}
-	if (SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+	if (sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 					 (SceObjectBase **)&object) < 0) {
 		sceGUIDReleaseObject(callbackId);
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -903,7 +903,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 			break;
 		}
 		waitId = object->context.waitId;
-		ret = SceSysmemForDriver_72A98D17(waitId,
+		ret = sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass,
 			(SceObjectBase **)&waitObject);
 		if (ret < 0) {
@@ -982,12 +982,12 @@ int SceThreadmgrForDriver_C040EC1C(SceUID callbackId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		ret = CallbackUnknownIdError();
 		goto resume;
 	}
-	if (SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+	if (sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 					 (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1016,12 +1016,12 @@ int SceThreadmgrForDriver_0892D8DF(SceUID callbackId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		ret = CallbackUnknownIdError();
 		goto resume;
 	}
-	if (SceSysmemForDriver_00ED6C14(callback->cb.threadId, THREAD_CLASS(),
+	if (sceGUIDReferObjectWithClass(callback->cb.threadId, THREAD_CLASS(),
 					 (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	} else {
@@ -1058,7 +1058,7 @@ int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *inf
 		if (ret >= 0) {
 			if (ThreadmgrInSyscall()) {
 				threadId = local.threadId;
-				if (SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(),
+				if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(),
 						(SceObjectBase **)&object) < 0) {
 					local.threadId = -1;
 				} else {
@@ -1094,12 +1094,12 @@ int SceThreadmgrForDriver_767CA30C(int level, SceKernelCallbackInfo *infos, SceS
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(CALLBACK_CLASS(), level, NULL, 0, NULL);
+	num = sceGUIDGetUIDVectorByClass(CALLBACK_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(CALLBACK_CLASS(), level, vector, num, &got);
+		total = sceGUIDGetUIDVectorByClass(CALLBACK_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1137,12 +1137,12 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid, CALLBACK_CLASS(), level, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(pid, CALLBACK_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid, CALLBACK_CLASS(), level, vector, num, &got);
+		total = scePUIDGetUIDVectorByClass(pid, CALLBACK_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1157,7 +1157,7 @@ int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo 
 			continue;
 		info.callbackId = vector[i];
 		threadId = info.threadId;
-		if (SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(),
+		if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(),
 						 (SceObjectBase **)&object) < 0) {
 			info.threadId = -1;
 		} else {
@@ -1194,7 +1194,7 @@ int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId,
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(callbackId, CALLBACK_CLASS(),
+	if (sceGUIDReferObjectWithClass(callbackId, CALLBACK_CLASS(),
 					 (SceObjectBase **)&callback) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID | SYSCALL_ERROR_BIT;
@@ -1205,7 +1205,7 @@ int sceKernelRegisterCallbackToEventForDriver(SceUID eventId, SceUID callbackId,
 		}
 		goto resume;
 	}
-	if (SceSysmemForDriver_72A98D17(eventId,
+	if (sceGUIDReferObjectWithSubclass(eventId,
 			s_threadmgrRuntime.manager->registerCallbackClass,
 			(SceObjectBase **)&event) < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1260,7 +1260,7 @@ int sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_72A98D17(eventId,
+	if (sceGUIDReferObjectWithSubclass(eventId,
 			s_threadmgrRuntime.manager->registerCallbackClass,
 			(SceObjectBase **)&event) < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1302,7 +1302,7 @@ int sceKernelUnregisterCallbackFromEventAll(SceUID eventId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_72A98D17(eventId,
+	if (sceGUIDReferObjectWithSubclass(eventId,
 			s_threadmgrRuntime.manager->registerCallbackClass,
 			(SceObjectBase **)&event) < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1350,17 +1350,17 @@ void startCallback(void)
 	struct ThreadmgrWaitableClass *registerClass;
 	SceClass *cls;
 
-	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, 0x2c);
+	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, 0x2c);
 	if (cls == NULL)
 		SCE_PANIC(184);
-	if (SceSysmemForDriver_61317102(cls, "SceUIDCallbackClass", SceSysmemForDriver_85336A1C(), 0x80,
+	if (sceUIDClassInitClass(cls, "SceUIDCallbackClass", SceSysmemForDriver_85336A1C(), 0x80,
 				  uidCallback_Constructor,
 				  (SceClassCallback)uidCallback_Destructor) < 0)
 		SCE_PANIC_FUNC(SCE_LINE(2040, 2035), "uidCallbackClassInit");
 	s_threadmgrRuntime.manager->callbackClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 197, " sizeof(SceUIDCallbackObject)=%d\n",
 			     sizeof(struct ThreadmgrCallback));
-	registerClass = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	registerClass = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						  sizeof(*registerClass));
 	if (registerClass == NULL)
 		SCE_PANIC(202);

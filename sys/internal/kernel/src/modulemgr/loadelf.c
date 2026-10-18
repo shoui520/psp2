@@ -93,10 +93,10 @@ static int LoadelfCopySharedSegment(LoadelfContext *ctx, int index)
 	opt.size = sizeof(opt);
 	opt.attr = 0x1000040;
 	opt.mirror_blockid = orig->memblk;
-	tmp = SceSysmemForDriver_C94850C9("SceModuleMgrKernelTmpForSharedText", 0x6020d006, 0, &opt);
+	tmp = sceKernelAllocMemBlockForKernel("SceModuleMgrKernelTmpForSharedText", 0x6020d006, 0, &opt);
 	if (tmp < 0)
 		return tmp;
-	SceSysmemForDriver_A841EDDA(tmp, &base);
+	sceKernelGetMemBlockBase(tmp, &base);
 	memcpy(ctx->seg[index].kaddr, (char *)base + ((SceUInt32)orig->vaddr & 0xfff), seg->filesz);
 	return SceSysmemForDriver_009E1C61(tmp);
 }
@@ -142,7 +142,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 			memtype = 0x1020d006;
 			if (type == 2)
 				memtype = 0x10f0d006;
-			ret = SceSysmemForDriver_C94850C9("SceModuleMgrSegment", memtype, total, &opt);
+			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrSegment", memtype, total, &opt);
 		} else {
 			opt.attr = base | 0x480080;
 			allocSize = total;
@@ -190,7 +190,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 					}
 				}
 			}
-			ret = SceSysmemForDriver_C94850C9("SceModuleMgrUserTextData", memtype, allocSize, &opt);
+			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrUserTextData", memtype, allocSize, &opt);
 		}
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 336, "memory allocation error (ret:0x%08x, size:%d)\n",
@@ -199,7 +199,7 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 		}
 
 		seg->memblk = ret;
-		SceSysmemForDriver_A841EDDA(ret, &seg->vaddr);
+		sceKernelGetMemBlockBase(ret, &seg->vaddr);
 		ctx->seg[index].kaddr = seg->vaddr;
 		seg->vaddr = (char *)seg->vaddr + pageOff;
 
@@ -213,13 +213,13 @@ int LoadelfLoadSegment(LoadelfContext *ctx, SelfReader *reader, int index, Loade
 			opt.size = sizeof(opt);
 			opt.attr = 0x1000040;
 			opt.mirror_blockid = seg->memblk;
-			ret = SceSysmemForDriver_C94850C9("SceModuleMgrKernelTmp", 0x6020d006, 0, &opt);
+			ret = sceKernelAllocMemBlockForKernel("SceModuleMgrKernelTmp", 0x6020d006, 0, &opt);
 			if (ret < 0) {
 				LoadelfFreeMem(cb, &seg->vaddr, &seg->memblk, &ctx->seg[index]);
 				return ret;
 			}
 			ctx->seg[index].tmpBlock = ret;
-			SceSysmemForDriver_A841EDDA(ret, &ctx->seg[index].kaddr);
+			sceKernelGetMemBlockBase(ret, &ctx->seg[index].kaddr);
 		}
 	}
 
@@ -285,7 +285,7 @@ static int LoadelfAllocRelaTmp(SceModuleCB *cb, SceSize size)
 		opt.attr = 0x400080;
 		opt.pid = cb->pid;
 	}
-	return SceSysmemForDriver_C94850C9("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
+	return sceKernelAllocMemBlockForKernel("SceModuleMgrRelaTmp", memtype, PAGE_ROUND(size), &opt);
 }
 
 int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, SceUInt32 flags)
@@ -435,7 +435,7 @@ int LoadelfParsePhdrs(LoadelfContext *ctx, SceUID fd, SelfAuthRequest *auth, Sce
 					ret = uid;
 					if (uid < 0)
 						goto fail;
-					SceSysmemForDriver_A841EDDA(uid, &buf);
+					sceKernelGetMemBlockBase(uid, &buf);
 					if (buf == NULL) {
 						ret = SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 					} else {

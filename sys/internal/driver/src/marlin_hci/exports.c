@@ -88,12 +88,12 @@ int MarlinHciExportStoredList(void *outputHandles, unsigned int *outputCount,
 	}
 	ret = MarlinHciExportStoredListChecked(handles, count);
 	if (outputHandles != NULL) {
-		copy = SceSysmemForDriver_6D88EF8A(outputHandles, handles, args.size);
+		copy = sceKernelCopyToUser(outputHandles, handles, args.size);
 		if (copy < 0)
 			return copy;
 	}
 	if (outputCount != NULL)
-		return copyResult(ret, SceSysmemForDriver_6D88EF8A(outputCount, count,
+		return copyResult(ret, sceKernelCopyToUser(outputCount, count,
 							 sizeof(*count)));
 	return ret;
 }
@@ -107,11 +107,11 @@ int MarlinHciImportWrappedKey(MarlinWrappedKeyImport *userRequest)
 		return MarlinHciImportWrappedKeyChecked(NULL);
 	request = __builtin_alloca(sizeof(*request));
 	__builtin_memset(request, 0, sizeof(*request));
-	ret = SceSysmemForDriver_BC996A7A(request, userRequest, sizeof(*request));
+	ret = sceKernelCopyFromUser(request, userRequest, sizeof(*request));
 	if (ret < 0)
 		return ret;
 	ret = MarlinHciImportWrappedKeyChecked(request);
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(userRequest, request,
+	return copyResult(ret, sceKernelCopyToUser(userRequest, request,
 						 sizeof(*request)));
 }
 

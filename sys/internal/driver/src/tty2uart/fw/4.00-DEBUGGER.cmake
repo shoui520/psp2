@@ -50,8 +50,8 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_B81CF0A3
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockVBase
+	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_4C38CE4D
 	sceKernelRWSpinlockLowReadUnlockCpuResumeIntr
 	sceKernelSpinlockLowUnlockCpuResumeIntr

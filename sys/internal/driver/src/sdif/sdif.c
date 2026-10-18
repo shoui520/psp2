@@ -615,21 +615,21 @@ int sceSdifInit(void)
 		opt.size = sizeof(opt);
 		opt.paddr = index < SDIF_PORTS ? sdifRegisterAddresses[index] : 0;
 		opt.attr = 2;
-		result = SceSysmemForDriver_C94850C9(name, 0x20100806,
+		result = sceKernelAllocMemBlockForKernel(name, 0x20100806,
 					       index < SDIF_PORTS ? SDIF_REG_SIZE : 0, &opt);
 		if (result < 0)
 			goto cleanupPorts;
 		port->registerMemblock = result;
-		SceSysmemForDriver_A841EDDA(result, &registerBase);
+		sceKernelGetMemBlockBase(result, &registerBase);
 		port->registers = registerBase;
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 0x200000;
-		result = SceSysmemForDriver_C94850C9(name, 0x1020d006, 0x10000, &opt);
+		result = sceKernelAllocMemBlockForKernel(name, 0x1020d006, 0x10000, &opt);
 		if (result < 0)
 			goto freeRegisters;
 		port->descriptorMemblock = result;
-		SceSysmemForDriver_A841EDDA(result, &port->descriptorBuffer);
+		sceKernelGetMemBlockBase(result, &port->descriptorBuffer);
 		result = sceKernelInitializeFastMutex(&port->mutex, name, 2, NULL);
 		if (result < 0)
 			goto freeDescriptors;
@@ -652,13 +652,13 @@ int sceSdifInit(void)
 			command->index = commandIndex;
 			__builtin_prefetch(&command[3].state);
 			address = command->leadingBuffer;
-			result = SceSysmemForDriver_8D160E65(address, &leadingPhysicalAddress);
+			result = sceKernelVAtoPA(address, &leadingPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3710, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
 			}
 			address = command->trailingBuffer;
-			result = SceSysmemForDriver_8D160E65(address, &trailingPhysicalAddress);
+			result = sceKernelVAtoPA(address, &trailingPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3717, "_sceSdifInitDmaAlignmentBuffer");
 				goto addressError;
@@ -666,7 +666,7 @@ int sceSdifInit(void)
 			command->leadingPhysicalAddress = leadingPhysicalAddress;
 			command->trailingPhysicalAddress = trailingPhysicalAddress;
 			address = command->defaultDescriptors;
-			result = SceSysmemForDriver_8D160E65(address, &command->defaultDescriptorPhysicalAddress);
+			result = sceKernelVAtoPA(address, &command->defaultDescriptorPhysicalAddress);
 			if (result < 0) {
 				debugInfo = SCE_DBGINFO_FUNC(3690, "_sceSdifInitCmd");
 				goto addressError;

@@ -121,10 +121,10 @@ static int AllocTemporary(void **base, unsigned *size)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	uid = SceSysmemForDriver_C94850C9("SceUsbstorMgTmp", 0x1020d006, bytes, &opt);
+	uid = sceKernelAllocMemBlockForKernel("SceUsbstorMgTmp", 0x1020d006, bytes, &opt);
 	if (uid < 0)
 		return MG_ERROR_MEMORY;
-	if (SceSysmemForDriver_A841EDDA(uid, &ptr) < 0) {
+	if (sceKernelGetMemBlockBase(uid, &ptr) < 0) {
 		SceSysmemForDriver_009E1C61(uid);
 		return MG_ERROR_MEMORY;
 	}
@@ -520,12 +520,12 @@ static int Initialize(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	s_mg.memblock = SceSysmemForDriver_C94850C9("SceUsbstorMg", 0x10208006, 0x2000, &opt);
+	s_mg.memblock = sceKernelAllocMemBlockForKernel("SceUsbstorMg", 0x10208006, 0x2000, &opt);
 	if (s_mg.memblock < 0) {
 		ret = MG_ERROR_MEMORY;
 		goto permissionOut;
 	}
-	if (SceSysmemForDriver_A841EDDA(s_mg.memblock, &base) < 0) {
+	if (sceKernelGetMemBlockBase(s_mg.memblock, &base) < 0) {
 		ret = MG_ERROR_MEMORY;
 		goto freeBlock;
 	}

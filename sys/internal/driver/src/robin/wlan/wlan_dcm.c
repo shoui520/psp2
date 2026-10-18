@@ -553,11 +553,11 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	result = SceSysmemForDriver_C94850C9("SceWlanBtRobinWlan", 0x1020d006, 0x1000, &options);
+	result = sceKernelAllocMemBlockForKernel("SceWlanBtRobinWlan", 0x1020d006, 0x1000, &options);
 	if (result < 0)
 		return result;
 	dcm->commandMemory = result;
-	result = SceSysmemForDriver_A841EDDA(result, (void **)&base);
+	result = sceKernelGetMemBlockBase(result, (void **)&base);
 	if (result < 0)
 		return result;
 	dcm->requestBuffer = base;
@@ -566,12 +566,12 @@ int robinWlanInitializeDcm(SceWlanBtRobinWlanDcm *dcm)
 	options.size = sizeof(options);
 	options.attr = 0x200004;
 	options.alignment = 0x1000;
-	result = SceSysmemForDriver_C94850C9("SceWlanBtRobinWlanSdioAggrRx",
+	result = sceKernelAllocMemBlockForKernel("SceWlanBtRobinWlanSdioAggrRx",
 				       0x10208006, 0x4000, &options);
 	if (result < 0)
 		return result;
 	dcm->aggregateMemory = result;
-	result = SceSysmemForDriver_A841EDDA(result, (void **)&base);
+	result = sceKernelGetMemBlockBase(result, (void **)&base);
 	if (result >= 0) {
 		dcm->aggregateCapacity = 0x4000;
 		dcm->packetHeadroom = 20;

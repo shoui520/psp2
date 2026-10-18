@@ -305,10 +305,10 @@ static int allocateBuffer(const char *name, unsigned int length, void **base)
 	options[0] = sizeof(options);
 	options[2] = 0x200004;
 	options[5] = 0x1000;
-	ret = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, (length + 0xfff) & ~0xfff,
+	ret = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, (length + 0xfff) & ~0xfff,
 				    (SceKernelAllocMemBlockKernelOpt *)options);
 	if (ret >= 0)
-		ret = SceSysmemForDriver_A841EDDA(ret, base);
+		ret = sceKernelGetMemBlockBase(ret, base);
 	return ret;
 }
 

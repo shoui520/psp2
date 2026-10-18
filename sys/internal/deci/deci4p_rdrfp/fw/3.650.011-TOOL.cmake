@@ -92,10 +92,10 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceCpuForDriver_341B6E81
 	SceCpuForDriver_5F6A8743
 	memset
@@ -158,8 +158,8 @@ set(MODULE_IMPORT_FUNCS
 	sceDfMgrSend
 	SceDeci4pDfMgrForDebugger_CACAB5F9
 	SceAppMgrForDriver_0813AFCA
-	SceAppMgrForDriver_1574E1A4
-	SceAppMgrForDriver_E8DB7942
+	sceAppMgrRdrfpMount
+	sceAppMgrRdrfpUmount
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

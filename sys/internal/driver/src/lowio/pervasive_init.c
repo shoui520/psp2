@@ -75,7 +75,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_pervasiveDevices[i].paddr;
-		ret = SceSysmemForDriver_C94850C9(s_pervasiveDevices[i].name,
+		ret = sceKernelAllocMemBlockForKernel(s_pervasiveDevices[i].name,
 			i == 5 ? 0x20100206 : 0x20100806,
 			s_pervasiveDevices[i].size, &opt);
 		if (ret < 0) {
@@ -88,7 +88,7 @@ static __attribute__((noinline)) int PervasiveInit(void)
 			return ret;
 		}
 		s_pervasiveUids[i] = ret;
-		SceSysmemForDriver_A841EDDA(ret, (void **)s_pervasiveDevices[i].base);
+		sceKernelGetMemBlockBase(ret, (void **)s_pervasiveDevices[i].base);
 	}
 	s_hardwareInfo[0] = s_misc->revision;
 	s_hardwareInfo[1] = s_misc->cacheStatus;

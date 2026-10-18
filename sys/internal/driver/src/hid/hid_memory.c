@@ -16,7 +16,7 @@ int hidInitializeMemory(void)
 	};
 	int result;
 
-	result = SceSysmemForDriver_9328E0E8("SceHid", 0x7000, &options);
+	result = sceKernelCreateHeap("SceHid", 0x7000, &options);
 	if (result < 0)
 		return result;
 	hidHeapId = result;
@@ -28,7 +28,7 @@ void *hidAllocateMemory(SceSize size)
 {
 	if (hidHeapId <= 0)
 		return NULL;
-	return SceSysmemForDriver_7B4CB60A(hidHeapId, size);
+	return sceKernelAllocHeapMemory(hidHeapId, size);
 }
 
 int hidFreeMemory(void *memory)

@@ -32,7 +32,7 @@ int _sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId)
 	kernelCopy = __builtin_alloca(sizeof(*kernelCopy));
 	*kernelCopy = (SceKernelOpenPsId){ { 0 } };
 	ret = aimgrGetOpenPsIdForUser(kernelCopy);
-	copyRet = SceSysmemForDriver_6D88EF8A(openPsId, kernelCopy, sizeof(*kernelCopy));
+	copyRet = sceKernelCopyToUser(openPsId, kernelCopy, sizeof(*kernelCopy));
 	if (copyRet < 0)
 		return copyRet;
 	return ret;

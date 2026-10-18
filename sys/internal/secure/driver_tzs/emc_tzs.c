@@ -174,11 +174,11 @@ int EmcModuleStart(SceSize arglen, const void *argp)
 	opt.size = 0x58;
 	opt.attr = 2;
 	opt.paddr = EMC_TOP_BASE;
-	ret = SceSysmemForDriver_C94850C9("SceEmcTop", 0x20100806, EMC_TOP_SIZE, &opt);
+	ret = sceKernelAllocMemBlockForKernel("SceEmcTop", 0x20100806, EMC_TOP_SIZE, &opt);
 	if (ret < 0)
 		return 2;
 	s_emc.uid = ret;
-	SceSysmemForDriver_A841EDDA(ret, &base);
+	sceKernelGetMemBlockBase(ret, &base);
 	s_emc.regs = base;
 	sceKernelRegisterIntrHandler(EMC_INTR, "SceEmcTop", 0, EmcIntrHandler, NULL,
 		0x50, ALL_CPUS, NULL);

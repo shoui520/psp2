@@ -205,26 +205,26 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUserUnmap
 	SceSysmemForDriver_0091D74D
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_00ED6C14
+	sceGUIDReferObjectWithClass
 	sceGUIDClose
-	SceSysmemForDriver_0F5C84B7
+	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_2D711589
 	SceSysmemForDriver_2ECF7944
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_4CFA4100
+	sceGUIDSetName
 	SceSysmemForDriver_58D21746
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	sceKernelStrncpyFromUserProc
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_A841EDDA
+	sceKernelGetMemBlockBase
 	SceSysmemForDriver_B415B5A8
 	SceSysmemForDriver_B429D419
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_DFE2C8CB
 	SceSysmemForDriver_E655852F
 	SceSysmemForKernel_4233C16D
@@ -288,7 +288,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	SceThreadmgrForDriver_B645C7EF
 	sceKernelCreateThread
-	SceThreadmgrForDriver_C8E57BB4
+	sceKernelCreateRemoteThread
 	sceKernelSetEventFlag
 	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide

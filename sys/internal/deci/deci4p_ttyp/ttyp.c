@@ -447,7 +447,7 @@ TTYP_INLINE int TtypInit(void)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.attr = 0x401;
 	heapOpt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	uid = SceSysmemForDriver_9328E0E8("SceDeci4pTtyp", 0x1000, &heapOpt);
+	uid = sceKernelCreateHeap("SceDeci4pTtyp", 0x1000, &heapOpt);
 	if (uid < 0) {
 		TTYP_PRINTF(242, "CreateHeap failed (0x%08X)\n", uid);
 		return uid;

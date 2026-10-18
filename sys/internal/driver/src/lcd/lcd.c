@@ -621,11 +621,11 @@ static __attribute__((noinline)) int initLcd(void) /* name unknown */
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = SPI_REG_BASE(2);
-	ret = SceSysmemForDriver_C94850C9("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	ret = sceKernelAllocMemBlockForKernel("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 	lcd.spiUid = ret;
-	SceSysmemForDriver_A841EDDA(ret, &base);
+	sceKernelGetMemBlockBase(ret, &base);
 	lcd.spi = base;
 	setupSpi(base);
 	sceKernelScheduleWorkTask(SCE_KERNEL_GLOBAL_WORK_QUEUE_ID, "SceLcdInit", initWork, 0);

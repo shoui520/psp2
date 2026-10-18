@@ -193,11 +193,11 @@ int sceDbgSdioInit(void)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = DBGSDIO_PADDR;
-	ret = SceSysmemForDriver_C94850C9("SceDbgSdio1", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	ret = sceKernelAllocMemBlockForKernel("SceDbgSdio1", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 				      SDIO_WINDOW_SIZE, &opt);
 	if (ret < 0)
 		return ret;
-	SceSysmemForDriver_A841EDDA(ret, (void **)&shm);
+	sceKernelGetMemBlockBase(ret, (void **)&shm);
 	s_sdio.memblock = ret;
 
 	ret = sceKernelInitializeFastMutex(&s_sdio.mutex, "SceDbgSdio1", 2, 0);

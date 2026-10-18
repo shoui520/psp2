@@ -46,9 +46,9 @@ set(MODULE_IMPORT_NIDS
 	0x0351D827:F:0xF1517B38
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelIsAccessibleRange
+	sceKernelCopyFromUser
 	memset
 	memcpy
 	__aeabi_uidivmod

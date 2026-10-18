@@ -164,7 +164,7 @@ int _sceAudiodecDeleteDecoderExternal(SceAudiodecCtrl *ctrl, SceUIntVAddr *userC
 	context = __builtin_alloca(sizeof(*context));
 	*context = 0;
 	ret = sceAudiodecDeleteDecoderExternalForUser(ctrl, context);
-	copied = SceSysmemForDriver_6D88EF8A(userContext, context, sizeof(*context));
+	copied = sceKernelCopyToUser(userContext, context, sizeof(*context));
 	return copied < 0 ? copied : ret;
 }
 
@@ -204,7 +204,7 @@ int _sceAudiodecGetInternalError(SceAudiodecCtrl *ctrl, int *userError)
 	internalError = __builtin_alloca(sizeof(*internalError));
 	*internalError = 0;
 	ret = sceAudiodecGetInternalErrorForUser(ctrl, internalError);
-	copied = SceSysmemForDriver_6D88EF8A(userError, internalError, sizeof(*internalError));
+	copied = sceKernelCopyToUser(userError, internalError, sizeof(*internalError));
 	return copied < 0 ? copied : ret;
 }
 
@@ -259,7 +259,7 @@ int _sceAudioencDeleteEncoderExternal(SceAudioencCtrl *ctrl, SceUIntVAddr *userC
 	context = __builtin_alloca(sizeof(*context));
 	*context = 0;
 	ret = sceAudioencDeleteEncoderExternalForUser(ctrl, (SceUIntVAddr)context);
-	copied = SceSysmemForDriver_6D88EF8A(userContext, context, sizeof(*context));
+	copied = sceKernelCopyToUser(userContext, context, sizeof(*context));
 	return copied < 0 ? copied : ret;
 }
 
@@ -293,7 +293,7 @@ int _sceAudioencGetInternalError(SceAudioencCtrl *ctrl, int *userError)
 	internalError = __builtin_alloca(sizeof(*internalError));
 	*internalError = 0;
 	ret = sceAudioencGetInternalErrorForUser(ctrl, internalError);
-	copied = SceSysmemForDriver_6D88EF8A(userError, internalError, sizeof(*internalError));
+	copied = sceKernelCopyToUser(userError, internalError, sizeof(*internalError));
 	return copied < 0 ? copied : ret;
 }
 
@@ -313,7 +313,7 @@ int _sceJpegDecodeMJpeg(const unsigned char *pJpeg, SceSize isize, void *pRGBA,
 	JpegDecodeArguments arguments;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret >= 0)
 		ret = SceAvcodecForDriver_80F63723(pJpeg, isize, pRGBA,
 			arguments.osize, arguments.decodeMode, arguments.pTempBuffer,
@@ -327,7 +327,7 @@ int _sceJpegDecodeMJpegYCbCr(const unsigned char *pJpeg, SceSize isize,
 	JpegYCbCrDecodeArguments arguments;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret >= 0)
 		ret = SceAvcodecForDriver_2A0AF392(pJpeg, isize, pYCbCr,
 			arguments.osize, arguments.decodeMode, arguments.pCoefBuffer,
@@ -341,7 +341,7 @@ int _sceJpegMJpegCsc(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 	JpegCscArguments arguments;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret >= 0)
 		ret = SceAvcodecForDriver_EAAE7737(pRGBA, pYCbCr, xysize,
 			arguments.iFrameWidth, arguments.colorOption, arguments.sampling);
@@ -355,7 +355,7 @@ int _sceJpegGetOutputInfo(const unsigned char *pJpeg, SceSize isize, int outputF
 	SceJpegOutputInfo *outputInfo;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (arguments.pOutputInfo == NULL)
@@ -365,7 +365,7 @@ int _sceJpegGetOutputInfo(const unsigned char *pJpeg, SceSize isize, int outputF
 	*outputInfo = (SceJpegOutputInfo){ 0 };
 	ret = SceAvcodecForDriver_F305E3B3(pJpeg, isize, outputFormat,
 		arguments.decodeMode, outputInfo);
-	copied = SceSysmemForDriver_6D88EF8A(arguments.pOutputInfo, outputInfo, sizeof(*outputInfo));
+	copied = sceKernelCopyToUser(arguments.pOutputInfo, outputInfo, sizeof(*outputInfo));
 	return copied < 0 ? copied : ret;
 }
 
@@ -378,11 +378,11 @@ int _sceJpegCreateSplitDecoder(SceJpegSplitDecodeCtrl *pCtrl)
 		return SceAvcodecForDriver_361238E2(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	memset(ctrl, 0, sizeof(*ctrl));
-	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
+	ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_361238E2(ctrl);
-	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
+	copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -395,11 +395,11 @@ int _sceJpegDeleteSplitDecoder(SceJpegSplitDecodeCtrl *pCtrl)
 		return SceAvcodecForDriver_864FC454(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	memset(ctrl, 0, sizeof(*ctrl));
-	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
+	ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_864FC454(ctrl);
-	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
+	copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -412,11 +412,11 @@ int _sceJpegSplitDecodeMJpeg(SceJpegSplitDecodeCtrl *pCtrl)
 		return SceAvcodecForDriver_B6882013(NULL);
 	ctrl = __builtin_alloca(sizeof(*ctrl));
 	memset(ctrl, 0, sizeof(*ctrl));
-	ret = SceSysmemForDriver_BC996A7A(ctrl, pCtrl, sizeof(*ctrl));
+	ret = sceKernelCopyFromUser(ctrl, pCtrl, sizeof(*ctrl));
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_B6882013(ctrl);
-	copied = SceSysmemForDriver_6D88EF8A(pCtrl, ctrl, sizeof(*ctrl));
+	copied = sceKernelCopyToUser(pCtrl, ctrl, sizeof(*ctrl));
 	return copied < 0 ? copied : ret;
 }
 
@@ -427,7 +427,7 @@ int _sceJpegInitMJpegWithParam(const SceJpegMJpegInitParam *pInitParam,
 	SceJpegMJpegInitParam *initParam;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (pInitParam == NULL)
@@ -435,7 +435,7 @@ int _sceJpegInitMJpegWithParam(const SceJpegMJpegInitParam *pInitParam,
 	if (arguments.size > sizeof(*initParam))
 		return 0x8002710b;
 	initParam = __builtin_alloca(sizeof(*initParam));
-	ret = SceSysmemForDriver_BC996A7A(initParam, pInitParam, arguments.size);
+	ret = sceKernelCopyFromUser(initParam, pInitParam, arguments.size);
 	if (ret >= 0)
 		ret = SceAvcodecForDriver_6F1CF77F(initParam);
 	return ret;
@@ -447,7 +447,7 @@ int _sceJpegCsc(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 	JpegCscArguments arguments;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret >= 0)
 		ret = jpegCscForUser(pRGBA, pYCbCr, xysize,
 			arguments.iFrameWidth, arguments.colorOption, arguments.sampling);
@@ -466,7 +466,7 @@ int _sceJpegEncoderInit(SceJpegEncoderContext context, int iFrameWidth,
 	JpegEncoderState *state;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -478,7 +478,7 @@ int _sceJpegEncoderInit(SceJpegEncoderContext context, int iFrameWidth,
 	memset(state, 0, sizeof(*state));
 	ret = SceAvcodecForDriver_1BE9F5A4(state, iFrameWidth, iFrameHeight,
 		arguments.pixelFormat, arguments.pJpeg, arguments.oJpegbufSize);
-	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -489,7 +489,7 @@ int _sceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr,
 	JpegEncoderState *state;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -498,11 +498,11 @@ int _sceJpegEncoderEncode(SceJpegEncoderContext context, const void *pYCbCr,
 		return 0x8002710b;
 	state = __builtin_alloca(sizeof(*state));
 	memset(state, 0, sizeof(*state));
-	ret = SceSysmemForDriver_BC996A7A(state, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(state, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_468949D7(state, pYCbCr);
-	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -513,7 +513,7 @@ int _sceJpegEncoderEnd(SceJpegEncoderContext context,
 	JpegEncoderState *state;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -522,11 +522,11 @@ int _sceJpegEncoderEnd(SceJpegEncoderContext context,
 		return 0x8002710b;
 	state = __builtin_alloca(sizeof(*state));
 	memset(state, 0, sizeof(*state));
-	ret = SceSysmemForDriver_BC996A7A(state, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(state, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_86AD5A4F(state);
-	copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, state, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -538,7 +538,7 @@ int _sceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
 	JpegEncoderControl *control;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -547,11 +547,11 @@ int _sceJpegEncoderSetValidRegion(SceJpegEncoderContext context,
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
 	*control = (JpegEncoderControl){ 0 };
-	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_D0647B74(control, iFrameWidth, iFrameHeight);
-	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -562,7 +562,7 @@ int _sceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compra
 	JpegEncoderControl *control;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -571,11 +571,11 @@ int _sceJpegEncoderSetCompressionRatio(SceJpegEncoderContext context, int compra
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
 	*control = (JpegEncoderControl){ 0 };
-	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_91B27CF3(control, compratio);
-	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -586,7 +586,7 @@ int _sceJpegEncoderSetHeaderMode(SceJpegEncoderContext context, int headerMode,
 	JpegEncoderControl *control;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -595,11 +595,11 @@ int _sceJpegEncoderSetHeaderMode(SceJpegEncoderContext context, int headerMode,
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
 	*control = (JpegEncoderControl){ 0 };
-	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_58835DCB(control, headerMode);
-	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -611,7 +611,7 @@ int _sceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
 	JpegEncoderControl *control;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context == NULL)
@@ -620,11 +620,11 @@ int _sceJpegEncoderSetOutputAddr(SceJpegEncoderContext context, void *pJpeg,
 		return 0x8002710b;
 	control = __builtin_alloca(sizeof(*control));
 	*control = (JpegEncoderControl){ 0 };
-	ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
+	ret = sceKernelCopyFromUser(control, context, arguments.contextSize);
 	if (ret < 0)
 		return ret;
 	ret = SceAvcodecForDriver_2C8271BA(control, pJpeg, oJpegbufSize);
-	copied = SceSysmemForDriver_6D88EF8A(context, control, arguments.contextSize);
+	copied = sceKernelCopyToUser(context, control, arguments.contextSize);
 	return copied < 0 ? copied : ret;
 }
 
@@ -635,14 +635,14 @@ int _sceJpegEncoderCsc(SceJpegEncoderContext context, void *pYCbCr,
 	JpegEncoderControl *control = context;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context != NULL) {
 		if (arguments.contextSize > sizeof(*control))
 			return 0x8002710b;
 		control = __builtin_alloca(sizeof(*control));
-		ret = SceSysmemForDriver_BC996A7A(control, context, arguments.contextSize);
+		ret = sceKernelCopyFromUser(control, context, arguments.contextSize);
 		if (ret < 0)
 			return ret;
 	}
@@ -659,7 +659,7 @@ int _sceJpegEncoderInitWithParam(SceJpegEncoderContext context,
 	SceJpegEncoderInitParam *initParam = (SceJpegEncoderInitParam *)pInitParam;
 	int ret, copied;
 
-	ret = SceSysmemForDriver_BC996A7A(&arguments, userArguments, sizeof(arguments));
+	ret = sceKernelCopyFromUser(&arguments, userArguments, sizeof(arguments));
 	if (ret < 0)
 		return ret;
 	if (context != NULL) {
@@ -672,13 +672,13 @@ int _sceJpegEncoderInitWithParam(SceJpegEncoderContext context,
 		if (arguments.initParamSize > sizeof(*initParam))
 			return 0x8002710b;
 		initParam = __builtin_alloca(sizeof(*initParam));
-		ret = SceSysmemForDriver_BC996A7A(initParam, pInitParam, arguments.initParamSize);
+		ret = sceKernelCopyFromUser(initParam, pInitParam, arguments.initParamSize);
 		if (ret < 0)
 			return ret;
 	}
 	ret = jpegEncoderInitWithParam(state, initParam);
 	if (context != NULL) {
-		copied = SceSysmemForDriver_6D88EF8A(context, state, arguments.contextSize);
+		copied = sceKernelCopyToUser(context, state, arguments.contextSize);
 		if (copied < 0)
 			return copied;
 	}

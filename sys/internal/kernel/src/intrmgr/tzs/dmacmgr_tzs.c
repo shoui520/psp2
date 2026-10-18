@@ -24,14 +24,14 @@ static void *mapDmac(const char *name, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	memBlockId = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					     DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 59, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(60);
 		return NULL;
 	}
-	SceSysmemForDriver_A841EDDA(memBlockId, &base);
+	sceKernelGetMemBlockBase(memBlockId, &base);
 	return base;
 }
 
@@ -90,14 +90,14 @@ static void *mapDmac(char n, SceUInt32 pa)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = pa;
-	memBlockId = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	memBlockId = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					     DMAC_REG_SIZE, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 59, "map %s failed. 0x%08x\n", name, memBlockId);
 		SCE_DBG_ASSERT_FAIL(60);
 		return NULL;
 	}
-	SceSysmemForDriver_A841EDDA(memBlockId, &base);
+	sceKernelGetMemBlockBase(memBlockId, &base);
 	return base;
 }
 

@@ -54,8 +54,8 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B74B7
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
 	memset
 	memcpy
 	__stack_chk_fail
@@ -74,7 +74,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetThreadId
 	sceKernelGetProcessId
 	sceKernelCreateMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_61B9B6FA
 	sceKernelSetPMUSERENR
 	SceProcessmgrForDriver_AF80F39C

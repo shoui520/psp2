@@ -15,7 +15,7 @@ int sceSblUsGetUpdateModeForUser(SceUpdateMode *output)
 	state = sceSyscallEnter();
 	result = SpkgUtilGetUpdateMode(&mode);
 	if (result == 0)
-		result = SceSysmemForDriver_6D88EF8A(output, &mode, sizeof(mode));
+		result = sceKernelCopyToUser(output, &mode, sizeof(mode));
 	sceSyscallLeave(state);
 	return result;
 }
@@ -68,7 +68,7 @@ int sceSblUsGetApplicableVersionForUser(int type, UpdateApplicableVersion *outpu
 	state = sceSyscallEnter();
 	result = SpkgInfoUtilGetApplicableVersion(type, &info);
 	if (result == 0)
-		result = SceSysmemForDriver_6D88EF8A(output, &info, sizeof(info));
+		result = sceKernelCopyToUser(output, &info, sizeof(info));
 	sceSyscallLeave(state);
 	return result;
 }

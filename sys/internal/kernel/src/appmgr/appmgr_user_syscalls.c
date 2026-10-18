@@ -115,11 +115,11 @@ int _sceAppMgrGetBootParam(SceUInt32 request, void *bootParam,
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	buffer = __builtin_alloca(44);
 	__builtin_memset(buffer, 0, 44);
-	ret = SceSysmemForDriver_BC996A7A(buffer, bootParam, arguments.size);
+	ret = sceKernelCopyFromUser(buffer, bootParam, arguments.size);
 	if (ret < 0)
 		return ret;
 	ret = appmgrGetBootParamSyscall(request, buffer);
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(bootParam, buffer, arguments.size));
+	return copyResult(ret, sceKernelCopyToUser(bootParam, buffer, arguments.size));
 }
 
 int _sceAppMgrAppParamGetInt(int pid, int param, int *value)
@@ -149,7 +149,7 @@ int _sceAppMgrAppParamGetString(int pid, int param, char *string,
 	length = strnlen(buffer, 1024) + 1;
 	if (length >= 1024)
 		length = 1024;
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(string, buffer, length));
+	return copyResult(ret, sceKernelCopyToUser(string, buffer, length));
 }
 
 int _sceAppMgrGetSystemDataFilePlayReady(SceUInt32 location, void *information,
@@ -197,7 +197,7 @@ int _sceAppMgrGetAppParam(char *param, const SyscallUnusedArgs *userArguments)
 	length = strnlen(buffer, 1024) + 1;
 	if (length >= 1024)
 		length = 1024;
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(param, buffer, length));
+	return copyResult(ret, sceKernelCopyToUser(param, buffer, length));
 }
 
 int _sceAppMgrGetAppParam2(void *appParam)
@@ -249,12 +249,12 @@ int _sceAppMgrGetCurrentBgmState(void *currentBgmId, void *currentBgmState)
 	}
 	ret = appmgrGetCurrentBgmStateSyscall(bgmId, bgmState);
 	if (currentBgmId != NULL) {
-		copy = SceSysmemForDriver_6D88EF8A(currentBgmId, bgmId, sizeof(*bgmId));
+		copy = sceKernelCopyToUser(currentBgmId, bgmId, sizeof(*bgmId));
 		if (copy < 0)
 			return copy;
 	}
 	if (currentBgmState != NULL)
-		return copyResult(ret, SceSysmemForDriver_6D88EF8A(currentBgmState, bgmState,
+		return copyResult(ret, sceKernelCopyToUser(currentBgmState, bgmState,
 							 sizeof(*bgmState)));
 	return ret;
 }
@@ -303,7 +303,7 @@ int _sceAppMgrPeekLaunchParamForShell(int appId, char *param,
 	length = strnlen(buffer, 1024) + 1;
 	if (length >= 1024)
 		length = 1024;
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(param, buffer, length));
+	return copyResult(ret, sceKernelCopyToUser(param, buffer, length));
 }
 
 int _sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param,
@@ -374,7 +374,7 @@ int _sceAppMgrGetNameById(SceUID id, char *appName,
 	length = strnlen(name, 32) + 1;
 	if (length >= 32)
 		length = 32;
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(appName, name, length));
+	return copyResult(ret, sceKernelCopyToUser(appName, name, length));
 }
 
 int _sceAppMgrGetIdByName(SceUID *userId, const char *appName,
@@ -393,6 +393,6 @@ int _sceAppMgrGetIdByName(SceUID *userId, const char *appName,
 	STRING_IN(name, appName, 32);
 	ret = appmgrGetIdByNameSyscall(id, name);
 	if (userId != NULL)
-		ret = copyResult(ret, SceSysmemForDriver_6D88EF8A(userId, id, sizeof(*id)));
+		ret = copyResult(ret, sceKernelCopyToUser(userId, id, sizeof(*id)));
 	return ret;
 }

@@ -38,7 +38,7 @@
 #endif
 
 typedef struct ScttypPort {
-	int handle;				/* SceDeci4pSDfMgrForKernel_A55F5F0D */
+	int handle;				/* sceSDfMgrOpen */
 	SceUInt32 connected;
 	SceSize len;				/* characters in buf */
 	SceSize sent;				/* bytes of the packet sent */
@@ -268,7 +268,7 @@ static int initThread(SceSize args, void *argp)
 	proto.destination = 0;
 	proto.flags = 3;
 	proto.name = "SCTTYP";
-	ret = SceDeci4pSDfMgrForKernel_A55F5F0D(deciEventHandler, &proto, &s_port);
+	ret = sceSDfMgrOpen(deciEventHandler, &proto, &s_port);
 	if (ret < 0) {
 		SCTTYP_PRINTF(282, "SDfMgrOpen() failed (0x%08X)\n", ret);
 		return ret;

@@ -81,9 +81,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_C8C8C321
 	sceKernelSysrootBacktrace
 	SceSysrootForKernel_E20F6FC8
-	SceSysmemForDriver_A78755EB
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceGUIDGetName
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelRegisterExceptionHandler
 	sceKernelDisableIntr
 	SceThreadmgrForDriver_FA54D49A

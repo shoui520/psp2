@@ -828,10 +828,10 @@ int module_start(SceSize args, void *argp)
 	options[0] = 0x58;
 	options[2] = 0x200004;
 	options[5] = 0x1000;
-	memblock = SceSysmemForDriver_C94850C9("SceUsbMassIOBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x10000,
+	memblock = sceKernelAllocMemBlockForKernel("SceUsbMassIOBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x10000,
 					 (SceKernelAllocMemBlockKernelOpt *)options);
 	if (memblock >= 0) {
-		ret = SceSysmemForDriver_A841EDDA(memblock, (void **)&ioBuffer);
+		ret = sceKernelGetMemBlockBase(memblock, (void **)&ioBuffer);
 		if (ret >= 0 && SceUsbServForDriver_AA6D4409() >= 0) {
 			ret = SceUsbdForDriver_1EC94F18(&driver);
 			if (ret >= 0) {

@@ -141,7 +141,7 @@ TSMP_INLINE int tsmpInitNotification(TsmpNotificationQueue *queue, const char *h
 	opt.size = sizeof(opt);
 	opt.attr = 0x401;
 	opt.memtype = TSMP_MEMTYPE;
-	ret = SceSysmemForDriver_9328E0E8(heapName, 0x4000, &opt);
+	ret = sceKernelCreateHeap(heapName, 0x4000, &opt);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3641, "0x%08X\n", ret);
 		return ret;
@@ -164,7 +164,7 @@ TSMP_INLINE int tsmpResetNotificationForRegistry(TsmpNotificationQueue *queue)
 	opt.size = sizeof(opt);
 	opt.attr = 0x401;
 	opt.memtype = TSMP_MEMTYPE;
-	ret = SceSysmemForDriver_9328E0E8("SceDeci4pTsmpRegistry", 0x4000, &opt);
+	ret = sceKernelCreateHeap("SceDeci4pTsmpRegistry", 0x4000, &opt);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 3678, "0x%08X\n", ret);
 		return ret;
@@ -185,7 +185,7 @@ TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const RegMgrN
 		SCE_PRINTF_WITH_INFO(0xf, 3730, "0x%08X\n", ret);
 		return ret;
 	}
-	node = SceSysmemForDriver_7B4CB60A(queue->heap, sizeof(*node));
+	node = sceKernelAllocHeapMemory(queue->heap, sizeof(*node));
 	if (node == NULL) {
 		SCE_PRINTF_WITH_INFO(0xf, 3738, "\n");
 		sceKernelUnlockFastMutex(&queue->lock);
@@ -353,7 +353,7 @@ static int tsmpSetSwInfoInt(const char *name, int id, SceUInt32 value)
 		SCE_PRINTF_WITH_INFO(0xf, 831, "%d\n", id);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ntf = SceSysmemForDriver_7B4CB60A(tsmp.miscHeap, sizeof(*ntf));
+	ntf = sceKernelAllocHeapMemory(tsmp.miscHeap, sizeof(*ntf));
 	if (ntf == NULL) {
 		SCE_PRINTF_WITH_INFO(0xf, 845, "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -393,7 +393,7 @@ static int tsmpSetSwInfoStr(const char *name, int id, const char *value, int len
 		SCE_PRINTF_WITH_INFO(0xf, 908, "%d\n", length);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ntf = SceSysmemForDriver_7B4CB60A(tsmp.miscHeap, sizeof(*ntf));
+	ntf = sceKernelAllocHeapMemory(tsmp.miscHeap, sizeof(*ntf));
 	if (ntf == NULL) {
 		SCE_PRINTF_WITH_INFO(0xf, 922, "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -435,7 +435,7 @@ static int tsmpSetSwInfoBin(const char *name, int id, const void *value, SceSize
 		SCE_PRINTF_WITH_INFO(0xf, 988, "%d\n", length);
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ntf = SceSysmemForDriver_7B4CB60A(tsmp.miscHeap, sizeof(*ntf));
+	ntf = sceKernelAllocHeapMemory(tsmp.miscHeap, sizeof(*ntf));
 	if (ntf == NULL) {
 		SCE_PRINTF_WITH_INFO(0xf, 1002, "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -1277,13 +1277,13 @@ TSMP_INLINE int tsmpSyncSettingXml(void)
 		return ret;
 	}
 	tsmp.fileSize = (size + 0xfff) & ~0xfff;
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pTsmpUifileBuf", TSMP_MEMTYPE, tsmp.fileSize, NULL);
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pTsmpUifileBuf", TSMP_MEMTYPE, tsmp.fileSize, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2900, "0x%08X\n", ret);
 		return ret;
 	}
 	tsmp.fileBlock = ret;
-	ret = SceSysmemForDriver_A841EDDA(ret, &tsmp.fileBase);
+	ret = sceKernelGetMemBlockBase(ret, &tsmp.fileBase);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2908, "0x%08X\n", ret);
 		goto free;
@@ -1325,13 +1325,13 @@ TSMP_INLINE int tsmpSyncEventLogXml(void)
 		return ret;
 	}
 	tsmp.fileSize = (size + sizeof(*header) + 0xfff) & ~0xfff;
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pTsmpUifileBuf", TSMP_MEMTYPE, tsmp.fileSize, NULL);
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pTsmpUifileBuf", TSMP_MEMTYPE, tsmp.fileSize, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2973, "0x%08X\n", ret);
 		return ret;
 	}
 	tsmp.fileBlock = ret;
-	ret = SceSysmemForDriver_A841EDDA(ret, &tsmp.fileBase);
+	ret = sceKernelGetMemBlockBase(ret, &tsmp.fileBase);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 2981, "0x%08X\n", ret);
 		goto free;
@@ -1550,7 +1550,7 @@ TSMP_INLINE int tsmpInit(void)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.attr = 0x401;
 	heapOpt.memtype = TSMP_MEMTYPE;
-	ret = SceSysmemForDriver_9328E0E8("SceDeci4pTsmpMisc", 0x4000, &heapOpt);
+	ret = sceKernelCreateHeap("SceDeci4pTsmpMisc", 0x4000, &heapOpt);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 337, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(338);
@@ -1564,7 +1564,7 @@ TSMP_INLINE int tsmpInit(void)
 		return ret;
 	}
 
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pTsmpSendBuf", TSMP_MEMTYPE, TSMP_BUF_SIZE, NULL);
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pTsmpSendBuf", TSMP_MEMTYPE, TSMP_BUF_SIZE, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 355, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(356);
@@ -1576,7 +1576,7 @@ TSMP_INLINE int tsmpInit(void)
 		SCE_PRINTF_WITH_INFO(0xf, 367, "0x%08X\n", ret);
 		return ret;
 	}
-	ret = SceSysmemForDriver_A841EDDA(tsmp.send.block, &tsmp.send.base);
+	ret = sceKernelGetMemBlockBase(tsmp.send.block, &tsmp.send.base);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 375, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(376);
@@ -1588,14 +1588,14 @@ TSMP_INLINE int tsmpInit(void)
 		return ret;
 	}
 
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pTsmpRecvBuf", TSMP_MEMTYPE, TSMP_BUF_SIZE, NULL);
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pTsmpRecvBuf", TSMP_MEMTYPE, TSMP_BUF_SIZE, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 395, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(396);
 		return ret;
 	}
 	tsmp.recv.block = ret;
-	ret = SceSysmemForDriver_A841EDDA(tsmp.recv.block, &tsmp.recv.base);
+	ret = sceKernelGetMemBlockBase(tsmp.recv.block, &tsmp.recv.base);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 405, "0x%08X\n", ret);
 		SCE_DBG_ASSERT_FAIL(406);

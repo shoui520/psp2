@@ -163,7 +163,7 @@ int appmgrReadPlayReadySystemData(SceUInt32 location, void *information,
 		result = (int)0x808010f3;
 		goto closeFile;
 	}
-	result = SceSysmemForDriver_9C78064C(48, userData, 16384);
+	result = sceKernelIsAccessibleRange(48, userData, 16384);
 	if (result < 0)
 		goto closeFile;
 	mapping = SceSysmemForDriver_278BC201("SceAppMgrGetSystemData", 2, userData, 16384,
@@ -312,7 +312,7 @@ int appmgrWritePlayReadySystemData(SceUInt32 location, const void *information,
 		if (dataSize == 0) {
 			sceIoClose(fd);
 		} else {
-			result = SceSysmemForDriver_9C78064C(48, userData, dataSize);
+			result = sceKernelIsAccessibleRange(48, userData, dataSize);
 			if (result < 0) {
 				sceIoClose(fd);
 				goto unlockAndFree;
@@ -371,13 +371,13 @@ int appmgrSetSystemDataFile(SceUInt32 location, const void *userData,
 		result = (int)0x80800001;
 		goto leave;
 	}
-	keys = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, sizeof(*keys));
+	keys = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*keys));
 	if (keys == NULL) {
 		result = (int)0x80801006;
 		goto leave;
 	}
 	memset(keys, 0, sizeof(*keys));
-	result = SceSysmemForDriver_BC996A7A(keys, userData, 4096);
+	result = sceKernelCopyFromUser(keys, userData, 4096);
 	if (result < 0)
 		goto freeKeys;
 	result = sceRegMgrSetKeyInt("/CONFIG/VIDEOSERVICE/MARLINIPTV",

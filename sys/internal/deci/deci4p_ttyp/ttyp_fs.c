@@ -189,7 +189,7 @@ static int ioctl_impl(SceVopIoctlArgs *argp)
 		}
 		pid = (SceUInt32 *)file->fd;
 		if (pid == NULL) {
-			pid = SceSysmemForDriver_7B4CB60A(ttypGetHeap(), inlen);
+			pid = sceKernelAllocHeapMemory(ttypGetHeap(), inlen);
 			file->fd = (SceUInt32)pid;
 			if (pid == NULL) {
 				ret = SCE_ERROR_ERRNO_ENOMEM;

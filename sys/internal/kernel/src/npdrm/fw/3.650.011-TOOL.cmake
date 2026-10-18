@@ -153,9 +153,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblAuthMgrForDriver_868B9E9A
 	sceKernelUserUnmap
 	SceSysmemForDriver_278BC201
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceSysmemForDriver_9F6E45E3
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyFromUser
 	SceSblGcAuthMgrDrmBBForDriver_050DC6DF
 	SceSblGcAuthMgrDrmBBForDriver_22FD5D23
 	SceSblGcAuthMgrDrmBBForDriver_4B506BE7

@@ -132,10 +132,10 @@ int LedModuleStart(const struct SysmemBootContext *context)
 	opt.size = sizeof(opt);
 	opt.paddr = GPIO0_REG_BASE;
 	opt.attr = 2;
-	uid = SceSysmemForDriver_C94850C9("SceLedReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x10000, &opt);
+	uid = sceKernelAllocMemBlockForKernel("SceLedReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x10000, &opt);
 	if (uid < 0)
 		SCE_PANIC(218);
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_ledRegs = base;
 #ifndef SYSMEM_TZS
 	SceKernelSuspendForDriver_CE7A2207(LED_SUSPEND_SLOT, LedSuspend, NULL);

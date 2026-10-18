@@ -39,7 +39,7 @@ int module_start(unsigned arglen, void *argp)
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = COMPAT_SRAM_BASE;
-	uid = SceSysmemForDriver_C94850C9("SceKernelBsodSram", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceKernelBsodSram", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
 				    COMPAT_SRAM_SIZE, &options);
 	if (uid < 0) {
 #if FW_DEBUG
@@ -49,7 +49,7 @@ int module_start(unsigned arglen, void *argp)
 #endif
 		return 1;
 	}
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_bsodDisplay.pixels = base;
 	s_bsodDisplay.current.physical = COMPAT_SRAM_BASE;
 	s_bsodDisplay.current.pitch = 960;

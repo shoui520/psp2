@@ -53,7 +53,7 @@ int _sceUlobjMgrStartSupportingUserlevelObject(SceUInt32 numEntries, SceUInt32 s
 							    &userBase);
 	if (ret != 0)
 		goto error;
-	ret = SceSysmemForDriver_6D88EF8A(pUserBase, &userBase, sizeof(userBase));
+	ret = sceKernelCopyToUser(pUserBase, &userBase, sizeof(userBase));
 	if (ret != 0) {
 		procCB = getAndLockUlobjInfoArray(pid, &lockState);
 		if (procCB != NULL) {

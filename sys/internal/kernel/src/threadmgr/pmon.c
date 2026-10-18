@@ -124,7 +124,7 @@ int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType)
 			PmonWriteEventType(eventType);
 			ret = 0;
 		}
-	} else if (SceSysmemForDriver_00ED6C14(threadId,
+	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -171,7 +171,7 @@ int pmonThreadChangeEnableCounter(SceUID threadId, uint32_t mask, int enable)
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 		return 0;
 	}
-	if (SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
+	if (sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
 					 (SceObjectBase **)&object) < 0)
 		return SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
 	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
@@ -238,7 +238,7 @@ void pmonThreadSetCounterIntr(struct ThreadmgrPmonRequest *request)
 		else
 			thread->pRegisterContext->pmevent[request->counter].count = request->value;
 		ret = 0;
-	} else if (SceSysmemForDriver_00ED6C14(threadId,
+	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -305,7 +305,7 @@ int SceThreadmgrForKernel_7B3368F1(SceUID threadId, uint32_t counter, uint32_t v
 		ret = 0;
 		goto resume;
 	}
-	ret = SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
+	ret = sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
 					   (SceObjectBase **)&object);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -361,7 +361,7 @@ void pmonThreadGetCounterIntr(struct ThreadmgrPmonRequest *request)
 			*out = thread->pRegisterContext->pmccntr;
 		else
 			*out = thread->pRegisterContext->pmevent[request->counter].count;
-	} else if (SceSysmemForDriver_00ED6C14(threadId,
+	} else if (sceGUIDReferObjectWithClass(threadId,
 			s_threadmgrRuntime.manager->threadClass,
 			(SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -437,7 +437,7 @@ int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *
 		ret = 0;
 		goto resume;
 	}
-	ret = SceSysmemForDriver_00ED6C14(threadId, s_threadmgrRuntime.manager->threadClass,
+	ret = sceGUIDReferObjectWithClass(threadId, s_threadmgrRuntime.manager->threadClass,
 					   (SceObjectBase **)&object);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID;
@@ -494,7 +494,7 @@ int sceKernelPMonSetUserEnableRegister(SceUID pid, uint32_t value)
 		process = currentThreadContext()->process;
 		ret = 0;
 	} else {
-		ret = SceSysmemForKernel_0E43E113(pid,
+		ret = sceGUIDGetObjectWithClass(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			return ret;
@@ -535,7 +535,7 @@ int sceKernelPMonSetControlRegister(SceUID pid, uint32_t value)
 		process = currentThreadContext()->process;
 		ret = 0;
 	} else {
-		ret = SceSysmemForKernel_0E43E113(pid,
+		ret = sceGUIDGetObjectWithClass(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			return ret;

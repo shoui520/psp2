@@ -43,7 +43,7 @@ int sceCoredumpCafContextClassInit(void)
 {
 	int result;
 
-	result = SceSysmemForDriver_61317102(&cafContextClass, "SceUIDCafContextClass",
+	result = sceUIDClassInitClass(&cafContextClass, "SceUIDCafContextClass",
 		SceSysmemForDriver_85336A1C(), sizeof(CafContextObject),
 		_cafContextConstructor, _cafContextDestructor);
 	if (result < 0)
@@ -56,7 +56,7 @@ SceUID sceCoredumpCafContextCreate(void)
 	SceObjectBase *object;
 	SceUID context;
 
-	context = SceSysmemForDriver_56A13E90(&cafContextClass,
+	context = sceGUIDKernelCreate(&cafContextClass,
 		"SceCoredumpCafContextObject", &object);
 	if (context < 0)
 		SCE_DBG_PRINTF(11, 261, "sceGUIDKernelCreate() failed: 0x%08X\n",

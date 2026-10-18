@@ -17,7 +17,7 @@ SceClass g_ioAsyncEventClass;
 
 /* 4.00 builds this file with _FORTIFY_SOURCE; Sony's heap declaration gives the size it checks */
 #if FW_VERSION >= 0x04000000
-void *SceSysmemForDriver_7B4CB60A(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
+void *sceKernelAllocHeapMemory(SceUID uid, SceSize size) __attribute__((alloc_size(2)));
 #define strncpy(dst, src, len)	__builtin___strncpy_chk(dst, src, len, __builtin_object_size(dst, 1))
 #endif
 
@@ -64,7 +64,7 @@ SceUID sceIoAsyncEventCreate(IoAsyncEvent **event)
 	case SCE_KERNEL_PROCESS_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_GAME_ID:
 	case SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID:
-		uid = SceSysmemForDriver_56A13E90(&g_ioAsyncEventClass, "SceIoAsyncEvent",
+		uid = sceGUIDKernelCreate(&g_ioAsyncEventClass, "SceIoAsyncEvent",
 					   (SceObjectBase **)&obj);
 		break;
 	default:
@@ -126,7 +126,7 @@ char *sceIoAsyncAllocPath(const char *path)
 {
 	char *copy;
 
-	copy = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, VFS_PATH_BUFF_SIZE);
+	copy = sceKernelAllocHeapMemory(g_ioSchedHeap, VFS_PATH_BUFF_SIZE);
 	if (copy != NULL) {
 		strncpy(copy, path, VFS_PATH_BUFF_SIZE - 1);
 		copy[VFS_PATH_BUFF_SIZE - 1] = '\0';
@@ -237,7 +237,7 @@ SceUID SceIofilemgrForDriver_69047C81(SceUID fd, void *data, SceSize size, IoAsy
 	if (uid < 0)
 		goto out;
 
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -306,7 +306,7 @@ SceUID SceIofilemgrForDriver_A1BD13D0(SceUID fd, const void *data, SceSize size,
 	if (uid < 0)
 		goto out;
 
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -798,7 +798,7 @@ SceUID SceIofilemgrForDriver_64A46A2C(SceUID fd, void *data, SceSize size, SceOf
 	if (uid < 0)
 		goto out;
 
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -866,7 +866,7 @@ SceUID SceIofilemgrForDriver_202CDDE3(SceUID fd, const void *data, SceSize size,
 	if (uid < 0)
 		goto out;
 
-	chunks = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
+	chunks = sceKernelAllocHeapMemory(g_ioSchedHeap, IO_REQUEST_CHUNK_NUM * sizeof(IoChunk));
 	if (chunks == NULL) {
 		err = SCE_ERROR_ERRNO_ENOMEM;
 		goto destroy;
@@ -1008,7 +1008,7 @@ int sceIoCancel(SceUID uid)
 	int ret, released;
 
 	tls = sceSyscallEnter();
-	ret = SceSysmemForDriver_00ED6C14(uid, &g_ioAsyncEventClass, (SceObjectBase **)&event);
+	ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass, (SceObjectBase **)&event);
 	if (ret < 0) {
 		sceSyscallLeave(tls);
 		return ret;
@@ -1038,7 +1038,7 @@ int sceIoComplete(SceUID uid)
 			sceSyscallLeave(tls);
 			return SCE_ERROR_ERRNO_EBUSY;
 		}
-		ret = SceSysmemForDriver_00ED6C14(uid, &g_ioAsyncEventClass,
+		ret = sceGUIDReferObjectWithClass(uid, &g_ioAsyncEventClass,
 						   (SceObjectBase **)&event);
 		if (ret >= 0) {
 			released = sceGUIDReleaseObject(uid);

@@ -165,7 +165,7 @@ int sceIoSchedDispatcherFreeAllAsyncEvents(SchedDispatcher *dispatcher, SceUID p
 	int freed, i, ret;
 
 	for (;;) {
-		ret = SceSysmemForKernel_08C05493(pid, &g_ioAsyncEventClass, 7, list, 8, &num);
+		ret = scePUIDGetUIDVectorByClass(pid, &g_ioAsyncEventClass, 7, list, 8, &num);
 		if (ret < 0)
 			return ret;
 
@@ -175,7 +175,7 @@ int sceIoSchedDispatcherFreeAllAsyncEvents(SchedDispatcher *dispatcher, SceUID p
 				guid = SceSysmemForDriver_45D22597(pid, list[i]);
 				if (guid < 0)
 					continue;
-				ret = SceSysmemForDriver_00ED6C14(guid, &g_ioAsyncEventClass,
+				ret = sceGUIDReferObjectWithClass(guid, &g_ioAsyncEventClass,
 								   (SceObjectBase **)&event);
 				if (ret < 0)
 					continue;

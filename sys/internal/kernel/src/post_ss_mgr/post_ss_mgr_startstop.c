@@ -32,7 +32,7 @@ int module_start(SceSize args, void *argp)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	g_postSsMgrHeap = SceSysmemForDriver_9328E0E8("SceSblPostSsMgr", POST_SS_MGR_HEAP_SIZE, &opt);
+	g_postSsMgrHeap = sceKernelCreateHeap("SceSblPostSsMgr", POST_SS_MGR_HEAP_SIZE, &opt);
 	failed = g_postSsMgrHeap < 0;
 	if (failed) {
 		SCE_DBG_PRINTF(0, 81, "sceKernelCreateHeap() failure\n");

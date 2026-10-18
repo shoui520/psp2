@@ -68,7 +68,7 @@ int sceKernelSysEventInit(void)
 
 	s_sysEventList[0] = (SysEventLink *)s_sysEventList;
 	s_sysEventList[1] = (SysEventLink *)s_sysEventList;
-	ret = SceSysmemForDriver_61317102(&s_sysEventClass, "SceUIDSysEventClass", SceSysmemForDriver_85336A1C(),
+	ret = sceUIDClassInitClass(&s_sysEventClass, "SceUIDSysEventClass", SceSysmemForDriver_85336A1C(),
 				    sizeof(SysEventObject), SysEventCreate, SysEventDestroy);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0xb, 102, "sceUIDClassInitClass() failed: 0x%08X\n", ret);
@@ -82,7 +82,7 @@ SceUID sceKernelRegisterSysEventHandler(const char *name, SceKernelSysEventHandl
 	SysEventLink *tail;
 	SceUID uid;
 
-	uid = SceSysmemForDriver_56A13E90(&s_sysEventClass, name, (SceObjectBase **)&object);
+	uid = sceGUIDKernelCreate(&s_sysEventClass, name, (SceObjectBase **)&object);
 	if (uid < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 118, "sceKernelRegisterSysEventHandler",
 				    "sceGUIDKernelCreate() failed: 0x%08X\n", uid);
@@ -104,7 +104,7 @@ int sceKernelUnregisterSysEventHandler(SceUID uid)
 	SceObjectBase *object;
 	int ret;
 
-	ret = SceSysmemForKernel_0E43E113(uid, &s_sysEventClass, &object);
+	ret = sceGUIDGetObjectWithClass(uid, &s_sysEventClass, &object);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_FUNC(0xb, 140, "sceKernelUnregisterSysEventHandler",
 				    "sceGUIDGetObjectWithClass() failed: 0x%08X\n", ret);

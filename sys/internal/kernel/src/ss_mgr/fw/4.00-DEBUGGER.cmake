@@ -108,12 +108,12 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_22CBE925
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
+	sceKernelCopyToUser
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
 	sceKernelLockRangeWithMode
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
 	SceSysmemForDriver_FB817A59
 	sceKernelIsUncacheAddressInTmpFsGame

@@ -136,7 +136,7 @@ SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 	SceUID guid;
 
 	guid = GetLibGUIDByLibUID(pid, uid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, g_libraryClass, (SceObjectBase **)&obj) < 0)
+	if (guid < 0 || sceGUIDReferObjectWithClass(guid, g_libraryClass, (SceObjectBase **)&obj) < 0)
 		return NULL;
 	if (ModulemgrReferModule(obj->modid) == NULL) {
 		sceGUIDReleaseObject(guid);
@@ -219,21 +219,21 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 			memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
 			opt.attr = 0xd0000000;
-			tbl->tableBlock = SceSysmemForDriver_C94850C9("SceModuleMgrAddr2ModTbl",
+			tbl->tableBlock = sceKernelAllocMemBlockForKernel("SceModuleMgrAddr2ModTbl",
 								  0x10f0d006, 0x1bc000, &opt);
 			if (tbl->tableBlock < 0) {
 				sceKernelFreeRemoteToolHeap(pid, tbl);
 				db->addr2mod = NULL;
 				goto fail;
 			}
-			SceSysmemForDriver_A841EDDA(tbl->tableBlock, (void **)&tbl->table);
+			sceKernelGetMemBlockBase(tbl->tableBlock, (void **)&tbl->table);
 
 			memset(&opt, 0, sizeof(opt));
 			opt.size = sizeof(opt);
 			opt.attr = 0xe0080081;
 			opt.vbase = 0xee000000;
 			opt.pid = pid;
-			tbl->exidxBlock = SceSysmemForDriver_C94850C9("SceModuleMgrA2ExidxTmp",
+			tbl->exidxBlock = sceKernelAllocMemBlockForKernel("SceModuleMgrA2ExidxTmp",
 								  0x3f0d040, 0x378000, &opt);
 			if (tbl->exidxBlock < 0)
 				goto fail;
@@ -242,11 +242,11 @@ LibraryDB *LibraryDBInitializeAddr2ModuleTable(SceUID pid)
 			opt.size = sizeof(opt);
 			opt.attr = 0xe1000040;
 			opt.mirror_blockid = tbl->exidxBlock;
-			tbl->exidxKernelBlock = SceSysmemForDriver_C94850C9("SceModuleMgrA2ExidxTmp",
+			tbl->exidxKernelBlock = sceKernelAllocMemBlockForKernel("SceModuleMgrA2ExidxTmp",
 									0x10f0d006, 0, &opt);
 			if (tbl->exidxKernelBlock < 0)
 				goto fail;
-			SceSysmemForDriver_A841EDDA(tbl->exidxKernelBlock, (void **)&tbl->exidx);
+			sceKernelGetMemBlockBase(tbl->exidxKernelBlock, (void **)&tbl->exidx);
 			if (SceSysmemForDriver_58D21746(tbl->exidxBlock) < 0)
 				goto fail;
 		}
@@ -274,13 +274,13 @@ int LibraryDBInitializeAddr2ModuleTableForKernel(LibraryDB *db)
 		memset(&opt, 0, sizeof(opt));
 		opt.size = sizeof(opt);
 		opt.attr = 0xd0000000;
-		g_kernelAddr2Mod.tableBlock = SceSysmemForDriver_C94850C9("SceKernelProcess", 0x10f0d006,
+		g_kernelAddr2Mod.tableBlock = sceKernelAllocMemBlockForKernel("SceKernelProcess", 0x10f0d006,
 								      0x40000, &opt);
 		if (g_kernelAddr2Mod.tableBlock < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 384);
 			return g_kernelAddr2Mod.tableBlock;
 		}
-		SceSysmemForDriver_A841EDDA(g_kernelAddr2Mod.tableBlock, (void **)&g_kernelAddr2Mod.table);
+		sceKernelGetMemBlockBase(g_kernelAddr2Mod.tableBlock, (void **)&g_kernelAddr2Mod.table);
 		for (cb = db->modules; cb != NULL; cb = cb->next)
 			Addr2ModRegister(&g_kernelAddr2Mod, cb);
 	}
@@ -1045,9 +1045,9 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 		SCE_DBG_ASSERT_LEVEL(0, 0, 2133);
 		return;
 	}
-	SceSysmemForDriver_4CFA4100(db->addr2mod->tableBlock, name);
-	SceSysmemForDriver_4CFA4100(db->addr2mod->exidxKernelBlock, name);
-	SceSysmemForDriver_4CFA4100(db->addr2mod->exidxBlock, name);
+	sceGUIDSetName(db->addr2mod->tableBlock, name);
+	sceGUIDSetName(db->addr2mod->exidxKernelBlock, name);
+	sceGUIDSetName(db->addr2mod->exidxBlock, name);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
@@ -1686,7 +1686,7 @@ int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSiz
 			if (db == NULL) {
 				ret = SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 			} else {
-				ret = SceSysmemForDriver_00ED6C14(guid, g_libraryClass, (SceObjectBase **)&obj);
+				ret = sceGUIDReferObjectWithClass(guid, g_libraryClass, (SceObjectBase **)&obj);
 				if (ret >= 0) {
 					n = 0;
 					if (obj->libEntCB->clientCount > 0) {

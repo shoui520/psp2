@@ -164,14 +164,14 @@ static void sceGpuMapPARegisters(IMG_HANDLE device, PVRSRV_HEAP_INFO *heap)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	uid = SceSysmemForDriver_C94850C9("SceRazorGpuBmkWar", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceRazorGpuBmkWar", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 				      SGX_BOOKMARK_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0, 5304, "%s: Failed to allocate %d bytes for SceRazorGpuBmkWar with error %08x.\n",
 			       __func__, SGX_BOOKMARK_SIZE, uid);
 		return;
 	}
-	ret = SceSysmemForDriver_A841EDDA(uid, (void **)&bookmark);
+	ret = sceKernelGetMemBlockBase(uid, (void **)&bookmark);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 5311, "%s: Failed to get memory block base for SceRazorGpuBmkWar with error %08x.\n",
 			       __func__, ret);

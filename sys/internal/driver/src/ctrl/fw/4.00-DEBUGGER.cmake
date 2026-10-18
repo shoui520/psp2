@@ -82,10 +82,10 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
+	sceKernelCopyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E
 	memset
@@ -116,7 +116,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_8CB01675
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076

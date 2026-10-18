@@ -682,12 +682,12 @@ int KrmDriverSha256(void *digest, const void *src, SceSize size)
 
 int KrmDriverCopyFromUser(void *dst, const void *src, SceSize size)
 {
-	return SceSysmemForDriver_BC996A7A(dst, src, size);
+	return sceKernelCopyFromUser(dst, src, size);
 }
 
 int KrmDriverCopyToUser(void *dst, const void *src, SceSize size)
 {
-	return SceSysmemForDriver_6D88EF8A(dst, src, size);
+	return sceKernelCopyToUser(dst, src, size);
 }
 
 int KrmDriverIsAccessible(const void *addr, SceSize size, unsigned int flags)
@@ -697,7 +697,7 @@ int KrmDriverIsAccessible(const void *addr, SceSize size, unsigned int flags)
 
 	if (!(flags & 2))
 		type = low;
-	return SceSysmemForDriver_9C78064C(type, addr, size) == 0;
+	return sceKernelIsAccessibleRange(type, addr, size) == 0;
 }
 
 unsigned int KrmDriverGetVersion(void)

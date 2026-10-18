@@ -78,7 +78,7 @@ int sceCoredumpWriteUserData(const void *data, SceSize size)
 			length = userDataCapacity - userDataUsedSize;
 			if (size < length)
 				length = size;
-			if (SceSysmemForDriver_BC996A7A((char *)userDataBuffer + userDataUsedSize,
+			if (sceKernelCopyFromUser((char *)userDataBuffer + userDataUsedSize,
 						   data, length) < 0) {
 				result = SCE_COREDUMP_ERROR_PARAM;
 				oalMutexUnlock(userDataMutexId);

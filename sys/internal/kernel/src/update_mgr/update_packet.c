@@ -26,7 +26,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 	option.align = 4096;
 	option.mmapBase = NULL;
 	option.mmapSize = 0;
-	dataVector = SceSysmemForDriver_7B4CB60A(heapId, sizeof(*dataVector));
+	dataVector = sceKernelAllocHeapMemory(heapId, sizeof(*dataVector));
 	if (!dataVector) {
 		result = (int)0x800f020c;
 		goto freeData;
@@ -49,7 +49,7 @@ int UpdateUtilCreatePacketPayload(UpdatePacketPayload **packetOut,
 		result = (int)0x800f0205;
 		goto freeVector;
 	}
-	packet = SceSysmemForDriver_7B4CB60A(heapId, sizeof(*packet));
+	packet = sceKernelAllocHeapMemory(heapId, sizeof(*packet));
 	if (!packet) {
 		result = (int)0x800f020c;
 		goto freeVector;

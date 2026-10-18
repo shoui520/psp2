@@ -18,7 +18,7 @@ int PupUtilPupGetCachedHeader(PupCachedHeader *header)
 	UpdateUtilLockPupHeader();
 	memcpy(&header->header, &pupFileHeader, sizeof(PupHeader));
 	count = pupFileHeader.m_segment_num;
-	segments = SceSysmemForDriver_7B4CB60A(heapId,
+	segments = sceKernelAllocHeapMemory(heapId,
 		(sizeof(PupSegment) + sizeof(PupSegmentSignature)) * count + sizeof(PupHeaderDigest));
 	if (!segments) {
 		UpdateUtilUnlockPupHeader();

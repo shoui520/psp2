@@ -47,7 +47,7 @@ int _sceVeneziaProcessCreateEntry(void)
 	VeneziaProcessStorage *storage;
 	int ret;
 
-	ret = SceProcessmgrForDriver_3801D7D6("SceVenezia", sizeof(*storage));
+	ret = sceKernelRegisterKPLS("SceVenezia", sizeof(*storage));
 	if (ret < 0)
 		goto out;
 	storage = NULL;

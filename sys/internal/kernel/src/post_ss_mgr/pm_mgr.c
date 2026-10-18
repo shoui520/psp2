@@ -239,7 +239,7 @@ int sceSblPmMgrGetProductModeForUser(SceUInt8 *mode)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
 	value = g_pmProductMode;
-	ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
+	ret = sceKernelCopyToUser(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -260,7 +260,7 @@ int sceSblPmMgrGetProductModeFromNVS(SceUInt8 *mode)
 	}
 	ret = SceSblPostSsMgrForDriver_4663C195(&value);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
+		ret = sceKernelCopyToUser(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -280,7 +280,7 @@ int sceSblPmMgrGetCurrentMode(SceUInt8 *mode)
 		return SCE_SBL_ERROR_PM_INVALID_ARGUMENT;
 	}
 	value = g_pmProductMode;
-	ret = SceSysmemForDriver_6D88EF8A(mode, &value, sizeof(value));
+	ret = sceKernelCopyToUser(mode, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }

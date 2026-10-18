@@ -242,21 +242,21 @@ static int openImage(void)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s.commandBlock = SceSysmemForDriver_C94850C9("SceUsbstorVstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+	s.commandBlock = sceKernelAllocMemBlockForKernel("SceUsbstorVstor", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 						 0x1000, &opt);
 	if (s.commandBlock < 0)
 		return VSTOR_ERROR_MEMORY;
-	if (SceSysmemForDriver_A841EDDA(s.commandBlock, &base) < 0) {
+	if (sceKernelGetMemBlockBase(s.commandBlock, &base) < 0) {
 		result = VSTOR_ERROR_MEMORY;
 		goto freeCommand;
 	}
 	s.response = base;
 	if (!s.buffers[0]) {
-		s.dataBlock = SceSysmemForDriver_C94850C9("SceUsbstorExt", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+		s.dataBlock = sceKernelAllocMemBlockForKernel("SceUsbstorExt", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 						      0x20000, &opt);
 		if (s.dataBlock < 0)
 			return VSTOR_ERROR_MEMORY;
-		if (SceSysmemForDriver_A841EDDA(s.dataBlock, &base) < 0) {
+		if (sceKernelGetMemBlockBase(s.dataBlock, &base) < 0) {
 			SceSysmemForDriver_009E1C61(s.dataBlock);
 			result = VSTOR_ERROR_MEMORY;
 			goto freeData;
@@ -863,8 +863,8 @@ int sceUsbstorVStorSetDeviceInfo(const char *product, const char *revision)
 
 	if (authorized()) {
 		result = VSTOR_ERROR_ARGUMENT;
-		if (SceSysmemForDriver_DB3EC244(productCopy, product, 16) >= 0 &&
-		    SceSysmemForDriver_DB3EC244(revisionCopy, revision, 4) >= 0 &&
+		if (sceKernelStrncpyFromUser(productCopy, product, 16) >= 0 &&
+		    sceKernelStrncpyFromUser(revisionCopy, revision, 4) >= 0 &&
 		    productCopy[0] && revisionCopy[0]) {
 			SceUsbstorForDriver_ADB2AAF2(productCopy, revisionCopy, 0);
 			result = 0;
@@ -882,7 +882,7 @@ int sceUsbstorVStorSetImgFilePath(const char *path)
 
 	if (authorized()) {
 		memset(copy, 0, 257);
-		result = SceSysmemForDriver_DB3EC244(copy, path, 256);
+		result = sceKernelStrncpyFromUser(copy, path, 256);
 		if (result < 0 || !path) {
 			result = VSTOR_ERROR_ARGUMENT;
 		} else {

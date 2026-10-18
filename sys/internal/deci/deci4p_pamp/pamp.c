@@ -35,7 +35,7 @@ static void pampZfree(void *opaque, void *address)
 /* name unknown */
 static void *pampZalloc(void *opaque, SceUInt32 items, SceUInt32 size)
 {
-	return SceSysmemForDriver_7B4CB60A((SceUID)opaque, items * size);
+	return sceKernelAllocHeapMemory((SceUID)opaque, items * size);
 }
 
 /* name unknown; overlap is rejected even though the operation is a copy. */
@@ -398,13 +398,13 @@ static int pampOpen(PampContext *ctx)
 	ctx->traceSize = windowSize - 0x1000000;
 	ctx->trace[0].allocated = 0;
 	ctx->trace[0].base = ctx->traceBase;
-	ret = SceSysmemForDriver_8D160E65(ctx->traceBase, &ctx->trace[0].physical);
+	ret = sceKernelVAtoPA(ctx->traceBase, &ctx->trace[0].physical);
 	if (ret < 0)
 		return PAMP_STATUS_ERROR;
 	ctx->trace[0].size = 0;
 	ctx->trace[1].allocated = 0;
 	ctx->trace[1].base = ctx->traceBase;
-	ret = SceSysmemForDriver_8D160E65(ctx->traceBase, &ctx->trace[1].physical);
+	ret = sceKernelVAtoPA(ctx->traceBase, &ctx->trace[1].physical);
 	if (ret < 0)
 		return PAMP_STATUS_ERROR;
 	ctx->trace[1].size = 0;
@@ -490,7 +490,7 @@ static int pampAllocateTrace(PampContext *ctx)
 	if (other->allocated)
 		other->base = ctx->traceBase + size;
 	if (ctx->trace[0].allocated) {
-		ret = SceSysmemForDriver_8D160E65(ctx->trace[0].base, &ctx->trace[0].physical);
+		ret = sceKernelVAtoPA(ctx->trace[0].base, &ctx->trace[0].physical);
 		if (ret < 0)
 			return PAMP_STATUS_INVALID_ARGUMENT;
 		ctx->paConfig[4] = data[2];
@@ -504,7 +504,7 @@ static int pampAllocateTrace(PampContext *ctx)
 			return pampProtocolError(ret);
 	}
 	if (ctx->trace[1].allocated) {
-		ret = SceSysmemForDriver_8D160E65(ctx->trace[1].base, &ctx->trace[1].physical);
+		ret = sceKernelVAtoPA(ctx->trace[1].base, &ctx->trace[1].physical);
 		if (ret < 0)
 			return PAMP_STATUS_INVALID_ARGUMENT;
 		ctx->pmuAddress = ctx->trace[1].physical;
@@ -1048,7 +1048,7 @@ int PampModuleStart(SceSize arglen, void *argp)
 	heapopt.memtype = PAMP_MEMTYPE;
 	heapopt.pid = 0;
 	heapopt.heap = NULL;
-	ret = SceSysmemForDriver_9328E0E8("SceDeci4pPamp", 0x100000, &heapopt);
+	ret = sceKernelCreateHeap("SceDeci4pPamp", 0x100000, &heapopt);
 	if (ret < 0)
 		return 2;
 	ctx->heap = ret;

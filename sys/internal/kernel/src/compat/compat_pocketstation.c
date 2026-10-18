@@ -16,7 +16,7 @@ int sceCompatIsPocketStationTitle(const char *titleId)
 
 	syscall = sceSyscallEnter();
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
-		result = SceSysmemForDriver_BC996A7A(localTitleId, titleId,
+		result = sceKernelCopyFromUser(localTitleId, titleId,
 			sizeof(localTitleId));
 		if (result >= 0) {
 			if (localTitleId[9] != 0)

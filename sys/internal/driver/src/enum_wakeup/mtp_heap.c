@@ -19,7 +19,7 @@ int mtpHeapCreate(SceSize size)
 	opt.size = sizeof(opt);
 	opt.attr = HEAP_AUTO_EXTEND | HEAP_HAS_MAX_SIZE;
 	opt.maxSize = 0x80000;
-	ret = SceSysmemForDriver_9328E0E8("SceMtpHeap", size, &opt);
+	ret = sceKernelCreateHeap("SceMtpHeap", size, &opt);
 	if (ret < 0)
 		ret = MTP_ERROR_NO_MEMORY;
 	else

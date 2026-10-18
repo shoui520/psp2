@@ -202,7 +202,7 @@ int sceKernelVSlotMapProcMemory(SceUID pid, uintptr_t va, SceSize size, SceUInt3
 
 	if ((va & 0xfff) || size - 1 >= VSLOT_MAX_SIZE || (size & 0xfff))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	ret = SceSysmemForDriver_659586BF(pid, (void *)va, size);
+	ret = sceKernelLockRangeProc(pid, (void *)va, size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 506, "sceKernelLockRangeProc failed 0x%08x\n", ret);
 		return ret;
@@ -212,7 +212,7 @@ int sceKernelVSlotMapProcMemory(SceUID pid, uintptr_t va, SceSize size, SceUInt3
 	ret = VSlotFIFOPop(fifo, &slot);
 	sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(&fifo->lock, intr);
 	if (ret < 0) {
-		SceSysmemForDriver_A8525B06(pid, (void *)va, size);
+		sceKernelUnlockRangeProc(pid, (void *)va, size);
 		return ret;
 	}
 	return VSlotMap(slot, pid, va, size, pSlot, pVbase);
@@ -240,7 +240,7 @@ int sceKernelVSlotUnmapProcMemory(MemBlockObject *slot)
 
 	VSlotUnmap(slot);
 	info = VSlotGetInfoRaw(slot);
-	ret = SceSysmemForDriver_A8525B06(info->pid, (void *)info->va, info->size);
+	ret = sceKernelUnlockRangeProc(info->pid, (void *)info->va, info->size);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 626, "sceKernelUnlockRangeProc failed 0x%08x\n", ret);
 		return ret;

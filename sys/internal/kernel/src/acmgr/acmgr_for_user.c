@@ -17,7 +17,7 @@ int _sceSblACMgrIsGameProgram(SceUInt32 *pResult)
 	result = __builtin_alloca(sizeof(*result));
 	*result = 0;
 	ret = isGameProgramForUser(result);
-	err = SceSysmemForDriver_6D88EF8A(pResult, result, sizeof(*result));
+	err = sceKernelCopyToUser(pResult, result, sizeof(*result));
 	return err < 0 ? err : ret;
 }
 

@@ -84,7 +84,7 @@ static int uidSimpleEvent_Destructor(void *object)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 877);
 	intr = SceCpuForDriver_821FC0EE();
 	pid = simple->event.ownerPid;
-	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
+	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
@@ -109,7 +109,7 @@ int startSimpleEvent(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(77);
 	ret = sceKernelUIDInheritedEventClassInit(cls, "SceUIDSimpleEventClass", SIMPLE_EVENT_ITEM_SIZE,
@@ -131,7 +131,7 @@ int simpleEventProcessExit(SceProcessObject *process)
 	uint32_t wake;
 	int num, i, intr, ret;
 
-	num = SceSysmemForKernel_08C05493(process->pid, SIMPLE_EVENT_CLASS(), PUID_VECTOR_LEVEL,
+	num = scePUIDGetUIDVectorByClass(process->pid, SIMPLE_EVENT_CLASS(), PUID_VECTOR_LEVEL,
 					  NULL, 0, NULL);
 	if (num < 0) {
 		SCE_DBG_ASSERT_FAIL(114);
@@ -139,10 +139,10 @@ int simpleEventProcessExit(SceProcessObject *process)
 	}
 	vector = NULL;
 	while (num != 0) {
-		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 121);
-		num = SceSysmemForKernel_08C05493(process->pid, SIMPLE_EVENT_CLASS(), 5, vector,
+		num = scePUIDGetUIDVectorByClass(process->pid, SIMPLE_EVENT_CLASS(), 5, vector,
 						  num, &got);
 		if ((int)got >= num)
 			break;
@@ -152,7 +152,7 @@ int simpleEventProcessExit(SceProcessObject *process)
 		guid = SceSysmemForDriver_45D22597(process->pid, vector[i]);
 		/* Sony's: interrupts stay suspended when the event is gone already */
 		intr = SceCpuForDriver_821FC0EE();
-		if (SceSysmemForDriver_00ED6C14(guid, SIMPLE_EVENT_CLASS(),
+		if (sceGUIDReferObjectWithClass(guid, SIMPLE_EVENT_CLASS(),
 						 (SceObjectBase **)&simple) < 0)
 			continue;
 		if (SceSysmemForDriver_84A4AF5E(process->pid, vector[i]) < 0)
@@ -316,7 +316,7 @@ int sceKernelDeleteSimpleEvent(SceUID simpleEventId)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(simpleEventId, SIMPLE_EVENT_CLASS(),
+	if (sceGUIDReferObjectWithClass(simpleEventId, SIMPLE_EVENT_CLASS(),
 					 (SceObjectBase **)&simple) < 0) {
 		ret = ThreadmgrInSyscall() ?
 			(SCE_KERNEL_ERROR_UNKNOWN_SIMPLE_EVENT_ID | SYSCALL_ERROR_BIT) :
@@ -405,12 +405,12 @@ int SceThreadmgrForDriver_4DE77569(int level, SceKernelEventInfo *infos, SceSize
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
+	num = sceGUIDGetUIDVectorByClass(SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(SIMPLE_EVENT_CLASS(), level, vector, num, &got);
+		total = sceGUIDGetUIDVectorByClass(SIMPLE_EVENT_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -450,12 +450,12 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *in
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid, SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(pid, SIMPLE_EVENT_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid, SIMPLE_EVENT_CLASS(), level, vector, num,
+		total = scePUIDGetUIDVectorByClass(pid, SIMPLE_EVENT_CLASS(), level, vector, num,
 						    &got);
 		if (total <= (int)got)
 			break;

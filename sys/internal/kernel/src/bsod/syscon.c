@@ -24,22 +24,22 @@ int _sceKernelBsodSysconInit(void)
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = GPIO0_REG_BASE;
-	uid = SceSysmemForDriver_C94850C9("SceBsodGpio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceBsodGpio0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				    0x1000, &options);
 	if (uid < 0)
 		goto error;
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_bsodSyscon[0] = base;
 
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 2;
 	options.paddr = SPI_REG_BASE(0);
-	uid = SceSysmemForDriver_C94850C9("SceBsodSpi0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceBsodSpi0", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				    0x1000, &options);
 	if (uid < 0)
 		goto error;
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_bsodSyscon[1] = base;
 	return 0;
 

@@ -391,14 +391,14 @@ PVRSRV_ERROR OSDisableTimer(IMG_HANDLE hTimer)
 PVRSRV_ERROR CopyToUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_UINT32 ui32Bytes)
 {
-	return SceSysmemForDriver_6D88EF8A(pvDest, pvSrc, ui32Bytes) == 0
+	return sceKernelCopyToUser(pvDest, pvSrc, ui32Bytes) == 0
 			? PVRSRV_OK : PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 
 PVRSRV_ERROR CopyFromUserWrapper(PVRSRV_PER_PROCESS_DATA *psPerProc,
 		IMG_VOID *pvDest, const IMG_VOID *pvSrc, IMG_UINT32 ui32Bytes)
 {
-	return SceSysmemForDriver_BC996A7A(pvDest, pvSrc, ui32Bytes) == 0
+	return sceKernelCopyFromUser(pvDest, pvSrc, ui32Bytes) == 0
 			? PVRSRV_OK : PVRSRV_ERROR_FAILED_TO_COPY_VIRT_MEMORY;
 }
 

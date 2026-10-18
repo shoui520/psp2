@@ -1559,7 +1559,7 @@ out:
 	return result;
 }
 
-int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint)
+int sceAppMgrRdrfpUmount(const SceAppMgrRdrfpMountPoint *mountPoint)
 {
 	union {
 		SceSelfAuthInfo authInfo;

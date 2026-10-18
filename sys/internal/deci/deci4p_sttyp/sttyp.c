@@ -51,7 +51,7 @@ SceUInt64 __aeabi_uldivmod(SceUInt64 numerator, SceUInt64 denominator);
 #endif
 
 typedef struct SttypPort {
-	int handle;				/* SceDeci4pSDfMgrForKernel_A55F5F0D */
+	int handle;				/* sceSDfMgrOpen */
 	SceSize len;				/* characters in buf */
 	SceUInt32 suspended;
 	SceSize sent;				/* bytes of the packet sent */
@@ -504,7 +504,7 @@ int module_bootstart(SceSize args, void *argp)
 	cpu = SceCpuId();
 	port->hdr.port = TTYP_PORT_KERNEL;
 	port->hdr.hdr.protocol = s_protocol[cpu].protocol;
-	handle = SceDeci4pSDfMgrForKernel_A55F5F0D(KpHandler, &s_protocol[SceCpuId()], port);
+	handle = sceSDfMgrOpen(KpHandler, &s_protocol[SceCpuId()], port);
 	if (handle < 0)
 		return handle;
 	port->handle = handle;

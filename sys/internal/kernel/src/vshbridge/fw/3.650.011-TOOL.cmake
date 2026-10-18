@@ -266,11 +266,11 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_DB3EC244
+	sceKernelStrncpyFromUser
 	SceSysrootForDriver_47724459
 	SceSysrootForDriver_67AAB627
 	SceSysrootForDriver_7AAC4EE7

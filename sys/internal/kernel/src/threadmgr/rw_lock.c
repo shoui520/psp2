@@ -201,7 +201,7 @@ static int uidRWLock_Destructor(void *object)
 	wake |= wakeupWaitObjectAll((uintptr_t)&rwLock->next, SCE_KERNEL_ERROR_WAIT_DELETE, NULL);
 	sceKernelSpinlockLowUnlock(&rwLock->lock);
 	pid = rwLock->ownerPid;
-	if (SceSysmemForDriver_00ED6C14(pid, s_threadmgrRuntime.manager->processClass,
+	if (sceGUIDReferObjectWithClass(pid, s_threadmgrRuntime.manager->processClass,
 					 (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
@@ -254,7 +254,7 @@ int lockRWLock(SceUID rwLockId, SceUInt32 *timeout, int mode, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_CHECK_STACK) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -378,7 +378,7 @@ static int getRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		ret = ThreadmgrInSyscall() ? SCE_KERNEL_ERROR_UNKNOWN_RW_LOCK_ID | SYSCALL_ERROR_BIT :
@@ -417,7 +417,7 @@ void startRWLock(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = SceSysmemForDriver_7B4CB60A(manager->heapId, 0x38);
+	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(448);
 	ret = uidExtendedClassInit(cls, "SceUIDRWLockClass",
@@ -473,16 +473,16 @@ int rwLockProcessExit(SceProcessObject *process)
 	SceSize got = 0;
 	int num, i, intr, ret;
 
-	num = SceSysmemForKernel_08C05493(process->pid,
+	num = scePUIDGetUIDVectorByClass(process->pid,
 		s_threadmgrRuntime.manager->rwLockClass, PUID_VECTOR_LEVEL, NULL, 0, NULL);
 	if (num < 0)
 		return 0;
 	vector = NULL;
 	while (num != 0) {
-		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 591);
-		num = SceSysmemForKernel_08C05493(process->pid,
+		num = scePUIDGetUIDVectorByClass(process->pid,
 			s_threadmgrRuntime.manager->rwLockClass, 5, vector, num, &got);
 		if ((int)got >= num)
 			break;
@@ -673,7 +673,7 @@ int sceKernelTryLockReadRWLock(SceUID rwLockId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -721,7 +721,7 @@ int sceKernelUnlockReadRWLock(SceUID rwLockId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -807,7 +807,7 @@ int sceKernelTryLockWriteRWLock(SceUID rwLockId)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -871,7 +871,7 @@ int sceKernelUnlockWriteRWLock(SceUID rwLockId)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -978,7 +978,7 @@ int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWrit
 		return SCE_KERNEL_ERROR_ILLEGAL_TYPE;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(rwLockId,
+	ret = sceGUIDReferObjectWithClass(rwLockId,
 		s_threadmgrRuntime.manager->rwLockClass, (SceObjectBase **)&rwLock);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
@@ -1048,7 +1048,7 @@ int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 		if (ret < 0)
 			goto restore;
 		if (ThreadmgrInSyscall() && local.writeOwnerId != 0) {
-			ret = SceSysmemForDriver_0FC24464(local.writeOwnerId, &owner);
+			ret = sceGUIDGetObject(local.writeOwnerId, &owner);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 1630, "*** error: sceKernelGetRWLockInfo() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", local.writeOwnerId, ret);
@@ -1077,13 +1077,13 @@ int SceThreadmgrForDriver_E2B57231(int level, SceKernelRWLockInfo *infos, SceSiz
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->rwLockClass,
+	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->rwLockClass,
 					  level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(
+		total = sceGUIDGetUIDVectorByClass(
 			s_threadmgrRuntime.manager->rwLockClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
@@ -1123,13 +1123,13 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, SceKernelRWLockInfo *in
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid,
+	num = scePUIDGetUIDVectorByClass(pid,
 		s_threadmgrRuntime.manager->rwLockClass, level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid,
+		total = scePUIDGetUIDVectorByClass(pid,
 			s_threadmgrRuntime.manager->rwLockClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
@@ -1145,7 +1145,7 @@ int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, SceKernelRWLockInfo *in
 			continue;
 		info.rwLockId = vector[i];
 		if (info.writeOwnerId != 0) {
-			err = SceSysmemForDriver_0FC24464(info.writeOwnerId, &owner);
+			err = sceGUIDGetObject(info.writeOwnerId, &owner);
 			if (err < 0)
 				SCE_DBG_PRINTF(0, 1817, "*** error: sceKernelGetRWLockInfoAllProc() -> "
 					"sceGUIDGetObject(0x%08X)=0x%08X\n", info.writeOwnerId, err);

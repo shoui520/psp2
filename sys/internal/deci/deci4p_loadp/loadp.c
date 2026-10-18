@@ -339,13 +339,13 @@ static __attribute__((noinline)) SceSize loadpInitPacket(void *packet, SceSize s
 
 LoadpSendBuf *pdLoadpAllocSendBuf(void)
 {
-	LoadpSendBuf *buf = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*buf));
+	LoadpSendBuf *buf = sceKernelAllocHeapMemory(loadp.heap, sizeof(*buf));
 	void *mem;
 
 	if (buf == NULL)
 		SCE_PANIC(1048);
 	memset(buf, 0, sizeof(*buf));
-	mem = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_SEND_BUF_SIZE);
+	mem = sceKernelAllocHeapMemory(loadp.heap, LOADP_SEND_BUF_SIZE);
 	buf->mem = mem;
 	if (mem == NULL) {
 		sceKernelFreeHeapMemory(loadp.heap, buf);
@@ -1041,7 +1041,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	r->reserved1 = 0;
 	r->reserved2 = -1;
 	r->mainThread = SceThreadmgrForDriver_F311808F(sceKernelGetProcessMainThreadForDebugger(pid));
-	info = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*info));
+	info = sceKernelAllocHeapMemory(loadp.heap, sizeof(*info));
 	if (info == NULL) {
 		*result = LOADP_RESULT_NO_MEMORY;
 		goto free_buf;
@@ -1158,7 +1158,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 	}
 
 	if (setupper) {
-		path = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(LOADP_CUI_SETUPPER));
+		path = sceKernelAllocHeapMemory(loadp.heap, sizeof(LOADP_CUI_SETUPPER));
 		if (path == NULL) {
 			result = LOADP_RESULT_NO_MEMORY;
 			goto reply;
@@ -1169,7 +1169,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 		pathSize = sizeof(LOADP_CUI_SETUPPER);
 	}
 	size = pathSize + total;
-	argBuf = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
+	argBuf = sceKernelAllocHeapMemory(loadp.heap, size);
 	if (argBuf == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto free_path;
@@ -1799,7 +1799,7 @@ reply:
 	memset(&param, 0, sizeof(param));						\
 	param.size = sizeof(param);							\
 	param.flags = 0x80000000;							\
-	info = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_LAUNCH_INFO_SIZE);		\
+	info = sceKernelAllocHeapMemory(loadp.heap, LOADP_LAUNCH_INFO_SIZE);		\
 	if (info == NULL) {								\
 		result = LOADP_RESULT_NO_MEMORY;					\
 		goto free_args;								\
@@ -1890,7 +1890,7 @@ static inline __attribute__((always_inline)) void pdLoadpPackageInstallerSpawnCm
 	}
 	req->path[req->size - 1] = '\0';
 	size = req->size + 0x2a;
-	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
+	args = sceKernelAllocHeapMemory(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -1921,7 +1921,7 @@ static inline __attribute__((always_inline)) void pdLoadpPackageUninstallerSpawn
 	}
 	req->path[req->size - 1] = '\0';
 	size = req->size + 0x35;
-	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
+	args = sceKernelAllocHeapMemory(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -1954,7 +1954,7 @@ static inline __attribute__((always_inline)) void pdLoadpBtPairingAppSpawnCmd(vo
 		result = LOADP_RESULT_BUSY;
 		goto reply;
 	}
-	args = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(LOADP_DS4_PAIRING_SELF));
+	args = sceKernelAllocHeapMemory(loadp.heap, sizeof(LOADP_DS4_PAIRING_SELF));
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2012,7 +2012,7 @@ static inline __attribute__((always_inline)) void pdLoadpSaveDataInstallerSpawnC
 		result = LOADP_RESULT_INVALID_ARG;
 		goto reply;
 	}
-	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
+	args = sceKernelAllocHeapMemory(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2092,7 +2092,7 @@ static inline __attribute__((always_inline)) void pdLoadpSaveDataFormatterSpawnC
 		titleId = req->path;
 		req->path[9] = '\0';
 	}
-	args = SceSysmemForDriver_7B4CB60A(loadp.heap, size);
+	args = sceKernelAllocHeapMemory(loadp.heap, size);
 	if (args == NULL) {
 		result = LOADP_RESULT_NO_MEMORY;
 		goto reply;
@@ -2250,11 +2250,11 @@ int module_start(SceSize args, void *argp)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.attr = 0x401;
 	heapOpt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	ret = SceSysmemForDriver_9328E0E8("SceDeci4pLoadp", 0x20000, &heapOpt);
+	ret = sceKernelCreateHeap("SceDeci4pLoadp", 0x20000, &heapOpt);
 	if (ret < 0)
 		return SCE_KERNEL_START_FAILED;
 	loadp.heap = ret;
-	loadp.recvBuf = SceSysmemForDriver_7B4CB60A(loadp.heap, LOADP_RECV_BUF_SIZE);
+	loadp.recvBuf = sceKernelAllocHeapMemory(loadp.heap, LOADP_RECV_BUF_SIZE);
 	if (loadp.recvBuf == NULL)
 		return SCE_KERNEL_START_FAILED;
 	memset(loadp.recvBuf, 0, LOADP_RECV_BUF_SIZE);
@@ -2356,7 +2356,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	int flags, option1, option2;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&p, param, sizeof(p));
+	ret = sceKernelCopyFromUser(&p, param, sizeof(p));
 	if (ret < 0)
 		return ret;
 	flags = p.flags;
@@ -2366,7 +2366,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	data = p.data;
 	if (path != NULL) {
 		kpath = __builtin_alloca(0x124);
-		ret = SceSysmemForDriver_DB3EC244(kpath, path, 0x124);
+		ret = sceKernelStrncpyFromUser(kpath, path, 0x124);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x124 && ((signed char *)kpath)[0x123] != '\0')
@@ -2374,7 +2374,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (titleId != NULL) {
 		ktitleId = __builtin_alloca(0x20);
-		ret = SceSysmemForDriver_DB3EC244(ktitleId, titleId, 0x20);
+		ret = sceKernelStrncpyFromUser(ktitleId, titleId, 0x20);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x20 && ((signed char *)ktitleId)[0x1f] != '\0')
@@ -2382,7 +2382,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (args != NULL) {
 		kargs = __builtin_alloca(0x400);
-		ret = SceSysmemForDriver_DB3EC244(kargs, args, 0x400);
+		ret = sceKernelStrncpyFromUser(kargs, args, 0x400);
 		if (ret < 0)
 			return ret;
 		if (ret == 0x400 && ((signed char *)kargs)[0x3ff] != '\0')
@@ -2390,7 +2390,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	}
 	if (data != NULL) {
 		kdata = __builtin_alloca(0x80);
-		ret = SceSysmemForDriver_BC996A7A(kdata, data, 0x80);
+		ret = sceKernelCopyFromUser(kdata, data, 0x80);
 		if (ret < 0)
 			return ret;
 	}

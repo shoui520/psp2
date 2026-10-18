@@ -121,10 +121,10 @@ set(MODULE_IMPORT_FUNCS
 	SceMagicGateForDriver_FEF11D84
 	SceSblACMgrForDriver_A27E47A7
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
+	sceKernelCreateHeap
+	sceKernelCopyFromUser
 	sceKernelDeleteHeap
 	sceKernelSetThreadAccessLevel
 	sceKernelDeleteMutex

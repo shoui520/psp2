@@ -41,12 +41,12 @@ int motionSpiInitialize(int clockDivider, uint16_t delay,
 	option.size = sizeof(option);
 	option.paddr = SPI_REG_BASE(1);
 	option.attr = 2;
-	result = SceSysmemForDriver_C94850C9("SceSpi1Reg", 0x20100806,
+	result = sceKernelAllocMemBlockForKernel("SceSpi1Reg", 0x20100806,
 		0x1000, &option);
 	if (result < 0)
 		return result;
 	motionSpi.memblock = result;
-	SceSysmemForDriver_A841EDDA(result, &base);
+	sceKernelGetMemBlockBase(result, &base);
 	motionSpi.delay = delay;
 	motionSpi.registers = base;
 	motionSpi.clockDivider = clockDivider;

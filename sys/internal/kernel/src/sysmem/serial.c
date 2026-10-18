@@ -231,26 +231,26 @@ int serial_remap(void)
 	opt.size = sizeof(opt);
 	opt.paddr = UART_REG_BASE;
 	opt.attr = 2;
-	uid = SceSysmemForDriver_C94850C9("SceUartReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, UART_PORTS * UART_REG_SIZE, &opt);
+	uid = sceKernelAllocMemBlockForKernel("SceUartReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, UART_PORTS * UART_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 242, "allocate uart register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 243);
 		return uid;
 	}
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	for (i = 0; i < UART_PORTS; i++)
 		s_uartRegs[i] = (volatile SceUartRegisters *)((char *)base + i * UART_REG_SIZE);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.paddr = UART_CLKGEN_BASE;
 	opt.attr = 2;
-	uid = SceSysmemForDriver_C94850C9("SceUartClkgenReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x1000, &opt);
+	uid = sceKernelAllocMemBlockForKernel("SceUartClkgenReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, 0x1000, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 262, "allocate uart clkgen area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_LEVEL_CHECK(2, 0, 263);
 		return uid;
 	}
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_uartClkgen = base;
 	return 0;
 }

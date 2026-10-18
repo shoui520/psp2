@@ -203,9 +203,9 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_E655852F
 	SceCpuForDriver_10EB35EB
 	SceCpuForDriver_2A40BB93
@@ -269,7 +269,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	sceKernelAllocOwnProcessHeap
 	SceProcessmgrForDriver_879153D9
 	sceKernelFreeRemoteProcessHeap

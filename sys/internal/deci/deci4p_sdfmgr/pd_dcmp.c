@@ -458,7 +458,7 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 	protocol->flags = 0;
 	snprintf(name, sizeof(name), "%s%d", "SceDeci4pSDfMgrDcmp",
 		 (int)sceKernelCpuId());
-	result = SceSysmemForDriver_C94850C9(name, SceDeci4pSDfMgrForKernel_35238B8A(),
+	result = sceKernelAllocMemBlockForKernel(name, SceDeci4pSDfMgrForKernel_35238B8A(),
 					 sizeof(*buffers), NULL);
 	if (result < 0) {
 #if FW_DEBUG
@@ -471,7 +471,7 @@ int dcmpInit(SdfMgrProtocolState *protocol)
 #endif
 	}
 	cpu->memblock = result;
-	result = SceSysmemForDriver_A841EDDA(result, &base);
+	result = sceKernelGetMemBlockBase(result, &base);
 	if (result < 0) {
 #if FW_DEBUG
 		errorInfo = DCMP_DEBUG_INFO(140, 0x917b6dd8, 0xb000cfda, "dcmpInit");

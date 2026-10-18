@@ -78,7 +78,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 		options.size = sizeof(options);
 		options.attr = 0x01000040;
 		options.mirror_blockid = referencedUid;
-		mappingUid = SceSysmemForDriver_C94850C9("SceGpuShadowMemBlock",
+		mappingUid = sceKernelAllocMemBlockForKernel("SceGpuShadowMemBlock",
 						    shadowType, 0, &options);
 		if (mappingUid < 0) {
 			SCE_DBG_PRINTF(0, 127,
@@ -91,7 +91,7 @@ GpuMemBlock *sceGpuMemBlockNewBlock(int uid, unsigned *groupId,
 	if (!block)
 		goto releaseMapping;
 	memset((void *)block, 0, sizeof(*block));
-	SceSysmemForDriver_A841EDDA(mappingUid, &mappedBase);
+	sceKernelGetMemBlockBase(mappingUid, &mappedBase);
 	base = info.ex.details.vbase;
 	alternate = (unsigned)mappedBase;
 	size = info.ex.details.size;

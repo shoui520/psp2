@@ -198,12 +198,12 @@ int SceThreadmgrForDriver_332E127C(void);
 int SceThreadmgrForDriver_5311CFB5(uintptr_t hook, uintptr_t arg);
 SceUID SceThreadmgrForDriver_FD6150D5(const char *name, SceUID target, SceUID pid, uint32_t mask,
 				      uintptr_t handler, uint32_t arg);
-int SceThreadmgrForKernel_15D6357C(SceUID threadId, int priority);
+int sceKernelSuspendThread(SceUID threadId, int priority);
 int SceThreadmgrForKernel_16D1961A(void);
-int SceThreadmgrForKernel_490DAF14(SceUID threadId);
+int sceKernelResumeThread(SceUID threadId);
 void *SceThreadmgrForKernel_565BD2DA(void);
 void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId);
-int SceThreadmgrForKernel_9928DFBA(SceUID threadId, int priority);
+int sceKernelStopThread(SceUID threadId, int priority);
 int SceThreadmgrForKernel_CBADD6B3(SceUID threadId, SceSize argSize, const void *arg);
 int sceKernelClearEvent(SceUID eventId, uint32_t keep);
 int sceKernelPulseEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
@@ -331,7 +331,7 @@ int SceThreadmgrForDriver_C6741986(int level, SceKernelSemaInfo *infos, SceSize 
 				   SceSize *count);
 int SceThreadmgrForDriver_C7F5FFE0(int level, SceKernelMsgPipeInfo *infos, SceSize size,
 				   SceSize *count);
-SceUID SceThreadmgrForDriver_C8E57BB4(SceUID pid, const char *name, SceKernelThreadEntry entry,
+SceUID sceKernelCreateRemoteThread(SceUID pid, const char *name, SceKernelThreadEntry entry,
 				      int initPriority, SceSize stackSize, uint32_t attr,
 				      uint32_t cpuAffinityMask,
 				      const SceKernelThreadOptParam *option);

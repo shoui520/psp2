@@ -74,8 +74,8 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelUtilsForDriver_C2A61770
 	SceKernelUtilsForDriver_D8678061
 	SceKernelUtilsForDriver_F12B6451
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
 	sceKernelRegisterProcEventHandler
 	memset
 	memcpy

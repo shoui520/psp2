@@ -392,7 +392,7 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	if (SceSysmemForDriver_00ED6C14(workQueueId, WORK_QUEUE_CLASS(),
+	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 (SceObjectBase **)&queue) < 0) {
 		if (!ThreadmgrInSyscall()) {
 			SCE_DBG_ASSERT_PRINTF(0, 778,
@@ -491,7 +491,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 	}
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	if (SceSysmemForDriver_00ED6C14(workTaskId, WORK_TASK_CLASS(),
+	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 (SceObjectBase **)&task) < 0) {
 		if (!ThreadmgrInSyscall()) {
 			SCE_DBG_ASSERT_PRINTF(0, 935,
@@ -588,7 +588,7 @@ int getWorkQueueInfo(SceUID workQueueId, ThreadmgrWorkQueueInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(workQueueId, WORK_QUEUE_CLASS(),
+	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 (SceObjectBase **)&queue) < 0) {
 		ret = ThreadmgrInSyscall() ?
 			(SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID | SYSCALL_ERROR_BIT) :
@@ -616,7 +616,7 @@ int getWorkQueueInfoFull(SceUID workQueueId, ThreadmgrWorkQueueInfoFull *info)
 	int intr, ret;
 
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(workQueueId, WORK_QUEUE_CLASS(),
+	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 (SceObjectBase **)&queue) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_QUEUE_ID;
 		goto resume;
@@ -654,7 +654,7 @@ int getWorkTaskInfo(SceUID workTaskId, ThreadmgrWorkTaskInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(workTaskId, WORK_TASK_CLASS(),
+	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 (SceObjectBase **)&task) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID;
 	} else {
@@ -748,7 +748,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 		SCE_DBG_ASSERT_CHECK(vfpException != NULL, 468);
 		*vfpException = thread->vfpException;
 		__asm__ volatile("dsb sy" : : : "memory");
-		if (task->user && SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
+		if (task->user && sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
 						       &thread->vfpException, sizeof(uint32_t)) < 0)
 			SCE_DBG_ASSERT_FAIL(475);
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
@@ -800,7 +800,7 @@ void callWorkTaskEntry(ThreadmgrWorkTaskCB *task, void *arg)
 		regs->lr = (uint32_t)SceSysrootForKernel_AD74BEB3(thread->process);
 		thread->pRegisterContext->tpidruro = thread->tls;
 		thread->vfpException = 0;
-		if (SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
+		if (sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VFP_EXCEPTION),
 					 &thread->vfpException, sizeof(uint32_t)) < 0)
 			SCE_DBG_ASSERT_FAIL(559);
 	}
@@ -831,7 +831,7 @@ int workQueueThread(SceSize argSize, void *argp)
 		intr = SceCpuForDriver_D32ACE9E(&queue->lock);
 		while ((link = queue->pending.next) != &queue->pending) {
 			cb = TASK_FROM_LINK(link);
-			if (SceSysmemForDriver_00ED6C14(cb->guid, WORK_TASK_CLASS(),
+			if (sceGUIDReferObjectWithClass(cb->guid, WORK_TASK_CLASS(),
 							 (SceObjectBase **)&task) < 0)
 				SCE_PANIC(638);
 			ListLinkRemove(link);
@@ -885,7 +885,7 @@ void startWorkQueue(void)
 {
 	struct ThreadmgrWaitableClass *cls;
 
-	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(340);
 	if (uidExtendedClassInit(cls, "SceUIDWorkQueueClass",
@@ -897,7 +897,7 @@ void startWorkQueue(void)
 	s_threadmgrRuntime.manager->workQueueClass = (SceClass *)cls;
 	SCE_DBG_PRINTF_LEVEL(2, 0, 356, " sizeof(SceUIDWorkQueueObject)=%d\n",
 			     sizeof(ThreadmgrWorkQueue));
-	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(361);
 	if (uidExtendedClassInit(cls, "SceUIDWorkTaskClass",
@@ -925,7 +925,7 @@ int createGlobalWorkQueue(void)
 		SCE_DBG_PRINTF(0xb, 249, " error: sceKernelCreateSema(0x%08X)\n", sema);
 		SCE_PANIC(250);
 	}
-	threads = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	threads = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 					    WORK_QUEUE_MAX_THREADS * sizeof(SceUID));
 	if (threads == NULL) {
 		SCE_DBG_PRINTF(0xb, 257, " error: sceKernelAllocHeapMemory()\n");
@@ -942,10 +942,10 @@ int createGlobalWorkQueue(void)
 		threads[i] = thread;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	queue = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
+	queue = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*queue));
 	if (queue == NULL)
 		SCE_PANIC(285);
-	if (SceSysmemForKernel_BF275C5A(GLOBAL_WORK_QUEUE_UID, WORK_QUEUE_CLASS(),
+	if (sceGUIDSet(GLOBAL_WORK_QUEUE_UID, WORK_QUEUE_CLASS(),
 					"SceKernelGlobalWorkQueue", (SceObjectBase *)queue) < 0)
 		SCE_PANIC(292);
 	uidWorkQueue_Constructor(queue);
@@ -1026,7 +1026,7 @@ SceUID sceKernelCreateWorkQueue(const char *name, SceUInt32 attr,
 		ret = sema;
 		goto restore;
 	}
-	threads = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	threads = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 					    count * sizeof(SceUID));
 	if (threads == NULL) {
 		SCE_DBG_PRINTF(0xb, 1122, " error: sceKernelAllocHeapMemory()\n");
@@ -1118,7 +1118,7 @@ SceUID sceKernelScheduleWorkTask(SceUID workQueueId, const char *name, int (*ent
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (SceSysmemForDriver_00ED6C14(workQueueId, WORK_QUEUE_CLASS(),
+	if (sceGUIDReferObjectWithClass(workQueueId, WORK_QUEUE_CLASS(),
 					 (SceObjectBase **)&queue) < 0) {
 		if (!ThreadmgrInSyscall()) {
 			SCE_DBG_ASSERT_PRINTF_FUNC(0, 1281, "sceKernelScheduleWorkTask",
@@ -1262,12 +1262,12 @@ int SceThreadmgrForDriver_920EA1CA(int level, ThreadmgrWorkQueueInfoFull *infos,
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(WORK_QUEUE_CLASS(), level, NULL, 0, NULL);
+	num = sceGUIDGetUIDVectorByClass(WORK_QUEUE_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(WORK_QUEUE_CLASS(), level, vector, num, &got);
+		total = sceGUIDGetUIDVectorByClass(WORK_QUEUE_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1319,12 +1319,12 @@ int SceThreadmgrForDriver_8C8A76EF(SceUID pid, int level, ThreadmgrWorkQueueInfo
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid, WORK_QUEUE_CLASS(), level, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(pid, WORK_QUEUE_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid, WORK_QUEUE_CLASS(), level, vector, num, &got);
+		total = scePUIDGetUIDVectorByClass(pid, WORK_QUEUE_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1387,7 +1387,7 @@ int SceThreadmgrForDriver_0B604A3C(SceUID workTaskId, ThreadmgrWorkTaskInfoShort
 	}
 	local = (ThreadmgrWorkTaskInfoShort){ .size = sizeof(local) };
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(workTaskId, WORK_TASK_CLASS(),
+	if (sceGUIDReferObjectWithClass(workTaskId, WORK_TASK_CLASS(),
 					 (SceObjectBase **)&task) < 0) {
 		ret = ThreadmgrInSyscall() ?
 			(SCE_KERNEL_ERROR_UNKNOWN_WORK_TASK_ID | SYSCALL_ERROR_BIT) :
@@ -1436,12 +1436,12 @@ int SceThreadmgrForDriver_E605ED7A(int level, ThreadmgrWorkTaskInfo *infos, SceS
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(WORK_TASK_CLASS(), level, NULL, 0, NULL);
+	num = sceGUIDGetUIDVectorByClass(WORK_TASK_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(WORK_TASK_CLASS(), level, vector, num, &got);
+		total = sceGUIDGetUIDVectorByClass(WORK_TASK_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1478,12 +1478,12 @@ int SceThreadmgrForDriver_B4CED111(SceUID pid, int level, ThreadmgrWorkTaskInfo 
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid, WORK_TASK_CLASS(), level, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(pid, WORK_TASK_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid, WORK_TASK_CLASS(), level, vector, num, &got);
+		total = scePUIDGetUIDVectorByClass(pid, WORK_TASK_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);

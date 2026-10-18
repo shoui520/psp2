@@ -212,30 +212,30 @@ set(MODULE_IMPORT_NIDS
 	0x849E3DF5:F:0xCACAB5F9
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForKernel_0E43E113
+	sceGUIDGetObjectWithClass
 	sceKernelGetHeapInfo
 	sceKernelCopyToUserProcTextDomainForDBGP
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_00ED6C14
-	SceSysmemForDriver_0F5C84B7
+	sceGUIDReferObjectWithClass
+	sceGUIDReferObject
 	sceGUIDReleaseObject
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCopyFromUserProc
 	sceKernelCopyToUserProc
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	sceKernelStrncpyFromUserProc
-	SceSysmemForDriver_77066FD1
-	SceSysmemForDriver_7B4CB60A
+	sceGUIDReferObjectWithClassLevel
+	sceKernelAllocHeapMemory
 	SceSysmemForDriver_85336A1C
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A78755EB
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCreateHeap
+	sceGUIDGetName
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
-	SceSysmemForDriver_DB3EC244
+	sceKernelStrncpyFromUser
 	SceSysmemForDriver_E655852F
 	sceKernelStrncpyToUserProc
 	SceCpuForKernel_803C84BF

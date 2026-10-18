@@ -151,7 +151,7 @@ int cameraInitializeConfig(void)
 {
 	memset(cameraDriver, 0, sizeof(*cameraDriver));
 	cameraDriver->processLocalStorageKey =
-		SceProcessmgrForDriver_3801D7D6("SceCamera",
+		sceKernelRegisterKPLS("SceCamera",
 						  2 * sizeof(CameraProcess));
 	cameraReservedState[0] = 0;
 	cameraDriver->device[0].activeProcessId = -1;
@@ -517,13 +517,13 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			buffer->pvIBase = cameraFrameBufferBase[devnum][index];
 			buffer->pvUBase = (char *)buffer->pvIBase + pixels;
 			buffer->pvVBase = (char *)buffer->pvUBase + chroma;
-			result = SceSysmemForDriver_8D160E65(buffer->pvIBase, &buffer->paddrIBase);
+			result = sceKernelVAtoPA(buffer->pvIBase, &buffer->paddrIBase);
 			if (result < 0)
 				return result;
-			result = SceSysmemForDriver_8D160E65(buffer->pvUBase, &buffer->paddrUBase);
+			result = sceKernelVAtoPA(buffer->pvUBase, &buffer->paddrUBase);
 			if (result < 0)
 				return result;
-			result = SceSysmemForDriver_8D160E65(buffer->pvVBase, &buffer->paddrVBase);
+			result = sceKernelVAtoPA(buffer->pvVBase, &buffer->paddrVBase);
 			if (result < 0)
 				return result;
 			pixels = device->config.sizeIBase;
@@ -543,7 +543,7 @@ int sceCameraConfigStartPid(int devnum, SceUID processId, int force)
 			buffer->pvUBase = NULL;
 			buffer->pvVBase = NULL;
 			buffer->pvIBase = cameraFrameBufferBase[devnum][index];
-			result = SceSysmemForDriver_8D160E65(buffer->pvIBase, &buffer->paddrIBase);
+			result = sceKernelVAtoPA(buffer->pvIBase, &buffer->paddrIBase);
 			if (result < 0)
 				return result;
 			buffer->paddrUBase = 0;
@@ -828,7 +828,7 @@ int cameraResetConfig(void)
 {
 	memset(cameraDriver, 0, sizeof(*cameraDriver));
 	cameraDriver->processLocalStorageKey =
-		SceProcessmgrForDriver_3801D7D6("SceCamera",
+		sceKernelRegisterKPLS("SceCamera",
 						  2 * sizeof(CameraProcess));
 	cameraReservedState[0] = 0;
 	cameraDriver->device[0].activeProcessId = -1;

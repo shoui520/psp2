@@ -162,13 +162,13 @@ int sceUdcdWaitState(const SceUdcdWaitParam *parameter, unsigned int timeout)
 		sceSyscallLeave(t);
 		return UDCD_ERROR_INTERRUPTED;
 	}
-	result = SceSysmemForDriver_BC996A7A(&kparameter, parameter, sizeof(kparameter));
+	result = sceKernelCopyFromUser(&kparameter, parameter, sizeof(kparameter));
 	if (result < 0)
 		goto out;
 	if ((unsigned int)kparameter.connection >> 3 != 0)
 		goto invalid;
 	if (kparameter.driverName != NULL) {
-		result = SceSysmemForDriver_DB3EC244(name, kparameter.driverName, sizeof(name));
+		result = sceKernelStrncpyFromUser(name, kparameter.driverName, sizeof(name));
 		if (result < 0)
 			goto out;
 		if (result == sizeof(name))
@@ -219,7 +219,7 @@ int sceUdcdGetDeviceState(UdcdUserDeviceState *state)
 		kstate.cable = value & 0x30;
 		kstate.charging = (bus->busPowered == 1 && bus->chargingEnabled == 1) ? 0x800 : 0;
 		kstate.connection = (value & 8) ? 1 : value & 7;
-		result = SceSysmemForDriver_6D88EF8A(state, &kstate, sizeof(kstate));
+		result = sceKernelCopyToUser(state, &kstate, sizeof(kstate));
 		if (result > 0)
 			result = 0;
 	}
@@ -242,7 +242,7 @@ int sceUdcdGetDeviceInfo(SceUdcdDeviceInfo *info)
 	} else {
 		result = SceUdcdForDriver_FBEA3703(&kinfo);
 		if (result >= 0) {
-			result = SceSysmemForDriver_6D88EF8A(info, &kinfo, sizeof(kinfo));
+			result = sceKernelCopyToUser(info, &kinfo, sizeof(kinfo));
 			if (result > 0)
 				result = 0;
 		}
@@ -277,7 +277,7 @@ int sceUdcdGetDrvState(const char *driverName)
 	}
 	if (driverName == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_DB3EC244(name, driverName, sizeof(name));
+	result = sceKernelStrncpyFromUser(name, driverName, sizeof(name));
 	if (result >= 0) {
 		if (result == sizeof(name))
 			goto invalid;

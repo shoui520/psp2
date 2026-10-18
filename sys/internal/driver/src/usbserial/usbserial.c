@@ -458,10 +458,10 @@ static int initializeSerial(int size, void *args, void *ctx)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s_serial.memblock = SceSysmemForDriver_C94850C9("SceUsbSerial", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x61000, &opt);
+	s_serial.memblock = sceKernelAllocMemBlockForKernel("SceUsbSerial", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x61000, &opt);
 	if (s_serial.memblock < 0)
 		return -1;
-	ret = SceSysmemForDriver_A841EDDA(s_serial.memblock, (void **)&base);
+	ret = sceKernelGetMemBlockBase(s_serial.memblock, (void **)&base);
 	if (ret < 0)
 		goto fail;
 	if (!s_serial.rx.base) {
@@ -1009,7 +1009,7 @@ int sceUsbSerialRecv(void *buffer, unsigned size, unsigned mode, int timeout)
 			} else {
 				ret = receiveSerial(s_serial.recvBuffer, size, mode, timeout);
 				/* Sony copies the requested size, including on an error. */
-				if (SceSysmemForDriver_6D88EF8A(buffer, s_serial.recvBuffer, size) < 0)
+				if (sceKernelCopyToUser(buffer, s_serial.recvBuffer, size) < 0)
 					ret = 1;
 			}
 		}
@@ -1032,7 +1032,7 @@ int sceUsbSerialSend(const void *buffer, unsigned size, unsigned mode, int timeo
 			if (size > SERIAL_RING_SIZE) {
 				ret = SERIAL_INVALID_ARGUMENT;
 			} else {
-				ret = SceSysmemForDriver_BC996A7A(s_serial.sendBuffer, buffer, size);
+				ret = sceKernelCopyFromUser(s_serial.sendBuffer, buffer, size);
 				if (ret >= 0)
 					ret = sendSerial(s_serial.sendBuffer, size, mode, timeout);
 			}

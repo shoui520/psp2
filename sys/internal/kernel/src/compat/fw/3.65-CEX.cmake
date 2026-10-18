@@ -123,15 +123,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_0F5C84B7
+	sceGUIDReferObject
 	sceGUIDReleaseObject
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
+	sceKernelCopyToUser
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
 	SceSysmemForDriver_AE36C775
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForDriver_FFCD9B60
 	sceKernelDeleteSema
 	sceKernelLockMutex

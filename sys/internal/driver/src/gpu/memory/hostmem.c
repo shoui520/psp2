@@ -47,7 +47,7 @@ int sceGpuHostMemInit(void)
 {
 	int ret;
 
-	ret = SceSysmemForDriver_9328E0E8("SceGpuBackup", 0x80000, 0);
+	ret = sceKernelCreateHeap("SceGpuBackup", 0x80000, 0);
 	hostMemHeapUid = ret;
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 109, "%s: Failed to create memblock (%08x)\n",

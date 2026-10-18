@@ -1049,7 +1049,7 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 	for (index = 0; index < 5 && operation->itemNum > index; index++) {
 		createdFiles[index] = 0;
 		memset(&file, 0, sizeof(file));
-		result = SceSysmemForDriver_BC996A7A(&file, operation->items + index, sizeof(file));
+		result = sceKernelCopyFromUser(&file, operation->items + index, sizeof(file));
 		if (result != 0)
 			goto freeDirectories;
 		option.size = sizeof(option);
@@ -1060,7 +1060,7 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 			goto freeDirectories;
 		}
 		memset(filePath, 0, 200);
-		result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
+		result = sceKernelStrncpyFromUser(filePath, (const char *)file.dataPath, 199);
 		if (result < 0)
 			goto freeFirstFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1189,7 +1189,7 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 	}
 	for (index = 0; index < 5 && operation->itemNum > index; index++) {
 		memset(&file, 0, sizeof(file));
-		result = SceSysmemForDriver_BC996A7A(&file, operation->items + index, sizeof(file));
+		result = sceKernelCopyFromUser(&file, operation->items + index, sizeof(file));
 		if (result != 0)
 			goto restorePermission;
 		option.size = sizeof(option);
@@ -1200,7 +1200,7 @@ int appmgrSaveDataDataSave(SceAppMgrSaveDataData *operation, int normalApplicati
 			goto restorePermission;
 		}
 		memset(filePath, 0, 200);
-		result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
+		result = sceKernelStrncpyFromUser(filePath, (const char *)file.dataPath, 199);
 		if (result < 0)
 			goto freeSecondFilePath;
 		result = appmgrValidateSaveDataFile(&file, filePath);
@@ -1604,7 +1604,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataDataSaveItem *userF
 	memset(&file, 0, sizeof(file));
 	memset(path, 0, sizeof(path));
 	memset(resolvedPath, 0, sizeof(resolvedPath));
-	result = SceSysmemForDriver_BC996A7A(&file, userFile, sizeof(file));
+	result = sceKernelCopyFromUser(&file, userFile, sizeof(file));
 	if (result != 0)
 		return result;
 	option.size = sizeof(option);
@@ -1617,7 +1617,7 @@ int appmgrCalculateSaveDataFileSpace(const SceAppUtilSaveDataDataSaveItem *userF
 	if (!filePath)
 		return (int)0x80801006;
 	memset(filePath, 0, 200);
-	result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
+	result = sceKernelStrncpyFromUser(filePath, (const char *)file.dataPath, 199);
 	if (result < 0)
 		goto freeFilePath;
 	snprintf(path, sizeof(path), "%s%s", mountPoint, filePath);
@@ -1968,7 +1968,7 @@ int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 	if (operation->itemNum) {
 		do {
 			memset(&file, 0, sizeof(file));
-			result = SceSysmemForDriver_BC996A7A(&file,
+			result = sceKernelCopyFromUser(&file,
 					operation->items + index, sizeof(file));
 			if (result != 0)
 				return result;
@@ -1982,7 +1982,7 @@ int appmgrRollbackSaveDataOperation(const SceAppMgrSaveDataData *operation,
 			if (!filePath)
 				return (int)0x80801006;
 			memset(filePath, 0, 200);
-			result = SceSysmemForDriver_DB3EC244(filePath, (const char *)file.dataPath, 199);
+			result = sceKernelStrncpyFromUser(filePath, (const char *)file.dataPath, 199);
 			if (result < 0) {
 				sceKernelFreeHeapMemory(g_appmgrSaveDataHeap, filePath);
 				return result;

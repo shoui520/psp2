@@ -372,7 +372,7 @@ int sceDeci4pDrfpInit(void)
 	opt.memtype = DRFP_MEMTYPE;
 	opt.pid = 0;
 	opt.heap = NULL;
-	ret = SceSysmemForDriver_9328E0E8(DRFP_NAME, 0x1000, &opt);
+	ret = sceKernelCreateHeap(DRFP_NAME, 0x1000, &opt);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 305, "CreateHeap failed (0x%08x)\n", ret);
 		return ret;
@@ -411,9 +411,9 @@ int sceDeci4pDrfpInit(void)
 	for (i = 0; i < DRFP_BUFFER_COUNT; i++) {
 		pool = &s_drfpBuffer[i];
 		snprintf(memBlockName, sizeof(memBlockName), DRFP_NAME "MemBlock%d", i);
-		pool->memBlock = SceSysmemForDriver_C94850C9(memBlockName, DRFP_MEMTYPE,
+		pool->memBlock = sceKernelAllocMemBlockForKernel(memBlockName, DRFP_MEMTYPE,
 						     pool->size, NULL);
-		SceSysmemForDriver_A841EDDA(pool->memBlock, &pool->base);
+		sceKernelGetMemBlockBase(pool->memBlock, &pool->base);
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
 		pool->sema = sceKernelCreateSema(name, SCE_KERNEL_ATTR_TH_PRIO, pool->count,
 						  pool->count, NULL);

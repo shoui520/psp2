@@ -607,7 +607,7 @@ PVRSRV_ERROR PVRSRVMapMemoryToGpuKM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 	accessFlags = flags & 1 ? 0x10 : 0;
 	if (flags & 2)
 		accessFlags |= 0x20;
-	if (SceSysmemForDriver_9C78064C(accessFlags, cpuAddress, size) < 0)
+	if (sceKernelIsAccessibleRange(accessFlags, cpuAddress, size) < 0)
 		return PVRSRV_ERROR_INVALID_PARAMS;
 	guid = SceSysmemForDriver_8A1742F6(cpuAddress, 0);
 	if (guid < 0)

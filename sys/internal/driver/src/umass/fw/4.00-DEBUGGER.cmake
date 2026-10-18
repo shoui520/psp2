@@ -73,8 +73,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSysrootForDriver_834439A7
 	sceKernelGenerateSoftIntr
 	sceKernelCallSubIntrHandler

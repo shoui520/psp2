@@ -1096,16 +1096,16 @@ int udcdStartController(int bus, SceKernelIntrStatus *status)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	block = SceSysmemForDriver_C94850C9("SceUdcdDmaTag", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW, 0x1000, &opt);
+	block = sceKernelAllocMemBlockForKernel("SceUdcdDmaTag", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW, 0x1000, &opt);
 	if (block >= 0) {
-		if (SceSysmemForDriver_A841EDDA(block, (void **)&base) >= 0) {
+		if (sceKernelGetMemBlockBase(block, (void **)&base) >= 0) {
 			controller->dmaBlock = block;
 			for (number = 1; number < 8; number++) {
 				if (controller->endpoints[number].queue->endpoint == NULL)
 					continue;
 				controller->endpoints[number].descriptor = (struct udcdDmaDescriptor *)base;
 				base += 0x200;
-				if (SceSysmemForDriver_8D160E65(controller->endpoints[number].descriptor, &address) < 0)
+				if (sceKernelVAtoPA(controller->endpoints[number].descriptor, &address) < 0)
 					address = 0x80243407;
 				controller->endpoints[number].dmaAddress = address;
 			}
@@ -1524,11 +1524,11 @@ int udcdInitializeControllers(void)
 	opt.size = sizeof(opt);
 	opt.paddr = PERVASIVE2_BASE;
 	opt.attr = 2;
-	block = SceSysmemForDriver_C94850C9("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	block = sceKernelAllocMemBlockForKernel("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (block < 0)
 		return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 	udcdState.phyRegisterBlock = block;
-	if (SceSysmemForDriver_A841EDDA(block, &base) < 0) {
+	if (sceKernelGetMemBlockBase(block, &base) < 0) {
 		result = SCE_UDCD_ERROR_WAIT_TIMEOUT;
 		goto release;
 	}
@@ -1585,9 +1585,9 @@ int udcdInitializeControllers(void)
 		opt.size = sizeof(opt);
 		opt.attr = 2;
 		opt.paddr = bus != 1 ? USB_DEVICE2_REG_BASE : USB_DEVICE1_REG_BASE;
-		block = SceSysmemForDriver_C94850C9("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, USB_REG_SIZE,
+		block = sceKernelAllocMemBlockForKernel("SceUdcd", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, USB_REG_SIZE,
 						 &opt);
-		if (block < 0 || SceSysmemForDriver_A841EDDA(block, &base) < 0) {
+		if (block < 0 || sceKernelGetMemBlockBase(block, &base) < 0) {
 			result = SCE_UDCD_ERROR_WAIT_TIMEOUT;
 			goto cleanup;
 		}

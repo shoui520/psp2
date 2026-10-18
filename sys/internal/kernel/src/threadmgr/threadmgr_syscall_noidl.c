@@ -41,22 +41,22 @@ SceUID sceKernelCreateThreadForUser(const char *name, uintptr_t entry, int initP
 	ret = SceSysrootForDriver_9AF075D4(0);
 	if (ret < 0)
 		return ret;
-	ret = SceSysmemForDriver_BC996A7A(&extargs_ks, extargs, sizeof(extargs_ks));
+	ret = sceKernelCopyFromUser(&extargs_ks, extargs, sizeof(extargs_ks));
 	if (ret < 0)
 		goto out;
-	ret = SceSysmemForDriver_DB3EC244(name_ks, name, sizeof(name_ks));
+	ret = sceKernelStrncpyFromUser(name_ks, name, sizeof(name_ks));
 	if (ret < 0)
 		goto out;
 	name_ks[sizeof(name_ks) - 1] = '\0';
 	if (extargs_ks.option != NULL) {
-		ret = SceSysmemForDriver_BC996A7A(&option.size, extargs_ks.option, sizeof(option.size));
+		ret = sceKernelCopyFromUser(&option.size, extargs_ks.option, sizeof(option.size));
 		if (ret < 0)
 			goto out;
 		if (option.size > sizeof(option)) {
 			ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 			goto out;
 		}
-		ret = SceSysmemForDriver_BC996A7A(&option, extargs_ks.option, option.size);
+		ret = sceKernelCopyFromUser(&option, extargs_ks.option, option.size);
 		if (ret < 0)
 			goto out;
 	} else {

@@ -36,7 +36,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 		return permission;
 	if (activation == NULL || random == NULL)
 		goto invalid;
-	result = SceSysmemForDriver_BC996A7A(&gcAuthActivationWorkspace.psmact,
+	result = sceKernelCopyFromUser(&gcAuthActivationWorkspace.psmact,
 		activation, sizeof(*activation));
 	if (result < 0)
 		goto finish;
@@ -64,7 +64,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 	case 2:
 		if (encryptedActivation == NULL)
 			goto invalid;
-		result = SceSysmemForDriver_BC996A7A(
+		result = sceKernelCopyFromUser(
 			&gcAuthActivationWorkspace.encryptedPsmact,
 			encryptedActivation, sizeof(*encryptedActivation));
 		if (result < 0)
@@ -83,7 +83,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 	case 6:
 		if (encryptedActivation == NULL)
 			goto invalid;
-		result = SceSysmemForDriver_BC996A7A(
+		result = sceKernelCopyFromUser(
 			&gcAuthActivationWorkspace.encryptedPsmact,
 			encryptedActivation, sizeof(*encryptedActivation));
 		if (result < 0)
@@ -91,7 +91,7 @@ int GcAuthPsmactApplyActivation(const GcAuthPsmactApplyActivationRequest *reques
 		result = GcAuthPsmactDecryptActivation(&keys);
 		if (result != 0)
 			break;
-		result = SceSysmemForDriver_6D88EF8A(encryptedActivation,
+		result = sceKernelCopyToUser(encryptedActivation,
 			gcAuthActivationWorkspace.encryptedPsmact.ciphertext,
 			sizeof(gcAuthActivationWorkspace.encryptedPsmact.ciphertext));
 		result &= result >> 31;
@@ -148,7 +148,7 @@ int GcAuthPcactApplyActivationWithStack(const GcAuthPcactActivationBundle *activ
 
 	state = sceSyscallEnter();
 	if (activation != NULL) {
-		result = SceSysmemForDriver_BC996A7A(&gcAuthActivationWorkspace.pcact,
+		result = sceKernelCopyFromUser(&gcAuthActivationWorkspace.pcact,
 			activation, sizeof(*activation));
 		if (result >= 0) {
 			request.activation = &gcAuthActivationWorkspace.pcact;

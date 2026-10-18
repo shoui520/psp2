@@ -213,12 +213,12 @@ static __attribute__((noinline)) int CsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].paddr;
-		ret = SceSysmemForDriver_C94850C9(s_csiDevices[i].name, 0x20100806,
+		ret = sceKernelAllocMemBlockForKernel(s_csiDevices[i].name, 0x20100806,
 			s_csiDevices[i].size, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->uid = ret;
-		ret = SceSysmemForDriver_A841EDDA(ret, &base);
+		ret = sceKernelGetMemBlockBase(ret, &base);
 		if (ret < 0)
 			return ret;
 		ctx->registers = base;
@@ -226,12 +226,12 @@ static __attribute__((noinline)) int CsiInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_csiDevices[i].cifPaddr;
-		ret = SceSysmemForDriver_C94850C9(s_csiDevices[i].cifName, 0x20100806,
+		ret = sceKernelAllocMemBlockForKernel(s_csiDevices[i].cifName, 0x20100806,
 			s_csiDevices[i].cifSize, &opt);
 		if (ret < 0)
 			return ret;
 		ctx->cifUid = ret;
-		ret = SceSysmemForDriver_A841EDDA(ret, &base);
+		ret = sceKernelGetMemBlockBase(ret, &base);
 		if (ret < 0)
 			return ret;
 		ctx->cifRegisters = base;

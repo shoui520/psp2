@@ -7,7 +7,7 @@ SceUID g_bbmcHeap;
 /* name unknown: creates the heap used by the manager's allocation wrappers. */
 int bbmcCreateHeap(SceSize size)
 {
-	int ret = SceSysmemForDriver_9328E0E8("SceBbmcMain", size, NULL);
+	int ret = sceKernelCreateHeap("SceBbmcMain", size, NULL);
 
 	if (ret >= 0)
 		g_bbmcHeap = ret;

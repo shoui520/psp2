@@ -255,7 +255,7 @@ int powerSwitchTransition(uint32_t mode)
 	monitor.resumeEntry = powerCpuResumeEntry;
 	suspend.monitorState = &monitor;
 	resume.resumeInformation = NULL;
-	SceSysmemForDriver_8D160E65(&monitor, &address);
+	sceKernelVAtoPA(&monitor, &address);
 	SceSysconForDriver_E26488B9(SYSCON_SCRATCH_PAD(resumeContextPA), &address, 4);
 	switch (request) {
 	case POWER_REQUEST_STANDBY:
@@ -814,11 +814,11 @@ int powerInitializeSwitchControl(void)
 	option.size = sizeof(option);
 	option.attr = 2;
 	option.paddr = 0x1f000000;
-	block = SceSysmemForDriver_C94850C9("ScePowerScratchPad32KiB", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
+	block = sceKernelAllocMemBlockForKernel("ScePowerScratchPad32KiB", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_NC_RW,
 					0x8000, &option);
 	if (block < 0)
 		return block;
-	SceSysmemForDriver_A841EDDA(block, &s_powerScratchPad);
+	sceKernelGetMemBlockBase(block, &s_powerScratchPad);
 	memset((void *)&s_powerSwitchState, 0, sizeof(s_powerSwitchState));
 	s_powerSwitchState.primaryMode = 2;
 	s_powerSwitchState.standbyButtonPushTime = 2000000;

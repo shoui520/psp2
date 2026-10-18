@@ -56,7 +56,7 @@ int _sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size,
 	length = strnlen(buffer, 1024) + 1;
 	if (length >= 1024)
 		length = 1024;
-	return copyResult(ret, SceSysmemForDriver_6D88EF8A(value, buffer, length));
+	return copyResult(ret, sceKernelCopyToUser(value, buffer, length));
 }
 
 int _sceAppMgrGetMountProcessNum(unsigned int mountId, const char *mountPoint,
@@ -96,7 +96,7 @@ STUB_FUNC(int, SceAppMgrForDriver_1286AF64, (int a, void *id))
 STUB_FUNC(int, SceAppMgrForDriver_12CE29F7, (int pid, int param, int *value))
 STUB_FUNC(int, sceAppMgrFakeSaveDataCreateMount, (const char *path, void *b))
 STUB(SceAppMgrForDriver_13D54107)
-STUB(SceAppMgrForDriver_1574E1A4)
+STUB(sceAppMgrRdrfpMount)
 STUB_FUNC(int, SceAppMgrForDriver_193784A9, (void *a))
 STUB_FUNC(int, sceAppMgrLaunchAppByNameForDebugger, (const char *titleId, int flags))
 STUB(SceAppMgrForDriver_1DE3B7C4)

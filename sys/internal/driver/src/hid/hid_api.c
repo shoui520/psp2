@@ -50,7 +50,7 @@ int sceHidMouseEnumerate(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
+			result = sceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -129,7 +129,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
+			status = sceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -186,7 +186,7 @@ int sceHidKeyboardEnumerateForUser(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
+			result = sceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -265,7 +265,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
+			status = sceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -417,7 +417,7 @@ found:
 		PEEK_COLLECTION_REPORTS(buffer, 0);
 		status = copied;
 		if (copied > 0)
-			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
+			status = sceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:
@@ -628,7 +628,7 @@ int sceHidKeyboardGetIntercept(int *enable)
 		result = hidGetKeyboardIntercept(pid, &intercept);
 		if (result >= 0) {
 			value = intercept.enabled == 1;
-			result = SceSysmemForDriver_6D88EF8A(enable, &value, sizeof(value));
+			result = sceKernelCopyToUser(enable, &value, sizeof(value));
 		}
 		hidUnlock();
 	}
@@ -682,7 +682,7 @@ int sceHidConsumerControlEnumerate(SceUID *handle, int count)
 				handles[copied++] = collection->id;
 		}
 		if (copied != 0)
-			result = SceSysmemForDriver_6D88EF8A(handle, handles, copied * sizeof(*handles));
+			result = sceKernelCopyToUser(handle, handles, copied * sizeof(*handles));
 		hidUnlock();
 	}
 	sceSyscallLeave(syscall);
@@ -763,7 +763,7 @@ found:
 		copied = hidReadCollectionReports(collection, buffer, nReports);
 		status = copied;
 		if (copied > 0)
-			status = SceSysmemForDriver_6D88EF8A(reports, buffer, copied * sizeof(*buffer));
+			status = sceKernelCopyToUser(reports, buffer, copied * sizeof(*buffer));
 		hidFreeMemory(buffer);
 	}
 unlock:

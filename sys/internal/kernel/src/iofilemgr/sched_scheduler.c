@@ -223,7 +223,7 @@ dcloseComplete:
 
 		param.fd = req->args.dread.fd;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.dir = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoDirent));
+			param.dir = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoDirent));
 			if (param.dir == NULL) {
 				req->args.dread.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -340,7 +340,7 @@ dcloseComplete:
 
 		param.file = req->args.getstat.path;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.stat = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoStat));
+			param.stat = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoStat));
 			if (param.stat == NULL) {
 				req->args.getstat.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -370,7 +370,7 @@ dcloseComplete:
 
 		param.fd = req->args.getstatByFd.fd;
 		if (req->isAsync == 1 && req->fromUser == 1) {
-			param.stat = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoStat));
+			param.stat = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoStat));
 			if (param.stat == NULL) {
 				req->args.getstatByFd.result = SCE_ERROR_ERRNO_ENOMEM;
 				break;
@@ -471,7 +471,7 @@ dcloseComplete:
 		getIofilemgrTls()->inAsyncCall = 0;
 		break;
 	case IO_REQUEST_DREAD_ASYNC: {
-		SceIoDirent *dir = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(SceIoDirent));
+		SceIoDirent *dir = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(SceIoDirent));
 
 		if (dir == NULL) {
 			req->args.dread.result = SCE_ERROR_ERRNO_ENOMEM;
@@ -753,7 +753,7 @@ IoScheduler *sceIoSchedulerCreateIoScheduler(SchedDispatcher *dispatcher,
 	IoSchedulerWorker *worker;
 	int i, type, ret;
 
-	sched = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*sched));
+	sched = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*sched));
 	if (sched == NULL)
 		return NULL;
 	memset(sched, 0, sizeof(*sched));

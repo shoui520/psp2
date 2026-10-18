@@ -492,12 +492,12 @@ static int Start(int size, void *args, void *ctx)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s_serial.memblock = SceSysmemForDriver_C94850C9("SceUsbDevSerial",
+	s_serial.memblock = sceKernelAllocMemBlockForKernel("SceUsbDevSerial",
 						    SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 						    0x8000, &opt);
 	if (s_serial.memblock < 0)
 		return s_serial.memblock;
-	ret = SceSysmemForDriver_A841EDDA(s_serial.memblock, (void **)&memory);
+	ret = sceKernelGetMemBlockBase(s_serial.memblock, (void **)&memory);
 	if (ret < 0)
 		goto fail;
 
@@ -791,12 +791,12 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 		size = pending;
 	tail = RX_SIZE - s_serial.rxRead;
 	if (tail < size) {
-		ret = SceSysmemForDriver_6D88EF8A(buffer, s_serial.rxRing + s_serial.rxRead, tail);
+		ret = sceKernelCopyToUser(buffer, s_serial.rxRing + s_serial.rxRead, tail);
 		if (ret < 0)
 			goto unlock;
-		ret = SceSysmemForDriver_6D88EF8A((uint8_t *)buffer + tail, s_serial.rxRing, size - tail);
+		ret = sceKernelCopyToUser((uint8_t *)buffer + tail, s_serial.rxRing, size - tail);
 	} else {
-		ret = SceSysmemForDriver_6D88EF8A(buffer, s_serial.rxRing + s_serial.rxRead, size);
+		ret = sceKernelCopyToUser(buffer, s_serial.rxRing + s_serial.rxRead, size);
 	}
 	if (ret < 0)
 		goto unlock;
@@ -872,13 +872,13 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 		size = space;
 	tail = TX_SIZE - s_serial.txWrite;
 	if (tail < size) {
-		ret = SceSysmemForDriver_BC996A7A(s_serial.txRing + s_serial.txWrite, buffer, tail);
+		ret = sceKernelCopyFromUser(s_serial.txRing + s_serial.txWrite, buffer, tail);
 		if (ret < 0)
 			goto unlock;
-		ret = SceSysmemForDriver_BC996A7A(s_serial.txRing, (const uint8_t *)buffer + tail,
+		ret = sceKernelCopyFromUser(s_serial.txRing, (const uint8_t *)buffer + tail,
 					     size - tail);
 	} else {
-		ret = SceSysmemForDriver_BC996A7A(s_serial.txRing + s_serial.txWrite, buffer, size);
+		ret = sceKernelCopyFromUser(s_serial.txRing + s_serial.txWrite, buffer, size);
 	}
 	if (ret < 0)
 		goto unlock;
@@ -910,7 +910,7 @@ int SceUsbDevSerial_918D359E(unsigned int command, void *buffer, unsigned int si
 	    (!s_serial.attached || !s_serial.openCount))
 		ret = SCE_ERROR_ERRNO_ENODEV;
 	else if (command == SERIAL_COMMAND_SET_TIMEOUT && buffer && size == sizeof(s_serial.timeout))
-		ret = SceSysmemForDriver_BC996A7A(&s_serial.timeout, buffer, sizeof(s_serial.timeout));
+		ret = sceKernelCopyFromUser(&s_serial.timeout, buffer, sizeof(s_serial.timeout));
 	serialLeave(context);
 	return ret;
 }

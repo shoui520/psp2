@@ -39,11 +39,11 @@ static int NOINLINE MapKeyRegisters(void)
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = DMAC5_KEYRING_REG_BASE;
-	uid = SceSysmemForDriver_C94850C9("SceSblDMAC5DmacKRBase", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceSblDMAC5DmacKRBase", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 		DMAC_REG_SIZE, &opt);
 	if (uid < 0)
 		return MG_ERROR_OPERATION;
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	s_keyring = base;
 	return 0;
 }

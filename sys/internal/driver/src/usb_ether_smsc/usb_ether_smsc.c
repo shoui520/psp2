@@ -963,12 +963,12 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT |
 			   SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 		opt.alignment = 0x1000;
-		uid = SceSysmemForDriver_C94850C9("SceNetDrvEtherTx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+		uid = sceKernelAllocMemBlockForKernel("SceNetDrvEtherTx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					    (a->bufferSize + 0xfff) & ~0xfffU, &opt);
 		ret = uid;
 		if (ret < 0)
 			return ret;
-		ret = SceSysmemForDriver_A841EDDA(uid, (void **)&value);
+		ret = sceKernelGetMemBlockBase(uid, (void **)&value);
 		if (ret < 0 || !value)
 			return ret;
 		a->txBuffer = (void *)value;
@@ -977,12 +977,12 @@ static int initializeAdapter(struct SceUsbEtherSmscContext *a)
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT |
 			   SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 		opt.alignment = 0x1000;
-		uid = SceSysmemForDriver_C94850C9("SceNetDrvEtherRx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
+		uid = sceKernelAllocMemBlockForKernel("SceNetDrvEtherRx", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW,
 					    (a->bufferSize + 0xfff) & ~0xfffU, &opt);
 		ret = uid;
 		if (ret < 0)
 			return ret;
-		ret = SceSysmemForDriver_A841EDDA(uid, (void **)&value);
+		ret = sceKernelGetMemBlockBase(uid, (void **)&value);
 		if (ret < 0 || !value)
 			return ret;
 		a->rxBuffer = (void *)value;

@@ -196,14 +196,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_49D4DD9B
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
-	SceSysmemForDriver_DB3EC244
+	sceKernelCopyToUser
+	sceKernelAllocHeapMemory
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
+	sceKernelStrncpyFromUser
 	SceSblACMgrForKernel_sceSblACMgrGetPaid
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
 	SceSblACMgrForKernel_BBA13D9C

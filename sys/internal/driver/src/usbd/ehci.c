@@ -1770,12 +1770,12 @@ int ehciInit(UsbdBus *bus)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = paddr;
-	result = SceSysmemForDriver_C94850C9("SceUsbdEhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
+	result = sceKernelAllocMemBlockForKernel("SceUsbdEhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW,
 					 USB_REG_SIZE, &opt);
 	if (result < 0)
 		goto fail;
 	ehci->registerBlockId = result;
-	result = SceSysmemForDriver_A841EDDA(ehci->registerBlockId, (void **)&base);
+	result = sceKernelGetMemBlockBase(ehci->registerBlockId, (void **)&base);
 	if (result < 0)
 		goto freeRegisters;
 	ehci->frameListSize = EHCI_FRAME_LIST_SIZE;
@@ -1794,12 +1794,12 @@ int ehciInit(UsbdBus *bus)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
 	opt.alignment = 0x1000;
-	result = SceSysmemForDriver_C94850C9("SceUsbdEhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW,
+	result = sceKernelAllocMemBlockForKernel("SceUsbdEhci", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_DEVICE_RW,
 					 0x10000, &opt);
 	if (result < 0)
 		goto freeRegisters;
 	ehci->descriptorBlockId = result;
-	result = SceSysmemForDriver_A841EDDA(ehci->descriptorBlockId, (void **)&base);
+	result = sceKernelGetMemBlockBase(ehci->descriptorBlockId, (void **)&base);
 	if (result < 0)
 		goto freeBlocks;
 	memset(base, 0, 0x10000);

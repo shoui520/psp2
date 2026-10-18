@@ -7,7 +7,7 @@ int BtCopyIn(const void *source, void *destination, unsigned int length,
 	     int userMode)
 {
 	if (userMode)
-		return SceSysmemForDriver_BC996A7A(destination, source, length);
+		return sceKernelCopyFromUser(destination, source, length);
 	memcpy(destination, source, length);
 	return 0;
 }
@@ -16,7 +16,7 @@ int BtCopyOut(const void *source, void *destination, unsigned int length,
 	      int userMode)
 {
 	if (userMode)
-		return SceSysmemForDriver_6D88EF8A(destination, source, length);
+		return sceKernelCopyToUser(destination, source, length);
 	memcpy(destination, source, length);
 	return 0;
 }

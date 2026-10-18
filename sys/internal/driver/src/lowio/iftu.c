@@ -751,12 +751,12 @@ static __attribute__((noinline)) int IftuInit(void)
 		opt.size = 0x58;
 		opt.attr = 2;
 		opt.paddr = s_iftuDevices[i].paddr;
-		ret = SceSysmemForDriver_C94850C9(s_iftuDevices[i].name, 0x20100806,
+		ret = sceKernelAllocMemBlockForKernel(s_iftuDevices[i].name, 0x20100806,
 			0x1000, &opt);
 		if (ret < 0)
 			return ret;
 		plane->controlUid = ret;
-		SceSysmemForDriver_A841EDDA(ret, &base);
+		sceKernelGetMemBlockBase(ret, &base);
 		plane->registers = base;
 		if (s_iftuDevices[i].controlPaddr != 0) {
 			if (i & 1) {
@@ -767,11 +767,11 @@ static __attribute__((noinline)) int IftuInit(void)
 				opt.size = 0x58;
 				opt.attr = 2;
 				opt.paddr = s_iftuDevices[i].controlPaddr;
-				ret = SceSysmemForDriver_C94850C9(
+				ret = sceKernelAllocMemBlockForKernel(
 					s_iftuDevices[i].controlName, 0x20100806,
 					0x1000, &opt);
 				/* Sony does not check this allocation or mapping. */
-				SceSysmemForDriver_A841EDDA(ret, &base);
+				sceKernelGetMemBlockBase(ret, &base);
 				plane->controlUid = ret;
 				plane->control = base;
 				plane->planeControl = &plane->control->plane[0];

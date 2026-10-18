@@ -232,7 +232,7 @@ found:
 	return 0;
 }
 
-int SceSysmemForDriver_61317102(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
+int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass, SceSize itemsize,
 			  SceClassCallback create, SceClassCallback destroy)
 {
 	SceSize aligned;

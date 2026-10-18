@@ -110,15 +110,15 @@ int allocateVeneziaVipMemoryBlock(VeneziaVipMemoryBlock *block,
 	if (physicalAddress) {
 		opt.paddr = physicalAddress;
 		opt.attr = 2;
-		uid = SceSysmemForDriver_C94850C9(name, type, size, &opt);
+		uid = sceKernelAllocMemBlockForKernel(name, type, size, &opt);
 	} else {
-		uid = SceSysmemForDriver_C94850C9(name, type, size, NULL);
+		uid = sceKernelAllocMemBlockForKernel(name, type, size, NULL);
 	}
 	if (uid < 0 || !block)
 		return uid;
 	block->uid = uid;
-	SceSysmemForDriver_A841EDDA(uid, (void **)&block->region.virtualAddress);
-	ret = SceSysmemForDriver_8D160E65((void *)block->region.virtualAddress,
+	sceKernelGetMemBlockBase(uid, (void **)&block->region.virtualAddress);
+	ret = sceKernelVAtoPA((void *)block->region.virtualAddress,
 		&block->region.physicalAddress);
 	if (ret >= 0) {
 		ret = 0;

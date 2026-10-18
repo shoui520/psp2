@@ -200,7 +200,7 @@ int sceSblRtcMgrGetCpSerialIdForUser(void *serialId)
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			ret = rtcMgrGetCpSerialId(buf);
 			if (ret == 0)
-				ret = SceSysmemForDriver_6D88EF8A(serialId, buf, sizeof(buf));
+				ret = sceKernelCopyToUser(serialId, buf, sizeof(buf));
 			sceSyscallLeave(state);
 			return ret;
 		}
@@ -248,7 +248,7 @@ int sceSblRtcMgrGetCpRtcPhysicalForUser(SceUInt32 *time)
 		if (pmMgrGetProductMode(&productMode) == 0 && productMode) {
 			ret = rtcMgrGetCpRtc(&value, 1);
 			if (ret == 0)
-				ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
+				ret = sceKernelCopyToUser(time, &value, sizeof(value));
 			sceSyscallLeave(state);
 			return ret;
 		}
@@ -287,7 +287,7 @@ int sceSblRtcMgrGetCpRtcLogicalForUser(SceUInt32 *time)
 	}
 	ret = rtcMgrGetCpRtc(&value, 0);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
+		ret = sceKernelCopyToUser(time, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }

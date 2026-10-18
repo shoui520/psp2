@@ -312,11 +312,11 @@ int module_start(SceSize args, void *argp)
 
 	opt.size = sizeof(opt);
 	opt.attr = 1;
-	s_heap = ret = SceSysmemForDriver_9328E0E8("SceSblSmschedProxy", 0x1000, &opt);
+	s_heap = ret = sceKernelCreateHeap("SceSblSmschedProxy", 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 
-	s_session = SceSysmemForDriver_7B4CB60A(s_heap, SESSION_COUNT * sizeof(Session));
+	s_session = sceKernelAllocHeapMemory(s_heap, SESSION_COUNT * sizeof(Session));
 	if (s_session == NULL)
 		return SCE_SBL_ERROR_NO_MEMORY;
 	for (i = 0; i < SESSION_COUNT; i++)

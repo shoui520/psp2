@@ -56,8 +56,8 @@ set(MODULE_IMPORT_FUNCS
 	vfsLockVnode
 	vfsMount
 	vfsGetNewVnode
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	memset
 	memcpy
 	strncpy
@@ -66,7 +66,7 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	SceDeci4pSDfMgrForKernel_35238B8A
 	SceDeci4pSDfMgrForKernel_86CFC8C6
-	SceDeci4pSDfMgrForKernel_A55F5F0D
+	sceSDfMgrOpen
 	_threadSignal
 	sceSDfMgrExSend
 	sceSDfMgrExRecv

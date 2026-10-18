@@ -147,17 +147,17 @@ int sceNetPsIsSdkVersion2OrLater(void)
 
 int sceNetPsCopyUserOut(const void *source, void *destination, size_t length)
 {
-	return SceSysmemForDriver_6D88EF8A(destination, source, length);
+	return sceKernelCopyToUser(destination, source, length);
 }
 
 int sceNetPsCopyUserIn(const void *source, void *destination, size_t length)
 {
-	return SceSysmemForDriver_BC996A7A(destination, source, length);
+	return sceKernelCopyFromUser(destination, source, length);
 }
 
 int sceNetPsCopyUserString(const char *source, char *destination, size_t length)
 {
-	return SceSysmemForDriver_DB3EC244(destination, source, length);
+	return sceKernelStrncpyFromUser(destination, source, length);
 }
 
 SceInt64 sceNetPsGetSystemTime(SceUInt64 *value)
@@ -478,11 +478,11 @@ int sceNetPsInitializePlatform(int (*initialize)(SceUID, void *, int,
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = 0x200000;
-	memoryId = SceSysmemForDriver_C94850C9("SceNetPs", 0x1020d006,
+	memoryId = sceKernelAllocMemBlockForKernel("SceNetPs", 0x1020d006,
 					 0x100000, &option);
 	if (memoryId < 0)
 		return 2;
-	if (SceSysmemForDriver_A841EDDA(memoryId, &base) < 0)
+	if (sceKernelGetMemBlockBase(memoryId, &base) < 0)
 		goto freeMemory;
 	systemId = sceKernelRegisterSysEventHandler("SceNetPs",
 			(SceKernelSysEventHandler)sceNetPsSysEventHandler,

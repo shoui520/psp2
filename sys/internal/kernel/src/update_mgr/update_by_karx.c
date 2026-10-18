@@ -49,7 +49,7 @@ int UpdateMgrWritePupSegment(SceUID heapId, SceUID fd,
 	}
 	if (segment->size > 0x18000000)
 		return (int)0x800f0224;
-	buffer = SceSysmemForDriver_7B4CB60A(heapId, (SceSize)segment->size);
+	buffer = sceKernelAllocHeapMemory(heapId, (SceSize)segment->size);
 	if (!buffer)
 		return (int)0x800f020c;
 	remaining = segment->size;

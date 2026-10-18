@@ -1073,7 +1073,7 @@ BM_CreateContext:
 	mov.w r2, #0x80000
 	ldr r1, BM_CreateContextLiteral1b8
 	movs r3, #0
-	bl SceSysmemForDriver_C94850C9
+	bl sceKernelAllocMemBlockForKernel
 	subs.w sl, r0, #0
 	bge .LBM_CreateContextbe
 	ldr r3, BM_CreateContextLiteral190
@@ -1121,7 +1121,7 @@ BM_CreateContext:
 .LBM_CreateContext10a:
 	ldr r0, BM_CreateContextLiteral1d4
 	movs r1, #0x10
-	bl SceProcessmgrForDriver_3801D7D6
+	bl sceKernelRegisterKPLS
 	subs r3, r0, #0
 	bge .LBM_CreateContext12a
 	ldr r2, BM_CreateContextLiteral190
@@ -1274,7 +1274,7 @@ BM_CreateContext:
 	mov.w r2, #0x80000
 	ldr r1, BM_CreateContextLiterale4
 	movs r3, #0
-	bl SceSysmemForDriver_C94850C9
+	bl sceKernelAllocMemBlockForKernel
 	subs.w sb, r0, #0
 	blt .LBM_CreateContext1c
 	movs r3, #1
@@ -1294,7 +1294,7 @@ BM_CreateContext:
 	blt .LBM_CreateContext1c
 	ldr r0, BM_CreateContextLiterale8
 	movs r1, #0x10
-	bl SceProcessmgrForDriver_3801D7D6
+	bl sceKernelRegisterKPLS
 	subs r2, r0, #0
 	blt .LBM_CreateContextb8
 	ldr r3, [sp, #4]
@@ -1476,11 +1476,11 @@ MMU_BIFResetPDAlloc:
 	ldr r1, MMU_BIFResetPDAllocLiteral100
 	str r3, [sp, #0x14]
 	movs r3, #0
-	bl SceSysmemForDriver_C94850C9
+	bl sceKernelAllocMemBlockForKernel
 	subs r5, r0, #0
 	blt .LMMU_BIFResetPDAlloce6
 	add r1, sp, #0x10
-	bl SceSysmemForDriver_A841EDDA
+	bl sceKernelGetMemBlockBase
 	cmp r0, #0
 	bge .LMMU_BIFResetPDAlloc3a
 	ldr r3, MMU_BIFResetPDAllocLiteral104
@@ -1494,7 +1494,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc3a:
 	ldr r0, [sp, #0x10]
 	addw r1, r4, #0x7cc
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	cmp r0, #0
 	ldr r3, [sp, #0x10]
 	bge .LMMU_BIFResetPDAlloc5a
@@ -1508,7 +1508,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc5a:
 	add.w r0, r3, #0x1000
 	add.w r1, r4, #0x7d0
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	cmp r0, #0
 	ldr r3, [sp, #0x10]
 	bge .LMMU_BIFResetPDAlloc7c
@@ -1522,7 +1522,7 @@ MMU_BIFResetPDAlloc:
 .LMMU_BIFResetPDAlloc7c:
 	add.w r0, r3, #0x2000
 	addw r1, r4, #0x7d4
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	subs r3, r0, #0
 	ldr r0, [sp, #0x10]
 	bge .LMMU_BIFResetPDAllocaa
@@ -1606,28 +1606,28 @@ MMU_BIFResetPDAlloc:
 	ldr r0, MMU_BIFResetPDAllocLiteralb8
 	str r3, [sp, #4]
 	movs r3, #0
-	bl SceSysmemForDriver_C94850C9
+	bl sceKernelAllocMemBlockForKernel
 	subs r5, r0, #0
 	blt .LMMU_BIFResetPDAlloc9e
 	mov r1, sp
-	bl SceSysmemForDriver_A841EDDA
+	bl sceKernelGetMemBlockBase
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	addw r1, r4, #0x7cc
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	add.w r1, r4, #0x7d0
 	add.w r0, r0, #0x1000
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	cmp r0, #0
 	blt .LMMU_BIFResetPDAlloc58
 	ldr r0, [sp]
 	addw r1, r4, #0x7d4
 	add.w r0, r0, #0x2000
-	bl SceSysmemForDriver_8D160E65
+	bl sceKernelVAtoPA
 	cmp r0, #0
 	bge .LMMU_BIFResetPDAlloc60
 .LMMU_BIFResetPDAlloc58:

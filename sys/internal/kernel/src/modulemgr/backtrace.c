@@ -396,7 +396,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}
-	ret = SceSysmemForDriver_0F5C84B7(thid, (void **)&obj);
+	ret = sceGUIDReferObject(thid, (void **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
@@ -574,7 +574,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 		ret = SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 		goto resume;
 	}
-	ret = SceSysmemForDriver_0F5C84B7(thid, (void **)&obj);
+	ret = sceGUIDReferObject(thid, (void **)&obj);
 	if (ret < 0)
 		goto resume;
 	ctx = &obj->context;
@@ -740,12 +740,12 @@ int sceKernelBacktraceForUser(SceUID thid, SceKernelBacktraceFrame *ubuf, SceSiz
 	ret = SceBacktraceForDriver_166B9C8C(thid, kbuf, size, &count, flags);
 	if (ret >= 0) {
 		if (ubuf != NULL) {
-			ret = SceSysmemForDriver_6D88EF8A(ubuf, kbuf, count * sizeof(*kbuf));
+			ret = sceKernelCopyToUser(ubuf, kbuf, count * sizeof(*kbuf));
 			if (ret < 0)
 				goto out;
 		}
 		if (ucount != NULL)
-			ret = SceSysmemForDriver_6D88EF8A(ucount, &count, sizeof(count));
+			ret = sceKernelCopyToUser(ucount, &count, sizeof(count));
 	}
 out:
 	SceSysmemForKernel_4233C16D(kbuf);
@@ -765,7 +765,7 @@ int _sceKernelBacktrace(SceUID thid, SceKernelBacktraceFrame *buf, SceSize size,
 	SceKernelBacktraceParam p;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&p, param, sizeof(p));
+	ret = sceKernelCopyFromUser(&p, param, sizeof(p));
 	if (ret < 0)
 		return ret;
 	return sceKernelBacktraceForUser(thid, buf, size, p.count, p.flags);

@@ -76,10 +76,10 @@ int SceSblPostSsMgrForDriver_BDF18922(const char *path, SceSblSpfsoCtx *ctx)
 		return SCE_SBL_ERROR_SPFSO_INVALID_FORMAT;
 	}
 	size = end;
-	uid = SceSysmemForDriver_C94850C9("SceSblSpsfoMgr", SPFSO_MEMBLOCK_TYPE,
+	uid = sceKernelAllocMemBlockForKernel("SceSblSpsfoMgr", SPFSO_MEMBLOCK_TYPE,
 				      (size + 0xfff) & ~0xfff, NULL);
 	ctx->uid = uid;
-	if (uid < 0 || SceSysmemForDriver_A841EDDA(uid, &ctx->base) != 0) {
+	if (uid < 0 || sceKernelGetMemBlockBase(uid, &ctx->base) != 0) {
 		sceIoClose(fd);
 		return SCE_SBL_ERROR_SPFSO_NO_MEMORY;
 	}

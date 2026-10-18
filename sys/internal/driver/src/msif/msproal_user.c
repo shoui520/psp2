@@ -118,7 +118,7 @@ void MsproalUserInvalidateCache(void *address, unsigned int length)
 
 void msproal_user_virt_to_bus(const void *address, uintptr_t *physicalAddress)
 {
-	int result = SceSysmemForDriver_8D160E65(address, physicalAddress);
+	int result = sceKernelVAtoPA(address, physicalAddress);
 
 	SCE_DBG_ASSERT(result == 1, 1442);
 }

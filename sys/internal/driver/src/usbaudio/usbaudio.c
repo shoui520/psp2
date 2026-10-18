@@ -40,7 +40,7 @@ static int unlockDevices(void)
 }
 static void *allocate(unsigned size)
 {
-	return s_heap < 0 ? NULL : SceSysmemForDriver_7B4CB60A(s_heap, size);
+	return s_heap < 0 ? NULL : sceKernelAllocHeapMemory(s_heap, size);
 }
 static void release(void *p)
 {
@@ -139,9 +139,9 @@ static int initializeAudio(void)
 		.flags = HEAP_HAS_MAX_SIZE | HEAP_HAS_MEMBLOCK,
 		.maxSize = USBAUDIO_HEAP_SIZE,
 	};
-	opt.memBlock = SceSysmemForDriver_C94850C9("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
+	opt.memBlock = sceKernelAllocMemBlockForKernel("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 					       USBAUDIO_HEAP_SIZE, NULL);
-	s_heap = SceSysmemForDriver_9328E0E8("SceUsbAudio", 0x1000, &opt);
+	s_heap = sceKernelCreateHeap("SceUsbAudio", 0x1000, &opt);
 	if (s_heap < 0) {
 		SceDebugForDriver_391B74B7("USBAUDIO: sceKernelCreateHeap() failed! => 0x%x", s_heap);
 		SceDebugForDriver_391B74B7("\n");
@@ -302,7 +302,7 @@ static int getVolume(SceUInt32 id, SceUInt32 *out, unsigned req)
 			ret = AUDIO_ERROR(INVALID_ARGUMENT);
 		else if (volumeRequest(id, req, 0, &value))
 			ret = AUDIO_ERROR(NOT_SUPPORTED);
-		else if (SceSysmemForDriver_6D88EF8A(out, &value, 4))
+		else if (sceKernelCopyToUser(out, &value, 4))
 			ret = AUDIO_ERROR(FAILED_TO_COPY_BUFFER);
 	}
 	sceSyscallLeave(domain);
@@ -345,7 +345,7 @@ SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, AudioInDeviceInfo *out)
 		else {
 			info.vendor = *(uint16_t *)(desc + 8);
 			info.product = *(uint16_t *)(desc + 10);
-			ret = SceSysmemForDriver_6D88EF8A(out, &info, sizeof(info)) ?
+			ret = sceKernelCopyToUser(out, &info, sizeof(info)) ?
 				AUDIO_ERROR(FAILED_TO_COPY_BUFFER) : 0;
 		}
 	}
@@ -362,9 +362,9 @@ SceInt32 sceUsbAudioInGetDeviceIdList(SceUInt32 *list, SceUInt32 *count, SceUInt
 	else {
 		int n = SceUsbAudioForDriver_96EC3E18(ids, 127);
 		int copied = n < (int)size ? n : size;
-		ret = SceSysmemForDriver_6D88EF8A(list, ids, copied * 4);
+		ret = sceKernelCopyToUser(list, ids, copied * 4);
 		if (!ret)
-			ret = SceSysmemForDriver_6D88EF8A(count, &copied, 4);
+			ret = sceKernelCopyToUser(count, &copied, 4);
 	}
 	sceSyscallLeave(domain);
 	return ret;
@@ -542,7 +542,7 @@ SceInt32 sceUsbAudioInInput(SceUInt32 id, void *buffer)
 	}
 	if (stream->ready < 3) {
 		AudioRing *ring = &stream->ring[stream->ready];
-		ret = SceSysmemForDriver_6D88EF8A(buffer, ring->data, ring->size) ?
+		ret = sceKernelCopyToUser(buffer, ring->data, ring->size) ?
 			AUDIO_ERROR(FAILED_TO_COPY_BUFFER) : 0;
 	} else {
 		ret = AUDIO_ERROR(NO_DATA_TO_READ);
@@ -1240,12 +1240,12 @@ static int attachAudio(int id)
 		stream->active = stream->write = stream->opened = 0;
 		stream->ready = stream->device = stream->process = -1;
 		for (unsigned i = 0; i < 3; i++) {
-			stream->memblock[i] = SceSysmemForDriver_C94850C9("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
+			stream->memblock[i] = sceKernelAllocMemBlockForKernel("SceUsbAudio", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 								 0x1000, NULL);
 			if (stream->memblock[i] < 0)
 				stream->dma[i] = NULL;
 			else {
-				SceSysmemForDriver_A841EDDA(stream->memblock[i], (void **)&stream->dma[i]);
+				sceKernelGetMemBlockBase(stream->memblock[i], (void **)&stream->dma[i]);
 				memset(stream->dma[i], 0, sizeof(AudioDma));
 			}
 			memset(&stream->ring[i], 0, sizeof(AudioRing));

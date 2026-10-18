@@ -201,7 +201,7 @@ int suspendThreadForVM(SceUID threadId, int *result, SceKernelSpinlock *done)
 	intr = SceCpuForDriver_821FC0EE();
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
-	ret = SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(), (SceObjectBase **)&object);
+	ret = sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
@@ -354,7 +354,7 @@ int resumeThreadForVM(SceUID threadId)
 	if (threadId == 0 || currentThreadContext()->threadId == threadId)
 		return SCE_KERNEL_ERROR_ILLEGAL_THREAD_ID;
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
@@ -455,7 +455,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 	}
 	if ((thread->currentAttr & THREAD_ATTR_USER) && !sceKernelCheckThreadUserStackSelf())
 		debugSuspendThreadSelf(DEBUG_SUSPEND_USER_STACK, 0, NULL);
-	ret = SceSysmemForDriver_00ED6C14(
+	ret = sceGUIDReferObjectWithClass(
 		thread->process->exceptionId, EXCEPTION_CLASS(),
 		(SceObjectBase **)&exception);
 	if (ret < 0) {
@@ -554,7 +554,7 @@ void startException(void)
 {
 	struct ThreadmgrWaitableClass *cls;
 
-	cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+	cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 	if (cls == NULL)
 		SCE_PANIC(352);
 	if (uidExtendedClassInit(cls, "SceUIDExceptionClass",
@@ -577,7 +577,7 @@ int createException(SceProcessObject *process)
 	char name[32];
 	int ret;
 
-	ret = SceSysmemForDriver_A78755EB(process->pid, &processName);
+	ret = sceGUIDGetName(process->pid, &processName);
 	if (ret < 0)
 		SCE_DBG_PRINTF(0, 386, "*** error: sceKernelThreadMgrProcessCreate() -> "
 			       "sceGUIDGetName(0x%08X)=0x%08X\n", process->pid, ret);
@@ -670,7 +670,7 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
@@ -711,11 +711,11 @@ int sceKernelSetThreadContextForVM(SceUID threadId, const ThreadmgrVmCpuContext 
 			SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags,
 						   THREAD_FLAG_FRAME_CHANGED);
 		}
-		ret = SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VM_WORD0), &cpu->tlsWord[0],
+		ret = sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VM_WORD0), &cpu->tlsWord[0],
 					   sizeof(uint32_t));
 		if (ret < 0)
 			goto unlock;
-		ret = SceSysmemForDriver_6D88EF8A((void *)(thread->tls - USER_TLS_VM_WORD1), &cpu->tlsWord[1],
+		ret = sceKernelCopyToUser((void *)(thread->tls - USER_TLS_VM_WORD1), &cpu->tlsWord[1],
 					   sizeof(uint32_t));
 		if (ret < 0)
 			goto unlock;
@@ -759,7 +759,7 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 	if ((cpu != NULL && cpu->size != sizeof(*cpu)) || (vfp != NULL && vfp->size != sizeof(*vfp)))
 		return SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
+	if (sceGUIDReferObjectWithClass(threadId, THREAD_CLASS(), (SceObjectBase **)&object) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_THREAD_ID | SYSCALL_ERROR_BIT;
 		goto resume;
 	}
@@ -797,12 +797,12 @@ int sceKernelGetThreadContextForVM(SceUID threadId, ThreadmgrVmCpuContext *cpu,
 			cpu->pc = frame->pc;
 			cpu->tpidrurw = frame->tpidrurw;
 		}
-		ret = SceSysmemForDriver_BC996A7A(&cpu->tlsWord[0],
+		ret = sceKernelCopyFromUser(&cpu->tlsWord[0],
 					     (const void *)(thread->tls - USER_TLS_VM_WORD0),
 					     sizeof(uint32_t));
 		if (ret < 0)
 			goto unlock;
-		ret = SceSysmemForDriver_BC996A7A(&cpu->tlsWord[1],
+		ret = sceKernelCopyFromUser(&cpu->tlsWord[1],
 					     (const void *)(thread->tls - USER_TLS_VM_WORD1),
 					     sizeof(uint32_t));
 		if (ret < 0)

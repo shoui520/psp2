@@ -204,7 +204,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 	overrideSampling = motion.overrideSampling != 0;
 	if (info != NULL) {
 		if (user == 1) {
-			if (SceSysmemForDriver_6D88EF8A(info, &overrideSampling,
+			if (sceKernelCopyToUser(info, &overrideSampling,
 						sizeof(overrideSampling)) < 0)
 				goto out;
 		} else {
@@ -310,7 +310,7 @@ int motionReadSamples(SceMotionDevData *data, int count, uint32_t *info,
 	}
 	motionRingConsume(motion.ring, process->reader);
 	if (user == 1 && j > 0 && n > 0) {
-		ret = SceSysmemForDriver_6D88EF8A(data, motionReadBuffer,
+		ret = sceKernelCopyToUser(data, motionReadBuffer,
 			n * sizeof(*motionReadBuffer));
 		if (ret < 0)
 			goto out;

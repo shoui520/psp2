@@ -66,12 +66,12 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceSysmemForDriver_22CBE925
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
+	sceKernelAllocHeapMemory
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
 	sceKernelLockRangeWithMode
-	SceSysmemForDriver_C94850C9
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
 	SceSysmemForDriver_E655852F
 	sceKernelVARangeToPAVector

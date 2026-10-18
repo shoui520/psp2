@@ -66,8 +66,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	sceKernelCpuId
 	SceCpuForDriver_821FC0EE
 	SceCpuForDriver_8B4C26DF
@@ -95,7 +95,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pSDfMgrForKernel_8A3B06F2
 	SceDeci4pSDfMgrForKernel_98AEC60E
 	sceSDfMgrContinueSystem
-	SceDeci4pSDfMgrForKernel_A55F5F0D
+	sceSDfMgrOpen
 	SceDeci4pSDfMgrForKernel_B22B42FB
 	sceSDfMgrExReqSend
 	sceSDfMgrExSend

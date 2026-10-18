@@ -354,7 +354,7 @@ static inline void rdrfpDeleteVDTreeLeaf(RdrfpList *list, RdrfpListElem *elem)
 	rdrfpRemoveFromList(list, elem);
 	if (rdrfpVDEntryIsMounted(leaf)) {
 		mountPoint = *(RdrfpMountPoint *)leaf->mountPoint;
-		ret = SceAppMgrForDriver_E8DB7942(&mountPoint);
+		ret = sceAppMgrRdrfpUmount(&mountPoint);
 		if (ret < 0)
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 389, "sceAppMgrRdrfpUmount ret = 0x%x\n", ret);
 	}
@@ -1097,7 +1097,7 @@ int rdrfpMountAppData(int type, const char *titleId, void *arg)
 	char *path;
 
 	if (type == RDRFP_APP_DATA_ALL_SAVEDATA) {
-		ret = SceAppMgrForDriver_1574E1A4(RDRFP_MOUNT_SAVEDATA, "ux0:data/savedata", NULL,
+		ret = sceAppMgrRdrfpMount(RDRFP_MOUNT_SAVEDATA, "ux0:data/savedata", NULL,
 						  &mountPoint);
 		if (ret < 0)
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 1687, "sceAppMgrRdrfpMount ret = 0x%x\n", ret);
@@ -1134,7 +1134,7 @@ int rdrfpMountAppData(int type, const char *titleId, void *arg)
 		}
 		snprintf(path, RDRFP_PATH_BUF, "ux0:app/%s", titleId);
 		passcode = *passcodeArg;
-		ret = SceAppMgrForDriver_1574E1A4(RDRFP_MOUNT_APP, path, &passcode, &mountPoint);
+		ret = sceAppMgrRdrfpMount(RDRFP_MOUNT_APP, path, &passcode, &mountPoint);
 		if (ret < 0) {
 			if (ret != (int)SCE_APPMGR_ERROR_NOT_FOUND) {
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 1741, "sceAppMgrRdrfpMount ret = 0x%x\n", ret);
@@ -1164,7 +1164,7 @@ savedata:
 		snprintf(path, RDRFP_PATH_BUF, "%s/savedata/%s", mount, titleId);
 	}
 	passcode = *passcodeArg;
-	ret = SceAppMgrForDriver_1574E1A4(RDRFP_MOUNT_SAVEDATA, path, &passcode, &mountPoint);
+	ret = sceAppMgrRdrfpMount(RDRFP_MOUNT_SAVEDATA, path, &passcode, &mountPoint);
 	if (ret < 0)
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 1775, "sceAppMgrRdrfpMount ret = 0x%x\n", ret);
 	else
@@ -1184,7 +1184,7 @@ int rdrfpUmountAppData(int type, const char *titleId)
 		ret = 0;
 		if (rdrfpSavedataMountPoint.path[0] != '\0') {
 			mountPoint = rdrfpSavedataMountPoint;
-			ret = SceAppMgrForDriver_E8DB7942(&mountPoint);
+			ret = sceAppMgrRdrfpUmount(&mountPoint);
 			if (ret < 0)
 				SCE_DBG_PRINTF_WITH_INFO(0xf, 1812, "sceAppMgrRdrfpMount ret = 0x%x\n", ret);
 			else
@@ -1205,7 +1205,7 @@ int rdrfpUmountAppData(int type, const char *titleId)
 	ret = 0;
 	if (app && rdrfpVDEntryIsMounted(app)) {
 		mountPoint = *(RdrfpMountPoint *)app->mountPoint;
-		ret = SceAppMgrForDriver_E8DB7942(&mountPoint);
+		ret = sceAppMgrRdrfpUmount(&mountPoint);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_WITH_INFO(0xf, 1843, "sceAppMgrRdrfpUmount ret = 0x%x\n", ret);
 			return ret;
@@ -1220,7 +1220,7 @@ savedata:
 	if (!rdrfpVDEntryIsMounted(savedata))
 		return ret;
 	mountPoint = *(RdrfpMountPoint *)savedata->mountPoint;
-	ret = SceAppMgrForDriver_E8DB7942(&mountPoint);
+	ret = sceAppMgrRdrfpUmount(&mountPoint);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 1861, "sceAppMgrRdrfpUmount ret = 0x%x\n", ret);
 		return ret;

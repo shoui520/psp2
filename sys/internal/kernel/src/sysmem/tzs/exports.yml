@@ -17,7 +17,7 @@ SceSysmem:
         - SceSysmemForTZS_29DE887D: 0x29DE887D
         - SceSysmemForTZS_2F18E288: 0x2F18E288
         - SceSysmemForTZS_31273DC7: 0x31273DC7
-        - SceSysmemForDriver_C94850C9: 0x402EB970
+        - sceKernelAllocMemBlockForKernel: 0x402EB970
         - SceSysmemForTZS_42AD34AB: 0x42AD34AB
         - SceSysmemForTZS_42FB5B12: 0x42FB5B12
         - SceSysmemForTZS_473871D8: 0x473871D8
@@ -26,7 +26,7 @@ SceSysmem:
         - SceSysmemForTZS_658EACE3: 0x658EACE3
         - SceSysmemForTZS_6A3FBAF0: 0x6A3FBAF0
         - SceSysmemForTZS_9D43E416: 0x9D43E416
-        - SceSysmemForDriver_A841EDDA: 0xE1DEDFF4
+        - sceKernelGetMemBlockBase: 0xE1DEDFF4
         - SceSysmemForTZS_EA712806: 0xEA712806
         - SceSysmemForTZS_F459D09D: 0xF459D09D
     SceDipswForTZS:

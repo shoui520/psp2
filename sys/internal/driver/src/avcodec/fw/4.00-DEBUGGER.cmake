@@ -119,7 +119,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_EE694840
@@ -127,14 +127,14 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_22CBE925
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9C78064C
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_A8525B06
+	sceKernelCopyToUser
+	sceKernelVAtoPA
+	sceKernelIsAccessibleRange
+	sceKernelGetMemBlockBase
+	sceKernelUnlockRangeProc
 	sceKernelLockRangeWithMode
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelVARangeToPAVector
 	memset
 	memcpy

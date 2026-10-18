@@ -141,9 +141,9 @@ int sceSblQafManagerGetQafNameForUser(char *name, SceSize size)
 	}
 
 	if (__builtin_expect(
-		(ret = SceSysmemForDriver_BC996A7A(buffer, name, size)) != 0 ||
+		(ret = sceKernelCopyFromUser(buffer, name, size)) != 0 ||
 		(ret = SceSblSsMgrForKernel_E2DD0378(buffer, size)) != 0 ||
-		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, size)) != 0, 0))
+		(ret = sceKernelCopyToUser(name, buffer, size)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
 	return 0;
@@ -190,9 +190,9 @@ int sceSblQafMgrGetQafName(char *name, SceSize size)
 
 	if (__builtin_expect(
 		(ret = qafLoadToken((uint8_t *)token)) != 0 ||
-		(ret = SceSysmemForDriver_BC996A7A(buffer, name, QAF_NAME_SIZE)) != 0 ||
+		(ret = sceKernelCopyFromUser(buffer, name, QAF_NAME_SIZE)) != 0 ||
 		(ret = SceSblSsMgrForKernel_E2DD0378(buffer, QAF_NAME_SIZE)) != 0 ||
-		(ret = SceSysmemForDriver_6D88EF8A(name, buffer, QAF_NAME_SIZE)) != 0, 0))
+		(ret = sceKernelCopyToUser(name, buffer, QAF_NAME_SIZE)) != 0, 0))
 		goto out;
 	sceSyscallLeave(frame);
 	return 0;
@@ -947,7 +947,7 @@ int sceSblQafMgrSetQafToken2(const void *token)
 		sceSyscallLeave(frame);
 		return SSMGR_ERROR_INVALID_ARGUMENT;
 	}
-	ret = SceSysmemForDriver_BC996A7A(buffer, token, sizeof(buffer));
+	ret = sceKernelCopyFromUser(buffer, token, sizeof(buffer));
 	if (__builtin_expect(ret == 0, 1))
 		ret = qafSetToken(buffer);
 	sceSyscallLeave(frame);
@@ -970,7 +970,7 @@ int sceSblQafMgrGetQafToken2(void *token)
 	}
 	ret = qafGetToken((uint8_t *)buffer);
 	if (__builtin_expect(ret == 0, 1))
-		ret = SceSysmemForDriver_6D88EF8A(token, buffer, sizeof(buffer));
+		ret = sceKernelCopyToUser(token, buffer, sizeof(buffer));
 	sceSyscallLeave(frame);
 	return ret;
 }

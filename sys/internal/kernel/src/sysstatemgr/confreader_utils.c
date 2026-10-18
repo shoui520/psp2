@@ -10,7 +10,7 @@ int ConfReaderUtilsAllocConfBuf(ConfReader *reader, SceSize size)
 		SCE_DBG_ASSERT_FAIL(168);
 		return CONF_ERROR(12);
 	}
-	SceSysmemForDriver_A841EDDA(reader->confBlock, (void **)&reader->confBuf);
+	sceKernelGetMemBlockBase(reader->confBlock, (void **)&reader->confBuf);
 	reader->confSize = size;
 	reader->cursor = 0;
 	return 0;
@@ -35,7 +35,7 @@ int ConfReaderUtilsAllocCmdBuf(ConfReader *reader, SceSize size)
 		SCE_DBG_ASSERT_FAIL(208);
 		return CONF_ERROR(12);
 	}
-	SceSysmemForDriver_A841EDDA(reader->cmdBlock, (void **)&reader->cmdBuf);
+	sceKernelGetMemBlockBase(reader->cmdBlock, (void **)&reader->cmdBuf);
 	reader->cmdSize = size;
 	return 0;
 }
@@ -52,12 +52,12 @@ void ConfReaderUtilsFreeCmdBuf(ConfReader *reader) /* name unknown */
 
 int ConfReaderUtilsRememberLoaded(ConfReader *reader, SceUID uid, const char *path) /* name unknown */
 {
-	ConfLoaded *loaded = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, sizeof(*loaded));
+	ConfLoaded *loaded = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, sizeof(*loaded));
 	unsigned len;
 
 	if (loaded) {
 		len = strnlen(path, 0x100);
-		loaded->path = SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, len + 1);
+		loaded->path = sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, len + 1);
 		if (loaded->path) {
 			loaded->path[0] = 0;
 			strncpy(loaded->path, path, len + 1);

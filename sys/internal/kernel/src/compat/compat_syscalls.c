@@ -60,7 +60,7 @@ int sceCompatAllocCdramWithHole(SceCompatCdram *cdram)
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatAllocCdramWithHole(&localCdram);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(cdram, &localCdram,
+			result = sceKernelCopyToUser(cdram, &localCdram,
 				sizeof(localCdram));
 		sceSyscallLeave(syscall);
 		return result;
@@ -102,7 +102,7 @@ int sceCompatIdStorageLookup(short leaf, unsigned int offset, void *buffer,
 		}
 		result = compatIdStorageLookup(leaf, offset, localBuffer, size);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(buffer, localBuffer, size);
+			result = sceKernelCopyToUser(buffer, localBuffer, size);
 		sceSyscallLeave(syscall);
 		return result;
 	}
@@ -120,7 +120,7 @@ int sceCompatReadShared32(int location, int *value)
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatReadShared32(location, &localValue);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(value, &localValue,
+			result = sceKernelCopyToUser(value, &localValue,
 				sizeof(localValue));
 		sceSyscallLeave(syscall);
 		return result;
@@ -137,7 +137,7 @@ int sceCompatWriteSharedCtrl(SceCtrlDataPsp *pad_data)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = SceSysmemForDriver_BC996A7A(&localData, pad_data,
+		result = sceKernelCopyFromUser(&localData, pad_data,
 			offsetof(SceCtrlDataPsp, Rsrv));
 		if (result >= 0)
 			result = compatWriteSharedCtrl(&localData);
@@ -225,7 +225,7 @@ int sceCompatDatRead(int index, unsigned int offset, void *buffer,
 			buffer = (unsigned char *)buffer + chunk;
 			if (result < 0)
 				break;
-			result = SceSysmemForDriver_6D88EF8A(destination,
+			result = sceKernelCopyToUser(destination,
 				gCompatActivationReadBuffer, chunk);
 			if (result < 0)
 				break;
@@ -279,7 +279,7 @@ int sceCompatGetDevInf(SceIoDevInfo *info)
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = compatGetDevInf(&localInfo);
 		if (result == 0)
-			result = SceSysmemForDriver_6D88EF8A(info, &localInfo,
+			result = sceKernelCopyToUser(info, &localInfo,
 				sizeof(localInfo));
 		sceSyscallLeave(syscall);
 		return result;
@@ -311,7 +311,7 @@ int sceCompatSetRif(const char *rif)
 
 	syscall = sceSyscallEnter();
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
-		result = SceSysmemForDriver_BC996A7A(contentId, rif, sizeof(contentId));
+		result = sceKernelCopyFromUser(contentId, rif, sizeof(contentId));
 		if (result >= 0)
 			result = compatSetRifPath(contentId);
 		sceSyscallLeave(syscall);
@@ -392,7 +392,7 @@ int sceCompatGetCurrentSecureTick(SceRtcTick *tick)
 	if (SceSblACMgrForDriver_FD00C72A(0) == 1) {
 		result = SceRtcForDriver_401C0954(&localTick);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(tick, &localTick,
+			result = sceKernelCopyToUser(tick, &localTick,
 				sizeof(localTick));
 		sceSyscallLeave(syscall);
 		return result;
@@ -414,7 +414,7 @@ int sceCompatGetTitleList(void *buf, SceSize length)
 		}
 		result = compatGetTitleListForVsh(gCompatTitleListBuffer, length);
 		if (result == 0)
-			result = SceSysmemForDriver_6D88EF8A(buf, gCompatTitleListBuffer,
+			result = sceKernelCopyToUser(buf, gCompatTitleListBuffer,
 				length);
 		sceSyscallLeave(syscall);
 		return result;

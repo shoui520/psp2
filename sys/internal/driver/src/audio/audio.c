@@ -481,7 +481,7 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
+	result = sceGUIDReferObject(pid, NULL);
 	if (result < 0)
 		goto unlock;
 	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
@@ -579,7 +579,7 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
+	result = sceGUIDReferObject(pid, NULL);
 	if (result < 0)
 		goto unlock;
 	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
@@ -1327,7 +1327,7 @@ int sceAudioOutSetVolume(int port, int ch, int *vol)
 		result = (int)0x80260230;
 		goto unlock;
 	}
-	result = SceSysmemForDriver_BC996A7A(volume, vol, sizeof(volume));
+	result = sceKernelCopyFromUser(volume, vol, sizeof(volume));
 	if (result < 0)
 		goto unlock;
 	if (type != 0) {
@@ -1886,7 +1886,7 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	result = audioInitializeHardware();
 	if (result < 0)
 		return result;
-	result = SceProcessmgrForDriver_3801D7D6("SceAudio",
+	result = sceKernelRegisterKPLS("SceAudio",
 		sizeof(AudioProcessLocalStorage));
 	audioStorageKey = result;
 	if (result < 0)
@@ -1902,10 +1902,10 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	sceKernelRegisterSysEventHandler("SceAudio", audioSystemEventHandler, NULL);
 	sceKernelRegisterProcEventHandler("SceAudio", &audioProcessEventHandlers, 0);
 	for (index = 0; index < 2; ++index) {
-		result = SceSysmemForDriver_8D160E65(audioOutputBuffers[0][index],
+		result = sceKernelVAtoPA(audioOutputBuffers[0][index],
 			&audioOutputPhysicalAddress[0][index]);
 		SCE_DBG_ASSERT(result, 2602);
-		result = SceSysmemForDriver_8D160E65(audioOutputBuffers[1][index],
+		result = sceKernelVAtoPA(audioOutputBuffers[1][index],
 			&audioOutputPhysicalAddress[1][index]);
 		SCE_DBG_ASSERT(result, 2602);
 	}

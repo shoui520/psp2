@@ -48,7 +48,7 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 	opt.pid = procCB->pid;
 	size = (numEntries * sizeof(SceUInt32) + sizeof(UlobjInfoArray) + 0xfff) & ~0xfff;
-	procCB->userMemBlock = SceSysmemForDriver_C94850C9("SceUlobjMgrUser",
+	procCB->userMemBlock = sceKernelAllocMemBlockForKernel("SceUlobjMgrUser",
 						       SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, size, &opt);
 	if (procCB->userMemBlock < 0)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
@@ -59,7 +59,7 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 			 SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
 	mirrorOpt.mirror_blockid = procCB->userMemBlock;
 	mirrorOpt.pid = procCB->pid;
-	procCB->driverMemBlock = SceSysmemForDriver_C94850C9("SceUlobjMgrDriver",
+	procCB->driverMemBlock = sceKernelAllocMemBlockForKernel("SceUlobjMgrDriver",
 							 SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, size,
 							 &mirrorOpt);
 	if (procCB->driverMemBlock < 0) {
@@ -67,10 +67,10 @@ int allocateInfoArray(UlobjProcCB *procCB, SceUInt32 numEntries, SceUInt32 sdkVe
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	}
 
-	ret = SceSysmemForDriver_A841EDDA(procCB->driverMemBlock, (void **)&procCB->infoArray);
+	ret = sceKernelGetMemBlockBase(procCB->driverMemBlock, (void **)&procCB->infoArray);
 	if (ret < 0)
 		goto error;
-	ret = SceSysmemForDriver_A841EDDA(procCB->userMemBlock, pUserBase);
+	ret = sceKernelGetMemBlockBase(procCB->userMemBlock, pUserBase);
 	if (ret < 0)
 		goto error;
 	return 0;

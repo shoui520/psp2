@@ -1858,7 +1858,7 @@ extern void *SceSysmemForDriver_B415B5A8(SceUID heap, SceSize size,
 extern int SceSysmemForKernel_4233C16D(void *ptr);
 
 #if !SYSMEM_NSKBL
-void *SceSysrootForKernel_D351EBC8(SceUID pid, SceSize size, void *opt)
+void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt)
 {
 	const SysrootProcessmgrRuntimeOps *ops;
 

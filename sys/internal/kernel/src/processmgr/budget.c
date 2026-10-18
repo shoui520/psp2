@@ -193,7 +193,7 @@ int sceKernelGetBudgetInfoForDebugger(SceUID budgetId, SceUInt32 level,
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	if (info->size != sizeof(*info))
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
-	ret = SceSysmemForDriver_77066FD1(budgetId, &g_budgetClass, level, &budget);
+	ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, level, &budget);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 431, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n", ret);
 		return ret;
@@ -308,7 +308,7 @@ int sceKernelGetBudgetInfo(SceUID budgetId, SceKernelBudgetInfo *info)
 			return SCE_KERNEL_ERROR_PROCESSMGR_INVALID_TYPE;
 		}
 	} else {
-		ret = SceSysmemForDriver_77066FD1(budgetId, &g_budgetClass, 7, &budget);
+		ret = sceGUIDReferObjectWithClassLevel(budgetId, &g_budgetClass, 7, &budget);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 578, "sceGUIDReferObjectWithClassLevel failed 0x%08x\n",
 					     ret);
@@ -382,7 +382,7 @@ int SceProcessmgrForKernel_23EF9D8E(SceUInt32 level, SceKernelBudgetInfoForDebug
 	if (count == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	*count = 0;
-	ret = SceSysmemForKernel_52137FA3(&g_budgetClass, level, NULL, 0, &n);
+	ret = sceGUIDGetUIDVectorByClass(&g_budgetClass, level, NULL, 0, &n);
 	if (ret < 0)
 		return ret;
 	num = size / sizeof(*info);
@@ -390,7 +390,7 @@ int SceProcessmgrForKernel_23EF9D8E(SceUInt32 level, SceKernelBudgetInfoForDebug
 		num = ret;
 	if (num != 0) {
 		ids = SceSysmemForKernel_85571907(num * sizeof(*ids));
-		SceSysmemForKernel_52137FA3(&g_budgetClass, level, ids, num, &n);
+		sceGUIDGetUIDVectorByClass(&g_budgetClass, level, ids, num, &n);
 		for (i = 0; i < (int)n; i++, info++) {
 			info->size = sizeof(*info);
 			ret = sceKernelGetBudgetInfoForDebugger(ids[i], level, info);
@@ -470,7 +470,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 			SceSysmemForKernel_6D563733(cdramPart);
 		} else if (opt->cdram != 0) {
 			snprintf(partName, 0x1f, "cdram: %s", name);
-			ret = SceSysmemForKernel_A2DFA383(partName, 0x30000, opt->cdram, &cdramPart);
+			ret = sceKernelCreatePhyMemPart(partName, 0x30000, opt->cdram, &cdramPart);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 173, "sceKernelCreatePhyMemPart(%s) failed. 0x%08x\n",
 						     partName, ret);
@@ -481,7 +481,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		if (opt->mainSize == 0)
 			goto delete_cdram;
 		snprintf(partName, 0x1f, "ddrmain: %s", name);
-		ret = SceSysmemForKernel_A2DFA383(partName, 0x10000, opt->mainSize, &mainPart);
+		ret = sceKernelCreatePhyMemPart(partName, 0x10000, opt->mainSize, &mainPart);
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 186, "sceKernelCreatePhyMemPart(%s) failed. 0x%08x\n",
 					     partName, ret);
@@ -490,7 +490,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		mainSize = opt->mainSize;
 		if (opt->cdialogSize != 0) {
 			snprintf(partName, 0x1f, "ddrcdlg: %s", name);
-			ret = SceSysmemForKernel_A2DFA383(partName, 0x10000, opt->cdialogSize, &cdialogPart);
+			ret = sceKernelCreatePhyMemPart(partName, 0x10000, opt->cdialogSize, &cdialogPart);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 203,
 						     "sceKernelCreatePhyMemPart(%s) failed. 0x%08x\n", partName, ret);
@@ -499,7 +499,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 		}
 		if (opt->phyContSize != 0) {
 			snprintf(partName, 0x1f, "ddrpcnt: %s", name);
-			ret = SceSysmemForKernel_A2DFA383(partName, 0x10001, opt->phyContSize, &phyContPart);
+			ret = sceKernelCreatePhyMemPart(partName, 0x10001, opt->phyContSize, &phyContPart);
 			if (ret < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xb, 214,
 						     "sceKernelCreatePhyMemPart(%s) failed. 0x%08x\n", partName, ret);
@@ -531,7 +531,7 @@ static SceUID _CreateBudget(SceUID uid, const char *name, SceUInt32 type,
 	}
 
 	if (uid == -1) {
-		uid = SceSysmemForDriver_56A13E90(&g_budgetClass, name, &budget);
+		uid = sceGUIDKernelCreate(&g_budgetClass, name, &budget);
 		if (uid < 0) {
 			ret = uid;
 			goto failed;
@@ -694,7 +694,7 @@ static inline __attribute__((always_inline)) int initializeBudget(void)
 {
 	int ret;
 
-	ret = SceSysmemForDriver_61317102(&g_budgetClass, "SceUIDProcBudgetClass", SceSysmemForDriver_85336A1C(),
+	ret = sceUIDClassInitClass(&g_budgetClass, "SceUIDProcBudgetClass", SceSysmemForDriver_85336A1C(),
 				    sizeof(ProcessBudget), (SceClassCallback)ProcessBudgetConstructor,
 				    (SceClassCallback)ProcessBudgetDestructor);
 	if (ret < 0) {

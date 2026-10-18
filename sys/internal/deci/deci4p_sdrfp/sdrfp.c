@@ -482,13 +482,13 @@ static void initResourceTable(void)
 	for (i = 0, res = s_resource; i != SDRFP_RESOURCES; i++, res++) {
 		res->size = res->nfrag * DRFP_FRAG_SIZE;
 		snprintf(name, sizeof(name), "SceDeci4pSDrfpMemBlock%d", i);
-		uid = SceSysmemForDriver_C94850C9(name, SceDeci4pSDfMgrForKernel_35238B8A(), res->size, NULL);
+		uid = sceKernelAllocMemBlockForKernel(name, SceDeci4pSDfMgrForKernel_35238B8A(), res->size, NULL);
 		if (uid < 0) {
 			SDRFP_PRINTF(1116, "AllocMemBlockForKernel failed (0x%08x)\n", uid);
 			SCE_DBG_ASSERT_FAIL(1117);
 		}
 		res->uid = uid;
-		SceSysmemForDriver_A841EDDA(uid, &res->base);
+		sceKernelGetMemBlockBase(uid, &res->base);
 	}
 }
 
@@ -518,7 +518,7 @@ int SDrfpModuleStart(SceSize args, void *argp)
 	SceCpuForDriver_BF82DEB2(&s_doneLock);
 	initResourceTable();
 
-	ret = SceDeci4pSDfMgrForKernel_A55F5F0D(sdrfpEventHandler, &s_protocol, &s_channel);
+	ret = sceSDfMgrOpen(sdrfpEventHandler, &s_protocol, &s_channel);
 	if (ret < 0) {
 		SDRFP_PRINTF(239, "SDfMgrOpen failed (0x%08x)\n", ret);
 		return ret;

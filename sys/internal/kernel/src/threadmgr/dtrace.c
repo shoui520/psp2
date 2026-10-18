@@ -31,7 +31,7 @@ int dtraceThreadCBInit(struct ThreadCB *thread)
 		ret = 0;
 		goto unlock;
 	}
-	state = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
+	state = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
 					  DTRACE_STATE_SIZE);
 	thread->dtraceState = state;
 	if (state == NULL) {
@@ -82,7 +82,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		opt.attr = 0x400;
 		opt.memtype = 0x10f0d006;
 		s_threadmgrRuntime.manager->dtraceHeapId =
-			SceSysmemForDriver_9328E0E8("SceDtraceThreadCB", DTRACE_HEAP_SIZE, &opt);
+			sceKernelCreateHeap("SceDtraceThreadCB", DTRACE_HEAP_SIZE, &opt);
 		if (s_threadmgrRuntime.manager->dtraceHeapId < 0)
 			SCE_PANIC(38);
 	}
@@ -92,7 +92,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 		return ret;
 	}
 	count = ret;
-	ids = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->dtraceHeapId,
+	ids = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->dtraceHeapId,
 					count * sizeof(SceUID));
 	if (ids == NULL) {
 		SCE_DBG_PRINTF(0, 51, "error: failed to allocate thread id list\n");
@@ -107,7 +107,7 @@ int sceKernelSetDTraceThreadCBEnable(int enable)
 	}
 	for (i = 0; i < count; i++) {
 		id = ids[i];
-		ret = SceSysmemForDriver_00ED6C14(id,
+		ret = sceGUIDReferObjectWithClass(id,
 			s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 70, "error: failed to lookup thread 0x%08x (0x%08x)\n", id,

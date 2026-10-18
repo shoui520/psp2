@@ -240,7 +240,7 @@ int initializeJpeg(void)
 {
 	int key;
 
-	key = SceProcessmgrForDriver_3801D7D6("SceJpeg", 56);
+	key = sceKernelRegisterKPLS("SceJpeg", 56);
 	if (key < 0)
 		return 2;
 	jpegResident.processStorageKey = key;

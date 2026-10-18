@@ -342,7 +342,7 @@ static int timerIntrHandler(int code, void *arg)
 			if (interval < TIMER_MIN_DELAY)
 				interval = TIMER_MIN_DELAY;
 			timer->expiry = expiry + interval;
-			if (SceSysmemForDriver_00ED6C14(timer->pid, PROCESS_CLASS(), NULL) < 0) {
+			if (sceGUIDReferObjectWithClass(timer->pid, PROCESS_CLASS(), NULL) < 0) {
 				/* the process is gone: the timer stays off the queue */
 				uidTimer->flags = (uidTimer->flags & ~TIMER_FLAG_RESCHEDULE) |
 						  TIMER_FLAG_SUSPENDED;
@@ -389,10 +389,10 @@ static int uidTimer_Destructor(void *object)
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 3650);
 	intr = SceCpuForDriver_D32ACE9E(&uidTimer->base.event.lock);
 #if FW_DEBUG
-	if (SceSysmemForDriver_00ED6C14(uidTimer->base.timer.pid, PROCESS_CLASS(),
+	if (sceGUIDReferObjectWithClass(uidTimer->base.timer.pid, PROCESS_CLASS(),
 					 (SceObjectBase **)&process) >= 0) {
 #else
-	if (SceSysmemForDriver_00ED6C14(uidTimer->base.timer.pid, PROCESS_CLASS(), NULL) >= 0) {
+	if (sceGUIDReferObjectWithClass(uidTimer->base.timer.pid, PROCESS_CLASS(), NULL) >= 0) {
 #endif
 		SceCpuForDriver_BF82DEB2(&uidTimer->base.timer.process->timerLock);
 		ListLinkRemove(&uidTimer->processLink);
@@ -407,7 +407,7 @@ static int uidTimer_Destructor(void *object)
 		sceGUIDReleaseObject(uidTimer->base.timer.pid);
 #endif
 	pid = uidTimer->base.event.ownerPid;
-	if (SceSysmemForDriver_00ED6C14(pid, PROCESS_CLASS(), (SceObjectBase **)&process) >= 0) {
+	if (sceGUIDReferObjectWithClass(pid, PROCESS_CLASS(), (SceObjectBase **)&process) >= 0) {
 		if (process->pid != THREADMGR_KERNEL_PID) {
 			SceCpuForDriver_BF82DEB2(&process->resourceLock);
 			if (uidTimer->base.event.attr & TIMER_ATTR_LW)
@@ -449,7 +449,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -538,7 +538,7 @@ static SceUID setAlarmWithName(const char *name, SceUInt64 delay, ThreadmgrAlarm
 	if (name == NULL)
 		name = "SceKernelAlarmObject";
 	intr = SceCpuForDriver_821FC0EE();
-	uid = SceSysmemForDriver_56A13E90(s_threadmgrRuntime.manager->alarmClass, name,
+	uid = sceGUIDKernelCreate(s_threadmgrRuntime.manager->alarmClass, name,
 				   (SceObjectBase **)&alarm);
 	if (uid >= 0) {
 		sceKernelSpinlockLowUnlock(&alarm->base.event.lock);
@@ -573,7 +573,7 @@ static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(alarmId, s_threadmgrRuntime.manager->alarmClass,
+	if (sceGUIDReferObjectWithClass(alarmId, s_threadmgrRuntime.manager->alarmClass,
 					 (SceObjectBase **)&alarm) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID;
 	} else {
@@ -603,7 +603,7 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 	memset(info, 0, sizeof(*info));
 	info->size = sizeof(*info);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		ret = TimerUnknownIdError();
 		goto resume;
 	}
@@ -624,7 +624,7 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 	process = uidTimer->base.timer.process;
 	sceKernelSpinlockLowUnlock(&uidTimer->base.event.lock);
 	sceGUIDReleaseObject(timerId);
-	if (SceSysmemForDriver_00ED6C14(pid, PROCESS_CLASS(), NULL) >= 0) {
+	if (sceGUIDReferObjectWithClass(pid, PROCESS_CLASS(), NULL) >= 0) {
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			info->currentTime.quad = SceSysrootForKernel_E20F6FC8() - process->time -
 					info->baseTime.quad;
@@ -721,14 +721,14 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 		opt.size = sizeof(opt);
 		opt.paddr = TIMER_LONG_REG_BASE(5);
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-		uid = SceSysmemForDriver_C94850C9("SceLT5", LT5_MEMBLOCK_TYPE, TIMER_REG_SIZE, &opt);
+		uid = sceKernelAllocMemBlockForKernel("SceLT5", LT5_MEMBLOCK_TYPE, TIMER_REG_SIZE, &opt);
 		manager = s_threadmgrRuntime.manager;
 		if (uid < 0) {
 			SCE_DBG_PRINTF(0xb, 331, "memBlockId 0x%08x\n", uid);
 			SCE_PANIC(332);
 		}
 		manager->timerMemBlockId = uid;
-		SceSysmemForDriver_A841EDDA(uid, (void **)&manager->systemTime);
+		sceKernelGetMemBlockBase(uid, (void **)&manager->systemTime);
 		SceSysrootForKernel_5B5EBFB1(s_threadmgrRuntime.manager->systemTime);
 		ret = sceKernelRegisterIntrHandler(TIMER_INTR, "SceThreadmgrTimer", 0,
 			timerIntrHandler, (void *)s_threadmgrRuntime.manager, 0x30, 0xf, NULL);
@@ -736,7 +736,7 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 			SCE_DBG_PRINTF(0xb, 344, "error: register timer handler.(0x%08X)\n", ret);
 			SCE_PANIC(345);
 		}
-		cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+		cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(351);
 		if (uidCpuTimerClassInit(cls, "SceUIDCpuTimerClass",
@@ -746,21 +746,21 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 			SCE_PANIC(361);
 		manager = s_threadmgrRuntime.manager;
 		manager->cpuTimerClass = (SceClass *)cls;
-		cls = SceSysmemForDriver_7B4CB60A(manager->heapId, sizeof(*cls));
+		cls = sceKernelAllocHeapMemory(manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(367);
 		uidDelayClassInit(cls);
 		s_threadmgrRuntime.manager->delayClass = (SceClass *)cls;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 380, " sizeof(SceUIDDelayObject)=%d\n",
 				     sizeof(ThreadmgrDelay));
-		cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+		cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(385);
 		uidAlarmClassInit(cls);
 		s_threadmgrRuntime.manager->alarmClass = (SceClass *)cls;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 398, " sizeof(SceUIDAlarmObject)=%d\n",
 				     sizeof(ThreadmgrAlarm));
-		cls = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
+		cls = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId, sizeof(*cls));
 		if (cls == NULL)
 			SCE_PANIC(403);
 		uidTimerClassInit(cls);
@@ -911,7 +911,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 	SceCpuForDriver_BF82DEB2(&manager->delayCacheLock);
 	if (manager->delayCacheCount < 1) {
 		sceKernelSpinlockLowUnlock(&manager->delayCacheLock);
-		uid = SceSysmemForDriver_56A13E90(s_threadmgrRuntime.manager->delayClass,
+		uid = sceGUIDKernelCreate(s_threadmgrRuntime.manager->delayClass,
 					   "SceKernelDelayObject", (SceObjectBase **)&delay);
 		if (uid < 0) {
 			SCE_DBG_PRINTF(0, 3859,
@@ -919,7 +919,7 @@ int uidDelay_AllocObject(const uint64_t *wakeup, uintptr_t callback)
 		} else {
 			sceKernelSpinlockLowUnlock(&delay->base.event.lock);
 			delay->base.event.ownerPid = THREADMGR_KERNEL_PID;
-			ret = SceSysmemForKernel_FF464A49(uid, &delay->base.event.uidEntry);
+			ret = sceGUIDGetEntry(uid, &delay->base.event.uidEntry);
 			if (ret < 0) {
 				SCE_DBG_PRINTF(0, 3871,
 					"*** error: uidDelay_AllocObject() -> sceGUIDGetEntry(0x%08X)=0x%08X\n",
@@ -955,7 +955,7 @@ void cancelDelayTimer(SceUID delayId, struct ThreadCB *thread)
 	uint64_t now;
 	int ret;
 
-	ret = SceSysmemForDriver_00ED6C14(delayId, s_threadmgrRuntime.manager->delayClass,
+	ret = sceGUIDReferObjectWithClass(delayId, s_threadmgrRuntime.manager->delayClass,
 					   (SceObjectBase **)&delay);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_PRINTF(0, 764, "error: sceGUIDReferObjectWithClass(0x%08X)=0x%08X\n",
@@ -1011,16 +1011,16 @@ int timerProcessExit(SceProcessObject *process)
 	bool close;
 	int num, i, intr, ret;
 
-	num = SceSysmemForKernel_08C05493(process->pid, TIMER_CLASS(), PUID_VECTOR_LEVEL, NULL, 0,
+	num = scePUIDGetUIDVectorByClass(process->pid, TIMER_CLASS(), PUID_VECTOR_LEVEL, NULL, 0,
 					  NULL);
 	if (num < 0)
 		return 0;
 	vector = NULL;
 	while (num != 0) {
-		vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+		vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID));
 		SCE_DBG_ASSERT_CHECK(vector != NULL, 866);
-		num = SceSysmemForKernel_08C05493(process->pid, TIMER_CLASS(), 5, vector, num, &got);
+		num = scePUIDGetUIDVectorByClass(process->pid, TIMER_CLASS(), 5, vector, num, &got);
 		if ((int)got >= num)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1291,7 +1291,7 @@ int sceKernelStartTimer(SceUID timerId)
 		goto resume;
 	}
 	sceKernelSpinlockLowUnlock(TIMER_LOCK());
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1346,7 +1346,7 @@ int sceKernelStopTimer(SceUID timerId)
 		goto resume;
 	}
 	sceKernelSpinlockLowUnlock(TIMER_LOCK());
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1394,7 +1394,7 @@ int sceKernelGetTimerBase(SceUID timerId, SceUInt64 *base)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1428,7 +1428,7 @@ SceUInt64 SceThreadmgrForDriver_A6D11DD3(SceUID timerId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) >= 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) >= 0) {
 		SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
 			base = uidTimer->time;
@@ -1456,7 +1456,7 @@ int sceKernelGetTimerTime(SceUID timerId, SceUInt64 *time)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1491,7 +1491,7 @@ SceUInt64 SceThreadmgrForDriver_C1286004(SceUID timerId)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		time = (SceUInt64)-1;
 	} else {
 		SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
@@ -1529,7 +1529,7 @@ int sceKernelSetTimerTime(SceUID timerId, SceUInt64 *time)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1584,7 +1584,7 @@ SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 	if (SceIntrmgrForDriver_182EE3E3())
 		goto restore;
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) >= 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) >= 0) {
 		SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
 		if (uidTimer->flags & TIMER_FLAG_RUNNING) {
 			now = SceSysrootForKernel_E20F6FC8();
@@ -1647,7 +1647,7 @@ int sceKernelSetTimerEvent(SceUID timerId, SceUInt32 type, SceUInt64 *interval, 
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1724,7 +1724,7 @@ int sceKernelCancelTimer(SceUID timerId, int *numWaitThreads)
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
+	if (sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
 		} else {
@@ -1931,12 +1931,12 @@ int SceThreadmgrForDriver_3C297724(int level, SceKernelTimerInfo *infos, SceSize
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(TIMER_CLASS(), level, NULL, 0, NULL);
+	num = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(TIMER_CLASS(), level, vector, num, &got);
+		total = sceGUIDGetUIDVectorByClass(TIMER_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -1974,12 +1974,12 @@ int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level, SceKernelTimerInfo *in
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_08C05493(pid, TIMER_CLASS(), level, NULL, 0, NULL);
+	num = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_08C05493(pid, TIMER_CLASS(), level, vector, num, &got);
+		total = scePUIDGetUIDVectorByClass(pid, TIMER_CLASS(), level, vector, num, &got);
 		if (total <= (int)got)
 			break;
 		sceKernelFreeHeapMemory(s_threadmgrRuntime.manager->heapId, vector);
@@ -2023,7 +2023,7 @@ int sceKernelGetTimerEventRemainingTime(SceUID timerId, SceUInt64 *remaining)
 		goto restore;
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	ret = SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer);
+	ret = sceGUIDReferObjectWithClass(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer);
 	if (ret < 0) {
 		if (ThreadmgrInSyscall()) {
 			ret = SCE_KERNEL_ERROR_UNKNOWN_TIMER_ID | SYSCALL_ERROR_BIT;
@@ -2034,7 +2034,7 @@ int sceKernelGetTimerEventRemainingTime(SceUID timerId, SceUInt64 *remaining)
 		}
 		goto resume;
 	}
-	ret = SceSysmemForDriver_00ED6C14(uidTimer->base.timer.pid, PROCESS_CLASS(),
+	ret = sceGUIDReferObjectWithClass(uidTimer->base.timer.pid, PROCESS_CLASS(),
 					   (SceObjectBase **)&process);
 	if (ret >= 0) {
 		SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
@@ -2089,7 +2089,7 @@ int sceKernelCancelAlarm(SceUID alarmId)
 		ret = SCE_KERNEL_ERROR_ALARM_BUSY;
 		goto resume;
 	}
-	ret = SceSysmemForDriver_00ED6C14(alarmId, manager->alarmClass,
+	ret = sceGUIDReferObjectWithClass(alarmId, manager->alarmClass,
 					   (SceObjectBase **)&alarm);
 	if (ret < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_ALARM_ID;
@@ -2151,13 +2151,13 @@ int SceThreadmgrForDriver_2828F884(int level, ThreadmgrAlarmInfo *infos, SceSize
 
 	if (size >= sizeof(info) && infos == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	num = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->alarmClass, level,
+	num = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->alarmClass, level,
 					  NULL, 0, NULL);
 	if (num <= 0)
 		return num;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(
+		total = sceGUIDGetUIDVectorByClass(
 			s_threadmgrRuntime.manager->alarmClass, level, vector, num, &got);
 		if (total <= (int)got)
 			break;
@@ -2195,7 +2195,7 @@ static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target
 
 	do {
 		intr = SceCpuForDriver_821FC0EE();
-		uid = SceSysmemForDriver_56A13E90(s_threadmgrRuntime.manager->delayClass,
+		uid = sceGUIDKernelCreate(s_threadmgrRuntime.manager->delayClass,
 					   "SceKernelDelayObject", (SceObjectBase **)&delay);
 		if (uid < 0) {
 			sceKernelCpuResumeIntr(intr);
@@ -2205,7 +2205,7 @@ static inline __attribute__((always_inline)) int uidDelay_CreateCache(int target
 		}
 		sceKernelSpinlockLowUnlock(&delay->base.event.lock);
 		delay->base.event.ownerPid = THREADMGR_KERNEL_PID;
-		ret = SceSysmemForKernel_FF464A49(uid, &delay->base.event.uidEntry);
+		ret = sceGUIDGetEntry(uid, &delay->base.event.uidEntry);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 3766,
 				"*** error: uidDelay_CreateCache() -> sceGUIDGetEntry(0x%08X)=0x%08X\n",

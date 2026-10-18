@@ -38,12 +38,12 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
 		kernelOption.alignment = 4096;
-		kernelMemBlock = SceSysmemForDriver_C94850C9(updateKernelBufferNames[index],
+		kernelMemBlock = sceKernelAllocMemBlockForKernel(updateKernelBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_GAME_RW,
 				((size + 4095) >> 12) << 12, &kernelOption);
 		if (kernelMemBlock < 0)
 			goto failed;
-		userMemBlock = SceSysmemForDriver_A841EDDA(kernelMemBlock, &kernelBuffer);
+		userMemBlock = sceKernelGetMemBlockBase(kernelMemBlock, &kernelBuffer);
 		if (userMemBlock)
 			goto failed;
 	} else {
@@ -52,10 +52,10 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		userOption.pid = pid;
 		userOption.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PID;
 		userOption.alignment = 4096;
-		userMemBlock = SceSysmemForDriver_C94850C9(updateUserBufferNames[index],
+		userMemBlock = sceKernelAllocMemBlockForKernel(updateUserBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_USER_MAIN_RW,
 				((size + 4095) >> 12) << 12, &userOption);
-		if (userMemBlock < 0 || SceSysmemForDriver_A841EDDA(userMemBlock, &userBuffer))
+		if (userMemBlock < 0 || sceKernelGetMemBlockBase(userMemBlock, &userBuffer))
 			goto failed;
 		memset(&kernelOption, 0, sizeof(kernelOption));
 		kernelOption.size = sizeof(kernelOption);
@@ -63,9 +63,9 @@ int UpdateUtilAllocateBuffer(SceSize size, void **buffer, SceUID pid)
 		kernelOption.alignment = 4096;
 		kernelOption.attr = ALLOC_ATTR_SHARE_PHYPAGE |
 				SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_MIRROR_BLOCKID;
-		kernelMemBlock = SceSysmemForDriver_C94850C9(updateKernelBufferNames[index],
+		kernelMemBlock = sceKernelAllocMemBlockForKernel(updateKernelBufferNames[index],
 				SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW, 0, &kernelOption);
-		if (kernelMemBlock < 0 || SceSysmemForDriver_A841EDDA(kernelMemBlock, &kernelBuffer))
+		if (kernelMemBlock < 0 || sceKernelGetMemBlockBase(kernelMemBlock, &kernelBuffer))
 			goto failed;
 	}
 	if (!kernelBuffer)

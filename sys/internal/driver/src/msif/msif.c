@@ -680,11 +680,11 @@ int module_start(SceSize args, const void *argp)
 	option.size = sizeof(option);
 	option.paddr = MSIF_REG_BASE;
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
-	result = SceSysmemForDriver_C94850C9("SceMsif", 0x20100806, MSIF_REG_SIZE, &option);
+	result = sceKernelAllocMemBlockForKernel("SceMsif", 0x20100806, MSIF_REG_SIZE, &option);
 	if (result < 0)
 		return 2;
 	gMsifContext.controllerMemBlock = result;
-	SceSysmemForDriver_A841EDDA(result, (void **)&gMsifContext.controller);
+	sceKernelGetMemBlockBase(result, (void **)&gMsifContext.controller);
 	gMsifContext.eventFlag = sceKernelCreateEventFlag("SceMsif", 0, 0, NULL);
 	if (gMsifContext.eventFlag < 0)
 		goto free_controller;
@@ -694,21 +694,21 @@ int module_start(SceSize args, const void *argp)
 	memset(&option, 0, sizeof(option));
 	option.size = sizeof(option);
 	option.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	result = SceSysmemForDriver_C94850C9("SceMsif", 0x1020d006, 98304, &option);
+	result = sceKernelAllocMemBlockForKernel("SceMsif", 0x1020d006, 98304, &option);
 	if (result < 0)
 		goto finalize_mutex;
 	gMsifContext.dmaMemBlock = result;
-	SceSysmemForDriver_A841EDDA(result, (void **)&gMsifContext.dmaDescriptors);
+	sceKernelGetMemBlockBase(result, (void **)&gMsifContext.dmaDescriptors);
 	memset(gMsifContext.dmaDescriptors, 0, 98304);
-	result = SceSysmemForDriver_8D160E65(gMsifContext.dmaDescriptors,
+	result = sceKernelVAtoPA(gMsifContext.dmaDescriptors,
 		&gMsifContext.dmaDescriptorsPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
-	result = SceSysmemForDriver_8D160E65(gMsifContext.headBuffer,
+	result = sceKernelVAtoPA(gMsifContext.headBuffer,
 		&gMsifContext.headPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
-	result = SceSysmemForDriver_8D160E65(gMsifContext.tailBuffer,
+	result = sceKernelVAtoPA(gMsifContext.tailBuffer,
 		&gMsifContext.tailPhysicalAddress);
 	if (result < 0)
 		goto free_dma;

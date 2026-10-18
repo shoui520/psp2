@@ -74,7 +74,7 @@ int ngsCopyToCaller(void *destination, const void *source, SceSize size,
 		if ((uintptr_t)destination >= (uintptr_t)destination + size)
 			return SCE_NGS_ERROR_INVALID_PARAM;
 		if (copyUserData == 1)
-			return SceSysmemForDriver_6D88EF8A(destination, source, size);
+			return sceKernelCopyToUser(destination, source, size);
 		memcpy(destination, source, size);
 	}
 	return 0;
@@ -88,7 +88,7 @@ int ngsCopyFromCaller(void *destination, const void *source, SceSize size,
 	if ((uintptr_t)source >= (uintptr_t)source + size)
 		return SCE_NGS_ERROR_INVALID_PARAM;
 	if (copyUserData == 1)
-		return SceSysmemForDriver_BC996A7A(destination, source, size);
+		return sceKernelCopyFromUser(destination, source, size);
 	memcpy(destination, source, size);
 	return 0;
 }
@@ -98,11 +98,11 @@ int ngsIsCallerRangeAccessible(const void *address, SceSize size, int copyUserDa
 	int result;
 
 	if (copyUserData == 1) {
-		result = SceSysmemForDriver_9C78064C(0x30, address, size);
+		result = sceKernelIsAccessibleRange(0x30, address, size);
 		if (result != 0)
 			goto error;
 	} else {
-		result = SceSysmemForDriver_9C78064C(3, address, size);
+		result = sceKernelIsAccessibleRange(3, address, size);
 		if (result != 0)
 			goto error;
 	}
@@ -116,7 +116,7 @@ error:
 
 int ngsIsRangeReadable(const void *address, SceSize size)
 {
-	return SceSysmemForDriver_9C78064C(1, address, size) == 0;
+	return sceKernelIsAccessibleRange(1, address, size) == 0;
 }
 
 unsigned int ngsGetSystemHandle(NgsSynSystem *system)

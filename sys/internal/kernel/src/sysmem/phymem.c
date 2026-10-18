@@ -222,7 +222,7 @@ int SceSysmemForKernel_021053DD(SceUInt32 visibility, SceUID *vector, SceSize ve
 {
 	if (count == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
-	return SceSysmemForKernel_52137FA3(s_phyMemPartClass, visibility, vector, vectorSize >> 2,
+	return sceGUIDGetUIDVectorByClass(s_phyMemPartClass, visibility, vector, vectorSize >> 2,
 					   count);
 }
 
@@ -260,7 +260,7 @@ int sceKernelGetPhyMemInfo(SceUInt32 type, SceKernelPhyMemRangeInfo *info)
 	return 0;
 }
 
-int SceSysmemForDriver_8D160E65(const void *va, uintptr_t *pa);
+int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 
 /* phymem_low.c */
 typedef struct PhyMemLow PhyMemLow;
@@ -419,7 +419,7 @@ int PhyPageTableMgrCheckPhyPage(PhyPageTableMgr *mgr, const void *va, int mode)
 	uintptr_t address = (uintptr_t)va, pa;
 	int ret;
 
-	ret = SceSysmemForDriver_8D160E65(va, &pa);
+	ret = sceKernelVAtoPA(va, &pa);
 	if (ret >= 0) {
 		table = mgr->tables[0];
 		if (address >= (uintptr_t)table->entries &&
@@ -2087,7 +2087,7 @@ failed:
 }
 
 /* name unknown: a partition anywhere */
-int SceSysmemForKernel_A2DFA383(const char *name, SceUInt32 type, SceSize psize, PhyMemPart **out)
+int sceKernelCreatePhyMemPart(const char *name, SceUInt32 type, SceSize psize, PhyMemPart **out)
 {
 	return CreatePhyMemPartByPbase(name, type, 0, psize, out);
 }
@@ -2375,14 +2375,14 @@ int sceKernelGetPhyMemPartInfoByID(SceUID uid, SceKernelPhyMemPartInfoForDebugge
 		SCE_DBG_ASSERT_FAIL(5215);
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT_SIZE;
 	}
-	ret = SceSysmemForDriver_0FC24464(uid, (SceObjectBase **)&part);
+	ret = sceGUIDGetObject(uid, (SceObjectBase **)&part);
 	if (ret >= 0)
 		ret = PhyMemPartGetInfoForDebugger(part, info);
 	return ret;
 }
 
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
-int SceSysmemForKernel_BF275C5A(SceUID guid, SceClass *cls, const char *name,
+int sceGUIDSet(SceUID guid, SceClass *cls, const char *name,
 				SceObjectBase *object);
 int PhyMemLowStaticInit(void);
 
@@ -2433,16 +2433,16 @@ int PhyMemModuleStartPhase2(const UIDManager *manager)
 	int ret;
 
 	s_phyMemPartClass = &s_phyMemPartClassBody;
-	ret = SceSysmemForDriver_61317102(&s_phyMemPartClassBody, "SceUIDPhyMemPartClass",
+	ret = sceUIDClassInitClass(&s_phyMemPartClassBody, "SceUIDPhyMemPartClass",
 				    SceSysmemForDriver_85336A1C(), sizeof(PhyMemPart), NULL, NULL);
 	if (ret < 0)
 		SCE_PANIC(5406);
-	ret = SceSysmemForKernel_BF275C5A(SCE_KERNEL_PHYMEMPART_ID, s_phyMemPartClass, NULL,
+	ret = sceGUIDSet(SCE_KERNEL_PHYMEMPART_ID, s_phyMemPartClass, NULL,
 					  &s_phyPartKernel->base);
 	if (ret < 0)
 		return ret;
 	if (SceDipswForDriver_A98FC2FD(0xd2)) {
-		ret = SceSysmemForKernel_BF275C5A(SCE_KERNEL_PHYMEMPART_TOOL_ID, s_phyMemPartClass, NULL,
+		ret = sceGUIDSet(SCE_KERNEL_PHYMEMPART_TOOL_ID, s_phyMemPartClass, NULL,
 						  &s_phyPartTool->base);
 		if (ret < 0)
 			return ret;

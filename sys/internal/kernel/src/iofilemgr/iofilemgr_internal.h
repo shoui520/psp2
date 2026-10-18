@@ -818,8 +818,8 @@ int vfs_buf_io_buff_contains(struct BuffCache *bc, SceOff pos, SceSize size);
 
 /* SceSysmem / SceProcessmgr heaps a buffer cache is allocated from */
 /* vitasdk: ksceKernelAllocHeapMemory2 */
-void *SceSysrootForKernel_D351EBC8(SceUID pid, SceSize size, void *opt);
-int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees SceSysrootForKernel_D351EBC8's */
+void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
+int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees sceKernelSysrootAllocRemoteProcessHeap's */
 
 struct VfsBuffIoOps;
 struct BuffLine;

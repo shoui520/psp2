@@ -44,7 +44,7 @@ IoRequestQueue *sceIoRequestQueueCreateIoRequestQueue(IoScheduler *sched, int pr
 {
 	IoRequestQueue *queue;
 
-	queue = SceSysmemForDriver_7B4CB60A(g_ioSchedHeap, sizeof(*queue));
+	queue = sceKernelAllocHeapMemory(g_ioSchedHeap, sizeof(*queue));
 	if (queue != NULL) {
 		queue->sched = sched;
 		queue->priority = priority;

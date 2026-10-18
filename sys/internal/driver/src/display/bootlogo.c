@@ -36,12 +36,12 @@ int showBootLogo(SceUInt32 head) /* name unknown */
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = COMPAT_SRAM_BASE;
-	block = SceSysmemForDriver_C94850C9("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW,
+	block = sceKernelAllocMemBlockForKernel("SceDisplay", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TMP_RW,
 				       COMPAT_SRAM_SIZE, &opt);
 	if (block < 0)
 		return block;
 	bootLogoBlock = block;
-	SceSysmemForDriver_A841EDDA(block, &base);
+	sceKernelGetMemBlockBase(block, &base);
 	if (SceKernelUtilsForDriver_367EE3DF(base, 960 * 544 * 4, bootLogo, NULL) < 0) {
 		SceSysmemForDriver_009E1C61(block);
 		return -1;

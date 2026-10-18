@@ -20,7 +20,7 @@ int regMemInit(int unused, SceSize size)
 	opt.size = sizeof(opt);
 	opt.uselock = 1;
 	g_regHeap = -1;
-	heap = SceSysmemForDriver_9328E0E8("SceRegMemBlock", size, &opt);
+	heap = sceKernelCreateHeap("SceRegMemBlock", size, &opt);
 	if (heap > 0)
 		g_regHeap = heap;
 
@@ -29,7 +29,7 @@ int regMemInit(int unused, SceSize size)
 
 void *regMemAlloc(SceSize size)
 {
-	return SceSysmemForDriver_7B4CB60A(g_regHeap, size);
+	return sceKernelAllocHeapMemory(g_regHeap, size);
 }
 
 void regMemFree(void *ptr)

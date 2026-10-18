@@ -71,9 +71,9 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_DB3EC244
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
+	sceKernelStrncpyFromUser
 	SceCpuForDriver_CDA96E81
 	SceDebugForDriver_02B04343
 	memset
@@ -102,7 +102,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCond
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
-	SceProcessmgrForDriver_3801D7D6
+	sceKernelRegisterKPLS
 	sceKernelAllocOwnProcessHeap
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_AF80F39C

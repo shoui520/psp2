@@ -112,7 +112,7 @@ void startFastMutex(void)
 	struct ThreadmgrWaitableClass *cls;
 	int ret;
 
-	cls = SceSysmemForDriver_7B4CB60A(manager->heapId, 0x38);
+	cls = sceKernelAllocHeapMemory(manager->heapId, 0x38);
 	if (cls == NULL)
 		SCE_PANIC(538);
 	ret = uidExtendedClassInit(cls, "SceUIDFastMutexClass",
@@ -307,7 +307,7 @@ int sceKernelInitializeFastMutex(struct ThreadmgrFastMutex *mutex, const char *n
 			goto resume;
 		}
 	}
-	ret = SceSysmemForDriver_56A13E90(s_threadmgrRuntime.manager->fastMutexClass, name,
+	ret = sceGUIDKernelCreate(s_threadmgrRuntime.manager->fastMutexClass, name,
 				   (SceObjectBase **)&uidMutex);
 	if (ret < 0)
 		goto resume;
@@ -384,7 +384,7 @@ restore:
  * the UID object's queue until it is ours.
  */
 #define FAST_MUTEX_SLEEP(panicLine, assertLine) do {					\
-	if (SceSysmemForDriver_00ED6C14(mutex->uid,					\
+	if (sceGUIDReferObjectWithClass(mutex->uid,					\
 			s_threadmgrRuntime.manager->fastMutexClass, NULL) < 0)	\
 		SCE_PANIC_FUNC(panicLine, "lockFastMutex");				\
 	SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));					\
@@ -739,7 +739,7 @@ int SceThreadmgrForDriver_AF302193(SceUID uid, ThreadmgrFastMutexInfo *info)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	} else if (info->size > sizeof(local)) {
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
-	} else if (SceSysmemForDriver_00ED6C14(uid,
+	} else if (sceGUIDReferObjectWithClass(uid,
 			s_threadmgrRuntime.manager->fastMutexClass,
 			(SceObjectBase **)&uidMutex) < 0) {
 		ret = SCE_KERNEL_ERROR_UNKNOWN_FAST_MUTEX_ID;
@@ -777,14 +777,14 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 		goto restore;
 	}
-	ret = SceSysmemForKernel_52137FA3(s_threadmgrRuntime.manager->fastMutexClass,
+	ret = sceGUIDGetUIDVectorByClass(s_threadmgrRuntime.manager->fastMutexClass,
 					  level, NULL, 0, NULL);
 	if (ret <= 0)
 		goto restore;
 	num = ret;
-	while ((vector = SceSysmemForDriver_7B4CB60A(s_threadmgrRuntime.manager->heapId,
+	while ((vector = sceKernelAllocHeapMemory(s_threadmgrRuntime.manager->heapId,
 						   num * sizeof(SceUID))) != NULL) {
-		total = SceSysmemForKernel_52137FA3(
+		total = sceGUIDGetUIDVectorByClass(
 			s_threadmgrRuntime.manager->fastMutexClass, level, vector, num,
 			&got);
 		if (total <= (int)got)
@@ -799,7 +799,7 @@ int SceThreadmgrForDriver_6D4C1EB7(int level, ThreadmgrFastMutexInfo *infos, Sce
 	ret = 0;
 	got = 0;
 	for (i = 0; i < total; i++) {
-		if (SceSysmemForDriver_00ED6C14(vector[i],
+		if (sceGUIDReferObjectWithClass(vector[i],
 				s_threadmgrRuntime.manager->fastMutexClass,
 				(SceObjectBase **)&uidMutex) < 0)
 			continue;

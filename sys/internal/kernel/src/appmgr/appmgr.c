@@ -160,7 +160,7 @@ int sceAppMgrInit(void)
 	heapOpt.maxSize = 0x80000;
 	result = appmgrInitializeShellEventQueue();
 	INIT_RESULT(result, 170);
-	uid = SceSysmemForDriver_9328E0E8("SceAppMgrApp", 4096, &heapOpt);
+	uid = sceKernelCreateHeap("SceAppMgrApp", 4096, &heapOpt);
 	INIT_ASSERT(uid >= 0, 175, coreHeapPanicInfo);
 	g_appmgrCoreHeap = uid;
 	uid = sceKernelCreateMutex("SceAppMgrApp", 0, 0, NULL);
@@ -173,13 +173,13 @@ int sceAppMgrInit(void)
 	if (result < 0)
 		appmgrInitializationPanic();
 #endif
-	uid = SceSysmemForDriver_9328E0E8("SceAppMgrMount", 0x10000, &heapOpt);
+	uid = sceKernelCreateHeap("SceAppMgrMount", 0x10000, &heapOpt);
 	INIT_ASSERT(uid >= 0, 189, mountHeapPanicInfo);
 	g_appmgrMountHeap = uid;
 	uid = sceKernelCreateMutex("SceAppMgrMount", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 193, mountMutexPanicInfo);
 	g_appmgrMountMutex = uid;
-	uid = SceSysmemForDriver_9328E0E8("SceAppMgrSaveData", 40960, &heapOpt);
+	uid = sceKernelCreateHeap("SceAppMgrSaveData", 40960, &heapOpt);
 	INIT_ASSERT(uid >= 0, 200, saveDataHeapPanicInfo);
 	g_appmgrSaveDataHeap = uid;
 	uid = sceKernelCreateMutex("SceAppMgrSaveData", 0, 0, NULL);
@@ -188,13 +188,13 @@ int sceAppMgrInit(void)
 	uid = sceKernelCreateMutex("SceAppMgrPhoto", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 214, photoMutexPanicInfo);
 	g_appmgrPhotoMutex = uid;
-	result = SceProcessmgrForDriver_3801D7D6("SceAppMgrSafeMemory", 0x10000);
+	result = sceKernelRegisterKPLS("SceAppMgrSafeMemory", 0x10000);
 	INIT_ASSERT(result >= 0, 224, safeMemoryStoragePanicInfo);
 	g_appmgrSafeMemoryKey = result;
 	uid = sceKernelCreateMutex("SceAppMgrSafeMemory", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 229, safeMemoryMutexPanicInfo);
 	g_appmgrSafeMemoryMutex = uid;
-	result = SceProcessmgrForDriver_3801D7D6("SceAppMgrAppInfoCache", 1024);
+	result = sceKernelRegisterKPLS("SceAppMgrAppInfoCache", 1024);
 	INIT_ASSERT(result >= 0, 238, appInfoCacheStoragePanicInfo);
 	g_appmgrAppInfoCacheKey = result;
 	for (app = g_appmgrAppStates; app != g_appmgrAppStates + 20; ++app) {

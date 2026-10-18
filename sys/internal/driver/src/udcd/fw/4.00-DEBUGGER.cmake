@@ -115,12 +115,12 @@ set(MODULE_IMPORT_FUNCS
 	ScePervasiveForDriver_BB67EF58
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
-	SceSysmemForDriver_DB3EC244
+	sceKernelCopyToUser
+	sceKernelVAtoPA
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
+	sceKernelStrncpyFromUser
 	sceKernelVARangeToPAVector
 	SceCpuForDriver_103872A5
 	sceKernelSpinlockLowUnlockCpuResumeIntr

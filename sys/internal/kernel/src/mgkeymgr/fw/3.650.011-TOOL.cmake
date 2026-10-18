@@ -33,8 +33,8 @@ set(MODULE_IMPORT_NIDS
 	0x9AD8E213:F:0x4322F188
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSblSmCommForKernel_0631F8ED
 	SceSblSmCommForKernel_7863A0CC
 	SceSblSmCommForKernel_DB9FC204

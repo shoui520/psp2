@@ -155,10 +155,10 @@ int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 		options.pid = pid;
 		type = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_UMAIN_NC_RW;
 	}
-	uid = SceSysmemForDriver_C94850C9(name, type, size, &options);
+	uid = sceKernelAllocMemBlockForKernel(name, type, size, &options);
 	if (uid < 0)
 		return uid;
-	ret = SceSysmemForDriver_A841EDDA(uid, &base);
+	ret = sceKernelGetMemBlockBase(uid, &base);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 231,
 			"%s: Failed to get address for memblock %08x with error %08x.\n",
@@ -212,7 +212,7 @@ int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 	revision = ScePervasiveForDriver_714EEFB7();
 	if (!(revision & 0x1ff00) && (unsigned char)revision <= 0x32)
 		return 0;
-	ret = SceSysmemForDriver_8D160E65((void *)address, &previous);
+	ret = sceKernelVAtoPA((void *)address, &previous);
 	if (ret < 0)
 		return ret;
 	if (!(previous & 0x3fffff)) {
@@ -233,7 +233,7 @@ int sceGpuMmuSelectPageTableSize(unsigned address, unsigned *directoryFlags,
 	}
 	for (cursor = address + 0x1000; cursor < address + 0x400000;
 	     cursor += 0x1000) {
-		ret = SceSysmemForDriver_8D160E65((void *)cursor, &physical);
+		ret = sceKernelVAtoPA((void *)cursor, &physical);
 		if (ret < 0)
 			return ret;
 		if (physical != previous + 0x1000) {
@@ -361,7 +361,7 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 			}
 			table->pool = &context->pageTablePool;
 			table->entries = (unsigned *)allocation.gpuAddress;
-			ret = SceSysmemForDriver_8D160E65(table->entries,
+			ret = sceKernelVAtoPA(table->entries,
 					&table->physicalAddress);
 			if (ret < 0) {
 #if FW_DEBUG
@@ -404,7 +404,7 @@ int sceGpuMmuMapMemory(GpuMmuContext *context, unsigned gpuAddress,
 			if (permissions & 0x80000000) {
 				physical = backingAddress;
 			} else {
-				ret = SceSysmemForDriver_8D160E65((void *)backingAddress, &physical);
+				ret = sceKernelVAtoPA((void *)backingAddress, &physical);
 				if (ret < 0) {
 					unsigned rollback;
 

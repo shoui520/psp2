@@ -323,13 +323,13 @@ int cameraUnlockFrameBufferRanges(int devnum, CameraProcess *process,
 		result = 0;
 		if (pvIBase != NULL && sizeIBase != 0) {
 			if (explicitProcess)
-				result = SceSysmemForDriver_A8525B06(processId, pvIBase, sizeIBase);
+				result = sceKernelUnlockRangeProc(processId, pvIBase, sizeIBase);
 			else
 				result = SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
 		}
 		if (pvUBase != NULL && sizeUBase != 0) {
 			if (explicitProcess)
-				result = SceSysmemForDriver_A8525B06(processId, pvUBase, sizeUBase);
+				result = sceKernelUnlockRangeProc(processId, pvUBase, sizeUBase);
 			else
 				result = SceSysmemForDriver_22CBE925(0x30, pvUBase, sizeUBase);
 		}
@@ -347,7 +347,7 @@ int cameraUnlockFrameBufferRanges(int devnum, CameraProcess *process,
 			break;
 	unlock:
 		if (explicitProcess)
-			result = SceSysmemForDriver_A8525B06(processId, pvIBase, sizeIBase);
+			result = sceKernelUnlockRangeProc(processId, pvIBase, sizeIBase);
 		else
 			result = SceSysmemForDriver_22CBE925(0x30, pvIBase, sizeIBase);
 		if (result != 0)
@@ -1488,10 +1488,10 @@ int cameraDriverThread(SceSize args, void *argp)
 	frameOption.size = sizeof(frameOption);
 	frameOption.alignment = 4096;
 	frameOption.attr = 0x200000;
-	cameraFrameBufferMemBlockId = SceSysmemForDriver_C94850C9("SceCamera", 0x10208006,
+	cameraFrameBufferMemBlockId = sceKernelAllocMemBlockForKernel("SceCamera", 0x10208006,
 							   3686400, &frameOption);
 	if (cameraFrameBufferMemBlockId < 0 ||
-	    SceSysmemForDriver_A841EDDA(cameraFrameBufferMemBlockId,
+	    sceKernelGetMemBlockBase(cameraFrameBufferMemBlockId,
 				     &cameraAlternateFrameBufferBase[0][0]) < 0)
 		goto registerCallback;
 	cameraAlternateFrameBufferBase[0][1] = (char *)cameraAlternateFrameBufferBase[0][0] + 614400;
@@ -1503,10 +1503,10 @@ int cameraDriverThread(SceSize args, void *argp)
 	sramOption.size = sizeof(sramOption);
 	sramOption.attr = 2;
 	sramOption.paddr = COMPAT_SRAM_BASE;
-	cameraSramMemBlockId = SceSysmemForDriver_C94850C9("SceCameraSRAM", 0x20108006,
+	cameraSramMemBlockId = sceKernelAllocMemBlockForKernel("SceCameraSRAM", 0x20108006,
 							 1843200, &sramOption);
 	if (cameraSramMemBlockId < 0 ||
-	    SceSysmemForDriver_A841EDDA(cameraSramMemBlockId, &cameraSramFrameBufferBase[0][0]) < 0)
+	    sceKernelGetMemBlockBase(cameraSramMemBlockId, &cameraSramFrameBufferBase[0][0]) < 0)
 		goto registerCallback;
 	cameraSramFrameBufferBase[0][1] = (char *)cameraSramFrameBufferBase[0][0] + 614400;
 	cameraSramFrameBufferBase[0][2] = (char *)cameraSramFrameBufferBase[0][0] + 1228800;
@@ -2690,7 +2690,7 @@ transferFrame:
 	if (device->config.wFormat < 3 || device->config.wFormat > 5) {
 		if (device->config.sizeIBase && device->cachedFrameBuffer.pvIBase) {
 			if (device->isUserThread)
-				result = SceSysmemForDriver_6D88EF8A(device->cachedFrameBuffer.pvIBase,
+				result = sceKernelCopyToUser(device->cachedFrameBuffer.pvIBase,
 						frame->pvIBase, device->config.sizeIBase);
 			else
 				memcpy(device->cachedFrameBuffer.pvIBase, frame->pvIBase,
@@ -2698,7 +2698,7 @@ transferFrame:
 		}
 		if (device->config.sizeUBase && device->cachedFrameBuffer.pvUBase) {
 			if (device->isUserThread)
-				result = SceSysmemForDriver_6D88EF8A(device->cachedFrameBuffer.pvUBase,
+				result = sceKernelCopyToUser(device->cachedFrameBuffer.pvUBase,
 						frame->pvUBase, device->config.sizeUBase);
 			else
 				memcpy(device->cachedFrameBuffer.pvUBase, frame->pvUBase,
@@ -2706,7 +2706,7 @@ transferFrame:
 		}
 		if (device->config.sizeVBase && device->cachedFrameBuffer.pvVBase) {
 			if (device->isUserThread)
-				result = SceSysmemForDriver_6D88EF8A(device->cachedFrameBuffer.pvVBase,
+				result = sceKernelCopyToUser(device->cachedFrameBuffer.pvVBase,
 						frame->pvVBase, device->config.sizeVBase);
 			else
 				memcpy(device->cachedFrameBuffer.pvVBase, frame->pvVBase,

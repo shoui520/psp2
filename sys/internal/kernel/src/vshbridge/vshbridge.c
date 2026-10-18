@@ -145,7 +145,7 @@ SceUInt32 vshKernelGetCompiledSdkVersionByPid(SceUID pid, SceUInt32 *version)
 	} else {
 		ret = SceProcessmgrForDriver_D141C076(pid, &v);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(version, &v, sizeof(v));
+			ret = sceKernelCopyToUser(version, &v, sizeof(v));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -472,7 +472,7 @@ SceUInt32 vshSysconGetLogInfo(void *info)
 	} else {
 		ret = SceSysconForDriver_701535FC(buf);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(info, buf, sizeof(buf));
+			ret = sceKernelCopyToUser(info, buf, sizeof(buf));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -678,7 +678,7 @@ int vshSysconLoadConfigstorageScript(int a, const void *script, SceSize size)
 	if (size > sizeof(buf)) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
-		ret = SceSysmemForDriver_BC996A7A(buf, script, size);
+		ret = sceKernelCopyFromUser(buf, script, size);
 		if (ret >= 0)
 			ret = SceSysconForDriver_89C5CFD6(a, buf, size);
 	}
@@ -695,7 +695,7 @@ int vshSysconVerifyConfigstorageScript(int a, const void *script, SceSize size)
 	if (size > sizeof(buf)) {
 		ret = SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 	} else {
-		ret = SceSysmemForDriver_BC996A7A(buf, script, size);
+		ret = sceKernelCopyFromUser(buf, script, size);
 		if (ret >= 0)
 			ret = SceSysconForDriver_CC6F90A8(a, buf, size);
 	}
@@ -713,10 +713,10 @@ SceUInt32 vshSysconGetBatteryCalibData(int *a, int *b, int *c, int *d)
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
 		ret = SceSysconForDriver_9ADC9936(&va, &vb, &vc, &vd);
-		if (ret >= 0 && (ret = SceSysmemForDriver_6D88EF8A(a, &va, 4)) >= 0 &&
-		    (ret = SceSysmemForDriver_6D88EF8A(b, &vb, 4)) >= 0 &&
-		    (ret = SceSysmemForDriver_6D88EF8A(c, &vc, 4)) >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(d, &vd, 4);
+		if (ret >= 0 && (ret = sceKernelCopyToUser(a, &va, 4)) >= 0 &&
+		    (ret = sceKernelCopyToUser(b, &vb, 4)) >= 0 &&
+		    (ret = sceKernelCopyToUser(c, &vc, 4)) >= 0)
+			ret = sceKernelCopyToUser(d, &vd, 4);
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -765,7 +765,7 @@ SceUInt32 vshIdStorageReadLeaf(SceSize leaf, void *buf)
 	} else {
 		ret = SceIdStorageForDriver_EB00C509(leaf, data);
 		if (ret == 0)
-			ret = SceSysmemForDriver_6D88EF8A(buf, data, sizeof(data));
+			ret = sceKernelCopyToUser(buf, data, sizeof(data));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -780,7 +780,7 @@ SceUInt32 vshIdStorageWriteLeaf(SceSize leaf, const void *buf)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ret = SceSysmemForDriver_BC996A7A(data, buf, sizeof(data));
+		ret = sceKernelCopyFromUser(data, buf, sizeof(data));
 		if (ret >= 0)
 			ret = SceIdStorageForDriver_1FA4D135(leaf, data);
 	}
@@ -803,7 +803,7 @@ SceUInt32 vshIdStorageCreateAtomicLeaves(const SceUInt16 *leaves, int num)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((SceUInt32)(num - 1) < 0x20) {
-		ret = SceSysmemForDriver_BC996A7A(buf, leaves, num * 2);
+		ret = sceKernelCopyFromUser(buf, leaves, num * 2);
 		if (ret >= 0)
 			ret = SceIdStorageForDriver_99ACCB71(buf, num);
 	} else {
@@ -834,7 +834,7 @@ SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
 		ret = sceIdStorageLookup(key, offset, data, len);
 		if (ret == 0)
-			ret = SceSysmemForDriver_6D88EF8A(buf, data, len);
+			ret = sceKernelCopyToUser(buf, data, len);
 	} else {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	}
@@ -851,7 +851,7 @@ SceUInt32 vshIdStorageUpdate(SceSize key, SceSize offset, const void *buf, SceSi
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret = SCE_ERROR_ERRNO_ENOSYS;
 	} else if ((len <= 0x200 ? offset : len) < 0x200) {
-		ret = SceSysmemForDriver_BC996A7A(data, buf, len);
+		ret = sceKernelCopyFromUser(data, buf, len);
 		if (ret >= 0)
 			ret = SceIdStorageForDriver_683AAC10(key, offset, data, len);
 	} else {
@@ -1291,7 +1291,7 @@ SceUInt32 vshMsifGetMsInfo(void *info)
 	} else {
 		ret = SceMsifForDriver_D0307849(&buf);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(info, &buf, sizeof(buf));
+			ret = sceKernelCopyToUser(info, &buf, sizeof(buf));
 	}
 	sceSyscallLeave(t);
 	return ret;
@@ -1329,7 +1329,7 @@ SceUInt32 vshSdGetCardInfo(void *info)
 	for (i = 0; i < 4; i++)
 		kinfo.ssr[i] = ctx->info.ssr[i];
 	kinfo.scr = ctx->info.scr;
-	ret = SceSysmemForDriver_6D88EF8A(info, &kinfo, sizeof(kinfo));
+	ret = sceKernelCopyToUser(info, &kinfo, sizeof(kinfo));
 out:
 	sceSyscallLeave(t);
 	return ret;
@@ -1467,7 +1467,7 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 			if (dataSize == 0 || dataSize > size)
 				ret = SCE_SBL_ERROR_SPFSO_TOO_LARGE;
 			else
-				ret = SceSysmemForDriver_6D88EF8A(buf, data, dataSize);
+				ret = sceKernelCopyToUser(buf, data, dataSize);
 		}
 		ret2 = SceSblPostSsMgrForDriver_AD3B0078(&ctx);
 		if (ret2 >= 0)

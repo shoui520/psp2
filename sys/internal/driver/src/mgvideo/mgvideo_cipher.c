@@ -20,7 +20,7 @@ int encryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 
 	while (remaining != 0) {
 		chunk = remaining >= 512 ? 512 : remaining;
-		SceSysmemForDriver_BC996A7A(workspace, source, chunk);
+		sceKernelCopyFromUser(workspace, source, chunk);
 		result = SceMagicGateForDriver_F2502A3B(workspace, workspace,
 						    chunk, slot, iv);
 		if (result < 0) {
@@ -31,7 +31,7 @@ int encryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 		*iv = workspace[((chunk & ~15U) - 16) / 16];
 		output = destination;
 		destination += chunk;
-		SceSysmemForDriver_6D88EF8A(output, workspace, chunk);
+		sceKernelCopyToUser(output, workspace, chunk);
 		remaining -= chunk;
 	}
 	return total;
@@ -50,7 +50,7 @@ int decryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 
 	while (remaining != 0) {
 		chunk = remaining > 512 ? 512 : remaining;
-		SceSysmemForDriver_BC996A7A(blocks, source, chunk);
+		sceKernelCopyFromUser(blocks, source, chunk);
 		workspace[0] = workspace[chunk / 16];
 		result = SceMagicGateForDriver_2B026FFF(blocks, blocks,
 						    chunk, slot, iv);
@@ -62,7 +62,7 @@ int decryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 		*iv = workspace[0];
 		output = destination;
 		destination += chunk;
-		SceSysmemForDriver_6D88EF8A(output, blocks, chunk);
+		sceKernelCopyToUser(output, blocks, chunk);
 		remaining -= chunk;
 	}
 	return chunk ? ((uint8_t *)blocks)[chunk - 1] : 0;
@@ -81,13 +81,13 @@ int encryptPaddedUserVideo(void *output, const void *input, unsigned int size,
 	remaining = size - result;
 	complete = result;
 	if (remaining != 0)
-		SceSysmemForDriver_BC996A7A(finalBlock, (const uint8_t *)input + complete,
+		sceKernelCopyFromUser(finalBlock, (const uint8_t *)input + complete,
 				       remaining);
 	memset(finalBlock + remaining, 16 - remaining, 16 - remaining);
 	result = SceMagicGateForDriver_F2502A3B(finalBlock, finalBlock, 16,
 					    slot, iv);
 	if (result >= 0) {
-		SceSysmemForDriver_6D88EF8A((uint8_t *)output + complete, finalBlock, 16);
+		sceKernelCopyToUser((uint8_t *)output + complete, finalBlock, 16);
 		return complete + 16;
 	}
 	TRANSLATE_MAGICGATE_RESULT(result);
@@ -106,7 +106,7 @@ int verifyUserVideoRecord(MgVideoContext *context, int index,
 		record = sceKernelAllocOwnProcessHeap(input->size, 0);
 		if (record == 0)
 			return (int)0x8050c004;
-		SceSysmemForDriver_BC996A7A(record, input->data, input->size);
+		sceKernelCopyFromUser(record, input->data, input->size);
 		result = SceMagicGateForDriver_0B01FE3F(&context->deviceIdentity,
 						     record, input->size, slot);
 		if (result >= 0) {
@@ -140,7 +140,7 @@ int installUserVideoRecord(MgVideoContext *context, const MgVideoUserBuffer *inp
 		SceMagicGateForDriver_144BFA76(slot);
 		return (int)0x8050c004;
 	}
-	SceSysmemForDriver_BC996A7A(record, input->data, input->size);
+	sceKernelCopyFromUser(record, input->data, input->size);
 	result = context->callbacks.installRecord(slot, record, input->size);
 	if (result >= 0) {
 		SceProcessmgrForDriver_FC2A424E(record);
@@ -258,7 +258,7 @@ int updateUserVideoRecord(void *argument)
 	int changed, previousDifference, block, localBlock, position, result;
 
 	for (;;) {
-		SceSysmemForDriver_BC996A7A(workspace, userBlocks + firstBlock, chunk);
+		sceKernelCopyFromUser(workspace, userBlocks + firstBlock, chunk);
 		previousDifference = timingsafe_memcmp(&originalTag, recordTag, 8);
 		result = SceMagicGateForDriver_CFD943E0(&originalTag, workspace,
 						      &originalTag, chunk);
@@ -325,7 +325,7 @@ int updateUserVideoRecord(void *argument)
 		position = blockCount;
 #define COPY_RECORD_BLOCK() do { \
 	block = blockNumbers[--position] - 1; \
-	SceSysmemForDriver_6D88EF8A(userBlocks + block, replacement, 16); \
+	sceKernelCopyToUser(userBlocks + block, replacement, 16); \
 } while (0)
 		if ((position & 3) != 0 && position > 0) {
 			int prefix = position & 3;
@@ -373,8 +373,8 @@ int openUserVideoKeyring(void *argument)
 
 	if ((context->validRecordMask & (1U << request->index)) == 0)
 		return (int)0x8050c013;
-	SceSysmemForDriver_BC996A7A(&workspace.selectedBlock, &record->record.blocks[selected], 16);
-	SceSysmemForDriver_BC996A7A(&workspace.headerBlock, &record->record.header.authenticatedData.fileInfo, 16);
+	sceKernelCopyFromUser(&workspace.selectedBlock, &record->record.blocks[selected], 16);
+	sceKernelCopyFromUser(&workspace.headerBlock, &record->record.header.authenticatedData.fileInfo, 16);
 	if (context->contentKeySlot < 0)
 		result = SceMagicGateForDriver_CFD943E0(&tag, &workspace.headerBlock, &tag, 16);
 	else
@@ -386,7 +386,7 @@ int openUserVideoKeyring(void *argument)
 	if (copy == 0)
 		return (int)0x8050c004;
 	size = 16 * selected;
-	SceSysmemForDriver_BC996A7A(copy, record->record.blocks, size);
+	sceKernelCopyFromUser(copy, record->record.blocks, size);
 	if (context->contentKeySlot < 0)
 		result = SceMagicGateForDriver_CFD943E0(&tag, copy, &tag, size);
 	else
@@ -403,7 +403,7 @@ int openUserVideoKeyring(void *argument)
 		goto recordError;
 	size = 16 * (998 - selected);
 	if (size != 0) {
-		SceSysmemForDriver_BC996A7A(copy, &record->record.blocks[selected + 1], size);
+		sceKernelCopyFromUser(copy, &record->record.blocks[selected + 1], size);
 		if (context->contentKeySlot < 0)
 			result = SceMagicGateForDriver_CFD943E0(&tag, copy, &tag, size);
 		else
@@ -419,7 +419,7 @@ int openUserVideoKeyring(void *argument)
 		return result;
 	if (memcmp(&workspace.selectedBlock, &zeroVideoBlock, 16) == 0)
 		return (int)0x8050c048;
-	SceSysmemForDriver_BC996A7A(&workspace.envelope, keyring->data, sizeof(workspace.envelope));
+	sceKernelCopyFromUser(&workspace.envelope, keyring->data, sizeof(workspace.envelope));
 	if (memcmp(workspace.envelope.header.label, keyringLabel, 12) != 0)
 		return (int)0x8050c003;
 	if ((workspace.envelope.header.format[0] << 8 | workspace.envelope.header.format[1]) != 3)
@@ -453,7 +453,7 @@ int openUserVideoKeyring(void *argument)
 		result = (int)0x8050c003;
 		goto releaseSlot;
 	}
-	SceSysmemForDriver_BC996A7A(workspace.payload, (const uint8_t *)keyring->data + 16, size);
+	sceKernelCopyFromUser(workspace.payload, (const uint8_t *)keyring->data + 16, size);
 	result = SceMagicGateForDriver_05912BF5(&workspace.calculatedTag, workspace.payload, 0, size, slot);
 	if (result < 0)
 		goto slotError;
@@ -601,7 +601,7 @@ int authenticateUserVideoRecord(void *argument)
 	unsigned int chunk = 256;
 	int slot, result;
 
-	SceSysmemForDriver_BC996A7A(&workspace.header, &request->record->header, 48);
+	sceKernelCopyFromUser(&workspace.header, &request->record->header, 48);
 	slot = unwrapVideoRecordHeader(&context->callbacks.unwrapKey, recordKey,
 				       recordTag, headerTag, &workspace.header,
 				       sourceSlot, context->contentKeySlot);
@@ -616,7 +616,7 @@ int authenticateUserVideoRecord(void *argument)
 		goto release;
 	}
 	for (;;) {
-		SceSysmemForDriver_BC996A7A(workspace.blocks, source, chunk);
+		sceKernelCopyFromUser(workspace.blocks, source, chunk);
 		result = SceMagicGateForDriver_C9658A76(recordKey, workspace.blocks,
 						      recordKey, chunk, slot);
 		if (result < 0)
@@ -662,20 +662,20 @@ int replaceUserVideoRecordBlock(MgVideoContext *context, int index,
 
 	if (memcmp(context->records.contentKeys[index], &zeroVideoBlock, 16) == 0) {
 		memset(&workspace.initialHeader, 0, sizeof(workspace.initialHeader));
-		SceSysmemForDriver_6D88EF8A(record->record.blocks, &workspace.initialHeader, 64);
+		sceKernelCopyToUser(record->record.blocks, &workspace.initialHeader, 64);
 		blocks = &record->record.blocks[4];
 		do {
-			SceSysmemForDriver_6D88EF8A(blocks,
+			sceKernelCopyToUser(blocks,
 					    &workspace.initialHeader, 64);
-			SceSysmemForDriver_6D88EF8A(blocks + 4,
+			sceKernelCopyToUser(blocks + 4,
 					    &workspace.initialHeader, 64);
-			SceSysmemForDriver_6D88EF8A(blocks + 8,
+			sceKernelCopyToUser(blocks + 8,
 					    &workspace.initialHeader, 64);
-			SceSysmemForDriver_6D88EF8A(blocks + 12,
+			sceKernelCopyToUser(blocks + 12,
 					    &workspace.initialHeader, 64);
 			blocks += 16;
 		} while (blocks != &record->record.blocks[996]);
-		SceSysmemForDriver_6D88EF8A(blocks,
+		sceKernelCopyToUser(blocks,
 				    &workspace.initialHeader, 48);
 		memcpy(&workspace.initialHeader.prefix.magic, videoRecordMagic, 4);
 		result = SceMagicGateForDriver_E0888D78(
@@ -696,13 +696,13 @@ int replaceUserVideoRecordBlock(MgVideoContext *context, int index,
 					&workspace.initialHeader.record.authenticatedData.fileInfo);
 		if (result < 0)
 			goto error;
-		SceSysmemForDriver_6D88EF8A(record, &workspace.initialHeader, 64);
+		sceKernelCopyToUser(record, &workspace.initialHeader, 64);
 	}
 	installed = installUserVideoRecord(context, input);
 	if (installed < 0)
 		return installed;
-	SceSysmemForDriver_BC996A7A(&workspace.header, &record->record.header, 48);
-	SceSysmemForDriver_BC996A7A(&workspace.header.authenticatedData.sequence, input->data, 4);
+	sceKernelCopyFromUser(&workspace.header, &record->record.header, 48);
+	sceKernelCopyFromUser(&workspace.header.authenticatedData.sequence, input->data, 4);
 	slot = unwrapVideoRecordHeader(&context->callbacks.unwrapKey, &workspace.recordKey,
 				       &recordTag, &headerTag, &workspace.header,
 				       installed, context->contentKeySlot);
@@ -736,12 +736,12 @@ int replaceUserVideoRecordBlock(MgVideoContext *context, int index,
 	result = SceThreadmgrForDriver_E54FD746(1280, updateUserVideoRecord, &update);
 	if (result >= 0) {
 		result = 0;
-		SceSysmemForDriver_6D88EF8A(&record->record.header.authenticatedData.sequence,
+		sceKernelCopyToUser(&record->record.header.authenticatedData.sequence,
 				    &workspace.header.authenticatedData.sequence, 4);
 		memcpy(context->records.contentKeys[index], &workspace.recordKey, 16);
 		context->records.recordHeaderTags[index] = headerTag;
 		context->records.recordTags[index] = recordTag;
-		SceSysmemForDriver_6D88EF8A(&record->encodedPrefix.stateMarker,
+		sceKernelCopyToUser(&record->encodedPrefix.stateMarker,
 				    &videoRecordStateMarker, 2);
 	}
 release:
@@ -888,7 +888,7 @@ int cipherUserVideoStream(unsigned int handle, void *output, const void *input,
 				counterIndex = channel->currentBlock;
 				iv = &channel->currentIv;
 			} else {
-				SceSysmemForDriver_BC996A7A(&counterIndex, input, 4);
+				sceKernelCopyFromUser(&counterIndex, input, 4);
 				input = (const uint8_t *)input + 4;
 				size -= 4;
 				consumed = 4;
@@ -914,7 +914,7 @@ int cipherUserVideoStream(unsigned int handle, void *output, const void *input,
 				goto error;
 			}
 		} else {
-			SceSysmemForDriver_BC996A7A(&channel->currentIv, input, 16);
+			sceKernelCopyFromUser(&channel->currentIv, input, 16);
 			input = (const uint8_t *)input + 16;
 			size -= 16;
 			consumed = 16;
@@ -1051,7 +1051,7 @@ int cipherUserVideoBuffer(unsigned int handle, void *output, const void *input,
 				result = (int)0x8050c002;
 				goto error;
 			}
-			SceSysmemForDriver_BC996A7A(&workspace.counter.encodedIndex, input, 4);
+			sceKernelCopyFromUser(&workspace.counter.encodedIndex, input, 4);
 			input = (const uint8_t *)input + 4;
 			size -= 4;
 		}
@@ -1071,7 +1071,7 @@ int cipherUserVideoBuffer(unsigned int handle, void *output, const void *input,
 			result = (int)0x8050c002;
 			goto error;
 		}
-		SceSysmemForDriver_BC996A7A(&workspace.iv, input, 16);
+		sceKernelCopyFromUser(&workspace.iv, input, 16);
 		input = (const uint8_t *)input + 16;
 		size -= 16;
 	}
@@ -1162,18 +1162,18 @@ int authorizeUserVideoRecord(int handle, unsigned int index,
 		return (int)0x8050c002;
 	if (body.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, body.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, body.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45U)
 		return (int)0x8050c031;
 	body.data = (const uint8_t *)body.data +
 		    offsetof(MagicGateBundledEkb2Record, header);
 	body.size -= offsetof(MagicGateBundledEkb2Record, header);
-	SceSysmemForDriver_BC996A7A(&recordIdentity,
+	sceKernelCopyFromUser(&recordIdentity,
 			      &record->record.header.authenticatedData.fileInfo,
 			      sizeof(recordIdentity));
 	magic = 0;
-	SceSysmemForDriver_BC996A7A(&magic, body.data, sizeof(magic));
+	sceKernelCopyFromUser(&magic, body.data, sizeof(magic));
 	if (__builtin_bswap32(magic) != __builtin_bswap32(recordIdentity))
 		return (int)0x8050c002;
 	slot = installUserVideoRecord(context, &body);
@@ -1264,7 +1264,7 @@ int openVideoRecordStream(int handle, unsigned int index, int blockNumber,
 		return (int)0x8050c002;
 	if (inputBuffer.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, inputBuffer.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, inputBuffer.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45U)
 		return (int)0x8050c031;
@@ -1670,7 +1670,7 @@ int removeUserVideoRecordBlocks(int handle, unsigned int index,
 		return (int)0x8050c002;
 	if (body.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, body.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, body.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45U)
 		return (int)0x8050c031;
@@ -1682,8 +1682,8 @@ int removeUserVideoRecordBlocks(int handle, unsigned int index,
 		result = installed;
 		goto reset;
 	}
-	SceSysmemForDriver_BC996A7A(&workspace.header, &record->record.header, 48);
-	SceSysmemForDriver_BC996A7A(&workspace.header.authenticatedData.sequence, body.data, 4);
+	sceKernelCopyFromUser(&workspace.header, &record->record.header, 48);
+	sceKernelCopyFromUser(&workspace.header.authenticatedData.sequence, body.data, 4);
 	slot = unwrapVideoRecordHeader(&context->callbacks.unwrapKey, &workspace.recordKey,
 				       &recordTag, &headerTag, &workspace.header,
 				       installed, context->contentKeySlot);
@@ -1717,12 +1717,12 @@ int removeUserVideoRecordBlocks(int handle, unsigned int index,
 	request.slot = slot;
 	result = SceThreadmgrForDriver_E54FD746(1280, updateUserVideoRecord, &request);
 	if (result >= 0) {
-		SceSysmemForDriver_6D88EF8A(&record->record.header.authenticatedData.sequence,
+		sceKernelCopyToUser(&record->record.header.authenticatedData.sequence,
 				    &workspace.header.authenticatedData.sequence, 4);
 		context->records.recordHeaderTags[index] = headerTag;
 		memcpy(context->records.contentKeys[index], &workspace.recordKey, 16);
 		context->records.recordTags[index] = recordTag;
-		SceSysmemForDriver_6D88EF8A(&record->encodedPrefix.stateMarker,
+		sceKernelCopyToUser(&record->encodedPrefix.stateMarker,
 				    &videoRecordStateMarker, 2);
 		result = 0;
 	}
@@ -1764,7 +1764,7 @@ int getUserVideoPlaybackInfo(int handle, void *output, unsigned int outputSize,
 	copy = sceKernelAllocOwnProcessHeap(size, 0);
 	if (!copy)
 		return (int)0x8050c004;
-	SceSysmemForDriver_BC996A7A(copy, (const uint8_t *)input->data +
+	sceKernelCopyFromUser(copy, (const uint8_t *)input->data +
 			      sizeof(MgVideoRecordPrefix), size);
 	if (mode == 1 && outputSize > 63) {
 		result = parseVideoPlaybackInfo(context->parserDialect, 1, &workspace, copy, size);
@@ -1866,13 +1866,13 @@ int copyVideoEkb2RecordToUser(int handle, const MgVideoUserBuffer *output)
 	}
 	result = context->callbacks.getEkb2Record(buffer, size);
 	if (result >= 0 && size) {
-		SceSysmemForDriver_6D88EF8A(destination, copy, size);
+		sceKernelCopyToUser(destination, copy, size);
 		if (size > offsetof(MgVideoRecordPrefix, stateMarker) + 1)
-			SceSysmemForDriver_6D88EF8A((uint8_t *)destination +
+			sceKernelCopyToUser((uint8_t *)destination +
 					offsetof(MgVideoRecordPrefix, stateMarker),
 					&videoRecordStateMarker, 2);
 		else if (size == offsetof(MgVideoRecordPrefix, stateMarker) + 1)
-			SceSysmemForDriver_6D88EF8A((uint8_t *)destination +
+			sceKernelCopyToUser((uint8_t *)destination +
 					offsetof(MgVideoRecordPrefix, stateMarker),
 					&videoRecordStateMarker, 1);
 	}
@@ -2003,8 +2003,8 @@ int generateUserVideoKeyring(int handle, const MgVideoUserBuffer *output,
 	memset(buffer->prefix.encodedMetadata, 0,
 	       sizeof(buffer->prefix.encodedMetadata));
 	scratch.tag = buffer->header.wrappedDriverKey;
-	SceSysmemForDriver_6D88EF8A((void *)output->data, buffer, dataSize);
-	SceSysmemForDriver_6D88EF8A((uint8_t *)output->data + dataSize,
+	sceKernelCopyToUser((void *)output->data, buffer, dataSize);
+	sceKernelCopyToUser((uint8_t *)output->data + dataSize,
 			    &scratch.tag, sizeof(scratch.tag));
 release:
 	SceProcessmgrForDriver_FC2A424E(buffer);
@@ -2060,7 +2060,7 @@ int replaceUserVideoKeyring(int handle, unsigned int index, int blockNumber,
 		return (int)0x8050c002;
 	if (body.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, body.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, body.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45)
 		return (int)0x8050c031;
@@ -2074,7 +2074,7 @@ int replaceUserVideoKeyring(int handle, unsigned int index, int blockNumber,
 		return (int)0x8050c002;
 	if (replacement.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, replacement.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, replacement.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45)
 		return (int)0x8050c031;
@@ -2087,7 +2087,7 @@ int replaceUserVideoKeyring(int handle, unsigned int index, int blockNumber,
 	buffer = sceKernelAllocOwnProcessHeap(allocationSize, 0);
 	if (!buffer)
 		return (int)0x8050c004;
-	SceSysmemForDriver_BC996A7A(buffer, keyringData, allocationSize);
+	sceKernelCopyFromUser(buffer, keyringData, allocationSize);
 	result = (int)0x8050c003;
 	if (buffer->prefix.magic != 0x3350474d)
 		goto release;
@@ -2259,7 +2259,7 @@ int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumbe
 		return (int)0x8050c002;
 	if (body.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, body.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, body.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45)
 		return (int)0x8050c031;
@@ -2273,7 +2273,7 @@ int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumbe
 		return (int)0x8050c002;
 	if (replacement.size <= 79)
 		return (int)0x8050c031;
-	if (SceSysmemForDriver_BC996A7A(&magic, replacement.data, sizeof(magic)) < 0)
+	if (sceKernelCopyFromUser(&magic, replacement.data, sizeof(magic)) < 0)
 		return (int)0x8050c002;
 	if (magic != 0x32424b45)
 		return (int)0x8050c031;
@@ -2293,11 +2293,11 @@ int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumbe
 	buffer = sceKernelAllocOwnProcessHeap(allocationSize, 0);
 	if (!buffer)
 		return (int)0x8050c004;
-	SceSysmemForDriver_BC996A7A(buffer, (const uint8_t *)keyringCopy.data +
+	sceKernelCopyFromUser(buffer, (const uint8_t *)keyringCopy.data +
 			      sizeof(buffer->prefix), allocationSize);
 	encodedSize = measureVideoTaggedData(buffer, allocationSize);
 	keyringCopy.size = encodedSize + sizeof(buffer->prefix);
-	SceSysmemForDriver_BC996A7A(buffer, keyringCopy.data, keyringCopy.size);
+	sceKernelCopyFromUser(buffer, keyringCopy.data, keyringCopy.size);
 	keyringCopy.data = buffer;
 	request.context = context;
 	request.header = &scratch.header;

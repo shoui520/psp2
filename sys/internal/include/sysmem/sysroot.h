@@ -397,7 +397,7 @@ int SceSysrootForKernel_CD8B5D37(uint32_t a0, uint32_t a1, uint32_t a2);
 void SceSysrootForKernel_D02281A8(void);
 int SceSysrootForKernel_D29BCA77(const SysrootProcessmgrRuntimeOps *ops);
 /* vitasdk: ksceKernelAllocHeapMemory2 */
-void *SceSysrootForKernel_D351EBC8(SceUID pid, SceSize size, void *opt);
+void *sceKernelSysrootAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
 uint32_t SceSysrootForKernel_D3872270(void);	/* vitasdk: ksceSysrootGetFactorySystemSwVersion */
 SceUID SceSysrootForKernel_D441DC34(void);
 void SceSysrootForKernel_D4457D4F(SysrootNetHook callback);

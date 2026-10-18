@@ -365,7 +365,7 @@ int dsp0VideocodecCalculateLibraryMemory(const Dsp0VideocodecInitParam *param,
 
 int initializeDsp0Videocodec(void)
 {
-	int ret = SceProcessmgrForDriver_3801D7D6("SceDsp0Videodec",
+	int ret = sceKernelRegisterKPLS("SceDsp0Videodec",
 						    sizeof(Dsp0VideocodecGlobal));
 
 	if (ret >= 0) {

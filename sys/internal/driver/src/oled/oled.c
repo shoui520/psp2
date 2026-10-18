@@ -515,11 +515,11 @@ static __attribute__((noinline)) int initOled(void) /* name unknown */
 	opt.size = sizeof(opt);
 	opt.attr = 2;
 	opt.paddr = SPI_REG_BASE(2);
-	ret = SceSysmemForDriver_C94850C9("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
+	ret = sceKernelAllocMemBlockForKernel("SceSpi2Reg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_RW, 0x1000, &opt);
 	if (ret < 0)
 		return ret;
 	oled.spiUid = ret;
-	SceSysmemForDriver_A841EDDA(ret, (void **)&base);
+	sceKernelGetMemBlockBase(ret, (void **)&base);
 	oled.spi = base;
 	setupSpi(base);
 	if ((SceSysrootForDriver_930B1342() & 0xff0000) == 0x800000) {

@@ -96,7 +96,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 		threadId = sceKernelGetThreadId();
 	}
 	intr = SceCpuForDriver_821FC0EE();
-	if (SceSysmemForDriver_00ED6C14(threadId,
+	if (sceGUIDReferObjectWithClass(threadId,
 	    s_threadmgrRuntime.manager->threadClass, (SceObjectBase **)&object) >= 0) {
 		SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 		if (!(object->context.status & THREAD_STATE_GONE)) {
@@ -107,7 +107,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 					&s_threadmgrRuntime.manager->threadMgrCBLock);
 				descriptor = &s_threadmgrRuntime.manager->tlsSlots[slot];
 				if (descriptor->active && create) {
-					memory = SceSysrootForKernel_D351EBC8(THREADMGR_KERNEL_PID,
+					memory = sceKernelSysrootAllocRemoteProcessHeap(THREADMGR_KERNEL_PID,
 									    descriptor->size, NULL);
 					if (memory != NULL) {
 						memset(memory, 0, descriptor->size);

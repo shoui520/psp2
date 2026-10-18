@@ -904,17 +904,17 @@ int displayInit(void) /* name unknown */
 	heads[1].plane[0].scale = 0;
 	heads[1].plane[1].scaleFlags = 0x80;
 	heads[1].plane[1].scale = 0;
-	plsKey = SceProcessmgrForDriver_3801D7D6("SceDisplay", sizeof(DisplayProcessLocal));
+	plsKey = sceKernelRegisterKPLS("SceDisplay", sizeof(DisplayProcessLocal));
 	mutexOpt.size = 8;
 	mutexOpt.attr = 0x20;
 	sceKernelInitializeFastMutex(&mutex, "SceDisplay", 6, &mutexOpt);
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x200000;
-	block = SceSysmemForDriver_C94850C9("SceDisplayDmaTag", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x8000, &opt);
-	SceSysmemForDriver_A841EDDA(block, &base);
+	block = sceKernelAllocMemBlockForKernel("SceDisplayDmaTag", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_NC_RW, 0x8000, &opt);
+	sceKernelGetMemBlockBase(block, &base);
 	dmaTag = base;
-	SceSysmemForDriver_8D160E65(base, &dmaTagPaddr);
+	sceKernelVAtoPA(base, &dmaTagPaddr);
 	vblankInit();
 	sceKernelRegisterSubIntrHandler(8, 2, "SceDispalyVblank", vblankHandler, NULL);
 	sceKernelRegisterSysEventHandler("SceDisplay", sysEventHandler, NULL);
@@ -1149,11 +1149,11 @@ static inline __attribute__((always_inline)) int framebufPaddr(SceUIntPtr base, 
 	SceUIntPtr first, last;
 	int ret;
 
-	ret = SceSysmemForDriver_8D160E65((void *)base, &first);
+	ret = sceKernelVAtoPA((void *)base, &first);
 	if (ret < 0)
 		return ret;
 	if (first - bound < 0x10000000) {
-		ret = SceSysmemForDriver_8D160E65((void *)(base - 1 + size), &last);
+		ret = sceKernelVAtoPA((void *)(base - 1 + size), &last);
 		if (ret < 0)
 			return ret;
 		if (first + size - 1 != last)
@@ -1701,7 +1701,7 @@ int sceDisplayGetRefreshRate(float *pFps)
 	intr = SceCpuForDriver_D32ACE9E(&heads[head].lock);
 	rate = heads[head].refreshRate;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&heads[head].lock, intr);
-	ret = SceSysmemForDriver_6D88EF8A(pFps, &rate, sizeof(rate));
+	ret = sceKernelCopyToUser(pFps, &rate, sizeof(rate));
 	return ret < 0 ? ret : 0;
 }
 
@@ -2236,7 +2236,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	dst.leftover_stride = (fb->pitch - fb->width) * 4;
 	dst.paddr0 = paddr;
 	SceCpuForDriver_02796361(fb->base, size);
-	ret = SceSysmemForDriver_0F5C84B7(pid, NULL);
+	ret = sceGUIDReferObject(pid, NULL);
 	if (ret < 0)
 		goto unlockRange;
 	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
@@ -2371,7 +2371,7 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	if (ret < 0)
 		goto free;
 	SceCpuForDriver_02796361(fb->base, size);
-	ret = SceSysmemForDriver_0F5C84B7(pid, NULL);
+	ret = sceGUIDReferObject(pid, NULL);
 	if (ret < 0)
 		goto free;
 	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);

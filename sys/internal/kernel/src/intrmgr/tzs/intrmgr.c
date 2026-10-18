@@ -95,7 +95,7 @@ static int SetSharedMemory_S(int arg0, int arg1, int arg2, int arg3)
 		SCE_DBG_ASSERT_FAIL(1644);
 		return memBlockId;
 	}
-	SceSysmemForDriver_A841EDDA(memBlockId, &base);
+	sceKernelGetMemBlockBase(memBlockId, &base);
 	sceKernelSysrootSetSharedMemoryForTZS(base);
 	return 0;
 }
@@ -118,13 +118,13 @@ static int SetL2ccReg(SceSize offset, SceUInt32 val)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PL310_REG_BASE;
-	memBlockId = SceSysmemForDriver_C94850C9("SceL2Cache", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	memBlockId = sceKernelAllocMemBlockForKernel("SceL2Cache", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 					     0x1000, &opt);
 	if (memBlockId < 0) {
 		SCE_DBG_PRINTF(0xb, 1798, "remap l2 cache area failed. 0x%08x\n", memBlockId);
 		return memBlockId;
 	}
-	SceSysmemForDriver_A841EDDA(memBlockId, (void **)&base);
+	sceKernelGetMemBlockBase(memBlockId, (void **)&base);
 	SCE_DBG_PRINTF(0xb, 1803, "base: %p, addr 0x%08x, val 0x%08x\n", base, base + offset, val);
 	*(volatile SceUInt32 *)(base + offset) = val;
 	SceSysmemForDriver_009E1C61(memBlockId);
@@ -383,7 +383,7 @@ static inline int sceKernelAllocMonitorCallTable(void)
 		return memBlockId;
 	}
 	g_moncallTableUid = memBlockId;
-	SceSysmemForDriver_A841EDDA(memBlockId, &base);
+	sceKernelGetMemBlockBase(memBlockId, &base);
 	g_moncallTable = base;
 	memset(base, 0, MONCALL_TABLE_SIZE);
 	return 0;
@@ -564,14 +564,14 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 	opt.paddr = PERIPH_REG_BASE;
-	ret = SceSysmemForDriver_C94850C9("SceInterruptControllerReg",
+	ret = sceKernelAllocMemBlockForKernel("SceInterruptControllerReg",
 				      SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &opt);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xb, 2250, "allocate intc register area failed. 0x%08x\n", ret);
 		SCE_DBG_ASSERT_FAIL(2251);
 		return ret;
 	}
-	SceSysmemForDriver_A841EDDA(ret, &base);
+	sceKernelGetMemBlockBase(ret, &base);
 	cpuInterface = (GicCpuInterface *)((char *)base + GIC_CPU_INTERFACE_OFFSET);
 	g_intrCpuInterface = cpuInterface;
 	g_intrDistributor = (GicDistributor *)((char *)base + GIC_DISTRIBUTOR_OFFSET);

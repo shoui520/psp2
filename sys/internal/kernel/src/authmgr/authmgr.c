@@ -229,7 +229,7 @@ static NOINLINE int authMgrSendRequest(SceUID id, struct AuthPacket *packet)
 	__asm__ volatile("dmb sy" : : : "memory");
 	(void)packet->result;
 	__asm__ volatile("dsb sy" : : : "memory");
-	result = SceSysmemForDriver_8D160E65(packet, &physicalAddress);
+	result = sceKernelVAtoPA(packet, &physicalAddress);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 1250, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;
@@ -396,7 +396,7 @@ static NOINLINE int sceSblAuthMgrStart(void)
 
 	s_state.selfHandle = -1;
 	s_state.requestId = AM_NO_REQUEST;
-	result = SceSysmemForDriver_8D160E65(s_state.sourceRanges, &s_state.sourcePhysicalAddress);
+	result = sceKernelVAtoPA(s_state.sourceRanges, &s_state.sourcePhysicalAddress);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 239, "ERROR: sceKernelVAtoPA ret = 0x%08x\n", result);
 		result = AM_EPHYSICAL;

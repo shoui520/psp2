@@ -331,9 +331,9 @@ cancelled:
 	currentCpuState()->nextRunningThread = 0;
 	switchThread(2);
 	if (waitType == WAIT_TYPE_EVENT)
-		ret = SceSysmemForDriver_72A98D17(waitId, WaitTypeClass(waitType), NULL);
+		ret = sceGUIDReferObjectWithSubclass(waitId, WaitTypeClass(waitType), NULL);
 	else
-		ret = SceSysmemForDriver_00ED6C14(waitId, WaitTypeClass(waitType), NULL);
+		ret = sceGUIDReferObjectWithClass(waitId, WaitTypeClass(waitType), NULL);
 	if (ret < 0) {
 		SceCpuForDriver_BF82DEB2(&thread->lock);
 		if (thread->waitResult == (int)THREADMGR_ERROR_WAIT_CANCEL)
@@ -531,7 +531,7 @@ void waitTimeoutHandler(struct ThreadCB *thread)
 	for (;;) {
 		SceCpuForDriver_BF82DEB2(&thread->lock);
 		waitId = thread->waitId;
-		ret = SceSysmemForDriver_72A98D17(waitId,
+		ret = sceGUIDReferObjectWithSubclass(waitId,
 			s_threadmgrRuntime.manager->waitableClass, &object);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_PRINTF(waitId == -1 || waitId == (SceUID)0x80000000, 624,

@@ -19,13 +19,13 @@ SceSysmem:
         - SceSysmemForKernel_03A2CAF0: 0x03A2CAF0
         - SceSysmemForKernel_05822B82: 0x05822B82
         - sceKernelObjectHeapSetResourceLimitAll: 0x067F2550
-        - SceSysmemForKernel_08C05493: 0x08C05493
+        - scePUIDGetUIDVectorByClass: 0x08C05493
         - SceSysmemForKernel_0B1B4ACA: 0x0B1B4ACA
         - SceSysmemForKernel_0B36F7F9: 0x0B36F7F9
         - SceSysmemForKernel_0B5A3E93: 0x0B5A3E93
-        - SceSysmemForKernel_0E43E113: 0x0E43E113
+        - sceGUIDGetObjectWithClass: 0x0E43E113
         - SceSysmemForKernel_100B4029: 0x100B4029
-        - SceSysmemForKernel_133024A5: 0x133024A5
+        - sceUIDEntryHeapCloseAllPUID: 0x133024A5
         - SceSysmemForKernel_1380E144: 0x1380E144
         - sceKernelVSlotMapProcMemory: 0x14D3807B
         - SceSysmemForKernel_16A54BFE: 0x16A54BFE
@@ -46,7 +46,7 @@ SceSysmem:
         - SceSysmemForKernel_2C7B8D65: 0x2C7B8D65
         - SceSysmemForKernel_2CFD8C9A: 0x2CFD8C9A
         - SceSysmemForKernel_2E5CC243: 0x2E5CC243
-        - SceSysmemForKernel_2F526AB8: 0x2F526AB8
+        - sceKernelDeleteObjectHeap: 0x2F526AB8
         - SceSysmemForKernel_31FA81B5: 0x31FA81B5
         - SceSysmemForKernel_320E907F: 0x320E907F
         - sceKernelAddressSpaceFreeAllMemBlock: 0x36159CF5
@@ -76,7 +76,7 @@ SceSysmem:
         - SceSysmemForKernel_4E923101: 0x4E923101
         - sceKernelVSlotUnmapProcMemory: 0x4EEF69C7
         - sceKernelSysmemCleaner: 0x50980298
-        - SceSysmemForKernel_52137FA3: 0x52137FA3
+        - sceGUIDGetUIDVectorByClass: 0x52137FA3
         - SceSysmemForKernel_5B434019: 0x5B434019
         - SceSysmemForKernel_5C0FC6BE: 0x5C0FC6BE
         - CreatePhyMemPartByPbase: 0x5CC56F87
@@ -86,7 +86,7 @@ SceSysmem:
         - SceSysmemForKernel_5FD15C6E: 0x5FD15C6E
         - SceSysmemForKernel_62800A6B: 0x62800A6B
         - SceSysmemForKernel_634D0D0C: 0x634D0D0C
-        - SceSysmemForKernel_660DC18A: 0x660DC18A
+        - sceKernelObjectHeapStart: 0x660DC18A
         - SceSysmemForKernel_66489B4B: 0x66489B4B
         - sceUIDEntryHeapSetHook: 0x666C878F
         - SceSysmemForKernel_6D26B066: 0x6D26B066
@@ -131,7 +131,7 @@ SceSysmem:
         - sceKernelCreateObjectHeap: 0x9D8F3BE8
         - SceSysmemForKernel_9F1A9AA6: 0x9F1A9AA6
         - sceKernelGetFixedHeapInfoByPointer: 0xA24D2C8D
-        - SceSysmemForKernel_A2DFA383: 0xA2DFA383
+        - sceKernelCreatePhyMemPart: 0xA2DFA383
         - SceSysmemForKernel_A4DB88E1: 0xA4DB88E1
         - SceSysmemForKernel_A541E0CF: 0xA541E0CF
         - SceSysmemForKernel_A7C91D62: 0xA7C91D62
@@ -146,7 +146,7 @@ SceSysmem:
         - sceGUIDGetPID: 0xBD42A0FC
         - SceSysmemForKernel_BD625136: 0xBD625136
         - SceSysmemForKernel_BDE00106: 0xBDE00106
-        - SceSysmemForKernel_BF275C5A: 0xBF275C5A
+        - sceGUIDSet: 0xBF275C5A
         - SceSysmemForKernel_BF70207B: 0xBF70207B
         - SceSysmemForKernel_C3EF4055: 0xC3EF4055
         - SceSysmemForKernel_C3F9607E: 0xC3F9607E
@@ -173,13 +173,13 @@ SceSysmem:
         - SceSysmemForKernel_F49C0BE8: 0xF49C0BE8
         - SceSysmemForKernel_F57A97A0: 0xF57A97A0
         - SceSysmemForKernel_F6D09BD9: 0xF6D09BD9
-        - SceSysmemForKernel_FA1A73DD: 0xFA1A73DD
+        - sceKernelAddressSpaceGetTimerVbase: 0xFA1A73DD
         - sceKernelAddressSpaceCtrSetObjectHeap: 0xFA348CB1
         - SceSysmemForKernel_FA6C098C: 0xFA6C098C
         - SceSysmemForKernel_FB101B86: 0xFB101B86
         - sceGUIDKernelCreateWithOpt: 0xFB6390CE
         - SceSysmemForKernel_FCB5745A: 0xFCB5745A
-        - SceSysmemForKernel_FF464A49: 0xFF464A49
+        - sceGUIDGetEntry: 0xFF464A49
     SceSysmemForDriver:
       syscall: false
       version: 5
@@ -188,7 +188,7 @@ SceSysmem:
         - sceKernelUserUnmap: 0x00575B00
         - SceSysmemForDriver_0091D74D: 0x0091D74D
         - SceSysmemForDriver_009E1C61: 0x009E1C61
-        - SceSysmemForDriver_00ED6C14: 0x00ED6C14
+        - sceGUIDReferObjectWithClass: 0x00ED6C14
         - SceSysmemForDriver_04059C4B: 0x04059C4B
         - sceGUIDClose: 0x047D32F2
         - sceKernelVARangeToPAVectorBySW: 0x08A8A7E8
@@ -196,8 +196,8 @@ SceSysmem:
         - SceSysmemForDriver_0AAA4FDD: 0x0AAA4FDD
         - SceSysmemForDriver_0B1FD5C3: 0x0B1FD5C3
         - SceSysmemForDriver_0B4ED16A: 0x0B4ED16A
-        - SceSysmemForDriver_0F5C84B7: 0x0F5C84B7
-        - SceSysmemForDriver_0FC24464: 0x0FC24464
+        - sceGUIDReferObject: 0x0F5C84B7
+        - sceGUIDGetObject: 0x0FC24464
         - SceSysmemForDriver_12624884: 0x12624884
         - SceSysmemForDriver_13805CA8: 0x13805CA8
         - sceGUIDReleaseObject: 0x149885C4
@@ -218,28 +218,28 @@ SceSysmem:
         - SceSysmemForDriver_45D22597: 0x45D22597
         - SceSysmemForDriver_49D4DD9B: 0x49D4DD9B
         - SceSysmemForDriver_4C584B29: 0x4C584B29
-        - SceSysmemForDriver_4CFA4100: 0x4CFA4100
+        - sceGUIDSetName: 0x4CFA4100
         - SceSysmemForDriver_513B9DDD: 0x513B9DDD
-        - SceSysmemForDriver_56A13E90: 0x56A13E90
+        - sceGUIDKernelCreate: 0x56A13E90
         - SceSysmemForDriver_58D21746: 0x58D21746
         - SceSysmemForDriver_59A4402F: 0x59A4402F
         - sceKernelCopyFromUserProc: 0x605275F8
-        - SceSysmemForDriver_61317102: 0x61317102
+        - sceUIDClassInitClass: 0x61317102
         - SceSysmemForDriver_61A67D32: 0x61A67D32
         - SceSysmemForDriver_64DBE472: 0x64DBE472
         - sceKernelVAtoPABySW: 0x65419BD3
-        - SceSysmemForDriver_659586BF: 0x659586BF
+        - sceKernelLockRangeProc: 0x659586BF
         - SceSysmemForDriver_6A0792A3: 0x6A0792A3
         - sceKernelCopyToUserProc: 0x6B825479
         - SceSysmemForDriver_6C76AD89: 0x6C76AD89
-        - SceSysmemForDriver_6D88EF8A: 0x6D88EF8A
-        - SceSysmemForDriver_72A98D17: 0x72A98D17
+        - sceKernelCopyToUser: 0x6D88EF8A
+        - sceGUIDReferObjectWithSubclass: 0x72A98D17
         - sceKernelStrncpyFromUserProc: 0x75AAF178
-        - SceSysmemForDriver_75C70DE0: 0x75C70DE0
-        - SceSysmemForDriver_77066FD1: 0x77066FD1
+        - sceKernelUnlockRange: 0x75C70DE0
+        - sceGUIDReferObjectWithClassLevel: 0x77066FD1
         - SceSysmemForDriver_7750CEA7: 0x7750CEA7
         - sceKernelGetMemBlockAllocMapSize: 0x78337B62
-        - SceSysmemForDriver_7B4CB60A: 0x7B4CB60A
+        - sceKernelAllocHeapMemory: 0x7B4CB60A
         - SceSysmemForDriver_7D4F8B5F: 0x7D4F8B5F
         - SceSysmemForDriver_80BD6FEB: 0x80BD6FEB
         - sceKernelCountFillValueFromUserProc: 0x8334454F
@@ -251,40 +251,40 @@ SceSysmem:
         - SceSysmemForDriver_89A44858: 0x89A44858
         - SceSysmemForDriver_8A1742F6: 0x8A1742F6
         - SceSysmemForDriver_8C43B052: 0x8C43B052
-        - SceSysmemForDriver_8D160E65: 0x8D160E65
+        - sceKernelVAtoPA: 0x8D160E65
         - SceSysmemForDriver_8DA0BCA5: 0x8DA0BCA5
         - sceKernelCopyFromToUserProc: 0x8E086C33
-        - SceSysmemForDriver_9328E0E8: 0x9328E0E8
+        - sceKernelCreateHeap: 0x9328E0E8
         - sceKernelMemBlockToPAVector: 0x987EE587
         - SceSysmemForDriver_98C15666: 0x98C15666
         - sceKernelStrnlenFromUserProc: 0x9929EB07
-        - SceSysmemForDriver_9C78064C: 0x9C78064C
+        - sceKernelIsAccessibleRange: 0x9C78064C
         - SceSysmemForDriver_9F6E45E3: 0x9F6E45E3
         - SceSysmemForDriver_A73CFFEF: 0xA73CFFEF
-        - SceSysmemForDriver_A78755EB: 0xA78755EB
+        - sceGUIDGetName: 0xA78755EB
         - SceSysmemForDriver_A7C0D1FC: 0xA7C0D1FC
-        - SceSysmemForDriver_A841EDDA: 0xA841EDDA
-        - SceSysmemForDriver_A8525B06: 0xA8525B06
+        - sceKernelGetMemBlockBase: 0xA841EDDA
+        - sceKernelUnlockRangeProc: 0xA8525B06
         - SceSysmemForDriver_AE36C775: 0xAE36C775
         - SceSysmemForDriver_B3575090: 0xB3575090
         - SceSysmemForDriver_B415B5A8: 0xB415B5A8
         - SceSysmemForDriver_B429D419: 0xB429D419
-        - SceSysmemForDriver_B81CF0A3: 0xB81CF0A3
+        - sceKernelGetMemBlockVBase: 0xB81CF0A3
         - SceSysmemForDriver_BB3B02C2: 0xBB3B02C2
         - sceKernelLockRangeWithMode: 0xBC0A1D60
-        - SceSysmemForDriver_BC996A7A: 0xBC996A7A
+        - sceKernelCopyFromUser: 0xBC996A7A
         - SceSysmemForDriver_BDA6E42B: 0xBDA6E42B
         - SceSysmemForDriver_BF209859: 0xBF209859
         - sceKernelVerifyHeap: 0xC50A9C0D
         - GUIDGetClass: 0xC74B0152
-        - SceSysmemForDriver_C94850C9: 0xC94850C9
+        - sceKernelAllocMemBlockForKernel: 0xC94850C9
         - SceSysmemForDriver_C9928F5E: 0xC9928F5E
         - SceSysmemForDriver_CB0F3A33: 0xCB0F3A33
         - SceSysmemForDriver_CED1547B: 0xCED1547B
         - sceKernelAllocMemBlockWithInfoForKernel: 0xD44F464D
         - sceKernelDeleteHeap: 0xD6437637
         - GUIDOpenByName: 0xD76E7452
-        - SceSysmemForDriver_DB3EC244: 0xDB3EC244
+        - sceKernelStrncpyFromUser: 0xDB3EC244
         - SceSysmemForDriver_DFE2C8CB: 0xDFE2C8CB
         - SceSysmemForDriver_E655852F: 0xE655852F
         - sceKernelVARangeToPAVector: 0xE68BEEBD
@@ -292,9 +292,9 @@ SceSysmem:
         - SceSysmemForDriver_E9728A12: 0xE9728A12
         - SceSysmemForDriver_EAF3849B: 0xEAF3849B
         - SceSysmemForDriver_F3BBE2E1: 0xF3BBE2E1
-        - SceSysmemForDriver_F4AD89D8: 0xF4AD89D8
+        - sceKernelIsEqualAccessibleRangeProcBySW: 0xF4AD89D8
         - SceSysmemForDriver_F50BDC0C: 0xF50BDC0C
-        - SceSysmemForDriver_F6DB54BA: 0xF6DB54BA
+        - sceGUIDReferObjectWithLevel: 0xF6DB54BA
         - SceSysmemForDriver_FB817A59: 0xFB817A59
         - SceSysmemForDriver_FE6D7FAE: 0xFE6D7FAE
         - sceKernelStrncpyToUserProc: 0xFED82F2D
@@ -318,7 +318,7 @@ SceSysmem:
         - sceKernelFindMemBlockByAddr: 0xA33B99D1
         - sceKernelFreeMemBlock: 0xA91E15EE
         - sceKernelCloseMemBlock: 0xB680E3A0
-        - sceKernelGetMemBlockBase: 0xB8EF5818
+        - sceKernelGetMemBlockBaseForUser: 0xB8EF5818
         - sceKernelAllocMemBlock: 0xB9D5EBDE
         - sceKernelGetModel: 0xD0D4F729
         - sceKernelCloseVMDomain: 0xD6CA56CA
@@ -600,7 +600,7 @@ SceSysmem:
         - SceSysrootForKernel_CD8B5D37: 0xCD8B5D37
         - SceSysrootForDriver_D02281A8: 0xD02281A8
         - SceSysrootForKernel_D29BCA77: 0xD29BCA77
-        - SceSysrootForKernel_D351EBC8: 0xD351EBC8
+        - sceKernelSysrootAllocRemoteProcessHeap: 0xD351EBC8
         - SceSysrootForKernel_D3872270: 0xD3872270
         - SceSysrootForKernel_D441DC34: 0xD441DC34
         - SceSysrootForDriver_D4457D4F: 0xD4457D4F

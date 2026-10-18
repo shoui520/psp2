@@ -395,11 +395,11 @@ int initVeneziaRpc(void)
 		.attr = 2,
 		.paddr = 0x1f840000,
 	};
-	ret = SceSysmemForDriver_C94850C9("SceVeneziaSpram", 0x20108006, 0x20000, &opt);
+	ret = sceKernelAllocMemBlockForKernel("SceVeneziaSpram", 0x20108006, 0x20000, &opt);
 	if (ret < 0)
 		return ret;
 	g_veneziaRpcState.memoryBlock = ret;
-	SceSysmemForDriver_A841EDDA(ret, &base);
+	sceKernelGetMemBlockBase(ret, &base);
 	g_veneziaRpcState.memory = base;
 	ret = initVeneziaRpcCommunicationMemory();
 	if (ret < 0)

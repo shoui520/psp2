@@ -15,7 +15,7 @@ int MarlinMemoryInitialize(void)
 	do {
 		if (marlinMemoryReferences == 0) {
 			if (marlinMemBlockId == 0) {
-				marlinMemBlockId = SceSysmemForDriver_C94850C9("SceMar", 0x1020d006,
+				marlinMemBlockId = sceKernelAllocMemBlockForKernel("SceMar", 0x1020d006,
 									 0x10000, 0);
 				if (marlinMemBlockId < 0) {
 					result = marlinMemBlockId;
@@ -28,7 +28,7 @@ int MarlinMemoryInitialize(void)
 			options.flags = HEAP_HAS_MEMBLOCK;
 			options.memBlock = marlinMemBlockId;
 			if (marlinHeapId == 0) {
-				marlinHeapId = SceSysmemForDriver_9328E0E8("SceMar", 0x10000, &options);
+				marlinHeapId = sceKernelCreateHeap("SceMar", 0x10000, &options);
 				if (marlinHeapId < 0) {
 					result = marlinHeapId;
 					if (result != 0)
@@ -77,7 +77,7 @@ void *MarlinAllocateMemory(void *allocator, unsigned int size)
 	if (allocator != 0)
 		status = 0;
 	if (size != 0)
-		memory = SceSysmemForDriver_7B4CB60A(marlinHeapId, size);
+		memory = sceKernelAllocHeapMemory(marlinHeapId, size);
 	return memory;
 }
 

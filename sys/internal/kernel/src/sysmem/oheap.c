@@ -305,7 +305,7 @@ int sceKernelCreateObjectHeap(SceUID pid, int kernel, SceKernelHeapHook *hook, O
 }
 
 /* sceKernelCreateObjectHeapWithHeap (wiki name): the shared size classes from a process heap */
-int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
+int sceKernelObjectHeapStart(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 {
 	const ObjectHeapSizeClassDef *def;
 	FixedHeap *fixedHeap;
@@ -313,7 +313,7 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 	SceUID uid;
 	int ret;
 
-	ret = SceSysmemForDriver_0FC24464(heapUid, &processHeap);
+	ret = sceGUIDGetObject(heapUid, &processHeap);
 	if (ret < 0)
 		return ret;
 	if (processHeap == NULL)
@@ -341,7 +341,7 @@ int SceSysmemForKernel_660DC18A(ObjectHeap *heap, SceUID pid, SceUID heapUid)
 }
 
 /* sceKernelDeleteObjectHeap (wiki name) */
-int SceSysmemForKernel_2F526AB8(ObjectHeap *heap)
+int sceKernelDeleteObjectHeap(ObjectHeap *heap)
 {
 	const ObjectHeapSizeClassDef *def;
 	ObjectHeapSizeClass *entry = heap->sizeClasses;
@@ -487,8 +487,8 @@ int ObjectHeapInitShared(void)
 	SceUID heapUid;
 	int ret;
 
-	heapUid = SceSysmemForDriver_9328E0E8("SceKernelHeapForShared", 0x10000, NULL);
-	ret = SceSysmemForDriver_0FC24464(heapUid, &s_sharedHeap);
+	heapUid = sceKernelCreateHeap("SceKernelHeapForShared", 0x10000, NULL);
+	ret = sceGUIDGetObject(heapUid, &s_sharedHeap);
 	if (ret < 0)
 		return ret;
 	s_sharedObjectHeap = HeapAllocLocked(s_sharedHeap, sizeof(ObjectHeap));

@@ -510,7 +510,7 @@ int sceSblLicMgrGetIssueNoForUser(SceUInt32 *issueNo, int fromNvs)
 	state = sceSyscallEnter();
 	ret = licMgrGetIssueNo(&value, fromNvs);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(issueNo, &value, sizeof(value));
+		ret = sceKernelCopyToUser(issueNo, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -528,7 +528,7 @@ int sceSblLicMgrGetActivationKeyForUser(SceActivationKey *key)
 	state = sceSyscallEnter();
 	ret = SceSblPostSsMgrForDriver_F7F1015B(&value);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(key, &value, sizeof(value));
+		ret = sceKernelCopyToUser(key, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -573,12 +573,12 @@ int sceSblLicMgrGetUsageTimeLimit(SceUInt32 *limit)
 	if (ret == SCE_SBL_ERROR_LIC_NO_DATA) {
 		if (licMgrHasQaFlags()) {
 			left = ~now;
-			ret = SceSysmemForDriver_6D88EF8A(limit, &left, sizeof(left));
+			ret = sceKernelCopyToUser(limit, &left, sizeof(left));
 		}
 	} else if (ret == 0) {
 		if (licMgrHasQaFlags())
 			left = ~now;
-		ret = SceSysmemForDriver_6D88EF8A(limit, &left, sizeof(left));
+		ret = sceKernelCopyToUser(limit, &left, sizeof(left));
 	}
 	sceSyscallLeave(state);
 	return ret;
@@ -601,7 +601,7 @@ int sceSblLicMgrGetExpireDateForUser(SceUInt32 *date, int fromNvs)
 	}
 	ret = SceSblPostSsMgrForDriver_4FF2682F(&value, fromNvs);
 	if (ret == 0)
-		ret = SceSysmemForDriver_6D88EF8A(date, &value, sizeof(value));
+		ret = sceKernelCopyToUser(date, &value, sizeof(value));
 	sceSyscallLeave(state);
 	return ret;
 }
@@ -618,7 +618,7 @@ int sceSblLicMgrActivateDevkitForUser(const char *path)
 		return SCE_SBL_ERROR_LIC_INVALID_ARGUMENT;
 	state = sceSyscallEnter();
 	memset(kpath, 0, sizeof(kpath));
-	ret = SceSysmemForDriver_DB3EC244(kpath, path, sizeof(kpath));
+	ret = sceKernelStrncpyFromUser(kpath, path, sizeof(kpath));
 	if (ret >= 0) {
 		if (ret == sizeof(kpath)) {
 			sceSyscallLeave(state);
@@ -853,7 +853,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 	}
 
 	/* the header, up to the line after the last '#' */
-	buf = SceSysmemForDriver_7B4CB60A(g_postSsMgrHeap, ACT_FILE_HEADER_MAX);
+	buf = sceKernelAllocHeapMemory(g_postSsMgrHeap, ACT_FILE_HEADER_MAX);
 	if (buf == NULL) {
 		ret = SCE_SBL_ERROR_LIC_NO_MEMORY;
 		goto out;
@@ -908,7 +908,7 @@ int licMgrParseCodeFile(SceActData *act, SceActSig *sig, const char *path)
 	bufSize = codeSize * ACT_CODES_PER_READ;
 	if (extraSize > bufSize)
 		bufSize = extraSize;
-	buf = SceSysmemForDriver_7B4CB60A(g_postSsMgrHeap, bufSize);
+	buf = sceKernelAllocHeapMemory(g_postSsMgrHeap, bufSize);
 	if (buf == NULL) {
 		ret = SCE_SBL_ERROR_LIC_NO_MEMORY;
 		goto out;

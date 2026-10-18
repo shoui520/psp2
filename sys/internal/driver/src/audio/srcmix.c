@@ -1207,10 +1207,10 @@ int audioInitializeSrcMix(void)
 		option.size = sizeof(option);
 		option.paddr = ACLKGEN_REG_BASE;
 		option.attr = 2;
-		result = SceSysmemForDriver_C94850C9("SceAclkgenReg", 0x20100806,
+		result = sceKernelAllocMemBlockForKernel("SceAclkgenReg", 0x20100806,
 			ACLKGEN_REG_SIZE, &option);
 		if (result >= 0)
-			SceSysmemForDriver_A841EDDA(result, (void **)&audioClockRegisters);
+			sceKernelGetMemBlockBase(result, (void **)&audioClockRegisters);
 	}
 	state = audioDmaStates;
 	ScePervasiveForDriver_2FB5F88F(1);
@@ -1226,10 +1226,10 @@ int audioInitializeSrcMix(void)
 			option.attr = 2;
 			option.paddr = physicalAddress;
 			snprintf(name, sizeof(name), "SceSrcMix%dReg", channel);
-			result = SceSysmemForDriver_C94850C9(name, 0x20100806, SRCMIX_REG_SIZE, &option);
+			result = sceKernelAllocMemBlockForKernel(name, 0x20100806, SRCMIX_REG_SIZE, &option);
 			if (result < 0)
 				return result;
-			SceSysmemForDriver_A841EDDA(result, (void **)&state->registers);
+			sceKernelGetMemBlockBase(result, (void **)&state->registers);
 			for (operation = 0; operation < 3; ++operation) {
 				SceKernelDmaOpTag *tags;
 				SceKernelDmaOpId opId;

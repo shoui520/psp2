@@ -91,7 +91,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 	ret = sceKernelLockMutex(signalMutex, 1, 0);
 	if (ret >= 0) {
 		if (user) {
-			ret = SceSysmemForDriver_BC996A7A(&observed, counter, 4);
+			ret = sceKernelCopyFromUser(&observed, counter, 4);
 			if (ret < 0)
 				goto unlock;
 		} else {
@@ -103,7 +103,7 @@ int WaitSignalCounter(unsigned *counter, unsigned timeout, int user)
 		}
 		if (ret == 0) {
 			if (user)
-				ret = SceSysmemForDriver_6D88EF8A(counter, &signalCounter, 4);
+				ret = sceKernelCopyToUser(counter, &signalCounter, 4);
 			else
 				*counter = signalCounter;
 		}

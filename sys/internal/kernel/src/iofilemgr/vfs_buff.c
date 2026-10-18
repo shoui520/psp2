@@ -9,10 +9,10 @@ void *vfs_buf_allocate_memory(SceUID id, SceSize size, int memType)
 {
 	switch (memType & 7) {
 	case VFS_BUFF_MEM_HEAP:
-		return SceSysmemForDriver_7B4CB60A(id, size);
+		return sceKernelAllocHeapMemory(id, size);
 	case VFS_BUFF_MEM_DEFAULT:
 	case VFS_BUFF_MEM_HOST:
-		return SceSysrootForKernel_D351EBC8(id, size, NULL);
+		return sceKernelSysrootAllocRemoteProcessHeap(id, size, NULL);
 	case VFS_BUFF_MEM_CDIALOG:
 		return sceKernelAllocRemoteCDialogHeap(id, size, NULL);
 	default:
@@ -717,11 +717,11 @@ int vfsBuffAllocate(SceSize dataCacheSize, int wayNum, SceSize lineSize,
 	}
 
 	if (memType == VFS_BUFF_MEM_HOST && SceDipswForDriver_A98FC2FD(0xd2)) {
-		bc->hostMemBlock = SceSysmemForDriver_C94850C9("SceIoBuffCacheForHost", 0x10f0d006,
+		bc->hostMemBlock = sceKernelAllocMemBlockForKernel("SceIoBuffCacheForHost", 0x10f0d006,
 							   ioCacheSize, NULL);
 		if (bc->hostMemBlock < 0)
 			goto free_data;
-		SceSysmemForDriver_A841EDDA(bc->hostMemBlock, &bc->ioBuffMemory);
+		sceKernelGetMemBlockBase(bc->hostMemBlock, &bc->ioBuffMemory);
 		bc->hostBuff = vfs_buf_allocate_memory(pid, 0x8200, VFS_BUFF_MEM_HOST);
 		if (bc->hostBuff == NULL) {
 			vfs_buf_free_data_buff(bc, NULL, NULL);

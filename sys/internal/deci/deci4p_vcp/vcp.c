@@ -195,7 +195,7 @@ static int VcpHandler(int event, void *arg, void *ctx)
 /* name unknown: zlib allocator on our heap */
 static void *VcpZAlloc(void *opaque, SceUInt32 items, SceUInt32 size)
 {
-	return SceSysmemForDriver_7B4CB60A(((VcpCtx *)opaque)->heap, items * size);
+	return sceKernelAllocHeapMemory(((VcpCtx *)opaque)->heap, items * size);
 }
 
 static void VcpZFree(void *opaque, void *address)
@@ -507,13 +507,13 @@ static int VcpThread(SceSize args, void *argp)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = 0x600000;
-	uid = SceSysmemForDriver_C94850C9("SceDeci4pVcpFrameBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceDeci4pVcpFrameBuf", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_NC_RW,
 				      s_vcp.fbSize, &opt);
 	if (uid < 0)
 		return uid;
 	s_vcp.fbMemblock = uid;
-	if ((ret = SceSysmemForDriver_A841EDDA(uid, &s_vcp.fbBase)) < 0 ||
-	    (ret = SceSysmemForDriver_8D160E65(s_vcp.fbBase, &s_vcp.fbPaddr)) < 0) {
+	if ((ret = sceKernelGetMemBlockBase(uid, &s_vcp.fbBase)) < 0 ||
+	    (ret = sceKernelVAtoPA(s_vcp.fbBase, &s_vcp.fbPaddr)) < 0) {
 		SceSysmemForDriver_009E1C61(s_vcp.fbMemblock);
 		return ret;
 	}
@@ -584,7 +584,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	hopt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
 	hopt.pid = 0;
 	hopt.heap = NULL;
-	uid = SceSysmemForDriver_9328E0E8("SceDeci4pVcp", 0x2000, &hopt);
+	uid = sceKernelCreateHeap("SceDeci4pVcp", 0x2000, &hopt);
 	if (uid < 0)
 		goto err_heap;
 	s_vcp.heap = uid;

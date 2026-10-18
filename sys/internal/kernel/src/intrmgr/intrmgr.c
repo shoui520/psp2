@@ -78,7 +78,7 @@ int ResumeController(int value, void *args)
 			if (info->configuration == 3)
 				SetConfiguration(i, 3);
 		}
-		SceSysmemForDriver_8D160E65(SceSysrootForKernel_C8C8C321(), &paddr);
+		sceKernelVAtoPA(SceSysrootForKernel_C8C8C321(), &paddr);
 		intrmgrSmc(paddr, 0xa000);
 	}
 	sceKernelSysrootCorelockUnlock();
@@ -249,7 +249,7 @@ int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsign
 	info->oldHandler = NULL;
 	if (opt && opt->num) {
 		unsigned int size = opt->num * sizeof(IntrHandler);
-		info->sub = SceSysmemForDriver_7B4CB60A(g_intrHeap, size);
+		info->sub = sceKernelAllocHeapMemory(g_intrHeap, size);
 		if (!info->sub) {
 			result = SCE_KERNEL_ERROR_NO_MEMORY;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -794,7 +794,7 @@ int sceKernelAllocSystemCallTable(unsigned int count, void **table)
 		return result;
 	}
 	g_intrSyscallBlock = result;
-	SceSysmemForDriver_A841EDDA(result, table);
+	sceKernelGetMemBlockBase(result, table);
 	g_intrSyscallTable = *table;
 	return 0;
 }
@@ -897,7 +897,7 @@ static inline __attribute__((always_inline)) int AllocSharedMemory_NS(void **bas
 		SCE_DBG_ASSERT_CHECK_FUNC(0, 1726, "AllocSharedMemory_NS");
 		return result;
 	}
-	SceSysmemForDriver_A841EDDA(result, base);
+	sceKernelGetMemBlockBase(result, base);
 	return 0;
 }
 
@@ -914,7 +914,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	}
 	options.size = sizeof(options);
 	options.attr = 1;
-	result = SceSysmemForDriver_9328E0E8("SceIntrMgr", 0x8000, &options);
+	result = sceKernelCreateHeap("SceIntrMgr", 0x8000, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2012, "Create Heap failed. 0x%08x\n", result);
 		return result;
@@ -978,7 +978,7 @@ int sceKernelIntrMgrStart(void)
 			SCE_DBG_ASSERT_FAIL(2183);
 		}
 		sceKernelSysrootSetSharedMemory(base);
-		if (SceSysmemForDriver_8D160E65(base, &paddr) < 0)
+		if (sceKernelVAtoPA(base, &paddr) < 0)
 			SCE_PANIC(2192);
 		intrmgrSmc(paddr, INTR_SHARED_MEMORY_SIZE);
 		if (sceKernelRegisterInitCallback(IntrMgrInitCallback, 5, NULL, NULL) < 0)
@@ -1009,7 +1009,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	}
 	options.size = sizeof(options);
 	options.attr = 1;
-	result = SceSysmemForDriver_9328E0E8(INTR_TEXT(g_intrSceIntrMgr, "SceIntrMgr"), 0x8000, &options);
+	result = sceKernelCreateHeap(INTR_TEXT(g_intrSceIntrMgr, "SceIntrMgr"), 0x8000, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2012, INTR_TEXT(g_intrCreateHeapFailedX, "Create Heap failed. 0x%08x\n"), result);
 		return result;
@@ -1044,13 +1044,13 @@ int sceKernelIntrMgrModuleStart(SceSize arglen, void *argp)
 
 	(void)arglen;
 	(void)argp;
-	result = SceSysmemForDriver_C94850C9(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &options);
+	result = sceKernelAllocMemBlockForKernel(INTR_TEXT(g_intrSceInterruptControllerReg, "SceInterruptControllerReg"), SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW, PERIPH_REG_SIZE, &options);
 	if (result < 0) {
 		SCE_DBG_PRINTF(0xb, 2250, INTR_TEXT(g_intrAllocateIntcRegisterAreaFailedX, "allocate intc register area failed. 0x%08x\n"), result);
 		SCE_DBG_ASSERT_FAIL(2251);
 		return result;
 	}
-	SceSysmemForDriver_A841EDDA(result, &base);
+	sceKernelGetMemBlockBase(result, &base);
 	g_intrCpuInterface = (GicCpuInterface *)((char *)base + GIC_CPU_INTERFACE_OFFSET);
 	g_intrDistributor = (GicDistributor *)((char *)base + GIC_DISTRIBUTOR_OFFSET);
 	ResetController();

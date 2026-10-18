@@ -100,13 +100,13 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceSysmemForDriver_84A4AF5E
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
 	SceSysmemForDriver_BF209859
-	SceSysmemForDriver_C94850C9
-	SceSysmemForDriver_DB3EC244
+	sceKernelAllocMemBlockForKernel
+	sceKernelStrncpyFromUser
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7
 	memset

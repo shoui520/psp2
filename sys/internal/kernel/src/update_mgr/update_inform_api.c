@@ -20,7 +20,7 @@ int sceSblUsInformUpdateStartedForUser(int number1, int number2,
 		return (int)0x800f0216;
 	}
 	memset(buffer, 0, sizeof(buffer));
-	result = SceSysmemForDriver_BC996A7A(buffer, str, len);
+	result = sceKernelCopyFromUser(buffer, str, len);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;
@@ -58,7 +58,7 @@ int sceSblUsInformUpdateFinishedForUser(int number, const char *str, SceSize len
 		return (int)0x800f0216;
 	}
 	memset(buffer, 0, sizeof(buffer));
-	result = SceSysmemForDriver_BC996A7A(buffer, str, len);
+	result = sceKernelCopyFromUser(buffer, str, len);
 	if (result != 0) {
 		sceSyscallLeave(state);
 		return result;

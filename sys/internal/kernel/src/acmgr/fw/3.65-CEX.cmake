@@ -39,7 +39,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_26AA237C
 	SceSysrootForDriver_56D85EB0
 	SceSysrootForDriver_E2515A08
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceQafMgrForDriver_694D1096
 	SceQafMgrForDriver_CAD47130
 	SceDipswForDriver_A98FC2FD

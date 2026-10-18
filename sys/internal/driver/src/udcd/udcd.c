@@ -580,8 +580,8 @@ SceUdcdConfiguration *udcdBuildConfiguration(int speed, const int *stringCounts,
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	*memBlock = SceSysmemForDriver_C94850C9("SceUdcdConfigDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, 0x1000, &options);
-	if (*memBlock < 0 || SceSysmemForDriver_A841EDDA(*memBlock, (void **)&allocation) < 0)
+	*memBlock = sceKernelAllocMemBlockForKernel("SceUdcdConfigDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, 0x1000, &options);
+	if (*memBlock < 0 || sceKernelGetMemBlockBase(*memBlock, (void **)&allocation) < 0)
 		return NULL;
 	settings = (SceUdcdInterfaceSettings *)(allocation + 1);
 	interface = (SceUdcdInterfaceDescriptor *)(settings + interfaces);
@@ -732,10 +732,10 @@ int udcdBuildDeviceDescriptors(unsigned short productId, int bus)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	state->deviceMemBlock = SceSysmemForDriver_C94850C9("SceUdcdDevDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	state->deviceMemBlock = sceKernelAllocMemBlockForKernel("SceUdcdDevDesc", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 						    0x1000, &options);
 	if (state->deviceMemBlock < 0 ||
-	    SceSysmemForDriver_A841EDDA(state->deviceMemBlock, (void **)&allocation) < 0)
+	    sceKernelGetMemBlockBase(state->deviceMemBlock, (void **)&allocation) < 0)
 		return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 	state->fullSpeedDevice = allocation;
 	memcpy(allocation, state->drivers->descriptor, sizeof(*allocation));
@@ -1062,7 +1062,7 @@ int udcdValidateRequests(SceUdcdDeviceRequest *request, int bus)
 					return 0x80243404;
 				request->physicalAddress = (void *)(uintptr_t)vector.pRanges->addr;
 			} else {
-				if (SceSysmemForDriver_8D160E65(request->data, &physicalAddress) < 0)
+				if (sceKernelVAtoPA(request->data, &physicalAddress) < 0)
 					return 0x80243407;
 				request->physicalAddress = (void *)physicalAddress;
 			}
@@ -1430,10 +1430,10 @@ int udcdAllocateDescriptorData(int bus)
 	memset(&options, 0, sizeof(options));
 	options.size = sizeof(options);
 	options.attr = 0x200000;
-	result = SceSysmemForDriver_C94850C9("SceUdcdGetDescData", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
+	result = sceKernelAllocMemBlockForKernel("SceUdcdGetDescData", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW,
 				       0x1000, &options);
 	state->descriptorMemBlock = result;
-	if (result < 0 || SceSysmemForDriver_A841EDDA(result, (void **)&base) < 0)
+	if (result < 0 || sceKernelGetMemBlockBase(result, (void **)&base) < 0)
 		return SCE_UDCD_ERROR_WAIT_TIMEOUT;
 	state->fullSpeedDescriptorData = base;
 	cursor = base + ((state->fullSpeedConfiguration->configDescriptors->wTotalLength +

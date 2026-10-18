@@ -51,14 +51,14 @@ int threadmgrGpuExceptionHandler(SceUID pid)
 	}
 	handler = manager->debugHandlers[1][DEBUG_HANDLER_GPU_EXCEPTION];
 	if (handler == NULL) {
-		ret = SceSysmemForDriver_00ED6C14(pid, manager->processClass,
+		ret = sceGUIDReferObjectWithClass(pid, manager->processClass,
 						   (SceObjectBase **)&process);
 		if (ret < 0)
 			goto invalid;
 	} else {
 		message = pid;
 		action = handler(sizeof(message), &message);
-		ret = SceSysmemForDriver_00ED6C14(pid,
+		ret = sceGUIDReferObjectWithClass(pid,
 			s_threadmgrRuntime.manager->processClass, (SceObjectBase **)&process);
 		if (ret < 0)
 			goto invalid;

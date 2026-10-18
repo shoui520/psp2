@@ -99,15 +99,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_45D22597
 	SceSysmemForDriver_49D4DD9B
 	sceKernelCopyToUserProc
-	SceSysmemForDriver_6D88EF8A
+	sceKernelCopyToUser
 	SceSysmemForDriver_7750CEA7
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_BC996A7A
-	SceSysmemForDriver_C94850C9
+	sceKernelVAtoPA
+	sceKernelCreateHeap
+	sceKernelGetMemBlockBase
+	sceKernelCopyFromUser
+	sceKernelAllocMemBlockForKernel
 	sceKernelDeleteHeap
-	SceSysmemForDriver_DB3EC244
+	sceKernelStrncpyFromUser
 	SceSysmemForDriver_F3BBE2E1
 	memset
 	strncmp

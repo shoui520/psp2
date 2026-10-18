@@ -130,8 +130,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67
 	SceSysmemForDriver_45D22597
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E
 	sceKernelRegisterSysEventHandler

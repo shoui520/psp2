@@ -73,8 +73,8 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_D9703808
 	ScePervasiveForDriver_714EEFB7
 	SceSysmemForDriver_009E1C61
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	memset
 	__stack_chk_fail
 	SceSblAIMgrForDriver_274663A0

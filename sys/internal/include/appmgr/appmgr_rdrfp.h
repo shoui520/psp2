@@ -17,9 +17,9 @@ typedef struct SceAppMgrRdrfpPasscode {
 	SceUInt32 data[8];
 } SceAppMgrRdrfpPasscode;
 
-int SceAppMgrForDriver_1574E1A4(int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
+int sceAppMgrRdrfpMount(int type, const char *path, const SceAppMgrRdrfpPasscode *passcode,
 				SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpMount */
-int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
+int sceAppMgrRdrfpUmount(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
 int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */
 
 int SceAppMgrForDriver_5B1BE482(const void *status);	/* vitasdk: ksceAppMgrBgdlSetQueueStatus */

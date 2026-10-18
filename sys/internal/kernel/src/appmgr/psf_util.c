@@ -9,7 +9,7 @@
 
 void *appmgrPsfAllocMemory(SceSize size)
 {
-	return SceSysmemForDriver_7B4CB60A(SCE_KERNEL_HEAP_ID, size);
+	return sceKernelAllocHeapMemory(SCE_KERNEL_HEAP_ID, size);
 }
 
 int appmgrPsfFreeMemory(void *memory)

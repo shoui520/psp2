@@ -14,7 +14,7 @@
 +extern int SceDebugForDriver_391B74B7(const char *fmt, ...);
 +extern int SceCpuForDriver_D32ACE9E(volatile int *lock);
 +extern void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile int *lock, int intr);
-+extern int SceSysmemForDriver_8D160E65(const void *va, uintptr_t *pa);
++extern int sceKernelVAtoPA(const void *va, uintptr_t *pa);
 +/* the heap's system memory (dlmalloc/heap.c) */
 +extern void *sceKernelDlMmap(void *heap, SceSize size);
 +extern void *sceKernelDlDirectMmap(void *heap, SceSize size);
@@ -192,7 +192,7 @@
 +/* SCE: a checked address is also translated, so a wild pointer faults here */
 +static inline int sce_touch_address(void* a) {
 +  uintptr_t pa;
-+  SceSysmemForDriver_8D160E65(a, &pa);
++  sceKernelVAtoPA(a, &pa);
 +  return 1;
 +}
 +#define ok_address(M, a) ((char*)(a) >= (M)->least_addr && sce_touch_address(a))
@@ -272,7 +272,7 @@
 +          if (is_inuse(q)) {
 +            if (q != first) {
 +              mstate fm = get_mstate_for(q);
-+              if (SceSysmemForDriver_8D160E65(fm, &pa) < 0) {
++              if (sceKernelVAtoPA(fm, &pa) < 0) {
 +                SCE_PRINTF_WITH_INFO(0, 3603,
 +                  "*** Kernel Heap Corruption. BAD ADDRESS (msp=%p[%s], q=%p, fm=%p)\n",
 +                  m, name, q, fm);

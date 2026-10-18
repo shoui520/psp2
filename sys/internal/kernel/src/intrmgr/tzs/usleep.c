@@ -122,14 +122,14 @@ int InitUsleepTimer(int remap)
 		opt.size = sizeof(opt);
 		opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_PADDR;
 		opt.paddr = TIMER_WORD_REG_BASE(USLEEP_TIMER);
-		memBlockId = SceSysmemForDriver_C94850C9("SceTimerForUsleep",
+		memBlockId = sceKernelAllocMemBlockForKernel("SceTimerForUsleep",
 						     SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 						     TIMER_REG_SIZE, &opt);
 		if (memBlockId < 0) {
 			SCE_DBG_PRINTF(0xb, 205, "remap Word Timer7 failed. 0x%08x\n", memBlockId);
 			SCE_DBG_ASSERT_FAIL(206);
 		}
-		SceSysmemForDriver_A841EDDA(memBlockId, &base);
+		sceKernelGetMemBlockBase(memBlockId, &base);
 		s_timer = base;
 	} else {
 		s_timer = (void *)TIMER_WORD_REG_BASE(USLEEP_TIMER);

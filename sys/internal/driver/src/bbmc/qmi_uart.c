@@ -203,12 +203,12 @@ int qmiInitializeUart(void)
 	options.size = sizeof(options);
 	options.paddr = UART_REG_BASE + 5 * UART_REG_SIZE;
 	options.attr = 2;
-	result = SceSysmemForDriver_C94850C9("SceUart5Reg", 0x20100806,
+	result = sceKernelAllocMemBlockForKernel("SceUart5Reg", 0x20100806,
 		UART_REG_SIZE, &options);
 	if (result < 0)
 		return result;
 	g_qmiUartMemBlock = result;
-	SceSysmemForDriver_A841EDDA(result, (void **)&g_qmiUartRegisters);
+	sceKernelGetMemBlockBase(result, (void **)&g_qmiUartRegisters);
 	result = sceKernelRegisterIntrHandler(229, "SceUart5", 0,
 		(SceKernelIntrHandler)qmiUartInterrupt, &g_qmiUartPort,
 		176, 15, NULL);

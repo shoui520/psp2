@@ -125,14 +125,14 @@ int createVideoContext(int type, int flags, int options)
 	}
 	heap = contextHeaps[owner];
 	if (heap <= 0) {
-		heap = SceSysmemForDriver_9328E0E8("mgvideo", sizeof(MgVideoContext), 0);
+		heap = sceKernelCreateHeap("mgvideo", sizeof(MgVideoContext), 0);
 		if (heap < 0) {
 			result = (int)0x8050c004;
 			goto unreference;
 		}
 		contextHeaps[owner] = heap;
 	}
-	context = SceSysmemForDriver_7B4CB60A(heap, sizeof(*context));
+	context = sceKernelAllocHeapMemory(heap, sizeof(*context));
 	if (!context) {
 		result = (int)0x8050c004;
 		sceKernelDeleteHeap(heap);

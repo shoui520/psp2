@@ -64,7 +64,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_103872A5
 	SceDebugForDriver_391B5B74
 	SceSysmemForDriver_0B4ED16A
-	SceSysmemForDriver_8D160E65
+	sceKernelVAtoPA
 	SceSysmemForDriver_AE36C775
 	sceKernelVARangeToPAVector
 	SceSysrootForKernel_377895EB

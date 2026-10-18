@@ -989,7 +989,7 @@ int sceAVConfigGetDisplayMaxBrightness(unsigned int *brightness)
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		maximum = ScePowerForDriver_D8759B55();
-		if (SceSysmemForDriver_6D88EF8A(brightness, &maximum, sizeof(maximum)) != 0)
+		if (sceKernelCopyToUser(brightness, &maximum, sizeof(maximum)) != 0)
 			result = (int)0x803a0102;
 		else
 			result = 0;
@@ -1008,7 +1008,7 @@ int sceAVConfigGetAcStatus(int *online)
 
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		active = scePowerIsPowerOnline() != 0;
-		if (SceSysmemForDriver_6D88EF8A(online, &active, sizeof(active)) != 0)
+		if (sceKernelCopyToUser(online, &active, sizeof(active)) != 0)
 			result = (int)0x803a0102;
 		else
 			result = 0;
@@ -1177,9 +1177,9 @@ int sceAVConfigGetVolCtrlEnable(int *mode, int *muted, int *avls)
 	if (sceSblACMgrIsSystemProgram(0) == 1) {
 		avConfigGetVolumeControlState(&modeValue, &mutedValue);
 		avlsValue = avConfigAvlsEnabled;
-		if (SceSysmemForDriver_6D88EF8A(mode, &modeValue, sizeof(modeValue)) != 0 ||
-		    SceSysmemForDriver_6D88EF8A(muted, &mutedValue, sizeof(mutedValue)) != 0 ||
-		    (result = SceSysmemForDriver_6D88EF8A(avls, &avlsValue, sizeof(avlsValue))) != 0)
+		if (sceKernelCopyToUser(mode, &modeValue, sizeof(modeValue)) != 0 ||
+		    sceKernelCopyToUser(muted, &mutedValue, sizeof(mutedValue)) != 0 ||
+		    (result = sceKernelCopyToUser(avls, &avlsValue, sizeof(avlsValue))) != 0)
 			result = (int)0x803a0102;
 	} else {
 		result = (int)0x80010058;
@@ -1202,8 +1202,8 @@ int sceAVConfigGetBtVol(int *notified, int *volume)
 		notifiedValue = avConfigConfiguration.settings.btVolumeNotified;
 		avConfigConfiguration.settings.btVolumeNotified = 0;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-		if (SceSysmemForDriver_6D88EF8A(notified, &notifiedValue, sizeof(notifiedValue)) != 0 ||
-		    (result = SceSysmemForDriver_6D88EF8A(volume, &volumeValue, sizeof(volumeValue))) != 0)
+		if (sceKernelCopyToUser(notified, &notifiedValue, sizeof(notifiedValue)) != 0 ||
+		    (result = sceKernelCopyToUser(volume, &volumeValue, sizeof(volumeValue))) != 0)
 			result = (int)0x803a0102;
 	} else {
 		result = (int)0x80010058;
@@ -1223,7 +1223,7 @@ int sceAVConfigGetSystemVol(int *volume)
 		intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 		volumeValue = avConfigConfiguration.settings.systemVolume;
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-		if (SceSysmemForDriver_6D88EF8A(volume, &volumeValue, sizeof(volumeValue)) != 0)
+		if (sceKernelCopyToUser(volume, &volumeValue, sizeof(volumeValue)) != 0)
 			result = (int)0x803a0102;
 		else
 			result = 0;
@@ -1482,7 +1482,7 @@ int sceAVConfigHdmiSetOutScalingRatio(const AvConfigScalingRatio *ratio)
 	{
 		AvConfigScalingRatio *value = __builtin_alloca(sizeof(*value));
 
-		result = SceSysmemForDriver_BC996A7A(value, ratio, sizeof(*value));
+		result = sceKernelCopyFromUser(value, ratio, sizeof(*value));
 		if (result < 0)
 			goto out;
 		if (avConfigIsHdmiAvailable() != 0) {
@@ -1513,7 +1513,7 @@ int sceAVConfigHdmiGetOutScalingRatio(AvConfigScalingRatio *ratio)
 	{
 		AvConfigScalingRatio *value = __builtin_alloca(sizeof(*value));
 
-		result = SceSysmemForDriver_BC996A7A(value, ratio, sizeof(*value));
+		result = sceKernelCopyFromUser(value, ratio, sizeof(*value));
 		if (result < 0)
 			goto out;
 		if (avConfigIsHdmiAvailable() == 0) {
@@ -1526,7 +1526,7 @@ int sceAVConfigHdmiGetOutScalingRatio(AvConfigScalingRatio *ratio)
 		}
 		result = avConfigGetHdmiScalingRatio(value);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(ratio, value, sizeof(*value));
+			result = sceKernelCopyToUser(ratio, value, sizeof(*value));
 	}
 out:
 	sceSyscallLeave(syscall);
@@ -1547,7 +1547,7 @@ int sceAVConfigHdmiGetMonitorInfo(AvConfigMonitorInfo *info)
 	{
 		AvConfigMonitorInfo *value = __builtin_alloca(sizeof(*value));
 
-		result = SceSysmemForDriver_BC996A7A(value, info, sizeof(*value));
+		result = sceKernelCopyFromUser(value, info, sizeof(*value));
 		if (result < 0)
 			goto out;
 		if (avConfigIsHdmiAvailable() == 0) {
@@ -1560,7 +1560,7 @@ int sceAVConfigHdmiGetMonitorInfo(AvConfigMonitorInfo *info)
 		}
 		result = avConfigGetMonitorInfo(value);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(info, value, sizeof(*value));
+			result = sceKernelCopyToUser(info, value, sizeof(*value));
 	}
 out:
 	sceSyscallLeave(syscall);
@@ -1581,7 +1581,7 @@ int sceAVConfigHdmiGetCecInfo(CecStatistics *statistics)
 	{
 		CecStatistics *value = __builtin_alloca(sizeof(*value));
 
-		result = SceSysmemForDriver_BC996A7A(value, statistics, sizeof(*value));
+		result = sceKernelCopyFromUser(value, statistics, sizeof(*value));
 		if (result < 0)
 			goto out;
 		if (avConfigIsHdmiAvailable() == 0) {
@@ -1594,7 +1594,7 @@ int sceAVConfigHdmiGetCecInfo(CecStatistics *statistics)
 		}
 		result = avConfigGetCecInfo(value);
 		if (result >= 0)
-			result = SceSysmemForDriver_6D88EF8A(statistics, value, sizeof(*value));
+			result = sceKernelCopyToUser(statistics, value, sizeof(*value));
 	}
 out:
 	sceSyscallLeave(syscall);
@@ -1628,7 +1628,7 @@ int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices)
 	intr = SceCpuForDriver_D32ACE9E(&avConfigConfiguration.lock);
 	connectedDevices = avConfigConfiguration.settings.connectedDevices;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&avConfigConfiguration.lock, intr);
-	if (SceSysmemForDriver_6D88EF8A(devices, &connectedDevices, sizeof(connectedDevices)) != 0)
+	if (sceKernelCopyToUser(devices, &connectedDevices, sizeof(connectedDevices)) != 0)
 		result = (int)0x803a0102;
 	else
 		result = 0;
@@ -1674,7 +1674,7 @@ int sceAVConfigGetMasterVol(int *volume)
 		syscall = sceSyscallEnter();
 		if (SceSblAIMgrForDriver_71608CA3() != 0) {
 			masterVolume = avConfigConfiguration.settings.masterVolume;
-			if (SceSysmemForDriver_6D88EF8A(volume, &masterVolume, sizeof(masterVolume)) != 0)
+			if (sceKernelCopyToUser(volume, &masterVolume, sizeof(masterVolume)) != 0)
 				result = (int)0x803a0102;
 			else
 				result = 0;

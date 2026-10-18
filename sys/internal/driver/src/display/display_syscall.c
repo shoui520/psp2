@@ -98,12 +98,12 @@ int _sceDisplayGetMaximumFrameBufResolution(int *pWidth, int *pHeight)
 	}
 	ret = syscallGetMaximumFrameBufResolution(width, height);
 	if (pWidth != NULL) {
-		res = SceSysmemForDriver_6D88EF8A(pWidth, width, sizeof(*width));
+		res = sceKernelCopyToUser(pWidth, width, sizeof(*width));
 		if (res < 0)
 			return res;
 	}
 	if (pHeight != NULL) {
-		res = SceSysmemForDriver_6D88EF8A(pHeight, height, sizeof(*height));
+		res = sceKernelCopyToUser(pHeight, height, sizeof(*height));
 		if (res < 0)
 			return res;
 	}
@@ -123,7 +123,7 @@ int _sceDisplaySetFrameBufInternal(SceUInt32 head, SceUInt32 plane, const SceDis
 	SceDisplayFrameBuf *frameBuf;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	frameBuf = NULL;
@@ -131,7 +131,7 @@ int _sceDisplaySetFrameBufInternal(SceUInt32 head, SceUInt32 plane, const SceDis
 		if (args.size > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-		ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
+		ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 		if (ret < 0)
 			return ret;
 	}
@@ -154,7 +154,7 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 	SceDisplayFrameBuf *frameBuf, *convDst;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	frameBuf = NULL;
@@ -162,7 +162,7 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 		if (args.paramSize > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-		ret = SceSysmemForDriver_BC996A7A(frameBuf, args.pParam, args.paramSize);
+		ret = sceKernelCopyFromUser(frameBuf, args.pParam, args.paramSize);
 		if (ret < 0)
 			return ret;
 	}
@@ -171,7 +171,7 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 		if (args.convDstSize > sizeof(SceDisplayFrameBuf))
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		convDst = __builtin_alloca(sizeof(SceDisplayFrameBuf));
-		ret = SceSysmemForDriver_BC996A7A(convDst, args.convDst, args.convDstSize);
+		ret = sceKernelCopyFromUser(convDst, args.convDst, args.convDstSize);
 		if (ret < 0)
 			return ret;
 	}
@@ -191,7 +191,7 @@ int _sceDisplayGetFrameBufInternal(SceUInt32 head, SceUInt32 plane, SceDisplayFr
 	SceDisplayFrameBuf *frameBuf;
 	int ret, res;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pParam == NULL)
@@ -200,11 +200,11 @@ int _sceDisplayGetFrameBufInternal(SceUInt32 head, SceUInt32 plane, SceDisplayFr
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(frameBuf, 0, SYSCALL_COPY_MAX);
-	ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
+	ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 	if (ret < 0)
 		return ret;
 	ret = syscallGetFrameBufInternal(head, plane, frameBuf, args.sync);
-	res = SceSysmemForDriver_6D88EF8A(pParam, frameBuf, args.size);
+	res = sceKernelCopyToUser(pParam, frameBuf, args.size);
 	return res < 0 ? res : ret;
 }
 
@@ -219,7 +219,7 @@ int _sceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, SceUInt32 sync, con
 	SceDisplayFrameBuf *frameBuf;
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	frameBuf = NULL;
@@ -227,7 +227,7 @@ int _sceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, SceUInt32 sync, con
 		if (args.size > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
 		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
-		ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
+		ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 		if (ret < 0)
 			return ret;
 	}
@@ -240,7 +240,7 @@ int _sceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, SceUInt32 sync, const Dis
 	SceDisplayFrameBuf *frameBuf;
 	int ret, res;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pParam == NULL)
@@ -249,11 +249,11 @@ int _sceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, SceUInt32 sync, const Dis
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(frameBuf, 0, SYSCALL_COPY_MAX);
-	ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
+	ret = sceKernelCopyFromUser(frameBuf, pParam, args.size);
 	if (ret < 0)
 		return ret;
 	ret = syscallGetFrameBuf(frameBuf, sync);
-	res = SceSysmemForDriver_6D88EF8A(pParam, frameBuf, args.size);
+	res = sceKernelCopyToUser(pParam, frameBuf, args.size);
 	return res < 0 ? res : ret;
 }
 
@@ -264,7 +264,7 @@ int _sceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInf
 	SceDisplayResolutionInfo *info;
 	int ret, res;
 
-	ret = SceSysmemForDriver_BC996A7A(&args, pArgs, sizeof(args));
+	ret = sceKernelCopyFromUser(&args, pArgs, sizeof(args));
 	if (ret < 0)
 		return ret;
 	if (pInfo == NULL)
@@ -273,10 +273,10 @@ int _sceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInf
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	info = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(info, 0, SYSCALL_COPY_MAX);
-	ret = SceSysmemForDriver_BC996A7A(info, pInfo, args.size);
+	ret = sceKernelCopyFromUser(info, pInfo, args.size);
 	if (ret < 0)
 		return ret;
 	ret = syscallGetResolutionInfoInternal(head, info);
-	res = SceSysmemForDriver_6D88EF8A(pInfo, info, args.size);
+	res = sceKernelCopyToUser(pInfo, info, args.size);
 	return res < 0 ? res : ret;
 }

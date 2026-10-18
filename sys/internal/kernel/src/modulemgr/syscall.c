@@ -24,7 +24,7 @@ int ModulemgrCopyPathFromUser(const char *upath, char **path)
 		return SCE_KERNEL_ERROR_MODULEMGR_NOMEM;
 	buf[len] = '\0';
 	if (len != 0) {
-		ret = SceSysmemForDriver_BC996A7A(buf, upath, len);
+		ret = sceKernelCopyFromUser(buf, upath, len);
 		if (ret < 0) {
 			ModulemgrFree(0, buf);
 			return ret;
@@ -270,7 +270,7 @@ int sceKernelGetModuleListForUser(SceUInt32 flags, SceUID *ulist, SceSize *unum)
 		ModulemgrSyscallLeave(state);
 		return ret;
 	}
-	ret = SceSysmemForDriver_BC996A7A(&count, unum, sizeof(count));
+	ret = sceKernelCopyFromUser(&count, unum, sizeof(count));
 	if (ret < 0) {
 		ModulemgrSyscallLeave(state);
 		return ret;
@@ -283,9 +283,9 @@ int sceKernelGetModuleListForUser(SceUInt32 flags, SceUID *ulist, SceSize *unum)
 	n = count;
 	ret = sceKernelGetModuleList(0, flags, 2, list, &n);
 	if (ret >= 0) {
-		ret = SceSysmemForDriver_6D88EF8A(ulist, list, n * sizeof(SceUID));
+		ret = sceKernelCopyToUser(ulist, list, n * sizeof(SceUID));
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(unum, &n, sizeof(n));
+			ret = sceKernelCopyToUser(unum, &n, sizeof(n));
 	}
 	SceSysmemForKernel_4233C16D(list);
 	ModulemgrSyscallLeave(state);
@@ -307,7 +307,7 @@ int sceKernelGetModuleInfo(SceUID modid, SceKernelModuleInfo *uinfo)
 		info.size = sizeof(info);
 		ret = LibraryDBGetModuleInfoById(sceKernelGetProcessId(), ret, &info);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
+			ret = sceKernelCopyToUser(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;
@@ -332,11 +332,11 @@ int _sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *uinfo)
 	state = ModulemgrSyscallEnter();
 	SceKernelSystemSwVersion info __attribute__((aligned(8))) = { 0 };
 
-	ret = SceSysmemForDriver_BC996A7A(&info, uinfo, 4);
+	ret = sceKernelCopyFromUser(&info, uinfo, 4);
 	if (ret >= 0) {
 		ret = sceKernelGetSystemSwVersion(&info);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
+			ret = sceKernelCopyToUser(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;
@@ -373,7 +373,7 @@ int sceKernelGetLibraryInfoByNID(SceUID modid, SceNID libnid, SceKernelLibraryIn
 
 		ret = LibraryDBGetLibraryInfoByNID(pid, ret, libnid, &info);
 		if (ret >= 0)
-			ret = SceSysmemForDriver_6D88EF8A(uinfo, &info, sizeof(info));
+			ret = sceKernelCopyToUser(uinfo, &info, sizeof(info));
 	}
 	ModulemgrSyscallLeave(state);
 	return ret;

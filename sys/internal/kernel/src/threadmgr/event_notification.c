@@ -15,7 +15,7 @@ int _sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, const
 	uint32_t values[4];
 	int ret;
 
-	ret = SceSysmemForDriver_BC996A7A(values, args, sizeof(values));
+	ret = sceKernelCopyFromUser(values, args, sizeof(values));
 	if (ret < 0)
 		return ret;
 	return sceKernelSetEventWithNotifyCallbackForUser(eventId, pattern, values[0], values[1],

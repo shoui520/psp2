@@ -52,7 +52,7 @@ RdrfpRequest *rdrfpPrepareRequest(SceUInt32 id, int bufType, int bufIndex, void 
 	desc = rdrfpCreateDesc(id, bufType, bufIndex, packet);
 	if (desc == NULL)
 		SCE_PANIC(163);
-	req = SceSysmemForDriver_7B4CB60A(rdrfpHeap, sizeof(*req));
+	req = sceKernelAllocHeapMemory(rdrfpHeap, sizeof(*req));
 	if (req == NULL)
 		SCE_PANIC(168);
 	memset(req, 0, sizeof(*req));
@@ -124,7 +124,7 @@ static inline __attribute__((always_inline)) int sceDeci4pRDrfpInit(void)
 		.attr = 0x401,
 		.memtype = 0x10f0d006,
 	};
-	ret = SceSysmemForDriver_9328E0E8("SceDeci4pRDrfp", 0x2000, &opt);
+	ret = sceKernelCreateHeap("SceDeci4pRDrfp", 0x2000, &opt);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_WITH_INFO(0xf, 80, "CreateHeap failed (0x%08X)\n", ret);
 		return SCE_KERNEL_START_FAILED;
@@ -187,7 +187,7 @@ void rdrfpQueueRequest(RdrfpRequest *req)
 
 void *rdrfpAlloc(SceSize size)
 {
-	return SceSysmemForDriver_7B4CB60A(rdrfpHeap, size);
+	return sceKernelAllocHeapMemory(rdrfpHeap, size);
 }
 
 void rdrfpFree(void *p)
@@ -351,7 +351,7 @@ static inline __attribute__((always_inline)) int ReadHandler(SceSize size, Rdrfp
 	*packet = head;
 	req = rdrfpPrepareRequest(head.id & 0xffff, bufType, index, packet);
 	if (head.type == RDRFP_CMD_READ) {
-		state = SceSysmemForDriver_7B4CB60A(rdrfpHeap, sizeof(*state));
+		state = sceKernelAllocHeapMemory(rdrfpHeap, sizeof(*state));
 		if (state == NULL)
 			SCE_PANIC(553);
 		state->continued = 0;

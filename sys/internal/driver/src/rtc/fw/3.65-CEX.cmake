@@ -57,8 +57,8 @@ set(MODULE_IMPORT_NIDS
 	0x60A35F64:F:0xE26488B9
 )
 set(MODULE_IMPORT_FUNCS
-	SceSysmemForDriver_6D88EF8A
-	SceSysmemForDriver_BC996A7A
+	sceKernelCopyToUser
+	sceKernelCopyFromUser
 	SceCpuForDriver_821FC0EE
 	sceKernelCpuResumeIntr
 	SceDipswForDriver_A98FC2FD

@@ -632,13 +632,13 @@ int StartSystimer(SceSize args, void *argp)
 	void *base;
 	SceUInt32 i;
 
-	uid = SceSysmemForDriver_C94850C9("SceLongRangeTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceLongRangeTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				      LONG_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 836, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(837);
 	}
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	for (i = 0; i < LONG_TIMERS; i++) {
 		s_longTimer[i].id = i | SCE_SYSTIMER_TYPE_LONG << 16;
 		s_longTimer[i].intrCode = i + LONG_INTR_BASE;
@@ -651,13 +651,13 @@ int StartSystimer(SceSize args, void *argp)
 	}
 
 	opt.paddr = TIMER_WORD_REG_BASE(0);
-	uid = SceSysmemForDriver_C94850C9("SceWordTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
+	uid = sceKernelAllocMemBlockForKernel("SceWordTimerReg", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_IO_SO_RW,
 				      WORD_TIMERS * TIMER_REG_SIZE, &opt);
 	if (uid < 0) {
 		SCE_DBG_PRINTF(0xb, 865, "allocate systimer register area failed. 0x%08x\n", uid);
 		SCE_DBG_ASSERT_FAIL(866);
 	}
-	SceSysmemForDriver_A841EDDA(uid, &base);
+	sceKernelGetMemBlockBase(uid, &base);
 	for (i = 0; i < WORD_TIMERS; i++) {
 		s_wordTimer[i].id = i | SCE_SYSTIMER_TYPE_WORD << 16;
 		s_wordTimer[i].intrCode = i + WORD_INTR_BASE;

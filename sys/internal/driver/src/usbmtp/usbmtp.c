@@ -438,14 +438,14 @@ static int _sceUsbMtpInitTask(void *args)
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
 	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT;
-	s_mtp.memblock = SceSysmemForDriver_C94850C9("SceUsbMtp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
+	s_mtp.memblock = sceKernelAllocMemBlockForKernel("SceUsbMtp", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW,
 						 0x11000, &opt);
 	if (s_mtp.memblock < 0) {
 		SCE_DBG_PRINTF(0, 2480, "[%s%-28s] Err(%4d) sceKernelAllocMemBlock. Size:0x%x\n",
 			       "usbmtp:", __func__, 2480, 0x11000);
 		return MTP_MEMORY;
 	}
-	ret = SceSysmemForDriver_A841EDDA(s_mtp.memblock, (void **)&base);
+	ret = sceKernelGetMemBlockBase(s_mtp.memblock, (void **)&base);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0, 2486, "[%s%-28s] Err(%4d) sceKernelGetMemBlockBase\n",
 			       "usbmtp:", __func__, 2486);

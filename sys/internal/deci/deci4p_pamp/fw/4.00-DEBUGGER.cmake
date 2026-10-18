@@ -99,9 +99,9 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelFreeHeapMemory
-	SceSysmemForDriver_7B4CB60A
-	SceSysmemForDriver_8D160E65
-	SceSysmemForDriver_9328E0E8
+	sceKernelAllocHeapMemory
+	sceKernelVAtoPA
+	sceKernelCreateHeap
 	SceSysmemForDriver_C9928F5E
 	memset
 	memmove

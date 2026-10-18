@@ -33,7 +33,7 @@ int ngsPlatformInitialize(void)
 {
 	int key;
 
-	key = SceProcessmgrForDriver_3801D7D6("SceLibNgs", 808);
+	key = sceKernelRegisterKPLS("SceLibNgs", 808);
 	if (key < 0)
 		return key;
 	ngsPlatformState.processStorageKey = key;
@@ -494,9 +494,9 @@ foundStorage:
 		opt.size = sizeof(opt);
 		opt.attr = 0x80;
 		opt.pid = sceKernelGetProcessId();
-		*memBlock = SceSysmemForDriver_C94850C9("SceNgsBlock", 0x10c0d006,
+		*memBlock = sceKernelAllocMemBlockForKernel("SceNgsBlock", 0x10c0d006,
 			(callbackSize + 4095 + systemSize) >> 12 << 12, &opt);
-		if (SceSysmemForDriver_A841EDDA(*memBlock, &memBlockBase) != 0) {
+		if (sceKernelGetMemBlockBase(*memBlock, &memBlockBase) != 0) {
 			*systemMemory = NULL;
 			*coherentMemory = NULL;
 			*dspHeapMemory = NULL;
@@ -648,9 +648,9 @@ int ngsAllocateDebugBuffer(SceNgsBufferInfo *buffer, SceUID *memBlock, int size)
 
 	memset(&opt, 0, sizeof(opt));
 	opt.size = sizeof(opt);
-	*memBlock = SceSysmemForDriver_C94850C9("SceNgsDbgBlk", 0x10f0d006,
+	*memBlock = sceKernelAllocMemBlockForKernel("SceNgsDbgBlk", 0x10f0d006,
 		(unsigned int)(size + 4095) >> 12 << 12, &opt);
-	result = SceSysmemForDriver_A841EDDA(*memBlock, &buffer->data);
+	result = sceKernelGetMemBlockBase(*memBlock, &buffer->data);
 	if (result != 0) {
 		buffer->data = NULL;
 		size = 0;

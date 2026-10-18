@@ -675,7 +675,7 @@ static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 
 int module_start(SceSize args, void *argp)
 {
-	s_storage = SceProcessmgrForDriver_3801D7D6("SceSysmodule", 0x1000);
+	s_storage = sceKernelRegisterKPLS("SceSysmodule", 0x1000);
 	sceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, 0);
 	return SCE_KERNEL_START_SUCCESS;
 }
@@ -760,14 +760,14 @@ int sceSysmoduleLoadModuleInternalWithArg(SceUInt32 id, SceSize args, void *argp
 	SysmoduleUserOpt opt;
 	int status, ret, ret2;
 
-	ret = SceSysmemForDriver_BC996A7A(&opt, uopt, sizeof(opt));
+	ret = sceKernelCopyFromUser(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
 	if (opt.status == NULL)
 		return sysmoduleLoadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleLoadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = SceSysmemForDriver_6D88EF8A(opt.status, &status, sizeof(status));
+	ret2 = sceKernelCopyToUser(opt.status, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }
 
@@ -776,13 +776,13 @@ int sceSysmoduleUnloadModuleInternalWithArg(SceUInt32 id, SceSize args, void *ar
 	SysmoduleUserOpt opt;
 	int status, ret, ret2;
 
-	ret = SceSysmemForDriver_BC996A7A(&opt, uopt, sizeof(opt));
+	ret = sceKernelCopyFromUser(&opt, uopt, sizeof(opt));
 	if (ret < 0)
 		return ret;
 	if (opt.status == NULL)
 		return sysmoduleUnloadWithOpt(id, args, argp, opt.flags, NULL);
 	status = 0;
 	ret = sysmoduleUnloadWithOpt(id, args, argp, opt.flags, &status);
-	ret2 = SceSysmemForDriver_6D88EF8A(opt.status, &status, sizeof(status));
+	ret2 = sceKernelCopyToUser(opt.status, &status, sizeof(status));
 	return ret2 < 0 ? ret2 : ret;
 }

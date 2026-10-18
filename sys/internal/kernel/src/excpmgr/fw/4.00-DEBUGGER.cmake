@@ -57,9 +57,9 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	sceKernelCopyFromUserProc
-	SceSysmemForDriver_A78755EB
-	SceSysmemForDriver_A841EDDA
-	SceSysmemForDriver_C94850C9
+	sceGUIDGetName
+	sceKernelGetMemBlockBase
+	sceKernelAllocMemBlockForKernel
 	SceSysmemForKernel_2995558D
 	SceSysrootForKernel_06182D59
 	SceSysrootForKernel_0A12227B

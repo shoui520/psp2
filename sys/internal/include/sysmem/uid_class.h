@@ -46,14 +46,14 @@ SceClass *SceSysmemForKernel_E4193EB6(void);	/* vitasdk: ksceKernelGetUIDDLinkCl
 SceClass *SceSysmemForKernel_7C878E94(void);	/* vitasdk: ksceKernelGetUIDHeapClass */
 SceClass *SceSysmemForKernel_86681B64(void);	/* vitasdk: ksceKernelGetUIDMemBlockClass */
 /* vitasdk: ksceUIDClassInitClass */
-int SceSysmemForDriver_61317102(SceClass *cls, const char *name, void *uidclass,
+int sceUIDClassInitClass(SceClass *cls, const char *name, void *uidclass,
 			SceSize itemsize, SceClassCallback create, SceClassCallback destroy);
 /* vitasdk: ksceKernelFindClassByName */
 int SceSysmemForKernel_7D87F706(const char *name, SceClass **cls);
 
 int PUIDGetPUIDVectorByGUID(SceUID pid, SceUID guid, SceUInt32 level, SceUID *vector, SceSize size, SceSize *ret_num);
 int SceSysmemForKernel_02DAD732(void);
-int SceSysmemForKernel_08C05493(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);
+int scePUIDGetUIDVectorByClass(SceUID pid, SceClass *cls, SceUInt32 level, SceUID *vector, SceSize num, SceSize *ret_num);
 int SceSysmemForKernel_16A54BFE(void);
 SceUID SceSysmemForKernel_188C8742(SceUID pid, SceUID puid);
 SceClass *SceSysmemForKernel_368F1C36(SceUID uid);

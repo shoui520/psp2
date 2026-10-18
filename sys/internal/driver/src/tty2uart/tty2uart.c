@@ -98,11 +98,11 @@ static void tty2bufferStart(Tty2Buffer *p)
 	intr = SceCpuForDriver_D32ACE9E(&p->lock);
 	p->pid = -1;
 	p->size = TTY2_BUFFER_SIZE;
-	p->uid = SceSysmemForDriver_C94850C9("SceTty2uartBuffer", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, TTY2_BUFFER_SIZE, NULL);
+	p->uid = sceKernelAllocMemBlockForKernel("SceTty2uartBuffer", SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW, TTY2_BUFFER_SIZE, NULL);
 	if (p->uid < 0) {
 		TTY2_ERROR(0xb, 159, "sceKernelAllocMemBlockForKernel failed (0x%08X)\n", p->uid);
 	} else {
-		ret = SceSysmemForDriver_B81CF0A3(p->uid, (void **)&p->base);
+		ret = sceKernelGetMemBlockVBase(p->uid, (void **)&p->base);
 		if (ret < 0) {
 			TTY2_ERROR(0xb, 165, "sceKernelGetMemBlockVBase failed (0x%08X)\n", ret);
 			SceSysmemForDriver_009E1C61(p->uid);

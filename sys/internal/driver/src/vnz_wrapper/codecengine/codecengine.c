@@ -30,7 +30,7 @@ int initCodecEngine(void)
 	int ret;
 
 	g_codecEngineProcessStorageKey = -1;
-	ret = SceProcessmgrForDriver_3801D7D6("SceCodecEngine", sizeof(CodecEngineProcessStorage));
+	ret = sceKernelRegisterKPLS("SceCodecEngine", sizeof(CodecEngineProcessStorage));
 	if (ret < 0)
 		return ret;
 	g_codecEngineProcessStorageKey = ret;

@@ -195,7 +195,7 @@ static int initializeStorage(void)
 	/* Sony only initializes the first two words of this option record. */
 	createOpt.size = sizeof(createOpt);
 	createOpt.attr = 1;
-	heap = SceSysmemForDriver_9328E0E8(name, 0x8000, &createOpt);
+	heap = sceKernelCreateHeap(name, 0x8000, &createOpt);
 	if (heap < 0)
 		return ID_NO_SPACE;
 	storage.offset = 0;
@@ -226,11 +226,11 @@ static int initializeStorage(void)
 	if (!storage.index)
 		return ID_NO_SPACE;
 	memset(storage.index, 0, indexLeaves << 1);
-	ret = SceSysmemForDriver_C94850C9(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x4000, NULL);
+	ret = sceKernelAllocMemBlockForKernel(name, SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_RW, 0x4000, NULL);
 	if (ret < 0)
 		return ret;
 	storage.memblock = ret;
-	ret = SceSysmemForDriver_A841EDDA(ret, (void **)&storage.data);
+	ret = sceKernelGetMemBlockBase(ret, (void **)&storage.data);
 	if (ret < 0) {
 		SceSysmemForDriver_009E1C61(storage.memblock);
 		return ret;

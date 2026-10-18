@@ -652,7 +652,7 @@ static int initThread(SceSize args, void *argp)
 		sceKernelExitThread(SCE_KERNEL_ERROR_INVALID_ARGUMENT);
 	}
 	ctx = *(Sdeci2pContext **)argp;
-	ret = SceSysmemForDriver_C94850C9("SceDeci4pSDeci2p", SceDeci4pSDfMgrForKernel_35238B8A(),
+	ret = sceKernelAllocMemBlockForKernel("SceDeci4pSDeci2p", SceDeci4pSDfMgrForKernel_35238B8A(),
 				      SDECI2P_STOPPED_SIZE, NULL);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 414, "AllocMemBlockForKernel failed (0x%08x)\n", ret);
@@ -660,7 +660,7 @@ static int initThread(SceSize args, void *argp)
 		return ret;
 	}
 	ctx->memblock = ret;
-	ret = SceSysmemForDriver_A841EDDA(ret, &base);
+	ret = sceKernelGetMemBlockBase(ret, &base);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 423, "GetMemBlockBase failed (0x%08x)\n", ret);
 		SCE_DBG_ASSERT_FAIL(424);
@@ -678,7 +678,7 @@ static int initThread(SceSize args, void *argp)
 	proto.destination = 0;
 	proto.flags = 1;
 	proto.name = "SDECI2P";
-	ret = SceDeci4pSDfMgrForKernel_A55F5F0D(sdeci2pHandler, &proto, ctx);
+	ret = sceSDfMgrOpen(sdeci2pHandler, &proto, ctx);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 446, "sceSDfMgrOpen() failed (0x%08x)\n", ret);
 		return ret;

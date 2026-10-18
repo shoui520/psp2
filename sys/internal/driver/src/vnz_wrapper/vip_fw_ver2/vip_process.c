@@ -37,7 +37,7 @@ int initializeVeneziaVipProcesses(void)
 {
 	int ret;
 
-	ret = SceProcessmgrForDriver_3801D7D6("SceVip", sizeof(VeneziaVipProcessStorage));
+	ret = sceKernelRegisterKPLS("SceVip", sizeof(VeneziaVipProcessStorage));
 	if (ret >= 0) {
 		g_veneziaVipProcessStorageKey = ret;
 		ret = initializeVeneziaVipResources();

@@ -121,7 +121,7 @@ void *memMgrAlloc(SceSize size)
 		result = oalMemBlockInit(&allocation->blockId, size);
 	if (result != 0)
 		return NULL;
-	if (SceSysmemForDriver_A841EDDA(allocation->blockId, &allocation->base) == 0)
+	if (sceKernelGetMemBlockBase(allocation->blockId, &allocation->base) == 0)
 		return allocation->base;
 	oalMemBlockFinal(largeAllocations[index].blockId);
 	largeAllocations[index].blockId = -1;

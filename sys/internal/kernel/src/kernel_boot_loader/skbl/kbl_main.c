@@ -293,7 +293,7 @@ int sceKblMain(SceKernelBootParam *param)
 	cpu->stackSize = KBL_STACK_SIZE;
 	cpu->stackBlockId = SceSysmemForKernel_40870E74(SysmemAllocName(s_bootStackNames[core]),
 							KBL_STACK_SIZE, KBL_STACK_ALIGN);
-	SceSysmemForDriver_B81CF0A3(cpu->stackBlockId, &stack);
+	sceKernelGetMemBlockVBase(cpu->stackBlockId, &stack);
 	cpu->stackBottom = (char *)stack + cpu->stackSize;
 	if (SceDipswForDriver_A98FC2FD(DIPSW_WIPE_KERNEL_STACK))
 		memset((char *)stack + KBL_STACK_GUARD, 0xff, KBL_STACK_SIZE - KBL_STACK_GUARD);

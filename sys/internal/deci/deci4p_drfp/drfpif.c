@@ -623,7 +623,7 @@ int sceDeci4pDrfpDread(int fd, DrfpDirent **ent)
 	}
 	ret = drfpConvertError(pkt->res.result);
 	if (ret == 0 && pkt->res.count != 0) {
-		p = SceSysmemForDriver_7B4CB60A(drfpGetHeap(), pkt->res.size);
+		p = sceKernelAllocHeapMemory(drfpGetHeap(), pkt->res.size);
 		*ent = p;
 		if (p != NULL) {
 			memcpy(p, pkt->res.ent, pkt->res.size);

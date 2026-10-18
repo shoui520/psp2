@@ -485,7 +485,7 @@ int dbgpCreateWorkerThread(SceUID pid)
 	int active[17];
 	int count, slot, result;
 
-	allocated = SceSysmemForDriver_7B4CB60A(g_dbgp.heap, 0x5000);
+	allocated = sceKernelAllocHeapMemory(g_dbgp.heap, 0x5000);
 	if (allocated == NULL) {
 		SCE_PRINTF_WITH_INFO_FUNC(15, 3681, "_dbgpAllocDbgpProcCB", "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
@@ -562,14 +562,14 @@ available:
 	proc->buf[0].name = "recv";
 	proc->buf[2].name = "work";
 	proc->buf[1].name = "send";
-	result = SceSysmemForDriver_C94850C9("SceDeci4pDbgp",
+	result = sceKernelAllocMemBlockForKernel("SceDeci4pDbgp",
 			SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW, 0x33000, NULL);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1171, "0x%08x\n", result);
 		return result;
 	}
 	proc->bufferMemBlock = result;
-	result = SceSysmemForDriver_A841EDDA(result, (void **)&base);
+	result = sceKernelGetMemBlockBase(result, (void **)&base);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1179, "0x%08x\n", result);
 		return result;
@@ -657,7 +657,7 @@ int module_start(SceSize args, const void *argp)
 	heapOpt.size = sizeof(heapOpt);
 	heapOpt.flags = HEAP_AUTO_EXTEND | HEAP_HAS_MEMTYPE;
 	heapOpt.memtype = SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW;
-	result = SceSysmemForDriver_9328E0E8("SceDeci4pDbgp", 0x10000, &heapOpt);
+	result = sceKernelCreateHeap("SceDeci4pDbgp", 0x10000, &heapOpt);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO_FUNC(15, 3872, "_dbgpMemInit", "0x%08x\n", result);
 		return 2;
@@ -800,7 +800,7 @@ int dbgpDetachAllProcess(DbgpCB *dbgp)
 	SceUID pid;
 	int i, result, alreadySuspended = 0;
 
-	threads = SceSysmemForDriver_7B4CB60A(dbgp->heap, 0x1000);
+	threads = sceKernelAllocHeapMemory(dbgp->heap, 0x1000);
 	if (threads == NULL)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	for (i = 0; i < 17; ++i) {
@@ -998,7 +998,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 		if (size > 0x11000) {
 			_dbgpSetBufStatus(buf, 0, 0x10);
 			allocationSize = (size + 4095) & ~4095u;
-			result = SceSysmemForDriver_C94850C9("SceDeci4pDbgp",
+			result = sceKernelAllocMemBlockForKernel("SceDeci4pDbgp",
 					SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_TOOL_RW,
 					allocationSize, NULL);
 			if (result < 0) {
@@ -1007,7 +1007,7 @@ int _dbgpEventRecv(int event, void *arg, void *ctx)
 				return 0;
 			}
 			buf->extendedMemBlock = result;
-			result = SceSysmemForDriver_A841EDDA(result, &extendedBase);
+			result = sceKernelGetMemBlockBase(result, &extendedBase);
 			if (result < 0) {
 				SCE_PRINTF_WITH_INFO_FUNC(15, 3003, "_dbgpAllocBuf",
 							  "0x%08x\n", result);
@@ -1696,7 +1696,7 @@ _dbgpAllocBuf(DbgpProcCB *proc, unsigned int which, SceSize size)
 	if (size > 0x11000) {
 		_dbgpSetBufStatus(buf, 0, 0x10);
 		size = (size + 0xfff) >> 12 << 12;
-		memid = SceSysmemForDriver_C94850C9("SceDeci4pDbgp", 0x10f0d006,
+		memid = sceKernelAllocMemBlockForKernel("SceDeci4pDbgp", 0x10f0d006,
 					       size, NULL);
 		if (memid < 0) {
 			SCE_PRINTF_WITH_INFO_FUNC(15, 2995, "_dbgpAllocBuf",
@@ -1704,7 +1704,7 @@ _dbgpAllocBuf(DbgpProcCB *proc, unsigned int which, SceSize size)
 			return NULL;
 		}
 		buf->extendedMemBlock = memid;
-		result = SceSysmemForDriver_A841EDDA(memid, &base);
+		result = sceKernelGetMemBlockBase(memid, &base);
 		if (result < 0) {
 			SCE_PRINTF_WITH_INFO_FUNC(15, 3003, "_dbgpAllocBuf",
 						  "0x%08x\n", result);
