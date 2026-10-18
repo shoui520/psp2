@@ -3,7 +3,7 @@
 #include <kernel/error.h>
 #include <intrmgr/syscall.h>
 #include <string.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <kernel_boot_loader/kbl_param.h>

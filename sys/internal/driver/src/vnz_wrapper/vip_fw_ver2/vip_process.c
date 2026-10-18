@@ -16,7 +16,6 @@
 #include <vnz_wrapper/venezia_debug.h>
 #include <string.h>
 #include <sysmem/sysclib.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <threadmgr/threadmgr.h>
 
 int dispatchVeneziaVipProcessReset(VeneziaVipProcessStorage *storage);

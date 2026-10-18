@@ -1,7 +1,7 @@
 /* Descriptive file name: no source-file debug records exist in the original. */
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <usbstormg/usbstormg.h>
 
 int loadVideoKeyring(MgVideoContext *context)

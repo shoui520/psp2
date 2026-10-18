@@ -1,7 +1,7 @@
 /* SceDbgUsb: development USB byte transport, bus 1. */
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <udcd/udcd.h>

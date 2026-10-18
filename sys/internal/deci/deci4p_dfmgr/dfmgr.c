@@ -7,7 +7,7 @@
 #include <sysmem/sysroot_dfmgr.h>
 #include <string.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>

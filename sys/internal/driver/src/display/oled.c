@@ -5,11 +5,11 @@
 #include <scetypes.h>
 #include <sysmem/spinlock.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <systimer/systimer.h>
 #include <lowio/iftu.h>
 #include <display/display.h>

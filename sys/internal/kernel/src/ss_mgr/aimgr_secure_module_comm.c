@@ -2,7 +2,7 @@
 #include <acmgr/acmgr.h>
 #include <idstorage/idstorage.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <rtc/rtc.h>
 
 SceUID aimgrSmId;

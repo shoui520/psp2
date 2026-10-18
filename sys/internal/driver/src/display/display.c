@@ -13,13 +13,13 @@
 #include <sysmem/spinlock.h>
 #include <sysmem/uid_guid.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/suspend.h>
 #include <dmacmgr/dmacmgr.h>
 #include <systimer/systimer.h>

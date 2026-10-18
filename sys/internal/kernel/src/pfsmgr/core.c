@@ -4,7 +4,7 @@
  * icv tree) and, in icv.db modes, its own "%08x.icv" file.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_PAGE_SIZE		0x8000

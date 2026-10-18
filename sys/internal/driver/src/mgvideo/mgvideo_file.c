@@ -2,7 +2,7 @@
 #include "mgvideo_private.h"
 #include "mgvideo_result.h"
 #include <processmgr/processmgr_imports.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <magicgate/magicgate.h>
 
 unsigned int copyFileGroupToUser(void *destination, unsigned int size,

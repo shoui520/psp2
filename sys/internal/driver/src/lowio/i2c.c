@@ -3,7 +3,7 @@
 #include "i2c_regs.h"
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>
 #include <threadmgr/threadmgr.h>

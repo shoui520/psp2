@@ -1,9 +1,9 @@
 /* Debugger command validation (Sony's check.c). */
 
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/cp15.h>

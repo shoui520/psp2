@@ -13,10 +13,9 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <syscon/syscon.h>
 #include <sysmem/sysroot.h>
 #include <motion_dummy/motion_dummy.h>

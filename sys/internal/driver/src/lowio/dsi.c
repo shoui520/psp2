@@ -3,7 +3,7 @@
  */
 #include "dsi_data.h"
 #include "lowio_internal.h"
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysclib.h>
 #include "dsi_regs.h"

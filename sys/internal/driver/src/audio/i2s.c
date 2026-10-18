@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include "audio_regs.h"

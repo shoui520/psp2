@@ -12,7 +12,7 @@
 #include <sysmem/cpu.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>

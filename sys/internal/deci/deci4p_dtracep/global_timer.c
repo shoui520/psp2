@@ -7,7 +7,7 @@
  * Internal names are unknown (no debug records name them).
  */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <intrmgr/gic_regs.h>

@@ -7,7 +7,7 @@
 #include <udcd/udcd.h>
 #include <sysmem/cpu.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <excpmgr/excpmgr_cpu.h>
 #include <kernel/error.h>

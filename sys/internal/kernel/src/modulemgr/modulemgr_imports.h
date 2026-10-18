@@ -17,7 +17,6 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <processmgr/processmgr.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <acmgr/acmgr.h>
 #include <intrmgr/intrmgr.h>
 #include <iofilemgr/iofilemgr.h>

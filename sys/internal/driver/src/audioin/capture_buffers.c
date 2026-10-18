@@ -4,7 +4,7 @@
 #include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2/audioin.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <syscon/syscon.h>
 #include <sysmem/sblaimgr.h>

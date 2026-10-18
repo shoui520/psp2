@@ -9,7 +9,7 @@
 #include <excpmgr/moncall.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <lowio/gpio.h>
 #include <lowio/pervasive.h>
 #include <sysmem/barrier.h>

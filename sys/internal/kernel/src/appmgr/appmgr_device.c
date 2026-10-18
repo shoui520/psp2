@@ -6,7 +6,7 @@
 #include <touch/touch.h>
 #include <appmgr/appmgr_debugger.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "appmgr_device.h"
 #include <display/display.h>
 #include <appmgr/appmgr.h>

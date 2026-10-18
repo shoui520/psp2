@@ -3,7 +3,7 @@
  * mount's entries in the pages after it.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_DB_V1_BASE			0x160	/* name unknown: page 0 of types 1 and 2 */

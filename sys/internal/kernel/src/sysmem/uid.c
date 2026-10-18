@@ -8,7 +8,7 @@
  * which the lock helpers ignore.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/uid_guid.h>
 #include "sysmem_internal.h"
 #include "memblock_obj_module.h"

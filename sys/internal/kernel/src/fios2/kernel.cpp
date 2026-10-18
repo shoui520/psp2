@@ -3,10 +3,10 @@
  * shifted, as an exported syscall does.
  */
 
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <intrmgr/syscall.h>
 #include "fios2_internal.h"
 

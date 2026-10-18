@@ -6,7 +6,7 @@
 #include <threadmgr/threadmgr_event.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/pmmgr.h>
 #include <appmgr.h>
 #include "app_state_internal.h"

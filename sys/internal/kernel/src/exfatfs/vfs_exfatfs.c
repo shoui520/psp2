@@ -3,7 +3,7 @@
 #include <sdstor/sdstor.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/fast_mutex_object.h>
 #include "exfatfs_internal.h"
 #include <threadmgr/threadmgr.h>

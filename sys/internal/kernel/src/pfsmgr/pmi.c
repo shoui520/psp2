@@ -4,7 +4,7 @@
  */
 
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"

@@ -10,7 +10,7 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/barrier.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

@@ -4,7 +4,7 @@
  * host by the host's file descriptor (SceVfsFile.fd).
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <iofilemgr/vfs.h>
 #include <sysmem/debug.h>
 #include "sdrfp.h"

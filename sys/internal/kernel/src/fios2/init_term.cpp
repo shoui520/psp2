@@ -5,7 +5,7 @@
  */
 
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <sysmem/procevent.h>
 extern "C" {
 #include <sysmem/debug.h>

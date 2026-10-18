@@ -7,7 +7,7 @@
 #include "../gpu-blockheap.h"
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 
 PVRSRV_DEVICE_NODE *SetGpuDeviceNode(PVRSRV_DEVICE_NODE *psDeviceNode);

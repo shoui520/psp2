@@ -7,7 +7,7 @@
 #include <stddef.h>
 #include <sm_comm/sm_comm.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <iofilemgr/iofilemgr.h>

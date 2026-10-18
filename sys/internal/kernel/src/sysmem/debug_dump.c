@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <scetypes.h>
 #include <sysmem/uid_guid.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <fw.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

@@ -5,7 +5,7 @@
 #include <rtc/rtc.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>

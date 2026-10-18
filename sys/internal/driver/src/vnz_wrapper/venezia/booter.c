@@ -1,6 +1,6 @@
 /* Sony venezia/booter.c: image memory and hardware bootstrap. */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include "../venezia_internal.h"
 #include <lowio/pervasive.h>

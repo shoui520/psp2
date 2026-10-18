@@ -2,7 +2,7 @@
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>
 #include <sm_comm/sm_comm.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include "update_internal.h"
 #include <threadmgr/threadmgr.h>

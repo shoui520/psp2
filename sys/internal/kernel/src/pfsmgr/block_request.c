@@ -3,7 +3,7 @@
  * say which blocks a read, a write or a resize covers.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <iofilemgr/iofilemgr.h>
 #include "pfsmgr_internal.h"
 

@@ -14,7 +14,7 @@
 #include <sysmem/uid_guid.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <sysmem/sysroot.h>

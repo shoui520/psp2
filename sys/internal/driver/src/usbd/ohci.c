@@ -13,7 +13,7 @@
  */
 
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>

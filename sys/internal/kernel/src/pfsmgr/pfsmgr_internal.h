@@ -13,7 +13,7 @@
 
 #include <scetypes.h>
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <string.h>
 #include <iofilemgr/vfs.h>
 

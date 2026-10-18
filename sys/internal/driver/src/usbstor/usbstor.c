@@ -23,7 +23,7 @@
 #include <sysmem/cpu.h>
 #include <modulemgr/modulemgr.h>
 #include <idstorage/idstorage.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <intrmgr/syscall.h>

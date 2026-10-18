@@ -6,8 +6,8 @@
  * first pass with no buffer only computes the size.
  */
 
-#include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 #define FIOS_DH_ENTRY_SIZE	(sizeof(SceIoDirent) + 8)

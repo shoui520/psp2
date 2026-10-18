@@ -1,6 +1,6 @@
 /* Sony: path_utility.c */
 #include <scetypes.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
 

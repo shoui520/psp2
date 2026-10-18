@@ -5,8 +5,8 @@
  * its own process's overlays of the user orders (0..127).
  */
 
-#include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 static SceFiosOverlayID g_fiosNextOverlayId = 1;

@@ -1,7 +1,7 @@
 /* Descriptive source name: the original has no source-file debug records. */
 #include "mgvideo_private.h"
 #include <rtc/rtc.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 
 int findVideoTaggedRecords(const void *input, int size, const char *const labels[],
 			  const MgVideoTaggedRecord *records[], int count)

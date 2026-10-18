@@ -3,7 +3,7 @@
 #include <usbstormg/usbstormg.h>
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr_imports.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "mgvideo_result.h"
 #include <magicgate/magicgate.h>
 #include <sysmem/procevent.h>

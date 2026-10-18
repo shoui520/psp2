@@ -5,7 +5,7 @@
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <dmacmgr/dmac_regs.h>
 #include <sysmem/sysroot.h>
 

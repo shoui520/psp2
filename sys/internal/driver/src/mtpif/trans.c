@@ -1,5 +1,5 @@
 /* SceMtpIfDriver: privileged MTP transport and bounded user-buffer staging. */
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <mtpif/mtpif.h>

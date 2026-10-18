@@ -5,7 +5,7 @@
  */
 #include "lowio_internal.h"
 #include <string.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>

@@ -7,7 +7,7 @@
 #include <psp2/audioin.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/fast_mutex_object.h>
 

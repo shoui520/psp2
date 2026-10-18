@@ -18,7 +18,6 @@
 #include <string.h>
 #include <lowio/pervasive.h>
 #include <sysmem/sysclib.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
 #include <power/power.h>

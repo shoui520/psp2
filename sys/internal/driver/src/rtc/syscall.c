@@ -4,7 +4,7 @@
  */
 
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "rtc_internal.h"
 #include <alloca.h>
 

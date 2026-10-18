@@ -4,7 +4,7 @@
  * with only the mode and PFS attributes translated.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 int pfsRedirectVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,

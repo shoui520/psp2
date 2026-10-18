@@ -4,7 +4,7 @@
  */
 
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 int sceFiosKernelPlatformGetstat(const char *path, SceIoStat *stat)

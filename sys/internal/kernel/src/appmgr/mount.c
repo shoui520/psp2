@@ -5,7 +5,7 @@
 #include <authmgr/sblauthmgr.h>
 #include <sysmem/sysmem.h>
 #include <ss_mgr/ss_mgr.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <npdrm/npdrm.h>
 #include <fios2/fios2.h>

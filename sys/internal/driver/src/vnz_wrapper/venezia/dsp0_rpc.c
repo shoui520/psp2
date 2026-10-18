@@ -1,10 +1,10 @@
 /* Sony venezia/dsp0_rpc.c. */
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include "../venezia_internal.h"
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 

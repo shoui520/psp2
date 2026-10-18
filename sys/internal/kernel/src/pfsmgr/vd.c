@@ -3,7 +3,7 @@
  * file indexes, unicv.db, and setting up a file's icv tree for checking.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 

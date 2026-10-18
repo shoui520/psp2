@@ -1,10 +1,10 @@
 /* SceHpremote: debounced headphone/remote inputs and codec detection. */
 #include <stdint.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <hpremote/hpremote.h>
 #include <sysmem/sysevent_ids.h>
 

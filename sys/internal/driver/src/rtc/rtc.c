@@ -13,7 +13,7 @@
 #include <sysmem/dipsw.h>
 #include <syscon/syscon.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysevent.h>

@@ -4,7 +4,7 @@
  * unknown; the names below describe their roles, imports retain their NIDs.
  */
 #include <stdint.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>

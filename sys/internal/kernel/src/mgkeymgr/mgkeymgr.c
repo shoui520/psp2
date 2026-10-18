@@ -4,7 +4,7 @@
  * exported names retain their unresolved NIDs.
  */
 #include <stdint.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <sm_comm/sm_comm.h>

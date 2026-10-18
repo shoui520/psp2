@@ -4,7 +4,7 @@
  * block after the last one handed out.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 #define FIOS_STORAGE_BIT(i)	(1 << (7 - ((i) & 7)))

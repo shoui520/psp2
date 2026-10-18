@@ -1,5 +1,5 @@
 /* Headset profile response formatting; original source filename unavailable. */
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <stdarg.h>
 #include "bt_internal.h"
 

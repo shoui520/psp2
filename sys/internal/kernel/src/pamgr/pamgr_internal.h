@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <scetypes.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <intrmgr/intrmgr_syscall.h>

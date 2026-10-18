@@ -1,6 +1,6 @@
 #include "update_internal.h"
 #include "spkg_hardware.h"
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sblaimgr.h>
 
 int SpkgInfoUtilGetApplicableVersion(int type, UpdateApplicableVersion *info)

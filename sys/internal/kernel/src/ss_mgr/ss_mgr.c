@@ -2,7 +2,7 @@
  * range helper and the syscon NVS areas other modules may read and write. */
 #include "ssmgr_internal.h"
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>

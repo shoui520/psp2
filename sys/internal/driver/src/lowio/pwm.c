@@ -2,7 +2,7 @@
 #include "lowio_internal.h"
 #include <stddef.h>
 #include <string.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include "pwm_regs.h"
 #include <sysmem/sysevent.h>

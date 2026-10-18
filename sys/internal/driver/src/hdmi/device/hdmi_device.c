@@ -6,7 +6,7 @@
  * Internal names are ours unless a comment says otherwise.
  */
 #include <scetypes.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <lowio/gpio.h>
 #include <fw.h>
 #include <sysmem/debug.h>

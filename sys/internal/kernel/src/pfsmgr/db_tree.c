@@ -4,7 +4,7 @@
  * hash the tree keeps, so that every walk from a leaf to the root checks it.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 /* the name of a key, copied as a whole (name unknown) */

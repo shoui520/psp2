@@ -2,7 +2,7 @@
  * The syscalls libult uses to start and stop the kernel's support.
  */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <intrmgr/syscall.h>
 #include "ulobjmgr_internal.h"
 #include <threadmgr/threadmgr.h>

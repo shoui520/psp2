@@ -1,7 +1,7 @@
 /* Venezia mailbox interrupt and completion handling. */
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/intrmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <lowio/mailbox_regs.h>
 #include "venezia_internal.h"
 #include <lowio/pervasive.h>

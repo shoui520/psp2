@@ -5,7 +5,7 @@
  * kernel objects are allocated from.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "sysmem_internal.h"
 
 #define SCE_CLASS_MAGIC			0xabce9da5

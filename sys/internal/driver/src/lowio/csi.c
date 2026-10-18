@@ -1,6 +1,6 @@
 /* SceCsi camera interface. Private helper and context names are unknown. */
 #include "lowio_internal.h"
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysclib.h>
 #include <sysmem/sysevent.h>

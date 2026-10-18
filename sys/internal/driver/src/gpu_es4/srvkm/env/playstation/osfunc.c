@@ -3,7 +3,7 @@
  */
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/debug.h>
 #include "../../system_sce.h"
 #include "../../osfunc_sce.h"

@@ -5,7 +5,7 @@
 #include <sysmem/sblaimgr.h>
 #include <ss_mgr/ss_mgr.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/procevent.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>

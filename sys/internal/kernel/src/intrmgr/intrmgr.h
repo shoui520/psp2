@@ -5,7 +5,7 @@
 #include <sysmem/barrier.h>
 #include <scetypes.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <sysmem/sysmem.h>

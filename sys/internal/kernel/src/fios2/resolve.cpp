@@ -5,8 +5,8 @@
  * down; a "newer" one when its file is newer than what is below it.
  */
 
-#include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 static inline int fiosIsSeparator(int c)		/* name unknown */

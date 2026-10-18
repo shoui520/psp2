@@ -6,7 +6,7 @@
  * physical address.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/gpio_regs.h>

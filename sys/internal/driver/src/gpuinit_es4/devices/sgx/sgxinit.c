@@ -6,7 +6,7 @@
  */
 
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>

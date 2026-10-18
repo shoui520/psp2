@@ -2,7 +2,7 @@
 #include "../audiodec/audiodec_internal.h"
 #include "videocodec_internal.h"
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/cpu.h>

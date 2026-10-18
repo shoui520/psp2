@@ -55,7 +55,6 @@
 #include <sysmem/cpu.h>
 #include <acmgr/acmgr.h>
 #include <syscon/syscon.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <lowio/pervasive.h>
 #include <lowio/gpio.h>
 #include <threadmgr/threadmgr.h>

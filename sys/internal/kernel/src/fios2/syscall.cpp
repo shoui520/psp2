@@ -7,7 +7,7 @@
 
 #include <alloca.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "fios2_internal.h"
 
 extern "C" {

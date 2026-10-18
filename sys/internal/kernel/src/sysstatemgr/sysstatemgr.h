@@ -5,7 +5,7 @@
 #include <sysmem/memblock.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/sblaimgr.h>
@@ -16,7 +16,6 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 #include <processmgr/processmgr.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <acmgr/acmgr.h>
 
 #define CONF_ERROR(n) ((int)(0x80010000U | (n)))

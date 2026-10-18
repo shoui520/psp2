@@ -5,7 +5,7 @@
 #include <acmgr/acmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <kernel/error.h>

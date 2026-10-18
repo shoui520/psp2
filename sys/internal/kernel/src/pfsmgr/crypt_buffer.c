@@ -4,7 +4,7 @@
  * hardware), handed out as runs of blocks with an icv for each.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
 #include <iofilemgr/iofilemgr.h>

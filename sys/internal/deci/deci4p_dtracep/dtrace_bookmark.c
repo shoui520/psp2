@@ -7,7 +7,7 @@
  * and is written when DTrace is vendored. Internal names are unknown.
  */
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <pamgr/perfmon_regs.h>
 
 static struct {

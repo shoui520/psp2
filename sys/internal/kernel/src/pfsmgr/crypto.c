@@ -4,7 +4,7 @@
  * and does no cryptography.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 void pfsHashCopy(void *dst, const void *src)

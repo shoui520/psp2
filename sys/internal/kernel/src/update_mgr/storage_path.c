@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "update_internal.h"
 
 int StorageUtilGetPartitionPath(uint32_t partition, uint8_t active,

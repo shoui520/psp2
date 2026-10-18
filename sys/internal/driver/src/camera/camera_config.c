@@ -5,7 +5,6 @@
 #include <processmgr/processmgr.h>
 #include "camera_config.h"
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <string.h>
 #include <psp2/camera.h>
 #include <camera/camera.h>

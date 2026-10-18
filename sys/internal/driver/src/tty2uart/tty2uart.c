@@ -13,7 +13,7 @@
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/uart.h>
 #include <iofilemgr/vfs.h>

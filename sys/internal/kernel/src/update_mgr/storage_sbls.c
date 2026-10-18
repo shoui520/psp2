@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "update_internal.h"
 #include "sbls.h"
 

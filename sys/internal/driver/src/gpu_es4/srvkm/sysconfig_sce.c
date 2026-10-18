@@ -3,7 +3,7 @@
  */
 #include <sysmem/sysmem.h>
 #include "gpu-dump.h"
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <power/power.h>
 
 PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData);

@@ -6,7 +6,7 @@
 
 #include <sysmem/cpu.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 #define SCE_PFS_ERROR_SHORT_READ	0x80140f02	/* name unknown */

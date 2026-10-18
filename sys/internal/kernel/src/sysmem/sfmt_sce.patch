@@ -13,7 +13,7 @@
 + */
 +#define MEXP 19937
 +#include <scetypes.h>
-+#include <psp2kern/kernel/sysclib.h>
++#include <sysmem/sysclib.h>
  #include "SFMT.h"
  #include "SFMT-params.h"
  

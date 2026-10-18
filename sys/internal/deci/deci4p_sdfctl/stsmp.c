@@ -6,7 +6,7 @@
  */
 
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

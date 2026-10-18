@@ -3,7 +3,7 @@
  * operation is a DRFP request to the host (Sony's drfpfs.c).
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <iofilemgr/vfs.h>
 #include <kernel/error.h>

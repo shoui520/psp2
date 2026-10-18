@@ -2,7 +2,7 @@
 
 #include <sysmem/debug.h>
 #include <processmgr/process.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/threadmgr.h>
 #include "dbgp_internal.h"
 

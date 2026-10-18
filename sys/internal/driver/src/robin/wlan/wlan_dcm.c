@@ -8,7 +8,7 @@
 #include <wlanbt/wlanbt.h>
 #include <wlanbt/wlanbt_protocol.h>
 #include "../../wlanbt/wlanbt_internal.h"
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <string.h>
 #include <net_ps/netps_thread.h>
 #include <net_ps/net_ps_bsd.h>

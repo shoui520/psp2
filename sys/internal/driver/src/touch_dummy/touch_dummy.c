@@ -7,9 +7,8 @@
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <motion_dummy/motion_dummy.h>
 #include <processmgr/processmgr.h>
 #include <sysmem/sysevent.h>

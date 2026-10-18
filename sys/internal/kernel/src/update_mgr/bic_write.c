@@ -1,4 +1,4 @@
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "spkg_peripherals.h"
 #include "bic_update.h"
 #include <syscon/syscon.h>

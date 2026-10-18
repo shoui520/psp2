@@ -1,6 +1,6 @@
 /* Sony venezia/venezia.c: process-local suspend state. */
-#include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <processmgr/processmgr.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include "../venezia_internal.h"
 #include <lowio/pervasive.h>

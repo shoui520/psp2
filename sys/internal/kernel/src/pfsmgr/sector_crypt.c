@@ -5,7 +5,7 @@
  * provisional until the deferred routines are reversed.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 /* PLACEHOLDER: cryptographic routine, deferred */

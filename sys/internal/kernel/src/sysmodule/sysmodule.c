@@ -10,9 +10,8 @@
 #include "sysmodule_ids.h"
 #include <sysmem/dipsw.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/debug.h>

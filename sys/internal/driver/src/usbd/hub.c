@@ -8,7 +8,7 @@
  * change attaches or detaches the device on that port.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "usbd_internal.h"
 
 #define HUB_COUNT			8

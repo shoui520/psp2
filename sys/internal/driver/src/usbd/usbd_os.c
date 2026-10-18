@@ -4,7 +4,7 @@
  * controllers' descriptor memory are physically contiguous memory blocks.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include "usbd_internal.h"
 

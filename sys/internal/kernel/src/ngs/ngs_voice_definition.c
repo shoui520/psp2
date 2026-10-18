@@ -2,7 +2,7 @@
 
 #include <sysmem/debug.h>
 #include <intrmgr/syscall.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "ngs_voice_definition.h"
 
 void *ngsAlignVoiceDefinitionAddress(void *address, unsigned int alignment);

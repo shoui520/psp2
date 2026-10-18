@@ -2,7 +2,7 @@
 
 #include <string.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include "oal_internal.h"

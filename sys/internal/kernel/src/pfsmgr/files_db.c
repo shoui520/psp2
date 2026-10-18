@@ -5,7 +5,7 @@
  * remembered.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include "pfsmgr_internal.h"
 

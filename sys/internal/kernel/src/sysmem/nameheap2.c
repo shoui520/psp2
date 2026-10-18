@@ -6,7 +6,7 @@
  * for flag 2, one for the rest.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "sysmem_internal.h"
 
 #define NAME_HEAP_ERROR_NO_MEMORY	SCE_KERNEL_ERROR_SYSMEM_ERROR

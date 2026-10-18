@@ -14,7 +14,7 @@
 #include <msif/msif.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <syscon/syscon.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <string.h>

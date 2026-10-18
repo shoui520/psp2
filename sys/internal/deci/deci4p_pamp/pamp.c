@@ -5,7 +5,7 @@
  */
 #include <sysmem/dipsw.h>
 #include <dmacmgr/dmacmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

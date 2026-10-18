@@ -15,7 +15,7 @@
 #include <ctrl/ctrl.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <modulemgr/modulemgr.h>

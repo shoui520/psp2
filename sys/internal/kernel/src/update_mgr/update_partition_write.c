@@ -1,6 +1,6 @@
 #include <sysmem/sysmem.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include "update_objects.h"
 

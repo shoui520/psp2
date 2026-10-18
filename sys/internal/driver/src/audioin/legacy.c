@@ -1,6 +1,6 @@
 /* Legacy 8 kHz capture queue; original source filename unavailable. */
 #include "audioin_internal.h"
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 
 void initializeAudioInLegacyQueue(void)
 {

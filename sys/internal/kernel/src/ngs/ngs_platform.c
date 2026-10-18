@@ -2,7 +2,7 @@
 
 #include <scetypes.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <threadmgr/threadmgr.h>
 #include <threadmgr/fast_mutex.h>

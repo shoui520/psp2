@@ -11,7 +11,7 @@
 #include <sysmem/cpu.h>
 #include <ss_mgr/ss_mgr.h>
 #include <post_ss_mgr/sblpostssmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/debug.h>

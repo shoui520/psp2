@@ -11,7 +11,7 @@
 #include <deci4p_sdfmgr/deci4p_memory.h>
 #include <sysmem/cpu.h>
 #include <excpmgr/excpmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysmem.h>
 #include <threadmgr/threadmgr.h>

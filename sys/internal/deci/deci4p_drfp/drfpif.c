@@ -5,7 +5,7 @@
  */
 
 #include <stddef.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <kernel/error.h>
 #include "drfp_internal.h"

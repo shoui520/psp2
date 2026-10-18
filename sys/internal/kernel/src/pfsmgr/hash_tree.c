@@ -4,7 +4,7 @@
  * holds the root hash.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_HASH_TREE_SECTOR	0x200	/* name unknown: what the header is read in */

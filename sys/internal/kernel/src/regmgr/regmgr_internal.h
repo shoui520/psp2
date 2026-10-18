@@ -8,7 +8,7 @@
 #define REGMGR_INTERNAL_H
 
 #include <scetypes.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include "reg.h"

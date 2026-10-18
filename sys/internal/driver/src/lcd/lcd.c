@@ -3,7 +3,7 @@
  */
 #include <stdint.h>
 #include <sysmem/uid_guid.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/cpu.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysevent.h>

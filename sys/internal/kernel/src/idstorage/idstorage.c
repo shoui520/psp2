@@ -5,7 +5,7 @@
 #include <sysmem/cpu.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/pmmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <idstorage/idstorage.h>
 #include <acmgr/acmgr.h>

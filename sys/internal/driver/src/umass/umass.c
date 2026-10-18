@@ -6,11 +6,11 @@
 #include <usbserv/usbserv.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/debug.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
-#include <psp2kern/kernel/intrmgr.h>
+#include <intrmgr/intrmgr.h>
 #include <sysmem/cpu.h>
 #include <kernel/error.h>
 #include <umass/umass.h>

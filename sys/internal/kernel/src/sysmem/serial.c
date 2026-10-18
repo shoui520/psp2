@@ -7,7 +7,7 @@
  * only the debug output.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "sysmem_internal.h"
 #include <sysmem/suspend.h>
 #include <lowio/uart_regs.h>

@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysmem.h>
 #include <kernel/error.h>

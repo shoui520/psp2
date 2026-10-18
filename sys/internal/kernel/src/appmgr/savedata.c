@@ -3,9 +3,7 @@
 
 #include <appmgr.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <rtc/rtc.h>
 #include <intrmgr/syscall.h>
 #include <threadmgr/threadmgr.h>

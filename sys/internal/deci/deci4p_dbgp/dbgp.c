@@ -10,9 +10,8 @@
 #include <sysmem/sysevent.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysroot.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include <threadmgr/fast_mutex_object.h>
 #include "dbgp_internal.h"
 

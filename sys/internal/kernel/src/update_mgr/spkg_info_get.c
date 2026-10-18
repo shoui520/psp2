@@ -1,5 +1,5 @@
 #include "update_internal.h"
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 
 int SysconUtilGetFirmwareVersion(uint32_t *version);
 int SysconUtilGetConfigVersion(uint32_t *version);

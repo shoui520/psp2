@@ -3,7 +3,7 @@
  * pages of icvs, all from the database's page allocator.
  */
 
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 #include "pfsmgr_internal.h"
 
 #define PFS_UNICV_ENTRY_MAGIC		0x4c42544649454353ULL	/* "SCEIFTBL" */

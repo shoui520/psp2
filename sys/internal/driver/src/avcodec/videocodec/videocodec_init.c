@@ -4,7 +4,6 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
-#include <psp2kern/kernel/processmgr.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <avcdec.h>
 #include <intrmgr/syscall.h>

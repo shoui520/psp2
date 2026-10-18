@@ -4,7 +4,7 @@
 #include <sysmem/cpu.h>
 #include "../venezia_internal.h"
 #include <dmacmgr/dmacmgr.h>
-#include <psp2kern/kernel/sysclib.h>
+#include <sysmem/sysclib.h>
 
 extern void *getVeneziaImageBase(void);
 extern unsigned int getVeneziaImagePhysicalBase(void);
