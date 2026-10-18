@@ -1,6 +1,6 @@
 /* SceCamera user entry points, shared with SceCameraDummy. */
 
-#include <psp2/camera.h>
+#include <camera.h>
 #include <sysmem/sysmem.h>
 #include <camera/camera.h>
 
@@ -21,10 +21,10 @@ int sceCameraOpen(int devnum, SceCameraInfo *pInfo)
 	if ((devnum & ~1u) != 0 || pInfo == NULL)
 		return SCE_CAMERA_ERROR_PARAM;
 	info = __builtin_alloca(sizeof(*info));
-	result = SceSysmemForDriver_BC996A7A(info, pInfo, sizeof(info->size));
+	result = SceSysmemForDriver_BC996A7A(info, pInfo, sizeof(info->sizeThis));
 	if (result < 0)
 		return result;
-	size = info->size;
+	size = info->sizeThis;
 	if (size - 0x28 > 8)
 		return SCE_CAMERA_ERROR_PARAM;
 	result = SceSysmemForDriver_BC996A7A(info, pInfo, size);
@@ -66,10 +66,10 @@ int sceCameraRead(int devnum, SceCameraRead *pRead)
 		return SCE_CAMERA_ERROR_PARAM;
 	/* The kernel accepts the extended 0x48-byte read parameter. */
 	read = __builtin_alloca(0x48);
-	result = SceSysmemForDriver_BC996A7A(read, pRead, sizeof(read->size));
+	result = SceSysmemForDriver_BC996A7A(read, pRead, sizeof(read->sizeThis));
 	if (result < 0)
 		return result;
-	size = read->size;
+	size = read->sizeThis;
 	if (size - 0x18 > 0x30)
 		return SCE_CAMERA_ERROR_PARAM;
 	result = SceSysmemForDriver_BC996A7A(read, pRead, size);

@@ -6,7 +6,7 @@
 #include "camera_config.h"
 #include <sysmem/sysmem.h>
 #include <string.h>
-#include <psp2/camera.h>
+#include <camera.h>
 #include <camera/camera.h>
 
 void *cameraSramFrameBufferBase[2][3] = {0};
@@ -334,21 +334,21 @@ int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo)
 	process->processId = processId;
 	if (device->activeProcessId == -1)
 		device->activeProcessId = processId;
-	process->config.wHeight = pInfo->height;
-	process->config.sizeThis = pInfo->size;
-	process->wPriority = pInfo->priority;
-	process->config.wFormat = pInfo->format;
-	process->config.wResolution = pInfo->resolution;
-	framerate = pInfo->framerate;
+	process->config.wHeight = pInfo->wHeight;
+	process->config.sizeThis = pInfo->sizeThis;
+	process->wPriority = pInfo->wPriority;
+	process->config.wFormat = pInfo->wFormat;
+	process->config.wResolution = pInfo->wResolution;
+	framerate = pInfo->wFramerate;
 	process->config.wFramerate = framerate;
-	process->config.wWidth = pInfo->width;
-	process->config.wRange = pInfo->range;
+	process->config.wWidth = pInfo->wWidth;
+	process->config.wRange = pInfo->wRange;
 	process->config.wZoom = 10;
 	process->config.wPitch = 0;
 	process->config.wBuffer = 0;
-	if (pInfo->size > 0x2b) {
-		process->config.wPitch = pInfo->pitch;
-		if (pInfo->buffer == 1)
+	if (pInfo->sizeThis > 0x2b) {
+		process->config.wPitch = pInfo->wPitch;
+		if (pInfo->wBuffer == 1)
 			process->config.wBuffer = 1;
 	}
 	process->config.brightness = 128;
@@ -388,9 +388,9 @@ int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo)
 		process->config.sizeIBase = pInfo->sizeIBase;
 		process->config.sizeUBase = pInfo->sizeUBase;
 		process->config.sizeVBase = pInfo->sizeVBase;
-		process->frameBuffer.pvIBase = pInfo->pIBase;
-		process->frameBuffer.pvUBase = pInfo->pUBase;
-		process->frameBuffer.pvVBase = pInfo->pVBase;
+		process->frameBuffer.pvIBase = pInfo->pvIBase;
+		process->frameBuffer.pvUBase = pInfo->pvUBase;
+		process->frameBuffer.pvVBase = pInfo->pvVBase;
 	}
 	process->state = 1;
 	return 0;
@@ -854,7 +854,7 @@ int cameraResetConfig(void)
 	return 0;
 }
 
-int sceCameraConfigRead(int devnum, SceCameraReadV2 *pRead)
+int sceCameraConfigRead(int devnum, SceCameraRead *pRead)
 {
 	CameraDriver *driver;
 	CameraProcess *storage;

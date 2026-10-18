@@ -12,7 +12,7 @@
 #include <processmgr/processmgr.h>
 #include <string.h>
 #include <sysmem/cpu.h>
-#include <psp2/camera.h>
+#include <camera.h>
 #include <camera/camera.h>
 #include <lowio/iftu.h>
 #include <threadmgr/threadmgr.h>
@@ -54,7 +54,7 @@ int sceCameraConfigSetActiveStatusPid(int devnum, SceUID processId, int status);
 int sceCameraConfigAttribute(int devnum, int checkFormat);
 int cameraCheckActiveProcess(SceUID processId, int devnum, int currentProcess);
 int sceCameraConfigGetAttribute(int devnum, int attribute, int *pValue);
-int sceCameraConfigRead(int devnum, SceCameraReadV2 *pRead);
+int sceCameraConfigRead(int devnum, SceCameraRead *pRead);
 SceUInt64 sceCameraConfigGetProcPrevFrame(int devnum, SceUID processId);
 SceUInt64 sceCameraConfigGetProcFrame(int devnum, SceUID processId);
 SceUInt64 sceCameraConfigGetProcTimestamp(int devnum, SceUID processId);
@@ -289,7 +289,7 @@ int cameraPowerEventHandler(int eventId, int eventCount, int flags, void *argume
 }
 
 int cameraUnlockFrameBufferRanges(int devnum, CameraProcess *process,
-				 SceCameraReadV2 *read, int explicitProcess,
+				 SceCameraRead *read, int explicitProcess,
 				 SceUID processId)
 {
 	SceUID callerProcessId = cameraGetCallerProcessId();
@@ -509,7 +509,7 @@ int cameraSubIntrHandler(void *subintrArg, void *registerArg,
 }
 
 int cameraLockFrameBufferRanges(int devnum, CameraProcess *process,
-		SceCameraReadV2 *read)
+		SceCameraRead *read)
 {
 	SceUID processId = cameraGetCallerProcessId();
 	SceSize sizeIBase, sizeUBase, sizeVBase;
@@ -2105,7 +2105,7 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 	}
 	processId = cameraGetCallerProcessId();
 	result = devnum & ~1u;
-	if (result != 0 || pInfo == NULL || pInfo->size - 40 > 8) {
+	if (result != 0 || pInfo == NULL || pInfo->sizeThis - 40 > 8) {
 		result = (int)0x802e0000;
 		goto out;
 	}
@@ -2114,15 +2114,15 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 		result = (int)0x802e0002;
 		goto out;
 	}
-	if (pInfo->priority != 0 || pInfo->buffer > 1u) {
+	if (pInfo->wPriority != 0 || pInfo->wBuffer > 1u) {
 		result = (int)0x802e0000;
 		goto out;
 	}
-	if ((unsigned int)(pInfo->format - 1) > 5) {
+	if ((unsigned int)(pInfo->wFormat - 1) > 5) {
 		result = (int)0x802e0007;
 		goto out;
 	}
-	resolution = pInfo->resolution;
+	resolution = pInfo->wResolution;
 	switch (resolution) {
 	case 1:
 		break;
@@ -2132,7 +2132,7 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 	case 5:
 	case 6:
 	case 8:
-		if (pInfo->format == 6) {
+		if (pInfo->wFormat == 6) {
 			result = (int)0x802e0000;
 			goto out;
 		}
@@ -2141,7 +2141,7 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 		result = (int)0x802e0008;
 		goto out;
 	}
-	framerate = pInfo->framerate;
+	framerate = pInfo->wFramerate;
 	if (framerate == 20)
 		goto setSize;
 	if (framerate <= 20) {
@@ -2171,39 +2171,39 @@ int SceCameraForDriver_E487870A(int devnum, SceCameraInfo *pInfo)
 setSize:
 	switch (resolution - 1) {
 	case 0:
-		pInfo->width = 640;
-		pInfo->height = 480;
+		pInfo->wWidth = 640;
+		pInfo->wHeight = 480;
 		break;
 	case 1:
-		pInfo->width = 320;
-		pInfo->height = 240;
+		pInfo->wWidth = 320;
+		pInfo->wHeight = 240;
 		break;
 	case 2:
-		pInfo->width = 160;
-		pInfo->height = 120;
+		pInfo->wWidth = 160;
+		pInfo->wHeight = 120;
 		break;
 	case 3:
-		pInfo->width = 352;
-		pInfo->height = 288;
+		pInfo->wWidth = 352;
+		pInfo->wHeight = 288;
 		break;
 	case 4:
-		pInfo->width = 176;
-		pInfo->height = 144;
+		pInfo->wWidth = 176;
+		pInfo->wHeight = 144;
 		break;
 	case 5:
-		pInfo->width = 480;
-		pInfo->height = 272;
+		pInfo->wWidth = 480;
+		pInfo->wHeight = 272;
 		break;
 	case 7:
-		pInfo->width = 640;
-		pInfo->height = 360;
+		pInfo->wWidth = 640;
+		pInfo->wHeight = 360;
 		break;
 	default:
-		pInfo->width = 0;
-		pInfo->height = 0;
+		pInfo->wWidth = 0;
+		pInfo->wHeight = 0;
 		break;
 	}
-	if (pInfo->range > 1u) {
+	if (pInfo->wRange > 1u) {
 		result = (int)0x802e0011;
 		goto out;
 	}
@@ -2504,7 +2504,7 @@ int SceCameraForDriver_8C3354E5(int devnum)
 	return result;
 }
 
-int SceCameraForDriver_2D12FDF3(int devnum, SceCameraReadV2 *read)
+int SceCameraForDriver_2D12FDF3(int devnum, SceCameraRead *read)
 {
 	SceUInt32 context, timeout, events, raw8Format;
 	SceUInt32 exposureTimeAndGap[2];

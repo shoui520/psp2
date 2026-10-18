@@ -190,7 +190,7 @@ int SceCameraForDriver_3590BB9B(void)
 	__ret < 0 ? __ret : __res;						\
 })
 
-int sceCameraOpen(int dev, void *info)
+int sceCameraOpen(int dev, SceCameraInfo *info)
 {
 	return CAMERA_PARAM_CALL(dev, info, CAMERA_OPEN_PARAM_MIN, CAMERA_OPEN_PARAM_MAX,
 				 SceCameraForDriver_E487870A);
@@ -217,7 +217,7 @@ int sceCameraStop(int dev)
 	return SceCameraForDriver_8C3354E5(dev);
 }
 
-int sceCameraRead(int dev, void *read)
+int sceCameraRead(int dev, SceCameraRead *read)
 {
 	return CAMERA_PARAM_CALL(dev, read, CAMERA_READ_PARAM_MIN, CAMERA_READ_PARAM_MAX,
 				 SceCameraForDriver_2D12FDF3);
@@ -230,7 +230,7 @@ int sceCameraIsActive(int dev)
 	return SceCameraForDriver_22E70D83(dev);
 }
 
-int sceCameraGetDeviceLocation(int dev, void *location)
+int sceCameraGetDeviceLocation(int dev, SceFVector3 *location)
 {
 	int buf[3];
 	int ret;
