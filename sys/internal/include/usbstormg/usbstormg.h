@@ -3,8 +3,8 @@
 
 #include <psp2kern/types.h>
 #include <magicgate/magicgate.h>
+#include <acmgr/acmgr.h>
 
-int SceSblACMgrForDriver_A27E47A7(int pid);
 int SceMagicGateForDriver_1BCE34AD(int handle, unsigned index, void *buf, SceSize size);
 int SceMagicGateForDriver_42A9D74E(int handle, void *tag, const void *info,
 				const void *challenge, const void *response, void *buf);

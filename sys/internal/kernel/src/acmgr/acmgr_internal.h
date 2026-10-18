@@ -15,12 +15,6 @@
 #define ACMGR_ERROR_INVALID_LEVEL	((int)0x800f0928)
 
 /* acmgr.c */
-int sceSblACMgrHasCapability(SceUID pid, int bit);
-int sceSblACMgrGetPaid(SceUID pid, SceUInt64 *paid);
-int sceSblACMgrIsGameProgram(SceUID pid);
-int SceSblACMgrForDriver_426A4E8C(SceUID pid);	/* vitasdk: ksceSblACMgrIsFself */
-int SceSblACMgrForDriver_0B6E6CD7(SceUID pid);	/* vitasdk: ksceSblACMgrIsNotSandboxed */
-int SceSblACMgrForKernel_30575458(SceUID pid);
 
 /*
  * The filesystem attribute operations, one set per attribute type: set from an

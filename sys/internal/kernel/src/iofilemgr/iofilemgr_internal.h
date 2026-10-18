@@ -841,8 +841,6 @@ int vfs_buf_io_buff_contains(struct BuffCache *bc, SceOff pos, SceSize size);
 /* vitasdk: ksceKernelAllocHeapMemory2 */
 void *SceSysrootForKernel_D351EBC8(SceUID pid, SceSize size, void *opt);
 int SceSysrootForKernel_7968F091(SceUID pid, void *ptr);	/* frees SceSysrootForKernel_D351EBC8's */
-void *sceKernelAllocRemoteCDialogHeap(SceUID pid, SceSize size, void *opt);
-int sceKernelFreeRemoteCDialogHeap(SceUID pid, void *ptr);
 
 struct VfsBuffIoOps;
 struct BuffLine;
@@ -976,7 +974,6 @@ int rfs_get_root(const VfsPathElem *elem, int num, RfsRootInfo *root, int *depth
 #define VFS_AC_MODE_WRITE		2
 #define VFS_AC_MODE_CHSTAT		8
 
-int SceSblACMgrForKernel_75AAF981(SceUID pid, SceSblACMgrValue *info, SceUInt32 mode);
 int SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(SceUID pid, SceSblACMgrValue *in, SceSblACMgrValue *out,
 				  SceUInt32 mntId);	/* sceSblACMgrSetFSAttributeByAttributeWithMountPoint */
 void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, SceUID pid);
@@ -1212,7 +1209,6 @@ typedef struct VfsBuffCacheInfo {
 
 int vfsBuffCtl(IofilemgrBuffCtlParam *param);
 		/* flock */
-int SceThreadmgrForDriver_1096042E(SceUID uid);	/* whether a Common Dialog thread */
 void *SceThreadmgrForDriver_89CA5698(SceUInt32 slot, SceUID threadId, int create);
 SceOff vfsLseek(IofilemgrLseekParam *param);	/* vfs.c: lseek */
 

@@ -34,4 +34,3 @@ struct ThreadCB *setupNextContext_thread(
 void switchThread(uint32_t reason);
 void switchThread2(uint32_t reason);
 
-struct ThreadRegisterContext *setupNextContext_intr(uintptr_t unused, uint32_t reason);

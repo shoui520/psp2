@@ -357,7 +357,6 @@ extern struct ThreadmgrRuntime s_threadmgrRuntime;
 void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request);
 struct ThreadmgrIntrRequest *allocIntrRequest(uint32_t kind);
 void addIntrRequest(unsigned int cpuId, uint32_t mask);
-void SceThreadmgrForKernel_8D53CA9B(unsigned int cpuId);
 
 struct ThreadmgrExtendedStackCache {
 	uint32_t count;

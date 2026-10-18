@@ -15,6 +15,7 @@
 #include <psp2kern/io/stat.h>
 #include <psp2kern/io/dirent.h>
 #include <acmgr/acmgr.h>
+#include <processmgr/processmgr.h>
 #include <psp2kern/kernel/rtc.h>
 #include <threadmgr/threadmgr.h>
 #include <psp2common/fios2.h>
@@ -76,12 +77,7 @@ void sceFiosKernelRwlockWriteLock(SceFiosKernelRwlock *lock);
 void sceFiosKernelRwlockWriteUnlock(SceFiosKernelRwlock *lock);
 
 /* imports without an SDK name */
-int SceThreadmgrForDriver_332E127C(void);	/* the current thread's permission */
 void *SceThreadmgrForDriver_89CA5698(int slot, SceUID threadId, int create);
-int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
-void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt);	/* the caller's process heap */
-int SceProcessmgrForDriver_FC2A424E(void *ptr);
-int sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
 
 /* a process's overlays and directory handles, in its process local storage */
 typedef struct SceFiosKernelProcessStorage {	/* name unknown */

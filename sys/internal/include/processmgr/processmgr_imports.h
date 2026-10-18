@@ -24,6 +24,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/uid_class.h>
 #include <intrmgr/intrmgr.h>
+#include <acmgr/acmgr.h>
 #include <psp2kern/io/fcntl.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
@@ -32,9 +33,6 @@
 #include <modulemgr/modulemgr.h>
 
 /* SceSblACMgrForKernel */
-int SceSblACMgrForKernel_sceSblACMgrIsGameProgram(SceUID pid);
-int SceSblACMgrForKernel_49509A83(SceUID pid);
-int SceSblACMgrForKernel_BBA13D9C(void);	/* vitasdk: ksceSblACMgrIsDevelopmentMode2 */
 
 /* SceModulemgrForKernel / SceModulemgrForDriver */
 SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, int flags, void *authInfo,
