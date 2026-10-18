@@ -86,19 +86,6 @@ extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	CoredumpTimerInfo *info);
 extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
-extern int SceCoredumpForDriver_E1BCBE8F(void *iv, SceSize size);
-extern int SceCoredumpForDriver_7C8120C5(SceUID context, SceUInt32 algorithm);
-extern int SceCoredumpForDriver_AE2C2793(SceUID context, const void *data,
-				       SceSize size);
-extern int SceCoredumpForDriver_65AA4991(SceUID context, void *digest, SceSize size);
-extern int SceCoredumpForDriver_07185515(SceUID context, SceUInt32 hashKeySelector,
-		SceUInt32 cipherMode, SceUInt32 cipherKeySelector,
-		const void *iv, SceSize size);
-extern int SceCoredumpForDriver_9336009B(void);
-extern int SceCoredumpForDriver_C90F61AF(void);
-extern int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source,
-	void *destination, SceSize size);
-extern int SceCoredumpForDriver_DF17420A(SceUID context, void *digest, SceSize size);
 extern int coredumpGetCachedThreadInfo(SceUID pid, SceUID threadId,
 	CoredumpThreadInfo *info);
 

@@ -3,6 +3,13 @@
 #include <psp2kern/types.h>
 #include <stdint.h>
 
+/* a context: the file, in a memory block */
+typedef struct SceSblSpfsoCtx {
+	SceUID uid;
+	void *base;
+	SceSize size;
+} SceSblSpfsoCtx;
+
 /* vitasdk: ksceSblPostSsMgrActivate */
 int SceSblPostSsMgrForDriver_0298382B(const char *path);
 /* vitasdk: ksceSblRSA2048CreateSignature */
@@ -41,3 +48,11 @@ int SceSblPostSsMgrForDriver_DE5150FE(SceUInt32 *time);	/* vitasdk: ksceSblRtcMg
 /* vitasdk: _ksceSblPostSsMgrExecutePmSmF00dCommand */
 int SceSblPostSsMgrForDriver_FE92A318(SceUInt32 flags);
 int sceSblPmMgrAuthEtoI(void);
+
+int SceSblPostSsMgrForDriver_2646DE64(const SceUInt32 *src, SceUInt32 *dst);	/* generate an app key */
+/* vitasdk: ksceSblPostSsMgrInitializeSpfsoCtx */
+int SceSblPostSsMgrForDriver_BDF18922(const char *path, SceSblSpfsoCtx *ctx);
+/* vitasdk: ksceSblPostSsMgrVerifySpfsoCtx */
+int SceSblPostSsMgrForDriver_686B9461(SceSblSpfsoCtx *ctx, void **data, SceSize *size);
+/* vitasdk: ksceSblPostSsMgrReleaseSpfsoCtx */
+int SceSblPostSsMgrForDriver_AD3B0078(SceSblSpfsoCtx *ctx);

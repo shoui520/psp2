@@ -78,3 +78,29 @@ SceUID sceAppMgrLaunchAppForDebugger(const char *path, const char *args, SceSize
 				     unsigned int flags, const SceAppMgrLaunchParam *param,
 				     void *opt);
 int sceAppMgrKillAppForDebugger(SceUID pid);
+
+/* not written in C yet: the prototypes are vshbridge's */
+int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
+int sceAppMgrUpdateRifInfo(const void *info);
+int SceAppMgrForDriver_B53FB98E(const char *path, void *a);	/* vitasdk: ksceAppMgrRegisterPath */
+/* vitasdk: ksceAppMgrCloudDataCreateHeader */
+int SceAppMgrForDriver_ED87F191(const void *a, int b, const void *c, void *d);
+int SceAppMgrForDriver_55D48190(const void *header);	/* vitasdk: ksceAppMgrCloudDataVerifyHeader */
+int SceAppMgrForDriver_2FAA6ABD(void *key);	/* vitasdk: ksceAppMgrCloudDataSetupKey */
+int sceAppMgrCloudDataSrcMount(int a, const void *b, void *c);
+int sceAppMgrCloudDataDstCreateMount(const void *a, void *b);
+int sceAppMgrFakeSaveDataCreateMount(const char *path, void *b);
+int SceAppMgrForDriver_0B94BB90(int a, const void *id);	/* vitasdk: ksceAppMgrCloudDataSetMcId */
+int SceAppMgrForDriver_1286AF64(int a, void *id);	/* vitasdk: ksceAppMgrCloudDataGetMcId */
+int SceAppMgrForDriver_EC408FEF(int a);	/* vitasdk: ksceAppMgrCloudDataClearMcId */
+int sceAppMgrGetPfsProcessStatus(void);
+int sceAppMgrIsExclusiveProcessRunning(const void *a);
+int sceAppMgrAcInstGetAcdirParam(const void *a, const void *b, void *c);
+/* vitasdk: ksceAppMgrSaveDataLocalBackupTargetGetList */
+int SceAppMgrForDriver_9B3F7D66(void *list);
+/* vitasdk: ksceAppMgrSaveDataLocalBackupTargetRemoveItem */
+int SceAppMgrForDriver_C4EF95BB(const void *item);
+int SceAppMgrForDriver_61B13981(void *id, void *b);	/* vitasdk: ksceAppMgrLocalBackupGetOfflineId */
+/* vitasdk: ksceAppMgrLocalBackupVerifyOfflineHeader */
+int SceAppMgrForDriver_62E98C42(const void *header);
+int sceAppMgrSaveDataNotifyBackupFinished(const void *a);

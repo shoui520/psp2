@@ -26,13 +26,6 @@
 #define SPFSO_SEGMENT_TYPE	1		/* names unknown */
 #define SPFSO_SEGMENT_HEADER	0x200
 
-/* a context: the file, in a memory block */
-typedef struct SceSblSpfsoCtx {
-	SceUID uid;
-	void *base;
-	SceSize size;
-} SceSblSpfsoCtx;
-
 /* the SCE header of an SPFSO (names unknown) */
 typedef struct SceSpfsoHeader {
 	SceUInt32 magic;

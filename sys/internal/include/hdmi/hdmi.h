@@ -84,6 +84,7 @@ int SceHdmiForDriver_291F000B(void);
 int sceHdmiCecRegisterEventCallback(int event, void (*callback)(int event));
 int SceHdmiForDriver_47894820(int mode);
 int SceHdmiForDriver_47B753EB(void);
+int SceHdmiForDriver_6D2D10D8(void);	/* CEC forced polling message */
 int SceHdmiForDriver_854EEB78(const SceHdmiAudioMode *mode);
 int SceHdmiForDriver_8EB0FD9C(SceHdmiEdidInfo *info);
 int SceHdmiForDriver_93AA48AC(CecStatistics *stats);

@@ -63,3 +63,21 @@ int sceCoredumpTrigger(SceUID pid, SceKernelCoredumpStateUpdateCallback update, 
 int sceCoredumpUnregisterCoredumpHandler(void);
 int sceCoredumpWriteUserData(const void *data, SceSize size);
 
+/* the CAF (crash report) encryption: placeholders, deferred (coredump.c) */
+int SceCoredumpForDriver_9336009B(void);	/* vitasdk: ksceCoredumpCafInit */
+int SceCoredumpForDriver_C90F61AF(void);	/* vitasdk: ksceCoredumpCafFinal */
+/* vitasdk: ksceCoredumpCafHeaderInit */
+int SceCoredumpForDriver_7C8120C5(SceUID context, SceUInt32 algorithm);
+/* vitasdk: ksceCoredumpCafHeaderTransform */
+int SceCoredumpForDriver_AE2C2793(SceUID context, const void *data, SceSize size);
+/* vitasdk: ksceCoredumpCafHeaderFinal */
+int SceCoredumpForDriver_65AA4991(SceUID context, void *digest, SceSize size);
+int SceCoredumpForDriver_E1BCBE8F(void *iv, SceSize size);	/* vitasdk: ksceCoredumpCafCreateIv */
+/* vitasdk: ksceCoredumpCafSegmentInit */
+int SceCoredumpForDriver_07185515(SceUID context, SceUInt32 hashKeySelector,
+		SceUInt32 cipherMode, SceUInt32 cipherKeySelector, const void *iv, SceSize size);
+/* vitasdk: ksceCoredumpCafSegmentTransform */
+int SceCoredumpForDriver_FB7AEBFE(SceUID context, const void *source, void *destination,
+		SceSize size);
+/* vitasdk: ksceCoredumpCafSegmentFinal */
+int SceCoredumpForDriver_DF17420A(SceUID context, void *digest, SceSize size);

@@ -130,3 +130,18 @@ int SceNpDrmForDriver_FF63672D(SceNpDrmLicense *license);
 int _sceNpDrmGetRifInfo(const SceNpDrmLicense *license, unsigned int license_size, int check_sign, const struct NpDrmGetRifInfoArgs *userArgs);
 int _sceNpDrmGetRifNameForInstall(char *rif_name, const SceNpDrmLicense *license, unsigned int is_fixed);
 int _sceNpDrmPresetRifProvisionalFlag(SceNpDrmLicense *license);
+
+/* vitasdk: ksceNpDrmEbootSigGenPsp */
+int SceNpDrmForDriver_90B1A6D3(const char *ebootPath, const void *sha256, void *signature, int swVersion);
+/* vitasdk: ksceNpDrmEbootSigGenPs1 */
+int SceNpDrmForDriver_6D9223E1(const char *ebootPath, const void *sha256, void *signature, int swVersion);
+/* vitasdk: ksceNpDrmEbootSigGenMultiDisc */
+int SceNpDrmForDriver_39A7A666(const char *ebootPath, const void *discInfo, void *signature, int swVersion);
+int SceNpDrmForDriver_116FC0D6(SceUInt64 accountId);	/* vitasdk: ksceNpDrmUpdateAccountId */
+
+/* not written in C yet: the prototypes are vshbridge's, PspEbootVerify's vitasdk's */
+/* vitasdk: ksceNpDrmGetLegacyDocKey */
+int SceNpDrmForDriver_4E321BDE(void *a, void *b, void *c, void *d);
+/* vitasdk: ksceNpDrmPspEbootVerify */
+int SceNpDrmForDriver_B6CA3A2C(const char *ebootPath, const void *signature);
+int SceNpDrmForDriver_FC84CA1A(void);	/* vitasdk: ksceNpDrmIsLooseAccountBind */

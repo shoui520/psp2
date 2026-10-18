@@ -1443,11 +1443,11 @@ int SceNpDrmForDriver_EF387FC4(const char *ebootPath, const void *sha256,
 	return result;
 }
 
-STUB(SceNpDrmForDriver_4E321BDE)
+STUB_FUNC(int, SceNpDrmForDriver_4E321BDE, (void *a, void *b, void *c, void *d))
 STUB_FUNC(int, SceNpDrmForDriver_9265B350, (int *actType, int *versionFlag, SceUInt64 *accountId,
 	  SceUInt64 *startTime, SceUInt64 *expirationTime))
-STUB(SceNpDrmForDriver_B6CA3A2C)
-STUB(SceNpDrmForDriver_FC84CA1A)
+STUB_FUNC(int, SceNpDrmForDriver_B6CA3A2C, (const char *ebootPath, const void *signature))
+STUB_FUNC(int, SceNpDrmForDriver_FC84CA1A, (void))
 STUB(SceNpDrmForDriver_FE7B17B6)
 STUB_FUNC(int, ScePsmDrmForDriver_4CD5375C, (SceUInt64 *accountId))
 STUB(ScePsmDrmForDriver_791198CE)

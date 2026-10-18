@@ -2,6 +2,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <sysmem/cpu.h>
 #include "pcact.h"
+#include <gcauthmgr/sblgcauthmgrmlnpsnl.h>
 #include <intrmgr/syscall.h>
 
 int GcAuthPcactEncryptChallenge(const GcAuthPcactEncryptChallengeRequest *request);

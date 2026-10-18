@@ -1391,19 +1391,19 @@ SceUInt32 vshNpDrmGetLegacyDocKey(void *a, void *b, void *c, void *d)
 	VSH_BRIDGE(SceNpDrmForDriver_4E321BDE(a, b, c, d));
 }
 
-SceUInt32 vshNpDrmEbootSigGenPsp(void *a, void *b, void *c, void *d)
+SceUInt32 vshNpDrmEbootSigGenPsp(const char *ebootPath, const void *sha256, void *signature, int swVersion)
 {
-	VSH_BRIDGE(SceNpDrmForDriver_90B1A6D3(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_90B1A6D3(ebootPath, sha256, signature, swVersion));
 }
 
-SceUInt32 vshNpDrmEbootSigGenPs1(void *a, void *b, void *c, void *d)
+SceUInt32 vshNpDrmEbootSigGenPs1(const char *ebootPath, const void *sha256, void *signature, int swVersion)
 {
-	VSH_BRIDGE(SceNpDrmForDriver_6D9223E1(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_6D9223E1(ebootPath, sha256, signature, swVersion));
 }
 
-SceUInt32 vshNpDrmEbootSigGenMultiDisc(void *a, void *b, void *c, void *d)
+SceUInt32 vshNpDrmEbootSigGenMultiDisc(const char *ebootPath, const void *discInfo, void *signature, int swVersion)
 {
-	VSH_BRIDGE(SceNpDrmForDriver_39A7A666(a, b, c, d));
+	VSH_BRIDGE(SceNpDrmForDriver_39A7A666(ebootPath, discInfo, signature, swVersion));
 }
 
 SceUInt32 vshNpDrmEbootSigConvert(const char *path, const void *oldSignature, void *newSignature)
@@ -1436,9 +1436,9 @@ SceUInt32 vshNpDrmUpdateDebugSettings(void)
 	VSH_BRIDGE(SceNpDrmForDriver_A91C7443());
 }
 
-SceUInt32 vshNpDrmUpdateAccountId(void *a, void *b)
+SceUInt32 vshNpDrmUpdateAccountId(SceUInt64 accountId)
 {
-	VSH_BRIDGE(SceNpDrmForDriver_116FC0D6(a, b));
+	VSH_BRIDGE(SceNpDrmForDriver_116FC0D6(accountId));
 }
 
 SceUID vshKernelSearchModuleByName(const char *name)
@@ -1454,7 +1454,7 @@ SceUID vshKernelSearchModuleByName(const char *name)
 SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 {
 	SceUInt32 t = sceSyscallEnter();
-	SceUInt32 ctx[3] = { 0 };
+	SceSblSpfsoCtx ctx = { 0 };
 	void *data = NULL;
 	SceSize dataSize = 0;
 	int ret, ret2;
@@ -1462,14 +1462,14 @@ SceUInt32 vshSblAuthMgrVerifySpsfo(const char *path, void *buf, SceSize size)
 	if (!sceSblACMgrIsSystemProgram(0)) {
 		ret2 = SCE_ERROR_ERRNO_ENOSYS;
 	} else {
-		ret = SceSblPostSsMgrForDriver_BDF18922(path, ctx);
-		if (ret >= 0 && (ret = SceSblPostSsMgrForDriver_686B9461(ctx, &data, &dataSize)) >= 0) {
+		ret = SceSblPostSsMgrForDriver_BDF18922(path, &ctx);
+		if (ret >= 0 && (ret = SceSblPostSsMgrForDriver_686B9461(&ctx, &data, &dataSize)) >= 0) {
 			if (dataSize == 0 || dataSize > size)
 				ret = SCE_SBL_ERROR_SPFSO_TOO_LARGE;
 			else
 				ret = SceSysmemForDriver_6D88EF8A(buf, data, dataSize);
 		}
-		ret2 = SceSblPostSsMgrForDriver_AD3B0078(ctx);
+		ret2 = SceSblPostSsMgrForDriver_AD3B0078(&ctx);
 		if (ret2 >= 0)
 			ret2 = ret;
 	}
@@ -1661,19 +1661,21 @@ SceUInt32 vshCoredumpCafCreateIv(void *iv, SceSize size)
 	VSH_BRIDGE(SceCoredumpForDriver_E1BCBE8F(iv, size));
 }
 
-SceUInt32 vshCoredumpCafSegmentInit(SceUID ctx, void *a, void *b, void *c, void *d, void *e)
+SceUInt32 vshCoredumpCafSegmentInit(SceUID ctx, SceUInt32 hashKeySelector, SceUInt32 cipherMode,
+	SceUInt32 cipherKeySelector, const void *iv, SceSize size)
 {
-	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_07185515(uid, a, b, c, d, e));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_07185515(uid, hashKeySelector, cipherMode,
+		cipherKeySelector, iv, size));
 }
 
-SceUInt32 vshCoredumpCafSegmentTransform(SceUID ctx, void *a, void *b, void *c)
+SceUInt32 vshCoredumpCafSegmentTransform(SceUID ctx, const void *source, void *destination, SceSize size)
 {
-	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_FB7AEBFE(uid, a, b, c));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_FB7AEBFE(uid, source, destination, size));
 }
 
-SceUInt32 vshCoredumpCafSegmentFinal(SceUID ctx, void *a, void *b)
+SceUInt32 vshCoredumpCafSegmentFinal(SceUID ctx, void *digest, SceSize size)
 {
-	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_DF17420A(uid, a, b));
+	VSH_BRIDGE_UID(ctx, SceCoredumpForDriver_DF17420A(uid, digest, size));
 }
 
 SceUInt32 vshCoredumpDeleteCrashReportCaf(void)
