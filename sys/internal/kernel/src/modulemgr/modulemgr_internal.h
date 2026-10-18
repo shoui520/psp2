@@ -563,11 +563,7 @@ int startModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUIn
 		      const SceKernelStartModuleOpt *opt, int *status);
 int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 		     const SceKernelStopModuleOpt *opt, int *status);
-int SceModulemgrForDriver_02D3D0C1(SceUID pid, SceUID modid, SceSize args, void *argp,
-					   SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
-					   int *status);
 int ModulemgrInhibitLoadingModule(SceUInt32 flags);
-int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, void *argp,
 				   SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status);
 
@@ -672,10 +668,6 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name);
 int LibraryDBIsShared(SceUID pid);
 void LibraryDBRegisterModule(SceModuleCB *cb);
 void LibraryDBSetShared(SceUID pid);
-int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr);
-int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out);
-int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
-				     void **textBase, char *name);
 int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, SceUID *list,
 			   SceSize *num);
 
@@ -717,7 +709,6 @@ int LoadcoreUnlinkClient(LibStubCB *stub);
 int LoadcoreAssignSyscalls(LibEntCB *ent);
 void registerClient(LibEntCB *ent, LibStubCB *stub);
 int LoadcoreLinkClient(LibEntCB *ent, LibStubCB *stub, const ModulemgrLibraryPatch *patch);
-int sceKernelRegisterModulesAfterBoot(void);
 int LibraryClassCreate(SceLibraryObject *obj);
 int LibraryClassDestroy(SceLibraryObject *obj);
 int LoadcoreRegisterLibrary(SceModuleCB *cb, int index, SceUInt32 flags);
@@ -754,13 +745,6 @@ SceUID sceKernelOpenModuleForUser(const char *path, SceSize args, void *argp, Sc
 				  const SceKernelLoadModuleOpt *opt, int *status);
 int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
 				const SceKernelUnloadModuleOpt *opt, int *status);
-
-/* exports of this module used internally */
-SceUID SceModulemgrForDriver_189BFBBB(const char *path, SceSize args, void *argp, SceUInt32 flags,
-				 const SceKernelLoadModuleOpt *opt, int *status);
-int SceModulemgrForDriver_03B30B7E(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			       const SceKernelUnloadModuleOpt *opt, int *status);
-int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 
 /* stub_linker.c */
 int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int mode);
