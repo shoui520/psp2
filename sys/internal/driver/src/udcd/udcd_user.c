@@ -15,8 +15,6 @@
 #include <acmgr/acmgr.h>
 #include <udcd/udcd.h>
 
-extern int SceUdcdForDriver_D03017C0(SceUdcdWaitParam *parameter, unsigned int timeout);
-extern int SceUdcdForDriver_FBEA3703(SceUdcdDeviceInfo *information);
 
 #define UDCD_ERROR_BUSY			SCE_UDCD_ERROR_WAIT_TIMEOUT
 

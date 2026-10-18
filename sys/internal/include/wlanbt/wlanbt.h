@@ -4,6 +4,7 @@ typedef int (*SceWlanBtMonitorCallback)(unsigned int event,
 				      unsigned int argument, unsigned int size,
 				      const void *data);
 
+/* vitasdk: ksceWlanBtAttachMonitor */
 int SceWlanBtForDriver_C5AA6F43(SceWlanBtMonitorCallback *monitor);
 int sceWlanBtDetachMonitor(SceWlanBtMonitorCallback *monitor);
 

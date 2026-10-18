@@ -28,4 +28,4 @@ _Static_assert(offsetof(SceBtEvent, argument) == 4, "SceBtEvent.argument");
 _Static_assert(offsetof(SceBtEvent, mac0) == 8, "SceBtEvent.mac0");
 _Static_assert(offsetof(SceBtEvent, mac1) == 12, "SceBtEvent.mac1");
 
-int SceBtForDriver_5ABB9A9D(SceBtEvent *events, int count);
+int SceBtForDriver_5ABB9A9D(SceBtEvent *events, int count);	/* vitasdk: ksceBtReadEvent */

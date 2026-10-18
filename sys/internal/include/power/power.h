@@ -24,6 +24,7 @@ struct PowerBatteryFakeStatus {
 /* vitasdk: kscePowerSetIdleCallback */
 int ScePowerForDriver_1BA2FCAE(uint32_t timerId, uint32_t tickFlags, uint64_t interval,
 			      PowerIdleCallback callback, void *argument);
+/* vitasdk: kscePowerSetProcessIdleCallback */
 int ScePowerForDriver_0856FD0A(PowerProcessIdleCallback callback, void *argument);
 /* vitasdk: kscePowerSetBatteryFakeStatus */
 int ScePowerForDriver_0C6973B8(const volatile struct PowerBatteryFakeStatus *status);

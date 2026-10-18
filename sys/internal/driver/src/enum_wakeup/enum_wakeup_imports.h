@@ -27,8 +27,10 @@
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 
 /* display brightness: the OLED or the LCD driver, whichever is present */
+/* vitasdk: ksceOledSetBrightness */
 int SceOledForDriver_F9624C47(int brightness) __attribute__((weak));
 int SceOledForDriver_3C990F53(void) __attribute__((weak));	/* display on? */
+/* vitasdk: ksceLcdSetBrightness */
 int SceLcdForDriver_581D3A87(int brightness) __attribute__((weak));
 int SceLcdForDriver_8C965153(void) __attribute__((weak));	/* display on? */
 

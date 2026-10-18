@@ -42,6 +42,7 @@ typedef struct SceMotionDevDeviceInfo {
 _Static_assert(sizeof(MotionMagnDeviceInfo) == 12, "magnetometer device info size");
 _Static_assert(sizeof(SceMotionDevDeviceInfo) == 44, "motion device info size");
 
+/* vitasdk: ksceMotionDevGetDeviceInfo */
 int SceMotionDevForDriver_3E4BCBC0(SceMotionDevDeviceInfo *info);
 
 #define MOTION_DATA_ENTRIES	6
@@ -223,21 +224,23 @@ _Static_assert(sizeof(SceMotionDevDs3CalibData) == 24, "DS3 calibration layout")
 _Static_assert(sizeof(MotionDriverSample) == 24, "virtual motion sample layout");
 _Static_assert(sizeof(MotionVirtualDriver) == 24, "virtual motion driver layout");
 
+/* vitasdk: ksceMotionDevRegisterVirtualMotionDriver */
 int SceMotionDevForDriver_7FD06731(const MotionVirtualDriver *driver);
 
 int SceMotionDevForDriver_031AF7A1(void);
-int SceMotionDevForDriver_10AAC8EA(void);
-int SceMotionDevForDriver_11A17A96(void);
+int SceMotionDevForDriver_10AAC8EA(void);	/* vitasdk: ksceMotionDevIsReady */
+int SceMotionDevForDriver_11A17A96(void);	/* vitasdk: ksceMotionDevNoiseFilterIsAvailable */
 int SceMotionDevForDriver_22CD6DCA(SceUID owner);
+/* vitasdk: ksceMotionDevRead */
 int SceMotionDevForDriver_3A3407B5(SceMotionDevData *data, int count, unsigned int *info);
 int SceMotionDevForDriver_3CD0CE14(SceUID *owner);
 int SceMotionDevForDriver_77BA3A04(void);
 int SceMotionDevForDriver_85E3C678(void);
 int SceMotionDevForDriver_A75976EE(void);
-int SceMotionDevForDriver_C02C85AB(void);
+int SceMotionDevForDriver_C02C85AB(void);	/* vitasdk: ksceMotionDevSamplingStart */
 int SceMotionDevForDriver_D7DA3DA7(void);
-int SceMotionDevForDriver_DBAF611A(unsigned int mode);
-int SceMotionDevForDriver_FD0B0785(void);
+int SceMotionDevForDriver_DBAF611A(unsigned int mode);	/* vitasdk: ksceMotionDevSetSamplingMode */
+int SceMotionDevForDriver_FD0B0785(void);	/* vitasdk: ksceMotionDevSamplingStop */
 int SceMotionDevForDriver_FD1C528D(void);
 
 /* SceMotionDev: the user syscalls */

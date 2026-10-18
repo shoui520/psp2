@@ -2,7 +2,6 @@
 #define UDCD_INTERNAL_H
 
 #include <stddef.h>
-#include "udcd_status.h"
 #include <lowio/pervasive_regs.h>
 #include <udcd/udcd.h>
 #include <sysmem/cpu.h>

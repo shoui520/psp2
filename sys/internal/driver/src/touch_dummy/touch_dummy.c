@@ -1319,7 +1319,7 @@ int SceTouchForDriver_423F26D3(void)
 	return 0;
 }
 
-int SceTouchForDriver_4E6C4558(void)
+int SceTouchForDriver_4E6C4558(unsigned panels)
 {
 	return 0;
 }

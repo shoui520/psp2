@@ -11,4 +11,5 @@ int SceBtForDriver_10D68FAE(const void *peerAddress, const void *deviceClass,
 			    const char *name, void *hostAddressOut, void *linkKeyOut);
 
 /* SceBtForDriver NID 0x50710281; the two words form the peer address. */
+/* vitasdk: ksceBtStartDisconnect */
 int SceBtForDriver_50710281(unsigned int mac0, unsigned int mac1);

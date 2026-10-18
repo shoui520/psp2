@@ -17,7 +17,6 @@ typedef struct TouchUtilLegacyFirmwareRecord {
 _Static_assert(sizeof(TouchUtilLegacyFirmwareRecord) == 2,
 	"legacy touch firmware record header size");
 
-int SceTouchForDriver_4E6C4558(unsigned int panels);
 
 typedef struct TouchUtilLegacyConfigRecord {
 	uint16_t address;

@@ -15,7 +15,7 @@ int SceClockgenForDriver_62478916(void);
 int SceClockgenForDriver_7B28A724(void);
 int SceClockgenForDriver_820D3516(int frequency);
 int SceClockgenForDriver_A2CA8B65(int spread);
-int SceClockgenForDriver_B6F0A532(void);
+int SceClockgenForDriver_B6F0A532(void);	/* vitasdk: ksceClockgenWlanBtClkDisable */
 int SceClockgenForDriver_CF63B11D(void);
 int SceClockgenForDriver_EFE8A68C(int singleRead);
 int SceClockgenForDriver_F0A0242D(void);
