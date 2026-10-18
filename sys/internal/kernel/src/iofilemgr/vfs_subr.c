@@ -57,8 +57,8 @@ int vfs_file_class_constructor(void *data)
 {
 	SceUIDVfsFileObject *obj = data;
 
-	obj->file.vp = NULL;
-	obj->file.debug_path = NULL;
+	obj->file.vnode = NULL;
+	obj->file.debugPath = NULL;
 	return 0;
 }
 
@@ -81,10 +81,10 @@ SceVfsMount *vfs_alloc_mount(void)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 		return NULL;
 	}
-	g_freeMntList = mnt->mnt_list_next;
+	g_freeMntList = mnt->mntListNext;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
-	fdlock = (struct FdLock *)mnt->opaque;
-	mnt->fd_lock = fdlock;
+	fdlock = (struct FdLock *)mnt->fdLockBuffer;
+	mnt->fdLock = fdlock;
 	uid = sceKernelCreateMutex("SceVfsFdLock", 0, 0, NULL);
 	if (uid >= 0) {
 		fdlock->mutex = uid;
@@ -93,7 +93,7 @@ SceVfsMount *vfs_alloc_mount(void)
 			fdlock->cond = uid;
 			fdlock->state = 0;
 			fdlock->waitNum = 0;
-			mnt->fumount = (struct Fumount *)mnt->opaque2;
+			mnt->fumount = (struct Fumount *)mnt->fumountBuffer;
 			return mnt;
 		}
 		sceKernelDeleteMutex(fdlock->mutex);
@@ -101,7 +101,7 @@ SceVfsMount *vfs_alloc_mount(void)
 	}
 	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
-		mnt->mnt_list_next = g_freeMntList;
+		mnt->mntListNext = g_freeMntList;
 	g_freeMntList = mnt;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 	return NULL;
@@ -112,24 +112,24 @@ void vfs_init_mount(SceVfsMount *mnt, SceVfsVnode *vp, SceUID allocator, SceVfsI
 {
 	struct Fumount *fumount;
 
-	sceKernelInitializeFastMutex(&mnt->fast_mutex, "SceVfsMnt", 2, 0);
+	sceKernelInitializeFastMutex(&mnt->fastMutex, "SceVfsMnt", 2, 0);
 	mnt->allocator = allocator;
-	mnt->mnt_vfs_inf = vfsInf;
-	mnt->mnt_ref_count = 1;
-	mnt->vnode_list = NULL;
-	mnt->vnode_num = 0;
-	mnt->opened_entry_num = 0;
-	mnt->available_entry_num = 0;
+	mnt->mntVfsInf = vfsInf;
+	mnt->mntRefCount = 1;
+	mnt->vnodeList = NULL;
+	mnt->vnodeNum = 0;
+	mnt->openedEntryNum = 0;
+	mnt->availableEntryNum = 0;
 	mnt->pid = 0;
-	mnt->mnted_on_list = NULL;
-	mnt->mnted_on_list_prev = NULL;
-	mnt->mnt_list_next = NULL;
-	mnt->mnt_data = NULL;
+	mnt->mntedOnList = NULL;
+	mnt->mntedOnListPrev = NULL;
+	mnt->mntListNext = NULL;
+	mnt->mntData = NULL;
 	memset(mnt->path, 0, sizeof(mnt->path));
-	mnt->mnt_vnode = vp;
+	mnt->mntVnode = vp;
 	if (vp != NULL) {
 		vp->core.type |= SCE_VNODE_TYPE_MOUNTED;
-		vp->core.ref_count++;
+		vp->core.refCount++;
 	}
 	fumount = mnt->fumount;
 	fumount->devState = &g_vfsDevState;
@@ -174,8 +174,8 @@ const char *find_mounted_path(const char *name, SceSize len)
 	const signed char *assign;
 
 	vfs_lock_mnt_list();
-	for (mnt = g_mntList; mnt != NULL; mnt = mnt->mnt_list_next) {
-		assign = (const signed char *)mnt->mnt_data->assign_name;
+	for (mnt = g_mntList; mnt != NULL; mnt = mnt->mntListNext) {
+		assign = (const signed char *)mnt->mntData->assignName;
 		if (strncmp((const char *)assign, name, len) == 0 && assign[len] == ':') {
 			vfs_unlock_mnt_list();
 			return mnt->path;
@@ -266,14 +266,14 @@ static inline __attribute__((always_inline)) int unlock_vdlock(SceVfsVnode *vp)
 	int ret;
 
 	thid = sceKernelGetThreadId();
-	if (vp->vdlock.owner_id != thid)
+	if (vp->vdlock.ownerId != thid)
 		return SCE_ERROR_ERRNO_EPERM;
-	if (vp->vdlock.recursive_count != 0) {
-		vp->vdlock.recursive_count--;
+	if (vp->vdlock.recursiveCount != 0) {
+		vp->vdlock.recursiveCount--;
 		return 0;
 	}
 	if (vp->vdlock.waiter == 0) {
-		expected = (SceUInt64)*(volatile SceUInt32 *)&vp->vdlock.owner_id << 32;
+		expected = (SceUInt64)*(volatile SceUInt32 *)&vp->vdlock.ownerId << 32;
 		AtomicFullBarrier();
 		for (;;) {
 			value = AtomicLoadReserved64((SceUInt64 *)&vp->vdlock);
@@ -284,12 +284,12 @@ static inline __attribute__((always_inline)) int unlock_vdlock(SceVfsVnode *vp)
 				return 0;
 		}
 	}
-	vp->vdlock.owner_id = VDLOCK_OWNER_HANDOVER;
-	ret = sceKernelSetEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern);
+	vp->vdlock.ownerId = VDLOCK_OWNER_HANDOVER;
+	ret = sceKernelSetEventFlag(vp->vdlock.waitId, vp->vdlock.waitPattern);
 	if (ret != 0)
 		SCE_DBG_PRINTF_FUNC(0xf, 682, "unlock_vdlock",
 				    "sceKernelSetEventFlag(0x%x, 0x%x) failed ret=0x%x\n",
-				    vp->vdlock.wait_id, vp->vdlock.wait_pattern, ret);
+				    vp->vdlock.waitId, vp->vdlock.waitPattern, ret);
 	return ret;
 }
 
@@ -297,22 +297,22 @@ void fini_vnode(SceVfsVnode *vp)
 {
 	int ret;
 
-	if (vp->core.vop_tbl != NULL) {
-		ret = vfs_free_vop_table(vp->core.vop_tbl);
+	if (vp->core.vopTbl != NULL) {
+		ret = vfs_free_vop_table(vp->core.vopTbl);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xf, 1291, "vop table free failed ret=0x%x tbl=%p\n", ret,
-				       vp->core.vop_tbl);
+				       vp->core.vopTbl);
 	}
 	if (vp->core.bc != NULL) {
 		if (vp->core.mnt->state == VFS_MOUNT_STATE_UMOUNTING)
-			vfsBuffFree(vp->core.bc, 0, vp, vp->core.fd_list);
+			vfsBuffFree(vp->core.bc, 0, vp, vp->core.fdList);
 		else
 			SCE_DBG_ASSERT(0, 1320);
 	}
 	memset(&vp->core, 0, 0x98);
-	if (sceKernelGetThreadId() != vp->vdlock.owner_id)
+	if (sceKernelGetThreadId() != vp->vdlock.ownerId)
 		return;
-	vp->vdlock.recursive_count = 0;
+	vp->vdlock.recursiveCount = 0;
 	ret = unlock_vdlock(vp);
 	SCE_DBG_ASSERT(ret == 0, 1339);
 }
@@ -409,7 +409,7 @@ int vfsLockMnt(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = lockFastMutex(&mnt->fast_mutex);
+	ret = lockFastMutex(&mnt->fastMutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 835, "::0x10f::009::%p 0x%x\n", mnt, ret);
 		SCE_DBG_PRINTF(0xf, 836, "mnt[%p] lock failed ret=0x%x\n", mnt, ret);
@@ -421,7 +421,7 @@ int vfsUnlockMnt(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = sceKernelUnlockFastMutex(&mnt->fast_mutex);
+	ret = sceKernelUnlockFastMutex(&mnt->fastMutex);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 855, "::0x10f::011::%p 0x%x\n", mnt, ret);
 		SCE_DBG_PRINTF(0xf, 856, "mnt[%p] unlock failed ret=0x%x\n", mnt, ret);
@@ -463,16 +463,16 @@ void vfs_free_mount(SceVfsMount *mnt)
 	int ret, intr;
 
 	info.size = sizeof(info);
-	ret = sceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
+	ret = sceKernelGetFastMutexInfo(&mnt->fastMutex, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 360, "can not get fmtx info ... %d 0x%X\n", ret, ret);
 		vfsUnlockMnt(mnt);
 	} else if (info.lockCount != 0) {
 		vfsUnlockMnt(mnt);
 	}
-	ret = sceKernelFinalizeFastMutex(&mnt->fast_mutex);
-	fini_mtx(&mnt->fast_mutex, ret);
-	fini_fdlock(mnt->fd_lock);
+	ret = sceKernelFinalizeFastMutex(&mnt->fastMutex);
+	fini_mtx(&mnt->fastMutex, ret);
+	fini_fdlock(mnt->fdLock);
 	if (mnt->fumount != NULL) {
 		ret = vfs_free_vop_table(mnt->fumount->vops);
 		if (ret < 0)
@@ -481,7 +481,7 @@ void vfs_free_mount(SceVfsMount *mnt)
 	}
 	intr = SceCpuForDriver_D32ACE9E(&g_freeMntListLock);
 	if (g_freeMntList != NULL)
-		mnt->mnt_list_next = g_freeMntList;
+		mnt->mntListNext = g_freeMntList;
 	g_freeMntList = mnt;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_freeMntListLock, intr);
 }
@@ -492,7 +492,7 @@ SceBool vfsIsLockedMnt(SceVfsMount *mnt)
 	int ret;
 
 	info.size = sizeof(info);
-	ret = sceKernelGetFastMutexInfo(&mnt->fast_mutex, &info);
+	ret = sceKernelGetFastMutexInfo(&mnt->fastMutex, &info);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(0xf, 869, "sceKernelGetFastMutexInfo(%p): 0x%08x\n", mnt, ret);
 		SCE_DBG_ASSERT_CHECK(0, 870);
@@ -531,7 +531,7 @@ int vfsLockFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = lock_fdlock(file->fd_lock);
+	ret = lock_fdlock(file->fdLock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 932, "::0x10f::012::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 933, "fdmnt lock failed ret=0x%x\n", ret);
@@ -543,7 +543,7 @@ int vfsLockFdByVnode(SceVfsVnode *vp)
 {
 	int ret;
 
-	ret = lock_fdlock(vp->core.mnt->fd_lock);
+	ret = lock_fdlock(vp->core.mnt->fdLock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 946, "::0x10f::013::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 947, "fdmnt lock failed ret=0x%x\n", ret);
@@ -555,7 +555,7 @@ int vfsTrylockFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = sceKernelTryLockMutex(file->fd_lock->mutex, 1);
+	ret = sceKernelTryLockMutex(file->fdLock->mutex, 1);
 	if (ret < 0) {
 		if (ret != SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN) {
 			SCE_PRINTF_WITH_INFO(0xf, 961, "::0x10f::014::0x%x\n", ret);
@@ -569,7 +569,7 @@ int vfsUnlockFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = sceKernelUnlockMutex(file->fd_lock->mutex, 1);
+	ret = sceKernelUnlockMutex(file->fdLock->mutex, 1);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 976, "::0x10f::015::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 977, "fdmnt unlock failed ret=0x%x\n", ret);
@@ -594,7 +594,7 @@ int vfsWaitFd(SceVfsFile *file)
 {
 	int ret;
 
-	ret = wait_fdlock(file->fd_lock);
+	ret = wait_fdlock(file->fdLock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 985, "::0x10f::016::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 986, "fdmnt wait failed ret=0x%x\n", ret);
@@ -610,7 +610,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 	int ret;
 
 	info.size = sizeof(info);
-	ret = vfsGetMutexInfo(file->fd_lock->mutex, &info);
+	ret = vfsGetMutexInfo(file->fdLock->mutex, &info);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_CHECK(0, 998);
 		return ret;
@@ -620,7 +620,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 	owner = info.currentOwnerId;
 	if (sceKernelGetThreadId() != owner) {
 		SCE_DBG_PRINTF(0xf, 1005, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n",
-			       file->fd_lock->mutex, ret);
+			       file->fdLock->mutex, ret);
 		SCE_DBG_PRINTF(0xf, 1006, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 		SCE_DBG_PRINTF(0xf, 1007, "inf.currentCount:       0x%08x\n", info.currentCount);
 		SCE_DBG_PRINTF(0xf, 1008, "sceKernelGetThreadId(): 0x%08x\n", sceKernelGetThreadId());
@@ -629,7 +629,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file)
 	}
 	if (info.currentCount != 0)
 		return 1;
-	SCE_DBG_PRINTF(0xf, 1012, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n", file->fd_lock->mutex,
+	SCE_DBG_PRINTF(0xf, 1012, "sceKernelGetMutexInfo(0x%08x): 0x%08x\n", file->fdLock->mutex,
 		       ret);
 	SCE_DBG_PRINTF(0xf, 1013, "inf.currentOwnerId:     0x%08x\n", info.currentOwnerId);
 	SCE_DBG_PRINTF(0xf, 1014, "inf.currentCount:       0x%08x\n", info.currentCount);
@@ -643,7 +643,7 @@ int vfsLockFdAll(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = lock_fdlock(mnt->fd_lock);
+	ret = lock_fdlock(mnt->fdLock);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1030, "::0x10f::017::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1031, "fdmnt lock all failed ret=0x%x\n", ret);
@@ -655,7 +655,7 @@ int vfsUnlockFdAll(SceVfsMount *mnt)
 {
 	int ret;
 
-	ret = sceKernelUnlockMutex(mnt->fd_lock->mutex, 1);
+	ret = sceKernelUnlockMutex(mnt->fdLock->mutex, 1);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1060, "::0x10f::019::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1061, "fdmnt unlock all failed ret=0x%x\n", ret);
@@ -667,9 +667,9 @@ int vfsSignalFd(SceVfsMount *mnt)
 {
 	int ret;
 
-	if (mnt->fd_lock->waitNum < 1)
+	if (mnt->fdLock->waitNum < 1)
 		return 0;
-	ret = sceKernelSignalCondAll(mnt->fd_lock->cond);
+	ret = sceKernelSignalCondAll(mnt->fdLock->cond);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 1074, "::0x10f::020::0x%x\n", ret);
 		SCE_DBG_PRINTF(0xf, 1075, "fdmnt signal failed ret=0x%x\n", ret);
@@ -683,10 +683,10 @@ static inline __attribute__((always_inline)) SceUID vdlock_try_own(SceVfsVnode *
 	SceUID owner;
 
 	for (;;) {
-		owner = AtomicLoadReserved32((SceUInt32 *)&vp->vdlock.owner_id);
+		owner = AtomicLoadReserved32((SceUInt32 *)&vp->vdlock.ownerId);
 		if (owner != -1)
 			break;
-		if (!AtomicStoreReserved32((SceUInt32 *)&vp->vdlock.owner_id, thid)) {
+		if (!AtomicStoreReserved32((SceUInt32 *)&vp->vdlock.ownerId, thid)) {
 			break;
 		}
 	}
@@ -716,8 +716,8 @@ int vfsLockVnode(SceVfsVnode *vp)
 		return 0;
 	}
 	if (thid == owner) {
-		SCE_DBG_ASSERT_FUNC(vp->vdlock.recursive_count != -1, 573, "lock_vdlock");
-		vp->vdlock.recursive_count++;
+		SCE_DBG_ASSERT_FUNC(vp->vdlock.recursiveCount != -1, 573, "lock_vdlock");
+		vp->vdlock.recursiveCount++;
 		return 0;
 	}
 	vdlock_change_waiters(vp, 1);
@@ -726,11 +726,11 @@ int vfsLockVnode(SceVfsVnode *vp)
 		AtomicFullBarrier();
 		return 0;
 	}
-	ret = sceKernelWaitEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern,
+	ret = sceKernelWaitEventFlag(vp->vdlock.waitId, vp->vdlock.waitPattern,
 				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	vdlock_change_waiters(vp, (SceUInt64)-1);
 	if (ret == 0) {
-		vp->vdlock.owner_id = thid;
+		vp->vdlock.ownerId = thid;
 		AtomicFullBarrier();
 		return 0;
 	}
@@ -754,8 +754,8 @@ int lock_vdlock(SceVfsVnode *vp)
 	}
 	if (thid != owner)
 		return SCE_ERROR_ERRNO_EBUSY;
-	SCE_DBG_ASSERT(vp->vdlock.recursive_count != -1, 573);
-	vp->vdlock.recursive_count++;
+	SCE_DBG_ASSERT(vp->vdlock.recursiveCount != -1, 573);
+	vp->vdlock.recursiveCount++;
 	return 0;
 }
 
@@ -774,7 +774,7 @@ int vfsUnlockVnode(SceVfsVnode *vp)
 
 SceBool vfsIsOwnerVnode(SceVfsVnode *vp)
 {
-	return vp->vdlock.owner_id == sceKernelGetThreadId();
+	return vp->vdlock.ownerId == sceKernelGetThreadId();
 }
 
 struct Ncache *vfs_alloc_ncache(SceUID heap, const VfsPathElem *elem)
@@ -836,7 +836,7 @@ void vfs_set_ncache_entry(struct Ncache *nc, SceVfsVnode *dvp, SceVfsVnode *vp, 
 void vfs_insert_mnt_list(SceVfsMount *mnt)
 {
 	if (g_mntList != NULL)
-		mnt->mnt_list_next = g_mntList;
+		mnt->mntListNext = g_mntList;
 	g_mntList = mnt;
 }
 
@@ -849,17 +849,17 @@ int vfs_remove_mnt_list(SceVfsMount *mnt)
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
 		if (g_mntList == mnt) {
-			g_mntList = mnt->mnt_list_next;
+			g_mntList = mnt->mntListNext;
 		} else {
 			cur = g_mntList;
 			do {
 				prev = cur;
-				cur = prev->mnt_list_next;
+				cur = prev->mntListNext;
 			} while (cur != mnt && cur != NULL);
-			prev->mnt_list_next = mnt->mnt_list_next;
+			prev->mntListNext = mnt->mntListNext;
 		}
 		ret = 0;
-		mnt->mnt_list_next = NULL;
+		mnt->mntListNext = NULL;
 	}
 	SCE_DBG_ASSERT_CHECK(ret == 0, 1498);
 	return ret;
@@ -867,9 +867,9 @@ int vfs_remove_mnt_list(SceVfsMount *mnt)
 
 void vfs_insert_mntedon_list(SceVfsMount *pmnt, SceVfsMount *mnt)
 {
-	if (pmnt->mnted_on_list != NULL)
-		mnt->mnted_on_list_prev = pmnt->mnted_on_list;
-	pmnt->mnted_on_list = mnt;
+	if (pmnt->mntedOnList != NULL)
+		mnt->mntedOnListPrev = pmnt->mntedOnList;
+	pmnt->mntedOnList = mnt;
 }
 
 int vfs_remove_mntedon_list(SceVfsMount *pmnt, SceVfsMount *mnt)
@@ -877,21 +877,21 @@ int vfs_remove_mntedon_list(SceVfsMount *pmnt, SceVfsMount *mnt)
 	SceVfsMount *prev, *cur;
 	int ret;
 
-	cur = pmnt->mnted_on_list;
+	cur = pmnt->mntedOnList;
 	if (cur == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
 		if (cur == mnt) {
-			pmnt->mnted_on_list = mnt->mnted_on_list_prev;
+			pmnt->mntedOnList = mnt->mntedOnListPrev;
 		} else {
 			do {
 				prev = cur;
-				cur = prev->mnted_on_list_prev;
+				cur = prev->mntedOnListPrev;
 			} while (cur != mnt && cur != NULL);
-			prev->mnted_on_list_prev = mnt->mnted_on_list_prev;
+			prev->mntedOnListPrev = mnt->mntedOnListPrev;
 		}
 		ret = 0;
-		mnt->mnted_on_list_prev = NULL;
+		mnt->mntedOnListPrev = NULL;
 	}
 	SCE_DBG_ASSERT_CHECK(ret == 0, 1513);
 	return ret;
@@ -902,12 +902,12 @@ int vfs_remove_mnt_vnode_list(SceVfsMount *mnt, SceVfsVnode *vp)
 	SceVfsVnode *prev, *cur;
 	int ret;
 
-	cur = mnt->vnode_list;
+	cur = mnt->vnodeList;
 	if (cur == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
 		if (cur == vp) {
-			mnt->vnode_list = vp->core.next;
+			mnt->vnodeList = vp->core.next;
 		} else {
 			do {
 				prev = cur;
@@ -920,7 +920,7 @@ int vfs_remove_mnt_vnode_list(SceVfsMount *mnt, SceVfsVnode *vp)
 	}
 	SCE_DBG_ASSERT_CHECK(ret == 0, 1537);
 	if (ret == 0)
-		mnt->vnode_num--;
+		mnt->vnodeNum--;
 	return ret;
 }
 
@@ -942,15 +942,15 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 	SceVfsVnode *vp, *next;
 	int retry, busy, num, freed, ret;
 
-	if ((int)mnt->opened_entry_num > 0) {
+	if ((int)mnt->openedEntryNum > 0) {
 		SCE_DBG_PRINTF(0xf, 271, "mnt=%p some entries are still opened %d 0x%x\n", mnt,
-			       mnt->opened_entry_num, mnt->opened_entry_num);
+			       mnt->openedEntryNum, mnt->openedEntryNum);
 		SCE_DBG_ASSERT(0, 272);
 	}
 	busy = 1;
 	retry = 11;
 	for (;;) {
-		num = mnt->vnode_num;
+		num = mnt->vnodeNum;
 		if (num < 1 || !busy)
 			break;
 		if (--retry == 0) {
@@ -959,7 +959,7 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 		}
 		busy = 0;
 		freed = 0;
-		for (vp = mnt->vnode_list; vp != NULL; vp = next) {
+		for (vp = mnt->vnodeList; vp != NULL; vp = next) {
 			next = vp->core.next;
 			ret = lock_vdlock(vp);
 			if (ret != 0) {
@@ -970,8 +970,8 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 				}
 				SCE_DBG_PRINTF(0xf, 304, "vnode lock failed %p retval=0x%x\n", vp, ret);
 			}
-			if (vp->core.ref_count != 0) {
-				SCE_DBG_PRINTF(0xf, 315, "vp refcount 0 != %d vp=%p\n", vp->core.ref_count,
+			if (vp->core.refCount != 0) {
+				SCE_DBG_PRINTF(0xf, 315, "vp refcount 0 != %d vp=%p\n", vp->core.refCount,
 					       vp);
 				vfsUnlockVnode(vp);
 				return SCE_ERROR_ERRNO_EBUSY;
@@ -986,11 +986,11 @@ int vfs_finalize_mount(SceVfsMount *mnt)
 			SCE_DBG_PRINTF(0xf, 335, "%d vnode are freed but expected %d node\n", freed,
 				       num);
 	}
-	if (mnt->mnt_vnode != NULL) {
-		vfsLockVnode(mnt->mnt_vnode);
-		vp = mnt->mnt_vnode;
+	if (mnt->mntVnode != NULL) {
+		vfsLockVnode(mnt->mntVnode);
+		vp = mnt->mntVnode;
 		vp->core.type &= ~SCE_VNODE_TYPE_MOUNTED;
-		vp->core.ref_count--;
+		vp->core.refCount--;
 		vfsUnlockVnode(vp);
 	}
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 345, "g_total_vnode_num=%d\n", g_total_vnode_num);
@@ -1004,9 +1004,9 @@ int sceVfsAddVfs(SceVfsInfo *vfsInf)
 	int ret;
 
 	vfs_lock_mnt_list();
-	name = vfsInf->vfs_name;
+	name = vfsInf->vfsName;
 	for (cur = g_vfsList; cur != NULL; cur = cur->next) {
-		if (strncmp(cur->vfs_name, name, 0x20) == 0) {
+		if (strncmp(cur->vfsName, name, 0x20) == 0) {
 			ret = SCE_ERROR_ERRNO_EEXIST;
 			goto out;
 		}
@@ -1017,7 +1017,7 @@ int sceVfsAddVfs(SceVfsInfo *vfsInf)
 	if (g_vfsList != NULL)
 		vfsInf->next = g_vfsList;
 	g_vfsList = vfsInf;
-	vfsInf->ref_count = 0;
+	vfsInf->refCount = 0;
 out:
 	vfs_unlock_mnt_list();
 	return ret;
@@ -1030,7 +1030,7 @@ int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf)
 
 	vfs_lock_mnt_list();
 	for (inf = g_vfsList; inf != NULL; inf = inf->next) {
-		if (strncmp(inf->vfs_name, name, 0x20) == 0)
+		if (strncmp(inf->vfsName, name, 0x20) == 0)
 			break;
 	}
 	if (inf == NULL) {
@@ -1040,7 +1040,7 @@ int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf)
 	ret = sceVfsOpFini(inf);
 	if (ret < 0)
 		goto out;
-	if (inf->ref_count != 0) {
+	if (inf->refCount != 0) {
 		ret = SCE_ERROR_ERRNO_EBUSY;
 		goto out;
 	}
@@ -1075,8 +1075,8 @@ SceVfsInfo *vfs_acquire_vfs(const char *name)
 
 	vfs_lock_mnt_list();
 	for (inf = g_vfsList; inf != NULL; inf = inf->next) {
-		if (strncmp(inf->vfs_name, name, 0x20) == 0) {
-			inf->ref_count++;
+		if (strncmp(inf->vfsName, name, 0x20) == 0) {
+			inf->refCount++;
 			break;
 		}
 	}
@@ -1092,8 +1092,8 @@ int vfs_release_vfs(const char *name)
 
 	vfs_lock_mnt_list();
 	for (inf = g_vfsList; inf != NULL; inf = inf->next) {
-		if (strncmp(inf->vfs_name, name, 0x20) == 0) {
-			inf->ref_count--;
+		if (strncmp(inf->vfsName, name, 0x20) == 0) {
+			inf->refCount--;
 			ret = 0;
 			break;
 		}
@@ -1107,34 +1107,34 @@ void vfs_initialize_file(SceVfsVnode *vp, SceVfsFile *file)
 	SceVfsMount *mnt = vp->core.mnt;
 	SceUInt32 attr;
 
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1734);
-	vp->core.fd_num++;
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.ownerId == sceKernelGetThreadId(), 1734);
+	vp->core.fdNum++;
 	file->state = SCE_VFS_FILE_STATE_OPEN;
-	file->vp = vp;
-	file->position = 0;
+	file->vnode = vp;
+	file->fpos = 0;
 	file->next = NULL;
-	file->is_dir = 0;
-	file->flags = 0;
+	file->is_dread = 0;
+	file->openMode = 0;
 	file->fd = 0;
 	file->pid = SceThreadmgrForDriver_FA54D49A();
-	file->has_flock_ent = 0;
-	file->fd_lock = mnt->fd_lock;
-	attr = (mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
+	file->hasFlockEnt = 0;
+	file->fdLock = mnt->fdLock;
+	attr = (mnt->mntFlags & SCE_VFS_MOUNT_FLAG_INTERNAL) != 0;
 	file->idata = attr;
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_EXTERNAL) != 0)
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_EXTERNAL) != 0)
 		file->idata = attr | VFS_FILE_ATTR_EXTERNAL;
 	__builtin_memset(file->ioSchedData, 0, sizeof(file->ioSchedData));
-	file->flock_busy_count = 0;
-	file->debug_path = NULL;
-	if (vp->core.fd_list != NULL)
-		file->next = vp->core.fd_list;
-	vp->core.fd_list = file;
+	file->flockBusyCount = 0;
+	file->debugPath = NULL;
+	if (vp->core.fdList != NULL)
+		file->next = vp->core.fdList;
+	vp->core.fdList = file;
 }
 
 /* name unknown: drops a file's opened-entry count and closes its UID */
 int vfs_close_file(SceVfsVnode *vp, SceUID fd)
 {
-	SceCpuForDriver_A4884C4E(&vp->core.mnt->opened_entry_num, 1);
+	SceCpuForDriver_A4884C4E(&vp->core.mnt->openedEntryNum, 1);
 	return sceGUIDClose(fd);
 }
 
@@ -1278,10 +1278,10 @@ int vfs_vnode_initialize(void)
 			evf = sceKernelCreateEventFlag("SceVfsVnode", 0x1000, 0, NULL);
 		SCE_DBG_ASSERT(evf > 0, 2109);
 		vp->vdlock.waiter = 0;
-		vp->vdlock.wait_id = evf;
-		vp->vdlock.wait_pattern = 1 << (i & 0x1f);
-		vp->vdlock.owner_id = -1;
-		vp->vdlock.recursive_count = 0;
+		vp->vdlock.waitId = evf;
+		vp->vdlock.waitPattern = 1 << (i & 0x1f);
+		vp->vdlock.ownerId = -1;
+		vp->vdlock.recursiveCount = 0;
 		vp = (SceVfsVnode *)((char *)vp + size);
 	}
 	return ret;
@@ -1336,7 +1336,7 @@ int vfs_set_fumount_vop(SceVfsMount *mnt)
 	SceVopTable *tbl;
 	SceVfsVnode *vp, *first;
 
-	first = mnt->vnode_list;
+	first = mnt->vnodeList;
 	tbl = vfs_alloc_vop_table();
 	if (tbl == NULL) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 2149, "could not allocate memory\n");
@@ -1345,7 +1345,7 @@ int vfs_set_fumount_vop(SceVfsMount *mnt)
 	mnt->fumount->vops = tbl;
 	memset(tbl, 0, sizeof(*tbl));
 	vfs_fill_fumount_vop(tbl, first->core.ops, 1);
-	for (vp = mnt->vnode_list; vp != NULL; vp = vp->core.next)
+	for (vp = mnt->vnodeList; vp != NULL; vp = vp->core.next)
 		vp->core.ops = tbl;
 	return 0;
 }
@@ -1361,7 +1361,7 @@ int vfs_set_fumount_vop_vnode(SceVfsVnode *vp)
 	memset(tbl, 0, sizeof(*tbl));
 	vfs_fill_fumount_vop(tbl, vp->core.ops, 0);
 	vp->core.ops = tbl;
-	vp->core.vop_tbl = tbl;
+	vp->core.vopTbl = tbl;
 	return 0;
 }
 
@@ -1373,7 +1373,7 @@ static inline __attribute__((always_inline)) int vfs_process_close(SceUID guid, 
 	} param;
 	int ret, i;
 
-	if (file->is_dir != 0) {
+	if (file->is_dread != 0) {
 		param.dclose.fd = guid;
 		param.dclose.reserved = 0;
 		ret = SceThreadmgrForDriver_E54FD746(0x2000, (void *)vfsDclose, &param);
@@ -1548,13 +1548,13 @@ int vfs_sync(SceVfsMount *mnt)
 				vfsUnlockVnode(vp);
 				continue;
 			}
-			link = vp->core.link_to;
+			link = vp->core.linkTo;
 			if (link == NULL) {
-				ret = sceVopSync(vp, vp->core.fd_list, 1);
+				ret = sceVopSync(vp, vp->core.fdList, 1);
 			} else {
 				vfsLockVnode(link);
-				ret = sceVopSync(vp->core.link_to, vp->core.link_to->core.fd_list, 1);
-				vfsUnlockVnode(vp->core.link_to);
+				ret = sceVopSync(vp->core.linkTo, vp->core.linkTo->core.fdList, 1);
+				vfsUnlockVnode(vp->core.linkTo);
 			}
 			if (ret < 0 && ret != SCE_ERROR_ERRNO_EUNSUP) {
 				SCE_DBG_PRINTF(0xf, 2621, "vop sync failed vp=%p ret=0x%x\n", vp, ret);
@@ -1562,7 +1562,7 @@ int vfs_sync(SceVfsMount *mnt)
 					SCE_DBG_PRINTF(0xf, 2624, "ncache name is %s\n",
 						       vp->core.ncache->name);
 				SCE_DBG_PRINTF(0xf, 2632, "some file/dir in %s\n",
-					       mnt->mnt_data->assign_name);
+					       mnt->mntData->assignName);
 			}
 			vfsUnlockVnode(vp);
 		}
@@ -1592,11 +1592,11 @@ int vfs_sync_all_mount_point(void)
 		again = 0;
 		vfs_lock_mnt_list();
 restart:
-		for (mnt = g_mntList; mnt != NULL; mnt = mnt->mnt_list_next) {
+		for (mnt = g_mntList; mnt != NULL; mnt = mnt->mntListNext) {
 			if (mnt->fumount->busy == 0)
 				continue;
 			vfs_unlock_mnt_list();
-			if (mnt->fs_type == SCE_VFS_FS_TYPE_CHRDEV)
+			if (mnt->fsType == SCE_VFS_FS_TYPE_CHRDEV)
 				tty = 1;
 			if (mnt->state == VFS_MOUNT_STATE_MOUNTED) {
 				ret = vfs_sync(mnt);
@@ -1658,7 +1658,7 @@ int vfs_debug_path_create(SceVfsFile *file, const char *path)
 		sceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	file->debug_path = dp;
+	file->debugPath = dp;
 	dp->resolvedOpenPath = buf;
 	if (path == NULL) {
 		buf[0] = '\0';
@@ -1674,7 +1674,7 @@ int vfs_debug_path_create(SceVfsFile *file, const char *path)
 /* name unknown: sets a file's resolved open path */
 int vfs_debug_set_resolved_path(SceVfsFile *file, const char *path)
 {
-	struct DebugPath *dp = file->debug_path;
+	struct DebugPath *dp = file->debugPath;
 
 	if (dp == NULL)
 		return vfs_debug_path_create(file, path);
@@ -1691,7 +1691,7 @@ int vfs_debug_set_resolved_path(SceVfsFile *file, const char *path)
 /* name unknown: sets a file's open path, after the resolved one when it fits */
 int vfs_debug_set_open_path(SceVfsFile *file, const char *path)
 {
-	struct DebugPath *dp = file->debug_path;
+	struct DebugPath *dp = file->debugPath;
 	SceSize len;
 	char *buf;
 	int index;
@@ -1720,7 +1720,7 @@ int vfs_debug_set_open_path(SceVfsFile *file, const char *path)
 /* name unknown: records the open flags and mode in a file's debug path record */
 int vfs_debug_set_open_param(SceVfsFile *file, int flags, SceMode mode)
 {
-	struct DebugPath *dp = file->debug_path;
+	struct DebugPath *dp = file->debugPath;
 
 	if (dp == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -1732,7 +1732,7 @@ int vfs_debug_set_open_param(SceVfsFile *file, int flags, SceMode mode)
 /* name unknown: frees a file's debug path record */
 int vfs_debug_path_free(SceVfsFile *file)
 {
-	struct DebugPath *dp = file->debug_path;
+	struct DebugPath *dp = file->debugPath;
 
 	if (dp == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -1741,7 +1741,7 @@ int vfs_debug_path_free(SceVfsFile *file)
 	    dp->openPathLength + dp->resolvedOpenPathLength + 2 > VFS_PATH_BUFF_SIZE)
 		bufferPoolFree(g_vfsDebugBufferPool[dp->openPathPool], dp->openPath);
 	sceKernelFreeHeapMemory(g_vfsNcacheHeap, dp);
-	file->debug_path = NULL;
+	file->debugPath = NULL;
 	return 0;
 }
 
@@ -1750,13 +1750,13 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	SceVfsFile *prev, *cur;
 	int ret;
 
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1780);
-	cur = vp->core.fd_list;
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.ownerId == sceKernelGetThreadId(), 1780);
+	cur = vp->core.fdList;
 	if (cur == NULL) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
 		if (cur == file) {
-			vp->core.fd_list = file->next;
+			vp->core.fdList = file->next;
 		} else {
 			do {
 				prev = cur;
@@ -1769,8 +1769,8 @@ int vfs_finalize_file(SceVfsVnode *vp, SceVfsFile *file)
 	}
 	SCE_DBG_ASSERT_CHECK(ret == 0, 1783);
 	if (ret == 0) {
-		vp->core.fd_num--;
-		file->vp = NULL;
+		vp->core.fdNum--;
+		file->vnode = NULL;
 		if (SceDipswForDriver_A98FC2FD(0xd2) != 0) {
 			vfs_debug_path_free(file);
 			return 0;
@@ -1837,7 +1837,7 @@ int vfs_wait_fumount(SceVfsMount *mnt)
 
 int vfs_check_fd_status(SceVfsFile *file, int closing)
 {
-	struct FdLock *fdlock = file->fd_lock;
+	struct FdLock *fdlock = file->fdLock;
 	volatile SceUInt32 state = fdlock->state;
 	SceVfsMount *mnt;
 	int ret;
@@ -1846,9 +1846,9 @@ int vfs_check_fd_status(SceVfsFile *file, int closing)
 	if (file->state == SCE_VFS_FILE_STATE_DUMMY)
 		return SCE_ERROR_ERRNO_EBADF;
 	if ((file->idata & VFS_FILE_ATTR_EXTERNAL) != 0) {
-		if (file->vp == NULL)
+		if (file->vnode == NULL)
 			return vfs_get_file_closed_error(file);
-		mnt = file->vp->core.mnt;
+		mnt = file->vnode->core.mnt;
 		if (*mnt->fumount->devState != 1) {
 			vfsUnlockFd(file);
 			ret = vfs_wait_fumount(mnt);
@@ -1964,14 +1964,14 @@ int vfs_prepare_for_resume(void)
 	int ret = 0, err;
 
 	vfs_lock_mnt_list();
-	for (mnt = g_mntList; mnt != NULL; mnt = mnt->mnt_list_next) {
-		if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_EXTERNAL) == 0)
+	for (mnt = g_mntList; mnt != NULL; mnt = mnt->mntListNext) {
+		if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_EXTERNAL) == 0)
 			continue;
 		err = sceKernelClearEventFlag(*mnt->fumount->activationEvf, 0);
 		if (err < 0) {
 			SCE_DBG_PRINTF(0xf, 3278,
 				       "vfs_prepare_dev_activation failed ... 0x%x mnt=%p %s\n", err,
-				       mnt, mnt->mnt_data->assign_name);
+				       mnt, mnt->mntData->assignName);
 			ret = err;
 		}
 	}
@@ -2044,12 +2044,12 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 	char objName[0x1f + 1];
 	SceUID uid;
 
-	data = mnt->mnt_data;
-	SCE_DBG_ASSERT_CHECK(vp->vdlock.owner_id == sceKernelGetThreadId(), 1682);
+	data = mnt->mntData;
+	SCE_DBG_ASSERT_CHECK(vp->vdlock.ownerId == sceKernelGetThreadId(), 1682);
 	if (name == NULL) {
 		strncpy(objName, "SceVfsFile", 0x1f);
 	} else {
-		snprintf(objName, 0x1f, "file %s %s", data->assign_name, name);
+		snprintf(objName, 0x1f, "file %s %s", data->assignName, name);
 		objName[0x1f] = '\0';
 	}
 	uid = vfs_create_file_object(&obj, objName);
@@ -2059,7 +2059,7 @@ SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name)
 		return uid;
 	}
 	*file = &obj->file;
-	SceCpuForDriver_5F6A8743(&mnt->opened_entry_num, 1);
+	SceCpuForDriver_5F6A8743(&mnt->openedEntryNum, 1);
 	return uid;
 }
 
@@ -2103,16 +2103,16 @@ static inline __attribute__((always_inline)) void init_vnode(SceVfsVnode *vp, Sc
 	memset(&vp->core, 0, 0x98);
 	vp->core.state = SCE_VNODE_STATE_NEW;
 	vp->core.ops = ops;
-	vp->core.mnt_opt = mnt->opt;
+	vp->core.mntOpt = mnt->opt;
 	vp->core.mnt = mnt;
-	vp->core.ref_count++;
+	vp->core.refCount++;
 	vp->core.allocator = heap;
 	vfsLockMnt(mnt);
 	vp->core.next = NULL;
-	if (mnt->vnode_list != NULL)
-		vp->core.next = mnt->vnode_list;
-	mnt->vnode_list = vp;
-	mnt->vnode_num++;
+	if (mnt->vnodeList != NULL)
+		vp->core.next = mnt->vnodeList;
+	mnt->vnodeList = vp;
+	mnt->vnodeNum++;
 	vfsUnlockMnt(mnt);
 }
 
@@ -2172,7 +2172,7 @@ int vfs_mount_initialize(SceUID heap)
 	for (; mnt != end; mnt++) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 3436, "mnt=%p\n", mnt);
 		if (g_freeMntList != NULL)
-			mnt->mnt_list_next = g_freeMntList;
+			mnt->mntListNext = g_freeMntList;
 		g_freeMntList = mnt;
 	}
 	return 0;

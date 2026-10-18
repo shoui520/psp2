@@ -148,7 +148,7 @@ static inline int _exfatfs_cleanup_device_file_buffer(SceExfatfsDrive *drive)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 135,
 			"%s: drive[%p], assignName(%s), vp[%p], file[%p], sceVopSync result[%#x]\n",
 			"_exfatfs_cleanup_device_file_buffer", drive,
-			drive->deviceInfo.mount_misc->assign_name, vp, file, result);
+			drive->deviceInfo.mount_misc->assignName, vp, file, result);
 		vp = drive->deviceInfo.device_vnode;
 		file = drive->deviceInfo.device_file;
 		result = sceVopCleanup(vp, file, 0, 0);
@@ -156,7 +156,7 @@ static inline int _exfatfs_cleanup_device_file_buffer(SceExfatfsDrive *drive)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 115, "_exfatfs_force_invalidate_device_file_buffer",
 				"%s: drive[%p], assignName(%s), vp[%p], file[%p], sceVopCleanup failed[%#x]\n",
 				"_exfatfs_force_invalidate_device_file_buffer", drive,
-				drive->deviceInfo.mount_misc->assign_name, vp, file, result);
+				drive->deviceInfo.mount_misc->assignName, vp, file, result);
 			if (result == (int)0x80010030)
 				result = 0;
 		}

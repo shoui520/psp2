@@ -29,7 +29,7 @@ int pfsGdsdDevctl(ScePfsPmi *pmi, SceVfsMount *mnt, const char *dev, unsigned in
 	if (cmd >> 12 == PFS_DEVCTL_GROUP) {
 		ret = pfsCoreDevctl(pmi, dev, cmd, arg, argLen, buf, bufLen);
 	} else {
-		lower = mnt->mnt_vnode->core.mnt;
+		lower = mnt->mntVnode->core.mnt;
 		if (lower == NULL) {
 			pfsAccessEnd(perm);
 			return SCE_ERROR_ERRNO_EINVAL;
@@ -48,12 +48,12 @@ int pfsGdsdMount(ScePfsPmi *pmi, SceVfsMount *mnt, SceVfsPath *devFilePath)
 	ScePfsNode root;
 	int perm, ret;
 
-	mnt->available_entry_num = 0x20;
-	mnt->default_io_cache_size = 0x8000;
+	mnt->availableEntryNum = 0x20;
+	mnt->defaultIoCacheSize = 0x8000;
 	ret = pfsAccessBegin(pmi, PFS_OP_MOUNT, 0, &perm);
 	if (ret != 0)
 		return ret;
-	root.vp = mnt->mnt_vnode;
+	root.vp = mnt->mntVnode;
 	root.name = NULL;
 	ret = pfsCoreMount(pmi, &root);
 	pfsAccessEnd(perm);
@@ -87,7 +87,7 @@ int pfsGdsdSync(ScePfsPmi *pmi, SceVfsMount *mnt, int flags)
 int pfsGdsdDecodePathElem(ScePfsPmi *pmi, SceVfsMount *mnt, const char *path, const char **path2,
 			  const char **path3, char *buf, SceSize bufLen, SceSize *decodeLen)
 {
-	SceVfsMount *lower = mnt->mnt_vnode->core.mnt;
+	SceVfsMount *lower = mnt->mntVnode->core.mnt;
 	int perm, ret;
 
 	if (lower == NULL)
@@ -114,7 +114,7 @@ int pfsGdsdSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp)
 	if (vd == NULL)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
-	lower = mnt->mnt_vnode;
+	lower = mnt->mntVnode;
 	vd->index = -1;
 	vd->attr = PFS_ATTR_DIR;
 	vd->pages.next = &vd->pages;
@@ -125,15 +125,15 @@ int pfsGdsdSetRoot(ScePfsPmi *pmi, SceVfsMount *mnt, int unk, SceVfsVnode *vp)
 	*(SceUInt64 *)vp->core.fid = *(SceUInt64 *)lower->core.fid;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.type = SCE_VNODE_TYPE_ROOTDIR;
-	vp->core.mnt_opt = lower->core.mnt_opt | 0x10000;
-	vp->core.node_data = vd;
+	vp->core.mntOpt = lower->core.mntOpt | 0x10000;
+	vp->core.nodeData = vd;
 	vp->core.mnt = mnt;
 	vp->core.dd = NULL;
-	*(SceUInt64 *)vp->core.acl_data = PFS_ATTR_DIR;
+	*(SceUInt64 *)vp->core.aclData = PFS_ATTR_DIR;
 
 	vfsGetVnodeName(lower, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	memset(&stat, 0, sizeof(stat));
 	vfsLockVnode(lower);
@@ -241,10 +241,10 @@ int pfsGdsdRead(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, void *buf, Sc
 	fi = (ScePfsFi *)file->fd;
 	if (fi->type != PFS_FI_FILE) {
 		ret = SCE_ERROR_ERRNO_EBADFD;
-	} else if (file->position < (SceOff)fi->vp->core.size) {
-		ret = pfsCoreRead(fi, pmi, buf, nbyte, file->position, &read);
+	} else if (file->fpos < (SceOff)fi->vp->core.size) {
+		ret = pfsCoreRead(fi, pmi, buf, nbyte, file->fpos, &read);
 		if (ret == 0) {
-			file->position += read;
+			file->fpos += read;
 			ret = read;
 		}
 	}
@@ -265,9 +265,9 @@ int pfsGdsdWrite(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, const void *
 	fi = (ScePfsFi *)file->fd;
 	ret = SCE_ERROR_ERRNO_EBADFD;
 	if (fi->type == PFS_FI_FILE) {
-		ret = pfsCoreWrite(fi, pmi, buf, nbyte, file->position, &written);
+		ret = pfsCoreWrite(fi, pmi, buf, nbyte, file->fpos, &written);
 		if (ret == 0) {
-			file->position += written;
+			file->fpos += written;
 			fi->position += written;
 			ret = written;
 		}
@@ -329,10 +329,10 @@ SceOff pfsGdsdLseek(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceOff of
 		return ret;
 	ret = SCE_ERROR_ERRNO_EBADFD;
 	if (((ScePfsFi *)file->fd)->type == PFS_FI_FILE) {
-		position = file->position;
+		position = file->fpos;
 		ret = pfsCoreLseek((ScePfsFi *)file->fd, pmi, offset, whence, &position);
 		if (ret == 0) {
-			file->position = position;
+			file->fpos = position;
 			pfsAccessEnd(perm);
 			return position;
 		}
@@ -357,7 +357,7 @@ int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, con
 	if (fi->type == PFS_FI_FILE) {
 		if ((unsigned int)cmd >> 12 == PFS_DEVCTL_GROUP) {
 			ret = pfsCoreIoctl(pmi, vp, fi, cmd, in, inLen, out, outLen);
-		} else if ((vd = vp->core.node_data) == NULL) {
+		} else if ((vd = vp->core.nodeData) == NULL) {
 			ret = SCE_ERROR_ERRNO_EINVAL;
 		} else {
 			lower = vd->lowerVp;
@@ -372,7 +372,7 @@ int pfsGdsdIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, int cmd, con
 
 int pfsGdsdInactive(SceVfsVnode *vp)
 {
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceVfsVnode *lowerVp, *icvVp;
 	ScePfsNode node;
 
@@ -389,8 +389,8 @@ int pfsGdsdInactive(SceVfsVnode *vp)
 	pfsNodeRelease(&node);
 	if (icvVp != NULL) {
 		vfsLockVnode(icvVp);
-		if (icvVp->core.ref_count > 1) {
-			icvVp->core.ref_count--;
+		if (icvVp->core.refCount > 1) {
+			icvVp->core.refCount--;
 			vfsUnlockVnode(icvVp);
 			return 0;
 		}
@@ -531,7 +531,7 @@ int pfsGdsdGetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat 
 	ret = pfsAccessBegin(pmi, PFS_OP_GETSTAT, 0, &perm);
 	if (ret != 0)
 		return ret;
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 		goto out;
@@ -571,7 +571,7 @@ int pfsGdsdFgetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat
 	ret = pfsAccessBegin(pmi, PFS_OP_GETSTAT, 0, &perm);
 	if (ret != 0)
 		return ret;
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	} else {
@@ -585,7 +585,7 @@ int pfsGdsdFgetstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat
 		ret = sceVopFgetstat(lower, fi->lower.file, stat);
 		vfsUnlockVnode(lower);
 		if (ret >= 0 && !pfsIsRoot(vp)) {
-			stat->st_attr = (SceUInt16)vp->core.acl_data[0];
+			stat->st_attr = (SceUInt16)vp->core.aclData[0];
 			if (pfsAttrToMode(stat->st_attr, &mode) == 0) {
 				if (stat->st_attr & PFS_ATTR_DIR)
 					stat->st_size = 0;
@@ -612,7 +612,7 @@ int pfsGdsdChstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *
 	ret = pfsAccessBegin(pmi, PFS_OP_CHSTAT, 0, &perm);
 	if (ret != 0)
 		return ret;
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 		goto out;
@@ -630,7 +630,7 @@ int pfsGdsdChstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path, SceIoStat *
 			if (ret < 0)
 				goto out;
 			vd->attr = attr;
-			*(SceUInt64 *)vp->core.acl_data = attr;
+			*(SceUInt64 *)vp->core.aclData = attr;
 		}
 		if (bit & SCE_CST_SIZE) {
 			size = stat->st_size;
@@ -690,7 +690,7 @@ int pfsGdsdFchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat 
 		ret = SCE_ERROR_ERRNO_EBADFD;
 		goto out;
 	}
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL) {
 		pfsAccessEnd(perm);
 		return SCE_ERROR_ERRNO_EINVAL;
@@ -722,7 +722,7 @@ int pfsGdsdFchstat(ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsFile *file, SceIoStat 
 					goto out;
 			}
 			vd->attr = attr;
-			*(SceUInt64 *)vp->core.acl_data = attr;
+			*(SceUInt64 *)vp->core.aclData = attr;
 		}
 		if (bit & SCE_CST_SIZE) {
 			size = stat->st_size;

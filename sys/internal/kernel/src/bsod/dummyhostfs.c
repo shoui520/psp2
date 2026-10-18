@@ -5,12 +5,13 @@
 #include <kernel/error.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
+#include <sysmem/uid_guid.h>
 #include <acmgr/acmgr.h>
 
-_Static_assert(offsetof(SceVfsMount, available_entry_num) == 0x68, "mount entries");
-_Static_assert(offsetof(SceVfsMount, default_io_cache_size) == 0xc0, "mount cache");
-_Static_assert(offsetof(SceVfsMount, data) == 0xc4, "mount private data");
-_Static_assert(offsetof(SceVfsVnode, core.node_data) == 0x48, "vnode private data");
+_Static_assert(offsetof(SceVfsMount, availableEntryNum) == 0x68, "mount entries");
+_Static_assert(offsetof(SceVfsMount, defaultIoCacheSize) == 0xc0, "mount cache");
+_Static_assert(offsetof(SceVfsMount, pData) == 0xc4, "mount private data");
+_Static_assert(offsetof(SceVfsVnode, core.nodeData) == 0x48, "vnode private data");
 _Static_assert(offsetof(SceVfsVnode, core.mnt) == 0x4c, "vnode mount");
 _Static_assert(offsetof(SceVfsVnode, core.fid) == 0x60, "vnode file ID");
 _Static_assert(offsetof(SceVfsVnode, core.state) == 0x74, "vnode state");
@@ -87,8 +88,8 @@ static int bsodFsMount(SceVfsOpMountArgs *arg)
 {
 	SceVfsMount *mount = arg->mnt;
 
-	mount->available_entry_num = 0x80;
-	mount->default_io_cache_size = 0x10000;
+	mount->availableEntryNum = 0x80;
+	mount->defaultIoCacheSize = 0x10000;
 	return 0;
 }
 
@@ -104,9 +105,9 @@ static int bsodFsSetRoot(SceVfsOpSetRootArgs *arg)
 	node->core.fid[1] = 0;
 	node->core.state = SCE_VNODE_STATE_ACTIVE;
 	node->core.size = 0;
-	node->core.node_data = mount->data;
-	node->core.acl_data[0] = 0;
-	node->core.acl_data[1] = 0;
+	node->core.nodeData = mount->pData;
+	node->core.aclData[0] = 0;
+	node->core.aclData[1] = 0;
 	return 0;
 }
 
@@ -118,10 +119,10 @@ DENIED(bsodFsOpen, SceVopOpenArgs, path)
 DENIED(bsodFsRemove, SceVopRemoveArgs, path)
 DENIED(bsodFsMkdir, SceVopMkdirArgs, path)
 DENIED(bsodFsRmdir, SceVopRmdirArgs, path)
-DENIED(bsodFsDopen, SceVopDopenAgrs, path)
+DENIED(bsodFsDopen, SceVopDopenArgs, path)
 DENIED(bsodFsGetstat, SceVopGetstatArgs, path)
 DENIED(bsodFsChstat, SceVopChstatArgs, path)
-DENIED(bsodFsRename, SceVopRenameArgs, old_path)
+DENIED(bsodFsRename, SceVopRenameArgs, oldPath)
 
 static int bsodFsDecodePath(SceVfsOpDecodePathElemArgs *arg)
 {
@@ -168,8 +169,8 @@ static SceVfsMountData s_bsodMountData = {
 	"host0:", "bsod_dummy_host_fs", "bsod_dummy_host_fs", NULL, 0,
 };
 static SceVfsMountParam s_bsodMount = {
-	.root_path = "/host", .fs_type = 4, .opt = 0x300,
-	.mnt_flags = 0x8006, .vfs_name = "bsod_dummy_host_fs",
+	.rootPath = "/host", .fsType = 4, .opt = 0x300,
+	.mntFlags = 0x8006, .vfsName = "bsod_dummy_host_fs",
 	.misc = &s_bsodMountData,
 };
 static SceVfsUmountParam s_bsodUmount = { "/host", 0 };
@@ -190,10 +191,10 @@ int _sceKernelBsodDummyFsInit(void)
 #endif
 	sceVfsDeleteVfs("deci4p_drfp_dev_fs", NULL);
 	s_bsodDummyInfo.type = 0x10;
-	s_bsodDummyInfo.vfs_ops = (SceVfsOpTable *)&s_bsodVfsOps;
-	s_bsodDummyInfo.default_vops = (SceVopTable *)&s_bsodVops;
-	s_bsodDummyInfo.vfs_name = "bsod_dummy_host_fs";
-	s_bsodDummyInfo.vfs_name_len = 0x13;
+	s_bsodDummyInfo.vfsOps = (SceVfsOpTable *)&s_bsodVfsOps;
+	s_bsodDummyInfo.defaultVops = (SceVopTable *)&s_bsodVops;
+	s_bsodDummyInfo.vfsName = "bsod_dummy_host_fs";
+	s_bsodDummyInfo.vfsNameLen = 0x13;
 	result = sceVfsAddVfs(&s_bsodDummyInfo);
 	if (result < 0) {
 #if FW_DEBUG

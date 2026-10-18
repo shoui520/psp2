@@ -57,7 +57,7 @@ void pfsDiskSize(ScePfsPmi *pmi, SceUInt32 attr, SceUInt32 index, SceUInt32 unus
 
 void pfsVnodeDiskSize(ScePfsPmi *pmi, SceVfsVnode *vp, SceUInt64 *diskSize)
 {
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceUInt64 size;
 
 	if (vd->attr & 0x8000)
@@ -81,7 +81,7 @@ int pfsPmiDiskSize(ScePfsPmi *pmi, SceUInt64 *diskSize)
 
 	vfsGetVnodeName(vp, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(vp);
 	ret = sceVopGetstat(vp, &path, &stat);
@@ -97,7 +97,7 @@ int pfsPmiDiskSize(ScePfsPmi *pmi, SceUInt64 *diskSize)
 	vp = pmi->unicvDb.vp;
 	vfsGetVnodeName(vp, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(vp);
 	ret = sceVopGetstat(vp, &path, &stat);
@@ -148,7 +148,7 @@ int pfsNodeLookup(ScePfsNode *node)
 	if (decodeLen >= sizeof(name))
 		return SCE_PFS_ERROR_NAME_TOO_LONG;
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(node->vp);
 	ret = sceVopLookup(node->vp, &vp, &path, PFS_LOOKUP_FLAGS);
@@ -167,7 +167,7 @@ int pfsNodeCreate(ScePfsNode *node, int mode)
 	int ret;
 
 	path.name = node->name;
-	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
+	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(dvp);
 	ret = sceVopCreate(dvp, &vp, &path, SCE_O_RDWR | SCE_O_CREAT | SCE_O_EXCL, mode);
@@ -187,7 +187,7 @@ int pfsLowerOpen(ScePfsLowerFile *lf, ScePfsNode *node, SceUInt32 cookie, int fl
 	path.name = node->name;
 	lf->cookie = cookie;
 	lf->vp = node->vp;
-	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
+	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(lf->vp);
 	lf->fd = vfsAllocateFile(lf->vp, &lf->file, path.name);
@@ -306,7 +306,7 @@ int pfsLowerGetSize(ScePfsLowerFile *lf, SceUInt64 *size)
 
 	vfsGetVnodeName(lf->vp, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	vfsLockVnode(lf->vp);
 	ret = sceVopGetstat(lf->vp, &path, &stat);
@@ -326,7 +326,7 @@ int pfsLowerSetSize(ScePfsLowerFile *lf, SceUInt64 size)
 
 	vfsGetVnodeName(lf->vp, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	stat.st_size = size;
 	vfsLockVnode(lf->vp);
@@ -342,7 +342,7 @@ int pfsNodeRemove(ScePfsNode *dir, ScePfsNode *node)
 	int ret;
 
 	path.name = node->name;
-	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
+	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	dvp = dir->vp;
 	path.path = NULL;
 	if (dvp == NULL) {
@@ -366,7 +366,7 @@ int pfsNodeMkdir(ScePfsNode *node, int mode)
 	int ret;
 
 	path.name = node->name;
-	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
+	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(node->vp);
 	ret = sceVopMkdir(node->vp, &vp, &path, mode);
@@ -385,7 +385,7 @@ int pfsNodeRmdir(ScePfsNode *dir, ScePfsNode *node)
 	int ret;
 
 	path.name = node->name;
-	path.name_length = strnlen(path.name, PFS_NAME_MAX - 1);
+	path.nameLength = strnlen(path.name, PFS_NAME_MAX - 1);
 	path.path = NULL;
 	vfsLockVnode(dvp);
 	vfsLockVnode(node->vp);
@@ -402,11 +402,11 @@ int pfsNodeRename(ScePfsNode *oldDir, ScePfsNode *oldNode, ScePfsNode *newNode)
 	int ret;
 
 	oldPath.name = oldNode->name;
-	oldPath.name_length = strnlen(oldPath.name, PFS_NAME_MAX - 1);
+	oldPath.nameLength = strnlen(oldPath.name, PFS_NAME_MAX - 1);
 	oldPath.path = NULL;
 	newPath.name = newNode->name;
 	ndvp = newNode->vp;
-	newPath.name_length = strnlen(newPath.name, PFS_NAME_MAX - 1);
+	newPath.nameLength = strnlen(newPath.name, PFS_NAME_MAX - 1);
 	newPath.path = NULL;
 	if (ndvp == odvp) {
 		vfsLockVnode(ndvp);

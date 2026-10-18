@@ -1355,7 +1355,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 				ret = vfs_convert_file(fd, &file);
 				if (ret == 0) {
 					vfsLockFd(file);
-					debugPath = file->debug_path;
+					debugPath = file->debugPath;
 					if (debugPath != NULL) {
 						SCE_DBG_PRINTF(0xf, 2302, "openPath = %s\n",
 							       debugPath->openPath);
@@ -1409,7 +1409,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 				ret = vfs_convert_file(fd, &file);
 				if (ret == 0) {
 					vfsLockFd(file);
-					debugPath = file->debug_path;
+					debugPath = file->debugPath;
 					if (debugPath != NULL) {
 						SCE_DBG_PRINTF(0xf, 2374, "openPath = %s\n",
 							       debugPath->openPath);

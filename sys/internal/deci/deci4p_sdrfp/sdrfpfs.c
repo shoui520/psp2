@@ -6,6 +6,7 @@
 
 #include <sysmem/sysclib.h>
 #include <iofilemgr/vfs.h>
+#include <kernel/iofilemgr.h>
 #include <sysmem/debug.h>
 #include "sdrfp.h"
 
@@ -32,8 +33,8 @@ static int dev_drfp_vfs_mount(SceVfsOpMountArgs *argp)
 	SceVfsMount *mnt = argp->mnt;
 
 	SDRFPFS_TRACE(155, "args = %p, mp = %p\n", argp, mnt);
-	mnt->available_entry_num = 0x80;
-	mnt->default_io_cache_size = 0x2000;
+	mnt->availableEntryNum = 0x80;
+	mnt->defaultIoCacheSize = 0x2000;
 	return 0;
 }
 
@@ -50,15 +51,15 @@ static int dev_drfp_vfs_set_root(SceVfsOpSetRootArgs *argp)
 	SceVfsVnode *vp = argp->vp;
 
 	vp->core.type = SCE_VNODE_TYPE_ROOTDIR;
-	vp->core.node_data = mnt->data;
+	vp->core.nodeData = mnt->pData;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.mnt = mnt;
 	vp->core.dd = NULL;
 	vp->core.fid[0] = 0;
 	vp->core.fid[1] = 0;
 	vp->core.size = 0;
-	vp->core.acl_data[0] = 0;
-	vp->core.acl_data[1] = 0;
+	vp->core.aclData[0] = 0;
+	vp->core.aclData[1] = 0;
 	return 0;
 }
 
@@ -80,8 +81,8 @@ static int dev_drfp_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 	const char **start = argp->path2;
 	const char **end = argp->path3;
 	char *buf = argp->buf;
-	SceSize bufsz = argp->buf_len;
-	SceSize *len = argp->decode_len;
+	SceSize bufsz = argp->bufLen;
+	SceSize *len = argp->decodeLen;
 
 	SDRFPFS_TRACE(209, "args = %p, path = %s\n", argp, path);
 	SDRFPFS_TRACE(211, "start = %p, end = %p, buf = %p, bufsz = %d\n", start, end, buf, bufsz);
@@ -98,7 +99,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	SceVfsVnode *dvp = argp->dvp;
 	SceVfsVnode **vpp = argp->vpp;
 	const char *name = argp->path->name;
-	int nameLen = argp->path->name_length;
+	int nameLen = argp->path->nameLength;
 	SceVfsVnode *vp;
 	Deci4pFsStat stat;
 	int ret;
@@ -111,7 +112,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	if (ret != 0)
 		return ret;
 
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, &vp);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 250, "vfsGetNewVnode failed (0x%08x)\n", ret);
@@ -136,7 +137,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 		vp->core.fid[1] = stat.fid >> 32;
 	}
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
-	vp->core.node_data = NULL;
+	vp->core.nodeData = NULL;
 	vp->core.size = stat.size;
 	*vpp = vp;
 	return 0;
@@ -190,7 +191,7 @@ static SceSSize dev_drfp_vop_read(SceVopReadArgs *argp)
 	SceUInt32 fd = file->fd;
 	void *buf = argp->buf;
 	SceSize nbyte = argp->nbyte;
-	SceOff offset = file->position;
+	SceOff offset = file->fpos;
 	int ret;
 
 	SDRFPFS_TRACE(344, "args = %p, vp = %p, file = %p\n", argp, argp->vp, file);
@@ -198,7 +199,7 @@ static SceSSize dev_drfp_vop_read(SceVopReadArgs *argp)
 	SDRFPFS_TRACE(346, "offset = 0x%016llx\n", offset);
 	ret = sdrfpRead(fd, buf, offset, nbyte);
 	if (ret >= 0)
-		file->position += ret;
+		file->fpos += ret;
 	return ret;
 }
 
@@ -215,16 +216,16 @@ static SceOff dev_drfp_vop_lseek(SceVopLseekArgs *argp)
 	case SCE_SEEK_SET:
 		break;
 	case SCE_SEEK_CUR:
-		offset += file->position;
+		offset += file->fpos;
 		break;
 	case SCE_SEEK_END:
 		offset += vp->core.size;
 		break;
 	default:
 		SCE_DBG_ASSERT(0, 381);
-		return file->position;
+		return file->fpos;
 	}
-	file->position = offset;
+	file->fpos = offset;
 	return offset;
 }
 
@@ -253,23 +254,23 @@ static const SceVopTable s_vops = {
 };
 
 static SceVfsInfo s_vfsInfo = {
-	.vfs_ops = &s_vfsOps,
+	.vfsOps = &s_vfsOps,
 	.type = SCE_VFS_TYPE_DEVFS,
-	.default_vops = &s_vops,
+	.defaultVops = &s_vops,
 };
 
 static const SceVfsMountData s_mountData = {
-	.assign_name = "host0:",
-	.fs_name = SDRFP_FS_NAME,
-	.blockdev_name = SDRFP_FS_NAME,
+	.assignName = "host0:",
+	.fsName = SDRFP_FS_NAME,
+	.blockdevName = SDRFP_FS_NAME,
 };
 
 static const SceVfsMountParam s_mountParam = {
-	.root_path = "/host",
-	.fs_type = SCE_VFS_FS_TYPE_HOSTFS,
+	.rootPath = "/host",
+	.fsType = SCE_VFS_FS_TYPE_HOSTFS,
 	.opt = 0x300,
-	.mnt_flags = SCE_VFS_MOUNT_FLAG_REMOTE | SCE_VFS_MOUNT_FLAG_NOBUF | SCE_VFS_MOUNT_TYPE_HOSTFS,
-	.vfs_name = SDRFP_FS_NAME,
+	.mntFlags = SCE_VFS_MOUNT_FLAG_REMOTE | SCE_VFS_MOUNT_FLAG_NOBUF | SCE_VFS_MOUNT_TYPE_HOSTFS,
+	.vfsName = SDRFP_FS_NAME,
 	.misc = (SceVfsMountData *)&s_mountData,
 };
 
@@ -277,8 +278,8 @@ int sdrfpVfsMount(void)
 {
 	int ret;
 
-	s_vfsInfo.vfs_name = SDRFP_FS_NAME;
-	s_vfsInfo.vfs_name_len = sizeof(SDRFP_FS_NAME);
+	s_vfsInfo.vfsName = SDRFP_FS_NAME;
+	s_vfsInfo.vfsNameLen = sizeof(SDRFP_FS_NAME);
 	ret = sceVfsAddVfs(&s_vfsInfo);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 120, "sceVfsAddVfs failed (0x%08X)\n", ret);

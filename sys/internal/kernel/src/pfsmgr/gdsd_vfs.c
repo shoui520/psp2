@@ -17,27 +17,27 @@ static int pfsGdsdVfsFini(SceVfsOpFiniArgs *arg)
 
 static int pfsGdsdVfsDevctl(SceVfsOpDevctlArg *arg)
 {
-	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->data;
+	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
 
 	if (pfsPmiIsMounted(pmi))
 		return pfsErrorToErrno(pfsGdsdDevctl(pmi, arg->mnt, arg->dev, arg->cmd, arg->arg,
-						     arg->arg_len, arg->buf, arg->buf_len));
+						     arg->argLen, arg->buf, arg->bufLen));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
 static int pfsGdsdVfsMount(SceVfsOpMountArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdMount(arg->mnt->data, arg->mnt, arg->dev_file_path));
+	return pfsErrorToErrno(pfsGdsdMount(arg->mnt->pData, arg->mnt, arg->devFilePath));
 }
 
 static int pfsGdsdVfsUmount(SceVfsOpUmountArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdUmount(arg->mnt->data, arg->mnt, arg->flags));
+	return pfsErrorToErrno(pfsGdsdUmount(arg->mnt->pData, arg->mnt, arg->flags));
 }
 
 static int pfsGdsdVfsSync(SceVfsOpSyncArgs *arg)
 {
-	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->data;
+	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
 
 	if (pfsPmiIsMounted(pmi))
 		return pfsErrorToErrno(pfsGdsdSync(pmi, arg->mnt, arg->flags));
@@ -46,14 +46,14 @@ static int pfsGdsdVfsSync(SceVfsOpSyncArgs *arg)
 
 static int pfsGdsdVfsSetRoot(SceVfsOpSetRootArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdSetRoot(arg->mnt->data, arg->mnt, arg->unk, arg->vp));
+	return pfsErrorToErrno(pfsGdsdSetRoot(arg->mnt->pData, arg->mnt, arg->unused, arg->vp));
 }
 
 static int pfsGdsdVfsDecodePathElem(SceVfsOpDecodePathElemArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->data, arg->mnt, arg->path, arg->path2,
-						     arg->path3, arg->buf, arg->buf_len,
-						     arg->decode_len));
+	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->pData, arg->mnt, arg->path, arg->path2,
+						     arg->path3, arg->buf, arg->bufLen,
+						     arg->decodeLen));
 }
 
 static int pfsGdsdVopLookup(SceVopLookupArgs *arg)
@@ -169,8 +169,8 @@ static int pfsGdsdVopIoctl(SceVopIoctlArgs *arg)
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsGdsdIoctl(pmi, arg->vp, arg->file, arg->cmd, arg->in_data,
-						    arg->in_len, arg->out_data, arg->out_len));
+		return pfsErrorToErrno(pfsGdsdIoctl(pmi, arg->vp, arg->file, arg->cmd, arg->inData,
+						    arg->inLen, arg->outData, arg->outLen));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
@@ -208,7 +208,7 @@ static int pfsGdsdVopRmdir(SceVopRmdirArgs *arg)
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsGdsdVopDopen(SceVopDopenAgrs *arg)
+static int pfsGdsdVopDopen(SceVopDopenArgs *arg)
 {
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
@@ -280,8 +280,8 @@ static int pfsGdsdVopRename(SceVopRenameArgs *arg)
 	ScePfsPmi *pmi = pfsVnodePmi(arg->odvp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsGdsdRename(pmi, arg->odvp, arg->ovp, arg->old_path,
-						     arg->ndvp, arg->nvpp, arg->new_path));
+		return pfsErrorToErrno(pfsGdsdRename(pmi, arg->odvp, arg->ovp, arg->oldPath,
+						     arg->ndvp, arg->nvpp, arg->newPath));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
@@ -296,18 +296,18 @@ static int pfsGdsdVopSync(SceVopSyncArgs *arg)
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsGdsdVopWhiteout(SceVopWhiteoutArgs_vitasdk *args)
+static int pfsGdsdVopWhiteout(SceVopWhiteoutArgs *args)
 {
 	SceVopWhiteoutArgs *arg = (void *)args;
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsGdsdWhiteout(pmi, arg->dvp, arg->vp, arg->old_path,
-						       arg->new_path, arg->a4, arg->a5));
+		return pfsErrorToErrno(pfsGdsdWhiteout(pmi, arg->dvp, arg->vp, arg->oldPath,
+						       arg->newPath, arg->a4, arg->a5));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsGdsdVopCleanup(SceVopCleanupArgs_vitasdk *args)
+static int pfsGdsdVopCleanup(SceVopCleanupArgs *args)
 {
 	SceVopCleanupArgs *arg = (void *)args;
 	return pfsErrorToErrno(pfsGdsdCleanup(pfsVnodePmi(arg->vp), arg->vp, arg->file,

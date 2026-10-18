@@ -26,24 +26,24 @@
 #define PFS_MODE_CHECK_APPROVED		0x28	/* ScePfsMgrForKernel_A772209C: only check an existing mount */
 
 SceVfsInfo g_pfsRedirectVfsInfo = {
-	.vfs_ops	= &g_pfsRedirectVfsOps,
-	.vfs_name	= "PFS_REDIRECT_INF",
-	.vfs_name_len	= sizeof("PFS_REDIRECT_INF"),
-	.default_vops	= &g_pfsRedirectVops,
+	.vfsOps	= &g_pfsRedirectVfsOps,
+	.vfsName	= "PFS_REDIRECT_INF",
+	.vfsNameLen	= sizeof("PFS_REDIRECT_INF"),
+	.defaultVops	= &g_pfsRedirectVops,
 };
 
 SceVfsInfo g_pfsGdsdVfsInfo = {
-	.vfs_ops	= &g_pfsGdsdVfsOps,
-	.vfs_name	= "PFS_GDSD_INF",
-	.vfs_name_len	= sizeof("PFS_GDSD_INF"),
-	.default_vops	= &g_pfsGdsdVops,
+	.vfsOps	= &g_pfsGdsdVfsOps,
+	.vfsName	= "PFS_GDSD_INF",
+	.vfsNameLen	= sizeof("PFS_GDSD_INF"),
+	.defaultVops	= &g_pfsGdsdVops,
 };
 
 SceVfsInfo g_pfsAcVfsInfo = {
-	.vfs_ops	= &g_pfsAcVfsOps,
-	.vfs_name	= "PFS_AC_INF",
-	.vfs_name_len	= sizeof("PFS_AC_INF"),
-	.default_vops	= &g_pfsAcVops,
+	.vfsOps	= &g_pfsAcVfsOps,
+	.vfsName	= "PFS_AC_INF",
+	.vfsNameLen	= sizeof("PFS_AC_INF"),
+	.defaultVops	= &g_pfsAcVops,
 };
 
 SceUID g_pfsPmiListMutex;
@@ -67,10 +67,10 @@ int ScePfsMgrForKernel_4C148288(SceVfsMount *mount, ScePfsMountInfo *info)
 	ScePfsListNode *node;
 	int i;
 
-	if (mount->fs_type != SCE_VFS_FS_TYPE_PFS)
+	if (mount->fsType != SCE_VFS_FS_TYPE_PFS)
 		return SCE_ERROR_ERRNO_EINVAL;
 
-	pmi = (ScePfsPmi *)mount->data;
+	pmi = (ScePfsPmi *)mount->pData;
 	info->mount = mount;
 	info->quota = pmi->quota;
 	info->path = pmi->path;
@@ -144,14 +144,14 @@ int ScePfsMgrForKernel_2D48AEA2(const char *path, const char *name, const void *
 		goto bad_mode;
 	bit = 1 << mode;
 	if (bit & PFS_MODE_GDSD_MASK) {
-		pmi->mountData.fs_name = "Gamedata/Savedata Pseudo Drive.";
-		param.vfs_name = g_pfsGdsdVfsInfo.vfs_name;
+		pmi->mountData.fsName = "Gamedata/Savedata Pseudo Drive.";
+		param.vfsName = g_pfsGdsdVfsInfo.vfsName;
 	} else if (bit & PFS_MODE_AC_MASK) {
-		pmi->mountData.fs_name = "AC Pseudo Drive.";
-		param.vfs_name = g_pfsAcVfsInfo.vfs_name;
+		pmi->mountData.fsName = "AC Pseudo Drive.";
+		param.vfsName = g_pfsAcVfsInfo.vfsName;
 	} else if (bit & PFS_MODE_REDIRECT_MASK) {
-		pmi->mountData.fs_name = "Redirect Pseudo Drive.";
-		param.vfs_name = g_pfsRedirectVfsInfo.vfs_name;
+		pmi->mountData.fsName = "Redirect Pseudo Drive.";
+		param.vfsName = g_pfsRedirectVfsInfo.vfsName;
 	} else {
 bad_mode:
 		ret = SCE_PFS_ERROR_BAD_MODE;
@@ -159,25 +159,25 @@ bad_mode:
 		goto out;
 	}
 
-	param.root_path = pmi->rootPath;
-	param.blockdev_name = pmi->path;
-	param.fs_type = SCE_VFS_FS_TYPE_PFS;
+	param.rootPath = pmi->rootPath;
+	param.blockdevName = pmi->path;
+	param.fsType = SCE_VFS_FS_TYPE_PFS;
 	param.opt = 0;
-	param.mnt_flags = SCE_VFS_MOUNT_TYPE_PFS;
+	param.mntFlags = SCE_VFS_MOUNT_TYPE_PFS;
 	param.data = pmi;
 	param.misc = &pmi->mountData;
 	param.vops = NULL;
 	if (mode == 20 || mode - 12 <= 1 || mode == 2)
-		param.mnt_flags = SCE_VFS_MOUNT_TYPE_PFS | SCE_VFS_MOUNT_FLAG_RDONLY;
+		param.mntFlags = SCE_VFS_MOUNT_TYPE_PFS | SCE_VFS_MOUNT_FLAG_RDONLY;
 	if (mode == 3)
-		param.mnt_flags |= SCE_VFS_MOUNT_FLAG_NOBUF;
+		param.mntFlags |= SCE_VFS_MOUNT_FLAG_NOBUF;
 	ret = vfsMountForPFS(&param, 0, 0);
 	if (ret < 0)
 		goto destroy;
 
 	first = g_pfsPmiList.next;
 	if (first == NULL) {
-		umountParam.assign_name = pmi->assignName;
+		umountParam.assignName = pmi->assignName;
 		umountParam.flag = 0;
 		vfsUmountForPFS(&umountParam, 0, 0);
 		ret = SCE_PFS_ERROR_NOT_IN_LIST;
@@ -216,7 +216,7 @@ int ScePfsMgrForKernel_680BC384(const char *name)
 	if (pmi->flags & PFS_PMI_NOT_MOUNTED) {
 		ret = SCE_ERROR_ERRNO_ENODEV;
 	} else {
-		umountParam.assign_name = pmi->assignName;
+		umountParam.assignName = pmi->assignName;
 		umountParam.flag = ret;
 		ret = vfsUmountForPFS(&umountParam, 0, 0);
 		if (ret < 0)
@@ -464,9 +464,9 @@ int module_start(SceSize args, void *argp)
 	if (ret == 0)
 		return 0;
 
-	sceVfsDeleteVfs(g_pfsGdsdVfsInfo.vfs_name, NULL);
+	sceVfsDeleteVfs(g_pfsGdsdVfsInfo.vfsName, NULL);
 redirect:
-	sceVfsDeleteVfs(g_pfsRedirectVfsInfo.vfs_name, NULL);
+	sceVfsDeleteVfs(g_pfsRedirectVfsInfo.vfsName, NULL);
 mutex:
 	sceKernelDeleteMutex(g_pfsPmiListMutex);
 lru:

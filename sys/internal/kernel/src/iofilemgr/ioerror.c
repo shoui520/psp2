@@ -65,7 +65,7 @@ SceUID sceIoCreateErrorEvent(int mntId, SceUInt32 pattern, IoErrorEventInfo *use
 			strncpy(name, "SceIoErrorEvent", sizeof(name) - 1);
 			i = 0;
 			while (1) {
-				c = data->assign_name[i];
+				c = data->assignName[i];
 				if (i == 0)
 					c = toupper(c);
 				if (c == ':') {

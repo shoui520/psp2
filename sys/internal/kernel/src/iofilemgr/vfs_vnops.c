@@ -7,7 +7,7 @@
 /* zero-fills the file from start up to its position through the I/O buffer */
 int buff_cache_fill_zero(struct BuffCache *bc, SceOff start, SceVfsVnode *vp, SceVfsFile *file)
 {
-	SceOff rest = file->position - start;
+	SceOff rest = file->fpos - start;
 	SceSize size;
 	int ret, filled;
 
@@ -108,7 +108,7 @@ static inline __attribute__((always_inline)) void data_write_check(SceOff start,
 								   SceVfsFile *file)
 {
 	SCE_DBG_ASSERT_FUNC(vp->core.size >= start, 413, "data_write_subr");
-	SCE_DBG_ASSERT_FUNC(vp->core.size >= file->position, 414, "data_write_subr");
+	SCE_DBG_ASSERT_FUNC(vp->core.size >= file->fpos, 414, "data_write_subr");
 }
 
 /* writes through the I/O buffer only, or straight to the file system */
@@ -138,10 +138,10 @@ int uncached_data_write(struct BuffCache *bc, SceOff start, SceSize nbyte, const
 			args.file = file;
 			args.buf = buf;
 			args.nbyte = rest;
-			saved = file->position;
-			file->position = pos;
+			saved = file->fpos;
+			file->fpos = pos;
 			n = vp->core.ops->vop_write(&args);
-			file->position = saved;
+			file->fpos = saved;
 			if (n == rest) {
 				done += rest;
 			} else {
@@ -179,7 +179,7 @@ int uncached_data_write(struct BuffCache *bc, SceOff start, SceSize nbyte, const
 					     ret);
 			goto fail;
 		}
-		if ((file->flags & SCE_O_APPEND) != 0 && size == bc->ioBuffSize) {
+		if ((file->openMode & SCE_O_APPEND) != 0 && size == bc->ioBuffSize) {
 			bc->ioBuffOffset = pos & ~(SceOff)(SceSize)(size - 1);
 			bc->ioBuffCachedSize = 0;
 			bc->ioBuffState = 1;
@@ -241,14 +241,14 @@ fail:
 			    "uncached_data_write failed ... %d 0x%x wsz=0x%x\n", ret, ret, done);
 out:
 	if (pwrite != 1) {
-		file->position += (int)done;
-		if (vp->core.size < file->position) {
+		file->fpos += (int)done;
+		if (vp->core.size < file->fpos) {
 			SCE_DBG_PRINTF_FUNC(0xf, 429, "data_write_subr",
 					    "file->fpos[0x%llx] > vp->size[0x%llx]\n",
-					    file->position, vp->core.size);
+					    file->fpos, vp->core.size);
 			SCE_DBG_PRINTF_FUNC(0xf, 432, "data_write_subr",
 					    "start[0x%llx] > nbyte[0x%x] wsz=0x%x FPOS = 0x%llx\n",
-					    start, nbyte, done, file->position - (int)done);
+					    start, nbyte, done, file->fpos - (int)done);
 			SCE_DBG_ASSERT_FUNC(0, 433, "data_write_subr");
 		}
 	}
@@ -295,10 +295,10 @@ int buff_cache_write(SceOff pos, const void *data, SceSize nbyte, SceVfsVnode *v
 				*wsz = nbyte;
 				SCE_DBG_ASSERT(newSize == 0, 503);
 			} else {
-				file->position += nbyte;
+				file->fpos += nbyte;
 				*wsz = nbyte;
 				SCE_DBG_ASSERT(newSize == 0, 503);
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 506);
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 506);
 			}
 			return 0;
 		}
@@ -323,16 +323,16 @@ int buff_cache_write(SceOff pos, const void *data, SceSize nbyte, SceVfsVnode *v
 				return -1;
 			}
 			if (pwrite != 1)
-				file->position += nbyte;
+				file->fpos += nbyte;
 			*wsz = nbyte;
 			if (newSize != 0) {
 				vfsBuffIoUpdateCachedSize(bc, newSize - vp->core.size);
 				vp->core.size = newSize;
 			}
-			if (pwrite != 1 && vp->core.size < file->position) {
+			if (pwrite != 1 && vp->core.size < file->fpos) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 662, "fpos=0x%llx, size=0x%llx\n",
-						     file->position, vp->core.size);
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 663);
+						     file->fpos, vp->core.size);
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 663);
 			}
 			return 0;
 		}
@@ -389,11 +389,11 @@ io_failed:
 io_done:
 		vfsBuffIo2DataBuff(bc, pos, vp, file);
 		if (pwrite != 1) {
-			file->position += nbyte;
-			if (vp->core.size < file->position) {
+			file->fpos += nbyte;
+			if (vp->core.size < file->fpos) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 608, "fpos=0x%llx size=0x%llx\n",
-						     file->position, vp->core.size);
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 609);
+						     file->fpos, vp->core.size);
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 609);
 			}
 		}
 		*wsz = nbyte;
@@ -418,11 +418,11 @@ io_done:
 			ret = vfsBuffIoWrite(bc, pos, nbyte, buf, vp, 0);
 		if (ret >= 0) {
 			if (pwrite != 1) {
-				file->position += nbyte;
-				if (vp->core.size < file->position) {
+				file->fpos += nbyte;
+				if (vp->core.size < file->fpos) {
 					SCE_DBG_PRINTF_LEVEL(1, 0xf, 742,
 							     "vp=%p file->fpos=0x%llx vp->size=0x%llx nbyte=0x%x upd_fsize=0x%llx\n",
-							     vp, file->position, vp->core.size, nbyte,
+							     vp, file->fpos, vp->core.size, nbyte,
 							     newSize);
 					SCE_DBG_PRINTF_LEVEL(1, 0xf, 743,
 							     "offset=0x%llx fstart=0x%llx fend=0x%llx\n",
@@ -430,7 +430,7 @@ io_done:
 					SCE_DBG_PRINTF_LEVEL(1, 0xf, 745,
 							     "bc->ioBuffCachedSize=0x%x iooffset=0x%llx\n",
 							     bc->ioBuffCachedSize, bc->ioBuffOffset);
-					SCE_DBG_ASSERT(vp->core.size >= file->position, 746);
+					SCE_DBG_ASSERT(vp->core.size >= file->fpos, 746);
 				}
 			}
 			*wsz = nbyte;
@@ -452,7 +452,7 @@ io_done:
 			goto uncached;
 		/* it starts in the I/O buffer and runs past it */
 		if (pos == ioStart && last > ioEnd &&
-		    (vp->core.mnt_opt & VFS_VNODE_MNT_OPT_DIRECT_WRITE))
+		    (vp->core.mntOpt & VFS_VNODE_MNT_OPT_DIRECT_WRITE))
 			goto drop_io_buff;
 		if (last <= ioEnd) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 943,
@@ -464,8 +464,8 @@ io_done:
 		ret = vfsBuffIoWrite(bc, pos, n, buf, vp, (SceSize)-1);
 		if (ret >= 0) {
 			if (pwrite != 1) {
-				file->position += n;
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 979);
+				file->fpos += n;
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 979);
 			}
 			ret = uncached_data_write(bc, pos + n, nbyte - n, buf + n, vp, file, pwrite,
 						  wsz);
@@ -504,7 +504,7 @@ drop_io_buff:
 	}
 	if (*wsz != n) {
 		SCE_DBG_PRINTF_LEVEL(2, 0xf, 842, "wbyte(0x%x) != args.nbyte(0x%x)\n", *wsz, n);
-		SCE_DBG_PRINTF_LEVEL(2, 0xf, 844, "fpos=0x%llx\n", file->position);
+		SCE_DBG_PRINTF_LEVEL(2, 0xf, 844, "fpos=0x%llx\n", file->fpos);
 		return *wsz;
 	}
 	rest = nbyte - n;
@@ -515,8 +515,8 @@ drop_io_buff:
 		ret = vfsBuffIoWrite(bc, ioStart, rest, buf, vp, 0);
 	if (ret >= 0) {
 		if (pwrite != 1) {
-			file->position += rest;
-			SCE_DBG_ASSERT(vp->core.size >= file->position, 904);
+			file->fpos += rest;
+			SCE_DBG_ASSERT(vp->core.size >= file->fpos, 904);
 		}
 		*wsz = nbyte;
 		return ret;
@@ -551,8 +551,8 @@ static inline __attribute__((always_inline)) void data_read_subr(int ret, SceSiz
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1120, "uncached_data_read failed ... %d 0x%x rsz=0x%x\n",
 				     ret, ret, done);
 	if (pread != 1) {
-		file->position += (int)done;
-		SCE_DBG_ASSERT(vp->core.size >= file->position, 1125);
+		file->fpos += (int)done;
+		SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1125);
 	}
 	*rsz = done;
 }
@@ -574,14 +574,14 @@ int uncached_data_read(struct BuffCache *bc, SceOff pos, SceSize nbyte, void *da
 		if ((pos & 0x1ff) == 0 && ((SceUIntPtr)buf & 0x3f) == 0 && bc->ioBuffSize < nbyte &&
 		    (read = vp->core.ops->vop_read) != NULL) {
 			/* aligned and larger than the buffer: read it directly */
-			position = file->position;
+			position = file->fpos;
 			args.vp = vp;
 			args.file = file;
-			file->position = pos;
+			file->fpos = pos;
 			args.buf = buf;
 			args.nbyte = nbyte;
 			n = read(&args);
-			file->position = position;
+			file->fpos = position;
 			if (n == nbyte) {
 				done += nbyte;
 			} else if (n >= 0) {
@@ -654,8 +654,8 @@ int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceV
 			if (ret != 0)
 				return -1;
 			if (pread != 1) {
-				file->position += nbyte;
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 1168);
+				file->fpos += nbyte;
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1168);
 			}
 			*rsz = nbyte;
 			return 0;
@@ -677,8 +677,8 @@ int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceV
 			return -1;
 		vfsBuffIo2DataBuff(bc, pos, vp, file);
 		if (pread != 1) {
-			file->position += nbyte;
-			SCE_DBG_ASSERT(vp->core.size >= file->position, 1213);
+			file->fpos += nbyte;
+			SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1213);
 		}
 		*rsz = nbyte;
 		return ret;
@@ -703,8 +703,8 @@ int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceV
 			return -1;
 		}
 		if (pread != 1) {
-			file->position += nbyte;
-			SCE_DBG_ASSERT(vp->core.size >= file->position, 1269);
+			file->fpos += nbyte;
+			SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1269);
 		}
 		*rsz = nbyte;
 		return ret;
@@ -727,8 +727,8 @@ int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceV
 			return -1;
 		}
 		if (pread != 1) {
-			file->position += n;
-			SCE_DBG_ASSERT(vp->core.size >= file->position, 1451);
+			file->fpos += n;
+			SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1451);
 		}
 		ret = uncached_data_read(bc, pos + n, nbyte - n, buf + n, vp, file, pread, rsz);
 		*rsz += n;
@@ -781,8 +781,8 @@ int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceV
 				return ret;
 			}
 			if (pread != 1) {
-				file->position += rest;
-				SCE_DBG_ASSERT(vp->core.size >= file->position, 1414);
+				file->fpos += rest;
+				SCE_DBG_ASSERT(vp->core.size >= file->fpos, 1414);
 			}
 			*rsz = nbyte;
 			return ret;
@@ -840,7 +840,7 @@ int sceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 		return SCE_ERROR_ERRNO_EPERM;
 	}
 	if ((flags & SCE_O_WRONLY) != 0 &&
-	    (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	    (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_OPEN + 1, 2, vp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -859,19 +859,19 @@ int sceVopOpen(SceVfsVnode *vp, SceVfsPath *path, int flags, SceVfsFile *file)
 		vfs_set_mnt_sync_request(vp->core.mnt);
 		if (ret == 0) {
 			if (vp->core.bc == NULL &&
-			    (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_NOBUF) == 0 &&
+			    (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_NOBUF) == 0 &&
 			    (flags & (VFS_O_NO_BUFFCACHE | SCE_O_NOBUF)) == 0) {
 				struct BuffCache *bc;
 				int memType;
 
 				memType = vfs_is_cdialog_thread() != 0 ?
 					  VFS_BUFF_MEM_CDIALOG : VFS_BUFF_MEM_DEFAULT;
-				if (vp->core.mnt->fs_type == SCE_VFS_FS_TYPE_HOSTFS)
+				if (vp->core.mnt->fsType == SCE_VFS_FS_TYPE_HOSTFS)
 					memType = VFS_BUFF_MEM_HOST;
 				err = vfsBuffAllocate(VFS_BUFF_DEFAULT_DATA_CACHE_SIZE,
 						      VFS_BUFF_DEFAULT_WAY_NUM,
 						      VFS_BUFF_DEFAULT_LINE_SIZE,
-						      vp->core.mnt->default_io_cache_size, file->pid,
+						      vp->core.mnt->defaultIoCacheSize, file->pid,
 						      memType, NULL, &bc);
 				if (err == 0)
 					vp->core.bc = bc;
@@ -900,7 +900,7 @@ int sceVopCreate(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int flag
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CREATE + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
-	if ((dvp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	if ((dvp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CREATE + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -944,7 +944,7 @@ int sceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 	bc = vp->core.bc;
 	ops = vp->core.ops;
 	if (bc != NULL) {
-		if (vp->core.fd_num == 1) {
+		if (vp->core.fdNum == 1) {
 			err = vfsBuffFree(bc, vp->core.mnt->state != VFS_MOUNT_STATE_MOUNTED, vp, file);
 			if (err < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 1782, "sceVopClose",
@@ -959,7 +959,7 @@ int sceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 				struct BuffCache *newBc;
 
 				/* the buffer cache belongs to this process: hand it to another */
-				for (f = vp->core.fd_list; f != NULL; f = f->next) {
+				for (f = vp->core.fdList; f != NULL; f = f->next) {
 					if (pid == f->pid && f != file)
 						goto close;
 				}
@@ -974,19 +974,19 @@ int sceVopClose(SceVfsVnode *vp, SceVfsFile *file)
 				vp->core.bc = NULL;
 				newBc = NULL;
 				pid = file->pid;
-				for (f = vp->core.fd_list; f != NULL; f = f->next) {
+				for (f = vp->core.fdList; f != NULL; f = f->next) {
 					int memType;
 
 					if (f->pid == pid)
 						continue;
 					memType = vfs_is_cdialog_thread() != 0 ?
 						  VFS_BUFF_MEM_CDIALOG : VFS_BUFF_MEM_DEFAULT;
-					if (vp->core.mnt->fs_type == SCE_VFS_FS_TYPE_HOSTFS)
+					if (vp->core.mnt->fsType == SCE_VFS_FS_TYPE_HOSTFS)
 						memType = VFS_BUFF_MEM_HOST;
 					ret = vfsBuffAllocate(VFS_BUFF_DEFAULT_DATA_CACHE_SIZE,
 							      VFS_BUFF_DEFAULT_WAY_NUM,
 							      VFS_BUFF_DEFAULT_LINE_SIZE,
-							      vp->core.mnt->default_io_cache_size, f->pid,
+							      vp->core.mnt->defaultIoCacheSize, f->pid,
 							      memType, NULL, &newBc);
 					if (ret == 0) {
 						vp->core.bc = newBc;
@@ -1029,7 +1029,7 @@ int sceVopRead(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, Sce
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 1911, "sceVopRead");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_READ, 8, vp, file, data, nbyte,
 			 (SceUInt32)((SceUInt64)vp->core.size >> 32), (SceUInt32)vp->core.size,
-			 (SceUInt32)((SceUInt64)file->position >> 32), (SceUInt32)file->position);
+			 (SceUInt32)((SceUInt64)file->fpos >> 32), (SceUInt32)file->fpos);
 	ret = vfs_get_file_state_error(file);
 	if (ret < 0)
 		goto out;
@@ -1074,7 +1074,7 @@ int sceVopRead(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, Sce
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_READ + 1, 3, vp, ret, *result);
 		return ret;
 	}
-	if (file->position >= (SceOff)vp->core.size) {
+	if (file->fpos >= (SceOff)vp->core.size) {
 		*result = 0;
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_READ + 1, 3, vp, ret, 0);
 		return 0;
@@ -1086,7 +1086,7 @@ int sceVopRead(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, Sce
 	}
 	vfs_set_mnt_sync_request(vp->core.mnt);
 	if (bc != NULL) {
-		ret = buff_cache_read(file->position, data, nbyte, vp, file, 0, result);
+		ret = buff_cache_read(file->fpos, data, nbyte, vp, file, 0, result);
 		if (ret != -1)
 			goto out;
 	}
@@ -1117,7 +1117,7 @@ int sceVopWrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nby
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2043, "sceVopWrite");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_WRITE, 8, vp, file, data, nbyte,
 			 (SceUInt32)((SceUInt64)vp->core.size >> 32), (SceUInt32)vp->core.size,
-			 (SceUInt32)((SceUInt64)file->position >> 32), (SceUInt32)file->position);
+			 (SceUInt32)((SceUInt64)file->fpos >> 32), (SceUInt32)file->fpos);
 	err = vfs_get_file_state_error(file);
 	if (err < 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_WRITE + 1, 3, vp, err, *result);
@@ -1172,11 +1172,11 @@ int sceVopWrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nby
 	}
 	vfs_set_mnt_sync_request(vp->core.mnt);
 	if (bc != NULL &&
-	    ((SceOff)vp->core.size >= file->position ||
+	    ((SceOff)vp->core.size >= file->fpos ||
 	     buff_cache_fill_zero(bc, vp->core.size, vp, file) != -1)) {
-		ret = buff_cache_write(file->position, data, nbyte, vp, file, 0, result);
+		ret = buff_cache_write(file->fpos, data, nbyte, vp, file, 0, result);
 		if (ret != -1) {
-			if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) == 0) {
+			if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) == 0) {
 				err = vfsBuffDataFlushAll(vp->core.bc, vp, file);
 				if (err < 0) {
 					SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2148, "sceVopWrite",
@@ -1222,7 +1222,7 @@ int sceVopPread(SceVfsVnode *vp, SceVfsFile *file, void *data, SceSize nbyte, Sc
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2234, "sceVopPread");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_PREAD, 10, vp, file, data, nbyte,
 			 (SceUInt32)((SceUInt64)vp->core.size >> 32), (SceUInt32)vp->core.size,
-			 (SceUInt32)((SceUInt64)file->position >> 32), (SceUInt32)file->position,
+			 (SceUInt32)((SceUInt64)file->fpos >> 32), (SceUInt32)file->fpos,
 			 (SceUInt32)((SceUInt64)offset >> 32), (SceUInt32)offset);
 	if (offset < 0)
 		goto inval;
@@ -1284,7 +1284,7 @@ int sceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nb
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 2347, "sceVopPwrite");
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_PWRITE, 10, vp, file, data, nbyte,
 			 (SceUInt32)((SceUInt64)vp->core.size >> 32), (SceUInt32)vp->core.size,
-			 (SceUInt32)((SceUInt64)file->position >> 32), (SceUInt32)file->position,
+			 (SceUInt32)((SceUInt64)file->fpos >> 32), (SceUInt32)file->fpos,
 			 (SceUInt32)((SceUInt64)offset >> 32), (SceUInt32)offset);
 	if (offset < 0)
 		goto inval;
@@ -1314,10 +1314,10 @@ int sceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nb
 		goto direct;
 	if ((SceOff)vp->core.size < offset) {
 		/* the gap up to the new offset reads back as zeroes */
-		position = file->position;
-		file->position = offset;
+		position = file->fpos;
+		file->fpos = offset;
 		ret = buff_cache_fill_zero(bc, vp->core.size, vp, file);
-		file->position = position;
+		file->fpos = position;
 		if (ret < 0) {
 			if (ret == -1)
 				goto direct;
@@ -1327,7 +1327,7 @@ int sceVopPwrite(SceVfsVnode *vp, SceVfsFile *file, const void *data, SceSize nb
 	ret = buff_cache_write(offset, data, nbyte, vp, file, 1, result);
 	if (ret == -1)
 		goto direct;
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) == 0) {
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) == 0) {
 		err = vfsBuffDataFlushAll(bc, vp, file);
 		if (err < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0xf, 2469, "sceVopPwrite",
@@ -1386,7 +1386,7 @@ SceOff sceVopLseek(SceVfsVnode *vp, SceVfsFile *file, SceOff offset, int whence)
 	}
 	switch (whence) {
 	case SCE_SEEK_CUR:
-		base = file->position;
+		base = file->fpos;
 		break;
 	case SCE_SEEK_END:
 		base = vp->core.size;
@@ -1431,7 +1431,7 @@ int sceVopMkdir(SceVfsVnode *dvp, SceVfsVnode **vpp, SceVfsPath *path, int mode)
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_MKDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -1466,7 +1466,7 @@ int sceVopRmdir(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 f
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RMDIR + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -1527,7 +1527,7 @@ int sceVopGetstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat)
 		vfs_set_mnt_sync_request(vp->core.mnt);
 		/* a file being written through the cache is bigger than the media says */
 		if (ret == 0 && stat->st_size != (SceOff)vp->core.size && vp->core.bc != NULL &&
-		    (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) != 0)
+		    (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) != 0)
 			stat->st_size = vp->core.size;
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_GETSTAT + 1, 6, vp, ret, stat->st_mode, stat->st_attr,
@@ -1555,7 +1555,7 @@ int sceVopRemove(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *path, SceUInt32 
 			goto perm;
 		ops = dvp->core.ops;
 	}
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_REMOVE + 1, 2, dvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -1596,7 +1596,7 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME + 1, 2, odvp, SCE_ERROR_ERRNO_EPERM);
 		return SCE_ERROR_ERRNO_EPERM;
 	}
-	if ((mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
+	if ((mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) != 0) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_RENAME + 1, 2, odvp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -1606,10 +1606,10 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 	} else {
 		args.odvp = odvp;
 		args.ovp = ovp;
-		args.old_path = old_path;
+		args.oldPath = old_path;
 		args.ndvp = ndvp;
 		args.nvpp = nvpp;
-		args.new_path = new_path;
+		args.newPath = new_path;
 		ret = op(&args);
 		if (ret == 0)
 			SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(*nvpp) == 1, 3071, "sceVopRename");
@@ -1621,8 +1621,8 @@ int sceVopRename(SceVfsVnode *odvp, SceVfsVnode *ovp, SceVfsPath *old_path, SceV
 
 int sceVopDopen(SceVfsVnode *vp, SceVfsPath *path, SceVfsFile *file)
 {
-	SceVopDopenAgrs args;
-	int (*op)(SceVopDopenAgrs *argp);
+	SceVopDopenArgs args;
+	int (*op)(SceVopDopenArgs *argp);
 	int ret;
 
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 3108, "sceVopDopen");
@@ -1730,7 +1730,7 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CHSTAT + 1, 2, vp, SCE_ERROR_ERRNO_EUNSUP);
 		return SCE_ERROR_ERRNO_EUNSUP;
 	}
-	if (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) {
+	if (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_CHSTAT + 1, 2, vp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -1747,12 +1747,12 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 			last = newSize - 1;
 			if (size & 0x1ff) {
 				if (vfs_buf_data_cached(bc, last)) {
-					ret = vfsBuffDataFlush(bc, last, 0, vp, vp->core.fd_list);
+					ret = vfsBuffDataFlush(bc, last, 0, vp, vp->core.fdList);
 					if (ret < 0)
 						goto out;
 				}
 				if (vfs_buf_io_cached_contains(bc, last, 1)) {
-					ret = vfsBuffIoFlush(bc, vp, vp->core.fd_list);
+					ret = vfsBuffIoFlush(bc, vp, vp->core.fdList);
 					if (ret < 0)
 						goto out;
 				}
@@ -1762,10 +1762,10 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 	}
 	if ((bit & SCE_CST_MODE) && bc != NULL && (stat->st_mode & (IO_STM_WU | IO_STM_WS)) == 0) {
 		/* it becomes read-only: write the cache back first */
-		ret = vfsBuffDataFlushAll(bc, vp, vp->core.fd_list);
+		ret = vfsBuffDataFlushAll(bc, vp, vp->core.fdList);
 		if (ret < 0)
 			goto out;
-		ret = vfsBuffIoFlush(bc, vp, vp->core.fd_list);
+		ret = vfsBuffIoFlush(bc, vp, vp->core.fdList);
 		if (ret < 0)
 			goto out;
 	}
@@ -1795,7 +1795,7 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 					bc->ioBuffState = VFS_BUFF_LINE_INVALID;
 			}
 		} else if (refetch && bc->ioBuffCachedSize != bc->ioBuffSize) {
-			vfsBuffIoFetch(bc, bc->ioBuffOffset, vp, vp->core.fd_list);
+			vfsBuffIoFetch(bc, bc->ioBuffOffset, vp, vp->core.fdList);
 		}
 	}
 out:
@@ -1818,10 +1818,10 @@ int sceVopIoctl(SceVfsVnode *vp, SceVfsFile *file, int cmd, const void *in_data,
 		args.vp = vp;
 		args.file = file;
 		args.cmd = cmd;
-		args.in_data = in_data;
-		args.in_len = in_len;
-		args.out_data = out_data;
-		args.out_len = out_len;
+		args.inData = in_data;
+		args.inLen = in_len;
+		args.outData = out_data;
+		args.outLen = out_len;
 		ret = ops->vop_ioctl(&args);
 		vfs_set_mnt_sync_request(vp->core.mnt);
 	}
@@ -1914,7 +1914,7 @@ int sceVopFgetstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat)
 		vfs_set_mnt_sync_request(vp->core.mnt);
 		/* a file being written through the cache is bigger than the media says */
 		if (ret == 0 && stat->st_size != (SceOff)vp->core.size && vp->core.bc != NULL &&
-		    (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) != 0)
+		    (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_WRITE_CACHE) != 0)
 			stat->st_size = vp->core.size;
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_FGETSTAT, 2, vp, ret);
@@ -1940,7 +1940,7 @@ int sceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_FCHSTAT + 1, 2, vp, SCE_ERROR_ERRNO_EUNSUP);
 		return SCE_ERROR_ERRNO_EUNSUP;
 	}
-	if (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_RDONLY) {
+	if (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_RDONLY) {
 		VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_FCHSTAT + 1, 2, vp, SCE_ERROR_ERRNO_EROFS);
 		return SCE_ERROR_ERRNO_EROFS;
 	}
@@ -2005,7 +2005,7 @@ int sceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
 					bc->ioBuffState = VFS_BUFF_LINE_INVALID;
 			}
 		} else if (refetch && bc->ioBuffCachedSize != bc->ioBuffSize) {
-			vfsBuffIoFetch(bc, bc->ioBuffOffset, vp, vp->core.fd_list);
+			vfsBuffIoFetch(bc, bc->ioBuffOffset, vp, vp->core.fdList);
 		}
 	}
 	VFS_VOP_HOOK_CALL(VFS_VOP_HOOK_FCHSTAT + 1, 2, vp, ret);
@@ -2031,8 +2031,8 @@ int sceVopWhiteout(SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPath *old_path,
 		/* a4 and a5 are not passed on: the file system always sees 0 */
 		args.dvp = dvp;
 		args.vp = vp;
-		args.old_path = old_path;
-		args.new_path = new_path;
+		args.oldPath = old_path;
+		args.newPath = new_path;
 		args.a4 = 0;
 		args.a5 = 0;
 		/* vitasdk types the table entry with its shorter args */
@@ -2070,8 +2070,8 @@ int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 						  err, err, vp);
 		vp->core.bc = NULL;
 		/* the cache goes on for the next process that still has the file open */
-		if (vp->core.fd_num > 1) {
-			for (other = vp->core.fd_list; other != NULL; other = other->next) {
+		if (vp->core.fdNum > 1) {
+			for (other = vp->core.fdList; other != NULL; other = other->next) {
 				pid = other->pid;
 				if (pid == file->pid || other == file)
 					continue;
@@ -2083,7 +2083,7 @@ int sceVopCleanup(SceVfsVnode *vp, SceVfsFile *file, SceUInt32 a2, SceUInt32 a3)
 					err = vfsBuffAllocate(VFS_BUFF_DEFAULT_DATA_CACHE_SIZE,
 							      VFS_BUFF_DEFAULT_WAY_NUM,
 							      VFS_BUFF_DEFAULT_LINE_SIZE,
-							      vp->core.mnt->default_io_cache_size, pid,
+							      vp->core.mnt->defaultIoCacheSize, pid,
 							      VFS_BUFF_MEM_DEFAULT, NULL, &bc);
 					if (err == 0)
 						vp->core.bc = bc;
@@ -2117,7 +2117,7 @@ int sceVopZerofill(SceVfsVnode *vp, SceUInt64 forwardedValue1, SceUInt64 forward
 	int (*op)(SceVopZerofillArgs *argp);
 
 	SCE_DBG_ASSERT_CHECK_FUNC(vfsIsOwnerVnode(vp) == 1, 4066, "sceVopZerofill");
-	op = (int (*)(SceVopZerofillArgs *))vp->core.ops->vop_verofill;
+	op = vp->core.ops->vop_zerofill;
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;
 	args.vp = vp;
@@ -2130,7 +2130,7 @@ int sceVopZerofill(SceVfsVnode *vp, SceUInt64 forwardedValue1, SceUInt64 forward
 /* the VFS operations of a mount point, as its file system registered them */
 static inline __attribute__((always_inline)) const SceVfsOpTable *vfs_mnt_ops(SceVfsMount *mnt)
 {
-	return mnt->mnt_vfs_inf->vfs_ops;
+	return mnt->mntVfsInf->vfsOps;
 }
 
 int sceVfsOpMount(SceVfsMount *mnt, SceVfsPath *devPath)
@@ -2144,7 +2144,7 @@ int sceVfsOpMount(SceVfsMount *mnt, SceVfsPath *devPath)
 		ret = SCE_ERROR_ERRNO_EUNSUP;
 	} else {
 		args.mnt = mnt;
-		args.dev_file_path = devPath;
+		args.devFilePath = devPath;
 		ret = ops->vfs_mount(&args);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VFSOP_HOOK_MOUNT + 1, 2, mnt, ret);
@@ -2172,22 +2172,22 @@ int sceVfsOpUmount(SceVfsMount *mnt, int flags)
 int sceVfsOpInit(SceVfsInfo *vfsInf)
 {
 	SceVfsOpInitArgs args;
-	int (*op)(SceVfsOpInitArgs *argp) = vfsInf->vfs_ops->vfs_init;
+	int (*op)(SceVfsOpInitArgs *argp) = vfsInf->vfsOps->vfs_init;
 
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;
-	args.vfs_inf = vfsInf;
+	args.vfsInf = vfsInf;
 	return op(&args);
 }
 
 int sceVfsOpFini(SceVfsInfo *vfsInf)
 {
 	SceVfsOpFiniArgs args;
-	int (*op)(SceVfsOpFiniArgs *argp) = vfsInf->vfs_ops->vfs_fini;
+	int (*op)(SceVfsOpFiniArgs *argp) = vfsInf->vfsOps->vfs_fini;
 
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;
-	args.vfs_inf = vfsInf;
+	args.vfsInf = vfsInf;
 	return op(&args);
 }
 
@@ -2211,9 +2211,9 @@ int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const vo
 		args.dev = dev;
 		args.cmd = cmd;
 		args.arg = indata;
-		args.arg_len = inlen;
+		args.argLen = inlen;
 		args.buf = outdata;
-		args.buf_len = outlen;
+		args.bufLen = outlen;
 		ret = op(&args);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VFSOP_HOOK_DEVCTL + 1, 2, mnt, ret);
@@ -2228,7 +2228,7 @@ int sceVfsOpSetRoot(SceVfsMount *mnt, int unused, SceVfsVnode *vp)
 	if (op == NULL)
 		return SCE_ERROR_ERRNO_EUNSUP;
 	args.mnt = mnt;
-	args.unk = unused;
+	args.unused = unused;
 	args.vp = vp;
 	return op(&args);
 }
@@ -2272,8 +2272,8 @@ int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const cha
 		args.path2 = path2;
 		args.path3 = path3;
 		args.buf = buf;
-		args.buf_len = buf_len;
-		args.decode_len = decode_len;
+		args.bufLen = buf_len;
+		args.decodeLen = decode_len;
 		ret = ops->vfs_decode_path_elem(&args);
 	}
 	VFS_VOP_HOOK_CALL(VFS_VFSOP_HOOK_DECODE_PATH_ELEM + 1, 2, mnt, ret);
@@ -2310,11 +2310,11 @@ void vfs_dump_fast_mutex(SceKernelFastMutex *mtx)
 /* name unknown */
 static __attribute__((noinline)) void vfs_dump_vdlock(SceVfsVnode *vp)
 {
-	SceDebugForDriver_391B74B7("ownerId=0x%x\n", vp->vdlock.owner_id);
+	SceDebugForDriver_391B74B7("ownerId=0x%x\n", vp->vdlock.ownerId);
 	SceDebugForDriver_391B74B7("waiter=0x%x\n", vp->vdlock.waiter);
-	SceDebugForDriver_391B74B7("recursiveCount=0x%x\n", vp->vdlock.recursive_count);
-	SceDebugForDriver_391B74B7("waitId=0x%x\n", vp->vdlock.wait_id);
-	SceDebugForDriver_391B74B7("waitPattern=0x%x\n", vp->vdlock.wait_pattern);
+	SceDebugForDriver_391B74B7("recursiveCount=0x%x\n", vp->vdlock.recursiveCount);
+	SceDebugForDriver_391B74B7("waitId=0x%x\n", vp->vdlock.waitId);
+	SceDebugForDriver_391B74B7("waitPattern=0x%x\n", vp->vdlock.waitPattern);
 }
 
 #endif
@@ -2325,11 +2325,11 @@ void vfs_dump_vnode(SceVfsVnode *vp, int unused)
 	SceDebugForDriver_391B74B7("============== vnode %p =================\n", vp);
 	vfs_dump_vdlock(vp);
 	SceDebugForDriver_391B74B7("ops = %p\n", vp->core.ops);
-	SceDebugForDriver_391B74B7("nodeInf = %d 0x%x\n", vp->core.node_inf, vp->core.node_inf);
-	SceDebugForDriver_391B74B7("nodeData = %p\n", vp->core.node_data);
+	SceDebugForDriver_391B74B7("nodeInf = %d 0x%x\n", vp->core.nodeInf, vp->core.nodeInf);
+	SceDebugForDriver_391B74B7("nodeData = %p\n", vp->core.nodeData);
 	SceDebugForDriver_391B74B7("mnt = %p\n", vp->core.mnt);
 	SceDebugForDriver_391B74B7("dd = %p\n", vp->core.dd);
-	SceDebugForDriver_391B74B7("refCount = %d\n", vp->core.ref_count);
+	SceDebugForDriver_391B74B7("refCount = %d\n", vp->core.refCount);
 	SceDebugForDriver_391B74B7("fid = %lld 0x%llx\n", *(SceUInt64 *)vp->core.fid,
 			 *(SceUInt64 *)vp->core.fid);
 	SceDebugForDriver_391B74B7("allocator = %d 0x%x\n", vp->core.allocator, vp->core.allocator);
@@ -2337,9 +2337,9 @@ void vfs_dump_vnode(SceVfsVnode *vp, int unused)
 	SceDebugForDriver_391B74B7("state = %d 0x%x\n", vp->core.state, vp->core.state);
 	SceDebugForDriver_391B74B7("size = %lld 0x%llx\n", vp->core.size, vp->core.size);
 	SceDebugForDriver_391B74B7("type = %d 0x%x\n", vp->core.type, vp->core.type);
-	SceDebugForDriver_391B74B7("aclData = %lld 0x%llx\n", *(SceUInt64 *)vp->core.acl_data,
-			 *(SceUInt64 *)vp->core.acl_data);
-	SceDebugForDriver_391B74B7("fdList = %p\n", vp->core.fd_list);
-	SceDebugForDriver_391B74B7("fdNum = %d\n", vp->core.fd_num);
+	SceDebugForDriver_391B74B7("aclData = %lld 0x%llx\n", *(SceUInt64 *)vp->core.aclData,
+			 *(SceUInt64 *)vp->core.aclData);
+	SceDebugForDriver_391B74B7("fdList = %p\n", vp->core.fdList);
+	SceDebugForDriver_391B74B7("fdNum = %d\n", vp->core.fdNum);
 #endif
 }

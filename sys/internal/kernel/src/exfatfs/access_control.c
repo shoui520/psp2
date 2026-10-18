@@ -122,7 +122,7 @@ static inline int set_attr_info_for_check(SceExfatfsDrive *drive,
 			value->size = 1;
 		}
 		result = sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, value, &inputValue,
-						    drive->deviceInfo.mount_misc->mnt_id);
+						    drive->deviceInfo.mount_misc->mntId);
 		if (result < 0)
 			return result;
 		SCE_DBG_PRINTF_LEVEL(2, 0, 133, "%s: special ACL[%#x]->attr[%#x]\n",

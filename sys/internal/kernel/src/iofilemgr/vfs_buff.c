@@ -264,13 +264,13 @@ int vfs_bop_flush_data_cache(struct BuffCache *bc, struct BuffLine *line, SceVfs
 			args.file = file;
 			args.buf = line->data;
 			args.nbyte = lineSize;
-			flags = file->flags;
-			position = file->position;
-			file->flags = flags | 3;
-			file->position = offset;
+			flags = file->openMode;
+			position = file->fpos;
+			file->openMode = flags | 3;
+			file->fpos = offset;
 			ret = ops->vop_write(&args);
-			file->position = position;
-			file->flags = (file->flags & ~3) | (flags & 3);
+			file->fpos = position;
+			file->openMode = (file->openMode & ~3) | (flags & 3);
 			if (ret == args.nbyte) {
 				ret = 0;
 			} else {
@@ -814,31 +814,31 @@ int vfsBuffIoFlush(struct BuffCache *bc, SceVfsVnode *vp, SceVfsFile *file)
 		args.file = file;
 		args.buf = bc->ioBuff;
 		args.nbyte = bc->ioBuffCachedSize;
-		flags = file->flags;
-		position = file->position;
-		file->position = bc->ioBuffOffset;
-		file->flags = flags | 3;
+		flags = file->openMode;
+		position = file->fpos;
+		file->fpos = bc->ioBuffOffset;
+		file->openMode = flags | 3;
 		ret = ops->vop_write(&args);
-		file->flags = (file->flags & ~3) | (flags & 3);
+		file->openMode = (file->openMode & ~3) | (flags & 3);
 		if (ret != args.nbyte) {
 			if (ret < 0) {
-				file->position = position;
+				file->fpos = position;
 				bc->ioBuffState = VFS_BUFF_LINE_INVALID;
 				return ret;
 			}
-			if (vp->core.size != file->position + ret) {
+			if (vp->core.size != file->fpos + ret) {
 				SCE_DBG_PRINTF_LEVEL(2, 0xf, 1414,
 						     "wsz(0x%x)!=nbyte(0x%x), retval=0x%x\n", ret,
 						     args.nbyte, ret);
 				SCE_DBG_PRINTF_LEVEL(2, 0xf, 1416,
 						     "A:::file->fpos=0x%llx vp->size=0x%llx, wsz=0x%x\n",
-						     file->position, vp->core.size, ret);
+						     file->fpos, vp->core.size, ret);
 				bc->ioBuffState = VFS_BUFF_LINE_INVALID;
-				file->position = position;
+				file->fpos = position;
 				return ret;
 			}
 		}
-		file->position = position;
+		file->fpos = position;
 		bc->ioBuffState = VFS_BUFF_LINE_FLUSHED;
 	}
 	return 0;
@@ -910,8 +910,8 @@ int vfsBuffFree(struct BuffCache *bc, int flags, SceVfsVnode *vp, SceVfsFile *fi
 int vfsBuffIoFetch(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile *file)
 {
 	SceOff offset = pos & ~(SceOff)(bc->ioBuffSize - 1);
-	SceOff position = file->position;
-	SceUInt32 flags = file->flags;
+	SceOff position = file->fpos;
+	SceUInt32 flags = file->openMode;
 	SceVopReadArgs args;
 	SceSSize (*read)(SceVopReadArgs *argp);
 	int ret, err;
@@ -932,13 +932,13 @@ int vfsBuffIoFetch(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile
 	args.file = file;
 	args.buf = bc->ioBuff;
 	args.nbyte = bc->ioBuffSize;
-	file->position = offset;
-	file->flags |= 3;
+	file->fpos = offset;
+	file->openMode |= 3;
 	ret = read(&args);
-	file->flags = (file->flags & ~3) | (flags & 3);
+	file->openMode = (file->openMode & ~3) | (flags & 3);
 	if (ret != args.nbyte) {
 		if (ret < 0) {
-			file->position = position;
+			file->fpos = position;
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 1478,
 					     "rsz(0x%x)!=nbyte(0x%x) retval=0x%x vp->size=0x%llx\n", ret,
 					     args.nbyte, ret, vp->core.size);
@@ -952,7 +952,7 @@ int vfsBuffIoFetch(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile
 			SCE_DBG_PRINTF_LEVEL(2, 0xf, 1489, "pos=0x%llx offset=0x%llx org=0x%llx vp=%p\n",
 					     pos, offset, position, vp);
 			bc->ioBuffState = VFS_BUFF_LINE_INVALID;
-			file->position = position;
+			file->fpos = position;
 			return ret;
 		}
 	}
@@ -966,7 +966,7 @@ int vfsBuffIoFetch(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile
 		if (err < 0)
 			ret = err;
 	}
-	file->position = position;
+	file->fpos = position;
 	return ret;
 }
 
@@ -1151,7 +1151,7 @@ int vfsBuffCacheCtl(SceVfsVnode *vp, SceSize dataCacheSize, SceUInt32 wayNum, Sc
 	int ret, err;
 
 	SCE_DBG_ASSERT_CHECK(vfsIsOwnerVnode(vp) == 1, 1783);
-	if (vp->core.mnt->mnt_flags & SCE_VFS_MOUNT_FLAG_NOBUF)
+	if (vp->core.mnt->mntFlags & SCE_VFS_MOUNT_FLAG_NOBUF)
 		return SCE_ERROR_ERRNO_EPERM;
 
 	bc = vp->core.bc;
@@ -1176,7 +1176,7 @@ int vfsBuffCacheCtl(SceVfsVnode *vp, SceSize dataCacheSize, SceUInt32 wayNum, Sc
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1847, "\n");
 			return ret;
 		}
-		err = vfsBuffFree(bc, 0, vp, vp->core.fd_list);
+		err = vfsBuffFree(bc, 0, vp, vp->core.fdList);
 		if (err < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0xf, 1856, "vfsBuffFree() failed ... %d 0x%x\n", err,
 					     err);
@@ -1193,12 +1193,12 @@ int vfsBuffCacheCtl(SceVfsVnode *vp, SceSize dataCacheSize, SceUInt32 wayNum, Sc
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1869, "\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ret = vfsBuffDataFlushAll(bc, vp, vp->core.fd_list);
+	ret = vfsBuffDataFlushAll(bc, vp, vp->core.fdList);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1875, "\n");
 		return ret;
 	}
-	ret = vfsBuffIoFlush(bc, vp, vp->core.fd_list);
+	ret = vfsBuffIoFlush(bc, vp, vp->core.fdList);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 1881, "\n");
 		return ret;

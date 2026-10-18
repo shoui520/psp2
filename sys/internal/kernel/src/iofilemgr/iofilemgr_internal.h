@@ -24,6 +24,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/sysroot_init.h>
+#include <sysmem/uid_guid.h>
 #include <sysmem/uid_class.h>
 
 /* Shared declarations describe caller buffers, mount/vnode/file objects,
@@ -59,7 +60,7 @@ typedef struct IofilemgrKpls {
 } IofilemgrKpls;
 _Static_assert(sizeof(IofilemgrKpls) == 0x28, "IofilemgrKpls");
 
-/* SceVfsFile.debug_path: the paths a file was opened with */
+/* SceVfsFile.debugPath: the paths a file was opened with */
 struct DebugPath {
 	char *resolvedOpenPath;
 	SceSize resolvedOpenPathLength;
@@ -418,7 +419,7 @@ int vfs_release_lock_entry(SceVfsVnode *vp);
 #define VFS_MOUNT_STATE_MOUNTING_BIT	0x100	/* set while vfsMount runs */
 #define VFS_MOUNT_STATE_MOUNTING	(VFS_MOUNT_STATE_MOUNTING_BIT | VFS_MOUNT_STATE_MOUNTED)
 #define VFS_MOUNT_TYPE_NONE		4	/* name unknown: vfsMount does nothing */
-#define VFS_MOUNT_FLAG_PARAM_MASK	0xfffff	/* the mnt_flags vfsMount takes from the caller */
+#define VFS_MOUNT_FLAG_PARAM_MASK	0xfffff	/* the mntFlags vfsMount takes from the caller */
 #define VFS_MOUNT_OPT_DEV_MASK		0xf00
 #define VFS_MOUNT_OPT_DEV_EXTERNAL	0x200	/* removable media (VFS_MOUNT_OPT_VC/MC/SD) */
 /* in vp->core.mnt_opt: a write from the I/O buffer's start past its end bypasses it (name unknown) */
@@ -515,8 +516,6 @@ void vfs_release_lookup(char *path, SceVfsVnode *vp1, SceVfsVnode *vp2, char *pa
 int vfs_find_in_path(VfsPathElem *elem, int num, SceVfsVnode **vpp, const char *path,
 		     SceUInt32 flags);
 SceVfsVnode *vfs_get_devfile_vnode(const char *path, char *flat, VfsPathElem *last);
-int vfsMount(SceVfsMountParam *param);
-int vfsUmount(SceVfsUmountParam *param);
 int vfs_system_event_handler(int resume, int eventid, void *args, void *opt);
 
 /* vfs_subr.c */
@@ -587,8 +586,6 @@ void fini_vnode(SceVfsVnode *vp);
 SceVopTable *vfs_alloc_vop_table(void);
 int vfs_debug_extend_buff(int index);
 char *vfs_debug_allocate_buff(int *index);
-int vfsLockMnt(SceVfsMount *mnt);
-int vfsUnlockMnt(SceVfsMount *mnt);
 void vfs_free_mount(SceVfsMount *mnt);
 SceBool vfsIsLockedMnt(SceVfsMount *mnt);
 int vfsLockFd(SceVfsFile *file);
@@ -600,9 +597,7 @@ SceBool vfsIsLockedFd(SceVfsFile *file);
 int vfsLockFdAll(SceVfsMount *mnt);
 int vfsUnlockFdAll(SceVfsMount *mnt);
 int vfsSignalFd(SceVfsMount *mnt);
-int vfsLockVnode(SceVfsVnode *vp);
 int lock_vdlock(SceVfsVnode *vp);
-int vfsUnlockVnode(SceVfsVnode *vp);
 SceBool vfsIsOwnerVnode(SceVfsVnode *vp);
 struct Ncache *vfs_alloc_ncache(SceUID heap, const VfsPathElem *elem);
 void vfs_free_ncache_heap(struct Ncache *nc, SceUID heap);
@@ -614,7 +609,6 @@ int vfs_remove_mnt_list(SceVfsMount *mnt);
 void vfs_insert_mntedon_list(SceVfsMount *pmnt, SceVfsMount *mnt);
 int vfs_remove_mntedon_list(SceVfsMount *pmnt, SceVfsMount *mnt);
 int vfs_remove_mnt_vnode_list(SceVfsMount *mnt, SceVfsVnode *vp);
-int vfsFreeVnode(SceVfsVnode *vp);
 int vfs_finalize_mount(SceVfsMount *mnt);
 SceVfsInfo *vfs_acquire_vfs(const char *name);
 int vfs_release_vfs(const char *name);
@@ -664,7 +658,6 @@ int vfs_create_file_object(SceUIDVfsFileObject **obj, const char *name);
 SceUID vfs_allocate_file(SceVfsVnode *vp, SceVfsFile **file, const char *name);
 SceUID vfs_allocate_file_dummy(SceVfsFile **file, const char *path);
 int vfs_extend_vnode_buffer(int cur);
-int vfsGetNewVnode(SceVfsMount *mnt, SceVopTable *ops, int unused, SceVfsVnode **vpp);
 int vfs_get_available_vnode_num(void);
 int vfs_mount_initialize(SceUID heap);
 IofilemgrTls *getIofilemgrTls(void);
@@ -808,7 +801,7 @@ static inline __attribute__((always_inline)) int vfs_buff_mem_type(SceVfsVnode *
 	int type;
 
 	type = vfs_is_cdialog_thread() != 0 ? VFS_BUFF_MEM_CDIALOG : VFS_BUFF_MEM_DEFAULT;
-	if (vp->core.mnt->fs_type == SCE_VFS_FS_TYPE_HOSTFS)
+	if (vp->core.mnt->fsType == SCE_VFS_FS_TYPE_HOSTFS)
 		type = VFS_BUFF_MEM_HOST;
 	return type;
 }
@@ -950,7 +943,7 @@ int rfs_get_root(const VfsPathElem *elem, int num, RfsRootInfo *root, int *depth
 
 /* the attribute that asks for the mount point's attributes ("SCE_ELONG") */
 #define VFS_AC_ATTR_LONG		0xf
-#define VFS_MOUNT_TYPE_LOOP		5	/* SceVfsMount.mnt_flags & 0xff (name unknown) */
+#define VFS_MOUNT_TYPE_LOOP		5	/* SceVfsMount.mntFlags & 0xff (name unknown) */
 
 /* SceSblACMgrForKernel_75AAF981's mode */
 #define VFS_AC_MODE_READ		1
@@ -1022,7 +1015,7 @@ typedef struct VfsHostRenameArg {
 /* vfsGetMntList's entries (name unknown) */
 typedef struct VfsMountListEntry {
 	SceVfsMount *mnt;
-	int mntId;			/* SceVfsMountData.mnt_id, -1 for PFS */
+	int mntId;			/* SceVfsMountData.mntId, -1 for PFS */
 	char assignName[0x20];
 	SceUInt32 openedEntryNum;
 	int isPfs;

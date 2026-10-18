@@ -49,7 +49,7 @@ int dev_tty_vfs_mount(SceVfsOpMountArgs *argp)
 	SceVfsMount *mp = argp->mnt;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 95, "args = %p, mp = %p\n", argp, mp);
-	mp->available_entry_num = DUMMY_TTY_ENTRY_NUM;
+	mp->availableEntryNum = DUMMY_TTY_ENTRY_NUM;
 	return 0;
 }
 
@@ -64,14 +64,14 @@ int dev_tty_vfs_set_root(SceVfsOpSetRootArgs *argp)
 	SceVfsMount *mnt = argp->mnt;
 	SceVfsVnode *vp = argp->vp;
 
-	vp->core.node_data = mnt->data;
+	vp->core.nodeData = mnt->pData;
 	vp->core.mnt = mnt;
 	vp->core.type = SCE_VNODE_TYPE_ROOTDIR_DEVFS;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.dd = NULL;
 	*(SceUInt64 *)vp->core.fid = 0;
 	vp->core.size = 0;
-	*(SceUInt64 *)vp->core.acl_data = 0;
+	*(SceUInt64 *)vp->core.aclData = 0;
 	return 0;
 }
 
@@ -126,7 +126,7 @@ int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 	SceVfsVnode *dvp = argp->dvp;
 	SceVfsVnode **vpp = argp->vpp;
 	const char *name = argp->path->name;
-	SceSize len = argp->path->name_length;
+	SceSize len = argp->path->nameLength;
 	SceVfsVnode *vp;
 	int unit, ret;
 
@@ -137,7 +137,7 @@ int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 
 	unit = name[3] - '0';
 	SCE_DBG_PRINTF_LEVEL(2, 0xf, 161, "unit = %d\n", unit);
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, &vp);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 167, "vfsGetNewNode failed (0x%08X)\n", ret);
@@ -146,7 +146,7 @@ int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 	vfsLockVnode(vp);
 	vp->core.mnt = dvp->core.mnt;
 	vp->core.dd = dvp;
-	vp->core.node_data = (void *)unit;
+	vp->core.nodeData = (void *)unit;
 	vp->core.type = DUMMY_TTY_VNODE_TYPE;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	*vpp = vp;
@@ -157,11 +157,11 @@ int DummyTtyStart(void)
 {
 	int ret;
 
-	g_dummyTtyVfsInfo.vfs_ops = &g_dummyTtyVfsOps;
-	g_dummyTtyVfsInfo.vfs_name = "dummy_ttyp_dev_fs";
+	g_dummyTtyVfsInfo.vfsOps = &g_dummyTtyVfsOps;
+	g_dummyTtyVfsInfo.vfsName = "dummy_ttyp_dev_fs";
 	g_dummyTtyVfsInfo.type = SCE_VFS_TYPE_DEVFS;
-	g_dummyTtyVfsInfo.default_vops = &g_dummyTtyVops;
-	g_dummyTtyVfsInfo.vfs_name_len = sizeof("dummy_ttyp_dev_fs");
+	g_dummyTtyVfsInfo.defaultVops = &g_dummyTtyVops;
+	g_dummyTtyVfsInfo.vfsNameLen = sizeof("dummy_ttyp_dev_fs");
 	ret = sceVfsAddVfs(&g_dummyTtyVfsInfo);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xf, 246, "sceVfsAddVfs failed (0x%08X)\n", ret);
@@ -215,18 +215,18 @@ int ioUserMapErrorToErrno(int err)
 }
 
 static const SceVfsMountData dummyTtyMountData = {
-	.assign_name = "tty",
-	.fs_name = "dummy_ttyp_dev_fs",
-	.blockdev_name = "dummy_ttyp_dev_fs",
+	.assignName = "tty",
+	.fsName = "dummy_ttyp_dev_fs",
+	.blockdevName = "dummy_ttyp_dev_fs",
 };
 
 const SceVfsMountParam g_dummyTtyMountParam = {
-	.root_path = "/tty",
-	.fs_type = SCE_VFS_FS_TYPE_CHRDEV,
+	.rootPath = "/tty",
+	.fsType = SCE_VFS_FS_TYPE_CHRDEV,
 	.opt = 0x400,
-	.mnt_flags = SCE_VFS_MOUNT_TYPE_DEVFS | SCE_VFS_MOUNT_FLAG_NOBUF |
+	.mntFlags = SCE_VFS_MOUNT_TYPE_DEVFS | SCE_VFS_MOUNT_FLAG_NOBUF |
 		     SCE_VFS_MOUNT_FLAG_NUMBERED,
-	.vfs_name = "dummy_ttyp_dev_fs",
+	.vfsName = "dummy_ttyp_dev_fs",
 	.misc = (SceVfsMountData *)&dummyTtyMountData,
 };
 

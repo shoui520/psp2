@@ -19,22 +19,22 @@ static int pfsRedirectVfsFini(SceVfsOpFiniArgs *arg)
 
 static int pfsRedirectVfsDevctl(SceVfsOpDevctlArg *arg)
 {
-	return pfsErrorToErrno(pfsRedirectDevctl(arg->mnt->data, arg->mnt, arg->dev, arg->cmd,
-						 arg->arg, arg->arg_len, arg->buf, arg->buf_len));
+	return pfsErrorToErrno(pfsRedirectDevctl(arg->mnt->pData, arg->mnt, arg->dev, arg->cmd,
+						 arg->arg, arg->argLen, arg->buf, arg->bufLen));
 }
 
 static int pfsRedirectVfsMount(SceVfsOpMountArgs *arg)
 {
 	SceVfsMount *mnt = arg->mnt;
 
-	mnt->available_entry_num = PFS_REDIRECT_ENTRIES;
-	mnt->default_io_cache_size = mnt->mnt_vnode->core.mnt->default_io_cache_size;
+	mnt->availableEntryNum = PFS_REDIRECT_ENTRIES;
+	mnt->defaultIoCacheSize = mnt->mntVnode->core.mnt->defaultIoCacheSize;
 	return 0;
 }
 
 static int pfsRedirectVfsUmount(SceVfsOpUmountArgs *arg)
 {
-	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->data;
+	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
 
 	if (arg->flags & 1)
 		pmi->flags |= PFS_PMI_NOT_MOUNTED;
@@ -50,14 +50,14 @@ static int pfsRedirectVfsSync(SceVfsOpSyncArgs *arg)
 
 static int pfsRedirectVfsSetRoot(SceVfsOpSetRootArgs *arg)
 {
-	return pfsErrorToErrno(pfsRedirectSetRoot(arg->mnt->data, arg->mnt, arg->unk, arg->vp));
+	return pfsErrorToErrno(pfsRedirectSetRoot(arg->mnt->pData, arg->mnt, arg->unused, arg->vp));
 }
 
 static int pfsRedirectVfsDecodePathElem(SceVfsOpDecodePathElemArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->data, arg->mnt, arg->path, arg->path2,
-						     arg->path3, arg->buf, arg->buf_len,
-						     arg->decode_len));
+	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->pData, arg->mnt, arg->path, arg->path2,
+						     arg->path3, arg->buf, arg->bufLen,
+						     arg->decodeLen));
 }
 
 static int pfsRedirectVopLookup(SceVopLookupArgs *arg)
@@ -173,8 +173,8 @@ static int pfsRedirectVopIoctl(SceVopIoctlArgs *arg)
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsRedirectIoctl(pmi, arg->vp, arg->file, arg->cmd, arg->in_data,
-						    arg->in_len, arg->out_data, arg->out_len));
+		return pfsErrorToErrno(pfsRedirectIoctl(pmi, arg->vp, arg->file, arg->cmd, arg->inData,
+						    arg->inLen, arg->outData, arg->outLen));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
@@ -212,7 +212,7 @@ static int pfsRedirectVopRmdir(SceVopRmdirArgs *arg)
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsRedirectVopDopen(SceVopDopenAgrs *arg)
+static int pfsRedirectVopDopen(SceVopDopenArgs *arg)
 {
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
@@ -284,8 +284,8 @@ static int pfsRedirectVopRename(SceVopRenameArgs *arg)
 	ScePfsPmi *pmi = pfsVnodePmi(arg->odvp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsRedirectRename(pmi, arg->odvp, arg->ovp, arg->old_path,
-						     arg->ndvp, arg->nvpp, arg->new_path));
+		return pfsErrorToErrno(pfsRedirectRename(pmi, arg->odvp, arg->ovp, arg->oldPath,
+						     arg->ndvp, arg->nvpp, arg->newPath));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
@@ -300,18 +300,18 @@ static int pfsRedirectVopSync(SceVopSyncArgs *arg)
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsRedirectVopWhiteout(SceVopWhiteoutArgs_vitasdk *args)
+static int pfsRedirectVopWhiteout(SceVopWhiteoutArgs *args)
 {
 	SceVopWhiteoutArgs *arg = (void *)args;
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 
 	if (pfsPmiIsMounted(pmi))
-		return pfsErrorToErrno(pfsRedirectWhiteout(pmi, arg->dvp, arg->vp, arg->old_path,
-						       arg->new_path, arg->a4, arg->a5));
+		return pfsErrorToErrno(pfsRedirectWhiteout(pmi, arg->dvp, arg->vp, arg->oldPath,
+						       arg->newPath, arg->a4, arg->a5));
 	return pfsErrorToErrno(SCE_ERROR_ERRNO_ENODEV);
 }
 
-static int pfsRedirectVopCleanup(SceVopCleanupArgs_vitasdk *args)
+static int pfsRedirectVopCleanup(SceVopCleanupArgs *args)
 {
 	SceVopCleanupArgs *arg = (void *)args;
 	return pfsErrorToErrno(pfsRedirectCleanup(pfsVnodePmi(arg->vp), arg->vp, arg->file,

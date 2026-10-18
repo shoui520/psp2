@@ -152,7 +152,7 @@ int iof_daemon_main(SceSize args, void *argp)
 		if (data == NULL) {
 			ret = SCE_ERROR_ERRNO_EINVAL;
 		} else {
-			param.dev = data->assign_name;
+			param.dev = data->assignName;
 			param.cmd = IOF_DAEMON_DEVCTL_FLUSH;
 			param.indata = NULL;
 			param.inlen = 0;

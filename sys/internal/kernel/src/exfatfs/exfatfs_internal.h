@@ -2,6 +2,7 @@
 #pragma once
 
 #include <threadmgr/fast_mutex_object.h>
+#include <threadmgr/threadmgr.h>
 #include <iofilemgr/vfs.h>
 #include <exfatfs/fat_boot.h>
 #include <exfatfs/exfat_directory.h>

@@ -553,7 +553,7 @@ free:
 
 int _exfat_lock_shared_resource(const char *caller)
 {
-	int result = lockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	int result = lockFastMutex(&g_sharedResourceMutex);
 
 #if FW_VERSION >= 0x04000000
 	if (result < 0)
@@ -565,7 +565,7 @@ int _exfat_lock_shared_resource(const char *caller)
 
 int _exfat_unlock_shared_resource(const char *caller)
 {
-	int result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	int result = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 
 #if FW_VERSION >= 0x04000000
 	if (result < 0)
@@ -799,7 +799,7 @@ int sceExfatfsInit(void)
 {
 	int result;
 
-	result = sceKernelInitializeFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex,
+	result = sceKernelInitializeFastMutex(&g_sharedResourceMutex,
 		"SceExfatfsSharedResource", 0x2000, 0);
 	if (result < 0) {
 #if FW_VERSION >= 0x04000000
@@ -987,7 +987,7 @@ extern SceUInt32 getInitializedFnodeCount(SceExfatfsSharedResource *sharedResour
 
 int _used_resource_count(SceVfsMount *mount)
 {
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	SceExfatfsFileSystem *fileSystem = NULL;
 	SceUInt32 fileCount;
 	SceUInt32 fnodeCount;
@@ -1050,7 +1050,7 @@ int _used_resource_count(SceVfsMount *mount)
 		mountIndex = -1;
 	if (mountIndex >= 0)
 		fileSystem = &g_sharedResource.fileSystems[mountIndex];
-	result = lockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	result = lockFastMutex(&g_sharedResourceMutex);
 	if (result < 0) {
 #if FW_VERSION >= 0x04000000
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
@@ -1064,7 +1064,7 @@ int _used_resource_count(SceVfsMount *mount)
 	}
 	fileCount = getInitializedFileCount(&g_sharedResource);
 #if FW_VERSION >= 0x04000000
-	lockResult = sceKernelTryLockFastMutex((SceKernelFastMutex *)&fileSystem->drive->fastmutex);
+	lockResult = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 	if (lockResult != (int)0x80028162) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1261, "_used_fd_count",
 			"%s: unexpected result[%#x]\n", "_used_fd_count", lockResult);
@@ -1085,7 +1085,7 @@ int _used_resource_count(SceVfsMount *mount)
 	result = usedFiles + usedFnodes;
 unlock:
 	{
-		int unlockResult = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+		int unlockResult = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 
 #if FW_VERSION >= 0x04000000
 		if (unlockResult < 0)
@@ -1169,7 +1169,7 @@ void _free_all_cluster_cache(SceExfatfsDrive *drive)
 		++mount;
 	}
 	fnodeCount = getInitializedFnodeCount(&g_sharedResource);
-	result = lockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	result = lockFastMutex(&g_sharedResourceMutex);
 	if (result < 0) {
 #if FW_VERSION >= 0x04000000
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
@@ -1190,7 +1190,7 @@ void _free_all_cluster_cache(SceExfatfsDrive *drive)
 				freeCommonHeapMemory((int)fnode->fileSystem->drive, cache);
 		}
 	}
-	result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	result = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 #if FW_VERSION >= 0x04000000
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 119, "_exfat_unlock_shared_resource",
@@ -2094,7 +2094,7 @@ freePath:
 				"%s: unexpected type(%d), fnode[%p], StartCluster[%#lx], Size[%#llx], mode[%#o]\n",
 				"sceExfatfsVopLookup", fnode->Stat.st_type, fnode, fnode->Stat.StartCluster,
 				fnode->Stat.Size, fnode->Stat.st_mode);
-		locked = lockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+		locked = lockFastMutex(&g_sharedResourceMutex);
 		if (locked < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
 				"%s: sceKernelLockFastMutex failed[%#x]\n", "_check_alias_fnode", locked);
@@ -2150,7 +2150,7 @@ freePath:
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 139, "_print_fnode",
 					"), FilePath[%p], FileName[%p]\n", alias->FilePath, alias->FileName);
 			}
-			locked = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+			locked = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 			if (locked < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 119, "_exfat_unlock_shared_resource",
 					"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_check_alias_fnode", locked);
@@ -4819,7 +4819,7 @@ int sceExfatfsVopSync(SceExfatfsFnode *fnode, SceUInt32 fd, int flags)
 			goto finish;
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 5845, "_exfatfs_sync_device_file",
 			"%s: sceVopSync failed[%#x], assignName(%s), device_vnode[%p], device_file[%p]\n",
-			"_exfatfs_sync_device_file", result, mount->assign_name, deviceVnode, deviceFile);
+			"_exfatfs_sync_device_file", result, mount->assignName, deviceVnode, deviceFile);
 		drive = fileSystem->drive;
 		if (!drive)
 			goto finish;
@@ -4999,7 +4999,7 @@ int _exfatfs_flush_all_data(SceExfatfsDrive *drive)
 	flushFileSystem = &g_sharedResource.fileSystems[index];
 	if ((flushFileSystem->mount_mode & 255) != 1) {
 #if FW_VERSION >= 0x04000000
-		result = sceKernelTryLockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
+		result = sceKernelTryLockFastMutex(&drive->fastmutex);
 		if (result != (int)0x80028162) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 6154, "%s: unexpected result[%#x]\n",
 				"_exfatfs_flush_all_data", result);
@@ -5084,7 +5084,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 	if (!mode) {
 		fileCount = getInitializedFileCount(&g_sharedResource);
 #if FW_VERSION >= 0x04000000
-		result = sceKernelTryLockFastMutex((SceKernelFastMutex *)&fileSystem->drive->fastmutex);
+		result = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 		if (result != (int)0x80028162) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1261, "_used_fd_count",
 				"%s: unexpected result[%#x]\n", "_used_fd_count", result);
@@ -5134,7 +5134,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 			fileSystem->whiteout_directory = whiteout;
 		}
 	}
-	result = lockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	result = lockFastMutex(&g_sharedResourceMutex);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 99, "_exfat_lock_shared_resource",
 			"%s: sceKernelLockFastMutex failed[%#x]\n", "_disconnect_drive", result);
@@ -5144,7 +5144,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 	}
 	fileCount = getInitializedFileCount(&g_sharedResource);
 #if FW_VERSION >= 0x04000000
-	result = sceKernelTryLockFastMutex((SceKernelFastMutex *)&fileSystem->drive->fastmutex);
+	result = sceKernelTryLockFastMutex(&fileSystem->drive->fastmutex);
 	if (result != (int)0x80028162) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1400, "_disconnect_all_fd",
 			"%s: unexpected result[%#x]\n", "_disconnect_all_fd", result);
@@ -5186,7 +5186,7 @@ int sceExfatfsVopUmount(SceExfatfsDrive *drive, int mode)
 				fnode->fileSystem = NULL;
 		}
 	}
-	result = sceKernelUnlockFastMutex((SceKernelFastMutex *)&g_sharedResourceMutex);
+	result = sceKernelUnlockFastMutex(&g_sharedResourceMutex);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 119, "_exfat_unlock_shared_resource",
 			"%s: sceKernelUnlockFastMutex failed[%#x]\n", "_disconnect_drive", result);

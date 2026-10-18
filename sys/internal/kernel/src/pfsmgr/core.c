@@ -96,7 +96,7 @@ static inline int pfsQuotaCheckGrow(ScePfsPmi *pmi, ScePfsCrypt *ctx, SceOff siz
 int pfsCoreFind(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 *index, SceUInt16 *attr,
 		SceUInt64 *size)
 {
-	ScePfsVd *vd = node->vp->core.node_data;
+	ScePfsVd *vd = node->vp->core.nodeData;
 	ScePfsDbKey key;
 
 	if (vd == NULL)
@@ -116,7 +116,7 @@ int pfsVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
 	SceVfsVnode *vp;
 	int ret;
 
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, vpp);
 	if (ret != 0)
 		return ret;
@@ -140,15 +140,15 @@ int pfsVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
 	(*vpp)->core.dd = dvp;
 	(*vpp)->core.mnt = mnt;
 	vp = *vpp;
-	vp->core.node_data = vd;
+	vp->core.nodeData = vd;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.type = lowerVp->core.type;
-	vp->core.acl_data[0] = attr;
-	vp->core.acl_data[1] = 0;
+	vp->core.aclData[0] = attr;
+	vp->core.aclData[1] = 0;
 	*(SceUInt64 *)vp->core.fid = *(SceUInt64 *)lowerVp->core.fid;
 	vp->core.size = size;
-	vp->core.mnt_opt = lowerVp->core.mnt_opt | 0x10000;
-	vp->core.ref_count = 1;
+	vp->core.mntOpt = lowerVp->core.mntOpt | 0x10000;
+	vp->core.refCount = 1;
 	vfsUnlockVnode(lowerVp);
 	return 0;
 }
@@ -156,7 +156,7 @@ int pfsVnodeCreate(SceVfsVnode **vpp, SceVfsVnode *dvp, SceVfsVnode *lowerVp,
 int pfsCoreCreateEntry(ScePfsPmi *pmi, ScePfsNode *node, int mode, int icvMode,
 		       SceUInt32 *index, SceUInt16 attrFlags, SceUInt16 *attr)
 {
-	ScePfsVd *vd = node->vp->core.node_data;
+	ScePfsVd *vd = node->vp->core.nodeData;
 	SceUInt8 hash[PFS_HASH_SIZE];
 	ScePfsDbKey key;
 	SceVfsVnode *lowerVp;
@@ -189,7 +189,7 @@ int pfsCoreMap(ScePfsPmi *pmi, SceVfsVnode *vp, ScePfsFi *fi, int cmd, ScePfsMap
 	       ScePfsBlockRequest *map)
 {
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	ScePfsListNode *node;
 	ScePfsCrypt ctx;
 	SceOff offset, first, last;
@@ -252,7 +252,7 @@ int pfsCoreReadData(ScePfsFi *fi, ScePfsPmi *pmi, void *buf, SceSize nbyte, SceO
 {
 	SceVfsVnode *vp = fi->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	ScePfsCrypt ctx;
 	int ret;
 
@@ -274,7 +274,7 @@ int pfsCoreReadData(ScePfsFi *fi, ScePfsPmi *pmi, void *buf, SceSize nbyte, SceO
 /* take the size of the underlying file into vp and files.db when it changed */
 int pfsCoreUpdateSize(ScePfsPmi *pmi, SceVfsVnode *vp)
 {
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceVfsVnode *lowerVp = vd->lowerVp;
 	char name[PFS_NAME_MAX];
 	SceSize nameLen;
@@ -286,7 +286,7 @@ int pfsCoreUpdateSize(ScePfsPmi *pmi, SceVfsVnode *vp)
 
 	vfsGetVnodeName(vp, name, sizeof(name), &nameLen);
 	path.name = name;
-	path.name_length = strnlen(name, sizeof(name) - 1);
+	path.nameLength = strnlen(name, sizeof(name) - 1);
 	path.path = NULL;
 	memset(&stat, 0, sizeof(stat));
 	vfsLockVnode(lowerVp);
@@ -321,7 +321,7 @@ int pfsCoreRemoveEntry(ScePfsPmi *pmi, SceVfsVnode *dvp, ScePfsNode *node, SceUI
 	if (attr & PFS_ATTR_ICV_RENAMED) {
 		dir.vp = pmi->icvDirVp;
 		dir.name = NULL;
-		vd = node->vp->core.node_data;
+		vd = node->vp->core.nodeData;
 		if (vd != NULL) {
 			snprintf(name, sizeof(name), "%08x.icv", index);
 			icv.vp = vd->icvVp;
@@ -330,7 +330,7 @@ int pfsCoreRemoveEntry(ScePfsPmi *pmi, SceVfsVnode *dvp, ScePfsNode *node, SceUI
 		}
 	} else {
 		pfsIndexFree(pmi, index);
-		vd = dvp->core.node_data;
+		vd = dvp->core.nodeData;
 		if (vd != NULL) {
 			key.name = node->name;
 			key.parentIndex = vd->index;
@@ -379,7 +379,7 @@ int pfsCoreMount(ScePfsPmi *pmi, ScePfsNode *root)
 	ScePfsNode node, dir;
 	int ret, createdSceDir, createdDb;
 
-	ret = sceVfsOpDevctl(root->vp->core.mnt, root->vp->core.mnt->mnt_data->assign_name,
+	ret = sceVfsOpDevctl(root->vp->core.mnt, root->vp->core.mnt->mntData->assignName,
 			      0x3001, NULL, 0, devInfo, sizeof(devInfo));
 	if (ret == 0)
 		pmi->clusterSize = devInfo[4];
@@ -556,7 +556,7 @@ int pfsCoreLookup(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 flags)
 {
 	SceVfsVnode *dvp = node->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = dvp->core.node_data;
+	ScePfsVd *vd = dvp->core.nodeData;
 	SceVfsVnode *lowerVp, *icvVp, *vp;
 	SceUInt64 size, oldDisk, newDisk, icvDisk;
 	char name[PFS_NAME_MAX];
@@ -624,7 +624,7 @@ cleanup:
 			pfsNodeInactive(&lower);
 		}
 		dvp = node->vp;
-		vd = dvp->core.node_data;
+		vd = dvp->core.nodeData;
 		if (vd != NULL) {
 			lowerVp = vd->lowerVp;
 			pfsVnodeDiskSize(pmi, dvp, &oldDisk);
@@ -657,7 +657,7 @@ int pfsCoreCreate(ScePfsPmi *pmi, ScePfsNode *node, int mode, SceUInt32 icvMode)
 {
 	SceVfsVnode *dvp = node->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = dvp->core.node_data;
+	ScePfsVd *vd = dvp->core.nodeData;
 	SceUInt64 size = 0, oldDisk, dirDisk, fileDisk;
 	SceVfsVnode *lowerDvp, *lowerVp, *icvVp, *vp;
 	char name[PFS_NAME_MAX];
@@ -715,7 +715,7 @@ int pfsCoreCreate(ScePfsPmi *pmi, ScePfsNode *node, int mode, SceUInt32 icvMode)
 			if (ret == 0)
 				goto done;
 		}
-		pfsBufferListFree(&g_pfsVdBufferList, vp->core.node_data);
+		pfsBufferListFree(&g_pfsVdBufferList, vp->core.nodeData);
 		vfsFreeVnode(vp);
 	}
 	if (info->icvType != PFS_ICV_UNICV) {
@@ -747,7 +747,7 @@ int pfsCoreOpen(ScePfsFi *fi, ScePfsPmi *pmi, ScePfsNode *node, int flags)
 {
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
 	SceVfsVnode *vp = node->vp;
-	ScePfsVd *vd = vp->core.node_data, *dvd;
+	ScePfsVd *vd = vp->core.nodeData, *dvd;
 	SceUInt8 hash[PFS_HASH_SIZE];
 	char name[PFS_NAME_MAX];
 	ScePfsCrypt ctx;
@@ -773,7 +773,7 @@ int pfsCoreOpen(ScePfsFi *fi, ScePfsPmi *pmi, ScePfsNode *node, int flags)
 		return SCE_ERROR_ERRNO_EINVAL;
 	pfsHashCopy(vd->hash, hash);
 
-	dvd = node->vp->core.node_data;
+	dvd = node->vp->core.nodeData;
 	if (pmi->mode == 10 && (unsigned int)((flags & 3) - 2) < 2) {
 		key.name = node->name;
 		key.parentIndex = dvd->parentIndex;
@@ -837,7 +837,7 @@ static inline int pfsCoreCommit(ScePfsPmi *pmi, ScePfsFi *fi, ScePfsCrypt *ctx,
 				SceUInt64 oldDisk)	/* name unknown */
 {
 	SceVfsVnode *vp = fi->vp;
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceUInt8 hash[PFS_HASH_SIZE], dbHash[PFS_HASH_SIZE];
 	char name[PFS_NAME_MAX];
 	SceUInt64 dbSize, size, newDisk;
@@ -873,7 +873,7 @@ int pfsCoreWrite(ScePfsFi *fi, ScePfsPmi *pmi, const void *buf, SceSize nbyte, S
 {
 	SceVfsVnode *vp = fi->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceUInt64 oldDisk;
 	ScePfsCrypt ctx;
 	SceOff size, end;
@@ -958,18 +958,18 @@ int pfsCoreRemove(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node)
 
 	if (pmi->mode == 3)
 		return SCE_PFS_ERROR_READ_ONLY;
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (dvp == NULL) {
 		pfsVnodeDiskSize(pmi, vp, &fileDisk);
 		lowerDir.vp = NULL;
 	} else {
-		if (dvp->core.node_data == NULL)
+		if (dvp->core.nodeData == NULL)
 			return SCE_ERROR_ERRNO_EINVAL;
 		pfsVnodeDiskSize(pmi, dvp, &oldDir);
 		pfsVnodeDiskSize(pmi, vp, &fileDisk);
-		lowerDir.vp = ((ScePfsVd *)dvp->core.node_data)->lowerVp;
+		lowerDir.vp = ((ScePfsVd *)dvp->core.nodeData)->lowerVp;
 	}
 	lower.vp = vd->lowerVp;
 	lower.name = node->name;
@@ -984,7 +984,7 @@ int pfsCoreRemove(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node)
 		if (ret != 0)
 			return ret;
 		pfsCoreRemoveEntry(pmi, dvp, node, vd->index, vd->attr);
-		if (dvp->core.node_data == NULL)
+		if (dvp->core.nodeData == NULL)
 			return SCE_ERROR_ERRNO_EINVAL;
 		pfsVnodeDiskSize(pmi, dvp, &newDir);
 	}
@@ -997,7 +997,7 @@ int pfsCoreMkdir(ScePfsPmi *pmi, ScePfsNode *node, int mode)
 {
 	SceVfsVnode *dvp = node->vp;
 	const ScePfsModeInfo *info = pfsModeInfo(pmi->mode);
-	ScePfsVd *vd = dvp->core.node_data;
+	ScePfsVd *vd = dvp->core.nodeData;
 	SceUInt64 size = PFS_PAGE_SIZE, oldDisk, dirDisk, newDisk;
 	SceVfsVnode *lowerDvp, *lowerVp, *icvVp, *vp;
 	char name[PFS_NAME_MAX];
@@ -1094,8 +1094,8 @@ int pfsCoreRmdir(ScePfsPmi *pmi, ScePfsNode *dir, ScePfsNode *node)
 
 	if (pmi->mode == 3)
 		return SCE_PFS_ERROR_READ_ONLY;
-	vd = vp->core.node_data;
-	if (vd == NULL || (dvd = dvp->core.node_data) == NULL)
+	vd = vp->core.nodeData;
+	if (vd == NULL || (dvd = dvp->core.nodeData) == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 	pfsVnodeDiskSize(pmi, dvp, &oldDir);
 	pfsVnodeDiskSize(pmi, vp, &oldDisk);
@@ -1133,9 +1133,9 @@ int pfsCoreRename(ScePfsPmi *pmi, ScePfsNode *oldDir, ScePfsNode *oldNode, ScePf
 
 	if (pmi->mode == 3)
 		return SCE_PFS_ERROR_READ_ONLY;
-	odvd = odvp->core.node_data;
-	ovd = ovp->core.node_data;
-	ndvd = ndvp->core.node_data;
+	odvd = odvp->core.nodeData;
+	ovd = ovp->core.nodeData;
+	ndvd = ndvp->core.nodeData;
 	if (ovd == NULL || odvd == NULL || ndvd == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 	if (odvp == ndvp) {
@@ -1193,22 +1193,22 @@ int pfsCoreRename(ScePfsPmi *pmi, ScePfsNode *oldDir, ScePfsNode *oldNode, ScePf
 	/* the open files of the old vnode move to the new one */
 	vfsLockVnode(lowerNvp);
 	vfsLockVnode(lowerOvp);
-	lowerNvp->core.fd_list = lowerOvp->core.fd_list;
-	lowerNvp->core.fd_num = lowerOvp->core.fd_num;
+	lowerNvp->core.fdList = lowerOvp->core.fdList;
+	lowerNvp->core.fdNum = lowerOvp->core.fdNum;
 	lowerNvp->core.bc = lowerOvp->core.bc;
-	for (file = lowerOvp->core.fd_list; file != NULL; file = file->next)
-		file->vp = lowerNvp;
-	lowerOvp->core.fd_list = NULL;
-	lowerOvp->core.fd_num = 0;
+	for (file = lowerOvp->core.fdList; file != NULL; file = file->next)
+		file->vnode = lowerNvp;
+	lowerOvp->core.fdList = NULL;
+	lowerOvp->core.fdNum = 0;
 	lowerOvp->core.bc = NULL;
 	vfsUnlockVnode(lowerOvp);
 	vfsUnlockVnode(lowerNvp);
 	if (icvVp != NULL) {
 		vfsLockVnode(icvVp);
-		icvVp->core.ref_count++;
+		icvVp->core.refCount++;
 		vfsUnlockVnode(icvVp);
 	}
-	for (file = ovp->core.fd_list; file != NULL; file = file->next) {
+	for (file = ovp->core.fdList; file != NULL; file = file->next) {
 		((ScePfsFi *)file->fd)->vp = nvp;
 		((ScePfsFi *)file->fd)->lower.vp = lowerNvp;
 	}
@@ -1241,7 +1241,7 @@ removeNew:
 
 int pfsCoreGetAttr(ScePfsPmi *pmi, ScePfsNode *node, SceUInt16 *attr, SceUInt64 *size)
 {
-	ScePfsVd *vd = node->vp->core.node_data;
+	ScePfsVd *vd = node->vp->core.nodeData;
 	ScePfsDbKey key;
 	int ret;
 
@@ -1269,7 +1269,7 @@ int pfsCoreTruncate(ScePfsFi *fi, ScePfsPmi *pmi, SceOff newSize)
 
 	if (pmi->mode == 3)
 		return SCE_PFS_ERROR_READ_ONLY;
-	if (newSize < 0 || (vd = vp->core.node_data) == NULL)
+	if (newSize < 0 || (vd = vp->core.nodeData) == NULL)
 		return SCE_ERROR_ERRNO_EINVAL;
 	pfsVnodeDiskSize(pmi, vp, &oldDisk);
 	if (vd->pages.next != &vd->pages)
@@ -1310,7 +1310,7 @@ out:
 
 int pfsCoreSetAttr(ScePfsPmi *pmi, ScePfsNode *node, SceUInt32 attr)
 {
-	ScePfsVd *vd = node->vp->core.node_data;
+	ScePfsVd *vd = node->vp->core.nodeData;
 	SceUInt16 newAttr = attr;
 	ScePfsDbKey key;
 
@@ -1338,7 +1338,7 @@ int pfsCoreVnodeSync(ScePfsFi *fi, ScePfsPmi *pmi, int flags)
 
 int pfsCoreDopen(ScePfsFi *fi, ScePfsPmi *pmi, SceVfsVnode *vp, SceVfsPath *path)
 {
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	SceVfsVnode *lowerVp;
 	SceVfsFile *file;
 	SceUID fd;
@@ -1471,7 +1471,7 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 		    SceVfsPath *newPath, SceUInt32 a4, SceUInt32 a5)
 {
 	const ScePfsModeInfo *info;
-	ScePfsVd *vd = vp->core.node_data, *dvd = dvp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData, *dvd = dvp->core.nodeData;
 	char oldName[PFS_NAME_MAX], newName[PFS_NAME_MAX];
 	SceVfsPath icvOld, icvNew;
 	SceVfsVnode *lowerDvp, *lowerVp;
@@ -1496,7 +1496,7 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 		return ret;
 
 	info = pfsModeInfo(pmi->mode);
-	dvd = dvp->core.node_data;
+	dvd = dvp->core.nodeData;
 	if (dvd != NULL) {
 		key.parentIndex = dvd->index;
 		key.name = oldPath->name;
@@ -1506,12 +1506,12 @@ int pfsCoreWhiteout(ScePfsPmi *pmi, SceVfsVnode *dvp, SceVfsVnode *vp, SceVfsPat
 			/* keep the icv file under a fresh name */
 			snprintf(oldName, sizeof(oldName) - 1, "%08x.icv", vd->index);
 			icvOld.name = oldName;
-			icvOld.name_length = strnlen(oldName, sizeof(oldName) - 1);
+			icvOld.nameLength = strnlen(oldName, sizeof(oldName) - 1);
 			index = vd->index;
 			for (;;) {
 				snprintf(newName, sizeof(newName) - 1, "%08x.icv", index);
 				icvNew.name = newName;
-				icvNew.name_length = strnlen(newName, sizeof(newName) - 1);
+				icvNew.nameLength = strnlen(newName, sizeof(newName) - 1);
 				vfsLockVnode(pmi->icvDirVp);
 				vfsLockVnode(vd->icvVp);
 				ret = sceVopWhiteout(pmi->icvDirVp, vd->icvVp, &icvOld, &icvNew, a4,

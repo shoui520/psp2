@@ -183,7 +183,7 @@ typedef struct ScePfsPmi {
 	SceUInt32 clusterSize;			/* name unknown: of the underlying mount */
 } ScePfsPmi;
 
-/* a PFS vnode's node_data (in "ScePfsVdBufferList"): the vnode it covers */
+/* a PFS vnode's nodeData (in "ScePfsVdBufferList"): the vnode it covers */
 typedef struct ScePfsVd {
 	SceVfsVnode *lowerVp;			/* in the underlying file system */
 	SceVfsVnode *icvVp;			/* its "%08x.icv" file, with per-file icv */
@@ -1169,7 +1169,7 @@ int pfsPathResolve(ScePfsPmi *pmi, ScePfsVd *vd, const char *path);
 
 static inline ScePfsPmi *pfsVnodePmi(SceVfsVnode *vp)	/* name unknown */
 {
-	return (ScePfsPmi *)vp->core.mnt->data;
+	return (ScePfsPmi *)vp->core.mnt->pData;
 }
 
 static inline int pfsPmiIsMounted(ScePfsPmi *pmi)	/* name unknown */

@@ -12,14 +12,14 @@
 
 static inline ScePfsVd *pfsVnodeVd(SceVfsVnode *vp)	/* name unknown */
 {
-	return (ScePfsVd *)vp->core.node_data;
+	return (ScePfsVd *)vp->core.nodeData;
 }
 
 /* outside every acid directory, or an acid directory itself */
 static inline int pfsAcIsOwn(SceVfsVnode *vp)	/* name unknown */
 {
 	return pfsVnodeVd(vp)->slot == (SceUInt32)-1 ||
-	       ((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR);
+	       ((SceUInt16)vp->core.aclData[0] & PFS_ATTR_ACID_DIR);
 }
 
 static inline int pfsAcIsAcMode(SceUInt16 mode)	/* name unknown */
@@ -80,16 +80,16 @@ static int dev_ac_fini(SceVfsOpFiniArgs *arg)
 
 static int dev_ac_devctl(SceVfsOpDevctlArg *arg)
 {
-	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->data;
+	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
 	int ret;
 
 	if (!pfsPmiIsMounted(pmi)) {
 		ret = SCE_ERROR_ERRNO_ENODEV;
 	} else if (arg->cmd != PFS_DEVCTL_GET_ACID_DIRS) {
 		return pfsErrorToErrno(pfsGdsdDevctl(pmi, arg->mnt, arg->dev, arg->cmd, arg->arg,
-						     arg->arg_len, arg->buf, arg->buf_len));
-	} else if (arg->arg == NULL && arg->arg_len == 0 && arg->buf != NULL &&
-		   arg->buf_len == sizeof(ScePfsAcidDirs)) {
+						     arg->argLen, arg->buf, arg->bufLen));
+	} else if (arg->arg == NULL && arg->argLen == 0 && arg->buf != NULL &&
+		   arg->bufLen == sizeof(ScePfsAcidDirs)) {
 		ret = pfsAcidGetDirs(pmi, arg->buf);
 	} else {
 		return pfsErrorToErrno(SCE_PFS_ERROR_INVALID_ARG);
@@ -99,12 +99,12 @@ static int dev_ac_devctl(SceVfsOpDevctlArg *arg)
 
 static int dev_ac_mount(SceVfsOpMountArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdMount(arg->mnt->data, arg->mnt, arg->dev_file_path));
+	return pfsErrorToErrno(pfsGdsdMount(arg->mnt->pData, arg->mnt, arg->devFilePath));
 }
 
 static int dev_ac_umount(SceVfsOpUmountArgs *arg)
 {
-	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->data;
+	ScePfsPmi *pmi = (ScePfsPmi *)arg->mnt->pData;
 	ScePfsListNode *node;
 	int ret;
 
@@ -131,19 +131,19 @@ static int dev_ac_umount(SceVfsOpUmountArgs *arg)
 
 static int dev_ac_sync(SceVfsOpSyncArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdSync(arg->mnt->data, arg->mnt, arg->flags));
+	return pfsErrorToErrno(pfsGdsdSync(arg->mnt->pData, arg->mnt, arg->flags));
 }
 
 static int dev_ac_set_root(SceVfsOpSetRootArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdSetRoot(arg->mnt->data, arg->mnt, arg->unk, arg->vp));
+	return pfsErrorToErrno(pfsGdsdSetRoot(arg->mnt->pData, arg->mnt, arg->unused, arg->vp));
 }
 
 static int dev_ac_decode_path_elem(SceVfsOpDecodePathElemArgs *arg)
 {
-	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->data, arg->mnt, arg->path,
+	return pfsErrorToErrno(pfsGdsdDecodePathElem(arg->mnt->pData, arg->mnt, arg->path,
 						     arg->path2, arg->path3, arg->buf,
-						     arg->buf_len, arg->decode_len));
+						     arg->bufLen, arg->decodeLen));
 }
 
 static int dev_ac_lookup(SceVopLookupArgs *arg)
@@ -174,7 +174,7 @@ static int dev_ac_lookup(SceVopLookupArgs *arg)
 			goto out;
 		pfsVnodeVd(*arg->vpp)->slot = pfsVnodeVd(arg->dvp)->slot;
 	}
-	if ((SceUInt16)(*arg->vpp)->core.acl_data[0] & PFS_ATTR_ACID_DIR) {
+	if ((SceUInt16)(*arg->vpp)->core.aclData[0] & PFS_ATTR_ACID_DIR) {
 		vd = pfsVnodeVd(*arg->vpp);
 		vd->slot = vd->index;
 		vd->index = 0;
@@ -196,13 +196,13 @@ static int dev_ac_open(SceVopOpenArgs *arg)
 	} else {
 		ret = pfsAcidFind(&acid, pmi, arg->vp);
 		if (ret == 0) {
-			arg->vp->core.mnt_opt |= 0x10000;
+			arg->vp->core.mntOpt |= 0x10000;
 			pfsAcResolve(acid, arg->vp, arg->path);
 			ret = pfsGdsdOpen(acid, arg->vp, arg->file, arg->path, arg->flags);
 			if (ret == 0)
 				pfsAcOpened(acid, 1);
 		} else if (ret == SCE_PFS_ERROR_NO_ACID) {
-			arg->vp->core.mnt_opt &= ~0x10000;
+			arg->vp->core.mntOpt &= ~0x10000;
 			pfsAcStandIn(&standIn, pmi);
 			ret = pfsRedirectOpen(&standIn, arg->vp, arg->file, arg->path, arg->flags);
 		}
@@ -423,7 +423,7 @@ static int dev_ac_ioctl(SceVopIoctlArgs *arg)
 		ret = pfsAcidDirSet(pmi, arg->vp);
 		break;
 	case PFS_IOCTL_ACID_DIR_MOUNT:
-		ret = pfsAcidDirMount(pmi, arg->vp, arg->in_data, arg->in_len);
+		ret = pfsAcidDirMount(pmi, arg->vp, arg->inData, arg->inLen);
 		break;
 	case PFS_IOCTL_ACID_DIR_SEAL:
 		ret = pfsAcidDirSeal(pmi, arg->vp);
@@ -440,14 +440,14 @@ static int dev_ac_ioctl(SceVopIoctlArgs *arg)
 				if (ret == SCE_PFS_ERROR_NO_ACID) {
 					pfsAcStandIn(&standIn, pmi);
 					ret = pfsRedirectIoctl(&standIn, arg->vp, arg->file, arg->cmd,
-							       arg->in_data, arg->in_len,
-							       arg->out_data, arg->out_len);
+							       arg->inData, arg->inLen,
+							       arg->outData, arg->outLen);
 				}
 				break;
 			}
 		}
-		ret = pfsGdsdIoctl(acid, arg->vp, arg->file, arg->cmd, arg->in_data, arg->in_len,
-				   arg->out_data, arg->out_len);
+		ret = pfsGdsdIoctl(acid, arg->vp, arg->file, arg->cmd, arg->inData, arg->inLen,
+				   arg->outData, arg->outLen);
 		break;
 	}
 out:
@@ -541,7 +541,7 @@ static int dev_ac_rmdir(SceVopRmdirArgs *arg)
 	return pfsErrorToErrno(ret);
 }
 
-static int dev_ac_dopen(SceVopDopenAgrs *arg)
+static int dev_ac_dopen(SceVopDopenArgs *arg)
 {
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
 	ScePfsPmi standIn, *acid;
@@ -720,24 +720,24 @@ static int dev_ac_rename(SceVopRenameArgs *arg)
 	if (!pfsPmiIsMounted(pmi)) {
 		ret = SCE_ERROR_ERRNO_ENODEV;
 	} else if (pfsAcIsOwn(arg->odvp)) {
-		ret = pfsGdsdRename(pmi, arg->odvp, arg->ovp, arg->old_path, arg->ndvp, arg->nvpp,
-				    arg->new_path);
+		ret = pfsGdsdRename(pmi, arg->odvp, arg->ovp, arg->oldPath, arg->ndvp, arg->nvpp,
+				    arg->newPath);
 	} else {
 		ret = pfsAcidFind(&acid, pmi, arg->odvp);
 		if (ret == 0) {
-			pfsAcResolveDir(acid, arg->odvp, arg->old_path);
-			pfsAcResolve(acid, arg->ovp, arg->old_path);
+			pfsAcResolveDir(acid, arg->odvp, arg->oldPath);
+			pfsAcResolve(acid, arg->ovp, arg->oldPath);
 			if (arg->ndvp != NULL)
-				pfsAcResolveDir(acid, arg->ndvp, arg->new_path);
-			ret = pfsGdsdRename(acid, arg->odvp, arg->ovp, arg->old_path, arg->ndvp,
-					    arg->nvpp, arg->new_path);
+				pfsAcResolveDir(acid, arg->ndvp, arg->newPath);
+			ret = pfsGdsdRename(acid, arg->odvp, arg->ovp, arg->oldPath, arg->ndvp,
+					    arg->nvpp, arg->newPath);
 		} else if (ret == SCE_PFS_ERROR_NO_ACID) {
 			if (arg->odvp != arg->ndvp) {
 				ret = SCE_PFS_ERROR_ACID_CROSS;
 			} else {
 				pfsAcStandIn(&standIn, pmi);
-				ret = pfsRedirectRename(&standIn, arg->odvp, arg->ovp, arg->old_path,
-							arg->odvp, arg->nvpp, arg->new_path);
+				ret = pfsRedirectRename(&standIn, arg->odvp, arg->ovp, arg->oldPath,
+							arg->odvp, arg->nvpp, arg->newPath);
 				if (ret == 0)
 					pfsVnodeVd(*arg->nvpp)->slot = pfsVnodeVd(arg->ndvp)->slot;
 			}
@@ -770,7 +770,7 @@ static int dev_ac_fsync(SceVopSyncArgs *arg)
 	return pfsErrorToErrno(ret);
 }
 
-static int dev_ac_whiteout(SceVopWhiteoutArgs_vitasdk *args)
+static int dev_ac_whiteout(SceVopWhiteoutArgs *args)
 {
 	SceVopWhiteoutArgs *arg = (void *)args;
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);
@@ -786,20 +786,20 @@ static int dev_ac_whiteout(SceVopWhiteoutArgs_vitasdk *args)
 	} else {
 		ret = pfsAcidFind(&acid, pmi, arg->vp);
 		if (ret == 0) {
-			ret = pfsGdsdWhiteout(acid, arg->dvp, arg->vp, arg->old_path, arg->new_path,
+			ret = pfsGdsdWhiteout(acid, arg->dvp, arg->vp, arg->oldPath, arg->newPath,
 					      arg->a4, arg->a5);
 			goto out;
 		}
 		if (ret != SCE_PFS_ERROR_NO_ACID)
 			goto out;
 	}
-	ret = pfsRedirectWhiteout(acid, arg->dvp, arg->vp, arg->old_path, arg->new_path, arg->a4,
+	ret = pfsRedirectWhiteout(acid, arg->dvp, arg->vp, arg->oldPath, arg->newPath, arg->a4,
 				  arg->a5);
 out:
 	return pfsErrorToErrno(ret);
 }
 
-static int dev_ac_cleanup(SceVopCleanupArgs_vitasdk *args)
+static int dev_ac_cleanup(SceVopCleanupArgs *args)
 {
 	SceVopCleanupArgs *arg = (void *)args;
 	ScePfsPmi *pmi = pfsVnodePmi(arg->vp);

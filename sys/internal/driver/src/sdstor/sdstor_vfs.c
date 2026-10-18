@@ -140,8 +140,8 @@ int dev_sdstor_vfs_set_root(SceVfsOpSetRootArgs *args)
 	vnode->core.type = SCE_VNODE_TYPE_ROOTDIR_DEVFS;
 	vnode->core.dd = NULL;
 	vnode->core.size = 0;
-	vnode->core.acl_data[0] = 0;
-	vnode->core.acl_data[1] = 0;
+	vnode->core.aclData[0] = 0;
+	vnode->core.aclData[1] = 0;
 	return 0;
 }
 
@@ -157,8 +157,8 @@ int dev_sdstor_vfs_mount(SceVfsOpMountArgs *args)
 	SceVfsMount *mount = args->mnt;
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 176, "called MOUNT set %p\n", mount);
-	mount->default_io_cache_size = 512;
-	mount->available_entry_num = 20;
+	mount->defaultIoCacheSize = 512;
+	mount->availableEntryNum = 20;
 	mount->allocator = sdstorVfsHeapId;
 	return 0;
 }
@@ -177,13 +177,13 @@ SceSSize dev_sdstor_vfs_pwrite(SceVopPwriteArgs *args)
 	SCE_DBG_PRINTF_LEVEL(2, 15, 473,
 		"SDSTOR PWRITE vp=%p size=0x%08x offset=0x%llx buf=%p\n",
 		vnode, size, offset, buffer);
-	if (!vnode->core.node_data)
+	if (!vnode->core.nodeData)
 		return 0x80010013;
 	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
-	handle->flags = file->flags;
+	handle->flags = file->openMode;
 	result = sdstor_write(handle, offset, buffer, size);
 	handle->flags = flags;
 	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
@@ -200,7 +200,7 @@ SceOff dev_sdstor_vfs_lseek(SceVopLseekArgs *args)
 	SceOff capacity, position;
 	int result;
 
-	if (!args->vp->core.node_data)
+	if (!args->vp->core.nodeData)
 		return (int)0x80010013;
 	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
@@ -213,7 +213,7 @@ SceOff dev_sdstor_vfs_lseek(SceVopLseekArgs *args)
 	}
 	capacity = (uint64_t)blockSize * sectorCount;
 	if (whence == 1) {
-		position = (SceOff)((uint64_t)file->position + (uint64_t)offset);
+		position = (SceOff)((uint64_t)file->fpos + (uint64_t)offset);
 	} else if (whence == 2) {
 		position = (SceOff)((uint64_t)blockSize * sectorCount +
 				    (uint64_t)offset);
@@ -227,7 +227,7 @@ SceOff dev_sdstor_vfs_lseek(SceVopLseekArgs *args)
 		if (capacity < position)
 			position = (int)0x80010021;
 		else
-			file->position = position;
+			file->fpos = position;
 	}
 unlock:
 	result = sceKernelUnlockFastMutex(&handle->fastmutex);
@@ -251,17 +251,17 @@ SceSSize dev_sdstor_vfs_write(SceVopWriteArgs *args)
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 401,
 		"SDSTOR WRITE vp=%p size=0x%08x buf=%p fpos=0x%llx\n",
-		vnode, size, buffer, file->position);
-	if (!vnode->core.node_data)
+		vnode, size, buffer, file->fpos);
+	if (!vnode->core.nodeData)
 		return 0x80010013;
 	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
-	handle->flags = file->flags;
-	result = sdstor_write(handle, file->position, buffer, size);
+	handle->flags = file->openMode;
+	result = sdstor_write(handle, file->fpos, buffer, size);
 	if (result > 0)
-		file->position += result;
+		file->fpos += result;
 	handle->flags = flags;
 	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
@@ -281,13 +281,13 @@ SceSSize dev_sdstor_vfs_pread(SceVopPreadArgs *args)
 	SCE_DBG_PRINTF_LEVEL(2, 15, 439,
 		"called PREAD vp=%p size=0x%08x offset=0x%llx buf=%p\n",
 		vnode, size, offset, buffer);
-	if (!vnode->core.node_data)
+	if (!vnode->core.nodeData)
 		return 0x80010013;
 	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
-	handle->flags = file->flags;
+	handle->flags = file->openMode;
 	result = sdstor_read(handle, offset, buffer, size);
 	handle->flags = flags;
 	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
@@ -306,17 +306,17 @@ SceSSize dev_sdstor_vfs_read(SceVopReadArgs *args)
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 365,
 		"called READ vp=%p size=0x%08x buf=%p fpos=0x%llx\n",
-		vnode, size, buffer, file->position);
-	if (!vnode->core.node_data)
+		vnode, size, buffer, file->fpos);
+	if (!vnode->core.nodeData)
 		return 0x80010013;
 	result = lockFastMutex(&handle->fastmutex);
 	if (result < 0)
 		return result;
 	flags = handle->flags;
-	handle->flags = file->flags;
-	result = sdstor_read(handle, file->position, buffer, size);
+	handle->flags = file->openMode;
+	result = sdstor_read(handle, file->fpos, buffer, size);
 	if (result > 0)
-		file->position += result;
+		file->fpos += result;
 	handle->flags = flags;
 	unlockResult = sceKernelUnlockFastMutex(&handle->fastmutex);
 	return unlockResult < 0 ? unlockResult : result;
@@ -326,7 +326,7 @@ int dev_sdstor_vfs_remove(SceVopRemoveArgs *args)
 {
 	SceVfsVnode *vnode = args->vp;
 	SceUID heap = args->dvp->core.allocator;
-	SceSdstorVnodeData *data = vnode->core.node_data;
+	SceSdstorVnodeData *data = vnode->core.nodeData;
 	SceSdstorPartitionEntry *entry;
 	SceSdstorSdpart *table;
 	int result;
@@ -347,10 +347,10 @@ int dev_sdstor_vfs_remove(SceVopRemoveArgs *args)
 		if (result < 0)
 			return result;
 	}
-	result = sceKernelFreeHeapMemory(heap, vnode->core.node_data);
+	result = sceKernelFreeHeapMemory(heap, vnode->core.nodeData);
 	if (result != 0)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 705, "0x%08x\n", result);
-	vnode->core.node_data = NULL;
+	vnode->core.nodeData = NULL;
 	return result;
 }
 
@@ -358,7 +358,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 {
 	SceVfsVnode *parent = args->dvp;
 	const char *name = args->path->name;
-	unsigned int length = args->path->name_length;
+	unsigned int length = args->path->nameLength;
 	SceUID heap = parent->core.allocator;
 	SceVfsVnode **resultVnode = args->vpp;
 	SceSdstorVnodeData *data;
@@ -416,7 +416,7 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 	port = sddev_get_port(data->sddev);
 	SCE_DBG_ASSERT(port <= 4, 626);
 	result = vfsGetNewVnode(parent->core.mnt,
-		(SceVopTable *)parent->core.mnt->mnt_vfs_inf->default_vops, 0, &vnode);
+		(SceVopTable *)parent->core.mnt->mntVfsInf->defaultVops, 0, &vnode);
 	if (result != 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 15, 652, "err ret = 0x%08x\n", result);
 		freeResult = sceKernelFreeHeapMemory(heap, data);
@@ -430,15 +430,15 @@ int dev_sdstor_vfs_lookup(SceVopLookupArgs *args)
 	SCE_DBG_PRINTF_LEVEL(2, 15, 635, "new vp =%p\n", vnode);
 	entry = data->pentry;
 	vnode->core.mnt = parent->core.mnt;
-	vnode->core.mnt_opt = sdstorVnodeMountOptions[port];
+	vnode->core.mntOpt = sdstorVnodeMountOptions[port];
 	vnode->core.state = SCE_VNODE_STATE_ACTIVE;
 	vnode->core.type = SCE_VNODE_TYPE_DEV;
 	vnode->core.dd = parent;
 	vnode->core.size = (uint64_t)sectorCount * blockSize;
-	vnode->core.node_data = data;
-	vnode->core.acl_data[0] = 0;
-	vnode->core.acl_data[1] = 0;
-	__builtin_memcpy(vnode->core.acl_data, &entry->flags,
+	vnode->core.nodeData = data;
+	vnode->core.aclData[0] = 0;
+	vnode->core.aclData[1] = 0;
+	__builtin_memcpy(vnode->core.aclData, &entry->flags,
 			 sizeof(SceSdstorPartitionAccess));
 	*resultVnode = vnode;
 	return 0;
@@ -451,7 +451,7 @@ int dev_sdstor_vfs_close(SceVopCloseArgs *args)
 
 int dev_sdstor_vfs_open(SceVopOpenArgs *args)
 {
-	SceSdstorVnodeData *data = args->vp->core.node_data;
+	SceSdstorVnodeData *data = args->vp->core.nodeData;
 	int flags = args->flags;
 	SceVfsFile *file = args->file;
 	SceSdstorFd *handle = NULL;
@@ -507,10 +507,10 @@ int dev_sdstor_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *args)
 	int length, result;
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 226, "path = %s, bufsz = %d\n",
-			     args->path, args->buf_len);
+			     args->path, args->bufLen);
 	path = args->path;
 	length = strnlen(path, 20);
-	bufferSize = args->buf_len;
+	bufferSize = args->bufLen;
 	if (bufferSize <= 3)
 		goto copyOriginal;
 	entry = sdpart_get_object(path, length);
@@ -530,14 +530,14 @@ int dev_sdstor_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *args)
 	if (result < 0)
 		return result;
 	args->buf[3] = 0;
-	*args->decode_len = 3;
+	*args->decodeLen = 3;
 	return 0;
 unchanged:
 	path = args->path;
-	bufferSize = args->buf_len;
+	bufferSize = args->bufLen;
 copyOriginal:
 	strncpy(args->buf, path, bufferSize);
-	*args->decode_len = length;
+	*args->decodeLen = length;
 	return 0;
 }
 
@@ -560,9 +560,9 @@ int dev_sdstor_vfs_devctl(SceVfsOpDevctlArg *args)
 	SCE_DBG_ASSERT(args != NULL, 715);
 	command = args->cmd;
 	arg = args->arg;
-	argSize = args->arg_len;
+	argSize = args->argLen;
 	buffer = args->buf;
-	bufferSize = args->buf_len;
+	bufferSize = args->bufLen;
 	SCE_DBG_PRINTF_LEVEL(2, 15, 730,
 		"cmd = %d, arg = %p, arglen = %d, buf = %p, buflen = %d\n",
 		command, arg, argSize, buffer, bufferSize);
@@ -810,12 +810,12 @@ int sdstor_vfs_initialize(void)
 		SCE_DBG_PRINTF_LEVEL(1, 15, 111, "0x%08x\n", sdstorVfsHeapId);
 		return sdstorVfsHeapId;
 	}
-	sdstorVfsInfo.vfs_ops = &sdstorVfsOps;
-	sdstorVfsInfo.vfs_name = "sdstor_dev_fs";
-	sdstorVfsInfo.vfs_name_len = 14;
+	sdstorVfsInfo.vfsOps = &sdstorVfsOps;
+	sdstorVfsInfo.vfsName = "sdstor_dev_fs";
+	sdstorVfsInfo.vfsNameLen = 14;
 	sdstorVfsInfo.type = 16;
-	sdstorVfsInfo.default_vops = &sdstorVnodeOps;
-	sdstorVfsInfo.vfs_data = NULL;
+	sdstorVfsInfo.defaultVops = &sdstorVnodeOps;
+	sdstorVfsInfo.vfsData = NULL;
 	result = sceVfsAddVfs(&sdstorVfsInfo);
 	if (result) {
 		error = sceKernelDeleteHeap(sdstorVfsHeapId);

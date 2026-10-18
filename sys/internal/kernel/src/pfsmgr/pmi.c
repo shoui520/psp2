@@ -117,10 +117,10 @@ int pfsPmiCreate(ScePfsPmi **outPmi, const char *path, const char *name, const v
 		}
 	}
 	if (mode - 0x1f > 2) {
-		pmi->mountData.assign_name = pmi->assignName;
+		pmi->mountData.assignName = pmi->assignName;
 		pmi->approvedMax = PFS_APPROVED_MAX;
-		pmi->mountData.blockdev_name = NULL;
-		pmi->mountData.blockdev_name_no_part = NULL;
+		pmi->mountData.blockdevName = NULL;
+		pmi->mountData.blockdevNameNoPart = NULL;
 		for (i = 0; i < PFS_APPROVED_MAX; i++)
 			pmi->approved[i] = -1;
 	}

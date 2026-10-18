@@ -10,13 +10,13 @@
 #include <acmgr/acmgr.h>
 
 SceVfsInfo g_exfatfsInfo = {
-	.vfs_ops = NULL,
-	.vfs_name = "exfat",
-	.vfs_name_len = 6,
-	.ref_count = 0,
+	.vfsOps = NULL,
+	.vfsName = "exfat",
+	.vfsNameLen = 6,
+	.refCount = 0,
 	.type = 2,
-	.default_vops = NULL,
-	.vfs_data = NULL,
+	.defaultVops = NULL,
+	.vfsData = NULL,
 	.next = NULL,
 };
 
@@ -58,7 +58,7 @@ int _close_device_file(SceExfatfsDeviceFileInfo *info, int force)
 		if (info->mount_misc)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 899,
 				"%s: unexpected info->device_file[%p], assignName(%s), info->device_fd[%#x], info->device_vnode[%p], please report to Bug 24084\n",
-				"_close_device_file", info->device_file, info->mount_misc->assign_name,
+				"_close_device_file", info->device_file, info->mount_misc->assignName,
 				info->device_fd, info->device_vnode);
 		else
 			SCE_DBG_PRINTF_LEVEL(1, 0, 901,
@@ -68,7 +68,7 @@ int _close_device_file(SceExfatfsDeviceFileInfo *info, int force)
 	} else {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 904,
 			"%s: info->device_file[%p], assignName(%s), info->device_fd[%#x], info->device_vnode[%p]\n",
-			"_close_device_file", info->device_file, info->mount_misc->assign_name,
+			"_close_device_file", info->device_file, info->mount_misc->assignName,
 			info->device_fd, info->device_vnode);
 	}
 	result = sceVopClose(info->device_vnode, info->device_file);
@@ -99,7 +99,7 @@ int _close_device_file(SceExfatfsDeviceFileInfo *info, int force)
 			return result;
 		}
 	} else {
-		--info->device_vnode->core.ref_count;
+		--info->device_vnode->core.refCount;
 	}
 	info->device_file = NULL;
 	info->device_fd = -1;
@@ -129,7 +129,7 @@ static inline int get_new_vnode(SceVfsMount *mount, SceVfsVnode **output)
 	SceVfsVnode *vnode = NULL;
 	int result;
 
-	result = vfsGetNewVnode(mount, mount->mnt_vfs_inf->default_vops, 0, &vnode);
+	result = vfsGetNewVnode(mount, mount->mntVfsInf->defaultVops, 0, &vnode);
 	if (result)
 		return result;
 	result = vfsLockVnode(vnode);
@@ -159,19 +159,19 @@ static inline __attribute__((always_inline)) void _set_root_directory_vnode(
 	}
 	if (vnode->core.state != 1)
 		vnode->core.state = 1;
-	vnode->core.acl_data[0] = attribute & 0xff;
-	vnode->core.acl_data[1] = 0;
+	vnode->core.aclData[0] = attribute & 0xff;
+	vnode->core.aclData[1] = 0;
 	vnode->core.fid[0] = 0;
 	vnode->core.fid[1] = 0;
 	vnode->core.size = 0;
-	vnode->core.node_data = fnode;
+	vnode->core.nodeData = fnode;
 }
 
 int exfatfs_vfs_get_root(SceVfsOpGetRootArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
-	SceVfsInfo *info = mount->mnt_vfs_inf;
-	SceExfatfsDrive *drive = mount->data;
+	SceVfsInfo *info = mount->mntVfsInf;
+	SceExfatfsDrive *drive = mount->pData;
 	SceVfsVnode **output = argp->vpp;
 	SceExfatfsFnode *fnode;
 	SceVfsVnode *vnode;
@@ -181,10 +181,10 @@ int exfatfs_vfs_get_root(SceVfsOpGetRootArgs *argp)
 
 	SCE_DBG_PRINTF_LEVEL(1, 0, 1864,
 		"%s: vfsName(%s), defaultVops[%p], vfsOps[%p], type[%#x], vfsData[%p], refCount(%d), next[%p], mnt->pData[%p]\n",
-		"exfatfs_vfs_get_root", info->vfs_name, info->default_vops,
-		info->vfs_ops, info->type, info->vfs_data, info->ref_count, info->next, drive);
-	*output = info->vfs_data;
-	if (info->vfs_data)
+		"exfatfs_vfs_get_root", info->vfsName, info->defaultVops,
+		info->vfsOps, info->type, info->vfsData, info->refCount, info->next, drive);
+	*output = info->vfsData;
+	if (info->vfsData)
 		return 0;
 	SCE_DBG_PRINTF_LEVEL(1, 0, 1869, "%s: no vfsData for mnt[%p]\n",
 		"exfatfs_vfs_get_root", mount);
@@ -209,7 +209,7 @@ int exfatfs_vfs_get_root(SceVfsOpGetRootArgs *argp)
 		return result;
 	attribute = stat.st_attr;
 	_set_root_directory_vnode(vnode, mount, fnode, attribute);
-	vnode->core.ref_count = 1;
+	vnode->core.refCount = 1;
 	*output = vnode;
 	return result;
 }
@@ -301,7 +301,7 @@ extern int _sceExfatfsVopSetRoot(SceExfatfsDrive *drive, SceExfatfsFnode **root)
 int exfatfs_vfs_set_root(SceVfsOpSetRootArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	SceVfsVnode *vnode = argp->vp;
 	SceExfatfsFnode *fnode = NULL;
 	unsigned char attribute = 0;
@@ -344,7 +344,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 
 		sceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
 		if (vfsFreeFile(drive->deviceInfo.device_vnode, drive->deviceInfo.device_fd) >= 0)
-			--drive->deviceInfo.device_vnode->core.ref_count;
+			--drive->deviceInfo.device_vnode->core.refCount;
 		drive->deviceInfo.device_file = NULL;
 		drive->deviceInfo.device_fd = -1;
 		if (locked >= 0)
@@ -375,7 +375,7 @@ void _cleanup_after_umount(SceExfatfsDrive *drive)
 #if FW_VERSION >= 0x04000000
 int _lock_drive_information(SceVfsMount *mount, const char *function)
 {
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	int result, error;
 
 	if (!drive) {
@@ -389,9 +389,9 @@ int _lock_drive_information(SceVfsMount *mount, const char *function)
 			"%s: sceKernelLockFastMutex failed[%#x]\n", function, result);
 		return result;
 	}
-	if (drive != mount->data) {
+	if (drive != mount->pData) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1254, "_lock_drive_information",
-			"%s: drive[%p]->[%p], mp[%p]\n", function, drive, mount->data, mount);
+			"%s: drive[%p]->[%p], mp[%p]\n", function, drive, mount->pData, mount);
 	} else if (!(drive->state & 1)) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1262, "_lock_drive_information",
 			"%s: not mounted, mp[%p], drive[%p], flags[%#x]\n",
@@ -408,7 +408,7 @@ int _lock_drive_information(SceVfsMount *mount, const char *function)
 #else
 static inline int _lock_drive_information(SceVfsMount *mount, const char *function)
 {
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	int result;
 
 	if (!drive)
@@ -416,7 +416,7 @@ static inline int _lock_drive_information(SceVfsMount *mount, const char *functi
 	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		return result;
-	if (drive != mount->data || !(drive->state & 1)) {
+	if (drive != mount->pData || !(drive->state & 1)) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		return 0x80010013;
 	}
@@ -437,7 +437,7 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1667, "%s: unexpected NULL mp\n", "exfatfs_vfs_umount");
 		return 0x80010016;
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (!drive) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 1670, "%s: unexpected pData[%p]\n",
 			"exfatfs_vfs_umount", drive);
@@ -447,10 +447,10 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 	if (result < 0)
 		return result;
 #if FW_VERSION >= 0x04000000
-	drive = mount->data;
+	drive = mount->pData;
 #endif
 	result = sceExfatfsVopUmount(drive, mode);
-	drive = mount->data;
+	drive = mount->pData;
 	if (!result) {
 		if (drive) {
 			if (!(drive->state & 0x4000))
@@ -458,7 +458,7 @@ int exfatfs_vfs_umount(SceVfsOpUmountArgs *argp)
 		} else {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1174, "_start_umount_cleanup",
 				"%s: unexpected NULL drive\n", "_start_umount_cleanup");
-			drive = mount->data;
+			drive = mount->pData;
 		}
 	}
 	if (!drive) {
@@ -479,13 +479,13 @@ extern int sceExfatfsVopDecodePathElem(SceExfatfsDrive *drive, const unsigned ch
 int exfatfs_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	const char *path = argp->path;
 	const char **path2 = argp->path2;
 	const char **path3 = argp->path3;
 	char *buffer = argp->buf;
-	SceSize size = argp->buf_len;
-	SceSize *length = argp->decode_len;
+	SceSize size = argp->bufLen;
+	SceSize *length = argp->decodeLen;
 	SceSize offset;
 	int result, error;
 
@@ -508,7 +508,7 @@ int exfatfs_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1995,
 			"sceExfatfsVopDecodePathElem() failed (0x%08X)\n", result);
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (!drive) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1282, "_unlock_drive_information",
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
@@ -533,11 +533,11 @@ int exfatfs_vop_dread(SceVopDreadArgs *argp)
 	char prefix[8];
 
 	SCE_DBG_PRINTF_LEVEL(2, 15, 2890, "VOP called DREAD \n");
-	vnode = file->vp;
+	vnode = file->vnode;
 	if (vnode != expectedVnode) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2892, "%s: vp[%p] != file->vnode[%p]\n",
 			"exfatfs_vop_dread", expectedVnode, vnode);
-		vnode = file->vp;
+		vnode = file->vnode;
 	}
 	mount = vnode->core.mnt;
 	result = _lock_drive_information(mount, "_exfatfs_dread");
@@ -555,11 +555,11 @@ int exfatfs_vop_dread(SceVopDreadArgs *argp)
 			break;
 		__builtin_memcpy(prefix, "SCEDEL~", sizeof(prefix));
 		if (strncmp(prefix, entry->d_name, 7) ||
-			!_exfatfs_reference_count(vnode->core.node_data, entry, &error))
+			!_exfatfs_reference_count(vnode->core.nodeData, entry, &error))
 			break;
 		memset(entry, 0, sizeof(*entry));
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -594,13 +594,13 @@ int _exfatfs_rename(SceVfsVnode *vnode, SceExfatfsFnode *parent,
 	result = _lock_drive_information(mount, "_exfatfs_rename");
 	if (result < 0)
 		return result;
-	whiteout = getWhiteoutDirectory(vnode->core.node_data);
-	if (vnode->core.node_data == whiteout) {
+	whiteout = getWhiteoutDirectory(vnode->core.nodeData);
+	if (vnode->core.nodeData == whiteout) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2691, "%s: can't rename whiteout directory\n", "_exfatfs_rename");
 		result = 0x80010010;
 	} else {
 		const char *name = path->name;
-		SceSize nameLength = path->name_length;
+		SceSize nameLength = path->nameLength;
 
 		if (!parent)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2050, "_exfatfs_lookup_core",
@@ -611,14 +611,14 @@ int _exfatfs_rename(SceVfsVnode *vnode, SceExfatfsFnode *parent,
 			if (whiteout != parent)
 				SCE_DBG_PRINTF_LEVEL(1, 0, 2704, "%s: already exist\n", "_exfatfs_rename");
 		} else if (result == (int)0x80010002) {
-			result = sceExfatfsVopRename(vnode->core.node_data, parent,
-				path->name, path->name_length, output);
+			result = sceExfatfsVopRename(vnode->core.nodeData, parent,
+				path->name, path->nameLength, output);
 		} else {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2708, "%s: _exfatfs_lookup_core failed[%#x]\n",
 				"_exfatfs_rename", result);
 		}
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -653,7 +653,7 @@ static inline void _exfatfs_lookup_rollback(SceVfsVnode *vnode, SceExfatfsFnode 
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2037, "_exfatfs_lookup_rollback_core",
 			"%s: _decrement_entry_reference for entry_data[%p] failed[%#x]\n",
 			"_exfatfs_lookup_rollback_core", fnode, result);
-	drive = mount->data;
+	drive = mount->pData;
 	if (!drive) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1282, "_unlock_drive_information",
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
@@ -680,7 +680,7 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	int mode = argp->mode;
 	SceExfatfsFnode *fnode = NULL;
 	SceVfsVnode *vnode = NULL;
-	SceExfatfsDrive *drive = parent->core.mnt->data;
+	SceExfatfsDrive *drive = parent->core.mnt->pData;
 	SceVfsMount *mount;
 	unsigned char attribute = 0;
 	unsigned char fileAttribute;
@@ -708,17 +708,17 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	if (result < 0)
 		return result;
 	result = 0;
-	if (parent->core.node_data == getWhiteoutDirectory(parent->core.node_data)) {
+	if (parent->core.nodeData == getWhiteoutDirectory(parent->core.nodeData)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2541, "%s: can't access whiteout directory\n", "_exfatfs_create");
 		result = 0x8001000d;
 	}
-	if (!parent->core.node_data)
+	if (!parent->core.nodeData)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2547,
 			"%s: NULL dvp->nodeData, please report to Bug 30621\n", "_exfatfs_create");
 	if (!result) {
 		const char *name = path->name;
-		SceSize nameLength = path->name_length;
-		SceExfatfsFnode *parentFnode = parent->core.node_data;
+		SceSize nameLength = path->nameLength;
+		SceExfatfsFnode *parentFnode = parent->core.nodeData;
 
 		if (!parentFnode)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2050, "_exfatfs_lookup_core",
@@ -729,14 +729,14 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 			result = 0x80010011;
 		} else if (result == (int)0x80010002) {
 			fnode = NULL;
-			result = sceExfatfsVopCreate(parent->core.node_data, path->name,
-				path->name_length, mode, &fnode);
+			result = sceExfatfsVopCreate(parent->core.nodeData, path->name,
+				path->nameLength, mode, &fnode);
 		} else {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2557, "%s: _exfatfs_lookup_core failed[%#x]\n",
 				"_exfatfs_create", result);
 		}
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -756,13 +756,13 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 
 		mount = parent->core.mnt;
 		if (!_lock_drive_information(mount, "_exfatfs_create_rollback")) {
-			sceExfatfsVopRemove(parent->core.node_data, rollbackFnode);
+			sceExfatfsVopRemove(parent->core.nodeData, rollbackFnode);
 			error = sceExfatfsVopInactive(rollbackFnode);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2037, "_exfatfs_lookup_rollback_core",
 					"%s: _decrement_entry_reference for entry_data[%p] failed[%#x]\n",
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
-			drive = mount->data;
+			drive = mount->pData;
 			if (drive) {
 				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
@@ -780,12 +780,12 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 #if FW_VERSION >= 0x04000000
 	vnode->core.mnt = parent->core.mnt;
 	vnode->core.dd = parent;
-	vnode->core.node_data = fnode;
+	vnode->core.nodeData = fnode;
 	vnode->core.state = 1;
 	vnode->core.type = 1;
 #else
 	vnode->core.dd = parent;
-	vnode->core.node_data = fnode;
+	vnode->core.nodeData = fnode;
 	vnode->core.type = 1;
 	vnode->core.mnt = parent->core.mnt;
 	vnode->core.state = 1;
@@ -793,9 +793,9 @@ int _exfatfs_create(SceVopCreateArgs *argp)
 	id = fnodeToFileId(fnode);
 	vnode->core.fid[0] = id;
 	vnode->core.fid[1] = id >> 32;
-	vnode->core.acl_data[0] = fileAttribute;
-	vnode->core.acl_data[1] = 0;
-	vnode->core.ref_count = 1;
+	vnode->core.aclData[0] = fileAttribute;
+	vnode->core.aclData[1] = 0;
+	vnode->core.refCount = 1;
 	*output = vnode;
 	return result;
 }
@@ -821,7 +821,7 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 	*output = NULL;
 	SCE_DBG_PRINTF_LEVEL_FUNC(2, 15, 4177, "exfatfs_vop_mkdir",
 		"VOP called MKDIR %s dvp=%p\n", path->name, parent);
-	result = sceFatfsACSetFSAttributeByPermission(parent->core.mnt->data, mode, &attribute);
+	result = sceFatfsACSetFSAttributeByPermission(parent->core.mnt->pData, mode, &attribute);
 	if (result < 0) {
 		if (result == (int)0x800f0916) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 4189, "exfatfs_vop_mkdir",
@@ -837,33 +837,33 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 	result = _lock_drive_information(mount, "_exfatfs_mkdir");
 	if (result < 0)
 		return result;
-	if (parent->core.node_data == getWhiteoutDirectory(parent->core.node_data)) {
+	if (parent->core.nodeData == getWhiteoutDirectory(parent->core.nodeData)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2592, "%s: can't access whiteout directory\n", "_exfatfs_mkdir");
 		result = 0x8001000d;
 	} else {
 		result = 0;
 	}
-	if (!parent->core.node_data)
+	if (!parent->core.nodeData)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2598,
 			"%s: NULL dvp->nodeData, please report to Bug 30621\n", "_exfatfs_mkdir");
 	if (!result) {
-		if (!parent->core.node_data)
+		if (!parent->core.nodeData)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2050, "_exfatfs_lookup_core",
 				"%s: NULL parent_data, please report to Bug 30621\n", "_exfatfs_lookup_core");
-		result = sceExfatfsVopLookup(parent->core.node_data, path->name, path->name_length, NULL);
+		result = sceExfatfsVopLookup(parent->core.nodeData, path->name, path->nameLength, NULL);
 		if (!result) {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2605, "%s: already exist\n", "_exfatfs_mkdir");
 			result = 0x80010011;
 		} else if (result == (int)0x80010002) {
 			fnode = NULL;
-			result = sceExfatfsVopMkdir(parent->core.node_data, path->name,
-				path->name_length, mode, &fnode);
+			result = sceExfatfsVopMkdir(parent->core.nodeData, path->name,
+				path->nameLength, mode, &fnode);
 		} else {
 			SCE_DBG_PRINTF_LEVEL(1, 0, 2608, "%s: _exfatfs_lookup_core failed[%#x]\n",
 				"_exfatfs_mkdir", result);
 		}
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -883,13 +883,13 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 
 		mount = parent->core.mnt;
 		if (!_lock_drive_information(mount, "_exfatfs_mkdir_rollback")) {
-			_check_empty_directory(parent->core.node_data, rollbackFnode);
+			_check_empty_directory(parent->core.nodeData, rollbackFnode);
 			error = sceExfatfsVopInactive(rollbackFnode);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2037, "_exfatfs_lookup_rollback_core",
 					"%s: _decrement_entry_reference for entry_data[%p] failed[%#x]\n",
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
-			drive = mount->data;
+			drive = mount->pData;
 			if (drive) {
 				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
@@ -906,15 +906,15 @@ int _exfatfs_mkdir(SceVopMkdirArgs *argp)
 	vnode->core.mnt = parent->core.mnt;
 	vnode->core.size = 0;
 	vnode->core.dd = parent;
-	vnode->core.node_data = fnode;
+	vnode->core.nodeData = fnode;
 	vnode->core.state = 1;
 	vnode->core.type = 2;
 	id = fnodeToFileId(fnode);
 	vnode->core.fid[0] = id;
 	vnode->core.fid[1] = id >> 32;
-	vnode->core.acl_data[0] = fileAttribute;
-	vnode->core.acl_data[1] = 0;
-	vnode->core.ref_count = 1;
+	vnode->core.aclData[0] = fileAttribute;
+	vnode->core.aclData[1] = 0;
+	vnode->core.refCount = 1;
 	*output = vnode;
 	return result;
 }
@@ -925,7 +925,7 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 	SceVfsVnode *oldVnode = argp->ovp;
 	SceVfsVnode *parent = argp->ndvp;
 	SceVfsVnode **output = argp->nvpp;
-	SceExfatfsDrive *drive = oldParent->core.mnt->data;
+	SceExfatfsDrive *drive = oldParent->core.mnt->pData;
 	SceExfatfsFnode *fnode = NULL;
 	SceVfsVnode *vnode = NULL;
 	SceVfsMount *mount;
@@ -933,18 +933,18 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 	int result, error;
 
 	if (parent) {
-		if (!parent->core.node_data)
+		if (!parent->core.nodeData)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4233,
 				"%s: NULL ndvp->nodeData, please report to Bug 30621\n", "exfatfs_vop_rename");
-		if (parent->core.mnt->data != drive)
+		if (parent->core.mnt->pData != drive)
 			return 0x80010001;
 	} else {
 		parent = oldParent;
-		if (!oldParent->core.node_data)
+		if (!oldParent->core.nodeData)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4240,
 				"%s: NULL odvp->nodeData, please report to Bug 30621\n", "exfatfs_vop_rename");
 	}
-	result = _exfatfs_rename(oldVnode, parent->core.node_data, argp->new_path, &fnode);
+	result = _exfatfs_rename(oldVnode, parent->core.nodeData, argp->newPath, &fnode);
 	if (result < 0)
 		return result;
 	result = get_new_vnode(parent->core.mnt, &vnode);
@@ -958,7 +958,7 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2037, "_exfatfs_lookup_rollback_core",
 					"%s: _decrement_entry_reference for entry_data[%p] failed[%#x]\n",
 					"_exfatfs_lookup_rollback_core", rollbackFnode, error);
-			drive = mount->data;
+			drive = mount->pData;
 			if (drive) {
 				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 				if (error < 0)
@@ -977,7 +977,7 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 	vnode->core.dd = parent;
 	vnode->core.state = 1;
 	vnode->core.type = oldVnode->core.type;
-	vnode->core.node_data = fnode;
+	vnode->core.nodeData = fnode;
 #if FW_VERSION < 0x04000000
 	vnode->core.mnt = parent->core.mnt;
 #endif
@@ -985,14 +985,14 @@ int exfatfs_vop_rename(SceVopRenameArgs *argp)
 	id = fnodeToFileId(fnode);
 	vnode->core.fid[0] = id;
 	vnode->core.fid[1] = id >> 32;
-	vnode->core.ref_count = 1;
-	vnode->core.acl_data[0] = oldVnode->core.acl_data[0];
-	vnode->core.acl_data[1] = oldVnode->core.acl_data[1];
+	vnode->core.refCount = 1;
+	vnode->core.aclData[0] = oldVnode->core.aclData[0];
+	vnode->core.aclData[1] = oldVnode->core.aclData[1];
 	*output = vnode;
 	return result;
 }
 
-int exfatfs_vop_dopen(SceVopDopenAgrs *argp)
+int exfatfs_vop_dopen(SceVopDopenArgs *argp)
 {
 	SceVfsVnode *vnode = argp->vp;
 	SceVfsMount *mount = vnode->core.mnt;
@@ -1004,8 +1004,8 @@ int exfatfs_vop_dopen(SceVopDopenAgrs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_dopen");
 	if (result < 0)
 		return result;
-	result = sceExfatfsVopDopen(vnode->core.node_data, &file->fd);
-	drive = mount->data;
+	result = sceExfatfsVopDopen(vnode->core.nodeData, &file->fd);
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1027,7 +1027,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	SceVfsVnode *parent = argp->dvp;
 	SceVfsVnode **output = argp->vpp;
 	const char *name = argp->path->name;
-	int length = argp->path->name_length;
+	int length = argp->path->nameLength;
 	SceVfsMount *mount = parent->core.mnt;
 	SceExfatfsFnode *fnode = NULL;
 	SceVfsVnode *vnode = NULL;
@@ -1042,17 +1042,17 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_lookup");
 	if (result < 0)
 		goto failed;
-	if (!parent->core.node_data)
+	if (!parent->core.nodeData)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2918,
 			"%s: NULL dvp->nodeData, please report to Bug 30621\n", "exfatfs_vop_lookup");
 	if (name[length] == '/') {
-		drive = parent->core.mnt->data;
+		drive = parent->core.mnt->pData;
 		buffer = allocateHeapBuffer(drive);
 		if (buffer) {
 			if (length)
 				memcpy(buffer, name, length);
 			buffer[length] = 0;
-			SceExfatfsFnode *parentFnode = parent->core.node_data;
+			SceExfatfsFnode *parentFnode = parent->core.nodeData;
 
 			if (!parentFnode)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2050, "_exfatfs_lookup_core",
@@ -1064,7 +1064,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 			result = 0x8001000c;
 		}
 	} else {
-		SceExfatfsFnode *parentFnode = parent->core.node_data;
+		SceExfatfsFnode *parentFnode = parent->core.nodeData;
 
 		if (!parentFnode)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2050, "_exfatfs_lookup_core",
@@ -1080,7 +1080,7 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	} else {
 		SCE_DBG_PRINTF_LEVEL(2, 15, 2939, "sceExfatfsVopLookup() failed (0x%08X)\n", result);
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1103,11 +1103,11 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 #if FW_VERSION >= 0x04000000
 		vnode->core.type = 2;
 		vnode->core.dd = parent;
-		vnode->core.node_data = fnode;
+		vnode->core.nodeData = fnode;
 		vnode->core.mnt = parent->core.mnt;
 		vnode->core.state = 1;
 #else
-		vnode->core.node_data = fnode;
+		vnode->core.nodeData = fnode;
 		vnode->core.state = 1;
 		vnode->core.type = 2;
 		vnode->core.mnt = parent->core.mnt;
@@ -1117,11 +1117,11 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 		vnode->core.dd = parent;
 #if FW_VERSION >= 0x04000000
 		vnode->core.type = 1;
-		vnode->core.node_data = fnode;
+		vnode->core.nodeData = fnode;
 		vnode->core.state = 1;
 		vnode->core.mnt = parent->core.mnt;
 #else
-		vnode->core.node_data = fnode;
+		vnode->core.nodeData = fnode;
 		vnode->core.type = 1;
 		vnode->core.mnt = parent->core.mnt;
 		vnode->core.state = 1;
@@ -1129,11 +1129,11 @@ int exfatfs_vop_lookup(SceVopLookupArgs *argp)
 	}
 	vnode->core.size = stat.st_size;
 	id = fnodeToFileId(fnode);
-	vnode->core.acl_data[0] = attribute;
-	vnode->core.acl_data[1] = 0;
+	vnode->core.aclData[0] = attribute;
+	vnode->core.aclData[1] = 0;
 	vnode->core.fid[0] = id;
 	vnode->core.fid[1] = id >> 32;
-	vnode->core.ref_count = 1;
+	vnode->core.refCount = 1;
 	*output = vnode;
 	return result;
 failed:
@@ -1154,7 +1154,7 @@ static inline int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, c
 	SceExfatfsDrive *drive;
 	int result, error;
 
-	result = sceFatfsACCheckRDirEntry(mount->data, vnode->core.acl_data[0]);
+	result = sceFatfsACCheckRDirEntry(mount->pData, vnode->core.aclData[0]);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2993, "%s: sceFatfsACCheckRDirEntry failed[%#x]\n",
 			"_exfatfs_getstat_common", result);
@@ -1163,8 +1163,8 @@ static inline int _exfatfs_getstat_common(SceVfsVnode *vnode, SceIoStat *stat, c
 	result = _lock_drive_information(mount, function);
 	if (result < 0)
 		return result;
-	result = sceExfatfsVopGetstat(vnode->core.node_data, stat);
-	drive = mount->data;
+	result = sceExfatfsVopGetstat(vnode->core.nodeData, stat);
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1187,9 +1187,9 @@ int exfatfs_vop_fgetstat(SceVopFgetstatArgs *argp)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3046, "%s: unexpected NULL file[%p], vp[%p]\n",
 			"exfatfs_vop_fgetstat", file, vnode);
 		SCE_DBG_ASSERT(file != NULL, 3047);
-	} else if (file->vp != vnode) {
+	} else if (file->vnode != vnode) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3049, "%s: vp[%p] != file->vnode[%p], file[%p]\n",
-			"exfatfs_vop_fgetstat", vnode, file->vp, file);
+			"exfatfs_vop_fgetstat", vnode, file->vnode, file);
 		SCE_DBG_ASSERT(0, 3050);
 	}
 	memset(stat, 0, sizeof(*stat));
@@ -1210,11 +1210,11 @@ extern int _exfatfs_renamed_file(const SceExfatfsFnode *vnode, const SceExfatfsF
 
 static inline void _file_size_sync_check(SceVfsVnode *vnode, SceVfsFile *file, const char *function)
 {
-	if (vnode != file->vp) {
+	if (vnode != file->vnode) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3061, "_file_size_sync_check",
-			"%s: vp[%p] != file->vnode[%p]\n", function, vnode, file->vp);
-		if (!_exfatfs_renamed_file(vnode->core.node_data, file->vp->core.node_data))
-			SCE_DBG_ASSERT_FUNC(vnode == file->vp, 3069, "_file_size_sync_check");
+			"%s: vp[%p] != file->vnode[%p]\n", function, vnode, file->vnode);
+		if (!_exfatfs_renamed_file(vnode->core.nodeData, file->vnode->core.nodeData))
+			SCE_DBG_ASSERT_FUNC(vnode == file->vnode, 3069, "_file_size_sync_check");
 	}
 }
 
@@ -1232,9 +1232,9 @@ int exfatfs_vop_open(SceVopOpenArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_open");
 	if (result < 0)
 		return result;
-	result = sceExfatfsVopOpen(vnode->core.node_data, flags, (int *)&file->fd);
+	result = sceExfatfsVopOpen(vnode->core.nodeData, flags, (int *)&file->fd);
 	_file_size_sync_check(vnode, file, "exfatfs_vop_open");
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1251,11 +1251,11 @@ extern int sceExfatfsVopLseek(unsigned int fd, SceOff offset, int whence, SceOff
 
 static inline void _file_size_check_before_lseek(SceVfsVnode *vnode, SceVfsFile *file)
 {
-	if (vnode != file->vp) {
+	if (vnode != file->vnode) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3132, "_file_size_check_before_lseek",
-			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_lseek", vnode, file->vp);
-		if (!_exfatfs_renamed_file(vnode->core.node_data, file->vp->core.node_data))
-			SCE_DBG_ASSERT_FUNC(vnode == file->vp, 3140, "_file_size_check_before_lseek");
+			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_lseek", vnode, file->vnode);
+		if (!_exfatfs_renamed_file(vnode->core.nodeData, file->vnode->core.nodeData))
+			SCE_DBG_ASSERT_FUNC(vnode == file->vnode, 3140, "_file_size_check_before_lseek");
 	}
 }
 
@@ -1275,14 +1275,14 @@ SceOff exfatfs_vop_lseek(SceVopLseekArgs *argp)
 		return result;
 	_file_size_check_before_lseek(vnode, file);
 	if (whence == 1) {
-		offset += file->position;
+		offset += file->fpos;
 		whence = 0;
 	} else if (whence == 2) {
 		offset += vnode->core.size;
 		whence = 0;
 	}
 	result = sceExfatfsVopLseek(file->fd, offset, whence, &position);
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1294,7 +1294,7 @@ SceOff exfatfs_vop_lseek(SceVopLseekArgs *argp)
 	}
 	if (result < 0)
 		return result;
-	file->position = position;
+	file->fpos = position;
 	return position;
 }
 
@@ -1318,7 +1318,7 @@ int _exfatfs_chstat_common(SceVfsVnode *vnode, SceIoStat *stat, unsigned int bit
 	if ((bits & 0x10) && validateDateTime((const SceExfatfsDateTime *)&stat->st_atime))
 		goto invalidArgument;
 	if (bits & 1) {
-		result = sceFatfsACSetFSAttributeByPermission(mount->data, stat->st_mode, &attribute);
+		result = sceFatfsACSetFSAttributeByPermission(mount->pData, stat->st_mode, &attribute);
 		if (result < 0) {
 			if (result == (int)0x800f0916) {
 				SCE_DBG_PRINTF_LEVEL(1, 0, 3786, "%s: invalid mode[%#o]\n",
@@ -1332,7 +1332,7 @@ int _exfatfs_chstat_common(SceVfsVnode *vnode, SceIoStat *stat, unsigned int bit
 		}
 	}
 	if (bits & 0x10000) {
-		result = sceFatfsACSetFSAttributeByAttribute(mount->data, stat->st_attr, &attribute);
+		result = sceFatfsACSetFSAttributeByAttribute(mount->pData, stat->st_attr, &attribute);
 		if (result < 0) {
 			if (result == (int)0x800f0916) {
 				SCE_DBG_PRINTF_LEVEL(1, 0, 3799, "%s: invalid st_attr[%#x]\n",
@@ -1348,26 +1348,26 @@ int _exfatfs_chstat_common(SceVfsVnode *vnode, SceIoStat *stat, unsigned int bit
 	result = _lock_drive_information(mount, "_exfatfs_chstat_common");
 	if (result < 0)
 		return result;
-	if (vnode->core.node_data == getWhiteoutDirectory(vnode->core.node_data)) {
+	if (vnode->core.nodeData == getWhiteoutDirectory(vnode->core.nodeData)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3812, "%s: can't access whiteout directory\n",
 			"_exfatfs_chstat_common");
 		result = 0x8001000d;
 	} else if (!result) {
-		result = _chstat_setup(vnode->core.node_data, stat, bits);
+		result = _chstat_setup(vnode->core.nodeData, stat, bits);
 		if (!result) {
 			if (bits & 4)
 				vnode->core.size = stat->st_size;
 			if (bits & 0x10001) {
-				vnode->core.acl_data[0] = attribute;
-				vnode->core.acl_data[1] = 0;
+				vnode->core.aclData[0] = attribute;
+				vnode->core.aclData[1] = 0;
 			}
 			goto unlock;
 		}
 	}
 	if (bits & 4)
-		vnode->core.size = _exfatfs_vnode_size(vnode->core.node_data);
+		vnode->core.size = _exfatfs_vnode_size(vnode->core.nodeData);
 unlock:
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1391,14 +1391,14 @@ int exfatfs_vop_fchstat(SceVopFchstatArgs *argp)
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 3865, "%s: vp[%p], file[%p], aclData[%#llx]\n",
 		"exfatfs_vop_fchstat", vnode, file,
-		(SceUInt64)vnode->core.acl_data[0] | (SceUInt64)vnode->core.acl_data[1] << 32);
+		(SceUInt64)vnode->core.aclData[0] | (SceUInt64)vnode->core.aclData[1] << 32);
 	if (!file) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3867, "%s: unexpected NULL file[%p], vp[%p]\n",
 			"exfatfs_vop_fchstat", file, vnode);
 		SCE_DBG_ASSERT(file != NULL, 3868);
-	} else if (file->vp != vnode) {
+	} else if (file->vnode != vnode) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3870, "%s: vp[%p] != file->vnode[%p], file[%p]\n",
-			"exfatfs_vop_fchstat", vnode, file->vp, file);
+			"exfatfs_vop_fchstat", vnode, file->vnode, file);
 		SCE_DBG_ASSERT(0, 3871);
 	}
 	return _exfatfs_chstat_common(vnode, stat, bits);
@@ -1412,8 +1412,8 @@ int exfatfs_vop_chstat(SceVopChstatArgs *argp)
 	unsigned int bits = argp->bit;
 
 	SCE_DBG_PRINTF_LEVEL(2, 0, 3851, "%s: vp[%p], name(%s), size(%d), aclData[%#llx]\n",
-		"exfatfs_vop_chstat", vnode, path->name, path->name_length,
-		(SceUInt64)vnode->core.acl_data[0] | (SceUInt64)vnode->core.acl_data[1] << 32);
+		"exfatfs_vop_chstat", vnode, path->name, path->nameLength,
+		(SceUInt64)vnode->core.aclData[0] | (SceUInt64)vnode->core.aclData[1] << 32);
 	return _exfatfs_chstat_common(vnode, stat, bits);
 }
 
@@ -1424,7 +1424,7 @@ int exfatfs_vop_remove(SceVopRemoveArgs *argp)
 	SceVfsMount *mount = vnode->core.mnt;
 	SceExfatfsDrive *drive;
 #if FW_VERSION < 0x04000000
-	SceExfatfsDrive *lockedDrive = mount->data;
+	SceExfatfsDrive *lockedDrive = mount->pData;
 #endif
 	int result, error, locked;
 
@@ -1436,16 +1436,16 @@ int exfatfs_vop_remove(SceVopRemoveArgs *argp)
 	locked = result == 0;
 	SCE_DBG_ASSERT(locked, 3901);
 	if (!parent)
-		result = sceExfatfsVopRemove(NULL, vnode->core.node_data);
+		result = sceExfatfsVopRemove(NULL, vnode->core.nodeData);
 	else if (locked)
-		result = sceExfatfsVopRemove(parent->core.node_data, vnode->core.node_data);
+		result = sceExfatfsVopRemove(parent->core.nodeData, vnode->core.nodeData);
 #if FW_VERSION < 0x04000000
 	else {
 		drive = lockedDrive;
 		goto unlock;
 	}
 #endif
-	drive = mount->data;
+	drive = mount->pData;
 #if FW_VERSION < 0x04000000
 unlock:
 #endif
@@ -1477,8 +1477,8 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 		return result;
 	locked = result == 0;
 	SCE_DBG_ASSERT(locked, 3958);
-	whiteout = getWhiteoutDirectory(vnode->core.node_data);
-	fnode = vnode->core.node_data;
+	whiteout = getWhiteoutDirectory(vnode->core.nodeData);
+	fnode = vnode->core.nodeData;
 	if (fnode == whiteout) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 3960, "%s: can't delete whiteout directory\n", "exfatfs_vop_rmdir");
 		result = 0x80010010;
@@ -1487,9 +1487,9 @@ int exfatfs_vop_rmdir(SceVopRmdirArgs *argp)
 			"exfatfs_vop_rmdir", vnode);
 		result = 0x80010016;
 	} else if (locked) {
-		result = _check_empty_directory(parent->core.node_data, fnode);
+		result = _check_empty_directory(parent->core.nodeData, fnode);
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1514,21 +1514,21 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 	SceVfsMount *mount = argp->mnt;
 	int command = argp->cmd;
 	const SceIoDevInfo *argument = argp->arg;
-	int arglen = argp->arg_len;
+	int arglen = argp->argLen;
 	SceIoDevInfo *information = argp->buf;
-	int buflen = argp->buf_len;
+	int buflen = argp->bufLen;
 	SceExfatfsDrive *drive;
 	SceVfsMountData *mountData;
 	const char *function;
 	SceUInt64 fakeFree;
 	int result, error, access;
 
-	if (!mount->data)
+	if (!mount->pData)
 		return 0x80010013;
 	switch (command) {
 	case 0x3001:
 		if (SceSblACMgrForDriver_D7AD8471(SceThreadmgrForDriver_FA54D49A(),
-			mount->mnt_data->assign_name) != 1)
+			mount->mntData->assignName) != 1)
 			return 0x80010030;
 		if (arglen)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4465,
@@ -1543,10 +1543,10 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		drive = mount->data;
+		drive = mount->pData;
 		mountData = drive->deviceInfo.mount_misc;
 		result = exfatfs_get_drive_information(drive, information, buflen);
-		if (result >= 0 && mountData->mnt_id == 0x800) {
+		if (result >= 0 && mountData->mntId == 0x800) {
 			SceUInt64 freeSize = information->freeSize;
 			information->freeSize = freeSize <= 0x2000000 ? 0 : freeSize - 0x2000000;
 		}
@@ -1561,7 +1561,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		result = exfatfs_get_file_size_limit(mount->data, (SceUInt64 *)information);
+		result = exfatfs_get_file_size_limit(mount->pData, (SceUInt64 *)information);
 		break;
 	case 0x3004:
 		access = SceThreadmgrForDriver_332E127C();
@@ -1581,7 +1581,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		result = exfatfs_set_fake_free(mount->data, fakeFree);
+		result = exfatfs_set_fake_free(mount->pData, fakeFree);
 		break;
 	case 0x3005:
 		access = SceThreadmgrForDriver_332E127C();
@@ -1600,7 +1600,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		result = exfatfs_clear_fake_free(mount->data);
+		result = exfatfs_clear_fake_free(mount->pData);
 		break;
 	case 0x3803:
 		access = SceThreadmgrForDriver_332E127C();
@@ -1614,7 +1614,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		result = _delete_whiteout_entry_core(mount->data);
+		result = _delete_whiteout_entry_core(mount->pData);
 		break;
 	case 0x3802:
 		access = SceThreadmgrForDriver_332E127C();
@@ -1628,7 +1628,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
 			return result;
-		drive = mount->data;
+		drive = mount->pData;
 		error = checkDriveWritable(drive);
 		if (error == (int)0x8001001e) {
 			result = error;
@@ -1691,7 +1691,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 	default:
 		return 0x80010030;
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1723,8 +1723,8 @@ int exfatfs_vop_link(SceVopLinkArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_link");
 	if (result < 0)
 		return result;
-	result = sceExfatfsVopLink(from->core.node_data, to->core.node_data);
-	drive = mount->data;
+	result = sceExfatfsVopLink(from->core.nodeData, to->core.nodeData);
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1742,7 +1742,7 @@ int exfatfs_vop_link(SceVopLinkArgs *argp)
 #if FW_VERSION >= 0x04000000
 int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const char *function)
 {
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	SceExfatfsDrive *current;
 	int result, error;
 
@@ -1757,7 +1757,7 @@ int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount, const
 			"%s: sceKernelLockFastMutex failed[%#x]\n", function, result);
 		return result;
 	}
-	current = mount->data;
+	current = mount->pData;
 	if (current != drive) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1254, "_lock_drive_information",
 			"%s: drive[%p]->[%p], mp[%p]\n", function, drive, current, mount);
@@ -1788,7 +1788,7 @@ unlockFailed:
 static inline int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allowUnmount,
 	const char *function)
 {
-	SceExfatfsDrive *drive = mount->data;
+	SceExfatfsDrive *drive = mount->pData;
 	int result;
 
 	if (!drive)
@@ -1796,7 +1796,7 @@ static inline int lockDriveInformationAllowUnmount(SceVfsMount *mount, int allow
 	result = lockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 	if (result < 0)
 		return result;
-	if (drive != mount->data || (!(drive->state & 1) && !allowUnmount)) {
+	if (drive != mount->pData || (!(drive->state & 1) && !allowUnmount)) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		return 0x80010013;
 	}
@@ -1830,13 +1830,13 @@ int exfatfs_vop_cleanup(SceVopCleanupArgs *argp)
 			"exfatfs_vop_cleanup");
 	}
 #endif
-	if (!vnode->core.node_data)
+	if (!vnode->core.nodeData)
 		result = 0x80010013;
 	else if (file)
-		result = sceExfatfsVopCleanup(vnode->core.node_data, file->fd);
+		result = sceExfatfsVopCleanup(vnode->core.nodeData, file->fd);
 	else
-		result = sceExfatfsVopCleanup(vnode->core.node_data, 0);
-	drive = mount->data;
+		result = sceExfatfsVopCleanup(vnode->core.nodeData, 0);
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1877,7 +1877,7 @@ int exfatfs_vop_sync(SceVopSyncArgs *argp)
 			"exfatfs_vop_sync");
 	}
 #endif
-	fnode = vnode->core.node_data;
+	fnode = vnode->core.nodeData;
 	if (!fnode) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2157, "_exfatfs_sync_core",
 			"%s: unexpected NULL nodeData, vp[%p], please report to Bug 29181\n",
@@ -1888,7 +1888,7 @@ int exfatfs_vop_sync(SceVopSyncArgs *argp)
 	} else {
 		result = sceExfatfsVopSync(fnode, 0, flags);
 	}
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1910,7 +1910,7 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 	int result, error;
 
 #if FW_VERSION < 0x04000000
-	drive = mount->data;
+	drive = mount->pData;
 #endif
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vfs_sync");
 #if FW_VERSION >= 0x04000000
@@ -1920,7 +1920,7 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 	} else if (result < 0) {
 		return result;
 	}
-	drive = result == 0 ? mount->data : NULL;
+	drive = result == 0 ? mount->pData : NULL;
 #else
 	if (result < 0 && result != (int)0x80010013)
 		return result;
@@ -1928,7 +1928,7 @@ int exfatfs_vfs_sync(SceVfsOpSyncArgs *argp)
 		drive = NULL;
 #endif
 	result = _exfatfs_flush_all_data(drive);
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1966,8 +1966,8 @@ int exfatfs_vop_read(SceVopReadArgs *argp)
 	if (result < 0)
 		return result;
 	_file_size_sync_check(vnode, file, "exfatfs_vop_read");
-	result = sceExfatfsVopPread(file->fd, buffer, size, file->position, &readSize);
-	drive = mount->data;
+	result = sceExfatfsVopPread(file->fd, buffer, size, file->fpos, &readSize);
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -1978,7 +1978,7 @@ int exfatfs_vop_read(SceVopReadArgs *argp)
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
 	}
 	if (result >= 0) {
-		file->position += readSize;
+		file->fpos += readSize;
 		result = readSize;
 	}
 	return result;
@@ -2010,15 +2010,15 @@ int exfatfs_vop_write(SceVopWriteArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_write");
 	if (result < 0)
 		return result;
-	if (vnode != file->vp) {
+	if (vnode != file->vnode) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3090, "_file_size_check_before_write",
-			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_write", vnode, file->vp);
-		if (!_exfatfs_renamed_file(vnode->core.node_data, file->vp->core.node_data))
-			SCE_DBG_ASSERT_FUNC(vnode == file->vp, 3098, "_file_size_check_before_write");
+			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_write", vnode, file->vnode);
+		if (!_exfatfs_renamed_file(vnode->core.nodeData, file->vnode->core.nodeData))
+			SCE_DBG_ASSERT_FUNC(vnode == file->vnode, 3098, "_file_size_check_before_write");
 	}
 	for (;;) {
 		result = sceExfatfsVopPwrite(file->fd, buffer + total, left,
-			file->position + total, &writeSize);
+			file->fpos + total, &writeSize);
 		if (result < 0)
 			break;
 		if (!writeSize) {
@@ -2041,7 +2041,7 @@ int exfatfs_vop_write(SceVopWriteArgs *argp)
 	if ((SceUInt64)vnode->core.size < fileSize)
 		vnode->core.size = fileSize;
 	_file_size_sync_check(vnode, file, "exfatfs_vop_write");
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -2052,7 +2052,7 @@ int exfatfs_vop_write(SceVopWriteArgs *argp)
 			"%s: mp[%p] doesn't have drive\n", "_unlock_drive_information", mount);
 	}
 	if (result >= 0) {
-		file->position += writeSize;
+		file->fpos += writeSize;
 		result = writeSize;
 		if (size != writeSize)
 			SCE_DBG_PRINTF_LEVEL(2, 15, 3655, "write_req: %d, write_ret: %d\n", size, writeSize);
@@ -2079,7 +2079,7 @@ int exfatfs_vop_pread(SceVopPreadArgs *argp)
 		return result;
 	_file_size_sync_check(vnode, file, "exfatfs_vop_pread");
 	result = sceExfatfsVopPread(file->fd, buffer, size, offset, &readSize);
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -2112,17 +2112,17 @@ int exfatfs_vop_pwrite(SceVopPwriteArgs *argp)
 	result = _lock_drive_information(mount, "exfatfs_vop_pwrite");
 	if (result < 0)
 		return result;
-	if (vnode != file->vp) {
+	if (vnode != file->vnode) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 3090, "_file_size_check_before_write",
-			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_pwrite", vnode, file->vp);
-		if (!_exfatfs_renamed_file(vnode->core.node_data, file->vp->core.node_data))
-			SCE_DBG_ASSERT_FUNC(vnode == file->vp, 3098, "_file_size_check_before_write");
+			"%s: vp[%p] != file->vnode[%p]\n", "exfatfs_vop_pwrite", vnode, file->vnode);
+		if (!_exfatfs_renamed_file(vnode->core.nodeData, file->vnode->core.nodeData))
+			SCE_DBG_ASSERT_FUNC(vnode == file->vnode, 3098, "_file_size_check_before_write");
 	}
 	result = sceExfatfsVopPwrite(file->fd, buffer, size, offset, &writeSize);
 	fileSize = _exfatfs_file_size(file->fd);
 	if ((SceUInt64)vnode->core.size < fileSize)
 		vnode->core.size = fileSize;
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&drive->fastmutex);
 		if (error < 0)
@@ -2144,15 +2144,15 @@ int exfatfs_vop_whiteout(SceVopWhiteoutArgs *argp)
 {
 	SceVfsVnode *parent = argp->dvp;
 	SceVfsVnode *vnode = argp->vp;
-	SceVfsPath *path = argp->new_path;
-	SceExfatfsFnode *whiteout = getWhiteoutDirectory(parent->core.node_data);
+	SceVfsPath *path = argp->newPath;
+	SceExfatfsFnode *whiteout = getWhiteoutDirectory(parent->core.nodeData);
 	SceVfsVnode *newVnode = NULL;
 	SceVfsVnode *releasedVnode;
 	SceExfatfsFnode *output = NULL;
 	int result, error;
 
 	if (!whiteout) {
-		whiteout = parent->core.node_data;
+		whiteout = parent->core.nodeData;
 		if (!whiteout)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4280, "%s: NULL dvp->nodeData, please report to Bug 30621\n",
 				"exfatfs_vop_whiteout");
@@ -2164,11 +2164,11 @@ int exfatfs_vop_whiteout(SceVopWhiteoutArgs *argp)
 		return result;
 	result = _exfatfs_rename(vnode, whiteout, path, &output);
 	if (!result) {
-		if (vnode->core.node_data != output)
+		if (vnode->core.nodeData != output)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 4297, "%s: new_entry_data[%p] != old_node[%p]\n",
-				"exfatfs_vop_whiteout", output, vnode->core.node_data);
-		if (parent->core.node_data != whiteout)
-			_exfatfs_set_whiteout_bit(vnode->core.node_data);
+				"exfatfs_vop_whiteout", output, vnode->core.nodeData);
+		if (parent->core.nodeData != whiteout)
+			_exfatfs_set_whiteout_bit(vnode->core.nodeData);
 		_exfatfs_lookup_rollback(parent, output);
 	}
 	releasedVnode = newVnode;
@@ -2196,8 +2196,8 @@ extern void _free_all_cluster_cache(SceExfatfsDrive *drive);
 int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 {
 	SceVfsMount *mount = argp->mnt;
-	SceExfatfsDrive *drive = mount->data;
-	SceVfsPath *path = argp->dev_file_path;
+	SceExfatfsDrive *drive = mount->pData;
+	SceVfsPath *path = argp->devFilePath;
 	SceVfsMountData *mountData;
 	SceVfsVnode *deviceVnode;
 	SceSdstorPartitionInfo partitionInfo;
@@ -2212,15 +2212,15 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 		if (!drive)
 			return 0x8001000c;
 		memset(drive, 0, sizeof(*drive));
-		mountData = mount->mnt_data;
+		mountData = mount->mntData;
 		drive->deviceInfo.mount_misc = mountData;
-		drive->deviceInfo.device_vnode = mount->mnt_vnode;
+		drive->deviceInfo.device_vnode = mount->mntVnode;
 		drive->deviceInfo.device_file = NULL;
 		drive->deviceInfo.device_fd = -1;
 		if (!drive->assignName) {
 			char mutexName[32] = "SceExfatfsDrive";
 
-			assignName = mountData->assign_name;
+			assignName = mountData->assignName;
 			mutexName[15] = *assignName++ - 32;
 			suffix = &mutexName[15];
 			if (*assignName != '0') {
@@ -2238,15 +2238,15 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 				return result;
 			}
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 849, "_initialize_drive_information",
-				"%s: assignName(%s)\n", "_initialize_drive_information", mount->mnt_data->assign_name);
-			mountData = mount->mnt_data;
-			drive->assignName = mountData->assign_name;
+				"%s: assignName(%s)\n", "_initialize_drive_information", mount->mntData->assignName);
+			mountData = mount->mntData;
+			drive->assignName = mountData->assignName;
 		}
 	} else {
-		mountData = mount->mnt_data;
+		mountData = mount->mntData;
 	}
-	fsName = mountData->fs_name;
-	deviceName = mountData->blockdev_name;
+	fsName = mountData->fsName;
+	deviceName = mountData->blockdevName;
 	if (drive->state)
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1112, "_start_mount",
 			"%s: unexpected drive state[%#x]\n", "_start_mount", drive->state);
@@ -2256,10 +2256,10 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 		SCE_DBG_PRINTF_LEVEL(2, 15, 1531, "sceFatfsInitializeHeap() failed (0x%08X)\n", result);
 		goto finalizeDrive;
 	}
-	deviceVnode = mount->mnt_vnode;
+	deviceVnode = mount->mntVnode;
 	drive->deviceInfo.device_file = NULL;
 	drive->deviceInfo.device_fd = -1;
-	mountFlags = mount->mnt_flags;
+	mountFlags = mount->mntFlags;
 	drive->deviceInfo.device_vnode = deviceVnode;
 	result = vfsLockVnode(deviceVnode);
 	if (result < 0) {
@@ -2285,27 +2285,27 @@ int exfatfs_vfs_mount(SceVfsOpMountArgs *argp)
 	} else {
 		if (deviceVnode->core.type & 0x2000) {
 			result = sceVfsOpDevctl(deviceVnode->core.mnt, path->name, 1,
-				path->name, path->name_length + 1, &partitionInfo, sizeof(partitionInfo));
+				path->name, path->nameLength + 1, &partitionInfo, sizeof(partitionInfo));
 			if (result < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1013, "_open_device_file",
 					"%s: sceVfsOpDevctl for (%s) failed[%#x]\n",
 					"_open_device_file", path->path, result);
 				if (result != (int)0x80010030) {
-					drive->deviceInfo.device_file->flags = 3;
+					drive->deviceInfo.device_file->openMode = 3;
 					goto freeFile;
 				}
 			} else if (partitionInfo.writeProtected & 1) {
 				result = 0x8001001e;
-				drive->deviceInfo.device_file->flags = 3;
+				drive->deviceInfo.device_file->openMode = 3;
 				goto freeFile;
 			} else if (result) {
-				drive->deviceInfo.device_file->flags = 3;
+				drive->deviceInfo.device_file->openMode = 3;
 				goto opened;
 			}
 		}
 		openFlags = 3;
 	}
-	drive->deviceInfo.device_file->flags = openFlags;
+	drive->deviceInfo.device_file->openMode = openFlags;
 	result = sceVopOpen(deviceVnode, path, openFlags, drive->deviceInfo.device_file);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1042, "_open_device_file",
@@ -2323,7 +2323,7 @@ freeFile:
 	} else {
 opened:
 		result = 0;
-		++deviceVnode->core.ref_count;
+		++deviceVnode->core.refCount;
 	}
 	error = vfsUnlockVnode(deviceVnode);
 	if (error < 0)
@@ -2332,7 +2332,7 @@ opened:
 	if (result)
 		goto finalizeHeap;
 	flags = 0x80000001;
-	if (drive->deviceInfo.device_file->flags & 2)
+	if (drive->deviceInfo.device_file->openMode & 2)
 		flags = 0x80000000;
 	result = _cache_all_fat_data_drive(drive, (int)fsName, deviceName, (int)"/", flags);
 	if (result < 0) {
@@ -2344,7 +2344,7 @@ opened:
 		_cleanup_after_umount(drive);
 		return result;
 	}
-	mount->data = drive;
+	mount->pData = drive;
 	if (drive->state & 0x4000) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 1603, "%s: mp[%p], drive[%p]\n", "exfatfs_vfs_mount", mount, drive);
 		_free_all_cluster_cache(drive);
@@ -2357,12 +2357,12 @@ opened:
 	} else {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 1128, "_mount_succeeded",
 			"%s: unexpected drive state[%#x]\n", "_mount_succeeded", drive->state);
-		drive = mount->data;
+		drive = mount->pData;
 	}
 	if (!drive->deviceInfo.mount_misc) {
 		result = initializeLegacyDrive(drive);
 		if (result < 0) {
-			drive = mount->data;
+			drive = mount->pData;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1070, "_sceExfatfsClearDeviceVnode",
 				"%s: drive[%p], flag(%d)\n", "_sceExfatfsClearDeviceVnode", drive, 1);
 #if FW_VERSION >= 0x04000000
@@ -2373,7 +2373,7 @@ opened:
 
 				sceVopClose(drive->deviceInfo.device_vnode, drive->deviceInfo.device_file);
 				if (vfsFreeFile(drive->deviceInfo.device_vnode, drive->deviceInfo.device_fd) >= 0)
-					--drive->deviceInfo.device_vnode->core.ref_count;
+					--drive->deviceInfo.device_vnode->core.refCount;
 				drive->deviceInfo.device_file = NULL;
 				drive->deviceInfo.device_fd = -1;
 				if (locked >= 0)
@@ -2384,12 +2384,12 @@ opened:
 			return result;
 		}
 	}
-	mount->available_entry_num = 64;
-	clusterSize = getDriveClusterSize(mount->data);
+	mount->availableEntryNum = 64;
+	clusterSize = getDriveClusterSize(mount->pData);
 	if (clusterSize <= 0x8000)
-		mount->default_io_cache_size = clusterSize;
+		mount->defaultIoCacheSize = clusterSize;
 	else
-		mount->default_io_cache_size = 0x8000;
+		mount->defaultIoCacheSize = 0x8000;
 	return result;
 finalizeHeap:
 	error = sceFatfsFinalizeHeap((int)drive);
@@ -2435,14 +2435,14 @@ int exfatfs_vop_close(SceVopCloseArgs *argp)
 		return result;
 	_file_size_sync_check(vnode, file, "exfatfs_vop_close");
 	result = sceExfatfsVopClose(file->fd);
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		if (drive->state & 0x4000) {
 			if (!_used_resource_count(mount)) {
-				current = mount->data;
+				current = mount->pData;
 				if (!current)
 					goto closed;
-				mount->data = NULL;
+				mount->pData = NULL;
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 					"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
 				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
@@ -2453,7 +2453,7 @@ int exfatfs_vop_close(SceVopCloseArgs *argp)
 				current->state = 0;
 				_cleanup_after_umount(current);
 			}
-			current = mount->data;
+			current = mount->pData;
 			if (!current)
 				goto closed;
 			if (drive != current) {
@@ -2491,19 +2491,19 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 #endif
 		return result;
 	if (vnode->core.type == 0x1002)
-		_clear_whiteout_directory(vnode->core.node_data);
-	result = sceExfatfsVopInactive(vnode->core.node_data);
+		_clear_whiteout_directory(vnode->core.nodeData);
+	result = sceExfatfsVopInactive(vnode->core.nodeData);
 	mount = vnode->core.mnt;
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive && !(drive->state & 0x4000) && (drive->state & 1))
 		goto unlock;
 	if (_used_resource_count(mount)) {
-		current = mount->data;
+		current = mount->pData;
 		if (current && (current->state & 0x4000) &&
 		    (vnode->core.type & 0x1002) == 0x1002) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1207, "_umount_after_root_inactive",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_root_inactive", mount, current);
-			mount->data = NULL;
+			mount->pData = NULL;
 			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
 			if (error < 0)
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 811, "_unlock_drive_information_core",
@@ -2512,9 +2512,9 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 			_cleanup_after_umount(current);
 		}
 	} else {
-		current = mount->data;
+		current = mount->pData;
 		if (current) {
-			mount->data = NULL;
+			mount->pData = NULL;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
 			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
@@ -2527,7 +2527,7 @@ int exfatfs_vop_inactive(SceVopInactiveArgs *argp)
 		}
 	}
 	if (drive) {
-		current = mount->data;
+		current = mount->pData;
 		if (current) {
 			if (current == drive) {
 unlock:
@@ -2542,7 +2542,7 @@ unlock:
 		}
 	}
 	if (!result)
-		vnode->core.node_data = NULL;
+		vnode->core.nodeData = NULL;
 	return result;
 }
 
@@ -2558,20 +2558,20 @@ int exfatfs_vop_dclose(SceVopDcloseArgs *argp)
 
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vop_dclose");
 	SCE_DBG_PRINTF_LEVEL(2, 15, 2861, "called DCLOSE vp = %p\n", vnode);
-	if (vnode != file->vp)
+	if (vnode != file->vnode)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 2863, "%s: vp[%p] != file->vnode[%p]\n",
-			"exfatfs_vop_dclose", vnode, file->vp);
+			"exfatfs_vop_dclose", vnode, file->vnode);
 	if (result != (int)0x80010013 && result < 0)
 		return result;
 	result = sceExfatfsVopDclose(file->fd);
-	drive = mount->data;
+	drive = mount->pData;
 	if (drive) {
 		if (drive->state & 0x4000) {
 			if (!_used_resource_count(mount)) {
-				current = mount->data;
+				current = mount->pData;
 				if (!current)
 					goto closed;
-				mount->data = NULL;
+				mount->pData = NULL;
 				SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 					"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
 				error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
@@ -2582,7 +2582,7 @@ int exfatfs_vop_dclose(SceVopDcloseArgs *argp)
 				current->state = 0;
 				_cleanup_after_umount(current);
 			}
-			current = mount->data;
+			current = mount->pData;
 			if (!current)
 				goto closed;
 			if (drive != current) {
@@ -2615,16 +2615,16 @@ int exfatfs_vop_unlink(SceVopUnlinkArgs *argp)
 	result = lockDriveInformationAllowUnmount(mount, 1, "exfatfs_vop_unlink");
 	if (result != (int)0x80010013 && result < 0)
 		return result;
-	result = sceExfatfsVopUnlink(from->core.node_data, to->core.node_data);
-	drive = mount->data;
+	result = sceExfatfsVopUnlink(from->core.nodeData, to->core.nodeData);
+	drive = mount->pData;
 	if (!drive)
 		return result;
 	if (drive->state & 0x4000) {
 		if (!_used_resource_count(mount)) {
-			current = mount->data;
+			current = mount->pData;
 			if (!current)
 				return result;
-			mount->data = NULL;
+			mount->pData = NULL;
 			SCE_DBG_PRINTF_LEVEL_FUNC(2, 0, 1236, "_umount_after_all_close",
 				"%s: mp[%p], drive[%p]\n", "_umount_after_all_close", mount, current);
 			error = sceKernelUnlockFastMutex((SceKernelFastMutex *)&current->fastmutex);
@@ -2635,7 +2635,7 @@ int exfatfs_vop_unlink(SceVopUnlinkArgs *argp)
 			current->state = 0;
 			_cleanup_after_umount(current);
 		}
-		current = mount->data;
+		current = mount->pData;
 		if (!current)
 			return result;
 		if (drive != current) {
@@ -2671,7 +2671,7 @@ void _exfatfs_notify_broken_cluster_chain(SceExfatfsDrive *drive,
 	IoErrorEventInfo info;
 	int result;
 
-	info.mntId = mountData->mnt_id;
+	info.mntId = mountData->mntId;
 	info.error = 0x808d0007;
 	info.reserved0[0] = 0;
 	info.reserved0[1] = 0;
@@ -2680,9 +2680,9 @@ void _exfatfs_notify_broken_cluster_chain(SceExfatfsDrive *drive,
 	info.reserved1[1] = 0;
 	SCE_DBG_PRINTF_LEVEL(1, 0, 280,
 		"%s: broken cluster chain found, cluster[%#x]->[%#x], please check whole (%s), mntId[%#x], error[%#x]\n",
-		"_exfatfs_notify_broken_cluster_chain", cluster, next, mountData->assign_name,
+		"_exfatfs_notify_broken_cluster_chain", cluster, next, mountData->assignName,
 		info.mntId, 0x808d0007);
-	result = sceIoSetErrorEvent(mountData->mnt_id, 1, &info);
+	result = sceIoSetErrorEvent(mountData->mntId, 1, &info);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 283, "%s: sceIoSetErrorEvent failed[%#x]\n",
 			"_exfatfs_notify_broken_cluster_chain", result);
@@ -2695,7 +2695,7 @@ void _exfatfs_notify_invalid_directory_entry(SceExfatfsDrive *drive,
 	IoErrorEventInfo info;
 	int result;
 
-	info.mntId = mountData->mnt_id;
+	info.mntId = mountData->mntId;
 	info.error = 0x808d0008;
 	info.reserved0[0] = 0;
 	info.reserved0[1] = 0;
@@ -2704,9 +2704,9 @@ void _exfatfs_notify_invalid_directory_entry(SceExfatfsDrive *drive,
 	info.reserved1[1] = 0;
 	SCE_DBG_PRINTF_LEVEL(1, 0, 305,
 		"%s: invalid directory entry found, first byte[%#x], assignName(%s), mntId[%#x], error[%#x]\n",
-		"_exfatfs_notify_invalid_directory_entry", *entry, mountData->assign_name,
+		"_exfatfs_notify_invalid_directory_entry", *entry, mountData->assignName,
 		info.mntId, 0x808d0008);
-	result = sceIoSetErrorEvent(mountData->mnt_id, 1, &info);
+	result = sceIoSetErrorEvent(mountData->mntId, 1, &info);
 	if (result < 0)
 		SCE_DBG_PRINTF_LEVEL(1, 0, 308, "%s: sceIoSetErrorEvent failed[%#x]\n",
 			"_exfatfs_notify_invalid_directory_entry", result);
@@ -2719,7 +2719,7 @@ void _exfatfs_notify_directory_loop(SceExfatfsDrive *drive, SceUInt32 startClust
 	IoErrorEventInfo info;
 	int result;
 
-	info.mntId = mountData->mnt_id;
+	info.mntId = mountData->mntId;
 	info.error = 0x808d000b;
 	info.reserved0[0] = 0;
 	info.reserved0[1] = 0;
@@ -2729,9 +2729,9 @@ void _exfatfs_notify_directory_loop(SceExfatfsDrive *drive, SceUInt32 startClust
 	if (!((startCluster == 0) & (fileSize == 0)) || (attributes & 0x10)) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 329,
 			"%s: directory loop found, start_cluster[%#x], offset[%#llx], assignName(%s), mntId[%#x], error[%#x]\n",
-			"_exfatfs_notify_directory_loop", startCluster, offset, mountData->assign_name,
+			"_exfatfs_notify_directory_loop", startCluster, offset, mountData->assignName,
 			info.mntId, 0x808d000b);
-		result = sceIoSetErrorEvent(mountData->mnt_id, 1, &info);
+		result = sceIoSetErrorEvent(mountData->mntId, 1, &info);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL(1, 0, 332, "%s: sceIoSetErrorEvent failed[%#x]\n",
 				"_exfatfs_notify_directory_loop", result);
@@ -2765,10 +2765,9 @@ static const SceVopTable g_exfatfsVopTable = {
 	.vop_sync = exfatfs_vop_sync,
 	.vop_fgetstat = exfatfs_vop_fgetstat,
 	.vop_fchstat = exfatfs_vop_fchstat,
-	/* SDK table types predate the canonical extended argument records. */
-	.vop_whiteout = (int (*)(SceVopWhiteoutArgs_vitasdk *))exfatfs_vop_whiteout,
-	.vop_cleanup = (int (*)(SceVopCleanupArgs_vitasdk *))exfatfs_vop_cleanup,
-	.vop_verofill = NULL,
+	.vop_whiteout = exfatfs_vop_whiteout,
+	.vop_cleanup = exfatfs_vop_cleanup,
+	.vop_zerofill = NULL,
 };
 
 static const SceVfsOpTable g_exfatfsVfsOpTable = {
@@ -2790,13 +2789,13 @@ int _register_exfatfs_vops(SceVfsInfo *info)
 {
 	int result;
 
-	info->vfs_ops = &g_exfatfsVfsOpTable;
-	info->default_vops = &g_exfatfsVopTable;
+	info->vfsOps = &g_exfatfsVfsOpTable;
+	info->defaultVops = &g_exfatfsVopTable;
 	result = sceVfsAddVfs(info);
 	if (result == (int)0x80010011) {
 		result = 0;
 		SCE_DBG_PRINTF_LEVEL(1, 0, 716, "%s: already registered, vfsName(%s), type(%d)\n",
-			"_register_exfatfs_vops", info->vfs_name, info->type);
+			"_register_exfatfs_vops", info->vfsName, info->type);
 	} else if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0, 719, "%s: sceVfsAddVfs failed[%#x]\n",
 			"_register_exfatfs_vops", result);

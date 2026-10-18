@@ -301,7 +301,7 @@ static int dev_tty_vfs_mount(SceVfsOpMountArgs *argp)
 		TTY2_ERROR(0xf, 752, "invalid arg\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	mnt->available_entry_num = 0x40;
+	mnt->availableEntryNum = 0x40;
 	return 0;
 }
 
@@ -327,15 +327,15 @@ static int dev_tty_vfs_set_root(SceVfsOpSetRootArgs *argp)
 		TTY2_ERROR(0xf, 784, "invalid arg\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	vp->core.node_data = mnt->data;
+	vp->core.nodeData = mnt->pData;
 	vp->core.mnt = mnt;
 	vp->core.type = SCE_VNODE_TYPE_ROOTDIR_DEVFS;
 	vp->core.dd = NULL;
 	vp->core.fid[0] = 0;
 	vp->core.fid[1] = 0;
 	vp->core.size = 0;
-	vp->core.acl_data[0] = 0;
-	vp->core.acl_data[1] = 0;
+	vp->core.aclData[0] = 0;
+	vp->core.aclData[1] = 0;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	return 0;
 }
@@ -365,7 +365,7 @@ static int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 		TTY2_ERROR(0xf, 812, "invalid arg\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	len = argp->path->name_length;
+	len = argp->path->nameLength;
 	dvp = argp->dvp;
 	vpp = argp->vpp;
 	name = (const signed char *)argp->path->name;
@@ -374,11 +374,11 @@ static int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 		return SCE_ERROR_ERRNO_ENOENT;
 	unit = name[3] - '0';
 	TTY2_TRACE(0xf, 835, "unit = %d\n", unit);
-	if (dvp == NULL || (mnt = dvp->core.mnt) == NULL || mnt->mnt_vfs_inf == NULL) {
+	if (dvp == NULL || (mnt = dvp->core.mnt) == NULL || mnt->mntVfsInf == NULL) {
 		TTY2_ERROR(0xf, 838, "invalid arg\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	ret = vfsGetNewVnode(mnt, (SceVopTable *)mnt->mnt_vfs_inf->default_vops, 0, &vp);
+	ret = vfsGetNewVnode(mnt, (SceVopTable *)mnt->mntVfsInf->defaultVops, 0, &vp);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 846, "vfsGetNewNode failed (0x%08X)\n", ret);
 		return ret;
@@ -388,7 +388,7 @@ static int dev_tty_vop_lookup(SceVopLookupArgs *argp)
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
 	vfsLockVnode(vp);
-	vp->core.node_data = (void *)unit;
+	vp->core.nodeData = (void *)unit;
 	vp->core.mnt = dvp->core.mnt;
 	vp->core.dd = dvp;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
@@ -502,23 +502,23 @@ static const SceVopTable s_vops = {
 };
 
 static const SceVfsMountData s_mountData = {
-	.assign_name = "tty",
-	.fs_name = TTY2_FS_NAME,
-	.blockdev_name = TTY2_FS_NAME,
+	.assignName = "tty",
+	.fsName = TTY2_FS_NAME,
+	.blockdevName = TTY2_FS_NAME,
 };
 
 static const SceVfsMountParam s_mountParam = {
-	.root_path = "/tty",
-	.fs_type = SCE_VFS_FS_TYPE_CHRDEV,
+	.rootPath = "/tty",
+	.fsType = SCE_VFS_FS_TYPE_CHRDEV,
 	.opt = 0x400,
-	.mnt_flags = SCE_VFS_MOUNT_FLAG_NUMBERED | SCE_VFS_MOUNT_FLAG_NOBUF | SCE_VFS_MOUNT_TYPE_DEVFS,
-	.vfs_name = TTY2_FS_NAME,
+	.mntFlags = SCE_VFS_MOUNT_FLAG_NUMBERED | SCE_VFS_MOUNT_FLAG_NOBUF | SCE_VFS_MOUNT_TYPE_DEVFS,
+	.vfsName = TTY2_FS_NAME,
 	.misc = (SceVfsMountData *)&s_mountData,
 };
 
 /* (writable: kept away from the operation tables) */
 static SceVfsUmountParam s_umountParam = {
-	.assign_name = "/tty",
+	.assignName = "/tty",
 };
 
 static int tty2uartFsInit(void)
@@ -529,12 +529,12 @@ static int tty2uartFsInit(void)
 	if (ret < 0)
 		TTY2_TRACE(0xf, 611, "vfsUmount failed (0x%08X)\n", ret);
 
-	s_vfsInfo.vfs_ops = &s_vfsOps;
-	s_vfsInfo.vfs_name = TTY2_FS_NAME;
+	s_vfsInfo.vfsOps = &s_vfsOps;
+	s_vfsInfo.vfsName = TTY2_FS_NAME;
 	s_vfsInfo.type = SCE_VFS_TYPE_DEVFS;
-	s_vfsInfo.default_vops = &s_vops;
-	s_vfsInfo.vfs_name_len = sizeof(TTY2_FS_NAME);
-	s_vfsInfo.vfs_data = NULL;
+	s_vfsInfo.defaultVops = &s_vops;
+	s_vfsInfo.vfsNameLen = sizeof(TTY2_FS_NAME);
+	s_vfsInfo.vfsData = NULL;
 	ret = sceVfsAddVfs(&s_vfsInfo);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 634, "sceVfsAddVfs failed (0x%08X)\n", ret);

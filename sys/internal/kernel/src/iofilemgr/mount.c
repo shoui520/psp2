@@ -214,11 +214,11 @@ void mount(MountRequest *request)
 		}
 		param = point->param;
 		if (flags & 1)
-			param.mnt_flags |= 0x1000;
+			param.mntFlags |= 0x1000;
 		else if (flags & 2)
-			param.mnt_flags &= ~0x1000;
-		param.blockdev_name = request->path;
-		param.mnt_flags |= flags & ~3;
+			param.mntFlags &= ~0x1000;
+		param.blockdevName = request->path;
+		param.mntFlags |= flags & ~3;
 		if (request->data != NULL && point->param.data == NULL) {
 			param.data = request->data;
 			point->param.data = request->data;
@@ -235,12 +235,12 @@ void mount(MountRequest *request)
 	}
 	result = ret;
 	if (ret == 0) {
-		if (param.blockdev_name != NULL) {
-			id = vfsGetMntId(param.blockdev_name);
+		if (param.blockdevName != NULL) {
+			id = vfsGetMntId(param.blockdevName);
 			if (id < 0) {
 				SCE_DBG_PRINTF_LEVEL(1, 0xf, 1441,
 						     "vfsGetMntId(%s) failed ... ret=%d 0x%x\n",
-						     param.blockdev_name, ret, ret);
+						     param.blockdevName, ret, ret);
 			} else {
 				parent = NULL;
 				for (i = 0; i < 32; i++) {
@@ -311,7 +311,7 @@ void umount(MountRequest *request)
 			work.sub.id = child->id;
 			umount(&work.sub);
 		}
-		work.param.assign_name = point->param.root_path;
+		work.param.assignName = point->param.rootPath;
 		work.param.flag = request->umountFlags;
 	}
 	vfs_increment_io_count();
@@ -421,7 +421,7 @@ const char *mount_get_path_by_id(int id)
 
 	for (i = 0; i < 32; i++) {
 		if (g_mountPoints[i].id == id)
-			return g_mountPoints[i].param.root_path;
+			return g_mountPoints[i].param.rootPath;
 	}
 	return NULL;
 }
@@ -445,9 +445,9 @@ int mnt_get_mount_opt(int id)
 
 	if (point == NULL)
 		return 0;
-	if ((point->param.mnt_flags & 0xff) != SCE_VFS_MOUNT_TYPE_STACKFS)
+	if ((point->param.mntFlags & 0xff) != SCE_VFS_MOUNT_TYPE_STACKFS)
 		return (short)point->param.opt;
-	param.path = mnt_get_mount_data(id)->assign_name;
+	param.path = mnt_get_mount_data(id)->assignName;
 	ret = SceThreadmgrForDriver_E54FD746(0x2000, (int (*)(void *))vfs_get_vnode_mnt_opt,
 				     &param);
 	if (ret < 0)
@@ -485,11 +485,11 @@ found:
 	memset(point, 0, sizeof(*point));
 	point->mountData = &g_mountDataSdstor;
 	point->param.misc = &g_mountDataSdstor;
-	point->param.root_path = "/dev";
-	point->param.vfs_name = "sdstor_dev_fs";
+	point->param.rootPath = "/dev";
+	point->param.vfsName = "sdstor_dev_fs";
 	point->id = 0x1;
-	point->param.fs_type = 0x10;
-	point->param.mnt_flags = 3;
+	point->param.fsType = 0x10;
+	point->param.mntFlags = 3;
 }
 
 static inline __attribute__((always_inline)) void init_memdisk(void)
@@ -509,21 +509,21 @@ found:
 	memset(point, 0, sizeof(*point));
 	point->mountData = &g_mountDataMemdisk;
 	point->param.misc = &g_mountDataMemdisk;
-	point->param.root_path = "/md";
-	point->param.vfs_name = "md_dev_fs";
+	point->param.rootPath = "/md";
+	point->param.vfsName = "md_dev_fs";
 	point->id = 0x2;
-	point->param.fs_type = 0x10;
-	point->param.mnt_flags = 0x2003;
+	point->param.fsType = 0x10;
+	point->param.mntFlags = 0x2003;
 }
 
 static inline __attribute__((always_inline)) void init_sd0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/sd/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/sd/exfat",
+		.fsType = 0x1,
 		.opt = 0x203,
-		.mnt_flags = 0x30002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x30002,
+		.vfsName = "exfat",
 	};
 	MountPoint *point = mntFindFreeMountPoint();
 
@@ -539,11 +539,11 @@ static inline __attribute__((always_inline)) void init_sd0(void)
 static inline __attribute__((always_inline)) void init_os0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/os/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/os/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x1002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x1002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataOs0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -560,11 +560,11 @@ static inline __attribute__((always_inline)) void init_os0(void)
 static inline __attribute__((always_inline)) void init_vs0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/vs/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/vs/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x1002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x1002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataVs0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -581,11 +581,11 @@ static inline __attribute__((always_inline)) void init_vs0(void)
 static inline __attribute__((always_inline)) void init_sa0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/sa/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/sa/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x1002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x1002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataSa0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -602,11 +602,11 @@ static inline __attribute__((always_inline)) void init_sa0(void)
 static inline __attribute__((always_inline)) void init_vd0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/vd/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/vd/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x10002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x10002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataVd0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -623,11 +623,11 @@ static inline __attribute__((always_inline)) void init_vd0(void)
 static inline __attribute__((always_inline)) void init_tm0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/tm/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/tm/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x10002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x10002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataTm0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -644,11 +644,11 @@ static inline __attribute__((always_inline)) void init_tm0(void)
 static inline __attribute__((always_inline)) void init_ur0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/ur/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/ur/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x50002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x50002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataUr0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -665,11 +665,11 @@ static inline __attribute__((always_inline)) void init_ur0(void)
 static inline __attribute__((always_inline)) void init_pd0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/pd/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/pd/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x1002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x1002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataPd0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -686,11 +686,11 @@ static inline __attribute__((always_inline)) void init_pd0(void)
 static inline __attribute__((always_inline)) void init_ud0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/ud/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/ud/exfat",
+		.fsType = 0x1,
 		.opt = 0x100,
-		.mnt_flags = 0x10002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x10002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataUd0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -707,11 +707,11 @@ static inline __attribute__((always_inline)) void init_ud0(void)
 static inline __attribute__((always_inline)) void init_ux0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/ux/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/ux/exfat",
+		.fsType = 0x1,
 		.opt = 0x202,
-		.mnt_flags = 0x30002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x30002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataUx0,
 	};
 
@@ -732,11 +732,11 @@ static inline __attribute__((always_inline)) void init_ux0(void)
 static inline __attribute__((always_inline)) void init_gro0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/gro/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/gro/exfat",
+		.fsType = 0x1,
 		.opt = 0x201,
-		.mnt_flags = 0x21002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x21002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataGro0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -753,11 +753,11 @@ static inline __attribute__((always_inline)) void init_gro0(void)
 static inline __attribute__((always_inline)) void init_grw0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/grw/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/grw/exfat",
+		.fsType = 0x1,
 		.opt = 0x201,
-		.mnt_flags = 0x20002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x20002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataGrw0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -774,11 +774,11 @@ static inline __attribute__((always_inline)) void init_grw0(void)
 static inline __attribute__((always_inline)) void init_imc0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/imc/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/imc/exfat",
+		.fsType = 0x1,
 		.opt = 0x202,
-		.mnt_flags = 0x30002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x30002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataImc0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -795,11 +795,11 @@ static inline __attribute__((always_inline)) void init_imc0(void)
 static inline __attribute__((always_inline)) void init_xmc0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/xmc/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/xmc/exfat",
+		.fsType = 0x1,
 		.opt = 0x202,
-		.mnt_flags = 0x30002,
-		.vfs_name = "exfat",
+		.mntFlags = 0x30002,
+		.vfsName = "exfat",
 		.misc = &g_mountDataXmc0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -816,11 +816,11 @@ static inline __attribute__((always_inline)) void init_xmc0(void)
 static inline __attribute__((always_inline)) void init_mfa0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/mfa/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/mfa/exfat",
+		.fsType = 0x1,
 		.opt = 0x0,
-		.mnt_flags = 0x5,
-		.vfs_name = "exfat",
+		.mntFlags = 0x5,
+		.vfsName = "exfat",
 		.misc = &g_mountDataMfa0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -837,11 +837,11 @@ static inline __attribute__((always_inline)) void init_mfa0(void)
 static inline __attribute__((always_inline)) void init_mfb0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/mfb/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/mfb/exfat",
+		.fsType = 0x1,
 		.opt = 0x0,
-		.mnt_flags = 0x5,
-		.vfs_name = "exfat",
+		.mntFlags = 0x5,
+		.vfsName = "exfat",
 		.misc = &g_mountDataMfb0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -858,11 +858,11 @@ static inline __attribute__((always_inline)) void init_mfb0(void)
 static inline __attribute__((always_inline)) void init_lma0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/lma/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/lma/exfat",
+		.fsType = 0x1,
 		.opt = 0x0,
-		.mnt_flags = 0x5,
-		.vfs_name = "exfat",
+		.mntFlags = 0x5,
+		.vfsName = "exfat",
 		.misc = &g_mountDataLma0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -879,11 +879,11 @@ static inline __attribute__((always_inline)) void init_lma0(void)
 static inline __attribute__((always_inline)) void init_lmb0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/lmb/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/lmb/exfat",
+		.fsType = 0x1,
 		.opt = 0x0,
-		.mnt_flags = 0x5,
-		.vfs_name = "exfat",
+		.mntFlags = 0x5,
+		.vfsName = "exfat",
 		.misc = &g_mountDataLmb0,
 	};
 	MountPoint *point = mntFindFreeMountPoint();
@@ -900,11 +900,11 @@ static inline __attribute__((always_inline)) void init_lmb0(void)
 static inline __attribute__((always_inline)) void init_uma0(void)
 {
 	static const SceVfsMountParam param = {
-		.root_path = "/uma/exfat",
-		.fs_type = 0x1,
+		.rootPath = "/uma/exfat",
+		.fsType = 0x1,
 		.opt = 0x203,
-		.mnt_flags = 0x2,
-		.vfs_name = "exfat",
+		.mntFlags = 0x2,
+		.vfsName = "exfat",
 	};
 	MountPoint *point = mntFindFreeMountPoint();
 
@@ -1059,7 +1059,7 @@ SceUID sceIoCreateMountEvent(SceUInt32 id, SceUInt32 pattern)
 	i = 0;
 	mountData = point->mountData;
 	for (;;) {
-		c = mountData->assign_name[i];
+		c = mountData->assignName[i];
 		if (i == 0)
 			c = toupper((SceInt8)c);
 		if (c == ':') {

@@ -12,19 +12,19 @@ void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, Sce
 	int ret;
 
 	info->value = (unsigned char *)attr;
-	fsType = mnt->fs_type;
+	fsType = mnt->fsType;
 	switch (fsType) {
 	case SCE_VFS_FS_TYPE_FS:
 		info->type = VFS_AC_FS_KIND_FS;
 		info->size = 1;
 		if (*attr == VFS_AC_ATTR_LONG) {
-			mntData = mnt->mnt_data;
-			if ((SceUInt8)mnt->mnt_flags != VFS_MOUNT_TYPE_LOOP)
+			mntData = mnt->mntData;
+			if ((SceUInt8)mnt->mntFlags != VFS_MOUNT_TYPE_LOOP)
 				SCE_DBG_PRINTF(0xf, 68, "NO LOOP MNT [%x] but SCE_ELONG is set\n",
-					       (SceUInt8)mnt->mnt_flags);
+					       (SceUInt8)mnt->mntFlags);
 			if ((vp->core.type & SCE_VNODE_TYPE_ROOTDIR) != SCE_VNODE_TYPE_ROOTDIR)
 				SCE_DBG_PRINTF(0xf, 73, "%p it not root vnode but SCE_ELONG is set\n", vp);
-			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mnt_id);
+			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mntId);
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xf, 82,
 					       "sceSblACMgrSetFSAttributeByAttributeWithMountPoint() failed ... %x\n",
@@ -35,14 +35,14 @@ void set_attr_info(SceVfsVnode *vp, SceUInt64 *attr, SceSblACMgrValue *info, Sce
 		info->type = VFS_AC_FS_KIND_2;
 		info->size = 4;
 		if (*attr == VFS_AC_ATTR_LONG) {
-			mntData = mnt->mnt_data;
-			if ((SceUInt8)mnt->mnt_flags != VFS_MOUNT_TYPE_LOOP)
+			mntData = mnt->mntData;
+			if ((SceUInt8)mnt->mntFlags != VFS_MOUNT_TYPE_LOOP)
 				SCE_DBG_PRINTF(0xf, 100, "NO LOOP MNT [%x] but SCE_ELONG is set\n",
-					       (SceUInt8)mnt->mnt_flags);
+					       (SceUInt8)mnt->mntFlags);
 			if ((vp->core.type & SCE_VNODE_TYPE_ROOTDIR) != SCE_VNODE_TYPE_ROOTDIR)
 				SCE_DBG_PRINTF(0xf, 105, "%p it not root vnode but SCE_ELONG is set\n",
 					       vp);
-			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mnt_id);
+			ret = SceSblACMgrForKernel_sceSblACMgrSetFSAttributeByAttributeWithMountPoint(pid, info, info, mntData->mntId);
 			if (ret < 0)
 				SCE_DBG_PRINTF(0xf, 114,
 					       "sceSblACMgrSetFSAttributeByAttributeWithMountPoint() failed ... %x\n",
@@ -71,12 +71,12 @@ static inline __attribute__((always_inline)) int vfs_check_vnode_access(SceVfsVn
 	SceUInt64 attr;
 	SceUID pid;
 
-	if (vp->core.mnt->fs_type == SCE_VFS_FS_TYPE_HOSTFS ||
+	if (vp->core.mnt->fsType == SCE_VFS_FS_TYPE_HOSTFS ||
 	    (vp->core.type & (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR)) ==
 		    (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR))
 		return 0;
 	pid = SceThreadmgrForDriver_FA54D49A();
-	attr = *(SceUInt64 *)vp->core.acl_data;
+	attr = *(SceUInt64 *)vp->core.aclData;
 	set_attr_info(vp, &attr, &info, pid);
 	return SceSblACMgrForKernel_75AAF981(pid, &info, mode);
 }
@@ -109,12 +109,12 @@ int sceVfsACCheckOpen(SceVfsVnode *vp, int flags)
 	SceUID pid;
 	int access;
 
-	if (vp->core.mnt->fs_type == SCE_VFS_FS_TYPE_HOSTFS ||
+	if (vp->core.mnt->fsType == SCE_VFS_FS_TYPE_HOSTFS ||
 	    (vp->core.type & (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR)) ==
 		    (SCE_VNODE_TYPE_DEV | SCE_VNODE_TYPE_CHR))
 		return 0;
 	pid = SceThreadmgrForDriver_FA54D49A();
-	attr = *(SceUInt64 *)vp->core.acl_data;
+	attr = *(SceUInt64 *)vp->core.aclData;
 	access = flags & SCE_O_RDWR;
 	set_attr_info(vp, &attr, &info, pid);
 	switch (access) {

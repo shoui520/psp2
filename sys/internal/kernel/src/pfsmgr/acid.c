@@ -15,7 +15,7 @@
 int pfsAcidFindLocked(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp)
 {
 	char name[PFS_ACID_NAME_SIZE];
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	int ret;
 
 	snprintf(name, sizeof(name), "0x%xACD", vd->slot);
@@ -27,7 +27,7 @@ int pfsAcidFindLocked(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp)
 
 int pfsAcidFind(ScePfsPmi **acid, ScePfsPmi *pmi, SceVfsVnode *vp)
 {
-	ScePfsVd *vd = vp->core.node_data;
+	ScePfsVd *vd = vp->core.nodeData;
 	int ret;
 
 	if (vd->slot == -1)
@@ -51,7 +51,7 @@ int pfsAcidDirSet(ScePfsPmi *pmi, SceVfsVnode *vp)
 
 	if (vp->core.dd->core.type < SCE_VNODE_TYPE_ROOTDIR)
 		return SCE_PFS_ERROR_INVALID_ARG;
-	if ((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR)
+	if ((SceUInt16)vp->core.aclData[0] & PFS_ATTR_ACID_DIR)
 		return SCE_PFS_ERROR_ACID_EXISTS;
 	ret = vfsGetVnodeName(vp, name, sizeof(name), &len);
 	if (ret != 0)
@@ -68,8 +68,8 @@ int pfsAcidDirSet(ScePfsPmi *pmi, SceVfsVnode *vp)
 	node.name = name;
 	ret = pfsCoreSetAttr(pmi, &node, attr);
 	if (ret == 0) {
-		vd = vp->core.node_data;
-		*(SceUInt64 *)vp->core.acl_data = attr;
+		vd = vp->core.nodeData;
+		*(SceUInt64 *)vp->core.aclData = attr;
 		vd->slot = vd->index;
 		vd->index = 0;
 	}
@@ -86,7 +86,7 @@ int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceS
 	SceSize pathLen;
 	int count, max, ret;
 
-	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
+	if (!((SceUInt16)vp->core.aclData[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
 	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	if (pfsAcidFindLocked(&acid, pmi, vp) == 0) {
@@ -106,7 +106,7 @@ int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceS
 		ret = SCE_PFS_ERROR_ACID_TOO_MANY;
 		goto unlock;
 	}
-	snprintf(name, sizeof(name), "0x%xACD", ((ScePfsVd *)vp->core.node_data)->slot);
+	snprintf(name, sizeof(name), "0x%xACD", ((ScePfsVd *)vp->core.nodeData)->slot);
 	ret = vfsGetVnodeName(vp, path, sizeof(path), &pathLen);
 	if (ret != 0)
 		goto unlock;
@@ -115,7 +115,7 @@ int pfsAcidDirMount(ScePfsPmi *pmi, SceVfsVnode *vp, const void *klicensee, SceS
 		goto unlock;
 	acid->parent = pmi;
 	acid->openCount = 0;
-	vd = vp->core.node_data;
+	vd = vp->core.nodeData;
 	if (vd == NULL) {
 		ret = SCE_ERROR_ERRNO_EINVAL;
 	} else {
@@ -170,7 +170,7 @@ int pfsAcidDirSeal(ScePfsPmi *pmi, SceVfsVnode *vp)
 	ScePfsPmi *acid;
 	int ret;
 
-	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
+	if (!((SceUInt16)vp->core.aclData[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
 	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	ret = pfsAcidFindLocked(&acid, pmi, vp);
@@ -191,7 +191,7 @@ int pfsAcidDirUmount(ScePfsPmi *pmi, SceVfsVnode *vp)
 	ScePfsPmi *acid;
 	int ret;
 
-	if (!((SceUInt16)vp->core.acl_data[0] & PFS_ATTR_ACID_DIR))
+	if (!((SceUInt16)vp->core.aclData[0] & PFS_ATTR_ACID_DIR))
 		return SCE_PFS_ERROR_INVALID_ARG;
 	sceKernelLockMutex(pmi->mutex, 1, NULL);
 	ret = pfsAcidFindLocked(&acid, pmi, vp);

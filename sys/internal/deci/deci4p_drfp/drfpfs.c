@@ -127,15 +127,15 @@ static int dev_drfp_vfs_set_root(SceVfsOpSetRootArgs *argp)
 	SceVfsVnode *vp = argp->vp;
 
 	vp->core.type = SCE_VNODE_TYPE_ROOTDIR;
-	vp->core.node_data = mnt->data;
+	vp->core.nodeData = mnt->pData;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.mnt = mnt;
 	vp->core.dd = NULL;
 	vp->core.fid[0] = 0;
 	vp->core.fid[1] = 0;
 	vp->core.size = 0;
-	vp->core.acl_data[0] = 0;
-	vp->core.acl_data[1] = 0;
+	vp->core.aclData[0] = 0;
+	vp->core.aclData[1] = 0;
 	return 0;
 }
 
@@ -184,12 +184,12 @@ static SceSSize dev_drfp_vop_write(SceVopWriteArgs *argp)
 	SceOff position, size;
 	int ret;
 
-	ret = sceDeci4pDrfpWrite(file->fd, argp->buf, file->position, argp->nbyte);
+	ret = sceDeci4pDrfpWrite(file->fd, argp->buf, file->fpos, argp->nbyte);
 	if (ret >= 0) {
-		position = file->position;
+		position = file->fpos;
 		size = vp->core.size;
 		position += ret;
-		file->position = position;
+		file->fpos = position;
 		if (size < position)
 			vp->core.size = position;
 	}
@@ -208,9 +208,9 @@ static SceSSize dev_drfp_vop_read(SceVopReadArgs *argp)
 	SceVfsFile *file = argp->file;
 	int ret;
 
-	ret = sceDeci4pDrfpRead(file->fd, argp->buf, file->position, argp->nbyte);
+	ret = sceDeci4pDrfpRead(file->fd, argp->buf, file->fpos, argp->nbyte);
 	if (ret >= 0)
-		file->position += ret;
+		file->fpos += ret;
 	return ret;
 }
 
@@ -220,8 +220,8 @@ static int dev_drfp_vfs_mount(SceVfsOpMountArgs *argp)
 	SceVfsMount *mnt = argp->mnt;
 
 	mnt->allocator = drfpGetHeap();
-	mnt->available_entry_num = 0x80;
-	mnt->default_io_cache_size = 0x10000;
+	mnt->availableEntryNum = 0x80;
+	mnt->defaultIoCacheSize = 0x10000;
 	return 0;
 }
 
@@ -237,7 +237,7 @@ static int dev_drfp_vop_dclose(SceVopDcloseArgs *argp)
 }
 
 /* name unknown */
-static int dev_drfp_vop_dopen(SceVopDopenAgrs *argp)
+static int dev_drfp_vop_dopen(SceVopDopenArgs *argp)
 {
 	SceVfsFile *file = argp->file;
 	const char *path = argp->path->name;
@@ -275,16 +275,16 @@ static SceOff dev_drfp_vop_lseek(SceVopLseekArgs *argp)
 	case SCE_SEEK_SET:
 		break;
 	case SCE_SEEK_CUR:
-		offset += file->position;
+		offset += file->fpos;
 		break;
 	case SCE_SEEK_END:
 		offset += vp->core.size;
 		break;
 	default:
 		SCE_DBG_ASSERT(0, 846);
-		return file->position;
+		return file->fpos;
 	}
-	file->position = offset;
+	file->fpos = offset;
 	return offset;
 }
 
@@ -309,7 +309,7 @@ static int dev_drfp_vfs_devctl(SceVfsOpDevctlArg *argp)
 
 	if (argp->cmd != DRFP_DEVCTL_TRANSLATE_PATH)
 		return SCE_ERROR_ERRNO_EUNSUP;
-	if (argp->arg_len != sizeof(*in) || argp->buf_len != sizeof(*out))
+	if (argp->argLen != sizeof(*in) || argp->bufLen != sizeof(*out))
 		return SCE_ERROR_ERRNO_EINVAL;
 	ret = sceDeci4pDrfpTranslatePath(in->base, in->path, DRFP_PATH_MAX, out->path, &len);
 	if (ret == 0) {
@@ -331,14 +331,14 @@ static int dev_drfp_vop_rename(SceVopRenameArgs *argp)
 	Deci4pFsStat st = {0};
 	int ret;
 
-	ret = sceDeci4pDrfpRename(argp->old_path->name, argp->new_path->name, &st);
+	ret = sceDeci4pDrfpRename(argp->oldPath->name, argp->newPath->name, &st);
 	if (ret != 0)
 		return ret;
 	dvp = argp->ndvp;
 	if (dvp == NULL)
 		dvp = argp->odvp;
 	mnt = dvp->core.mnt;
-	ret = vfsGetNewVnode(mnt, (SceVopTable *)mnt->mnt_vfs_inf->default_vops, 0, &vp);
+	ret = vfsGetNewVnode(mnt, (SceVopTable *)mnt->mntVfsInf->defaultVops, 0, &vp);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 1200, "vfsGetNewVnode failed (0x%08x)\n", ret);
 		return ret;
@@ -357,7 +357,7 @@ static int dev_drfp_vop_rename(SceVopRenameArgs *argp)
 	drfpSetVnodeFile(vp, &st);
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	vp->core.size = st.size;
-	vp->core.node_data = NULL;
+	vp->core.nodeData = NULL;
 	*nvpp = vp;
 	return ret;
 }
@@ -374,7 +374,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	ret = sceDeci4pDrfpStat(((const DrfpLookupPath *)argp->path)->elem, &st);
 	if (ret != 0)
 		return ret;
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, &vp);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 603, "vfsGetNewVnode failed (0x%08x)\n", ret);
@@ -393,7 +393,7 @@ static int dev_drfp_vop_lookup(SceVopLookupArgs *argp)
 	}
 	drfpSetVnodeFile(vp, &st);
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
-	vp->core.node_data = NULL;
+	vp->core.nodeData = NULL;
 	vp->core.size = st.size;
 	*vpp = vp;
 	return 0;
@@ -411,7 +411,7 @@ static int dev_drfp_vop_mkdir(SceVopMkdirArgs *argp)
 	ret = sceDeci4pDrfpMkdir(argp->path->name, argp->mode, &st);
 	if (ret < 0)
 		return ret;
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, &vp);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 885, "vfsGetNewVnode failed (0x%08x)\n", ret);
@@ -424,7 +424,7 @@ static int dev_drfp_vop_mkdir(SceVopMkdirArgs *argp)
 	drfpSetVnodeFile(vp, &st);
 	vp->core.size = st.size;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
-	vp->core.node_data = NULL;
+	vp->core.nodeData = NULL;
 	*vpp = vp;
 	return ret;
 }
@@ -462,7 +462,7 @@ static int dev_drfp_vop_create(SceVopCreateArgs *argp)
 		}
 		sceDeci4pDrfpClose(ret);
 	}
-	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mnt_vfs_inf->default_vops,
+	ret = vfsGetNewVnode(dvp->core.mnt, (SceVopTable *)dvp->core.mnt->mntVfsInf->defaultVops,
 			     0, &vp);
 	if (ret < 0) {
 		DRFP_PRINTF(0xf, 682, "vfsGetNewVnode failed (0x%08x)\n", ret);
@@ -474,7 +474,7 @@ static int dev_drfp_vop_create(SceVopCreateArgs *argp)
 	vp->core.dd = dvp;
 	drfpSetVnodeFile(vp, &st);
 	vp->core.size = st.size;
-	vp->core.node_data = NULL;
+	vp->core.nodeData = NULL;
 	vp->core.state = SCE_VNODE_STATE_ACTIVE;
 	*vpp = vp;
 	return 0;
@@ -493,14 +493,14 @@ static int dev_drfp_vfs_decode_path_elem(SceVfsOpDecodePathElemArgs *argp)
 	if (ret != 0)
 		return ret;
 	len = strnlen(path, DRFP_PATH_MAX);
-	*argp->decode_len = len;
+	*argp->decodeLen = len;
 	*argp->path2 = path;
 	*argp->path3 = path + len;
 	if (st.fid == 0) {
-		strncpy(argp->buf, path, argp->buf_len);
+		strncpy(argp->buf, path, argp->bufLen);
 	} else {
-		snprintf(argp->buf, argp->buf_len, "dev0x%08x/node0x%016llx", st.dev, st.fid);
-		*argp->decode_len = strnlen(argp->buf, DRFP_PATH_MAX);
+		snprintf(argp->buf, argp->bufLen, "dev0x%08x/node0x%016llx", st.dev, st.fid);
+		*argp->decodeLen = strnlen(argp->buf, DRFP_PATH_MAX);
 	}
 	return ret;
 }
@@ -697,30 +697,30 @@ static const SceVopTable s_drfpVops = {
 };
 
 static SceVfsInfo s_drfpVfsInfo = {
-	.vfs_ops = &s_drfpVfsOps,
-	.vfs_name = DRFP_FS_NAME,
-	.vfs_name_len = sizeof(DRFP_FS_NAME),
+	.vfsOps = &s_drfpVfsOps,
+	.vfsName = DRFP_FS_NAME,
+	.vfsNameLen = sizeof(DRFP_FS_NAME),
 	.type = SCE_VFS_TYPE_DEVFS,
-	.default_vops = &s_drfpVops,
+	.defaultVops = &s_drfpVops,
 };
 
 static const SceVfsMountData s_drfpMountData = {
-	.assign_name = "host0:",
-	.fs_name = DRFP_FS_NAME,
-	.blockdev_name = DRFP_FS_NAME,
+	.assignName = "host0:",
+	.fsName = DRFP_FS_NAME,
+	.blockdevName = DRFP_FS_NAME,
 };
 
 static const SceVfsMountParam s_drfpMountParam = {
-	.root_path = "/host",
-	.fs_type = SCE_VFS_FS_TYPE_HOSTFS,
+	.rootPath = "/host",
+	.fsType = SCE_VFS_FS_TYPE_HOSTFS,
 	.opt = 0x300,
-	.mnt_flags = SCE_VFS_MOUNT_FLAG_REMOTE | SCE_VFS_MOUNT_TYPE_HOSTFS,
-	.vfs_name = DRFP_FS_NAME,
+	.mntFlags = SCE_VFS_MOUNT_FLAG_REMOTE | SCE_VFS_MOUNT_TYPE_HOSTFS,
+	.vfsName = DRFP_FS_NAME,
 	.misc = (SceVfsMountData *)&s_drfpMountData,
 };
 
 static const SceVfsUmountParam s_drfpUmountParam = {
-	.assign_name = "/host",
+	.assignName = "/host",
 };
 
 /* a host0: left by an earlier instance goes first */

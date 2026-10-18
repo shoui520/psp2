@@ -41,7 +41,7 @@ int pfsCoreIoctl(ScePfsPmi *pmi, SceVfsVnode *vp, ScePfsFi *fi, int cmd, const v
 		    outLen == sizeof(ScePfsBlockRequest))
 			return pfsCoreMap(pmi, vp, fi, cmd, (ScePfsMapArg *)in, map);
 	} else if (cmd == PFS_UNMAP && inLen == 0 && in == NULL && out != NULL &&
-		   outLen == sizeof(ScePfsBlockRequest) && (vd = vp->core.node_data) != NULL) {
+		   outLen == sizeof(ScePfsBlockRequest) && (vd = vp->core.nodeData) != NULL) {
 		for (node = vd->pages.next; node != &vd->pages; node = node->next) {
 			if (node == &map->link) {
 				map->link.next->prev = map->link.prev;
