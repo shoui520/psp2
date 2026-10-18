@@ -31,7 +31,7 @@ DebugPrintfHandler volatile s_debugKprintfHandler = DebugDefaultPrintf;
 static void *volatile s_debugKprintfArgument;
 struct DebugTty s_debugTty;
 static char s_debugPrefix[256];
-volatile uint32_t s_debugPrintLock;
+volatile SceKernelSpinlock s_debugPrintLock;
 
 int SceDebugForKernel_88AD6D0C(DebugPrintfHandler handler, void *argument)
 {

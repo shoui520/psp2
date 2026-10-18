@@ -11,6 +11,7 @@
 #include <stdint.h>
 #include <sysmem/utils.h>
 #include <kernel/error.h>
+#include <sysmem/cpu.h>
 
 #define MT_N			624
 #define MT_M			397
@@ -20,11 +21,8 @@
 
 _Static_assert(sizeof(SceMt19937Context) == 0x9c4, "MT19937 context size");
 
-int SceCpuForDriver_D32ACE9E(volatile SceUInt32 *lock);
-void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
-
 static SceMt19937Context s_mt19937;
-static volatile SceUInt32 s_mt19937Lock;
+static volatile SceKernelSpinlock s_mt19937Lock;
 
 /* note: in the original this one is hand-written assembly */
 SceUInt32 SceKernelUtilsForDriver_92AEDFBC(SceMt19937Context *context)

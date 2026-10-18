@@ -22,6 +22,7 @@
 #include <sysmem/debug.h>
 #include <kernel/error.h>
 #include <threadmgr/threadcb.h>
+#include <sysmem/cpu.h>
 #include <excpmgr/excpmgr.h>
 #include <sysmem/sysroot_modulemgr.h>
 #include "debug_tty.h"
@@ -29,8 +30,6 @@
 int SceCpuForDriver_821FC0EE(void);
 int sceKernelCpuResumeIntr(int flags);
 int sceKernelCpuId(void);
-int SceCpuForDriver_D32ACE9E(volatile SceUInt32 *lock);
-void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceUInt32 *lock, int flags);
 int SceDebugForDriver_411C0733(const char *format, va_list arguments);
 int SceDipswForDriver_A98FC2FD(unsigned int bit);
 SceUInt64 SceSysrootForKernel_E20F6FC8(void);
@@ -56,7 +55,7 @@ extern volatile uint32_t s_assertLevel;
 
 /* debug_output.c: the TTY ring and its lock */
 
-extern volatile uint32_t s_debugPrintLock;
+extern volatile SceKernelSpinlock s_debugPrintLock;
 
 
 /* the backtrace flags: whose frames */

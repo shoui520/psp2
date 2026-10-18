@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <sysmem/spinlock.h>
 #include <sysmem/barrier.h>
 #include <excpmgr/excpmgr_cpu.h>
 
@@ -14,19 +15,19 @@
 int sceKernelGetCpuId(void);
 
 /* the IRQ-off locks return the previous I bit (PSR_I_BIT), the try forms -1 when held */
-int CpuSpinlockLockIrqCore(volatile uint32_t *lock);
-int CpuSpinlockLockIrqWithCaller(volatile uint32_t *lock, uintptr_t caller);
-int CpuSpinlockTrylockIrqCore(volatile uint32_t *lock);
-int CpuSpinlockTrylockIrqWithCaller(volatile uint32_t *lock, uintptr_t caller);
-void CpuSpinlockUnlock(volatile uint32_t *lock);
-void CpuSpinlockUnlockIrq(volatile uint32_t *lock, uint32_t flags);
+SceKernelIntrStatus CpuSpinlockLockIrqCore(volatile SceKernelSpinlock *lock);
+SceKernelIntrStatus CpuSpinlockLockIrqWithCaller(volatile SceKernelSpinlock *lock, uintptr_t caller);
+SceKernelIntrStatus CpuSpinlockTrylockIrqCore(volatile SceKernelSpinlock *lock);
+SceKernelIntrStatus CpuSpinlockTrylockIrqWithCaller(volatile SceKernelSpinlock *lock, uintptr_t caller);
+void CpuSpinlockUnlock(volatile SceKernelSpinlock *lock);
+void CpuSpinlockUnlockIrq(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags);
 
-int CpuRWSpinlockWriteLockIrq(volatile uint32_t *lock);
-int CpuRWSpinlockTryWriteLockIrq(volatile uint32_t *lock);
-void CpuRWSpinlockWriteUnlock(volatile uint32_t *lock);
-void CpuRWSpinlockWriteUnlockIrq(volatile uint32_t *lock, uint32_t flags);
+SceKernelIntrStatus CpuRWSpinlockWriteLockIrq(volatile SceKernelRWSpinlock *lock);
+SceKernelIntrStatus CpuRWSpinlockTryWriteLockIrq(volatile SceKernelRWSpinlock *lock);
+void CpuRWSpinlockWriteUnlock(volatile SceKernelRWSpinlock *lock);
+void CpuRWSpinlockWriteUnlockIrq(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags);
 
-int CpuRWSpinlockReadLockIrq(volatile uint32_t *lock);
-int CpuRWSpinlockTryReadLockIrq(volatile uint32_t *lock);
-void CpuRWSpinlockReadUnlock(volatile uint32_t *lock);
-void CpuRWSpinlockReadUnlockIrq(volatile uint32_t *lock, uint32_t flags);
+SceKernelIntrStatus CpuRWSpinlockReadLockIrq(volatile SceKernelRWSpinlock *lock);
+SceKernelIntrStatus CpuRWSpinlockTryReadLockIrq(volatile SceKernelRWSpinlock *lock);
+void CpuRWSpinlockReadUnlock(volatile SceKernelRWSpinlock *lock);
+void CpuRWSpinlockReadUnlockIrq(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags);

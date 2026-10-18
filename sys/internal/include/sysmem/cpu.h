@@ -81,7 +81,7 @@ uint64_t SceCpuForDriver_267D0B33(uint64_t *address);
 /* vitasdk: ksceKernelAtomicSetIfGreaterGet32 */
 int32_t SceCpuForDriver_26F71995(uint32_t *address, int32_t value);
 /* vitasdk: ksceKernelSpinlockLowTrylockCpuSuspendIntr */
-int SceCpuForDriver_27C0B340(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_27C0B340(volatile SceKernelSpinlock *lock);
 /* vitasdk: ksceKernelAtomicGetAndSet8 */
 int8_t SceCpuForDriver_29599FC8(int8_t *address, int8_t value);
 /* vitasdk: ksceKernelAtomicGetAndOr32 */
@@ -115,7 +115,7 @@ void SceCpuForDriver_4AE1BCC0(volatile SceInt32 *address, SceInt32 mask);
 /* vitasdk: ksceKernelAtomicCompareAndSet64 */
 uint64_t SceCpuForDriver_4B527009(uint64_t *address, uint64_t expected, uint64_t replacement);
 /* vitasdk: ksceKernelRWSpinlockLowWriteLockCpuSuspendIntr */
-int SceCpuForDriver_4C38CE4D(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_4C38CE4D(volatile SceKernelRWSpinlock *lock);
 /* vitasdk: ksceKernelAtomicAddAndGet64 */
 uint64_t SceCpuForDriver_4E459A03(uint64_t *address, uint64_t value);
 /* vitasdk: ksceKernelAtomicSubAndGet16 */
@@ -191,11 +191,11 @@ uint64_t SceCpuForDriver_D18E7B54(uint64_t *address, uint64_t value);
 /* vitasdk: ksceKernelAtomicGetAndSet64 */
 uint64_t SceCpuForDriver_D2DEE625(uint64_t *address, uint64_t value);
 /* vitasdk: ksceKernelSpinlockLowLockCpuSuspendIntr */
-int SceCpuForDriver_D32ACE9E(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_D32ACE9E(volatile SceKernelSpinlock *lock);
 /* vitasdk: ksceKernelAtomicGetAndAnd8 */
 int8_t SceCpuForDriver_D8E675C0(int8_t *address, int8_t value);
 /* vitasdk: ksceKernelRWSpinlockLowTryWriteLockCpuSuspendIntr */
-int SceCpuForDriver_DE6482C6(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_DE6482C6(volatile SceKernelRWSpinlock *lock);
 /* vitasdk: ksceKernelAtomicAndAndGet32 */
 SceInt32 SceCpuForDriver_DF899E4B(volatile SceInt32 *address, SceInt32 value);
 /* vitasdk: ksceKernelAtomicGetAndXor64 */
@@ -208,9 +208,9 @@ void SceCpuForDriver_E813EBB2(void);
 /* vitasdk: ksceKernelAtomicSubAndGet8 */
 int8_t SceCpuForDriver_EB085370(int8_t *address, int8_t value);
 /* vitasdk: ksceKernelRWSpinlockLowReadLockCpuSuspendIntr */
-int SceCpuForDriver_EC53D007(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_EC53D007(volatile SceKernelRWSpinlock *lock);
 /* vitasdk: ksceKernelRWSpinlockLowTryReadLockCpuSuspendIntr */
-int SceCpuForDriver_F02467D1(volatile uint32_t *lock);
+SceKernelIntrStatus SceCpuForDriver_F02467D1(volatile SceKernelRWSpinlock *lock);
 /* vitasdk: ksceKernelAtomicGetAndSub32 */
 SceInt32 SceCpuForDriver_F891CF2A(volatile SceInt32 *address, SceInt32 value);
 /* vitasdk: ksceKernelAtomicGetAndAdd8 */
@@ -274,12 +274,12 @@ int sceKernelCpuId(void);
 int sceKernelCpuResumeIntr(int flags);
 void sceKernelIcacheInvalidateRange(const void *start, SceSize size);
 SceBool sceKernelIsUncacheAddressInTmpFsGame(const void *address);
-void sceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock);
-void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags);
-void sceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock);
-void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags);
-void sceKernelSpinlockLowUnlock(volatile uint32_t *lock);
-void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags);
+void sceKernelRWSpinlockLowReadUnlock(volatile SceKernelRWSpinlock *lock);
+void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags);
+void sceKernelRWSpinlockLowWriteUnlock(volatile SceKernelRWSpinlock *lock);
+void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags);
+void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock);
+void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags);
 
 #ifdef __cplusplus
 }

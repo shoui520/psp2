@@ -40,7 +40,7 @@ extern uint32_t SceSysrootForKernel_41636522(void);
 
 #if FW_DEBUG
 
-int SceCpuForDriver_F02467D1(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_F02467D1(volatile SceKernelRWSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockTryReadLockIrq(lock);
@@ -54,7 +54,7 @@ int SceCpuForDriver_F02467D1(volatile uint32_t *lock)
 	return previous;
 }
 
-int SceCpuForDriver_4C38CE4D(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_4C38CE4D(volatile SceKernelRWSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockWriteLockIrq(lock);
@@ -68,7 +68,7 @@ int SceCpuForDriver_4C38CE4D(volatile uint32_t *lock)
 	return previous;
 }
 
-int SceCpuForDriver_DE6482C6(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_DE6482C6(volatile SceKernelRWSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockTryWriteLockIrq(lock);
@@ -82,7 +82,7 @@ int SceCpuForDriver_DE6482C6(volatile uint32_t *lock)
 	return previous;
 }
 
-int SceCpuForDriver_EC53D007(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_EC53D007(volatile SceKernelRWSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuRWSpinlockReadLockIrq(lock);
@@ -118,7 +118,7 @@ int CpuResumeIntrLow(int flags)
 }
 
 #if FW_DEBUG
-int SceCpuForDriver_27C0B340(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_27C0B340(volatile SceKernelSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockTrylockIrqWithCaller(lock, caller);
@@ -132,7 +132,7 @@ int SceCpuForDriver_27C0B340(volatile uint32_t *lock)
 	return previous;
 }
 
-int SceCpuForDriver_D32ACE9E(volatile uint32_t *lock)
+SceKernelIntrStatus SceCpuForDriver_D32ACE9E(volatile SceKernelSpinlock *lock)
 {
 	uintptr_t caller = (uintptr_t)__builtin_return_address(0);
 	int previous = CpuSpinlockLockIrqWithCaller(lock, caller);
