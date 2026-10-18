@@ -62,6 +62,8 @@ typedef struct SceVopZerofillArgs {
 
 VITASDK_BUILD_ASSERT_EQ(0x20, SceVopZerofillArgs);
 
+int SceIofilemgrForDriver_0D8A806E(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopUnlink */
+int SceIofilemgrForDriver_942AA61F(SceVfsVnode *fvp, SceVfsVnode *tvp);	/* vitasdk: ksceVopLink */
 int sceVfsAddVfs(SceVfsInfo *vfsInf);
 int sceVfsDeleteVfs(const char *name, SceVfsInfo **vfsInf);
 int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,

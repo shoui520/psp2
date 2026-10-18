@@ -765,7 +765,7 @@ int SyscallCBIsInitialized(void);
 /* backtrace.c */
 int BacktraceInit(void);
 int SceBacktraceForDriver_166B9C8C(SceUID thid, struct SceKernelBacktraceFrame *frames, SceSize size,
-			SceSize *count, SceUInt32 flags);
+			SceSize *count, SceUInt32 flags);	/* vitasdk: ksceKernelBacktrace */
 int SceBacktraceForDriver_888E99B8(SceUID thid, struct SceKernelBacktraceFrameForKernel *frames,
 				   SceSize size, SceSize *count, SceUInt32 flags);
 int SceBacktraceForDriver_7C878F90(SceUID pid, const struct SceKernelBacktraceFrameForKernel *frames,

@@ -493,6 +493,7 @@ struct Ncache {
 };
 _Static_assert(sizeof(struct Ncache) == 0x20, "Ncache");
 
+/* vitasdk: ksceVfsOpDecodePathElem */
 int SceIofilemgrForDriver_F7DAC0F5(SceVfsMount *mnt, const char *path, const char **path2,
 			    const char **path3, char *buf, SceSize n, SceSize *decodeLen);
 
@@ -865,7 +866,6 @@ int vfs_buf_io_read(struct BuffCache *bc, SceOff pos, SceSize size, void *buf);
 void vfsBuffIoUpdateCachedSize(struct BuffCache *bc, SceSize size);
 int vfsBuffIo2DataBuff(struct BuffCache *bc, SceOff pos, SceVfsVnode *vp, SceVfsFile *file);
 int vfs_buf_io_buff_reaches(struct BuffCache *bc, SceOff pos, SceSize size);
-int vfsBuffCacheFree(SceVfsVnode *vp, SceVfsFile *file, int flags, int a4);
 int buff_cache_write(SceOff pos, const void *data, SceSize nbyte, SceVfsVnode *vp,
 		     SceVfsFile *file, int pwrite, SceSize *wsz);
 int buff_cache_read(SceOff pos, void *data, SceSize nbyte, SceVfsVnode *vp, SceVfsFile *file,
@@ -883,8 +883,6 @@ int vfsCleanup(SceUID fd);
 int sceVfsOpMount(SceVfsMount *mnt, SceVfsPath *devPath);
 int sceVfsOpUmount(SceVfsMount *mnt, int flags);
 int sceVfsOpInit(SceVfsInfo *vfsInf);
-int sceVfsOpDevctl(SceVfsMount *mnt, const char *dev, unsigned int cmd, const void *indata,
-		    SceSize inlen, void *outdata, SceSize outlen);
 int sceVfsOpSetRoot(SceVfsMount *mnt, int unused, SceVfsVnode *vp);
 int sceVfsOpFini(SceVfsInfo *vfsInf);
 int sceVfsOpSync(SceVfsMount *mnt, int flags);
@@ -1076,7 +1074,6 @@ int vfs_get_mount_list(VfsMountListEntry *list, int max, int *num);
 int vfs_get_mount_info(SceVfsMount *target, VfsMountInfo *info);
 int vfs_check_fd_vnode(const char *path, SceUID fd);
 const char *mount_get_path_by_id(int mntId);	/* mount.c (name unknown) */
-int vfsNotifyDeviceStatus(int mntId);
 
 void vfs_set_sync_pending(void);
 void vfs_increment_io_count(void);
@@ -1269,10 +1266,6 @@ int SceFios2KernelForDriver_28E28A58(int handle, SceIoDirent *dir);
 int SceFios2KernelForDriver_DD7627EC(int handle);
 
 /* the Fios2 handle behind a dummy file (vfs.c) */
-SceUID vfsAllocateFileDummy(int flags, int isDir, const char *path);
-int SceIofilemgrForDriver_3A79FAC9(SceUID fd);
-int SceIofilemgrForDriver_2EFDFA12(SceUID fd, const char *path);
-int SceIofilemgrForDriver_6BEEDDB4(SceUID fd, int handle);
 
 int SceFios2KernelForDriver_2649408B(int handle, SceIoStat *stat);
 int SceFios2KernelForDriver_35E7E75C(int handle, const SceIoStat *stat, int bits);
@@ -1284,13 +1277,6 @@ int sceIoSetThreadDefaultPriorityInternal(SceInt32 priority, int fromKernel);
 SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel);
 int sceIoSetPriorityInternal(SceUID fd, SceInt32 priority, int fromKernel);
 SceInt32 sceIoGetPriorityInternal(SceUID fd, int fromKernel);
-int SceIofilemgrForDriver_16336A0D(SceUID fd, int op);
-int sceIoCancel(SceUID uid);
-int sceIoComplete(SceUID uid);
-int sceIoIoctl(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
-		void *outdata, SceSize outlen);
-int SceIofilemgrForDriver_43170575(SceUID fd, int flag);
-int SceIofilemgrForDriver_338DCD68(SceUID fd, int *error);
 
 /* iofilemgr.c: the per-process fd counts */
 int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid);
@@ -1371,46 +1357,6 @@ int sceIoSchedulerCancelAsyncIoRequest(IoScheduler *sched, IoRequest *req);
 int sceIoSchedulerRemoveIoRequest(IoScheduler *sched, IoRequest *req);	/* name unknown */
 int sceIoSchedulerIssueAnotherIoRequestInternal(IoScheduler *sched);
 int sceIoSchedulerExecuteIoRequestWorkerForDispatcher(IoScheduler *sched);
-
-/* the option block of an asynchronous call (name unknown) */
-typedef struct IoAsyncParam {
-	union {
-		SceInt64 result;
-		struct {
-			SceUID event;
-			SceUInt32 reserved0;
-		};
-	};
-	int priority;
-	SceUInt32 reserved1[2];			/* not yet traced */
-	int completionStatus;			/* name unknown: zero on completion */
-} IoAsyncParam;
-
-int SceIofilemgrForDriver_A9302946(const char *dev, unsigned int cmd, const void *indata, SceSize inlen,
-		      void *outdata, SceSize outlen, IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_EC974400(SceUID fd, SceIoStat *stat, int bits, IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_0FEE1238(SceUID fd, SceIoStat *stat, IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_041209CF(SceUID fd, int flag, IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_11C57CC6(SceUID fd, IoAsyncParam *asyncParam);
-int SceIofilemgrForDriver_B761E91B(SceUID fd, unsigned int cmd, const void *indata, SceSize inlen,
-		     void *outdata, SceSize outlen, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_451001DE(const char *file, int flags, SceMode mode, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_69047C81(SceUID fd, void *data, SceSize size, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_A1BD13D0(SceUID fd, const void *data, SceSize size, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_541BAABD(SceUID fd, SceOff offset, int whence, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_F9D6507D(const char *file, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_72F06BDE(const char *dirname, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_27003443(const char *dir, SceMode mode, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_F5B0B36C(const char *dirname, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_AACBC47A(const char *oldname, const char *newname, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_7EC442BF(const char *file, SceIoStat *stat, unsigned int bits,
-			 IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_94A5304A(const char *file, SceIoStat *stat, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_4F9EA8B0(const char *device, unsigned int flag, IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_64A46A2C(SceUID fd, void *data, SceSize size, SceOff offset,
-			IoAsyncParam *asyncParam);
-SceUID SceIofilemgrForDriver_202CDDE3(SceUID fd, const void *data, SceSize size, SceOff offset,
-			 IoAsyncParam *asyncParam);
 
 /* io_scheduler_async.c */
 SceUID sceIoAsyncEventCreate(IoAsyncEvent **event);
