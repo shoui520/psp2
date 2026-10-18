@@ -132,7 +132,7 @@ static int procStart(SceUID pid, int event, ProcEventParam *param, int arg) /* n
 
 	if (event == 0x10000) {
 		pls = NULL;
-		ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
+		SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
 		if (pls != NULL) {
 			pls->vcountBase[0] = heads[0].vcount + pls->vcountBase[0] - pls->vcountStopped[0];
 			pls->vcountBase[1] = heads[1].vcount + pls->vcountBase[1] - pls->vcountStopped[1];
@@ -148,7 +148,7 @@ static int procStop(SceUID pid, int event, ProcEventParam *param, int arg) /* na
 
 	if (event == 0x800) {
 		pls = NULL;
-		ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
+		SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
 		if (pls != NULL) {
 			pls->vcountStopped[0] = heads[0].vcount;
 			pls->vcountStopped[1] = heads[1].vcount;

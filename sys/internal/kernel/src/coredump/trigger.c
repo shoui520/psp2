@@ -409,7 +409,7 @@ int ksceCoredumpCreateDump(SceUID pid, const char *titleid, int titleidLength,
 		return SCE_ERROR_ERRNO_EINVAL;
 	syncDumpPathSize = pathSize;
 	syncDumpPath = path;
-	result = ksceKernelSuspendProcess(pid, 17);
+	result = sceKernelProcessDebugSuspend(pid, 17);
 	if (result != 0)
 		return result;
 	__builtin_memset(&param.dumpLevel, 0, sizeof(param.dumpLevel) +

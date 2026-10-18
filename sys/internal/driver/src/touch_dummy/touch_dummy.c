@@ -159,7 +159,7 @@ static int lookupProcess(int pid, int pls, void **out, int create) /* name unkno
 	int ret;
 
 	*out = NULL;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, pls, out, create);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, pls, out, create);
 	if (ret < 0)
 		*out = NULL;
 	return ret;
@@ -773,7 +773,7 @@ static int initializePhysical(void *args) /* name unknown */
 	touch.state = 2;
 	touch.sysHandler = sceKernelRegisterSysEventHandler("SceTouch", systemEvent, NULL);
 	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, 0);
-	touch.plsId = ksceKernelCreateProcessLocalStorage("SceTouch", sizeof(struct touchProcess));
+	touch.plsId = SceProcessmgrForDriver_3801D7D6("SceTouch", sizeof(struct touchProcess));
 	if (touch.plsId >= 0) {
 		createPhysicalProcess(0x10005);
 		createVirtualProcess(0x10005);
@@ -817,7 +817,7 @@ int module_start(unsigned arglen, void *argp)
 			break;
 	}
 	pad.lock = 0;
-	pad.plsId = ksceKernelCreateProcessLocalStorage("SceTouchPad", sizeof(struct virtualProcess));
+	pad.plsId = SceProcessmgrForDriver_3801D7D6("SceTouchPad", sizeof(struct virtualProcess));
 	if (pad.plsId < 0)
 		return 2;
 	storage.readMutex = -1;

@@ -167,9 +167,9 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_F311808F
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	ksceKernelGetProcessStatus
+	sceKernelGetProcessStatus
 	sceKernelSpawnProcessExt
-	ksceKernelGetProcessMainThread
+	sceKernelGetProcessMainThreadForDebugger
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelKillProcess
 	ksceKernelGetModuleCB

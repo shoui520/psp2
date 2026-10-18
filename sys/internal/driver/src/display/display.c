@@ -294,7 +294,7 @@ static int _sceDisplayModuleProcessCreate(SceUID pid, ProcEventCreateParam *para
 	SceUID event;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 1);
 	if (ret < 0)
 		return ret;
 	memset(pls, 0, sizeof(*pls));
@@ -530,7 +530,7 @@ static inline __attribute__((always_inline)) void releaseProcess(SceUID pid) /* 
 	SceUInt32 head, plane;
 	SceUID event;
 
-	ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 1);
+	SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 1);
 	for (head = 0; head < 2; head++) {
 		for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++) {
 			if (heads[head].plane[plane].owner == pid) {
@@ -900,7 +900,7 @@ int displayInit(void) /* name unknown */
 	heads[1].plane[0].scale = 0;
 	heads[1].plane[1].scaleFlags = 0x80;
 	heads[1].plane[1].scale = 0;
-	plsKey = ksceKernelCreateProcessLocalStorage("SceDisplay", sizeof(DisplayProcessLocal));
+	plsKey = SceProcessmgrForDriver_3801D7D6("SceDisplay", sizeof(DisplayProcessLocal));
 	mutexOpt.size = 8;
 	mutexOpt.attr = 0x20;
 	sceKernelInitializeFastMutex(&mutex, "SceDisplay", 6, &mutexOpt);
@@ -1193,7 +1193,7 @@ int setFrameBufForCompat(int x, int y, int cropWidth, int cropHeight,
 		sceSyscallLeave(t);
 		return ret;
 	}
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	if (pParam == NULL) {
 		shift = 1;
 		resolution = 0x100000;
@@ -1392,7 +1392,7 @@ int ksceDisplaySetOwner(int head, int plane, SceUID pid)
 		return 0;
 	}
 	if (owner != pid
-	    && (ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0)) >= 0) {
+	    && (ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0)) >= 0) {
 		h->plane[plane].owner = pid;
 		rec = &pls->frameBuf[head][plane];
 		if (rec->paddr == 0) {
@@ -1593,7 +1593,7 @@ int ksceDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane, const SceDisplay
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&h->lock, intr);
 	if (h->plane[plane].owner != -1) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(h->plane[plane].owner, plsKey,
+		if (SceProcessmgrForDriver_AF80F39C(h->plane[plane].owner, plsKey,
 							       (void **)&pls, 0) < 0)
 			pls = NULL;
 		else if (pls != NULL) {
@@ -1633,7 +1633,7 @@ int ksceDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane, SceDisplay
 		sceKernelUnlockFastMutex(&mutex);
 		return 0;
 	}
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(h->plane[plane].owner, plsKey, (void **)&pls, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(h->plane[plane].owner, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
 		return ret;
@@ -1720,7 +1720,7 @@ int ksceDisplayGetMaximumFrameBufResolution(int *width, int *height)
 	SceUInt32 flags;
 	int w, h;
 
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	flags = 0;
 	if (pls != NULL)
 		flags = pls->resolutionFlags;
@@ -1785,7 +1785,7 @@ int ksceDisplaySetFrameBufInternal(int head, int plane, const SceDisplayFrameBuf
 		sceSyscallLeave(t);
 		return ret;
 	}
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	if ((SceUInt32)head > 1 || (SceUInt32)plane > 1) {
 		ret = SCE_DISPLAY_ERROR_INVALID_HEAD;
 		goto unlock;
@@ -2022,7 +2022,7 @@ int ksceDisplayGetFrameBufInternal(int head, int plane, SceDisplayFrameBuf *pPar
 		sceSyscallLeave(t);
 		return ret;
 	}
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	size = pParam->size;
 	if (size > DISPLAY_FRAMEBUF_PARAM_SIZE)
 		size = DISPLAY_FRAMEBUF_PARAM_SIZE;
@@ -2095,7 +2095,7 @@ int ksceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, int sync)
 		sceSyscallLeave(t);
 		return ret;
 	}
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	size = pParam->size;
 	if (size > DISPLAY_FRAMEBUF_PARAM_SIZE)
 		size = DISPLAY_FRAMEBUF_PARAM_SIZE;
@@ -2126,7 +2126,7 @@ int ksceDisplayGetProcFrameBufInternal(SceUID pid, int head, int plane,
 		pid = heads[head].plane[plane].owner;
 	else if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex(&mutex);
 		return ret;
@@ -2235,7 +2235,7 @@ static inline __attribute__((always_inline)) int captureFrameBufIftu(SceUID pid,
 	ret = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (ret < 0)
 		goto unlockRange;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0)
 		goto release;
 	if (pls == NULL || pls->frameEvent <= 0) {
@@ -2370,7 +2370,7 @@ static inline __attribute__((always_inline)) int captureFrameBufDmac(SceUID pid,
 	ret = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (ret < 0)
 		goto free;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, plsKey, (void **)&pls, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, plsKey, (void **)&pls, 0);
 	if (ret < 0)
 		goto release;
 	if (pls == NULL || pls->frameEvent <= 0) {

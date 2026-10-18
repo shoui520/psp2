@@ -9,6 +9,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <string.h>
 #include "audioenc_internal.h"
+#include <processmgr/processmgr.h>
 
 AudioencResident audioencResident;
 
@@ -35,7 +36,6 @@ SCE_DBGINFO_DEFINE(static, deleteEncoderBudget, 1390, "sceAudioencDeleteEncoderF
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfo, 691, "_copyInSceAudioencCtrl");
 SCE_DBGINFO_DEFINE(static, copyInCtrlInfoDestination, 692, "_copyInSceAudioencCtrl");
 
-int ksceKernelIsGameBudget(void);
 int _lockProcessSuspendCore(void);
 int _unlockProcessSuspendCore(void);
 
@@ -100,7 +100,7 @@ int initializeAudioenc(void)
 	ret = _audioencInternalInitLibrary(&audioencResident.manager, &param, 1);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateProcessLocalStorage("SceAudioenc", sizeof(AudioencProcess));
+	ret = SceProcessmgrForDriver_3801D7D6("SceAudioenc", sizeof(AudioencProcess));
 	if (ret >= 0)
 		audioencResident.processStorage = ret;
 	return ret;
@@ -115,7 +115,7 @@ int _sceAudioencProcessCreateEntry(SceUID pid)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	ret = SceProcessmgrForDriver_AF80F39C(pid,
 			audioencResident.processStorage, (void **)&process, 1);
 	if (ret < 0)
 		return ret;
@@ -171,7 +171,7 @@ int _sceAudioencProcessExitEntry(SceUID pid)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	ret = SceProcessmgrForDriver_AF80F39C(pid,
 			audioencResident.processStorage, (void **)&process, 0);
 	status = ret < 0 ? ret : 0;
 #if FW_DEBUG
@@ -230,7 +230,7 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelIsGameBudget();
+	ret = sceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &initLibraryBudget,
@@ -263,7 +263,7 @@ int sceAudioencInitLibraryForUser(SceUInt32 codecType, SceAudioencInitParam *use
 		ret = SCE_AUDIOENC_ERROR_INVALID_SIZE;
 		goto unlock;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -295,7 +295,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 {
 	AudioencProcess *process;
@@ -307,7 +306,7 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelIsGameBudget();
+	ret = sceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &termLibraryBudget,
@@ -318,7 +317,7 @@ int sceAudioencTermLibraryForUser(SceUInt32 codecType)
 	ret = _lockProcessSuspendCore();
 	if (ret < 0)
 		goto leave;
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -467,7 +466,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 				   SceUInt32 codecType)
 {
@@ -489,7 +487,7 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	resident = !ksceKernelIsGameBudget();
+	resident = !sceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
 		SceDebugForDriver_D9703808(1, 0, &createEncoderBudget,
@@ -609,7 +607,7 @@ int sceAudioencCreateEncoderForUser(SceAudioencCtrl *userCtrl,
 	}
 	ctrl.maxEsSize = 27;
 	ctrl.maxPcmSize = 640;
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -775,7 +773,7 @@ int sceAudioencCreateEncoderResidentForUser(SceAudioencCtrl *userCtrl,
 	} else {
 		ctrl.maxPcmSize = 640;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
@@ -936,7 +934,7 @@ int sceAudioencCreateEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 	} else {
 		ctrl.maxPcmSize = 640;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -982,7 +980,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	resident = !ksceKernelIsGameBudget();
+	resident = !sceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
 		SceDebugForDriver_D9703808(1, 0, &deleteEncoderBudget,
@@ -1070,7 +1068,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 			goto invalidHandle;
 		codecType = audioencGetHandleCodecType(ctrl.handle);
 		audioencIsExternalHandle(ctrl.handle);
-		process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+		process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
@@ -1084,7 +1082,7 @@ int sceAudioencDeleteEncoderForUser(SceAudioencCtrl *userCtrl)
 			goto invalidHandle;
 		codecType = audioencGetHandleCodecType(ctrl.handle);
 		external = audioencIsExternalHandle(ctrl.handle);
-		process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+		process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1228,7 +1226,7 @@ int sceAudioencDeleteEncoderResidentForUser(SceAudioencCtrl *userCtrl)
 		goto invalidHandle;
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	audioencIsExternalHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #else
@@ -1364,7 +1362,7 @@ int sceAudioencDeleteEncoderExternalForUser(SceAudioencCtrl *userCtrl,
 		goto invalidHandle;
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1508,7 +1506,7 @@ int sceAudioencEncodeForUser(SceAudioencCtrl *userCtrl)
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
 	resident = audioencIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1717,7 +1715,7 @@ int sceAudioencEncodeNFramesForUser(SceAudioencCtrl *userCtrl, SceUInt32 nFrames
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
 	resident = audioencIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1948,7 +1946,7 @@ int sceAudioencClearContextForUser(SceAudioencCtrl *userCtrl)
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
 	resident = audioencIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -2098,7 +2096,7 @@ int sceAudioencGetOptInfoForUser(SceAudioencCtrl *userCtrl)
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
 	resident = audioencIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -2246,7 +2244,7 @@ int sceAudioencGetInternalErrorForUser(SceAudioencCtrl *userCtrl,
 	codecType = audioencGetHandleCodecType(ctrl.handle);
 	external = audioencIsExternalHandle(ctrl.handle);
 	resident = audioencIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audioencResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audioencResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif

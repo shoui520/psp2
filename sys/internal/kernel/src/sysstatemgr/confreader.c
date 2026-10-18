@@ -342,14 +342,14 @@ static int ConfReaderCmdSpawn(ConfReader *reader, int argc, char **argv, unsigne
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if (!remote || (pid = ksceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0) {
+	if (!remote || (pid = sceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0) {
 		for (i = 0; i < 4; i++) {
 			remote = ConfReaderGetRemoteRpath(reader, path, i);
-			if (remote && (pid = ksceKernelCreateProcess("main", 0x1000000, remote, NULL)) >= 0)
+			if (remote && (pid = sceKernelCreateProcess("main", 0x1000000, remote, NULL)) >= 0)
 				goto created;
 		}
 		remote = path;
-		pid = ksceKernelCreateProcess("main", 0x1000000, path, NULL);
+		pid = sceKernelCreateProcess("main", 0x1000000, path, NULL);
 	}
 created:
 	SCE_DBG_PRINTF(0, 1288, "Creating a process from %s : ", remote);
@@ -359,7 +359,7 @@ created:
 	}
 	SCE_DBG_PRINTF(0, 1293, "OK (pid=0x%08x)\n", pid);
 	SCE_DBG_PRINTF(0, 1296, "Starting a process (pid=0x%08x)\n", pid);
-	SceProcessmgrForKernel_5137B783(pid, 0, NULL, NULL);
+	SceProcessmgrForKernel_5137B783(pid, 0, 0, NULL);
 	ConfReaderUtilsRememberLoaded(reader, pid, path);
 	return 0;
 }
@@ -375,8 +375,8 @@ static int ConfReaderCmdSpawnWait(ConfReader *reader, int argc, char **argv, uns
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if (!remote || (pid = ksceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0)
-		pid = ksceKernelCreateProcess("main", 0x1000000, path, NULL);
+	if (!remote || (pid = sceKernelCreateProcess("main", 0x1000000, remote, NULL)) < 0)
+		pid = sceKernelCreateProcess("main", 0x1000000, path, NULL);
 	SCE_DBG_PRINTF(0, 1495, "Creating a process from %s : ", path);
 	if (pid < 0) {
 		SCE_DBG_PRINTF(0, 1497, "Failed (err=0x%08x)\n", pid);
@@ -384,7 +384,7 @@ static int ConfReaderCmdSpawnWait(ConfReader *reader, int argc, char **argv, uns
 	}
 	SCE_DBG_PRINTF(0, 1500, "OK (pid=0x%08x)\n", pid);
 	SCE_DBG_PRINTF(0, 1503, "Starting a process (pid=0x%08x)\n", pid);
-	SceProcessmgrForKernel_5137B783(pid, 0, NULL, NULL);
+	SceProcessmgrForKernel_5137B783(pid, 0, 0, NULL);
 	ret = sceKernelWaitProcessEnd(pid, NULL, NULL);
 	SCE_DBG_PRINTF(0, 1507, "Waiting for a process termination (pid=0x%08x) : ", pid);
 	if (ret < 0)

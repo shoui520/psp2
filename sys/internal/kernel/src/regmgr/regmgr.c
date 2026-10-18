@@ -2472,7 +2472,7 @@ int regMgrMakePsIdToken(SceUInt8 *token)
 	ret = ksceSblAimgrGetOpenPsId(&psid);
 	if (ret != 0)
 		return ret;
-	time = ksceKernelGetProcessTimeLowCore();
+	time = SceProcessmgrForDriver_02179E12();
 	for (i = 0; i < 32; i++) {
 		if (i == 8)
 			token[i] = time & 3;

@@ -100,7 +100,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_55392965
 	SceSysrootForDriver_834439A7
 	SceSysrootForDriver_B0E1FC67
-	ksceKernelGetProcessTimeLowCore
+	SceProcessmgrForDriver_02179E12
 	ksceIoRemove
 	ksceIoWrite
 	ksceIoLseek

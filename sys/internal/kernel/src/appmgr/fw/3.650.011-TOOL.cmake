@@ -449,16 +449,16 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRead
 	ksceIoClose
 	sceKernelAllocRemoteProcessHeap
-	ksceKernelGetProcessInfo
-	ksceKernelCreateProcessLocalStorage
+	sceKernelGetProcessInfo
+	SceProcessmgrForDriver_3801D7D6
 	sceKernelGetBudgetInfo
 	SceProcessmgrForDriver_5E882B60
-	ksceKernelGetProcessStatus
-	ksceKernelGetProcessTimeWideCore
+	sceKernelGetProcessStatus
+	SceProcessmgrForDriver_82D94BE9
 	sceKernelFreeRemoteProcessHeap
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_C715591F
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	ksceSblRngPseudoRandomNumber
@@ -516,15 +516,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelStartProcessExt
 	sceKernelWaitProcessEventCompletion
 	sceKernelSuspendProcess
-	ksceKernelGetProcessSelfAuthInfo
+	sceKernelGetProcessSelfAuthInfo
 	SceProcessmgrForKernel_344DDE0B
 	SceProcessmgrForKernel_459A223B
 	sceKernelGrowBudget
 	sceKernelResetGameBudget
 	sceKernelSpawnProcessExt
-	ksceKernelCreateProcess
+	sceKernelCreateProcess
 	SceProcessmgrForKernel_8321B827
-	ksceKernelSuspendProcess
+	sceKernelProcessDebugSuspend
 	SceProcessmgrForKernel_D5DF895D
 	SceProcessmgrForKernel_DC18FCEF
 	sceKernelResumeProcess

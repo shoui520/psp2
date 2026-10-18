@@ -145,7 +145,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceSblSmCommStopSm
 	ksceSblSmCommStartSmFromFile
 	ksceSblSmCommCallFunc
-	ksceKernelGetProcessSelfAuthInfo
+	sceKernelGetProcessSelfAuthInfo
 	SceSblAIMgrForDriver_274663A0
 	SceSblAIMgrForDriver_3B638885
 	ksceSblSmSchedProxyExecuteF00DCommand

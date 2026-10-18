@@ -2460,10 +2460,12 @@ modules:
         kernel: true
         nid: 0x746EC971
         functions:
+          SceProcessmgrForDriver_02179E12: 0x02179E12
           SceProcessmgrForDriver_11BEFBBE: 0x11BEFBBE
           SceProcessmgrForDriver_1C70501E: 0x1C70501E
           SceProcessmgrForDriver_2CEB1C7A: 0x2CEB1C7A
           SceProcessmgrForDriver_33B3D026: 0x33B3D026
+          SceProcessmgrForDriver_3801D7D6: 0x3801D7D6
           SceProcessmgrForDriver_3B33FFBA: 0x3B33FFBA
           SceProcessmgrForDriver_4140D633: 0x4140D633
           SceProcessmgrForDriver_5468892A: 0x5468892A
@@ -2472,35 +2474,33 @@ modules:
           SceProcessmgrForDriver_5BDA978F: 0x5BDA978F
           SceProcessmgrForDriver_5E882B60: 0x5E882B60
           SceProcessmgrForDriver_61B9B6FA: 0x61B9B6FA
+          SceProcessmgrForDriver_82D94BE9: 0x82D94BE9
           SceProcessmgrForDriver_879153D9: 0x879153D9
           SceProcessmgrForDriver_8CB01675: 0x8CB01675
           SceProcessmgrForDriver_A1CF74FA: 0xA1CF74FA
+          SceProcessmgrForDriver_AF80F39C: 0xAF80F39C
           SceProcessmgrForDriver_B1C3EFCA: 0xB1C3EFCA
           SceProcessmgrForDriver_BA0A06A4: 0xBA0A06A4
+          SceProcessmgrForDriver_C074EB31: 0xC074EB31
           SceProcessmgrForDriver_C5CF15ED: 0xC5CF15ED
           SceProcessmgrForDriver_C715591F: 0xC715591F
           SceProcessmgrForDriver_D141C076: 0xD141C076
           SceProcessmgrForDriver_E1A67C86: 0xE1A67C86
           SceProcessmgrForDriver_E8005AFC: 0xE8005AFC
+          SceProcessmgrForDriver_EC283166: 0xEC283166
+          SceProcessmgrForDriver_EE694840: 0xEE694840
           SceProcessmgrForDriver_FC2A424E: 0xFC2A424E
-          ksceKernelCreateProcessLocalStorage: 0x3801D7D6
-          ksceKernelGetProcessInfo: 0x0AFF3EAE
-          ksceKernelGetProcessLocalStorageAddr: 0xEE694840
-          ksceKernelGetProcessLocalStorageAddrForPid: 0xAF80F39C
-          ksceKernelGetProcessStatus: 0x65B120B8
-          ksceKernelGetProcessTimeCore: 0xEC283166
-          ksceKernelGetProcessTimeLowCore: 0x02179E12
-          ksceKernelGetProcessTimeWideCore: 0x82D94BE9
-          ksceKernelGetRemoteProcessTime: 0xC074EB31
-          ksceKernelIsCDialogAvailable: 0x2F6020B7
-          ksceKernelIsGameBudget: 0xF7A8BB25
           sceKernelAllocRemoteCDialogHeap: 0x8A85FA28
           sceKernelAllocRemoteProcessHeap: 0x00B1CA0F
           sceKernelCallCoredumpHandler: 0xB559410A
           sceKernelFreeRemoteCDialogHeap: 0xDD0A58D1
           sceKernelFreeRemoteProcessHeap: 0x9C28EA9A
           sceKernelGetBudgetInfo: 0x46221964
+          sceKernelGetProcessInfo: 0x0AFF3EAE
           sceKernelGetProcessResourceLimit: 0xB80DBD53
+          sceKernelGetProcessStatus: 0x65B120B8
+          sceKernelIsCDialogAvailable: 0x2F6020B7
+          sceKernelIsGameBudget: 0xF7A8BB25
           sceKernelIsProcessSuspending: 0x0CC5B30C
           sceKernelRegisterCoredumpHandler: 0x21A6F0EC
           sceKernelSetPMUSERENR: 0x6599E5D9
@@ -2510,6 +2510,7 @@ modules:
         kernel: true
         nid: 0xEB1F8EF7
         functions:
+          SceProcessmgrForKernel_014F5113: 0x014F5113
           SceProcessmgrForKernel_1197DB8A: 0x1197DB8A
           SceProcessmgrForKernel_1E5B38E5: 0x1E5B38E5
           SceProcessmgrForKernel_23EF9D8E: 0x23EF9D8E
@@ -2521,8 +2522,10 @@ modules:
           SceProcessmgrForKernel_8321B827: 0x8321B827
           SceProcessmgrForKernel_8B4086AF: 0x8B4086AF
           SceProcessmgrForKernel_923AF3CC: 0x923AF3CC
+          SceProcessmgrForKernel_98AE4BC8: 0x98AE4BC8
           SceProcessmgrForKernel_9BC44974: 0x9BC44974
           SceProcessmgrForKernel_9FA66773: 0x9FA66773
+          SceProcessmgrForKernel_B0E076D6: 0xB0E076D6
           SceProcessmgrForKernel_BC110987: 0xBC110987
           SceProcessmgrForKernel_D231AE5B: 0xD231AE5B
           SceProcessmgrForKernel_D5DF895D: 0xD5DF895D
@@ -2532,32 +2535,28 @@ modules:
           SceProcessmgrForKernel_EFFF2975: 0xEFFF2975
           SceProcessmgrForKernel_F160B4D8: 0xF160B4D8
           SceProcessmgrForKernel_FC80A606: 0xFC80A606
-          ksceKernelCreateProcess: 0x68068618
-          ksceKernelExitProcess: 0x905621F9
-          ksceKernelGetProcessKernelBuf: 0xD991C85E
-          ksceKernelGetProcessMainThread: 0xD20553C6
-          ksceKernelGetProcessModuleInfo: 0x3AF6B088
-          ksceKernelGetProcessSelfAuthInfo: 0x324F2B20
-          ksceKernelGetUIDProcessClass: 0x98AE4BC8
-          ksceKernelLibcGettimeofday: 0x014F5113
-          ksceKernelLibcTime: 0xB0E076D6
-          ksceKernelResumeProcess: 0x6894499C
-          ksceKernelSuspendProcess: 0x93B8E785
           sceKernelAllocRemoteToolHeap: 0x51AF6FE6
           sceKernelChangeProcessCpuAffinity: 0xF013B7F1
+          sceKernelCreateProcess: 0x68068618
           sceKernelDisablePHWP: 0xA2EE1B7F
           sceKernelEnablePHWP: 0x9DF739C7
+          sceKernelExitProcess: 0x905621F9
           sceKernelFreeRemoteToolHeap: 0x2755CEDD
           sceKernelGetBudgetInfoForDebugger: 0xCF9EC344
           sceKernelGetPHBP: 0x060DA466
           sceKernelGetPHWP: 0x6898F7A7
           sceKernelGetProcessApp: 0xE5097B4F
+          sceKernelGetProcessLibdb: 0x3AF6B088
+          sceKernelGetProcessMainThreadForDebugger: 0xD20553C6
           sceKernelGetProcessParentId: 0xA5E55217
+          sceKernelGetProcessSelfAuthInfo: 0x324F2B20
           sceKernelGetProcessType: 0xB631C93B
           sceKernelGrowBudget: 0x48DD3348
           sceKernelKillProcess: 0xF388F05C
           sceKernelKillProcessForDebugger: 0x148E23E3
           sceKernelProcessAssocApp: 0x00DBA872
+          sceKernelProcessDebugResume: 0x6894499C
+          sceKernelProcessDebugSuspend: 0x93B8E785
           sceKernelResetGameBudget: 0x56657302
           sceKernelResumeProcess: 0xEFBCF15B
           sceKernelResumeProcessForDebugger: 0x8FB7FD50
@@ -2568,6 +2567,7 @@ modules:
           sceKernelStartProcessExt: 0x026F3E87
           sceKernelSuspendProcess: 0x1400A1F8
           sceKernelSuspendProcessForDebugger: 0x4232517A
+          sceKernelUIDtoProcess: 0xD991C85E
           sceKernelWaitProcessEnd: 0x0B9BE51B
           sceKernelWaitProcessEventCompletion: 0x0F23A5ED
   SceRegistryMgr:

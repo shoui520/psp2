@@ -177,7 +177,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoOpen
 	ksceIoRead
 	ksceIoClose
-	ksceKernelGetProcessTimeWideCore
+	SceProcessmgrForDriver_82D94BE9
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC
 	sceDeci2pTermForCompat

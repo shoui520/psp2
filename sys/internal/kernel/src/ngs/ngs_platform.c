@@ -34,7 +34,7 @@ int ngsPlatformInitialize(void)
 {
 	int key;
 
-	key = ksceKernelCreateProcessLocalStorage("SceLibNgs", 808);
+	key = SceProcessmgrForDriver_3801D7D6("SceLibNgs", 808);
 	if (key < 0)
 		return key;
 	ngsPlatformState.processStorageKey = key;
@@ -68,7 +68,7 @@ int ngsProcessInitialize(SceUID pid)
 	NgsProcessStorage *storage = NULL;
 	int result;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 1);
 	if (result >= 0) {
 		memset(storage, 0, sizeof(*storage));
@@ -90,7 +90,7 @@ int ngsProcessSuspend(SceUID pid)
 	int retries;
 	int state;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 0);
 	if (result >= 0) {
 		if (storage->runState != 0) {
@@ -125,7 +125,7 @@ int ngsProcessResume(SceUID pid)
 	NgsProcessStorage *storage = NULL;
 	int result;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 		ngsPlatformState.processStorageKey, (void **)&storage, 0);
 	if (result < 0)
 		return result;
@@ -173,7 +173,7 @@ int ngsGetProcessStorage(NgsProcessStorage **storage)
 		if (storage == NULL)
 			return SCE_NGS_ERROR;
 		*storage = NULL;
-		result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		result = SceProcessmgrForDriver_AF80F39C(pid,
 			ngsPlatformState.processStorageKey, (void **)storage, 0);
 		return (result >> 31) & SCE_NGS_ERROR;
 	}
@@ -217,7 +217,7 @@ int ngsCreateSystem(NgsSynSystem *system)
 		index = 7;
 	else {
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -362,7 +362,7 @@ int ngsReleaseSystem(NgsSynSystem *system)
 		index = 7;
 	else {
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -456,7 +456,7 @@ int ngsAllocateProcessMemory(unsigned int handle, SceSize coherentSize,
 		index = 7;
 	else {
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return SCE_NGS_ERROR;
 		goto foundStorage;
@@ -565,7 +565,7 @@ void ngsFreeProcessMemory(unsigned int handle, void *coherentMemory,
 		index = 7;
 	else {
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 			ngsPlatformState.processStorageKey, (void **)&storage, 0) < 0)
 			return;
 		goto foundStorage;

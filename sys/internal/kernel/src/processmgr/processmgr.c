@@ -30,8 +30,6 @@ typedef struct ProcessRequest {
 	SceUInt32 request;
 } ProcessRequest;
 
-
-
 /* thread ids of a process, collected under the vector's lock */
 typedef struct ThreadIdVector {
 	SceUID id[PROCESS_THREAD_VECTOR_MAX];
@@ -107,10 +105,6 @@ static struct {
 
 static SceKernelSpinlock g_localStorageLock;
 static void (*g_processDeleteCallback)(SceUID pid, int exitStatus);
-/* the name of a process local storage key */
-typedef struct ProcessLocalStorageName {
-	char name[0x20];
-} ProcessLocalStorageName;
 
 static ProcessLocalStorageName g_localStorageName[PROCESS_LOCAL_STORAGE_MAX];
 static SceSize g_localStorageSize[PROCESS_LOCAL_STORAGE_MAX];
@@ -238,7 +232,7 @@ static void PPMFreeSlot(SceUInt32 slot)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&g_ppmLock, intr);
 }
 
-int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size)
+int SceProcessmgrForDriver_3801D7D6(const char *name, SceSize size)
 {
 	int intr, i;
 
@@ -931,7 +925,7 @@ SceUID SceProcessmgrForKernel_9BC44974(SceUID pid)
 	return ret;
 }
 
-int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void **addr, int create)
+int SceProcessmgrForDriver_AF80F39C(SceUID pid, SceUInt32 key, void **addr, int create)
 {
 	SceProcessObject *process;
 	void *storage;
@@ -975,7 +969,7 @@ int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, SceUInt32 key, void *
 	return ret;
 }
 
-void *ksceKernelGetProcessLocalStorageAddr(SceUInt32 key)
+void *SceProcessmgrForDriver_EE694840(SceUInt32 key)
 {
 	ThreadCB *cb = getCurrentThreadCB();
 	void *storage;
@@ -984,7 +978,7 @@ void *ksceKernelGetProcessLocalStorageAddr(SceUInt32 key)
 		return NULL;
 	storage = cb->process->localStorage[key];
 	if (storage == NULL
-	    && ksceKernelGetProcessLocalStorageAddrForPid(0, key, &storage, 1) < 0)
+	    && SceProcessmgrForDriver_AF80F39C(0, key, &storage, 1) < 0)
 		return NULL;
 	return storage;
 }
@@ -2271,7 +2265,6 @@ failed:
 	sceGUIDClose(pid);
 	return ret;
 }
-
 
 /* thread manager errors a whole-process operation skips */
 static inline __attribute__((always_inline)) int ThreadGone(int ret)
@@ -3787,7 +3780,7 @@ failed:
 	return ret;
 }
 
-SceClass *ksceKernelGetUIDProcessClass(void)
+SceClass *SceProcessmgrForKernel_98AE4BC8(void)
 {
 	return &g_processClass;
 }
@@ -3802,7 +3795,6 @@ int SceProcessmgrForKernel_D5DF895D(void)
 {
 	return sceKernelSignalSema(g_requestSema, PROCESS_MAX);
 }
-
 
 #define SCE_KERNEL_ERROR_PROCESS_LIMIT		0x80010082	/* name unknown */
 #define SCE_KERNEL_ERROR_ILLEGAL_CPU_AFFINITY	0x80022004	/* name unknown */
@@ -4456,7 +4448,7 @@ static inline __attribute__((always_inline)) void ClearResuming(SceProcessObject
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->lock, intr);
 }
 
-int sceKernelProcessDebugResume(SceUID pid)
+int sceKernelProcessDebugResume(SceUID pid, SceUInt32 reserved)
 {
 	SceProcessObject *process = NULL;
 	int intr, ret;
@@ -4603,13 +4595,6 @@ int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *
 	sceGUIDReleaseObject(process->pid);
 	return 0;
 }
-
-/* name unknown: a process local storage key's name and size */
-typedef struct ProcessLocalStorageInfo {
-	SceSize size;				/* 0x28 */
-	ProcessLocalStorageName name;
-	SceSize storageSize;
-} ProcessLocalStorageInfo;
 
 int SceProcessmgrForDriver_C5CF15ED(SceUInt32 key, ProcessLocalStorageInfo *info)
 {
@@ -5227,7 +5212,7 @@ int SceProcessmgrForDriver_594319C7(SceUID pid)
 	return ret;
 }
 
-int ksceKernelGetRemoteProcessTime(SceUID pid, SceUInt64 *time)
+int SceProcessmgrForDriver_C074EB31(SceUID pid, SceUInt64 *time)
 {
 	SceProcessObject *process;
 	int intr, ret;
@@ -5254,14 +5239,14 @@ int sceKernelGetRemoteProcessTime(SceUID pid, SceUInt64 *time)
 	int ret;
 
 	state = ProcessSyscallEnter();
-	ret = ksceKernelGetRemoteProcessTime(pid, &value);
+	ret = SceProcessmgrForDriver_C074EB31(pid, &value);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
 	ProcessSyscallLeave(state);
 	return ret;
 }
 
-int ksceKernelGetProcessTimeCore(SceUInt64 *time)
+int SceProcessmgrForDriver_EC283166(SceUInt64 *time)
 {
 	ThreadCB *cb = getCurrentThreadCB();
 	SceProcessObject *process;
@@ -5283,14 +5268,14 @@ int sceKernelGetProcessTimeCore(SceUInt64 *time)
 	int ret;
 
 	state = ProcessSyscallEnter();
-	ret = ksceKernelGetProcessTimeCore(&value);
+	ret = SceProcessmgrForDriver_EC283166(&value);
 	if (ret >= 0)
 		ret = SceSysmemForDriver_6D88EF8A(time, &value, sizeof(value));
 	ProcessSyscallLeave(state);
 	return ret;
 }
 
-SceUInt32 ksceKernelGetProcessTimeLowCore(void)
+SceUInt32 SceProcessmgrForDriver_02179E12(void)
 {
 	ThreadCB *cb = getCurrentThreadCB();
 	SceProcessObject *process;
@@ -5309,12 +5294,12 @@ SceUInt32 sceKernelGetProcessTimeLowCore(void)
 
 	state = ProcessSyscallEnter();
 	sceKernelApiDeclareTypeUInt32();
-	ret = ksceKernelGetProcessTimeLowCore();
+	ret = SceProcessmgrForDriver_02179E12();
 	ProcessSyscallLeave(state);
 	return ret;
 }
 
-SceUInt64 ksceKernelGetProcessTimeWideCore(void)
+SceUInt64 SceProcessmgrForDriver_82D94BE9(void)
 {
 	ThreadCB *cb = getCurrentThreadCB();
 	SceProcessObject *process;
@@ -5333,7 +5318,7 @@ SceUInt64 sceKernelGetProcessTimeWideCore(void)
 
 	state = ProcessSyscallEnter();
 	sceKernelApiDeclareTypeUInt64();
-	ret = ksceKernelGetProcessTimeWideCore();
+	ret = SceProcessmgrForDriver_82D94BE9();
 	ProcessSyscallLeave(state);
 	return ret;
 }
@@ -5558,12 +5543,6 @@ void _sceKernelExitProcessForUser(int status)
 	SCE_PANIC(8820);
 }
 
-/* the user mode addresses LibKernel registers */
-typedef struct LibkernelAddresses {
-	SceSize size;				/* 0x1c */
-	void *addr[6];
-} LibkernelAddresses;
-
 int _sceKernelRegisterLibkernelAddressesForUser(const LibkernelAddresses *uaddr)
 {
 	SceProcessObject *process;
@@ -5764,23 +5743,12 @@ SceKernelTime sceKernelLibcTime(SceKernelTime *ut)
 
 	state = ProcessSyscallEnter();
 	sceKernelApiDeclareTypeUInt32();
-	t = ksceKernelLibcTime(&t);
+	t = SceProcessmgrForKernel_B0E076D6(&t);
 	if (ut != NULL && SceSysmemForDriver_6D88EF8A(ut, &t, sizeof(t)) < 0)
 		t = (SceKernelTime)-1;
 	ProcessSyscallLeave(state);
 	return t;
 }
-
-/* the user mode struct timeval / struct timezone */
-typedef struct ProcessTimeval {
-	SceInt32 sec;
-	SceInt32 usec;
-} ProcessTimeval;
-
-typedef struct ProcessTimezone {
-	SceInt32 minuteswest;
-	SceInt32 dsttime;
-} ProcessTimezone;
 
 int sceKernelLibcGettimeofday(ProcessTimeval *utv, ProcessTimezone *utz)
 {
@@ -5790,18 +5758,13 @@ int sceKernelLibcGettimeofday(ProcessTimeval *utv, ProcessTimezone *utz)
 	int ret;
 
 	state = ProcessSyscallEnter();
-	ret = ksceKernelLibcGettimeofday(&tv, &tz);
+	ret = SceProcessmgrForKernel_014F5113(&tv, &tz);
 	if (ret == 0 && (utv == NULL || (ret = SceSysmemForDriver_6D88EF8A(utv, &tv, sizeof(tv))) >= 0)
 	    && utz != NULL)
 		ret = SceSysmemForDriver_6D88EF8A(utz, &tz, sizeof(tz));
 	ProcessSyscallLeave(state);
 	return ret;
 }
-
-/* the user mode struct tm */
-typedef struct ProcessTm {
-	SceInt32 field[9];
-} ProcessTm;
 
 int sceKernelLibcGmtime_r(const SceKernelTime *ut, ProcessTm *utm)
 {
@@ -6312,9 +6275,9 @@ static const struct {
 	sceKernelInhibitProcEvent,
 	sceKernelPermitProcEvent,
 	sceKernelGetObjectHeap,
-	ksceKernelCreateProcessLocalStorage,
-	ksceKernelGetProcessLocalStorageAddr,
-	ksceKernelGetProcessLocalStorageAddrForPid,
+	SceProcessmgrForDriver_3801D7D6,
+	SceProcessmgrForDriver_EE694840,
+	SceProcessmgrForDriver_AF80F39C,
 	sceKernelProcessDebugSuspend,
 	SceProcessmgrForDriver_D141C076,
 };

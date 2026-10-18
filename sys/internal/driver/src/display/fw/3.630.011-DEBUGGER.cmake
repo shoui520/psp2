@@ -265,11 +265,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceKernelDmaOpAlloc
 	ksceKernelDmaOpFree
 	ksceKernelDmaOpAssign
-	ksceKernelCreateProcessLocalStorage
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_3801D7D6
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_E1A67C86
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler
 	sceSblACMgrIsGameProgram

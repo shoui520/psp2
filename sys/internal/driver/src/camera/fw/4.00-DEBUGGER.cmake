@@ -135,9 +135,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_3801D7D6
 	SceProcessmgrForDriver_8CB01675
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler

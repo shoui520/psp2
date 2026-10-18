@@ -20,7 +20,6 @@
 #include <processmgr/processmgr.h>
 #include <sysmem/sysroot.h>
 
-int ksceKernelIsGameBudget(void);
 int sceNetPsProcessCreateHandler(SceUID processId, const void *param,
 				SceNetPsProcessHooks *hooks);
 int sceNetPsProcessExitHandler(SceUID processId, const void *param,
@@ -127,7 +126,7 @@ int sceNetPsIsApplicationProgram(int *error)
 
 int sceNetPsIsGameBudget(void)
 {
-	return ksceKernelIsGameBudget() != 0;
+	return sceKernelIsGameBudget() != 0;
 }
 
 int sceNetPsIsDevelopmentMode(void)

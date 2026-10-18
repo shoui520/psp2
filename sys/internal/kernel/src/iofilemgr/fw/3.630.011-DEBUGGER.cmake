@@ -276,9 +276,9 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_3801D7D6
 	sceKernelAllocRemoteCDialogHeap
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_AF80F39C
 	sceKernelGetProcessResourceLimit
 	sceKernelFreeRemoteCDialogHeap
 	SceSblACMgrForKernel_sceSblACMgrIsGameProgram

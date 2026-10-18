@@ -230,7 +230,7 @@ static int sysmoduleFind(SysmoduleProc **proc, SceUInt16 **state, const Sysmodul
 allowed:
 	if (s_storage < 0)
 		return s_storage;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(0, s_storage, (void **)proc, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(0, s_storage, (void **)proc, 0);
 	if (ret < 0)
 		return ret;
 	if (*proc == NULL)
@@ -610,7 +610,7 @@ allowed:
 	ret = s_storage;
 	if (s_storage < 0)
 		goto out;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(0, s_storage, (void **)&proc, 0);
+	ret = SceProcessmgrForDriver_AF80F39C(0, s_storage, (void **)&proc, 0);
 	if (ret < 0)
 		goto out;
 	if (proc == NULL) {
@@ -642,7 +642,7 @@ static int procCreateHandler(SceUID pid, ProcEventCreateParam *param, int args)
 	SysmoduleProc *proc = NULL;
 
 	if (s_storage >= 0 &&
-	    ksceKernelGetProcessLocalStorageAddrForPid(pid, s_storage, (void **)&proc, 1) >= 0 &&
+	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 1) >= 0 &&
 	    proc != NULL) {
 		proc->mutex = sceKernelCreateMutex("SceSysmodule", 0x8000, 0, NULL);
 		proc->waiter = -1;
@@ -656,7 +656,7 @@ static inline void sysmoduleProcEnd(SceUID pid)
 	SysmoduleProc *proc = NULL;
 
 	if (s_storage >= 0 &&
-	    ksceKernelGetProcessLocalStorageAddrForPid(pid, s_storage, (void **)&proc, 0) >= 0 &&
+	    SceProcessmgrForDriver_AF80F39C(pid, s_storage, (void **)&proc, 0) >= 0 &&
 	    proc != NULL && proc->mutex >= 0) {
 		sceKernelDeleteMutex(proc->mutex);
 		proc->mutex = -1;
@@ -677,7 +677,7 @@ static int procKillHandler(SceUID pid, ProcEventParam *param, int args)
 
 int module_start(SceSize args, void *argp)
 {
-	s_storage = ksceKernelCreateProcessLocalStorage("SceSysmodule", 0x1000);
+	s_storage = SceProcessmgrForDriver_3801D7D6("SceSysmodule", 0x1000);
 	sceKernelRegisterProcEventHandler("SceSysmodule", &s_procHandler, 0);
 	return SCE_KERNEL_START_SUCCESS;
 }

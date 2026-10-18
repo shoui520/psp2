@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForDriver_E87D1777
 	SceSblAIMgrForDriver_D78B04A2
 	ksceSblRSA2048VerifySignature
-	ksceKernelGetProcessSelfAuthInfo
+	sceKernelGetProcessSelfAuthInfo
 	sceKernelRegisterSysEventHandler
 	SceSysrootForKernel_20009397
 	SceSysrootForKernel_CC119171

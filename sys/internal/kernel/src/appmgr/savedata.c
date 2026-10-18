@@ -78,7 +78,7 @@ int appmgrSetRequiredSaveDataSize(SceUInt32 requiredKiB)
 	void *storage = NULL;
 	int result;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(0,
+	result = SceProcessmgrForDriver_AF80F39C(0,
 			g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		return result;
@@ -199,7 +199,7 @@ int appmgrCreateSaveDataSlotFile(SceUID pid, const char *path,
 	result = ksceIoGetstat(filePath, &stat);
 	if (result == 0)
 		goto freePath;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(
+	result = SceProcessmgrForDriver_AF80F39C(
 		pid, g_appmgrSafeMemoryKey, &buffer, 1);
 	if (result < 0)
 		goto freePath;
@@ -445,7 +445,7 @@ int ksceAppMgrSaveDataSlotCreate(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
@@ -508,7 +508,7 @@ int ksceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
@@ -572,7 +572,7 @@ int ksceAppMgrSaveDataSlotSetParam(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
@@ -635,7 +635,7 @@ int ksceAppMgrSaveDataSlotSetStatus(void *parameters)
 	if (result != 0)
 		goto restorePermission;
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(0, g_appmgrAppInfoCacheKey,
+	if (SceProcessmgrForDriver_AF80F39C(0, g_appmgrAppInfoCacheKey,
 						    &storage, 0) >= 0 && storage) {
 		info = storage;
 		info->saveDataFlags |= 2;
@@ -968,7 +968,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	if (quotaExceeded) {
 		operation->requiredSizeKiB = (totalRequiredBytes - quotaBytes) >> 10;
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+		if (SceProcessmgrForDriver_AF80F39C(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->neededSaveDataKiB = operation->requiredSizeKiB;
@@ -981,7 +981,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 	if (missingFilesystemKiB && !allFilesEmpty) {
 		operation->requiredSizeKiB = missingFilesystemKiB;
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+		if (SceProcessmgrForDriver_AF80F39C(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->neededSaveDataKiB = missingFilesystemKiB;
@@ -1035,7 +1035,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 				goto freeDirectories;
 		}
 		storage = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+		if (SceProcessmgrForDriver_AF80F39C(0,
 			g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 			info = storage;
 			info->saveDataFlags |= 2;
@@ -1098,7 +1098,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					goto firstWriteError;
 				if (!changed) {
 					storage = NULL;
-					if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+					if (SceProcessmgrForDriver_AF80F39C(0,
 						g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 						info = storage;
 						info->saveDataFlags |= 2;
@@ -1169,7 +1169,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 			ksceIoClose(fd);
 			if (!changed) {
 				storage = NULL;
-				if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+				if (SceProcessmgrForDriver_AF80F39C(0,
 					g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 					info = storage;
 					info->saveDataFlags |= 2;
@@ -1250,7 +1250,7 @@ int appmgrSaveDataDataSave(AppmgrSaveDataOperationParam *operation, int normalAp
 					}
 					if (!changed) {
 						storage = NULL;
-						if (ksceKernelGetProcessLocalStorageAddrForPid(0,
+						if (SceProcessmgrForDriver_AF80F39C(0,
 							g_appmgrAppInfoCacheKey, &storage, 0) >= 0 && storage) {
 							info = storage;
 							info->saveDataFlags |= 2;
@@ -2042,7 +2042,7 @@ int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
 	float elapsed;
 	int result;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(sceKernelGetProcessId(),
+	result = SceProcessmgrForDriver_AF80F39C(sceKernelGetProcessId(),
 		g_appmgrAppInfoCacheKey, &storage, 0);
 	if (result < 0)
 		return result;
@@ -2054,7 +2054,7 @@ int appmgrAccumulateSaveDataWriteSize(SceUInt32 writtenKiB)
 	info->totalWrittenKiB += writtenKiB;
 	if (sinceNotice < 1024)
 		return 0;
-	seconds = ksceKernelGetProcessTimeWideCore() / 1000000;
+	seconds = SceProcessmgrForDriver_82D94BE9() / 1000000;
 	if (seconds) {
 		elapsed = seconds;
 		threshold = 20480 * (seconds / 3600 + 1);

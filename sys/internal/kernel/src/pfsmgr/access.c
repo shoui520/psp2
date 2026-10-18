@@ -162,13 +162,13 @@ int pfsAccessBegin(ScePfsPmi *pmi, int op, SceUInt32 arg, int *oldPermission)
 	isSystem = sceSblACMgrIsSystemProgram(SceThreadmgrForDriver_FA54D49A());
 	if ((unsigned int)(pmi->mode - 0x1f) < 3) {
 		owner = pmi->parent;
-		if (ksceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
+		if (sceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
 			approved = pfsPmiIsApproved(owner, authInfo.program_authority_id);
 		flags = pmi->parent->flags;
 	} else {
-		if (ksceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
+		if (sceKernelGetProcessSelfAuthInfo(SceThreadmgrForDriver_FA54D49A(), &authInfo) < 0)
 			approved = 0;
 		else
 			approved = pfsPmiIsApproved(pmi, authInfo.program_authority_id);

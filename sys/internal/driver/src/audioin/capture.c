@@ -589,7 +589,7 @@ int sceAudioInOpenPort(SceAudioInPortType portType, int grain, int freq,
 	port->pid = pid;
 	port->grain = grain;
 	port->freq = freq;
-	candidate = (unsigned char)ksceKernelGetProcessTimeLowCore() | 0x80;
+	candidate = (unsigned char)SceProcessmgrForDriver_02179E12() | 0x80;
 	for (i = 0; i < 4; i++) {
 		while (g_audioInPorts[i].port == candidate) {
 			i = 0;
@@ -758,7 +758,7 @@ int sceAudioInOpenPortForDiag(unsigned int portType, unsigned int grain,
 	port->pid = pid;
 	port->grain = grain;
 	port->freq = freq;
-	candidate = (unsigned char)ksceKernelGetProcessTimeLowCore() | 0x80;
+	candidate = (unsigned char)SceProcessmgrForDriver_02179E12() | 0x80;
 	for (i = 0; i < 4; i++) {
 		while (g_audioInPorts[i].port == candidate) {
 			i = 0;

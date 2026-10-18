@@ -93,8 +93,6 @@ extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	CoredumpTimerInfo *info);
 extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
-extern int ksceKernelGetProcessStatus(SceUID pid, int *status);
-extern int ksceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info);
 extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
 extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
@@ -501,7 +499,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 		goto foundReason;
 	}
 processStatus:
-	result = ksceKernelGetProcessStatus(coredumpRun.pid, &status);
+	result = sceKernelGetProcessStatus(coredumpRun.pid, &status);
 	if (result >= 0) {
 		switch ((uint8_t)status) {
 		case 1:
@@ -871,7 +869,7 @@ void oalGetProcessDumpName(SceUID pid, char *name)
 		strncpy(name, "nonsystem", 32);
 	memset(&process, 0, sizeof(process));
 	process.size = sizeof(process);
-	if (ksceKernelGetProcessInfo(pid, &process) == 0 &&
+	if (sceKernelGetProcessInfo(pid, &process) == 0 &&
 	    strnlen(process.name, sizeof(process.name)) != 0)
 		__builtin_memcpy(name, process.name, sizeof(process.name));
 }
@@ -1436,11 +1434,11 @@ void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info)
 	memset(info, 0, sizeof(*info));
 	memset(&process, 0, sizeof(process));
 	process.size = sizeof(process);
-	if (ksceKernelGetProcessInfo(pid, &process) != 0)
+	if (sceKernelGetProcessInfo(pid, &process) != 0)
 		return;
 	status = 0;
 	info->pid = process.pid;
-	if (ksceKernelGetProcessStatus(pid, &status) < 0) {
+	if (sceKernelGetProcessStatus(pid, &status) < 0) {
 		flags = 0;
 	} else {
 		status = (uint8_t)status;
@@ -1497,7 +1495,7 @@ int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize)
 	*pathSize = 0;
 	memset(&process, 0, sizeof(process));
 	process.size = sizeof(process);
-	result = ksceKernelGetProcessInfo(pid, &process);
+	result = sceKernelGetProcessInfo(pid, &process);
 	if (result != 0)
 		return result;
 	result = ksceKernelGetModulePath(process.mainModule, path, 255);
@@ -1516,7 +1514,7 @@ void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info)
 	memset(info, 0, sizeof(*info));
 	memset(&process, 0, sizeof(process));
 	process.size = sizeof(process);
-	if (ksceKernelGetProcessInfo(pid, &process) != 0)
+	if (sceKernelGetProcessInfo(pid, &process) != 0)
 		return;
 	if (ksceKernelGetModuleInfo(pid, process.mainModule, &module) < 0)
 		return;
@@ -2034,7 +2032,7 @@ int oalEachOfAllMemBlockInfo(SceUID pid,
 
 	SCE_DBG_ASSERT(callback != NULL && blocks != NULL, 2959);
 	process.size = sizeof(process);
-	if (ksceKernelGetProcessInfo(pid, &process) < 0)
+	if (sceKernelGetProcessInfo(pid, &process) < 0)
 		return 0;
 	space.size = sizeof(space);
 	result = SceSysmemForKernel_C3EF4055(process.addressSpace, &space);
@@ -3373,13 +3371,13 @@ void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *inf
 	memset(info, 0, sizeof(*info));
 	memset(&process, 0, sizeof(process));
 	process.size = sizeof(process);
-	if (ksceKernelGetProcessInfo(extnlPid, &process) != 0)
+	if (sceKernelGetProcessInfo(extnlPid, &process) != 0)
 		return;
 	info->pid = process.pid;
 	if (_isSystemProgram(pid) != 0)
 		info->budgetId = process.budgetId;
 	status = 0;
-	if (ksceKernelGetProcessStatus(extnlPid, &status) < 0) {
+	if (sceKernelGetProcessStatus(extnlPid, &status) < 0) {
 		flags = 0;
 	} else {
 		status = (uint8_t)status;
@@ -4125,11 +4123,10 @@ int oalGetEventlog(void *buf, SceSize size, SceSize *readBlocks)
 }
 
 /* 0x6894499C in 4.00 takes a second argument, always 0 here */
-extern int ksceKernelResumeProcess(SceUID pid, SceUInt32 reserved);
 
 int oalResumeProcess(SceUID pid)
 {
-	return ksceKernelResumeProcess(pid, 0);
+	return sceKernelProcessDebugResume(pid, 0);
 }
 
 int oalSuspendProcess(SceUID pid, SceUInt32 *timeout)

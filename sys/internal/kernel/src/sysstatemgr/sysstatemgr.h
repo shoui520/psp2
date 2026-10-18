@@ -24,7 +24,6 @@
 #define CONF_MEMTYPE SCE_KERNEL_MEMBLOCK_TYPE_KERNEL_ROOT_RW
 
 /* Kernel-only imports not declared by the public SDK headers. */
-int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);
 extern char SceKernelPsp2Config_A6483A7C[];
 extern char SceKernelPsp2Config_C1BA20DA[];
 

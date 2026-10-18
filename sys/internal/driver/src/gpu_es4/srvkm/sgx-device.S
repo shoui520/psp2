@@ -1121,7 +1121,7 @@ BM_CreateContext:
 .LBM_CreateContext10a:
 	ldr r0, BM_CreateContextLiteral1d4
 	movs r1, #0x10
-	bl ksceKernelCreateProcessLocalStorage
+	bl SceProcessmgrForDriver_3801D7D6
 	subs r3, r0, #0
 	bge .LBM_CreateContext12a
 	ldr r2, BM_CreateContextLiteral190
@@ -1136,7 +1136,7 @@ BM_CreateContext:
 	ldr r2, [sp, #0xc]
 	add.w r2, r2, #0x1020
 	str r3, [r2, #4]
-	bl ksceKernelGetProcessLocalStorageAddr
+	bl SceProcessmgrForDriver_EE694840
 	cbnz r0, .LBM_CreateContext14a
 	ldr r3, BM_CreateContextLiteral190
 	movs r1, #0
@@ -1294,13 +1294,13 @@ BM_CreateContext:
 	blt .LBM_CreateContext1c
 	ldr r0, BM_CreateContextLiterale8
 	movs r1, #0x10
-	bl ksceKernelCreateProcessLocalStorage
+	bl SceProcessmgrForDriver_3801D7D6
 	subs r2, r0, #0
 	blt .LBM_CreateContextb8
 	ldr r3, [sp, #4]
 	add.w r3, r3, #0x1020
 	str r2, [r3, #4]
-	bl ksceKernelGetProcessLocalStorageAddr
+	bl SceProcessmgrForDriver_EE694840
 	cbz r0, .LBM_CreateContextb8
 	ldr r3, [sp, #4]
 	ldr r3, [r3, #4]

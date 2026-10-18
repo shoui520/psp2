@@ -84,7 +84,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSetEventFlag
 	sceKernelUnlockFastMutex
-	ksceKernelGetProcessTimeLowCore
+	SceProcessmgrForDriver_02179E12
 	SceProcessmgrForDriver_D141C076
 	sceKernelRegisterSysEventHandler
 	sceKernelRegisterProcEventHandler

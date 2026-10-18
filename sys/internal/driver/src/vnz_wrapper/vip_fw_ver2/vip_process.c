@@ -43,7 +43,7 @@ int initializeVeneziaVipProcesses(void)
 {
 	int ret;
 
-	ret = ksceKernelCreateProcessLocalStorage("SceVip", sizeof(VeneziaVipProcessStorage));
+	ret = SceProcessmgrForDriver_3801D7D6("SceVip", sizeof(VeneziaVipProcessStorage));
 	if (ret >= 0) {
 		g_veneziaVipProcessStorageKey = ret;
 		ret = initializeVeneziaVipResources();
@@ -59,7 +59,7 @@ int _sceHwd0ProcessCreateEntry(SceUID pid)
 	char name[32];
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 1);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -83,7 +83,7 @@ int releaseVeneziaVipProcessStorage(SceUID pid)
 	VeneziaVipProcessStorage *storage = NULL;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 		ret = 0;
@@ -101,11 +101,11 @@ VeneziaVipProcessStorage *_sceVipGetVipProcessResource(SceUID pid)
 	VeneziaVipProcessStorage *storage = NULL;
 
 	if (pid) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
+		if (SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
 			(void **)&storage, 0) < 0)
 			storage = NULL;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
+		storage = SceProcessmgrForDriver_EE694840(g_veneziaVipProcessStorageKey);
 	}
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
@@ -120,7 +120,7 @@ int waitVeneziaVipProcessReady(void)
 	VeneziaVipProcessStorage *storage;
 	int ret, signal;
 
-	storage = ksceKernelGetProcessLocalStorageAddr(g_veneziaVipProcessStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(g_veneziaVipProcessStorageKey);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, SCE_DBGINFO_FUNC(170, "_sceVipGetVipProcessResource"),
 		__builtin_return_address(0));
@@ -142,7 +142,7 @@ int _sceHwd0StartProcessSuspend(SceUID pid)
 	VeneziaVipProcessStorage *process;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG
@@ -174,7 +174,7 @@ int _sceHwd0ProcessResume(SceUID pid)
 	VeneziaVipProcessStorage *process;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_veneziaVipProcessStorageKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_veneziaVipProcessStorageKey,
 		(void **)&storage, 0);
 	if (ret >= 0) {
 #if FW_DEBUG

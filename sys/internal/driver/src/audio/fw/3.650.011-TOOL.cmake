@@ -129,11 +129,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelCreateThread
 	sceKernelSetEventFlag
-	ksceKernelGetProcessTimeLowCore
-	ksceKernelCreateProcessLocalStorage
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_02179E12
+	SceProcessmgrForDriver_3801D7D6
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterSysEventHandler
 	ksceKernelDmaOpQuit
 	ksceKernelDmaOpSetupChain

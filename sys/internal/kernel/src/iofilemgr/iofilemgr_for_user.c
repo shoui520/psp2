@@ -1094,7 +1094,7 @@ int sceIoCompleteMultipleForUser(void *params, int num, int *numCompleted)
 
 	IO_CHECK_VM_DOMAIN(1902);
 	pid = sceKernelGetProcessId();
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
 						       (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;

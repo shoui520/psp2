@@ -359,9 +359,9 @@ set(MODULE_IMPORT_FUNCS
 	sceSDfMgrBreakSystem
 	sceSDfMgrExRecv
 	SceDeci4pSDfMgrForKernel_FFC95B63
-	ksceKernelGetProcessInfo
+	sceKernelGetProcessInfo
 	SceProcessmgrForDriver_5468892A
-	ksceKernelGetProcessStatus
+	sceKernelGetProcessStatus
 	SceProcessmgrForDriver_BA0A06A4
 	SceProcessmgrForDriver_C5CF15ED
 	SceProcessmgrForDriver_FC2A424E
@@ -374,13 +374,13 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_459A223B
 	SceProcessmgrForKernel_5137B783
 	sceKernelSetPHBP
-	ksceKernelCreateProcess
-	ksceKernelResumeProcess
+	sceKernelCreateProcess
+	sceKernelProcessDebugResume
 	sceKernelGetPHWP
 	sceKernelResumeProcessForDebugger
 	SceProcessmgrForKernel_923AF3CC
-	ksceKernelSuspendProcess
-	ksceKernelGetUIDProcessClass
+	sceKernelProcessDebugSuspend
+	SceProcessmgrForKernel_98AE4BC8
 	sceKernelSetPHWP
 	sceKernelGetBudgetInfoForDebugger
 	SceProcessmgrForKernel_DC18FCEF

@@ -48,7 +48,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 	SCE_DBG_ASSERT(result >= 0, 253);
 	result = SceSysmemForDriver_8D160E65(audioMixerBuffers[1], &physicalAddress[1]);
 	SCE_DBG_ASSERT(result >= 0, 255);
-	audioMixerDeadline = ksceKernelGetProcessTimeLowCore();
+	audioMixerDeadline = SceProcessmgrForDriver_02179E12();
 	while (sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL) >= 0) {
 		AudioProcessLocalStorage *process;
 		unsigned int index;
@@ -192,7 +192,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 						buffer ^= 1;
 						audioDispatchDmaBuffer(address, 0, samples);
 						state = 0;
-						audioMixerDeadline = ksceKernelGetProcessTimeLowCore() +
+						audioMixerDeadline = SceProcessmgrForDriver_02179E12() +
 							(1000U * samples) / 48;
 					} else {
 						state = 0;
@@ -207,7 +207,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 		sceKernelSetEventFlag(audioEventFlag, 32);
 		state = 0;
 		sceKernelWaitEventFlag(audioEventFlag, 1, 5, NULL, NULL);
-		audioMixerDeadline = ksceKernelGetProcessTimeLowCore();
+		audioMixerDeadline = SceProcessmgrForDriver_02179E12();
 	}
 	sceKernelExitThread(0);
 	return 0;
@@ -216,7 +216,7 @@ int _sceAudiodrvMixer(SceSize arglen, void *argp)
 uint32_t audioWaitForPlaybackDeadline(uint32_t deadline, uint32_t freq,
 				     uint32_t samples)
 {
-	uint32_t current = ksceKernelGetProcessTimeLowCore();
+	uint32_t current = SceProcessmgrForDriver_02179E12();
 	uint32_t duration = (1000000 * samples) / freq;
 	uint32_t delay = deadline - current;
 

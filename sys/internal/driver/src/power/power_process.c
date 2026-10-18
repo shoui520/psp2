@@ -43,7 +43,7 @@ static int setProcessWirelessFlags(SceUID pid, uint32_t mask, uint32_t enabled)
 
 	if (enabled > 1)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -121,7 +121,7 @@ int powerInitializeKernelProcessState(void)
 	powerResetProcessClockFlags();
 	override = SceDipswForDriver_A98FC2FD(0x9f) && SceDipswForDriver_A98FC2FD(0xec);
 	powerInitializeProcessClockFlags(override);
-	result = ksceKernelGetProcessLocalStorageAddrForPid(SCE_KERNEL_PROCESS_ID,
+	result = SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 1);
 	if (result < 0)
 		return 0;
@@ -155,7 +155,7 @@ void powerCreateProcessState(SceUID pid)
 	SceKernelIntrStatus intrState;
 	int game;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 1) < 0)
 		return;
 	state->pid = pid;
@@ -177,7 +177,7 @@ void powerCreateProcessState(SceUID pid)
 	if (pid == SCE_KERNEL_PROCESS_ID)
 		return;
 	if (powerBeginKernelClockReduction() &&
-	    ksceKernelGetProcessLocalStorageAddrForPid(SCE_KERNEL_PROCESS_ID,
+	    SceProcessmgrForDriver_AF80F39C(SCE_KERNEL_PROCESS_ID,
 			s_processStorageKey, (void **)&state, 0) >= 0) {
 		state->clockFrequency[POWER_PROCESS_CLOCK_BUS] = 55;
 		if (ksceDisplayGetDeviceType(1, 0))
@@ -193,7 +193,7 @@ static inline __attribute__((always_inline)) void powerUnlinkProcessState(SceUID
 	struct PowerProcessState *state, *process;
 	SceKernelIntrStatus intrState;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	intrState = SceCpuForDriver_D32ACE9E(&s_powerIdleLock);
@@ -224,7 +224,7 @@ void powerProcessSuspendEvent(SceUID pid, uint32_t event)
 {
 	struct PowerProcessState *state;
 
-	if (event != 0x800 || ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (event != 0x800 || SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	state->clockExcluded = 1;
@@ -237,7 +237,7 @@ void powerProcessResumeEvent(SceUID pid, uint32_t event)
 {
 	struct PowerProcessState *state;
 
-	if (event != 0x10000 || ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (event != 0x10000 || SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0) < 0)
 		return;
 	state->clockExcluded = 0;
@@ -262,7 +262,7 @@ static inline __attribute__((always_inline)) int setProcessClockFrequency(SceUID
 		result = SCE_POWER_ERROR_INVALID_VALUE;
 		goto out;
 	}
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		goto out;
@@ -310,7 +310,7 @@ int getProcessClockFrequency(SceUID pid, enum PowerProcessClock clock, int sysca
 
 	if (syscall)
 		context = sceSyscallEnter();
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0)
 		result = state->clockFrequency[clock];
@@ -383,7 +383,7 @@ static inline __attribute__((always_inline)) int setProcessGpuFrequency(SceUID p
 
 	if (frequency < 1 || frequency > 222)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;
@@ -439,7 +439,7 @@ int powerSetProcessConfigurationFlags(uint32_t mask, uint32_t enabled)
 
 	if (enabled > 1)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	state = ksceKernelGetProcessLocalStorageAddr(s_processStorageKey);
+	state = SceProcessmgrForDriver_EE694840(s_processStorageKey);
 	if (!state)
 		return SCE_POWER_ERROR_INVALID_VALUE;
 	previous = state->wirelessFlags;
@@ -477,7 +477,7 @@ int getProcessWirelessState(SceUID pid, unsigned int view, int syscall)
 
 	if (syscall)
 		context = sceSyscallEnter();
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result >= 0) {
 		flags = state->wirelessFlags;

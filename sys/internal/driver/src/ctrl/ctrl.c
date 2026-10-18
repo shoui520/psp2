@@ -131,7 +131,7 @@ static inline __attribute__((always_inline)) int ctrlPeekBuffer(
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 			ctrlStorage.processStorageKey, (void **)&process, 0) < 0 ||
 	    !process) {
 		result = SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -199,7 +199,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	event = extended ? ctrlStorage.ports[port].negative :
 			   ctrlStorage.ports[port].positive;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 			ctrlStorage.processStorageKey, (void **)&lookup, 0) < 0 ||
 	    !lookup) {
 		result = SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -219,7 +219,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	sceKernelClearEventFlag(event, ~eventBit);
 	lookup = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 			ctrlStorage.processStorageKey, (void **)&lookup, 0) < 0 ||
 	    !lookup) {
 		result = SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -847,7 +847,7 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 		if (!userButtons && !ctrlStorage.otherPortButtons) {
 			process = NULL;
 			if (ctrlStorage.activeProcess != -1 &&
-			    ksceKernelGetProcessLocalStorageAddrForPid(ctrlStorage.activeProcess,
+			    SceProcessmgrForDriver_AF80F39C(ctrlStorage.activeProcess,
 				ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 &&
 			    process && process->buttonInterceptPending) {
 				process->buttonInterceptPending = 0;
@@ -866,7 +866,7 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 	}
 	active = ctrlStorage.activeProcess;
 	process = NULL;
-	if (active == -1 || ksceKernelGetProcessLocalStorageAddrForPid(active,
+	if (active == -1 || SceProcessmgrForDriver_AF80F39C(active,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 ||
 	    !process || process->processState == 2) {
 		active = -1;
@@ -880,7 +880,7 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 			if (rapid->owner == -1)
 				continue;
 			process = NULL;
-			if (ksceKernelGetProcessLocalStorageAddrForPid(rapid->owner,
+			if (SceProcessmgrForDriver_AF80F39C(rapid->owner,
 				ctrlStorage.processStorageKey, (void **)&process, 0) < 0 ||
 			    !process || ((rapid->owner != ctrlStorage.activeProcess ||
 			    process->processState == 2) && rapid->owner != SCE_KERNEL_PROCESS_ID) ||
@@ -921,7 +921,7 @@ void ctrlPublishSample(int port, struct ctrlNativeSample *sample, int source)
 		if (ctrlStorage.processes[i] == -1)
 			continue;
 		process = NULL;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(ctrlStorage.processes[i],
+		if (SceProcessmgrForDriver_AF80F39C(ctrlStorage.processes[i],
 			ctrlStorage.processStorageKey, (void **)&process, 0) < 0 ||
 		    !process || process->processState == 2)
 			continue;
@@ -999,7 +999,7 @@ int SceCtrlForDriver_B26C2231(SceUID pid)
 	if (ctrlStorage.activeProcess != pid) {
 		ctrlStorage.activeProcessChangePending = 1;
 		ctrlStorage.pendingActiveProcess = pid;
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 		    ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 &&
 		    process && !process->activation)
 			process->activation = 1;
@@ -1205,7 +1205,7 @@ int ctrlGetProcessStatus(SceUID pid, int *status)
 	int result = SCE_CTRL_ERROR_PRIV_REQUIRED;
 
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 && process) {
 		*status = process->buttonIntercept == 1;
 		result = 0;
@@ -1361,7 +1361,7 @@ int ksceCtrlSetButtonIntercept(int intercept)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto out;
 	if (process->buttonIntercept != intercept) {
@@ -1391,7 +1391,7 @@ int ksceCtrlGetButtonIntercept(int *intercept)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) >= 0 && process) {
 		*intercept = process->buttonIntercept == 1;
 		result = 0;
@@ -1669,7 +1669,7 @@ int ctrlCreateProcess(SceUID pid)
 	int result = SCE_CTRL_ERROR_FATAL;
 
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 1) < 0 || !process)
 		goto unlock;
 	process->processId = pid;
@@ -1698,7 +1698,7 @@ int ctrlCreateProcess(SceUID pid)
 	}
 	process->privileged = SceSblACMgrForDriver_991FDC15(pid) ||
 		sceSblACMgrIsKernelProgram(pid) || SceSblACMgrForDriver_2E992B02(pid);
-	ksceKernelGetProcessSelfAuthInfo(pid, &auth);
+	sceKernelGetProcessSelfAuthInfo(pid, &auth);
 	process->specialAuthority = auth.program_authority_id == 0x2800000000000013ULL ||
 		(uint64_t)(auth.program_authority_id - 0x2800000000007009ULL) < 2 ||
 		(uint64_t)(auth.program_authority_id - 0x220000101cd2000cULL) < 2;
@@ -1741,7 +1741,7 @@ int ctrlDestroyProcess(SceUID pid)
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
 	if (ctrlStorage.activeProcess == pid)
 		ctrlStorage.activeProcess = -1;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
 	for (port = 0; ; port++) {
@@ -1823,7 +1823,7 @@ int ctrlActivateProcess(SceUID pid, int event, ProcEventParam *args, int flags)
 	if (event != 0x10000)
 		return 0;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
 	if (process->samplingMode - 1U <= 2)
@@ -1885,7 +1885,7 @@ int ctrlProcessEvent(SceUID pid, int event, ProcEventParam *args, int flags)
 	if (event != 0x200 && event != 0x800)
 		return 0;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	if (SceProcessmgrForDriver_AF80F39C(pid,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process)
 		goto unlock;
 	if (event == 0x200) {
@@ -1926,7 +1926,7 @@ int _sceCtrlBdRemoconSendNotify(uint32_t notify)
 	}
 #endif
 	owner = ctrlStorage.activeProcess;
-	if (owner == -1 || ksceKernelGetProcessLocalStorageAddrForPid(owner,
+	if (owner == -1 || SceProcessmgrForDriver_AF80F39C(owner,
 		ctrlStorage.processStorageKey, (void **)&process, 0) < 0 || !process ||
 	    process->processState == 2 || process->buttonIntercept == 1)
 		return 0;
@@ -2104,7 +2104,7 @@ int ctrlInitialize(void)
 	ctrlStorage.processCount = 0;
 	memset(ctrlStorage.processes, 0xff, sizeof(ctrlStorage.processes));
 	ctrlStorage.lock = 0;
-	result = ksceKernelCreateProcessLocalStorage("SceCtrl", sizeof(struct ctrlProcessStorage));
+	result = SceProcessmgrForDriver_3801D7D6("SceCtrl", sizeof(struct ctrlProcessStorage));
 	ctrlStorage.processStorageKey = result;
 	if (result < 0)
 		return result;
@@ -2328,7 +2328,7 @@ int ksceCtrlSetSamplingMode(int mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -2361,7 +2361,7 @@ int ctrlSetSamplingModeExt(int mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -2392,7 +2392,7 @@ int ksceCtrlGetSamplingMode(int *mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
@@ -2413,7 +2413,7 @@ int ctrlGetSamplingModeExt(int *mode)
 		return SCE_CTRL_ERROR_INVALID_ARG;
 	pid = sceKernelGetProcessId();
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, ctrlStorage.processStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, ctrlStorage.processStorageKey,
 						     (void **)&process, 0) < 0 || !process) {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;

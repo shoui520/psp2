@@ -74,10 +74,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetThreadId
 	sceKernelGetProcessId
 	sceKernelCreateMutex
-	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_3801D7D6
 	SceProcessmgrForDriver_61B9B6FA
 	sceKernelSetPMUSERENR
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_B1C3EFCA
 	SceProcessmgrForDriver_D141C076
 	SceSblACMgrForDriver_6C5AB07F

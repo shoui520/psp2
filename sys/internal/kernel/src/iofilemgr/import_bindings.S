@@ -664,9 +664,9 @@ strnlen:
 .word 0x10, 0x7ee45391, 0xcd4bd884, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateProcessLocalStorage
-.type ksceKernelCreateProcessLocalStorage, %function
-ksceKernelCreateProcessLocalStorage:
+.global SceProcessmgrForDriver_3801D7D6
+.type SceProcessmgrForDriver_3801D7D6, %function
+SceProcessmgrForDriver_3801D7D6:
 .word 0x10, 0x746ec971, 0x3801d7d6, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
@@ -676,9 +676,9 @@ sceKernelAllocRemoteCDialogHeap:
 .word 0x10, 0x746ec971, 0x8a85fa28, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetProcessLocalStorageAddrForPid
-.type ksceKernelGetProcessLocalStorageAddrForPid, %function
-ksceKernelGetProcessLocalStorageAddrForPid:
+.global SceProcessmgrForDriver_AF80F39C
+.type SceProcessmgrForDriver_AF80F39C, %function
+SceProcessmgrForDriver_AF80F39C:
 .word 0x10, 0x746ec971, 0xaf80f39c, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
@@ -1535,9 +1535,9 @@ strnlen:
 .word 0x10, 0x7ee45391, 0xcd4bd884, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelCreateProcessLocalStorage
-.type ksceKernelCreateProcessLocalStorage, %function
-ksceKernelCreateProcessLocalStorage:
+.global SceProcessmgrForDriver_3801D7D6
+.type SceProcessmgrForDriver_3801D7D6, %function
+SceProcessmgrForDriver_3801D7D6:
 .word 0x10, 0x746ec971, 0x3801d7d6, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
@@ -1547,9 +1547,9 @@ sceKernelAllocRemoteCDialogHeap:
 .word 0x10, 0x746ec971, 0x8a85fa28, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4
-.global ksceKernelGetProcessLocalStorageAddrForPid
-.type ksceKernelGetProcessLocalStorageAddrForPid, %function
-ksceKernelGetProcessLocalStorageAddrForPid:
+.global SceProcessmgrForDriver_AF80F39C
+.type SceProcessmgrForDriver_AF80F39C, %function
+SceProcessmgrForDriver_AF80F39C:
 .word 0x10, 0x746ec971, 0xaf80f39c, 0xe320f000
 .section .vitalink.fstubs.SceProcessmgrForDriver, "ax", %progbits
 .balign 4

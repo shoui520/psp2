@@ -113,11 +113,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelInitializeFastMutex
 	sceKernelUnlockFastMutex
-	ksceKernelCreateProcessLocalStorage
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_3801D7D6
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
-	ksceKernelGetProcessLocalStorageAddr
-	ksceKernelIsGameBudget
+	SceProcessmgrForDriver_EE694840
+	sceKernelIsGameBudget
 	sceKernelRegisterProcEventHandler
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_22CBE925

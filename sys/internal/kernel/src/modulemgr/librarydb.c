@@ -66,7 +66,7 @@ static LibraryDB *LibraryDBGetDB(SceUID pid)
 #endif
 {
 	SCE_DBG_ASSERT_LEVEL(0, pid != 0, 67);
-	return ksceKernelGetProcessModuleInfo(pid);
+	return sceKernelGetProcessLibdb(pid);
 }
 
 /* name unknown: the database of a process, locked */

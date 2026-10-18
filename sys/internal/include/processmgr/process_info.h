@@ -2,11 +2,7 @@
 
 #include <psp2kern/types.h>
 
-/*
- * sceKernelGetProcessInfo's output (os0:kd/processmgr.skprx). vitasdk's
- * <psp2kern/kernel/processmgr.h> declares the same name with unknown fields; include
- * one or the other: this header is separate from processmgr/processmgr.h for that reason.
- */
+/* sceKernelGetProcessInfo's output (os0:kd/processmgr.skprx) */
 typedef struct SceKernelProcessInfo {
 	SceSize size;				/* 0xe8 */
 	SceUID pid;

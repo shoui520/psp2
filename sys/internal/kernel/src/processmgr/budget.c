@@ -6,33 +6,6 @@
 #include "processmgr_internal.h"
 #include <processmgr/process_budget.h>
 
-/* sceKernelGetBudgetInfo's output */
-/* SceKernelBudgetInfo.part[]: the partitions of a budget */
-#define BUDGET_PART_MAIN		0
-#define BUDGET_PART_CDIALOG		1
-#define BUDGET_PART_PHYCONT		2
-#define BUDGET_PART_CDRAM		5
-#define BUDGET_PART_KERNEL_EXTRA	7
-#define BUDGET_PART_MAX			8	/* 3, 4 and 6 are never filled */
-
-typedef struct SceKernelBudgetInfo {
-	SceSize size;				/* 0x88 */
-	SceUInt32 count;
-	SceKernelPhyMemPartInfoCore part[BUDGET_PART_MAX];
-} SceKernelBudgetInfo;
-
-_Static_assert(sizeof(SceKernelBudgetInfo) == 0x88, "SceKernelBudgetInfo size");
-
-/* the options of a mini application budget (SceProcessmgrForKernel_DC18FCEF) */
-typedef struct ProcessBudgetOpt {
-	SceSize size;				/* 0x18 */
-	SceUInt32 flags;			/* 1: the CDRAM of another budget */
-	SceSize mainSize;
-	SceSize cdialogSize;
-	SceSize phyContSize;
-	SceUInt32 cdram;			/* a size, or with flags 1 the budget id */
-} ProcessBudgetOpt;
-
 #define BUDGET_ID_CURRENT		0
 #define BUDGET_ID_GAME			2
 #define BUDGET_ID_SHELL			3

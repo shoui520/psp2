@@ -364,14 +364,14 @@ int dsp0VideocodecCalculateLibraryMemory(const Dsp0VideocodecInitParam *param,
 
 int initializeDsp0Videocodec(void)
 {
-	int ret = ksceKernelCreateProcessLocalStorage("SceDsp0Videodec",
+	int ret = SceProcessmgrForDriver_3801D7D6("SceDsp0Videodec",
 						    sizeof(Dsp0VideocodecGlobal));
 
 	if (ret >= 0) {
 		void *storage = NULL;
 
 		dsp0VideocodecLocalStorageId = ret;
-		ret = ksceKernelGetProcessLocalStorageAddrForPid(0, ret, &storage, 1);
+		ret = SceProcessmgrForDriver_AF80F39C(0, ret, &storage, 1);
 		if (ret >= 0) {
 			Dsp0VideocodecGlobal *global;
 			struct ThreadmgrFastMutex *mutex;
@@ -411,7 +411,7 @@ int initializeDsp0Videocodec(void)
 int _sceDsp0VideocodecProcessCreateEntry(SceUID pid)
 {
 	void *storage = NULL;
-	int ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	int ret = SceProcessmgrForDriver_AF80F39C(pid,
 					 dsp0VideocodecLocalStorageId, &storage, 1);
 
 	if (ret >= 0) {
@@ -449,7 +449,7 @@ int _sceDsp0VideocodecProcessCreateEntry(SceUID pid)
 int _sceDsp0VideocodecProcessExitEntry(SceUID pid)
 {
 	void *storage = NULL;
-	int ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	int ret = SceProcessmgrForDriver_AF80F39C(pid,
 					 dsp0VideocodecLocalStorageId, &storage, 0);
 
 	if (ret >= 0) {
@@ -481,11 +481,11 @@ int dsp0VideocodecIsProcessActive(SceUID pid)
 	int status;
 
 	if (pid != 0) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
@@ -507,11 +507,11 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 	int suspended = 1;
 
 	if (pid != 0) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
@@ -524,11 +524,11 @@ int dsp0VideocodecIsProcessSuspended(SceUID pid)
 	if (status != 0) {
 		storage = NULL;
 		if (pid != 0) {
-			if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+			if (SceProcessmgrForDriver_AF80F39C(pid,
 					dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 				storage = NULL;
 		} else {
-			storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+			storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 		}
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
@@ -551,11 +551,11 @@ int dsp0VideocodecProcessResume(SceUID pid)
 	int status;
 
 	if (pid != 0) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
@@ -568,11 +568,11 @@ int dsp0VideocodecProcessResume(SceUID pid)
 	if (status == 3) {
 		storage = NULL;
 		if (pid != 0) {
-			if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+			if (SceProcessmgrForDriver_AF80F39C(pid,
 					dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 				storage = NULL;
 		} else {
-			storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+			storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 		}
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,
@@ -594,7 +594,7 @@ int dsp0VideocodecQueryLibraryMemory(const Dsp0VideocodecInitParam *param,
 	SceSize librarySize;
 	int ret;
 
-	global = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+	global = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(global != NULL, &dsp0VideocodecGlobalStorage,
 			 __builtin_return_address(0));
@@ -627,11 +627,11 @@ int dsp0VideocodecTermLibraryForProcess(unsigned int codecType, SceUID pid)
 	int ret;
 
 	if (pid != 0) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 				dsp0VideocodecLocalStorageId, &storage, 0) < 0)
 			storage = NULL;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(dsp0VideocodecLocalStorageId);
+		storage = SceProcessmgrForDriver_EE694840(dsp0VideocodecLocalStorageId);
 	}
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(storage != NULL, &dsp0VideocodecGlobalStorage,

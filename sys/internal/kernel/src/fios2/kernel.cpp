@@ -205,7 +205,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 		goto out;
 	}
 	*outDH = NULL;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
+	ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 							 (void **)&storage, 1);
 	if (ret != 0)
 		goto out;
@@ -267,7 +267,7 @@ static inline int fiosDHForget(SceFiosKernelDH *dh)	/* name unknown */
 	SceFiosKernelProcessStorage *storage = NULL;
 	int i;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
+	if (SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(), g_fiosPlsKey,
 						       (void **)&storage, 1) == 0) {
 		if (storage == NULL)
 			return 0;

@@ -343,15 +343,15 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelDebugSuspendThread
 	sceKernelCreateMutex
-	ksceKernelLibcGettimeofday
-	ksceKernelResumeProcess
-	ksceKernelSuspendProcess
-	ksceKernelGetUIDProcessClass
+	SceProcessmgrForKernel_014F5113
+	sceKernelProcessDebugResume
+	sceKernelProcessDebugSuspend
+	SceProcessmgrForKernel_98AE4BC8
 	sceKernelGetProcessParentId
-	ksceKernelLibcTime
+	SceProcessmgrForKernel_B0E076D6
 	SceProcessmgrForKernel_EFFF2975
-	ksceKernelGetProcessInfo
-	ksceKernelGetProcessStatus
+	sceKernelGetProcessInfo
+	sceKernelGetProcessStatus
 	ksceKernelGetModuleInfoForDebugger
 	ksceKernelGetModuleIdByAddrForDebugger
 	ksceKernelGetModuleFingerprint

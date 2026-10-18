@@ -1904,7 +1904,7 @@ int dbgpIsApplicationActive(void)
 	for (i = 0; i < (int)count; ++i) {
 		if (pids[i] == 0x10005)
 			continue;
-		if (ksceKernelGetProcessStatus(pids[i], &status) >= 0) {
+		if (sceKernelGetProcessStatus(pids[i], &status) >= 0) {
 			status = (SceUInt8)status;
 			if ((status & 0x10) != 0)
 				return 1;

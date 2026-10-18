@@ -5,50 +5,15 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/lowio/pervasive.h>
 #include <sysmem/sysclib.h>
-#include <psp2kern/kernel/processmgr.h>
+#include <processmgr/processmgr.h>
+#include <processmgr/process.h>
 
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/mmu.c"
 
-/* Only fields consumed here have recovered names. */
-typedef struct GpuProcessInfo {
-	unsigned size;
-	unsigned unk04[5];
-	int budgetUid;
-	unsigned unk1c[4];
-	unsigned processType;
-	unsigned unk30[46];
-} GpuProcessInfo;
-
-typedef struct GpuBudgetPartitionInfo {
-	unsigned base;
-	unsigned size;
-	unsigned freeSize;
-	unsigned freeLinkCount;
-} GpuBudgetPartitionInfo;
-
-typedef struct GpuBudgetInfo {
-	unsigned size;
-	unsigned count;
-	GpuBudgetPartitionInfo mainPartition;
-	GpuBudgetPartitionInfo cDialogPartition;
-	GpuBudgetPartitionInfo physicalPartition;
-	GpuBudgetPartitionInfo unk38[2];
-	GpuBudgetPartitionInfo cdramPartition;
-	GpuBudgetPartitionInfo unk68[2];
-} GpuBudgetInfo;
-
-_Static_assert(sizeof(GpuProcessInfo) == 0xe8, "native process query size");
-_Static_assert(offsetof(GpuProcessInfo, budgetUid) == 0x18, "budget UID");
-_Static_assert(offsetof(GpuProcessInfo, processType) == 0x2c, "process type");
-_Static_assert(sizeof(GpuBudgetInfo) == 0x88, "native budget query size");
-_Static_assert(offsetof(GpuBudgetInfo, cdramPartition.size) == 0x5c,
-	       "native CDRAM partition size");
-
 /* Module-local declarations while the shared ABI inputs are frozen. Native
  * callers/callees consume two words for each query; no options argument.
  */
-extern int sceKernelGetBudgetInfo(int uid, GpuBudgetInfo *info);
 extern int CreateGpuHeap(unsigned base, unsigned size, unsigned lookupKey,
 			 unsigned attributes, GpuHeap **output);
 extern int DestroyGpuHeap(GpuHeap *heap);
@@ -136,8 +101,8 @@ int CheckGpuMmuRange(GpuMmuContext *context, unsigned address, unsigned size,
 
 int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 {
-	GpuProcessInfo process;
-	GpuBudgetInfo budget;
+	SceKernelProcessInfo process;
+	SceKernelBudgetInfo budget;
 	SceKernelAllocMemBlockKernelOpt options;
 	const char *name;
 	unsigned size, type;
@@ -152,7 +117,7 @@ int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 	} else {
 		memset(&process, 0, sizeof(process));
 		process.size = sizeof(process);
-		ret = ksceKernelGetProcessInfo(pid, &process);
+		ret = sceKernelGetProcessInfo(pid, &process);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 159,
 				"%s: Unable to get information for process %08x with error %08x.\n",
@@ -161,18 +126,18 @@ int sceGpuMmuAllocatePageTablePool(GpuPageTablePool *pool, unsigned pid)
 		}
 		memset(&budget, 0, sizeof(budget));
 		budget.size = sizeof(budget);
-		ret = sceKernelGetBudgetInfo(process.budgetUid, &budget);
+		ret = sceKernelGetBudgetInfo(process.budgetId, &budget);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0, 168,
 				"%s: Unable to get budget information for process %08x budget %08x with error %08x.\n",
-				__func__, pid, process.budgetUid, ret);
+				__func__, pid, process.budgetId, ret);
 			return ret;
 		}
 		/* Keep the native unsigned wrapping before the 64-MiB rounding. */
-		size = ((budget.mainPartition.size + 0x3ffffff) & 0xfc000000) >> 10;
-		size += ((budget.cdramPartition.size + 0x3ffffff) & 0xfc000000) >> 10;
-		if (process.processType == 0x02000000) {
-			size += ((budget.cDialogPartition.size + 0x3ffffff) & 0xfc000000) >> 10;
+		size = ((budget.part[BUDGET_PART_MAIN].psize + 0x3ffffff) & 0xfc000000) >> 10;
+		size += ((budget.part[BUDGET_PART_CDRAM].psize + 0x3ffffff) & 0xfc000000) >> 10;
+		if (process.type == PROCESS_TYPE_MINI_APP) {
+			size += ((budget.part[BUDGET_PART_CDIALOG].psize + 0x3ffffff) & 0xfc000000) >> 10;
 			size += 0x60000;
 			name = "SceGpuPageTablePoolMiniApp";
 		} else {

@@ -894,7 +894,7 @@ int replace_flat_path(const char *path, char *flat, VfsPathElem *elem, int *num,
 		pid = SceThreadmgrForDriver_FA54D49A();
 		if ((pid & ~0x10) != SCE_KERNEL_PROCESS_ID &&
 		    pid != SCE_KERNEL_DUMMY_PROCESS_GAME_ID) {
-			ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
+			ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
 									 (void **)&kpls, 1);
 			if (ret < 0)
 				goto free;

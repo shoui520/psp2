@@ -150,7 +150,7 @@ int powerAcquireProcessSwitchLock(uint32_t kind)
 
 	if (kind)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	state = ksceKernelGetProcessLocalStorageAddr(s_processStorageKey);
+	state = SceProcessmgrForDriver_EE694840(s_processStorageKey);
 	if (!state)
 		return SCE_POWER_ERROR_INVALID_VALUE;
 	return powerAcquireSwitchProcessLockCount(&state->powerLockCount);
@@ -191,7 +191,7 @@ int powerReleaseProcessSwitchLock(uint32_t kind)
 
 	if (kind)
 		return SCE_POWER_ERROR_INVALID_VALUE;
-	state = ksceKernelGetProcessLocalStorageAddr(s_processStorageKey);
+	state = SceProcessmgrForDriver_EE694840(s_processStorageKey);
 	if (!state)
 		return SCE_POWER_ERROR_INVALID_VALUE;
 	return powerReleaseSwitchProcessLock(&state->powerLockCount);
@@ -952,7 +952,7 @@ int powerReleaseProcessSwitchLocks(SceUID pid)
 	struct PowerProcessState *state;
 	int result;
 
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	result = SceProcessmgrForDriver_AF80F39C(pid,
 			s_processStorageKey, (void **)&state, 0);
 	if (result < 0)
 		return result;

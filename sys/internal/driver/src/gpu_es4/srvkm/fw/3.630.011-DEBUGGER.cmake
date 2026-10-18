@@ -195,13 +195,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelEnableIntr
 	sceKernelReleaseIntrHandler
 	sceKernelAllocRemoteProcessHeap
-	ksceKernelGetProcessInfo
-	ksceKernelCreateProcessLocalStorage
+	sceKernelGetProcessInfo
+	SceProcessmgrForDriver_3801D7D6
 	sceKernelGetBudgetInfo
-	ksceKernelGetProcessTimeWideCore
+	SceProcessmgrForDriver_82D94BE9
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_D141C076
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_EE694840
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_391B74B7

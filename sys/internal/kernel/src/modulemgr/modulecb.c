@@ -28,7 +28,7 @@ int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out)
 		opt.attr = 0;
 		opt.ownerPid = 0;
 		opt.cls = NULL;
-		ret = SceProcessmgrForKernel_8B4086AF(pid);
+		ret = SceProcessmgrForKernel_8B4086AF(pid, opt.heapKind);
 		optp = &opt;
 		if (ret < 0)
 			return ret;

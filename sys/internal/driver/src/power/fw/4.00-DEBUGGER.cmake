@@ -273,12 +273,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelScheduleWorkTask
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
-	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_3801D7D6
 	SceProcessmgrForDriver_5468892A
 	SceProcessmgrForDriver_879153D9
 	sceKernelFreeRemoteProcessHeap
-	ksceKernelGetProcessLocalStorageAddrForPid
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_AF80F39C
+	SceProcessmgrForDriver_EE694840
 	SceProcessmgrForDriver_FC2A424E
 	sceKernelRegisterSysEventHandler
 	SceKernelSuspendForDriver_250ACD90

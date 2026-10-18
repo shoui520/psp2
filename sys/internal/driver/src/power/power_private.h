@@ -98,8 +98,6 @@ extern struct PowerIdleState s_powerIdleTimers;
 
 /* imports */
 
-extern int sceKernelFreeRemoteProcessHeap(SceUID pid, void *address);
-
 /* The saved continuation returns through the original caller's LR and SP. */
 extern int powerSaveCpuContext(void *context) __attribute__((returns_twice));
 
@@ -113,8 +111,6 @@ extern int ksceCtrlUpdateMaskForNonShell(int clearMask, int setMask);
 extern int __aeabi_idiv(int numerator, int denominator);
 
 extern int ksceCtrlGetActiveControllerPort(void);
-
-extern void *SceProcessmgrForDriver_5468892A(unsigned int size, int flags);
 
 /* name unknown: told the new power flags of a process */
 extern SceUID SceCtrlForDriver_FF9D4DD4(uint32_t, void (*)(uint32_t, uint32_t),

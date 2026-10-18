@@ -12,7 +12,7 @@ int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 	int status, newStatus, threadStatus, result;
 
 	(void)proc;
-	if (ksceKernelGetProcessStatus(pid, &status) < 0)
+	if (sceKernelGetProcessStatus(pid, &status) < 0)
 		status = 0;
 	else
 		status = (SceUInt8)status;
@@ -114,7 +114,7 @@ set_status:
 	}
 	return 0;
 debug_suspend:
-	result = ksceKernelSuspendProcess(pid, newStatus);
+	result = sceKernelProcessDebugSuspend(pid, newStatus);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 222, "0x%08x:0x%08x\n", result, newStatus);
 		return result;

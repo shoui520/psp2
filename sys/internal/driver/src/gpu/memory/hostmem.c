@@ -9,7 +9,6 @@
 #undef __FILE_NAME__
 #define __FILE_NAME__ "../../../../driver/src/gpu/memory/hostmem.c"
 
-extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
 extern void *OSAllocMem(unsigned size);
 int InitKernelMemBlockHeap(void);
 

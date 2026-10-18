@@ -161,9 +161,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockFastMutex
 	sceKernelScheduleWorkTask
 	sceKernelRegisterSysEventHandler
-	ksceKernelCreateProcessLocalStorage
-	ksceKernelGetProcessLocalStorageAddrForPid
-	ksceKernelGetProcessLocalStorageAddr
+	SceProcessmgrForDriver_3801D7D6
+	SceProcessmgrForDriver_AF80F39C
+	SceProcessmgrForDriver_EE694840
 	sceKernelRegisterProcEventHandler
 	ksceKernelDmaOpSetupChain
 	ksceKernelDmaOpSync

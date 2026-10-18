@@ -192,13 +192,13 @@ int sceAppMgrInit(void)
 	uid = sceKernelCreateMutex("SceAppMgrPhoto", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 214, photoMutexPanicInfo);
 	g_appmgrPhotoMutex = uid;
-	result = ksceKernelCreateProcessLocalStorage("SceAppMgrSafeMemory", 0x10000);
+	result = SceProcessmgrForDriver_3801D7D6("SceAppMgrSafeMemory", 0x10000);
 	INIT_ASSERT(result >= 0, 224, safeMemoryStoragePanicInfo);
 	g_appmgrSafeMemoryKey = result;
 	uid = sceKernelCreateMutex("SceAppMgrSafeMemory", 0, 0, NULL);
 	INIT_ASSERT(uid >= 0, 229, safeMemoryMutexPanicInfo);
 	g_appmgrSafeMemoryMutex = uid;
-	result = ksceKernelCreateProcessLocalStorage("SceAppMgrAppInfoCache", 1024);
+	result = SceProcessmgrForDriver_3801D7D6("SceAppMgrAppInfoCache", 1024);
 	INIT_ASSERT(result >= 0, 238, appInfoCacheStoragePanicInfo);
 	g_appmgrAppInfoCacheKey = result;
 	for (app = g_appmgrAppStates; app != g_appmgrAppStates + 20; ++app) {

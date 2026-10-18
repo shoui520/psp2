@@ -145,7 +145,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	SceThreadmgrForDriver_FD6150D5
 	SceProcessmgrForDriver_D141C076
-	ksceKernelIsGameBudget
+	sceKernelIsGameBudget
 	SceKernelUtilsForDriver_478A6F3C
 	SceKernelUtilsForDriver_48F24106
 	SceKernelUtilsForDriver_4C9A5730

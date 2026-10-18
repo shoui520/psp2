@@ -198,7 +198,7 @@ static int lookupProcess(int pid, void **out, int create) /* name unknown */
 	int ret;
 
 	*out = NULL;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, touch.plsId, out, create);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, touch.plsId, out, create);
 	if (ret < 0)
 		*out = NULL;
 	return ret;
@@ -1207,7 +1207,7 @@ static int initialize(void *argp)
 	touch.state = TOUCH_STATE_RUNNING;
 	touch.sysHandler = sceKernelRegisterSysEventHandler("SceTouch", systemEvent, NULL);
 	touch.procHandler = sceKernelRegisterProcEventHandler("SceTouch", &procHandlers, 0);
-	touch.plsId = ksceKernelCreateProcessLocalStorage("SceTouch", sizeof(struct touchProcess));
+	touch.plsId = SceProcessmgrForDriver_3801D7D6("SceTouch", sizeof(struct touchProcess));
 	if (touch.plsId < 0)
 		return 1;
 	createProcess(0x10005);

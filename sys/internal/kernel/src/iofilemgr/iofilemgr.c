@@ -35,7 +35,7 @@ int IofilemgrModuleProcResume(SceUID pid, int phase, ProcEventParam *param, int 
 	case SCE_PROC_EVENT_PHASE_RESUME:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
 			SceCpuForDriver_5F6A8743(&g_gameProgramCount, 1);
-		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
+		ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
 			return ret;
@@ -58,7 +58,7 @@ int IofilemgrModuleProcSuspend(SceUID pid, int phase, ProcEventParam *param, int
 	case SCE_PROC_EVENT_PHASE_SUSPEND:
 		if (SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) == 1)
 			SceCpuForDriver_A4884C4E(&g_gameProgramCount, 1);
-		ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey,
+		ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey,
 								 (void **)&kpls, 1);
 		if (ret < 0)
 			return ret;
@@ -82,7 +82,7 @@ static inline __attribute__((always_inline)) int iofilemgrProcessFinalize(SceUID
 	SceUID oldPid;
 	int ret, i;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	oldPid = SceThreadmgrForDriver_0486F239(pid);
@@ -126,7 +126,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unuse
 
 	key = g_iofilemgrKplsKey;
 	if (key == -1) {
-		ret = ksceKernelCreateProcessLocalStorage("SceIofilemgr", sizeof(IofilemgrKpls));
+		ret = SceProcessmgrForDriver_3801D7D6("SceIofilemgr", sizeof(IofilemgrKpls));
 		g_iofilemgrKplsKey = ret;
 		if (ret < 0) {
 			SCE_DBG_PRINTF_LEVEL(1, 0xb, 1551, "sceKernelRegisterKPLS() failed err=%d 0x%x\n",
@@ -135,7 +135,7 @@ int IofilemgrModuleProcCreate(SceUID pid, ProcEventCreateParam *param, int unuse
 		}
 		key = ret;
 	}
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, key, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, key, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	memset(kpls, 0, sizeof(*kpls));
@@ -1327,7 +1327,7 @@ int check_limit_and_increment_user_fd_count(SceUID pid, SceUID thid)
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return 0;
 	SCE_DBG_ASSERT(g_iofilemgrKplsKey != -1, 2237);
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	for (;;) {
@@ -1452,7 +1452,7 @@ void decrement_user_fd_count(SceUID pid, SceUID thid, int keepPeak)
 	if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || pid == SCE_KERNEL_PROCESS_ID ||
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1) < 0)
+	if (SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1) < 0)
 		return;
 	if (SceThreadmgrForDriver_1096042E(thid)) {
 		SceCpuForDriver_A4884C4E(&kpls->dialogFdCount, 1);
@@ -1474,7 +1474,7 @@ int check_limit_user_fd_count(SceUID pid, SceUID thid)
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return 0;
 	SCE_DBG_ASSERT(g_iofilemgrKplsKey != -1, 2449);
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	if (SceThreadmgrForDriver_1096042E(thid)) {
@@ -1519,7 +1519,7 @@ int SceIofilemgrForDriver_AC0E9AAA(SceUID pid, SceInt32 fdMax)
 	IofilemgrKpls *kpls;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret >= 0) {
 		kpls->fdMax = fdMax;
 		ret = 0;
@@ -1532,7 +1532,7 @@ int SceIofilemgrForDriver_03F6A684(SceUID pid, SceInt32 depth)
 	IofilemgrKpls *kpls;
 	int ret;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret >= 0) {
 		kpls->depth = depth;
 		ret = 0;
@@ -1559,7 +1559,7 @@ int ksceIoGetRemoteKPLSData(SceUID pid, void *dst)
 	if (pid == SCE_KERNEL_DUMMY_PROCESS_GAME_ID || pid == SCE_KERNEL_PROCESS_ID ||
 	    pid == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return SCE_ERROR_ERRNO_ENOENT;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
+	ret = SceProcessmgrForDriver_AF80F39C(pid, g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;
 	data->fdCount = kpls->fdCount;

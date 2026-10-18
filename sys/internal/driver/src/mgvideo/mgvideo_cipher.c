@@ -8,8 +8,6 @@
 #include <processmgr/processmgr.h>
 #include <magicgate/magicgate.h>
 
-void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);
-
 int encryptUserVideoBlocks(void *output, const void *input, unsigned int size,
 			  int slot, MgVideoCipherBlock *iv)
 {

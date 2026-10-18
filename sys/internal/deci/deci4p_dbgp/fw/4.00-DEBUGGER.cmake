@@ -194,17 +194,17 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	ksceKernelGetProcessInfo
+	sceKernelGetProcessInfo
 	sceKernelSetProcessStatus
-	ksceKernelGetProcessStatus
+	sceKernelGetProcessStatus
 	sceKernelWaitProcessEventCompletion
 	sceKernelSetPHBP
-	ksceKernelResumeProcess
-	ksceKernelSuspendProcess
+	sceKernelProcessDebugResume
+	sceKernelProcessDebugSuspend
 	sceKernelEnablePHWP
 	sceKernelDisablePHWP
 	sceKernelSetPHWP
-	ksceKernelGetProcessKernelBuf
+	sceKernelUIDtoProcess
 	SceProcessmgrForKernel_EFFF2975
 	ksceKernelGetModuleInfoForDebugger
 	ksceKernelGetModuleIdByAddrForDebugger

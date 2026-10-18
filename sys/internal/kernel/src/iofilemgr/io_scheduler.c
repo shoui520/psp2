@@ -48,7 +48,7 @@ int sceIoSetProcessDefaultPriorityInternal(SceInt32 priority, int fromKernel)
 	    isSystemIoProcess(pid)) {
 		defaultPriority = &g_ioDefaultPriority;
 	} else {
-		ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
+		ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
 								 g_iofilemgrKplsKey, (void **)&kpls,
 								 1);
 		if (ret < 0)
@@ -115,7 +115,7 @@ SceInt32 sceIoGetProcessDefaultPriorityInternal(int fromKernel)
 	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID) {
 		priority = g_ioDefaultPriority;
 	} else {
-		priority = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
+		priority = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
 								      g_iofilemgrKplsKey,
 								      (void **)&kpls, 1);
 		if (priority < 0) {
@@ -216,7 +216,7 @@ SceInt32 sceIoGetThreadDefaultPriorityInternal(int fromKernel)
 		if (SceSblACMgrForKernel_sceSblACMgrIsKernelProgram(pid) == 1 || isSystemIoProcess(pid)) {
 			priority = g_ioDefaultPriority;
 		} else {
-			priority = ksceKernelGetProcessLocalStorageAddrForPid(
+			priority = SceProcessmgrForDriver_AF80F39C(
 				SceThreadmgrForDriver_FA54D49A(), g_iofilemgrKplsKey, (void **)&kpls, 1);
 			if (priority < 0) {
 				sceSyscallLeave(syscall);
@@ -379,7 +379,7 @@ SceInt32 getThreadIoPriority(void)
 	    SceThreadmgrForDriver_FA54D49A() == SCE_KERNEL_DUMMY_PROCESS_SYSTEM_ID)
 		return g_ioDefaultPriority;
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(SceThreadmgrForDriver_FA54D49A(),
+	ret = SceProcessmgrForDriver_AF80F39C(SceThreadmgrForDriver_FA54D49A(),
 							 g_iofilemgrKplsKey, (void **)&kpls, 1);
 	if (ret < 0)
 		return ret;

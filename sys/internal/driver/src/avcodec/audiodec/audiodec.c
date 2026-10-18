@@ -13,7 +13,6 @@
 
 static AudiodecResident audiodecResident;
 
-int ksceKernelIsGameBudget(void);
 int _lockProcessSuspendCore(void);
 int _unlockProcessSuspendCore(void);
 
@@ -415,7 +414,7 @@ int initializeAudiodec(void)
 	ret = _audiodecInternalInitLibrary(&audiodecResident.manager, &param, 1);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelCreateProcessLocalStorage("SceAudiodec", 7952);
+	ret = SceProcessmgrForDriver_3801D7D6("SceAudiodec", 7952);
 	if (ret >= 0)
 		audiodecResident.processStorage = ret;
 	return ret;
@@ -430,7 +429,7 @@ int _sceAudiodecProcessCreateEntry(SceUID pid)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	ret = SceProcessmgrForDriver_AF80F39C(pid,
 			audiodecResident.processStorage, (void **)&process, 1);
 	if (ret < 0)
 		return ret;
@@ -535,7 +534,7 @@ int _sceAudiodecProcessExitEntry(SceUID pid)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid,
+	ret = SceProcessmgrForDriver_AF80F39C(pid,
 			audiodecResident.processStorage, (void **)&process, 0);
 	result = ret & (ret >> 31);
 #if FW_DEBUG
@@ -600,7 +599,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelIsGameBudget();
+	ret = sceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &initLibraryBudget,
@@ -633,7 +632,7 @@ int sceAudiodecInitLibraryForUser(SceUInt32 codecType, SceAudiodecInitParam *use
 		ret = SCE_AUDIODEC_ERROR_INVALID_SIZE;
 		goto unlock;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -684,7 +683,7 @@ int sceAudiodecTermLibraryForUser(SceUInt32 codecType)
 	void *caller = __builtin_return_address(0);
 #endif
 
-	ret = ksceKernelIsGameBudget();
+	ret = sceKernelIsGameBudget();
 	if (!ret) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, &termLibraryBudget,
@@ -695,7 +694,7 @@ int sceAudiodecTermLibraryForUser(SceUInt32 codecType)
 	ret = _lockProcessSuspendCore();
 	if (ret < 0)
 		goto leave;
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -931,7 +930,7 @@ int sceAudiodecCreateDecoderForUser(SceAudiodecCtrl *userCtrl, SceUInt32 codecTy
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	resident = !ksceKernelIsGameBudget();
+	resident = !sceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
 		SceDebugForDriver_D9703808(1, 0, &createDecoderBudget,
@@ -1037,7 +1036,7 @@ int sceAudiodecCreateDecoderForUser(SceAudiodecCtrl *userCtrl, SceUInt32 codecTy
 			       (const AudiodecInfo *const *)&ctrl.pInfo, codecType);
 	if (ret < 0)
 		goto unlock;
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1306,7 +1305,7 @@ int sceAudiodecCreateDecoderResidentForUser(SceAudiodecCtrl *userCtrl, SceUInt32
 			       (const AudiodecInfo *const *)&ctrl.pInfo, codecType);
 	if (ret < 0)
 		goto unlock;
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1495,7 +1494,7 @@ int sceAudiodecCreateDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 			       (const AudiodecInfo *const *)&ctrl.pInfo, codecType);
 	if (ret < 0)
 		goto unlock;
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1530,7 +1529,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 {
 	SceAudiodecCtrl ctrl;
@@ -1546,7 +1544,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 	const void *caller = __builtin_return_address(0);
 #endif
 
-	resident = !ksceKernelIsGameBudget();
+	resident = !sceKernelIsGameBudget();
 #if FW_DEBUG
 	if (resident)
 		SceDebugForDriver_D9703808(1, 0, &deleteDecoderBudget,
@@ -1571,7 +1569,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		codecType = audiodecGetHandleCodecType(ctrl.handle);
 		decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 		audiodecIsExternalHandle(ctrl.handle);
-		process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+		process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1584,7 +1582,7 @@ int sceAudiodecDeleteDecoderForUser(SceAudiodecCtrl *userCtrl)
 		codecType = audiodecGetHandleCodecType(ctrl.handle);
 		decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 		external = audiodecIsExternalHandle(ctrl.handle);
-		process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+		process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 		SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1698,7 +1696,7 @@ int sceAudiodecDeleteDecoderResidentForUser(SceAudiodecCtrl *userCtrl)
 	codecType = audiodecGetHandleCodecType(ctrl.handle);
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	audiodecIsExternalHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1786,7 +1784,7 @@ int sceAudiodecDeleteDecoderExternalForUser(SceAudiodecCtrl *userCtrl,
 	codecType = audiodecGetHandleCodecType(ctrl.handle);
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1866,7 +1864,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 {
 	SceAudiodecCtrl ctrl;
@@ -1897,7 +1894,7 @@ int sceAudiodecDecodeForUser(SceAudiodecCtrl *userCtrl)
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
 	resident = audiodecIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -1991,7 +1988,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames)
 {
 	SceAudiodecCtrl ctrl;
@@ -2026,7 +2022,7 @@ int sceAudiodecDecodeNFramesForUser(SceAudiodecCtrl *userCtrl, SceUInt32 nFrames
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
 	resident = audiodecIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -2120,7 +2116,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 				    SceUInt32 startSample, SceUInt32 nSamples)
 {
@@ -2152,7 +2147,7 @@ int sceAudiodecPartlyDecodeForUser(SceAudiodecCtrl *userCtrl,
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
 	resident = audiodecIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -2246,7 +2241,6 @@ leave:
 	return ret;
 }
 
-
 int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 				     SceUInt32 nStreams)
 {
@@ -2324,7 +2318,7 @@ int sceAudiodecDecodeNStreamsForUser(SceAudiodecCtrl *const *userCtrls,
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(1, &workManagersDestination, caller);
 #endif
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagersStorage, caller);
 #endif
@@ -2507,7 +2501,7 @@ invalidCelp:
 	decoderIndex = audiodecGetHandleIndex(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
 	resident = audiodecIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif
@@ -2677,7 +2671,7 @@ int sceAudiodecGetInternalErrorForUser(SceAudiodecCtrl *userCtrl,
 	codecType = audiodecGetHandleCodecType(ctrl.handle);
 	external = audiodecIsExternalHandle(ctrl.handle);
 	resident = audiodecIsResidentHandle(ctrl.handle);
-	process = ksceKernelGetProcessLocalStorageAddr(audiodecResident.processStorage);
+	process = SceProcessmgrForDriver_EE694840(audiodecResident.processStorage);
 #if FW_DEBUG
 	SceDebugForDriver_35A35322(process != NULL, &workManagerStorage, caller);
 #endif

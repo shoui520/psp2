@@ -239,7 +239,7 @@ int initializeJpeg(void)
 {
 	int key;
 
-	key = ksceKernelCreateProcessLocalStorage("SceJpeg", 56);
+	key = SceProcessmgrForDriver_3801D7D6("SceJpeg", 56);
 	if (key < 0)
 		return 2;
 	jpegResident.processStorageKey = key;
@@ -266,7 +266,7 @@ int jpegProcessExitEntry(SceUID pid, SceUInt32 type)
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelGetProcessLocalStorageAddrForPid(pid, jpegResident.processStorageKey,
+	ret = SceProcessmgrForDriver_AF80F39C(pid, jpegResident.processStorageKey,
 						     (void **)&process, 0);
 	if (ret < 0) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
@@ -357,7 +357,7 @@ int SceAvcodecForDriver_48247A20(unsigned int maxSplitDecoder)
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL) {
 		ret = 0x80650042;
 		goto error;
@@ -423,7 +423,7 @@ int SceAvcodecForDriver_6F1CF77F(const SceJpegMJpegInitParam *pInitParam)
 		sceSyscallLeave(syscallState);
 		return ret;
 	}
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL) {
 		ret = 0x80650042;
 		goto error;
@@ -471,7 +471,7 @@ int SceAvcodecForDriver_04080710(void)
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1 || process->allocatedDecoders != 0) {
 		ret = 0x80650039;
 		goto unlock;
@@ -533,7 +533,7 @@ int SceAvcodecForDriver_80F63723(const unsigned char *pJpeg, SceSize isize,
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		ret = 0x80650039;
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
@@ -766,7 +766,7 @@ int SceAvcodecForDriver_2A0AF392(const unsigned char *pJpeg, SceSize isize,
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
@@ -863,7 +863,7 @@ int SceAvcodecForDriver_EAAE7737(void *pRGBA, const unsigned char *pYCbCr,
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || (bytesShift = process->state) != 1) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
@@ -986,7 +986,7 @@ int jpegCscForUser(void *pRGBA, const unsigned char *pYCbCr, int xysize,
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
@@ -1096,7 +1096,7 @@ int SceAvcodecForDriver_F305E3B3(const unsigned char *pJpeg, SceSize isize,
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		sceKernelUnlockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 		ret = 0x80650039;
@@ -1164,7 +1164,7 @@ int SceAvcodecForDriver_361238E2(SceJpegSplitDecodeCtrl *pCtrl)
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		ret = 0x80650039;
 		goto unlock;
@@ -1217,7 +1217,7 @@ int SceAvcodecForDriver_864FC454(SceJpegSplitDecodeCtrl *pCtrl)
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		ret = 0x80650039;
 		goto unlock;
@@ -1293,7 +1293,7 @@ int SceAvcodecForDriver_B6882013(SceJpegSplitDecodeCtrl *pCtrl)
 	ret = lockFastMutex((SceKernelFastMutex *)&jpegResident.mutex);
 	if (ret < 0)
 		goto finish;
-	process = ksceKernelGetProcessLocalStorageAddr(jpegResident.processStorageKey);
+	process = SceProcessmgrForDriver_EE694840(jpegResident.processStorageKey);
 	if (process == NULL || process->state != 1) {
 		ret = 0x80650039;
 		goto unlock;

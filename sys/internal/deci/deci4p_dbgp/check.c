@@ -68,14 +68,14 @@ int checkInvalidNetEmulationRequest(SceNetPsDebugEmulationRequest request)
 
 int checkInvalidProcess(SceUID pid)
 {
-	if (pid == 0x10005 || ksceKernelGetProcessKernelBuf(pid) == NULL)
+	if (pid == 0x10005 || sceKernelUIDtoProcess(pid) == NULL)
 		return 0x20011;
 	return 0;
 }
 
 int checkUnknownProcess(SceUID pid)
 {
-	return ksceKernelGetProcessKernelBuf(pid) != NULL ? 0 : 0x20011;
+	return sceKernelUIDtoProcess(pid) != NULL ? 0 : 0x20011;
 }
 
 int checkInvalidThread(SceUID pid, SceUID thid)
@@ -299,7 +299,7 @@ int checkIllegalProcessStatus(SceUID pid)
 {
 	int status, fullStatus, result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 691, "0x%08x\n", result);
 		return result;
@@ -317,7 +317,7 @@ int checkIllegalProcessStatusResumeProcess(SceUID pid)
 {
 	int status, fullStatus, result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 715, "0x%08x\n", result);
 		return result;
@@ -347,7 +347,7 @@ int checkProcessIsSuspendedAlready(SceUID pid)
 {
 	int status, result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 777, "0x%08x\n", result);
 		return result;
@@ -452,7 +452,7 @@ int checkIllegalApplicationStatus(SceUID pid)
 	int status = 0;
 	int result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 965, "0x%08x\n", result);
 		return result;
@@ -465,7 +465,7 @@ int checkApplicationIsSuspendedAlready(SceUID pid)
 	int status = 0;
 	int result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 984, "0x%08x\n", result);
 		return result;
@@ -478,7 +478,7 @@ int checkApplicationIsSuspended(SceUID pid)
 	int status = 0;
 	int result;
 
-	result = ksceKernelGetProcessStatus(pid, &status);
+	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
 		SCE_PRINTF_WITH_INFO(15, 1002, "0x%08x\n", result);
 		return result;

@@ -552,7 +552,7 @@ int sceKernelLoadPtLoadSegForFwloader(const char *path, int index, void *dst, Sc
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
 
 	memset(&auth, 0, sizeof(auth));
-	ret = ksceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.caller);
+	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.caller);
 	if (ret < 0)
 		return ret;
 	ret = SceSblACMgrForKernel_sceSblACMgrGetMediaType(path, &auth.mediaType);

@@ -19,17 +19,17 @@ int SceProcessmgrForDriver_4140D633(const ProcessmgrLibcOps *ops)
 /* name unknown: clock(), the process run time */
 SceUInt32 ProcessmgrLibcClock(void)
 {
-	return ksceKernelGetProcessTimeWideCore();
+	return SceProcessmgrForDriver_82D94BE9();
 }
 
-SceKernelTime ksceKernelLibcTime(SceKernelTime *t)
+SceKernelTime SceProcessmgrForKernel_B0E076D6(SceKernelTime *t)
 {
 	if (g_libcOps->time != NULL)
 		return g_libcOps->time(t);
 	return -1;
 }
 
-int ksceKernelLibcGettimeofday(void *tv, void *tz)
+int SceProcessmgrForKernel_014F5113(void *tv, void *tz)
 {
 	if (g_libcOps->gettimeofday != NULL)
 		return g_libcOps->gettimeofday(tv, tz);

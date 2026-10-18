@@ -14,4 +14,3 @@
 #include <acmgr/acmgr.h>
 #include <sysmem/sysmem.h>
 
-int SceProcessmgrForKernel_5137B783(SceUID pid, SceSize len, const void *args, void *opt);

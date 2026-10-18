@@ -84,14 +84,14 @@ IMG_HANDLE BM_CreateContext(PVRSRV_DEVICE_NODE *psDeviceNode,
 				__func__, ret);
 		return 0;
 	}
-	storage = ksceKernelCreateProcessLocalStorage("SceGpu", 16);
+	storage = SceProcessmgrForDriver_3801D7D6("SceGpu", 16);
 	if (storage < 0) {
 		SCE_DBG_PRINTF(0, 72,
 				"%s: Failed to register kernel process memory with error %08x.\n",
 				__func__, storage);
 	} else {
 		pBMContext->processLocalStorageUid = storage;
-		processMemory = ksceKernelGetProcessLocalStorageAddr(storage);
+		processMemory = SceProcessmgrForDriver_EE694840(storage);
 		if (processMemory) {
 			processMemory->pageDirectoryMemblockUid =
 				pBMContext->mmu.pageDirectoryMemblockUid;

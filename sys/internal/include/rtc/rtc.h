@@ -11,6 +11,7 @@
 #include <syscon/syscon.h>
 #include <sysmem/qafmgr.h>
 #include <sysmem/sysroot.h>
+#include <processmgr/processmgr.h>
 
 /* SceRtcForDriver: clocks and alarms */
 int sceRtcSynchronize(void);
@@ -88,5 +89,4 @@ int ksceRtcFormatRFC3339LocalTime(char *buf, const SceRtcTick *tick);
  */
 
 /* processmgr: the C library time functions for processes */
-int SceProcessmgrForDriver_4140D633(const void *functions);
 int ksceSblUtMgrHasStoreFlag(void);

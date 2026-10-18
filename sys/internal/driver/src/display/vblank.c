@@ -103,7 +103,7 @@ static __attribute__((noinline)) int waitVblank(SceUInt32 head, SceUInt32 count,
 	} else {
 		status = 0;
 	}
-	pls = ksceKernelGetProcessLocalStorageAddr(plsKey);
+	pls = SceProcessmgrForDriver_EE694840(plsKey);
 	vcount = heads[head].vcount;
 	if (!(flags & 2)) {
 		wait = SceThreadmgrForDriver_3A72C6D8(vblankWaitKey);
@@ -335,7 +335,7 @@ int ksceDisplayGetVcountInternal(int head)
 	if ((SceUInt32)head > 2)
 		return SCE_DISPLAY_ERROR_INVALID_HEAD;
 	vcount = heads[head].vcount;
-	if (sceKernelIsUserModeThread() != 0 && (pls = ksceKernelGetProcessLocalStorageAddr(plsKey)) != NULL)
+	if (sceKernelIsUserModeThread() != 0 && (pls = SceProcessmgrForDriver_EE694840(plsKey)) != NULL)
 		return (vcount - pls->vcountBase[head]) & 0xffff;
 	return vcount & 0xffff;
 }
@@ -352,7 +352,7 @@ int sceDisplayGetVcount(void)
 	if (head < 3) {
 		vcount = heads[head].vcount;
 		if (sceKernelIsUserModeThread() != 0
-		    && (pls = ksceKernelGetProcessLocalStorageAddr(plsKey)) != NULL)
+		    && (pls = SceProcessmgrForDriver_EE694840(plsKey)) != NULL)
 			vcount -= pls->vcountBase[head];
 		ret = (SceUInt16)vcount;
 	} else {
@@ -373,7 +373,7 @@ int sceDisplayGetVcountInternal(SceUInt32 head)
 	if (head < 3) {
 		vcount = heads[head].vcount;
 		if (sceKernelIsUserModeThread() != 0
-		    && (pls = ksceKernelGetProcessLocalStorageAddr(plsKey)) != NULL)
+		    && (pls = SceProcessmgrForDriver_EE694840(plsKey)) != NULL)
 			vcount -= pls->vcountBase[head];
 		ret = (SceUInt16)vcount;
 	} else {

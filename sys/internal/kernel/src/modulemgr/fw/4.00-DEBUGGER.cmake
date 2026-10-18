@@ -331,12 +331,12 @@ set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
 	sceKernelFreeRemoteToolHeap
-	ksceKernelGetProcessSelfAuthInfo
-	ksceKernelGetProcessModuleInfo
+	sceKernelGetProcessSelfAuthInfo
+	sceKernelGetProcessLibdb
 	sceKernelAllocRemoteToolHeap
 	sceKernelSetProcessLibdb
 	SceProcessmgrForKernel_8B4086AF
-	ksceKernelGetUIDProcessClass
+	SceProcessmgrForKernel_98AE4BC8
 	sceKernelGetProcessType
 	SceProcessmgrForKernel_BC110987
 	SceProcessmgrForKernel_F160B4D8

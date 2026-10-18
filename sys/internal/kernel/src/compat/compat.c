@@ -1044,14 +1044,14 @@ int compatWaitSpecialRequest(int mode)
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		start = ksceKernelGetProcessTimeWideCore();
+		start = SceProcessmgrForDriver_82D94BE9();
 		while (state != 1) {
 			sceKernelDelayThread(100);
 			SceCpuForDriver_8B4C26DF(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
-			if (ksceKernelGetProcessTimeWideCore() - start > 5000000)
+			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
 				goto timedOut;
 			if (!gCompatProcessId)
 				goto terminated;
@@ -1080,14 +1080,14 @@ int compatWaitSpecialRequest(int mode)
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		start = ksceKernelGetProcessTimeWideCore();
+		start = SceProcessmgrForDriver_82D94BE9();
 		while (state != 3) {
 			sceKernelDelayThread(100);
 			SceCpuForDriver_8B4C26DF(
 				(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 			requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 			state = *requestState;
-			if (ksceKernelGetProcessTimeWideCore() - start > 5000000)
+			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
 				goto timedOut;
 			if (!gCompatProcessId)
 				goto terminated;
@@ -1111,7 +1111,7 @@ int compatWaitSpecialRequest(int mode)
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = ksceKernelGetProcessTimeWideCore();
+	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		result = sceKernelLockMutex(gCompatExitMutex, 1, NULL);
@@ -1130,7 +1130,7 @@ int compatWaitSpecialRequest(int mode)
 		result = sceKernelUnlockMutex(gCompatExitMutex, 1);
 		if (result < 0)
 			goto out;
-		if (ksceKernelGetProcessTimeWideCore() - start > 30000000)
+		if (SceProcessmgrForDriver_82D94BE9() - start > 30000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;
@@ -1374,8 +1374,8 @@ int compatInterrupt(int intrCode)
 		goto out;
 	}
 	pending = &gCompatSharedSram->runtime.interrupts[intrCode].pending;
-	start = ksceKernelGetProcessTimeWideCore();
-	while (ksceKernelGetProcessTimeWideCore() - start <= 1000000) {
+	start = SceProcessmgrForDriver_82D94BE9();
+	while (SceProcessmgrForDriver_82D94BE9() - start <= 1000000) {
 		if (!*pending)
 			break;
 	}
@@ -1423,25 +1423,25 @@ int compatProcessStopHandler(SceUID pid, int event,
 		}
 		lcdDma = gCompatLcdDma;
 		lcdDma->stopControl = 0x1000000;
-		start = ksceKernelGetProcessTimeWideCore();
+		start = SceProcessmgrForDriver_82D94BE9();
 		while (!(lcdDma->stopControl & 0x1000000)) {
-			if (ksceKernelGetProcessTimeWideCore() - start > 5000000 ||
+			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
 		lcdDma->stopCommand = 1;
-		start = ksceKernelGetProcessTimeWideCore();
+		start = SceProcessmgrForDriver_82D94BE9();
 		while (lcdDma->activeStatus) {
 			sceKernelDelayThread(100);
-			if (ksceKernelGetProcessTimeWideCore() - start > 5000000 ||
+			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
 		lcdDma->stopControl = 0x11100000;
-		start = ksceKernelGetProcessTimeWideCore();
+		start = SceProcessmgrForDriver_82D94BE9();
 		while (lcdDma->stopControl) {
 			sceKernelDelayThread(100);
-			if (ksceKernelGetProcessTimeWideCore() - start > 5000000 ||
+			if (SceProcessmgrForDriver_82D94BE9() - start > 5000000 ||
 				!gCompatProcessId)
 				goto hardwareFailed;
 		}
@@ -1456,7 +1456,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = ksceKernelGetProcessTimeWideCore();
+	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		if (sceKernelLockMutex(gCompatExitMutex, 1, NULL) < 0)
@@ -1469,7 +1469,7 @@ int compatProcessStopHandler(SceUID pid, int event,
 		state = *requestState;
 		if (sceKernelUnlockMutex(gCompatExitMutex, 1) < 0)
 			goto color;
-		if (ksceKernelGetProcessTimeWideCore() - start > 30000000 ||
+		if (SceProcessmgrForDriver_82D94BE9() - start > 30000000 ||
 			!gCompatProcessId)
 			goto color;
 	}
@@ -1887,14 +1887,14 @@ cleanup:
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = ksceKernelGetProcessTimeWideCore();
+	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 1) {
 		sceKernelDelayThread(100);
 		SceCpuForDriver_8B4C26DF(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		if (ksceKernelGetProcessTimeWideCore() - start > 5000000)
+		if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;
@@ -1923,14 +1923,14 @@ cleanup:
 		(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 	requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 	state = *requestState;
-	start = ksceKernelGetProcessTimeWideCore();
+	start = SceProcessmgrForDriver_82D94BE9();
 	while (state != 3) {
 		sceKernelDelayThread(100);
 		SceCpuForDriver_8B4C26DF(
 			(void *)(((uintptr_t)gCompatMainDdr + 0x3d78000) & ~31U), 64);
 		requestState = (unsigned int *)((char *)gCompatMainDdr + 0x3d78000);
 		state = *requestState;
-		if (ksceKernelGetProcessTimeWideCore() - start > 5000000)
+		if (SceProcessmgrForDriver_82D94BE9() - start > 5000000)
 			goto timedOut;
 		if (!gCompatProcessId)
 			goto terminated;

@@ -103,8 +103,8 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelCreateProcessLocalStorage
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_3801D7D6
+	SceProcessmgrForDriver_AF80F39C
 	sceKernelRegisterProcEventHandler
 	_unlockProcessSuspendCore
 	SceCodecEngineWrapperForDriver_2DD83BB0

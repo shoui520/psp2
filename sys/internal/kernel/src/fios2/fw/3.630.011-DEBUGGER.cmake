@@ -102,10 +102,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCond
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
-	ksceKernelCreateProcessLocalStorage
+	SceProcessmgrForDriver_3801D7D6
 	SceProcessmgrForDriver_5468892A
 	sceKernelFreeRemoteProcessHeap
-	ksceKernelGetProcessLocalStorageAddrForPid
+	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076
 	SceProcessmgrForDriver_FC2A424E
 	ksceIoDclose

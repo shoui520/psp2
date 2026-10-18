@@ -141,7 +141,7 @@ static inline int set_caller_auth_info(SceModuleCB *cb, const char *path, SelfAu
 	SceUID pid = cb->pid;
 	int ret;
 
-	ret = ksceKernelGetProcessSelfAuthInfo((flags & 0x4002) != 0 ? pid : sceKernelGetProcessId(),
+	ret = sceKernelGetProcessSelfAuthInfo((flags & 0x4002) != 0 ? pid : sceKernelGetProcessId(),
 					       &info->caller);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 1022, "get SelfAuthInfo failed (0x%08x)\n", ret);
@@ -596,7 +596,7 @@ int ModulemgrProcEventHandler(int event, int phase, void *param, void *common)
 /* name unknown */
 int ModulemgrReferProcessObject(SceUID pid)
 {
-	return SceSysmemForDriver_00ED6C14(pid, ksceKernelGetUIDProcessClass(), NULL);
+	return SceSysmemForDriver_00ED6C14(pid, SceProcessmgrForKernel_98AE4BC8(), NULL);
 }
 
 /* name unknown */

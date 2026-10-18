@@ -120,7 +120,7 @@ int ssCheckProcessAuthInfo(void)
 	SceAuthInfo authInfo;
 	int ret;
 
-	ret = ksceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &authInfo.request);
+	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &authInfo.request);
 	return ret & (ret >> 31);
 }
 
@@ -300,7 +300,7 @@ int ksceSblSsDecryptWithPortability(SceUInt32 key_type, void *iv,
 		return 0x800f1716;
 	if (dst->msg_size != src->msg_size || dst->msg_size > 32 || (dst->msg_size & 15))
 		return 0x800f1716;
-	ret = ksceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.request);
+	ret = sceKernelGetProcessSelfAuthInfo(sceKernelGetProcessId(), &auth.request);
 	if (ret < 0)
 		return ret;
 	if (__builtin_expect(key_type - 1 <= 19, 0))

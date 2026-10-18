@@ -30,7 +30,7 @@ static int fiosProcessKill(SceUID pid, ProcEventParam *param, int a3)
 
 	sceFiosKernelOverlayRemoveAll(pid);
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_fiosPlsKey, (void **)&storage, 0) == 0 &&
+	if (SceProcessmgrForDriver_AF80F39C(pid, g_fiosPlsKey, (void **)&storage, 0) == 0 &&
 	    storage != NULL) {
 		for (i = 0; i < FIOS_DH_MAX; i++) {
 			dh = (SceFiosKernelDH *)storage->dh[i];
@@ -52,7 +52,7 @@ static int fiosProcessExit(SceUID pid, ProcEventParam *param, int a3)
 
 	sceFiosKernelOverlayRemoveAll(pid);
 	storage = NULL;
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, g_fiosPlsKey, (void **)&storage, 0) == 0 &&
+	if (SceProcessmgrForDriver_AF80F39C(pid, g_fiosPlsKey, (void **)&storage, 0) == 0 &&
 	    storage != NULL) {
 		for (i = 0; i < FIOS_DH_MAX; i++) {
 			dh = (SceFiosKernelDH *)storage->dh[i];
@@ -70,7 +70,7 @@ extern "C" int sceFiosKernelInit(SceSize args, void *argp)
 	SceKernelProcEventHandler handler;
 	int ret;
 
-	g_fiosPlsKey = ksceKernelCreateProcessLocalStorage("SceFios",
+	g_fiosPlsKey = SceProcessmgrForDriver_3801D7D6("SceFios",
 							  sizeof(SceFiosKernelProcessStorage));
 	if (g_fiosPlsKey < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 78, "%d\n", g_fiosPlsKey);

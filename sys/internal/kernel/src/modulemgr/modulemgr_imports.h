@@ -41,9 +41,6 @@ int ksceSblAuthMgrSetupAuthSegment(int ctx, int index);
 int ksceSblAuthMgrLoadBlock(int ctx, void *buf, SceSize size);
 
 /* SceProcessmgrForKernel / SceProcessmgrForDriver */
-void sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr);
-void sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
-int SceProcessmgrForKernel_8B4086AF(SceUID pid);	/* reserve a module slot */
 
 /* SceIntrmgrForDriver / SceIntrmgrForKernel */
 int SceIntrmgrForDriver_C568F145(int code);

@@ -93,7 +93,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	sceKernelWaitProcessEnd
 	SceProcessmgrForKernel_5137B783
-	ksceKernelCreateProcess
+	sceKernelCreateProcess
 	sceKernelDelayThread
 	sceKernelGetSystemTimeWide
 	ksceKernelStopUnloadModule

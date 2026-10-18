@@ -294,10 +294,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_2A03DFA1
 	SceSysrootForKernel_6D111FA7
 	SceSysrootForKernel_E20F6FC8
-	ksceKernelGetProcessInfo
+	sceKernelGetProcessInfo
 	sceKernelRegisterCoredumpHandler
 	SceProcessmgrForDriver_33B3D026
-	ksceKernelGetProcessStatus
+	sceKernelGetProcessStatus
 	SceProcessmgrForDriver_8CB01675
 	SceProcessmgrForDriver_A1CF74FA
 	sceKernelCallCoredumpHandler
@@ -305,8 +305,8 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_D141C076
 	sceKernelSuspendProcess
 	SceProcessmgrForKernel_23EF9D8E
-	ksceKernelResumeProcess
-	ksceKernelSuspendProcess
+	sceKernelProcessDebugResume
+	sceKernelProcessDebugSuspend
 	sceKernelGetBudgetInfoForDebugger
 	ksceIoGetPUIDFdListForDebugger
 	ksceIoRemove

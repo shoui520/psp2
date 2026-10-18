@@ -458,7 +458,6 @@ int SceThreadmgrForDriver_84EB1EA4(int value);			/* set them, returning the old 
 /* ARM performance monitor control of a thread (0: the caller) */
 int sceKernelPMonSetControlRegister(SceUID pid, uint32_t value);
 int sceKernelPMonSetUserEnableRegister(SceUID pid, uint32_t value);
-int sceKernelSetPMUSERENR(SceUID thid, SceUInt32 value);
 int pmonCpuSetEventSelf(SceUID threadId, uint32_t counter, uint32_t eventType);
 
 /* Names unknown: per-thread ARM performance counters. */

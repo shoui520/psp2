@@ -23,14 +23,9 @@
 #include "equalizer.h"
 #include <sysmem/sysroot.h>
 
-int ksceKernelGetProcessLocalStorageAddrForPid(SceUID pid, int key,
-					    void **storage, int create);
-void *ksceKernelGetProcessLocalStorageAddr(int key);
-SceUInt32 ksceKernelGetProcessTimeLowCore(void);
 /* This caller preserves the three arguments of the original call interface. */
 int SceCodecForDriver_CCDE1B04(int mode);
 int sceAudioOutSetEffectType(int type);
-int ksceKernelCreateProcessLocalStorage(const char *name, SceSize size);
 int audioInitializeHardware(void);
 int audioInitializeEffects(void);
 int _sceAudiodrvMixer(SceSize arglen, void *argp);
@@ -138,7 +133,7 @@ int audioCleanupProcess(SceUID pid, ProcEventParam *param, int reason)
 	AudioMainPort *port;
 	int count;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 						   (void **)&storage, 1) >= 0) {
 		AudioProcessLocalStorage *process = storage;
 
@@ -299,7 +294,7 @@ int audioInitializeProcess(SceUID pid, ProcEventCreateParam *param, int reason)
 	AudioProcessLocalStorage *storage;
 	char titleId[32];
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 						   (void **)&storage, 1) >= 0) {
 		memset(storage, 0, sizeof(*storage));
 		storage->direct[0].eventMask = 64;
@@ -341,7 +336,7 @@ int audioProcessEventHandler(SceUID pid, int event, ProcEventParam *param,
 	int channel;
 	unsigned int remaining;
 
-	if (ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	if (SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 						   (void **)&storage, 1) < 0)
 		return 0;
 	switch (event) {
@@ -445,7 +440,7 @@ int sceAudioOutSetCompress(int port, unsigned int mode)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -491,7 +486,7 @@ int SceAudioForDriver_3440C1CA(SceUID pid, int type, int adopt,
 	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (result < 0)
 		goto unlock;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							(void **)&storage, 1);
 	if (result < 0)
 		goto release;
@@ -589,7 +584,7 @@ int sceAudioOutSetAdopt_forUser(int type, int adopt, int duration, int wait)
 	result = SceSysmemForDriver_0F5C84B7(pid, NULL);
 	if (result < 0)
 		goto unlock;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							(void **)&storage, 1);
 	if (result < 0)
 		goto release;
@@ -692,7 +687,7 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -819,7 +814,7 @@ selectedMain:
 	direct->volume[1] = 0x8000;
 	direct->volume[0] = 0x8000;
 	direct->len = len;
-	direct->deadline = ksceKernelGetProcessTimeLowCore();
+	direct->deadline = SceProcessmgrForDriver_02179E12();
 	direct->compress = compress;
 	adopted = audioAdoptedPorts[direct->channel];
 	if (adopted == NULL) {
@@ -866,7 +861,7 @@ int sceAudioOutOpenExtPort(int len, int mode)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -919,7 +914,7 @@ int sceAudioOutReleasePort(int port)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -1050,7 +1045,7 @@ int _audioSetptrMain(int port, const void *buf)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	sceKernelSetEventFlag(audioEventFlag, 16);
 	if (storage == NULL) {
 		result = (int)0x80260230;
@@ -1206,7 +1201,7 @@ int _audioSetptrMain(int port, const void *buf)
 					freq, 0);
 			} else {
 				result = audioDispatchDmaBuffer(0, channel + 1, 0);
-				direct->deadline = ksceKernelGetProcessTimeLowCore();
+				direct->deadline = SceProcessmgrForDriver_02179E12();
 			}
 			goto out;
 		}
@@ -1273,7 +1268,7 @@ int _audioSetptrMain(int port, const void *buf)
 				audioOutputPhysicalAddress[channel][audioOutputBufferIndex[channel]],
 				channel + 1, samples);
 			{
-				uint32_t time = ksceKernelGetProcessTimeLowCore();
+				uint32_t time = SceProcessmgrForDriver_02179E12();
 
 				direct->deadline = time + (1000000U * samples) / freq;
 			}
@@ -1330,7 +1325,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -1420,7 +1415,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto unlock;
@@ -1525,7 +1520,7 @@ int sceAudioOutGetAdopt(SceAudioOutPortType type)
 	int channel;
 	int result;
 
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto out;
@@ -1576,7 +1571,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 	unsigned int bytesPerFrame;
 	int result;
 
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto out;
@@ -1651,7 +1646,7 @@ int sceAudioOutGetRestSample(int port)
 	AudioMainPort *main;
 	int result;
 
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL) {
 		result = (int)0x80260230;
 		goto out;
@@ -1703,7 +1698,7 @@ int SceAudioForDriver_629261CD(SceUID pid, int mask, unsigned int volume,
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
@@ -1740,7 +1735,7 @@ int SceAudioForDriver_B05D5B28(SceUID pid, int type)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		return result;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if (type == 1)
@@ -1780,7 +1775,7 @@ int sceAudioOutSetPortVolume_forUser(int mask, unsigned int volume, int duration
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if ((mask & 2) != 0) {
@@ -1821,7 +1816,7 @@ int sceAudioOutGetPortVolume_forUser(int type)
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
 		goto out;
-	result = ksceKernelGetProcessLocalStorageAddrForPid(pid, audioStorageKey,
+	result = SceProcessmgrForDriver_AF80F39C(pid, audioStorageKey,
 							 (void **)&storage, 1);
 	if (result >= 0) {
 		if (type == 1)
@@ -1894,7 +1889,7 @@ int audioModuleStart(SceSize arglen, const void *argp)
 	result = audioInitializeHardware();
 	if (result < 0)
 		return result;
-	result = ksceKernelCreateProcessLocalStorage("SceAudio",
+	result = SceProcessmgrForDriver_3801D7D6("SceAudio",
 		sizeof(AudioProcessLocalStorage));
 	audioStorageKey = result;
 	if (result < 0)
@@ -1979,7 +1974,7 @@ int sceAudioOutSetAlcMode(SceAudioOutAlcMode mode)
 
 	if ((unsigned int)mode > 1)
 		return (int)0x80260200;
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL)
 		return (int)0x80260230;
 	storage->direct[0].alcMode = mode;
@@ -2010,7 +2005,7 @@ int sceAudioOutSetEffectType(int type)
 	default:
 		return (int)0x80260200;
 	}
-	storage = ksceKernelGetProcessLocalStorageAddr(audioStorageKey);
+	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL)
 		return (int)0x80260230;
 	storage->direct[0].equalizer = equalizer;

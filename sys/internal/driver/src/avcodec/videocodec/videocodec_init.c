@@ -81,12 +81,12 @@ void *_GetVideocodecGlobal(SceUID pid)
 	void *storage = 0;
 
 	if (pid != 0) {
-		if (ksceKernelGetProcessLocalStorageAddrForPid(pid,
+		if (SceProcessmgrForDriver_AF80F39C(pid,
 				videocodecResident.processLocalStorageId,
 				&storage, 0) < 0)
 			storage = 0;
 	} else {
-		storage = ksceKernelGetProcessLocalStorageAddr(
+		storage = SceProcessmgrForDriver_EE694840(
 			videocodecResident.processLocalStorageId);
 	}
 #if FW_DEBUG
@@ -100,7 +100,7 @@ int initializeVideocodec(void)
 {
 	int ret;
 
-	ret = ksceKernelCreateProcessLocalStorage("SceVideodec", 7584);
+	ret = SceProcessmgrForDriver_3801D7D6("SceVideodec", 7584);
 	if (ret < 0)
 		goto out;
 	videocodecResident.processLocalStorageId = ret;

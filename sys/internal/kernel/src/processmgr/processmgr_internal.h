@@ -16,6 +16,7 @@
 #include <threadmgr/threadcb.h>
 #include <processmgr/processmgr_imports.h>
 #include <processmgr/process.h>
+#include <processmgr/processmgr.h>
 
 #define ARRAY_SIZE(a)			(sizeof(a) / sizeof((a)[0]))
 
@@ -87,23 +88,7 @@
 #define SCE_KERNEL_ERROR_PROCESSMGR_NO_REQUEST		0x8002900c	/* name unknown */
 #define SCE_KERNEL_ERROR_PROCESSMGR_INHERIT_PID		0x80029001	/* ExitSpawn: other pid */
 
-
 _Static_assert(sizeof(ProcessBudget) == 0x74, "ProcessBudget size");
-
-typedef SceUInt32 SceKernelTime;
-
-/* the kernel libc time implementation (SceProcessmgrForDriver_4140D633); rtc's RtcLibcTimeFunctions */
-typedef struct ProcessmgrLibcOps {
-	SceSize size;
-	SceUInt32 (*clock)(void);
-	SceKernelTime (*time)(SceKernelTime *t);
-	int (*gettimeofday)(void *tv, void *tz);
-	int (*gmtime_r)(const SceKernelTime *t, void *tm);
-	int (*localtime_r)(const SceKernelTime *t, void *tm);
-	int (*mktime)(void *tm, SceKernelTime *t, SceUInt64 *wide);
-	int (*getCurrentTick)(void *a, void *b, void *c);
-	int (*getCurrentSecureTick)(void *a, void *b, void *c);
-} ProcessmgrLibcOps;
 
 #define THREAD_ATTR_COREDUMP_HANDLER	0x800000	/* name unknown */
 
@@ -125,12 +110,9 @@ static inline void ProcessSyscallLeave(SceUInt32 t)
 /* processmgr.c */
 extern SceClass g_processClass;
 SceProcessObject *GetCurrentProcess(void);
-SceUInt64 ksceKernelGetProcessTimeWideCore(void);
 
 /* libctime.c */
 SceUInt32 ProcessmgrLibcClock(void);
-SceKernelTime ksceKernelLibcTime(SceKernelTime *t);
-int ksceKernelLibcGettimeofday(void *tv, void *tz);
 int ProcessmgrLibcGmtime_r(const SceKernelTime *t, void *tm);
 int ProcessmgrLibcLocaltime_r(const SceKernelTime *t, void *tm);
 int ProcessmgrLibcMktime(void *tm, SceKernelTime *t, SceUInt64 *wide);

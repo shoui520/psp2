@@ -331,7 +331,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 	AppmgrPfsMount *cursor, *previous;
 	int permission, result, removed = 0, references = 0, index;
 
-	result = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+	result = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 	if (result < 0)
 		return result;
 	authorityId = authInfo.program_authority_id;
@@ -363,7 +363,7 @@ int appmgrReleasePfsMount(SceUID pid, AppmgrPfsMount *mount, int flags)
 		    authorityId == mount->programAuthorityIds[15] ||
 		    mount->mountPoint.drive_id[0] == 0)
 			return 0;
-		result = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+		result = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (result < 0)
 			return result;
 		if (authInfo.program_authority_id == 0x2800000000000001ULL ||
@@ -711,7 +711,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 	}
 	pfsMount = source->pfsMount;
 	if (pfsMount->mountPoint.drive_id[0] != '\0') {
-		status = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+		status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (status < 0)
 			goto authError;
 		status = kscePfsApprove(&pfsMount->mountPoint,
@@ -719,7 +719,7 @@ int appmgrCloneVirtualMount(SceUID pid, const AppmgrVirtualMount *source,
 		if (status != (int)0x80010011 && status < 0)
 			goto authError;
 	}
-	status = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+	status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 	if (status < 0)
 		goto authError;
 	pfsMount = mount->pfsMount;
@@ -1504,7 +1504,7 @@ int appmgrCountPfsMountReferences(unsigned int mountId, int flags)
 	}
 	goto count;
 checkAuth:
-	if (ksceKernelGetProcessSelfAuthInfo(0, &authInfo) >= 0) {
+	if (sceKernelGetProcessSelfAuthInfo(0, &authInfo) >= 0) {
 		if (mountId == 111)
 			SceSblACMgrForDriver_F5AE24AC(0);
 		else if (mountId == 112)
@@ -1571,7 +1571,7 @@ int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint)
 	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	if (ksceKernelGetProcessSelfAuthInfo(0, &work.authInfo) < 0 ||
+	if (sceKernelGetProcessSelfAuthInfo(0, &work.authInfo) < 0 ||
 	    work.authInfo.program_authority_id != 0x2808000000000001ULL) {
 		result = (int)0x80800009;
 		goto unlock;
@@ -1632,7 +1632,7 @@ int appmgrSetPfsAcidDirectory(const char *path, const char *directory)
 	result = sceKernelLockMutex(g_appmgrMountMutex, 1, NULL);
 	if (result < 0)
 		goto out;
-	result = ksceKernelGetProcessSelfAuthInfo(0, &authInfo);
+	result = sceKernelGetProcessSelfAuthInfo(0, &authInfo);
 	if (result < 0)
 		goto unlock;
 	if (authInfo.program_authority_id != 0x2800000000000001ULL) {
@@ -1720,7 +1720,7 @@ cleanup:
 		next = mount->next;
 		pfsMount = mount->pfsMount;
 		/* Reuse appmgrReleasePfsMount at Sony's observed inline site. */
-		status = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+		status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 		if (status < 0)
 			goto freeVirtualMount;
 		authorityId = authInfo.program_authority_id;
@@ -1754,7 +1754,7 @@ cleanup:
 			    authorityId == pfsMount->programAuthorityIds[15] ||
 			    pfsMount->mountPoint.drive_id[0] == 0)
 				goto freeVirtualMount;
-			status = ksceKernelGetProcessSelfAuthInfo(pid, &authInfo);
+			status = sceKernelGetProcessSelfAuthInfo(pid, &authInfo);
 			if (status < 0)
 				goto freeVirtualMount;
 			if (authInfo.program_authority_id == 0x2800000000000001ULL ||

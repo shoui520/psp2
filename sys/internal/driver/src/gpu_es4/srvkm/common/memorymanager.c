@@ -439,7 +439,7 @@ PVRSRV_ERROR PVRSRVCreateDeviceMemContextKM(PVRSRV_DEVICE_NODE *psDeviceNode,
 		FreeGpuPageTablePool(&psContext->mmu.pageTablePool);
 		goto removeContext;
 	}
-	processMemory = ksceKernelGetProcessLocalStorageAddr(psKernelContext->processLocalStorageUid);
+	processMemory = SceProcessmgrForDriver_EE694840(psKernelContext->processLocalStorageUid);
 	if (processMemory) {
 		processMemory->pageDirectoryMemblockUid = psContext->mmu.pageDirectoryMemblockUid;
 		processMemory->pageDirectory = psContext->mmu.pageDirectory;

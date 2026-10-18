@@ -141,7 +141,6 @@ failure:
 /* These imports are private declarations while shared ABI inputs are frozen.
  * Native callers pass process/size/options and process/address respectively.
  */
-extern int sceKernelFreeRemoteProcessHeap(unsigned pid, void *address);
 
 void *OSAllocMem(unsigned size)
 {

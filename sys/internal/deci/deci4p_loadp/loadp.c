@@ -1045,14 +1045,14 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	r->reserved0[4] = 0;
 	r->reserved1 = 0;
 	r->reserved2 = -1;
-	r->mainThread = SceThreadmgrForDriver_F311808F(ksceKernelGetProcessMainThread(pid));
+	r->mainThread = SceThreadmgrForDriver_F311808F(sceKernelGetProcessMainThreadForDebugger(pid));
 	info = SceSysmemForDriver_7B4CB60A(loadp.heap, sizeof(*info));
 	if (info == NULL) {
 		*result = LOADP_RESULT_NO_MEMORY;
 		goto free_buf;
 	}
 	info->size = sizeof(*info);
-	ret = SceThreadmgrForDriver_555CA6BB(ksceKernelGetProcessMainThread(pid), 0, info);
+	ret = SceThreadmgrForDriver_555CA6BB(sceKernelGetProcessMainThreadForDebugger(pid), 0, info);
 	if (ret < 0) {
 		*result = pdLoadpKernelErrToLoadpErr(ret);
 		goto free_info;
@@ -1418,7 +1418,7 @@ static inline int checkProcess(SceUID pid, SceUInt32 *result)
 {
 	int status = 0;
 
-	if (ksceKernelGetProcessStatus(pid, &status) < 0) {
+	if (sceKernelGetProcessStatus(pid, &status) < 0) {
 		*result = LOADP_RESULT_NO_PROCESS;
 		return 0;
 	}
