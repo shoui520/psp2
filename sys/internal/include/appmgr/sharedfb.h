@@ -1,7 +1,20 @@
-/* SceSharedFb interface additions to vitasdk. */
+/* SceAppMgr's shared framebuffer (sharedfb.c): its records and its exports. */
 #pragma once
 
-#include <psp2/sharedfb.h>
+#include <scetypes.h>
+
+/*
+ * A shared framebuffer's information, kept in its port: the framebuffer the creator allocated,
+ * then the record sceSharedFbUpdateProcessBegin copies from its caller.
+ */
+typedef struct SharedFbInfo {
+	void *base;
+	int size;
+	unsigned char update[64];
+	unsigned char reserved[16];
+} SharedFbInfo;
+
+_Static_assert(sizeof(SharedFbInfo) == 0x58, "SharedFb information");
 
 typedef struct SceSharedFbCreate {
 	SceSize AllocMemSize;

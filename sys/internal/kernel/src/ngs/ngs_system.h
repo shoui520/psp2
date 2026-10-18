@@ -3,7 +3,7 @@
 #pragma once
 
 #include <scetypes.h>
-#include <psp2/ngs_internal.h>
+#include <ngs/ngs_top.h>
 #include <stddef.h>
 
 #include "ngs_platform.h"
@@ -13,11 +13,7 @@ struct NgsSynRack;
 struct NgsVoice;
 struct NgsDspGraph;
 struct NgsDspBatch;
-
-struct SceNgsBufferInfo {
-	void *data;
-	SceUInt32 size;
-};
+struct NgsCallbackList;
 
 typedef struct NgsLockedMemoryRange {
 	void *address;
@@ -48,7 +44,7 @@ typedef struct NgsSynSystem {
 	unsigned int CycleCount;
 	unsigned char state;
 	SceNgsParamsErrorCallbackFunc paramErrorCallback;
-	SceNgsSulphaUpdateCallback synthUpdateCallback;
+	void *synthUpdateCallback;
 	SceNgsBufferInfo debugBuffer;
 	SceNgsBufferInfo callerDebugBuffer;
 	SceUID debugMemBlock;
@@ -66,8 +62,8 @@ typedef struct NgsSynSystem {
 	SceUID systemMemBlock;
 	SceNgsCallbackInfo *rackReleaseInfo;
 	SceNgsCallbackInfo *paramErrorInfo;
-	SceNgsCallbackListInfo *callbacks;
-	SceNgsCallbackListInfo *callerCallbacks;
+	struct NgsCallbackList *callbacks;
+	struct NgsCallbackList *callerCallbacks;
 	unsigned int callbackCount;
 	unsigned int callbackCapacity;
 	struct NgsVoice **updateVoices;

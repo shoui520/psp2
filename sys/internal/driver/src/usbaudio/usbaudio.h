@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <usbd/usbd.h>
-#include <psp2/usbaudioin.h>
 #include <sysmem/sysclib.h>
 #include <threadmgr/fast_mutex_object.h>
 #include <sysmem/sysmem.h>

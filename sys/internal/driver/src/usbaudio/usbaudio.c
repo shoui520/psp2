@@ -6,7 +6,7 @@
 
 #define USBAUDIO_HEAP_SIZE	0x40000
 
-#define AUDIO_ERROR(name) ((int)SCE_USBAUDIO_IN_ERROR_##name)
+#define AUDIO_ERROR(name) ((int)USBAUDIO_IN_ERROR_##name)
 
 /* Private global/state/helper names unknown. No Sony debug records exist. */
 struct AudioCallback {
@@ -329,11 +329,11 @@ SceInt32 sceUsbAudioInSetCurrentValueOfVolume(SceUInt32 id, SceUInt32 value)
 	sceSyscallLeave(domain);
 	return ret;
 }
-SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, SceUsbAudioInDeviceInfo *out)
+SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, AudioInDeviceInfo *out)
 {
 	unsigned domain = sceSyscallEnter();
 	int ret;
-	SceUsbAudioInDeviceInfo info;
+	AudioInDeviceInfo info;
 	if (!out)
 		ret = AUDIO_ERROR(INVALID_ARGUMENT);
 	else if (!findPort(id))
@@ -352,7 +352,7 @@ SceInt32 sceUsbAudioInGetDeviceInformation(SceUInt32 id, SceUsbAudioInDeviceInfo
 	sceSyscallLeave(domain);
 	return ret;
 }
-SceInt32 sceUsbAudioInGetDeviceIdList(SceUsbAudioInDeviceListItem *list, SceUInt32 *count, SceUInt32 size)
+SceInt32 sceUsbAudioInGetDeviceIdList(SceUInt32 *list, SceUInt32 *count, SceUInt32 size)
 {
 	unsigned domain = sceSyscallEnter();
 	int ret;

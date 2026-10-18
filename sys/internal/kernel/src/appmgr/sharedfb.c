@@ -30,7 +30,7 @@ struct SharedFbPort {
 	unsigned int creationArgument;
 	SceUID beginEvent;
 	SceUID endEvent;
-	SceSharedFbInfo info;
+	SharedFbInfo info;
 	struct SharedFbProcess processes[16];
 	union {
 		struct {
@@ -333,7 +333,7 @@ SceUID sharedFbGetRenderMemBlock(int *size)
 		port = &gSharedFbManager.ports[index];
 		memBlock = port->memBlock;
 		if (size)
-			*size = port->info.fb_size;
+			*size = port->info.size;
 		sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 		return memBlock;
 	}
@@ -426,8 +426,8 @@ SceUID sceSharedFbCreate(int index, const SceSharedFbCreate *param)
 	port->ownerPid = processId;
 	port->creationArgument = create.creationArgument;
 	port->memBlock = memBlock;
-	port->info.fb_base = base;
-	port->info.fb_size = create.AllocMemSize;
+	port->info.base = base;
+	port->info.size = create.AllocMemSize;
 	result = SceSysmemForDriver_BF209859(processId, memBlock);
 	sceKernelUnlockFastMutex(&gSharedFbManager.mutex);
 	if (result >= 0)
@@ -546,7 +546,7 @@ int sceSharedFbUpdateProcessBegin(SceUID fbId, const void *info,
 		goto unlock;
 	}
 	port = &gSharedFbManager.ports[portIndex];
-	result = SceSysmemForDriver_BC996A7A(&port->info.fb_base2, info, 64);
+	result = SceSysmemForDriver_BC996A7A(port->info.update, info, 64);
 	if (result)
 		goto unlock;
 	firstPid = port->requestedPids[0];

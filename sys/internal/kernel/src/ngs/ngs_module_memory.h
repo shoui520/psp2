@@ -2,6 +2,7 @@
 #define NGS_MODULE_MEMORY_H
 
 #include <scetypes.h>
+#include <ngs/ngs_top.h>
 
 typedef union NgsParamValue {
 	int integer;
@@ -58,11 +59,6 @@ typedef struct NgsModuleAudioInterface {
 	const struct NgsAudioFormat *formats;
 	const char *name;
 } NgsModuleAudioInterface;
-
-typedef struct SceNgsParamsDescriptor {
-	unsigned int id;
-	unsigned int size;
-} SceNgsParamsDescriptor;
 
 typedef struct NgsModulePreset {
 	const char *name;
