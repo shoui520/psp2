@@ -232,7 +232,7 @@ pad:
 #endif
 
 #if !defined(SYSCLIB_SELECT_STRINGS) || defined(SYSCLIB_WANT_STRLCPY)
-#include "bsd_strings.c"
+#include "strlcpy-sce.c"
 #endif
 
 #if !defined(SYSCLIB_SELECT_STRINGS) || defined(SYSCLIB_WANT_STRLCAT)

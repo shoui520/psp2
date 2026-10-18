@@ -6,6 +6,7 @@
  * the sceHdmiDevice* commands set. Internal names are ours unless a comment
  * says otherwise.
  */
+#include <stddef.h>
 #include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>

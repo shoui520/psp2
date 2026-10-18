@@ -8,6 +8,7 @@
 #include <scetypes.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "appmgr_device.h"
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>

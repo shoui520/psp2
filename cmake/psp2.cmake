@@ -119,10 +119,23 @@ endfunction()
 
 # the compile settings of a module's sources (psp2_module's variables in scope)
 macro(psp2_compile_settings name)
+	set(include_dirs ${PSP2_INCLUDE_DIRS})
+	if(M_COMPILER STREQUAL "gcc48" AND DEFINED PSP2_SYSTEM_INCLUDE AND
+	   (NOT M_KIND STREQUAL "kernel" OR MODULE_VITASDK_LIBC))
+		# vitasdk's C library (newlib) and user headers ahead of the tree's C library: user-mode
+		# C until the tree has the user-mode SDK headers, and the kernel modules that still build
+		# NetBSD code over newlib's socket headers (MODULE_VITASDK_LIBC); the shims first
+		set(include_dirs
+			"${PSP2_SRC}/sys/internal/include"
+			"${PSP2_SRC}/cmake/compat/vitasdk"
+			"${PSP2_SYSTEM_INCLUDE}"
+			"${PSP2_SRC}/sys/sdk/target/include"
+			"${PSP2_SRC}/cmake/include")
+	endif()
 	target_include_directories(${name} PRIVATE
 		"${CMAKE_CURRENT_SOURCE_DIR}/include"
 		"${CMAKE_CURRENT_SOURCE_DIR}"
-		${PSP2_INCLUDE_DIRS}
+		${include_dirs}
 		"${PSP2_SRC}")
 	target_compile_definitions(${name} PRIVATE ${MODULE_DEFINES})
 	# after the module's CMakeLists, which may set a source's COMPILE_DEFINITIONS outright

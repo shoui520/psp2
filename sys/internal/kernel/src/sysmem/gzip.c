@@ -3,6 +3,7 @@
  * raw deflate decoder (SceKernelUtilsForDriver_8AF1FAD4).
  */
 
+#include <stddef.h>
 #include <stdint.h>
 #include <scetypes.h>
 #include <sysmem/utils.h>

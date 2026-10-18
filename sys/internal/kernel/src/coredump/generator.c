@@ -4,9 +4,10 @@
 #include "seg_internal.h"
 #include <sysmem/debug.h>
 #include <kernel/error.h>
-#include <elf.h>
+#include <coredump/elf.h>
 #include <threadmgr/threadmgr.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <stdio.h>
 
 typedef struct CoredumpCancelContext {

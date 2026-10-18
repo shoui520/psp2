@@ -2,6 +2,9 @@
 # The remaining export bodies are honest placeholders during C conversion.
 # All present originals lack SSP guard/fail imports and guards on stack locals.
 set(MODULE_COMPILE_OPTIONS -fno-stack-protector)
+# newlib's C library and socket headers until net_ps builds from NetBSD's own (LAYOUT_PLAN
+# section 12)
+set(MODULE_VITASDK_LIBC ON)
 psp2_module(os0_kd_net_ps_dev KIND kernel COMPILER gcc48 PARTIAL SOURCES
 	../netps_allocator_adapters.c
 	../netps_thread.c

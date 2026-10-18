@@ -1,4 +1,4 @@
-#include <string.h>
+#include <sysmem/sysclib.h>
 
 char *strncat(char *destination, const char *source, size_t count)
 {

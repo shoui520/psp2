@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <acmgr/acmgr.h>
 
 typedef struct AppmgrPlayReadyFileHeader {

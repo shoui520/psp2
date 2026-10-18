@@ -40,8 +40,14 @@ def instruction_mode(argv):
 def compile_options(argv):
     """Options consumed by the Sony compiler wrapper, in configured order."""
     opts = [x for x in argv if re.fullmatch(r'-O(?:[0-3sg]|fast)', x)]
+    includes = []
+    for i, x in enumerate(argv):
+        if x.startswith('-I'):
+            includes.append(x)
+        elif x == '-isystem' and i + 1 < len(argv):
+            includes += argv[i:i + 2]
     return dict(defines=[x for x in argv if x.startswith('-D')],
-                includes=[x for x in argv if x.startswith('-I')],
+                includes=includes,
                 opt=opts[-1] if opts else '-O2',
                 extra=[x for x in argv if x.startswith('-f') and x not in DEFAULT_F],
                 mode=instruction_mode(argv))

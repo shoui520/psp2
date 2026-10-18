@@ -110,6 +110,15 @@
  
  /*
    An alias for mallopt.
+@@ -1337,7 +1410,7 @@
+ #endif /* LACKS_UNISTD_H */
+ 
+ /* Declarations for locking */
+-#if USE_LOCKS
++#if USE_LOCKS == 1	/* SCE: the kernel heap's own locks (USE_LOCKS 2) need no pthreads */
+ #ifndef WIN32
+ #include <pthread.h>
+ #if defined (__SVR4) && defined (__sun)  /* solaris */
 @@ -1562,21 +1635,10 @@
  #if HAVE_MMAP
      #define USE_MMAP_BIT            (SIZE_T_ONE)

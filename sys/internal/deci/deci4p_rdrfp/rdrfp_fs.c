@@ -2,7 +2,9 @@
  * SceDeci4pRDrfp file system thread (Sony's rdrfp_fs.c): runs the queued
  * requests, and tells the host when a device is mounted or unmounted.
  */
+#include <stddef.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <iofilemgr/iofilemgr.h>
 #include <threadmgr/threadmgr.h>
 #include "rdrfp.h"

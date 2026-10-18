@@ -1,5 +1,6 @@
 /* Core locks. */
 
+#include <stddef.h>
 #include <sysmem/debug.h>
 #include <threadmgr/threadmgr.h>
 #include <appmgr/appmgr.h>

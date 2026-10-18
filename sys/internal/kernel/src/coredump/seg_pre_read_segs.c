@@ -4,7 +4,7 @@
  * this build registers either: no segment table names the segment methods.
  */
 
-#include <elf.h>
+#include <coredump/elf.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include "writer_internal.h"

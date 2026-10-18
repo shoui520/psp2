@@ -1,5 +1,6 @@
 /* Crashdump segment writer. */
 
+#include <stddef.h>
 #include <sysmem/debug.h>
 #include "seg_internal.h"
 

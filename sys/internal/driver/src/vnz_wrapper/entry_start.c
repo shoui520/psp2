@@ -1,4 +1,5 @@
 /* Sony entry.c: module initialization and callback registration. */
+#include <stddef.h>
 #include <scetypes.h>
 #include <sysmem/procevent.h>
 #include <sysmem/suspend.h>

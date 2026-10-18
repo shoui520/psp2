@@ -7,6 +7,7 @@
 #include <acmgr/acmgr.h>
 #include <iofilemgr/iofilemgr.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 typedef struct SceSdstorVnodeData {
 	SceSdstorPartitionEntry *pentry;

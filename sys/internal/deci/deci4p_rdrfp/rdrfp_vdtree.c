@@ -11,6 +11,7 @@
 #include <threadmgr/threadmgr.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include "rdrfp.h"
 

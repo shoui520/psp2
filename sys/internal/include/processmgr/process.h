@@ -186,10 +186,10 @@ typedef struct SceProcessObject {
 	ProcessTerminationCallback *callbacks;
 	SceUID preloadThread;
 	ListNode threads;		/* ThreadCB.processThreadNext */
-	uint32_t threadCount;			/* uint32_t: Sony's updates do not alias the SceUID fields */
-	uint32_t threadPeak;
-	uint32_t unlimitedThreadCount;		/* threads with attribute 0x4000 */
-	uint32_t unlimitedThreadPeak;
+	SceULong threadCount;			/* long: Sony's updates do not alias the SceUID fields */
+	SceULong threadPeak;
+	SceULong unlimitedThreadCount;		/* threads with attribute 0x4000 */
+	SceULong unlimitedThreadPeak;
 	ListNode msgPipes;		/* the msg pipes whose buffers it holds */
 	struct ThreadmgrFastMutex msgPipeLock;	/* "SceKernelMsgPipeListLock" */
 	SceUID workerThread;			/* "tworker: %s", processWorkerThread */

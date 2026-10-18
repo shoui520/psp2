@@ -8,7 +8,6 @@
 
 #include <scetypes.h>
 #include <vshbridge/vshbridge_imports.h>
-#include <alloca.h>
 
 #include <intrmgr/syscall_copy.h>
 
@@ -44,7 +43,7 @@ typedef struct VshMlnpsnlAuth2Args {
 	if (a != NULL) {						\
 		if (args.aSize > 0x20)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		pa = alloca(0x20);				\
+		pa = __builtin_alloca(0x20);				\
 		ret = SceSysmemForDriver_BC996A7A(pa, a, args.aSize);	\
 		if (ret < 0)						\
 			return ret;					\
@@ -52,7 +51,7 @@ typedef struct VshMlnpsnlAuth2Args {
 	if (b != NULL) {						\
 		if (args.bSize > 8)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		pb = alloca(8);				\
+		pb = __builtin_alloca(8);				\
 		ret = SceSysmemForDriver_BC996A7A(pb, b, args.bSize);	\
 		if (ret < 0)						\
 			return ret;					\
@@ -60,13 +59,13 @@ typedef struct VshMlnpsnlAuth2Args {
 	if (out != NULL) {						\
 		if (args.out1Size > 0x80)				\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		out1 = alloca(0x80);				\
+		out1 = __builtin_alloca(0x80);				\
 		__builtin_memset(out1, 0, 0x80);			\
 	}								\
 	if (args.out2 != NULL) {					\
 		if (args.out2Size > 0x40)				\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		out2 = alloca(0x40);				\
+		out2 = __builtin_alloca(0x40);				\
 		__builtin_memset(out2, 0, 0x40);			\
 	}								\
 	ret = _impl(pa, pb, out1, out2);				\
@@ -92,7 +91,7 @@ typedef struct VshMlnpsnlAuth2Args {
 	if (a != NULL) {						\
 		if (args.aSize > 0x50)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		pa = alloca(0x50);				\
+		pa = __builtin_alloca(0x50);				\
 		ret = SceSysmemForDriver_BC996A7A(pa, a, args.aSize);	\
 		if (ret < 0)						\
 			return ret;					\
@@ -100,7 +99,7 @@ typedef struct VshMlnpsnlAuth2Args {
 	if (b != NULL) {						\
 		if (args.bSize > 0x40)					\
 			return SCE_KERNEL_ERROR_NO_MEMORY;		\
-		pb = alloca(0x40);				\
+		pb = __builtin_alloca(0x40);				\
 		ret = SceSysmemForDriver_BC996A7A(pb, b, args.bSize);	\
 		if (ret < 0)						\
 			return ret;					\
@@ -109,7 +108,7 @@ typedef struct VshMlnpsnlAuth2Args {
 		return _impl(pa, pb, NULL);				\
 	if (args.outSize > 0x10)					\
 		return SCE_KERNEL_ERROR_NO_MEMORY;			\
-	kout = alloca(0x10);					\
+	kout = __builtin_alloca(0x10);					\
 	__builtin_memset(kout, 0, 0x10);				\
 	ret = _impl(pa, pb, kout);					\
 	return copyResult(ret, SceSysmemForDriver_6D88EF8A(out, kout, args.outSize));	\

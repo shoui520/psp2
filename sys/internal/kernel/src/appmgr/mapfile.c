@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "mapfile_internal.h"
 
 extern int appmgrResolvePath(const char *path, SceUID pid, char *out,

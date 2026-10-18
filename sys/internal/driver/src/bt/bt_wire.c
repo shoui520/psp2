@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 extern const uint8_t gBtRfcommFcsTable[256];
 

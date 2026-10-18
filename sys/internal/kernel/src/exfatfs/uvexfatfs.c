@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/debug.h>
 #include <iofilemgr/iofilemgr.h>
 #include "exfatfs_internal.h"

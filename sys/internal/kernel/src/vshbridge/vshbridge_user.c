@@ -9,7 +9,6 @@
 #include <vshbridge/vshbridge_imports.h>
 #include "vshbridge.h"
 #include "vshbridge_copy.h"
-#include <alloca.h>
 
 /* ===== RunWithStack bodies ===== */
 
@@ -60,7 +59,7 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 	if (ret < 0)
 		return ret;
 	if (a != NULL) {
-		pa = alloca(0x200);
+		pa = __builtin_alloca(0x200);
 		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x200);
 		if (ret < 0)
 			return ret;
@@ -68,14 +67,14 @@ static int npDrmGetLegacyDocKey(const void *a, const void *key, void *c, const V
 	if (key != NULL) {
 		if (args.keySize > 0x200)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		pkey = alloca(0x200);
+		pkey = __builtin_alloca(0x200);
 		ret = SceSysmemForDriver_BC996A7A(pkey, key, args.keySize);
 		if (ret < 0)
 			return ret;
 	}
 	if (args.out == NULL)
 		return vshNpDrmGetLegacyDocKey(pa, pkey, c, NULL);
-	out = alloca(0x10);
+	out = __builtin_alloca(0x10);
 	__builtin_memset(out, 0, 0x10);
 	ret = vshNpDrmGetLegacyDocKey(pa, pkey, c, out);
 	return copyResult(ret, SceSysmemForDriver_6D88EF8A(args.out, out, 0x10));
@@ -101,7 +100,7 @@ static int npDrmEbootSigConvert(const char *path, const void *oldSignature, void
 	BLOCK_IN(pold, oldSignature, 0x100);
 	if (newSignature == NULL)
 		return vshNpDrmEbootSigConvert(ppath, pold, NULL);
-	pnew = alloca(0x200);
+	pnew = __builtin_alloca(0x200);
 	__builtin_memset(pnew, 0, 0x200);
 	ret = vshNpDrmEbootSigConvert(ppath, pold, pnew);
 	return copyResult(ret, SceSysmemForDriver_6D88EF8A(newSignature, pnew, 0x200));
@@ -120,20 +119,20 @@ static int appMgrCloudDataCreateHeader(const void *a, int b, const void *c, void
 	int ret;
 
 	if (a != NULL) {
-		pa = alloca(0x18);
+		pa = __builtin_alloca(0x18);
 		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x18);
 		if (ret < 0)
 			return ret;
 	}
 	if (c != NULL) {
-		pc = alloca(0x20);
+		pc = __builtin_alloca(0x20);
 		ret = SceSysmemForDriver_BC996A7A(pc, c, 0x20);
 		if (ret < 0)
 			return ret;
 	}
 	if (header == NULL)
 		return vshAppMgrCloudDataCreateHeader(pa, b, pc, NULL);
-	kheader = alloca(0x170);
+	kheader = __builtin_alloca(0x170);
 	__builtin_memset(kheader, 0, 0x170);
 	ret = vshAppMgrCloudDataCreateHeader(pa, b, pc, kheader);
 	return copyResult(ret, SceSysmemForDriver_6D88EF8A(header, kheader, 0x170));
@@ -152,7 +151,7 @@ static int appMgrCloudDataVerifyHeader(const void *header)
 	int ret;
 
 	if (header != NULL) {
-		p = alloca(0x170);
+		p = __builtin_alloca(0x170);
 		ret = SceSysmemForDriver_BC996A7A(p, header, 0x170);
 		if (ret < 0)
 			return ret;
@@ -171,20 +170,20 @@ static int appMgrAcInstGetAcdirParam(const void *a, const void *b, void *param)
 	int ret;
 
 	if (a != NULL) {
-		pa = alloca(0x10);
+		pa = __builtin_alloca(0x10);
 		ret = SceSysmemForDriver_BC996A7A(pa, a, 0x10);
 		if (ret < 0)
 			return ret;
 	}
 	if (b != NULL) {
-		pb = alloca(0x14);
+		pb = __builtin_alloca(0x14);
 		ret = SceSysmemForDriver_BC996A7A(pb, b, 0x14);
 		if (ret < 0)
 			return ret;
 	}
 	if (param == NULL)
 		return vshAppMgrAcInstGetAcdirParam(pa, pb, NULL);
-	kparam = alloca(0xe0);
+	kparam = __builtin_alloca(0xe0);
 	__builtin_memset(kparam, 0, 0xe0);
 	ret = vshAppMgrAcInstGetAcdirParam(pa, pb, kparam);
 	return copyResult(ret, SceSysmemForDriver_6D88EF8A(param, kparam, 0xe0));
@@ -203,7 +202,7 @@ static int appMgrLocalBackupVerifyOfflineHeader(const void *header)
 	int ret;
 
 	if (header != NULL) {
-		p = alloca(0x170);
+		p = __builtin_alloca(0x170);
 		ret = SceSysmemForDriver_BC996A7A(p, header, 0x170);
 		if (ret < 0)
 			return ret;
@@ -289,11 +288,11 @@ int _vshRtcGetAlarmTick(SceRtcTick *tick, int *unk)
 	int ret, ret2;
 
 	if (tick != NULL) {
-		ktick = alloca(sizeof(*ktick));
+		ktick = __builtin_alloca(sizeof(*ktick));
 		ktick->tick = 0;
 	}
 	if (unk != NULL) {
-		kunk = alloca(sizeof(*kunk));
+		kunk = __builtin_alloca(sizeof(*kunk));
 		*kunk = 0;
 	}
 	ret = vshRtcGetAlarmTick(ktick, kunk);
@@ -347,7 +346,7 @@ int _vshDisplayGetActualViewportConf(int head, void *unused, void *conf, const S
 		return vshDisplayGetActualViewportConf(head, unused, 0);
 	if (args.size > 0x14)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	kconf = alloca(0x14);
+	kconf = __builtin_alloca(0x14);
 	__builtin_memset(kconf, 0, 0x14);
 	ret = SceSysmemForDriver_BC996A7A(kconf, conf, args.size);
 	if (ret < 0)
@@ -503,7 +502,7 @@ int _vshIoDread(SceUID fd, void *dirent)
 
 	if (dirent == NULL)
 		return vshIoDread(fd, NULL);
-	kdirent = alloca(0x160);
+	kdirent = __builtin_alloca(0x160);
 	__builtin_memset(kdirent, 0, 0x160);
 	ret = SceSysmemForDriver_BC996A7A(kdirent, dirent, 0x160);
 	if (ret < 0)
@@ -875,11 +874,11 @@ int _vshAppMgrLocalBackupGetOfflineId(void *id, void *b)
 	int ret, ret2;
 
 	if (id != NULL) {
-		kid = alloca(sizeof(*kid));
+		kid = __builtin_alloca(sizeof(*kid));
 		*kid = 0;
 	}
 	if (b != NULL) {
-		kb = alloca(sizeof(*kb));
+		kb = __builtin_alloca(sizeof(*kb));
 		*kb = 0;
 	}
 	ret = vshAppMgrLocalBackupGetOfflineId(kid, kb);
@@ -1043,7 +1042,7 @@ int _vshSblGetSystemSwVersion(SceKernelSystemSwVersion *info)
 
 	if (info == NULL)
 		return vshSblGetSystemSwVersion(NULL);
-	kinfo = alloca(sizeof(*kinfo));
+	kinfo = __builtin_alloca(sizeof(*kinfo));
 	__builtin_memset(kinfo, 0, sizeof(*kinfo));
 	ret = SceSysmemForDriver_BC996A7A(kinfo, info, sizeof(*kinfo));
 	if (ret < 0)

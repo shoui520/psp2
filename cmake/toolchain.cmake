@@ -45,10 +45,10 @@ set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT 98)
 # nothing links without a module's linker script: the compiler checks build a library
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-# Thumb unless a source asks for ARM (-marm); the headers of the C library until the tree has its
-# own (sys/sdk/target/include)
-set(CMAKE_C_FLAGS_INIT "-mthumb ${PSP2_GCC48_TARGET} -std=gnu11 ${PSP2_GCC48_FLAGS} -isystem ${PSP2_SYSTEM_INCLUDE}")
-set(CMAKE_CXX_FLAGS_INIT "-mthumb ${PSP2_GCC48_TARGET} ${PSP2_GCC48_FLAGS} -isystem ${PSP2_SYSTEM_INCLUDE}")
+# Thumb unless a source asks for ARM (-marm); the C library's headers are the tree's
+# (sys/sdk/target/include), as Sony's GCC builds read the SDK's
+set(CMAKE_C_FLAGS_INIT "-mthumb ${PSP2_GCC48_TARGET} -std=gnu11 ${PSP2_GCC48_FLAGS}")
+set(CMAKE_CXX_FLAGS_INIT "-mthumb ${PSP2_GCC48_TARGET} ${PSP2_GCC48_FLAGS}")
 set(CMAKE_ASM_FLAGS_INIT "-mthumb ${PSP2_GCC48_TARGET}")
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

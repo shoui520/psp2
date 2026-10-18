@@ -2,6 +2,7 @@
 
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 typedef struct AppmgrRawPathArguments {
 	unsigned char reserved[16];

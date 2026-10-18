@@ -1,6 +1,7 @@
 /* Headset profile command callbacks; original source filename unavailable. */
 #include "bt_internal.h"
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 uintptr_t BtNotifyEvent(unsigned int eventId, unsigned int status,
 			unsigned int argument, uint64_t deviceAddress);

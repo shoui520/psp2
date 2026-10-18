@@ -14,6 +14,7 @@
 #include <regmgr/regmgr.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "deci4p_loadp_imports.h"
 #include <modulemgr/modulemgr_control.h>
 #include <processmgr/processmgr.h>
@@ -22,7 +23,6 @@
 #include <threadmgr/threadmgr_debugger.h>
 #include "loadp.h"
 #include <kernel/error.h>
-#include <alloca.h>
 
 #define LOADP_DIPSW				0xc2
 #define LOADP_DIPSW_NO_AUTO_ENABLE		0xc3
@@ -2365,7 +2365,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 	option2 = p.option2;
 	data = p.data;
 	if (path != NULL) {
-		kpath = alloca(0x124);
+		kpath = __builtin_alloca(0x124);
 		ret = SceSysmemForDriver_DB3EC244(kpath, path, 0x124);
 		if (ret < 0)
 			return ret;
@@ -2373,7 +2373,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
 	if (titleId != NULL) {
-		ktitleId = alloca(0x20);
+		ktitleId = __builtin_alloca(0x20);
 		ret = SceSysmemForDriver_DB3EC244(ktitleId, titleId, 0x20);
 		if (ret < 0)
 			return ret;
@@ -2381,7 +2381,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
 	if (args != NULL) {
-		kargs = alloca(0x400);
+		kargs = __builtin_alloca(0x400);
 		ret = SceSysmemForDriver_DB3EC244(kargs, args, 0x400);
 		if (ret < 0)
 			return ret;
@@ -2389,7 +2389,7 @@ int SceDeci4pLoadp_9A46C1BA(const char *path, int option0, const char *titleId,
 			return SCE_KERNEL_ERROR_NO_MEMORY;	/* Sony's code for an unterminated string here */
 	}
 	if (data != NULL) {
-		kdata = alloca(0x80);
+		kdata = __builtin_alloca(0x80);
 		ret = SceSysmemForDriver_BC996A7A(kdata, data, 0x80);
 		if (ret < 0)
 			return ret;

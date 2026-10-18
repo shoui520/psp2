@@ -1,4 +1,7 @@
 # All original functions have C bodies; verification remains incomplete.
+# newlib's C library and socket headers until net_ps builds from NetBSD's own (LAYOUT_PLAN
+# section 12)
+set(MODULE_VITASDK_LIBC ON)
 set(wlanbt_upstream "${CMAKE_CURRENT_LIST_DIR}/../../../../../contrib/rt2860-7bc30c23")
 set(wlanbt_patched "${CMAKE_CURRENT_BINARY_DIR}/cmm_wpa_sce.c")
 configure_file("${wlanbt_upstream}/cmm_wpa.c" "${wlanbt_patched}" COPYONLY)

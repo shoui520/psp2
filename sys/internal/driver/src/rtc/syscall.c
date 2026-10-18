@@ -6,7 +6,6 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysclib.h>
 #include "rtc_internal.h"
-#include <alloca.h>
 
 #define RTC_FORMAT_SIZE		128
 
@@ -117,7 +116,7 @@ int name(SceRtcTick *tick)						\
 									\
 	if (tick == NULL)						\
 		return function(NULL);					\
-	ktick = alloca(sizeof(*ktick));			\
+	ktick = __builtin_alloca(sizeof(*ktick));			\
 	ktick->tick = 0;						\
 	ret = function(ktick);						\
 	return rtcCopyOut(tick, ktick, sizeof(*ktick), ret);		\
@@ -139,7 +138,7 @@ int _sceRtcGetCurrentClock(SceDateTime *time, int timezone)
 
 	if (time == NULL)
 		return rtcSysGetCurrentClock(NULL, timezone);
-	ktime = alloca(sizeof(*ktime));
+	ktime = __builtin_alloca(sizeof(*ktime));
 	*ktime = (SceDateTime){ 0 };
 	ret = rtcSysGetCurrentClock(ktime, timezone);
 	return rtcCopyOut(time, ktime, sizeof(*ktime), ret);
@@ -152,7 +151,7 @@ int _sceRtcGetCurrentClockLocalTime(SceDateTime *time)
 
 	if (time == NULL)
 		return rtcSysGetCurrentClockLocalTime(NULL);
-	ktime = alloca(sizeof(*ktime));
+	ktime = __builtin_alloca(sizeof(*ktime));
 	*ktime = (SceDateTime){ 0 };
 	ret = rtcSysGetCurrentClockLocalTime(ktime);
 	return rtcCopyOut(time, ktime, sizeof(*ktime), ret);
@@ -165,14 +164,14 @@ int name(const SceRtcTick *src, SceRtcTick *dst)			\
 	int ret;							\
 									\
 	if (src != NULL) {						\
-		ksrc = alloca(sizeof(*ksrc));			\
+		ksrc = __builtin_alloca(sizeof(*ksrc));			\
 		ret = SceSysmemForDriver_BC996A7A(ksrc, src, sizeof(*ksrc));	\
 		if (ret < 0)						\
 			return ret;					\
 	}								\
 	if (dst == NULL)						\
 		return function(ksrc, NULL);				\
-	kdst = alloca(sizeof(*kdst));				\
+	kdst = __builtin_alloca(sizeof(*kdst));				\
 	kdst->tick = 0;							\
 	ret = function(ksrc, kdst);					\
 	return rtcCopyOut(dst, kdst, sizeof(*kdst), ret);		\
@@ -207,11 +206,11 @@ int name(char *buf, const SceRtcTick *tick, const void *reserved)		\
 	if (ret < 0)							\
 		return ret;						\
 	if (buf != NULL) {						\
-		kbuf = alloca(RTC_FORMAT_SIZE);		\
+		kbuf = __builtin_alloca(RTC_FORMAT_SIZE);		\
 		memset(kbuf, 0, RTC_FORMAT_SIZE);			\
 	}								\
 	if (tick != NULL) {						\
-		ktick = alloca(sizeof(*ktick));		\
+		ktick = __builtin_alloca(sizeof(*ktick));		\
 		ret = SceSysmemForDriver_BC996A7A(ktick, tick, sizeof(*ktick)); \
 		if (ret < 0)						\
 			return ret;					\
@@ -234,11 +233,11 @@ int name(char *buf, const SceRtcTick *tick, int offset, const void *reserved) \
 	if (ret < 0)							\
 		return ret;						\
 	if (buf != NULL) {						\
-		kbuf = alloca(RTC_FORMAT_SIZE);		\
+		kbuf = __builtin_alloca(RTC_FORMAT_SIZE);		\
 		memset(kbuf, 0, RTC_FORMAT_SIZE);			\
 	}								\
 	if (tick != NULL) {						\
-		ktick = alloca(sizeof(*ktick));		\
+		ktick = __builtin_alloca(sizeof(*ktick));		\
 		ret = SceSysmemForDriver_BC996A7A(ktick, tick, sizeof(*ktick)); \
 		if (ret < 0)						\
 			return ret;					\

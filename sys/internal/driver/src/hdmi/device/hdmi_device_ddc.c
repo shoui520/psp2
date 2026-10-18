@@ -3,6 +3,7 @@
  * KSV FIFO), serialized by the "SceHdmiDeviceDdc" mutex, and the check of
  * each EDID block read. Internal names are ours unless a comment says otherwise.
  */
+#include <stddef.h>
 #include <scetypes.h>
 #include <fw.h>
 #include <sysmem/debug.h>

@@ -1,4 +1,5 @@
 /* Adhoc BB semaphore lifecycle. */
+#include <stddef.h>
 #include <threadmgr/threadmgr.h>
 #include <stdint.h>
 

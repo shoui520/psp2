@@ -2,6 +2,7 @@
 
 #include <iofilemgr/iofilemgr.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "param_sfo.h"
 
 extern void *appmgrAllocMountHeapMemory(SceSize size);

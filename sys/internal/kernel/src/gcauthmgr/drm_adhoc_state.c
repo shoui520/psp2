@@ -1,4 +1,5 @@
 /* Adhoc session initialization. */
+#include <stddef.h>
 #include <stdint.h>
 #include <threadmgr/threadmgr.h>
 

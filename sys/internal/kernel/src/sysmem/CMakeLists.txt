@@ -8,6 +8,17 @@ sysmem_prepare_patched(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/sfmt-1.3.3/SFMT.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/sfmt_sce.patch"
 	"${sysmem_sfmt_source}")
+# SceSysclib's strtoll (FreeBSD's)
+set(sysmem_strtoll_source "${CMAKE_CURRENT_BINARY_DIR}/strtoll-sce.c")
+sysmem_prepare_patched(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/bsd-stdlib-7.0.0/strtoll.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/strtoll_sce.patch"
+	"${sysmem_strtoll_source}")
+# SceSysclib's strlcpy (FreeBSD's), which strings.c includes
+sysmem_prepare_patched(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/bsd-string-1998/strlcpy.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/strlcpy_sce.patch"
+	"${CMAKE_CURRENT_BINARY_DIR}/strlcpy-sce.c")
 # the kernel heap's dlmalloc/malloc.c
 set(sysmem_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 sysmem_prepare_patched(
@@ -63,7 +74,7 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	search.c
 	checked_strings.c
 	numeric.c
-	bsd_strtoll_kernel.c
+	"${sysmem_strtoll_source}"
 	ctype.c
 	memcpy_chk.c
 	copy_forward.S
@@ -125,8 +136,10 @@ psp2_module(os0_kd_sysmem KIND kernel COMPILER gcc48 SOURCES
 	strlcpy_chk.c
 	sprintf_chk.c
 )
+# strings.c includes the adapted strlcpy-sce.c from the build directory
+target_include_directories(os0_kd_sysmem PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
-set_source_files_properties(bsd_strtoll_kernel.c
+set_source_files_properties("${sysmem_strtoll_source}"
 	PROPERTIES COMPILE_OPTIONS "-fsigned-char")
 
 # Sony built the DIP switch file for size: literal pools, not movw/movt.

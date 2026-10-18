@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 
 static SceKernelSpinlock gsDebugLockIRQ;
 

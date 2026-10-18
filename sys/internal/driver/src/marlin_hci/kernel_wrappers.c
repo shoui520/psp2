@@ -2,7 +2,6 @@
 #include "key.h"
 #include "handles.h"
 #include "kernel_wrappers.h"
-#include "memory.h"
 
 int MarlinLock(void *context);
 int MarlinUnlock(void *context);

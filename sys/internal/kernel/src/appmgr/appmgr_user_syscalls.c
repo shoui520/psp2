@@ -3,6 +3,7 @@
 #include <appmgr.h>
 #include <intrmgr/syscall_copy.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "appmgr_shell_event.h"
 #include "appmgr_event.h"
 

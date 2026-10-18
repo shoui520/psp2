@@ -10,7 +10,7 @@
  * owner), then each range, page aligned.
  */
 
-#include <elf.h>
+#include <coredump/elf.h>
 #include <iofilemgr/iofilemgr.h>
 #include <sysmem/sblaimgr.h>
 #include <sysmem/cpu.h>

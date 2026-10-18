@@ -112,8 +112,10 @@ static int _writeSegs(SegIf *segment)
 		batch = batch < 1024 ? batch : 1024;
 		oalGetUltObjIds(coredumpRun.pid, ids, batch, skip, 2);
 		for (i = 0; i != batch; ++i) {
+			SceUInt32 id = ids[i];
+
 			numWaiting = 1024;
-			oalGetUltSemaInfo(coredumpRun.pid, ids[i], &info,
+			oalGetUltSemaInfo(coredumpRun.pid, id, &info,
 				waitingIds, &numWaiting);
 			result = writerWrite(currentWriter, &info, sizeof(info));
 			if (result != 0)

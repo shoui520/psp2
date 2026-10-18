@@ -2,6 +2,7 @@
  * SceSysmem: SceSblPmMgr's queries of the boot type in the KBL parameters.
  */
 
+#include <stddef.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <sysmem/pmmgr.h>
 

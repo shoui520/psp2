@@ -8,6 +8,7 @@
  * the others are guessed and kept as NIDs.
  */
 
+#include <stddef.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
 #include <lowio/i2c.h>

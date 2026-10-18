@@ -402,6 +402,19 @@
      int havedict;               /* true if dictionary provided */
      int flags;                  /* gzip header method and flags (0 if zlib) */
      unsigned dmax;              /* zlib header max distance (INFLATE_STRICT) */
+--- a/zconf.h
++++ b/zconf.h
+@@ -360,9 +360,7 @@
+ #  define Z_HAVE_UNISTD_H
+ #endif
+ 
+-#ifdef STDC
+-#  include <sys/types.h>    /* for off_t */
+-#endif
++/* SCE: the SDK has no sys/types.h, and nothing here takes off_t (z_off_t is long) */
+ 
+ /* a little trick to accommodate both "#define _LARGEFILE64_SOURCE" and
+  * "#define _LARGEFILE64_SOURCE 1" as requesting 64-bit operations, (even
 --- a/zlib.h
 +++ b/zlib.h
 @@ -1537,7 +1537,19 @@

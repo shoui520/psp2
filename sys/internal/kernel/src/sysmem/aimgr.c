@@ -4,6 +4,7 @@
  * fields are big-endian.
  */
 
+#include <stddef.h>
 #include <kernel_boot_loader/kbl_param.h>
 #include <ss_mgr/ss_mgr.h>
 

@@ -4,6 +4,7 @@
  * mutex, the events it polls, the plug and PLL state). Internal names are
  * ours unless a comment says otherwise.
  */
+#include <stddef.h>
 #include <scetypes.h>
 #include <threadmgr/threadmgr.h>
 #include <fw.h>

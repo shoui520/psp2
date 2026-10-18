@@ -1,4 +1,5 @@
 /* Adhoc session clearing. */
+#include <stddef.h>
 #include <stdint.h>
 #include <threadmgr/threadmgr.h>
 

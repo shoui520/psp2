@@ -4,6 +4,7 @@
  * and handed to the device layer. No debug record names this file; its name
  * and the names below are ours.
  */
+#include <stddef.h>
 #include <scetypes.h>
 #include "hdmi_internal.h"
 #include <sysmem/sblaimgr.h>

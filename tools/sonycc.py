@@ -92,7 +92,7 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 		cmd = host.linux_command([str(gcc or GCC48), '-m' + mode, *GCC48_TARGET, opt, '-std=gnu11',
 					  '-fstack-protector-strong' if gcc is None else '-fstack-protector',
 					  *GCC48_CODE, *extra, *GCC48_FREESTANDING, '-w', name, *defines,
-					  *includes, '-isystem', str(host.vitasdk_include()),
+					  *includes,
 					  '-S' if stage == 'assembly' else '-c', str(src), '-o', str(out)], cwd=ROOT)
 	else:
 		incs = [f'-I{win(i[2:])}' if i.startswith('-I') else i for i in includes]

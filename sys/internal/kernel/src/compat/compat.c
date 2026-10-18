@@ -21,6 +21,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <npdrm/npdrm.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sysmem/suspend.h>

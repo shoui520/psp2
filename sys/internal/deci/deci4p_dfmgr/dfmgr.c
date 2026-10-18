@@ -6,6 +6,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/sysroot_dfmgr.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <sysmem/dipsw.h>
 #include <intrmgr/intrmgr.h>
 #include <modulemgr/modulemgr.h>

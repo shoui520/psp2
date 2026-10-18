@@ -1,4 +1,5 @@
 /* SCE suspend event helpers; no native source-file record survives. */
+#include <stddef.h>
 #include <threadmgr/threadmgr.h>
 
 /* Existing import name, NID EA211225; absent from vitasdk's NID table. */

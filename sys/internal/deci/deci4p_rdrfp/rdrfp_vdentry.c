@@ -6,6 +6,7 @@
 #include <iofilemgr/iofilemgr.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include "rdrfp.h"
 
 #define SCE_ERROR_ERRNO_ENOENT		0x80010002

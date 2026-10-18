@@ -1,5 +1,6 @@
 /* Application abort handling and coredump controls. */
 
+#include <stddef.h>
 #include <sysmem/debug.h>
 #include <sysmem/barrier.h>
 #include <stdint.h>

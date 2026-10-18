@@ -16,7 +16,6 @@
 #include <kernel/error.h>
 #include "display_internal.h"
 #include "display_imports.h"
-#include <alloca.h>
 
 /*
  * Syscalls. A kernel error returned to user mode gets bit 30 set; the user's
@@ -90,11 +89,11 @@ int _sceDisplayGetMaximumFrameBufResolution(int *pWidth, int *pHeight)
 	int ret, res;
 
 	if (pWidth != NULL) {
-		width = alloca(sizeof(*width));
+		width = __builtin_alloca(sizeof(*width));
 		*width = 0;
 	}
 	if (pHeight != NULL) {
-		height = alloca(sizeof(*height));
+		height = __builtin_alloca(sizeof(*height));
 		*height = 0;
 	}
 	ret = syscallGetMaximumFrameBufResolution(width, height);
@@ -131,7 +130,7 @@ int _sceDisplaySetFrameBufInternal(SceUInt32 head, SceUInt32 plane, const SceDis
 	if (pParam != NULL) {
 		if (args.size > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		frameBuf = alloca(SYSCALL_COPY_MAX);
+		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 		ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
 		if (ret < 0)
 			return ret;
@@ -162,7 +161,7 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 	if (args.pParam != NULL) {
 		if (args.paramSize > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		frameBuf = alloca(SYSCALL_COPY_MAX);
+		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 		ret = SceSysmemForDriver_BC996A7A(frameBuf, args.pParam, args.paramSize);
 		if (ret < 0)
 			return ret;
@@ -171,7 +170,7 @@ int _sceDisplaySetFrameBufForCompat(int x, int y, int cropWidth,
 	if (args.convDst != NULL) {
 		if (args.convDstSize > sizeof(SceDisplayFrameBuf))
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		convDst = alloca(sizeof(SceDisplayFrameBuf));
+		convDst = __builtin_alloca(sizeof(SceDisplayFrameBuf));
 		ret = SceSysmemForDriver_BC996A7A(convDst, args.convDst, args.convDstSize);
 		if (ret < 0)
 			return ret;
@@ -199,7 +198,7 @@ int _sceDisplayGetFrameBufInternal(SceUInt32 head, SceUInt32 plane, SceDisplayFr
 		return syscallGetFrameBufInternal(head, plane, NULL, args.sync);
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	frameBuf = alloca(SYSCALL_COPY_MAX);
+	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(frameBuf, 0, SYSCALL_COPY_MAX);
 	ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
 	if (ret < 0)
@@ -227,7 +226,7 @@ int _sceDisplaySetFrameBuf(const SceDisplayFrameBuf *pParam, SceUInt32 sync, con
 	if (pParam != NULL) {
 		if (args.size > SYSCALL_COPY_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		frameBuf = alloca(SYSCALL_COPY_MAX);
+		frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 		ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
 		if (ret < 0)
 			return ret;
@@ -248,7 +247,7 @@ int _sceDisplayGetFrameBuf(SceDisplayFrameBuf *pParam, SceUInt32 sync, const Dis
 		return syscallGetFrameBuf(NULL, sync);
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	frameBuf = alloca(SYSCALL_COPY_MAX);
+	frameBuf = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(frameBuf, 0, SYSCALL_COPY_MAX);
 	ret = SceSysmemForDriver_BC996A7A(frameBuf, pParam, args.size);
 	if (ret < 0)
@@ -272,7 +271,7 @@ int _sceDisplayGetResolutionInfoInternal(SceUInt32 head, SceDisplayResolutionInf
 		return syscallGetResolutionInfoInternal(head, NULL);
 	if (args.size > SYSCALL_COPY_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	info = alloca(SYSCALL_COPY_MAX);
+	info = __builtin_alloca(SYSCALL_COPY_MAX);
 	memset(info, 0, SYSCALL_COPY_MAX);
 	ret = SceSysmemForDriver_BC996A7A(info, pInfo, args.size);
 	if (ret < 0)

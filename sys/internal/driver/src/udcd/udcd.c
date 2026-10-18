@@ -1,6 +1,7 @@
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 #include <string.h>
+#include <sysmem/sysclib.h>
 #include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>

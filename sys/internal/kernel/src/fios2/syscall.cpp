@@ -5,7 +5,6 @@
  * in a structure in user memory.
  */
 
-#include <alloca.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/sysclib.h>
 #include "fios2_internal.h"
@@ -75,14 +74,14 @@ int _sceFiosKernelOverlayAdd(SceFiosOverlay *pOverlay, SceFiosOverlayID *pOutId)
 	int ret;
 
 	if (pOverlay != NULL) {
-		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
+		overlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*overlay));
 		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
 	if (pOutId == NULL)
 		return sceFiosKernelOverlayAdd(overlay, NULL);
-	outId = (SceFiosOverlayID *)alloca(sizeof(*outId));
+	outId = (SceFiosOverlayID *)__builtin_alloca(sizeof(*outId));
 	*outId = 0;
 	ret = sceFiosKernelOverlayAdd(overlay, outId);
 	return FIOS_COPY_OUT(pOutId, outId, sizeof(*outId), ret);
@@ -100,7 +99,7 @@ int _sceFiosKernelOverlayGetInfo(SceFiosOverlayID id, SceFiosOverlay *pOutOverla
 
 	if (pOutOverlay == NULL)
 		return sceFiosKernelOverlayGetInfo(id, NULL);
-	outOverlay = (SceFiosOverlay *)alloca(sizeof(*outOverlay));
+	outOverlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*outOverlay));
 	memset(outOverlay, 0, sizeof(*outOverlay));
 	ret = sceFiosKernelOverlayGetInfo(id, outOverlay);
 	return FIOS_COPY_OUT(pOutOverlay, outOverlay, sizeof(*outOverlay), ret);
@@ -112,7 +111,7 @@ int _sceFiosKernelOverlayModify(SceFiosOverlayID id, SceFiosOverlay *pOverlay)
 	int ret;
 
 	if (pOverlay != NULL) {
-		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
+		overlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*overlay));
 		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
@@ -128,14 +127,14 @@ FIOS_SYSCALL int fiosSyscallAddForProcess(SceUID pid, SceFiosOverlay *pOverlay,
 	int ret;
 
 	if (pOverlay != NULL) {
-		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
+		overlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*overlay));
 		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
 	}
 	if (pOutId == NULL)
 		return sceFiosKernelOverlayAddForProcess(pid, overlay, NULL);
-	outId = (SceFiosOverlayID *)alloca(sizeof(*outId));
+	outId = (SceFiosOverlayID *)__builtin_alloca(sizeof(*outId));
 	*outId = 0;
 	ret = sceFiosKernelOverlayAddForProcess(pid, overlay, outId);
 	return FIOS_COPY_OUT(pOutId, outId, sizeof(*outId), ret);
@@ -159,7 +158,7 @@ FIOS_SYSCALL int fiosSyscallGetInfoForProcess(SceUID pid, SceFiosOverlayID id,
 
 	if (pOutOverlay == NULL)
 		return sceFiosKernelOverlayGetInfoForProcess(pid, id, NULL);
-	outOverlay = (SceFiosOverlay *)alloca(sizeof(*outOverlay));
+	outOverlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*outOverlay));
 	memset(outOverlay, 0, sizeof(*outOverlay));
 	ret = sceFiosKernelOverlayGetInfoForProcess(pid, id, outOverlay);
 	return FIOS_COPY_OUT(pOutOverlay, outOverlay, sizeof(*outOverlay), ret);
@@ -177,7 +176,7 @@ FIOS_SYSCALL int fiosSyscallModifyForProcess(SceUID pid, SceFiosOverlayID id,
 	int ret;
 
 	if (pOverlay != NULL) {
-		overlay = (SceFiosOverlay *)alloca(sizeof(*overlay));
+		overlay = (SceFiosOverlay *)__builtin_alloca(sizeof(*overlay));
 		ret = SceSysmemForDriver_BC996A7A(overlay, pOverlay, sizeof(*overlay));
 		if (ret < 0)
 			return ret;
@@ -205,12 +204,12 @@ FIOS_SYSCALL int fiosSyscallGetList(SceUID pid, unsigned int minOrder, unsigned 
 	if (outIds != NULL) {
 		if (args.outIdsSize > FIOS_GET_LIST_MAX)
 			return SCE_KERNEL_ERROR_NO_MEMORY;
-		outIds = (SceFiosOverlayID *)alloca(FIOS_GET_LIST_MAX);
+		outIds = (SceFiosOverlayID *)__builtin_alloca(FIOS_GET_LIST_MAX);
 		memset(outIds, 0, FIOS_GET_LIST_MAX);
 	}
 	outCount = args.outCount;
 	if (outCount != NULL) {
-		outCount = (SceSize *)alloca(sizeof(*outCount));
+		outCount = (SceSize *)__builtin_alloca(sizeof(*outCount));
 		*outCount = 0;
 	}
 	ret = sceFiosKernelOverlayGetList(pid, minOrder, maxOrder, outIds, args.maxIds, outCount);
@@ -242,7 +241,7 @@ FIOS_SYSCALL int fiosSyscallResolveSync(SceUID pid, int resolveFlag, const char 
 	if (ret < 0)
 		return ret;
 	if (pInPath != NULL) {
-		char *path = (char *)alloca(FIOS_PATH_MAX);
+		char *path = (char *)__builtin_alloca(FIOS_PATH_MAX);
 		ret = fiosStrncpyPathFromUser(path, pInPath);
 		if (ret < 0)
 			return ret;
@@ -252,7 +251,7 @@ FIOS_SYSCALL int fiosSyscallResolveSync(SceUID pid, int resolveFlag, const char 
 		return sceFiosKernelOverlayResolveSync(pid, resolveFlag, inPath, NULL, args.maxPath);
 	if (args.outPathSize > FIOS_PATH_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	outPath = (char *)alloca(FIOS_PATH_MAX);
+	outPath = (char *)__builtin_alloca(FIOS_PATH_MAX);
 	memset(outPath, 0, FIOS_PATH_MAX);
 	ret = sceFiosKernelOverlayResolveSync(pid, resolveFlag, inPath, outPath, args.maxPath);
 	return FIOS_COPY_OUT(args.outPath, outPath, args.outPathSize, ret);
@@ -276,7 +275,7 @@ FIOS_SYSCALL int fiosSyscallResolveWithRangeSync(SceUID pid, int resolveFlag, co
 	if (ret < 0)
 		return ret;
 	if (pInPath != NULL) {
-		char *path = (char *)alloca(FIOS_PATH_MAX);
+		char *path = (char *)__builtin_alloca(FIOS_PATH_MAX);
 		ret = fiosStrncpyPathFromUser(path, pInPath);
 		if (ret < 0)
 			return ret;
@@ -288,7 +287,7 @@ FIOS_SYSCALL int fiosSyscallResolveWithRangeSync(SceUID pid, int resolveFlag, co
 							       args.maxOrder);
 	if (args.outPathSize > FIOS_PATH_MAX)
 		return SCE_KERNEL_ERROR_NO_MEMORY;
-	outPath = (char *)alloca(FIOS_PATH_MAX);
+	outPath = (char *)__builtin_alloca(FIOS_PATH_MAX);
 	memset(outPath, 0, FIOS_PATH_MAX);
 	ret = sceFiosKernelOverlayResolveWithRangeSync(pid, resolveFlag, inPath, outPath, args.maxPath,
 						       args.minOrder, args.maxOrder);
@@ -313,11 +312,11 @@ int _sceFiosKernelOverlayDHOpenSync(SceFiosKernelDH **pOutDH, const char *pPath,
 	if (ret < 0)
 		return ret;
 	if (pOutDH != NULL) {
-		outDH = (SceFiosKernelDH **)alloca(sizeof(*outDH));
+		outDH = (SceFiosKernelDH **)__builtin_alloca(sizeof(*outDH));
 		*outDH = NULL;
 	}
 	if (pPath != NULL) {
-		char *buffer = (char *)alloca(FIOS_PATH_MAX);
+		char *buffer = (char *)__builtin_alloca(FIOS_PATH_MAX);
 		ret = fiosStrncpyPathFromUser(buffer, pPath);
 		if (ret < 0)
 			return ret;
@@ -336,7 +335,7 @@ int _sceFiosKernelOverlayDHReadSync(SceFiosKernelDH *dh, SceIoDirent *pOutDirent
 
 	if (pOutDirent == NULL)
 		return sceFiosKernelOverlayDHReadSync(dh, NULL);
-	outDirent = (SceIoDirent *)alloca(sizeof(*outDirent));
+	outDirent = (SceIoDirent *)__builtin_alloca(sizeof(*outDirent));
 	memset(outDirent, 0, sizeof(*outDirent));
 	ret = sceFiosKernelOverlayDHReadSync(dh, outDirent);
 	return FIOS_COPY_OUT(pOutDirent, outDirent, sizeof(*outDirent), ret);
@@ -354,7 +353,7 @@ int _sceFiosKernelOverlayDHStatSync(SceFiosKernelDH *dh, SceIoStat *pOutStat)
 
 	if (pOutStat == NULL)
 		return sceFiosKernelOverlayDHStatSync(dh, NULL);
-	outStat = (SceIoStat *)alloca(sizeof(*outStat));
+	outStat = (SceIoStat *)__builtin_alloca(sizeof(*outStat));
 	memset(outStat, 0, sizeof(*outStat));
 	ret = sceFiosKernelOverlayDHStatSync(dh, outStat);
 	return FIOS_COPY_OUT(pOutStat, outStat, sizeof(*outStat), ret);
@@ -366,7 +365,7 @@ int _sceFiosKernelOverlayDHChstatSync(SceFiosKernelDH *dh, SceIoStat *pStat, int
 	int ret;
 
 	if (pStat != NULL) {
-		stat = (SceIoStat *)alloca(sizeof(*stat));
+		stat = (SceIoStat *)__builtin_alloca(sizeof(*stat));
 		ret = SceSysmemForDriver_BC996A7A(stat, pStat, sizeof(*stat));
 		if (ret < 0)
 			return ret;
@@ -405,7 +404,7 @@ FIOS_SYSCALL int fiosSyscallGetRecommendedScheduler(int avail, const char *pPath
 	if (ret < 0)
 		return ret;
 	if (pPath != NULL) {
-		char *buffer = (char *)alloca(FIOS_PATH_MAX);
+		char *buffer = (char *)__builtin_alloca(FIOS_PATH_MAX);
 		ret = fiosStrncpyPathFromUser(buffer, pPath);
 		if (ret < 0)
 			return ret;

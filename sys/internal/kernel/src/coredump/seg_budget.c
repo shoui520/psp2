@@ -54,8 +54,10 @@ static int _calcSize(SegIf *segment)
 	oalGetBudgetIdList(ids, count);
 	totalParts = 0;
 	for (i = 0; i < count; i++) {
+		SceUID id = ids[i];
+
 		numParts = 5;
-		oalGetBudgetInfo(ids[i], &info, parts, &numParts);
+		oalGetBudgetInfo(id, &info, parts, &numParts);
 		totalParts += numParts;
 	}
 	segment->numPhdr = 1;
@@ -93,8 +95,10 @@ static int _writeSegs(SegIf *segment)
 	segment->writtenSize += sizeof(count);
 	oalGetBudgetIdList(ids, count);
 	for (i = 0; i < count; i++) {
+		SceUID id = ids[i];
+
 		numParts = 5;
-		oalGetBudgetInfo(ids[i], &info, parts, &numParts);
+		oalGetBudgetInfo(id, &info, parts, &numParts);
 		result = writerWrite(currentWriter, &info, sizeof(info));
 		if (result != 0)
 			goto free;
