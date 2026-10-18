@@ -175,11 +175,11 @@ typedef struct SdfMgrState {
 #endif
 	SdfMgrCpuState cpu[4];
 #if FW_DEBUG
-	uint32_t lock;
+	SceKernelSpinlock lock;
 	SdfMgrDebugCpuState *debugCpu;
 #else
 	SdfMgrGlobalState global;
-	uint32_t lock;
+	SceKernelSpinlock lock;
 #endif
 	SdfMgrDcmpCpuState dcmp[4];
 	SdfMgrTsmpCpuState tsmp[4];

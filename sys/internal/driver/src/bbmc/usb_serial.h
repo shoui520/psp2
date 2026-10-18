@@ -35,7 +35,7 @@ typedef struct BbmcUsbSerialRequest {
 
 struct BbmcUsbSerialPipe {
 	int pipeId;
-	SceUInt32 lock;
+	SceKernelSpinlock lock;
 	BbmcUsbSerialRequest *head;
 	BbmcUsbSerialRequest *tail;
 };
@@ -55,7 +55,7 @@ typedef struct BbmcUsbSerialHost {
 	int deviceId[4];
 	int attached[4];
 	SceUID event;
-	SceUInt32 lock;
+	SceKernelSpinlock lock;
 	BbmcUsbSerialPipe controlPipe;
 	BbmcUsbSerialEndpoints endpoints[4];
 	void (*stateChanged[2])(SceUInt32 events, void *context);
@@ -82,7 +82,7 @@ typedef struct BbmcUsbExtIfControl {
 	int restoreMtp;
 	int controllerStarted;
 	int mode;
-	SceUInt32 lock;
+	SceKernelSpinlock lock;
 	int qcomChannel;
 	int atChannel;
 } BbmcUsbExtIfControl;

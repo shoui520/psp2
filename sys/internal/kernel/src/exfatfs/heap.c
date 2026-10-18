@@ -6,7 +6,7 @@
 
 struct SceExfatfsDrive;
 
-SceUInt32 g_heapLock;
+SceKernelSpinlock g_heapLock;
 SceUID g_commonHeapId = -1;
 void *g_heapBlockCache[4];
 int g_heapBlockCacheCount;

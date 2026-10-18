@@ -273,7 +273,7 @@ typedef struct VeneziaDebuggerState {
 	uint32_t captureSlotBusy[4];
 	unsigned int selectedBank;
 	int captureInvalid;
-	uint32_t spinlock;
+	SceKernelSpinlock spinlock;
 	void (*log)(unsigned int event, unsigned int count, ...);
 } VeneziaDebuggerState;
 

@@ -72,7 +72,7 @@ struct SysrootState {
 	void *cls;
 	uint32_t size;
 	uint32_t magic;
-	volatile uint32_t bootHeapLock;
+	volatile SceKernelSpinlock bootHeapLock;
 	SceSize bootHeapCapacity;
 	uintptr_t bootHeapCursor;
 	uint32_t perCpuCount;			/* 0x1c */
@@ -95,7 +95,7 @@ struct SysrootState {
 	};
 	volatile uint32_t modelCapability;
 	volatile SceLongTimerRegisters *sharedTime;
-	volatile uint32_t initCallbackLock;
+	volatile SceKernelSpinlock initCallbackLock;
 	uint32_t initCallbackBase;
 	struct SysrootInitCallbackSlot initCallbacks[9][8];
 	int (*threadMgrStartAfterProcess)(void);

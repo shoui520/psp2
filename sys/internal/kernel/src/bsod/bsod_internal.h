@@ -28,7 +28,7 @@ typedef struct BsodFramebuffer {
 typedef struct BsodDisplay {
 	uint32_t *pixels;
 	int lock;
-	uint32_t captureLock;
+	SceKernelSpinlock captureLock;
 	BsodFramebuffer previous;
 	BsodFramebuffer current;
 } BsodDisplay;

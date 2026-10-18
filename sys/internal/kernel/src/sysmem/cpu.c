@@ -230,7 +230,7 @@ int sceKernelCpuId(void)
 #endif
 
 #if FW_DEBUG
-void sceKernelSpinlockLowUnlock(volatile uint32_t *lock)
+void sceKernelSpinlockLowUnlock(volatile SceKernelSpinlock *lock)
 {
 	if (!*lock) {
 		void *caller = __builtin_return_address(0);
@@ -275,7 +275,7 @@ void SceCpuForKernel_C6426313(void)
 }
 
 #if FW_DEBUG
-void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile SceKernelSpinlock *lock, SceKernelIntrStatus flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
@@ -321,7 +321,7 @@ void sceKernelSpinlockLowUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t f
 	CpuSpinlockUnlockIrq(lock, flags);
 }
 
-void sceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
+void sceKernelRWSpinlockLowReadUnlock(volatile SceKernelRWSpinlock *lock)
 {
 	if (!*lock || *lock == 0x80000000U) {
 		void *caller = __builtin_return_address(0);
@@ -337,7 +337,7 @@ void sceKernelRWSpinlockLowReadUnlock(volatile uint32_t *lock)
 	CpuRWSpinlockReadUnlock(lock);
 }
 
-void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
@@ -383,7 +383,7 @@ void sceKernelRWSpinlockLowReadUnlockCpuResumeIntr(volatile uint32_t *lock, uint
 	CpuRWSpinlockReadUnlockIrq(lock, flags);
 }
 
-void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uint32_t flags)
+void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile SceKernelRWSpinlock *lock, SceKernelIntrStatus flags)
 {
 	void *caller = __builtin_return_address(0);
 	uint32_t status;
@@ -429,7 +429,7 @@ void sceKernelRWSpinlockLowWriteUnlockCpuResumeIntr(volatile uint32_t *lock, uin
 	CpuRWSpinlockWriteUnlockIrq(lock, flags);
 }
 
-void sceKernelRWSpinlockLowWriteUnlock(volatile uint32_t *lock)
+void sceKernelRWSpinlockLowWriteUnlock(volatile SceKernelRWSpinlock *lock)
 {
 	if (*lock != 0x80000000U) {
 		void *caller = __builtin_return_address(0);
