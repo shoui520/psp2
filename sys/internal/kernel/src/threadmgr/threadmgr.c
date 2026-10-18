@@ -5217,10 +5217,13 @@ out:
 	return ret;
 }
 
-/* SceThreadmgrForDriver_E54FD746 */
-int64_t SceThreadmgrForDriver_E54FD746(SceSize size, ThreadmgrStackFunction function, void *arg)
+/*
+ * SceThreadmgrForDriver_E54FD746: sceKernelExtendKernelStackWide for a function returning int; its
+ * callers take the 64-bit result (iofilemgr's sceIoRead and sceIoWrite keep both words)
+ */
+int64_t SceThreadmgrForDriver_E54FD746(SceSize size, int (*function)(void *arg), void *arg)
 {
-	return sceKernelExtendKernelStackWide(size, function, arg);
+	return sceKernelExtendKernelStackWide(size, (ThreadmgrStackFunction)function, arg);
 }
 
 /*

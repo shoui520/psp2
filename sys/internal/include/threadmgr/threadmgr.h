@@ -504,7 +504,7 @@ typedef struct ThreadmgrThreadEventInfo {
 	uint32_t arg;
 } ThreadmgrThreadEventInfo;
 
-/* what SceThreadmgrForDriver_E54FD746 runs on a stack of its own */
+/* what sceKernelExtendKernelStackWide runs on a stack of its own */
 typedef int64_t (*ThreadmgrStackFunction)(void *arg);
 
 /* an alarm's handler: returns the delay to the next call, 0 to end */
@@ -753,7 +753,7 @@ int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *in
 int SceThreadmgrForDriver_E2B57231(int level, SceKernelRWLockInfo *infos, SceSize size,
 				   SceSize *count);
 /* vitasdk: ksceKernelRunWithStack */
-int64_t SceThreadmgrForDriver_E54FD746(SceSize size, ThreadmgrStackFunction function, void *arg);
+int64_t SceThreadmgrForDriver_E54FD746(SceSize size, int (*function)(void *arg), void *arg);
 int SceThreadmgrForDriver_E6D80698(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result, SceUInt32 *timeout);
 void *SceThreadmgrForDriver_E938FB20(unsigned int index);	/* vitasdk: ksceKernelGetTLSAddr */
