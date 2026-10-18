@@ -1,13 +1,34 @@
 /* SceCompat shared SRAM: host, guest boot, and IPL storage phases. */
 #pragma once
 
+#include <scetypes.h>
+#include <rtc.h>
 #include <iofilemgr/iofilemgr.h>
-/* vitasdk's user header; its psp2/io/devctl.h declares the user sceIoIoctl, of other types */
-#define sceIoIoctl	sceIoIoctl_vitasdk
-#include <psp2/compat.h>
-#undef sceIoIoctl
 #include <stddef.h>
 #include <stdint.h>
+
+/* the PSP emulator's video memory, mapped twice: cached and uncached */
+typedef struct SceCompatCdram {
+	void *cachedCdram;
+	void *uncachedCdram;
+} SceCompatCdram;
+
+/*
+ * A controller sample in the PSP's layout (its SDK's SceCtrlData, with the PS Vita's right
+ * stick in two of the reserved bytes), as the emulator reads it from the shared SRAM
+ */
+typedef struct SceCtrlDataPsp {
+	unsigned int TimeStamp;
+	unsigned int Buttons;
+	unsigned char Lx;
+	unsigned char Ly;
+	unsigned char Rx;
+	unsigned char Ry;
+	unsigned char Rsrv[4];
+} SceCtrlDataPsp;
+
+_Static_assert(sizeof(SceCompatCdram) == 8, "SceCompatCdram");
+_Static_assert(sizeof(SceCtrlDataPsp) == 0x10, "SceCtrlDataPsp");
 
 typedef struct SceCompatSharedRequest {
 	uint32_t queueSelector;
@@ -131,5 +152,41 @@ _Static_assert(offsetof(SceCompatSharedSram, runtime.returns) == 0x840,
 	"compat shared return channels");
 _Static_assert(offsetof(SceCompatSharedSram, runtime.interrupts) == 0x8c0,
 	"compat shared interrupt channels");
+
+/* SceCompat: the PSP emulator's system calls (SceCompatForVsh exports three of them too) */
+int sceCompatInitEx(int mode);
+int sceCompatUninit(void);
+int sceCompatStart(void);
+int sceCompatStop(void);
+int sceCompatAllocCdramWithHole(SceCompatCdram *cdram);
+int sceCompatFrameBufferInit(void *framebuffer);
+int sceCompatSetSuspendSema(SceUID semaid1, SceUID semaid2);
+int sceCompatSuspendResume(int mode);
+int sceCompatCache(int mode, void *addr, SceSize size);
+int sceCompatWaitSpecialRequest(int mode);
+int sceCompatWaitAndGetRequest(int mode, int id);
+int sceCompatWaitIntr(unsigned int index);
+int sceCompatInterrupt(int intrCode);
+int sceCompatReturnValueEx(SceUInt32 channel, const SceUInt32 *values, SceUInt64 value);
+int sceCompatLCDCSync(void);
+int sceCompatGetPrimaryHead(void);
+int sceCompatGetPeripheralState(int mode);
+int sceCompatGetStatus(void);
+int sceCompatGetUpdateState(void);
+int sceCompatSetUpdateState(int state);
+int sceCompatSetDisplayConfig(int resolution, int colorSpaceMode);
+int sceCompatSetRif(const char *rif);
+int sceCompatGetPspSystemSoftwareVersion(void);
+int sceCompatAvailableColorSpaceSetting(void);
+int sceCompatCheckPocketStation(void);
+int sceCompatIsPocketStationTitle(const char *titleId);
+int sceCompatReadShared32(int location, int *value);
+int sceCompatWriteShared32(int location, int value);
+int sceCompatWriteSharedCtrl(SceCtrlDataPsp *pad_data);
+int sceCompatGetTitleList(void *buf, SceSize length);
+int sceCompatGetDevInf(SceIoDevInfo *info);
+int sceCompatGetCurrentSecureTick(SceRtcTick *tick);
+int sceCompatIdStorageLookup(short leaf, unsigned int offset, void *buffer, unsigned int size);
+int sceCompatDatRead(int index, unsigned int offset, void *buffer, unsigned int size);
 
 int SceCompatForDriver_6EBD9E01(SceUInt32 mode);

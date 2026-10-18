@@ -1315,17 +1315,17 @@ int compatAllocCdramWithHole(SceCompatCdram *cdram)
 		gCompatMemoryBlocks[2][i] = result;
 	}
 	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[0][0],
-		&cdram->cached_cdram);
+		&cdram->cachedCdram);
 	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[0][2],
-		&cdram->uncached_cdram);
-	if ((uintptr_t)cdram->uncached_cdram !=
-		(uintptr_t)cdram->cached_cdram + 0x3000000) {
+		&cdram->uncachedCdram);
+	if ((uintptr_t)cdram->uncachedCdram !=
+		(uintptr_t)cdram->cachedCdram + 0x3000000) {
 		result = (int)0x80010078;
 		goto failed;
 	}
 	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[1][0],
-		&cdram->uncached_cdram);
-	gCompatCacheRangeBase = (uintptr_t)cdram->cached_cdram;
+		&cdram->uncachedCdram);
+	gCompatCacheRangeBase = (uintptr_t)cdram->cachedCdram;
 	SceSysmemForDriver_A841EDDA(gCompatMemoryBlocks[2][0], &gCompatMainDdr);
 	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[0][1]);
 	SceSysmemForDriver_FFCD9B60(gCompatMemoryBlocks[1][1]);
