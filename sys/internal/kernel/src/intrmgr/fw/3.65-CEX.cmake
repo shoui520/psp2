@@ -49,7 +49,7 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
-	ksceExcpmgrRegisterHandler
+	sceKernelRegisterExceptionHandler
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_7B4CB60A
 	SceSysmemForDriver_8D160E65

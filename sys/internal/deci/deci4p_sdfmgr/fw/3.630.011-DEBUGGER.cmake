@@ -88,8 +88,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetIntrPendingStatusForDebugger
 	SceIntrmgrForKernel_807B2004
 	sceKernelClearIntrPendingStatusForDebugger
-	ksceExcpmgrRegisterHandler
-	ksceExcpmgrGetData
+	sceKernelRegisterExceptionHandler
+	SceExcpmgrForKernel_96C2869C
 	SceSysmemForDriver_009E1C61
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9

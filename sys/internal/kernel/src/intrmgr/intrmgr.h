@@ -11,6 +11,7 @@
 #include <sysmem/sysmem.h>
 #include <sysmem/sysroot.h>
 #include <intrmgr/intrmgr.h>
+#include <excpmgr/excpmgr.h>
 #include <threadmgr/threadcb.h>
 #include <processmgr/process.h>
 #include <intrmgr/gic_regs.h>
@@ -110,16 +111,14 @@ static inline SceUInt32 *StackGuard(unsigned int cpu, unsigned int level)
 	return &g_intrStacks[(4 - cpu) * 16 - level].guard;
 }
 
-void interruptEntry(void);
-void syscallEntry(void);
+extern SceExcpmgrHandler interruptEntry;
+extern SceExcpmgrHandler syscallEntry;
 void initStackGuards(unsigned int magic);
 int checkStackGuard(void);
 int intrmgrSmc(unsigned int paddr, unsigned int command);
 extern char intrEnterHook[], intrLeaveHook[], syscallEnterHook[], syscallLeaveHook[];
 extern SceUInt32 intrEnterBranch, intrLeaveBranch;
 extern SceUInt16 syscallEnterBranch, syscallLeaveBranch;
-
-int ksceExcpmgrRegisterHandler(int code, int flags, void *handler);
 
 int callIntrEvent(unsigned int event, unsigned int size, void *data);
 void invalidApiStatCfunc(const ThreadSyscallFrame *frame, void *result, unsigned int state);

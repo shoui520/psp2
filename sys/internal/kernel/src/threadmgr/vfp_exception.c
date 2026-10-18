@@ -16,6 +16,7 @@
 #include "syscall_context.h"
 #include <sysmem/sysroot.h>
 #include <threadmgr/threadmgr.h>
+#include <excpmgr/excpmgr.h>
 
 #define THREAD_ATTR_USER		0x80000000
 #define PROCESS_DEBUG_SUSPEND_EXCEPTION	0x11	/* PLACEHOLDER: SceSysrootForKernel_1247A825's reason */
@@ -67,7 +68,6 @@ typedef void (*ThreadmgrProcessDebugSuspendHook)(SceUID pid, SceUID threadId, in
 						 uintptr_t arg);
 
 extern void SceIntrmgrForKernel_71E08D71(ThreadmgrVfpTrace *trace, const void *raw);
-extern int SceExcpmgrForKernel_B615A7DA(void);
 void runningThreadPreemptByIntr(struct ThreadCB *context, uint32_t reason);
 
 static const char *const s_traceExceptions[16] = {

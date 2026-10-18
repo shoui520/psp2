@@ -94,7 +94,7 @@ typedef struct SceExcpmgrContext {
 } SceExcpmgrContext;
 
 
-/* the block ksceExcpmgrGetData returns (also given to sysroot slot 4) */
+/* the block SceExcpmgrForKernel_96C2869C returns (also given to sysroot slot 4) */
 typedef struct SceExcpmgrData {
 	unsigned int nestCount[4];		/* 0x00 exception depth per core */
 	unsigned int reserved0[4];
@@ -160,7 +160,24 @@ int sceKernelRegisterExceptionHandler(unsigned int code, unsigned int priority,
 				      SceExcpmgrHandler *handler);
 int sceKernelRegisterDefaultExceptionHandler(SceExcpmgrHandler *handler);
 int sceKernelReleaseExceptionHandler(unsigned int code, SceExcpmgrHandler *handler);
-SceExcpmgrData *ksceExcpmgrGetData(void);
+SceExcpmgrData *SceExcpmgrForKernel_96C2869C(void);
 void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context);
 void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context);
 void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context);
+SceExcpmgrHandler *SceExcpmgrForKernel_4337DD78(void);	/* the default handler */
+
+/* the callbacks the initial debug handlers give a prefetch abort, data abort, undefined context */
+void SceExcpmgrForKernel_58F7212B(SceExcpmgrCallback callback);
+void SceExcpmgrForKernel_9EE59C6E(SceExcpmgrCallback callback);
+void SceExcpmgrForKernel_1FBF5654(SceExcpmgrCallback callback);
+
+/* the kernel process's hardware breakpoints and watchpoints */
+void SceExcpmgrForKernel_293DFA04(ProcessHwBreakpoints *regs);
+void SceExcpmgrForKernel_E7487AFD(ProcessHwWatchpoints *regs);
+
+/* exception nesting depth of this core, 0 in thread context */
+int SceExcpmgrForKernel_B615A7DA(void);
+/* the top of a CPU's exception stack */
+void *SceExcpmgrForKernel_5420ED8F(int cpu);
+/* the code whose faults are SCE_KERNEL_ERROR_INVALID_MEMORY_ACCESS */
+int SceExcpmgrForKernel_44CE04B8(unsigned int start, unsigned int end);

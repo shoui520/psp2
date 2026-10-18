@@ -13,6 +13,7 @@ int bsodFormat(BsodFormatCallback callback, void *context, int count,
 #include <string.h>
 #include <sysmem/debug.h>
 #include <sysmem/sysmem.h>
+#include <excpmgr/excpmgr.h>
 
 typedef struct BsodFramebuffer {
 	uint32_t physical;
@@ -38,7 +39,6 @@ extern uint8_t *s_bsodIftu[3];
 extern uint8_t *s_bsodSyscon[2];
 extern int s_bsodQafEnabled;
 
-int ksceExcpmgrRegisterHandler(unsigned kind, unsigned priority, void *handler);
 
 int _sceKernelBsodIftuInit(int dolce);
 int _sceKernelBsodSysconInit(void);
@@ -48,6 +48,6 @@ int bsodReadFramebuffer(unsigned bank, BsodFramebuffer *framebuffer);
 void bsodWriteFramebuffer(unsigned bank, const BsodFramebuffer *framebuffer);
 void bsodCrashHandler(int kind) __attribute__((noreturn));
 void bsodDebugCrashCallback(void) __attribute__((noreturn));
-extern uint32_t bsodPrefetchEntry[];
-extern uint32_t bsodDataEntry[];
-extern uint32_t bsodUndefinedEntry[];
+extern SceExcpmgrHandler bsodPrefetchEntry;
+extern SceExcpmgrHandler bsodDataEntry;
+extern SceExcpmgrHandler bsodUndefinedEntry;

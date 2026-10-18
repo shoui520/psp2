@@ -903,7 +903,7 @@ notify:
 report:
 	if ((dbgFlags & 1) != 0) {
 		state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
-		intr = SceSysrootForDriver_256B2394(pid, modid, 0x20006, time);
+		intr = SceSysrootForKernel_256B2394(pid, modid, 0x20006, time);
 		if (intr < 0) {
 			if (intr == 0x8002802d) {
 				state->modid = modid;
@@ -1074,7 +1074,7 @@ static inline void sendDbgpStartupFailed(SceUID pid, SceUID modid, int result)
 		return;
 	state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
 	time = sceKernelGetSystemTimeWide();
-	ret = SceSysrootForDriver_256B2394(pid, modid, 0x20005, time);
+	ret = SceSysrootForKernel_256B2394(pid, modid, 0x20005, time);
 	if (ret < 0) {
 		if (ret == 0x8002802d) {
 			state->modid = modid;
@@ -1104,7 +1104,7 @@ static inline void sendDbgpStartupFailedForRetryedSyscall(SceUID pid, ModulemgrT
 	if ((dbgFlags & 1) == 0 || pid != sceKernelGetProcessId())
 		return;
 	state = SceThreadmgrForDriver_3A72C6D8(g_threadStateSlot);
-	ret = SceSysrootForDriver_256B2394(pid, modid, 0x20005, time);
+	ret = SceSysrootForKernel_256B2394(pid, modid, 0x20005, time);
 	if (ret < 0) {
 		if (ret == 0x8002802d) {
 			state->modid = modid;
@@ -1724,7 +1724,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 					path = buf;
 					snprintf(buf, sizeof(buf), "ux0:%s", m->sdPath + 4);
 				}
-				if (SceSysrootForDriver_89D19090())
+				if (SceSysrootForKernel_89D19090())
 					internal = 0;
 			}
 			if (path == NULL)

@@ -805,15 +805,15 @@ modules:
           SceExcpmgrForKernel_44CE04B8: 0x44CE04B8
           SceExcpmgrForKernel_5420ED8F: 0x5420ED8F
           SceExcpmgrForKernel_58F7212B: 0x58F7212B
+          SceExcpmgrForKernel_96C2869C: 0x96C2869C
           SceExcpmgrForKernel_9EE59C6E: 0x9EE59C6E
           SceExcpmgrForKernel_B615A7DA: 0xB615A7DA
           SceExcpmgrForKernel_E7487AFD: 0xE7487AFD
-          ksceExcpmgrGetData: 0x96C2869C
-          ksceExcpmgrRegisterHandler: 0x00063675
           sceKernelInitialHandlerDebugDabtCfunc: 0x64A057C7
           sceKernelInitialHandlerDebugPabtCfunc: 0xD195E55C
           sceKernelInitialHandlerDebugUndefCfunc: 0xB7B10796
           sceKernelRegisterDefaultExceptionHandler: 0x416C0E20
+          sceKernelRegisterExceptionHandler: 0x00063675
           sceKernelReleaseExceptionHandler: 0xDA7BB671
       SceExcpmgrForTZS:
         kernel: true

@@ -176,7 +176,7 @@ set(MODULE_IMPORT_NIDS
 	0x92C9FFC2:F:0xF1DE6949
 )
 set(MODULE_IMPORT_FUNCS
-	ksceExcpmgrRegisterHandler
+	sceKernelRegisterExceptionHandler
 	SceExcpmgrForKernel_3E55B5C3
 	SceExcpmgrForKernel_B615A7DA
 	sceKernelDisableIntr

@@ -906,7 +906,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	int result;
 	SceKernelHeapCreateOpt options;
 
-	result = ksceExcpmgrRegisterHandler(6, 0, interruptEntry);
+	result = sceKernelRegisterExceptionHandler(6, 0, &interruptEntry);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 1998, "register exception handler failed. 0x%08x\n", result);
 		return result;
@@ -1001,7 +1001,7 @@ static inline __attribute__((always_inline)) int Start(void)
 	int result;
 	SceKernelHeapCreateOpt options;
 
-	result = ksceExcpmgrRegisterHandler(6, 0, interruptEntry);
+	result = sceKernelRegisterExceptionHandler(6, 0, &interruptEntry);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 1998, INTR_TEXT(g_intrRegisterExceptionHandlerFailedX, "register exception handler failed. 0x%08x\n"), result);
 		return result;
@@ -1014,7 +1014,7 @@ static inline __attribute__((always_inline)) int Start(void)
 		return result;
 	}
 	g_intrHeap = result;
-	result = ksceExcpmgrRegisterHandler(2, 0, syscallEntry);
+	result = sceKernelRegisterExceptionHandler(2, 0, &syscallEntry);
 	if (result < 0) {
 		SCE_DBG_PRINTF(6, 2024, INTR_TEXT(g_intrRegisterSyscallEntryFailedX, "register syscall entry failed. 0x%08x\n"), result);
 		SCE_DBG_ASSERT_FAIL(2025);

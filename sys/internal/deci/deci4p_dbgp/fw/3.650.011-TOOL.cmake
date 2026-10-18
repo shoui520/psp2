@@ -265,7 +265,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FF8DA217
 	SceThreadmgrForKernel_6C1F092F
 	SceIntrmgrForDriver_182EE3E3
-	ksceExcpmgrRegisterHandler
+	sceKernelRegisterExceptionHandler
 	sceKernelInitialHandlerDebugDabtCfunc
 	sceKernelInitialHandlerDebugUndefCfunc
 	sceKernelInitialHandlerDebugPabtCfunc

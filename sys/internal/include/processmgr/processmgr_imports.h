@@ -28,22 +28,12 @@
 #include <sysmem/debug.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/utils.h>
-
-/* SceIofilemgrForDriver */
-
-/* SceCpuForDriver / SceCpuForKernel */
+#include <excpmgr/excpmgr.h>
 
 /* SceSblACMgrForKernel */
 int SceSblACMgrForKernel_sceSblACMgrIsGameProgram(SceUID pid);
 int SceSblACMgrForKernel_49509A83(SceUID pid);
 int SceSblACMgrForKernel_BBA13D9C(void);	/* vitasdk: ksceSblACMgrIsDevelopmentMode2 */
-
-/* SceExcpmgrForKernel */
-void SceExcpmgrForKernel_293DFA04(void);
-int SceExcpmgrForKernel_B615A7DA(void);			/* in an exception context */
-void SceExcpmgrForKernel_E7487AFD(void *phwp);
-
-/* SceIntrmgrForKernel / SceIntrmgrForDriver */
 
 /* SceModulemgrForKernel / SceModulemgrForDriver */
 int ksceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags);
@@ -63,15 +53,5 @@ int SceThreadmgrForKernel_7425185E(void *process);
 int SceThreadmgrForKernel_89C17825(void *process);
 int sceKernelThreadMgrProcessCreate(void *process);
 int sceKernelGetDefaultCpuAffinityMask(void *budget);
-
-/* SceThreadmgrForDriver */
-
-/* SceSysmemForKernel / SceSysmemForDriver */
-
-/* SceSysrootForDriver / SceSysrootForKernel */
-
-/* SceDebugForKernel (beyond sysmem/debug.h) */
-
-/* SceKernelUtilsForDriver */
 
 #endif

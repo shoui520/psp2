@@ -392,14 +392,14 @@ unsigned int PatchUserInstruction(SceExcpmgrContext *context)
 }
 
 /* exception nesting depth of this core, 0 in thread context */
-unsigned int SceExcpmgrForKernel_B615A7DA(void)
+int SceExcpmgrForKernel_B615A7DA(void)
 {
 	if (getCurrentThreadCB() != NULL)
 		return 0;
 	return g_excpData.nestCount[SceCpuId()];
 }
 
-SceExcpmgrData *ksceExcpmgrGetData(void)
+SceExcpmgrData *SceExcpmgrForKernel_96C2869C(void)
 {
 	return &g_excpData;
 }

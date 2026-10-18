@@ -192,6 +192,7 @@ int SceSysrootForKernel_1D84C4D4(SceUID pid, SceUInt32 addr, SceUInt32 *fingerpr
 int SceSysrootForKernel_20D2A0DF(SceUID pid, SceUID modid, uint64_t time);
 int SceSysrootForKernel_2A03DFA1(void *out);
 int SceSysrootForKernel_377895EB(void);
+/* the instruction a software breakpoint replaced: 9CFF80F9 reads it (0: there is one), 38751FB7 replaces it */
 int SceSysrootForKernel_38751FB7(SceUID pid, SceUInt32 address, SceUInt32 instruction);
 uint32_t SceSysrootForKernel_41636522(void);
 int SceSysrootForKernel_47724459(int event);

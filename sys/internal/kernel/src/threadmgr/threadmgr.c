@@ -514,10 +514,7 @@ int uidExtendedClassInit(struct ThreadmgrWaitableClass *cls, const char *name,
 #define SGI_LOW_PRIORITY		0x50
 #define CPU_STOP_REQUEST		4
 
-/* excpmgr's exception kinds and handler slots */
-#define EXCP_UNDEFINED			1
-#define EXCP_PREFETCH_ABORT		3
-#define EXCP_DATA_ABORT			4
+/* the priorities of threadmgr's excpmgr handlers */
 #define EXCP_SLOT_FAULT			4	/* PLACEHOLDER: names */
 #define EXCP_SLOT_DEBUG			6
 
@@ -560,14 +557,13 @@ extern int SceIntrmgrForKernel_E3B670BF(void *handler);	/* a thread's debug susp
 extern int SceIntrmgrForKernel_BCD3BB05(void);
 extern uint32_t SceIntrmgrForKernel_08FDB0CE(struct ThreadRegisterContext *context, uint32_t flags,
 					     uintptr_t vfp);
-extern int ksceExcpmgrRegisterHandler(int kind, int slot, void *handler);
 
 /* excp_handlers.S */
 void poisonVfpRegisters(void);
 void idleThreadEntry(void);
-extern uint8_t threadmgrAbortHandler[], threadmgrPrefetchHandler[], threadmgrUndefHandler[];
-extern uint8_t threadmgrDebugAbortHandler[], threadmgrDebugPrefetchHandler[];
-extern uint8_t threadmgrDebugUndefHandler[];
+extern SceExcpmgrHandler threadmgrAbortHandler, threadmgrPrefetchHandler, threadmgrUndefHandler;
+extern SceExcpmgrHandler threadmgrDebugAbortHandler, threadmgrDebugPrefetchHandler;
+extern SceExcpmgrHandler threadmgrDebugUndefHandler;
 
 /* the rest of threadmgr */
 extern uint8_t s_zeroBlock[0x80];
@@ -926,13 +922,12 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	startSimpleEvent();
 	startWorkQueue();
 	startException();
-	ksceExcpmgrRegisterHandler(EXCP_UNDEFINED, EXCP_SLOT_FAULT, threadmgrUndefHandler);
-	ksceExcpmgrRegisterHandler(EXCP_PREFETCH_ABORT, EXCP_SLOT_FAULT, threadmgrPrefetchHandler);
-	ksceExcpmgrRegisterHandler(EXCP_DATA_ABORT, EXCP_SLOT_FAULT, threadmgrAbortHandler);
-	ksceExcpmgrRegisterHandler(EXCP_UNDEFINED, EXCP_SLOT_DEBUG, threadmgrDebugUndefHandler);
-	ksceExcpmgrRegisterHandler(EXCP_PREFETCH_ABORT, EXCP_SLOT_DEBUG,
-				   threadmgrDebugPrefetchHandler);
-	ksceExcpmgrRegisterHandler(EXCP_DATA_ABORT, EXCP_SLOT_DEBUG, threadmgrDebugAbortHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_UNDEF, EXCP_SLOT_FAULT, &threadmgrUndefHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_PABT, EXCP_SLOT_FAULT, &threadmgrPrefetchHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_DABT, EXCP_SLOT_FAULT, &threadmgrAbortHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_UNDEF, EXCP_SLOT_DEBUG, &threadmgrDebugUndefHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_PABT, EXCP_SLOT_DEBUG, &threadmgrDebugPrefetchHandler);
+	sceKernelRegisterExceptionHandler(SCE_EXCP_DABT, EXCP_SLOT_DEBUG, &threadmgrDebugAbortHandler);
 	registerThreadmgrVfpExceptionIntrHandler();
 	SceKernelSuspendForDriver_CE7A2207(SUSPEND_ORDER_THREADMGR, threadmgrSuspendHandler, NULL);
 	SceKernelSuspendForDriver_105C5752(SUSPEND_ORDER_THREADMGR, threadmgrResumeHandler, NULL);

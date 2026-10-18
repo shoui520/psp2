@@ -1442,7 +1442,7 @@ static int CreateKernelProcess(void)
 		process->phwp = &g_kernelPhwp;
 		process->contextBreakpoint = &g_kernelContextBreakpoint;
 	}
-	SceExcpmgrForKernel_293DFA04();
+	SceExcpmgrForKernel_293DFA04(process->phbp);
 	SceIntrmgrForKernel_ABEB5A69(process->phbp);
 	SceExcpmgrForKernel_E7487AFD(process->phwp);
 	SceIntrmgrForKernel_7E3D4560(process->phwp);

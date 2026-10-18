@@ -29,14 +29,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>
-
-/* SceIofilemgrForDriver */
-
-/* SceSysmemForKernel / SceSysmemForDriver */
-
-/* SceCpuForDriver / SceCpuForKernel */
-
-/* SceThreadmgrForDriver / SceThreadmgrForKernel */
+#include <excpmgr/excpmgr.h>
 
 /* SceSblACMgrForDriver / SceSblAuthMgrForKernel / SceQafMgrForDriver */
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, void *type);
@@ -47,23 +40,12 @@ int ksceSblAuthMgrAuthHeader(int ctx, const void *header, SceSize size, void *in
 int ksceSblAuthMgrSetupAuthSegment(int ctx, int index);
 int ksceSblAuthMgrLoadBlock(int ctx, void *buf, SceSize size);
 
-/* SceSysrootForKernel / SceSysrootForDriver */
-/* the NID db names these SceSysrootForKernel imports oddly */
-#define SceSysrootForDriver_89D19090		SceSysrootForKernel_89D19090
-#define SceSysrootForDriver_256B2394 \
-/* the instruction a software breakpoint replaced: 9CFF80F9 reads it (0: there is one), 38751FB7 replaces it */
-
-/* SceProcEventForDriver */
-
 /* SceProcessmgrForKernel / SceProcessmgrForDriver */
 void sceKernelFreeRemoteToolHeap(SceUID pid, void *ptr);
 void sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
 int SceProcessmgrForKernel_8B4086AF(SceUID pid);	/* reserve a module slot */
 
-/* SceDebugForKernel / SceExcpmgrForKernel / SceIntrmgr */
-void *SceExcpmgrForKernel_5420ED8F(int cpu);		/* top of the exception stack of a CPU */
-int SceExcpmgrForKernel_B615A7DA(void);			/* exception nesting level */
-
+/* SceIntrmgrForDriver / SceIntrmgrForKernel */
 int SceIntrmgrForDriver_C568F145(int code);
 int SceIntrmgrForKernel_71C5F42F(void *handler);
 

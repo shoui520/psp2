@@ -607,10 +607,9 @@ int SceDeci4pSDfMgrForKernel_59C077B3(SdfMgrControl control)
 
 /* Per-core DECI initialization and CPU0 exception/debugger registration. */
 
-extern void sdfMgrDataAbortEntry(void);
-extern void sdfMgrPrefetchAbortEntry(void);
-extern void sdfMgrUndefinedEntry(void);
-int ksceExcpmgrRegisterHandler(unsigned int kind, int priority, void *handler);
+extern SceExcpmgrHandler sdfMgrDataAbortEntry;
+extern SceExcpmgrHandler sdfMgrPrefetchAbortEntry;
+extern SceExcpmgrHandler sdfMgrUndefinedEntry;
 
 /* Sysroot keeps these handlers for the bus error, system error and power paths. */
 int dcmpInit(SdfMgrProtocolState *protocol);
@@ -724,13 +723,13 @@ int module_bootstart(SceSize args, void *argp)
 		}
 	}
 	if (!sceKernelCpuId()) {
-		result = ksceExcpmgrRegisterHandler(3, 2, sdfMgrPrefetchAbortEntry);
+		result = sceKernelRegisterExceptionHandler(3, 2, &sdfMgrPrefetchAbortEntry);
 		BOOT_CHECK(result, 291, 0x3ca87a6f, 292, 0x40a8c17c,
 			   "sceKernelRegisterExceptionHandler() failed (0x%08x)\n");
-		result = ksceExcpmgrRegisterHandler(4, 2, sdfMgrDataAbortEntry);
+		result = sceKernelRegisterExceptionHandler(4, 2, &sdfMgrDataAbortEntry);
 		BOOT_CHECK(result, 303, 0x6a2d38af, 304, 0x292cf543,
 			   "sceKernelRegisterExceptionHandler() failed (0x%08x)\n");
-		result = ksceExcpmgrRegisterHandler(1, 2, sdfMgrUndefinedEntry);
+		result = sceKernelRegisterExceptionHandler(1, 2, &sdfMgrUndefinedEntry);
 		BOOT_CHECK(result, 315, 0xda54a773, 316, 0xfa6cbe59,
 			   "sceKernelRegisterExceptionHandler() failed (0x%08x)\n");
 		/* The registered routines ignore the interrupt code and context. */
@@ -782,7 +781,7 @@ int sdfMgrPrefetchAbortHandler(SceExcpmgrContext *context,
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readIfsr();
 	sdfMgrFormatCpsr(status, cpsr);
-	s_sdfMgrState.exceptionDepth = (uint32_t *)ksceExcpmgrGetData();
+	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
 	    thread.process_id == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);
@@ -808,7 +807,7 @@ int sdfMgrDataAbortHandler(SceExcpmgrContext *context,
 	cpu = &s_sdfMgrState.cpu[sdfMgrCoreIndex()];
 	fault = readDfsr();
 	sdfMgrFormatCpsr(status, cpsr);
-	s_sdfMgrState.exceptionDepth = (uint32_t *)ksceExcpmgrGetData();
+	s_sdfMgrState.exceptionDepth = (uint32_t *)SceExcpmgrForKernel_96C2869C();
 	if (((fault & 15) | ((fault >> 10) & 1) << 4) != 2 &&
 	    thread.process_id == SCE_KERNEL_PROCESS_ID)
 		dumpModuleInfo(address);

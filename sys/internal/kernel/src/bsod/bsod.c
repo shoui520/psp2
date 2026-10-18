@@ -61,9 +61,9 @@ int module_start(unsigned arglen, void *argp)
 	_sceKernelBsodSysconInit();
 	_sceKernelBsodIftuInit(SceSblAIMgrForDriver_71608CA3() != 0);
 	state = SceCpuForDriver_821FC0EE();
-	ksceExcpmgrRegisterHandler(3, 2, bsodPrefetchEntry);
-	ksceExcpmgrRegisterHandler(4, 2, bsodDataEntry);
-	ksceExcpmgrRegisterHandler(1, 2, bsodUndefinedEntry);
+	sceKernelRegisterExceptionHandler(3, 2, &bsodPrefetchEntry);
+	sceKernelRegisterExceptionHandler(4, 2, &bsodDataEntry);
+	sceKernelRegisterExceptionHandler(1, 2, &bsodUndefinedEntry);
 	SceDebugForKernel_67E9D1EC(bsodDebugCrashCallback);
 	bsodInitializePutchar();
 	SceDebugForKernel_A465A31A(0);
