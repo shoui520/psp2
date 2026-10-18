@@ -11,7 +11,7 @@
 #include <sysmem/debug.h>
 #include <sysmem/procevent.h>
 #include <acmgr/acmgr.h>
-#include <psp2/audioout.h>
+#include <audioout.h>
 
 #include "audio_private.h"
 #include "audio_work.h"
@@ -664,8 +664,7 @@ out:
 	return result;
 }
 
-int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
-		       SceAudioOutMode mode)
+int sceAudioOutOpenPort(int type, int len, int freq, int mode)
 {
 	unsigned int syscall;
 	AudioProcessLocalStorage *storage;
@@ -680,7 +679,7 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 	int result;
 
 	if (((unsigned int)len << 26) != 0 || (unsigned int)len - 1 > 0xffbf)
-		return (int)0x80260006;
+		return SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 	syscall = sceSyscallEnter();
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
@@ -693,7 +692,7 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 	switch (type) {
 	case SCE_AUDIO_OUT_PORT_TYPE_MAIN:
 		if (freq != 48000) {
-			result = (int)0x80260008;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 			goto unlock;
 		}
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
@@ -737,12 +736,12 @@ int sceAudioOutOpenPort(SceAudioOutPortType type, int len, int freq,
 			index = 0;
 			goto selectedMain;
 		}
-		result = (int)0x80260005;
+		result = SCE_AUDIO_OUT_ERROR_PORT_FULL;
 		goto unlockMain;
 selectedMain:
 		if (sampleMode != 0) {
 			if (sampleMode != 1) {
-				result = (int)0x80260007;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 				goto unlockMain;
 			}
 			bytesPerFrame = 4;
@@ -786,13 +785,13 @@ selectedMain:
 	if (freq != 48000 && freq != 44100 && freq != 32000 && freq != 24000 &&
 	    freq != 22050 && freq != 16000 && freq != 12000 && freq != 11025 && freq != 8000) {
 		if (SceSblACMgrForDriver_FD00C72A(0) != 1 || freq != 44184) {
-			result = (int)0x80260008;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 			goto unlockDirect;
 		}
 	}
 	if (sampleMode != 0) {
 		if (sampleMode != 1) {
-			result = (int)0x80260007;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 			goto unlockDirect;
 		}
 		bytesPerFrame = 4;
@@ -800,7 +799,7 @@ selectedMain:
 		bytesPerFrame = 2;
 	}
 	if (direct->len != 0) {
-		result = (int)0x80260005;
+		result = SCE_AUDIO_OUT_ERROR_PORT_FULL;
 		goto unlockDirect;
 	}
 	direct->ramp.direction = 0;
@@ -854,7 +853,7 @@ int sceAudioOutOpenExtPort(int len, int mode)
 	int result;
 
 	if (((unsigned int)len << 26) != 0 || (unsigned int)len - 1 > 0xffbf)
-		return (int)0x80260006;
+		return SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 	syscall = sceSyscallEnter();
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
@@ -867,12 +866,12 @@ int sceAudioOutOpenExtPort(int len, int mode)
 	sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 	port = &storage->main[8];
 	if (port->config.len != 0 || port->current.cursor != NULL) {
-		result = (int)0x80260005;
+		result = SCE_AUDIO_OUT_ERROR_PORT_FULL;
 		goto unlockMain;
 	}
 	if (sampleMode != 0) {
 		if (sampleMode != 1) {
-			result = (int)0x80260007;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 			goto unlockMain;
 		}
 		bytesPerFrame = 4;
@@ -927,7 +926,7 @@ int sceAudioOutReleasePort(int port)
 			goto unlockDirect;
 		}
 		if (direct->remaining != 0) {
-			result = (int)0x80260002;
+			result = SCE_AUDIO_OUT_ERROR_BUSY;
 			goto unlockDirect;
 		}
 		index = direct->channel;
@@ -948,7 +947,7 @@ int sceAudioOutReleasePort(int port)
 		goto unlock;
 	}
 	if (index > 8) {
-		result = (int)0x80260003;
+		result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 		goto unlock;
 	}
 	main = &storage->main[index];
@@ -959,7 +958,7 @@ int sceAudioOutReleasePort(int port)
 	}
 	if (main->current.mapping <= 0) {
 		if (main->queued.mapping > 0) {
-			result = (int)0x80260002;
+			result = SCE_AUDIO_OUT_ERROR_BUSY;
 			goto unlockMain;
 		}
 	} else {
@@ -967,7 +966,7 @@ int sceAudioOutReleasePort(int port)
 		if (main->queued.mapping > 0 ||
 		    (SceProcessmgrForDriver_D141C076(0, &sdkVersion) >= 0 &&
 		     sdkVersion >= 0x2000000)) {
-			result = (int)0x80260002;
+			result = SCE_AUDIO_OUT_ERROR_BUSY;
 			goto unlockMain;
 		}
 		while (main->current.mapping > 0 || main->queued.mapping > 0) {
@@ -1051,7 +1050,7 @@ int _audioSetptrMain(int port, const void *buf)
 	}
 	if (type == 0) {
 		if (index > 8) {
-			result = (int)0x80260003;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 			goto out;
 		}
 		main = &storage->main[index];
@@ -1059,7 +1058,7 @@ int _audioSetptrMain(int port, const void *buf)
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (main->config.len == 0)
 			goto unlockMain;
-		result = (int)0x80260002;
+		result = SCE_AUDIO_OUT_ERROR_BUSY;
 		if (main->queued.mapping != 0)
 			goto unlockMain;
 		if (storage->link.prev == NULL) {
@@ -1146,7 +1145,7 @@ int _audioSetptrMain(int port, const void *buf)
 	result = (int)0xc0260001;
 	if (direct->len == 0)
 		goto out;
-	result = (int)0x80260002;
+	result = SCE_AUDIO_OUT_ERROR_BUSY;
 	if (direct->remaining != 0)
 		goto out;
 	sceKernelWaitEventFlag(audioEventFlag, mask, 5, NULL, NULL);
@@ -1305,7 +1304,7 @@ out:
 	return result;
 }
 
-int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
+int sceAudioOutSetVolume(int port, int ch, int *vol)
 {
 	unsigned int syscall;
 	unsigned int type = ((unsigned int)port >> 8) & 0xff;
@@ -1318,7 +1317,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 	int result;
 
 	if (vol == NULL)
-		return (int)0x80260004;
+		return SCE_AUDIO_OUT_ERROR_INVALID_POINTER;
 	syscall = sceSyscallEnter();
 	result = sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	if (result < 0)
@@ -1353,7 +1352,7 @@ int sceAudioOutSetVolume(int port, SceAudioOutChannelFlag ch, int *vol)
 		else
 			maximum = 0x8000;
 		if (volume[0] > maximum || volume[1] > maximum) {
-			result = (int)0x80260009;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_VOLUME;
 		} else {
 			result = 0;
 			direct->volume[0] = volume[0];
@@ -1364,7 +1363,7 @@ unlockDirect:
 	} else {
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
-			result = (int)0x80260003;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 			goto unlockMain;
 		}
 		main = &storage->main[index];
@@ -1383,7 +1382,7 @@ unlockDirect:
 		else
 			maximum = 0x8000;
 		if (volume[0] > maximum || volume[1] > maximum) {
-			result = (int)0x80260009;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_VOLUME;
 		} else {
 			result = 0;
 			main->volume[0] = volume[0];
@@ -1399,7 +1398,7 @@ out:
 	return result;
 }
 
-int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
+int sceAudioOutSetConfig(int port, int len, int freq, int mode)
 {
 	unsigned int syscall = sceSyscallEnter();
 	unsigned int type = ((unsigned int)port >> 8) & 0xff;
@@ -1432,7 +1431,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 		if ((int)len < 0)
 			len = direct->len;
 		else if ((len & 63) != 0 || len - 1 > 0xffbf) {
-			result = (int)0x80260006;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 			goto unlockDirect;
 		}
 		if (freq < 0)
@@ -1441,7 +1440,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 			 freq != 24000 && freq != 22050 && freq != 16000 &&
 			 freq != 12000 && freq != 11025 && freq != 8000) {
 			if (SceSblACMgrForDriver_FD00C72A(0) != 1 || freq != 44184) {
-				result = (int)0x80260008;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 				goto unlockDirect;
 			}
 		}
@@ -1451,7 +1450,7 @@ int sceAudioOutSetConfig(int port, SceSize len, int freq, SceAudioOutMode mode)
 			else if ((unsigned char)mode == 1)
 				bytesPerFrame = 4;
 			else {
-				result = (int)0x80260007;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 				goto unlockDirect;
 			}
 			if (type == 1) {
@@ -1469,7 +1468,7 @@ unlockDirect:
 	} else {
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
-			result = (int)0x80260003;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 			goto unlockMain;
 		}
 		main = &storage->main[index];
@@ -1480,11 +1479,11 @@ unlockDirect:
 		if ((int)len < 0)
 			len = main->config.len;
 		else if ((len & 63) != 0 || len - 1 > 0xffbf) {
-			result = (int)0x80260006;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 			goto unlockMain;
 		}
 		if (freq >= 0 && freq != 48000) {
-			result = (int)0x80260008;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 			goto unlockMain;
 		}
 		if (mode >= 0) {
@@ -1493,7 +1492,7 @@ unlockDirect:
 			else if ((unsigned char)mode == 1)
 				main->config.bytesPerFrame = 4;
 			else {
-				result = (int)0x80260007;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 				goto unlockMain;
 			}
 		}
@@ -1509,7 +1508,7 @@ out:
 	return result;
 }
 
-int sceAudioOutGetAdopt(SceAudioOutPortType type)
+int sceAudioOutGetAdopt(int type)
 {
 	unsigned int syscall = sceSyscallEnter();
 	AudioProcessLocalStorage *storage;
@@ -1558,7 +1557,7 @@ out:
 	return result;
 }
 
-int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
+int sceAudioOutGetConfig(int port, int type)
 {
 	unsigned int syscall = sceSyscallEnter();
 	unsigned int portType = ((unsigned int)port >> 8) & 0xff;
@@ -1596,7 +1595,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 			case 0:
 				break;
 			default:
-				result = (int)0x8026000c;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_CONF_TYPE;
 				break;
 			}
 		}
@@ -1604,7 +1603,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 	} else {
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
-			result = (int)0x80260003;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 			goto unlockMain;
 		}
 		main = &storage->main[index];
@@ -1622,7 +1621,7 @@ int sceAudioOutGetConfig(int port, SceAudioOutConfigType type)
 			case 0:
 				break;
 			default:
-				result = (int)0x8026000c;
+				result = SCE_AUDIO_OUT_ERROR_INVALID_CONF_TYPE;
 				break;
 			}
 		}
@@ -1663,7 +1662,7 @@ int sceAudioOutGetRestSample(int port)
 	} else {
 		sceKernelWaitEventFlag(audioEventFlag, 32, 5, NULL, NULL);
 		if (index > 8) {
-			result = (int)0x80260003;
+			result = SCE_AUDIO_OUT_ERROR_INVALID_PORT;
 			goto unlockMain;
 		}
 		main = &storage->main[index];
@@ -1864,7 +1863,7 @@ int SceAudioForDriver_15FB30DF(unsigned int volume)
 	int result;
 
 	if (volume > 0x8000)
-		return (int)0x80260009;
+		return SCE_AUDIO_OUT_ERROR_INVALID_VOLUME;
 	result = audioSetHardwareVolume(1, volume, volume);
 	if (result >= 0)
 		audioHardwareVolume = volume;
@@ -1916,7 +1915,7 @@ int audioModuleStart(SceSize arglen, const void *argp)
 int SceAudioForDriver_134C96C1(int freq)
 {
 	if (freq != 8000 && freq != 48000)
-		return (int)0x80260008;
+		return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	audioEightKhzMode = freq == 8000;
 	sceKernelSetEventFlag(audioEventFlag, 16);
@@ -1926,7 +1925,7 @@ int SceAudioForDriver_134C96C1(int freq)
 int SceAudioForDriver_FC375BAC(int mode)
 {
 	if ((unsigned int)mode - 1 > 1)
-		return (int)0x80260007;
+		return SCE_AUDIO_OUT_ERROR_INVALID_FORMAT;
 	sceKernelWaitEventFlag(audioEventFlag, 16, 5, NULL, NULL);
 	audioModeOneEnabled = mode == 1;
 	SceClockgenForDriver_820D3516(48000);
@@ -1966,12 +1965,12 @@ int audioProcessDirectPort(AudioDirectPort *port, int16_t *output,
 	return (int)(0x80260219U - (unsigned int)result);
 }
 
-int sceAudioOutSetAlcMode(SceAudioOutAlcMode mode)
+int sceAudioOutSetAlcMode(int mode)
 {
 	AudioProcessLocalStorage *storage;
 
 	if ((unsigned int)mode > 1)
-		return (int)0x80260200;
+		return SCE_AUDIO_OUT_ERROR_INVALID_FX_TYPE;
 	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL)
 		return (int)0x80260230;
@@ -2001,7 +2000,7 @@ int sceAudioOutSetEffectType(int type)
 		equalizer = 0x01432331;
 		break;
 	default:
-		return (int)0x80260200;
+		return SCE_AUDIO_OUT_ERROR_INVALID_FX_TYPE;
 	}
 	storage = SceProcessmgrForDriver_EE694840(audioStorageKey);
 	if (storage == NULL)

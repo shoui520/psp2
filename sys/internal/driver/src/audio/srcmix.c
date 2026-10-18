@@ -10,6 +10,7 @@
 #include "aclkgen.h"
 #include "audio_work.h"
 #include <lowio/pervasive.h>
+#include <audioout.h>
 
 const uint32_t audioDmaCommands[3][3] = {
 	{ 0x1a80000, 0x1b00000, 0xc54000 },
@@ -644,7 +645,7 @@ int audioQueueHardwareBuffer(int channel, void *buffer, unsigned int wordCount)
 
 	if (wordCount <= 4 || (wordCount & 3) ||
 	    ((audioEightKhzMode | audioModeOneEnabled) && wordCount != 120))
-		return (int)0x80260006;
+		return SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 	if (channel == 0) {
 		state = &audioDmaStates[1];
 		if (state->sourceMode != 2)
@@ -807,7 +808,7 @@ int audioQueueSingleHardwareBuffer(void *buffer, unsigned int wordCount)
 	SceKernelIntrStatus intr;
 
 	if (wordCount <= 4 || (wordCount & 3))
-		return (int)0x80260006;
+		return SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 	if (state->transmitSourceMode != 2)
 		return -2;
 	if (sceKernelDmaOpSync(state->transfers[0].opId, 1, 0, 0) <= 0)
@@ -845,15 +846,15 @@ int audioSubmitDmaBuffer(uintptr_t source, unsigned int wordCount,
 	if (!source)
 		goto wait;
 	if (source & 15)
-		return (int)0x80260004;
+		return SCE_AUDIO_OUT_ERROR_INVALID_POINTER;
 	intr = SceCpuForDriver_D32ACE9E(&state->lock);
 	running = transfer->state;
 	if (running > 1) {
-		result = (int)0x80260002;
+		result = SCE_AUDIO_OUT_ERROR_BUSY;
 		goto unlock;
 	}
 	if (wordCount <= 4 || (wordCount & 3)) {
-		result = (int)0x80260006;
+		result = SCE_AUDIO_OUT_ERROR_INVALID_SIZE;
 		goto unlock;
 	}
 	transfer->tags[0].src = (const void *)source;
@@ -989,7 +990,7 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 	case 8000: selector = 34; break;
 	default:
 		if (clockRate > 0)
-			return (int)0x80260008;
+			return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 		selector = -1;
 		break;
 	}
@@ -1003,7 +1004,7 @@ int SceAudioForDriver_28B3AF10(int channel, int inputRate, int outputRate,
 	}
 	if (outputRate > 0) {
 		if ((unsigned int)(clockRate - 1) <= 0x7cfe)
-			return (int)0x80260008;
+			return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 		packet[tail] = 0;
 		send = 1;
 	} else if (outputRate == 0) {

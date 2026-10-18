@@ -1,6 +1,7 @@
 #include "audio_work.h"
 /* Audio clock-divider programming. */
 #include "aclkgen.h"
+#include <audioout.h>
 
 
 const struct AudioClockDivider audioClockDividers[10] = {
@@ -49,7 +50,7 @@ int audioSetClockRates(unsigned int channel, int inputRate, int outputRate,
 		else if (clockRate == 8000)
 			clockIndex = 9;
 		else
-			return (int)0x80260008;
+			return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 		setMask = 4;
 	} else if (clockRate == 0) {
 		clearMask = 4;
@@ -76,7 +77,7 @@ int audioSetClockRates(unsigned int channel, int inputRate, int outputRate,
 		else if (inputRate == 8000)
 			inputIndex = 9;
 		else
-			return (int)0x80260008;
+			return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 		setMask |= 1;
 	} else if (inputRate == 0) {
 		clearMask |= 1;
@@ -103,7 +104,7 @@ int audioSetClockRates(unsigned int channel, int inputRate, int outputRate,
 		else if (outputRate == 8000)
 			outputIndex = 9;
 		else
-			return (int)0x80260008;
+			return SCE_AUDIO_OUT_ERROR_INVALID_SAMPLE_FREQ;
 		setMask |= 2;
 	} else if (outputRate == 0) {
 		clearMask |= 2;
