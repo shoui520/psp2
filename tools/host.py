@@ -16,7 +16,6 @@ Locations, from the environment:
   PSP2_TOOLCHAINS   built toolchains (the recipes in toolchains/ install there); default
                     toolchains/install
   PSP2_SDK          the Sony PSP2 SDK's "SDK Software/PSVITA/sdk" folder (required for SNC)
-  VITASDK           vitasdk, for its headers when the pinned copy is not installed
   PSP2_LIMA         the Lima instance on macOS (default psp2)
   WINE              the Wine program (default: wine64 or wine on PATH)
 
@@ -51,16 +50,6 @@ def sdk():
 		return Path(os.environ['PSP2_SDK'])
 	raise HostError('the Sony PSP2 SDK is not found: set PSP2_SDK to its '
 			'"SDK Software/PSVITA/sdk" folder')
-
-
-def vitasdk_include():
-	"""vitasdk headers: the pinned copy all results were measured with, else $VITASDK's."""
-	pinned = toolchains() / 'vitasdk-include-2026-05-24'
-	if pinned.is_dir():
-		return pinned
-	if os.environ.get('VITASDK'):
-		return Path(os.environ['VITASDK']) / 'arm-vita-eabi' / 'include'
-	raise HostError('vitasdk headers are not found: set VITASDK')
 
 
 # --- Linux programs -------------------------------------------------------------------
@@ -195,7 +184,7 @@ def main():
 		print('toolchains: ', toolchains())
 		for name, probe in (('linux', lambda: linux_command(['true'])[:-1] or 'native'),
 				    ('psp2snc', lambda: windows_command(['psp2snc.exe'])[:-1] or 'native'),
-				    ('sdk', sdk), ('vitasdk', vitasdk_include)):
+				    ('sdk', sdk)):
 			try:
 				print(f'{name + ":":12}', probe())
 			except HostError as e:

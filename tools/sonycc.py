@@ -24,7 +24,6 @@ TOOLCHAINS = host.toolchains()
 # GCC48_DRIVER=g++ the C++ driver
 GCC48 = TOOLCHAINS / os.environ.get('GCC48_TOOLCHAIN', 'csl-4.8-2014.05-strong-strd') / \
 	'bin' / ('arm-none-eabi-' + os.environ.get('GCC48_DRIVER', 'gcc'))
-COMPAT = ROOT / 'cmake/compat'
 
 # Sony's GCC 4.8 flags (compile_one, and the CMake build: cmake/toolchain.cmake): the target,
 # the code generation, and the freestanding kernel (arm-none-eabi defaults to short enums;
@@ -38,8 +37,7 @@ GCC48_FREESTANDING = ('-fno-short-enums', '-ffreestanding', '-fno-builtin')
 # how Sony built that module) come from the module's build
 DEFAULT_F = ('-fstack-protector-strong', *GCC48_CODE, *GCC48_FREESTANDING)
 
-# SNC: Sony's macro spellings, then the project's include order: Sony's standard headers
-# before vitasdk's psp2kern headers
+# SNC: Sony's macro spellings; the tree's headers come before the SDK's
 SNC_DEFINES = ('-DSCE_DEPRECATED(n)=n', '-DSCE_DEPRECATED_EX(n,c)=n',
 	       '-DSCE_ALIGN(x)=__attribute__((aligned(x)))',
 	       '-D__builtin_return_address(x)=__builtin_return_address()')
@@ -50,18 +48,10 @@ def win(p):
 	return host.windows_path(p)
 
 
-def __getattr__(name):
-	# resolved on first use, so importing sonycc needs no vitasdk
-	if name == 'VITASDK_INCLUDE':
-		return host.vitasdk_include()
-	raise AttributeError(name)
-
-
 def snc_command(opt, args):
 	sdk = host.sdk()
 	includes = [ROOT / 'sys/internal/include', ROOT / 'sys/sdk/target/include',
-		    ROOT / 'cmake/include', COMPAT / 'vitasdk', ROOT,
-		    sdk / 'target/include', sdk / 'target/include_common', host.vitasdk_include()]
+		    ROOT / 'cmake/include', ROOT, sdk / 'target/include', sdk / 'target/include_common']
 	return host.windows_command([sdk / 'host_tools/build/bin/psp2snc.exe', *SNC_DEFINES, opt,
 				     *args, *(f'-I{win(i)}' for i in includes)])
 
@@ -126,8 +116,7 @@ def toolchain(folder):
 		path = host.linux_wrapper(bindir / f'arm-none-eabi-{program}', folder / f'arm-none-eabi-{program}')
 		lines.append(f'set(PSP2_GCC48_{program.upper().replace("+", "X")} "{path.as_posix()}")')
 	lines += [f'set(PSP2_GCC48_TARGET "{" ".join(GCC48_TARGET)}")',
-		  f'set(PSP2_GCC48_FLAGS "{" ".join(("-fstack-protector-strong", *GCC48_CODE, *GCC48_FREESTANDING))}")',
-		  f'set(PSP2_SYSTEM_INCLUDE "{host.vitasdk_include().as_posix()}")']
+		  f'set(PSP2_GCC48_FLAGS "{" ".join(("-fstack-protector-strong", *GCC48_CODE, *GCC48_FREESTANDING))}")']
 	(folder / 'flags.cmake').write_text('\n'.join(lines) + '\n')
 
 

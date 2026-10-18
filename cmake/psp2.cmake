@@ -118,19 +118,9 @@ endfunction()
 # the compile settings of a module's sources (psp2_module's variables in scope)
 macro(psp2_compile_settings name)
 	set(include_dirs ${PSP2_INCLUDE_DIRS})
-	if(M_COMPILER STREQUAL "gcc48" AND DEFINED PSP2_SYSTEM_INCLUDE AND MODULE_VITASDK_LIBC)
-		# vitasdk's C library (newlib) and user headers ahead of the tree's C library, for the
-		# modules that set MODULE_VITASDK_LIBC: those still building NetBSD code over newlib's
-		# socket headers, and user C not yet on the tree's SDK headers; the shims first
-		set(include_dirs
-			"${PSP2_SRC}/sys/internal/include"
-			"${PSP2_SRC}/cmake/compat/vitasdk"
-			"${PSP2_SYSTEM_INCLUDE}"
-			"${PSP2_SRC}/sys/sdk/target/include"
-			"${PSP2_SRC}/cmake/include")
-	elseif(NOT M_COMPILER STREQUAL "gcc48")
-		# SNC and vitasdk's GCC (user code) still read vitasdk's user headers: the shims that
-		# complete them
+	if(NOT M_COMPILER)
+		# a folder of a later roadmap stage, under vitasdk's toolchain: its user code still reads
+		# vitasdk's user headers, and the shims complete them
 		list(APPEND include_dirs "${PSP2_SRC}/cmake/compat/vitasdk")
 	endif()
 	target_include_directories(${name} PRIVATE
