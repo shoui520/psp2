@@ -1011,7 +1011,7 @@ set(MODULE_IMPORT_FUNCS
 	libicalss_D2386CAD
 	libicalss_F7FC10E7
 	SceAppUtilWebBrowserCBLimited_3ED8F841
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceGxmUnmapMemory
 	sceGxmMapMemory
 	SceLiveAreaUtil_876A649B

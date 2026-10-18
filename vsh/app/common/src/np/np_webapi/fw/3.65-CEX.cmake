@@ -176,7 +176,7 @@ set(MODULE_IMPORT_FUNCS
 	sceAppMgrAppParamGetString
 	sceAppMgrGetStatusByName
 	sceAppMgrIsDevelopmentMode
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceNetNtohs
 	sceNetHtons
 )

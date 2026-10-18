@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/deci4p_scttyp.skprx (generated)
 set(MODULE_NID 0x0AD24C79)
+set(MODULE_AUTH_ID 0x2808000000010097)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

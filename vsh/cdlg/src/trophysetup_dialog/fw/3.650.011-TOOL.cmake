@@ -179,7 +179,7 @@ set(MODULE_IMPORT_FUNCS
 	SceNpTrophy_C80794CF
 	SceNpTrophy_D70DAFA7
 	SceNpTrophy_FD34F7CF
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	__stack_chk_fail
 	sceClibMemset
 	sceClibStrncmp

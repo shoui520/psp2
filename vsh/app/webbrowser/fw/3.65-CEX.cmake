@@ -681,7 +681,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSqliteVsh_F67857AC
 	SceShellUtil_BB54D049
 	sceShellUtilRequestLaunchApp
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	SceCommonGuiDialog_11D35CB5
 	SceCommonGuiDialog_1D4E3C83
 	SceCommonGuiDialog_20B141F1

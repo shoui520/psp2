@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:us/libgpu_es4.suprx (generated)
 set(MODULE_NID 0x07AD8CBB)
+set(MODULE_AUTH_ID 0x280000000002802A)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

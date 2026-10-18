@@ -130,7 +130,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_ECB1A10D
 	ScePafWidget_FF5BC957
 	sceSblQafMgrIsAllowRemoteSysmoduleLoad
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceSysmoduleIsLoadedInternal
 	sceSysmoduleUnloadModuleInternalWithArg
 	sceSysmoduleLoadModuleInternalWithArg

@@ -61,7 +61,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelStartThread
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDeleteEventFlag
 	sceKernelSignalCond
 	sceKernelDeleteCond
@@ -71,7 +71,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	sceKernelDeleteMsgPipe
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrSendNotificationRequest
 	sceRegMgrUtilityGetStr
 	sceRegMgrUtilityGetBin

@@ -1,5 +1,7 @@
 # 3.65-CEX: pup:cui_setupper.self (generated)
 set(MODULE_NID 0x8802DAE9)
+set(MODULE_AUTH_ID 0x2800800000000003)
+set(MODULE_SELF_UNCOMPRESSED ON)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_NID0_VARS 0x70FBA1E7:sceProcessParam)

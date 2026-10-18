@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/usbstorvstor.skprx (generated)
 set(MODULE_NID 0xCE6682C3)
+set(MODULE_AUTH_ID 0x2808000000020062)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

@@ -60,7 +60,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelWaitThreadEnd
 	sceKernelStartThread
 	sceKernelDeleteThread
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceIpmi_4E255C31
 	SceIpmi_B282B430
 	sceKernelFreeMemBlock

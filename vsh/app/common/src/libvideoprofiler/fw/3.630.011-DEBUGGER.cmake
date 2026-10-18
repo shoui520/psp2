@@ -106,7 +106,7 @@ set(MODULE_IMPORT_FUNCS
 	_vshRtcGetCurrentSecureTick
 	vshSblAimgrIsDEX
 	sceRegMgrGetKeyInt
-	ksceRegMgrSystemParamGetBin
+	sceRegMgrSystemParamGetBin
 	SceLibFflVuMp4_18AF7E91
 	SceLibFflVuMp4_29BD5D63
 	SceLibFflVuMp4_2DD28439

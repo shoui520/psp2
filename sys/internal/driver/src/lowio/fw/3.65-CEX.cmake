@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/lowio.skprx (generated)
 set(MODULE_NID 0xEE520DFD)
+set(MODULE_AUTH_ID 0x2808000000020028)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

@@ -23,7 +23,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyStr
 	sceRegMgrSetKeyInt
 	sceRegMgrGetKeyStr
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	__stack_chk_fail
 	__sce_aeabi_idiv0
 	__sce_aeabi_ldiv0

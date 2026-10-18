@@ -88,7 +88,7 @@ set(MODULE_IMPORT_FUNCS
 	sceDisplayWaitVblankStart
 	sceSysmoduleUnloadModule
 	sceSysmoduleLoadModule
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRegMgrSystemParamSetInt
 	_ZSt14_Xlength_errorPKc
 	_ZSt14_Xout_of_rangePKc

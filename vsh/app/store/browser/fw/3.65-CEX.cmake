@@ -1290,7 +1290,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

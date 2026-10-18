@@ -187,7 +187,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteEventFlag
 	sceKernelDeleteMutex
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceRtcParseDateTime
 )
 set(MODULE_IMPORT_VARS

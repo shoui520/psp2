@@ -63,7 +63,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateLwMutex
 	sceKernelWaitThreadEnd
 	sceKernelDeleteThread
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceIpmi_4E255C31
 	SceIpmi_B282B430
 	SceLibLocation_0C0BB66A

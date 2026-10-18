@@ -1178,7 +1178,7 @@ set(MODULE_IMPORT_FUNCS
 	sceNpWebApiGetHttpResponseHeaderValueLength
 	sceNpWebApiAbortRequest
 	sceNpWebApiCheckCallback
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
 	sceKernelDelayThread

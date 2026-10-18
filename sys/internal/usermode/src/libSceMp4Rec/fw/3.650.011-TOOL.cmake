@@ -47,13 +47,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteEventFlag
 	sceKernelGetProcessId
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrAppParamGetString
 	sceAppMgrUmount
 	sceAppMgrGetDevInfo
 	sceAppMgrSendNotificationRequest
 	sceAppMgrWorkDirMountById
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceAvcencEncode
 	sceAvcencEncodeStop
 	sceAvcencSetEncoderParameter

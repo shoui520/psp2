@@ -9,6 +9,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <scetypes.h>
 #include <kernel/libkernel.h>
 #include <kernel/threadmgr.h>
@@ -78,6 +79,10 @@ int sceClibMspaceMallocStats(void *mspace, struct MspaceStats *stats);
 int sceClibMspaceMallocStatsFast(void *mspace, struct MspaceStats *stats);
 SceSize sceClibMspaceMallocUsableSize(void *pointer);
 SceBool sceClibMspaceIsHeapEmpty(void *mspace);
+
+/* *value = replacement if it was expected; the value it had */
+uint32_t sceKernelAtomicCompareAndSet32(uint32_t *address, uint32_t expected,
+					uint32_t replacement);
 
 /* the calling thread's TLS word at index */
 void *sceKernelGetTLSAddr(SceUInt32 index);

@@ -142,7 +142,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetDipsw
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelClearEventFlag
 	sceKernelDeleteEventFlag
@@ -376,7 +376,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGxmSetUniformDataF
 	sceGxmSetVertexStream
 	sceGxmSetVertexTexture
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	SceSystemSettingsCore_0277BC7A
 	SceSystemSettingsCore_043C27CD
 	SceSystemSettingsCore_06AB76AC

@@ -248,7 +248,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteSema
 	sceKernelSignalSema
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrDestroyAppByName
 	sceAppMgrGetStatusByAppId
 	sceAppMgrGetStatusByName

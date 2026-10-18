@@ -824,7 +824,7 @@ set(MODULE_IMPORT_FUNCS
 	sceAudioOutSetVolume
 	sceAudioOutReleasePort
 	sceRegMgrUtilityGetInt
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRegMgrSrvCnvRegionStr
 	sceRegMgrSrvGetRegion
 	scePowerRegisterCallback
@@ -903,7 +903,7 @@ set(MODULE_IMPORT_FUNCS
 	_sceNpDrmGetRifInfo
 	_sceNpDrmGetFixedRifName
 	_sceNpDrmCheckActData
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceMtpIfStartPort
 	sceMtpIfWaitConnect
 	sceMtpIfReset

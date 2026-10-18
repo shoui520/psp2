@@ -118,7 +118,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteSema
 	sceKernelSignalSema
 	sceKernelSetEventFlag
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	SceHostAvch_08734B08
 	SceHostAvch_0DE5B1E1
 	SceHostAvch_146021A6
@@ -968,7 +968,7 @@ set(MODULE_IMPORT_FUNCS
 	sceNetInit
 	sceNetSocket
 	sceNetEpollCreate
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceDbrecoveryUtility_4AB1DAA9
 	SceLibFflMp4_06BF5971
 	SceLibFflMp4_0881EF5C

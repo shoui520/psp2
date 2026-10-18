@@ -254,7 +254,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteMutex
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	ScePromoterUtil_0D76CD38
 	scePromoterUtilityGetSize
 	scePromoterUtilityPromoteImport
@@ -892,8 +892,8 @@ set(MODULE_IMPORT_FUNCS
 	SceIpmi_4E255C31
 	SceIpmi_B282B430
 	ScePafLowlayer_D7DAA151
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

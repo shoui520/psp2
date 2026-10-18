@@ -24,7 +24,7 @@ set(MODULE_IMPORT_LIBS
 	0x35C5ACD4:1:0x8
 )
 set(MODULE_IMPORT_FUNCS
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	SceCommonGuiDialog_20B141F1
 	SceCommonGuiDialog_696DB9C9
 	SceCommonGuiDialog_6CE14F66

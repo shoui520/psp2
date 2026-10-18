@@ -50,6 +50,7 @@ struct MultipleEventWaitOptions;
 struct ObjectInfoRequest;
 struct PackageVerifyRequest;
 struct PcActivationChallengeRequest;
+struct ProcessParamHeader;
 struct PsmActivationRequest;
 struct RandomNumberRequest;
 struct SecureClockRequest;
@@ -377,6 +378,13 @@ extern int _sceKernelCancelTimer(SceUID id, SceUInt32 *waiting);
 extern int _sceKernelGetTimerInfo(SceUID id, SceKernelTimerInfo *info,
 				  const struct TimerInfoRequest *request);
 extern int _sceKernelGetTimerEventRemainingTime(SceUID id, SceKernelSysClock *clock);
+
+/* the process start and exit (lifecycle.c) */
+extern const struct ProcessParamHeader *sceKernelGetProcessParam(void);
+extern int sceKernelGetModuleList(SceUInt8 type, SceUID *ids, SceSize *count);
+/* sceKernelExitThread as SceThreadmgrCoredumpTime exports it, the library the original imports it
+   from (SceThreadmgr's export of the same NID, 0x0C8A38E1, is sceKernelExitThread) */
+extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 
 #endif
 

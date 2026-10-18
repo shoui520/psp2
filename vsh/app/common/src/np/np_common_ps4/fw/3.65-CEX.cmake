@@ -83,7 +83,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCloseMsgPipe
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelClearEventFlag
 	sceKernelDeleteEventFlag
@@ -163,7 +163,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRtcGetCurrentRetainedNetworkTick
 	sceRtcTickAddMicroseconds
 	sceRtcGetCurrentNetworkTick
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceKernelIsCDialogAvailable
 	sceKernelPowerUnlock
 	sceKernelPowerLock

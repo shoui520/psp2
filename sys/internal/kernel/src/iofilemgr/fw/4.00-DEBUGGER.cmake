@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/iofilemgr.skprx (generated)
 set(MODULE_NID 0xBDB4D88E)
+set(MODULE_AUTH_ID 0x2808000000020026)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

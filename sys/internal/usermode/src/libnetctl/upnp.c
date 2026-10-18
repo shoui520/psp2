@@ -737,8 +737,8 @@ int netCtlUpnpSearch(int sock, char *buf, int size, const SceNetInAddr *gateway,
 		ret = sceNetSendto(sock, buf, ret, 0, (SceNetSockaddr *)&addr, sizeof(addr));
 		if (ret < 0)
 			return ret;
-		deadline = (SceUInt64)ksceKernelGetSystemTimeLow() + SSDP_WAIT;
-		while ((now = ksceKernelGetSystemTimeLow()) < deadline) {
+		deadline = (SceUInt64)SceThreadmgr_47F6DE49() + SSDP_WAIT;
+		while ((now = SceThreadmgr_47F6DE49()) < deadline) {
 			epoll = -1;
 			ret = sceNetEpollCreate("SceNetUpnpAction", 0);
 			if (ret < 0)

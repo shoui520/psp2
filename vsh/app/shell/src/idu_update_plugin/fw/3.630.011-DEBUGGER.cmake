@@ -271,7 +271,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceNetInternal_9DBD2F60
 	sceNetCtlInetGetInfo
 	SceShellSvc_7CBF442B

@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/buserror.skprx (generated)
 set(MODULE_NID 0x3F6FC3E4)
+set(MODULE_AUTH_ID 0x280800000002000D)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

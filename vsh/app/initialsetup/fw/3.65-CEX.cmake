@@ -616,7 +616,7 @@ set(MODULE_IMPORT_FUNCS
 	SceCommonGuiDialog_6CE14F66
 	SceCommonGuiDialog_8947FC23
 	SceCommonGuiDialog_BC311DC0
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceNetTerm
 	sceNetInit
 	sceHttpInit

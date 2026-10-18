@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelChangeThreadPriority2
 	sceKernelChangeThreadVfpException
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrIsGameProgram
 )
 set(MODULE_IMPORT_VARS

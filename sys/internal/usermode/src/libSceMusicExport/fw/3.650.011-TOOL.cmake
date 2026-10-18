@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCheckCallback
 	SceIpmi_4E255C31
 	SceIpmi_B282B430
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

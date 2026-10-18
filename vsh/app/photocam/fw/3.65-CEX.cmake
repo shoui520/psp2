@@ -1232,7 +1232,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelPowerTick
 	sceKernelPowerUnlock
 	sceKernelPowerLock
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceScreenShotDisable
 	sceScreenShotEnable
 	sceMotionRotateYaw

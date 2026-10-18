@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/wlanbt_robin_img_ax.skprx (generated)
 set(MODULE_NID 0x33E0D478)
+set(MODULE_AUTH_ID 0x2808000000020057)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

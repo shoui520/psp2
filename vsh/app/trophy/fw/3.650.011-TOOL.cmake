@@ -532,7 +532,7 @@ set(MODULE_IMPORT_FUNCS
 	sceNetCtlInit
 	sceNetCtlTerm
 	SceNetCtl_E8E8DF18
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRtcConvertUtcToLocalTime
 	sceRtcParseDateTime
 	sceRtcGetCurrentTick

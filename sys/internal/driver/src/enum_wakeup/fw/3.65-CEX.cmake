@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/enum_wakeup.skprx (generated)
 set(MODULE_NID 0xC32D352C)
+set(MODULE_AUTH_ID 0x280800000002005C)
 set(MODULE_ATTR 1)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

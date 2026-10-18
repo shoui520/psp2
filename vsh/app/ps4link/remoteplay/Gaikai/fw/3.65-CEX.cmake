@@ -241,7 +241,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalCondAll
 	sceKernelDeleteMutex
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 )
 set(MODULE_IMPORT_VARS
 	_Touptab

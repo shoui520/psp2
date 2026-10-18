@@ -100,7 +100,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelStartTimer
 	sceKernelDeleteTimer
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

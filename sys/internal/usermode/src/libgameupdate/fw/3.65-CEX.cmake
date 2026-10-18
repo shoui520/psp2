@@ -35,8 +35,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemSwVersion
 	sceKernelDelayThread
 	sceRtcGetCurrentNetworkTick
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	sceHttpsDisableOptionPrivate
 	sceHttpSetConnectTimeOut
 	sceHttpGetStatusCode

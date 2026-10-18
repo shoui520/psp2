@@ -834,7 +834,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelStartTimer
 	sceKernelDeleteTimer
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceRtcGetCurrentTick
 	sceRtcTickAddSeconds
 	sceRtcGetCurrentRetainedNetworkTick

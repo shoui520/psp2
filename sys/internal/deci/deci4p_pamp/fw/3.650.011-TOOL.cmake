@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/deci4p_pamp.skprx (generated)
 set(MODULE_NID 0x15343D32)
+set(MODULE_AUTH_ID 0x280800000001000B)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

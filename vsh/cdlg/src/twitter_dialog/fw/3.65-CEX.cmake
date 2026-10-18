@@ -54,7 +54,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sceRegMgrSystemParamSetStr
 	sceGxmUnmapMemory
 	sceGxmMapMemory

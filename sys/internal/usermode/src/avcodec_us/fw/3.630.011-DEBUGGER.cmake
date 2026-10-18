@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: os0:us/avcodec_us.suprx (generated)
 set(MODULE_NID 0x60C1EAE5)
+set(MODULE_AUTH_ID 0x2800000000028005)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)

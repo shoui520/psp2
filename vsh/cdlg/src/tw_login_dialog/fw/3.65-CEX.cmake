@@ -46,7 +46,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateLwMutex
 	sceClibPrintf
 	__sce_aeabi_ldiv0
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sceRegMgrSystemParamSetStr
 	sceGxmUnmapMemory
 	sceGxmMapMemory

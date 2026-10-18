@@ -41,22 +41,9 @@ uint32_t __stack_chk_guard = 0;
 uint32_t SceKernelStackChkGuard = 0;
 extern uint32_t sceLibSspStackChkGuard __attribute__((alias("__stack_chk_guard")));
 
-/*
- * sceKernelExitThread (NID 0x0C8A38E1) as SceThreadmgrCoredumpTime exports it,
- * the library the original imports it from. SceThreadmgr's export already has
- * the link symbol sceKernelExitThread, so this one's is ksceKernelExitThread
- * (tools/nids/user.yml).
- */
-int ksceKernelExitThread(int status);
-
-extern const struct ProcessParamHeader *sceKernelGetProcessParam(void);
-extern int sceKernelGetModuleList(SceUInt8 type, SceUID *ids, SceSize *count);
-extern uint32_t sceKernelAtomicCompareAndSet32(uint32_t *value,
-					     uint32_t expected, uint32_t replacement);
-
 void ExitThreadEntry(int status)
 {
-	ksceKernelExitThread(status);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(status);
 	__breakpoint(BKPT_ABORT);
 }
 
@@ -103,7 +90,7 @@ int module_start(SceSize size, void *argument)
 		libkernelState.processSdkVersion = 0;
 	else
 		libkernelState.processSdkVersion = parameter->sdkVersion;
-	ksceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	for (;;)
 		;
 }
@@ -150,7 +137,7 @@ void sceKernelCallModuleExit(int type)
 int sceKernelExitProcess(int status)
 {
 	if (sceKernelAtomicCompareAndSet32(&libkernelState.exitStarted, 0, 1)) {
-		ksceKernelExitThread(status);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(status);
 		return 0;
 	}
 	sceKernelCallModuleExit(0x80);

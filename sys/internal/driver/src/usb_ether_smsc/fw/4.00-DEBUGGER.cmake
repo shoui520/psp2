@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/usb_ether_smsc.skprx (generated)
 set(MODULE_NID 0xCA227D46)
+set(MODULE_AUTH_ID 0x280800000002004E)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

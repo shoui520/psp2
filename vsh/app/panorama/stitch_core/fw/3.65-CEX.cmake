@@ -69,7 +69,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteMutex
 	sceKernelDeleteRWLock
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceSysmoduleUnloadModule
 	sceSysmoduleLoadModule
 	sceGxmMapFragmentUsseMemory

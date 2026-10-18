@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/gpucoredump_es4.skprx (generated)
 set(MODULE_NID 0xCD14E3A8)
+set(MODULE_AUTH_ID 0x280800000002001F)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

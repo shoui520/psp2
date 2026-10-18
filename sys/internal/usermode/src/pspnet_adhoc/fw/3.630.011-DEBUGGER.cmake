@@ -61,7 +61,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteSema
 	sceKernelSignalSema
 	sceKernelDeleteMsgPipe
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceNetSetsockopt
 	sceNetNtohs
 	sceNetSocketClose
@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	SceNetInternal_A2C2BC5F
 	SceNetInternal_E62A2FAA
 	sceAppMgrSendNotificationRequest
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

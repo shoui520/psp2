@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/crashdump.skprx (generated)
 set(MODULE_NID 0x8CB64A33)
+set(MODULE_AUTH_ID 0x2808000000020064)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

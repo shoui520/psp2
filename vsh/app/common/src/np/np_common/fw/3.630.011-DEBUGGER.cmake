@@ -90,11 +90,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteCond
 	sceKernelDeleteMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceShellSvc_7CBF442B
 	SceShellSvc_B31E7F1C
 	SceShellSvc_D943CE15
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	vshSblAimgrIsCEX
 	vshSblUtMgrHasStoreFlag
 	sceSblQafMgrIsAllowNpFullTest

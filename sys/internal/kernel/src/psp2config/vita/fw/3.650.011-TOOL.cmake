@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:psp2config_vita.skprx (generated)
 set(MODULE_NID 0x139C27EA)
+set(MODULE_AUTH_ID 0x280800000002005B)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

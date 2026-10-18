@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: os0:kd/net_ps_dev.skprx (generated)
 set(MODULE_NID 0x0E8683DA)
+set(MODULE_AUTH_ID 0x280800000002002E)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)

@@ -304,7 +304,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteMutex
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceNetCtl_229EAA64
 	sceNetCtlInit
 	SceNetCtl_AC326DB7
@@ -515,8 +515,8 @@ set(MODULE_IMPORT_FUNCS
 	ScePafToplevel_1DF2C6FD
 	ScePafToplevel_F72FC59E
 	scePowerIsPowerOnline
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeyInt

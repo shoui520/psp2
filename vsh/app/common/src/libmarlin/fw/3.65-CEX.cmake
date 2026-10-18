@@ -39,7 +39,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDrmBridgeUser_6F5DC6CD
 	sceDrmBridgeGetCurrentSecureTick
 	sceDrmBridgeMlnpsnlAuth1
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sceAppMgrAppDataMount
 	sceAppMgrUmount
 	SceMarlinHci_00F544DF

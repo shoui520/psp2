@@ -145,7 +145,7 @@ set(MODULE_IMPORT_FUNCS
 	sceNetSend
 	sceNetSocket
 	sceNetEpollCreate
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRegMgrUtilityGetInt
 	sceKernelGetRandomNumber
 	sceRtcGetCurrentTick

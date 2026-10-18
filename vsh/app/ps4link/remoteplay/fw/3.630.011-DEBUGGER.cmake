@@ -514,7 +514,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	sceRegMgrIsBlueScreen

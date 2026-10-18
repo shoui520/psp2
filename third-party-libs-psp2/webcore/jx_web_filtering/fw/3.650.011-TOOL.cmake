@@ -38,8 +38,8 @@ set(MODULE_IMPORT_FUNCS
 	sceRtcGetCurrentTick
 	sceRtcTickAddSeconds
 	sceRtcSetTick
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetBin
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetBin
 	sceRegMgrSystemParamSetInt
 	sceRegMgrSystemParamSetBin
 	sceHttpParseStatusLine

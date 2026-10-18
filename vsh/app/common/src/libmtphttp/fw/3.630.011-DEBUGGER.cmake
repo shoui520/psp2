@@ -18,7 +18,7 @@ set(MODULE_IMPORT_LIBS
 	0xF4E34EDB:1:0x0
 )
 set(MODULE_IMPORT_FUNCS
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceAppMgrConvertVs0UserDrivePath
 	sceAppMgrIsGameProgram
 	sceKernelWaitSema
@@ -73,7 +73,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelClearEventFlag
 	sceKernelPollSema
 	sceKernelCloseEventFlag

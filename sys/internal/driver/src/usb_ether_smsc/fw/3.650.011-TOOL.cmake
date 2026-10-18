@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/usb_ether_smsc.skprx (generated)
 set(MODULE_NID 0xEDAEF162)
+set(MODULE_AUTH_ID 0x280800000002004E)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

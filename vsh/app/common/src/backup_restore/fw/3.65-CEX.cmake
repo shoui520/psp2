@@ -147,7 +147,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlock
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelClearEventFlag
 	sceKernelDeleteCond
@@ -156,7 +156,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalCondAll
 	sceKernelDeleteMutex
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceDbutil_0E387A6B
 	SceDbutil_1B0116F3
 	SceDbutil_453787A2

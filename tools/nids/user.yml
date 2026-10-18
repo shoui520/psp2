@@ -3956,7 +3956,17 @@ modules:
         kernel: false
         nid: 0x859A24B1
         functions:
+          SceThreadmgr_47F6DE49: 0x47F6DE49
+          SceThreadmgr_D06F2886: 0xD06F2886
+          SceThreadmgr_sceKernelCancelMutex: 0x7204B846
+          SceThreadmgr_sceKernelChangeCurrentThreadAttr: 0x751C9B7A
+          SceThreadmgr_sceKernelGetMutexInfo: 0x69B78A12
           SceThreadmgr_sceKernelGetThreadCpuAffinityMask: 0xF1AE5654
+          SceThreadmgr_sceKernelGetThreadCurrentPriority: 0x01414F0B
+          SceThreadmgr_sceKernelLockMutex: 0x16AC80C5
+          SceThreadmgr_sceKernelStartThread: 0x21F5419B
+          SceThreadmgr_sceKernelTryLockMutex: 0x270993A6
+          SceThreadmgr_sceKernelUnlockMutex: 0x1E82E5D0
           __sceKernelCreateLwMutex: 0x4BB3154A
           _sceKernelCancelEvent: 0x29483405
           _sceKernelCancelEventFlag: 0xF76F3056
@@ -4048,16 +4058,6 @@ modules:
           _sceKernelWaitSignalCB: 0xCEA3FC52
           _sceKernelWaitThreadEnd: 0xEA5C52F5
           _sceKernelWaitThreadEndCB: 0xFA3D4491
-          ksceKernelCancelMutex: 0x7204B846
-          ksceKernelChangeCurrentThreadAttr: 0x751C9B7A
-          ksceKernelGetMutexInfo: 0x69B78A12
-          ksceKernelGetSystemTimeLow: 0x47F6DE49
-          ksceKernelGetThreadCurrentPriority: 0x01414F0B
-          ksceKernelLockMutex: 0x16AC80C5
-          ksceKernelLockMutexCB_089: 0xD06F2886
-          ksceKernelStartThread: 0x21F5419B
-          ksceKernelTryLockMutex: 0x270993A6
-          ksceKernelUnlockMutex: 0x1E82E5D0
           sceKernelCancelCallback: 0x30741EF2
           sceKernelChangeActiveCpuMask: 0x001173F8
           sceKernelChangeThreadCpuAffinityMask: 0x15129174
@@ -4144,7 +4144,7 @@ modules:
         kernel: false
         nid: 0x5E8D0E22
         functions:
-          ksceKernelExitThread: 0x0C8A38E1
+          SceThreadmgrCoredumpTime_sceKernelExitThread: 0x0C8A38E1
   SceKrm:
     nid: 0x00000000
     libraries:
@@ -19208,10 +19208,10 @@ modules:
         kernel: false
         nid: 0x0B351269
         functions:
-          ksceRegMgrSystemParamGetBin: 0x7FFE2CDF
-          ksceRegMgrSystemParamGetInt: 0x347C1BDB
-          ksceRegMgrSystemParamGetStr: 0x877ADB3F
           sceRegMgrSystemIsBlueScreen: 0x169A0D1D
+          sceRegMgrSystemParamGetBin: 0x7FFE2CDF
+          sceRegMgrSystemParamGetInt: 0x347C1BDB
+          sceRegMgrSystemParamGetStr: 0x877ADB3F
           sceRegMgrSystemParamSetBin: 0xD5A73557
           sceRegMgrSystemParamSetInt: 0xC8F73311
           sceRegMgrSystemParamSetStr: 0xCB3246E3

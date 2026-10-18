@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/deci4p_rdrfp.skprx (generated)
 set(MODULE_NID 0xE09101DF)
+set(MODULE_AUTH_ID 0x2808000000010014)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

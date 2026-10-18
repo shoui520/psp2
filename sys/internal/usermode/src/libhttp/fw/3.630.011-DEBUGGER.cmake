@@ -17,7 +17,7 @@ set(MODULE_IMPORT_LIBS
 	0xC6083AE1:1:0x0
 )
 set(MODULE_IMPORT_FUNCS
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceAppMgrIsNonGameProgram
 	sceAppMgrIsGameProgram
 	sceKernelWaitSema
@@ -56,7 +56,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelPollSema
 	sceKernelDeleteSema

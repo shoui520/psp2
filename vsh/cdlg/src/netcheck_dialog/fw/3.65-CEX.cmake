@@ -1345,8 +1345,8 @@ set(MODULE_IMPORT_FUNCS
 	sceGxmSetVertexStream
 	sceGxmSetVertexTexture
 	sceKernelPowerTick
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	SceNpCommerce2_115DF6B1
 	SceNpCommerce2_1B0B5798
 	SceNpCommerce2_1B229032

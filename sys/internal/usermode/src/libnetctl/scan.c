@@ -212,6 +212,6 @@ static int netCtlScanThread(SceSize args, void *argp)
 		ret = sceKernelWaitEventFlag(g_scanEventFlag, NETCTL_SCAN_EVENT_STOP,
 					     SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &outBits, &timeout);
 	} while (ret != 0 && ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT);
-	ksceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }

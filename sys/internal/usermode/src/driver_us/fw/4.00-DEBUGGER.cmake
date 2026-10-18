@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:us/driver_us.suprx (generated)
 set(MODULE_NID 0x17B96D2A)
+set(MODULE_AUTH_ID 0x280000000002800A)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

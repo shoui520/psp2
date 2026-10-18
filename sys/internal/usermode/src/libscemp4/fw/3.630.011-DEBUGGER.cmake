@@ -43,7 +43,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalCond
 	sceKernelDeleteCond
 	sceKernelDeleteMutex
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

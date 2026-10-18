@@ -390,7 +390,7 @@ set(MODULE_IMPORT_FUNCS
 	SceNpUtility_E64B4101
 	SceNpUtility_ED2B86ED
 	SceNpUtility_F4B21646
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRtcParseDateTime
 	sceRtcGetCurrentTick
 	sceRtcGetCurrentNetworkTick

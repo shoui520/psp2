@@ -50,9 +50,9 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDelayThread
 	sceKernelDeleteEventFlag
 	sceKernelGetSystemTimeWide
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetBin
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetBin
+	sceRegMgrSystemParamGetStr
 	sceRegMgrSystemParamSetInt
 	sceRegMgrSystemParamSetStr
 	sceRegMgrSystemParamSetBin

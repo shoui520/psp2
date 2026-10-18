@@ -89,7 +89,7 @@ set(MODULE_IMPORT_FUNCS
 	SceVideoProfiler_2DBE786B
 	SceVideoProfiler_4DBB7596
 	SceVideoProfiler_E5B10A6B
-	ksceRegMgrSystemParamGetBin
+	sceRegMgrSystemParamGetBin
 )
 set(MODULE_IMPORT_VARS
 	ScePafStdc_610F2F91

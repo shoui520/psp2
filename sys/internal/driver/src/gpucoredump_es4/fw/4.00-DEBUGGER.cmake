@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/gpucoredump_es4.skprx (generated)
 set(MODULE_NID 0x66955E6D)
+set(MODULE_AUTH_ID 0x280800000002001F)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

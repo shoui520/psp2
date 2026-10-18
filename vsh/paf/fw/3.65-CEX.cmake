@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	sceAudioOutSetVolume
 	sceAudioOutReleasePort
 	sceRegMgrUtilityGetInt
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceKernelWaitSema
 	sceKernelGetThreadId
 	sceKernelWaitEvent

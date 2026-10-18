@@ -66,7 +66,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoGetstat
 	sceClibPrintf
 	__sce_aeabi_ldiv0
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sce_paf_malloc
 	sce_paf_wcschr
 	sce_paf_strchr

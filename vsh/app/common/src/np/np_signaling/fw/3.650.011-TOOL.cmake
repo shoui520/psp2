@@ -184,7 +184,7 @@ set(MODULE_IMPORT_FUNCS
 	sceNpCmpNpId
 	sceNpManagerGetNpId
 	sceNpGetServiceState
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceIpmi_006EFA9D
 	SceIpmi_22625598
 	SceIpmi_9EE9496B

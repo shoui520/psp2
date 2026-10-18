@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/deci4p_loadp.skprx (generated)
 set(MODULE_NID 0xADE8DB27)
+set(MODULE_AUTH_ID 0x280800000001000A)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

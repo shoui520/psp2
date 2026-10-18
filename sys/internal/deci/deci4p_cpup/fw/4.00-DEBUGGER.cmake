@@ -1,5 +1,6 @@
 # 4.00-DEBUGGER: os0:kd/deci4p_cpup.skprx (generated)
 set(MODULE_NID 0x46150A16)
+set(MODULE_AUTH_ID 0x280800000001000C)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x04000000)

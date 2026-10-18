@@ -1,5 +1,6 @@
 # 3.630.011-DEBUGGER: os0:psp2config_vita.skprx (generated)
 set(MODULE_NID 0x7AB0729C)
+set(MODULE_AUTH_ID 0x280800000002005B)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)

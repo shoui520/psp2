@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:us/libkernel.suprx (generated)
 set(MODULE_NID 0x016A1B6F)
+set(MODULE_AUTH_ID 0x2800000000028034)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
@@ -317,7 +318,7 @@ set(MODULE_IMPORT_FUNCS
 	_sceKernelWaitEventFlag
 	_sceKernelGetLwMutexInfoById
 	_sceKernelSetTimerTime
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	_sceKernelStopModule
 	sceKernelGetModuleList
 	sceKernelGetModuleInfo

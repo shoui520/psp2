@@ -963,7 +963,7 @@ set(MODULE_IMPORT_FUNCS
 	libicalss_447AC528
 	libicalss_D2386CAD
 	libicalss_F7FC10E7
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceRtcGetCurrentClockLocalTime
 	sceRtcGetDayOfWeek
 	sceRtcGetDaysInMonth

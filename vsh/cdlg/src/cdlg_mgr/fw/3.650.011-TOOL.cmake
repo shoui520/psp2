@@ -57,7 +57,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessId
 	sceKernelDeleteSema
 	sceKernelSignalSema
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceSvcCtrl_077F8AF1
 	SceSvcCtrl_8BEB8B7C
 	sceGxmCheckMemoryInternal

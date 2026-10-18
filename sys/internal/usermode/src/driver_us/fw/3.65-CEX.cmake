@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:us/driver_us.suprx (generated)
 set(MODULE_NID 0xDE1F6491)
+set(MODULE_AUTH_ID 0x280000000002800A)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

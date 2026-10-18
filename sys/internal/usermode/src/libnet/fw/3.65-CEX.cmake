@@ -132,7 +132,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCallback
 	sceKernelDeleteCallback
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 )
 set(MODULE_IMPORT_VARS
 )

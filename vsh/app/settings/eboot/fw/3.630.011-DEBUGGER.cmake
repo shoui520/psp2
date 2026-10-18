@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
 	sceKernelExitDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelStartTimer
 	sceKernelDelayThread
 	sceKernelClearEventFlag
@@ -528,8 +528,8 @@ set(MODULE_IMPORT_FUNCS
 	sceGxmSetUniformDataF
 	sceGxmSetVertexStream
 	sceGxmSetVertexTexture
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	SceIpmi_4E255C31
 	SceIpmi_B282B430
 	SceShellUtil_01141995
@@ -595,7 +595,7 @@ set(MODULE_IMPORT_FUNCS
 	sceAppMgrDestroyOtherApp
 	sceAppMgrGrowMemory
 	sceAppMgrSetInfobarState
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceKernelFreeMemBlock
 	sceKernelGetMemBlockBase
 	sceKernelAllocMemBlock

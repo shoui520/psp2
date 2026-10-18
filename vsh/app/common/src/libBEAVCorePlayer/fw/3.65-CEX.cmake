@@ -130,7 +130,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelChangeThreadPriority
 	sceKernelDeleteSema
 	sceKernelSignalSema
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	ScePafStdc_1B77082E
 	ScePafStdc_2730262C
 	ScePafStdc_5883A6E3

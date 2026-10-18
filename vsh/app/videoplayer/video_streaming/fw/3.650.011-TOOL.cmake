@@ -607,7 +607,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelDeleteEventFlag
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	_vshSblSsGetNvsData
 	_vshRtcGetCurrentSecureTick
 	vshSysconIsIduMode
@@ -633,7 +633,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrGetKeyStr
 	sceRegMgrSrvGetRegion
 	SceShellUtil_BB54D049
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	SceIniFileProcessor_0975D396
 	SceIniFileProcessor_109B4E83
 	SceIniFileProcessor_14146AF5

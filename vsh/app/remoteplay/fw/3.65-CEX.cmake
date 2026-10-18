@@ -530,7 +530,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelAllocMemBlock
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelDeleteEventFlag
 	sceKernelDeleteCond
@@ -539,7 +539,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteMutex
 	sceKernelSetEventFlag
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceAudiocodec_1F9A3722
 	SceAudiocodec_E2AF3A54
 	SceAudiocodec_E827E04F

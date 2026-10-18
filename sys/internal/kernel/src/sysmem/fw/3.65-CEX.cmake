@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/sysmem.skprx (generated)
 set(MODULE_NID 0x4DC73B57)
+set(MODULE_AUTH_ID 0x2808000000020044)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS fw/3.65-CEX.exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

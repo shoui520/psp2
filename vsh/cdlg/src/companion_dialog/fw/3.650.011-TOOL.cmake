@@ -214,7 +214,7 @@ set(MODULE_IMPORT_FUNCS
 	ScePafWidget_F8D257AF
 	ScePafWidget_FB7FE189
 	ScePafWidget_FF5BC957
-	ksceRegMgrSystemParamGetBin
+	sceRegMgrSystemParamGetBin
 	sceRegMgrSystemParamSetInt
 	sceRegMgrSystemParamSetBin
 	sceNpManagerGetCachedParam

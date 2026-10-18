@@ -89,7 +89,7 @@ set(MODULE_IMPORT_FUNCS
 	sceGxmSetVertexStream
 	sceGxmSetVertexTexture
 	sceKernelPowerTick
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceSysmoduleUnloadModule
 	sceSysmoduleIsLoaded
 	sceSysmoduleLoadModule

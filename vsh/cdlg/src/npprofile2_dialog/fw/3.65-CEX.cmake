@@ -167,7 +167,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelStartTimer
 	sceKernelDeleteTimer
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceCommonDialogMain_05EFC635
 	SceCommonDialogMain_5739BC42
 	SceCommonDialogMain_75F10F83

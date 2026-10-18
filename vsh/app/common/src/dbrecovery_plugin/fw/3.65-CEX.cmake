@@ -235,13 +235,13 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCloseMutex
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelDelayThread
 	sceKernelOpenMutex
 	sceKernelDeleteMutex
 	sceKernelDeleteSema
 	sceKernelSignalSema
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceRegMgrGetKeyBin
 	sceRegMgrGetKeyInt
 	sceRegMgrSetKeys

@@ -532,8 +532,8 @@ set(MODULE_IMPORT_FUNCS
 	sceHmacSha256Digest
 	SceNetInternal_A2C2BC5F
 	SceNetInternal_E62A2FAA
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	sceRegMgrGetKeyInt
 	sceKernelGetSystemSwVersion
 )

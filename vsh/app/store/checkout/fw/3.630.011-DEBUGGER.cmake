@@ -105,7 +105,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRtcFormatRFC3339
 	sceRtcSetTick
 	sceRtcGetCurrentNetworkTick
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceSysmoduleIsLoadedInternal
 	sceSysmoduleUnloadModule
 	sceSysmoduleIsLoaded

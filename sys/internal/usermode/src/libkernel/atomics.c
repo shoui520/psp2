@@ -1,4 +1,5 @@
 #include <sysmem/atomic.h>
+#include <libkernel/libkernel.h>
 
 uint32_t sceKernelAtomicCompareAndSet32(uint32_t *address, uint32_t expected,
 				     uint32_t replacement)

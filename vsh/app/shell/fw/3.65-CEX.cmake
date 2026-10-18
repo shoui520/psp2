@@ -216,7 +216,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelUnlockMutex
 	sceKernelDeleteThread
 	sceKernelExitDeleteThread
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelStartTimer
 	sceKernelDelayThread
 	sceKernelClearEventFlag
@@ -405,7 +405,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIpmi_F5CFFDF6
 	SceIpmi_F5D3ACC2
 	sceAudioInSetMute
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrLaunchAppByUri
 	sceAppMgrAppParamGetString
 	sceAppMgrLaunchAppByUri2
@@ -2051,8 +2051,8 @@ set(MODULE_IMPORT_FUNCS
 	SceLibLocationProvider_8A796686
 	SceLibLocationDolceProvide_67156291
 	SceLibLocationDolceProvide_AF76021F
-	ksceRegMgrSystemParamGetInt
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetStr
 	sceNetRecv
 	sceNetSetsockopt
 	sceNetNtohs

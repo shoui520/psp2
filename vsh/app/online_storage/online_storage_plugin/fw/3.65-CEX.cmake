@@ -403,7 +403,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteCallback
 	sceKernelCheckCallback
 	sceKernelGetSystemTimeWide
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAppMgrLaunchAppByUri
 	sceAppMgrUpdateSaveDataParam
 	sceAppMgrLaunchAppByName2

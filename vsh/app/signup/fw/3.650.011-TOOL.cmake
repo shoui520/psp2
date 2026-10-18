@@ -220,7 +220,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelPowerTick
 	sceRegMgrIsBlueScreen
 	sceRegMgrGetKeys
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	sceShellUtilUnlock
 	SceShellUtil_5C5373B9
 	sceShellUtilRegisterEventHandler

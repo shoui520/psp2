@@ -72,7 +72,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelPowerTick
 	sceRegMgrIsBlueScreen
 	sceRegMgrGetKeys
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 	SceShellUtil_BB54D049
 	sceAppMgrLaunchAppByUri
 	sceAppMgrDestroyAppByName

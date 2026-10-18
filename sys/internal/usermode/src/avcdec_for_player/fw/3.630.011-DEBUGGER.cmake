@@ -65,7 +65,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCallback
 	sceKernelDeleteCallback
 	sceKernelSetEventFlag
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceAvcdecDecodeAuInternal
 	sceAvcdecUnregisterCallbackInternal
 	sceAvcdecDecodeFlush

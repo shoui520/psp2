@@ -59,7 +59,7 @@ set(MODULE_IMPORT_FUNCS
 	SceIpmi_B943F5D9
 	SceIpmi_BC3A3031
 	SceIpmi_D73C03D2
-	ksceRegMgrSystemParamGetInt
+	sceRegMgrSystemParamGetInt
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

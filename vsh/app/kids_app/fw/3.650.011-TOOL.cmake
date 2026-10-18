@@ -443,7 +443,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyStr
 	sceRegMgrSetKeyInt
 	sceRegMgrGetKeyStr
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	SceLibLocationPermission_810F3D2A
 	SceLibLocationPermission_AB8EBF86
 	sceErrorGetExternalString

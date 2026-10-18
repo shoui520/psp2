@@ -347,7 +347,7 @@ set(MODULE_IMPORT_FUNCS
 	SceShell_548A3111
 	SceShell_6A6123E3
 	SceShell_F197032C
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	_vshAppMgrAcInstGetAcdirParam
 	_vshSblAuthMgrVerifySpsfo
 )

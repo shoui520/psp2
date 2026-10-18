@@ -1150,7 +1150,7 @@ set(MODULE_IMPORT_FUNCS
 	SceEmailEngine_FDAF04B5
 	SceEmailEngine_FE3B8BA8
 	sceKernelGetSystemSwVersion
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	SceDbutil_055C641E
 	SceDbutil_0A4E17D5
 	SceDbutil_0C3792E1

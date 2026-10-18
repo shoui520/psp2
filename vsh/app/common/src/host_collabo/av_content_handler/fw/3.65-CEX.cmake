@@ -335,7 +335,7 @@ set(MODULE_IMPORT_FUNCS
 	sceIoClose
 	sceIoRead
 	sceKernelGetTimerTimeWide
-	ksceKernelGetSystemTimeLow
+	SceThreadmgr_47F6DE49
 	sceKernelStartTimer
 	sceKernelDelayThread
 	sceKernelClearEventFlag

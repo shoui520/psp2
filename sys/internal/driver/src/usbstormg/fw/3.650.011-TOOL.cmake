@@ -1,5 +1,6 @@
 # 3.650.011-TOOL: os0:kd/usbstormg.skprx (generated)
 set(MODULE_NID 0x0E2C0324)
+set(MODULE_AUTH_ID 0x2808000000000203)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_EXPORT_ORDER 0x00000000)

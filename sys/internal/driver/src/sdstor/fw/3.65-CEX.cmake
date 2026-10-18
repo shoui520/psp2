@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/sdstor.skprx (generated)
 set(MODULE_NID 0x65C4CC38)
+set(MODULE_AUTH_ID 0x280800000002003C)
 set(MODULE_ATTR 7)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)

@@ -4,7 +4,8 @@
 #
 # release/<FW>.list names each module by its rel (its firmware path without the extension,
 # os0/kd/sysmem); release/modules.tsv gives the folder of Sony's tree its sources live in.
-# A module builds in <builddir>/<rel>, so build trees and target names keep its identity.
+# A module builds in <builddir>/<rel>, so build trees and target names keep its identity, and
+# comes out there as the firmware ships it, under its firmware name (sysmem.skprx).
 
 cmake_minimum_required(VERSION 3.19)
 
@@ -27,7 +28,9 @@ foreach(row IN LISTS manifest)
 	string(REPLACE "\t" ";" row "${row}")
 	list(GET row 0 rel)
 	list(GET row 1 folder)
+	list(GET row 2 devpath)
 	set(PSP2_FOLDER_${rel} "${folder}")
+	set(PSP2_DEVPATH_${rel} "${devpath}")
 endforeach()
 
 file(STRINGS "release/${FW}.list" modules)
@@ -52,6 +55,11 @@ foreach(m IN LISTS modules)
 		# a folder Sony built once for several rels (byte-identical copies) names its
 		# target from the rel: psp2_module(${PSP2_TARGET} ...)
 		string(MAKE_C_IDENTIFIER "${m}" PSP2_TARGET)
+		# the file it ships as, where that is a SELF (not a module inside another image)
+		set(PSP2_SELF_NAME "")
+		if(PSP2_DEVPATH_${m} MATCHES "([^/:]+\\.(skprx|suprx|self))$")
+			set(PSP2_SELF_NAME "${CMAKE_MATCH_1}")
+		endif()
 		add_subdirectory(${folder} ${m})
 	endif()
 endforeach()

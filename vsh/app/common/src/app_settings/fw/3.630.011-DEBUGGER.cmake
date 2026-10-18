@@ -36,7 +36,7 @@ set(MODULE_IMPORT_FUNCS
 	sceRegMgrSetKeyStr
 	sceRegMgrSetKeyInt
 	sceRegMgrGetKeyStr
-	ksceRegMgrSystemParamGetStr
+	sceRegMgrSystemParamGetStr
 	sceIoLseek32
 	sceIoClose
 	sceIoRead

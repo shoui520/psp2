@@ -55,7 +55,9 @@ For example, `os0:kd/acmgr.skprx` is built from `sys/internal/kernel/src/acmgr/`
 cmake -S . -B build -DFW=4.00-DEBUGGER && cmake --build build
 ```
 builds every module of that firmware; each lands in `build/<partition>/<path>/`
-(`build/os0/kd/acmgr/`), so it can (*hopefully*) be used in place of the original on PSP2.
+(`build/os0/kd/acmgr/`) as the firmware ships it, `acmgr.skprx`: an fSELF (unencrypted) in
+Sony's SELF layout with the original's auth ID (`tools/mkfself.py`), so it can (*hopefully*) be
+used in place of the original on PSP2.
 ## Current status
 To summarize:
 * `os0`: substantial C reimplementation exists for nearly all modules. Not complete and not exact yet. No progress so far on MeP modules.

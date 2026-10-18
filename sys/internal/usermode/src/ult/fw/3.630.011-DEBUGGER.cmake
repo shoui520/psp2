@@ -66,7 +66,7 @@ set(MODULE_IMPORT_FUNCS
 	sceClibPrintf
 	sceKernelDeleteThread
 	sceKernelSendSignal
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	_sceUlobjMgrRegisterLibultProtocolRevision
 	SceUlobjDbg_D7F0F610
 	SceUlobjDbg_F9C0F5DA

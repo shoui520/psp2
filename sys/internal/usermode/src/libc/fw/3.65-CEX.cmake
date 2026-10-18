@@ -59,7 +59,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelUnregisterThreadEventHandler
 	sceKernelDelayThread
-	ksceKernelExitThread
+	SceThreadmgrCoredumpTime_sceKernelExitThread
 	sceFiosFHToFileno
 	sceFiosRenameSync
 	sceFiosFHCloseSync

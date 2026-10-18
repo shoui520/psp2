@@ -40,6 +40,8 @@
 #   MODULE_NID0_VARS      NID:symbol per extra variable of the module's own (NID 0) export
 #                         record, beyond module_info / module_sdk_version (process param,
 #                         ...); vita-elf-create cannot emit them, fixup_velf.py splices them in
+#   MODULE_AUTH_ID        the program authority ID in the original SELF's app info
+#   MODULE_SELF_UNCOMPRESSED  ON where the original SELF's segments are not compressed
 # A module absent from a firmware has no fw/<FW>.cmake and is skipped.
 # Hand-written per-firmware extras go in <module>/fw/<FW>.local.cmake (never generated):
 #   MODULE_EXPORT_AUX     LIBNID:AUXATTR for export records whose auxattr byte is set
@@ -184,6 +186,8 @@ function(psp2_module name)
 	set(MODULE_EXPORT_AUX "")
 	set(MODULE_IMPORT_FORMAT 0x24)
 	set(MODULE_NID0_VAR_ORDER "")
+	unset(MODULE_AUTH_ID)
+	set(MODULE_SELF_UNCOMPRESSED OFF)
 	include("${fwfile}")
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/fw/${FW}.local.cmake")
 		include("${CMAKE_CURRENT_SOURCE_DIR}/fw/${FW}.local.cmake")
@@ -385,4 +389,29 @@ macro(psp2_sce_layout name)
 		DEPENDS ${name} $<TARGET_FILE:${name}> "${PSP2_SRC}/tools/mkprx.py"
 		VERBATIM)
 	add_custom_target(${name}_velf ALL DEPENDS ${name}.velf)
+
+	# the module as the firmware ships it, under its firmware name: an fSELF of the .velf in
+	# Sony's SELF layout (tools/mkfself.py), with the original's auth ID, the type of its KIND
+	# (7 kernel, 13 user) and the firmware's version
+	if(PSP2_SELF_NAME)
+		set(self_options --self-type 13)
+		if(M_KIND STREQUAL "kernel")
+			set(self_options --self-type 7)
+		endif()
+		math(EXPR version "(${FW_VERSION} & 0xFFFF0000) << 16" OUTPUT_FORMAT HEXADECIMAL)
+		list(APPEND self_options --app-version ${version})
+		if(DEFINED MODULE_AUTH_ID)
+			list(APPEND self_options --auth-id ${MODULE_AUTH_ID})
+		endif()
+		if(NOT MODULE_SELF_UNCOMPRESSED)
+			list(APPEND self_options --compress)
+		endif()
+		add_custom_command(OUTPUT ${PSP2_SELF_NAME}
+			COMMAND python3 "${PSP2_SRC}/tools/mkfself.py" ${self_options}
+				"${CMAKE_CURRENT_BINARY_DIR}/${name}.velf" ${PSP2_SELF_NAME}
+			DEPENDS "${CMAKE_CURRENT_BINARY_DIR}/${name}.velf" "${PSP2_SRC}/tools/mkfself.py"
+				"${fwfile}"
+			VERBATIM)
+		add_custom_target(${name}_self ALL DEPENDS ${PSP2_SELF_NAME})
+	endif()
 endmacro()

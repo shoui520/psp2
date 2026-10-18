@@ -1,5 +1,6 @@
 # 3.65-CEX: os0:kd/vipimg.skprx (generated)
 set(MODULE_NID 0x86EDAAD3)
+set(MODULE_AUTH_ID 0x2808000000020052)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
