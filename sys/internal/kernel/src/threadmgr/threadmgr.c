@@ -6377,7 +6377,7 @@ int sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 	info.exitStatus = thread->exitStatus;
 	info.threadReleaseCount = thread->threadReleaseCount;
 	info.fNotifyCallback = (thread->flags & THREAD_FLAG_CALLBACKS) != 0;
-	info.runClocks = thread->runClock;
+	info.runClocks.quad = thread->runClock;
 	info.intrPreemptCount = thread->intrPreemptCount;
 	info.threadPreemptCount = thread->threadPreemptCount;
 	info.changeCpuCount = thread->changeCpuCount;
@@ -6485,7 +6485,7 @@ int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output)
 		info.cpuInfo[i].threadSwitchCount = cpu->threadSwitchCount;
 		SceCpuForDriver_BF82DEB2(THREAD_LOCK(idle));
 		info.cpuInfo[i].comesOutOfIdleCount = idle->intrPreemptCount;
-		info.cpuInfo[i].idleClock = idle->runClock;
+		info.cpuInfo[i].idleClock.quad = idle->runClock;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(idle));
 	}
 	sceKernelCpuResumeIntr(intr);

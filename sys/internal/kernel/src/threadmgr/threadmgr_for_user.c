@@ -1569,21 +1569,21 @@ SceUInt64 sceKernelGetSystemTimeWideForUser(void)
 }
 
 /* the core of _sceKernelGetSystemTime */
-int sceKernelGetSystemTimeForUser(ThreadmgrSysClock *clock)
+int sceKernelGetSystemTimeForUser(SceKernelSysClock *clock)
 {
-	return SceSysrootForKernel_1D8DB3A5(clock);
+	return SceSysrootForKernel_1D8DB3A5(&clock->quad);
 }
 
 /* _sceKernelGetSystemTime: the syscall copies the clock out */
-int _sceKernelGetSystemTime(ThreadmgrSysClock *userClock)
+int _sceKernelGetSystemTime(SceKernelSysClock *userClock)
 {
-	ThreadmgrSysClock *clock;
+	SceKernelSysClock *clock;
 	int ret, err;
 
 	if (userClock == NULL)
 		return sceKernelGetSystemTimeForUser(NULL);
 	clock = __builtin_alloca(sizeof(*clock));
-	*clock = (ThreadmgrSysClock){ 0, 0 };
+	*clock = (SceKernelSysClock){ .quad = 0 };
 	ret = sceKernelGetSystemTimeForUser(clock);
 	err = SceSysmemForDriver_6D88EF8A(userClock, clock, sizeof(*clock));
 	if (err < 0)

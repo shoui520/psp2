@@ -612,13 +612,13 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 	SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
 	flags = uidTimer->flags;
 	info->numWaitThreads = uidTimer->base.event.waiting;
-	info->baseTime = uidTimer->time;
+	info->baseTime.quad = uidTimer->time;
 	info->attr = uidTimer->base.event.attr;
 	info->fActive = flags & TIMER_FLAG_RUNNING;
 	if (flags & TIMER_FLAG_EVENT)
-		info->schedule = uidTimer->eventTime;
+		info->schedule.quad = uidTimer->eventTime;
 	info->fRepeat = (flags & TIMER_FLAG_REPEAT) >> 2;
-	info->interval = uidTimer->interval;
+	info->interval.quad = uidTimer->interval;
 	info->type = uidTimer->pulse;
 	pid = uidTimer->base.timer.pid;
 	process = uidTimer->base.timer.process;
@@ -626,8 +626,8 @@ static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 	sceGUIDReleaseObject(timerId);
 	if (SceSysmemForDriver_00ED6C14(pid, PROCESS_CLASS(), NULL) >= 0) {
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
-			info->currentTime = SceSysrootForKernel_E20F6FC8() - process->time -
-					info->baseTime;
+			info->currentTime.quad = SceSysrootForKernel_E20F6FC8() - process->time -
+					info->baseTime.quad;
 		else
 			info->currentTime = info->baseTime;
 		sceGUIDReleaseObject(pid);

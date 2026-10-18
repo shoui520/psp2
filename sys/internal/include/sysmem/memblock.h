@@ -8,8 +8,8 @@
 #include <scetypes.h>
 
 /*
- * The SDK's kernel/types.h type: that header is not included by kernel units until vitasdk's
- * SceIoMode and SceKernelSysClock, which clash with Sony's, are gone from them.
+ * The SDK's kernel/types.h type, repeated (the same typedef): user units that include this
+ * header still take vitasdk's SceKernelSysClock, which clashes with Sony's.
  */
 typedef SceUInt32 SceKernelMemBlockType;
 

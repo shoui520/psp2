@@ -1,9 +1,9 @@
 /*
  * vitasdk's psp2common/types.h, for the files and vitasdk headers that still include it: the SCE
  * types come from our SDK headers (Sony's definitions), and only vitasdk's own names remain here,
- * until the files stop using them. Sony's SceIoMode (int, kernel/types.h) would clash with
- * vitasdk's enum of that name, so kernel/types.h is not included and SceMode and
- * SceKernelSysClock keep vitasdk's definitions here.
+ * until the files stop using them. Kernel units take SceMode and SceKernelSysClock (Sony's union)
+ * from kernel/types.h; user units keep vitasdk's definitions, whose SceIoMode enum
+ * (psp2common/kernel/iofilemgr.h) would clash with Sony's.
  */
 #ifndef _PSP2COMMON_TYPES_H_
 #define _PSP2COMMON_TYPES_H_
@@ -24,9 +24,13 @@
 #define SCE_DEPRECATED_EX(name, comment)	name
 #endif
 
+#ifdef PSP2_KERNEL
+#include <kernel/types.h>
+#else
 typedef int		SceMode;
-typedef unsigned int	SceNID;		/* modulemgr/module_library.h's, for vitasdk's user headers */
 typedef SceUInt64	SceKernelSysClock;
+#endif
+typedef unsigned int	SceNID;		/* modulemgr/module_library.h's, for vitasdk's user headers */
 
 #define SCE_KERNEL_THREAD_ID_SELF	0
 #define SCE_OK				(0)

@@ -372,13 +372,6 @@ int pushExtendedStackCache(SceUID uid, void *base);
 _Static_assert(sizeof(struct ThreadmgrExtendedStackCache) == 0x20,
 	       "per-CPU extended stack cache layout");
 
-/* Native Sysroot time contracts; shared declarations await header integration. */
-/* SceKernelSysClock */
-typedef struct ThreadmgrSysClock {
-	uint32_t low;
-	uint32_t high;
-} ThreadmgrSysClock;
-
 _Static_assert(offsetof(SceProcessObject, threads) == 0x2d0 &&
 	       offsetof(SceProcessObject, threadEventCount) == 0x374 &&
 	       offsetof(SceProcessObject, lwMutexCacheLock) == 0x340 &&

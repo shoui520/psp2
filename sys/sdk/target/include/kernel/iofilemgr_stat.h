@@ -6,14 +6,9 @@
 #define _SCE_KERNEL_IOFILEMGR_STAT_H
 
 #include <scetypes.h>
+#include <kernel/types.h>
 
 #if !defined(_LANGUAGE_ASSEMBLY)
-
-/*
- * Sony's header takes SceIoMode from kernel/types.h; kernel units cannot include that one yet
- * (vitasdk's SceKernelSysClock), so its definition is repeated here, the same typedef.
- */
-typedef int			SceIoMode;
 
 /* st_mode: the file's type */
 #define SCE_STM_FMT		(0xf  <<  12)

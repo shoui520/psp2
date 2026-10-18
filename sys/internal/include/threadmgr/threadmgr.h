@@ -10,6 +10,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
+#include <kernel/types.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
