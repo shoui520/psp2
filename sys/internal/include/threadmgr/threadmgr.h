@@ -18,6 +18,29 @@
 extern "C" {
 #endif
 
+/*
+ * The kernel's sceKernelCreateThread option (0x1c). The SDK's is the first eight bytes
+ * (kernel/threadmgr.h, user mode); the kernel reads the rest when attr names them (threadmgr.c's
+ * THREAD_OPT_*): the memory block types of the kernel stack, the user stack and the TLS, a user
+ * stack block the caller gives, and the exceptions handed to the thread. The kernel-only names
+ * are ours.
+ */
+typedef struct _SceKernelThreadOptParam {
+	SceSize size;
+	SceUInt32 attr;
+	SceUInt32 kStackMemType;		/* 0x08 */
+	SceUInt32 uStackMemType;
+	SceUInt32 uTLSMemType;
+	SceUInt32 uStackMemid;			/* 0x14 */
+	SceUInt32 handedExceptions;
+} SceKernelThreadOptParam;
+
+/* the SDK's sceKernelCreateThread option: the first eight bytes of the kernel's */
+typedef struct SceKernelThreadOptParamV1 {
+	SceSize size;
+	SceUInt32 attr;
+} SceKernelThreadOptParamV1;
+
 /* NID 0x9DCB4B7A (vitasdk: ksceKernelGetProcessId); our NID db names it this way */
 SceUID sceKernelGetProcessId(void);
 
@@ -104,6 +127,8 @@ typedef struct ThreadCBInfo {
 } ThreadCBInfo;
 
 #ifndef __cplusplus
+_Static_assert(sizeof(SceKernelThreadOptParam) == 0x1c, "SceKernelThreadOptParam size");
+_Static_assert(sizeof(SceKernelThreadOptParamV1) == 8, "SceKernelThreadOptParamV1 size");
 _Static_assert(sizeof(ThreadmgrFastMutexInfo) == 0x44, "fast-mutex info size");
 _Static_assert(sizeof(ThreadmgrThreadEventInfo) == 0x40, "thread event info size");
 _Static_assert(sizeof(ThreadmgrDebugRegisters) == 0x48, "debugger registers size");

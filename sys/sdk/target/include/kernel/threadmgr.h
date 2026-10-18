@@ -2,7 +2,7 @@
  * kernel/threadmgr.h: the thread manager's constants and types, under Sony's names and layouts
  * (SDK Release 03.570.011, target/include/kernel/threadmgr.h; the kernel's DWARF names the header
  * at sys/sdk/target/include/kernel/threadmgr.h): what the kernel fills for its callers and takes
- * from them.
+ * from them, and the user library's functions.
  */
 
 #pragma once
@@ -131,27 +131,13 @@ typedef SceInt32 (*SceKernelCallbackFunction)(SceUID notifyId, SceInt32 notifyCo
 typedef SceInt32 (*SceKernelThreadEventHandler)(SceInt32 type, SceUID threadId, SceInt32 arg,
 						void *pCommon);
 
-/*
- * sceKernelCreateThread's option (0x1c). The SDK's is the first eight bytes; the kernel reads
- * the rest when attr names them (threadmgr.c's THREAD_OPT_*): the memory block types of the
- * kernel stack, the user stack and the TLS, a user stack block the caller gives, and the
- * exceptions handed to the thread. The kernel-only names are ours.
- */
+#ifndef PSP2_KERNEL
+/* sceKernelCreateThread's option; a kernel unit has the kernel's longer one (threadmgr/threadmgr.h) */
 typedef struct _SceKernelThreadOptParam {
 	SceSize size;
 	SceUInt32 attr;
-	SceUInt32 kStackMemType;		/* 0x08 */
-	SceUInt32 uStackMemType;
-	SceUInt32 uTLSMemType;
-	SceUInt32 uStackMemid;			/* 0x14 */
-	SceUInt32 handedExceptions;
 } SceKernelThreadOptParam;
-
-/* the SDK's sceKernelCreateThread option: the first eight bytes of the kernel's */
-typedef struct SceKernelThreadOptParamV1 {
-	SceSize size;
-	SceUInt32 attr;
-} SceKernelThreadOptParamV1;
+#endif
 
 /* sceKernelGetThreadInfo (0x80) */
 typedef struct _SceKernelThreadInfo {
@@ -413,8 +399,6 @@ typedef struct _SceKernelMsgPipeInfo {
 } SceKernelMsgPipeInfo;
 
 #ifndef __cplusplus	/* C only; g++ 4.8 (C++98) has no static_assert */
-_Static_assert(sizeof(SceKernelThreadOptParam) == 0x1c, "SceKernelThreadOptParam size");
-_Static_assert(sizeof(SceKernelThreadOptParamV1) == 8, "SceKernelThreadOptParamV1 size");
 _Static_assert(sizeof(SceKernelThreadInfo) == 0x80, "SceKernelThreadInfo size");
 _Static_assert(sizeof(SceKernelThreadRunStatus) == 0x34, "SceKernelThreadRunStatus size");
 _Static_assert(sizeof(SceKernelSystemInfo) == 0x48, "SceKernelSystemInfo size");
@@ -435,6 +419,219 @@ _Static_assert(sizeof(SceKernelEventInfo) == 0x40, "SceKernelEventInfo size");
 _Static_assert(sizeof(SceKernelMsgPipeVector) == 8, "SceKernelMsgPipeVector size");
 _Static_assert(sizeof(SceKernelMsgPipeOptParam) == 0x14, "SceKernelMsgPipeOptParam size");
 _Static_assert(sizeof(SceKernelMsgPipeInfo) == 0x3c, "SceKernelMsgPipeInfo size");
+#endif
+
+#ifndef PSP2_KERNEL
+/*
+ * The user library's thread manager (SceLibKernel and its syscalls), Sony's prototypes. A kernel
+ * unit has the kernel's functions of these names instead (threadmgr/threadmgr.h).
+ */
+SceUID sceKernelCreateThread(const char *pName, SceKernelThreadEntry entry, SceInt32 initPriority,
+			     SceSize stackSize, SceUInt32 attr, SceInt32 cpuAffinityMask,
+			     const SceKernelThreadOptParam *pOptParam);
+SceInt32 sceKernelStartThread(SceUID threadId, SceSize argSize, const void *pArgBlock);
+SceInt32 sceKernelExitThread(SceInt32 exitStatus);
+SceInt32 sceKernelDeleteThread(SceUID threadId);
+SceInt32 sceKernelExitDeleteThread(SceInt32 exitStatus);
+SceSize sceKernelCheckThreadStack(void);
+SceInt32 sceKernelCallWithChangeStack(void *pBase, SceSize size,
+				      SceKernelChangeStackFunction changeStackFunc, void *pCommon);
+SceInt32 sceKernelChangeThreadCpuAffinityMask(SceUID threadId, SceInt32 cpuAffinityMask);
+SceInt32 sceKernelGetThreadCpuAffinityMask(SceUID threadId);
+SceInt32 sceKernelChangeThreadPriority(SceUID threadId, SceInt32 priority);
+SceInt32 sceKernelChangeThreadPriority2(SceUID threadId, SceInt32 priority);
+SceInt32 sceKernelGetThreadCurrentPriority(void);
+SceUID sceKernelGetThreadId(void);
+SceInt32 sceKernelChangeCurrentThreadAttr(SceUInt32 clearAttr, SceUInt32 setAttr);
+SceInt32 sceKernelGetThreadExitStatus(SceUID threadId, SceInt32 *pExitStatus);
+SceUID sceKernelGetProcessId(void);
+SceInt32 sceKernelCheckWaitableStatus(void);
+SceInt32 sceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *pInfo);
+SceInt32 sceKernelGetThreadRunStatus(SceKernelThreadRunStatus *pStatus);
+SceInt32 sceKernelGetSystemInfo(SceKernelSystemInfo *pInfo);
+SceInt32 sceKernelGetThreadmgrUIDClass(SceUID uid);
+SceInt32 sceKernelChangeThreadVfpException(SceInt32 clearMask, SceInt32 setMask);
+SceInt32 sceKernelGetCurrentThreadVfpException(void);
+SceInt32 sceKernelDelayThread(SceUInt32 usec);
+SceInt32 sceKernelDelayThreadCB(SceUInt32 usec);
+SceInt32 sceKernelWaitThreadEnd(SceUID threadId, SceInt32 *pExitStatus, SceUInt32 *pTimeout);
+SceInt32 sceKernelWaitThreadEndCB(SceUID threadId, SceInt32 *pExitStatus, SceUInt32 *pTimeout);
+SceUID sceKernelCreateCallback(const char *pName, SceUInt32 attr,
+			       SceKernelCallbackFunction callbackFunc, void *pCommon);
+SceInt32 sceKernelDeleteCallback(SceUID callbackId);
+SceInt32 sceKernelNotifyCallback(SceUID callbackId, SceInt32 notifyArg);
+SceInt32 sceKernelCancelCallback(SceUID callbackId);
+SceInt32 sceKernelGetCallbackCount(SceUID callbackId);
+SceInt32 sceKernelCheckCallback(void);
+SceInt32 sceKernelGetCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *pInfo);
+SceInt32 sceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId);
+SceInt32 sceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId);
+SceInt32 sceKernelUnregisterCallbackFromEventAll(SceUID eventId);
+SceInt32 sceKernelWaitEvent(SceUID eventId, SceUInt32 waitPattern, SceUInt32 *pResultPattern,
+			    SceUInt64 *pUserData, SceUInt32 *pTimeout);
+SceInt32 sceKernelWaitEventCB(SceUID eventId, SceUInt32 waitPattern, SceUInt32 *pResultPattern,
+			      SceUInt64 *pUserData, SceUInt32 *pTimeout);
+SceInt32 sceKernelPollEvent(SceUID eventId, SceUInt32 bitPattern, SceUInt32 *pResultPattern,
+			    SceUInt64 *pUserData);
+SceInt32 sceKernelWaitMultipleEvents(SceKernelWaitEvent *pWaitEventList, SceUInt32 numEvents,
+				     SceUInt32 waitMode, SceKernelResultEvent *pResultEventList,
+				     SceUInt32 *pTimeout);
+SceInt32 sceKernelWaitMultipleEventsCB(SceKernelWaitEvent *pWaitEventList, SceUInt32 numEvents,
+				       SceUInt32 waitMode, SceKernelResultEvent *pResultEventList,
+				       SceUInt32 *pTimeout);
+SceInt32 sceKernelSetEvent(SceUID eventId, SceUInt32 setPattern, SceUInt64 userData);
+SceInt32 sceKernelSetEventWithNotifyCallback(SceUID eventId, SceUInt32 setPattern,
+					     SceUInt64 userData, SceInt32 notifyArg);
+SceInt32 sceKernelPulseEvent(SceUID eventId, SceUInt32 pulsePattern, SceUInt64 userData);
+SceInt32 sceKernelPulseEventWithNotifyCallback(SceUID eventId, SceUInt32 pulsePattern,
+					       SceUInt64 userData, SceInt32 notifyArg);
+SceInt32 sceKernelClearEvent(SceUID eventId, SceUInt32 clearPattern);
+SceInt32 sceKernelCancelEventWithSetPattern(SceUID eventId, SceUInt32 setPattern,
+					    SceUInt64 userData, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetEventPattern(SceUID eventId, SceUInt32 *pPattern);
+SceInt32 sceKernelCancelEvent(SceUID eventId, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetEventInfo(SceUID eventId, SceKernelEventInfo *pInfo);
+SceUID sceKernelCreateEventFlag(const char *pName, SceUInt32 attr, SceUInt32 initPattern,
+				const SceKernelEventFlagOptParam *pOptParam);
+SceInt32 sceKernelDeleteEventFlag(SceUID evfId);
+SceUID sceKernelOpenEventFlag(const char *pName);
+SceInt32 sceKernelCloseEventFlag(SceUID evfId);
+SceInt32 sceKernelWaitEventFlag(SceUID evfId, SceUInt32 bitPattern, SceUInt32 waitMode,
+				SceUInt32 *pResultPat, SceUInt32 *pTimeout);
+SceInt32 sceKernelWaitEventFlagCB(SceUID evfId, SceUInt32 bitPattern, SceUInt32 waitMode,
+				  SceUInt32 *pResultPat, SceUInt32 *pTimeout);
+SceInt32 sceKernelPollEventFlag(SceUID evfId, SceUInt32 bitPattern, SceUInt32 waitMode,
+				SceUInt32 *pResultPat);
+SceInt32 sceKernelSetEventFlag(SceUID evfId, SceUInt32 bitPattern);
+SceInt32 sceKernelClearEventFlag(SceUID evfId, SceUInt32 bitPattern);
+SceInt32 sceKernelCancelEventFlag(SceUID evfId, SceUInt32 setPattern, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *pInfo);
+SceUID sceKernelCreateSema(const char *pName, SceUInt32 attr, SceInt32 initCount, SceInt32 maxCount,
+			   const SceKernelSemaOptParam *pOptParam);
+SceInt32 sceKernelDeleteSema(SceUID semaId);
+SceUID sceKernelOpenSema(const char *pName);
+SceInt32 sceKernelCloseSema(SceUID semaId);
+SceInt32 sceKernelWaitSema(SceUID semaId, SceInt32 needCount, SceUInt32 *pTimeout);
+SceInt32 sceKernelWaitSemaCB(SceUID semaId, SceInt32 needCount, SceUInt32 *pTimeout);
+SceInt32 sceKernelPollSema(SceUID semaId, SceInt32 needCount);
+SceInt32 sceKernelSignalSema(SceUID semaId, SceInt32 signalCount);
+SceInt32 sceKernelCancelSema(SceUID semaId, SceInt32 setCount, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetSemaInfo(SceUID semaId, SceKernelSemaInfo *pInfo);
+SceUID sceKernelCreateMutex(const char *pName, SceUInt32 attr, SceInt32 initCount,
+			    const SceKernelMutexOptParam *pOptParam);
+SceInt32 sceKernelDeleteMutex(SceUID mutexId);
+SceUID sceKernelOpenMutex(const char *pName);
+SceInt32 sceKernelCloseMutex(SceUID mutexId);
+SceInt32 sceKernelLockMutex(SceUID mutexId, SceInt32 lockCount, SceUInt32 *pTimeout);
+SceInt32 sceKernelLockMutexCB(SceUID mutexId, SceInt32 lockCount, SceUInt32 *pTimeout);
+SceInt32 sceKernelTryLockMutex(SceUID mutexId, SceInt32 lockCount);
+SceInt32 sceKernelUnlockMutex(SceUID mutexId, SceInt32 unlockCount);
+SceInt32 sceKernelCancelMutex(SceUID mutexId, SceInt32 newCount, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *pInfo);
+SceInt32 sceKernelCreateLwMutex(SceKernelLwMutexWork *pWork, const char *pName, SceUInt32 attr,
+				SceInt32 initCount, const SceKernelLwMutexOptParam *pOptParam);
+SceInt32 sceKernelDeleteLwMutex(SceKernelLwMutexWork *pWork);
+SceInt32 sceKernelLockLwMutex(SceKernelLwMutexWork *pWork, SceInt32 lockCount, SceUInt32 *pTimeout);
+SceInt32 sceKernelLockLwMutexCB(SceKernelLwMutexWork *pWork, SceInt32 lockCount,
+				SceUInt32 *pTimeout);
+SceInt32 sceKernelTryLockLwMutex(SceKernelLwMutexWork *pWork, SceInt32 lockCount);
+SceInt32 sceKernelUnlockLwMutex(SceKernelLwMutexWork *pWork, SceInt32 unlockCount);
+SceInt32 sceKernelGetLwMutexInfo(SceKernelLwMutexWork *pWork, SceKernelLwMutexInfo *pInfo);
+SceInt32 sceKernelGetLwMutexInfoById(SceUID lwMutexId, SceKernelLwMutexInfo *pInfo);
+SceUID sceKernelCreateCond(const char *pName, SceUInt32 attr, SceUID mutexId,
+			   const SceKernelCondOptParam *pOptParam);
+SceInt32 sceKernelDeleteCond(SceUID condId);
+SceInt32 sceKernelWaitCond(SceUID condId, SceUInt32 *pTimeout);
+SceInt32 sceKernelSignalCond(SceUID condId);
+SceInt32 sceKernelSignalCondAll(SceUID condId);
+SceInt32 sceKernelSignalCondTo(SceUID condId, SceUID threadId);
+SceInt32 sceKernelGetCondInfo(SceUID condId, SceKernelCondInfo *pInfo);
+SceInt32 sceKernelCreateLwCond(SceKernelLwCondWork *pWork, const char *pName, SceUInt32 attr,
+			       SceKernelLwMutexWork *pLwMutex,
+			       const SceKernelLwCondOptParam *pOptParam);
+SceInt32 sceKernelDeleteLwCond(SceKernelLwCondWork *pWork);
+SceInt32 sceKernelWaitLwCond(SceKernelLwCondWork *pWork, SceUInt32 *pTimeout);
+SceInt32 sceKernelSignalLwCond(SceKernelLwCondWork *pWork);
+SceInt32 sceKernelSignalLwCondAll(SceKernelLwCondWork *pWork);
+SceInt32 sceKernelSignalLwCondTo(SceKernelLwCondWork *pWork, SceUID threadId);
+SceInt32 sceKernelGetLwCondInfo(SceKernelLwCondWork *pWork, SceKernelLwCondInfo *pInfo);
+SceInt32 sceKernelGetLwCondInfoById(SceUID lwCondId, SceKernelLwCondInfo *pInfo);
+SceUID sceKernelCreateRWLock(const char *pName, SceUInt32 attr,
+			     const SceKernelRWLockOptParam *pOptParam);
+SceInt32 sceKernelDeleteRWLock(SceUID rwLockId);
+SceUID sceKernelOpenRWLock(const char *pName);
+SceInt32 sceKernelCloseRWLock(SceUID rwLockId);
+SceInt32 sceKernelLockReadRWLock(SceUID rwLockId, SceUInt32 *pTimeout);
+SceInt32 sceKernelLockReadRWLockCB(SceUID rwLockId, SceUInt32 *pTimeout);
+SceInt32 sceKernelTryLockReadRWLock(SceUID rwLockId);
+SceInt32 sceKernelUnlockReadRWLock(SceUID rwLockId);
+SceInt32 sceKernelLockWriteRWLock(SceUID rwLockId, SceUInt32 *pTimeout);
+SceInt32 sceKernelLockWriteRWLockCB(SceUID rwLockId, SceUInt32 *pTimeout);
+SceInt32 sceKernelTryLockWriteRWLock(SceUID rwLockId);
+SceInt32 sceKernelUnlockWriteRWLock(SceUID rwLockId);
+SceInt32 sceKernelCancelRWLock(SceUID rwLockId, SceUInt32 *pNumReadWaitThreads,
+			       SceUInt32 *pNumWriteWaitThreads, SceInt32 flag);
+SceInt32 sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *pInfo);
+SceUID sceKernelCreateTimer(const char *pName, SceUInt32 attr,
+			    const SceKernelTimerOptParam *pOptParam);
+SceInt32 sceKernelDeleteTimer(SceUID timerId);
+SceUID sceKernelOpenTimer(const char *pName);
+SceInt32 sceKernelCloseTimer(SceUID timerId);
+SceInt32 sceKernelStartTimer(SceUID timerId);
+SceInt32 sceKernelStopTimer(SceUID timerId);
+SceInt32 sceKernelGetTimerBase(SceUID timerId, SceKernelSysClock *pBase);
+SceUInt64 sceKernelGetTimerBaseWide(SceUID timerId);
+SceInt32 sceKernelGetTimerTime(SceUID timerId, SceKernelSysClock *pClock);
+SceUInt64 sceKernelGetTimerTimeWide(SceUID timerId);
+SceInt32 sceKernelSetTimerTime(SceUID timerId, SceKernelSysClock *pClock);
+SceUInt64 sceKernelSetTimerTimeWide(SceUID timerId, SceUInt64 clock);
+SceInt32 sceKernelSetTimerEvent(SceUID timerId, SceInt32 type, SceKernelSysClock *pInterval,
+				SceInt32 fRepeat);
+SceInt32 sceKernelCancelTimer(SceUID timerId, SceUInt32 *pNumWaitThreads);
+SceInt32 sceKernelGetTimerInfo(SceUID timerId, SceKernelTimerInfo *pInfo);
+SceInt32 sceKernelGetTimerEventRemainingTime(SceUID timerId, SceKernelSysClock *pClock);
+SceUID sceKernelCreateSimpleEvent(const char *pName, SceUInt32 attr, SceUInt32 initPattern,
+				  const SceKernelSimpleEventOptParam *pOptParam);
+SceInt32 sceKernelDeleteSimpleEvent(SceUID simpleEventId);
+SceUID sceKernelOpenSimpleEvent(const char *pName);
+SceInt32 sceKernelCloseSimpleEvent(SceUID simpleEventId);
+SceUID sceKernelCreateMsgPipe(const char *pName, SceUInt32 type, SceUInt32 attr, SceSize bufSize,
+			      const SceKernelMsgPipeOptParam *pOptParam);
+SceInt32 sceKernelDeleteMsgPipe(SceUID msgPipeId);
+SceUID sceKernelOpenMsgPipe(const char *pName);
+SceInt32 sceKernelCloseMsgPipe(SceUID msgPipeId);
+SceInt32 sceKernelSendMsgPipe(SceUID msgPipeId, const void *pSendBuf, SceSize sendSize,
+			      SceUInt32 waitMode, SceSize *pResult, SceUInt32 *pTimeout);
+SceInt32 sceKernelSendMsgPipeCB(SceUID msgPipeId, const void *pSendBuf, SceSize sendSize,
+				SceUInt32 waitMode, SceSize *pResult, SceUInt32 *pTimeout);
+SceInt32 sceKernelTrySendMsgPipe(SceUID msgPipeId, const void *pSendBuf, SceSize sendSize,
+				 SceUInt32 waitMode, SceSize *pResult);
+SceInt32 sceKernelSendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+				    SceUInt32 numVector, SceUInt32 waitMode, SceSize *pResult,
+				    SceUInt32 *pTimeout);
+SceInt32 sceKernelSendMsgPipeVectorCB(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+				      SceUInt32 numVector, SceUInt32 waitMode, SceSize *pResult,
+				      SceUInt32 *pTimeout);
+SceInt32 sceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+				       SceUInt32 numVector, SceUInt32 waitMode, SceSize *pResult);
+SceInt32 sceKernelReceiveMsgPipe(SceUID msgPipeId, void *pRecvBuf, SceSize recvSize,
+				 SceUInt32 waitMode, SceSize *pResult, SceUInt32 *pTimeout);
+SceInt32 sceKernelReceiveMsgPipeCB(SceUID msgPipeId, void *pRecvBuf, SceSize recvSize,
+				   SceUInt32 waitMode, SceSize *pResult, SceUInt32 *pTimeout);
+SceInt32 sceKernelTryReceiveMsgPipe(SceUID msgPipeId, void *pRecvBuf, SceSize recvSize,
+				    SceUInt32 waitMode, SceSize *pResult);
+SceInt32 sceKernelReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+				       SceUInt32 numVector, SceUInt32 waitMode, SceSize *pResult,
+				       SceUInt32 *pTimeout);
+SceInt32 sceKernelReceiveMsgPipeVectorCB(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+					 SceUInt32 numVector, SceUInt32 waitMode, SceSize *pResult,
+					 SceUInt32 *pTimeout);
+SceInt32 sceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *pVector,
+					  SceUInt32 numVector, SceUInt32 waitMode,
+					  SceSize *pResult);
+SceInt32 sceKernelCancelMsgPipe(SceUID msgPipeId, SceUInt32 *pNumSendWaitThreads,
+				SceUInt32 *pNumReceiveWaitThreads);
+SceInt32 sceKernelGetMsgPipeInfo(SceUID msgPipeId, SceKernelMsgPipeInfo *pInfo);
 #endif
 
 #ifdef __cplusplus
