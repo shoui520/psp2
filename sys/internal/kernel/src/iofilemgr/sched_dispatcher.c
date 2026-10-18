@@ -245,7 +245,8 @@ void sceIoSchedDispatcherWorker(SchedDispatcher *dispatcher, IoScheduler *sched)
 	for (;;) {
 		bits = 0;
 		ret = ksceKernelWaitEventFlag(dispatcher->evf, sched->eventBits | SCHED_EVENT_HELP_MASK,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		SCE_DBG_ASSERT(ret == 0, 508);
 		if (bits & SCHED_EVENT_EXIT)
 			break;

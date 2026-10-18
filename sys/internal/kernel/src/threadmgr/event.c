@@ -328,7 +328,7 @@ restore:
 }
 
 /* an event's information */
-static int getEventInfo(SceUID eventId, ThreadmgrEventInfo *info)
+static int getEventInfo(SceUID eventId, SceKernelEventInfo *info)
 {
 	ThreadmgrEvent *event;
 	SceClass *cls;
@@ -349,7 +349,7 @@ static int getEventInfo(SceUID eventId, ThreadmgrEventInfo *info)
 			SceCpuForDriver_BF82DEB2(&event->lock);
 			info->attr = event->attr;
 			info->numWaitThreads = event->waiting;
-			info->pattern = event->pattern;
+			info->eventPattern = event->pattern;
 			info->userData = event->userData;
 			sceKernelSpinlockLowUnlock(&event->lock);
 		}
@@ -1204,7 +1204,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 	struct ThreadCB *thread =
 		currentThreadContext();
 	struct ThreadmgrWaitNode *self = (struct ThreadmgrWaitNode *)thread;
-	const ThreadmgrWaitEvent *wanted;
+	const SceKernelWaitEvent *wanted;
 	ThreadmgrEventWaitNode *node;
 	ThreadmgrEvent *event;
 	SceAllocOpt opt;
@@ -1271,7 +1271,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 			SceCpuForDriver_BF82DEB2(&event->lock);
 			if (event->attr & EVENT_ATTR_UNINTERRUPTIBLE)
 				uninterruptible = true;
-			matched = event->pattern & wanted->pattern;
+			matched = event->pattern & wanted->eventPattern;
 			if (matched == 0) {
 				if (queueing) {
 					opt.size = sizeof(opt);
@@ -1292,7 +1292,7 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 					node->next = (struct ThreadmgrWaitNode *)node;
 					node->prev = (struct ThreadmgrWaitNode *)node;
 					node->thread = thread;
-					node->pattern = wanted->pattern;
+					node->pattern = wanted->eventPattern;
 					node->eventId = wanted->eventId;
 					node->index = i;
 					node->wmeLink.next = &node->wmeLink;
@@ -1305,12 +1305,13 @@ int waitMultipleEvents(ThreadmgrWaitMultipleEvents *wme, SceUInt32 *timeout,
 				if (wme->results != NULL) {
 					SceCpuForDriver_BF82DEB2(THREAD_LOCK(thread));
 					addEventWaitResult(wme, wanted->eventId, 0,
-							   wanted->pattern & event->pattern,
+							   wanted->eventPattern & event->pattern,
 							   event->userData);
 					sceKernelSpinlockLowUnlock(THREAD_LOCK(thread));
 				}
 				if (event->attr & EVENT_ATTR_AUTO_CLEAR)
-					event->pattern &= ~(wanted->pattern & ~EVENT_PATTERN_RESERVED);
+					event->pattern &= ~(wanted->eventPattern &
+							    ~EVENT_PATTERN_RESERVED);
 				markEventReady(wme, i);
 				if (wme->mode & WME_MODE_ANY)
 					queueing = false;
@@ -1425,8 +1426,8 @@ restore:
 
 /* a WMECB for count events, then the wait; returns the results written or an error */
 static inline __attribute__((always_inline)) int waitMultipleEventsWith(
-	const ThreadmgrWaitEvent *events, uint32_t count, uint32_t mode,
-	ThreadmgrWaitEventResult *results, SceUInt32 *timeout, int callbacks)
+	const SceKernelWaitEvent *events, uint32_t count, uint32_t mode,
+	SceKernelResultEvent *results, SceUInt32 *timeout, int callbacks)
 {
 	ThreadmgrWaitMultipleEvents *wme;
 	SceAllocOpt opt;
@@ -1469,25 +1470,25 @@ static inline __attribute__((always_inline)) int waitMultipleEventsWith(
 }
 
 /* SceThreadmgrForDriver_36F8E58A: waits on several events */
-int SceThreadmgrForDriver_36F8E58A(const ThreadmgrWaitEvent *events, uint32_t count,
-				   uint32_t mode, ThreadmgrWaitEventResult *results,
+int SceThreadmgrForDriver_36F8E58A(const SceKernelWaitEvent *events, uint32_t count,
+				   uint32_t mode, SceKernelResultEvent *results,
 				   SceUInt32 *timeout)
 {
 	return waitMultipleEventsWith(events, count, mode, results, timeout, 0);
 }
 
 /* SceThreadmgrForDriver_8C48E53B: the same, running callbacks */
-int SceThreadmgrForDriver_8C48E53B(const ThreadmgrWaitEvent *events, uint32_t count,
-				   uint32_t mode, ThreadmgrWaitEventResult *results,
+int SceThreadmgrForDriver_8C48E53B(const SceKernelWaitEvent *events, uint32_t count,
+				   uint32_t mode, SceKernelResultEvent *results,
 				   SceUInt32 *timeout)
 {
 	return waitMultipleEventsWith(events, count, mode, results, timeout, 1);
 }
 
 /* SceThreadmgrForDriver_CBA7FAAA: an event's information */
-int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, ThreadmgrEventInfo *info)
+int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, SceKernelEventInfo *info)
 {
-	ThreadmgrEventInfo local;
+	SceKernelEventInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -1510,10 +1511,10 @@ int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, ThreadmgrEventInfo *info)
 }
 
 /* SceThreadmgrForDriver_995F32E1: the information of every event visible at level */
-int SceThreadmgrForDriver_995F32E1(int level, ThreadmgrEventInfo *infos, SceSize size,
+int SceThreadmgrForDriver_995F32E1(int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrEventInfo info;
+	SceKernelEventInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -1552,10 +1553,10 @@ int SceThreadmgrForDriver_995F32E1(int level, ThreadmgrEventInfo *infos, SceSize
 }
 
 /* SceThreadmgrForDriver_7D12344A: the same for a process's event PUIDs */
-int SceThreadmgrForDriver_7D12344A(SceUID pid, int level, ThreadmgrEventInfo *infos,
+int SceThreadmgrForDriver_7D12344A(SceUID pid, int level, SceKernelEventInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrEventInfo info;
+	SceKernelEventInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

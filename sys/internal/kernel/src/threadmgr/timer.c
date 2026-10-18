@@ -592,7 +592,7 @@ static int getAlarmInfo(SceUID alarmId, ThreadmgrAlarmInfo *info)
 }
 
 /* a timer's information */
-static int getTimerInfo(SceUID timerId, ThreadmgrTimerInfo *info)
+static int getTimerInfo(SceUID timerId, SceKernelTimerInfo *info)
 {
 	ThreadmgrUidTimer *uidTimer;
 	SceProcessObject *process;
@@ -612,24 +612,24 @@ static int getTimerInfo(SceUID timerId, ThreadmgrTimerInfo *info)
 	SceCpuForDriver_BF82DEB2(&uidTimer->base.event.lock);
 	flags = uidTimer->flags;
 	info->numWaitThreads = uidTimer->base.event.waiting;
-	info->time = uidTimer->time;
+	info->baseTime = uidTimer->time;
 	info->attr = uidTimer->base.event.attr;
-	info->running = flags & TIMER_FLAG_RUNNING;
+	info->fActive = flags & TIMER_FLAG_RUNNING;
 	if (flags & TIMER_FLAG_EVENT)
-		info->eventTime = uidTimer->eventTime;
-	info->repeat = (flags & TIMER_FLAG_REPEAT) >> 2;
+		info->schedule = uidTimer->eventTime;
+	info->fRepeat = (flags & TIMER_FLAG_REPEAT) >> 2;
 	info->interval = uidTimer->interval;
-	info->pulse = uidTimer->pulse;
+	info->type = uidTimer->pulse;
 	pid = uidTimer->base.timer.pid;
 	process = uidTimer->base.timer.process;
 	sceKernelSpinlockLowUnlock(&uidTimer->base.event.lock);
 	sceGUIDReleaseObject(timerId);
 	if (SceSysmemForDriver_00ED6C14(pid, PROCESS_CLASS(), NULL) >= 0) {
 		if (uidTimer->flags & TIMER_FLAG_RUNNING)
-			info->current = SceSysrootForKernel_E20F6FC8() - process->time -
-					info->time;
+			info->currentTime = SceSysrootForKernel_E20F6FC8() - process->time -
+					info->baseTime;
 		else
-			info->current = info->time;
+			info->currentTime = info->baseTime;
 		sceGUIDReleaseObject(pid);
 	}
 	ret = 0;
@@ -1092,16 +1092,12 @@ int timerProcessExit(SceProcessObject *process)
 	return 0;
 }
 
-typedef struct ThreadmgrTimerOptParam {
-	SceSize size;
-} ThreadmgrTimerOptParam;
-
 /*
  * The early errors return with TPIDRURO still shifted, as Sony's code
  * does (see ksceKernelCreateSema).
  */
 SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr,
-			    const ThreadmgrTimerOptParam *option)
+			    const SceKernelTimerOptParam *option)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
@@ -1898,9 +1894,9 @@ retry:
 }
 
 /* SceThreadmgrForDriver_19F3E92A: a timer's information */
-int SceThreadmgrForDriver_19F3E92A(SceUID timerId, ThreadmgrTimerInfo *info)
+int SceThreadmgrForDriver_19F3E92A(SceUID timerId, SceKernelTimerInfo *info)
 {
-	ThreadmgrTimerInfo local;
+	SceKernelTimerInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -1925,10 +1921,10 @@ int SceThreadmgrForDriver_19F3E92A(SceUID timerId, ThreadmgrTimerInfo *info)
 }
 
 /* SceThreadmgrForDriver_3C297724: the information of every timer visible at level */
-int SceThreadmgrForDriver_3C297724(int level, ThreadmgrTimerInfo *infos, SceSize size,
+int SceThreadmgrForDriver_3C297724(int level, SceKernelTimerInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrTimerInfo info;
+	SceKernelTimerInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -1967,10 +1963,10 @@ int SceThreadmgrForDriver_3C297724(int level, ThreadmgrTimerInfo *infos, SceSize
 }
 
 /* SceThreadmgrForDriver_C327CA7C: the same for a process's timer PUIDs */
-int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level, ThreadmgrTimerInfo *infos,
+int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level, SceKernelTimerInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrTimerInfo info;
+	SceKernelTimerInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

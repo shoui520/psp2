@@ -232,7 +232,9 @@ static int NOINLINE StartSession(int index, uint32_t priority,
 		goto cleanup;
 	vector.size = 1;
 	sceKernelSysrootDisableAutoClockDown();
-	ret = ksceKernelWaitEventFlag(eventFlag, 0x11, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &vector.size, NULL);
+	ret = ksceKernelWaitEventFlag(eventFlag, 0x11,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &vector.size, NULL);
 	sceKernelSysrootEnableAutoClockDown();
 	if (ret < 0)
 		goto cleanup;
@@ -425,7 +427,9 @@ int ksceSblSmCommCallFunc(SceSblSmCommId id, SceUInt32 service,
 		goto out;
 	}
 	sceKernelSysrootDisableAutoClockDown();
-	ret = ksceKernelWaitEventFlag(eventFlag, 0x11, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &eventBits, NULL);
+	ret = ksceKernelWaitEventFlag(eventFlag, 0x11,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &eventBits, NULL);
 	sceKernelSysrootEnableAutoClockDown();
 	if (ret < 0)
 		goto out;

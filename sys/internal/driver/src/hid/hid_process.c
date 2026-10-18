@@ -1,6 +1,6 @@
 /* Descriptive filename; these helpers have no debug source records. */
 #include "hid_internal.h"
-#include <psp2/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <acmgr/acmgr.h>
 #include <ctrl/ctrl.h>
 #include <string.h>

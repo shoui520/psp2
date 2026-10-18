@@ -352,7 +352,7 @@ int cecDevInitialize(const CecDevCallbacks *callbacks)
 	cecDev.physicalAddress[0] = 0xff;
 	cecDev.physicalAddress[1] = 0xff;
 	cecDev.available = 1;
-	eventFlag = ksceKernelCreateEventFlag("SceHdmiCECDev", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	eventFlag = ksceKernelCreateEventFlag("SceHdmiCECDev", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (eventFlag < 0) {
 		SCE_DBG_ASSERT_FAIL(954);
 		return eventFlag;
@@ -540,7 +540,8 @@ int cecDevTx(const SceUInt8 *frame, SceUInt32 length)
 	timeout = CEC_DEV_TX_TIMEOUT;
 	ret = ksceKernelWaitEventFlag(cecDev.eventFlag, CEC_DEV_EVENT_TX_READY |
 				      CEC_DEV_EVENT_TX_RETRY_TIMEOUT | CEC_DEV_EVENT_TX_ARBITRATION,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR, &events, &timeout);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, &events, &timeout);
 	if (ret < 0)
 		return ret;
 	if (events & CEC_DEV_EVENT_TX_ARBITRATION)

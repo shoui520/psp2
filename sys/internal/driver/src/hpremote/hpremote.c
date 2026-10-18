@@ -97,10 +97,12 @@ static int remoteThread(SceSize args, void *argp) /* name unknown */
 	for (;;) {
 		events = 0;
 		if (!timeout)
-			ksceKernelPollEventFlag(remote.event, 0xc0000008, SCE_EVENT_WAITOR, &events);
+			ksceKernelPollEventFlag(remote.event, 0xc0000008,
+						SCE_KERNEL_EVF_WAITMODE_OR, &events);
 		else
 			ksceKernelWaitEventFlag(remote.event, mask | 0xc0000008,
-					       SCE_EVENT_WAITOR, &events, (int32_t)timeout < 0 ? NULL : &timeout);
+					       SCE_KERNEL_EVF_WAITMODE_OR, &events,
+					       (int32_t)timeout < 0 ? NULL : &timeout);
 		if (events & 0x40000000) {
 			remote.state = 0;
 			ksceKernelClearEventFlag(remote.event, ~0x40000000u);
@@ -303,7 +305,7 @@ int module_start(SceSize args, void *argp)
 
 	memset(&remote, 0, sizeof(remote));
 	memset(remote.callbacks, -1, sizeof(remote.callbacks));
-	uid = ksceKernelCreateEventFlag("SceHprm", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	uid = ksceKernelCreateEventFlag("SceHprm", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0)
 		return 0;
 	remote.event = uid;

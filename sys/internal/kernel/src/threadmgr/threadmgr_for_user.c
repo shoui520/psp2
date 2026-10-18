@@ -23,7 +23,6 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/uid_class.h>
 
-int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
 int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
 int ksceKernelGetThreadCpuAffinityMask(SceUID uid);
 int __attribute__((noinline)) sceKernelWaitSignal(uint32_t arg0, uint32_t arg1, SceUInt32 *timeout);
@@ -76,16 +75,13 @@ uint32_t ksceKernelChangeThreadVfpException(uint32_t clear, uint32_t set);
 SceUID ksceKernelCreateCallback(const char *name, SceUInt32 attr, uintptr_t entry, void *common);
 int ksceKernelDeleteCallback(SceUID callbackId);
 int ksceKernelNotifyCallback(SceUID callbackId, int arg);
-int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, ThreadmgrCallbackInfo *info);
-int ksceKernelRegisterCallbackToEvent(SceUID eventId, SceUID callbackId, uint32_t notifyId);
+int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *info);
 int ksceKernelUnregisterCallbackFromEvent(SceUID eventId, SceUID callbackId);
 int ksceKernelUnregisterCallbackFromEventAll(SceUID eventId);
 SceUID registerThreadEventHandler(const char *name, SceUID target, SceUID pid, uint32_t mask,
 				  uintptr_t handler, uint32_t arg, int user);
 int sceKernelUnregisterThreadEventHandler(SceUID uid);
 int SceThreadmgrForDriver_6657429E(SceUID uid, void *info);
-int ksceKernelWaitEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
-			uint64_t *outUserData, SceUInt32 *timeout);
 int ksceKernelWaitEventCB(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 			  uint64_t *outUserData, SceUInt32 *timeout);
 int sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
@@ -98,7 +94,7 @@ int ksceKernelPulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uin
 int sceKernelCancelEventWithSetPattern(SceUID eventId, uint32_t setPattern, uint64_t userData,
 				       int *numWaitThreads);
 int sceKernelGetEventPattern(SceUID eventId, uint32_t *pattern);
-int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, ThreadmgrEventInfo *info);
+int SceThreadmgrForDriver_CBA7FAAA(SceUID eventId, SceKernelEventInfo *info);
 int ksceKernelWaitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
 			    SceUInt32 *timeout);
 int ksceKernelWaitEventFlagCB(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
@@ -139,7 +135,6 @@ int __sceKernelWaitLwCond(SceUID condId, SceUInt32 *timeout, int callbacks);
 int __sceKernelSignalLwCond(SceUID condId);
 int __sceKernelSignalLwCondAll(SceUID condId);
 int __sceKernelSignalLwCondTo(SceUID condId, SceUID threadId);
-SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr, const void *option);
 int SceThreadmgrForDriver_3F5E1D56(SceUID rwLockId, SceUInt32 *timeout);
 int SceThreadmgrForDriver_CFA2FFAF(SceUID rwLockId, SceUInt32 *timeout);
 int ksceKernelTryLockReadRWLock(SceUID rwLockId);
@@ -151,7 +146,6 @@ int ksceKernelUnlockWriteRWLock(SceUID rwLockId);
 int sceKernelCancelRWLock(SceUID rwLockId, int *numReadWaitThreads, int *numWriteWaitThreads,
 			  SceUInt32 type);
 int sceKernelGetRWLockInfo(SceUID rwLockId, void *info);
-int SceThreadmgrForKernel_170F69D6(SceUID threadId, uint32_t counter, uint32_t *value);
 void *ksceKernelGetThreadTLSAddr(SceUID uid, unsigned int index);
 int _sceKernelLockLwMutex(void *work, int count, SceUInt32 *timeout, int callbacks);
 int _sceKernelUnlockLwMutex(void *work, int count);
@@ -172,8 +166,6 @@ SceUID sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount,
 SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 attr,
 				    SceSize bufferSize, const void *option, const void *lr);
 SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr, const void *option);
-SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
-				   const void *option);
 int _sceKernelCreateLwMutexForUser(void *work, const char *name, SceUInt32 attr, int initCount,
 				   const void *option);
 int sceKernelDeleteLwMutexForUser(void *work);
@@ -502,7 +494,7 @@ int sceKernelNotifyCallback(SceUID callbackId, int arg)
 }
 
 /* the core of _sceKernelGetCallbackInfo: the user sees its own PUID */
-int sceKernelGetCallbackInfoForUser(SceUID callbackId, ThreadmgrCallbackInfo *info)
+int sceKernelGetCallbackInfoForUser(SceUID callbackId, SceKernelCallbackInfo *info)
 {
 	SceUID guid = SceSysmemForDriver_45D22597(0, callbackId);
 	int ret;
@@ -740,15 +732,15 @@ struct ThreadmgrUserEventId {
  * user's arrays live in the process's heap; a wait a request broke keeps
  * them on the thread (restartWaitMultipleEvents) for the restarted syscall.
  */
-int sceKernelWaitMultipleEventsForUser(const ThreadmgrWaitEvent *userEvents, SceUInt32 count,
-				       SceUInt32 mode, ThreadmgrWaitEventResult *userResults,
+int sceKernelWaitMultipleEventsForUser(const SceKernelWaitEvent *userEvents, SceUInt32 count,
+				       SceUInt32 mode, SceKernelResultEvent *userResults,
 				       SceUInt32 *userTimeout)
 {
 	struct ThreadCB *thread;
 	ThreadmgrWaitMultipleEvents *wme;
-	ThreadmgrWaitEventResult *results;
+	SceKernelResultEvent *results;
 	struct ThreadmgrUserEventId *ids;
-	ThreadmgrWaitEvent *events;
+	SceKernelWaitEvent *events;
 	SceUInt32 timeout, *timeoutPtr;
 	SceAllocOpt opt;
 	SceUID pid, guid;
@@ -830,7 +822,7 @@ int sceKernelWaitMultipleEventsForUser(const ThreadmgrWaitEvent *userEvents, Sce
 		/* restarted: the WME the broken wait kept */
 		SCE_DBG_ASSERT_CHECK(thread->restartWaitMultipleEvents != NULL, 854);
 		wme = thread->restartWaitMultipleEvents;
-		events = (ThreadmgrWaitEvent *)wme->events;
+		events = (SceKernelWaitEvent *)wme->events;
 		ids = wme->userEventIds;
 		results = wme->results;
 	}
@@ -888,15 +880,15 @@ out:
  * user's arrays live in the process's heap; a wait a request broke keeps
  * them on the thread (restartWaitMultipleEvents) for the restarted syscall.
  */
-int sceKernelWaitMultipleEventsCBForUser(const ThreadmgrWaitEvent *userEvents, SceUInt32 count,
-				       SceUInt32 mode, ThreadmgrWaitEventResult *userResults,
+int sceKernelWaitMultipleEventsCBForUser(const SceKernelWaitEvent *userEvents, SceUInt32 count,
+				       SceUInt32 mode, SceKernelResultEvent *userResults,
 				       SceUInt32 *userTimeout)
 {
 	struct ThreadCB *thread;
 	ThreadmgrWaitMultipleEvents *wme;
-	ThreadmgrWaitEventResult *results;
+	SceKernelResultEvent *results;
 	struct ThreadmgrUserEventId *ids;
-	ThreadmgrWaitEvent *events;
+	SceKernelWaitEvent *events;
 	SceUInt32 timeout, *timeoutPtr;
 	SceAllocOpt opt;
 	SceUID pid, guid;
@@ -978,7 +970,7 @@ int sceKernelWaitMultipleEventsCBForUser(const ThreadmgrWaitEvent *userEvents, S
 		/* restarted: the WME the broken wait kept */
 		SCE_DBG_ASSERT_CHECK(thread->restartWaitMultipleEvents != NULL, 1058);
 		wme = thread->restartWaitMultipleEvents;
-		events = (ThreadmgrWaitEvent *)wme->events;
+		events = (SceKernelWaitEvent *)wme->events;
 		ids = wme->userEventIds;
 		results = wme->results;
 	}
@@ -1080,7 +1072,7 @@ int sceKernelGetEventPatternForUser(SceUID eventId, uint32_t *pattern)
 }
 
 /* the core of _sceKernelGetEventInfo: the user's PUID, and whether it created the event */
-int sceKernelGetEventInfoForUser(SceUID eventId, ThreadmgrEventInfo *info)
+int sceKernelGetEventInfoForUser(SceUID eventId, SceKernelEventInfo *info)
 {
 	uint32_t attributes;
 	SceUID guid;
@@ -1470,7 +1462,7 @@ int sceKernelGetMsgPipeInfoForUser(SceUID msgPipeId, struct ThreadmgrUserInfoHea
 }
 
 /* the core of _sceKernelGetLwMutexInfoById */
-int sceKernelGetLwMutexInfoByIdForUser(SceUID lwMutexId, ThreadmgrLwMutexInfo *info)
+int sceKernelGetLwMutexInfoByIdForUser(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	SceUID guid = SceSysmemForDriver_45D22597(0, lwMutexId);
 	int ret;
@@ -1609,7 +1601,7 @@ int sceKernelSignalLwCondToForUser(const ThreadmgrLwCondWork *work, SceUID threa
 
 /* the cores of _sceKernelGetLwCondInfo and _sceKernelGetLwCondInfoById */
 int sceKernelGetLwCondInfoForUser(const ThreadmgrLwCondWork *work,
-				  ThreadmgrLwCondInfo *info)
+				  SceKernelLwCondInfo *info)
 {
 	SceUID guid;
 	int ret;
@@ -2091,7 +2083,7 @@ int sceKernelCancelMutex(SceUID mutexId, int newCount, int *numWaitThreads)
 }
 
 /* sceKernelGetMutexInfo (user) */
-int sceKernelGetMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
+int sceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	uint32_t attributes;
 	SceUID guid;
@@ -2957,7 +2949,7 @@ int _sceKernelPollEvent(SceUID eventId, uint32_t pattern, uint32_t *outPattern,
 }
 
 /* _sceKernelWaitMultipleEvents: extra arguments (results, timeout) */
-int _sceKernelWaitMultipleEvents(const ThreadmgrWaitEvent *events, SceUInt32 count,
+int _sceKernelWaitMultipleEvents(const SceKernelWaitEvent *events, SceUInt32 count,
 				 SceUInt32 mode, const ThreadmgrSyscallArgs *userArgs)
 {
 	ThreadmgrSyscallArgs args;
@@ -2967,11 +2959,11 @@ int _sceKernelWaitMultipleEvents(const ThreadmgrWaitEvent *events, SceUInt32 cou
 	if (ret < 0)
 		return ret;
 	return sceKernelWaitMultipleEventsForUser(events, count, mode,
-		(ThreadmgrWaitEventResult *)args.arg[0], (SceUInt32 *)args.arg[1]);
+		(SceKernelResultEvent *)args.arg[0], (SceUInt32 *)args.arg[1]);
 }
 
 /* _sceKernelWaitMultipleEventsCB */
-int _sceKernelWaitMultipleEventsCB(const ThreadmgrWaitEvent *events, SceUInt32 count,
+int _sceKernelWaitMultipleEventsCB(const SceKernelWaitEvent *events, SceUInt32 count,
 				   SceUInt32 mode, const ThreadmgrSyscallArgs *userArgs)
 {
 	ThreadmgrSyscallArgs args;
@@ -2981,7 +2973,7 @@ int _sceKernelWaitMultipleEventsCB(const ThreadmgrWaitEvent *events, SceUInt32 c
 	if (ret < 0)
 		return ret;
 	return sceKernelWaitMultipleEventsCBForUser(events, count, mode,
-		(ThreadmgrWaitEventResult *)args.arg[0], (SceUInt32 *)args.arg[1]);
+		(SceKernelResultEvent *)args.arg[0], (SceUInt32 *)args.arg[1]);
 }
 
 /* _sceKernelPulseEventWithNotifyCallback: extra arguments (userData, arg) */
@@ -3506,7 +3498,7 @@ int _sceKernelGetLwCondInfo(const ThreadmgrLwCondWork *work, void *userInfo)
 	ret = SceSysmemForDriver_BC996A7A(info, userInfo, LW_COND_INFO_SIZE);
 	if (ret < 0)
 		return ret;
-	ret = sceKernelGetLwCondInfoForUser(kWork, (ThreadmgrLwCondInfo *)info);
+	ret = sceKernelGetLwCondInfoForUser(kWork, (SceKernelLwCondInfo *)info);
 	err = SceSysmemForDriver_6D88EF8A(userInfo, info, LW_COND_INFO_SIZE);
 	if (err < 0)
 		ret = err;
@@ -3831,7 +3823,7 @@ int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWait
 			  sceKernelCancelEventFlag(guid, pattern, numWaitThreads);
 }
 
-int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info)
+int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	uint32_t attributes;
 	int ret = SceSysmemForDriver_45D22597(0, evfId);
@@ -3968,7 +3960,6 @@ uint64_t ksceKernelGetTimerBaseWide(SceUID uid);
 uint64_t ksceKernelGetTimerTimeWide(SceUID uid);
 int sceKernelSetTimerTime(SceUID uid, uint64_t *value);
 uint64_t ksceKernelSetTimerTimeWide(SceUID uid, uint64_t value);
-int sceKernelSetTimerEvent(SceUID uid, uint32_t type, const volatile uint64_t *interval, int repeat);
 int sceKernelCancelTimer(SceUID uid, uint32_t *count);
 int sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *remaining);
 
@@ -4010,7 +4001,7 @@ int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output)
 }
 
 /* name unknown */
-int getTimerInfoForUser(SceUID uid, ThreadmgrTimerInfo *output)
+int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output)
 {
 	SceUID guid = SceSysmemForDriver_45D22597(0, uid);
 	uint32_t attributes;

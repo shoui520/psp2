@@ -348,7 +348,7 @@ int LockupThread(SceSize args, void *argp)
 	while (lockupThreadRunning) {
 		eventPattern = 0;
 		result = ksceKernelWaitEventFlag(lockupEventUid, 3,
-				SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+				SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				&eventPattern, NULL);
 		if (!lockupThreadRunning)
 			break;

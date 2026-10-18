@@ -887,7 +887,8 @@ static int _mainThread(SceSize args, void *argp)
 	int ret, i15;
 
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(work.eventFlag, CEC_EVENT_ALL, SCE_EVENT_WAITOR,
+		ret = ksceKernelWaitEventFlag(work.eventFlag, CEC_EVENT_ALL,
+					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 2253);
@@ -982,7 +983,7 @@ int cecInitialize(void)
 		SCE_DBG_ASSERT_FAIL(2762);
 		return thread;
 	}
-	ret = ksceKernelCreateEventFlag("SceHdmiCEC", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceHdmiCEC", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(2774);
 		return ret;

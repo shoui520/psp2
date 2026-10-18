@@ -435,21 +435,21 @@ int sceDfMgrInit(void)
 
 	for (i = 0, link = s_dfmgrLink; i < DFMGR_LINK_COUNT; i++, link++) {
 		pd = _getPdCB(s_dfmgrLinkTable[i].pd);
-		ret = ksceKernelCreateMutex("SceDeci4pDfMgrSend", SCE_KERNEL_ATTR_THREAD_PRIO, 0,
+		ret = ksceKernelCreateMutex("SceDeci4pDfMgrSend", SCE_KERNEL_ATTR_TH_PRIO, 0,
 					    NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 228);
 			return ret;
 		}
 		link->sendMutex = ret;
-		ret = ksceKernelCreateMutex("SceDeci4pDfMgrRecv", SCE_KERNEL_ATTR_THREAD_PRIO, 0,
+		ret = ksceKernelCreateMutex("SceDeci4pDfMgrRecv", SCE_KERNEL_ATTR_TH_PRIO, 0,
 					    NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 238);
 			return ret;
 		}
 		link->recvMutex = ret;
-		ret = ksceKernelCreateSema("SceDeci4pDfMgrEvent", SCE_KERNEL_ATTR_THREAD_PRIO, 2, 2,
+		ret = ksceKernelCreateSema("SceDeci4pDfMgrEvent", SCE_KERNEL_ATTR_TH_PRIO, 2, 2,
 					   NULL);
 		if (ret < 0) {
 			SCE_DBG_ASSERT_LEVEL(0, 0, 251);

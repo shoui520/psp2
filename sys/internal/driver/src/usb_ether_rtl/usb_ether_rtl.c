@@ -684,14 +684,18 @@ static int attach(int device)
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
 		return ret;
 	request = (SceUsbdDeviceRequest){ 1, 11, 0, 0, 0 };
 	ret = ksceUsbdControlTransfer(a->controlPipe, &request, NULL, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
 		return ret;
 	a->device = device;

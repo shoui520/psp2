@@ -2493,7 +2493,8 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 					g_threadIdVector.id[i]);
 				SCE_PANIC(1151);
 			}
-			if (info.status == SCE_THREAD_SUSPENDED || info.status == SCE_THREAD_DORMANT)
+			if (info.status == SCE_KERNEL_THREAD_STATUS_SUSPENDED ||
+			    info.status == SCE_KERNEL_THREAD_STATUS_DORMANT)
 				break;
 #if FW_DEBUG
 			if (n % 50000 == 0)
@@ -4920,7 +4921,7 @@ int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32
 /* name unknown: reload the debug registers on every core running the process */
 static inline __attribute__((always_inline)) int ProcessUpdateDebugRegs(SceUID pid)
 {
-	ThreadmgrRunStatus info;
+	SceKernelThreadRunStatus info;
 	int ret, i;
 
 	if (pid == KERNEL_PID) {
@@ -4935,7 +4936,7 @@ static inline __attribute__((always_inline)) int ProcessUpdateDebugRegs(SceUID p
 	if (ret < 0)
 		return ret;
 	for (i = 0; i < 4; i++) {
-		if (info.cpu[i].processId == pid)
+		if (info.cpuInfo[i].processId == pid)
 			SceThreadmgrForKernel_8D53CA9B(i);
 	}
 	return 0;
@@ -6111,7 +6112,7 @@ SceUID sceKernelCallCoredumpHandler(SceUID pid)
 	opt.kStackMemType = 0;
 	opt.uStackMemType = 0;
 	opt.uTLSMemType = 0;
-	opt.data_0x18 = 0;
+	opt.handedExceptions = 0;
 	opt.size = sizeof(opt);
 	opt.attr = 8;			/* uStackMemid is given */
 	thid = SceThreadmgrForDriver_C8E57BB4(pid, "SceKernelCoredumpHandler", process->libkernelAddr[3],

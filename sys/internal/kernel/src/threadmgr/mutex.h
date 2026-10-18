@@ -128,7 +128,7 @@ static inline void notifyPriorityChange(struct ThreadCB *thread, int oldPriority
 	}
 }
 
-int getMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info);
+int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info);
 void acquireMutex(ThreadmgrMutex *mutex, struct ThreadCB *thread, int count);
 int releaseMutex(ThreadmgrMutexCore *core);
 int findNextCeilingPriority(struct ThreadCB *thread);

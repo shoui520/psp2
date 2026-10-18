@@ -487,7 +487,9 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	unsigned int bits;
 	int ret;
 
-	ret = ksceKernelWaitEventFlag(s_mtp.event, done | failed, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR,
+	ret = ksceKernelWaitEventFlag(s_mtp.event, done | failed,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
 				      &bits, bounded ? &timeout : NULL);
 	if ((bits & failed) || req->returnCode < 0)
 		return s_mtp.busFlags & MTP_BUS_ATTACHED ? MTP_CANCELLED : MTP_DISCONNECTED;
@@ -498,7 +500,8 @@ static inline int WaitTransfer(SceUdcdDeviceRequest *req, SceUdcdEndpoint *endpo
 	timeout = MTP_WAIT_TIMEOUT;
 	ksceUdcdClearFIFO(endpoint);
 	if (ksceUdcdReqCancelAll(endpoint) == SCE_UDCD_ERROR_DRIVER_IN_PROGRESS)
-		ksceKernelWaitEventFlag(s_mtp.event, failed, SCE_EVENT_WAITCLEAR, NULL, &timeout);
+		ksceKernelWaitEventFlag(s_mtp.event, failed, SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL,
+					NULL, &timeout);
 	return MTP_TIMEOUT;
 }
 
@@ -1214,7 +1217,8 @@ int SceUsbMtpForDriver_76D707B1(SceUInt32 timeout)
 	if (!s_mtp.ready)
 		return MTP_UNAVAILABLE;
 	uint32_t bits;
-	int ret = ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_ATTACHED | MTP_EVENT_CONFIGURED, SCE_EVENT_WAITOR, &bits, &timeout);
+	int ret = ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_ATTACHED | MTP_EVENT_CONFIGURED,
+					  SCE_KERNEL_EVF_WAITMODE_OR, &bits, &timeout);
 	if (bits & MTP_EVENT_CONFIGURED)
 		return MTP_CANCELLED;
 	return ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? MTP_TIMEOUT : ret;
@@ -1261,7 +1265,8 @@ int sceUsbMtpStart(void)
 {
 	if (s_mtp.ready)
 		return MTP_BUSY;
-	if (ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED, SCE_EVENT_WAITOR, NULL, NULL) < 0)
+	if (ksceKernelWaitEventFlag(s_mtp.event, MTP_EVENT_INITIALIZED, SCE_KERNEL_EVF_WAITMODE_OR,
+				    NULL, NULL) < 0)
 		return MTP_TIMEOUT;
 	const char *driver = "USBDeviceControllerDriver";
 	int ret = ksceUdcdStart(driver, 0, 0);

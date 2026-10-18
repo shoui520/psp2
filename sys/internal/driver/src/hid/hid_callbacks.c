@@ -2,7 +2,7 @@
 #include "hid_internal.h"
 #include <psp2kern/kernel/threadmgr/callback.h>
 #include <sysmem/sysmem.h>
-#include <psp2/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <intrmgr/syscall.h>
 #include <string.h>
 

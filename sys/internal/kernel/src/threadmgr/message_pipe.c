@@ -40,12 +40,6 @@ int ksceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex);
 int ksceKernelLockFastMutex(struct ThreadmgrFastMutex *mutex);
 int callCallbackAll(struct ThreadCB *thread);
 
-/* one buffer of a send or receive */
-typedef struct ThreadmgrMsgPipeVector {
-	void *base;
-	SceSize size;
-} ThreadmgrMsgPipeVector;
-
 /* the ring buffer (pipe +0x38) */
 struct ThreadmgrMsgPipeRing {
 	uint8_t *base;				/* 0x38 */
@@ -72,20 +66,6 @@ typedef struct ThreadmgrMsgPipe {
 } ThreadmgrMsgPipe;
 
 _Static_assert(sizeof(ThreadmgrMsgPipe) == 0x78, "SceUIDMsgPipeObject size");
-
-/* ksceKernelGetMsgPipeInfo (0x3c) */
-typedef struct ThreadmgrMsgPipeInfo {
-	SceSize size;
-	SceUID msgPipeId;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	SceSize bufferSize;			/* 0x2c */
-	SceSize freeSize;			/* 0x30 */
-	int numSendWaitThreads;			/* 0x34 */
-	int numReceiveWaitThreads;		/* 0x38 */
-} ThreadmgrMsgPipeInfo;
-
-_Static_assert(sizeof(ThreadmgrMsgPipeInfo) == 0x3c, "msg pipe info size");
 
 #define MSG_PIPE_CLASS()	(s_threadmgrRuntime.manager->msgPipeClass)
 #define MSG_PIPE_QUEUE(pipe)	((struct ThreadmgrWaitNode *)&(pipe)->event.next)
@@ -207,7 +187,7 @@ static int uidMsgPipe_Destructor(void *object)
 }
 
 /* a pipe's information */
-static int getMsgPipeInfo(SceUID msgPipeId, ThreadmgrMsgPipeInfo *info)
+static int getMsgPipeInfo(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 {
 	ThreadmgrMsgPipe *pipe;
 	int intr, ret;
@@ -325,10 +305,10 @@ static inline __attribute__((always_inline)) int sendPipe(struct ThreadmgrMsgPip
  * ring; the position moves on unless keep is set.
  */
 int sendPipeVector(struct ThreadmgrMsgPipeRing *ring, SceUID pid,
-			  const ThreadmgrMsgPipeVector *vector, int *index, SceSize *offset,
+			  const SceKernelMsgPipeVector *vector, int *index, SceSize *offset,
 			  SceSize size, int keep, int kernelVector)
 {
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	SceSize off = *offset, len;
 	int i = *index, ret;
 
@@ -344,18 +324,18 @@ int sendPipeVector(struct ThreadmgrMsgPipeRing *ring, SceUID pid,
 				return ret;
 			}
 		}
-		len = buffer.size - off;
+		len = buffer.bufSize - off;
 		if (size <= len)
 			len = size;
-		ret = sendPipe(ring, pid, (const uint8_t *)buffer.base + off, len);
+		ret = sendPipe(ring, pid, (const uint8_t *)buffer.pBase + off, len);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xf, 313, "sendPipe(%p, 0x%08X, 0x%08X, 0x%08x): error 0x%08x\n",
-				       ring, pid, (uint8_t *)buffer.base + off, len, ret);
+				       ring, pid, (uint8_t *)buffer.pBase + off, len, ret);
 			return ret;
 		}
 		off += len;
 		size -= len;
-		if (buffer.size <= off) {
+		if (buffer.bufSize <= off) {
 			off = 0;
 			i++;
 		}
@@ -413,10 +393,10 @@ static inline __attribute__((always_inline)) int recvPipe(struct ThreadmgrMsgPip
 
 /* size bytes from the ring into the vector, from buffer *index at *offset on */
 int recvPipeVector(struct ThreadmgrMsgPipeRing *ring, SceUID pid,
-			  const ThreadmgrMsgPipeVector *vector, int *index, SceSize *offset,
+			  const SceKernelMsgPipeVector *vector, int *index, SceSize *offset,
 			  SceSize size, int kernelVector)
 {
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	SceSize off = *offset, len;
 	int i = *index, ret;
 
@@ -432,18 +412,18 @@ int recvPipeVector(struct ThreadmgrMsgPipeRing *ring, SceUID pid,
 				return ret;
 			}
 		}
-		len = buffer.size - off;
+		len = buffer.bufSize - off;
 		if (size <= len)
 			len = size;
-		ret = recvPipe(ring, pid, (uint8_t *)buffer.base + off, len);
+		ret = recvPipe(ring, pid, (uint8_t *)buffer.pBase + off, len);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xf, 412, "recvPipe(%p, 0x%08X, 0x%08X, 0x%08x): error 0x%08x\n",
-				       ring, pid, (uint8_t *)buffer.base + off, len, ret);
+				       ring, pid, (uint8_t *)buffer.pBase + off, len, ret);
 			return ret;
 		}
 		off += len;
 		size -= len;
-		if (buffer.size <= off) {
+		if (buffer.bufSize <= off) {
 			off = 0;
 			i++;
 		}
@@ -634,7 +614,6 @@ stop:
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 		       const uint64_t *wakeup, void *timeoutOutput, int *waitCount, int *locked);
 extern int SceThreadmgrForDriver_20C228E4(void);
-extern void *SceThreadmgrForDriver_3A72C6D8(uint32_t slot);
 
 /* what a syscall restarted after a suspend carries over of its transfer */
 typedef struct ThreadmgrMsgPipeRestart {
@@ -673,7 +652,7 @@ static inline uint32_t MsgPipeTransferPattern(ThreadmgrMsgPipe *pipe, SceSize si
  * otherwise. *result gets the bytes sent, *wakeOut whether a reschedule is
  * due.
  */
-int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVector *vector,
+int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVector *vector,
 				 int count, uint32_t mode, SceSize *result, SceUInt32 *timeout,
 				 int callbacks, uint32_t *wakeOut)
 {
@@ -682,7 +661,7 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 	struct ThreadmgrWaitNode *queue, *node, *pos;
 	struct ThreadCB *waiter;
 	ThreadmgrMsgPipeRestart *state;
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	ThreadmgrMsgPipe *pipe;
 	SceUInt32 timeoutValue, *wait;
 	SceSize total = 0, remaining = 0, offset = 0, n, moved, savedUsed;
@@ -734,14 +713,14 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 				total = 0;
 				goto fail;
 			}
-			if (buffer.base == NULL) {
+			if (buffer.pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				wake = 0;
 				total = 0;
 				goto fail;
 			}
-			if (pipe->ring.size < buffer.size ||
-			    pipe->ring.size < (remaining += buffer.size)) {
+			if (pipe->ring.size < buffer.bufSize ||
+			    pipe->ring.size < (remaining += buffer.bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				wake = 0;
 				total = 0;
@@ -751,14 +730,14 @@ int sendMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 		total = remaining;
 	} else {
 		for (i = 0; i < count; i++) {
-			if (vector[i].base == NULL) {
+			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				wake = 0;
 				total = 0;
 				goto fail;
 			}
-			if (pipe->ring.size < vector[i].size ||
-			    pipe->ring.size < (remaining += vector[i].size)) {
+			if (pipe->ring.size < vector[i].bufSize ||
+			    pipe->ring.size < (remaining += vector[i].bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				wake = 0;
 				total = 0;
@@ -1026,7 +1005,7 @@ callbacks:
  * with MSG_PIPE_MODE_ALL all of it or nothing, MSG_PIPE_MODE_PEEK leaves the
  * data in place; waits otherwise.
  */
-int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVector *vector,
+int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const SceKernelMsgPipeVector *vector,
 				 int count, uint32_t mode, SceSize *result, SceUInt32 *timeout,
 				 int callbacks, uint32_t *wakeOut)
 {
@@ -1035,7 +1014,7 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 	struct ThreadmgrWaitNode *queue, *node, *pos;
 	struct ThreadCB *waiter;
 	ThreadmgrMsgPipeRestart *state;
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	ThreadmgrMsgPipe *pipe;
 	SceUInt32 timeoutValue, *wait;
 	SceSize total = 0, remaining = 0, offset = 0, n, m, moved, senderRemaining;
@@ -1088,14 +1067,14 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 				total = 0;
 				goto fail;
 			}
-			if (buffer.base == NULL) {
+			if (buffer.pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				wake = 0;
 				total = 0;
 				goto fail;
 			}
-			if (pipe->ring.size < buffer.size ||
-			    pipe->ring.size < (remaining += buffer.size)) {
+			if (pipe->ring.size < buffer.bufSize ||
+			    pipe->ring.size < (remaining += buffer.bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				wake = 0;
 				total = 0;
@@ -1105,14 +1084,14 @@ int recvMsgPipeVectorCore(SceUID msgPipeId, SceUID pid, const ThreadmgrMsgPipeVe
 		total = remaining;
 	} else {
 		for (i = 0; i < count; i++) {
-			if (vector[i].base == NULL) {
+			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				wake = 0;
 				total = 0;
 				goto fail;
 			}
-			if (pipe->ring.size < vector[i].size ||
-			    pipe->ring.size < (remaining += vector[i].size)) {
+			if (pipe->ring.size < vector[i].bufSize ||
+			    pipe->ring.size < (remaining += vector[i].bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				wake = 0;
 				total = 0;
@@ -1410,7 +1389,6 @@ extern int ksceKernelUnlockMutex(SceUID mutexId, int count);
 extern int ksceKernelWaitCond(SceUID condId, SceUInt32 *timeout);
 extern int ksceKernelSignalCond(SceUID condId);
 extern int ksceKernelChangeThreadPriority(SceUID uid, uint32_t priority);
-extern int ksceKernelChangeThreadCpuAffinityMask(SceUID uid, uint32_t mask);
 extern int sceKernelCheckCallback(void);
 int sceKernelCheckThreadUserStackSelf(void);
 
@@ -1423,7 +1401,7 @@ typedef struct ThreadmgrMsgPipeAsyncRequest {
 	uint32_t cpuAffinityMask;		/* 0x10: the caller's */
 	SceUID msgPipeId;			/* 0x14 */
 	SceUID pid;				/* 0x18 */
-	ThreadmgrMsgPipeVector *vector;		/* 0x1c: a copy in the process's heap */
+	SceKernelMsgPipeVector *vector;		/* 0x1c: a copy in the process's heap */
 	int count;				/* 0x20 */
 	uint32_t mode;				/* 0x24 */
 	SceSize *result;			/* 0x28 */
@@ -1434,7 +1412,7 @@ typedef struct ThreadmgrMsgPipeAsyncRequest {
 typedef struct ThreadmgrMsgPipeCall {
 	SceUID msgPipeId;
 	SceUID pid;
-	const ThreadmgrMsgPipeVector *vector;	/* 0x08 */
+	const SceKernelMsgPipeVector *vector;	/* 0x08 */
 	int count;				/* 0x0c */
 	uint32_t mode;				/* 0x10 */
 	SceSize *result;			/* 0x14 */
@@ -1601,7 +1579,7 @@ static inline __attribute__((always_inline)) int recvMsgPipeVectorAsync(Threadmg
 		currentThreadContext();
 	struct SceKernelThreadmgrPrivate *manager;
 	ThreadmgrMsgPipeAsyncRequest *request;
-	ThreadmgrMsgPipeVector *vector;
+	SceKernelMsgPipeVector *vector;
 	SceProcessObject *process;
 	SceUInt32 version;
 	uint32_t mask;
@@ -1752,7 +1730,7 @@ static inline __attribute__((always_inline)) int sendMsgPipeVectorAsync(Threadmg
 		currentThreadContext();
 	struct SceKernelThreadmgrPrivate *manager;
 	ThreadmgrMsgPipeAsyncRequest *request;
-	ThreadmgrMsgPipeVector *vector;
+	SceKernelMsgPipeVector *vector;
 	SceProcessObject *process;
 	SceUInt32 version;
 	uint32_t mask;
@@ -2619,7 +2597,8 @@ SceUID SceThreadmgrForDriver_88206D29(const char *name)
 	return ret;
 }
 
-int ksceKernelSendMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector, int count, uint32_t mode,
+int ksceKernelSendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *vector, int count,
+				uint32_t mode,
 	SceSize *result, SceUInt32 *timeout)
 {
 	ThreadmgrMsgPipeCall call;
@@ -2638,15 +2617,16 @@ int ksceKernelSendMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVector *
 int SceThreadmgrForDriver_F5074173(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode, SceSize *result,
 	SceUInt32 *timeout)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return ksceKernelSendMsgPipeVector(msgPipeId, &vector, 1, mode, result, timeout);
 }
 
 /* SceThreadmgrForDriver_2FC0FFF6: ksceKernelSendMsgPipeVectorCB */
-int SceThreadmgrForDriver_2FC0FFF6(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector, int count, uint32_t mode,
+int SceThreadmgrForDriver_2FC0FFF6(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
+				   int count, uint32_t mode,
 	SceSize *result, SceUInt32 *timeout)
 {
 	ThreadmgrMsgPipeCall call;
@@ -2665,14 +2645,15 @@ int SceThreadmgrForDriver_2FC0FFF6(SceUID msgPipeId, const ThreadmgrMsgPipeVecto
 int SceThreadmgrForDriver_E6D80698(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode, SceSize *result,
 	SceUInt32 *timeout)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return SceThreadmgrForDriver_2FC0FFF6(msgPipeId, &vector, 1, mode, result, timeout);
 }
 
-int ksceKernelReceiveMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector, int count, uint32_t mode,
+int ksceKernelReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
+				   int count, uint32_t mode,
 	SceSize *result, SceUInt32 *timeout)
 {
 	ThreadmgrMsgPipeCall call;
@@ -2691,14 +2672,15 @@ int ksceKernelReceiveMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVecto
 int SceThreadmgrForDriver_2F9F75AA(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode, SceSize *result,
 	SceUInt32 *timeout)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return ksceKernelReceiveMsgPipeVector(msgPipeId, &vector, 1, mode, result, timeout);
 }
 
-int ksceKernelReceiveMsgPipeVectorCB(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector, int count, uint32_t mode,
+int ksceKernelReceiveMsgPipeVectorCB(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
+				     int count, uint32_t mode,
 	SceSize *result, SceUInt32 *timeout)
 {
 	ThreadmgrMsgPipeCall call;
@@ -2717,10 +2699,10 @@ int ksceKernelReceiveMsgPipeVectorCB(SceUID msgPipeId, const ThreadmgrMsgPipeVec
 int SceThreadmgrForDriver_D0262C55(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode, SceSize *result,
 	SceUInt32 *timeout)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return ksceKernelReceiveMsgPipeVectorCB(msgPipeId, &vector, 1, mode, result, timeout);
 }
 
@@ -2733,14 +2715,14 @@ int SceThreadmgrForDriver_D0262C55(SceUID msgPipeId, void *buffer, SceSize size,
  * the ring (MSG_PIPE_MODE_ALL: all of it or SCE_KERNEL_ERROR_MSG_PIPE_FULL).
  * The vector is the caller's own process's.
  */
-int ksceKernelTrySendMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector,
+int ksceKernelTrySendMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
 				   int count, uint32_t mode, SceSize *result)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
 	struct ThreadmgrWaitNode *queue, *node, *next;
 	struct ThreadCB *waiter;
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	ThreadmgrMsgPipe *pipe;
 	SceSize total = 0, remaining = 0, offset = 0, n, room, moved, savedUsed;
 	SceUInt32 version;
@@ -2778,12 +2760,12 @@ int ksceKernelTrySendMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVecto
 	}
 	if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
 		for (i = 0; i < count; i++) {
-			if (vector[i].base == NULL) {
+			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				goto report;
 			}
-			if (pipe->ring.size < vector[i].size ||
-			    pipe->ring.size < (remaining += vector[i].size)) {
+			if (pipe->ring.size < vector[i].bufSize ||
+			    pipe->ring.size < (remaining += vector[i].bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				goto report;
 			}
@@ -2797,12 +2779,12 @@ int ksceKernelTrySendMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVecto
 					&buffer, &vector[i], sizeof(buffer), ret);
 				goto report;
 			}
-			if (buffer.base == NULL) {
+			if (buffer.pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				goto report;
 			}
-			if (pipe->ring.size < buffer.size ||
-			    pipe->ring.size < (remaining += buffer.size)) {
+			if (pipe->ring.size < buffer.bufSize ||
+			    pipe->ring.size < (remaining += buffer.bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				goto report;
 			}
@@ -2998,10 +2980,10 @@ resume:
 int SceThreadmgrForDriver_85F4DC8C(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return ksceKernelTrySendMsgPipeVector(msgPipeId, &vector, 1, mode, result);
 }
 
@@ -3010,14 +2992,14 @@ int SceThreadmgrForDriver_85F4DC8C(SceUID msgPipeId, void *buffer, SceSize size,
  * waiting senders (who refill the ring); MSG_PIPE_MODE_ALL: all of it or
  * SCE_KERNEL_ERROR_MSG_PIPE_EMPTY. The vector is the caller's own process's.
  */
-int ksceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVector *vector,
+int ksceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const SceKernelMsgPipeVector *vector,
 				      int count, uint32_t mode, SceSize *result)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
 	struct ThreadmgrWaitNode *queue, *node, *pos;
 	struct ThreadCB *waiter;
-	ThreadmgrMsgPipeVector buffer;
+	SceKernelMsgPipeVector buffer;
 	ThreadmgrMsgPipe *pipe;
 	SceSize total = 0, remaining = 0, offset = 0, n, m, available, moved, senderRemaining;
 	SceSize savedUsed;
@@ -3057,12 +3039,12 @@ int ksceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVe
 	}
 	if (sceKernelGetProcessId() == THREADMGR_KERNEL_PID) {
 		for (i = 0; i < count; i++) {
-			if (vector[i].base == NULL) {
+			if (vector[i].pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				goto report;
 			}
-			if (pipe->ring.size < vector[i].size ||
-			    pipe->ring.size < (remaining += vector[i].size)) {
+			if (pipe->ring.size < vector[i].bufSize ||
+			    pipe->ring.size < (remaining += vector[i].bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				goto report;
 			}
@@ -3076,12 +3058,12 @@ int ksceKernelTryReceiveMsgPipeVector(SceUID msgPipeId, const ThreadmgrMsgPipeVe
 					&buffer, &vector[i], sizeof(buffer), ret);
 				goto report;
 			}
-			if (buffer.base == NULL) {
+			if (buffer.pBase == NULL) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 				goto report;
 			}
-			if (pipe->ring.size < buffer.size ||
-			    pipe->ring.size < (remaining += buffer.size)) {
+			if (pipe->ring.size < buffer.bufSize ||
+			    pipe->ring.size < (remaining += buffer.bufSize)) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 				goto report;
 			}
@@ -3281,10 +3263,10 @@ resume:
 int SceThreadmgrForDriver_2E95B628(SceUID msgPipeId, void *buffer, SceSize size, uint32_t mode,
 				   SceSize *result)
 {
-	ThreadmgrMsgPipeVector vector;
+	SceKernelMsgPipeVector vector;
 
-	vector.base = buffer;
-	vector.size = size;
+	vector.pBase = buffer;
+	vector.bufSize = size;
 	return ksceKernelTryReceiveMsgPipeVector(msgPipeId, &vector, 1, mode, result);
 }
 
@@ -3366,9 +3348,9 @@ resume:
 	return ret;
 }
 
-int ksceKernelGetMsgPipeInfo(SceUID msgPipeId, ThreadmgrMsgPipeInfo *info)
+int ksceKernelGetMsgPipeInfo(SceUID msgPipeId, SceKernelMsgPipeInfo *info)
 {
-	ThreadmgrMsgPipeInfo local;
+	SceKernelMsgPipeInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -3393,10 +3375,10 @@ int ksceKernelGetMsgPipeInfo(SceUID msgPipeId, ThreadmgrMsgPipeInfo *info)
 }
 
 /* SceThreadmgrForDriver_C7F5FFE0: the information of every msg pipe visible at level */
-int SceThreadmgrForDriver_C7F5FFE0(int level, ThreadmgrMsgPipeInfo *infos, SceSize size,
+int SceThreadmgrForDriver_C7F5FFE0(int level, SceKernelMsgPipeInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrMsgPipeInfo info;
+	SceKernelMsgPipeInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -3435,10 +3417,10 @@ int SceThreadmgrForDriver_C7F5FFE0(int level, ThreadmgrMsgPipeInfo *infos, SceSi
 }
 
 /* SceThreadmgrForDriver_E9E50096: the same for a process's msg pipe PUIDs */
-int SceThreadmgrForDriver_E9E50096(SceUID pid, int level, ThreadmgrMsgPipeInfo *infos,
+int SceThreadmgrForDriver_E9E50096(SceUID pid, int level, SceKernelMsgPipeInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrMsgPipeInfo info;
+	SceKernelMsgPipeInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

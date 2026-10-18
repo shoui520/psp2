@@ -59,20 +59,6 @@ __attribute__((section(SCE_DBGSRC_SECTION), used)) = {
 #define SCE_KERNEL_ERROR_WAIT_DELETE_COND 0x800281a4
 #define SCE_KERNEL_ERROR_WAIT_CANCEL_COND 0x800281a5
 
-typedef struct ThreadmgrCondOptParam {
-	SceSize size;
-} ThreadmgrCondOptParam;
-
-/* ksceKernelGetCondInfo (0x34) */
-typedef struct ThreadmgrCondInfo {
-	SceSize size;
-	SceUID condId;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	SceUID mutexId;
-	int numWaitThreads;			/* 0x30 */
-} ThreadmgrCondInfo;
-
 extern int SceThreadmgrForDriver_20C228E4(void);
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
@@ -314,7 +300,7 @@ restore:
 }
 
 /* a cond's information (the info exports' core) */
-int getCondInfo(SceUID condId, ThreadmgrCondInfo *info)
+int getCondInfo(SceUID condId, SceKernelCondInfo *info)
 {
 	ThreadmgrCond *cond;
 	int intr, ret;
@@ -420,7 +406,7 @@ static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
  * path keeps the mutex locked and referenced; kept.
  */
 SceUID ksceKernelCreateCond(const char *name, SceUInt32 attr, SceUID mutexId,
-			    const ThreadmgrCondOptParam *option)
+			    const SceKernelCondOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -874,9 +860,9 @@ restore:
 }
 
 /* SceThreadmgrForDriver_D1FBDFA6: a cond's information; a syscall sees the mutex's PUID */
-int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, ThreadmgrCondInfo *info)
+int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, SceKernelCondInfo *info)
 {
-	ThreadmgrCondInfo local;
+	SceKernelCondInfo local;
 	ThreadmgrMutex *mutex;
 	uint32_t saved;
 	SceSize size;
@@ -914,10 +900,10 @@ int SceThreadmgrForDriver_D1FBDFA6(SceUID condId, ThreadmgrCondInfo *info)
 }
 
 /* SceThreadmgrForDriver_67022B18: the information of every cond visible at level */
-int SceThreadmgrForDriver_67022B18(int level, ThreadmgrCondInfo *infos, SceSize size,
+int SceThreadmgrForDriver_67022B18(int level, SceKernelCondInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrCondInfo info;
+	SceKernelCondInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -958,10 +944,10 @@ int SceThreadmgrForDriver_67022B18(int level, ThreadmgrCondInfo *infos, SceSize 
 }
 
 /* SceThreadmgrForDriver_CA704239: the same for a process's cond PUIDs (mutexes as GUID PUIDs) */
-int SceThreadmgrForDriver_CA704239(SceUID pid, int level, ThreadmgrCondInfo *infos, SceSize size,
+int SceThreadmgrForDriver_CA704239(SceUID pid, int level, SceKernelCondInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrCondInfo info;
+	SceKernelCondInfo info;
 	ThreadmgrMutex *mutex;
 	SceSize got = 0;
 	SceUID *vector, mutexId;

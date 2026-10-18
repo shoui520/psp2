@@ -88,7 +88,7 @@ typedef struct ThreadmgrAlarmInfo {
 } ThreadmgrAlarmInfo;
 
 /* SceThreadmgrForDriver_19F3E92A, ksceKernelGetTimerInfo (0x60) */
-_Static_assert(sizeof(ThreadmgrAlarmInfo) == 0x38 && sizeof(ThreadmgrTimerInfo) == 0x60,
+_Static_assert(sizeof(ThreadmgrAlarmInfo) == 0x38 && sizeof(SceKernelTimerInfo) == 0x60,
 	       "timer info sizes");
 
 void insertTimer(struct ThreadmgrTimer *timer);

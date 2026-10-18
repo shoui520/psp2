@@ -65,7 +65,7 @@ static int uidLwMutex_Destructor(void *object)
 }
 
 /* a lw mutex's information, its count and owner read from the work area */
-static int getLwMutexInfo(SceUID lwMutexId, ThreadmgrLwMutexInfo *info)
+static int getLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	ThreadmgrLwMutexWork work;
 	ThreadmgrLwMutex *lwMutex;
@@ -90,7 +90,7 @@ static int getLwMutexInfo(SceUID lwMutexId, ThreadmgrLwMutexInfo *info)
 	SceCpuForDriver_BF82DEB2(&lwMutex->lock);
 	info->numWaitThreads = lwMutex->waiting;
 	info->initCount = lwMutex->initCount;
-	info->work = lwMutex->work;
+	info->pWork = lwMutex->work;
 	info->attr = lwMutex->attr;
 	strncpy(info->name, lwMutex->name, sizeof(info->name));
 	sceKernelSpinlockLowUnlock(&lwMutex->lock);
@@ -102,7 +102,7 @@ static int getLwMutexInfo(SceUID lwMutexId, ThreadmgrLwMutexInfo *info)
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_WORK | SYSCALL_ERROR_BIT;
 		} else {
 			ret = SCE_KERNEL_ERROR_LW_MUTEX_WORK;
-			info->work = (ThreadmgrLwMutexWork *)((uintptr_t)info->work | 1);
+			info->pWork = (ThreadmgrLwMutexWork *)((uintptr_t)info->pWork | 1);
 		}
 	} else {
 		if (work.owner == 0) {
@@ -823,10 +823,10 @@ restore:
  * Sony's sceKernelGetLwMutexInfoById: an unreadable work area still gives
  * the rest of the information.
  */
-int ksceKernelGetLwMutexInfo(SceUID lwMutexId, ThreadmgrLwMutexInfo *info)
+int ksceKernelGetLwMutexInfo(SceUID lwMutexId, SceKernelLwMutexInfo *info)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrLwMutexInfo local;
+	SceKernelLwMutexInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -866,10 +866,10 @@ restore:
 }
 
 /* SceThreadmgrForDriver_C2DA6286: the information of every lw mutex visible at level */
-int SceThreadmgrForDriver_C2DA6286(int level, ThreadmgrLwMutexInfo *infos, SceSize size,
+int SceThreadmgrForDriver_C2DA6286(int level, SceKernelLwMutexInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrLwMutexInfo info;
+	SceKernelLwMutexInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret, err;
@@ -911,11 +911,11 @@ int SceThreadmgrForDriver_C2DA6286(int level, ThreadmgrLwMutexInfo *infos, SceSi
 }
 
 /* the same for the lw mutexes a process holds PUIDs of, with user-visible IDs */
-int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, ThreadmgrLwMutexInfo *infos,
+int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level, SceKernelLwMutexInfo *infos,
 				   SceSize size, SceSize *count)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrLwMutexInfo info;
+	SceKernelLwMutexInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret, err;

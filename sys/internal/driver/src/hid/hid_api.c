@@ -2,7 +2,7 @@
 #include "hid_internal.h"
 #include <intrmgr/syscall.h>
 #include <sysmem/sysmem.h>
-#include <psp2/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <string.h>
 
 int ksceHidMouseEnumerate(SceUID *handle, int count)

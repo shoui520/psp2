@@ -173,10 +173,14 @@ static int transferThread(SceSize size, void *args)
 	unsigned bits;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(s.eventFlag, EVF_OPEN, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ksceKernelWaitEventFlag(s.eventFlag, EVF_OPEN,
+					SCE_KERNEL_EVF_WAITMODE_OR |
+					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					&bits, NULL);
 		while (ksceKernelWaitEventFlag(s.eventFlag, EVF_EXIT | EVF_CLOSE | EVF_WRITE | EVF_SEND,
-					       SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL) >= 0) {
+					       SCE_KERNEL_EVF_WAITMODE_OR |
+					       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
+					       NULL) >= 0) {
 			if (bits & EVF_CLOSE)
 				break;
 			if (bits & EVF_EXIT) {
@@ -314,7 +318,9 @@ freeCommand:
 static int waitTransfer(unsigned bit)
 {
 	if (s.pending) {
-		if (ksceKernelWaitEventFlag(s.eventFlag, bit, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		if (ksceKernelWaitEventFlag(s.eventFlag, bit,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    NULL, NULL) < 0)
 			return -1;
 		s.pending = 0;
@@ -347,7 +353,8 @@ static int transferBlocks(unsigned block, unsigned count, struct UsbstorSense *s
 				 ksceIoRead(s.fd, s.buffers[index], bytes);
 		if (result < 0) {
 			if (s.pending && ksceKernelWaitEventFlag(s.eventFlag, completion,
-								 SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+								 SCE_KERNEL_EVF_WAITMODE_OR |
+								 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 								 NULL, NULL) >= 0)
 				s.pending = 0;
 			if (!write)
@@ -826,7 +833,8 @@ int module_start(SceSize size, void *args)
 	s.driver.unit = s.driver.requestSense = s.driver.busy = 0;
 	if (SceUsbstorForDriver_C0944A04(&s.driver) < 0)
 		return SCE_KERNEL_START_FAILED;
-	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstorVStorCmd", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstorVStorCmd", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+						NULL);
 	if (s.eventFlag <= 0)
 		return SCE_KERNEL_START_FAILED;
 	s.thread = ksceKernelCreateThread("SceUsbstorVstor", transferThread, 0x1f, 0x800, 0, 0x80000, NULL);

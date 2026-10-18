@@ -910,7 +910,8 @@ static int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 			bit = process->ports[port].eventBit;
 			if (!(bit & touch.ports[port].allocated))
 				return TOUCH_ERROR(1);
-			ret = ksceKernelWaitEventFlag(touch.ports[port].events[kind], bit, SCE_EVENT_WAITOR, NULL, NULL);
+			ret = ksceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
+						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
 			intr = SceCpuForDriver_D32ACE9E(&touch.lock);
@@ -1626,7 +1627,8 @@ static int readVirtual(unsigned device, void *out, unsigned count, int peek) /* 
 			bit = process->ports[device].eventBit;
 			if (!(bit & pad.ports[device].allocated))
 				return TOUCH_ERROR(1);
-			ret = ksceKernelWaitEventFlag(pad.ports[device].event, bit, SCE_EVENT_WAITOR, NULL, NULL);
+			ret = ksceKernelWaitEventFlag(pad.ports[device].event, bit,
+						      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 			if (ret < 0)
 				return ret;
 			intr = SceCpuForDriver_D32ACE9E(&pad.lock);

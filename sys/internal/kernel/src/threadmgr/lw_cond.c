@@ -125,7 +125,7 @@ static int uidLwCond_Destructor(void *object)
 }
 
 /* a lw cond's information (the info exports' core) */
-static int getLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info)
+static int getLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 {
 	ThreadmgrLwCond *cond;
 	int intr, ret;
@@ -144,8 +144,8 @@ static int getLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info)
 		SceCpuForDriver_BF82DEB2(&cond->lock);
 		info->attr = cond->attr;
 		info->numWaitThreads = cond->waiting;
-		info->work = cond->work;
-		info->lwMutexWork = cond->lwMutexWork;
+		info->pWork = cond->work;
+		info->pLwMutex = cond->lwMutexWork;
 		sceKernelSpinlockLowUnlock(&cond->lock);
 		sceGUIDReleaseObject(condId);
 	}
@@ -678,9 +678,9 @@ restore:
 }
 
 /* a lw cond's information, copied out */
-int sceKernelGetLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info)
+int sceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 {
-	ThreadmgrLwCondInfo local;
+	SceKernelLwCondInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -704,16 +704,16 @@ int sceKernelGetLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info)
 	return ret;
 }
 
-int ksceKernelGetLwCondInfo(SceUID condId, ThreadmgrLwCondInfo *info)
+int ksceKernelGetLwCondInfo(SceUID condId, SceKernelLwCondInfo *info)
 {
 	return sceKernelGetLwCondInfo(condId, info);
 }
 
 /* SceThreadmgrForDriver_738FF63D: the information of every lw cond visible at level */
-int SceThreadmgrForDriver_738FF63D(int level, ThreadmgrLwCondInfo *infos, SceSize size,
+int SceThreadmgrForDriver_738FF63D(int level, SceKernelLwCondInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrLwCondInfo info;
+	SceKernelLwCondInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -754,10 +754,10 @@ int SceThreadmgrForDriver_738FF63D(int level, ThreadmgrLwCondInfo *infos, SceSiz
 }
 
 /* SceThreadmgrForDriver_09346D1A: the same for a process's lw cond PUIDs */
-int SceThreadmgrForDriver_09346D1A(SceUID pid, int level, ThreadmgrLwCondInfo *infos,
+int SceThreadmgrForDriver_09346D1A(SceUID pid, int level, SceKernelLwCondInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrLwCondInfo info;
+	SceKernelLwCondInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;

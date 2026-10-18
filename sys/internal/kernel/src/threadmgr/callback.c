@@ -61,8 +61,6 @@
 #define CALLBACK_FROM_CB(cb) \
 	((struct ThreadmgrCallback *)((uintptr_t)(cb) - offsetof(struct ThreadmgrCallback, cb)))
 
-_Static_assert(sizeof(ThreadmgrCallbackInfo) == 0x44, "SceKernelCallbackInfo size");
-
 /* SceUIDRegisterCallbackObject (0x30): an object callbacks can be registered on */
 typedef struct ThreadmgrRegisterCallback {
 	uint8_t base[0x28];			/* the waitable object */
@@ -162,7 +160,7 @@ int uidCallback_Destructor(struct ThreadmgrCallback *callback)
 }
 
 /* the information of a callback, read under its thread's lock */
-int getCallbackInfo(SceUID callbackId, ThreadmgrCallbackInfo *info)
+int getCallbackInfo(SceUID callbackId, SceKernelCallbackInfo *info)
 {
 	struct ThreadmgrCallback *callback;
 	struct ThreadmgrThreadObject *object;
@@ -187,11 +185,11 @@ int getCallbackInfo(SceUID callbackId, ThreadmgrCallbackInfo *info)
 	SceCpuForDriver_BF82DEB2(THREAD_LOCK(&object->context));
 	info->attr = callback->cb.attr;
 	info->threadId = callback->cb.threadId;
-	info->entry = callback->cb.entry;
+	info->callbackFunc = callback->cb.entry;
 	info->notifyId = callback->cb.notifyId;
 	info->notifyCount = callback->cb.notifyCount;
 	info->notifyArg = callback->cb.notifyArg;
-	info->common = callback->cb.common;
+	info->pCommon = callback->cb.common;
 	sceKernelSpinlockLowUnlock(THREAD_LOCK(&object->context));
 	sceGUIDReleaseObject(callback->cb.threadId);
 release:
@@ -1040,9 +1038,9 @@ resume:
 }
 
 /* SceThreadmgrForDriver_FDC044AC: ksceKernelGetCallbackInfo; a syscall sees its own ids */
-int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, ThreadmgrCallbackInfo *info)
+int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, SceKernelCallbackInfo *info)
 {
-	ThreadmgrCallbackInfo local;
+	SceKernelCallbackInfo local;
 	struct ThreadmgrThreadObject *object;
 	SceUID threadId, puid;
 	SceSize size, got;
@@ -1086,10 +1084,10 @@ int SceThreadmgrForDriver_FDC044AC(SceUID callbackId, ThreadmgrCallbackInfo *inf
 }
 
 /* SceThreadmgrForDriver_767CA30C: the information of every callback visible at level */
-int SceThreadmgrForDriver_767CA30C(int level, ThreadmgrCallbackInfo *infos, SceSize size,
+int SceThreadmgrForDriver_767CA30C(int level, SceKernelCallbackInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrCallbackInfo info;
+	SceKernelCallbackInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -1128,10 +1126,10 @@ int SceThreadmgrForDriver_767CA30C(int level, ThreadmgrCallbackInfo *infos, SceS
 }
 
 /* SceThreadmgrForDriver_FF8DA217: the same for a process's callback PUIDs, in its ids */
-int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, ThreadmgrCallbackInfo *infos,
+int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level, SceKernelCallbackInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrCallbackInfo info;
+	SceKernelCallbackInfo info;
 	struct ThreadmgrThreadObject *object;
 	SceUID *vector, threadId, puid;
 	SceSize got = 0, found;

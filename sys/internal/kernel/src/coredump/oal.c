@@ -36,7 +36,6 @@
 #include <psp2kern/kernel/threadmgr/semaphores.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/msg_pipe.h>
-#include <psp2/kernel/threadmgr/rwlock.h>
 #include <psp2kern/kernel/ssmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/gpu_es4.h>
@@ -71,38 +70,28 @@ extern int coredumpGetCachedRWLockInfo(SceUID pid, SceUID rwLockId,
 	CoredumpRWLockInfo *info);
 extern int coredumpGetCachedSimpleEventInfo(SceUID pid, SceUID eventId,
 	CoredumpSimpleEventInfo *info);
-struct ThreadmgrSemaInfo;
-struct ThreadmgrEventFlagInfo;
-struct ThreadmgrLwMutexInfo;
-struct ThreadmgrCondInfo;
-struct ThreadmgrLwCondInfo;
-struct ThreadmgrMsgPipeInfo;
-struct ThreadmgrCallbackInfo;
-struct ThreadmgrTimerInfo;
-struct ThreadmgrRWLockInfo;
-struct ThreadmgrEventInfo;
 extern int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level,
-	struct ThreadmgrSemaInfo *infos, SceSize size, SceSize *count);
+	SceKernelSemaInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level,
-	struct ThreadmgrEventFlagInfo *infos, SceSize size, SceSize *count);
+	SceKernelEventFlagInfo *infos, SceSize size, SceSize *count);
 extern int sceKernelGetMutexInfoAllProc(SceUID pid, int level,
-	ThreadmgrMutexInfo *infos, SceSize size, SceSize *count);
+	SceKernelMutexInfo *infos, SceSize size, SceSize *count);
 extern int sceKernelGetLwMutexInfoAllProc(SceUID pid, int level,
-	struct ThreadmgrLwMutexInfo *infos, SceSize size, SceSize *count);
+	SceKernelLwMutexInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_CA704239(SceUID pid, int level,
-	struct ThreadmgrCondInfo *infos, SceSize size, SceSize *count);
+	SceKernelCondInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_09346D1A(SceUID pid, int level,
-	struct ThreadmgrLwCondInfo *infos, SceSize size, SceSize *count);
+	SceKernelLwCondInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_E9E50096(SceUID pid, int level,
-	struct ThreadmgrMsgPipeInfo *infos, SceSize size, SceSize *count);
+	SceKernelMsgPipeInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_FF8DA217(SceUID pid, int level,
-	struct ThreadmgrCallbackInfo *infos, SceSize size, SceSize *count);
+	SceKernelCallbackInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_C327CA7C(SceUID pid, int level,
-	struct ThreadmgrTimerInfo *infos, SceSize size, SceSize *count);
+	SceKernelTimerInfo *infos, SceSize size, SceSize *count);
 extern int sceKernelGetRWLockInfoAllProc(SceUID pid, int level,
-	struct ThreadmgrRWLockInfo *infos, SceSize size, SceSize *count);
+	SceKernelRWLockInfo *infos, SceSize size, SceSize *count);
 extern int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level,
-	struct ThreadmgrEventInfo *infos, SceSize size, SceSize *count);
+	SceKernelEventInfo *infos, SceSize size, SceSize *count);
 extern void *memMgrLocalAllAlloc(SceSize *size);
 extern int memMgrLocalFree(void *allocation);
 extern int memMgrInit(void);
@@ -2517,7 +2506,7 @@ void oalGetEventFlagInfo(SceUID pid, SceUID eventFlagId,
 
 void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info)
 {
-	ThreadmgrMutexInfo mutex;
+	SceKernelMutexInfo mutex;
 	SceUID guid, owner;
 	SceUInt32 uidAttr, attr;
 
@@ -2556,7 +2545,7 @@ void oalGetMutexInfo(SceUID pid, SceUID mutexId, CoredumpMutexInfo *info)
 
 void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 {
-	ThreadmgrLwMutexInfo mutex;
+	SceKernelLwMutexInfo mutex;
 	SceUID guid, owner;
 	int result;
 
@@ -2574,7 +2563,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		info->lwMutexId = lwMutexId;
 		strncpy(info->name, mutex.name, 32);
 		info->attr = mutex.attr;
-		info->work = mutex.work;
+		info->work = mutex.pWork;
 		info->initCount = mutex.initCount;
 		info->currentCount = mutex.currentCount;
 		owner = mutex.currentOwnerId;
@@ -2589,7 +2578,7 @@ void oalGetLwMutexInfo(SceUID pid, SceUID lwMutexId, CoredumpLwMutexInfo *info)
 		info->lwMutexId = lwMutexId;
 		strncpy(info->name, mutex.name, 32);
 		info->attr = mutex.attr;
-		info->work = mutex.work;
+		info->work = mutex.pWork;
 		info->initCount = mutex.initCount;
 		info->currentCount = mutex.currentCount;
 		info->numWaitThreads = mutex.numWaitThreads;
@@ -2647,13 +2636,13 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	*lwMutexWork = NULL;
 	if (coredumpGetCachedLwCondInfo(pid, lwCondId, info, work, lwMutexWork) == 0)
 		return;
-	ThreadmgrLwCondInfo cond = {0};
+	SceKernelLwCondInfo cond = {0};
 	cond.size = sizeof(cond);
 	guid = SceSysmemForDriver_45D22597(pid, lwCondId);
 	if (guid < 0 || ksceKernelGetLwCondInfo(guid, &cond) < 0)
 		return;
 	__builtin_memset(uidBytes, 0, sizeof(uidBytes));
-	mutexWork = cond.lwMutexWork;
+	mutexWork = cond.pLwMutex;
 	if (SceSysmemForDriver_9F6E45E3(pid, 16, &mutexWork->uid, 4) == 0)
 		sceKernelCopyFromUserProc(pid, uidBytes, &mutexWork->uid, 4);
 	lwMutexId = uidBytes[0] + ((SceUInt32)uidBytes[1] << 8) +
@@ -2667,8 +2656,8 @@ void oalGetLwCondInfo(SceUID pid, SceUID lwCondId, CoredumpLwCondInfo *info,
 	info->formatVersion[1] = 0;
 	info->formatVersion[2] = 0;
 	info->formatVersion[3] = 0;
-	*work = cond.work;
-	*lwMutexWork = cond.lwMutexWork;
+	*work = cond.pWork;
+	*lwMutexWork = cond.pLwMutex;
 }
 
 void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info)
@@ -2694,10 +2683,10 @@ void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info)
 	info->msgPipeId = msgPipeId;
 	strncpy(info->name, msgPipe.name, 32);
 	info->attr = attr;
-	info->bufferSize = msgPipe.buffer_size;
-	info->freeSize = msgPipe.free_size;
-	info->numSendWaitThreads = msgPipe.num_send_wait_threads;
-	info->numReceiveWaitThreads = msgPipe.num_receive_wait_threads;
+	info->bufferSize = msgPipe.bufferSize;
+	info->freeSize = msgPipe.freeSize;
+	info->numSendWaitThreads = msgPipe.numSendWaitThreads;
+	info->numReceiveWaitThreads = msgPipe.numReceiveWaitThreads;
 	info->formatVersion[0] = 0;
 	info->formatVersion[1] = 0;
 	info->formatVersion[2] = 0;
@@ -2706,7 +2695,7 @@ void oalGetMsgPipeInfo(SceUID pid, SceUID msgPipeId, CoredumpMsgPipeInfo *info)
 
 void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *info)
 {
-	ThreadmgrCallbackInfo callback;
+	SceKernelCallbackInfo callback;
 	SceUID guid, threadId;
 
 	SCE_DBG_ASSERT(info != NULL, 4341);
@@ -2727,8 +2716,8 @@ void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *inf
 	info->threadId = threadId;
 	strncpy(info->name, callback.name, 32);
 	info->attr = callback.attr;
-	info->entry = callback.entry;
-	info->common = callback.common;
+	info->entry = callback.callbackFunc;
+	info->common = callback.pCommon;
 	info->notifyCount = callback.notifyCount;
 	info->notifyArg = callback.notifyArg;
 	info->formatVersion[0] = 0;
@@ -2739,7 +2728,7 @@ void oalGetCallbackInfo(SceUID pid, SceUID callbackId, CoredumpCallbackInfo *inf
 
 void oalGetTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info)
 {
-	ThreadmgrTimerInfo timer;
+	SceKernelTimerInfo timer;
 	SceUID guid;
 	SceUInt32 uidAttr, attr;
 
@@ -2759,13 +2748,13 @@ void oalGetTimerInfo(SceUID pid, SceUID timerId, CoredumpTimerInfo *info)
 	info->timerId = timerId;
 	info->pid = pid;
 	strncpy(info->name, timer.name, 32);
-	__builtin_memcpy(&info->baseTime, &timer.time, sizeof(info->baseTime));
+	__builtin_memcpy(&info->baseTime, &timer.baseTime, sizeof(info->baseTime));
 	info->attr = attr;
-	__builtin_memcpy(&info->currentTime, &timer.current, sizeof(info->currentTime));
-	info->fActive = timer.running;
-	info->type = timer.pulse;
-	__builtin_memcpy(&info->schedule, &timer.eventTime, sizeof(info->schedule));
-	info->fRepeat = timer.repeat;
+	__builtin_memcpy(&info->currentTime, &timer.currentTime, sizeof(info->currentTime));
+	info->fActive = timer.fActive;
+	info->type = timer.type;
+	__builtin_memcpy(&info->schedule, &timer.schedule, sizeof(info->schedule));
+	info->fRepeat = timer.fRepeat;
 	info->numWaitThreads = timer.numWaitThreads;
 	__builtin_memcpy(&info->interval, &timer.interval, sizeof(info->interval));
 	info->formatVersion[0] = 0;
@@ -2824,7 +2813,7 @@ void oalGetRWLockInfo(SceUID pid, SceUID rwLockId, CoredumpRWLockInfo *info)
 void oalGetCommonEventInfo(SceUID pid, SceUID eventId,
 	CoredumpCommonEventInfo *info)
 {
-	ThreadmgrEventInfo event;
+	SceKernelEventInfo event;
 	SceUID guid;
 
 	SCE_DBG_ASSERT(info != NULL, 4493);
@@ -2833,7 +2822,7 @@ void oalGetCommonEventInfo(SceUID pid, SceUID eventId,
 	guid = SceSysmemForDriver_45D22597(pid, eventId);
 	if (guid < 0 || SceThreadmgrForDriver_CBA7FAAA(guid, &event) < 0)
 		return;
-	info->pattern = event.pattern;
+	info->pattern = event.eventPattern;
 	info->userData[0] = event.userData;
 	info->userData[1] = event.userData >> 32;
 }
@@ -2841,7 +2830,7 @@ void oalGetCommonEventInfo(SceUID pid, SceUID eventId,
 void oalGetSimpleEventInfo(SceUID pid, SceUID eventId,
 	CoredumpSimpleEventInfo *info)
 {
-	ThreadmgrEventInfo event;
+	SceKernelEventInfo event;
 	SceUID guid;
 	SceUInt32 uidAttr, attr;
 
@@ -2863,7 +2852,7 @@ void oalGetSimpleEventInfo(SceUID pid, SceUID eventId,
 	info->numWaitThreads = event.numWaitThreads;
 	info->pid = pid;
 	info->attr = attr;
-	info->pattern = event.pattern;
+	info->pattern = event.eventPattern;
 	__builtin_memcpy(info->userData, &event.userData, sizeof(info->userData));
 }
 

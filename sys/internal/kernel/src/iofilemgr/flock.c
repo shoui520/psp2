@@ -219,7 +219,8 @@ static inline __attribute__((always_inline)) FlockLock *vfs_get_lock(SceVfsFile 
 		flock->fid = fid;
 		flock->refcount = 0;
 		lock = flock->lock;
-		evf = ksceKernelCreateEventFlag("SceIofileFlockWaitQueue", SCE_EVENT_WAITMULTIPLE,
+		evf = ksceKernelCreateEventFlag("SceIofileFlockWaitQueue",
+						SCE_KERNEL_EVF_ATTR_MULTI,
 						0, NULL);
 		if (evf >= 0) {
 			lock->waitQueue = evf;
@@ -342,7 +343,8 @@ static inline __attribute__((always_inline)) int lock_shared(SceVfsFile *file, F
 			return 0;
 		if (op & FLOCK_OP_NB)
 			return SCE_KERNEL_ERROR_IO_WOULD_BLOCK;
-		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_SH, SCE_EVENT_WAITAND,
+		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_SH,
+					      SCE_KERNEL_EVF_WAITMODE_AND,
 					      NULL, NULL);
 		if (ret < 0)
 			return ret;
@@ -453,10 +455,10 @@ wait:
 
 	if (isR)
 		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_RS,
-					      SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	else
 		ret = ksceKernelWaitEventFlag(lock->waitQueue, FLOCK_WAKE_EX,
-					      SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelLockFastMutex(&lock->mutex);

@@ -45,9 +45,9 @@ typedef struct ThreadmgrWaitMultipleEvents {
 	uint32_t pending;			/* 0x10: nodes queued on events */
 	uint32_t resultCount;			/* 0x14 */
 	uint32_t busy;				/* 0x18: the waiter is setting up or tearing down */
-	ThreadmgrWaitEventResult *results;	/* 0x1c */
+	SceKernelResultEvent *results;	/* 0x1c */
 	uint32_t ready[WME_MAX_EVENTS / 32];	/* 0x20: the events done with */
-	const ThreadmgrWaitEvent *events;	/* 0x28 */
+	const SceKernelWaitEvent *events;	/* 0x28 */
 	void *userEventIds;			/* 0x2c: the caller's IDs, kept for a restarted syscall */
 	ListNode nodes[];	/* 0x30: per event, its queued node */
 } ThreadmgrWaitMultipleEvents;
@@ -102,13 +102,13 @@ static inline uint32_t unlinkEventWaitNode(ThreadmgrEventWaitNode *node,
 static inline void addEventWaitResult(ThreadmgrWaitMultipleEvents *wme, SceUID eventId,
 				      int result, uint32_t pattern, uint64_t userData)
 {
-	ThreadmgrWaitEventResult *res;
+	SceKernelResultEvent *res;
 
 	if (wme->results == NULL)
 		return;
 	res = &wme->results[wme->resultCount];
 	res->eventId = eventId;
-	res->pattern = pattern;
+	res->resultPattern = pattern;
 	res->userData = userData;
 	res->result = result;
 	wme->resultCount++;
@@ -166,8 +166,6 @@ uint32_t pulseEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t
 				      uint32_t arg, ThreadmgrEvent *event);
 int sceKernelEventObjectInit(SceUID eventId, uint32_t attr, uint64_t userData, uint32_t pattern);
 int ksceKernelSetEvent(SceUID eventId, uint32_t pattern, uint64_t userData);
-int sceKernelSetEventWithNotifyCallback(SceUID eventId, uint32_t pattern, uint64_t userData,
-				   uint32_t arg);
 int ksceKernelClearEvent(SceUID eventId, uint32_t keep);
 
 #endif

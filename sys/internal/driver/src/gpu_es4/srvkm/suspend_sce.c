@@ -29,6 +29,6 @@ int sceGpuSignalSuspendWait(void)
 
 int sceGpuWaitSuspend(void)
 {
-	return ksceKernelWaitEventFlag(suspendWaitEvent, ~0U, SCE_EVENT_WAITOR,
+	return ksceKernelWaitEventFlag(suspendWaitEvent, ~0U, SCE_KERNEL_EVF_WAITMODE_OR,
 			NULL, NULL);
 }

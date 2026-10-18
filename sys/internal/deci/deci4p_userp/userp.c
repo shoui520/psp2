@@ -438,7 +438,7 @@ int module_start(SceSize args, void *argp)
 	if (uid < 0)
 		return 1;
 	s_procEvent = uid;
-	uid = ksceKernelCreateMutex("SceDeci4pUserGlobal", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	uid = ksceKernelCreateMutex("SceDeci4pUserGlobal", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto unregister;
 	s_mutex = uid;
@@ -517,15 +517,16 @@ SceUID sceKernelDeci4pOpen(const char *name, SceUInt32 protocol, SceSize ringSiz
 	st->callback = -1;
 	s_channel[slot] = guid;
 
-	ret = uid = ksceKernelCreateMutex("SceDeci4pUserRead", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	ret = uid = ksceKernelCreateMutex("SceDeci4pUserRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto fail;
 	st->readMutex = uid;
-	ret = uid = ksceKernelCreateMutex("SceDeci4pUserWrite", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	ret = uid = ksceKernelCreateMutex("SceDeci4pUserWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0)
 		goto fail;
 	st->writeMutex = uid;
-	ret = uid = ksceKernelCreateEventFlag("SceDeci4pUserp", EVF_ATTR_UNK8000 | SCE_EVENT_WAITMULTIPLE,
+	ret = uid = ksceKernelCreateEventFlag("SceDeci4pUserp",
+					      EVF_ATTR_UNK8000 | SCE_KERNEL_EVF_ATTR_MULTI,
 					       0, NULL);
 	if (uid < 0)
 		goto fail;
@@ -725,7 +726,8 @@ int sceKernelDeci4pRead(SceUID puid, void *buf, SceSize size, int flags)
 		ksceKernelClearEventFlag(st->evf, ~EVF_DATA);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&st->lock, intr);
 		ret = ksceKernelWaitEventFlag(st->evf, EVF_DATA | EVF_CLOSE | EVF_DOWN | EVF_CLOSED,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0) {
 			sceGUIDReleaseObject(guid);
 			ksceKernelUnlockMutex(st->readMutex, 1);
@@ -883,7 +885,8 @@ int sceKernelDeci4pWrite(SceUID puid, const void *buf, SceSize size, int flags)
 		return ret == (int)DFMGR_ERROR_NOT_CONNECTED ? SCE_KERNEL_ERROR_DECI4P_NO_CONNECT : SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 	}
 	ret = ksceKernelWaitEventFlag(st->evf, EVF_SENT | EVF_SEND_FAIL,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret >= 0) {
 		if (!(bits & EVF_SEND_FAIL))
 			ret = len - sizeof(SceDeci4pHeader);

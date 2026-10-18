@@ -920,7 +920,8 @@ static int pampSendThread(SceSize arglen, void *argp)
 	int ret;
 
 	for (;;) {
-		if ((ret = ksceKernelWaitEventFlag(s_pamp.event, 2, SCE_EVENT_WAITOR, &bits, NULL)) < 0)
+		if ((ret = ksceKernelWaitEventFlag(s_pamp.event, 2, SCE_KERNEL_EVF_WAITMODE_OR,
+						   &bits, NULL)) < 0)
 			break;
 		if (!(bits & 2))
 			continue;
@@ -943,7 +944,8 @@ static int pampMainThread(SceSize arglen, void *argp)
 	int ret;
 
 	for (;;) {
-		if ((ret = ksceKernelWaitEventFlag(ctx->event, 5, SCE_EVENT_WAITOR, &bits, NULL)) < 0)
+		if ((ret = ksceKernelWaitEventFlag(ctx->event, 5, SCE_KERNEL_EVF_WAITMODE_OR, &bits,
+						   NULL)) < 0)
 			break;
 		if (bits & 1) {
 			if (ctx->kickWorker)
@@ -1035,7 +1037,7 @@ int PampModuleStart(SceSize arglen, void *argp)
 	if (ret < 0)
 		return 2;
 	ctx->sendSema = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pPamp", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pPamp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0)
 		return 2;
 	ctx->event = ret;
@@ -1057,7 +1059,7 @@ int PampModuleStart(SceSize arglen, void *argp)
 	threadopt.uStackMemType = 0;
 	threadopt.uTLSMemType = 0;
 	threadopt.uStackMemid = 0;
-	threadopt.data_0x18 = 0;
+	threadopt.handedExceptions = 0;
 	ret = ksceKernelCreateThread("SceDeci4pPampMain", pampMainThread, 0x1e, 0x4000, 0, 0xf, &threadopt);
 	if (ret < 0)
 		return 2;

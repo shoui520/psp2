@@ -14,7 +14,9 @@ int mtpXferThread(SceSize args, void *argp)
 		return -1;
 	ctx = x->ctx;
 	for (;;) {
-		if (ksceKernelWaitEventFlag(x->evf, 0x8003, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		if (ksceKernelWaitEventFlag(x->evf, 0x8003,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    &bits, NULL) < 0)
 			return -1;
 		if (bits & 1) {
@@ -36,7 +38,8 @@ int mtpXferInit(MtpContext *ctx, MtpXfer **out)
 	if (x == NULL) {
 		ret = MTP_ERROR_NO_MEMORY;
 	} else {
-		x->evf = ksceKernelCreateEventFlag("SceMtpXferEventFlag", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+		x->evf = ksceKernelCreateEventFlag("SceMtpXferEventFlag", SCE_KERNEL_EVF_ATTR_MULTI,
+						   0, NULL);
 		if (x->evf > 0) {
 			x->thread = ksceKernelCreateThread("SceMtpXferThread", mtpXferThread,
 							   0x10000103, 0x400, 0x20000000, 0x80000,

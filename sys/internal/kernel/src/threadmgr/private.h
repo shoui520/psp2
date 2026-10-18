@@ -339,14 +339,6 @@ struct SceKernelThreadmgrPrivate {
 
 _Static_assert(sizeof(struct SceKernelThreadmgrPrivate) == 0x28c8, "threadmgr private size");
 
-/* the tracers' hooks: an event, the count of the values that follow, the values */
-typedef void (*ThreadmgrTraceHook)(uint32_t event, uint32_t argc, ...);
-typedef void (*ThreadmgrOnCpuHook)(SceUID processId, SceUID threadId, int priority,
-				   uint32_t cpuAffinityMask);
-typedef void (*ThreadmgrOffCpuHook)(SceUID processId, SceUID threadId, uint32_t why);
-typedef void (*ThreadmgrPriorityChangeHook)(SceUID processId, SceUID threadId, int newPriority,
-					    int oldPriority);
-
 struct ThreadmgrRuntime {
 	struct SceKernelThreadmgrPrivate *manager;
 	void (*idleEntry)(void);

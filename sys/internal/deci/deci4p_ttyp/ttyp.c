@@ -455,13 +455,13 @@ TTYP_INLINE int TtypInit(void)
 		return uid;
 	}
 	s_heap = uid;
-	uid = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	uid = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (uid < 0) {
 		TTYP_PRINTF(250, "CreateMutex failed (0x%08X)\n", uid);
 		return uid;
 	}
 	s_mutex = uid;
-	s_sema = ksceKernelCreateSema("SceDeci4pTtyp", SCE_KERNEL_ATTR_THREAD_PRIO,
+	s_sema = ksceKernelCreateSema("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO,
 				      TTYP_RESOURCES, TTYP_RESOURCES, NULL);
 	if (s_sema < 0) {
 		TTYP_PRINTF(262, "CreateSema failed (0x%08X)\n", s_sema);
@@ -544,14 +544,14 @@ int TtypOpen(int unit)
 		in = ch->in;
 		in->wp = in->data;
 		in->rp = in->data;
-		uid = ksceKernelCreateMutex("SceDeci4pTtyRead", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+		uid = ksceKernelCreateMutex("SceDeci4pTtyRead", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 		if (uid < 0) {
 			TTYP_PRINTF(707, "sceKernelCreateMutex[r] failed 0x%x\n", uid);
 			ksceKernelUnlockMutex(s_mutex, 1);
 			return uid;
 		}
 		ch->readMutex = uid;
-		uid = ksceKernelCreateMutex("SceDeci4pTtyWrite", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+		uid = ksceKernelCreateMutex("SceDeci4pTtyWrite", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 		if (uid < 0) {
 			TTYP_PRINTF(715, "sceKernelCreateMutex[w] failed 0x%x\n", uid);
 			ksceKernelDeleteMutex(ch->readMutex);
@@ -630,7 +630,8 @@ int TtypRead(int unit, void *buf, SceSize size, SceUInt32 flags)
 		ret = n;
 		if (!(flags & 4) && in->wp == in->rp) {
 			do {
-				c = ksceKernelWaitEventFlag(ch->evf, 5, SCE_EVENT_WAITOR, &outBits, NULL);
+				c = ksceKernelWaitEventFlag(ch->evf, 5, SCE_KERNEL_EVF_WAITMODE_OR,
+							    &outBits, NULL);
 				if (c < 0) {
 					if (c != SCE_KERNEL_ERROR_THREAD_SUSPENDED)
 						TTYP_PRINTF(814, "WaitEventFlag failed (0x%08X)\n", c);

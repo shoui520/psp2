@@ -224,7 +224,8 @@ static int readRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, un
 	ret = ksceUsbdControlTransfer(a->controlPipe, &s_readRequest, (unsigned char *)&s_readValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
 		ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret >= 0) {
 			if (bits & CONTROL_FAILED)
 				ret = SMSC_ERROR_NOT_READY;
@@ -249,7 +250,8 @@ static int writeRegister(struct SceUsbEtherSmscContext *a, unsigned short reg, u
 	ret = ksceUsbdControlTransfer(a->controlPipe, &s_writeRequest, (unsigned char *)&s_writeValue, onControlTransferCompletion, a);
 	if (ret >= 0) {
 		ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret >= 0 && (bits & CONTROL_FAILED))
 			ret = SMSC_ERROR_NOT_READY;
 	}
@@ -376,7 +378,8 @@ static int onAttach(int device)
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
 		return ret;
 	request.bmRequestType = 1;
@@ -386,7 +389,8 @@ static int onAttach(int device)
 	if (ret < 0)
 		return ret;
 	ret = ksceKernelWaitEventFlag(a->controlEvent, CONTROL_FAILED | CONTROL_DONE,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0)
 		return ret;
 	ret = ksceUsbdGetDeviceSpeed(device, &speed);
@@ -1264,7 +1268,8 @@ static int workerEntry(SceSize arglen, void *argp)
 			wait = &timeout;
 		}
 		ret = ksceKernelWaitEventFlag(a->workerEvent, WORKER_EVENTS,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, wait);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, wait);
 		now = sceKernelGetSystemTimeWide();
 		if (ret) {
 			if (ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT) {

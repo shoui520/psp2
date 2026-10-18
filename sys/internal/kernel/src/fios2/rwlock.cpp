@@ -9,11 +9,11 @@
 void sceFiosKernelRwlockInit(SceFiosKernelRwlock *lock)
 {
 	lock->mutex = ksceKernelCreateMutex("SceFiosKernelRwlockMutex",
-					    SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+					    SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	lock->readCond = ksceKernelCreateCond("SceFiosKernelRwlockReadCond",
-					      SCE_KERNEL_ATTR_THREAD_PRIO, lock->mutex, NULL);
+					      SCE_KERNEL_ATTR_TH_PRIO, lock->mutex, NULL);
 	lock->writeCond = ksceKernelCreateCond("SceFiosKernelRwlockWriteCond",
-					       SCE_KERNEL_ATTR_THREAD_PRIO, lock->mutex, NULL);
+					       SCE_KERNEL_ATTR_TH_PRIO, lock->mutex, NULL);
 	lock->readWaiters = 0;
 	lock->readers = 0;
 	lock->writeWaiters = 0;

@@ -412,7 +412,9 @@ static int disconnectChannel(struct Channel *channel, int command)
 		channel->state = PCM_CHANNEL_CANCELLING;
 	ret = SceUdcdForDriver_AA5FD90E(&channel->command);
 	if (ret == (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS) {
-		ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED, SCE_EVENT_WAITOR, &bits, &timeout);
+		ret = ksceKernelWaitEventFlag(channel->event,
+					      PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED,
+					      SCE_KERNEL_EVF_WAITMODE_OR, &bits, &timeout);
 		if (ret < 0)
 			return ret;
 		if (bits & PCM_EVENT_DISCONNECTED) {
@@ -432,7 +434,10 @@ static int disconnectChannel(struct Channel *channel, int command)
 	}
 	ksceUdcdReqSend(&channel->command);
 	timeout = PCM_WAIT_TIMEOUT;
-	ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED, SCE_EVENT_WAITOR, NULL, &timeout);
+	ret = ksceKernelWaitEventFlag(channel->event,
+				      PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED |
+				      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+				      &timeout);
 	if (command == PCM_COMMAND_CANCEL && ret >= 0)
 		channel->state = PCM_CHANNEL_IDLE;
 	return ret;
@@ -1128,7 +1133,9 @@ static int connectionThread(SceSize size, void *args)
 				dispatchNotification(event);
 			}
 		}
-		if (ksceKernelWaitEventFlag(s.event, PCM_THREAD_EVENT_CHANGED, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR, NULL, NULL) < 0)
+		if (ksceKernelWaitEventFlag(s.event, PCM_THREAD_EVENT_CHANGED,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, NULL, NULL) < 0)
 			continue;
 		state = lock();
 		arrivals = s.arrivals;
@@ -1246,14 +1253,19 @@ static int connectChannel(const unsigned *args)
 		timeout = *(unsigned *)(uintptr_t)args[2];
 		wait = &timeout;
 	}
-	ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED, SCE_EVENT_WAITOR, &bits, wait);
+	ret = ksceKernelWaitEventFlag(channel->event,
+				      PCM_EVENT_COMMAND_DONE | PCM_EVENT_DISCONNECTED |
+				      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR, &bits, wait);
 	if (ret >= 0) {
 		if (bits & (PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED)) {
 			channel->port = -1;
 			channel->state = PCM_CHANNEL_IDLE;
 			return PCM_ERROR_DISCONNECTED;
 		}
-		ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_ACCEPTED | PCM_EVENT_CANCELLED, SCE_EVENT_WAITOR, &bits, wait);
+		ret = ksceKernelWaitEventFlag(channel->event,
+					      PCM_EVENT_DISCONNECTED | PCM_EVENT_ACCEPTED |
+					      PCM_EVENT_CANCELLED, SCE_KERNEL_EVF_WAITMODE_OR,
+					      &bits, wait);
 		if (ret >= 0) {
 			if (bits & (PCM_EVENT_DISCONNECTED | PCM_EVENT_CANCELLED)) {
 				channel->port = -1;
@@ -1422,7 +1434,10 @@ static int waitData(struct Channel *channel, const unsigned *timeout)
 		time = *timeout;
 		wait = &time;
 	}
-	ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_DATA | PCM_EVENT_WAIT_CANCEL, SCE_EVENT_WAITOR, &bits, wait);
+	ret = ksceKernelWaitEventFlag(channel->event,
+				      PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET |
+				      PCM_EVENT_DATA | PCM_EVENT_WAIT_CANCEL,
+				      SCE_KERNEL_EVF_WAITMODE_OR, &bits, wait);
 	if (ret < 0) {
 		if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 			ret = PCM_ERROR_TIMEOUT;
@@ -1471,7 +1486,10 @@ static int ioctlReset(unsigned unit)
 	} else {
 		unlock(state);
 	}
-	ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET_RECEIVED, SCE_EVENT_WAITOR, &bits, NULL);
+	ret = ksceKernelWaitEventFlag(channel->event,
+				      PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED |
+				      PCM_EVENT_RESET_RECEIVED, SCE_KERNEL_EVF_WAITMODE_OR, &bits,
+				      NULL);
 	if (ret >= 0) {
 		if (bits & PCM_EVENT_DISCONNECTED)
 			ret = PCM_ERROR_DISCONNECTED;
@@ -1614,7 +1632,11 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 	channel->headerRequest.request.returnCode = 1;
 	ksceUdcdReqSend(&channel->headerRequest.request);
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_SEND_FAILED, SCE_EVENT_WAITOR, &bits, NULL);
+		ret = ksceKernelWaitEventFlag(channel->event,
+					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
+					      PCM_EVENT_CLOSED | PCM_EVENT_RESET |
+					      PCM_EVENT_SEND_FAILED, SCE_KERNEL_EVF_WAITMODE_OR,
+					      &bits, NULL);
 		if (ret < 0)
 			goto clear;
 		if (bits & (PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_SEND_FAILED))
@@ -1622,7 +1644,11 @@ static int writeChannel(unsigned unit, const uint8_t *data, unsigned size, unsig
 		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SENT);
 		ksceKernelClearEventFlag(channel->event, ~PCM_EVENT_SEND_FAILED);
 		ksceUdcdReqSend(&channel->dataRequest);
-		ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_SEND_FAILED, SCE_EVENT_WAITOR, &bits, NULL);
+		ret = ksceKernelWaitEventFlag(channel->event,
+					      PCM_EVENT_SENT | PCM_EVENT_DISCONNECTED |
+					      PCM_EVENT_CLOSED | PCM_EVENT_RESET |
+					      PCM_EVENT_SEND_FAILED, SCE_KERNEL_EVF_WAITMODE_OR,
+					      &bits, NULL);
 		if (ret < 0)
 			goto clear;
 		if (bits & (PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET | PCM_EVENT_SEND_FAILED))
@@ -1820,7 +1846,10 @@ static int readChannel(unsigned unit, uint8_t *data, unsigned size, unsigned mod
 	channel->read = data;
 	unlock(state);
 	for (;;) {
-		ret = ksceKernelWaitEventFlag(channel->event, PCM_EVENT_READ | PCM_EVENT_DISCONNECTED | PCM_EVENT_CLOSED | PCM_EVENT_RESET, SCE_EVENT_WAITOR, &bits, NULL);
+		ret = ksceKernelWaitEventFlag(channel->event,
+					      PCM_EVENT_READ | PCM_EVENT_DISCONNECTED |
+					      PCM_EVENT_CLOSED | PCM_EVENT_RESET,
+					      SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
 		buffer = s.receive.unused;
 		if (ret < 0)
 			goto clearBusy;

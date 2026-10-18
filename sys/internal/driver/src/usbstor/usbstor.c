@@ -283,7 +283,8 @@ static int stopStorage(int size, void *args, void *ctx)
 	if (s.flags & FLAG_ATTACHED)
 		return STOR_ERROR_BUSY;
 	ksceKernelSetEventFlag(s.eventFlag, EVF_STOP);
-	ksceKernelWaitEventFlag(s.eventFlag, EVF_STOPPED, SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+	ksceKernelWaitEventFlag(s.eventFlag, EVF_STOPPED, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
+				NULL);
 	for (int i = s.count - 1; i >= 0; i--) {
 		if (s.functions[i]->stop)
 			s.functions[i]->stop();
@@ -464,7 +465,8 @@ static void cancelEndpoint(int ep, unsigned cancelled)
 {
 	unsigned timeout = TRANSFER_TIMEOUT;
 	if (ksceUdcdReqCancelAll(&s.endpoints[ep]) != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
-	    ksceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_EVENT_WAITCLEAR_PAT, NULL, &timeout) >= 0)
+	    ksceKernelWaitEventFlag(s.eventFlag, cancelled, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
+				    &timeout) >= 0)
 		ksceUdcdClearFIFO(&s.endpoints[ep]);
 }
 
@@ -481,7 +483,8 @@ static int flushSend(unsigned timeout)
 	if (result < 0)
 		return result;
 	result = ksceKernelWaitEventFlag(s.eventFlag, EVF_IN_CANCELLED | EVF_SENT,
-					 SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, &timeout);
+					 SCE_KERNEL_EVF_WAITMODE_OR |
+					 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, &timeout);
 	s.send.request.size = 0;
 	if ((bits & EVF_IN_CANCELLED) || s.send.request.returnCode < 0) {
 		s.send.request.returnCode = REQUEST_IDLE;
@@ -577,7 +580,8 @@ int SceUsbstorForDriver_F1A690DC(void *buffer, unsigned size, unsigned timeout)
 	if (result < 0)
 		return result;
 	result = ksceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED | EVF_RECEIVED,
-					 SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, &timeout);
+					 SCE_KERNEL_EVF_WAITMODE_OR |
+					 SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, &timeout);
 	if (!(bits & EVF_OUT_CANCELLED) && s.receive.request.returnCode >= 0) {
 		if (result == 0)
 			return s.receive.request.transmitted;
@@ -826,7 +830,7 @@ static int initializeDescriptors(void)
 	s.product.bDescriptorType = USB_DT_STRING;
 	copyBytes((uint8_t *)s.product.bString, (const uint8_t *)names[s.type == USBSTOR_TYPE_CDROM],
 		  sizeof(names[0]));
-	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstor", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s.eventFlag = ksceKernelCreateEventFlag("SceUsbstor", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (s.eventFlag < 0) {
 		SceSysmemForDriver_009E1C61(s.memblock);
 		return STOR_ERROR_GENERAL;
@@ -870,7 +874,8 @@ static int storageThread(SceSize size, void *args)
 	}
 	copyBytes((uint8_t *)s.serial.bString, s.identity + 31, 34);
 start:
-	ksceKernelWaitEventFlag(s.eventFlag, EVF_START, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+	ksceKernelWaitEventFlag(s.eventFlag, EVF_START,
+				SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				&bits, NULL);
 next:
 	if (state == 1)
@@ -891,13 +896,15 @@ sendCsw:
 	goto waitNormal;
 waitTimed:
 	timeout = 1000;
-	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
+				    SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				    &bits, &timeout) < 0)
 		goto next;
 	goto events;
 waitNormal:
 	timeout = 1000;
-	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+	if (ksceKernelWaitEventFlag(s.eventFlag, EVF_TRANSPORT,
+				    SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 				    &bits, NULL) < 0)
 		goto wake;
 events:
@@ -1134,7 +1141,8 @@ receive:
 		timeout = TRANSFER_TIMEOUT;
 		result = ksceUdcdReqCancelAll(&s.endpoints[2]);
 		if (result != (int)SCE_UDCD_ERROR_DRIVER_IN_PROGRESS ||
-		    ksceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED, SCE_EVENT_WAITCLEAR_PAT,
+		    ksceKernelWaitEventFlag(s.eventFlag, EVF_OUT_CANCELLED,
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    NULL, &timeout) >= 0)
 			ksceUdcdClearFIFO(&s.endpoints[2]);
 	}

@@ -355,7 +355,8 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 			ret = SCE_KERNEL_ERROR_DECI4P_HOST_TOOMANY_PROCESS;
 			goto out;
 		}
-	evf = ksceKernelCreateEventFlag("SceDeci4pTmcpRcv", SCE_KERNEL_ATTR_THREAD_PRIO | EVF_ATTR_UNK8000, 0, NULL);
+	evf = ksceKernelCreateEventFlag("SceDeci4pTmcpRcv",
+					SCE_KERNEL_ATTR_TH_PRIO | EVF_ATTR_UNK8000, 0, NULL);
 	if (evf < 0) {
 		ret = SCE_KERNEL_ERROR_DECI4P_UNKNOWN;
 		goto out;
@@ -381,7 +382,8 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 		goto no_link;
 	while (s_link.busy && s_link.connected) {
 		ksceKernelUnlockMutex(s_link.mutex, 1);
-		ret = ksceKernelWaitEventFlag(s_link.evf, EVF_LINK_DOWN | EVF_ACK, SCE_EVENT_WAITOR,
+		ret = ksceKernelWaitEventFlag(s_link.evf, EVF_LINK_DOWN | EVF_ACK,
+					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
 		ksceKernelLockMutex(s_link.mutex, 1, NULL);
 		if (ret < 0)
@@ -419,7 +421,8 @@ static int TmcpCommand(SceUInt32 arg, const char *s1, const char *s2, const char
 
 wait_ack:
 	ksceKernelUnlockMutex(s_link.mutex, 1);
-	ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_ACK, SCE_EVENT_WAITOR, &bits, NULL);
+	ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_ACK,
+				      SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
 	ksceKernelLockMutex(s_link.mutex, 1, NULL);
 	if (ret == SCE_KERNEL_ERROR_THREAD_SUSPENDED)
 		goto out;
@@ -452,7 +455,8 @@ wait_ack:
 
 	if (ret == 0 && !async) {
 		ksceKernelUnlockMutex(s_link.mutex, 1);
-		ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_DONE, SCE_EVENT_WAITOR,
+		ret = ksceKernelWaitEventFlag(slot->evf, EVF_LINK_DOWN | EVF_DONE,
+					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      &bits, NULL);
 		ksceKernelLockMutex(s_link.mutex, 1, NULL);
 		if (ret == SCE_KERNEL_ERROR_THREAD_SUSPENDED)
@@ -502,12 +506,13 @@ int module_start(SceSize args, void *argp)
 	if (!SceDipswForDriver_A98FC2FD(0xc2))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	mutex = ksceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	mutex = ksceKernelCreateMutex("SceDeci4pTmcpComm", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (mutex < 0)
 		return SCE_KERNEL_START_FAILED;
 	s_link.mutex = mutex;
 	s_link.seq = 0;
-	s_link.evf = ksceKernelCreateEventFlag("SceDeci4pTmcpCmd", SCE_KERNEL_ATTR_THREAD_PRIO | SCE_EVENT_WAITMULTIPLE |
+	s_link.evf = ksceKernelCreateEventFlag("SceDeci4pTmcpCmd",
+					       SCE_KERNEL_ATTR_TH_PRIO | SCE_KERNEL_EVF_ATTR_MULTI |
 					       EVF_ATTR_UNK8000, EVF_ACK, NULL);
 	for (slot = s_slot; slot != &s_slot[TMCP_SLOTS]; slot++) {
 		slot->pid = -1;

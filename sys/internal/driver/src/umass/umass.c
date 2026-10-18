@@ -270,7 +270,9 @@ static int clearHalt(UsbMassDevice *dev, SceUsbdEndpointDescriptor *endpoint, in
 		if (inspect)
 			ret = waitTransfer(dev, 5);
 		else
-			ksceKernelWaitEventFlag(dev->eventFlag, 3, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+			ksceKernelWaitEventFlag(dev->eventFlag, 3,
+						SCE_KERNEL_EVF_WAITMODE_OR |
+						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	}
 	return ret;
 }

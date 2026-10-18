@@ -76,8 +76,6 @@ void sceFiosKernelRwlockWriteLock(SceFiosKernelRwlock *lock);
 void sceFiosKernelRwlockWriteUnlock(SceFiosKernelRwlock *lock);
 
 /* imports without an SDK name */
-int SceThreadmgrForDriver_B645C7EF(SceSize size, void (*destructor)(void *, uintptr_t),
-				   uintptr_t argument);	/* a kernel TLS slot */
 int SceThreadmgrForDriver_332E127C(void);	/* the current thread's permission */
 void *SceThreadmgrForDriver_89CA5698(int slot, SceUID threadId, int create);
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);

@@ -6227,48 +6227,6 @@ int checkThreadUserStack(struct ThreadCB *thread)
 #define SCE_KERNEL_ERROR_ILLEGAL_SIZE	0x8002000b
 #define SCE_KERNEL_ERROR_NOT_SUPPORTED	0x80020004	/* PLACEHOLDER: name */
 
-/* SceKernelThreadInfo (0x80) */
-typedef struct ThreadmgrThreadInfo {
-	SceSize size;
-	SceUID processId;
-	char name[32];
-	SceUInt32 attr;				/* 0x28 */
-	SceUInt32 status;
-	uintptr_t entry;			/* 0x30 */
-	uintptr_t stack;
-	SceSize stackSize;
-	int initPriority;			/* 0x3c */
-	int currentPriority;
-	uint32_t initCpuAffinityMask;
-	uint32_t currentCpuAffinityMask;	/* 0x48 */
-	int currentCpuId;
-	int lastExecutedCpuId;
-	uint32_t waitType;			/* 0x54 */
-	SceUID waitId;
-	int exitStatus;
-	uint64_t runClocks;			/* 0x60 */
-	uint32_t intrPreemptCount;		/* 0x68 */
-	uint32_t threadPreemptCount;
-	uint32_t threadReleaseCount;
-	uint32_t changeCpuCount;		/* 0x74 */
-	int fNotifyCallback;
-	uint32_t reserved;
-} ThreadmgrThreadInfo;
-
-/* SceThreadmgrForDriver_7E280B69: the CPUs' idle threads (0x48) */
-typedef struct ThreadmgrSystemInfo {
-	SceSize size;
-	uint32_t activeCpuMask;
-	struct {
-		uint64_t idleClock;		/* the idle thread's run time */
-		uint32_t idleCount;		/* PLACEHOLDER: its intrPreemptCount */
-		uint32_t threadSwitchCount;	/* the CPU's */
-	} cpu[CPU_COUNT];
-} ThreadmgrSystemInfo;
-
-_Static_assert(sizeof(ThreadmgrThreadInfo) == 0x80 && sizeof(ThreadmgrRunStatus) == 0x34 &&
-	       sizeof(ThreadmgrSystemInfo) == 0x48, "thread info layouts");
-
 /* the calling process's SDK version (kernel callers count as the newest) */
 static inline void getCallerSdkVersion(SceUInt32 *version)
 {
@@ -6347,11 +6305,11 @@ restore:
 }
 
 /* ksceKernelGetThreadInfo: 0 is the calling thread; a syscall sees PUIDs */
-int ksceKernelGetThreadInfo(SceUID threadId, ThreadmgrThreadInfo *output)
+int ksceKernelGetThreadInfo(SceUID threadId, SceKernelThreadInfo *output)
 {
 	struct ThreadmgrThreadObject *object;
 	struct ThreadCB *thread;
-	ThreadmgrThreadInfo info;
+	SceKernelThreadInfo info;
 	SceUInt32 version, state, waiting;
 	SceSize count;
 	SceUID puid;
@@ -6432,8 +6390,8 @@ int ksceKernelGetThreadInfo(SceUID threadId, ThreadmgrThreadInfo *output)
 		waiting = state & SCE_KERNEL_THREAD_STATUS_WAITING;
 	}
 	info.attr = thread->currentAttr;
-	info.entry = thread->entry;
-	info.stack = (int)info.attr < 0 ? thread->pUStack : thread->pKStack;
+	info.entry = (SceKernelThreadEntry)thread->entry;
+	info.pStack = (void *)((int)info.attr < 0 ? thread->pUStack : thread->pKStack);
 	info.currentCpuId = thread->currentCpuId;
 	if (waiting) {
 		info.waitType = thread->waitType;
@@ -6465,11 +6423,11 @@ restore:
 }
 
 /* SceThreadmgrForDriver_33E85E9E: what runs on each CPU */
-int SceThreadmgrForDriver_33E85E9E(ThreadmgrRunStatus *output)
+int SceThreadmgrForDriver_33E85E9E(SceKernelThreadRunStatus *output)
 {
 	struct ThreadmgrThreadObject *object;
 	struct ThreadMgrCpuCB *cpu;
-	ThreadmgrRunStatus status;
+	SceKernelThreadRunStatus status;
 	SceUInt32 version;
 	uint32_t saved;
 	SceUID threadId;
@@ -6485,7 +6443,7 @@ int SceThreadmgrForDriver_33E85E9E(ThreadmgrRunStatus *output)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_SIZE;
 		goto restore;
 	}
-	status = (ThreadmgrRunStatus){ .size = sizeof(status) };
+	status = (SceKernelThreadRunStatus){ .size = sizeof(status) };
 	intr = SceCpuForDriver_821FC0EE();
 	cpu = s_threadmgrRuntime.manager->cpuCB;
 	if (currentThreadContext() == NULL ||
@@ -6500,22 +6458,22 @@ int SceThreadmgrForDriver_33E85E9E(ThreadmgrRunStatus *output)
 			if (SceSysmemForDriver_00ED6C14(threadId,
 				s_threadmgrRuntime.manager->threadClass,
 				(SceObjectBase **)&object) < 0) {
-				status.cpu[i].processId = -1;
-				status.cpu[i].threadId = -1;
-				status.cpu[i].priority = -1;
+				status.cpuInfo[i].processId = -1;
+				status.cpuInfo[i].threadId = -1;
+				status.cpuInfo[i].priority = -1;
 				continue;
 			}
-			status.cpu[i].processId = object->context.processId;
+			status.cpuInfo[i].processId = object->context.processId;
 			if (object->context.processId == currentThreadContext()->processId)
-				status.cpu[i].threadId = object->context.userThreadId;
+				status.cpuInfo[i].threadId = object->context.userThreadId;
 			else
-				status.cpu[i].threadId = -1;
-			status.cpu[i].priority = object->context.currentPriority;
+				status.cpuInfo[i].threadId = -1;
+			status.cpuInfo[i].priority = object->context.currentPriority;
 			sceGUIDReleaseObject(threadId);
 		} else {
-			status.cpu[i].processId = cpu->processId;
-			status.cpu[i].threadId = cpu->threadId;
-			status.cpu[i].priority = cpu->priority;
+			status.cpuInfo[i].processId = cpu->processId;
+			status.cpuInfo[i].threadId = cpu->threadId;
+			status.cpuInfo[i].priority = cpu->priority;
 		}
 	}
 	sceKernelCpuResumeIntr(intr);
@@ -6527,11 +6485,11 @@ restore:
 }
 
 /* SceThreadmgrForDriver_7E280B69: the active CPUs and their idle threads' times */
-int SceThreadmgrForDriver_7E280B69(ThreadmgrSystemInfo *output)
+int SceThreadmgrForDriver_7E280B69(SceKernelSystemInfo *output)
 {
 	struct ThreadMgrCpuCB *cpu;
 	struct ThreadCB *idle;
-	ThreadmgrSystemInfo info;
+	SceKernelSystemInfo info;
 	uint32_t saved;
 	int intr, ret, i;
 
@@ -6556,10 +6514,10 @@ int SceThreadmgrForDriver_7E280B69(ThreadmgrSystemInfo *output)
 	for (i = 0; i < CPU_COUNT; i++) {
 		cpu = &s_threadmgrRuntime.manager->cpuCB[i];
 		idle = cpu->idleThread;
-		info.cpu[i].threadSwitchCount = cpu->threadSwitchCount;
+		info.cpuInfo[i].threadSwitchCount = cpu->threadSwitchCount;
 		SceCpuForDriver_BF82DEB2(THREAD_LOCK(idle));
-		info.cpu[i].idleCount = idle->intrPreemptCount;
-		info.cpu[i].idleClock = idle->runClock;
+		info.cpuInfo[i].comesOutOfIdleCount = idle->intrPreemptCount;
+		info.cpuInfo[i].idleClock = idle->runClock;
 		sceKernelSpinlockLowUnlock(THREAD_LOCK(idle));
 	}
 	sceKernelCpuResumeIntr(intr);
@@ -6990,7 +6948,7 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 			goto restore;
 		}
 		if (param.attr & THREAD_OPT_HANDED_EXCP) {
-			handedExceptions = param.data_0x18;
+			handedExceptions = param.handedExceptions;
 			if (handedExceptions & ~THREAD_HANDED_EXCP_MASK) {
 				ret = SCE_KERNEL_ERROR_ILLEGAL_TYPE;
 				goto restore;
@@ -8392,7 +8350,7 @@ uint32_t sceKernelGetCurrentThreadVfpException(void)
 #define VM_EXCEPTION_PREFETCH_ABORT	0x100
 #define VM_EXCEPTION_DEBUG		0x200
 
-/* thread->handedExceptions: the kinds this thread hands over (SceKernelThreadOptParam data_0x18) */
+/* thread->handedExceptions: the kinds this thread hands over (its option's handedExceptions) */
 #define THREAD_EXCP_DATA_ABORT		0x001
 #define THREAD_EXCP_PREFETCH_ABORT	0x100
 #define THREAD_EXCP_DEBUG		0x200

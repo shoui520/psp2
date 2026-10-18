@@ -378,7 +378,7 @@ int sceDeci4pDrfpInit(void)
 		return ret;
 	}
 	s_drfpHeap = ret;
-	s_drfpRequestSema = ksceKernelCreateSema(DRFP_NAME, SCE_KERNEL_ATTR_THREAD_PRIO,
+	s_drfpRequestSema = ksceKernelCreateSema(DRFP_NAME, SCE_KERNEL_ATTR_TH_PRIO,
 						 DRFP_REQUEST_COUNT, DRFP_REQUEST_COUNT, NULL);
 	if (s_drfpRequestSema < 0)
 		return -1;
@@ -415,7 +415,7 @@ int sceDeci4pDrfpInit(void)
 						     pool->size, NULL);
 		SceSysmemForDriver_A841EDDA(pool->memBlock, &pool->base);
 		snprintf(name, sizeof(name), DRFP_NAME "%d", i);
-		pool->sema = ksceKernelCreateSema(name, SCE_KERNEL_ATTR_THREAD_PRIO, pool->count,
+		pool->sema = ksceKernelCreateSema(name, SCE_KERNEL_ATTR_TH_PRIO, pool->count,
 						  pool->count, NULL);
 	}
 
@@ -526,7 +526,8 @@ int sceDeci4pDrfpSend(void *packet, SceSize size, void *info)
 		bits = 0;
 		ret = ksceKernelWaitEventFlag(req->evf,
 					      DRFP_EVF_RESPONSE | DRFP_EVF_SENT | DRFP_EVF_CANCEL,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					      pTimeout);
 		if (ret >= 0)
 			break;

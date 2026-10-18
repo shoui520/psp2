@@ -236,7 +236,7 @@ static int intrThread(SceSize args, void *argp)
 		for (;;) {
 			ksceKernelWaitEventFlag(intrWork.eventFlag,
 						HDMI_INTR_EVENT_INTR | HDMI_INTR_EVENT_EXIT,
-						SCE_EVENT_WAITOR, &bits, NULL);
+						SCE_KERNEL_EVF_WAITMODE_OR, &bits, NULL);
 			ksceKernelClearEventFlag(intrWork.eventFlag, ~bits);
 			if (bits & HDMI_INTR_EVENT_EXIT) {
 				sceKernelExitThread(0);
@@ -339,7 +339,8 @@ int _sceHdmiDeviceModuleStart(void)
 	if (ret < 0)
 		goto error;
 	intrWork.mutex = ret;
-	intrWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceIntr", SCE_EVENT_WAITMULTIPLE, 0,
+	intrWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceIntr",
+						       SCE_KERNEL_EVF_ATTR_MULTI, 0,
 						       &intrWork.eventFlagOpt);
 	intrWork.threadOpt.size = 8;
 	ret = ksceKernelCreateThread("SceHdmiDeviceIntr", intrThread, 0x19, 0x2000, 0x10000000,

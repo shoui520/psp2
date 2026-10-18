@@ -38,18 +38,6 @@ typedef struct ThreadmgrSemaphore {
 
 _Static_assert(sizeof(ThreadmgrSemaphore) == 0x38, "SceUIDSemaphoreObject size");
 
-/* ksceKernelGetSemaInfo */
-typedef struct ThreadmgrSemaInfo {
-	SceSize size;				/* 0x3c */
-	SceUID semaId;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	int initCount;
-	int currentCount;
-	int maxCount;
-	int numWaitThreads;			/* 0x38 */
-} ThreadmgrSemaInfo;
-
 int uidCacheConstructor(void *object);
 int uidCacheDestructor(void *object);
 
@@ -142,7 +130,7 @@ static int uidSemaphore_Destructor(void *object)
 }
 
 /* a semaphore's information (ksceKernelGetSemaInfo's core) */
-int getSemaInfo(SceUID semaId, ThreadmgrSemaInfo *info)
+int getSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
 	ThreadmgrSemaphore *sema;
 	int intr, ret;
@@ -335,10 +323,6 @@ restore:
 #define SCE_KERNEL_ERROR_ILLEGAL_ATTR	0x8002000e
 #define PUID_VECTOR_LEVEL		0x00050000	/* PLACEHOLDER: name */
 
-typedef struct ThreadmgrSemaOptParam {
-	SceSize size;
-} ThreadmgrSemaOptParam;
-
 /* closes every semaphore PUID a process still holds */
 int semaphoreProcessExit(SceProcessObject *process)
 {
@@ -381,7 +365,7 @@ int semaphoreProcessExit(SceProcessObject *process)
 
 /* creates the object, counting it against the calling process's limits */
 static inline __attribute__((always_inline)) SceUID sceKernelCreateSemaCore(const char *name,
-	SceUInt32 attr, int initCount, int maxCount, const ThreadmgrSemaOptParam *option)
+	SceUInt32 attr, int initCount, int maxCount, const SceKernelSemaOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -475,7 +459,7 @@ resume:
  * (both create functions).
  */
 SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int maxCount,
-			    const ThreadmgrSemaOptParam *option)
+			    const SceKernelSemaOptParam *option)
 {
 	uint32_t saved;
 	SceUID uid;
@@ -514,7 +498,7 @@ SceUID ksceKernelCreateSema(const char *name, SceUInt32 attr, int initCount, int
 
 /* the create of 1.6x SDKs: maxCount 0 allowed, no syscall attribute check */
 SceUID sceKernelCreateSema_16XX(const char *name, SceUInt32 attr, int initCount, int maxCount,
-				const ThreadmgrSemaOptParam *option)
+				const SceKernelSemaOptParam *option)
 {
 	uint32_t saved;
 	SceUID uid;
@@ -771,9 +755,9 @@ resume:
 	return ret;
 }
 
-int ksceKernelGetSemaInfo(SceUID semaId, ThreadmgrSemaInfo *info)
+int ksceKernelGetSemaInfo(SceUID semaId, SceKernelSemaInfo *info)
 {
-	ThreadmgrSemaInfo local;
+	SceKernelSemaInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -798,10 +782,10 @@ int ksceKernelGetSemaInfo(SceUID semaId, ThreadmgrSemaInfo *info)
 }
 
 /* the information of every semaphore visible at level */
-int SceThreadmgrForDriver_C6741986(int level, ThreadmgrSemaInfo *infos, SceSize size,
+int SceThreadmgrForDriver_C6741986(int level, SceKernelSemaInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrSemaInfo info;
+	SceKernelSemaInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -842,10 +826,10 @@ int SceThreadmgrForDriver_C6741986(int level, ThreadmgrSemaInfo *infos, SceSize 
 }
 
 /* the same for the semaphores a process holds PUIDs of */
-int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level, ThreadmgrSemaInfo *infos,
+int SceThreadmgrForDriver_477F7C8A(SceUID pid, int level, SceKernelSemaInfo *infos,
 				     SceSize size, SceSize *count)
 {
-	ThreadmgrSemaInfo info;
+	SceKernelSemaInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

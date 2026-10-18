@@ -69,7 +69,8 @@ RdrfpRequest *rdrfpDequeue(RdrfpQueue *queue, int wait)
 		while (queue->count == 0) {
 			ksceKernelUnlockMutex(queue->mutex, 1);
 			ret = ksceKernelWaitEventFlagCB(queue->evf, 1,
-							SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+							SCE_KERNEL_EVF_WAITMODE_OR |
+							SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 							NULL, NULL);
 			ksceKernelLockMutex(queue->mutex, 1, NULL);
 			if (ret < 0)

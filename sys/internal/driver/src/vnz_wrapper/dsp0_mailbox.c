@@ -110,7 +110,7 @@ int submitVeneziaRpc(unsigned int channel)
 int waitVeneziaRpc(unsigned int channel)
 {
 	return ksceKernelWaitEventFlag(g_veneziaMailboxState.blockingEvent,
-		1U << (channel & 15), SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+		1U << (channel & 15), SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 }
 
 /* name unknown: consume all asynchronous mailbox completions. */

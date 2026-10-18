@@ -35,7 +35,7 @@ static int uidMutex_Constructor(void *object)
 }
 
 /* a mutex's information (ksceKernelGetMutexInfo's core) */
-int getMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
+int getMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	ThreadmgrMutex *mutex;
 	int intr, ret;
@@ -438,11 +438,6 @@ int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
 #define SCE_KERNEL_ERROR_MUTEX_FAILED_TO_OWN 0x80028145
 #define SCE_KERNEL_ERROR_MUTEX_NOT_OWNED 0x80028146
 
-typedef struct ThreadmgrMutexOptParam {
-	SceSize size;
-	int ceilingPriority;
-} ThreadmgrMutexOptParam;
-
 static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 {
 	SceUID puid = SceSysmemForDriver_CED1547B(pid, guid, 1);
@@ -453,7 +448,7 @@ static inline SceUID OpenByGUID(SceUID pid, SceUID guid)
 }
 
 SceUID ksceKernelCreateMutex(const char *name, SceUInt32 attr, int initCount,
-			     const ThreadmgrMutexOptParam *option)
+			     const SceKernelMutexOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process;
@@ -1078,10 +1073,10 @@ restore:
 }
 
 /* inside a syscall the owner is reported by its user-visible thread ID */
-int ksceKernelGetMutexInfo(SceUID mutexId, ThreadmgrMutexInfo *info)
+int ksceKernelGetMutexInfo(SceUID mutexId, SceKernelMutexInfo *info)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrMutexInfo local;
+	SceKernelMutexInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -1116,10 +1111,10 @@ restore:
 }
 
 /* SceThreadmgrForDriver_B6DA4669: the information of every mutex visible at level */
-int SceThreadmgrForDriver_B6DA4669(int level, ThreadmgrMutexInfo *infos, SceSize size,
+int SceThreadmgrForDriver_B6DA4669(int level, SceKernelMutexInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrMutexInfo info;
+	SceKernelMutexInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -1160,11 +1155,11 @@ int SceThreadmgrForDriver_B6DA4669(int level, ThreadmgrMutexInfo *infos, SceSize
 }
 
 /* the same for the mutexes a process holds PUIDs of, with user-visible IDs */
-int sceKernelGetMutexInfoAllProc(SceUID pid, int level, ThreadmgrMutexInfo *infos,
+int sceKernelGetMutexInfoAllProc(SceUID pid, int level, SceKernelMutexInfo *infos,
 				 SceSize size, SceSize *count)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrMutexInfo info;
+	SceKernelMutexInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

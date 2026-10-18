@@ -35,10 +35,6 @@
 #define SCE_KERNEL_ERROR_EVF_MULTI	0x800280e2
 #define SCE_KERNEL_ERROR_EVF_COND	0x800280e3
 
-typedef struct ThreadmgrEventFlagOptParam {
-	SceSize size;
-} ThreadmgrEventFlagOptParam;
-
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -286,7 +282,7 @@ restore:
 }
 
 /* an event flag's information (ksceKernelGetEventFlagInfo's core) */
-int getEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info)
+int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 {
 	ThreadmgrEventFlag *evf;
 	int intr, ret;
@@ -416,7 +412,7 @@ int eventFlagProcessExit(SceProcessObject *process)
  * event flag count it raised; kept.
  */
 SceUID ksceKernelCreateEventFlag(const char *name, SceUInt32 attr, uint32_t initPattern,
-				 const ThreadmgrEventFlagOptParam *option)
+				 const SceKernelEventFlagOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -774,9 +770,9 @@ int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThre
 	return ret;
 }
 
-int ksceKernelGetEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info)
+int ksceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info)
 {
-	ThreadmgrEventFlagInfo local;
+	SceKernelEventFlagInfo local;
 	SceSize size;
 	int ret;
 
@@ -795,10 +791,10 @@ int ksceKernelGetEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info)
 }
 
 /* SceThreadmgrForDriver_5870C73A: the information of every event flag visible at level */
-int SceThreadmgrForDriver_5870C73A(int level, ThreadmgrEventFlagInfo *infos, SceSize size,
+int SceThreadmgrForDriver_5870C73A(int level, SceKernelEventFlagInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrEventFlagInfo info;
+	SceKernelEventFlagInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -843,10 +839,10 @@ int SceThreadmgrForDriver_5870C73A(int level, ThreadmgrEventFlagInfo *infos, Sce
  * SceThreadmgrForDriver_0EB0ABF0: the same for the event flags process pid
  * holds, named by its PUIDs (opened ones marked)
  */
-int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level, ThreadmgrEventFlagInfo *infos,
+int SceThreadmgrForDriver_0EB0ABF0(SceUID pid, int level, SceKernelEventFlagInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrEventFlagInfo info;
+	SceKernelEventFlagInfo info;
 	SceSize got = 0;
 	uint32_t attributes;
 	SceUID *vector;

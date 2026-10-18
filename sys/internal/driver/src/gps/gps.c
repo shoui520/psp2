@@ -570,7 +570,9 @@ static int acquisitionWorker(SceSize arglen, void *argp)
 	unsigned events = 0, info[2];
 	gpsSetState(1);
 	for (;;) {
-		if (ksceKernelWaitEventFlag(context->event, 0xe003007f, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &events, NULL) < 0)
+		if (ksceKernelWaitEventFlag(context->event, 0xe003007f,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &events, NULL) < 0)
 			return 0;
 		if (events & 0x80000000) {
 			gpsSetState(0);

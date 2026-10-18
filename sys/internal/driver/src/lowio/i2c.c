@@ -138,7 +138,7 @@ static void I2cEnd(I2cContext *ctx)
 static int I2cWait(I2cContext *ctx, uint32_t *status)
 {
 	return ksceKernelWaitEventFlag(ctx->event, I2C_STATUS_MASK,
-		SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, status, NULL);
+		SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, status, NULL);
 }
 
 static int I2cError(uint32_t status, int nack)

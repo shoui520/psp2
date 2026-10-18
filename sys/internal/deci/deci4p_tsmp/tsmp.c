@@ -1196,7 +1196,8 @@ static int tsmpMainThread(SceSize args, void *argp)
 		pattern = (tsmp.status & TSMP_STATUS_SENDING) ? TSMP_EVENT_SENT : TSMP_EVENT_ALL;
 		bits = 0;
 		ret = ksceKernelWaitEventFlag(tsmp.evf, pattern,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 1119, "0x%08X\n", ret);
 			continue;
@@ -1393,7 +1394,8 @@ static int tsmpSyncThread(SceSize args, void *argp)
 	(void)args;
 	(void)argp;
 
-	ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_START, SCE_EVENT_WAITOR, NULL,
+	ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_START, SCE_KERNEL_EVF_WAITMODE_OR,
+				      NULL,
 				      &timeout);
 	if (ret < 0 && ret != (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT) {
 		SCE_PRINTF_WITH_INFO(0xf, 2535, "0x%08X\n", ret);
@@ -1416,7 +1418,8 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			SCE_PRINTF_WITH_INFO(0xf, 2588, "0x%08X\n", ret);
 			goto term;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_TICK_DONE, SCE_EVENT_WAITOR,
+		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_TICK_DONE,
+					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2597, "0x%08X\n", ret);
@@ -1441,7 +1444,8 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			SCE_PRINTF_WITH_INFO(0xf, 2628, "0x%08X\n", ret);
 			goto fail;
 		}
-		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE, SCE_EVENT_WAITOR,
+		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_DONE,
+					      SCE_KERNEL_EVF_WAITMODE_OR,
 					      NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2637, "0x%08X\n", ret);
@@ -1456,7 +1460,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			goto fail;
 		}
 		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_SETTING_DONE,
-					      SCE_EVENT_WAITOR, NULL, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2658, "0x%08X\n", ret);
 			goto fail;
@@ -1470,7 +1474,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			goto fail;
 		}
 		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_EVENTLOG_DONE,
-					      SCE_EVENT_WAITOR, NULL, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2679, "0x%08X\n", ret);
 			goto fail;
@@ -1484,7 +1488,7 @@ static int tsmpSyncThread(SceSize args, void *argp)
 			goto fail;
 		}
 		ret = ksceKernelWaitEventFlag(tsmp.syncEvf, TSMP_SYNC_REG_END_DONE,
-					      SCE_EVENT_WAITOR, NULL, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 2700, "0x%08X\n", ret);
 			goto term;
@@ -1616,7 +1620,7 @@ TSMP_INLINE int tsmpInit(void)
 		return ret;
 	}
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pTsmp", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pTsmp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 425, "0x%08X\n", ret);
 		return ret;
@@ -1630,7 +1634,7 @@ TSMP_INLINE int tsmpInit(void)
 	if (ret < 0)
 		return ret;
 	tsmp.mainThread = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pTsmpSync", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pTsmpSync", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 451, "0x%08X\n", ret);
 		return ret;

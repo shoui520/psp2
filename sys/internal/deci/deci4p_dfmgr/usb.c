@@ -66,7 +66,8 @@ static int _recvThread(SceSize args, void *argp)
 		bits = 0;
 		ret = ksceKernelWaitEventFlag(s_usbRecvEvf,
 					      USB_EVF_DATA | USB_EVF_CONNECTED | USB_EVF_DISCONNECTED,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0)
 			break;
 		if (bits & USB_EVF_DATA)
@@ -96,7 +97,9 @@ static int _sendThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_usbSendEvf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ret = ksceKernelWaitEventFlag(s_usbSendEvf, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
 		if (ret < 0)
 			break;
@@ -126,14 +129,16 @@ int usbInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallback
 	s_usbSendCallback = sendCallback;
 	s_usbLink = link;
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbSend", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 90);
 		return ret;
 	}
 	*pSendEvf = ret;
 	s_usbSendEvf = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbRecv", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrUsbRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 104);
 		return ret;

@@ -52,7 +52,8 @@ int ewPowerOffThread(SceSize args, void *argp)
 		ksceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_PRESSED | EW_EVENT_UNPLUGGED
 					| EW_EVENT_TIMER | EW_EVENT_DISPLAY_TIMER | EW_EVENT_CHARGED
 					| EW_EVENT_SHUTDOWN,
-					SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					SCE_KERNEL_EVF_WAITMODE_OR |
+					SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (bits & EW_EVENT_UNPLUGGED) {
 			kscePowerBatterySetUsbStatus(5);
 			goto standby;
@@ -64,7 +65,8 @@ int ewPowerOffThread(SceSize args, void *argp)
 		/* held for 1.5 s: power on */
 		timeout = 1500000;
 		ret = ksceKernelWaitEventFlag(ewg.ew.evf, EW_EVENT_POWER_RELEASED,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					      &timeout);
 		if (ret == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
 			break;

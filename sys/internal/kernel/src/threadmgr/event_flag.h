@@ -48,18 +48,7 @@ _Static_assert(sizeof(ThreadmgrEventFlag) == 0x40, "SceUIDEventFlagObject size")
 #define EVENT_FLAG_FROM_HOLDER_LINK(link) \
 	((ThreadmgrEventFlag *)((uintptr_t)(link) - offsetof(ThreadmgrEventFlag, core.holderLink)))
 
-/* ksceKernelGetEventFlagInfo (0x38) */
-typedef struct ThreadmgrEventFlagInfo {
-	SceSize size;
-	SceUID evfId;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	uint32_t initPattern;
-	uint32_t currentPattern;
-	int numWaitThreads;			/* 0x34 */
-} ThreadmgrEventFlagInfo;
-
-int getEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info);
+int getEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info);
 int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPattern,
 		  SceUInt32 *timeout, int callbacks);
 void releaseAllEventFlag(struct ThreadCB *thread);
@@ -69,6 +58,6 @@ int ksceKernelPollEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint3
 int ksceKernelSetEventFlag(SceUID evfId, uint32_t pattern);
 int ksceKernelClearEventFlag(SceUID evfId, uint32_t pattern);
 int sceKernelCancelEventFlag(SceUID evfId, uint32_t setPattern, int *numWaitThreads);
-int ksceKernelGetEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info);
+int ksceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info);
 
 #endif

@@ -130,7 +130,9 @@ int iof_daemon_main(SceSize args, void *argp)
 			ksceKernelUnlockFastMutex(&g_iofDaemonLock);
 
 			ret = ksceKernelWaitEventFlag(g_iofDaemonEvf, IOF_DAEMON_EVF_ALARM,
-						      SCE_EVENT_WAITAND | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+						      SCE_KERNEL_EVF_WAITMODE_AND |
+						      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL,
+						      NULL);
 			index = g_iofDaemonExpiredTimer;
 			mntOpt = g_iofDaemonTimer[index].mntOpt;
 			if (ret < 0) {

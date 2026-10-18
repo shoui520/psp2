@@ -171,7 +171,8 @@ static int _workerThread(SceSize args, void *argp)
 
 	for (;;) {
 		ret = ksceKernelWaitEventFlag(s_stsmp.evf, STSMP_EVF_SEND,
-					    SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 		if (ret < 0)
 			SDFCTL_PRINTF(377, "WaitEventFlag failed (0x%08X)\n", ret);
 		else
@@ -314,7 +315,7 @@ int stsmpInit(SDfCtlPd *pd)
 	if (uid < 0)
 		return uid;
 	s_stsmp.thread = uid;
-	uid = ksceKernelCreateEventFlag("SceDeci4pSDfCtl", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	uid = ksceKernelCreateEventFlag("SceDeci4pSDfCtl", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0) {
 		SDFCTL_PRINTF(139, "CreateEventFlag failed (0x%08X)\n", uid);
 		return uid;

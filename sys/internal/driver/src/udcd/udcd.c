@@ -148,7 +148,7 @@ int ksceUdcdWaitBusInitialized(unsigned int timeout, int bus)
 	}
 	ksceKernelClearEventFlag(state->phyReadyEvent, ~1u);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&state->lock, status);
-	result = ksceKernelWaitEventFlag(state->phyReadyEvent, 1, SCE_EVENT_WAITOR, NULL,
+	result = ksceKernelWaitEventFlag(state->phyReadyEvent, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
 				       timeout ? &timeout : NULL);
 	return result == SCE_KERNEL_ERROR_WAIT_TIMEOUT ? UDCD_ERROR_TIMEOUT : result;
 }
@@ -174,7 +174,9 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 		while (parameter->driverName &&
 		       ksceUdcdGetDrvStateInternal(parameter->driverName, bus) != 2) {
 			result = ksceKernelWaitEventFlag(state->stateEvent, 0x80004000,
-						       SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, remaining);
+						       SCE_KERNEL_EVF_WAITMODE_OR |
+						       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
+						       remaining);
 			if (state->waitError)
 				return state->waitError;
 			if (result == SCE_KERNEL_ERROR_WAIT_TIMEOUT)
@@ -187,7 +189,7 @@ int ksceUdcdWaitStateInternal(SceUdcdWaitParam *parameter, unsigned int timeout,
 		if (!pattern)
 			return 0;
 		result = ksceKernelWaitEventFlag(state->stateEvent, pattern | 0x80004000,
-					       SCE_EVENT_WAITOR, &bits, remaining);
+					       SCE_KERNEL_EVF_WAITMODE_OR, &bits, remaining);
 		if (state->waitError)
 			return state->waitError;
 		if (result < 0) {

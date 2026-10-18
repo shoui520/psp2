@@ -233,7 +233,8 @@ static inline __attribute__((always_inline)) int VcpSend(const void *hdr,
 	ret = sceDfMgrReqSend(s_vcp.handle);
 	if (ret < 0)
 		return ret;
-	return ksceKernelWaitEventFlag(s_vcp.evf, EVF_SENT, SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+	return ksceKernelWaitEventFlag(s_vcp.evf, EVF_SENT, SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
+				       &bits, NULL);
 }
 
 static void VcpClearInfo(void)
@@ -522,7 +523,8 @@ static int VcpThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_vcp.evf, EVF_REQUEST, SCE_EVENT_WAITCLEAR, &bits, NULL);
+		ret = ksceKernelWaitEventFlag(s_vcp.evf, EVF_REQUEST,
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, &bits, NULL);
 		if (ret < 0)
 			return ret;
 
@@ -572,7 +574,7 @@ int VcpModuleStart(SceSize args, void *argp)
 	s_vcp.fbSize = SceSblAIMgrForDriver_71608CA3() ? 0x3c0000 : 0x200000;
 	s_vcp.req = (VcpRequest *)s_recvBuf;
 
-	uid = ksceKernelCreateEventFlag("SceDeci4pVcp", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	uid = ksceKernelCreateEventFlag("SceDeci4pVcp", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (uid < 0)
 		return SCE_KERNEL_START_FAILED;
 	s_vcp.evf = uid;

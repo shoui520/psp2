@@ -36,7 +36,9 @@ static int transfer(struct RtlAdapter *a, SceUsbdDeviceRequest *request, void *d
 	ret = ksceUsbdControlTransfer(a->controlPipe, request, data, rtlControlDone, a);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelWaitEventFlag(a->controlEvent, 3, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+	ret = ksceKernelWaitEventFlag(a->controlEvent, 3,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret >= 0 && (bits & 1))
 		return RTL_ERROR(4);
 	return ret;

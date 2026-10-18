@@ -1726,7 +1726,8 @@ static inline int readPhysical(unsigned port, SceTouchData *out, unsigned count,
 		bit = process->ports[port].eventBit;
 		if (!(bit & touch.ports[port].allocated))
 			return TOUCH_ERROR(1);
-		ret = ksceKernelWaitEventFlag(touch.ports[port].events[kind], bit, SCE_EVENT_WAITOR, NULL, NULL);
+		ret = ksceKernelWaitEventFlag(touch.ports[port].events[kind], bit,
+					      SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		if (ret < 0)
 			return ret;
 		intr = SceCpuForDriver_D32ACE9E(&touch.lock);
@@ -2228,7 +2229,8 @@ int SceTouchForDriver_DDCF5145(void)
 	int ret;
 
 	s_updateEvent = 0;
-	s_updateEvent = ksceKernelCreateEventFlag("SceTouchUpdate", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s_updateEvent = ksceKernelCreateEventFlag("SceTouchUpdate", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+						  NULL);
 	if (s_updateEvent < 0) {
 		s_updateEvent = -1;
 		return -1;
@@ -2241,7 +2243,9 @@ int SceTouchForDriver_DDCF5145(void)
 		ret = 0;
 	} else {
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&touch.lock, intr);
-		ret = ksceKernelWaitEventFlag(s_updateEvent, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, &timeout);
+		ret = ksceKernelWaitEventFlag(s_updateEvent, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, &timeout);
 		if (ret < 0) {
 			ksceKernelDeleteEventFlag(s_updateEvent);
 			s_updateEvent = -1;

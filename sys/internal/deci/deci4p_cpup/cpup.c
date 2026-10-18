@@ -139,7 +139,7 @@ static int CpupHandler(int event, void *arg, void *ctx)
 /* name unknown */
 static __attribute__((noinline)) int CpupInit(void)
 {
-	s_cpupMutex = ksceKernelCreateMutex("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	s_cpupMutex = ksceKernelCreateMutex("SceDeci4pCpup", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (s_cpupMutex < 0)
 		return s_cpupMutex;
 
@@ -147,12 +147,14 @@ static __attribute__((noinline)) int CpupInit(void)
 						  CPUP_BUF_SIZE, NULL);
 	SceSysmemForDriver_A841EDDA(s_cpupMemBlock, (void **)&s_cpupBuffer);
 
-	s_cpupRequestSemaphore = ksceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
+	s_cpupRequestSemaphore = ksceKernelCreateSema("SceDeci4pCpup", SCE_KERNEL_ATTR_TH_PRIO, 1,
+						      1, NULL);
 	if (s_cpupRequestSemaphore < 0) {
 		ksceKernelDeleteMutex(s_cpupMutex);
 		return s_cpupRequestSemaphore;
 	}
-	s_cpupBufferSemaphore = ksceKernelCreateSema("SceDeci4pCpupBuf", SCE_KERNEL_ATTR_THREAD_PRIO, 1, 1, NULL);
+	s_cpupBufferSemaphore = ksceKernelCreateSema("SceDeci4pCpupBuf", SCE_KERNEL_ATTR_TH_PRIO, 1,
+						     1, NULL);
 	if (s_cpupBufferSemaphore < 0) {
 		ksceKernelDeleteMutex(s_cpupMutex);
 		ksceKernelDeleteSema(s_cpupRequestSemaphore);
@@ -228,7 +230,8 @@ static int CpupSendRequest(CpupPacket *pkt, SceSize size)
 	sceDfMgrReqSend(handle);
 
 	return ksceKernelWaitEventFlag(req->evf, 1,
-				       SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+				       SCE_KERNEL_EVF_WAITMODE_OR |
+				       SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 }
 
 static inline __attribute__((always_inline)) CpupPacket *CpupNewPacket(SceSize size,

@@ -99,7 +99,7 @@ void *_sceVeneziaAllocCommunicationMemory(SceSize size)
 			__builtin_return_address(0));
 #endif
 		ksceKernelWaitEventFlag(g_veneziaCommunicationMemory.event, ~0U,
-			SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+			SCE_KERNEL_EVF_WAITMODE_OR | SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	}
 	return memory;
 }

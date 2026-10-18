@@ -1,7 +1,7 @@
 /* Descriptive filename; report helpers have no debug source records. */
 #include "hid_internal.h"
 #include <string.h>
-#include <psp2/kernel/threadmgr/thread.h>
+#include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
 
 HidReportRouting hidRouting[3];

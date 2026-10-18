@@ -59,10 +59,6 @@ typedef struct ThreadmgrSimpleEvent {
 
 _Static_assert(sizeof(ThreadmgrSimpleEvent) == 0x3c, "SceUIDSimpleEventObject size");
 
-typedef struct ThreadmgrSimpleEventOptParam {
-	SceSize size;
-} ThreadmgrSimpleEventOptParam;
-
 #define SIMPLE_EVENT_CLASS()	(s_threadmgrRuntime.manager->simpleEventClass)
 
 /* the user data of the bits a thread sets: its process, and its thread ID above */
@@ -183,7 +179,7 @@ int simpleEventProcessExit(SceProcessObject *process)
  * does (see ksceKernelCreateSema).
  */
 SceUID ksceKernelCreateSimpleEvent(const char *name, SceUInt32 attr, uint32_t initPattern,
-				   const ThreadmgrSimpleEventOptParam *option)
+				   const SceKernelSimpleEventOptParam *option)
 {
 	struct ThreadCB *thread =
 		currentThreadContext();
@@ -399,10 +395,10 @@ SceUID sceKernelOpenSimpleEventForUser(const char *userName)
 }
 
 /* SceThreadmgrForDriver_4DE77569: the information of every simple event visible at level */
-int SceThreadmgrForDriver_4DE77569(int level, ThreadmgrEventInfo *infos, SceSize size,
+int SceThreadmgrForDriver_4DE77569(int level, SceKernelEventInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrEventInfo info;
+	SceKernelEventInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -443,10 +439,10 @@ int SceThreadmgrForDriver_4DE77569(int level, ThreadmgrEventInfo *infos, SceSize
 }
 
 /* SceThreadmgrForDriver_E0C7BCBB: the same for a process's simple event PUIDs */
-int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, ThreadmgrEventInfo *infos,
+int SceThreadmgrForDriver_E0C7BCBB(SceUID pid, int level, SceKernelEventInfo *infos,
 				   SceSize size, SceSize *count)
 {
-	ThreadmgrEventInfo info;
+	SceKernelEventInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

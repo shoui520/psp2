@@ -514,7 +514,8 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 	}
 
 	ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_MESSAGE,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0 || (bits & STATUS_ERROR)) {
 		SCE_PRINTF_WITH_INFO(0, 1418, "0x%x %d 0x%x 0x%x\n", DBGSDIO_ERROR, 1418, bits, ret);
 		goto result;
@@ -530,7 +531,8 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			goto done;
 		}
 		ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
-					      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 		if (ret < 0 || (bits & STATUS_ERROR)) {
 			SCE_PRINTF_WITH_INFO(0, 1458, "0x%x %d 0x%x 0x%x\n", DBGSDIO_ERROR, 1458, bits, ret);
 			goto result;
@@ -573,7 +575,8 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 	*c->rxControl = CTRL_RX_REQUEST;
 
 	ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
-				      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits, NULL);
 	if (ret < 0 || (bits & STATUS_ERROR)) {
 		SCE_PRINTF_WITH_INFO(0, 1545, "0x%x %d 0x%x 0x%x\n", DBGSDIO_ERROR, 1545, bits, ret);
 		goto result;
@@ -589,7 +592,8 @@ int receiveData(SceUInt32 index, void *buffer, SceSize size)
 			if (!left)
 				break;
 			ret = ksceKernelWaitEventFlag(c->event, STATUS_ERROR | STATUS_RX_DATA,
-						      SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+						      SCE_KERNEL_EVF_WAITMODE_OR |
+						      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 						      &bits, NULL);
 			if (ret < 0 || (bits & STATUS_ERROR)) {
 				SCE_PRINTF_WITH_INFO(0, 1589, "0x%x %d 0x%x 0x%x\n", DBGSDIO_ERROR, 1589,

@@ -16,6 +16,7 @@
 
 #include <stdint.h>
 #include <psp2kern/types.h>
+#include <threadmgr/threadmgr.h>
 
 /*
  * The registers of a thread that is not running: saved by an exception or
@@ -215,7 +216,7 @@ typedef struct ThreadCB {
 	uint32_t threadEventMask;		/* 0x170: the thread events being delivered */
 	void *threadEventHandler;		/* 0x174: the handler running */
 	struct ThreadmgrExceptionEntry *exceptionEntry;	/* 0x178: its pending exception (status 0x200) */
-	uint32_t handedExceptions;		/* 0x17c: exceptions handed to the VM (opt data_0x18) */
+	uint32_t handedExceptions;		/* 0x17c: exceptions handed to the VM (its option's) */
 	int vmSuspendCount;			/* 0x180: sceKernelSuspendThreadForVM's nesting */
 	uint32_t intrPreemptCount;		/* 0x184 */
 	uint32_t threadPreemptCount;
@@ -233,19 +234,8 @@ typedef struct ThreadCB {
 
 /*
  * ThreadCB.status: the state in the low half, Sony's SCE_KERNEL_THREAD_STATUS_*
- * (kernel/threadmgr.h). A debug-suspended thread keeps its old state << 16.
+ * (threadmgr/threadmgr.h). A debug-suspended thread keeps its old state << 16.
  */
-#define SCE_KERNEL_THREAD_STATUS_RUNNING	0x00000001
-#define SCE_KERNEL_THREAD_STATUS_READY		0x00000002
-#define SCE_KERNEL_THREAD_STATUS_STANDBY	0x00000004
-#define SCE_KERNEL_THREAD_STATUS_WAITING	0x00000008
-#define SCE_KERNEL_THREAD_STATUS_DORMANT	0x00000010
-#define SCE_KERNEL_THREAD_STATUS_DELETED	0x00000020
-#define SCE_KERNEL_THREAD_STATUS_DEAD		0x00000040
-#define SCE_KERNEL_THREAD_STATUS_STAGNANT	0x00000080
-#define SCE_KERNEL_THREAD_STATUS_SUSPENDED	0x00000100
-#define SCE_KERNEL_THREAD_STATUS_MASK		0x0000ffff
-
 #define THREAD_STATE_QUEUED		0x00000007	/* running, ready or standby */
 #define THREAD_STATE_GONE		0x00000060	/* deleted or dead */
 #define THREAD_STATE_ENDED		0x00000070	/* dormant, deleted or dead */
@@ -323,16 +313,6 @@ struct ThreadmgrThreadObject {
 /* the thread object a thread context is part of */
 #define THREAD_OBJECT(thread)	((struct ThreadmgrThreadObject *)((uintptr_t)(thread) -	\
 				 __builtin_offsetof(struct ThreadmgrThreadObject, context)))
-
-/* SceThreadmgrForDriver_33E85E9E: the thread running on each CPU (0x34) */
-typedef struct ThreadmgrRunStatus {
-	SceSize size;
-	struct {
-		SceUID processId;
-		SceUID threadId;
-		int priority;
-	} cpu[4];					/* one per CPU */
-} ThreadmgrRunStatus;
 
 /* TPIDRPRW: the running thread's ThreadCB, NULL before the thread manager runs */
 static inline ThreadCB *getCurrentThreadCB(void)

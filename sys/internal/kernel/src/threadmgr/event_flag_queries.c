@@ -10,7 +10,7 @@
 #include <sysmem/uid_class.h>
 
 int sceKernelCancelEventFlagForUser(SceUID evfId, uint32_t pattern, int *numWaitThreads);
-int sceKernelGetEventFlagInfoForUser(SceUID evfId, ThreadmgrEventFlagInfo *info);
+int sceKernelGetEventFlagInfoForUser(SceUID evfId, SceKernelEventFlagInfo *info);
 int sceKernelPollEventFlagForUser(SceUID evfId, uint32_t pattern, uint32_t mode,
 				  uint32_t *outPattern);
 
@@ -42,9 +42,9 @@ int _sceKernelCancelEventFlag(SceUID evfId, uint32_t pattern, int *numWaitThread
 }
 
 /* args: the user's extra arguments, the first the size of *info */
-int _sceKernelGetEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info, const uint32_t *args)
+int _sceKernelGetEventFlagInfo(SceUID evfId, SceKernelEventFlagInfo *info, const uint32_t *args)
 {
-	ThreadmgrEventFlagInfo *local;
+	SceKernelEventFlagInfo *local;
 	uint32_t extra[2];
 	int ret, copied;
 
@@ -56,7 +56,7 @@ int _sceKernelGetEventFlagInfo(SceUID evfId, ThreadmgrEventFlagInfo *info, const
 	if (extra[0] > sizeof(*local))
 		return SCE_KERNEL_ERROR_NO_MEMORY;
 	local = __builtin_alloca(sizeof(*local));
-	*local = (ThreadmgrEventFlagInfo){ 0 };
+	*local = (SceKernelEventFlagInfo){ 0 };
 	ret = SceSysmemForDriver_BC996A7A(local, info, extra[0]);
 	if (ret < 0)
 		return ret;

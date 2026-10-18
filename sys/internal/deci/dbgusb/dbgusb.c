@@ -159,7 +159,9 @@ static int __attribute__((noreturn)) StatusWorker(SceSize size, void *args) /* n
 
 	for (;;) {
 		bits = 0;
-		if (ksceKernelWaitEventFlag(s_status, 0x10000000, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		if (ksceKernelWaitEventFlag(s_status, 0x10000000,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					  &bits, NULL) >= 0) {
 			changed = previous ^ bits;
 			if ((changed & 0x10) && (bits & 1))
@@ -177,11 +179,12 @@ static int __attribute__((noreturn)) _sceDbgUsbReadQueueWorker(SceSize size, voi
 	int ret;
 
 	for (;;) {
-		ksceKernelWaitEventFlag(s_free.event, 1, SCE_EVENT_WAITOR, NULL, NULL);
+		ksceKernelWaitEventFlag(s_free.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 		buffer = QueueGet(&s_free);
 		if (!buffer)
 			continue;
-		ret = ksceKernelWaitEventFlag(s_status, 0x10, SCE_EVENT_WAITOR, NULL, NULL);
+		ret = ksceKernelWaitEventFlag(s_status, 0x10, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+					      NULL);
 		if (ret >= 0) {
 			SCE_DBG_ASSERT(buffer->remaining == 0, 449);
 			buffer->request.transmitted = 0;
@@ -265,7 +268,8 @@ int _sceDbgUsbPullData(void *data, unsigned int size)
 	while (left) {
 		buffer = s_pending;
 		while (!buffer) {
-			ksceKernelWaitEventFlag(s_done.event, 1, SCE_EVENT_WAITOR, NULL, NULL);
+			ksceKernelWaitEventFlag(s_done.event, 1, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+						NULL);
 			buffer = QueueGet(&s_done);
 		}
 		s_pending = buffer;
@@ -325,7 +329,8 @@ int SceDbgUsbForDriver_40C65DB2(const void *data, unsigned int size)
 	ksceKernelSetEventFlag(s_status, 0x100);
 	ret = ksceUdcdReqSendInternal(&s_write.request, 1);
 	if (ret >= 0) {
-		ret = ksceKernelWaitEventFlag(s_status, 0x1000, SCE_EVENT_WAITOR, NULL, NULL);
+		ret = ksceKernelWaitEventFlag(s_status, 0x1000, SCE_KERNEL_EVF_WAITMODE_OR, NULL,
+					      NULL);
 		if (ret >= 0 && s_write.request.returnCode >= 0 &&
 		    s_write.request.transmitted == size)
 			ret = size;
@@ -404,18 +409,20 @@ int sceDbgUsbModuleStart(SceSize arglen, void *argp)
 	if (ret < 0)
 		goto writeMutexFail;
 	s_writeMutex = ret;
-	ret = ksceKernelCreateEventFlag("SceDbgUsbStatus", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDbgUsbStatus", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (ret < 0)
 		goto statusFail;
 	s_status = ret;
 	s_free.next = s_free.prev = (DbgUsbBuffer *)&s_free;
 	s_free.lock = 0;
-	s_free.event = ksceKernelCreateEventFlag("SceDbgUsbFreeFifo", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s_free.event = ksceKernelCreateEventFlag("SceDbgUsbFreeFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+						 NULL);
 	if (s_free.event < 0)
 		goto freeFail;
 	s_done.next = s_done.prev = (DbgUsbBuffer *)&s_done;
 	s_done.lock = 0;
-	s_done.event = ksceKernelCreateEventFlag("SceDbgUsbDoneFifo", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s_done.event = ksceKernelCreateEventFlag("SceDbgUsbDoneFifo", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+						 NULL);
 	if (s_done.event < 0)
 		goto doneFail;
 	/* Only the first three option words are replaced after the memblock opt. */

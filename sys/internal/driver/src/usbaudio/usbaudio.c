@@ -272,7 +272,9 @@ static int volumeRequest(unsigned id, unsigned request, unsigned value, int *out
 		dev->controlResult = 0;
 		ret = ksceUsbdControlTransfer(dev->port.controlPipe, &req, buffer, completeVolume, dev);
 		unsigned timeout = 1000000;
-		int wait = ksceKernelWaitEventFlag(dev->event, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR, 0, &timeout);
+		int wait = ksceKernelWaitEventFlag(dev->event, 1,
+						   SCE_KERNEL_EVF_WAITMODE_OR |
+						   SCE_KERNEL_EVF_WAITMODE_CLEAR_ALL, 0, &timeout);
 		if (request & SCE_USBD_REQTYPE_DIR_TO_HOST)
 			volume = *(int16_t *)buffer;
 		ksceKernelUnlockFastMutex(&dev->mutex);
@@ -466,7 +468,7 @@ SceInt32 sceUsbAudioInOpenDevice(SceUInt32 id, int bits, int rate)
 	s_audio.opened++;
 	unsigned flags[2] = { 0 }, timeout = 1000000;
 	ret = ksceKernelWaitEventFlag(stream->event, STREAM_DATA_READY | STREAM_HALTED,
-				      SCE_EVENT_WAITOR, flags, &timeout);
+				      SCE_KERNEL_EVF_WAITMODE_OR, flags, &timeout);
 	ret = ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? AUDIO_ERROR(TIMEOUT) :
 		ret ? AUDIO_ERROR(FAILED_TO_READ_STREAM) : 0;
  unlockPort:
@@ -488,7 +490,9 @@ SceInt32 sceUsbAudioInCloseDevice(SceUInt32 id)
 		if (!ret) {
 			unsigned flags[2] = { 0 }, timeout = 1000000;
 			stream->opened = 0;
-			ksceKernelWaitEventFlag(stream->event, 4, SCE_EVENT_WAITAND | SCE_EVENT_WAITCLEAR_PAT, flags, &timeout);
+			ksceKernelWaitEventFlag(stream->event, 4,
+						SCE_KERNEL_EVF_WAITMODE_AND |
+						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, flags, &timeout);
 			ksceKernelClearEventFlag(stream->event, 0);
 			stream->process = -1;
 			ret = lockAudio();
@@ -521,7 +525,9 @@ SceInt32 sceUsbAudioInInput(SceUInt32 id, void *buffer)
 	if (ret)
 		goto out;
 	unsigned flags[2] = { 0 }, timeout = 64000;
-	ret = ksceKernelWaitEventFlag(stream->event, 10, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, flags, &timeout);
+	ret = ksceKernelWaitEventFlag(stream->event, 10,
+				      SCE_KERNEL_EVF_WAITMODE_OR |
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, flags, &timeout);
 	if (ret) {
 		ret = ret == (int)SCE_KERNEL_ERROR_WAIT_TIMEOUT ? AUDIO_ERROR(TIMEOUT) : AUDIO_ERROR(FAILED_TO_READ_STREAM);
 		goto out;

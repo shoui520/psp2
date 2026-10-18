@@ -7,7 +7,7 @@
 #include <threadmgr/mutex.h>
 #include <sysmem/atomic.h>
 
-extern int vfsGetMutexInfo(SceUID uid, ThreadmgrMutexInfo *info)
+extern int vfsGetMutexInfo(SceUID uid, SceKernelMutexInfo *info)
 	__asm__("ksceKernelGetMutexInfo");
 
 SceClass g_vfsFileClass;
@@ -605,7 +605,7 @@ int vfsWaitFd(SceVfsFile *file)
 #if FW_DEBUG
 SceBool vfsIsLockedFd(SceVfsFile *file)
 {
-	ThreadmgrMutexInfo info;
+	SceKernelMutexInfo info;
 	SceUID owner;
 	int ret;
 
@@ -727,7 +727,7 @@ int vfsLockVnode(SceVfsVnode *vp)
 		return 0;
 	}
 	ret = ksceKernelWaitEventFlag(vp->vdlock.wait_id, vp->vdlock.wait_pattern,
-				      SCE_EVENT_WAITCLEAR_PAT, NULL, NULL);
+				      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, NULL, NULL);
 	vdlock_change_waiters(vp, (SceUInt64)-1);
 	if (ret == 0) {
 		vp->vdlock.owner_id = thid;

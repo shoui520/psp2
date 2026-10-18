@@ -1307,7 +1307,9 @@ static inline int dmacMemcpySub(DmaOp *op, void *dst, const void *src, SceSize s
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelWaitEventFlag(op->evfId, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		res = ksceKernelWaitEventFlag(op->evfId, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
 		if (res < 0)
 			break;
@@ -1385,7 +1387,9 @@ static inline int dmacMemsetSub(DmaOp *op, SceKernelDmaOpChainParam *param,
 					    "Enqueue operation failed. 0x%08x\n", res);
 			break;
 		}
-		res = ksceKernelWaitEventFlag(op->evfId, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		res = ksceKernelWaitEventFlag(op->evfId, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
 		if (res < 0)
 			break;
@@ -1507,15 +1511,21 @@ int ksceKernelDmaOpSync(SceKernelDmaOpId opid, SceKernelDmaOpSyncMode syncMode,
 	case SCE_KERNEL_DMA_OP_SYNC_POLL:
 		if (!(status & DMA_OP_DONE))
 			return 1;
-		res = ksceKernelPollEventFlag(evfId, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		res = ksceKernelPollEventFlag(evfId, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL);
 		break;
 	case SCE_KERNEL_DMA_OP_SYNC_WAIT:
-		res = ksceKernelWaitEventFlag(evfId, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		res = ksceKernelWaitEventFlag(evfId, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, NULL);
 		break;
 	case SCE_KERNEL_DMA_OP_SYNC_TIMED_WAIT:
-		res = ksceKernelWaitEventFlag(evfId, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		res = ksceKernelWaitEventFlag(evfId, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      NULL, &timeout);
 		break;
 	default:

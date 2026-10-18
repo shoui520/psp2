@@ -138,7 +138,8 @@ static inline int powerAcquireSwitchProcessLockCount(volatile uint32_t *count)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_powerIdleLock, intrState);
 	if (!s_powerSwitchState.suspendInProgress)
 		return 0;
-	return ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag, 0x40000, SCE_EVENT_WAITOR, NULL, NULL);
+	return ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag, 0x40000,
+				       SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 }
 
 /* Appended to process.c; storage key and object layout remain private. */
@@ -525,7 +526,7 @@ int powerSwitchWorker(SceSize args, void *argp)
 		ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 					POWER_SWITCH_EVENT_EXIT | POWER_SWITCH_EVENT_HDMI_CEC |
 					POWER_SWITCH_EVENT_REQUESTS | POWER_SWITCH_EVENT_BUTTONS,
-					SCE_EVENT_WAITOR, &pattern, NULL);
+					SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 		if (pattern & POWER_SWITCH_EVENT_EXIT)
 			break;
 		if (pattern & POWER_SWITCH_EVENT_REQUESTS)
@@ -566,7 +567,8 @@ buttonsDown:
 						      POWER_SWITCH_EVENT_EXIT |
 						      POWER_SWITCH_EVENT_REQUESTS |
 						      POWER_SWITCH_EVENT_BUTTONS,
-						      SCE_EVENT_WAITOR, &pattern, &timeout);
+						      SCE_KERNEL_EVF_WAITMODE_OR, &pattern,
+						      &timeout);
 			if (pattern & POWER_SWITCH_EVENT_EXIT)
 				break;
 			buttons = s_powerSwitchState.controllerButtons;
@@ -606,7 +608,8 @@ buttonsDown:
 								      POWER_SWITCH_EVENT_EXIT |
 								      POWER_SWITCH_EVENT_REQUESTS |
 								      POWER_SWITCH_EVENT_BUTTONS,
-								      SCE_EVENT_WAITOR, &pattern, &timeout);
+								      SCE_KERNEL_EVF_WAITMODE_OR,
+								      &pattern, &timeout);
 					if (pattern & POWER_SWITCH_EVENT_EXIT)
 						break;
 					if (pattern & POWER_SWITCH_EVENT_REQUESTS)
@@ -631,7 +634,8 @@ buttonsDown:
 						      POWER_SWITCH_EVENT_EXIT |
 						      POWER_SWITCH_EVENT_REQUESTS |
 						      POWER_SWITCH_EVENT_BUTTONS,
-						      SCE_EVENT_WAITOR, &pattern, &timeout);
+						      SCE_KERNEL_EVF_WAITMODE_OR, &pattern,
+						      &timeout);
 			if (pattern & POWER_SWITCH_EVENT_EXIT)
 				break;
 			buttons = s_powerSwitchState.controllerButtons;
@@ -704,7 +708,7 @@ request:
 		/* wait until no process holds the switch lock */
 		ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
 					POWER_SWITCH_EVENT_EXIT | POWER_SWITCH_EVENT_UNLOCKED,
-					SCE_EVENT_WAITOR, &pattern, NULL);
+					SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 		if (pattern & POWER_SWITCH_EVENT_EXIT)
 			break;
 		if (pattern & POWER_SWITCH_EVENT_COLD_RESET)
@@ -838,7 +842,7 @@ int powerInitializeSwitchControl(void)
 		(SceKernelIntrHandler)powerSwitchInterrupt, NULL, 0x50, 0xf,
 		NULL);
 	s_powerSwitchState.eventFlag = ksceKernelCreateEventFlag(
-		"ScePowerMain", SCE_EVENT_WAITMULTIPLE, 0x50000, NULL);
+		"ScePowerMain", SCE_KERNEL_EVF_ATTR_MULTI, 0x50000, NULL);
 	s_powerSwitchState.mainThread =
 		ksceKernelCreateThread("ScePowerMain", powerSwitchWorker, 0x10,
 				       0x2000, 0, 0x80000, NULL);
@@ -1036,7 +1040,7 @@ int kscePowerEncodeUBattery(void)
 	int result;
 
 	result = ksceKernelPollEventFlag(s_powerSwitchState.eventFlag,
-				       UINT32_MAX, SCE_EVENT_WAITOR, &pattern);
+				       UINT32_MAX, SCE_KERNEL_EVF_WAITMODE_OR, &pattern);
 	/* Native Poll writes the current pattern before its no-match error. */
 	if (result < 0 && result != SCE_KERNEL_ERROR_EVF_COND)
 		return result;
@@ -1044,12 +1048,12 @@ int kscePowerEncodeUBattery(void)
 		return 0;
 	if (!(pattern & 0x20000)) {
 		result = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
-					       0x20000, SCE_EVENT_WAITOR, &pattern, NULL);
+					       0x20000, SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 		if (result < 0)
 			return result;
 	}
 	result = ksceKernelWaitEventFlag(s_powerSwitchState.eventFlag,
-				       0x40000, SCE_EVENT_WAITOR, &pattern, NULL);
+				       0x40000, SCE_KERNEL_EVF_WAITMODE_OR, &pattern, NULL);
 	return result < 0 ? result : 0;
 }
 

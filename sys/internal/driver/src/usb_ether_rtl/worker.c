@@ -611,7 +611,9 @@ int rtlWorker(SceSize length, void *arg)
 		bits = 0;
 		if (a->flags & 4)
 			timeout = 3000000;
-		ret = ksceKernelWaitEventFlag(a->workerEvent, 0x7f, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &bits,
+		ret = ksceKernelWaitEventFlag(a->workerEvent, 0x7f,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &bits,
 					    a->flags & 4 ? &timeout : NULL);
 		now = sceKernelGetSystemTimeWide();
 		if (ret) {

@@ -119,7 +119,8 @@ int hdmiDeviceSmInitialize(void)
 	int ret, ret2;
 
 	smWork = (HdmiSmWork){ 0 };
-	smWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceSm", SCE_EVENT_WAITMULTIPLE, 0,
+	smWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceSm", SCE_KERNEL_EVF_ATTR_MULTI,
+						     0,
 						     &smWork.eventFlagOpt);
 	smWork.threadOpt.size = sizeof(smWork.threadOpt);
 	smWork.thread = ksceKernelCreateThread("SceHdmiDeviceSm", smThread, 0x1e, 0x2000,
@@ -135,7 +136,8 @@ int hdmiDeviceSmInitialize(void)
 /* Did one of the events in pattern come? The events stay set. */
 int hdmiDeviceSmPollEvent(SceUInt32 *events, SceUInt32 pattern)
 {
-	return ksceKernelPollEventFlag(smWork.eventFlag, pattern, SCE_EVENT_WAITOR, events) == 0;
+	return ksceKernelPollEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
+				       events) == 0;
 }
 
 /* Wait for one of the events in pattern and clear those that came. */
@@ -145,7 +147,8 @@ int hdmiDeviceSmWaitEvent(SceUInt32 *events, SceUInt32 pattern)
 	int ret;
 
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "WaitSystemEvent Ptn:0x%08X\n", pattern);
-	ret = ksceKernelWaitEventFlag(smWork.eventFlag, pattern, SCE_EVENT_WAITOR, events, NULL);
+	ret = ksceKernelWaitEventFlag(smWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR, events,
+				      NULL);
 	cleared = pattern & *events;
 	ksceKernelClearEventFlag(smWork.eventFlag, ~cleared);
 	HDMI_PRINTF(HDMI_DBG_SEVT, "[hdmiSEVT] ", "Event Occure :0x%08X\n", *events);

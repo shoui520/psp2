@@ -551,7 +551,9 @@ static int UsbServThread(unsigned arglen, void *arg)
 	registerConnectors();
 	for (;;) {
 		unsigned flags;
-		int ret = ksceKernelWaitEventFlag(s_serv.event, 0xfe, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT, &flags, NULL);
+		int ret = ksceKernelWaitEventFlag(s_serv.event, 0xfe,
+						  SCE_KERNEL_EVF_WAITMODE_OR |
+						  SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT, &flags, NULL);
 		if (ret < 0) {
 			DEBUG(6, 877, "UsbServThread", "# ERROR # sceKernelWaitEventFlag 0x%08x\n", ret);
 			continue;
@@ -643,7 +645,7 @@ int _sceUsbServInit(unsigned arglen, const void *argp)
 		return 1;
 	}
 	s_serv.mutex = ret;
-	s_serv.event = ksceKernelCreateEventFlag("SceUsbserv", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	s_serv.event = ksceKernelCreateEventFlag("SceUsbserv", SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (s_serv.event < 0) {
 		DEBUG(6, 1064, "_sceUsbServInit", "# ERROR # sceKernelCreateEventFlag 0x%08x\n", s_serv.event);
 		goto deleteMutex;

@@ -46,7 +46,7 @@ int powerBatteryWorker(SceSize argumentSize, void *argument)
 		events = 0;
 		if (timeout) {
 			result = ksceKernelWaitEventFlag(s_powerBatteryBase.eventFlag,
-					eventMask | 0x90000000, SCE_EVENT_WAITOR, &events,
+					eventMask | 0x90000000, SCE_KERNEL_EVF_WAITMODE_OR, &events,
 					timeout == UINT32_MAX ? NULL : &timeout);
 			if ((events & 0x10000000) && !s_powerBatteryBase.initialScan) {
 				s_powerBatteryBase.initialScan = 1;
@@ -56,7 +56,8 @@ int powerBatteryWorker(SceSize argumentSize, void *argument)
 				return 0;
 		} else {
 			ksceKernelPollEventFlag(s_powerBatteryBase.eventFlag,
-					eventMask | 0x80000000, SCE_EVENT_WAITOR, &events);
+					eventMask | 0x80000000, SCE_KERNEL_EVF_WAITMODE_OR,
+					&events);
 		}
 		if (events & 0x80000000)
 			return 0;

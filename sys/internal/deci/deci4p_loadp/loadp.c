@@ -2139,7 +2139,9 @@ static int _loadpThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(loadp.evf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ret = ksceKernelWaitEventFlag(loadp.evf, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
 		if (ret < 0) {
 			SCE_PRINTF_WITH_INFO(0xf, 4604, "0x%08x\n", ret);

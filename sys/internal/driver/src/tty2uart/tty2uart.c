@@ -557,7 +557,7 @@ int tty2uartModuleStart(SceSize args, void *argp)
 	if (!SceDipswForDriver_A98FC2FD(0xd3))
 		return SCE_KERNEL_START_NO_RESIDENT;
 
-	ret = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_THREAD_PRIO, 0, NULL);
+	ret = ksceKernelCreateMutex("SceDeci4pTtyp", SCE_KERNEL_ATTR_TH_PRIO, 0, NULL);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 677, "CreateMutex failed (0x%08X)\n", ret);
 		return SCE_KERNEL_START_FAILED;

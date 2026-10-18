@@ -516,7 +516,7 @@ static int Start(int size, void *args, void *ctx)
 	s_serial.txRing = memory->txRing;
 	s_serial.rxRing = memory->rxRing;
 
-	s_serial.event = ksceKernelCreateEventFlag("SceUsbSerial", SCE_EVENT_WAITMULTIPLE,
+	s_serial.event = ksceKernelCreateEventFlag("SceUsbSerial", SCE_KERNEL_EVF_ATTR_MULTI,
 						   SERIAL_EVENT_DETACHED | SERIAL_EVENT_CLOSED, NULL);
 	if (s_serial.event <= 0)
 		goto fail;
@@ -746,7 +746,7 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 	}
 	pending = rxPending();
 	if (pending == 0) {
-		ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_EVENT_WAITOR, &bits);
+		ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
 		if (s_serial.requireCarrier == 1 && (bits & SERIAL_EVENT_DTR_OFF)) {
 			ret = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
 			goto unlock;
@@ -762,7 +762,8 @@ int SceUsbDevSerial_57FBB08C(void *buffer, unsigned int size)
 				  SERIAL_EVENT_CANCEL | SERIAL_EVENT_RX_READY;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern, SCE_EVENT_WAITOR,
+			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern,
+							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, timeoutp);
 			if (ret < 0)
 				goto out;
@@ -833,7 +834,7 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 		ret = SCE_ERROR_ERRNO_ENODEV;
 		goto unlock;
 	}
-	ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_EVENT_WAITOR, &bits);
+	ksceKernelPollEventFlag(s_serial.event, ~0U, SCE_KERNEL_EVF_WAITMODE_OR, &bits);
 	if (s_serial.requireCarrier == 1 && (bits & SERIAL_EVENT_DTR_OFF)) {
 		ret = SCE_UDCD_ERROR_BUS_DRIVER_NOT_STARTED;
 		goto unlock;
@@ -846,7 +847,8 @@ int SceUsbDevSerial_4437FF2D(const void *buffer, unsigned int size)
 				  SERIAL_EVENT_NOTIFY_IDLE;
 			if (requireCarrier)
 				pattern |= SERIAL_EVENT_DTR_OFF;
-			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern, SCE_EVENT_WAITOR,
+			ret = ksceKernelWaitEventFlagCB(s_serial.event, pattern,
+							SCE_KERNEL_EVF_WAITMODE_OR,
 							&bits, NULL);
 			if (ret < 0)
 				goto out;

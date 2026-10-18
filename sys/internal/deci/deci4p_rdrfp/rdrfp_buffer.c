@@ -97,7 +97,9 @@ int rdrfpReserveBuffer(int type, int wait)
 			goto out;
 		}
 		ksceKernelUnlockMutex(table->mutex, 1);
-		ret = ksceKernelWaitEventFlagCB(table->evf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ret = ksceKernelWaitEventFlagCB(table->evf, 1,
+						SCE_KERNEL_EVF_WAITMODE_OR |
+						SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 						NULL, NULL);
 		ksceKernelLockMutex(table->mutex, 1, NULL);
 		if (ret < 0)

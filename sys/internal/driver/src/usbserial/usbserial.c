@@ -638,7 +638,7 @@ static int receiveSerial(void *buffer, unsigned size, unsigned mode, int timeout
 				usec = timeout;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
 			ret = ksceKernelWaitEventFlag(s_serial.event, disconnected | EVENT_RX_CANCEL | EVENT_RX_DATA | EVENT_CLOSED,
-				SCE_EVENT_WAITOR, bits, timeout < 0 ? 0 : &usec);
+				SCE_KERNEL_EVF_WAITMODE_OR, bits, timeout < 0 ? 0 : &usec);
 			intr = SceCpuForDriver_D32ACE9E(&s_serial.lock);
 			ret = waitError(ret, bits[0], disconnected, EVENT_RX_CANCEL);
 			if (ret < 0)
@@ -714,7 +714,7 @@ static int sendSerial(const void *buffer, unsigned size, unsigned mode, int time
 				usec = timeout;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
 			ret = ksceKernelWaitEventFlag(s_serial.event, disconnected | EVENT_TX_CANCEL | EVENT_TX_SPACE | EVENT_CLOSED,
-				SCE_EVENT_WAITOR, bits, timeout < 0 ? 0 : &usec);
+				SCE_KERNEL_EVF_WAITMODE_OR, bits, timeout < 0 ? 0 : &usec);
 			intr = SceCpuForDriver_D32ACE9E(&s_serial.lock);
 			ret = waitError(ret, bits[0], disconnected, EVENT_TX_CANCEL);
 			if (ret < 0)
@@ -941,7 +941,7 @@ static int drainSerial(int timeout)
 	ksceKernelClearEventFlag(s_serial.event, ~EVENT_DRAIN_CANCEL);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_serial.lock, intr);
 	ret = ksceKernelWaitEventFlag(s_serial.event, disconnected | EVENT_DRAIN_CANCEL | EVENT_TX_EMPTY | EVENT_CLOSED,
-		SCE_EVENT_WAITOR, bits, timeout < 0 ? 0 : &usec);
+		SCE_KERNEL_EVF_WAITMODE_OR, bits, timeout < 0 ? 0 : &usec);
 	intr = SceCpuForDriver_D32ACE9E(&s_serial.lock);
 	ret = waitError(ret, bits[0], disconnected, EVENT_DRAIN_CANCEL);
 	s_serial.flags &= ~SERIAL_DRAINING;

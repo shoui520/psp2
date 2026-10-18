@@ -394,7 +394,7 @@ static int ErrorSyncCreate(ErrorSync *sync, SceUInt32 signal, const char *name)
 {
 	SceUID evf;
 
-	evf = ksceKernelCreateEventFlag(name, SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	evf = ksceKernelCreateEventFlag(name, SCE_KERNEL_EVF_ATTR_MULTI, 0, NULL);
 	if (evf < 0)
 		return evf;
 	sync->evf = evf;
@@ -418,7 +418,9 @@ static SceUInt32 ErrorSyncLock(ErrorSync *sync)
 		signal = __atomic_exchange_n(&sync->signal, 0, __ATOMIC_SEQ_CST);
 		if (signal != 0)
 			break;
-		if (ksceKernelWaitEventFlag(sync->evf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		if (ksceKernelWaitEventFlag(sync->evf, 1,
+					    SCE_KERNEL_EVF_WAITMODE_OR |
+					    SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					    &bits, NULL) < 0)
 			break;
 	}

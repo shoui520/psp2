@@ -3203,7 +3203,7 @@ int sceUsbdRegisterCallback(SceUID cbid, int flag)
 	result = ksceKernelGetThreadmgrUIDClass(guid);
 	if (result < 0)
 		goto out;
-	if (result != SCE_KERNEL_TMID_Callback) {
+	if (result != SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK) {
 		result = SCE_USBD_ERROR_INVALID_PARAM;
 		goto out;
 	}

@@ -14,7 +14,7 @@ int cancelTimerForUser(SceUID uid, uint32_t *count);
 int createTimerForUser(const char *name, uint32_t attributes, const uint32_t *options);
 int getTimerBaseForUser(SceUID uid, uint64_t *value);
 int getTimerEventRemainingTimeForUser(SceUID uid, uint64_t *output);
-int getTimerInfoForUser(SceUID uid, ThreadmgrTimerInfo *output);
+int getTimerInfoForUser(SceUID uid, SceKernelTimerInfo *output);
 int getTimerTimeForUser(SceUID uid, uint64_t *value);
 int setTimerEventForUser(SceUID uid, uint32_t type, const volatile uint64_t *interval, uint32_t repeat);
 int setTimerTimeForUser(SceUID uid, uint64_t *userValue);
@@ -34,7 +34,6 @@ _Static_assert(sizeof(struct ThreadmgrTimerInfoCopyArgs) == 8,
 	       "timer info copy arguments size");
 
 extern int copyinUIDNameWithAttr(char *name, const char *userName, uint32_t attributes);
-SceUID sceKernelCreateTimer(const char *name, SceUInt32 attr, const void *option);
 int ksceKernelStartTimer(SceUID uid);
 int ksceKernelStopTimer(SceUID uid);
 int sceKernelGetTimerBase(SceUID uid, uint64_t *value);
@@ -43,7 +42,6 @@ uint64_t ksceKernelGetTimerBaseWide(SceUID uid);
 uint64_t ksceKernelGetTimerTimeWide(SceUID uid);
 int sceKernelSetTimerTime(SceUID uid, uint64_t *value);
 uint64_t ksceKernelSetTimerTimeWide(SceUID uid, uint64_t value);
-int sceKernelSetTimerEvent(SceUID uid, uint32_t type, const volatile uint64_t *interval, int repeat);
 int sceKernelCancelTimer(SceUID uid, uint32_t *count);
 int sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *remaining);
 
@@ -99,7 +97,7 @@ int _sceKernelGetTimerEventRemainingTime(SceUID uid, uint64_t *output)
 int _sceKernelGetTimerInfo(SceUID uid, uint32_t *output, const uint32_t *options)
 {
 	struct ThreadmgrTimerInfoCopyArgs args;
-	ThreadmgrTimerInfo info;
+	SceKernelTimerInfo info;
 	int result, copied;
 
 	result = SceSysmemForDriver_BC996A7A(&args, options, sizeof(args));

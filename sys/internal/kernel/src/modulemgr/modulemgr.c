@@ -350,7 +350,7 @@ int ModulemgrCallEntryOnUserThread(SceModuleCB *cb, SceModuleEntry entry,
 		opt.uStackMemType = 0x0e20d060;
 		opt.uTLSMemType = 0x0e20d060;
 		opt.uStackMemid = 0;
-		opt.data_0x18 = 0;
+		opt.handedExceptions = 0;
 		optp = &opt;
 		attr = 0x2008000;
 	} else {

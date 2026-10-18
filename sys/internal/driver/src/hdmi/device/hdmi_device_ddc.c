@@ -39,7 +39,8 @@ static HdmiDdcWork ddcWork;
 int hdmiDeviceDdcInitialize(HdmiDevice *device)
 {
 	ddcWork = (HdmiDdcWork){ 0 };
-	ddcWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceDdc", SCE_EVENT_WAITMULTIPLE, 0,
+	ddcWork.eventFlag = ksceKernelCreateEventFlag("SceHdmiDeviceDdc", SCE_KERNEL_EVF_ATTR_MULTI,
+						      0,
 						      &ddcWork.eventFlagOpt);
 	ddcWork.mutex = ksceKernelCreateMutex("SceHdmiDeviceDdc", 0x2002, 0, NULL);
 	if (ddcWork.mutex < 0)
@@ -64,7 +65,8 @@ inline int hdmiDeviceDdcWaitEvent(SceUInt32 *events, SceUInt32 pattern, SceUInt3
 	int ret;
 
 	HDMI_PRINTF(HDMI_DBG_DDC, "[hdmiDDC ] ", "WaitSystemEvent Ptn:0x%08X\n", pattern);
-	ret = ksceKernelWaitEventFlag(ddcWork.eventFlag, pattern, SCE_EVENT_WAITOR, events, timeout);
+	ret = ksceKernelWaitEventFlag(ddcWork.eventFlag, pattern, SCE_KERNEL_EVF_WAITMODE_OR,
+				      events, timeout);
 	cleared = pattern & *events;
 	ksceKernelClearEventFlag(ddcWork.eventFlag, ~cleared);
 	HDMI_PRINTF(HDMI_DBG_DDC, "[hdmiDDC ] ", "Event Occure :0x%08X\n", *events);

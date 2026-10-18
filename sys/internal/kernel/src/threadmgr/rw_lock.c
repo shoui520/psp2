@@ -76,22 +76,6 @@ _Static_assert(sizeof(ThreadmgrRWLock) == 0x48, "SceUIDRWLockObject size");
 #define RW_LOCK_FROM_OWNER_LINK(link) \
 	((ThreadmgrRWLock *)((uintptr_t)(link) - offsetof(ThreadmgrRWLock, core.ownerLink)))
 
-typedef struct ThreadmgrRWLockOptParam {
-	SceSize size;
-} ThreadmgrRWLockOptParam;
-
-/* sceKernelGetRWLockInfo (0x3c) */
-typedef struct ThreadmgrRWLockInfo {
-	SceSize size;
-	SceUID rwLockId;
-	char name[32];
-	uint32_t attr;				/* 0x28 */
-	int lockCount;
-	SceUID writeOwnerId;			/* 0x30 */
-	int numReadWaitThreads;
-	int numWriteWaitThreads;		/* 0x38 */
-} ThreadmgrRWLockInfo;
-
 int callCallbackAll(struct ThreadCB *thread);
 int sceKernelCheckThreadUserStackSelf(void);
 int waitWaitableObject(SceUID waitId, uintptr_t waitable, uint32_t waitType,
@@ -383,7 +367,7 @@ restore:
 }
 
 /* an rw lock's information (the info exports' core) */
-static int getRWLockInfo(SceUID rwLockId, ThreadmgrRWLockInfo *info)
+static int getRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 {
 	struct ThreadmgrWaitQueue *queue;
 	struct ThreadmgrWaitNode *node;
@@ -522,7 +506,7 @@ int rwLockProcessExit(SceProcessObject *process)
 }
 
 SceUID sceKernelCreateRWLock(const char *name, SceUInt32 attr,
-			     const ThreadmgrRWLockOptParam *option)
+			     const SceKernelRWLockOptParam *option)
 {
 	struct ThreadCB *thread;
 	SceProcessObject *process = NULL;
@@ -1045,10 +1029,10 @@ resume:
 }
 
 /* inside a syscall the writer is reported by its user-visible thread ID */
-int sceKernelGetRWLockInfo(SceUID rwLockId, ThreadmgrRWLockInfo *info)
+int sceKernelGetRWLockInfo(SceUID rwLockId, SceKernelRWLockInfo *info)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrRWLockInfo local;
+	SceKernelRWLockInfo local;
 	uint32_t saved;
 	SceSize size;
 	int ret;
@@ -1083,10 +1067,10 @@ restore:
 }
 
 /* SceThreadmgrForDriver_E2B57231: the information of every rw lock visible at level */
-int SceThreadmgrForDriver_E2B57231(int level, ThreadmgrRWLockInfo *infos, SceSize size,
+int SceThreadmgrForDriver_E2B57231(int level, SceKernelRWLockInfo *infos, SceSize size,
 				   SceSize *count)
 {
-	ThreadmgrRWLockInfo info;
+	SceKernelRWLockInfo info;
 	SceSize got = 0;
 	SceUID *vector;
 	int num, total, i, ret;
@@ -1127,11 +1111,11 @@ int SceThreadmgrForDriver_E2B57231(int level, ThreadmgrRWLockInfo *infos, SceSiz
 }
 
 /* the same for the rw locks a process holds PUIDs of, with user-visible IDs */
-int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, ThreadmgrRWLockInfo *infos,
+int sceKernelGetRWLockInfoAllProc(SceUID pid, int level, SceKernelRWLockInfo *infos,
 				  SceSize size, SceSize *count)
 {
 	struct ThreadmgrThreadObject *owner;
-	ThreadmgrRWLockInfo info;
+	SceKernelRWLockInfo info;
 	SceUInt32 attr;
 	SceSize got = 0;
 	SceUID *vector;

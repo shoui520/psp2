@@ -213,7 +213,7 @@ static inline __attribute__((always_inline)) int ctrlReadBuffer(
 	eventBit = process->ports[port].eventBit;
 	ring = process->ports[port].ring;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctrlStorage.lock, intr);
-	result = ksceKernelWaitEventFlag(event, eventBit, SCE_EVENT_WAITOR, NULL, NULL);
+	result = ksceKernelWaitEventFlag(event, eventBit, SCE_KERNEL_EVF_WAITMODE_OR, NULL, NULL);
 	if (result < 0)
 		return result;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);

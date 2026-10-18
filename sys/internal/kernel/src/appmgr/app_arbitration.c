@@ -43,7 +43,7 @@ SceUID g_appmgrGrw0MountEvent;
 SceUID g_appmgrGro0MountEvent;
 #endif
 
-ThreadmgrWaitEvent g_appmgrGcWaitEvents[3];
+SceKernelWaitEvent g_appmgrGcWaitEvents[3];
 
 #if !FW_DEBUG
 static const SceKernelDebugInfo gcListenerStartPanicInfo = {
@@ -380,7 +380,7 @@ int getMiniAppValue(struct AppState *app)
 
 int _gcListenerThreadEntry(SceSize args, void *argp)
 {
-	ThreadmgrWaitEventResult results[3];
+	SceKernelResultEvent results[3];
 	SceProductMode productMode;
 	int count;
 	int gameCardChanged;
@@ -395,9 +395,9 @@ int _gcListenerThreadEntry(SceSize args, void *argp)
 		g_appmgrGcWaitEvents[0].eventId = g_appmgrGro0MountEvent;
 		g_appmgrGcWaitEvents[1].eventId = g_appmgrGrw0MountEvent;
 		g_appmgrGcWaitEvents[2].eventId = g_appmgrUx0MountEvent;
-		g_appmgrGcWaitEvents[0].pattern = -1;
-		g_appmgrGcWaitEvents[1].pattern = -1;
-		g_appmgrGcWaitEvents[2].pattern = -1;
+		g_appmgrGcWaitEvents[0].eventPattern = -1;
+		g_appmgrGcWaitEvents[1].eventPattern = -1;
+		g_appmgrGcWaitEvents[2].eventPattern = -1;
 		memset(results, 0, sizeof(results));
 		count = SceThreadmgrForDriver_36F8E58A(g_appmgrGcWaitEvents, 3,
 			1, results, NULL);

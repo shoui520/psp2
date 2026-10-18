@@ -787,7 +787,7 @@ int ksceRtcRegisterSecureAlarmCallback(SceUID cb)
 	int ret;
 
 	context = rtcEnter();
-	if (ksceKernelGetThreadmgrUIDClass(cb) != SCE_KERNEL_TMID_Callback) {
+	if (ksceKernelGetThreadmgrUIDClass(cb) != SCE_KERNEL_THREADMGR_UID_CLASS_CALLBACK) {
 		rtcLeave(context);
 		return SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID;	/* SCE_KERNEL_ERROR_UNKNOWN_CALLBACK_ID */
 	}

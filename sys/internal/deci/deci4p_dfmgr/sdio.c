@@ -58,7 +58,9 @@ static int _recvThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_sdioRecvEvf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ret = ksceKernelWaitEventFlag(s_sdioRecvEvf, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
 		if (ret < 0)
 			break;
@@ -79,7 +81,9 @@ static int _sendThread(SceSize args, void *argp)
 
 	for (;;) {
 		bits = 0;
-		ret = ksceKernelWaitEventFlag(s_sdioSendEvf, 1, SCE_EVENT_WAITOR | SCE_EVENT_WAITCLEAR_PAT,
+		ret = ksceKernelWaitEventFlag(s_sdioSendEvf, 1,
+					      SCE_KERNEL_EVF_WAITMODE_OR |
+					      SCE_KERNEL_EVF_WAITMODE_CLEAR_PAT,
 					      &bits, NULL);
 		if (ret < 0)
 			break;
@@ -109,14 +113,16 @@ int sdioInit(DfMgrLinkCB *link, DfMgrLinkCallback sendCallback, DfMgrLinkCallbac
 	s_sdioSendCallback = sendCallback;
 	s_sdioLink = link;
 
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioSend", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioSend", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 89);
 		return ret;
 	}
 	*pSendEvf = ret;
 	s_sdioSendEvf = ret;
-	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioRecv", SCE_EVENT_WAITMULTIPLE, 0, NULL);
+	ret = ksceKernelCreateEventFlag("SceDeci4pDfMgrSdioRecv", SCE_KERNEL_EVF_ATTR_MULTI, 0,
+					NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_LEVEL(0, 0, 103);
 		return ret;
