@@ -5,7 +5,7 @@
  * module_start and the process event handlers; Sony's file name for this
  * part is unknown.
  */
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
 #include "ulobjmgr_internal.h"
 

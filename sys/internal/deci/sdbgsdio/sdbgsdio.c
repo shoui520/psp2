@@ -10,7 +10,7 @@
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>

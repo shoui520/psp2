@@ -22,6 +22,7 @@
 #include <sysmem/uid_class.h>
 #include <acmgr/acmgr.h>
 #include <threadmgr/threadmgr.h>
+#include <modulemgr/modulemgr.h>
 
 #define WAIT_TYPE_MSG_PIPE		0x00040000
 #define MSG_PIPE_WAIT_SEND		1	/* waitDirection: senders wait */
@@ -2175,8 +2176,6 @@ int msgPipeProcessExit(SceProcessObject *process)
 #define SCE_KERNEL_ERROR_ILLEGAL_TYPE	0x8002000c	/* PLACEHOLDER: name */
 #define SCE_KERNEL_ERROR_ILLEGAL_HEAP	0x80020011	/* PLACEHOLDER: name */
 
-extern int ksceKernelGetModuleIsSharedByAddr(SceUID pid, const void *addr);
-
 typedef struct ThreadmgrMsgPipeOptParam {
 	SceSize size;
 	uint32_t flags;				/* MSG_PIPE_OPT_FLAG_* */
@@ -2265,7 +2264,7 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, int memType, SceUInt32 att
 		blockType = 0x10c0d006;
 	} else if (memType == MSG_PIPE_MEMORY_USER_SHARED &&
 		   (!ThreadmgrInSyscall() || !SceSblACMgrForKernel_570D6AD3(0) ||
-		    ksceKernelGetModuleIsSharedByAddr(thread->processId, lr))) {
+		    SceModulemgrForKernel_F1DE6949(thread->processId, (SceUInt32)lr))) {
 		pid = flags ? param.pid : sceKernelGetProcessId();
 		blockType = 0x10a0d006;
 		blockOpt.pid = pid;

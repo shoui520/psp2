@@ -3,7 +3,7 @@
  */
 #include <string.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/procevent.h>
 #include <sysmem/sysevent.h>

@@ -600,7 +600,7 @@ static int UsbServThread(unsigned arglen, void *arg)
 			ksceSysconCtrlAccPower(1);
 		else
 			usb0_mac_select(1, 1);
-		if (ksceKernelSearchModuleByName("SceBbmc") >= 0) {
+		if (SceModulemgrForDriver_BBE1771C("SceBbmc") >= 0) {
 			ScePervasiveForDriver_BB67EF58(1);
 			usb1_mac_select(0, 2);
 		} else {

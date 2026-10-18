@@ -1,7 +1,7 @@
 /* Debugger command validation (Sony's check.c). */
 
 #include <psp2kern/kernel/processmgr.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr/debugger.h>
@@ -99,7 +99,7 @@ int checkInvalidModule(SceUID pid, SceUID modid)
 
 	info.size = sizeof(info);
 	guid = SceSysmemForDriver_45D22597(pid, modid);
-	if (guid < 0 || ksceKernelGetModuleInfo(pid, guid, &info) < 0)
+	if (guid < 0 || SceModulemgrForKernel_DAA90093(pid, guid, &info) < 0)
 		return 0x20013;
 	return 0;
 }

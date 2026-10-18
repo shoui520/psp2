@@ -6,7 +6,7 @@
 #include <psp2kern/appmgr.h>
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -707,7 +707,7 @@ static int loadpNotifyModuleLoad(SceUID pid, SceUID modid, SceUInt64 time)
 	buf = pdLoadpAllocSendBuf();
 	if (buf == NULL)
 		return DFMGR_ERROR_INVALID_ARGUMENT;
-	ret = ksceKernelGetModuleCB(modid, (void **)&cb);
+	ret = SceModulemgrForKernel_37512E29(modid, &cb);
 	if (ret < 0 || cb == NULL || cb->path == NULL) {
 		loadpFreeSendBuf(buf);
 		return ret;
@@ -994,12 +994,12 @@ static inline int useSystemSetupper(const char *path, SceSize pathSize)
 
 	if (strnlen(path, 0x100) != pathSize - 1 || strncmp(path, "host0:", 6) != 0)
 		return 0;
-	if (ksceKernelGetProgramIdentificationInfo(path, &authId, (SceSelfAppInfo *)&sysVersion) < 0 ||
+	if (sceKernelGetProgramIdentificationInfo(path, &authId, &sysVersion) < 0 ||
 	    authId != LOADP_CUI_SETUPPER_AUTH_ID)
 		return 0;
-	if (ksceKernelGetProgramIdentificationInfo(path, &authId2, (SceSelfAppInfo *)&version) < 0 ||
-	    ksceKernelGetProgramIdentificationInfo(LOADP_CUI_SETUPPER, &authId3,
-						   (SceSelfAppInfo *)&sysVersion) < 0)
+	if (sceKernelGetProgramIdentificationInfo(path, &authId2, &version) < 0 ||
+	    sceKernelGetProgramIdentificationInfo(LOADP_CUI_SETUPPER, &authId3,
+						   &sysVersion) < 0)
 		return 0;
 	if (authId2 != authId || authId3 != authId2)
 		return 0;
@@ -1029,7 +1029,7 @@ static inline __attribute__((always_inline)) int sendSpawnReply(SceUID pid, cons
 	r->reply.head.cmd = LOADP_CMD_SPAWN + 1;
 	r->reply.head.arg = LOADP_CMD_SPAWN;
 	r->reply.result = 0;
-	ret = ksceKernelGetModuleCB(ksceKernelGetModuleIdByPid(pid), (void **)&cb);
+	ret = SceModulemgrForKernel_37512E29(sceKernelGetModuleIdByPid(pid), &cb);
 	if (ret < 0 || cb == NULL) {
 		*result = pdLoadpKernelErrToLoadpErr(ret);
 		goto free_buf;
@@ -1230,7 +1230,7 @@ static __attribute__((noinline)) void pdLoadpProcSpawnCmd(SceUInt8 flags)
 			goto free_args;
 		}
 	} else {
-		if (ksceKernelSearchModuleByName("SceAppMgr") < 0) {
+		if (SceModulemgrForDriver_BBE1771C("SceAppMgr") < 0) {
 			result = pdLoadpKernelErrToLoadpErr(SCE_ERROR_ERRNO_ENOSYS);
 			goto free_args;
 		}
@@ -1470,9 +1470,9 @@ static inline __attribute__((always_inline)) void loadpLoadModuleCmd(void)
 		if (!SceQafMgrForDriver_382C71E8())
 			modid = SCE_ERROR_ERRNO_ENOENT;
 		else
-			modid = ksceKernelLoadModule(req->path, flags, NULL);
+			modid = sceKernelLoadModule(req->path, flags, NULL);
 	} else if (pathAllowed(req->path)) {
-		modid = ksceKernelLoadModuleForPid(target, req->path, flags, NULL);
+		modid = SceModulemgrForKernel_4E85022D(target, req->path, flags, NULL);
 	} else {
 		modid = SCE_ERROR_ERRNO_ENOENT;
 	}
@@ -1488,7 +1488,7 @@ static inline __attribute__((always_inline)) void loadpLoadModuleCmd(void)
 	r->reply.head.cmd = LOADP_CMD_LOAD_MODULE + 1;
 	r->reply.head.arg = LOADP_CMD_LOAD_MODULE;
 	r->reply.result = 0;
-	ret = ksceKernelGetModuleCB(modid, (void **)&cb);
+	ret = SceModulemgrForKernel_37512E29(modid, &cb);
 	if (ret < 0 || cb == NULL) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
 		loadpFreeSendBuf(buf);
@@ -1622,9 +1622,9 @@ static inline __attribute__((always_inline)) void loadpStartModuleCmd(void)
 		if (!SceQafMgrForDriver_382C71E8())
 			ret = SCE_ERROR_ERRNO_ENOENT;
 		else
-			ret = ksceKernelStartModule(uid, size, (void *)args, 0, NULL, &status);
+			ret = sceKernelStartModule(uid, size, (void *)args, 0, NULL, &status);
 	} else {
-		ret = ksceKernelStartModuleForPid(target, uid, size, (void *)args, 0, NULL, &status);
+		ret = SceModulemgrForKernel_3FE47DDF(target, uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
@@ -1671,11 +1671,11 @@ static inline __attribute__((always_inline)) void loadpStopModuleCmd(void)
 	if (uid < 0)
 		goto reply;
 	if (!kernel) {
-		ret = ksceKernelStopModuleForPid(target, uid, size, (void *)args, 0, NULL, &status);
+		ret = sceKernelStopRemoteModule(target, uid, size, (void *)args, 0, NULL, &status);
 	} else if (!SceQafMgrForDriver_382C71E8()) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
-		ret = ksceKernelStopModule(uid, size, (void *)args, 0, NULL, &status);
+		ret = SceModulemgrForDriver_100DAEB9(uid, size, (void *)args, 0, NULL, &status);
 	}
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);
@@ -1709,11 +1709,11 @@ static inline __attribute__((always_inline)) void loadpUnloadModuleCmd(void)
 	if (uid < 0)
 		goto reply;
 	if (!kernel) {
-		ret = ksceKernelUnloadModuleForPid(target, uid, 0x40000000, NULL);
+		ret = SceModulemgrForKernel_FCA9FDB1(target, uid, 0x40000000, NULL);
 	} else if (!SceQafMgrForDriver_382C71E8()) {
 		ret = SCE_ERROR_ERRNO_ENOENT;
 	} else {
-		ret = ksceKernelUnloadModule(uid, 0, NULL);
+		ret = sceKernelUnloadModule(uid, 0, NULL);
 	}
 	if (ret < 0) {
 		result = pdLoadpKernelErrToLoadpErr(ret);

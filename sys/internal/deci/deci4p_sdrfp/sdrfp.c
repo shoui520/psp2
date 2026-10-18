@@ -8,7 +8,7 @@
  */
 
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/cpu.h>

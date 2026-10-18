@@ -9,7 +9,7 @@
 
 #include "sysmodule_ids.h"
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/sysclib.h>
@@ -159,11 +159,11 @@ static int sysmoduleLoadLib(SysmoduleProc *proc, SceUInt32 *ref, const Sysmodule
 	if (perm < 0)
 		return perm;
 	if (!(lib->flags & SYSMODULE_LIB_SHARED))
-		modid = ksceKernelLoadStartModuleForPid(pid, proc->path, proc->opt.args, proc->opt.argp,
+		modid = SceModulemgrForDriver_9D953C22(pid, proc->path, proc->opt.args, proc->opt.argp,
 							flags | proc->opt.flags, proc->opt.loadOpt,
 							proc->opt.status);
 	else
-		modid = ksceKernelLoadStartSharedModuleForPid(pid, proc->path, proc->opt.args, proc->opt.argp,
+		modid = SceModulemgrForDriver_E2ADEF8D(pid, proc->path, proc->opt.args, proc->opt.argp,
 							      flags | proc->opt.flags, proc->opt.sharedLoadOpt,
 							      proc->opt.status);
 	sceKernelSetThreadAccessLevel(perm);
@@ -528,11 +528,11 @@ static int sysmoduleUnload(SceUInt32 id, const SysmoduleOpt *opt)
 				pid = sceKernelGetProcessId();
 				lib = sysmoduleLibAlt(idx);
 				if (s_libs[lib].flags & SYSMODULE_LIB_SHARED)
-					ret = ksceKernelStopUnloadSharedModuleForPid(pid, ref[1], proc->opt.args,
+					ret = SceModulemgrForDriver_02D3D0C1(pid, ref[1], proc->opt.args,
 							proc->opt.argp, proc->opt.flags,
 							proc->opt.sharedUnloadOpt, proc->opt.status);
 				else
-					ret = ksceKernelStopUnloadModuleForPid(pid, ref[1], proc->opt.args,
+					ret = SceModulemgrForDriver_49A3EDC7(pid, ref[1], proc->opt.args,
 							proc->opt.argp, proc->opt.flags,
 							proc->opt.unloadOpt, proc->opt.status);
 				if (ret < 0) {

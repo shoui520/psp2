@@ -376,7 +376,7 @@ set(MODULE_IMPORT_FUNCS
 	sceSDfMgrExRecv
 	SceDeci4pSDfMgrForKernel_FFC95B63
 	sceKernelGetProcessInfo
-	SceProcessmgrForDriver_5468892A
+	sceKernelAllocOwnProcessHeap
 	sceKernelGetProcessStatus
 	SceProcessmgrForDriver_BA0A06A4
 	SceProcessmgrForDriver_C5CF15ED
@@ -403,25 +403,25 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelChangeProcessCpuAffinity
 	SceProcessmgrForKernel_FC80A606
-	ksceKernelStartModule
-	ksceKernelUnloadModule
-	ksceKernelLoadModule
-	ksceKernelGetModuleInfoForDebugger
-	ksceKernelGetStubInfoForDebugger
-	ksceKernelGetLibraryList
-	ksceKernelGetModuleFingerprint
-	ksceKernelGetLostLibraryInfo
-	ksceKernelGetModuleInfoMinByAddr
-	ksceKernelGetModuleIdByPid
-	ksceKernelGetModulePath
-	ksceKernelGetLostLibraryList
-	ksceKernelGetLibraryClientList
-	ksceKernelGetLibraryExportInfoForDebugger
-	ksceKernelGetLibraryInfoForDebugger
-	ksceKernelStopModuleForPid
-	ksceKernelGetStubNidTableForDebugger
-	ksceKernelGetModuleInfo
-	ksceKernelGetStubList
+	sceKernelStartModule
+	sceKernelUnloadModule
+	sceKernelLoadModule
+	sceKernelGetModuleInfoForDebugger
+	sceKernelGetStubInfoForDebugger
+	sceKernelGetLibraryList
+	SceModulemgrForKernel_337A3908
+	sceKernelGetLostLibraryInfo
+	SceModulemgrForKernel_5564A860
+	sceKernelGetModuleIdByPid
+	SceModulemgrForKernel_79E761B5
+	sceKernelGetLostLibraryList
+	sceKernelGetLibraryClientList
+	sceKernelGetLibraryExportInfoForDebugger
+	sceKernelGetLibraryInfoForDebugger
+	sceKernelStopRemoteModule
+	sceKernelGetStubNidTableForDebugger
+	SceModulemgrForKernel_DAA90093
+	sceKernelGetStubList
 	ksceIoGetPUIDFdListForDebugger
 	ksceIoWrite
 	ksceIoGetRemoteKPLSData

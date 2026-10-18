@@ -9,7 +9,7 @@
  */
 
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/uart.h>
 #include <psp2kern/lowio/pervasive.h>

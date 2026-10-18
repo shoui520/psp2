@@ -16,27 +16,27 @@ SceKernelModulemgr:
         - sceKernelGetModuleIdByAddrForDebugger: 0x0C668636
         - sceKernelGetLibraryList: 0x12AD6DE3
         - sceKernelGetImportedLibraryListInModule: 0x1360E9A8
-        - ksceKernelGetModuleCBByAddr: 0x1728612F
+        - SceModulemgrForKernel_1728612F: 0x1728612F
         - sceKernelMountBootimageFS: 0x185FF1BC
         - sceKernelGetLibraryDBFlags: 0x1C82E9F7
         - sceKernelLinkWeakLibraryByLibname: 0x26C28FA4
-        - ksceKernelRegisterSyscall: 0x2E4A10A0
+        - SceModulemgrForKernel_2E4A10A0: 0x2E4A10A0
         - sceKernelGetMetaDataForDebugger: 0x2E6569F3
-        - ksceKernelModuleUnloadMySelf: 0x2F82EEBC
-        - ksceKernelGetModuleFingerprint: 0x337A3908
+        - SceModulemgrForKernel_2F82EEBC: 0x2F82EEBC
+        - SceModulemgrForKernel_337A3908: 0x337A3908
         - sceKernelUnlinkNormalSyscall: 0x353821B2
-        - ksceKernelGetModuleCB: 0x37512E29
+        - SceModulemgrForKernel_37512E29: 0x37512E29
         - sceKernelGetLostLibraryInfo: 0x388D4DE0
-        - ksceKernelStartModuleForPid: 0x3FE47DDF
-        - ksceKernelLoadModuleForPid: 0x4E85022D
+        - SceModulemgrForKernel_3FE47DDF: 0x3FE47DDF
+        - SceModulemgrForKernel_4E85022D: 0x4E85022D
         - sceKernelGetLibEntCBListForSyslibtrace: 0x534519CD
-        - ksceKernelGetModuleInfoMinByAddr: 0x5564A860
+        - SceModulemgrForKernel_5564A860: 0x5564A860
         - sceKernelGetProgramIdentificationInfo: 0x5D60CD77
         - sceKernelGetModuleIdByPid: 0x679F5144
         - sceKernelGetLostLibraryListInModule: 0x6A5DFBBA
         - SceModulemgrForKernel_74A4E0EE: 0x74A4E0EE
-        - ksceKernelGetModulePath: 0x79E761B5
-        - ksceKernelGetModuleEntryPoint: 0x7B302C5D
+        - SceModulemgrForKernel_79E761B5: 0x79E761B5
+        - SceModulemgrForKernel_7B302C5D: 0x7B302C5D
         - sceKernelGetLostLibraryList: 0x7D71892B
         - sceKernelGetExportedLibraryListInModule: 0x7E3F9F55
         - sceKernelStartPreloadingModules: 0x998C7AE9
@@ -50,35 +50,35 @@ SceKernelModulemgr:
         - sceKernelGetModuleList: 0xB72C75A4
         - sceKernelFinalizeKbl: 0xB911516F
         - sceKernelUmountBootimageFS: 0xBD61AD4D
-        - ksceKernelStopModuleForPid: 0xBDBD391D
+        - sceKernelStopRemoteModule: 0xBDBD391D
         - sceKernelGetStubNidTableForDebugger: 0xCE201AFC
         - sceKernelRegisterModulesAfterBoot: 0xD0AF9DB7
-        - ksceKernelGetModuleInfo: 0xDAA90093
+        - SceModulemgrForKernel_DAA90093: 0xDAA90093
         - sceKernelLoadPreloadingModules: 0xE3C1AAA1
         - sceKernelGetStubList: 0xE48CDE07
-        - ksceKernelUnloadProcessModules: 0xE71530D7
-        - ksceKernelGetModuleIsSharedByAddr: 0xF1DE6949
-        - ksceKernelUnloadModuleForPid: 0xFCA9FDB1
+        - SceModulemgrForKernel_E71530D7: 0xE71530D7
+        - SceModulemgrForKernel_F1DE6949: 0xF1DE6949
+        - SceModulemgrForKernel_FCA9FDB1: 0xFCA9FDB1
     SceModulemgrForDriver:
       syscall: false
       version: 1
       nid: 0xD4A60A52
       functions:
-        - ksceKernelStopUnloadSharedModuleForPid: 0x02D3D0C1
-        - ksceKernelStopUnloadModule: 0x03B30B7E
-        - ksceKernelStartModule: 0x0675B682
+        - SceModulemgrForDriver_02D3D0C1: 0x02D3D0C1
+        - SceModulemgrForDriver_03B30B7E: 0x03B30B7E
+        - sceKernelStartModule: 0x0675B682
         - sceKernelUnregisterLibrary: 0x0975B104
-        - ksceKernelStopModule: 0x100DAEB9
-        - ksceKernelLoadStartModule: 0x189BFBBB
-        - ksceKernelGetModuleInfoByAddr: 0x1D9E0F7E
-        - ksceKernelStopUnloadModuleForPid: 0x49A3EDC7
+        - SceModulemgrForDriver_100DAEB9: 0x100DAEB9
+        - SceModulemgrForDriver_189BFBBB: 0x189BFBBB
+        - SceModulemgrForDriver_1D9E0F7E: 0x1D9E0F7E
+        - SceModulemgrForDriver_49A3EDC7: 0x49A3EDC7
         - sceKernelGetSystemSwVersion: 0x5182E212
-        - ksceKernelUnloadModule: 0x728E72A6
+        - sceKernelUnloadModule: 0x728E72A6
         - sceKernelRegisterLibrary: 0x861638AD
-        - ksceKernelLoadModule: 0x86D8D634
-        - ksceKernelLoadStartModuleForPid: 0x9D953C22
-        - ksceKernelSearchModuleByName: 0xBBE1771C
-        - ksceKernelLoadStartSharedModuleForPid: 0xE2ADEF8D
+        - sceKernelLoadModule: 0x86D8D634
+        - SceModulemgrForDriver_9D953C22: 0x9D953C22
+        - SceModulemgrForDriver_BBE1771C: 0xBBE1771C
+        - SceModulemgrForDriver_E2ADEF8D: 0xE2ADEF8D
     SceModulemgr:
       syscall: true
       version: 2
@@ -105,7 +105,7 @@ SceKernelModulemgr:
       version: 1
       nid: 0x77CB3DD6
       functions:
-        - ksceKernelBacktrace: 0x166B9C8C
+        - SceBacktraceForDriver_166B9C8C: 0x166B9C8C
         - SceBacktraceForDriver_7C878F90: 0x7C878F90
         - SceBacktraceForDriver_888E99B8: 0x888E99B8
     SceBacktrace:

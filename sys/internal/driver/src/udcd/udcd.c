@@ -1,7 +1,7 @@
 #include <udcd/udcd_imports.h>
 #include "udcd_internal.h"
 #include <string.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
 #include <threadmgr/threadmgr.h>
 #include <intrmgr/intrmgr.h>

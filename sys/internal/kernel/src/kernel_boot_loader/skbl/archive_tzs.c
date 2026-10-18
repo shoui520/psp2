@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <fw.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/cpu.h>
 #include <compat/compat_regs.h>
 #include <sysmem/debug.h>
@@ -24,8 +24,6 @@
 int SerialDebugPutchar(void *args, int c);
 uint32_t DebugGetPrintLevel(void);
 SceUID sceKernelLoadModuleBufferWithoutStart(const void *buffer, SceSize size);
-int sceKernelStartModule(SceUID uid, SceSize args, void *argp, int flags, void *option,
-			 int *status);
 int sceKernelGetModuleBootEntry(SceUID uid, int (**entry)(SceSize args, void *argp));
 int sceKernelMMUMapSections(uint32_t *l1, uint32_t type, uint32_t domain, uintptr_t va,
 			    SceSize size, uintptr_t pa);

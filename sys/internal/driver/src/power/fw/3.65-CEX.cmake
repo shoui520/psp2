@@ -270,7 +270,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetSystemTimeWide
 	sceKernelCreateMutex
 	SceProcessmgrForDriver_3801D7D6
-	SceProcessmgrForDriver_5468892A
+	sceKernelAllocOwnProcessHeap
 	SceProcessmgrForDriver_879153D9
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_AF80F39C

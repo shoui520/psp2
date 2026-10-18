@@ -31,7 +31,7 @@
 typedef SceUInt64 SceRtcTick;
 
 /* sysroot, threads, modules */
-SceUID ksceKernelSearchModuleByName(const char *name);
+SceUID SceModulemgrForDriver_BBE1771C(const char *name);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 int SceUdcdForDriver_2D91F8C3(int enable);		/* USB charging */
 

@@ -4,7 +4,7 @@
 #include <psp2kern/types.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/io/stat.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/dipsw.h>

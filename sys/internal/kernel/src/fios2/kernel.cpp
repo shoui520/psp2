@@ -221,7 +221,7 @@ int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, 
 						   minOrder, maxOrder, NULL, 0, NULL);
 		ret = size;
 		if (size >= 0) {
-			buffer = SceProcessmgrForDriver_5468892A(size, NULL);
+			buffer = sceKernelAllocOwnProcessHeap(size, NULL);
 			if (buffer == NULL) {
 				ret = SCE_FIOS_ERROR_CANT_ALLOCATE_DH;
 			} else {

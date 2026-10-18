@@ -176,18 +176,18 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelGetProcessMainThreadForDebugger
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelKillProcess
-	ksceKernelGetModuleCB
-	ksceKernelStartModuleForPid
-	ksceKernelLoadModuleForPid
-	ksceKernelGetProgramIdentificationInfo
-	ksceKernelGetModuleIdByPid
-	ksceKernelStopModuleForPid
-	ksceKernelUnloadModuleForPid
-	ksceKernelStartModule
-	ksceKernelStopModule
-	ksceKernelUnloadModule
-	ksceKernelLoadModule
-	ksceKernelSearchModuleByName
+	SceModulemgrForKernel_37512E29
+	SceModulemgrForKernel_3FE47DDF
+	SceModulemgrForKernel_4E85022D
+	sceKernelGetProgramIdentificationInfo
+	sceKernelGetModuleIdByPid
+	sceKernelStopRemoteModule
+	SceModulemgrForKernel_FCA9FDB1
+	sceKernelStartModule
+	SceModulemgrForDriver_100DAEB9
+	sceKernelUnloadModule
+	sceKernelLoadModule
+	SceModulemgrForDriver_BBE1771C
 	SceSblAIMgrForDriver_71608CA3
 	SceSblACMgrForDriver_4CBD6156
 	SceSblACMgrForDriver_AD717E7A

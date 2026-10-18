@@ -7,7 +7,7 @@
 
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysroot.h>

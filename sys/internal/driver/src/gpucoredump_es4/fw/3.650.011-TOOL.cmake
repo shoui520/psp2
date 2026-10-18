@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	strncpy_s
 	SceKernelUtilsForDriver_A0D45D25
 	SceKernelUtilsForDriver_AE6C45FB
-	ksceKernelGetModuleInfoByAddr
+	SceModulemgrForDriver_1D9E0F7E
 	SceSysmemForDriver_E655852F
 	kscePowerGetGpuClockFrequencyInternal
 	kscePervasiveGetSoCRevision

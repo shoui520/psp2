@@ -21,7 +21,7 @@
 #include <psp2kern/udcd.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/idstorage.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <psp2kern/kernel/threadmgr.h>

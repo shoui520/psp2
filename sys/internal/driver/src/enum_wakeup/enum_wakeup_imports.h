@@ -21,8 +21,8 @@
 #include <power/led.h>
 #include <power/power.h>
 #include <psp2kern/display.h>
+#include <modulemgr/modulemgr.h>
 
-int ksceKernelSearchModuleByName(const char *name);
 int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 
 /* display brightness: the OLED or the LCD driver, whichever is present */

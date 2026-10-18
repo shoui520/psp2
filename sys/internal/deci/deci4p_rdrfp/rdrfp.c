@@ -5,13 +5,11 @@
 #include <sysmem/dipsw.h>
 #include <sysmem/sysmem.h>
 #include <string.h>
+#include <kernel/modulemgr.h>
 #include "rdrfp.h"
 
 #define SCE_ERROR_ERRNO_ENOMEM			0x8001000c
 #define RDRFP_DFMGR_ERROR_REQUESTED		0x80080007	/* name unknown: already requested */
-#define SCE_KERNEL_START_SUCCESS		0
-#define SCE_KERNEL_START_NO_RESIDENT		1
-#define SCE_KERNEL_START_FAILED			2
 
 #define RDRFP_DIPSW			0xc2
 #define RDRFP_DIPSW_NO_AUTO_ENABLE	0xc3

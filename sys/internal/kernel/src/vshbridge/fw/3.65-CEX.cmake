@@ -301,7 +301,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoGetProcessDefaultPriorityForSystem
 	ksceIoMount
 	ksceIoGetstatForVshbridge
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	SceProcessmgrForDriver_D141C076
 	sceSblACMgrIsSystemProgram
 	sceSblACMgrHasCapability

@@ -20,7 +20,7 @@
 #include "mutex.h"
 #include "affinity.h"
 #include <psp2kern/types.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>
 #include <sysmem/sysclib.h>
@@ -6766,9 +6766,6 @@ struct ThreadmgrUserTls {
 	int priority;				/* 0x20 */
 	uint32_t cpuAffinityMask;		/* 0x24: << 16 */
 };
-extern int ksceKernelGetModuleIsSharedByAddr(SceUID pid, const void *addr);
-extern SceUID ksceKernelGetModuleIdByPid(SceUID pid);
-extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 
 static uint32_t s_procLwpCreateProbeId;
 volatile uintptr_t s_procLwpCreateHandler;
@@ -6831,8 +6828,8 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	inSyscall = ThreadmgrInSyscall();
 	shared = 0;
 	if (inSyscall)
-		shared = ksceKernelGetModuleIsSharedByAddr(currentThreadContext()->processId,
-							   callerAddr);
+		shared = SceModulemgrForKernel_F1DE6949(currentThreadContext()->processId,
+							   (SceUInt32)callerAddr);
 	self = currentThreadContext();
 	if (self == NULL) {
 		SCE_DBG_ASSERT_PRINTF(0, 3164, "*** error: illegal context\n");
@@ -7207,14 +7204,14 @@ SceUID createThread(SceUID pid, const char *name, uintptr_t entry, int initPrior
 	moduleId = -1;
 	tlsSize = USER_TLS_BLOCK_MIN;
 	if (!(attr & THREAD_ATTR_NO_MODULE_TLS)) {
-		moduleId = ksceKernelGetModuleIdByPid(pid);
+		moduleId = sceKernelGetModuleIdByPid(pid);
 		if (SceSysmemForDriver_0F5C84B7(moduleId, NULL) < 0) {
 			moduleId = -1;
 			tlsSize = USER_TLS_BLOCK_MIN;
 		} else {
 			memset(&info, 0, sizeof(info));
 			info.size = sizeof(info);
-			if (ksceKernelGetModuleInfo(pid, moduleId, &info) < 0 ||
+			if (SceModulemgrForKernel_DAA90093(pid, moduleId, &info) < 0 ||
 			    info.tlsAreaSize > USER_TLS_AREA_MAX)
 				tlsSize = USER_TLS_BLOCK_MIN;
 			else

@@ -5,7 +5,7 @@
  * (DevInitSGXPart2KM); then it finishes the services' initialisation.
  */
 
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sblaimgr.h>
@@ -686,7 +686,7 @@ int module_start(SceSize args, void *argp)
 	IMG_UINT32 count, pid, i;
 	PVRSRV_ERROR ret, final;
 
-	if (ksceKernelGetModuleInfoByAddr(&moduleInfo, &moduleInfo) < 0) {
+	if (SceModulemgrForDriver_1D9E0F7E((SceUInt32)&moduleInfo, &moduleInfo) < 0) {
 		for (i = 0; i < sizeof(fallbackName); i++)
 			moduleInfo.module_name[i] = fallbackName[i];
 	}

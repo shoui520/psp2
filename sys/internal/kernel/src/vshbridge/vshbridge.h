@@ -6,6 +6,7 @@
 
 #include <psp2kern/types.h>
 #include <kernel/error.h>
+#include <modulemgr/modulemgr.h>
 
 /* the caller is not a system program (errno 0x58) */
 
@@ -13,13 +14,6 @@ typedef struct SceKernelShutdownParam {
 	SceSize size;				/* 4 or 8 */
 	int mode;				/* size 8: 1, 2: power off */
 } SceKernelShutdownParam;
-
-typedef struct SceKernelSystemSwVersion {
-	SceSize size;				/* sizeof(SceKernelSystemSwVersion) */
-	char versionString[0x1c];		/* "X.YY" */
-	SceUInt32 version;
-	SceUInt32 versionExtra;			/* always 0 */
-} SceKernelSystemSwVersion;
 
 /* vshbridge.c */
 SceUInt32 vshKernelShutdownSystemForUser(const SceKernelShutdownParam *param);

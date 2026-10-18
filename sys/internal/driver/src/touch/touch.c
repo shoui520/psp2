@@ -14,7 +14,7 @@
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/procevent.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <syscon/syscon.h>

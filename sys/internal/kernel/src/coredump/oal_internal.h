@@ -109,7 +109,7 @@ typedef struct CoredumpProcessInfo {
 	uint32_t reserved;
 	uint32_t cpuAffinityMask;
 	uintptr_t entryPoint;
-	uint32_t fingerprint;
+	SceUInt32 fingerprint;
 	union {
 		SceUID parentPid;
 		int8_t parentPidBytes[4];	/* all ones for pid 0x10005 */
@@ -128,7 +128,7 @@ typedef struct CoredumpExtnlProcInfo {
 	uint32_t reserved;
 	uint32_t cpuAffinityMask;
 	uintptr_t entryPoint;
-	uint32_t fingerprint;
+	SceUInt32 fingerprint;
 	union {
 		SceUID parentPid;
 		int8_t parentPidBytes[4];	/* all ones for pid 0x10005 */

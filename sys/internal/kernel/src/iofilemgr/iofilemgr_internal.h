@@ -22,7 +22,7 @@ int ksceIoUmount(int id, int flags, uint64_t reserved);
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <iofilemgr/vfs.h>
 #include <acmgr/acmgr.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/dipsw.h>
 #include <sysmem/suspend.h>
 #include <psp2kern/fios2.h>

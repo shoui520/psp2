@@ -79,7 +79,7 @@ void sceFiosKernelRwlockWriteUnlock(SceFiosKernelRwlock *lock);
 int SceThreadmgrForDriver_332E127C(void);	/* the current thread's permission */
 void *SceThreadmgrForDriver_89CA5698(int slot, SceUID threadId, int create);
 int SceProcessmgrForDriver_D141C076(SceUID pid, SceUInt32 *sdkVersion);
-void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);	/* the caller's process heap */
+void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt);	/* the caller's process heap */
 int SceProcessmgrForDriver_FC2A424E(void *ptr);
 int sceKernelFreeRemoteProcessHeap(SceUID pid, void *ptr);
 
@@ -278,7 +278,7 @@ static inline int fiosCallerIsPrivileged(SceUID caller)	/* name unknown */
 /* a path buffer in the caller's process heap */
 static inline char *fiosPathAlloc(void)			/* name unknown */
 {
-	char *path = (char *)SceProcessmgrForDriver_5468892A(FIOS_PATH_MAX, NULL);
+	char *path = (char *)sceKernelAllocOwnProcessHeap(FIOS_PATH_MAX, NULL);
 
 	if (path != NULL)
 		path[0] = '\0';

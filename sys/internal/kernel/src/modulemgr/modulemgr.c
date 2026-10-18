@@ -732,7 +732,7 @@ int ModulemgrReleaseProcess(SceUID pid)
 }
 
 int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags,
-			    const SceKernelLMOption *opt)
+			    const SceKernelLoadModuleOpt *opt)
 {
 	ModulemgrThreadState *state;
 	SharedModuleEntry *shared;
@@ -928,15 +928,15 @@ out:
 	return ret;
 }
 
-SceUID ksceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLMOption *opt)
+SceUID sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt)
 {
 	if ((flags & 0xfff8260f) != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	return loadModuleCommon(KERNEL_PID, path, flags, opt);
 }
 
-SceUID ksceKernelLoadModuleForPid(SceUID pid, const char *path, SceUInt32 flags,
-				  const SceKernelLMOption *opt)
+SceUID SceModulemgrForKernel_4E85022D(SceUID pid, const char *path, SceUInt32 flags,
+				  const SceKernelLoadModuleOpt *opt)
 {
 	int perm;
 	SceUID old;
@@ -1004,7 +1004,7 @@ static inline int ModulemgrUnloadModule(SceUID pid, SceModuleObject *obj, SceUID
 }
 
 int unloadModuleCommon(SceUID pid, SceUID modid, SceUInt32 flags,
-			      const SceKernelULMOption *opt)
+			      const SceKernelUnloadModuleOpt *opt)
 {
 	SceModuleObject *obj;
 	int ret;
@@ -1042,15 +1042,15 @@ int unloadModuleCommon(SceUID pid, SceUID modid, SceUInt32 flags,
 	return ret;
 }
 
-int ksceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelULMOption *opt)
+int sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt)
 {
 	if ((flags & 0xbfffffff) != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	return unloadModuleCommon(KERNEL_PID, modid, flags, opt);
 }
 
-int ksceKernelUnloadModuleForPid(SceUID pid, SceUID modid, SceUInt32 flags,
-				 const SceKernelULMOption *opt)
+int SceModulemgrForKernel_FCA9FDB1(SceUID pid, SceUID modid, SceUInt32 flags,
+				 const SceKernelUnloadModuleOpt *opt)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1121,7 +1121,7 @@ static inline void sendDbgpStartupFailedForRetryedSyscall(SceUID pid, ModulemgrT
 }
 
 int startModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			     const SceKernelLMOption *opt, int *status)
+			     const SceKernelStartModuleOpt *opt, int *status)
 {
 	ModulemgrThreadState *state;
 	SceModuleObject *obj;
@@ -1190,16 +1190,16 @@ failed:
 	return ret;
 }
 
-int ksceKernelStartModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			  const SceKernelLMOption *opt, int *status)
+int sceKernelStartModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+			  const SceKernelStartModuleOpt *opt, int *status)
 {
 	if (flags != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	return startModuleCommon(KERNEL_PID, modid, args, argp, 0, opt, status);
 }
 
-int ksceKernelStartModuleForPid(SceUID pid, SceUID modid, SceSize args, void *argp,
-				SceUInt32 flags, const SceKernelLMOption *opt, int *status)
+int SceModulemgrForKernel_3FE47DDF(SceUID pid, SceUID modid, SceSize args, void *argp,
+				SceUInt32 flags, const SceKernelStartModuleOpt *opt, int *status)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1306,7 +1306,7 @@ started:
 }
 
 int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			    const SceKernelLMOption *opt, int *status)
+			    const SceKernelStopModuleOpt *opt, int *status)
 {
 	SceModuleObject *obj;
 	SceUInt32 mflags;
@@ -1368,7 +1368,7 @@ int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt
 }
 
 int StopUnloadModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			   const SceKernelULMOption *opt, int *status)
+			   const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	int ret;
 #if FW_DEBUG
@@ -1377,7 +1377,7 @@ int StopUnloadModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, S
 
 	memset(&info, 0, sizeof(info));
 	info.size = sizeof(info);
-	if (ksceKernelGetModuleInfo(pid, modid, &info) != 0)
+	if (SceModulemgrForKernel_DAA90093(pid, modid, &info) != 0)
 		name = "invalid";
 #endif
 
@@ -1401,7 +1401,7 @@ int StopUnloadModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, S
 
 /* name unknown */
 SceUID loadStartModuleCommon(SceUID pid, const char *path, SceSize args, void *argp,
-				    SceUInt32 flags, const SceKernelLMOption *opt, int *status)
+				    SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status)
 {
 	SceUID modid;
 	int ret;
@@ -1419,16 +1419,16 @@ SceUID loadStartModuleCommon(SceUID pid, const char *path, SceSize args, void *a
 	return ret;
 }
 
-SceUID ksceKernelLoadStartModule(const char *path, SceSize args, void *argp, SceUInt32 flags,
-				 const SceKernelLMOption *opt, int *status)
+SceUID SceModulemgrForDriver_189BFBBB(const char *path, SceSize args, void *argp, SceUInt32 flags,
+				 const SceKernelLoadModuleOpt *opt, int *status)
 {
 	if ((flags & 0xfff8260f) != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	return loadStartModuleCommon(KERNEL_PID, path, args, argp, flags, opt, status);
 }
 
-SceUID ksceKernelLoadStartModuleForPid(SceUID pid, const char *path, SceSize args, void *argp,
-				       SceUInt32 flags, const SceKernelLMOption *opt, int *status)
+SceUID SceModulemgrForDriver_9D953C22(SceUID pid, const char *path, SceSize args, void *argp,
+				       SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1438,8 +1438,8 @@ SceUID ksceKernelLoadStartModuleForPid(SceUID pid, const char *path, SceSize arg
 				     opt, status);
 }
 
-int ksceKernelStopUnloadSharedModuleForPid(SceUID pid, SceUID modid, SceSize args, void *argp,
-					   SceUInt32 flags, const SceKernelULMOption *opt,
+int SceModulemgrForDriver_02D3D0C1(SceUID pid, SceUID modid, SceSize args, void *argp,
+					   SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
 					   int *status)
 {
 	if (pid == 0)
@@ -1451,7 +1451,7 @@ int ksceKernelStopUnloadSharedModuleForPid(SceUID pid, SceUID modid, SceSize arg
 
 /* name unknown */
 SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, void *argp,
-					  SceUInt32 flags, const SceKernelLMOption *opt,
+					  SceUInt32 flags, const SceKernelLoadModuleOpt *opt,
 					  int *status)
 {
 	SceUID modid;
@@ -1470,9 +1470,9 @@ SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, v
 	return ret;
 }
 
-SceUID ksceKernelLoadStartSharedModuleForPid(SceUID pid, const char *path, SceSize args,
+SceUID SceModulemgrForDriver_E2ADEF8D(SceUID pid, const char *path, SceSize args,
 					     void *argp, SceUInt32 flags,
-					     const SceKernelLMOption *opt, int *status)
+					     const SceKernelLoadModuleOpt *opt, int *status)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1480,8 +1480,8 @@ SceUID ksceKernelLoadStartSharedModuleForPid(SceUID pid, const char *path, SceSi
 					   status);
 }
 
-int ksceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			       const SceKernelULMOption *opt, int *status)
+int SceModulemgrForDriver_03B30B7E(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+			       const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	if ((flags & 0xbfffffff) != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
@@ -1499,8 +1499,8 @@ int sceKernelFinalizeKbl(void)
 	return ret;
 }
 
-int ksceKernelStopUnloadModuleForPid(SceUID pid, SceUID modid, SceSize args, void *argp,
-				     SceUInt32 flags, const SceKernelULMOption *opt, int *status)
+int SceModulemgrForDriver_49A3EDC7(SceUID pid, SceUID modid, SceSize args, void *argp,
+				     SceUInt32 flags, const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1509,7 +1509,7 @@ int ksceKernelStopUnloadModuleForPid(SceUID pid, SceUID modid, SceSize args, voi
 	return StopUnloadModuleCommon(pid, modid, args, argp, flags | LOAD_FLAG_FOR_PID, opt, status);
 }
 
-/* name unknown: the work queue entry of ksceKernelModuleUnloadMySelf */
+/* name unknown: the work queue entry of SceModulemgrForKernel_2F82EEBC */
 int ModulemgrUnloadMySelfWork(void *arg)
 {
 	typeof(g_unloadMySelf) *req = arg;
@@ -1524,16 +1524,16 @@ int ModulemgrUnloadMySelfWork(void *arg)
 	return ret;
 }
 
-int ksceKernelStopModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			 const SceKernelLMOption *opt, int *status)
+int SceModulemgrForDriver_100DAEB9(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+			 const SceKernelStopModuleOpt *opt, int *status)
 {
 	if (flags != 0)
 		return SCE_KERNEL_ERROR_INVALID_FLAGS;
 	return stopModuleCommon(KERNEL_PID, modid, args, argp, 0, opt, status);
 }
 
-int ksceKernelStopModuleForPid(SceUID pid, SceUID modid, SceSize args, void *argp,
-			       SceUInt32 flags, const SceKernelLMOption *opt, int *status)
+int sceKernelStopRemoteModule(SceUID pid, SceUID modid, SceSize args, void *argp,
+			       SceUInt32 flags, const SceKernelStopModuleOpt *opt, int *status)
 {
 	if (pid == 0)
 		return SCE_KERNEL_ERROR_MODULEMGR_BAD_PID;
@@ -1587,7 +1587,7 @@ int sceKernelUnregisterLibrary(const void *libent)
 	return ret;
 }
 
-SceModuleEntry ksceKernelGetModuleEntryPoint(SceUID modid)
+SceModuleEntry SceModulemgrForKernel_7B302C5D(SceUID modid)
 {
 	SceModuleObject *obj = ModulemgrReferModule(modid);
 	SceModuleEntry entry = NULL;
@@ -1599,7 +1599,7 @@ SceModuleEntry ksceKernelGetModuleEntryPoint(SceUID modid)
 	return entry;
 }
 
-int ksceKernelGetModuleCB(SceUID modid, SceModuleCB **cb)
+int SceModulemgrForKernel_37512E29(SceUID modid, SceModuleCB **cb)
 {
 	SceModuleObject *obj = ModulemgrReferModule(modid);
 
@@ -1730,7 +1730,7 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 			if (path == NULL)
 				continue;
 			if ((m->flags & PRELOAD_SHARED) == 0)
-				ret = ksceKernelLoadModuleForPid(pid, path, lflags, NULL);
+				ret = SceModulemgrForKernel_4E85022D(pid, path, lflags, NULL);
 			else
 				ret = ModulemgrLoadSharedModuleForPid(pid, path, lflags);
 			if (ret >= 0)
@@ -1759,16 +1759,16 @@ int sceKernelLoadPreloadingModules(SceUID pid, const ProcessImageInfo *info,
 					if (strncmp(buf, "NPXS10007", 0x20) != 0)
 						goto system;
 				}
-				if (ksceKernelLoadModuleForPid(pid, m->appPath, lflags | LOAD_FLAG_1000,
+				if (SceModulemgrForKernel_4E85022D(pid, m->appPath, lflags | LOAD_FLAG_1000,
 							       NULL) >= 0)
 					goto next;
 			}
 system:
 			if ((!SceSblACMgrForKernel_sceSblACMgrIsGameProgram(pid) && !SceSblACMgrForKernel_3F99279F(pid)) ||
 			    m->appPath == NULL)
-				ret = ksceKernelLoadModuleForPid(pid, path, lflags, NULL);
+				ret = SceModulemgrForKernel_4E85022D(pid, path, lflags, NULL);
 			else if ((flags & 2) == 0)
-				ret = ksceKernelLoadModuleForPid(pid, path, lflags, NULL);
+				ret = SceModulemgrForKernel_4E85022D(pid, path, lflags, NULL);
 			else
 				goto notfound;
 		}
@@ -1819,12 +1819,12 @@ static const SysrootModulemgrOps g_sysrootCallbacks = {
 	.size = sizeof(SysrootModulemgrOps),
 	.getStubInfo = ModulemgrGetStubInfo,
 	.showCallerInfo = ShowCallerInfo,
-	.getModuleInfoMinByAddr = ksceKernelGetModuleInfoMinByAddr,
+	.getModuleInfoMinByAddr = SceModulemgrForKernel_5564A860,
 	.backtrace = SceBacktraceForDriver_888E99B8,
 	.printBacktrace = SceBacktraceForDriver_7C878F90,
 };
 
-int ksceKernelModuleUnloadMySelf(void)
+int SceModulemgrForKernel_2F82EEBC(void)
 {
 	int ret;
 
@@ -1912,7 +1912,7 @@ int ModulemgrModuleStart(SceSize args, void *argp)
 
 int module_start(SceSize args, void *argp) __attribute__((alias("ModulemgrModuleStart")));
 
-int ksceKernelUnloadProcessModules(SceUID pid)
+int SceModulemgrForKernel_E71530D7(SceUID pid)
 {
 	LibraryDB *db;
 	SceUID modid;
@@ -2069,7 +2069,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 		if (ret < 0)
 			goto unload;
 	} else if ((obj->cb.flags & MODULE_FLAG_SELF_FIXED) != 0) {
-		ksceKernelUnloadProcessModules(pid);
+		SceModulemgrForKernel_E71530D7(pid);
 		return SCE_KERNEL_ERROR_MODULEMGR_NO_PROCPARAM;
 	}
 
@@ -2089,7 +2089,7 @@ SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, SceUInt32 flags,
 	return obj->cb.modid;
 
 unload:
-	ksceKernelUnloadProcessModules(pid);
+	SceModulemgrForKernel_E71530D7(pid);
 	return ret;
 }
 
@@ -2120,7 +2120,7 @@ int sceKernelUnlinkNormalSyscall(SceUID pid)
 	return 0;
 }
 
-SceUID ksceKernelSearchModuleByName(const char *name)
+SceUID SceModulemgrForDriver_BBE1771C(const char *name)
 {
 	return LibraryDBFindModuleByName(KERNEL_PID, name);
 }
@@ -2134,7 +2134,7 @@ int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info)
 	if (!g_fwInfoValid) {
 		v = SceSysrootForDriver_67AAB627();
 		g_fwInfo.version = v;
-		g_fwInfo.unk_24 = 0;
+		g_fwInfo.versionExtra = 0;
 		g_fwInfo.size = sizeof(g_fwInfo);
 		snprintf(g_fwInfo.versionString, sizeof(g_fwInfo.versionString), "%d.%02d",
 			 ((v >> 28) & 0xf) * 10 + ((v >> 24) & 0xf),

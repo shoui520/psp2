@@ -63,7 +63,7 @@ SceProcessmgr:
         - SceProcessmgrForDriver_3B33FFBA: 0x3B33FFBA
         - SceProcessmgrForDriver_4140D633: 0x4140D633
         - sceKernelGetBudgetInfo: 0x46221964
-        - SceProcessmgrForDriver_5468892A: 0x5468892A
+        - sceKernelAllocOwnProcessHeap: 0x5468892A
         - SceProcessmgrForDriver_54D469E2: 0x54D469E2
         - SceProcessmgrForDriver_594319C7: 0x594319C7
         - SceProcessmgrForDriver_5BDA978F: 0x5BDA978F

@@ -6,7 +6,7 @@
  */
 
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysroot.h>
 #include "post_ss_mgr_internal.h"
 #include <sysmem/qafmgr.h>
@@ -172,13 +172,13 @@ int sceSblFwLoaderLoad(int type, void *dst, SceSize size, SceSize *loaded)
 		ret = SCE_SBL_ERROR_FWLOADER_NOT_LOCKED;
 	} else {
 		if (override != NULL) {
-			ret = ksceKernelLoadPtLoadSegForFwloader(override, 1, dst, size, 0, loaded);
+			ret = sceKernelLoadPtLoadSegForFwloader(override, 1, dst, size, 0, loaded);
 			if (ret >= 0)
 				goto out;
 			SCE_DBG_PRINTF(0, 296, "load %s : failed (0x%08x) (ignored)\n", override, ret);
 		}
 		path = g_fwLoaderPath;
-		ret = ksceKernelLoadPtLoadSegForFwloader(path, 1, dst, size, 0, loaded);
+		ret = sceKernelLoadPtLoadSegForFwloader(path, 1, dst, size, 0, loaded);
 		if (ret < 0)
 			SCE_DBG_PRINTF(0xb, 308, "sceKernelLoadStartModule (%s) fail (ret=0x%08x)\n",
 				       g_fwLoaderPath, ret);

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
+#include <kernel/modulemgr.h>
 #include "tsmp.h"
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysclib.h>
@@ -17,9 +18,6 @@
 #define SCE_ERROR_ERRNO_ENODATA			0x8001003d
 #define SCE_KERNEL_ERROR_INVALID_FLAGS		0x8002000a
 #define SCE_KERNEL_ERROR_NO_MEMORY		0x8002710b
-#define SCE_KERNEL_START_SUCCESS		0
-#define SCE_KERNEL_START_NO_RESIDENT		1
-#define SCE_KERNEL_START_FAILED			2
 
 #define TSMP_DIPSW			0xc2
 

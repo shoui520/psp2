@@ -9,50 +9,6 @@
 
 #define PROCESS_TYPE_SHARED	0x4000000	/* processes that share module images */
 
-/* sceKernelGetLostLibraryInfo */
-typedef struct SceKernelLostLibraryInfo {
-	SceSize size;
-	SceUID modid;
-	SceNID libnid;
-	char libname[0x100];
-	SceUInt16 version;
-	SceUInt16 nfunc;
-	SceUInt16 nvar;
-	SceUInt16 ntls;
-	SceNID *funcnid;
-	void **funcent;
-	SceNID *varnid;
-	void **varent;
-} SceKernelLostLibraryInfo;
-
-/* sceKernelGetLostLibraryList* */
-typedef struct SceKernelLostLibraryEntry {
-	SceUID modid;
-	SceNID libnid;
-} SceKernelLostLibraryEntry;
-
-/* sceKernelGetLibraryInfoForDebugger */
-typedef struct SceKernelLibraryInfoForDebugger {
-	SceSize size;
-	SceUID libid;
-	SceNID libnid;
-	SceUInt16 version;
-	SceUInt16 attr;
-	SceUInt16 nfunc;
-	SceUInt16 nvar;
-	SceUInt16 ntls;
-	SceUInt16 reserved;
-	char libname[0x100];
-	int clientCount;
-	SceUID modid;
-} SceKernelLibraryInfoForDebugger;
-
-/* sceKernelGetLibraryExportInfoForDebugger */
-typedef struct SceKernelLibraryExportEntry {
-	SceNID nid;
-	void *entry;
-} SceKernelLibraryExportEntry;
-
 int g_sharedFlag;			/* a shared-image process exists */
 SceKernelSpinlock g_sharedLock;
 SharedModuleEntry *g_sharedModules;
@@ -914,7 +870,7 @@ int LibraryDBFindModuleByAddr(LibraryDB *db, SceUInt32 addr, SceModuleCB **out)
 	return SCE_KERNEL_ERROR_LIBRARYDB_NO_MOD;
 }
 
-int ksceKernelGetModuleIsSharedByAddr(SceUID pid, SceUInt32 addr)
+int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr)
 {
 	SceModuleCB *cb = NULL;
 	LibraryDB *db;
@@ -929,7 +885,7 @@ int ksceKernelGetModuleIsSharedByAddr(SceUID pid, SceUInt32 addr)
 	return ret;
 }
 
-int ksceKernelGetModuleCBByAddr(SceUID pid, SceUInt32 addr, SceModuleCB **out)
+int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out)
 {
 	LibraryDB *db;
 	int ret, intr;
@@ -1095,7 +1051,7 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name)
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&db->lock, intr);
 }
 
-int ksceKernelGetModuleInfoMinByAddr(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
+int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
 				     void **textBase, char *name)
 {
 	SceModuleCB *cb;
@@ -1186,7 +1142,7 @@ void LibraryDBSetShared(SceUID pid)
 		g_sharedFlag = 1;
 }
 
-int ksceKernelGetModulePath(SceUID modid, char *path, SceSize size)
+int SceModulemgrForKernel_79E761B5(SceUID modid, char *path, SceSize size)
 {
 	SceModuleObject *obj;
 
@@ -1198,7 +1154,7 @@ int ksceKernelGetModulePath(SceUID modid, char *path, SceSize size)
 	return 0;
 }
 
-int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint)
+int SceModulemgrForKernel_337A3908(SceUID modid, SceUInt32 *fingerprint)
 {
 	SceModuleObject *obj;
 
@@ -1415,7 +1371,7 @@ int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, SceUID *
 	return getModuleList(pid, flags, type, list, num);
 }
 
-int ksceKernelGetModuleInfoByAddr(SceUInt32 addr, SceKernelModuleInfo *info)
+int SceModulemgrForDriver_1D9E0F7E(SceUInt32 addr, SceKernelModuleInfo *info)
 {
 	SceUID modid;
 
@@ -1425,7 +1381,7 @@ int ksceKernelGetModuleInfoByAddr(SceUInt32 addr, SceKernelModuleInfo *info)
 	return LibraryDBGetModuleInfoById(KERNEL_PID, modid, info);
 }
 
-int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info)
+int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info)
 {
 	if (pid == 0)
 		pid = sceKernelGetProcessId();

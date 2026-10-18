@@ -69,7 +69,7 @@ int sceKernelMountBootimageFS(const char *path)
 
 	if (g_bootimage != NULL)
 		return SCE_KERNEL_ERROR_MODULEMGR_EXIST;
-	modid = ksceKernelLoadStartModule(path, 0, NULL, 0x100, NULL, NULL);
+	modid = SceModulemgrForDriver_189BFBBB(path, 0, NULL, 0x100, NULL, NULL);
 	if (modid < 0)
 		return modid;
 	fs = ModulemgrKernelAlloc(sizeof(*fs));
@@ -95,7 +95,7 @@ int sceKernelUmountBootimageFS(void)
 
 	if (g_bootimage == NULL)
 		return SCE_KERNEL_ERROR_MODULEMGR_STOP_FAIL;
-	ret = ksceKernelStopUnloadModule(g_bootimage->modid, 0, NULL, 0, NULL, NULL);
+	ret = SceModulemgrForDriver_03B30B7E(g_bootimage->modid, 0, NULL, 0, NULL, NULL);
 	SCE_DBG_ASSERT_LEVEL(0, ret == 0, 154);
 	(void)ret;
 	SceSysmemForKernel_4233C16D(g_bootimage);

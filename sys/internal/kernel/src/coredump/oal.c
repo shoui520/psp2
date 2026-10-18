@@ -18,7 +18,8 @@
 #include <iofilemgr/iofilemgr.h>
 #include <processmgr/processmgr.h>
 #include <processmgr/process_info.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
+#include <modulemgr/modulemgr_debugger.h>
 #include <processmgr/process_budget.h>
 #include <threadmgr/threadmgr_debugger.h>
 #include <threadmgr/threadmgr_vfp.h>
@@ -40,7 +41,6 @@
 #include <sysmem/sblaimgr.h>
 #include <psp2kern/gpu_es4.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/iofilemgr.h>
 #include <psp2kern/io/fcntl.h>
 #include <psp2kern/registrymgr.h>
@@ -57,7 +57,6 @@ extern void *memMgrLocalAlloc(SceSize size);
 extern int sceRegMgrGetKeyInt(const char *category, const char *name, int *value);
 extern int sceRegMgrGetKeyStr(const char *category, const char *name,
 	char *buf, SceSize size);
-extern int sceKernelUnlinkNormalSyscall(SceUID pid);
 extern unsigned int SceGpuEs4ForDriver_F001AE90(void);
 extern unsigned int SceGpuEs4ForDriver_395F7689(void);
 extern unsigned int SceGpuEs4ForDriver_18C90B42(void);
@@ -93,9 +92,6 @@ extern int coredumpGetCachedTimerInfo(SceUID pid, SceUID timerId,
 	CoredumpTimerInfo *info);
 extern int coredumpGetCachedMsgPipeInfo(SceUID pid, SceUID msgPipeId,
 	CoredumpMsgPipeInfo *info);
-extern int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
-extern int ksceKernelGetModulePath(SceUID modid, char *path, SceSize pathlen);
-extern int ksceKernelGetModuleFingerprint(SceUID modid, SceUInt32 *fingerprint);
 extern int ksceSblQafManagerGetQAFlags(void *flags);
 extern int ksceSblQafManagerGetQafName(char *name, SceSize size);
 extern SceUID sceCoredumpCafContextCreate(void);
@@ -1455,7 +1451,7 @@ void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info)
 	__builtin_memcpy(info->name, process.name, sizeof(info->name));
 	info->cpuAffinityMask = process.cpuAffinity;
 	info->entryPoint = (uintptr_t)process.entryPoint;
-	ksceKernelGetModuleFingerprint(process.mainModule, &info->fingerprint);
+	SceModulemgrForKernel_337A3908(process.mainModule, &info->fingerprint);
 	if (process.parentPid == 0x10005) {
 		info->parentPidBytes[0] = -1;
 		info->parentPidBytes[1] = -1;
@@ -1498,7 +1494,7 @@ int oalGetProcessPath(SceUID pid, char *path, SceSize *pathSize)
 	result = sceKernelGetProcessInfo(pid, &process);
 	if (result != 0)
 		return result;
-	result = ksceKernelGetModulePath(process.mainModule, path, 255);
+	result = SceModulemgrForKernel_79E761B5(process.mainModule, path, 255);
 	if (result < 0)
 		return result;
 	*pathSize = strnlen(path, 255) + 1;
@@ -1516,7 +1512,7 @@ void oalGetProcessArmExInfo(SceUID pid, CoredumpArmExInfo *info)
 	process.size = sizeof(process);
 	if (sceKernelGetProcessInfo(pid, &process) != 0)
 		return;
-	if (ksceKernelGetModuleInfo(pid, process.mainModule, &module) < 0)
+	if (SceModulemgrForKernel_DAA90093(pid, process.mainModule, &module) < 0)
 		return;
 	/* exidx_top, exidx_btm, extab_top, extab_btm */
 	__builtin_memcpy(info, &module.exidx_top, sizeof(*info));
@@ -1860,7 +1856,7 @@ int oalEachModuleInfo(SceUID pid,
 
 int oalGetNumOfLibs(SceUID pid)
 {
-	int count = ksceKernelGetLibraryList(pid, NULL, NULL);
+	int count = sceKernelGetLibraryList(pid, NULL, NULL);
 
 	if (count < 0)
 		count = 0;
@@ -1876,27 +1872,27 @@ void oalGetLibIdList(SceUID pid, SceUID *ids, SceSize capacity)
 		return;
 	memset(ids, 0, capacity * sizeof(*ids));
 	count = capacity;
-	ksceKernelGetLibraryList(pid, ids, &count);
+	sceKernelGetLibraryList(pid, ids, &count);
 }
 
 int oalGetLibInfo(SceUID pid, SceUID libraryId, CoredumpLibraryInfo *info)
 {
-	SceKernelModuleLibraryInfo library;
+	SceKernelLibraryInfoForDebugger library;
 	int result;
 
 	SCE_DBG_ASSERT(info != NULL, 2749);
 	memset(info, 0, sizeof(*info));
 	library.size = sizeof(library);
-	result = ksceKernelGetLibraryInfoForDebugger(pid, libraryId, &library);
+	result = sceKernelGetLibraryInfoForDebugger(pid, libraryId, &library);
 	if (result >= 0) {
-		info->libraryId = (library.library_id & 0x40000000) ?
-			library.library_id : -1;
-		info->flags = library.flags;
-		info->numFunctions = library.entry_num_function;
-		info->numVariables = library.entry_num_variable;
-		result = library.modid2;
+		info->libraryId = (library.libid & 0x40000000) ?
+			library.libid : -1;
+		info->flags = library.attr;
+		info->numFunctions = library.nfunc;
+		info->numVariables = library.nvar;
+		result = library.modid;
 		info->moduleId = result;
-		info->numClients = library.number_of_imported;
+		info->numClients = library.clientCount;
 		info->reservedVersion[0] = 0;
 		info->reservedVersion[1] = 0;
 		info->reservedVersion[2] = 0;
@@ -1912,7 +1908,7 @@ unsigned int oalGetLibNumFuncAndVar(SceUID pid, const CoredumpLibraryInfo *info)
 }
 
 void oalGetLibExportInfo(SceUID pid, SceUID libraryId,
-	SceKernelModuleExportEntry *entries, SceSize capacity, SceSize skip)
+	SceKernelLibraryExportEntry *entries, SceSize capacity, SceSize skip)
 {
 	SceSize count;
 
@@ -1921,7 +1917,7 @@ void oalGetLibExportInfo(SceUID pid, SceUID libraryId,
 		return;
 	memset(entries, 0, capacity * sizeof(*entries));
 	count = capacity;
-	ksceKernelGetLibraryExportInfoForDebugger(pid, libraryId, entries, &count, skip);
+	sceKernelGetLibraryExportInfoForDebugger(pid, libraryId, entries, &count, skip);
 }
 
 unsigned int oalGetLibNumClient(SceUID pid, const CoredumpLibraryInfo *info)
@@ -1940,12 +1936,12 @@ void oalGetLibClientInfo(SceUID pid, SceUID libraryId, SceUID *moduleIds,
 		return;
 	memset(moduleIds, 0, capacity * sizeof(*moduleIds));
 	count = capacity;
-	ksceKernelGetLibraryClientList(pid, libraryId, moduleIds, &count, 0);
+	sceKernelGetLibraryClientList(pid, libraryId, moduleIds, &count, 0);
 }
 
 void oalGetLibName(SceUID pid, SceUID libraryId, char *name, SceSize *nameSize)
 {
-	SceKernelModuleLibraryInfo library;
+	SceKernelLibraryInfoForDebugger library;
 	SceSize count;
 
 	SCE_DBG_ASSERT(name != NULL, 2849);
@@ -1953,10 +1949,10 @@ void oalGetLibName(SceUID pid, SceUID libraryId, char *name, SceSize *nameSize)
 	memset(name, 0, 256);
 	*nameSize = 0;
 	library.size = sizeof(library);
-	if (ksceKernelGetLibraryInfoForDebugger(pid, libraryId, &library) < 0)
+	if (sceKernelGetLibraryInfoForDebugger(pid, libraryId, &library) < 0)
 		return;
-	count = strnlen(library.library_name, 255) + 1;
-	memcpy(name, library.library_name, count);
+	count = strnlen(library.libname, 255) + 1;
+	memcpy(name, library.libname, count);
 	*nameSize = count;
 }
 
@@ -3394,7 +3390,7 @@ void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *inf
 	__builtin_memcpy(info->name, process.name, sizeof(info->name));
 	info->cpuAffinityMask = process.cpuAffinity;
 	info->entryPoint = (uintptr_t)process.entryPoint;
-	ksceKernelGetModuleFingerprint(process.mainModule, &info->fingerprint);
+	SceModulemgrForKernel_337A3908(process.mainModule, &info->fingerprint);
 	if (process.parentPid == 0x10005) {
 		info->parentPidBytes[0] = -1;
 		info->parentPidBytes[1] = -1;

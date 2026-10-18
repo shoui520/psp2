@@ -36,7 +36,7 @@ int ModulemgrCopyPathFromUser(const char *upath, char **path)
 
 /* name unknown */
 int ModulemgrLoadModuleForUser(const char *upath, SceUInt32 flags,
-				      const SceKernelLMOption *opt, SceUID *modid, SceUID *puid)
+				      const SceKernelLoadModuleOpt *opt, SceUID *modid, SceUID *puid)
 {
 	SceModuleObject *obj;
 	char *path;
@@ -65,7 +65,7 @@ int ModulemgrLoadModuleForUser(const char *upath, SceUInt32 flags,
 
 /* name unknown */
 SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags,
-					 const SceKernelLMOption *opt)
+					 const SceKernelLoadModuleOpt *opt)
 {
 	SceUID puid = 0;
 	SceUInt32 state;
@@ -81,7 +81,7 @@ SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags,
 
 /* name unknown */
 int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				       const SceKernelLMOption *opt, int *status)
+				       const SceKernelStartModuleOpt *opt, int *status)
 {
 	SceUInt32 state;
 	int ret;
@@ -103,7 +103,7 @@ int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 
 /* name unknown */
 int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				      const SceKernelLMOption *opt, int *status)
+				      const SceKernelStopModuleOpt *opt, int *status)
 {
 	SceUInt32 state;
 	int ret;
@@ -125,7 +125,7 @@ int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32
 
 /* name unknown */
 int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
-					const SceKernelULMOption *opt)
+					const SceKernelUnloadModuleOpt *opt)
 {
 	SceUInt32 state;
 	int ret;
@@ -144,7 +144,7 @@ int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags,
 
 /* name unknown */
 SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp,
-					      SceUInt32 flags, const SceKernelLMOption *opt,
+					      SceUInt32 flags, const SceKernelLoadModuleOpt *opt,
 					      int *status)
 {
 	SceUID modid = 0, puid = 0;
@@ -173,7 +173,7 @@ SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *arg
 
 /* name unknown */
 int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
-					    SceUInt32 flags, const SceKernelULMOption *opt,
+					    SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
 					    int *status)
 {
 	SceUInt32 state;
@@ -199,7 +199,7 @@ int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp,
 
 /* name unknown */
 SceUID sceKernelOpenModuleForUser(const char *upath, SceSize args, void *argp,
-					 SceUInt32 flags, const SceKernelLMOption *opt, int *status)
+					 SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status)
 {
 	SceModuleObject *obj;
 	SceUInt32 state;
@@ -236,7 +236,7 @@ SceUID sceKernelOpenModuleForUser(const char *upath, SceSize args, void *argp,
 
 /* name unknown */
 int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				       const SceKernelULMOption *opt, int *status)
+				       const SceKernelUnloadModuleOpt *opt, int *status)
 {
 	SceUInt32 state;
 	int ret;
@@ -248,7 +248,7 @@ int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt3
 	else if (flags != 0)
 		ret = SCE_KERNEL_ERROR_INVALID_FLAGS;
 	else
-		ret = ksceKernelStopUnloadSharedModuleForPid(sceKernelGetProcessId(), ret, args,
+		ret = SceModulemgrForDriver_02D3D0C1(sceKernelGetProcessId(), ret, args,
 							     argp, 0, opt, status);
 	ModulemgrSyscallLeave(state);
 	return ret;
@@ -385,7 +385,7 @@ int sceKernelIsCalledFromSysModule(const void *addr)
 	int ret;
 
 	state = ModulemgrSyscallEnter();
-	ret = ksceKernelGetModuleIsSharedByAddr(sceKernelGetProcessId(), (SceUInt32)addr);
+	ret = SceModulemgrForKernel_F1DE6949(sceKernelGetProcessId(), (SceUInt32)addr);
 	ModulemgrSyscallLeave(state);
 	return ret;
 }

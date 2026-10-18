@@ -2,7 +2,7 @@
  * SceHdmi: module start and the SceHdmiForDriver entry points.
  */
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include "hdmi_internal.h"
 
 int module_start(SceSize args, void *argp)

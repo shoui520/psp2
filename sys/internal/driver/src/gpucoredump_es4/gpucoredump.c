@@ -489,7 +489,7 @@ int module_start(SceSize args, void *argp)
 
 	if (SceDipswForDriver_A98FC2FD(0xd4) == 0)
 		return SCE_KERNEL_START_NO_RESIDENT;
-	if (ksceKernelGetModuleInfoByAddr(&gpuCoreDumpModuleInfo, &gpuCoreDumpModuleInfo) < 0)
+	if (SceModulemgrForDriver_1D9E0F7E((SceUInt32)&gpuCoreDumpModuleInfo, &gpuCoreDumpModuleInfo) < 0)
 		for (i = 0; i != sizeof(GPU_COREDUMP_NAME); i++)
 			gpuCoreDumpModuleInfo.module_name[i] = GPU_COREDUMP_NAME[i];
 	gpuCoreDumpResetMaster(&gpuCoreDumpMasterRegs);

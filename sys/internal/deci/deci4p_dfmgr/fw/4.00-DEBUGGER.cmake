@@ -114,7 +114,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetEventFlag
 	sceKernelCreateMutex
 	SceProcessmgrForDriver_C715591F
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	SceDipswForDriver_A98FC2FD
 	sceKernelRegisterSysEventHandler
 	SceDbgSdioForDriver_361E1BB6

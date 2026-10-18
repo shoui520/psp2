@@ -206,17 +206,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSetPHWP
 	sceKernelUIDtoProcess
 	SceProcessmgrForKernel_EFFF2975
-	ksceKernelGetModuleInfoForDebugger
-	ksceKernelGetModuleIdByAddrForDebugger
-	ksceKernelGetLibraryList
-	ksceKernelGetMetaDataForDebugger
-	ksceKernelGetModuleFingerprint
-	ksceKernelGetModuleCB
-	ksceKernelGetModulePath
-	ksceKernelGetLibraryClientList
-	ksceKernelGetLibraryExportInfoForDebugger
-	ksceKernelGetLibraryInfoForDebugger
-	ksceKernelGetModuleInfo
+	sceKernelGetModuleInfoForDebugger
+	sceKernelGetModuleIdByAddrForDebugger
+	sceKernelGetLibraryList
+	sceKernelGetMetaDataForDebugger
+	SceModulemgrForKernel_337A3908
+	SceModulemgrForKernel_37512E29
+	SceModulemgrForKernel_79E761B5
+	sceKernelGetLibraryClientList
+	sceKernelGetLibraryExportInfoForDebugger
+	sceKernelGetLibraryInfoForDebugger
+	SceModulemgrForKernel_DAA90093
 	ksceIoGetPUIDFdListForDebugger
 	ksceIoGetFileInfo
 	SceThreadmgrForDriver_04C6764B

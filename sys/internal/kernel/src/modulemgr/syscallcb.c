@@ -121,7 +121,7 @@ void SyscallCBReleaseEntry(SceUInt32 num)
 		SyscallCBWrite(num, func_noentry);
 }
 
-void ksceKernelRegisterSyscall(SceUInt32 num, void *func)
+void SceModulemgrForKernel_2E4A10A0(SceUInt32 num, void *func)
 {
 	if (num < SYSCALLCB_MAX_SYSCALLNUM)
 		SyscallCBWrite(num, func);

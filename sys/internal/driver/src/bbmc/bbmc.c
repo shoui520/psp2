@@ -13,7 +13,7 @@
 #include <threadmgr/threadmgr.h>
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <psp2kern/kernel/threadmgr/thread.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/idstorage.h>
 #include <sysmem/procevent.h>
 #include <arm_neon.h>
@@ -508,7 +508,7 @@ int module_start(SceSize argumentSize, const void *arguments)
 
 	(void)argumentSize;
 	(void)arguments;
-	if (ksceKernelSearchModuleByName("SceDbgUsb") >= 0 ||
+	if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") >= 0 ||
 	    (ksceSysconGetHardwareInfo() & 2) == 0 ||
 	    g_bbmcControl != NULL || bbmcInitializeGpio() < 0)
 		return 1;

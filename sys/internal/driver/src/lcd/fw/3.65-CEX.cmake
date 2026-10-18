@@ -61,7 +61,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_47F6DE49
 	sceKernelDelayThread
 	sceKernelScheduleWorkTask
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	sceKernelRegisterSysEventHandler
 	kscePervasiveSpiResetEnable
 	kscePervasiveSpiClockDisable

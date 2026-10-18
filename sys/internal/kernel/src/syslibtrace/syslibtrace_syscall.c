@@ -8,7 +8,7 @@
  * caller's return address and calls the client's return callback.
  */
 
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <sysmem/debug.h>
 #include <kernel/error.h>
@@ -143,7 +143,7 @@ int sceSyslibtraceCallbackRegisterLibs(SceUInt32 flags)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 190);
@@ -183,7 +183,7 @@ int sceSyslibtraceCallbackDeregisterLibs(SceUInt32 flags)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 232);
@@ -244,7 +244,7 @@ int sceSyslibtraceSetTargetSyscallLib(SceUInt32 libraryNid)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 271);
@@ -282,7 +282,7 @@ int sceSyslibtraceClearTargetSyscallLib(SceUInt32 libraryNid)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT(0, 328);
@@ -325,7 +325,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 386);
@@ -345,7 +345,7 @@ int sceSyslibtraceStartSyscallTrace(void)
 			SceSyslibtraceSyscallInfo *info = &g_syslibtraceSyscallInfo[number];
 			const SceModuleExports *exports;
 
-			ksceKernelRegisterSyscall(number, SyslibtraceSyscallTrampoline);
+			SceModulemgrForKernel_2E4A10A0(number, SyslibtraceSyscallTrampoline);
 			lib = list[i];
 			exports = lib->exports;
 			info->entry = exports->entryTable[k];
@@ -374,7 +374,7 @@ int sceSyslibtraceStopSyscallTrace(void)
 		return SCE_ERROR_ERRNO_ENOMEM;
 
 	num = LIBENT_LIST_NUM;
-	ret = ksceKernelGetLibEntCBListForSyslibtrace((void **)list, &num);
+	ret = sceKernelGetLibEntCBListForSyslibtrace((struct LibEntCB **)list, &num);
 	if (ret < 0) {
 		SceSysmemForKernel_4233C16D(list);
 		SCE_DBG_ASSERT_LEVEL(0, 0, 438);
@@ -391,7 +391,7 @@ int sceSyslibtraceStopSyscallTrace(void)
 
 		for (k = 0; k < lib->exports->numFunctions; k++) {
 			lib = list[i];
-			ksceKernelRegisterSyscall(SyscallNumber(lib, k), lib->exports->entryTable[k]);
+			SceModulemgrForKernel_2E4A10A0(SyscallNumber(lib, k), lib->exports->entryTable[k]);
 		}
 	}
 

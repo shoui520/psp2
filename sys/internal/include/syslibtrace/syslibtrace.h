@@ -32,7 +32,7 @@ typedef struct SceModuleExports {
 
 /*
  * The module manager's entry for an exported library, as handed out by
- * ksceKernelGetLibEntCBListForSyslibtrace (Modulemgr's LibEntCB).
+ * sceKernelGetLibEntCBListForSyslibtrace (Modulemgr's LibEntCB).
  */
 typedef struct SceSyslibtraceLibEntry {
 	struct SceSyslibtraceLibEntry *next;
@@ -109,6 +109,6 @@ SceSize SceNidsymtblForDriver_138A9106(const SceNidsymtblEntry **table);	/* the 
 int SceNidsymtblForDriver_985E2935(SceUInt32 nid, const char **name);	/* name of a NID */
 
 /* imports */
-/* ksceKernelGetLibEntCBListForSyslibtrace: <psp2kern/kernel/modulemgr.h> (list of SceSyslibtraceLibEntry pointers) */
+/* sceKernelGetLibEntCBListForSyslibtrace: <modulemgr/modulemgr.h> (fills a list of SceSyslibtraceLibEntry pointers) */
 /* names unknown: hand the syscall table and trampoline to the module manager, the NID lookup to sysroot */
 int SceModulemgrForKernel_B23286B8(SceSyslibtraceSyscallInfo *info, void *trampoline);

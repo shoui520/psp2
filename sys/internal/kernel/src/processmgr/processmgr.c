@@ -438,7 +438,7 @@ static int DeleteProcess(SceProcessObject *process)
 
 	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_NOT_DEBUG_SUSPENDED);
 	if (process->type != PROCESS_TYPE_SHELL || SceDipswForDriver_A98FC2FD(0xc2) != 0)
-		ksceKernelUnloadProcessModules(process->pid);
+		SceModulemgrForKernel_E71530D7(process->pid);
 	process->status = (process->status & ~PROCESS_STATE_MASK) | PROCESS_STATE_EXITED;
 	sceKernelSetEventFlag(process->eventFlag, PROCESS_EVF_DELETED);
 	ret = sceKernelThreadMgrProcessDeleteBeforePUIDClose(process);
@@ -1560,7 +1560,7 @@ static int sceKernelProcessPreloadModule(SceSize args, void *argp)
 		else if (ret < 0)
 			SCE_PRINTF_WITH_INFO(0xb, 4653, "ProcessThreadResume failed 0x%08x\n", ret);
 	}
-	ret = ksceKernelStartPreloadingModules(process->pid);
+	ret = sceKernelStartPreloadingModules(process->pid);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4666, "sceKernelStartPreloadingModules : failed (res=0x%08x)\n",
 				     ret);
@@ -2130,7 +2130,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	SCE_DBG_ASSERT_CHECK(ret == 0, 3901);
 	PROCESS_PROBE("exec", path);
 
-	ret = ksceKernelLoadProcessImage(process->pid, path,
+	ret = sceKernelLoadProcessImage(process->pid, path,
 					 ((attr & PROCESS_ATTR_LOAD_FLAG) ? 0x10000 : 0) | ((kind == 1) << 14),
 					 &process->authInfo, &process->image,
 					 FindTitlePatch(process->TitleId));
@@ -2163,7 +2163,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	ret = SceProcessmgrForDriver_D141C076(process->pid, &sdkVersion);
 	if (ret < 0) {
 		deleteThreads = 1;
-		ksceKernelUnloadProcessModules(process->pid);
+		SceModulemgrForKernel_E71530D7(process->pid);
 		goto failed;
 	}
 	threadAttr = process->image.mainThreadAttr;
@@ -2176,20 +2176,20 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 	if (*(const SceSize *)optParam == 0)
 		optParam = NULL;
 	permission = sceKernelSetThreadAccessLevel(0x80);
-	ret = ksceKernelGetModuleIdByPid(process->pid);
+	ret = sceKernelGetModuleIdByPid(process->pid);
 	if (ret < 0) {
 		deleteThreads = 1;
-		ksceKernelUnloadProcessModules(process->pid);
+		SceModulemgrForKernel_E71530D7(process->pid);
 		goto failed;
 	}
-	ret = SceThreadmgrForDriver_C8E57BB4(process->pid, threadName, ksceKernelGetModuleEntryPoint(ret),
+	ret = SceThreadmgrForDriver_C8E57BB4(process->pid, threadName, SceModulemgrForKernel_7B302C5D(ret),
 					     priority, stackSize, threadAttr | 0x80000000, cpu,
 					     (void *)optParam);
 	sceKernelSetThreadAccessLevel(permission);
 	if (ret < 0) {
 		deleteThreads = 1;
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4024, "sceKernelCreateRemoteThread failed. 0x%08x\n", ret);
-		ksceKernelUnloadProcessModules(process->pid);
+		SceModulemgrForKernel_E71530D7(process->pid);
 		goto failed;
 	}
 	process->mainThread = ret;
@@ -2210,7 +2210,7 @@ static int _CreateProcess(const char *name, SceUInt32 type, const char *path, Sc
 		failParam.type = process->type;
 		sceKernelInvokeProcEventHandler(process->pid, PROC_EVENT_EXIT, 0, &failParam,
 						 NULL, handler);
-		ksceKernelUnloadProcessModules(process->pid);
+		SceModulemgrForKernel_E71530D7(process->pid);
 		goto failed;
 	}
 	if (process->image.processName[0] == '\0') {
@@ -3705,7 +3705,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 	process->time = sceKernelGetSystemTimeWide();
 	process->timeRunning = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&process->timeLock, intr);
-	ret = ksceKernelLoadPreloadingModules(pid, &process->image, flags);
+	ret = sceKernelLoadPreloadingModules(pid, &process->image, flags);
 	if (ret < 0) {
 		SCE_DBG_PRINTF_LEVEL(1, 0xb, 4880, "sceKernelLoadPreloadingModules : failed (res=0x%08x)\n",
 				     ret);
@@ -4235,14 +4235,14 @@ int sceKernelGetProcessInfo(SceUID pid, SceKernelProcessInfo *info)
 	info->cpuAffinity = process->cpuAffinity;
 	info->status = process->status & ~0xf0000;
 	info->param = process->infoParam;
-	ksceKernelGetLibraryDBFlags(pid, &info->libraryDBFlags);
-	modid = ksceKernelGetModuleIdByPid(pid);
+	sceKernelGetLibraryDBFlags(pid, &info->libraryDBFlags);
+	modid = sceKernelGetModuleIdByPid(pid);
 	if (modid < 0) {
 		info->mainModule = -1;
 		info->entryPoint = (void *)-1;
 	} else {
 		info->mainModule = modid;
-		info->entryPoint = ksceKernelGetModuleEntryPoint(modid);
+		info->entryPoint = SceModulemgrForKernel_7B302C5D(modid);
 	}
 	info->type = process->type;
 	if (strnlen(process->image.processName, sizeof(process->image.processName)) != 0)
@@ -4639,7 +4639,7 @@ int sceKernelSetProcessLibdb(SceUID pid, void *libdb)
 }
 
 /* name unknown: allocate in the unique heap of the current process */
-void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt)
+void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt)
 {
 	SceProcessObject *process = GetCurrentProcess();
 

@@ -10,9 +10,7 @@
 #include <string.h>
 #include "enum_wakeup.h"
 #include <stddef.h>
-
-#define SCE_KERNEL_START_SUCCESS	0
-#define SCE_KERNEL_START_FAILED		2
+#include <kernel/modulemgr.h>
 
 #include "enum_wakeup_imports.h"
 #include <mtpif/mtpif_driver.h>

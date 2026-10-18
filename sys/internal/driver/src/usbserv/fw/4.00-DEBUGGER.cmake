@@ -89,7 +89,7 @@ set(MODULE_IMPORT_NIDS
 )
 set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelLockMutex

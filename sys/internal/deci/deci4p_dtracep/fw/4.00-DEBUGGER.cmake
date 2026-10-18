@@ -364,15 +364,15 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForKernel_EFFF2975
 	sceKernelGetProcessInfo
 	sceKernelGetProcessStatus
-	ksceKernelGetModuleInfoForDebugger
-	ksceKernelGetModuleIdByAddrForDebugger
-	ksceKernelGetModuleFingerprint
-	ksceKernelGetModuleCB
-	ksceKernelGetModuleIdByPid
+	sceKernelGetModuleInfoForDebugger
+	sceKernelGetModuleIdByAddrForDebugger
+	SceModulemgrForKernel_337A3908
+	SceModulemgrForKernel_37512E29
+	sceKernelGetModuleIdByPid
 	SceModulemgrForKernel_74A4E0EE
-	ksceKernelGetModulePath
+	SceModulemgrForKernel_79E761B5
 	SceModulemgrForKernel_ACBC97C9
-	ksceKernelGetModuleList
+	sceKernelGetModuleList
 	sceSyslibtraceCallbackRegisterLibs
 	sceSyslibtraceStartSyscallTrace
 	sceSyslibtraceClearTargetSyscallLib

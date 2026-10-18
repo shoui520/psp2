@@ -18,6 +18,7 @@
 #include <pamgr/coresight_regs.h>
 #include <psp2kern/kernel/threadmgr/event_flags.h>
 #include <psp2kern/kernel/threadmgr/semaphores.h>
+#include <modulemgr/modulemgr.h>
 
 SdfMgrState s_sdfMgrState;
 
@@ -1025,8 +1026,6 @@ void sdfMgrRestoreDebugContext(const ThreadCB *thread,
 
 /* System break/continue and the mapped ARM debug register interface. */
 
-int ksceKernelGetModuleCBByAddr(SceUID pid, uint32_t address, SceModuleCB **module);
-
 #if FW_DEBUG
 #define MODULE_INFO(_line, _hash) \
 	SDFMGR_DEBUG_INFO(_line, _hash, 0xd2bbeef4, "dumpModuleInfo")
@@ -1044,7 +1043,7 @@ void dumpModuleInfo(uint32_t address)
 	SceModuleCB *module, *snapshot;
 	char name[27];
 
-	if (ksceKernelGetModuleCBByAddr(SCE_KERNEL_PROCESS_ID, address, &module) < 0)
+	if (SceModulemgrForKernel_1728612F(SCE_KERNEL_PROCESS_ID, address, &module) < 0)
 		return;
 	SceDebugForDriver_02B04343(0, MODULE_INFO(2808, 0x3099e3a6),
 		"\n**** Module Info ****\n  ModuleID    0x%08x\n", module->modid);

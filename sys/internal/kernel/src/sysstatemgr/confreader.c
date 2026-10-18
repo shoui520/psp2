@@ -38,7 +38,7 @@ static void ConfReaderClose(ConfReader *reader)
 	if (reader->confModule == -1)
 		ConfReaderUtilsFreeConfBuf(reader);
 	else
-		ksceKernelStopUnloadModule(reader->confModule, 0, NULL, 0, NULL, &status);
+		SceModulemgrForDriver_03B30B7E(reader->confModule, 0, NULL, 0, NULL, &status);
 	for (i = 0; i < 4; i++)
 		if (reader->rpath[i])
 			SceSysmemForKernel_4233C16D(reader->rpath[i]);
@@ -213,9 +213,9 @@ static int ConfReaderCmdLoad(ConfReader *reader, int argc, char **argv, unsigned
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if ((!remote || (ret = ksceKernelLoadStartModule(remote, len, args, 0, NULL, &status)) < 0) &&
-	    (ret = ksceKernelLoadStartModule(path, len, args, 0x800, NULL, &status)) < 0)
-		ret = ksceKernelLoadStartModule(path, len, args, 0, NULL, &status);
+	if ((!remote || (ret = SceModulemgrForDriver_189BFBBB(remote, len, args, 0, NULL, &status)) < 0) &&
+	    (ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0x800, NULL, &status)) < 0)
+		ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0, NULL, &status);
 	if (ret >= 0) {
 		SCE_DBG_PRINTF(0, 1032, "\n");
 		ret = ConfReaderUtilsRememberLoaded(reader, ret, path);
@@ -235,9 +235,9 @@ static int ConfReaderCmdLoadOnly(ConfReader *reader, int argc, char **argv, unsi
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if ((!remote || (ret = ksceKernelLoadModule(remote, 0, NULL)) < 0) &&
-	    (ret = ksceKernelLoadModule(path, 0x800, NULL)) < 0)
-		ret = ksceKernelLoadModule(path, 0, NULL);
+	if ((!remote || (ret = sceKernelLoadModule(remote, 0, NULL)) < 0) &&
+	    (ret = sceKernelLoadModule(path, 0x800, NULL)) < 0)
+		ret = sceKernelLoadModule(path, 0, NULL);
 	if (ret < 0)
 		return ret;
 	return ConfReaderUtilsRememberLoaded(reader, ret, path);
@@ -255,7 +255,7 @@ static int ConfReaderCmdStart(ConfReader *reader, int argc, char **argv, unsigne
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	return ksceKernelStartModule(uid, len, args, 0, NULL, &status);
+	return sceKernelStartModule(uid, len, args, 0, NULL, &status);
 }
 
 static int ConfReaderCmdStop(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
@@ -269,7 +269,7 @@ static int ConfReaderCmdStop(ConfReader *reader, int argc, char **argv, unsigned
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	return ksceKernelStopModule(uid, len, args, 0, NULL, &status);
+	return SceModulemgrForDriver_100DAEB9(uid, len, args, 0, NULL, &status);
 }
 
 static int ConfReaderCmdUnload(ConfReader *reader, int argc, char **argv, unsigned len, char *args)
@@ -283,7 +283,7 @@ static int ConfReaderCmdUnload(ConfReader *reader, int argc, char **argv, unsign
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	ret = ksceKernelStopUnloadModule(uid, len, args, 0, NULL, &status);
+	ret = SceModulemgrForDriver_03B30B7E(uid, len, args, 0, NULL, &status);
 	return ret < 0 ? ret : ConfReaderUtilsForgetLoaded(reader, uid);
 }
 
@@ -298,7 +298,7 @@ static int ConfReaderCmdUnloadOnly(ConfReader *reader, int argc, char **argv, un
 	path = ConfReaderRelToAbsPath(reader, argv[0]);
 	if (!path || (uid = ConfReaderUtilsFindLoaded(reader, path)) < 0)
 		return CONF_ERROR(2);
-	ret = ksceKernelUnloadModule(uid, 0, NULL);
+	ret = sceKernelUnloadModule(uid, 0, NULL);
 	return ret < 0 ? ret : ConfReaderUtilsForgetLoaded(reader, uid);
 }
 
@@ -322,8 +322,8 @@ static int ConfReaderCmdToolLoad(ConfReader *reader, int argc, char **argv, unsi
 	if (!path)
 		return CONF_ERROR(13);
 	remote = ConfReaderGetRemotePath(&reader->remotePath, path);
-	if (!remote || (ret = ksceKernelLoadStartModule(remote, len, args, 0x20, NULL, &status)) < 0)
-		ret = ksceKernelLoadStartModule(path, len, args, 0x20, NULL, &status);
+	if (!remote || (ret = SceModulemgrForDriver_189BFBBB(remote, len, args, 0x20, NULL, &status)) < 0)
+		ret = SceModulemgrForDriver_189BFBBB(path, len, args, 0x20, NULL, &status);
 	if (ret >= 0) {
 		SCE_DBG_PRINTF(0, 1072, "\n");
 		ret = ConfReaderUtilsRememberLoaded(reader, ret, path);
@@ -490,7 +490,7 @@ static int checkFreeKernelBudgetSize(void)
 	SceKernelPhyMemPartInfoCore info;
 	int ret;
 
-	ret = ksceKernelUmountBootfs();
+	ret = sceKernelUmountBootimageFS();
 	if (!ret) {
 		ret = sceKernelGetPhyMemPartInfoCore(SceSysmemForKernel_0164D817(), &info);
 		if (ret >= 0) {
@@ -525,7 +525,7 @@ void ConfReader_mountDefaultBootimage(void)
 {
 	if (s_bootimage) {
 		SCE_DBG_PRINTF_LEVEL(2, 0, 1414, "ConfReader_mountDefaultBootimage(): mount %s\n", s_bootimage);
-		ksceKernelMountBootfs(s_bootimage);
+		sceKernelMountBootimageFS(s_bootimage);
 		s_bootimage = NULL;
 	}
 }
@@ -650,7 +650,7 @@ static __attribute__((always_inline)) inline int ConfReaderReadPrxFmt(ConfReader
 	int ret, status;
 
 	ksceIoClose(reader->fd);
-	reader->confModule = ksceKernelLoadModule(path, 0x100, NULL);
+	reader->confModule = sceKernelLoadModule(path, 0x100, NULL);
 	if (reader->confModule < 0) {
 #if FW_DEBUG
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO_FUNC(501, "ConfReaderReadPrxFmt"),
@@ -658,9 +658,9 @@ static __attribute__((always_inline)) inline int ConfReaderReadPrxFmt(ConfReader
 #endif
 		return reader->confModule;
 	}
-	ret = ksceKernelStartModule(reader->confModule, 0, NULL, 0, NULL, &status);
+	ret = sceKernelStartModule(reader->confModule, 0, NULL, 0, NULL, &status);
 	if (ret < 0) {
-		ksceKernelUnloadModule(reader->confModule, 0, NULL);
+		sceKernelUnloadModule(reader->confModule, 0, NULL);
 		return ret;
 	}
 	reader->confBuf = SceKernelPsp2Config_A6483A7C;

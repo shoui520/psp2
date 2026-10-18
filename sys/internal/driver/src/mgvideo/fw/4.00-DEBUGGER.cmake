@@ -140,7 +140,7 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCpuResumeIntr
 	SceKernelSuspendForDriver_2BB92967
 	SceKernelSuspendForDriver_4DF40893
-	SceProcessmgrForDriver_5468892A
+	sceKernelAllocOwnProcessHeap
 	SceProcessmgrForDriver_FC2A424E
 	sceKernelRegisterProcEventHandler
 	SceProcEventForDriver_3DED57CC

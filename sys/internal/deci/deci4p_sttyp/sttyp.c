@@ -12,7 +12,7 @@
 #include <sysmem/cp15.h>
 #include <stdarg.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/pmmgr.h>
 #include <sysmem/cpu.h>

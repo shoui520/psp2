@@ -449,7 +449,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pCpupForDriver_C0AB956B
 	SceDeci4pCpupForDriver_D78403C8
 	SceDeci4pCpupForDriver_DE07478F
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	SceBbmcForDriver_192D641F
 	SceBbmcForDriver_393E70CB
 	SceBbmcForDriver_4281E476

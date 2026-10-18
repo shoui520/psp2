@@ -31,8 +31,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForKernel_B39CD708
 	SceQafMgrForDriver_CAD47130
 	sceKernelSetSyslibtraceThreadCBEnable
-	ksceKernelRegisterSyscall
-	ksceKernelGetLibEntCBListForSyslibtrace
+	SceModulemgrForKernel_2E4A10A0
+	sceKernelGetLibEntCBListForSyslibtrace
 	SceModulemgrForKernel_B23286B8
 )
 set(MODULE_IMPORT_VARS

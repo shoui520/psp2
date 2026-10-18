@@ -15,7 +15,7 @@
 
 #include <sysmem/cpu.h>
 #include <sysmem/dipsw.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <sysmem/barrier.h>

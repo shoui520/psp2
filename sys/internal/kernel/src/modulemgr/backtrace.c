@@ -282,7 +282,7 @@ int SceBacktraceForDriver_7C878F90(SceUID pid, const SceKernelBacktraceFrameForK
 	for (i = 0, f = frames; i != count; i++, f++) {
 		fingerprint = 0;
 		textBase = NULL;
-		ret = ksceKernelGetModuleInfoMinByAddr(pid, f->pc, &fingerprint, &textBase, name);
+		ret = SceModulemgrForKernel_5564A860(pid, f->pc, &fingerprint, &textBase, name);
 		if (ret < 0) {
 			size = i == count - 1 ? 0 : f[1].sp - f->sp;
 			SceDebugForDriver_391B74B7(
@@ -667,7 +667,7 @@ walk:
 	if (n != 0) {
 		fingerprint = 0;
 		textBase = NULL;
-		ksceKernelGetModuleInfoMinByAddr(pid, pc, &fingerprint, &textBase, NULL);
+		SceModulemgrForKernel_5564A860(pid, pc, &fingerprint, &textBase, NULL);
 		frames[0].sp = regs[REG_SP];
 		frames[0].pc = regs[REG_PC];
 		frames[0].fingerprint = fingerprint;
@@ -685,7 +685,7 @@ walk:
 		if (i < n) {
 			fingerprint = 0;
 			textBase = NULL;
-			ksceKernelGetModuleInfoMinByAddr(pid, regs[REG_PC], &fingerprint, &textBase,
+			SceModulemgrForKernel_5564A860(pid, regs[REG_PC], &fingerprint, &textBase,
 							 NULL);
 			frames[1].sp = regs[REG_SP];
 			frames[1].pc = regs[REG_PC];
@@ -737,7 +737,7 @@ int sceKernelBacktraceForUser(SceUID thid, SceKernelBacktraceFrame *ubuf, SceSiz
 	} else {
 		kbuf = NULL;
 	}
-	ret = ksceKernelBacktrace(thid, kbuf, size, &count, flags);
+	ret = SceBacktraceForDriver_166B9C8C(thid, kbuf, size, &count, flags);
 	if (ret >= 0) {
 		if (ubuf != NULL) {
 			ret = SceSysmemForDriver_6D88EF8A(ubuf, kbuf, count * sizeof(*kbuf));

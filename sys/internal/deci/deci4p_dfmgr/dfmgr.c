@@ -8,7 +8,7 @@
 #include <string.h>
 #include <sysmem/dipsw.h>
 #include <psp2kern/kernel/intrmgr.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/threadmgr.h>
 #include <kernel/error.h>
 #include <sysmem/sysevent.h>
@@ -472,7 +472,7 @@ int sceDfMgrInit(void)
 		}
 		if (i == 0) {
 			dfmgrSetLinkStatus(link, DFMGR_LINK_ATTACHED, 1);
-			if (ksceKernelSearchModuleByName("SceDbgUsb") < 0)
+			if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") < 0)
 				break;
 		}
 	}

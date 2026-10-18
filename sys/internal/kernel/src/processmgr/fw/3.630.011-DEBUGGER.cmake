@@ -234,13 +234,13 @@ set(MODULE_IMPORT_FUNCS
 	SceIntrmgrForDriver_182EE3E3
 	sceKernelGenerateSoftIntr
 	sceKernelRegisterIntrHandler
-	ksceKernelGetLibraryDBFlags
-	ksceKernelGetModuleIdByPid
-	ksceKernelGetModuleEntryPoint
-	ksceKernelStartPreloadingModules
-	ksceKernelLoadProcessImage
-	ksceKernelLoadPreloadingModules
-	ksceKernelUnloadProcessModules
+	sceKernelGetLibraryDBFlags
+	sceKernelGetModuleIdByPid
+	SceModulemgrForKernel_7B302C5D
+	sceKernelStartPreloadingModules
+	sceKernelLoadProcessImage
+	sceKernelLoadPreloadingModules
+	SceModulemgrForKernel_E71530D7
 	ksceIoOpen
 	ksceIoClose
 	sceKernelCpuScanThreadForProcessmgr

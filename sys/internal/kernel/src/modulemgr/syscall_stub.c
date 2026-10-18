@@ -8,9 +8,9 @@
 
 #include "modulemgr_internal.h"
 
-SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLMOption *uopt)
+SceUID _sceKernelLoadModule(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *uopt)
 {
-	SceKernelLMOption *opt = NULL;
+	SceKernelLoadModuleOpt *opt = NULL;
 	int ret;
 
 	if (uopt != NULL) {
@@ -30,7 +30,7 @@ int _sceKernelStartModule(SceUID modid, SceSize args, void *argp,
 			  const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelLMOption *opt = NULL;
+	SceKernelStartModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
@@ -58,7 +58,7 @@ int _sceKernelStopModule(SceUID modid, SceSize args, void *argp,
 			 const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelLMOption *opt = NULL;
+	SceKernelStopModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
@@ -82,9 +82,9 @@ int _sceKernelStopModule(SceUID modid, SceSize args, void *argp,
 	return res < 0 ? res : ret;
 }
 
-int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelULMOption *uopt)
+int _sceKernelUnloadModule(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *uopt)
 {
-	SceKernelULMOption *opt = NULL;
+	SceKernelUnloadModuleOpt *opt = NULL;
 	int ret;
 
 	if (uopt != NULL) {
@@ -100,7 +100,7 @@ SceUID _sceKernelLoadStartModule(const char *path, SceSize args, void *argp,
 				 const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelLMOption *opt = NULL;
+	SceKernelLoadModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
@@ -128,7 +128,7 @@ int _sceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp,
 			       const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelULMOption *opt = NULL;
+	SceKernelUnloadModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
@@ -156,7 +156,7 @@ SceUID _sceKernelOpenModule(const char *path, SceSize args, void *argp,
 			    const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelLMOption *opt = NULL;
+	SceKernelLoadModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 
@@ -184,7 +184,7 @@ int _sceKernelCloseModule(SceUID modid, SceSize args, void *argp,
 			  const SceKernelModuleSyscallParam *uparam)
 {
 	SceKernelModuleSyscallParam p;
-	SceKernelULMOption *opt = NULL;
+	SceKernelUnloadModuleOpt *opt = NULL;
 	int *status, *ustatus, ret, res;
 	SceUInt32 flags;
 

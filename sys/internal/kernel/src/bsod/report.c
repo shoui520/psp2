@@ -5,10 +5,9 @@
 #include "report_data.h"
 #include "exception_record.h"
 #include <sysmem/sysmem.h>
+#include <modulemgr/modulemgr.h>
 
 extern void (*s_bsodPrinter)(const char *format, ...);
-int ksceKernelGetModuleInfoMinByAddr(int pid, uint32_t address, int *uid,
-				    uint32_t *base, char *name);
 static void bsodFormatCpsr(uint32_t cpsr, char text[52])
 {
 	armFormatCpsr(cpsr, text);
@@ -102,8 +101,10 @@ void bsodReportStack(const BsodCrashRecord *frame, int user)
 {
 	const ThreadCB *context = frame->thread;
 	const BsodStackFrame *entry;
-	int pid, count, i, uid;
-	uint32_t base, size;
+	int pid, count, i;
+	SceUInt32 fingerprint;
+	void *textBase;
+	uint32_t size;
 	char name[28];
 
 	if (!user) {
@@ -122,17 +123,18 @@ void bsodReportStack(const BsodCrashRecord *frame, int user)
 		s_bsodPrinter(s_bsodTextUserBacktrace);
 	}
 	for (i = 0; i != count; i++, entry++) {
-		uid = 0;
-		base = 0;
-		int result = ksceKernelGetModuleInfoMinByAddr(pid, entry->pc, &uid, &base, name);
+		fingerprint = 0;
+		textBase = NULL;
+		int result = SceModulemgrForKernel_5564A860(pid, entry->pc, &fingerprint, &textBase,
+							    name);
 		size = i == count - 1 ? 0 : entry[1].sp - entry->sp;
 		if (result < 0) {
 			s_bsodPrinter(s_bsodTextBacktraceFrameNoModule, i, entry->pc, entry->sp, size);
 		} else {
 			if (!user && !s_bsodQafEnabled)
-				snprintf(name, 0x1b, s_bsodTextHex, uid);
+				snprintf(name, 0x1b, s_bsodTextHex, fingerprint);
 			s_bsodPrinter(s_bsodTextBacktraceFrame, i, entry->pc, entry->sp, size,
-				name, entry->pc - base);
+				name, entry->pc - (uint32_t)textBase);
 		}
 	}
 }

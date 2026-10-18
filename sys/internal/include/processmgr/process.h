@@ -75,7 +75,7 @@ typedef struct ProcessDebugRegBlock {
 
 _Static_assert(sizeof(ProcessDebugRegBlock) == 0x60, "ProcessDebugRegBlock size");
 
-/* the process image information ksceKernelLoadProcessImage fills in */
+/* the process image information sceKernelLoadProcessImage fills in */
 typedef struct ProcessImageInfo {
 	SceUInt32 sdkVersion;
 	char mainThreadName[0x20];

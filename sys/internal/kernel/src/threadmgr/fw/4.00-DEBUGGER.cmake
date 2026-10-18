@@ -321,9 +321,9 @@ set(MODULE_IMPORT_FUNCS
 	SceSblACMgrForKernel_570D6AD3
 	SceSblACMgrForKernel_8241AB5C
 	SceSblACMgrForKernel_sceSblACMgrIsSystemProgram
-	ksceKernelGetModuleIdByPid
-	ksceKernelGetModuleInfo
-	ksceKernelGetModuleIsSharedByAddr
+	sceKernelGetModuleIdByPid
+	SceModulemgrForKernel_DAA90093
+	SceModulemgrForKernel_F1DE6949
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

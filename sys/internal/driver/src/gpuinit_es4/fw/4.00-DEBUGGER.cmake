@@ -79,7 +79,7 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	SceSblAIMgrForDriver_274663A0
 	SceSblACMgrForDriver_E87D1777
-	ksceKernelGetModuleInfoByAddr
+	SceModulemgrForDriver_1D9E0F7E
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard

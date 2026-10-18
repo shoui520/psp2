@@ -275,7 +275,7 @@ clocks:
 		kscePowerSetGpuClockFrequencyInternal(ewg.ew.clocks[2], ewg.ew.clocks[2]);
 		scePowerSetGpuXbarClockFrequency(ewg.ew.clocks[3]);
 		ScePervasiveForDriver_4F64DEF6(0);
-		if (ksceKernelSearchModuleByName("SceDbgUsb") < 0)
+		if (SceModulemgrForDriver_BBE1771C("SceDbgUsb") < 0)
 			ScePervasiveForDriver_4F64DEF6(1);
 		ScePervasiveForDriver_E0711D42();
 		SceSysconForDriver_3FDD29D6(1, 0);

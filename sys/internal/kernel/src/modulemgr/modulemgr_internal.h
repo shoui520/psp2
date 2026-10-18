@@ -15,7 +15,7 @@
 #include <sysmem/sysmem.h>
 #include <processmgr/process.h>
 #include <modulemgr/modulemgr_patch.h>
-#include <psp2common/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2common/kernel/iofilemgr.h>
 #include <modulemgr/module_library.h>
 #include <sysmem/debug.h>
@@ -556,20 +556,20 @@ int ModulemgrReleaseProcess(SceUID pid);
 void ShowCallerInfo(SceUID pid, SceUInt32 addr);
 int ModulemgrProcEventHandler(int event, int phase, void *param, void *common);
 int StopUnloadModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			   const SceKernelULMOption *opt, int *status);
-int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags, const SceKernelLMOption *opt);
-int unloadModuleCommon(SceUID pid, SceUID modid, SceUInt32 flags, const SceKernelULMOption *opt);
+			   const SceKernelUnloadModuleOpt *opt, int *status);
+int loadModuleCommon(SceUID pid, const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt);
+int unloadModuleCommon(SceUID pid, SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt);
 int startModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-		      const SceKernelLMOption *opt, int *status);
+		      const SceKernelStartModuleOpt *opt, int *status);
 int stopModuleCommon(SceUID pid, SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-		     const SceKernelLMOption *opt, int *status);
-int ksceKernelStopUnloadSharedModuleForPid(SceUID pid, SceUID modid, SceSize args, void *argp,
-					   SceUInt32 flags, const SceKernelULMOption *opt,
+		     const SceKernelStopModuleOpt *opt, int *status);
+int SceModulemgrForDriver_02D3D0C1(SceUID pid, SceUID modid, SceSize args, void *argp,
+					   SceUInt32 flags, const SceKernelUnloadModuleOpt *opt,
 					   int *status);
 int ModulemgrInhibitLoadingModule(SceUInt32 flags);
 int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 SceUID loadStartSharedModuleCommon(SceUID pid, const char *path, SceSize args, void *argp,
-				   SceUInt32 flags, const SceKernelLMOption *opt, int *status);
+				   SceUInt32 flags, const SceKernelLoadModuleOpt *opt, int *status);
 
 /* modulecb.c */
 int ModuleObjNew(SceUID pid, SceUInt32 flags, SceModuleObject **out);
@@ -672,9 +672,9 @@ void LibraryDBRenameAddr2ModTbls(SceUID pid, const char *name);
 int LibraryDBIsShared(SceUID pid);
 void LibraryDBRegisterModule(SceModuleCB *cb);
 void LibraryDBSetShared(SceUID pid);
-int ksceKernelGetModuleIsSharedByAddr(SceUID pid, SceUInt32 addr);
-int ksceKernelGetModuleCBByAddr(SceUID pid, SceUInt32 addr, SceModuleCB **out);
-int ksceKernelGetModuleInfoMinByAddr(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
+int SceModulemgrForKernel_F1DE6949(SceUID pid, SceUInt32 addr);
+int SceModulemgrForKernel_1728612F(SceUID pid, SceUInt32 addr, SceModuleCB **out);
+int SceModulemgrForKernel_5564A860(SceUID pid, SceUInt32 addr, SceUInt32 *fingerprint,
 				     void **textBase, char *name);
 int sceKernelGetModuleList(SceUID pid, SceUInt32 flags, SceUInt32 type, SceUID *list,
 			   SceSize *num);
@@ -740,27 +740,27 @@ typedef struct SceKernelModuleSyscallParam {
 	SceUInt32 reserved;
 } SceKernelModuleSyscallParam;
 
-SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags, const SceKernelLMOption *opt);
+SceUID sceKernelLoadModuleForUser(const char *path, SceUInt32 flags, const SceKernelLoadModuleOpt *opt);
 int sceKernelStartModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				const SceKernelLMOption *opt, int *status);
+				const SceKernelStartModuleOpt *opt, int *status);
 int sceKernelStopModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			       const SceKernelLMOption *opt, int *status);
-int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags, const SceKernelULMOption *opt);
+			       const SceKernelStopModuleOpt *opt, int *status);
+int sceKernelUnloadModuleForUser(SceUID modid, SceUInt32 flags, const SceKernelUnloadModuleOpt *opt);
 SceUID sceKernelLoadStartModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
-				       const SceKernelLMOption *opt, int *status);
+				       const SceKernelLoadModuleOpt *opt, int *status);
 int sceKernelStopUnloadModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				     const SceKernelULMOption *opt, int *status);
+				     const SceKernelUnloadModuleOpt *opt, int *status);
 SceUID sceKernelOpenModuleForUser(const char *path, SceSize args, void *argp, SceUInt32 flags,
-				  const SceKernelLMOption *opt, int *status);
+				  const SceKernelLoadModuleOpt *opt, int *status);
 int sceKernelCloseModuleForUser(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-				const SceKernelULMOption *opt, int *status);
+				const SceKernelUnloadModuleOpt *opt, int *status);
 
 /* exports of this module used internally */
-SceUID ksceKernelLoadStartModule(const char *path, SceSize args, void *argp, SceUInt32 flags,
-				 const SceKernelLMOption *opt, int *status);
-int ksceKernelStopUnloadModule(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
-			       const SceKernelULMOption *opt, int *status);
-int ksceKernelGetModuleInfo(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
+SceUID SceModulemgrForDriver_189BFBBB(const char *path, SceSize args, void *argp, SceUInt32 flags,
+				 const SceKernelLoadModuleOpt *opt, int *status);
+int SceModulemgrForDriver_03B30B7E(SceUID modid, SceSize args, void *argp, SceUInt32 flags,
+			       const SceKernelUnloadModuleOpt *opt, int *status);
+int SceModulemgrForKernel_DAA90093(SceUID pid, SceUID modid, SceKernelModuleInfo *info);
 
 /* stub_linker.c */
 int apply_reftable(SceModuleCB *cb, const void *reftable, SceUInt32 value, int mode);
@@ -780,7 +780,7 @@ int SyscallCBIsInitialized(void);
 
 /* backtrace.c */
 int BacktraceInit(void);
-int ksceKernelBacktrace(SceUID thid, struct SceKernelBacktraceFrame *frames, SceSize size,
+int SceBacktraceForDriver_166B9C8C(SceUID thid, struct SceKernelBacktraceFrame *frames, SceSize size,
 			SceSize *count, SceUInt32 flags);
 int SceBacktraceForDriver_888E99B8(SceUID thid, struct SceKernelBacktraceFrameForKernel *frames,
 				   SceSize size, SceSize *count, SceUInt32 flags);

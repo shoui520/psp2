@@ -15,6 +15,7 @@
 #include <psp2kern/lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
+#include <modulemgr/modulemgr.h>
 
 #if FW_VERSION >= 0x04000000
 #include "data-4.00-DEBUGGER.h"
@@ -24,8 +25,6 @@
 #include "data-3.630.011-DEBUGGER.h"
 #endif
 #include <sysmem/barrier.h>
-
-extern int ksceKernelSearchModuleByName(const char *name);
 
 #define LCD_INVALID ((int)0x803f0c02)
 #define LCD_NO_PANEL ((int)0x803f0c03)
@@ -636,7 +635,7 @@ static __attribute__((noinline)) int initLcd(void) /* name unknown */
 
 int module_start(unsigned arglen, void *argp)
 {
-	if (ksceKernelSearchModuleByName("SceOled") >= 0)
+	if (SceModulemgrForDriver_BBE1771C("SceOled") >= 0)
 		return 1;
 	return initLcd() < 0;
 }

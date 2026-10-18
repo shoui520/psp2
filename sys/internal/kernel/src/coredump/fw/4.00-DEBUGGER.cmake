@@ -249,15 +249,15 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForKernel_C3EF4055
 	PUIDGetPUIDVectorByGUID
 	sceKernelGetModuleInfoForDebugger
-	ksceKernelGetLibraryList
+	sceKernelGetLibraryList
 	sceKernelGetMetaDataForDebugger
-	ksceKernelGetModuleFingerprint
+	SceModulemgrForKernel_337A3908
 	sceKernelUnlinkNormalSyscall
-	ksceKernelGetModulePath
-	ksceKernelGetLibraryClientList
-	ksceKernelGetLibraryExportInfoForDebugger
-	ksceKernelGetLibraryInfoForDebugger
-	ksceKernelGetModuleInfo
+	SceModulemgrForKernel_79E761B5
+	sceKernelGetLibraryClientList
+	sceKernelGetLibraryExportInfoForDebugger
+	sceKernelGetLibraryInfoForDebugger
+	SceModulemgrForKernel_DAA90093
 	memset
 	strncmp
 	memcpy

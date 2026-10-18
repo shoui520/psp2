@@ -78,7 +78,7 @@ set(MODULE_IMPORT_NIDS
 	0x4E29D3B6:F:0x382C71E8
 )
 set(MODULE_IMPORT_FUNCS
-	ksceKernelGetModuleCBByAddr
+	SceModulemgrForKernel_1728612F
 	sceKernelSignalSema
 	sceKernelSetEventFlag
 	SceThreadmgrForKernel_6C1F092F

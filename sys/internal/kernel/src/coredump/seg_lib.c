@@ -2,7 +2,8 @@
 
 #include <sysmem/debug.h>
 #include <kernel/error.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
+#include <modulemgr/modulemgr_debugger.h>
 #include "writer_internal.h"
 #include "seg_internal.h"
 
@@ -13,7 +14,7 @@ extern int oalGetLibInfo(SceUID pid, SceUID libraryId, CoredumpLibraryInfo *info
 extern unsigned int oalGetLibNumFuncAndVar(SceUID pid,
 	const CoredumpLibraryInfo *info);
 extern void oalGetLibExportInfo(SceUID pid, SceUID libraryId,
-	SceKernelModuleExportEntry *entries, SceSize capacity, SceSize skip);
+	SceKernelLibraryExportEntry *entries, SceSize capacity, SceSize skip);
 extern unsigned int oalGetLibNumClient(SceUID pid,
 	const CoredumpLibraryInfo *info);
 extern void oalGetLibClientInfo(SceUID pid, SceUID libraryId,
@@ -74,7 +75,7 @@ static int _calcSize(SegIf *segment)
 	memMgrLocalFree(ids);
 	segment->numPhdr = 1;
 	segment->dataSize = namesSize + sizeof(CoredumpLibraryInfo) * (i + 1) +
-		2156 + numExports * sizeof(SceKernelModuleExportEntry) +
+		2156 + numExports * sizeof(SceKernelLibraryExportEntry) +
 		(i + numClients) * sizeof(SceUID);
 	return 0;
 }
@@ -87,7 +88,7 @@ static int _writeSegs(SegIf *segment)
 	CoredumpNoteHeader header;
 	char name[256];
 	SceUID *ids, *clients;
-	SceKernelModuleExportEntry *exports;
+	SceKernelLibraryExportEntry *exports;
 	unsigned int i, remaining, capacity, chunk, skip, numClients;
 	SceSize padding;
 	int result;

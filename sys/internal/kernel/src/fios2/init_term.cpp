@@ -4,7 +4,7 @@
  * overlays and directory handles when it ends.
  */
 
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/processmgr.h>
 #include <sysmem/procevent.h>
 extern "C" {

@@ -1440,7 +1440,7 @@ SceUInt32 vshNpDrmUpdateAccountId(void *a, void *b)
 SceUID vshKernelSearchModuleByName(const char *name)
 {
 	SceUInt32 t = sceSyscallEnter();
-	SceUID ret = ksceKernelSearchModuleByName(name);
+	SceUID ret = SceModulemgrForDriver_BBE1771C(name);
 
 	sceSyscallLeave(t);
 	return ret;

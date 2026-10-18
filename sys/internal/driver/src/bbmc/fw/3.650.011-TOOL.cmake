@@ -259,7 +259,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoClose
 	sceKernelRegisterSysEventHandler
 	sceKernelUnregisterSysEventHandler
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	SceQafMgrForDriver_BFD5E463
 	sceSblACMgrIsSystemProgram
 	ScePmMgrForDriver_2AC815A2

@@ -96,17 +96,17 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateProcess
 	sceKernelDelayThread
 	sceKernelGetSystemTimeWide
-	ksceKernelStopUnloadModule
-	ksceKernelStartModule
-	ksceKernelStopModule
-	ksceKernelLoadStartModule
-	ksceKernelUnloadModule
-	ksceKernelLoadModule
-	ksceKernelMountBootfs
-	ksceKernelModuleUnloadMySelf
-	ksceKernelFinalizeKbl
-	ksceKernelUmountBootfs
-	ksceKernelRegisterModulesAfterBoot
+	SceModulemgrForDriver_03B30B7E
+	sceKernelStartModule
+	SceModulemgrForDriver_100DAEB9
+	SceModulemgrForDriver_189BFBBB
+	sceKernelUnloadModule
+	sceKernelLoadModule
+	sceKernelMountBootimageFS
+	SceModulemgrForKernel_2F82EEBC
+	sceKernelFinalizeKbl
+	sceKernelUmountBootimageFS
+	sceKernelRegisterModulesAfterBoot
 	ksceIoLseek
 	ksceIoOpen
 	ksceIoGetstat

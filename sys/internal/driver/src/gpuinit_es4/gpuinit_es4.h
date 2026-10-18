@@ -2,13 +2,13 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/modulemgr.h>
 #include <gpu/sgxmkif_sce.h>
 #include "../gpu_es4/srvkm/sgxutils_sce.h"
 #include "../gpu_es4/srvkm/perproc_sce.h"
 #include "../gpu_es4/srvkm/power_sce.h"
 #include "../gpu_es4/srvkm/gpu-mmu.h"
 #include <psp2kern/lowio/pervasive.h>
+#include <modulemgr/modulemgr.h>
 
 IMG_BOOL OSProcHasPrivSrvInit(IMG_VOID);
 IMG_UINT32 OSGetCurrentProcessIDKM(IMG_VOID);
@@ -44,4 +44,3 @@ PVRSRV_ERROR DevInitSGXPart2KM(PVRSRV_PER_PROCESS_DATA *psPerProc,
 int ksceGpuMmuMapMemory(GpuMmuContext *context, SceUInt32 vaddr, void *base,
 			SceUInt32 size, SceUInt32 flags);
 int ksceGpuMmuUnmapMemory(GpuMmuContext *context, SceUInt32 vaddr, SceUInt32 size);
-int ksceKernelGetModuleInfoByAddr(const void *address, SceKernelModuleInfo *info);

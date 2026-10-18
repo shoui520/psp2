@@ -1,7 +1,7 @@
 /* SceAvcodec process event dispatch. */
 #include <processmgr/processmgr.h>
 #include <sysmem/procevent.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 
 extern int _sceVideocodecProcessExitEntry(SceUID pid, SceUInt32 type);
 extern int _sceDsp0VideocodecProcessExitEntry(SceUID pid, SceUInt32 type);

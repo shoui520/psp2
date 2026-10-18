@@ -7,7 +7,7 @@
  */
 
 #include <sysmem/cpu.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/debug.h>
 #include <intrmgr/intrmgr.h>

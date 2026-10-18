@@ -103,7 +103,7 @@ int verifyUserVideoRecord(MgVideoContext *context, int index,
 
 	if (index < 0 || (result = timingsafe_memcmp(headerTag,
 			&context->records.recordHeaderTags[index], 8)) != 0) {
-		record = SceProcessmgrForDriver_5468892A(input->size, 0);
+		record = sceKernelAllocOwnProcessHeap(input->size, 0);
 		if (record == 0)
 			return (int)0x8050c004;
 		SceSysmemForDriver_BC996A7A(record, input->data, input->size);
@@ -135,7 +135,7 @@ int installUserVideoRecord(MgVideoContext *context, const MgVideoUserBuffer *inp
 		result = slot;
 		goto translateResult;
 	}
-	record = SceProcessmgrForDriver_5468892A(input->size, 0);
+	record = sceKernelAllocOwnProcessHeap(input->size, 0);
 	if (record == 0) {
 		SceMagicGateForDriver_144BFA76(slot);
 		return (int)0x8050c004;
@@ -382,7 +382,7 @@ int openUserVideoKeyring(void *argument)
 						      16, &zeroVideoBlock);
 	if (result < 0)
 		goto error;
-	copy = SceProcessmgrForDriver_5468892A(16048, 0);
+	copy = sceKernelAllocOwnProcessHeap(16048, 0);
 	if (copy == 0)
 		return (int)0x8050c004;
 	size = 16 * selected;
@@ -1761,7 +1761,7 @@ int getUserVideoPlaybackInfo(int handle, void *output, unsigned int outputSize,
 	size = input->size - sizeof(MgVideoRecordPrefix);
 	if (size > 21056)
 		return (int)0x8050c051;
-	copy = SceProcessmgrForDriver_5468892A(size, 0);
+	copy = sceKernelAllocOwnProcessHeap(size, 0);
 	if (!copy)
 		return (int)0x8050c004;
 	SceSysmemForDriver_BC996A7A(copy, (const uint8_t *)input->data +
@@ -1859,7 +1859,7 @@ int copyVideoEkb2RecordToUser(int handle, const MgVideoUserBuffer *output)
 	}
 	buffer = destination;
 	if (size) {
-		copy = SceProcessmgrForDriver_5468892A(size, 0);
+		copy = sceKernelAllocOwnProcessHeap(size, 0);
 		if (!copy)
 			return (int)0x8050c004;
 		buffer = copy;
@@ -1912,7 +1912,7 @@ int generateUserVideoKeyring(int handle, const MgVideoUserBuffer *output,
 		return (int)0x8050c002;
 	if ((unsigned int)mode - 4U > 2)
 		return (int)0x8050c033;
-	buffer = SceProcessmgrForDriver_5468892A(sizeof(*buffer), 0);
+	buffer = sceKernelAllocOwnProcessHeap(sizeof(*buffer), 0);
 	if (!buffer)
 		return (int)0x8050c004;
 	flags = avOut->fields.controlFlags;
@@ -2084,7 +2084,7 @@ int replaceUserVideoKeyring(int handle, unsigned int index, int blockNumber,
 	if (!(context->validRecordMask & (1U << index)))
 		return (int)0x8050c013;
 	allocationSize = keyringSize < sizeof(*buffer) ? keyringSize : sizeof(*buffer);
-	buffer = SceProcessmgrForDriver_5468892A(allocationSize, 0);
+	buffer = sceKernelAllocOwnProcessHeap(allocationSize, 0);
 	if (!buffer)
 		return (int)0x8050c004;
 	SceSysmemForDriver_BC996A7A(buffer, keyringData, allocationSize);
@@ -2290,7 +2290,7 @@ int updateUserVideoPlaybackPeriod(int handle, unsigned int index, int blockNumbe
 		allocationSize = keyringCopy.size - sizeof(buffer->prefix);
 	if (allocationSize > sizeof(*buffer))
 		return (int)0x8050c051;
-	buffer = SceProcessmgrForDriver_5468892A(allocationSize, 0);
+	buffer = sceKernelAllocOwnProcessHeap(allocationSize, 0);
 	if (!buffer)
 		return (int)0x8050c004;
 	SceSysmemForDriver_BC996A7A(buffer, (const uint8_t *)keyringCopy.data +

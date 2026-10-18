@@ -271,7 +271,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDeci4pCpupForDriver_C0AB956B
 	SceDeci4pCpupForDriver_DAC4F630
 	ksceSblAuthMgrVerifySpfsoCtx
-	ksceKernelLoadPtLoadSegForFwloader
+	sceKernelLoadPtLoadSegForFwloader
 	SceDipswForDriver_A98FC2FD
 )
 set(MODULE_IMPORT_VARS

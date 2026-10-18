@@ -17,6 +17,7 @@
 #include <sysmem/sysevent.h>
 #include <sysmem/procevent.h>
 #include <sysmem/sysroot.h>
+#include <modulemgr/modulemgr.h>
 
 /* Names unknown: hardware operations identified by their import NIDs. */
 int SceUdcdForDriver_1A5A3851(void);
@@ -24,6 +25,5 @@ int SceUdcdForDriver_2A234CAF(int port);
 int SceUdcdForDriver_9E7F7EFE(void);
 int SceUdcdForDriver_D01CFD22(void);
 int SceUdcdForDriver_E9E75C49(int port);
-int ksceKernelSearchModuleByName(const char *name);
 int sceUsbServAccessoryActivate(void);
 int sceUsbServAccessoryDeactivate(void);

@@ -9,7 +9,7 @@
 #pragma once
 
 #include <psp2kern/types.h>
-#include <psp2kern/kernel/modulemgr.h>
+#include <modulemgr/modulemgr.h>
 #include <sysmem/des.h>
 #include <gpu/sgxmkif_sce.h>
 #include <gpu/sgx_regs.h>

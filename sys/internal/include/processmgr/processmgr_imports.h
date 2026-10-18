@@ -29,6 +29,7 @@
 #include <sysmem/sysroot.h>
 #include <sysmem/utils.h>
 #include <excpmgr/excpmgr.h>
+#include <modulemgr/modulemgr.h>
 
 /* SceSblACMgrForKernel */
 int SceSblACMgrForKernel_sceSblACMgrIsGameProgram(SceUID pid);
@@ -36,14 +37,8 @@ int SceSblACMgrForKernel_49509A83(SceUID pid);
 int SceSblACMgrForKernel_BBA13D9C(void);	/* vitasdk: ksceSblACMgrIsDevelopmentMode2 */
 
 /* SceModulemgrForKernel / SceModulemgrForDriver */
-int ksceKernelGetLibraryDBFlags(SceUID pid, SceUInt32 *flags);
-SceUID ksceKernelGetModuleIdByPid(SceUID pid);
-void *ksceKernelGetModuleEntryPoint(SceUID modid);
-int ksceKernelStartPreloadingModules(SceUID pid);
-SceUID ksceKernelLoadProcessImage(SceUID pid, const char *path, int flags, void *authInfo,
+SceUID sceKernelLoadProcessImage(SceUID pid, const char *path, int flags, void *authInfo,
 				  void *imageInfo, const void *shims);
-int ksceKernelLoadPreloadingModules(SceUID pid, void *param, SceUInt32 flags);
-int ksceKernelUnloadProcessModules(SceUID pid);
 
 /* SceThreadmgrForKernel */
 int sceKernelThreadMgrProcessDeleteBeforePUIDClose(void *process);

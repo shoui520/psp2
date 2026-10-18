@@ -157,7 +157,7 @@ int SceProcessmgrForDriver_1C70501E(SceUID pid);
 int SceProcessmgrForDriver_3801D7D6(const char *name, SceSize size);
 void *SceProcessmgrForDriver_3B33FFBA(SceSize size, void *opt);
 int SceProcessmgrForDriver_4140D633(const ProcessmgrLibcOps *ops);
-void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);
+void *sceKernelAllocOwnProcessHeap(SceSize size, void *opt);
 int SceProcessmgrForDriver_594319C7(SceUID pid);
 int SceProcessmgrForDriver_5BDA978F(SceUID pid, SceUInt64 *time);
 /* vitasdk: ksceKernelGetProcessLocalStorageAddrForPid */

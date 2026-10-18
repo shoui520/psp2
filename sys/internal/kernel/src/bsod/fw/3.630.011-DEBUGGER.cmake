@@ -90,7 +90,7 @@ set(MODULE_IMPORT_FUNCS
 	vfsUmount
 	ksceVfsDeleteVfs
 	vfsMount
-	ksceKernelGetModuleInfoMinByAddr
+	SceModulemgrForKernel_5564A860
 	SceDebugForDriver_02B04343
 	SceDebugForDriver_391B5B74
 	SceDebugForDriver_62466B0A

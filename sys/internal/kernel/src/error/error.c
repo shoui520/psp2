@@ -11,7 +11,6 @@
  */
 
 #include <psp2kern/io/fcntl.h>
-#include <psp2kern/kernel/modulemgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr.h>
@@ -298,7 +297,7 @@ static int ErrorHistoryPost(ErrorTable *table, ErrorRecord *rec)
 	fw.size = sizeof(fw);
 	sceKernelGetSystemSwVersion(&fw);
 	e->rec.swVersion = fw.version;
-	e->rec.swVersionExtra = fw.unk_24;
+	e->rec.swVersionExtra = fw.versionExtra;
 	if (s_defaultFormatSet & 1)
 		e->rec.format = s_defaultFormat;
 	ksceRtcGetCurrentTick((SceRtcTick *)&e->tick);

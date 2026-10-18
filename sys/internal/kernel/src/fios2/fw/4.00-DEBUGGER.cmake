@@ -103,7 +103,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FA54D49A
 	sceKernelCreateMutex
 	SceProcessmgrForDriver_3801D7D6
-	SceProcessmgrForDriver_5468892A
+	sceKernelAllocOwnProcessHeap
 	sceKernelFreeRemoteProcessHeap
 	SceProcessmgrForDriver_AF80F39C
 	SceProcessmgrForDriver_D141C076

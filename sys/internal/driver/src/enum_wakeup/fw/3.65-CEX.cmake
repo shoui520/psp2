@@ -194,7 +194,7 @@ set(MODULE_IMPORT_FUNCS
 	ksceIoRead
 	ksceIoClose
 	SceQafMgrForDriver_52B4E164
-	ksceKernelSearchModuleByName
+	SceModulemgrForDriver_BBE1771C
 	ScePervasiveForDriver_146108D4
 	ScePervasiveForDriver_2FB5F88F
 	ScePervasiveForDriver_3D8A8712
