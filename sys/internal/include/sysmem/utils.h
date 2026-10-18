@@ -19,11 +19,6 @@
 extern "C" {
 #endif
 
-/* the AES key schedule the AES init exports set up (an SceAesCompactContext or SceAesFullContext) */
-typedef struct SceAesContext {
-	SceUInt8 schedule[0x3d0];
-} SceAesContext;
-
 /* an AES-CMAC computation (aes_cmac.c) */
 struct CmacContext {
 	SceAesCompactContext aes;
@@ -52,7 +47,7 @@ int SceKernelUtilsForDriver_236A9097(SceSha256Context *context, const void *plai
 /* vitasdk: ksceHmacSha1Digest */
 int SceKernelUtilsForDriver_29A28957(const void *key, SceSize key_len, const void *plain, SceSize len, void *digest);
 /* vitasdk: ksceAesEncrypt2 */
-int SceKernelUtilsForDriver_302947B6(SceAesContext *ctx, const void *src, void *dst);
+int SceKernelUtilsForDriver_302947B6(SceAesCompactContext *ctx, const void *src, void *dst);
 SceUInt32 SceKernelUtilsForDriver_335AF34D(SceXorshift128State *state);
 /* vitasdk: ksceGzipDecompress */
 int SceKernelUtilsForDriver_367EE3DF(void *dst, SceSize dst_size, const void *src, uint32_t *crc32);
@@ -71,7 +66,7 @@ int SceKernelUtilsForDriver_5B9BCD75(const void *src, unsigned char *cmf, unsign
 /* vitasdk: ksceGzipGetCompressedData */
 const void *SceKernelUtilsForDriver_63619124(const void *src);
 /* vitasdk: ksceAesInit3 */
-int SceKernelUtilsForDriver_72408E29(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
+int SceKernelUtilsForDriver_72408E29(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
 /* vitasdk: ksceSha224BlockUpdate */
 int SceKernelUtilsForDriver_7556E611(SceSha224Context *context, const void *plain, SceSize len);
 /* vitasdk: ksceHmacSha224Digest */
@@ -95,23 +90,23 @@ int SceKernelUtilsForDriver_A773A6A8(const void *plain, SceSize len, void *diges
 int SceKernelUtilsForDriver_B55C69B7(SceXorshift128State *state);
 int SceKernelUtilsForDriver_BB6E35CD(struct CmacContext *ctx, const void *plain, SceSize length);
 /* vitasdk: ksceAesEncrypt1 */
-int SceKernelUtilsForDriver_C2A61770(SceAesContext *context, const void *src, void *dst);
+int SceKernelUtilsForDriver_C2A61770(SceAesFullContext *context, const void *src, void *dst);
 /* vitasdk: ksceSha224BlockInit */
 int SceKernelUtilsForDriver_C762EA6D(SceSha224Context *context);
 const char *SceKernelUtilsForDriver_CD3AE08F(const void *src);	/* vitasdk: ksceGzipGetComment */
 int SceKernelUtilsForDriver_D428CC2A(SceUInt32 seed);	/* vitasdk: ksceMt19937GlobalInit */
 /* vitasdk: ksceAesDecrypt1 */
-int SceKernelUtilsForDriver_D8678061(SceAesContext *context, const void *src, void *dst);
+int SceKernelUtilsForDriver_D8678061(SceAesFullContext *context, const void *src, void *dst);
 int SceKernelUtilsForDriver_D8FAEFD4(const void *src);	/* vitasdk: ksceGzipIsValid */
 /* vitasdk: ksceSha256BlockInit */
 int SceKernelUtilsForDriver_D909FA2C(SceSha256Context *context);
 /* vitasdk: ksceAesDecrypt2 */
-int SceKernelUtilsForDriver_E39CD272(SceAesContext *context, const void *src, void *dst);
+int SceKernelUtilsForDriver_E39CD272(SceAesCompactContext *context, const void *src, void *dst);
 int SceKernelUtilsForDriver_E4390FFA(SceSha1Context *ctx);	/* vitasdk: ksceSha1BlockInit */
 /* vitasdk: ksceAesInit2 */
-int SceKernelUtilsForDriver_EDA97D6D(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
+int SceKernelUtilsForDriver_EDA97D6D(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
 /* vitasdk: ksceAesInit1 */
-int SceKernelUtilsForDriver_F12B6451(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
+int SceKernelUtilsForDriver_F12B6451(SceAesFullContext *ctx, SceSize blocksize, SceSize keysize, const void *key);
 const char *SceKernelUtilsForDriver_F901FD3E(const void *src);	/* vitasdk: ksceGzipGetName */
 /* vitasdk: ksceSha224BlockResult */
 int SceKernelUtilsForDriver_FBF2A442(SceSha224Context *context, void *result);

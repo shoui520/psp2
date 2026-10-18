@@ -16,7 +16,7 @@ int sceNetPsAesEncrypt(unsigned char *destination, const unsigned char *source,
 {
 	int fullLength = length & ~15;
 	int tailLength = length & 15;
-	SceAesContext *context;
+	SceAesFullContext *context;
 	unsigned char *output;
 	const unsigned char *input, *chain = initialVector;
 	int result, i;
@@ -76,7 +76,7 @@ int sceNetPsAesDecrypt(unsigned char *destination, const unsigned char *source,
 {
 	int tailLength = length & 15;
 	int fullLength = length & ~15;
-	SceAesContext *context;
+	SceAesFullContext *context;
 	const unsigned char *chain;
 	unsigned char *output;
 	int result, i;

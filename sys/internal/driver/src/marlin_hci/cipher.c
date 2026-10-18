@@ -1,20 +1,20 @@
 /* Descriptive source name: the original library has no debug records. */
 #include "cipher.h"
 
-typedef int (*MarlinBlockTransform)(SceAesContext *key, const void *data,
+typedef int (*MarlinBlockTransform)(SceAesFullContext *key, const void *data,
 				    void *output);
 
 MarlinBlockTransform marlinBlockEncryptors[2] = { 0, MarlinEncryptBlock };
 MarlinBlockTransform marlinBlockDecryptors[2] = { 0, MarlinDecryptBlock };
 
 typedef int (*MarlinEncryptMode)(const MarlinCipherContext *context,
-				 SceAesContext *key, const unsigned char *data,
+				 SceAesFullContext *key, const unsigned char *data,
 				 unsigned int size, unsigned char *encrypted,
 				 unsigned int *encryptedSize,
 				 const unsigned char *paddingBlock,
 				 unsigned int paddingSize);
 typedef int (*MarlinDecryptMode)(const MarlinCipherContext *context,
-				 SceAesContext *key, const unsigned char *encrypted,
+				 SceAesFullContext *key, const unsigned char *encrypted,
 				 unsigned int size, unsigned char *data,
 				 unsigned int *dataSize);
 
@@ -153,7 +153,7 @@ int MarlinCipherPreparePadding(const MarlinCipherContext *context,
 }
 
 int MarlinCipherEncryptEcb(const MarlinCipherContext *context,
-			   SceAesContext *key, const unsigned char *data,
+			   SceAesFullContext *key, const unsigned char *data,
 			   unsigned int size, unsigned char *encrypted,
 			   unsigned int *encryptedSize,
 			   const unsigned char *paddingBlock,
@@ -200,7 +200,7 @@ out:
 }
 
 int MarlinCipherDecryptEcb(const MarlinCipherContext *context,
-			   SceAesContext *key, const unsigned char *encrypted,
+			   SceAesFullContext *key, const unsigned char *encrypted,
 			   unsigned int size, unsigned char *data,
 			   unsigned int *dataSize)
 {
@@ -263,7 +263,7 @@ out:
 }
 
 int MarlinCipherEncryptCbc(const MarlinCipherContext *context,
-			   SceAesContext *key, const unsigned char *data,
+			   SceAesFullContext *key, const unsigned char *data,
 			   unsigned int size, unsigned char *encrypted,
 			   unsigned int *encryptedSize,
 			   const unsigned char *paddingBlock,
@@ -318,7 +318,7 @@ out:
 }
 
 int MarlinCipherDecryptCbc(const MarlinCipherContext *context,
-			   SceAesContext *key, const unsigned char *encrypted,
+			   SceAesFullContext *key, const unsigned char *encrypted,
 			   unsigned int size, unsigned char *data,
 			   unsigned int *dataSize)
 {
@@ -393,7 +393,7 @@ unsigned int MarlinCipherSetKey(MarlinCipherContext *context,
 {
 	int result = 0;
 	int operation;
-	SceAesContext *keySchedule = 0;
+	SceAesFullContext *keySchedule = 0;
 
 	if (context == 0) {
 		result = 3;
@@ -556,7 +556,7 @@ int MarlinCipherEncrypt(MarlinCipherContext *context, const void *data,
 {
 	int result = 0;
 	MarlinCipherContext *cipher = context;
-	SceAesContext *keySchedule;
+	SceAesFullContext *keySchedule;
 	unsigned char paddingBlock[16];
 	unsigned int paddingSize;
 
@@ -581,7 +581,7 @@ int MarlinCipherProcess(MarlinCipherContext *context, const void *input,
 {
 	int result = 0;
 	MarlinCipherContext *cipher = context;
-	SceAesContext *keySchedule = 0;
+	SceAesFullContext *keySchedule = 0;
 
 	keySchedule = cipher->keySchedule;
 	result = MarlinCipherValidate(cipher);
@@ -632,11 +632,11 @@ int MarlinCipherTransformBlock(const void *key, const void *input, void *output)
 	return result;
 }
 
-int MarlinKeyScheduleCreate(SceAesContext **context, int operation,
+int MarlinKeyScheduleCreate(SceAesFullContext **context, int operation,
 			    unsigned int keySize, const void *key)
 {
 	unsigned int result = 0;
-	SceAesContext *schedule = 0;
+	SceAesFullContext *schedule = 0;
 	unsigned int keyBits = 0;
 	unsigned int blockBits = 0;
 
@@ -660,19 +660,19 @@ out:
 	return result;
 }
 
-int MarlinKeyScheduleDestroy(SceAesContext *context)
+int MarlinKeyScheduleDestroy(SceAesFullContext *context)
 {
 	int result = 0;
-	SceAesContext *schedule = context;
+	SceAesFullContext *schedule = context;
 
 	MarlinFreeMemory(0, schedule);
 	return result;
 }
 
-int MarlinEncryptBlock(SceAesContext *key, const void *data, void *encrypted)
+int MarlinEncryptBlock(SceAesFullContext *key, const void *data, void *encrypted)
 {
 	int result = 0;
-	SceAesContext *schedule = key;
+	SceAesFullContext *schedule = key;
 
 	if (schedule == 0) {
 		result = 0x22020004;
@@ -687,10 +687,10 @@ out:
 	return result;
 }
 
-int MarlinDecryptBlock(SceAesContext *key, const void *encrypted, void *data)
+int MarlinDecryptBlock(SceAesFullContext *key, const void *encrypted, void *data)
 {
 	int result = 0;
-	SceAesContext *schedule = key;
+	SceAesFullContext *schedule = key;
 
 	if (schedule == 0) {
 		result = 0x22020004;

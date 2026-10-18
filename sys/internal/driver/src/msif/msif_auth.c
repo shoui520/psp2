@@ -74,7 +74,7 @@ int get_ecdsa_param(struct MsifEcdsaPoint *publicKey, struct MsifEcdsaCurve *cur
 		__builtin_memset(&portability, 0, sizeof(portability));
 		return -204;
 	}
-	if (SceKernelUtilsForDriver_F12B6451((SceAesContext *)&state.aes, 128, 128,
+	if (SceKernelUtilsForDriver_F12B6451(&state.aes, 128, 128,
 		portability.msg + 16) < 0) {
 		__builtin_memset(&portability, 0, sizeof(portability));
 		memset(&state, 0, sizeof(state));
@@ -84,7 +84,7 @@ int get_ecdsa_param(struct MsifEcdsaPoint *publicKey, struct MsifEcdsaCurve *cur
 	if (blockBytes)
 		memcpy(state.chain, gMsifParameterIv, blockBytes);
 	for (offset = 0; offset < sizeof(gMsifEncryptedParameters); offset += 16) {
-		SceKernelUtilsForDriver_D8678061((SceAesContext *)&state.aes,
+		SceKernelUtilsForDriver_D8678061(&state.aes,
 			gMsifEncryptedParameters.bytes + offset, decoded.bytes);
 		blockBytes = state.aes.encryption.blockWords * 4;
 		i = 0;

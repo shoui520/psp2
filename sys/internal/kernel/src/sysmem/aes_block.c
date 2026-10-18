@@ -218,14 +218,15 @@ const uint8_t aesInverseSubstitution[256] = {
 };
 
 
-int SceKernelUtilsForDriver_302947B6(SceAesContext *ctx, const void *src, void *dst)
+/* the encryption reads only the encryption schedule, which a compact context holds too */
+int SceKernelUtilsForDriver_302947B6(SceAesCompactContext *ctx, const void *src, void *dst)
 {
-	return SceKernelUtilsForDriver_C2A61770(ctx, src, dst);
+	return SceKernelUtilsForDriver_C2A61770((SceAesFullContext *)ctx, src, dst);
 }
 
-int SceKernelUtilsForDriver_C2A61770(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_C2A61770(SceAesFullContext *context, const void *src, void *dst)
 {
-	const SceAesCompactContext *ctx = (const SceAesCompactContext *)context;
+	const SceAesCompactContext *ctx = &context->encryption;
 	const uint32_t *input = src;
 	uint32_t *output = dst;
 	const uint32_t *key = ctx->roundKeys;
@@ -298,9 +299,9 @@ int SceKernelUtilsForDriver_C2A61770(SceAesContext *context, const void *src, vo
 	return 0;
 }
 
-int SceKernelUtilsForDriver_E39CD272(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_E39CD272(SceAesCompactContext *context, const void *src, void *dst)
 {
-	const SceAesCompactContext *ctx = (const SceAesCompactContext *)context;
+	const SceAesCompactContext *ctx = context;
 	const uint32_t *input = src;
 	uint32_t *output = dst;
 	const uint32_t *key = ctx->roundKeys;
@@ -373,9 +374,9 @@ int SceKernelUtilsForDriver_E39CD272(SceAesContext *context, const void *src, vo
 	return 0;
 }
 
-int SceKernelUtilsForDriver_D8678061(SceAesContext *context, const void *src, void *dst)
+int SceKernelUtilsForDriver_D8678061(SceAesFullContext *context, const void *src, void *dst)
 {
-	const SceAesFullContext *full = (const SceAesFullContext *)context;
+	const SceAesFullContext *full = context;
 	const SceAesCompactContext *ctx = &full->encryption;
 	const uint32_t *input = src;
 	uint32_t *output = dst;

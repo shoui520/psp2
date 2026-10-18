@@ -541,19 +541,19 @@ int AesInit(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize,
 	return 0;
 }
 
-int SceKernelUtilsForDriver_F12B6451(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_F12B6451(SceAesFullContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
-	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 0);
+	return AesInit(&ctx->encryption, blocksize, keysize, key, 0);
 }
 
-int SceKernelUtilsForDriver_EDA97D6D(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_EDA97D6D(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
-	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 1);
+	return AesInit(ctx, blocksize, keysize, key, 1);
 }
 
-int SceKernelUtilsForDriver_72408E29(SceAesContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
+int SceKernelUtilsForDriver_72408E29(SceAesCompactContext *ctx, SceSize blocksize, SceSize keysize, const void *key)
 {
-	return AesInit((SceAesCompactContext *)ctx, blocksize, keysize, key, 2);
+	return AesInit(ctx, blocksize, keysize, key, 2);
 }
 
 int HmacDigest(const void *key, SceSize keyLen, const void *plain, SceSize len,

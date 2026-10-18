@@ -35,10 +35,10 @@ int SceKernelUtilsForDriver_0C39954E(struct CmacContext *ctx,
 	if (key == NULL || ctx == NULL)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	memset(ctx, 0, sizeof(*ctx));
-	ret = SceKernelUtilsForDriver_EDA97D6D((SceAesContext *)&ctx->aes, blockBits, keyBits, key);
+	ret = SceKernelUtilsForDriver_EDA97D6D(&ctx->aes, blockBits, keyBits, key);
 	if (ret < 0)
 		return ret;
-	SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, encryptedZero);
+	SceKernelUtilsForDriver_302947B6(&ctx->aes, ctx->chain, encryptedZero);
 	last = ctx->aes.blockWords * 4 - 1;
 	index = 0;
 	do {
@@ -90,7 +90,7 @@ int SceKernelUtilsForDriver_BB6E35CD(struct CmacContext *ctx,
 			}
 			for (index = 0; index < blockBytes; index++)
 				ctx->chain[index] ^= block[index];
-			SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, ctx->chain);
+			SceKernelUtilsForDriver_302947B6(&ctx->aes, ctx->chain, ctx->chain);
 			if (pending <= blockBytes)
 				break;
 			pending -= blockBytes;
@@ -127,7 +127,7 @@ int SceKernelUtilsForDriver_222986EF(struct CmacContext *ctx, void *result)
 				ctx->chain[index] ^= ctx->partialSubkey[index];
 			ctx->chain[ctx->remains] ^= 0x80;
 		}
-		SceKernelUtilsForDriver_302947B6((SceAesContext *)&ctx->aes, ctx->chain, ctx->result);
+		SceKernelUtilsForDriver_302947B6(&ctx->aes, ctx->chain, ctx->result);
 		ctx->computed = 1;
 	}
 	memcpy(result, ctx->result, blockBytes);

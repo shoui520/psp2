@@ -1548,13 +1548,13 @@ int NpDrmPackageDecryptOnStack(void *argp)
 __attribute__((noinline)) int NpDrmPackageAesInitialize(
 	SceAesCompactContext *context, const void *key, unsigned int keySize)
 {
-	return SceKernelUtilsForDriver_EDA97D6D((void *)context, 128, keySize * 8, key);
+	return SceKernelUtilsForDriver_EDA97D6D(context, 128, keySize * 8, key);
 }
 
 __attribute__((noinline)) int NpDrmPackageAesEncrypt(
 	SceAesCompactContext *context, void *output, const void *input)
 {
-	return SceKernelUtilsForDriver_302947B6((void *)context, input, output);
+	return SceKernelUtilsForDriver_302947B6(context, input, output);
 }
 
 __attribute__((noinline)) int NpDrmPackageAesCtr(const void *input,
