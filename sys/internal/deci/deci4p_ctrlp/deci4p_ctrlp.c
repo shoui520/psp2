@@ -1031,7 +1031,7 @@ static inline int btDelete(const CtrlpBtDelete *del, SceUInt32 length)
 
 	if (length < 8)
 		return CTRLP_RESULT_INVALID;
-	ret = SceBtForDriver_E6F659E0(del->mac0, del->mac1);
+	ret = SceBtForDriver_E6F659E0((uint64_t)del->mac1 << 32 | del->mac0);
 	if (ret == 0)
 		return CTRLP_RESULT_OK;
 	if (ret == SCE_BT_ERROR_REG_DELETE_CONNECTING)

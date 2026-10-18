@@ -74,5 +74,6 @@ int SceBtForDriver_D2449052(uint64_t deviceAddress, const void *data, int length
 /* vitasdk: ksceBtSendL2capEchoRequestForTest */
 int SceBtForDriver_E3A66814(uint64_t deviceAddress, const void *data, unsigned int length);
 int SceBtForDriver_E6F659E0(uint64_t deviceAddress);	/* vitasdk: ksceBtDeleteRegisteredInfo */
+#define SCE_BT_ERROR_REG_DELETE_CONNECTING	((int)0x802F0109)	/* a connection to it is open */
 int SceBtForDriver_E8E95977(const void *path, unsigned int length);	/* vitasdk: ksceBtRecvBip */
 int SceBtForDriver_EBDCC992(int configuration);	/* vitasdk: ksceBtSetConfiguration */

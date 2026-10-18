@@ -84,7 +84,7 @@ struct physicalState {
 	unsigned char forceDefault[2];
 	unsigned short generation;
 	int plsId;
-	void (*ctrlCallback)(unsigned, SceTouchData *);
+	int (*ctrlCallback)(unsigned, SceTouchData *);
 	const TouchVirtualDriver *virtualDriver;
 	unsigned reserved;
 };
@@ -1172,7 +1172,7 @@ int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 	return 0;
 }
 
-int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *))
+int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *))
 {
 	unsigned intr;
 

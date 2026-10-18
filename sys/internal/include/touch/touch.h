@@ -102,7 +102,7 @@ int sceTouchPeekRegionExt(unsigned port, void *out, unsigned count, unsigned reg
 int sceTouchRead2(unsigned device, unsigned port, void *out, unsigned count);
 int sceTouchReadRegion(unsigned port, void *out, unsigned count, unsigned regions);
 int sceTouchReadRegionExt(unsigned port, void *out, unsigned count, unsigned regions);
-int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *));
+int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *));
 int sceTouchSetProcessPrivilege(unsigned privilege);
 int sceTouchSetRegion(unsigned port, unsigned region, const void *rect, unsigned attr);
 int sceTouchSetRegionAttr(unsigned port, unsigned region, unsigned attr);

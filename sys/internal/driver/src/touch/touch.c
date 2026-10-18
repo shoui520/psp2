@@ -132,7 +132,7 @@ struct touchState {
 	unsigned char forceDefault[TOUCH_PORTS];
 	unsigned short generation;
 	int plsId;
-	void (*ctrlCallback)(unsigned, SceTouchData *);
+	int (*ctrlCallback)(unsigned, SceTouchData *);
 };
 
 /* force filter coefficients, per panel */
@@ -2036,7 +2036,7 @@ int SceTouchForDriver_3F3FBF69(const TouchProcessPriorities *priorities)
 	return 0;
 }
 
-int sceTouchSetCtrlpCallback(void (*callback)(unsigned, SceTouchData *))
+int sceTouchSetCtrlpCallback(int (*callback)(unsigned, SceTouchData *))
 {
 	unsigned intr;
 
