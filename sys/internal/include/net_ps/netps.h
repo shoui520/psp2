@@ -2,7 +2,7 @@
 #ifndef SCE_NETPS_H
 #define SCE_NETPS_H
 
-#include <psp2/net/net.h>
+#include <net.h>
 #include <scetypes.h>
 #include <stddef.h>
 

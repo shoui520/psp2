@@ -14,7 +14,7 @@
 #include <usbd/usbd.h>
 #include <usbserv/usbserv.h>
 #include <idstorage/idstorage.h>
-#include <psp2common/net.h>
+#include <net/ether.h>
 #include <stddef.h>
 #include <string.h>
 #include <sysmem/debug.h>

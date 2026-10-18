@@ -32,7 +32,6 @@
 #include <threadmgr/lw_mutex.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
-#include <psp2kern/gpu_es4.h>
 #include <sysmem/dipsw.h>
 #include "oal_internal.h"
 #include <threadmgr/threadmgr.h>
@@ -41,6 +40,7 @@
 #include <sysmem/sysclib.h>
 #include <sysmem/sysroot.h>
 #include <sysmem/ctype.h>
+#include <gpu/lockup.h>
 #include <acmgr/acmgr.h>
 #include <regmgr/regmgr.h>
 

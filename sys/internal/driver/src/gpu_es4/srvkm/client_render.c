@@ -13,7 +13,7 @@
 #include "sgxtransfer_sce.h"
 #include <stddef.h>
 #include <string.h>
-#include <psp2/kernel/error.h>
+#include <kernel/error.h>
 #include <threadmgr/threadmgr.h>
 
 PVRSRV_ERROR ResManFreeResByPtr(struct Resource *resource,

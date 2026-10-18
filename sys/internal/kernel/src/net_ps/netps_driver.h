@@ -2,7 +2,7 @@
 #define SCE_NETPS_DRIVER_H
 
 #include <scetypes.h>
-#include <psp2/net/net.h>
+#include <net.h>
 #include <net_ps/netdrv.h>
 #include <stddef.h>
 

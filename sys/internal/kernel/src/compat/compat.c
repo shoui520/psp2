@@ -19,7 +19,6 @@
 #include <sm_comm/sm_comm.h>
 #include <compat/compat_regs.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/io/devctl.h>
 #include <npdrm/npdrm.h>
 #include <string.h>
 #include <stdio.h>

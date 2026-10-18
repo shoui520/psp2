@@ -2,8 +2,6 @@
  * SceRtc: the C library time functions processmgr hands to processes.
  */
 
-#include <psp2common/kernel/processmgr.h>
-
 #include "rtc_internal.h"
 
 #define RTC_TICK_UNIX_EPOCH	62135596800000000LL
@@ -21,6 +19,11 @@ typedef struct RtcLibcTm {
 	int isdst;
 } RtcLibcTm;
 
+typedef struct RtcLibcTimeval {
+	int sec;
+	int usec;
+} RtcLibcTimeval;
+
 typedef struct RtcLibcTimezone {
 	int minutesWest;
 	int dstTime;
@@ -30,7 +33,7 @@ typedef struct RtcLibcTimeFunctions {
 	SceSize size;
 	unsigned int (*clock)(void);
 	unsigned int (*time)(unsigned int *t);
-	int (*gettimeofday)(SceKernelTimeval *tv, RtcLibcTimezone *tz);
+	int (*gettimeofday)(RtcLibcTimeval *tv, RtcLibcTimezone *tz);
 	int (*gmtime)(const unsigned int *t, RtcLibcTm *tm);
 	int (*localtime)(const unsigned int *t, RtcLibcTm *tm);
 	int (*mktime)(RtcLibcTm *tm, unsigned int *t, RtcLibcTimezone *tz);
@@ -212,7 +215,7 @@ static int rtcLibcLocaltime(const unsigned int *t, RtcLibcTm *tm)
 	return 0;
 }
 
-static int rtcLibcGettimeofday(SceKernelTimeval *tv, RtcLibcTimezone *tz)
+static int rtcLibcGettimeofday(RtcLibcTimeval *tv, RtcLibcTimezone *tz)
 {
 	SceDateTime time;
 	SceRtcTick tick;

@@ -10,7 +10,6 @@
 #include <sysmem/suspend.h>
 #include <sysmem/utils.h>
 #include <iofilemgr/iofilemgr.h>
-#include <psp2kern/io/devctl.h>
 #include <sysmem/sblaimgr.h>
 #include "pfsmgr_internal.h"
 

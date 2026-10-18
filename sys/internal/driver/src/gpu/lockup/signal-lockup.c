@@ -8,6 +8,7 @@
 #include <sysmem/sblaimgr.h>
 #include <acmgr/acmgr.h>
 #include <sysmem/sysclib.h>
+#include <gpu/lockup.h>
 
 int signalMutex = -1;
 int signalCond = -1;

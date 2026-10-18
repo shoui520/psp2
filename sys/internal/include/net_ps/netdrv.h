@@ -9,7 +9,7 @@
 #pragma once
 
 #include <scetypes.h>
-#include <psp2common/net.h>
+#include <net/ether.h>
 #include <stddef.h>
 
 /* a packet's data: the frame runs from data to end */

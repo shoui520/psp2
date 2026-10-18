@@ -1,6 +1,6 @@
 /* SceNetPs platform adapters, adjacent to Sony's system_os.c debug records. */
-#include <psp2/registrymgr.h>
 #include <acmgr/acmgr.h>
+#include <regmgr/regmgr.h>
 #include <sysmem/sblaimgr.h>
 #include <rtc/rtc.h>
 #include <ss_mgr/ss_mgr.h>

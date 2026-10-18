@@ -11,7 +11,7 @@
 #include <lowio/gpio.h>
 #include <usbd/usbd.h>
 #include <usbserv/usbserv.h>
-#include <psp2common/net.h>
+#include <net/ether.h>
 #include <stddef.h>
 #include <string.h>
 #include <net_ps/netdrv.h>

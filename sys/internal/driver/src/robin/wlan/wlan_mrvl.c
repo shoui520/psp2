@@ -1,6 +1,6 @@
 /* Marvell command family; filename attested by Sony's prototype debug records. */
 #include "../../wlanbt/wlanbt_internal.h"
-#include <psp2common/net.h>
+#include <net/ether.h>
 #include <string.h>
 
 typedef struct SceWlanBtRobinWlanMulticastRequest {

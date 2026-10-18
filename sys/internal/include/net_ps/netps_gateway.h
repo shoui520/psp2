@@ -2,7 +2,7 @@
 #ifndef SCE_NETPS_GATEWAY_H
 #define SCE_NETPS_GATEWAY_H
 
-#include <psp2/net/net.h>
+#include <net.h>
 #include <net_ps/netdrv.h>
 #include <stddef.h>
 
