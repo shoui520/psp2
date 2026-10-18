@@ -251,7 +251,7 @@ static int fiosDHBuild(SceFiosKernelDHBuild *build, SceFiosKernelDH **outDH, con
 					  index, build->minOrder, build->maxOrder) != 0) {
 				if (separator == NULL)
 					goto next;
-				build->stat->st_mode |= SCE_S_IFDIR | SCE_S_IRUSR | SCE_S_IWUSR;
+				build->stat->st_mode |= SCE_STM_FDIR | SCE_STM_RWU;
 			}
 			entries++;
 			fiosDHAddEntry(build, dh);

@@ -1,6 +1,6 @@
 /* Public PSP emulator syscalls; source filename inferred. */
 
-#include <psp2/compat.h>
+#include <compat/compat.h>
 #include <stddef.h>
 #include <acmgr/acmgr.h>
 #include <psp2kern/npdrm.h>

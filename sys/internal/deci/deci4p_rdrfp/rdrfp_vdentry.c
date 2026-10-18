@@ -101,7 +101,7 @@ static inline void setVDEntryStat(SceIoStat *stat)
 	stat->st_ctime.minute = 0;
 	stat->st_ctime.second = 0;
 	stat->st_ctime.microsecond = 0;
-	stat->st_mode = SCE_S_IFDIR | SCE_S_IRUSR | SCE_S_IWUSR;
+	stat->st_mode = SCE_STM_FDIR | SCE_STM_RWU;
 	stat->st_attr = 0;
 	stat->st_size = 0;
 	stat->st_atime = stat->st_ctime;

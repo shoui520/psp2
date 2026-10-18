@@ -268,7 +268,7 @@ static int openImage(void)
 	result = VSTOR_ERROR_PATH;
 	if (s.type == USBSTOR_TYPE_DISK) {
 		permission = sceKernelSetThreadAccessLevel(0x40);
-		s.fd = sceIoOpen(s.path, SCE_O_RDWR, SCE_S_IWSYS | SCE_S_IRSYS);
+		s.fd = sceIoOpen(s.path, SCE_O_RDWR, IO_STM_RWS);
 		length = sceIoLseek(s.fd, 0, SCE_SEEK_SET);
 		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.sector)) >= 0 &&
 		    be16(image.fat.signature) == FAT_SIGNATURE && image.fat.totalSectors &&
@@ -281,7 +281,7 @@ static int openImage(void)
 		}
 		sceKernelSetThreadAccessLevel(permission);
 	} else if (s.type == USBSTOR_TYPE_CDROM) {
-		s.fd = sceIoOpen(s.path, SCE_O_RDONLY, SCE_S_IRSYS);
+		s.fd = sceIoOpen(s.path, SCE_O_RDONLY, IO_STM_RS);
 		length = sceIoLseek(s.fd, ISO_VD_OFFSET, SCE_SEEK_SET);
 		if (length >= 0 && sceIoRead(s.fd, image.sector, sizeof(image.iso)) >= 0 &&
 		    image.iso.type == ISO_VD_PRIMARY && strncmp(image.iso.identifier, "CD001", 5) == 0) {

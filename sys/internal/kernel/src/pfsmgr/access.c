@@ -99,7 +99,7 @@ SceUInt32 pfsAdjustAttr(ScePfsPmi *pmi, SceUInt32 flags)
 
 SceUInt32 pfsCreateAttr(ScePfsPmi *pmi, SceUInt32 mode)
 {
-	SceUInt32 attr = (mode & SCE_SO_IFDIR) ? 0x8000 : 0;
+	SceUInt32 attr = (mode & IO_STA_FDIR) ? 0x8000 : 0;
 
 	if (pmi->mode == 20)
 		return attr | 5;
@@ -110,10 +110,10 @@ SceUInt32 pfsCreateAttr(ScePfsPmi *pmi, SceUInt32 mode)
 
 SceUInt32 pfsLowerMode(SceUInt32 mode)
 {
-	if (mode & SCE_S_IRUSR)
-		mode = (mode & ~SCE_S_IRUSR) | SCE_S_IROTH;
-	if (mode & SCE_S_IWUSR)
-		mode = (mode & ~SCE_S_IWUSR) | SCE_S_IWOTH;
+	if (mode & SCE_STM_RU)
+		mode = (mode & ~SCE_STM_RU) | IO_STM_RS;
+	if (mode & IO_STM_WU)
+		mode = (mode & ~IO_STM_WU) | IO_STM_WS;
 	return mode;
 }
 

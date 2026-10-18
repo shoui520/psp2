@@ -16,7 +16,7 @@
 #include <processmgr/process.h>
 #include <modulemgr/modulemgr_patch.h>
 #include <modulemgr/modulemgr.h>
-#include <psp2common/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <modulemgr/module_library.h>
 #include <sysmem/debug.h>
 #include "modulemgr_imports.h"

@@ -1503,7 +1503,7 @@ int appmgrRemoveSaveDataPath(const char *path, unsigned int missingPolicy,
 			result = 0;
 		return result;
 	}
-	if (!(stat.st_mode & SCE_S_IFDIR)) {
+	if (!(stat.st_mode & SCE_STM_FDIR)) {
 		++*entryCount;
 		return sceIoRemove(path);
 	}
@@ -1574,9 +1574,9 @@ int appmgrGetSaveDataDeviceSpace(const char *mountPoint,
 	memset(&info, 0, sizeof(info));
 	result = sceIoDevctl(mountPoint, 0x3001, NULL, 0, &info, sizeof(info));
 	if (result == 0) {
-		maxSize = info.max_size;
-		freeSize = info.free_size;
-		*allocationUnit = info.cluster_size;
+		maxSize = info.maxSize;
+		freeSize = info.freeSize;
+		*allocationUnit = info.clusterSize;
 		*totalBytes = maxSize;
 		*freeBytes = freeSize;
 	}

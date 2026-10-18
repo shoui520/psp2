@@ -3,7 +3,7 @@
 #include <psp2kern/types.h>
 #include <string.h>
 #include <sysmem/debug.h>
-#include <psp2common/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include "exfatfs_internal.h"
 
 const char *g_clusterCacheDisabledMounts[] = {

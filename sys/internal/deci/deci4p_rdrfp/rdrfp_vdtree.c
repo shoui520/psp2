@@ -84,22 +84,22 @@ static inline __attribute__((always_inline)) void endIo(const RdrfpIoContext *ct
 /* elevated, the others' permissions count as the owner's */
 static inline void fixStatMode(SceIoStat *stat)
 {
-	if (stat->st_mode & SCE_S_IRSYS)
-		stat->st_mode |= SCE_S_IRUSR;
-	if (stat->st_mode & SCE_S_IWSYS)
-		stat->st_mode |= SCE_S_IWUSR;
+	if (stat->st_mode & IO_STM_RS)
+		stat->st_mode |= SCE_STM_RU;
+	if (stat->st_mode & IO_STM_WS)
+		stat->st_mode |= IO_STM_WU;
 }
 
 static inline void fixChstatMode(SceIoStat *stat)
 {
 	SceMode mode = stat->st_mode;
 
-	if (mode & SCE_S_IRUSR) {
-		mode = (mode & ~SCE_S_IRUSR) | SCE_S_IRSYS;
+	if (mode & SCE_STM_RU) {
+		mode = (mode & ~SCE_STM_RU) | IO_STM_RS;
 		stat->st_mode = mode;
 	}
-	if (mode & SCE_S_IWUSR) {
-		mode = (mode & ~SCE_S_IWUSR) | SCE_S_IWSYS;
+	if (mode & IO_STM_WU) {
+		mode = (mode & ~IO_STM_WU) | IO_STM_WS;
 		stat->st_mode = mode;
 	}
 }
@@ -852,7 +852,7 @@ int rdrfpDread(SceUInt32 fd, SceIoDirent *dirent)
 		if (ret <= 0)
 			break;
 		if (rdrfpFdIsRootDir(f) &&
-		    (dirent->d_stat.st_mode & (SCE_S_IFMT | SCE_S_IRUSR)) == SCE_S_IFDIR)
+		    (dirent->d_stat.st_mode & (SCE_STM_FMT | SCE_STM_RU)) == SCE_STM_FDIR)
 			continue;
 		if (!rdrfpFdIsElevated(f))
 			break;

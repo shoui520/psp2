@@ -280,8 +280,8 @@ queryDevice:
 		if (result == (int)0x80010030)
 			result = 0;
 	} else {
-		clusters = (SceUInt64)info.free_size / info.cluster_size;
-		result = clusters * (SceUInt64)info.cluster_size >= requiredBytes ?
+		clusters = (SceUInt64)info.freeSize / info.clusterSize;
+		result = clusters * (SceUInt64)info.clusterSize >= requiredBytes ?
 			0 : (int)0x80800016;
 	}
 out:

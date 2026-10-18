@@ -165,9 +165,9 @@ int MarlinGetPathInfo(void *allocator, const char *path, MarlinPathInfo *info)
 			result = 0x11060007;
 		goto out;
 	}
-	if (SCE_S_ISREG(stat.st_mode)) {
+	if (SCE_STM_ISREG(stat.st_mode)) {
 		info->isFile = 1;
-	} else if (SCE_S_ISDIR(stat.st_mode)) {
+	} else if (SCE_STM_ISDIR(stat.st_mode)) {
 		info->isFile = 0;
 	} else {
 		result = 0x11060007;

@@ -52,22 +52,22 @@ static inline __attribute__((always_inline)) SceMode drfpStatMode(SceUInt32 mode
 {
 	SceMode m;
 
-	m = (mode & DECI4P_FS_MODE_IFREG) ? SCE_S_IFREG : 0;
+	m = (mode & DECI4P_FS_MODE_IFREG) ? SCE_STM_FREG : 0;
 	if (mode & DECI4P_FS_MODE_IFDIR)
-		m |= SCE_S_IFDIR;
+		m |= SCE_STM_FDIR;
 	if (mode & DECI4P_FS_MODE_IRUSR)
-		m |= SCE_S_IRUSR | SCE_S_IRSYS;
+		m |= SCE_STM_RU | IO_STM_RS;
 	if (mode & DECI4P_FS_MODE_IWUSR)
-		m |= SCE_S_IRUSR | SCE_S_IWUSR | SCE_S_IRSYS | SCE_S_IWSYS;
+		m |= SCE_STM_RWU | IO_STM_RWS;
 	return m;
 }
 
 /* SceIoStat.st_mode of a new file to the host mode */
 static inline __attribute__((always_inline)) int drfpHostMode(int mode)
 {
-	if (!(mode & (SCE_S_IRUSR | SCE_S_IWUSR | SCE_S_IRSYS | SCE_S_IWSYS)))
+	if (!(mode & (SCE_STM_RWU | IO_STM_RWS)))
 		return 0;
-	if (mode & (SCE_S_IRUSR | SCE_S_IRSYS))
+	if (mode & (SCE_STM_RU | IO_STM_RS))
 		return DECI4P_FS_MODE_IRUSR | DECI4P_FS_MODE_IWUSR;
 	return DECI4P_FS_MODE_IWUSR;
 }

@@ -1760,7 +1760,7 @@ int sceVopChstat(SceVfsVnode *vp, SceVfsPath *path, SceIoStat *stat, int bit)
 			invalidate = 1;
 		}
 	}
-	if ((bit & SCE_CST_MODE) && bc != NULL && (stat->st_mode & (SCE_S_IWUSR | SCE_S_IWSYS)) == 0) {
+	if ((bit & SCE_CST_MODE) && bc != NULL && (stat->st_mode & (IO_STM_WU | IO_STM_WS)) == 0) {
 		/* it becomes read-only: write the cache back first */
 		ret = vfsBuffDataFlushAll(bc, vp, vp->core.fd_list);
 		if (ret < 0)
@@ -1970,7 +1970,7 @@ int sceVopFchstat(SceVfsVnode *vp, SceVfsFile *file, SceIoStat *stat, int bit)
 			invalidate = 1;
 		}
 	}
-	if ((bit & SCE_CST_MODE) && bc != NULL && (stat->st_mode & (SCE_S_IWUSR | SCE_S_IWSYS)) == 0) {
+	if ((bit & SCE_CST_MODE) && bc != NULL && (stat->st_mode & (IO_STM_WU | IO_STM_WS)) == 0) {
 		/* it becomes read-only: write the cache back first */
 		err = vfsBuffDataFlushAll(bc, vp, file);
 		if (err < 0)

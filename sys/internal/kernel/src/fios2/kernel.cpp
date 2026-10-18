@@ -331,7 +331,7 @@ int SceFios2KernelForDriver_2649408B(SceFiosKernelDH *dh, SceIoStat *stat)
 		/* only overlays name it */
 		memset(stat, 0, sizeof(*stat));
 		ret = 0;
-		stat->st_mode = SCE_S_IFDIR | SCE_S_IRUSR | SCE_S_IWUSR | SCE_S_IROTH | SCE_S_IWOTH;
+		stat->st_mode = SCE_STM_FDIR | SCE_STM_RWU | IO_STM_RWS;
 	}
 	sceSyscallLeave(state);
 	return ret;

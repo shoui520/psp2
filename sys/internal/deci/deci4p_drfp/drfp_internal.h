@@ -11,7 +11,7 @@
 #include <fw.h>
 #include <psp2kern/types.h>
 #include <sysmem/cpu.h>
-#include <psp2common/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <sysmem/debug.h>
 #include <sysmem/list.h>
 #include <kernel/error.h>

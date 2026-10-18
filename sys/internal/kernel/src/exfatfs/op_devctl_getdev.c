@@ -1,5 +1,5 @@
 #include <psp2kern/types.h>
-#include <psp2common/kernel/iofilemgr.h>
+#include <iofilemgr/iofilemgr.h>
 #include <string.h>
 #include <sysmem/debug.h>
 #include "exfatfs_internal.h"
@@ -40,8 +40,8 @@ int _exfatfs_get_devinf(SceExfatfsFileSystem *fileSystem, void *information,
 		extended = NULL;
 	}
 	clusterSize = fileSystem->sectorSize * fileSystem->clusterSectorCount;
-	base->cluster_size = clusterSize;
-	base->max_size = (SceUInt64)clusterSize * fileSystem->clusterCount;
+	base->clusterSize = clusterSize;
+	base->maxSize = (SceUInt64)clusterSize * fileSystem->clusterCount;
 	if (fileSystem->fileSystemType == 2) {
 		error = UVFAT_readallocationbitmap(sharedResource, fileSystem);
 		if (!error) {
@@ -67,12 +67,12 @@ free_count:
 		freeSize = 0;
 	} else {
 		count -= fileSystem->fakeFreeClusterCount;
-		freeSize = (SceUInt64)count * base->cluster_size;
+		freeSize = (SceUInt64)count * base->clusterSize;
 	}
-	base->free_size = freeSize;
+	base->freeSize = freeSize;
 	if (extended) {
 		extended->volumeLabel[11] = 0;
-		extended->base.unk = NULL;
+		extended->base.reserved = NULL;
 		boot = fileSystem->PBRBuf;
 		if (fileSystem->fileSystemType == 2) {
 			extended->volumeSerial = ((SceUInt32)boot->exfat.volumeSerial[2] << 16) |

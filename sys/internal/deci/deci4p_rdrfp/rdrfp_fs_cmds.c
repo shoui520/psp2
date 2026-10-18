@@ -159,13 +159,13 @@ static inline __attribute__((always_inline)) void setStat(RdrfpStat *out, const 
 {
 	SceUInt32 mode = 0;
 
-	if (stat->st_mode & SCE_S_IFDIR)
+	if (stat->st_mode & SCE_STM_FDIR)
 		mode |= DECI4P_FS_MODE_IFDIR;
-	if (stat->st_mode & SCE_S_IFREG)
+	if (stat->st_mode & SCE_STM_FREG)
 		mode |= DECI4P_FS_MODE_IFREG;
-	if (stat->st_mode & (SCE_S_IRUSR | SCE_S_IRSYS))
+	if (stat->st_mode & (SCE_STM_RU | IO_STM_RS))
 		mode |= DECI4P_FS_MODE_IRUSR;
-	if (stat->st_mode & SCE_S_IWUSR)
+	if (stat->st_mode & IO_STM_WU)
 		mode |= DECI4P_FS_MODE_IWUSR;
 	out->mode = mode;
 	out->dev = 0;

@@ -1547,8 +1547,8 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 		mountData = drive->deviceInfo.mount_misc;
 		result = exfatfs_get_drive_information(drive, information, buflen);
 		if (result >= 0 && mountData->mnt_id == 0x800) {
-			SceUInt64 freeSize = information->free_size;
-			information->free_size = freeSize <= 0x2000000 ? 0 : freeSize - 0x2000000;
+			SceUInt64 freeSize = information->freeSize;
+			information->freeSize = freeSize <= 0x2000000 ? 0 : freeSize - 0x2000000;
 		}
 		break;
 	case 0x80000001:
@@ -1576,7 +1576,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 				"exfatfs_vfs_devctl", arglen, 24);
 			return 0x80010016;
 		}
-		fakeFree = argument->free_size;
+		fakeFree = argument->freeSize;
 		function = "_set_fake_free";
 		result = _lock_drive_information(mount, function);
 		if (result < 0)
@@ -1667,7 +1667,7 @@ int exfatfs_vfs_devctl(SceVfsOpDevctlArg *argp)
 									result = error;
 									SCE_DBG_PRINTF_LEVEL_FUNC(1, 0, 2383, "_set_whiteout_directory_core",
 										"%s: get_drive_information failed[%#x]\n", "_set_whiteout_directory_core", error);
-								} else if (info.free_size) {
+								} else if (info.freeSize) {
 									result = 0x80010005;
 								}
 							}
