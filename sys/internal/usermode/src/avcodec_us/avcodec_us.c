@@ -5,7 +5,7 @@
  * more arguments pass the rest as a block on the stack.
  */
 
-#include <psp2/types.h>
+#include <scetypes.h>
 #include "avcodec.h"
 
 /* the syscalls (the kernel side declares their real prototypes) */

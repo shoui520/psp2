@@ -6,7 +6,8 @@
 #ifndef _DRIVER_USER_H
 #define _DRIVER_USER_H
 
-#include <psp2/types.h>
+#include <stddef.h>
+#include <scetypes.h>
 
 /*
  * A syscall takes at most four register arguments. Further arguments, and the

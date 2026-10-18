@@ -5,7 +5,8 @@
 #ifndef _MOTION_H
 #define _MOTION_H
 
-#include <psp2/types.h>
+#include <stddef.h>
+#include <scetypes.h>
 #include <arm_neon.h>
 
 /*

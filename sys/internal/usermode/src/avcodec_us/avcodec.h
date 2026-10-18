@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
 
 int _sceJpegDecodeMJpeg(int a0, int a1, int a2, const void *args);
 int _sceJpegDecodeMJpegYCbCr(int a0, int a1, int a2, const void *args);

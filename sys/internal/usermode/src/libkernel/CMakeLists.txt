@@ -11,6 +11,8 @@ libkernel_prepare_heap(
 	"${CMAKE_CURRENT_SOURCE_DIR}/heap_sce.patch"
 	"${libkernel_heap_source}")
 
+# vitasdk's user headers and newlib until this module is on the tree's SDK headers
+set(MODULE_VITASDK_LIBC ON)
 psp2_module(os0_us_libkernel KIND user COMPILER gcc48 SOURCES
 	"${libkernel_unwind_source}"
 	"${libkernel_heap_source}"
