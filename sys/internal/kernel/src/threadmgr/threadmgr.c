@@ -2326,7 +2326,7 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 	SceUInt32 version, delay, jittered;
 	uint64_t wakeup;
 	SceSize length;
-	char buffer[0x200];
+	struct SceKernelBacktraceFrameForKernel frames[32];
 	uint32_t saved;
 	int intr, ret, result;
 
@@ -2360,9 +2360,9 @@ int delayThread(SceUInt32 usec, uint32_t flags, SceUInt32 *remaining, int callba
 	}
 	intr = SceCpuForDriver_821FC0EE();
 	if (intr & 0x80) {
-		memset(buffer, 0, sizeof(buffer));
-		if (sceKernelSysrootBacktrace(0, buffer, sizeof(buffer), &length, 3) >= 0)
-			sceKernelSysrootPrintBacktrace(THREADMGR_KERNEL_PID, buffer, length, 0);
+		memset(frames, 0, sizeof(frames));
+		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &length, 3) >= 0)
+			sceKernelSysrootPrintBacktrace(THREADMGR_KERNEL_PID, frames, length, 0);
 		SCE_DBG_PRINTF(0, 2088, " k: error: delayThread(usec 0x%08X) irq suspended\n", delay);
 		SCE_DBG_ASSERT_FAIL(2090);
 		ret = SCE_KERNEL_ERROR_CAN_NOT_WAIT;
@@ -4465,7 +4465,7 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 	SceUInt32 sdkVersion;
 	SceSize length;
 	uint32_t status;
-	char buffer[0x200];
+	struct SceKernelBacktraceFrameForKernel frames[32];
 	int action, ret;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), SCE_LINE(9571, 9576));
@@ -4494,9 +4494,9 @@ int sceKernelTrapThreadAfterSyscall(ThreadSyscallFrame *frame, uint32_t *result,
 			SCE_PRINTF_WITH_INFO(0, SCE_LINE(9722, 9727), "ThreadID:  0x%08X [%s]\n", thread->threadId,
 					     SceSysmemForDriver_E655852F(thread->threadId));
 			SceDebugForKernel_BCC8D0B2(thread->processId, frame, result);
-			memset(buffer, 0, sizeof(buffer));
-			if (sceKernelSysrootBacktrace(0, buffer, sizeof(buffer), &length, 2) >= 0)
-				sceKernelSysrootPrintBacktrace(0, buffer, length, 0);
+			memset(frames, 0, sizeof(frames));
+			if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &length, 2) >= 0)
+				sceKernelSysrootPrintBacktrace(0, frames, length, 0);
 			message.processId = thread->processId;
 			message.threadId = thread->threadId;
 			message.r[0] = frame->r[0];

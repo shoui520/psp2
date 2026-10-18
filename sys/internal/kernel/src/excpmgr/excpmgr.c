@@ -514,7 +514,7 @@ int module_bootstart(SceSize args, void *argp)
 void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 {
 	ThreadCB *thread = context->thread;
-	SceUID uids[256];
+	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count;
 	char *threadName, *processName;
 	SceUID pid, tid;
@@ -537,15 +537,15 @@ void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 	printExcpSavedRegisters(context);
 	printVfpRegisters(context);
 	printWPT(context);
-	memset(uids, 0, sizeof(uids));
-	if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 3) >= 0)
-		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, uids, count, 0);
+	memset(frames, 0, sizeof(frames));
+	if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 3) >= 0)
+		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, count, 0);
 	if (thread == NULL)
 		return;
 	pid = thread->processId;
-	memset(uids, 0, sizeof(uids));
-	if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
-		sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
+	memset(frames, 0, sizeof(frames));
+	if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 10) >= 0)
+		sceKernelSysrootPrintBacktrace(pid, frames, count, 0);
 	res = SceSysmemForDriver_A78755EB(pid, &processName);
 	if (res < 0)
 		SCE_DBG_PRINTF(0, 1861,
@@ -567,7 +567,7 @@ void sceKernelInitialHandlerDebugUndefCfunc(SceExcpmgrContext *context)
 void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 {
 	ThreadCB *thread = context->thread;
-	SceUID uids[256];
+	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count;
 	char *threadName, *processName;
 	SceUID pid, tid;
@@ -591,15 +591,15 @@ void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 	printVfpRegisters(context);
 	printIFSR(context);
 	printWPT(context);
-	memset(uids, 0, sizeof(uids));
-	if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 3) >= 0)
-		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, uids, count, 0);
+	memset(frames, 0, sizeof(frames));
+	if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 3) >= 0)
+		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, count, 0);
 	pid = SCE_KERNEL_PROCESS_ID;
 	if (thread != NULL) {
 		pid = thread->processId;
-		memset(uids, 0, sizeof(uids));
-		if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
-			sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
+		memset(frames, 0, sizeof(frames));
+		if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 10) >= 0)
+			sceKernelSysrootPrintBacktrace(pid, frames, count, 0);
 		res = SceSysmemForDriver_A78755EB(pid, &processName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 1944,
@@ -624,7 +624,7 @@ void sceKernelInitialHandlerDebugPabtCfunc(SceExcpmgrContext *context)
 void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 {
 	ThreadCB *thread = context->thread;
-	SceUID uids[256];
+	struct SceKernelBacktraceFrameForKernel frames[64];
 	unsigned int count, dacr;
 	char *threadName, *processName;
 	SceUID pid, tid;
@@ -651,14 +651,14 @@ void sceKernelInitialHandlerDebugDabtCfunc(SceExcpmgrContext *context)
 	printVfpRegisters(context);
 	printDFSR(context);
 	printWPT(context);
-	memset(uids, 0, sizeof(uids));
-	if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 3) >= 0)
-		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, uids, count, 0);
+	memset(frames, 0, sizeof(frames));
+	if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 3) >= 0)
+		sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, count, 0);
 	if (unlikely(thread != NULL)) {
 		pid = thread->processId;
-		memset(uids, 0, sizeof(uids));
-		if (sceKernelSysrootBacktrace(0xfffffff0, uids, 256, &count, 10) >= 0)
-			sceKernelSysrootPrintBacktrace(pid, uids, count, 0);
+		memset(frames, 0, sizeof(frames));
+		if (sceKernelSysrootBacktrace(0xfffffff0, frames, 256, &count, 10) >= 0)
+			sceKernelSysrootPrintBacktrace(pid, frames, count, 0);
 		res = SceSysmemForDriver_A78755EB(pid, &processName);
 		if (res < 0)
 			SCE_DBG_PRINTF(0, 2035,

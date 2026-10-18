@@ -9,7 +9,8 @@
 int procSuspendProcess(DbgpProcCB *proc, SceUID pid, SceUID thid,
 		       SceUInt32 reason)
 {
-	int status, newStatus, threadStatus, result;
+	SceUInt32 status;
+	int newStatus, threadStatus, result;
 
 	(void)proc;
 	if (sceKernelGetProcessStatus(pid, &status) < 0)

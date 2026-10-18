@@ -1411,7 +1411,7 @@ reply:
 /* the process status that allows module commands */
 static inline int checkProcess(SceUID pid, SceUInt32 *result)
 {
-	int status = 0;
+	SceUInt32 status = 0;
 
 	if (sceKernelGetProcessStatus(pid, &status) < 0) {
 		*result = LOADP_RESULT_NO_PROCESS;

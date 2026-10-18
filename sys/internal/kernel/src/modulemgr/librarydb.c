@@ -136,7 +136,7 @@ SceLibraryObject *LibraryDBReferLibrary(SceUID pid, SceUID uid)
 	SceUID guid;
 
 	guid = GetLibGUIDByLibUID(pid, uid);
-	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, g_libraryClass, &obj) < 0)
+	if (guid < 0 || SceSysmemForDriver_00ED6C14(guid, g_libraryClass, (SceObjectBase **)&obj) < 0)
 		return NULL;
 	if (ModulemgrReferModule(obj->modid) == NULL) {
 		sceGUIDReleaseObject(guid);
@@ -1686,7 +1686,7 @@ int sceKernelGetLibraryClientList(SceUID pid, SceUID libid, SceUID *list, SceSiz
 			if (db == NULL) {
 				ret = SCE_KERNEL_ERROR_LIBRARYDB_NOENT;
 			} else {
-				ret = SceSysmemForDriver_00ED6C14(guid, g_libraryClass, &obj);
+				ret = SceSysmemForDriver_00ED6C14(guid, g_libraryClass, (SceObjectBase **)&obj);
 				if (ret >= 0) {
 					n = 0;
 					if (obj->libEntCB->clientCount > 0) {

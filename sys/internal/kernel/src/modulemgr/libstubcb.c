@@ -445,9 +445,9 @@ int sceKernelGetStubInfoForDebugger(SceUID pid, SceUID stubid,
 		return ret;
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (void **)&sobj)) < 0)
+	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
 		goto out;
-	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (void **)&mobj);
+	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
 	if (ret >= 0) {
 		if (sobj->index < mobj->cb.libStubCount) {
 			stub = &mobj->cb.libStubCB[sobj->index];
@@ -499,9 +499,9 @@ static inline int getStubNidTableInfoForDebugger(SceUID pid, SceUID stubid,
 
 	guid = getStubGUIDByStubUID(pid, stubid);
 	ret = guid;
-	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (void **)&sobj)) < 0)
+	if (guid < 0 || (ret = SceSysmemForDriver_00ED6C14(guid, g_stubClass, (SceObjectBase **)&sobj)) < 0)
 		return ret;
-	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (void **)&mobj);
+	ret = SceSysmemForDriver_00ED6C14(sobj->modid, g_moduleClass, (SceObjectBase **)&mobj);
 	if (ret < 0)
 		goto release;
 	if (sobj->index >= mobj->cb.libStubCount) {

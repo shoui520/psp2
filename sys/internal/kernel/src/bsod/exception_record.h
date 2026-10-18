@@ -31,7 +31,7 @@ typedef struct BsodCrashRecord {
 	uint32_t jidr, joscr, jmcr, jaolr;
 	uint32_t dbgdscr;
 	uint8_t sessionId[16];
-	uint32_t kernelFrameCount, userFrameCount;
+	SceSize kernelFrameCount, userFrameCount;
 	BsodStackFrame kernelFrames[32];
 	BsodStackFrame userFrames[32];
 } BsodCrashRecord;

@@ -898,7 +898,7 @@ static int UIDtoProcessAndRefer(SceUID pid, SceProcessObject **process)
 		if (cb == NULL || cb->processId != pid) {
 			cls = &g_processClass;
 refer_class:
-			if (SceSysmemForDriver_00ED6C14(pid, cls, process) < 0)
+			if (SceSysmemForDriver_00ED6C14(pid, cls, (SceObjectBase **)process) < 0)
 				return SCE_KERNEL_ERROR_PROCESSMGR_UNKNOWN_UID;
 			return 0;
 		}
@@ -2756,7 +2756,7 @@ static inline __attribute__((always_inline)) void WaitThreadGroup(SceUID *thid, 
 			id = thid[i];
 			if (id == -1)
 				continue;
-			if (SceSysmemForDriver_00ED6C14(id, g_threadClass, &thread) < 0) {
+			if (SceSysmemForDriver_00ED6C14(id, g_threadClass, (SceObjectBase **)&thread) < 0) {
 				thid[i] = -1;
 				remaining--;
 				continue;
@@ -5333,7 +5333,7 @@ int SceProcessmgrForDriver_5BDA978F(SceUID pid, SceUInt64 *time)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, &process);
+	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, (SceObjectBase **)&process);
 	if (ret < 0)
 		return ret;
 	*time = process->time;
@@ -5351,7 +5351,7 @@ int SceProcessmgrForDriver_8CB01675(SceUID pid, SceUInt64 *out, SceUInt64 time)
 		return SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 	if (pid == 0)
 		pid = sceKernelGetProcessId();
-	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, &process);
+	ret = SceSysmemForDriver_00ED6C14(pid, &g_processClass, (SceObjectBase **)&process);
 	if (ret < 0)
 		return ret;
 	intr = SceCpuForDriver_D32ACE9E(&process->timeLock);
@@ -5634,7 +5634,7 @@ int sceKernelProcessPowerUnlockForUser(int type)
 	SceUInt32 state;
 	int intr, ret;
 #if FW_DEBUG
-	char buf[0x200];
+	struct SceKernelBacktraceFrameForKernel frames[32];
 	SceSize len;
 	SceUID threadId;
 #endif
@@ -5649,12 +5649,12 @@ int sceKernelProcessPowerUnlockForUser(int type)
 		SceDebugForDriver_D9703808(1, 0, SCE_DBGINFO(8964),
 			"*** error: sceKernelPowerUnlock() nest borken 0x%08X [%s]\n",
 			threadId, SceSysmemForDriver_E655852F(threadId));
-		memset(buf, 0, sizeof(buf));
-		if (sceKernelSysrootBacktrace(0, buf, sizeof(buf), &len, 3) >= 0)
-			sceKernelSysrootPrintBacktrace(KERNEL_PID, buf, len, 0);
-		memset(buf, 0, sizeof(buf));
-		if (sceKernelSysrootBacktrace(0, buf, sizeof(buf), &len, 2) >= 0)
-			sceKernelSysrootPrintBacktrace(0, buf, len, 0);
+		memset(frames, 0, sizeof(frames));
+		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &len, 3) >= 0)
+			sceKernelSysrootPrintBacktrace(KERNEL_PID, frames, len, 0);
+		memset(frames, 0, sizeof(frames));
+		if (sceKernelSysrootBacktrace(0, frames, sizeof(frames), &len, 2) >= 0)
+			sceKernelSysrootPrintBacktrace(0, frames, len, 0);
 #endif
 		ProcessSyscallLeave(state);
 		return 0;

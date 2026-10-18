@@ -9,11 +9,7 @@
 #include <threadmgr/threadcb.h>
 #include "cpu_irq.h"
 #include <sysmem/sysclib.h>
-
-extern int sceKernelSysrootBacktrace(int pid, void *buffer, size_t capacity,
-				     uint32_t *length, int mode);
-extern int sceKernelSysrootPrintBacktrace(uint32_t type, const void *buffer,
-				     uint32_t length, int flags);
+#include <sysmem/sysroot.h>
 
 /* Name unknown; only the callback prefix is accessed by CPU diagnostics. */
 struct CpuLongIrqHandlerRecord {
@@ -205,8 +201,8 @@ extern __typeof__(CpuResumeIntrLow) sceKernelCpuResumeIntr
 int sceKernelCpuId(void)
 {
 	uint32_t status;
-	uint32_t length;
-	char buffer[512];
+	SceSize length;
+	struct SceKernelBacktraceFrameForKernel frames[32];
 
 	if (getCurrentThreadCB() != NULL) {
 		status = readCpsr();
@@ -215,14 +211,14 @@ int sceKernelCpuId(void)
 				SCE_DBGINFO_FUNC(488, "sceKernelCpuId"),
 				"***\n*** warning: sceKernelCpuId() called. But IRQ has been enabled.(lr=%p)\n***\n",
 				__builtin_return_address(0));
-			memset(buffer, 0, sizeof(buffer));
-			if (sceKernelSysrootBacktrace(0, buffer, sizeof(buffer),
+			memset(frames, 0, sizeof(frames));
+			if (sceKernelSysrootBacktrace(0, frames, sizeof(frames),
 						       &length, 3) >= 0)
-				sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, buffer, length, 0);
-			memset(buffer, 0, sizeof(buffer));
-			if (sceKernelSysrootBacktrace(0, buffer, sizeof(buffer),
+				sceKernelSysrootPrintBacktrace(SCE_KERNEL_PROCESS_ID, frames, length, 0);
+			memset(frames, 0, sizeof(frames));
+			if (sceKernelSysrootBacktrace(0, frames, sizeof(frames),
 						       &length, 2) >= 0)
-				sceKernelSysrootPrintBacktrace(0, buffer, length, 0);
+				sceKernelSysrootPrintBacktrace(0, frames, length, 0);
 		}
 	}
 	return sceKernelGetCpuId();

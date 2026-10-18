@@ -1891,7 +1891,7 @@ int dbgpIsApplicationActive(void)
 {
 	SceUID pids[16];
 	SceSize count = 0;
-	int status = 0;
+	SceUInt32 status = 0;
 	int i;
 
 	memset(pids, 0, sizeof(pids));

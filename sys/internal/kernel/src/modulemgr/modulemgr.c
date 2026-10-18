@@ -614,7 +614,7 @@ SceModuleObject *ModulemgrReferModule(SceUID modid)
 {
 	SceModuleObject *obj;
 
-	if (SceSysmemForDriver_00ED6C14(modid, g_moduleClass, &obj) < 0)
+	if (SceSysmemForDriver_00ED6C14(modid, g_moduleClass, (SceObjectBase **)&obj) < 0)
 		obj = NULL;
 	return obj;
 }

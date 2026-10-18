@@ -297,7 +297,8 @@ int checkNoFreeSwbrkpt(const DbgpProcCB *proc)
 
 int checkIllegalProcessStatus(SceUID pid)
 {
-	int status, fullStatus, result;
+	SceUInt32 status;
+	int fullStatus, result;
 
 	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
@@ -315,7 +316,8 @@ int checkIllegalProcessStatus(SceUID pid)
 
 int checkIllegalProcessStatusResumeProcess(SceUID pid)
 {
-	int status, fullStatus, result;
+	SceUInt32 status;
+	int fullStatus, result;
 
 	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
@@ -345,7 +347,8 @@ int checkAlreadyAttachedProcess(SceUID pid)
 
 int checkProcessIsSuspendedAlready(SceUID pid)
 {
-	int status, result;
+	SceUInt32 status;
+	int result;
 
 	result = sceKernelGetProcessStatus(pid, &status);
 	if (result < 0) {
@@ -449,7 +452,7 @@ int checkInvalidAddressOverflow(const void *address, SceSize size)
 
 int checkIllegalApplicationStatus(SceUID pid)
 {
-	int status = 0;
+	SceUInt32 status = 0;
 	int result;
 
 	result = sceKernelGetProcessStatus(pid, &status);
@@ -462,7 +465,7 @@ int checkIllegalApplicationStatus(SceUID pid)
 
 int checkApplicationIsSuspendedAlready(SceUID pid)
 {
-	int status = 0;
+	SceUInt32 status = 0;
 	int result;
 
 	result = sceKernelGetProcessStatus(pid, &status);
@@ -475,7 +478,7 @@ int checkApplicationIsSuspendedAlready(SceUID pid)
 
 int checkApplicationIsSuspended(SceUID pid)
 {
-	int status = 0;
+	SceUInt32 status = 0;
 	int result;
 
 	result = sceKernelGetProcessStatus(pid, &status);

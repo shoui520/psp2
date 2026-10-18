@@ -368,7 +368,7 @@ int _getAbortedProcessStopReason(CoredumpStopReason *stopReason)
 	unsigned int capacity, copiedCount, i;
 	uint32_t reason, selectedReason;
 	int triggerReason;
-	int status;
+	SceUInt32 status;
 	int count;
 	int result;
 	SceSize threadBytes;
@@ -1394,7 +1394,7 @@ void oalGetProcessInfo(SceUID pid, CoredumpProcessInfo *info)
 {
 	SceKernelProcessInfo process;
 	uint32_t flags;
-	int status;
+	SceUInt32 status;
 
 	SCE_DBG_ASSERT(info != NULL, 1722);
 	memset(info, 0, sizeof(*info));
@@ -3331,7 +3331,7 @@ void oalGetExtnlProcInfo(SceUID pid, SceUID extnlPid, CoredumpExtnlProcInfo *inf
 {
 	SceKernelProcessInfo process;
 	uint32_t flags;
-	int status;
+	SceUInt32 status;
 
 	SCE_DBG_ASSERT(info != NULL, 5366);
 	memset(info, 0, sizeof(*info));
