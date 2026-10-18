@@ -132,7 +132,9 @@ int SceProcessmgrForKernel_8321B827(SceUInt32 *timeout);
 int SceProcessmgrForKernel_BC110987(SceUID pid, SceUInt32 event);
 int SceProcessmgrForKernel_D5DF895D(void);
 int SceProcessmgrForKernel_F160B4D8(SceUID pid, int kind);	/* release the slot */
+/* vitasdk: ksceKernelGetProcessTimeLowCore */
 SceUInt32 SceProcessmgrForDriver_02179E12(void);
+/* vitasdk: ksceKernelGetProcessTimeWideCore */
 SceUInt64 SceProcessmgrForDriver_82D94BE9(void);
 void *sceKernelAllocRemoteProcessHeap(SceUID pid, SceSize size, void *opt);
 void *sceKernelAllocRemoteToolHeap(SceUID pid, SceSize size);
@@ -151,18 +153,23 @@ int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *
 
 int SceProcessmgrForDriver_11BEFBBE(void *ptr);
 int SceProcessmgrForDriver_1C70501E(SceUID pid);
+/* vitasdk: ksceKernelCreateProcessLocalStorage */
 int SceProcessmgrForDriver_3801D7D6(const char *name, SceSize size);
 void *SceProcessmgrForDriver_3B33FFBA(SceSize size, void *opt);
 int SceProcessmgrForDriver_4140D633(const ProcessmgrLibcOps *ops);
 void *SceProcessmgrForDriver_5468892A(SceSize size, void *opt);
 int SceProcessmgrForDriver_594319C7(SceUID pid);
 int SceProcessmgrForDriver_5BDA978F(SceUID pid, SceUInt64 *time);
+/* vitasdk: ksceKernelGetProcessLocalStorageAddrForPid */
 int SceProcessmgrForDriver_AF80F39C(SceUID pid, SceUInt32 key, void **addr, int create);
+/* vitasdk: ksceKernelGetRemoteProcessTime */
 int SceProcessmgrForDriver_C074EB31(SceUID pid, SceUInt64 *time);
 int SceProcessmgrForDriver_C5CF15ED(SceUInt32 key, ProcessLocalStorageInfo *info);
 int SceProcessmgrForDriver_E8005AFC(int level, void *buf, SceSize size, SceSize *count);
-int SceProcessmgrForDriver_EC283166(SceUInt64 *time);
+int SceProcessmgrForDriver_EC283166(SceUInt64 *time);	/* vitasdk: ksceKernelGetProcessTimeCore */
+/* vitasdk: ksceKernelGetProcessLocalStorageAddr */
 void *SceProcessmgrForDriver_EE694840(SceUInt32 key);
+/* vitasdk: ksceKernelLibcGettimeofday */
 int SceProcessmgrForKernel_014F5113(void *tv, void *tz);
 int SceProcessmgrForKernel_1197DB8A(SceUInt32 index, SceUInt32 value, SceUInt32 control);
 SceUID SceProcessmgrForKernel_1E5B38E5(const char *name, SceUInt32 type, const char *path,
@@ -174,8 +181,9 @@ int SceProcessmgrForKernel_5137B783(SceUID pid, int waitDebugger, SceSize args, 
 int SceProcessmgrForKernel_6DEC45C3(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
 int SceProcessmgrForKernel_8B4086AF(SceUID pid, int kind);	/* reserve a module slot */
 void *SceProcessmgrForKernel_923AF3CC(int kind);
-SceClass *SceProcessmgrForKernel_98AE4BC8(void);
+SceClass *SceProcessmgrForKernel_98AE4BC8(void);	/* vitasdk: ksceKernelGetUIDProcessClass */
 int SceProcessmgrForKernel_9FA66773(SceUInt32 index, SceUInt32 *value, SceUInt32 *control);
+/* vitasdk: ksceKernelLibcTime */
 SceKernelTime SceProcessmgrForKernel_B0E076D6(SceKernelTime *t);
 int SceProcessmgrForKernel_D231AE5B(void *a, void *b, void *c);
 SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type,
