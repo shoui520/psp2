@@ -52,8 +52,9 @@ int SceCoredumpForDriver_12392973(SceUID dump, const void *buf, SceSize size);	/
 int SceCoredumpForDriver_10863B61(SceUID dump);					/* close */
 
 int SceCoredumpForDriver_097AA37D(void);
+/* vitasdk: ksceCoredumpCreateDump */
 int SceCoredumpForDriver_0C10313F(SceUID pid, const char *titleid, int titleidLength, const char *appName, int appNameLength, int appVersion, char *path, SceSize pathSize);
-int SceCoredumpForDriver_AD070837(void);
+int SceCoredumpForDriver_AD070837(void);	/* vitasdk: ksceCoredumpDeleteCrashReportCaf */
 int SceCoredumpForDriver_D064F6DC(SceUID pid, SceKernelCoredumpStateUpdateCallback update, SceKernelCoredumpStateFinishCallback finish, SceCoredumpTriggerParam *param);
 SceUID sceCoredumpCafContextCreate(void);
 int sceCoredumpCafContextDestroy(SceUID context);

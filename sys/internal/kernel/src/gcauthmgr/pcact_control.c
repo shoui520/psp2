@@ -6,6 +6,7 @@
 #include <sysmem/utils.h>
 #include <rtc/rtc.h>
 #include <npdrm/npdrm.h>
+#include <npdrm/psmdrm.h>
 
 SceRtcTick gcAuthActivationCurrentTick;
 SceNpDrmActivationData gcAuthNpDrmActivation;
@@ -22,9 +23,6 @@ int GcAuthPcactEncryptChallengeWithStack(unsigned char mode,
 		GcAuthPcactRandomRecord *random);
 int GcAuthPcactGetAesDecryptKeyWithStack(const GcAuthPcactActivationBlock *activation,
 		const GcAuthPcactRandomRecord *random, unsigned char *outputKey);
-int ScePsmDrmForDriver_B09003A7(int *actType, int *versionFlag, SceUInt64 *accountId,
-		SceUInt64 *startTime, SceUInt64 *endTime);
-int ScePsmDrmForDriver_4CD5375C(SceUInt64 *accountId);
 int GcAuthPsmactCreateChallengeWithStack(unsigned char mode,
 		const unsigned char *rtcSeconds, GcAuthPsmactChallenge *output,
 		GcAuthPsmactRandomRecord *random);

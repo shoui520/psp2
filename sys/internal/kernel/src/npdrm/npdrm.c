@@ -7,6 +7,7 @@
 #include <psp2kern/kernel/threadmgr/misc.h>
 #include <iofilemgr/iofilemgr.h>
 #include <npdrm/npdrm.h>
+#include <npdrm/psmdrm.h>
 #include <gcauthmgr/sblgcauthmgrdrmbb.h>
 #include <ss_mgr/ss_mgr.h>
 #include <sysmem/sblaimgr.h>
@@ -1448,9 +1449,12 @@ STUB_FUNC(int, SceNpDrmForDriver_9265B350, (int *actType, int *versionFlag, SceU
 STUB(SceNpDrmForDriver_B6CA3A2C)
 STUB(SceNpDrmForDriver_FC84CA1A)
 STUB(SceNpDrmForDriver_FE7B17B6)
-STUB(ScePsmDrmForDriver_4CD5375C)
+STUB_FUNC(int, ScePsmDrmForDriver_4CD5375C, (SceUInt64 *accountId))
 STUB(ScePsmDrmForDriver_791198CE)
-STUB(ScePsmDrmForDriver_8C8CFD01)
-STUB(ScePsmDrmForDriver_984F9017)
-STUB(ScePsmDrmForDriver_B09003A7)
-STUB(ScePsmDrmForDriver_CB73E9D3)
+STUB_FUNC(int, ScePsmDrmForDriver_8C8CFD01, (const ScePsmDrmLicense *license,
+	  ScePsmDrmKeySet *keydata, int *flags, SceRtcTick *startTime, SceRtcTick *expirationTime))
+STUB_FUNC(int, ScePsmDrmForDriver_984F9017, (const ScePsmDrmLicense *license, char *contentId,
+	  SceUInt64 *accountId, SceUInt64 *startTime, SceUInt64 *expirationTime))
+STUB_FUNC(int, ScePsmDrmForDriver_B09003A7, (int *actType, int *versionFlag, SceUInt64 *accountId,
+	  SceUInt64 *startTime, SceUInt64 *expirationTime))
+STUB_FUNC(int, ScePsmDrmForDriver_CB73E9D3, (void *activation, const char *aesKey))

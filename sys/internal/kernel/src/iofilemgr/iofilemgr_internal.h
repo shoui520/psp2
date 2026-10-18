@@ -1264,6 +1264,7 @@ int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *ty
  * so it declares the calls it makes itself rather than take fios2/fios2.h's
  * SceFiosKernelDH pointers.
  */
+/* vitasdk: ksceFiosKernelOverlayResolveSync */
 int SceFios2KernelForDriver_0F456345(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
 				     SceSize maxPath);
 

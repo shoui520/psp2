@@ -22,15 +22,18 @@ int SceAppMgrForDriver_1574E1A4(int type, const char *path, const SceAppMgrRdrfp
 int SceAppMgrForDriver_E8DB7942(const SceAppMgrRdrfpMountPoint *mountPoint);	/* sceAppMgrRdrfpUmount */
 int SceAppMgrForDriver_0813AFCA(int id, char *path, SceSize size);	/* a mount's path */
 
-int SceAppMgrForDriver_5B1BE482(const void *status);
-int SceAppMgrForDriver_0B1BEEE0(const char *path);
-int SceAppMgrForDriver_7554330F(int setting);
+int SceAppMgrForDriver_5B1BE482(const void *status);	/* vitasdk: ksceAppMgrBgdlSetQueueStatus */
+int SceAppMgrForDriver_0B1BEEE0(const char *path);	/* vitasdk: ksceAppMgrCheckPfsMounted */
+int SceAppMgrForDriver_7554330F(int setting);	/* vitasdk: ksceAppMgrDebugSettingNotifyUpdate */
+/* vitasdk: ksceAppMgrSystemParamDateTimeSetConf */
 int SceAppMgrForDriver_A9AA3A68(const void *conf);
 
-int SceAppMgrForDriver_2277F736(void *parameters);
+int SceAppMgrForDriver_2277F736(void *parameters);	/* vitasdk: ksceAppMgrSaveDataSlotInit */
+/* vitasdk: ksceAppMgrSaveDataSlotSetParam */
 int SceAppMgrForDriver_7E247E47(void *parameters);
+/* vitasdk: ksceAppMgrSaveDataSlotSetStatus */
 int SceAppMgrForDriver_9ADB00FA(void *parameters);
-int SceAppMgrForDriver_E6F389B8(void *parameters);
+int SceAppMgrForDriver_E6F389B8(void *parameters);	/* vitasdk: ksceAppMgrSaveDataSlotCreate */
 SceUID sceAppMgrGetShellPidForDriver(void);
 int sceAppMgrResumeAppByNameForDebugger(const char *appName);
 int sceAppMgrResumeAppForDebugger(SceUID pid);

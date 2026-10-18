@@ -48,23 +48,36 @@ _Static_assert(sizeof(SceFiosOverlay) == 0x258, "SceFiosOverlay");
 /* a directory handle listing a directory with the overlays merged in */
 typedef struct SceFiosKernelDH SceFiosKernelDH;
 
+/* vitasdk: ksceFiosKernelOverlayAdd */
 int SceFios2KernelForDriver_2607EE4C(SceFiosOverlay *overlay, SceFiosOverlayID *outId);
+/* vitasdk: ksceFiosKernelOverlayAddForProcess */
 int SceFios2KernelForDriver_17E65A1C(SceUID pid, SceFiosOverlay *overlay, SceFiosOverlayID *outId);
+/* vitasdk: ksceFiosKernelOverlayRemove */
 int SceFios2KernelForDriver_2368FEB5(SceFiosOverlayID id);
+/* vitasdk: ksceFiosKernelOverlayRemoveForProcess */
 int SceFios2KernelForDriver_23247EFB(SceUID pid, SceFiosOverlayID id);
+/* vitasdk: ksceFiosKernelOverlayGetInfo */
 int SceFios2KernelForDriver_725E6817(SceFiosOverlayID id, SceFiosOverlay *outOverlay);
+/* vitasdk: ksceFiosKernelOverlayGetInfoForProcess */
 int SceFios2KernelForDriver_F1762BC2(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *outOverlay);
+/* vitasdk: ksceFiosKernelOverlayModify */
 int SceFios2KernelForDriver_7F8B960C(SceFiosOverlayID id, SceFiosOverlay *overlay);
+/* vitasdk: ksceFiosKernelOverlayModifyForProcess */
 int SceFios2KernelForDriver_853EA82A(SceUID pid, SceFiosOverlayID id, SceFiosOverlay *overlay);
+/* vitasdk: ksceFiosKernelOverlayGetList */
 int SceFios2KernelForDriver_FF42AAF0(SceUID pid, unsigned int minOrder, unsigned int maxOrder,
 				     SceFiosOverlayID *outIds, SceSize maxIds, SceSize *outCount);
+/* vitasdk: ksceFiosKernelOverlayResolveSync */
 int SceFios2KernelForDriver_0F456345(SceUID pid, int resolveFlag, const char *inPath, char *outPath,
 				     SceSize maxPath);
+/* vitasdk: ksceFiosKernelOverlayResolveWithRangeSync */
 int SceFios2KernelForDriver_D3D968FC(SceUID pid, int resolveFlag, const char *inPath,
 				     char *outPath, SceSize maxPath, uint8_t minOrder,
 				     uint8_t maxOrder);
+/* vitasdk: ksceFiosKernelOverlayThreadSetDisabled */
 int SceFios2KernelForDriver_03727E5E(int disabled);
-int SceFios2KernelForDriver_E71192C5(void);
+int SceFios2KernelForDriver_E71192C5(void);	/* vitasdk: ksceFiosKernelOverlayThreadIsDisabled */
+/* vitasdk: ksceFiosKernelOverlayGetRecommendedScheduler */
 int SceFios2KernelForDriver_241BF0D6(int avail, const char *path);
 int SceFios2KernelForDriver_3B329E86(SceFiosKernelDH **outDH, const char *path, unsigned int minOrder,
 				     unsigned int maxOrder);

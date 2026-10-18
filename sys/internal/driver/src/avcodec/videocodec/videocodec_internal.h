@@ -175,7 +175,7 @@ _Static_assert(offsetof(AvcencCscFrame, pPicture) == 36,
 	       "AVC encoder CSC picture addresses ABI");
 
 int SceAvcodecForDriver_4F11F915(AvcencCscFrame *pDst,
-			       const AvcencCscFrame *pSrc);
+			       const AvcencCscFrame *pSrc);	/* vitasdk: ksceAvcencCsc */
 
 typedef struct AvcencControl {
 	unsigned int handle;
@@ -201,7 +201,8 @@ _Static_assert(offsetof(AvcencArrayAu, pAu) == 8,
 	       "AVC encoder output addresses ABI");
 
 int SceAvcodecForDriver_DE515BFF(const AvcencControl *pCtrl,
-		       AvcencArrayAu *pArrayAu);
+		       AvcencArrayAu *pArrayAu);	/* vitasdk: ksceAvcencEncodeStop */
+/* vitasdk: ksceAvcencEncode */
 int SceAvcodecForDriver_A0E63278(const AvcencControl *pCtrl,
 		    const AvcencCscFrame *pFrame, AvcencArrayAu *pArrayAu);
 
@@ -291,13 +292,15 @@ int SceAvcodecForDriver_90F394E6(SceAvcdecCtrl *pCtrl, SceUID cbid,
 int SceAvcodecForDriver_E7E14DE4(SceAvcdecCtrl *pCtrl, SceUID cbid,
 			       unsigned int eventMask);
 int SceAvcodecForDriver_A2085B6B(unsigned int codecType, unsigned int size);
+/* vitasdk: ksceAvcencSetAvailablePreset */
 int SceAvcodecForDriver_7DC13C29(unsigned int codecType, unsigned int preset);
-int SceAvcodecForDriver_2895CB6D(AvcencControl *pCtrl);
-int SceAvcodecForDriver_229AB2CF(const AvcencControl *pCtrl);
+int SceAvcodecForDriver_2895CB6D(AvcencControl *pCtrl);	/* vitasdk: ksceAvcencDeleteEncoder */
+int SceAvcodecForDriver_229AB2CF(const AvcencControl *pCtrl);	/* vitasdk: ksceAvcencEncodeFlush */
+/* vitasdk: ksceAvcencSetEncoderParameter */
 int SceAvcodecForDriver_E0232BFE(const AvcencControl *pCtrl,
 			       const AvcencEncoderParameter *pParameter);
 int SceAvcodecForDriver_1A584DB7(const AvcencControl *pCtrl, unsigned int index,
-				AvcencNalUnit *pNalUnit);
+				AvcencNalUnit *pNalUnit);	/* vitasdk: ksceAvcencGetNalUnit */
 
 int SceAvcodecForDriver_20892154(const SceAvcdecCtrl *pCtrl,
 	const VeneziaVipVideoInput *pAu, SceAvcdecArrayPicture *pArrayPicture,

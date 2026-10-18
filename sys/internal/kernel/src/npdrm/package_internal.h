@@ -13,6 +13,7 @@
 #include <sysmem/sysroot.h>
 #include <acmgr/acmgr.h>
 #include <npdrm/npdrm.h>
+#include <npdrm/psmdrm.h>
 #include <post_ss_mgr/sblpostssmgr.h>
 
 /* Extended package file header; multibyte members retain big-endian order. */
@@ -228,17 +229,9 @@ int PsmDrmGetRifName(char *name);
 int PsmDrmGetRifNameForInstall(char *name, const ScePsmDrmLicense *license);
 int PsmDrmGetRifKey(const ScePsmDrmLicense *license, ScePsmDrmKeySet *keydata,
 	int *flags, SceRtcTick *startTime, SceRtcTick *expirationTime);
-int ScePsmDrmForDriver_4CD5375C(uint64_t *accountId);
-int ScePsmDrmForDriver_B09003A7(int *actType, int *versionFlag, uint64_t *accountId,
-	uint64_t *startTime, uint64_t *expirationTime);
-int ScePsmDrmForDriver_984F9017(const ScePsmDrmLicense *license, char *contentId,
-	uint64_t *accountId, uint64_t *startTime, uint64_t *expirationTime);
 int PsmDrmGetRifNameForDriver(char *name);
 int PsmDrmGetRifNameForInstallForDriver(char *name,
 	const ScePsmDrmLicense *license);
-int ScePsmDrmForDriver_8C8CFD01(const ScePsmDrmLicense *license,
-	ScePsmDrmKeySet *keydata, int *flags, SceRtcTick *startTime,
-	SceRtcTick *expirationTime);
 int NpDrmPackageCheckForUser(const void *buffer, unsigned int size,
 	const unsigned char *digest, unsigned int identifier);
 

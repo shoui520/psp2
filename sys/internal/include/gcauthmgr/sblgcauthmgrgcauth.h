@@ -6,4 +6,5 @@
 
 #include <scetypes.h>
 
+/* vitasdk: ksceSblGcAuthMgrGcAuthCartAuthentication */
 int SceSblGcAuthMgrGcAuthForDriver_68781760(SceUInt32 keyId);

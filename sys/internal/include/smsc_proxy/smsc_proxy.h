@@ -69,20 +69,26 @@ _Static_assert(sizeof(SceSblSmSchedProxyInvokeArg) == 0x48, "SceSblSmSchedProxyI
 typedef void (*SceSblSmSchedCry2ArmHandler)(SceUID id, int channel, void *arg,
 					     SceUInt32 a, SceUInt32 b);
 
-int SceSblSmSchedProxyForKernel_A488D604(void);
-int SceSblSmSchedProxyForKernel_33A3A1E2(void);
+int SceSblSmSchedProxyForKernel_A488D604(void);	/* vitasdk: ksceSblSmSchedProxyInitialize */
+int SceSblSmSchedProxyForKernel_33A3A1E2(void);	/* vitasdk: ksceSblSmSchedProxyUninitialize */
 int sceSblSmSchedProxyInvoke(SceUInt32 a, SceUInt32 b, SceUInt32 c, const SceUInt32 *in,
 			     const void *param, SceUID *id);
 int sceSblSmSchedProxyWait(SceUID id, SceUInt32 *result);
 int sceSblSmSchedProxyGetStatus(SceUID id, SceUInt32 *status);
+/* vitasdk: ksceSblSmSchedProxyChangeF00DStatus */
 int SceSblSmSchedProxyForKernel_DE4EAC3C(SceUID id);
+/* vitasdk: ksceSblSmSchedCallFunc */
 int SceSblSmSchedProxyForKernel_723B382F(SceUID id, int channel, SceUInt32 value);
+/* vitasdk: ksceSblSmSchedProxyGetCommandF00DRegister */
 int SceSblSmSchedProxyForKernel_F70C04EC(SceUID id, int channel, SceUInt32 *value);
 int sceSblSmSchedProxyWriteCry2Arm(SceUID id, int channel, SceUInt32 value);
 int sceSblSmSchedProxyReadCry2Arm(SceUID id, int channel, SceUInt32 *value);
+/* vitasdk: ksceSblSmSchedProxyEnableCry2ArmInterrupt */
 int SceSblSmSchedProxyForKernel_8B84AC2A(SceUID id, int channel,
 					      SceSblSmSchedCry2ArmHandler handler, void *arg);
+/* vitasdk: ksceSblSmSchedProxyDisableCry2ArmInterrupt */
 int SceSblSmSchedProxyForKernel_85EDA5FC(SceUID id, int channel);
+/* vitasdk: ksceSblSmSchedProxyExecuteF00DCommand */
 int SceSblSmSchedProxyForKernel_7894B6F0(SceUInt32 a, SceUInt32 b, SceUInt32 c, SceUInt32 d);
 
 /* names unknown (NID) */

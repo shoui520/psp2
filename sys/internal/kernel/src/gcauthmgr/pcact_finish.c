@@ -4,6 +4,7 @@
 #include <sysmem/cpu.h>
 #include <rtc.h>
 #include "pcact.h"
+#include <npdrm/psmdrm.h>
 #include <intrmgr/syscall.h>
 
 GcAuthPsmactActivationFile gcAuthPsmactActivationFile;
@@ -11,7 +12,6 @@ GcAuthPsmactActivationFile gcAuthPsmactActivationFile;
 int GcAuthPsmactVerifyActivationWithStack(const GcAuthPsmactActivation *activation,
 		const GcAuthPsmactRandomRecord *random, GcAuthPsmactDerivedKeys *output);
 int GcAuthPsmactDecryptActivation(const GcAuthPsmactDerivedKeys *keys);
-int ScePsmDrmForDriver_CB73E9D3(void *activation, const char *aesKey);
 extern SceRtcTick gcAuthActivationRetryDeadline;
 int GcAuthPcactBeginActivation(const GcAuthPcactBeginActivationRequest *request);
 int GcAuthPcactApplyActivation(const GcAuthPcactApplyActivationRequest *request);

@@ -10,6 +10,7 @@
 #include <psp2kern/types.h>
 #include <sysmem/cpu.h>
 #include <ss_mgr/ss_mgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 #include <psp2kern/kernel/sysclib.h>
 #include <sysmem/sysmem.h>
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
@@ -100,10 +101,6 @@ int pmMgrGetSmProductMode(SceUInt8 *mode);	/* name unknown */
 extern SceUInt8 g_pmProductMode;		/* name unknown */
 int sceSblPmMgrInit(void);
 int sceSblPmMgrSetProductModeCommon(int mode, int useSm);
-int SceSblPostSsMgrForDriver_ADF92824(int on);
-int SceSblPostSsMgrForDriver_FE92A318(SceUInt32 flags);
-int SceSblPostSsMgrForDriver_4663C195(SceUInt8 *mode);
-int sceSblPmMgrAuthEtoI(void);
 
 /* pm_syscon_jig.c */
 int pm_auth_common(int type, const char *path);

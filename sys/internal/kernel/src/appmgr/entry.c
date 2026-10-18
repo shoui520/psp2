@@ -149,7 +149,6 @@ STUB(sceAppMgrDestroyAppForTest)
 STUB(_sceAppMgrGetCoredumpStateForShell)
 STUB(_sceAppMgrInitSafeMemoryById)
 STUB(_sceAppMgrAddContMount)
-extern int sceAppMgrSetDisplayMergeConf(SceUInt32 setting, SceUInt32 alpha);
 
 STUB(_sceAppMgrUmountByPid)
 STUB(_sceAppMgrWorkDirMount)
@@ -185,13 +184,11 @@ STUB(_sceAppMgrLaunchAppByUri)
 extern int appmgrReleaseSoundOutExclusive(void);
 
 STUB(_sceAppMgrTrophyMountById)
-extern int sceAppMgrEnablePrioritizingSystemChat(int enabled);
 
 STUB(sceAppMgrDestroyOtherApp)
 STUB(_sceAppMgrSaveDataDataRemove2)
 STUB(sceAppMgrActivateApp)
 STUB(sceAppMgrGrowMemory3)
-extern int sceAppMgrAcquireBgmPortForMusicPlayer(void);
 
 STUB(_sceAppMgrGameDataMount)
 STUB(_sceAppMgrGetPfsDrive)
@@ -208,7 +205,6 @@ STUB(sceAppMgrSaveDataGetCachedRequiredSizeKiB)
 STUB(_sceAppMgrAddContAddMount)
 STUB(_sceAppMgrWorkDirMountById)
 STUB(_sceAppMgrAppParamSetString)
-extern int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
 
 STUB(sceAppMgrSuspendBgAppByShell)
 STUB(sceAppMgrReturnLiveAreaOperationResultForShell)
@@ -218,18 +214,15 @@ extern int appmgrReleaseSoundOutExclusive3(void);
 STUB(sceAppMgrResumeBgAppByShell)
 STUB(_sceAppMgrGetSaveDataInfo)
 STUB(_sceAppMgrAcidDirSet)
-extern int sceAppMgrSetBgmSubPriority(int enabled, int priority);
 
 STUB(sceAppMgrSetRecommendedScreenOrientationActivated)
 STUB(_sceAppMgrPspSaveDataGetParams)
-extern int sceAppMgrDeclareSystemChatApp(void);
 
 STUB(sceAppMgrIsDevelopmentMode)
 STUB(sceAppMgrGrowMemory)
 STUB(_sceAppMgrSaveDataSlotFileOpen)
 STUB(sceAppMgrExitToLiveboardForGameApp)
 STUB(_sceAppMgrLaunchAppByPath4)
-extern int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
 
 STUB(_sceAppMgrAppDataMountById)
 STUB(sceAppMgrGetExtraAppParam)
@@ -239,14 +232,12 @@ STUB(_sceAppMgrSaveDataDataRemove)
 STUB(_sceAppMgrLoadSaveDataSystemFile)
 STUB(_sceAppMgrPspSaveDataRootMount)
 STUB(_sceAppMgrDrmOpen)
-extern int sceAppMgrAcquireBgmPortWithPriority(int priority);
 
 extern int appmgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
 
 STUB(sceAppMgrSetInfobarState)
 STUB(_sceAppMgrLaunchAppByName2)
 STUB(sceAppMgrSetAppProtectionModeOnMemoryShortage)
-extern int sceAppMgrAcquireBgmPort(void);
 
 STUB(_sceAppMgrPhotoUmount)
 STUB(_sceAppMgrSaveDataDataSave)
@@ -264,7 +255,6 @@ STUB(_sceAppMgrSaveDataAddMount)
 STUB(sceAppMgrSetSystemImposeState)
 STUB(_sceAppMgrSendParam)
 STUB(sceAppMgrSetInfobarStateForCommonDialog)
-extern int sceAppMgrAcquireBtrm(void);
 
 STUB(_sceAppMgrThemeDataMount)
 STUB(sceAppMgrRestoreBgmSettingForShell)
@@ -289,7 +279,6 @@ STUB(_sceAppMgrInstallDirMount)
 STUB(_sceAppMgrAppDataMount)
 STUB(_sceAppMgrSaveDataGetQuota)
 STUB(_sceAppMgrCaptureFrameBufIFTUByAppId)
-extern int sceAppMgrReleaseBgmPort(void);
 
 extern int appmgrSendNotificationRequest(const AppmgrNotificationRequest *request, int wait);
 
