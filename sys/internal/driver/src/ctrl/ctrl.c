@@ -1330,7 +1330,7 @@ int ksceCtrlSetRapidFire(int port, int index, const SceCtrlRapidFireRule *rule)
 		if (target & 0x200)
 			target = (target & ~0x200) | 0x800;
 	}
-	if (!ksceKernelIsIntrAllowedInCurrentContext() && sceKernelIsUserModeThread() &&
+	if (!SceIntrmgrForDriver_182EE3E3() && sceKernelIsUserModeThread() &&
 	    ((mask | trigger | target) & (~ctrlStorage.maskForNonShell | 0x20000)))
 		return SCE_CTRL_ERROR_PRIV_REQUIRED;
 	intr = SceCpuForDriver_D32ACE9E(&ctrlStorage.lock);
@@ -1632,7 +1632,7 @@ int ctrlSystemEventCallback(int category, int event, void *args, void *opt)
 	if (category == 1) {
 		if (event == SYSEVENT_RESUME_DEVICE(12)) {
 			ctrlStorage.systemEventState = 1;
-			ksceKernelEnableSubIntr(8, 3);
+			sceKernelEnableSubIntr(8, 3);
 		}
 		return 0;
 	}
@@ -1640,7 +1640,7 @@ int ctrlSystemEventCallback(int category, int event, void *args, void *opt)
 		return 0;
 	switch (event) {
 	case SYSEVENT_SUSPEND_DEVICE(12):
-		ksceKernelDisableSubIntr(8, 3);
+		sceKernelDisableSubIntr(8, 3);
 		ctrlStorage.samplingMode = 0;
 		if (ctrlStorage.samplingTimer != -1) {
 			sceKernelCancelAlarm(ctrlStorage.samplingTimer);
@@ -2126,8 +2126,8 @@ int ctrlInitialize(void)
 	memset(ctrlStorage.remoconReleaseOwners, 0xff, sizeof(ctrlStorage.remoconReleaseOwners));
 	for (slot = 0; slot < 16; slot++)
 		ctrlStorage.remoconReleaseStates[slot] = 0xff;
-	ksceKernelRegisterSubIntrHandler(8, 3, "SceCtrlVblank", ctrlVblankCallback, NULL);
-	ksceKernelEnableSubIntr(8, 3);
+	sceKernelRegisterSubIntrHandler(8, 3, "SceCtrlVblank", ctrlVblankCallback, NULL);
+	sceKernelEnableSubIntr(8, 3);
 	return 0;
 }
 

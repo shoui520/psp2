@@ -156,9 +156,9 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	strnlen
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	ksceSblFwLoaderLoad
 	ksceSblFwLoaderLock
 	ksceSblFwLoaderUnlock

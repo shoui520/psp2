@@ -1112,7 +1112,7 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 			}
 			if (s_dfmgrLink[1].flags & DFMGR_LINK_CONNECTED)
 				dfmgrSetLinkStatus(&s_dfmgrLink[1], DFMGR_LINK_CONNECTED, 0);
-			ksceKernelDisableIntr(0xb8);
+			sceKernelDisableIntr(0xb8);
 			dfmgrSetFlags(DFMGR_SUSPENDED);
 			return 0;
 		default:
@@ -1131,7 +1131,7 @@ static int _suspendHandlerQuery(int resume, int eventid, void *args, void *opt)
 		if (!(s_dfmgrFlags & DFMGR_SUSPENDED))
 			return 0;
 		dfmgrClearFlags(DFMGR_SUSPENDED);
-		ksceKernelEnableIntr(0xb8);
+		sceKernelEnableIntr(0xb8);
 		dcmpSendStatusPower(0, 0xe, 1, 0);
 		s_dfmgrResumeRetries = 0;
 		return 0;

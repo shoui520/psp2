@@ -388,7 +388,7 @@ static int GpioIntrHandler(int intrCode, void *arg)
 		(void)status[gate];
 		LowioDsb();
 		sceKernelCpuResumeIntr(state);
-		if (ksceKernelTriggerSubIntr(intrCode, port,
+		if (sceKernelCallSubIntrHandler(intrCode, port,
 			(void *)(uintptr_t)port) == -2)
 			GpioDisableSubIntr(intrCode, port);
 		return -1;
@@ -415,7 +415,7 @@ static int GpioSysEvent(int resume, int event, void *args, void *opt)
 			for (gate = 0; gate < 5; gate++)
 				ctx->intrEnable[gate] = 0;
 			for (gate = 0; gate < 5; gate++)
-				ksceKernelEnableIntr(ctx->intrCodes[gate]);
+				sceKernelEnableIntr(ctx->intrCodes[gate]);
 		}
 	}
 	return 0;
@@ -433,8 +433,8 @@ static const struct {
 	},
 };
 
-static SceKernelIntrOptParam s_gpioIntrOpt = {
-	0x14, 0x20, (SceKernelIntrOptHandlers *)&s_gpioIntrHandlers, 0, 0,
+static SceKernelIntrRegisterOpt s_gpioIntrOpt = {
+	0x14, 0x20, (void *)&s_gpioIntrHandlers, 0, 0,
 };
 
 typedef struct GpioIntr {
@@ -492,7 +492,7 @@ static __attribute__((noinline)) int GpioInit(void)
 		intr = s_gpioIntrs[bank];
 		for (gate = 0; gate < 5; gate++, intr++) {
 			ctx->intrCodes[gate] = intr->code;
-			ksceKernelRegisterIntrHandler(intr->code, intr->name, 0,
+			sceKernelRegisterIntrHandler(intr->code, intr->name, 0,
 				GpioIntrHandler, ctx, intr->priority,
 				intr->targetCpu, &s_gpioIntrOpt);
 		}
@@ -511,7 +511,7 @@ static __attribute__((noinline)) int GpioInit(void)
 		for (gate = 0; gate < 5; gate++)
 			ctx->intrEnable[gate] = ~ctx->base->interruptMask[gate];
 		for (gate = 0; gate < 5; gate++)
-			ksceKernelEnableIntr(ctx->intrCodes[gate]);
+			sceKernelEnableIntr(ctx->intrCodes[gate]);
 	}
 	sceKernelRegisterSysEventHandler("SceGpio", GpioSysEvent, NULL);
 	return 0;

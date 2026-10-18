@@ -1,0 +1,4 @@
+/* vitasdk's psp2kern/kernel/intrmgr.h, for the files and vitasdk headers that still include it */
+#pragma once
+
+#include <intrmgr/intrmgr.h>

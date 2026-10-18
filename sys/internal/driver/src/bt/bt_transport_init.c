@@ -52,7 +52,7 @@ int BtSetupSdioTransport(void)
 	oldSubInterrupt = gBtTransport.subInterrupt;
 	gBtTransport.subInterrupt = gBtTransport.function->number + 1;
 	if (oldSubInterrupt == 0) {
-		result = ksceKernelRegisterSubIntrHandler(222,
+		result = sceKernelRegisterSubIntrHandler(222,
 			gBtTransport.subInterrupt, "SceBtIntr",
 			BtHandleSdioInterrupt, &gBtTransport);
 		if (result < 0 && result != (int)0x80027109) {
@@ -60,7 +60,7 @@ int BtSetupSdioTransport(void)
 			goto disable_function;
 		}
 	}
-	if (ksceKernelEnableSubIntr(222, gBtTransport.subInterrupt) < 0) {
+	if (sceKernelEnableSubIntr(222, gBtTransport.subInterrupt) < 0) {
 		result = 0x802f150b;
 		goto release_interrupt;
 	}
@@ -110,10 +110,10 @@ int BtSetupSdioTransport(void)
 		goto disable_interrupt;
 	return 0;
 disable_interrupt:
-	ksceKernelDisableSubIntr(222, gBtTransport.subInterrupt);
+	sceKernelDisableSubIntr(222, gBtTransport.subInterrupt);
 	gBtTransport.interruptEnabled = 0;
 release_interrupt:
-	ksceKernelReleaseSubIntrHandler(222, gBtTransport.subInterrupt);
+	sceKernelReleaseSubIntrHandler(222, gBtTransport.subInterrupt);
 disable_function:
 	SceSdifForDriver_E80293EF(gBtTransport.function);
 	return result;

@@ -1105,7 +1105,7 @@ static int sceKernelPermitProcEvent(SceUID pid)
 	SceUID sema;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -1125,7 +1125,7 @@ static int sceKernelInhibitProcEvent(SceUID pid)
 	SceUID sema;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -2330,7 +2330,7 @@ static SceSize ProcessAllThreadAction(SceProcessObject *process,
 
 	if (SceExcpmgrForKernel_B615A7DA() != 0)
 		vector = &g_excpThreadIdVector;
-	else if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	else if (SceIntrmgrForDriver_182EE3E3() != 0)
 		vector = &g_intrThreadIdVector;
 	else
 		vector = &g_threadIdVector;
@@ -2436,7 +2436,7 @@ static int _SuspendProcess(SceProcessObject *process, SceUInt32 state, SceUInt32
 		intr = SceCpuForDriver_821FC0EE();
 		g_sgiEnter = 0;
 		g_sgiLeave = 0;
-		ksceKernelTriggerSGI(6, 0, 7);
+		sceKernelGenerateSoftIntr(6, 0, 7);
 		while (g_sgiEnter != 3)
 			;
 		ret = sceKernelInvokeProcEventHandler(process->pid, PROC_EVENT_SUSPEND, 0x202, &param,
@@ -3661,7 +3661,7 @@ static int StartProcessCommon(SceUID pid, int waitDebugger, SceSize args, void *
 	SceUID thread;
 	int debug, exitStatus, intr, ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -3828,7 +3828,7 @@ SceUID sceKernelCreateProcess(const char *name, SceUInt32 type, const char *path
 	int ret;
 
 	parentPid = sceKernelGetProcessId();
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (path == NULL || name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -4008,7 +4008,7 @@ int sceKernelExitProcess(int status)
 	SceProcessObject *process;
 	int intr, ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0) {
+	if (SceIntrmgrForDriver_182EE3E3() != 0) {
 		SCE_DBG_ASSERT_FAIL(5024);
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	}
@@ -4051,7 +4051,7 @@ int sceKernelExitProcess(int status)
 int sceKernelKillProcess(SceUID pid, int kind)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 5304, "pid 0x%08x, option %d\n", pid, kind);
-	if (ksceKernelIsIntrAllowedInCurrentContext() == 0 && SceExcpmgrForKernel_B615A7DA() == 0)
+	if (SceIntrmgrForDriver_182EE3E3() == 0 && SceExcpmgrForKernel_B615A7DA() == 0)
 		return KillProcessCommon(pid, kind);
 	return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 }
@@ -4063,7 +4063,7 @@ static SceUID SpawnProcessCommon(const char *name, SceUInt32 type, const char *p
 	SceUID pid;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	pid = sceKernelCreateProcess(name, type & 0x7fffffff, path, opt);
 	if (pid >= 0) {
@@ -4101,7 +4101,7 @@ int sceKernelProcessAssocApp(SceUID pid, SceUID app)
 	SceProcessObject *process;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -4390,7 +4390,7 @@ SceUID sceKernelGetProcessMainThreadForDebugger(SceUID pid)
 int sceKernelSuspendProcess(SceUID pid, SceUInt32 flags, SceUInt32 *timeout)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 6069, "(pid 0x%08x, option 0x%08x)\n", pid, flags);
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	return SuspendProcessCommon(pid, flags, timeout);
 }
@@ -4421,7 +4421,7 @@ int SceProcessmgrForDriver_C715591F(void)
 int sceKernelResumeProcess(SceUID pid)
 {
 	SCE_DBG_PRINTF_LEVEL(1, 0xb, 6371, "(pid 0x%08x)\n", pid);
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	return ResumeProcessCommon(pid);
 }
@@ -4558,7 +4558,7 @@ int sceKernelWaitProcessEnd(SceUID pid, int *exitStatus, SceUInt32 *timeout)
 	SceProcessObject *process;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	ret = UIDtoProcessAndRefer(pid, &process);
 	if (ret < 0) {
@@ -4583,7 +4583,7 @@ int sceKernelWaitProcessEventCompletion(SceUID pid, SceUInt32 event, SceUInt32 *
 	SceProcessObject *process;
 	int ret;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (event != PROCESS_EVF_STARTED && event != PROCESS_EVF_SUSPENDED
 	    && event != PROCESS_EVF_RESUMED && event != PROCESS_EVF_DELETED)
@@ -6221,7 +6221,7 @@ static int ProcessmgrModuleStart2(void)
 	g_requestLock = 0;
 	g_requestCount = 0;
 	g_requestSema = ret;
-	ret = ksceKernelRegisterIntrHandler(6, "SceKernelProcessmgr", 0, sceKernelProcessmgrSgiHandler,
+	ret = sceKernelRegisterIntrHandler(6, "SceKernelProcessmgr", 0, sceKernelProcessmgrSgiHandler,
 					    NULL, 0x50, 0xf, NULL);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(9782);

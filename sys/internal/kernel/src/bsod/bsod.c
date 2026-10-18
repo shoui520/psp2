@@ -101,9 +101,9 @@ void bsodCrashHandler(int kind)
 	unsigned page = kind ? 0 : 3;
 
 	SceCpuForDriver_BF82DEB2(&s_bsodDisplay.lock);
-	ksceKernelDisableIntr(0xd5);
-	ksceKernelDisableIntr(0xd2);
-	ksceKernelDisableIntr(0xf8);
+	sceKernelDisableIntr(0xd5);
+	sceKernelDisableIntr(0xd2);
+	sceKernelDisableIntr(0xf8);
 	bsodFreezeLog();
 	s_bsodPrinter = bsodPrintf;
 	bsodReadFramebuffer(0, &s_bsodDisplay.previous);

@@ -122,7 +122,7 @@ SceUID cameraGetCallerProcessId(void)
 {
 	int result;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return 0;
 	result = sceKernelIsUserModeThread();
 	if (result != 0)
@@ -308,7 +308,7 @@ int sceCameraConfigOpen(int devnum, SceCameraInfo *pInfo)
 	unsigned int timeout;
 	int result;
 
-	if (!ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (!SceIntrmgrForDriver_182EE3E3()) {
 		processId = sceKernelIsUserModeThread();
 		if (processId != 0)
 			processId = sceKernelGetProcessId();
@@ -864,7 +864,7 @@ int sceCameraConfigRead(int devnum, SceCameraReadV2 *pRead)
 	SceUID processId;
 	int result, isUserThread, wBuffer;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		driver = cameraDriver;
 		processId = 0;
 		device = &driver->device[devnum];
@@ -934,7 +934,7 @@ int sceCameraConfigAttribute(int devnum, int checkFormat)
 	SceUID processId;
 	int result;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		driver = cameraDriver;
 		processId = 0;
 		device = &driver->device[devnum];
@@ -975,7 +975,7 @@ int cameraCheckActiveProcess(SceUID processId, int devnum, int currentProcess)
 	CameraProcess *process;
 	int result;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		result = 0;
 	} else {
 		result = sceKernelIsUserModeThread();
@@ -1010,7 +1010,7 @@ int sceCameraConfigGetAttribute(int devnum, int attribute, int *pValue)
 	SceUID processId;
 	int result;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() ||
+	if (SceIntrmgrForDriver_182EE3E3() ||
 	    !sceKernelIsUserModeThread()) {
 		processId = 0;
 	} else {
@@ -1092,7 +1092,7 @@ int sceCameraConfigSetAttribute(int devnum, int attribute, int value, int flags,
 	SceUID processId;
 	int result;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		processId = 0;
 		device = &cameraDriver->device[devnum];
 	} else {

@@ -207,7 +207,7 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
 #endif
 		return PVRSRV_ERROR_UNABLE_TO_INSTALL_ISR;
 	}
-	if (ksceKernelRegisterIntrHandler(ui32Irq, "SceGpuLisr", 0,
+	if (sceKernelRegisterIntrHandler(ui32Irq, "SceGpuLisr", 0,
 			SystemISRWrapper, pvSysData, 80, 15, NULL) != 0)
 		goto deleteThread;
 	psEnvData->bLISRInstalled = IMG_TRUE;
@@ -218,7 +218,7 @@ PVRSRV_ERROR OSInstallSystemLISR(IMG_VOID *pvSysData, IMG_UINT32 ui32Irq)
 	if (psEnvData->misrEventFlag < 0)
 		goto deleteThread;
 	sceKernelStartThread(psEnvData->misrThread, sizeof(psEnvData), &psEnvData);
-	ksceKernelEnableIntr(ui32Irq);
+	sceKernelEnableIntr(ui32Irq);
 	return PVRSRV_OK;
 
 deleteThread:
@@ -233,7 +233,7 @@ PVRSRV_ERROR OSUninstallSystemLISR(IMG_VOID *pvSysData)
 
 	if (!psEnvData->bLISRInstalled)
 		return PVRSRV_ERROR_ISR_NOT_INSTALLED;
-	ksceKernelReleaseIntrHandler(psEnvData->ui32IRQ);
+	sceKernelReleaseIntrHandler(psEnvData->ui32IRQ);
 	psEnvData->misrRunning = IMG_FALSE;
 	sceKernelSetEventFlag(psEnvData->misrEventFlag, 1);
 	sceKernelWaitThreadEnd(psEnvData->misrThread, NULL, NULL);

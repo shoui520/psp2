@@ -77,9 +77,9 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	strncmp
 	__stack_chk_fail
-	ksceKernelDisableSubIntr
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelLockMutex

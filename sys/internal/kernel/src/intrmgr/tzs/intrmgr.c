@@ -152,7 +152,7 @@ int IllegalContext(void)
 }
 
 int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsigned int type,
-				 SceKernelIntrHandlerTzs handler, void *arg, unsigned int priority,
+				 void *handler, void *arg, unsigned int priority,
 				 unsigned int target, const SceKernelIntrRegisterOpt *opt)
 {
 	IntrHandler *info;

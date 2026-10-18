@@ -87,9 +87,9 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	memcmp
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelExitThread

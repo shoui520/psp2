@@ -372,7 +372,7 @@ int waitWorkQueue(SceUID workQueueId, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 744, "*** error: illegal context. workQueueId=0x%08x[%s]\n",
 				      workQueueId, SceSysmemForDriver_E655852F(workQueueId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -471,7 +471,7 @@ int waitWorkTask(SceUID workTaskId, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 901, "*** error: illegal context. workTaskId=0x%08x[%s]\n",
 				      workTaskId, SceSysmemForDriver_E655852F(workTaskId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

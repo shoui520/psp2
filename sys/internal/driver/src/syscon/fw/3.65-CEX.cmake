@@ -77,12 +77,12 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_3AE319DA
 	SceSysrootForDriver_46E72428
 	SceSysrootForDriver_930B1342
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelDisableSubIntr
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
-	ksceKernelSetIntrTarget
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelDisableSubIntr
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
+	sceKernelSetIntrTargetCpu
 	sceKernelDeleteMutex
 	sceKernelDeleteSema
 	sceKernelLockMutex

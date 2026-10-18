@@ -9,6 +9,6 @@ IMPORTS
 	SceSysrootForDriver_9421B223
 	sceKernelDeleteEventFlag
 	sceKernelDeleteThread
-	ksceKernelTriggerSGI
-	ksceKernelReleaseIntrHandler
+	sceKernelGenerateSoftIntr
+	sceKernelReleaseIntrHandler
 )

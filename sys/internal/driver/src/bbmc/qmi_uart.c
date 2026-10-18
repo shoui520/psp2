@@ -210,7 +210,7 @@ int qmiInitializeUart(void)
 		return result;
 	g_qmiUartMemBlock = result;
 	SceSysmemForDriver_A841EDDA(result, (void **)&g_qmiUartRegisters);
-	result = ksceKernelRegisterIntrHandler(229, "SceUart5", 0,
+	result = sceKernelRegisterIntrHandler(229, "SceUart5", 0,
 		(SceKernelIntrHandler)qmiUartInterrupt, &g_qmiUartPort,
 		176, 15, NULL);
 	if (result < 0) {
@@ -223,7 +223,7 @@ int qmiInitializeUart(void)
 
 int qmiFinalizeUart(void)
 {
-	ksceKernelDisableIntr(229);
+	sceKernelDisableIntr(229);
 	if (g_qmiUartPort.registers != NULL) {
 		int index = g_qmiUartPort.index;
 
@@ -234,7 +234,7 @@ int qmiFinalizeUart(void)
 		g_qmiUartPort.enabled = 0;
 		g_qmiUartPort.index = 255;
 	}
-	ksceKernelReleaseIntrHandler(229);
+	sceKernelReleaseIntrHandler(229);
 	SceSysmemForDriver_009E1C61(g_qmiUartMemBlock);
 	return 0;
 }
@@ -339,7 +339,7 @@ int qmiOpenUart(unsigned int index, QmiUartPort **port,
 	registers->enable = 1;
 	g_qmiUartPort.enabled = 1;
 	*port = &g_qmiUartPort;
-	ksceKernelEnableIntr(index);
+	sceKernelEnableIntr(index);
 	return 0;
 }
 
@@ -350,7 +350,7 @@ int qmiCloseUart(QmiUartPort *port)
 			SceCpuForDriver_D32ACE9E(&port->lock);
 
 		if (port->interruptNumber != 0)
-			ksceKernelDisableIntr(port->interruptNumber);
+			sceKernelDisableIntr(port->interruptNumber);
 		port->interruptNumber = 0;
 		port->registers->enable = 0;
 		kscePervasiveUartClockDisable(port->index);

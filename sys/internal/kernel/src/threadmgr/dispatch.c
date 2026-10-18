@@ -777,7 +777,7 @@ void switchThread(uint32_t reason)
 	uint32_t mode;
 
 	SCE_DBG_ASSERT_CHECK(ThreadmgrIntrDisabled(), 104);
-	SCE_DBG_ASSERT_LEVEL(0, !ksceKernelIsIntrAllowedInCurrentContext(), 107);
+	SCE_DBG_ASSERT_LEVEL(0, !SceIntrmgrForDriver_182EE3E3(), 107);
 	cpu = currentCpuState();
 	thread = currentThreadContext();
 	if (reason & (SWITCH_REASON_PREEMPT | SWITCH_REASON_WAIT))

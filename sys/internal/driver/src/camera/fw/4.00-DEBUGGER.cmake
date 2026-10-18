@@ -112,10 +112,10 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_idiv
 	memcpy
 	__stack_chk_fail
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelExitThread

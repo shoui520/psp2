@@ -100,8 +100,8 @@ int DelTimerInfo(TimerInfo *info)
 {
 	int ret;
 
-	ksceKernelDisableIntr(info->intrCode);
-	ret = ksceKernelReleaseIntrHandler(info->intrCode);
+	sceKernelDisableIntr(info->intrCode);
+	ret = sceKernelReleaseIntrHandler(info->intrCode);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 809, "release systimer handler failed. 0x%08x\n", ret);
 		return ret;
@@ -143,7 +143,7 @@ int InitTimerInfo(TimerInfo *info)
 		snprintf(name, sizeof(name), "SceSystimerLongrangeTimer%d", index);
 	}
 
-	ret = ksceKernelRegisterIntrHandler(info->intrCode, name, 0, TimerIntrHandler,
+	ret = sceKernelRegisterIntrHandler(info->intrCode, name, 0, TimerIntrHandler,
 					    info, 0x80, 0xf, NULL);
 	if (ret < 0) {
 		SCE_DBG_PRINTF(6, 794, "register systimer handler failed. 0x%08x\n", ret);
@@ -158,7 +158,7 @@ SceSysTimerId ksceKernelSysTimerAlloc(int type)
 	unsigned int i, count;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	switch (type) {
@@ -187,8 +187,8 @@ SceSysTimerId ksceKernelSysTimerAlloc(int type)
 	if (i >= count)
 		return SCE_KERNEL_ERROR_NO_FREE_TIMER;
 
-	ksceKernelEnableIntr(info->intrCode);
-	ksceKernelSetIntrTarget(info->intrCode, 0xf);
+	sceKernelEnableIntr(info->intrCode);
+	sceKernelSetIntrTargetCpu(info->intrCode, 0xf);
 	return info->id;
 }
 
@@ -197,11 +197,11 @@ int ksceKernelSysTimerFree(SceSysTimerId id)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
-	ksceKernelDisableIntr(info->intrCode);
+	sceKernelDisableIntr(info->intrCode);
 
 	state = SceCpuForDriver_D32ACE9E(&info->lock);
 	if (!(info->flags & TIMER_ALLOCATED)) {
@@ -238,7 +238,7 @@ int ksceKernelSysTimerSetClockSource(SceSysTimerId id, SceUInt32 source, SceUInt
 	SceUInt32 sel;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (source == 2 || source == 14 || source == 15 || source > 21)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -272,7 +272,7 @@ int ksceKernelSysTimerSetInterval(SceSysTimerId id, SceUInt64 interval)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -302,7 +302,7 @@ int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	/* a CPU mask in bits 0-3, or in bits 16-19 */
@@ -334,7 +334,7 @@ int ksceKernelSysTimerSetHandler(SceSysTimerId id, SceSysTimerCallback handler,
 		info->arg = NULL;
 	} else {
 		info->arg = arg;
-		ksceKernelSetIntrTarget(info->intrCode, targetCpu);
+		sceKernelSetIntrTargetCpu(info->intrCode, targetCpu);
 	}
 
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&info->lock, state);
@@ -399,7 +399,7 @@ int ksceKernelSysTimerResetCount(SceSysTimerId id)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -448,7 +448,7 @@ int ksceKernelSysTimerSetCount(SceSysTimerId id, SceUInt64 count)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 
 	info = GetTimerInfo(id);
@@ -543,7 +543,7 @@ int SceSystimerForDriver_904DF737(SceSysTimerId id, SceUInt32 a, SceUInt32 b)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (a >= 14)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;
@@ -574,7 +574,7 @@ int SceSystimerForDriver_C34D7940(SceSysTimerId id, SceUInt32 a)
 	TimerInfo *info;
 	int state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (a >= 14)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

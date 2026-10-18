@@ -134,10 +134,10 @@ set(MODULE_IMPORT_FUNCS
 	memcmp
 	SceDebugForDriver_35A35322
 	SceDebugForDriver_D9703808
-	ksceKernelDisableSubIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex
 	sceKernelStartThread

@@ -84,7 +84,7 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9
 	ksceExcpmgrRegisterHandler
-	ksceKernelDisableIntr
+	sceKernelDisableIntr
 	SceThreadmgrForDriver_FA54D49A
 	ksceVfsAddVfs
 	vfsUmount

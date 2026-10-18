@@ -1660,7 +1660,7 @@ int ehciStart(UsbdBus *bus)
 	ehci = s_ehci[bus->index];
 	if (ehci == NULL)
 		return SCE_USBD_ERROR_NOT_INITIALIZED;
-	result = ksceKernelEnableIntr(ehci->intrCode);
+	result = sceKernelEnableIntr(ehci->intrCode);
 	if (result < 0)
 		return result;
 
@@ -1683,7 +1683,7 @@ int ehciStop(UsbdBus *bus)
 	Ehci *ehci = s_ehci[bus->index];
 	int port, timeout, result;
 
-	result = ksceKernelDisableIntr(ehci->intrCode);
+	result = sceKernelDisableIntr(ehci->intrCode);
 	if (result < 0)
 		return result;
 	for (port = 0; port < ehci->portCount; port++)
@@ -1934,7 +1934,7 @@ int ehciInit(UsbdBus *bus)
 		result = SCE_USBD_ERROR_FATAL;
 		goto fail;
 	}
-	result = ksceKernelRegisterIntrHandler(intrCode, name, 0, ehciInterruptHandler, ehci,
+	result = sceKernelRegisterIntrHandler(intrCode, name, 0, ehciInterruptHandler, ehci,
 					       160, 15, NULL);
 	if (result >= 0) {
 		ehci->intrCode = intrCode;
@@ -1993,10 +1993,10 @@ int ehciTerm(UsbdBus *bus)
 	result = ehciStop(bus);
 	if (result < 0)
 		return result;
-	result = ksceKernelDisableIntr(ehci->intrCode);
+	result = sceKernelDisableIntr(ehci->intrCode);
 	if (result < 0)
 		return result;
-	result = ksceKernelReleaseIntrHandler(ehci->intrCode);
+	result = sceKernelReleaseIntrHandler(ehci->intrCode);
 	if (result < 0)
 		return result;
 	result = SceSysmemForDriver_009E1C61(ehci->descriptorBlockId);

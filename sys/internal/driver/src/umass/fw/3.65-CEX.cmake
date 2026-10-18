@@ -76,8 +76,8 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_A841EDDA
 	SceSysmemForDriver_C94850C9
 	SceSysrootForDriver_834439A7
-	ksceKernelTriggerSGI
-	ksceKernelTriggerSubIntr
+	sceKernelGenerateSoftIntr
+	sceKernelCallSubIntrHandler
 	SceCpuForDriver_2A40BB93
 	sceKernelSpinlockLowUnlockCpuResumeIntr
 	SceCpuForDriver_D32ACE9E

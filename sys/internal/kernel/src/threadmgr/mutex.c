@@ -682,7 +682,7 @@ int sceKernelDeleteMutex(SceUID mutexId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1045, "sceKernelDeleteMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
 				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ThreadmgrSetUserRoWord(saved);
@@ -844,7 +844,7 @@ restore:
 	return ret;
 }
 
-/* SceThreadmgrForKernel_1059CCDD, SceThreadmgrForDriver_16AC80C5 */
+/* SceThreadmgrForKernel_sceKernelLockMutex, SceThreadmgrForDriver_16AC80C5 */
 int sceKernelLockMutex(SceUID mutexId, int count, SceUInt32 *timeout)
 {
 	return lockMutex(mutexId, count, timeout, 0);
@@ -865,7 +865,7 @@ int sceKernelTryLockMutex(SceUID mutexId, int count)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1132, "sceKernelTryLockMutex", "*** error: illegal context. mutexId=0x%08x[%s]\n",
 				      mutexId, SceSysmemForDriver_E655852F(mutexId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

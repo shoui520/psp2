@@ -16,7 +16,7 @@ int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount,
 	int count;
 	int result;
 
-	if (!ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (!SceIntrmgrForDriver_182EE3E3()) {
 		result = BtLockTransport();
 		if (result < 0)
 			return result;
@@ -68,7 +68,7 @@ int GetRegisteredInfo(uint64_t deviceAddress, void *buffer, int maxCount,
 			device = device->next;
 		}
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return count;
 	return BtUnlockTransport(count);
 }

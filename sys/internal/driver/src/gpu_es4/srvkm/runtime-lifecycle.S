@@ -34,7 +34,7 @@ GpuRuntimeStart:
 	b .LGpuRuntimeStart40
 .LGpuRuntimeStart3a:
 	ldr r0, [r7, #0x24]
-	bl ksceKernelEnableIntr
+	bl sceKernelEnableIntr
 .LGpuRuntimeStart40:
 	mov r0, r6
 	pop {r3, r4, r5, r6, r7, pc}
@@ -53,7 +53,7 @@ GpuRuntimeCleanup:
 	push {r4, r5, r6, lr}
 	mov r4, r0
 	ldr r0, [r3, #0x24]
-	bl ksceKernelDisableIntr
+	bl sceKernelDisableIntr
 	mov r0, r4
 	bl GpuRuntimeDeviceRelease
 	cbnz r0, .LGpuRuntimeCleanup48
@@ -138,7 +138,7 @@ GpuRuntimeDeviceAcquire:
 	mov r0, r6
 	ldr r1, GpuRuntimeDeviceAcquireLiteraldc
 	ldr r3, GpuRuntimeDeviceAcquireLiterale0
-	bl ksceKernelRegisterIntrHandler
+	bl sceKernelRegisterIntrHandler
 	ldr r4, [sp, #0x10]
 	mov r5, r0
 	cbz r0, .LGpuRuntimeDeviceAcquire72
@@ -169,7 +169,7 @@ GpuRuntimeDeviceAcquire:
 	add r2, sp, #0x10
 	bl sceKernelStartThread
 	mov r0, r6
-	bl ksceKernelEnableIntr
+	bl sceKernelEnableIntr
 	mov r0, r5
 	b .LGpuRuntimeDeviceAcquireb0
 .LGpuRuntimeDeviceAcquireae:
@@ -243,7 +243,7 @@ GpuRuntimeDeviceAcquire:
 	mov r0, r6
 	ldr r1, GpuRuntimeDeviceAcquireLiteralc0
 	ldr r3, GpuRuntimeDeviceAcquireLiteralc4
-	bl ksceKernelRegisterIntrHandler
+	bl sceKernelRegisterIntrHandler
 	ldr r4, [sp, #0x10]
 	mov r5, r0
 	cbz r0, .LGpuRuntimeDeviceAcquire5e
@@ -272,7 +272,7 @@ GpuRuntimeDeviceAcquire:
 	add r2, sp, #0x10
 	bl sceKernelStartThread
 	mov r0, r6
-	bl ksceKernelEnableIntr
+	bl sceKernelEnableIntr
 	mov r0, r5
 	b .LGpuRuntimeDeviceAcquire9e
 .LGpuRuntimeDeviceAcquire98:
@@ -316,7 +316,7 @@ GpuRuntimeDeviceRelease:
 	cbz r3, .LGpuRuntimeDeviceRelease30
 	movs r5, #0
 	ldr r0, [r4, #0xc]
-	bl ksceKernelReleaseIntrHandler
+	bl sceKernelReleaseIntrHandler
 	str r5, [r4, #0x1c]
 	movs r1, #1
 	ldr r0, [r4, #0x18]

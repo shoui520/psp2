@@ -216,7 +216,7 @@ static int _sceUsbMassDetach(int deviceId)
 	attached = NULL;
 	sceKernelSetEventFlag(dev->eventFlag, 2);
 	SceCpuForDriver_2A40BB93(&pending, 2);
-	ksceKernelTriggerSGI(15, 2, 0);
+	sceKernelGenerateSoftIntr(15, 2, 0);
 	return 0;
 }
 
@@ -636,7 +636,7 @@ connected:
 			SceDebugForDriver_391B74B7("[Umass]%08x:USB mass storage (%04x:%04x) attached\n",
 				SceThreadmgrForDriver_47F6DE49(), desc->idVendor, desc->idProduct);
 			SceCpuForDriver_2A40BB93(&pending, 1);
-			ksceKernelTriggerSGI(15, 2, 0);
+			sceKernelGenerateSoftIntr(15, 2, 0);
 			return 0;
 		}
 		if (ret != UMASS_ERROR(6))
@@ -795,9 +795,9 @@ int SceUsbMassForDriver_F2BAB182(int intr)
 		return (int)SCE_ERROR_ERRNO_EINVAL;
 	state = SceCpuForDriver_D32ACE9E(&intrLock);
 	if ((enabled & 1) && (SceCpuForDriver_E36F3A46(&pending, 1) & 1))
-		ksceKernelTriggerSubIntr(15, 0, NULL);
+		sceKernelCallSubIntrHandler(15, 0, NULL);
 	if ((enabled & 2) && (SceCpuForDriver_E36F3A46(&pending, 2) & 2))
-		ksceKernelTriggerSubIntr(15, 1, NULL);
+		sceKernelCallSubIntrHandler(15, 1, NULL);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&intrLock, state);
 	return -1;
 }

@@ -273,7 +273,7 @@ static int intrThread(SceSize args, void *argp)
 			}
 		}
 		unlock();
-	} while (ksceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE) >= 0);
+	} while (sceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE) >= 0);
 	return 0;
 }
 
@@ -356,12 +356,12 @@ int _sceHdmiDeviceModuleStart(void)
 		goto error;
 	if (ksceGpioSetIntrMode(0, HDMI_INTR_GPIO_PORT, 0) < 0)
 		goto error;
-	if (ksceKernelRegisterSubIntrHandler(HDMI_INTR_CODE, HDMI_INTR_SUBCODE, "SceHdmiIntr",
+	if (sceKernelRegisterSubIntrHandler(HDMI_INTR_CODE, HDMI_INTR_SUBCODE, "SceHdmiIntr",
 					     intrHandler, NULL) < 0)
 		goto error;
 	ret = cecInitialize();
 	if (ret == SCE_HDMI_ERROR_CEC_UNSUPPORTED || ret >= 0) {
-		if (ksceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE) < 0) {
+		if (sceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE) < 0) {
 			SCE_DBG_ASSERT_FAIL(261);
 			return 2;
 		}
@@ -435,7 +435,7 @@ int _sceHdmiDeviceResume(void)
 		SCE_DBG_ASSERT_FAIL(556);
 		return ret;
 	}
-	ret = ksceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE);
+	ret = sceKernelEnableSubIntr(HDMI_INTR_CODE, HDMI_INTR_SUBCODE);
 	if (ret < 0) {
 		SCE_DBG_ASSERT_FAIL(563);
 		return ret;

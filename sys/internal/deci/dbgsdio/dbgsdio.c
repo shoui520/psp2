@@ -291,7 +291,7 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
 		return event;
 	}
-	ret = ksceKernelRegisterIntrHandler(DBGSDIO_INTR_BASE + index, "SceDbgSdio1Mbox0", 0,
+	ret = sceKernelRegisterIntrHandler(DBGSDIO_INTR_BASE + index, "SceDbgSdio1Mbox0", 0,
 					    sceDbgSdioMboxInterrupt, c, 0x80, 0xf, NULL);
 	if (ret < 0) {
 		sceKernelDeleteEventFlag(event);
@@ -302,7 +302,7 @@ int SceDbgSdioForDriver_3D3FAF3A(SceUInt32 index, SceUID notify)
 	c->event = event;
 	c->notify = notify;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_sdio.lock, state);
-	ksceKernelEnableIntr(DBGSDIO_INTR_BASE + index);
+	sceKernelEnableIntr(DBGSDIO_INTR_BASE + index);
 	return 0;
 }
 
@@ -318,8 +318,8 @@ int SceDbgSdioForDriver_361E1BB6(SceUInt32 index)
 
 	state = SceCpuForDriver_D32ACE9E(&s_sdio.lock);
 	if (c->active) {
-		ksceKernelDisableIntr(DBGSDIO_INTR_BASE + index);
-		ksceKernelReleaseIntrHandler(DBGSDIO_INTR_BASE + index);
+		sceKernelDisableIntr(DBGSDIO_INTR_BASE + index);
+		sceKernelReleaseIntrHandler(DBGSDIO_INTR_BASE + index);
 		sceKernelDeleteEventFlag(c->event);
 		c->active = 0;
 	}
@@ -386,7 +386,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 	int virtual;
 
 	SCE_DBG_ASSERT(1, 1237);
-	ksceKernelDisableIntr(DBGSDIO_INTR_BASE + c->index);
+	sceKernelDisableIntr(DBGSDIO_INTR_BASE + c->index);
 
 	if (size >= DBGSDIO_DMA_MIN) {
 		desc.offset = c->tx.dmaOffset;
@@ -409,7 +409,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 
 	if (size <= c->tx.inlineMax) {
 		waitStatus(c, STATUS_TX_DATA);
-		ksceKernelEnableIntr(DBGSDIO_INTR_BASE + c->index);
+		sceKernelEnableIntr(DBGSDIO_INTR_BASE + c->index);
 		return size;
 	}
 	waitStatus(c, STATUS_TX_ACCEPTED);
@@ -475,7 +475,7 @@ static int sendData(DbgSdioChannel *c, const SceUInt8 *data, SceSize size)
 	while (*c->txControl & CTRL_TX_DATA)
 		;
 complete:
-	ksceKernelEnableIntr(DBGSDIO_INTR_BASE + c->index);
+	sceKernelEnableIntr(DBGSDIO_INTR_BASE + c->index);
 	return size;
 }
 

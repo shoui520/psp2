@@ -145,7 +145,7 @@ void SceIntrmgrForKernel_04DBA732(void *enter, void *leave)
 	g_intrLeaveSubIntr = leave;
 }
 
-int ksceKernelIsIntrAllowedInCurrentContext(void)
+int SceIntrmgrForDriver_182EE3E3(void)
 {
 	if (getCurrentThreadCB())
 		return 0;
@@ -743,12 +743,12 @@ SUB_INTR_OPERATION(sceKernelSuspendSubIntr, 7, 1197, 1215, SUB_OUT_ARG,
 SUB_INTR_OPERATION(sceKernelResumeSubIntr, 8, 1244, 1253, SUB_STATE_ARG, , stateValue)
 SUB_INTR_OPERATION(sceKernelIsSubInterruptOccurred, 9, 1279, 1288, , )
 
-int sceKernelCallSubIntrHandler(int intrCode, int subCode, unsigned int value)
+int sceKernelCallSubIntrHandler(int intrCode, int subCode, void *value)
 {
 	IntrHandler *info, *sub;
-	int (*handler)(unsigned int, void *, unsigned int);
+	int (*handler)(void *, void *, unsigned int);
 	int result;
-	void (*enter)(int, unsigned int, unsigned int, unsigned int, void *);
+	void (*enter)(int, unsigned int, unsigned int, void *, void *);
 
 	if ((unsigned int)intrCode >= INTR_COUNT) {
 		SCE_DBG_PRINTF(0xb, 1315, INTR_TEXT(g_intrUnknownInterruptCode, "Unknown interrupt code. %d\n"), intrCode);
@@ -769,7 +769,7 @@ int sceKernelCallSubIntrHandler(int intrCode, int subCode, unsigned int value)
 		enter(4, intrCode, subCode, value, sub->arg);
 	result = handler(value, sub->arg, (SceUInt8)info->priority);
 	if (unlikely(g_intrLeaveSubIntr != NULL))
-		((void (*)(int, unsigned int, unsigned int, unsigned int))g_intrLeaveSubIntr)
+		((void (*)(int, unsigned int, unsigned int, void *))g_intrLeaveSubIntr)
 			(3, intrCode, subCode, value);
 	if (checkStackGuard() < 0) {
 		SCE_DBG_PRINTF(0xb, 1347,

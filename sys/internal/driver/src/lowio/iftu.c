@@ -208,7 +208,7 @@ static inline __attribute__((always_inline)) void IftuStop(IftuPlane *plane)
 	regs->interruptStatus = 0;
 	(void)regs->interruptStatus;
 	LowioDsb();
-	ksceKernelDisableIntr(plane->intrCode);
+	sceKernelDisableIntr(plane->intrCode);
 }
 
 static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
@@ -237,7 +237,7 @@ static int IftuSysEvent(int resume, int eventId, void *args, void *opt)
 		(void)converter->registers->pathConfig;
 		LowioDsb();
 		converter->registers->pathConfig = 0x108;
-		ksceKernelEnableIntr(converter->intrCode);
+		sceKernelEnableIntr(converter->intrCode);
 		intr = SceCpuForDriver_D32ACE9E(&converter->lock);
 		if (converter->state != IFTU_STATE_DISABLED) {
 			IftuLoadCsc1(converter->registers, &converter->cscParams1);
@@ -568,7 +568,7 @@ int ksceIftuEnable(unsigned int index)
 	control->engineControl = 1;
 	LowioDmb();
 	plane->state = IFTU_STATE_STARTING;
-	ksceKernelEnableIntr(plane->intrCode);
+	sceKernelEnableIntr(plane->intrCode);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&plane->lock, intr);
 	return 0;
 }
@@ -786,13 +786,13 @@ static __attribute__((noinline)) int IftuInit(void)
 		plane->intrCode = s_iftuDevices[i].intrCode;
 		if (plane->intrCode >= 0) {
 			if (i == IFTU_CONVERTER) {
-				ksceKernelRegisterIntrHandler(plane->intrCode,
+				sceKernelRegisterIntrHandler(plane->intrCode,
 					"SceIftu2", 0, Iftu2IntrHandler, plane, 0x50,
 					0xf, NULL);
-				ksceKernelEnableIntr(converter->intrCode);
+				sceKernelEnableIntr(converter->intrCode);
 				break;
 			}
-			ksceKernelRegisterIntrHandler(plane->intrCode,
+			sceKernelRegisterIntrHandler(plane->intrCode,
 				s_iftuDevices[i].intrName, 0, IftuIntrHandler, plane,
 				0x50, 0xf, NULL);
 		}

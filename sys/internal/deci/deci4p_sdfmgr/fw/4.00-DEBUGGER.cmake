@@ -82,12 +82,12 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelSignalSema
 	sceKernelSetEventFlag
 	SceThreadmgrForKernel_6C1F092F
-	ksceKernelDisableIntr
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	SceIntrmgrForKernel_01911612
 	sceKernelGetIntrPendingStatusForDebugger
 	SceIntrmgrForKernel_807B2004

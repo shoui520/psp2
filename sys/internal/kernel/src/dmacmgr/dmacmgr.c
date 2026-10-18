@@ -170,8 +170,8 @@ void ReleaseDmacChannel(int intrCode, DmaController *dmac, DmaChannel *channel)
 
 	if (!(dmac->intrChannels & bit))
 		return;
-	ksceKernelDisableIntr(intrCode);
-	ksceKernelReleaseIntrHandler(intrCode);
+	sceKernelDisableIntr(intrCode);
+	sceKernelReleaseIntrHandler(intrCode);
 	reg = channel->reg;
 	reg->ctrl = 0;
 	dsb();
@@ -600,15 +600,15 @@ int ResumeDmacmgr(void *args)
 		ResetDmacChannel(s_dmacMgr.dmac6Channel[1].op);
 	}
 	for (i = 0; i < 14; i++)
-		ksceKernelEnableIntr(s_intrCode[i]);
+		sceKernelEnableIntr(s_intrCode[i]);
 	reg4 = s_dmacMgr.dmac4Reg;
 	reg4->gate[0].intrMask = 0xffff;
 	reg4->gate[1].intrMask = 0;
 	reg4->gate[2].intrMask = 0;
 	reg4->gate[3].intrMask = 0;
 	if (s_dmacMgr.dmac6Reg != NULL) {
-		ksceKernelEnableIntr(0x7e);
-		ksceKernelEnableIntr(0x7f);
+		sceKernelEnableIntr(0x7e);
+		sceKernelEnableIntr(0x7f);
 	}
 	return 0;
 }
@@ -852,7 +852,7 @@ SceKernelDmaOpId ksceKernelDmaOpAlloc(const char *name)
 	DmaOp *op;
 	SceUID evfId;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (name == NULL) {
 		name = "SceDmacDefault";
@@ -885,7 +885,7 @@ int ksceKernelDmaOpFree(SceKernelDmaOpId opid)
 	SceKernelIntrStatus intr;
 	int retry;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (op->magic != DMA_OP_MAGIC) {
 		SCE_DBG_PRINTF_FUNC(0xb, 732, "sceKernelDmaOpFree",
@@ -1332,7 +1332,7 @@ int ksceDmacMemcpy(void *dst, const void *src, SceSize size)
 	DmaOp op;
 	SceUID evfId;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (size == 0)
 		return 0;
@@ -1414,7 +1414,7 @@ int ksceDmacMemset(void *dst, int c, SceSize size)
 	SceKernelDmacId dmacId;
 	SceUID evfId;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (size == 0)
 		return 0;
@@ -1572,7 +1572,7 @@ int ksceKernelDmaOpQuit(SceKernelDmaOpId opid)
 			/* the interrupt handler finishes the cancel */
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&op->lock, intr);
 			for (retry = 5; ; ) {
-				if (!ksceKernelIsIntrAllowedInCurrentContext() && intr != 0)
+				if (!SceIntrmgrForDriver_182EE3E3() && intr != 0)
 					sceKernelDelayThread(10);
 				intr = SceCpuForDriver_D32ACE9E(&op->lock);
 				if (!(op->status & DMA_OP_CANCELING))
@@ -1811,7 +1811,7 @@ int module_start(SceSize args, void *argp)
 		}
 		if (s_dmacMgr.dmac6Reg == NULL && isDmac6Intr(intrCode))
 			continue;
-		res = ksceKernelRegisterIntrHandler(intrCode, s_dmacIntr[i].name, 0, handler, arg,
+		res = sceKernelRegisterIntrHandler(intrCode, s_dmacIntr[i].name, 0, handler, arg,
 						    0x80, targetCpu, NULL);
 		if (res < 0) {
 			SCE_DBG_PRINTF_FUNC(0xb, 2244, "StartDmacmgr",
@@ -1819,12 +1819,12 @@ int module_start(SceSize args, void *argp)
 			while (i-- != 0) {
 				intrCode = s_dmacIntr[i].intrCode;
 				if (s_dmacMgr.dmac6Reg != NULL || !isDmac6Intr(intrCode))
-					ksceKernelReleaseIntrHandler(intrCode);
+					sceKernelReleaseIntrHandler(intrCode);
 			}
 			sceKernelDeleteHeap(s_dmacMgr.rangeHeapId);
 			goto out;
 		}
-		ksceKernelEnableIntr(intrCode);
+		sceKernelEnableIntr(intrCode);
 	}
 	reg4 = s_dmacMgr.dmac4Reg;
 	reg4->gate[0].intrMask = 0xffff;

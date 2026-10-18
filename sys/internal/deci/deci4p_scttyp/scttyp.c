@@ -66,7 +66,7 @@ static int resumeHandler(void *args)
 			SCTTYP_PRINTF(739, "UartChStart() failed (0x%08X)\n", ret);
 			return ret;
 		}
-		ret = ksceKernelEnableIntr(SCTTYP_INTR);
+		ret = sceKernelEnableIntr(SCTTYP_INTR);
 		if (ret < 0) {
 			SCTTYP_PRINTF(746, "EnableIntr() failed (0x%08X)\n", ret);
 			return ret;
@@ -82,7 +82,7 @@ static int suspendHandler(void *args)
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == SCTTYP_CPU) {
-		ret = ksceKernelDisableIntr(SCTTYP_INTR);
+		ret = sceKernelDisableIntr(SCTTYP_INTR);
 		if (ret < 0)
 			SCTTYP_PRINTF(712, "DisableIntr() failed (0x%08X)\n", ret);
 	}
@@ -281,19 +281,19 @@ static int initThread(SceSize args, void *argp)
 		SCTTYP_PRINTF(290, "RegisterBreakHook() failed (0x%08x)\n", ret);
 		goto close;
 	}
-	ret = ksceKernelRegisterIntrHandler(SCTTYP_INTR, "SceUart6", 0, uartIntrHandler, NULL,
+	ret = sceKernelRegisterIntrHandler(SCTTYP_INTR, "SceUart6", 0, uartIntrHandler, NULL,
 					    0x10, 0x20000, NULL);
 	if (ret < 0) {
 		SCTTYP_PRINTF(304, "RegisterIntrHandler() failed (0x%08X)\n", ret);
 		goto unhook;
 	}
-	ret = ksceKernelEnableIntr(SCTTYP_INTR);
+	ret = sceKernelEnableIntr(SCTTYP_INTR);
 	if (ret >= 0) {
 		sceKernelExitThread(0);
 		return 0;
 	}
 	SCTTYP_PRINTF(311, "EnableIntr() failed (0x%08X)\n", ret);
-	ret = ksceKernelReleaseIntrHandler(SCTTYP_INTR);
+	ret = sceKernelReleaseIntrHandler(SCTTYP_INTR);
 	if (ret < 0)
 		SCTTYP_PRINTF(322, "ReleaseIntrHandler() failed (0x%08X)\n", ret);
 unhook:

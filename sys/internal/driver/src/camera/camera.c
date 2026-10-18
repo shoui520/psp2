@@ -204,18 +204,18 @@ int sce_camera_init(void)
 	if ((hardwareInfo & 0xdf0000) == 0x100000 ||
 	    (hardwareInfo & 0xff0000) == 0x310000 ||
 	    (hardwareInfo & 0xfe0000) == 0x400000) {
-		ksceKernelRegisterSubIntrHandler(166, 0, "SceCif0Camera",
+		sceKernelRegisterSubIntrHandler(166, 0, "SceCif0Camera",
 				cameraSubIntrHandler, &cameraDriver->device[1]);
-		ksceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
+		sceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
 				cameraSubIntrHandler, &cameraDriver->device[0]);
 		cameraDriver->device[0].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif1", 0x1000, 0, &cameraDriver->device[0].eventFlagOption);
 		cameraDriver->device[1].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif0", 0x1000, 0, &cameraDriver->device[1].eventFlagOption);
 	} else {
-		ksceKernelRegisterSubIntrHandler(166, 0, "SceCif0Camera",
+		sceKernelRegisterSubIntrHandler(166, 0, "SceCif0Camera",
 				cameraSubIntrHandler, &cameraDriver->device[0]);
-		ksceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
+		sceKernelRegisterSubIntrHandler(168, 0, "SceCif1Camera",
 				cameraSubIntrHandler, &cameraDriver->device[1]);
 		cameraDriver->device[0].eventFlagId = sceKernelCreateEventFlag(
 				"SceCif0", 0x1000, 0, &cameraDriver->device[0].eventFlagOption);
@@ -231,8 +231,8 @@ int sce_camera_init(void)
 			(const SceKernelThreadOptParam *)&driver->threadOption);
 	result = cameraDriver->threadId;
 	if (result >= 0) {
-		ksceKernelEnableSubIntr(166, 0);
-		ksceKernelEnableSubIntr(168, 0);
+		sceKernelEnableSubIntr(166, 0);
+		sceKernelEnableSubIntr(168, 0);
 		sceKernelRegisterSysEventHandler("SceCamera", cameraSysEventHandler, NULL);
 		sceKernelRegisterProcEventHandler("SceCamera", &cameraProcessEventHandler, 0);
 		cameraDriver->mutexId = sceKernelCreateMutex("SceCameraDrv", 0, 0, NULL);
@@ -868,8 +868,8 @@ int cameraTerminate(void)
 	sceKernelDeleteMutex(cameraDriver->mutexId);
 	sceKernelDeleteEventFlag(cameraDriver->device[0].eventFlagId);
 	sceKernelDeleteEventFlag(cameraDriver->device[1].eventFlagId);
-	ksceKernelReleaseSubIntrHandler(166, 0);
-	ksceKernelReleaseSubIntrHandler(168, 0);
+	sceKernelReleaseSubIntrHandler(166, 0);
+	sceKernelReleaseSubIntrHandler(168, 0);
 	driver = cameraDriver;
 	hardwareInfo = driver->hardwareInfo;
 	head = (hardwareInfo & 0xdf0000) == 0x100000 ||

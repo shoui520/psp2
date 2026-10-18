@@ -139,12 +139,12 @@ cancelTimer:
 		transport->wakeupTimer = BtCancelTimer(transport->wakeupTimer);
 enableInterrupt:
 		if (transport->interruptEnabled &&
-		    ksceKernelEnableSubIntr(222, transport->subInterrupt) < 0)
+		    sceKernelEnableSubIntr(222, transport->subInterrupt) < 0)
 			goto exit;
 	}
 exit:
 	BtUnlockTransport(0);
-	ksceKernelDisableSubIntr(222, transport->subInterrupt);
+	sceKernelDisableSubIntr(222, transport->subInterrupt);
 	transport->interruptEnabled = 0;
 	sceKernelExitThread(0);
 	return 0;

@@ -49,7 +49,7 @@ void issueIntrRequest(unsigned int cpuId, struct ThreadmgrIntrRequest *request)
 	} while (SceCpuForDriver_CDA96E81(
 		 (SceInt32 *)&cpu->intrRequestHead, (intptr_t)oldHead,
 		 (intptr_t)request) != (intptr_t)oldHead);
-	if (!oldHead && ksceKernelTriggerSGI(2, 0, 1u << cpuId) < 0) {
+	if (!oldHead && sceKernelGenerateSoftIntr(2, 0, 1u << cpuId) < 0) {
 		SCE_DBG_PRINTF(0xb, 420,
 			      " fatal error: scheduling request SGI failed.\n");
 		SCE_PANIC(SCE_LINE(422, 421));
@@ -103,7 +103,7 @@ void addIntrRequest(unsigned int cpuId, uint32_t mask)
 		hook(61 - (mask ? __builtin_clz(mask) : 32), 1, cpuId);
 	if (SceCpuForDriver_2A40BB93((SceInt32 *)&cpu->intrRequestMask,
 				    mask) == 0 &&
-	    ksceKernelTriggerSGI(2, 0, 1u << cpuId) < 0) {
+	    sceKernelGenerateSoftIntr(2, 0, 1u << cpuId) < 0) {
 		SCE_DBG_PRINTF(0xb, 453,
 			      " fatal error: scheduling request SGI failed.\n");
 		SCE_PANIC(SCE_LINE(455, 454));
@@ -347,7 +347,7 @@ static inline void salvageExecutableStagnantThread(void)
 
 	cpuId = sceKernelCpuId();
 	cpu = currentCpuState();
-	SCE_DBG_ASSERT_LEVEL(0, ksceKernelIsIntrAllowedInCurrentContext() != 0, 63);
+	SCE_DBG_ASSERT_LEVEL(0, SceIntrmgrForDriver_182EE3E3() != 0, 63);
 	SCE_DBG_ASSERT_CHECK(IntrDisabled(), 66);
 	first = NULL;
 	for (;;) {

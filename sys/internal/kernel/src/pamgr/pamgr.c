@@ -16,9 +16,9 @@
 #include <sysmem/sysmem.h>
 #include <processmgr/processmgr.h>
 #include <acmgr/acmgr.h>
+#include <intrmgr/intrmgr.h>
 
 int checkDebugPermission(void);
-void SceIntrmgrForKernel_217AC350(void *enter, void *leave);
 int configurePrimaryTrace(const volatile struct PamgrPrimaryTraceConfig *config);
 int configureArmTrace(const volatile struct PamgrArmTraceConfig *config);
 int startTrace(unsigned int channel);
@@ -902,7 +902,7 @@ int unregisterTraceInterruptCallback(void)
 
 	if (pamgrState.traceInterruptCallback == NULL)
 		return SCE_KERNEL_ERROR_PA_ERROR;
-	result = ksceKernelDisableIntr(0xf4);
+	result = sceKernelDisableIntr(0xf4);
 	pamgrState.traceInterruptCallback = NULL;
 	pamgrState.traceInterruptArg = NULL;
 	return result;
@@ -917,7 +917,7 @@ int registerTraceInterruptCallback(PamgrTraceInterruptCallback callback, void *a
 	pamgrState.traceInterruptCallback = callback;
 	pamgrState.traceInterruptArg = arg;
 	pamgrState.pfmRegisters->traceInterruptStatus = 0x10003;
-	result = ksceKernelEnableIntr(0xf4);
+	result = sceKernelEnableIntr(0xf4);
 	if (result < 0)
 		unregisterTraceInterruptCallback();
 	return result;
@@ -1459,7 +1459,7 @@ int initializeTraceHardware(void)
 	pfm = pamgrState.pfmRegisters;
 	if (pfm->traceControl & PFM_TRACE_ENABLED)
 		return SCE_KERNEL_ERROR_ALREADY_REGISTERED;
-	result = ksceKernelRegisterIntrHandler(0xf4, "SceKernelPaPmoni", 0,
+	result = sceKernelRegisterIntrHandler(0xf4, "SceKernelPaPmoni", 0,
 					     traceInterruptHandler, NULL, 0xd0, 0xf, NULL);
 	if (result < 0)
 		return result;

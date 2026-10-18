@@ -343,7 +343,7 @@ int powerSwitchTransition(uint32_t mode)
 					 NULL);
 		s_powerSwitchState.interruptState = 1;
 		dsb();
-		ksceKernelTriggerSGI(10, 0, 7);
+		sceKernelGenerateSoftIntr(10, 0, 7);
 		started = SceThreadmgrForDriver_47F6DE49();
 		while ((seen = s_powerSwitchState.interruptCpuMask) != 7) {
 			now = SceThreadmgrForDriver_47F6DE49();
@@ -837,7 +837,7 @@ int powerInitializeSwitchControl(void)
 		s_powerSwitchState.primaryMode = 9;
 	}
 	s_powerSwitchState.powerModeArgument = 2;
-	ksceKernelRegisterIntrHandler(
+	sceKernelRegisterIntrHandler(
 		10, "ScePowerMain", 0,
 		(SceKernelIntrHandler)powerSwitchInterrupt, NULL, 0x50, 0xf,
 		NULL);

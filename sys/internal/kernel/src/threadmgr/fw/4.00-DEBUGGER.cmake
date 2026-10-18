@@ -179,11 +179,11 @@ set(MODULE_IMPORT_FUNCS
 	ksceExcpmgrRegisterHandler
 	SceExcpmgrForKernel_3E55B5C3
 	SceExcpmgrForKernel_B615A7DA
-	ksceKernelDisableIntr
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
+	sceKernelDisableIntr
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
 	SceIntrmgrForDriver_C568F145
 	SceIntrmgrForKernel_04E635AA
 	SceIntrmgrForKernel_08FDB0CE

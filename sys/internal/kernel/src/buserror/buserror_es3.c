@@ -275,7 +275,7 @@ int RegisterBusErrorHandler_ES3(void)
 {
 	int ret;
 
-	ret = ksceKernelRegisterIntrHandler(0x20, "SceBusError", 0, busErrorIntrHandler, NULL,
+	ret = sceKernelRegisterIntrHandler(0x20, "SceBusError", 0, busErrorIntrHandler, NULL,
 					    0x10, 0xf, NULL);
 	if (ret < 0) {
 #if FW_DEBUG
@@ -283,7 +283,7 @@ int RegisterBusErrorHandler_ES3(void)
 		SCE_DBG_ASSERT_FAIL(1740);
 #endif
 	} else {
-		ksceKernelEnableIntr(0x20);
+		sceKernelEnableIntr(0x20);
 		ret = 0;
 	}
 	return ret;

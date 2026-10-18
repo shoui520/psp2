@@ -7,14 +7,15 @@
 
 #include <psp2kern/types.h>
 
-typedef int (*SceKernelIntrHandlerTzs)(int intrCode, void *userCtx);
 /* an SMC service of the secure monitor: the caller's r0-r3 */
 typedef int (*SceKernelMonitorCallHandler)(int arg0, int arg1, int arg2, int arg3);
 
+struct SceKernelIntrRegisterOpt;			/* intrmgr/intrmgr.h */
+
+/* the same prototypes as the non-secure kernel's (intrmgr/intrmgr.h) */
 int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsigned int type,
-				 SceKernelIntrHandlerTzs handler, void *userCtx,
-				 unsigned int priority, unsigned int targetCpu,
-				 const struct SceKernelIntrRegisterOpt *opt);
+				 void *handler, void *arg, unsigned int priority,
+				 unsigned int target, const struct SceKernelIntrRegisterOpt *opt);
 int sceKernelReleaseIntrHandler(unsigned int intrCode);
 int sceKernelEnableIntr(unsigned int intrCode);
 int sceKernelDisableIntr(unsigned int intrCode);

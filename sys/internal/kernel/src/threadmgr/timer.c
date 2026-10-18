@@ -442,7 +442,7 @@ static int deleteTimer(SceUID timerId, SceUID puid)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 1425, "*** error: illegal context. timerId=0x%08x[%s]\n",
 				      timerId, SceSysmemForDriver_E655852F(timerId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -730,7 +730,7 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 		manager->timerMemBlockId = uid;
 		SceSysmemForDriver_A841EDDA(uid, (void **)&manager->systemTime);
 		SceSysrootForKernel_5B5EBFB1(s_threadmgrRuntime.manager->systemTime);
-		ret = ksceKernelRegisterIntrHandler(TIMER_INTR, "SceThreadmgrTimer", 0,
+		ret = sceKernelRegisterIntrHandler(TIMER_INTR, "SceThreadmgrTimer", 0,
 			timerIntrHandler, (void *)s_threadmgrRuntime.manager, 0x30, 0xf, NULL);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 344, "error: register timer handler.(0x%08X)\n", ret);
@@ -780,7 +780,7 @@ void startCpuTimer(struct ThreadMgrCpuCB *cpu)
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
 		cpu->lastThreadSwitchTime = 0;
-		ret = ksceKernelEnableIntr(TIMER_INTR);
+		ret = sceKernelEnableIntr(TIMER_INTR);
 		if (ret < 0) {
 			SCE_DBG_PRINTF(0xb, 439, "error: enable timer intr.(0x%08X)\n", ret);
 			SCE_PANIC(440);
@@ -798,7 +798,7 @@ void suspendCpuTimer(void)
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
 		s_suspendedTime = SceSysrootForKernel_E20F6FC8();
-		ksceKernelDisableIntr(TIMER_INTR);
+		sceKernelDisableIntr(TIMER_INTR);
 		manager = s_threadmgrRuntime.manager;
 		compare = manager->timerCompare;
 		/* resume just before the next expiry, so it is not lost */
@@ -825,7 +825,7 @@ void resumeCpuTimer(void)
 		lt5->compareLo = (uint32_t)manager->timerCompare;
 		lt5->compareHi = (uint32_t)(manager->timerCompare >> 32);
 		lt5->control = control;
-		ksceKernelEnableIntr(TIMER_INTR);
+		sceKernelEnableIntr(TIMER_INTR);
 	}
 	sceKernelSysrootCorelockUnlock();
 }
@@ -1522,7 +1522,7 @@ int sceKernelSetTimerTime(SceUID timerId, SceUInt64 *time)
 		ret = SCE_KERNEL_ERROR_ILLEGAL_ADDR;
 		goto restore;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 2008, "*** error: illegal context. timerId=0x%08x[%s]\n",
 				      timerId, SceSysmemForDriver_E655852F(timerId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -1581,7 +1581,7 @@ SceUInt64 SceThreadmgrForDriver_85195A16(SceUID timerId, SceUInt64 time)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		goto restore;
 	intr = SceCpuForDriver_821FC0EE();
 	if (SceSysmemForDriver_00ED6C14(timerId, TIMER_CLASS(), (SceObjectBase **)&uidTimer) >= 0) {
@@ -1629,7 +1629,7 @@ int sceKernelSetTimerEvent(SceUID timerId, SceUInt32 type, SceUInt64 *interval, 
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 2188, "*** error: illegal context. timerId=0x%08x[%s]\n",
 				      timerId, SceSysmemForDriver_E655852F(timerId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

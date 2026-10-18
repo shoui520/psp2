@@ -66,13 +66,13 @@ int initVeneziaMailbox(void)
 	g_veneziaMailboxState.blockingEvent = ret;
 	for (channel = 0; channel < 16; channel++) {
 		snprintf(name, sizeof(name), "SceVeneziaMailbox%02u", channel);
-		ret = ksceKernelRegisterIntrHandler(channel + 80, name, 0,
+		ret = sceKernelRegisterIntrHandler(channel + 80, name, 0,
 			veneziaMailboxIntrHandler, (void *)(uintptr_t)channel, 208, 15, NULL);
 		if (ret < 0)
 			return ret;
 	}
 	for (channel = 80; channel < 96; channel++) {
-		ret = ksceKernelEnableIntr(channel);
+		ret = sceKernelEnableIntr(channel);
 		if (ret < 0)
 			return ret;
 	}
@@ -86,7 +86,7 @@ int enableVeneziaMailboxInterrupts(void)
 	int ret;
 
 	for (channel = 80; channel < 96; channel++) {
-		ret = ksceKernelEnableIntr(channel);
+		ret = sceKernelEnableIntr(channel);
 		if (ret < 0)
 			return ret;
 	}

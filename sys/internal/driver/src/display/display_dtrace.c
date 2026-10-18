@@ -24,7 +24,7 @@ static void vblankProbeCreate(void)
 {
 	int ret;
 
-	ret = ksceKernelRegisterSubIntrHandler(8, 1, "SceDispalyDtrace", vblankProbeHandler, NULL);
+	ret = sceKernelRegisterSubIntrHandler(8, 1, "SceDispalyDtrace", vblankProbeHandler, NULL);
 	DTRACE_CHECK(ret, "failed to register interrupt");
 }
 
@@ -37,7 +37,7 @@ static void vblankProbeEnable(void)
 {
 	int ret;
 
-	ret = ksceKernelEnableSubIntr(8, 1);
+	ret = sceKernelEnableSubIntr(8, 1);
 	DTRACE_CHECK(ret, "failed to enable vblank interrupt");
 }
 
@@ -50,7 +50,7 @@ static void vblankProbeDisable(void)
 {
 	int ret;
 
-	ret = ksceKernelDisableSubIntr(8, 1);
+	ret = sceKernelDisableSubIntr(8, 1);
 	DTRACE_CHECK(ret, "failed to disable vblank interrupt");
 }
 
@@ -63,7 +63,7 @@ static void vblankProbeDestroy(void)
 {
 	int ret;
 
-	ret = ksceKernelReleaseSubIntrHandler(8, 1);
+	ret = sceKernelReleaseSubIntrHandler(8, 1);
 	DTRACE_CHECK(ret, "failed to release interrupt");
 }
 

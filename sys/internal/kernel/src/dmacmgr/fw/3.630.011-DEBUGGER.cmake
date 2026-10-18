@@ -81,11 +81,11 @@ set(MODULE_IMPORT_FUNCS
 	SceDipswForDriver_A98FC2FD
 	sceKernelSysrootDisableAutoClockDown
 	sceKernelSysrootEnableAutoClockDown
-	ksceKernelDisableIntr
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelCreateEventFlag
 	sceKernelDelayThread

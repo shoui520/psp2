@@ -129,10 +129,10 @@ set(MODULE_IMPORT_FUNCS
 	SceProcessmgrForDriver_B1C3EFCA
 	SceSblACMgrForKernel_49509A83
 	SceQafMgrForDriver_382C71E8
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	SceSyslibtraceForKernel_7CC73CDA
 )
 set(MODULE_IMPORT_VARS

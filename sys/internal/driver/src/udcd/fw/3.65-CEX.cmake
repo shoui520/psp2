@@ -129,15 +129,15 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidivmod
 	__stack_chk_fail
 	strnlen
-	ksceKernelDisableIntr
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelDisableSubIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelDisableSubIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
+	sceKernelReleaseIntrHandler
 	sceKernelGetThreadmgrUIDClass
 	sceKernelWaitEventFlag
 	SceThreadmgrForDriver_20C228E4

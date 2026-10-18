@@ -220,14 +220,14 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_89D19090
 	SceSysrootForDriver_B0E1FC67
 	SceSysrootForKernel_EC3124A3
-	ksceKernelDisableSubIntr
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
-	ksceKernelTriggerSubIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
+	sceKernelCallSubIntrHandler
+	sceKernelReleaseIntrHandler
 	ksceKernelSysTimerSetClockSource
 	ksceKernelSysTimerStartCount
 	ksceKernelSysTimerFree

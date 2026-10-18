@@ -197,7 +197,7 @@ int waitSema(SceUID semaId, int needCount, SceUInt32 *timeout, int callbacks)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 #if FW_DEBUG
 		if (SceDebugForDriver_374B7868() > 0)
 			SceDebugForDriver_821A2D59(1, 0, SCE_DBGINFO(149), __builtin_return_address(0),
@@ -530,7 +530,7 @@ int sceKernelDeleteSema(SceUID semaId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 661, "sceKernelDeleteSema", "*** error: illegal context. semaId=0x%08x[%s]\n",
 				      semaId, SceSysmemForDriver_E655852F(semaId));
 		ThreadmgrSetUserRoWord(saved);
@@ -547,7 +547,7 @@ int sceKernelDeleteSema(SceUID semaId)
 	return ret;
 }
 
-/* SceThreadmgrForKernel_EFD7439D, SceThreadmgrForDriver_3C8B55A9 */
+/* SceThreadmgrForKernel_sceKernelWaitSema, SceThreadmgrForDriver_3C8B55A9 */
 int sceKernelWaitSema(SceUID semaId, int needCount, SceUInt32 *timeout)
 {
 	return waitSema(semaId, needCount, timeout, 0);

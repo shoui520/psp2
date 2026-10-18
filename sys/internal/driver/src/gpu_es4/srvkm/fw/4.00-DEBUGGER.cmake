@@ -192,10 +192,10 @@ set(MODULE_IMPORT_FUNCS
 	SceSysmemForDriver_EAF3849B
 	SceSysmemForDriver_F50BDC0C
 	SceSysmemForDriver_FFCD9B60
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelAllocRemoteProcessHeap
 	ksceKernelGetProcessInfo
 	ksceKernelCreateProcessLocalStorage

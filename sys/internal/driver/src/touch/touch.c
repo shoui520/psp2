@@ -402,7 +402,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 		case 0x402:
 			return touch.state == TOUCH_STATE_IDLE ? 0 : -1;
 		case 0x400c:
-			ksceKernelDisableSubIntr(8, 5);
+			sceKernelDisableSubIntr(8, 5);
 			touch.state = TOUCH_STATE_SUSPENDED;
 			if (touch.timer != -1) {
 				sceKernelCancelAlarm(touch.timer);
@@ -417,7 +417,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 			touch.modeMask = 0;
 			touch.ports[0].forceChange = 0;
 			touch.ports[1].forceChange = 0;
-			ksceKernelEnableSubIntr(8, 5);
+			sceKernelEnableSubIntr(8, 5);
 			return 0;
 		}
 		if (event == 0x100000) {
@@ -1211,8 +1211,8 @@ static int initialize(void *argp)
 	if (touch.plsId < 0)
 		return 1;
 	createProcess(0x10005);
-	ksceKernelRegisterSubIntrHandler(8, 5, "SceTouchVblank", vblankHandler, NULL);
-	ksceKernelEnableSubIntr(8, 5);
+	sceKernelRegisterSubIntrHandler(8, 5, "SceTouchVblank", vblankHandler, NULL);
+	sceKernelEnableSubIntr(8, 5);
 	return 1;
 }
 

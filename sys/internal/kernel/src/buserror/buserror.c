@@ -74,7 +74,7 @@ SceSize SceBusErrorForKernel_EBB1F135(void *buf, SceSize size)
 static int busErrorResume(void *args)
 {
 	if (sceKernelCpuId() == 0)
-		ksceKernelEnableIntr(BUSERROR_INTR);
+		sceKernelEnableIntr(BUSERROR_INTR);
 	return 0;
 }
 

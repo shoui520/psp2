@@ -325,27 +325,27 @@ int SceSDbgSdioForKernel_7876806C(SceUInt32 channel, const void *buf, SceSize si
 	}
 	CopyToShm(ch->tx.desc, &desc, sizeof(desc));
 
-	ksceKernelDisableIntr(intr);
+	sceKernelDisableIntr(intr);
 	*ch->txControl = CTRL_TX_MESSAGE;
 
 	if (desc.flags == 0 || left != 0) {
 		WaitStatus(ch->status, STATUS_TX_ACCEPTED);
-		ksceKernelEnableIntr(intr);
+		sceKernelEnableIntr(intr);
 
 		for (first = 1; left != 0; left -= chunk, first = 0) {
 			chunk = left < desc.chunkSize ? left : desc.chunkSize;
 			if (!first) {
 				WaitStatus(ch->status, STATUS_TX_DATA);
-				ksceKernelEnableIntr(intr);
+				sceKernelEnableIntr(intr);
 			}
 			CopyToShm(ch->tx.data, src, chunk);
 			src += chunk;
-			ksceKernelDisableIntr(intr);
+			sceKernelDisableIntr(intr);
 			*ch->txControl = CTRL_TX_DATA;
 		}
 	}
 
 	WaitStatus(ch->status, STATUS_TX_DATA);
-	ksceKernelEnableIntr(intr);
+	sceKernelEnableIntr(intr);
 	return size;
 }

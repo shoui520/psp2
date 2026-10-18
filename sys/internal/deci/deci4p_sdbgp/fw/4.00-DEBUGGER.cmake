@@ -496,11 +496,11 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForKernel_C976719E
 	SceThreadmgrForKernel_E2DACBC2
 	SceThreadmgrForKernel_F55FDEFB
-	ksceKernelIsIntrAllowedInCurrentContext
+	SceIntrmgrForDriver_182EE3E3
 	SceIntrmgrForKernel_01911612
 	SceIntrmgrForKernel_04DBA732
 	SceIntrmgrForKernel_8D6E1289
-	ksceKernelQueryIntrHandlerInfo
+	sceKernelQueryIntrHandlerInfo
 	SceExcpmgrForKernel_1FBF5654
 	SceExcpmgrForKernel_44CE04B8
 	SceExcpmgrForKernel_5420ED8F

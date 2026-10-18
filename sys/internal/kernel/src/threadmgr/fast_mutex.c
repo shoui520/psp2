@@ -351,7 +351,7 @@ int sceKernelFinalizeFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 910, "sceKernelFinalizeFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -418,7 +418,7 @@ int lockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 210, "lockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -552,7 +552,7 @@ int sceKernelTryLockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1006, "sceKernelTryLockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -634,7 +634,7 @@ int sceKernelUnlockFastMutex(struct ThreadmgrFastMutex *mutex)
 		ret = SCE_KERNEL_ERROR_FAST_MUTEX_NOT_INITIALIZED;
 		goto restore;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1092, "sceKernelUnlockFastMutex", "*** error: illegal context. pFastMutex=%p[%s]\n",
 				      mutex, SceSysmemForDriver_E655852F(mutex->uid));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

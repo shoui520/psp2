@@ -326,7 +326,7 @@ int module_start(SceSize args, void *argp)
 	ret = sceSblTzsBridgeStart();
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelRegisterIntrHandler(4, "SceSblSmSchedProxySGI", 0x10, softIntrHandler,
+	ret = sceKernelRegisterIntrHandler(4, "SceSblSmSchedProxySGI", 0x10, softIntrHandler,
 					    NULL, 0x80, 0xf, NULL);
 	if (ret < 0)
 		return ret;

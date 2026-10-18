@@ -243,15 +243,15 @@ static int DsiIntrHandler(int intrCode, void *arg)
 	mask = ctx->subIntrMask;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
 	if ((status & 1) && (mask & 1))
-		ksceKernelTriggerSubIntr(intrCode, 0, (void *)0);
+		sceKernelCallSubIntrHandler(intrCode, 0, (void *)0);
 	if ((status & 2) && (mask & 2))
-		ksceKernelTriggerSubIntr(intrCode, 1, (void *)1);
+		sceKernelCallSubIntrHandler(intrCode, 1, (void *)1);
 	if ((status & 4) && (mask & 4))
-		ksceKernelTriggerSubIntr(intrCode, 2, (void *)2);
+		sceKernelCallSubIntrHandler(intrCode, 2, (void *)2);
 	if ((status & 8) && (mask & 8))
-		ksceKernelTriggerSubIntr(intrCode, 3, (void *)3);
+		sceKernelCallSubIntrHandler(intrCode, 3, (void *)3);
 	if ((status & 0x10) && (mask & 0x10))
-		ksceKernelTriggerSubIntr(intrCode, 4, (void *)4);
+		sceKernelCallSubIntrHandler(intrCode, 4, (void *)4);
 	return -1;
 }
 
@@ -310,10 +310,10 @@ static const struct {
 	},
 };
 
-static SceKernelIntrOptParam s_dsiIntrOpt = {
+static SceKernelIntrRegisterOpt s_dsiIntrOpt = {
 	0x14,
 	5,
-	(SceKernelIntrOptHandlers *)&s_dsiIntrHandlers,
+	(void *)&s_dsiIntrHandlers,
 	0,
 	0,
 };
@@ -367,9 +367,9 @@ static __attribute__((noinline)) int DsiInit(void)
 	}
 	s_dsi[0].intrCode = DSI_INTR_HEAD0;
 	s_dsi[1].intrCode = DSI_INTR_HEAD1;
-	ksceKernelRegisterIntrHandler(DSI_INTR_HEAD0, "SceDsi0", 0, DsiIntrHandler,
+	sceKernelRegisterIntrHandler(DSI_INTR_HEAD0, "SceDsi0", 0, DsiIntrHandler,
 		&s_dsi[0], 0xa0, 0xf, &s_dsiIntrOpt);
-	ksceKernelRegisterIntrHandler(DSI_INTR_HEAD1, "SceDsi1", 0, DsiIntrHandler,
+	sceKernelRegisterIntrHandler(DSI_INTR_HEAD1, "SceDsi1", 0, DsiIntrHandler,
 		&s_dsi[1], 0xa0, 0xf, &s_dsiIntrOpt);
 	sceKernelRegisterSysEventHandler("SceDsi", DsiSysEvent, NULL);
 	s_dsi[0].continuousClock = 0;
@@ -818,7 +818,7 @@ int ksceDsiEnableHead(unsigned head)
 	regs->commandMode = 1;
 	ctx->enabled = 1;
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&ctx->lock, intr);
-	ksceKernelEnableIntr(ctx->intrCode);
+	sceKernelEnableIntr(ctx->intrCode);
 	return 0;
 }
 
@@ -837,7 +837,7 @@ int ksceDsiDisableHead(unsigned head)
 		return 0;
 	}
 	ctx->enabled = 0;
-	ksceKernelDisableIntr(ctx->intrCode);
+	sceKernelDisableIntr(ctx->intrCode);
 	regs = s_dsi[head].registers;
 	while (regs->pending & 0xf)
 		;

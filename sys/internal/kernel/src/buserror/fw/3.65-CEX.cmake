@@ -30,8 +30,8 @@ set(MODULE_IMPORT_NIDS
 set(MODULE_IMPORT_FUNCS
 	SceKernelSuspendForDriver_105C5752
 	SceKernelSuspendForDriver_CE7A2207
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
 	SceSysrootForKernel_3E455842
 	SceSysrootForKernel_82FC6405
 	SceSysrootForKernel_B27B7530

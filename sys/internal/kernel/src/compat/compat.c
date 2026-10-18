@@ -207,8 +207,9 @@ const SceKernelProcEventHandler gCompatProcessHandlers = {
 	compatProcessKillHandler, compatProcessStopHandler, NULL, NULL,
 };
 
-SceKernelIntrOptParam gCompatInterruptOptions = {
-	sizeof(SceKernelIntrOptParam), 0, NULL, 1, 3,
+SceKernelIntrRegisterOpt gCompatInterruptOptions = {
+	sizeof(SceKernelIntrRegisterOpt), 0, NULL, SCE_KERNEL_INTR_OPT_HAS_CONFIG,
+	SCE_KERNEL_INTR_CONFIG_EDGE,
 };
 
 #if FW_DEBUG
@@ -446,9 +447,9 @@ int compatSysEventHandler(int event, int stage, void *args, void *opt)
 
 	if (event == 1 && stage == 0x100000) {
 		for (i = 0; i != 7; ++i)
-			ksceKernelEnableIntr(gCompatInterruptConfig[i].intrcode);
-		ksceKernelEnableIntr(78);
-		ksceKernelEnableIntr(65);
+			sceKernelEnableIntr(gCompatInterruptConfig[i].intrcode);
+		sceKernelEnableIntr(78);
+		sceKernelEnableIntr(65);
 		gCompatRequestsEnabled = 0;
 	}
 	return 0;
@@ -680,26 +681,26 @@ int module_start(SceSize arglen, const void *argp)
 	config = gCompatInterruptConfig;
 	sema = gCompatReturnSema;
 	do {
-		if (ksceKernelRegisterIntrHandler(config->intrcode, config->name,
+		if (sceKernelRegisterIntrHandler(config->intrcode, config->name,
 			0, compatCallIntrHandler, NULL, config->priority,
 			config->target_cpu, &gCompatInterruptOptions) ||
-			ksceKernelEnableIntr(config->intrcode))
+			sceKernelEnableIntr(config->intrcode))
 			goto cleanup;
 		result = sceKernelCreateSema(config[3].name, 0x8000, 1, 1, NULL);
 		if (result < 0)
 			goto cleanup;
 		*sema++ = result;
-		if (ksceKernelRegisterIntrHandler(config[3].intrcode, config[3].name,
+		if (sceKernelRegisterIntrHandler(config[3].intrcode, config[3].name,
 			0, compatReturnIntrHandler,
 			(void *)result, config[3].priority, config[3].target_cpu,
 			&gCompatInterruptOptions) ||
-			ksceKernelEnableIntr(config[3].intrcode))
+			sceKernelEnableIntr(config[3].intrcode))
 			goto cleanup;
 		++config;
 	} while (sema != gCompatReturnSema + 3);
-	if (!ksceKernelRegisterIntrHandler(74, "SceCompatLcdc", 0,
+	if (!sceKernelRegisterIntrHandler(74, "SceCompatLcdc", 0,
 		compatLcdcIntrHandler, NULL, 160, 1,
-		&gCompatInterruptOptions) && !ksceKernelEnableIntr(74))
+		&gCompatInterruptOptions) && !sceKernelEnableIntr(74))
 		return 0;
 cleanup:
 	sema = gCompatHandlerSema;
@@ -714,9 +715,9 @@ cleanup:
 		result = *sema++;
 		if (result > 0)
 			sceKernelDeleteSema(result);
-		ksceKernelReleaseIntrHandler(config->intrcode);
+		sceKernelReleaseIntrHandler(config->intrcode);
 		++config;
-		ksceKernelReleaseIntrHandler(config[2].intrcode);
+		sceKernelReleaseIntrHandler(config[2].intrcode);
 	} while (sema != gCompatReturnSema + 3);
 	if (gCompatSharedSramMemBlock > 0) {
 		SceSysmemForDriver_009E1C61(gCompatSharedSramMemBlock);

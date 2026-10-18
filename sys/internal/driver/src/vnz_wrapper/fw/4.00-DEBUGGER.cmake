@@ -134,10 +134,10 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_D32ACE9E
 	SceCpuForDriver_E813EBB2
 	sceKernelCpuResumeIntr
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelGetThreadmgrUIDClass
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex

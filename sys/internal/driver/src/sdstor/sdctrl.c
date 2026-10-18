@@ -175,7 +175,7 @@ int sdstorRegisterUsbMassInterrupt(void)
 	opt.handlers = (void *)&usbMassIntrCallbacks;
 	opt.attr = 0;
 	opt.config = 0;
-	return ksceKernelRegisterIntrHandler(15, "SceUsbMass", 0,
+	return sceKernelRegisterIntrHandler(15, "SceUsbMass", 0,
 					     sdintrUsbMassHandler, NULL, 208, 15, &opt);
 }
 
@@ -492,7 +492,7 @@ int sdintr_suspend_usd(SceSdstorIntr *interrupt)
 	SCE_DBG_ASSERT_FUNC(1, 2437, "sdintr_hdr_disable_insert_interrupt");
 	irqPort = header->port;
 	SCE_DBG_ASSERT_FUNC(irqPort <= 4, 2242, "sdintr_hdr_get_irq");
-	result = ksceKernelDisableSubIntr(sdintrIrqNumbers[irqPort], header->insertSubIntr);
+	result = sceKernelDisableSubIntr(sdintrIrqNumbers[irqPort], header->insertSubIntr);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2445,
 			"sdintr_hdr_disable_insert_interrupt", "0x%08x\n", result);
@@ -666,7 +666,7 @@ int sdctrl_system_event_handler(int resume, int eventId, void *eventArgs, void *
 		SCE_DBG_ASSERT_FUNC(1, 2419, "sdintr_hdr_disable_remove_interrupt");
 		port = sdintrHeaders[1].port;
 		SCE_DBG_ASSERT_FUNC(port <= 4, 2242, "sdintr_hdr_get_irq");
-		result = ksceKernelDisableSubIntr(sdintrIrqNumbers[port],
+		result = sceKernelDisableSubIntr(sdintrIrqNumbers[port],
 						 sdintrHeaders[1].removeSubIntr);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2427,
@@ -679,7 +679,7 @@ int sdctrl_system_event_handler(int resume, int eventId, void *eventArgs, void *
 		SCE_DBG_ASSERT_FUNC(1, 2419, "sdintr_hdr_disable_remove_interrupt");
 		port = sdintrHeaders[2].port;
 		SCE_DBG_ASSERT_FUNC(port <= 4, 2242, "sdintr_hdr_get_irq");
-		result = ksceKernelDisableSubIntr(sdintrIrqNumbers[port],
+		result = sceKernelDisableSubIntr(sdintrIrqNumbers[port],
 						 sdintrHeaders[2].removeSubIntr);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2427,
@@ -827,12 +827,12 @@ notify:
 	port = header->port;
 	SCE_DBG_ASSERT_FUNC(port <= 4, 2242, "sdintr_hdr_get_irq");
 	irq = sdintrIrqNumbers[port];
-	status = ksceKernelEnableSubIntr(irq, header->insertSubIntr);
+	status = sceKernelEnableSubIntr(irq, header->insertSubIntr);
 	if (status < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2381,
 			"sdintr_hdr_enable_interrupt", "0x%08x\n", status);
 	} else {
-		status = ksceKernelEnableSubIntr(irq, header->removeSubIntr);
+		status = sceKernelEnableSubIntr(irq, header->removeSubIntr);
 		if (status < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2387,
 				"sdintr_hdr_enable_interrupt", "0x%08x\n", status);
@@ -871,12 +871,12 @@ int sdintr_thr_entry(SceSize args, void *argp)
 	port = header->port;
 	SCE_DBG_ASSERT_FUNC(port <= 4, 2242, "sdintr_hdr_get_irq");
 	irq = sdintrIrqNumbers[port];
-	result = ksceKernelEnableSubIntr(irq, header->insertSubIntr);
+	result = sceKernelEnableSubIntr(irq, header->insertSubIntr);
 	if (result < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2381,
 			"sdintr_hdr_enable_interrupt", "0x%08x\n", result);
 	} else {
-		result = ksceKernelEnableSubIntr(irq, header->removeSubIntr);
+		result = sceKernelEnableSubIntr(irq, header->removeSubIntr);
 		if (result < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2387,
 				"sdintr_hdr_enable_interrupt", "0x%08x\n", result);
@@ -953,7 +953,7 @@ int sdintr_thr_entry(SceSize args, void *argp)
 						"sdintr_hdr_disable_insert_interrupt");
 					headerPort = header->port;
 					SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
-					result = ksceKernelDisableSubIntr(sdintrIrqNumbers[headerPort],
+					result = sceKernelDisableSubIntr(sdintrIrqNumbers[headerPort],
 									 header->insertSubIntr);
 					if (result < 0) {
 						SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2445,
@@ -1005,7 +1005,7 @@ suspendGcWithoutIdentity:
 					SCE_DBG_ASSERT_FUNC(1, 2437, "sdintr_hdr_disable_insert_interrupt");
 					headerPort = header->port;
 					SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
-					result = ksceKernelDisableSubIntr(sdintrIrqNumbers[headerPort],
+					result = sceKernelDisableSubIntr(sdintrIrqNumbers[headerPort],
 									 header->insertSubIntr);
 					if (result < 0) {
 						SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2445,
@@ -1171,11 +1171,11 @@ resumeGcNotify:
 	headerPort = header->port;
 	SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
 	irq = sdintrIrqNumbers[headerPort];
-	status = ksceKernelEnableSubIntr(irq, header->insertSubIntr);
+	status = sceKernelEnableSubIntr(irq, header->insertSubIntr);
 	if (status < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2381, "sdintr_hdr_enable_interrupt", "0x%08x\n", status);
 	} else {
-		status = ksceKernelEnableSubIntr(irq, header->removeSubIntr);
+		status = sceKernelEnableSubIntr(irq, header->removeSubIntr);
 		if (status < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2387, "sdintr_hdr_enable_interrupt", "0x%08x\n", status);
 	}
@@ -1249,11 +1249,11 @@ resumeRmNotify:
 	headerPort = header->port;
 	SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
 	irq = sdintrIrqNumbers[headerPort];
-	status = ksceKernelEnableSubIntr(irq, header->insertSubIntr);
+	status = sceKernelEnableSubIntr(irq, header->insertSubIntr);
 	if (status < 0) {
 		SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2381, "sdintr_hdr_enable_interrupt", "0x%08x\n", status);
 	} else {
-		status = ksceKernelEnableSubIntr(irq, header->removeSubIntr);
+		status = sceKernelEnableSubIntr(irq, header->removeSubIntr);
 		if (status < 0)
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2387, "sdintr_hdr_enable_interrupt", "0x%08x\n", status);
 	}
@@ -1498,7 +1498,7 @@ int sdctrl_initialize(void)
 		SCE_DBG_ASSERT_FUNC(header != NULL, 2419, "sdintr_hdr_disable_remove_interrupt");
 		headerPort = header->port;
 		SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
-		result = ksceKernelDisableSubIntr(sdintrIrqNumbers[headerPort], header->removeSubIntr);
+		result = sceKernelDisableSubIntr(sdintrIrqNumbers[headerPort], header->removeSubIntr);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2427,
 				"sdintr_hdr_disable_remove_interrupt", "0x%08x\n", result);
@@ -1508,7 +1508,7 @@ int sdctrl_initialize(void)
 			SCE_DBG_ASSERT_FUNC(header != NULL, 2437, "sdintr_hdr_disable_insert_interrupt");
 			headerPort = header->port;
 			SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
-			result = ksceKernelDisableSubIntr(sdintrIrqNumbers[headerPort], header->insertSubIntr);
+			result = sceKernelDisableSubIntr(sdintrIrqNumbers[headerPort], header->insertSubIntr);
 			if (result < 0) {
 				SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2445,
 					"sdintr_hdr_disable_insert_interrupt", "0x%08x\n", result);
@@ -1519,14 +1519,14 @@ int sdctrl_initialize(void)
 		headerPort = header->port;
 		SCE_DBG_ASSERT_FUNC(headerPort <= 4, 2242, "sdintr_hdr_get_irq");
 		irq = sdintrIrqNumbers[headerPort];
-		result = ksceKernelRegisterSubIntrHandler(irq, header->insertSubIntr,
+		result = sceKernelRegisterSubIntrHandler(irq, header->insertSubIntr,
 							"SceSdstorCardInsert", header->insertHandler, interrupt);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2326, "sdintr_hdr_register_interrupt",
 				"irq = %d, ret = 0x%08x\n", irq, result);
 			goto registerFailed;
 		}
-		result = ksceKernelRegisterSubIntrHandler(irq, header->removeSubIntr,
+		result = sceKernelRegisterSubIntrHandler(irq, header->removeSubIntr,
 							"SceSdstorCardRemove", header->removeHandler, interrupt);
 		if (result < 0) {
 			SCE_DBG_PRINTF_LEVEL_FUNC(1, 15, 2337,

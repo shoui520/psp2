@@ -351,7 +351,7 @@ uint32_t SceDeci4pSDfMgrForKernel_0A6437B6(void)
 
 int sceSDfMgrPoll(void)
 {
-	int result = ksceKernelTriggerSGI(1, 0, s_sdfMgrCpuTargets[sceKernelCpuId()]);
+	int result = sceKernelGenerateSoftIntr(1, 0, s_sdfMgrCpuTargets[sceKernelCpuId()]);
 
 #if FW_DEBUG
 	if (result < 0) {
@@ -734,11 +734,11 @@ int module_bootstart(SceSize args, void *argp)
 		BOOT_CHECK(result, 315, 0xda54a773, 316, 0xfa6cbe59,
 			   "sceKernelRegisterExceptionHandler() failed (0x%08x)\n");
 		/* The registered routines ignore the interrupt code and context. */
-		result = ksceKernelRegisterIntrHandler(0, "SceSDfMgrBreakSgiHandler", 0,
+		result = sceKernelRegisterIntrHandler(0, "SceSDfMgrBreakSgiHandler", 0,
 			(SceKernelIntrHandler)sdfMgrWaitForControl, NULL, 0x10, 15, NULL);
 		BOOT_CHECK(result, 331, 0xb54914e4, 332, 0xe368e1fb,
 			   "sceKernelRegisterIntrHandler() failed (0x%08x)\n");
-		result = ksceKernelRegisterIntrHandler(1, "SceSDfMgrThreadSgiHandler", 0,
+		result = sceKernelRegisterIntrHandler(1, "SceSDfMgrThreadSgiHandler", 0,
 			(SceKernelIntrHandler)_threadKicker, NULL, 0x20, 15, NULL);
 		BOOT_CHECK(result, 347, 0x9d408fa5, 348, 0xdc18cd4a,
 			   "sceKernelRegisterIntrHandler() failed (0x%08x)\n");
@@ -961,7 +961,7 @@ SceUInt32 sdfMgrCompleteInterrupt(SceUInt32 acknowledge)
 	depth = vectors->nesting;
 	nesting = *depth;
 	core = readMpidr() & 15;
-	level = ksceKernelIsIntrAllowedInCurrentContext();
+	level = SceIntrmgrForDriver_182EE3E3();
 	stack = SceIntrmgrForKernel_01911612(core, level);
 	if ((stack - nesting)->guard != 0x1ab4e8dfU) {
 		for (;;)
@@ -1166,7 +1166,7 @@ int sceSDfMgrBreakSystem(void)
 		_execControlComponent(&s_sdfMgrState.cpu[cpu], 1);
 	}
 	sdfMgrUpdateGlobalFlags(1, 1);
-	result = ksceKernelTriggerSGI(0, 1, 0);
+	result = sceKernelGenerateSoftIntr(0, 1, 0);
 #if FW_DEBUG
 	if (result < 0)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
@@ -1202,7 +1202,7 @@ int sceSDfMgrContinueSystem(void)
 		_execControlComponent(&s_sdfMgrState.cpu[cpu], 0);
 	}
 	sdfMgrUpdateGlobalFlags(1, 0);
-	result = ksceKernelTriggerSGI(0, 1, 0);
+	result = sceKernelGenerateSoftIntr(0, 1, 0);
 #if FW_DEBUG
 	if (result < 0)
 		SceDeci4pSDfMgrForKernel_501CE61D(15,
@@ -1661,7 +1661,7 @@ int _threadSignal(int handle)
 	if (transport && (transport->operationFlags & 0x10))
 		transport->operations.poll(transport);
 	if (s_sdfMgrState.cpu[sdfMgrCoreIndex()].flags & 8) {
-		int signalResult = ksceKernelTriggerSGI(1, 0,
+		int signalResult = sceKernelGenerateSoftIntr(1, 0,
 					s_sdfMgrCpuTargets[sceKernelCpuId()]);
 
 #if FW_DEBUG

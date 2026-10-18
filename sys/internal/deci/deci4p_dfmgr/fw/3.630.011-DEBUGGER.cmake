@@ -81,8 +81,8 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	SceDebugForDriver_02B04343
-	ksceKernelDisableIntr
-	ksceKernelEnableIntr
+	sceKernelDisableIntr
+	sceKernelEnableIntr
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelDeleteSema

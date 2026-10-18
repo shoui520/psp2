@@ -72,11 +72,11 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelTriggerSubIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelCallSubIntrHandler
+	sceKernelReleaseIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex

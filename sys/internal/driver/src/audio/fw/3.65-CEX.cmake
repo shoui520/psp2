@@ -116,8 +116,8 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uidiv
 	snprintf
 	__stack_chk_fail
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
 	sceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelStartThread

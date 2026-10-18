@@ -129,13 +129,13 @@ int audioInitializeI2s(void)
 			SceSysmemForDriver_A841EDDA(result, (void **)&audioI2sRegisters[port]);
 			if (audioI2sInterrupt[port]) {
 				snprintf(name, sizeof(name), "SceI2s%d", port);
-				ksceKernelRegisterIntrHandler(audioI2sInterrupt[port], name, 0,
+				sceKernelRegisterIntrHandler(audioI2sInterrupt[port], name, 0,
 					audioI2sInterruptHandler, (void *)(uintptr_t)port,
 					160, 0x80000, NULL);
 			}
 		}
 		if (audioI2sInterrupt[port])
-			ksceKernelEnableIntr(audioI2sInterrupt[port]);
+			sceKernelEnableIntr(audioI2sInterrupt[port]);
 	}
 	audioI2sEnabledMask = 0;
 	ScePervasiveForDriver_A1D2E440(1);

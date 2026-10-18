@@ -118,11 +118,11 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelDisableSubIntr
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelDisableSubIntr
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelStartThread

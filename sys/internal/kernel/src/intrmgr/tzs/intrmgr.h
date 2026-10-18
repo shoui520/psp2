@@ -94,7 +94,6 @@ extern SceKernelMonitorCallHandler *g_moncallTable;
 extern SceUID g_moncallTableUid;
 
 int IllegalContext(void);
-int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target);
 
 /* intrmgr_entry.S */
 extern char monitorFiqEntry[], monitorSmcEntry[];

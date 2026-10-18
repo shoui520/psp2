@@ -119,8 +119,8 @@ set(MODULE_IMPORT_FUNCS
 	snprintf
 	__stack_chk_fail
 	SceDebugForDriver_35A35322
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
 	sceKernelWaitEventFlag
 	sceKernelExitThread
 	sceKernelStartThread

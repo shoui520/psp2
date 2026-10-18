@@ -125,10 +125,10 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceKernelDisableSubIntr
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex
 	sceKernelStartThread

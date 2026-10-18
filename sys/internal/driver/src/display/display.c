@@ -744,7 +744,7 @@ static int initWork(void *arg) /* name unknown */
 		startupHead = 3;
 		primaryHead = 1;
 	}
-	ksceKernelEnableSubIntr(8, 2);
+	sceKernelEnableSubIntr(8, 2);
 	for (head = 0; head < DISPLAY_HEAD_COUNT; head++) {
 		for (plane = 0; plane < DISPLAY_PLANE_COUNT; plane++) {
 			if (head != 2) {
@@ -912,7 +912,7 @@ int displayInit(void) /* name unknown */
 	dmaTag = base;
 	SceSysmemForDriver_8D160E65(base, &dmaTagPaddr);
 	vblankInit();
-	ksceKernelRegisterSubIntrHandler(8, 2, "SceDispalyVblank", vblankHandler, NULL);
+	sceKernelRegisterSubIntrHandler(8, 2, "SceDispalyVblank", vblankHandler, NULL);
 	sceKernelRegisterSysEventHandler("SceDisplay", sysEventHandler, NULL);
 	sceKernelRegisterProcEventHandler("SceDisplay", &procEventHandler, 0);
 	sceKernelRegisterInitCallback(initCallback, 8, 0, 0);

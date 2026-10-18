@@ -179,8 +179,8 @@ int powerInitializeLedControl(void)
 		ksceGpioSetPortMode((gpio & 0x20) != 0, gpio & 0x1f, 0);
 		powerLedSetOutput(led, 0);
 	}
-	ksceKernelRegisterSubIntrHandler(8, 0x19, "SceLedVblank", powerLedVblankHandler, NULL);
-	ksceKernelEnableSubIntr(8, 0x19);
+	sceKernelRegisterSubIntrHandler(8, 0x19, "SceLedVblank", powerLedVblankHandler, NULL);
+	sceKernelEnableSubIntr(8, 0x19);
 	sceKernelRegisterSysEventHandler("SceLed", powerLedSysEventHandler, NULL);
 	sceKernelRegisterInitCallback(powerLedInitCallback, 8, 0, NULL);
 	return 0;
@@ -331,7 +331,7 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 			s_powerLedSavedLevel = power->mode == SCE_LED_MODE_LEVEL ? power->sysconLevel : 0;
 		} else if (eventid == SYSEVENT_SUSPEND_DEVICE(10)) {
 			sleepMode = suspend->sleepMode;
-			ksceKernelDisableSubIntr(8, 0x19);
+			sceKernelDisableSubIntr(8, 0x19);
 			for (led = 0; led < 8; led++) {
 				if (s_powerLeds[led].gpio == 0)
 					continue;
@@ -389,7 +389,7 @@ static int powerLedSysEventHandler(int resume, int eventid, void *args, void *op
 			if (s_powerLedHardwareEnabled)
 				SceSysconForDriver_9CA6EB70(1);
 		}
-		ksceKernelEnableSubIntr(8, 0x19);
+		sceKernelEnableSubIntr(8, 0x19);
 	}
 	return 0;
 }

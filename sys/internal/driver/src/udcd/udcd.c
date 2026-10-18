@@ -2112,7 +2112,7 @@ static inline __attribute__((always_inline)) int udcdStartDriverImpl(
 
 	if (!name || strnlen(name, 64) == 64)
 		return SCE_UDCD_ERROR_USBDRIVER_INVALID_NAME;
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	driverState = state->controllerDriverState;
 	if (driverState == UDCD_CONTROLLER_DRIVER_ABSENT)
@@ -2206,7 +2206,7 @@ static inline __attribute__((always_inline)) int udcdStopDriverImpl(
 
 	if (!name || strnlen(name, 64) == 64)
 		return SCE_UDCD_ERROR_USBDRIVER_INVALID_NAME;
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	driverState = state->controllerDriverState;
 	if (driverState == UDCD_CONTROLLER_DRIVER_ABSENT)

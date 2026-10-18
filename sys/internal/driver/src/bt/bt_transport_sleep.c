@@ -60,7 +60,7 @@ int BtCompleteControllerSleep(BtStack *stack)
 					 &interruptEnable, 1);
 	if (result < 0)
 		return result;
-	if (ksceKernelDisableSubIntr(222, gBtTransport.subInterrupt) < 0)
+	if (sceKernelDisableSubIntr(222, gBtTransport.subInterrupt) < 0)
 		return (int)0x802f150c;
 	gBtTransport.interruptEnabled = 0;
 	timer = BtCancelTimer(stack->resetTimer);
@@ -106,7 +106,7 @@ int BtPowerOffTransport(void)
 					 &interruptEnable, 1);
 	if (result < 0)
 		return result;
-	if (ksceKernelDisableSubIntr(222, gBtTransport.subInterrupt) < 0)
+	if (sceKernelDisableSubIntr(222, gBtTransport.subInterrupt) < 0)
 		return (int)0x802f150c;
 	gBtTransport.interruptEnabled = 0;
 	BtUnlockTransport(0);

@@ -13,7 +13,7 @@ struct PowerProcessState *volatile s_powerProcessList;
 int powerEnableIdleVblank(uint32_t kind, void *argument)
 {
 	s_powerIdleTimers.tickSnapshot = sceKernelGetSystemTimeWide();
-	ksceKernelEnableSubIntr(8, 0x1a);
+	sceKernelEnableSubIntr(8, 0x1a);
 	return 0;
 }
 
@@ -116,7 +116,7 @@ int powerInitializeIdleControl(void)
 {
 	memset((void *)&s_powerIdleTimers, 0, sizeof(s_powerIdleTimers));
 	s_powerIdleTimers.tickSnapshot = sceKernelGetSystemTimeWide();
-	ksceKernelRegisterSubIntrHandler(8, 0x1a, "ScePowerVblank",
+	sceKernelRegisterSubIntrHandler(8, 0x1a, "ScePowerVblank",
 				       powerIdleVblankHandler, NULL);
 	sceKernelRegisterInitCallback(powerEnableIdleVblank, 8, 0, NULL);
 	return 0;
@@ -126,7 +126,7 @@ static inline __attribute__((always_inline)) void powerTickProcess(void)
 {
 	struct PowerProcessState *state;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext())
+	if (SceIntrmgrForDriver_182EE3E3())
 		return;
 	state = ksceKernelGetProcessLocalStorageAddr(s_processStorageKey);
 	if (!state || state->tickRecorded)

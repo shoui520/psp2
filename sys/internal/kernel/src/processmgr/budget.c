@@ -159,7 +159,7 @@ int SceProcessmgrForKernel_459A223B(SceUID budgetId)
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
 		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	isDefault = budgetId == BUDGET_ID_CURRENT || budgetId == BUDGET_ID_GAME
 		 || budgetId == BUDGET_ID_SHELL;
@@ -621,7 +621,7 @@ SceUID SceProcessmgrForKernel_DC18FCEF(const char *name, SceUInt32 type, const P
 	ret = SceThreadmgrForDriver_332E127C();
 	if (ret != 0x40 && ret != 0x80)
 		return SCE_KERNEL_ERROR_ILLEGAL_PERMISSION;
-	if (ksceKernelIsIntrAllowedInCurrentContext() != 0)
+	if (SceIntrmgrForDriver_182EE3E3() != 0)
 		return SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 	if (opt == NULL || name == NULL)
 		return SCE_KERNEL_ERROR_INVALID_ARGUMENT;

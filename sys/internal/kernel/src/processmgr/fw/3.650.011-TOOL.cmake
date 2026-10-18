@@ -231,9 +231,9 @@ set(MODULE_IMPORT_FUNCS
 	SceExcpmgrForKernel_E7487AFD
 	SceIntrmgrForKernel_7E3D4560
 	SceIntrmgrForKernel_ABEB5A69
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
 	ksceKernelGetLibraryDBFlags
 	ksceKernelGetModuleIdByPid
 	ksceKernelGetModuleEntryPoint

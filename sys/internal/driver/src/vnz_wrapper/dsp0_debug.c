@@ -4669,8 +4669,8 @@ int synchronizeVeneziaVipProcess(void)
 /* name unknown: remove the VIP primary interrupt handler. */
 int releaseVeneziaVipInterrupt(void)
 {
-	ksceKernelDisableIntr(56);
-	ksceKernelReleaseIntrHandler(56);
+	sceKernelDisableIntr(56);
+	sceKernelReleaseIntrHandler(56);
 	return 0;
 }
 
@@ -4706,14 +4706,14 @@ int initializeVeneziaVipInterrupt(VeneziaVipState *state)
 	counters[10].count = 0;
 	counters[11].count = 0;
 	counters[12].count = 0;
-	ret = ksceKernelRegisterIntrHandler(56, "SceVipMailbox0", 0,
+	ret = sceKernelRegisterIntrHandler(56, "SceVipMailbox0", 0,
 		(SceKernelIntrHandler)veneziaDebugInterruptHandler, state, 208, 15, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelEnableIntr(56);
+	ret = sceKernelEnableIntr(56);
 	if (ret < 0) {
-		ksceKernelDisableIntr(56);
-		ksceKernelReleaseIntrHandler(56);
+		sceKernelDisableIntr(56);
+		sceKernelReleaseIntrHandler(56);
 		return ret;
 	}
 	return 0;
@@ -9154,10 +9154,10 @@ int synchronizeVeneziaVipMultiCapture(void)
 /* name unknown: release the secondary and primary debugger interrupt handlers. */
 int releaseVeneziaVipInterrupts(void)
 {
-	ksceKernelDisableIntr(57);
-	ksceKernelReleaseIntrHandler(57);
-	ksceKernelDisableIntr(56);
-	ksceKernelReleaseIntrHandler(56);
+	sceKernelDisableIntr(57);
+	sceKernelReleaseIntrHandler(57);
+	sceKernelDisableIntr(56);
+	sceKernelReleaseIntrHandler(56);
 	return 0;
 }
 
@@ -9193,27 +9193,27 @@ int initializeVeneziaVipInterrupts(VeneziaVipState *state)
 	counters[4].unidentifiedControl = 0;
 	counters[5].count = 0;
 	counters[5].unidentifiedControl = 0;
-	ret = ksceKernelRegisterIntrHandler(56, "SceVipMailbox0", 0,
+	ret = sceKernelRegisterIntrHandler(56, "SceVipMailbox0", 0,
 		(SceKernelIntrHandler)veneziaDebugAuxiliaryInterruptHandler,
 		state, 208, 15, NULL);
 	if (ret < 0)
 		return ret;
-	ret = ksceKernelEnableIntr(56);
+	ret = sceKernelEnableIntr(56);
 	if (ret < 0)
 		goto releasePrimary;
-	ret = ksceKernelRegisterIntrHandler(57, "SceVipMailbox1", 0,
+	ret = sceKernelRegisterIntrHandler(57, "SceVipMailbox1", 0,
 		(SceKernelIntrHandler)veneziaDebugSecondaryInterruptHandler,
 		state, 208, 15, NULL);
 	if (ret < 0)
 		goto releasePrimary;
-	ret = ksceKernelEnableIntr(57);
+	ret = sceKernelEnableIntr(57);
 	if (ret >= 0)
 		return 0;
-	ksceKernelDisableIntr(57);
-	ksceKernelReleaseIntrHandler(57);
+	sceKernelDisableIntr(57);
+	sceKernelReleaseIntrHandler(57);
 releasePrimary:
-	ksceKernelDisableIntr(56);
-	ksceKernelReleaseIntrHandler(56);
+	sceKernelDisableIntr(56);
+	sceKernelReleaseIntrHandler(56);
 	return ret;
 }
 

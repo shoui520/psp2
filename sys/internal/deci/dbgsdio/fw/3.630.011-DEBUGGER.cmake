@@ -75,10 +75,10 @@ set(MODULE_IMPORT_FUNCS
 	memset
 	memcpy
 	__stack_chk_fail
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex
 	sceKernelCreateEventFlag

@@ -294,10 +294,10 @@ set(MODULE_IMPORT_FUNCS
 	SceExcpmgrForKernel_B615A7DA
 	SceIntrmgrForKernel_01911612
 	SceIntrmgrForKernel_6F5B8AF2
-	ksceKernelQueryIntrHandlerInfo
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelRegisterIntrHookHandler
-	ksceKernelReleaseIntrHookHandler
+	sceKernelQueryIntrHandlerInfo
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelRegisterIntrHookHandler
+	sceKernelReleaseIntrHookHandler
 	ksceKernelSysTimerSetClockSource
 	ksceKernelSysTimerSetCount
 	ksceKernelSysTimerStartCount

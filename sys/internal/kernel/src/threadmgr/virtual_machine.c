@@ -427,7 +427,7 @@ int waitException(uint32_t mask, ThreadmgrExceptionInfo *info, SceUInt32 *timeou
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 161, "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto restore;

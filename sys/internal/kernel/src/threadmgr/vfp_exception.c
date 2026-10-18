@@ -155,7 +155,7 @@ int threadmgrVfpExceptionIntrHandler(int code, void *arg)
 			s_threadmgrRuntime.vfpExceptionHook(2, 0);
 		return -1;
 	}
-	if (ksceKernelIsIntrAllowedInCurrentContext() > 1) {
+	if (SceIntrmgrForDriver_182EE3E3() > 1) {
 		SCE_PRINTF_WITH_INFO(0, 151,
 			"fatal error: VFP/NEON exception occurred in interrupt handler.\n\n");
 		if (s_threadmgrRuntime.vfpExceptionHook != NULL)
@@ -280,7 +280,7 @@ int registerThreadmgrVfpExceptionIntrHandler(void)
 	int i, ret;
 
 	for (i = 0; i < 4; i++) {
-		ret = ksceKernelRegisterIntrHandler(s_vfpExceptionIntrs[i].intrCode,
+		ret = sceKernelRegisterIntrHandler(s_vfpExceptionIntrs[i].intrCode,
 			s_vfpExceptionIntrs[i].name, 0, threadmgrVfpExceptionIntrHandler, NULL, 0x10,
 			s_vfpExceptionIntrs[i].targetCpu, NULL);
 		if (ret < 0) {
@@ -289,7 +289,7 @@ int registerThreadmgrVfpExceptionIntrHandler(void)
 				ret, s_vfpExceptionIntrs[i].intrCode);
 			SCE_PANIC(319);
 		}
-		ksceKernelEnableIntr(s_vfpExceptionIntrs[i].intrCode);
+		sceKernelEnableIntr(s_vfpExceptionIntrs[i].intrCode);
 	}
 	return 0;
 }
@@ -304,10 +304,10 @@ void resumeThreadmgrVfpException(void)
 {
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == 0) {
-		ksceKernelEnableIntr(0x24);
-		ksceKernelEnableIntr(0x25);
-		ksceKernelEnableIntr(0x26);
-		ksceKernelEnableIntr(0x27);
+		sceKernelEnableIntr(0x24);
+		sceKernelEnableIntr(0x25);
+		sceKernelEnableIntr(0x26);
+		sceKernelEnableIntr(0x27);
 	}
 	sceKernelSysrootCorelockUnlock();
 }

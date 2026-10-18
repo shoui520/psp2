@@ -33,7 +33,7 @@ PVRSRV_ERROR SysDeinitialise(SYS_DATA *psSysData)
 	PVRSRV_ERROR eError;
 	SYS_DATA *psSystem;
 
-	ksceKernelDisableIntr(gpuDumpRegion.state.platform.ui32IRQ);
+	sceKernelDisableIntr(gpuDumpRegion.state.platform.ui32IRQ);
 	eError = OSUninstallSystemLISR(psSysData);
 	if (eError != PVRSRV_OK)
 		return eError;
@@ -71,7 +71,7 @@ PVRSRV_ERROR SysFinalise(IMG_VOID)
 		SysDeinitialise(gpuDumpRegion.state.system);
 		gpuDumpRegion.state.system = NULL;
 	} else {
-		ksceKernelEnableIntr(gpuDumpRegion.state.platform.ui32IRQ);
+		sceKernelEnableIntr(gpuDumpRegion.state.platform.ui32IRQ);
 	}
 	return eLISRError;
 }
@@ -161,7 +161,7 @@ PVRSRV_ERROR SysSystemPrePowerState(PVRSRV_SYS_POWER_STATE eNewSysPowerState)
 	if (eNewSysPowerState != eCurrentPowerState &&
 			eNewSysPowerState == PVRSRV_SYS_POWER_STATE_D3 &&
 			eCurrentPowerState <= PVRSRV_SYS_POWER_STATE_D2) {
-		ksceKernelDisableIntr(gpuDumpRegion.state.platform.ui32IRQ);
+		sceKernelDisableIntr(gpuDumpRegion.state.platform.ui32IRQ);
 		SceSysmemForDriver_009E1C61(gpuDumpRegion.state.registerMemblockUid);
 	}
 	return PVRSRV_OK;
@@ -179,7 +179,7 @@ PVRSRV_ERROR SysSystemPostPowerState(PVRSRV_SYS_POWER_STATE eNewSysPowerState)
 		return PVRSRV_OK;
 	eError = MapGpuRegisters();
 	if (eError == PVRSRV_OK)
-		ksceKernelEnableIntr(gpuDumpRegion.state.platform.ui32IRQ);
+		sceKernelEnableIntr(gpuDumpRegion.state.platform.ui32IRQ);
 	return eError;
 }
 

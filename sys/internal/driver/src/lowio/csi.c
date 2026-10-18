@@ -63,13 +63,13 @@ static int CifIntrHandler(int intrCode, void *arg)
 	if (status & SCE_CIF_INTR_FRAME) {
 		mask = ctx->subIntrMask;
 		if (mask & 1)
-			ksceKernelTriggerSubIntr(intrCode, 0, (void *)frameInfo);
+			sceKernelCallSubIntrHandler(intrCode, 0, (void *)frameInfo);
 		if (mask & 2)
-			ksceKernelTriggerSubIntr(intrCode, 1, (void *)frameInfo);
+			sceKernelCallSubIntrHandler(intrCode, 1, (void *)frameInfo);
 		if (mask & 4)
-			ksceKernelTriggerSubIntr(intrCode, 2, (void *)frameInfo);
+			sceKernelCallSubIntrHandler(intrCode, 2, (void *)frameInfo);
 		if (mask & 8)
-			ksceKernelTriggerSubIntr(intrCode, 3, (void *)frameInfo);
+			sceKernelCallSubIntrHandler(intrCode, 3, (void *)frameInfo);
 	}
 	(void)cif->interruptStatus;
 	LowioDsb();
@@ -118,17 +118,17 @@ static int CsiSysEvent(int resume, int eventId, void *args, void *opt)
 	(void)opt;
 	if (resume == 0) {
 		if (eventId == 0x4004) {
-			ksceKernelDisableIntr(s_csi[0].intrCode);
-			ksceKernelDisableIntr(s_csi[0].cifIntrCode);
-			ksceKernelDisableIntr(s_csi[1].intrCode);
-			ksceKernelDisableIntr(s_csi[1].cifIntrCode);
+			sceKernelDisableIntr(s_csi[0].intrCode);
+			sceKernelDisableIntr(s_csi[0].cifIntrCode);
+			sceKernelDisableIntr(s_csi[1].intrCode);
+			sceKernelDisableIntr(s_csi[1].cifIntrCode);
 		}
 	} else if (resume == 1 && eventId == 0x10004) {
 		CsiReset();
-		ksceKernelEnableIntr(s_csi[0].intrCode);
-		ksceKernelEnableIntr(s_csi[0].cifIntrCode);
-		ksceKernelEnableIntr(s_csi[1].intrCode);
-		ksceKernelEnableIntr(s_csi[1].cifIntrCode);
+		sceKernelEnableIntr(s_csi[0].intrCode);
+		sceKernelEnableIntr(s_csi[0].cifIntrCode);
+		sceKernelEnableIntr(s_csi[1].intrCode);
+		sceKernelEnableIntr(s_csi[1].cifIntrCode);
 	}
 	return 0;
 }
@@ -174,10 +174,10 @@ static const struct {
     },
 };
 
-static SceKernelIntrOptParam s_csiIntrOpt = {
+static SceKernelIntrRegisterOpt s_csiIntrOpt = {
     0x14,
     4,
-    (SceKernelIntrOptHandlers *)&s_csiIntrHandlers,
+    (void *)&s_csiIntrHandlers,
     0,
     0,
 };
@@ -241,12 +241,12 @@ static __attribute__((noinline)) int CsiInit(void)
 		ctx->cifRegisters = base;
 		ctx->intrCode = s_csiDevices[i].intrCode;
 		ctx->cifIntrCode = s_csiDevices[i].cifIntrCode;
-		ksceKernelRegisterIntrHandler(ctx->intrCode, s_csiDevices[i].intrName, 0,
+		sceKernelRegisterIntrHandler(ctx->intrCode, s_csiDevices[i].intrName, 0,
 			CsiIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
-		ksceKernelRegisterIntrHandler(ctx->cifIntrCode, s_csiDevices[i].cifIntrName, 0,
+		sceKernelRegisterIntrHandler(ctx->cifIntrCode, s_csiDevices[i].cifIntrName, 0,
 			CifIntrHandler, ctx, 0xa0, 0xf, &s_csiIntrOpt);
-		ksceKernelEnableIntr(ctx->intrCode);
-		ksceKernelEnableIntr(ctx->cifIntrCode);
+		sceKernelEnableIntr(ctx->intrCode);
+		sceKernelEnableIntr(ctx->cifIntrCode);
 	}
 	sceKernelRegisterSysEventHandler("SceCsi", CsiSysEvent, NULL);
 	CsiReset();
@@ -336,7 +336,7 @@ uint32_t SceCsiForDriver_2AFEA1B0(unsigned head, uint32_t mode)
 	cif->outputEnable = 1;
 	cif->start = 1;
 	LowioDmb();
-	ksceKernelEnableIntr(ctx->cifIntrCode);
+	sceKernelEnableIntr(ctx->cifIntrCode);
 	return 0;
 }
 
@@ -351,7 +351,7 @@ uint32_t SceCsiForDriver_A1D1805D(unsigned head)
 		return CSI_ERROR_HEAD;
 	ctx = &s_csi[head];
 	cif = ctx->cifRegisters;
-	ksceKernelDisableIntr(ctx->cifIntrCode);
+	sceKernelDisableIntr(ctx->cifIntrCode);
 	/* Let the frame in progress finish, for up to 300 ms. */
 	start = sceKernelGetSystemTimeWide();
 	while (sceKernelGetSystemTimeWide() - start < 300000) {

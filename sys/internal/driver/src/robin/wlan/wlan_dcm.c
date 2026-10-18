@@ -767,11 +767,11 @@ int robinWlanStartDcm(SceWlanBtRobinWlanDcm *dcm)
 	if (result < 0)
 		return result;
 	dcm->subInterrupt = dcm->sdioFunction->number + 1;
-	result = ksceKernelRegisterSubIntrHandler(222, dcm->subInterrupt,
+	result = sceKernelRegisterSubIntrHandler(222, dcm->subInterrupt,
 			"SceWlanBtRobinWlan", robinWlanSubInterrupt, dcm->context);
 	if (result < 0)
 		return result;
-	result = ksceKernelEnableSubIntr(222, dcm->subInterrupt);
+	result = sceKernelEnableSubIntr(222, dcm->subInterrupt);
 	if (result < 0)
 		return result;
 	result = SceSdifForDriver_D0F78D9B(dcm->sdioFunction, 0, sizeof(dcm->status),
@@ -794,9 +794,9 @@ int robinWlanShutdownDcm(SceWlanBtRobinWlanDcm *dcm, int keepFunction)
 
 	result = SceSdifForDriver_3C4CDC8B(dcm->sdioFunction, 2, 1, &interruptMask, 1);
 	if (result >= 0) {
-		result = ksceKernelDisableSubIntr(222, dcm->subInterrupt);
+		result = sceKernelDisableSubIntr(222, dcm->subInterrupt);
 		if (result >= 0) {
-			result = ksceKernelReleaseSubIntrHandler(222, dcm->subInterrupt);
+			result = sceKernelReleaseSubIntrHandler(222, dcm->subInterrupt);
 			if (result >= 0 && !keepFunction)
 				result = SceSdifForDriver_E80293EF(dcm->sdioFunction);
 		}
@@ -1117,7 +1117,7 @@ int robinWlanDcmInterruptRequest(SceWlanBtRobinWlanDcm *dcm)
 	dcm->writeBitmap = bitmap | (dcm->status.writeBitmap[0] & 1);
 	if (readPending)
 		dcm->readBitmap = dcm->status.readBitmap[0] | dcm->status.readBitmap[1] << 8;
-	result = ksceKernelEnableSubIntr(222, dcm->subInterrupt);
+	result = sceKernelEnableSubIntr(222, dcm->subInterrupt);
 #if FW_DEBUG
 	if (result < 0) {
 		SceDebugForDriver_D9703808(1, 0, &gDcmInterruptError,

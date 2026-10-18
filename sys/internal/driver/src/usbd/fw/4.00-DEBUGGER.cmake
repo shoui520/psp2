@@ -93,10 +93,10 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateThread
 	sceKernelSignalSema
 	sceKernelUnlockFastMutex
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	SceSysmemForDriver_009E1C61
 	sceKernelFreeHeapMemory
 	SceSysmemForDriver_45D22597

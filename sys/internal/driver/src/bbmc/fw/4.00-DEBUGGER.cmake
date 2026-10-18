@@ -219,10 +219,10 @@ set(MODULE_IMPORT_FUNCS
 	__stack_chk_fail
 	strnlen
 	memcmp
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex

@@ -336,7 +336,7 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForKernel_91E7D24F
 	SceExcpmgrForKernel_5420ED8F
 	SceExcpmgrForKernel_B615A7DA
-	ksceKernelIsIntrAllowedInCurrentContext
+	SceIntrmgrForDriver_182EE3E3
 	SceIntrmgrForDriver_C568F145
 )
 set(MODULE_IMPORT_VARS

@@ -11,6 +11,7 @@
 #include <lowio/pervasive.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sysroot.h>
+#include <intrmgr/intrmgr.h>
 
 typedef struct SdifHostInfo {
 	volatile SdifHostRegisters *registers;
@@ -182,7 +183,6 @@ int sdifCompleteMmcInitialization(unsigned int index);
 int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int intrPriority);
 void sdifStartFunctionInterrupt(SdifContextGlobal *context, int interrupt, unsigned int intrPriority);
 void sdifDispatchFunctionInterrupt(SdifContextGlobal *context);
-int ksceKernelTriggerSubIntr(int interrupt, int subInterrupt, void *argument);
 void sdifCommandQueueInitialize(SdifCommandQueue *queue);
 void sdifCommandQueuePush(SdifCommandQueue *queue, SdifCommand *command);
 void sceSdifDumpAdmaInfo(SdifCommand *command);

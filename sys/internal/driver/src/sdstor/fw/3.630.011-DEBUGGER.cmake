@@ -129,10 +129,10 @@ set(MODULE_IMPORT_FUNCS
 	strnlen
 	look_ctype_table
 	memcmp
-	ksceKernelDisableSubIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelWaitEventFlag
 	sceKernelFinalizeFastMutex
 	sceKernelStartThread

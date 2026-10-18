@@ -374,7 +374,7 @@ int _sceKernelBacktraceCore(SceUID thid, SceKernelBacktraceFrame *frames, SceSiz
 
 	intr = SceCpuForDriver_821FC0EE();
 	ctx = getCurrentThreadCB();
-	inIntr = ksceKernelIsIntrAllowedInCurrentContext();
+	inIntr = SceIntrmgrForDriver_182EE3E3();
 	excp = SceExcpmgrForKernel_B615A7DA();
 	refer = 0;
 	if (thid == 0) {
@@ -551,7 +551,7 @@ int _sceKernelBacktraceForKernelCore(SceUID thid, SceKernelBacktraceFrameForKern
 
 	intr = SceCpuForDriver_821FC0EE();
 	ctx = getCurrentThreadCB();
-	inIntr = ksceKernelIsIntrAllowedInCurrentContext();
+	inIntr = SceIntrmgrForDriver_182EE3E3();
 	excp = SceExcpmgrForKernel_B615A7DA();
 	refer = 0;
 	locked = 0;

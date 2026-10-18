@@ -503,7 +503,7 @@ static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
 	pkt[7] = 0x53;
 	*(SceUInt16 *)&pkt[0] = 0x18;
 	SceCpuForDriver_9CB9F0CE(pkt, 0x40);
-	ret = ksceKernelDisableIntr(SDECI2P_INTR_FWD);
+	ret = sceKernelDisableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 1657, "DisableIntr() failed (0x%08X)\n", ret);
 	ret = notifyForwardStart(ctx, ctx->cur);
@@ -511,7 +511,7 @@ static inline int forwardPacketForInitialize(Sdeci2pContext *ctx)
 		return ret;
 	while (ctx->fwd[ctx->cur].flags & SDECI2P_CH_FULL)
 		forwardDonePollHandler();
-	ret = ksceKernelEnableIntr(SDECI2P_INTR_FWD);
+	ret = sceKernelEnableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 1676, "EnableIntr() failed (0x%08X)\n", ret);
 	return 0;
@@ -627,10 +627,10 @@ static int suspendHandler(void *args)
 
 	sceKernelSysrootCorelockLock(0);
 	if (sceKernelCpuId() == SDECI2P_CPU) {
-		ret = ksceKernelDisableIntr(SDECI2P_INTR_ACQ);
+		ret = sceKernelDisableIntr(SDECI2P_INTR_ACQ);
 		if (ret < 0)
 			SDECI2P_PRINTF(0xf, 1698, "DisableIntr() failed (0x%08X)\n", ret);
-		ret = ksceKernelDisableIntr(SDECI2P_INTR_FWD);
+		ret = sceKernelDisableIntr(SDECI2P_INTR_FWD);
 		if (ret < 0)
 			SDECI2P_PRINTF(0xf, 1705, "DisableIntr() failed (0x%08X)\n", ret);
 	}
@@ -706,38 +706,38 @@ static int initThread(SceSize args, void *argp)
 	opt.attr = SCE_KERNEL_INTR_OPT_HAS_CONFIG;
 	opt.size = sizeof(opt);
 	opt.config = SCE_KERNEL_INTR_CONFIG_EDGE;
-	ret = ksceKernelRegisterIntrHandler(SDECI2P_INTR_FWD, "SceDeci4pSDeci2pFwd", 0,
+	ret = sceKernelRegisterIntrHandler(SDECI2P_INTR_FWD, "SceDeci4pSDeci2pFwd", 0,
 					    forwardDoneIntrHandler, NULL, 0x10, 0x80000, &opt);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 492, "RegisterIntrHandler() failed (0x%08X)\n", ret);
 		goto unhook_acq;
 	}
-	ret = ksceKernelRegisterIntrHandler(SDECI2P_INTR_ACQ, "SceDeci4pSDeci2pAcq", 0,
+	ret = sceKernelRegisterIntrHandler(SDECI2P_INTR_ACQ, "SceDeci4pSDeci2pAcq", 0,
 					    acquireStartIntrHandler, NULL, 0x10, 0x80000, &opt);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 506, "RegisterIntrHandler() failed (0x%08X)\n", ret);
 		goto release_fwd;
 	}
-	ret = ksceKernelEnableIntr(SDECI2P_INTR_FWD);
+	ret = sceKernelEnableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0) {
 		SDECI2P_PRINTF(0xf, 513, "EnableIntr() failed (0x%08X)\n", ret);
 		goto release_acq;
 	}
-	ret = ksceKernelEnableIntr(SDECI2P_INTR_ACQ);
+	ret = sceKernelEnableIntr(SDECI2P_INTR_ACQ);
 	if (ret >= 0) {
 		sceKernelExitThread(0);
 		return 0;
 	}
 	SDECI2P_PRINTF(0xf, 520, "EnableIntr() failed (0x%08X)\n", ret);
-	ret = ksceKernelDisableIntr(SDECI2P_INTR_FWD);
+	ret = sceKernelDisableIntr(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 531, "DisableIntr() failed (0x%08X)\n", ret);
 release_acq:
-	ret = ksceKernelReleaseIntrHandler(SDECI2P_INTR_ACQ);
+	ret = sceKernelReleaseIntrHandler(SDECI2P_INTR_ACQ);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 539, "ReleaseIntrHandler() failed (0x%08X)\n", ret);
 release_fwd:
-	ret = ksceKernelReleaseIntrHandler(SDECI2P_INTR_FWD);
+	ret = sceKernelReleaseIntrHandler(SDECI2P_INTR_FWD);
 	if (ret < 0)
 		SDECI2P_PRINTF(0xf, 547, "ReleaseIntrHandler() failed (0x%08X)\n", ret);
 unhook_acq:

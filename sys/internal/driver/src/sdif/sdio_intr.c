@@ -119,24 +119,24 @@ void sdifDispatchFunctionInterrupt(SdifContextGlobal *context)
 	if (!port->interruptDispatchPending || !port->pendingFunctions)
 		return;
 	if (port->pendingFunctions & 2)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 2, (void *)0x100);
+		sceKernelCallSubIntrHandler(port->interruptNumber, 2, (void *)0x100);
 	if (port->pendingFunctions & 4)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 3,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 3,
 			(void *)(uintptr_t)port->interruptFunctions);
 	if (port->pendingFunctions & 8)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 4,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 4,
 			(void *)(uintptr_t)port->interruptFunctions);
 	if (port->pendingFunctions & 0x10)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 5,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 5,
 			(void *)(uintptr_t)port->interruptFunctions);
 	if (port->pendingFunctions & 0x20)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 6,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 6,
 			(void *)(uintptr_t)port->interruptFunctions);
 	if (port->pendingFunctions & 0x40)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 7,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 7,
 			(void *)(uintptr_t)port->interruptFunctions);
 	if (port->pendingFunctions & 0x80)
-		ksceKernelTriggerSubIntr(port->interruptNumber, 8,
+		sceKernelCallSubIntrHandler(port->interruptNumber, 8,
 			(void *)(uintptr_t)port->interruptFunctions);
 	port->interruptDispatchPending = 0;
 	port->pendingFunctions = 0;

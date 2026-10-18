@@ -367,8 +367,8 @@ int SceSdifForDriver_E5E5F42E(void)
 			port->removedPart = NULL;
 			sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 			interrupt = port->index + 220;
-			ksceKernelDisableIntr(interrupt);
-			ksceKernelReleaseIntrHandler(interrupt);
+			sceKernelDisableIntr(interrupt);
+			sceKernelReleaseIntrHandler(interrupt);
 			sceKernelDeleteEventFlag(port->eventFlag);
 			sceKernelFinalizeFastMutex(&port->mutex);
 			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
@@ -541,7 +541,7 @@ int sceSdifResume0(int phase, int event)
 						sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
 						if (index != 0) {
 							port->polling = 0;
-							ksceKernelEnableIntr(index + 220);
+							sceKernelEnableIntr(index + 220);
 						} else {
 							part = NULL;
 							result = sdifStartMmcInitialization(0, &part);
@@ -560,7 +560,7 @@ int sceSdifResume0(int phase, int event)
 					SceDebugForDriver_02B04343(15, SCE_DBGINFO_FUNC(744, "sceSdifResume1"),
 								"Can't resume eMMC. 0x%x\n", result);
 				gSdifContexts[0].port.polling = 0;
-				ksceKernelEnableIntr(220);
+				sceKernelEnableIntr(220);
 			}
 		}
 	} else if (event == 0x400c && gSdifState.portCount != 0) {
@@ -568,7 +568,7 @@ int sceSdifResume0(int phase, int event)
 		index = 0;
 		do {
 			port = &context->port;
-			ksceKernelDisableIntr(index + 220);
+			sceKernelDisableIntr(index + 220);
 			intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 			registers = port->registers;
 			__builtin_prefetch(&context[3].port.registers);
@@ -641,7 +641,7 @@ int sceSdifInit(void)
 		if (result < 0)
 			goto finalizeMutex;
 		interrupt = port->index + 220;
-		result = ksceKernelRegisterIntrHandler(interrupt, name, 0,
+		result = sceKernelRegisterIntrHandler(interrupt, name, 0,
 						      (SceKernelIntrHandler)sceSdifInterrupt, context, 128, 15,
 						      &gSdifIntrOpt);
 		if (result < 0)
@@ -681,7 +681,7 @@ int sceSdifInit(void)
 		intrState = SceCpuForDriver_D32ACE9E(&port->lock);
 		_sceSdifReset(context, 3);
 		sceKernelSpinlockLowUnlockCpuResumeIntr(&port->lock, intrState);
-		ksceKernelEnableIntr(interrupt);
+		sceKernelEnableIntr(interrupt);
 	} while (gSdifState.portCount > index);
 	result = sceKernelRegisterSysEventHandler("SceSdif",
 						 (SceKernelSysEventHandler)sceSdifResume0, NULL);
@@ -700,7 +700,7 @@ addressError:
 #else
 	(void)debugInfo;
 #endif
-	ksceKernelReleaseIntrHandler(interrupt);
+	sceKernelReleaseIntrHandler(interrupt);
 deleteEventFlag:
 	sceKernelDeleteEventFlag(port->eventFlag);
 finalizeMutex:
@@ -717,8 +717,8 @@ cleanupPorts:
 			port = &context->port;
 			interrupt = port->index + 220;
 			__builtin_prefetch(&context[3].port.index);
-			ksceKernelDisableIntr(interrupt);
-			ksceKernelReleaseIntrHandler(interrupt);
+			sceKernelDisableIntr(interrupt);
+			sceKernelReleaseIntrHandler(interrupt);
 			sceKernelDeleteEventFlag(port->eventFlag);
 			sceKernelFinalizeFastMutex(&port->mutex);
 			SceSysmemForDriver_009E1C61(port->descriptorMemblock);
@@ -956,12 +956,12 @@ int sceSdifInterrupt(int interrupt, SdifContextGlobal *context, unsigned int int
 		registers->normalInterruptStatus = 0x80;
 		removed = 1;
 		if (port->interruptMask & 2)
-			ksceKernelTriggerSubIntr(interrupt, 1, (void *)0x80);
+			sceKernelCallSubIntrHandler(interrupt, 1, (void *)0x80);
 	}
 	if (normalStatus & 0x40) {
 		registers->normalInterruptStatus = 0x40;
 		if (port->interruptMask & 1)
-			ksceKernelTriggerSubIntr(interrupt, 0, (void *)0x40);
+			sceKernelCallSubIntrHandler(interrupt, 0, (void *)0x40);
 	}
 	if ((normalStatus & 1) || (errorStatus & 0xf)) {
 		command = port->currentCommand;

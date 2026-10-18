@@ -1352,7 +1352,7 @@ int ohciStart(UsbdBus *bus)
 	result = ohciReset(ohci);
 	if (result < 0)
 		return result;
-	result = ksceKernelEnableIntr(ohci->intrCode);
+	result = sceKernelEnableIntr(ohci->intrCode);
 	if (result < 0)
 		return result;
 
@@ -1421,7 +1421,7 @@ int ohciStop(UsbdBus *bus)
 	SceUInt8 port;
 	int result;
 
-	result = ksceKernelDisableIntr(ohci->intrCode);
+	result = sceKernelDisableIntr(ohci->intrCode);
 	if (result < 0)
 		return result;
 	for (port = 0; port < ohci->portCount; port++)
@@ -1590,7 +1590,7 @@ int ohciInit(UsbdBus *bus)
 	default:
 		return SCE_USBD_ERROR_FATAL;
 	}
-	result = ksceKernelRegisterIntrHandler(intrCode, name, 0, ohciInterruptHandler, ohci,
+	result = sceKernelRegisterIntrHandler(intrCode, name, 0, ohciInterruptHandler, ohci,
 					       160, 15, NULL);
 	if (result < 0) {
 		usbdFree(records);
@@ -1633,10 +1633,10 @@ int ohciTerm(UsbdBus *bus)
 	result = ohciStop(bus);
 	if (result < 0)
 		return result;
-	result = ksceKernelDisableIntr(ohci->intrCode);
+	result = sceKernelDisableIntr(ohci->intrCode);
 	if (result < 0)
 		return result;
-	result = ksceKernelReleaseIntrHandler(ohci->intrCode);
+	result = sceKernelReleaseIntrHandler(ohci->intrCode);
 	if (result < 0)
 		return result;
 	result = SceSysmemForDriver_009E1C61(ohci->descriptorBlockId);

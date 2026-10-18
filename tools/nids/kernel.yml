@@ -1240,29 +1240,29 @@ modules:
         kernel: true
         nid: 0x9DF04041
         functions:
+          SceIntrmgrForDriver_182EE3E3: 0x182EE3E3
           SceIntrmgrForDriver_C568F145: 0xC568F145
-          ksceKernelDisableIntr: 0x180435EC
-          ksceKernelDisableSubIntr: 0x259C6D9E
-          ksceKernelEnableIntr: 0x7117E827
-          ksceKernelEnableSubIntr: 0x901E41D8
-          ksceKernelGetIntrPriority: 0xE427D050
-          ksceKernelGetIntrTarget: 0x353CFAAE
-          ksceKernelIsIntrAllowedInCurrentContext: 0x182EE3E3
-          ksceKernelIsSubInterruptOccurred: 0x950B864B
-          ksceKernelRegisterIntrHandler: 0x5C1FEB29
-          ksceKernelRegisterIntrHookHandler: 0x99048AEC
-          ksceKernelRegisterSubIntrHandler: 0x96576C18
-          ksceKernelReleaseIntrHandler: 0xD6009B98
-          ksceKernelReleaseIntrHookHandler: 0xA0B7F44E
-          ksceKernelReleaseSubIntrHandler: 0x7B9657B3
-          ksceKernelResumeIntr: 0xA4C772AF
-          ksceKernelResumeSubIntr: 0x957023D0
-          ksceKernelSetIntrPriority: 0x71020E29
-          ksceKernelSetIntrTarget: 0x973BACCC
-          ksceKernelSuspendIntr: 0x6EC07C56
-          ksceKernelSuspendSubIntr: 0x3A9EA7D1
-          ksceKernelTriggerSGI: 0x29F62500
-          ksceKernelTriggerSubIntr: 0xCC94B294
+          sceKernelCallSubIntrHandler: 0xCC94B294
+          sceKernelDisableIntr: 0x180435EC
+          sceKernelDisableSubIntr: 0x259C6D9E
+          sceKernelEnableIntr: 0x7117E827
+          sceKernelEnableSubIntr: 0x901E41D8
+          sceKernelGenerateSoftIntr: 0x29F62500
+          sceKernelGetIntrPriority: 0xE427D050
+          sceKernelGetIntrTargetCpu: 0x353CFAAE
+          sceKernelIsSubInterruptOccurred: 0x950B864B
+          sceKernelRegisterIntrHandler: 0x5C1FEB29
+          sceKernelRegisterIntrHookHandler: 0x99048AEC
+          sceKernelRegisterSubIntrHandler: 0x96576C18
+          sceKernelReleaseIntrHandler: 0xD6009B98
+          sceKernelReleaseIntrHookHandler: 0xA0B7F44E
+          sceKernelReleaseSubIntrHandler: 0x7B9657B3
+          sceKernelResumeIntr: 0xA4C772AF
+          sceKernelResumeSubIntr: 0x957023D0
+          sceKernelSetIntrPriority: 0x71020E29
+          sceKernelSetIntrTargetCpu: 0x973BACCC
+          sceKernelSuspendIntr: 0x6EC07C56
+          sceKernelSuspendSubIntr: 0x3A9EA7D1
       SceIntrmgrForKernel:
         kernel: true
         nid: 0xDF44892E
@@ -1284,10 +1284,10 @@ modules:
           SceIntrmgrForKernel_ABEB5A69: 0xABEB5A69
           SceIntrmgrForKernel_BCD3BB05: 0xBCD3BB05
           SceIntrmgrForKernel_E3B670BF: 0xE3B670BF
-          ksceKernelQueryIntrHandlerInfo: 0xF769CEFA
           sceKernelAllocSystemCallTable: 0xB5A665C7
           sceKernelClearIntrPendingStatusForDebugger: 0xC63C96BC
           sceKernelGetIntrPendingStatusForDebugger: 0x2CC44FF3
+          sceKernelQueryIntrHandlerInfo: 0xF769CEFA
       SceIntrmgrForTZS:
         kernel: true
         nid: 0xEC3056FE
@@ -1649,7 +1649,6 @@ modules:
         nid: 0x7F8593BA
         functions:
           SceThreadmgrForKernel_0788C9BC: 0x0788C9BC
-          SceThreadmgrForKernel_1059CCDD: 0x1059CCDD
           SceThreadmgrForKernel_10853CCD: 0x10853CCD
           SceThreadmgrForKernel_15D6357C: 0x15D6357C
           SceThreadmgrForKernel_16D1961A: 0x16D1961A
@@ -1675,7 +1674,6 @@ modules:
           SceThreadmgrForKernel_89C17825: 0x89C17825
           SceThreadmgrForKernel_8C07C8EC: 0x8C07C8EC
           SceThreadmgrForKernel_8D53CA9B: 0x8D53CA9B
-          SceThreadmgrForKernel_9461FC73: 0x9461FC73
           SceThreadmgrForKernel_9605DF7D: 0x9605DF7D
           SceThreadmgrForKernel_9928DFBA: 0x9928DFBA
           SceThreadmgrForKernel_A3975A5A: 0xA3975A5A
@@ -1691,7 +1689,6 @@ modules:
           SceThreadmgrForKernel_CBADD6B3: 0xCBADD6B3
           SceThreadmgrForKernel_DF59DF99: 0xDF59DF99
           SceThreadmgrForKernel_E2DACBC2: 0xE2DACBC2
-          SceThreadmgrForKernel_EFD7439D: 0xEFD7439D
           SceThreadmgrForKernel_F46783E2: 0xF46783E2
           SceThreadmgrForKernel_F55FDEFB: 0xF55FDEFB
           SceThreadmgrForKernel_F885ECCA: 0xF885ECCA
@@ -1699,8 +1696,11 @@ modules:
           SceThreadmgrForKernel_sceKernelCreateSema: 0xF9364623
           SceThreadmgrForKernel_sceKernelDeleteMutex: 0xCA760728
           SceThreadmgrForKernel_sceKernelDeleteSema: 0xA5ACE750
+          SceThreadmgrForKernel_sceKernelLockMutex: 0x1059CCDD
+          SceThreadmgrForKernel_sceKernelSetThreadAccessLevel: 0x9461FC73
           SceThreadmgrForKernel_sceKernelSignalSema: 0x21B25367
           SceThreadmgrForKernel_sceKernelUnlockMutex: 0x59D924C1
+          SceThreadmgrForKernel_sceKernelWaitSema: 0xEFD7439D
           pmonCpuSetEventSelf: 0xFFB9CD24
           sceKernelClearThreadMgrTestMode: 0x5D270A94
           sceKernelCpuScanThreadForProcessmgr: 0x01369E06

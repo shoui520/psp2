@@ -272,7 +272,7 @@ set(MODULE_IMPORT_FUNCS
 	SceThreadmgrForDriver_FD87586C
 	SceThreadmgrForDriver_FF8DA217
 	SceThreadmgrForKernel_6C1F092F
-	ksceKernelIsIntrAllowedInCurrentContext
+	SceIntrmgrForDriver_182EE3E3
 	ksceExcpmgrRegisterHandler
 	sceKernelInitialHandlerDebugDabtCfunc
 	sceKernelInitialHandlerDebugUndefCfunc

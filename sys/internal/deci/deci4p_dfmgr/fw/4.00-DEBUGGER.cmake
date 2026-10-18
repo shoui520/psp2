@@ -95,8 +95,8 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	ksceKernelDisableIntr
-	ksceKernelEnableIntr
+	sceKernelDisableIntr
+	sceKernelEnableIntr
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelDeleteSema

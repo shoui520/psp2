@@ -8,10 +8,7 @@
 
 typedef int (*SceKernelIntrHandler)(int intrCode, void *userCtx);
 
-/*
- * ksceKernelRegisterIntrHandler's option (vitasdk's SceKernelIntrOptParam;
- * our name, so both headers can be included).
- */
+/* sceKernelRegisterIntrHandler's option (name unknown) */
 typedef struct SceKernelIntrRegisterOpt {
 	SceSize size;				/* sizeof(SceKernelIntrRegisterOpt) */
 	SceUInt32 num;				/* the sub-interrupt handler slots to allocate */
@@ -26,9 +23,8 @@ typedef struct SceKernelIntrRegisterOpt {
 typedef int (*SceKernelSubIntrHandler)(void *subintrArg, void *registerArg, unsigned char intrPriority);
 
 /*
- * Sub-interrupt callbacks, in the order consumed by IntrMgr. The SDK's
- * SceKernelIntrOptHandlers uses pointer-to-pointer members; keep this typed
- * view separate so callers can also include the SDK header.
+ * Sub-interrupt callbacks, in the order IntrMgr calls them (name unknown; IntrMgr itself
+ * reads them as an array of function pointers, SubIntrCallback).
  */
 typedef struct SceKernelIntrCallbacks {
 	SceSize size;
@@ -45,20 +41,21 @@ typedef struct SceKernelIntrCallbacks {
 	int (*isOccurred)(int intrCode, int subintrCode);
 } SceKernelIntrCallbacks;
 
-int ksceKernelRegisterIntrHandler(int intrCode, const char *name, int type,
-				  SceKernelIntrHandler handler, void *userCtx,
-				  int priority, int targetCpu, void *opt);
-int ksceKernelReleaseIntrHandler(int intrCode);
-int ksceKernelEnableIntr(int intrCode);
-int ksceKernelDisableIntr(int intrCode);
-int ksceKernelEnableSubIntr(int intrCode, int subintrCode);
-int ksceKernelDisableSubIntr(int intrCode, int subintrCode);
-int ksceKernelSetIntrTarget(int intrCode, int targetCpu);
-int ksceKernelIsIntrAllowedInCurrentContext(void);
-int ksceKernelRegisterSubIntrHandler(int intrCode, int subintrCode, const char *name,
-				     SceKernelSubIntrHandler handler, void *registerArg);
-int ksceKernelReleaseSubIntrHandler(int intrCode, int subintrCode);
-int ksceKernelTriggerSGI(int intrCode, unsigned int targetListFilter, unsigned int cpuTargetList);
+int sceKernelRegisterIntrHandler(unsigned int intrCode, const char *name, unsigned int type,
+				 void *handler, void *arg, unsigned int priority,
+				 unsigned int target, const SceKernelIntrRegisterOpt *opt);
+int sceKernelReleaseIntrHandler(unsigned int intrCode);
+int sceKernelEnableIntr(unsigned int intrCode);
+int sceKernelDisableIntr(unsigned int intrCode);
+int sceKernelEnableSubIntr(int intrCode, int subCode);
+int sceKernelDisableSubIntr(int intrCode, int subCode);
+int sceKernelSetIntrTargetCpu(unsigned int intrCode, unsigned int target);
+int SceIntrmgrForDriver_182EE3E3(void);	/* vitasdk: ksceKernelIsIntrAllowedInCurrentContext */
+int sceKernelRegisterSubIntrHandler(unsigned int intrCode, unsigned int subCode, const char *name,
+				    void *handler, void *arg);
+int sceKernelReleaseSubIntrHandler(int intrCode, int subCode);
+int sceKernelCallSubIntrHandler(int intrCode, int subCode, void *value);
+int sceKernelGenerateSoftIntr(unsigned int intrCode, unsigned int filter, unsigned int target);
 int sceKernelGetIntrPendingStatusForDebugger(int intrCode);
 int sceKernelClearIntrPendingStatusForDebugger(int intrCode);
 
@@ -69,4 +66,15 @@ void *SceIntrmgrForKernel_01911612(unsigned int cpu, unsigned int level);
 void SceIntrmgrForKernel_7E3D4560(void *handler);
 void *SceIntrmgrForKernel_807B2004(void);
 void SceIntrmgrForKernel_ABEB5A69(void *handler);
-int sceKernelAllocSystemCallTable(unsigned int count, void **table);	/* name per NID db */
+int sceKernelAllocSystemCallTable(unsigned int count, void **table);	/* the 0.990 prototype names it */
+
+void SceIntrmgrForKernel_04DBA732(void *enter, void *leave);
+void SceIntrmgrForKernel_6F5B8AF2(void (*registered)(unsigned int), void (*released)(unsigned int));
+void SceIntrmgrForKernel_8D6E1289(void *enter, void *leave);
+int sceKernelGetIntrPriority(unsigned int intrCode, unsigned int *priority);
+int sceKernelGetIntrTargetCpu(unsigned int intrCode, unsigned int *target);
+int sceKernelRegisterIntrHookHandler(int intrCode, void *handler, void **oldHandler);
+int sceKernelReleaseIntrHookHandler(unsigned int intrCode);
+int sceKernelResumeIntr(unsigned int intrCode, unsigned int enabled);
+int sceKernelSetIntrPriority(unsigned int intrCode, unsigned int priority);
+int sceKernelSuspendIntr(unsigned int intrCode, unsigned int *enabled);

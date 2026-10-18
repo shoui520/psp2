@@ -38,7 +38,7 @@ static int sgiNop(int intr_code, int subintr_code) /* name unknown */
 	return 0;
 }
 
-static int sgiSet(int intr_code, int subintr_code, int enable) /* name unknown */
+static int sgiSet(int intr_code, int subintr_code, unsigned int enable) /* name unknown */
 {
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
@@ -49,7 +49,7 @@ static int sgiSet(int intr_code, int subintr_code, int enable) /* name unknown *
 	return 0;
 }
 
-static int sgiTake(int intr_code, int subintr_code, int *enabled) /* name unknown */
+static int sgiTake(int intr_code, int subintr_code, unsigned int *enabled) /* name unknown */
 {
 	DisplaySgiState *state = &sgiState[intr_code - 8];
 	SceKernelIntrStatus intr;
@@ -73,7 +73,7 @@ static int sgiHandler(int intr_code, void *userCtx) /* name unknown */
 
 	for (i = 0; i < 32; i++) {
 		if ((1 << i) & mask)
-			ksceKernelTriggerSubIntr(intr_code, i, (void *)i);
+			sceKernelCallSubIntrHandler(intr_code, i, (void *)i);
 	}
 	return -1;
 }
@@ -175,7 +175,7 @@ static int vblankSubIntrHandler(void *subintrArg, void *userCtx, unsigned char p
 	if (devStatus != NULL && bits == 1)
 		*devStatus = (h->vcount & ~0xff000000) | 0x11000000;
 	if ((1 << startupHead) & bits)
-		ksceKernelTriggerSGI(8, 2, 0);
+		sceKernelGenerateSoftIntr(8, 2, 0);
 	return -1;
 }
 
@@ -203,7 +203,7 @@ static void vblankTimerHandler(SceSysTimerId timer, void *pUserData) /* name unk
 	if (devStatus != NULL && primaryHead == 1)
 		*devStatus = (heads[1].vcount & ~0xff000000) | 0x11000000;
 	if (bits & (1 << startupHead))
-		ksceKernelTriggerSGI(8, 2, 0);
+		sceKernelGenerateSoftIntr(8, 2, 0);
 }
 
 static int sgiDisable(int intr_code, int subintr_code) /* name unknown */
@@ -228,20 +228,20 @@ static int sgiEnable(int intr_code, int subintr_code) /* name unknown */
 	return 0;
 }
 
-static const SceKernelIntrOptHandlers sgiOptHandlers = {
-	.size = sizeof(SceKernelIntrOptHandlers),
-	.fptr0 = (void *)sgiDisable,
-	.enable_subintr_cb = (void *)sgiEnable,
-	.disable_subintr_cb = (void *)sgiDisable,
-	.fptr3 = (void *)sgiTake,
-	.fptr4 = (void *)sgiSet,
-	.fptr5 = (void *)sgiNop,
+static const SceKernelIntrCallbacks sgiOptHandlers = {
+	.size = sizeof(SceKernelIntrCallbacks),
+	.postRelease = sgiDisable,
+	.enable = sgiEnable,
+	.disable = sgiDisable,
+	.suspend = sgiTake,
+	.resume = sgiSet,
+	.isOccurred = sgiNop,
 };
 
-static const SceKernelIntrOptParam sgiOptParam = {
-	.size = sizeof(SceKernelIntrOptParam),
+static const SceKernelIntrRegisterOpt sgiOptParam = {
+	.size = sizeof(SceKernelIntrRegisterOpt),
 	.num = 0x20,
-	.handlers = (SceKernelIntrOptHandlers *)&sgiOptHandlers,
+	.handlers = (void *)&sgiOptHandlers,
 };
 
 static const char *const vblankEventNames[2] = {
@@ -291,19 +291,19 @@ int vblankInit(void) /* name unknown */
 		if (ret < 0)
 			return ret;
 	}
-	ksceKernelRegisterIntrHandler(8, "SceDisplayVbStartSGI", 0, sgiHandler, sgiState, 0xa0, 0xf,
-				      (SceKernelIntrOptParam *)&sgiOptParam);
+	sceKernelRegisterIntrHandler(8, "SceDisplayVbStartSGI", 0, sgiHandler, sgiState, 0xa0, 0xf,
+				     &sgiOptParam);
 	if (hdmiOnly == 0) {
-		ksceKernelRegisterSubIntrHandler(0xd5, 1, "SceDisplayVbStartMainLCD", vblankSubIntrHandler,
+		sceKernelRegisterSubIntrHandler(0xd5, 1, "SceDisplayVbStartMainLCD", vblankSubIntrHandler,
 						 &heads[0]);
-		ksceKernelRegisterSubIntrHandler(0xd2, 1, "SceDisplayVbStartHDMI", vblankSubIntrHandler,
+		sceKernelRegisterSubIntrHandler(0xd2, 1, "SceDisplayVbStartHDMI", vblankSubIntrHandler,
 						 &heads[1]);
-		ksceKernelEnableSubIntr(0xd5, 1);
-		ksceKernelEnableSubIntr(0xd2, 1);
+		sceKernelEnableSubIntr(0xd5, 1);
+		sceKernelEnableSubIntr(0xd2, 1);
 	} else {
-		ksceKernelRegisterSubIntrHandler(0xd2, 1, "SceDisplayVbStartMainLCD", vblankSubIntrHandler,
+		sceKernelRegisterSubIntrHandler(0xd2, 1, "SceDisplayVbStartMainLCD", vblankSubIntrHandler,
 						 &heads[0]);
-		ksceKernelEnableSubIntr(0xd2, 1);
+		sceKernelEnableSubIntr(0xd2, 1);
 	}
 	startVblankTimer();
 	return 0;

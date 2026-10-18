@@ -124,9 +124,9 @@ int MsifInsertionInterrupt(int interrupt, void *argp)
 	uint32_t status = ScePervasiveForDriver_F9E7B023();
 
 	if ((status & 1) && (context->insertionInterruptMask & 2))
-		ksceKernelTriggerSubIntr(interrupt, 1, NULL);
+		sceKernelCallSubIntrHandler(interrupt, 1, NULL);
 	if ((status & 2) && (context->insertionInterruptMask & 1))
-		ksceKernelTriggerSubIntr(interrupt, 0, NULL);
+		sceKernelCallSubIntrHandler(interrupt, 0, NULL);
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&gMsifContext.lock, state);
 	return -1;
 }
@@ -207,8 +207,8 @@ int MsifSysEventHandler(int phase, int event)
 
 			gMsifContext.mediaAccessTickEnabled = 0;
 			gMsifContext.savedMediaAccessTickEnabled = enabled;
-			ksceKernelDisableIntr(60);
-			ksceKernelDisableIntr(61);
+			sceKernelDisableIntr(60);
+			sceKernelDisableIntr(61);
 			kscePervasiveMsifResetEnable();
 			kscePervasiveMsifClockDisable();
 		}
@@ -221,8 +221,8 @@ int MsifSysEventHandler(int phase, int event)
 		kscePervasiveMsifSetClock(4);
 		kscePervasiveMsifResetDisable();
 		kscePervasiveMsifClockEnable();
-		ksceKernelEnableIntr(61);
-		ksceKernelEnableIntr(60);
+		sceKernelEnableIntr(61);
+		sceKernelEnableIntr(60);
 		gMsifContext.mediaAccessTickEnabled =
 			gMsifContext.savedMediaAccessTickEnabled;
 		break;
@@ -656,17 +656,16 @@ unlock:
 	return result;
 }
 
-/* The pinned SDK declares these callback fields with an extra pointer level. */
-static const SceKernelIntrOptHandlers gMsifInsertionHandlers = {
-	.size = sizeof(SceKernelIntrOptHandlers),
-	.enable_subintr_cb = (SceKernelIntrOptHandlersCb1 *)MsifEnableInsertionSubInterrupt,
-	.disable_subintr_cb = (SceKernelIntrOptHandlersCb1 *)MsifDisableInsertionSubInterrupt,
+static const SceKernelIntrCallbacks gMsifInsertionHandlers = {
+	.size = sizeof(SceKernelIntrCallbacks),
+	.enable = MsifEnableInsertionSubInterrupt,
+	.disable = MsifDisableInsertionSubInterrupt,
 };
 
-static const SceKernelIntrOptParam gMsifInsertionOptions = {
-	.size = sizeof(SceKernelIntrOptParam),
+static const SceKernelIntrRegisterOpt gMsifInsertionOptions = {
+	.size = sizeof(SceKernelIntrRegisterOpt),
 	.num = 2,
-	.handlers = (SceKernelIntrOptHandlers *)&gMsifInsertionHandlers,
+	.handlers = (void *)&gMsifInsertionHandlers,
 };
 
 /* Sony's sceMsifInit, exported as the module entry point. */
@@ -716,13 +715,13 @@ int module_start(SceSize args, const void *argp)
 		&gMsifContext.tailPhysicalAddress);
 	if (result < 0)
 		goto free_dma;
-	result = ksceKernelRegisterIntrHandler(61, "SceMsifSmshc", 0,
+	result = sceKernelRegisterIntrHandler(61, "SceMsifSmshc", 0,
 		MsifControllerInterrupt, &gMsifContext, 128, 15, NULL);
 	if (result < 0)
 		goto free_dma;
-	result = ksceKernelRegisterIntrHandler(60, "SceMsifIns", 0,
+	result = sceKernelRegisterIntrHandler(60, "SceMsifIns", 0,
 		MsifInsertionInterrupt, &gMsifContext, 128, 15,
-		(SceKernelIntrOptParam *)&gMsifInsertionOptions);
+		&gMsifInsertionOptions);
 	if (result < 0)
 		goto release_controller_interrupt;
 	result = sceKernelRegisterSysEventHandler("SceMsif",
@@ -756,8 +755,8 @@ int module_start(SceSize args, const void *argp)
 	kscePervasiveMsifResetDisable();
 	kscePervasiveMsifClockEnable();
 	SCE_DBG_ASSERT_FUNC(1, 297, "sceMsifInit");
-	ksceKernelEnableIntr(61);
-	ksceKernelEnableIntr(60);
+	sceKernelEnableIntr(61);
+	sceKernelEnableIntr(60);
 	return 0;
 
 delete_sleep_thread:
@@ -767,11 +766,11 @@ delete_sleep_event:
 unregister_sys_event:
 	sceKernelUnregisterSysEventHandler(gMsifSysEventHandler);
 release_insertion_interrupt:
-	ksceKernelDisableIntr(60);
-	ksceKernelReleaseIntrHandler(60);
+	sceKernelDisableIntr(60);
+	sceKernelReleaseIntrHandler(60);
 release_controller_interrupt:
-	ksceKernelDisableIntr(61);
-	ksceKernelReleaseIntrHandler(61);
+	sceKernelDisableIntr(61);
+	sceKernelReleaseIntrHandler(61);
 free_dma:
 	SceSysmemForDriver_009E1C61(gMsifContext.dmaMemBlock);
 finalize_mutex:

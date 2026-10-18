@@ -140,7 +140,7 @@ int waitEventFlag(SceUID evfId, uint32_t pattern, uint32_t mode, uint32_t *outPa
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 108, "*** error: illegal context. evfId=0x%08x[%s]\n",
 				      evfId, SceSysmemForDriver_E655852F(evfId));
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
@@ -538,7 +538,7 @@ int sceKernelDeleteEventFlag(SceUID evfId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 664, "sceKernelDeleteEventFlag", "*** error: illegal context. evfId=0x%08x[%s]\n",
 				      evfId, SceSysmemForDriver_E655852F(evfId));
 		ThreadmgrSetUserRoWord(saved);

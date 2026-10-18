@@ -87,7 +87,7 @@ void *SceThreadmgrForDriver_89CA5698(uint32_t slot, SceUID threadId, int create)
 	void *memory = NULL;
 	void **field;
 
-	if (ksceKernelIsIntrAllowedInCurrentContext() || !driverSlot(slot))
+	if (SceIntrmgrForDriver_182EE3E3() || !driverSlot(slot))
 		return NULL;
 	if (threadId == 0) {
 		memory = currentThreadContext()->tlsSlotMemory.slot[slot];

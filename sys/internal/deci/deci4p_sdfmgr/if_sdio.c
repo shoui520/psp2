@@ -48,10 +48,10 @@ void sdioIdle(void)
 
 void sdioEnableInterrupts(SdfMgrTransport *transport)
 {
-	ksceKernelEnableIntr(0xb0);
-	ksceKernelEnableIntr(0xb1);
-	ksceKernelEnableIntr(0xb2);
-	ksceKernelEnableIntr(0xb3);
+	sceKernelEnableIntr(0xb0);
+	sceKernelEnableIntr(0xb1);
+	sceKernelEnableIntr(0xb2);
+	sceKernelEnableIntr(0xb3);
 	transport->events |= 1;
 	transport->interruptFlags |= 1;
 }
@@ -59,10 +59,10 @@ void sdioEnableInterrupts(SdfMgrTransport *transport)
 void sdioDisableInterrupts(SdfMgrTransport *transport)
 {
 	(void)transport;
-	ksceKernelDisableIntr(0xb0);
-	ksceKernelDisableIntr(0xb1);
-	ksceKernelDisableIntr(0xb2);
-	ksceKernelDisableIntr(0xb3);
+	sceKernelDisableIntr(0xb0);
+	sceKernelDisableIntr(0xb1);
+	sceKernelDisableIntr(0xb2);
+	sceKernelDisableIntr(0xb3);
 }
 
 int recvStart(SdfMgrTransport *transport)
@@ -82,7 +82,7 @@ int recvStart(SdfMgrTransport *transport)
 int recvPause(SdfMgrTransport *transport)
 {
 	transport->events |= 0x1000;
-	ksceKernelDisableIntr(s_sdioInterrupts[sceKernelCpuId()]);
+	sceKernelDisableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	return 0;
 }
 
@@ -95,7 +95,7 @@ int recvFinish(SdfMgrTransport *transport)
 	transport->interruptFlags = interrupts & ~0x100u;
 	SceDeci4pSDfMgrForKernel_FFC95B63(&transport->receiveHeader, 0);
 	if (!(transport->events & 0x1000))
-		ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
+		sceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	transport->receiveSize = 0;
 	transport->receiveProgress = 0;
 	return 0;
@@ -107,7 +107,7 @@ int recvResume(SdfMgrTransport *transport)
 
 	transport->events = events & ~0x1000u;
 	if (!(events & 0x6000))
-		ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
+		sceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	return 0;
 }
 
@@ -120,7 +120,7 @@ void sdioKickSend(SdfMgrTransport *transport, const uint32_t *interruptFlags)
 		if (*interruptFlags & 1)
 			transport->events = events | 0x20;
 		else
-			ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
+			sceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	}
 	sceKernelCpuResumeIntr(state);
 }
@@ -344,7 +344,7 @@ int sdioInit(void)
 	transport->operations = operations;
 	code = s_sdioInterrupts[sceKernelCpuId()];
 	target = s_sdfMgrCpuTargets[sceKernelCpuId()];
-	result = ksceKernelRegisterIntrHandler(code, "SceSDbgSdio0Mbox", 0,
+	result = sceKernelRegisterIntrHandler(code, "SceSDbgSdio0Mbox", 0,
 				       sdioIntrEntry, transport, 0x10, target, NULL);
 	if (result < 0) {
 #if FW_DEBUG
@@ -398,7 +398,7 @@ int sdioInit(void)
 		return result;
 	}
 	transport->interruptFlags |= 1;
-	result = ksceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
+	result = sceKernelEnableIntr(s_sdioInterrupts[sceKernelCpuId()]);
 	if (result < 0) {
 #if FW_DEBUG
 		SceDeci4pSDfMgrForKernel_501CE61D(15,

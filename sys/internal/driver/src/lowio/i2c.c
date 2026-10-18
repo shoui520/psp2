@@ -384,7 +384,7 @@ static int I2cSysEvent(int resume, int event, void *args, void *opt)
 				ksceI2cInit(bus);
 				I2cHardwareTiming(&s_i2c[bus]);
 				s_i2c[bus].base->interruptEnable = 0x01000000;
-				ksceKernelEnableIntr(s_i2c[bus].intrCode);
+				sceKernelEnableIntr(s_i2c[bus].intrCode);
 			}
 			sceKernelSetEventFlag(s_i2c[1].event, 0x80000000);
 		}
@@ -433,12 +433,12 @@ static __attribute__((noinline)) int I2cInit(void)
 	s_i2c[1].event = sceKernelCreateEventFlag("SceI2c1", 0, 0, NULL);
 	s_i2c[0].intrCode = 0x8e;
 	s_i2c[1].intrCode = 0x8f;
-	ksceKernelRegisterIntrHandler(0x8e, "SceI2c0", 0, I2cIntrHandler,
+	sceKernelRegisterIntrHandler(0x8e, "SceI2c0", 0, I2cIntrHandler,
 		&s_i2c[0], 0xa0, 0xf, NULL);
-	ksceKernelRegisterIntrHandler(0x8f, "SceI2c1", 0, I2cIntrHandler,
+	sceKernelRegisterIntrHandler(0x8f, "SceI2c1", 0, I2cIntrHandler,
 		&s_i2c[1], 0xa0, 0xf, NULL);
-	ksceKernelEnableIntr(0x8e);
-	ksceKernelEnableIntr(0x8f);
+	sceKernelEnableIntr(0x8e);
+	sceKernelEnableIntr(0x8f);
 	for (bus = 0; bus < 2; bus++) {
 		ctx = &s_i2c[bus];
 		ScePervasiveForDriver_86BEA9A4(bus);

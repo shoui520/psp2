@@ -95,11 +95,11 @@ set(MODULE_IMPORT_FUNCS
 	SceSysrootForDriver_B0E1FC67
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_FD753E7A
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelDisableSubIntr
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelDisableSubIntr
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	SceThreadmgrForDriver_0892D8DF
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag

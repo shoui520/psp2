@@ -714,7 +714,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 		case 0x402:
 			return touch.state == 4 ? 0 : -1;
 		case 0x400c:
-			ksceKernelDisableSubIntr(8, 5);
+			sceKernelDisableSubIntr(8, 5);
 			touch.state = 1;
 			if (touch.timer != -1) {
 				sceKernelCancelAlarm(touch.timer);
@@ -728,7 +728,7 @@ static int systemEvent(int resume, int event, void *args, void *opt) /* name unk
 			touch.modeMask = 0;
 			touch.ports[0].forceChange = 0;
 			touch.ports[1].forceChange = 0;
-			ksceKernelEnableSubIntr(8, 5);
+			sceKernelEnableSubIntr(8, 5);
 		} else if (event == 0x100000) {
 			touch.state = 1;
 			SceThreadmgrForDriver_C58DF384("SceTouchAlarm1", 100000, noOpAlarm, NULL);
@@ -777,8 +777,8 @@ static int initializePhysical(void *args) /* name unknown */
 	if (touch.plsId >= 0) {
 		createPhysicalProcess(0x10005);
 		createVirtualProcess(0x10005);
-		ksceKernelRegisterSubIntrHandler(8, 5, "SceTouchVblank", vblankCallback, NULL);
-		ksceKernelEnableSubIntr(8, 5);
+		sceKernelRegisterSubIntrHandler(8, 5, "SceTouchVblank", vblankCallback, NULL);
+		sceKernelEnableSubIntr(8, 5);
 	}
 	return 1;
 }

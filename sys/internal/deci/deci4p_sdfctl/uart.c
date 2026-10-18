@@ -64,7 +64,7 @@ static int recvStart(SDfCtlIf *ifp)
 
 static int uartStart(SDfCtlIf *ifp)
 {
-	int ret = ksceKernelEnableIntr(UART_INTR);
+	int ret = sceKernelEnableIntr(UART_INTR);
 
 	ifp->state |= UART_UP;
 	ifp->intr |= UART_INTR_SEND;
@@ -77,7 +77,7 @@ static int uartRecvUnblock(SDfCtlIf *ifp)
 
 	ifp->state = state & ~UART_RECV_BLOCKED;
 	if (!(state & (UART_RECV_HEADER | UART_RECV_DONE)))
-		ksceKernelEnableIntr(UART_INTR);
+		sceKernelEnableIntr(UART_INTR);
 	return 0;
 }
 
@@ -103,13 +103,13 @@ static int uartStop(SDfCtlIf *ifp)
 {
 	ifp->state &= ~UART_UP;
 	ifp->intr &= ~UART_INTR_SEND;
-	return ksceKernelDisableIntr(UART_INTR);
+	return sceKernelDisableIntr(UART_INTR);
 }
 
 static int uartRecvBlock(SDfCtlIf *ifp)
 {
 	ifp->state |= UART_RECV_BLOCKED;
-	ksceKernelDisableIntr(UART_INTR);
+	sceKernelDisableIntr(UART_INTR);
 	return 0;
 }
 
@@ -144,7 +144,7 @@ static int uartRecvDone(SDfCtlIf *ifp)
 	ifp->intr &= ~UART_INTR_RECV;
 	sdfctlSetSize(&ifp->recvHdr, 0);
 	if (!(ifp->state & UART_RECV_BLOCKED))
-		ksceKernelEnableIntr(UART_INTR);
+		sceKernelEnableIntr(UART_INTR);
 	ifp->recvSize = 0;
 	ifp->recvDone = 0;
 	return 0;
@@ -160,7 +160,7 @@ static __attribute__((noinline, noclone)) void uartKick(SDfCtlIf *ifp, SceUInt32
 		if (*intr & UART_INTR_SEND)
 			ifp->state |= UART_SEND_READY;
 		else
-			ksceKernelEnableIntr(UART_INTR);
+			sceKernelEnableIntr(UART_INTR);
 	}
 	sceKernelSpinlockLowUnlockCpuResumeIntr(&s_uartLock, s);
 }
@@ -280,7 +280,7 @@ int uartInit(void)
 	s_uartLock = 0;
 	s_uart.ops = s_uartOps;
 	s_uart.name = "UART";
-	ret = ksceKernelRegisterIntrHandler(UART_INTR, "SceUart1", 0, _uartIntrHandler, &s_uart,
+	ret = sceKernelRegisterIntrHandler(UART_INTR, "SceUart1", 0, _uartIntrHandler, &s_uart,
 					    0x50, 0x10000, NULL);
 	if (ret < 0) {
 		SDFCTL_PRINTF(113, "register uart interrupt handler failed\n");
@@ -300,7 +300,7 @@ int uartInit(void)
 		return ret2;
 	}
 	s_uart.intr |= UART_INTR_SEND;
-	ret2 = ksceKernelEnableIntr(UART_INTR);
+	ret2 = sceKernelEnableIntr(UART_INTR);
 	if (ret2 < 0) {
 		SDFCTL_PRINTF(145, "sceKernelEnableIntr failed (0x%08x)\n", ret2);
 		SCE_DBG_ASSERT_FAIL(146);

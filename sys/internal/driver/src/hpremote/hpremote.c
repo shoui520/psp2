@@ -339,8 +339,8 @@ int module_start(SceSize args, void *argp)
 		return 0;
 	remote.thread = uid;
 	sceKernelStartThread(uid, 0, NULL);
-	ksceKernelRegisterSubIntrHandler(8, 24, "SceHprmVblank", pollInputs, NULL);
-	ksceKernelEnableSubIntr(8, 24);
+	sceKernelRegisterSubIntrHandler(8, 24, "SceHprmVblank", pollInputs, NULL);
+	sceKernelEnableSubIntr(8, 24);
 	sceKernelRegisterSysEventHandler("SceHprm", sysEvent, NULL);
 	return 0;
 }

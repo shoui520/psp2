@@ -895,13 +895,13 @@ int sceKernelThreadMgrModuleBoot(SceSize arglen, const struct ThreadmgrBootArgs 
 	sceKernelSpinlockLowUnlock(&object->waitLock);
 
 	/* the interrupts, exceptions and power events */
-	if (ksceKernelRegisterIntrHandler(SGI_INTR_REQUEST, "SceThreadmgrSGI", 0,
+	if (sceKernelRegisterIntrHandler(SGI_INTR_REQUEST, "SceThreadmgrSGI", 0,
 					  intrRequestSGIHandler, (void *)s_threadmgrRuntime.manager,
 					  SGI_PRIORITY, CPU_MASK_ALL, NULL) < 0)
 		SCE_PANIC(587);
 	SCE_DBG_PRINTF_LEVEL(2, 0, 589, " sizeof(IntrRequest)=%d\n", SIZEOF_INTR_REQUEST);
 	initIntrRequestPool();
-	if (ksceKernelRegisterIntrHandler(SGI_STOP_CPUS, "SceThreadmgrSGILow", 0,
+	if (sceKernelRegisterIntrHandler(SGI_STOP_CPUS, "SceThreadmgrSGILow", 0,
 					  stopCpuIntrHandler, NULL, SGI_LOW_PRIORITY,
 					  CPU_MASK_ALL, NULL) < 0)
 		SCE_PANIC(599);
@@ -5140,7 +5140,7 @@ int64_t sceKernelExtendKernelStackWide(SceSize size, ThreadmgrStackFunction func
 		      size, free);
 	if (free >= STACK_SAFETY)
 		free -= STACK_SAFETY;
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF(0, 5368, "*** error: illegal context\n");
 		ret = (int)SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;
 		goto out;
@@ -5243,7 +5243,7 @@ int sceKernelGetThreadCpuAffinityMask(SceUID uid)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	inIntr = ksceKernelIsIntrAllowedInCurrentContext();
+	inIntr = SceIntrmgrForDriver_182EE3E3();
 	if (uid == 0) {
 		if (inIntr) {
 			SCE_DBG_ASSERT_PRINTF_FUNC(0, 5822, "sceKernelGetThreadCpuAffinityMask",
@@ -7678,7 +7678,7 @@ retry:
 		SceCpuForDriver_BC248C30((SceInt32 *)&thread->flags, request);
 		if (thread->status & SCE_KERNEL_THREAD_STATUS_RUNNING) {
 			/* it is the thread this SGI interrupted */
-			SCE_DBG_ASSERT_CHECK(ksceKernelIsIntrAllowedInCurrentContext() != 0, 8809);
+			SCE_DBG_ASSERT_CHECK(SceIntrmgrForDriver_182EE3E3() != 0, 8809);
 			SCE_DBG_ASSERT_CHECK(!(thread->flags & THREAD_FLAG_SELF_STOPPED), 8810);
 			if (!(request & THREAD_FLAG_REQUEST_SUSPEND)) {
 				if (thread->userFrame == NULL)
@@ -8550,7 +8550,7 @@ void threadMgrExcpHandlerCfunc_3(struct ThreadCB *thread)
 		(SceInt32 *)&s_threadmgrRuntime.manager->cpuStopOwner, 0, 1);
 	if (stopped == 0) {
 		s_threadmgrRuntime.manager->cpuStopState = CPU_STOP_REQUEST;
-		ksceKernelTriggerSGI(SGI_STOP_CPUS, 0,
+		sceKernelGenerateSoftIntr(SGI_STOP_CPUS, 0,
 				     ~(1 << sceKernelCpuId()) & CPU_MASK_ALL);
 	}
 	sceKernelCpuResumeIntr(0);

@@ -796,7 +796,7 @@ int sceKernelDeleteCallback(SceUID callbackId)
 
 	saved = ThreadmgrUserRoWord();
 	ThreadmgrSetUserRoWord(saved << 16);
-	if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	if (SceIntrmgrForDriver_182EE3E3()) {
 		SCE_DBG_ASSERT_PRINTF_FUNC(0, 1067, "sceKernelDeleteCallback",
 					   "*** error: illegal context\n");
 		ret = SCE_KERNEL_ERROR_ILLEGAL_CONTEXT;

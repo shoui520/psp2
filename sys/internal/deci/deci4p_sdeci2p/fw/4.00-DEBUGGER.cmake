@@ -80,10 +80,10 @@ set(MODULE_IMPORT_FUNCS
 	SceDebugForDriver_374B7868
 	SceDebugForDriver_D9703808
 	SceDebugForDriver_FD753E7A
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelGetIntrPendingStatusForDebugger
 	sceKernelClearIntrPendingStatusForDebugger
 	__stack_chk_fail

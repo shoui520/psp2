@@ -481,7 +481,7 @@ static int sysconSubmitSynchronousPacket(SceSysconPacket *packet,
 #endif
 			return result;
 		}
-	} else if (ksceKernelIsIntrAllowedInCurrentContext()) {
+	} else if (SceIntrmgrForDriver_182EE3E3()) {
 		return SCE_SYSCON_ERROR_NOT_INTR_ALLOWED;
 	}
 	result = sysconPreparePacket(packet, flags, NULL, NULL);
@@ -553,7 +553,7 @@ int ksceSysconSetAffirmativeRertyMode(uint32_t mode)
 
 int SceSysconForDriver_0D58E297(uint32_t polling)
 {
-	ksceKernelSetIntrTarget(0xf8, polling ? 8 : 0xf);
+	sceKernelSetIntrTargetCpu(0xf8, polling ? 8 : 0xf);
 	s_sysconControl.polling = polling;
 	return 0;
 }
@@ -718,9 +718,9 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 
 	if (!resume) {
 		if (eventid == SYSEVENT_SUSPEND_DEVICE(6)) {
-			ksceKernelDisableSubIntr(0xf8, 4);
+			sceKernelDisableSubIntr(0xf8, 4);
 		} else if (eventid == SYSEVENT_SUSPEND_DEVICE(15)) {
-			ksceKernelSetIntrTarget(0xf8, 8);
+			sceKernelSetIntrTargetCpu(0xf8, 8);
 			s_sysconControl.polling = 1;
 		} else if (eventid == SYSEVENT_SUSPEND_IDLE_QUERY) {
 			packet = s_sysconControl.queueHeads[0];
@@ -752,7 +752,7 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 			ksceGpioSetPortMode(0, 3, 0);
 			ksceGpioSetPortMode(0, 4, 1);
 			ksceGpioSetIntrMode(0, 4, 3);
-			ksceKernelEnableSubIntr(0xf8, 4);
+			sceKernelEnableSubIntr(0xf8, 4);
 			s_sysconControl.lastTransferTime = SceThreadmgrForDriver_47F6DE49();
 			s_sysconControl.notificationBits = resumeInfo[3];
 			sysconDecodeNotifications(s_sysconControl.notificationBits);
@@ -769,7 +769,7 @@ static int sysconSysEvent(int resume, int eventid, void *args, void *opt)
 			s_sysconControl.notificationState[SYSCON_STATE_MOTION_DEV] =
 				((resumeInfo[5] ^ 0x2000000) >> 25) & 1;
 		} else if (eventid == SYSEVENT_RESUME_DEVICE(15)) {
-			ksceKernelSetIntrTarget(0xf8, 0xf);
+			sceKernelSetIntrTargetCpu(0xf8, 0xf);
 			s_sysconControl.polling = 0;
 		}
 	}
@@ -873,9 +873,9 @@ static __attribute__((noinline)) int sysconInitialize(void)
 		return result;
 	s_sysconControl.spiMemblock = result;
 	SceSysmemForDriver_A841EDDA(result, (void **)&s_sysconControl.spiRegisters);
-	ksceKernelRegisterSubIntrHandler(0xf8, 4, "SceSysconCmdclr",
+	sceKernelRegisterSubIntrHandler(0xf8, 4, "SceSysconCmdclr",
 				       _sceSysconGpioIntr, NULL);
-	ksceKernelEnableSubIntr(0xf8, 4);
+	sceKernelEnableSubIntr(0xf8, 4);
 	s_sysconControl.hardwareInfo = SceSysrootForDriver_930B1342();
 	SceSysrootForDriver_46E72428(s_sysconControl.hardwareFlags);
 	sceKernelRegisterSysEventHandler("SceSyscon", sysconSysEvent, NULL);

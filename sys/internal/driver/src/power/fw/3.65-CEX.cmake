@@ -238,13 +238,13 @@ set(MODULE_IMPORT_FUNCS
 	__aeabi_uldivmod
 	__aeabi_uidiv
 	__stack_chk_fail
-	ksceKernelIsIntrAllowedInCurrentContext
-	ksceKernelDisableSubIntr
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
-	ksceKernelReleaseSubIntrHandler
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	SceIntrmgrForDriver_182EE3E3
+	sceKernelDisableSubIntr
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
+	sceKernelReleaseSubIntrHandler
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	SceThreadmgrForDriver_0892D8DF
 	sceKernelGetThreadmgrUIDClass
 	sceKernelDeleteMutex

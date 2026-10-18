@@ -66,11 +66,11 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelDeleteThread
 	sceKernelCreateThread
 	sceKernelSetEventFlag
-	ksceKernelDisableIntr
-	ksceKernelTriggerSGI
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelGenerateSoftIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelSysrootCorelockLock
 	sceKernelSysrootCorelockUnlock
 	sceKernelCpuId

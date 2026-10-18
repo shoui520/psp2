@@ -72,10 +72,10 @@ set(MODULE_IMPORT_FUNCS
 	SceCpuForDriver_8B4C26DF
 	SceCpuForDriver_9CB9F0CE
 	sceKernelCpuResumeIntr
-	ksceKernelDisableIntr
-	ksceKernelRegisterIntrHandler
-	ksceKernelEnableIntr
-	ksceKernelReleaseIntrHandler
+	sceKernelDisableIntr
+	sceKernelRegisterIntrHandler
+	sceKernelEnableIntr
+	sceKernelReleaseIntrHandler
 	sceKernelGetIntrPendingStatusForDebugger
 	sceKernelClearIntrPendingStatusForDebugger
 	__stack_chk_fail

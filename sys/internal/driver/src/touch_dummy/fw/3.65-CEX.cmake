@@ -62,9 +62,9 @@ set(MODULE_IMPORT_FUNCS
 	memcpy
 	__stack_chk_fail
 	SceDebugForDriver_391B74B7
-	ksceKernelDisableSubIntr
-	ksceKernelEnableSubIntr
-	ksceKernelRegisterSubIntrHandler
+	sceKernelDisableSubIntr
+	sceKernelEnableSubIntr
+	sceKernelRegisterSubIntrHandler
 	sceKernelDeleteMutex
 	sceKernelWaitEventFlag
 	sceKernelLockMutex
