@@ -38,11 +38,6 @@
 
 /* SceSysrootForDriver: the software information hooks other modules call */
 
-/* SceRegMgrForDebugger (names unknown) */
-int SceRegMgrForDebugger_53970232(int (*callback)(const TsmpNotification *entry),
-				  TsmpNotification *entry);	/* enumerate the registry */
-int SceRegMgrForDebugger_810D2F09(const TsmpRegRequest *request);	/* set a key */
-
 static TsmpState tsmp;
 
 /* Name and caller unknown; this retained original function returns success. */
@@ -179,7 +174,7 @@ TSMP_INLINE int tsmpResetNotificationForRegistry(TsmpNotificationQueue *queue)
 	return 0;
 }
 
-TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const TsmpNotification *ntf)
+TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const RegMgrNotifyInfo *ntf)
 {
 	TsmpNotificationNode *node;
 	int ret;
@@ -209,7 +204,7 @@ TSMP_INLINE int tsmpPushNotificaiton(TsmpNotificationQueue *queue, const TsmpNot
 }
 
 /* SceRegMgrForDebugger callback: a registry key changed */
-static int tsmpPushRegistryNotification(const TsmpNotification *entry)
+static int tsmpPushRegistryNotification(RegMgrNotifyInfo *entry)
 {
 	int ret;
 
@@ -283,7 +278,7 @@ static inline int tsmpSyncLocalTime(void)
  */
 __attribute__((noinline)) static int tsmpConvertRegMgrToTsmp(SceUInt32 *out)
 {
-	const TsmpNotification *ntf = &tsmp.current;
+	const RegMgrNotifyInfo *ntf = &tsmp.current;
 	SceUInt32 nameWords, kind, valueBytes, length;
 	int size;
 
@@ -292,14 +287,14 @@ __attribute__((noinline)) static int tsmpConvertRegMgrToTsmp(SceUInt32 *out)
 		SCE_PRINTF_WITH_INFO(0xf, 3330, "%d\n");
 		return SCE_ERROR_ERRNO_EINVAL;
 	}
-	length = strnlen(ntf->name, sizeof(ntf->name));
+	length = strnlen(ntf->path, sizeof(ntf->path));
 	out[1] = length + 1;
-	memcpy(&out[2], ntf->name, length);	/* out is zeroed: the NUL is there */
+	memcpy(&out[2], ntf->path, length);	/* out is zeroed: the NUL is there */
 	nameWords = (out[1] + 3) >> 2;
 
 	switch (ntf->type) {
 	case TSMP_VALUE_STR:
-		length = ntf->length;
+		length = ntf->valueSize;
 		if (length)
 			memcpy(&out[nameWords + 3], ntf->data, length);
 		((char *)&out[nameWords + 3])[length] = '\0';
@@ -312,7 +307,7 @@ __attribute__((noinline)) static int tsmpConvertRegMgrToTsmp(SceUInt32 *out)
 		kind = 4;
 		break;
 	case TSMP_VALUE_BIN:
-		length = ntf->length;
+		length = ntf->valueSize;
 		if (length == 0) {
 			valueBytes = 0;
 			kind = 0x10000;
@@ -330,14 +325,14 @@ __attribute__((noinline)) static int tsmpConvertRegMgrToTsmp(SceUInt32 *out)
 	size = ((valueBytes >> 2) + nameWords + 3) * 4;
 	out[0] = size;
 	if (ntf->type == TSMP_VALUE_INT
-	    && strncmp(ntf->name, "/CONFIG/DATE/time_zone", sizeof(ntf->name)) == 0)
+	    && strncmp(ntf->path, "/CONFIG/DATE/time_zone", sizeof(ntf->path)) == 0)
 		tsmpSyncLocalTime();
 	return size;
 }
 
 /* ===== software information (SceSysrootForDriver hooks) ===== */
 
-TSMP_INLINE int tsmpQueueSwInfo(TsmpNotification *ntf)
+TSMP_INLINE int tsmpQueueSwInfo(RegMgrNotifyInfo *ntf)
 {
 	if (tsmpPushNotificaiton(&tsmp.swInfo, ntf) >= 0)
 		sceKernelSetEventFlag(tsmp.evf, TSMP_EVENT_SWINFO);
@@ -346,7 +341,7 @@ TSMP_INLINE int tsmpQueueSwInfo(TsmpNotification *ntf)
 
 static int tsmpSetSwInfoInt(const char *name, int id, SceUInt32 value)
 {
-	TsmpNotification *ntf;
+	RegMgrNotifyInfo *ntf;
 	int ret;
 
 	if (name == NULL) {
@@ -365,9 +360,9 @@ static int tsmpSetSwInfoInt(const char *name, int id, SceUInt32 value)
 	ntf->size = sizeof(*ntf);
 	ntf->value = value;
 	ntf->type = TSMP_VALUE_INT;
-	ntf->length = sizeof(ntf->value);
-	strncpy(ntf->name, name, sizeof(ntf->name));
-	ntf->name[sizeof(ntf->name) - 1] = '\0';
+	ntf->valueSize = sizeof(ntf->value);
+	strncpy(ntf->path, name, sizeof(ntf->path));
+	ntf->path[sizeof(ntf->path) - 1] = '\0';
 	ret = tsmpQueueSwInfo(ntf);
 	if (ret < 0) {
 		SCE_PRINTF_WITH_INFO(0xf, 878, "\n");
@@ -378,7 +373,7 @@ static int tsmpSetSwInfoInt(const char *name, int id, SceUInt32 value)
 
 static int tsmpSetSwInfoStr(const char *name, int id, const char *value, int length)
 {
-	TsmpNotification *ntf;
+	RegMgrNotifyInfo *ntf;
 	int ret;
 
 	if (name == NULL) {
@@ -402,12 +397,12 @@ static int tsmpSetSwInfoStr(const char *name, int id, const char *value, int len
 		SCE_PRINTF_WITH_INFO(0xf, 922, "\n");
 		return SCE_ERROR_ERRNO_ENOMEM;
 	}
-	ntf->length = length + 1;
+	ntf->valueSize = length + 1;
 	ntf->size = sizeof(*ntf);
 	ntf->type = TSMP_VALUE_STR;
 	ntf->value = 0;
-	strncpy(ntf->name, name, sizeof(ntf->name));
-	ntf->name[sizeof(ntf->name) - 1] = '\0';
+	strncpy(ntf->path, name, sizeof(ntf->path));
+	ntf->path[sizeof(ntf->path) - 1] = '\0';
 	strncpy(ntf->data, value, sizeof(ntf->data));
 	ntf->data[sizeof(ntf->data) - 1] = '\0';
 	ret = tsmpQueueSwInfo(ntf);
@@ -420,7 +415,7 @@ static int tsmpSetSwInfoStr(const char *name, int id, const char *value, int len
 
 static int tsmpSetSwInfoBin(const char *name, int id, const void *value, SceSize length)
 {
-	TsmpNotification *ntf;
+	RegMgrNotifyInfo *ntf;
 	int ret;
 
 	if (name == NULL) {
@@ -446,10 +441,10 @@ static int tsmpSetSwInfoBin(const char *name, int id, const void *value, SceSize
 	}
 	ntf->size = sizeof(*ntf);
 	ntf->type = TSMP_VALUE_BIN;
-	ntf->length = length + 1;
+	ntf->valueSize = length + 1;
 	ntf->value = 0;
-	strncpy(ntf->name, name, sizeof(ntf->name));
-	ntf->name[sizeof(ntf->name) - 1] = '\0';
+	strncpy(ntf->path, name, sizeof(ntf->path));
+	ntf->path[sizeof(ntf->path) - 1] = '\0';
 	tsmpMemcpyChk(ntf->data, value, length);
 	ntf->data[length] = '\0';
 	ret = tsmpQueueSwInfo(ntf);
@@ -634,7 +629,7 @@ TSMP_INLINE int tsmpGetSettingRes(const TsmpHeader *pkt, SceSize size)
 {
 	const TsmpSettingRequest *req = (const TsmpSettingRequest *)(pkt + 1);
 	const SceUInt32 *entry = req->entry;
-	TsmpRegRequest set;
+	RegMgrKeyInfo set;
 	SceUInt32 kind, words, result;
 	int ret;
 
@@ -653,7 +648,7 @@ TSMP_INLINE int tsmpGetSettingRes(const TsmpHeader *pkt, SceSize size)
 	set.name = (const char *)&entry[2];
 	words = ((entry[1] + 3) >> 2) + 2;
 	kind = entry[words];
-	set.length = kind;
+	set.valueSize = kind;
 	switch (kind >> 16) {
 	case 1:
 		set.data = &entry[words + 1];

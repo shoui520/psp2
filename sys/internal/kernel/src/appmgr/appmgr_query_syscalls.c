@@ -4,8 +4,6 @@
 #include "appmgr_event.h"
 #include <appmgr/appmgr.h>
 
-extern int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);
-extern int SceAppMgrForDriver_D2541B4A(SceUInt32 request, void *bootParam);
 extern int sceAppMgrPeekLaunchParamForShell(int appId, char *param);
 extern int sceAppMgrOverwriteLaunchParamForShell(int appId, const char *param);
 

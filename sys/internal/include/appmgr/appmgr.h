@@ -79,7 +79,18 @@ SceUID sceAppMgrLaunchAppForDebugger(const char *path, const char *args, SceSize
 				     void *opt);
 int sceAppMgrKillAppForDebugger(SceUID pid);
 
-/* not written in C yet: the prototypes are vshbridge's */
+/* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
+ * system calls) */
+int sceAppMgrLaunchAppByNameForDebugger(const char *titleId, int flags);
+int sceAppMgrGetPidByNameForDebugger(const char *titleId, SceUID *pid);
+int sceAppMgrKillAppByNameForDebugger(const char *titleId);
+int sceAppMgrLaunchAppForTest2(const char *path, const char *titleId, int flags, const char *args,
+		int option1, int option2, int option0, const void *data);
+int sceAppMgrDestroyAppForTest(SceUID pid);
+int SceAppMgrForDriver_3B4F305B(int kind, const char *titleId);	/* tool app control */
+int SceAppMgrForDriver_12CE29F7(int pid, int param, int *value);	/* vitasdk: ksceAppMgrAppParamGetInt */
+int SceAppMgrForDriver_D2541B4A(SceUInt32 request, void *bootParam);	/* vitasdk: ksceAppMgrGetBootParam */
+int SceAppMgrForDriver_EC9D5A35(void *status);	/* vitasdk: ksceAppMgrSaveDataSlotGetStatus */
 int SceAppMgrForDriver_193784A9(void *a);	/* vitasdk: ksceAppMgrCheckContentInstallPeriod */
 int sceAppMgrUpdateRifInfo(const void *info);
 int SceAppMgrForDriver_B53FB98E(const char *path, void *a);	/* vitasdk: ksceAppMgrRegisterPath */

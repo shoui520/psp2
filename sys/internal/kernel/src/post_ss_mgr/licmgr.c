@@ -86,12 +86,6 @@ typedef struct SceActSig {
 	SceUInt8 signature[0x100];
 } SceActSig;
 
-/* the activation key: the OpenPsId and a byte-wise sum of its words (names unknown) */
-typedef struct SceActivationKey {
-	SceKernelOpenPsId openPsId;
-	SceUInt8 sum[4];
-} SceActivationKey;
-
 int SceSblACMgrForKernel_sceSblACMgrGetMediaType(const char *path, SceUInt32 *mediaType);
 
 int licMgrHexDecode(const char *hex, void *data, SceSize size);

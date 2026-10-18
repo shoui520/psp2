@@ -1,6 +1,32 @@
 #pragma once
 
-#include <psp2/types.h>
+#include <scetypes.h>
+
+#define REGMGR_WORD_SIZE	0x100
+
+/* a change, as the notify function gets it (names unknown) */
+typedef struct RegMgrKeyInfo {
+	SceSize size;
+	const char *name;
+	SceUInt16 type;
+	SceUInt16 valueSize;
+	union {
+		int value;
+		const void *data;
+	};
+} RegMgrKeyInfo;
+
+/* a key and its value, as SceRegMgrForDebugger_53970232's function gets it (names unknown) */
+typedef struct RegMgrNotifyInfo {
+	SceSize size;			/* REGMGR_NOTIFY_INFO_SIZE */
+	char path[REGMGR_WORD_SIZE];
+	SceUInt16 type;
+	SceUInt16 valueSize;
+	int value;
+	char data[0x7c0];
+} RegMgrNotifyInfo;
+
+_Static_assert(sizeof(RegMgrNotifyInfo) == 0x8cc, "RegMgrNotifyInfo");
 
 int sceRegMgrGetKeyBin(const char *category, const char *name,
 		     void *buffer, SceSize size);
@@ -18,6 +44,9 @@ int SceRegMgrForDebugger_8E798E47(void);
 int SceRegMgrForDebugger_B9A0BB77(void);
 int SceRegMgrForDebugger_C588D3E7(void);
 int SceRegMgrForDebugger_D668ABD2(SceSize *uisize);
+int SceRegMgrForDebugger_53970232(int (*func)(RegMgrNotifyInfo *info), RegMgrNotifyInfo *info);
+int SceRegMgrForDebugger_810D2F09(const RegMgrKeyInfo *info);
+int SceRegMgrForDebugger_C64C67A8(RegMgrKeyInfo *info);
 int SceRegMgrForTool_0B623D0B(void);
 int SceRegMgrForTool_0CFA929B(int region, SceUInt32 config);
 int SceRegMgrForTool_2A76051A(const char *category, int *handle);
@@ -59,3 +88,9 @@ int sceRegMgrUtilityGetStr(int id, char *buf, SceSize size);
 int sceRegMgrUtilitySetBin(int id, const void *buf, SceSize size);
 int sceRegMgrUtilitySetInt(int id, int value);
 int sceRegMgrUtilitySetStr(int id, const char *buf, SceSize size);
+
+/* the kernel APIs */
+int sceRegMgrGetKeysInfo(const char *category, RegMgrKeyInfo *info, int count);
+int sceRegMgrSetKeys(const char *category, RegMgrKeyInfo *info, int count);
+int sceRegMgrGetKeys(const char *category, RegMgrKeyInfo *info, int count);
+int sceRegMgrGetInitVals(const char *category, RegMgrKeyInfo *info, int count);

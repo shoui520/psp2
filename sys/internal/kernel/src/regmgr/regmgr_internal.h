@@ -61,7 +61,6 @@ int regMgrLoadCache(void);
 #define REGMGR_CATEGORY_MAX	0x400	/* names unknown */
 #define REGMGR_CATEGORY_NAME	0x1c
 #define REGMGR_CATEGORY_DEPTH	5
-#define REGMGR_WORD_SIZE	0x100
 #define REGMGR_LINE_SIZE	0x800
 #define REGMGR_READ_SIZE	0x1400
 #define REGMGR_BIN_CACHE_SIZE	0x800
@@ -154,27 +153,6 @@ typedef struct RegMgrKeyAccess {
 	void *buf;
 	int valueSize;
 } RegMgrKeyAccess;
-
-/* a change, as the notify function gets it (names unknown) */
-typedef struct RegMgrKeyInfo {
-	SceSize size;
-	const char *name;
-	SceUInt16 type;
-	SceUInt16 valueSize;
-	union {
-		int value;
-		const void *data;
-	};
-} RegMgrKeyInfo;
-
-typedef struct RegMgrNotifyInfo {
-	SceSize size;			/* REGMGR_NOTIFY_INFO_SIZE */
-	char path[REGMGR_WORD_SIZE];
-	SceUInt16 type;
-	SceUInt16 valueSize;
-	int value;
-	char data[];
-} RegMgrNotifyInfo;
 
 typedef struct RegMgrValue {	/* name unknown */
 	void *data;
@@ -294,12 +272,6 @@ int regMgrMoveNpCurrentAccount(int version, int newVersion);
 void regMgrConvertLanguage(int version, int newVersion);
 
 #define REGMGR_STATUS_SYSCALL	0x00000001	/* called by a system call (name unknown) */
-
-/* the kernel APIs */
-int sceRegMgrGetKeysInfo(const char *category, RegMgrKeyInfo *info, int count);
-int sceRegMgrSetKeys(const char *category, RegMgrKeyInfo *info, int count);
-int sceRegMgrGetKeys(const char *category, RegMgrKeyInfo *info, int count);
-int sceRegMgrGetInitVals(const char *category, RegMgrKeyInfo *info, int count);
 
 /* regmgr.c */
 int regMgrComApiPrologue(int *lock);

@@ -12,6 +12,7 @@
 #include <appmgr/appmgr_launch.h>
 #include <appmgr/appmgr_rdrfp.h>
 #include <regmgr/regmgr.h>
+#include <post_ss_mgr/sblpostssmgr.h>
 #include <npdrm/npdrm_package.h>
 #include <rtc/rtc.h>
 #include <sysmem/suspend.h>
@@ -70,7 +71,6 @@ int appmgrCloneTemporaryMounts(SceUID pid, const char *titleId,
 			       AppmgrMountHolder *destination,
 			       ScePfsRndDriveId *outDriveId);
 
-extern int sceSblSsDecryptSealedKey(const void *sealedKey, void *key);
 extern int appmgrGetMountPointById(int mountId, char *mountPoint);
 
 SceUID g_appmgrCoreHeap;

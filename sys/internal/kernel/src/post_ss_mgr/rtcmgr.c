@@ -24,14 +24,12 @@
 #define RTC_CP_SERIAL_VERSION	0x1000600
 
 #define RTC_CP_SERIAL_ID_SIZE	0x80
-#define RTC_CP_KEY_SIZE		0x10	/* name unknown */
 
 int SceDeci4pCpupForDriver_2015C7CB(SceUInt32 *time, int physical);
 int SceDeci4pCpupForDriver_C0AB956B(SceUInt32 *version, SceUInt32 *unk1, SceUInt32 *unk2);
 int SceDeci4pCpupForDriver_DAC4F630(SceUInt32 time, int physical);
 int SceDeci4pCpupForDriver_4939DA45(SceUInt32 time, int physical, const void *key);
 int SceDeci4pCpupForDriver_8139AD4E(void *serialId, SceSize *size);
-int SceSblPostSsMgrForDriver_F7F1015B(void *key);
 
 /* SceDeci4pCpup's import: NULL when no CP (SceDeci4pCpup) is there to ask */
 int (*g_rtcMgrCpup)(SceUInt32 *version, SceUInt32 *unk1, SceUInt32 *unk2) =
@@ -76,23 +74,23 @@ int _sceSblRtcMgrSetCpRtc(SceUInt32 time, int physical, const void *key)	/* name
 
 int rtcMgrSetCpActivationKey(void)	/* name unknown */
 {
-	SceUInt8 key[RTC_CP_KEY_SIZE];
+	SceActivationKey key;
 	int ret;
 
-	ret = SceSblPostSsMgrForDriver_F7F1015B(key);
+	ret = SceSblPostSsMgrForDriver_F7F1015B(&key);
 	if (ret == 0)
-		ret = _sceSblRtcMgrSetCpRtc(0, 0, key);
+		ret = _sceSblRtcMgrSetCpRtc(0, 0, &key);
 	return ret;
 }
 
 int rtcMgrSetCpRtcPhysicalAndKey(SceUInt32 time)	/* name unknown */
 {
-	SceUInt8 key[RTC_CP_KEY_SIZE];
+	SceActivationKey key;
 	int ret;
 
-	ret = SceSblPostSsMgrForDriver_F7F1015B(key);
+	ret = SceSblPostSsMgrForDriver_F7F1015B(&key);
 	if (ret == 0)
-		ret = _sceSblRtcMgrSetCpRtc(time, 1, key);
+		ret = _sceSblRtcMgrSetCpRtc(time, 1, &key);
 	return ret;
 }
 

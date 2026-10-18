@@ -2,6 +2,7 @@
 
 #include <psp2kern/types.h>
 #include <stdint.h>
+#include <kernel/openpsid.h>
 
 /* a context: the file, in a memory block */
 typedef struct SceSblSpfsoCtx {
@@ -9,6 +10,12 @@ typedef struct SceSblSpfsoCtx {
 	void *base;
 	SceSize size;
 } SceSblSpfsoCtx;
+
+/* the activation key: the OpenPsId and a byte-wise sum of its words (names unknown) */
+typedef struct SceActivationKey {
+	SceKernelOpenPsId openPsId;
+	SceUInt8 sum[4];
+} SceActivationKey;
 
 /* vitasdk: ksceSblPostSsMgrActivate */
 int SceSblPostSsMgrForDriver_0298382B(const char *path);
@@ -56,3 +63,7 @@ int SceSblPostSsMgrForDriver_BDF18922(const char *path, SceSblSpfsoCtx *ctx);
 int SceSblPostSsMgrForDriver_686B9461(SceSblSpfsoCtx *ctx, void **data, SceSize *size);
 /* vitasdk: ksceSblPostSsMgrReleaseSpfsoCtx */
 int SceSblPostSsMgrForDriver_AD3B0078(SceSblSpfsoCtx *ctx);
+/* vitasdk: ksceSblLicMgrGetActivationKey */
+int SceSblPostSsMgrForDriver_F7F1015B(SceActivationKey *key);
+int SceSblPostSsMgrForDriver_128FB35A(SceUID pid);	/* a utoken communication test process */
+int sceSblSsDecryptSealedKey(const void *sealedKey, void *key);

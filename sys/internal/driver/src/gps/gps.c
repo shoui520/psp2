@@ -718,7 +718,7 @@ failed:
 static int permission(void)
 {
 	uint8_t mode = 0;
-	if (!sceSblACMgrIsSystemProgram(0) && !SceSblPostSsMgrForDriver_128FB35A() &&
+	if (!sceSblACMgrIsSystemProgram(0) && !SceSblPostSsMgrForDriver_128FB35A(0) &&
 	    !SceQafMgrForDriver_BFD5E463()) {
 		int ret = ScePmMgrForDriver_2AC815A2(&mode);
 		if (ret < 0)

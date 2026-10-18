@@ -15,6 +15,7 @@
 #include <psp2kern/kernel/threadmgr/fast_mutex.h>
 #include <deci4p_dfmgr/deci4p.h>
 #include <stddef.h>
+#include <regmgr/regmgr.h>
 
 #define TSMP_BUF_SIZE		0x11000
 #define TSMP_DATA_MAX		0x10000		/* XML bytes per packet */
@@ -111,22 +112,13 @@ typedef struct TsmpBuffer {
 	void *base;
 } TsmpBuffer;
 
-/* a registry key/value or software information entry */
-typedef struct TsmpNotification {
-	SceSize size;				/* sizeof(TsmpNotification) */
-	char name[0x100];
-	SceUInt16 type;				/* TSMP_VALUE_* */
-	SceUInt16 length;			/* value bytes, strings with the NUL */
-	SceUInt32 value;			/* TSMP_VALUE_INT */
-	char data[0x7c0];
-} TsmpNotification;
-
+/* a notification (a registry key or a software information entry) is a RegMgrNotifyInfo; its type */
 #define TSMP_VALUE_INT		0
 #define TSMP_VALUE_STR		1
 #define TSMP_VALUE_BIN		2
 
 typedef struct TsmpNotificationNode {
-	TsmpNotification ntf;
+	RegMgrNotifyInfo ntf;
 	struct TsmpNotificationNode *next;
 } TsmpNotificationNode;
 
@@ -148,18 +140,6 @@ typedef struct TsmpRegFileRequest {
 	SceSize total;
 	SceUInt32 reserved[3];
 } TsmpRegFileRequest;
-
-/* SceRegMgrForDebugger set / get of one key */
-typedef struct TsmpRegRequest {
-	SceSize size;				/* sizeof(TsmpRegRequest) */
-	const char *name;
-	SceUInt16 type;				/* 0 int, 1 string, 2 binary */
-	SceUInt16 length;
-	union {
-		SceUInt32 value;
-		const void *data;
-	};
-} TsmpRegRequest;
 
 /* SceRegMgrForDebugger write of the setting UI file */
 typedef struct TsmpRegWriteRequest {
@@ -187,12 +167,11 @@ typedef struct TsmpState {
 	void *fileBase;
 	TsmpRegFileRequest fileRequest;
 	SceSize fileSent;
-	TsmpNotification regEntry;		/* filled by the registry for the callback */
-	TsmpNotification current;		/* last popped notification */
+	RegMgrNotifyInfo regEntry;		/* filled by the registry for the callback */
+	RegMgrNotifyInfo current;		/* last popped notification */
 } TsmpState;
 
 _Static_assert(sizeof(TsmpHeader) == 0x1c, "TSMP header");
-_Static_assert(sizeof(TsmpNotification) == 0x8cc, "TSMP notification");
 _Static_assert(offsetof(TsmpState, send) == 0x5c, "TSMP send buffer");
 _Static_assert(offsetof(TsmpState, registry) == 0xfc, "TSMP registry queue");
 _Static_assert(offsetof(TsmpState, fileSize) == 0x1a4, "TSMP file");
